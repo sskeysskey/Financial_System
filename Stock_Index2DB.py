@@ -20,8 +20,10 @@ def extract_data(cleaned_lines, index_list):
             # 从下一行开始查找包含纯数字或数字+符号的行
             for next_line in cleaned_lines[i+1:]:
                 if re.search(r'^[\d,.-]+$', next_line.strip()):
-                    price = next_line
-                    results.append((name.strip(), price.strip()))
+                    # 移除数字中的逗号
+                    price = next_line.replace(',', '')
+                    # 将价格转换为浮点数
+                    results.append((name.strip(), float(price)))
                     break
     return results
 
