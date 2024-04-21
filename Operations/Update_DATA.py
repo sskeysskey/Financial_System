@@ -29,20 +29,20 @@ def update_data(db_path, table_name, data):
 data_sets = {
     'Commodities': [],
     'Stocks': [
-        (21, "2015-03-18", "SSE Composite Index", "4657.6", 10),
-        (22, "2016-03-23", "SSE Composite Index", "2821.05", 10),
-        (23, "2018-01-15", "SSE Composite Index", "3487.86", 10),
-        (24, "2018-12-24", "SSE Composite Index", "2493.9", 10),
-        (25, "2019-04-08", "SSE Composite Index", "3188.63", 10),
-        (26, "2020-03-16", "SSE Composite Index", "2763.99", 10),
-        (27, "2021-02-15", "SSE Composite Index", "3696.17", 10),
-        (28, "2022-03-02", "SSE Composite Index", "3001.56", 10)
+        # (83, "2024-04-19", "S&P BSE SENSEX", "72408.33", 10),
+        (112, "2023-07-31", "HANG SENG INDEX", "20078.94", 10),
+        # (23, "2018-01-15", "SSE Composite Index", "3487.86", 10),
+        # (24, "2018-12-24", "SSE Composite Index", "2493.9", 10),
+        # (25, "2019-04-08", "SSE Composite Index", "3188.63", 10),
+        # (26, "2020-03-16", "SSE Composite Index", "2763.99", 10),
+        # (27, "2021-02-15", "SSE Composite Index", "3696.17", 10),
+        # (28, "2022-03-02", "SSE Composite Index", "3001.56", 10)
     ]
 }
 
 databases = [
-    {'path': '/Users/yanzhang/Commodities.db', 'table': 'Commodities'},
-    {'path': '/Users/yanzhang/Stocks.db', 'table': 'Stocks'},
+    {'path': '/Users/yanzhang/Commodities.db', 'table': 'Commodities', 'index_names': ('NASDAQ', 'S&P 500', 'SSE Composite Index', 'Shenzhen Index', 'Nikkei 225', 'S&P BSE SENSEX', 'HANG SENG INDEX')},
+    {'path': '/Users/yanzhang/Stocks.db', 'table': 'Stocks', 'index_names': ('APPL', 'RED', 'SEA', 'HIH')},
     # 可以添加更多数据库配置
 ]
 

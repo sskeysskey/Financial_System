@@ -12,38 +12,43 @@ def insert_data(db_path, table_name, data):
     cursor = conn.cursor()
 
     # 插入数据
+    count = 0  # 初始化计数器
     for record in data:
         cursor.execute(f"INSERT INTO {table_name} (date, name, price, parent_id) VALUES (?, ?, ?, ?);", record)
+        count += 1  # 插入一条数据，计数器加一
 
     # 提交事务
     conn.commit()
     # 关闭连接
     conn.close()
-    print(f"Data inserted into {table_name} in {db_path}")
+    print(f"一共 {count} 条 {table_name} 数据已插入 {db_path}")
 
 # 准备不同的数据集
 data_sets = {
     'Stocks': [
-        # ('2000-08-01', 'HANG SENG INDEX', 17097.51, 10),
-        # ('2003-04-01', 'HANG SENG INDEX', 8717.22, 10)
+        # ('2024-04-01', 'Shenzhen Index', 9647.07, 10),
+        # ('2023-11-24', 'Nikkei 225', 33625.53, 10),
+        # ('2024-01-25', 'Nikkei 225', 36236.47, 10)
+        # ('2024-04-10', 'HANG SENG INDEX', 17139.11, 10)
+        ('2024-03-26', 'S&P BSE SENSEX', 72470.3, 10),
     ],
     'Currencies': [
         # ('2001-12-01', 'USDHKD', 1.846, 4),
         # ('2001-12-01', 'USDHKD', 1.846, 4)
     ],
     'Commodities': [
-        ('2021-10-01', 'Copper', 0.622, 6),
-        ('2026-05-01', 'Copper', 3.7165, 6),
-        ('2008-04-01', 'Copper', 3.934, 6),
-        ('2011-02-01', 'Copper', 4.478, 6),
-        ('2011-09-01', 'Copper', 3.145, 6),
-        ('2015-11-01', 'Copper', 2.0445, 6),
-        ('2017-12-03', 'Copper', 3.2785, 6),
-        ('2020-03-03', 'Copper', 2.1555, 6),
-        ('2022-02-28', 'Copper', 4.8975, 6),
-        ('2022-07-11', 'Copper', 3.2365, 6),
-        ('2023-01-16', 'Copper', 4.251, 6),
-        ('2023-10-16', 'Copper', 3.563, 6)
+        # ('2021-10-01', 'Copper', 0.622, 6),
+        # ('2026-05-01', 'Copper', 3.7165, 6),
+        # ('2008-04-01', 'Copper', 3.934, 6),
+        # ('2011-02-01', 'Copper', 4.478, 6),
+        # ('2011-09-01', 'Copper', 3.145, 6),
+        # ('2015-11-01', 'Copper', 2.0445, 6),
+        # ('2017-12-03', 'Copper', 3.2785, 6),
+        # ('2020-03-03', 'Copper', 2.1555, 6),
+        # ('2022-02-28', 'Copper', 4.8975, 6),
+        # ('2022-07-11', 'Copper', 3.2365, 6),
+        # ('2023-01-16', 'Copper', 4.251, 6),
+        # ('2023-10-16', 'Copper', 3.563, 6)
     ],
     'Crypto': [
         # ('2021-05-03', 'Bitcoin Cash', 1428.74, 3),
