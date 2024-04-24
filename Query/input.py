@@ -41,7 +41,7 @@ def query_database(db_file, table_name, condition):
     today_date = datetime.now().strftime('%Y-%m-%d')
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
-    query = f"SELECT * FROM {table_name} WHERE {condition} ORDER BY date;"
+    query = f"SELECT * FROM {table_name} WHERE {condition} ORDER BY date DESC;"
     cursor.execute(query)
     rows = cursor.fetchall()
     if not rows:
@@ -83,14 +83,20 @@ if __name__ == '__main__':
 
     # 定义数据库信息的字典
     database_info = {
-        'StocksDB': {'path': '/Users/yanzhang/Stocks.db', 'table': 'Stocks'},
-        'CryptoDB': {'path': '/Users/yanzhang/Crypto.db', 'table': 'Crypto'}
+        'StocksDB': {'path': '/Users/yanzhang/Finance.db', 'table': 'Stocks'},
+        'CryptoDB': {'path': '/Users/yanzhang/Finance.db', 'table': 'Crypto'},
+        'CurrencyDB': {'path': '/Users/yanzhang/Finance.db', 'table': 'Currencies'},
+        'CommodityDB': {'path': '/Users/yanzhang/Finance.db', 'table': 'Commodities'},
+        'BondsDB': {'path': '/Users/yanzhang/Finance.db', 'table': 'Bonds'},
     }
 
     # 将数据库信息键映射到一组关键字
     database_mapping = {
-        'StocksDB': {"NASDAQ", "S&P 500", "SEA", "ALL", "apps", "shenzhen", "hengsheng", "nikkei"},
-        'CryptoDB': {"Solana", "bitcoin", "ether", "litecoin", "bit cash", "dogcoin"}
+        'StocksDB': {'NASDAQ', 'S&P 500', 'SSE Composite Index', 'Shenzhen Index', 'Nikkei 225', 'S&P BSE SENSEX', 'HANG SENG INDEX'},
+        'CryptoDB': {"Bitcoin", "Ether", "Binance", "Bitcoin Cash", "Solana", "Monero", "Litecoin"},
+        'CurrencyDB': {'DXY', 'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHY', 'USDINR', 'USDBRL', 'USDRUB', 'USDKRW', 'USDTRY', 'USDSGD', 'USDHKD'},
+        'CommodityDB': {'Crude Oil', 'Brent', 'Natural gas', 'Coal', 'Uranium', 'Gold', 'Silver', 'Copper', 'Steel', 'Iron Ore', 'Lithium', 'Soybeans', 'Wheat', 'Lumber', 'Palm Oil', 'Rubber', 'Coffee', 'Cotton', 'Cocoa', 'Rice', 'Canola', 'Corn', 'Bitumen', 'Cobalt', 'Lead', 'Aluminum', 'Nickel', 'Tin', 'Zinc', 'Lean Hogs', 'Beef', 'Poultry', 'Salmon'},
+        'BondsDB': {'United States', 'United Kingdom', 'Japan', 'Russia', 'Brazil', 'India', 'Turkey'},
     }
 
     # 反向映射，从关键字到数据库信息键

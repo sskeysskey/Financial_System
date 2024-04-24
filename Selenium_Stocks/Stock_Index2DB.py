@@ -28,7 +28,7 @@ def extract_data(cleaned_lines, index_list):
     return results
 
 def store_data_to_db(data):
-    conn = sqlite3.connect('/Users/yanzhang/Stocks.db')
+    conn = sqlite3.connect('/Users/yanzhang/Finance.db')
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS Stocks (date TEXT, name TEXT, price REAL, parent_id INTEGER)''')
     # 插入数据时加入当前日期和parent_id

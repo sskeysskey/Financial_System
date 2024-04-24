@@ -11,7 +11,7 @@ conn = sqlite3.connect('/Users/yanzhang/Finance.db')
 cursor = conn.cursor()
 # 创建表
 cursor.execute('''
-CREATE TABLE IF NOT EXISTS Crypto (
+CREATE TABLE IF NOT EXISTS Bonds (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     date TEXT,
     name TEXT,
@@ -33,32 +33,31 @@ driver = webdriver.Chrome(service=service, options=options)
 
 try:
     # 访问网页
-    driver.get('https://tradingeconomics.com/Crypto')
-    Cryptos = [
-        "Bitcoin", "Ether", "Binance", "Bitcoin Cash", "Solana",
-        "Monero", "Litecoin"
+    driver.get('https://tradingeconomics.com/bonds')
+    Currencies = [
+        "United States", "United Kingdom", "Japan", "Russia", "Brazil", "India", "Turkey"
     ]
 
     all_data = []
     today = datetime.now().strftime('%Y-%m-%d')
 
     # 查找并处理数据
-    for Crypto in Cryptos:
+    for Currency in Currencies:
         try:
             element = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.LINK_TEXT, Crypto))
+                EC.presence_of_element_located((By.LINK_TEXT, Currency))
             )
             row = element.find_element(By.XPATH, './ancestor::tr')
             price = row.find_element(By.ID, 'p').text.strip()
-            parent_id = 3
+            parent_id = 24
             
             # 将数据格式化后添加到列表
-            all_data.append((today, Crypto, price, parent_id))
+            all_data.append((today, Currency, price, parent_id))
         except Exception as e:
-            print(f"Failed to retrieve data for {Crypto}: {e}")
+            print(f"Failed to retrieve data for {Currencies}: {e}")
     
     # 插入数据到数据库
-    cursor.executemany('INSERT INTO Crypto (date, name, price, parent_id) VALUES (?, ?, ?, ?)', all_data)
+    cursor.executemany('INSERT INTO Bonds (date, name, price, parent_id) VALUES (?, ?, ?, ?)', all_data)
     conn.commit()
 
 except Exception as e:

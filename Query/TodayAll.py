@@ -65,10 +65,11 @@ def create_window(content):
 if __name__ == '__main__':
     # 数据库文件和表名的列表
     db_info = [
-        {'path': '/Users/yanzhang/Stocks.db', 'table': 'Stocks'},
-        {'path': '/Users/yanzhang/Currencies.db', 'table': 'Currencies'},
-        {'path': '/Users/yanzhang/Commodities.db', 'table': 'Commodities'},
-        {'path': '/Users/yanzhang/Crypto.db', 'table': 'Crypto'}
+        {'path': '/Users/yanzhang/Finance.db', 'table': 'Stocks'},
+        {'path': '/Users/yanzhang/Finance.db', 'table': 'Currencies'},
+        {'path': '/Users/yanzhang/Finance.db', 'table': 'Commodities'},
+        {'path': '/Users/yanzhang/Finance.db', 'table': 'Crypto'},
+        {'path': '/Users/yanzhang/Finance.db', 'table': 'Bonds'},
     ]
     
     # 遍历数据库信息列表，对每个数据库执行查询并收集结果

@@ -7,7 +7,7 @@ from datetime import datetime
 import sqlite3
 
 # 初始化数据库连接
-conn = sqlite3.connect('/Users/yanzhang/Currencies.db')
+conn = sqlite3.connect('/Users/yanzhang/Finance.db')
 cursor = conn.cursor()
 # 创建表
 cursor.execute('''
@@ -35,9 +35,8 @@ try:
     # 访问网页
     driver.get('https://tradingeconomics.com/Currencies')
     Currencies = [
-        "DXY", "EURUSD", "GBPUSD", "USDJPY", "USDCHY",
-        "USDINR", "USDBRL", "USDRUB", "USDKRW", "USDTRY", "USDSGD",
-        "USDHKD"
+        "DXY", "EURUSD", "GBPUSD", "USDJPY", "USDCNY", "USDINR", "USDBRL", "USDRUB",
+        "USDKRW", "USDTRY", "USDSGD", "USDTWD", "USDIDR", "USDPHP", "USDEGP", "USDARS"
     ]
 
     all_data = []
