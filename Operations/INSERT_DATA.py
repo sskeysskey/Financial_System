@@ -48,26 +48,23 @@ data_sets = {
     ],
     'Currencies': [
         # ('2024-02-13', 'DXY', 104.96, 4),
-        # ('2023-12-27', 'DXY', 100.986, 4),
         # ('2024-03-11', 'USDJPY', 146.94, 4),
-        # ('2024-01-01', 'USDJPY', 140.87, 4),
-        # ('2024-03-11', 'USDCNY', 7.179, 4),
         # ('2023-12-28', 'USDCNY', 7.118, 4),
         # ('2023-11-23', 'CNYJPY', 20.921, 4),
-        # ('2024-03-21', 'CNYJPY', 20.9972, 4),
-        # ('2024-01-01', 'CNYJPY', 19.774, 4),
+    ],
+    'Bonds': [
+        # ('2024-02-13', 'United States', 104.96, 4),
     ],
     # parent_id为5的大宗商品
-    'Commodities': [
-        # ('2024-03-12', 'Crude Oil', 77.25, 5),
-        # ('2024-02-02', 'Crude Oil', 72.3, 5),
-        # ('2024-03-05', 'Natural gas', 2.095, 5),
-    ],
-    # parent_id为6的大宗商品
     # 'Commodities': [
-    #      ('2021-10-01', 'Copper', 0.622, 6),
-    #      ('2024-04-05', 'Crude Oil', 86.91, 6),
+    #     # ('2024-03-12', 'Crude Oil', 77.25, 5),
+    #     # ('2024-03-05', 'Natural gas', 2.095, 5),
     # ],
+    # parent_id为6的大宗商品
+    'Commodities': [
+         ('2008-12-01', 'Copper', 1.395, 6),
+        #  ('2024-04-05', 'Crude Oil', 86.91, 6),
+    ],
     # # parent_id为7的大宗商品
     # 'Commodities': [
     #      ('2021-10-01', 'Copper', 0.622, 7),
@@ -91,7 +88,8 @@ databases = [
     {'path': '/Users/yanzhang/Finance.db', 'table': 'Currencies', 'columns': ['date', 'name', 'price', 'parent_id']},
     {'path': '/Users/yanzhang/Finance.db', 'table': 'Commodities', 'columns': ['date', 'name', 'price', 'parent_id']},
     {'path': '/Users/yanzhang/Finance.db', 'table': 'Crypto', 'columns': ['date', 'name', 'price', 'parent_id']},
-    {'path': '/Users/yanzhang/Finance.db', 'table': 'Categories', 'columns': ['name', 'parent_id','created_at']}
+    {'path': '/Users/yanzhang/Finance.db', 'table': 'Bonds', 'columns': ['date', 'name', 'price', 'parent_id']},
+    {'path': '/Users/yanzhang/Finance.db', 'table': 'Categories', 'columns': ['name', 'parent_id','created_at']},
 ]
 
 # 对每个数据库执行数据插入操作

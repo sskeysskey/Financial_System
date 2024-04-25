@@ -1,0 +1,16 @@
+{
+    "database_info": {
+        "StocksDB": {"path": "/Users/yanzhang/Finance.db", "table": "Stocks"},
+        "CryptoDB": {"path": "/Users/yanzhang/Finance.db", "table": "Crypto"},
+        "CurrencyDB": {"path": "/Users/yanzhang/Finance.db", "table": "Currencies"},
+        "CommodityDB": {"path": "/Users/yanzhang/Finance.db", "table": "Commodities"},
+        "BondsDB": {"path": "/Users/yanzhang/Finance.db", "table": "Bonds"}
+    },
+    "database_mapping": {
+        "StocksDB": ["NASDAQ", "S&P 500", "SSE Composite Index", "Shenzhen Index", "Nikkei 225", "S&P BSE SENSEX", "HANG SENG INDEX"],
+        "CryptoDB": ["Bitcoin", "Ether", "Binance", "Bitcoin Cash", "Solana", "Monero", "Litecoin"],
+        "CurrencyDB": ["DXY", "CNYEUR", "USDJPY", "USDCNY", "USDBRL", "USDRUB", "USDKRW", "USDTRY", "USDSGD", "CNYJPY", "CNYPHP", "CNYIDR"],
+        "CommodityDB": ["Crude Oil", "Brent", "Natural gas", "Coal", "Uranium", "Gold", "Silver", "Copper", "Steel", "Iron Ore", "Lithium", "Soybeans", "Wheat", "Lumber", "Palm Oil", "Rubber", "Coffee", "Cotton", "Cocoa", "Rice", "Canola", "Corn", "Bitumen", "Cobalt", "Lead", "Aluminum", "Nickel", "Tin", "Zinc", "Lean Hogs", "Beef", "Poultry", "Salmon"],
+        "BondsDB": ["United States", "United Kingdom", "Japan", "Russia", "Brazil", "India", "Turkey"]
+    }
+}

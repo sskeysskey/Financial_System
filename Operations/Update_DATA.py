@@ -41,51 +41,52 @@ data_sets = {
         # (112, "2023-07-31", "HANG SENG INDEX", "20078.94", 10),
         # (23, "2018-01-15", "SSE Composite Index", "3487.86", 10)
     ],
-    'Commodities': [
+    'Bonds': [
         # (83, "2024-04-19", "Crude Oil", "72408.33", 5),
         # (83, "2024-04-19", "Crude Oil", "72408.33", 5)
     ],
+    # 'Commodities': [
+    #     # (83, "2024-04-19", "Crude Oil", "72408.33", 5),
+    #     # (83, "2024-04-19", "Crude Oil", "72408.33", 5)
+    # ],
     'Commodities': [
-        # (83, "2024-04-19", "Gold", "72408.33", 6),
+        (430, "2008-12-01", "Copper", "1.395", 6),
         # (83, "2024-04-19", "Gold", "72408.33", 6)
     ],
-    'Commodities': [
-        # (83, "2024-04-19", "Soybeans", "72408.33", 7),
-        # (83, "2024-04-19", "Soybeans", "72408.33", 7)
-    ],
-    'Commodities': [
-        # (83, "2024-04-19", "Aluminum", "72408.33", 8),
-        # (83, "2024-04-19", "Aluminum", "72408.33", 8)
-    ],
-    'Commodities': [
-        # (83, "2024-04-19", "Salmon", "72408.33", 9),
-        # (83, "2024-04-19", "Beef", "72408.33", 9),
-        # (83, "2024-04-19", "Poultry", "72408.33", 9),
-        # (83, "2024-04-19", "Lean Hogs", "72408.33", 9)
-    ],
-    'Currencies': [
-        (49, "2014-01-01", "USDCNY", "6.034", 4),
-        (50, "2016-12-01", "USDCNY", "6.972", 4),
-        (51, "2018-03-01", "USDCNY", "6.26", 4),
-        (52, "2019-08-01", "USDCNY", "7.16", 4),
-        (53, "2022-02-01", "USDCNY", "6.311", 4),
-        (54, "2022-10-24", "USDCNY", "7.2698", 4),
-        (55, "2023-01-09", "USDCNY", "6.707", 4),
-        (56, "2023-09-04", "USDCNY", "7.365", 4)
-        # (83, "2024-04-19", "EURUSD", "72408.33", 4),
-        # (83, "2024-04-19", "EURUSD", "72408.33", 4)
-    ]
+    # 'Commodities': [
+    #     # (83, "2024-04-19", "Soybeans", "72408.33", 7),
+    #     # (83, "2024-04-19", "Soybeans", "72408.33", 7)
+    # ],
+    # 'Commodities': [
+    #     # (83, "2024-04-19", "Aluminum", "72408.33", 8),
+    #     # (83, "2024-04-19", "Aluminum", "72408.33", 8)
+    # ],
+    # 'Commodities': [
+    #     # (83, "2024-04-19", "Salmon", "72408.33", 9),
+    #     # (83, "2024-04-19", "Beef", "72408.33", 9),
+    #     # (83, "2024-04-19", "Poultry", "72408.33", 9),
+    #     # (83, "2024-04-19", "Lean Hogs", "72408.33", 9)
+    # ],
+    # 'Currencies': [
+    #     # (49, "2014-01-01", "USDCNY", "6.034", 4),
+    #     # (50, "2016-12-01", "USDCNY", "6.972", 4),
+    #     # (51, "2018-03-01", "USDCNY", "6.26", 4),
+    #     # (52, "2019-08-01", "USDCNY", "7.16", 4),
+    #     # (53, "2022-02-01", "USDCNY", "6.311", 4),
+    #     # (54, "2022-10-24", "USDCNY", "7.2698", 4),
+    #     # (55, "2023-01-09", "USDCNY", "6.707", 4),
+    #     # (56, "2023-09-04", "USDCNY", "7.365", 4),
+    #     # (83, "2024-04-19", "EURUSD", "72408.33", 4),
+    #     # (83, "2024-04-19", "EURUSD", "72408.33", 4)
+    # ]
 }
 
 databases = [
-    # {'path': '/Users/yanzhang/Stocks.db', 'table': 'Stocks', 'index_names': ('NASDAQ', 'S&P 500', 'SSE Composite Index', 'Shenzhen Index', 'Nikkei 225', 'S&P BSE SENSEX', 'HANG SENG INDEX')},
-    # {'path': '/Users/yanzhang/Crypto.db', 'table': 'Crypto', 'index_names': ('Bitcoin', 'Ether', 'Binance', 'Bitcoin Cash', 'Solana', 'Monero', 'Litecoin')},
-    # {'path': '/Users/yanzhang/Currencies.db', 'table': 'Currencies', 'index_names': ('DXY', 'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHY', 'USDINR', 'USDBRL', 'USDRUB', 'USDKRW', 'USDTRY', 'USDSGD', 'USDHKD')},
-    # {'path': '/Users/yanzhang/Commodities.db', 'table': 'Commodities', 'index_names': ('Crude Oil', 'Brent', 'Natural gas', 'Coal', 'Uranium', 'Gold', 'Silver', 'Copper', 'Steel', 'Iron Ore', 'Lithium', 'Soybeans', 'Wheat', 'Lumber', 'Palm Oil', 'Rubber', 'Coffee', 'Cotton', 'Cocoa', 'Rice', 'Canola', 'Corn', 'Bitumen', 'Cobalt', 'Lead', 'Aluminum', 'Nickel', 'Tin', 'Zinc', 'Lean Hogs', 'Beef', 'Poultry', 'Salmon')},
     {'path': '/Users/yanzhang/Finance.db', 'table': 'Stocks'},
     {'path': '/Users/yanzhang/Finance.db', 'table': 'Crypto'},
     {'path': '/Users/yanzhang/Finance.db', 'table': 'Currencies'},
-    {'path': '/Users/yanzhang/Finance.db', 'table': 'Commodities'}
+    {'path': '/Users/yanzhang/Finance.db', 'table': 'Commodities'},
+    {'path': '/Users/yanzhang/Finance.db', 'table': 'Bonds'},
     # 可以添加更多数据库配置
 ]
 

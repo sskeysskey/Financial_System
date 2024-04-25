@@ -1,9 +1,11 @@
+import sys
 import sqlite3
 import tkinter as tk
 import tkinter.font as tkFont
 from tkinter import scrolledtext
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
+sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
 from name2chart import plot_financial_data
 
 def create_connection(db_file):
@@ -15,14 +17,6 @@ def create_connection(db_file):
         error_msg = f"数据库连接失败: {e}"
         print(error_msg)
         return None, error_msg
-
-def execute_query(cursor, query, params):
-    """ 执行SQL查询并处理异常 """
-    try:
-        cursor.execute(query, params)
-        return cursor.fetchall(), None
-    except sqlite3.DatabaseError as e:
-        return None, f"SQL执行错误: {e}"
 
 def get_price_comparison(cursor, table_name, months_back, index_name, today):
     # 使用 dateutil.relativedelta 计算过去的日期
@@ -36,6 +30,14 @@ def get_price_comparison(cursor, table_name, months_back, index_name, today):
     cursor.execute(query, (past_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"), index_name))
     result = cursor.fetchone()
     return result if result else (None, None)
+
+def execute_query(cursor, query, params):
+    """ 执行SQL查询并处理异常 """
+    try:
+        cursor.execute(query, params)
+        return cursor.fetchall(), None
+    except sqlite3.DatabaseError as e:
+        return None, f"SQL执行错误: {e}"
 
 def compare_today_yesterday(cursor, table_name, index_name, output, today):
     yesterday = today - timedelta(days=1)
@@ -80,7 +82,6 @@ def create_window(parent, content):
     # size = (800, 600)  # 定义窗口大小
     # x = w - size[0]  # 窗口右边缘与屏幕右边缘对齐
     # y = h - size[1] - 30 # 窗口下边缘与屏幕下边缘对齐
-
     # 设置窗口出现在屏幕右下角
     # top.geometry("%dx%d+%d+%d" % (size[0], size[1], x, y))
 
@@ -91,7 +92,6 @@ def create_window(parent, content):
     size = (800, 800)  # 定义窗口大小
     x = (w // 2) - (size[0] // 2)  # 计算窗口左上角横坐标
     y = (h // 2) - (size[1] // 2)  # 计算窗口左上角纵坐标
-
     # 设置窗口出现在屏幕中央
     top.geometry("%dx%d+%d+%d" % (size[0], size[1], x, y))
 
@@ -139,10 +139,12 @@ def main():
     today = datetime.now()
     output = []  # 用于收集输出信息的列表
     databases = [
-        {'path': '/Users/yanzhang/Finance.db', 'table': 'Stocks', 'names': ('NASDAQ', 'S&P 500', 'SSE Composite Index', 'Shenzhen Index', 'Nikkei 225', 'S&P BSE SENSEX', 'HANG SENG INDEX')},
+        {'path': '/Users/yanzhang/Finance.db', 'table': 'Stocks', 'names': ('NASDAQ', 'S&P 500', 'SSE Composite Index',
+        'Shenzhen Index', 'Nikkei 225', 'S&P BSE SENSEX', 'HANG SENG INDEX')},
         {'path': '/Users/yanzhang/Finance.db', 'table': 'Crypto', 'names': ('Bitcoin', 'Ether', 'Solana')},
         {'path': '/Users/yanzhang/Finance.db', 'table': 'Currencies', 'names': ('DXY', 'CNYEUR', 'USDJPY', 'USDCNY', 'CNYJPY', 'USDARS')},
-        {'path': '/Users/yanzhang/Finance.db', 'table': 'Commodities', 'names': ('Brent', 'Natural gas', 'Uranium', 'Gold', 'Silver', 'Copper', 'Lithium', 'Soybeans', 'Wheat', 'Cocoa', 'Rice', 'Nickel')}
+        {'path': '/Users/yanzhang/Finance.db', 'table': 'Commodities', 'names': ('Brent', 'Natural gas', 'Uranium', 'Gold',
+        'Silver', 'Copper', 'Lithium', 'Soybeans', 'Wheat', 'Cocoa', 'Rice', 'Nickel')}
     ]
     intervals = [600, 360, 240, 120, 60, 24, 12, 6, 3]  # 以月份表示的时间间隔列表
     

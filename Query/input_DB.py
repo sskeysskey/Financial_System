@@ -1,8 +1,42 @@
+import re
+import json
 import sqlite3
+import matplotlib
 import tkinter as tk
-from datetime import datetime
 import tkinter.font as tkFont
+import matplotlib.pyplot as plt
 from tkinter import scrolledtext
+from datetime import datetime, timedelta
+from matplotlib.widgets import RadioButtons
+
+def input_mapping():
+    # 获取用户输入
+    prompt = "请输入关键字查询数据库:"
+    user_input = get_user_input_custom(root, prompt)
+    
+    if user_input is None:
+        print("未输入任何内容，程序即将退出。")
+        close_app()
+    else:
+        normalized_input = user_input.strip().lower()  # 移除首尾空格并转换为小写
+        # 查找匹配项
+        found = False
+        for db, items in database_mapping.items():
+            for item in items:
+                if re.search(normalized_input, item.lower()):  # 使用正则表达式进行不区分大小写的部分匹配
+                    db_key = reverse_mapping[item]
+                    db_info = database_info[db_key]
+                    condition = f"name = '{item}'"
+                    result = query_database(db_info['path'], db_info['table'], condition)
+                    create_window(None, result)
+                    found = True
+                    break
+            if found:
+                break
+
+        if not found:
+            print("未找到匹配的数据项，请确保输入的名称正确无误。")
+            close_app()
 
 def get_user_input_custom(root, prompt):
     # 创建一个新的顶层窗口
@@ -81,23 +115,12 @@ if __name__ == '__main__':
     root.withdraw()  # 隐藏根窗口
     root.bind('<Escape>', close_app)  # 同样绑定ESC到关闭程序的函数
 
-    # 定义数据库信息的字典
-    database_info = {
-        'StocksDB': {'path': '/Users/yanzhang/Finance.db', 'table': 'Stocks'},
-        'CryptoDB': {'path': '/Users/yanzhang/Finance.db', 'table': 'Crypto'},
-        'CurrencyDB': {'path': '/Users/yanzhang/Finance.db', 'table': 'Currencies'},
-        'CommodityDB': {'path': '/Users/yanzhang/Finance.db', 'table': 'Commodities'},
-        'BondsDB': {'path': '/Users/yanzhang/Finance.db', 'table': 'Bonds'},
-    }
-
-    # 将数据库信息键映射到一组关键字
-    database_mapping = {
-        'StocksDB': {'NASDAQ', 'S&P 500', 'SSE Composite Index', 'Shenzhen Index', 'Nikkei 225', 'S&P BSE SENSEX', 'HANG SENG INDEX'},
-        'CryptoDB': {"Bitcoin", "Ether", "Binance", "Bitcoin Cash", "Solana", "Monero", "Litecoin"},
-        'CurrencyDB': {'DXY', 'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHY', 'USDINR', 'USDBRL', 'USDRUB', 'USDKRW', 'USDTRY', 'USDSGD', 'USDHKD'},
-        'CommodityDB': {'Crude Oil', 'Brent', 'Natural gas', 'Coal', 'Uranium', 'Gold', 'Silver', 'Copper', 'Steel', 'Iron Ore', 'Lithium', 'Soybeans', 'Wheat', 'Lumber', 'Palm Oil', 'Rubber', 'Coffee', 'Cotton', 'Cocoa', 'Rice', 'Canola', 'Corn', 'Bitumen', 'Cobalt', 'Lead', 'Aluminum', 'Nickel', 'Tin', 'Zinc', 'Lean Hogs', 'Beef', 'Poultry', 'Salmon'},
-        'BondsDB': {'United States', 'United Kingdom', 'Japan', 'Russia', 'Brazil', 'India', 'Turkey'},
-    }
+    # 读取配置文件
+    with open('/Users/yanzhang/Documents/Financial_System/Modules/config.json', 'r') as file:
+        config = json.load(file)
+    
+    database_info = config['database_info']
+    database_mapping = {k: set(v) for k, v in config['database_mapping'].items()}
 
     # 反向映射，从关键字到数据库信息键
     reverse_mapping = {}
@@ -105,19 +128,6 @@ if __name__ == '__main__':
         for keyword in keywords:
             reverse_mapping[keyword] = db_key
 
-    # 获取用户输入
-    prompt = "请输入关键字查询数据库:"
-    value = get_user_input_custom(root, prompt)
-
-    # 使用反向映射表查询数据库信息
-    if value and value in reverse_mapping:
-        db_key = reverse_mapping[value]
-        db_info = database_info[db_key]
-        condition = f"name = '{value}'"
-        result = query_database(db_info['path'], db_info['table'], condition)
-        create_window(root, result)
-    else:
-        print("输入值无效或未配置数据库信息。程序退出。")
-        close_app()
+    input_mapping()
 
     root.mainloop()  # 主事件循环
