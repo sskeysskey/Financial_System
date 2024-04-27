@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import RadioButtons
 import matplotlib
 
-def plot_financial_data(product_name):
+def plot_financial_data(name):
     with open('/Users/yanzhang/Documents/Financial_System/Modules/config.json', 'r') as file:
         config = json.load(file)
     
@@ -18,15 +18,15 @@ def plot_financial_data(product_name):
         for keyword in keywords:
             reverse_mapping[keyword] = db_key
 
-    if product_name in reverse_mapping:
-        db_key = reverse_mapping[product_name]
+    if name in reverse_mapping:
+        db_key = reverse_mapping[name]
         db_path = database_info[db_key]['path']
         table_name = database_info[db_key]['table']
         
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         query = f"SELECT date, price FROM {table_name} WHERE name = ? ORDER BY date;"
-        cursor.execute(query, (product_name,))
+        cursor.execute(query, (name,))
         data = cursor.fetchall()
         cursor.close()
         conn.close()
@@ -41,7 +41,7 @@ def plot_financial_data(product_name):
 
         fig, ax = plt.subplots(figsize=(10, 5), constrained_layout=True)
         line, = ax.plot(dates, prices, marker='o', linestyle='-', color='b')
-        ax.set_title(f'{product_name}')
+        ax.set_title(f'{name}')
         # ax.set_xlabel('Date')
         ax.set_ylabel('Price')
         ax.grid(True)
@@ -128,7 +128,4 @@ def plot_financial_data(product_name):
         print("图表绘制完成，等待用户操作...")
         plt.show()
     else:
-        print(f"未找到产品名为 {product_name} 的相关数据库信息。")
-
-# product_name = "NASDAQ"
-# plot_financial_data(product_name)
+        print(f"未找到产品名为 {name} 的相关数据库信息。")

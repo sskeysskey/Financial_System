@@ -1,13 +1,11 @@
 import re
 import json
 import sqlite3
-import matplotlib
 import tkinter as tk
 import tkinter.font as tkFont
-import matplotlib.pyplot as plt
 from tkinter import scrolledtext
-from datetime import datetime, timedelta
-from matplotlib.widgets import RadioButtons
+from datetime import datetime
+from tkinter import messagebox
 
 def input_mapping():
     # 获取用户输入
@@ -35,7 +33,7 @@ def input_mapping():
                 break
 
         if not found:
-            print("未找到匹配的数据项，请确保输入的名称正确无误。")
+            messagebox.showerror("错误", "未找到匹配的数据项。")
             close_app()
 
 def get_user_input_custom(root, prompt):

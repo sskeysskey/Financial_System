@@ -1,13 +1,9 @@
 import sys
 import sqlite3
-import matplotlib
 import tkinter as tk
 from tkinter import ttk
 import tkinter.font as tkFont
-import matplotlib.pyplot as plt
 from tkinter import scrolledtext
-from datetime import datetime, timedelta
-from matplotlib.widgets import RadioButtons
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
 from name2chart import plot_financial_data
 
