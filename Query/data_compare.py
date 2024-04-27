@@ -57,11 +57,11 @@ def compare_today_yesterday(cursor, table_name, index_name, output, today):
         percentage_change = (change / yesterday_price) * 100
 
         if change > 0:
-            output.append(f"{index_name}: -> {today_price} 比昨天涨了 {abs(percentage_change):.2f}%。")
+            output.append(f"{index_name}:今天 {today_price} 比昨天涨了 {abs(percentage_change):.2f}%。")
         elif change < 0:
-            output.append(f"{index_name}: -> {today_price} 比昨天跌了 {abs(percentage_change):.2f}%。")
+            output.append(f"{index_name}:今天 {today_price} 比昨天跌了 {abs(percentage_change):.2f}%。")
         else:
-            output.append(f"{index_name}: -> {today_price} 与昨天持平。")
+            output.append(f"{index_name}:今天 {today_price} 与昨天持平。")
 
         # 检查是否浮动超过10%
         if abs(percentage_change) > 10:
@@ -101,9 +101,8 @@ def create_window(parent, content):
     top.geometry("%dx%d+%d+%d" % (size[0], size[1], x, y))
 
     # 定义字体
-    clickable_font = tkFont.Font(family='Courier', size=20, weight='bold')  # 可点击项的字体
+    clickable_font = tkFont.Font(family='Courier', size=23, weight='bold')  # 可点击项的字体
     text_font = tkFont.Font(family='Courier', size=20)  # 文本项的字体
-    text_font_red = tkFont.Font(family='Courier', size=16)  # 文本项的字体
 
     # 创建滚动文本区域，但不直接插入文本，而是插入带有点击事件的Label
     container = tk.Canvas(top)
@@ -124,19 +123,23 @@ def create_window(parent, content):
     for line in content.split('\n'):
         if ':' in line:
             index_name, message = line.split(':', 1)
-            lbl = tk.Label(scrollable_frame, text=index_name, fg="orange", cursor="hand2", font=clickable_font)
+            lbl = tk.Label(scrollable_frame, text=index_name, fg="gold", cursor="hand2", font=clickable_font)
             lbl.pack(anchor='w')
-            lbl.bind("<Button-1>", lambda e, idx=index_name: show_message(idx))
-            tk.Label(scrollable_frame, text=':' + message, font=text_font).pack(anchor='w')
+            lbl.bind("<Button-1>", lambda e, idx=index_name: show_grapher(idx))
+            tk.Label(scrollable_frame, text=message, font=text_font).pack(anchor='w')
         elif '#' in line:
-            tk.Label(scrollable_frame, text=line, fg="red", font=text_font_red).pack(anchor='w')
+            line = line.replace('#', '')
+            tk.Label(scrollable_frame, text=line, fg="red", font=text_font).pack(anchor='w')
+        elif '@' in line:
+            line = line.replace('@', '')
+            tk.Label(scrollable_frame, text=line, fg="orange", font=text_font).pack(anchor='w')
         else:
             tk.Label(scrollable_frame, text=line, font=text_font).pack(anchor='w')
 
     container.pack(side="left", fill="both", expand=True)
     scrollbar.pack(side="right", fill="y")
 
-def show_message(index_name):
+def show_grapher(index_name):
     """调用 name2chart.py 中的函数以显示财务数据图表"""
     plot_financial_data(index_name)
 
@@ -197,15 +200,15 @@ def main():
                             if today_price > max_price:
                                 if months >= 12:
                                     years = months // 12
-                                    output.append(f"创了 {years} 年来的新高！！")
+                                    output.append(f"@创了 {years} 年来的新高！！")
                                 else:
-                                    output.append(f"创了 {months} 个月来的新高！！")
+                                    output.append(f"@创了 {months} 个月来的新高！！")
                             else:  # today_price == max_price
                                 if months >= 12:
                                     years = months // 12
-                                    output.append(f"逼平 {years} 年来的新高！！")
+                                    output.append(f"@逼平 {years} 年来的新高！！")
                                 else:
-                                    output.append(f"逼平 {months} 个月来的新高！！")
+                                    output.append(f"@逼平 {months} 个月来的新高！！")
                         elif abs_diff_ratio <= 3:
                             if abs_diff_ratio <= 1:
                                 difference_desc = "仅仅差"
@@ -235,15 +238,15 @@ def main():
                             if today_price < min_price:
                                 if months >= 12:
                                     years = months // 12
-                                    output.append(f"{index_name} 创了 {years} 年来的新低！！！")
+                                    output.append(f"@创了 {years} 年来的新低！！！")
                                 else:
-                                    output.append(f"{index_name} 创了 {months} 个月来的新低！！！")
+                                    output.append(f"@创了 {months} 个月来的新低！！！")
                             else:  # today_price == min_price
                                 if months >= 12:
                                     years = months // 12
-                                    output.append(f"与 {years} 年来的最低值撞衫！！")
+                                    output.append(f"@与 {years} 年来的最低值撞衫！！")
                                 else:
-                                    output.append(f"与 {months} 个月来的最低值撞衫！！")
+                                    output.append(f"@与 {months} 个月来的最低值撞衫！！")
                         elif abs_diff_ratio <= 3:
                             if abs_diff_ratio <= 1:
                                 difference_desc = "仅仅差"
