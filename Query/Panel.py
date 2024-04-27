@@ -2,6 +2,7 @@ import sys
 import sqlite3
 import matplotlib
 import tkinter as tk
+from tkinter import ttk
 import tkinter.font as tkFont
 import matplotlib.pyplot as plt
 from tkinter import scrolledtext
@@ -10,10 +11,29 @@ from matplotlib.widgets import RadioButtons
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
 from name2chart import plot_financial_data
 
+def create_custom_style():
+    style = ttk.Style()
+
+    # 尝试使用不同的主题，如果默认主题不支持背景颜色的更改
+    # style.theme_use('clam')
+    style.theme_use('alt')
+
+    # 为不同的按钮定义颜色
+    style.configure("Purple.TButton", background="purple", foreground="white", font=('Helvetica', 18))
+    style.configure("Yellow.TButton", background="yellow", foreground="black", font=('Helvetica', 18))
+    style.configure("Orange.TButton", background="orange", foreground="black", font=('Helvetica', 18))
+    style.configure("Blue.TButton", background="blue", foreground="white", font=('Helvetica', 18))
+    style.configure("Default.TButton", background="gray", foreground="black", font=('Helvetica', 18))
+
+    # 确保按钮的背景颜色被填充
+    style.map("TButton",
+              background=[('active', '!disabled', 'pressed', 'focus', 'hover', 'alternate', 'selected', 'background')]
+              )
+
 def create_selection_window():
     selection_window = tk.Toplevel(root)
     selection_window.title("选择查询关键字")
-    selection_window.geometry("1280x800")
+    selection_window.geometry("1280x900")
     selection_window.bind('<Escape>', lambda e: close_app(root))
 
     canvas = tk.Canvas(selection_window)
@@ -27,8 +47,14 @@ def create_selection_window():
         )
     )
 
+    create_custom_style() 
     canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
     canvas.configure(xscrollcommand=scrollbar.set)
+
+    purple_keywords = ["NASDAQ", "Gold", "Bitcoin", "USDCNY", "United States"]
+    yellow_keywords = ["CNYJPY", "DXY"]
+    orange_keywords = ["HANG SENG INDEX", "Brent", "Natural gas", "Ether"]
+    blue_keywords = ["CRB Index", "Copper"]
 
     # 创建一个新的Frame来纵向包含CurrencyDB1和CryptoDB1
     new_vertical_frame1 = tk.Frame(scrollable_frame)
@@ -38,11 +64,11 @@ def create_selection_window():
     new_vertical_frame2.pack(side="left", padx=15, pady=10, fill="both", expand=True)
 
     for db_key, keywords in database_mapping.items():
-        if db_key in ['CurrencyDB', 'Bonds', 'CryptoDB']:
+        if db_key in ['Currency', 'Bonds', 'Crypto']:
             # 将这两个数据库的框架放入新的纵向框架中
             frame = tk.LabelFrame(new_vertical_frame1, text=db_key, padx=10, pady=10)
             frame.pack(side="top", padx=15, pady=10, fill="both", expand=True)
-        elif db_key in ['IndexDB', 'CommodityDB1']:
+        elif db_key in ['Stocks Index', 'Commodity Index']:
             frame = tk.LabelFrame(new_vertical_frame2, text=db_key, padx=10, pady=10)
             frame.pack(side="top", padx=15, pady=10, fill="both", expand=True)
         else:
@@ -53,10 +79,22 @@ def create_selection_window():
             button_frame = tk.Frame(frame)  # 创建一个内部Frame来包裹两个按钮
             button_frame.pack(side="top", fill="x", padx=5, pady=2)
 
-            button_data = tk.Button(button_frame, text=keyword, command=lambda k=keyword: on_keyword_selected(k))
+            # 根据关键字设置背景颜色
+            if keyword in purple_keywords:
+                button_style = "Purple.TButton"
+            elif keyword in yellow_keywords:
+                button_style = "Yellow.TButton"
+            elif keyword in orange_keywords:
+                button_style = "Orange.TButton"
+            elif keyword in blue_keywords:
+                button_style = "Blue.TButton"
+            else:
+                button_style = "Default.TButton"  # 默认颜色
+
+            button_data = ttk.Button(button_frame, text=keyword, style=button_style, command=lambda k=keyword: on_keyword_selected(k))
             button_data.pack(side="left", fill="x", expand=True)  # 设置左侧填充
 
-            button_chart = tk.Button(button_frame, text="图表", command=lambda k=keyword: on_keyword_selected_chart(k, selection_window))
+            button_chart = tk.Button(button_frame, text="📊", command=lambda k=keyword: on_keyword_selected_chart(k, selection_window))
             button_chart.pack(side="left", fill="x", expand=True)  # 设置右侧填充
 
     canvas.pack(side="top", fill="both", expand=True)
@@ -120,22 +158,22 @@ if __name__ == '__main__':
     root.withdraw()
     
     database_info = {
-            'CommodityDB': {'path': '/Users/yanzhang/Finance.db', 'table': 'Commodities'},
-            'IndexDB': {'path': '/Users/yanzhang/Finance.db', 'table': 'Stocks'},
-            'CryptoDB': {'path': '/Users/yanzhang/Finance.db', 'table': 'Crypto'},
-            'CurrencyDB': {'path': '/Users/yanzhang/Finance.db', 'table': 'Currencies'},
+            'Commodity': {'path': '/Users/yanzhang/Finance.db', 'table': 'Commodities'},
+            'Stocks Index': {'path': '/Users/yanzhang/Finance.db', 'table': 'Stocks'},
+            'Crypto': {'path': '/Users/yanzhang/Finance.db', 'table': 'Crypto'},
+            'Currency': {'path': '/Users/yanzhang/Finance.db', 'table': 'Currencies'},
             'Bonds': {'path': '/Users/yanzhang/Finance.db', 'table': 'Bonds'},
-            'CommodityDB1': {'path': '/Users/yanzhang/Finance.db', 'table': 'Commodities'}
+            'Commodity Index': {'path': '/Users/yanzhang/Finance.db', 'table': 'Commodities'}
     }
 
     database_mapping = {
-        'CommodityDB': {'Uranium', 'Nickel', 'Soybeans', 'Wheat', 'Coffee', 'Cotton', 'Cocoa', 'Rice', 'Corn',
+        'Commodity': {'Uranium', 'Nickel', 'Soybeans', 'Wheat', 'Coffee', 'Cotton', 'Cocoa', 'Rice', 'Corn',
         'Crude Oil', 'Brent', 'Natural gas', 'Gold', 'Silver', 'Copper', 'Lithium', 'Aluminum'},
-        'IndexDB': {'NASDAQ', 'S&P 500', 'SSE Composite Index', 'Shenzhen Index', 'Nikkei 225', 'S&P BSE SENSEX', 'HANG SENG INDEX'},
-        'CommodityDB1': {'CRB Index', 'LME Index', 'Nuclear Energy Index', 'Solar Energy Index', 'EU Carbon Permits',
+        'Stocks Index': {'NASDAQ', 'S&P 500', 'HANG SENG INDEX', 'SSE Composite Index', 'Shenzhen Index', 'Nikkei 225', 'S&P BSE SENSEX'},
+        'Commodity Index': {'CRB Index', 'LME Index', 'Nuclear Energy Index', 'Solar Energy Index', 'EU Carbon Permits',
         'Containerized Freight Index'},
-        'CryptoDB': {"Bitcoin", "Ether", "Solana"},
-        'CurrencyDB': {'DXY', 'CNYEUR', 'USDJPY', 'USDCNY', 'CNYJPY', 'CNYPHP', 'CNYIDR'},
+        'Crypto': {"Bitcoin", "Ether", "Solana"},
+        'Currency': {'DXY', 'EURCNY', 'GBPCNY', 'USDJPY', 'USDCNY', 'CNYJPY', 'CNYPHP', 'CNYIDR', 'USDIDR'},
         'Bonds': {"United States", "Japan", "Russia", "India", "Turkey"},
     }
 

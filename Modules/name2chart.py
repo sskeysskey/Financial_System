@@ -49,8 +49,8 @@ def plot_financial_data(product_name):
 
         # 注释初始化
         annot = ax.annotate("", xy=(0,0), xytext=(20,20), textcoords="offset points",
-                            bbox=dict(boxstyle="round", fc="w"),
-                            arrowprops=dict(arrowstyle="->"))
+                            bbox=dict(boxstyle="round", fc="black"),
+                            arrowprops=dict(arrowstyle="->"), color='yellow')
         annot.set_visible(False)
 
         time_options = {
@@ -72,14 +72,15 @@ def plot_financial_data(product_name):
 
         def update_annot(ind):
             x, y = line.get_data()
+            xval = x[ind["ind"][0]]
             yval = y[ind["ind"][0]]
-            annot.xy = (x[ind["ind"][0]], yval)
-            text = f"{yval}"
+            annot.xy = (xval, yval)
+            text = f"{datetime.strftime(xval, '%m-%d')}: {yval}"
             annot.set_text(text)
             annot.get_bbox_patch().set_alpha(0.4)
 
             # 检查数据点的位置，动态调整浮窗的位置
-            if x[ind["ind"][0]] >= (max(x) - (max(x) - min(x)) / 10):  # 如果数据点在图表右侧10%范围内
+            if xval >= (max(x) - (max(x) - min(x)) / 5):  # 如果数据点在图表右侧10%范围内
                 annot.set_position((-100, 20))  # 向左偏移
             else:
                 annot.set_position((20, 20))  # 默认偏移

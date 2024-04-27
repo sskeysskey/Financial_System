@@ -62,6 +62,11 @@ def compare_today_yesterday(cursor, table_name, index_name, output, today):
             output.append(f"{index_name}: -> {today_price} 比昨天跌了 {abs(percentage_change):.2f}%。")
         else:
             output.append(f"{index_name}: -> {today_price} 与昨天持平。")
+
+        # 检查是否浮动超过10%
+        if abs(percentage_change) > 10:
+            output.append("#浮动超过10%，查一下是什么原因！")
+
     elif len(results) == 1:
         result_date = results[0][0]
         if result_date == today.strftime("%Y-%m-%d"):
@@ -98,6 +103,7 @@ def create_window(parent, content):
     # 定义字体
     clickable_font = tkFont.Font(family='Courier', size=20, weight='bold')  # 可点击项的字体
     text_font = tkFont.Font(family='Courier', size=20)  # 文本项的字体
+    text_font_red = tkFont.Font(family='Courier', size=16)  # 文本项的字体
 
     # 创建滚动文本区域，但不直接插入文本，而是插入带有点击事件的Label
     container = tk.Canvas(top)
@@ -122,6 +128,8 @@ def create_window(parent, content):
             lbl.pack(anchor='w')
             lbl.bind("<Button-1>", lambda e, idx=index_name: show_message(idx))
             tk.Label(scrollable_frame, text=':' + message, font=text_font).pack(anchor='w')
+        elif '#' in line:
+            tk.Label(scrollable_frame, text=line, fg="red", font=text_font_red).pack(anchor='w')
         else:
             tk.Label(scrollable_frame, text=line, font=text_font).pack(anchor='w')
 
@@ -142,7 +150,8 @@ def main():
         {'path': '/Users/yanzhang/Finance.db', 'table': 'Stocks', 'names': ('NASDAQ', 'S&P 500', 'SSE Composite Index',
         'Shenzhen Index', 'Nikkei 225', 'S&P BSE SENSEX', 'HANG SENG INDEX')},
         {'path': '/Users/yanzhang/Finance.db', 'table': 'Crypto', 'names': ('Bitcoin', 'Ether', 'Solana')},
-        {'path': '/Users/yanzhang/Finance.db', 'table': 'Currencies', 'names': ('DXY', 'CNYEUR', 'USDJPY', 'USDCNY', 'CNYJPY', 'USDARS')},
+        {'path': '/Users/yanzhang/Finance.db', 'table': 'Currencies', 'names': ('DXY', 'EURCNY', 'GBPCNY',
+        'USDJPY', 'USDCNY', 'CNYJPY', 'USDARS')},
         {'path': '/Users/yanzhang/Finance.db', 'table': 'Commodities', 'names': ('Brent', 'Natural gas', 'Uranium', 'Gold',
         'Silver', 'Copper', 'Lithium', 'Soybeans', 'Wheat', 'Cocoa', 'Rice', 'Nickel')}
     ]
