@@ -1,12 +1,6 @@
-import sys
 import sqlite3
-import tkinter as tk
-import tkinter.font as tkFont
-from tkinter import scrolledtext
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
-sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
-from name2chart import plot_financial_data
 
 def create_connection(db_file):
     """ 创建到SQLite数据库的连接 """
@@ -70,81 +64,11 @@ def compare_today_yesterday(cursor, table_name, index_name, output, today):
     elif len(results) == 1:
         result_date = results[0][0]
         if result_date == today.strftime("%Y-%m-%d"):
-            output.append(f"{index_name}:仅找到今天的数据，无法比较。")
+            output.append(f"{index_name}: 仅找到今天的数据，无法比较。")
         else:
-            output.append(f"{index_name}:仅找到昨天的数据，无法比较。")
+            output.append(f"{index_name}: 仅找到昨天的数据，无法比较。")
     else:
-        output.append(f"{index_name}:没有找到今天和昨天的数据。")
-
-def create_window(parent, content):
-    top = tk.Toplevel(parent)
-    top.bind('<Escape>', quit_app)  # 在新创建的窗口上也绑定 ESC 键
-
-    # 更新窗口状态以获取准确的屏幕尺寸
-    # top.update_idletasks()
-    # w = top.winfo_screenwidth()  # 获取屏幕宽度
-    # h = top.winfo_screenheight()  # 获取屏幕高度
-    # size = (800, 600)  # 定义窗口大小
-    # x = w - size[0]  # 窗口右边缘与屏幕右边缘对齐
-    # y = h - size[1] - 30 # 窗口下边缘与屏幕下边缘对齐
-    # 设置窗口出现在屏幕右下角
-    # top.geometry("%dx%d+%d+%d" % (size[0], size[1], x, y))
-
-    # 更新窗口状态以获取准确的屏幕尺寸
-    top.update_idletasks()
-    w = top.winfo_screenwidth()  # 获取屏幕宽度
-    h = top.winfo_screenheight()  # 获取屏幕高度
-    size = (800, 800)  # 定义窗口大小
-    x = (w // 2) - (size[0] // 2)  # 计算窗口左上角横坐标
-    y = (h // 2) - (size[1] // 2)  # 计算窗口左上角纵坐标
-    # 设置窗口出现在屏幕中央
-    top.geometry("%dx%d+%d+%d" % (size[0], size[1], x, y))
-
-    # 定义字体
-    clickable_font = tkFont.Font(family='Courier', size=23, weight='bold')  # 可点击项的字体
-    text_font = tkFont.Font(family='Courier', size=20)  # 文本项的字体
-
-    # 创建滚动文本区域，但不直接插入文本，而是插入带有点击事件的Label
-    container = tk.Canvas(top)
-    scrollbar = tk.Scrollbar(top, command=container.yview)
-    scrollable_frame = tk.Frame(container)
-
-    scrollable_frame.bind(
-        "<Configure>",
-        lambda e: container.configure(
-            scrollregion=container.bbox("all")
-        )
-    )
-
-    container.create_window((0, 0), window=scrollable_frame, anchor="nw")
-    container.configure(yscrollcommand=scrollbar.set)
-
-    # 解析内容并为每个index_name创建一个可点击的Label
-    for line in content.split('\n'):
-        if ':' in line:
-            index_name, message = line.split(':', 1)
-            lbl = tk.Label(scrollable_frame, text=index_name, fg="gold", cursor="hand2", font=clickable_font)
-            lbl.pack(anchor='w')
-            lbl.bind("<Button-1>", lambda e, idx=index_name: show_grapher(idx))
-            tk.Label(scrollable_frame, text=message, font=text_font).pack(anchor='w')
-        elif '#' in line:
-            line = line.replace('#', '')
-            tk.Label(scrollable_frame, text=line, fg="red", font=text_font).pack(anchor='w')
-        elif '@' in line:
-            line = line.replace('@', '')
-            tk.Label(scrollable_frame, text=line, fg="orange", font=text_font).pack(anchor='w')
-        else:
-            tk.Label(scrollable_frame, text=line, font=text_font).pack(anchor='w')
-
-    container.pack(side="left", fill="both", expand=True)
-    scrollbar.pack(side="right", fill="y")
-
-def show_grapher(index_name):
-    """调用 name2chart.py 中的函数以显示财务数据图表"""
-    plot_financial_data(index_name)
-
-def quit_app(event=None):
-    root.destroy()
+        output.append(f"{index_name}: 没有找到今天和昨天的数据。")
 
 def main():
     today = datetime.now()
@@ -264,10 +188,15 @@ def main():
                 output.append(f"\n")
             cursor.close()
     final_output = "\n".join(output)
-    create_window(None, final_output)  # 假设没有父窗口
+    
+    # 将输出保存到文件
+    path = '/Users/yanzhang/Documents/News/'  # 您可以修改这个路径到您想要保存的目录
+    filename = 'financial_output.txt'
+    file_path = path + filename
+    with open(file_path, 'w', encoding='utf-8') as file:
+        file.write(final_output)
+    print(f"文件已保存到 {file_path}")
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    root.withdraw()  # 隐藏根窗口
     main()            # 先运行main函数，确保所有GUI组件都已经初始化
-    root.mainloop()   # 启动事件循环，这行代码会在所有窗口关闭后执行结束
+

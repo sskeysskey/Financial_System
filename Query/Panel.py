@@ -169,7 +169,7 @@ if __name__ == '__main__':
         'Commodity Index': {'CRB Index', 'LME Index', 'Nuclear Energy Index', 'Solar Energy Index', 'EU Carbon Permits',
         'Containerized Freight Index'},
         'Crypto': {"Bitcoin", "Ether", "Solana"},
-        'Currency': {'DXY', 'EURCNY', 'GBPCNY', 'USDJPY', 'USDCNY', 'CNYJPY', 'CNYPHP', 'CNYIDR', 'USDIDR'},
+        'Currency': {'DXY', 'EURCNY', 'GBPCNY', 'USDJPY', 'USDCNY', 'CNYJPY', 'CNYPHP', 'CNYIDR', 'USDIDR', 'USDARS'},
         'Bonds': {"United States", "Japan", "Russia", "India", "Turkey"},
     }
 
