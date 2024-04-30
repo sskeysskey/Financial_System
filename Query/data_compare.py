@@ -18,16 +18,23 @@ def create_connection(db_file):
         print(error_msg)
         return None, error_msg
 
-def get_price_comparison(cursor, table_name, months_back, index_name, today):
+def get_price_comparison(cursor, table_name, months_back, name, today):
     # 使用 dateutil.relativedelta 计算过去的日期
-    past_date = today - relativedelta(months=months_back)
-    end_date = today - timedelta(days=1)
+    yesterday = today - timedelta(days=1)
+    day_of_week = yesterday.weekday()  # 周一为0，周日为6
+
+    if day_of_week == 5:  # 昨天是周六
+        yesterday = today - timedelta(days=2)  # 取周五
+    elif day_of_week == 6:  # 昨天是周日
+        yesterday = today - timedelta(days=3)  # 取上周五
+
+    past_date = yesterday - relativedelta(months=months_back)
     
     query = f"""
     SELECT MAX(price), MIN(price)
     FROM {table_name} WHERE date BETWEEN ? AND ? AND name = ?
     """
-    cursor.execute(query, (past_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"), index_name))
+    cursor.execute(query, (past_date.strftime("%Y-%m-%d"), yesterday.strftime("%Y-%m-%d"), name))
     result = cursor.fetchone()
     return result if result else (None, None)
 
@@ -39,13 +46,27 @@ def execute_query(cursor, query, params):
     except sqlite3.DatabaseError as e:
         return None, f"SQL执行错误: {e}"
 
-def compare_today_yesterday(cursor, table_name, index_name, output, today):
+def compare_today_yesterday(cursor, table_name, name, output, today):
     yesterday = today - timedelta(days=1)
+    # 判断昨天是周几
+    day_of_week = yesterday.weekday()  # 周一为0，周日为6
+
+    if day_of_week == 0:  # 昨天是周一
+        ex_yesterday = today - timedelta(days=4)  # 取上周六
+    elif day_of_week == 5:  # 昨天是周六
+        yesterday = today - timedelta(days=2)  # 取周五
+        ex_yesterday = yesterday  - timedelta(days=1)
+    elif day_of_week == 6:  # 昨天是周日
+        yesterday = today - timedelta(days=3)  # 取上周五
+        ex_yesterday = yesterday  - timedelta(days=1) #取上周四
+    else:
+        ex_yesterday = yesterday  - timedelta(days=1)
+
     query = f"""
     SELECT date, price FROM {table_name} 
     WHERE name = ? AND date IN (?, ?) ORDER BY date DESC
     """
-    results, error = execute_query(cursor, query, (index_name, today.strftime("%Y-%m-%d"), yesterday.strftime("%Y-%m-%d")))
+    results, error = execute_query(cursor, query, (name, yesterday.strftime("%Y-%m-%d"), ex_yesterday.strftime("%Y-%m-%d")))
     if error:
         output.append(error)
         return
@@ -57,11 +78,11 @@ def compare_today_yesterday(cursor, table_name, index_name, output, today):
         percentage_change = (change / yesterday_price) * 100
 
         if change > 0:
-            output.append(f"{index_name}:今天 {today_price} 比昨天涨了 {abs(percentage_change):.2f}%。")
+            output.append(f"{name}:今天 {today_price} 比昨天涨了 {abs(percentage_change):.2f}%。")
         elif change < 0:
-            output.append(f"{index_name}:今天 {today_price} 比昨天跌了 {abs(percentage_change):.2f}%。")
+            output.append(f"{name}:今天 {today_price} 比昨天跌了 {abs(percentage_change):.2f}%。")
         else:
-            output.append(f"{index_name}:今天 {today_price} 与昨天持平。")
+            output.append(f"{name}:今天 {today_price} 与昨天持平。")
 
         # 检查是否浮动超过10%
         if abs(percentage_change) > 10:
@@ -69,12 +90,13 @@ def compare_today_yesterday(cursor, table_name, index_name, output, today):
 
     elif len(results) == 1:
         result_date = results[0][0]
+        result_price = results[0][1]  # 提取价格
         if result_date == today.strftime("%Y-%m-%d"):
-            output.append(f"{index_name}:仅找到今天的数据，无法比较。")
+            output.append(f"{name}:仅找到今天的数据{result_price}，无法比较。")
         else:
-            output.append(f"{index_name}:仅找到昨天的数据，无法比较。")
+            output.append(f"{name}:仅找到昨天的数据{result_price}，无法比较。")
     else:
-        output.append(f"{index_name}:没有找到今天和昨天的数据。")
+        output.append(f"{name}:没有找到今天和昨天的数据。")
 
 def create_window(parent, content):
     top = tk.Toplevel(parent)
@@ -119,13 +141,13 @@ def create_window(parent, content):
     container.create_window((0, 0), window=scrollable_frame, anchor="nw")
     container.configure(yscrollcommand=scrollbar.set)
 
-    # 解析内容并为每个index_name创建一个可点击的Label
+    # 解析内容并为每个name创建一个可点击的Label
     for line in content.split('\n'):
         if ':' in line:
-            index_name, message = line.split(':', 1)
-            lbl = tk.Label(scrollable_frame, text=index_name, fg="gold", cursor="hand2", font=clickable_font)
+            name, message = line.split(':', 1)
+            lbl = tk.Label(scrollable_frame, text=name, fg="gold", cursor="hand2", font=clickable_font)
             lbl.pack(anchor='w')
-            lbl.bind("<Button-1>", lambda e, idx=index_name: show_grapher(idx))
+            lbl.bind("<Button-1>", lambda e, idx=name: show_grapher(idx))
             tk.Label(scrollable_frame, text=message, font=text_font).pack(anchor='w')
         elif '#' in line:
             line = line.replace('#', '')
@@ -139,50 +161,60 @@ def create_window(parent, content):
     container.pack(side="left", fill="both", expand=True)
     scrollbar.pack(side="right", fill="y")
 
-def show_grapher(index_name):
+def show_grapher(name):
     """调用 name2chart.py 中的函数以显示财务数据图表"""
-    plot_financial_data(index_name)
+    plot_financial_data(name)
 
 def quit_app(event=None):
     root.destroy()
 
 def main():
     today = datetime.now()
+    # yesterday = today - timedelta(days=1)
+    day_of_week = today.weekday()  # 周一为0，周日为6
+    if day_of_week == 0:  # 昨天是周一
+        real_today = today - timedelta(days=3)  # 取上周六
+    elif day_of_week == 6:  # 昨天是周日
+        real_today = today - timedelta(days=2)  # 取上周五
+    else:
+        real_today = today - timedelta(days=1)
+
     output = []  # 用于收集输出信息的列表
     databases = [
-        {'path': '/Users/yanzhang/Finance.db', 'table': 'Stocks', 'names': ('NASDAQ', 'S&P 500', 'SSE Composite Index',
-        'Shenzhen Index', 'Nikkei 225', 'S&P BSE SENSEX', 'HANG SENG INDEX')},
-        {'path': '/Users/yanzhang/Finance.db', 'table': 'Crypto', 'names': ('Bitcoin', 'Ether', 'Solana')},
-        {'path': '/Users/yanzhang/Finance.db', 'table': 'Currencies', 'names': ('DXY', 'EURCNY', 'GBPCNY',
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Stocks', 'names': ('NASDAQ Composite', 'S&P 500',
+        'SSE Composite Index', 'Shenzhen Index', 'Nikkei 225', 'S&P BSE SENSEX', 'HANG SENG INDEX', 'Russell 2000',
+        'CBOE Volatility Index')},
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto', 'names': ('Bitcoin', 'Ether', 'Solana')},
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies', 'names': ('DXY', 'EURCNY', 'GBPCNY',
         'USDJPY', 'USDCNY', 'CNYJPY', 'USDARS')},
-        {'path': '/Users/yanzhang/Finance.db', 'table': 'Commodities', 'names': ('Brent', 'Natural gas', 'Uranium', 'Gold',
-        'Silver', 'Copper', 'Lithium', 'Soybeans', 'Wheat', 'Cocoa', 'Rice', 'Nickel')}
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities', 'names': ('Brent',
+        'Natural gas', 'Uranium', 'Gold', 'Silver', 'Copper', 'Lithium', 'Soybeans', 'Wheat', 'Cocoa', 'Rice', 'Nickel')}
     ]
     intervals = [600, 360, 240, 120, 60, 24, 12, 6, 3]  # 以月份表示的时间间隔列表
     
     for db_config in databases:
         db_path = db_config['path']
         table_name = db_config['table']
-        index_names = db_config['names']
+        names = db_config['names']
         
         with create_connection(db_path) as conn:
             cursor = conn.cursor()
         
-            for index_name in index_names:
-                compare_today_yesterday(cursor, table_name, index_name, output, today)
+            for name in names:
+                compare_today_yesterday(cursor, table_name, name, output, today)
                 today_price_query = f"SELECT price FROM {table_name} WHERE date = ? AND name = ?"
-                cursor.execute(today_price_query, (datetime.now().strftime("%Y-%m-%d"), index_name))
+                cursor.execute(today_price_query, (real_today.strftime("%Y-%m-%d"), name))
                 result = cursor.fetchone()
 
                 if result:
                     today_price = result[0]
                 else:
-                    output.append(f"没有找到今天的{index_name}价格。")
+                    output.append(f"没有找到今天的{name}价格。")
                     continue
                 
                 price_extremes = {}
                 for months in intervals:
-                    max_price, min_price = get_price_comparison(cursor, table_name, months, index_name, today)
+                    max_price, min_price = get_price_comparison(cursor, table_name, months, name, today)
                     price_extremes[months] = (max_price, min_price)  # 存储最大和最小价格
 
                 # 检查是否接近最高价格
@@ -264,6 +296,14 @@ def main():
                 output.append(f"\n")
             cursor.close()
     final_output = "\n".join(output)
+    # 将输出保存到文件
+    path = '/Users/yanzhang/Documents/News/'  # 您可以修改这个路径到您想要保存的目录
+    filename = 'financial_output.txt'
+    file_path = path + filename
+    with open(file_path, 'w', encoding='utf-8') as file:
+        file.write(final_output)
+    print(f"文件已保存到 {file_path}")
+
     create_window(None, final_output)  # 假设没有父窗口
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 import pyperclip
 import sqlite3
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 def get_clipboard_content():
     return pyperclip.paste()
@@ -28,11 +28,16 @@ def extract_data(cleaned_lines, index_list):
     return results
 
 def store_data_to_db(data):
-    conn = sqlite3.connect('/Users/yanzhang/Finance.db')
+    conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS Stocks (date TEXT, name TEXT, price REAL, parent_id INTEGER)''')
     # 插入数据时加入当前日期和parent_id
-    today = datetime.now().strftime('%Y-%m-%d')
+    # 获取当前时间
+    now = datetime.now()
+    # 获取前一天的日期
+    yesterday = now - timedelta(days=1)
+    # 格式化输出
+    today = yesterday.strftime('%Y-%m-%d')
     data_with_extra_fields = [(today, name, price, 10) for name, price in data]
     c.executemany('INSERT INTO Stocks (date, name, price, parent_id) VALUES (?, ?, ?, ?)', data_with_extra_fields)
     conn.commit()
@@ -42,7 +47,7 @@ def main():
     raw_data = get_clipboard_content()
     cleaned_lines = clean_data(raw_data)
     Indexs = [
-        "NASDAQ", "S&P 500", "HYG", "SSE Composite Index", "Shenzhen Index",
+        "NASDAQ Composite", "S&P 500", "HYG", "SSE Composite Index", "Shenzhen Index",
         "Nikkei 225", "S&P BSE SENSEX", "HANG SENG INDEX"
     ]
     extracted_data = extract_data(cleaned_lines, Indexs)

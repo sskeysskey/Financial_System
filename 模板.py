@@ -7,12 +7,12 @@ import json # 首先得import json
 {
     "databases": [
         {
-            "path": "/Users/yanzhang/Finance.db",
+            "path": "/Users/yanzhang/Documents/Database/Finance.db",
             "table": "Stocks",
             "names": ["NASDAQ", "S&P 500", "SSE Composite Index", "Shenzhen Index", "Nikkei 225", "S&P BSE SENSEX", "HANG SENG INDEX"]
         },
         {
-            "path": "/Users/yanzhang/Finance.db",
+            "path": "/Users/yanzhang/Documents/Database/Finance.db",
             "table": "Crypto",
             "names": ["Bitcoin", "Ether", "Binance", "Bitcoin Cash", "Solana", "Monero", "Litecoin"]
         }

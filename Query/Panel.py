@@ -154,18 +154,18 @@ if __name__ == '__main__':
     root.withdraw()
     
     database_info = {
-            'Commodity': {'path': '/Users/yanzhang/Finance.db', 'table': 'Commodities'},
-            'Stocks Index': {'path': '/Users/yanzhang/Finance.db', 'table': 'Stocks'},
-            'Crypto': {'path': '/Users/yanzhang/Finance.db', 'table': 'Crypto'},
-            'Currency': {'path': '/Users/yanzhang/Finance.db', 'table': 'Currencies'},
-            'Bonds': {'path': '/Users/yanzhang/Finance.db', 'table': 'Bonds'},
-            'Commodity Index': {'path': '/Users/yanzhang/Finance.db', 'table': 'Commodities'}
+            'Commodity': {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities'},
+            'Stocks Index': {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Stocks'},
+            'Crypto': {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto'},
+            'Currency': {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies'},
+            'Bonds': {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Bonds'},
+            'Commodity Index': {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities'}
     }
 
     database_mapping = {
         'Commodity': {'Uranium', 'Nickel', 'Soybeans', 'Wheat', 'Coffee', 'Cotton', 'Cocoa', 'Rice', 'Corn',
         'Crude Oil', 'Brent', 'Natural gas', 'Gold', 'Silver', 'Copper', 'Lithium', 'Aluminum'},
-        'Stocks Index': {'NASDAQ', 'S&P 500', 'HANG SENG INDEX', 'SSE Composite Index', 'Shenzhen Index', 'Nikkei 225', 'S&P BSE SENSEX'},
+        'Stocks Index': {'NASDAQ Composite', 'Russell 2000', 'CBOE Volatility Index', 'S&P 500', 'HANG SENG INDEX', 'SSE Composite Index', 'Shenzhen Index', 'Nikkei 225', 'S&P BSE SENSEX'},
         'Commodity Index': {'CRB Index', 'LME Index', 'Nuclear Energy Index', 'Solar Energy Index', 'EU Carbon Permits',
         'Containerized Freight Index'},
         'Crypto': {"Bitcoin", "Ether", "Solana"},

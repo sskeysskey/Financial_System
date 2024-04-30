@@ -1,13 +1,13 @@
 {
     "database_info": {
-        "StocksDB": {"path": "/Users/yanzhang/Finance.db", "table": "Stocks"},
-        "CryptoDB": {"path": "/Users/yanzhang/Finance.db", "table": "Crypto"},
-        "CurrencyDB": {"path": "/Users/yanzhang/Finance.db", "table": "Currencies"},
-        "CommodityDB": {"path": "/Users/yanzhang/Finance.db", "table": "Commodities"},
-        "BondsDB": {"path": "/Users/yanzhang/Finance.db", "table": "Bonds"}
+        "StocksDB": {"path": "/Users/yanzhang/Documents/Database/Finance.db", "table": "Stocks"},
+        "CryptoDB": {"path": "/Users/yanzhang/Documents/Database/Finance.db", "table": "Crypto"},
+        "CurrencyDB": {"path": "/Users/yanzhang/Documents/Database/Finance.db", "table": "Currencies"},
+        "CommodityDB": {"path": "/Users/yanzhang/Documents/Database/Finance.db", "table": "Commodities"},
+        "BondsDB": {"path": "/Users/yanzhang/Documents/Database/Finance.db", "table": "Bonds"}
     },
     "database_mapping": {
-        "StocksDB": ["NASDAQ", "S&P 500", "SSE Composite Index", "Shenzhen Index", "Nikkei 225", "S&P BSE SENSEX", "HANG SENG INDEX"],
+        "StocksDB": ["NASDAQ Composite", "Russell 2000", "CBOE Volatility Index", "S&P 500", "SSE Composite Index", "Shenzhen Index", "Nikkei 225", "S&P BSE SENSEX", "HANG SENG INDEX"],
         "CryptoDB": ["Bitcoin", "Ether", "Binance", "Bitcoin Cash", "Solana", "Monero", "Litecoin"],
         "CurrencyDB": ["DXY", "EURCNY", "GBPCNY", "AUDCNY", "USDJPY", "USDCNY", "USDBRL", "USDRUB", "USDARS", "USDKRW", "USDTRY",
         "USDSGD", "USDIDR", "USDPHP", "CNYJPY", "CNYPHP", "CNYIDR"],

@@ -12,10 +12,7 @@ def capture_screen():
     return screenshot
 
 # 查找图片
-def find_image_on_screen(template_path, threshold=0.9):
-    template = cv2.imread(template_path, cv2.IMREAD_COLOR)
-    if template is None:
-        raise FileNotFoundError(f"模板图片未能正确读取于路径 {template_path}")
+def find_image_on_screen(template, threshold=0.9):
     screen = capture_screen()
     result = cv2.matchTemplate(screen, template, cv2.TM_CCOEFF_NORMED)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
@@ -28,20 +25,31 @@ def find_image_on_screen(template_path, threshold=0.9):
 
 # 主函数
 def main():
-    template_menuindex = '/Users/yanzhang/Documents/python_code/Resource/Stock_menu_index.png'
-    template_searchlogo = '/Users/yanzhang/Documents/python_code/Resource/Stock_search_logo.png'
-    template_shiftwatchlist = '/Users/yanzhang/Documents/python_code/Resource/Stock_shift_watchlist.png'
-    template_watchlistindex = '/Users/yanzhang/Documents/python_code/Resource/Stock_watchlist_Index.png'
+    # 定义模板路径字典
+    template_paths = {
+        "menuindex": "/Users/yanzhang/Documents/python_code/Resource/Stock_menu_index.png",
+        "searchlogo": "/Users/yanzhang/Documents/python_code/Resource/Stock_search_logo.png",
+        "shiftwatchlist": "/Users/yanzhang/Documents/python_code/Resource/Stock_shift_watchlist.png",
+        "watchlistindex": "/Users/yanzhang/Documents/python_code/Resource/Stock_watchlist_Index.png",
+    }
+
+    # 读取所有模板图片，并存储在字典中
+    templates = {}
+    for key, path in template_paths.items():
+        template = cv2.imread(path, cv2.IMREAD_COLOR)
+        if template is None:
+            raise FileNotFoundError(f"模板图片未能正确读取于路径 {path}")
+        templates[key] = template
     
     found_watchlistindex = False
     while not found_watchlistindex:
-        location, shape = find_image_on_screen(template_watchlistindex)
+        location, shape = find_image_on_screen(templates["watchlistindex"])
         if location:
             found_watchlistindex = True
             print(f"找到图片位置: {location}")
         else:
             print("未找到图片，继续监控...")
-            location, shape = find_image_on_screen(template_shiftwatchlist)
+            location, shape = find_image_on_screen(templates["shiftwatchlist"])
             if location:
                 print("找到图片，继续执行")
                 # 计算中心坐标
@@ -51,7 +59,7 @@ def main():
                 # 鼠标点击中心坐标
                 pyautogui.click(center_x, center_y)
                 sleep(1)
-                location, shape = find_image_on_screen(template_menuindex)
+                location, shape = find_image_on_screen(templates["menuindex"])
                 if location:
                     print("找到poe_stillwaiting图片，执行页面刷新操作...")
                     # 计算中心坐标
@@ -66,7 +74,7 @@ def main():
     
     found_searchlogo = False
     while not found_searchlogo:
-        location, shape = find_image_on_screen(template_searchlogo)
+        location, shape = find_image_on_screen(templates["searchlogo"])
         if location:
             print("找到图片，继续监控...")
             # 计算中心坐标

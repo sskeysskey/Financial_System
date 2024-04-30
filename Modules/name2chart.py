@@ -40,7 +40,8 @@ def plot_financial_data(name):
         matplotlib.rcParams['font.size'] = 14
 
         fig, ax = plt.subplots(figsize=(10, 5), constrained_layout=True)
-        line, = ax.plot(dates, prices, marker='o', linestyle='-', color='b')
+        # line, = ax.plot(dates, prices, marker='o', linestyle='-', color='b')
+        line, = ax.plot(dates, prices, marker='o', markersize=1, linestyle='-', linewidth=2, color='b')
         ax.set_title(f'{name}')
         # ax.set_xlabel('Date')
         ax.set_ylabel('Price')

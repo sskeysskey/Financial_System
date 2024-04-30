@@ -3,11 +3,11 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from datetime import datetime
+from datetime import datetime, timedelta
 import sqlite3
 
 # 初始化数据库连接
-conn = sqlite3.connect('/Users/yanzhang/Finance.db')
+conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
 cursor = conn.cursor()
 # 创建表
 cursor.execute('''
@@ -40,7 +40,12 @@ try:
     ]
 
     all_data = []
-    today = datetime.now().strftime('%Y-%m-%d')
+    # 获取当前时间
+    now = datetime.now()
+    # 获取前一天的日期
+    yesterday = now - timedelta(days=1)
+    # 格式化输出
+    today = yesterday.strftime('%Y-%m-%d')
 
     # 查找并处理数据
     for Currency in Currencies:

@@ -1,11 +1,15 @@
 import sqlite3
 import tkinter as tk
 from tkinter import scrolledtext
-from datetime import datetime
+from datetime import datetime, timedelta
 
 def query_database(db_file, table_name):
     # 获取今天的日期
-    today_date = datetime.now().strftime('%Y-%m-%d')
+    now = datetime.now()
+    # 获取前一天的日期
+    yesterday = now - timedelta(days=1)
+    # 格式化输出
+    today_date = yesterday.strftime('%Y-%m-%d')
 
     # 连接到 SQLite 数据库
     conn = sqlite3.connect(db_file)
@@ -65,11 +69,11 @@ def create_window(content):
 if __name__ == '__main__':
     # 数据库文件和表名的列表
     db_info = [
-        {'path': '/Users/yanzhang/Finance.db', 'table': 'Stocks'},
-        {'path': '/Users/yanzhang/Finance.db', 'table': 'Currencies'},
-        {'path': '/Users/yanzhang/Finance.db', 'table': 'Commodities'},
-        {'path': '/Users/yanzhang/Finance.db', 'table': 'Crypto'},
-        {'path': '/Users/yanzhang/Finance.db', 'table': 'Bonds'},
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Stocks'},
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies'},
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities'},
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto'},
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Bonds'},
     ]
     
     # 遍历数据库信息列表，对每个数据库执行查询并收集结果

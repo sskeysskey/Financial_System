@@ -31,7 +31,15 @@ def insert_data(db_path, table_name, columns, data):
 # 准备不同的数据集
 data_sets = {
     'Categories': [
-        # ('Index', 1, '2024-04-24'),
+        # ('S&P 500', 10, '2024-04-29'),
+        # ('Russell 2000', 10, '2024-04-29'),
+        # ('MOEX Russia Index', 10, '2024-04-29'),
+        # ('Nikkei 225', 10, '2024-04-29'),
+        # ('HANG SENG INDEX', 10, '2024-04-29'),
+        # ('SSE Composite Index', 10, '2024-04-29'),
+        # ('Shenzhen Index', 10, '2024-04-29'),
+        # ('S&P BSE SENSEX', 10, '2024-04-29'),
+        # ('CBOE Volatility Index', 10, '2024-04-29'),
         # ('Bonds', None, '2024-04-24'),
     ],
     'Stocks': [
@@ -51,7 +59,7 @@ data_sets = {
         # ('2024-03-11', 'USDJPY', 146.94, 4),
         # ('2023-12-28', 'USDCNY', 7.118, 4),
         # ('2023-11-23', 'CNYJPY', 20.921, 4),
-        ('2023-11-23', 'CNYEUR', 20.921, 4),
+        # ('2023-11-23', 'CNYEUR', 20.921, 4),
     ],
     'Bonds': [
         # ('2024-02-13', 'United States', 104.96, 4),
@@ -85,12 +93,12 @@ data_sets = {
 
 # 数据库文件和表名信息，同时指定每个表的列名
 databases = [
-    {'path': '/Users/yanzhang/Finance.db', 'table': 'Stocks', 'columns': ['date', 'name', 'price', 'parent_id']},
-    {'path': '/Users/yanzhang/Finance.db', 'table': 'Currencies', 'columns': ['date', 'name', 'price', 'parent_id']},
-    {'path': '/Users/yanzhang/Finance.db', 'table': 'Commodities', 'columns': ['date', 'name', 'price', 'parent_id']},
-    {'path': '/Users/yanzhang/Finance.db', 'table': 'Crypto', 'columns': ['date', 'name', 'price', 'parent_id']},
-    {'path': '/Users/yanzhang/Finance.db', 'table': 'Bonds', 'columns': ['date', 'name', 'price', 'parent_id']},
-    {'path': '/Users/yanzhang/Finance.db', 'table': 'Categories', 'columns': ['name', 'parent_id','created_at']},
+    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Stocks', 'columns': ['date', 'name', 'price', 'parent_id']},
+    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies', 'columns': ['date', 'name', 'price', 'parent_id']},
+    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities', 'columns': ['date', 'name', 'price', 'parent_id']},
+    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto', 'columns': ['date', 'name', 'price', 'parent_id']},
+    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Bonds', 'columns': ['date', 'name', 'price', 'parent_id']},
+    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Categories', 'columns': ['name', 'parent_id','created_at']},
 ]
 
 # 对每个数据库执行数据插入操作
