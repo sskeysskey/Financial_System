@@ -72,17 +72,17 @@ def compare_today_yesterday(cursor, table_name, name, output, today):
         return
 
     if len(results) == 2:
-        today_price = results[0][1]
-        yesterday_price = results[1][1]
-        change = today_price - yesterday_price
-        percentage_change = (change / yesterday_price) * 100
+        yesterday_price = results[0][1]
+        ex_yesterday_price = results[1][1]
+        change = yesterday_price - ex_yesterday_price
+        percentage_change = (change / ex_yesterday_price) * 100
 
         if change > 0:
-            output.append(f"{name}:今天 {today_price} 比昨天涨了 {abs(percentage_change):.2f}%。")
+            output.append(f"{name}:今天 {yesterday_price} 比昨天涨了 {abs(percentage_change):.2f}%。")
         elif change < 0:
-            output.append(f"{name}:今天 {today_price} 比昨天跌了 {abs(percentage_change):.2f}%。")
+            output.append(f"{name}:今天 {yesterday_price} 比昨天跌了 {abs(percentage_change):.2f}%。")
         else:
-            output.append(f"{name}:今天 {today_price} 与昨天持平。")
+            output.append(f"{name}:今天 {yesterday_price} 与昨天持平。")
 
         # 检查是否浮动超过10%
         if abs(percentage_change) > 10:
@@ -91,7 +91,7 @@ def compare_today_yesterday(cursor, table_name, name, output, today):
     elif len(results) == 1:
         result_date = results[0][0]
         result_price = results[0][1]  # 提取价格
-        if result_date == today.strftime("%Y-%m-%d"):
+        if result_date == yesterday.strftime("%Y-%m-%d"):
             output.append(f"{name}:仅找到今天的数据{result_price}，无法比较。")
         else:
             output.append(f"{name}:仅找到昨天的数据{result_price}，无法比较。")
@@ -170,7 +170,6 @@ def quit_app(event=None):
 
 def main():
     today = datetime.now()
-    # yesterday = today - timedelta(days=1)
     day_of_week = today.weekday()  # 周一为0，周日为6
     if day_of_week == 0:  # 昨天是周一
         real_today = today - timedelta(days=3)  # 取上周六
@@ -182,13 +181,13 @@ def main():
     output = []  # 用于收集输出信息的列表
     databases = [
         {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Stocks', 'names': ('NASDAQ Composite', 'S&P 500',
-        'SSE Composite Index', 'Shenzhen Index', 'Nikkei 225', 'S&P BSE SENSEX', 'HANG SENG INDEX', 'Russell 2000',
-        'CBOE Volatility Index')},
+            'SSE Composite Index', 'Shenzhen Index', 'Nikkei 225', 'S&P BSE SENSEX', 'HANG SENG INDEX', 'Russell 2000',
+            'CBOE Volatility Index')},
         {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto', 'names': ('Bitcoin', 'Ether', 'Solana')},
         {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies', 'names': ('DXY', 'EURCNY', 'GBPCNY',
-        'USDJPY', 'USDCNY', 'CNYJPY', 'USDARS')},
+            'USDJPY', 'USDCNY', 'CNYJPY', 'USDARS')},
         {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities', 'names': ('Brent',
-        'Natural gas', 'Uranium', 'Gold', 'Silver', 'Copper', 'Lithium', 'Soybeans', 'Wheat', 'Cocoa', 'Rice', 'Nickel')}
+            'Natural gas', 'Uranium', 'Gold', 'Silver', 'Copper', 'Lithium', 'Soybeans', 'Wheat', 'Cocoa', 'Rice', 'Nickel')},
     ]
     intervals = [600, 360, 240, 120, 60, 24, 12, 6, 3]  # 以月份表示的时间间隔列表
     

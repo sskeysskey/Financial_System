@@ -39,12 +39,13 @@ def plot_financial_data(name):
         matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
         matplotlib.rcParams['font.size'] = 14
 
-        fig, ax = plt.subplots(figsize=(10, 5), constrained_layout=True)
-        # line, = ax.plot(dates, prices, marker='o', linestyle='-', color='b')
+        fig, ax = plt.subplots(figsize=(10, 5))
+        fig.subplots_adjust(left=0.1, bottom=0.2, right=0.95, top=0.9)  # 根据需要调整这些值
+        
         line, = ax.plot(dates, prices, marker='o', markersize=1, linestyle='-', linewidth=2, color='b')
         ax.set_title(f'{name}')
         # ax.set_xlabel('Date')
-        ax.set_ylabel('Price')
+        # ax.set_ylabel('Price')
         ax.grid(True)
         plt.xticks(rotation=45)
 
@@ -55,16 +56,16 @@ def plot_financial_data(name):
         annot.set_visible(False)
 
         time_options = {
-            "全部": 0,
-            "10年": 10,
-            "5年": 5,
-            "2年": 2,
-            "1年": 1,
-            "6月": 0.5,
-            "3月": 0.25,
+            "All": 0,
+            "10": 10,
+            "5": 5,
+            "2": 2,
+            "1": 1,
+            "6m": 0.5,
+            "3m": 0.25,
         }
 
-        rax = plt.axes([0.09, 0.7, 0.07, 0.3], facecolor='lightgoldenrodyellow')
+        rax = plt.axes([0.005, 0.01, 0.05, 0.5], facecolor='lightgoldenrodyellow')
         options = list(time_options.keys())
         radio = RadioButtons(rax, options, active=6)
 
@@ -76,15 +77,15 @@ def plot_financial_data(name):
             xval = x[ind["ind"][0]]
             yval = y[ind["ind"][0]]
             annot.xy = (xval, yval)
-            text = f"{datetime.strftime(xval, '%m-%d')}: {yval}"
+            text = f"{datetime.strftime(xval, '%Y-%m-%d')}\n{yval}"
             annot.set_text(text)
             annot.get_bbox_patch().set_alpha(0.4)
 
             # 检查数据点的位置，动态调整浮窗的位置
-            if xval >= (max(x) - (max(x) - min(x)) / 5):  # 如果数据点在图表右侧10%范围内
-                annot.set_position((-100, 20))  # 向左偏移
+            if xval >= (max(x) - (max(x) - min(x)) / 2):  # 如果数据点在图表右侧5%范围内
+                annot.set_position((-100, -20))  # 向左偏移
             else:
-                annot.set_position((20, 20))  # 默认偏移
+                annot.set_position((-50, 0))  # 默认偏移
 
         def hover(event):
             vis = annot.get_visible()
@@ -113,7 +114,7 @@ def plot_financial_data(name):
             ax.autoscale_view()
             plt.draw()
 
-        update("3月")
+        update("3m")
         radio.on_clicked(update)
 
         def on_key(event):

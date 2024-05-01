@@ -7,15 +7,17 @@
         "BondsDB": {"path": "/Users/yanzhang/Documents/Database/Finance.db", "table": "Bonds"}
     },
     "database_mapping": {
-        "StocksDB": ["NASDAQ Composite", "Russell 2000", "CBOE Volatility Index", "S&P 500", "SSE Composite Index", "Shenzhen Index", "Nikkei 225", "S&P BSE SENSEX", "HANG SENG INDEX"],
+        "StocksDB": ["NASDAQ Composite", "Russell 2000", "CBOE Volatility Index", "S&P 500", "SSE Composite Index",
+            "Shenzhen Index", "Nikkei 225", "S&P BSE SENSEX", "HANG SENG INDEX", "IBOVESPA"],
         "CryptoDB": ["Bitcoin", "Ether", "Binance", "Bitcoin Cash", "Solana", "Monero", "Litecoin"],
-        "CurrencyDB": ["DXY", "EURCNY", "GBPCNY", "AUDCNY", "USDJPY", "USDCNY", "USDBRL", "USDRUB", "USDARS", "USDKRW", "USDTRY",
-        "USDSGD", "USDIDR", "USDPHP", "CNYJPY", "CNYPHP", "CNYIDR"],
+        "CurrencyDB": ["DXY", "GBPUSD", "EURCNY", "GBPCNY", "AUDCNY", "USDJPY", "USDCNY", "USDBRL", "USDRUB", "USDARS",
+            "USDINR", "USDKRW", "USDTRY", "USDSGD", "USDIDR", "USDEGP", "USDPHP", "USDTWD", "CNYJPY", "CNYPHP", "CNYIDR",
+            "EURUSD", "CNYARS", "CNYINR", "CNYKRW", "CNYMXN", "CNYRUB", "CNYSGD", "CNYBRL", "CNYEGP", "CNYTHB"],
         "CommodityDB": ["Crude Oil", "Brent", "Natural gas", "Coal", "Uranium", "Gold", "Silver", "Copper", "Steel",
-        "Iron Ore", "Lithium", "Soybeans", "Wheat", "Lumber", "Palm Oil", "Rubber", "Coffee", "Cotton", "Cocoa",
-        "Rice", "Canola", "Corn", "Bitumen", "Cobalt", "Lead", "Aluminum", "Nickel", "Tin", "Zinc", "Lean Hogs",
-        "Beef", "Poultry", "Salmon", "CRB Index", "LME Index", "Nuclear Energy Index", "Solar Energy Index", "EU Carbon Permits",
-        "Containerized Freight Index"],
+            "Iron Ore", "Lithium", "Soybeans", "Wheat", "Lumber", "Palm Oil", "Rubber", "Coffee", "Cotton", "Cocoa",
+            "Rice", "Canola", "Corn", "Bitumen", "Cobalt", "Lead", "Aluminum", "Nickel", "Tin", "Zinc", "Lean Hogs",
+            "Beef", "Poultry", "Salmon", "CRB Index", "LME Index", "Nuclear Energy Index", "Solar Energy Index",
+            "EU Carbon Permits", "Containerized Freight Index"],
         "BondsDB": ["United States", "United Kingdom", "Japan", "Russia", "Brazil", "India", "Turkey"]
     }
 }

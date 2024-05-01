@@ -47,10 +47,10 @@ def create_selection_window():
     canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
     canvas.configure(xscrollcommand=scrollbar.set)
 
-    purple_keywords = ["NASDAQ", "Gold", "Bitcoin", "USDCNY", "United States"]
-    yellow_keywords = ["CNYJPY", "DXY"]
-    orange_keywords = ["HANG SENG INDEX", "Brent", "Natural gas", "Ether"]
-    blue_keywords = ["CRB Index", "Copper"]
+    purple_keywords = ["NASDAQ", "Gold", "Bitcoin", "USDCNY", "United States", "EURUSD"]
+    yellow_keywords = ["CNYJPY", "DXY", "USDJPY", "NASDAQ Composite"]
+    orange_keywords = ["HANG SENG INDEX", "Brent", "Natural gas", "Ether", "SSE Composite Index", "Shenzhen Index"]
+    blue_keywords = ["CRB Index", "Copper", "S&P 500"]
 
     # 创建一个新的Frame来纵向包含CurrencyDB1和CryptoDB1
     new_vertical_frame1 = tk.Frame(scrollable_frame)
@@ -60,11 +60,11 @@ def create_selection_window():
     new_vertical_frame2.pack(side="left", padx=15, pady=10, fill="both", expand=True)
 
     for db_key, keywords in database_mapping.items():
-        if db_key in ['Currency', 'Bonds', 'Crypto']:
+        if db_key in ['Currency', 'Bonds']:
             # 将这两个数据库的框架放入新的纵向框架中
             frame = tk.LabelFrame(new_vertical_frame1, text=db_key, padx=10, pady=10)
             frame.pack(side="top", padx=15, pady=10, fill="both", expand=True)
-        elif db_key in ['Stocks Index', 'Commodity Index']:
+        elif db_key in ['Crypto', 'Stocks Index', 'Commodity Index']:
             frame = tk.LabelFrame(new_vertical_frame2, text=db_key, padx=10, pady=10)
             frame.pack(side="top", padx=15, pady=10, fill="both", expand=True)
         else:
@@ -164,12 +164,14 @@ if __name__ == '__main__':
 
     database_mapping = {
         'Commodity': {'Uranium', 'Nickel', 'Soybeans', 'Wheat', 'Coffee', 'Cotton', 'Cocoa', 'Rice', 'Corn',
-        'Crude Oil', 'Brent', 'Natural gas', 'Gold', 'Silver', 'Copper', 'Lithium', 'Aluminum'},
-        'Stocks Index': {'NASDAQ Composite', 'Russell 2000', 'CBOE Volatility Index', 'S&P 500', 'HANG SENG INDEX', 'SSE Composite Index', 'Shenzhen Index', 'Nikkei 225', 'S&P BSE SENSEX'},
-        'Commodity Index': {'CRB Index', 'LME Index', 'Nuclear Energy Index', 'Solar Energy Index', 'EU Carbon Permits',
-        'Containerized Freight Index'},
+            'Crude Oil', 'Brent', 'Natural gas', 'Gold', 'Silver', 'Copper', 'Lithium', 'Aluminum'},
         'Crypto': {"Bitcoin", "Ether", "Solana"},
-        'Currency': {'DXY', 'EURCNY', 'GBPCNY', 'USDJPY', 'USDCNY', 'CNYJPY', 'CNYPHP', 'CNYIDR', 'USDIDR', 'USDARS'},
+        'Stocks Index': {'NASDAQ Composite', 'Russell 2000', 'CBOE Volatility Index', 'S&P 500', 'HANG SENG INDEX',
+            'SSE Composite Index', 'Shenzhen Index', 'Nikkei 225', 'S&P BSE SENSEX', 'IBOVESPA'},
+        'Commodity Index': {'CRB Index', 'LME Index', 'Nuclear Energy Index', 'Solar Energy Index', 'EU Carbon Permits',
+            'Containerized Freight Index'},
+        'Currency': {'DXY', 'EURUSD', 'GBPUSD', 'EURCNY', 'GBPCNY', 'USDJPY', 'USDCNY', 'CNYJPY', 'CNYPHP', 'CNYIDR',
+            'USDIDR', 'USDARS', 'USDPHP'},
         'Bonds': {"United States", "Japan", "Russia", "India", "Turkey"},
     }
 
