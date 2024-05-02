@@ -12,11 +12,12 @@
         "CryptoDB": ["Bitcoin", "Ether", "Binance", "Bitcoin Cash", "Solana", "Monero", "Litecoin"],
         "CurrencyDB": ["DXY", "GBPUSD", "EURCNY", "GBPCNY", "AUDCNY", "USDJPY", "USDCNY", "USDBRL", "USDRUB", "USDARS",
             "USDINR", "USDKRW", "USDTRY", "USDSGD", "USDIDR", "USDEGP", "USDPHP", "USDTWD", "CNYJPY", "CNYPHP", "CNYIDR",
-            "EURUSD", "CNYARS", "CNYINR", "CNYKRW", "CNYMXN", "CNYRUB", "CNYSGD", "CNYBRL", "CNYEGP", "CNYTHB"],
+            "EURUSD", "CNYARS", "CNYINR", "CNYKRW", "CNYMXN", "CNYRUB", "CNYSGD", "CNYBRL", "CNYEGP", "CNYTHB", "CNYEUR",
+            "CNYUSD", "CNYGBP"],
         "CommodityDB": ["Crude Oil", "Brent", "Natural gas", "Coal", "Uranium", "Gold", "Silver", "Copper", "Steel",
-            "Iron Ore", "Lithium", "Soybeans", "Wheat", "Lumber", "Palm Oil", "Rubber", "Coffee", "Cotton", "Cocoa",
-            "Rice", "Canola", "Corn", "Bitumen", "Cobalt", "Lead", "Aluminum", "Nickel", "Tin", "Zinc", "Lean Hogs",
-            "Beef", "Poultry", "Salmon", "CRB Index", "LME Index", "Nuclear Energy Index", "Solar Energy Index",
+            "Iron Ore", "Lithium", "Soybeans", "Wheat", "Lumber", "Palm Oil", "Rubber", "Coffee", "Cotton", "Cocoa", "Orange Juice",
+            "Rice", "Canola", "Corn", "Oat", "Bitumen", "Cobalt", "Lead", "Aluminum", "Nickel", "Tin", "Zinc", "Lean Hogs", "Sugar",
+            "Live Cattle", "Poultry", "Salmon", "CRB Index", "LME Index", "Nuclear Energy Index", "Solar Energy Index",
             "EU Carbon Permits", "Containerized Freight Index"],
         "BondsDB": ["United States", "United Kingdom", "Japan", "Russia", "Brazil", "India", "Turkey"]
     }

@@ -43,7 +43,7 @@ else:
         driver.get('https://tradingeconomics.com/currencies?base=cny')
         Currencies = [
             "CNYJPY", "CNYARS", "CNYINR", "CNYKRW", "CNYMXN", "CNYRUB", "CNYSGD", "CNYBRL",
-            "CNYPHP", "CNYIDR", "CNYEGP", "CNYTHB"
+            "CNYPHP", "CNYIDR", "CNYEGP", "CNYTHB", "CNYEUR", "CNYUSD", "CNYGBP",
         ]
 
         all_data = []

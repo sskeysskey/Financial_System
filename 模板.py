@@ -172,3 +172,118 @@ else:
     print("输入值无效或未配置数据库信息。程序退出。")
     close_app()
 # ——————————————————————————————————————————————————————————————————————————————————————————
+def create_window(parent, content):
+    top = tk.Toplevel(parent)
+    top.bind('<Escape>', quit_app)  # 在新创建的窗口上也绑定 ESC 键
+
+    # 更新窗口状态以获取准确的屏幕尺寸
+    # top.update_idletasks()
+    # w = top.winfo_screenwidth()  # 获取屏幕宽度
+    # h = top.winfo_screenheight()  # 获取屏幕高度
+    # size = (800, 600)  # 定义窗口大小
+    # x = w - size[0]  # 窗口右边缘与屏幕右边缘对齐
+    # y = h - size[1] - 30 # 窗口下边缘与屏幕下边缘对齐
+    # 设置窗口出现在屏幕右下角
+    # top.geometry("%dx%d+%d+%d" % (size[0], size[1], x, y))
+
+    # 更新窗口状态以获取准确的屏幕尺寸
+    top.update_idletasks()
+    w = top.winfo_screenwidth()  # 获取屏幕宽度
+    h = top.winfo_screenheight()  # 获取屏幕高度
+    size = (800, 800)  # 定义窗口大小
+    x = (w // 2) - (size[0] // 2)  # 计算窗口左上角横坐标
+    y = (h // 2) - (size[1] // 2)  # 计算窗口左上角纵坐标
+    # 设置窗口出现在屏幕中央
+    top.geometry("%dx%d+%d+%d" % (size[0], size[1], x, y))
+
+    # 定义字体
+    clickable_font = tkFont.Font(family='Courier', size=23, weight='bold')  # 可点击项的字体
+    text_font = tkFont.Font(family='Courier', size=20)  # 文本项的字体
+
+    # 创建滚动文本区域，但不直接插入文本，而是插入带有点击事件的Label
+    container = tk.Canvas(top)
+    scrollbar = tk.Scrollbar(top, command=container.yview)
+    scrollable_frame = tk.Frame(container)
+
+    scrollable_frame.bind(
+        "<Configure>",
+        lambda e: container.configure(
+            scrollregion=container.bbox("all")
+        )
+    )
+
+    container.create_window((0, 0), window=scrollable_frame, anchor="nw")
+    container.configure(yscrollcommand=scrollbar.set)
+
+    # 解析内容并为每个name创建一个可点击的Label
+    for line in content.split('\n'):
+        if ':' in line:
+            name, message = line.split(':', 1)
+            lbl = tk.Label(scrollable_frame, text=name, fg="gold", cursor="hand2", font=clickable_font)
+            lbl.pack(anchor='w')
+            lbl.bind("<Button-1>", lambda e, idx=name: show_grapher(idx))
+            tk.Label(scrollable_frame, text=message, font=text_font).pack(anchor='w')
+        elif '#' in line:
+            line = line.replace('#', '')
+            tk.Label(scrollable_frame, text=line, fg="red", font=text_font).pack(anchor='w')
+        elif '@' in line:
+            line = line.replace('@', '')
+            tk.Label(scrollable_frame, text=line, fg="orange", font=text_font).pack(anchor='w')
+        else:
+            tk.Label(scrollable_frame, text=line, font=text_font).pack(anchor='w')
+
+    container.pack(side="left", fill="both", expand=True)
+    scrollbar.pack(side="right", fill="y")
+# ——————————————————————————————————————————————————————————————————————————————————————————
+def compare_today_yesterday(cursor, table_name, name, output, today):
+    yesterday = today - timedelta(days=1)
+    # 判断昨天是周几
+    day_of_week = yesterday.weekday()  # 周一为0，周日为6
+
+    if day_of_week == 0:  # 昨天是周一
+        ex_yesterday = today - timedelta(days=4)  # 取上周六
+    elif day_of_week == 5:  # 昨天是周六
+        yesterday = today - timedelta(days=2)  # 取周五
+        ex_yesterday = yesterday  - timedelta(days=1)
+    elif day_of_week == 6:  # 昨天是周日
+        yesterday = today - timedelta(days=3)  # 取上周五
+        ex_yesterday = yesterday  - timedelta(days=1) #取上周四
+    else:
+        ex_yesterday = yesterday  - timedelta(days=1)
+
+    query = f"""
+    SELECT date, price FROM {table_name} 
+    WHERE name = ? AND date IN (?, ?) ORDER BY date DESC
+    """
+    results, error = execute_query(cursor, query, (name, yesterday.strftime("%Y-%m-%d"), ex_yesterday.strftime("%Y-%m-%d")))
+    if error:
+        output.append(error)
+        return
+
+    if len(results) == 2:
+        yesterday_price = results[0][1]
+        ex_yesterday_price = results[1][1]
+        change = yesterday_price - ex_yesterday_price
+        percentage_change = (change / ex_yesterday_price) * 100
+
+        if change > 0:
+            output.append(f"{name}:今天 {yesterday_price} 比昨天涨了 {abs(percentage_change):.2f}%。")
+        elif change < 0:
+            output.append(f"{name}:今天 {yesterday_price} 比昨天跌了 {abs(percentage_change):.2f}%。")
+        else:
+            output.append(f"{name}:今天 {yesterday_price} 与昨天持平。")
+
+        # 检查是否浮动超过10%
+        if abs(percentage_change) > 5:
+            output.append("#提醒：浮动超过了5%！！")
+
+    elif len(results) == 1:
+        result_date = results[0][0]
+        result_price = results[0][1]  # 提取价格
+        if result_date == yesterday.strftime("%Y-%m-%d"):
+            output.append(f"{name}:仅找到今天的数据{result_price}，无法比较。")
+        else:
+            output.append(f"{name}:仅找到昨天的数据{result_price}，无法比较。")
+    else:
+        output.append(f"{name}:没有找到今天和昨天的数据。")
+# ——————————————————————————————————————————————————————————————————————————————————————————

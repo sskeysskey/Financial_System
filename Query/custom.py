@@ -4,7 +4,7 @@ import tkinter.font as tkFont
 from tkinter import scrolledtext
 from datetime import datetime
 
-def query_database(db_file, table_name, condition):
+def query_database(db_file, table_name, condition, fields):
     # 获取今天的日期
     today_date = datetime.now().strftime('%Y-%m-%d')
 
@@ -12,8 +12,8 @@ def query_database(db_file, table_name, condition):
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
     
-    # 执行查询，使用参数化的表名
-    query = f"SELECT * FROM {table_name} WHERE {condition};"
+    # 执行查询
+    query = f"SELECT {fields} FROM {table_name} WHERE {condition};"
     cursor.execute(query)
     
     # 获取查询结果
@@ -41,10 +41,10 @@ def create_window(content):
     root.title("数据库查询结果")
 
     # 窗口尺寸和位置设置
-    window_width = 900  # 窗口宽度
-    window_height = 600  # 窗口高度（原来高度的两倍）
-    screen_width = root.winfo_screenwidth()  # 屏幕宽度
-    screen_height = root.winfo_screenheight()  # 屏幕高度
+    window_width = 900
+    window_height = 600
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
     center_x = int(screen_width / 2 - window_width / 2)
     center_y = int(screen_height / 2 - window_height / 2)
     root.geometry(f'{window_width}x{window_height}+{center_x}+{center_y}')
@@ -53,13 +53,13 @@ def create_window(content):
     root.bind('<Escape>', lambda e: root.destroy())
     
     # 创建带滚动条的文本区域
-    text_font = tkFont.Font(family="Courier", size=20)  # 设置字体和大小
+    text_font = tkFont.Font(family="Courier", size=20)
     text_area = scrolledtext.ScrolledText(root, wrap=tk.WORD, width=100, height=30, font=text_font)
     text_area.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
     
     # 插入文本内容
     text_area.insert(tk.INSERT, content)
-    text_area.configure(state='disabled')  # 禁止编辑文本内容
+    text_area.configure(state='disabled')
     
     # 运行窗口
     root.mainloop()
@@ -67,18 +67,24 @@ def create_window(content):
 if __name__ == '__main__':
     # 数据库文件和表名的列表
     db_info = [
-        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Stocks', 'condition': "name = 'NASDAQ'"},
-        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies', 'condition': "name = 'DXY'"},
-        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities', 'condition': "name = 'Gold'"},
-        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto', 'condition': "name = 'Solana'"}
+        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Stocks', 'condition': "name = 'NASDAQ'"},
+        # {'path': '/Users/yanzhang/Documents/Database/Finance.db',
+        #     'table': 'Currencies', 'condition': "name = 'CNYUSD' ORDER BY date DESC", 'fields': '*'},
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities',
+            'condition': "name = 'Sugar' ORDER BY date DESC", 'fields': '*'},
+        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto', 'condition': "name = 'Solana'"},
+        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Bonds', 'condition': "name = 'United States'"},
     ]
     
     # 遍历数据库信息列表，对每个数据库执行查询并收集结果
     full_content = ""
     for info in db_info:
         full_content += f"Querying table {info['table']} in database at: {info['path']}\n"
-        result = query_database(info['path'], info['table'], info['condition'])
+        result = query_database(info['path'], info['table'], info['condition'], info['fields'])
         full_content += result + "\n" + "-"*50 + "\n"
     
     # 创建并显示结果窗口
     create_window(full_content)
+
+
+

@@ -4,8 +4,9 @@ import sqlite3
 def read_and_process_csv(file_path):
     # 读取CSV文件，注意匹配列名的大小写
     df = pd.read_csv(file_path, usecols=['Date', 'Close'])
-    # 保留小数点后三位
-    df['Close'] = df['Close'].round(3)
+    df['Close'] = df['Close'].round(6)
+    # 将Close字段的数据除以100并保留6位小数
+    # df['Close'] = (df['Close'] / 100).round(6)
     return df
 
 def insert_data_to_db(df, db_file, table_name, name, parent_id):
@@ -43,11 +44,11 @@ def insert_data_to_db(df, db_file, table_name, name, parent_id):
     conn.close()
 
 if __name__ == "__main__":
-    csv_file_path = '/Users/yanzhang/Downloads/EURCNY.csv'
+    csv_file_path = '/Users/yanzhang/Downloads/sp500.csv'
     database_file = '/Users/yanzhang/Documents/Database/Finance.db'
-    table_name = 'Currencies'  # 将表名定义为一个变量
-    name = 'EURCNY'  # 将股票名称定义为一个变量
-    parent_id = 4  # 将parent_id定义为一个变量
+    table_name = 'Stocks'  # 将表名定义为一个变量
+    name = 'S&P 500'  # 将股票名称定义为一个变量
+    parent_id = 10  # 将parent_id定义为一个变量
     
     # 读取并处理CSV数据
     data_frame = read_and_process_csv(csv_file_path)

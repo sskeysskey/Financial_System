@@ -5,6 +5,11 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import RadioButtons
 import matplotlib
 
+# 设置支持中文的字体
+matplotlib.rcParams['font.family'] = 'sans-serif'
+matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
+matplotlib.rcParams['font.size'] = 14
+
 def plot_financial_data(name):
     with open('/Users/yanzhang/Documents/Financial_System/Modules/config.json', 'r') as file:
         config = json.load(file)
@@ -13,39 +18,27 @@ def plot_financial_data(name):
     database_mapping = {k: set(v) for k, v in config['database_mapping'].items()}
 
     # 反向映射，从关键字到数据库信息键
-    reverse_mapping = {}
-    for db_key, keywords in database_mapping.items():
-        for keyword in keywords:
-            reverse_mapping[keyword] = db_key
+    reverse_mapping = {keyword: db_key for db_key, keywords in database_mapping.items() for keyword in keywords}
 
     if name in reverse_mapping:
         db_key = reverse_mapping[name]
         db_path = database_info[db_key]['path']
         table_name = database_info[db_key]['table']
         
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        query = f"SELECT date, price FROM {table_name} WHERE name = ? ORDER BY date;"
-        cursor.execute(query, (name,))
-        data = cursor.fetchall()
-        cursor.close()
-        conn.close()
+        with sqlite3.connect(db_path) as conn:
+            cursor = conn.cursor()
+            query = f"SELECT date, price FROM {table_name} WHERE name = ? ORDER BY date;"
+            cursor.execute(query, (name,))
+            data = cursor.fetchall()
 
         dates = [datetime.strptime(row[0], "%Y-%m-%d") for row in data]
         prices = [row[1] for row in data]
-
-        # 设置支持中文的字体
-        matplotlib.rcParams['font.family'] = 'sans-serif'
-        matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
-        matplotlib.rcParams['font.size'] = 14
 
         fig, ax = plt.subplots(figsize=(10, 5))
         fig.subplots_adjust(left=0.1, bottom=0.2, right=0.95, top=0.9)  # 根据需要调整这些值
         
         line, = ax.plot(dates, prices, marker='o', markersize=1, linestyle='-', linewidth=2, color='b')
         ax.set_title(f'{name}')
-        # ax.set_xlabel('Date')
-        # ax.set_ylabel('Price')
         ax.grid(True)
         plt.xticks(rotation=45)
 
@@ -56,18 +49,18 @@ def plot_financial_data(name):
         annot.set_visible(False)
 
         time_options = {
-            "All": 0,
-            "10": 10,
-            "5": 5,
-            "2": 2,
-            "1": 1,
-            "6m": 0.5,
             "3m": 0.25,
+            "6m": 0.5,
+            "1Y": 1,
+            "2Y": 2,
+            "5Y": 5,
+            "10Y": 10,
+            "All": 0,
         }
 
         rax = plt.axes([0.005, 0.01, 0.05, 0.5], facecolor='lightgoldenrodyellow')
         options = list(time_options.keys())
-        radio = RadioButtons(rax, options, active=6)
+        radio = RadioButtons(rax, options, active=0)
 
         for label in radio.labels:
             label.set_fontsize(14)

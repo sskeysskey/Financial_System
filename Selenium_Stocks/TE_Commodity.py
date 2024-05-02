@@ -11,13 +11,15 @@ def get_parent_id(commodity):
         return 5
     elif commodity in ["Gold", "Silver", "Copper", "Steel", "Lithium"]:
         return 6
-    elif commodity in ["Soybeans", "Wheat", "Palm Oil", "Orange Juice", "Cocoa", "Rice", "Corn", "Coffee", "Sugar"]:
+    elif commodity in ["Soybeans", "Wheat", "Palm Oil", "Orange Juice", "Cocoa", "Rice", "Corn", "Coffee", "Sugar",
+        "Oat", "Orange Juice"]:
         return 7
     elif commodity in ["Aluminum", "Nickel", "Tin", "Zinc", "Palladium"]:
         return 8
-    elif commodity in ["Live Cattle", "Lean Hogs", "Beef", "Poultry", "Salmon"]:
+    elif commodity in ["Live Cattle", "Lean Hogs", "Live Cattle", "Poultry", "Salmon"]:
         return 9
-    elif commodity in ["CRB Index", "LME Index", "Nuclear Energy Index", "Solar Energy Index", "EU Carbon Permits", "Containerized Freight Index"]:
+    elif commodity in ["CRB Index", "LME Index", "Nuclear Energy Index", "Solar Energy Index", "EU Carbon Permits",
+        "Containerized Freight Index"]:
         return 23
     return None
 
@@ -60,8 +62,8 @@ else:
             "Crude Oil", "Brent", "Natural gas", "Coal", "Uranium",
             "Gold", "Silver", "Copper", "Steel", "Lithium",
             "Soybeans", "Wheat", "Palm Oil", "Orange Juice", "Cocoa", "Rice", "Sugar", "Coffee",
-            "Corn", "Aluminum", "Nickel", "Tin", "Zinc", "Palladium",
-            "Live Cattle", "Lean Hogs", "Beef", "Poultry", "Salmon",
+            "Corn", "Oat", "Orange Juice", "Aluminum", "Nickel", "Tin", "Zinc", "Palladium",
+            "Live Cattle", "Lean Hogs", "Live Cattle", "Poultry", "Salmon",
             "CRB Index", "LME Index", "Nuclear Energy Index", "Solar Energy Index", "EU Carbon Permits",
             "Containerized Freight Index"
         ]
