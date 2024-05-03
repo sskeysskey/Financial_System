@@ -71,6 +71,8 @@ else:
         # 插入数据到数据库
         cursor.executemany('INSERT INTO Currencies (date, name, price, parent_id) VALUES (?, ?, ?, ?)', all_data)
         conn.commit()
+        # 打印插入的数据条数
+        print(f"Total {len(all_data)} records have been inserted into the database.")
 
     except Exception as e:
         print(f"An error occurred: {e}")
@@ -78,5 +80,3 @@ else:
     finally:
         driver.quit()
         conn.close()
-
-    print("Data scraping and storage done.")

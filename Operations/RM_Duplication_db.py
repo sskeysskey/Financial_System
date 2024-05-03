@@ -25,6 +25,16 @@ def clean_duplicate_records(db_path, table_name):
             WHERE name = ? AND date = ?
         ) AND name = ? AND date = ?
         """.format(table_name)  # 同样使用format方法来插入表名
+
+        # delete_query = """
+        # DELETE FROM {0}
+        # WHERE id NOT IN (
+        #     SELECT MIN(id)
+        #     FROM {0}
+        #     WHERE name = ? AND date = ?
+        # ) AND name = ? AND date = ?
+        # """.format(table_name)  # 同样使用format方法来插入表名
+
         cursor.execute(delete_query, (name, date, name, date))
         conn.commit()
 
@@ -36,6 +46,6 @@ def clean_duplicate_records(db_path, table_name):
 
 # 调用函数，传入数据库路径和表名
 db_path = '/Users/yanzhang/Documents/Database/Finance.db'
-table_name = 'Bonds'
+table_name = 'Commodities'
 
 clean_duplicate_records(db_path, table_name)

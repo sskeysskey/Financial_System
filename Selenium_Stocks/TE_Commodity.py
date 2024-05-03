@@ -12,11 +12,11 @@ def get_parent_id(commodity):
     elif commodity in ["Gold", "Silver", "Copper", "Steel", "Lithium"]:
         return 6
     elif commodity in ["Soybeans", "Wheat", "Palm Oil", "Orange Juice", "Cocoa", "Rice", "Corn", "Coffee", "Sugar",
-        "Oat", "Orange Juice"]:
+        "Oat", "Cotton"]:
         return 7
     elif commodity in ["Aluminum", "Nickel", "Tin", "Zinc", "Palladium"]:
         return 8
-    elif commodity in ["Live Cattle", "Lean Hogs", "Live Cattle", "Poultry", "Salmon"]:
+    elif commodity in ["Live Cattle", "Lean Hogs", "Poultry", "Salmon"]:
         return 9
     elif commodity in ["CRB Index", "LME Index", "Nuclear Energy Index", "Solar Energy Index", "EU Carbon Permits",
         "Containerized Freight Index"]:
@@ -59,13 +59,10 @@ else:
         # 访问网页
         driver.get('https://tradingeconomics.com/commodities')
         commodities = [
-            "Crude Oil", "Brent", "Natural gas", "Coal", "Uranium",
-            "Gold", "Silver", "Copper", "Steel", "Lithium",
-            "Soybeans", "Wheat", "Palm Oil", "Orange Juice", "Cocoa", "Rice", "Sugar", "Coffee",
-            "Corn", "Oat", "Orange Juice", "Aluminum", "Nickel", "Tin", "Zinc", "Palladium",
-            "Live Cattle", "Lean Hogs", "Live Cattle", "Poultry", "Salmon",
+            "Coal", "Uranium","Steel", "Lithium","Wheat", "Palm Oil","Aluminum", "Nickel", "Tin", "Zinc", "Palladium",
+            "Poultry", "Salmon",
             "CRB Index", "LME Index", "Nuclear Energy Index", "Solar Energy Index", "EU Carbon Permits",
-            "Containerized Freight Index"
+            "Containerized Freight Index",
         ]
 
         all_data = []
@@ -94,6 +91,8 @@ else:
         # 插入数据到数据库
         cursor.executemany('INSERT INTO Commodities (date, name, price, parent_id) VALUES (?, ?, ?, ?)', all_data)
         conn.commit()
+        # 打印插入的数据条数
+        print(f"Total {len(all_data)} records have been inserted into the database.")
 
     except Exception as e:
         print(f"An error occurred: {e}")
@@ -101,5 +100,3 @@ else:
     finally:
         driver.quit()
         conn.close()
-
-    print("Data scraping and storage done.")

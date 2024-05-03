@@ -51,7 +51,7 @@ def create_file_list(file_list_frame, files, text_scroll):
         file_button.pack(fill=tk.X)
 
 def create_selection_window():
-    subprocess.run(['/Library/Frameworks/Python.framework/Versions/3.12/bin/python3', '/Users/yanzhang/Documents/Financial_System/Query/data_compare.py'])
+    # subprocess.run(['/Library/Frameworks/Python.framework/Versions/3.12/bin/python3', '/Users/yanzhang/Documents/Financial_System/Query/data_compare.py'])
     selection_window = tk.Toplevel(root)
     selection_window.title("选择查询关键字")
     selection_window.geometry("1480x900")
@@ -72,11 +72,11 @@ def create_selection_window():
     canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
     canvas.configure(xscrollcommand=scrollbar.set)
 
-    purple_keywords = ["NASDAQ", "Bitcoin", "USDCNY", "United States", "EURUSD", "Corn", "Coffee"]
-    yellow_keywords = ["CNYJPY", "DXY", "USDJPY", "NASDAQ Composite", "Gold", "Cocoa"]
-    orange_keywords = ["HANG SENG INDEX", "Brent", "Natural gas", "Ether", "SSE Composite Index", "Shenzhen Index"]
-    blue_keywords = ["CRB Index", "Copper", "S&P 500"]
-    red_keywords = ["CBOE Volatility Index"]
+    purple_keywords = ["Bitcoin", "CNYUSD", "United States", "USDJPY", "Crude Oil"]
+    yellow_keywords = ["CNYJPY", "NASDAQ Composite", "Gold", "Cocoa"]
+    orange_keywords = ["HANG SENG INDEX", "Natural gas", "Ether", "SSE Composite Index"]
+    blue_keywords = ["Copper", "S&P 500"]
+    red_keywords = ["CBOE Volatility Index", "DXY"]
 
     # 创建一个新的Frame来纵向包含CurrencyDB1和CryptoDB1
     new_vertical_frame1 = tk.Frame(scrollable_frame)
@@ -133,10 +133,10 @@ def create_selection_window():
     # 创建用于显示文本文件内容的 Frame
     text_file_frame = tk.Frame(selection_window)
     text_file_frame.pack(side="right", fill="y", expand=False, padx=0, pady=20)
-    text_font = tkFont.Font(family="Courier", size=20)
+    text_font = tkFont.Font(family="Courier", size=36)
 
     # 文本文件滚动区域
-    text_scroll = scrolledtext.ScrolledText(text_file_frame, width=35, height=35, font=text_font)
+    text_scroll = scrolledtext.ScrolledText(text_file_frame, width=20, height=20, font=text_font)
     text_scroll.pack(pady=0, padx=0, fill=tk.BOTH, expand=False)
 
     # 使用全局定义的 directory 变量
@@ -233,7 +233,7 @@ if __name__ == '__main__':
                 'SSE Composite Index', 'Shenzhen Index', 'Nikkei 225', 'S&P BSE SENSEX', 'IBOVESPA'},
             'Commodity Index': {'CRB Index', 'LME Index', 'Nuclear Energy Index', 'Solar Energy Index', 'EU Carbon Permits',
                 'Containerized Freight Index'},
-            'Currency': {'DXY', 'EURUSD', 'GBPUSD', 'EURCNY', 'GBPCNY', 'USDJPY', 'USDCNY', 'CNYJPY', 'CNYPHP', 'CNYIDR',
+            'Currency': {'DXY', 'EURUSD', 'GBPUSD', 'EURCNY', 'GBPCNY', 'USDJPY', 'USDCNY', 'CNYJPY', 'CNYUSD', 'CNYPHP', 'CNYIDR',
                 'USDIDR', 'USDARS', 'USDPHP', 'CNYEUR', 'CNYGBP'},
             'Bonds': {"United States", "Japan", "Russia", "India", "Turkey"},
         }

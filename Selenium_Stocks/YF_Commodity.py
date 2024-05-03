@@ -6,6 +6,23 @@ from selenium.webdriver.support import expected_conditions as EC
 from datetime import datetime, timedelta
 import sqlite3
 
+def get_parent_id(commodity):
+    if commodity in ["Crude Oil", "Brent", "Natural gas", "Coal", "Uranium"]:
+        return 5
+    elif commodity in ["Gold", "Silver", "Copper", "Steel", "Lithium"]:
+        return 6
+    elif commodity in ["Soybeans", "Wheat", "Palm Oil", "Orange Juice", "Cocoa", "Rice", "Corn", "Coffee", "Sugar",
+        "Oat", "Cotton"]:
+        return 7
+    elif commodity in ["Aluminum", "Nickel", "Tin", "Zinc", "Palladium"]:
+        return 8
+    elif commodity in ["Live Cattle", "Lean Hogs", "Poultry", "Salmon"]:
+        return 9
+    elif commodity in ["CRB Index", "LME Index", "Nuclear Energy Index", "Solar Energy Index", "EU Carbon Permits",
+        "Containerized Freight Index"]:
+        return 23
+    return None
+
 # 获取当前时间
 now = datetime.now()
 
@@ -40,11 +57,14 @@ else:
 
     try:
         # 访问网页
-        driver.get('https://finance.yahoo.com/world-indices/')
-        indices = [
-            "NASDAQ Composite", "S&P 500", "Russell 2000", "MOEX Russia Index", "Nikkei 225", "HANG SENG INDEX",
-            "SSE Composite Index",  "Shenzhen Index", "S&P BSE SENSEX", "IBOVESPA", "CBOE Volatility Index",
-        ]
+        driver.get('https://finance.yahoo.com/commodities/')
+        # 映射表将商品符号与商品名称关联
+        commodity_mapping = {
+            "CC=F": "Cocoa", "KC=F": "Coffee", "CT=F": "Cotton", "OJ=F": "Orange Juice", "SB=F": "Sugar",
+            "HE=F": "Lean Hogs", "CL=F": "Crude Oil", "BZ=F": "Brent", "LE=F": "Live Cattle", "HG=F": "Copper",
+            "ZC=F": "Corn", "GC=F": "Gold", "SI=F": "Silver", "NG=F": "Natural gas", "ZO=F": "Oat",
+            "ZR=F": "Rice", "ZS=F": "Soybeans"
+        }
 
         all_data = []
         # 获取当前时间
@@ -54,20 +74,18 @@ else:
         # 格式化输出
         today = yesterday.strftime('%Y-%m-%d')
 
-        # 查找所有含有特定aria-label="Name"的<td>元素
-        names = driver.find_elements(By.XPATH, '//td[@aria-label="Name"]')
-
-        for name in names:
-            indice_name = name.text
-            if indice_name in indices:
-                # 查找相邻的价格
-                price_element = name.find_element(By.XPATH, './following-sibling::td[@aria-label="Last Price"]/fin-streamer')
+        symbols = driver.find_elements(By.XPATH, '//a[@data-test="quoteLink"]')
+        for symbol in symbols:
+            commodity_symbol = symbol.text
+            if commodity_symbol in commodity_mapping:
+                commodity_name = commodity_mapping[commodity_symbol]
+                parent_id = get_parent_id(commodity_name)
+                price_element = symbol.find_element(By.XPATH, './ancestor::td/following-sibling::td[@aria-label="Last Price"]/fin-streamer')
                 price = price_element.get_attribute('value')
-                parent_id = 10
-                all_data.append((today, indice_name, price, parent_id))
+                all_data.append((today, commodity_name, price, parent_id))
         
         # 插入数据到数据库
-        cursor.executemany('INSERT INTO Stocks (date, name, price, parent_id) VALUES (?, ?, ?, ?)', all_data)
+        cursor.executemany('INSERT INTO Commodities (date, name, price, parent_id) VALUES (?, ?, ?, ?)', all_data)
         conn.commit()
         # 打印插入的数据条数
         print(f"Total {len(all_data)} records have been inserted into the database.")

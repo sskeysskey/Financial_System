@@ -1,5 +1,6 @@
 import json
 import sqlite3
+import numpy as np
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 from matplotlib.widgets import RadioButtons
@@ -37,6 +38,8 @@ def plot_financial_data(name):
         fig, ax = plt.subplots(figsize=(10, 5))
         fig.subplots_adjust(left=0.1, bottom=0.2, right=0.95, top=0.9)  # 根据需要调整这些值
         
+        highlight_point = ax.scatter([], [], s=100, color='blue', zorder=5)  # s是点的大小
+
         line, = ax.plot(dates, prices, marker='o', markersize=1, linestyle='-', linewidth=2, color='b')
         ax.set_title(f'{name}')
         ax.grid(True)
@@ -81,17 +84,36 @@ def plot_financial_data(name):
                 annot.set_position((-50, 0))  # 默认偏移
 
         def hover(event):
-            vis = annot.get_visible()
             if event.inaxes == ax:
-                cont, ind = line.contains(event)
-                if cont:
-                    update_annot(ind)
-                    annot.set_visible(True)
+                if event.xdata is not None:
+                    current_date = matplotlib.dates.num2date(event.xdata).replace(tzinfo=None)
+                    vline.set_xdata(current_date)
+                    vline.set_visible(True)
                     fig.canvas.draw_idle()
-                else:
-                    if vis:
-                        annot.set_visible(False)
+
+                    x_min, x_max = ax.get_xlim()
+                    time_span = x_max - x_min
+
+                    dynamic_atol = 0.05 * (time_span / 365)
+
+                    xdata, ydata = line.get_data()
+                    nearest_index = (np.abs(np.array(xdata) - current_date)).argmin()
+                    if np.isclose(matplotlib.dates.date2num(xdata[nearest_index]), matplotlib.dates.date2num(current_date), atol=dynamic_atol):
+                        update_annot({"ind": [nearest_index]})
+                        annot.set_visible(True)
+                        # 更新highlight点的位置并显示
+                        highlight_point.set_offsets([xdata[nearest_index], ydata[nearest_index]])
+                        highlight_point.set_visible(True)
                         fig.canvas.draw_idle()
+                    else:
+                        annot.set_visible(False)
+                        highlight_point.set_visible(False)  # 无接触时隐藏highlight点
+                        fig.canvas.draw_idle()
+                else:
+                    vline.set_visible(False)
+                    annot.set_visible(False)
+                    highlight_point.set_visible(False)
+                    fig.canvas.draw_idle()
         
         def update(val):
             years = time_options[val]
@@ -103,10 +125,12 @@ def plot_financial_data(name):
                 filtered_dates = [date for date in dates if date >= min_date]
                 filtered_prices = [price for date, price in zip(dates, prices) if date >= min_date]
             line.set_data(filtered_dates, filtered_prices)
-            ax.relim()
-            ax.autoscale_view()
+            ax.set_xlim(min(filtered_dates), max(filtered_dates))  # 更新x轴范围
+            ax.set_ylim(min(filtered_prices), max(filtered_prices))  # 更新y轴范围
             plt.draw()
 
+        # 添加竖线
+        vline = ax.axvline(x=dates[0], color='b', linestyle='--', linewidth=1, visible=False)
         update("3m")
         radio.on_clicked(update)
 
@@ -123,4 +147,4 @@ def plot_financial_data(name):
         print("图表绘制完成，等待用户操作...")
         plt.show()
     else:
-        print(f"未找到产品名为 {name} 的相关数据库信息。")
+        print(f"未找到产品名为 {name} 的相关数据库信息。三次成功点")
