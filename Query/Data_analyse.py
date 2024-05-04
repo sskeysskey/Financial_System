@@ -179,9 +179,7 @@ def main():
             cursor.close()
     final_output = "\n".join(output)
     # 将输出保存到文件
-    path = '/Users/yanzhang/Documents/News/'  # 您可以修改这个路径到您想要保存的目录
-    filename = 'financial_output.txt'
-    file_path = path + filename
+    file_path = '/Users/yanzhang/Documents/News/Data_analyse.txt'  # 您可以修改这个路径到您想要保存的目录
     with open(file_path, 'w', encoding='utf-8') as file:
         file.write(final_output)
     print(f"文件已保存到 {file_path}")

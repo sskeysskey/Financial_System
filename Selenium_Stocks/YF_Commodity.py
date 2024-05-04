@@ -62,9 +62,10 @@ else:
         commodity_mapping = {
             "CC=F": "Cocoa", "KC=F": "Coffee", "CT=F": "Cotton", "OJ=F": "Orange Juice", "SB=F": "Sugar",
             "HE=F": "Lean Hogs", "CL=F": "Crude Oil", "BZ=F": "Brent", "LE=F": "Live Cattle", "HG=F": "Copper",
-            "ZC=F": "Corn", "GC=F": "Gold", "SI=F": "Silver", "NG=F": "Natural gas", "ZO=F": "Oat",
+            "ZC=F": "Corn", "GC=F": "Gold", "SI=F": "Silver", "NG=F": "Natural gas",
             "ZR=F": "Rice", "ZS=F": "Soybeans"
         }
+        #  "ZO=F": "Oat",
 
         all_data = []
         # 获取当前时间

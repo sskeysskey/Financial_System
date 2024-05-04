@@ -2,8 +2,7 @@ options.add_argument('--headless')  # 无界面模式
 driver = webdriver.Chrome(service=service, options=options)
 # ——————————————————————————————————————————————————————————————————————————————————————————
 import json # 首先得import json
-# 针对data_compare.py文件的配置文件优化
-# 创建一个JSON文件，例如命名为 config.json
+# 创建一个JSON文件，例如命名为 config_all.json
 {
     "databases": [
         {
@@ -21,7 +20,7 @@ import json # 首先得import json
 
 def load_config():
     """加载配置文件"""
-    with open('config.json', 'r') as file:
+    with open('config_all.json', 'r') as file:
         config = json.load(file)
     return config
 

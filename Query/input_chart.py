@@ -74,7 +74,7 @@ if __name__ == '__main__':
     root.bind('<Escape>', close_app)  # 同样绑定ESC到关闭程序的函数
 
     # 读取配置文件
-    with open('/Users/yanzhang/Documents/Financial_System/Modules/config.json', 'r') as file:
+    with open('/Users/yanzhang/Documents/Financial_System/Modules/config_all.json', 'r') as file:
         config = json.load(file)
     
     database_info = config['database_info']

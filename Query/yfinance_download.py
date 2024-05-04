@@ -1,4 +1,20 @@
 import yfinance as yf
+
+# 定义股票代码和时间范围
+ticker_symbol = "^GSPC"
+start_date = "1978-12-14"
+end_date = "2024-05-01"
+# end_date = datetime.now().strftime("%Y-%m-%d")  # 获取当前日期并格式化为字符串
+
+# 使用 yfinance 下载数据
+data = yf.download(ticker_symbol, start=start_date, end=end_date)
+
+# 将数据保存为 CSV 文件
+csv_file_path = "/Users/yanzhang/Downloads/sp500.csv"
+data.to_csv(csv_file_path)
+
+print(f"数据已保存至 {csv_file_path}")
+
 # from datetime import datetime
 # import matplotlib.pyplot as plt
 
@@ -20,18 +36,3 @@ import yfinance as yf
 
 # # 显示图表
 # plt.show()
-
-# 定义股票代码和时间范围
-ticker_symbol = "^GSPC"
-start_date = "1978-12-14"
-end_date = "2024-05-01"
-# end_date = datetime.now().strftime("%Y-%m-%d")  # 获取当前日期并格式化为字符串
-
-# 使用 yfinance 下载数据
-data = yf.download(ticker_symbol, start=start_date, end=end_date)
-
-# 将数据保存为 CSV 文件
-csv_file_path = "/Users/yanzhang/Downloads/sp500.csv"
-data.to_csv(csv_file_path)
-
-print(f"数据已保存至 {csv_file_path}")

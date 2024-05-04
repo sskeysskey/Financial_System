@@ -1,24 +1,13 @@
 import os
 import sys
+import json
 import sqlite3
-import subprocess
 import tkinter as tk
 import tkinter.font as tkFont
 from tkinter import ttk, scrolledtext
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
 from name2chart import plot_financial_data
 from datetime import datetime, timedelta
-from today_yesterday import compare_today_yesterday
-
-# 全局变量中初始化数据库连接
-database_connections = {}
-
-# 全局变量定义
-directory = '/Users/yanzhang/Documents/News/'
-
-def init_db_connections():
-    for key, info in database_info.items():
-        database_connections[key] = sqlite3.connect(info['path'])
 
 def create_custom_style():
     style = ttk.Style()
@@ -40,7 +29,7 @@ def create_custom_style():
               )
 
 def load_text(filename, text_scroll):
-    global directory  # 声明使用全局变量
+    directory = '/Users/yanzhang/Documents/News/'
     text_scroll.delete('1.0', tk.END)
     with open(os.path.join(directory, filename), 'r', encoding='utf-8') as file_content:
         text_scroll.insert(tk.END, file_content.read())
@@ -50,8 +39,20 @@ def create_file_list(file_list_frame, files, text_scroll):
         file_button = ttk.Button(file_list_frame, text=file, command=lambda f=file: load_text(f, text_scroll))
         file_button.pack(fill=tk.X)
 
+def parse_changes(filename):
+    changes = {}
+    try:
+        with open(filename, 'r', encoding='utf-8') as file:
+            for line in file:
+                if ':' in line:
+                    key, value = line.split(':')
+                    changes[key.strip()] = value.strip()
+    except FileNotFoundError:
+        print("文件未找到")
+    return changes
+
 def create_selection_window():
-    # subprocess.run(['/Library/Frameworks/Python.framework/Versions/3.12/bin/python3', '/Users/yanzhang/Documents/Financial_System/Query/data_compare.py'])
+    # subprocess.run(['/Library/Frameworks/Python.framework/Versions/3.12/bin/python3', '/Users/yanzhang/Documents/Financial_System/Query/Date_analyse.py'])
     selection_window = tk.Toplevel(root)
     selection_window.title("选择查询关键字")
     selection_window.geometry("1480x900")
@@ -114,14 +115,8 @@ def create_selection_window():
                 button_style = "Red.TButton"
             else:
                 button_style = "Default.TButton"  # 默认颜色
-
-            db_key = reverse_mapping[keyword]
-            db_info = database_info[db_key]
-            # 使用 with 语句来管理数据库连接
-            with sqlite3.connect(db_info['path']) as conn:
-                cursor = conn.cursor()
-                today = datetime.now()
-                change_text = compare_today_yesterday(cursor, db_info['table'], keyword, today)
+            
+            change_text = change_dict.get(keyword, "")
             button_text = f"{keyword} {change_text}"
             
             button_data = ttk.Button(button_frame, text=button_text, style=button_style, command=lambda k=keyword: on_keyword_selected(k))
@@ -140,7 +135,7 @@ def create_selection_window():
     text_scroll.pack(pady=0, padx=0, fill=tk.BOTH, expand=False)
 
     # 使用全局定义的 directory 变量
-    global directory
+    directory = '/Users/yanzhang/Documents/News/'
     files = [f for f in os.listdir(directory) if f.endswith('.txt')]
 
     # 创建文件列表的 Frame
@@ -165,8 +160,8 @@ def on_keyword_selected(value):
         result = query_database(db_info['path'], db_info['table'], condition)
         create_window(result)
 
-def query_database(db_file, table_name, condition):
-    with sqlite3.connect(db_file) as conn:
+def query_database(db_path, table_name, condition):
+    with sqlite3.connect(db_path) as conn:
         cursor = conn.cursor()
         query = f"SELECT * FROM {table_name} WHERE {condition} ORDER BY date DESC;"
         cursor.execute(query)
@@ -207,40 +202,18 @@ def create_window(content):
 def close_app(window):
     window.destroy()
 
-def close_all_connections():
-    for conn in database_connections.values():
-        conn.close()
-
 if __name__ == '__main__':
-    try:
-        root = tk.Tk()
-        root.withdraw()
-        
-        database_info = {
-                'Commodity': {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities'},
-                'Stocks Index': {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Stocks'},
-                'Crypto': {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto'},
-                'Currency': {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies'},
-                'Bonds': {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Bonds'},
-                'Commodity Index': {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities'}
-        }
+    root = tk.Tk()
+    root.withdraw()
 
-        database_mapping = {
-            'Commodity': {'Uranium', 'Nickel', 'Soybeans', 'Wheat', 'Coffee', 'Cotton', 'Cocoa', 'Rice', 'Corn', 'Oat', 'Orange Juice',
-                'Crude Oil', 'Brent', 'Natural gas', 'Gold', 'Copper', 'Lithium', 'Aluminum', 'Lean Hogs', 'Live Cattle', 'Sugar'},
-            'Crypto': {"Bitcoin", "Ether", "Solana"},
-            'Stocks Index': {'NASDAQ Composite', 'Russell 2000', 'CBOE Volatility Index', 'S&P 500', 'HANG SENG INDEX',
-                'SSE Composite Index', 'Shenzhen Index', 'Nikkei 225', 'S&P BSE SENSEX', 'IBOVESPA'},
-            'Commodity Index': {'CRB Index', 'LME Index', 'Nuclear Energy Index', 'Solar Energy Index', 'EU Carbon Permits',
-                'Containerized Freight Index'},
-            'Currency': {'DXY', 'EURUSD', 'GBPUSD', 'EURCNY', 'GBPCNY', 'USDJPY', 'USDCNY', 'CNYJPY', 'CNYUSD', 'CNYPHP', 'CNYIDR',
-                'USDIDR', 'USDARS', 'USDPHP', 'CNYEUR', 'CNYGBP'},
-            'Bonds': {"United States", "Japan", "Russia", "India", "Turkey"},
-        }
+    # 读取合并后的数据库配置
+    with open('/Users/yanzhang/Documents/Financial_System/Modules/config_panel.json', 'r') as f:
+        config = json.load(f)
 
-        reverse_mapping = {keyword: db for db, keywords in database_mapping.items() for keyword in keywords}
-        init_db_connections()  # 初始化数据库连接
-        create_selection_window()
-        root.mainloop()
-    finally:
-        close_all_connections()
+    database_info = config['database_info']
+    database_mapping = config['database_mapping']
+    reverse_mapping = {keyword: db for db, keywords in database_mapping.items() for keyword in keywords}
+    change_dict = parse_changes('/Users/yanzhang/Documents/News/Date_compare.txt')
+    
+    create_selection_window()
+    root.mainloop()

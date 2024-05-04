@@ -11,8 +11,8 @@ def get_parent_id(commodity):
         return 5
     elif commodity in ["Gold", "Silver", "Copper", "Steel", "Lithium"]:
         return 6
-    elif commodity in ["Soybeans", "Wheat", "Palm Oil", "Orange Juice", "Cocoa", "Rice", "Corn", "Coffee", "Sugar",
-        "Oat", "Cotton"]:
+    elif commodity in ["Soybeans", "Wheat", "Palm Oil", "Orange Juice", "Cocoa",
+        "Rice", "Corn", "Coffee", "Sugar", "Cotton", "Oat"]:
         return 7
     elif commodity in ["Aluminum", "Nickel", "Tin", "Zinc", "Palladium"]:
         return 8
@@ -60,7 +60,7 @@ else:
         driver.get('https://tradingeconomics.com/commodities')
         commodities = [
             "Coal", "Uranium","Steel", "Lithium","Wheat", "Palm Oil","Aluminum", "Nickel", "Tin", "Zinc", "Palladium",
-            "Poultry", "Salmon",
+            "Poultry", "Salmon", "Oat",
             "CRB Index", "LME Index", "Nuclear Energy Index", "Solar Energy Index", "EU Carbon Permits",
             "Containerized Freight Index",
         ]
