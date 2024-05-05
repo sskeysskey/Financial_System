@@ -27,7 +27,7 @@ def delete_records_by_name_and_date(db_file, table_name, names, date):
         cur = conn.cursor()
         sql = f"""
         DELETE FROM {table_name}
-        WHERE name IN ({names_str}) AND date <= '{date}';
+        WHERE name IN ({names_str}) AND date >= '{date}';
         """
         cur.execute(sql)
         
@@ -49,8 +49,8 @@ table = 'Stocks'                                      # 配置表名
 #     "Rice", "Soybeans"
 # ]
 names_to_delete = [
-    "CBOE Volatility Index"
+    "SSE Composite Index", "Shenzhen Index"
 ]
-date_to_delete = '2005-06-08'
+date_to_delete = '2024-05-01'
 
 delete_records_by_name_and_date(db_path, table, names_to_delete, date_to_delete)

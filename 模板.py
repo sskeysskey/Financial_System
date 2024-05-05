@@ -286,3 +286,24 @@ def compare_today_yesterday(cursor, table_name, name, output, today):
     else:
         output.append(f"{name}:没有找到今天和昨天的数据。")
 # ——————————————————————————————————————————————————————————————————————————————————————————
+# 不爬取时间配置
+no_crawl_periods = {
+    "SSE Composite Index": [('2024-05-02', '2024-05-05')],
+    "Shenzhen Index": [('2024-05-02', '2024-05-05')],
+    # 可以添加更多指数和对应的时间段
+}
+
+def is_within_no_crawl_period(current_date, name):
+    """检查当前日期是否在指定指数的不爬取时间内"""
+    periods = no_crawl_periods.get(name, [])
+    for start, end in periods:
+        if start <= current_date <= end:
+            return True
+    return False
+
+for name in names:
+    indice_name = name.text
+    if indice_name in indices:
+        if is_within_no_crawl_period(today_str, indice_name):
+            continue  # 如果当前日期在不爬取时间内，跳过此指数
+# ——————————————————————————————————————————————————————————————————————————————————————————

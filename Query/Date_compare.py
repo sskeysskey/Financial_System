@@ -22,15 +22,18 @@ def compare_today_yesterday(config_path, output_file):
                 cursor = conn.cursor()
                 today = datetime.now()
                 yesterday = today - timedelta(days=1)
-                day_of_week = yesterday.weekday()
-
-                if day_of_week == 0:  # 昨天是周一
-                    ex_yesterday = yesterday - timedelta(days=3)  # 取上周五
-                elif day_of_week in {5, 6}:  # 昨天是周六或周日
-                    yesterday = yesterday - timedelta(days=(day_of_week - 4))  # 周五
+                
+                if keyword in {'Bitcoin', 'Ether', 'Solana'}:
                     ex_yesterday = yesterday - timedelta(days=1)
                 else:
-                    ex_yesterday = yesterday - timedelta(days=1)
+                    day_of_week = yesterday.weekday()
+                    if day_of_week == 0:  # 昨天是周一
+                        ex_yesterday = yesterday - timedelta(days=3)  # 取上周五
+                    elif day_of_week in {5, 6}:  # 昨天是周六或周日
+                        yesterday = yesterday - timedelta(days=(day_of_week - 4))  # 周五
+                        ex_yesterday = yesterday - timedelta(days=1)
+                    else:
+                        ex_yesterday = yesterday - timedelta(days=1)
 
                 query = f"""
                 SELECT date, price FROM {table_name} 
