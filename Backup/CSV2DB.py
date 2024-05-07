@@ -3,8 +3,8 @@ import sqlite3
 
 def read_and_process_csv(file_path):
     # 读取CSV文件，注意匹配列名的大小写
-    df = pd.read_csv(file_path, usecols=['Date', 'Close'])
-    df['Close'] = df['Close'].round(6)
+    df = pd.read_csv(file_path, usecols=['Date', 'Adj Close'])
+    df['Adj Close'] = df['Adj Close'].round(6)
     # 将Close字段的数据除以100并保留6位小数
     # df['Close'] = (df['Close'] / 100).round(6)
     return df

@@ -1,0 +1,122 @@
+{
+  "Basic_Materials": {
+    "Mega": [
+      
+    ],
+    "Large": [
+
+    ],
+    "Middle": [
+    ]
+  },
+  "Communication_Services": {
+    "Mega": [
+
+    ],
+    "Large": [
+      
+    ],
+    "Middle": [
+      
+    ]
+  },
+  "Consumer_Cyclical": {
+    "Mega": [
+      
+    ],
+    "Large": [
+      
+    ],
+    "Middle": [
+      
+    ]
+  },
+  "Consumer_Defensive": {
+    "Mega": [
+      
+    ],
+    "Large": [
+      
+    ],
+    "Middle": [
+      
+    ]
+  },
+  "Energy": {
+    "Mega": [
+      
+    ],
+    "Large": [
+
+    ],
+    "Middle": [
+      
+    ]
+  },
+  "Financial_Services": {
+    "Mega": [
+      
+    ],
+    "Large": [
+      
+    ],
+    "Middle": [
+      
+    ]
+  },
+  "Healthcare": {
+    "Mega": [
+      
+    ],
+    "Large": [
+      
+    ],
+    "Middle": [
+      
+    ]
+  },
+  "Industrials": {
+    "Mega": [
+
+    ],
+    "Large": [
+      
+    ],
+    "Middle": [
+      
+    ]
+  },
+  "Real_Estate": {
+    "Mega": [
+
+    ],
+    "Large": [
+      
+    ],
+    "Middle": [
+      
+    ]
+  },
+  "Technology": {
+    "Mega": [
+      "AAPL"
+    ],
+    "Large": [
+      
+    ],
+    "Middle": [
+      
+    ]
+  },
+  "Utilities": {
+    "Mega": [
+
+    ],
+    "Large": [
+      
+    ],
+    "Middle": [
+      
+    ]
+  }
+}
