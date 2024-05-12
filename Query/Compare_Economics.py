@@ -23,7 +23,7 @@ def compare_today_yesterday(config_path, output_file):
                 today = datetime.now()
                 yesterday = today - timedelta(days=1)
                 
-                if keyword in {'Bitcoin', 'Ether', 'Solana'}:
+                if keyword in {'Bitcoin', 'Ether', 'Solana', 'Binance'}:
                     ex_yesterday = yesterday - timedelta(days=1)
                 else:
                     day_of_week = yesterday.weekday()
@@ -48,6 +48,7 @@ def compare_today_yesterday(config_path, output_file):
                     change = yesterday_price - ex_yesterday_price
                     percentage_change = (change / ex_yesterday_price) * 100
                     change_text = f"{percentage_change:.2f}%"
+                    print(f"{keyword}: {change_text}")
                     output.append(f"{keyword}: {change_text}")
 
     with open(output_file, 'w') as file:
@@ -56,5 +57,6 @@ def compare_today_yesterday(config_path, output_file):
 
 if __name__ == '__main__':
     config_path = '/Users/yanzhang/Documents/Financial_System/Modules/config_panel.json'
-    output_file = '/Users/yanzhang/Documents/News/Date_compare.txt'
+    output_file = '/Users/yanzhang/Documents/News/backup/Compare_Economics.txt'
     compare_today_yesterday(config_path, output_file)
+    print(f"{output_file} 已生成。")

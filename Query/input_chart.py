@@ -3,10 +3,25 @@ import sys
 import json
 import tkinter as tk
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
-from name2chart import plot_financial_data
+from API_Name2Chart import plot_financial_data
 from tkinter import messagebox
 
-def input_mapping():
+def load_sector_data():
+    with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as file:
+        sector_data = json.load(file)
+    return sector_data
+
+def load_compare_data():
+    compare_data = {}
+    with open('/Users/yanzhang/Documents/News/Compare_Stocks.txt', 'r') as file:
+        for line in file.readlines():
+            parts = line.split(':')
+            key = parts[0].split()[-1].strip()  # 获取最后一个单词，即MTD, GEN等
+            value = parts[1].strip()  # 获取冒号后的百分比数据
+            compare_data[key] = value
+    return compare_data
+
+def input_mapping(root, sector_data, compare_data):
     # 获取用户输入
     prompt = "请输入关键字查询数据库:"
     user_input = get_user_input_custom(root, prompt)
@@ -15,22 +30,43 @@ def input_mapping():
         print("未输入任何内容，程序即将退出。")
         close_app()
     else:
-        normalized_input = user_input.strip().lower()  # 移除首尾空格并转换为小写
-        # 查找匹配项
-        found = False
-        for db, items in database_mapping.items():
-            for item in items:
-                if re.search(normalized_input, item.lower()):  # 使用正则表达式进行不区分大小写的部分匹配
-                    plot_financial_data(item)  # 找到匹配项，调用绘图函数
-                    found = True
-                    close_app()
+        input_trimmed = user_input.strip()
+        lower_input = input_trimmed.lower()
+        # 先进行完整匹配查找
+        exact_match_found = False
+        for sector, categories in sector_data.items():
+            for category, names in categories.items():
+                if input_trimmed.upper() in names:
+                    db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+                    compare = compare_data.get(input_trimmed.upper(), "未知")
+                    plot_financial_data(db_path, sector, input_trimmed.upper(), compare)
+                    exact_match_found = True
+                    close_app(root)
                     break
-            if found:
+            if exact_match_found:
                 break
 
-        if not found:
-            messagebox.showerror("错误", "未找到匹配的数据项。")
-            close_app()
+        # 如果没有找到完整匹配，则进行模糊匹配
+        if not exact_match_found:
+            found = False
+            for sector, categories in sector_data.items():
+                for category, names in categories.items():
+                    for name in names:
+                        if re.search(lower_input, name.lower()):
+                            db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+                            compare = compare_data.get(input_trimmed.upper(), "未知")
+                            plot_financial_data(db_path, sector, category, name, compare)
+                            found = True
+                            close_app(root)
+                            break
+                    if found:
+                        break
+                if found:
+                    break
+
+            if not found:
+                messagebox.showerror("错误", "未找到匹配的数据项。")
+                close_app(root)
 
 def get_user_input_custom(root, prompt):
     # 创建一个新的顶层窗口
@@ -73,13 +109,8 @@ if __name__ == '__main__':
     root.withdraw()  # 隐藏根窗口
     root.bind('<Escape>', close_app)  # 同样绑定ESC到关闭程序的函数
 
-    # 读取配置文件
-    with open('/Users/yanzhang/Documents/Financial_System/Modules/config_all.json', 'r') as file:
-        config = json.load(file)
-    
-    database_info = config['database_info']
-    database_mapping = {k: set(v) for k, v in config['database_mapping'].items()}
-
-    input_mapping()
+    sector_data = load_sector_data()
+    compare_data = load_compare_data()
+    input_mapping(root, sector_data, compare_data)
 
     root.mainloop()  # 主事件循环

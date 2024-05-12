@@ -7,7 +7,12 @@ from tkinter import scrolledtext
 from datetime import datetime
 from tkinter import messagebox
 
-def input_mapping():
+def load_sector_data():
+    with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as file:
+        sector_data = json.load(file)
+    return sector_data
+
+def input_mapping(root, sector_data):
     # 获取用户输入
     prompt = "请输入关键字查询数据库:"
     user_input = get_user_input_custom(root, prompt)
@@ -16,21 +21,41 @@ def input_mapping():
         print("未输入任何内容，程序即将退出。")
         close_app()
     else:
-        normalized_input = user_input.strip().lower()  # 移除首尾空格并转换为小写
-        # 查找匹配项
-        found = False
-        for db, items in database_mapping.items():
-            for item in items:
-                if re.search(normalized_input, item.lower()):  # 使用正则表达式进行不区分大小写的部分匹配
-                    db_key = reverse_mapping[item]
-                    db_info = database_info[db_key]
-                    condition = f"name = '{item}'"
-                    result = query_database(db_info['path'], db_info['table'], condition)
-                    create_window(None, result)
-                    found = True
-                    break
-            if found:
+        input_trimmed = user_input.strip()
+        lower_input = input_trimmed.lower()
+        # 先进行完整匹配查找
+        exact_match_found = False
+        for sector, categories in sector_data.items():
+            for category, names in categories.items():
+                if input_trimmed.upper() in names:
+                        db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+                        condition = f"name = '{input_trimmed.upper()}'"
+                        result = query_database(db_path, sector, condition)
+                        # print(f"查询结果: {result}")  # 打印查询结果
+                        create_window(None, result)
+                        found = True
+                        break
+            if exact_match_found:
                 break
+
+        # 如果没有找到完整匹配，则进行模糊匹配
+        if not exact_match_found:
+            found = False
+            for sector, categories in sector_data.items():
+                for category, names in categories.items():
+                    for name in names:
+                        if re.search(lower_input, name.lower()):
+                            db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+                            condition = f"name = '{name}'"
+                            result = query_database(db_path, sector, condition)
+                            # print(f"查询结果: {result}")  # 打印查询结果
+                            create_window(None, result)
+                            found = True
+                            break
+                    if found:
+                        break
+                if found:
+                    break
 
         if not found:
             messagebox.showerror("错误", "未找到匹配的数据项。")
@@ -74,6 +99,7 @@ def query_database(db_file, table_name, condition):
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
     query = f"SELECT * FROM {table_name} WHERE {condition} ORDER BY date DESC;"
+    # print(f"执行的SQL查询: {query}")  # 打印SQL查询语句
     cursor.execute(query)
     rows = cursor.fetchall()
     if not rows:
@@ -113,19 +139,8 @@ if __name__ == '__main__':
     root.withdraw()  # 隐藏根窗口
     root.bind('<Escape>', close_app)  # 同样绑定ESC到关闭程序的函数
 
-    # 读取配置文件
-    with open('/Users/yanzhang/Documents/Financial_System/Modules/config_all.json', 'r') as file:
-        config = json.load(file)
-    
-    database_info = config['database_info']
-    database_mapping = {k: set(v) for k, v in config['database_mapping'].items()}
+    sector_data = load_sector_data()
 
-    # 反向映射，从关键字到数据库信息键
-    reverse_mapping = {}
-    for db_key, keywords in database_mapping.items():
-        for keyword in keywords:
-            reverse_mapping[keyword] = db_key
-
-    input_mapping()
+    input_mapping(root, sector_data)
 
     root.mainloop()  # 主事件循环

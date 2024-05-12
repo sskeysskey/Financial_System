@@ -1,27 +1,18 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from datetime import datetime, timedelta
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
 import sqlite3
 
-def get_parent_id(commodity):
-    if commodity in ["Crude Oil", "Brent", "Natural gas", "Coal", "Uranium"]:
-        return 5
-    elif commodity in ["Gold", "Silver", "Copper", "Steel", "Lithium"]:
-        return 6
-    elif commodity in ["Soybeans", "Wheat", "Palm Oil", "Orange Juice", "Cocoa",
-        "Rice", "Corn", "Coffee", "Sugar", "Cotton", "Oat"]:
-        return 7
-    elif commodity in ["Aluminum", "Nickel", "Tin", "Zinc", "Palladium"]:
-        return 8
-    elif commodity in ["Live Cattle", "Lean Hogs", "Poultry", "Salmon"]:
-        return 9
-    elif commodity in ["CRB Index", "LME Index", "Nuclear Energy Index", "Solar Energy Index", "EU Carbon Permits",
-        "Containerized Freight Index"]:
-        return 23
-    return None
+def setup_driver():
+    chrome_options = Options()
+    chrome_options.add_argument('--disable-gpu')
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+    return driver
 
 # 获取当前时间
 now = datetime.now()
@@ -39,30 +30,18 @@ else:
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         date TEXT,
         name TEXT,
-        price REAL,
-        parent_id INTEGER,
-        FOREIGN KEY (parent_id) REFERENCES Categories(id)
+        price REAL
     );
     ''')
     conn.commit()
 
-    # ChromeDriver 路径
-    chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
-    service = Service(executable_path=chrome_driver_path)
-
-    # 设置WebDriver
-    options = webdriver.ChromeOptions()
-    # options.add_argument('--headless')  # 无界面模式
-    driver = webdriver.Chrome(service=service, options=options)
-
+    driver = setup_driver()
     try:
         # 访问网页
         driver.get('https://tradingeconomics.com/commodities')
         commodities = [
-            "Coal", "Uranium","Steel", "Lithium","Wheat", "Palm Oil","Aluminum", "Nickel", "Tin", "Zinc", "Palladium",
-            "Poultry", "Salmon", "Oat",
-            "CRB Index", "LME Index", "Nuclear Energy Index", "Solar Energy Index", "EU Carbon Permits",
-            "Containerized Freight Index",
+            "Coal", "Uranium", "Steel", "Silver", "Lithium", "Wheat", "Palm Oil", "Aluminum",
+            "Nickel", "Tin", "Zinc", "Palladium", "Poultry", "Salmon"
         ]
 
         all_data = []
@@ -81,15 +60,14 @@ else:
                 )
                 row = element.find_element(By.XPATH, './ancestor::tr')
                 price = row.find_element(By.ID, 'p').text.strip()
-                parent_id = get_parent_id(commodity)
                 
                 # 将数据格式化后添加到列表
-                all_data.append((today, commodity, price, parent_id))
+                all_data.append((today, commodity, price))
             except Exception as e:
                 print(f"Failed to retrieve data for {commodity}: {e}")
         
         # 插入数据到数据库
-        cursor.executemany('INSERT INTO Commodities (date, name, price, parent_id) VALUES (?, ?, ?, ?)', all_data)
+        cursor.executemany('INSERT INTO Commodities (date, name, price) VALUES (?, ?, ?)', all_data)
         conn.commit()
         # 打印插入的数据条数
         print(f"Total {len(all_data)} records have been inserted into the database.")

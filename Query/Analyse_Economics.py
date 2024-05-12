@@ -1,23 +1,15 @@
-import sys
 import sqlite3
-from contextlib import contextmanager
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
-@contextmanager
 def create_connection(db_file):
-    """ 创建到SQLite数据库的连接，并确保正确关闭 """
+    """ 创建数据库连接 """
     conn = None
     try:
         conn = sqlite3.connect(db_file)
-        yield conn
-    except sqlite3.Error as e:
-        error_msg = f"数据库连接失败: {e}"
-        print(error_msg)
-        yield None, error_msg
-    finally:
-        if conn:
-            conn.close()
+    except Exception as e:
+        print(e)
+    return conn
 
 def get_price_comparison(cursor, table_name, months_back, name, today):
     # 使用 dateutil.relativedelta 计算过去的日期
@@ -39,17 +31,6 @@ def get_price_comparison(cursor, table_name, months_back, name, today):
     cursor.execute(query, (past_date.strftime("%Y-%m-%d"), ex_yesterday.strftime("%Y-%m-%d"), name))
     return cursor.fetchone()
 
-def execute_query(cursor, query, params):
-    """ 执行SQL查询并处理异常 """
-    try:
-        cursor.execute(query, params)
-        return cursor.fetchall(), None
-    except sqlite3.DatabaseError as e:
-        return None, f"SQL执行错误: {e}"
-
-def quit_app(event=None):
-    root.destroy()
-
 def main():
     today = datetime.now()
     day_of_week = today.weekday()  # 周一为0，周日为6
@@ -62,15 +43,18 @@ def main():
 
     output = []  # 用于收集输出信息的列表
     databases = [
-        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Stocks', 'names': ('NASDAQ Composite', 'S&P 500',
-            'SSE Composite Index', 'Shenzhen Index', 'Nikkei 225', 'S&P BSE SENSEX', 'HANG SENG INDEX', 'Russell 2000',
-            'CBOE Volatility Index')},
-        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto', 'names': ('Bitcoin', 'Ether', 'Solana')},
-        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies', 'names': ('DXY', 'CNYEUR', 'CNYGBP',
-            'CNYUSD', 'USDJPY')},
-        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities', 'names': ('Brent', 'Crude Oil',
-            'Natural gas', 'Gold', 'Copper', 'Coffee', 'Cocoa', 'Rice', 'Corn', 'Oat', 'Lean Hogs',
-            'Live Cattle', 'Cotton', 'Orange Juice', 'Sugar')},
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Indices', 'names': ('NASDAQ',
+            'S&P500', 'Shanghai', 'Shenzhen', 'Nikkei', 'India', 'HANGSENG', 'Russell', 'VIX')},
+
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto', 'names': ('Bitcoin',
+            'Ether', 'Solana', 'Binance')},
+
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies', 'names': ('DXY',
+            'USDCNY', 'USDJPY')},
+
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities', 'names': ('Brent',
+            'CrudeOil', 'Naturalgas', 'Gold', 'Copper', 'Coffee', 'Cocoa', 'Rice', 'Corn', 'Oat', 'LeanHogs',
+            'LiveCattle', 'Cotton', 'OrangeJuice', 'Sugar')},
     ]
     intervals = [600, 360, 240, 120, 60, 24, 12, 6, 3]  # 以月份表示的时间间隔列表
     
@@ -83,7 +67,6 @@ def main():
             cursor = conn.cursor()
         
             for name in names:
-                # compare_today_yesterday(cursor, table_name, name, output, today)
                 today_price_query = f"SELECT price FROM {table_name} WHERE date = ? AND name = ?"
                 cursor.execute(today_price_query, (real_today.strftime("%Y-%m-%d"), name))
                 result = cursor.fetchone()
@@ -179,12 +162,10 @@ def main():
             cursor.close()
     final_output = "\n".join(output)
     # 将输出保存到文件
-    file_path = '/Users/yanzhang/Documents/News/Data_analyse.txt'  # 您可以修改这个路径到您想要保存的目录
+    file_path = '/Users/yanzhang/Documents/News/Analyse_Economics.txt'  # 您可以修改这个路径到您想要保存的目录
     with open(file_path, 'w', encoding='utf-8') as file:
         file.write(final_output)
     print(f"文件已保存到 {file_path}")
-    sys.exit()
 
 if __name__ == "__main__":
-    main()            # 先运行main函数，确保所有GUI组件都已经初始化
-    root.mainloop()   # 启动事件循环，这行代码会在所有窗口关闭后执行结束
+    main()

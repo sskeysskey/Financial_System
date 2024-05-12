@@ -69,11 +69,22 @@ def create_window(content):
 if __name__ == '__main__':
     # 数据库文件和表名的列表
     db_info = [
-        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Stocks'},
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Indices'},
         {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies'},
         {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities'},
         {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto'},
         {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Bonds'},
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Financial_Services'},
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Energy'},
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Consumer_Defensive'},
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Technology'},
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Healthcare'},
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Consumer_Cyclical'},
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Industrials'},
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Basic_Materials'},
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Real_Estate'},
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Utilities'},
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Communication_Services'},
     ]
     
     # 遍历数据库信息列表，对每个数据库执行查询并收集结果

@@ -1,10 +1,18 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from datetime import datetime, timedelta
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
 import sqlite3
+
+def setup_driver():
+    chrome_options = Options()
+    chrome_options.add_argument('--disable-gpu')
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+    return driver
 
 # 获取当前时间
 now = datetime.now()
@@ -23,27 +31,23 @@ else:
         date TEXT,
         name TEXT,
         price REAL,
-        parent_id INTEGER,
-        FOREIGN KEY (parent_id) REFERENCES Categories(id)
+        UNIQUE(date, name)
     );
     ''')
     conn.commit()
 
-    # ChromeDriver 路径
-    chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
-    service = Service(executable_path=chrome_driver_path)
-
-    # 设置WebDriver
-    options = webdriver.ChromeOptions()
-    # options.add_argument('--headless')  # 无界面模式
-    driver = webdriver.Chrome(service=service, options=options)
-
+    driver = setup_driver()
     try:
         # 访问网页
         driver.get('https://tradingeconomics.com/bonds')
-        Currencies = [
-            "United States", "United Kingdom", "Japan", "Russia", "Brazil", "India", "Turkey"
-        ]
+        name_mapping = {
+            "United Kingdom": "UK10Y",
+            "Japan": "JP10Y",
+            "Russia": "RU10Y",
+            "Brazil": "BR10Y",
+            "India": "IND10Y",
+            "Turkey": "TUR10Y"
+        }
 
         all_data = []
         # 获取当前时间
@@ -54,22 +58,23 @@ else:
         today = yesterday.strftime('%Y-%m-%d')
 
         # 查找并处理数据
-        for Currency in Currencies:
+        for bond in name_mapping.keys():
             try:
                 element = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.LINK_TEXT, Currency))
+                    EC.presence_of_element_located((By.LINK_TEXT, bond))
                 )
                 row = element.find_element(By.XPATH, './ancestor::tr')
                 price = row.find_element(By.ID, 'p').text.strip()
-                parent_id = 24
+                # 使用映射后的名称
+                mapped_name = name_mapping[bond]
                 
                 # 将数据格式化后添加到列表
-                all_data.append((today, Currency, price, parent_id))
+                all_data.append((today, mapped_name, price))
             except Exception as e:
-                print(f"Failed to retrieve data for {Currencies}: {e}")
+                print(f"Failed to retrieve data for {name_mapping}: {e}")
         
         # 插入数据到数据库
-        cursor.executemany('INSERT INTO Bonds (date, name, price, parent_id) VALUES (?, ?, ?, ?)', all_data)
+        cursor.executemany('INSERT INTO Bonds (date, name, price) VALUES (?, ?, ?)', all_data)
         conn.commit()
         # 打印插入的数据条数
         print(f"Total {len(all_data)} records have been inserted into the database.")

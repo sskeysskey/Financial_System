@@ -1,5 +1,5 @@
 {
-  "Basic_Materials": {
+  "Bonds": {
     "Mega": [
       
     ],
@@ -7,6 +7,62 @@
 
     ],
     "Middle": [
+
+    ]
+  },
+  "Currencies": {
+    "Mega": [
+      
+    ],
+    "Large": [
+      
+    ],
+    "Middle": [
+     
+    ]
+  },
+  "Crypto": {
+    "Mega": [
+      
+    ],
+    "Large": [
+
+    ],
+    "Middle": [
+
+    ]
+  },
+  "Indices": {
+    "Mega": [
+      
+    ],
+    "Large": [
+      
+    ],
+    "Middle": [
+
+    ]
+  },
+  "Commodities": {
+    "Mega": [
+      
+    ],
+    "Large": [
+
+    ],
+    "Middle": [
+
+    ]
+  },
+  "Basic_Materials": {
+    "Mega": [
+     
+    ],
+    "Large": [
+
+    ],
+    "Middle": [
+
     ]
   },
   "Communication_Services": {
@@ -14,18 +70,18 @@
 
     ],
     "Large": [
-      
+ 
     ],
     "Middle": [
-      
+
     ]
   },
   "Consumer_Cyclical": {
     "Mega": [
-      
+
     ],
     "Large": [
-      
+
     ],
     "Middle": [
       
@@ -47,7 +103,7 @@
       
     ],
     "Large": [
-
+      
     ],
     "Middle": [
       
@@ -99,7 +155,7 @@
   },
   "Technology": {
     "Mega": [
-      "AAPL"
+      
     ],
     "Large": [
       

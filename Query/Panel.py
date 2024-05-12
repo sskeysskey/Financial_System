@@ -6,7 +6,7 @@ import tkinter as tk
 import tkinter.font as tkFont
 from tkinter import ttk, scrolledtext
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
-from name2chart import plot_financial_data
+from API_Name2Chart import plot_financial_data
 from datetime import datetime, timedelta
 
 def create_custom_style():
@@ -52,7 +52,6 @@ def parse_changes(filename):
     return changes
 
 def create_selection_window():
-    # subprocess.run(['/Library/Frameworks/Python.framework/Versions/3.12/bin/python3', '/Users/yanzhang/Documents/Financial_System/Query/Date_analyse.py'])
     selection_window = tk.Toplevel(root)
     selection_window.title("选择查询关键字")
     selection_window.geometry("1480x900")
@@ -73,11 +72,11 @@ def create_selection_window():
     canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
     canvas.configure(xscrollcommand=scrollbar.set)
 
-    purple_keywords = ["Bitcoin", "CNYUSD", "United States", "USDJPY", "Crude Oil"]
-    yellow_keywords = ["CNYJPY", "NASDAQ Composite", "Gold", "Cocoa"]
-    orange_keywords = ["HANG SENG INDEX", "Natural gas", "Ether", "SSE Composite Index"]
-    blue_keywords = ["Copper", "S&P 500"]
-    red_keywords = ["CBOE Volatility Index", "DXY"]
+    purple_keywords = ["Bitcoin", "CNYUSD", "US10Y", "USDJPY", "CrudeOil"]
+    yellow_keywords = ["CNYJPY", "NASDAQ", "Gold", "Cocoa"]
+    orange_keywords = ["HANGSENG", "Naturalgas", "Ether", "Shanghai", "USDCNY"]
+    blue_keywords = ["Copper", "S&P500"]
+    red_keywords = ["VIX", "DXY"]
 
     # 创建一个新的Frame来纵向包含CurrencyDB1和CryptoDB1
     new_vertical_frame1 = tk.Frame(scrollable_frame)
@@ -87,11 +86,11 @@ def create_selection_window():
     new_vertical_frame2.pack(side="left", padx=15, pady=10, fill="both", expand=True)
 
     for db_key, keywords in database_mapping.items():
-        if db_key in ['Currency', 'Bonds']:
+        if db_key in ['Bonds', 'Crypto', 'World_Indices']:
             # 将这两个数据库的框架放入新的纵向框架中
             frame = tk.LabelFrame(new_vertical_frame1, text=db_key, padx=10, pady=10)
             frame.pack(side="top", padx=15, pady=10, fill="both", expand=True)
-        elif db_key in ['Crypto', 'Stocks Index', 'Commodity Index']:
+        elif db_key in ['Currency']:
             frame = tk.LabelFrame(new_vertical_frame2, text=db_key, padx=10, pady=10)
             frame.pack(side="top", padx=15, pady=10, fill="both", expand=True)
         else:
@@ -101,7 +100,7 @@ def create_selection_window():
         for keyword in sorted(keywords):
             button_frame = tk.Frame(frame)  # 创建一个内部Frame来包裹两个按钮
             button_frame.pack(side="top", fill="x", padx=5, pady=2)
-
+            
             # 根据关键字设置背景颜色
             if keyword in purple_keywords:
                 button_style = "Purple.TButton"
@@ -127,14 +126,13 @@ def create_selection_window():
 
     # 创建用于显示文本文件内容的 Frame
     text_file_frame = tk.Frame(selection_window)
-    text_file_frame.pack(side="right", fill="y", expand=False, padx=0, pady=20)
-    text_font = tkFont.Font(family="Courier", size=36)
+    text_file_frame.pack(side="right", fill="y", expand=False, padx=0, pady=0)
+    text_font = tkFont.Font(family="Courier", size=28)
 
     # 文本文件滚动区域
-    text_scroll = scrolledtext.ScrolledText(text_file_frame, width=20, height=20, font=text_font)
+    text_scroll = scrolledtext.ScrolledText(text_file_frame, width=30, height=20, font=text_font)
     text_scroll.pack(pady=0, padx=0, fill=tk.BOTH, expand=False)
 
-    # 使用全局定义的 directory 变量
     directory = '/Users/yanzhang/Documents/News/'
     files = [f for f in os.listdir(directory) if f.endswith('.txt')]
 
@@ -176,11 +174,17 @@ def query_database(db_path, table_name, condition):
             output_text += ' | '.join([str(item).ljust(col_widths[idx]) for idx, item in enumerate(row)]) + '\n'
         return output_text
 
+def load_sector_data():
+    with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as file:
+        sector_data = json.load(file)
+    return sector_data
+
 def on_keyword_selected_chart(value, parent_window):
-    db_key = reverse_mapping[value]
-    db_info = database_info[db_key]
-    condition = f"name = '{value}'"
-    plot_financial_data(value)
+    for sector, categories in sector_data.items():
+            for category, names in categories.items():
+                if value in names:
+                    db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+                    plot_financial_data(db_path, sector, category, value)
 
 def create_window(content):
     top = tk.Toplevel(root)
@@ -213,7 +217,8 @@ if __name__ == '__main__':
     database_info = config['database_info']
     database_mapping = config['database_mapping']
     reverse_mapping = {keyword: db for db, keywords in database_mapping.items() for keyword in keywords}
-    change_dict = parse_changes('/Users/yanzhang/Documents/News/Date_compare.txt')
+    change_dict = parse_changes('/Users/yanzhang/Documents/News/backup/Compare_Economics.txt')
     
     create_selection_window()
+    sector_data = load_sector_data()
     root.mainloop()

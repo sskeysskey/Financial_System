@@ -1,18 +1,27 @@
 {
     "database_info": {
         "Commodity": {"path": "/Users/yanzhang/Documents/Database/Finance.db", "table": "Commodities"},
-        "Stocks Index": {"path": "/Users/yanzhang/Documents/Database/Finance.db", "table": "Stocks"},
+        "World_Indices": {"path": "/Users/yanzhang/Documents/Database/Finance.db", "table": "Indices"},
         "Crypto": {"path": "/Users/yanzhang/Documents/Database/Finance.db", "table": "Crypto"},
         "Currency": {"path": "/Users/yanzhang/Documents/Database/Finance.db", "table": "Currencies"},
-        "Bonds": {"path": "/Users/yanzhang/Documents/Database/Finance.db", "table": "Bonds"},
-        "Commodity Index": {"path": "/Users/yanzhang/Documents/Database/Finance.db", "table": "Commodities"}
+        "Bonds": {"path": "/Users/yanzhang/Documents/Database/Finance.db", "table": "Bonds"}
     },
     "database_mapping": {
-        "Commodity": ["Uranium", "Nickel", "Soybeans", "Wheat", "Coffee", "Cotton", "Cocoa", "Rice", "Corn", "Oat", "Orange Juice", "Crude Oil", "Brent", "Natural gas", "Gold", "Copper", "Lithium", "Aluminum", "Lean Hogs", "Live Cattle", "Sugar"],
-        "Crypto": ["Bitcoin", "Ether", "Solana"],
-        "Stocks Index": ["NASDAQ Composite", "Russell 2000", "CBOE Volatility Index", "S&P 500", "HANG SENG INDEX", "SSE Composite Index", "Shenzhen Index", "Nikkei 225", "S&P BSE SENSEX", "IBOVESPA"],
-        "Commodity Index": ["CRB Index", "LME Index", "Nuclear Energy Index", "Solar Energy Index", "EU Carbon Permits", "Containerized Freight Index"],
-        "Bonds": ["United States", "Japan", "Russia", "India", "Turkey"],
-        "Currency": ["DXY", "EURUSD", "GBPUSD", "EURCNY", "GBPCNY", "USDJPY", "USDCNY", "CNYJPY", "CNYUSD", "CNYPHP", "CNYIDR", "USDIDR", "USDARS", "USDPHP", "CNYEUR", "CNYGBP"]
+        "Commodity": ["Uranium", "Nickel", "Lithium", "Wheat", "Aluminum",
+            "Cocoa", "Rice", "Corn", "Oat", "OrangeJuice", "CrudeOil", "Brent",
+            "Naturalgas", "Gold", "Copper", "LeanHogs", "Soybean", "Coffee", "Cotton",
+            "LiveCattle", "Sugar"],
+
+        "Crypto": ["Bitcoin", "Ether", "Solana", "Binance"],
+
+        "World_Indices": ["NASDAQ", "Russell", "VIX",
+            "S&P500", "HANGSENG", "Shanghai", "Shenzhen",
+            "Nikkei", "India", "Brazil", "Russian"],
+
+        "Bonds": ["US10Y"],
+        
+        "Currency": ["DXY", "EURUSD", "GBPUSD", "EURCNY", "GBPCNY", "USDJPY",
+            "USDCNY", "CNYJPY", "CNYUSD", "CNYPHP", "CNYIDR", "USDIDR", "USDARS",
+            "USDPHP", "CNYEUR", "CNYGBP", "AUDCNY"]
     }
 }

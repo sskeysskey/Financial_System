@@ -22,9 +22,7 @@ else:
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         date TEXT,
         name TEXT,
-        price REAL,
-        parent_id INTEGER,
-        FOREIGN KEY (parent_id) REFERENCES Categories(id)
+        price REAL
     );
     ''')
     conn.commit()
@@ -42,8 +40,8 @@ else:
         # 访问网页
         driver.get('https://tradingeconomics.com/currencies?base=cny')
         Currencies = [
-            "CNYJPY", "CNYARS", "CNYINR", "CNYKRW", "CNYMXN", "CNYRUB", "CNYSGD", "CNYBRL",
-            "CNYPHP", "CNYIDR", "CNYEGP", "CNYTHB", "CNYEUR", "CNYUSD", "CNYGBP",
+            "CNYARS", "CNYINR", "CNYKRW", "CNYMXN", "CNYRUB", "CNYSGD", "CNYBRL",
+            "CNYPHP", "CNYIDR", "CNYEGP", "CNYTHB"
         ]
 
         all_data = []
@@ -62,15 +60,14 @@ else:
                 )
                 row = element.find_element(By.XPATH, './ancestor::tr')
                 price = row.find_element(By.ID, 'p').text.strip()
-                parent_id = 4
                 
                 # 将数据格式化后添加到列表
-                all_data.append((today, Currency, price, parent_id))
+                all_data.append((today, Currency, price))
             except Exception as e:
                 print(f"Failed to retrieve data for {Currencies}: {e}")
         
         # 插入数据到数据库
-        cursor.executemany('INSERT INTO Currencies (date, name, price, parent_id) VALUES (?, ?, ?, ?)', all_data)
+        cursor.executemany('INSERT INTO Currencies (date, name, price) VALUES (?, ?, ?)', all_data)
         conn.commit()
         # 打印插入的数据条数
         print(f"Total {len(all_data)} records have been inserted into the database.")

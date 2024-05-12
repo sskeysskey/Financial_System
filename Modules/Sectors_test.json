@@ -1,0 +1,45 @@
+{
+  "Basic_Materials": {
+    "Mega": [
+      "IOSP",
+      "TROX",
+      "EA"
+    ],
+    "Large": [
+      "CSTM",
+      "ARCH",
+      "SLVM"
+    ],
+    "Middle": [
+      "SLVM"
+    ]
+  },
+  "Communication_Services": {
+    "Mega": [
+      "EAS",
+      "PINS"
+
+    ],
+    "Large": [
+      "SNAP",
+      "RBLX"
+ 
+    ],
+    "Middle": [
+      "TTWO",
+      "LYV"
+    ]
+  },
+  "Consumer_Cyclical": {
+    "Mega": [
+      "WBD"
+    ],
+    "Large": [
+      "OMC",
+      "WMG"
+    ],
+    "Middle": [
+      
+    ]
+  }
+}

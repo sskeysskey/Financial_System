@@ -329,3 +329,35 @@ plt.legend()
 # 显示图表
 plt.show()
 # ——————————————————————————————————————————————————————————————————————————————————————————
+# 定义parent_id的映射
+parent_ids = {
+    "Basic_Materials": 13,
+    "Communication_Services": 20,
+    "Consumer_Cyclical": 15,
+    "Consumer_Defensive": 16,
+    "Energy": 12,
+    "Financial_Services": 18,
+    "Healthcare": 17,
+    "Industrials": 14,
+    "Real_Estate": 22,
+    "Technology": 19,
+    "Utilities": 21
+}
+# ——————————————————————————————————————————————————————————————————————————————————————————
+def get_parent_id(commodity):
+    if commodity in ["Crude Oil", "Brent", "Natural gas", "Coal", "Uranium"]:
+        return 5
+    elif commodity in ["Gold", "Silver", "Copper", "Steel", "Lithium"]:
+        return 6
+    elif commodity in ["Soybeans", "Wheat", "Palm Oil", "Orange Juice", "Cocoa",
+        "Rice", "Corn", "Coffee", "Sugar", "Cotton", "Oat"]:
+        return 7
+    elif commodity in ["Aluminum", "Nickel", "Tin", "Zinc", "Palladium"]:
+        return 8
+    elif commodity in ["Live Cattle", "Lean Hogs", "Poultry", "Salmon"]:
+        return 9
+    elif commodity in ["CRB Index", "LME Index", "Nuclear Energy Index", "Solar Energy Index", "EU Carbon Permits",
+        "Containerized Freight Index"]:
+        return 23
+    return None
+# ——————————————————————————————————————————————————————————————————————————————————————————

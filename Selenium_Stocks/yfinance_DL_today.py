@@ -1,65 +1,92 @@
 import yfinance as yf
 import sqlite3
 import json
-import datetime
+from datetime import datetime, timedelta
 
-# 读取JSON文件
-with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors.json', 'r') as file:
-    stock_groups = json.load(file)
+# 获取当前时间
+now = datetime.now()
 
-today = datetime.date.today()
-yesterday = datetime.date.today() - datetime.timedelta(days=1)
+# 判断今天的星期数，如果是周日(6)或周一(0)，则不执行程序
+if now.weekday() in (0, 6):
+    print("Today is either Sunday or Monday. The script will not run.")
+else:
+    # 读取JSON文件
+    with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json', 'r') as file:
+        stock_groups = json.load(file)
 
-# 定义时间范围
-start_date = yesterday.strftime('%Y-%m-%d')
-end_date = today.strftime('%Y-%m-%d')
+    today = now.date()
+    yesterday = today - timedelta(days=1)
 
-# 连接到SQLite数据库
-conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
-c = conn.cursor()
+    # 定义时间范围
+    start_date = yesterday.strftime('%Y-%m-%d')
+    end_date = today.strftime('%Y-%m-%d')
 
-# 定义parent_id的映射
-parent_ids = {
-    "Basic_Materials": 13,
-    "Communication_Services": 20,
-    "Consumer_Cyclical": 15,
-    "Consumer_Defensive": 16,
-    "Energy": 12,
-    "Financial_Services": 18,
-    "Healthcare": 17,
-    "Industrials": 14,
-    "Real_Estate": 22,
-    "Technology": 19,
-    "Utilities": 21
-}
+    # 连接到SQLite数据库
+    conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
+    c = conn.cursor()
 
-# 遍历所有组和子组
-for group_name, subgroups in stock_groups.items():
-    subgroup_counter = {subgroup_name: 0 for subgroup_name in subgroups}  # 初始化计数器
-    for subgroup_name, tickers in subgroups.items():
-        for ticker_symbol in tickers:
-            # 使用 yfinance 下载股票数据
-            data = yf.download(ticker_symbol, start=start_date, end=end_date)
+    symbol_mapping = {
+        "CC=F": "Cocoa", "KC=F": "Coffee", "CT=F": "Cotton", "OJ=F": "OrangeJuice",
+        "SB=F": "Sugar", "ZO=F": "Oat", "HE=F": "LeanHogs", "CL=F": "CrudeOil",
+        "BZ=F": "Brent", "LE=F": "LiveCattle", "HG=F": "Copper", "ZC=F": "Corn",
+        "GC=F": "Gold", "SI=F": "Silver", "NG=F": "Naturalgas", "ZR=F": "Rice", "ZS=F": "Soybean",
+        
+        "^TNX": "US10Y",
+        
+        "DX-Y.NYB": "DXY", "EURUSD=X": "EURUSD", "GBPUSD=X": "GBPUSD", "JPY=X": "USDJPY",
+        "CNYEUR=X": "CNYEUR", "CNYGBP=X": "CNYGBP", "CNYJPY=X": "CNYJPY", "CNYUSD=X": "CNYUSD",
+        "EURCNY=X": "EURCNY", "CNY=X": "USDCNY", "GBPCNY=X": "GBPCNY", "AUDCNY=X": "AUDCNY",
+        "INR=X": "USDINR", "BRL=X": "USDBRL", "RUB=X": "USDRUB", "KRW=X": "USDKRW", "TRY=X": "USDTRY",
+        "SGD=X": "USDSGD", "TWD=X": "USDTWD", "IDR=X": "USDIDR", "PHP=X": "USDPHP", "EGP=X": "USDEGP",
+        "ARS=X": "USDARS",
+        
+        "BTC-USD": "Bitcoin", "ETH-USD": "Ether", "SOL-USD": "Solana", "BNB-USD": "Binance",
+        
+        "^HSI": "HANGSENG", "^IXIC": "NASDAQ", "000001.SS": "Shanghai", "399001.SZ": "Shenzhen",
+        "^VIX": "VIX", "^BVSP": "Brazil", "^N225": "Nikkei", "^RUT": "Russell", "^GSPC": "S&P500",
+        "^BSESN": "India", "IMOEX.ME": "Russian"
+    }
 
-            # 插入数据到相应的表中
-            table_name = group_name.replace(" ", "_")  # 确保表名没有空格
-            for index, row in data.iterrows():
-                date = index.strftime('%Y-%m-%d')
-                price = round(row['Adj Close'], 2)  # 对价格进行四舍五入保留两位小数
-                volume = int(row['Volume'])  # 将交易量转换为整数
-                c.execute(f"INSERT INTO {table_name} (date, name, price, volume, parent_id) VALUES (?, ?, ?, ?, ?)",
-                          (date, ticker_symbol, price, volume, parent_ids[group_name]))
-            subgroup_counter[subgroup_name] += 1  # 更新计数器
+    # 定义需要特殊处理的group_name
+    special_groups = ["Currencies", "Bonds", "Crypto", "Commodities"]
 
-    # 使用print输出每个大组的统计信息
-    print(f"{group_name} statistics:")
-    for subgroup_name, count in subgroup_counter.items():
-        print(f"  {subgroup_name}: {count} stocks inserted.")
+    # 遍历所有组和子组
+    for group_name, subgroups in stock_groups.items():
+        subgroup_counter = {subgroup_name: 0 for subgroup_name in subgroups}  # 初始化计数器
+        for subgroup_name, tickers in subgroups.items():
+            for ticker_symbol in tickers:
+                # 使用 yfinance 下载股票数据
+                data = yf.download(ticker_symbol, start=start_date, end=end_date)
 
-# 提交事务
-conn.commit()
+                # 插入数据到相应的表中
+                table_name = group_name.replace(" ", "_")  # 确保表名没有空格
+                mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)  # 从映射字典获取名称，如果不存在则使用原始 ticker_symbol
+                for index, row in data.iterrows():
+                    date = index.strftime('%Y-%m-%d')
+                    if group_name in ["Currencies", "Bonds", "Crypto"]:
+                        price = round(row['Close'], 6)
+                    elif group_name in ["Commodities", "Indices"]:
+                        price = round(row['Close'], 4)
+                    else:
+                        price = round(row['Close'], 2)
 
-# 关闭连接
-conn.close()
+                    if group_name in special_groups:
+                        c.execute(f"INSERT INTO {table_name} (date, name, price) VALUES (?, ?, ?)",
+                                (date, mapped_name, price))
+                    else:
+                        volume = int(row['Volume'])
+                        c.execute(f"INSERT INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)",
+                                (date, mapped_name, price, volume))
+                subgroup_counter[subgroup_name] += 1  # 更新计数器
 
-print("所有数据已成功写入数据库")
+        # 使用print输出每个大组的统计信息
+        print(f"{group_name} statistics:")
+        for subgroup_name, count in subgroup_counter.items():
+            print(f"  {subgroup_name}: {count} stocks inserted.")
+
+    # 提交事务
+    conn.commit()
+    # 关闭连接
+    conn.close()
+
+    print("所有数据已成功写入数据库")
