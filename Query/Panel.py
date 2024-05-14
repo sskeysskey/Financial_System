@@ -6,7 +6,7 @@ import tkinter as tk
 import tkinter.font as tkFont
 from tkinter import ttk, scrolledtext
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
-from API_Name2Chart import plot_financial_data
+from API_panel_Name2Chart import plot_financial_data
 from datetime import datetime, timedelta
 
 def create_custom_style():
@@ -184,7 +184,7 @@ def on_keyword_selected_chart(value, parent_window):
             for category, names in categories.items():
                 if value in names:
                     db_path = "/Users/yanzhang/Documents/Database/Finance.db"
-                    plot_financial_data(db_path, sector, category, value)
+                    plot_financial_data(db_path, sector, value)
 
 def create_window(content):
     top = tk.Toplevel(root)

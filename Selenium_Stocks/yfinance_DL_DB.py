@@ -4,7 +4,7 @@ import json
 import datetime
 
 # 读取JSON文件
-with open('/Users/yanzhang/Documents/Financial_System/Modules/YF_Selenium.json', 'r') as file:
+with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json', 'r') as file:
     stock_groups = json.load(file)
 
 today = datetime.date.today()

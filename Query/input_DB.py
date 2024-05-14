@@ -27,14 +27,16 @@ def input_mapping(root, sector_data):
         exact_match_found = False
         for sector, categories in sector_data.items():
             for category, names in categories.items():
-                if input_trimmed.upper() in names:
-                        db_path = "/Users/yanzhang/Documents/Database/Finance.db"
-                        condition = f"name = '{input_trimmed.upper()}'"
-                        result = query_database(db_path, sector, condition)
-                        # print(f"查询结果: {result}")  # 打印查询结果
-                        create_window(None, result)
-                        found = True
-                        break
+                # if input_trimmed.upper() in names:
+                if input_trimmed in names:
+                    db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+                    # condition = f"name = '{input_trimmed.upper()}'"
+                    condition = f"name = '{input_trimmed}'"
+                    result = query_database(db_path, sector, condition)
+                    # print(f"查询结果: {result}")  # 打印查询结果
+                    create_window(None, result)
+                    found = True
+                    break
             if exact_match_found:
                 break
 

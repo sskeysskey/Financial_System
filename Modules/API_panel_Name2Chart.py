@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import RadioButtons
 import matplotlib
 
-def plot_financial_data(db_path, table_name, name, compare):
+def plot_financial_data(db_path, table_name, name):
     # 设置支持中文的字体
     # matplotlib.rcParams['font.family'] = 'sans-serif'
     # matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
@@ -13,23 +13,20 @@ def plot_financial_data(db_path, table_name, name, compare):
     
     with sqlite3.connect(db_path) as conn:
         cursor = conn.cursor()
-        query = f"SELECT date, price, volume FROM {table_name} WHERE name = ? ORDER BY date;"
+        query = f"SELECT date, price FROM {table_name} WHERE name = ? ORDER BY date;"
         cursor.execute(query, (name,))
         data = cursor.fetchall()
 
     dates = []
     prices = []
-    last_volume = None  # 新增变量以存储最新的volume
-
     for row in data:
         try:
             date = datetime.strptime(row[0], "%Y-%m-%d")
             price = float(row[1]) if row[1] is not None else None
-            volume = row[2]  # 获取当前行的volume
+            # volume = row[2]  # 获取当前行的volume
             if price is not None:
                 dates.append(date)
                 prices.append(price)
-                last_volume = volume  # 更新last_volume为当前行的volume
         except ValueError:
             continue  # 跳过非法数据
 
@@ -43,7 +40,8 @@ def plot_financial_data(db_path, table_name, name, compare):
     highlight_point = ax.scatter([], [], s=100, color='blue', zorder=5)  # s是点的大小
 
     line, = ax.plot(dates, prices, marker='o', markersize=1, linestyle='-', linewidth=2, color='b')
-    ax.set_title(f'{name}  {compare}  Volume: {f"{volume/1000:.1f}K"}  {table_name}')
+    # ax.set_title(f'{name} Volume: {f"{volume/1000:.1f}K"}  {table_name}')
+    ax.set_title(f'{name}  {table_name}')
     ax.grid(True)
     plt.xticks(rotation=45)
 
@@ -66,7 +64,7 @@ def plot_financial_data(db_path, table_name, name, compare):
 
     rax = plt.axes([0.95, 0.005, 0.05, 0.8], facecolor='lightgoldenrodyellow')
     options = list(time_options.keys())
-    radio = RadioButtons(rax, options, active=6)
+    radio = RadioButtons(rax, options, active=1)
 
     for label in radio.labels:
         label.set_fontsize(14)
@@ -140,7 +138,7 @@ def plot_financial_data(db_path, table_name, name, compare):
 
     # 添加竖线
     vline = ax.axvline(x=dates[0], color='b', linestyle='--', linewidth=1, visible=False)
-    update("10Y")
+    update("3m")
     radio.on_clicked(update)
 
     def on_key(event):

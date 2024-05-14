@@ -7,7 +7,7 @@ def create_connection(db_file):
     conn = sqlite3.connect(db_file)
     return conn
 
-def compare_today_yesterday(config_path, output_file):
+def compare_today_yesterday(config_path):
     with open(config_path, 'r') as file:
             data = json.load(file)
 
@@ -47,6 +47,9 @@ def compare_today_yesterday(config_path, output_file):
     # 对输出进行排序，根据变化百分比
     output.sort(key=lambda x: x[1], reverse=True)
 
+    # 生成输出文件名，包含时间戳
+    timestamp = datetime.now().strftime("%m_%d")
+    output_file = f'/Users/yanzhang/Documents/News/Compare_Stocks_{timestamp}.txt'
     with open(output_file, 'w') as file:
         for line in output:
             file.write(f"{line[0]}: {line[1]:.2f}%\n")
@@ -54,5 +57,4 @@ def compare_today_yesterday(config_path, output_file):
 
 if __name__ == '__main__':
     config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_Stock.json'
-    output_file = '/Users/yanzhang/Documents/News/Compare_Stocks.txt'
-    compare_today_yesterday(config_path, output_file)
+    compare_today_yesterday(config_path)

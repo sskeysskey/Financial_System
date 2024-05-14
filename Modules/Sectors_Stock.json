@@ -110,10 +110,9 @@
       "TME",
       "LYV",
       "RCI",
-      "RBLX"
+      "WBD"
     ],
     "Middle": [
-      "WBD",
       "TLK",
       "OMC",
       "WMG",
@@ -145,7 +144,8 @@
       "BILI",
       "NXST",
       "TKC",
-      "PHI"
+      "PHI",
+      "RBLX"
     ]
   },
   "Consumer_Cyclical": {
@@ -153,11 +153,11 @@
       "AMZN",
       "TSLA",
       "HD",
-      "TM"
+      "TM",
+      "BABA"
     ],
     "Large": [
       "MCD",
-      "BABA",
       "PDD",
       "NKE",
       "LOW",
@@ -308,7 +308,9 @@
       "RRR",
       "BYD",
       "SLGN",
-      "LOT"
+      "LOT",
+      "VIK",
+      "COLM"
     ]
   },
   "Consumer_Defensive": {
@@ -424,10 +426,10 @@
       "CQP",
       "CCJ",
       "PBA",
-      "CTRA"
+      "CTRA",
+      "TS"
     ],
     "Middle": [
-      "TS",
       "EQT",
       "MRO",
       "TPL",
@@ -565,8 +567,7 @@
       "MKL",
       "ERIE",
       "WRB",
-      "HBAN",
-      "LPLA"
+      "HBAN"
     ],
     "Middle": [
       "PFG",
@@ -659,10 +660,10 @@
       "LU",
       "CADE",
       "JHG",
-      "FG",
       "FNB",
       "SLMBP",
-      "AMG"
+      "LPLA",
+      "LNC"
     ]
   },
   "Healthcare": {
@@ -800,8 +801,7 @@
       "OPCH",
       "OSCR",
       "APLS",
-      "RCM",
-      "INSP"
+      "RCM"
     ]
   },
   "Industrials": {
@@ -869,7 +869,7 @@
       "AXON",
       "HUBB",
       "BLDR",
-      "BAH"
+      "FER"
     ],
     "Middle": [
       "CSL",
@@ -985,7 +985,9 @@
       "MDU",
       "CRS",
       "MMS",
-      "AWI"
+      "AWI",
+      "ERJ",
+      "BAH"
     ]
   },
   "Real_Estate": {
@@ -1146,7 +1148,8 @@
       "NOK",
       "TYL",
       "FSLR",
-      "UMC"
+      "UMC",
+      "CPAY"
     ],
     "Middle": [
       "LDOS",
@@ -1254,9 +1257,7 @@
       "PEGA",
       "ALGM",
       "STNE",
-      "CWAN",
-      "AUR",
-      "VRNS"
+      "CWAN"
     ]
   },
   "Utilities": {

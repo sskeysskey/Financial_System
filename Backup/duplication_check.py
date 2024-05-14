@@ -1,21 +1,51 @@
+import json
+
+def find_duplicates_in_json(json_data):
+    # 解析 JSON 数据
+    data = json.loads(json_data)
+    
+    # 创建一个字典来存储所有项
+    items = {}
+    
+    # 遍历 JSON 数据中的每个分类
+    for category in data:
+        for subcategory in data[category]:
+            # 遍历每个子分类中的项
+            for item in data[category][subcategory]:
+                # 检查项是否已存在于字典中
+                if item in items:
+                    # 如果存在，打印出重复的项
+                    print(f"发现重复项: {item} 在 {category}/{subcategory}")
+                else:
+                    # 如果不存在，将项添加到字典中
+                    items[item] = f"{category}/{subcategory}"
+
+# 示例 JSON 数据
+json_data = '''
 {
   "Bonds": {
-    "Mega": [],
+    "Mega": [
+      "^TNX"
+    ],
     "Large": [],
     "Middle": []
   },
   "Currencies": {
     "Mega": [
+      "DX-Y.NYB",
       "EURUSD=X",
-      "GBPUSD=X"
+      "GBPUSD=X",
+      "JPY=X"
     ],
     "Large": [
       "CNYEUR=X",
       "CNYGBP=X",
-      "CNYJPY=X"
+      "CNYJPY=X",
+      "CNYUSD=X"
     ],
     "Middle": [
       "EURCNY=X",
+      "CNY=X",
       "GBPCNY=X",
       "AUDCNY=X",
       "INR=X",
@@ -32,24 +62,22 @@
     ]
   },
   "Crypto": {
-    "Mega": [
-      "BTC-USD",
-      "ETH-USD",
-      "SOL-USD",
-      "BNB-USD"
-    ],
+    "Mega": [],
     "Large": [],
     "Middle": []
   },
   "Indices": {
     "Mega": [
+      "^HSI",
+      "^IXIC",
       "000001.SS",
       "399001.SZ",
+      "^VIX",
       "^BVSP",
+      "^N225",
       "^RUT",
       "^GSPC",
-      "^BSESN",
-      "IMOEX.ME"
+      "^BSESN"
     ],
     "Large": [],
     "Middle": []
@@ -187,9 +215,10 @@
       "TME",
       "LYV",
       "RCI",
-      "WBD"
+      "RBLX"
     ],
     "Middle": [
+      "WBD",
       "TLK",
       "OMC",
       "WMG",
@@ -221,8 +250,7 @@
       "BILI",
       "NXST",
       "TKC",
-      "PHI",
-      "RBLX"
+      "PHI"
     ]
   },
   "Consumer_Cyclical": {
@@ -230,11 +258,11 @@
       "AMZN",
       "TSLA",
       "HD",
-      "TM",
-      "BABA"
+      "TM"
     ],
     "Large": [
       "MCD",
+      "BABA",
       "PDD",
       "NKE",
       "LOW",
@@ -385,9 +413,7 @@
       "RRR",
       "BYD",
       "SLGN",
-      "LOT",
-      "VIK",
-      "COLM"
+      "LOT"
     ]
   },
   "Consumer_Defensive": {
@@ -503,10 +529,10 @@
       "CQP",
       "CCJ",
       "PBA",
-      "CTRA",
-      "TS"
+      "CTRA"
     ],
     "Middle": [
+      "TS",
       "EQT",
       "MRO",
       "TPL",
@@ -644,7 +670,8 @@
       "MKL",
       "ERIE",
       "WRB",
-      "HBAN"
+      "HBAN",
+      "LPLA"
     ],
     "Middle": [
       "PFG",
@@ -737,10 +764,10 @@
       "LU",
       "CADE",
       "JHG",
+      "FG",
       "FNB",
       "SLMBP",
-      "LPLA",
-      "LNC"
+      "AMG"
     ]
   },
   "Healthcare": {
@@ -878,7 +905,8 @@
       "OPCH",
       "OSCR",
       "APLS",
-      "RCM"
+      "RCM",
+      "INSP"
     ]
   },
   "Industrials": {
@@ -946,7 +974,7 @@
       "AXON",
       "HUBB",
       "BLDR",
-      "FER"
+      "BAH"
     ],
     "Middle": [
       "CSL",
@@ -1062,9 +1090,7 @@
       "MDU",
       "CRS",
       "MMS",
-      "AWI",
-      "ERJ",
-      "BAH"
+      "AWI"
     ]
   },
   "Real_Estate": {
@@ -1225,8 +1251,7 @@
       "NOK",
       "TYL",
       "FSLR",
-      "UMC",
-      "CPAY"
+      "UMC"
     ],
     "Middle": [
       "LDOS",
@@ -1334,7 +1359,9 @@
       "PEGA",
       "ALGM",
       "STNE",
-      "CWAN"
+      "CWAN",
+      "AUR",
+      "VRNS"
     ]
   },
   "Utilities": {
@@ -1393,3 +1420,6 @@
     ]
   }
 }
+'''
+
+find_duplicates_in_json(json_data)
