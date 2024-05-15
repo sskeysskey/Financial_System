@@ -1,16 +1,15 @@
 import yfinance as yf
 import sqlite3
 import json
-import datetime
+from datetime import datetime, timedelta
 
 # 读取JSON文件
 with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json', 'r') as file:
     stock_groups = json.load(file)
 
-today = datetime.date.today()
-
+today = datetime.now()
 # 定义时间范围
-start_date = "2000-01-01"
+start_date = "2024-05-12"
 # end_date = "2024-05-06"
 end_date = today.strftime('%Y-%m-%d')
 

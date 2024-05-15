@@ -4,11 +4,8 @@ from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 from matplotlib.widgets import RadioButtons
 import matplotlib
-import json
-import tkinter as tk
-from tkinter import simpledialog
 
-def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_data):
+def plot_financial_data(db_path, table_name, name, compare, marketcap, pe):
     # 设置支持中文的字体
     # matplotlib.rcParams['font.family'] = 'sans-serif'
     # matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
@@ -19,14 +16,22 @@ def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_
             query = f"SELECT date, price, volume FROM {table_name} WHERE name = ? ORDER BY date;"
             cursor.execute(query, (name,))
             data = cursor.fetchall()
+            # 查询最新的价格
+            # query_latest_price = f"SELECT price FROM {table_name} WHERE name = ? ORDER BY date DESC LIMIT 1;"
+            # cursor.execute(query_latest_price, (name,))
+            # latest_price_result = cursor.fetchone()
+            # latest_price = latest_price_result[0] if latest_price_result else None
+
     except sqlite3.OperationalError as e:
         if 'no such column: volume' in str(e):
             print("警告: 数据库表中不存在'volume'列。")
             data = []
         else:
             raise
+
     dates = []
     prices = []
+
     for row in data:
             date = datetime.strptime(row[0], "%Y-%m-%d")
             price = float(row[1]) if row[1] is not None else None
@@ -44,38 +49,15 @@ def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_
 
     highlight_point = ax.scatter([], [], s=100, color='blue', zorder=5)  # s是点的大小
 
-    line, = ax.plot(dates, prices, marker='o', markersize=1, linestyle='-', linewidth=2, color='b', picker=5)
+    line, = ax.plot(dates, prices, marker='o', markersize=1, linestyle='-', linewidth=2, color='b')
     
     if volume is not None and price is not None:
         turnover = f"{(volume * float(price)) / 1000000:.1f}"
 
     marketcap_in_billion = f"{float(marketcap) / 1e9:.1f}B" if marketcap is not None else "N/A"
     pe_text = f"{pe}" if pe is not None else "N/A"
-
-    # 创建弹出窗口显示股票信息
-    def show_stock_info(name, descriptions):
-        root = tk.Tk()
-        root.withdraw()  # 隐藏主窗口
-        info = f"{name}:\n\n{descriptions['description1']}\n\n{descriptions['description2']}"
-        simpledialog.messagebox.showinfo("Stock Information", info)
-        root.mainloop()
-
-    # 添加 pick 事件处理器
-    def on_pick(event):
-        if event.artist == title:
-            stock_name = name
-            for stock in json_data['stocks']:
-                if stock['name'] == stock_name:
-                    show_stock_info(stock_name, stock)
-                    break
     
-    # 添加交互性标题
-    title_text = f'{name}  {compare}  TurnOver: {turnover}M   MarketCap:{marketcap_in_billion}   PE:{pe_text}   {table_name}'
-    title = ax.set_title(title_text, picker=True)
-    title.set_picker(5)  # 设置标题的 picker 容差
-
-    fig.canvas.mpl_connect('pick_event', on_pick)
-
+    ax.set_title(f'{name}  {compare}  TurnOver: {turnover}M   MarketCap:{marketcap_in_billion}   PE:{pe_text}   {table_name}')
     ax.grid(True)
     plt.xticks(rotation=45)
 

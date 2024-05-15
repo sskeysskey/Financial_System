@@ -53,7 +53,8 @@
       "^N225",
       "^RUT",
       "^GSPC",
-      "^BSESN"
+      "^BSESN",
+      "IMOEX.ME"
     ],
     "Large": [],
     "Middle": []
