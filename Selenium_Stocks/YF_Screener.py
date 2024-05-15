@@ -1,6 +1,5 @@
 import json
 import os
-import datetime
 from datetime import datetime, timedelta
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -26,7 +25,7 @@ blacklist = ["CTA-PA", "FWONK", "FOXA", "NWSA", "PARAA", "LSXMA",
     "PSA-PK", "DLR-PK", "DLR-PJ", "NLY-PG", "NLY-PF", "MAA-PI",
     "AGNCN", "VNO-PL", "VNO-PM", "FRT-PC", "AMH-PH", "AMH-PG",
     "KIM-PM", "KIM-PL", "DUK-PA", "EBR-B", "CIG-C", "CMS-PB",
-    "CWEN-A", "ELPC", "BML-PG", "SLG-PI", "NEE-PR", "APO-PA"]
+    "CWEN-A", "ELPC", "BML-PG", "SLG-PI", "NEE-PR", "APO-PA", "YNDX"]
 
 def setup_driver():
     chrome_options = Options()
@@ -110,7 +109,7 @@ def fetch_data(driver, url):
         results.append((symbol, market_cap, pe_ratio))
         
     # 将结果写入到 txt 文件
-    with open('/Users/yanzhang/Documents/News/backup/marketcap_pe_result.txt', 'a') as file:  # 修改 'w' 为 'a'
+    with open('/Users/yanzhang/Documents/News/backup/marketcap_pe.txt', 'a') as file:  # 修改 'w' 为 'a'
         for result in results:
             file.write(f"{result[0]}: {result[1]}, {result[2]}\n")
     
@@ -173,7 +172,7 @@ def process_sector(driver, url, sector, output):
 
 def save_output_to_file(output, directory, filename='MarketCap_Change.txt'):
     # 获取当前时间，并格式化为字符串（如'2023-03-15_12-30-00'）
-    current_time = datetime.datetime.now().strftime('%m_%d')
+    current_time = datetime.now().strftime('%m_%d')
     
     # 在文件名中加入时间戳
     filename = f"{filename.split('.')[0]}_{current_time}.txt"
@@ -192,8 +191,7 @@ def save_output_to_file(output, directory, filename='MarketCap_Change.txt'):
     print(f"输出已保存到文件：{file_path}")
 
 def main():
-    获取当前时间
-    now = datetime.datetime.now()
+    now = datetime.now()
     # 判断今天的星期数，如果是周日(6)或周一(0)，则不执行程序
     if now.weekday() in (0, 6):
         print("Today is either Sunday or Monday. The script will not run.")
@@ -205,7 +203,7 @@ def main():
         if os.path.exists(file_path):
             # 获取昨天的日期作为时间戳
             yesterday = datetime.now() - timedelta(days=1)
-            timestamp = yesterday.strftime('%Y%m%d')
+            timestamp = yesterday.strftime('%m%d')
 
             # 构建新的文件名
             directory, filename = os.path.split(file_path)

@@ -187,7 +187,8 @@
       "TME",
       "LYV",
       "RCI",
-      "WBD"
+      "WBD",
+      "RBLX"
     ],
     "Middle": [
       "TLK",
@@ -214,15 +215,13 @@
       "EDR",
       "NYT",
       "LBRDK",
-      "YNDX",
       "FYBR",
       "KT",
       "LBTYK",
       "BILI",
       "NXST",
       "TKC",
-      "PHI",
-      "RBLX"
+      "PHI"
     ]
   },
   "Consumer_Cyclical": {
@@ -230,8 +229,7 @@
       "AMZN",
       "TSLA",
       "HD",
-      "TM",
-      "BABA"
+      "TM"
     ],
     "Large": [
       "MCD",
@@ -279,7 +277,8 @@
       "BALL",
       "CVNA",
       "DKNG",
-      "WSM"
+      "WSM",
+      "BABA"
     ],
     "Middle": [
       "ULTA",
@@ -387,7 +386,8 @@
       "SLGN",
       "LOT",
       "VIK",
-      "COLM"
+      "COLM",
+      "VFC"
     ]
   },
   "Consumer_Defensive": {
@@ -644,7 +644,8 @@
       "MKL",
       "ERIE",
       "WRB",
-      "HBAN"
+      "HBAN",
+      "LPLA"
     ],
     "Middle": [
       "PFG",
@@ -739,8 +740,9 @@
       "JHG",
       "FNB",
       "SLMBP",
-      "LPLA",
-      "LNC"
+      "LNC",
+      "FG",
+      "AMG"
     ]
   },
   "Healthcare": {
@@ -1226,12 +1228,11 @@
       "TYL",
       "FSLR",
       "UMC",
-      "CPAY"
+      "STX"
     ],
     "Middle": [
       "LDOS",
       "ENTG",
-      "STX",
       "ZM",
       "TER",
       "GDDY",
@@ -1333,8 +1334,8 @@
       "EEFT",
       "PEGA",
       "ALGM",
-      "STNE",
-      "CWAN"
+      "CWAN",
+      "CPAY"
     ]
   },
   "Utilities": {
