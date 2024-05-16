@@ -42,9 +42,9 @@ data_sets = {
         # ('CBOE Volatility Index', 10, '2024-04-29'),
         # ('Bonds', None, '2024-04-24'),
     ],
-    'Stocks': [
+    'Indices': [
         # ('2024-04-01', 'Shenzhen Index', 9647.07, 10),
-        # ('2023-11-24', 'Nikkei 225', 33625.53, 10),
+        # ('2024-05-15', 'Nikkei', 38608.18, ),
         # ('2018-01-22', 'HANG SENG INDEX', 33154.12, 10),
         # ('2024-03-26', 'S&P BSE SENSEX', 72470.3, 10)
     ],
@@ -90,7 +90,7 @@ data_sets = {
 
 # 数据库文件和表名信息，同时指定每个表的列名
 databases = [
-    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Stocks', 'columns': ['date', 'name', 'price', 'parent_id']},
+    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Indices', 'columns': ['date', 'name', 'price', 'parent_id']},
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies', 'columns': ['date', 'name', 'price', 'parent_id']},
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities', 'columns': ['date', 'name', 'price', 'parent_id']},
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto', 'columns': ['date', 'name', 'price', 'parent_id']},

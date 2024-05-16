@@ -37,7 +37,7 @@ def get_price_comparison(cursor, table_name, months_back, name, today):
 
 def save_output_to_file(output, directory, filename):
     # 获取当前时间，并格式化为字符串（如'2023-03-15_12-30-00'）
-    current_time = datetime.now().strftime('%m_%d')
+    current_time = datetime.now().strftime('%m%d')
     
     # 在文件名中加入时间戳
     filename = f"{filename.split('.')[0]}_{current_time}.txt"
@@ -140,7 +140,7 @@ def main():
 
     # 在代码的最后部分调用save_output_to_file函数
     output_directory = '/Users/yanzhang/Documents/News'
-    filename = 'Analyse_Stocks.txt'
+    filename = 'Analyse_Stock.txt'
     filename1 = '52week_newlow.txt'
     save_output_to_file(final_output, output_directory, filename)
     save_output_to_file(final_output1, output_directory, filename1)

@@ -6,6 +6,9 @@ import subprocess
 import numpy as np
 from time import sleep
 from PIL import ImageGrab
+import tkinter as tk
+from tkinter import messagebox
+import sys
 
 def capture_screen():
     # 使用PIL的ImageGrab直接截取屏幕
@@ -33,9 +36,17 @@ with open(json_path, 'r', encoding='utf-8') as file:
 
 # 从剪贴板获取第一个新的name字段内容
 new_name = pyperclip.paste()
-
 # 去除新name的所有引号
-# new_name = new_name.replace('"', '').replace("'", "")
+new_name = new_name.replace('"', '').replace("'", "")
+
+# 判断是否全是大写英文字母
+if not new_name.isupper() or not new_name.isalpha():
+    # 初始化Tkinter窗口
+    root = tk.Tk()
+    root.withdraw()  # 隐藏主窗口
+    # 弹出警示框
+    messagebox.showerror("错误", "不是股票代码！")
+    sys.exit()
 
 template_paths = {
     "poesuccess": "/Users/yanzhang/Documents/python_code/Resource/poe_copy_success.png",

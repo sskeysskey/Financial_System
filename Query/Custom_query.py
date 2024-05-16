@@ -65,10 +65,9 @@ def create_window(content):
     root.mainloop()
 
 if __name__ == '__main__':
-    # 数据库文件和表名的列表
     db_info = [
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Indices',
-        #   'condition': "name = 'S&P500' ORDER BY date DESC", 'fields': '*'},
+        #   'condition': "name = 'Nikkei' ORDER BY date DESC", 'fields': '*'},
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies',
         #   'condition': "name = 'CNYUSD' ORDER BY date DESC", 'fields': '*'},
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities',
@@ -77,12 +76,12 @@ if __name__ == '__main__':
         #   'condition': "name = 'Solana' ORDER BY date DESC", 'fields': '*'},
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Bonds',
         #   'condition': "name = 'JP10Y' ORDER BY date DESC", 'fields': '*'},
-        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Basic_Materials',
-            'condition': "name = 'AA' ORDER BY date DESC", 'fields': '*'},
+        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Basic_Materials',
+        #     'condition': "name = 'AA' ORDER BY date DESC", 'fields': '*'},
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Communication_Services',
         #     'condition': "name = 'META' ORDER BY date DESC", 'fields': '*'},
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Consumer_Cyclical',
-        #     'condition': "name = 'VIK' ORDER BY date DESC", 'fields': '*'},
+        #     'condition': "name = 'GME' ORDER BY date DESC", 'fields': '*'},
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Consumer_Defensive',
         #     'condition': "name = 'WMT' ORDER BY date DESC", 'fields': '*'},
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Energy',

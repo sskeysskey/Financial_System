@@ -71,11 +71,11 @@ else:
                         price = round(row['Close'], 2)
 
                     if group_name in special_groups:
-                        c.execute(f"INSERT INTO {table_name} (date, name, price) VALUES (?, ?, ?)",
+                        c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price) VALUES (?, ?, ?)",
                                 (date, mapped_name, price))
                     else:
                         volume = int(row['Volume'])
-                        c.execute(f"INSERT INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)",
+                        c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)",
                                 (date, mapped_name, price, volume))
                 subgroup_counter[subgroup_name] += 1  # 更新计数器
 

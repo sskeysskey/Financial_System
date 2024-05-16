@@ -6,7 +6,7 @@ from matplotlib.widgets import RadioButtons
 import matplotlib
 import json
 import tkinter as tk
-from tkinter import simpledialog
+from tkinter import simpledialog, scrolledtext
 
 def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_data):
     # 设置支持中文的字体
@@ -52,12 +52,39 @@ def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_
     marketcap_in_billion = f"{float(marketcap) / 1e9:.1f}B" if marketcap is not None else "N/A"
     pe_text = f"{pe}" if pe is not None else "N/A"
 
-    # 创建弹出窗口显示股票信息
     def show_stock_info(name, descriptions):
         root = tk.Tk()
         root.withdraw()  # 隐藏主窗口
+        
+        # 创建一个新的顶级窗口
+        top = tk.Toplevel(root)
+        top.title("Stock Information")
+        
+        # 设置窗口尺寸
+        top.geometry("400x600")
+        
+        # 设置字体大小
+        font_size = ('Arial', 22)
+        
+        # 创建一个滚动文本框
+        text_box = scrolledtext.ScrolledText(top, wrap=tk.WORD, font=font_size)
+        text_box.pack(expand=True, fill='both')
+        
+        # 插入股票信息
         info = f"{name}:\n\n{descriptions['description1']}\n\n{descriptions['description2']}"
-        simpledialog.messagebox.showinfo("Stock Information", info)
+        text_box.insert(tk.END, info)
+        
+        # 设置文本框为只读
+        text_box.config(state=tk.DISABLED)
+        
+        # 创建一个关闭按钮
+        close_button = tk.Button(top, text="OK", command=top.destroy, font=font_size)
+        close_button.pack(pady=10)
+        
+        # 设置焦点并绑定回车键
+        close_button.focus_set()
+        top.bind('<Escape>', lambda event: top.destroy())
+        
         root.mainloop()
 
     # 添加 pick 事件处理器
@@ -170,6 +197,11 @@ def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_
         ax.set_ylim(min(filtered_prices), max(filtered_prices))  # 更新y轴范围
         plt.draw()
 
+    def close_app(root):
+        if root:
+            root.quit()  # 更安全的关闭方式
+            root.destroy()  # 使用destroy来确保彻底关闭所有窗口和退出
+
     # 添加竖线
     vline = ax.axvline(x=dates[0], color='b', linestyle='--', linewidth=1, visible=False)
     update("10Y")
@@ -179,6 +211,7 @@ def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_
         try:
             if event.key == 'escape':
                 plt.close()
+                close_app()
         except Exception as e:
             print(f"处理键盘事件时发生错误: {str(e)}")
 

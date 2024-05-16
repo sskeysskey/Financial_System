@@ -156,8 +156,7 @@
       "CBT",
       "NEU",
       "BCC",
-      "BCPC",
-      "ALTM"
+      "BCPC"
     ]
   },
   "Communication_Services": {
@@ -226,7 +225,8 @@
       "BILI",
       "NXST",
       "TKC",
-      "PHI"
+      "PHI",
+      "IQ"
     ]
   },
   "Consumer_Cyclical": {
@@ -234,7 +234,8 @@
       "AMZN",
       "TSLA",
       "HD",
-      "TM"
+      "TM",
+      "BABA"
     ],
     "Large": [
       "MCD",
@@ -282,8 +283,7 @@
       "BALL",
       "CVNA",
       "DKNG",
-      "WSM",
-      "BABA"
+      "WSM"
     ],
     "Middle": [
       "ULTA",
@@ -390,9 +390,7 @@
       "BYD",
       "SLGN",
       "LOT",
-      "VIK",
-      "COLM",
-      "VFC"
+      "VIK"
     ]
   },
   "Consumer_Defensive": {
@@ -747,7 +745,8 @@
       "SLMBP",
       "LNC",
       "FG",
-      "AMG"
+      "AMG",
+      "BMA"
     ]
   },
   "Healthcare": {
@@ -953,10 +952,10 @@
       "AXON",
       "HUBB",
       "BLDR",
-      "FER"
+      "FER",
+      "CSL"
     ],
     "Middle": [
-      "CSL",
       "WSO",
       "AER",
       "EME",
@@ -1156,10 +1155,10 @@
       "AMD",
       "SAP",
       "ADBE",
-      "QCOM"
+      "QCOM",
+      "CSCO"
     ],
     "Large": [
-      "CSCO",
       "ACN",
       "INTU",
       "AMAT",
@@ -1233,13 +1232,13 @@
       "TYL",
       "FSLR",
       "UMC",
-      "STX"
+      "STX",
+      "TER",
+      "ENTG"
     ],
     "Middle": [
       "LDOS",
-      "ENTG",
       "ZM",
-      "TER",
       "GDDY",
       "TDY",
       "ERIC",
@@ -1340,7 +1339,10 @@
       "PEGA",
       "ALGM",
       "CWAN",
-      "CPAY"
+      "CPAY",
+      "ALAB",
+      "VRNS",
+      "STNE"
     ]
   },
   "Utilities": {
@@ -1368,10 +1370,10 @@
       "FE",
       "ES",
       "PPL",
-      "FTS"
+      "FTS",
+      "AEE"
     ],
     "Middle": [
-      "AEE",
       "CNP",
       "CMS",
       "BEP",
