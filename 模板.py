@@ -361,3 +361,65 @@ def get_parent_id(commodity):
         return 23
     return None
 # ——————————————————————————————————————————————————————————————————————————————————————————
+{"database_info": {
+        "Commodities": {
+            "path": "/Users/yanzhang/Documents/Database/Finance.db",
+            "table": "Commodities"
+        },
+        "Indices": {
+            "path": "/Users/yanzhang/Documents/Database/Finance.db",
+            "table": "Indices"
+        },
+        "Crypto": {
+            "path": "/Users/yanzhang/Documents/Database/Finance.db",
+            "table": "Crypto"
+        },
+        "Currencies": {
+            "path": "/Users/yanzhang/Documents/Database/Finance.db",
+            "table": "Currencies"
+        },
+        "Basic_Materials": {
+            "path": "/Users/yanzhang/Documents/Database/Finance.db",
+            "table": "Basic_Materials"
+        },
+        "Communication_Services": {
+            "path": "/Users/yanzhang/Documents/Database/Finance.db",
+            "table": "Communication_Services"
+        },
+        "Consumer_Cyclical": {
+            "path": "/Users/yanzhang/Documents/Database/Finance.db",
+            "table": "Consumer_Cyclical"
+        },
+        "Consumer_Defensive": {
+            "path": "/Users/yanzhang/Documents/Database/Finance.db",
+            "table": "Consumer_Defensive"
+        },
+        "Energy": {
+            "path": "/Users/yanzhang/Documents/Database/Finance.db",
+            "table": "Energy"
+        },
+        "Financial_Services": {
+            "path": "/Users/yanzhang/Documents/Database/Finance.db",
+            "table": "Financial_Services"
+        },
+        "Healthcare": {
+            "path": "/Users/yanzhang/Documents/Database/Finance.db",
+            "table": "Healthcare"
+        },
+        "Industrials": {
+            "path": "/Users/yanzhang/Documents/Database/Finance.db",
+            "table": "Industrials"
+        },
+        "Real_Estate": {
+            "path": "/Users/yanzhang/Documents/Database/Finance.db",
+            "table": "Real_Estate"
+        },
+        "Technology": {
+            "path": "/Users/yanzhang/Documents/Database/Finance.db",
+            "table": "Technology"
+        },
+        "Utilities": {
+            "path": "/Users/yanzhang/Documents/Database/Finance.db",
+            "table": "Utilities"
+        }
+    }}

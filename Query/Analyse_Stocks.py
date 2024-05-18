@@ -73,67 +73,65 @@ def main():
     intervals = [600, 360, 240, 120, 60, 24, 13, 6, 3, 1]  # 以月份表示的时间间隔列表
 
     # 遍历JSON中的每个表和股票代码
-    for table_name, groups in data.items():
-        for group_name, names in groups.items():
-            with create_connection(db_path) as conn:
-                cursor = conn.cursor()
+    for table_name, names in data.items():
+        with create_connection(db_path) as conn:
+            cursor = conn.cursor()
+            for name in names:
+                if is_blacklisted(name):
+                    print(f"{name} is blacklisted and will be skipped.")
+                    continue  # 跳过黑名单中的符号
+                today_price_query = f"SELECT price FROM {table_name} WHERE date = ? AND name = ?"
+                cursor.execute(today_price_query, (real_today.strftime("%Y-%m-%d"), name))
+                result = cursor.fetchone()
 
-                for name in names:
-                    if is_blacklisted(name):
-                        print(f"{name} is blacklisted and will be skipped.")
-                        continue  # 跳过黑名单中的符号
-                    today_price_query = f"SELECT price FROM {table_name} WHERE date = ? AND name = ?"
-                    cursor.execute(today_price_query, (real_today.strftime("%Y-%m-%d"), name))
-                    result = cursor.fetchone()
+                if result:
+                    today_price = result[0]
+                else:
+                    output.append(f"没有找到今天的{name}价格。")
+                    continue
 
-                    if result:
-                        today_price = result[0]
-                    else:
-                        output.append(f"没有找到今天的{name}价格。")
-                        continue
+                price_extremes = {}
+                for months in intervals:
+                    max_price, min_price = get_price_comparison(cursor, table_name, months, name, today)
+                    price_extremes[months] = (max_price, min_price)  # 存储最大和最小价格
 
-                    price_extremes = {}
-                    for months in intervals:
-                        max_price, min_price = get_price_comparison(cursor, table_name, months, name, today)
-                        price_extremes[months] = (max_price, min_price)  # 存储最大和最小价格
+                # 检查是否接近最高价格
+                found_max = False
+                for months in intervals:
+                    if found_max:
+                        break
+                    max_price, _ = price_extremes.get(months, (None, None))
+                    if max_price is not None and today_price >= max_price:
+                        found_max = True
+                        if today_price >= max_price:
+                            if months >= 12:
+                                years = months // 12
+                                print(f"{table_name} {name} {years}Y_newhigh")
+                                output.append(f"{table_name} {name} {years}Y_newhigh")
+                            else:
+                                print(f"{table_name} {name} {months}M_newhigh")
+                                output.append(f"{table_name} {name} {months}M_newhigh")
 
-                    # 检查是否接近最高价格
-                    found_max = False
-                    for months in intervals:
-                        if found_max:
-                            break
-                        max_price, _ = price_extremes.get(months, (None, None))
-                        if max_price is not None and today_price >= max_price:
-                            found_max = True
-                            if today_price >= max_price:
-                                if months >= 12:
-                                    years = months // 12
-                                    print(f"{table_name} {group_name} {name} {years}Y_newhigh")
-                                    output.append(f"{table_name} {group_name} {name} {years}Y_newhigh")
-                                else:
-                                    print(f"{table_name} {group_name} {name} {months}M_newhigh")
-                                    output.append(f"{table_name} {group_name} {name} {months}M_newhigh")
+                # 检查是否接近最低价格
+                found_min = False
+                for months in intervals:
+                    if found_min:
+                        break
+                    _, min_price = price_extremes.get(months, (None, None))
+                    if min_price is not None and today_price <= min_price:
+                        found_min = True
+                        if today_price <= min_price:
+                            if months >= 12:
+                                years = months // 12
+                                print(f"{table_name} {name} {years}Y_newlow")
+                                output.append(f"{table_name} {name} {years}Y_newlow")
+                                output1.append(f"{table_name} {name} {years}Y_newlow")
+                            else:
+                                print(f"{table_name} {name} {months}M_newlow")
+                                output.append(f"{table_name} {name} {months}M_newlow")
 
-                    # 检查是否接近最低价格
-                    found_min = False
-                    for months in intervals:
-                        if found_min:
-                            break
-                        _, min_price = price_extremes.get(months, (None, None))
-                        if min_price is not None and today_price <= min_price:
-                            found_min = True
-                            if today_price <= min_price:
-                                if months >= 12:
-                                    years = months // 12
-                                    print(f"{table_name} {group_name} {name} {years}Y_newlow")
-                                    output.append(f"{table_name} {group_name} {name} {years}Y_newlow")
-                                    output1.append(f"{table_name} {group_name} {name} {years}Y_newlow")
-                                else:
-                                    print(f"{table_name} {group_name} {name} {months}M_newlow")
-                                    output.append(f"{table_name} {group_name} {name} {months}M_newlow")
-
-                output.append("\n")
-                cursor.close()
+            output.append("\n")
+            cursor.close()
 
     final_output = "\n".join(output)
     final_output1 = "\n".join(output1)

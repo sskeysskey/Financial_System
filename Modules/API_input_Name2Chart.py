@@ -61,7 +61,7 @@ def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_
         top.title("Stock Information")
         
         # 设置窗口尺寸
-        top.geometry("400x600")
+        top.geometry("600x800")
         
         # 设置字体大小
         font_size = ('Arial', 22)

@@ -1,24 +1,26 @@
 from datetime import datetime, timedelta
 import sqlite3
 import json
+import shutil  # 在文件最开始导入shutil模块
+
+def copy_database_to_backup():
+    source_path = '/Users/yanzhang/Documents/Database/Finance.db'
+    destination_path = '/Users/yanzhang/Downloads/backup/DB_backup/Finance.db'
+    shutil.copy2(source_path, destination_path)  # 使用copy2来复制文件，并覆盖同名文件
+    print(f"文件已从{source_path}复制到{destination_path}。")
 
 def compare_today_yesterday(config_path, output_file):
     # 读取合并后的数据库配置
     with open(config_path, 'r') as f:
         config = json.load(f)
-
-    database_info = config['database_info']
-    database_mapping = config['database_mapping']
-    reverse_mapping = {keyword: db for db, keywords in database_mapping.items() for keyword in keywords}
-
+        
     output = []
-    for db_key, keywords in database_mapping.items():
+    for table_name, keywords in config.items():
         for keyword in sorted(keywords):
-            db_key = reverse_mapping[keyword]
-            db_info = database_info[db_key]
-            table_name = db_info['table']
+            db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+            
             # 使用 with 语句来管理数据库连接
-            with sqlite3.connect(db_info['path']) as conn:
+            with sqlite3.connect(db_path) as conn:
                 cursor = conn.cursor()
                 today = datetime.now()
                 yesterday = today - timedelta(days=1)
@@ -56,7 +58,8 @@ def compare_today_yesterday(config_path, output_file):
             file.write(line + '\n')
 
 if __name__ == '__main__':
-    config_path = '/Users/yanzhang/Documents/Financial_System/Modules/config_panel.json'
-    output_file = '/Users/yanzhang/Documents/News/backup/Compare_Economics.txt'
+    config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json'
+    output_file = '/Users/yanzhang/Documents/News/backup/Compare_Panel.txt'
     compare_today_yesterday(config_path, output_file)
     print(f"{output_file} 已生成。")
+    copy_database_to_backup()  # 在程序的最后调用复制数据库的功能

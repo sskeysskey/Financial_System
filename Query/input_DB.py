@@ -25,36 +25,30 @@ def input_mapping(root, sector_data):
         lower_input = input_trimmed.lower()
         # 先进行完整匹配查找
         exact_match_found = False
-        for sector, categories in sector_data.items():
-            for category, names in categories.items():
-                # if input_trimmed.upper() in names:
-                if input_trimmed in names:
-                    db_path = "/Users/yanzhang/Documents/Database/Finance.db"
-                    # condition = f"name = '{input_trimmed.upper()}'"
-                    condition = f"name = '{input_trimmed}'"
-                    result = query_database(db_path, sector, condition)
-                    # print(f"查询结果: {result}")  # 打印查询结果
-                    create_window(None, result)
-                    found = True
-                    break
-            if exact_match_found:
+        for sector, names in sector_data.items():
+            # if input_trimmed.upper() in names:
+            if input_trimmed in names:
+                db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+                # condition = f"name = '{input_trimmed.upper()}'"
+                condition = f"name = '{input_trimmed}'"
+                result = query_database(db_path, sector, condition)
+                # print(f"查询结果: {result}")  # 打印查询结果
+                create_window(None, result)
+                exact_match_found = True
                 break
-
+            
         # 如果没有找到完整匹配，则进行模糊匹配
         if not exact_match_found:
             found = False
-            for sector, categories in sector_data.items():
-                for category, names in categories.items():
-                    for name in names:
-                        if re.search(lower_input, name.lower()):
-                            db_path = "/Users/yanzhang/Documents/Database/Finance.db"
-                            condition = f"name = '{name}'"
-                            result = query_database(db_path, sector, condition)
-                            # print(f"查询结果: {result}")  # 打印查询结果
-                            create_window(None, result)
-                            found = True
-                            break
-                    if found:
+            for sector, names in sector_data.items():
+                for name in names:
+                    if re.search(lower_input, name.lower()):
+                        db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+                        condition = f"name = '{name}'"
+                        result = query_database(db_path, sector, condition)
+                        # print(f"查询结果: {result}")  # 打印查询结果
+                        create_window(None, result)
+                        found = True
                         break
                 if found:
                     break

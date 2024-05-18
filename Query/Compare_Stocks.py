@@ -26,24 +26,23 @@ def compare_today_yesterday(config_path):
     else:
         ex_yesterday = yesterday - timedelta(days=1)
 
-    for table_name, groups in data.items():
-            for group_name, names in groups.items():
-                with create_connection(db_path) as conn:
-                    cursor = conn.cursor()
-                    for name in names:
-                        query = f"""
-                        SELECT date, price FROM {table_name} 
-                        WHERE name = ? AND date IN (?, ?) ORDER BY date DESC
-                        """
-                        cursor.execute(query, (name, yesterday.strftime("%Y-%m-%d"), ex_yesterday.strftime("%Y-%m-%d")))
-                        results = cursor.fetchall()
+    for table_name, names in data.items():
+        with create_connection(db_path) as conn:
+            cursor = conn.cursor()
+            for name in names:
+                query = f"""
+                SELECT date, price FROM {table_name} 
+                WHERE name = ? AND date IN (?, ?) ORDER BY date DESC
+                """
+                cursor.execute(query, (name, yesterday.strftime("%Y-%m-%d"), ex_yesterday.strftime("%Y-%m-%d")))
+                results = cursor.fetchall()
 
-                        if len(results) == 2:
-                            yesterday_price = results[0][1]
-                            ex_yesterday_price = results[1][1]
-                            change = yesterday_price - ex_yesterday_price
-                            percentage_change = (change / ex_yesterday_price) * 100
-                            output.append((f"{table_name} {group_name} {name}", percentage_change))
+                if len(results) == 2:
+                    yesterday_price = results[0][1]
+                    ex_yesterday_price = results[1][1]
+                    change = yesterday_price - ex_yesterday_price
+                    percentage_change = (change / ex_yesterday_price) * 100
+                    output.append((f"{table_name} {name}", percentage_change))
 
     # 对输出进行排序，根据变化百分比
     output.sort(key=lambda x: x[1], reverse=True)

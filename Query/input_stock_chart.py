@@ -54,26 +54,24 @@ def input_mapping(root, sector_data, compare_data, marketcap_pe_data, json_data,
     lower_input = input_trimmed.lower()
     upper_input = input_trimmed.upper()
 
-    for sector, categories in sector_data.items():
-        for category, names in categories.items():
-            if upper_input in names:
-                plot_financial_data(db_path, sector, upper_input, 
-                                    compare_data.get(upper_input, "N/A"), 
-                                    *marketcap_pe_data.get(upper_input, (None, 'N/A')), 
+    for sector, names in sector_data.items():
+        if upper_input in names:
+            plot_financial_data(db_path, sector, upper_input, 
+                                compare_data.get(upper_input, "N/A"), 
+                                *marketcap_pe_data.get(upper_input, (None, 'N/A')), 
+                                json_data)
+            close_app(root)
+            return
+
+    for sector, names in sector_data.items():
+        for name in names:
+            if re.search(lower_input, name.lower()):
+                plot_financial_data(db_path, sector, name, 
+                                    compare_data.get(name, "N/A"), 
+                                    *marketcap_pe_data.get(name, (None, 'N/A')), 
                                     json_data)
                 close_app(root)
                 return
-
-    for sector, categories in sector_data.items():
-        for category, names in categories.items():
-            for name in names:
-                if re.search(lower_input, name.lower()):
-                    plot_financial_data(db_path, sector, name, 
-                                        compare_data.get(name, "N/A"), 
-                                        *marketcap_pe_data.get(name, (None, 'N/A')), 
-                                        json_data)
-                    close_app(root)
-                    return
 
     messagebox.showerror("错误", "未找到匹配的数据项。")
     close_app(root)
@@ -88,7 +86,7 @@ def get_user_input_custom(root, prompt):
     window_width = 280
     window_height = 90
     position_right = int(screen_width/2 - window_width/2)
-    position_down = int(screen_height/2 - window_height/2) - 60
+    position_down = int(screen_height/2 - window_height/2) - 100
     input_dialog.geometry(f"{window_width}x{window_height}+{position_right}+{position_down}")
 
     entry = tk.Entry(input_dialog, width=20, font=('Helvetica', 18))

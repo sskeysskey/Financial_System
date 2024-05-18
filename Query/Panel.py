@@ -28,16 +28,16 @@ def create_custom_style():
               background=[('active', '!disabled', 'pressed', 'focus', 'hover', 'alternate', 'selected', 'background')]
               )
 
-def load_text(filename, text_scroll):
-    directory = '/Users/yanzhang/Documents/News/'
-    text_scroll.delete('1.0', tk.END)
-    with open(os.path.join(directory, filename), 'r', encoding='utf-8') as file_content:
-        text_scroll.insert(tk.END, file_content.read())
+# def load_text(filename, text_scroll):
+#     directory = '/Users/yanzhang/Documents/News/'
+#     text_scroll.delete('1.0', tk.END)
+#     with open(os.path.join(directory, filename), 'r', encoding='utf-8') as file_content:
+#         text_scroll.insert(tk.END, file_content.read())
 
-def create_file_list(file_list_frame, files, text_scroll):
-    for file in files:
-        file_button = ttk.Button(file_list_frame, text=file, command=lambda f=file: load_text(f, text_scroll))
-        file_button.pack(fill=tk.X)
+# def create_file_list(file_list_frame, files, text_scroll):
+#     for file in files:
+#         file_button = ttk.Button(file_list_frame, text=file, command=lambda f=file: load_text(f, text_scroll))
+#         file_button.pack(fill=tk.X)
 
 def parse_changes(filename):
     changes = {}
@@ -85,12 +85,26 @@ def create_selection_window():
     new_vertical_frame2 = tk.Frame(scrollable_frame)
     new_vertical_frame2.pack(side="left", padx=15, pady=10, fill="both", expand=True)
 
-    for db_key, keywords in database_mapping.items():
-        if db_key in ['Bonds', 'Crypto', 'World_Indices']:
+    new_vertical_frame3 = tk.Frame(scrollable_frame)
+    new_vertical_frame3.pack(side="left", padx=15, pady=10, fill="both", expand=True)
+
+    new_vertical_frame4 = tk.Frame(scrollable_frame)
+    new_vertical_frame4.pack(side="left", padx=15, pady=10, fill="both", expand=True)
+
+    for db_key, keywords in config.items():
+        if db_key in ['Bonds', 'Crypto', 'Indices']:
             # 将这两个数据库的框架放入新的纵向框架中
+            frame = tk.LabelFrame(new_vertical_frame4, text=db_key, padx=10, pady=10)
+            frame.pack(side="top", padx=15, pady=10, fill="both", expand=True)
+        elif db_key in ['Currencies']:
+            frame = tk.LabelFrame(new_vertical_frame3, text=db_key, padx=10, pady=10)
+            frame.pack(side="top", padx=15, pady=10, fill="both", expand=True)
+        elif db_key in ['Basic_Materials','Communication_Services','Consumer_Cyclical',
+                    'Consumer_Defensive','Energy','Utilities']:
             frame = tk.LabelFrame(new_vertical_frame1, text=db_key, padx=10, pady=10)
             frame.pack(side="top", padx=15, pady=10, fill="both", expand=True)
-        elif db_key in ['Currency']:
+        elif db_key in ['Financial_Services','Healthcare','Industrials','Real_Estate',
+                    'Technology']:
             frame = tk.LabelFrame(new_vertical_frame2, text=db_key, padx=10, pady=10)
             frame.pack(side="top", padx=15, pady=10, fill="both", expand=True)
         else:
@@ -124,39 +138,39 @@ def create_selection_window():
             button_chart = tk.Button(button_frame, text="📊", command=lambda k=keyword: on_keyword_selected_chart(k, selection_window))
             button_chart.pack(side="left", fill="x", expand=True)
 
-    # 创建用于显示文本文件内容的 Frame
-    text_file_frame = tk.Frame(selection_window)
-    text_file_frame.pack(side="right", fill="y", expand=False, padx=0, pady=0)
-    text_font = tkFont.Font(family="Courier", size=28)
+    # # 创建用于显示文本文件内容的 Frame
+    # text_file_frame = tk.Frame(selection_window)
+    # text_file_frame.pack(side="right", fill="y", expand=False, padx=0, pady=0)
+    # text_font = tkFont.Font(family="Courier", size=28)
 
-    # 文本文件滚动区域
-    text_scroll = scrolledtext.ScrolledText(text_file_frame, width=30, height=20, font=text_font)
-    text_scroll.pack(pady=0, padx=0, fill=tk.BOTH, expand=False)
+    # # 文本文件滚动区域
+    # text_scroll = scrolledtext.ScrolledText(text_file_frame, width=30, height=20, font=text_font)
+    # text_scroll.pack(pady=0, padx=0, fill=tk.BOTH, expand=False)
 
-    directory = '/Users/yanzhang/Documents/News/'
-    files = [f for f in os.listdir(directory) if f.endswith('.txt')]
+    # directory = '/Users/yanzhang/Documents/News/'
+    # files = [f for f in os.listdir(directory) if f.endswith('.txt')]
 
-    # 创建文件列表的 Frame
-    file_list_frame = tk.Frame(text_file_frame)
-    file_list_frame.pack(side="top", fill="both", expand=True)
+    # # 创建文件列表的 Frame
+    # file_list_frame = tk.Frame(text_file_frame)
+    # file_list_frame.pack(side="top", fill="both", expand=True)
 
-    # 调用新的函数来创建文件列表和按钮
-    create_file_list(file_list_frame, files, text_scroll)
+    # # 调用新的函数来创建文件列表和按钮
+    # create_file_list(file_list_frame, files, text_scroll)
 
-    # 自动打开第一个文件
-    if files:
-        load_text(files[0], text_scroll)  # 确保 files 不为空
+    # # 自动打开第一个文件
+    # if files:
+    #     load_text(files[0], text_scroll)  # 确保 files 不为空
 
     canvas.pack(side="left", fill="both", expand=True)
     scrollbar.pack(side="bottom", fill="x")
 
 def on_keyword_selected(value):
-    if value:
-        db_key = reverse_mapping[value]
-        db_info = database_info[db_key]
-        condition = f"name = '{value}'"
-        result = query_database(db_info['path'], db_info['table'], condition)
-        create_window(result)
+     for sector, names in sector_data.items():
+        if value in names:
+            db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+            condition = f"name = '{value}'"
+            result = query_database(db_path, sector, condition)
+            create_window(result)
 
 def query_database(db_path, table_name, condition):
     with sqlite3.connect(db_path) as conn:
@@ -180,11 +194,10 @@ def load_sector_data():
     return sector_data
 
 def on_keyword_selected_chart(value, parent_window):
-    for sector, categories in sector_data.items():
-            for category, names in categories.items():
-                if value in names:
-                    db_path = "/Users/yanzhang/Documents/Database/Finance.db"
-                    plot_financial_data(db_path, sector, value)
+    for sector, names in sector_data.items():
+        if value in names:
+            db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+            plot_financial_data(db_path, sector, value)
 
 def create_window(content):
     top = tk.Toplevel(root)
@@ -211,13 +224,10 @@ if __name__ == '__main__':
     root.withdraw()
 
     # 读取合并后的数据库配置
-    with open('/Users/yanzhang/Documents/Financial_System/Modules/config_panel.json', 'r') as f:
+    with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json', 'r') as f:
         config = json.load(f)
 
-    database_info = config['database_info']
-    database_mapping = config['database_mapping']
-    reverse_mapping = {keyword: db for db, keywords in database_mapping.items() for keyword in keywords}
-    change_dict = parse_changes('/Users/yanzhang/Documents/News/backup/Compare_Economics.txt')
+    change_dict = parse_changes('/Users/yanzhang/Documents/News/backup/Compare_Panel.txt')
     
     create_selection_window()
     sector_data = load_sector_data()

@@ -42,38 +42,31 @@ symbol_mapping = {
 # 定义需要特殊处理的group_name
 special_groups = ["Currencies", "Bonds", "Crypto", "Commodities"]
 
-# 遍历所有组和子组
-for group_name, subgroups in stock_groups.items():
-    subgroup_counter = {subgroup_name: 0 for subgroup_name in subgroups}  # 初始化计数器
-    for subgroup_name, tickers in subgroups.items():
-        for ticker_symbol in tickers:
-            # 使用 yfinance 下载股票数据
-            data = yf.download(ticker_symbol, start=start_date, end=end_date)
-            # 插入数据到相应的表中
-            table_name = group_name.replace(" ", "_")  # 确保表名没有空格
-            mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)  # 从映射字典获取名称，如果不存在则使用原始 ticker_symbol
-            for index, row in data.iterrows():
-                date = index.strftime('%Y-%m-%d')
-                if group_name in ["Currencies", "Bonds", "Crypto"]:
-                    price = round(row['Close'], 6)
-                elif group_name in ["Commodities", "Indices"]:
-                    price = round(row['Close'], 4)
-                else:
-                    price = round(row['Close'], 2)
+# 遍历所有组
+for group_name, tickers in stock_groups.items():
+    for ticker_symbol in tickers:
+        # 使用 yfinance 下载股票数据
+        data = yf.download(ticker_symbol, start=start_date, end=end_date)
 
-                if group_name in special_groups:
-                    c.execute(f"INSERT INTO {table_name} (date, name, price) VALUES (?, ?, ?)",
-                              (date, mapped_name, price))
-                else:
-                    volume = int(row['Volume'])
-                    c.execute(f"INSERT INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)",
-                              (date, mapped_name, price, volume))
-            subgroup_counter[subgroup_name] += 1  # 更新计数器
+        # 插入数据到相应的表中
+        table_name = group_name.replace(" ", "_")  # 确保表名没有空格
+        mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)  # 从映射字典获取名称，如果不存在则使用原始 ticker_symbol
+        for index, row in data.iterrows():
+            date = index.strftime('%Y-%m-%d')
+            if group_name in ["Currencies", "Bonds", "Crypto"]:
+                price = round(row['Close'], 6)
+            elif group_name in ["Commodities", "Indices"]:
+                price = round(row['Close'], 4)
+            else:
+                price = round(row['Close'], 2)
 
-    # 使用print输出每个大组的统计信息
-    print(f"{group_name} statistics:")
-    for subgroup_name, count in subgroup_counter.items():
-        print(f"  {subgroup_name}: {count} stocks inserted.")
+            if group_name in special_groups:
+                c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price) VALUES (?, ?, ?)",
+                            (date, mapped_name, price))
+            else:
+                volume = int(row['Volume'])
+                c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)",
+                            (date, mapped_name, price, volume))
 
 # 提交事务
 conn.commit()

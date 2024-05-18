@@ -5,7 +5,7 @@ def insert_data(db_path, table_name, columns, data):
     向指定数据库的指定表插入数据。
     :param db_path: 数据库文件路径
     :param table_name: 表名
-    :param data: 要插入的数据列表，每个元素是一个包含(date, name, price, parent_id)的元组
+    :param data: 要插入的数据列表，每个元素是一个包含(date, name, price, volume)的元组
     """
     # 连接到数据库
     conn = sqlite3.connect(db_path)
@@ -44,9 +44,9 @@ data_sets = {
     ],
     'Indices': [
         # ('2024-04-01', 'Shenzhen Index', 9647.07, 10),
-        # ('2024-05-15', 'Nikkei', 38608.18, ),
+        # ('2024-05-16', 'Nikkei', 38920.26, 157900000),
         # ('2018-01-22', 'HANG SENG INDEX', 33154.12, 10),
-        # ('2024-03-26', 'S&P BSE SENSEX', 72470.3, 10)
+        ('2024-05-16', 'Russian', 3486.26, 0)
     ],
     'Crypto': [
         # ('2021-05-03', 'Bitcoin Cash', 1428.74, 3),
@@ -90,12 +90,11 @@ data_sets = {
 
 # 数据库文件和表名信息，同时指定每个表的列名
 databases = [
-    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Indices', 'columns': ['date', 'name', 'price', 'parent_id']},
-    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies', 'columns': ['date', 'name', 'price', 'parent_id']},
-    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities', 'columns': ['date', 'name', 'price', 'parent_id']},
-    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto', 'columns': ['date', 'name', 'price', 'parent_id']},
-    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Bonds', 'columns': ['date', 'name', 'price', 'parent_id']},
-    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Categories', 'columns': ['name', 'parent_id','created_at']},
+    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Indices', 'columns': ['date', 'name', 'price', 'volume']},
+    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies', 'columns': ['date', 'name', 'price', 'volume']},
+    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities', 'columns': ['date', 'name', 'price', 'volume']},
+    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto', 'columns': ['date', 'name', 'price', 'volume']},
+    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Bonds', 'columns': ['date', 'name', 'price', 'volume']},
 ]
 
 # 对每个数据库执行数据插入操作

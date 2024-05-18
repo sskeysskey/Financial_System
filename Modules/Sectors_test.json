@@ -1,43 +1,16 @@
 {
-  "Basic_Materials": {
-    "Mega": [
+  "Basic_Materials": [
       "IOSP",
       "TROX",
       "EA"
     ],
-    "Large": [
-      "CSTM",
-      "ARCH",
-      "SLVM"
-    ],
-    "Middle": [
-      "SLVM"
-    ]
-  },
-  "Communication_Services": {
-    "Mega": [
+    
+  "Communication_Services": [
       "EAS",
       "PINS"
     ],
-    "Large": [
-      "SNAP",
-      "RBLX"
-    ],
-    "Middle": [
-      "TTWO",
-      "LYV"
-    ]
-  },
-  "Consumer_Cyclical": {
-    "Mega": [
+    
+  "Consumer_Cyclical": [
       "WBD"
-    ],
-    "Large": [
-      "OMC",
-      "WMG"
-    ],
-    "Middle": [
-      
     ]
-  }
 }

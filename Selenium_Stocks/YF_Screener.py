@@ -119,46 +119,34 @@ def update_json(data, sector, file_path, output, log_enabled):
     with open(file_path, 'r+') as file:
         json_data = json.load(file)
         
-        # 创建一个反向映射，用于查找符号当前所在的类别
-        current_categories = {}
-        for category in json_data[sector]:
-            for symbol in json_data[sector][category]:
-                current_categories[symbol] = category
+        # 创建一个反向映射，用于查找符号当前所在的sector
+        current_sectors = {}
+        for sec in json_data:
+            for symbol in json_data[sec]:
+                current_sectors[symbol] = sec
 
+        # 处理每个传入的symbol数据
         for symbol, market_cap, pe_ratio in data:
-            current_category = current_categories.get(symbol)
-            # 检查市值是否小于 Middle 分组下限
+            current_sector = current_sectors.get(symbol)
+            
+            # 检查市值是否小于50亿，如果是，则可能需要移除
             if market_cap < 5000000000:
-                if current_category:
-                    # 如果市值小于下限且符号在列表中，则移除
-                    json_data[sector][current_category].remove(symbol)
+                if current_sector and symbol in json_data[current_sector]:
+                    json_data[current_sector].remove(symbol)
                     if log_enabled:
-                        message = f"Removed '{symbol}' from {current_category} in {sector} due to low market cap."
+                        message = f"Removed '{symbol}' from {current_sector} due to low market cap."
                         print(message)
                         output.append(message)
             else:
-                # 否则，按照原有逻辑处理市值分类
-                if market_cap >= 200000000000:
-                    category = "Mega"
-                elif 20000000000 <= market_cap < 200000000000:
-                    category = "Large"
-                elif 5000000000 <= market_cap < 20000000000:
-                    category = "Middle"
-                else:
-                    continue
-                if current_category and current_category != category:
-                    json_data[sector][current_category].remove(symbol)
+                # 市值大于等于50亿，需要加入到对应的sector中
+                if symbol not in json_data[sector]:
+                    json_data[sector].append(symbol)
                     if log_enabled:
-                        message = f"Removed '{symbol}' from {current_category} in {sector} as it belongs to {category}."
-                        print(message)
-                        output.append(message)
-                if symbol not in json_data[sector][category]:
-                    json_data[sector][category].append(symbol)
-                    if log_enabled:
-                        message = f"Added '{symbol}' to {category} in {sector}."
+                        message = f"Added '{symbol}' to {sector} due to a new rising star."
                         print(message)
                         output.append(message)
 
+        # 重写文件内容
         file.seek(0)
         file.truncate()
         json.dump(json_data, file, indent=2)
@@ -168,7 +156,6 @@ def process_sector(driver, url, sector, output):
     update_json(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', output, log_enabled=True)
     update_json(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json', output, log_enabled=False)
     update_json(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_Stock.json', output, log_enabled=False)
-    update_json(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_DL_2K.json', output, log_enabled=False)
 
 def save_output_to_file(output, directory, filename='MarketCap_Change.txt'):
     # 获取当前时间，并格式化为字符串（如'2023-03-15_12-30-00'）

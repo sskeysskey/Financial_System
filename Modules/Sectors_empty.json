@@ -1,178 +1,64 @@
 {
-  "Bonds": {
-    "Mega": [
+  "Bonds": [
       
     ],
-    "Large": [
-
-    ],
-    "Middle": [
-
-    ]
-  },
-  "Currencies": {
-    "Mega": [
+  "Currencies": [
       
     ],
-    "Large": [
+    
+  "Crypto": [
       
     ],
-    "Middle": [
-     
-    ]
-  },
-  "Crypto": {
-    "Mega": [
+    
+  "Indices": [
       
     ],
-    "Large": [
-
-    ],
-    "Middle": [
-
-    ]
-  },
-  "Indices": {
-    "Mega": [
+    
+  "Commodities": [
       
     ],
-    "Large": [
-      
-    ],
-    "Middle": [
-
-    ]
-  },
-  "Commodities": {
-    "Mega": [
-      
-    ],
-    "Large": [
-
-    ],
-    "Middle": [
-
-    ]
-  },
-  "Basic_Materials": {
-    "Mega": [
+    
+  "Basic_Materials": [
      
     ],
-    "Large": [
+
+  "Communication_Services": [
 
     ],
-    "Middle": [
-      
-    ]
-  },
-  "Communication_Services": {
-    "Mega": [
+    
+  "Consumer_Cyclical": [
 
     ],
-    "Large": [
- 
-    ],
-    "Middle": [
-
-    ]
-  },
-  "Consumer_Cyclical": {
-    "Mega": [
-
-    ],
-    "Large": [
-
-    ],
-    "Middle": [
-      
-    ]
-  },
-  "Consumer_Defensive": {
-    "Mega": [
+    
+  "Consumer_Defensive": [
       
     ],
-    "Large": [
+    
+  "Energy": [
       
     ],
-    "Middle": [
-      
-    ]
-  },
-  "Energy": {
-    "Mega": [
+    
+  "Financial_Services": [
       
     ],
-    "Large": [
+    
+  "Healthcare": [
       
     ],
-    "Middle": [
-      
-    ]
-  },
-  "Financial_Services": {
-    "Mega": [
-      
-    ],
-    "Large": [
-      
-    ],
-    "Middle": [
-      
-    ]
-  },
-  "Healthcare": {
-    "Mega": [
-      
-    ],
-    "Large": [
-      
-    ],
-    "Middle": [
-      
-    ]
-  },
-  "Industrials": {
-    "Mega": [
+    
+  "Industrials": [
 
     ],
-    "Large": [
-      
-    ],
-    "Middle": [
-      
-    ]
-  },
-  "Real_Estate": {
-    "Mega": [
+    
+  "Real_Estate": [
 
     ],
-    "Large": [
+    
+  "Technology": [
       
     ],
-    "Middle": [
-      
-    ]
-  },
-  "Technology": {
-    "Mega": [
-      
-    ],
-    "Large": [
-      
-    ],
-    "Middle": [
-      
-    ]
-  },
-  "Utilities": {
-    "Mega": [
+    
+  "Utilities": [
 
-    ],
-    "Large": [
-      
-    ],
-    "Middle": [
-      
     ]
-  }
 }
