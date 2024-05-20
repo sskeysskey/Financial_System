@@ -8,7 +8,7 @@ def create_connection(db_file):
     conn = sqlite3.connect(db_file)
     return conn
 
-def compare_today_yesterday(config_path):
+def compare_today_yesterday(config_path, blacklist):
     with open(config_path, 'r') as file:
             data = json.load(file)
 
@@ -27,37 +27,55 @@ def compare_today_yesterday(config_path):
         ex_yesterday = yesterday - timedelta(days=1)
 
     for table_name, names in data.items():
-        with create_connection(db_path) as conn:
-            cursor = conn.cursor()
-            for name in names:
-                query = f"""
-                SELECT date, price FROM {table_name} 
-                WHERE name = ? AND date IN (?, ?) ORDER BY date DESC
-                """
-                cursor.execute(query, (name, yesterday.strftime("%Y-%m-%d"), ex_yesterday.strftime("%Y-%m-%d")))
-                results = cursor.fetchall()
+        if table_name in interested_sectors:  # 过滤sector
+            with create_connection(db_path) as conn:
+                cursor = conn.cursor()
+                for name in names:
+                    if name in blacklist:  # 检查黑名单
+                        continue
+                    query = f"""
+                    SELECT date, price FROM {table_name} 
+                    WHERE name = ? AND date IN (?, ?) ORDER BY date DESC
+                    """
+                    cursor.execute(query, (name, yesterday.strftime("%Y-%m-%d"), ex_yesterday.strftime("%Y-%m-%d")))
+                    results = cursor.fetchall()
 
-                if len(results) == 2:
-                    yesterday_price = results[0][1]
-                    ex_yesterday_price = results[1][1]
-                    change = yesterday_price - ex_yesterday_price
-                    percentage_change = (change / ex_yesterday_price) * 100
-                    output.append((f"{table_name} {name}", percentage_change))
+                    if len(results) == 2:
+                        yesterday_price = results[0][1]
+                        ex_yesterday_price = results[1][1]
+                        change = yesterday_price - ex_yesterday_price
+                        percentage_change = (change / ex_yesterday_price) * 100
+                        output.append((f"{table_name} {name}", percentage_change))
 
     # 对输出进行排序，根据变化百分比
     output.sort(key=lambda x: x[1], reverse=True)
 
-    # 生成输出文件名，包含时间戳
-    # timestamp = datetime.now().strftime("%m_%d")
-    # output_file = f'/Users/yanzhang/Documents/News/Compare_Stocks_{timestamp}.txt'
+    # output_file = f'/Users/yanzhang/Documents/News/Compare_Stocks.txt'
+    # with open(output_file, 'w') as file:
+    #     for line in output:
+    #         if line[0].split(' ')[1] not in blacklist:  # 再次检查黑名单
+    #             file.write(f"{line[0]}: {line[1]:.2f}%\n")
+    # print(f"{output_file} 已生成。")
+
     output_file = f'/Users/yanzhang/Documents/News/Compare_Stocks.txt'
     with open(output_file, 'w') as file:
         for line in output:
-            file.write(f"{line[0]}: {line[1]:.2f}%\n")
+            sector_and_company = line[0].split()
+            sector = " ".join(sector_and_company[:-1])  # 获取sector
+            company = sector_and_company[-1]  # 获取company
+
+            if company not in blacklist:  # 再次检查黑名单
+                # 格式化输出
+                file.write(f"{sector:<25}{company:<8}: {line[1]:>6.2f}%\n")
     print(f"{output_file} 已生成。")
 
 if __name__ == '__main__':
-    config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_Stock.json'
+    config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
+    blacklist = ['VFS','KVYO','LU','IEP']  # 黑名单列表
+    # 定义你感兴趣的sectors
+    interested_sectors = ["Basic_Materials", "Communication_Services", "Consumer_Cyclical",
+        "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare", "Industrials",
+        "Real_Estate", "Technology", "Utilities"]
     # 检查文件是否存在
     file_path = '/Users/yanzhang/Documents/News/Compare_Stocks.txt'
     if os.path.exists(file_path):
@@ -76,4 +94,4 @@ if __name__ == '__main__':
         print(f"文件已重命名为: {new_file_path}")
     else:
         print("文件不存在")
-    compare_today_yesterday(config_path)
+    compare_today_yesterday(config_path, blacklist)

@@ -2,7 +2,6 @@ import cv2
 import json
 import pyperclip
 import pyautogui
-import subprocess
 import numpy as np
 from time import sleep
 from PIL import ImageGrab

@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
 # 定义黑名单
-blacklist = ["YNDX"]
+blacklist = ["YNDX","CHT"]
 
 def is_blacklisted(name):
     """检查给定的股票符号是否在黑名单中"""
@@ -36,12 +36,6 @@ def get_price_comparison(cursor, table_name, months_back, name, today):
     return cursor.fetchone()
 
 def save_output_to_file(output, directory, filename):
-    # 获取当前时间，并格式化为字符串（如'2023-03-15_12-30-00'）
-    current_time = datetime.now().strftime('%m%d')
-    
-    # 在文件名中加入时间戳
-    filename = f"{filename.split('.')[0]}_{current_time}.txt"
-    
     # 创建文件夹如果它不存在
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -49,7 +43,22 @@ def save_output_to_file(output, directory, filename):
     # 定义完整的文件路径
     file_path = os.path.join(directory, filename)
     
-    # 将输出写入到文件
+    # 检查文件是否存在
+    if os.path.exists(file_path):
+        # 获取昨天的日期字符串
+        yesterday = datetime.now() - timedelta(days=1)
+        yesterday_suffix = yesterday.strftime("%Y-%m-%d")
+        
+        # 新的文件名添加昨天的日期
+        base, ext = os.path.splitext(filename)
+        new_filename = f"{base}_{yesterday_suffix}{ext}"
+        new_file_path = os.path.join(directory, new_filename)
+        
+        # 重命名旧文件
+        os.rename(file_path, new_file_path)
+        print(f"旧文件已重命名为：{new_file_path}")
+
+    # 将输出写入到新文件
     with open(file_path, 'w', encoding='utf-8') as file:
         file.write(output)
     print(f"输出已保存到文件：{file_path}")
@@ -64,7 +73,12 @@ def main():
     else:
         real_today = today - timedelta(days=1)
 
-    with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_Stock.json', 'r') as file:
+    # 定义你感兴趣的sectors
+    interested_sectors = ["Basic_Materials", "Communication_Services", "Consumer_Cyclical",
+        "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare", "Industrials",
+        "Real_Estate", "Technology", "Utilities"]
+    
+    with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as file:
         data = json.load(file)
 
     output = []
@@ -74,64 +88,65 @@ def main():
 
     # 遍历JSON中的每个表和股票代码
     for table_name, names in data.items():
-        with create_connection(db_path) as conn:
-            cursor = conn.cursor()
-            for name in names:
-                if is_blacklisted(name):
-                    print(f"{name} is blacklisted and will be skipped.")
-                    continue  # 跳过黑名单中的符号
-                today_price_query = f"SELECT price FROM {table_name} WHERE date = ? AND name = ?"
-                cursor.execute(today_price_query, (real_today.strftime("%Y-%m-%d"), name))
-                result = cursor.fetchone()
+        if table_name in interested_sectors:  # 过滤sector
+            with create_connection(db_path) as conn:
+                cursor = conn.cursor()
+                for name in names:
+                    if is_blacklisted(name):
+                        print(f"{name} is blacklisted and will be skipped.")
+                        continue  # 跳过黑名单中的符号
+                    today_price_query = f"SELECT price FROM {table_name} WHERE date = ? AND name = ?"
+                    cursor.execute(today_price_query, (real_today.strftime("%Y-%m-%d"), name))
+                    result = cursor.fetchone()
 
-                if result:
-                    today_price = result[0]
-                else:
-                    output.append(f"没有找到今天的{name}价格。")
-                    continue
+                    if result:
+                        today_price = result[0]
+                    else:
+                        output.append(f"没有找到今天的{name}价格。")
+                        continue
 
-                price_extremes = {}
-                for months in intervals:
-                    max_price, min_price = get_price_comparison(cursor, table_name, months, name, today)
-                    price_extremes[months] = (max_price, min_price)  # 存储最大和最小价格
+                    price_extremes = {}
+                    for months in intervals:
+                        max_price, min_price = get_price_comparison(cursor, table_name, months, name, today)
+                        price_extremes[months] = (max_price, min_price)  # 存储最大和最小价格
 
-                # 检查是否接近最高价格
-                found_max = False
-                for months in intervals:
-                    if found_max:
-                        break
-                    max_price, _ = price_extremes.get(months, (None, None))
-                    if max_price is not None and today_price >= max_price:
-                        found_max = True
-                        if today_price >= max_price:
-                            if months >= 12:
-                                years = months // 12
-                                print(f"{table_name} {name} {years}Y_newhigh")
-                                output.append(f"{table_name} {name} {years}Y_newhigh")
-                            else:
-                                print(f"{table_name} {name} {months}M_newhigh")
-                                output.append(f"{table_name} {name} {months}M_newhigh")
+                    # 检查是否接近最高价格
+                    found_max = False
+                    for months in intervals:
+                        if found_max:
+                            break
+                        max_price, _ = price_extremes.get(months, (None, None))
+                        if max_price is not None and today_price >= max_price:
+                            found_max = True
+                            if today_price >= max_price:
+                                if months >= 12:
+                                    years = months // 12
+                                    print(f"{table_name:<25} {name:<8} {years}Y_newhigh")
+                                    output.append(f"{table_name:<25} {name:<8} {years}Y_newhigh")
+                                else:
+                                    print(f"{table_name:<25} {name:<8} {months}M_newhigh")
+                                    output.append(f"{table_name:<25} {name:<8} {months}M_newhigh")
 
-                # 检查是否接近最低价格
-                found_min = False
-                for months in intervals:
-                    if found_min:
-                        break
-                    _, min_price = price_extremes.get(months, (None, None))
-                    if min_price is not None and today_price <= min_price:
-                        found_min = True
-                        if today_price <= min_price:
-                            if months >= 12:
-                                years = months // 12
-                                print(f"{table_name} {name} {years}Y_newlow")
-                                output.append(f"{table_name} {name} {years}Y_newlow")
-                                output1.append(f"{table_name} {name} {years}Y_newlow")
-                            else:
-                                print(f"{table_name} {name} {months}M_newlow")
-                                output.append(f"{table_name} {name} {months}M_newlow")
+                    # 检查是否接近最低价格
+                    found_min = False
+                    for months in intervals:
+                        if found_min:
+                            break
+                        _, min_price = price_extremes.get(months, (None, None))
+                        if min_price is not None and today_price <= min_price:
+                            found_min = True
+                            if today_price <= min_price:
+                                if months >= 12:
+                                    years = months // 12
+                                    print(f"{table_name:<25} {name:<8} {years}Y_newlow")
+                                    output.append(f"{table_name:<25} {name:<8} {years}Y_newlow")
+                                    output1.append(f"{table_name:<25} {name:<8} {years}Y_newlow")
+                                else:
+                                    print(f"{table_name:<25} {name:<8} {months}M_newlow")
+                                    output.append(f"{table_name:<25} {name:<8} {months}M_newlow")
 
-            output.append("\n")
-            cursor.close()
+                output.append("\n")
+                cursor.close()
 
     final_output = "\n".join(output)
     final_output1 = "\n".join(output1)

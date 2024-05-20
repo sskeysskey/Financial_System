@@ -1,16 +1,28 @@
 {
+  "Bonds": [
+    "US10Y",
+    "UK10Y"
+  ],
+
+  "Commodities": [
+    "IOSP",
+    "TUR10Y",
+    "EA"
+  ],
+
   "Basic_Materials": [
       "IOSP",
-      "TROX",
+      "TUR10Y",
       "EA"
     ],
     
-  "Communication_Services": [
+  "Energy": [
       "EAS",
-      "PINS"
+      "Gold",
+      "TU"
     ],
     
-  "Consumer_Cyclical": [
+  "Technology": [
       "WBD"
     ]
 }

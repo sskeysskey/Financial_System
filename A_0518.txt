@@ -1,0 +1,25 @@
+NewHighs:
+Financial_Services         0.3583  13.38%
+Basic_Materials            0.3472  12.96%
+Real_Estate                0.3387  12.65%
+Utilities                  0.3333  12.45%
+Technology                 0.2564   9.57%
+Communication_Services     0.2419   9.03%
+Energy                     0.2073   7.74%
+Healthcare                 0.1603   5.99%
+Consumer_Defensive         0.1587   5.93%
+Industrials                0.1404   5.24%
+Consumer_Cyclical          0.1355   5.06%
+
+NewLows:
+Healthcare                 0.0687  20.64%
+Consumer_Defensive         0.0635  19.08%
+Technology                 0.0410  12.33%
+Industrials                0.0393  11.82%
+Basic_Materials            0.0278   8.35%
+Consumer_Cyclical          0.0258   7.75%
+Energy                     0.0244   7.33%
+Utilities                  0.0208   6.26%
+Communication_Services     0.0161   4.85%
+Financial_Services         0.0053   1.61%
+Real_Estate                0.0000   0.00%

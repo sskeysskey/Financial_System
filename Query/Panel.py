@@ -73,7 +73,7 @@ def create_selection_window():
     canvas.configure(xscrollcommand=scrollbar.set)
 
     purple_keywords = ["Bitcoin", "CNYUSD", "US10Y", "USDJPY", "CrudeOil"]
-    yellow_keywords = ["CNYJPY", "NASDAQ", "Gold", "Cocoa"]
+    yellow_keywords = ["CNYJPY", "NASDAQ", "Gold", "Cocoa", "Silver"]
     orange_keywords = ["HANGSENG", "Naturalgas", "Ether", "Shanghai", "USDCNY"]
     blue_keywords = ["Copper", "S&P500"]
     red_keywords = ["VIX", "DXY"]

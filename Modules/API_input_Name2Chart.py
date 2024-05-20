@@ -16,24 +16,34 @@ def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_
     try:
         with sqlite3.connect(db_path) as conn:
             cursor = conn.cursor()
-            query = f"SELECT date, price, volume FROM {table_name} WHERE name = ? ORDER BY date;"
-            cursor.execute(query, (name,))
+            try:
+                query = f"SELECT date, price, volume FROM {table_name} WHERE name = ? ORDER BY date;"
+                cursor.execute(query, (name,))
+            except sqlite3.OperationalError as e:
+                if 'no such column: volume' in str(e):
+                    print("警告: 数据库表中不存在'volume'列，将不显示成交量信息。")
+                    # 当 volume 列不存在时，只查询 date 和 price
+                    query = f"SELECT date, price FROM {table_name} WHERE name = ? ORDER BY date;"
+                    cursor.execute(query, (name,))
+                else:
+                    raise
             data = cursor.fetchall()
     except sqlite3.OperationalError as e:
-        if 'no such column: volume' in str(e):
-            print("警告: 数据库表中不存在'volume'列。")
-            data = []
-        else:
-            raise
+        print(f"数据库错误: {e}")
+        return
+
     dates = []
     prices = []
     for row in data:
-            date = datetime.strptime(row[0], "%Y-%m-%d")
-            price = float(row[1]) if row[1] is not None else None
-            volume = row[2] if len(row) > 2 else None  # 安全检查是否存在volume
-            if price is not None:
-                dates.append(date)
-                prices.append(price)
+        date = datetime.strptime(row[0], "%Y-%m-%d")
+        price = float(row[1]) if row[1] is not None else None
+        if price is not None:
+            dates.append(date)
+            prices.append(price)
+        if len(row) > 2 and row[2] is not None:
+            volume = row[2]  # 安全检查是否存在volume
+        else:
+            volume = None
 
     if not dates or not prices:
         print("没有有效的数据来绘制图表。")
@@ -48,6 +58,8 @@ def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_
     
     if volume is not None and price is not None:
         turnover = f"{(volume * float(price)) / 1000000:.1f}"
+    else:
+        turnover = "N/A"
 
     marketcap_in_billion = f"{float(marketcap) / 1e9:.1f}B" if marketcap is not None else "N/A"
     pe_text = f"{pe}" if pe is not None else "N/A"
@@ -83,25 +95,43 @@ def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_
         
         # 设置焦点并绑定回车键
         close_button.focus_set()
-        top.bind('<Escape>', lambda event: top.destroy())
+        top.bind('<Escape>', lambda event: root.destroy())
         
         root.mainloop()
 
-    # 添加 pick 事件处理器
+    # 添加 pick 事件处理器，仅在 clickable 为 True 时激活
     def on_pick(event):
-        if event.artist == title:
+        if event.artist == title and clickable:
             stock_name = name
             for stock in json_data['stocks']:
                 if stock['name'] == stock_name:
                     show_stock_info(stock_name, stock)
                     break
+    def draw_underline(text_obj):
+        x, y = text_obj.get_position()
+        text_renderer = text_obj.get_window_extent(renderer=fig.canvas.get_renderer())
+        linewidth = text_renderer.width
+        line = matplotlib.lines.Line2D([x, x + linewidth], [y - 2, y - 2], transform=ax.transData,
+                                    color='blue', linewidth=2)
+        ax.add_line(line)
+    
+    # 判断是否应该使标题可点击
+    if json_data and 'stocks' in json_data and any(stock['name'] == name for stock in json_data['stocks']):
+        clickable = True
+        title_style = {'color': 'blue', 'fontsize': 12, 'fontweight': 'bold', 'picker': True}
+    else:
+        clickable = False
+        title_style = {'color': 'black', 'fontsize': 12, 'fontweight': 'bold', 'picker': False}
     
     # 添加交互性标题
     title_text = f'{name}  {compare}  TurnOver: {turnover}M   MarketCap:{marketcap_in_billion}   PE:{pe_text}   {table_name}'
-    title = ax.set_title(title_text, picker=True)
-    title.set_picker(5)  # 设置标题的 picker 容差
+    
+    title = ax.set_title(title_text, **title_style)  # 使用 title_style 中的样式
 
-    fig.canvas.mpl_connect('pick_event', on_pick)
+    if clickable:
+        draw_underline(title)  # 如果标题可点击，添加下划线
+
+    fig.canvas.mpl_connect('pick_event', on_pick if clickable else lambda event: None)
 
     ax.grid(True)
     plt.xticks(rotation=45)

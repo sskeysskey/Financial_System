@@ -23,37 +23,68 @@ def input_mapping(root, sector_data):
     else:
         input_trimmed = user_input.strip()
         lower_input = input_trimmed.lower()
+        upper_input = input_trimmed.upper()
+        capitalized_input = input_trimmed.capitalize()
         # 先进行完整匹配查找
         exact_match_found = False
         for sector, names in sector_data.items():
-            # if input_trimmed.upper() in names:
-            if input_trimmed in names:
-                db_path = "/Users/yanzhang/Documents/Database/Finance.db"
-                # condition = f"name = '{input_trimmed.upper()}'"
-                condition = f"name = '{input_trimmed}'"
-                result = query_database(db_path, sector, condition)
-                # print(f"查询结果: {result}")  # 打印查询结果
-                create_window(None, result)
-                exact_match_found = True
+            for name in names:
+                if input_trimmed == name:
+                    db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+                    condition = f"name = '{input_trimmed}'"
+                    result = query_database(db_path, sector, condition)
+                    create_window(None, result)
+                    exact_match_found = True
+                    print("哈哈")
+                    break
+            if exact_match_found:
                 break
-            
-        # 如果没有找到完整匹配，则进行模糊匹配
+
+        # 再进行次次完整匹配查找
+        subexact_match_found = False
+        sub_match_found = False
+        found = False
         if not exact_match_found:
-            found = False
             for sector, names in sector_data.items():
                 for name in names:
-                    if re.search(lower_input, name.lower()):
+                    if capitalized_input == name:
                         db_path = "/Users/yanzhang/Documents/Database/Finance.db"
-                        condition = f"name = '{name}'"
+                        condition = f"name = '{capitalized_input}'"
                         result = query_database(db_path, sector, condition)
-                        # print(f"查询结果: {result}")  # 打印查询结果
                         create_window(None, result)
-                        found = True
+                        subexact_match_found = True
                         break
-                if found:
+                if subexact_match_found:
                     break
 
-        if not found:
+            if not subexact_match_found:
+                for sector, names in sector_data.items():
+                    for name in names:
+                        if upper_input == name:
+                            db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+                            condition = f"name = '{upper_input}'"
+                            result = query_database(db_path, sector, condition)
+                            create_window(None, result)
+                            sub_match_found = True
+                            break
+                    if sub_match_found:
+                        break
+            
+                # 如果没有找到完整匹配，则进行模糊匹配
+                if not sub_match_found:
+                    for sector, names in sector_data.items():
+                        for name in names:
+                            if re.search(lower_input, name.lower()):
+                                db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+                                condition = f"name = '{name}'"
+                                result = query_database(db_path, sector, condition)
+                                create_window(None, result)
+                                found = True
+                                break
+                        if found:
+                            break
+
+        if not found and not exact_match_found and not subexact_match_found and not sub_match_found:
             messagebox.showerror("错误", "未找到匹配的数据项。")
             close_app()
 

@@ -30,23 +30,11 @@ def insert_data(db_path, table_name, columns, data):
 
 # 准备不同的数据集
 data_sets = {
-    'Categories': [
-        # ('S&P 500', 10, '2024-04-29'),
-        # ('Russell 2000', 10, '2024-04-29'),
-        # ('MOEX Russia Index', 10, '2024-04-29'),
-        # ('Nikkei 225', 10, '2024-04-29'),
-        # ('HANG SENG INDEX', 10, '2024-04-29'),
-        # ('SSE Composite Index', 10, '2024-04-29'),
-        # ('Shenzhen Index', 10, '2024-04-29'),
-        # ('S&P BSE SENSEX', 10, '2024-04-29'),
-        # ('CBOE Volatility Index', 10, '2024-04-29'),
-        # ('Bonds', None, '2024-04-24'),
-    ],
     'Indices': [
         # ('2024-04-01', 'Shenzhen Index', 9647.07, 10),
         # ('2024-05-16', 'Nikkei', 38920.26, 157900000),
         # ('2018-01-22', 'HANG SENG INDEX', 33154.12, 10),
-        ('2024-05-16', 'Russian', 3486.26, 0)
+        # ('2024-05-16', 'Russian', 3486.26, 0)
     ],
     'Crypto': [
         # ('2021-05-03', 'Bitcoin Cash', 1428.74, 3),
@@ -66,35 +54,19 @@ data_sets = {
     ],
     
     'Commodities': [
-    # parent_id为5的大宗商品
-        # ('2024-03-12', 'Crude Oil', 77.25, 5),
-        # ('2024-03-05', 'Natural gas', 2.095, 5),
-    
-    # parent_id为6的大宗商品
-        #  ('2008-12-01', 'Cotton', 1.395, 6),
-        #  ('2024-04-05', 'Crude Oil', 86.91, 6),
-
-    # parent_id为7的大宗商品
-        #  ('2024-05-01', 'Cotton', 75.14, 7),
-        #  ('2024-04-05', 'Crude Oil', 86.91, 7),
-
-    # parent_id为8的大宗商品
-        #  ('2021-10-01', 'Copper', 0.622, 8),
-        #  ('2024-04-05', 'Crude Oil', 86.91, 8),
-
-    # parent_id为9的大宗商品
-        #  ('2021-10-01', 'Copper', 0.622, 9),
-        #  ('2024-04-05', 'Crude Oil', 86.91, 9),
+        # ('2024-03-12', 'Crude Oil', 77.25),
+        # ('2024-03-05', 'Natural gas', 2.095),
+         ('2024-05-09', 'Silver', 28.132),
     ],
 }
 
 # 数据库文件和表名信息，同时指定每个表的列名
 databases = [
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Indices', 'columns': ['date', 'name', 'price', 'volume']},
-    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies', 'columns': ['date', 'name', 'price', 'volume']},
-    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities', 'columns': ['date', 'name', 'price', 'volume']},
-    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto', 'columns': ['date', 'name', 'price', 'volume']},
-    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Bonds', 'columns': ['date', 'name', 'price', 'volume']},
+    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies', 'columns': ['date', 'name', 'price']},
+    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities', 'columns': ['date', 'name', 'price']},
+    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto', 'columns': ['date', 'name', 'price']},
+    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Bonds', 'columns': ['date', 'name', 'price']},
 ]
 
 # 对每个数据库执行数据插入操作

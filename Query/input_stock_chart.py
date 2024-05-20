@@ -1,12 +1,24 @@
 import re
 import sys
 import json
+import subprocess
 import tkinter as tk
 from tkinter import messagebox
 from datetime import datetime
+import pyperclip
 
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
 from API_input_Name2Chart import plot_financial_data
+
+def Copy_Command_C():
+    script = '''
+    tell application "System Events"
+	    keystroke "c" using command down
+        delay 0.5
+    end tell
+    '''
+    # 运行AppleScript
+    subprocess.run(['osascript', '-e', script])
 
 def load_sector_data(path):
     with open(path, 'r') as file:
@@ -43,8 +55,7 @@ def close_app(root):
         root.quit()
         root.destroy()
 
-def input_mapping(root, sector_data, compare_data, marketcap_pe_data, json_data, db_path):
-    user_input = get_user_input_custom(root, "请输入")
+def input_mapping(root, sector_data, compare_data, marketcap_pe_data, json_data, db_path, user_input):
     if user_input is None:
         print("未输入任何内容，程序即将退出。")
         close_app(root)
@@ -53,29 +64,73 @@ def input_mapping(root, sector_data, compare_data, marketcap_pe_data, json_data,
     input_trimmed = user_input.strip()
     lower_input = input_trimmed.lower()
     upper_input = input_trimmed.upper()
-
-    for sector, names in sector_data.items():
-        if upper_input in names:
-            plot_financial_data(db_path, sector, upper_input, 
-                                compare_data.get(upper_input, "N/A"), 
-                                *marketcap_pe_data.get(upper_input, (None, 'N/A')), 
-                                json_data)
-            close_app(root)
-            return
-
+    capitalized_input = input_trimmed.capitalize()
+    # 先进行完整匹配查找
+    exact_match_found = False
     for sector, names in sector_data.items():
         for name in names:
-            if re.search(lower_input, name.lower()):
-                plot_financial_data(db_path, sector, name, 
-                                    compare_data.get(name, "N/A"), 
-                                    *marketcap_pe_data.get(name, (None, 'N/A')), 
-                                    json_data)
-                close_app(root)
-                return
+            if input_trimmed == name:
+                plot_financial_data(db_path, sector, input_trimmed, 
+                        compare_data.get(input_trimmed, "N/A"), 
+                        *marketcap_pe_data.get(input_trimmed, (None, 'N/A')), 
+                        json_data)
+                exact_match_found = True
+                
+                break
+        if exact_match_found:
+            break
 
-    messagebox.showerror("错误", "未找到匹配的数据项。")
-    close_app(root)
+    # 再进行次次完整匹配查找
+    subexact_match_found = False
+    sub_match_found = False
+    found = False
+    if not exact_match_found:
+        for sector, names in sector_data.items():
+            for name in names:
+                if capitalized_input == name:
+                    print("哈哈")
+                    plot_financial_data(db_path, sector, capitalized_input, 
+                        compare_data.get(capitalized_input, "N/A"), 
+                        *marketcap_pe_data.get(capitalized_input, (None, 'N/A')), 
+                        json_data)
+                    subexact_match_found = True
+                    break
+            if subexact_match_found:
+                break
 
+        if not subexact_match_found:
+            for sector, names in sector_data.items():
+                for name in names:
+                    if upper_input == name:
+                        plot_financial_data(db_path, sector, upper_input, 
+                        compare_data.get(upper_input, "N/A"), 
+                        *marketcap_pe_data.get(upper_input, (None, 'N/A')), 
+                        json_data)
+                        sub_match_found = True
+                        break
+                if sub_match_found:
+                    break
+        
+            # 如果没有找到完整匹配，则进行模糊匹配
+            if not sub_match_found:
+                for sector, names in sector_data.items():
+                    for name in names:
+                        if re.search(lower_input, name.lower()):
+                            plot_financial_data(db_path, sector, name, 
+                        compare_data.get(name, "N/A"), 
+                        *marketcap_pe_data.get(name, (None, 'N/A')), 
+                        json_data)
+                            found = True
+                            break
+                    if found:
+                        break
+
+    if found or exact_match_found or subexact_match_found or sub_match_found:
+        close_app(root)  # 调用后彻底关闭程序
+    else:
+        messagebox.showerror("错误", "未找到匹配的数据项。")
+        close_app(root)
+    
 def get_user_input_custom(root, prompt):
     input_dialog = tk.Toplevel(root)
     input_dialog.title(prompt)
@@ -104,16 +159,25 @@ def get_user_input_custom(root, prompt):
     input_dialog.wait_window(input_dialog)
     return user_input
 
+def check_clipboard(root, sector_data, compare_data, marketcap_pe_data, json_data, db_path):
+    clipboard_content = pyperclip.paste()
+    if clipboard_content and clipboard_content.isupper():
+        input_mapping(root, sector_data, compare_data, marketcap_pe_data, json_data, db_path, clipboard_content)
+    else:
+        user_input = get_user_input_custom(root, "请输入")
+        input_mapping(root, sector_data, compare_data, marketcap_pe_data, json_data, db_path, user_input)
+
 if __name__ == '__main__':
+    Copy_Command_C()
     root = tk.Tk()
     root.withdraw()
     root.bind('<Escape>', lambda event: close_app(root))
 
-    sector_data = load_sector_data('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_Stock.json')
+    sector_data = load_sector_data('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json')
     compare_data = load_compare_data('/Users/yanzhang/Documents/News/Compare_Stocks.txt')
     marketcap_pe_data = load_marketcap_pe_data('/Users/yanzhang/Documents/News/backup/marketcap_pe.txt')
     json_data = load_json_data('/Users/yanzhang/Documents/Financial_System/Modules/Description.json')
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
 
-    input_mapping(root, sector_data, compare_data, marketcap_pe_data, json_data, db_path)
+    check_clipboard(root, sector_data, compare_data, marketcap_pe_data, json_data, db_path)
     root.mainloop()

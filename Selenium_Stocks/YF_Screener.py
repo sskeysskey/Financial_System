@@ -155,7 +155,6 @@ def process_sector(driver, url, sector, output):
     data = fetch_data(driver, url)
     update_json(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', output, log_enabled=True)
     update_json(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json', output, log_enabled=False)
-    update_json(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_Stock.json', output, log_enabled=False)
 
 def save_output_to_file(output, directory, filename='MarketCap_Change.txt'):
     # 获取当前时间，并格式化为字符串（如'2023-03-15_12-30-00'）

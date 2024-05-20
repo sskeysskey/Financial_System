@@ -9,9 +9,9 @@ with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json
 
 today = datetime.now()
 # 定义时间范围
-start_date = "2024-05-12"
-# end_date = "2024-05-06"
-end_date = today.strftime('%Y-%m-%d')
+start_date = "2000-09-06"
+end_date = "2024-05-09"
+# end_date = today.strftime('%Y-%m-%d')
 
 # 连接到SQLite数据库
 conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
