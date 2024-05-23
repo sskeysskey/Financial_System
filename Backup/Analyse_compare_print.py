@@ -31,13 +31,13 @@ def analyze_sector_impacts(filename):
                 sector = match.group(1).strip()
                 percentage = float(match.group(2))
                 # 根据百分比正负分别处理
-                if percentage <= -0.2:
+                if percentage <= -0.05:
                     if sector in negative_sector_counts:
                         negative_sector_counts[sector] += 1
                     else:
                         negative_sector_counts[sector] = 1
                     negative_total += 1
-                elif percentage >= 0.5:
+                elif percentage >= 0.1:
                     if sector in positive_sector_counts:
                         positive_sector_counts[sector] += 1
                     else:

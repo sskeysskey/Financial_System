@@ -11,30 +11,33 @@ sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
 from Chart_panel_1Y import plot_financial_data_panel
 from Chart_input_1Y import plot_financial_data
 
-def create_custom_style():
-    style = ttk.Style()
-    # 尝试使用不同的主题，如果默认主题不支持背景颜色的更改
-    # style.theme_use('clam')
-    style.theme_use('alt')
-
-    # 为不同的按钮定义颜色
-    style.configure("Green.TButton", background="green", foreground="white", font=('Helvetica', 16))
-    style.configure("White.TButton", background="white", foreground="black", font=('Helvetica', 16))
-    style.configure("Purple.TButton", background="purple", foreground="white", font=('Helvetica', 16))
-    style.configure("Yellow.TButton", background="yellow", foreground="black", font=('Helvetica', 16))
-    style.configure("Orange.TButton", background="orange", foreground="black", font=('Helvetica', 16))
-    style.configure("Blue.TButton", background="blue", foreground="white", font=('Helvetica', 16))
-    style.configure("Red.TButton", background="red", foreground="black", font=('Helvetica', 16))
-    style.configure("Black.TButton", background="black", foreground="white", font=('Helvetica', 16))
-    style.configure("Default.TButton", background="gray", foreground="black", font=('Helvetica', 16))
-
-    # 确保按钮的背景颜色被填充
-    style.map("TButton",
-              background=[('active', '!disabled', 'pressed', 'focus', 'hover', 'alternate', 'selected', 'background')]
-              )
 def load_json_data(path):
     with open(path, 'r', encoding='utf-8') as file:
         return json.load(file)
+
+# 全局数据变量
+keyword_colors = load_json_data('/Users/yanzhang/Documents/Financial_System/Modules/Colors.json')
+config = load_json_data('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json')
+json_data = load_json_data('/Users/yanzhang/Documents/Financial_System/Modules/Description.json')
+sector_data = load_json_data('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json')
+
+def create_custom_style():
+    style = ttk.Style()
+    style.theme_use('alt')
+    button_styles = {
+        "Green": ("green", "white"),
+        "White": ("white", "black"),
+        "Purple": ("purple", "white"),
+        "Yellow": ("yellow", "black"),
+        "Orange": ("orange", "black"),
+        "Blue": ("blue", "white"),
+        "Red": ("red", "black"),
+        "Black": ("black", "white"),
+        "Default": ("gray", "black")
+    }
+    for name, (bg, fg) in button_styles.items():
+        style.configure(f"{name}.TButton", background=bg, foreground=fg, font=('Helvetica', 16))
+        style.map("TButton", background=[('active', '!disabled', 'pressed', 'focus', 'hover', 'alternate', 'selected', 'background')])
 
 def parse_changes(filename):
     changes = {}
@@ -49,17 +52,6 @@ def parse_changes(filename):
     return changes
 
 def create_selection_window():
-    # 载入关键字颜色配置
-    keyword_colors = load_json_data('/Users/yanzhang/Documents/Financial_System/Modules/Colors.json')
-    purple_keywords = keyword_colors["purple_keywords"]
-    yellow_keywords = keyword_colors["yellow_keywords"]
-    orange_keywords = keyword_colors["orange_keywords"]
-    blue_keywords = keyword_colors["blue_keywords"]
-    red_keywords = keyword_colors["red_keywords"]
-    green_keywords = keyword_colors["green_keywords"]
-    black_keywords = keyword_colors["black_keywords"]
-    white_keywords = keyword_colors["white_keywords"]
-
     selection_window = tk.Toplevel(root)
     selection_window.title("选择查询关键字")
     selection_window.geometry("1480x900")
@@ -80,78 +72,60 @@ def create_selection_window():
     canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
     canvas.configure(xscrollcommand=scrollbar.set)
 
-    # 创建一个新的Frame来纵向包含CurrencyDB1和CryptoDB1
-    new_vertical_frame1 = tk.Frame(scrollable_frame)
-    new_vertical_frame1.pack(side="left", padx=15, pady=10, fill="both", expand=True)
+    color_frames = [tk.Frame(scrollable_frame) for _ in range(6)]
+    for frame in color_frames:
+        frame.pack(side="left", padx=15, pady=10, fill="both", expand=True)
 
-    new_vertical_frame2 = tk.Frame(scrollable_frame)
-    new_vertical_frame2.pack(side="left", padx=15, pady=10, fill="both", expand=True)
+    categories = [
+        ['Basic_Materials', 'Communication_Services', 'Consumer_Cyclical', 'Consumer_Defensive', 'Technology'],
+        ['Financial_Services', 'Healthcare', 'Industrials', 'Real_Estate', 'Energy', 'Utilities'],
+        ['Bonds', 'Crypto', 'Indices'],
+        ['Commodities'],
+        ['Currencies'],
+        ['Economics']
+    ]
 
-    new_vertical_frame3 = tk.Frame(scrollable_frame)
-    new_vertical_frame3.pack(side="left", padx=15, pady=10, fill="both", expand=True)
+    for index, category_group in enumerate(categories):
+        for db_key, keywords in config.items():
+            if db_key in category_group:
+                frame = tk.LabelFrame(color_frames[index], text=db_key, padx=10, pady=10)
+                frame.pack(side="top", padx=15, pady=10, fill="both", expand=True)
 
-    new_vertical_frame4 = tk.Frame(scrollable_frame)
-    new_vertical_frame4.pack(side="left", padx=15, pady=10, fill="both", expand=True)
-
-    new_vertical_frame5 = tk.Frame(scrollable_frame)
-    new_vertical_frame5.pack(side="left", padx=15, pady=10, fill="both", expand=True)
-
-    for db_key, keywords in config.items():
-        if db_key in ['Basic_Materials','Communication_Services','Consumer_Cyclical',
-                    'Consumer_Defensive','Technology']:
-            frame = tk.LabelFrame(new_vertical_frame1, text=db_key, padx=10, pady=10)
-            frame.pack(side="top", padx=15, pady=10, fill="both", expand=True)
-        elif db_key in ['Financial_Services','Healthcare','Industrials','Real_Estate','Energy','Utilities']:
-            frame = tk.LabelFrame(new_vertical_frame2, text=db_key, padx=10, pady=10)
-            frame.pack(side="top", padx=15, pady=10, fill="both", expand=True)
-        elif db_key in ['Bonds', 'Crypto', 'Indices']:
-            # 将这两个数据库的框架放入新的纵向框架中
-            frame = tk.LabelFrame(new_vertical_frame3, text=db_key, padx=10, pady=10)
-            frame.pack(side="top", padx=15, pady=10, fill="both", expand=True)
-        elif db_key in ['Commodities']:
-            frame = tk.LabelFrame(new_vertical_frame4, text=db_key, padx=10, pady=10)
-            frame.pack(side="top", padx=15, pady=10, fill="both", expand=True)
-        elif db_key in ['Currencies']:
-            frame = tk.LabelFrame(new_vertical_frame5, text=db_key, padx=10, pady=10)
-            frame.pack(side="top", padx=15, pady=10, fill="both", expand=True)
-        else:
-            frame = tk.LabelFrame(scrollable_frame, text=db_key, padx=10, pady=10)
-            frame.pack(side="top", padx=15, pady=10, fill="both", expand=True)
-
-        for keyword in sorted(keywords):
-            button_frame = tk.Frame(frame)  # 创建一个内部Frame来包裹两个按钮
-            button_frame.pack(side="top", fill="x", padx=5, pady=2)
-            
-            # 根据关键字设置背景颜色
-            if keyword in purple_keywords:
-                button_style = "Purple.TButton"
-            elif keyword in yellow_keywords:
-                button_style = "Yellow.TButton"
-            elif keyword in orange_keywords:
-                button_style = "Orange.TButton"
-            elif keyword in blue_keywords:
-                button_style = "Blue.TButton"
-            elif keyword in red_keywords:
-                button_style = "Red.TButton"
-            elif keyword in black_keywords:
-                button_style = "Black.TButton"
-            elif keyword in white_keywords:
-                button_style = "White.TButton"
-            elif keyword in green_keywords:
-                button_style = "Green.TButton"
-            else:
-                button_style = "Default.TButton"  # 默认颜色
-            
-            change_text = change_dict.get(keyword, "")
-            button_text = f"{keyword} {change_text}"
-            
-            button_data = ttk.Button(button_frame, text=button_text, style=button_style, command=lambda k=keyword: on_keyword_selected_chart(k, selection_window))
-            button_data.pack(side="left", fill="x", expand=True)
-            
-            # 使用Label创建一个可点击的文本链接
-            link_label = tk.Label(button_frame, text="🔢", fg="gray", cursor="hand2")
-            link_label.pack(side="right", fill="x", expand=False)
-            link_label.bind("<Button-1>", lambda event, k=keyword: on_keyword_selected(k))
+                for keyword in sorted(keywords):
+                    button_frame = tk.Frame(frame)  # 创建一个内部Frame来包裹两个按钮
+                    button_frame.pack(side="top", fill="x", padx=5, pady=2)
+                    
+                    # 根据关键字设置背景颜色
+                    if keyword in keyword_colors["purple_keywords"]:
+                        button_style = "Purple.TButton"
+                    elif keyword in keyword_colors["yellow_keywords"]:
+                        button_style = "Yellow.TButton"
+                    elif keyword in keyword_colors["orange_keywords"]:
+                        button_style = "Orange.TButton"
+                    elif keyword in keyword_colors["blue_keywords"]:
+                        button_style = "Blue.TButton"
+                    elif keyword in keyword_colors["red_keywords"]:
+                        button_style = "Red.TButton"
+                    elif keyword in keyword_colors["black_keywords"]:
+                        button_style = "Black.TButton"
+                    elif keyword in keyword_colors["white_keywords"]:
+                        button_style = "White.TButton"
+                    elif keyword in keyword_colors["green_keywords"]:
+                        button_style = "Green.TButton"
+                    else:
+                        button_style = "Default.TButton"  # 默认颜色
+                    
+                    change_text = change_dict.get(keyword, "")
+                    button_text = f"{keyword} {change_text}"
+                    
+                    button_data = ttk.Button(button_frame, text=button_text, style=button_style,
+                        command=lambda k=keyword: on_keyword_selected_chart(k, selection_window))
+                    button_data.pack(side="left", fill="x", expand=True)
+                    
+                    # 使用Label创建一个可点击的文本链接
+                    link_label = tk.Label(button_frame, text="🔢", fg="gray", cursor="hand2")
+                    link_label.pack(side="right", fill="x", expand=False)
+                    link_label.bind("<Button-1>", lambda event, k=keyword: on_keyword_selected(k))
 
     canvas.pack(side="left", fill="both", expand=True)
     scrollbar.pack(side="bottom", fill="x")
@@ -184,10 +158,6 @@ def load_sector_data():
     with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as file:
         sector_data = json.load(file)
     return sector_data
-
-def load_json_data(path):
-    with open(path, 'r', encoding='utf-8') as file:
-        return json.load(file)
 
 def load_compare_data(path):
     compare_data = {}
@@ -251,15 +221,9 @@ if __name__ == '__main__':
     root = tk.Tk()
     root.withdraw()
 
-    # 读取合并后的数据库配置
-    with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json', 'r') as f:
-        config = json.load(f)
-
     change_dict = parse_changes('/Users/yanzhang/Documents/News/backup/Compare_All.txt')
     compare_data = load_compare_data('/Users/yanzhang/Documents/News/CompareStock.txt')
     marketcap_pe_data = load_marketcap_pe_data('/Users/yanzhang/Documents/News/backup/marketcap_pe.txt')
-    json_data = load_json_data('/Users/yanzhang/Documents/Financial_System/Modules/Description.json')
     
     create_selection_window()
-    sector_data = load_sector_data()
     root.mainloop()

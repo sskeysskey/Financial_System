@@ -8,10 +8,12 @@ with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json
     stock_groups = json.load(file)
 
 # 适合于自定义抓取
-today = datetime.now()
 start_date = "2000-09-06"
-# end_date = "2024-05-16"
-end_date = today.strftime('%Y-%m-%d')
+end_date = "2024-05-21"
+
+# today = datetime.now()
+# end_date = today.strftime('%Y-%m-%d')
+
 
 # 适合于抓今天
 # today = datetime.now()

@@ -1,6 +1,5 @@
 {
     "Basic_Materials": [
-        "GOLD",
         "AA"
     ],
     "Communication_Services": [
@@ -9,35 +8,24 @@
     "Consumer_Cyclical": [
         "LULU",
         "LI",
-        "CZR",
-        "MGA"
+        "CZR"
     ],
     "Consumer_Defensive": [
-        "TAP"
+        
     ],
     "Financial_Services": [
-        "BBD",
-        "BBDO",
-        "PSLV"
+        
     ],
     "Healthcare": [
-        "STVN",
-        "WBA",
-        "LEGN",
-        "JAZZ",
-        "DOCS",
-        "MDGL"
+        
     ],
     "Industrials": [
-        "GNRC",
-        "JBHT",
-        "GATX"
+        "GNRC"
     ],
     "Energy": [],
     "Real_Estate": [],
     "Technology": [
-        "U",
-        "BILL"
+        "U"
     ],
     "Utilities": [],
     "Economics": [
@@ -46,7 +34,8 @@
         "USInterest",
         "USPayroll",
         "USTrade",
-        "USConfidence"
+        "USConfidence",
+        "USJobless"
     ],
     "Commodities": [
         "Uranium",

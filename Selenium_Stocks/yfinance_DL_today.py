@@ -50,6 +50,7 @@ else:
     special_groups = ["Currencies", "Bonds", "Crypto", "Commodities"]
 
     for group_name, tickers in stock_groups.items():
+        data_count = 0  # 初始化计数器
         for ticker_symbol in tickers:
             try:
                 # 使用 yfinance 下载股票数据
@@ -74,12 +75,16 @@ else:
                     else:
                         volume = int(row['Volume'])
                         c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)", (date, mapped_name, price, volume))
+                    
+                    data_count += 1  # 成功插入一条数据，计数器增加
             except Exception as e:
                 error_message = f"Failed download:\n[{ticker_symbol}]: {str(e)}\n"
                 # 将错误信息写入文件
                 with open('/Users/yanzhang/Documents/News/DL_today_error.txt', 'a') as error_file:
                     error_file.write(error_message)
-        print(f"{group_name} 数据处理完成。")
+
+        # 在完成每个group_name后打印信息
+        print(f"{group_name} 数据处理完成，总共下载了 {data_count} 条数据。")
 
     print("所有数据已成功写入数据库")
     # 提交事务

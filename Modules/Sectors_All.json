@@ -69,7 +69,8 @@
     "USInterest",
     "USPayroll",
     "USTrade",
-    "USConfidence"
+    "USConfidence",
+    "USJobless"
   ],
   "Commodities": [
     "Gold",

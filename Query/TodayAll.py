@@ -69,6 +69,7 @@ def create_window(content):
 if __name__ == '__main__':
     # 数据库文件和表名的列表
     db_info = [
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Economics'},
         {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Indices'},
         {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies'},
         {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities'},

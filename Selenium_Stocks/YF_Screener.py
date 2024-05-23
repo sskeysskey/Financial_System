@@ -18,7 +18,6 @@ chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
 service = Service(executable_path=chrome_driver_path)
 driver = webdriver.Chrome(service=service)
 
-
 # 定义黑名单
 blacklist = ["CTA-PA", "FWONK", "FOXA", "NWSA", "PARAA", "LSXMA",
     "LSXMB", "LBRDA", "LBTYA", "LBTYB", "LEN-B", "BF-A", "MKC-V",
@@ -34,7 +33,7 @@ blacklist = ["CTA-PA", "FWONK", "FOXA", "NWSA", "PARAA", "LSXMA",
     "AGNCN", "VNO-PL", "VNO-PM", "FRT-PC", "AMH-PH", "AMH-PG",
     "KIM-PM", "KIM-PL", "DUK-PA", "EBR-B", "CIG-C", "CMS-PB",
     "CWEN-A", "ELPC", "BML-PG", "SLG-PI", "NEE-PR", "APO-PA",
-    "YNDX", "CUK"]
+    "YNDX", "CUK", "BBDO"]
 
 # def setup_driver():
 #     chrome_options = Options()

@@ -73,7 +73,7 @@ def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_
         top.title("Stock Information")
         
         # 设置窗口尺寸
-        top.geometry("600x800")
+        top.geometry("600x650")
         
         # 设置字体大小
         font_size = ('Arial', 22)
@@ -83,20 +83,13 @@ def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_
         text_box.pack(expand=True, fill='both')
         
         # 插入股票信息
-        info = f"{name}:\n\n{descriptions['description1']}\n\n{descriptions['description2']}"
+        info = f"{name}:{descriptions['description1']}\n\n{descriptions['description2']}"
         text_box.insert(tk.END, info)
         
         # 设置文本框为只读
         text_box.config(state=tk.DISABLED)
         
-        # 创建一个关闭按钮
-        close_button = tk.Button(top, text="OK", command=top.destroy, font=font_size)
-        close_button.pack(pady=10)
-        
-        # 设置焦点并绑定回车键
-        close_button.focus_set()
         top.bind('<Escape>', lambda event: root.destroy())
-        
         root.mainloop()
 
     # 添加 pick 事件处理器，仅在 clickable 为 True 时激活

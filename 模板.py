@@ -434,3 +434,33 @@ def Copy_Command_C():
     # 运行AppleScript
     subprocess.run(['osascript', '-e', script])
 # ——————————————————————————————————————————————————————————————————————————————————————————
+def create_custom_style():
+    style = ttk.Style()
+    # 尝试使用不同的主题，如果默认主题不支持背景颜色的更改
+    # style.theme_use('clam')
+    style.theme_use('alt')
+
+    # 为不同的按钮定义颜色
+    style.configure("Green.TButton", background="green", foreground="white", font=('Helvetica', 16))
+    style.configure("White.TButton", background="white", foreground="black", font=('Helvetica', 16))
+    style.configure("Purple.TButton", background="purple", foreground="white", font=('Helvetica', 16))
+    style.configure("Yellow.TButton", background="yellow", foreground="black", font=('Helvetica', 16))
+    style.configure("Orange.TButton", background="orange", foreground="black", font=('Helvetica', 16))
+    style.configure("Blue.TButton", background="blue", foreground="white", font=('Helvetica', 16))
+    style.configure("Red.TButton", background="red", foreground="black", font=('Helvetica', 16))
+    style.configure("Black.TButton", background="black", foreground="white", font=('Helvetica', 16))
+    style.configure("Default.TButton", background="gray", foreground="black", font=('Helvetica', 16))
+
+    # 确保按钮的背景颜色被填充
+    style.map("TButton",
+              background=[('active', '!disabled', 'pressed', 'focus', 'hover', 'alternate', 'selected', 'background')]
+              )
+# ——————————————————————————————————————————————————————————————————————————————————————————
+# ——————————————————————————————————————————————————————————————————————————————————————————
+# ——————————————————————————————————————————————————————————————————————————————————————————
+# ——————————————————————————————————————————————————————————————————————————————————————————
+# ——————————————————————————————————————————————————————————————————————————————————————————
+# ——————————————————————————————————————————————————————————————————————————————————————————
+# ——————————————————————————————————————————————————————————————————————————————————————————
+# ——————————————————————————————————————————————————————————————————————————————————————————
+# ——————————————————————————————————————————————————————————————————————————————————————————

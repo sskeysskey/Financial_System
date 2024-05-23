@@ -19,7 +19,7 @@ def query_database(db_file, table_name, condition, fields):
     # 获取查询结果
     rows = cursor.fetchall()
     if not rows:
-        return "今天没有数据可显示。\n"
+        return "没有数据可显示。\n"
 
     # 获取列名，并确定每列的最大宽度
     columns = [description[0] for description in cursor.description]
@@ -91,7 +91,7 @@ if __name__ == '__main__':
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Energy',
         #     'condition': "name = 'TS' ORDER BY date DESC", 'fields': '*'},
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Financial_Services',
-        #     'condition': "name = 'LNC' ORDER BY date DESC", 'fields': '*'},
+        #     'condition': "name = 'BBDO' ORDER BY date DESC", 'fields': '*'},
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Healthcare',
         #     'condition': "name = 'MTD' ORDER BY date DESC", 'fields': '*'},
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Industrials',
@@ -102,6 +102,8 @@ if __name__ == '__main__':
         #     'condition': "name = 'AAPL' ORDER BY date DESC", 'fields': '*'},
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Utilities',
         #     'condition': "name = '' ORDER BY date DESC", 'fields': '*'},
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Economics',
+            'condition': "name = 'USInflation' ORDER BY date DESC", 'fields': '*'}
     ]
     
     # 遍历数据库信息列表，对每个数据库执行查询并收集结果

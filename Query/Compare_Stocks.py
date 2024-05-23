@@ -64,7 +64,7 @@ def compare_today_yesterday(config_path, blacklist):
 
 if __name__ == '__main__':
     config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
-    blacklist = ['VFS','KVYO','LU','IEP','LOT']  # 黑名单列表
+    blacklist = ['VFS','KVYO','LU','IEP','LOT','GRFS']  # 黑名单列表
     # 定义你感兴趣的sectors
     interested_sectors = ["Basic_Materials", "Communication_Services", "Consumer_Cyclical",
         "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare", "Industrials",
