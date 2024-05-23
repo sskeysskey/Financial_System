@@ -66,6 +66,10 @@ def create_window(content):
 
 if __name__ == '__main__':
     db_info = [
+        # {'path': '/Users/yanzhang/Documents/Database/Analysis.db', 'table': 'High_low',
+        #   'condition': "name = 'Energy' ORDER BY date DESC", 'fields': '*'},
+        # {'path': '/Users/yanzhang/Documents/Database/Analysis.db', 'table': 'Date_compare',
+        #   'condition': "name = 'Technology' ORDER BY date DESC", 'fields': '*'},
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Indices',
         #   'condition': "name = 'Nikkei' ORDER BY date DESC", 'fields': '*'},
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies',

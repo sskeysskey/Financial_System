@@ -14,10 +14,11 @@ def save_json(filename, data):
         json.dump(data, file, indent=4, ensure_ascii=False)
 
 # 主处理函数
-def process_files(a_file, b_file):
+def process_files(a_file, b_file, c_file):
     # 加载文件
     data_a = load_json(a_file)
     data_b = load_json(b_file)
+    data_c = load_json(c_file)
     
     # 从剪贴板获取内容
     clipboard_content = pyperclip.paste().strip()
@@ -36,16 +37,29 @@ def process_files(a_file, b_file):
                 data_b[outer_key].append(clipboard_content)
                 save_json(b_file, data_b)
                 print(f"已添加 '{clipboard_content}' 到 '{outer_key}'")
-                messagebox.showinfo("成功", "52Week_NewLow已成功写入！")
+                messagebox.showinfo("成功", "数据已添加到b.json。")
             else:
                 print(f"'{clipboard_content}' 已存在于 '{outer_key}'")
                 messagebox.showinfo("失败", "要写入的数据已存在！")
         else:
             print(f"'{outer_key}' 在b.json的database_mapping中不存在")
-            messagebox.showinfo("失败", "目标json中缺少股票所属类别！")
+            messagebox.showinfo("失败", "目标json中缺少相应类别！")
     else:
         print("未在a.json中找到匹配的项或剪贴板为空。")
         messagebox.showinfo("失败", "原始json中没有你要导入的项或剪贴板为空！")
+    
+    # 添加到c.json的white_keywords下
+    if clipboard_content:
+        if clipboard_content not in data_c['white_keywords']:
+            data_c['white_keywords'].append(clipboard_content)
+            save_json(c_file, data_c)
+            print(f"已添加 '{clipboard_content}' 到 c.json 的 'white_keywords'")
+            messagebox.showinfo("成功", "数据已添加到c.json的white_keywords。")
+        else:
+            print(f"'{clipboard_content}' 已存在于 c.json 的 'white_keywords'")
+            messagebox.showinfo("失败", "要写入的数据已存在于c.json的white_keywords！")
 
 # 调用主函数
-process_files('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json')
+process_files('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json',
+'/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json',
+'/Users/yanzhang/Documents/Financial_System/Modules/Colors.json')

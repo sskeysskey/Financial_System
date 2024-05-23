@@ -6,10 +6,18 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
+# from selenium.webdriver.chrome.options import Options
+# from webdriver_manager.chrome import ChromeDriverManager
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support import expected_conditions as EC
+
+# ChromeDriver 路径
+chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
+
+# 设置 ChromeDriver
+service = Service(executable_path=chrome_driver_path)
+driver = webdriver.Chrome(service=service)
+
 
 # 定义黑名单
 blacklist = ["CTA-PA", "FWONK", "FOXA", "NWSA", "PARAA", "LSXMA",
@@ -25,14 +33,15 @@ blacklist = ["CTA-PA", "FWONK", "FOXA", "NWSA", "PARAA", "LSXMA",
     "PSA-PK", "DLR-PK", "DLR-PJ", "NLY-PG", "NLY-PF", "MAA-PI",
     "AGNCN", "VNO-PL", "VNO-PM", "FRT-PC", "AMH-PH", "AMH-PG",
     "KIM-PM", "KIM-PL", "DUK-PA", "EBR-B", "CIG-C", "CMS-PB",
-    "CWEN-A", "ELPC", "BML-PG", "SLG-PI", "NEE-PR", "APO-PA", "YNDX"]
+    "CWEN-A", "ELPC", "BML-PG", "SLG-PI", "NEE-PR", "APO-PA",
+    "YNDX", "CUK"]
 
-def setup_driver():
-    chrome_options = Options()
-    chrome_options.add_argument('--disable-gpu')
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=chrome_options)
-    return driver
+# def setup_driver():
+#     chrome_options = Options()
+#     chrome_options.add_argument('--disable-gpu')
+#     service = Service(ChromeDriverManager().install())
+#     driver = webdriver.Chrome(service=service, options=chrome_options)
+#     return driver
 
 def login_once(driver, login_url):
     driver.get(login_url)
@@ -158,7 +167,7 @@ def process_sector(driver, url, sector, output):
 
 def save_output_to_file(output, directory, filename='MarketCap_Change.txt'):
     # 获取当前时间，并格式化为字符串（如'2023-03-15_12-30-00'）
-    current_time = datetime.now().strftime('%m_%d')
+    current_time = datetime.now().strftime('%m%d')
     
     # 在文件名中加入时间戳
     filename = f"{filename.split('.')[0]}_{current_time}.txt"
@@ -182,10 +191,10 @@ def main():
     if now.weekday() in (0, 6):
         print("Today is either Sunday or Monday. The script will not run.")
     else:
-        driver = setup_driver()
         output = []  # 用于收集输出信息的列表
         # 检查文件是否存在
         file_path = '/Users/yanzhang/Documents/News/backup/marketcap_pe.txt'
+        directory_backup = '/Users/yanzhang/Documents/News/site/'
         if os.path.exists(file_path):
             # 获取昨天的日期作为时间戳
             yesterday = datetime.now() - timedelta(days=1)
@@ -195,7 +204,7 @@ def main():
             directory, filename = os.path.split(file_path)
             name, extension = os.path.splitext(filename)
             new_filename = f"{name}_{timestamp}{extension}"
-            new_file_path = os.path.join(directory, new_filename)
+            new_file_path = os.path.join(directory_backup, new_filename)
 
             # 重命名文件
             os.rename(file_path, new_file_path)

@@ -58,8 +58,8 @@ def compare_today_yesterday(config_path, output_file):
             file.write(line + '\n')
 
 if __name__ == '__main__':
-    config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json'
-    output_file = '/Users/yanzhang/Documents/News/backup/Compare_Panel.txt'
+    config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
+    output_file = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
     compare_today_yesterday(config_path, output_file)
     print(f"{output_file} 已生成。")
     copy_database_to_backup()  # 在程序的最后调用复制数据库的功能

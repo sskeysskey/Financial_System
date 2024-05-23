@@ -5,18 +5,18 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
 # 定义黑名单
-blacklist = ["YNDX","CHT"]
+blacklist_glob = ["YNDX","CHT"]
 
 def is_blacklisted(name):
     """检查给定的股票符号是否在黑名单中"""
-    return name in blacklist
+    return name in blacklist_glob
 
 def create_connection(db_file):
     conn = None
     conn = sqlite3.connect(db_file)
     return conn
 
-def get_price_comparison(cursor, table_name, months_back, name, today):
+def get_price_comparison(cursor, table_name, interval, name, today):
     yesterday = today - timedelta(days=1)
     day_of_week = yesterday.weekday()  # 周一为0，周日为6
 
@@ -26,7 +26,13 @@ def get_price_comparison(cursor, table_name, months_back, name, today):
         yesterday = today - timedelta(days=3)  # 取上周五
 
     ex_yesterday = yesterday - timedelta(days=1)
-    past_date = yesterday - relativedelta(months=months_back)
+    # past_date = yesterday - relativedelta(months=interval)
+    # 判断interval是否小于1，若是，则按天数计算
+    if interval < 1:
+        days = int(interval * 30)  # 将月份转换为天数
+        past_date = today - timedelta(days=days)
+    else:
+        past_date = today - relativedelta(months=int(interval))
     
     query = f"""
     SELECT MAX(price), MIN(price)
@@ -35,11 +41,7 @@ def get_price_comparison(cursor, table_name, months_back, name, today):
     cursor.execute(query, (past_date.strftime("%Y-%m-%d"), ex_yesterday.strftime("%Y-%m-%d"), name))
     return cursor.fetchone()
 
-def save_output_to_file(output, directory, filename):
-    # 创建文件夹如果它不存在
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    
+def save_output_to_file(output, directory, filename, directory_backup):
     # 定义完整的文件路径
     file_path = os.path.join(directory, filename)
     
@@ -47,12 +49,12 @@ def save_output_to_file(output, directory, filename):
     if os.path.exists(file_path):
         # 获取昨天的日期字符串
         yesterday = datetime.now() - timedelta(days=1)
-        yesterday_suffix = yesterday.strftime("%Y-%m-%d")
+        yesterday_suffix = yesterday.strftime("%m%d")
         
         # 新的文件名添加昨天的日期
         base, ext = os.path.splitext(filename)
         new_filename = f"{base}_{yesterday_suffix}{ext}"
-        new_file_path = os.path.join(directory, new_filename)
+        new_file_path = os.path.join(directory_backup, new_filename)
         
         # 重命名旧文件
         os.rename(file_path, new_file_path)
@@ -84,7 +86,7 @@ def main():
     output = []
     output1 = []
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
-    intervals = [600, 360, 240, 120, 60, 24, 13, 6, 3, 1]  # 以月份表示的时间间隔列表
+    intervals = [600, 360, 240, 120, 60, 24, 13, 6, 3, 1, 0.5, 0.25]  # 以月份表示的时间间隔列表
 
     # 遍历JSON中的每个表和股票代码
     for table_name, names in data.items():
@@ -102,7 +104,7 @@ def main():
                     if result:
                         today_price = result[0]
                     else:
-                        output.append(f"没有找到今天的{name}价格。")
+                        print(f"没有找到今天的{name}价格。")
                         continue
 
                     price_extremes = {}
@@ -121,11 +123,11 @@ def main():
                             if today_price >= max_price:
                                 if months >= 12:
                                     years = months // 12
-                                    print(f"{table_name:<25} {name:<8} {years}Y_newhigh")
-                                    output.append(f"{table_name:<25} {name:<8} {years}Y_newhigh")
+                                    print(f"{table_name} {name} {years}Y_newhigh")
+                                    output.append(f"{table_name} {name} {years}Y_newhigh")
                                 else:
-                                    print(f"{table_name:<25} {name:<8} {months}M_newhigh")
-                                    output.append(f"{table_name:<25} {name:<8} {months}M_newhigh")
+                                    print(f"{table_name} {name} {months}M_newhigh")
+                                    output.append(f"{table_name} {name} {months}M_newhigh")
 
                     # 检查是否接近最低价格
                     found_min = False
@@ -138,12 +140,12 @@ def main():
                             if today_price <= min_price:
                                 if months >= 12:
                                     years = months // 12
-                                    print(f"{table_name:<25} {name:<8} {years}Y_newlow")
-                                    output.append(f"{table_name:<25} {name:<8} {years}Y_newlow")
-                                    output1.append(f"{table_name:<25} {name:<8} {years}Y_newlow")
+                                    print(f"{table_name} {name} {years}Y_newlow")
+                                    output.append(f"{table_name} {name} {years}Y_newlow")
+                                    output1.append(f"{table_name} {name} {years}Y_newlow")
                                 else:
-                                    print(f"{table_name:<25} {name:<8} {months}M_newlow")
-                                    output.append(f"{table_name:<25} {name:<8} {months}M_newlow")
+                                    print(f"{table_name} {name} {months}M_newlow")
+                                    output.append(f"{table_name} {name} {months}M_newlow")
 
                 output.append("\n")
                 cursor.close()
@@ -151,12 +153,47 @@ def main():
     final_output = "\n".join(output)
     final_output1 = "\n".join(output1)
 
+    # 解析final_output1，构建更新数据
+    def parse_output(output):
+        updates = {}
+        lines = output.split('\n')
+        for line in lines:
+            category, symbol, _ = line.split()
+            if category in updates:
+                updates[category].append(symbol)
+            else:
+                updates[category] = [symbol]
+        return updates
+
+    def update_json_data(config_path, updates, blacklist_newlow):
+        with open(config_path, 'r', encoding='utf-8') as file:
+            data = json.load(file)
+
+        for category, symbols in updates.items():
+            if category in data:
+                for symbol in symbols:
+                    if symbol not in data[category] and symbol not in blacklist_newlow:
+                        data[category].append(symbol)
+            else:
+                data[category] = [symbol for symbol in symbols if symbol not in blacklist_newlow]
+
+        with open(config_path, 'w', encoding='utf-8') as file:
+            json.dump(data, file, ensure_ascii=False, indent=4)
+
+    updates = parse_output(final_output1)
+    # 黑名单列表
+    blacklist_newlow = ["SIRI", "FIVE"]
+    config_json = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json"
+    update_json_data(config_json, updates, blacklist_newlow)
+    print("Sectors_Panel.json文件已成功更新！")
+
     # 在代码的最后部分调用save_output_to_file函数
     output_directory = '/Users/yanzhang/Documents/News'
-    filename = 'Analyse_Stock.txt'
-    filename1 = '52week_newlow.txt'
-    save_output_to_file(final_output, output_directory, filename)
-    save_output_to_file(final_output1, output_directory, filename1)
+    directory_backup = '/Users/yanzhang/Documents/News/site'
+    filename = 'AnalyseStock.txt'
+    save_output_to_file(final_output, output_directory, filename, directory_backup)
+    # filename1 = '52_newlow.txt'
+    # save_output_to_file(final_output1, output_directory, filename1, directory_backup)
 
 if __name__ == "__main__":
     main()

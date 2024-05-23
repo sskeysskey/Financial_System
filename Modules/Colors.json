@@ -1,0 +1,51 @@
+{
+    "purple_keywords": [
+        "Bitcoin",
+        "CNYUSD",
+        "US10Y",
+        "USDJPY",
+        "CrudeOil"
+    ],
+    "yellow_keywords": [
+        "CNYJPY",
+        "NASDAQ",
+        "Gold",
+        "Cocoa",
+        "Silver"
+    ],
+    "orange_keywords": [
+        "HANGSENG",
+        "Naturalgas",
+        "Ether",
+        "Shanghai",
+        "USDCNY"
+    ],
+    "blue_keywords": [
+        "Copper",
+        "S&P500"
+    ],
+    "red_keywords": [
+        "VIX",
+        "DXY"
+    ],
+    "green_keywords": [
+        "TLK",
+        "LULU",
+        "LI",
+        "FIVE",
+        "CZR",
+        "TAP",
+        "BMY",
+        "STVN",
+        "U"
+    ],
+    "black_keywords": [
+        "Cotton",
+        "Sugar"
+    ],
+    "white_keywords": [
+        "GNRC",
+        "GOLD",
+        "AA"
+    ]
+}

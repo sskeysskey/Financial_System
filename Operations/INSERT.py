@@ -34,7 +34,8 @@ data_sets = {
         # ('2024-04-01', 'Shenzhen Index', 9647.07, 10),
         # ('2024-05-16', 'Nikkei', 38920.26, 157900000),
         # ('2018-01-22', 'HANG SENG INDEX', 33154.12, 10),
-        # ('2024-05-16', 'Russian', 3486.26, 0)
+        # ('2024-05-16', 'Russian', 3486.26, 0),
+        # ('2024-05-20', 'India', 74005.94, 0)
     ],
     'Crypto': [
         # ('2021-05-03', 'Bitcoin Cash', 1428.74, 3),
@@ -56,8 +57,13 @@ data_sets = {
     'Commodities': [
         # ('2024-03-12', 'Crude Oil', 77.25),
         # ('2024-03-05', 'Natural gas', 2.095),
-         ('2024-05-09', 'Silver', 28.132),
+        #  ('2024-05-09', 'Silver', 28.132),
     ],
+    'Economics': [
+        # ('2017-08-10', 'USGDP', 2.3),
+        # ('2019-01-10', 'USInflation', 1.9),
+        #  ('2015-12-15', 'USInterest', 0.25),
+    ]
 }
 
 # 数据库文件和表名信息，同时指定每个表的列名
@@ -67,6 +73,7 @@ databases = [
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities', 'columns': ['date', 'name', 'price']},
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto', 'columns': ['date', 'name', 'price']},
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Bonds', 'columns': ['date', 'name', 'price']},
+    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Economics', 'columns': ['date', 'name', 'price']},
 ]
 
 # 对每个数据库执行数据插入操作

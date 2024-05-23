@@ -1,19 +1,12 @@
-import json
+import os
 
-def load_sector_data():
-    # 读取JSON文件
-    with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_test.json', 'r') as file:
-        sector_data = json.load(file)
-    
-    # 打印整个sector_data的内容
-    print("完整的sector_data内容:")
-    print(json.dumps(sector_data, indent=4, ensure_ascii=False))
-    
-    # 遍历每一个sector，打印每一个name
-    print("\n遍历打印每个sector及其对应的names:")
-    for sector, names in sector_data.items():
-        for name in names:
-            print(f"Sector: {sector}, Name: {name}")
+existing_file = '/Users/yanzhang/Documents/News/backup/ETFs.txt'
+new_file = '/Users/yanzhang/Documents/News/ETFs_new.txt'
 
-# 调用函数
-load_sector_data()
+# 检查new_file是否存在，如果存在，则迁移内容到existing_file
+if os.path.exists(new_file):
+    with open(new_file, 'r') as file_a, open(existing_file, 'a') as file_b:
+        file_b.write('\n')  # 在迁移内容前首先输入一个回车
+        for line in file_a:
+            file_b.write(line)
+    open(new_file, 'w').close()  # 清空a.txt

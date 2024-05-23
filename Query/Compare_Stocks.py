@@ -50,14 +50,7 @@ def compare_today_yesterday(config_path, blacklist):
     # 对输出进行排序，根据变化百分比
     output.sort(key=lambda x: x[1], reverse=True)
 
-    # output_file = f'/Users/yanzhang/Documents/News/Compare_Stocks.txt'
-    # with open(output_file, 'w') as file:
-    #     for line in output:
-    #         if line[0].split(' ')[1] not in blacklist:  # 再次检查黑名单
-    #             file.write(f"{line[0]}: {line[1]:.2f}%\n")
-    # print(f"{output_file} 已生成。")
-
-    output_file = f'/Users/yanzhang/Documents/News/Compare_Stocks.txt'
+    output_file = f'/Users/yanzhang/Documents/News/CompareStock.txt'
     with open(output_file, 'w') as file:
         for line in output:
             sector_and_company = line[0].split()
@@ -71,13 +64,14 @@ def compare_today_yesterday(config_path, blacklist):
 
 if __name__ == '__main__':
     config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
-    blacklist = ['VFS','KVYO','LU','IEP']  # 黑名单列表
+    blacklist = ['VFS','KVYO','LU','IEP','LOT']  # 黑名单列表
     # 定义你感兴趣的sectors
     interested_sectors = ["Basic_Materials", "Communication_Services", "Consumer_Cyclical",
         "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare", "Industrials",
         "Real_Estate", "Technology", "Utilities"]
     # 检查文件是否存在
-    file_path = '/Users/yanzhang/Documents/News/Compare_Stocks.txt'
+    file_path = '/Users/yanzhang/Documents/News/CompareStock.txt'
+    directory_backup = '/Users/yanzhang/Documents/News/site/'
     if os.path.exists(file_path):
         # 获取昨天的日期作为时间戳
         yesterday = datetime.now() - timedelta(days=1)
@@ -87,7 +81,7 @@ if __name__ == '__main__':
         directory, filename = os.path.split(file_path)
         name, extension = os.path.splitext(filename)
         new_filename = f"{name}_{timestamp}{extension}"
-        new_file_path = os.path.join(directory, new_filename)
+        new_file_path = os.path.join(directory_backup, new_filename)
 
         # 重命名文件
         os.rename(file_path, new_file_path)

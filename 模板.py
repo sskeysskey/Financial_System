@@ -423,3 +423,14 @@ def get_parent_id(commodity):
             "table": "Utilities"
         }
     }}
+# ——————————————————————————————————————————————————————————————————————————————————————————
+def Copy_Command_C():
+    script = '''
+    tell application "System Events"
+	    keystroke "c" using command down
+        delay 0.5
+    end tell
+    '''
+    # 运行AppleScript
+    subprocess.run(['osascript', '-e', script])
+# ——————————————————————————————————————————————————————————————————————————————————————————

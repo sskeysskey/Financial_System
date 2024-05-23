@@ -2,7 +2,6 @@
   "Bonds": [
     "^TNX"
   ],
-    
   "Currencies": [
     "DX-Y.NYB",
     "EURUSD=X",
@@ -28,11 +27,7 @@
     "EGP=X",
     "ARS=X"
   ],
-  
-  "Crypto": [
-
-  ],
-    
+  "Crypto": [],
   "Indices": [
     "^HSI",
     "^IXIC",
@@ -46,7 +41,6 @@
     "^BSESN",
     "IMOEX.ME"
   ],
-  
   "Commodities": [
     "GC=F",
     "HG=F",
@@ -63,9 +57,9 @@
     "KC=F",
     "CT=F",
     "OJ=F",
-    "SB=F"
+    "SB=F",
+    "SI=F"
   ],
-  
   "Basic_Materials": [
     "LIN",
     "BHP",
@@ -137,8 +131,7 @@
     "BCC",
     "BCPC",
     "WLK",
-    "ALTM",
-    "ASH"
+    "ALTM"
   ],
   "Communication_Services": [
     "GOOGL",
@@ -201,8 +194,7 @@
     "BILI",
     "NXST",
     "TKC",
-    "PHI",
-    "IQ"
+    "PHI"
   ],
   "Consumer_Cyclical": [
     "AMZN",
@@ -261,7 +253,6 @@
     "AVY",
     "DPZ",
     "DRI",
-    "CUK",
     "IHG",
     "PKG",
     "BBY",
@@ -359,7 +350,9 @@
     "BYD",
     "SLGN",
     "LOT",
-    "VIK"
+    "VIK",
+    "GLBE",
+    "COLM"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -508,7 +501,8 @@
     "CSAN",
     "VAL",
     "NFG",
-    "MGY"
+    "MGY",
+    "RIG"
   ],
   "Financial_Services": [
     "BRK-A",
@@ -697,7 +691,8 @@
     "FG",
     "AMG",
     "LPLA",
-    "BMA"
+    "BMA",
+    "PSLV"
   ],
   "Healthcare": [
     "LLY",
@@ -821,7 +816,6 @@
     "XRAY",
     "IONS",
     "GKOS",
-    "IBRX",
     "HALO",
     "BBIO",
     "BLCO",
@@ -830,7 +824,8 @@
     "OSCR",
     "APLS",
     "RCM",
-    "DOCS"
+    "DOCS",
+    "MDGL"
   ],
   "Industrials": [
     "GE",
@@ -1010,7 +1005,9 @@
     "MMS",
     "ERJ",
     "BAH",
-    "CSL"
+    "CSL",
+    "AWI",
+    "GATX"
   ],
   "Real_Estate": [
     "PLD",
@@ -1076,7 +1073,6 @@
     "VNO",
     "DOC"
   ],
-  
   "Technology": [
     "MSFT",
     "AAPL",
@@ -1271,8 +1267,7 @@
     "CPAY",
     "ALAB",
     "ENTG",
-    "EXLS",
-    "ITRI"
+    "EXLS"
   ],
   "Utilities": [
     "NEE",
@@ -1322,6 +1317,7 @@
     "CWEN",
     "ELP",
     "UGI",
-    "AEE"
-  ] 
+    "AEE",
+    "GEV"
+  ]
 }

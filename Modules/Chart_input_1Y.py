@@ -4,31 +4,46 @@ from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 from matplotlib.widgets import RadioButtons
 import matplotlib
+import json
+import tkinter as tk
+from tkinter import simpledialog, scrolledtext
 
-def plot_financial_data(db_path, table_name, name):
+def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_data):
     # 设置支持中文的字体
     # matplotlib.rcParams['font.family'] = 'sans-serif'
     # matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
     # matplotlib.rcParams['font.size'] = 14
-    
-    with sqlite3.connect(db_path) as conn:
-        cursor = conn.cursor()
-        query = f"SELECT date, price FROM {table_name} WHERE name = ? ORDER BY date;"
-        cursor.execute(query, (name,))
-        data = cursor.fetchall()
+    try:
+        with sqlite3.connect(db_path) as conn:
+            cursor = conn.cursor()
+            try:
+                query = f"SELECT date, price, volume FROM {table_name} WHERE name = ? ORDER BY date;"
+                cursor.execute(query, (name,))
+            except sqlite3.OperationalError as e:
+                if 'no such column: volume' in str(e):
+                    print("警告: 数据库表中不存在'volume'列，将不显示成交量信息。")
+                    # 当 volume 列不存在时，只查询 date 和 price
+                    query = f"SELECT date, price FROM {table_name} WHERE name = ? ORDER BY date;"
+                    cursor.execute(query, (name,))
+                else:
+                    raise
+            data = cursor.fetchall()
+    except sqlite3.OperationalError as e:
+        print(f"数据库错误: {e}")
+        return
 
     dates = []
     prices = []
     for row in data:
-        try:
-            date = datetime.strptime(row[0], "%Y-%m-%d")
-            price = float(row[1]) if row[1] is not None else None
-            # volume = row[2]  # 获取当前行的volume
-            if price is not None:
-                dates.append(date)
-                prices.append(price)
-        except ValueError:
-            continue  # 跳过非法数据
+        date = datetime.strptime(row[0], "%Y-%m-%d")
+        price = float(row[1]) if row[1] is not None else None
+        if price is not None:
+            dates.append(date)
+            prices.append(price)
+        if len(row) > 2 and row[2] is not None:
+            volume = row[2]  # 安全检查是否存在volume
+        else:
+            volume = None
 
     if not dates or not prices:
         print("没有有效的数据来绘制图表。")
@@ -39,9 +54,85 @@ def plot_financial_data(db_path, table_name, name):
 
     highlight_point = ax.scatter([], [], s=100, color='blue', zorder=5)  # s是点的大小
 
-    line, = ax.plot(dates, prices, marker='o', markersize=1, linestyle='-', linewidth=2, color='b')
-    # ax.set_title(f'{name} Volume: {f"{volume/1000:.1f}K"}  {table_name}')
-    ax.set_title(f'{name}  {table_name}')
+    line, = ax.plot(dates, prices, marker='o', markersize=1, linestyle='-', linewidth=2, color='b', picker=5)
+    
+    if volume is not None and price is not None:
+        turnover = f"{(volume * float(price)) / 1000000:.1f}"
+    else:
+        turnover = "N/A"
+
+    marketcap_in_billion = f"{float(marketcap) / 1e9:.1f}B" if marketcap is not None else "N/A"
+    pe_text = f"{pe}" if pe is not None else "N/A"
+
+    def show_stock_info(name, descriptions):
+        root = tk.Tk()
+        root.withdraw()  # 隐藏主窗口
+        
+        # 创建一个新的顶级窗口
+        top = tk.Toplevel(root)
+        top.title("Stock Information")
+        
+        # 设置窗口尺寸
+        top.geometry("600x800")
+        
+        # 设置字体大小
+        font_size = ('Arial', 22)
+        
+        # 创建一个滚动文本框
+        text_box = scrolledtext.ScrolledText(top, wrap=tk.WORD, font=font_size)
+        text_box.pack(expand=True, fill='both')
+        
+        # 插入股票信息
+        info = f"{name}:\n\n{descriptions['description1']}\n\n{descriptions['description2']}"
+        text_box.insert(tk.END, info)
+        
+        # 设置文本框为只读
+        text_box.config(state=tk.DISABLED)
+        
+        # 创建一个关闭按钮
+        close_button = tk.Button(top, text="OK", command=top.destroy, font=font_size)
+        close_button.pack(pady=10)
+        
+        # 设置焦点并绑定回车键
+        close_button.focus_set()
+        top.bind('<Escape>', lambda event: root.destroy())
+        
+        root.mainloop()
+
+    # 添加 pick 事件处理器，仅在 clickable 为 True 时激活
+    def on_pick(event):
+        if event.artist == title and clickable:
+            stock_name = name
+            for stock in json_data['stocks']:
+                if stock['name'] == stock_name:
+                    show_stock_info(stock_name, stock)
+                    break
+    def draw_underline(text_obj):
+        x, y = text_obj.get_position()
+        text_renderer = text_obj.get_window_extent(renderer=fig.canvas.get_renderer())
+        linewidth = text_renderer.width
+        line = matplotlib.lines.Line2D([x, x + linewidth], [y - 2, y - 2], transform=ax.transData,
+                                    color='blue', linewidth=2)
+        ax.add_line(line)
+    
+    # 判断是否应该使标题可点击
+    if json_data and 'stocks' in json_data and any(stock['name'] == name for stock in json_data['stocks']):
+        clickable = True
+        title_style = {'color': 'blue', 'fontsize': 12, 'fontweight': 'bold', 'picker': True}
+    else:
+        clickable = False
+        title_style = {'color': 'black', 'fontsize': 12, 'fontweight': 'bold', 'picker': False}
+    
+    # 添加交互性标题
+    title_text = f'{name}  {compare}  TurnOver: {turnover}M   MarketCap:{marketcap_in_billion}   PE:{pe_text}   {table_name}'
+    
+    title = ax.set_title(title_text, **title_style)  # 使用 title_style 中的样式
+
+    if clickable:
+        draw_underline(title)  # 如果标题可点击，添加下划线
+
+    fig.canvas.mpl_connect('pick_event', on_pick if clickable else lambda event: None)
+
     ax.grid(True)
     plt.xticks(rotation=45)
 
@@ -57,6 +148,7 @@ def plot_financial_data(db_path, table_name, name):
         "6m": 0.5,
         "1Y": 1,
         "2Y": 2,
+        "3Y": 3,
         "5Y": 5,
         "10Y": 10,
         "All": 0,
@@ -64,7 +156,7 @@ def plot_financial_data(db_path, table_name, name):
 
     rax = plt.axes([0.95, 0.005, 0.05, 0.8], facecolor='lightgoldenrodyellow')
     options = list(time_options.keys())
-    radio = RadioButtons(rax, options, active=1)
+    radio = RadioButtons(rax, options, active=3)
 
     for label in radio.labels:
         label.set_fontsize(14)
@@ -136,15 +228,21 @@ def plot_financial_data(db_path, table_name, name):
         ax.set_ylim(min(filtered_prices), max(filtered_prices))  # 更新y轴范围
         plt.draw()
 
+    def close_app(root):
+        if root:
+            root.quit()  # 更安全的关闭方式
+            root.destroy()  # 使用destroy来确保彻底关闭所有窗口和退出
+
     # 添加竖线
     vline = ax.axvline(x=dates[0], color='b', linestyle='--', linewidth=1, visible=False)
-    update("3m")
+    update("1Y")
     radio.on_clicked(update)
 
     def on_key(event):
         try:
             if event.key == 'escape':
                 plt.close()
+                close_app()
         except Exception as e:
             print(f"处理键盘事件时发生错误: {str(e)}")
 

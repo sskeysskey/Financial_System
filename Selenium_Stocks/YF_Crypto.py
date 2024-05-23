@@ -2,20 +2,19 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from datetime import datetime, timedelta
-from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
 import sqlite3
 
-def setup_driver():
-    chrome_options = Options()
-    chrome_options.add_argument('--disable-gpu')
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=chrome_options)
-    return driver
+# ChromeDriver 路径
+chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
+
+# 设置 ChromeDriver
+service = Service(executable_path=chrome_driver_path)
+driver = webdriver.Chrome(service=service)
 
 # 初始化数据库连接
 conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
 cursor = conn.cursor()
+
 # 创建表
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS Crypto (
@@ -28,7 +27,6 @@ CREATE TABLE IF NOT EXISTS Crypto (
 ''')
 conn.commit()
 
-driver = setup_driver()
 # 映射字典
 crypto_names = {
     "BTC-USD": "Bitcoin",

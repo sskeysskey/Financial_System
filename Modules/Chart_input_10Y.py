@@ -148,6 +148,7 @@ def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_
         "6m": 0.5,
         "1Y": 1,
         "2Y": 2,
+        "3Y": 3,
         "5Y": 5,
         "10Y": 10,
         "All": 0,
@@ -155,7 +156,7 @@ def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_
 
     rax = plt.axes([0.95, 0.005, 0.05, 0.8], facecolor='lightgoldenrodyellow')
     options = list(time_options.keys())
-    radio = RadioButtons(rax, options, active=6)
+    radio = RadioButtons(rax, options, active=7)
 
     for label in radio.labels:
         label.set_fontsize(14)

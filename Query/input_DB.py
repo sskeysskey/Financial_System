@@ -20,73 +20,47 @@ def input_mapping(root, sector_data):
     if user_input is None:
         print("未输入任何内容，程序即将退出。")
         close_app()
-    else:
-        input_trimmed = user_input.strip()
-        lower_input = input_trimmed.lower()
-        upper_input = input_trimmed.upper()
-        capitalized_input = input_trimmed.capitalize()
-        # 先进行完整匹配查找
-        exact_match_found = False
+        return
+
+    input_variants = {
+        'exact': user_input.strip(),
+        'capitalized': user_input.strip().capitalize(),
+        'upper': user_input.strip().upper(),
+    }
+    
+    db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+
+    # 尝试查找匹配
+    found = False
+    for variant_name, input_variant in input_variants.items():
+        for sector, names in sector_data.items():
+            if input_variant in names:
+                condition = f"name = '{input_variant}'"
+                result = query_database(db_path, sector, condition)
+                create_window(None, result)
+                print("哈哈" if variant_name == 'exact' else "")
+                found = True
+                break
+        if found:
+            break
+
+    # 如果没有找到完整匹配，则进行模糊匹配
+    if not found:
+        lower_input = input_variants['exact'].lower()
         for sector, names in sector_data.items():
             for name in names:
-                if input_trimmed == name:
-                    db_path = "/Users/yanzhang/Documents/Database/Finance.db"
-                    condition = f"name = '{input_trimmed}'"
+                if re.search(lower_input, name.lower()):
+                    condition = f"name = '{name}'"
                     result = query_database(db_path, sector, condition)
                     create_window(None, result)
-                    exact_match_found = True
-                    print("哈哈")
+                    found = True
                     break
-            if exact_match_found:
+            if found:
                 break
 
-        # 再进行次次完整匹配查找
-        subexact_match_found = False
-        sub_match_found = False
-        found = False
-        if not exact_match_found:
-            for sector, names in sector_data.items():
-                for name in names:
-                    if capitalized_input == name:
-                        db_path = "/Users/yanzhang/Documents/Database/Finance.db"
-                        condition = f"name = '{capitalized_input}'"
-                        result = query_database(db_path, sector, condition)
-                        create_window(None, result)
-                        subexact_match_found = True
-                        break
-                if subexact_match_found:
-                    break
-
-            if not subexact_match_found:
-                for sector, names in sector_data.items():
-                    for name in names:
-                        if upper_input == name:
-                            db_path = "/Users/yanzhang/Documents/Database/Finance.db"
-                            condition = f"name = '{upper_input}'"
-                            result = query_database(db_path, sector, condition)
-                            create_window(None, result)
-                            sub_match_found = True
-                            break
-                    if sub_match_found:
-                        break
-            
-                # 如果没有找到完整匹配，则进行模糊匹配
-                if not sub_match_found:
-                    for sector, names in sector_data.items():
-                        for name in names:
-                            if re.search(lower_input, name.lower()):
-                                db_path = "/Users/yanzhang/Documents/Database/Finance.db"
-                                condition = f"name = '{name}'"
-                                result = query_database(db_path, sector, condition)
-                                create_window(None, result)
-                                found = True
-                                break
-                        if found:
-                            break
-
-        if not found and not exact_match_found and not subexact_match_found and not sub_match_found:
-            messagebox.showerror("错误", "未找到匹配的数据项。")
-            close_app()
+    if not found:
+        messagebox.showerror("错误", "未找到匹配的数据项。")
+        close_app()
 
 def get_user_input_custom(root, prompt):
     # 创建一个新的顶层窗口
@@ -130,7 +104,7 @@ def query_database(db_file, table_name, condition):
     cursor.execute(query)
     rows = cursor.fetchall()
     if not rows:
-        return "今天没有数据可显示。\n"
+        return "没有数据可显示。\n"
     columns = [description[0] for description in cursor.description]
     col_widths = [max(len(str(row[i])) for row in rows + [columns]) for i in range(len(columns))]
     output_text = ' | '.join([col.ljust(col_widths[idx]) for idx, col in enumerate(columns)]) + '\n'

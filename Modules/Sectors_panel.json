@@ -1,33 +1,52 @@
 {
     "Basic_Materials": [
-        "Bitcoin"
+        "GOLD",
+        "AA"
     ],
     "Communication_Services": [
-        "Bitcoin"
+        "TLK"
     ],
     "Consumer_Cyclical": [
-        "Bitcoin"
+        "LULU",
+        "LI",
+        "CZR",
+        "MGA"
     ],
     "Consumer_Defensive": [
-        "Bitcoin"
+        "TAP"
     ],
     "Financial_Services": [
-        "Bitcoin"
+        "BBD",
+        "BBDO",
+        "PSLV"
     ],
     "Healthcare": [
-        "Bitcoin"
+        "STVN",
+        "WBA",
+        "LEGN",
+        "JAZZ",
+        "DOCS",
+        "MDGL"
     ],
     "Industrials": [
-        "Bitcoin"
+        "GNRC",
+        "JBHT",
+        "GATX"
     ],
-    "Real_Estate": [
-        "Bitcoin"
-    ],
+    "Energy": [],
+    "Real_Estate": [],
     "Technology": [
-        "Bitcoin"
+        "U",
+        "BILL"
     ],
-    "Utilities": [
-        "Bitcoin"
+    "Utilities": [],
+    "Economics": [
+        "USGDP",
+        "USInflation",
+        "USInterest",
+        "USPayroll",
+        "USTrade",
+        "USConfidence"
     ],
     "Commodities": [
         "Uranium",
@@ -73,7 +92,10 @@
         "Russian"
     ],
     "Bonds": [
-        "US10Y"
+        "US10Y",
+        "JP10Y",
+        "IND10Y",
+        "RU10Y"
     ],
     "Currencies": [
         "DXY",

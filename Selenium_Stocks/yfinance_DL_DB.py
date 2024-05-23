@@ -7,10 +7,16 @@ from datetime import datetime, timedelta
 with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json', 'r') as file:
     stock_groups = json.load(file)
 
+# 适合于自定义抓取
 today = datetime.now()
-# 定义时间范围
 start_date = "2000-09-06"
-end_date = "2024-05-09"
+# end_date = "2024-05-16"
+end_date = today.strftime('%Y-%m-%d')
+
+# 适合于抓今天
+# today = datetime.now()
+# yesterday = today - timedelta(days=1)
+# start_date = yesterday.strftime('%Y-%m-%d')
 # end_date = today.strftime('%Y-%m-%d')
 
 # 连接到SQLite数据库
