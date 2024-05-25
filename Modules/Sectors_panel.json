@@ -1,6 +1,6 @@
 {
     "Basic_Materials": [
-        "AA"
+        
     ],
     "Communication_Services": [
         "TLK"
@@ -10,29 +10,22 @@
         "LI"
     ],
     "Consumer_Defensive": [
-        "BF-B"
+        
     ],
     "Financial_Services": [],
     "Healthcare": [
-        "BMY",
-        "BDX",
-        "BMRN",
-        "ACHC"
+        "BMY"
     ],
     "Industrials": [
-        "GNRC",
-        "JBHT"
+        "GNRC"
     ],
     "Energy": [],
     "Real_Estate": [],
     "Technology": [
-        "U",
-        "EPAM",
-        "DAY",
-        "OTEX"
+        "U"
     ],
     "Utilities": [
-        "NFE"
+        
     ],
     "Economics": [
         "USGDP",

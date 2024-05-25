@@ -54,17 +54,17 @@ def main():
     output = []  # 用于收集输出信息的列表
     databases = [
         {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Indices', 'names': ('NASDAQ',
-            'S&P500', 'Shanghai', 'Shenzhen', 'Nikkei', 'India', 'HANGSENG', 'Russell', 'VIX')},
+            'S&P500', 'Shanghai', 'Shenzhen', 'Nikkei', 'India', 'HANGSENG', 'Russell', 'VIX', 'Brazil', 'Russian')},
 
         {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto', 'names': ('Bitcoin',
             'Ether', 'Solana', 'Binance')},
 
         {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies', 'names': ('DXY',
-            'USDCNY', 'USDJPY')},
+            'USDCNY', 'USDJPY', 'CNYEUR', 'GBPCNY', 'USDARS')},
 
         {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities', 'names': ('Brent',
             'CrudeOil', 'Naturalgas', 'Gold', 'Copper', 'Coffee', 'Cocoa', 'Rice', 'Corn', 'Oat', 'LeanHogs',
-            'LiveCattle', 'Cotton', 'OrangeJuice', 'Sugar')},
+            'LiveCattle', 'Cotton', 'OrangeJuice', 'Sugar', 'Silver', 'Soybean')},
     ]
     intervals = [600, 360, 240, 120, 60, 24, 12, 6, 3]  # 以月份表示的时间间隔列表
     

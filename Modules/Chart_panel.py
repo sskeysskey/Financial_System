@@ -31,12 +31,10 @@ def plot_financial_data_panel(db_path, table_name, name, compare, default_time_r
 
     fig, ax = plt.subplots(figsize=(10, 5))
     fig.subplots_adjust(left=0.08, bottom=0.2, right=0.93, top=0.9)  # 根据需要调整这些值
-
     highlight_point = ax.scatter([], [], s=100, color='blue', zorder=5)  # s是点的大小
-
     line, = ax.plot(dates, prices, marker='o', markersize=1, linestyle='-', linewidth=2, color='b')
-    # ax.set_title(f'{name} Volume: {f"{volume/1000:.1f}K"}  {table_name}')
-    ax.set_title(f'{name}   {compare}   {table_name}')
+    
+    ax.set_title(f'{name}   {compare}   {table_name}', fontsize=18)
     ax.grid(True)
     plt.xticks(rotation=45)
 

@@ -207,7 +207,7 @@ def main():
     updates = parse_output(final_output1)
     # 黑名单列表
     blacklist_newlow = ["SIRI", "FIVE", "MGA", "BBD", "WBA", "LEGN",
-        "BILL", "TAP", "STVN", "LSXMK", "TAK", "CSAN", "CIG"]
+        "BILL", "TAP", "STVN", "LSXMK", "TAK", "CSAN", "CIG", "EPAM"]
 
     config_json = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json"
     update_json_data(config_json, updates, blacklist_newlow)

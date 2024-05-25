@@ -8,25 +8,25 @@ def update_data(db_path, table_name, data):
 
     try:
         # 遍历数据列表，每个元素包含id, date, name, price, volume
-        for item in data:
-            id, date, name, price, volume = item
-            # 移除价格中的逗号
-            # price = float(price.replace(',', ''))
-            # 构建SQL UPDATE语句
-            sql = f"UPDATE {table_name} SET date=?, name=?, price=?, volume=? WHERE id=?"
-            # 执行SQL语句
-            cursor.execute(sql, (date, name, price, volume, id))
-            count += 1  # 成功更新后计数增加
-        
         # for item in data:
-        #     id, date, name, price = item
+        #     id, date, name, price, volume = item
         #     # 移除价格中的逗号
         #     # price = float(price.replace(',', ''))
         #     # 构建SQL UPDATE语句
-        #     sql = f"UPDATE {table_name} SET date=?, name=?, price=? WHERE id=?"
+        #     sql = f"UPDATE {table_name} SET date=?, name=?, price=?, volume=? WHERE id=?"
         #     # 执行SQL语句
-        #     cursor.execute(sql, (date, name, price, id))
+        #     cursor.execute(sql, (date, name, price, volume, id))
         #     count += 1  # 成功更新后计数增加
+        
+        for item in data:
+            id, date, name, price = item
+            # 移除价格中的逗号
+            # price = float(price.replace(',', ''))
+            # 构建SQL UPDATE语句
+            sql = f"UPDATE {table_name} SET date=?, name=?, price=? WHERE id=?"
+            # 执行SQL语句
+            cursor.execute(sql, (date, name, price, id))
+            count += 1  # 成功更新后计数增加
         
         # 提交更改
         conn.commit()
@@ -61,7 +61,7 @@ data_sets = {
         # (83, "2024-04-19", "United States", "72408.33", 24)
     ],
     'Economics': [
-        # (119, "2022-11-02", "USInterest", "4"),
+        # (175, "2019-02-20", "USInterest", "2.5"),
         # (83, "2024-04-19", "United States", "72408.33", 24)
     ],
     'Commodities': [

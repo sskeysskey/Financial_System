@@ -219,6 +219,7 @@ else:
     # 将新内容添加到stocks列表
     data['etfs'].append({
         "name": new_name,
+        "tag": [],
         "description1": new_description1,
         "description2": new_description2
     })

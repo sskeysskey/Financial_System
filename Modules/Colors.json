@@ -37,7 +37,8 @@
         "TAP",
         "BMY",
         "STVN",
-        "U"
+        "U",
+        "JBHT"
     ],
     "black_keywords": [
         "Cotton",
@@ -45,7 +46,6 @@
     ],
     "white_keywords": [
         "GNRC",
-        "GOLD",
-        "AA"
+        "GOLD"
     ]
 }

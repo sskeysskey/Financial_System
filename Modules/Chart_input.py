@@ -9,6 +9,7 @@ import tkinter as tk
 from tkinter import simpledialog, scrolledtext
 
 def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_data, default_time_range="1Y"):
+    matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
     try:
         with sqlite3.connect(db_path) as conn:
             cursor = conn.cursor()
@@ -107,13 +108,19 @@ def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_
     # 判断是否应该使标题可点击
     if json_data and 'stocks' in json_data and any(stock['name'] == name for stock in json_data['stocks']):
         clickable = True
-        title_style = {'color': 'blue', 'fontsize': 12, 'fontweight': 'bold', 'picker': True}
+        title_style = {'color': 'blue', 'fontsize': 16, 'fontweight': 'bold', 'picker': True}
     else:
         clickable = False
-        title_style = {'color': 'black', 'fontsize': 12, 'fontweight': 'bold', 'picker': False}
+        title_style = {'color': 'black', 'fontsize': 15, 'fontweight': 'bold', 'picker': False}
     
+    tag_str = ""  # 如果没有找到tag，默认显示N/A
+    for stock in json_data.get('stocks', []):  # 从stocks列表中查找
+        if stock['name'] == name:
+            tags = stock.get('tag', [])
+            tag_str = ','.join(tags)  # 将tag列表转换为逗号分隔的字符串
+            break
     # 添加交互性标题
-    title_text = f'{name}  {compare}  TurnOver: {turnover}M   MarketCap:{marketcap_in_billion}   PE:{pe_text}   {table_name}'
+    title_text = f'{name}   {compare}   {turnover}M   {marketcap_in_billion}   {pe_text}   {table_name}   {tag_str}'
     
     title = ax.set_title(title_text, **title_style)  # 使用 title_style 中的样式
 
