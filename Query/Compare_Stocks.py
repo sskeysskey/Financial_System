@@ -8,6 +8,12 @@ def create_connection(db_file):
     conn = sqlite3.connect(db_file)
     return conn
 
+def log_error_with_timestamp(error_message):
+    # 获取当前日期和时间
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    # 在错误信息前加入时间戳
+    return f"[{timestamp}] {error_message}\n"
+
 def compare_today_yesterday(config_path, blacklist):
     with open(config_path, 'r') as file:
             data = json.load(file)
@@ -33,19 +39,27 @@ def compare_today_yesterday(config_path, blacklist):
                 for name in names:
                     if name in blacklist:  # 检查黑名单
                         continue
-                    query = f"""
-                    SELECT date, price FROM {table_name} 
-                    WHERE name = ? AND date IN (?, ?) ORDER BY date DESC
-                    """
-                    cursor.execute(query, (name, yesterday.strftime("%Y-%m-%d"), ex_yesterday.strftime("%Y-%m-%d")))
-                    results = cursor.fetchall()
+                    try:
+                        query = f"""
+                        SELECT date, price FROM {table_name} 
+                        WHERE name = ? AND date IN (?, ?) ORDER BY date DESC
+                        """
+                        cursor.execute(query, (name, yesterday.strftime("%Y-%m-%d"), ex_yesterday.strftime("%Y-%m-%d")))
+                        results = cursor.fetchall()
 
-                    if len(results) == 2:
-                        yesterday_price = results[0][1]
-                        ex_yesterday_price = results[1][1]
-                        change = yesterday_price - ex_yesterday_price
-                        percentage_change = (change / ex_yesterday_price) * 100
-                        output.append((f"{table_name} {name}", percentage_change))
+                        if len(results) == 2:
+                            yesterday_price = results[0][1]
+                            ex_yesterday_price = results[1][1]
+                            change = yesterday_price - ex_yesterday_price
+                            percentage_change = (change / ex_yesterday_price) * 100
+                            output.append((f"{table_name} {name}", percentage_change))
+                        else:
+                            raise Exception(f"错误：无法比较{table_name}下的{name}，因为缺少必要的数据。")
+                    except Exception as e:
+                        formatted_error_message = log_error_with_timestamp(str(e))
+                        # 将错误信息追加到文件中
+                        with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                            error_file.write(formatted_error_message)
 
     # 对输出进行排序，根据变化百分比
     output.sort(key=lambda x: x[1], reverse=True)

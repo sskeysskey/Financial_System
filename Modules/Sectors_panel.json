@@ -7,27 +7,33 @@
     ],
     "Consumer_Cyclical": [
         "LULU",
-        "LI",
-        "CZR"
+        "LI"
     ],
     "Consumer_Defensive": [
-        
+        "BF-B"
     ],
-    "Financial_Services": [
-        
-    ],
+    "Financial_Services": [],
     "Healthcare": [
-        
+        "BMY",
+        "BDX",
+        "BMRN",
+        "ACHC"
     ],
     "Industrials": [
-        "GNRC"
+        "GNRC",
+        "JBHT"
     ],
     "Energy": [],
     "Real_Estate": [],
     "Technology": [
-        "U"
+        "U",
+        "EPAM",
+        "DAY",
+        "OTEX"
     ],
-    "Utilities": [],
+    "Utilities": [
+        "NFE"
+    ],
     "Economics": [
         "USGDP",
         "USInflation",

@@ -8,8 +8,8 @@ from tkinter import ttk, scrolledtext
 from datetime import datetime, timedelta
 
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
-from Chart_panel_1Y import plot_financial_data_panel
-from Chart_input_1Y import plot_financial_data
+from Chart_panel import plot_financial_data_panel
+from Chart_input import plot_financial_data
 
 def load_json_data(path):
     with open(path, 'r', encoding='utf-8') as file:
@@ -182,20 +182,27 @@ def load_marketcap_pe_data(path):
     return marketcap_pe_data
 
 def on_keyword_selected_chart(value, parent_window):
-    interested_sectors = ["Basic_Materials", "Communication_Services", "Consumer_Cyclical",
+    stock_sectors = ["Basic_Materials", "Communication_Services", "Consumer_Cyclical",
         "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare", "Industrials",
         "Real_Estate", "Technology", "Utilities"]
+    economics_sectors = ["Economics"]
     
     db_path = "/Users/yanzhang/Documents/Database/Finance.db"
     for sector, names in sector_data.items():
         if value in names:
-            if sector in interested_sectors:            
+            if sector in stock_sectors:            
                 plot_financial_data(db_path, sector, value, 
                         compare_data.get(value, "N/A"), 
                         *marketcap_pe_data.get(value, (None, 'N/A')), 
-                        json_data)
+                        json_data, '1Y')
+            elif sector in economics_sectors:            
+                plot_financial_data(db_path, sector, value, 
+                        compare_data.get(value, "N/A"), 
+                        *marketcap_pe_data.get(value, (None, 'N/A')), 
+                        json_data, '10Y')
             else:
-                plot_financial_data_panel(db_path, sector, value)
+                change = change_dict.get(value, "")
+                plot_financial_data_panel(db_path, sector, value, change, '1Y')
 
 def create_window(content):
     top = tk.Toplevel(root)

@@ -129,7 +129,6 @@
     "CBT",
     "NEU",
     "BCC",
-    "BCPC",
     "WLK",
     "ALTM"
   ],
@@ -194,7 +193,8 @@
     "BILI",
     "NXST",
     "TKC",
-    "PHI"
+    "PHI",
+    "RDDT"
   ],
   "Consumer_Cyclical": [
     "AMZN",
@@ -342,16 +342,11 @@
     "SEE",
     "MOD",
     "GME",
-    "RH",
     "KBH",
     "M",
     "DOOO",
-    "RRR",
-    "BYD",
-    "SLGN",
     "LOT",
     "VIK",
-    "GLBE",
     "COLM"
   ],
   "Consumer_Defensive": [
@@ -416,7 +411,6 @@
     "POST",
     "BRFS",
     "LANC",
-    "FLO",
     "MKC"
   ],
   "Energy": [
@@ -501,8 +495,7 @@
     "CSAN",
     "VAL",
     "NFG",
-    "MGY",
-    "RIG"
+    "MGY"
   ],
   "Financial_Services": [
     "BRK-A",
@@ -579,7 +572,6 @@
     "RKT",
     "FITB",
     "OWL",
-    "BBDO",
     "WTW",
     "RJF",
     "MTB",
@@ -685,14 +677,11 @@
     "LU",
     "CADE",
     "JHG",
-    "FNB",
-    "SLMBP",
     "LNC",
-    "FG",
     "AMG",
     "LPLA",
     "BMA",
-    "PSLV"
+    "FG"
   ],
   "Healthcare": [
     "LLY",
@@ -821,8 +810,6 @@
     "BLCO",
     "OGN",
     "OPCH",
-    "OSCR",
-    "APLS",
     "RCM",
     "DOCS",
     "MDGL"
@@ -998,7 +985,6 @@
     "FSS",
     "VMI",
     "AVAV",
-    "MSM",
     "TNET",
     "MDU",
     "CRS",
@@ -1007,7 +993,7 @@
     "BAH",
     "CSL",
     "AWI",
-    "GATX"
+    "DY"
   ],
   "Real_Estate": [
     "PLD",
@@ -1070,7 +1056,6 @@
     "AIRC",
     "RITM",
     "TRNO",
-    "VNO",
     "DOC"
   ],
   "Technology": [
@@ -1267,7 +1252,9 @@
     "CPAY",
     "ALAB",
     "ENTG",
-    "EXLS"
+    "EXLS",
+    "ITRI",
+    "VRNS"
   ],
   "Utilities": [
     "NEE",

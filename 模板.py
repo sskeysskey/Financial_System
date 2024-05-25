@@ -456,7 +456,21 @@ def create_custom_style():
               background=[('active', '!disabled', 'pressed', 'focus', 'hover', 'alternate', 'selected', 'background')]
               )
 # ——————————————————————————————————————————————————————————————————————————————————————————
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
+
+def setup_driver():
+    chrome_options = Options()
+    chrome_options.add_argument('--disable-gpu')
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+    return driver
 # ——————————————————————————————————————————————————————————————————————————————————————————
+def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_data):
+    设置支持中文的字体
+    matplotlib.rcParams['font.family'] = 'sans-serif'
+    matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
+    matplotlib.rcParams['font.size'] = 14
 # ——————————————————————————————————————————————————————————————————————————————————————————
 # ——————————————————————————————————————————————————————————————————————————————————————————
 # ——————————————————————————————————————————————————————————————————————————————————————————

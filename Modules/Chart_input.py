@@ -8,11 +8,7 @@ import json
 import tkinter as tk
 from tkinter import simpledialog, scrolledtext
 
-def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_data):
-    # 设置支持中文的字体
-    # matplotlib.rcParams['font.family'] = 'sans-serif'
-    # matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
-    # matplotlib.rcParams['font.size'] = 14
+def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_data, default_time_range="1Y"):
     try:
         with sqlite3.connect(db_path) as conn:
             cursor = conn.cursor()
@@ -73,7 +69,7 @@ def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_
         top.title("Stock Information")
         
         # 设置窗口尺寸
-        top.geometry("600x650")
+        top.geometry("600x750")
         
         # 设置字体大小
         font_size = ('Arial', 22)
@@ -88,7 +84,7 @@ def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_
         
         # 设置文本框为只读
         text_box.config(state=tk.DISABLED)
-
+        
         top.bind('<Escape>', lambda event: root.destroy())
         root.mainloop()
 
@@ -146,10 +142,12 @@ def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_
         "10Y": 10,
         "All": 0,
     }
+    # 确定默认选项的索引
+    default_index = list(time_options.keys()).index(default_time_range)
 
     rax = plt.axes([0.95, 0.005, 0.05, 0.8], facecolor='lightgoldenrodyellow')
     options = list(time_options.keys())
-    radio = RadioButtons(rax, options, active=3)
+    radio = RadioButtons(rax, options, active=default_index)
 
     for label in radio.labels:
         label.set_fontsize(14)
@@ -228,7 +226,7 @@ def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_
 
     # 添加竖线
     vline = ax.axvline(x=dates[0], color='b', linestyle='--', linewidth=1, visible=False)
-    update("1Y")
+    update(default_time_range)
     radio.on_clicked(update)
 
     def on_key(event):

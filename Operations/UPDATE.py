@@ -8,25 +8,25 @@ def update_data(db_path, table_name, data):
 
     try:
         # 遍历数据列表，每个元素包含id, date, name, price, volume
-        # for item in data:
-        #     id, date, name, price, volume = item
-        #     # 移除价格中的逗号
-        #     # price = float(price.replace(',', ''))
-        #     # 构建SQL UPDATE语句
-        #     sql = f"UPDATE {table_name} SET date=?, name=?, price=?, volume=? WHERE id=?"
-        #     # 执行SQL语句
-        #     cursor.execute(sql, (date, name, price, volume, id))
-        #     count += 1  # 成功更新后计数增加
-        
         for item in data:
-            id, date, name, price = item
+            id, date, name, price, volume = item
             # 移除价格中的逗号
             # price = float(price.replace(',', ''))
             # 构建SQL UPDATE语句
-            sql = f"UPDATE {table_name} SET date=?, name=?, price=? WHERE id=?"
+            sql = f"UPDATE {table_name} SET date=?, name=?, price=?, volume=? WHERE id=?"
             # 执行SQL语句
-            cursor.execute(sql, (date, name, price, id))
+            cursor.execute(sql, (date, name, price, volume, id))
             count += 1  # 成功更新后计数增加
+        
+        # for item in data:
+        #     id, date, name, price = item
+        #     # 移除价格中的逗号
+        #     # price = float(price.replace(',', ''))
+        #     # 构建SQL UPDATE语句
+        #     sql = f"UPDATE {table_name} SET date=?, name=?, price=? WHERE id=?"
+        #     # 执行SQL语句
+        #     cursor.execute(sql, (date, name, price, id))
+        #     count += 1  # 成功更新后计数增加
         
         # 提交更改
         conn.commit()
@@ -52,7 +52,7 @@ data_sets = {
         # (163, "2024-04-26", "HYG", "76.38", 10),
         # (164, "2024-04-26", "SSE Composite Index", "3062.32", 10),
         # (165, "2024-04-26", "Shenzhen Index", "9326.8", 10),
-        # (91107, "2024-05-14", "Nikkei", "38356.0586", 143300000),
+        # (91152, "2024-05-20", "Nikkei", "39069.68", 127400000),
         # (167, "2024-04-26", "S&P BSE SENSEX", "74339.44", 10),
         # (91113, "2024-05-14", "HANGSENG", "19073.7109", 3455242600),
     ],

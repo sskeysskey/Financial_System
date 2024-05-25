@@ -16,6 +16,12 @@ def create_connection(db_file):
     conn = sqlite3.connect(db_file)
     return conn
 
+def log_error_with_timestamp(error_message):
+    # 获取当前日期和时间
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    # 在错误信息前加入时间戳
+    return f"[{timestamp}] {error_message}\n"
+
 def get_price_comparison(cursor, table_name, interval, name, today):
     yesterday = today - timedelta(days=1)
     day_of_week = yesterday.weekday()  # 周一为0，周日为6
@@ -39,7 +45,11 @@ def get_price_comparison(cursor, table_name, interval, name, today):
     FROM {table_name} WHERE date BETWEEN ? AND ? AND name = ?
     """
     cursor.execute(query, (past_date.strftime("%Y-%m-%d"), ex_yesterday.strftime("%Y-%m-%d"), name))
-    return cursor.fetchone()
+    result = cursor.fetchone()
+    if result and (result[0] is not None and result[1] is not None):
+        return result
+    else:
+        return None  # 如果找不到有效数据，则返回None
 
 def save_output_to_file(output, directory, filename, directory_backup):
     # 定义完整的文件路径
@@ -100,17 +110,31 @@ def main():
                     today_price_query = f"SELECT price FROM {table_name} WHERE date = ? AND name = ?"
                     cursor.execute(today_price_query, (real_today.strftime("%Y-%m-%d"), name))
                     result = cursor.fetchone()
-
-                    if result:
-                        today_price = result[0]
-                    else:
-                        print(f"没有找到今天的{name}价格。")
-                        continue
+                    try:
+                        if result:
+                            today_price = result[0]
+                        else:
+                            raise Exception(f"没有找到今天的{name}价格。")
+                    except Exception as e:
+                        formatted_error_message = log_error_with_timestamp(str(e))
+                        # 将错误信息追加到文件中
+                        with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                            error_file.write(formatted_error_message)
 
                     price_extremes = {}
                     for months in intervals:
-                        max_price, min_price = get_price_comparison(cursor, table_name, months, name, today)
-                        price_extremes[months] = (max_price, min_price)  # 存储最大和最小价格
+                        result = get_price_comparison(cursor, table_name, months, name, today)
+                        try:
+                            if result:
+                                max_price, min_price = result
+                                price_extremes[months] = (max_price, min_price)
+                            else:
+                                raise Exception(f"没有足够的历史数据来进行{table_name}下的{name} {months}月的价格比较。")
+                        except Exception as e:
+                            formatted_error_message = log_error_with_timestamp(str(e))
+                            # 将错误信息追加到文件中
+                            with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                                error_file.write(formatted_error_message)
 
                     # 检查是否接近最高价格
                     found_max = False
@@ -182,7 +206,8 @@ def main():
 
     updates = parse_output(final_output1)
     # 黑名单列表
-    blacklist_newlow = ["SIRI","FIVE","MGA","BBD","WBA","LEGN","BILL","TAP","STVN"]
+    blacklist_newlow = ["SIRI", "FIVE", "MGA", "BBD", "WBA", "LEGN",
+        "BILL", "TAP", "STVN", "LSXMK", "TAK", "CSAN", "CIG"]
 
     config_json = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json"
     update_json_data(config_json, updates, blacklist_newlow)

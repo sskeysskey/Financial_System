@@ -8,7 +8,7 @@ from datetime import datetime
 import pyperclip
 
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
-from Chart_input_10Y import plot_financial_data
+from Chart_input import plot_financial_data
 
 def load_sector_data(path):
     with open(path, 'r') as file:
@@ -67,8 +67,7 @@ def input_mapping(root, sector_data, compare_data, marketcap_pe_data, json_data,
                         db_path, sector, name,
                         compare_data.get(name, "N/A"),
                         *marketcap_pe_data.get(name, (None, 'N/A')),
-                        json_data
-                    )
+                        json_data, '10Y')
                     found = True
                     break
             if found:
@@ -86,8 +85,7 @@ def input_mapping(root, sector_data, compare_data, marketcap_pe_data, json_data,
                         db_path, sector, name,
                         compare_data.get(name, "N/A"),
                         *marketcap_pe_data.get(name, (None, 'N/A')),
-                        json_data
-                    )
+                        json_data, '10Y')
                     found = True
                     break
             if found:

@@ -11,6 +11,12 @@ def create_connection(db_file):
         print(e)
     return conn
 
+def log_error_with_timestamp(error_message):
+    # 获取当前日期和时间
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    # 在错误信息前加入时间戳
+    return f"[{timestamp}] {error_message}\n"
+
 def get_price_comparison(cursor, table_name, months_back, name, today):
     # 使用 dateutil.relativedelta 计算过去的日期
     yesterday = today - timedelta(days=1)
@@ -29,7 +35,11 @@ def get_price_comparison(cursor, table_name, months_back, name, today):
     FROM {table_name} WHERE date BETWEEN ? AND ? AND name = ?
     """
     cursor.execute(query, (past_date.strftime("%Y-%m-%d"), ex_yesterday.strftime("%Y-%m-%d"), name))
-    return cursor.fetchone()
+    result = cursor.fetchone()
+    if result and (result[0] is not None and result[1] is not None):
+        return result
+    else:
+        return None  # 如果找不到有效数据，则返回None
 
 def main():
     today = datetime.now()
@@ -70,17 +80,31 @@ def main():
                 today_price_query = f"SELECT price FROM {table_name} WHERE date = ? AND name = ?"
                 cursor.execute(today_price_query, (real_today.strftime("%Y-%m-%d"), name))
                 result = cursor.fetchone()
-
-                if result:
-                    today_price = result[0]
-                else:
-                    output.append(f"没有找到今天的{name}价格。")
-                    continue
+                try:
+                    if result:
+                        today_price = result[0]
+                    else:
+                        raise Exception(f"没有找到今天的{name}价格。")
+                except Exception as e:
+                    formatted_error_message = log_error_with_timestamp(str(e))
+                    # 将错误信息追加到文件中
+                    with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                        error_file.write(formatted_error_message)
                 
                 price_extremes = {}
                 for months in intervals:
-                    max_price, min_price = get_price_comparison(cursor, table_name, months, name, today)
-                    price_extremes[months] = (max_price, min_price)  # 存储最大和最小价格
+                    result = get_price_comparison(cursor, table_name, months, name, today)
+                    try:
+                        if result:
+                            max_price, min_price = result
+                            price_extremes[months] = (max_price, min_price)
+                        else:
+                            raise Exception(f"没有足够的历史数据来进行{months}月的价格比较。")
+                    except Exception as e:
+                        formatted_error_message = log_error_with_timestamp(str(e))
+                        # 将错误信息追加到文件中
+                        with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                            error_file.write(formatted_error_message)
 
                 # 检查是否接近最高价格
                 found_max = False
@@ -162,7 +186,7 @@ def main():
             cursor.close()
     final_output = "\n".join(output)
     # 将输出保存到文件
-    file_path = '/Users/yanzhang/Documents/News/Analyse_Panel.txt'  # 您可以修改这个路径到您想要保存的目录
+    file_path = '/Users/yanzhang/Documents/News/AnalysePanel.txt'  # 您可以修改这个路径到您想要保存的目录
     with open(file_path, 'w', encoding='utf-8') as file:
         file.write(final_output)
     print(f"文件已保存到 {file_path}")

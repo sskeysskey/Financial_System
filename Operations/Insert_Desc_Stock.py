@@ -1,4 +1,5 @@
 import cv2
+import re
 import json
 import pyperclip
 import pyautogui
@@ -60,8 +61,9 @@ new_name = pyperclip.paste()
 # 去除新name的所有引号
 new_name = new_name.replace('"', '').replace("'", "")
 
-# 判断是否全是大写英文字母
-if not new_name.isupper() or not new_name.isalpha():
+# 判断是否全是大写英文字母或由大写和-组成，比如：BF-B
+# if not new_name.isupper() or not new_name.isalpha():
+if not re.match("^[A-Z\-]+$", new_name):
     # 初始化Tkinter窗口
     root = tk.Tk()
     root.withdraw()  # 隐藏主窗口
@@ -123,14 +125,6 @@ else:
             # 鼠标点击中心坐标
             pyautogui.click(center_x, center_y)
             print(f"找到图片位置: {location}")
-        
-        # found_success_image = False
-        # while not found_success_image:
-        #     location, shape = find_image_on_screen(templates["poesuccess"])
-        #     if location:
-        #         print("找到poe_copy_success图片，继续执行程序...")
-        #         found_success_image = True
-        #     sleep(1)  # 每次检测间隔1秒
     else:
         location, shape = find_image_on_screen(templates["kimicopy"])
         if location:

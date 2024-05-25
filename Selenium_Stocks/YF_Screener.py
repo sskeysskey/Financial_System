@@ -6,8 +6,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.chrome.service import Service
-# from selenium.webdriver.chrome.options import Options
-# from webdriver_manager.chrome import ChromeDriverManager
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support import expected_conditions as EC
 
@@ -33,14 +31,7 @@ blacklist = ["CTA-PA", "FWONK", "FOXA", "NWSA", "PARAA", "LSXMA",
     "AGNCN", "VNO-PL", "VNO-PM", "FRT-PC", "AMH-PH", "AMH-PG",
     "KIM-PM", "KIM-PL", "DUK-PA", "EBR-B", "CIG-C", "CMS-PB",
     "CWEN-A", "ELPC", "BML-PG", "SLG-PI", "NEE-PR", "APO-PA",
-    "YNDX", "CUK", "BBDO"]
-
-# def setup_driver():
-#     chrome_options = Options()
-#     chrome_options.add_argument('--disable-gpu')
-#     service = Service(ChromeDriverManager().install())
-#     driver = webdriver.Chrome(service=service, options=chrome_options)
-#     return driver
+    "YNDX", "CUK", "BBDO", "SLMBP"]
 
 def login_once(driver, login_url):
     driver.get(login_url)
@@ -101,7 +92,6 @@ def fetch_data(driver, url):
         except ValueError:
             print(f"Invalid market cap data for symbol {symbol}")
             continue
-
         try:
             pe_ratio_element = driver.find_element(By.XPATH, pe_ratio_xpath)
             pe_ratio = pe_ratio_element.text.strip()
@@ -140,9 +130,9 @@ def update_json(data, sector, file_path, output, log_enabled):
             # 检查市值是否小于50亿，如果是，则可能需要移除
             if market_cap < 5000000000:
                 if current_sector and symbol in json_data[current_sector]:
-                    json_data[current_sector].remove(symbol)
+                    # json_data[current_sector].remove(symbol)
                     if log_enabled:
-                        message = f"Removed '{symbol}' from {current_sector} due to low market cap."
+                        message = f"'{symbol}' was supposed to be Removed from {current_sector} due to low marketcap, but it wasn't."
                         print(message)
                         output.append(message)
             else:

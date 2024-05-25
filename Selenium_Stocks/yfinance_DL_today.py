@@ -4,6 +4,12 @@ import json
 from datetime import datetime, timedelta
 import traceback  # 用于获取完整的错误信息
 
+def log_error_with_timestamp(error_message):
+    # 获取当前日期和时间
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    # 在错误信息前加入时间戳
+    return f"[{timestamp}] {error_message}\n"
+
 now = datetime.now()
 # 判断今天的星期数，如果是周日(6)或周一(0)，则不执行程序
 if now.weekday() in (0, 6):
@@ -56,7 +62,7 @@ else:
                 # 使用 yfinance 下载股票数据
                 data = yf.download(ticker_symbol, start=start_date, end=end_date)
                 if data.empty:
-                    raise ValueError(f"{ticker_symbol}: No price data found for the given date range ({start_date} -> {end_date})")
+                    raise ValueError(f"{ticker_symbol}: No price data found for the given date range.")
 
                 # 插入数据到相应的表中
                 table_name = group_name.replace(" ", "_")  # 确保表名没有空格
@@ -78,10 +84,10 @@ else:
                     
                     data_count += 1  # 成功插入一条数据，计数器增加
             except Exception as e:
-                error_message = f"Failed download:\n[{ticker_symbol}]: {str(e)}\n"
-                # 将错误信息写入文件
-                with open('/Users/yanzhang/Documents/News/DL_today_error.txt', 'a') as error_file:
-                    error_file.write(error_message)
+                formatted_error_message = log_error_with_timestamp(str(e))
+                # 将错误信息追加到文件中
+                with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                    error_file.write(formatted_error_message)
 
         # 在完成每个group_name后打印信息
         print(f"{group_name} 数据处理完成，总共下载了 {data_count} 条数据。")

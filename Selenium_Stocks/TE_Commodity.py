@@ -13,13 +13,6 @@ chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
 service = Service(executable_path=chrome_driver_path)
 driver = webdriver.Chrome(service=service)
 
-# def setup_driver():
-#     chrome_options = Options()
-#     chrome_options.add_argument('--disable-gpu')
-#     service = Service(ChromeDriverManager().install())
-#     driver = webdriver.Chrome(service=service, options=chrome_options)
-#     return driver
-
 # 获取当前时间
 now = datetime.now()
 
