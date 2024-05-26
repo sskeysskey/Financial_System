@@ -56,7 +56,6 @@ def compare_today_yesterday(config_path, output_file):
                         change = yesterday_price - ex_yesterday_price
                         percentage_change = (change / ex_yesterday_price) * 100
                         change_text = f"{percentage_change:.2f}%"
-                        print(f"{keyword}: {change_text}")
                         output.append(f"{keyword}: {change_text}")
                     else:
                         raise Exception(f"错误：无法比较{table_name}下的{keyword}，因为缺少必要的数据。")

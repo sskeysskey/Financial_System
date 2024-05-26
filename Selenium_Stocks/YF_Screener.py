@@ -31,7 +31,9 @@ blacklist = ["CTA-PA", "FWONK", "FOXA", "NWSA", "PARAA", "LSXMA",
     "AGNCN", "VNO-PL", "VNO-PM", "FRT-PC", "AMH-PH", "AMH-PG",
     "KIM-PM", "KIM-PL", "DUK-PA", "EBR-B", "CIG-C", "CMS-PB",
     "CWEN-A", "ELPC", "BML-PG", "SLG-PI", "NEE-PR", "APO-PA",
-    "YNDX", "CUK", "BBDO", "SLMBP"]
+    "YNDX", "CUK", "BBDO", "SLMBP", "BPYPP", "GOOG","CPG", "PHYS",
+    "CTA-PB"
+    ]
 
 def login_once(driver, login_url):
     driver.get(login_url)
@@ -96,13 +98,13 @@ def fetch_data(driver, url):
             pe_ratio_element = driver.find_element(By.XPATH, pe_ratio_xpath)
             pe_ratio = pe_ratio_element.text.strip()
             if pe_ratio == 'N/A':
-                pe_ratio = 'N/A'
+                pe_ratio = '--'
             else:
                 pe_ratio = float(pe_ratio)
         except NoSuchElementException:
-            pe_ratio = 'N/A'
+            pe_ratio = '--'
         except ValueError:
-            pe_ratio = 'N/A'
+            pe_ratio = '--'
 
         results.append((symbol, market_cap, pe_ratio))
         

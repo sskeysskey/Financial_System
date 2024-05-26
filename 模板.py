@@ -472,6 +472,17 @@ def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_
     matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
     matplotlib.rcParams['font.size'] = 14
 # ——————————————————————————————————————————————————————————————————————————————————————————
+def parse_changes(filename):
+    changes = {}
+    try:
+        with open(filename, 'r', encoding='utf-8') as file:
+            for line in file:
+                if ':' in line:
+                    key, value = line.split(':')
+                    changes[key.strip()] = value.strip()
+    except FileNotFoundError:
+        print("文件未找到")
+    return changes
 # ——————————————————————————————————————————————————————————————————————————————————————————
 # ——————————————————————————————————————————————————————————————————————————————————————————
 # ——————————————————————————————————————————————————————————————————————————————————————————

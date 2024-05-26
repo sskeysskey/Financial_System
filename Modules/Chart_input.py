@@ -8,7 +8,7 @@ import json
 import tkinter as tk
 from tkinter import simpledialog, scrolledtext
 
-def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_data, default_time_range="1Y"):
+def plot_financial_data(db_path, table_name, name, compare, share, fullname, marketcap, pe, json_data, default_time_range="1Y"):
     matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
     try:
         with sqlite3.connect(db_path) as conn:
@@ -57,6 +57,11 @@ def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_
         turnover = f"{(volume * float(price)) / 1000000:.1f}"
     else:
         turnover = "N/A"
+
+    if volume is not None and share is not None:
+        turnover_rate = f"{(volume / int(share))*100:.2f}"
+    else:
+        turnover_rate = "N/A"
 
     marketcap_in_billion = f"{float(marketcap) / 1e9:.1f}B" if marketcap is not None else "N/A"
     pe_text = f"{pe}" if pe is not None else "N/A"
@@ -120,7 +125,7 @@ def plot_financial_data(db_path, table_name, name, compare, marketcap, pe, json_
             tag_str = ','.join(tags)  # 将tag列表转换为逗号分隔的字符串
             break
     # 添加交互性标题
-    title_text = f'{name}   {compare}   {turnover}M   {marketcap_in_billion}   {pe_text}   {table_name}   {tag_str}'
+    title_text = f'{name} {compare}  {turnover}M/{turnover_rate}  {marketcap_in_billion}  {pe_text} {table_name} {fullname} {tag_str}'
     
     title = ax.set_title(title_text, **title_style)  # 使用 title_style 中的样式
 

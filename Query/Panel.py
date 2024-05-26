@@ -39,18 +39,6 @@ def create_custom_style():
         style.configure(f"{name}.TButton", background=bg, foreground=fg, font=('Helvetica', 16))
         style.map("TButton", background=[('active', '!disabled', 'pressed', 'focus', 'hover', 'alternate', 'selected', 'background')])
 
-def parse_changes(filename):
-    changes = {}
-    try:
-        with open(filename, 'r', encoding='utf-8') as file:
-            for line in file:
-                if ':' in line:
-                    key, value = line.split(':')
-                    changes[key.strip()] = value.strip()
-    except FileNotFoundError:
-        print("文件未找到")
-    return changes
-
 def create_selection_window():
     selection_window = tk.Toplevel(root)
     selection_window.title("选择查询关键字")
@@ -115,7 +103,7 @@ def create_selection_window():
                     else:
                         button_style = "Default.TButton"  # 默认颜色
                     
-                    change_text = change_dict.get(keyword, "")
+                    change_text = compare_data.get(keyword, "")
                     button_text = f"{keyword} {change_text}"
                     
                     button_data = ttk.Button(button_frame, text=button_text, style=button_style,
@@ -193,15 +181,19 @@ def on_keyword_selected_chart(value, parent_window):
             if sector in stock_sectors:            
                 plot_financial_data(db_path, sector, value, 
                         compare_data.get(value, "N/A"), 
+                        shares.get(value, "N/A"), 
+                        fullnames.get(value, "N/A"), 
                         *marketcap_pe_data.get(value, (None, 'N/A')), 
                         json_data, '1Y')
             elif sector in economics_sectors:            
                 plot_financial_data(db_path, sector, value, 
                         compare_data.get(value, "N/A"), 
+                        shares.get(value, "N/A"), 
+                        fullnames.get(value, "N/A"), 
                         *marketcap_pe_data.get(value, (None, 'N/A')), 
                         json_data, '10Y')
             else:
-                change = change_dict.get(value, "")
+                change = compare_data.get(value, "")
                 plot_financial_data_panel(db_path, sector, value, change, '1Y')
 
 def create_window(content):
@@ -227,9 +219,9 @@ def close_app(window):
 if __name__ == '__main__':
     root = tk.Tk()
     root.withdraw()
-
-    change_dict = parse_changes('/Users/yanzhang/Documents/News/backup/Compare_All.txt')
-    compare_data = load_compare_data('/Users/yanzhang/Documents/News/CompareStock.txt')
+    compare_data = load_compare_data('/Users/yanzhang/Documents/News/backup/Compare_All.txt')
+    shares = load_compare_data('/Users/yanzhang/Documents/News/backup/Shares.txt')
+    fullnames = load_compare_data('/Users/yanzhang/Documents/News/backup/symbol_names.txt')
     marketcap_pe_data = load_marketcap_pe_data('/Users/yanzhang/Documents/News/backup/marketcap_pe.txt')
     
     create_selection_window()
