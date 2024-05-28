@@ -74,6 +74,7 @@ databases = [
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto', 'columns': ['date', 'name', 'price']},
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Bonds', 'columns': ['date', 'name', 'price']},
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Economics', 'columns': ['date', 'name', 'price']},
+    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'ETFs', 'columns': ['date', 'name', 'price', 'volume']},
 ]
 
 # 对每个数据库执行数据插入操作

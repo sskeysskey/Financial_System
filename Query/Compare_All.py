@@ -35,8 +35,11 @@ def compare_today_yesterday(config_path, output_file):
                         ex_yesterday = yesterday - timedelta(days=1)
                     else:
                         day_of_week = yesterday.weekday()
+                        
                         if day_of_week == 0:  # 昨天是周一
                             ex_yesterday = yesterday - timedelta(days=3)  # 取上周五
+                        # elif day_of_week == 1:  # 昨天是周二
+                        #     ex_yesterday = yesterday - timedelta(days=4)  # 取上周五
                         elif day_of_week in {5, 6}:  # 昨天是周六或周日
                             yesterday = yesterday - timedelta(days=(day_of_week - 4))  # 周五
                             ex_yesterday = yesterday - timedelta(days=1)

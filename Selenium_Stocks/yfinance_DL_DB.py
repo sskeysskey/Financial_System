@@ -3,17 +3,20 @@ import sqlite3
 import json
 from datetime import datetime, timedelta
 
-# 读取JSON文件
-with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json', 'r') as file:
-    stock_groups = json.load(file)
+def log_error_with_timestamp(error_message):
+    # 获取当前日期和时间
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    # 在错误信息前加入时间戳
+    return f"[{timestamp}] {error_message}\n"
 
 # 适合于纯自定义抓取
-start_date = "2024-05-11"
-end_date = "2024-05-24"
+# start_date = "2024-05-23"
+# end_date = "2024-05-25"
 
 # 适合于半自定义抓取
-# today = datetime.now()
-# end_date = today.strftime('%Y-%m-%d')
+start_date = "2000-09-01"
+today = datetime.now()
+end_date = today.strftime('%Y-%m-%d')
 
 # 适合于只抓今天
 # today = datetime.now()
@@ -25,27 +28,13 @@ end_date = "2024-05-24"
 conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
 c = conn.cursor()
 
-symbol_mapping = {
-    "CC=F": "Cocoa", "KC=F": "Coffee", "CT=F": "Cotton", "OJ=F": "OrangeJuice",
-    "SB=F": "Sugar", "ZO=F": "Oat", "HE=F": "LeanHogs", "CL=F": "CrudeOil",
-    "BZ=F": "Brent", "LE=F": "LiveCattle", "HG=F": "Copper", "ZC=F": "Corn",
-    "GC=F": "Gold", "SI=F": "Silver", "NG=F": "Naturalgas", "ZR=F": "Rice", "ZS=F": "Soybean",
-    
-    "^TNX": "US10Y",
-    
-    "DX-Y.NYB": "DXY", "EURUSD=X": "EURUSD", "GBPUSD=X": "GBPUSD", "JPY=X": "USDJPY",
-    "CNYEUR=X": "CNYEUR", "CNYGBP=X": "CNYGBP", "CNYJPY=X": "CNYJPY", "CNYUSD=X": "CNYUSD",
-    "EURCNY=X": "EURCNY", "CNY=X": "USDCNY", "GBPCNY=X": "GBPCNY", "AUDCNY=X": "AUDCNY",
-    "INR=X": "USDINR", "BRL=X": "USDBRL", "RUB=X": "USDRUB", "KRW=X": "USDKRW", "TRY=X": "USDTRY",
-    "SGD=X": "USDSGD", "TWD=X": "USDTWD", "IDR=X": "USDIDR", "PHP=X": "USDPHP", "EGP=X": "USDEGP",
-    "ARS=X": "USDARS",
-    
-    "BTC-USD": "Bitcoin", "ETH-USD": "Ether", "SOL-USD": "Solana", "BNB-USD": "Binance",
-    
-    "^HSI": "HANGSENG", "^IXIC": "NASDAQ", "000001.SS": "Shanghai", "399001.SZ": "Shenzhen",
-    "^VIX": "VIX", "^BVSP": "Brazil", "^N225": "Nikkei", "^RUT": "Russell", "^GSPC": "S&P500",
-    "^BSESN": "India", "IMOEX.ME": "Russian"
-}
+# 读取JSON文件
+with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json', 'r') as file:
+    stock_groups = json.load(file)
+
+# 读取symbol_mapping JSON文件
+with open('/Users/yanzhang/Documents/Financial_System/Modules/Symbol_mapping.json', 'r') as file:
+    symbol_mapping = json.load(file)
 
 # 定义需要特殊处理的group_name
 special_groups = ["Currencies", "Bonds", "Crypto", "Commodities"]
@@ -53,33 +42,44 @@ special_groups = ["Currencies", "Bonds", "Crypto", "Commodities"]
 # 遍历所有组
 for group_name, tickers in stock_groups.items():
     for ticker_symbol in tickers:
-        # 使用 yfinance 下载股票数据
-        data = yf.download(ticker_symbol, start=start_date, end=end_date)
+        # 检查映射是否存在
+        if ticker_symbol not in symbol_mapping:
+            error_message = f"No mapping found for ticker symbol: {ticker_symbol}"
+            raise ValueError(log_error_with_timestamp(error_message))
+        try:
+            # 使用 yfinance 下载股票数据
+            data = yf.download(ticker_symbol, start=start_date, end=end_date)
+            if data.empty:
+                raise ValueError(f"{ticker_symbol}: No price data found for the given date range.")
 
-        # 插入数据到相应的表中
-        table_name = group_name.replace(" ", "_")  # 确保表名没有空格
-        mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)  # 从映射字典获取名称，如果不存在则使用原始 ticker_symbol
-        for index, row in data.iterrows():
-            date = index.strftime('%Y-%m-%d')
-            if group_name in ["Currencies", "Bonds", "Crypto"]:
-                price = round(row['Close'], 6)
-            elif group_name in ["Commodities", "Indices"]:
-                price = round(row['Close'], 4)
-            else:
-                price = round(row['Close'], 2)
+            # 插入数据到相应的表中
+            table_name = group_name.replace(" ", "_")  # 确保表名没有空格
+            mapped_name = symbol_mapping[ticker_symbol]  # 从映射字典获取名称
+            for index, row in data.iterrows():
+                date = index.strftime('%Y-%m-%d')
+                if group_name in ["Currencies", "Bonds", "Crypto"]:
+                    price = round(row['Close'], 6)
+                elif group_name in ["Commodities", "Indices"]:
+                    price = round(row['Close'], 4)
+                else:
+                    price = round(row['Close'], 2)
 
-            if group_name in special_groups:
-                c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price) VALUES (?, ?, ?)",
-                            (date, mapped_name, price))
-            else:
-                volume = int(row['Volume'])
-                c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)",
-                            (date, mapped_name, price, volume))
+                if group_name in special_groups:
+                    c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price) VALUES (?, ?, ?)",
+                                (date, mapped_name, price))
+                else:
+                    volume = int(row['Volume'])
+                    c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)",
+                                (date, mapped_name, price, volume))
+        except Exception as e:
+                formatted_error_message = log_error_with_timestamp(str(e))
+                # 将错误信息追加到文件中
+                with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                    error_file.write(formatted_error_message)
+
+        print(f"{ticker_symbol} 已成功写入数据库")  # 添加打印语句
 
 # 提交事务
 conn.commit()
-
 # 关闭连接
 conn.close()
-
-print("所有数据已成功写入数据库")

@@ -24,15 +24,16 @@ def log_error_with_timestamp(error_message):
 
 def get_price_comparison(cursor, table_name, interval, name, today):
     yesterday = today - timedelta(days=1)
-    day_of_week = yesterday.weekday()  # 周一为0，周日为6
 
-    if day_of_week == 5:  # 昨天是周六
-        yesterday = today - timedelta(days=2)  # 取周五
-    elif day_of_week == 6:  # 昨天是周日
-        yesterday = today - timedelta(days=3)  # 取上周五
+    # day_of_week = yesterday.weekday()  # 周一为0，周日为6
+
+    # if day_of_week == 5:  # 昨天是周六
+    #     yesterday = today - timedelta(days=2)  # 取周五
+    # elif day_of_week == 6:  # 昨天是周日
+    #     yesterday = today - timedelta(days=3)  # 取上周五
 
     ex_yesterday = yesterday - timedelta(days=1)
-    # past_date = yesterday - relativedelta(months=interval)
+    
     # 判断interval是否小于1，若是，则按天数计算
     if interval < 1:
         days = int(interval * 30)  # 将月份转换为天数
@@ -78,8 +79,9 @@ def save_output_to_file(output, directory, filename, directory_backup):
 def main():
     today = datetime.now()
     day_of_week = today.weekday()  # 周一为0，周日为6
+    # if day_of_week == 0 or day_of_week == 1:  # 昨天是周一或周二
     if day_of_week == 0:  # 昨天是周一
-        real_today = today - timedelta(days=3)  # 取上周六
+        real_today = today - timedelta(days=3)  # 取上周五
     elif day_of_week == 6:  # 昨天是周日
         real_today = today - timedelta(days=2)  # 取上周五
     else:
@@ -120,6 +122,7 @@ def main():
                         # 将错误信息追加到文件中
                         with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
                             error_file.write(formatted_error_message)
+                        continue  # 处理下一个股票
 
                     price_extremes = {}
                     for months in intervals:
@@ -135,6 +138,7 @@ def main():
                             # 将错误信息追加到文件中
                             with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
                                 error_file.write(formatted_error_message)
+                            continue  # 处理下一个时间间隔
 
                     # 检查是否接近最高价格
                     found_max = False
@@ -182,11 +186,12 @@ def main():
         updates = {}
         lines = output.split('\n')
         for line in lines:
-            category, symbol, _ = line.split()
-            if category in updates:
-                updates[category].append(symbol)
-            else:
-                updates[category] = [symbol]
+            if line.strip():  # 添加这个检查，确保不处理空行
+                category, symbol, _ = line.split()
+                if category in updates:
+                    updates[category].append(symbol)
+                else:
+                    updates[category] = [symbol]
         return updates
 
     def update_json_data(config_path, updates, blacklist_newlow):
@@ -204,22 +209,51 @@ def main():
         with open(config_path, 'w', encoding='utf-8') as file:
             json.dump(data, file, ensure_ascii=False, indent=4)
 
-    updates = parse_output(final_output1)
-    # 黑名单列表
-    blacklist_newlow = ["SIRI", "FIVE", "MGA", "BBD", "WBA", "LEGN",
-        "BILL", "TAP", "STVN", "LSXMK", "TAK", "CSAN", "CIG", "EPAM"]
+    # updates = parse_output(final_output1)
+    # # 黑名单列表
+    # blacklist_newlow = ["SIRI", "FIVE", "MGA", "BBD", "WBA", "LEGN",
+    #     "BILL", "TAP", "STVN", "LSXMK", "TAK", "CSAN", "CIG", "EPAM"]
 
-    config_json = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json"
-    update_json_data(config_json, updates, blacklist_newlow)
-    print("Sectors_Panel.json文件已成功更新！")
+    # config_json = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json"
+    # update_json_data(config_json, updates, blacklist_newlow)
 
-    # 在代码的最后部分调用save_output_to_file函数
-    output_directory = '/Users/yanzhang/Documents/News'
-    directory_backup = '/Users/yanzhang/Documents/News/site'
-    filename = 'AnalyseStock.txt'
-    save_output_to_file(final_output, output_directory, filename, directory_backup)
+
+    # # 在代码的最后部分调用save_output_to_file函数
+    # output_directory = '/Users/yanzhang/Documents/News'
+    # directory_backup = '/Users/yanzhang/Documents/News/site'
+    # filename = 'AnalyseStock.txt'
+    # save_output_to_file(final_output, output_directory, filename, directory_backup)
     # filename1 = '52_newlow.txt'
     # save_output_to_file(final_output1, output_directory, filename1, directory_backup)
+
+    if final_output1.strip():  # 检查final_output1是否为空
+        updates = parse_output(final_output1)
+        # 黑名单列表
+        blacklist_newlow = ["SIRI", "FIVE", "MGA", "BBD", "WBA", "LEGN",
+            "BILL", "TAP", "STVN", "LSXMK", "TAK", "CSAN", "CIG", "EPAM"]
+
+        config_json = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json"
+        update_json_data(config_json, updates, blacklist_newlow)
+        print("Sectors_Panel.json文件已成功更新！")
+    else:
+        error_message = "final_output1为空，无法进行更新操作。"
+        formatted_error_message = log_error_with_timestamp(error_message)
+        # 将错误信息追加到文件中
+        with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+            error_file.write(formatted_error_message)
+
+    if final_output.strip():  # 检查final_output是否为空
+        # 在代码的最后部分调用save_output_to_file函数
+        output_directory = '/Users/yanzhang/Documents/News'
+        directory_backup = '/Users/yanzhang/Documents/News/site'
+        filename = 'AnalyseStock.txt'
+        save_output_to_file(final_output, output_directory, filename, directory_backup)
+    else:
+        error_message = "final_output为空，无法保存输出文件。"
+        formatted_error_message = log_error_with_timestamp(error_message)
+        # 将错误信息追加到文件中
+        with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+            error_file.write(formatted_error_message)
 
 if __name__ == "__main__":
     main()

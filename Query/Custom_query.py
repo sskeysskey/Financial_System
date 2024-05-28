@@ -71,29 +71,37 @@ def create_window(content):
 if __name__ == '__main__':
     db_info = [
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Economics',
-        #  'condition': "name = 'USInflation' ORDER BY date DESC", 'fields': '*', 'include_condition': False},
+        #  'condition': "name = 'USInflation' ORDER BY date DESC", 'fields': '*', 'include_condition': True},
+
         # {'path': '/Users/yanzhang/Documents/Database/Analysis.db', 'table': 'High_low',
         #   'condition': "name = 'Energy' ORDER BY date DESC", 'fields': '*', 'include_condition': True},
-        # {'path': '/Users/yanzhang/Documents/Database/Analysis.db', 'table': 'Date_compare',
-        #   'condition': "name = 'Technology' ORDER BY date DESC", 'fields': '*', 'include_condition': True},
+
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Indices',
         #   'condition': "name = 'Nikkei' ORDER BY date DESC", 'fields': '*', 'include_condition': True},
+
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies',
-        #   'condition': "name = 'CNYUSD' ORDER BY date DESC", 'fields': '*', 'include_condition': True},
+        #   'condition': "name = 'CNYTHB' ORDER BY date DESC", 'fields': '*', 'include_condition': True},
+
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities',
-        #     'condition': "name = 'Silver' ORDER BY date DESC", 'fields': '*', 'include_condition': True},
+        #     'condition': "name = 'Zinc' ORDER BY date DESC", 'fields': '*', 'include_condition': True},
+
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto',
-        #   'condition': "name = 'Solana' ORDER BY date DESC", 'fields': '*', 'include_condition': False},
+        #   'condition': "name = 'Solana' ORDER BY date DESC", 'fields': '*', 'include_condition': True},
+
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Bonds',
-        #   'condition': "name = 'JP10Y' ORDER BY date DESC", 'fields': '*', 'include_condition': False},
+        #   'condition': "name = 'US10Y' ORDER BY date DESC", 'fields': '*', 'include_condition': True},
+
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'ETFs',
+          'condition': "name = 'USRealEstate' ORDER BY date DESC", 'fields': '*', 'include_condition': True},
+
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Basic_Materials',
         #     'condition': "name = 'CTA-PB' ORDER BY date DESC", 'fields': '*', 'include_condition': True},
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Communication_Services',
-        #     'condition': "name = 'META' ORDER BY date DESC", 'fields': '*', 'include_condition': False},
+        #     'condition': "name = 'META' ORDER BY date DESC", 'fields': '*', 'include_condition': True},
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Consumer_Cyclical',
-        #     'condition': "name = 'GME' ORDER BY date DESC", 'fields': '*', 'include_condition': False},
+        #     'condition': "name = 'GME' ORDER BY date DESC", 'fields': '*', 'include_condition': True},
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Consumer_Defensive',
-        #     'condition': "name = 'WMT' ORDER BY date DESC", 'fields': '*', 'include_condition': False},
+        #     'condition': "name = 'WMT' ORDER BY date DESC", 'fields': '*', 'include_condition': True},
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Energy',
         #     'condition': "name = 'TS' ORDER BY date DESC", 'fields': '*', 'include_condition': True},
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Financial_Services',
@@ -105,11 +113,11 @@ if __name__ == '__main__':
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Real_Estate',
         #     'condition': "name = '' ORDER BY date DESC", 'fields': '*', 'include_condition': True},
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Technology',
-        #     'condition': "name = 'AAPL' ORDER BY date DESC", 'fields': '*', 'include_condition': True},
+        #     'condition': "name = 'SATS' ORDER BY date DESC", 'fields': '*', 'include_condition': True},
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Technology',
         #   'condition': "id = 779743", 'fields': '*', 'include_condition': True},
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Utilities',
-        #     'condition': "name = '' ORDER BY date DESC", 'fields': '*', 'include_condition': False},
+        #     'condition': "name = '' ORDER BY date DESC", 'fields': '*', 'include_condition': True},
     ]
     
     # 遍历数据库信息列表，对每个数据库执行查询并收集结果

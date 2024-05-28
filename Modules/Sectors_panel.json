@@ -1,7 +1,5 @@
 {
-    "Basic_Materials": [
-        
-    ],
+    "Basic_Materials": [],
     "Communication_Services": [
         "TLK"
     ],
@@ -9,9 +7,7 @@
         "LULU",
         "LI"
     ],
-    "Consumer_Defensive": [
-        
-    ],
+    "Consumer_Defensive": [],
     "Financial_Services": [],
     "Healthcare": [
         "BMY"
@@ -24,9 +20,7 @@
     "Technology": [
         "U"
     ],
-    "Utilities": [
-        
-    ],
+    "Utilities": [],
     "Economics": [
         "USGDP",
         "USInflation",
@@ -36,8 +30,33 @@
         "USConfidence",
         "USJobless"
     ],
+    "ETFs_US": [
+        "IntermedTreary",
+        "USHealth",
+        "USRetail",
+        "USFinancial",
+        "USDiscretionary",
+        "USRealEstate",
+        "USAeroDefence",
+        "USInsurance",
+        "USMaterials",
+        "USInfrastructure",
+        "USStaples",
+        "USEnergy",
+        "USUtilities"
+      ],
+    "ETFs_Oversea": [
+        "JapanETF",
+        "CNTech",
+        "TaiwanETF",
+        "EmergingETF",
+        "TurkeyETF"
+      ],
+    "ETFs_Commodity": [
+        "LithBattery",
+        "UraniumETF"
+      ],
     "Commodities": [
-        "Uranium",
         "Nickel",
         "Lithium",
         "Wheat",
@@ -48,7 +67,6 @@
         "Oat",
         "OrangeJuice",
         "CrudeOil",
-        "Brent",
         "Naturalgas",
         "Gold",
         "Copper",

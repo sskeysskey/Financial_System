@@ -1,0 +1,23 @@
+{
+    "CC=F": "Cocoa", "KC=F": "Coffee", "CT=F": "Cotton", "OJ=F": "OrangeJuice",
+    "SB=F": "Sugar", "ZO=F": "Oat", "HE=F": "LeanHogs", "CL=F": "CrudeOil",
+    "BZ=F": "Brent", "LE=F": "LiveCattle", "HG=F": "Copper", "ZC=F": "Corn",
+    "GC=F": "Gold", "SI=F": "Silver", "NG=F": "Naturalgas", "ZR=F": "Rice", "ZS=F": "Soybean",
+    "^TNX": "US10Y",
+    "SPTI": "IntermedTreary", "PICK": "MetalMine", "LIT": "LithBattery", "BITB": "Bitwise",
+    "CQQQ": "CNTech", "IYH": "USHealth", "RTH": "USRetail", "VFH": "USFinancial",
+    "FDIS": "USDiscretionary", "XLRE": "USRealEstate", "XAR": "USAeroDefence",
+    "KIE": "USInsurance", "XLB": "USMaterials", "PAVE": "USInfrastructure",
+    "FSTA": "USStaples", "XLE": "USEnergy", "XLU": "USUtilities", "BBJP": "JapanETF",
+    "EWT": "TaiwanETF", "EMXC": "EmergingETF", "TUR": "TurkeyETF", "URA": "UraniumETF",
+    "DX-Y.NYB": "DXY", "EURUSD=X": "EURUSD", "GBPUSD=X": "GBPUSD", "JPY=X": "USDJPY",
+    "CNYEUR=X": "CNYEUR", "CNYGBP=X": "CNYGBP", "CNYJPY=X": "CNYJPY", "CNYUSD=X": "CNYUSD",
+    "EURCNY=X": "EURCNY", "CNY=X": "USDCNY", "GBPCNY=X": "GBPCNY", "AUDCNY=X": "AUDCNY",
+    "INR=X": "USDINR", "BRL=X": "USDBRL", "RUB=X": "USDRUB", "KRW=X": "USDKRW", "TRY=X": "USDTRY",
+    "SGD=X": "USDSGD", "TWD=X": "USDTWD", "IDR=X": "USDIDR", "PHP=X": "USDPHP", "EGP=X": "USDEGP",
+    "ARS=X": "USDARS",
+    "BTC-USD": "Bitcoin", "ETH-USD": "Ether", "SOL-USD": "Solana", "BNB-USD": "Binance",
+    "^HSI": "HANGSENG", "^IXIC": "NASDAQ", "000001.SS": "Shanghai", "399001.SZ": "Shenzhen",
+    "^VIX": "VIX", "^BVSP": "Brazil", "^N225": "Nikkei", "^RUT": "Russell", "^GSPC": "S&P500",
+    "^BSESN": "India", "IMOEX.ME": "Russian"
+}

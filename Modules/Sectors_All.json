@@ -96,6 +96,30 @@
     "Wheat",
     "Aluminum"
   ],
+  "ETFs": [
+    "IntermedTreary",
+    "MetalMine",
+    "LithBattery",
+    "Bitwise",
+    "CNTech",
+    "USHealth",
+    "USRetail",
+    "USFinancial",
+    "USDiscretionary",
+    "USRealEstate",
+    "USAeroDefence",
+    "USInsurance",
+    "USMaterials",
+    "USInfrastructure",
+    "USStaples",
+    "USEnergy",
+    "USUtilities",
+    "JapanETF",
+    "TaiwanETF",
+    "EmergingETF",
+    "TurkeyETF",
+    "UraniumETF"
+  ],
   "Basic_Materials": [
     "LIN",
     "BHP",
@@ -381,7 +405,8 @@
     "DOOO",
     "LOT",
     "VIK",
-    "COLM"
+    "COLM",
+    "RRR"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -1285,7 +1310,8 @@
     "ENTG",
     "EXLS",
     "ITRI",
-    "VRNS"
+    "VRNS",
+    "SATS"
   ],
   "Utilities": [
     "NEE",

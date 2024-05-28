@@ -103,6 +103,7 @@ databases = [
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities'},
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Bonds'},
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Economics'},
+    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'ETFs'},
     # 可以添加更多数据库配置
 ]
 

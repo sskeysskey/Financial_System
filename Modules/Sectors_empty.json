@@ -1,9 +1,9 @@
 {
   "Bonds": [
-      
+    
     ],
   "Currencies": [
-      
+    
     ],
     
   "Crypto": [
@@ -17,6 +17,9 @@
   "Commodities": [
       
     ],
+  "ETFs": [
+      
+    ],
     
   "Basic_Materials": [
     
@@ -27,7 +30,7 @@
     ],
     
   "Consumer_Cyclical": [
-    
+      
     ],
     
   "Consumer_Defensive": [
@@ -55,7 +58,7 @@
     ],
     
   "Technology": [
-    
+      
     ],
     
   "Utilities": [

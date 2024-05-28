@@ -60,6 +60,30 @@
     "SB=F",
     "SI=F"
   ],
+  "ETFs": [
+    "SPTI",
+    "PICK",
+    "LIT",
+    "BITB",
+    "CQQQ",
+    "IYH",
+    "RTH",
+    "VFH",
+    "FDIS",
+    "XLRE",
+    "XAR",
+    "KIE",
+    "XLB",
+    "PAVE",
+    "FSTA",
+    "XLE",
+    "XLU",
+    "BBJP",
+    "EWT",
+    "EMXC",
+    "TUR",
+    "URA"
+  ],
   "Basic_Materials": [
     "LIN",
     "BHP",
@@ -345,7 +369,8 @@
     "DOOO",
     "LOT",
     "VIK",
-    "COLM"
+    "COLM",
+    "RRR"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -1249,7 +1274,8 @@
     "ENTG",
     "EXLS",
     "ITRI",
-    "VRNS"
+    "VRNS",
+    "SATS"
   ],
   "Utilities": [
     "NEE",

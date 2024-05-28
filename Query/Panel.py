@@ -68,9 +68,9 @@ def create_selection_window():
         ['Basic_Materials', 'Communication_Services', 'Consumer_Cyclical', 'Consumer_Defensive', 'Technology'],
         ['Financial_Services', 'Healthcare', 'Industrials', 'Real_Estate', 'Energy', 'Utilities'],
         ['Bonds', 'Crypto', 'Indices'],
-        ['Commodities'],
-        ['Currencies'],
-        ['Economics']
+        ['Commodities', "ETFs_Commodity"],
+        ['Currencies', 'ETFs_Oversea'],
+        ['Economics', 'ETFs_US']
     ]
 
     for index, category_group in enumerate(categories):
@@ -173,7 +173,7 @@ def on_keyword_selected_chart(value, parent_window):
     stock_sectors = ["Basic_Materials", "Communication_Services", "Consumer_Cyclical",
         "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare", "Industrials",
         "Real_Estate", "Technology", "Utilities"]
-    economics_sectors = ["Economics"]
+    economics_sectors = ["Economics","ETFs"]
     
     db_path = "/Users/yanzhang/Documents/Database/Finance.db"
     for sector, names in sector_data.items():

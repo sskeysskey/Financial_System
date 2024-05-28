@@ -90,6 +90,7 @@ def main():
                     # 将错误信息追加到文件中
                     with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
                         error_file.write(formatted_error_message)
+                    continue  # 处理下一个股票
                 
                 price_extremes = {}
                 for months in intervals:
@@ -105,6 +106,7 @@ def main():
                         # 将错误信息追加到文件中
                         with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
                             error_file.write(formatted_error_message)
+                        continue  # 处理下一个时间间隔
 
                 # 检查是否接近最高价格
                 found_max = False

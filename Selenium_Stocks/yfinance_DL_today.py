@@ -19,6 +19,10 @@ else:
     with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json', 'r') as file:
         stock_groups = json.load(file)
 
+    # 读取symbol_mapping JSON文件
+    with open('/Users/yanzhang/Documents/Financial_System/Modules/Symbol_mapping.json', 'r') as file:
+        symbol_mapping = json.load(file)
+
     today = now.date()
     yesterday = today - timedelta(days=1)
 
@@ -29,28 +33,6 @@ else:
     # 连接到SQLite数据库
     conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
     c = conn.cursor()
-
-    symbol_mapping = {
-        "CC=F": "Cocoa", "KC=F": "Coffee", "CT=F": "Cotton", "OJ=F": "OrangeJuice",
-        "SB=F": "Sugar", "ZO=F": "Oat", "HE=F": "LeanHogs", "CL=F": "CrudeOil",
-        "BZ=F": "Brent", "LE=F": "LiveCattle", "HG=F": "Copper", "ZC=F": "Corn",
-        "GC=F": "Gold", "SI=F": "Silver", "NG=F": "Naturalgas", "ZR=F": "Rice", "ZS=F": "Soybean",
-        
-        "^TNX": "US10Y",
-        
-        "DX-Y.NYB": "DXY", "EURUSD=X": "EURUSD", "GBPUSD=X": "GBPUSD", "JPY=X": "USDJPY",
-        "CNYEUR=X": "CNYEUR", "CNYGBP=X": "CNYGBP", "CNYJPY=X": "CNYJPY", "CNYUSD=X": "CNYUSD",
-        "EURCNY=X": "EURCNY", "CNY=X": "USDCNY", "GBPCNY=X": "GBPCNY", "AUDCNY=X": "AUDCNY",
-        "INR=X": "USDINR", "BRL=X": "USDBRL", "RUB=X": "USDRUB", "KRW=X": "USDKRW", "TRY=X": "USDTRY",
-        "SGD=X": "USDSGD", "TWD=X": "USDTWD", "IDR=X": "USDIDR", "PHP=X": "USDPHP", "EGP=X": "USDEGP",
-        "ARS=X": "USDARS",
-        
-        "BTC-USD": "Bitcoin", "ETH-USD": "Ether", "SOL-USD": "Solana", "BNB-USD": "Binance",
-        
-        "^HSI": "HANGSENG", "^IXIC": "NASDAQ", "000001.SS": "Shanghai", "399001.SZ": "Shenzhen",
-        "^VIX": "VIX", "^BVSP": "Brazil", "^N225": "Nikkei", "^RUT": "Russell", "^GSPC": "S&P500",
-        "^BSESN": "India", "IMOEX.ME": "Russian"
-    }
 
     # 定义需要特殊处理的group_name
     special_groups = ["Currencies", "Bonds", "Crypto", "Commodities"]

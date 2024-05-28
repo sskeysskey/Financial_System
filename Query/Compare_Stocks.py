@@ -26,6 +26,8 @@ def compare_today_yesterday(config_path, blacklist):
     day_of_week = yesterday.weekday()
     if day_of_week == 0:  # 昨天是周一
         ex_yesterday = yesterday - timedelta(days=3)  # 取上周五
+    # elif day_of_week == 1:  # 昨天是周二
+    #     ex_yesterday = yesterday - timedelta(days=4)  # 取上周五
     elif day_of_week in {5, 6}:  # 昨天是周六或周日
         yesterday = yesterday - timedelta(days=(day_of_week - 4))  # 周五
         ex_yesterday = yesterday - timedelta(days=1)
@@ -61,20 +63,26 @@ def compare_today_yesterday(config_path, blacklist):
                         with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
                             error_file.write(formatted_error_message)
 
-    # 对输出进行排序，根据变化百分比
-    output.sort(key=lambda x: x[1], reverse=True)
+    if output:  # 检查output是否为空
+        # 对输出进行排序，根据变化百分比
+        output.sort(key=lambda x: x[1], reverse=True)
+        output_file = f'/Users/yanzhang/Documents/News/CompareStock.txt'
+        with open(output_file, 'w') as file:
+            for line in output:
+                sector_and_company = line[0].split()
+                sector = " ".join(sector_and_company[:-1])  # 获取sector
+                company = sector_and_company[-1]  # 获取company
 
-    output_file = f'/Users/yanzhang/Documents/News/CompareStock.txt'
-    with open(output_file, 'w') as file:
-        for line in output:
-            sector_and_company = line[0].split()
-            sector = " ".join(sector_and_company[:-1])  # 获取sector
-            company = sector_and_company[-1]  # 获取company
-
-            if company not in blacklist:  # 再次检查黑名单
-                # 格式化输出
-                file.write(f"{sector:<25}{company:<8}: {line[1]:>6.2f}%\n")
-    print(f"{output_file} 已生成。")
+                if company not in blacklist:  # 再次检查黑名单
+                    # 格式化输出
+                    file.write(f"{sector:<25}{company:<8}: {line[1]:>6.2f}%\n")
+        print(f"{output_file} 已生成。")
+    else:
+        error_message = "输出为空，无法进行保存文件操作。"
+        formatted_error_message = log_error_with_timestamp(error_message)
+        # 将错误信息追加到文件中
+        with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+            error_file.write(formatted_error_message)
 
 if __name__ == '__main__':
     config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'

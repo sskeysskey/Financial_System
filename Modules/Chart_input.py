@@ -58,7 +58,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, fullname, mar
     else:
         turnover = "N/A"
 
-    if volume is not None and share is not None:
+    if volume is not None and share is not None and share != "N/A":
         turnover_rate = f"{(volume / int(share))*100:.2f}"
     else:
         turnover_rate = "N/A"
