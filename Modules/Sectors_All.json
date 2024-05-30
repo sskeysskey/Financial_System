@@ -189,7 +189,8 @@
     "NEU",
     "BCC",
     "WLK",
-    "ALTM"
+    "ALTM",
+    "ASH"
   ],
   "Communication_Services": [
     "GOOGL",
@@ -252,7 +253,8 @@
     "NXST",
     "TKC",
     "PHI",
-    "RDDT"
+    "RDDT",
+    "BZ"
   ],
   "Consumer_Cyclical": [
     "AMZN",
@@ -287,7 +289,6 @@
     "CPNG",
     "YUM",
     "SE",
-    "FLUT",
     "RCL",
     "LVS",
     "TCOM",
@@ -406,7 +407,8 @@
     "LOT",
     "VIK",
     "COLM",
-    "RRR"
+    "RRR",
+    "GLBE"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -553,7 +555,8 @@
     "CSAN",
     "VAL",
     "NFG",
-    "MGY"
+    "MGY",
+    "RIG"
   ],
   "Financial_Services": [
     "BRK-A",
@@ -650,7 +653,6 @@
     "SYF",
     "RF",
     "CRBG",
-    "FITBI",
     "SHG",
     "NTRS",
     "L",
@@ -738,7 +740,9 @@
     "AMG",
     "LPLA",
     "BMA",
-    "FG"
+    "FG",
+    "STEP",
+    "PSLV"
   ],
   "Healthcare": [
     "LLY",
@@ -869,7 +873,8 @@
     "OPCH",
     "RCM",
     "DOCS",
-    "MDGL"
+    "MDGL",
+    "INSM"
   ],
   "Industrials": [
     "GE",

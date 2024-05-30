@@ -29,7 +29,7 @@ def delete_records_by_name(db_file, table_name, stock_name):
 
 # 使用示例
 db_path = '/Users/yanzhang/Documents/Database/Finance.db'  # 配置数据库文件路径
-table = 'ETFs'
-stock_name_to_delete = 'IntermedT'
+table = 'Consumer_Cyclical'
+stock_name_to_delete = 'FLUT'
 
 delete_records_by_name(db_path, table, stock_name_to_delete)

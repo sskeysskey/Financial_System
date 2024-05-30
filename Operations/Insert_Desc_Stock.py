@@ -231,4 +231,4 @@ else:
         json.dump(data, file, indent=2, ensure_ascii=False)
 
     # 使用弹窗显示成功更新信息
-    messagebox.showinfo("成功", "股票信息已成功写入")
+    messagebox.showinfo("成功", f"{new_name}股票信息已成功写入")

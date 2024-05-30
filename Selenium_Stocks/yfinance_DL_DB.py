@@ -11,10 +11,10 @@ def log_error_with_timestamp(error_message):
 
 # 适合于纯自定义抓取
 # start_date = "2024-05-23"
-# end_date = "2024-05-25"
+# end_date = "2024-05-28"
 
 # 适合于半自定义抓取
-start_date = "2000-09-01"
+start_date = "2024-05-23"
 today = datetime.now()
 end_date = today.strftime('%Y-%m-%d')
 
@@ -42,10 +42,6 @@ special_groups = ["Currencies", "Bonds", "Crypto", "Commodities"]
 # 遍历所有组
 for group_name, tickers in stock_groups.items():
     for ticker_symbol in tickers:
-        # 检查映射是否存在
-        if ticker_symbol not in symbol_mapping:
-            error_message = f"No mapping found for ticker symbol: {ticker_symbol}"
-            raise ValueError(log_error_with_timestamp(error_message))
         try:
             # 使用 yfinance 下载股票数据
             data = yf.download(ticker_symbol, start=start_date, end=end_date)
@@ -54,7 +50,7 @@ for group_name, tickers in stock_groups.items():
 
             # 插入数据到相应的表中
             table_name = group_name.replace(" ", "_")  # 确保表名没有空格
-            mapped_name = symbol_mapping[ticker_symbol]  # 从映射字典获取名称
+            mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)
             for index, row in data.iterrows():
                 date = index.strftime('%Y-%m-%d')
                 if group_name in ["Currencies", "Bonds", "Crypto"]:

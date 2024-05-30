@@ -229,4 +229,4 @@ else:
         json.dump(data, file, indent=2, ensure_ascii=False)
 
     # 使用弹窗显示成功更新信息
-    messagebox.showinfo("成功", "ETF信息已成功写入！")
+    messagebox.showinfo("成功", f"ETF {new_name}信息已成功写入！")

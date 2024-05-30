@@ -16,50 +16,53 @@ def log_error_with_timestamp(error_message):
 
 def compare_today_yesterday(config_path, blacklist):
     with open(config_path, 'r') as file:
-            data = json.load(file)
+        data = json.load(file)
 
-    output = []  # 用于收集输出信息的列表
+    output = []
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
-    today = datetime.now()
-    yesterday = today - timedelta(days=1)
     
-    day_of_week = yesterday.weekday()
-    if day_of_week == 0:  # 昨天是周一
-        ex_yesterday = yesterday - timedelta(days=3)  # 取上周五
-    # elif day_of_week == 1:  # 昨天是周二
-    #     ex_yesterday = yesterday - timedelta(days=4)  # 取上周五
-    elif day_of_week in {5, 6}:  # 昨天是周六或周日
-        yesterday = yesterday - timedelta(days=(day_of_week - 4))  # 周五
-        ex_yesterday = yesterday - timedelta(days=1)
-    else:
-        ex_yesterday = yesterday - timedelta(days=1)
-
     for table_name, names in data.items():
-        if table_name in interested_sectors:  # 过滤sector
+        if table_name in interested_sectors:
             with create_connection(db_path) as conn:
                 cursor = conn.cursor()
                 for name in names:
-                    if name in blacklist:  # 检查黑名单
+                    if name in blacklist:
                         continue
                     try:
-                        query = f"""
-                        SELECT date, price FROM {table_name} 
-                        WHERE name = ? AND date IN (?, ?) ORDER BY date DESC
+                        # 查询最新两个有数据的日期
+                        query_two_latest_dates = f"""
+                        SELECT date FROM {table_name}
+                        WHERE name = ? 
+                        ORDER BY date DESC
+                        LIMIT 2
                         """
-                        cursor.execute(query, (name, yesterday.strftime("%Y-%m-%d"), ex_yesterday.strftime("%Y-%m-%d")))
+                        cursor.execute(query_two_latest_dates, (name,))
                         results = cursor.fetchall()
 
-                        if len(results) == 2:
-                            yesterday_price = results[0][1]
-                            ex_yesterday_price = results[1][1]
-                            change = yesterday_price - ex_yesterday_price
-                            percentage_change = (change / ex_yesterday_price) * 100
+                        if len(results) < 2:
+                            raise Exception(f"错误：无法找到{table_name}下的{name}足够的历史数据进行比较。")
+
+                        latest_date = datetime.strptime(results[0][0], "%Y-%m-%d")
+                        second_latest_date = datetime.strptime(results[1][0], "%Y-%m-%d")
+
+                        # 获取这两天的价格
+                        query = f"""
+                        SELECT date, price FROM {table_name}
+                        WHERE name = ? AND date IN (?, ?) ORDER BY date DESC
+                        """
+                        cursor.execute(query, (name, latest_date.strftime("%Y-%m-%d"), second_latest_date.strftime("%Y-%m-%d")))
+                        prices = cursor.fetchall()
+
+                        if len(prices) == 2:
+                            latest_price = prices[0][1]
+                            second_latest_price = prices[1][1]
+                            change = latest_price - second_latest_price
+                            percentage_change = (change / second_latest_price) * 100
                             output.append((f"{table_name} {name}", percentage_change))
                         else:
                             raise Exception(f"错误：无法比较{table_name}下的{name}，因为缺少必要的数据。")
                     except Exception as e:
                         formatted_error_message = log_error_with_timestamp(str(e))
-                        # 将错误信息追加到文件中
                         with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
                             error_file.write(formatted_error_message)
 

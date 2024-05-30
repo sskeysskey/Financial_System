@@ -22,22 +22,14 @@ def log_error_with_timestamp(error_message):
     # 在错误信息前加入时间戳
     return f"[{timestamp}] {error_message}\n"
 
-def get_price_comparison(cursor, table_name, interval, name, today):
-    yesterday = today - timedelta(days=1)
-
-    # day_of_week = yesterday.weekday()  # 周一为0，周日为6
-
-    # if day_of_week == 5:  # 昨天是周六
-    #     yesterday = today - timedelta(days=2)  # 取周五
-    # elif day_of_week == 6:  # 昨天是周日
-    #     yesterday = today - timedelta(days=3)  # 取上周五
-
-    ex_yesterday = yesterday - timedelta(days=1)
+def get_price_comparison(cursor, table_name, interval, name, validate):
+    today = datetime.now()
+    ex_validate = validate - timedelta(days=1)
     
     # 判断interval是否小于1，若是，则按天数计算
     if interval < 1:
         days = int(interval * 30)  # 将月份转换为天数
-        past_date = today - timedelta(days=days)
+        past_date = validate - timedelta(days=days - 1)
     else:
         past_date = today - relativedelta(months=int(interval))
     
@@ -45,12 +37,20 @@ def get_price_comparison(cursor, table_name, interval, name, today):
     SELECT MAX(price), MIN(price)
     FROM {table_name} WHERE date BETWEEN ? AND ? AND name = ?
     """
-    cursor.execute(query, (past_date.strftime("%Y-%m-%d"), ex_yesterday.strftime("%Y-%m-%d"), name))
+    cursor.execute(query, (past_date.strftime("%Y-%m-%d"), ex_validate.strftime("%Y-%m-%d"), name))
     result = cursor.fetchone()
     if result and (result[0] is not None and result[1] is not None):
         return result
     else:
         return None  # 如果找不到有效数据，则返回None
+
+def get_latest_price_and_date(cursor, table_name, name):
+    """获取指定股票的最新价格和日期"""
+    query = f"""
+    SELECT date, price FROM {table_name} WHERE name = ? ORDER BY date DESC LIMIT 1
+    """
+    cursor.execute(query, (name,))
+    return cursor.fetchone()
 
 def save_output_to_file(output, directory, filename, directory_backup):
     # 定义完整的文件路径
@@ -76,63 +76,47 @@ def save_output_to_file(output, directory, filename, directory_backup):
         file.write(output)
     print(f"输出已保存到文件：{file_path}")
 
-def main():
-    today = datetime.now()
-    day_of_week = today.weekday()  # 周一为0，周日为6
-    # if day_of_week == 0 or day_of_week == 1:  # 昨天是周一或周二
-    if day_of_week == 0:  # 昨天是周一
-        real_today = today - timedelta(days=3)  # 取上周五
-    elif day_of_week == 6:  # 昨天是周日
-        real_today = today - timedelta(days=2)  # 取上周五
-    else:
-        real_today = today - timedelta(days=1)
-
-    # 定义你感兴趣的sectors
-    interested_sectors = ["Basic_Materials", "Communication_Services", "Consumer_Cyclical",
-        "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare", "Industrials",
-        "Real_Estate", "Technology", "Utilities"]
-    
+def main():    
+    db_path = '/Users/yanzhang/Documents/Database/Finance.db'
     with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as file:
         data = json.load(file)
 
     output = []
     output1 = []
-    db_path = '/Users/yanzhang/Documents/Database/Finance.db'
     intervals = [600, 360, 240, 120, 60, 24, 13, 6, 3, 1, 0.5, 0.25]  # 以月份表示的时间间隔列表
 
     # 遍历JSON中的每个表和股票代码
     for table_name, names in data.items():
-        if table_name in interested_sectors:  # 过滤sector
+        if table_name in ["Basic_Materials", "Communication_Services", "Consumer_Cyclical",
+                          "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare",
+                          "Industrials", "Real_Estate", "Technology", "Utilities"]:  # 过滤sector
             with create_connection(db_path) as conn:
                 cursor = conn.cursor()
                 for name in names:
                     if is_blacklisted(name):
                         print(f"{name} is blacklisted and will be skipped.")
                         continue  # 跳过黑名单中的符号
-                    today_price_query = f"SELECT price FROM {table_name} WHERE date = ? AND name = ?"
-                    cursor.execute(today_price_query, (real_today.strftime("%Y-%m-%d"), name))
-                    result = cursor.fetchone()
-                    try:
-                        if result:
-                            today_price = result[0]
-                        else:
-                            raise Exception(f"没有找到今天的{name}价格。")
-                    except Exception as e:
-                        formatted_error_message = log_error_with_timestamp(str(e))
-                        # 将错误信息追加到文件中
+                    
+                    result = get_latest_price_and_date(cursor, table_name, name)
+                    if result:
+                        validate, validate_price = result
+                        validate = datetime.strptime(validate, "%Y-%m-%d")
+                    else:
+                        error_message = f"没有找到{name}的历史价格数据。"
+                        formatted_error_message = log_error_with_timestamp(error_message)
                         with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
                             error_file.write(formatted_error_message)
-                        continue  # 处理下一个股票
+                        continue
 
                     price_extremes = {}
-                    for months in intervals:
-                        result = get_price_comparison(cursor, table_name, months, name, today)
+                    for interval in intervals:
+                        result = get_price_comparison(cursor, table_name, interval, name, validate)
                         try:
                             if result:
                                 max_price, min_price = result
-                                price_extremes[months] = (max_price, min_price)
+                                price_extremes[interval] = (max_price, min_price)
                             else:
-                                raise Exception(f"没有足够的历史数据来进行{table_name}下的{name} {months}月的价格比较。")
+                                raise Exception(f"没有足够的历史数据来进行{table_name}下的{name} {interval}月的价格比较。")
                         except Exception as e:
                             formatted_error_message = log_error_with_timestamp(str(e))
                             # 将错误信息追加到文件中
@@ -142,41 +126,40 @@ def main():
 
                     # 检查是否接近最高价格
                     found_max = False
-                    for months in intervals:
+                    for interval in intervals:
                         if found_max:
                             break
-                        max_price, _ = price_extremes.get(months, (None, None))
-                        if max_price is not None and today_price >= max_price:
+                        max_price, _ = price_extremes.get(interval, (None, None))
+                        if max_price is not None and validate_price >= max_price:
                             found_max = True
-                            if today_price >= max_price:
-                                if months >= 12:
-                                    years = months // 12
+                            if validate_price >= max_price:
+                                if interval >= 12:
+                                    years = interval // 12
                                     print(f"{table_name} {name} {years}Y_newhigh")
                                     output.append(f"{table_name} {name} {years}Y_newhigh")
                                 else:
-                                    print(f"{table_name} {name} {months}M_newhigh")
-                                    output.append(f"{table_name} {name} {months}M_newhigh")
+                                    print(f"{table_name} {name} {interval}M_newhigh")
+                                    output.append(f"{table_name} {name} {interval}M_newhigh")
 
                     # 检查是否接近最低价格
                     found_min = False
-                    for months in intervals:
+                    for interval in intervals:
                         if found_min:
                             break
-                        _, min_price = price_extremes.get(months, (None, None))
-                        if min_price is not None and today_price <= min_price:
+                        _, min_price = price_extremes.get(interval, (None, None))
+                        if min_price is not None and validate_price <= min_price:
                             found_min = True
-                            if today_price <= min_price:
-                                if months >= 12:
-                                    years = months // 12
+                            if validate_price <= min_price:
+                                if interval >= 12:
+                                    years = interval // 12
                                     print(f"{table_name} {name} {years}Y_newlow")
                                     output.append(f"{table_name} {name} {years}Y_newlow")
                                     output1.append(f"{table_name} {name} {years}Y_newlow")
                                 else:
-                                    print(f"{table_name} {name} {months}M_newlow")
-                                    output.append(f"{table_name} {name} {months}M_newlow")
+                                    print(f"{table_name} {name} {interval}M_newlow")
+                                    output.append(f"{table_name} {name} {interval}M_newlow")
 
                 output.append("\n")
-                cursor.close()
 
     final_output = "\n".join(output)
     final_output1 = "\n".join(output1)
@@ -209,28 +192,13 @@ def main():
         with open(config_path, 'w', encoding='utf-8') as file:
             json.dump(data, file, ensure_ascii=False, indent=4)
 
-    # updates = parse_output(final_output1)
-    # # 黑名单列表
-    # blacklist_newlow = ["SIRI", "FIVE", "MGA", "BBD", "WBA", "LEGN",
-    #     "BILL", "TAP", "STVN", "LSXMK", "TAK", "CSAN", "CIG", "EPAM"]
-
-    # config_json = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json"
-    # update_json_data(config_json, updates, blacklist_newlow)
-
-
-    # # 在代码的最后部分调用save_output_to_file函数
-    # output_directory = '/Users/yanzhang/Documents/News'
-    # directory_backup = '/Users/yanzhang/Documents/News/site'
-    # filename = 'AnalyseStock.txt'
-    # save_output_to_file(final_output, output_directory, filename, directory_backup)
-    # filename1 = '52_newlow.txt'
-    # save_output_to_file(final_output1, output_directory, filename1, directory_backup)
-
     if final_output1.strip():  # 检查final_output1是否为空
         updates = parse_output(final_output1)
         # 黑名单列表
         blacklist_newlow = ["SIRI", "FIVE", "MGA", "BBD", "WBA", "LEGN",
-            "BILL", "TAP", "STVN", "LSXMK", "TAK", "CSAN", "CIG", "EPAM"]
+            "BILL", "TAP", "STVN", "LSXMK", "TAK", "CSAN", "CIG", "EPAM", "NFE", "TLK",
+            "LBTYK", "PKX", "ABEV", "TD", "DAY", "RHI", "OTEX", "APA"
+        ]
 
         config_json = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json"
         update_json_data(config_json, updates, blacklist_newlow)

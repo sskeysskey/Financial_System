@@ -1,21 +1,36 @@
 {
-    "Basic_Materials": [],
+    "Basic_Materials": [
+        
+    ],
     "Communication_Services": [
-        "TLK"
+        
     ],
     "Consumer_Cyclical": [
         "LULU",
-        "LI"
+        "LI",
+        "MTN"
     ],
-    "Consumer_Defensive": [],
-    "Financial_Services": [],
+    "Consumer_Defensive": [
+        "DEO",
+        "BF-B"
+    ],
+    "Financial_Services": [
+
+    ],
     "Healthcare": [
-        "BMY"
+        "BMY",
+        "JNJ",
+        "GILD",
+        "CVS",
+        "XRAY"
     ],
     "Industrials": [
-        "GNRC"
+        "GNRC",
+        "UPS"
     ],
-    "Energy": [],
+    "Energy": [
+        
+    ],
     "Real_Estate": [],
     "Technology": [
         "U"
@@ -44,21 +59,20 @@
         "USStaples",
         "USEnergy",
         "USUtilities"
-      ],
+    ],
     "ETFs_Oversea": [
         "JapanETF",
         "CNTech",
         "TaiwanETF",
         "EmergingETF",
         "TurkeyETF"
-      ],
+    ],
     "ETFs_Commodity": [
         "LithBattery",
         "UraniumETF"
-      ],
+    ],
     "Commodities": [
         "Nickel",
-        "Lithium",
         "Wheat",
         "Aluminum",
         "Cocoa",

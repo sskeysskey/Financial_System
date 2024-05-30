@@ -62,7 +62,7 @@ def create_selection_window():
 
     color_frames = [tk.Frame(scrollable_frame) for _ in range(6)]
     for frame in color_frames:
-        frame.pack(side="left", padx=15, pady=10, fill="both", expand=True)
+        frame.pack(side="left", padx=5, pady=10, fill="both", expand=True)
 
     categories = [
         ['Basic_Materials', 'Communication_Services', 'Consumer_Cyclical', 'Consumer_Defensive', 'Technology'],
