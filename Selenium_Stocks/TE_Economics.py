@@ -54,9 +54,9 @@ def navigate_to_section(driver, section_css, link_text):
         WebDriverWait(driver, 10).until(
             EC.visibility_of_element_located((By.LINK_TEXT, link_text))
         )
-        print(f"成功找到并点击 '{link_text}' 链接，继续执行程序。")
+        print(f"成功切换到 {section_css} 并找到 '{link_text}' 的链接，继续执行程序。")
     except TimeoutException:
-        print(f"未能在页面上找到 '{link_text}' 链接。")
+        print(f"未能在页面上找到 '{link_text}' 的链接。")
 
 # ChromeDriver 路径
 chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
@@ -70,15 +70,21 @@ with webdriver.Chrome(service=service) as driver:
         "Inflation Rate": "USInflation",
         "Interest Rate": "USInterest",
         "Balance of Trade": "USTrade", 
-        "Consumer Confidence": "USConfidence",
+        "Consumer Confidence": "USConfidence"
     }
     Economics2 = {
     "Initial Jobless Claims": "USJobless"
+    }
+    Economics3 = {
+        "Core PCE Price Index Annual Change": "CorePCEY",
+        "Core PCE Price Index MoM": "CorePCEM"
     }
     data_to_insert = []
     data_to_insert = fetch_data(driver, Economics1, data_to_insert)
     navigate_to_section(driver, 'a[data-bs-target="#labour"]', "Manufacturing Payrolls")
     data_to_insert = fetch_data(driver, Economics2, data_to_insert)
+    navigate_to_section(driver, 'a[data-bs-target="#prices"]', "Core Consumer Prices")
+    data_to_insert = fetch_data(driver, Economics3, data_to_insert)
 
 with sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db') as conn:
     setup_database(conn)

@@ -14,7 +14,7 @@ def log_error_with_timestamp(error_message):
 # end_date = "2024-05-28"
 
 # 适合于半自定义抓取
-start_date = "2024-05-23"
+start_date = "2000-09-16"
 today = datetime.now()
 end_date = today.strftime('%Y-%m-%d')
 
@@ -24,13 +24,13 @@ end_date = today.strftime('%Y-%m-%d')
 # start_date = yesterday.strftime('%Y-%m-%d')
 # end_date = today.strftime('%Y-%m-%d')
 
-# 连接到SQLite数据库
-conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
-c = conn.cursor()
-
 # 读取JSON文件
 with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json', 'r') as file:
     stock_groups = json.load(file)
+
+# 连接到SQLite数据库
+conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
+c = conn.cursor()
 
 # 读取symbol_mapping JSON文件
 with open('/Users/yanzhang/Documents/Financial_System/Modules/Symbol_mapping.json', 'r') as file:

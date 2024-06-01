@@ -70,7 +70,9 @@
     "USPayroll",
     "USTrade",
     "USConfidence",
-    "USJobless"
+    "USJobless",
+    "CorePCEY",
+    "CorePCEM"
   ],
   "Commodities": [
     "Gold",
@@ -234,7 +236,6 @@
     "WPP",
     "TWLO",
     "Z",
-    "ZG",
     "PARA",
     "PSO",
     "ROKU",
@@ -253,8 +254,7 @@
     "NXST",
     "TKC",
     "PHI",
-    "RDDT",
-    "BZ"
+    "RDDT"
   ],
   "Consumer_Cyclical": [
     "AMZN",
@@ -408,7 +408,11 @@
     "VIK",
     "COLM",
     "RRR",
-    "GLBE"
+    "GLBE",
+    "VFC",
+    "WHR",
+    "BYD",
+    "SLGN"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -713,7 +717,6 @@
     "PNFP",
     "OBDC",
     "HLNE",
-    "BNRE",
     "WTFC",
     "CACC",
     "SSB",
@@ -993,7 +996,6 @@
     "AAL",
     "FBIN",
     "STN",
-    "BZ",
     "TTC",
     "DCI",
     "WCC",

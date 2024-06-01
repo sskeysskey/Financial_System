@@ -21,8 +21,9 @@ end_date = datetime(2024, 5, 30)
 file_path = '/Users/yanzhang/Documents/News/backup/Economic_Events.txt'
 
 Event_Filter = [
-    "Initial Jobless Clm*", "GDP 2nd Estimate*", "PCE Prices Prelim *",
-    "Core PCE Prices Prelim*", "Non-Farm Payrolls*"
+    "Initial Jobless Clm*", "GDP 2nd Estimate*",
+    "Non-Farm Payrolls*", "Core PCE Price Index MM *",
+    "Core PCE Price Index YY*"
 ]
 
 # 在写入之前先读取文件中的现有内容，避免重复写入

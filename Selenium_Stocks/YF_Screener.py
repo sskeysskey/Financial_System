@@ -32,7 +32,7 @@ blacklist = ["CTA-PA", "FWONK", "FOXA", "NWSA", "PARAA", "LSXMA",
     "KIM-PM", "KIM-PL", "DUK-PA", "EBR-B", "CIG-C", "CMS-PB",
     "CWEN-A", "ELPC", "BML-PG", "SLG-PI", "NEE-PR", "APO-PA",
     "YNDX", "CUK", "BBDO", "SLMBP", "BPYPP", "GOOG","CPG", "PHYS",
-    "CTA-PB", "FITBI", "FLUT"
+    "CTA-PB", "FITBI", "FLUT", "ZG", "BNRE", "BZ", "VNO"
     ]
 
 def login_once(driver, login_url):

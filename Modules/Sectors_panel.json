@@ -1,41 +1,36 @@
 {
-    "Basic_Materials": [
-        
-    ],
-    "Communication_Services": [
-        
-    ],
+    "Basic_Materials": [],
+    "Communication_Services": [],
     "Consumer_Cyclical": [
         "LULU",
-        "LI",
-        "MTN"
+        "LI"
     ],
     "Consumer_Defensive": [
         "DEO",
         "BF-B"
     ],
-    "Financial_Services": [
-
-    ],
+    "Financial_Services": [],
     "Healthcare": [
         "BMY",
         "JNJ",
         "GILD",
-        "CVS",
-        "XRAY"
+        "CVS"
     ],
     "Industrials": [
         "GNRC",
         "UPS"
     ],
-    "Energy": [
-        
-    ],
+    "Energy": [],
     "Real_Estate": [],
     "Technology": [
-        "U"
+        "U",
+        "SNOW",
+        "PAYC",
+        "ALAB"
     ],
-    "Utilities": [],
+    "Utilities": [
+        "ELP"
+    ],
     "Economics": [
         "USGDP",
         "USInflation",
@@ -43,7 +38,9 @@
         "USPayroll",
         "USTrade",
         "USConfidence",
-        "USJobless"
+        "USJobless",
+        "CorePCEY",
+        "CorePCEM"
     ],
     "ETFs_US": [
         "IntermedTreary",

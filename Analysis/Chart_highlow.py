@@ -9,7 +9,7 @@ db_path = '/Users/yanzhang/Documents/Database/Analysis.db'
 conn = sqlite3.connect(db_path)
 
 # 读取数据
-query = "SELECT date, name, rate FROM High_low"  # 请替换tablename为您的实际表名
+query = "SELECT date, name, rate FROM High_low"
 df = pd.read_sql(query, conn)
 
 # 确保'date'列是日期格式

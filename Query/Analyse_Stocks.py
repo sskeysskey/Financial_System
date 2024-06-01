@@ -212,7 +212,7 @@ def main():
 
     if final_output.strip():  # 检查final_output是否为空
         # 在代码的最后部分调用save_output_to_file函数
-        output_directory = '/Users/yanzhang/Documents/News'
+        output_directory = '/Users/yanzhang/Documents/News/site'
         directory_backup = '/Users/yanzhang/Documents/News/site'
         filename = 'AnalyseStock.txt'
         save_output_to_file(final_output, output_directory, filename, directory_backup)

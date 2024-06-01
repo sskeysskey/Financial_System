@@ -25,7 +25,7 @@ start_date = datetime(2024, 5, 30)
 end_date = datetime(2024, 6, 8)
 
 # 文件路径
-file_path = '/Users/yanzhang/Documents/News/backup/Earnings_Release.txt'
+file_path = '/Users/yanzhang/Documents/News/Earnings_Release.txt'
 
 # 在写入之前先读取文件中的现有内容，避免重复写入
 existing_entries = set()
