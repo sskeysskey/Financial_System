@@ -1,10 +1,17 @@
 {
-    "purple_keywords": [
-        "Bitcoin",
-        "CNYUSD",
-        "US10Y",
-        "USDJPY",
-        "CrudeOil"
+    "white_keywords": [
+        "SNOW",
+        "ELP",
+        "LI",
+        "FIVE",
+        "TAP",
+        "STVN",
+        "JBHT",
+        "GILD",
+        "LULU",
+        "GGB",
+        "PATH",
+        "DOX"
     ],
     "yellow_keywords": [
         "CNYJPY",
@@ -12,43 +19,54 @@
         "Gold",
         "Cocoa",
         "Silver",
-        "IntermedTreary"
+        "IntermedTreary",
+        "IndiaETF"
     ],
     "orange_keywords": [
         "HANGSENG",
         "Naturalgas",
         "Ether",
         "Shanghai",
-        "USDCNY"
+        "USDCNY",
+        "CZR",
+        "DEO",
+        "JNJ",
+        "UPS",
+        "CVS",
+        "PCTY"
+    ],
+    "purple_keywords": [
+        "Bitcoin",
+        "CNYUSD",
+        "US10Y",
+        "USDJPY",
+        "CrudeOil",
+        "PAYC",
+        "BF-B",
+        "BMY"
+    ],
+    "black_keywords": [
+        "Cotton",
+        "Sugar",
+        "U",
+        "VFC",
+        "WBA",
+        "SOLV",
+        "ZI",
+        "ALAB"
     ],
     "blue_keywords": [
         "Copper",
-        "S&P500"
+        "S&P500",
+        "USDINR"
     ],
     "red_keywords": [
         "VIX",
         "DXY",
-        "USInterest"
+        "USInterest",
+        "CorePCEM"
     ],
     "green_keywords": [
-        "TLK",
-        "LULU",
-        "LI",
-        "FIVE",
-        "CZR",
-        "TAP",
-        "BMY",
-        "STVN",
-        "U",
-        "JBHT",
-        "DEO"
-    ],
-    "black_keywords": [
-        "Cotton",
-        "Sugar"
-    ],
-    "white_keywords": [
-        "GNRC",
-        "GOLD"
+        "EURCNY"
     ]
 }

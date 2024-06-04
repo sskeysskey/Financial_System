@@ -3,22 +3,22 @@
     {
       "name": "ERJ",
       "tag": ["meme","happy"],
-      "description1": "**美股代码“ERJ”** 代表的是巴西航空工业公司，其全称为**Embraer S.A.**。Embraer 是一家总部位于巴西的全球领先的飞机制造商",
+      "description1": "**美股代码“ERJ”** 代表的是巴西航空工业公司",
       "description2": "Embraer SA（股票代码“ERJ”）是一家巴西公司，专注于设计、制造和销售飞机及其部件，服务于商业、国防和行政航空领域。"
     },
     {
       "name": "PODD",
       "tag": ["AI"],
-      "description1": "**美股代码PODD** 代表的是 **Insulet Corporation**，这是一家主要从事开发、生产和销售可穿戴胰岛素泵的公司。这些胰岛素泵用于管理糖尿病。",
-      "description2": "美股代码“PODD”代表的是Insulet Corporation，这是一家医疗器械供应商，专注于开发、制造和销售用于胰岛素依赖性糖尿病患者的胰岛素输注系统。"
+      "description1": "**美股代码PODD** 代表的是 **Insulet Corporation**，这是一家主要从事开发、生产和销售可穿戴胰岛素泵的公司。",
+      "description2": "美股代码“PODD”代表的是Insulet Corporation"
     }
   ],
   "etfs": [
     {
       "name": "BLOK",
       "tag": ["Food","Eating"],
-      "description1": "**Amplify Transformational Data Sharing ETF**（基金代码：BLOK）是一只专注于区块链技术投资的交易所交易基金（ETF）。",
-      "description2": "Amplify Transformational Data Sharing ETF（股票代码：BLOK）是一个交易所交易基金（ETF），专注于投资那些积极参与区块链技术开发和应用的公司。"
+      "description1": "**Amplify Transformational Data Sharing ETF**（基金代码：BLOK）",
+      "description2": "Amplify Transformational Data Sharing ETF（股票代码：BLOK）是一个交易所交易基金（ETF）"
     },
     {
       "name": "NFE",

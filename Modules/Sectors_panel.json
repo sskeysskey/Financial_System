@@ -1,5 +1,7 @@
 {
-    "Basic_Materials": [],
+    "Basic_Materials": [
+        
+    ],
     "Communication_Services": [],
     "Consumer_Cyclical": [
         "LULU",
@@ -12,25 +14,22 @@
     "Financial_Services": [],
     "Healthcare": [
         "BMY",
-        "JNJ",
         "GILD",
-        "CVS"
+        "CVS",
+        "WBA"
     ],
-    "Industrials": [
-        "GNRC",
-        "UPS"
-    ],
+    "Industrials": [],
     "Energy": [],
     "Real_Estate": [],
     "Technology": [
         "U",
         "SNOW",
+        "PATH",
         "PAYC",
-        "ALAB"
+        "DOX",
+        "PCTY"
     ],
-    "Utilities": [
-        "ELP"
-    ],
+    "Utilities": [],
     "Economics": [
         "USGDP",
         "USInflation",
@@ -62,7 +61,8 @@
         "CNTech",
         "TaiwanETF",
         "EmergingETF",
-        "TurkeyETF"
+        "TurkeyETF",
+        "IndiaETF"
     ],
     "ETFs_Commodity": [
         "LithBattery",
@@ -123,14 +123,12 @@
         "USDJPY",
         "USDCNY",
         "CNYJPY",
-        "CNYUSD",
         "CNYPHP",
         "CNYIDR",
         "USDIDR",
         "USDARS",
         "USDPHP",
-        "CNYEUR",
-        "CNYGBP",
-        "AUDCNY"
+        "AUDCNY",
+        "USDINR"
     ]
 }

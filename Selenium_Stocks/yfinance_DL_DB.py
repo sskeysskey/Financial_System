@@ -11,7 +11,7 @@ def log_error_with_timestamp(error_message):
 
 # 适合于纯自定义抓取
 # start_date = "2024-05-23"
-# end_date = "2024-05-28"
+# end_date = "2024-06-03"
 
 # 适合于半自定义抓取
 start_date = "2000-09-16"

@@ -9,6 +9,7 @@
     "FDIS": "USDiscretionary", "XLRE": "USRealEstate", "XAR": "USAeroDefence",
     "KIE": "USInsurance", "XLB": "USMaterials", "PAVE": "USInfrastructure",
     "FSTA": "USStaples", "XLE": "USEnergy", "XLU": "USUtilities", "BBJP": "JapanETF",
+    "INDA": "IndiaETF",
     "EWT": "TaiwanETF", "EMXC": "EmergingETF", "TUR": "TurkeyETF", "URA": "UraniumETF",
     "DX-Y.NYB": "DXY", "EURUSD=X": "EURUSD", "GBPUSD=X": "GBPUSD", "JPY=X": "USDJPY",
     "CNYEUR=X": "CNYEUR", "CNYGBP=X": "CNYGBP", "CNYJPY=X": "CNYJPY", "CNYUSD=X": "CNYUSD",

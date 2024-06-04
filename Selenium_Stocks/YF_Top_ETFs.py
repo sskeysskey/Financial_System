@@ -62,7 +62,7 @@ def save_data(urls, existing_file, new_file):
                     existing_symbols.add(symbol)
 
 # URL列表
-urls = ["https://finance.yahoo.com/etfs/?offset=0&count=100", "https://finance.yahoo.com/etfs/?count=100&offset=100"]
+urls = ["https://finance.yahoo.com/etfs/?offset=0&count=100", "https://finance.yahoo.com/etfs/?count=100&offset=100", "https://finance.yahoo.com/etfs/?count=100&offset=200"]
 existing_file = '/Users/yanzhang/Documents/News/backup/ETFs.txt'
 new_file = '/Users/yanzhang/Documents/News/ETFs_new.txt'
 

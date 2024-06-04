@@ -131,7 +131,8 @@ def get_user_input_custom(root, prompt):
 
 def check_clipboard(root, sector_data, compare_data, shares, fullnames, marketcap_pe_data, json_data, db_path):
     clipboard_content = pyperclip.paste()
-    if clipboard_content and clipboard_content.isupper():
+    # if clipboard_content and clipboard_content.isupper():
+    if clipboard_content:
         input_mapping(root, sector_data, compare_data, shares, fullnames, marketcap_pe_data, json_data, db_path, clipboard_content)
     else:
         user_input = get_user_input_custom(root, "请输入")

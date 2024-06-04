@@ -80,6 +80,7 @@
     "XLU",
     "BBJP",
     "EWT",
+    "INDA",
     "EMXC",
     "TUR",
     "URA"
@@ -154,7 +155,8 @@
     "BCC",
     "WLK",
     "ALTM",
-    "ASH"
+    "ASH",
+    "BCPC"
   ],
   "Communication_Services": [
     "GOOGL",
@@ -174,7 +176,6 @@
     "EA",
     "BCE",
     "ORAN",
-    "CHT",
     "PINS",
     "SNAP",
     "TTWO",
@@ -216,7 +217,8 @@
     "NXST",
     "TKC",
     "PHI",
-    "RDDT"
+    "RDDT",
+    "USM"
   ],
   "Consumer_Cyclical": [
     "AMZN",
@@ -374,7 +376,9 @@
     "VFC",
     "WHR",
     "BYD",
-    "SLGN"
+    "SLGN",
+    "ZK",
+    "RH"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -522,7 +526,8 @@
     "VAL",
     "NFG",
     "MGY",
-    "RIG"
+    "RIG",
+    "VRN"
   ],
   "Financial_Services": [
     "BRK-A",
@@ -839,7 +844,9 @@
     "RCM",
     "DOCS",
     "MDGL",
-    "INSM"
+    "INSM",
+    "SOLV",
+    "BIO-B"
   ],
   "Industrials": [
     "GE",
@@ -1019,7 +1026,11 @@
     "BAH",
     "CSL",
     "AWI",
-    "DY"
+    "DY",
+    "CNH",
+    "ULS",
+    "SRCL",
+    "LOAR"
   ],
   "Real_Estate": [
     "PLD",
@@ -1280,7 +1291,8 @@
     "EXLS",
     "ITRI",
     "VRNS",
-    "SATS"
+    "SATS",
+    "RBRK"
   ],
   "Utilities": [
     "NEE",

@@ -5,10 +5,9 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
 # 定义黑名单
-blacklist_glob = ["YNDX","CHT"]
+blacklist_glob = ["YNDX"]
 
 def is_blacklisted(name):
-    """检查给定的股票符号是否在黑名单中"""
     return name in blacklist_glob
 
 def create_connection(db_file):
@@ -83,7 +82,7 @@ def main():
 
     output = []
     output1 = []
-    intervals = [600, 360, 240, 120, 60, 24, 13, 6, 3, 1, 0.5, 0.25]  # 以月份表示的时间间隔列表
+    intervals = [600, 360, 240, 120, 60, 36, 24, 13, 6, 3, 1, 0.5, 0.25]  # 以月份表示的时间间隔列表
 
     # 遍历JSON中的每个表和股票代码
     for table_name, names in data.items():
@@ -176,7 +175,7 @@ def main():
                 else:
                     updates[category] = [symbol]
         return updates
-
+    
     def update_json_data(config_path, updates, blacklist_newlow):
         with open(config_path, 'r', encoding='utf-8') as file:
             data = json.load(file)
@@ -191,18 +190,79 @@ def main():
 
         with open(config_path, 'w', encoding='utf-8') as file:
             json.dump(data, file, ensure_ascii=False, indent=4)
+    
+    def parse_output_color(output):
+        updates_color = {}
+        lines = output.split('\n')
+        for line in lines:
+            if line.strip():  # 确保不处理空行
+                parts = line.split()
+                category = parts[0]
+                symbol = parts[1]
+                descriptor = parts[2]  # 形如 '1Y_newlow'
+
+                # 解析年数和类型（newhigh或newlow）
+                year_part, _ = descriptor.split('_')
+                if 'M' in year_part:
+                    continue  # 如果是月份，我们不处理
+                if 'Y' in year_part:
+                    years = int(year_part.replace('Y', ''))
+                    if years == 1:
+                        # continue  # 一年的不需要放入任何颜色分类中
+                        category_list = 'white_keywords'
+                    elif years == 2:
+                        category_list = 'yellow_keywords'
+                    elif years == 3:
+                        category_list = 'orange_keywords'
+                    elif years in [5, 10]:
+                        category_list = 'purple_keywords'
+                    elif years in [20, 30, 50]:
+                        category_list = 'black_keywords'
+                    else:
+                        continue  # 其他年份不处理
+
+                    if category_list in updates_color:
+                        if symbol not in updates_color[category_list]:
+                            updates_color[category_list].append(symbol)
+                    else:
+                        updates_color[category_list] = [symbol]
+
+        return updates_color
+    
+    def update_color_json(color_config_path, updates, blacklist_newlow):
+        with open(color_config_path, 'r', encoding='utf-8') as file:
+            colors = json.load(file)
+        
+        for category_list, names in updates.items():
+            for name in names:
+                # 检查并移动到正确的分类
+                for key in colors:
+                    if name in colors[key]:
+                        if key != category_list:
+                            colors[key].remove(name)
+                        break
+                if name not in colors[category_list] and name not in blacklist_newlow:
+                    colors[category_list].append(name)
+
+        with open(color_config_path, 'w', encoding='utf-8') as file:
+            json.dump(colors, file, ensure_ascii=False, indent=4)
 
     if final_output1.strip():  # 检查final_output1是否为空
         updates = parse_output(final_output1)
+        updates_color = parse_output_color(final_output1)
         # 黑名单列表
-        blacklist_newlow = ["SIRI", "FIVE", "MGA", "BBD", "WBA", "LEGN",
-            "BILL", "TAP", "STVN", "LSXMK", "TAK", "CSAN", "CIG", "EPAM", "NFE", "TLK",
-            "LBTYK", "PKX", "ABEV", "TD", "DAY", "RHI", "OTEX", "APA"
+        blacklist_newlow = ["SIRI", "BBD","BILL", "TAP", "STVN", "LSXMK",
+        "TAK", "CSAN", "CIG", "EPAM", "TLK", "LBTYK", "ABEV",
+        "TD", "DAY", "RHI", "OTEX", "ZI"
         ]
 
         config_json = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json"
         update_json_data(config_json, updates, blacklist_newlow)
         print("Sectors_Panel.json文件已成功更新！")
+
+        color_json_path = '/Users/yanzhang/Documents/Financial_System/Modules/Colors.json'
+        update_color_json(color_json_path, updates_color, blacklist_newlow)
+        print("Colors.json文件已成功更新！")
     else:
         error_message = "final_output1为空，无法进行更新操作。"
         formatted_error_message = log_error_with_timestamp(error_message)

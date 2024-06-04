@@ -40,20 +40,27 @@ def activate_chrome():
     # 运行AppleScript
     subprocess.run(['osascript', '-e', script])
 
-def Copy_Command_C():
-    script = '''
-    tell application "System Events"
-	    keystroke "c" using command down
-    end tell
-    '''
-    # 运行AppleScript
-    subprocess.run(['osascript', '-e', script])
+def add_stock(name, entry, data, json_file, description1, description2, root):
+    tags = entry.get().split()
+    new_stock = {
+        "name": name,
+        "tag": tags,
+        "description1": description1,
+        "description2": description2
+    }
+    data["stocks"].append(new_stock)
+    with open(json_file, "w", encoding="utf-8") as file:
+        json.dump(data, file, ensure_ascii=False, indent=4)
+    root.destroy()
 
-Copy_Command_C()
+def on_key_press(event, name, entry, data, json_file, description1, description2, root):
+    if event.keysym == 'Escape':
+        root.destroy()
+    elif event.keysym == 'Return':
+        add_stock(name, entry, data, json_file, description1, description2, root)
 
-json_path = "/Users/yanzhang/Documents/Financial_System/Modules/Description.json"
-# 读取现有的JSON文件
-with open(json_path, 'r', encoding='utf-8') as file:
+json_file = "/Users/yanzhang/Documents/Financial_System/Modules/Description.json"
+with open(json_file, 'r', encoding='utf-8') as file:
     data = json.load(file)
 
 # 从剪贴板获取第一个新的name字段内容
@@ -64,21 +71,13 @@ new_name = new_name.replace('"', '').replace("'", "")
 # 判断是否全是大写英文字母或由大写和-组成，比如：BF-B
 # if not new_name.isupper() or not new_name.isalpha():
 if not re.match("^[A-Z\-]+$", new_name):
-    # 初始化Tkinter窗口
-    root = tk.Tk()
-    root.withdraw()  # 隐藏主窗口
-    # 弹出警示框
     messagebox.showerror("错误", "不是股票代码！")
     sys.exit()
 
-# 检查新的name是否已存在于etfs中
-exists = any(etf['name'] == new_name for etf in data.get('stocks', []))
+# 检查新的name是否已存在于stocks中
+exists = any(stock['name'] == new_name for stock in data.get('stocks', []))
 
 if exists:
-    # 初始化Tkinter窗口
-    root = tk.Tk()
-    root.withdraw()  # 隐藏主窗口
-    # 弹出警示框
     messagebox.showerror("错误", "股票代码已存在！")
     sys.exit()
 else:
@@ -218,17 +217,13 @@ else:
     # 去除所有的回车换行符和引号
     new_description2 = new_description2.replace('\n', ' ').replace('\r', ' ').replace('"', '').replace("'", "")
 
-    # 将新内容添加到stocks列表
-    data['stocks'].append({
-        "name": new_name,
-        "tag": [],
-        "description1": new_description1,
-        "description2": new_description2
-    })
-
-    # 将更新后的数据写回JSON文件
-    with open(json_path, 'w', encoding='utf-8') as file:
-        json.dump(data, file, indent=2, ensure_ascii=False)
-
-    # 使用弹窗显示成功更新信息
-    messagebox.showinfo("成功", f"{new_name}股票信息已成功写入")
+    root = tk.Tk()
+    root.title("Add Stock")
+    entry = tk.Entry(root)
+    entry.pack()
+    entry.focus_set()
+    button = tk.Button(root, text="添加Stock", command=lambda: add_stock(new_name, entry, data, json_file, new_description1, new_description2, root))
+    button.pack()
+    root.bind('<Key>', lambda event: on_key_press(event, new_name, entry, data, json_file, new_description1, new_description2, root))
+    root.mainloop()
+    messagebox.showinfo("成功", f"股票 {new_name} 已成功写入！")

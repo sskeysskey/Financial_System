@@ -46,7 +46,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, fullname, mar
         print("没有有效的数据来绘制图表。")
         return
 
-    fig, ax = plt.subplots(figsize=(10, 5))
+    fig, ax = plt.subplots(figsize=(12, 6)) # 调整整个窗口大小，前面是X，后面是Y
     fig.subplots_adjust(left=0.08, bottom=0.2, right=0.93, top=0.9)  # 根据需要调整这些值
 
     highlight_point = ax.scatter([], [], s=100, color='blue', zorder=5)  # s是点的大小
