@@ -10,4 +10,4 @@ if os.path.exists(new_file):
             file_b.write(line)
     
     # 清空并删除new_file.txt
-    os.remove(new_file)  # 直接删除文件，无需先清空
+    os.remove(new_file)

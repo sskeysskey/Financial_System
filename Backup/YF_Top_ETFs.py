@@ -2,6 +2,8 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 import time
 import os
+import json
+# from collections import defaultdict
 from selenium.webdriver.chrome.service import Service
 
 # ChromeDriver 路径
@@ -10,7 +12,6 @@ chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
 # 设置 ChromeDriver
 service = Service(executable_path=chrome_driver_path)
 driver = webdriver.Chrome(service=service)
-
 
 def fetch_data(url):
     driver.get(url)
@@ -36,56 +37,59 @@ def fetch_data(url):
     
     return data_list
 
-def save_data(urls, existing_file, new_file):
+def save_data(urls, existing_file, new_file, json_file):
+# def save_data(urls, url_tag, existing_file, new_file, json_file):
+    # with open(json_file, 'r') as file:
+    #     json_data = json.load(file)
+    #     etf_data = {item['name']: item['tag'] for item in json_data['etfs']}
+    
+    # tag_counts = defaultdict(int)
+    existing_symbols = set()
+
     # 检查new_file是否存在，如果存在，则迁移内容到existing_file
     if os.path.exists(new_file):
         with open(new_file, 'r') as file_a, open(existing_file, 'a') as file_b:
             file_b.write('\n')  # 在迁移内容前首先输入一个回车
             for line in file_a:
                 file_b.write(line)
-        # 清空并删除new_file.txt
-        os.remove(new_file)
+        open(new_file, 'w').close()  # 清空new_file
 
     # 读取现有的symbols
-    existing_symbols = set()
     with open(existing_file, 'r') as file:
         for line in file:
-            stripped_line = line.strip()  # 移除行首行尾的空白字符
-            if stripped_line:  # 检查是否为空行
-                existing_symbol = stripped_line.split(': ')[0]
-                existing_symbols.add(existing_symbol)
+            existing_symbol = line.split(': ')[0].strip()
+            existing_symbols.add(existing_symbol)
 
-    # 写入新数据到new_file
-    # with open(new_file, "w") as file:
-    #     for url in urls:
-    #         data_list = fetch_data(url)
-    #         for symbol, name, volume in data_list:
-    #             if volume > 200000 and symbol not in existing_symbols:
-    #                 file.write(f"{symbol}: {name}, {volume}\n")
-    #                 existing_symbols.add(symbol)
+    # 对每个URL中的数据进行处理
     with open(new_file, "w") as file:
-        total_data_list = []  # 用来存储所有待写入的数据
         for url in urls:
             data_list = fetch_data(url)
             for symbol, name, volume in data_list:
                 if volume > 200000 and symbol not in existing_symbols:
-                    total_data_list.append(f"{symbol}: {name}, {volume}")
+                    file.write(f"{symbol}: {name}, {volume}\n")
                     existing_symbols.add(symbol)
+                
+    # data_list_tag = fetch_data(url_tag[0])
+    # for symbol, name, volume in data_list_tag:
+    #     if volume > 200000 and symbol in etf_data:
+    #             for tag in etf_data[symbol]:
+    #                 tag_counts[tag] += 1
 
-        # 写入文件
-        for i, line in enumerate(total_data_list):
-            if i < len(total_data_list) - 1:
-                file.write(f"{line}\n")  # 非最后一行添加换行符
-            else:
-                file.write(line)  # 最后一行不添加任何后缀
+    # 将标签计数结果保存到文件
+    # with open('/Users/yanzhang/Documents/News/Analyse_ETFs.txt', 'w') as file:
+    #     for tag, count in tag_counts.items():
+    #         file.write(f"{tag}: {count}\n")
 
 # URL列表
 urls = ["https://finance.yahoo.com/etfs/?offset=0&count=100", "https://finance.yahoo.com/etfs/?count=100&offset=100", "https://finance.yahoo.com/etfs/?count=100&offset=200"]
+# url_tag = ["https://finance.yahoo.com/etfs/?offset=0&count=100"]
 existing_file = '/Users/yanzhang/Documents/News/backup/ETFs.txt'
 new_file = '/Users/yanzhang/Documents/News/ETFs_new.txt'
+json_file = '/Users/yanzhang/Documents/Financial_System/Modules/Description.json'
 
 try:
-    save_data(urls, existing_file, new_file)
+    # save_data(urls, url_tag, existing_file, new_file, json_file)
+    save_data(urls, existing_file, new_file, json_file)
 finally:
     driver.quit()
-print("所有爬取任务完成。")
+print("所有爬取任务完成，并已处理标签计数。")

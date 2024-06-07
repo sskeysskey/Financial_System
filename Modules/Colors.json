@@ -11,7 +11,10 @@
         "LULU",
         "GGB",
         "PATH",
-        "DOX"
+        "LVS",
+        "AGCO",
+        "WST",
+        "CSCO"
     ],
     "yellow_keywords": [
         "CNYJPY",
@@ -20,7 +23,11 @@
         "Cocoa",
         "Silver",
         "IntermedTreary",
-        "IndiaETF"
+        "IndiaETF",
+        "VALE",
+        "APA",
+        "DOX",
+        "NFE"
     ],
     "orange_keywords": [
         "HANGSENG",
@@ -33,7 +40,8 @@
         "JNJ",
         "UPS",
         "CVS",
-        "PCTY"
+        "PCTY",
+        "DAR"
     ],
     "purple_keywords": [
         "Bitcoin",
@@ -43,7 +51,8 @@
         "CrudeOil",
         "PAYC",
         "BF-B",
-        "BMY"
+        "BMY",
+        "MKTX"
     ],
     "black_keywords": [
         "Cotton",
@@ -53,7 +62,8 @@
         "WBA",
         "SOLV",
         "ZI",
-        "ALAB"
+        "ALAB",
+        "LU"
     ],
     "blue_keywords": [
         "Copper",

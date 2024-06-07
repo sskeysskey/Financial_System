@@ -253,7 +253,7 @@ def main():
         # 黑名单列表
         blacklist_newlow = ["SIRI", "BBD","BILL", "TAP", "STVN", "LSXMK",
         "TAK", "CSAN", "CIG", "EPAM", "TLK", "LBTYK", "ABEV",
-        "TD", "DAY", "RHI", "OTEX", "ZI"
+        "TD", "DAY", "RHI", "OTEX", "ZI", "APA", "LU"
         ]
 
         config_json = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json"

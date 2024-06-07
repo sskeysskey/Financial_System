@@ -4,21 +4,24 @@
     ],
     "Communication_Services": [],
     "Consumer_Cyclical": [
-        "LULU",
-        "LI"
+        "LULU"
     ],
     "Consumer_Defensive": [
         "DEO",
-        "BF-B"
+        "DAR"
     ],
-    "Financial_Services": [],
+    "Financial_Services": [
+        "MKTX"
+    ],
     "Healthcare": [
         "BMY",
-        "GILD",
         "CVS",
-        "WBA"
+        "WBA",
+        "WST"
     ],
-    "Industrials": [],
+    "Industrials": [
+        
+    ],
     "Energy": [],
     "Real_Estate": [],
     "Technology": [
@@ -26,10 +29,11 @@
         "SNOW",
         "PATH",
         "PAYC",
-        "DOX",
         "PCTY"
     ],
-    "Utilities": [],
+    "Utilities": [
+        "NFE"
+    ],
     "Economics": [
         "USGDP",
         "USInflation",
@@ -126,7 +130,6 @@
         "CNYPHP",
         "CNYIDR",
         "USDIDR",
-        "USDARS",
         "USDPHP",
         "AUDCNY",
         "USDINR"

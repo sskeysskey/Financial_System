@@ -794,7 +794,6 @@
     "FMS",
     "SRPT",
     "THC",
-    "SWAV",
     "MEDP",
     "DVA",
     "UHS",
@@ -846,7 +845,7 @@
     "MDGL",
     "INSM",
     "SOLV",
-    "BIO-B"
+    "APLS"
   ],
   "Industrials": [
     "GE",
@@ -1292,7 +1291,8 @@
     "ITRI",
     "VRNS",
     "SATS",
-    "RBRK"
+    "RBRK",
+    "CVLT"
   ],
   "Utilities": [
     "NEE",

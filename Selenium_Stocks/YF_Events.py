@@ -23,7 +23,9 @@ file_path = '/Users/yanzhang/Documents/News/backup/Economic_Events.txt'
 Event_Filter = [
     "Initial Jobless Clm*", "GDP 2nd Estimate*",
     "Non-Farm Payrolls*", "Core PCE Price Index MM *",
-    "Core PCE Price Index YY*", "ISM Manufacturing PMI"
+    "Core PCE Price Index YY*", "ISM Manufacturing PMI",
+    "ADP National Employment*", "International Trade $ *",
+    "ISM N-Mfg PMI"
 ]
 
 # 在写入之前先读取文件中的现有内容，避免重复写入

@@ -4,15 +4,17 @@ import json
 import os
 
 def create_connection(db_file):
-    conn = None
     conn = sqlite3.connect(db_file)
     return conn
 
 def log_error_with_timestamp(error_message):
-    # 获取当前日期和时间
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-    # 在错误信息前加入时间戳
     return f"[{timestamp}] {error_message}\n"
+
+def read_earnings_release(filepath):
+    with open(filepath, 'r') as file:
+        companies_with_earnings = {line.split(':')[0] for line in file}
+    return companies_with_earnings
 
 def compare_today_yesterday(config_path, blacklist):
     with open(config_path, 'r') as file:
@@ -20,7 +22,8 @@ def compare_today_yesterday(config_path, blacklist):
 
     output = []
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
-    
+    earnings_companies = read_earnings_release('/Users/yanzhang/Documents/News/Earnings_Release.txt')
+
     for table_name, names in data.items():
         if table_name in interested_sectors:
             with create_connection(db_path) as conn:
@@ -29,7 +32,6 @@ def compare_today_yesterday(config_path, blacklist):
                     if name in blacklist:
                         continue
                     try:
-                        # 查询最新两个有数据的日期
                         query_two_latest_dates = f"""
                         SELECT date FROM {table_name}
                         WHERE name = ? 
@@ -42,10 +44,8 @@ def compare_today_yesterday(config_path, blacklist):
                         if len(results) < 2:
                             raise Exception(f"错误：无法找到{table_name}下的{name}足够的历史数据进行比较。")
 
-                        latest_date = datetime.strptime(results[0][0], "%Y-%m-%d")
-                        second_latest_date = datetime.strptime(results[1][0], "%Y-%m-%d")
+                        latest_date, second_latest_date = map(lambda x: datetime.strptime(x[0], "%Y-%m-%d"), results)
 
-                        # 获取这两天的价格
                         query = f"""
                         SELECT date, price FROM {table_name}
                         WHERE name = ? AND date IN (?, ?) ORDER BY date DESC
@@ -54,8 +54,7 @@ def compare_today_yesterday(config_path, blacklist):
                         prices = cursor.fetchall()
 
                         if len(prices) == 2:
-                            latest_price = prices[0][1]
-                            second_latest_price = prices[1][1]
+                            latest_price, second_latest_price = prices[0][1], prices[1][1]
                             change = latest_price - second_latest_price
                             percentage_change = (change / second_latest_price) * 100
                             output.append((f"{table_name} {name}", percentage_change))
@@ -66,49 +65,37 @@ def compare_today_yesterday(config_path, blacklist):
                         with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
                             error_file.write(formatted_error_message)
 
-    if output:  # 检查output是否为空
-        # 对输出进行排序，根据变化百分比
+    if output:
         output.sort(key=lambda x: x[1], reverse=True)
-        output_file = f'/Users/yanzhang/Documents/News/CompareStock.txt'
+        output_file = '/Users/yanzhang/Documents/News/CompareStock.txt'
         with open(output_file, 'w') as file:
             for line in output:
-                sector_and_company = line[0].split()
-                sector = " ".join(sector_and_company[:-1])  # 获取sector
-                company = sector_and_company[-1]  # 获取company
-
-                if company not in blacklist:  # 再次检查黑名单
-                    # 格式化输出
-                    file.write(f"{sector:<25}{company:<8}: {line[1]:>6.2f}%\n")
+                sector, company = line[0].rsplit(' ', 1)
+                if company in earnings_companies:
+                    company += '.*'
+                file.write(f"{sector:<25}{company:<8}: {line[1]:>6.2f}%\n")
         print(f"{output_file} 已生成。")
     else:
         error_message = "输出为空，无法进行保存文件操作。"
         formatted_error_message = log_error_with_timestamp(error_message)
-        # 将错误信息追加到文件中
         with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
             error_file.write(formatted_error_message)
 
 if __name__ == '__main__':
     config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
-    blacklist = ['VFS','KVYO','LU','IEP','LOT','GRFS']  # 黑名单列表
-    # 定义你感兴趣的sectors
+    blacklist = ['VFS','KVYO','LU','IEP','LOT','GRFS','BGNE']
     interested_sectors = ["Basic_Materials", "Communication_Services", "Consumer_Cyclical",
-        "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare", "Industrials",
-        "Real_Estate", "Technology", "Utilities"]
-    # 检查文件是否存在
+                          "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare", "Industrials",
+                          "Real_Estate", "Technology", "Utilities"]
     file_path = '/Users/yanzhang/Documents/News/CompareStock.txt'
     directory_backup = '/Users/yanzhang/Documents/News/site/'
     if os.path.exists(file_path):
-        # 获取昨天的日期作为时间戳
         yesterday = datetime.now() - timedelta(days=1)
         timestamp = yesterday.strftime('%m%d')
-
-        # 构建新的文件名
         directory, filename = os.path.split(file_path)
         name, extension = os.path.splitext(filename)
         new_filename = f"{name}_{timestamp}{extension}"
         new_file_path = os.path.join(directory_backup, new_filename)
-
-        # 重命名文件
         os.rename(file_path, new_file_path)
         print(f"文件已重命名为: {new_file_path}")
     else:

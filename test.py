@@ -1,13 +1,103 @@
-import re
+from datetime import datetime, timedelta
+import sqlite3
+import json
+import os
 
-def clean_text(text):
-    # 使用正则表达式匹配所有除逗号和句号之外的符号，并替换为空
-    cleaned_text = re.sub(r'[^\w\s，。]', '', text)
-    return cleaned_text
+def create_connection(db_file):
+    conn = sqlite3.connect(db_file)
+    return conn
 
-# 原始文本
-text = "这篇文章主要探讨了如何构建一个成功的故事，以及如何让观众与故事中的主角产生情感上的联系。文章强调了情感的重要性，认为故事的核心应该是情感因素而非智力因素，目的是让观众产生共鸣，而非仅仅思考。作者提出了八类常见的故事问题，这些问题通常与人类的基本欲望和普遍困难相关，能够引起观众的共鸣。文章还讨论了主角的受欢迎度问题，指出观众通常喜欢那些他们认为的“好人”，但有时一些不受欢迎或有缺点的主角也能吸引观众，只要他们面临的问题足够大，能够引起观众的同情。例如，《疤面煞星》和《豪斯医生》中的主角虽然有缺点，但观众仍然对他们的故事感兴趣。作者强调，为了让主角讨人喜欢，主角需要展现出对他人的善意和牺牲精神。《救猫咪！》一书提出的“救一只猫”的概念，就是指主角在故事初期需要做出一些让观众喜欢他的行为。此外，主角的成长历程也是故事的重要组成部分，主角通常从一个不完美的状态开始，经历挑战和变化，最终成为更好的自己。文章还提到，故事的开篇非常关键，需要快速吸引读者的注意力，并建立起读者对主角的理解和兴趣。通过介绍主角的生活现状和他们面临的问题，可以激发读者的好奇心，让他们愿意继续跟随故事的发展。最后，文章以《黑道家族》中的托尼·瑟普拉诺为例，说明了即使是反英雄角色，只要他们面临的问题足够大，也能够引起观众的共鸣和关注。托尼虽然有暴力倾向，但他的恐慌症和对尊重的渴望让他成为一个复杂而引人入胜的角色。总的来说，文章强调了情感共鸣、主角的受欢迎度、成长历程以及故事开篇的重要性，这些都是构建成功故事的关键要素。通过这些方法，可以创作出能够触动观众内心、引起共鸣的故事。"
+def log_error_with_timestamp(error_message):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    return f"[{timestamp}] {error_message}\n"
 
-# 清除符号
-cleaned_text = clean_text(text)
-print(cleaned_text)
+def read_earnings_release(filepath):
+    with open(filepath, 'r') as file:
+        companies_with_earnings = {line.split(':')[0] for line in file}
+    return companies_with_earnings
+
+def compare_today_yesterday(config_path, blacklist):
+    with open(config_path, 'r') as file:
+        data = json.load(file)
+
+    output = []
+    db_path = '/Users/yanzhang/Documents/Database/Finance.db'
+    earnings_companies = read_earnings_release('/Users/yanzhang/Documents/News/Earnings_Release.txt')
+
+    for table_name, names in data.items():
+        if table_name in interested_sectors:
+            with create_connection(db_path) as conn:
+                cursor = conn.cursor()
+                for name in names:
+                    if name in blacklist:
+                        continue
+                    try:
+                        query_two_latest_dates = f"""
+                        SELECT date FROM {table_name}
+                        WHERE name = ? 
+                        ORDER BY date DESC
+                        LIMIT 2
+                        """
+                        cursor.execute(query_two_latest_dates, (name,))
+                        results = cursor.fetchall()
+
+                        if len(results) < 2:
+                            raise Exception(f"错误：无法找到{table_name}下的{name}足够的历史数据进行比较。")
+
+                        latest_date, second_latest_date = map(lambda x: datetime.strptime(x[0], "%Y-%m-%d"), results)
+
+                        query = f"""
+                        SELECT date, price FROM {table_name}
+                        WHERE name = ? AND date IN (?, ?) ORDER BY date DESC
+                        """
+                        cursor.execute(query, (name, latest_date.strftime("%Y-%m-%d"), second_latest_date.strftime("%Y-%m-%d")))
+                        prices = cursor.fetchall()
+
+                        if len(prices) == 2:
+                            latest_price, second_latest_price = prices[0][1], prices[1][1]
+                            change = latest_price - second_latest_price
+                            percentage_change = (change / second_latest_price) * 100
+                            output.append((f"{table_name} {name}", percentage_change))
+                        else:
+                            raise Exception(f"错误：无法比较{table_name}下的{name}，因为缺少必要的数据。")
+                    except Exception as e:
+                        formatted_error_message = log_error_with_timestamp(str(e))
+                        with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                            error_file.write(formatted_error_message)
+
+    if output:
+        output.sort(key=lambda x: x[1], reverse=True)
+        output_file = '/Users/yanzhang/Documents/News/CompareStock.txt'
+        with open(output_file, 'w') as file:
+            for line in output:
+                sector, company = line[0].rsplit(' ', 1)
+                if company in earnings_companies:
+                    company += '.*'
+                file.write(f"{sector:<25}{company:<8}: {line[1]:>6.2f}%\n")
+        print(f"{output_file} 已生成。")
+    else:
+        error_message = "输出为空，无法进行保存文件操作。"
+        formatted_error_message = log_error_with_timestamp(error_message)
+        with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+            error_file.write(formatted_error_message)
+
+if __name__ == '__main__':
+    config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
+    blacklist = ['VFS','KVYO','LU','IEP','LOT','GRFS','BGNE']
+    interested_sectors = ["Basic_Materials", "Communication_Services", "Consumer_Cyclical",
+                          "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare", "Industrials",
+                          "Real_Estate", "Technology", "Utilities"]
+    file_path = '/Users/yanzhang/Documents/News/CompareStock.txt'
+    directory_backup = '/Users/yanzhang/Documents/News/site/'
+    if os.path.exists(file_path):
+        yesterday = datetime.now() - timedelta(days=1)
+        timestamp = yesterday.strftime('%m%d')
+        directory, filename = os.path.split(file_path)
+        name, extension = os.path.splitext(filename)
+        new_filename = f"{name}_{timestamp}{extension}"
+        new_file_path = os.path.join(directory_backup, new_filename)
+        os.rename(file_path, new_file_path)
+        print(f"文件已重命名为: {new_file_path}")
+    else:
+        print("文件不存在")
+    compare_today_yesterday(config_path, blacklist)

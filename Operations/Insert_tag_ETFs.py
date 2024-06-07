@@ -9,7 +9,7 @@ def add_etf(name, entry, data, json_file, root):
     tags = entry.get().split()
     new_etf = {
         "name": name,
-        "tags": tags,
+        "tag": tags,
         "description1": "",
         "description2": ""
     }

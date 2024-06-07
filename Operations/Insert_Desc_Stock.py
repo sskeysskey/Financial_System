@@ -222,7 +222,7 @@ else:
     entry = tk.Entry(root)
     entry.pack()
     entry.focus_set()
-    button = tk.Button(root, text="添加Stock", command=lambda: add_stock(new_name, entry, data, json_file, new_description1, new_description2, root))
+    button = tk.Button(root, text="添加 Tags", command=lambda: add_stock(new_name, entry, data, json_file, new_description1, new_description2, root))
     button.pack()
     root.bind('<Key>', lambda event: on_key_press(event, new_name, entry, data, json_file, new_description1, new_description2, root))
     root.mainloop()

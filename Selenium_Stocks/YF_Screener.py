@@ -32,7 +32,8 @@ blacklist = ["CTA-PA", "FWONK", "FOXA", "NWSA", "PARAA", "LSXMA",
     "KIM-PM", "KIM-PL", "DUK-PA", "EBR-B", "CIG-C", "CMS-PB",
     "CWEN-A", "ELPC", "BML-PG", "SLG-PI", "NEE-PR", "APO-PA",
     "YNDX", "CUK", "BBDO", "SLMBP", "BPYPP", "GOOG","CPG", "PHYS",
-    "CTA-PB", "FITBI", "FLUT", "ZG", "BNRE", "BZ", "VNO", "CHT"
+    "CTA-PB", "FITBI", "FLUT", "ZG", "BNRE", "BZ", "VNO", "CHT",
+    "SWAV", "BIO-B"
     ]
 
 def login_once(driver, login_url):
@@ -134,7 +135,7 @@ def update_json(data, sector, file_path, output, log_enabled):
                 if current_sector and symbol in json_data[current_sector]:
                     # json_data[current_sector].remove(symbol)
                     if log_enabled:
-                        message = f"'{symbol}' was supposed to be Removed from {current_sector} due to low marketcap, but it wasn't."
+                        message = f"'{symbol}' should be Removed from {current_sector}."
                         print(message)
                         output.append(message)
             else:
@@ -156,7 +157,7 @@ def process_sector(driver, url, sector, output):
     update_json(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', output, log_enabled=True)
     update_json(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json', output, log_enabled=False)
 
-def save_output_to_file(output, directory, filename='MarketCap_Change.txt'):
+def save_output_to_file(output, directory, filename='Stock_Change.txt'):
     # 获取当前时间，并格式化为字符串（如'2023-03-15_12-30-00'）
     current_time = datetime.now().strftime('%m%d')
     
@@ -251,7 +252,7 @@ def main():
         print("所有爬取任务完成。")
         
         # 在代码的最后部分调用save_output_to_file函数
-        output_directory = '/Users/yanzhang/Documents/News/site'
+        output_directory = '/Users/yanzhang/Documents/News'
         save_output_to_file(output, output_directory)
 
 if __name__ == "__main__":
