@@ -1,7 +1,5 @@
 {
-    "Basic_Materials": [
-        
-    ],
+    "Basic_Materials": [],
     "Communication_Services": [],
     "Consumer_Cyclical": [
         "LULU"
@@ -16,8 +14,7 @@
     "Healthcare": [
         "BMY",
         "CVS",
-        "WBA",
-        "WST"
+        "WBA"
     ],
     "Industrials": [
         
@@ -29,7 +26,8 @@
         "SNOW",
         "PATH",
         "PAYC",
-        "PCTY"
+        "PCTY",
+        "DOX"
     ],
     "Utilities": [
         "NFE"

@@ -14,11 +14,11 @@ service = Service(executable_path=chrome_driver_path)
 driver = webdriver.Chrome(service=service)
 
 # 获取当前日期和结束日期
-start_date = datetime(2024, 5, 28)
-end_date = datetime(2024, 5, 30)
+start_date = datetime(2024, 6, 7)
+end_date = datetime(2024, 6, 7)
 
 # 文件路径
-file_path = '/Users/yanzhang/Documents/News/backup/Economic_Events.txt'
+file_path = '/Users/yanzhang/Documents/News/Economic_Events.txt'
 
 Event_Filter = [
     "Initial Jobless Clm*", "GDP 2nd Estimate*",

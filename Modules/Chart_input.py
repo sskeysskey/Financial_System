@@ -125,7 +125,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, fullname, mar
             tag_str = ','.join(tags)  # 将tag列表转换为逗号分隔的字符串
             break
     # 添加交互性标题
-    title_text = f'{name} {compare}  {turnover}M/{turnover_rate}  {marketcap_in_billion}  {pe_text} {table_name} {fullname} {tag_str}'
+    title_text = f'{name} {compare}  {turnover}M/{turnover_rate}  {marketcap_in_billion}  {pe_text} "{table_name}" {fullname} {tag_str}'
     
     title = ax.set_title(title_text, **title_style)  # 使用 title_style 中的样式
 
