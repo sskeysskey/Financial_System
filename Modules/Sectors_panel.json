@@ -1,6 +1,10 @@
 {
-    "Basic_Materials": [],
-    "Communication_Services": [],
+    "Basic_Materials": [
+        
+    ],
+    "Communication_Services": [
+        
+    ],
     "Consumer_Cyclical": [
         "LULU"
     ],
@@ -9,7 +13,7 @@
         "DAR"
     ],
     "Financial_Services": [
-        "MKTX"
+        
     ],
     "Healthcare": [
         "BMY",
@@ -30,7 +34,7 @@
         "DOX"
     ],
     "Utilities": [
-        "NFE"
+        
     ],
     "Economics": [
         "USGDP",
@@ -114,7 +118,8 @@
         "US10Y",
         "JP10Y",
         "IND10Y",
-        "RU10Y"
+        "RU10Y",
+        "BR10Y"
     ],
     "Currencies": [
         "DXY",

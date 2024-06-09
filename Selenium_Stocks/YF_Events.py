@@ -14,8 +14,8 @@ service = Service(executable_path=chrome_driver_path)
 driver = webdriver.Chrome(service=service)
 
 # 获取当前日期和结束日期
-start_date = datetime(2024, 6, 7)
-end_date = datetime(2024, 6, 7)
+start_date = datetime(2024, 6, 8)
+end_date = datetime(2024, 6, 16)
 
 # 文件路径
 file_path = '/Users/yanzhang/Documents/News/Economic_Events.txt'

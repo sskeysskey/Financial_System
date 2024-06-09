@@ -119,6 +119,13 @@ def get_user_input_custom(root, prompt):
     entry.pack(pady=20, ipady=10)
     entry.focus_set()
 
+    try:
+        clipboard_content = root.clipboard_get()
+    except tk.TclError:
+        clipboard_content = ''
+    entry.insert(0, clipboard_content)
+    entry.select_range(0, tk.END)  # 全选文本
+
     def on_submit():
         nonlocal user_input
         user_input = entry.get()

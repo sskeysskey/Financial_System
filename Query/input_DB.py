@@ -80,6 +80,13 @@ def get_user_input_custom(root, prompt):
     entry.pack(pady=20, ipady=10)  # 增加内部垂直填充
     entry.focus_set()
 
+    try:
+        clipboard_content = root.clipboard_get()
+    except tk.TclError:
+        clipboard_content = ''
+    entry.insert(0, clipboard_content)
+    entry.select_range(0, tk.END)  # 全选文本
+
     # 设置确认按钮，点击后销毁窗口并返回输入内容
     def on_submit():
         nonlocal user_input

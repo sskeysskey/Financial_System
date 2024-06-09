@@ -86,7 +86,8 @@ else:
     template_paths = {
         "poesuccess": "/Users/yanzhang/Documents/python_code/Resource/poe_copy_success.png",
         "poethumb": "/Users/yanzhang/Documents/python_code/Resource/poe_thumb.png",
-        "kimicopy": "/Users/yanzhang/Documents/python_code/Resource/Kimi_copy.png",
+        # "kimicopy": "/Users/yanzhang/Documents/python_code/Resource/Kimi_copy.png",
+        "kimicopy": "/Users/yanzhang/Documents/python_code/Resource/baichuan_copy.png",
         "poecopy": "/Users/yanzhang/Documents/python_code/Resource/poe_copy.png",
     }
 

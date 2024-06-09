@@ -21,8 +21,8 @@ with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json',
 # 获取当前日期和结束日期
 # start_date = datetime(2024, 5, 27)
 # end_date = datetime(2024, 8, 1)
-start_date = datetime(2024, 5, 30)
-end_date = datetime(2024, 6, 8)
+start_date = datetime(2024, 6, 9)
+end_date = datetime(2024, 6, 15)
 
 # 文件路径
 file_path = '/Users/yanzhang/Documents/News/Earnings_Release.txt'

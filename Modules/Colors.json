@@ -9,13 +9,14 @@
         "JBHT",
         "GILD",
         "LULU",
-        "GGB",
         "PATH",
         "LVS",
         "AGCO",
         "WST",
         "CSCO",
-        "ESLT"
+        "ESLT",
+        "ORAN",
+        "NGG"
     ],
     "yellow_keywords": [
         "CNYJPY",
@@ -42,7 +43,11 @@
         "UPS",
         "CVS",
         "PCTY",
-        "DAR"
+        "DAR",
+        "MOS",
+        "GGB",
+        "MGA",
+        "MTN"
     ],
     "purple_keywords": [
         "Bitcoin",
