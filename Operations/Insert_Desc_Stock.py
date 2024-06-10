@@ -86,8 +86,8 @@ else:
     template_paths = {
         "poesuccess": "/Users/yanzhang/Documents/python_code/Resource/poe_copy_success.png",
         "poethumb": "/Users/yanzhang/Documents/python_code/Resource/poe_thumb.png",
-        # "kimicopy": "/Users/yanzhang/Documents/python_code/Resource/Kimi_copy.png",
-        "kimicopy": "/Users/yanzhang/Documents/python_code/Resource/baichuan_copy.png",
+        "kimicopy": "/Users/yanzhang/Documents/python_code/Resource/Kimi_copy.png",
+        "baichuancopy": "/Users/yanzhang/Documents/python_code/Resource/baichuan_copy.png",
         "poecopy": "/Users/yanzhang/Documents/python_code/Resource/poe_copy.png",
     }
 
@@ -133,11 +133,18 @@ else:
             center_x = (location[0] + shape[1] // 2) // 2
             center_y = (location[1] + shape[0] // 2) // 2
             
-            modify_x = center_x
-            modify_y = center_y
-
             # 鼠标点击中心坐标
-            pyautogui.click(modify_x, modify_y)
+            pyautogui.click(center_x, center_y)
+        else:
+            location, shape = find_image_on_screen(templates["baichuancopy"])
+            if location:
+                print("找到copy图了，准备点击copy...")
+                # 计算中心坐标
+                center_x = (location[0] + shape[1] // 2) // 2
+                center_y = (location[1] + shape[0] // 2) // 2
+
+                # 鼠标点击中心坐标
+                pyautogui.click(center_x, center_y)
 
     sleep(1)
     new_description1 = pyperclip.paste()
@@ -168,6 +175,16 @@ else:
 
             # 鼠标点击中心坐标
             pyautogui.click(modify_x, modify_y)
+        else:
+            location, shape = find_image_on_screen(templates["baichuancopy"])
+            if location:
+                print("找到copy图了，准备点击copy...")
+                # 计算中心坐标
+                center_x = (location[0] + shape[1] // 2) // 2
+                center_y = (location[1] + shape[0] // 2) // 2
+
+                # 鼠标点击中心坐标
+                pyautogui.click(center_x, center_y)
     else:
         script_path = '/Users/yanzhang/Documents/ScriptEditor/Shift2Poe.scpt'
         try:

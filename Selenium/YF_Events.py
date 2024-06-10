@@ -14,8 +14,8 @@ service = Service(executable_path=chrome_driver_path)
 driver = webdriver.Chrome(service=service)
 
 # 获取当前日期和结束日期
-start_date = datetime(2024, 6, 8)
-end_date = datetime(2024, 6, 16)
+start_date = datetime(2024, 6, 9)
+end_date = datetime(2024, 6, 15)
 
 # 文件路径
 file_path = '/Users/yanzhang/Documents/News/Economic_Events.txt'
@@ -25,7 +25,10 @@ Event_Filter = [
     "Non-Farm Payrolls*", "Core PCE Price Index MM *",
     "Core PCE Price Index YY*", "ISM Manufacturing PMI",
     "ADP National Employment*", "International Trade $ *",
-    "ISM N-Mfg PMI"
+    "ISM N-Mfg PMI", "CPI YY, NSA*", "Core CPI MM, SA*",
+    "CPI MM, SA*", "Core CPI YY, NSA*", "PPI ex Food/Energy/Tr MM*",
+    "PPI exFood/Energy MM*", "PPI Final Demand MM*", "Fed Funds Tgt Rate *",
+    
 ]
 
 # 在写入之前先读取文件中的现有内容，避免重复写入
