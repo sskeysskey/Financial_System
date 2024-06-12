@@ -16,7 +16,11 @@
         "CSCO",
         "ESLT",
         "ORAN",
-        "NGG"
+        "NGG",
+        "XRAY",
+        "CAE",
+        "NVDA",
+        "DBX"
     ],
     "yellow_keywords": [
         "CNYJPY",
@@ -29,7 +33,8 @@
         "VALE",
         "APA",
         "DOX",
-        "NFE"
+        "NFE",
+        "CNQ"
     ],
     "orange_keywords": [
         "HANGSENG",

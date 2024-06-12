@@ -254,7 +254,7 @@ def main():
         blacklist_newlow = ["SIRI", "BBD","BILL", "TAP", "STVN", "LSXMK",
         "TAK", "CSAN", "CIG", "EPAM", "TLK", "LBTYK", "ABEV",
         "TD", "DAY", "RHI", "OTEX", "ZI", "APA", "LU", "FIVE", "ORAN",
-        "MGA", "MTN", "NGG", "NFE"
+        "MGA", "MTN", "NGG", "NFE", "DBX", "ELP"
         ]
 
         config_json = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json"

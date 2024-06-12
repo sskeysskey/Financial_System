@@ -2,28 +2,28 @@
     "Basic_Materials": [
         
     ],
-    "Communication_Services": [
-        
-    ],
+    "Communication_Services": [],
     "Consumer_Cyclical": [
         "LULU"
     ],
     "Consumer_Defensive": [
         "DEO",
-        "DAR"
+        "DAR",
+        "BF-B"
     ],
-    "Financial_Services": [
-        
-    ],
+    "Financial_Services": [],
     "Healthcare": [
         "BMY",
         "CVS",
-        "WBA"
+        "WBA",
+        "XRAY"
     ],
     "Industrials": [
         
     ],
-    "Energy": [],
+    "Energy": [
+        "CNQ"
+    ],
     "Real_Estate": [],
     "Technology": [
         "U",
