@@ -45,8 +45,7 @@ def close_app(root):
         root.quit()
         root.destroy()
 
-def input_mapping(root, sector_data, compare_data, shares, fullnames, marketcap_pe_data, json_data, db_path):
-    user_input = get_user_input_custom(root, "请输入")
+def input_mapping(root, sector_data, compare_data, shares, fullnames, marketcap_pe_data, json_data, db_path, user_input):
     if user_input is None:
         print("未输入任何内容，程序即将退出。")
         close_app(root)
@@ -135,7 +134,15 @@ def get_user_input_custom(root, prompt):
     input_dialog.bind('<Escape>', lambda event: input_dialog.destroy())
     user_input = None
     input_dialog.wait_window(input_dialog)
-    return user_input        
+    return user_input
+
+def check_clipboard(root, sector_data, compare_data, shares, fullnames, marketcap_pe_data, json_data, db_path):
+    clipboard_content = pyperclip.paste()
+    if clipboard_content:
+        input_mapping(root, sector_data, compare_data, shares, fullnames, marketcap_pe_data, json_data, db_path, clipboard_content)
+    else:
+        user_input = get_user_input_custom(root, "请输入")
+        input_mapping(root, sector_data, compare_data, shares, fullnames, marketcap_pe_data, json_data, db_path, user_input)
 
 if __name__ == '__main__':
     root = tk.Tk()
@@ -150,5 +157,17 @@ if __name__ == '__main__':
     json_data = load_json_data('/Users/yanzhang/Documents/Financial_System/Modules/Description.json')
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
 
-    input_mapping(root, sector_data, compare_data, shares, fullnames, marketcap_pe_data, json_data, db_path)
+    # 解析命令行参数
+    if len(sys.argv) > 1:
+        arg = sys.argv[1]
+        if arg == "paste":
+            clipboard_content = pyperclip.paste()
+            input_mapping(root, sector_data, compare_data, shares, fullnames, marketcap_pe_data, json_data, db_path, clipboard_content)
+        elif arg == "input":
+            user_input = get_user_input_custom(root, "请输入")
+            input_mapping(root, sector_data, compare_data, shares, fullnames, marketcap_pe_data, json_data, db_path, user_input)
+    else:
+        print("请提供参数 input 或 paste")
+        sys.exit(1)
+
     root.mainloop()

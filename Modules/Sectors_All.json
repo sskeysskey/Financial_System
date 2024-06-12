@@ -950,7 +950,6 @@
     "AXON",
     "HUBB",
     "BLDR",
-    "FER",
     "WSO",
     "AER",
     "EME",
@@ -968,7 +967,6 @@
     "OC",
     "TRU",
     "SNA",
-    "CNHI",
     "POOL",
     "GGG",
     "RBA",
@@ -1131,7 +1129,8 @@
     "AIRC",
     "RITM",
     "TRNO",
-    "DOC"
+    "DOC",
+    "NSA"
   ],
   "Technology": [
     "MSFT",

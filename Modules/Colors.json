@@ -20,7 +20,10 @@
         "XRAY",
         "CAE",
         "NVDA",
-        "DBX"
+        "DBX",
+        "BIDU",
+        "MAT",
+        "SIGI"
     ],
     "yellow_keywords": [
         "CNYJPY",
@@ -52,7 +55,8 @@
         "MOS",
         "GGB",
         "MGA",
-        "MTN"
+        "MTN",
+        "LEA"
     ],
     "purple_keywords": [
         "Bitcoin",
@@ -63,7 +67,8 @@
         "PAYC",
         "BF-B",
         "BMY",
-        "MKTX"
+        "MKTX",
+        "YUMC"
     ],
     "black_keywords": [
         "Cotton",
@@ -74,7 +79,8 @@
         "SOLV",
         "ZI",
         "ALAB",
-        "LU"
+        "LU",
+        "ZK"
     ],
     "blue_keywords": [
         "Copper",

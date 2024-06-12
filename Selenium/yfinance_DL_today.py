@@ -25,10 +25,13 @@ else:
 
     today = now.date()
     yesterday = today - timedelta(days=1)
+    # tomorrow = today + timedelta(days=1)
 
     # 定义时间范围
     start_date = yesterday.strftime('%Y-%m-%d')
     end_date = today.strftime('%Y-%m-%d')
+    # start_date = today.strftime('%Y-%m-%d')
+    # end_date = tomorrow.strftime('%Y-%m-%d')
 
     # 连接到SQLite数据库
     conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
@@ -51,6 +54,7 @@ else:
                 mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)  # 从映射字典获取名称，如果不存在则使用原始 ticker_symbol
                 for index, row in data.iterrows():
                     date = index.strftime('%Y-%m-%d')
+                    # date = "2024-06-11"
                     if group_name in ["Currencies", "Bonds", "Crypto"]:
                         price = round(row['Close'], 6)
                     elif group_name in ["Commodities", "Indices"]:

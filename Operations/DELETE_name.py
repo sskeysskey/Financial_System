@@ -24,12 +24,11 @@ def delete_records_by_name(db_file, table_name, stock_name):
     except sqlite3.Error as e:
         print(f"数据库错误: {e}")
     finally:
-        # 关闭连接
         conn.close()
 
 # 使用示例
 db_path = '/Users/yanzhang/Documents/Database/Finance.db'  # 配置数据库文件路径
-table = 'Technology'
-stock_name_to_delete = 'RBRK'
+table = 'Industrials'
+stock_name_to_delete = 'FER'
 
 delete_records_by_name(db_path, table, stock_name_to_delete)

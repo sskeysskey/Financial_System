@@ -1,28 +1,29 @@
 {
-    "Basic_Materials": [
+    "Basic_Materials": [],
+    "Communication_Services": [
         
     ],
-    "Communication_Services": [],
     "Consumer_Cyclical": [
-        "LULU"
+        "LULU",
+        "LI"
     ],
     "Consumer_Defensive": [
         "DEO",
         "DAR",
         "BF-B"
     ],
-    "Financial_Services": [],
+    "Financial_Services": [
+        "MKTX"
+    ],
     "Healthcare": [
         "BMY",
         "CVS",
         "WBA",
         "XRAY"
     ],
-    "Industrials": [
-        
-    ],
+    "Industrials": [],
     "Energy": [
-        "CNQ"
+        
     ],
     "Real_Estate": [],
     "Technology": [
@@ -33,9 +34,7 @@
         "PCTY",
         "DOX"
     ],
-    "Utilities": [
-        
-    ],
+    "Utilities": [],
     "Economics": [
         "USGDP",
         "USInflation",

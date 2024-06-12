@@ -1,4 +1,5 @@
 import re
+import sys
 import json
 import sqlite3
 import tkinter as tk
@@ -77,6 +78,13 @@ def get_user_input_custom(root, prompt):
     entry.pack(pady=20, ipady=10)  # 增加内部垂直填充
     entry.focus_set()
 
+    try:
+        clipboard_content = root.clipboard_get()
+    except tk.TclError:
+        clipboard_content = ''
+    entry.insert(0, clipboard_content)
+    entry.select_range(0, tk.END)  # 全选文本
+
     # 设置确认按钮，点击后销毁窗口并返回输入内容
     def on_submit():
         nonlocal user_input
@@ -91,15 +99,6 @@ def get_user_input_custom(root, prompt):
     user_input = None
     input_dialog.wait_window(input_dialog)
     return user_input
-
-def check_clipboard(root, sector_data):
-    clipboard_content = pyperclip.paste()
-    if clipboard_content and clipboard_content.isupper():
-        input_mapping(root, sector_data, clipboard_content)
-    else:
-        prompt = "请输入关键字查询数据库:"
-        user_input = get_user_input_custom(root, prompt)
-        input_mapping(root, sector_data, user_input)
 
 def query_database(db_file, table_name, condition):
     today_date = datetime.now().strftime('%Y-%m-%d')
@@ -148,7 +147,18 @@ if __name__ == '__main__':
 
     sector_data = load_sector_data()
 
-    # input_mapping(root, sector_data)
-    check_clipboard(root, sector_data)
+    # 解析命令行参数
+    if len(sys.argv) > 1:
+        arg = sys.argv[1]
+        if arg == "paste":
+            clipboard_content = pyperclip.paste()
+            input_mapping(root, sector_data, clipboard_content)
+        elif arg == "input":
+            prompt = "请输入关键字查询数据库:"
+            user_input = get_user_input_custom(root, prompt)
+            input_mapping(root, sector_data, user_input)
+    else:
+        print("请提供参数 input 或 paste")
+        sys.exit(1)
 
     root.mainloop()  # 主事件循环
