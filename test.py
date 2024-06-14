@@ -1,97 +1,50 @@
-import pygame
-import sys
+class Calculator:
+    def add(self, a, b):
+        return a + b
 
-# 初始化 Pygame
-pygame.init()
+    def subtract(self, a, b):
+        return a - b
 
-# 屏幕大小
-screen_width = 800
-screen_height = 600
+    def multiply(self, a, b):
+        return a * b
 
-# 颜色定义
-black = (0, 0, 0)
-white = (255, 255, 255)
+    def divide(self, a, b):
+        if b == 0:
+            raise ValueError("除数不能为零")
+        return a / b
 
-# 初始化屏幕
-screen = pygame.display.set_mode((screen_width, screen_height))
-pygame.display.set_caption('弹球游戏')
+def main():
+    calc = Calculator()
+    while True:
+        try:
+            print("\n--- 简易计算器 ---")
+            print("1. 加法")
+            print("2. 减法")
+            print("3. 乘法")
+            print("4. 除法")
+            print("5. 退出")
+            choice = int(input("请选择操作 (1/2/3/4/5): "))
 
-# 球类
-class Ball:
-    def __init__(self):
-        self.rect = pygame.Rect(screen_width // 2, screen_height // 2, 15, 15)
-        self.speed = [5, 5]
-    
-    def move(self):
-        self.rect.x += self.speed[0]
-        self.rect.y += self.speed[1]
-        if self.rect.top <= 0 or self.rect.bottom >= screen_height:
-            self.speed[1] = -self.speed[1]
-        if self.rect.left <= 0 or self.rect.right >= screen_width:
-            self.speed[0] = -self.speed[0]
+            if choice == 5:
+                print("退出程序")
+                break
 
-    def draw(self):
-        pygame.draw.ellipse(screen, white, self.rect)
+            if choice in [1, 2, 3, 4]:
+                num1 = float(input("请输入第一个数字: "))
+                num2 = float(input("请输入第二个数字: "))
 
-# 玩家类
-class Paddle:
-    def __init__(self, x, y):
-        self.rect = pygame.Rect(x, y, 10, 100)
-        self.speed = 5
-    
-    def move(self, up, down):
-        keys = pygame.key.get_pressed()
-        if keys[up] and self.rect.top > 0:
-            self.rect.y -= self.speed
-        if keys[down] and self.rect.bottom < screen_height:
-            self.rect.y += self.speed
+                if choice == 1:
+                    print(f"结果: {calc.add(num1, num2)}")
+                elif choice == 2:
+                    print(f"结果: {calc.subtract(num1, num2)}")
+                elif choice == 3:
+                    print(f"结果: {calc.multiply(num1, num2)}")
+                elif choice == 4:
+                    print(f"结果: {calc.divide(num1, num2)}")
+            else:
+                print("无效的选项，请重试。")
+        except ValueError as e:
+            print(f"输入错误: {e}")
 
-    def draw(self):
-        pygame.draw.rect(screen, white, self.rect)
-
-# 记分系统
-class Score:
-    def __init__(self):
-        self.score = 0
-        self.font = pygame.font.Font(None, 36)
-
-    def increase(self):
-        self.score += 1
-
-    def draw(self):
-        score_text = self.font.render(f'Score: {self.score}', True, white)
-        screen.blit(score_text, (screen_width // 2 - score_text.get_width() // 2, 20))
-
-# 游戏初始化
-ball = Ball()
-player1 = Paddle(screen_width - 20, screen_height // 2 - 50)
-player2 = Paddle(10, screen_height // 2 - 50)
-score = Score()
-
-# 主游戏循环
-clock = pygame.time.Clock()
-running = True
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-
-    ball.move()
-    player1.move(pygame.K_UP, pygame.K_DOWN)
-    player2.move(pygame.K_w, pygame.K_s)
-
-    if ball.rect.colliderect(player1.rect) or ball.rect.colliderect(player2.rect):
-        ball.speed[0] = -ball.speed[0]
-        score.increase()
-
-    screen.fill(black)
-    ball.draw()
-    player1.draw()
-    player2.draw()
-    score.draw()
-    
-    pygame.display.flip()
-    clock.tick(60)
-
-pygame.quit()
-sys.exit()
+if __name__ == "__main__":
+    main()

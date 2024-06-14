@@ -23,7 +23,11 @@
         "DBX",
         "BIDU",
         "MAT",
-        "SIGI"
+        "SIGI",
+        "CMCSA",
+        "GPN",
+        "APH",
+        "EBR"
     ],
     "yellow_keywords": [
         "CNYJPY",
@@ -33,7 +37,6 @@
         "Silver",
         "IntermedTreary",
         "IndiaETF",
-        "VALE",
         "APA",
         "DOX",
         "NFE",
@@ -56,7 +59,8 @@
         "GGB",
         "MGA",
         "MTN",
-        "LEA"
+        "LEA",
+        "VALE"
     ],
     "purple_keywords": [
         "Bitcoin",
@@ -80,7 +84,8 @@
         "ZI",
         "ALAB",
         "LU",
-        "ZK"
+        "ZK",
+        "KVUE"
     ],
     "blue_keywords": [
         "Copper",

@@ -480,7 +480,8 @@
     "POST",
     "BRFS",
     "LANC",
-    "MKC"
+    "MKC",
+    "HIMS"
   ],
   "Energy": [
     "XOM",

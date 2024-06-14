@@ -26,9 +26,9 @@ Event_Filter = [
     "Core PCE Price Index YY*", "ISM Manufacturing PMI",
     "ADP National Employment*", "International Trade $ *",
     "ISM N-Mfg PMI", "CPI YY, NSA*", "Core CPI MM, SA*",
-    "CPI MM, SA*", "Core CPI YY, NSA*", "PPI ex Food/Energy/Tr MM*",
-    "PPI exFood/Energy MM*", "PPI Final Demand MM*", "Fed Funds Tgt Rate *",
-    
+    "CPI MM, SA*", "Core CPI YY, NSA*", "Fed Funds Tgt Rate *",
+    "PPI Final Demand YY*", "PPI exFood/Energy MM*", "PPI ex Food/Energy/Tr MM*",
+    "PPI Final Demand MM*"
 ]
 
 # 在写入之前先读取文件中的现有内容，避免重复写入
