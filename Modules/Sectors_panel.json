@@ -1,14 +1,13 @@
 {
     "Basic_Materials": [
-        "VALE",
-        "MOS"
+        "MOS",
+        "ALB",
+        "ALTM"
     ],
-    "Communication_Services": [
-        
-    ],
+    "Communication_Services": [],
     "Consumer_Cyclical": [
         "LULU",
-        "MAT"
+        "CAVA"
     ],
     "Consumer_Defensive": [
         "DEO",
@@ -30,17 +29,15 @@
     "Energy": [],
     "Real_Estate": [],
     "Technology": [
-        "U",
         "SNOW",
         "PATH",
         "PAYC",
         "PCTY",
-        "DOX"
-        
+        "DOX",
+        "CSCO",
+        "U"
     ],
-    "Utilities": [
-        
-    ],
+    "Utilities": [],
     "Economics": [
         "USGDP",
         "USInflation",

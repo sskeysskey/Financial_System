@@ -3,7 +3,6 @@
         "SNOW",
         "ELP",
         "LI",
-        "FIVE",
         "TAP",
         "STVN",
         "JBHT",
@@ -17,7 +16,6 @@
         "ESLT",
         "ORAN",
         "NGG",
-        "XRAY",
         "CAE",
         "NVDA",
         "DBX",
@@ -27,7 +25,9 @@
         "CMCSA",
         "GPN",
         "APH",
-        "EBR"
+        "EBR",
+        "BEN",
+        "GXO"
     ],
     "yellow_keywords": [
         "CNYJPY",
@@ -60,7 +60,12 @@
         "MGA",
         "MTN",
         "LEA",
-        "VALE"
+        "VALE",
+        "ALB",
+        "ALTM",
+        "LKQ",
+        "GMAB",
+        "ETSY"
     ],
     "purple_keywords": [
         "Bitcoin",
@@ -72,7 +77,10 @@
         "BF-B",
         "BMY",
         "MKTX",
-        "YUMC"
+        "YUMC",
+        "WBD",
+        "XRAY",
+        "PARA"
     ],
     "black_keywords": [
         "Cotton",
@@ -85,12 +93,14 @@
         "ALAB",
         "LU",
         "ZK",
-        "KVUE"
+        "KVUE",
+        "ZM"
     ],
     "blue_keywords": [
         "Copper",
         "S&P500",
-        "USDINR"
+        "USDINR",
+        "CAVA"
     ],
     "red_keywords": [
         "VIX",

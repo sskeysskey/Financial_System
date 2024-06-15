@@ -85,7 +85,7 @@ data_sets = {
     'Currencies': [
         # (49603, "2024-04-30", "CNYEUR", "0.129250", 4),
         # (50, "2016-12-01", "USDCNY", "6.972", 4),
-        (128834, "2024-06-12", "USDBRL", "5.3867"),
+        # (128834, "2024-06-12", "USDBRL", "5.3867"),
         # (52, "2019-08-01", "USDCNY", "7.16", 4),
         # (53, "2022-02-01", "USDCNY", "6.311", 4),
         # (54, "2022-10-24", "USDCNY", "7.2698", 4),
@@ -93,6 +93,11 @@ data_sets = {
         # (56, "2023-09-04", "USDCNY", "7.365", 4),
         # (83, "2024-04-19", "EURUSD", "72408.33", 4),
         # (83, "2024-04-19", "EURUSD", "72408.33", 4)
+    ],
+    'Technology': [
+        # (49603, "2024-04-30", "CNYEUR", "0.129250", 4),
+        (801138, "2024-06-13", "AVGO", "167.899"),
+        # (128834, "2024-06-12", "USDBRL", "5.3867")
     ]
 }
 
@@ -104,6 +109,7 @@ databases = [
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Bonds'},
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Economics'},
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'ETFs'},
+    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Technology'},
     # 可以添加更多数据库配置
 ]
 
