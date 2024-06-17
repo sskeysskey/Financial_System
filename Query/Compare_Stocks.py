@@ -47,7 +47,7 @@ def compare_today_yesterday(config_path, blacklist):
                         latest_date, second_latest_date = map(lambda x: datetime.strptime(x[0], "%Y-%m-%d"), results)
 
                         query = f"""
-                        SELECT date, price FROM {table_name}
+                        SELECT date, price, volume FROM {table_name}
                         WHERE name = ? AND date IN (?, ?) ORDER BY date DESC
                         """
                         cursor.execute(query, (name, latest_date.strftime("%Y-%m-%d"), second_latest_date.strftime("%Y-%m-%d")))
@@ -55,9 +55,11 @@ def compare_today_yesterday(config_path, blacklist):
 
                         if len(prices) == 2:
                             latest_price, second_latest_price = prices[0][1], prices[1][1]
+                            latest_volume, second_latest_volume = prices[0][2], prices[1][2]
                             change = latest_price - second_latest_price
                             percentage_change = (change / second_latest_price) * 100
-                            output.append((f"{table_name} {name}", percentage_change))
+                            volume_change = latest_volume - second_latest_volume
+                            output.append((f"{table_name} {name}", percentage_change, latest_volume, volume_change))
                         else:
                             raise Exception(f"错误：无法比较{table_name}下的{name}，因为缺少必要的数据。")
                     except Exception as e:
@@ -71,9 +73,18 @@ def compare_today_yesterday(config_path, blacklist):
         with open(output_file, 'w') as file:
             for line in output:
                 sector, company = line[0].rsplit(' ', 1)
+                percentage_change, latest_volume, volume_change = line[1], line[2], line[3]
+                
                 if company in earnings_companies:
+                    company += '.$'
+                if latest_volume > 5000000:
                     company += '.*'
-                file.write(f"{sector:<25}{company:<8}: {line[1]:>6.2f}%\n")
+                if volume_change > 0:
+                    company += '.>'
+                elif volume_change < 0:
+                    company += '.<'
+                
+                file.write(f"{sector:<25}{company:<10}: {percentage_change:>6.2f}%\n")
         print(f"{output_file} 已生成。")
     else:
         error_message = "输出为空，无法进行保存文件操作。"

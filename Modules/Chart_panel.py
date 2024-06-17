@@ -6,6 +6,11 @@ from matplotlib.widgets import RadioButtons
 import matplotlib
 
 def plot_financial_data_panel(db_path, table_name, name, compare, default_time_range="1Y"):
+    # 初始化鼠标按下状态和初始价格点
+    mouse_pressed = False
+    initial_price = None
+    initial_date = None
+    
     with sqlite3.connect(db_path) as conn:
         cursor = conn.cursor()
         query = f"SELECT date, price FROM {table_name} WHERE name = ? ORDER BY date;"
@@ -69,7 +74,13 @@ def plot_financial_data_panel(db_path, table_name, name, compare, default_time_r
         xval = x[ind["ind"][0]]
         yval = y[ind["ind"][0]]
         annot.xy = (xval, yval)
-        text = f"{datetime.strftime(xval, '%Y-%m-%d')}\n{yval}"
+
+        if mouse_pressed and initial_price is not None:
+            percentage_change = ((yval - initial_price) / initial_price) * 100
+            text = f"{datetime.strftime(xval, '%Y-%m-%d')}\nPrice: {yval}\nInitial: {initial_price}\nChange: {percentage_change:.2f}%"
+        else:
+            text = f"{datetime.strftime(xval, '%Y-%m-%d')}\nPrice: {yval}"
+        
         annot.set_text(text)
         annot.get_bbox_patch().set_alpha(0.4)
 
@@ -77,7 +88,8 @@ def plot_financial_data_panel(db_path, table_name, name, compare, default_time_r
         if xval >= (max(x) - (max(x) - min(x)) / 2):  # 如果数据点在图表右侧5%范围内
             annot.set_position((-100, -20))  # 向左偏移
         else:
-            annot.set_position((-50, 0))  # 默认偏移
+            # annot.set_position((-50, 0))  # 默认偏移
+            annot.set_position((50, 20))  # 默认偏移
 
     def hover(event):
         if event.inaxes == ax:
@@ -143,8 +155,24 @@ def plot_financial_data_panel(db_path, table_name, name, compare, default_time_r
         except Exception as e:
             print(f"处理键盘事件时发生错误: {str(e)}")
 
+    def on_mouse_press(event):
+        nonlocal mouse_pressed, initial_price, initial_date
+        if event.button == 1:  # 左键按下
+            mouse_pressed = True
+            nearest_index = (np.abs(np.array(dates) - matplotlib.dates.num2date(event.xdata).replace(tzinfo=None))).argmin()
+            initial_price = prices[nearest_index]
+            initial_date = dates[nearest_index]
+
+    def on_mouse_release(event):
+        nonlocal mouse_pressed
+        if event.button == 1:  # 左键释放
+            mouse_pressed = False
+
     plt.gcf().canvas.mpl_connect("motion_notify_event", hover)
     plt.gcf().canvas.mpl_connect('key_press_event', on_key)
+    plt.gcf().canvas.mpl_connect('button_press_event', on_mouse_press)
+    plt.gcf().canvas.mpl_connect('button_release_event', on_mouse_release)
+    
     def hide_annot_on_leave(event):
         annot.set_visible(False)
         highlight_point.set_visible(False)

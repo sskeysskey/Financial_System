@@ -10,6 +10,14 @@ from tkinter import simpledialog, scrolledtext
 
 def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe, json_data, default_time_range="1Y"):
     matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
+
+    # 初始化 show_volume 状态
+    show_volume = False
+    # 初始化鼠标按下状态和初始价格点
+    mouse_pressed = False
+    initial_price = None
+    initial_date = None
+
     try:
         with sqlite3.connect(db_path) as conn:
             cursor = conn.cursor()
@@ -31,28 +39,33 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     dates = []
     prices = []
+    volumes = []  # 用于存储 volume 数据
     for row in data:
         date = datetime.strptime(row[0], "%Y-%m-%d")
         price = float(row[1]) if row[1] is not None else None
+        volume = int(row[2]) if len(row) > 2 and row[2] is not None else None
         if price is not None:
             dates.append(date)
             prices.append(price)
-        if len(row) > 2 and row[2] is not None:
-            volume = row[2]  # 安全检查是否存在volume
-        else:
-            volume = None
+            volumes.append(volume)  # 添加 volume 数据
 
     if not dates or not prices:
         print("没有有效的数据来绘制图表。")
         return
 
-    fig, ax = plt.subplots(figsize=(12, 6)) # 调整整个窗口大小，前面是X，后面是Y
-    fig.subplots_adjust(left=0.08, bottom=0.2, right=0.93, top=0.9)  # 根据需要调整这些值
+    fig, ax1 = plt.subplots(figsize=(13, 6)) # 调整整个窗口大小，前面是X，后面是Y
+    fig.subplots_adjust(left=0.05, bottom=0.2, right=0.91, top=0.9)  # 根据需要调整这些值
 
-    highlight_point = ax.scatter([], [], s=100, color='blue', zorder=5)  # s是点的大小
-
-    line, = ax.plot(dates, prices, marker='o', markersize=1, linestyle='-', linewidth=2, color='b', picker=5)
+    ax2 = ax1.twinx()  # 创建双 y 轴
     
+    highlight_point = ax1.scatter([], [], s=100, color='blue', zorder=5)  # s是点的大小
+
+    line1, = ax1.plot(dates, prices, marker='o', markersize=1, linestyle='-', linewidth=2, color='b', picker=5, label='Price')
+    line2, = ax2.plot(dates, volumes, marker='o', markersize=1, linestyle='-', linewidth=2, color='r', picker=5, label='Volume')
+
+    # 隐藏 volume 曲线
+    line2.set_visible(show_volume)
+
     if volume is not None and price is not None:
         turnover = f"{(volume * float(price)) / 1000000:.1f}"
     else:
@@ -106,9 +119,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         x, y = text_obj.get_position()
         text_renderer = text_obj.get_window_extent(renderer=fig.canvas.get_renderer())
         linewidth = text_renderer.width
-        line = matplotlib.lines.Line2D([x, x + linewidth], [y - 2, y - 2], transform=ax.transData,
+        line = matplotlib.lines.Line2D([x, x + linewidth], [y - 2, y - 2], transform=ax1.transData,
                                     color='blue', linewidth=2)
-        ax.add_line(line)
+        ax1.add_line(line)
     
     # 判断是否应该使标题可点击
     if json_data and 'stocks' in json_data and any(stock['symbol'] == name for stock in json_data['stocks']):
@@ -129,18 +142,18 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     # 添加交互性标题
     title_text = f'{name} {compare}  {turnover}M/{turnover_rate}  {marketcap_in_billion}  {pe_text} "{table_name}" {fullname} {tag_str}'
     
-    title = ax.set_title(title_text, **title_style)  # 使用 title_style 中的样式
+    title = ax1.set_title(title_text, **title_style)  # 使用 title_style 中的样式
 
     if clickable:
         draw_underline(title)  # 如果标题可点击，添加下划线
 
     fig.canvas.mpl_connect('pick_event', on_pick if clickable else lambda event: None)
 
-    ax.grid(True)
+    ax1.grid(True)
     plt.xticks(rotation=45)
 
     # 注释初始化
-    annot = ax.annotate("", xy=(0,0), xytext=(20,20), textcoords="offset points",
+    annot = ax1.annotate("", xy=(0,0), xytext=(20,20), textcoords="offset points",
                         bbox=dict(boxstyle="round", fc="black"),
                         arrowprops=dict(arrowstyle="->"), color='yellow')
     annot.set_visible(False)
@@ -167,11 +180,17 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         label.set_fontsize(14)
 
     def update_annot(ind):
-        x, y = line.get_data()
+        x, y = line1.get_data()
         xval = x[ind["ind"][0]]
         yval = y[ind["ind"][0]]
         annot.xy = (xval, yval)
-        text = f"{datetime.strftime(xval, '%Y-%m-%d')}\n{yval}"
+
+        if mouse_pressed and initial_price is not None:
+            percentage_change = ((yval - initial_price) / initial_price) * 100
+            text = f"{datetime.strftime(xval, '%Y-%m-%d')}\nPrice: {yval}\nInitial: {initial_price}\nChange: {percentage_change:.2f}%"
+        else:
+            text = f"{datetime.strftime(xval, '%Y-%m-%d')}\nPrice: {yval}"
+        
         annot.set_text(text)
         annot.get_bbox_patch().set_alpha(0.4)
 
@@ -179,22 +198,23 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         if xval >= (max(x) - (max(x) - min(x)) / 2):  # 如果数据点在图表右侧5%范围内
             annot.set_position((-100, -20))  # 向左偏移
         else:
-            annot.set_position((-50, 0))  # 默认偏移
+            # annot.set_position((-50, 0))  # 默认偏移
+            annot.set_position((50, -20))  # 默认偏移
 
     def hover(event):
-        if event.inaxes == ax:
+        if event.inaxes in [ax1, ax2]:
             if event.xdata is not None:
                 current_date = matplotlib.dates.num2date(event.xdata).replace(tzinfo=None)
                 vline.set_xdata(current_date)
                 vline.set_visible(True)
                 fig.canvas.draw_idle()
 
-                x_min, x_max = ax.get_xlim()
+                x_min, x_max = ax1.get_xlim()
                 time_span = x_max - x_min
 
                 dynamic_atol = 0.05 * (time_span / 365)
 
-                xdata, ydata = line.get_data()
+                xdata, ydata = line1.get_data()
                 nearest_index = (np.abs(np.array(xdata) - current_date)).argmin()
                 if np.isclose(matplotlib.dates.date2num(xdata[nearest_index]), matplotlib.dates.date2num(current_date), atol=dynamic_atol):
                     update_annot({"ind": [nearest_index]})
@@ -224,13 +244,19 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         if years == 0:
             filtered_dates = dates
             filtered_prices = prices
+            filtered_volumes = volumes
         else:
             min_date = datetime.now() - timedelta(days=years * 365)
             filtered_dates = [date for date in dates if date >= min_date]
             filtered_prices = [price for date, price in zip(dates, prices) if date >= min_date]
-        line.set_data(filtered_dates, filtered_prices)
-        ax.set_xlim(min(filtered_dates), max(filtered_dates))  # 更新x轴范围
-        ax.set_ylim(min(filtered_prices), max(filtered_prices))  # 更新y轴范围
+            filtered_volumes = [volume for date, volume in zip(dates, volumes) if date >= min_date]
+        line1.set_data(filtered_dates, filtered_prices)
+        line2.set_data(filtered_dates, filtered_volumes)
+        ax1.set_xlim(min(filtered_dates), max(filtered_dates))  # 更新x轴范围
+        ax1.set_ylim(min(filtered_prices), max(filtered_prices))  # 更新y轴范围
+        if show_volume:
+            ax2.set_ylim(0, max(filtered_volumes))  # 更新y轴范围
+        line2.set_visible(show_volume)
         plt.draw()
 
     def close_app(root):
@@ -239,20 +265,40 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             root.destroy()  # 使用destroy来确保彻底关闭所有窗口和退出
 
     # 添加竖线
-    vline = ax.axvline(x=dates[0], color='b', linestyle='--', linewidth=1, visible=False)
+    vline = ax1.axvline(x=dates[0], color='b', linestyle='--', linewidth=1, visible=False)
     update(default_time_range)
     radio.on_clicked(update)
 
     def on_key(event):
+        nonlocal show_volume
         try:
             if event.key == 'escape':
                 plt.close()
                 close_app()
+            elif event.key == 'v':  # 使用 'v' 键切换 volume 曲线的显示状态
+                show_volume = not show_volume
+                update(radio.value_selected)
         except Exception as e:
             print(f"处理键盘事件时发生错误: {str(e)}")
 
+    def on_mouse_press(event):
+        nonlocal mouse_pressed, initial_price, initial_date
+        if event.button == 1:  # 左键按下
+            mouse_pressed = True
+            nearest_index = (np.abs(np.array(dates) - matplotlib.dates.num2date(event.xdata).replace(tzinfo=None))).argmin()
+            initial_price = prices[nearest_index]
+            initial_date = dates[nearest_index]
+
+    def on_mouse_release(event):
+        nonlocal mouse_pressed
+        if event.button == 1:  # 左键释放
+            mouse_pressed = False
+
     plt.gcf().canvas.mpl_connect("motion_notify_event", hover)
     plt.gcf().canvas.mpl_connect('key_press_event', on_key)
+    plt.gcf().canvas.mpl_connect('button_press_event', on_mouse_press)
+    plt.gcf().canvas.mpl_connect('button_release_event', on_mouse_release)
+    
     def hide_annot_on_leave(event):
         annot.set_visible(False)
         highlight_point.set_visible(False)

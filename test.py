@@ -1,49 +1,114 @@
+from datetime import datetime, timedelta
+import sqlite3
 import json
-from collections import OrderedDict
+import os
 
-# 读取 JSON 数据
-def read_json_file(filename):
-    with open(filename, 'r', encoding='utf-8') as file:
-        data = json.load(file, object_pairs_hook=OrderedDict)
-    return data
+def create_connection(db_file):
+    conn = sqlite3.connect(db_file)
+    return conn
 
-# 读取并解析 TXT 数据
-def parse_txt_file(filename):
-    symbol_to_name = {}
-    with open(filename, 'r', encoding='utf-8') as file:
-        for line in file:
-            if ':' in line:
-                symbol, name = line.strip().split(':')
-                symbol_to_name[symbol.strip()] = name.strip()
-    return symbol_to_name
+def log_error_with_timestamp(error_message):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    return f"[{timestamp}] {error_message}\n"
 
-# 更新 JSON 数据
-def update_json_data(json_data, symbol_to_name):
-    for category in ['stocks', 'etfs']:
-        for item in json_data[category]:
-            symbol = item['symbol']
-            if symbol in symbol_to_name:
-                item['name'] = symbol_to_name[symbol]
-            # 确保字段排序
-            ordered_item = OrderedDict([
-                ('symbol', item['symbol']),
-                ('name', item.get('name', '')),
-                ('tag', item['tag']),
-                ('description1', item['description1']),
-                ('description2', item['description2'])
-            ])
-            json_data[category][json_data[category].index(item)] = ordered_item
+def read_earnings_release(filepath):
+    with open(filepath, 'r') as file:
+        companies_with_earnings = {line.split(':')[0] for line in file}
+    return companies_with_earnings
 
-# 写入 JSON 数据到文件
-def write_json_file(data, filename):
-    with open(filename, 'w', encoding='utf-8') as file:
-        json.dump(data, file, ensure_ascii=False, indent=4)
+def compare_today_yesterday(config_path, blacklist):
+    with open(config_path, 'r') as file:
+        data = json.load(file)
 
-def main():
-    json_data = read_json_file('/Users/yanzhang/Documents/Financial_System/Modules/Description.json')
-    symbol_to_name = parse_txt_file('/Users/yanzhang/Documents/News/backup/symbol_names.txt')
-    update_json_data(json_data, symbol_to_name)
-    write_json_file(json_data, '/Users/yanzhang/Documents/Financial_System/Modules/Description_new.json')
+    output = []
+    db_path = '/Users/yanzhang/Documents/Database/Finance.db'
+    earnings_companies = read_earnings_release('/Users/yanzhang/Documents/News/Earnings_Release_new.txt')
+
+    for table_name, names in data.items():
+        if table_name in interested_sectors:
+            with create_connection(db_path) as conn:
+                cursor = conn.cursor()
+                for name in names:
+                    if name in blacklist:
+                        continue
+                    try:
+                        query_two_latest_dates = f"""
+                        SELECT date FROM {table_name}
+                        WHERE name = ? 
+                        ORDER BY date DESC
+                        LIMIT 2
+                        """
+                        cursor.execute(query_two_latest_dates, (name,))
+                        results = cursor.fetchall()
+
+                        if len(results) < 2:
+                            raise Exception(f"错误：无法找到{table_name}下的{name}足够的历史数据进行比较。")
+
+                        latest_date, second_latest_date = map(lambda x: datetime.strptime(x[0], "%Y-%m-%d"), results)
+
+                        query = f"""
+                        SELECT date, price, volume FROM {table_name}
+                        WHERE name = ? AND date IN (?, ?) ORDER BY date DESC
+                        """
+                        cursor.execute(query, (name, latest_date.strftime("%Y-%m-%d"), second_latest_date.strftime("%Y-%m-%d")))
+                        prices = cursor.fetchall()
+
+                        if len(prices) == 2:
+                            latest_price, second_latest_price = prices[0][1], prices[1][1]
+                            latest_volume, second_latest_volume = prices[0][2], prices[1][2]
+                            change = latest_price - second_latest_price
+                            percentage_change = (change / second_latest_price) * 100
+                            volume_change = latest_volume - second_latest_volume
+                            output.append((f"{table_name} {name}", percentage_change, latest_volume, volume_change))
+                        else:
+                            raise Exception(f"错误：无法比较{table_name}下的{name}，因为缺少必要的数据。")
+                    except Exception as e:
+                        formatted_error_message = log_error_with_timestamp(str(e))
+                        with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                            error_file.write(formatted_error_message)
+
+    if output:
+        output.sort(key=lambda x: x[1], reverse=True)
+        output_file = '/Users/yanzhang/Documents/News/CompareStock.txt'
+        with open(output_file, 'w') as file:
+            for line in output:
+                sector, company = line[0].rsplit(' ', 1)
+                percentage_change, latest_volume, volume_change = line[1], line[2], line[3]
+                
+                if company in earnings_companies:
+                    company += '.$'
+                if latest_volume > 5000000:
+                    company += '.*'
+                if volume_change > 0:
+                    company += '.>'
+                elif volume_change < 0:
+                    company += '.<'
+                
+                file.write(f"{sector:<25}{company:<8}: {percentage_change:>6.2f}%\n")
+        print(f"{output_file} 已生成。")
+    else:
+        error_message = "输出为空，无法进行保存文件操作。"
+        formatted_error_message = log_error_with_timestamp(error_message)
+        with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+            error_file.write(formatted_error_message)
 
 if __name__ == '__main__':
-    main()
+    config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
+    blacklist = ['VFS','KVYO','LU','IEP','LOT','GRFS','BGNE']
+    interested_sectors = ["Basic_Materials", "Communication_Services", "Consumer_Cyclical",
+                          "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare", "Industrials",
+                          "Real_Estate", "Technology", "Utilities"]
+    file_path = '/Users/yanzhang/Documents/News/CompareStock.txt'
+    directory_backup = '/Users/yanzhang/Documents/News/site/'
+    if os.path.exists(file_path):
+        yesterday = datetime.now() - timedelta(days=1)
+        timestamp = yesterday.strftime('%m%d')
+        directory, filename = os.path.split(file_path)
+        name, extension = os.path.splitext(filename)
+        new_filename = f"{name}_{timestamp}{extension}"
+        new_file_path = os.path.join(directory_backup, new_filename)
+        os.rename(file_path, new_file_path)
+        print(f"文件已重命名为: {new_file_path}")
+    else:
+        print("文件不存在")
+    compare_today_yesterday(config_path, blacklist)
