@@ -1,3 +1,6 @@
+import os
+import tkinter as tk
+from tkinter import messagebox
 from selenium import webdriver
 from datetime import datetime, timedelta
 from selenium.webdriver.common.by import By
@@ -6,6 +9,21 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.chrome.service import Service
 import json
+
+# 文件路径
+file_path = '/Users/yanzhang/Documents/News/Earnings_Release_new.txt'
+
+# 检查文件是否存在
+if os.path.exists(file_path):
+    # 创建一个Tkinter根窗口并隐藏
+    root = tk.Tk()
+    root.withdraw()
+    
+    # 弹窗通知用户
+    messagebox.showinfo("文件存在", f"Earnings_Release_new文件已存在，请先处理后再执行。")
+    
+    # 退出程序
+    exit()
 
 # ChromeDriver 路径
 chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
@@ -21,21 +39,13 @@ with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json',
 # 获取当前日期和结束日期
 # start_date = datetime(2024, 5, 27)
 # end_date = datetime(2024, 8, 1)
-start_date = datetime(2024, 6, 9)
-end_date = datetime(2024, 6, 15)
 
-# 文件路径
-file_path = '/Users/yanzhang/Documents/News/Earnings_Release.txt'
-
-# 在写入之前先读取文件中的现有内容，避免重复写入
-existing_entries = set()
-try:
-    with open(file_path, 'r') as file:
-        for line in file:
-            existing_entries.add(line.strip())
-except FileNotFoundError:
-    # 如果文件不存在，则无需读取
-    pass
+# 获取当前系统日期
+current_date = datetime.now()
+# 计算离当前最近的周天
+start_date = current_date + timedelta(days=(6 - current_date.weekday()))
+# 计算离当前最近的周六
+end_date = start_date + timedelta(days=6)
 
 # 初始化结果文件，使用追加模式
 with open(file_path, 'a') as output_file:
@@ -72,12 +82,22 @@ with open(file_path, 'a') as output_file:
                         for category, symbols in data.items():
                             if symbol in symbols:
                                 entry = f"{symbol}:{formatted_change_date}-{call_time}"
-                                if entry not in existing_entries:
-                                    output_file.write(entry + "\n")
-                                    existing_entries.add(entry)
+                                output_file.write(entry + "\n")
+                                
                 offset += 100  # 为下一个子页面增加 offset
-        
         change_date += delta  # 日期增加一天
 
 # 关闭浏览器
 driver.quit()
+
+# 移除最后一行的回车换行符
+with open(file_path, 'r') as file:
+    lines = file.readlines()
+
+# 去掉最后一行的换行符
+if lines and lines[-1].endswith("\n"):
+    lines[-1] = lines[-1].rstrip("\n")
+
+# 重新写回文件
+with open(file_path, 'w') as file:
+    file.writelines(lines)

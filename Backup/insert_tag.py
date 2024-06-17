@@ -16,7 +16,7 @@ for category in ['stocks', 'etfs']:
         new_item = OrderedDict()
         for key, value in item.items():
             new_item[key] = value
-            if key == 'name':  # 在name后立即插入tag
+            if key == 'symbol':  # 在name后立即插入tag
                 new_item['tag'] = []  # 添加空的tag列表
         # 替换原来的字典项
         index = data[category].index(item)

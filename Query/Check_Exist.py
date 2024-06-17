@@ -13,8 +13,14 @@ new_name = pyperclip.paste()
 new_name = new_name.replace('"', '').replace("'", "")
 
 # 检查新的name是否已存在于etfs中
-exists_etf = any(etf['name'] == new_name for etf in data.get('etfs', []))
-exists_stock = any(stock['name'] == new_name for stock in data.get('stocks', []))
+def check_existence_and_descriptions(data, new_name):
+    for etf in data.get('etfs', []):
+        if etf['symbol'] == new_name:
+            return bool(etf['description1'] or etf['description2'])
+    return False
+
+exists_etf = check_existence_and_descriptions(data, new_name)
+exists_stock = any(stock['symbol'] == new_name for stock in data.get('stocks', []))
 
 if exists_etf or exists_stock:
     messagebox.showerror("错误", "ETF代码已存在！")

@@ -22,7 +22,7 @@ def compare_today_yesterday(config_path, blacklist):
 
     output = []
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
-    earnings_companies = read_earnings_release('/Users/yanzhang/Documents/News/Earnings_Release.txt')
+    earnings_companies = read_earnings_release('/Users/yanzhang/Documents/News/Earnings_Release_new.txt')
 
     for table_name, names in data.items():
         if table_name in interested_sectors:

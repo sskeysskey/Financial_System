@@ -45,7 +45,7 @@ def close_app(root):
         root.quit()
         root.destroy()
 
-def input_mapping(root, sector_data, compare_data, shares, fullnames, marketcap_pe_data, json_data, db_path, user_input):
+def input_mapping(root, sector_data, compare_data, shares, marketcap_pe_data, json_data, db_path, user_input):
     if user_input is None:
         print("未输入任何内容，程序即将退出。")
         close_app(root)
@@ -67,7 +67,6 @@ def input_mapping(root, sector_data, compare_data, shares, fullnames, marketcap_
                         db_path, sector, name,
                         compare_data.get(name, "N/A"),
                         shares.get(name, "N/A"),
-                        fullnames.get(name, "N/A"),
                         *marketcap_pe_data.get(name, (None, 'N/A')),
                         json_data, '10Y')
                     found = True
@@ -87,7 +86,6 @@ def input_mapping(root, sector_data, compare_data, shares, fullnames, marketcap_
                         db_path, sector, name,
                         compare_data.get(name, "N/A"),
                         shares.get(name, "N/A"),
-                        fullnames.get(name, "N/A"),
                         *marketcap_pe_data.get(name, (None, 'N/A')),
                         json_data, '10Y')
                     found = True
@@ -136,13 +134,13 @@ def get_user_input_custom(root, prompt):
     input_dialog.wait_window(input_dialog)
     return user_input
 
-def check_clipboard(root, sector_data, compare_data, shares, fullnames, marketcap_pe_data, json_data, db_path):
-    clipboard_content = pyperclip.paste()
-    if clipboard_content:
-        input_mapping(root, sector_data, compare_data, shares, fullnames, marketcap_pe_data, json_data, db_path, clipboard_content)
-    else:
-        user_input = get_user_input_custom(root, "请输入")
-        input_mapping(root, sector_data, compare_data, shares, fullnames, marketcap_pe_data, json_data, db_path, user_input)
+# def check_clipboard(root, sector_data, compare_data, shares, marketcap_pe_data, json_data, db_path):
+#     clipboard_content = pyperclip.paste()
+#     if clipboard_content:
+#         input_mapping(root, sector_data, compare_data, shares,  marketcap_pe_data, json_data, db_path, clipboard_content)
+#     else:
+#         user_input = get_user_input_custom(root, "请输入")
+#         input_mapping(root, sector_data, compare_data, shares, marketcap_pe_data, json_data, db_path, user_input)
 
 if __name__ == '__main__':
     root = tk.Tk()
@@ -152,7 +150,6 @@ if __name__ == '__main__':
     sector_data = load_sector_data('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json')
     compare_data = load_compare_data('/Users/yanzhang/Documents/News/backup/Compare_All.txt')
     shares = load_compare_data('/Users/yanzhang/Documents/News/backup/Shares.txt')
-    fullnames = load_compare_data('/Users/yanzhang/Documents/News/backup/symbol_names.txt')
     marketcap_pe_data = load_marketcap_pe_data('/Users/yanzhang/Documents/News/backup/marketcap_pe.txt')
     json_data = load_json_data('/Users/yanzhang/Documents/Financial_System/Modules/Description.json')
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
@@ -162,10 +159,10 @@ if __name__ == '__main__':
         arg = sys.argv[1]
         if arg == "paste":
             clipboard_content = pyperclip.paste()
-            input_mapping(root, sector_data, compare_data, shares, fullnames, marketcap_pe_data, json_data, db_path, clipboard_content)
+            input_mapping(root, sector_data, compare_data, shares, marketcap_pe_data, json_data, db_path, clipboard_content)
         elif arg == "input":
             user_input = get_user_input_custom(root, "请输入")
-            input_mapping(root, sector_data, compare_data, shares, fullnames, marketcap_pe_data, json_data, db_path, user_input)
+            input_mapping(root, sector_data, compare_data, shares, marketcap_pe_data, json_data, db_path, user_input)
     else:
         print("请提供参数 input 或 paste")
         sys.exit(1)

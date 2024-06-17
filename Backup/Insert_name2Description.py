@@ -19,7 +19,8 @@ def parse_txt_file(filename):
 
 # 更新 JSON 数据
 def update_json_data(json_data, symbol_to_name):
-    for category in ['stocks', 'etfs']:
+    # for category in ['stocks', 'etfs']:
+    for category in ['etfs']:
         for item in json_data[category]:
             symbol = item['symbol']
             if symbol in symbol_to_name:
@@ -41,7 +42,8 @@ def write_json_file(data, filename):
 
 def main():
     json_data = read_json_file('/Users/yanzhang/Documents/Financial_System/Modules/Description.json')
-    symbol_to_name = parse_txt_file('/Users/yanzhang/Documents/News/backup/symbol_names.txt')
+    # symbol_to_name = parse_txt_file('/Users/yanzhang/Documents/News/backup/symbol_names.txt')
+    symbol_to_name = parse_txt_file('/Users/yanzhang/Documents/News/backup/ETFs.txt')
     update_json_data(json_data, symbol_to_name)
     write_json_file(json_data, '/Users/yanzhang/Documents/Financial_System/Modules/Description_new.json')
 

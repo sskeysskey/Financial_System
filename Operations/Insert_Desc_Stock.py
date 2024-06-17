@@ -40,10 +40,22 @@ def activate_chrome():
     # 运行AppleScript
     subprocess.run(['osascript', '-e', script])
 
-def add_stock(name, entry, data, json_file, description1, description2, root):
+def load_symbol_names(file_path):
+    symbol_names = {}
+    with open(file_path, 'r', encoding='utf-8') as file:
+        lines = file.readlines()
+        for line in lines:
+            if ': ' in line:
+                symbol, name = line.strip().split(': ', 1)
+                symbol_names[symbol] = name
+    return symbol_names
+
+def add_stock(symbol, entry, data, json_file, description1, description2, root, symbol_names):
     tags = entry.get().split()
+    stock_name = symbol_names.get(symbol, "")
     new_stock = {
-        "name": name,
+        "symbol": symbol,
+        "name": stock_name,
         "tag": tags,
         "description1": description1,
         "description2": description2
@@ -53,13 +65,16 @@ def add_stock(name, entry, data, json_file, description1, description2, root):
         json.dump(data, file, ensure_ascii=False, indent=4)
     root.destroy()
 
-def on_key_press(event, name, entry, data, json_file, description1, description2, root):
+def on_key_press(event, symbol, entry, data, json_file, description1, description2, root, symbol_names):
     if event.keysym == 'Escape':
         root.destroy()
     elif event.keysym == 'Return':
-        add_stock(name, entry, data, json_file, description1, description2, root)
+        add_stock(symbol, entry, data, json_file, description1, description2, root, symbol_names)
 
 json_file = "/Users/yanzhang/Documents/Financial_System/Modules/Description.json"
+symbol_name_file = "/Users/yanzhang/Documents/News/backup/symbol_names.txt"
+symbol_names = load_symbol_names(symbol_name_file)
+
 with open(json_file, 'r', encoding='utf-8') as file:
     data = json.load(file)
 
@@ -75,7 +90,7 @@ if not re.match("^[A-Z\-]+$", new_name):
     sys.exit()
 
 # 检查新的name是否已存在于stocks中
-exists = any(stock['name'] == new_name for stock in data.get('stocks', []))
+exists = any(stock['symbol'] == new_name for stock in data.get('stocks', []))
 
 if exists:
     messagebox.showerror("错误", "股票代码已存在！")
@@ -240,8 +255,8 @@ else:
     entry = tk.Entry(root)
     entry.pack()
     entry.focus_set()
-    button = tk.Button(root, text="添加 Tags", command=lambda: add_stock(new_name, entry, data, json_file, new_description1, new_description2, root))
+    button = tk.Button(root, text="添加 Tags", command=lambda: add_stock(new_name, entry, data, json_file, new_description1, new_description2, root, symbol_names))
     button.pack()
-    root.bind('<Key>', lambda event: on_key_press(event, new_name, entry, data, json_file, new_description1, new_description2, root))
+    root.bind('<Key>', lambda event: on_key_press(event, new_name, entry, data, json_file, new_description1, new_description2, root, symbol_names))
     root.mainloop()
     messagebox.showinfo("成功", f"股票 {new_name} 已成功写入！")

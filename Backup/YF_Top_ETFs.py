@@ -41,7 +41,7 @@ def save_data(urls, existing_file, new_file, json_file):
 # def save_data(urls, url_tag, existing_file, new_file, json_file):
     # with open(json_file, 'r') as file:
     #     json_data = json.load(file)
-    #     etf_data = {item['name']: item['tag'] for item in json_data['etfs']}
+    #     etf_data = {item['symbol']: item['tag'] for item in json_data['etfs']}
     
     # tag_counts = defaultdict(int)
     existing_symbols = set()

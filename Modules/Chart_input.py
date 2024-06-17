@@ -8,7 +8,7 @@ import json
 import tkinter as tk
 from tkinter import simpledialog, scrolledtext
 
-def plot_financial_data(db_path, table_name, name, compare, share, fullname, marketcap, pe, json_data, default_time_range="1Y"):
+def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe, json_data, default_time_range="1Y"):
     matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
     try:
         with sqlite3.connect(db_path) as conn:
@@ -66,7 +66,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, fullname, mar
     marketcap_in_billion = f"{float(marketcap) / 1e9:.1f}B" if marketcap is not None else "N/A"
     pe_text = f"{pe}" if pe is not None else "N/A"
 
-    def show_stock_info(name, descriptions):
+    def show_stock_info(symbol, descriptions):
         root = tk.Tk()
         root.withdraw()  # 隐藏主窗口
         
@@ -85,7 +85,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, fullname, mar
         text_box.pack(expand=True, fill='both')
         
         # 插入股票信息
-        info = f"{name}:{descriptions['description1']}\n\n{descriptions['description2']}"
+        info = f"{symbol}:{descriptions['description1']}\n\n{descriptions['description2']}"
         text_box.insert(tk.END, info)
         
         # 设置文本框为只读
@@ -99,7 +99,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, fullname, mar
         if event.artist == title and clickable:
             stock_name = name
             for stock in json_data['stocks']:
-                if stock['name'] == stock_name:
+                if stock['symbol'] == stock_name:
                     show_stock_info(stock_name, stock)
                     break
     def draw_underline(text_obj):
@@ -111,7 +111,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, fullname, mar
         ax.add_line(line)
     
     # 判断是否应该使标题可点击
-    if json_data and 'stocks' in json_data and any(stock['name'] == name for stock in json_data['stocks']):
+    if json_data and 'stocks' in json_data and any(stock['symbol'] == name for stock in json_data['stocks']):
         clickable = True
         title_style = {'color': 'blue', 'fontsize': 16, 'fontweight': 'bold', 'picker': True}
     else:
@@ -119,9 +119,11 @@ def plot_financial_data(db_path, table_name, name, compare, share, fullname, mar
         title_style = {'color': 'black', 'fontsize': 15, 'fontweight': 'bold', 'picker': False}
     
     tag_str = ""  # 如果没有找到tag，默认显示N/A
+    fullname = ""
     for stock in json_data.get('stocks', []):  # 从stocks列表中查找
-        if stock['name'] == name:
+        if stock['symbol'] == name:
             tags = stock.get('tag', [])
+            fullname = stock.get('name', [])
             tag_str = ','.join(tags)  # 将tag列表转换为逗号分隔的字符串
             break
     # 添加交互性标题

@@ -182,14 +182,12 @@ def on_keyword_selected_chart(value, parent_window):
                 plot_financial_data(db_path, sector, value, 
                         compare_data.get(value, "N/A"), 
                         shares.get(value, "N/A"), 
-                        fullnames.get(value, "N/A"), 
                         *marketcap_pe_data.get(value, (None, 'N/A')), 
                         json_data, '1Y')
             elif sector in economics_sectors:            
                 plot_financial_data(db_path, sector, value, 
                         compare_data.get(value, "N/A"), 
                         shares.get(value, "N/A"), 
-                        fullnames.get(value, "N/A"), 
                         *marketcap_pe_data.get(value, (None, 'N/A')), 
                         json_data, '10Y')
             else:
@@ -221,7 +219,6 @@ if __name__ == '__main__':
     root.withdraw()
     compare_data = load_compare_data('/Users/yanzhang/Documents/News/backup/Compare_All.txt')
     shares = load_compare_data('/Users/yanzhang/Documents/News/backup/Shares.txt')
-    fullnames = load_compare_data('/Users/yanzhang/Documents/News/backup/symbol_names.txt')
     marketcap_pe_data = load_marketcap_pe_data('/Users/yanzhang/Documents/News/backup/marketcap_pe.txt')
     
     create_selection_window()

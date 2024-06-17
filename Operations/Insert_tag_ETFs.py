@@ -13,16 +13,28 @@ def save_data(data, file_path):
     with open(file_path, "w", encoding="utf-8") as file:
         json.dump(data, file, ensure_ascii=False, indent=4)
 
-def add_or_update_etf(name, new_tags, data, json_file):
+def load_symbol_names(file_path):
+    symbol_names = {}
+    with open(file_path, 'r', encoding='utf-8') as file:
+        lines = file.readlines()
+        for line in lines:
+            if ': ' in line:
+                symbol, name = line.strip().split(': ', 1)
+                symbol_names[symbol] = name
+    return symbol_names
+
+def add_or_update_etf(symbol, new_tags, data, json_file, symbol_names):
     etf_exists = False
     for etf in data["etfs"]:
-        if etf["name"] == name:
+        if etf["symbol"] == symbol:
             etf_exists = True
             etf["tag"].extend(tag for tag in new_tags if tag not in etf["tag"])
             break
     if not etf_exists:
+        etf_name = symbol_names.get(symbol, "")
         new_etf = {
-            "name": name,
+            "symbol": symbol,
+            "name": etf_name,
             "tag": new_tags,
             "description1": "",
             "description2": ""
@@ -38,12 +50,12 @@ def Copy_Command_C():
     '''
     subprocess.run(['osascript', '-e', script])
 
-def on_key_press(event, name, entry, data, json_file, root):
+def on_key_press(event, symbol, entry, data, json_file, root):
     if event.keysym == 'Escape':
         root.destroy()
     elif event.keysym == 'Return':
         input_tags = entry.get().split()
-        add_or_update_etf(name, input_tags, data, json_file)
+        add_or_update_etf(symbol, input_tags, data, json_file)
         root.destroy()
 
 def main():
@@ -51,6 +63,8 @@ def main():
 
     json_file = "/Users/yanzhang/Documents/Financial_System/Modules/Description.json"
     data = load_data(json_file)
+    symbol_name_file = "/Users/yanzhang/Documents/News/backup/ETFs.txt"
+    symbol_names = load_symbol_names(symbol_name_file)
 
     new_name = pyperclip.paste().replace('"', '').replace("'", "")
     if not new_name.isupper() or not new_name.isalpha():
@@ -62,9 +76,9 @@ def main():
     entry = tk.Entry(root)
     entry.pack()
     entry.focus_set()
-    button = tk.Button(root, text="添加或更新ETF", command=lambda: on_key_press('Return', new_name, entry, data, json_file, root))
+    button = tk.Button(root, text="添加或更新ETF", command=lambda: on_key_press('Return', new_name, entry, data, json_file, root, symbol_names))
     button.pack()
-    root.bind('<Key>', lambda event: on_key_press(event, new_name, entry, data, json_file, root))
+    root.bind('<Key>', lambda event: on_key_press(event, new_name, entry, data, json_file, root, symbol_names))
     root.mainloop()
 
 if __name__ == "__main__":

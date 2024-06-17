@@ -80,7 +80,7 @@ def save_data(urls, existing_file, new_file):
                 file.write(line)  # 最后一行不添加任何后缀
 
 # URL列表
-urls = ["https://finance.yahoo.com/etfs/?offset=0&count=100", "https://finance.yahoo.com/etfs/?count=100&offset=100", "https://finance.yahoo.com/etfs/?count=100&offset=200"]
+urls = ["https://finance.yahoo.com/etfs/?offset=0&count=100", "https://finance.yahoo.com/etfs/?count=100&offset=100", "https://finance.yahoo.com/etfs/?count=100&offset=200", "https://finance.yahoo.com/etfs/?count=100&offset=300"]
 existing_file = '/Users/yanzhang/Documents/News/backup/ETFs.txt'
 new_file = '/Users/yanzhang/Documents/News/ETFs_new.txt'
 

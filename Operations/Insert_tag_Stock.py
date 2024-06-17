@@ -16,7 +16,7 @@ def save_data(data, file_path):
 
 def add_stock(name, new_tags, data):
     for stock in data["stocks"]:
-        if stock["name"] == name:
+        if stock["symbol"] == name:
             stock["tag"].extend(tag for tag in new_tags if tag not in stock["tag"])
             break
 
@@ -44,7 +44,7 @@ def main():
     data = load_data(json_file)
 
     new_name = pyperclip.paste().replace('"', '').replace("'", "")
-    if not re.match("^[A-Z\-]+$", new_name) or not any(stock['name'] == new_name for stock in data['stocks']):
+    if not re.match("^[A-Z\-]+$", new_name) or not any(stock['symbol'] == new_name for stock in data['stocks']):
         messagebox.showerror("错误", "不是有效的股票代码或股票代码不存在！")
         sys.exit()
 
