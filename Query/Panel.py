@@ -173,7 +173,7 @@ def on_keyword_selected_chart(value, parent_window):
     stock_sectors = ["Basic_Materials", "Communication_Services", "Consumer_Cyclical",
         "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare", "Industrials",
         "Real_Estate", "Technology", "Utilities"]
-    economics_sectors = ["Economics","ETFs"]
+    economics_sectors = ["Economics","ETFs", "Indices"]
     
     db_path = "/Users/yanzhang/Documents/Database/Finance.db"
     for sector, names in sector_data.items():

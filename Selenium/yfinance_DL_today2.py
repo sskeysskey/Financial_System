@@ -28,8 +28,7 @@ else:
     tomorrow = today + timedelta(days=1)
 
     # 定义时间范围
-    # start_date = yesterday.strftime('%Y-%m-%d')
-    # end_date = today.strftime('%Y-%m-%d')
+    yesterday_date = yesterday.strftime('%Y-%m-%d')
     start_date = today.strftime('%Y-%m-%d')
     end_date = tomorrow.strftime('%Y-%m-%d')
 
@@ -53,8 +52,7 @@ else:
                 table_name = group_name.replace(" ", "_")  # 确保表名没有空格
                 mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)  # 从映射字典获取名称，如果不存在则使用原始 ticker_symbol
                 for index, row in data.iterrows():
-                    # date = index.strftime('%Y-%m-%d')
-                    date = "2024-06-12"
+                    date = yesterday_date  # 使用昨天的日期
                     if group_name in ["Currencies", "Bonds", "Crypto"]:
                         price = round(row['Close'], 6)
                     elif group_name in ["Commodities", "Indices"]:

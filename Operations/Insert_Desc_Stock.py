@@ -102,7 +102,7 @@ else:
         "poesuccess": "/Users/yanzhang/Documents/python_code/Resource/poe_copy_success.png",
         "poethumb": "/Users/yanzhang/Documents/python_code/Resource/poe_thumb.png",
         "kimicopy": "/Users/yanzhang/Documents/python_code/Resource/Kimi_copy.png",
-        "baichuancopy": "/Users/yanzhang/Documents/python_code/Resource/baichuan_copy.png",
+        "xinghuocopy": "/Users/yanzhang/Documents/python_code/Resource/xinghuo_copy.png",
         "poecopy": "/Users/yanzhang/Documents/python_code/Resource/poe_copy.png",
     }
 
@@ -151,7 +151,7 @@ else:
             # 鼠标点击中心坐标
             pyautogui.click(center_x, center_y)
         else:
-            location, shape = find_image_on_screen(templates["baichuancopy"])
+            location, shape = find_image_on_screen(templates["xinghuocopy"])
             if location:
                 print("找到copy图了，准备点击copy...")
                 # 计算中心坐标
@@ -191,7 +191,7 @@ else:
             # 鼠标点击中心坐标
             pyautogui.click(modify_x, modify_y)
         else:
-            location, shape = find_image_on_screen(templates["baichuancopy"])
+            location, shape = find_image_on_screen(templates["xinghuocopy"])
             if location:
                 print("找到copy图了，准备点击copy...")
                 # 计算中心坐标

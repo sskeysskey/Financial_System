@@ -6,6 +6,8 @@ from matplotlib.widgets import RadioButtons
 import matplotlib
 
 def plot_financial_data_panel(db_path, table_name, name, compare, default_time_range="1Y"):
+    # 初始化 show_volume 状态
+    show_volume = False
     # 初始化鼠标按下状态和初始价格点
     mouse_pressed = False
     initial_price = None
@@ -79,10 +81,13 @@ def plot_financial_data_panel(db_path, table_name, name, compare, default_time_r
             percentage_change = ((yval - initial_price) / initial_price) * 100
             text = f"{datetime.strftime(xval, '%Y-%m-%d')}\nPrice: {yval}\nInitial: {initial_price}\nChange: {percentage_change:.2f}%"
         else:
-            text = f"{datetime.strftime(xval, '%Y-%m-%d')}\nPrice: {yval}"
+            text = f"{datetime.strftime(xval, '%Y-%m-%d')}\n  {yval}"
         
         annot.set_text(text)
         annot.get_bbox_patch().set_alpha(0.4)
+
+        # 设置字体大小
+        annot.set_fontsize(16)  # 你可以根据需要调整这个值
 
         # 检查数据点的位置，动态调整浮窗的位置
         if xval >= (max(x) - (max(x) - min(x)) / 2):  # 如果数据点在图表右侧5%范围内
@@ -167,6 +172,37 @@ def plot_financial_data_panel(db_path, table_name, name, compare, default_time_r
         nonlocal mouse_pressed
         if event.button == 1:  # 左键释放
             mouse_pressed = False
+    
+    def on_key(event):
+        nonlocal show_volume
+        try:
+            if event.key == 'escape':
+                plt.close()
+                close_app()
+            elif event.key == '1':  # 使用 'c' 键切换到 "3m" 时间跨度
+                radio.set_active(options.index("1m"))
+                update("1m")
+            elif event.key == '2':  # 使用 'c' 键切换到 "3m" 时间跨度
+                radio.set_active(options.index("3m"))
+                update("3m")
+            elif event.key == '3':  # 使用 'f' 键切换到 "10Y" 时间跨度
+                radio.set_active(options.index("6m"))
+                update("6m")
+            elif event.key == '4':  # 使用 'f' 键切换到 "10Y" 时间跨度
+                radio.set_active(options.index("1Y"))
+                update("1Y")
+            elif event.key == '5':  # 使用 'f' 键切换到 "10Y" 时间跨度
+                radio.set_active(options.index("5Y"))
+                update("5Y")
+            elif event.key == '6':  # 使用 'f' 键切换到 "10Y" 时间跨度
+                radio.set_active(options.index("10Y"))
+                update("10Y")
+            elif event.key == '7':  # 使用 'f' 键切换到 "10Y" 时间跨度
+                radio.set_active(options.index("All"))
+                update("All")
+            
+        except Exception as e:
+            print(f"处理键盘事件时发生错误: {str(e)}")
 
     plt.gcf().canvas.mpl_connect("motion_notify_event", hover)
     plt.gcf().canvas.mpl_connect('key_press_event', on_key)

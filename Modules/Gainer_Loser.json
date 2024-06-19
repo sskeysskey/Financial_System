@@ -1,0 +1,49 @@
+{
+    "2024-06-19": {
+        "gainer": [
+            "CHWY",
+            "ITCI",
+            "AMKR",
+            "ARM",
+            "WBA",
+            "DELL",
+            "U"
+        ],
+        "loser": [
+            "ELF",
+            "VRT",
+            "DRS",
+            "IOT",
+            "BALL",
+            "MBLY",
+            "WST",
+            "COIN",
+            "AYI",
+            "EL",
+            "ARW",
+            "ALTM",
+            "SOLV",
+            "CSCO",
+            "DT",
+            "PCTY",
+            "CCCS"
+        ]
+    },
+    "2024-06-18": {
+        "gainer": [
+            "SNOW"
+        ],
+        "loser": [
+            "CPNG",
+            "BNTX",
+            "ICL",
+            "LPX",
+            "DY",
+            "ITRI",
+            "ALB",
+            "CSAN",
+            "BBWI",
+            "BMY"
+        ]
+    }
+}

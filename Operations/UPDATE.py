@@ -18,15 +18,15 @@ def update_data(db_path, table_name, data):
         #     cursor.execute(sql, (date, name, price, volume, id))
         #     count += 1  # 成功更新后计数增加
         
-        for item in data:
-            id, date, name, price = item
-            # 移除价格中的逗号
-            # price = float(price.replace(',', ''))
-            # 构建SQL UPDATE语句
-            sql = f"UPDATE {table_name} SET date=?, name=?, price=? WHERE id=?"
-            # 执行SQL语句
-            cursor.execute(sql, (date, name, price, id))
-            count += 1  # 成功更新后计数增加
+        # for item in data:
+        #     id, date, name, price = item
+        #     # 移除价格中的逗号
+        #     # price = float(price.replace(',', ''))
+        #     # 构建SQL UPDATE语句
+        #     sql = f"UPDATE {table_name} SET date=?, name=?, price=? WHERE id=?"
+        #     # 执行SQL语句
+        #     cursor.execute(sql, (date, name, price, id))
+        #     count += 1  # 成功更新后计数增加
         
         # 提交更改
         conn.commit()
@@ -53,7 +53,7 @@ data_sets = {
         # (164, "2024-04-26", "SSE Composite Index", "3062.32", 10),
         # (165, "2024-04-26", "Shenzhen Index", "9326.8", 10),
         # (91152, "2024-05-20", "Nikkei", "39069.68", 127400000),
-        # (167, "2024-04-26", "S&P BSE SENSEX", "74339.44", 10),
+        # (91368, "2024-06-17", "India", "77236.73", 0),
         # (91113, "2024-05-14", "HANGSENG", "19073.7109", 3455242600),
     ],
     'Bonds': [
@@ -96,7 +96,7 @@ data_sets = {
     ],
     'Technology': [
         # (49603, "2024-04-30", "CNYEUR", "0.129250", 4),
-        (801138, "2024-06-13", "AVGO", "167.899"),
+        # (801138, "2024-06-13", "AVGO", "167.899"),
         # (128834, "2024-06-12", "USDBRL", "5.3867")
     ]
 }

@@ -4,37 +4,30 @@
         "ALB",
         "ALTM"
     ],
-    "Communication_Services": [],
+    "Communication_Services": [
+        "ROKU"
+    ],
     "Consumer_Cyclical": [
-        "LULU",
-        "CAVA"
+        
     ],
     "Consumer_Defensive": [
-        "DEO",
-        "DAR",
-        "BF-B"
+        "DEO"
     ],
     "Financial_Services": [
         "MKTX"
     ],
     "Healthcare": [
-        "BMY",
         "CVS",
-        "WBA",
-        "XRAY"
+        "WBA"
     ],
     "Industrials": [
-        "GPN"
+        "UPS"
     ],
     "Energy": [],
     "Real_Estate": [],
     "Technology": [
-        "SNOW",
-        "PATH",
         "PAYC",
-        "PCTY",
         "DOX",
-        "CSCO",
         "U"
     ],
     "Utilities": [],
@@ -105,7 +98,8 @@
     ],
     "Indices": [
         "NASDAQ",
-        "Russell",
+        "Korea",
+        "Australia",
         "VIX",
         "S&P500",
         "HANGSENG",
@@ -113,8 +107,7 @@
         "Shenzhen",
         "Nikkei",
         "India",
-        "Brazil",
-        "Russian"
+        "Brazil"
     ],
     "Bonds": [
         "US10Y",

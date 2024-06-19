@@ -39,7 +39,8 @@
     "^RUT",
     "^GSPC",
     "^BSESN",
-    "IMOEX.ME"
+    "^KS11",
+    "^AXJO"
   ],
   "Commodities": [
     "GC=F",

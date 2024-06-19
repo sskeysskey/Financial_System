@@ -46,7 +46,7 @@ Event_Filter = [
     "ISM N-Mfg PMI", "CPI YY, NSA*", "Core CPI MM, SA*",
     "CPI MM, SA*", "Core CPI YY, NSA*", "Fed Funds Tgt Rate *",
     "PPI Final Demand YY*", "PPI exFood/Energy MM*", "PPI ex Food/Energy/Tr MM*",
-    "PPI Final Demand MM*"
+    "PPI Final Demand MM*", "Retail Sales MM *"
 ]
 
 # 初始化结果文件，使用追加模式

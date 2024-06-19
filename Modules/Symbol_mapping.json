@@ -20,5 +20,5 @@
     "BTC-USD": "Bitcoin", "ETH-USD": "Ether", "SOL-USD": "Solana", "BNB-USD": "Binance",
     "^HSI": "HANGSENG", "^IXIC": "NASDAQ", "000001.SS": "Shanghai", "399001.SZ": "Shenzhen",
     "^VIX": "VIX", "^BVSP": "Brazil", "^N225": "Nikkei", "^RUT": "Russell", "^GSPC": "S&P500",
-    "^BSESN": "India", "IMOEX.ME": "Russian"
+    "^BSESN": "India", "IMOEX.ME": "Russian", "^AXJO": "Australia", "^KS11": "Korea"
 }

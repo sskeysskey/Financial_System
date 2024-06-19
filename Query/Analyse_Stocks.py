@@ -256,7 +256,7 @@ def main():
         "TD", "DAY", "RHI", "OTEX", "ZI", "APA", "LU", "FIVE", "ORAN",
         "MGA", "MTN", "NGG", "NFE", "DBX", "ELP", "YUMC", "EBR", "LI",
         "CMCSA", "WBD", "MAT", "ZK", "BEN", "GGB", "BIDU", "PARA", "LVS",
-        "ETSY", "GXO", "ZM", "CAE"
+        "ETSY", "GXO", "ZM", "CAE", "PKX", "TU", "XRAY", "GILD"
         ]
 
         config_json = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json"

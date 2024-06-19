@@ -50,12 +50,12 @@ def Copy_Command_C():
     '''
     subprocess.run(['osascript', '-e', script])
 
-def on_key_press(event, symbol, entry, data, json_file, root):
+def on_key_press(event, symbol, entry, data, json_file, root, symbol_names):
     if event.keysym == 'Escape':
         root.destroy()
     elif event.keysym == 'Return':
         input_tags = entry.get().split()
-        add_or_update_etf(symbol, input_tags, data, json_file)
+        add_or_update_etf(symbol, input_tags, data, json_file, symbol_names)
         root.destroy()
 
 def main():
@@ -76,7 +76,7 @@ def main():
     entry = tk.Entry(root)
     entry.pack()
     entry.focus_set()
-    button = tk.Button(root, text="添加或更新ETF", command=lambda: on_key_press('Return', new_name, entry, data, json_file, root, symbol_names))
+    button = tk.Button(root, text="添加或更新ETF", command=lambda: on_key_press(tk.Event(), new_name, entry, data, json_file, root, symbol_names))
     button.pack()
     root.bind('<Key>', lambda event: on_key_press(event, new_name, entry, data, json_file, root, symbol_names))
     root.mainloop()

@@ -16,6 +16,14 @@ def read_earnings_release(filepath):
         companies_with_earnings = {line.split(':')[0] for line in file}
     return companies_with_earnings
 
+def read_gainers_losers(filepath):
+    with open(filepath, 'r') as file:
+        data = json.load(file)
+    yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    gainers = data.get(yesterday, {}).get('gainer', [])
+    losers = data.get(yesterday, {}).get('loser', [])
+    return gainers, losers
+
 def compare_today_yesterday(config_path, blacklist):
     with open(config_path, 'r') as file:
         data = json.load(file)
@@ -23,6 +31,7 @@ def compare_today_yesterday(config_path, blacklist):
     output = []
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
     earnings_companies = read_earnings_release('/Users/yanzhang/Documents/News/Earnings_Release_new.txt')
+    gainers, losers = read_gainers_losers('/Users/yanzhang/Documents/Financial_System/Modules/Gainer_Loser.json')
 
     for table_name, names in data.items():
         if table_name in interested_sectors:
@@ -75,14 +84,19 @@ def compare_today_yesterday(config_path, blacklist):
                 sector, company = line[0].rsplit(' ', 1)
                 percentage_change, latest_volume, volume_change = line[1], line[2], line[3]
                 
-                if company in earnings_companies:
+                original_company = company  # 保留原始公司名称
+                if original_company in earnings_companies:
                     company += '.$'
                 if latest_volume > 5000000:
                     company += '.*'
-                if volume_change > 0:
+                if original_company in gainers:
                     company += '.>'
-                elif volume_change < 0:
+                elif original_company in losers:
                     company += '.<'
+                # if volume_change > 0:
+                #     company += '.>'
+                # elif volume_change < 0:
+                #     company += '.<'
                 
                 file.write(f"{sector:<25}{company:<10}: {percentage_change:>6.2f}%\n")
         print(f"{output_file} 已生成。")

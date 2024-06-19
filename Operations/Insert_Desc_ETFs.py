@@ -39,14 +39,15 @@ def activate_chrome():
     # 运行AppleScript
     subprocess.run(['osascript', '-e', script])
 
-def load_symbol_names(file_path):
+def load_symbol_names(file_paths):
     symbol_names = {}
-    with open(file_path, 'r', encoding='utf-8') as file:
-        lines = file.readlines()
-        for line in lines:
-            if ': ' in line:
-                symbol, name = line.strip().split(': ', 1)
-                symbol_names[symbol] = name
+    for file_path in file_paths:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            lines = file.readlines()
+            for line in lines:
+                if ': ' in line:
+                    symbol, name = line.strip().split(': ', 1)
+                    symbol_names[symbol] = name
     return symbol_names
 
 def add_etf(symbol, entry, data, json_file, description1, description2, root, symbol_names):
@@ -71,8 +72,9 @@ def on_key_press(event, symbol, entry, data, json_file, description1, descriptio
         add_etf(symbol, entry, data, json_file, description1, description2, root, symbol_names)
 
 json_file = "/Users/yanzhang/Documents/Financial_System/Modules/Description.json"
-symbol_name_file = "/Users/yanzhang/Documents/News/backup/ETFs.txt"
-symbol_names = load_symbol_names(symbol_name_file)
+symbol_name_file1 = "/Users/yanzhang/Documents/News/backup/ETFs.txt"
+symbol_name_file2 = "/Users/yanzhang/Documents/News/ETFs_new.txt"
+symbol_names = load_symbol_names([symbol_name_file1, symbol_name_file2])
 
 with open(json_file, 'r', encoding='utf-8') as file:
     data = json.load(file)

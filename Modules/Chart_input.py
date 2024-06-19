@@ -54,7 +54,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         return
 
     fig, ax1 = plt.subplots(figsize=(13, 6)) # 调整整个窗口大小，前面是X，后面是Y
-    fig.subplots_adjust(left=0.05, bottom=0.2, right=0.91, top=0.9)  # 根据需要调整这些值
+    fig.subplots_adjust(left=0.05, bottom=0.1, right=0.91, top=0.9)  # 根据图标窗口距离上下左右的距离
 
     ax2 = ax1.twinx()  # 创建双 y 轴
     
@@ -187,16 +187,20 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
         if mouse_pressed and initial_price is not None:
             percentage_change = ((yval - initial_price) / initial_price) * 100
-            text = f"{datetime.strftime(xval, '%Y-%m-%d')}\nPrice: {yval}\nInitial: {initial_price}\nChange: {percentage_change:.2f}%"
+            # text = f"{datetime.strftime(xval, '%Y-%m-%d')}\nPrice: {yval}\nInitial: {initial_price}\nChange: {percentage_change:.2f}%"
+            text = f"{percentage_change:.1f}%"
         else:
-            text = f"{datetime.strftime(xval, '%Y-%m-%d')}\nPrice: {yval}"
+            text = f"{datetime.strftime(xval, '%Y-%m-%d')}\n  {yval}"
         
         annot.set_text(text)
         annot.get_bbox_patch().set_alpha(0.4)
 
+        # 设置字体大小
+        annot.set_fontsize(16)  # 你可以根据需要调整这个值
+
         # 检查数据点的位置，动态调整浮窗的位置
         if xval >= (max(x) - (max(x) - min(x)) / 2):  # 如果数据点在图表右侧5%范围内
-            annot.set_position((-100, -20))  # 向左偏移
+            annot.set_position((-130, -20))  # 向左偏移
         else:
             # annot.set_position((-50, 0))  # 默认偏移
             annot.set_position((50, -20))  # 默认偏移
@@ -293,6 +297,40 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         nonlocal mouse_pressed
         if event.button == 1:  # 左键释放
             mouse_pressed = False
+        
+    def on_key(event):
+        nonlocal show_volume
+        try:
+            if event.key == 'escape':
+                plt.close()
+                close_app()
+            elif event.key == 'v':  # 使用 'v' 键切换 volume 曲线的显示状态
+                show_volume = not show_volume
+                update(radio.value_selected)
+            elif event.key == '1':  # 使用 'c' 键切换到 "3m" 时间跨度
+                radio.set_active(options.index("1m"))
+                update("1m")
+            elif event.key == '2':  # 使用 'c' 键切换到 "3m" 时间跨度
+                radio.set_active(options.index("3m"))
+                update("3m")
+            elif event.key == '3':  # 使用 'f' 键切换到 "10Y" 时间跨度
+                radio.set_active(options.index("6m"))
+                update("6m")
+            elif event.key == '4':  # 使用 'f' 键切换到 "10Y" 时间跨度
+                radio.set_active(options.index("1Y"))
+                update("1Y")
+            elif event.key == '5':  # 使用 'f' 键切换到 "10Y" 时间跨度
+                radio.set_active(options.index("5Y"))
+                update("5Y")
+            elif event.key == '6':  # 使用 'f' 键切换到 "10Y" 时间跨度
+                radio.set_active(options.index("10Y"))
+                update("10Y")
+            elif event.key == '7':  # 使用 'f' 键切换到 "10Y" 时间跨度
+                radio.set_active(options.index("All"))
+                update("All")
+            
+        except Exception as e:
+            print(f"处理键盘事件时发生错误: {str(e)}")
 
     plt.gcf().canvas.mpl_connect("motion_notify_event", hover)
     plt.gcf().canvas.mpl_connect('key_press_event', on_key)
