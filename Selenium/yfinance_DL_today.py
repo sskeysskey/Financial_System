@@ -55,10 +55,12 @@ else:
                 for index, row in data.iterrows():
                     date = index.strftime('%Y-%m-%d')
                     # date = "2024-06-11"
-                    if group_name in ["Currencies", "Bonds", "Crypto"]:
-                        price = round(row['Close'], 6)
-                    elif group_name in ["Commodities", "Indices"]:
+                    if group_name in ["Currencies", "Bonds"]:
                         price = round(row['Close'], 4)
+                    elif group_name in ["Crypto"]:
+                        price = round(row['Close'], 1)
+                    elif group_name in ["Commodities"]:
+                        price = round(row['Close'], 3)
                     else:
                         price = round(row['Close'], 2)
 

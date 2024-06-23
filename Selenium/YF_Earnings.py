@@ -36,6 +36,15 @@ driver = webdriver.Chrome(service=service)
 with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as file:
     data = json.load(file)
 
+# 加载颜色关键词JSON文件
+with open('/Users/yanzhang/Documents/Financial_System/Modules/colors.json', 'r') as file:
+    color_data = json.load(file)
+
+# 将所有颜色关键词整合到一个集合中
+color_keys = set()
+for key in color_data:
+    color_keys.update(color_data[key])
+
 # 获取当前日期和结束日期
 # start_date = datetime(2024, 5, 27)
 # end_date = datetime(2024, 8, 1)
@@ -81,7 +90,10 @@ with open(file_path, 'a') as output_file:
                     if "Earnings Release" in event_name:
                         for category, symbols in data.items():
                             if symbol in symbols:
-                                entry = f"{symbol}:{formatted_change_date}-{call_time}"
+                                # 检查颜色关键词
+                                if symbol in color_keys:
+                                    symbol += ":L"
+                                entry = f"{symbol:<7}: {formatted_change_date} - {call_time}"
                                 output_file.write(entry + "\n")
                                 
                 offset += 100  # 为下一个子页面增加 offset

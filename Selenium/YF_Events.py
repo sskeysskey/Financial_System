@@ -38,7 +38,7 @@ start_date = current_date + timedelta(days=(6 - current_date.weekday()))
 # 计算离当前最近的周六
 end_date = start_date + timedelta(days=6)
 
-Event_Filter = [
+Event_Filter = {
     "Initial Jobless Clm*", "GDP 2nd Estimate*",
     "Non-Farm Payrolls*", "Core PCE Price Index MM *",
     "Core PCE Price Index YY*", "ISM Manufacturing PMI",
@@ -47,7 +47,12 @@ Event_Filter = [
     "CPI MM, SA*", "Core CPI YY, NSA*", "Fed Funds Tgt Rate *",
     "PPI Final Demand YY*", "PPI exFood/Energy MM*", "PPI ex Food/Energy/Tr MM*",
     "PPI Final Demand MM*", "Retail Sales MM *"
-]
+}
+
+# 定义一个包含所有目标国家代码的集合
+target_countries = {
+    "US"
+}
 
 # 初始化结果文件，使用追加模式
 with open(file_path, 'a') as output_file:
@@ -56,24 +61,38 @@ with open(file_path, 'a') as output_file:
     
     while change_date <= end_date:
         formatted_change_date = change_date.strftime('%Y-%m-%d')
-        url = f"https://finance.yahoo.com/calendar/economic?from={start_date.strftime('%Y-%m-%d')}&to={end_date.strftime('%Y-%m-%d')}&day={formatted_change_date}"
-        driver.get(url)
+        offset = 0
+        has_data = True
         
-        wait = WebDriverWait(driver, 2)
-        try:
-            rows = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "tr.simpTblRow")))
-            for row in rows:
-                event = row.find_element(By.CSS_SELECTOR, 'td[aria-label="Event"]').text
-                if event in Event_Filter:
-                    try:
-                        event_time = row.find_element(By.CSS_SELECTOR, 'td[aria-label="Event Time"]').text
-                    except NoSuchElementException:
-                        event_time = "No event time available"
+        while has_data:
+            url = f"https://finance.yahoo.com/calendar/economic?from={start_date.strftime('%Y-%m-%d')}&to={end_date.strftime('%Y-%m-%d')}&day={formatted_change_date}&offset={offset}&size=100"
+            driver.get(url)
+            
+            wait = WebDriverWait(driver, 4)
+            try:
+                rows = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "tr.simpTblRow")))
+            except TimeoutException:
+                rows = []  # 如果超时，则设置 rows 为空列表
+            
+            if not rows:
+                has_data = False
+            else:
+                try:
+                    for row in rows:
+                        event = row.find_element(By.CSS_SELECTOR, 'td[aria-label="Event"]').text
+                        country = row.find_element(By.CSS_SELECTOR, 'td[aria-label="Country"]').text
 
-                    entry = f"{event}:{formatted_change_date}-{event_time}"
-                    output_file.write(entry + "\n")
-        except TimeoutException:
-            print(f"No data found for date {formatted_change_date}. Skipping to next date.")
+                        if event in Event_Filter and country not in target_countries:
+                            try:
+                                event_time = row.find_element(By.CSS_SELECTOR, 'td[aria-label="Event Time"]').text
+                            except NoSuchElementException:
+                                event_time = "No event time available"
+
+                            entry = f"{formatted_change_date} : {event} [{country}]"
+                            output_file.write(entry + "\n")
+                    offset += 100  # 为下一个子页面增加 offset
+                except TimeoutException:
+                    print(f"No data found for date {formatted_change_date}. Skipping to next date.")
         change_date += delta
 
 # 关闭浏览器

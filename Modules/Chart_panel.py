@@ -77,11 +77,7 @@ def plot_financial_data_panel(db_path, table_name, name, compare, default_time_r
         yval = y[ind["ind"][0]]
         annot.xy = (xval, yval)
 
-        if mouse_pressed and initial_price is not None:
-            percentage_change = ((yval - initial_price) / initial_price) * 100
-            text = f"{datetime.strftime(xval, '%Y-%m-%d')}\nPrice: {yval}\nInitial: {initial_price}\nChange: {percentage_change:.2f}%"
-        else:
-            text = f"{datetime.strftime(xval, '%Y-%m-%d')}\n  {yval}"
+        text = f"{((yval - initial_price) / initial_price) * 100:.1f}%" if mouse_pressed and initial_price is not None else f"{datetime.strftime(xval, '%Y-%m-%d')}\n{yval}"
         
         annot.set_text(text)
         annot.get_bbox_patch().set_alpha(0.4)

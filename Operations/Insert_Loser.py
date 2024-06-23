@@ -1,15 +1,26 @@
 import pyperclip
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import OrderedDict
 import subprocess
+
+def get_effective_date():
+    today = datetime.now()
+    # 如果今天是周日（6）或周一（0），则找到最近的前一个周六
+    if today.weekday() == 6:  # 周日是6
+        last_saturday = today - timedelta(days=1)
+    elif today.weekday() == 0:  # 周一是0
+        last_saturday = today - timedelta(days=2)
+    else:
+        return today.strftime("%Y-%m-%d")
+    return last_saturday.strftime("%Y-%m-%d")
 
 def add_to_loser():
     filename = '/Users/yanzhang/Documents/Financial_System/Modules/Gainer_Loser.json'
     
-    # 获取当前日期
-    date = datetime.now().strftime("%Y-%m-%d")
+    # 获取有效日期
+    date = get_effective_date()
     
     # 如果文件不存在，则创建一个空的JSON文件
     if not os.path.exists(filename):

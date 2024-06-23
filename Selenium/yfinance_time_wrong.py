@@ -16,7 +16,7 @@ if now.weekday() in (0, 6):
     print("Today is either Sunday or Monday. The script will not run.")
 else:
     # 读取JSON文件
-    with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty2.json', 'r') as file:
+    with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_time_wrong.json', 'r') as file:
         stock_groups = json.load(file)
 
     # 读取symbol_mapping JSON文件
@@ -53,10 +53,12 @@ else:
                 mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)  # 从映射字典获取名称，如果不存在则使用原始 ticker_symbol
                 for index, row in data.iterrows():
                     date = yesterday_date  # 使用昨天的日期
-                    if group_name in ["Currencies", "Bonds", "Crypto"]:
-                        price = round(row['Close'], 6)
-                    elif group_name in ["Commodities", "Indices"]:
+                    if group_name in ["Currencies", "Bonds"]:
                         price = round(row['Close'], 4)
+                    elif group_name in ["Crypto"]:
+                        price = round(row['Close'], 1)
+                    elif group_name in ["Commodities"]:
+                        price = round(row['Close'], 3)
                     else:
                         price = round(row['Close'], 2)
 

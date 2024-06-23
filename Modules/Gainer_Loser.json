@@ -1,5 +1,39 @@
 {
-    "2024-06-19": {
+    "2024-06-22": {
+        "gainer": [
+            "IBRX",
+            "RYAN"
+        ],
+        "loser": [
+            "GTLS"
+        ]
+    },
+    "2024-06-21": {
+        "gainer": [
+            "AMKR",
+            "WBA",
+            "CHWY",
+            "AAPL",
+            "AVAV",
+            "GLOB",
+            "GILD",
+            "ACN",
+            "AMD",
+            "CPAY",
+            "CMC",
+            "FCX",
+            "NU"
+        ],
+        "loser": [
+            "ALTM",
+            "ELF",
+            "BALL",
+            "DRS",
+            "VRT",
+            "TOST"
+        ]
+    },
+    "2024-06-20": {
         "gainer": [
             "CHWY",
             "ITCI",

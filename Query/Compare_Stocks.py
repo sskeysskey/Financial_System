@@ -4,63 +4,69 @@ import json
 import os
 
 def create_connection(db_file):
-    conn = sqlite3.connect(db_file)
-    return conn
+    return sqlite3.connect(db_file)
 
-def log_error_with_timestamp(error_message):
+def log_error_with_timestamp(error_message, error_file_path):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-    return f"[{timestamp}] {error_message}\n"
+    with open(error_file_path, 'a') as error_file:
+        error_file.write(f"[{timestamp}] {error_message}\n")
 
 def read_earnings_release(filepath):
     with open(filepath, 'r') as file:
-        companies_with_earnings = {line.split(':')[0] for line in file}
-    return companies_with_earnings
+        return {line.split(':')[0] for line in file}
 
 def read_gainers_losers(filepath):
     with open(filepath, 'r') as file:
         data = json.load(file)
-    yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-    gainers = data.get(yesterday, {}).get('gainer', [])
-    losers = data.get(yesterday, {}).get('loser', [])
-    return gainers, losers
+    if not data:
+        return [], []
+    # 找到最新的日期
+    latest_date = max(data.keys(), key=lambda d: datetime.strptime(d, "%Y-%m-%d"))
+    # 返回最新日期的数据
+    return data.get(latest_date, {}).get('gainer', []), data.get(latest_date, {}).get('loser', [])
 
-def compare_today_yesterday(config_path, blacklist):
+def get_latest_two_dates(cursor, table_name, name):
+    query = f"""
+    SELECT date FROM {table_name}
+    WHERE name = ? 
+    ORDER BY date DESC
+    LIMIT 2
+    """
+    cursor.execute(query, (name,))
+    return cursor.fetchall()
+
+def get_prices(cursor, table_name, name, dates):
+    query = f"""
+    SELECT date, price, volume FROM {table_name}
+    WHERE name = ? AND date IN (?, ?)
+    ORDER BY date DESC
+    """
+    cursor.execute(query, (name, *dates))
+    return cursor.fetchall()
+
+def compare_today_yesterday(config_path, blacklist, interested_sectors, db_path, earnings_path, gainers_losers_path, output_path, error_file_path):
     with open(config_path, 'r') as file:
         data = json.load(file)
 
-    output = []
-    db_path = '/Users/yanzhang/Documents/Database/Finance.db'
-    earnings_companies = read_earnings_release('/Users/yanzhang/Documents/News/Earnings_Release_new.txt')
-    gainers, losers = read_gainers_losers('/Users/yanzhang/Documents/Financial_System/Modules/Gainer_Loser.json')
+    earnings_companies = read_earnings_release(earnings_path)
+    gainers, losers = read_gainers_losers(gainers_losers_path)
 
-    for table_name, names in data.items():
-        if table_name in interested_sectors:
-            with create_connection(db_path) as conn:
-                cursor = conn.cursor()
+    output = []
+
+    with create_connection(db_path) as conn:
+        cursor = conn.cursor()
+        for table_name, names in data.items():
+            if table_name in interested_sectors:
                 for name in names:
                     if name in blacklist:
                         continue
                     try:
-                        query_two_latest_dates = f"""
-                        SELECT date FROM {table_name}
-                        WHERE name = ? 
-                        ORDER BY date DESC
-                        LIMIT 2
-                        """
-                        cursor.execute(query_two_latest_dates, (name,))
-                        results = cursor.fetchall()
-
+                        results = get_latest_two_dates(cursor, table_name, name)
                         if len(results) < 2:
-                            raise Exception(f"错误：无法找到{table_name}下的{name}足够的历史数据进行比较。")
+                            raise ValueError(f"无法找到 {table_name} 下的 {name} 足够的历史数据进行比较。")
 
-                        latest_date, second_latest_date = map(lambda x: datetime.strptime(x[0], "%Y-%m-%d"), results)
-
-                        query = f"""
-                        SELECT date, price, volume FROM {table_name}
-                        WHERE name = ? AND date IN (?, ?) ORDER BY date DESC
-                        """
-                        cursor.execute(query, (name, latest_date.strftime("%Y-%m-%d"), second_latest_date.strftime("%Y-%m-%d")))
-                        prices = cursor.fetchall()
+                        latest_date, second_latest_date = map(lambda x: x[0], results)
+                        prices = get_prices(cursor, table_name, name, [latest_date, second_latest_date])
 
                         if len(prices) == 2:
                             latest_price, second_latest_price = prices[0][1], prices[1][1]
@@ -68,21 +74,19 @@ def compare_today_yesterday(config_path, blacklist):
                             change = latest_price - second_latest_price
                             percentage_change = (change / second_latest_price) * 100
                             volume_change = latest_volume - second_latest_volume
-                            output.append((f"{table_name} {name}", percentage_change, latest_volume, volume_change))
+                            percentage_volume_change = (volume_change / second_latest_volume) * 100
+                            output.append((f"{table_name} {name}", percentage_change, latest_volume, percentage_volume_change))
                         else:
-                            raise Exception(f"错误：无法比较{table_name}下的{name}，因为缺少必要的数据。")
+                            raise ValueError(f"无法比较 {table_name} 下的 {name}，因为缺少必要的数据。")
                     except Exception as e:
-                        formatted_error_message = log_error_with_timestamp(str(e))
-                        with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
-                            error_file.write(formatted_error_message)
+                        log_error_with_timestamp(str(e), error_file_path)
 
     if output:
         output.sort(key=lambda x: x[1], reverse=True)
-        output_file = '/Users/yanzhang/Documents/News/CompareStock.txt'
-        with open(output_file, 'w') as file:
+        with open(output_path, 'w') as file:
             for line in output:
                 sector, company = line[0].rsplit(' ', 1)
-                percentage_change, latest_volume, volume_change = line[1], line[2], line[3]
+                percentage_change, latest_volume, percentage_volume_change = line[1], line[2], line[3]
                 
                 original_company = company  # 保留原始公司名称
                 if original_company in earnings_companies:
@@ -98,13 +102,10 @@ def compare_today_yesterday(config_path, blacklist):
                 # elif volume_change < 0:
                 #     company += '.<'
                 
-                file.write(f"{sector:<25}{company:<10}: {percentage_change:>6.2f}%\n")
-        print(f"{output_file} 已生成。")
+                file.write(f"{sector:<25}{company:<10}: {percentage_change:>6.2f}%    {percentage_volume_change:>6.2f}%\n")
+        print(f"{output_path} 已生成。")
     else:
-        error_message = "输出为空，无法进行保存文件操作。"
-        formatted_error_message = log_error_with_timestamp(error_message)
-        with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
-            error_file.write(formatted_error_message)
+        log_error_with_timestamp("输出为空，无法进行保存文件操作。", error_file_path)
 
 if __name__ == '__main__':
     config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
@@ -114,6 +115,8 @@ if __name__ == '__main__':
                           "Real_Estate", "Technology", "Utilities"]
     file_path = '/Users/yanzhang/Documents/News/CompareStock.txt'
     directory_backup = '/Users/yanzhang/Documents/News/site/'
+    error_file_path = '/Users/yanzhang/Documents/News/Today_error.txt'
+    
     if os.path.exists(file_path):
         yesterday = datetime.now() - timedelta(days=1)
         timestamp = yesterday.strftime('%m%d')
@@ -125,4 +128,9 @@ if __name__ == '__main__':
         print(f"文件已重命名为: {new_file_path}")
     else:
         print("文件不存在")
-    compare_today_yesterday(config_path, blacklist)
+    
+    compare_today_yesterday(config_path, blacklist, interested_sectors,
+                            '/Users/yanzhang/Documents/Database/Finance.db',
+                            '/Users/yanzhang/Documents/News/Earnings_Release_new.txt',
+                            '/Users/yanzhang/Documents/Financial_System/Modules/Gainer_Loser.json',
+                            file_path, error_file_path)

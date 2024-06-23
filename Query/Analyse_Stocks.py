@@ -208,7 +208,7 @@ def main():
                 if 'Y' in year_part:
                     years = int(year_part.replace('Y', ''))
                     if years == 1:
-                        # continue  # 一年的不需要放入任何颜色分类中
+                        # continue  # 不需要放入任何颜色分类，就用continue
                         category_list = 'white_keywords'
                     elif years == 2:
                         category_list = 'yellow_keywords'
@@ -229,11 +229,11 @@ def main():
 
         return updates_color
     
-    def update_color_json(color_config_path, updates, blacklist_newlow):
+    def update_color_json(color_config_path, updates_colors, blacklist_newlow):
         with open(color_config_path, 'r', encoding='utf-8') as file:
             colors = json.load(file)
         
-        for category_list, names in updates.items():
+        for category_list, names in updates_colors.items():
             for name in names:
                 # 检查并移动到正确的分类
                 for key in colors:
@@ -251,12 +251,12 @@ def main():
         updates = parse_output(final_output1)
         updates_color = parse_output_color(final_output1)
         # 黑名单列表
-        blacklist_newlow = ["SIRI", "BBD","BILL", "TAP", "STVN", "LSXMK",
-        "TAK", "CSAN", "CIG", "EPAM", "TLK", "LBTYK", "ABEV",
+        blacklist_newlow = ["SIRI", "BBD", "BILL", "TAP", "STVN", "LSXMK",
+        "TAK", "CSAN", "CIG", "TLK", "LBTYK", "ABEV",
         "TD", "DAY", "RHI", "OTEX", "ZI", "APA", "LU", "FIVE", "ORAN",
         "MGA", "MTN", "NGG", "NFE", "DBX", "ELP", "YUMC", "EBR", "LI",
         "CMCSA", "WBD", "MAT", "ZK", "BEN", "GGB", "BIDU", "PARA", "LVS",
-        "ETSY", "GXO", "ZM", "CAE", "PKX", "TU", "XRAY", "GILD"
+        "ETSY", "GXO", "ZM", "CAE", "PKX", "TU", "XRAY"
         ]
 
         config_json = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json"

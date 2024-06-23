@@ -11,15 +11,32 @@ sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
 from Chart_panel import plot_financial_data_panel
 from Chart_input import plot_financial_data
 
-def load_json_data(path):
+def load_json(path):
     with open(path, 'r', encoding='utf-8') as file:
         return json.load(file)
 
+def load_text_data(path):
+    data = {}
+    with open(path, 'r') as file:
+        for line in file:
+            key, value = map(str.strip, line.split(':', 1))
+            data[key.split()[-1]] = value
+    return data
+
+def load_marketcap_pe_data(path):
+    data = {}
+    with open(path, 'r') as file:
+        for line in file:
+            key, values = map(str.strip, line.split(':', 1))
+            marketcap, pe = map(str.strip, values.split(','))
+            data[key] = (float(marketcap), pe)
+    return data
+
 # 全局数据变量
-keyword_colors = load_json_data('/Users/yanzhang/Documents/Financial_System/Modules/Colors.json')
-config = load_json_data('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json')
-json_data = load_json_data('/Users/yanzhang/Documents/Financial_System/Modules/Description.json')
-sector_data = load_json_data('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json')
+keyword_colors = load_json('/Users/yanzhang/Documents/Financial_System/Modules/Colors.json')
+config = load_json('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json')
+json_data = load_json('/Users/yanzhang/Documents/Financial_System/Modules/Description.json')
+sector_data = load_json('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json')
 
 def create_custom_style():
     style = ttk.Style()
@@ -49,24 +66,21 @@ def create_selection_window():
     scrollbar = tk.Scrollbar(selection_window, orient="horizontal", command=canvas.xview)
     scrollable_frame = tk.Frame(canvas)
 
-    scrollable_frame.bind(
-        "<Configure>",
-        lambda e: canvas.configure(
-            scrollregion=canvas.bbox("all")
-        )
-    )
+    scrollable_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
 
-    create_custom_style() 
+    create_custom_style()
     canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
     canvas.configure(xscrollcommand=scrollbar.set)
 
-    color_frames = [tk.Frame(scrollable_frame) for _ in range(6)]
+    color_frames = [tk.Frame(scrollable_frame) for _ in range(8)]
     for frame in color_frames:
-        frame.pack(side="left", padx=5, pady=10, fill="both", expand=True)
+        frame.pack(side="left", padx=3, pady=10, fill="both", expand=True)
 
     categories = [
-        ['Basic_Materials', 'Communication_Services', 'Consumer_Cyclical', 'Consumer_Defensive', 'Technology'],
-        ['Financial_Services', 'Healthcare', 'Industrials', 'Real_Estate', 'Energy', 'Utilities'],
+        ['Basic_Materials', 'Communication_Services', 'Consumer_Cyclical'],
+        ['Technology', 'Energy', 'Utilities'],
+        ['Industrials', 'Consumer_Defensive', 'Real_Estate'],
+        ['Healthcare', 'Financial_Services'],
         ['Bonds', 'Crypto', 'Indices'],
         ['Commodities', "ETFs_Commodity"],
         ['Currencies', 'ETFs_Oversea'],
@@ -76,41 +90,19 @@ def create_selection_window():
     for index, category_group in enumerate(categories):
         for db_key, keywords in config.items():
             if db_key in category_group:
-                frame = tk.LabelFrame(color_frames[index], text=db_key, padx=10, pady=10)
-                frame.pack(side="top", padx=15, pady=10, fill="both", expand=True)
+                frame = tk.LabelFrame(color_frames[index], text=db_key, padx=0, pady=10)
+                frame.pack(side="top", padx=0, pady=10, fill="both", expand=True)
 
                 for keyword in sorted(keywords):
-                    button_frame = tk.Frame(frame)  # 创建一个内部Frame来包裹两个按钮
+                    button_frame = tk.Frame(frame)
                     button_frame.pack(side="top", fill="x", padx=5, pady=2)
-                    
-                    # 根据关键字设置背景颜色
-                    if keyword in keyword_colors["purple_keywords"]:
-                        button_style = "Purple.TButton"
-                    elif keyword in keyword_colors["yellow_keywords"]:
-                        button_style = "Yellow.TButton"
-                    elif keyword in keyword_colors["orange_keywords"]:
-                        button_style = "Orange.TButton"
-                    elif keyword in keyword_colors["blue_keywords"]:
-                        button_style = "Blue.TButton"
-                    elif keyword in keyword_colors["red_keywords"]:
-                        button_style = "Red.TButton"
-                    elif keyword in keyword_colors["black_keywords"]:
-                        button_style = "Black.TButton"
-                    elif keyword in keyword_colors["white_keywords"]:
-                        button_style = "White.TButton"
-                    elif keyword in keyword_colors["green_keywords"]:
-                        button_style = "Green.TButton"
-                    else:
-                        button_style = "Default.TButton"  # 默认颜色
-                    
-                    change_text = compare_data.get(keyword, "")
-                    button_text = f"{keyword} {change_text}"
-                    
-                    button_data = ttk.Button(button_frame, text=button_text, style=button_style,
-                        command=lambda k=keyword: on_keyword_selected_chart(k, selection_window))
-                    button_data.pack(side="left", fill="x", expand=True)
-                    
-                    # 使用Label创建一个可点击的文本链接
+
+                    button_style = get_button_style(keyword)
+                    button_text = f"{keyword} {compare_data.get(keyword, '')}"
+
+                    ttk.Button(button_frame, text=button_text, style=button_style,
+                               command=lambda k=keyword: on_keyword_selected_chart(k, selection_window)).pack(side="left", fill="x", expand=True)
+
                     link_label = tk.Label(button_frame, text="🔢", fg="gray", cursor="hand2")
                     link_label.pack(side="right", fill="x", expand=False)
                     link_label.bind("<Button-1>", lambda event, k=keyword: on_keyword_selected(k))
@@ -118,13 +110,29 @@ def create_selection_window():
     canvas.pack(side="left", fill="both", expand=True)
     scrollbar.pack(side="bottom", fill="x")
 
+def get_button_style(keyword):
+    color_styles = {
+        "purple": "Purple.TButton",
+        "yellow": "Yellow.TButton",
+        "orange": "Orange.TButton",
+        "blue": "Blue.TButton",
+        "red": "Red.TButton",
+        "black": "Black.TButton",
+        "white": "White.TButton",
+        "green": "Green.TButton"
+    }
+    for color, style in color_styles.items():
+        if keyword in keyword_colors[f"{color}_keywords"]:
+            return style
+    return "Default.TButton"
+
 def on_keyword_selected(value):
-     for sector, names in sector_data.items():
-        if value in names:
-            db_path = "/Users/yanzhang/Documents/Database/Finance.db"
-            condition = f"name = '{value}'"
-            result = query_database(db_path, sector, condition)
-            create_window(result)
+    sector = next((s for s, names in sector_data.items() if value in names), None)
+    if sector:
+        db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+        condition = f"name = '{value}'"
+        result = query_database(db_path, sector, condition)
+        create_window(result)
 
 def query_database(db_path, table_name, condition):
     with sqlite3.connect(db_path) as conn:
@@ -142,69 +150,37 @@ def query_database(db_path, table_name, condition):
             output_text += ' | '.join([str(item).ljust(col_widths[idx]) for idx, item in enumerate(row)]) + '\n'
         return output_text
 
-def load_sector_data():
-    with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as file:
-        sector_data = json.load(file)
-    return sector_data
-
-def load_compare_data(path):
-    compare_data = {}
-    with open(path, 'r') as file:
-        for line in file.readlines():
-            parts = line.split(':')
-            key = parts[0].split()[-1].strip()
-            value = parts[1].strip()
-            compare_data[key] = value
-    return compare_data
-
-def load_marketcap_pe_data(path):
-    marketcap_pe_data = {}
-    with open(path, 'r') as file:
-        for line in file.readlines():
-            parts = line.split(':')
-            key = parts[0].strip()
-            values = parts[1].split(',')
-            marketcap = float(values[0].strip())
-            pe = values[1].strip()
-            marketcap_pe_data[key] = (marketcap, pe)
-    return marketcap_pe_data
-
 def on_keyword_selected_chart(value, parent_window):
     stock_sectors = ["Basic_Materials", "Communication_Services", "Consumer_Cyclical",
-        "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare", "Industrials",
-        "Real_Estate", "Technology", "Utilities"]
-    economics_sectors = ["Economics","ETFs", "Indices"]
-    
+                     "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare", "Industrials",
+                     "Real_Estate", "Technology", "Utilities"]
+    economics_sectors = ["Economics", "ETFs", "Indices"]
+
     db_path = "/Users/yanzhang/Documents/Database/Finance.db"
-    for sector, names in sector_data.items():
-        if value in names:
-            if sector in stock_sectors:            
-                plot_financial_data(db_path, sector, value, 
-                        compare_data.get(value, "N/A"), 
-                        shares.get(value, "N/A"), 
-                        *marketcap_pe_data.get(value, (None, 'N/A')), 
-                        json_data, '1Y')
-            elif sector in economics_sectors:            
-                plot_financial_data(db_path, sector, value, 
-                        compare_data.get(value, "N/A"), 
-                        shares.get(value, "N/A"), 
-                        *marketcap_pe_data.get(value, (None, 'N/A')), 
-                        json_data, '10Y')
-            else:
-                change = compare_data.get(value, "")
-                plot_financial_data_panel(db_path, sector, value, change, '1Y')
+    sector = next((s for s, names in sector_data.items() if value in names), None)
+
+    if sector:
+        compare_value = compare_data.get(value, "N/A")
+        shares_value = shares.get(value, "N/A")
+        marketcap, pe = marketcap_pe_data.get(value, (None, 'N/A'))
+
+        if sector in stock_sectors:
+            plot_financial_data(db_path, sector, value, compare_value, shares_value, marketcap, pe, json_data, '1Y')
+        elif sector in economics_sectors:
+            plot_financial_data(db_path, sector, value, compare_value, shares_value, marketcap, pe, json_data, '10Y')
+        else:
+            change = compare_data.get(value, "")
+            plot_financial_data_panel(db_path, sector, value, change, '1Y')
 
 def create_window(content):
     top = tk.Toplevel(root)
     top.title("数据库查询结果")
-    window_width = 900
-    window_height = 600
-    screen_width = top.winfo_screenwidth()
-    screen_height = top.winfo_screenheight()
-    center_x = int(screen_width / 2 - window_width / 2)
-    center_y = int(screen_height / 2 - window_height / 2)
+    window_width, window_height = 900, 600
+    center_x = (top.winfo_screenwidth() - window_width) // 2
+    center_y = (top.winfo_screenheight() - window_height) // 2
     top.geometry(f'{window_width}x{window_height}+{center_x}+{center_y}')
     top.bind('<Escape>', lambda e: close_app(top))
+
     text_font = tkFont.Font(family="Courier", size=20)
     text_area = scrolledtext.ScrolledText(top, wrap=tk.WORD, width=100, height=30, font=text_font)
     text_area.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
@@ -217,9 +193,9 @@ def close_app(window):
 if __name__ == '__main__':
     root = tk.Tk()
     root.withdraw()
-    compare_data = load_compare_data('/Users/yanzhang/Documents/News/backup/Compare_All.txt')
-    shares = load_compare_data('/Users/yanzhang/Documents/News/backup/Shares.txt')
+    compare_data = load_text_data('/Users/yanzhang/Documents/News/backup/Compare_All.txt')
+    shares = load_text_data('/Users/yanzhang/Documents/News/backup/Shares.txt')
     marketcap_pe_data = load_marketcap_pe_data('/Users/yanzhang/Documents/News/backup/marketcap_pe.txt')
-    
+
     create_selection_window()
     root.mainloop()

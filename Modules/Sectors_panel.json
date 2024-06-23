@@ -2,33 +2,59 @@
     "Basic_Materials": [
         "MOS",
         "ALB",
-        "ALTM"
+        "ALTM",
+        "VALE"
     ],
     "Communication_Services": [
         "ROKU"
     ],
     "Consumer_Cyclical": [
-        
+        "LEA",
+        "LULU",
+        "MTN",
+        "VFC"
     ],
     "Consumer_Defensive": [
-        "DEO"
+        "DEO",
+        "ACI",
+        "TAP",
+        "DAR",
+        "KVUE"
     ],
     "Financial_Services": [
-        "MKTX"
+        "MKTX",
+        "SIGI",
+        "BEN"
     ],
     "Healthcare": [
         "CVS",
-        "WBA"
+        "WBA",
+        "BNTX",
+        "PEN",
+        "WST",
+        "JNJ",
+        "BMY",
+        "SOLV"
     ],
     "Industrials": [
-        "UPS"
+        "UPS",
+        "ESLT",
+        "AGCO",
+        "JBHT",
+        "GPN"
     ],
-    "Energy": [],
+    "Energy": [
+        "APA"
+    ],
     "Real_Estate": [],
     "Technology": [
         "PAYC",
         "DOX",
-        "U"
+        "U",
+        "CSCO",
+        "DT",
+        "PCTY",
+        "ALAB"
     ],
     "Utilities": [],
     "Economics": [

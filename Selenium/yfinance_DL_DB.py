@@ -14,15 +14,15 @@ def log_error_with_timestamp(error_message):
 # end_date = "2024-06-03"
 
 # 适合于半自定义抓取
-# start_date = "2000-09-23"
-# today = datetime.now()
-# end_date = today.strftime('%Y-%m-%d')
+start_date = "2024-05-17"
+today = datetime.now()
+end_date = today.strftime('%Y-%m-%d')
 
 # 适合于只抓今天
-today = datetime.now()
-yesterday = today - timedelta(days=1)
-start_date = yesterday.strftime('%Y-%m-%d')
-end_date = today.strftime('%Y-%m-%d')
+# today = datetime.now()
+# yesterday = today - timedelta(days=1)
+# start_date = yesterday.strftime('%Y-%m-%d')
+# end_date = today.strftime('%Y-%m-%d')
 
 # 读取JSON文件
 with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json', 'r') as file:
@@ -53,10 +53,12 @@ for group_name, tickers in stock_groups.items():
             mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)
             for index, row in data.iterrows():
                 date = index.strftime('%Y-%m-%d')
-                if group_name in ["Currencies", "Bonds", "Crypto"]:
-                    price = round(row['Close'], 6)
-                elif group_name in ["Commodities", "Indices"]:
+                if group_name in ["Currencies", "Bonds"]:
                     price = round(row['Close'], 4)
+                elif group_name in ["Crypto"]:
+                    price = round(row['Close'], 1)
+                elif group_name in ["Commodities"]:
+                    price = round(row['Close'], 3)
                 else:
                     price = round(row['Close'], 2)
 

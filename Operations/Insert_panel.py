@@ -24,11 +24,10 @@ def save_json(filename, data):
         json.dump(data, file, indent=4, ensure_ascii=False)
 
 # 主处理函数
-def process_files(a_file, b_file, c_file):
+def process_files(a_file, b_file):
     # 加载文件
     data_a = load_json(a_file)
     data_b = load_json(b_file)
-    data_c = load_json(c_file)
     
     Copy_Command_C()
     # 从剪贴板获取内容
@@ -63,18 +62,19 @@ def process_files(a_file, b_file, c_file):
         print("未在a.json中找到匹配的项或剪贴板为空。")
         messagebox.showinfo("失败", "原始json中没有你要导入的项或剪贴板为空！")
     
-    # 添加到c.json的white_keywords下
-    if clipboard_content_upper:
-        if clipboard_content_upper not in data_c['white_keywords']:
-            data_c['blue_keywords'].append(clipboard_content_upper)
-            save_json(c_file, data_c)
-            print(f"已添加 '{clipboard_content_upper}' 到 colors.json 的 'white_keywords'")
-            messagebox.showinfo("成功", "数据已添加到c.json的blue_keywords。")
-        else:
-            print(f"'{clipboard_content_upper}' 已存在于 c.json 的 'white_keywords'")
-            messagebox.showinfo("失败", "要写入的数据已存在于c.json的blue_keywords！")
+    # # 添加到c.json的white_keywords下
+    # if clipboard_content_upper:
+    #     if clipboard_content_upper not in data_c['white_keywords']:
+    #         data_c['blue_keywords'].append(clipboard_content_upper)
+    #         save_json(c_file, data_c)
+    #         print(f"已添加 '{clipboard_content_upper}' 到 colors.json 的 'white_keywords'")
+    #         messagebox.showinfo("成功", "数据已添加到c.json的blue_keywords。")
+    #     else:
+    #         print(f"'{clipboard_content_upper}' 已存在于 c.json 的 'white_keywords'")
+    #         messagebox.showinfo("失败", "要写入的数据已存在于c.json的blue_keywords！")
 
 # 调用主函数
 process_files('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json',
-'/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json',
-'/Users/yanzhang/Documents/Financial_System/Modules/Colors.json')
+'/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json'
+# '/Users/yanzhang/Documents/Financial_System/Modules/Colors.json'
+)

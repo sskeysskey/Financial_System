@@ -97,7 +97,15 @@
     "Nickel",
     "Lithium",
     "Wheat",
-    "Aluminum"
+    "Aluminum",
+    "Steel",
+    "Coal",
+    "Palm Oil",
+    "Tin",
+    "Zinc",
+    "Palladium",
+    "Poultry",
+    "Salmon"
   ],
   "ETFs": [
     "IntermedTreary",
@@ -887,7 +895,8 @@
     "SOLV",
     "APLS",
     "NUVL",
-    "KRYS"
+    "KRYS",
+    "IBRX"
   ],
   "Industrials": [
     "GE",

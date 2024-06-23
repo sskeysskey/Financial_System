@@ -47,10 +47,6 @@ def is_blacklisted(symbol):
     """检查给定的股票符号是否在黑名单中"""
     return symbol in blacklist
 
-def process_urls(driver, urls, output):
-    for url, sector in urls:
-        process_sector(driver, url, sector, output)
-
 def fetch_data(driver, url):
     driver.get(url)
     results = []
@@ -135,10 +131,24 @@ def update_json(data, sector, file_path, output, log_enabled):
         file.truncate()
         json.dump(json_data, file, indent=2)
 
-def process_sector(driver, url, sector, output):
-    data = fetch_data(driver, url)
-    update_json(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', output, log_enabled=True)
-    update_json(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json', output, log_enabled=False)
+def process_sector(url, sector, cookies):
+    chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
+    service = Service(executable_path=chrome_driver_path)
+    driver = webdriver.Chrome(service=service)
+    
+    try:
+        driver.get("https://finance.yahoo.com")
+        for cookie in cookies:
+            driver.add_cookie(cookie)
+        driver.refresh()
+        
+        data = fetch_data(driver, url)
+        update_json(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', output, log_enabled=True)
+        update_json(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json', output, log_enabled=False)
+    finally:
+        driver.quit()
+    
+    return f"Processed {sector}"
 
 def save_output_to_file(output, directory, filename='Stock_Change.txt'):
     current_time = datetime.now().strftime('%m%d')
@@ -237,25 +247,20 @@ urls = [
 # 登录并获取cookies
 cookies = login_once()
 
-chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
-service = Service(executable_path=chrome_driver_path)
-driver = webdriver.Chrome(service=service)
-
-try:
-    # Navigate to the domain that matches the cookies
-    driver.get("https://finance.yahoo.com")  # Adjust URL as necessary to match the cookie domain
+# 创建一个 ThreadPoolExecutor
+with ThreadPoolExecutor(max_workers=5) as executor:  # 你可以根据需要调整 max_workers
+    # 提交所有任务到 executor
+    future_to_url = {executor.submit(process_sector, url, sector, cookies): (url, sector) for url, sector in urls}
     
-    # 在driver中设置cookies
-    for cookie in cookies:
-        driver.add_cookie(cookie)
-    
-    # Refresh the page to apply cookies
-    driver.refresh()
+    # 当任务完成时获取结果
+    for future in as_completed(future_to_url):
+        url, sector = future_to_url[future]
+        try:
+            result = future.result()
+            print(f"Task for {sector} completed: {result}")
+        except Exception as exc:
+            print(f"{url} generated an exception: {exc}")
 
-    # 用设置好cookies的driver处理URLs
-    process_urls(driver, urls, output)
-finally:
-    driver.quit()
 print("所有爬取任务完成。")
 
 # 在代码的最后部分调用save_output_to_file函数

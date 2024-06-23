@@ -2,7 +2,6 @@
     "white_keywords": [
         "SNOW",
         "ELP",
-        "LI",
         "TAP",
         "STVN",
         "JBHT",
@@ -17,20 +16,19 @@
         "ORAN",
         "NGG",
         "CAE",
-        "NVDA",
         "DBX",
         "BIDU",
         "MAT",
         "SIGI",
         "CMCSA",
-        "APH",
         "EBR",
         "BEN",
         "GXO",
         "PKX",
         "ROKU",
         "PEN",
-        "DT"
+        "DT",
+        "ACI"
     ],
     "yellow_keywords": [
         "CNYJPY",
@@ -42,8 +40,7 @@
         "IndiaETF",
         "APA",
         "DOX",
-        "NFE",
-        "CNQ"
+        "NFE"
     ],
     "orange_keywords": [
         "HANGSENG",
@@ -69,7 +66,8 @@
         "LKQ",
         "GMAB",
         "ETSY",
-        "TU"
+        "TU",
+        "BNTX"
     ],
     "purple_keywords": [
         "Bitcoin",
@@ -83,29 +81,27 @@
         "MKTX",
         "YUMC",
         "WBD",
-        "XRAY",
         "PARA",
         "GPN"
     ],
     "black_keywords": [
         "Cotton",
         "Sugar",
-        "U",
         "VFC",
         "WBA",
         "SOLV",
         "ZI",
-        "ALAB",
         "LU",
         "ZK",
         "KVUE",
-        "ZM"
+        "ZM",
+        "U",
+        "ALAB"
     ],
     "blue_keywords": [
         "Copper",
         "S&P500",
-        "USDINR",
-        "CAVA"
+        "USDINR"
     ],
     "red_keywords": [
         "VIX",
