@@ -1,59 +1,141 @@
-import time
+from datetime import datetime, timedelta
+import sqlite3
+import json
 import os
-import requests
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.action_chains import ActionChains
+import re
 
-# 设置浏览器驱动路径和下载路径
-chrome_driver_path = '/Users/yanzhang/Downloads/backup/chromedriver'  # 替换为你的chromedriver路径
-download_path = '/Users/yanzhang/Downloads'
+def create_connection(db_file):
+    return sqlite3.connect(db_file)
 
-# 初始化浏览器
-options = webdriver.ChromeOptions()
-prefs = {'download.default_directory': download_path}
-options.add_experimental_option('prefs', prefs)
-service = Service(chrome_driver_path)
-driver = webdriver.Chrome(service=service, options=options)
+def log_error_with_timestamp(error_message, error_file_path):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    with open(error_file_path, 'a') as error_file:
+        error_file.write(f"[{timestamp}] {error_message}\n")
 
-# 访问目标网站
-driver.get("https://lexica.art/")
+def read_earnings_release(filepath):
+    earnings = {}
+    with open(filepath, 'r') as file:
+        for line in file:
+            parts = line.split(':')
+            company = parts[0].strip()
+            date_info = parts[1].strip().split('-')[0].strip()
+            day = re.search(r'\d{4}-\d{2}-(\d{2})', date_info)
+            if day:
+                earnings[company] = day.group(1)
+    return earnings
 
-# 等待页面加载完成
-time.sleep(5)
+def read_gainers_losers(filepath):
+    with open(filepath, 'r') as file:
+        data = json.load(file)
+    if not data:
+        return [], []
+    # 找到最新的日期
+    latest_date = max(data.keys(), key=lambda d: datetime.strptime(d, "%Y-%m-%d"))
+    # 返回最新日期的数据
+    return data.get(latest_date, {}).get('gainer', []), data.get(latest_date, {}).get('loser', [])
 
-# 找到所有符合条件的链接
-links = driver.find_elements(By.XPATH, "//a[starts-with(@href, '/prompt/')]")
-links = links[:5]  # 取前10个链接
+def get_latest_two_dates(cursor, table_name, name):
+    query = f"""
+    SELECT date FROM {table_name}
+    WHERE name = ? 
+    ORDER BY date DESC
+    LIMIT 2
+    """
+    cursor.execute(query, (name,))
+    return cursor.fetchall()
 
-for link in links:
-    url = link.get_attribute('href')
+def get_prices(cursor, table_name, name, dates):
+    query = f"""
+    SELECT date, price, volume FROM {table_name}
+    WHERE name = ? AND date IN (?, ?)
+    ORDER BY date DESC
+    """
+    cursor.execute(query, (name, *dates))
+    return cursor.fetchall()
+
+def compare_today_yesterday(config_path, blacklist, interested_sectors, db_path, earnings_path, gainers_losers_path, output_path, error_file_path):
+    with open(config_path, 'r') as file:
+        data = json.load(file)
+
+    earnings_companies = read_earnings_release(earnings_path)
+    gainers, losers = read_gainers_losers(gainers_losers_path)
+
+    output = []
+
+    with create_connection(db_path) as conn:
+        cursor = conn.cursor()
+        for table_name, names in data.items():
+            if table_name in interested_sectors:
+                for name in names:
+                    if name in blacklist:
+                        continue
+                    try:
+                        results = get_latest_two_dates(cursor, table_name, name)
+                        if len(results) < 2:
+                            raise ValueError(f"无法找到 {table_name} 下的 {name} 足够的历史数据进行比较。")
+
+                        latest_date, second_latest_date = map(lambda x: x[0], results)
+                        prices = get_prices(cursor, table_name, name, [latest_date, second_latest_date])
+
+                        if len(prices) == 2:
+                            latest_price, second_latest_price = prices[0][1], prices[1][1]
+                            latest_volume, second_latest_volume = prices[0][2], prices[1][2]
+                            change = latest_price - second_latest_price
+                            percentage_change = (change / second_latest_price) * 100
+                            volume_change = latest_volume - second_latest_volume
+                            percentage_volume_change = (volume_change / second_latest_volume) * 100
+                            output.append((f"{table_name} {name}", percentage_change, latest_volume, percentage_volume_change))
+                        else:
+                            raise ValueError(f"无法比较 {table_name} 下的 {name}，因为缺少必要的数据。")
+                    except Exception as e:
+                        log_error_with_timestamp(str(e), error_file_path)
+
+    if output:
+        output.sort(key=lambda x: x[1], reverse=True)
+        with open(output_path, 'w') as file:
+            for line in output:
+                sector, company = line[0].rsplit(' ', 1)
+                percentage_change, latest_volume, percentage_volume_change = line[1], line[2], line[3]
+                
+                original_company = company  # 保留原始公司名称
+                if original_company in earnings_companies:
+                    company += f'.${earnings_companies[original_company]}'
+                if latest_volume > 5000000:
+                    company += '.*'
+                if original_company in gainers:
+                    company += '.>'
+                elif original_company in losers:
+                    company += '.<'
+                
+                file.write(f"{sector:<25}{company:<10}: {percentage_change:>6.2f}%    {percentage_volume_change:>6.2f}%\n")
+        print(f"{output_path} 已生成。")
+    else:
+        log_error_with_timestamp("输出为空，无法进行保存文件操作。", error_file_path)
+
+if __name__ == '__main__':
+    config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
+    blacklist = ['VFS','KVYO','LU','IEP','LOT','GRFS','BGNE']
+    interested_sectors = ["Basic_Materials", "Communication_Services", "Consumer_Cyclical",
+                          "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare", "Industrials",
+                          "Real_Estate", "Technology", "Utilities"]
+    file_path = '/Users/yanzhang/Documents/News/CompareStock.txt'
+    directory_backup = '/Users/yanzhang/Documents/News/site/'
+    error_file_path = '/Users/yanzhang/Documents/News/Today_error.txt'
     
-    # 打开新页面
-    driver.execute_script(f"window.open('{url}');")
-    driver.switch_to.window(driver.window_handles[-1])
+    if os.path.exists(file_path):
+        yesterday = datetime.now() - timedelta(days=1)
+        timestamp = yesterday.strftime('%m%d')
+        directory, filename = os.path.split(file_path)
+        name, extension = os.path.splitext(filename)
+        new_filename = f"{name}_{timestamp}{extension}"
+        new_file_path = os.path.join(directory_backup, new_filename)
+        os.rename(file_path, new_file_path)
+        print(f"文件已重命名为: {new_file_path}")
+    else:
+        print("文件不存在")
     
-    # 等待图片加载
-    try:
-        img_element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, "//img[starts-with(@src, 'https://image.lexica.art/full_webp/')]")))
-        img_url = img_element.get_attribute('src')
-        
-        # 下载图片
-        img_data = requests.get(img_url).content
-        img_name = os.path.join(download_path, img_url.split('/')[-1] + ".webp")
-        with open(img_name, 'wb') as handler:
-            handler.write(img_data)
-        
-        print(f"Downloaded {img_name}")
-    except Exception as e:
-        print(f"Failed to download image from {url}: {e}")
-    
-    # 关闭当前标签页并回到主页面
-    driver.close()
-    driver.switch_to.window(driver.window_handles[0])
-
-# 关闭浏览器
-driver.quit()
+    compare_today_yesterday(config_path, blacklist, interested_sectors,
+                            '/Users/yanzhang/Documents/Database/Finance.db',
+                            '/Users/yanzhang/Documents/News/Earnings_Release_new.txt',
+                            '/Users/yanzhang/Documents/Financial_System/Modules/Gainer_Loser.json',
+                            file_path, error_file_path)

@@ -98,11 +98,11 @@ def main():
     }
     templates = {key: cv2.imread(path, cv2.IMREAD_COLOR) for key, path in template_paths.items()}
 
-    def find_and_click(template_key, pixel=0):
+    def find_and_click(template_key, offset_y=0):
         location, shape = find_image_on_screen(templates[template_key])
         if location:
             center_x = (location[0] + shape[1] // 2) // 2
-            center_y = (location[1] + shape[0] // 2) // 2 - pixel
+            center_y = (location[1] + shape[0] // 2) // 2 - offset_y
             pyautogui.click(center_x, center_y)
             return True
         return False
@@ -130,15 +130,20 @@ def main():
     sleep(1)
     if not found_poe:
         found_poe = find_and_click("poethumb", 50)
-        pyautogui.click(button='right')
-        while not find_and_click("poecopy"):
-            sleep(1)
-        while not find_image("poesuccess"):
-            sleep(1)
+        if found_poe:
+            pyautogui.click(button='right')
+            while not find_and_click("poecopy"):
+                sleep(1)
+            while not find_image("poesuccess"):
+                sleep(1)
     else:
         find_and_click("kimicopy") or find_and_click("xinghuocopy")
 
     new_description2 = read_clipboard().replace('\n', ' ').replace('\r', ' ')
+    
+    if "ETF" in new_description1 and "ETF" in new_description2:
+        messagebox.showerror("错误", "要添加的好像是ETF而不是Stock")
+        sys.exit()
     
     root = tk.Tk()
     root.title("Add Stock")

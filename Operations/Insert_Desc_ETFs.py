@@ -29,29 +29,42 @@ def activate_chrome():
         delay 0.5
     end tell
     '''
-    subprocess.run(['osascript', '-e', script])
+    subprocess.run(['osascript', '-e', script], check=True)
 
 def load_symbol_names(file_paths):
     symbol_names = {}
     for file_path in file_paths:
-        with open(file_path, 'r', encoding='utf-8') as file:
-            lines = file.readlines()
-            for line in lines:
-                if ': ' in line:
-                    symbol, name = line.strip().split(': ', 1)
-                    symbol_names[symbol] = name
+        try:
+            with open(file_path, 'r', encoding='utf-8') as file:
+                for line in file:
+                    if ': ' in line:
+                        symbol, name = line.strip().split(': ', 1)
+                        symbol_names[symbol] = name
+        except FileNotFoundError:
+            print(f"文件未找到: {file_path}，将忽略。")
     return symbol_names
 
-def add_etf(symbol, entry, data, json_file, description1, description2, root, symbol_names):
+def add_or_update_etf(symbol, entry, data, json_file, description1, description2, root, symbol_names):
     etf_name = symbol_names.get(symbol, "")
-    new_etf = {
-        "symbol": symbol,
-        "name": etf_name,
-        "tag": entry.get().split(),
-        "description1": description1,
-        "description2": description2
-    }
-    data["etfs"].append(new_etf)
+    existing_etf = next((etf for etf in data["etfs"] if etf["symbol"] == symbol), None)
+    if existing_etf:
+        # 更新已有的ETF
+        if "description1" in existing_etf and not existing_etf["description1"]:
+            existing_etf["description1"] = description1
+        if "description2" in existing_etf and not existing_etf["description2"]:
+            existing_etf["description2"] = description2
+        existing_etf["tag"].extend(entry.get().split())
+    else:
+        # 添加新的ETF
+        new_etf = {
+            "symbol": symbol,
+            "name": etf_name,
+            "tag": entry.get().split(),
+            "description1": description1,
+            "description2": description2
+        }
+        data["etfs"].append(new_etf)
+    
     with open(json_file, "w", encoding="utf-8") as file:
         json.dump(data, file, ensure_ascii=False, indent=4)
     root.destroy()
@@ -60,7 +73,7 @@ def on_key_press(event, symbol, entry, data, json_file, description1, descriptio
     if event.keysym == 'Escape':
         root.destroy()
     elif event.keysym == 'Return':
-        add_etf(symbol, entry, data, json_file, description1, description2, root, symbol_names)
+        add_or_update_etf(symbol, entry, data, json_file, description1, description2, root, symbol_names)
 
 def read_clipboard():
     return pyperclip.paste().replace('"', '').replace("'", "")
@@ -73,9 +86,14 @@ def validate_new_name(new_name):
     return new_name
 
 def check_etf_exists(data, new_name):
-    if any(etf['symbol'] == new_name for etf in data.get('etfs', [])):
-        messagebox.showerror("错误", "股票代码已存在！")
-        sys.exit()
+    existing_etf = next((etf for etf in data.get('etfs', []) if etf['symbol'] == new_name), None)
+    if existing_etf:
+        if not existing_etf['description1'] and not existing_etf['description2']:
+            return existing_etf
+        else:
+            messagebox.showerror("错误", "股票代码已存在且描述已存在！")
+            sys.exit()
+    return None
 
 def execute_applescript(script_path):
     try:
@@ -94,7 +112,7 @@ def main():
         data = json.load(file)
 
     new_name = validate_new_name(read_clipboard())
-    check_etf_exists(data, new_name)
+    existing_etf = check_etf_exists(data, new_name)
 
     activate_chrome()
     template_paths = {
@@ -106,20 +124,18 @@ def main():
     }
     templates = {key: cv2.imread(path, cv2.IMREAD_COLOR) for key, path in template_paths.items()}
 
-    def find_and_click(template_key, point=0):
+    def find_and_click(template_key, offset_y=0):
         location, shape = find_image_on_screen(templates[template_key])
         if location:
             center_x = (location[0] + shape[1] // 2) // 2
-            center_y = (location[1] + shape[0] // 2) // 2 - point
+            center_y = (location[1] + shape[0] // 2) // 2 - offset_y
             pyautogui.click(center_x, center_y)
             return True
         return False
 
     def find_image(template_key):
-        location, shape = find_image_on_screen(templates[template_key])
-        if location:
-            return True
-        return False
+        location, _ = find_image_on_screen(templates[template_key])
+        return location is not None
 
     found_poe = find_and_click("poethumb", 50)
     if found_poe:
@@ -138,11 +154,12 @@ def main():
     sleep(1)
     if not found_poe:
         found_poe = find_and_click("poethumb", 50)
-        pyautogui.click(button='right')
-        while not find_and_click("poecopy"):
-            sleep(1)
-        while not find_image("poesuccess"):
-            sleep(1)
+        if found_poe:
+            pyautogui.click(button='right')
+            while not find_and_click("poecopy"):
+                sleep(1)
+            while not find_image("poesuccess"):
+                sleep(1)
     else:
         find_and_click("kimicopy") or find_and_click("xinghuocopy")
 
@@ -153,7 +170,7 @@ def main():
     entry = tk.Entry(root)
     entry.pack()
     entry.focus_set()
-    button = tk.Button(root, text="添加 Tags", command=lambda: add_etf(new_name, entry, data, json_file, new_description1, new_description2, root, symbol_names))
+    button = tk.Button(root, text="添加 Tags", command=lambda: add_or_update_etf(new_name, entry, data, json_file, new_description1, new_description2, root, symbol_names))
     button.pack()
     root.bind('<Key>', lambda event: on_key_press(event, new_name, entry, data, json_file, new_description1, new_description2, root, symbol_names))
     root.mainloop()

@@ -15,7 +15,26 @@ def log_error_with_timestamp(error_message):
     # 在错误信息前加入时间戳
     return f"[{timestamp}] {error_message}\n"
 
-def compare_today_yesterday(config_path, output_file):
+def read_latest_date_info(gainer_loser_path):
+    with open(gainer_loser_path, 'r') as f:
+        data = json.load(f)
+    latest_date = max(data.keys())
+    return data[latest_date]
+
+def read_earningsymbol_from_file(file_path):
+    symbols = set()
+    with open(file_path, 'r') as f:
+        for line in f:
+            symbol = line.split(':')[0].strip()
+            symbols.add(symbol)
+    return symbols
+
+def compare_today_yesterday(config_path, output_file, gainer_loser_path, earning_file):
+    latest_info = read_latest_date_info(gainer_loser_path)
+    gainers = latest_info.get("gainer", [])
+    losers = latest_info.get("loser", [])
+    symbols = read_earningsymbol_from_file(earning_file)
+
     with open(config_path, 'r') as f:
         config = json.load(f)
         
@@ -56,7 +75,22 @@ def compare_today_yesterday(config_path, output_file):
                         change = latest_price - second_latest_price
                         percentage_change = (change / second_latest_price) * 100
                         change_text = f"{percentage_change:.2f}%"
-                        output.append(f"{keyword}: {change_text}")
+
+                        if keyword in gainers:
+                            if keyword in symbols:
+                                output.append(f"{keyword}: ${change_text}涨")
+                            else:
+                                output.append(f"{keyword}: {change_text}涨")
+                        elif keyword in losers:
+                            if keyword in symbols:
+                                output.append(f"{keyword}: ${change_text}跌")
+                            else:
+                                output.append(f"{keyword}: {change_text}跌")
+                        else:
+                            if keyword in symbols:
+                                output.append(f"{keyword}: 财报{change_text}")
+                            else:
+                                output.append(f"{keyword}: {change_text}")
                     else:
                         raise Exception(f"错误：无法比较{table_name}下的{keyword}，因为缺少必要的数据。")
             except Exception as e:
@@ -71,6 +105,8 @@ def compare_today_yesterday(config_path, output_file):
 if __name__ == '__main__':
     config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
     output_file = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
-    compare_today_yesterday(config_path, output_file)
+    gainer_loser_path = '/Users/yanzhang/Documents/Financial_System/Modules/Gainer_Loser.json'
+    earning_file = '/Users/yanzhang/Documents/News/Earnings_Release_new.txt'
+    compare_today_yesterday(config_path, output_file, gainer_loser_path, earning_file)
     print(f"{output_file} 已生成。")
     copy_database_to_backup()

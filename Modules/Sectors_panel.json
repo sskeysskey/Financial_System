@@ -3,7 +3,8 @@
         "MOS",
         "ALB",
         "ALTM",
-        "VALE"
+        "VALE",
+        "ICL"
     ],
     "Communication_Services": [
         "ROKU"
@@ -34,17 +35,16 @@
         "WST",
         "JNJ",
         "BMY",
-        "SOLV"
+        "GMAB"
     ],
     "Industrials": [
         "UPS",
-        "ESLT",
         "AGCO",
         "JBHT",
         "GPN"
     ],
     "Energy": [
-        "APA"
+        
     ],
     "Real_Estate": [],
     "Technology": [
@@ -54,7 +54,7 @@
         "CSCO",
         "DT",
         "PCTY",
-        "ALAB"
+        "SNOW"
     ],
     "Utilities": [],
     "Economics": [

@@ -28,7 +28,8 @@
         "ROKU",
         "PEN",
         "DT",
-        "ACI"
+        "ACI",
+        "VIPS"
     ],
     "yellow_keywords": [
         "CNYJPY",
@@ -67,7 +68,8 @@
         "GMAB",
         "ETSY",
         "TU",
-        "BNTX"
+        "BNTX",
+        "ICL"
     ],
     "purple_keywords": [
         "Bitcoin",
@@ -82,7 +84,8 @@
         "YUMC",
         "WBD",
         "PARA",
-        "GPN"
+        "GPN",
+        "CMG"
     ],
     "black_keywords": [
         "Cotton",

@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import sqlite3
 import json
 import os
+import re
 
 def create_connection(db_file):
     return sqlite3.connect(db_file)
@@ -12,8 +13,16 @@ def log_error_with_timestamp(error_message, error_file_path):
         error_file.write(f"[{timestamp}] {error_message}\n")
 
 def read_earnings_release(filepath):
+    earnings_companies = {}
+    pattern = re.compile(r'(\w+)\s*:\s*(\d{4}-\d{2}-(\d{2}))')
     with open(filepath, 'r') as file:
-        return {line.split(':')[0] for line in file}
+        for line in file:
+            match = pattern.search(line)
+            if match:
+                company = match.group(1).strip()
+                day = match.group(3)
+                earnings_companies[company] = day
+    return earnings_companies
 
 def read_gainers_losers(filepath):
     with open(filepath, 'r') as file:
@@ -90,19 +99,15 @@ def compare_today_yesterday(config_path, blacklist, interested_sectors, db_path,
                 
                 original_company = company  # 保留原始公司名称
                 if original_company in earnings_companies:
-                    company += '.$'
+                    company += f'.' + earnings_companies[original_company]
                 if latest_volume > 5000000:
                     company += '.*'
                 if original_company in gainers:
                     company += '.>'
                 elif original_company in losers:
                     company += '.<'
-                # if volume_change > 0:
-                #     company += '.>'
-                # elif volume_change < 0:
-                #     company += '.<'
                 
-                file.write(f"{sector:<25}{company:<10}: {percentage_change:>6.2f}%    {percentage_volume_change:>6.2f}%\n")
+                file.write(f"{sector:<25}{company:<13}: {percentage_change:>6.2f}%    {percentage_volume_change:>6.2f}%\n")
         print(f"{output_path} 已生成。")
     else:
         log_error_with_timestamp("输出为空，无法进行保存文件操作。", error_file_path)

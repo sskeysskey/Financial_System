@@ -90,7 +90,18 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     line2, = ax2.plot(dates, volumes, marker='o', markersize=1, linestyle='-', linewidth=2, color='r', picker=5, label='Volume')
     line2.set_visible(show_volume)
 
-    turnover = f"{(volumes[-1] * prices[-1]) / 1e6:.1f}" if volumes[-1] is not None and prices[-1] is not None else "N/A"
+    def clean_percentage_string(percentage_str):
+        try:
+            return float(percentage_str.strip('%'))
+        except ValueError:
+            return None
+
+    turnover = (volumes[-1] * prices[-1]) / 1e6 if volumes[-1] is not None and prices[-1] is not None else None
+    turnover_str = f"{turnover:.1f}" if turnover is not None else "N/A"
+    compare_value = clean_percentage_string(compare)
+    if turnover is not None and turnover < 100 and compare_value is not None and compare_value > 0:
+        turnover_str = f"可疑的{turnover_str}"
+
     turnover_rate = f"{(volumes[-1] / int(share))*100:.2f}" if volumes[-1] is not None and share is not None and share != "N/A" else "N/A"
     marketcap_in_billion = f"{float(marketcap) / 1e9:.1f}B" if marketcap is not None else "N/A"
     pe_text = f"{pe}" if pe is not None else "N/A"
@@ -106,7 +117,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             clickable = True
             break
     
-    title_text = f'{name} {compare}  {turnover}M/{turnover_rate}  {marketcap_in_billion}  {pe_text} "{table_name}" {fullname} {tag_str}'
+    title_text = f'{name} {compare}  {turnover_str}M/{turnover_rate}  {marketcap_in_billion}  {pe_text} "{table_name}" {fullname} {tag_str}'
     title_style = {'color': 'blue' if clickable else 'black', 'fontsize': 16 if clickable else 15, 'fontweight': 'bold', 'picker': clickable}
     title = ax1.set_title(title_text, **title_style)
 

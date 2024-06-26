@@ -46,7 +46,7 @@ Event_Filter = {
     "ISM N-Mfg PMI", "CPI YY, NSA*", "Core CPI MM, SA*",
     "CPI MM, SA*", "Core CPI YY, NSA*", "Fed Funds Tgt Rate *",
     "PPI Final Demand YY*", "PPI exFood/Energy MM*", "PPI ex Food/Energy/Tr MM*",
-    "PPI Final Demand MM*", "Retail Sales MM *"
+    "PPI Final Demand MM*", "Retail Sales MM *", "GDP Final*", "Core PCE Prices Fnal*"
 }
 
 # 定义一个包含所有目标国家代码的集合

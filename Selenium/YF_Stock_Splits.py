@@ -11,7 +11,7 @@ from selenium.webdriver.chrome.service import Service
 import json
 
 # 文件路径
-file_path = '/Users/yanzhang/Documents/News/Earnings_Release_new.txt'
+file_path = '/Users/yanzhang/Documents/News/Stock_Splits_new.txt'
 
 # 检查文件是否存在
 if os.path.exists(file_path):
@@ -20,7 +20,7 @@ if os.path.exists(file_path):
     root.withdraw()
     
     # 弹窗通知用户
-    messagebox.showinfo("文件存在", f"Earnings_Release_new文件已存在，请先处理后再执行。")
+    messagebox.showinfo("文件存在", f"Stock_Splits_new文件已存在，请先处理后再执行。")
     
     # 退出程序
     exit()
@@ -35,19 +35,6 @@ driver = webdriver.Chrome(service=service)
 # 加载JSON文件
 with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as file:
     data = json.load(file)
-
-# 加载颜色关键词JSON文件
-with open('/Users/yanzhang/Documents/Financial_System/Modules/colors.json', 'r') as file:
-    color_data = json.load(file)
-
-# 将所有颜色关键词整合到一个集合中
-color_keys = set()
-for key in color_data:
-    color_keys.update(color_data[key])
-
-# 获取当前日期和结束日期
-# start_date = datetime(2024, 5, 27)
-# end_date = datetime(2024, 8, 1)
 
 # 获取当前系统日期
 current_date = datetime.now()
@@ -67,7 +54,7 @@ with open(file_path, 'a') as output_file:
         has_data = True
         
         while has_data:
-            url = f"https://finance.yahoo.com/calendar/earnings?from={start_date.strftime('%Y-%m-%d')}&to={end_date.strftime('%Y-%m-%d')}&day={formatted_change_date}&offset={offset}&size=100"
+            url = f"https://finance.yahoo.com/calendar/splits?from={start_date.strftime('%Y-%m-%d')}&to={end_date.strftime('%Y-%m-%d')}&day={formatted_change_date}&offset={offset}&size=100"
             driver.get(url)
             
             # 使用显式等待确保元素加载
@@ -82,34 +69,15 @@ with open(file_path, 'a') as output_file:
             else:
                 for row in rows:
                     symbol = row.find_element(By.CSS_SELECTOR, 'a[data-test="quoteLink"]').text
-                    event_name = row.find_element(By.CSS_SELECTOR, 'td[aria-label="Event Name"]').text
-                    try:
-                        call_time = row.find_element(By.XPATH, './/td[contains(@aria-label, "Earnings Call Time")]/span').text
-                    except NoSuchElementException:
-                        call_time = "No call time available"
-                    if "Earnings Release" in event_name or "Shareholders Meeting" in event_name:
-                        for category, symbols in data.items():
-                            if symbol in symbols:
-                                # 检查颜色关键词
-                                if symbol in color_keys:
-                                    symbol += ":L"
-                                entry = f"{symbol:<7}: {formatted_change_date} - {call_time}"
-                                output_file.write(entry + "\n")
+                    company = row.find_element(By.CSS_SELECTOR, 'td[aria-label="Company"]').text
+                    
+                    for category, symbols in data.items():
+                        if symbol in symbols:
+                            entry = f"{symbol}: {formatted_change_date} - {company}"
+                            output_file.write(entry + "\n")
                                 
                 offset += 100  # 为下一个子页面增加 offset
         change_date += delta  # 日期增加一天
 
 # 关闭浏览器
 driver.quit()
-
-# 移除最后一行的回车换行符
-with open(file_path, 'r') as file:
-    lines = file.readlines()
-
-# 去掉最后一行的换行符
-if lines and lines[-1].endswith("\n"):
-    lines[-1] = lines[-1].rstrip("\n")
-
-# 重新写回文件
-with open(file_path, 'w') as file:
-    file.writelines(lines)

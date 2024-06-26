@@ -12,7 +12,6 @@ chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
 service = Service(executable_path=chrome_driver_path)
 driver = webdriver.Chrome(service=service)
 
-
 def fetch_data(url):
     driver.get(url)
     data_list = []
@@ -37,29 +36,60 @@ def fetch_data(url):
     
     return data_list
 
-def save_data(urls, existing_json, new_file):
+def save_data(urls, existing_json, new_file, today_file, diff_file):
     # 读取a.json文件中的etfs的symbol字段
     with open(existing_json, 'r') as json_file:
         data = json.load(json_file)
         existing_symbols = {etf['symbol'] for etf in data['etfs']}
 
-    # 写入新数据到new_file
+    # 收集新数据
     total_data_list = []
+    filter_data_list = []
     for url in urls:
         data_list = fetch_data(url)
         for symbol, name, volume in data_list:
-            if volume > 200000 and symbol not in existing_symbols:
+            if volume > 2000000:
                 total_data_list.append(f"{symbol}: {name}, {volume}")
-                existing_symbols.add(symbol)
+                if symbol not in existing_symbols:
+                    filter_data_list.append(f"{symbol}: {name}, {volume}")
+                    existing_symbols.add(symbol)
 
-    # 写入文件
+    # 写入新数据文件
     with open(new_file, "w") as file:
-        for i, line in enumerate(total_data_list):
-            if i < len(total_data_list) - 1:
+        for i, line in enumerate(filter_data_list):
+            if i < len(filter_data_list) - 1:
                 file.write(f"{line}\n")  # 非最后一行添加换行符
             else:
                 file.write(line)  # 最后一行不添加任何后缀
+    if not os.path.exists(today_file):
+        # 如果today_file不存在，写入所有新数据
+        with open(today_file, "w") as file:
+            for i, line in enumerate(total_data_list):
+                if i < len(total_data_list) - 1:
+                    file.write(f"{line}\n")
+                else:
+                    file.write(line)
+    else:
+        # 如果today_file存在，比较并写入diff_file
+        with open(today_file, "r") as file:
+            existing_lines = file.readlines()
+            existing_symbols_today = {line.split(":")[0].strip() for line in existing_lines}
+        
+        diff_data_list = [line for line in total_data_list if line.split(":")[0].strip() not in existing_symbols_today]
 
+        with open(diff_file, "w") as file:
+            for i, line in enumerate(diff_data_list):
+                if i < len(diff_data_list) - 1:
+                    file.write(f"{line}\n")
+                else:
+                    file.write(line)
+        # 覆盖写入today_file
+        with open(today_file, "w") as file:
+            for i, line in enumerate(total_data_list):
+                if i < len(total_data_list) - 1:
+                    file.write(f"{line}\n")
+                else:
+                    file.write(line)
 # URL列表
 urls = [
     "https://finance.yahoo.com/etfs/?offset=0&count=100",
@@ -68,10 +98,12 @@ urls = [
     "https://finance.yahoo.com/etfs/?count=100&offset=300"
 ]
 existing_json = '/Users/yanzhang/Documents/Financial_System/Modules/Description.json'
+today_file = '/Users/yanzhang/Documents/News/site/ETFs_today.txt'
+diff_file = '/Users/yanzhang/Documents/News/ETFs_diff.txt'
 new_file = '/Users/yanzhang/Documents/News/ETFs_new.txt'
 
 try:
-    save_data(urls, existing_json, new_file)
+    save_data(urls, existing_json, new_file, today_file, diff_file)
 finally:
     driver.quit()
 print("所有爬取任务完成。")
