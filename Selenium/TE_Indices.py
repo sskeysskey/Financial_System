@@ -25,23 +25,23 @@ else:
     cursor = conn.cursor()
     # 创建表
     cursor.execute('''
-    CREATE TABLE  IF NOT EXISTS  Commodities (
+    CREATE TABLE IF NOT EXISTS Indices (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         date TEXT,
         name TEXT,
-        price REAL
+        price REAL,
+        volume REAL,
+        UNIQUE(date, name)
     );
     ''')
     conn.commit()
 
-    # driver = setup_driver()
     try:
         # 访问网页
-        driver.get('https://tradingeconomics.com/commodities')
-        commodities = [
-            "Coal", "Uranium", "Steel", "Lithium", "Wheat", "Palm Oil", "Aluminum",
-            "Nickel", "Tin", "Zinc", "Palladium", "Poultry", "Salmon", "Iron Ore"
-        ]
+        driver.get('https://tradingeconomics.com/stocks')
+        name_mapping = {
+            "MOEX": "Russia"
+        }
 
         all_data = []
         # 获取当前时间
@@ -52,21 +52,23 @@ else:
         today = yesterday.strftime('%Y-%m-%d')
 
         # 查找并处理数据
-        for commodity in commodities:
+        for Indice in name_mapping.keys():
             try:
                 element = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.LINK_TEXT, commodity))
+                    EC.presence_of_element_located((By.LINK_TEXT, Indice))
                 )
                 row = element.find_element(By.XPATH, './ancestor::tr')
                 price = row.find_element(By.ID, 'p').text.strip()
+                # 使用映射后的名称
+                mapped_name = name_mapping[Indice]
                 
                 # 将数据格式化后添加到列表
-                all_data.append((today, commodity, price))
+                all_data.append((today, mapped_name, price, 0))
             except Exception as e:
-                print(f"Failed to retrieve data for {commodity}: {e}")
+                print(f"Failed to retrieve data for {name_mapping}: {e}")
         
         # 插入数据到数据库
-        cursor.executemany('INSERT INTO Commodities (date, name, price) VALUES (?, ?, ?)', all_data)
+        cursor.executemany('INSERT INTO Indices (date, name, price, volume) VALUES (?, ?, ?, ?)', all_data)
         conn.commit()
         # 打印插入的数据条数
         print(f"Total {len(all_data)} records have been inserted into the database.")

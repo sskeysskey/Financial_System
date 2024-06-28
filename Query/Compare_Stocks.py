@@ -14,14 +14,22 @@ def log_error_with_timestamp(error_message, error_file_path):
 
 def read_earnings_release(filepath):
     earnings_companies = {}
-    pattern = re.compile(r'(\w+)\s*:\s*(\d{4}-\d{2}-(\d{2}))')
+    pattern_single_colon = re.compile(r'(\w+)\s*:\s*(\d{4}-\d{2}-(\d{2}))')
+    pattern_double_colon = re.compile(r'(\w+)\s*:\s*\w+\s*:\s*(\d{4}-\d{2}-(\d{2}))')
+    
     with open(filepath, 'r') as file:
         for line in file:
-            match = pattern.search(line)
-            if match:
-                company = match.group(1).strip()
-                day = match.group(3)
+            match_double = pattern_double_colon.search(line)
+            match_single = pattern_single_colon.search(line)
+            if match_double:
+                company = match_double.group(1).strip()
+                day = match_double.group(3)
                 earnings_companies[company] = day
+            elif match_single:
+                company = match_single.group(1).strip()
+                day = match_single.group(3)
+                earnings_companies[company] = day
+                
     return earnings_companies
 
 def read_gainers_losers(filepath):

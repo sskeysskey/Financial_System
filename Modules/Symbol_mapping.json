@@ -4,13 +4,7 @@
     "BZ=F": "Brent", "LE=F": "LiveCattle", "HG=F": "Copper", "ZC=F": "Corn",
     "GC=F": "Gold", "SI=F": "Silver", "NG=F": "Naturalgas", "ZR=F": "Rice", "ZS=F": "Soybean",
     "^TNX": "US10Y",
-    "SPTI": "IntermedTreary", "PICK": "MetalMine", "LIT": "LithBattery", "BITB": "Bitwise",
-    "CQQQ": "CNTech", "IYH": "USHealth", "RTH": "USRetail", "VFH": "USFinancial",
-    "FDIS": "USDiscretionary", "XLRE": "USRealEstate", "XAR": "USAeroDefence",
-    "KIE": "USInsurance", "XLB": "USMaterials", "PAVE": "USInfrastructure",
-    "FSTA": "USStaples", "XLE": "USEnergy", "XLU": "USUtilities", "BBJP": "JapanETF",
-    "INDA": "IndiaETF",
-    "EWT": "TaiwanETF", "EMXC": "EmergingETF", "TUR": "TurkeyETF", "URA": "UraniumETF",
+    
     "DX-Y.NYB": "DXY", "EURUSD=X": "EURUSD", "GBPUSD=X": "GBPUSD", "JPY=X": "USDJPY",
     "CNYEUR=X": "CNYEUR", "CNYGBP=X": "CNYGBP", "CNYJPY=X": "CNYJPY", "CNYUSD=X": "CNYUSD",
     "EURCNY=X": "EURCNY", "CNY=X": "USDCNY", "GBPCNY=X": "GBPCNY", "AUDCNY=X": "AUDCNY",
@@ -20,5 +14,5 @@
     "BTC-USD": "Bitcoin", "ETH-USD": "Ether", "SOL-USD": "Solana", "BNB-USD": "Binance",
     "^HSI": "HANGSENG", "^IXIC": "NASDAQ", "000001.SS": "Shanghai", "399001.SZ": "Shenzhen",
     "^VIX": "VIX", "^BVSP": "Brazil", "^N225": "Nikkei", "^RUT": "Russell", "^GSPC": "S&P500",
-    "^BSESN": "India", "IMOEX.ME": "Russian", "^AXJO": "Australia", "^KS11": "Korea"
+    "^BSESN": "India", "^AXJO": "Australia", "^KS11": "Korea"
 }

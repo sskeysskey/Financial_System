@@ -1,4 +1,46 @@
 {
+    "2024-06-28": {
+        "gainer": [
+            "WY",
+            "MKC",
+            "DLTR"
+        ],
+        "loser": [
+            "MOS",
+            "AS",
+            "S",
+            "GPN",
+            "ELAN"
+        ]
+    },
+    "2024-06-27": {
+        "gainer": [
+            "WST",
+            "BMY",
+            "GPN",
+            "WHR",
+            "X",
+            "ALGN"
+        ],
+        "loser": [
+            "VFC",
+            "APTV",
+            "DLTR",
+            "BNTX",
+            "PEN",
+            "CSCO",
+            "FDX",
+            "MBLY",
+            "SQM",
+            "CRS",
+            "L",
+            "CART",
+            "GIS",
+            "PAYX",
+            "MRNA",
+            "BIRK"
+        ]
+    },
     "2024-06-26": {
         "gainer": [
             "CMG",

@@ -39,8 +39,7 @@ else:
         # 访问网页
         driver.get('https://tradingeconomics.com/commodities')
         commodities = [
-            "Coal", "Uranium", "Steel", "Lithium", "Wheat", "Palm Oil", "Aluminum",
-            "Nickel", "Tin", "Zinc", "Palladium", "Poultry", "Salmon", "Iron Ore"
+            "Iron Ore"
         ]
 
         all_data = []

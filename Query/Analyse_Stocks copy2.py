@@ -4,6 +4,7 @@ import os
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
+# 定义黑名单
 blacklist_glob = ["YNDX"]
 
 def is_blacklisted(name):
@@ -15,7 +16,9 @@ def create_connection(db_file):
     return conn
 
 def log_error_with_timestamp(error_message):
+    # 获取当前日期和时间
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    # 在错误信息前加入时间戳
     return f"[{timestamp}] {error_message}\n"
 
 def get_price_comparison(cursor, table_name, interval, name, validate):
@@ -48,6 +51,30 @@ def get_latest_price_and_date(cursor, table_name, name):
     cursor.execute(query, (name,))
     return cursor.fetchone()
 
+def save_output_to_file(output, directory, filename, directory_backup):
+    # 定义完整的文件路径
+    file_path = os.path.join(directory, filename)
+    
+    # 检查文件是否存在
+    if os.path.exists(file_path):
+        # 获取昨天的日期字符串
+        yesterday = datetime.now() - timedelta(days=1)
+        yesterday_suffix = yesterday.strftime("%m%d")
+        
+        # 新的文件名添加昨天的日期
+        base, ext = os.path.splitext(filename)
+        new_filename = f"{base}_{yesterday_suffix}{ext}"
+        new_file_path = os.path.join(directory_backup, new_filename)
+        
+        # 重命名旧文件
+        os.rename(file_path, new_file_path)
+        print(f"旧文件已重命名为：{new_file_path}")
+
+    # 将输出写入到新文件
+    with open(file_path, 'w', encoding='utf-8') as file:
+        file.write(output)
+    print(f"输出已保存到文件：{file_path}")
+
 def main():    
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
     with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as file:
@@ -55,6 +82,7 @@ def main():
 
     output = []
     output1 = []
+    # intervals = [600, 360, 240, 120, 60, 36, 24, 13, 6, 3, 1, 0.5, 0.25]  # 以月份表示的时间间隔列表
     intervals = [120, 60, 24, 13]  # 以月份表示的时间间隔列表
 
     # 遍历JSON中的每个表和股票代码
@@ -96,6 +124,23 @@ def main():
                                 error_file.write(formatted_error_message)
                             continue  # 处理下一个时间间隔
 
+                    # 检查是否接近最高价格
+                    # found_max = False
+                    # for interval in intervals:
+                    #     if found_max:
+                    #         break
+                    #     max_price, _ = price_extremes.get(interval, (None, None))
+                    #     if max_price is not None and validate_price >= max_price:
+                    #         found_max = True
+                    #         if validate_price >= max_price:
+                    #             if interval >= 12:
+                    #                 years = interval // 12
+                    #                 print(f"{table_name} {name} {years}Y_newhigh")
+                    #                 output.append(f"{table_name} {name} {years}Y_newhigh")
+                    #             else:
+                    #                 print(f"{table_name} {name} {interval}M_newhigh")
+                    #                 output.append(f"{table_name} {name} {interval}M_newhigh")
+
                     # 检查是否接近最低价格
                     found_min = False
                     for interval in intervals:
@@ -107,7 +152,16 @@ def main():
                             if validate_price <= min_price:
                                 if interval >= 12:
                                     years = interval // 12
+                                    # print(f"{table_name} {name} {years}Y_newlow")
+                                    # output.append(f"{table_name} {name} {years}Y_newlow")
                                     output1.append(f"{table_name} {name} {years}Y_newlow")
+                                # else:
+                                #     print(f"{table_name} {name} {interval}M_newlow")
+                                #     output.append(f"{table_name} {name} {interval}M_newlow")
+
+                # output.append("\n")
+
+    # final_output = "\n".join(output)
     final_output1 = "\n".join(output1)
 
     # 解析final_output1，构建更新数据
@@ -125,15 +179,15 @@ def main():
     
     def update_json_data(config_path, updates, blacklist_newlow):
         with open(config_path, 'r', encoding='utf-8') as file:
-            data = json.load(file, object_pairs_hook=OrderedDict)
+            data = json.load(file)
 
         for category, symbols in updates.items():
             if category in data:
                 for symbol in symbols:
                     if symbol not in data[category] and symbol not in blacklist_newlow:
-                        data[category][symbol] = ""  # 使用新格式写入
+                        data[category].append(symbol)
             else:
-                data[category] = {symbol: "" for symbol in symbols if symbol not in blacklist_newlow}
+                data[category] = [symbol for symbol in symbols if symbol not in blacklist_newlow]
 
         with open(config_path, 'w', encoding='utf-8') as file:
             json.dump(data, file, ensure_ascii=False, indent=4)
@@ -218,6 +272,19 @@ def main():
         # 将错误信息追加到文件中
         with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
             error_file.write(formatted_error_message)
+
+    # if final_output.strip():  # 检查final_output是否为空
+    #     # 在代码的最后部分调用save_output_to_file函数
+    #     output_directory = '/Users/yanzhang/Documents/News/site'
+    #     directory_backup = '/Users/yanzhang/Documents/News/site'
+    #     filename = 'AnalyseStock.txt'
+    #     save_output_to_file(final_output, output_directory, filename, directory_backup)
+    # else:
+    #     error_message = "final_output为空，无法保存输出文件。"
+    #     formatted_error_message = log_error_with_timestamp(error_message)
+    #     # 将错误信息追加到文件中
+    #     with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+    #         error_file.write(formatted_error_message)
 
 if __name__ == "__main__":
     main()

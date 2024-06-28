@@ -1,161 +1,163 @@
 {
-    "Basic_Materials": [
-        "MOS",
-        "ALB",
-        "ALTM",
-        "VALE",
-        "ICL"
-    ],
-    "Communication_Services": [
-        "ROKU"
-    ],
-    "Consumer_Cyclical": [
-        "LEA",
-        "LULU",
-        "MTN",
-        "VFC"
-    ],
-    "Consumer_Defensive": [
-        "DEO",
-        "ACI",
-        "TAP",
-        "DAR",
-        "KVUE"
-    ],
-    "Financial_Services": [
-        "MKTX",
-        "SIGI",
-        "BEN"
-    ],
-    "Healthcare": [
-        "CVS",
-        "WBA",
-        "BNTX",
-        "PEN",
-        "WST",
-        "JNJ",
-        "BMY",
-        "GMAB"
-    ],
-    "Industrials": [
-        "UPS",
-        "AGCO",
-        "JBHT",
-        "GPN"
-    ],
-    "Energy": [
-        
-    ],
-    "Real_Estate": [],
-    "Technology": [
-        "PAYC",
-        "DOX",
-        "U",
-        "CSCO",
-        "DT",
-        "PCTY",
-        "SNOW"
-    ],
-    "Utilities": [],
-    "Economics": [
-        "USGDP",
-        "USInflation",
-        "USInterest",
-        "USPayroll",
-        "USTrade",
-        "USConfidence",
-        "USJobless",
-        "CorePCEY",
-        "CorePCEM"
-    ],
-    "ETFs_US": [
-        "IntermedTreary",
-        "USHealth",
-        "USRetail",
-        "USFinancial",
-        "USDiscretionary",
-        "USRealEstate",
-        "USAeroDefence",
-        "USInsurance",
-        "USMaterials",
-        "USInfrastructure",
-        "USStaples",
-        "USEnergy",
-        "USUtilities"
-    ],
-    "ETFs_Oversea": [
-        "JapanETF",
-        "CNTech",
-        "TaiwanETF",
-        "EmergingETF",
-        "TurkeyETF",
-        "IndiaETF"
-    ],
-    "ETFs_Commodity": [
-        "LithBattery",
-        "UraniumETF"
-    ],
-    "Commodities": [
-        "Nickel",
-        "Wheat",
-        "Aluminum",
-        "Cocoa",
-        "Rice",
-        "Corn",
-        "Oat",
-        "OrangeJuice",
-        "CrudeOil",
-        "Naturalgas",
-        "Gold",
-        "Copper",
-        "LeanHogs",
-        "Soybean",
-        "Coffee",
-        "Cotton",
-        "LiveCattle",
-        "Sugar",
-        "Silver"
-    ],
-    "Crypto": [
-        "Bitcoin",
-        "Ether",
-        "Solana",
-        "Binance"
-    ],
-    "Indices": [
-        "NASDAQ",
-        "Korea",
-        "Australia",
-        "VIX",
-        "S&P500",
-        "HANGSENG",
-        "Shanghai",
-        "Shenzhen",
-        "Nikkei",
-        "India",
-        "Brazil"
-    ],
-    "Bonds": [
-        "US10Y",
-        "JP10Y",
-        "IND10Y",
-        "RU10Y",
-        "BR10Y"
-    ],
-    "Currencies": [
-        "DXY",
-        "EURUSD",
-        "GBPUSD",
-        "EURCNY",
-        "GBPCNY",
-        "USDJPY",
-        "USDCNY",
-        "CNYJPY",
-        "CNYPHP",
-        "CNYIDR",
-        "USDIDR",
-        "USDPHP",
-        "AUDCNY",
-        "USDINR"
-    ]
+    "Basic_Materials": {
+        "MOS": "美盛化肥",
+        "ALB": "雅宝",
+        "ALTM": "锂矿",
+        "VALE": "淡水河谷"
+    },
+    "Communication_Services": {
+        "ROKU": ""
+    },
+    "Consumer_Cyclical": {
+        "LULU": "",
+        "MTN": "滑雪场",
+        "VFC": "北面",
+        "AS": "体育零售"
+    },
+    "Consumer_Defensive": {
+        "ACI": "零售百货",
+        "TAP": "啤酒酿造",
+        "DAR": "动物饲料",
+        "KVUE": "泰诺",
+        "DLTR": "一元店",
+        "DEO": "威士忌"
+    },
+    "Financial_Services": {
+        "MKTX": "金融债券",
+        "SIGI": "保险公司",
+        "BEN": "养老基金"
+    },
+    "Healthcare": {
+        "CVS": "药店连锁",
+        "WBA": "药店连锁",
+        "BNTX": "",
+        "PEN": "中风血栓",
+        "WST": "药物包装",
+        "JNJ": "",
+        "BMY": "",
+        "GMAB": "生物科技"
+    },
+    "Industrials": {
+        "UPS": "联合包裹",
+        "AGCO": "农业机械",
+        "JBHT": "物流运输",
+        "GPN": "支付技术",
+        "POOL": "泳池",
+        "SITE": "景观园艺"
+    },
+    "Energy": {},
+    "Real_Estate": {
+        "WY": "林业房产"
+    },
+    "Technology": {
+        "PAYC": "人力云",
+        "DOX": "软件云",
+        "U": "Unity",
+        "CSCO": "思科",
+        "DT": "云监控",
+        "PCTY": "人力云",
+        "SNOW": "云数据"
+    },
+    "Utilities": {},
+    "Economics": {
+        "USGDP": "GDP",
+        "USInflation": "通货膨胀",
+        "USInterest": "利率",
+        "USPayroll": "非农就业",
+        "USTrade": "进出口",
+        "USConfidence": "信心指数",
+        "USJobless": "初请失业",
+        "CorePCEY": "年PCE",
+        "CorePCEM": "月PCE"
+    },
+    "ETFs_US": {
+        "SPTI": "中期国债",
+        "IYH": "医疗",
+        "RTH": "零售",
+        "VFH": "金融",
+        "FDIS": "非必需消费",
+        "XLRE": "房地产",
+        "XAR": "国防航天",
+        "KIE": "保险",
+        "XLB": "原材料",
+        "PAVE": "基础设施",
+        "FSTA": "必需消费",
+        "XLE": "能源",
+        "XLU": "公共事业"
+    },
+    "ETFs_Oversea": {
+        "CQQQ": "中国科技",
+        "DXJ": "日本",
+        "INDA": "印度",
+        "EWT": "台湾",
+        "EMXC": "新兴市场",
+        "TUR": "土耳其"
+    },
+    "ETFs_Commodity": {
+        "LIT": "锂矿电池",
+        "URA": "铀矿核能"
+    },
+    "Commodities": {
+        "Nickel": "镍",
+        "Wheat": "",
+        "Aluminum": "铝",
+        "Cocoa": "",
+        "Rice": "",
+        "Corn": "",
+        "Oat": "",
+        "Steel": "",
+        "Iron Ore": "铁矿石",
+        "OrangeJuice": "桔汁",
+        "CrudeOil": "",
+        "Naturalgas": "天然气",
+        "Gold": "",
+        "Copper": "",
+        "LeanHogs": "",
+        "Soybean": "",
+        "Coffee": "",
+        "Cotton": "",
+        "LiveCattle": "牛肉",
+        "Sugar": "",
+        "Silver": ""
+    },
+    "Crypto": {
+        "Bitcoin": "",
+        "Ether": "",
+        "Solana": "",
+        "Binance": ""
+    },
+    "Indices": {
+        "NASDAQ": "",
+        "Korea": "",
+        "Australia": "澳大利亚",
+        "VIX": "恐慌指数",
+        "S&P500": "",
+        "HANGSENG": "恒生",
+        "Shanghai": "上证",
+        "Shenzhen": "深证",
+        "Nikkei": "",
+        "India": "",
+        "Brazil": "",
+        "Russia": ""
+    },
+    "Bonds": {
+        "US10Y": "",
+        "JP10Y": "",
+        "IND10Y": "",
+        "RU10Y": "",
+        "BR10Y": ""
+    },
+    "Currencies": {
+        "DXY": "美元指数",
+        "EURUSD": "",
+        "GBPUSD": "",
+        "EURCNY": "",
+        "GBPCNY": "",
+        "USDJPY": "",
+        "USDCNY": "",
+        "CNYJPY": "",
+        "CNYPHP": "",
+        "USDIDR": "",
+        "USDINR": ""
+    }
 }

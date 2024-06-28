@@ -3,6 +3,7 @@ from selenium.webdriver.common.by import By
 import time
 import os
 import json
+import shutil
 from selenium.webdriver.chrome.service import Service
 
 # ChromeDriver 路径
@@ -90,6 +91,23 @@ def save_data(urls, existing_json, new_file, today_file, diff_file):
                     file.write(f"{line}\n")
                 else:
                     file.write(line)
+
+def backup_diff_file(diff_file, backup_dir):
+    if os.path.exists(diff_file):
+        # 获取当前时间戳
+        timestamp = datetime.now().strftime('%Y%m%d')
+        # 新的文件名
+        new_filename = f"ETFs_diff_{timestamp}.txt"
+        # 目标路径
+        target_path = os.path.join(backup_dir, new_filename)
+        # 移动文件
+        shutil.move(diff_file, target_path)
+
+# diff 文件路径
+diff_file = '/Users/yanzhang/Documents/News/ETFs_diff.txt'
+backup_dir = '/Users/yanzhang/Documents/News/backup/backup'
+backup_diff_file(diff_file, backup_dir)
+
 # URL列表
 urls = [
     "https://finance.yahoo.com/etfs/?offset=0&count=100",

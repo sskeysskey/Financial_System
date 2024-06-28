@@ -6,6 +6,7 @@ import tkinter as tk
 import tkinter.font as tkFont
 from tkinter import ttk, scrolledtext
 from datetime import datetime, timedelta
+from collections import OrderedDict
 
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
 from Chart_panel import plot_financial_data_panel
@@ -13,7 +14,7 @@ from Chart_input import plot_financial_data
 
 def load_json(path):
     with open(path, 'r', encoding='utf-8') as file:
-        return json.load(file)
+        return json.load(file, object_pairs_hook=OrderedDict)
 
 def load_text_data(path):
     data = {}
@@ -74,31 +75,37 @@ def create_selection_window():
 
     color_frames = [tk.Frame(scrollable_frame) for _ in range(8)]
     for frame in color_frames:
-        frame.pack(side="left", padx=3, pady=10, fill="both", expand=True)
+        frame.pack(side="left", padx=2, pady=3, fill="both", expand=True)
 
     categories = [
         ['Basic_Materials', 'Communication_Services', 'Consumer_Cyclical'],
-        ['Technology', 'Energy', 'Utilities'],
-        ['Industrials', 'Consumer_Defensive', 'Real_Estate'],
+        ['Technology', 'Energy', 'Real_Estate'],
+        ['Industrials', 'Consumer_Defensive', 'Utilities'],
         ['Healthcare', 'Financial_Services'],
         ['Bonds', 'Crypto', 'Indices'],
-        ['Commodities', "ETFs_Commodity"],
-        ['Currencies', 'ETFs_Oversea'],
+        ['Commodities'],
+        ['Currencies', 'ETFs_Oversea', "ETFs_Commodity"],
         ['Economics', 'ETFs_US']
     ]
 
     for index, category_group in enumerate(categories):
         for db_key, keywords in config.items():
             if db_key in category_group:
-                frame = tk.LabelFrame(color_frames[index], text=db_key, padx=0, pady=10)
-                frame.pack(side="top", padx=0, pady=10, fill="both", expand=True)
+                frame = tk.LabelFrame(color_frames[index], text=db_key, padx=2, pady=3)
+                frame.pack(side="top", padx=2, pady=3, fill="both", expand=True)
 
-                for keyword in sorted(keywords):
+                if isinstance(keywords, dict):
+                    items = keywords.items()  # 保持原有顺序
+                else:
+                    items = [(kw, kw) for kw in keywords]  # 保持原有顺序
+
+                for keyword, translation in items:
                     button_frame = tk.Frame(frame)
-                    button_frame.pack(side="top", fill="x", padx=5, pady=2)
+                    button_frame.pack(side="top", fill="x", padx=2, pady=3)
 
                     button_style = get_button_style(keyword)
-                    button_text = f"{keyword} {compare_data.get(keyword, '')}"
+                    button_text = translation if translation else keyword
+                    button_text += f" {compare_data.get(keyword, '')}"
 
                     ttk.Button(button_frame, text=button_text, style=button_style,
                                command=lambda k=keyword: on_keyword_selected_chart(k, selection_window)).pack(side="left", fill="x", expand=True)

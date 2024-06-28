@@ -125,15 +125,15 @@ def main():
     
     def update_json_data(config_path, updates, blacklist_newlow):
         with open(config_path, 'r', encoding='utf-8') as file:
-            data = json.load(file, object_pairs_hook=OrderedDict)
+            data = json.load(file)
 
         for category, symbols in updates.items():
             if category in data:
                 for symbol in symbols:
                     if symbol not in data[category] and symbol not in blacklist_newlow:
-                        data[category][symbol] = ""  # 使用新格式写入
+                        data[category].append(symbol)
             else:
-                data[category] = {symbol: "" for symbol in symbols if symbol not in blacklist_newlow}
+                data[category] = [symbol for symbol in symbols if symbol not in blacklist_newlow]
 
         with open(config_path, 'w', encoding='utf-8') as file:
             json.dump(data, file, ensure_ascii=False, indent=4)

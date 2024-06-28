@@ -13,7 +13,10 @@ cursor = conn.cursor()
 # cursor.execute("UPDATE Consumer_Cyclical SET price = 65.66 WHERE id = 691483")
 
 # # 如果只想更新特定的name，比如Binance
-cursor.execute("UPDATE Consumer_Cyclical SET price = ROUND(price, 2) WHERE name = 'CMG'")
+# cursor.execute("UPDATE Consumer_Cyclical SET price = ROUND(price, 2) WHERE name = 'CMG'")
+
+# 执行更新操作，将所有name为'Russian'的记录改为'Russia'
+cursor.execute("UPDATE Indices SET name = 'Russia' WHERE name = 'Russian'")
 
 # 更新所有记录的price字段，保留一位小数
 # cursor.execute("UPDATE Indices SET price = ROUND(price, 2)")

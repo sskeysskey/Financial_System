@@ -25,7 +25,7 @@ def login_once(driver, login_url):
         EC.presence_of_element_located((By.ID, "login-passwd"))
     )
     password_input = driver.find_element(By.ID, "login-passwd")
-    password_input.send_keys("83o32683O326")
+    password_input.send_keys("1@34Abcd")
     password_input.send_keys(Keys.RETURN)
     
     # 等待登录成功的标志，如重定向到登录后页面的某个特定元素

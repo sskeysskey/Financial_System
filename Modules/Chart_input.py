@@ -1,3 +1,4 @@
+import re
 import sqlite3
 import numpy as np
 from datetime import datetime, timedelta
@@ -35,11 +36,11 @@ def process_data(data):
             volumes.append(volume)
     return dates, prices, volumes
 
-def show_stock_info(symbol, descriptions):
+def show_stock_etf_info(symbol, descriptions):
     root = tk.Tk()
     root.withdraw()  # 隐藏主窗口
     top = tk.Toplevel(root)
-    top.title("Stock Information")
+    top.title("Information")
     top.geometry("600x750")
     font_size = ('Arial', 22)
     text_box = scrolledtext.ScrolledText(top, wrap=tk.WORD, font=font_size)
@@ -97,33 +98,48 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             return None
 
     turnover = (volumes[-1] * prices[-1]) / 1e6 if volumes[-1] is not None and prices[-1] is not None else None
-    turnover_str = f"{turnover:.1f}" if turnover is not None else "N/A"
-    compare_value = clean_percentage_string(compare)
+    turnover_str = f"{turnover:.1f}" if turnover is not None else ""
+    # 过滤掉compare中的所有中文字符
+    filtered_compare = re.sub(r'[\u4e00-\u9fff]', '', compare)
+    compare_value = clean_percentage_string(filtered_compare)
     if turnover is not None and turnover < 100 and compare_value is not None and compare_value > 0:
-        turnover_str = f"可疑的{turnover_str}"
+        turnover_str = f"可疑{turnover_str}"
 
-    turnover_rate = f"{(volumes[-1] / int(share))*100:.2f}" if volumes[-1] is not None and share is not None and share != "N/A" else "N/A"
-    marketcap_in_billion = f"{float(marketcap) / 1e9:.1f}B" if marketcap is not None else "N/A"
-    pe_text = f"{pe}" if pe is not None else "N/A"
+    turnover_rate = f"{(volumes[-1] / int(share))*100:.2f}" if volumes[-1] is not None and share is not None and share != "N/A" else ""
+    marketcap_in_billion = f"{float(marketcap) / 1e9:.1f}B" if marketcap is not None else ""
+    pe_text = f"{pe}" if pe is not None and pe != "N/A" else ""
 
     clickable = False
-    tag_str = "N/A"
+    tag_str = ""
     fullname = ""
-    for stock in json_data.get('stocks', []):
-        if stock['symbol'] == name:
-            tags = stock.get('tag', [])
-            fullname = stock.get('name', [])
-            tag_str = ','.join(tags)
-            clickable = True
+    data_sources = ['stocks', 'etfs']
+    found = False
+
+    for source in data_sources:
+        for item in json_data.get(source, []):
+            if item['symbol'] == name:
+                tags = item.get('tag', [])
+                fullname = item.get('name', '')
+                tag_str = ','.join(tags)
+                clickable = True
+                found = True
+                break
+        if found:
             break
     
-    title_text = f'{name} {compare}  {turnover_str}M/{turnover_rate}  {marketcap_in_billion}  {pe_text} "{table_name}" {fullname} {tag_str}'
+    title_text = f'{name}  {compare}  {turnover_str}M/{turnover_rate} {marketcap_in_billion} {pe_text}"{table_name}" {fullname} {tag_str}'
     title_style = {'color': 'blue' if clickable else 'black', 'fontsize': 16 if clickable else 15, 'fontweight': 'bold', 'picker': clickable}
     title = ax1.set_title(title_text, **title_style)
 
+    def on_pick(event):
+        if event.artist == title:  # 只有当点击的是标题时才执行
+            for item in json_data.get(source, []):
+                if item['symbol'] == name:
+                    show_stock_etf_info(name, item)
+        
     if clickable:
         draw_underline(title, fig, ax1)
-        fig.canvas.mpl_connect('pick_event', lambda event: show_stock_info(name, next(stock for stock in json_data['stocks'] if stock['symbol'] == name)))
+        fig.canvas.mpl_connect('pick_event', on_pick)
 
     ax1.grid(True)
     plt.xticks(rotation=45)
@@ -197,10 +213,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             'v': lambda: toggle_volume(),
             '1': lambda: radio.set_active(0),
             '2': lambda: radio.set_active(1),
-            '3': lambda: radio.set_active(2),
+            '3': lambda: radio.set_active(7),
             '4': lambda: radio.set_active(3),
             '5': lambda: radio.set_active(6),
-            '6': lambda: radio.set_active(7),
+            '6': lambda: radio.set_active(2),
             '7': lambda: radio.set_active(8)
         }
         action = actions.get(event.key)

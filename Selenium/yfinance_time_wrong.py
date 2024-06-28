@@ -46,7 +46,8 @@ else:
                 # 使用 yfinance 下载股票数据
                 data = yf.download(ticker_symbol, start=start_date, end=end_date)
                 if data.empty:
-                    raise ValueError(f"{ticker_symbol}: No price data found for the given date range.")
+                    # raise ValueError(f"{ticker_symbol}: No price data found for the given date range.")
+                    raise ValueError(f"{group_name} {ticker_symbol}: No price data found for the given date range.")
 
                 # 插入数据到相应的表中
                 table_name = group_name.replace(" ", "_")  # 确保表名没有空格

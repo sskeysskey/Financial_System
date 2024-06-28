@@ -10,11 +10,12 @@
     "EA"
   ],
 
-  "Basic_Materials": [
-      "IOSP",
-      "TUR10Y",
-      "EA"
-    ],
+  "ETFs": [
+    "SPTI",
+    "PICK",
+    "LIT",
+    "URA"
+  ],
     
   "Energy": [
       "EAS",

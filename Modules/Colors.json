@@ -29,7 +29,10 @@
         "PEN",
         "DT",
         "ACI",
-        "VIPS"
+        "VIPS",
+        "WY",
+        "POOL",
+        "SITE"
     ],
     "yellow_keywords": [
         "CNYJPY",
@@ -37,11 +40,12 @@
         "Gold",
         "Cocoa",
         "Silver",
-        "IntermedTreary",
-        "IndiaETF",
+        "SPTI",
+        "INDA",
         "APA",
         "DOX",
-        "NFE"
+        "NFE",
+        "DLTR"
     ],
     "orange_keywords": [
         "HANGSENG",
@@ -69,7 +73,9 @@
         "ETSY",
         "TU",
         "BNTX",
-        "ICL"
+        "ICL",
+        "APTV",
+        "RCI"
     ],
     "purple_keywords": [
         "Bitcoin",
@@ -77,6 +83,7 @@
         "US10Y",
         "USDJPY",
         "CrudeOil",
+        "XLRE",
         "PAYC",
         "BF-B",
         "BMY",
@@ -99,7 +106,8 @@
         "KVUE",
         "ZM",
         "U",
-        "ALAB"
+        "ALAB",
+        "AS"
     ],
     "blue_keywords": [
         "Copper",
@@ -113,6 +121,7 @@
         "CorePCEM"
     ],
     "green_keywords": [
-        "EURCNY"
+        "EURCNY",
+        "JP10Y"
     ]
 }

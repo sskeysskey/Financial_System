@@ -78,12 +78,12 @@ def compare_today_yesterday(config_path, output_file, gainer_loser_path, earning
 
                         if keyword in gainers:
                             if keyword in symbols:
-                                output.append(f"{keyword}: ${change_text}涨")
+                                output.append(f"{keyword}: 财报{change_text}涨")
                             else:
                                 output.append(f"{keyword}: {change_text}涨")
                         elif keyword in losers:
                             if keyword in symbols:
-                                output.append(f"{keyword}: ${change_text}跌")
+                                output.append(f"{keyword}: 财报{change_text}跌")
                             else:
                                 output.append(f"{keyword}: {change_text}跌")
                         else:
