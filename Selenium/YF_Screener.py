@@ -167,7 +167,7 @@ blacklist = {"CTA-PA", "FWONK", "FOXA", "NWSA", "PARAA", "LSXMA",
     "CWEN-A", "ELPC", "BML-PG", "SLG-PI", "NEE-PR", "APO-PA",
     "YNDX", "CUK", "BBDO", "SLMBP", "BPYPP", "GOOG","CPG", "PHYS",
     "CTA-PB", "FITBI", "FLUT", "ZG", "BNRE", "BZ", "VNO", "CHT",
-    "SWAV", "BIO-B", "RBRK", "CNHI", "FER", "LOAR", "ACGLO"
+    "SWAV", "BIO-B", "RBRK", "CNHI", "FER", "LOAR", "ACGLO", "AIRC"
     }
 
 output = []  # 用于收集输出信息的列表

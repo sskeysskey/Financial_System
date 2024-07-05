@@ -7,49 +7,24 @@ from matplotlib.widgets import RadioButtons
 import matplotlib
 import tkinter as tk
 from tkinter import simpledialog, scrolledtext
+from functools import lru_cache
 
+@lru_cache(maxsize=None)
 def fetch_data(db_path, table_name, name):
-    try:
-        with sqlite3.connect(db_path) as conn:
-            cursor = conn.cursor()
+    with sqlite3.connect(db_path) as conn:
+        cursor = conn.cursor()
+        try:
             query = f"SELECT date, price, volume FROM {table_name} WHERE name = ? ORDER BY date;"
-            cursor.execute(query, (name,))
-            return cursor.fetchall()
-    except sqlite3.OperationalError as e:
-        if 'no such column: volume' in str(e):
+            return cursor.execute(query, (name,)).fetchall()
+        except sqlite3.OperationalError:
             query = f"SELECT date, price FROM {table_name} WHERE name = ? ORDER BY date;"
-            cursor.execute(query, (name,))
-            return cursor.fetchall()
-        else:
-            print(f"数据库错误: {e}")
-            return []
+            return cursor.execute(query, (name,)).fetchall()
 
 def process_data(data):
-    dates, prices, volumes = [], [], []
-    for row in data:
-        date = datetime.strptime(row[0], "%Y-%m-%d")
-        price = float(row[1]) if row[1] is not None else None
-        volume = int(row[2]) if len(row) > 2 and row[2] is not None else None
-        if price is not None:
-            dates.append(date)
-            prices.append(price)
-            volumes.append(volume)
-    return dates, prices, volumes
-
-def show_stock_etf_info(symbol, descriptions):
-    root = tk.Tk()
-    root.withdraw()  # 隐藏主窗口
-    top = tk.Toplevel(root)
-    top.title("Information")
-    top.geometry("600x750")
-    font_size = ('Arial', 22)
-    text_box = scrolledtext.ScrolledText(top, wrap=tk.WORD, font=font_size)
-    text_box.pack(expand=True, fill='both')
-    info = f"{symbol}:{descriptions['description1']}\n\n{descriptions['description2']}"
-    text_box.insert(tk.END, info)
-    text_box.config(state=tk.DISABLED)
-    top.bind('<Escape>', lambda event: root.destroy())
-    root.mainloop()
+    return zip(*[(datetime.strptime(row[0], "%Y-%m-%d"), 
+                  float(row[1]) if row[1] is not None else None,
+                  int(row[2]) if len(row) > 2 and row[2] is not None else None)
+                 for row in data if row[1] is not None])
 
 def draw_underline(text_obj, fig, ax1):
     x, y = text_obj.get_position()
@@ -61,14 +36,16 @@ def draw_underline(text_obj, fig, ax1):
 def update_plot(line1, line2, dates, prices, volumes, ax1, ax2, show_volume):
     line1.set_data(dates, prices)
     line2.set_data(dates, volumes)
-    ax1.set_xlim(min(dates), max(dates))
-    ax1.set_ylim(min(prices), max(prices))
+    ax1.set_xlim(np.min(dates), np.max(dates))
+    ax1.set_ylim(np.min(prices), np.max(prices))
     if show_volume:
-        ax2.set_ylim(0, max(volumes))
+        ax2.set_ylim(0, np.max(volumes))
     line2.set_visible(show_volume)
     plt.draw()
 
-def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe, json_data, default_time_range="1Y"):
+def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe, json_data, default_time_range="1Y", panel="False"):
+    plt.close('all')  # 关闭所有图表
+
     matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
     show_volume = False
     mouse_pressed = False
@@ -86,9 +63,23 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     fig.subplots_adjust(left=0.05, bottom=0.1, right=0.91, top=0.9)
     ax2 = ax1.twinx()
 
-    highlight_point = ax1.scatter([], [], s=100, color='blue', zorder=5)
-    line1, = ax1.plot(dates, prices, marker='o', markersize=1, linestyle='-', linewidth=2, color='b', picker=5, label='Price')
-    line2, = ax2.plot(dates, volumes, marker='o', markersize=1, linestyle='-', linewidth=2, color='r', picker=5, label='Volume')
+    fig.patch.set_facecolor('black')
+    ax1.set_facecolor('black')
+    
+
+    ax1.tick_params(axis='x', colors='white')
+    ax1.tick_params(axis='y', colors='white')
+    ax2.tick_params(axis='y', colors='white')
+    
+    # ax2.spines['bottom'].set_color('white')
+    # ax2.spines['top'].set_color('white') 
+    # ax2.spines['right'].set_color('white')
+    # ax2.spines['left'].set_color('white')
+
+    highlight_point = ax1.scatter([], [], s=100, color='yellow', zorder=5)
+    # line1, = ax1.plot(dates, prices, marker='o', markersize=1, linestyle='-', linewidth=2, color='b', picker=5, label='Price')
+    line1, = ax1.plot(dates, prices, marker='o', markersize=1, linestyle='-', linewidth=1, color='gold', picker=5, label='Price')
+    line2, = ax2.plot(dates, volumes, marker='o', markersize=1, linestyle='-', linewidth=1, color='r', picker=5, label='Volume')
     line2.set_visible(show_volume)
 
     def clean_percentage_string(percentage_str):
@@ -128,33 +119,56 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             break
     
     title_text = f'{name}  {compare}  {turnover_str}M/{turnover_rate} {marketcap_in_billion} {pe_text}"{table_name}" {fullname} {tag_str}'
-    title_style = {'color': 'blue' if clickable else 'black', 'fontsize': 16 if clickable else 15, 'fontweight': 'bold', 'picker': clickable}
+    title_style = {'color': 'orange' if clickable else 'lightgray', 'fontsize': 16 if clickable else 15, 'fontweight': 'bold', 'picker': clickable}
     title = ax1.set_title(title_text, **title_style)
+
+    def show_stock_etf_info(event=None):
+        for source in data_sources:
+            for item in json_data.get(source, []):
+                if item['symbol'] == name:
+                    descriptions = item
+                    root = tk.Tk()
+                    root.withdraw()  # 隐藏主窗口
+                    top = tk.Toplevel(root)
+                    top.title("Information")
+                    top.geometry("600x750")
+                    font_size = ('Arial', 22)
+                    text_box = scrolledtext.ScrolledText(top, wrap=tk.WORD, font=font_size)
+                    text_box.pack(expand=True, fill='both')
+                    info = f"{name} - {descriptions['name']}\n{descriptions['description1']}\n\n{descriptions['description2']}"
+                    text_box.insert(tk.END, info)
+                    text_box.config(state=tk.DISABLED)
+                    top.bind('<Escape>', lambda event: root.destroy())
+                    root.mainloop()
+                    return
+        print(f"未找到 {name} 的信息")
 
     def on_pick(event):
         if event.artist == title:  # 只有当点击的是标题时才执行
-            for item in json_data.get(source, []):
-                if item['symbol'] == name:
-                    show_stock_etf_info(name, item)
+            show_stock_etf_info()
         
     if clickable:
         draw_underline(title, fig, ax1)
         fig.canvas.mpl_connect('pick_event', on_pick)
 
-    ax1.grid(True)
+    # ax1.grid(True)
+    ax1.grid(True, color='white', alpha=0.2)
     plt.xticks(rotation=45)
 
-    annot = ax1.annotate("", xy=(0,0), xytext=(20,20), textcoords="offset points", bbox=dict(boxstyle="round", fc="black"), arrowprops=dict(arrowstyle="->"), color='yellow')
+    annot = ax1.annotate("", xy=(0,0), xytext=(20,20), textcoords="offset points", bbox=dict(boxstyle="round", fc="black"), arrowprops=dict(arrowstyle="->"), color='white')
     annot.set_visible(False)
 
     time_options = {"1m": 0.08, "3m": 0.25, "6m": 0.5, "1Y": 1, "2Y": 2, "3Y": 3, "5Y": 5, "10Y": 10, "All": 0}
     default_index = list(time_options.keys()).index(default_time_range)
 
-    rax = plt.axes([0.95, 0.005, 0.05, 0.8], facecolor='lightgoldenrodyellow')
+    rax = plt.axes([0.95, 0.005, 0.05, 0.8], facecolor='black')
     radio = RadioButtons(rax, list(time_options.keys()), active=default_index)
-
+        
     for label in radio.labels:
+        label.set_color('white')
         label.set_fontsize(14)
+
+    radio.circles[default_index].set_facecolor('red')
 
     def update_annot(ind):
         x, y = line1.get_data()
@@ -206,22 +220,32 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             filtered_volumes = [volume for date, volume in zip(dates, volumes) if date >= min_date]
         update_plot(line1, line2, filtered_dates, filtered_prices, filtered_volumes, ax1, ax2, show_volume)
 
+        radio.circles[list(time_options.keys()).index(val)].set_facecolor('red')
+
     def on_key(event):
-        nonlocal show_volume
         actions = {
-            'escape': lambda: plt.close(),
-            'v': lambda: toggle_volume(),
+            'v': toggle_volume,
             '1': lambda: radio.set_active(0),
             '2': lambda: radio.set_active(1),
-            '3': lambda: radio.set_active(7),
+            '3': lambda: radio.set_active(2),
             '4': lambda: radio.set_active(3),
-            '5': lambda: radio.set_active(6),
-            '6': lambda: radio.set_active(2),
-            '7': lambda: radio.set_active(8)
+            '5': lambda: radio.set_active(4),
+            '6': lambda: radio.set_active(5),
+            '7': lambda: radio.set_active(6),
+            '8': lambda: radio.set_active(7),
+            '9': lambda: radio.set_active(8),
+            '`': show_stock_etf_info
         }
         action = actions.get(event.key)
         if action:
             action()
+
+    def close_everything(event, panel):
+        if event.key == 'escape':
+            plt.close('all')
+            if panel:
+                import sys
+                sys.exit(0)
 
     def toggle_volume():
         nonlocal show_volume
@@ -243,10 +267,12 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     plt.gcf().canvas.mpl_connect("motion_notify_event", hover)
     plt.gcf().canvas.mpl_connect('key_press_event', on_key)
+    plt.gcf().canvas.mpl_connect('key_press_event', lambda event: close_everything(event, panel))
     plt.gcf().canvas.mpl_connect('button_press_event', on_mouse_press)
     plt.gcf().canvas.mpl_connect('button_release_event', on_mouse_release)
 
-    vline = ax1.axvline(x=dates[0], color='b', linestyle='--', linewidth=1, visible=False)
+    # vline = ax1.axvline(x=dates[0], color='b', linestyle='--', linewidth=1, visible=False)
+    vline = ax1.axvline(x=dates[0], color='yellow', linestyle='--', linewidth=1, visible=False)
     update(default_time_range)
     radio.on_clicked(update)
 

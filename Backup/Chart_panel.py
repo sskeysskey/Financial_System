@@ -6,6 +6,7 @@ from matplotlib.widgets import RadioButtons
 import matplotlib
 
 def plot_financial_data_panel(db_path, table_name, name, compare, default_time_range="1Y"):
+    plt.close('all')  # 关闭所有图表
     # 初始化 show_volume 状态
     show_volume = False
     # 初始化鼠标按下状态和初始价格点

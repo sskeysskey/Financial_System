@@ -29,7 +29,7 @@ def read_earningsymbol_from_file(file_path):
             symbols.add(symbol)
     return symbols
 
-def compare_today_yesterday(config_path, output_file, gainer_loser_path, earning_file):
+def compare_today_yesterday(config_path, output_file, gainer_loser_path, earning_file, sector_panel_path):
     latest_info = read_latest_date_info(gainer_loser_path)
     gainers = latest_info.get("gainer", [])
     losers = latest_info.get("loser", [])
@@ -37,6 +37,9 @@ def compare_today_yesterday(config_path, output_file, gainer_loser_path, earning
 
     with open(config_path, 'r') as f:
         config = json.load(f)
+    
+    with open(sector_panel_path, 'r') as f:
+        panel_json = json.load(f)
     
     output = []
     db_path = "/Users/yanzhang/Documents/Database/Finance.db"
@@ -76,7 +79,7 @@ def compare_today_yesterday(config_path, output_file, gainer_loser_path, earning
 
                         # 检查是否连续两天或三天上涨
                         consecutive_rise = 0
-                        if keyword in config.get(table_name, {}):
+                        if keyword in panel_json.get(table_name, {}):
                             query_four_days = f"""
                             SELECT date, price FROM {table_name} 
                             WHERE name = ? ORDER BY date DESC LIMIT 4
@@ -126,6 +129,7 @@ if __name__ == '__main__':
     output_file = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
     gainer_loser_path = '/Users/yanzhang/Documents/Financial_System/Modules/Gainer_Loser.json'
     earning_file = '/Users/yanzhang/Documents/News/Earnings_Release_new.txt'
-    compare_today_yesterday(config_path, output_file, gainer_loser_path, earning_file)
+    sector_panel_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json'
+    compare_today_yesterday(config_path, output_file, gainer_loser_path, earning_file, sector_panel_path)
     print(f"{output_file} 已生成。")
     copy_database_to_backup()

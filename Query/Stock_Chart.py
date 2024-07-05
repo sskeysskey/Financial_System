@@ -39,7 +39,7 @@ def match_and_plot(input_trimmed, sector_data, compare_data, shares, marketcap_p
                     compare_data.get(input_variant, "N/A"),
                     shares.get(input_variant, "N/A"),
                     *marketcap_pe_data.get(input_variant, (None, 'N/A')),
-                    json_data, '10Y')
+                    json_data, '10Y', True)
                 return True
     input_lower = input_trimmed.lower()
     for sector, names in sector_data.items():
@@ -50,7 +50,7 @@ def match_and_plot(input_trimmed, sector_data, compare_data, shares, marketcap_p
                     compare_data.get(name, "N/A"),
                     shares.get(name, "N/A"),
                     *marketcap_pe_data.get(name, (None, 'N/A')),
-                    json_data, '10Y')
+                    json_data, '10Y', True)
                 return True
     return False
 

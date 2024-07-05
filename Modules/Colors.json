@@ -30,13 +30,15 @@
         "DT",
         "ACI",
         "VIPS",
-        "WY",
         "POOL",
-        "SITE"
+        "SITE",
+        "BSBR",
+        "XP",
+        "VIV",
+        "TIMB"
     ],
     "yellow_keywords": [
         "CNYJPY",
-        "NASDAQ",
         "Gold",
         "Cocoa",
         "Silver",
@@ -45,53 +47,55 @@
         "APA",
         "DOX",
         "NFE",
-        "DLTR"
+        "DLTR",
+        "ICL",
+        "NKE",
+        "DEO",
+        "BNTX",
+        "GMAB",
+        "PCTY",
+        "CNH",
+        "WY",
+        "SON",
+        "JAZZ"
     ],
     "orange_keywords": [
-        "HANGSENG",
+        "NASDAQ",
+        "S&P500",
         "Naturalgas",
+        "Steel",
         "Ether",
-        "Shanghai",
         "USDCNY",
         "CZR",
-        "DEO",
         "JNJ",
         "UPS",
         "CVS",
-        "PCTY",
         "DAR",
         "MOS",
         "GGB",
-        "MGA",
-        "MTN",
+        "GPN",
+        "PAYC",
         "LEA",
         "VALE",
         "ALB",
         "ALTM",
         "LKQ",
-        "GMAB",
-        "ETSY",
-        "TU",
-        "BNTX",
-        "ICL",
         "APTV",
-        "RCI"
+        "MKTX",
+        "BF-B",
+        "BIO"
     ],
     "purple_keywords": [
+        "Nikkei",
         "Bitcoin",
+        "India",
         "CNYUSD",
         "US10Y",
         "USDJPY",
         "CrudeOil",
         "XLRE",
-        "PAYC",
-        "BF-B",
-        "BMY",
-        "MKTX",
-        "YUMC",
         "WBD",
         "PARA",
-        "GPN",
         "CMG"
     ],
     "black_keywords": [
@@ -105,14 +109,19 @@
         "ZK",
         "KVUE",
         "ZM",
+        "Corn",
         "U",
+        "BMY",
         "ALAB",
-        "AS"
+        "AS",
+        "RPRX"
     ],
     "blue_keywords": [
+        "HANGSENG",
         "Copper",
-        "S&P500",
-        "USDINR"
+        "USDINR",
+        "Solana",
+        "DXJ"
     ],
     "red_keywords": [
         "VIX",
@@ -122,6 +131,9 @@
     ],
     "green_keywords": [
         "EURCNY",
-        "JP10Y"
+        "JP10Y",
+        "EURUSD",
+        "Shanghai",
+        "Shenzhen"
     ]
 }

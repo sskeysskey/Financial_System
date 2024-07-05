@@ -59,6 +59,12 @@ else:
                 )
                 row = element.find_element(By.XPATH, './ancestor::tr')
                 price = row.find_element(By.ID, 'p').text.strip()
+
+                # 修改 "Palm Oil" 和 "Iron Ore" 的名称
+                if commodity == "Palm Oil":
+                    commodity = "PalmOil"
+                elif commodity == "Iron Ore":
+                    commodity = "IronOre"
                 
                 # 将数据格式化后添加到列表
                 all_data.append((today, commodity, price))

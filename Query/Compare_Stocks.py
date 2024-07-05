@@ -61,6 +61,25 @@ def get_prices(cursor, table_name, name, dates):
     cursor.execute(query, (name, *dates))
     return cursor.fetchall()
 
+def get_latest_four_dates(cursor, table_name, name):
+    query = f"""
+    SELECT date FROM {table_name}
+    WHERE name = ? 
+    ORDER BY date DESC
+    LIMIT 4
+    """
+    cursor.execute(query, (name,))
+    return cursor.fetchall()
+
+def get_prices_four_days(cursor, table_name, name, dates):
+    query = f"""
+    SELECT date, price, volume FROM {table_name}
+    WHERE name = ? AND date IN (?, ?, ?, ?)
+    ORDER BY date DESC
+    """
+    cursor.execute(query, (name, *dates))
+    return cursor.fetchall()
+
 def compare_today_yesterday(config_path, blacklist, interested_sectors, db_path, earnings_path, gainers_losers_path, output_path, error_file_path):
     with open(config_path, 'r') as file:
         data = json.load(file)
@@ -78,21 +97,29 @@ def compare_today_yesterday(config_path, blacklist, interested_sectors, db_path,
                     if name in blacklist:
                         continue
                     try:
-                        results = get_latest_two_dates(cursor, table_name, name)
-                        if len(results) < 2:
+                        results = get_latest_four_dates(cursor, table_name, name)
+                        if len(results) < 4:
                             raise ValueError(f"无法找到 {table_name} 下的 {name} 足够的历史数据进行比较。")
 
-                        latest_date, second_latest_date = map(lambda x: x[0], results)
-                        prices = get_prices(cursor, table_name, name, [latest_date, second_latest_date])
+                        dates = [result[0] for result in results]
+                        prices = get_prices_four_days(cursor, table_name, name, dates)
 
-                        if len(prices) == 2:
+                        if len(prices) == 4:
                             latest_price, second_latest_price = prices[0][1], prices[1][1]
                             latest_volume, second_latest_volume = prices[0][2], prices[1][2]
                             change = latest_price - second_latest_price
                             percentage_change = (change / second_latest_price) * 100
                             volume_change = latest_volume - second_latest_volume
                             percentage_volume_change = (volume_change / second_latest_volume) * 100
-                            output.append((f"{table_name} {name}", percentage_change, latest_volume, percentage_volume_change))
+
+                            # 检查连续上涨
+                            consecutive_rise = 0
+                            if prices[0][1] > prices[1][1] and prices[1][1] > prices[2][1]:
+                                consecutive_rise = 2
+                                if prices[2][1] > prices[3][1]:
+                                    consecutive_rise = 3
+
+                            output.append((f"{table_name} {name}", percentage_change, latest_volume, percentage_volume_change, consecutive_rise))
                         else:
                             raise ValueError(f"无法比较 {table_name} 下的 {name}，因为缺少必要的数据。")
                     except Exception as e:
@@ -103,11 +130,11 @@ def compare_today_yesterday(config_path, blacklist, interested_sectors, db_path,
         with open(output_path, 'w') as file:
             for line in output:
                 sector, company = line[0].rsplit(' ', 1)
-                percentage_change, latest_volume, percentage_volume_change = line[1], line[2], line[3]
+                percentage_change, latest_volume, percentage_volume_change, consecutive_rise = line[1], line[2], line[3], line[4]
                 
                 original_company = company  # 保留原始公司名称
                 if original_company in earnings_companies:
-                    company += f'.' + earnings_companies[original_company]
+                    company += f'.{earnings_companies[original_company]}'
                 if latest_volume > 5000000:
                     company += '.*'
                 if original_company in gainers:
@@ -115,7 +142,13 @@ def compare_today_yesterday(config_path, blacklist, interested_sectors, db_path,
                 elif original_company in losers:
                     company += '.<'
                 
-                file.write(f"{sector:<25}{company:<13}: {percentage_change:>6.2f}%    {percentage_volume_change:>6.2f}%\n")
+                # 添加连续上涨标记
+                if consecutive_rise == 2:
+                    company += '.+'
+                elif consecutive_rise == 3:
+                    company += '.++'
+                
+                file.write(f"{sector:<25}{company:<15}: {percentage_change:>6.2f}%    {percentage_volume_change:>6.2f}%\n")
         print(f"{output_path} 已生成。")
     else:
         log_error_with_timestamp("输出为空，无法进行保存文件操作。", error_file_path)

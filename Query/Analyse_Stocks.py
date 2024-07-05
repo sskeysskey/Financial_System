@@ -3,6 +3,7 @@ import json
 import os
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
+from collections import OrderedDict
 
 blacklist_glob = ["YNDX"]
 
@@ -53,7 +54,6 @@ def main():
     with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as file:
         data = json.load(file)
 
-    output = []
     output1 = []
     intervals = [120, 60, 24, 13]  # 以月份表示的时间间隔列表
 
@@ -107,6 +107,7 @@ def main():
                             if validate_price <= min_price:
                                 if interval >= 12:
                                     years = interval // 12
+                                    print(f"{table_name} {name} {years}Y_newlow")
                                     output1.append(f"{table_name} {name} {years}Y_newlow")
     final_output1 = "\n".join(output1)
 
@@ -202,7 +203,8 @@ def main():
         "MGA", "MTN", "NGG", "NFE", "DBX", "ELP", "YUMC", "EBR", "LI",
         "CMCSA", "WBD", "MAT", "ZK", "BEN", "GGB", "BIDU", "PARA", "LVS",
         "ETSY", "GXO", "ZM", "CAE", "PKX", "TU", "XRAY", "ESLT", "VIPS",
-        "ALAB", "LEA", "SOLV", "RCI"
+        "ALAB", "LEA", "SOLV", "RCI", "ICL", "AS", "BCE", "RPRX", "VIV",
+        "TIMB", "JAZZ"
         ]
 
         config_json = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json"

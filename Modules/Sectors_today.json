@@ -93,7 +93,6 @@
     "EWD",
     "ETHO",
     "FCOM",
-    "EDOG",
     "EVX",
     "GAA",
     "PRN",
@@ -106,7 +105,6 @@
     "CIBR",
     "GXG",
     "FXZ",
-    "VBIIX",
     "CEW",
     "JPIB",
     "EPU",
@@ -332,7 +330,6 @@
     "MUST",
     "EEMA",
     "HYG",
-    "AMJ",
     "SOXL",
     "IWM",
     "VTI",
@@ -350,7 +347,6 @@
     "FXE",
     "FXB",
     "UUP",
-    "UUPT",
     "JNK",
     "SCHH",
     "TLT",
@@ -377,7 +373,6 @@
     "SHYG",
     "EEMS",
     "ANGL",
-    "KCCB",
     "HEZU",
     "IYF",
     "ISCF",
@@ -702,7 +697,8 @@
     "BYD",
     "SLGN",
     "ZK",
-    "RH"
+    "RH",
+    "FUN"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -852,7 +848,8 @@
     "NFG",
     "MGY",
     "RIG",
-    "VRN"
+    "VRN",
+    "TBN"
   ],
   "Financial_Services": [
     "BRK-A",
@@ -1172,7 +1169,9 @@
     "APLS",
     "NUVL",
     "KRYS",
-    "IBRX"
+    "IBRX",
+    "TEM",
+    "MMSI"
   ],
   "Industrials": [
     "GE",
@@ -1412,7 +1411,6 @@
     "ADC",
     "CIGI",
     "HR",
-    "AIRC",
     "RITM",
     "TRNO",
     "DOC",

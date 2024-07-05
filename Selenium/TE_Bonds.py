@@ -42,7 +42,6 @@ else:
         name_mapping = {
             "United Kingdom": "UK10Y",
             "Japan": "JP10Y",
-            "Russia": "RU10Y",
             "Brazil": "BR10Y",
             "India": "IND10Y",
             "Turkey": "TUR10Y"

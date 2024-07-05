@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from collections import OrderedDict
 
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
-from Chart_panel import plot_financial_data_panel
+# from Chart_panel import plot_financial_data_panel
 from Chart_input import plot_financial_data
 
 def load_json(path):
@@ -172,12 +172,13 @@ def on_keyword_selected_chart(value, parent_window):
         marketcap, pe = marketcap_pe_data.get(value, (None, 'N/A'))
 
         if sector in stock_sectors:
-            plot_financial_data(db_path, sector, value, compare_value, shares_value, marketcap, pe, json_data, '1Y')
+            plot_financial_data(db_path, sector, value, compare_value, shares_value, marketcap, pe, json_data, '1Y', False)
         elif sector in economics_sectors:
-            plot_financial_data(db_path, sector, value, compare_value, shares_value, marketcap, pe, json_data, '10Y')
+            plot_financial_data(db_path, sector, value, compare_value, shares_value, marketcap, pe, json_data, '10Y', False)
         else:
             change = compare_data.get(value, "")
-            plot_financial_data_panel(db_path, sector, value, change, '1Y')
+            # plot_financial_data_panel(db_path, sector, value, change, '1Y')
+            plot_financial_data(db_path, sector, value, compare_value, shares_value, marketcap, pe, json_data, '1Y', False)
 
 def create_window(content):
     top = tk.Toplevel(root)
