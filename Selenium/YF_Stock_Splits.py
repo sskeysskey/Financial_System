@@ -36,6 +36,9 @@ driver = webdriver.Chrome(service=service)
 with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as file:
     data = json.load(file)
 
+# start_date = datetime(2024, 6, 30)
+# end_date = datetime(2024, 7, 6)
+
 # 获取当前系统日期
 current_date = datetime.now()
 # 计算离当前最近的周天

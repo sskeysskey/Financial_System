@@ -10,7 +10,8 @@
         "LULU": "",
         "VFC": "北面",
         "NKE": "Nike",
-        "SON": "产品包装"
+        "SON": "产品包装",
+        "CCK": ""
     },
     "Energy": {},
     "Real_Estate": {
@@ -22,15 +23,14 @@
         "U": "Unity",
         "CSCO": "思科",
         "PCTY": "人力云",
-        "SNOW": "云数据"
+        "SNOW": ""
     },
     "Consumer_Defensive": {
         "ACI": "克罗格",
-        "TAP": "啤酒酿造",
         "DAR": "动物饲料",
         "KVUE": "泰诺",
         "DLTR": "一元店",
-        "DEO": "威士忌",
+        "DEO": "尊尼获加",
         "BF-B": "杰克丹尼"
     },
     "Industrials": {
@@ -82,6 +82,7 @@
         "Brazil": ""
     },
     "Bonds": {
+        "US2Y": "",
         "US10Y": "",
         "JP10Y": "",
         "IND10Y": "",
@@ -105,12 +106,14 @@
         "OrangeJuice": "桔汁",
         "Sugar": "",
         "Wheat": "",
+        "Rice": "",
         "Oat": "",
         "LeanHogs": "",
         "LiveCattle": "牛肉"
     },
     "ETFs_Oversea": {
         "CQQQ": "中国科技",
+        "KBA": "中国A股",
         "DXJ": "日本",
         "INDA": "印度",
         "EWT": "台湾",

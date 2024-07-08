@@ -35,7 +35,8 @@
         "BSBR",
         "XP",
         "VIV",
-        "TIMB"
+        "TIMB",
+        "CCK"
     ],
     "yellow_keywords": [
         "CNYJPY",
@@ -75,7 +76,6 @@
         "GGB",
         "GPN",
         "PAYC",
-        "LEA",
         "VALE",
         "ALB",
         "ALTM",
@@ -94,6 +94,7 @@
         "USDJPY",
         "CrudeOil",
         "XLRE",
+        "KBA",
         "WBD",
         "PARA",
         "CMG"
@@ -101,6 +102,7 @@
     "black_keywords": [
         "Cotton",
         "Sugar",
+        "Rice",
         "VFC",
         "WBA",
         "SOLV",
@@ -132,6 +134,7 @@
     "green_keywords": [
         "EURCNY",
         "JP10Y",
+        "LIT",
         "EURUSD",
         "Shanghai",
         "Shenzhen"

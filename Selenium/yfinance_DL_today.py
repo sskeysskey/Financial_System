@@ -25,13 +25,10 @@ else:
 
     today = now.date()
     yesterday = today - timedelta(days=1)
-    # tomorrow = today + timedelta(days=1)
 
     # 定义时间范围
     start_date = yesterday.strftime('%Y-%m-%d')
     end_date = today.strftime('%Y-%m-%d')
-    # start_date = today.strftime('%Y-%m-%d')
-    # end_date = tomorrow.strftime('%Y-%m-%d')
 
     # 连接到SQLite数据库
     conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')

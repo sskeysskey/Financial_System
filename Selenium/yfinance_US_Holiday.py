@@ -16,7 +16,7 @@ if now.weekday() in (0, 6):
     print("Today is either Sunday or Monday. The script will not run.")
 else:
     # 读取JSON文件
-    with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_time_wrong.json', 'r') as file:
+    with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_US_holiday.json', 'r') as file:
         stock_groups = json.load(file)
 
     # 读取symbol_mapping JSON文件
@@ -25,12 +25,10 @@ else:
 
     today = now.date()
     yesterday = today - timedelta(days=1)
-    tomorrow = today + timedelta(days=1)
 
     # 定义时间范围
-    yesterday_date = yesterday.strftime('%Y-%m-%d')
-    start_date = today.strftime('%Y-%m-%d')
-    end_date = tomorrow.strftime('%Y-%m-%d')
+    start_date = yesterday.strftime('%Y-%m-%d')
+    end_date = today.strftime('%Y-%m-%d')
 
     # 连接到SQLite数据库
     conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
@@ -46,14 +44,14 @@ else:
                 # 使用 yfinance 下载股票数据
                 data = yf.download(ticker_symbol, start=start_date, end=end_date)
                 if data.empty:
-                    # raise ValueError(f"{ticker_symbol}: No price data found for the given date range.")
                     raise ValueError(f"{group_name} {ticker_symbol}: No price data found for the given date range.")
 
                 # 插入数据到相应的表中
                 table_name = group_name.replace(" ", "_")  # 确保表名没有空格
                 mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)  # 从映射字典获取名称，如果不存在则使用原始 ticker_symbol
                 for index, row in data.iterrows():
-                    date = yesterday_date  # 使用昨天的日期
+                    date = index.strftime('%Y-%m-%d')
+                    # date = "2024-06-11"
                     if group_name in ["Currencies", "Bonds"]:
                         price = round(row['Close'], 4)
                     elif group_name in ["Crypto"]:

@@ -3,25 +3,18 @@
     
     ],
   "Currencies": [
-    "EURUSD=X",
-    "GBPUSD=X",
-    "JPY=X",
-    "CNYEUR=X",
-    "CNYGBP=X",
-    "CNYJPY=X",
     "CNYUSD=X",
-    "EURCNY=X",
     "CNY=X",
-    "GBPCNY=X",
-    "AUDCNY=X",
     "INR=X",
+    "BRL=X",
     "RUB=X",
     "KRW=X",
     "TRY=X",
-    "SGD=X",
     "TWD=X",
     "IDR=X",
-    "PHP=X"
+    "PHP=X",
+    "EGP=X",
+    "ARS=X"
     ],
     
   "Crypto": [
@@ -29,10 +22,7 @@
     ],
     
   "Indices": [
-      "^HSI",
-      "000001.SS",
-      "399001.SZ",
-      "^N225"
+      
     ],
     
   "Commodities": [

@@ -14,14 +14,9 @@ file_path = '/Users/yanzhang/Documents/News/Economic_Events_new.txt'
 
 # 检查文件是否存在
 if os.path.exists(file_path):
-    # 创建一个Tkinter根窗口并隐藏
     root = tk.Tk()
     root.withdraw()
-    
-    # 弹窗通知用户
     messagebox.showinfo("文件存在", f"Economic_Events_new文件已存在，请先处理后再执行。")
-    
-    # 退出程序
     exit()
 
 # ChromeDriver 路径
@@ -30,6 +25,9 @@ chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
 # 设置 ChromeDriver
 service = Service(executable_path=chrome_driver_path)
 driver = webdriver.Chrome(service=service)
+
+# start_date = datetime(2024, 6, 30)
+# end_date = datetime(2024, 7, 6)
 
 # 获取当前系统日期
 current_date = datetime.now()
@@ -48,7 +46,7 @@ Event_Filter = {
     "PPI Final Demand YY*", "PPI exFood/Energy MM*", "PPI ex Food/Energy/Tr MM*",
     "PPI Final Demand MM*", "Retail Sales MM *", "GDP Final*", "Core PCE Prices Fnal*",
     "PCE Prices Final *", "GDP Cons Spending Final*", "Pending Homes Index",
-    "PCE Price Index MM*"
+    "PCE Price Index MM*", "Unemployment Rate*"
 }
 
 # 定义一个包含所有目标国家代码的集合
@@ -84,7 +82,7 @@ with open(file_path, 'a') as output_file:
                         event = row.find_element(By.CSS_SELECTOR, 'td[aria-label="Event"]').text
                         country = row.find_element(By.CSS_SELECTOR, 'td[aria-label="Country"]').text
 
-                        if event in Event_Filter and country not in target_countries:
+                        if event in Event_Filter and country in target_countries:
                             try:
                                 event_time = row.find_element(By.CSS_SELECTOR, 'td[aria-label="Event Time"]').text
                             except NoSuchElementException:

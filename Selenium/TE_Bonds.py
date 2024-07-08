@@ -5,25 +5,22 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import sqlite3
+import logging
+
+# 设置日志
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # ChromeDriver 路径
-chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
+CHROME_DRIVER_PATH = "/Users/yanzhang/Downloads/backup/chromedriver"
+DB_PATH = '/Users/yanzhang/Documents/Database/Finance.db'
 
-# 设置 ChromeDriver
-service = Service(executable_path=chrome_driver_path)
-driver = webdriver.Chrome(service=service)
+def setup_driver():
+    service = Service(executable_path=CHROME_DRIVER_PATH)
+    return webdriver.Chrome(service=service)
 
-# 获取当前时间
-now = datetime.now()
-
-# 判断今天的星期数，如果是周日(6)或周一(0)，则不执行程序
-if now.weekday() in (0, 6):
-    print("Today is either Sunday or Monday. The script will not run.")
-else:
-    # 初始化数据库连接
-    conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
+def setup_database():
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    # 创建表
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS Bonds (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34,52 +31,64 @@ else:
     );
     ''')
     conn.commit()
+    return conn, cursor
 
-    # driver = setup_driver()
+def fetch_bond_data(driver, bond_name, xpath='./ancestor::tr'):
+    element = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.LINK_TEXT, bond_name))
+    )
+    row = element.find_element(By.XPATH, xpath)
+    return row.find_element(By.ID, 'p').text.strip()
+
+def main():
+    now = datetime.now()
+    if now.weekday() in (0, 6):
+        logging.info("Today is either Sunday or Monday. The script will not run.")
+        return
+
+    driver = setup_driver()
+    conn, cursor = setup_database()
+
     try:
-        # 访问网页
+        yesterday = (now - timedelta(days=1)).strftime('%Y-%m-%d')
+        all_data = []
+
+        # US Bond data
+        driver.get('https://tradingeconomics.com/united-states/government-bond-yield')
+        us_bonds = ["US 2Y"]
+        for bond in us_bonds:
+            try:
+                price = fetch_bond_data(driver, bond)
+                all_data.append((yesterday, bond.replace(" ", ""), price))
+            except Exception as e:
+                logging.error(f"Failed to retrieve data for {bond}: {e}")
+
+        # Other countries' bond data
         driver.get('https://tradingeconomics.com/bonds')
-        name_mapping = {
+        other_bonds = {
             "United Kingdom": "UK10Y",
             "Japan": "JP10Y",
             "Brazil": "BR10Y",
             "India": "IND10Y",
             "Turkey": "TUR10Y"
         }
-
-        all_data = []
-        # 获取当前时间
-        now = datetime.now()
-        # 获取前一天的日期
-        yesterday = now - timedelta(days=1)
-        # 格式化输出
-        today = yesterday.strftime('%Y-%m-%d')
-
-        # 查找并处理数据
-        for bond in name_mapping.keys():
+        for bond, mapped_name in other_bonds.items():
             try:
-                element = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.LINK_TEXT, bond))
-                )
-                row = element.find_element(By.XPATH, './ancestor::tr')
-                price = row.find_element(By.ID, 'p').text.strip()
-                # 使用映射后的名称
-                mapped_name = name_mapping[bond]
-                
-                # 将数据格式化后添加到列表
-                all_data.append((today, mapped_name, price))
+                price = fetch_bond_data(driver, bond)
+                all_data.append((yesterday, mapped_name, price))
             except Exception as e:
-                print(f"Failed to retrieve data for {name_mapping}: {e}")
-        
-        # 插入数据到数据库
-        cursor.executemany('INSERT INTO Bonds (date, name, price) VALUES (?, ?, ?)', all_data)
+                logging.error(f"Failed to retrieve data for {mapped_name}: {e}")
+
+        cursor.executemany('INSERT OR REPLACE INTO Bonds (date, name, price) VALUES (?, ?, ?)', all_data)
         conn.commit()
-        # 打印插入的数据条数
-        print(f"Total {len(all_data)} records have been inserted into the database.")
+        logging.info(f"Total {len(all_data)} records have been inserted into the database.")
 
     except Exception as e:
-        print(f"An error occurred: {e}")
-        conn.rollback()  # 回滚在异常发生时的所有操作
+        logging.error(f"An error occurred: {e}")
+        conn.rollback()
     finally:
         driver.quit()
         conn.close()
+
+if __name__ == "__main__":
+    main()
