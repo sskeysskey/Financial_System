@@ -9,7 +9,6 @@ from datetime import datetime, timedelta
 from collections import OrderedDict
 
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
-# from Chart_panel import plot_financial_data_panel
 from Chart_input import plot_financial_data
 
 def load_json(path):
@@ -79,8 +78,8 @@ def create_selection_window():
 
     categories = [
         ['Basic_Materials', 'Communication_Services', 'Consumer_Cyclical'],
-        ['Technology', 'Energy', 'Real_Estate'],
-        ['Industrials', 'Consumer_Defensive', 'Utilities'],
+        ['Technology', 'Energy', 'Real_Estate', 'Utilities'],
+        ['Industrials', 'Consumer_Defensive'],
         ['Healthcare', 'Financial_Services'],
         ['Bonds', 'Crypto', 'Indices'],
         ['Commodities'],

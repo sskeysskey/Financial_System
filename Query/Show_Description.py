@@ -28,7 +28,7 @@ def show_description(symbol, descriptions):
     text_box.pack(expand=True, fill='both')
     
     # 插入股票信息
-    info = f"{symbol}\n\n{descriptions['tag']}\n\n{descriptions['name']}\n\n{descriptions['description1']}\n\n{descriptions['description2']}"
+    info = f"{symbol}\n{descriptions['name']}\n\n{descriptions['tag']}\n\n{descriptions['description1']}\n\n{descriptions['description2']}"
     text_box.insert(tk.END, info)
     
     # 设置文本框为只读

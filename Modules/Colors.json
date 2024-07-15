@@ -36,7 +36,12 @@
         "XP",
         "VIV",
         "TIMB",
-        "CCK"
+        "CCK",
+        "HTHT",
+        "DE",
+        "MCD",
+        "LW",
+        "BDX"
     ],
     "yellow_keywords": [
         "CNYJPY",
@@ -58,7 +63,12 @@
         "CNH",
         "WY",
         "SON",
-        "JAZZ"
+        "JAZZ",
+        "NTR",
+        "ALB",
+        "MOS",
+        "WRB",
+        "AAL"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -72,18 +82,17 @@
         "UPS",
         "CVS",
         "DAR",
-        "MOS",
         "GGB",
         "GPN",
         "PAYC",
         "VALE",
-        "ALB",
         "ALTM",
         "LKQ",
         "APTV",
         "MKTX",
         "BF-B",
-        "BIO"
+        "BIO",
+        "EL"
     ],
     "purple_keywords": [
         "Nikkei",
@@ -94,7 +103,7 @@
         "USDJPY",
         "CrudeOil",
         "XLRE",
-        "KBA",
+        "CNYA",
         "WBD",
         "PARA",
         "CMG"
@@ -103,6 +112,7 @@
         "Cotton",
         "Sugar",
         "Rice",
+        "Soybean",
         "VFC",
         "WBA",
         "SOLV",

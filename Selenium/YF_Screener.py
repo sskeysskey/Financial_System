@@ -8,9 +8,23 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support import expected_conditions as EC
-from concurrent.futures import ThreadPoolExecutor
 
-def login_once(driver, login_url):
+def save_cookies(driver, file_path):
+    with open(file_path, 'w') as file:
+        json.dump(driver.get_cookies(), file)
+
+def load_cookies(driver, file_path):
+    with open(file_path, 'r') as file:
+        cookies = json.load(file)
+        for cookie in cookies:
+            driver.add_cookie(cookie)
+
+def login_once():
+    chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
+    login_url = "https://login.yahoo.com"
+    service = Service(executable_path=chrome_driver_path)
+    driver = webdriver.Chrome(service=service)
+
     driver.get(login_url)
 
     WebDriverWait(driver, 15).until(
@@ -18,14 +32,14 @@ def login_once(driver, login_url):
     )
 
     username_input = driver.find_element(By.ID, "login-username")
-    username_input.send_keys("zyprozypro@gmail.com")
+    username_input.send_keys("sskeysskey@gmail.com")
     username_input.send_keys(Keys.RETURN)
 
     WebDriverWait(driver, 600).until(
         EC.presence_of_element_located((By.ID, "login-passwd"))
     )
     password_input = driver.find_element(By.ID, "login-passwd")
-    password_input.send_keys("1@34Abcd")
+    password_input.send_keys("1234@Abcd")
     password_input.send_keys(Keys.RETURN)
     
     # 等待登录成功的标志，如重定向到登录后页面的某个特定元素
@@ -33,7 +47,12 @@ def login_once(driver, login_url):
         EC.presence_of_element_located((By.ID, "ybarAccountMenu"))
     )
     print("登录成功，继续执行其他任务")
-
+    
+    cookies = driver.get_cookies()
+    save_cookies(driver, '/Users/yanzhang/Documents/Financial_System/Modules/sskey_cookies.json')
+    driver.quit()
+    return cookies
+    
 def is_blacklisted(symbol):
     """检查给定的股票符号是否在黑名单中"""
     return symbol in blacklist
@@ -145,11 +164,6 @@ def save_output_to_file(output, directory, filename='Stock_Change.txt'):
         file.write("\n".join(output))
     print(f"输出已保存到文件：{file_path}")
 
-chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
-
-service = Service(executable_path=chrome_driver_path)
-driver = webdriver.Chrome(service=service)
-
 # 定义黑名单
 blacklist = {"CTA-PA", "FWONK", "FOXA", "NWSA", "PARAA", "LSXMA",
     "LSXMB", "LBRDA", "LBTYA", "LBTYB", "LEN-B", "BF-A", "MKC-V",
@@ -167,7 +181,8 @@ blacklist = {"CTA-PA", "FWONK", "FOXA", "NWSA", "PARAA", "LSXMA",
     "CWEN-A", "ELPC", "BML-PG", "SLG-PI", "NEE-PR", "APO-PA",
     "YNDX", "CUK", "BBDO", "SLMBP", "BPYPP", "GOOG","CPG", "PHYS",
     "CTA-PB", "FITBI", "FLUT", "ZG", "BNRE", "BZ", "VNO", "CHT",
-    "SWAV", "BIO-B", "RBRK", "CNHI", "FER", "LOAR", "ACGLO", "AIRC"
+    "SWAV", "BIO-B", "RBRK", "CNHI", "FER", "LOAR", "ACGLO", "AIRC",
+    "WRK"
     }
 
 output = []  # 用于收集输出信息的列表
@@ -191,48 +206,73 @@ if os.path.exists(file_path):
 else:
     print("文件不存在")
 
-login_url = "https://login.yahoo.com"
 urls = [
-    ('https://finance.yahoo.com/screener/d4e6dd73-c8bf-45cf-a0a7-43949b1c8bb2?offset=0&count=100',
+    ('https://finance.yahoo.com/screener/abf2a40b-6e31-4353-9af1-91f0474e353c?offset=0&count=100',
     'Technology'),
-    ('https://finance.yahoo.com/screener/d4e6dd73-c8bf-45cf-a0a7-43949b1c8bb2?count=100&offset=100',
+    ('https://finance.yahoo.com/screener/abf2a40b-6e31-4353-9af1-91f0474e353c?count=100&offset=100',
     'Technology'),
-    ('https://finance.yahoo.com/screener/d4e6dd73-c8bf-45cf-a0a7-43949b1c8bb2?count=100&offset=200',
+    ('https://finance.yahoo.com/screener/abf2a40b-6e31-4353-9af1-91f0474e353c?count=100&offset=200',
     'Technology'),
-    ('https://finance.yahoo.com/screener/e4c75fee-06c4-49bd-a31c-48316ca60fdc?offset=0&count=100',
+    ('https://finance.yahoo.com/screener/2e39461b-04c9-4560-bc72-9b45331669b2?offset=0&count=100',
     'Industrials'),
-    ('https://finance.yahoo.com/screener/e4c75fee-06c4-49bd-a31c-48316ca60fdc?count=100&offset=100',
+    ('https://finance.yahoo.com/screener/2e39461b-04c9-4560-bc72-9b45331669b2?count=100&offset=100',
     'Industrials'),
-    ('https://finance.yahoo.com/screener/34ba1ed8-8b53-44a7-b246-d4fc64be309a?offset=0&count=100',
+    ('https://finance.yahoo.com/screener/cf1d55c1-69b4-4f3a-b0c6-dfab869aeeda?offset=0&count=100',
     'Financial_Services'),
-    ('https://finance.yahoo.com/screener/34ba1ed8-8b53-44a7-b246-d4fc64be309a?count=100&offset=100',
+    ('https://finance.yahoo.com/screener/cf1d55c1-69b4-4f3a-b0c6-dfab869aeeda?count=100&offset=100',
     'Financial_Services'),
-    ('https://finance.yahoo.com/screener/34ba1ed8-8b53-44a7-b246-d4fc64be309a?count=100&offset=200',
+    ('https://finance.yahoo.com/screener/cf1d55c1-69b4-4f3a-b0c6-dfab869aeeda?count=100&offset=200',
     'Financial_Services'),
-    ('https://finance.yahoo.com/screener/b9e45f5b-1060-4937-88cf-222f6d0eaf12?offset=0&count=100',
+    ('https://finance.yahoo.com/screener/a6ae322b-684f-4a0a-a741-780ee93d91b9?offset=0&count=100',
     'Basic_Materials'),
-    ('https://finance.yahoo.com/screener/ec0f56e6-3d33-42e2-b259-bc4f0fda72b3?offset=0&count=100',
+    ('https://finance.yahoo.com/screener/d86fe323-442b-4606-a97b-10a403168772?offset=0&count=100',
     'Consumer_Defensive'),
-    ('https://finance.yahoo.com/screener/909bdb77-4f37-4360-b72e-051c89384680?offset=0&count=100',
+    ('https://finance.yahoo.com/screener/b410daa9-796b-496e-93aa-5f471f2d25b3?offset=0&count=100',
     'Utilities'),
-    ('https://finance.yahoo.com/screener/458e9bc1-1970-4237-bf39-bb84c20e04e0?offset=0&count=100',
+    ('https://finance.yahoo.com/screener/c0b7a27b-93dc-40e3-ba69-9d8f3d2efa3d?offset=0&count=100',
     'Energy'),
-    ('https://finance.yahoo.com/screener/1aca9038-4b33-4ab3-9243-ba8033193704?offset=0&count=100',
+    ('https://finance.yahoo.com/screener/31b0d926-ddb8-41b0-8069-8c83433efe1f?offset=0&count=100',
     'Consumer_Cyclical'),
-    ('https://finance.yahoo.com/screener/1aca9038-4b33-4ab3-9243-ba8033193704?count=100&offset=100',
+    ('https://finance.yahoo.com/screener/31b0d926-ddb8-41b0-8069-8c83433efe1f?count=100&offset=100',
     'Consumer_Cyclical'),
-    ('https://finance.yahoo.com/screener/26f7790f-afdf-4a5f-828b-6c2b4b280022?offset=0&count=100',
+    ('https://finance.yahoo.com/screener/cbd1eeac-8eb9-4d08-9100-5917153d288a?offset=0&count=100',
     'Real_Estate'),
-    ('https://finance.yahoo.com/screener/c915b3a5-8842-4108-b940-4fa06561e6e9?offset=0&count=100',
+    ('https://finance.yahoo.com/screener/73eee657-6674-422d-8001-68e601d27811?offset=0&count=100',
     'Healthcare'),
-    ('https://finance.yahoo.com/screener/c915b3a5-8842-4108-b940-4fa06561e6e9?count=100&offset=100',
+    ('https://finance.yahoo.com/screener/73eee657-6674-422d-8001-68e601d27811?count=100&offset=100',
     'Healthcare'),
-    ('https://finance.yahoo.com/screener/1af4bd9c-1144-4c59-9037-ad33429ef3de?offset=0&count=100',
+    ('https://finance.yahoo.com/screener/32c6df77-2f51-47a6-9c8a-30340ca7728b?offset=0&count=100',
     'Communication_Services'),
 ]
 
+# 检查是否存在已保存的cookies
+cookies_file_path = '/Users/yanzhang/Documents/Financial_System/Modules/sskey_cookies.json'
+if os.path.exists(cookies_file_path):
+    chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
+    service = Service(executable_path=chrome_driver_path)
+    driver = webdriver.Chrome(service=service)
+    
+    driver.get("https://finance.yahoo.com")
+    load_cookies(driver, cookies_file_path)
+    driver.refresh()
+else:
+    cookies = login_once()
+    chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
+    service = Service(executable_path=chrome_driver_path)
+    driver = webdriver.Chrome(service=service)
+    
+    # Navigate to the domain that matches the cookies
+    driver.get("https://finance.yahoo.com")  # Adjust URL as necessary to match the cookie domain
+    
+    # 在driver中设置cookies
+    for cookie in cookies:
+        driver.add_cookie(cookie)
+    
+    # Refresh the page to apply cookies
+    driver.refresh()
+
 try:
-    login_once(driver, login_url)
+    # 用设置好cookies的driver处理URLs
     process_urls(driver, urls, output)
 finally:
     driver.quit()

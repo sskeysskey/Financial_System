@@ -36,7 +36,7 @@ def load_symbol_names(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
         return dict(line.strip().split(': ', 1) for line in file if ': ' in line)
 
-def add_stock(symbol, entry, data, json_file, description1, description2, root, symbol_names):
+def add_stock(symbol, entry, data, json_file, description1, description2, root, symbol_names, success_flag):
     stock_name = symbol_names.get(symbol, "")
     new_stock = {
         "symbol": symbol,
@@ -48,13 +48,14 @@ def add_stock(symbol, entry, data, json_file, description1, description2, root, 
     data["stocks"].append(new_stock)
     with open(json_file, "w", encoding="utf-8") as file:
         json.dump(data, file, ensure_ascii=False, indent=4)
+    success_flag[0] = True  # 设置成功标志位
     root.destroy()
 
-def on_key_press(event, symbol, entry, data, json_file, description1, description2, root, symbol_names):
+def on_key_press(event, symbol, entry, data, json_file, description1, description2, root, symbol_names, success_flag):
     if event.keysym == 'Escape':
         root.destroy()
     elif event.keysym == 'Return':
-        add_stock(symbol, entry, data, json_file, description1, description2, root, symbol_names)
+        add_stock(symbol, entry, data, json_file, description1, description2, root, symbol_names, success_flag)
 
 def read_clipboard():
     return pyperclip.paste().replace('"', '').replace("'", "")
@@ -147,14 +148,19 @@ def main():
     
     root = tk.Tk()
     root.title("Add Stock")
+    success_flag = [False]  # 使用列表来传递布尔值
     entry = tk.Entry(root)
     entry.pack()
     entry.focus_set()
-    button = tk.Button(root, text="添加 Tags", command=lambda: add_stock(new_name, entry, data, json_file, new_description1, new_description2, root, symbol_names))
+    button = tk.Button(root, text="添加 Tags", command=lambda: add_stock(new_name, entry, data, json_file, new_description1, new_description2, root, symbol_names, success_flag))
     button.pack()
-    root.bind('<Key>', lambda event: on_key_press(event, new_name, entry, data, json_file, new_description1, new_description2, root, symbol_names))
+    root.bind('<Key>', lambda event: on_key_press(event, new_name, entry, data, json_file, new_description1, new_description2, root, symbol_names, success_flag))
     root.mainloop()
-    messagebox.showinfo("成功", f"股票 {new_name} 已成功写入！")
+
+    if success_flag[0]:
+        messagebox.showinfo("成功", f"股票 {new_name} 已成功写入！")
+    else:
+        messagebox.showinfo("取消", "操作已取消，未进行任何写入。")
 
 if __name__ == "__main__":
     main()

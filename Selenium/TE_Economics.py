@@ -77,7 +77,8 @@ with webdriver.Chrome(service=service) as driver:
     }
     Economics3 = {
         "Core PCE Price Index Annual Change": "CorePCEY",
-        "Core PCE Price Index MoM": "CorePCEM"
+        "Core PCE Price Index MoM": "CorePCEM",
+        "Producer Prices Change": "USPPI"
     }
     data_to_insert = []
     data_to_insert = fetch_data(driver, Economics1, data_to_insert)

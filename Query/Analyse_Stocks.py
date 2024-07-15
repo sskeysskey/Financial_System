@@ -204,7 +204,7 @@ def main():
         "CMCSA", "WBD", "MAT", "ZK", "BEN", "GGB", "BIDU", "PARA", "LVS",
         "ETSY", "GXO", "ZM", "CAE", "PKX", "TU", "XRAY", "ESLT", "VIPS",
         "ALAB", "LEA", "SOLV", "RCI", "ICL", "AS", "BCE", "RPRX", "VIV",
-        "TIMB", "JAZZ"
+        "TIMB", "JAZZ", "DLTR"
         ]
 
         config_json = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json"

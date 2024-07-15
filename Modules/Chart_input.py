@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import RadioButtons
 import matplotlib
 import tkinter as tk
-from tkinter import simpledialog, scrolledtext
+from tkinter import simpledialog, scrolledtext, messagebox
 from functools import lru_cache
 
 @lru_cache(maxsize=None)
@@ -15,16 +15,38 @@ def fetch_data(db_path, table_name, name):
         cursor = conn.cursor()
         try:
             query = f"SELECT date, price, volume FROM {table_name} WHERE name = ? ORDER BY date;"
-            return cursor.execute(query, (name,)).fetchall()
+            result = cursor.execute(query, (name,)).fetchall()
+            if not result:
+                raise ValueError("没有查询到可用数据")
+            return result
         except sqlite3.OperationalError:
             query = f"SELECT date, price FROM {table_name} WHERE name = ? ORDER BY date;"
-            return cursor.execute(query, (name,)).fetchall()
+            result = cursor.execute(query, (name,)).fetchall()
+            if not result:
+                raise ValueError("没有查询到可用数据")
+            return result
 
 def process_data(data):
-    return zip(*[(datetime.strptime(row[0], "%Y-%m-%d"), 
-                  float(row[1]) if row[1] is not None else None,
-                  int(row[2]) if len(row) > 2 and row[2] is not None else None)
-                 for row in data if row[1] is not None])
+    if not data:
+        raise ValueError("没有可供处理的数据")
+        
+    dates, prices, volumes = [], [], []
+    for row in data:
+        date = datetime.strptime(row[0], "%Y-%m-%d")
+        price = float(row[1]) if row[1] is not None else None
+        volume = int(row[2]) if len(row) > 2 and row[2] is not None else None
+        if price is not None:
+            dates.append(date)
+            prices.append(price)
+            volumes.append(volume)
+    
+    return dates, prices, volumes
+
+def show_error_message(message):
+    root = tk.Tk()
+    root.withdraw()  # 隐藏主窗口
+    messagebox.showerror("错误", message)
+    root.destroy()
 
 def draw_underline(text_obj, fig, ax1):
     x, y = text_obj.get_position()
@@ -35,10 +57,11 @@ def draw_underline(text_obj, fig, ax1):
 
 def update_plot(line1, line2, dates, prices, volumes, ax1, ax2, show_volume):
     line1.set_data(dates, prices)
-    line2.set_data(dates, volumes)
+    if volumes:
+        line2.set_data(dates, volumes)
     ax1.set_xlim(np.min(dates), np.max(dates))
     ax1.set_ylim(np.min(prices), np.max(prices))
-    if show_volume:
+    if show_volume and volumes:
         ax2.set_ylim(0, np.max(volumes))
     line2.set_visible(show_volume)
     plt.draw()
@@ -52,11 +75,20 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     initial_price = None
     initial_date = None
 
-    data = fetch_data(db_path, table_name, name)
-    dates, prices, volumes = process_data(data)
+    try:
+        data = fetch_data(db_path, table_name, name)
+    except ValueError as e:
+        show_error_message(f"{e}")
+        return
+
+    try:
+        dates, prices, volumes = process_data(data)
+    except ValueError as e:
+        show_error_message(f"{e}")
+        return
 
     if not dates or not prices:
-        print("没有有效的数据来绘制图表。")
+        show_error_message("没有有效的数据来绘制图表。")
         return
 
     fig, ax1 = plt.subplots(figsize=(13, 6))
@@ -76,7 +108,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     # ax2.spines['right'].set_color('white')
     # ax2.spines['left'].set_color('white')
 
-    highlight_point = ax1.scatter([], [], s=100, color='yellow', zorder=5)
+    highlight_point = ax1.scatter([], [], s=100, color='red', zorder=5)
     # line1, = ax1.plot(dates, prices, marker='o', markersize=1, linestyle='-', linewidth=2, color='b', picker=5, label='Price')
     line1, = ax1.plot(dates, prices, marker='o', markersize=1, linestyle='-', linewidth=1, color='gold', picker=5, label='Price')
     line2, = ax2.plot(dates, volumes, marker='o', markersize=1, linestyle='-', linewidth=1, color='r', picker=5, label='Volume')
@@ -88,7 +120,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         except ValueError:
             return None
 
-    turnover = (volumes[-1] * prices[-1]) / 1e6 if volumes[-1] is not None and prices[-1] is not None else None
+    turnover = (volumes[-1] * prices[-1]) / 1e6 if volumes and volumes[-1] is not None and prices[-1] is not None else None
     turnover_str = f"{turnover:.1f}" if turnover is not None else ""
     # 过滤掉compare中的所有中文字符
     filtered_compare = re.sub(r'[\u4e00-\u9fff+]', '', compare)
@@ -96,7 +128,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     if turnover is not None and turnover < 100 and compare_value is not None and compare_value > 0:
         turnover_str = f"可疑{turnover_str}"
 
-    turnover_rate = f"{(volumes[-1] / int(share))*100:.2f}" if volumes[-1] is not None and share is not None and share != "N/A" else ""
+    turnover_rate = f"{(volumes[-1] / int(share))*100:.2f}" if volumes and volumes[-1] is not None and share is not None and share != "N/A" else ""
     marketcap_in_billion = f"{float(marketcap) / 1e9:.1f}B" if marketcap is not None else ""
     pe_text = f"{pe}" if pe is not None and pe != "N/A" else ""
 
@@ -135,13 +167,13 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     font_size = ('Arial', 22)
                     text_box = scrolledtext.ScrolledText(top, wrap=tk.WORD, font=font_size)
                     text_box.pack(expand=True, fill='both')
-                    info = f"{name} - {descriptions['name']}\n{descriptions['description1']}\n\n{descriptions['description2']}"
+                    info = f"{name}\n{descriptions['name']}\n\n{descriptions['tag']}\n\n{descriptions['description1']}\n\n{descriptions['description2']}"
                     text_box.insert(tk.END, info)
                     text_box.config(state=tk.DISABLED)
                     top.bind('<Escape>', lambda event: root.destroy())
                     root.mainloop()
                     return
-        print(f"未找到 {name} 的信息")
+        show_error_message(f"未找到 {name} 的信息")
 
     def on_pick(event):
         if event.artist == title:  # 只有当点击的是标题时才执行
@@ -217,7 +249,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             min_date = datetime.now() - timedelta(days=years * 365)
             filtered_dates = [date for date in dates if date >= min_date]
             filtered_prices = [price for date, price in zip(dates, prices) if date >= min_date]
-            filtered_volumes = [volume for date, volume in zip(dates, volumes) if date >= min_date]
+            filtered_volumes = [volume for date, volume in zip(dates, volumes) if date >= min_date] if volumes else None
         update_plot(line1, line2, filtered_dates, filtered_prices, filtered_volumes, ax1, ax2, show_volume)
 
         radio.circles[list(time_options.keys()).index(val)].set_facecolor('red')
@@ -272,7 +304,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     plt.gcf().canvas.mpl_connect('button_release_event', on_mouse_release)
 
     # vline = ax1.axvline(x=dates[0], color='b', linestyle='--', linewidth=1, visible=False)
-    vline = ax1.axvline(x=dates[0], color='yellow', linestyle='--', linewidth=1, visible=False)
+    vline = ax1.axvline(x=dates[0], color='red', linestyle='--', linewidth=1, visible=False)
     update(default_time_range)
     radio.on_clicked(update)
 

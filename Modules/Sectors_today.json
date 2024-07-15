@@ -59,7 +59,8 @@
     "CT=F",
     "OJ=F",
     "SB=F",
-    "SI=F"
+    "SI=F",
+    "PL=F"
   ],
   "ETFs": [
     "EWT",
@@ -105,7 +106,6 @@
     "CIBR",
     "GXG",
     "FXZ",
-    "CEW",
     "JPIB",
     "EPU",
     "CBON",
@@ -605,7 +605,6 @@
     "YUMC",
     "MGA",
     "IP",
-    "WRK",
     "TOL",
     "FND",
     "MGM",
@@ -698,7 +697,9 @@
     "SLGN",
     "ZK",
     "RH",
-    "FUN"
+    "FUN",
+    "VVV",
+    "ABG"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -1033,7 +1034,10 @@
     "BMA",
     "FG",
     "STEP",
-    "PSLV"
+    "PSLV",
+    "FNB",
+    "PFSI",
+    "NYCB"
   ],
   "Healthcare": [
     "LLY",
@@ -1352,7 +1356,9 @@
     "DY",
     "CNH",
     "ULS",
-    "SRCL"
+    "SRCL",
+    "GATX",
+    "EXPO"
   ],
   "Real_Estate": [
     "PLD",
@@ -1414,7 +1420,9 @@
     "RITM",
     "TRNO",
     "DOC",
-    "NSA"
+    "NSA",
+    "EPRT",
+    "KRG"
   ],
   "Technology": [
     "MSFT",
@@ -1615,7 +1623,9 @@
     "VRNS",
     "SATS",
     "CVLT",
-    "CRDO"
+    "CRDO",
+    "ACLS",
+    "AUR"
   ],
   "Utilities": [
     "NEE",

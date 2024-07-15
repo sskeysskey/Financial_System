@@ -76,8 +76,6 @@ for group_name, tickers in stock_groups.items():
                 with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
                     error_file.write(formatted_error_message)
 
-        print(f"{ticker_symbol} 已成功写入数据库")  # 添加打印语句
-
 # 提交事务
 conn.commit()
 # 关闭连接

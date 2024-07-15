@@ -74,7 +74,8 @@
     "USConfidence",
     "USJobless",
     "CorePCEY",
-    "CorePCEM"
+    "CorePCEM",
+    "USPPI"
   ],
   "Commodities": [
     "Gold",
@@ -107,7 +108,8 @@
     "Palladium",
     "Poultry",
     "Salmon",
-    "IronOre"
+    "IronOre",
+    "Platinum"
   ],
   "ETFs": [
     "EWT",
@@ -153,7 +155,6 @@
     "CIBR",
     "GXG",
     "FXZ",
-    "CEW",
     "JPIB",
     "EPU",
     "CBON",
@@ -653,7 +654,6 @@
     "YUMC",
     "MGA",
     "IP",
-    "WRK",
     "TOL",
     "FND",
     "MGM",
@@ -746,7 +746,9 @@
     "SLGN",
     "ZK",
     "RH",
-    "FUN"
+    "FUN",
+    "VVV",
+    "ABG"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -1081,7 +1083,10 @@
     "BMA",
     "FG",
     "STEP",
-    "PSLV"
+    "PSLV",
+    "FNB",
+    "PFSI",
+    "NYCB"
   ],
   "Healthcare": [
     "LLY",
@@ -1400,7 +1405,9 @@
     "DY",
     "CNH",
     "ULS",
-    "SRCL"
+    "SRCL",
+    "GATX",
+    "EXPO"
   ],
   "Real_Estate": [
     "PLD",
@@ -1462,7 +1469,9 @@
     "RITM",
     "TRNO",
     "DOC",
-    "NSA"
+    "NSA",
+    "EPRT",
+    "KRG"
   ],
   "Technology": [
     "MSFT",
@@ -1663,7 +1672,9 @@
     "VRNS",
     "SATS",
     "CVLT",
-    "CRDO"
+    "CRDO",
+    "ACLS",
+    "AUR"
   ],
   "Utilities": [
     "NEE",

@@ -3,7 +3,8 @@
         "MOS": "美盛化肥",
         "ALB": "雅宝",
         "ALTM": "锂矿",
-        "VALE": "淡水河谷"
+        "VALE": "淡水河谷",
+        "NTR": "化肥"
     },
     "Communication_Services": {},
     "Consumer_Cyclical": {
@@ -11,7 +12,9 @@
         "VFC": "北面",
         "NKE": "Nike",
         "SON": "产品包装",
-        "CCK": ""
+        "CCK": "食品包装",
+        "HTHT": "华住",
+        "MCD": "麦当劳"
     },
     "Energy": {},
     "Real_Estate": {
@@ -21,17 +24,18 @@
         "PAYC": "人力云",
         "DOX": "软件云",
         "U": "Unity",
-        "CSCO": "思科",
         "PCTY": "人力云",
-        "SNOW": ""
+        "SNOW": "",
+        "DT": "云监控"
     },
     "Consumer_Defensive": {
         "ACI": "克罗格",
         "DAR": "动物饲料",
         "KVUE": "泰诺",
-        "DLTR": "一元店",
         "DEO": "尊尼获加",
-        "BF-B": "杰克丹尼"
+        "BF-B": "杰克丹尼",
+        "EL": "雅诗兰黛",
+        "LW": "冷冻土豆"
     },
     "Industrials": {
         "UPS": "联合包裹",
@@ -40,7 +44,9 @@
         "GPN": "支付技术",
         "POOL": "泳池",
         "SITE": "景观园艺",
-        "CNH": "农业机械"
+        "CNH": "农业机械",
+        "DE": "机械设备",
+        "AAL": "美国航空"
     },
     "Utilities": {},
     "Financial_Services": {
@@ -59,7 +65,8 @@
         "JNJ": "",
         "BMY": "",
         "GMAB": "生物科技",
-        "BIO": "基因诊断"
+        "BIO": "基因诊断",
+        "BDX": "医疗器械"
     },
     "Crypto": {
         "Bitcoin": "",
@@ -98,6 +105,7 @@
         "Aluminum": "铝",
         "Steel": "",
         "IronOre": "铁矿石",
+        "Platinum": "铂金",
         "Cocoa": "",
         "Coffee": "",
         "Corn": "",
@@ -113,7 +121,7 @@
     },
     "ETFs_Oversea": {
         "CQQQ": "中国科技",
-        "KBA": "中国A股",
+        "CNYA": "中国A股",
         "DXJ": "日本",
         "INDA": "印度",
         "EWT": "台湾",
@@ -142,18 +150,17 @@
         "USInflation": "通货膨胀",
         "USInterest": "利率",
         "USPayroll": "非农就业",
-        "USTrade": "进出口",
         "USConfidence": "信心指数",
-        "USJobless": "初请失业",
-        "CorePCEY": "年PCE",
-        "CorePCEM": "月PCE"
+        "USJobless": "初请失业"
     },
     "ETFs_US": {
         "SPTI": "中期国债",
+        "XLK": "科技",
         "IYH": "医疗",
         "RTH": "零售",
+        "XLI": "工业",
         "VFH": "金融",
-        "FDIS": "非必需",
+        "XLY": "非必需",
         "XLRE": "房地产",
         "XAR": "国防航天",
         "KIE": "保险",
