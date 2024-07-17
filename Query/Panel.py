@@ -74,7 +74,7 @@ def create_selection_window():
 
     color_frames = [tk.Frame(scrollable_frame) for _ in range(8)]
     for frame in color_frames:
-        frame.pack(side="left", padx=2, pady=3, fill="both", expand=True)
+        frame.pack(side="left", padx=1, pady=3, fill="both", expand=True)
 
     categories = [
         ['Basic_Materials', 'Communication_Services', 'Consumer_Cyclical'],
@@ -90,8 +90,8 @@ def create_selection_window():
     for index, category_group in enumerate(categories):
         for db_key, keywords in config.items():
             if db_key in category_group:
-                frame = tk.LabelFrame(color_frames[index], text=db_key, padx=2, pady=3)
-                frame.pack(side="top", padx=2, pady=3, fill="both", expand=True)
+                frame = tk.LabelFrame(color_frames[index], text=db_key, padx=1, pady=3)
+                frame.pack(side="top", padx=1, pady=3, fill="both", expand=True)
 
                 if isinstance(keywords, dict):
                     items = keywords.items()  # 保持原有顺序
@@ -100,7 +100,7 @@ def create_selection_window():
 
                 for keyword, translation in items:
                     button_frame = tk.Frame(frame)
-                    button_frame.pack(side="top", fill="x", padx=2, pady=3)
+                    button_frame.pack(side="top", fill="x", padx=1, pady=3)
 
                     button_style = get_button_style(keyword)
                     button_text = translation if translation else keyword

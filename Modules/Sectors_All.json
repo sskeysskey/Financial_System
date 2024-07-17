@@ -75,7 +75,8 @@
     "USJobless",
     "CorePCEY",
     "CorePCEM",
-    "USPPI"
+    "USPPI",
+    "USRetailM"
   ],
   "Commodities": [
     "Gold",
@@ -143,7 +144,6 @@
     "EWD",
     "ETHO",
     "FCOM",
-    "EVX",
     "GAA",
     "PRN",
     "PEXL",
@@ -450,7 +450,8 @@
     "SMMD",
     "FDIS",
     "INDA",
-    "URA"
+    "URA",
+    "JVAL"
   ],
   "Basic_Materials": [
     "LIN",
@@ -1086,7 +1087,12 @@
     "PSLV",
     "FNB",
     "PFSI",
-    "NYCB"
+    "NYCB",
+    "HOMB",
+    "ACT",
+    "RDN",
+    "SLM",
+    "UBSI"
   ],
   "Healthcare": [
     "LLY",
@@ -1224,7 +1230,9 @@
     "KRYS",
     "IBRX",
     "TEM",
-    "MMSI"
+    "MMSI",
+    "SEM",
+    "PACS"
   ],
   "Industrials": [
     "GE",
@@ -1407,7 +1415,8 @@
     "ULS",
     "SRCL",
     "GATX",
-    "EXPO"
+    "EXPO",
+    "JOBY"
   ],
   "Real_Estate": [
     "PLD",
@@ -1725,6 +1734,8 @@
     "ELP",
     "UGI",
     "AEE",
-    "GEV"
+    "GEV",
+    "TLN",
+    "BIPC"
   ]
 }

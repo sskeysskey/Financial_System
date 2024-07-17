@@ -122,8 +122,13 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     turnover = (volumes[-1] * prices[-1]) / 1e6 if volumes and volumes[-1] is not None and prices[-1] is not None else None
     turnover_str = f"{turnover:.1f}" if turnover is not None else ""
-    # 过滤掉compare中的所有中文字符
+    
+    # 过滤掉compare中的所有中文字符和+，也能执行，就是怪异，备份用
     filtered_compare = re.sub(r'[\u4e00-\u9fff+]', '', compare)
+
+    # 过滤掉compare中的所有中文及中文之前的符号，然后再过滤加号+
+    # filtered_compare = re.sub(r'^.*[\u4e00-\u9fff]', '', compare)
+    # filtered_compare = re.sub(r'\+', '', filtered_compare)
     compare_value = clean_percentage_string(filtered_compare)
     if turnover is not None and turnover < 100 and compare_value is not None and compare_value > 0:
         turnover_str = f"可疑{turnover_str}"

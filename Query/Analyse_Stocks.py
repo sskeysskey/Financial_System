@@ -11,7 +11,6 @@ def is_blacklisted(name):
     return name in blacklist_glob
 
 def create_connection(db_file):
-    conn = None
     conn = sqlite3.connect(db_file)
     return conn
 
@@ -49,8 +48,20 @@ def get_latest_price_and_date(cursor, table_name, name):
     cursor.execute(query, (name,))
     return cursor.fetchone()
 
+def parse_earnings_release(file_path):
+    """解析Earnings Release文件，提取symbol"""
+    symbols = set()
+    with open(file_path, 'r') as file:
+        for line in file:
+            symbol = line.split(':')[0].strip()
+            symbols.add(symbol)
+    return symbols
+
 def main():    
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
+    earnings_release_path = '/Users/yanzhang/Documents/News/Earnings_Release_new.txt'
+    earnings_symbols = parse_earnings_release(earnings_release_path)
+
     with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as file:
         data = json.load(file)
 
@@ -155,8 +166,9 @@ def main():
                     continue  # 如果是月份，我们不处理
                 if 'Y' in year_part:
                     years = int(year_part.replace('Y', ''))
-                    if years == 1:
-                        # continue  # 不需要放入任何颜色分类，就用continue
+                    if symbol in earnings_symbols:
+                        category_list = 'red_keywords'
+                    elif years == 1:
                         category_list = 'white_keywords'
                     elif years == 2:
                         category_list = 'yellow_keywords'
@@ -178,7 +190,43 @@ def main():
     def update_color_json(color_config_path, updates_colors, blacklist_newlow):
         with open(color_config_path, 'r', encoding='utf-8') as file:
             colors = json.load(file)
-        
+
+        # 检查并移除不在earnings_release_new.txt中的red_keywords（但保留以US开头的symbol）
+        red_keywords_to_check = list(colors.get('red_keywords', []))
+        for symbol in red_keywords_to_check:
+            if not symbol.startswith("US") and symbol not in earnings_symbols:
+                colors['red_keywords'].remove(symbol)
+                # 检查是否在今天的newlow中
+                found = False
+                for line in final_output1.split('\n'):
+                    if symbol in line:
+                        parts = line.split()
+                        descriptor = parts[2]
+                        year_part, _ = descriptor.split('_')
+                        years = int(year_part.replace('Y', ''))
+                        if years == 1:
+                            category_list = 'white_keywords'
+                        elif years == 2:
+                            category_list = 'yellow_keywords'
+                        elif years == 5:
+                            category_list = 'orange_keywords'
+                        elif years == 10:
+                            category_list = 'black_keywords'
+                        else:
+                            category_list = 'white_keywords'
+                        if category_list in colors:
+                            colors[category_list].append(symbol)
+                        else:
+                            colors[category_list] = [symbol]
+                        found = True
+                        break
+                # 如果不在今天的newlow中，默认分配到white_keywords组
+                if not found:
+                    if 'white_keywords' in colors:
+                        colors['white_keywords'].append(symbol)
+                    else:
+                        colors['white_keywords'] = [symbol]
+
         for category_list, names in updates_colors.items():
             for name in names:
                 # 检查并移动到正确的分类

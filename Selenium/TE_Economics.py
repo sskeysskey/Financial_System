@@ -70,7 +70,8 @@ with webdriver.Chrome(service=service) as driver:
         "Inflation Rate": "USInflation",
         "Interest Rate": "USInterest",
         "Balance of Trade": "USTrade", 
-        "Consumer Confidence": "USConfidence"
+        "Consumer Confidence": "USConfidence",
+        "Retail Sales MoM": "USRetailM"
     }
     Economics2 = {
     "Initial Jobless Claims": "USJobless"

@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import sqlite3
 import json
 import shutil  # 在文件最开始导入shutil模块
+import re
 
 def copy_database_to_backup():
     source_path = '/Users/yanzhang/Documents/Database/Finance.db'
@@ -21,19 +22,30 @@ def read_latest_date_info(gainer_loser_path):
     latest_date = max(data.keys())
     return data[latest_date]
 
-def read_earningsymbol_from_file(file_path):
-    symbols = set()
-    with open(file_path, 'r') as f:
-        for line in f:
-            symbol = line.split(':')[0].strip()
-            symbols.add(symbol)
-    return symbols
+def read_earnings_release(filepath):
+    earnings_companies = {}
+    pattern_single_colon = re.compile(r'(\w+)\s*:\s*(\d{4}-\d{2}-(\d{2}))')
+    pattern_double_colon = re.compile(r'(\w+)\s*:\s*\w+\s*:\s*(\d{4}-\d{2}-(\d{2}))')
+    
+    with open(filepath, 'r') as file:
+        for line in file:
+            match_double = pattern_double_colon.search(line)
+            match_single = pattern_single_colon.search(line)
+            if match_double:
+                company = match_double.group(1).strip()
+                day = match_double.group(3)
+                earnings_companies[company] = day
+            elif match_single:
+                company = match_single.group(1).strip()
+                day = match_single.group(3)
+                earnings_companies[company] = day
+    return earnings_companies
 
 def compare_today_yesterday(config_path, output_file, gainer_loser_path, earning_file):
     latest_info = read_latest_date_info(gainer_loser_path)
     gainers = latest_info.get("gainer", [])
     losers = latest_info.get("loser", [])
-    symbols = read_earningsymbol_from_file(earning_file)
+    earnings_data = read_earnings_release(earning_file)
 
     with open(config_path, 'r') as f:
         config = json.load(f)
@@ -96,18 +108,18 @@ def compare_today_yesterday(config_path, output_file, gainer_loser_path, earning
                                 change_text += "++"
 
                         if keyword in gainers:
-                            if keyword in symbols:
-                                output.append(f"{keyword}: 财{change_text}涨")
+                            if keyword in earnings_data:
+                                output.append(f"{keyword}: {earnings_data[keyword]}财{change_text}涨")
                             else:
                                 output.append(f"{keyword}: {change_text}涨")
                         elif keyword in losers:
-                            if keyword in symbols:
-                                output.append(f"{keyword}: 财{change_text}跌")
+                            if keyword in earnings_data:
+                                output.append(f"{keyword}: {earnings_data[keyword]}财{change_text}跌")
                             else:
                                 output.append(f"{keyword}: {change_text}跌")
                         else:
-                            if keyword in symbols:
-                                output.append(f"{keyword}: 财{change_text}")
+                            if keyword in earnings_data:
+                                output.append(f"{keyword}: {earnings_data[keyword]}财{change_text}")
                             else:
                                 output.append(f"{keyword}: {change_text}")
                     else:

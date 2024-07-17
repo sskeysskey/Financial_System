@@ -18,14 +18,14 @@
   "etfs": [
     {
       "symbol": "BLOK",
-      "name": "ERJ贸易公司",
-      "tag": ["Food","Eating"],
+      "name": "JPMorgan U.S. Value Factor ETF, 2711093",
+      "tag": ["Food", "Eating"],
       "description1": "**Amplify Transformational Data Sharing ETF**（基金代码：BLOK）",
       "description2": "Amplify Transformational Data Sharing ETF（股票代码：BLOK）是一个交易所交易基金（ETF）"
     },
     {
       "symbol": "NFE",
-      "name": "ERJ贸易公司",
+      "name": "iShares Core MSCI Pacific ETF, 4340344",
       "tag": [],
       "description1": "New Fortress Energy Inc.** 这是一家总部位于美国的全球能源基础设施公司",
       "description2": "New Fortress Energy Inc.（新堡壘能源公司"

@@ -4,11 +4,9 @@
         "ELP",
         "TAP",
         "STVN",
-        "JBHT",
         "GILD",
         "LULU",
         "PATH",
-        "LVS",
         "AGCO",
         "WST",
         "CSCO",
@@ -41,7 +39,9 @@
         "DE",
         "MCD",
         "LW",
-        "BDX"
+        "BDX",
+        "VIX",
+        "DXY"
     ],
     "yellow_keywords": [
         "CNYJPY",
@@ -68,7 +68,8 @@
         "ALB",
         "MOS",
         "WRB",
-        "AAL"
+        "AAL",
+        "AVGO"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -78,7 +79,6 @@
         "Ether",
         "USDCNY",
         "CZR",
-        "JNJ",
         "UPS",
         "CVS",
         "DAR",
@@ -89,7 +89,6 @@
         "ALTM",
         "LKQ",
         "APTV",
-        "MKTX",
         "BF-B",
         "BIO",
         "EL"
@@ -136,10 +135,12 @@
         "DXJ"
     ],
     "red_keywords": [
-        "VIX",
-        "DXY",
-        "USInterest",
-        "CorePCEM"
+        "JBHT",
+        "LVS",
+        "JNJ",
+        "MKTX",
+        "USRetailM",
+        "USJobless"
     ],
     "green_keywords": [
         "EURCNY",
