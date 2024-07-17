@@ -313,13 +313,13 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     update(default_time_range)
     radio.on_clicked(update)
 
-    plt.gcf().canvas.mpl_connect('figure_leave_event', lambda event: hide_annot_on_leave())
+    def hide_annot_on_leave(event):
+        annot.set_visible(False)
+        highlight_point.set_visible(False)
+        vline.set_visible(False)
+        fig.canvas.draw_idle()
+
+    plt.gcf().canvas.mpl_connect('figure_leave_event', hide_annot_on_leave)
 
     print("图表绘制完成，等待用户操作...")
     plt.show()
-
-def hide_annot_on_leave():
-    annot.set_visible(False)
-    highlight_point.set_visible(False)
-    vline.set_visible(False)
-    fig.canvas.draw_idle()
