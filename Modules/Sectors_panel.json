@@ -4,7 +4,9 @@
         "ALB": "雅宝",
         "ALTM": "锂矿",
         "VALE": "淡水河谷",
-        "NTR": "化肥"
+        "NTR": "化肥",
+        "SQM": "智利锂",
+        "BHP": "必和必拓"
     },
     "Communication_Services": {},
     "Consumer_Cyclical": {
@@ -14,9 +16,15 @@
         "SON": "产品包装",
         "CCK": "食品包装",
         "HTHT": "华住",
-        "MCD": "麦当劳"
+        "MCD": "麦当劳",
+        "MBLY": "Mobileye",
+        "APTV": "",
+        "ULTA": "",
+        "WYNN": ""
     },
-    "Energy": {},
+    "Energy": {
+        "PBF": "石油精炼"
+    },
     "Real_Estate": {
         "WY": "林业房产"
     },
@@ -26,7 +34,8 @@
         "U": "Unity",
         "PCTY": "人力云",
         "SNOW": "",
-        "DT": "云监控"
+        "DT": "云监控",
+        "ALGM": ""
     },
     "Consumer_Defensive": {
         "ACI": "克罗格",
@@ -55,6 +64,7 @@
         "BEN": "养老基金"
     },
     "Healthcare": {
+        "PFE": "辉瑞",
         "CVS": "药店连锁",
         "WBA": "药店连锁",
         "BNTX": "BioNTech",
@@ -146,14 +156,14 @@
     "Economics": {
         "USJobless": "18初请失业",
         "USRetailM": "16零售月率",
-        "USGDP": "GDP",
-        "USInflation": "通货膨胀",
         "USInterest": "利率",
         "USPayroll": "非农就业",
         "USConfidence": "信心指数"
     },
     "ETFs_US": {
         "SPTI": "中期国债",
+        "SCHD": "高股息",
+        "FXY": "多日空美",
         "XLK": "科技",
         "IYH": "医疗",
         "RTH": "零售",

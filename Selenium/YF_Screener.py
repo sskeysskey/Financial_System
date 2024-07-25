@@ -164,6 +164,25 @@ def save_output_to_file(output, directory, filename='Stock_Change.txt'):
         file.write("\n".join(output))
     print(f"输出已保存到文件：{file_path}")
 
+def clean_old_backups(directory, prefix="marketcap_pe_", days=3):
+    """删除备份目录中超过指定天数的文件"""
+    now = datetime.now()
+    cutoff = now - timedelta(days=days)
+
+    for filename in os.listdir(directory):
+        if filename.startswith(prefix):  # 只处理特定前缀的文件
+            try:
+                date_str = filename.split('_')[-1].split('.')[0]  # 获取日期部分
+                file_date = datetime.strptime(date_str, '%m%d')
+                # 将年份设置为今年
+                file_date = file_date.replace(year=now.year)
+                if file_date < cutoff:
+                    file_path = os.path.join(directory, filename)
+                    os.remove(file_path)
+                    print(f"删除旧备份文件：{file_path}")
+            except Exception as e:
+                print(f"跳过文件：{filename}，原因：{e}")
+
 # 定义黑名单
 blacklist = {"CTA-PA", "FWONK", "FOXA", "NWSA", "PARAA", "LSXMA",
     "LSXMB", "LBRDA", "LBTYA", "LBTYB", "LEN-B", "BF-A", "MKC-V",
@@ -182,7 +201,7 @@ blacklist = {"CTA-PA", "FWONK", "FOXA", "NWSA", "PARAA", "LSXMA",
     "YNDX", "CUK", "BBDO", "SLMBP", "BPYPP", "GOOG","CPG", "PHYS",
     "CTA-PB", "FITBI", "FLUT", "ZG", "BNRE", "BZ", "VNO", "CHT",
     "SWAV", "BIO-B", "RBRK", "CNHI", "FER", "LOAR", "ACGLO", "AIRC",
-    "WRK"
+    "WRK", "ETRN"
     }
 
 output = []  # 用于收集输出信息的列表
@@ -281,3 +300,6 @@ print("所有爬取任务完成。")
 # 在代码的最后部分调用save_output_to_file函数
 output_directory = '/Users/yanzhang/Documents/News'
 save_output_to_file(output, output_directory)
+
+# 调用清理旧备份文件的函数
+clean_old_backups(directory_backup)

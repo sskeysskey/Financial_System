@@ -5,6 +5,7 @@ import os
 import json
 import shutil
 from selenium.webdriver.chrome.service import Service
+from datetime import datetime, timedelta
 
 # ChromeDriver 路径
 chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
@@ -55,13 +56,23 @@ def save_data(urls, existing_json, new_file, today_file, diff_file):
                     filter_data_list.append(f"{symbol}: {name}, {volume}")
                     existing_symbols.add(symbol)
 
-    # 写入新数据文件
-    with open(new_file, "w") as file:
-        for i, line in enumerate(filter_data_list):
-            if i < len(filter_data_list) - 1:
-                file.write(f"{line}\n")  # 非最后一行添加换行符
-            else:
-                file.write(line)  # 最后一行不添加任何后缀
+    # 写入新数据文件（仅在filter_data_list不为空时）
+    if filter_data_list:
+        with open(new_file, "w") as file:
+            for i, line in enumerate(filter_data_list):
+                if i < len(filter_data_list) - 1:
+                    file.write(f"{line}\n")  # 非最后一行添加换行符
+                else:
+                    file.write(line)  # 最后一行不添加任何后缀
+
+    # 获取昨天的日期
+    yesterday = (datetime.now() - timedelta(1)).strftime('%m%d')
+
+    if os.path.exists(today_file):
+        # 备份今天的文件
+        backup_today_file = f"/Users/yanzhang/Documents/News/site/ETFs_today_{yesterday}.txt"
+        shutil.copy2(today_file, backup_today_file)
+
     if not os.path.exists(today_file):
         # 如果today_file不存在，写入所有新数据
         with open(today_file, "w") as file:
@@ -103,6 +114,25 @@ def backup_diff_file(diff_file, backup_dir):
         # 移动文件
         shutil.move(diff_file, target_path)
 
+def clean_old_backups(directory, prefix="ETFs_today_", days=3):
+    """删除备份目录中超过指定天数的文件"""
+    now = datetime.now()
+    cutoff = now - timedelta(days=days)
+
+    for filename in os.listdir(directory):
+        if filename.startswith(prefix):  # 只处理特定前缀的文件
+            try:
+                date_str = filename.split('_')[-1].split('.')[0]  # 获取日期部分
+                file_date = datetime.strptime(date_str, '%m%d')
+                # 将年份设置为今年
+                file_date = file_date.replace(year=now.year)
+                if file_date < cutoff:
+                    file_path = os.path.join(directory, filename)
+                    os.remove(file_path)
+                    print(f"删除旧备份文件：{file_path}")
+            except Exception as e:
+                print(f"跳过文件：{filename}，原因：{e}")
+
 # diff 文件路径
 diff_file = '/Users/yanzhang/Documents/News/ETFs_diff.txt'
 backup_dir = '/Users/yanzhang/Documents/News/backup/backup'
@@ -125,3 +155,7 @@ try:
 finally:
     driver.quit()
 print("所有爬取任务完成。")
+
+# 调用清理旧备份文件的函数
+directory_backup = '/Users/yanzhang/Documents/News/site/'
+clean_old_backups(directory_backup)

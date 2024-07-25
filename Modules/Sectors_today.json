@@ -99,7 +99,6 @@
     "PEXL",
     "IAI",
     "UTES",
-    "FIVG",
     "CWB",
     "FSTA",
     "CIBR",
@@ -401,7 +400,9 @@
     "FDIS",
     "INDA",
     "URA",
-    "JVAL"
+    "JVAL",
+    "USO",
+    "UCO"
   ],
   "Basic_Materials": [
     "LIN",
@@ -699,7 +700,8 @@
     "RH",
     "FUN",
     "VVV",
-    "ABG"
+    "ABG",
+    "SW"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -839,7 +841,6 @@
     "ENLC",
     "FRO",
     "PBF",
-    "ETRN",
     "SM",
     "UGP",
     "TDW",
@@ -1042,7 +1043,11 @@
     "ACT",
     "RDN",
     "SLM",
-    "UBSI"
+    "UBSI",
+    "GBCI",
+    "FFIN",
+    "CRVL",
+    "COLB"
   ],
   "Healthcare": [
     "LLY",
@@ -1633,7 +1638,8 @@
     "CVLT",
     "CRDO",
     "ACLS",
-    "AUR"
+    "AUR",
+    "PI"
   ],
   "Utilities": [
     "NEE",

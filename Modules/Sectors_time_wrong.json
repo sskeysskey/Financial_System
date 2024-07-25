@@ -1,72 +1,23 @@
 {
-  "Bonds": [
-    
-    ],
-  "Currencies": [
-    
-    ],
-    
-  "Crypto": [
-      
-    ],
-    
+  "Bonds": [],
+  "Currencies": [],
+  "Crypto": [],
   "Indices": [
-      "^HSI",
-      "000001.SS",
-      "399001.SZ",
-      "^N225",
-      "^KS11",
-      "^AXJO"
-    ],
-    
-  "Commodities": [
-      
-    ],
-  "ETFs": [
-      
-    ],
-    
-  "Basic_Materials": [
-      
-    ],
-
-  "Communication_Services": [
-      
-    ],
-    
-  "Consumer_Cyclical": [
-      
-    ],
-    
-  "Consumer_Defensive": [
-      
-    ],
-    
-  "Energy": [
-      
-    ],
-    
-  "Financial_Services": [
-      
-    ],
-    
-  "Healthcare": [
-      
-    ],
-    
-  "Industrials": [
-    
-    ],
-    
-  "Real_Estate": [
-      
-    ],
-    
-  "Technology": [
-      
-    ],
-    
-  "Utilities": [
-    
-    ]
+    "^N225",
+    "^KS11",
+    "^AXJO"
+  ],
+  "Commodities": [],
+  "ETFs": [],
+  "Basic_Materials": [],
+  "Communication_Services": [],
+  "Consumer_Cyclical": [],
+  "Consumer_Defensive": [],
+  "Energy": [],
+  "Financial_Services": [],
+  "Healthcare": [],
+  "Industrials": [],
+  "Real_Estate": [],
+  "Technology": [],
+  "Utilities": []
 }

@@ -227,6 +227,12 @@ def main():
                     else:
                         colors['white_keywords'] = [symbol]
 
+        for symbol in earnings_symbols:
+            if 'red_keywords' not in colors:
+                colors['red_keywords'] = []
+            if symbol not in colors['red_keywords']:
+                colors['red_keywords'].append(symbol)
+
         for category_list, names in updates_colors.items():
             for name in names:
                 # 检查并移动到正确的分类
@@ -246,12 +252,12 @@ def main():
         updates_color = parse_output_color(final_output1)
         # 黑名单列表
         blacklist_newlow = ["SIRI", "BBD", "BILL", "TAP", "STVN", "LSXMK",
-        "TAK", "CSAN", "CIG", "TLK", "LBTYK", "ABEV",
+        "TAK", "CSAN", "CIG", "LBTYK", "ABEV",
         "TD", "DAY", "RHI", "OTEX", "ZI", "APA", "LU", "FIVE", "ORAN",
         "MGA", "MTN", "NGG", "NFE", "DBX", "ELP", "YUMC", "EBR", "LI",
         "CMCSA", "WBD", "MAT", "ZK", "BEN", "GGB", "BIDU", "PARA", "LVS",
         "ETSY", "GXO", "ZM", "CAE", "PKX", "TU", "XRAY", "ESLT", "VIPS",
-        "ALAB", "LEA", "SOLV", "RCI", "ICL", "AS", "BCE", "RPRX", "VIV",
+        "ALAB", "LEA", "RCI", "ICL", "AS", "BCE", "RPRX", "VIV",
         "TIMB", "JAZZ", "DLTR"
         ]
 
