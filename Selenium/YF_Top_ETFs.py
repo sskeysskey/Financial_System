@@ -114,7 +114,7 @@ def backup_diff_file(diff_file, backup_dir):
         # 移动文件
         shutil.move(diff_file, target_path)
 
-def clean_old_backups(directory, prefix="ETFs_today_", days=3):
+def clean_old_backups(directory, prefix="ETFs_today_", days=4):
     """删除备份目录中超过指定天数的文件"""
     now = datetime.now()
     cutoff = now - timedelta(days=days)

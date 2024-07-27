@@ -107,7 +107,7 @@ if __name__ == '__main__':
         # 'include_condition': True},
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Communication_Services',
-        #     'condition': "name = 'BZ'", 'fields': '*',
+        #     'condition': "id = '284897'", 'fields': '*',
         # 'include_condition': True},
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Consumer_Cyclical',

@@ -15,12 +15,12 @@
         "NKE": "Nike",
         "SON": "产品包装",
         "CCK": "食品包装",
-        "HTHT": "华住",
         "MCD": "麦当劳",
         "MBLY": "Mobileye",
-        "APTV": "",
-        "ULTA": "",
-        "WYNN": ""
+        "APTV": "自动驾驶",
+        "ULTA": "美容零售",
+        "WYNN": "永利赌场",
+        "LKQ": "汽车部件"
     },
     "Energy": {
         "PBF": "石油精炼"
@@ -30,16 +30,16 @@
     },
     "Technology": {
         "PAYC": "人力云",
-        "DOX": "软件云",
         "U": "Unity",
         "PCTY": "人力云",
         "SNOW": "",
         "DT": "云监控",
-        "ALGM": ""
+        "ALGM": "传感器",
+        "STM": "意法",
+        "LSCC": "半导体"
     },
+    "Utilities": {},
     "Consumer_Defensive": {
-        "ACI": "克罗格",
-        "DAR": "动物饲料",
         "KVUE": "泰诺",
         "DEO": "尊尼获加",
         "BF-B": "杰克丹尼",
@@ -51,15 +51,12 @@
         "AGCO": "农业机械",
         "JBHT": "物流运输",
         "GPN": "支付技术",
-        "POOL": "泳池",
         "SITE": "景观园艺",
         "CNH": "农业机械",
         "DE": "机械设备",
         "AAL": "美国航空"
     },
-    "Utilities": {},
     "Financial_Services": {
-        "MKTX": "金融债券",
         "SIGI": "保险公司",
         "BEN": "养老基金"
     },
@@ -72,9 +69,11 @@
         "WST": "药物包装",
         "JNJ": "",
         "BMY": "",
-        "GMAB": "生物科技",
-        "BIO": "基因诊断",
-        "BDX": "医疗器械"
+        "GMAB": "骨髓瘤",
+        "BIO": "体外诊断",
+        "BDX": "碧迪公司",
+        "EW": "爱德华兹",
+        "DXCM": "血糖监测"
     },
     "Crypto": {
         "Bitcoin": "",
@@ -124,7 +123,7 @@
         "Wheat": "",
         "Rice": "",
         "Oat": "",
-        "LeanHogs": "",
+        "LeanHogs": "猪肉",
         "LiveCattle": "牛肉"
     },
     "ETFs_Oversea": {
@@ -143,22 +142,14 @@
     "Currencies": {
         "DXY": "美元指数",
         "USDCNY": "",
-        "EURCNY": "",
         "USDJPY": "",
         "CNYJPY": "",
-        "EURUSD": "",
-        "GBPUSD": "",
-        "CNYPHP": "",
-        "USDIDR": "",
-        "USDINR": "",
-        "GBPCNY": ""
+        "EURUSD": ""
     },
     "Economics": {
-        "USJobless": "18初请失业",
-        "USRetailM": "16零售月率",
-        "USInterest": "利率",
-        "USPayroll": "非农就业",
-        "USConfidence": "信心指数"
+        "USJobless": "25初请失业",
+        "CorePCEY": "26核心PCE年",
+        "CorePCEM": "26核心PCE月"
     },
     "ETFs_US": {
         "SPTI": "中期国债",

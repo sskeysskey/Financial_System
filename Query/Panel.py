@@ -118,11 +118,11 @@ def create_selection_window():
 
 def get_button_style(keyword):
     color_styles = {
+        "red": "Red.TButton",
         "purple": "Purple.TButton",
         "yellow": "Yellow.TButton",
         "orange": "Orange.TButton",
         "blue": "Blue.TButton",
-        "red": "Red.TButton",
         "black": "Black.TButton",
         "white": "White.TButton",
         "green": "Green.TButton"

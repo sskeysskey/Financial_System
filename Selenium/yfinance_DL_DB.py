@@ -14,15 +14,15 @@ def log_error_with_timestamp(error_message):
 # end_date = "2024-06-03"
 
 # 适合于半自定义抓取
-# start_date = "2000-09-17"
-# today = datetime.now()
-# end_date = today.strftime('%Y-%m-%d')
+start_date = "2000-09-17"
+today = datetime.now()
+end_date = today.strftime('%Y-%m-%d')
 
 # 适合于只抓今天
-today = datetime.now()
-yesterday = today - timedelta(days=1)
-start_date = yesterday.strftime('%Y-%m-%d')
-end_date = today.strftime('%Y-%m-%d')
+# today = datetime.now()
+# yesterday = today - timedelta(days=1)
+# start_date = yesterday.strftime('%Y-%m-%d')
+# end_date = today.strftime('%Y-%m-%d')
 
 # 读取JSON文件
 with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json', 'r') as file:
@@ -80,3 +80,11 @@ for group_name, tickers in stock_groups.items():
 conn.commit()
 # 关闭连接
 conn.close()
+
+# 清空各组内的symbol
+for group_name in stock_groups:
+    stock_groups[group_name] = []
+
+# 写回到JSON文件
+with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json', 'w') as file:
+    json.dump(stock_groups, file, indent=4)

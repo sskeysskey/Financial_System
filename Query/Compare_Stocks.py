@@ -153,7 +153,7 @@ def compare_today_yesterday(config_path, blacklist, interested_sectors, db_path,
     else:
         log_error_with_timestamp("输出为空，无法进行保存文件操作。", error_file_path)
 
-def clean_old_backups(directory, prefix="CompareStock_", days=3):
+def clean_old_backups(directory, prefix="CompareStock_", days=4):
     """删除备份目录中超过指定天数的文件"""
     now = datetime.now()
     cutoff = now - timedelta(days=days)

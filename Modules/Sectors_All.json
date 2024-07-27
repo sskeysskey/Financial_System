@@ -588,7 +588,8 @@
     "TKC",
     "PHI",
     "RDDT",
-    "USM"
+    "USM",
+    "DJT"
   ],
   "Consumer_Cyclical": [
     "AMZN",
@@ -816,7 +817,9 @@
     "BRFS",
     "LANC",
     "MKC",
-    "HIMS"
+    "HIMS",
+    "OLLI",
+    "FRPT"
   ],
   "Energy": [
     "XOM",
@@ -1097,7 +1100,10 @@
     "GBCI",
     "FFIN",
     "CRVL",
-    "COLB"
+    "COLB",
+    "FUTU",
+    "ESGR",
+    "PJT"
   ],
   "Healthcare": [
     "LLY",
@@ -1237,7 +1243,10 @@
     "TEM",
     "MMSI",
     "SEM",
-    "PACS"
+    "PACS",
+    "SMMT",
+    "LNTH",
+    "RNA"
   ],
   "Industrials": [
     "GE",
@@ -1421,7 +1430,8 @@
     "SRCL",
     "GATX",
     "EXPO",
-    "JOBY"
+    "JOBY",
+    "SYM"
   ],
   "Real_Estate": [
     "PLD",
@@ -1485,7 +1495,8 @@
     "DOC",
     "NSA",
     "EPRT",
-    "KRG"
+    "KRG",
+    "LINE"
   ],
   "Technology": [
     "MSFT",
@@ -1689,7 +1700,13 @@
     "CRDO",
     "ACLS",
     "AUR",
-    "PI"
+    "PI",
+    "TTD",
+    "MDB",
+    "ENPH",
+    "APPF",
+    "VERX",
+    "ASTS"
   ],
   "Utilities": [
     "NEE",

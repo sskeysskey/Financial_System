@@ -7,7 +7,6 @@
         "GILD",
         "PATH",
         "AGCO",
-        "WST",
         "CSCO",
         "ESLT",
         "ORAN",
@@ -46,7 +45,8 @@
         "MKTX",
         "BHP",
         "WYNN",
-        "ALGM"
+        "ALGM",
+        "LSCC"
     ],
     "yellow_keywords": [
         "CNYJPY",
@@ -93,7 +93,6 @@
         "GPN",
         "PAYC",
         "ALTM",
-        "LKQ",
         "BF-B",
         "BIO",
         "EL"
@@ -131,7 +130,8 @@
         "ALAB",
         "AS",
         "RPRX",
-        "MBLY"
+        "MBLY",
+        "TLN"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -142,8 +142,9 @@
         "SCHD"
     ],
     "red_keywords": [
-        "USRetailM",
         "USJobless",
+        "CorePCEY",
+        "CorePCEM",
         "VALE",
         "CMCSA",
         "LUV",

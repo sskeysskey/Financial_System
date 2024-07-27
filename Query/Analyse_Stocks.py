@@ -191,10 +191,26 @@ def main():
         with open(color_config_path, 'r', encoding='utf-8') as file:
             colors = json.load(file)
 
+        # 检查所有颜色组中的符号
+        # for color_group in list(colors.keys()):
+        #     symbols_to_remove = []
+        #     for symbol in colors[color_group]:
+        #         if symbol in earnings_symbols:
+        #             if color_group != 'red_keywords':
+        #                 symbols_to_remove.append(symbol)
+        #                 if 'red_keywords' not in colors:
+        #                     colors['red_keywords'] = []
+        #                 if symbol not in colors['red_keywords']:
+        #                     colors['red_keywords'].append(symbol)
+            
+        #     # 从当前颜色组中移除符号
+        #     for symbol in symbols_to_remove:
+        #         colors[color_group].remove(symbol)
+
         # 检查并移除不在earnings_release_new.txt中的red_keywords（但保留以US开头的symbol）
         red_keywords_to_check = list(colors.get('red_keywords', []))
         for symbol in red_keywords_to_check:
-            if not symbol.startswith("US") and symbol not in earnings_symbols:
+            if not symbol.startswith(("US", "Core")) and symbol not in earnings_symbols:
                 colors['red_keywords'].remove(symbol)
                 # 检查是否在今天的newlow中
                 found = False
@@ -258,7 +274,7 @@ def main():
         "CMCSA", "WBD", "MAT", "ZK", "BEN", "GGB", "BIDU", "PARA", "LVS",
         "ETSY", "GXO", "ZM", "CAE", "PKX", "TU", "XRAY", "ESLT", "VIPS",
         "ALAB", "LEA", "RCI", "ICL", "AS", "BCE", "RPRX", "VIV",
-        "TIMB", "JAZZ", "DLTR"
+        "TIMB", "JAZZ", "DLTR", "HTHT"
         ]
 
         config_json = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json"

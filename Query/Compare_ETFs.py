@@ -114,6 +114,25 @@ def compare_today_yesterday(config_path, blacklist, interested_sectors, db_path,
     else:
         log_error_with_timestamp("输出为空，无法进行保存文件操作。", error_file_path)
 
+def clean_old_backups(directory, prefix="CompareETFs_", days=4):
+    """删除备份目录中超过指定天数的文件"""
+    now = datetime.now()
+    cutoff = now - timedelta(days=days)
+
+    for filename in os.listdir(directory):
+        if filename.startswith(prefix):  # 只处理特定前缀的文件
+            try:
+                date_str = filename.split('_')[-1].split('.')[0]  # 获取日期部分
+                file_date = datetime.strptime(date_str, '%m%d')
+                # 将年份设置为今年
+                file_date = file_date.replace(year=now.year)
+                if file_date < cutoff:
+                    file_path = os.path.join(directory, filename)
+                    os.remove(file_path)
+                    print(f"删除旧备份文件：{file_path}")
+            except Exception as e:
+                print(f"跳过文件：{filename}，原因：{e}")
+
 if __name__ == '__main__':
     config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
     blacklist = []
@@ -137,3 +156,4 @@ if __name__ == '__main__':
     compare_today_yesterday(config_path, blacklist, interested_sectors,
                             '/Users/yanzhang/Documents/Database/Finance.db',
                             file_path, error_file_path)
+    clean_old_backups(directory_backup)
