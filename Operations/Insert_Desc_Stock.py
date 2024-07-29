@@ -148,6 +148,10 @@ def main():
     
     root = tk.Tk()
     root.title("Add Stock")
+
+    root.lift()
+    root.focus_force()
+    
     success_flag = [False]  # 使用列表来传递布尔值
     entry = tk.Entry(root)
     entry.pack()

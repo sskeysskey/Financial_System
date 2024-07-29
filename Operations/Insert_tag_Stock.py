@@ -50,6 +50,10 @@ def main():
 
     root = tk.Tk()
     root.title("Add Tags")
+    
+    root.lift()
+    root.focus_force()
+    
     entry = tk.Entry(root)
     entry.pack()
     entry.focus_set()

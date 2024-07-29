@@ -73,6 +73,10 @@ def main():
 
     root = tk.Tk()
     root.title("Add or Update ETF")
+    
+    root.lift()
+    root.focus_force()
+    
     entry = tk.Entry(root)
     entry.pack()
     entry.focus_set()
