@@ -61,20 +61,21 @@ def get_prices(cursor, table_name, name, dates):
     cursor.execute(query, (name, *dates))
     return cursor.fetchall()
 
-def get_latest_four_dates(cursor, table_name, name):
+def get_latest_available_dates(cursor, table_name, name, limit=4):
     query = f"""
     SELECT date FROM {table_name}
     WHERE name = ? 
     ORDER BY date DESC
-    LIMIT 4
+    LIMIT ?
     """
-    cursor.execute(query, (name,))
+    cursor.execute(query, (name, limit))
     return cursor.fetchall()
 
-def get_prices_four_days(cursor, table_name, name, dates):
+def get_prices_available_days(cursor, table_name, name, dates):
+    placeholders = ', '.join('?' for _ in dates)
     query = f"""
     SELECT date, price, volume FROM {table_name}
-    WHERE name = ? AND date IN (?, ?, ?, ?)
+    WHERE name = ? AND date IN ({placeholders})
     ORDER BY date DESC
     """
     cursor.execute(query, (name, *dates))
@@ -97,14 +98,14 @@ def compare_today_yesterday(config_path, blacklist, interested_sectors, db_path,
                     if name in blacklist:
                         continue
                     try:
-                        results = get_latest_four_dates(cursor, table_name, name)
-                        if len(results) < 4:
+                        results = get_latest_available_dates(cursor, table_name, name)
+                        if len(results) < 2:
                             raise ValueError(f"无法找到 {table_name} 下的 {name} 足够的历史数据进行比较。")
 
                         dates = [result[0] for result in results]
-                        prices = get_prices_four_days(cursor, table_name, name, dates)
+                        prices = get_prices_available_days(cursor, table_name, name, dates)
 
-                        if len(prices) == 4:
+                        if len(prices)  >= 2:
                             latest_price, second_latest_price = prices[0][1], prices[1][1]
                             latest_volume, second_latest_volume = prices[0][2], prices[1][2]
                             change = latest_price - second_latest_price
@@ -114,9 +115,9 @@ def compare_today_yesterday(config_path, blacklist, interested_sectors, db_path,
 
                             # 检查连续上涨
                             consecutive_rise = 0
-                            if prices[0][1] > prices[1][1] and prices[1][1] > prices[2][1]:
+                            if len(prices) >= 3 and prices[0][1] > prices[1][1] and prices[1][1] > prices[2][1]:
                                 consecutive_rise = 2
-                                if prices[2][1] > prices[3][1]:
+                                if len(prices) >= 4 and prices[2][1] > prices[3][1]:
                                     consecutive_rise = 3
 
                             output.append((f"{table_name} {name}", percentage_change, latest_volume, percentage_volume_change, consecutive_rise))

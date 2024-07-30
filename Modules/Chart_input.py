@@ -262,14 +262,14 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     def on_key(event):
         actions = {
             'v': toggle_volume,
-            '1': lambda: radio.set_active(0),
+            '1': lambda: radio.set_active(7),
             '2': lambda: radio.set_active(1),
             '3': lambda: radio.set_active(2),
             '4': lambda: radio.set_active(3),
             '5': lambda: radio.set_active(4),
             '6': lambda: radio.set_active(5),
             '7': lambda: radio.set_active(6),
-            '8': lambda: radio.set_active(7),
+            '8': lambda: radio.set_active(0),
             '9': lambda: radio.set_active(8),
             '`': show_stock_etf_info
         }

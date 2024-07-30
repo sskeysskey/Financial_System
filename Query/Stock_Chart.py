@@ -74,8 +74,8 @@ def get_user_input_custom(root, prompt):
 
     screen_width = input_dialog.winfo_screenwidth()
     screen_height = input_dialog.winfo_screenheight()
-    position_right = int(screen_width/2 - 140)
-    position_down = int(screen_height/2 - 140) - 100
+    position_right = int(screen_width / 2 - 140)
+    position_down = int(screen_height / 2 - 140) - 100
     input_dialog.geometry(f"280x90+{position_right}+{position_down}")
 
     entry = tk.Entry(input_dialog, width=20, font=('Helvetica', 18))
