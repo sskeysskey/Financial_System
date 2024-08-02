@@ -688,7 +688,6 @@
     "KBH",
     "M",
     "DOOO",
-    "LOT",
     "VIK",
     "COLM",
     "RRR",
@@ -1197,7 +1196,8 @@
     "PACS",
     "SMMT",
     "LNTH",
-    "RNA"
+    "RNA",
+    "CRSP"
   ],
   "Industrials": [
     "GE",
@@ -1382,7 +1382,10 @@
     "GATX",
     "EXPO",
     "JOBY",
-    "SYM"
+    "SYM",
+    "MSM",
+    "CSWI",
+    "LTM"
   ],
   "Real_Estate": [
     "PLD",
@@ -1657,7 +1660,9 @@
     "ENPH",
     "APPF",
     "VERX",
-    "ASTS"
+    "ASTS",
+    "TWLO",
+    "ZETA"
   ],
   "Utilities": [
     "NEE",
@@ -1710,6 +1715,7 @@
     "AEE",
     "GEV",
     "TLN",
-    "BIPC"
+    "BIPC",
+    "IDA"
   ]
 }

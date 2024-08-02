@@ -1,43 +1,48 @@
 {
+    "My_Order": {
+        "TLT": "20+美国债",
+        "INDA": "印度",
+        "IEF": "7-10国债",
+        "FXY": "多日空美",
+        "SPTI": "中期债券"
+    },
     "Basic_Materials": {
         "MOS": "美盛化肥",
         "ALB": "雅宝",
-        "ALTM": "锂矿",
         "VALE": "淡水河谷",
         "NTR": "化肥",
         "SQM": "智利锂",
-        "BHP": "必和必拓"
+        "BHP": "必和必拓",
+        "MT": ""
     },
     "Communication_Services": {},
     "Consumer_Cyclical": {
         "LULU": "",
-        "VFC": "北面",
         "NKE": "Nike",
-        "SON": "产品包装",
-        "CCK": "食品包装",
-        "MCD": "麦当劳",
         "MBLY": "Mobileye",
         "APTV": "自动驾驶",
         "ULTA": "美容零售",
         "WYNN": "永利赌场",
         "LKQ": "汽车部件",
-        "STLA": ""
+        "STLA": "",
+        "MNSO": "",
+        "SW": ""
     },
     "Energy": {
-        "PBF": "石油精炼"
+        "PBF": "石油精炼",
+        "TS": ""
     },
-    "Real_Estate": {
-        "WY": "林业房产"
-    },
+    "Real_Estate": {},
     "Technology": {
         "PAYC": "人力云",
         "U": "Unity",
-        "PCTY": "人力云",
         "SNOW": "",
         "DT": "云监控",
         "ALGM": "传感器",
         "STM": "意法",
-        "LSCC": "半导体"
+        "LSCC": "半导体",
+        "INTC": "",
+        "RMBS": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -55,11 +60,15 @@
         "SITE": "景观园艺",
         "CNH": "农业机械",
         "DE": "机械设备",
-        "AAL": "美国航空"
+        "AAL": "美国航空",
+        "SYM": "机器人",
+        "LTM": ""
     },
     "Financial_Services": {
         "SIGI": "保险公司",
-        "BEN": "养老基金"
+        "BEN": "养老基金",
+        "PUK": "",
+        "XP": ""
     },
     "Healthcare": {
         "PFE": "辉瑞",

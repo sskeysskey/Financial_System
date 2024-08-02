@@ -6,7 +6,6 @@
         "STVN",
         "GILD",
         "PATH",
-        "AGCO",
         "CSCO",
         "ESLT",
         "ORAN",
@@ -21,7 +20,6 @@
         "BEN",
         "GXO",
         "ROKU",
-        "PEN",
         "DT",
         "ACI",
         "VIPS",
@@ -45,8 +43,6 @@
         "MKTX",
         "BHP",
         "WYNN",
-        "LSCC",
-        "VALE",
         "CMCSA",
         "LUV",
         "WRB",
@@ -93,7 +89,6 @@
         "CFR",
         "TTE",
         "SNY",
-        "AAL",
         "WH",
         "WHR",
         "COLM",
@@ -326,7 +321,8 @@
         "AVTR",
         "EQNR",
         "CADE",
-        "MHK"
+        "MHK",
+        "MNSO"
     ],
     "yellow_keywords": [
         "CNYJPY",
@@ -341,7 +337,6 @@
         "DLTR",
         "ICL",
         "NKE",
-        "DEO",
         "BNTX",
         "GMAB",
         "PCTY",
@@ -357,7 +352,11 @@
         "SQM",
         "LULU",
         "APTV",
-        "ULTA"
+        "ULTA",
+        "ALTM",
+        "VALE",
+        "PUK",
+        "AAL"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -372,7 +371,6 @@
         "GGB",
         "GPN",
         "PAYC",
-        "ALTM",
         "BF-B",
         "BIO",
         "EL"
@@ -410,7 +408,10 @@
         "ALAB",
         "AS",
         "RPRX",
-        "TLN"
+        "TLN",
+        "LOT",
+        "SW",
+        "LTM"
     ],
     "blue_keywords": [
         "HANGSENG",

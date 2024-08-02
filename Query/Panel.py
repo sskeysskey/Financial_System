@@ -83,7 +83,7 @@ def create_selection_window():
         ['Healthcare', 'Financial_Services'],
         ['Bonds', 'Crypto', 'Indices'],
         ['Commodities'],
-        ['Currencies', 'ETFs_Oversea', "ETFs_Commodity"],
+        ['Currencies', 'ETFs_Oversea', "ETFs_Commodity", "My_Order"],
         ['Economics', 'ETFs_US']
     ]
 
