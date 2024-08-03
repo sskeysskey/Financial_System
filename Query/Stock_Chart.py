@@ -2,11 +2,11 @@ import re
 import sys
 import json
 import tkinter as tk
-from tkinter import messagebox
 from datetime import datetime
 import pyperclip
 
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
+from Message_AppleScript import display_dialog
 from Chart_input import plot_financial_data
 
 def load_data(path, data_type='json'):
@@ -64,7 +64,7 @@ def input_mapping(root, sector_data, compare_data, shares, marketcap_pe_data, js
     if match_and_plot(input_trimmed, sector_data, compare_data, shares, marketcap_pe_data, json_data, db_path):
         close_app(root)
     else:
-        messagebox.showerror("错误", "未找到匹配的数据项。")
+        display_dialog("未找到匹配的数据项。")
         close_app(root)
 
 def get_user_input_custom(root, prompt):

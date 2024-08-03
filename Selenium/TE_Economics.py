@@ -66,15 +66,16 @@ with webdriver.Chrome(service=service) as driver:
     driver.get('https://tradingeconomics.com/united-states/indicators')
     Economics1 = {
         "GDP Growth Rate": "USGDP",
-        "Non Farm Payrolls": "USPayroll",
+        "Non Farm Payrolls": "USNonFarm",
         "Inflation Rate": "USInflation",
         "Interest Rate": "USInterest",
-        "Balance of Trade": "USTrade", 
+        "Balance of Trade": "USTrade",
         "Consumer Confidence": "USConfidence",
-        "Retail Sales MoM": "USRetailM"
+        "Retail Sales MoM": "USRetailM",
+        "Unemployment Rate": "USUnemploy"
     }
     Economics2 = {
-    "Initial Jobless Claims": "USJobless"
+    "Initial Jobless Claims": "USInitial"
     }
     Economics3 = {
         "Core PCE Price Index Annual Change": "CorePCEY",

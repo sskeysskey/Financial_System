@@ -1,6 +1,5 @@
 import json
 import tkinter as tk
-from tkinter import messagebox
 import pyperclip
 import sys
 import subprocess
@@ -68,7 +67,10 @@ def main():
 
     new_name = pyperclip.paste().replace('"', '').replace("'", "")
     if not new_name.isupper() or not new_name.isalpha():
-        messagebox.showerror("错误", "不是有效的ETFs代码！")
+        # AppleScript代码
+        applescript_code = 'display dialog "不是有效的ETFs代码！" buttons {"OK"} default button "OK"'
+        # 使用subprocess调用osascript
+        process = subprocess.run(['osascript', '-e', applescript_code], check=True)
         sys.exit()
 
     root = tk.Tk()

@@ -43,6 +43,8 @@ def create_window(content):
     # 创建主窗口
     root = tk.Tk()
     root.title("数据库查询结果")
+    root.lift()
+    root.focus_force()
 
     # 窗口尺寸和位置设置
     window_width = 900
@@ -99,7 +101,7 @@ if __name__ == '__main__':
         # 'include_condition': True},
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'ETFs',
-        #   'condition': "name = 'JapanETF'", 'fields': '*',
+        #   'condition': "name = 'SCO'", 'fields': '*',
         # 'include_condition': True},
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Basic_Materials',

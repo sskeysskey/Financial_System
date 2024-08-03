@@ -1,7 +1,4 @@
-import tkinter as tk
-root = tk.Tk()
-root.title("Test Tkinter")
-root.geometry("200x100")
-label = tk.Label(root, text="Tkinter is working!")
-label.pack()
-root.mainloop()
+import subprocess
+
+applescript_code = 'display dialog "整个字幕文件翻译完毕。" buttons {"OK"} default button "OK"'
+process = subprocess.run(['osascript', '-e', applescript_code], check=True)

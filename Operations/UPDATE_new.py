@@ -23,10 +23,10 @@ cursor = conn.cursor()
 # cursor.execute("UPDATE Commodities SET price = 14.24 WHERE id = 100811")
 
 # 保留两位小数
-# cursor.execute("UPDATE Technology SET price = ROUND(price, 3) WHERE name = 'AVGO'")
+# cursor.execute("UPDATE Economics SET price = ROUND(price, 2) WHERE name = 'USInitial'")
 
 # 将所有name为'Russian'的记录改为'Russia'
-# cursor.execute("UPDATE Commodities SET name = 'PalmOil' WHERE name = 'Palm Oil'")
+# cursor.execute("UPDATE Economics SET name = 'USNonFarm' WHERE name = 'USPayroll'")
 
 # 更新数据库表中所有记录的price字段，保留2位小数
 # cursor.execute("UPDATE Indices SET price = ROUND(price, 2)")

@@ -2,8 +2,8 @@ import sys
 import json
 import pyperclip
 import tkinter as tk
+import subprocess
 from tkinter import scrolledtext
-from tkinter import messagebox
 
 def load_json_data(path):
     with open(path, 'r', encoding='utf-8') as file:
@@ -108,7 +108,8 @@ if __name__ == '__main__':
             if result:
                 show_description(symbol, result)
             else:
-                messagebox.showinfo("失败", f"未找到名称为 {symbol} 的股票或ETF！")
+                applescript_code = 'display dialog "未找到股票或ETF！" buttons {"OK"} default button "OK"'
+                process = subprocess.run(['osascript', '-e', applescript_code], check=True)
         elif arg == "input":
             prompt = "请输入关键字查询数据库:"
             user_input = get_user_input_custom(prompt)
@@ -121,7 +122,8 @@ if __name__ == '__main__':
             if result:
                 show_description(user_input, result)
             else:
-                messagebox.showinfo("失败", f"未找到名称为 {user_input} 的股票或ETF！")
+                applescript_code = 'display dialog "未找到股票或ETF！" buttons {"OK"} default button "OK"'
+                process = subprocess.run(['osascript', '-e', applescript_code], check=True)
     else:
         print("请提供参数 input 或 paste")
         sys.exit(1)

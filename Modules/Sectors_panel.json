@@ -1,52 +1,44 @@
 {
     "My_Order": {
         "TLT": "20+美国债",
-        "INDA": "印度",
         "IEF": "7-10国债",
-        "FXY": "多日空美",
-        "SPTI": "中期债券"
+        "EDV": "2030国债",
+        "TMF": "三倍做多国债"
     },
     "Basic_Materials": {
         "MOS": "美盛化肥",
         "ALB": "雅宝",
         "VALE": "淡水河谷",
-        "NTR": "化肥",
-        "SQM": "智利锂",
-        "BHP": "必和必拓",
-        "MT": ""
+        "BHP": "必和必拓"
     },
     "Communication_Services": {},
     "Consumer_Cyclical": {
         "LULU": "",
         "NKE": "Nike",
         "MBLY": "Mobileye",
-        "APTV": "自动驾驶",
         "ULTA": "美容零售",
-        "WYNN": "永利赌场",
         "LKQ": "汽车部件",
         "STLA": "",
-        "MNSO": "",
-        "SW": ""
+        "SW": "包装纸"
     },
     "Energy": {
         "PBF": "石油精炼",
-        "TS": ""
+        "EQT": "天然气"
     },
     "Real_Estate": {},
     "Technology": {
-        "PAYC": "人力云",
         "U": "Unity",
         "SNOW": "",
+        "TEAM": "云协作",
         "DT": "云监控",
-        "ALGM": "传感器",
         "STM": "意法",
-        "LSCC": "半导体",
+        "LSCC": "FPGA",
         "INTC": "",
-        "RMBS": ""
+        "RMBS": "内存芯片",
+        "JBL": "捷普科技"
     },
     "Utilities": {},
     "Consumer_Defensive": {
-        "KVUE": "泰诺",
         "DEO": "尊尼获加",
         "BF-B": "杰克丹尼",
         "EL": "雅诗兰黛",
@@ -54,36 +46,28 @@
     },
     "Industrials": {
         "UPS": "联合包裹",
-        "AGCO": "农业机械",
         "JBHT": "物流运输",
         "GPN": "支付技术",
         "SITE": "景观园艺",
-        "CNH": "农业机械",
-        "DE": "机械设备",
+        "CNH": "依维柯",
+        "DE": "迪尔",
         "AAL": "美国航空",
-        "SYM": "机器人",
-        "LTM": ""
+        "SYM": "仓储机器",
+        "ATKR": "电气管道"
     },
     "Financial_Services": {
         "SIGI": "保险公司",
-        "BEN": "养老基金",
-        "PUK": "",
-        "XP": ""
+        "LPLA": "金融顾问"
     },
     "Healthcare": {
-        "PFE": "辉瑞",
-        "CVS": "药店连锁",
-        "WBA": "药店连锁",
+        "CVS": "",
         "BNTX": "BioNTech",
         "PEN": "中风血栓",
         "WST": "药物包装",
-        "JNJ": "",
-        "BMY": "",
         "GMAB": "骨髓瘤",
         "BIO": "体外诊断",
-        "BDX": "碧迪公司",
         "EW": "爱德华兹",
-        "DXCM": "血糖监测"
+        "DXCM": "德康血糖"
     },
     "Crypto": {
         "Bitcoin": "",
@@ -102,15 +86,14 @@
         "India": "",
         "Russia": "",
         "Korea": "",
-        "Australia": "澳大利亚",
+        "Australia": "",
         "Brazil": ""
     },
     "Bonds": {
         "US2Y": "",
         "US10Y": "",
         "JP10Y": "",
-        "IND10Y": "",
-        "BR10Y": ""
+        "IND10Y": ""
     },
     "Commodities": {
         "CrudeOil": "",
@@ -157,7 +140,7 @@
         "EURUSD": ""
     },
     "Economics": {
-        "USJobless": "25初请失业",
+        "USInitial": "25初请失业",
         "CorePCEY": "26核心PCE年",
         "CorePCEM": "26核心PCE月"
     },

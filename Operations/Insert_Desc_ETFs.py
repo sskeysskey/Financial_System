@@ -6,7 +6,6 @@ import numpy as np
 from time import sleep
 from PIL import ImageGrab
 import tkinter as tk
-from tkinter import messagebox
 import sys
 import subprocess
 
@@ -82,7 +81,8 @@ def read_clipboard():
 def validate_new_name(new_name):
     # 判断是否全是大写英文字母
     if not new_name.isupper() or not new_name.isalpha():
-        messagebox.showerror("错误", "不是ETFs代码！")
+        applescript_code = 'display dialog "不是ETFs代码！" buttons {"OK"} default button "OK"'
+        process = subprocess.run(['osascript', '-e', applescript_code], check=True)
         sys.exit()
     return new_name
 
@@ -92,7 +92,8 @@ def check_etf_exists(data, new_name):
         if not existing_etf['description1'] and not existing_etf['description2']:
             return existing_etf
         else:
-            messagebox.showerror("错误", "股票代码已存在且描述已存在！")
+            applescript_code = 'display dialog "股票代码已存在且描述已存在！" buttons {"OK"} default button "OK"'
+            process = subprocess.run(['osascript', '-e', applescript_code], check=True)
             sys.exit()
     return None
 
@@ -182,9 +183,11 @@ def main():
     root.mainloop()
 
     if success_flag[0]:
-        messagebox.showinfo("成功", f"股票 {new_name} 已成功写入！")
+        applescript_code = 'display dialog "股票已成功写入！" buttons {"OK"} default button "OK"'
+        process = subprocess.run(['osascript', '-e', applescript_code], check=True)
     else:
-        messagebox.showinfo("取消", "操作已取消，未进行任何写入。")
+        applescript_code = 'display dialog "操作已取消，未进行任何写入。" buttons {"OK"} default button "OK"'
+        process = subprocess.run(['osascript', '-e', applescript_code], check=True)
 
 if __name__ == "__main__":
     main()

@@ -1,7 +1,6 @@
 import re
 import json
 import tkinter as tk
-from tkinter import messagebox
 import pyperclip
 import sys
 import subprocess
@@ -45,7 +44,8 @@ def main():
 
     new_name = pyperclip.paste().replace('"', '').replace("'", "")
     if not re.match("^[A-Z\-]+$", new_name) or not any(stock['symbol'] == new_name for stock in data['stocks']):
-        messagebox.showerror("错误", "不是有效的股票代码或股票代码不存在！")
+        applescript_code = 'display dialog "不是有效的股票代码或股票代码不存在！" buttons {"OK"} default button "OK"'
+        process = subprocess.run(['osascript', '-e', applescript_code], check=True)
         sys.exit()
 
     root = tk.Tk()

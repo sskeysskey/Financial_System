@@ -37,10 +37,12 @@ def read_gainers_losers(filepath):
         data = json.load(file)
     if not data:
         return [], []
-    # 找到最新的日期
-    latest_date = max(data.keys(), key=lambda d: datetime.strptime(d, "%Y-%m-%d"))
-    # 返回最新日期的数据
-    return data.get(latest_date, {}).get('gainer', []), data.get(latest_date, {}).get('loser', [])
+    
+    today_date = datetime.now().strftime("%Y-%m-%d")
+    if today_date in data:
+        return data[today_date].get('gainer', []), data[today_date].get('loser', [])
+    else:
+        return [], []
 
 def get_latest_two_dates(cursor, table_name, name):
     query = f"""

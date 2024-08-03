@@ -1,7 +1,6 @@
 import json
+import subprocess
 import pyperclip
-import tkinter as tk
-from tkinter import messagebox
 
 json_file = "/Users/yanzhang/Documents/Financial_System/Modules/Description.json"
 with open(json_file, 'r', encoding='utf-8') as file:
@@ -23,5 +22,6 @@ exists_etf = check_existence_and_descriptions(data, new_name)
 exists_stock = any(stock['symbol'] == new_name for stock in data.get('stocks', []))
 
 if exists_etf or exists_stock:
-    messagebox.showerror("错误", "ETF代码已存在！")
+    applescript_code = 'display dialog "ETF代码已存在！" buttons {"OK"} default button "OK"'
+    process = subprocess.run(['osascript', '-e', applescript_code], check=True)
     sys.exit()

@@ -3,10 +3,11 @@ import sys
 import json
 import sqlite3
 import tkinter as tk
-from tkinter import scrolledtext, messagebox
+from tkinter import scrolledtext
 from tkinter.font import Font
 from datetime import datetime
 import pyperclip
+import subprocess
 
 def load_sector_data(file_path):
     with open(file_path, 'r') as file:
@@ -80,7 +81,8 @@ def input_processing(root, sector_data, user_input):
                 create_window(None, result)
                 return
     
-    messagebox.showerror("错误", "未找到匹配的数据项。")
+    applescript_code = 'display dialog "未找到匹配的数据项。" buttons {"OK"} default button "OK"'
+    process = subprocess.run(['osascript', '-e', applescript_code], check=True)
     close_app()
 
 def get_user_input_custom(root, prompt):

@@ -274,7 +274,10 @@ def main():
         "CMCSA", "WBD", "MAT", "ZK", "BEN", "GGB", "BIDU", "PARA", "LVS",
         "ETSY", "GXO", "ZM", "CAE", "PKX", "TU", "XRAY", "ESLT", "VIPS",
         "ALAB", "LEA", "RCI", "ICL", "AS", "BCE", "RPRX", "VIV",
-        "TIMB", "JAZZ", "DLTR", "HTHT", "ALTM", "TX", "CCCS"
+        "TIMB", "JAZZ", "DLTR", "HTHT", "ALTM", "TX", "CCCS", "MNSO",
+        "TS", "WDS", "HAL", "EC", "CIVI", "GFS", "ALGM", "NTR", "SQM",
+        "MT", "APTV", "WYNN", "KVUE", "AGCO", "LTM", "BEN", "PUK", "XP",
+        "WBA"
         ]
 
         config_json = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json"

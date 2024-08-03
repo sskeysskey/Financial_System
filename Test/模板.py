@@ -484,7 +484,15 @@ def parse_changes(filename):
         print("文件未找到")
     return changes
 # ——————————————————————————————————————————————————————————————————————————————————————————
+sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
+from Message_AppleScript import display_dialog
+
+display_dialog("未找到匹配的数据项。")
 # ——————————————————————————————————————————————————————————————————————————————————————————
+import subprocess
+
+applescript_code = 'display dialog "整个字幕文件翻译完毕。" buttons {"OK"} default button "OK"'
+process = subprocess.run(['osascript', '-e', applescript_code], check=True)
 # ——————————————————————————————————————————————————————————————————————————————————————————
 # ——————————————————————————————————————————————————————————————————————————————————————————
 # ——————————————————————————————————————————————————————————————————————————————————————————

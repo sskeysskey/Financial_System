@@ -7,7 +7,6 @@ import numpy as np
 from time import sleep
 from PIL import ImageGrab
 import tkinter as tk
-from tkinter import messagebox
 import sys
 import subprocess
 
@@ -62,13 +61,19 @@ def read_clipboard():
 
 def validate_new_name(new_name):
     if not re.match("^[A-Z\-]+$", new_name):
-        messagebox.showerror("错误", "不是股票代码！")
+        # AppleScript代码
+        applescript_code = 'display dialog "不是股票代码！" buttons {"OK"} default button "OK"'
+        # 使用subprocess调用osascript
+        process = subprocess.run(['osascript', '-e', applescript_code], check=True)
         sys.exit()
     return new_name
 
 def check_stock_exists(data, new_name):
     if any(stock['symbol'] == new_name for stock in data.get('stocks', [])):
-        messagebox.showerror("错误", "股票代码已存在！")
+        # AppleScript代码
+        applescript_code = 'display dialog "股票代码已存在！" buttons {"OK"} default button "OK"'
+        # 使用subprocess调用osascript
+        process = subprocess.run(['osascript', '-e', applescript_code], check=True)
         sys.exit()
 
 def execute_applescript(script_path):
@@ -143,7 +148,10 @@ def main():
     new_description2 = read_clipboard().replace('\n', ' ').replace('\r', ' ')
     
     if "ETF" in new_description1 and "ETF" in new_description2:
-        messagebox.showerror("错误", "要添加的好像是ETF而不是Stock")
+        # AppleScript代码
+        applescript_code = 'display dialog "要添加的好像是ETF而不是Stock" buttons {"OK"} default button "OK"'
+        # 使用subprocess调用osascript
+        process = subprocess.run(['osascript', '-e', applescript_code], check=True)
         sys.exit()
     
     root = tk.Tk()
@@ -162,9 +170,15 @@ def main():
     root.mainloop()
 
     if success_flag[0]:
-        messagebox.showinfo("成功", f"股票 {new_name} 已成功写入！")
+        # AppleScript代码
+        applescript_code = 'display dialog "股票已成功写入！" buttons {"OK"} default button "OK"'
+        # 使用subprocess调用osascript
+        process = subprocess.run(['osascript', '-e', applescript_code], check=True)
     else:
-        messagebox.showinfo("取消", "操作已取消，未进行任何写入。")
+        # AppleScript代码
+        applescript_code = 'display dialog "操作已取消，未进行任何写入。" buttons {"OK"} default button "OK"'
+        # 使用subprocess调用osascript
+        process = subprocess.run(['osascript', '-e', applescript_code], check=True)
 
 if __name__ == "__main__":
     main()

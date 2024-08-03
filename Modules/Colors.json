@@ -1,6 +1,5 @@
 {
     "white_keywords": [
-        "SNOW",
         "ELP",
         "TAP",
         "STVN",
@@ -36,7 +35,6 @@
         "BDX",
         "VIX",
         "DXY",
-        "PBF",
         "JBHT",
         "LVS",
         "JNJ",
@@ -322,7 +320,12 @@
         "EQNR",
         "CADE",
         "MHK",
-        "MNSO"
+        "MNSO",
+        "HAL",
+        "EC",
+        "EQT",
+        "ATKR",
+        "JBL"
     ],
     "yellow_keywords": [
         "CNYJPY",
@@ -345,7 +348,6 @@
         "SON",
         "JAZZ",
         "NTR",
-        "ALB",
         "MOS",
         "WRB",
         "AVGO",
@@ -356,7 +358,10 @@
         "ALTM",
         "VALE",
         "PUK",
-        "AAL"
+        "AAL",
+        "WDS",
+        "SNOW",
+        "GFS"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -368,7 +373,6 @@
         "CZR",
         "CVS",
         "DAR",
-        "GGB",
         "GPN",
         "PAYC",
         "BF-B",
@@ -422,7 +426,7 @@
         "SCHD"
     ],
     "red_keywords": [
-        "USJobless",
+        "USInitial",
         "CorePCEY",
         "CorePCEM",
         "HESM",

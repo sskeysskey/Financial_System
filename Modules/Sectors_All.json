@@ -69,14 +69,15 @@
     "USGDP",
     "USInflation",
     "USInterest",
-    "USPayroll",
+    "USNonFarm",
     "USTrade",
     "USConfidence",
-    "USJobless",
+    "USInitial",
     "CorePCEY",
     "CorePCEM",
     "USPPI",
-    "USRetailM"
+    "USRetailM",
+    "USUnemploy"
   ],
   "Commodities": [
     "Gold",
@@ -452,7 +453,26 @@
     "URA",
     "JVAL",
     "USO",
-    "UCO"
+    "UCO",
+    "EDV",
+    "VIXY",
+    "UVXY",
+    "VXX",
+    "SOXS",
+    "SCO",
+    "KOLD",
+    "ZSL",
+    "DGZ",
+    "UNG",
+    "XOP",
+    "ERY",
+    "PPLT",
+    "CPER",
+    "DBB",
+    "CORN",
+    "WEAT",
+    "DBA",
+    "CANE"
   ],
   "Basic_Materials": [
     "LIN",
@@ -567,7 +587,6 @@
     "IPG",
     "SIRI",
     "WPP",
-    "TWLO",
     "Z",
     "PARA",
     "PSO",
@@ -1103,7 +1122,8 @@
     "COLB",
     "FUTU",
     "ESGR",
-    "PJT"
+    "PJT",
+    "DNB"
   ],
   "Healthcare": [
     "LLY",

@@ -100,7 +100,7 @@ def compare_today_yesterday(config_path, blacklist, interested_sectors, db_path,
                 percentage_change, latest_volume, percentage_volume_change, consecutive_rise = line[1], line[2], line[3], line[4]
                 
                 original_company = company  # 保留原始公司名称
-                if latest_volume > 5000000:
+                if latest_volume > 3000000:
                     company += '.*'
                 
                 # 添加连续上涨标记

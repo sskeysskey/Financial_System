@@ -1,4 +1,5 @@
 import re
+import sys
 import sqlite3
 import numpy as np
 from datetime import datetime, timedelta
@@ -6,8 +7,11 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import RadioButtons
 import matplotlib
 import tkinter as tk
-from tkinter import simpledialog, scrolledtext, messagebox
+from tkinter import simpledialog, scrolledtext
 from functools import lru_cache
+
+sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
+from Message_AppleScript import display_dialog
 
 @lru_cache(maxsize=None)
 def fetch_data(db_path, table_name, name):
@@ -45,7 +49,7 @@ def process_data(data):
 def show_error_message(message):
     root = tk.Tk()
     root.withdraw()  # 隐藏主窗口
-    messagebox.showerror("错误", message)
+    display_dialog(message)
     root.destroy()
 
 def draw_underline(text_obj, fig, ax1):
