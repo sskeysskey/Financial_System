@@ -59,8 +59,10 @@ def draw_underline(text_obj, fig, ax1):
     line = matplotlib.lines.Line2D([x, x + linewidth], [y - 2, y - 2], transform=ax1.transData, color='blue', linewidth=2)
     ax1.add_line(line)
 
-def update_plot(line1, line2, dates, prices, volumes, ax1, ax2, show_volume):
+def update_plot(line1, fill, line2, dates, prices, volumes, ax1, ax2, show_volume):
     line1.set_data(dates, prices)
+    fill.remove()
+    fill = ax1.fill_between(dates, prices, color='lightblue', alpha=0.3)
     if volumes:
         line2.set_data(dates, volumes)
     ax1.set_xlim(np.min(dates), np.max(dates))
@@ -69,6 +71,7 @@ def update_plot(line1, line2, dates, prices, volumes, ax1, ax2, show_volume):
         ax2.set_ylim(0, np.max(volumes))
     line2.set_visible(show_volume)
     plt.draw()
+    return fill
 
 def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe, json_data, default_time_range="1Y", panel="False"):
     plt.close('all')  # 关闭所有图表
@@ -78,6 +81,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     mouse_pressed = False
     initial_price = None
     initial_date = None
+    fill = None  # 添加这行
 
     try:
         data = fetch_data(db_path, table_name, name)
@@ -114,7 +118,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     highlight_point = ax1.scatter([], [], s=100, color='red', zorder=5)
     # line1, = ax1.plot(dates, prices, marker='o', markersize=1, linestyle='-', linewidth=2, color='b', picker=5, label='Price')
-    line1, = ax1.plot(dates, prices, marker='o', markersize=1, linestyle='-', linewidth=1, color='gold', picker=5, label='Price')
+    line1, = ax1.plot(dates, prices, marker='o', markersize=1, linestyle='-', linewidth=1, color='lightblue', picker=5, label='Price')
+    fill = ax1.fill_between(dates, prices, color='lightblue', alpha=0.3)
     line2, = ax2.plot(dates, volumes, marker='o', markersize=1, linestyle='-', linewidth=1, color='r', picker=5, label='Volume')
     line2.set_visible(show_volume)
 
@@ -259,7 +264,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             filtered_dates = [date for date in dates if date >= min_date]
             filtered_prices = [price for date, price in zip(dates, prices) if date >= min_date]
             filtered_volumes = [volume for date, volume in zip(dates, volumes) if date >= min_date] if volumes else None
-        update_plot(line1, line2, filtered_dates, filtered_prices, filtered_volumes, ax1, ax2, show_volume)
+        nonlocal fill
+        fill = update_plot(line1, fill, line2, filtered_dates, filtered_prices, filtered_volumes, ax1, ax2, show_volume)
 
         radio.circles[list(time_options.keys()).index(val)].set_facecolor('red')
 
