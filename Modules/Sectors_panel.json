@@ -3,7 +3,7 @@
         "TLT": "20+美国债",
         "IEF": "7-10国债",
         "EDV": "2030国债",
-        "TMF": "三倍做多国债"
+        "TMF": "三倍多国债"
     },
     "Basic_Materials": {
         "MOS": "美盛化肥",
@@ -15,7 +15,7 @@
     "Consumer_Cyclical": {
         "LULU": "",
         "NKE": "Nike",
-        "MBLY": "Mobileye",
+        "MBLY": "",
         "ULTA": "美容零售",
         "LKQ": "汽车部件",
         "STLA": "",
