@@ -4,6 +4,10 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 from matplotlib.dates import DateFormatter
 
+import matplotlib
+# 使用TkAgg后端
+matplotlib.use('TkAgg')
+
 # 数据库路径
 db_path = '/Users/yanzhang/Documents/Database/Finance.db'
 
@@ -15,6 +19,7 @@ stock_config = [
     {'table': 'ETFs', 'name': 'TLT'},
     # {'table': 'Currencies', 'name': 'DXY'},
     # {'table': 'Bonds', 'name': 'US10Y'},
+    {'table': 'Economics', 'name': 'USInterest'},
 ]
 
 # 自动分配颜色
@@ -23,7 +28,7 @@ colors = ['tab:blue', 'tab:red', 'tab:green', 'tab:purple', 'tab:pink', 'tab:bro
 # 自定义时间范围
 # custom_start_date = '2000-01-01'
 
-custom_start_date = '2019-01-01'
+custom_start_date = '2019-11-01'
 custom_end_date = '2024-08-05'
 
 # 连接到数据库并读取数据
@@ -43,14 +48,14 @@ end_date = min(df[0].index.max() for df in dfs.values())
 
 # 确定最终的日期范围
 final_start_date = max(pd.to_datetime(custom_start_date), start_date)
-final_end_date = min(pd.to_datetime(custom_end_date), end_date)
+final_end_date = min(pd.to_datetime(custom_end_date), end_date) if pd.to_datetime(custom_end_date) <= end_date else pd.to_datetime(custom_end_date)
 
 # 筛选共同日期范围内的数据
 for name in dfs:
-    dfs[name] = (dfs[name][0].loc[final_start_date:final_end_date], dfs[name][1])
+    dfs[name] = (dfs[name][0].reindex(pd.date_range(final_start_date, final_end_date)).fillna(method='ffill'), dfs[name][1])
 
 # 创建图表
-fig, ax1 = plt.subplots(figsize=(12, 6))
+fig, ax1 = plt.subplots(figsize=(16, 6))
 
 # 设置中文字体
 zh_font = fm.FontProperties(fname='/Users/yanzhang/Library/Fonts/FangZhengHeiTiJianTi-1.ttf')
@@ -68,7 +73,7 @@ for i, (name, (df, color)) in enumerate(list(dfs.items())[1:], 1):
     ax = ax1.twinx()
     if i > 1:
         ax.spines['right'].set_position(('outward', 60 * (i - 1)))
-    ax.set_ylabel(f"{name} 价格", color=color, fontproperties=zh_font)
+    
     line, = ax.plot(df.index, df['price'], label=name, color=color, linewidth=2)
     ax.tick_params(axis='y', labelcolor=color)
     second_axes.append(ax)
