@@ -1,6 +1,4 @@
 import os
-import tkinter as tk
-from tkinter import messagebox
 from selenium import webdriver
 from datetime import datetime, timedelta
 from selenium.webdriver.common.by import By
@@ -8,6 +6,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.chrome.service import Service
+import subprocess
 import json
 
 # 文件路径
@@ -15,12 +14,9 @@ file_path = '/Users/yanzhang/Documents/News/Stock_Splits_new.txt'
 
 # 检查文件是否存在
 if os.path.exists(file_path):
-    # 创建一个Tkinter根窗口并隐藏
-    root = tk.Tk()
-    root.withdraw()
-    
     # 弹窗通知用户
-    messagebox.showinfo("文件存在", f"Stock_Splits_new文件已存在，请先处理后再执行。")
+    applescript_code = 'display dialog "Stock_Splits_new文件已存在，请先处理后再执行。" buttons {"OK"} default button "OK"'
+    process = subprocess.run(['osascript', '-e', applescript_code], check=True)
     
     # 退出程序
     exit()

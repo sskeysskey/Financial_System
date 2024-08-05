@@ -1,6 +1,5 @@
 import os
-import tkinter as tk
-from tkinter import messagebox
+import subprocess
 from selenium import webdriver
 from datetime import datetime, timedelta
 from selenium.webdriver.common.by import By
@@ -14,9 +13,8 @@ file_path = '/Users/yanzhang/Documents/News/Economic_Events_new.txt'
 
 # 检查文件是否存在
 if os.path.exists(file_path):
-    root = tk.Tk()
-    root.withdraw()
-    messagebox.showinfo("文件存在", f"Economic_Events_new文件已存在，请先处理后再执行。")
+    applescript_code = 'display dialog "Economic_Events_new文件已存在，请先处理后再执行。" buttons {"OK"} default button "OK"'
+    process = subprocess.run(['osascript', '-e', applescript_code], check=True)
     exit()
 
 # ChromeDriver 路径
