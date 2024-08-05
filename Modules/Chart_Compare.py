@@ -8,10 +8,8 @@ import matplotlib
 # 使用TkAgg后端
 matplotlib.use('TkAgg')
 
-# 数据库路径
 db_path = '/Users/yanzhang/Documents/Database/Finance.db'
 
-# 配置表或集合，包含表名和股票名称
 stock_config = [
     # {'table': 'Indices', 'name': 'NASDAQ'},
     {'table': 'Indices', 'name': 'S&P500'},
@@ -31,7 +29,6 @@ colors = ['tab:blue', 'tab:red', 'tab:green', 'tab:purple', 'tab:pink', 'tab:bro
 custom_start_date = '2019-11-01'
 custom_end_date = '2024-08-05'
 
-# 连接到数据库并读取数据
 dfs = {}
 with sqlite3.connect(db_path) as conn:
     for i, config in enumerate(stock_config):
