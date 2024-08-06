@@ -44,7 +44,7 @@ Event_Filter = {
     "PPI Final Demand YY*", "PPI exFood/Energy MM*", "PPI ex Food/Energy/Tr MM*",
     "PPI Final Demand MM*", "Retail Sales MM *", "GDP Final*", "Core PCE Prices Fnal*",
     "PCE Prices Final *", "GDP Cons Spending Final*", "Pending Homes Index",
-    "PCE Price Index MM*", "Unemployment Rate*"
+    "PCE Price Index MM*", "Unemployment Rate*", "ISM N-Mfg PMI"
 }
 
 # 定义一个包含所有目标国家代码的集合
