@@ -12,12 +12,14 @@ db_path = '/Users/yanzhang/Documents/Database/Finance.db'
 
 stock_config = [
     # {'table': 'Indices', 'name': 'NASDAQ'},
-    {'table': 'Indices', 'name': 'S&P500'},
-    # {'table': 'Technology', 'name': 'NVDA'},
-    {'table': 'ETFs', 'name': 'TLT'},
+    # {'table': 'Indices', 'name': 'S&P500'},
+    {'table': 'Technology', 'name': 'NVDA'},
+    {'table': 'Technology', 'name': 'AMD'},
+    # {'table': 'Technology', 'name': 'INTC'},
+    # {'table': 'ETFs', 'name': 'TLT'},
     # {'table': 'Currencies', 'name': 'DXY'},
     # {'table': 'Bonds', 'name': 'US10Y'},
-    {'table': 'Economics', 'name': 'USInterest'},
+    # {'table': 'Economics', 'name': 'USInterest'},
 ]
 
 # 自动分配颜色
@@ -26,7 +28,7 @@ colors = ['tab:blue', 'tab:red', 'tab:green', 'tab:purple', 'tab:pink', 'tab:bro
 # 自定义时间范围
 # custom_start_date = '2000-01-01'
 
-custom_start_date = '2019-11-01'
+custom_start_date = '2017-11-01'
 custom_end_date = '2024-08-05'
 
 dfs = {}

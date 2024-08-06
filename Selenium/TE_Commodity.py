@@ -5,81 +5,96 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import sqlite3
+import logging
+
+# 设置日志
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # ChromeDriver 路径
-chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
+CHROME_DRIVER_PATH = "/Users/yanzhang/Downloads/backup/chromedriver"
+DB_PATH = '/Users/yanzhang/Documents/Database/Finance.db'
 
-# 设置 ChromeDriver
-service = Service(executable_path=chrome_driver_path)
-driver = webdriver.Chrome(service=service)
+def setup_driver():
+    service = Service(executable_path=CHROME_DRIVER_PATH)
+    return webdriver.Chrome(service=service)
 
-# 获取当前时间
-now = datetime.now()
-
-# 判断今天的星期数，如果是周日(6)或周一(0)，则不执行程序
-if now.weekday() in (0, 6):
-    print("Today is either Sunday or Monday. The script will not run.")
-else:
-    # 初始化数据库连接
-    conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
+def setup_database():
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    # 创建表
     cursor.execute('''
-    CREATE TABLE  IF NOT EXISTS  Commodities (
+    CREATE TABLE IF NOT EXISTS Commodities (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         date TEXT,
         name TEXT,
-        price REAL
+        price REAL,
+        UNIQUE(date, name)
     );
     ''')
     conn.commit()
+    return conn, cursor
 
-    # driver = setup_driver()
+def fetch_commodity_data_str(driver, commodity_name, xpath='./ancestor::tr'):
+    element = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.LINK_TEXT, commodity_name))
+    )
+    row = element.find_element(By.XPATH, xpath)
+    price_str = row.find_element(By.ID, 'p').text.strip()
+    return float(price_str.replace(',', ''))
+
+def fetch_commodity_data(driver, commodity_name, xpath='./ancestor::tr'):
+    element = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.LINK_TEXT, commodity_name))
+    )
+    row = element.find_element(By.XPATH, xpath)
+    return row.find_element(By.ID, 'p').text.strip()
+
+def main():
+    now = datetime.now()
+    if now.weekday() in (0, 6):
+        logging.info("Today is either Sunday or Monday. The script will not run.")
+        return
+
+    driver = setup_driver()
+    conn, cursor = setup_database()
+
     try:
-        # 访问网页
+        yesterday = (now - timedelta(days=1)).strftime('%Y-%m-%d')
+        all_data = []
+
+        # US commodity data
+        driver.get('https://tradingeconomics.com/commodity/baltic')
+        us_commodities = ["Baltic Dry"]
+        for us_commodity in us_commodities:
+            try:
+                price = fetch_commodity_data_str(driver, us_commodity)
+                all_data.append((yesterday, us_commodity.replace(" ", ""), price))
+            except Exception as e:
+                logging.error(f"Failed to retrieve data for {us_commodity}: {e}")
+
+        # Other commodity data
         driver.get('https://tradingeconomics.com/commodities')
         commodities = [
             "Coal", "Uranium", "Steel", "Lithium", "Wheat", "Palm Oil", "Aluminum",
             "Nickel", "Tin", "Zinc", "Palladium", "Poultry", "Salmon", "Iron Ore"
         ]
 
-        all_data = []
-        # 获取当前时间
-        now = datetime.now()
-        # 获取前一天的日期
-        yesterday = now - timedelta(days=1)
-        # 格式化输出
-        today = yesterday.strftime('%Y-%m-%d')
-
-        # 查找并处理数据
         for commodity in commodities:
             try:
-                element = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.LINK_TEXT, commodity))
-                )
-                row = element.find_element(By.XPATH, './ancestor::tr')
-                price = row.find_element(By.ID, 'p').text.strip()
-
-                # 修改 "Palm Oil" 和 "Iron Ore" 的名称
-                if commodity == "Palm Oil":
-                    commodity = "PalmOil"
-                elif commodity == "Iron Ore":
-                    commodity = "IronOre"
-                
-                # 将数据格式化后添加到列表
-                all_data.append((today, commodity, price))
+                price = fetch_commodity_data(driver, commodity)
+                all_data.append((yesterday, commodity.replace(" ", ""), price))
             except Exception as e:
-                print(f"Failed to retrieve data for {commodity}: {e}")
-        
-        # 插入数据到数据库
-        cursor.executemany('INSERT INTO Commodities (date, name, price) VALUES (?, ?, ?)', all_data)
+                logging.error(f"Failed to retrieve data for {commodity}: {e}")
+
+        cursor.executemany('INSERT OR REPLACE INTO Commodities (date, name, price) VALUES (?, ?, ?)', all_data)
         conn.commit()
-        # 打印插入的数据条数
-        print(f"Total {len(all_data)} records have been inserted into the database.")
+        logging.info(f"Total {len(all_data)} records have been inserted into the database.")
 
     except Exception as e:
-        print(f"An error occurred: {e}")
-        conn.rollback()  # 回滚在异常发生时的所有操作
+        logging.error(f"An error occurred: {e}")
+        conn.rollback()
     finally:
         driver.quit()
         conn.close()
+
+if __name__ == "__main__":
+    main()

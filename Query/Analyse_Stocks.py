@@ -277,7 +277,7 @@ def main():
         "TIMB", "JAZZ", "DLTR", "HTHT", "ALTM", "TX", "CCCS", "MNSO",
         "TS", "WDS", "HAL", "EC", "CIVI", "GFS", "ALGM", "NTR", "SQM",
         "MT", "APTV", "WYNN", "KVUE", "AGCO", "LTM", "BEN", "PUK", "XP",
-        "WBA"
+        "WBA", "AMX", "SW", "CTRA", "CSCO"
         ]
 
         config_json = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json"

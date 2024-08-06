@@ -106,15 +106,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     fig.patch.set_facecolor('black')
     ax1.set_facecolor('black')
     
-
     ax1.tick_params(axis='x', colors='white')
     ax1.tick_params(axis='y', colors='white')
     ax2.tick_params(axis='y', colors='white')
-    
-    # ax2.spines['bottom'].set_color('white')
-    # ax2.spines['top'].set_color('white') 
-    # ax2.spines['right'].set_color('white')
-    # ax2.spines['left'].set_color('white')
 
     highlight_point = ax1.scatter([], [], s=100, color='red', zorder=5)
     # line1, = ax1.plot(dates, prices, marker='o', markersize=1, linestyle='-', linewidth=2, color='b', picker=5, label='Price')
@@ -197,8 +191,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         draw_underline(title, fig, ax1)
         fig.canvas.mpl_connect('pick_event', on_pick)
 
-    # ax1.grid(True)
-    ax1.grid(True, color='white', alpha=0.2)
+    # ax1.grid(False)
+    ax1.grid(True, color='gray', alpha=0.1, linestyle='--')
+
     plt.xticks(rotation=45)
 
     annot = ax1.annotate("", xy=(0,0), xytext=(20,20), textcoords="offset points", bbox=dict(boxstyle="round", fc="black"), arrowprops=dict(arrowstyle="->"), color='white')

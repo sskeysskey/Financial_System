@@ -1,17 +1,18 @@
 {
     "My_Order": {
-        "TLT": "20+美国债",
-        "IEF": "7-10国债",
-        "EDV": "2030国债",
-        "TMF": "三倍多国债"
+        "CRWD": "",
+        "XLE": "能源"
     },
     "Basic_Materials": {
         "MOS": "美盛化肥",
         "ALB": "雅宝",
         "VALE": "淡水河谷",
-        "BHP": "必和必拓"
+        "BHP": "必和必拓",
+        "PPG": "涂料"
     },
-    "Communication_Services": {},
+    "Communication_Services": {
+        "ROKU": ""
+    },
     "Consumer_Cyclical": {
         "LULU": "",
         "NKE": "Nike",
@@ -19,11 +20,13 @@
         "ULTA": "美容零售",
         "LKQ": "汽车部件",
         "STLA": "",
-        "SW": "包装纸"
+        "HMC": "本田汽车"
     },
     "Energy": {
         "PBF": "石油精炼",
-        "EQT": "天然气"
+        "EQT": "天然气",
+        "PBR": "巴西石油",
+        "MUR": ""
     },
     "Real_Estate": {},
     "Technology": {
@@ -34,8 +37,10 @@
         "STM": "意法",
         "LSCC": "FPGA",
         "INTC": "",
-        "RMBS": "内存芯片",
-        "JBL": "捷普科技"
+        "RMBS": "",
+        "JBL": "",
+        "BSY": "",
+        "PATH": "UiPath"
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -46,14 +51,13 @@
     },
     "Industrials": {
         "UPS": "联合包裹",
-        "JBHT": "物流运输",
         "GPN": "支付技术",
-        "SITE": "景观园艺",
         "CNH": "依维柯",
-        "DE": "迪尔",
         "AAL": "美国航空",
         "SYM": "仓储机器",
-        "ATKR": "电气管道"
+        "ATKR": "电气管道",
+        "ROK": "工业信息",
+        "DLB": "杜比"
     },
     "Financial_Services": {
         "SIGI": "保险公司",
@@ -63,9 +67,7 @@
         "CVS": "",
         "BNTX": "BioNTech",
         "PEN": "中风血栓",
-        "WST": "药物包装",
         "GMAB": "骨髓瘤",
-        "BIO": "体外诊断",
         "EW": "爱德华兹",
         "DXCM": "德康血糖"
     },
@@ -99,6 +101,7 @@
         "CrudeOil": "",
         "Naturalgas": "天然气",
         "Gold": "",
+        "BalticDry": "",
         "Silver": "",
         "Copper": "",
         "Nickel": "镍",
