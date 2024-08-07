@@ -63,7 +63,7 @@ def save_data(urls, existing_json, new_file, today_file, diff_file, compare_file
     for url in urls:
         data_list = fetch_data(url)
         for symbol, name, volume in data_list:
-            if volume > 2000000:
+            if volume > 1500000:
                 total_data_list.append(f"{symbol}: {name}, {volume}")
                 if symbol not in existing_symbols:
                     filter_data_list.append(f"{symbol}: {name}, {volume}")
@@ -163,7 +163,8 @@ urls = [
     "https://finance.yahoo.com/etfs/?offset=0&count=100",
     "https://finance.yahoo.com/etfs/?count=100&offset=100",
     "https://finance.yahoo.com/etfs/?count=100&offset=200",
-    "https://finance.yahoo.com/etfs/?count=100&offset=300"
+    "https://finance.yahoo.com/etfs/?count=100&offset=300",
+    "https://finance.yahoo.com/etfs/?count=100&offset=400"
 ]
 existing_json = '/Users/yanzhang/Documents/Financial_System/Modules/Description.json'
 today_file = '/Users/yanzhang/Documents/News/site/ETFs_today.txt'
