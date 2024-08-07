@@ -90,7 +90,7 @@ if __name__ == '__main__':
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities',
         #     'condition': "name = 'Zinc'", 'fields': '*',
-        # 'include_condition': True},
+        # 'include_condition': False},
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto',
         #   'condition': "name = 'Solana'", 'fields': '*',

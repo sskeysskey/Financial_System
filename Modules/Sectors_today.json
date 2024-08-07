@@ -557,7 +557,8 @@
     "PHI",
     "RDDT",
     "USM",
-    "DJT"
+    "DJT",
+    "LUMN"
   ],
   "Consumer_Cyclical": [
     "AMZN",
@@ -1216,7 +1217,8 @@
     "SMMT",
     "LNTH",
     "RNA",
-    "CRSP"
+    "CRSP",
+    "TMDX"
   ],
   "Industrials": [
     "GE",

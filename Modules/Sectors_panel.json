@@ -1,7 +1,6 @@
 {
     "My_Order": {
-        "CRWD": "",
-        "XLE": "能源"
+        "CRWD": ""
     },
     "Basic_Materials": {
         "MOS": "美盛化肥",
@@ -11,7 +10,8 @@
         "PPG": "涂料"
     },
     "Communication_Services": {
-        "ROKU": ""
+        "ROKU": "",
+        "NTES": ""
     },
     "Consumer_Cyclical": {
         "LULU": "",
@@ -26,7 +26,8 @@
         "PBF": "石油精炼",
         "EQT": "天然气",
         "PBR": "巴西石油",
-        "MUR": ""
+        "MUR": "",
+        "BP": ""
     },
     "Real_Estate": {},
     "Technology": {
@@ -39,7 +40,6 @@
         "INTC": "",
         "RMBS": "",
         "JBL": "",
-        "BSY": "",
         "PATH": "UiPath"
     },
     "Utilities": {},
@@ -124,7 +124,7 @@
     },
     "ETFs_Oversea": {
         "CQQQ": "中国科技",
-        "CNYA": "中国A股",
+        "CNYA": "A股",
         "DXJ": "日本",
         "INDA": "印度",
         "EWT": "台湾",

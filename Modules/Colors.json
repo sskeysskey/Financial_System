@@ -395,7 +395,6 @@
         "NSIT",
         "BECN",
         "DKNG",
-        "XRAY",
         "CE",
         "SMFG",
         "SPGI",
@@ -603,7 +602,6 @@
         "RITM",
         "TEF",
         "BLCO",
-        "ETSY",
         "BCH",
         "AEE",
         "BIPC",
@@ -719,7 +717,8 @@
         "EOG",
         "UDR",
         "LNT",
-        "PPG"
+        "PPG",
+        "NTES"
     ],
     "yellow_keywords": [
         "CNYJPY",
@@ -769,7 +768,8 @@
         "OLN",
         "AMX",
         "UPS",
-        "STM"
+        "STM",
+        "NIO"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -825,7 +825,8 @@
         "INTC",
         "MBLY",
         "AN",
-        "SNOW"
+        "SNOW",
+        "TBN"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -1125,6 +1126,7 @@
         "EURUSD",
         "Shanghai",
         "Shenzhen",
-        "FXY"
+        "FXY",
+        "BalticDry"
     ]
 }

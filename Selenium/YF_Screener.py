@@ -27,9 +27,12 @@ def login_once(driver, login_url):
     password_input.send_keys("!@#$Abcd")
     password_input.send_keys(Keys.RETURN)
     
-    # 等待登录成功的标志，如重定向到登录后页面的某个特定元素
+    # 等待找到id为header-profile-button或ybarAccountMenu其中任意一个表示登录成功
     WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.ID, "ybarAccountMenu"))
+        EC.any_of(
+            EC.presence_of_element_located((By.ID, "header-profile-button")),
+            EC.presence_of_element_located((By.ID, "ybarAccountMenu"))
+        )
     )
     print("登录成功，继续执行其他任务")
 

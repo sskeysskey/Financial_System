@@ -38,12 +38,25 @@ def fetch_data(url):
     
     return data_list
 
-def save_data(urls, existing_json, new_file, today_file, diff_file):
+def load_compare_data(compare_file):
+    compare_data = {}
+    with open(compare_file, 'r') as file:
+        for line in file:
+            parts = line.split(':')
+            if len(parts) == 2:
+                symbol, percentage = parts[0].strip(), parts[1].strip()
+                compare_data[symbol] = percentage
+    return compare_data
+
+def save_data(urls, existing_json, new_file, today_file, diff_file, compare_file):
     # 读取a.json文件中的etfs的symbol字段
     with open(existing_json, 'r') as json_file:
         data = json.load(json_file)
         existing_symbols = {etf['symbol'] for etf in data['etfs']}
-
+    
+    # 读取compare_all.txt文件中的百分比数据
+    compare_data = load_compare_data(compare_file)
+    
     # 收集新数据
     total_data_list = []
     filter_data_list = []
@@ -87,7 +100,14 @@ def save_data(urls, existing_json, new_file, today_file, diff_file):
             existing_lines = file.readlines()
             existing_symbols_today = {line.split(":")[0].strip() for line in existing_lines}
         
-        diff_data_list = [line for line in total_data_list if line.split(":")[0].strip() not in existing_symbols_today]
+        diff_data_list = []
+        for line in total_data_list:
+            symbol = line.split(":")[0].strip()
+            if symbol not in existing_symbols_today:
+                percentage = compare_data.get(symbol, "")
+                if percentage:
+                    line = f"{symbol} {percentage}: {line.split(':', 1)[1]}"
+                diff_data_list.append(line)
 
         with open(diff_file, "w") as file:
             for i, line in enumerate(diff_data_list):
@@ -149,9 +169,10 @@ existing_json = '/Users/yanzhang/Documents/Financial_System/Modules/Description.
 today_file = '/Users/yanzhang/Documents/News/site/ETFs_today.txt'
 diff_file = '/Users/yanzhang/Documents/News/ETFs_diff.txt'
 new_file = '/Users/yanzhang/Documents/News/ETFs_new.txt'
+compare_file = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
 
 try:
-    save_data(urls, existing_json, new_file, today_file, diff_file)
+    save_data(urls, existing_json, new_file, today_file, diff_file, compare_file)
 finally:
     driver.quit()
 print("所有爬取任务完成。")
