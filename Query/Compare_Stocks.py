@@ -83,12 +83,20 @@ def get_prices_available_days(cursor, table_name, name, dates):
     cursor.execute(query, (name, *dates))
     return cursor.fetchall()
 
-def compare_today_yesterday(config_path, blacklist, interested_sectors, db_path, earnings_path, gainers_losers_path, output_path, error_file_path):
+def compare_today_yesterday(config_path, description_path, blacklist, interested_sectors, db_path, earnings_path, gainers_losers_path, output_path, error_file_path):
     with open(config_path, 'r') as file:
         data = json.load(file)
 
     earnings_companies = read_earnings_release(earnings_path)
     gainers, losers = read_gainers_losers(gainers_losers_path)
+
+    with open(description_path, 'r') as file:
+        description_data = json.load(file)
+
+    # 构建symbol到tag的映射
+    symbol_to_tags = {}
+    for item in description_data.get("stocks", []) + description_data.get("etfs", []):
+        symbol_to_tags[item["symbol"]] = item.get("tag", [])
 
     output = []
 
@@ -151,7 +159,11 @@ def compare_today_yesterday(config_path, blacklist, interested_sectors, db_path,
                 elif consecutive_rise == 3:
                     company += '.++'
                 
-                file.write(f"{sector:<25}{company:<15}: {percentage_change:>6.2f}%    {percentage_volume_change:>6.2f}%\n")
+                # 获取对应symbol的tags
+                tags = symbol_to_tags.get(original_company, [])
+                tags_str = ', '.join(f'{tag}' for tag in tags)
+                
+                file.write(f"{sector:<25}{company:<15}: {percentage_change:>6.2f}%  {tags_str}\n")
         print(f"{output_path} 已生成。")
     else:
         log_error_with_timestamp("输出为空，无法进行保存文件操作。", error_file_path)
@@ -177,6 +189,7 @@ def clean_old_backups(directory, prefix="CompareStock_", days=4):
 
 if __name__ == '__main__':
     config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
+    description_path = '/Users/yanzhang/Documents/Financial_System/Modules/Description.json'
     blacklist = ['VFS','KVYO','LU','IEP','LOT','GRFS','BGNE']
     interested_sectors = ["Basic_Materials", "Communication_Services", "Consumer_Cyclical",
                           "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare", "Industrials",
@@ -197,7 +210,7 @@ if __name__ == '__main__':
     else:
         print("文件不存在")
     
-    compare_today_yesterday(config_path, blacklist, interested_sectors,
+    compare_today_yesterday(config_path, description_path, blacklist, interested_sectors,
                             '/Users/yanzhang/Documents/Database/Finance.db',
                             '/Users/yanzhang/Documents/News/Earnings_Release_new.txt',
                             '/Users/yanzhang/Documents/Financial_System/Modules/Gainer_Loser.json',
