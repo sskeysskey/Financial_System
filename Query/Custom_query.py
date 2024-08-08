@@ -113,7 +113,7 @@ if __name__ == '__main__':
         # 'include_condition': True},
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Consumer_Cyclical',
-        #     'condition': "name = 'GME'", 'fields': '*',
+        #     'condition': "name = 'VVV'", 'fields': '*',
         # 'include_condition': True},
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Consumer_Defensive',
@@ -121,7 +121,7 @@ if __name__ == '__main__':
         # 'include_condition': True},
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Energy',
-        #     'condition': "name = 'TS'", 'fields': '*',
+        #     'condition': "name = 'VVV'", 'fields': '*',
         # 'include_condition': True},
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Financial_Services',

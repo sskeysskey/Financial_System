@@ -866,7 +866,6 @@
     "SM",
     "UGP",
     "TDW",
-    "VVV",
     "CSAN",
     "VAL",
     "NFG",
@@ -1218,7 +1217,8 @@
     "LNTH",
     "RNA",
     "CRSP",
-    "TMDX"
+    "TMDX",
+    "INSP"
   ],
   "Industrials": [
     "GE",
