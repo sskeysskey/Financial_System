@@ -1,79 +1,37 @@
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from datetime import datetime, timedelta
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-import sqlite3
-import logging
+import json
+import re
 
-# 设置日志
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+def extract_and_remove_chinese_characters(text):
+    # 使用正则表达式提取中文字符
+    chinese_characters = re.findall(r'[\u4e00-\u9fff]+', text)
+    # 检查name是否只有中文字符
+    if ''.join(chinese_characters) == text.strip():
+        return [], text  # 如果是，则不移动
+    # 否则，从原始文本中去除中文字符及其左边的空格
+    for char in chinese_characters:
+        text = re.sub(r'\s*' + char, '', text)
+    return chinese_characters, text
 
-# ChromeDriver 路径
-CHROME_DRIVER_PATH = "/Users/yanzhang/Downloads/backup/chromedriver"
-DB_PATH = '/Users/yanzhang/Documents/Database/Finance.db'
+def process_json_file(file_path):
+    # 读取JSON文件
+    with open(file_path, 'r', encoding='utf-8') as file:
+        data = json.load(file)
 
-def setup_driver():
-    service = Service(executable_path=CHROME_DRIVER_PATH)
-    return webdriver.Chrome(service=service)
+    # 遍历stocks中的每个项目
+    for stock in data['stocks']:
+        original_name = stock['name']
+        # 提取并移除name中的中文字符
+        chinese_tags, new_name = extract_and_remove_chinese_characters(original_name)
+        # 如果有中文字符且不是仅有中文字符，插入到tag列表的开头
+        if chinese_tags:
+            stock['tag'] = chinese_tags + stock['tag']
+        # 更新name为去除中文字符后的字符串
+        stock['name'] = new_name
 
-def setup_database():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Commodities (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        date TEXT,
-        name TEXT,
-        price REAL,
-        UNIQUE(date, name)
-    );
-    ''')
-    conn.commit()
-    return conn, cursor
+    # 输出修改后的JSON数据
+    with open(file_path, 'w', encoding='utf-8') as file:
+        json.dump(data, file, ensure_ascii=False, indent=2)
 
-def fetch_commodity_data(driver, commodity_name, xpath='./ancestor::tr'):
-    element = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.LINK_TEXT, commodity_name))
-    )
-    row = element.find_element(By.XPATH, xpath)
-    price_str = row.find_element(By.ID, 'p').text.strip()
-    return float(price_str.replace(',', ''))
-
-def main():
-    now = datetime.now()
-    if now.weekday() in (0, 6):
-        logging.info("Today is either Sunday or Monday. The script will not run.")
-        return
-
-    driver = setup_driver()
-    conn, cursor = setup_database()
-
-    try:
-        yesterday = (now - timedelta(days=1)).strftime('%Y-%m-%d')
-        all_data = []
-
-        # US commodity data
-        driver.get('https://tradingeconomics.com/commodity/baltic')
-        us_commodities = ["Baltic Dry"]
-        for us_commodity in us_commodities:
-            try:
-                price = fetch_commodity_data(driver, us_commodity)
-                all_data.append((yesterday, us_commodity.replace(" ", ""), price))
-            except Exception as e:
-                logging.error(f"Failed to retrieve data for {us_commodity}: {e}")
-
-        cursor.executemany('INSERT OR REPLACE INTO Commodities (date, name, price) VALUES (?, ?, ?)', all_data)
-        conn.commit()
-        logging.info(f"Total {len(all_data)} records have been inserted into the database.")
-
-    except Exception as e:
-        logging.error(f"An error occurred: {e}")
-        conn.rollback()
-    finally:
-        driver.quit()
-        conn.close()
-
-if __name__ == "__main__":
-    main()
+# 指定文件路径
+file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Description.json'
+process_json_file(file_path)

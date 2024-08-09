@@ -473,7 +473,11 @@
     "CORN",
     "WEAT",
     "DBA",
-    "CANE"
+    "CANE",
+    "PPA",
+    "DSI",
+    "RWL",
+    "COM"
   ],
   "Basic_Materials": [
     "LIN",

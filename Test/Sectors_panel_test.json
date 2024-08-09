@@ -1,0 +1,71 @@
+{
+    "My_Order": {
+        "CRWD": ""
+    },
+    "Basic_Materials": {
+        "MOS": "美盛化肥"
+    },
+    "Communication_Services": {
+        "ROKU": "",
+        "NTES": ""
+    },
+    "Consumer_Cyclical": {
+        "LULU": ""
+    },
+    "Energy": {
+        "PBF": "石油精炼",
+        "BP": ""
+    },
+    "Real_Estate": {},
+    "Technology": {
+        "U": "Unity",
+        "GTLB": ""
+    },
+    "Utilities": {},
+    "Consumer_Defensive": {
+        "MNST": ""
+    },
+    "Industrials": {
+        "BA": "波音"
+    },
+    "Financial_Services": {
+        "LPLA": "金融顾问",
+        "SOFI": ""
+    },
+    "Healthcare": {
+        "CVS": "",
+        "DXCM": "德康血糖"
+    },
+    "Crypto": {
+        "Bitcoin": ""
+    },
+    "Indices": {
+        "VIX": "恐慌指数",
+        "Brazil": ""
+    },
+    "Bonds": {
+        "US2Y": "",
+        "IND10Y": ""
+    },
+    "Commodities": {
+        "CrudeOil": "",
+        "LiveCattle": "牛肉"
+    },
+    "ETFs_Oversea": {
+        "CQQQ": "中国科技",
+        "TUR": "土耳其"
+    },
+    "ETFs_Commodity": {
+        "URA": "铀矿核能"
+    },
+    "Currencies": {
+        "DXY": "美元指数",
+        "EURUSD": ""
+    },
+    "Economics": {
+        "USInitial": "25初请失业"
+    },
+    "ETFs_US": {
+        "SPTI": "中期国债"
+    }
+}

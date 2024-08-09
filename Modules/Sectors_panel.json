@@ -20,7 +20,7 @@
         "ULTA": "美容零售",
         "LKQ": "汽车部件",
         "STLA": "",
-        "HMC": "本田汽车"
+        "ABNB": ""
     },
     "Energy": {
         "PBF": "石油精炼",
@@ -34,20 +34,22 @@
         "U": "Unity",
         "SNOW": "",
         "TEAM": "云协作",
-        "DT": "云监控",
         "STM": "意法",
         "LSCC": "FPGA",
         "INTC": "",
         "RMBS": "",
         "JBL": "",
-        "PATH": "UiPath"
+        "PATH": "UiPath",
+        "LYFT": "",
+        "QLYS": "云安全"
     },
     "Utilities": {},
     "Consumer_Defensive": {
         "DEO": "尊尼获加",
         "BF-B": "杰克丹尼",
         "EL": "雅诗兰黛",
-        "LW": "冷冻土豆"
+        "LW": "冷冻土豆",
+        "MNST": ""
     },
     "Industrials": {
         "UPS": "联合包裹",
@@ -57,11 +59,13 @@
         "SYM": "仓储机器",
         "ATKR": "电气管道",
         "ROK": "工业信息",
-        "DLB": "杜比"
+        "DLB": "杜比",
+        "BA": "波音"
     },
     "Financial_Services": {
         "SIGI": "保险公司",
-        "LPLA": "金融顾问"
+        "LPLA": "金融顾问",
+        "SOFI": ""
     },
     "Healthcare": {
         "CVS": "",
@@ -143,9 +147,8 @@
         "EURUSD": ""
     },
     "Economics": {
-        "USInitial": "25初请失业",
-        "CorePCEY": "26核心PCE年",
-        "CorePCEM": "26核心PCE月"
+        "USTrade": "06USTrade",
+        "USInitial": "08USInitial"
     },
     "ETFs_US": {
         "SPTI": "中期国债",

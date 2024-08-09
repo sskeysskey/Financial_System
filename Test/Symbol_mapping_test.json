@@ -1,0 +1,9 @@
+{
+    "CC=F": "Cocoa",
+    "^KS11": "Korea",
+    "Initial Jobless Clm*": "USInitial",
+    "International Trade $ *": "USTrade",
+    "Non-Farm Payrolls*": "USNonFarm",
+    "Unemployment Rate*": "USUnemploy",
+    "Retail Sales MM *": "USRetailM"
+}

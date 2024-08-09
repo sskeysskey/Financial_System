@@ -49,6 +49,11 @@ def load_compare_data(compare_file):
     return compare_data
 
 def save_data(urls, existing_json, new_file, today_file, diff_file, compare_file):
+    # 首先访问Yahoo Finance主页
+    driver.get("https://finance.yahoo.com/etfs/")
+    # 等待2秒
+    time.sleep(2)
+    
     # 读取a.json文件中的etfs的symbol字段
     with open(existing_json, 'r') as json_file:
         data = json.load(json_file)
@@ -63,7 +68,7 @@ def save_data(urls, existing_json, new_file, today_file, diff_file, compare_file
     for url in urls:
         data_list = fetch_data(url)
         for symbol, name, volume in data_list:
-            if volume > 1500000:
+            if volume > 200000:
                 total_data_list.append(f"{symbol}: {name}, {volume}")
                 if symbol not in existing_symbols:
                     filter_data_list.append(f"{symbol}: {name}, {volume}")
@@ -163,8 +168,7 @@ urls = [
     "https://finance.yahoo.com/etfs/?offset=0&count=100",
     "https://finance.yahoo.com/etfs/?count=100&offset=100",
     "https://finance.yahoo.com/etfs/?count=100&offset=200",
-    "https://finance.yahoo.com/etfs/?count=100&offset=300",
-    "https://finance.yahoo.com/etfs/?count=100&offset=400"
+    "https://finance.yahoo.com/etfs/?count=100&offset=300"
 ]
 existing_json = '/Users/yanzhang/Documents/Financial_System/Modules/Description.json'
 today_file = '/Users/yanzhang/Documents/News/site/ETFs_today.txt'

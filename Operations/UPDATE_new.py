@@ -5,7 +5,7 @@ conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
 cursor = conn.cursor()
 
 # 执行拆股操作 I
-# name = 'AVGO'
+# name = 'MSTR'
 # price_divisor = 10
 # cursor.execute("UPDATE Technology SET price = price / ? WHERE name = ?", (price_divisor, name))
 
@@ -21,9 +21,11 @@ cursor = conn.cursor()
 
 # 更新价格字段
 # cursor.execute("UPDATE Commodities SET price = 1677.0 WHERE id = 101175")
+cursor.execute("UPDATE Technology SET price = 124.68 WHERE id = 832165")
 
 # 保留两位小数
 # cursor.execute("UPDATE Economics SET price = ROUND(price, 2) WHERE name = 'USInitial'")
+# cursor.execute("UPDATE Technology SET price = ROUND(price, 2) WHERE name = 'MSTR'")
 
 # 将所有name为'Russian'的记录改为'Russia'
 # cursor.execute("UPDATE Economics SET name = 'USNonFarm' WHERE name = 'USPayroll'")
