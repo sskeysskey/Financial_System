@@ -183,7 +183,7 @@ def main():
     root.mainloop()
 
     if success_flag[0]:
-        applescript_code = 'display dialog "股票已成功写入！" buttons {"OK"} default button "OK"'
+        applescript_code = 'display dialog "ETF信息已成功写入！" buttons {"OK"} default button "OK"'
         process = subprocess.run(['osascript', '-e', applescript_code], check=True)
     else:
         applescript_code = 'display dialog "操作已取消，未进行任何写入。" buttons {"OK"} default button "OK"'

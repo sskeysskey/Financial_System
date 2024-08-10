@@ -121,7 +121,7 @@ def compare_today_yesterday(config_path, description_path, blacklist, interested
                 tags = symbol_to_tags.get(original_company, [])
                 tags_str = ', '.join(f'{tag}' for tag in tags)
                 
-                file.write(f"{company:<10}: {percentage_change:>6.2f}%    {percentage_volume_change:>6.2f}%  {tags_str}\n")
+                file.write(f"{company:<10}: {percentage_change:>6.2f}%   {latest_volume:<10} {percentage_volume_change:>7.2f}%   {tags_str}\n")
         print(f"{output_path} 已生成。")
     else:
         log_error_with_timestamp("输出为空，无法进行保存文件操作。", error_file_path)

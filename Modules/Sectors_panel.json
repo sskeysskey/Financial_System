@@ -7,7 +7,8 @@
         "ALB": "雅宝",
         "VALE": "淡水河谷",
         "BHP": "必和必拓",
-        "PPG": "涂料"
+        "PPG": "涂料",
+        "CLF": "铁矿石"
     },
     "Communication_Services": {
         "ROKU": "",
@@ -151,8 +152,7 @@
         "USInitial": "08USInitial"
     },
     "ETFs_US": {
-        "SPTI": "中期国债",
-        "SCHD": "高股息",
+        "EDV": "长期国债",
         "FXY": "多日空美",
         "XLK": "科技",
         "IYH": "医疗",
