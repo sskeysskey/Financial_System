@@ -1,37 +1,62 @@
 import json
 import re
+import os
+import pyperclip
 
-def extract_and_remove_chinese_characters(text):
-    # 使用正则表达式提取中文字符
-    chinese_characters = re.findall(r'[\u4e00-\u9fff]+', text)
-    # 检查name是否只有中文字符
-    if ''.join(chinese_characters) == text.strip():
-        return [], text  # 如果是，则不移动
-    # 否则，从原始文本中去除中文字符及其左边的空格
-    for char in chinese_characters:
-        text = re.sub(r'\s*' + char, '', text)
-    return chinese_characters, text
+# 读取JSON文件
+with open('/Users/yanzhang/Documents/Financial_System/Modules/Description.json', 'r') as file:
+    data = json.load(file)
 
-def process_json_file(file_path):
-    # 读取JSON文件
-    with open(file_path, 'r', encoding='utf-8') as file:
-        data = json.load(file)
+def find_tags_by_symbol(symbol, data):
+    # 遍历stocks和etfs，找到匹配的symbol并返回其tags
+    for category in ['stocks', 'etfs']:
+        for item in data[category]:
+            if item['symbol'] == symbol:
+                return item['tag']
+    return []
 
-    # 遍历stocks中的每个项目
-    for stock in data['stocks']:
-        original_name = stock['name']
-        # 提取并移除name中的中文字符
-        chinese_tags, new_name = extract_and_remove_chinese_characters(original_name)
-        # 如果有中文字符且不是仅有中文字符，插入到tag列表的开头
-        if chinese_tags:
-            stock['tag'] = chinese_tags + stock['tag']
-        # 更新name为去除中文字符后的字符串
-        stock['name'] = new_name
+def find_symbols_by_tags(target_tags, data):
+    related_symbols = {}
+    # 遍历stocks和etfs，找到所有与目标tags模糊匹配的symbol
+    for category in ['stocks', 'etfs']:
+        for item in data[category]:
+            tags = item.get('tag', [])
+            # 对每个tag进行正则表达式匹配
+            for t_tag in target_tags:
+                pattern = re.compile(re.escape(t_tag), re.IGNORECASE)  # 创建模糊匹配的正则表达式模式
+                if any(pattern.search(tag) for tag in tags):
+                    related_symbols[item['symbol']] = tags  # 将symbol和其tags一起存储
+    return related_symbols
 
-    # 输出修改后的JSON数据
-    with open(file_path, 'w', encoding='utf-8') as file:
-        json.dump(data, file, ensure_ascii=False, indent=2)
+def main(symbol):
+    # 找到给定symbol的tags
+    target_tags = find_tags_by_symbol(symbol, data)
+    output_lines = [f"Tags for {symbol}: {target_tags}\n"]
 
-# 指定文件路径
-file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Description.json'
-process_json_file(file_path)
+    if not target_tags:
+        output_lines.append("No tags found for the given symbol.\n")
+    else:
+        # 找到所有与这些tags模糊匹配的symbols和tags
+        related_symbols = find_symbols_by_tags(target_tags, data)
+    
+        # 移除原始symbol以避免自引用
+        if symbol in related_symbols:
+            del related_symbols[symbol]
+        
+        output_lines.append(f"Related symbols for tags {target_tags}:\n")
+        for sym, tags in related_symbols.items():
+            output_lines.append(f"{sym}: {tags}\n")
+
+    # 写入文件
+    output_path = '/Users/yanzhang/Documents/News/similar.txt'
+    with open(output_path, 'w') as file:
+        file.writelines(output_lines)
+
+    # 自动打开文件
+    os.system(f'open "{output_path}"')
+
+# 从剪贴板获取输入
+clipboard_content = pyperclip.paste().strip()
+
+# 使用剪贴板内容作为输入
+main(clipboard_content)

@@ -166,9 +166,9 @@ def main():
                     continue  # 如果是月份，我们不处理
                 if 'Y' in year_part:
                     years = int(year_part.replace('Y', ''))
-                    if symbol in earnings_symbols:
-                        category_list = 'red_keywords'
-                    elif years == 1:
+                    # if symbol in earnings_symbols:
+                    #     category_list = 'red_keywords'
+                    if years == 1:
                         category_list = 'white_keywords'
                     elif years == 2:
                         category_list = 'yellow_keywords'
@@ -211,7 +211,6 @@ def main():
         red_keywords_to_check = list(colors.get('red_keywords', []))
         for symbol in red_keywords_to_check:
             if not symbol.startswith(("US", "Core")) and symbol not in earnings_symbols:
-                colors['red_keywords'].remove(symbol)
                 # 检查是否在今天的newlow中
                 found = False
                 for line in final_output1.split('\n'):
@@ -236,12 +235,9 @@ def main():
                             colors[category_list] = [symbol]
                         found = True
                         break
-                # 如果不在今天的newlow中，默认分配到white_keywords组
+                # 如果不在今天的newlow中，将其移除
                 if not found:
-                    if 'white_keywords' in colors:
-                        colors['white_keywords'].append(symbol)
-                    else:
-                        colors['white_keywords'] = [symbol]
+                    colors['red_keywords'].remove(symbol)
 
         for symbol in earnings_symbols:
             if 'red_keywords' not in colors:

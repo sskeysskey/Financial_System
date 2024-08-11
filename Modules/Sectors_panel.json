@@ -148,8 +148,8 @@
         "EURUSD": ""
     },
     "Economics": {
-        "USTrade": "06USTrade",
-        "USInitial": "08USInitial"
+        "USInitial": "15USInitial",
+        "USRetailM": "15USRetailM"
     },
     "ETFs_US": {
         "EDV": "长期国债",

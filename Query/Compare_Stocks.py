@@ -190,7 +190,7 @@ def clean_old_backups(directory, prefix="CompareStock_", days=4):
 if __name__ == '__main__':
     config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
     description_path = '/Users/yanzhang/Documents/Financial_System/Modules/Description.json'
-    blacklist = ['VFS','KVYO','LU','IEP','LOT','GRFS','BGNE']
+    blacklist = []
     interested_sectors = ["Basic_Materials", "Communication_Services", "Consumer_Cyclical",
                           "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare", "Industrials",
                           "Real_Estate", "Technology", "Utilities"]
