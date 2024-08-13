@@ -61,5 +61,6 @@
     "International Trade $ *": "USTrade",
     "Non-Farm Payrolls*": "USNonFarm",
     "Unemployment Rate*": "USUnemploy",
-    "Retail Sales MM *": "USRetailM"
+    "Retail Sales MM *": "USRetailM",
+    "PPI Final Demand YY*": "USPPI"
 }

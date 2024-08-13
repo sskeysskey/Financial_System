@@ -21,7 +21,8 @@
         "ULTA": "美容零售",
         "LKQ": "汽车部件",
         "STLA": "",
-        "ABNB": ""
+        "ABNB": "",
+        "W": "家居装饰"
     },
     "Energy": {
         "PBF": "石油精炼",
@@ -50,7 +51,8 @@
         "BF-B": "杰克丹尼",
         "EL": "雅诗兰黛",
         "LW": "冷冻土豆",
-        "MNST": ""
+        "MNST": "",
+        "ACI": ""
     },
     "Industrials": {
         "UPS": "联合包裹",
@@ -61,7 +63,8 @@
         "ATKR": "电气管道",
         "ROK": "工业信息",
         "DLB": "杜比",
-        "BA": "波音"
+        "BA": "波音",
+        "GTLS": "低温物流"
     },
     "Financial_Services": {
         "SIGI": "保险公司",
@@ -148,8 +151,9 @@
         "EURUSD": ""
     },
     "Economics": {
-        "USInitial": "15USInitial",
-        "USRetailM": "15USRetailM"
+        "USInitial": "15 USInitial",
+        "USRetailM": "15 USRetailM",
+        "USPPI": "13 USPPI"
     },
     "ETFs_US": {
         "EDV": "长期国债",

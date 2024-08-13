@@ -274,7 +274,7 @@ def main():
         "TS", "WDS", "HAL", "EC", "CIVI", "GFS", "ALGM", "NTR", "SQM",
         "MT", "APTV", "WYNN", "KVUE", "AGCO", "LTM", "BEN", "PUK", "XP",
         "WBA", "AMX", "SW", "CTRA", "CSCO", "NIO", "BSY", "SNAP", "XPEV",
-        "CNP", "COTY", "GTLB"
+        "CNP", "COTY", "GTLB", "WMG"
         ]
 
         config_json = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json"

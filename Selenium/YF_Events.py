@@ -31,7 +31,7 @@ driver = webdriver.Chrome(service=service)
 current_date = datetime.now()
 # 计算离当前最近的周天
 start_date = current_date + timedelta(days=(6 - current_date.weekday()))
-# 计算离当前最近的周六
+# 计算往后延6天的周六
 end_date = start_date + timedelta(days=6)
 
 Event_Filter = {

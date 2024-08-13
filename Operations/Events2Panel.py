@@ -28,7 +28,7 @@ for event in events:
     # 在symbol_mapping中查找匹配
     if description in symbol_mapping:
         economics_key = symbol_mapping[description]
-        combined_value = f"{day_field}{economics_key}"
+        combined_value = f"{day_field} {economics_key}"
 
         # 更新sectors_panel中的Economics分组
         sectors_panel['Economics'][economics_key] = combined_value

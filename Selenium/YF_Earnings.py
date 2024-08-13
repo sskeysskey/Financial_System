@@ -1,4 +1,5 @@
 import os
+import sqlite3
 from selenium import webdriver
 from datetime import datetime, timedelta
 from selenium.webdriver.common.by import By
@@ -16,7 +17,7 @@ file_path = '/Users/yanzhang/Documents/News/Earnings_Release_new.txt'
 if os.path.exists(file_path):
     # 弹窗通知用户
     applescript_code = 'display dialog "Earnings_Release_new文件已存在，请先处理后再执行。" buttons {"OK"} default button "OK"'
-    process = subprocess.run(['osascript', '-e', applescript_code], check=True)
+    subprocess.run(['osascript', '-e', applescript_code], check=True)
     
     # 退出程序
     exit()
@@ -50,8 +51,13 @@ for key, symbols in color_data.items():
 current_date = datetime.now()
 # 计算离当前最近的周天
 start_date = current_date + timedelta(days=(6 - current_date.weekday()))
-# 计算离当前最近的周六
+# 计算往后延6天的周六
 end_date = start_date + timedelta(days=6)
+
+# 初始化数据库连接
+db_path = '/Users/yanzhang/Documents/Database/Finance.db'
+conn = sqlite3.connect(db_path)
+cursor = conn.cursor()
 
 # 初始化结果文件，使用追加模式
 with open(file_path, 'a') as output_file:
@@ -87,14 +93,22 @@ with open(file_path, 'a') as output_file:
                     if "Earnings Release" in event_name or "Shareholders Meeting" in event_name:
                         for category, symbols in data.items():
                             if symbol in symbols:
+                                # 查询数据库获取交易量
+                                cursor.execute(f"SELECT volume FROM {category} WHERE name = ? ORDER BY date DESC LIMIT 1", (symbol,))
+                                volume_row = cursor.fetchone()
+                                volume = volume_row[0] if volume_row else "No volume data"
+                                
                                 # 检查颜色关键词
                                 if symbol in color_keys:
                                     symbol += ":L"
-                                entry = f"{symbol:<7}: {formatted_change_date} - {call_time}"
+                                entry = f"{symbol:<7}: {volume:<10} {formatted_change_date} - {call_time}"
                                 output_file.write(entry + "\n")
                                 
                 offset += 100  # 为下一个子页面增加 offset
         change_date += delta  # 日期增加一天
+
+# 关闭数据库连接
+conn.close()
 
 # 关闭浏览器
 driver.quit()

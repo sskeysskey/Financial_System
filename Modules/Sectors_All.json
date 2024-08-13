@@ -469,7 +469,8 @@
     "PPA",
     "DSI",
     "RWL",
-    "COM"
+    "COM",
+    "ILCG"
   ],
   "Basic_Materials": [
     "LIN",

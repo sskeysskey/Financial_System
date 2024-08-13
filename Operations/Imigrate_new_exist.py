@@ -45,9 +45,9 @@ def backup_diff_file(diff_file, backup_dir):
 
 if 1 <= current_day <= 5:  # 周二到周六
     process_file(new_files['ETFs'], files['ETFs'])
-elif current_day == 6:  # 周日
-    process_file(new_files['Earnings_Release'], files['Earnings_Release'])
-    process_file(new_files['Economic_Events'], files['Economic_Events'])
+    if current_day == 4:  # 周五
+        process_file(new_files['Earnings_Release'], files['Earnings_Release'])
+        process_file(new_files['Economic_Events'], files['Economic_Events'])
 
 # 备份 diff 文件
 backup_diff_file(diff_file, backup_dir)
