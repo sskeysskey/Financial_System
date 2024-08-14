@@ -29,7 +29,8 @@
         "EQT": "天然气",
         "PBR": "巴西石油",
         "MUR": "",
-        "BP": ""
+        "BP": "",
+        "NE": ""
     },
     "Real_Estate": {},
     "Technology": {
@@ -42,17 +43,17 @@
         "RMBS": "",
         "JBL": "",
         "PATH": "UiPath",
-        "LYFT": "",
         "QLYS": "云安全"
     },
     "Utilities": {},
     "Consumer_Defensive": {
+        "DAR": "宠物食品",
         "DEO": "尊尼获加",
         "BF-B": "杰克丹尼",
         "EL": "雅诗兰黛",
         "LW": "冷冻土豆",
         "MNST": "",
-        "ACI": ""
+        "ACI": "美国超市"
     },
     "Industrials": {
         "UPS": "联合包裹",
@@ -153,7 +154,9 @@
     "Economics": {
         "USInitial": "15 USInitial",
         "USRetailM": "15 USRetailM",
-        "USPPI": "13 USPPI"
+        "USPPI": "13 USPPI",
+        "USCPI": "14 USCPI",
+        "CoreCPI": "14 CoreCPI"
     },
     "ETFs_US": {
         "EDV": "长期国债",

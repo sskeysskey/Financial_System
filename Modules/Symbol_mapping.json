@@ -62,5 +62,7 @@
     "Non-Farm Payrolls*": "USNonFarm",
     "Unemployment Rate*": "USUnemploy",
     "Retail Sales MM *": "USRetailM",
-    "PPI Final Demand YY*": "USPPI"
+    "PPI Final Demand YY*": "USPPI",
+    "CPI YY, NSA*": "USCPI",
+    "Core CPI YY, NSA*": "CoreCPI"
 }

@@ -1,62 +1,49 @@
 import json
-import re
-import os
-import pyperclip
 
-# 读取JSON文件
-with open('/Users/yanzhang/Documents/Financial_System/Modules/Description.json', 'r') as file:
-    data = json.load(file)
+def parse_earnings_release(file_path):
+    """解析Earnings Release文件，提取symbol"""
+    symbols = set()
+    try:
+        with open(file_path, 'r') as file:
+            for line in file:
+                symbol = line.split(':')[0].strip()
+                symbols.add(symbol)
+    except FileNotFoundError:
+        print(f"文件未找到: {file_path}")
+    except Exception as e:
+        print(f"读取文件时发生错误: {e}")
+    return symbols
 
-def find_tags_by_symbol(symbol, data):
-    # 遍历stocks和etfs，找到匹配的symbol并返回其tags
-    for category in ['stocks', 'etfs']:
-        for item in data[category]:
-            if item['symbol'] == symbol:
-                return item['tag']
-    return []
+earnings_release_path = '/Users/yanzhang/Documents/News/Earnings_Release_new.txt'
+color_json_path = '/Users/yanzhang/Documents/Financial_System/Modules/Colors.json'
+earnings_symbols = parse_earnings_release(earnings_release_path)
 
-def find_symbols_by_tags(target_tags, data):
-    related_symbols = {}
-    # 遍历stocks和etfs，找到所有与目标tags模糊匹配的symbol
-    for category in ['stocks', 'etfs']:
-        for item in data[category]:
-            tags = item.get('tag', [])
-            # 对每个tag进行正则表达式匹配
-            for t_tag in target_tags:
-                pattern = re.compile(re.escape(t_tag), re.IGNORECASE)  # 创建模糊匹配的正则表达式模式
-                if any(pattern.search(tag) for tag in tags):
-                    related_symbols[item['symbol']] = tags  # 将symbol和其tags一起存储
-    return related_symbols
+try:
+    with open(color_json_path, 'r', encoding='utf-8') as file:
+        colors = json.load(file)
+except FileNotFoundError:
+    print(f"文件未找到: {color_json_path}")
+    colors = {}
+except json.JSONDecodeError:
+    print(f"JSON解析错误: {color_json_path}")
+    colors = {}
+except Exception as e:
+    print(f"读取文件时发生错误: {e}")
+    colors = {}
 
-def main(symbol):
-    # 找到给定symbol的tags
-    target_tags = find_tags_by_symbol(symbol, data)
-    output_lines = [f"Tags for {symbol}: {target_tags}\n"]
+if 'red_keywords' in colors:
+    colors['red_keywords'] = [symbol for symbol in colors['red_keywords']
+                              if symbol.startswith(("US", "Core")) or symbol in earnings_symbols]
 
-    if not target_tags:
-        output_lines.append("No tags found for the given symbol.\n")
-    else:
-        # 找到所有与这些tags模糊匹配的symbols和tags
-        related_symbols = find_symbols_by_tags(target_tags, data)
-    
-        # 移除原始symbol以避免自引用
-        if symbol in related_symbols:
-            del related_symbols[symbol]
-        
-        output_lines.append(f"Related symbols for tags {target_tags}:\n")
-        for sym, tags in related_symbols.items():
-            output_lines.append(f"{sym}: {tags}\n")
+else:
+    colors['red_keywords'] = []
 
-    # 写入文件
-    output_path = '/Users/yanzhang/Documents/News/similar.txt'
-    with open(output_path, 'w') as file:
-        file.writelines(output_lines)
+for symbol in earnings_symbols:
+    if symbol not in colors['red_keywords']:
+        colors['red_keywords'].append(symbol)
 
-    # 自动打开文件
-    os.system(f'open "{output_path}"')
-
-# 从剪贴板获取输入
-clipboard_content = pyperclip.paste().strip()
-
-# 使用剪贴板内容作为输入
-main(clipboard_content)
+try:
+    with open(color_json_path, 'w', encoding='utf-8') as file:
+        json.dump(colors, file, ensure_ascii=False, indent=4)
+except Exception as e:
+    print(f"写入文件时发生错误: {e}")

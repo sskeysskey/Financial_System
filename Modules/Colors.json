@@ -1,32 +1,25 @@
 {
     "red_keywords": [
         "USInitial",
-        "CorePCEY",
-        "CorePCEM",
         "USGDP",
         "USNonFarm",
-        "USInflation",
+        "USCPI",
         "USInterest",
         "USTrade",
         "USConfidence",
         "USRetailM",
         "USUnemploy",
         "USPPI",
-        "USM",
+        "CorePCEY",
+        "CorePCEM",
+        "CoreCPI",
         "PHI",
-        "ET",
-        "G",
-        "BN",
         "PSLV",
         "LI",
         "PGR",
         "JHX",
         "DDS",
         "IBRX",
-        "O",
-        "Z",
-        "H",
-        "USFD",
         "UBS",
         "BABA",
         "EC",
@@ -67,7 +60,8 @@
         "AMCR",
         "BEKE",
         "GLBE",
-        "TME"
+        "TME",
+        "ICL"
     ],
     "white_keywords": [
         "BHP",
@@ -145,7 +139,8 @@
         "DLB",
         "W",
         "GTLS",
-        "TNET"
+        "TNET",
+        "NE"
     ],
     "yellow_keywords": [
         "CNYJPY",
@@ -221,7 +216,8 @@
         "PAYC",
         "BF-B",
         "BIO",
-        "EL"
+        "EL",
+        "CSAN"
     ],
     "purple_keywords": [
         "Bitcoin",

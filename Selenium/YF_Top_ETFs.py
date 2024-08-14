@@ -111,7 +111,7 @@ def save_data(urls, existing_json, new_file, today_file, diff_file, compare_file
             if symbol not in existing_symbols_today:
                 percentage = compare_data.get(symbol, "")
                 if percentage:
-                    line = f"{symbol} {percentage}: {line.split(':', 1)[1]}"
+                    line = f"{symbol:<7} {percentage:<10}: {line.split(':', 1)[1]}"
                 diff_data_list.append(line)
 
         with open(diff_file, "w") as file:

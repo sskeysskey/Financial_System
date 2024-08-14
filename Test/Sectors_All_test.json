@@ -1,0 +1,25 @@
+{
+  "Bonds": [
+    "US10Y",
+    "UK10Y"
+  ],
+  "Commodities": [
+    "IOSP",
+    "TUR10Y",
+    "EA"
+  ],
+  "Economics": [
+    "SPTI",
+    "PICK",
+    "LIT",
+    "URA"
+  ],
+  "Energy": [
+    "EAS",
+    "Gold",
+    "TU"
+  ],
+  "Technology": [
+    "WBD"
+  ]
+}

@@ -67,7 +67,7 @@ with webdriver.Chrome(service=service) as driver:
     Economics1 = {
         "GDP Growth Rate": "USGDP",
         "Non Farm Payrolls": "USNonFarm",
-        "Inflation Rate": "USInflation",
+        "Inflation Rate": "USCPI",
         "Interest Rate": "USInterest",
         "Balance of Trade": "USTrade",
         "Consumer Confidence": "USConfidence",
@@ -80,6 +80,7 @@ with webdriver.Chrome(service=service) as driver:
     Economics3 = {
         "Core PCE Price Index Annual Change": "CorePCEY",
         "Core PCE Price Index MoM": "CorePCEM",
+        "Core Inflation Rate": "CoreCPI",
         "Producer Prices Change": "USPPI"
     }
     data_to_insert = []

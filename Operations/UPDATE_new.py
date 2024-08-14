@@ -21,14 +21,14 @@ cursor = conn.cursor()
 
 # 更新价格字段
 # cursor.execute("UPDATE Commodities SET price = 1677.0 WHERE id = 101175")
-cursor.execute("UPDATE Economics SET price = 2.7 WHERE id = 250")
+# cursor.execute("UPDATE Economics SET price = 2.7 WHERE id = 250")
 
 # 保留两位小数
 # cursor.execute("UPDATE Economics SET price = ROUND(price, 2) WHERE name = 'USInitial'")
 # cursor.execute("UPDATE Technology SET price = ROUND(price, 2) WHERE name = 'MSTR'")
 
 # 将所有name为'Russian'的记录改为'Russia'
-# cursor.execute("UPDATE Economics SET name = 'USNonFarm' WHERE name = 'USPayroll'")
+# cursor.execute("UPDATE Economics SET name = 'USCPI' WHERE name = 'USInflation'")
 
 # 更新数据库表中所有记录的price字段，保留2位小数
 # cursor.execute("UPDATE Indices SET price = ROUND(price, 2)")

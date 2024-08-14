@@ -18,6 +18,11 @@ def log_error_with_timestamp(error_message):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
     return f"[{timestamp}] {error_message}\n"
 
+def load_blacklist_newlow(file_path):
+    with open(file_path, 'r', encoding='utf-8') as file:
+        data = json.load(file)
+        return data.get("blacklist_newlow", [])
+
 def get_price_comparison(cursor, table_name, interval, name, validate):
     today = datetime.now()
     ex_validate = validate - timedelta(days=1)
@@ -48,20 +53,11 @@ def get_latest_price_and_date(cursor, table_name, name):
     cursor.execute(query, (name,))
     return cursor.fetchone()
 
-def parse_earnings_release(file_path):
-    """解析Earnings Release文件，提取symbol"""
-    symbols = set()
-    with open(file_path, 'r') as file:
-        for line in file:
-            symbol = line.split(':')[0].strip()
-            symbols.add(symbol)
-    return symbols
-
 def main():    
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
-    earnings_release_path = '/Users/yanzhang/Documents/News/Earnings_Release_new.txt'
-    earnings_symbols = parse_earnings_release(earnings_release_path)
-
+    blacklist_path = '/Users/yanzhang/Documents/Financial_System/Modules/blacklist.json'
+    blacklist_newlow = load_blacklist_newlow(blacklist_path)
+    
     with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as file:
         data = json.load(file)
 
@@ -166,8 +162,6 @@ def main():
                     continue  # 如果是月份，我们不处理
                 if 'Y' in year_part:
                     years = int(year_part.replace('Y', ''))
-                    # if symbol in earnings_symbols:
-                    #     category_list = 'red_keywords'
                     if years == 1:
                         category_list = 'white_keywords'
                     elif years == 2:
@@ -184,66 +178,11 @@ def main():
                             updates_color[category_list].append(symbol)
                     else:
                         updates_color[category_list] = [symbol]
-
         return updates_color
     
     def update_color_json(color_config_path, updates_colors, blacklist_newlow):
         with open(color_config_path, 'r', encoding='utf-8') as file:
             colors = json.load(file)
-
-        # 检查所有颜色组中的符号
-        # for color_group in list(colors.keys()):
-        #     symbols_to_remove = []
-        #     for symbol in colors[color_group]:
-        #         if symbol in earnings_symbols:
-        #             if color_group != 'red_keywords':
-        #                 symbols_to_remove.append(symbol)
-        #                 if 'red_keywords' not in colors:
-        #                     colors['red_keywords'] = []
-        #                 if symbol not in colors['red_keywords']:
-        #                     colors['red_keywords'].append(symbol)
-            
-        #     # 从当前颜色组中移除符号
-        #     for symbol in symbols_to_remove:
-        #         colors[color_group].remove(symbol)
-
-        # 检查并移除不在earnings_release_new.txt中的red_keywords（但保留以US开头的symbol）
-        red_keywords_to_check = list(colors.get('red_keywords', []))
-        for symbol in red_keywords_to_check:
-            if not symbol.startswith(("US", "Core")) and symbol not in earnings_symbols:
-                # 检查是否在今天的newlow中
-                found = False
-                for line in final_output1.split('\n'):
-                    if symbol in line:
-                        parts = line.split()
-                        descriptor = parts[2]
-                        year_part, _ = descriptor.split('_')
-                        years = int(year_part.replace('Y', ''))
-                        if years == 1:
-                            category_list = 'white_keywords'
-                        elif years == 2:
-                            category_list = 'yellow_keywords'
-                        elif years == 5:
-                            category_list = 'orange_keywords'
-                        elif years == 10:
-                            category_list = 'black_keywords'
-                        else:
-                            category_list = 'white_keywords'
-                        if category_list in colors:
-                            colors[category_list].append(symbol)
-                        else:
-                            colors[category_list] = [symbol]
-                        found = True
-                        break
-                # 如果不在今天的newlow中，将其移除
-                if not found:
-                    colors['red_keywords'].remove(symbol)
-
-        for symbol in earnings_symbols:
-            if 'red_keywords' not in colors:
-                colors['red_keywords'] = []
-            if symbol not in colors['red_keywords']:
-                colors['red_keywords'].append(symbol)
 
         for category_list, names in updates_colors.items():
             for name in names:
@@ -262,20 +201,6 @@ def main():
     if final_output1.strip():  # 检查final_output1是否为空
         updates = parse_output(final_output1)
         updates_color = parse_output_color(final_output1)
-        # 黑名单列表
-        blacklist_newlow = ["SIRI", "BBD", "BILL", "TAP", "STVN", "LSXMK",
-        "TAK", "CSAN", "CIG", "LBTYK", "ABEV",
-        "TD", "DAY", "RHI", "OTEX", "ZI", "APA", "LU", "FIVE", "ORAN",
-        "MGA", "MTN", "NGG", "NFE", "DBX", "ELP", "YUMC", "EBR", "LI",
-        "CMCSA", "WBD", "MAT", "ZK", "BEN", "GGB", "BIDU", "PARA", "LVS",
-        "ETSY", "GXO", "ZM", "CAE", "PKX", "TU", "XRAY", "ESLT", "VIPS",
-        "ALAB", "LEA", "RCI", "ICL", "AS", "BCE", "RPRX", "VIV",
-        "TIMB", "JAZZ", "DLTR", "HTHT", "ALTM", "TX", "CCCS", "MNSO",
-        "TS", "WDS", "HAL", "EC", "CIVI", "GFS", "ALGM", "NTR", "SQM",
-        "MT", "APTV", "WYNN", "KVUE", "AGCO", "LTM", "BEN", "PUK", "XP",
-        "WBA", "AMX", "SW", "CTRA", "CSCO", "NIO", "BSY", "SNAP", "XPEV",
-        "CNP", "COTY", "GTLB", "WMG"
-        ]
 
         config_json = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json"
         update_json_data(config_json, updates, blacklist_newlow)
