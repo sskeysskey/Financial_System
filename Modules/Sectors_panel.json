@@ -18,7 +18,7 @@
         "LULU": "",
         "NKE": "Nike",
         "MBLY": "",
-        "ULTA": "美容零售",
+        "ULTA": "美妆购物",
         "LKQ": "汽车部件",
         "STLA": "",
         "ABNB": "",
@@ -152,11 +152,11 @@
         "EURUSD": ""
     },
     "Economics": {
-        "USInitial": "15 USInitial",
-        "USRetailM": "15 USRetailM",
         "USPPI": "13 USPPI",
         "USCPI": "14 USCPI",
-        "CoreCPI": "14 CoreCPI"
+        "CoreCPI": "14 CoreCPI",
+        "USInitial": "15 USInitial",
+        "USRetailM": "15 USRetailM"
     },
     "ETFs_US": {
         "EDV": "长期国债",

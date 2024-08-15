@@ -37,7 +37,7 @@ crypto_names = {
 
 try:
     # 访问网页
-    driver.get('https://finance.yahoo.com/crypto/')
+    driver.get('https://finance.yahoo.com/markets/crypto/all/')
     all_data = []
     # 获取当前时间
     now = datetime.now()
@@ -46,15 +46,17 @@ try:
     # 格式化输出
     today = yesterday.strftime('%Y-%m-%d')
 
-    # 查找所有含有特定aria-label="Name"的<td>元素
-    names = driver.find_elements(By.XPATH, '//td[@aria-label="Symbol"]')
-
-    for name in names:
-        crypto_symbol = name.text
+    # 查找所有包含加密货币信息的<tr>元素
+    rows = driver.find_elements(By.XPATH, '//tbody[@class="body yf-42jv6g"]/tr')
+    
+    for row in rows:
+        # 获取加密货币的Symbol
+        symbol_element = row.find_element(By.XPATH, './/span[@class="symbol yf-ravs5v"]')
+        crypto_symbol = symbol_element.text.strip()
         if crypto_symbol in crypto_names:
-            # 查找相邻的价格
-            price_element = name.find_element(By.XPATH, './following-sibling::td[@aria-label="Price (Intraday)"]/fin-streamer')
-            price = price_element.get_attribute('value')
+            # 获取加密货币的价格，并去掉逗号
+            price_element = row.find_element(By.XPATH, './/fin-streamer[@data-field="regularMarketPrice"]')
+            price = price_element.get_attribute('data-value').replace(',', '')
             full_name = crypto_names[crypto_symbol]
             all_data.append((today, full_name, price))
     

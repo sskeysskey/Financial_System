@@ -419,7 +419,9 @@
     "RWL",
     "COM",
     "ILCG",
-    "ICF"
+    "ICF",
+    "SPXL",
+    "SPXS"
   ],
   "Basic_Materials": [
     "LIN",

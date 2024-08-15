@@ -270,17 +270,27 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             '1': lambda: radio.set_active(7),
             '2': lambda: radio.set_active(1),
             '3': lambda: radio.set_active(3),
-            '4': lambda: radio.set_active(2),
-            '5': lambda: radio.set_active(4),
-            '6': lambda: radio.set_active(5),
-            '7': lambda: radio.set_active(6),
-            '8': lambda: radio.set_active(0),
-            '9': lambda: radio.set_active(8),
+            '4': lambda: radio.set_active(4),
+            '5': lambda: radio.set_active(5),
+            '6': lambda: radio.set_active(6),
+            '7': lambda: radio.set_active(8),
+            '8': lambda: radio.set_active(2),
+            '9': lambda: radio.set_active(0),
             '`': show_stock_etf_info
         }
-        action = actions.get(event.key)
-        if action:
-            action()
+        if event.key in actions:
+            actions[event.key]()
+
+        # 获取当前选中的索引
+        current_index = list(time_options.keys()).index(radio.value_selected)
+
+        # 处理方向键
+        if event.key == 'up' and current_index > 0:
+            # 上键：向更长时间范围移动，但不超过3个月
+            radio.set_active(current_index - 1)
+        elif event.key == 'down' and current_index < len(time_options) - 1:
+            # 下键：向更短时间范围移动，但不超过All
+            radio.set_active(current_index + 1)
 
     def close_everything(event, panel):
         if event.key == 'escape':

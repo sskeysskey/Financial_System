@@ -12,13 +12,13 @@ db_path = '/Users/yanzhang/Documents/Database/Finance.db'
 
 stock_config = [
     # {'table': 'Indices', 'name': 'NASDAQ'},
-    # {'table': 'Indices', 'name': 'S&P500'},
+    {'table': 'Indices', 'name': 'S&P500'},
     # {'table': 'Technology', 'name': 'NVDA'},
     # {'table': 'Technology', 'name': 'AMD'},
     # {'table': 'Technology', 'name': 'INTC'},
-    {'table': 'ETFs', 'name': 'TLT'},
+    {'table': 'ETFs', 'name': 'SPXL'},
     # {'table': 'Currencies', 'name': 'DXY'},
-    {'table': 'Bonds', 'name': 'US10Y'},
+    # {'table': 'Bonds', 'name': 'US10Y'},
     # {'table': 'Economics', 'name': 'USInterest'},
 ]
 
