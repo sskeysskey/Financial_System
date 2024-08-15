@@ -19,20 +19,20 @@ def fetch_data(url):
     data_list = []
 
     # 找到所有的数据行
-    rows = driver.find_elements(By.CSS_SELECTOR, 'tr.simpTblRow')
+    rows = driver.find_elements(By.CSS_SELECTOR, 'tr.row.false.yf-42jv6g')
     
     for row in rows:
         # 在当前行中提取Symbol
-        symbol_element = row.find_element(By.CSS_SELECTOR, 'a[data-test="quoteLink"]')
+        symbol_element = row.find_element(By.CSS_SELECTOR, 'span.symbol.yf-ravs5v')
         symbol = symbol_element.text.strip()
         
         # 在当前行中提取Name
-        name_element = row.find_element(By.CSS_SELECTOR, 'td[aria-label="Name"]')
+        name_element = row.find_element(By.CSS_SELECTOR, 'span.yf-ravs5v.longName')
         name = name_element.text.strip()
 
         # 在当前行中提取Volume，并移除逗号以转换为整数
         volume_element = row.find_element(By.CSS_SELECTOR, 'fin-streamer[data-field="regularMarketVolume"]')
-        volume = int(volume_element.get_attribute('value').replace(',', ''))
+        volume = int(volume_element.get_attribute('data-value').replace(',', ''))
 
         data_list.append((symbol, name, volume))
     
@@ -50,7 +50,7 @@ def load_compare_data(compare_file):
 
 def save_data(urls, existing_json, new_file, today_file, diff_file, compare_file):
     # 首先访问Yahoo Finance主页
-    driver.get("https://finance.yahoo.com/etfs/")
+    driver.get("https://finance.yahoo.com/markets/etfs/top/")
     # 等待2秒
     time.sleep(2)
     
@@ -111,7 +111,7 @@ def save_data(urls, existing_json, new_file, today_file, diff_file, compare_file
             if symbol not in existing_symbols_today:
                 percentage = compare_data.get(symbol, "")
                 if percentage:
-                    line = f"{symbol:<7} {percentage:<10}: {line.split(':', 1)[1]}"
+                    line = f"{symbol:<7} {percentage if percentage else '':<10}: {line.split(':', 1)[1]}"
                 diff_data_list.append(line)
 
         with open(diff_file, "w") as file:
@@ -165,10 +165,10 @@ backup_diff_file(diff_file, backup_dir)
 
 # URL列表
 urls = [
-    "https://finance.yahoo.com/etfs/?offset=0&count=100",
-    "https://finance.yahoo.com/etfs/?count=100&offset=100",
-    "https://finance.yahoo.com/etfs/?count=100&offset=200",
-    "https://finance.yahoo.com/etfs/?count=100&offset=300"
+    "https://finance.yahoo.com/markets/etfs/top/?start=0&count=100",
+    "https://finance.yahoo.com/markets/etfs/top/?start=100&count=100",
+    "https://finance.yahoo.com/markets/etfs/top/?start=200&count=100",
+    "https://finance.yahoo.com/markets/etfs/top/?start=300&count=100"
 ]
 existing_json = '/Users/yanzhang/Documents/Financial_System/Modules/Description.json'
 today_file = '/Users/yanzhang/Documents/News/site/ETFs_today.txt'
