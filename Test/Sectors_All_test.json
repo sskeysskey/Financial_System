@@ -3,23 +3,36 @@
     "US10Y",
     "UK10Y"
   ],
+  "Currencies": [],
+  "Crypto": [],
+  "Indices": [],
   "Commodities": [
     "IOSP",
     "TUR10Y",
     "EA"
   ],
+  "ETFs": [],
   "Economics": [
     "SPTI",
     "PICK",
     "LIT",
     "URA"
   ],
+  "Basic_Materials": [],
+  "Communication_Services": [],
+  "Consumer_Cyclical": [],
+  "Consumer_Defensive": [],
   "Energy": [
     "EAS",
     "Gold",
     "TU"
   ],
+  "Financial_Services": [],
+  "Healthcare": [],
+  "Industrials": [],
+  "Real_Estate": [],
   "Technology": [
     "WBD"
-  ]
+  ],
+  "Utilities": []
 }

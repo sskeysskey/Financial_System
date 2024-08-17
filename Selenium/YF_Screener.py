@@ -55,6 +55,7 @@ def fetch_data(driver, url):
             continue
         
         symbol_xpath = f'//fin-streamer[@data-symbol="{symbol}"]'
+        name_xpath = f'{symbol_xpath}/ancestor::tr/td[@aria-label="Name"]'
         market_cap_xpath = f'{symbol_xpath}[@data-field="marketCap"]'
         pe_ratio_xpath = f'{symbol_xpath}/ancestor::tr/td[@aria-label="PE Ratio (TTM)"]'
         
@@ -71,6 +72,7 @@ def fetch_data(driver, url):
         except ValueError:
             print(f"Invalid market cap data for symbol {symbol}")
             continue
+        
         try:
             pe_ratio_element = driver.find_element(By.XPATH, pe_ratio_xpath)
             pe_ratio = pe_ratio_element.text.strip()
@@ -83,7 +85,13 @@ def fetch_data(driver, url):
         except ValueError:
             pe_ratio = '--'
 
-        results.append((symbol, market_cap, pe_ratio))
+        try:
+            name_element = driver.find_element(By.XPATH, name_xpath)
+            name = name_element.text.strip()
+        except NoSuchElementException:
+            name = '--'
+
+        results.append((symbol, market_cap, pe_ratio, name))
         
     # 将结果写入到 txt 文件
     with open('/Users/yanzhang/Documents/News/backup/marketcap_pe.txt', 'a') as file:  # 修改 'w' 为 'a'
@@ -102,8 +110,9 @@ def update_json(data, sector, file_path, output, log_enabled):
             for symbol in json_data[sec]:
                 current_sectors[symbol] = sec
 
-        # 处理每个传入的symbol数据
-        for symbol, market_cap, pe_ratio in data:
+        new_symbols = []  # 用于存储新添加的符号和名称
+
+        for symbol, market_cap, pe_ratio, name in data:
             current_sector = current_sectors.get(symbol)
             
             # 检查市值是否小于50亿，如果是，则可能需要移除
@@ -118,6 +127,7 @@ def update_json(data, sector, file_path, output, log_enabled):
                 # 市值大于等于50亿，需要加入到对应的sector中
                 if symbol not in json_data[sector]:
                     json_data[sector].append(symbol)
+                    new_symbols.append((symbol, name))  # 添加新的符号和名称
                     if log_enabled:
                         message = f"Added '{symbol}' to {sector} due to a new rising star."
                         print(message)
@@ -127,6 +137,13 @@ def update_json(data, sector, file_path, output, log_enabled):
         file.seek(0)
         file.truncate()
         json.dump(json_data, file, indent=2)
+
+    if new_symbols:
+        with open('/Users/yanzhang/Documents/News/backup/symbol_names.txt', 'a') as symbol_file:
+            # 写入一个换行符，以确保新内容从新的一行开始
+            symbol_file.write('\n')
+            for symbol, name in new_symbols:
+                symbol_file.write(f"{symbol}: {name}")
 
 def process_sector(driver, url, sector, output):
     data = fetch_data(driver, url)

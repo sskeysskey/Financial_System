@@ -1,49 +1,42 @@
 import json
+from collections import Counter
 
-def parse_earnings_release(file_path):
-    """解析Earnings Release文件，提取symbol"""
-    symbols = set()
-    try:
-        with open(file_path, 'r') as file:
-            for line in file:
-                symbol = line.split(':')[0].strip()
-                symbols.add(symbol)
-    except FileNotFoundError:
-        print(f"文件未找到: {file_path}")
-    except Exception as e:
-        print(f"读取文件时发生错误: {e}")
-    return symbols
+# 指定你的JSON文件路径
+json_file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Description.json'
 
-earnings_release_path = '/Users/yanzhang/Documents/News/Earnings_Release_new.txt'
-color_json_path = '/Users/yanzhang/Documents/Financial_System/Modules/Colors.json'
-earnings_symbols = parse_earnings_release(earnings_release_path)
+# 读取并解析JSON文件
+with open(json_file_path, 'r', encoding='utf-8') as file:
+    data = json.load(file)
 
-try:
-    with open(color_json_path, 'r', encoding='utf-8') as file:
-        colors = json.load(file)
-except FileNotFoundError:
-    print(f"文件未找到: {color_json_path}")
-    colors = {}
-except json.JSONDecodeError:
-    print(f"JSON解析错误: {color_json_path}")
-    colors = {}
-except Exception as e:
-    print(f"读取文件时发生错误: {e}")
-    colors = {}
+# 检查每个组中的symbol是否有重复
+def check_duplicates(group_data, group_name):
+    symbols = [item['symbol'] for item in group_data]
+    symbol_counts = Counter(symbols)
+    duplicates = [symbol for symbol, count in symbol_counts.items() if count > 1]
+    
+    if duplicates:
+        print(f"{group_name} 组中有重复的 symbol: {', '.join(duplicates)}")
+    else:
+        print(f"{group_name} 组中没有重复的 symbol。")
 
-if 'red_keywords' in colors:
-    colors['red_keywords'] = [symbol for symbol in colors['red_keywords']
-                              if symbol.startswith(("US", "Core")) or symbol in earnings_symbols]
+# 检查 stocks 组
+check_duplicates(data['stocks'], 'stocks')
 
-else:
-    colors['red_keywords'] = []
+# 检查 etfs 组
+check_duplicates(data['etfs'], 'etfs')
 
-for symbol in earnings_symbols:
-    if symbol not in colors['red_keywords']:
-        colors['red_keywords'].append(symbol)
+# 检查 stocks 和 etfs 组之间的重复
+def check_cross_group_duplicates(stocks_data, etfs_data):
+    stocks_symbols = set(item['symbol'] for item in stocks_data)
+    etfs_symbols = set(item['symbol'] for item in etfs_data)
+    
+    # 获取两个集合的交集，即重复的symbol
+    common_symbols = stocks_symbols & etfs_symbols
+    
+    if common_symbols:
+        print(f"stocks 和 etfs 组之间有重复的 symbol: {', '.join(common_symbols)}")
+    else:
+        print("stocks 和 etfs 组之间没有重复的 symbol。")
 
-try:
-    with open(color_json_path, 'w', encoding='utf-8') as file:
-        json.dump(colors, file, ensure_ascii=False, indent=4)
-except Exception as e:
-    print(f"写入文件时发生错误: {e}")
+# 检查两个组之间的重复
+check_cross_group_duplicates(data['stocks'], data['etfs'])

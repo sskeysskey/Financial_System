@@ -774,7 +774,8 @@
     "VVV",
     "ABG",
     "SW",
-    "HOG"
+    "HOG",
+    "SKY"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -1125,7 +1126,8 @@
     "FUTU",
     "ESGR",
     "PJT",
-    "DNB"
+    "DNB",
+    "TRU"
   ],
   "Healthcare": [
     "LLY",
@@ -1351,7 +1353,6 @@
     "NDSN",
     "MAS",
     "OC",
-    "TRU",
     "SNA",
     "POOL",
     "GGG",

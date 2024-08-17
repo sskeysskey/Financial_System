@@ -94,7 +94,14 @@ def compare_today_yesterday(config_path, description_path, blacklist, interested
                                 if prices[2][1] > prices[3][1]:
                                     consecutive_rise = 3
 
-                            output.append((f"{table_name} {name}", percentage_change, latest_volume, percentage_volume_change, consecutive_rise))
+                            # 检查连续下跌
+                            consecutive_fall = 0
+                            if prices[0][1] < prices[1][1] and prices[1][1] < prices[2][1]:
+                                consecutive_fall = 2
+                                if prices[2][1] < prices[3][1]:
+                                    consecutive_fall = 3
+
+                            output.append((f"{table_name} {name}", percentage_change, latest_volume, percentage_volume_change, consecutive_rise, consecutive_fall))
                         else:
                             raise ValueError(f"无法比较 {table_name} 下的 {name}，因为缺少必要的数据。")
                     except Exception as e:
@@ -105,7 +112,7 @@ def compare_today_yesterday(config_path, description_path, blacklist, interested
         with open(output_path, 'w') as file:
             for line in output:
                 sector, company = line[0].rsplit(' ', 1)
-                percentage_change, latest_volume, percentage_volume_change, consecutive_rise = line[1], line[2], line[3], line[4]
+                percentage_change, latest_volume, percentage_volume_change, consecutive_rise, consecutive_fall = line[1], line[2], line[3], line[4], line[5]
                 
                 original_company = company  # 保留原始公司名称
                 if latest_volume > 3000000:
@@ -116,6 +123,12 @@ def compare_today_yesterday(config_path, description_path, blacklist, interested
                     company += '.+'
                 elif consecutive_rise == 3:
                     company += '.++'
+
+                # 添加连续下跌标记
+                if consecutive_fall == 2:
+                    company += '.-'
+                elif consecutive_fall == 3:
+                    company += '.--'
                 
                 # 获取对应symbol的tags
                 tags = symbol_to_tags.get(original_company, [])

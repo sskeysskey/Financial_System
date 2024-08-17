@@ -3,6 +3,7 @@ import sqlite3
 import json
 import shutil  # 在文件最开始导入shutil模块
 import re
+import os
 
 def copy_database_to_backup():
     source_path = '/Users/yanzhang/Documents/Database/Finance.db'
@@ -17,12 +18,19 @@ def log_error_with_timestamp(error_message):
     return f"[{timestamp}] {error_message}\n"
 
 def read_latest_date_info(gainer_loser_path):
+    if not os.path.exists(gainer_loser_path):
+        return {"gainer": [], "loser": []}
+
     with open(gainer_loser_path, 'r') as f:
         data = json.load(f)
     latest_date = max(data.keys())
     return data[latest_date]
 
-def read_earnings_release(filepath):
+def read_earnings_release(filepath, error_file_path):
+    if not os.path.exists(filepath):
+        log_error_with_timestamp(f"文件 {filepath} 不存在。", error_file_path)
+        return {}
+
     earnings_companies = {}
     pattern_single_colon = re.compile(r'(\w+)\s*:\s*(\d{4}-\d{2}-(\d{2}))')
     pattern_double_colon = re.compile(r'(\w+)\s*:\s*\w+\s*:\s*(\d{4}-\d{2}-(\d{2}))')
@@ -41,11 +49,15 @@ def read_earnings_release(filepath):
                 earnings_companies[company] = day
     return earnings_companies
 
-def compare_today_yesterday(config_path, output_file, gainer_loser_path, earning_file):
+def compare_today_yesterday(config_path, output_file, gainer_loser_path, earning_file, error_file_path):
     latest_info = read_latest_date_info(gainer_loser_path)
     gainers = latest_info.get("gainer", [])
     losers = latest_info.get("loser", [])
-    earnings_data = read_earnings_release(earning_file)
+    earnings_data = read_earnings_release(earning_file, error_file_path)
+
+    if not os.path.exists(config_path):
+        log_error_with_timestamp(f"文件 {config_path} 不存在。", error_file_path)
+        return
 
     with open(config_path, 'r') as f:
         config = json.load(f)
@@ -88,6 +100,7 @@ def compare_today_yesterday(config_path, output_file, gainer_loser_path, earning
 
                         # 检查是否连续两天或三天上涨
                         consecutive_rise = 0
+                        consecutive_fall = 0
                         if keyword in config.get(table_name, {}):
                             query_four_days = f"""
                             SELECT date, price FROM {table_name} 
@@ -101,11 +114,22 @@ def compare_today_yesterday(config_path, output_file, gainer_loser_path, earning
                                     consecutive_rise = 2
                                     if four_day_results[2][1] > four_day_results[3][1]:
                                         consecutive_rise = 3
-                            
+                                # 检查连续下跌
+                                elif (four_day_results[0][1] < four_day_results[1][1] and
+                                      four_day_results[1][1] < four_day_results[2][1]):
+                                    consecutive_fall = 2
+                                    if four_day_results[2][1] < four_day_results[3][1]:
+                                        consecutive_fall = 3
+
                             if consecutive_rise == 2:
                                 change_text += "+"
                             elif consecutive_rise == 3:
                                 change_text += "++"
+                            
+                            if consecutive_fall == 2:
+                                change_text += "-"
+                            elif consecutive_fall == 3:
+                                change_text += "--"
 
                         if keyword in gainers:
                             if keyword in earnings_data:
@@ -126,7 +150,7 @@ def compare_today_yesterday(config_path, output_file, gainer_loser_path, earning
                         raise Exception(f"错误：无法比较{table_name}下的{keyword}，因为缺少必要的数据。")
             except Exception as e:
                 formatted_error_message = log_error_with_timestamp(str(e))
-                with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                with open(error_file_path, 'a') as error_file:
                     error_file.write(formatted_error_message)
 
     with open(output_file, 'w') as file:
@@ -138,6 +162,11 @@ if __name__ == '__main__':
     output_file = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
     gainer_loser_path = '/Users/yanzhang/Documents/Financial_System/Modules/Gainer_Loser.json'
     earning_file = '/Users/yanzhang/Documents/News/Earnings_Release_new.txt'
-    compare_today_yesterday(config_path, output_file, gainer_loser_path, earning_file)
+    error_file_path = '/Users/yanzhang/Documents/News/Today_error.txt'
+
+    # 运行主逻辑
+    compare_today_yesterday(config_path, output_file, gainer_loser_path, earning_file, error_file_path)
     print(f"{output_file} 已生成。")
+
+    # 备份数据库
     copy_database_to_backup()

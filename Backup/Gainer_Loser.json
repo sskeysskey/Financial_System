@@ -1,0 +1,303 @@
+{
+    "2024-07-16": {
+        "gainer": [
+            "PCTY"
+        ],
+        "loser": []
+    },
+    "2024-07-13": {
+        "gainer": [
+            "JBHT"
+        ],
+        "loser": [
+            "WFC"
+        ]
+    },
+    "2024-07-11": {
+        "gainer": [],
+        "loser": [
+            "DECK"
+        ]
+    },
+    "2024-07-10": {
+        "gainer": [
+            "RVMD"
+        ],
+        "loser": []
+    },
+    "2024-07-09": {
+        "gainer": [
+            "BAX"
+        ],
+        "loser": [
+            "RL",
+            "CMG"
+        ]
+    },
+    "2024-07-06": {
+        "gainer": [
+            "BAX"
+        ],
+        "loser": [
+            "SNX",
+            "TPX"
+        ]
+    },
+    "2024-07-04": {
+        "gainer": [
+            "FSLR"
+        ],
+        "loser": [
+            "GILD"
+        ]
+    },
+    "2024-06-29": {
+        "gainer": [],
+        "loser": [
+            "ICL"
+        ]
+    },
+    "2024-06-28": {
+        "gainer": [
+            "WY",
+            "MKC",
+            "DLTR"
+        ],
+        "loser": [
+            "MOS",
+            "AS",
+            "S",
+            "GPN",
+            "ELAN"
+        ]
+    },
+    "2024-06-27": {
+        "gainer": [
+            "WST",
+            "BMY",
+            "GPN",
+            "WHR",
+            "X",
+            "ALGN"
+        ],
+        "loser": [
+            "VFC",
+            "APTV",
+            "DLTR",
+            "BNTX",
+            "PEN",
+            "CSCO",
+            "FDX",
+            "MBLY",
+            "SQM",
+            "CRS",
+            "L",
+            "CART",
+            "GIS",
+            "PAYX",
+            "MRNA",
+            "BIRK"
+        ]
+    },
+    "2024-06-26": {
+        "gainer": [
+            "CMG",
+            "NU",
+            "CART",
+            "NFE"
+        ],
+        "loser": [
+            "ALB",
+            "ALTM",
+            "MOS",
+            "VALE",
+            "ROKU",
+            "LEA",
+            "LULU",
+            "MTN",
+            "DEO",
+            "DAR",
+            "KVUE",
+            "MKTX",
+            "SIGI",
+            "BEN",
+            "CVS",
+            "TAP",
+            "WBA",
+            "GMAB",
+            "UPS",
+            "AGCO",
+            "JBHT",
+            "GPN",
+            "APA",
+            "PAYC",
+            "U",
+            "CSCO",
+            "SNOW",
+            "LOW",
+            "FBIN"
+        ]
+    },
+    "2024-06-25": {
+        "gainer": [
+            "EDU",
+            "U",
+            "RRC",
+            "DVN",
+            "SNY",
+            "WFRD",
+            "NFE",
+            "NXT"
+        ],
+        "loser": [
+            "IONS",
+            "RIVN",
+            "TAL",
+            "CHWY",
+            "MOS",
+            "VRN",
+            "BKR",
+            "APA",
+            "SFM",
+            "EQT",
+            "CHX",
+            "M",
+            "CTRA",
+            "OXY",
+            "MTDR",
+            "COKE",
+            "FANG",
+            "SM",
+            "KVUE",
+            "UPS",
+            "BBIO",
+            "RMD",
+            "SMCI",
+            "SIRI",
+            "DKNG",
+            "ZI",
+            "AVGO",
+            "Z"
+        ]
+    },
+    "2024-06-22": {
+        "gainer": [
+            "IBRX",
+            "RYAN",
+            "DBX",
+            "ALNY",
+            "PATH",
+            "RGEN",
+            "MAT",
+            "HUBS",
+            "FDS",
+            "FMC",
+            "MOS",
+            "LULU",
+            "TAP",
+            "BEN",
+            "CVS",
+            "WBA",
+            "JNJ",
+            "BMY",
+            "JBHT",
+            "GPN",
+            "PAYC",
+            "CSCO",
+            "DT",
+            "JNPR",
+            "GIS"
+        ],
+        "loser": [
+            "GTLS",
+            "BILI",
+            "ACN",
+            "TREX",
+            "MTN",
+            "DEO",
+            "ACI",
+            "KVUE",
+            "MKTX",
+            "SIGI",
+            "BNTX",
+            "SOLV",
+            "UPS",
+            "APA",
+            "SNX",
+            "AVAV",
+            "JEF"
+        ]
+    },
+    "2024-06-21": {
+        "gainer": [
+            "AMKR",
+            "WBA",
+            "CHWY",
+            "AAPL",
+            "AVAV",
+            "GLOB",
+            "GILD",
+            "ACN",
+            "AMD",
+            "CPAY",
+            "CMC",
+            "FCX",
+            "NU"
+        ],
+        "loser": [
+            "ALTM",
+            "ELF",
+            "BALL",
+            "DRS",
+            "VRT",
+            "TOST"
+        ]
+    },
+    "2024-06-20": {
+        "gainer": [
+            "CHWY",
+            "ITCI",
+            "AMKR",
+            "ARM",
+            "WBA",
+            "DELL",
+            "U"
+        ],
+        "loser": [
+            "ELF",
+            "VRT",
+            "DRS",
+            "IOT",
+            "BALL",
+            "MBLY",
+            "WST",
+            "COIN",
+            "AYI",
+            "EL",
+            "ARW",
+            "ALTM",
+            "SOLV",
+            "CSCO",
+            "DT",
+            "PCTY",
+            "CCCS"
+        ]
+    },
+    "2024-06-18": {
+        "gainer": [
+            "SNOW"
+        ],
+        "loser": [
+            "CPNG",
+            "BNTX",
+            "ICL",
+            "LPX",
+            "DY",
+            "ITRI",
+            "ALB",
+            "CSAN",
+            "BBWI",
+            "BMY"
+        ]
+    }
+}

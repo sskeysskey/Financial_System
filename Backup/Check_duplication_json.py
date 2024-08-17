@@ -20,5 +20,5 @@ def check_duplicates(file_path):
         print("没有重复的symbol。")
 
 # 使用你的文件路径
-file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Colors.json'
+file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json'
 check_duplicates(file_path)

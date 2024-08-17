@@ -133,7 +133,7 @@ if __name__ == '__main__':
         # 'include_condition': True},
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Industrials',
-        #     'condition': "name = 'GNRC'", 'fields': '*',
+        #     'condition': "name = 'TRU'", 'fields': '*',
         # 'include_condition': True},
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Real_Estate',
