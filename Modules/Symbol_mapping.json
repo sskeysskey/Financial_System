@@ -64,5 +64,6 @@
     "Retail Sales MM *": "USRetailM",
     "PPI Final Demand YY*": "USPPI",
     "CPI YY, NSA*": "USCPI",
-    "Core CPI YY, NSA*": "CoreCPI"
+    "Core CPI YY, NSA*": "CoreCPI",
+    "U Mich Sentiment Prelim": "USConfidence"
 }
