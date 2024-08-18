@@ -101,7 +101,7 @@ with open(file_path, 'a') as output_file:
                                 # 检查颜色关键词
                                 if symbol in color_keys:
                                     symbol += ":L"
-                                entry = f"{symbol:<7}: {volume:<10} {formatted_change_date} - {call_time}"
+                                entry = f"{symbol:<7}: {volume:<10}: {formatted_change_date} - {call_time}"
                                 output_file.write(entry + "\n")
                                 
                 offset += 100  # 为下一个子页面增加 offset

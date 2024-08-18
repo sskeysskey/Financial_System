@@ -24,7 +24,7 @@ def read_latest_date_info(gainer_loser_path):
     with open(gainer_loser_path, 'r') as f:
         data = json.load(f)
     latest_date = max(data.keys())
-    return data[latest_date]
+    return latest_date, data[latest_date]
 
 def read_earnings_release(filepath, error_file_path):
     if not os.path.exists(filepath):
@@ -32,28 +32,37 @@ def read_earnings_release(filepath, error_file_path):
         return {}
 
     earnings_companies = {}
-    pattern_single_colon = re.compile(r'(\w+)\s*:\s*(\d{4}-\d{2}-(\d{2}))')
-    pattern_double_colon = re.compile(r'(\w+)\s*:\s*\w+\s*:\s*(\d{4}-\d{2}-(\d{2}))')
-    
+
+    # 修改后的正则表达式
+    pattern_double_colon = re.compile(r'(\w+)\s*:\s*\d+\s*:\s*\d{4}-\d{2}-(\d{2})')
+    pattern_triple_colon = re.compile(r'(\w+)\s*:\s*\w+\s*:\s*\d+\s*:\s*\d{4}-\d{2}-(\d{2})')
+
     with open(filepath, 'r') as file:
         for line in file:
+            match_triple = pattern_triple_colon.search(line)
             match_double = pattern_double_colon.search(line)
-            match_single = pattern_single_colon.search(line)
-            if match_double:
+            if match_triple:
+                company = match_triple.group(1).strip()
+                day = match_triple.group(2)
+                earnings_companies[company] = day
+            elif match_double:
                 company = match_double.group(1).strip()
-                day = match_double.group(3)
+                day = match_double.group(2)
                 earnings_companies[company] = day
-            elif match_single:
-                company = match_single.group(1).strip()
-                day = match_single.group(3)
-                earnings_companies[company] = day
+
     return earnings_companies
 
 def compare_today_yesterday(config_path, output_file, gainer_loser_path, earning_file, error_file_path):
-    latest_info = read_latest_date_info(gainer_loser_path)
+    latest_date, latest_info = read_latest_date_info(gainer_loser_path)
     gainers = latest_info.get("gainer", [])
     losers = latest_info.get("loser", [])
     earnings_data = read_earnings_release(earning_file, error_file_path)
+
+    # 检查 gainer_loser.json 中的日期是否为今天或昨天
+    today = datetime.now().date()
+    yesterday = today - timedelta(days=1)
+    latest_date = datetime.strptime(latest_date, "%Y-%m-%d").date()
+    is_recent = latest_date in (today, yesterday)
 
     if not os.path.exists(config_path):
         log_error_with_timestamp(f"文件 {config_path} 不存在。", error_file_path)
@@ -131,12 +140,12 @@ def compare_today_yesterday(config_path, output_file, gainer_loser_path, earning
                             elif consecutive_fall == 3:
                                 change_text += "--"
 
-                        if keyword in gainers:
+                        if is_recent and keyword in gainers:
                             if keyword in earnings_data:
                                 output.append(f"{keyword}: {earnings_data[keyword]}财{change_text}涨")
                             else:
                                 output.append(f"{keyword}: {change_text}涨")
-                        elif keyword in losers:
+                        elif is_recent and keyword in losers:
                             if keyword in earnings_data:
                                 output.append(f"{keyword}: {earnings_data[keyword]}财{change_text}跌")
                             else:

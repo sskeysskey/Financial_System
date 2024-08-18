@@ -12,24 +12,30 @@ def log_error_with_timestamp(error_message, error_file_path):
     with open(error_file_path, 'a') as error_file:
         error_file.write(f"[{timestamp}] {error_message}\n")
 
-def read_earnings_release(filepath):
+def read_earnings_release(filepath, error_file_path):
+    if not os.path.exists(filepath):
+        log_error_with_timestamp(f"文件 {filepath} 不存在。", error_file_path)
+        return {}
+
     earnings_companies = {}
-    pattern_single_colon = re.compile(r'(\w+)\s*:\s*(\d{4}-\d{2}-(\d{2}))')
-    pattern_double_colon = re.compile(r'(\w+)\s*:\s*\w+\s*:\s*(\d{4}-\d{2}-(\d{2}))')
-    
+
+    # 修改后的正则表达式
+    pattern_double_colon = re.compile(r'(\w+)\s*:\s*\d+\s*:\s*\d{4}-\d{2}-(\d{2})')
+    pattern_triple_colon = re.compile(r'(\w+)\s*:\s*\w+\s*:\s*\d+\s*:\s*\d{4}-\d{2}-(\d{2})')
+
     with open(filepath, 'r') as file:
         for line in file:
+            match_triple = pattern_triple_colon.search(line)
             match_double = pattern_double_colon.search(line)
-            match_single = pattern_single_colon.search(line)
-            if match_double:
+            if match_triple:
+                company = match_triple.group(1).strip()
+                day = match_triple.group(2)
+                earnings_companies[company] = day
+            elif match_double:
                 company = match_double.group(1).strip()
-                day = match_double.group(3)
+                day = match_double.group(2)
                 earnings_companies[company] = day
-            elif match_single:
-                company = match_single.group(1).strip()
-                day = match_single.group(3)
-                earnings_companies[company] = day
-                
+
     return earnings_companies
 
 def read_gainers_losers(filepath):
@@ -41,10 +47,16 @@ def read_gainers_losers(filepath):
         
     if not data:
         return [], []
-    
+
     today_date = datetime.now().strftime("%Y-%m-%d")
+    yesterday_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+
+    # 尝试获取今天的数据
     if today_date in data:
         return data[today_date].get('gainer', []), data[today_date].get('loser', [])
+    # 如果今天的数据不存在，尝试获取昨天的数据
+    elif yesterday_date in data:
+        return data[yesterday_date].get('gainer', []), data[yesterday_date].get('loser', [])
     else:
         return [], []
 
@@ -91,7 +103,7 @@ def compare_today_yesterday(config_path, description_path, blacklist, interested
     with open(config_path, 'r') as file:
         data = json.load(file)
 
-    earnings_companies = read_earnings_release(earnings_path)
+    earnings_companies = read_earnings_release(earnings_path, error_file_path)
     gainers, losers = read_gainers_losers(gainers_losers_path)
 
     with open(description_path, 'r') as file:
