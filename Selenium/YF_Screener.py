@@ -100,7 +100,7 @@ def fetch_data(driver, url):
     
     return results
 
-def update_json(data, sector, file_path, output, log_enabled):
+def update_json(data, sector, file_path, output, log_enabled, write_symbols=False):
     with open(file_path, 'r+') as file:
         json_data = json.load(file)
         
@@ -138,17 +138,15 @@ def update_json(data, sector, file_path, output, log_enabled):
         file.truncate()
         json.dump(json_data, file, indent=2)
 
-    if new_symbols:
+    if new_symbols and write_symbols:
         with open('/Users/yanzhang/Documents/News/backup/symbol_names.txt', 'a') as symbol_file:
-            # 写入一个换行符，以确保新内容从新的一行开始
-            symbol_file.write('\n')
             for symbol, name in new_symbols:
-                symbol_file.write(f"{symbol}: {name}")
+                symbol_file.write(f"{symbol}: {name}\n")  # 修改为确保每个symbol在新行中写入
 
 def process_sector(driver, url, sector, output):
     data = fetch_data(driver, url)
-    update_json(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', output, log_enabled=True)
-    update_json(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json', output, log_enabled=False)
+    update_json(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', output, log_enabled=True, write_symbols=True)
+    update_json(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json', output, log_enabled=False, write_symbols=False)
 
 def save_output_to_file(output, directory, filename='Stock_Change.txt'):
     current_time = datetime.now().strftime('%m%d')

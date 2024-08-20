@@ -2,7 +2,8 @@ import sqlite3
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
-from matplotlib.dates import DateFormatter
+from matplotlib.dates import DateFormatter, num2date
+from datetime import datetime
 
 import matplotlib
 # 使用TkAgg后端
@@ -15,11 +16,15 @@ stock_config = [
     # {'table': 'Indices', 'name': 'S&P500'},
     # {'table': 'Technology', 'name': 'NVDA'},
     # {'table': 'Technology', 'name': 'AMD'},
-    {'table': 'ETFs', 'name': 'PDBC'},
-    {'table': 'ETFs', 'name': 'DBC'},
-    # {'table': 'Commodities', 'name': 'Copper'},
+    # {'table': 'ETFs', 'name': 'LGLV'},
+    # {'table': 'ETFs', 'name': 'DBC'},
+    {'table': 'Commodities', 'name': 'IronOre'},
+    {'table': 'Commodities', 'name': 'Steel'},
+    # {'table': 'Currencies', 'name': 'DXY'},
     # {'table': 'Currencies', 'name': 'DXY'},
     # {'table': 'Bonds', 'name': 'US10Y'},
+    # {'table': 'Bonds', 'name': 'US10Y'},
+    # {'table': 'Economics', 'name': 'USInterest'},
     # {'table': 'Economics', 'name': 'USInterest'},
 ]
 
@@ -27,10 +32,11 @@ stock_config = [
 colors = ['tab:blue', 'tab:red', 'tab:green', 'tab:purple', 'tab:pink', 'tab:brown', 'tab:gray', 'tab:olive', 'tab:cyan']
 
 # 自定义时间范围
-# custom_start_date = '2000-01-01'
+custom_start_date = '2000-01-01'
+custom_end_date = datetime.now().strftime('%Y-%m-%d')
 
-custom_start_date = '2017-11-01'
-custom_end_date = '2024-08-05'
+# custom_start_date = '2017-11-01'
+# custom_end_date = '2024-08-05'
 
 dfs = {}
 with sqlite3.connect(db_path) as conn:
@@ -52,7 +58,7 @@ final_end_date = min(pd.to_datetime(custom_end_date), end_date) if pd.to_datetim
 
 # 筛选共同日期范围内的数据
 for name in dfs:
-    dfs[name] = (dfs[name][0].reindex(pd.date_range(final_start_date, final_end_date)).fillna(method='ffill'), dfs[name][1])
+    dfs[name] = (dfs[name][0].reindex(pd.date_range(final_start_date, final_end_date)).ffill(), dfs[name][1])
 
 # 创建图表
 fig, ax1 = plt.subplots(figsize=(16, 6))
@@ -96,9 +102,8 @@ date_text = fig.text(0.5, 0.005, '', ha='center', va='bottom', fontproperties=zh
 # 定义鼠标移动事件处理函数
 def on_mouse_move(event):
     if event.inaxes:
-        vline.set_xdata(event.xdata)
-        # 获取当前日期并更新文本注释
-        current_date = pd.to_datetime(event.xdata, unit='D').strftime('%m-%d')
+        vline.set_xdata([event.xdata, event.xdata])  # 使用列表
+        current_date = num2date(event.xdata).strftime('%m-%d')
         date_text.set_text(current_date)
         # 更新文本位置
         date_text.set_position((event.x / fig.dpi / fig.get_size_inches()[0], 0.005))

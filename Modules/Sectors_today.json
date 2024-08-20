@@ -422,7 +422,8 @@
     "ICF",
     "SPXL",
     "SPXS",
-    "SVXY"
+    "SVXY",
+    "LGLV"
   ],
   "Basic_Materials": [
     "LIN",
@@ -1234,7 +1235,6 @@
     "DE",
     "LMT",
     "BA",
-    "ADP",
     "WM",
     "GD",
     "RELX",
@@ -1260,7 +1260,6 @@
     "URI",
     "FERG",
     "JCI",
-    "PAYX",
     "WCN",
     "LHX",
     "CMI",
@@ -1473,7 +1472,9 @@
     "NSA",
     "EPRT",
     "KRG",
-    "LINE"
+    "LINE",
+    "SITC",
+    "EPR-PG"
   ],
   "Technology": [
     "MSFT",
@@ -1685,7 +1686,10 @@
     "VERX",
     "ASTS",
     "TWLO",
-    "ZETA"
+    "ZETA",
+    "ADP",
+    "PAYX",
+    "ACIW"
   ],
   "Utilities": [
     "NEE",

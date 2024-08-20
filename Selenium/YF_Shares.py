@@ -77,7 +77,6 @@ driver.quit()
 with open("/Users/yanzhang/Documents/News/backup/Shares.txt", "a+") as file:
     file.seek(0)
     existing_data = file.read()
-    file.write('\n')
     for symbol, shares in shares_data.items():
         if f"{symbol}: {shares}" not in existing_data:
-            file.write(f"{symbol}: {shares}")
+            file.write(f"{symbol}: {shares}\n")

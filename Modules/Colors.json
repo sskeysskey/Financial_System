@@ -147,8 +147,8 @@
     "yellow_keywords": [
         "CNYJPY",
         "Gold",
-        "Cocoa",
         "Silver",
+        "Cocoa",
         "SPTI",
         "INDA",
         "APA",
@@ -207,8 +207,8 @@
         "NASDAQ",
         "S&P500",
         "USDJPY",
-        "Naturalgas",
-        "Steel",
+        "OrangeJuice",
+        "Coffee",
         "Ether",
         "USDCNY",
         "CZR",
@@ -228,7 +228,6 @@
         "VIX",
         "CNYUSD",
         "US10Y",
-        "CrudeOil",
         "XLRE",
         "CNYA",
         "WBD",
@@ -238,7 +237,9 @@
     "black_keywords": [
         "Cotton",
         "Sugar",
-        "Rice",
+        "Wheat",
+        "Oat",
+        "IronOre",
         "Soybean",
         "VFC",
         "WBA",
@@ -268,6 +269,7 @@
     "blue_keywords": [
         "HANGSENG",
         "Copper",
+        "CrudeOil",
         "USDINR",
         "Solana",
         "DXJ",
@@ -276,10 +278,10 @@
     "green_keywords": [
         "EURCNY",
         "JP10Y",
+        "Naturalgas",
         "EURUSD",
         "Shanghai",
         "Shenzhen",
-        "FXY",
-        "BalticDry"
+        "FXY"
     ]
 }

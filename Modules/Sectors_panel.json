@@ -7,29 +7,22 @@
         "ALB": "雅宝",
         "VALE": "淡水河谷",
         "BHP": "必和必拓",
-        "PPG": "涂料",
         "CLF": "铁矿石"
     },
     "Communication_Services": {
-        "ROKU": "",
         "NTES": ""
     },
     "Consumer_Cyclical": {
         "LULU": "",
         "NKE": "Nike",
         "MBLY": "",
-        "ULTA": "",
         "LKQ": "汽车部件",
         "STLA": "",
-        "ABNB": "",
-        "W": "家居装饰"
+        "ABNB": ""
     },
     "Energy": {
         "PBF": "石油精炼",
         "EQT": "天然气",
-        "PBR": "巴西石油",
-        "MUR": "",
-        "BP": "",
         "NE": ""
     },
     "Real_Estate": {},
@@ -40,43 +33,34 @@
         "STM": "意法",
         "LSCC": "FPGA",
         "INTC": "",
-        "RMBS": "",
         "JBL": "",
         "PATH": "UiPath",
         "QLYS": "云安全"
     },
     "Utilities": {},
     "Consumer_Defensive": {
-        "DAR": "宠物食品",
         "DEO": "尊尼获加",
         "BF-B": "杰克丹尼",
         "EL": "雅诗兰黛",
         "LW": "冷冻土豆",
-        "MNST": "",
-        "ACI": "美国超市"
+        "MNST": "Monster"
     },
     "Industrials": {
         "UPS": "联合包裹",
-        "GPN": "支付技术",
         "CNH": "依维柯",
         "AAL": "美国航空",
         "SYM": "仓储机器",
         "ATKR": "电气管道",
-        "ROK": "工业信息",
-        "DLB": "杜比",
         "BA": "波音",
         "GTLS": "低温物流"
     },
     "Financial_Services": {
         "SIGI": "保险公司",
-        "LPLA": "金融顾问",
         "SOFI": ""
     },
     "Healthcare": {
         "CVS": "",
         "BNTX": "BioNTech",
-        "PEN": "中风血栓",
-        "GMAB": "骨髓瘤",
         "EW": "爱德华兹",
         "DXCM": "德康血糖"
     },
