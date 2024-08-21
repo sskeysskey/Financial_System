@@ -2,83 +2,98 @@ import yfinance as yf
 import sqlite3
 import json
 from datetime import datetime, timedelta
+from typing import Dict, List, Any
 
-def log_error_with_timestamp(error_message):
-    # 获取当前日期和时间
+def log_error_with_timestamp(error_message: str) -> str:
+    """为错误消息添加时间戳"""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-    # 在错误信息前加入时间戳
     return f"[{timestamp}] {error_message}\n"
 
-# 适合于半自定义抓取
-start_date = "2000-09-17"
-today = datetime.now()
-end_date = today.strftime('%Y-%m-%d')
+def is_stock_groups_empty(stock_groups: Dict[str, List[str]]) -> bool:
+    """检查所有股票组是否为空"""
+    return all(len(tickers) == 0 for tickers in stock_groups.values())
 
-# 读取JSON文件
-with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json', 'r') as file:
-    stock_groups = json.load(file)
+def get_price_format(group_name: str) -> str:
+    """根据组名决定价格格式"""
+    if group_name in ["Currencies", "Bonds"]:
+        return ".4f"
+    elif group_name == "Crypto":
+        return ".1f"
+    elif group_name == "Commodities":
+        return ".3f"
+    else:
+        return ".2f"
 
-# 检查是否所有组都是空的
-if all(len(tickers) == 0 for tickers in stock_groups.values()):
-    print("Sectors_empty.json 文件为空，跳过后续操作。")
-else:
-    # 连接到SQLite数据库
-    conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
-    c = conn.cursor()
+def insert_data(c: sqlite3.Cursor, table_name: str, date: str, name: str, price: float, volume: int = None):
+    """插入数据到数据库"""
+    if volume is None:
+        c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price) VALUES (?, ?, ?)",
+                  (date, name, price))
+    else:
+        c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)",
+                  (date, name, price, volume))
 
-    # 读取symbol_mapping JSON文件
-    with open('/Users/yanzhang/Documents/Financial_System/Modules/Symbol_mapping.json', 'r') as file:
-        symbol_mapping = json.load(file)
-
-    # 定义需要特殊处理的group_name
+def process_stock_data(stock_groups: Dict[str, List[str]], start_date: str, end_date: str, 
+                       db_path: str, symbol_mapping: Dict[str, str], error_file_path: str):
+    """处理股票数据的主要逻辑"""
     special_groups = ["Currencies", "Bonds", "Crypto", "Commodities"]
+    
+    with sqlite3.connect(db_path) as conn:
+        c = conn.cursor()
+        
+        for group_name, tickers in stock_groups.items():
+            for ticker_symbol in tickers:
+                try:
+                    data = yf.download(ticker_symbol, start=start_date, end=end_date)
+                    if data.empty:
+                        raise ValueError(f"{group_name} {ticker_symbol}: No price data found for the given date range.")
 
-    # 遍历所有组
-    for group_name, tickers in stock_groups.items():
-        for ticker_symbol in tickers:
-            try:
-                # 使用 yfinance 下载股票数据
-                data = yf.download(ticker_symbol, start=start_date, end=end_date)
-                if data.empty:
-                    # raise ValueError(f"{ticker_symbol}: No price data found for the given date range.")
-                    raise ValueError(f"{group_name} {ticker_symbol}: No price data found for the given date range.")
+                    table_name = group_name.replace(" ", "_")
+                    mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)
+                    price_format = get_price_format(group_name)
 
-                # 插入数据到相应的表中
-                table_name = group_name.replace(" ", "_")  # 确保表名没有空格
-                mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)
-                for index, row in data.iterrows():
-                    date = index.strftime('%Y-%m-%d')
-                    if group_name in ["Currencies", "Bonds"]:
-                        price = round(row['Close'], 4)
-                    elif group_name in ["Crypto"]:
-                        price = round(row['Close'], 1)
-                    elif group_name in ["Commodities"]:
-                        price = round(row['Close'], 3)
-                    else:
-                        price = round(row['Close'], 2)
+                    for index, row in data.iterrows():
+                        date = index.strftime('%Y-%m-%d')
+                        price = float(f"{row['Close']:{price_format}}")
+                        
+                        if group_name in special_groups:
+                            insert_data(c, table_name, date, mapped_name, price)
+                        else:
+                            volume = int(row['Volume'])
+                            insert_data(c, table_name, date, mapped_name, price, volume)
 
-                    if group_name in special_groups:
-                        c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price) VALUES (?, ?, ?)",
-                                    (date, mapped_name, price))
-                    else:
-                        volume = int(row['Volume'])
-                        c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)",
-                                    (date, mapped_name, price, volume))
-            except Exception as e:
+                except Exception as e:
                     formatted_error_message = log_error_with_timestamp(str(e))
-                    # 将错误信息追加到文件中
-                    with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                    with open(error_file_path, 'a') as error_file:
                         error_file.write(formatted_error_message)
 
-    # 提交事务
-    conn.commit()
-    # 关闭连接
-    conn.close()
+        conn.commit()
+
+def main():
+    start_date = "2000-09-17"
+    end_date = datetime.now().strftime('%Y-%m-%d')
+    sectors_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json'
+    symbol_mapping_file = '/Users/yanzhang/Documents/Financial_System/Modules/Symbol_mapping.json'
+    db_path = '/Users/yanzhang/Documents/Database/Finance.db'
+    error_file_path = '/Users/yanzhang/Documents/News/Today_error.txt'
+
+    with open(sectors_file, 'r') as file:
+        stock_groups = json.load(file)
+
+    if is_stock_groups_empty(stock_groups):
+        print("Sectors_empty.json 文件为空，跳过后续操作。")
+        return
+
+    with open(symbol_mapping_file, 'r') as file:
+        symbol_mapping = json.load(file)
+
+    process_stock_data(stock_groups, start_date, end_date, db_path, symbol_mapping, error_file_path)
 
     # 清空各组内的symbol
-    for group_name in stock_groups:
-        stock_groups[group_name] = []
+    stock_groups = {group: [] for group in stock_groups}
 
-    # 写回到JSON文件
-    with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json', 'w') as file:
+    with open(sectors_file, 'w') as file:
         json.dump(stock_groups, file, indent=4)
+
+if __name__ == "__main__":
+    main()

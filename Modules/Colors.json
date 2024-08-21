@@ -13,7 +13,6 @@
         "CorePCEY",
         "CorePCEM",
         "CoreCPI",
-        "VIPS",
         "UI",
         "KEYS",
         "LANC",
@@ -60,7 +59,6 @@
         "ALC",
         "DY",
         "WSM",
-        "MNSO",
         "SSL",
         "NDSN",
         "BILI"
@@ -142,7 +140,8 @@
         "W",
         "GTLS",
         "TNET",
-        "NE"
+        "NE",
+        "VAL"
     ],
     "yellow_keywords": [
         "CNYJPY",
@@ -172,7 +171,6 @@
         "PUK",
         "AAL",
         "WDS",
-        "VAL",
         "MGA",
         "AL",
         "SQ",

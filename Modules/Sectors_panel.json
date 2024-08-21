@@ -1,6 +1,7 @@
 {
     "My_Order": {
-        "CRWD": ""
+        "CRWD": "",
+        "CIBR": ""
     },
     "Basic_Materials": {
         "MOS": "美盛化肥",
@@ -23,7 +24,8 @@
     "Energy": {
         "PBF": "石油精炼",
         "EQT": "天然气",
-        "NE": ""
+        "NE": "",
+        "VAL": ""
     },
     "Real_Estate": {},
     "Technology": {

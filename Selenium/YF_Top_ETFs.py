@@ -168,7 +168,8 @@ urls = [
     "https://finance.yahoo.com/markets/etfs/top/?start=0&count=100",
     "https://finance.yahoo.com/markets/etfs/top/?start=100&count=100",
     "https://finance.yahoo.com/markets/etfs/top/?start=200&count=100",
-    "https://finance.yahoo.com/markets/etfs/top/?start=300&count=100"
+    "https://finance.yahoo.com/markets/etfs/top/?start=300&count=100",
+    "https://finance.yahoo.com/markets/etfs/top/?start=400&count=100"
 ]
 existing_json = '/Users/yanzhang/Documents/Financial_System/Modules/Description.json'
 today_file = '/Users/yanzhang/Documents/News/site/ETFs_today.txt'
