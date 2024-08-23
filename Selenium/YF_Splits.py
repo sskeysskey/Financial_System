@@ -16,15 +16,11 @@ file_path = '/Users/yanzhang/Documents/News/Stock_Splits_new.txt'
 if os.path.exists(file_path):
     # 弹窗通知用户
     applescript_code = 'display dialog "Stock_Splits_new文件已存在，请先处理后再执行。" buttons {"OK"} default button "OK"'
-    process = subprocess.run(['osascript', '-e', applescript_code], check=True)
-    
-    # 退出程序
+    subprocess.run(['osascript', '-e', applescript_code], check=True)
     exit()
 
-# ChromeDriver 路径
+# ChromeDriver 设置
 chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
-
-# 设置 ChromeDriver
 service = Service(executable_path=chrome_driver_path)
 driver = webdriver.Chrome(service=service)
 
@@ -42,41 +38,48 @@ start_date = current_date + timedelta(days=(6 - current_date.weekday()))
 # 计算往后延6天的周六
 end_date = start_date + timedelta(days=6)
 
-# 初始化结果文件，使用追加模式
-with open(file_path, 'a') as output_file:
-    change_date = start_date
-    delta = timedelta(days=1)
+# 用于存储结果的列表
+results = []
+
+change_date = start_date
+delta = timedelta(days=1)
+
+while change_date <= end_date:
+    formatted_change_date = change_date.strftime('%Y-%m-%d')
+    offset = 0
+    has_data = True
     
-    while change_date <= end_date:
-        formatted_change_date = change_date.strftime('%Y-%m-%d')
-        offset = 0
-        has_data = True
+    while has_data:
+        url = f"https://finance.yahoo.com/calendar/splits?from={start_date.strftime('%Y-%m-%d')}&to={end_date.strftime('%Y-%m-%d')}&day={formatted_change_date}&offset={offset}&size=100"
+        driver.get(url)
         
-        while has_data:
-            url = f"https://finance.yahoo.com/calendar/splits?from={start_date.strftime('%Y-%m-%d')}&to={end_date.strftime('%Y-%m-%d')}&day={formatted_change_date}&offset={offset}&size=100"
-            driver.get(url)
+        try:
+            rows = WebDriverWait(driver, 4).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "tr.simpTblRow")))
+        except TimeoutException:
+            has_data = False
+            continue
+        
+        for row in rows:
+            symbol = row.find_element(By.CSS_SELECTOR, 'a[data-test="quoteLink"]').text
+            company = row.find_element(By.CSS_SELECTOR, 'td[aria-label="Company"]').text
             
-            # 使用显式等待确保元素加载
-            wait = WebDriverWait(driver, 4)
-            try:
-                rows = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "tr.simpTblRow")))
-            except TimeoutException:
-                rows = []  # 如果超时，则设置 rows 为空列表
-            
-            if not rows:
-                has_data = False
-            else:
-                for row in rows:
-                    symbol = row.find_element(By.CSS_SELECTOR, 'a[data-test="quoteLink"]').text
-                    company = row.find_element(By.CSS_SELECTOR, 'td[aria-label="Company"]').text
-                    
-                    for category, symbols in data.items():
-                        if symbol in symbols:
-                            entry = f"{symbol}: {formatted_change_date} - {company}"
-                            output_file.write(entry + "\n")
-                                
-                offset += 100  # 为下一个子页面增加 offset
-        change_date += delta  # 日期增加一天
+            for category, symbols in data.items():
+                if symbol in symbols:
+                    results.append(f"{symbol}: {formatted_change_date} - {company}")
+                    break
+        
+        offset += 100
+    
+    change_date += delta
 
 # 关闭浏览器
 driver.quit()
+
+# 只有在有结果时才创建文件
+if results:
+    with open(file_path, 'w') as output_file:
+        for result in results:
+            output_file.write(result + "\n")
+    print(f"已成功创建文件 {file_path} 并写入 {len(results)} 条记录。")
+else:
+    print("没有找到符合条件的数据，未创建文件。")

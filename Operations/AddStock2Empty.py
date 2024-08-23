@@ -53,8 +53,11 @@ def process_stock_changes():
         updates_count = 0
         for symbol, _, group in matches:
             if group in data_empty:
-                if any(symbol in symbols for symbols in data_all.values()):
-                    log_error_with_timestamp(f"Symbol '{symbol}' 已经存在于 Sectors_All.json 中，未添加到 {group} 组别。", ERROR_FILE_PATH)
+                # 计算symbol在data_all中出现的次数
+                symbol_count = sum(symbol in symbols for symbols in data_all.values())
+                
+                if symbol_count >= 2:
+                    log_error_with_timestamp(f"Symbol '{symbol}' 在 Sectors_All.json 中出现了 {symbol_count} 次，未添加到 {group} 组别。", ERROR_FILE_PATH)
                 else:
                     data_empty[group].append(symbol)
                     updates_count += 1
@@ -63,11 +66,11 @@ def process_stock_changes():
             write_json(JSON_FILE_PATH_EMPTY, data_empty)
             print(f"JSON文件已成功更新！共更新了 {updates_count} 条记录。")
         else:
-            print("Symbol已经存在于 Sectors_All.json 中，empty文件保持不变。")
+            print("没有新的Symbol需要添加，empty文件保持不变。")
 
     except Exception as e:
-        log_error_with_timestamp(f"处理过程中发生错误: {str(e)}", ERROR_FILE_PATH)
-        print(f"发生错误，详情请查看错误日志: {ERROR_FILE_PATH}")
+        print(f"处理过程中发生错误: {str(e)}")
+        print(f"详情请查看错误日志: {ERROR_FILE_PATH}")
 
 if __name__ == "__main__":
     process_stock_changes()

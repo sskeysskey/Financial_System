@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 import shutil
+import argparse
 
 # 文件路径
 files = {
@@ -43,11 +44,20 @@ def backup_diff_file(diff_file, backup_dir):
         # 移动文件
         shutil.move(diff_file, target_path)
 
-if 1 <= current_day <= 5:  # 周二到周六
-    process_file(new_files['ETFs'], files['ETFs'])
-    if current_day == 4:  # 周五
-        process_file(new_files['Earnings_Release'], files['Earnings_Release'])
-        process_file(new_files['Economic_Events'], files['Economic_Events'])
+def main(mode):
+    if mode == 'etf':
+        if 1 <= current_day <= 5:  # 周二到周六
+            process_file(new_files['ETFs'], files['ETFs'])
+            # 备份 diff 文件
+            backup_diff_file(diff_file, backup_dir)
+    elif mode == 'other':
+        if current_day == 4:  # 周五
+            process_file(new_files['Earnings_Release'], files['Earnings_Release'])
+            process_file(new_files['Economic_Events'], files['Economic_Events'])
 
-# 备份 diff 文件
-backup_diff_file(diff_file, backup_dir)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Process files based on the given mode.')
+    parser.add_argument('mode', choices=['etf', 'other'], help='The processing mode: etf or other')
+    args = parser.parse_args()
+
+    main(args.mode)

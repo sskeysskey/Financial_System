@@ -12,18 +12,18 @@ matplotlib.use('TkAgg')
 db_path = '/Users/yanzhang/Documents/Database/Finance.db'
 
 stock_config = [
-    {'table': 'Indices', 'name': 'NASDAQ'},
+    # {'table': 'Indices', 'name': 'NASDAQ'},
     # {'table': 'Indices', 'name': 'S&P500'},
-    # {'table': 'Technology', 'name': 'CRWD'},
+    {'table': 'Technology', 'name': 'CRWD'},
     # {'table': 'Technology', 'name': 'AMD'},
-    # {'table': 'ETFs', 'name': 'TLT'},
+    {'table': 'ETFs', 'name': 'CIBR'},
     # {'table': 'ETFs', 'name': 'DBC'},
     # {'table': 'ETFs', 'name': 'EDV'},
     # {'table': 'Commodities', 'name': 'IronOre'},
     # {'table': 'Commodities', 'name': 'Steel'},
     # {'table': 'Currencies', 'name': 'DXY'},
     # {'table': 'Currencies', 'name': 'DXY'},
-    {'table': 'Bonds', 'name': 'US10Y'},
+    # {'table': 'Bonds', 'name': 'US10Y'},
     # {'table': 'Bonds', 'name': 'US2Y'},
     # {'table': 'Economics', 'name': 'USInterest'},
     # {'table': 'Economics', 'name': 'USInterest'},

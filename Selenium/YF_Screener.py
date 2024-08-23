@@ -109,6 +109,11 @@ def update_json(data, sector, file_path, output, log_enabled, write_symbols=Fals
         for sec in json_data:
             for symbol in json_data[sec]:
                 current_sectors[symbol] = sec
+        
+        # 创建一个集合，包含所有组别的所有符号
+        all_symbols = set()
+        for sec, symbols in json_data.items():
+            all_symbols.update(symbols)
 
         new_symbols = []  # 用于存储新添加的符号和名称
 
@@ -132,6 +137,12 @@ def update_json(data, sector, file_path, output, log_enabled, write_symbols=Fals
                         message = f"Added '{symbol}' to {sector} due to a new rising star."
                         print(message)
                         output.append(message)
+                        if symbol in all_symbols:
+                            for sec, symbols in json_data.items():
+                                if symbol in symbols:
+                                    error_message = f"'{symbol}' 已经在 {sec} 中了，请处理。"
+                                    print(error_message)
+                                    log_error_with_timestamp(error_message, ERROR_FILE_PATH)
 
         # 重写文件内容
         file.seek(0)
@@ -181,6 +192,12 @@ def clean_old_backups(directory, prefix="marketcap_pe_", days=4):
             except Exception as e:
                 print(f"跳过文件：{filename}，原因：{e}")
 
+def log_error_with_timestamp(error_message, file_path):
+    """记录带时间戳的错误信息"""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    with open(file_path, 'a') as error_file:
+        error_file.write(f"[{timestamp}] {error_message}\n")
+
 chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
 
 service = Service(executable_path=chrome_driver_path)
@@ -211,6 +228,8 @@ output = []  # 用于收集输出信息的列表
 # 检查文件是否存在
 file_path = '/Users/yanzhang/Documents/News/backup/marketcap_pe.txt'
 directory_backup = '/Users/yanzhang/Documents/News/site/'
+ERROR_FILE_PATH = '/Users/yanzhang/Documents/News/Today_error.txt'
+
 if os.path.exists(file_path):
     # 获取昨天的日期作为时间戳
     yesterday = datetime.now() - timedelta(days=1)

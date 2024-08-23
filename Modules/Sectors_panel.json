@@ -25,7 +25,8 @@
         "PBF": "石油精炼",
         "EQT": "天然气",
         "NE": "",
-        "VAL": ""
+        "VAL": "",
+        "CHRD": ""
     },
     "Real_Estate": {},
     "Technology": {
@@ -138,9 +139,7 @@
         "CNYJPY": "",
         "EURUSD": ""
     },
-    "Economics": {
-        "USInitial": "22 USInitial"
-    },
+    "Economics": {},
     "ETFs_US": {
         "EDV": "长期国债",
         "FXY": "多日空美",
