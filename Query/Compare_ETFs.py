@@ -63,7 +63,6 @@ def compare_today_yesterday(config_path, description_path, blacklist, interested
         symbol_to_tags[item["symbol"]] = item.get("tag", [])
 
     output = []
-
     with create_connection(db_path) as conn:
         cursor = conn.cursor()
         for table_name, names in data.items():

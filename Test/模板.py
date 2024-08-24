@@ -494,6 +494,29 @@ import subprocess
 applescript_code = 'display dialog "整个字幕文件翻译完毕。" buttons {"OK"} default button "OK"'
 process = subprocess.run(['osascript', '-e', applescript_code], check=True)
 # ——————————————————————————————————————————————————————————————————————————————————————————
+from log_config import setup_logger
+
+logger = setup_logger()
+
+logger.info("这是一条信息日志")
+logger.warning("这是一条警告日志")
+logger.error("这是一条错误日志")
 # ——————————————————————————————————————————————————————————————————————————————————————————
+def search_category_for_tag(category):
+    return [
+        (item['symbol'], ' '.join(item.get('tag', []))) for item in data.get(category, [])
+        if all(any(fuzzy_match(tag, keyword) for tag in item.get('tag', [])) for keyword in keywords_lower)
+    ]
+
+def search_category_for_name(category):
+    return [
+        (item['symbol'], ' '.join(item.get('tag', []))) for item in data.get(category, [])
+        if all(fuzzy_match(item['name'], keyword) for keyword in keywords_lower)
+    ]
+
+return (
+    search_category_for_tag('stocks'), search_category_for_tag('etfs'),
+    search_category_for_name('stocks'), search_category_for_name('etfs')
+)
 # ——————————————————————————————————————————————————————————————————————————————————————————
 # ——————————————————————————————————————————————————————————————————————————————————————————

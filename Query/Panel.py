@@ -50,6 +50,7 @@ def create_custom_style():
         "Blue": ("blue", "white"),
         "Red": ("red", "black"),
         "Black": ("black", "white"),
+        "Cyan": ("cyan", "black"),
         "Default": ("gray", "black")
     }
     for name, (bg, fg) in button_styles.items():
@@ -114,7 +115,6 @@ def create_selection_window():
                     link_label.bind("<Button-1>", lambda event, k=keyword: on_keyword_selected(k))
 
     canvas.pack(side="left", fill="both", expand=True)
-    scrollbar.pack(side="bottom", fill="x")
 
 def get_button_style(keyword):
     color_styles = {
@@ -125,7 +125,8 @@ def get_button_style(keyword):
         "blue": "Blue.TButton",
         "black": "Black.TButton",
         "white": "White.TButton",
-        "green": "Green.TButton"
+        "green": "Green.TButton",
+        "cyan": "Cyan.TButton",
     }
     for color, style in color_styles.items():
         if keyword in keyword_colors[f"{color}_keywords"]:

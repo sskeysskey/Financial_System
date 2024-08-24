@@ -9,6 +9,7 @@ import matplotlib
 import tkinter as tk
 from tkinter import simpledialog, scrolledtext
 from functools import lru_cache
+import tkinter.font as tkFont
 
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
 from Message_AppleScript import display_dialog
@@ -186,7 +187,46 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     def on_pick(event):
         if event.artist == title:  # 只有当点击的是标题时才执行
             show_stock_etf_info()
-        
+
+    def on_keyword_selected(db_path, table_name, name):
+        condition = f"name = '{name}'"
+        result = query_database(db_path, table_name, condition)
+        create_window(result)
+            
+    def query_database(db_path, table_name, condition):
+        with sqlite3.connect(db_path) as conn:
+            cursor = conn.cursor()
+            query = f"SELECT * FROM {table_name} WHERE {condition} ORDER BY date DESC;"
+            cursor.execute(query)
+            rows = cursor.fetchall()
+            if not rows:
+                return "今天没有数据可显示。\n"
+            columns = [description[0] for description in cursor.description]
+            col_widths = [max(len(str(row[i])) for row in rows + [columns]) for i in range(len(columns))]
+            output_text = ' | '.join([col.ljust(col_widths[idx]) for idx, col in enumerate(columns)]) + '\n'
+            output_text += '-' * len(output_text) + '\n'
+            for row in rows:
+                output_text += ' | '.join([str(item).ljust(col_widths[idx]) for idx, item in enumerate(row)]) + '\n'
+            return output_text
+            
+    def create_window(content):
+        root = tk.Tk()
+        root.withdraw()  # 隐藏主窗口
+        top = tk.Toplevel(root)
+        top.title("数据库查询结果")
+        window_width, window_height = 900, 600
+        center_x = (top.winfo_screenwidth() - window_width) // 2
+        center_y = (top.winfo_screenheight() - window_height) // 2
+        top.geometry(f'{window_width}x{window_height}+{center_x}+{center_y}')
+        top.bind('<Escape>', lambda event: root.destroy())
+
+        text_font = tkFont.Font(family="Courier", size=20)
+        text_area = scrolledtext.ScrolledText(top, wrap=tk.WORD, width=100, height=30, font=text_font)
+        text_area.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+        text_area.insert(tk.INSERT, content)
+        text_area.configure(state='disabled')        
+        root.mainloop()
+    
     if clickable:
         draw_underline(title, fig, ax1)
         fig.canvas.mpl_connect('pick_event', on_pick)
@@ -276,7 +316,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             '7': lambda: radio.set_active(8),
             '8': lambda: radio.set_active(2),
             '9': lambda: radio.set_active(0),
-            '`': show_stock_etf_info
+            '`': show_stock_etf_info,
+            'd': lambda: on_keyword_selected(db_path, table_name, name)  # 添加快捷键'D'的功能
         }
         if event.key in actions:
             actions[event.key]()

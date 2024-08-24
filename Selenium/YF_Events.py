@@ -9,7 +9,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 
 # 文件路径
-file_path = '/Users/yanzhang/Documents/News/Economic_Events_new.txt'
+file_path = '/Users/yanzhang/Documents/News/Economic_Events_next.txt'
 
 # 检查文件是否存在
 if os.path.exists(file_path):
@@ -45,7 +45,7 @@ Event_Filter = {
     "PPI Final Demand MM*", "Retail Sales MM *", "GDP Final*", "Core PCE Prices Fnal*",
     "PCE Prices Final *", "GDP Cons Spending Final*", "Pending Homes Index",
     "PCE Price Index MM*", "Unemployment Rate*", "ISM N-Mfg PMI",
-    "U Mich Sentiment Prelim"
+    "U Mich Sentiment Prelim", "New Home Sales-Units *", "New Home Sales Chg MM *",
 }
 
 # 定义一个包含所有目标国家代码的集合

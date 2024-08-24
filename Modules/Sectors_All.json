@@ -476,7 +476,8 @@
     "SPXL",
     "SPXS",
     "SVXY",
-    "LGLV"
+    "LGLV",
+    "CEFS"
   ],
   "Basic_Materials": [
     "LIN",
@@ -613,7 +614,8 @@
     "RDDT",
     "USM",
     "DJT",
-    "LUMN"
+    "LUMN",
+    "MSGS"
   ],
   "Consumer_Cyclical": [
     "AMZN",
@@ -777,7 +779,8 @@
     "ABG",
     "SW",
     "HOG",
-    "SKY"
+    "SKY",
+    "LTH"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -1129,7 +1132,8 @@
     "ESGR",
     "PJT",
     "DNB",
-    "TRU"
+    "TRU",
+    "UMBF"
   ],
   "Healthcare": [
     "LLY",

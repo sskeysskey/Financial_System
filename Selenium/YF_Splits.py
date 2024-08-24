@@ -10,7 +10,7 @@ import subprocess
 import json
 
 # 文件路径
-file_path = '/Users/yanzhang/Documents/News/Stock_Splits_new.txt'
+file_path = '/Users/yanzhang/Documents/News/Stock_Splits_next.txt'
 
 # 检查文件是否存在
 if os.path.exists(file_path):

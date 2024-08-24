@@ -36,11 +36,15 @@ def load_symbol_names(file_paths):
         try:
             with open(file_path, 'r', encoding='utf-8') as file:
                 for line in file:
-                    if ': ' in line:
-                        symbol, name = line.strip().split(': ', 1)
+                    parts = line.strip().split(': ', 1)
+                    if len(parts) == 2:
+                        symbol, rest = parts
+                        name = rest.rsplit(',', 1)[0].strip()
                         symbol_names[symbol] = name
         except FileNotFoundError:
             print(f"文件未找到: {file_path}，将忽略。")
+        except Exception as e:
+            print(f"处理文件 {file_path} 时发生错误: {e}")
     return symbol_names
 
 def add_or_update_etf(symbol, entry, data, json_file, description1, description2, root, symbol_names, success_flag):

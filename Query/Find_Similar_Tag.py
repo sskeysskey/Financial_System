@@ -2,13 +2,17 @@ import json
 import re
 import os
 import pyperclip
+import subprocess
+from time import sleep
 
-# 过滤掉的tags集合
-excluded_tags = {"巴西","美国","中国","以色列","加拿大","英国","瑞士"}
-
-# 读取JSON文件
-with open('/Users/yanzhang/Documents/Financial_System/Modules/Description.json', 'r') as file:
-    data = json.load(file)
+def copy2clipboard():
+    script = '''
+    tell application "System Events"
+	    keystroke "c" using {command down}
+        delay 0.5
+    end tell
+    '''
+    subprocess.run(['osascript', '-e', script], check=True)
 
 def find_tags_by_symbol(symbol, data):
     # 遍历stocks和etfs，找到匹配的symbol并返回其tags
@@ -70,8 +74,24 @@ def main(symbol):
     # 自动打开文件
     os.system(f'open "{output_path}"')
 
+
+# 过滤掉的tags集合
+excluded_tags = {"巴西","美国","以色列","加拿大","英国","瑞士"}
+
+# 读取JSON文件
+with open('/Users/yanzhang/Documents/Financial_System/Modules/Description.json', 'r') as file:
+    data = json.load(file)
+
+copy2clipboard()
 # 从剪贴板获取输入
 clipboard_content = pyperclip.paste().strip()
 
 # 使用剪贴板内容作为输入
 main(clipboard_content)
+sleep(2)
+
+try:
+    os.remove('/Users/yanzhang/Documents/News/similar.txt')
+    print(f"文件已删除")
+except OSError as e:
+    print(f"删除文件时出错: {e}")

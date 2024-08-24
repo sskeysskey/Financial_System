@@ -26,7 +26,8 @@
         "EQT": "天然气",
         "NE": "",
         "VAL": "",
-        "CHRD": ""
+        "CHRD": "",
+        "TBN": ""
     },
     "Real_Estate": {},
     "Technology": {
@@ -68,6 +69,7 @@
         "DXCM": "德康血糖"
     },
     "Crypto": {
+        "IBIT": "",
         "Bitcoin": "",
         "Ether": "",
         "Binance": "",

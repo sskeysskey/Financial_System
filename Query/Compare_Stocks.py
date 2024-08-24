@@ -20,22 +20,15 @@ def read_earnings_release(filepath, error_file_path):
     earnings_companies = {}
 
     # 修改后的正则表达式
-    pattern_double_colon = re.compile(r'(\w+)\s*:\s*\d+\s*:\s*\d{4}-\d{2}-(\d{2})')
-    pattern_triple_colon = re.compile(r'(\w+)\s*:\s*\w+\s*:\s*\d+\s*:\s*\d{4}-\d{2}-(\d{2})')
+    pattern_colon = re.compile(r'([\w-]+)(?::[\w]+)?\s*:\s*\d+\s*:\s*(\d{4}-\d{2}-\d{2})')
 
     with open(filepath, 'r') as file:
         for line in file:
-            match_triple = pattern_triple_colon.search(line)
-            match_double = pattern_double_colon.search(line)
-            if match_triple:
-                company = match_triple.group(1).strip()
-                day = match_triple.group(2)
-                earnings_companies[company] = day
-            elif match_double:
-                company = match_double.group(1).strip()
-                day = match_double.group(2)
-                earnings_companies[company] = day
-
+            match = pattern_colon.search(line)
+            company = match.group(1).strip()
+            date = match.group(2)
+            day = date.split('-')[2]  # 只取日期的天数
+            earnings_companies[company] = day
     return earnings_companies
 
 def read_gainers_losers(filepath):
