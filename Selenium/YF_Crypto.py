@@ -17,7 +17,7 @@ chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
 
 # 设置 Chrome 选项
 chrome_options = Options()
-chrome_options.add_argument("--headless")  # 无头模式
+# chrome_options.add_argument("--headless")  # 无头模式
 chrome_options.add_argument("--disable-gpu")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
