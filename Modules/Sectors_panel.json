@@ -131,7 +131,9 @@
         "TUR": "土耳其"
     },
     "ETFs_Commodity": {
+        "Lithium": "",
         "LIT": "锂矿电池",
+        "Uranium": "",
         "URA": "铀矿核能"
     },
     "Currencies": {
