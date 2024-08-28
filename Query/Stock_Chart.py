@@ -4,12 +4,15 @@ import json
 import tkinter as tk
 from datetime import datetime
 import pyperclip
+from functools import lru_cache
+import concurrent.futures
 
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
 from Message_AppleScript import display_dialog
 from Chart_input import plot_financial_data
 
-def load_data(path, data_type='json'):
+@lru_cache(maxsize=None)
+def lazy_load_data(path, data_type='json'):
     with open(path, 'r', encoding='utf-8') as file:
         if data_type == 'json':
             return json.load(file)
@@ -54,14 +57,41 @@ def match_and_plot(input_trimmed, sector_data, compare_data, shares, marketcap_p
                 return True
     return False
 
-def input_mapping(root, sector_data, compare_data, shares, marketcap_pe_data, json_data, db_path, user_input):
+def load_data_parallel():
+    data_sources = [
+        ('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'json'),
+        ('/Users/yanzhang/Documents/News/backup/Compare_All.txt', 'compare'),
+        ('/Users/yanzhang/Documents/News/backup/Shares.txt', 'compare'),
+        ('/Users/yanzhang/Documents/News/backup/marketcap_pe.txt', 'marketcap_pe'),
+        ('/Users/yanzhang/Documents/Financial_System/Modules/Description.json', 'json')
+    ]
+    
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        future_to_data = {executor.submit(lazy_load_data, path, data_type): (path, data_type) for path, data_type in data_sources}
+        results = {}
+        for future in concurrent.futures.as_completed(future_to_data):
+            path, data_type = future_to_data[future]
+            try:
+                data = future.result()
+                results[path] = data
+            except Exception as exc:
+                print(f'{path} generated an exception: {exc}')
+    
+    return results
+
+def input_mapping(root, data, db_path, user_input):
     if not user_input:
         print("未输入任何内容，程序即将退出。")
         close_app(root)
         return
 
     input_trimmed = user_input.strip()
-    if match_and_plot(input_trimmed, sector_data, compare_data, shares, marketcap_pe_data, json_data, db_path):
+    if match_and_plot(input_trimmed, data['/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'],
+                      data['/Users/yanzhang/Documents/News/backup/Compare_All.txt'],
+                      data['/Users/yanzhang/Documents/News/backup/Shares.txt'],
+                      data['/Users/yanzhang/Documents/News/backup/marketcap_pe.txt'],
+                      data['/Users/yanzhang/Documents/Financial_System/Modules/Description.json'],
+                      db_path):
         close_app(root)
     else:
         display_dialog("未找到匹配的数据项。")
@@ -105,21 +135,17 @@ if __name__ == '__main__':
     root.withdraw()
     root.bind('<Escape>', lambda event: close_app(root))
 
-    sector_data = load_data('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json')
-    compare_data = load_data('/Users/yanzhang/Documents/News/backup/Compare_All.txt', 'compare')
-    shares = load_data('/Users/yanzhang/Documents/News/backup/Shares.txt', 'compare')
-    marketcap_pe_data = load_data('/Users/yanzhang/Documents/News/backup/marketcap_pe.txt', 'marketcap_pe')
-    json_data = load_data('/Users/yanzhang/Documents/Financial_System/Modules/Description.json')
+    data = load_data_parallel()
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
 
     if len(sys.argv) > 1:
         arg = sys.argv[1]
         if arg == "paste":
             clipboard_content = pyperclip.paste()
-            input_mapping(root, sector_data, compare_data, shares, marketcap_pe_data, json_data, db_path, clipboard_content)
+            input_mapping(root, data, db_path, clipboard_content)
         elif arg == "input":
             user_input = get_user_input_custom(root, "请输入")
-            input_mapping(root, sector_data, compare_data, shares, marketcap_pe_data, json_data, db_path, user_input)
+            input_mapping(root, data, db_path, user_input)
     else:
         print("请提供参数 input 或 paste")
         sys.exit(1)

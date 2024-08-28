@@ -456,7 +456,6 @@
     "SCO",
     "KOLD",
     "ZSL",
-    "DGZ",
     "UNG",
     "XOP",
     "ERY",
@@ -477,7 +476,8 @@
     "SPXS",
     "SVXY",
     "LGLV",
-    "CEFS"
+    "CEFS",
+    "SPXU"
   ],
   "Basic_Materials": [
     "LIN",
@@ -1532,7 +1532,8 @@
     "KRG",
     "LINE",
     "SITC",
-    "EPR-PG"
+    "EPR-PG",
+    "PECO"
   ],
   "Technology": [
     "MSFT",

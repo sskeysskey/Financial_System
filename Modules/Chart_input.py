@@ -19,6 +19,8 @@ def fetch_data(db_path, table_name, name):
     with sqlite3.connect(db_path) as conn:
         cursor = conn.cursor()
         try:
+            # 为查询字段添加索引
+            cursor.execute(f"CREATE INDEX IF NOT EXISTS idx_name ON {table_name} (name);")
             query = f"SELECT date, price, volume FROM {table_name} WHERE name = ? ORDER BY date;"
             result = cursor.execute(query, (name,)).fetchall()
             if not result:
@@ -48,10 +50,7 @@ def process_data(data):
     return dates, prices, volumes
 
 def show_error_message(message):
-    root = tk.Tk()
-    root.withdraw()  # 隐藏主窗口
     display_dialog(message)
-    root.destroy()
 
 def draw_underline(text_obj, fig, ax1):
     x, y = text_obj.get_position()
