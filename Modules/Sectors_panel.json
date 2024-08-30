@@ -20,10 +20,6 @@
     },
     "Energy": {
         "PBF": "石油精炼",
-        "EQT": "天然气",
-        "NE": "",
-        "VAL": "",
-        "CHRD": "",
         "TBN": ""
     },
     "Real_Estate": {},
@@ -125,7 +121,8 @@
         "DXJ": "日本",
         "INDA": "印度",
         "EWT": "台湾",
-        "EMXC": "新兴市场",
+        "EMXC": "新兴股市",
+        "EMB": "新兴债券",
         "TUR": "土耳其"
     },
     "ETFs_Commodity": {
