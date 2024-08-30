@@ -75,7 +75,7 @@ with webdriver.Chrome(service=service) as driver:
         "Unemployment Rate": "USUnemploy"
     }
     Economics2 = {
-    "Initial Jobless Claims": "USInitial"
+        "Initial Jobless Claims": "USInitial"
     }
     Economics3 = {
         "Core PCE Price Index Annual Change": "CorePCEY",
@@ -83,12 +83,17 @@ with webdriver.Chrome(service=service) as driver:
         "Core Inflation Rate": "CoreCPI",
         "Producer Prices Change": "USPPI"
     }
+    Economics4 = {
+        "Real Consumer Spending": "USConspending"
+    }
     data_to_insert = []
     data_to_insert = fetch_data(driver, Economics1, data_to_insert)
     navigate_to_section(driver, 'a[data-bs-target="#labour"]', "Manufacturing Payrolls")
     data_to_insert = fetch_data(driver, Economics2, data_to_insert)
     navigate_to_section(driver, 'a[data-bs-target="#prices"]', "Core Consumer Prices")
     data_to_insert = fetch_data(driver, Economics3, data_to_insert)
+    navigate_to_section(driver, 'a[data-bs-target="#gdp"]', "GDP Constant Prices")
+    data_to_insert = fetch_data(driver, Economics4, data_to_insert)
 
 with sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db') as conn:
     setup_database(conn)

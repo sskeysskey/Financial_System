@@ -64,7 +64,7 @@ def main():
 
     if 'red_keywords' in colors:
         colors['red_keywords'] = [symbol for symbol in colors['red_keywords']
-                                  if symbol in economics_symbols or symbol in earnings_symbols]
+                                  if symbol in economics_symbols]
     else:
         colors['red_keywords'] = []
 

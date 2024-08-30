@@ -1,8 +1,5 @@
 {
-    "My_Order": {
-        "CRWD": "",
-        "CIBR": ""
-    },
+    "My_Order": {},
     "Basic_Materials": {
         "MOS": "美盛化肥",
         "ALB": "雅宝",
@@ -47,7 +44,8 @@
         "BF-B": "杰克丹尼",
         "EL": "雅诗兰黛",
         "LW": "冷冻土豆",
-        "MNST": "Monster"
+        "MNST": "Monster",
+        "DG": ""
     },
     "Industrials": {
         "UPS": "联合包裹",

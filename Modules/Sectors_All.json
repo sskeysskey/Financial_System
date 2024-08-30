@@ -78,7 +78,8 @@
     "USUnemploy",
     "CorePCEY",
     "CorePCEM",
-    "CoreCPI"
+    "CoreCPI",
+    "USConspending"
   ],
   "Commodities": [
     "Gold",
@@ -1133,7 +1134,8 @@
     "PJT",
     "DNB",
     "TRU",
-    "UMBF"
+    "UMBF",
+    "THG"
   ],
   "Healthcare": [
     "LLY",

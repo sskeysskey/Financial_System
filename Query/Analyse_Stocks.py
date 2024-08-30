@@ -182,7 +182,10 @@ def main():
     
     def update_color_json(color_config_path, updates_colors, blacklist_newlow):
         with open(color_config_path, 'r', encoding='utf-8') as file:
-            colors = json.load(file)
+            all_colors = json.load(file)
+
+        # 创建一个新的字典，排除 "red_keywords"
+        colors = {k: v for k, v in all_colors.items() if k != "red_keywords"}
 
         for category_list, names in updates_colors.items():
             for name in names:
@@ -194,6 +197,9 @@ def main():
                         break
                 if name not in colors[category_list] and name not in blacklist_newlow:
                     colors[category_list].append(name)
+
+        # 在写回文件之前，将 "red_keywords" 添加回去
+        colors["red_keywords"] = all_colors["red_keywords"]
 
         with open(color_config_path, 'w', encoding='utf-8') as file:
             json.dump(colors, file, ensure_ascii=False, indent=4)

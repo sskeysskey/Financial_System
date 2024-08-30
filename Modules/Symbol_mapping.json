@@ -65,5 +65,9 @@
     "PPI Final Demand YY*": "USPPI",
     "CPI YY, NSA*": "USCPI",
     "Core CPI YY, NSA*": "CoreCPI",
-    "U Mich Sentiment Prelim": "USConfidence"
+    "U Mich Sentiment Prelim": "USConfidence",
+    "GDP 2nd Estimate*": "USGDP",
+    "GDP Cons Spending Prelim*": "USConspending",
+    "Core PCE Price Index YY*": "CorePCEY",
+    "Core PCE Price Index MM *": "CorePCEM"
 }

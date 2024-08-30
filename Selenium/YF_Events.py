@@ -35,8 +35,7 @@ start_date = current_date + timedelta(days=(6 - current_date.weekday()))
 end_date = start_date + timedelta(days=6)
 
 Event_Filter = {
-    "Initial Jobless Clm*", "GDP 2nd Estimate*",
-    "Non-Farm Payrolls*", "Core PCE Price Index MM *",
+    "GDP 2nd Estimate*", "Non-Farm Payrolls*", "Core PCE Price Index MM *",
     "Core PCE Price Index YY*", "ISM Manufacturing PMI",
     "ADP National Employment*", "International Trade $ *",
     "ISM N-Mfg PMI", "CPI YY, NSA*", "Core CPI MM, SA*",
@@ -46,6 +45,8 @@ Event_Filter = {
     "PCE Prices Final *", "GDP Cons Spending Final*", "Pending Homes Index",
     "PCE Price Index MM*", "Unemployment Rate*", "ISM N-Mfg PMI",
     "U Mich Sentiment Prelim", "New Home Sales-Units *", "New Home Sales Chg MM *",
+    "GDP Cons Spending Prelim*", "Core PCE Prices Prelim*",
+    "Corporate Profits Prelim*", "Initial Jobless Clm*"
 }
 
 # 定义一个包含所有目标国家代码的集合
