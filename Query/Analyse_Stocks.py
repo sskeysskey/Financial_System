@@ -23,13 +23,21 @@ def load_blacklist_newlow(file_path):
         data = json.load(file)
         return data.get("blacklist_newlow", [])
 
-def create_output_file():
-    """创建输出文件并返回文件路径"""
-    output_dir = '/Users/yanzhang/Documents/News/backup/backup'
-    os.makedirs(output_dir, exist_ok=True)
+def create_output_files():
+    """创建两个输出文件并返回文件路径"""
+    output_dirs = [
+        '/Users/yanzhang/Documents/News/backup/backup',
+        '/Users/yanzhang/Documents/News'
+    ]
     timestamp = datetime.now().strftime("%y%m%d")
-    file_name = f"newlow_{timestamp}.txt"
-    return os.path.join(output_dir, file_name)
+    file_name = f"NewLow_{timestamp}.txt"
+    output_files = []
+    
+    for output_dir in output_dirs:
+        os.makedirs(output_dir, exist_ok=True)
+        output_files.append(os.path.join(output_dir, file_name))
+    
+    return output_files
 
 def get_price_comparison(cursor, table_name, interval, name, validate):
     today = datetime.now()
@@ -70,62 +78,65 @@ def main():
         data = json.load(file)
 
     output1 = []
-    output_file = create_output_file()
-    with open(output_file, 'w') as f:
-        intervals = [120, 60, 24, 13]  # 以月份表示的时间间隔列表
+    output_files = create_output_files()
+    for output_file in output_files:
+        with open(output_file, 'w') as f:
+            intervals = [120, 60, 24, 13]  # 以月份表示的时间间隔列表
 
-        # 遍历JSON中的每个表和股票代码
-        for table_name, names in data.items():
-            if table_name in ["Basic_Materials", "Communication_Services", "Consumer_Cyclical",
-                            "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare",
-                            "Industrials", "Real_Estate", "Technology", "Utilities"]:  # 过滤sector
-                with create_connection(db_path) as conn:
-                    cursor = conn.cursor()
-                    for name in names:
-                        if is_blacklisted(name):
-                            print(f"{name} is blacklisted and will be skipped.")
-                            continue  # 跳过黑名单中的符号
-                        
-                        result = get_latest_price_and_date(cursor, table_name, name)
-                        if result:
-                            validate, validate_price = result
-                            validate = datetime.strptime(validate, "%Y-%m-%d")
-                        else:
-                            error_message = f"没有找到{name}的历史价格数据。"
-                            formatted_error_message = log_error_with_timestamp(error_message)
-                            with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
-                                error_file.write(formatted_error_message)
-                            continue
-
-                        price_extremes = {}
-                        for interval in intervals:
-                            result = get_price_comparison(cursor, table_name, interval, name, validate)
-                            try:
-                                if result:
-                                    max_price, min_price = result
-                                    price_extremes[interval] = (max_price, min_price)
-                                else:
-                                    raise Exception(f"没有足够的历史数据来进行{table_name}下的{name} {interval}月的价格比较。")
-                            except Exception as e:
-                                formatted_error_message = log_error_with_timestamp(str(e))
-                                # 将错误信息追加到文件中
+            # 遍历JSON中的每个表和股票代码
+            for table_name, names in data.items():
+                if table_name in ["Basic_Materials", "Communication_Services", "Consumer_Cyclical",
+                                "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare",
+                                "Industrials", "Real_Estate", "Technology", "Utilities"]:  # 过滤sector
+                    with create_connection(db_path) as conn:
+                        cursor = conn.cursor()
+                        for name in names:
+                            if is_blacklisted(name):
+                                print(f"{name} is blacklisted and will be skipped.")
+                                continue  # 跳过黑名单中的符号
+                            
+                            result = get_latest_price_and_date(cursor, table_name, name)
+                            if result:
+                                validate, validate_price = result
+                                validate = datetime.strptime(validate, "%Y-%m-%d")
+                            else:
+                                error_message = f"没有找到{name}的历史价格数据。"
+                                formatted_error_message = log_error_with_timestamp(error_message)
                                 with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
                                     error_file.write(formatted_error_message)
-                                continue  # 处理下一个时间间隔
+                                continue
 
-                        # 检查是否接近最低价格
-                        for interval in intervals:
-                            _, min_price = price_extremes.get(interval, (None, None))
-                            if min_price is not None and validate_price <= min_price:
-                                if interval >= 12:
-                                    years = interval // 12
-                                    output_line = f"{table_name} {name} {years}Y_newlow"
-                                    print(output_line)
-                                    f.write(output_line + '\n')
-                                    output1.append(output_line)
-                                    break  # 只输出最长的时间周期
-        final_output1 = "\n".join(output1)
-    print(f"结果已保存到文件: {output_file}")
+                            price_extremes = {}
+                            for interval in intervals:
+                                result = get_price_comparison(cursor, table_name, interval, name, validate)
+                                try:
+                                    if result:
+                                        max_price, min_price = result
+                                        price_extremes[interval] = (max_price, min_price)
+                                    else:
+                                        raise Exception(f"没有足够的历史数据来进行{table_name}下的{name} {interval}月的价格比较。")
+                                except Exception as e:
+                                    formatted_error_message = log_error_with_timestamp(str(e))
+                                    # 将错误信息追加到文件中
+                                    with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                                        error_file.write(formatted_error_message)
+                                    continue  # 处理下一个时间间隔
+
+                            # 检查是否接近最低价格
+                            for interval in intervals:
+                                _, min_price = price_extremes.get(interval, (None, None))
+                                if min_price is not None and validate_price <= min_price:
+                                    if interval >= 12:
+                                        years = interval // 12
+                                        output_line = f"{table_name} {name} {years}Y_newlow"
+                                        print(output_line)
+                                        f.write(output_line + '\n')
+                                        output1.append(output_line)
+                                        break  # 只输出最长的时间周期
+    for output_file in output_files:
+        print(f"结果已保存到文件: {output_file}")
+    
+    final_output1 = "\n".join(output1)
 
     # 解析final_output1，构建更新数据
     def parse_output(output):

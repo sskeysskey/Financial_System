@@ -783,7 +783,8 @@
     "SW",
     "HOG",
     "SKY",
-    "LTH"
+    "LTH",
+    "GPI"
   ],
   "Consumer_Defensive": [
     "WMT",
