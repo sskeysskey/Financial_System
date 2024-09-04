@@ -16,7 +16,7 @@ if now.weekday() in (0, 6):
     print("Today is either Sunday or Monday. The script will not run.")
 else:
     # 读取JSON文件
-    with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_time_wrong.json', 'r') as file:
+    with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_time_wrong2.json', 'r') as file:
         stock_groups = json.load(file)
 
     # 读取symbol_mapping JSON文件

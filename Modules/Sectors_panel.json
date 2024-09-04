@@ -20,7 +20,9 @@
     },
     "Energy": {
         "PBF": "石油精炼",
-        "TBN": ""
+        "BP": "",
+        "SLB": "",
+        "OXY": ""
     },
     "Real_Estate": {},
     "Technology": {
@@ -31,8 +33,7 @@
         "LSCC": "FPGA",
         "INTC": "",
         "JBL": "",
-        "PATH": "UiPath",
-        "QLYS": "云安全"
+        "PATH": "UiPath"
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -138,7 +139,11 @@
         "CNYJPY": "",
         "EURUSD": ""
     },
-    "Economics": {},
+    "Economics": {
+        "USTrade": "04 USTrade",
+        "USNonFarm": "06 USNonFarm",
+        "USUnemploy": "06 USUnemploy"
+    },
     "ETFs_US": {
         "EDV": "长期国债",
         "FXY": "多日空美",
@@ -153,7 +158,7 @@
         "KIE": "保险",
         "XLB": "原材料",
         "PAVE": "基础设施",
-        "FSTA": "必需消费",
+        "IYK": "必需消费",
         "XLE": "能源",
         "XLU": "公共事业"
     }

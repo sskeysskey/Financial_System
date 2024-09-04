@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import datetime, timedelta
 import shutil
 import argparse
@@ -30,23 +31,38 @@ backup_dir = '/Users/yanzhang/Documents/News/backup/backup'
 # 获取当前星期几，0是周一，6是周日
 current_day = datetime.now().weekday()
 
+def format_line(line):
+    parts = re.split(r'\s*:\s*', line.strip(), 2)
+    if len(parts) == 3:
+        symbol, _, rest = parts
+        return f"{symbol:<7}: {rest}"
+    elif len(parts) == 2:
+        symbol, rest = parts
+        return f"{symbol:<7}: {rest}"
+    else:
+        return line.strip()
+
 def process_and_rename_files():
-    # 检查所有四个文件是否存在
-    all_files_exist = all(os.path.exists(f) for f in [
+    # 检查 Earnings_Release 的 new 和 next 文件是否存在
+    earnings_files_exist = all(os.path.exists(f) for f in [
         new_files['Earnings_Release'],
-        new_files['Economic_Events'],
-        next_files['Earnings_Release'],
-        next_files['Economic_Events']
+        next_files['Earnings_Release']
     ])
 
-    if all_files_exist:
-        # 处理现有的 new 文件
+    if earnings_files_exist:
+        # 处理 Earnings_Release 的 new 文件
         process_file(new_files['Earnings_Release'], files['Earnings_Release'])
-        process_file(new_files['Economic_Events'], files['Economic_Events'])
 
-        # 重命名 next 文件为 new 文件
+        # 重命名 Earnings_Release 的 next 文件为 new 文件
         os.rename(next_files['Earnings_Release'], new_files['Earnings_Release'])
-        os.rename(next_files['Economic_Events'], new_files['Economic_Events'])
+
+        # 如果 Economic_Events 的 new 文件存在，则处理它
+        if os.path.exists(new_files['Economic_Events']):
+            process_file(new_files['Economic_Events'], files['Economic_Events'])
+
+        # 如果 Economic_Events 的 next 文件存在，则重命名它
+        if os.path.exists(next_files['Economic_Events']):
+            os.rename(next_files['Economic_Events'], new_files['Economic_Events'])
     else:
         print("Some required files are missing. No action taken.")
 
@@ -54,8 +70,20 @@ def process_file(new_file, existing_file):
     if os.path.exists(new_file):
         with open(new_file, 'r') as file_a, open(existing_file, 'a') as file_b:
             file_b.write('\n')  # 在迁移内容前首先输入一个回车
-            for line in file_a:
-                file_b.write(line)
+            lines = file_a.readlines()
+            for i, line in enumerate(lines):
+                if 'Earnings_Release' in new_file:
+                    # 只对 Earnings_Release 文件进行处理
+                    # 使用正则表达式去除 " : 数字" 部分
+                    processed_line = re.sub(r'\s*:\s*\d+\s*', '', line, count=1)
+                    formatted_line = format_line(processed_line)
+                    if i == len(lines) - 1:  # 如果是最后一行
+                        file_b.write(formatted_line.rstrip())  # 移除行尾的空白字符，但不添加新行
+                    else:
+                        file_b.write(formatted_line + '\n')
+                else:
+                    # 对于其他文件，直接写入原始行
+                    file_b.write(line)
         os.remove(new_file)
 
 def backup_diff_file(diff_file, backup_dir):
@@ -87,7 +115,7 @@ def backup_diff_file(diff_file, backup_dir):
 
 def main(mode):
     if mode == 'etf':
-        if 1 <= current_day <= 5:  # 周二到周六
+        if 1 <= current_day <= 6:  # 周二到周天
             process_file(new_files['ETFs'], files['ETFs'])
             # 备份 diff 文件
             backup_diff_file(diff_file, backup_dir)

@@ -1,0 +1,33 @@
+{
+  "Bonds": [],
+  "Currencies": [
+    "EURUSD=X",
+    "GBPUSD=X",
+    "JPY=X",
+    "INR=X",
+    "RUB=X",
+    "KRW=X",
+    "TRY=X",
+    "SGD=X",
+    "TWD=X"
+  ],
+  "Crypto": [],
+  "Indices": [
+    "^N225",
+    "^KS11",
+    "^AXJO"
+  ],
+  "Commodities": [],
+  "ETFs": [],
+  "Basic_Materials": [],
+  "Communication_Services": [],
+  "Consumer_Cyclical": [],
+  "Consumer_Defensive": [],
+  "Energy": [],
+  "Financial_Services": [],
+  "Healthcare": [],
+  "Industrials": [],
+  "Real_Estate": [],
+  "Technology": [],
+  "Utilities": []
+}

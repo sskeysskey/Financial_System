@@ -367,7 +367,6 @@
     "IYF",
     "ISCF",
     "QLD",
-    "QTUM",
     "BJAN",
     "PEY",
     "VOOG",
@@ -426,7 +425,9 @@
     "CEFS",
     "SPXU",
     "EMLC",
-    "SHV"
+    "SHV",
+    "IYK",
+    "CEMB"
   ],
   "Basic_Materials": [
     "LIN",
@@ -459,7 +460,6 @@
     "STLD",
     "MT",
     "CE",
-    "AVTR",
     "RS",
     "JHX",
     "ALB",
@@ -730,7 +730,8 @@
     "HOG",
     "SKY",
     "LTH",
-    "GPI"
+    "GPI",
+    "PSNYW"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -1231,7 +1232,8 @@
     "CRSP",
     "TMDX",
     "INSP",
-    "RARE"
+    "RARE",
+    "AVTR"
   ],
   "Industrials": [
     "GE",
