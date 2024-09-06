@@ -216,7 +216,7 @@ def main():
                         if key != category_list:
                             colors[key].remove(name)
                         break
-                if name not in colors[category_list] and name not in blacklist_newlow:
+                if name not in colors[category_list]:
                     colors[category_list].append(name)
 
         # 在写回文件之前，将 "red_keywords" 添加回去

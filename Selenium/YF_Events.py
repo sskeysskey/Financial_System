@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 from selenium import webdriver
 from datetime import datetime, timedelta
@@ -10,12 +11,28 @@ from selenium.common.exceptions import NoSuchElementException, TimeoutException
 
 # 文件路径
 file_path = '/Users/yanzhang/Documents/News/Economic_Events_next.txt'
+backup_dir = '/Users/yanzhang/Documents/News/backup/backup'
 
-# 检查文件是否存在
-if os.path.exists(file_path):
-    applescript_code = 'display dialog "Economic_Events_new文件已存在，请先处理后再执行。" buttons {"OK"} default button "OK"'
-    process = subprocess.run(['osascript', '-e', applescript_code], check=True)
-    exit()
+# 检查原始文件是否存在
+original_file_exists = os.path.exists(file_path)
+
+# 如果原始文件存在，进行备份
+if original_file_exists:
+    timestamp = datetime.now().strftime('%y%m%d')
+    backup_filename = f'Economic_Events_next_{timestamp}.txt'
+    backup_path = os.path.join(backup_dir, backup_filename)
+    
+    # 确保备份目录存在
+    os.makedirs(backup_dir, exist_ok=True)
+    
+    # 复制文件到备份目录
+    shutil.copy2(file_path, backup_path)
+
+    # 读取原有内容
+    with open(file_path, 'r') as file:
+        existing_content = set(file.read().splitlines())
+else:
+    existing_content = set()
 
 # ChromeDriver 路径
 chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
@@ -54,7 +71,9 @@ target_countries = {
     "US"
 }
 
-# 初始化结果文件，使用追加模式
+new_content_added = False
+
+# 使用追加模式打开文件
 with open(file_path, 'a') as output_file:
     change_date = start_date
     delta = timedelta(days=1)
@@ -89,8 +108,10 @@ with open(file_path, 'a') as output_file:
                                 event_time = "No event time available"
 
                             entry = f"{formatted_change_date} : {event} [{country}]"
-                            output_file.write(entry + "\n")
-                    offset += 100  # 为下一个子页面增加 offset
+                            if entry not in existing_content:
+                                output_file.write(entry + "\n")
+                                new_content_added = True
+                    offset += 100   # 为下一个子页面增加 offset
                 except TimeoutException:
                     print(f"No data found for date {formatted_change_date}. Skipping to next date.")
         change_date += delta
@@ -109,3 +130,8 @@ if lines and lines[-1].endswith("\n"):
 # 重新写回文件
 with open(file_path, 'w') as file:
     file.writelines(lines)
+
+# 只有当原始文件存在且有新内容添加时才显示弹窗
+if original_file_exists and new_content_added:
+    applescript_code = 'display dialog "新内容已添加。" buttons {"OK"} default button "OK"'
+    subprocess.run(['osascript', '-e', applescript_code], check=True)

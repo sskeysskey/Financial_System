@@ -24,5 +24,5 @@ def check_duplicates(file_path):
     return duplicates
 
 # 使用文件路径
-file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Colors.json'
+file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'
 check_duplicates(file_path)

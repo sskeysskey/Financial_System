@@ -1,6 +1,7 @@
 import re
 import sys
 import json
+import subprocess
 import tkinter as tk
 from datetime import datetime
 import pyperclip
@@ -8,7 +9,6 @@ from functools import lru_cache
 import concurrent.futures
 
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
-from Message_AppleScript import display_dialog
 from Chart_input import plot_financial_data
 
 @lru_cache(maxsize=None)
@@ -31,6 +31,13 @@ def close_app(root):
     if root:
         root.quit()
         root.destroy()
+
+def display_dialog(message):
+    # AppleScript代码模板
+    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+    
+    # 使用subprocess调用osascript
+    process = subprocess.run(['osascript', '-e', applescript_code], check=True)
 
 def match_and_plot(input_trimmed, sector_data, compare_data, shares, marketcap_pe_data, json_data, db_path):
     search_keys = [input_trimmed, input_trimmed.capitalize(), input_trimmed.upper()]

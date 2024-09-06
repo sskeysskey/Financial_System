@@ -2,7 +2,6 @@
     "white_keywords": [
         "BHP",
         "PPG",
-        "CLF",
         "ROKU",
         "NTES",
         "STLA",
@@ -42,7 +41,6 @@
         "CMCSA",
         "EBR",
         "GXO",
-        "ACI",
         "VIPS",
         "POOL",
         "SITE",
@@ -69,7 +67,16 @@
         "CHRD",
         "TM",
         "SLB",
-        "RIG"
+        "RIG",
+        "CX",
+        "MTDR",
+        "NOV",
+        "NUE",
+        "HES",
+        "HAL",
+        "EC",
+        "DINO",
+        "CIVI"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -83,7 +90,6 @@
         "INDA",
         "APA",
         "DOX",
-        "DLTR",
         "ICL",
         "NKE",
         "GMAB",
@@ -119,7 +125,13 @@
         "DAR",
         "MOS",
         "TU",
-        "OXY"
+        "OXY",
+        "CLF",
+        "ALTM",
+        "ACI",
+        "CVX",
+        "BEN",
+        "GFS"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -134,20 +146,8 @@
         "BF-B",
         "BIO",
         "EL",
-        "DG"
-    ],
-    "cyan_keywords": [
-        "IBIT"
-    ],
-    "purple_keywords": [
-        "Bitcoin",
-        "DXY",
-        "DBC",
-        "VIX",
-        "CNYUSD",
-        "US10Y",
-        "XLRE",
-        "CNYA"
+        "DG",
+        "DLTR"
     ],
     "black_keywords": [
         "Cotton",
@@ -172,6 +172,19 @@
         "IEP",
         "CSAN",
         "PARA"
+    ],
+    "cyan_keywords": [
+        "IBIT"
+    ],
+    "purple_keywords": [
+        "Bitcoin",
+        "DXY",
+        "DBC",
+        "VIX",
+        "CNYUSD",
+        "US10Y",
+        "XLRE",
+        "CNYA"
     ],
     "blue_keywords": [
         "HANGSENG",

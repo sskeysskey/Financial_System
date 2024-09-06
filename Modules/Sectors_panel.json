@@ -5,7 +5,8 @@
         "ALB": "雅宝",
         "VALE": "淡水河谷",
         "BHP": "必和必拓",
-        "CLF": "铁矿石"
+        "CLF": "",
+        "NUE": "钢铁"
     },
     "Communication_Services": {
         "NTES": ""
@@ -20,20 +21,25 @@
     },
     "Energy": {
         "PBF": "石油精炼",
-        "BP": "",
-        "SLB": "",
-        "OXY": ""
+        "CHK": "",
+        "MTDR": "",
+        "CHRD": "",
+        "NE": "",
+        "VAL": "",
+        "CVX": "",
+        "HES": "",
+        "DINO": ""
     },
     "Real_Estate": {},
     "Technology": {
         "U": "Unity",
         "SNOW": "",
-        "TEAM": "云协作",
         "STM": "意法",
         "LSCC": "FPGA",
         "INTC": "",
         "JBL": "",
-        "PATH": "UiPath"
+        "PATH": "UiPath",
+        "RMBS": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -41,17 +47,16 @@
         "BF-B": "杰克丹尼",
         "EL": "雅诗兰黛",
         "LW": "冷冻土豆",
-        "MNST": "Monster",
-        "DG": ""
+        "DG": "",
+        "ACI": ""
     },
     "Industrials": {
         "UPS": "联合包裹",
         "CNH": "依维柯",
         "AAL": "美国航空",
         "SYM": "仓储机器",
-        "ATKR": "电气管道",
-        "BA": "波音",
-        "GTLS": "低温物流"
+        "ATKR": "",
+        "BA": "波音"
     },
     "Financial_Services": {
         "SIGI": "保险公司",

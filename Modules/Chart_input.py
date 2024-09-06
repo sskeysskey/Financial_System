@@ -1,6 +1,7 @@
 import re
 import sys
 import sqlite3
+import subprocess
 import numpy as np
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
@@ -10,9 +11,6 @@ import tkinter as tk
 from tkinter import simpledialog, scrolledtext
 from functools import lru_cache
 import tkinter.font as tkFont
-
-sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
-from Message_AppleScript import display_dialog
 
 @lru_cache(maxsize=None)
 def fetch_data(db_path, table_name, name):
@@ -49,8 +47,12 @@ def process_data(data):
     
     return dates, prices, volumes
 
-def show_error_message(message):
-    display_dialog(message)
+def display_dialog(message):
+    # AppleScript代码模板
+    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+    
+    # 使用subprocess调用osascript
+    process = subprocess.run(['osascript', '-e', applescript_code], check=True)
 
 def draw_underline(text_obj, fig, ax1):
     x, y = text_obj.get_position()
@@ -86,17 +88,17 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     try:
         data = fetch_data(db_path, table_name, name)
     except ValueError as e:
-        show_error_message(f"{e}")
+        display_dialog(f"{e}")
         return
 
     try:
         dates, prices, volumes = process_data(data)
     except ValueError as e:
-        show_error_message(f"{e}")
+        display_dialog(f"{e}")
         return
 
     if not dates or not prices:
-        show_error_message("没有有效的数据来绘制图表。")
+        display_dialog("没有有效的数据来绘制图表。")
         return
 
     fig, ax1 = plt.subplots(figsize=(13, 6))
@@ -181,7 +183,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     top.bind('<Escape>', lambda event: root.destroy())
                     root.mainloop()
                     return
-        show_error_message(f"未找到 {name} 的信息")
+        display_dialog(f"未找到 {name} 的信息")
 
     def on_pick(event):
         if event.artist == title:  # 只有当点击的是标题时才执行

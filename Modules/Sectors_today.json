@@ -427,7 +427,9 @@
     "EMLC",
     "SHV",
     "IYK",
-    "CEMB"
+    "CEMB",
+    "FSMB",
+    "FHLC"
   ],
   "Basic_Materials": [
     "LIN",
@@ -882,7 +884,8 @@
     "MGY",
     "RIG",
     "VRN",
-    "TBN"
+    "TBN",
+    "VIST"
   ],
   "Financial_Services": [
     "BRK-A",
@@ -1755,6 +1758,7 @@
     "GEV",
     "TLN",
     "BIPC",
-    "IDA"
+    "IDA",
+    "POR"
   ]
 }

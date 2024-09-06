@@ -1,9 +1,14 @@
 import json
 import sys
+import subprocess
 from datetime import datetime
 
-sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
-from Message_AppleScript import display_dialog
+def display_dialog(message):
+    # AppleScript代码模板
+    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+    
+    # 使用subprocess调用osascript
+    process = subprocess.run(['osascript', '-e', applescript_code], check=True)
 
 def is_sunday_or_monday():
     """检查当前日期是否为周日或周一"""
