@@ -76,7 +76,10 @@
         "HAL",
         "EC",
         "DINO",
-        "CIVI"
+        "CIVI",
+        "TX",
+        "CTRA",
+        "HXL"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -131,7 +134,8 @@
         "ACI",
         "CVX",
         "BEN",
-        "GFS"
+        "GFS",
+        "NFE"
     ],
     "orange_keywords": [
         "NASDAQ",

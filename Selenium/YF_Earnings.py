@@ -1,5 +1,7 @@
 import os
 import sqlite3
+import shutil
+import subprocess
 from selenium import webdriver
 from datetime import datetime, timedelta
 from selenium.webdriver.common.by import By
@@ -7,20 +9,32 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.chrome.service import Service
-import subprocess
 import json
 
 # 文件路径
 file_path = '/Users/yanzhang/Documents/News/Earnings_Release_next.txt'
+backup_dir = '/Users/yanzhang/Documents/News/backup/backup'
 
-# 检查文件是否存在
+# 如果文件存在，进行备份
 if os.path.exists(file_path):
-    # 弹窗通知用户
-    applescript_code = 'display dialog "Earnings_Release_new文件已存在，请先处理后再执行。" buttons {"OK"} default button "OK"'
-    subprocess.run(['osascript', '-e', applescript_code], check=True)
+    timestamp = datetime.now().strftime('%y%m%d')
+    backup_filename = f'Earnings_Release_next_{timestamp}.txt'
+    backup_path = os.path.join(backup_dir, backup_filename)
     
-    # 退出程序
-    exit()
+    # 确保备份目录存在
+    os.makedirs(backup_dir, exist_ok=True)
+    
+    # 复制文件到备份目录
+    shutil.copy2(file_path, backup_path)
+
+# 读取原有内容（如果文件存在）
+existing_content = set()
+if os.path.exists(file_path):
+    with open(file_path, 'r') as file:
+        for line in file:
+            # 只取第一个冒号之前的部分作为键
+            stock_symbol = line.split(':')[0].strip()
+            existing_content.add(stock_symbol)
 
 # ChromeDriver 路径
 chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
@@ -59,8 +73,11 @@ db_path = '/Users/yanzhang/Documents/Database/Finance.db'
 conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
 
-# 初始化结果文件，使用追加模式
+new_content_added = False
+
+# 使用追加模式打开文件
 with open(file_path, 'a') as output_file:
+    output_file.write('\n')
     change_date = start_date
     delta = timedelta(days=1)
     
@@ -98,11 +115,14 @@ with open(file_path, 'a') as output_file:
                                 volume_row = cursor.fetchone()
                                 volume = volume_row[0] if volume_row else "No volume data"
                                 
+                                original_symbol = symbol  # 保留原始公司名称
                                 # 检查颜色关键词
                                 if symbol in color_keys:
                                     symbol += ":L"
                                 entry = f"{symbol:<7}: {volume:<10}: {formatted_change_date} - {call_time}"
-                                output_file.write(entry + "\n")
+                                if original_symbol not in existing_content:
+                                    output_file.write(entry + "\n")
+                                    new_content_added = True
                                 
                 offset += 100  # 为下一个子页面增加 offset
         change_date += delta  # 日期增加一天
@@ -124,3 +144,8 @@ if lines and lines[-1].endswith("\n"):
 # 重新写回文件
 with open(file_path, 'w') as file:
     file.writelines(lines)
+
+# 如果有新内容添加，显示提示
+if new_content_added:
+    applescript_code = 'display dialog "新内容已添加。" buttons {"OK"} default button "OK"'
+    subprocess.run(['osascript', '-e', applescript_code], check=True)

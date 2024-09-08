@@ -1,4 +1,6 @@
 import os
+import shutil
+import subprocess
 from selenium import webdriver
 from datetime import datetime, timedelta
 from selenium.webdriver.common.by import By
@@ -6,18 +8,29 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.chrome.service import Service
-import subprocess
 import json
 
 # 文件路径
 file_path = '/Users/yanzhang/Documents/News/Stock_Splits_next.txt'
+backup_dir = '/Users/yanzhang/Documents/News/backup/backup'
 
-# 检查文件是否存在
+# 如果文件存在，进行备份
 if os.path.exists(file_path):
-    # 弹窗通知用户
-    applescript_code = 'display dialog "Stock_Splits_new文件已存在，请先处理后再执行。" buttons {"OK"} default button "OK"'
-    subprocess.run(['osascript', '-e', applescript_code], check=True)
-    exit()
+    timestamp = datetime.now().strftime('%y%m%d')
+    backup_filename = f'Stock_Splits_next_{timestamp}.txt'
+    backup_path = os.path.join(backup_dir, backup_filename)
+    
+    # 确保备份目录存在
+    os.makedirs(backup_dir, exist_ok=True)
+    
+    # 复制文件到备份目录
+    shutil.copy2(file_path, backup_path)
+
+# 读取原有内容（如果文件存在）
+existing_content = set()
+if os.path.exists(file_path):
+    with open(file_path, 'r') as file:
+        existing_content = set(file.read().splitlines())
 
 # ChromeDriver 设置
 chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
@@ -37,6 +50,8 @@ current_date = datetime.now()
 start_date = current_date + timedelta(days=(6 - current_date.weekday()))
 # 计算往后延6天的周六
 end_date = start_date + timedelta(days=6)
+
+new_content_added = False
 
 # 用于存储结果的列表
 results = []
@@ -65,7 +80,10 @@ while change_date <= end_date:
             
             for category, symbols in data.items():
                 if symbol in symbols:
-                    results.append(f"{symbol}: {formatted_change_date} - {company}")
+                    entry = f"{symbol}: {formatted_change_date} - {company}"
+                    if entry not in existing_content:
+                        results.append(entry)
+                        new_content_added = True
                     break
         
         offset += 100
@@ -75,11 +93,26 @@ while change_date <= end_date:
 # 关闭浏览器
 driver.quit()
 
-# 只有在有结果时才创建文件
+# 只有在有新结果时才追加到文件
 if results:
-    with open(file_path, 'w') as output_file:
+    with open(file_path, 'a') as output_file:
+        output_file.write('\n')
         for result in results:
             output_file.write(result + "\n")
-    print(f"已成功创建文件 {file_path} 并写入 {len(results)} 条记录。")
-else:
-    print("没有找到符合条件的数据，未创建文件。")
+
+# 移除最后一行的回车换行符
+with open(file_path, 'r') as file:
+    lines = file.readlines()
+
+# 去掉最后一行的换行符
+if lines and lines[-1].endswith("\n"):
+    lines[-1] = lines[-1].rstrip("\n")
+
+# 重新写回文件
+with open(file_path, 'w') as file:
+    file.writelines(lines)
+
+# 如果有新内容添加，显示提示
+if new_content_added:
+    applescript_code = 'display dialog "新内容已添加。" buttons {"OK"} default button "OK"'
+    subprocess.run(['osascript', '-e', applescript_code], check=True)

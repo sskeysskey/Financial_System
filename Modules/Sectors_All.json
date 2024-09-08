@@ -483,7 +483,9 @@
     "IYK",
     "CEMB",
     "FSMB",
-    "FHLC"
+    "FHLC",
+    "EMHY",
+    "TPYP"
   ],
   "Basic_Materials": [
     "LIN",
@@ -723,7 +725,6 @@
     "BIRK",
     "BWA",
     "GPK",
-    "GPS",
     "HAS",
     "LNW",
     "MMYT",
@@ -787,7 +788,8 @@
     "SKY",
     "LTH",
     "GPI",
-    "PSNYW"
+    "PSNYW",
+    "GAP"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -1142,7 +1144,8 @@
     "DNB",
     "TRU",
     "UMBF",
-    "THG"
+    "THG",
+    "GAB-PG"
   ],
   "Healthcare": [
     "LLY",
@@ -1758,7 +1761,8 @@
     "ZETA",
     "ADP",
     "PAYX",
-    "ACIW"
+    "ACIW",
+    "OS"
   ],
   "Utilities": [
     "NEE",

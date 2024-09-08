@@ -3,10 +3,10 @@
     "Basic_Materials": {
         "MOS": "美盛化肥",
         "ALB": "雅宝",
-        "VALE": "淡水河谷",
+        "VALE": "",
         "BHP": "必和必拓",
         "CLF": "",
-        "NUE": "钢铁"
+        "NUE": ""
     },
     "Communication_Services": {
         "NTES": ""
@@ -47,8 +47,7 @@
         "BF-B": "杰克丹尼",
         "EL": "雅诗兰黛",
         "LW": "冷冻土豆",
-        "DG": "",
-        "ACI": ""
+        "DG": ""
     },
     "Industrials": {
         "UPS": "联合包裹",

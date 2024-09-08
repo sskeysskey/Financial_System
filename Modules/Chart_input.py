@@ -1,5 +1,4 @@
 import re
-import sys
 import sqlite3
 import subprocess
 import numpy as np
@@ -8,9 +7,8 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import RadioButtons
 import matplotlib
 import tkinter as tk
-from tkinter import simpledialog, scrolledtext
+from tkinter import simpledialog, scrolledtext, font as tkFont
 from functools import lru_cache
-import tkinter.font as tkFont
 
 @lru_cache(maxsize=None)
 def fetch_data(db_path, table_name, name):

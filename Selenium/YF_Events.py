@@ -75,6 +75,7 @@ new_content_added = False
 
 # 使用追加模式打开文件
 with open(file_path, 'a') as output_file:
+    output_file.write('\n')
     change_date = start_date
     delta = timedelta(days=1)
     
