@@ -78,9 +78,12 @@
         "DINO",
         "CIVI",
         "TX",
-        "CTRA",
         "HXL",
-        "RRC"
+        "RRC",
+        "FMX",
+        "COTY",
+        "COP",
+        "OVV"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -137,7 +140,12 @@
         "BEN",
         "GFS",
         "NFE",
-        "BBWI"
+        "BBWI",
+        "NTR",
+        "LEA",
+        "EQNR",
+        "DVN",
+        "CTRA"
     ],
     "orange_keywords": [
         "NASDAQ",

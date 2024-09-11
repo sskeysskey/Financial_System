@@ -128,9 +128,15 @@ def compare_today_yesterday(config_path, description_path, blacklist, interested
                             latest_price, second_latest_price = prices[0][1], prices[1][1]
                             latest_volume, second_latest_volume = prices[0][2], prices[1][2]
                             change = latest_price - second_latest_price
-                            percentage_change = (change / second_latest_price) * 100
+                            if second_latest_price != 0:
+                                percentage_change = (change / second_latest_price) * 100
+                            else:
+                                raise ValueError(f" {table_name} 下的 {name} 的 second_latest_price 为零")
                             volume_change = latest_volume - second_latest_volume
-                            percentage_volume_change = (volume_change / second_latest_volume) * 100
+                            if second_latest_volume != 0:
+                                percentage_volume_change = (volume_change / second_latest_volume) * 100
+                            else:
+                                raise ValueError(f" {table_name} 下的 {name} 的 second_latest_volume 为零")
 
                             # 检查连续上涨
                             consecutive_rise = 0

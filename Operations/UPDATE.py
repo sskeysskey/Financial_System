@@ -15,17 +15,19 @@ cursor = conn.cursor()
 # """, (price_divisor, name))
 
 # 执行拆股操作 II
-# name = 'WRB'
 # price_multiplier = 2 / 3  # 2股拆3股的乘数
 
+# name = 'SIRI'
+# price_multiplier = 10  # 2股拆3股的乘数
+
 # cursor.execute("""
-#     UPDATE Financial_Services 
+#     UPDATE Communication_Services 
 #     SET price = ROUND(price * ?, 2)  
 #     WHERE name = ?
 # """, (price_multiplier, name))
 
 # 更新价格字段
-# cursor.execute("UPDATE Industrials SET price = 45.03 WHERE id = 958369")
+# cursor.execute("UPDATE Communication_Services SET price = 27.38 WHERE id = 295030")
 # cursor.execute("UPDATE Economics SET price = -0.2 WHERE id = 252")
 
 # 保留两位小数

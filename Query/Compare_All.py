@@ -94,11 +94,21 @@ def compare_today_yesterday(config_path, output_file, gainer_loser_path, earning
                     results = cursor.fetchall()
 
                     if len(results) == 2:
-                        latest_price = results[0][1]
-                        second_latest_price = results[1][1]
+                        latest_price = float(results[0][1]) if results[0][1] is not None else 0
+                        second_latest_price = float(results[1][1]) if results[1][1] is not None else 0
                         change = latest_price - second_latest_price
-                        percentage_change = (change / second_latest_price) * 100
-                        change_text = f"{percentage_change:.2f}%"
+                        if second_latest_price != 0:
+                            percentage_change = (change / second_latest_price) * 100
+                            change_text = f"{percentage_change:.2f}%"
+                        else:
+                            # 处理除以零的情况
+                            if latest_price > 0:
+                                change_text = "∞%"  # 正无穷
+                            elif latest_price < 0:
+                                change_text = "-∞%"  # 负无穷
+                            else:
+                                change_text = "0%"  # 两个价格都为零
+                            raise ValueError(f" {table_name} 下的 {keyword}的 second_latest_price 为零")
 
                         # 检查是否连续两天或三天上涨
                         consecutive_rise = 0
@@ -166,9 +176,15 @@ if __name__ == '__main__':
     earning_file = '/Users/yanzhang/Documents/News/Earnings_Release_new.txt'
     error_file_path = '/Users/yanzhang/Documents/News/Today_error.txt'
 
-    # 运行主逻辑
-    compare_today_yesterday(config_path, output_file, gainer_loser_path, earning_file, error_file_path)
-    print(f"{output_file} 已生成。")
+    try:
+        # 运行主逻辑
+        compare_today_yesterday(config_path, output_file, gainer_loser_path, earning_file, error_file_path)
+        print(f"{output_file} 已生成。")
 
-    # 备份数据库
-    copy_database_to_backup()
+        # 备份数据库
+        copy_database_to_backup()
+    except Exception as e:
+        error_message = log_error_with_timestamp(f"未预期的错误: {str(e)}")
+        with open(error_file_path, 'a') as error_file:
+            error_file.write(error_message)
+        print(f"发生错误，详情请查看 {error_file_path}")

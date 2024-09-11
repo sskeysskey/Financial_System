@@ -6,7 +6,8 @@
         "VALE": "",
         "BHP": "必和必拓",
         "CLF": "",
-        "NUE": ""
+        "NUE": "",
+        "OLN": ""
     },
     "Communication_Services": {
         "NTES": ""
@@ -28,7 +29,9 @@
         "NE": "",
         "VAL": "",
         "CVX": "",
-        "HES": ""
+        "HES": "",
+        "COP": "",
+        "EQNR": ""
     },
     "Technology": {
         "U": "Unity",
@@ -43,28 +46,22 @@
     },
     "Utilities": {},
     "Consumer_Defensive": {
-        "DEO": "尊尼获加",
-        "BF-B": "杰克丹尼",
         "EL": "雅诗兰黛",
-        "LW": "冷冻土豆",
-        "DG": ""
+        "DG": "",
+        "FMX": "",
+        "DAR": ""
     },
     "Industrials": {
-        "UPS": "联合包裹",
-        "CNH": "依维柯",
         "AAL": "美国航空",
         "SYM": "仓储机器",
         "ATKR": "",
-        "BA": "波音"
+        "BA": "波音",
+        "GTLS": ""
     },
     "Real_Estate": {},
-    "Financial_Services": {
-        "SIGI": "保险公司",
-        "SOFI": ""
-    },
+    "Financial_Services": {},
     "Healthcare": {
         "CVS": "",
-        "BNTX": "BioNTech",
         "EW": "爱德华兹",
         "DXCM": "德康血糖"
     },
@@ -165,7 +162,7 @@
         "KIE": "保险",
         "XLB": "原材料",
         "PAVE": "基础设施",
-        "IYK": "必需消费",
+        "XLP": "必需消费",
         "XLE": "能源",
         "XLU": "公共事业"
     }

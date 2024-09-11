@@ -7,75 +7,65 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from datetime import datetime, timedelta
+from contextlib import contextmanager
 
-# 浏览器设置
-chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
-service = Service(executable_path=chrome_driver_path)
-driver = webdriver.Chrome(service=service)
+# 配置常量
+CHROME_DRIVER_PATH = "/Users/yanzhang/Downloads/backup/chromedriver"
+TXT_FILE_PATH = "/Users/yanzhang/Documents/News/Today_error.txt"
+DB_PATH = "/Users/yanzhang/Documents/Database/Finance.db"
 
-# 读取 today_error.txt 文件
-txt_file_path = "/Users/yanzhang/Documents/News/Today_error.txt"
-with open(txt_file_path, 'r') as txt_file:
-    txt_content = txt_file.read()
+@contextmanager
+def get_driver():
+    service = Service(executable_path=CHROME_DRIVER_PATH)
+    driver = webdriver.Chrome(service=service)
+    try:
+        yield driver
+    finally:
+        driver.quit()
 
-# 匹配 "ETFs HYG" 或 "Basic_Materials RIO" 的模式
-pattern = re.compile(r"\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}\] (\w+) (\w+):")
-matches = pattern.findall(txt_content)
+def read_tasks():
+    with open(TXT_FILE_PATH, 'r') as txt_file:
+        content = txt_file.read()
+    pattern = re.compile(r"\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}\] (\w+) (\w+):")
+    return [{"tablename": match[0], "symbol": match[1]} for match in pattern.findall(content)]
 
-# 提取 tablename 和 symbol
-tasks = [{"tablename": match[0], "symbol": match[1]} for match in matches]
-
-# 获取昨天的日期
-now = datetime.now()
-yesterday = (now - timedelta(days=1)).date()
-
-# 打开数据库连接
-db_path = "/Users/yanzhang/Documents/Database/Finance.db"
-conn = sqlite3.connect(db_path)
-cursor = conn.cursor()
-
-# 爬取股票数据并写入数据库
-for task in tasks:
-    tablename = task["tablename"]
-    symbol = task["symbol"]
-    
-    # 爬取页面 https://finance.yahoo.com/quote/{symbol}/
+def get_stock_data(driver, symbol):
     url = f"https://finance.yahoo.com/quote/{symbol}/"
     driver.get(url)
+    
+    price_element = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, "fin-streamer[data-testid='qsp-price'] > span"))
+    )
+    price = float(price_element.text.replace(',', ''))
 
-    try:
-        # 提取价格 (price)
-        price_element = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "fin-streamer[data-testid='qsp-price'] > span"))
-        )
-        price = price_element.text
-        price = float(price.replace(',', ''))  # 转换为浮点数
+    volume_element = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.XPATH, "//span[@class='value yf-tx3nkj']/fin-streamer[@data-field='regularMarketVolume']"))
+    )
+    volume = volume_element.get_attribute("data-value")
+    volume = int(volume.replace(',', '')) if volume != '--' else 0
 
-        # 提取成交量 (volume)
-        volume_element = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, "//span[@class='value yf-tx3nkj']/fin-streamer[@data-field='regularMarketVolume']"))
-        )
-        volume = volume_element.get_attribute("data-value")
-        if volume == '--':
-            print(f"Symbol {symbol} has no available volume data.")
-            volume = 0.0  # 设置默认价格
-        else:
-            volume = int(volume.replace(',', ''))  # 转换为整数
+    return price, volume
 
-        # 插入数据到 SQLite 数据库
-        cursor.execute(f"""
-            INSERT INTO {tablename} (date, name, price, volume)
-            VALUES (?, ?, ?, ?)
-        """, (yesterday, symbol, price, volume))
+def insert_data(cursor, tablename, symbol, date, price, volume):
+    cursor.execute(f"""
+        INSERT INTO {tablename} (date, name, price, volume)
+        VALUES (?, ?, ?, ?)
+    """, (date, symbol, price, volume))
 
-        print(f"成功插入数据: {tablename}, {symbol}, {price}, {volume}")
+def main():
+    tasks = read_tasks()
+    yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
 
-    except Exception as e:
-        print(f"爬取 {symbol} 时出错: {str(e)}")
+    with get_driver() as driver, sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        for task in tasks:
+            try:
+                price, volume = get_stock_data(driver, task["symbol"])
+                insert_data(cursor, task["tablename"], task["symbol"], yesterday, price, volume)
+                print(f"成功插入数据: {task['tablename']}, {task['symbol']}, {price}, {volume}")
+            except Exception as e:
+                print(f"爬取 {task['symbol']} 时出错: {str(e)}")
+        conn.commit()
 
-# 提交事务并关闭数据库
-conn.commit()
-conn.close()
-
-# 关闭浏览器
-driver.quit()
+if __name__ == "__main__":
+    main()
