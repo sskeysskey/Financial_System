@@ -1,89 +1,105 @@
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import os
+import re
 import sqlite3
-import pandas as pd
-import matplotlib.pyplot as plt
-import pyperclip
-import matplotlib
-import subprocess
+from datetime import datetime, timedelta
 
-# 设置中文字体
-matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
-plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
+def setup_driver():
+    chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
+    service = Service(executable_path=chrome_driver_path)
+    return webdriver.Chrome(service=service)
 
-def Copy_Command_C():
-    script = '''
-    tell application "System Events"
-        keystroke "c" using command down
-    end tell
-    '''
-    # 运行AppleScript
-    subprocess.run(['osascript', '-e', script])
+def parse_error_file(file_path):
+    data = []
+    pattern = r'\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\] (\w+) (\w+): No price data found for the given date range\.'
+    with open(file_path, 'r') as file:
+        for line in file:
+            match = re.match(pattern, line.strip())
+            if match:
+                _, tablename, symbol = match.groups()
+                data.append((tablename, symbol))
+    return data
 
-def get_db_connection(db_path):
-    """创建数据库连接"""
-    return sqlite3.connect(db_path)
+def safe_float(value):
+    try:
+        return float(value.replace(',', ''))
+    except (ValueError, AttributeError):
+        return None
 
-def query_database(conn, query, params):
-    """查询数据库并返回DataFrame"""
-    return pd.read_sql_query(query, conn, params=params)
+def safe_int(value):
+    try:
+        return int(value.replace(',', ''))
+    except (ValueError, AttributeError):
+        return None
 
-def on_key_press(event):
-    """当按下ESC键时关闭图表并退出程序"""
-    if event.key == 'escape':
-        plt.close('all')
-
-def plot_price_trend(df, title):
-    """绘制价格趋势图"""
-    plt.figure(figsize=(12, 6))
-    
-    # 修改背景颜色
-    ax = plt.gca()  # 获取当前的坐标轴对象
-    ax.set_facecolor('#2e2e2e')  # 深色背景
-    plt.gcf().set_facecolor('#2e2e2e')  # 整个图表的背景
-
-    # 绘制价格趋势线
-    plt.plot(df['date'], df['price'], marker='o', color='#00ff7f')  # 绿色线条
-
-    # 设置标题和标签的颜色
-    plt.title(title, color='white')
-
-    # 设置坐标轴刻度标签颜色
-    plt.xticks(color='white', rotation=45)
-    plt.yticks(color='white')
-
-    # 设置网格线颜色
-    plt.grid(True, color='#444444')  # 深灰色网格线
-    
-    plt.tight_layout()
-    
-    # 连接键盘事件处理函数
-    plt.gcf().canvas.mpl_connect('key_press_event', on_key_press)
-    
-    plt.show()
-
-def main():
-    db_path = '/Users/yanzhang/Documents/Database/Finance.db'
-    query = """
-    SELECT date, price
-    FROM Earning
-    WHERE name = ?
-    ORDER BY date
-    """
-    
-    Copy_Command_C()
-    clipboard_content = pyperclip.paste().strip()
+def fetch_data(driver, symbol):
+    url = f"https://finance.yahoo.com/quote/{symbol}/"
+    driver.get(url)
     
     try:
-        with get_db_connection(db_path) as conn:
-            df = query_database(conn, query, (clipboard_content,))
-            
-            if df.empty:
-                print(f"没有找到与 '{clipboard_content}' 相关的数据。")
+        price_element = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//fin-streamer[@data-field='regularMarketPrice']/span"))
+        )
+        price = safe_float(price_element.text)
+
+        volume_element = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//fin-streamer[@data-field='regularMarketVolume']"))
+        )
+        volume = safe_int(volume_element.text)
+
+        if price is None and volume is None:
+            print(f"Warning: No valid data for {symbol}. Price: {price_element.text}, Volume: {volume_element.text}")
+            return None, None
+
+        if price is None:
+            print(f"Warning: Invalid price for {symbol}. Price: {price_element.text}")
+        if volume is None:
+            print(f"Warning: Invalid volume for {symbol}. Volume: {volume_element.text}")
+
+        return price, volume
+    except Exception as e:
+        print(f"Error fetching data for {symbol}: {str(e)}")
+        return None, None
+
+def insert_data(conn, tablename, symbol, date, price, volume):
+    cursor = conn.cursor()
+    cursor.execute(f'''
+        INSERT INTO {tablename} (date, name, price, volume)
+        VALUES (?, ?, ?, ?)
+    ''', (date, symbol, price, volume))
+    conn.commit()
+
+def adapt_date(date):
+    return date.isoformat()
+
+def main():
+    error_file_path = "/Users/yanzhang/Documents/News/Today_error.txt"
+    db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+
+    driver = setup_driver()
+    data = parse_error_file(error_file_path)
+
+    today = datetime.now().date()
+    yesterday = today - timedelta(days=1)
+
+    sqlite3.register_adapter(datetime, adapt_date)
+    conn = sqlite3.connect(db_path, detect_types=sqlite3.PARSE_DECLTYPES)
+
+    try:
+        for tablename, symbol in data:
+            price, volume = fetch_data(driver, symbol)
+            if price is not None or volume is not None:
+                insert_data(conn, tablename, symbol, yesterday, price, volume)
+                print(f"Data inserted for {symbol} in {tablename}. Price: {price}, Volume: {volume}")
             else:
-                df['date'] = pd.to_datetime(df['date'])
-                plot_price_trend(df, f"{clipboard_content} 财报历史记录")
-    
-    except sqlite3.Error as e:
-        print(f"数据库错误: {e}")
+                print(f"Skipping {symbol} due to no valid data")
+    finally:
+        driver.quit()
+        conn.close()
 
 if __name__ == "__main__":
     main()

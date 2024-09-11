@@ -14,9 +14,9 @@ def query_database(db_file, table_name, condition, fields, include_condition):
     
     # 根据 include_condition 决定是否添加 WHERE 条件
     if include_condition and condition:
-        query = f"SELECT {fields} FROM {table_name} WHERE {condition} ORDER BY date DESC;"
+        query = f"SELECT {fields} FROM {table_name} WHERE {condition} ORDER BY date DESC, id DESC;"
     else:
-        query = f"SELECT {fields} FROM {table_name} ORDER BY DATE DESC;"
+        query = f"SELECT {fields} FROM {table_name} ORDER BY date DESC, id DESC;"
     
     cursor.execute(query)
     
@@ -110,7 +110,7 @@ if __name__ == '__main__':
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Communication_Services',
         #     'condition': "id = '284897'", 'fields': '*',
-        # 'include_condition': True},
+        # 'include_condition': False},
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Consumer_Cyclical',
         #     'condition': "name = 'VVV'", 'fields': '*',

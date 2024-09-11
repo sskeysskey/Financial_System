@@ -41,8 +41,8 @@ chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
 service = Service(executable_path=chrome_driver_path)
 driver = webdriver.Chrome(service=service)
 
-# start_date = datetime(2024, 6, 30)
-# end_date = datetime(2024, 7, 6)
+# start_date = datetime(2024, 9, 8)
+# end_date = datetime(2024, 9, 14)
 
 # 获取当前系统日期
 current_date = datetime.now()

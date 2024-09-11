@@ -60,8 +60,7 @@ def main():
     if is_sunday_or_monday():
         update_sectors_panel()
     else:
-        show_error_message("今天不是周日或周一，不执行更新操作。")
-        display_dialog(mshow_error_messageessage)
+        display_dialog("今天不是周日或周一，不执行更新操作。")
 
 if __name__ == "__main__":
     main()

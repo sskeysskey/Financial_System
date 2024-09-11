@@ -57,9 +57,8 @@ for key, symbols in color_data.items():
     if key != "red_keywords":
         color_keys.update(symbols)
 
-# 获取当前日期和结束日期
-# start_date = datetime(2024, 5, 27)
-# end_date = datetime(2024, 8, 1)
+# start_date = datetime(2024, 9, 8)
+# end_date = datetime(2024, 9, 14)
 
 # 获取当前系统日期
 current_date = datetime.now()

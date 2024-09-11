@@ -11,6 +11,42 @@ from collections import OrderedDict
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
 from Chart_input import plot_financial_data
 
+class SymbolManager:
+    def __init__(self, config):
+        self.symbols = []
+        self.current_index = -1
+        for category in config.values():
+            if isinstance(category, dict):
+                self.symbols.extend(category.keys())
+            else:
+                self.symbols.extend(category)
+
+    def next_symbol(self):
+        self.current_index = (self.current_index + 1) % len(self.symbols)
+        return self.symbols[self.current_index]
+
+    def previous_symbol(self):
+        self.current_index = (self.current_index - 1) % len(self.symbols)
+        return self.symbols[self.current_index]
+
+    def set_current_symbol(self, symbol):
+        if symbol in self.symbols:
+            self.current_index = self.symbols.index(symbol)
+        else:
+            print(f"Warning: Symbol {symbol} not found in the list.")
+
+    def reset(self):
+        self.current_index = -1
+
+def handle_arrow_key(direction):
+    global symbol_manager
+    if direction == 'down':
+        symbol = symbol_manager.next_symbol()
+    else:
+        symbol = symbol_manager.previous_symbol()
+    
+    on_keyword_selected_chart(symbol, None)
+
 def load_json(path):
     with open(path, 'r', encoding='utf-8') as file:
         return json.load(file, object_pairs_hook=OrderedDict)
@@ -62,6 +98,8 @@ def create_selection_window():
     selection_window.title("选择查询关键字")
     selection_window.geometry("1480x900")
     selection_window.bind('<Escape>', lambda e: close_app(root))
+    selection_window.bind('<Down>', lambda e: handle_arrow_key('down'))
+    selection_window.bind('<Up>', lambda e: handle_arrow_key('up'))
 
     canvas = tk.Canvas(selection_window)
     scrollbar = tk.Scrollbar(selection_window, orient="horizontal", command=canvas.xview)
@@ -158,27 +196,16 @@ def query_database(db_path, table_name, condition):
         return output_text
 
 def on_keyword_selected_chart(value, parent_window):
-    stock_sectors = ["Basic_Materials", "Communication_Services", "Consumer_Cyclical",
-                     "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare", "Industrials",
-                     "Real_Estate", "Technology", "Utilities"]
-    economics_sectors = ["Economics", "ETFs", "Indices"]
-
+    global symbol_manager
     db_path = "/Users/yanzhang/Documents/Database/Finance.db"
     sector = next((s for s, names in sector_data.items() if value in names), None)
 
     if sector:
+        symbol_manager.set_current_symbol(value)
         compare_value = compare_data.get(value, "N/A")
         shares_value = shares.get(value, "N/A")
         marketcap, pe = marketcap_pe_data.get(value, (None, 'N/A'))
-
-        if sector in stock_sectors:
-            plot_financial_data(db_path, sector, value, compare_value, shares_value, marketcap, pe, json_data, '1Y', False)
-        elif sector in economics_sectors:
-            plot_financial_data(db_path, sector, value, compare_value, shares_value, marketcap, pe, json_data, '10Y', False)
-        else:
-            change = compare_data.get(value, "")
-            # plot_financial_data_panel(db_path, sector, value, change, '1Y')
-            plot_financial_data(db_path, sector, value, compare_value, shares_value, marketcap, pe, json_data, '1Y', False)
+        plot_financial_data(db_path, sector, value, compare_value, shares_value, marketcap, pe, json_data, '1Y', False)
 
 def create_window(content):
     top = tk.Toplevel(root)
@@ -196,6 +223,8 @@ def create_window(content):
     text_area.configure(state='disabled')
 
 def close_app(window):
+    global symbol_manager
+    symbol_manager.reset()
     window.destroy()
 
 if __name__ == '__main__':
@@ -205,5 +234,6 @@ if __name__ == '__main__':
     shares = load_text_data('/Users/yanzhang/Documents/News/backup/Shares.txt')
     marketcap_pe_data = load_marketcap_pe_data('/Users/yanzhang/Documents/News/backup/marketcap_pe.txt')
 
+    symbol_manager = SymbolManager(config)
     create_selection_window()
     root.mainloop()

@@ -79,7 +79,8 @@
         "CIVI",
         "TX",
         "CTRA",
-        "HXL"
+        "HXL",
+        "RRC"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -135,7 +136,8 @@
         "CVX",
         "BEN",
         "GFS",
-        "NFE"
+        "NFE",
+        "BBWI"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -222,33 +224,13 @@
         "CorePCEY",
         "CorePCEM",
         "CoreCPI",
-        "SMAR",
-        "IOT",
-        "HMY",
-        "HPE",
-        "NIO",
-        "ASND",
-        "GTLB",
-        "AVAV",
-        "DKS",
-        "CRDO",
-        "HRL",
+        "PGR",
+        "ORCL",
         "KR",
-        "CPRT",
-        "SAIC",
-        "HQY",
-        "PATH",
-        "DLTR",
-        "RH",
-        "DOOO",
-        "CASY",
-        "CIEN",
-        "DSGX",
-        "CNM",
-        "GWRE",
-        "ZS",
-        "DOCU",
-        "TTC",
-        "AVGO"
+        "TKC",
+        "LEN",
+        "GME",
+        "ADBE",
+        "RH"
     ]
 }
