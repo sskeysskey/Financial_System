@@ -8,7 +8,7 @@ with open('/Users/yanzhang/Documents/News/backup/ETFs.txt', 'r', encoding='utf-8
 etf_txt_symbols = {line.split(':')[0].strip() for line in etf_lines}
 
 # 读取a.json文件内容
-with open('/Users/yanzhang/Documents/Financial_System/Modules/Description.json', 'r', encoding='utf-8') as file:
+with open('/Users/yanzhang/Documents/Financial_System/Modules/description.json', 'r', encoding='utf-8') as file:
     json_data = json.load(file)
 
 # 提取a.json中的etf symbols

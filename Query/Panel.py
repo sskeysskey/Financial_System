@@ -71,7 +71,7 @@ def load_marketcap_pe_data(path):
 # 全局数据变量
 keyword_colors = load_json('/Users/yanzhang/Documents/Financial_System/Modules/Colors.json')
 config = load_json('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json')
-json_data = load_json('/Users/yanzhang/Documents/Financial_System/Modules/Description.json')
+json_data = load_json('/Users/yanzhang/Documents/Financial_System/Modules/description.json')
 sector_data = load_json('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json')
 
 def create_custom_style():

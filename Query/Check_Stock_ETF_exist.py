@@ -2,7 +2,7 @@ import json
 import subprocess
 import pyperclip
 
-json_file = "/Users/yanzhang/Documents/Financial_System/Modules/Description.json"
+json_file = "/Users/yanzhang/Documents/Financial_System/Modules/description.json"
 with open(json_file, 'r', encoding='utf-8') as file:
     data = json.load(file)
 

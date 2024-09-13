@@ -171,7 +171,7 @@ urls = [
     "https://finance.yahoo.com/markets/etfs/top/?start=300&count=100",
     "https://finance.yahoo.com/markets/etfs/top/?start=400&count=100"
 ]
-existing_json = '/Users/yanzhang/Documents/Financial_System/Modules/Description.json'
+existing_json = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
 today_file = '/Users/yanzhang/Documents/News/site/ETFs_today.txt'
 diff_file = '/Users/yanzhang/Documents/News/ETFs_diff.txt'
 new_file = '/Users/yanzhang/Documents/News/ETFs_new.txt'

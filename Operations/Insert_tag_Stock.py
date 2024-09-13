@@ -39,7 +39,7 @@ def on_key_press(event, name, entry, data, json_file, root):
 def main():
     Copy_Command_C()
 
-    json_file = "/Users/yanzhang/Documents/Financial_System/Modules/Description.json"
+    json_file = "/Users/yanzhang/Documents/Financial_System/Modules/description.json"
     data = load_data(json_file)
 
     new_name = pyperclip.paste().replace('"', '').replace("'", "")

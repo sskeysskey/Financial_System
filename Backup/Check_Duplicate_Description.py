@@ -2,7 +2,7 @@ import json
 from collections import Counter
 
 # 指定你的JSON文件路径
-json_file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Description.json'
+json_file_path = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
 
 # 读取并解析JSON文件
 with open(json_file_path, 'r', encoding='utf-8') as file:

@@ -1,7 +1,7 @@
 import json
 
 # 读取a.json文件
-with open('/Users/yanzhang/Documents/Financial_System/Modules/Description.json', 'r', encoding='utf-8') as f:
+with open('/Users/yanzhang/Documents/Financial_System/Modules/description.json', 'r', encoding='utf-8') as f:
     data_a = json.load(f)
 
 # 提取etfs分类下的所有symbol字段

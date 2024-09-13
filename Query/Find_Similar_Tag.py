@@ -79,7 +79,7 @@ def main(symbol):
 excluded_tags = {"巴西","美国","以色列","加拿大","英国","瑞士"}
 
 # 读取JSON文件
-with open('/Users/yanzhang/Documents/Financial_System/Modules/Description.json', 'r') as file:
+with open('/Users/yanzhang/Documents/Financial_System/Modules/description.json', 'r') as file:
     data = json.load(file)
 
 copy2clipboard()

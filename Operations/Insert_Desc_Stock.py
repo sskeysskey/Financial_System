@@ -84,7 +84,7 @@ def execute_applescript(script_path):
         print(f"Error running AppleScript: {e}")
 
 def main():
-    json_file = "/Users/yanzhang/Documents/Financial_System/Modules/Description.json"
+    json_file = "/Users/yanzhang/Documents/Financial_System/Modules/description.json"
     symbol_name_file = "/Users/yanzhang/Documents/News/backup/symbol_names.txt"
     symbol_names = load_symbol_names(symbol_name_file)
 

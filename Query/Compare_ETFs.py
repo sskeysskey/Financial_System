@@ -159,7 +159,7 @@ def clean_old_backups(directory, prefix="CompareETFs_", days=4):
 
 if __name__ == '__main__':
     config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
-    description_path = '/Users/yanzhang/Documents/Financial_System/Modules/Description.json'
+    description_path = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
     blacklist = []
     interested_sectors = ["ETFs"]
     file_path = '/Users/yanzhang/Documents/News/CompareETFs.txt'

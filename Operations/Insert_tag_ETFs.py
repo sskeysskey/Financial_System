@@ -60,7 +60,7 @@ def on_key_press(event, symbol, entry, data, json_file, root, symbol_names):
 def main():
     Copy_Command_C()
 
-    json_file = "/Users/yanzhang/Documents/Financial_System/Modules/Description.json"
+    json_file = "/Users/yanzhang/Documents/Financial_System/Modules/description.json"
     data = load_data(json_file)
     symbol_name_file = "/Users/yanzhang/Documents/News/backup/ETFs.txt"
     symbol_names = load_symbol_names(symbol_name_file)

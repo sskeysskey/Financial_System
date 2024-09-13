@@ -41,11 +41,11 @@ def write_json_file(data, filename):
         json.dump(data, file, ensure_ascii=False, indent=4)
 
 def main():
-    json_data = read_json_file('/Users/yanzhang/Documents/Financial_System/Modules/Description.json')
+    json_data = read_json_file('/Users/yanzhang/Documents/Financial_System/Modules/description.json')
     # symbol_to_name = parse_txt_file('/Users/yanzhang/Documents/News/backup/symbol_names.txt')
     symbol_to_name = parse_txt_file('/Users/yanzhang/Documents/News/backup/ETFs.txt')
     update_json_data(json_data, symbol_to_name)
-    write_json_file(json_data, '/Users/yanzhang/Documents/Financial_System/Modules/Description_new.json')
+    write_json_file(json_data, '/Users/yanzhang/Documents/Financial_System/Modules/description_new.json')
 
 if __name__ == '__main__':
     main()

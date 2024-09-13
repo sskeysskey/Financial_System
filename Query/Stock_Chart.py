@@ -70,7 +70,7 @@ def load_data_parallel():
         ('/Users/yanzhang/Documents/News/backup/Compare_All.txt', 'compare'),
         ('/Users/yanzhang/Documents/News/backup/Shares.txt', 'compare'),
         ('/Users/yanzhang/Documents/News/backup/marketcap_pe.txt', 'marketcap_pe'),
-        ('/Users/yanzhang/Documents/Financial_System/Modules/Description.json', 'json')
+        ('/Users/yanzhang/Documents/Financial_System/Modules/description.json', 'json')
     ]
     
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
@@ -97,7 +97,7 @@ def input_mapping(root, data, db_path, user_input):
                       data['/Users/yanzhang/Documents/News/backup/Compare_All.txt'],
                       data['/Users/yanzhang/Documents/News/backup/Shares.txt'],
                       data['/Users/yanzhang/Documents/News/backup/marketcap_pe.txt'],
-                      data['/Users/yanzhang/Documents/Financial_System/Modules/Description.json'],
+                      data['/Users/yanzhang/Documents/Financial_System/Modules/description.json'],
                       db_path):
         close_app(root)
     else:
