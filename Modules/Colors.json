@@ -76,7 +76,6 @@
         "HAL",
         "EC",
         "DINO",
-        "CIVI",
         "TX",
         "HXL",
         "RRC",
@@ -145,7 +144,9 @@
         "LEA",
         "EQNR",
         "DVN",
-        "CTRA"
+        "CTRA",
+        "CTAS",
+        "CIVI"
     ],
     "orange_keywords": [
         "NASDAQ",

@@ -151,6 +151,10 @@ if __name__ == '__main__':
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Utilities',
         #     'condition': "name = ''", 'fields': '*',
         # 'include_condition': True},
+
+        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Earning',
+        #     'condition': "name = ''", 'fields': '*',
+        # 'include_condition': False},
     ]
     
     # 遍历数据库信息列表，对每个数据库执行查询并收集结果

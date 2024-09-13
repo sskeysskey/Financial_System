@@ -31,7 +31,8 @@
         "CVX": "",
         "HES": "",
         "COP": "",
-        "EQNR": ""
+        "EQNR": "",
+        "DINO": ""
     },
     "Technology": {
         "U": "Unity",

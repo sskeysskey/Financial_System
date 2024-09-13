@@ -18,9 +18,21 @@ def get_stock_data(file_path):
         return file.read()
 
 def parse_stock_data(content, stock_name):
-    pattern = rf'{re.escape(stock_name)}.*?:\s*([-]?\d+\.\d+)'
+    pattern = rf'{re.escape(stock_name)}.*?:\s*([-]?\d+\.\d+)%'
     match = re.search(pattern, content)
-    return float(match.group(1)) if match else None
+    if match:
+        return float(match.group(1))
+    return None
+
+# def parse_stock_data(content, stock_name):
+#     # 修改正则表达式以匹配百分号
+#     pattern = rf'{re.escape(stock_name)}\.10\.\*\.-\s*:\s*([-]?\d+\.\d+%?)' 
+#     match = re.search(pattern, content)
+#     if match:
+#         # 去除百分号并转换为浮点数
+#         return float(match.group(1).rstrip('%')) 
+#     else:
+#         return None
 
 def check_last_record_date(cursor, name, current_date):
     cursor.execute("""

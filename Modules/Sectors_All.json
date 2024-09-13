@@ -502,7 +502,14 @@
     "DEM",
     "XLP",
     "KBE",
-    "CARZ"
+    "CARZ",
+    "BBEU",
+    "PFM",
+    "FLHY",
+    "SPIB",
+    "IGIB",
+    "SMIN",
+    "IXC"
   ],
   "Basic_Materials": [
     "LIN",
@@ -1162,7 +1169,8 @@
     "TRU",
     "UMBF",
     "THG",
-    "GAB-PG"
+    "GAB-PG",
+    "BNT"
   ],
   "Healthcare": [
     "LLY",
@@ -1310,7 +1318,8 @@
     "TMDX",
     "INSP",
     "RARE",
-    "AVTR"
+    "AVTR",
+    "OSCR"
   ],
   "Industrials": [
     "GE",

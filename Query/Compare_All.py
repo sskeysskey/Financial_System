@@ -45,7 +45,139 @@ def read_earnings_release(filepath, error_file_path):
             earnings_companies[company] = day
     return earnings_companies
 
-def compare_today_yesterday(config_path, output_file, gainer_loser_path, earning_file, error_file_path):
+def generate_html_output(config_path, compare_results, output_html_path):
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+    
+    html_content = """
+    <!DOCTYPE html>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>金融数据比较</title>
+        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+        <style>
+            body {
+                font-family: 'Roboto', sans-serif;
+                line-height: 1.6;
+                color: #333;
+                background-color: #f4f4f4;
+                margin: 0;
+                padding: 20px;
+            }
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+                background-color: #fff;
+                border-radius: 8px;
+                box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                padding: 30px;
+            }
+            h1 {
+                color: #2c3e50;
+                text-align: center;
+                margin-bottom: 30px;
+                font-size: 2.5em;
+            }
+            h2 {
+                color: #3498db;
+                padding-bottom: 10px;
+                margin-top: 40px;
+            }
+            .category {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: space-between;
+            }
+            .item {
+                background-color: #ecf0f1;
+                border-radius: 6px;
+                padding: 15px;
+                margin: 10px 0;
+                width: calc(50% - 10px);
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                transition: transform 0.3s ease;
+            }
+            .item:hover {
+                transform: translateY(-5px);
+            }
+            .item-name {
+                font-weight: bold;
+                color: #2c3e50;
+            }
+            .item-value {
+                color: #27ae60;
+                font-size: 1.1em;
+                margin-top: 5px;
+            }
+            .item-value.negative {
+                color: #c0392b;
+            }
+            @media (max-width: 768px) {
+                .item {
+                    width: 100%;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>金融数据比较</h1>
+    """
+
+    for category, items in config.items():
+        # 检查该分组是否有任何符号项目
+        has_symbols = any(item for item in items if next((r for r in compare_results if r.startswith(f"{item}:")), None))
+        
+        if has_symbols:
+            html_content += f'<h2>{category}</h2>\n<div class="category">\n'
+            for item, description in items.items():
+                result = next((r for r in compare_results if r.startswith(f"{item}:")), None)
+                if result:
+                    change = result.split(': ')[1]
+                    display_name = description if description else item
+                    value_class = "item-value negative" if "-" in change else "item-value"
+                    html_content += f'''
+                    <div class="item">
+                        <div class="item-name">{display_name}</div>
+                        <div class="{value_class}">{change}</div>
+                    </div>
+                    '''
+            html_content += '</div>\n'
+
+    html_content += """
+        </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', (event) => {
+                document.querySelectorAll('.item').forEach((item) => {
+                    item.style.opacity = '0';
+                    item.style.transform = 'translateY(20px)';
+                });
+
+                function showItems() {
+                    let delay = 0;
+                    document.querySelectorAll('.item').forEach((item) => {
+                        setTimeout(() => {
+                            item.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                            item.style.opacity = '1';
+                            item.style.transform = 'translateY(0)';
+                        }, delay);
+                        delay += 50;
+                    });
+                }
+
+                showItems();
+            });
+        </script>
+    </body>
+    </html>
+    """
+
+    with open(output_html_path, 'w', encoding='utf-8') as f:
+        f.write(html_content)
+
+def compare_today_yesterday(config_path, config_path2, output_file, gainer_loser_path, earning_file, error_file_path, output_html_path):
     latest_date, latest_info = read_latest_date_info(gainer_loser_path)
     gainers = latest_info.get("gainer", [])
     losers = latest_info.get("loser", [])
@@ -169,17 +301,22 @@ def compare_today_yesterday(config_path, output_file, gainer_loser_path, earning
         for line in output:
             file.write(line + '\n')
 
+    # 生成 HTML 输出
+    generate_html_output(config_path2, output, output_html_path)
+
 if __name__ == '__main__':
     config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
+    config_path2 = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json'
     output_file = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
     gainer_loser_path = '/Users/yanzhang/Documents/Financial_System/Modules/Gainer_Loser.json'
     earning_file = '/Users/yanzhang/Documents/News/Earnings_Release_new.txt'
     error_file_path = '/Users/yanzhang/Documents/News/Today_error.txt'
+    output_html_path = '/Users/yanzhang/Documents/sskeysskey.github.io/economics/finance_comparison.html'
 
     try:
         # 运行主逻辑
-        compare_today_yesterday(config_path, output_file, gainer_loser_path, earning_file, error_file_path)
-        print(f"{output_file} 已生成。")
+        compare_today_yesterday(config_path, config_path2, output_file, gainer_loser_path, earning_file, error_file_path, output_html_path)
+        print(f"{output_file} 和 {output_html_path} 已生成。")
 
         # 备份数据库
         copy_database_to_backup()

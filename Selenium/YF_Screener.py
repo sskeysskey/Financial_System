@@ -1,7 +1,8 @@
-import json
 import os
-from datetime import datetime, timedelta
+import json
+import pyautogui
 from selenium import webdriver
+from datetime import datetime, timedelta
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
@@ -28,7 +29,7 @@ def login_once(driver, login_url):
     password_input.send_keys(Keys.RETURN)
     
     # 等待找到id为header-profile-button或ybarAccountMenu其中任意一个表示登录成功
-    WebDriverWait(driver, 10).until(
+    WebDriverWait(driver, 120).until(
         EC.any_of(
             EC.presence_of_element_located((By.ID, "header-profile-button")),
             EC.presence_of_element_located((By.ID, "ybarAccountMenu"))
@@ -57,6 +58,8 @@ def fetch_data(driver, url):
         symbol_xpath = f'//fin-streamer[@data-symbol="{symbol}"]'
         name_xpath = f'{symbol_xpath}/ancestor::tr/td[@aria-label="Name"]'
         market_cap_xpath = f'{symbol_xpath}[@data-field="marketCap"]'
+        price_xpath = f'{symbol_xpath}[@data-field="regularMarketPrice"]'
+        volume_xpath = f'{symbol_xpath}[@data-field="regularMarketVolume"]'
         pe_ratio_xpath = f'{symbol_xpath}/ancestor::tr/td[@aria-label="PE Ratio (TTM)"]'
         
         try:
@@ -71,6 +74,34 @@ def fetch_data(driver, url):
             continue
         except ValueError:
             print(f"Invalid market cap data for symbol {symbol}")
+            continue
+
+        try:
+            price_element = driver.find_element(By.XPATH, price_xpath)
+            price = price_element.get_attribute('value')
+            if price == 'N/A':
+                print(f"price data for symbol {symbol} is N/A and will be skipped.")
+                continue
+            price = float(price)
+        except NoSuchElementException:
+            print(f"No price data for symbol {symbol}")
+            continue
+        except ValueError:
+            print(f"Invalid price data for symbol {symbol}")
+            continue
+
+        try:
+            volume_element = driver.find_element(By.XPATH, volume_xpath)
+            volume = volume_element.get_attribute('value')
+            if volume == 'N/A':
+                print(f"volume data for symbol {symbol} is N/A and will be skipped.")
+                continue
+            volume = float(volume)
+        except NoSuchElementException:
+            print(f"No volume data for symbol {symbol}")
+            continue
+        except ValueError:
+            print(f"Invalid volume data for symbol {symbol}")
             continue
         
         try:
@@ -91,12 +122,15 @@ def fetch_data(driver, url):
         except NoSuchElementException:
             name = '--'
 
-        results.append((symbol, market_cap, pe_ratio, name))
+        results.append((symbol, market_cap, pe_ratio, name, price, volume))
         
     # 将结果写入到 txt 文件
     with open('/Users/yanzhang/Documents/News/backup/marketcap_pe.txt', 'a') as file:  # 修改 'w' 为 'a'
         for result in results:
             file.write(f"{result[0]}: {result[1]}, {result[2]}\n")
+    with open('/Users/yanzhang/Documents/News/backup/price_volume.txt', 'a') as file:  # 修改 'w' 为 'a'
+        for result in results:
+            file.write(f"{result[0]}: {result[4]}, {result[5]}\n")
     
     return results
 
@@ -117,7 +151,7 @@ def update_json(data, sector, file_path, output, log_enabled, write_symbols=Fals
 
         new_symbols = []  # 用于存储新添加的符号和名称
 
-        for symbol, market_cap, pe_ratio, name in data:
+        for symbol, market_cap, pe_ratio, name, price, volume in data:
             current_sector = current_sectors.get(symbol)
             
             # 检查市值是否小于50亿，如果是，则可能需要移除
@@ -173,30 +207,56 @@ def save_output_to_file(output, directory, filename='Stock_Change.txt'):
         file.write("\n".join(output))
     print(f"输出已保存到文件：{file_path}")
 
-def clean_old_backups(directory, prefix="marketcap_pe_", days=4):
-    """删除备份目录中超过指定天数的文件"""
+def clean_old_backups(directory, file_patterns, days=4):
+    """
+    删除备份目录中超过指定天数的文件
+    
+    :param directory: 备份文件所在的目录
+    :param file_patterns: 要清理的文件模式列表，每个元素是一个元组 (前缀, 日期位置)
+    :param days: 保留的天数
+    """
     now = datetime.now()
     cutoff = now - timedelta(days=days)
 
     for filename in os.listdir(directory):
-        if filename.startswith(prefix):  # 只处理特定前缀的文件
-            try:
-                date_str = filename.split('_')[-1].split('.')[0]  # 获取日期部分
-                file_date = datetime.strptime(date_str, '%m%d')
-                # 将年份设置为今年
-                file_date = file_date.replace(year=now.year)
-                if file_date < cutoff:
-                    file_path = os.path.join(directory, filename)
-                    os.remove(file_path)
-                    print(f"删除旧备份文件：{file_path}")
-            except Exception as e:
-                print(f"跳过文件：{filename}，原因：{e}")
+        for prefix, date_position in file_patterns:
+            if filename.startswith(prefix):
+                try:
+                    parts = filename.split('_')
+                    date_str = parts[date_position].split('.')[0]  # 获取日期部分
+                    file_date = datetime.strptime(date_str, '%m%d')
+                    file_date = file_date.replace(year=now.year)
+                    
+                    if file_date < cutoff:
+                        file_path = os.path.join(directory, filename)
+                        os.remove(file_path)
+                        print(f"删除旧备份文件：{file_path}")
+                    break  # 文件已处理，无需检查其他模式
+                except Exception as e:
+                    print(f"跳过文件：{filename}，原因：{e}")
 
 def log_error_with_timestamp(error_message, file_path):
     """记录带时间戳的错误信息"""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
     with open(file_path, 'a') as error_file:
         error_file.write(f"[{timestamp}] {error_message}\n")
+
+def backup_file(file_name, source_dir, backup_dir):
+    file_path = os.path.join(source_dir, file_name)
+    if os.path.exists(file_path):
+        yesterday = datetime.now() - timedelta(days=1)
+        timestamp = yesterday.strftime('%m%d')
+
+        name, extension = os.path.splitext(file_name)
+        new_filename = f"{name}_{timestamp}{extension}"
+        new_file_path = os.path.join(backup_dir, new_filename)
+
+        os.rename(file_path, new_file_path)
+        print(f"文件已重命名为: {new_file_path}")
+        return True
+    else:
+        print(f"文件不存在: {file_path}")
+        return False
 
 chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
 
@@ -225,27 +285,18 @@ blacklist = {"CTA-PA", "FWONK", "FOXA", "NWSA", "PARAA", "LSXMA",
     }
 
 output = []  # 用于收集输出信息的列表
-# 检查文件是否存在
-file_path = '/Users/yanzhang/Documents/News/backup/marketcap_pe.txt'
-directory_backup = '/Users/yanzhang/Documents/News/site/'
 ERROR_FILE_PATH = '/Users/yanzhang/Documents/News/Today_error.txt'
 
-if os.path.exists(file_path):
-    # 获取昨天的日期作为时间戳
-    yesterday = datetime.now() - timedelta(days=1)
-    timestamp = yesterday.strftime('%m%d')
+# 定义源目录和备份目录
+source_directory = '/Users/yanzhang/Documents/News/backup/'
+backup_directory = '/Users/yanzhang/Documents/News/site/'
 
-    # 构建新的文件名
-    directory, filename = os.path.split(file_path)
-    name, extension = os.path.splitext(filename)
-    new_filename = f"{name}_{timestamp}{extension}"
-    new_file_path = os.path.join(directory_backup, new_filename)
+# 需要备份的文件列表
+files_to_backup = ['marketcap_pe.txt', 'price_volume.txt']
 
-    # 重命名文件
-    os.rename(file_path, new_file_path)
-    print(f"文件已重命名为: {new_file_path}")
-else:
-    print("文件不存在")
+# 对每个文件执行备份操作
+for file in files_to_backup:
+    backup_file(file, source_directory, backup_directory)
 
 login_url = "https://login.yahoo.com"
 urls = [
@@ -298,5 +349,11 @@ print("所有爬取任务完成。")
 output_directory = '/Users/yanzhang/Documents/News'
 save_output_to_file(output, output_directory)
 
+# 定义要清理的文件模式
+file_patterns = [
+    ("marketcap_pe_", -1),  # 日期在最后一个下划线后
+    ("price_volume_", -1)   # 日期在最后一个下划线后
+]
+
 # 调用清理旧备份文件的函数
-clean_old_backups(directory_backup)
+clean_old_backups(backup_directory, file_patterns)
