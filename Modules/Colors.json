@@ -146,7 +146,8 @@
         "DVN",
         "CTRA",
         "CTAS",
-        "CIVI"
+        "CIVI",
+        "MRNA"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -186,7 +187,8 @@
         "U",
         "IEP",
         "CSAN",
-        "PARA"
+        "PARA",
+        "SIRI"
     ],
     "cyan_keywords": [
         "IBIT"

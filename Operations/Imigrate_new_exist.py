@@ -120,7 +120,8 @@ def main(mode):
             # 备份 diff 文件
             backup_diff_file(diff_file, backup_dir)
     elif mode == 'other':
-        if current_day == 6 or 0 <= current_day <=3:  # 周天或周一到周四
+        # if current_day == 6 or 0 <= current_day <=3:  # 周天或周一到周四
+        if current_day == 6 or current_day == 0:  # 周天或周一
             process_and_rename_files()
 
 if __name__ == "__main__":

@@ -509,7 +509,11 @@
     "SPIB",
     "IGIB",
     "SMIN",
-    "IXC"
+    "IXC",
+    "RING",
+    "KBWP",
+    "USRT",
+    "GOVI"
   ],
   "Basic_Materials": [
     "LIN",
@@ -630,7 +634,6 @@
     "SKM",
     "MTCH",
     "TIMB",
-    "LSXMK",
     "TKO",
     "EDR",
     "NYT",
@@ -1319,7 +1322,8 @@
     "INSP",
     "RARE",
     "AVTR",
-    "OSCR"
+    "OSCR",
+    "RDNT"
   ],
   "Industrials": [
     "GE",

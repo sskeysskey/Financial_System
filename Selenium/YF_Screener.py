@@ -1,6 +1,5 @@
 import os
 import json
-import pyautogui
 from selenium import webdriver
 from datetime import datetime, timedelta
 from selenium.webdriver.common.by import By
@@ -281,7 +280,7 @@ blacklist = {"CTA-PA", "FWONK", "FOXA", "NWSA", "PARAA", "LSXMA",
     "YNDX", "CUK", "BBDO", "SLMBP", "BPYPP", "GOOG","CPG", "PHYS",
     "CTA-PB", "FITBI", "FLUT", "ZG", "BNRE", "BZ", "VNO", "CHT",
     "SWAV", "BIO-B", "RBRK", "CNHI", "FER", "LOAR", "ACGLO", "AIRC",
-    "WRK", "ETRN", "WSO-B", "DJTWW", "ORKA"
+    "WRK", "ETRN", "WSO-B", "DJTWW", "ORKA", "LSXMK"
     }
 
 output = []  # 用于收集输出信息的列表
