@@ -115,6 +115,8 @@
         "LiveCattle": "牛肉"
     },
     "ETFs_Oversea": {
+        "DBC": "大宗商品",
+        "IBIT": "比特币",
         "CQQQ": "中国科技",
         "CNYA": "A股",
         "DXJ": "日本",
@@ -124,9 +126,7 @@
         "EMB": "新兴债券",
         "TUR": "土耳其",
         "LIT": "锂矿电池",
-        "URA": "铀矿核能",
-        "DBC": "大宗商品",
-        "IBIT": ""
+        "URA": "铀矿核能"
     },
     "Commodity": {
         "Lithium": "",
