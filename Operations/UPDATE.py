@@ -5,11 +5,11 @@ conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
 cursor = conn.cursor()
 
 # 执行拆股操作并保留两位小数
-# name = 'CTAS'
-# price_divisor = 4
+# name = 'DECK'
+# price_divisor = 6
 
 # cursor.execute("""
-#     UPDATE Industrials 
+#     UPDATE Consumer_Cyclical 
 #     SET price = ROUND(price / ?, 2) 
 #     WHERE name = ?
 # """, (price_divisor, name))
@@ -27,7 +27,7 @@ cursor = conn.cursor()
 # """, (price_multiplier, name))
 
 # 更新价格字段
-# cursor.execute("UPDATE Industrials SET price = 204.96 WHERE id = 958844")
+# cursor.execute("UPDATE Consumer_Cyclical SET price = 156.28 WHERE id = 739630")
 # cursor.execute("UPDATE Economics SET price = -0.2 WHERE id = 252")
 
 # 保留两位小数

@@ -47,6 +47,7 @@
     "BNB-USD": "Binance",
     "^HSI": "HANGSENG",
     "^IXIC": "NASDAQ",
+    "^DJI": "DowJones",
     "000001.SS": "Shanghai",
     "399001.SZ": "Shenzhen",
     "^VIX": "VIX",

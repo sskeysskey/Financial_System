@@ -53,6 +53,7 @@
   "Indices": [
     "HANGSENG",
     "NASDAQ",
+    "DowJones",
     "Shanghai",
     "Shenzhen",
     "VIX",
@@ -513,7 +514,9 @@
     "RING",
     "KBWP",
     "USRT",
-    "GOVI"
+    "GOVI",
+    "SPIP",
+    "IMTM"
   ],
   "Basic_Materials": [
     "LIN",

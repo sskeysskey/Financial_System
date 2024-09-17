@@ -1,5 +1,4 @@
 {
-    "My_Order": {},
     "Basic_Materials": {
         "MOS": "美盛化肥",
         "ALB": "雅宝",
@@ -16,10 +15,7 @@
         "LULU": "",
         "NKE": "Nike",
         "MBLY": "",
-        "LKQ": "汽车部件",
-        "STLA": "",
-        "ABNB": "",
-        "BBWI": ""
+        "ABNB": ""
     },
     "Energy": {
         "PBF": "石油精炼",
@@ -39,10 +35,8 @@
         "SNOW": "",
         "STM": "意法",
         "LSCC": "FPGA",
-        "INTC": "",
         "JBL": "",
         "PATH": "UiPath",
-        "RMBS": "",
         "QLYS": ""
     },
     "Utilities": {},
@@ -65,10 +59,10 @@
         "CVS": "",
         "EW": "爱德华兹",
         "DXCM": "德康血糖",
-        "MRNA": ""
+        "MRNA": "",
+        "BMRN": ""
     },
     "Crypto": {
-        "IBIT": "",
         "Bitcoin": "",
         "Ether": "",
         "Binance": "",
@@ -78,6 +72,7 @@
         "VIX": "恐慌指数",
         "NASDAQ": "",
         "S&P500": "",
+        "DowJones": "",
         "HANGSENG": "恒生",
         "Shanghai": "上证",
         "Shenzhen": "深证",
@@ -95,7 +90,6 @@
         "IND10Y": ""
     },
     "Commodities": {
-        "DBC": "大宗商品",
         "CrudeOil": "",
         "Naturalgas": "天然气",
         "Gold": "",
@@ -128,13 +122,15 @@
         "EWT": "台湾",
         "EMXC": "新兴股市",
         "EMB": "新兴债券",
-        "TUR": "土耳其"
-    },
-    "ETFs_Commodity": {
-        "Lithium": "",
+        "TUR": "土耳其",
         "LIT": "锂矿电池",
-        "Uranium": "",
-        "URA": "铀矿核能"
+        "URA": "铀矿核能",
+        "DBC": "大宗商品",
+        "IBIT": ""
+    },
+    "Commodity": {
+        "Lithium": "",
+        "Uranium": ""
     },
     "Currencies": {
         "DXY": "美元指数",
@@ -144,11 +140,8 @@
         "EURUSD": ""
     },
     "Economics": {
-        "USCPI": "11 USCPI",
-        "CoreCPI": "11 CoreCPI",
-        "USPPI": "12 USPPI",
-        "USInitial": "12 USInitial",
-        "USConfidence": "13 USConfidence"
+        "USRetailM": "17 USRetailM",
+        "USInitial": "19 USInitial"
     },
     "ETFs_US": {
         "EDV": "长期国债",

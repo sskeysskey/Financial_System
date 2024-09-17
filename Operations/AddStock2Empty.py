@@ -28,17 +28,17 @@ def write_json(file_path, data):
     with open(file_path, 'w') as file:
         json.dump(data, file, indent=2)
 
-def find_stock_change_file():
-    """查找Stock_Change_开头的TXT文件"""
-    txt_file_pattern = os.path.join(TXT_FILE_DIRECTORY, "Stock_Change_*.txt")
+def find_Stock_50_file():
+    """查找Stock_50_开头的TXT文件"""
+    txt_file_pattern = os.path.join(TXT_FILE_DIRECTORY, "Stock_50_*.txt")
     txt_files = glob.glob(txt_file_pattern)
     if not txt_files:
-        raise FileNotFoundError("未找到以 'Stock_Change_' 开头的TXT文件。")
+        raise FileNotFoundError("未找到以 'Stock_50_' 开头的TXT文件。")
     return txt_files[0]
 
-def process_stock_changes():
+def process_Stock_50():
     try:
-        txt_file_path = find_stock_change_file()
+        txt_file_path = find_Stock_50_file()
         txt_content = read_file(txt_file_path)
         data_empty = json.loads(read_file(JSON_FILE_PATH_EMPTY))
         data_all = json.loads(read_file(JSON_FILE_PATH_ALL))
@@ -47,7 +47,7 @@ def process_stock_changes():
         matches = pattern.findall(txt_content)
 
         if not matches:
-            print("未从Stock_Change.txt中提取到有效数据，不更新empty文件。")
+            print("未从Stock_50.txt中提取到有效数据，不更新empty文件。")
             return
 
         updates_count = 0
@@ -73,4 +73,4 @@ def process_stock_changes():
         print(f"详情请查看错误日志: {ERROR_FILE_PATH}")
 
 if __name__ == "__main__":
-    process_stock_changes()
+    process_Stock_50()

@@ -31,6 +31,7 @@
   "Indices": [
     "^HSI",
     "^IXIC",
+    "^DJI",
     "000001.SS",
     "399001.SZ",
     "^VIX",
@@ -459,7 +460,9 @@
     "RING",
     "KBWP",
     "USRT",
-    "GOVI"
+    "GOVI",
+    "SPIP",
+    "IMTM"
   ],
   "Basic_Materials": [
     "LIN",

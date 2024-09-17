@@ -21,7 +21,7 @@ def log_error_with_timestamp(error_message):
 def load_blacklist_newlow(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
         data = json.load(file)
-        return data.get("blacklist_newlow", [])
+        return data.get("newlow", [])
 
 def create_output_files():
     """创建两个输出文件并返回文件路径"""

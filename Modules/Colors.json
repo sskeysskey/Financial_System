@@ -147,11 +147,14 @@
         "CTRA",
         "CTAS",
         "CIVI",
-        "MRNA"
+        "MRNA",
+        "DECK",
+        "BMRN"
     ],
     "orange_keywords": [
         "NASDAQ",
         "S&P500",
+        "DowJones",
         "USDJPY",
         "OrangeJuice",
         "Coffee",
@@ -235,13 +238,12 @@
         "CorePCEY",
         "CorePCEM",
         "CoreCPI",
-        "PGR",
-        "ORCL",
-        "KR",
-        "TKC",
+        "FDX",
         "LEN",
-        "GME",
-        "ADBE",
-        "RH"
+        "DRI",
+        "FDS",
+        "GIS",
+        "PKG",
+        "VFS"
     ]
 }

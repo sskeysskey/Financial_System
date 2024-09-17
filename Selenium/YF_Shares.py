@@ -29,12 +29,12 @@ driver = webdriver.Chrome(service=service)
 # 文件目录路径
 txt_file_directory = "/Users/yanzhang/Documents/News/"
 
-# 找到以Stock_Change_开头的第一个TXT文件
-txt_file_pattern = os.path.join(txt_file_directory, "Stock_Change_*.txt")
+# 找到以Stock_50_开头的第一个TXT文件
+txt_file_pattern = os.path.join(txt_file_directory, "Stock_50_*.txt")
 txt_files = glob.glob(txt_file_pattern)
 
 if not txt_files:
-    raise FileNotFoundError("未找到以 'Stock_Change_' 开头的TXT文件。")
+    raise FileNotFoundError("未找到以 'Stock_50_' 开头的TXT文件。")
 
 # 取第一个找到的文件
 txt_file_path = txt_files[0]
