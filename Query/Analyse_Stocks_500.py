@@ -79,7 +79,7 @@ def main():
 
     output1 = []
     output_files = create_output_files()
-    intervals = [6, 3, 1.5]  # 以月份表示的时间间隔列表
+    intervals = [6, 3]  # 以月份表示的时间间隔列表
 
     # 遍历JSON中的每个表和股票代码
     for table_name, names in data.items():
@@ -172,7 +172,7 @@ def main():
             if line.strip():  # 确保不处理空行
                 parts = line.split()
                 category = parts[0]
-                symbol = parts[1]
+                symbol = parts[1]       
                 descriptor = parts[2]  # 形如 '1Y_newlow'
 
                 # 解析年数和类型（newhigh或newlow）
@@ -180,12 +180,10 @@ def main():
                 if 'Y' in year_part:
                     continue  # 如果是年份，我们不处理
                 if 'M' in year_part:
-                    years = int(year_part.replace('M', ''))
-                    if years == 1.5:
-                        category_list = 'cyan_keywords'
-                    elif years == 3:
+                    months = int(year_part.replace('M', ''))
+                    if months == 3:
                         category_list = 'blue_keywords'
-                    elif years == 6:
+                    elif months == 6:
                         category_list = 'purple_keywords'
                     else:
                         continue  # 其他月份不处理
@@ -241,10 +239,16 @@ def main():
         print("Colors.json文件已成功更新！")
     else:
         error_message = "final_output1为空，无法进行更新操作。"
-        formatted_error_message = log_error_with_timestamp(error_message)
-        # 将错误信息追加到文件中
-        with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
-            error_file.write(formatted_error_message)
+        log_and_print_error(error_message)
+
+def log_and_print_error(error_message):
+    formatted_error_message = log_error_with_timestamp(error_message)
+    print(f"错误: {error_message}")
+    with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+        error_file.write(formatted_error_message)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        log_and_print_error(f"程序执行过程中发生错误: {str(e)}")

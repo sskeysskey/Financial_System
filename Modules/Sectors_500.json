@@ -69,7 +69,8 @@
     "CL",
     "DEO",
     "TGT",
-    "KDP"
+    "KDP",
+    "MNST"
   ],
   "Energy": [
     "XOM",
@@ -210,7 +211,8 @@
     "RSG",
     "EMR",
     "NSC",
-    "PCAR"
+    "PCAR",
+    "URI"
   ],
   "Real_Estate": [
     "PLD",

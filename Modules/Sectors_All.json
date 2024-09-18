@@ -589,7 +589,8 @@
     "ALTM",
     "ASH",
     "BCPC",
-    "SSL"
+    "SSL",
+    "KNF"
   ],
   "Communication_Services": [
     "GOOGL",
@@ -1176,7 +1177,8 @@
     "UMBF",
     "THG",
     "GAB-PG",
-    "BNT"
+    "BNT",
+    "VIRT"
   ],
   "Healthcare": [
     "LLY",

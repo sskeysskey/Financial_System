@@ -40,9 +40,9 @@ def is_blacklisted(symbol):
     """检查给定的股票符号是否在黑名单中"""
     return symbol in blacklist
 
-def process_urls(driver, urls, output, output_500):
+def process_urls(driver, urls, output, output_500, output_5000):
     for url, sector in urls:
-        process_sector(driver, url, sector, output, output_500)
+        process_sector(driver, url, sector, output, output_500, output_5000)
 
 def fetch_data(driver, url):
     driver.get(url)
@@ -69,10 +69,10 @@ def fetch_data(driver, url):
                 continue
             market_cap = float(market_cap)
         except NoSuchElementException:
-            print(f"No market cap data for symbol {symbol}")
+            print(f"No market cap data for symbol {symbol} on Yahoo Financial website")
             continue
         except ValueError:
-            print(f"Invalid market cap data for symbol {symbol}")
+            print(f"Invalid market cap data for symbol {symbol} on Yahoo Financial website")
             continue
 
         try:
@@ -130,7 +130,6 @@ def fetch_data(driver, url):
     with open('/Users/yanzhang/Documents/News/backup/price_volume.txt', 'a') as file:  # 修改 'w' 为 'a'
         for result in results:
             file.write(f"{result[0]}: {result[4]}, {result[5]}\n")
-    
     return results
 
 def update_json(data, sector, file_path, output, log_enabled, write_symbols=False):
@@ -222,12 +221,49 @@ def update_json_500(data, sector, file_path_500, output_500, log_enabled):
         file.truncate()
         json.dump(json_data, file, indent=2)
 
-def process_sector(driver, url, sector, output, output_500):
+def update_json_5000(data, sector, file_path_5000, output_5000, log_enabled):
+    with open(file_path_5000, 'r+') as file:
+        json_data = json.load(file)
+        
+        # 创建一个反向映射，用于查找符号当前所在的sector
+        current_sectors = {}
+        for sec in json_data:
+            for symbol in json_data[sec]:
+                current_sectors[symbol] = sec
+        
+        # 创建一个集合，包含所有组别的所有符号
+        all_symbols = set()
+        for sec, symbols in json_data.items():
+            all_symbols.update(symbols)
+
+        for symbol, market_cap, pe_ratio, name, price, volume in data:
+            current_sector = current_sectors.get(symbol)
+            if market_cap > 500000000000:  # 5000亿
+                if symbol not in json_data[sector]:
+                    json_data[sector].append(symbol)
+                    if log_enabled:
+                        message = f"Added '{symbol}' to {sector} in Sectors_5000.json due to market cap > 5000亿."
+                        print(message)
+                        output_5000.append(message)
+                        if symbol in all_symbols:
+                            for sec, symbols in json_data.items():
+                                if symbol in symbols:
+                                    error_message = f"5000亿里的 '{symbol}' 已经在 {sec} 中存在了，请处理。"
+                                    print(error_message)
+                                    log_error_with_timestamp(error_message, ERROR_FILE_PATH)
+        # 重写文件内容
+        file.seek(0)
+        file.truncate()
+        json.dump(json_data, file, indent=2)
+
+def process_sector(driver, url, sector, output, output_500, output_5000):
     data = fetch_data(driver, url)
     update_json(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', output, log_enabled=True, write_symbols=True)
     update_json(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json', output, log_enabled=False, write_symbols=False)
     # 处理 Sectors_500.json
     update_json_500(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_500.json', output_500, log_enabled=True)
+    # 处理 Sectors_5000.json
+    update_json_5000(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_5000.json', output_5000, log_enabled=True)
 
 def save_output_to_file(output, directory, filename='Stock_50.txt'):
     current_time = datetime.now().strftime('%m%d')
@@ -322,6 +358,7 @@ blacklist = {"CTA-PA", "FWONK", "FOXA", "NWSA", "PARAA", "LSXMA",
 
 output = []  # 用于收集50亿以上信息的列表
 output_500 = []  # 用于收集500亿以上信息的列表
+output_5000 = []  # 用于收集5000亿以上信息的列表
 ERROR_FILE_PATH = '/Users/yanzhang/Documents/News/Today_error.txt'
 
 # 定义源目录和备份目录
@@ -377,7 +414,7 @@ urls = [
 
 try:
     login_once(driver, login_url)
-    process_urls(driver, urls, output, output_500)
+    process_urls(driver, urls, output, output_500, output_5000)
 finally:
     driver.quit()
 print("所有爬取任务完成。")
@@ -386,6 +423,7 @@ print("所有爬取任务完成。")
 output_directory = '/Users/yanzhang/Documents/News'
 save_output_to_file(output, output_directory, filename='Stock_50.txt')
 save_output_to_file(output_500, output_directory, filename='Stock_500.txt')
+save_output_to_file(output_5000, output_directory, filename='Stock_5000.txt')
 
 # 定义要清理的文件模式
 file_patterns = [

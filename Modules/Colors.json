@@ -1,4 +1,26 @@
 {
+    "cyan_keywords": [
+        "IBIT"
+    ],
+    "blue_keywords": [
+        "HANGSENG",
+        "Copper",
+        "CrudeOil",
+        "USDINR",
+        "Solana",
+        "DXJ",
+        "SCHD"
+    ],
+    "purple_keywords": [
+        "Bitcoin",
+        "DXY",
+        "DBC",
+        "VIX",
+        "CNYUSD",
+        "US10Y",
+        "XLRE",
+        "CNYA"
+    ],
     "white_keywords": [
         "BHP",
         "PPG",
@@ -192,28 +214,6 @@
         "CSAN",
         "PARA",
         "SIRI"
-    ],
-    "cyan_keywords": [
-        "IBIT"
-    ],
-    "purple_keywords": [
-        "Bitcoin",
-        "DXY",
-        "DBC",
-        "VIX",
-        "CNYUSD",
-        "US10Y",
-        "XLRE",
-        "CNYA"
-    ],
-    "blue_keywords": [
-        "HANGSENG",
-        "Copper",
-        "CrudeOil",
-        "USDINR",
-        "Solana",
-        "DXJ",
-        "SCHD"
     ],
     "green_keywords": [
         "EURCNY",

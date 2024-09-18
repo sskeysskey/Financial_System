@@ -78,15 +78,15 @@ def create_custom_style():
     style = ttk.Style()
     style.theme_use('alt')
     button_styles = {
+        "Cyan": ("cyan", "black"),
+        "Blue": ("blue", "white"),
+        "Purple": ("purple", "white"),
         "Green": ("green", "white"),
         "White": ("white", "black"),
-        "Purple": ("purple", "white"),
         "Yellow": ("yellow", "black"),
         "Orange": ("orange", "black"),
-        "Blue": ("blue", "white"),
         "Red": ("red", "black"),
         "Black": ("black", "white"),
-        "Cyan": ("cyan", "black"),
         "Default": ("gray", "black")
     }
     for name, (bg, fg) in button_styles.items():
@@ -157,14 +157,14 @@ def create_selection_window():
 def get_button_style(keyword):
     color_styles = {
         "red": "Red.TButton",
+        "cyan": "Cyan.TButton",
+        "blue": "Blue.TButton",
         "purple": "Purple.TButton",
         "yellow": "Yellow.TButton",
         "orange": "Orange.TButton",
-        "blue": "Blue.TButton",
         "black": "Black.TButton",
         "white": "White.TButton",
         "green": "Green.TButton",
-        "cyan": "Cyan.TButton",
     }
     for color, style in color_styles.items():
         if keyword in keyword_colors[f"{color}_keywords"]:
