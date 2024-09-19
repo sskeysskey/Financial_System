@@ -463,7 +463,9 @@
     "GOVI",
     "SPIP",
     "IMTM",
-    "HTUS"
+    "HTUS",
+    "QLC",
+    "BCD"
   ],
   "Basic_Materials": [
     "LIN",
