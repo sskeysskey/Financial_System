@@ -1,13 +1,37 @@
 {
-    "Basic_Materials": [],
-    "Communication_Services": [],
-    "Consumer_Cyclical": [],
-    "Consumer_Defensive": [],
-    "Energy": [],
-    "Financial_Services": [],
-    "Healthcare": [],
-    "Industrials": [],
-    "Real_Estate": [],
-    "Technology": [],
-    "Utilities": []
+  "Basic_Materials": [],
+  "Communication_Services": [
+    "GOOGL",
+    "META"
+  ],
+  "Consumer_Cyclical": [
+    "AMZN",
+    "TSLA"
+  ],
+  "Consumer_Defensive": [
+    "WMT"
+  ],
+  "Energy": [
+    "XOM"
+  ],
+  "Financial_Services": [
+    "BRK-A",
+    "JPM",
+    "V"
+  ],
+  "Healthcare": [
+    "LLY",
+    "NVO",
+    "UNH"
+  ],
+  "Industrials": [],
+  "Real_Estate": [],
+  "Technology": [
+    "AAPL",
+    "MSFT",
+    "NVDA",
+    "TSM",
+    "AVGO"
+  ],
+  "Utilities": []
 }

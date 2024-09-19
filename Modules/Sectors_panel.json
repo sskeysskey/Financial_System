@@ -37,7 +37,8 @@
         "LSCC": "FPGA",
         "JBL": "",
         "PATH": "UiPath",
-        "QLYS": ""
+        "QLYS": "",
+        "ADBE": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -48,7 +49,6 @@
     },
     "Industrials": {
         "AAL": "美国航空",
-        "SYM": "仓储机器",
         "ATKR": "",
         "BA": "波音",
         "GTLS": ""

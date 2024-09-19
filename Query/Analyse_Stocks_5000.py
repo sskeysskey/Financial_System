@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from collections import OrderedDict
 
-blacklist_glob = ["YNDX"]
+blacklist_glob = set(["YNDX"])  # 使用集合以提高查找效率
 
 def is_blacklisted(name):
     return name in blacklist_glob
@@ -236,7 +236,7 @@ def main():
         update_color_json(color_json_path, updates_color, blacklist_newlow, existing_sectors_panel)
         print("Colors.json文件已成功更新！")
     else:
-        error_message = "final_output1为空，无法进行更新操作。"
+        error_message = "没有符合条件的股票被检索出来，无法进行后续的更新操作。"
         log_and_print_error(error_message)
 
 def log_and_print_error(error_message):
