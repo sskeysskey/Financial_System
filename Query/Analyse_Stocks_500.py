@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from collections import OrderedDict
 
-blacklist_glob = ["YNDX"]
+blacklist_glob = set(["YNDX"])  # 使用集合以提高查找效率
 
 def is_blacklisted(name):
     return name in blacklist_glob
@@ -209,15 +209,18 @@ def main():
 
         for category_list, names in updates_colors.items():
             for name in names:
-                if name not in colors[category_list]:
+                if name not in colors.get(category_list, []):
                     if name in existing_symbols:
                         # 如果symbol已存在于sectors_panel.json中，打印日志
                         print(f"Symbol {name} 已存在于 sectors_panel.json 中，不添加到 {category_list}")
                     else:
-                        colors[category_list].append(name)
+                        if category_list in colors:
+                            colors[category_list].append(name)
+                        else:
+                            colors[category_list] = [name]
 
         # 在写回文件之前，将 "red_keywords" 添加回去
-        colors["red_keywords"] = all_colors["red_keywords"]
+        colors["red_keywords"] = all_colors.get("red_keywords", [])
 
         with open(color_config_path, 'w', encoding='utf-8') as file:
             json.dump(colors, file, ensure_ascii=False, indent=4)

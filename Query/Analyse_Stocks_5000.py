@@ -2,7 +2,6 @@ import sqlite3
 import json
 import os
 from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta
 from collections import OrderedDict
 
 blacklist_glob = set(["YNDX"])  # 使用集合以提高查找效率
@@ -40,16 +39,19 @@ def create_output_files():
     return output_files
 
 def get_price_comparison(cursor, table_name, interval, name, validate):
-    today = datetime.now()
+    """
+    获取指定时间间隔内的最高价和最低价。
+    
+    :param cursor: 数据库游标
+    :param table_name: 表名
+    :param interval: 时间间隔（以周为单位）
+    :param name: 股票代码
+    :param validate: 验证日期（datetime对象）
+    :return: (max_price, min_price) 或 None
+    """
     ex_validate = validate - timedelta(days=1)
-    
-    # 判断interval是否小于1，若是，则按天数计算
-    if interval == 1.5:
-        days = int(interval * 30)  # 将月份转换为天数
-        past_date = validate - timedelta(days=days - 1)
-    else:
-        past_date = today - relativedelta(months=int(interval))
-    
+    past_date = validate - timedelta(weeks=interval)
+
     query = f"""
     SELECT MAX(price), MIN(price)
     FROM {table_name} WHERE date BETWEEN ? AND ? AND name = ?
@@ -79,13 +81,13 @@ def main():
 
     output1 = []
     output_files = create_output_files()
-    intervals = [1.5]  # 以月份表示的时间间隔列表
+    intervals = [3, 6]  # 使用周为单位的时间间隔列表
 
     # 遍历JSON中的每个表和股票代码
     for table_name, names in data.items():
         if table_name in ["Basic_Materials", "Communication_Services", "Consumer_Cyclical",
-                        "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare",
-                        "Industrials", "Real_Estate", "Technology", "Utilities"]:  # 过滤sector
+                         "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare",
+                         "Industrials", "Real_Estate", "Technology", "Utilities"]:  # 过滤sector
             with create_connection(db_path) as conn:
                 cursor = conn.cursor()
                 for name in names:
@@ -112,7 +114,7 @@ def main():
                                 max_price, min_price = result
                                 price_extremes[interval] = (max_price, min_price)
                             else:
-                                raise Exception(f"没有足够的历史数据来进行{table_name}下的{name} {interval}月的价格比较。")
+                                raise Exception(f"没有足够的历史数据来进行{table_name}下的{name} {interval}周的价格比较。")
                         except Exception as e:
                             formatted_error_message = log_error_with_timestamp(str(e))
                             # 将错误信息追加到文件中
@@ -124,7 +126,7 @@ def main():
                     for interval in intervals:
                         _, min_price = price_extremes.get(interval, (None, None))
                         if min_price is not None and validate_price <= min_price:
-                            output_line = f"{table_name} {name} {interval}M_newlow"
+                            output_line = f"{table_name} {name} {interval}W_newlow"
                             print(output_line)
                             output1.append(output_line)
                             break  # 只输出最长的时间周期
@@ -172,25 +174,25 @@ def main():
             if line.strip():  # 确保不处理空行
                 parts = line.split()
                 category = parts[0]
-                symbol = parts[1]       
-                descriptor = parts[2]  # 形如 '1Y_newlow'
+                symbol = parts[1]
+                descriptor = parts[2]  # 形如 '3W_newlow'
 
-                # 解析年数和类型（newhigh或newlow）
-                year_part, _ = descriptor.split('_')
-                if 'Y' in year_part:
-                    continue  # 如果是年份，我们不处理
-                if 'M' in year_part:
-                    months = float(year_part.replace('M', ''))
-                    if months == 1.5:
+                # 解析周数和类型（newhigh或newlow）
+                week_part, _ = descriptor.split('_')
+                if 'W' in week_part:
+                    weeks = int(week_part.replace('W', ''))
+                    if weeks in [3, 6]:
                         category_list = 'cyan_keywords'
                     else:
-                        continue  # 其他月份不处理
+                        continue  # 其他周数不处理
+                else:
+                    continue  # 如果不是以'W'结尾，跳过
 
-                    if category_list in updates_color:
-                        if symbol not in updates_color[category_list]:
-                            updates_color[category_list].append(symbol)
-                    else:
-                        updates_color[category_list] = [symbol]
+                if category_list in updates_color:
+                    if symbol not in updates_color[category_list]:
+                        updates_color[category_list].append(symbol)
+                else:
+                    updates_color[category_list] = [symbol]
         return updates_color
     
     def update_color_json(color_config_path, updates_colors, blacklist_newlow, existing_sectors_panel):
@@ -207,15 +209,18 @@ def main():
 
         for category_list, names in updates_colors.items():
             for name in names:
-                if name not in colors[category_list]:
+                if name not in colors.get(category_list, []):
                     if name in existing_symbols:
                         # 如果symbol已存在于sectors_panel.json中，打印日志
                         print(f"Symbol {name} 已存在于 sectors_panel.json 中，不添加到 {category_list}")
                     else:
-                        colors[category_list].append(name)
+                        if category_list in colors:
+                            colors[category_list].append(name)
+                        else:
+                            colors[category_list] = [name]
 
         # 在写回文件之前，将 "red_keywords" 添加回去
-        colors["red_keywords"] = all_colors["red_keywords"]
+        colors["red_keywords"] = all_colors.get("red_keywords", [])
 
         with open(color_config_path, 'w', encoding='utf-8') as file:
             json.dump(colors, file, ensure_ascii=False, indent=4)
