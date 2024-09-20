@@ -823,7 +823,8 @@
     "LTH",
     "GPI",
     "PSNYW",
-    "GAP"
+    "GAP",
+    "BOOT"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -890,7 +891,8 @@
     "MKC",
     "HIMS",
     "OLLI",
-    "FRPT"
+    "FRPT",
+    "FLO"
   ],
   "Energy": [
     "XOM",
@@ -1516,7 +1518,8 @@
     "SYM",
     "MSM",
     "CSWI",
-    "LTM"
+    "LTM",
+    "SNDR"
   ],
   "Real_Estate": [
     "PLD",
@@ -1800,7 +1803,8 @@
     "ADP",
     "PAYX",
     "ACIW",
-    "OS"
+    "OS",
+    "CLVT"
   ],
   "Utilities": [
     "NEE",
