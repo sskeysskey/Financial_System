@@ -266,6 +266,10 @@ def process_sector(driver, url, sector, output, output_500, output_5000):
     update_json_5000(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_5000.json', output_5000, log_enabled=True)
 
 def save_output_to_file(output, directory, filename='Stock_50.txt'):
+    if not output:  # 如果输出列表为空，直接返回
+        print(f"没有内容需要保存到 {filename}")
+        return
+
     current_time = datetime.now().strftime('%m%d')
     # 在文件名中加入时间戳
     filename = f"{filename.split('.')[0]}_{current_time}.txt"
@@ -422,8 +426,10 @@ print("所有爬取任务完成。")
 # 在代码的最后部分调用save_output_to_file函数
 output_directory = '/Users/yanzhang/Documents/News'
 save_output_to_file(output, output_directory, filename='Stock_50.txt')
-save_output_to_file(output_500, output_directory, filename='Stock_500.txt')
-save_output_to_file(output_5000, output_directory, filename='Stock_5000.txt')
+if output_500:  # 只有在 output_500 不为空时才保存
+    save_output_to_file(output_500, output_directory, filename='Stock_500.txt')
+if output_5000:  # 只有在 output_5000 不为空时才保存
+    save_output_to_file(output_5000, output_directory, filename='Stock_5000.txt')
 
 # 定义要清理的文件模式
 file_patterns = [

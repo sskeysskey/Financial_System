@@ -81,7 +81,7 @@ def main():
 
     output1 = []
     output_files = create_output_files()
-    intervals = [3, 6]  # 使用周为单位的时间间隔列表
+    intervals = [6, 8]  # 使用周为单位的时间间隔列表
 
     # 遍历JSON中的每个表和股票代码
     for table_name, names in data.items():

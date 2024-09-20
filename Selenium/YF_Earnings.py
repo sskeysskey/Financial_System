@@ -132,17 +132,18 @@ conn.close()
 # 关闭浏览器
 driver.quit()
 
-# 移除最后一行的回车换行符
-with open(file_path, 'r') as file:
-    lines = file.readlines()
+if os.path.exists(file_path):
+    # 移除最后一行的回车换行符
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
 
-# 去掉最后一行的换行符
-if lines and lines[-1].endswith("\n"):
-    lines[-1] = lines[-1].rstrip("\n")
+    # 去掉最后一行的换行符
+    if lines and lines[-1].endswith("\n"):
+        lines[-1] = lines[-1].rstrip("\n")
 
-# 重新写回文件
-with open(file_path, 'w') as file:
-    file.writelines(lines)
+    # 重新写回文件
+    with open(file_path, 'w') as file:
+        file.writelines(lines)
 
 # 如果有新内容添加，显示提示
 if new_content_added:

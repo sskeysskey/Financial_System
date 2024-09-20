@@ -46,9 +46,9 @@ with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json',
 
 # 获取当前系统日期
 current_date = datetime.now()
-# 计算离当前最近的周天
+# 计算离当前最近的周天（周日）
 start_date = current_date + timedelta(days=(6 - current_date.weekday()))
-# 计算往后延6天的周六
+# 计算往后延6天的日期
 end_date = start_date + timedelta(days=6)
 
 new_content_added = False
@@ -96,23 +96,27 @@ driver.quit()
 # 只有在有新结果时才追加到文件
 if results:
     with open(file_path, 'a') as output_file:
-        output_file.write('\n')
+        # 如果文件已经存在且不是空的，添加一个换行符分隔
+        if os.path.getsize(file_path) > 0:
+            output_file.write('\n')
         for result in results:
             output_file.write(result + "\n")
-
-# 移除最后一行的回车换行符
-with open(file_path, 'r') as file:
-    lines = file.readlines()
-
-# 去掉最后一行的换行符
-if lines and lines[-1].endswith("\n"):
-    lines[-1] = lines[-1].rstrip("\n")
-
-# 重新写回文件
-with open(file_path, 'w') as file:
-    file.writelines(lines)
-
-# 如果有新内容添加，显示提示
-if new_content_added:
-    applescript_code = 'display dialog "新内容已添加。" buttons {"OK"} default button "OK"'
-    subprocess.run(['osascript', '-e', applescript_code], check=True)
+    
+    # 移除最后一行的回车换行符
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as file:
+            lines = file.readlines()
+        
+        # 去掉最后一行的换行符
+        if lines and lines[-1].endswith("\n"):
+            lines[-1] = lines[-1].rstrip("\n")
+        
+        with open(file_path, 'w') as file:
+            file.writelines(lines)
+    
+    # 如果有新内容添加，显示提示
+    if new_content_added:
+        applescript_code = 'display dialog "新内容已添加。" buttons {"OK"} default button "OK"'
+        subprocess.run(['osascript', '-e', applescript_code], check=True)
+else:
+    print("没有新内容添加，文件保持不变。")
