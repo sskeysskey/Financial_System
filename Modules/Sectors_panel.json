@@ -9,12 +9,14 @@
         "OLN": ""
     },
     "Communication_Services": {
-        "NTES": ""
+        "NTES": "",
+        "DJT": ""
     },
     "Consumer_Cyclical": {
         "LULU": "",
         "NKE": "Nike",
-        "MBLY": ""
+        "MBLY": "",
+        "STLA": ""
     },
     "Energy": {
         "PBF": "石油精炼",
@@ -47,7 +49,8 @@
     "Healthcare": {
         "CVS": "",
         "DXCM": "德康血糖",
-        "MRNA": ""
+        "MRNA": "",
+        "NVO": ""
     },
     "Crypto": {
         "Bitcoin": "",
