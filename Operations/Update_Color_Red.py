@@ -6,14 +6,11 @@ from datetime import datetime
 def display_dialog(message):
     # AppleScript代码模板
     applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
-    
-    # 使用subprocess调用osascript
-    process = subprocess.run(['osascript', '-e', applescript_code], check=True)
+    subprocess.run(['osascript', '-e', applescript_code], check=True)
 
 def check_day():
     """检查当前日期是否为周日或周一"""
-    current_day = datetime.now().weekday()
-    return current_day in [6, 0]  # 6 代表周日，0 代表周一
+    return datetime.now().weekday() in [6, 0]  # 6 代表周日，0 代表周一
 
 def parse_earnings_release(file_path):
     """解析Earnings Release文件，提取symbol"""
@@ -21,8 +18,9 @@ def parse_earnings_release(file_path):
     try:
         with open(file_path, 'r') as file:
             for line in file:
-                symbol = line.split(':')[0].strip()
-                symbols.add(symbol)
+                parts = line.strip().split(':')
+                if parts and parts[0].strip():
+                    symbols.add(parts[0].strip())
     except FileNotFoundError:
         print(f"文件未找到: {file_path}")
     except Exception as e:
@@ -31,8 +29,8 @@ def parse_earnings_release(file_path):
 
 def main():
     if not check_day():
-        show_error_message("今天不是周日或周一，不执行更新操作。")
-        display_dialog(mshow_error_messageessage)
+        message = "今天不是周日或周一，不执行更新操作。"
+        display_dialog(message)
         return
 
     earnings_release_path = '/Users/yanzhang/Documents/News/Earnings_Release_new.txt'
@@ -41,18 +39,19 @@ def main():
     
     earnings_symbols = parse_earnings_release(earnings_release_path)
 
-    # 读取Economics分组内容
-    economics_symbols = set()
     try:
         with open(sectors_all_json_path, 'r', encoding='utf-8') as file:
             sectors_data = json.load(file)
             economics_symbols = set(sectors_data.get('Economics', []))
     except FileNotFoundError:
         print(f"文件未找到: {sectors_all_json_path}")
+        economics_symbols = set()
     except json.JSONDecodeError:
         print(f"JSON解析错误: {sectors_all_json_path}")
+        economics_symbols = set()
     except Exception as e:
         print(f"读取文件时发生错误: {e}")
+        economics_symbols = set()
 
     # 读取颜色json文件
     try:
@@ -68,14 +67,10 @@ def main():
         print(f"读取文件时发生错误: {e}")
         colors = {}
 
-    if 'red_keywords' in colors:
-        colors['red_keywords'] = [symbol for symbol in colors['red_keywords']
-                                  if symbol in economics_symbols]
-    else:
-        colors['red_keywords'] = []
+    colors['red_keywords'] = list(set(colors.get('red_keywords', [])) & economics_symbols)
 
     for symbol in earnings_symbols:
-        if symbol not in colors['red_keywords']:
+        if symbol and symbol not in colors['red_keywords']:
             colors['red_keywords'].append(symbol)
 
     try:

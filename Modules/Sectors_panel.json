@@ -130,8 +130,9 @@
         "EURUSD": ""
     },
     "Economics": {
-        "USRetailM": "17 USRetailM",
-        "USInitial": "19 USInitial"
+        "CorePCEY": "27 CorePCEY",
+        "CorePCEM": "27 CorePCEM",
+        "USInitial": "26 USInitial"
     },
     "ETFs_US": {
         "EDV": "长期国债",
