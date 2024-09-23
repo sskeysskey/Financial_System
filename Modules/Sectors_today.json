@@ -25,7 +25,8 @@
     "IDR=X",
     "PHP=X",
     "EGP=X",
-    "ARS=X"
+    "ARS=X",
+    "MYR=X"
   ],
   "Crypto": [],
   "Indices": [
@@ -41,7 +42,8 @@
     "^GSPC",
     "^BSESN",
     "^KS11",
-    "^AXJO"
+    "^AXJO",
+    "^STI"
   ],
   "Commodities": [
     "GC=F",

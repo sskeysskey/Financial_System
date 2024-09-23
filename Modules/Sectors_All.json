@@ -42,7 +42,8 @@
     "USDIDR",
     "USDPHP",
     "USDEGP",
-    "USDARS"
+    "USDARS",
+    "USDMYR"
   ],
   "Crypto": [
     "Bitcoin",
@@ -64,7 +65,8 @@
     "S&P500",
     "India",
     "Korea",
-    "Australia"
+    "Australia",
+    "Singapore"
   ],
   "Economics": [
     "USGDP",

@@ -13,6 +13,7 @@ copy_2_backup('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.
 copy_2_backup('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', '/Users/yanzhang/Documents/sskeysskey.github.io/economics/sectors_all.json')
 copy_2_backup('/Users/yanzhang/Documents/Financial_System/Modules/description.json', '/Users/yanzhang/Documents/sskeysskey.github.io/economics/description.json')
 copy_2_backup('/Users/yanzhang/Documents/News/CompareStock.txt', '/Users/yanzhang/Documents/sskeysskey.github.io/economics/comparestock.txt')
+copy_2_backup('/Users/yanzhang/Documents/News/backup/marketcap_pe.txt', '/Users/yanzhang/Documents/sskeysskey.github.io/economics/marketcap_pe.txt')
 
 # 连接到 SQLite 数据库文件
 db_file = '/Users/yanzhang/Documents/Database/Finance.db'  # 你的数据库文件路径
