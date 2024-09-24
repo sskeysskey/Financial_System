@@ -21,10 +21,10 @@
     },
     "Energy": {
         "PBF": "石油精炼",
-        "MTDR": "",
         "CHRD": "",
         "NE": "",
-        "VAL": ""
+        "VAL": "",
+        "NFE": ""
     },
     "Technology": {
         "SNOW": "",
