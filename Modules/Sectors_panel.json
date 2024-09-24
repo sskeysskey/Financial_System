@@ -16,7 +16,8 @@
         "LULU": "",
         "NKE": "Nike",
         "MBLY": "",
-        "STLA": ""
+        "STLA": "",
+        "MNSO": ""
     },
     "Energy": {
         "PBF": "石油精炼",
@@ -50,7 +51,10 @@
         "CVS": "",
         "DXCM": "德康血糖",
         "MRNA": "",
-        "NVO": ""
+        "NVO": "",
+        "VRTX": "",
+        "GMAB": "",
+        "BMRN": ""
     },
     "Crypto": {
         "Bitcoin": "",
@@ -108,6 +112,7 @@
     "ETFs": {
         "DBC": "大宗商品",
         "IBIT": "比特币",
+        "SMH": "半导体",
         "CQQQ": "中国科技",
         "CNYA": "A股",
         "DXJ": "日本",

@@ -58,7 +58,7 @@ def fetch_data(max_retries=3):
             
             # 等待页面加载
             WebDriverWait(driver, 20).until(
-                EC.presence_of_element_located((By.XPATH, '//tbody[@class="body yf-42jv6g"]/tr'))
+                EC.presence_of_element_located((By.XPATH, '//tbody[@class="body yf-1dbt8wv"]/tr'))
             )
             
             all_data = []
@@ -66,7 +66,7 @@ def fetch_data(max_retries=3):
             yesterday = now - timedelta(days=1)
             today = yesterday.strftime('%Y-%m-%d')
 
-            rows = driver.find_elements(By.XPATH, '//tbody[@class="body yf-42jv6g"]/tr')
+            rows = driver.find_elements(By.XPATH, '//tbody[@class="body yf-1dbt8wv"]/tr')
             
             for row in rows:
                 symbol_element = WebDriverWait(row, 10).until(

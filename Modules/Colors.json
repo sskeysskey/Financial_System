@@ -1,8 +1,8 @@
 {
     "cyan_keywords": [
-        "IBIT",
         "UNH",
-        "NVO"
+        "ADBE",
+        "VRTX"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -12,7 +12,7 @@
         "Solana",
         "DXJ",
         "SCHD",
-        "ADBE"
+        "NVO"
     ],
     "purple_keywords": [
         "Bitcoin",
@@ -108,7 +108,7 @@
         "COTY",
         "COP",
         "OVV",
-        "DJT"
+        "MNSO"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -173,7 +173,8 @@
         "CTRA",
         "CIVI",
         "MRNA",
-        "BMRN"
+        "BMRN",
+        "DJT"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -219,6 +220,7 @@
     ],
     "green_keywords": [
         "EURCNY",
+        "IBIT",
         "JP10Y",
         "Naturalgas",
         "EURUSD",

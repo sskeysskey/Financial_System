@@ -182,7 +182,7 @@ def main():
                 if 'M' in year_part:
                     months = int(year_part.replace('M', ''))
                     if months == 3:
-                        category_list = 'blue_keywords'
+                        category_list = 'cyan_keywords'
                     elif months == 6:
                         category_list = 'purple_keywords'
                     else:

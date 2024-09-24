@@ -182,7 +182,7 @@ def main():
                 if 'W' in week_part:
                     weeks = int(week_part.replace('W', ''))
                     if weeks in [3, 6]:
-                        category_list = 'cyan_keywords'
+                        category_list = 'blue_keywords'
                     else:
                         continue  # 其他周数不处理
                 else:

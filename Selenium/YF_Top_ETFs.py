@@ -19,7 +19,7 @@ def fetch_data(url):
     data_list = []
 
     # 找到所有的数据行
-    rows = driver.find_elements(By.CSS_SELECTOR, 'tr.row.false.yf-42jv6g')
+    rows = driver.find_elements(By.CSS_SELECTOR, 'tr.row.false.yf-1dbt8wv')
     
     for row in rows:
         # 在当前行中提取Symbol
