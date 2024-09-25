@@ -184,7 +184,7 @@ def main():
                     if months == 3:
                         category_list = 'cyan_keywords'
                     elif months == 6:
-                        category_list = 'purple_keywords'
+                        category_list = 'green_keywords'
                     else:
                         continue  # 其他月份不处理
 

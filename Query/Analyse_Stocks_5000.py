@@ -241,7 +241,7 @@ def main():
         update_color_json(color_json_path, updates_color, blacklist_newlow, existing_sectors_panel)
         print("Colors.json文件已成功更新！")
     else:
-        error_message = "没有符合条件的股票被检索出来，无法进行后续的更新操作。"
+        error_message = "analyse_5000，没有符合条件的股票被检索出来，无法进行后续的更新操作。"
         log_and_print_error(error_message)
 
 def log_and_print_error(error_message):

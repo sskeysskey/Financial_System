@@ -1,20 +1,14 @@
 {
     "Basic_Materials": {
         "MOS": "美盛化肥",
-        "ALB": "雅宝",
         "VALE": "",
-        "BHP": "必和必拓",
-        "CLF": "",
-        "NUE": "",
-        "OLN": ""
+        "CLF": ""
     },
     "Communication_Services": {
-        "NTES": "",
         "DJT": ""
     },
     "Consumer_Cyclical": {
         "LULU": "",
-        "NKE": "Nike",
         "MBLY": "",
         "STLA": "",
         "MNSO": ""
@@ -22,7 +16,6 @@
     "Energy": {
         "PBF": "石油精炼",
         "CHRD": "",
-        "NE": "",
         "VAL": "",
         "NFE": ""
     },
@@ -30,16 +23,13 @@
         "SNOW": "",
         "STM": "意法",
         "INTC": "",
-        "PATH": "UiPath",
         "QLYS": "",
         "ADBE": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
         "EL": "雅诗兰黛",
-        "DG": "",
-        "FMX": "",
-        "DAR": ""
+        "DG": ""
     },
     "Industrials": {
         "ATKR": "",
@@ -54,11 +44,8 @@
         "DXCM": "德康血糖",
         "MRNA": "",
         "NVO": "",
-        "VRTX": "",
         "GMAB": "",
-        "BMRN": "",
-        "MCK": "",
-        "APLS": ""
+        "MCK": ""
     },
     "Crypto": {
         "Bitcoin": "",

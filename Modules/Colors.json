@@ -22,8 +22,7 @@
         "CNYUSD",
         "US10Y",
         "XLRE",
-        "CNYA",
-        "MCK"
+        "CNYA"
     ],
     "white_keywords": [
         "BHP",
@@ -229,7 +228,8 @@
         "EURUSD",
         "Shanghai",
         "Shenzhen",
-        "FXY"
+        "FXY",
+        "MCK"
     ],
     "red_keywords": [
         "USNonFarm",
