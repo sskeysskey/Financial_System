@@ -45,7 +45,9 @@
         "ATKR": "",
         "BA": "波音"
     },
-    "Real_Estate": {},
+    "Real_Estate": {
+        "LINE": ""
+    },
     "Financial_Services": {},
     "Healthcare": {
         "CVS": "",
@@ -54,7 +56,9 @@
         "NVO": "",
         "VRTX": "",
         "GMAB": "",
-        "BMRN": ""
+        "BMRN": "",
+        "MCK": "",
+        "APLS": ""
     },
     "Crypto": {
         "Bitcoin": "",

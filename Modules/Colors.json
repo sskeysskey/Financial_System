@@ -22,7 +22,8 @@
         "CNYUSD",
         "US10Y",
         "XLRE",
-        "CNYA"
+        "CNYA",
+        "MCK"
     ],
     "white_keywords": [
         "BHP",
@@ -108,7 +109,8 @@
         "COTY",
         "COP",
         "OVV",
-        "MNSO"
+        "MNSO",
+        "APLS"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -216,7 +218,8 @@
         "IEP",
         "CSAN",
         "PARA",
-        "SIRI"
+        "SIRI",
+        "LINE"
     ],
     "green_keywords": [
         "EURCNY",

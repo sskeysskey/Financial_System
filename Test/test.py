@@ -1,36 +1,32 @@
-import sqlite3
 import json
+import os
+import re
+import glob
 
-def find_tables_with_flo(db_path):
-    # 连接到数据库
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
+def find_Stock_50_file():
+    """查找Stock_50_开头的TXT文件"""
+    txt_file_pattern = os.path.join(TXT_FILE_DIRECTORY, "Stock_50_*.txt")
+    txt_files = glob.glob(txt_file_pattern)
+    if not txt_files:
+        raise FileNotFoundError("未找到以 'Stock_50_' 开头的TXT文件。")
+    return txt_files[0]
 
-    # 获取所有表名
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-    tables = [table[0] for table in cursor.fetchall()]
+def read_file(file_path):
+    """读取文件内容"""
+    with open(file_path, 'r') as file:
+        return file.read()
 
-    # 存储包含 'FLO' 的表名
-    tables_with_flo = []
+TXT_FILE_DIRECTORY = "/Users/yanzhang/Documents/News/"
+txt_file_path = find_Stock_50_file()
+txt_content = read_file(txt_file_path)
+JSON_FILE_PATH_ALL = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json"
 
-    # 查询每个表
-    for table in tables:
-        query = f"SELECT 1 FROM '{table}' WHERE name = 'FLO' LIMIT 1"
-        try:
-            cursor.execute(query)
-            if cursor.fetchone():
-                tables_with_flo.append(table)
-        except sqlite3.OperationalError:
-            # 如果表结构不符合预期，跳过该表
-            continue
+data_all = json.loads(read_file(JSON_FILE_PATH_ALL))
 
-    # 关闭数据库连接
-    conn.close()
+pattern = re.compile(r"Added\s+'(\w+(-\w+)?)'\s+to\s+(\w+)")
+matches = pattern.findall(txt_content)
 
-    return tables_with_flo
+for symbol, _, group in matches:
+    symbol_count = sum(symbol in symbols for symbols in data_all.values())
 
-# 使用示例
-db_path = '/Users/yanzhang/Documents/Database/Finance.db'
-result = find_tables_with_flo(db_path)
-
-print(json.dumps({"Tables containing 'FLO'": result}, indent=2))
+print(f"共出现了{symbol_count}次。")

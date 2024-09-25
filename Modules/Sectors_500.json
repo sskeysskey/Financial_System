@@ -52,7 +52,8 @@
     "ROST",
     "HMC",
     "DECK",
-    "SE"
+    "SE",
+    "JD"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -216,7 +217,8 @@
     "PCAR",
     "URI",
     "GWW",
-    "JCI"
+    "JCI",
+    "CPRT"
   ],
   "Real_Estate": [
     "PLD",
