@@ -45,6 +45,7 @@ def process_Stock_50():
 
         pattern = re.compile(r"Added\s+'(\w+(-\w+)?)'\s+to\s+(\w+)")
         matches = pattern.findall(txt_content)
+        print(f"从 Stock_50 文件中提取到 {len(matches)} 条匹配记录")
 
         if not matches:
             print("未从Stock_50.txt中提取到有效数据，不更新empty文件。")
@@ -55,12 +56,15 @@ def process_Stock_50():
             if group in data_empty:
                 # 计算symbol在data_all中出现的次数
                 symbol_count = sum(symbol in symbols for symbols in data_all.values())
-                
+                print(f"'{symbol}' 在 Sectors_All.json 中出现 {symbol_count} 次")
+
                 if symbol_count >= 2:
                     log_error_with_timestamp(f"Symbol '{symbol}' 在 Sectors_All.json 中出现了 {symbol_count} 次，未添加到 {group} 组别。", ERROR_FILE_PATH)
+                    print(f"'{symbol}' 在 Sectors_All.json 中出现了 {symbol_count} 次，未添加到 {group} 组别。")
                 else:
                     data_empty[group].append(symbol)
                     updates_count += 1
+                    print(f"成功将 '{symbol}' 添加到 '{group}' 组别")
 
         if updates_count > 0:
             write_json(JSON_FILE_PATH_EMPTY, data_empty)

@@ -10,8 +10,7 @@ def is_blacklisted(name):
     return name in blacklist_glob
 
 def create_connection(db_file):
-    conn = sqlite3.connect(db_file)
-    return conn
+    return sqlite3.connect(db_file)
 
 def log_error_with_timestamp(error_message):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -19,8 +18,7 @@ def log_error_with_timestamp(error_message):
 
 def load_blacklist_newlow(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
-        data = json.load(file)
-        return data.get("newlow_5000", [])
+        return json.load(file).get("newlow_5000", [])
 
 def create_output_files():
     """创建两个输出文件并返回文件路径"""
@@ -64,12 +62,106 @@ def get_price_comparison(cursor, table_name, interval, name, validate):
         return None  # 如果找不到有效数据，则返回None
 
 def get_latest_price_and_date(cursor, table_name, name):
-    """获取指定股票的最新价格和日期"""
-    query = f"""
-    SELECT date, price FROM {table_name} WHERE name = ? ORDER BY date DESC LIMIT 1
-    """
+    query = f"SELECT date, price FROM {table_name} WHERE name = ? ORDER BY date DESC LIMIT 1"
     cursor.execute(query, (name,))
     return cursor.fetchone()
+
+# 解析final_output，构建更新数据
+def parse_output(output):
+    updates = {}
+    lines = output.split('\n')
+    for line in lines:
+        if line.strip():  # 添加这个检查，确保不处理空行
+            category, symbol, _ = line.split()
+            if category in updates:
+                updates[category].append(symbol)
+            else:
+                updates[category] = [symbol]
+    return updates
+
+def update_json_data(config_path, updates, blacklist_newlow):
+    with open(config_path, 'r', encoding='utf-8') as file:
+        data = json.load(file, object_pairs_hook=OrderedDict)
+
+    for category, symbols in updates.items():
+        if category in data:
+            for symbol in symbols:
+                if symbol not in data[category] and symbol not in blacklist_newlow:
+                    data[category][symbol] = ""  # 使用新格式写入
+        else:
+            data[category] = {symbol: "" for symbol in symbols if symbol not in blacklist_newlow}
+
+    with open(config_path, 'w', encoding='utf-8') as file:
+        json.dump(data, file, ensure_ascii=False, indent=4)
+
+def parse_output_color(output):
+    updates_color = {}
+    lines = output.split('\n')
+    for line in lines:
+        if line.strip():  # 确保不处理空行
+            parts = line.split()
+            category = parts[0]
+            symbol = parts[1]
+            descriptor = parts[2]  # 形如 '3W_newlow'
+
+            # 解析周数和类型（newhigh或newlow）
+            week_part, _ = descriptor.split('_')
+            if 'W' in week_part:
+                weeks = int(week_part.replace('W', ''))
+                if weeks in [3, 6]:
+                    category_list = 'blue_keywords'
+                else:
+                    continue  # 其他周数不处理
+            else:
+                continue  # 如果不是以'W'结尾，跳过
+
+            if category_list in updates_color:
+                if symbol not in updates_color[category_list]:
+                    updates_color[category_list].append(symbol)
+            else:
+                updates_color[category_list] = [symbol]
+    return updates_color
+
+def update_color_json(color_config_path, updates_colors, blacklist_newlow, existing_sectors_panel):
+    with open(color_config_path, 'r', encoding='utf-8') as file:
+        all_colors = json.load(file)
+
+    # 创建一个新的字典，排除 "red_keywords"
+    colors = {k: v for k, v in all_colors.items() if k != "red_keywords"}
+
+    # 创建一个集合，包含所有已存在于sectors_panel.json中的symbol
+    existing_symbols = set()
+    for category in existing_sectors_panel.values():
+        existing_symbols.update(category.keys())
+
+    for category_list, names in updates_colors.items():
+        for name in names:
+            if name not in colors.get(category_list, []):
+                if name in existing_symbols:
+                    # 如果symbol已存在于sectors_panel.json中，打印日志
+                    print(f"Symbol {name} 已存在于 sectors_panel.json 中，不添加到 {category_list}")
+                else:
+                    if category_list in colors:
+                        colors[category_list].append(name)
+                        print(f"将 '{name}' 添加到已存在的 '{category_list}' 类别中")
+                    else:
+                        colors[category_list] = [name]
+                        print(f"创建新类别 '{category_list}' 并添加 '{name}'")
+
+    # 在写回文件之前，将 "red_keywords" 添加回去
+    colors["red_keywords"] = all_colors.get("red_keywords", [])
+
+    try:
+        with open(color_config_path, 'w', encoding='utf-8') as file:
+            json.dump(colors, file, ensure_ascii=False, indent=4)
+    except Exception as e:
+        print(f"写入文件时发生错误: {e}")
+
+def log_and_print_error(error_message):
+    formatted_error_message = log_error_with_timestamp(error_message)
+    print(f"错误: {error_message}")
+    with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+        error_file.write(formatted_error_message)
 
 def main():    
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
@@ -79,8 +171,7 @@ def main():
     with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_5000.json', 'r') as file:
         data = json.load(file)
 
-    output1 = []
-    output_files = create_output_files()
+    output = []
     intervals = [6, 8]  # 使用周为单位的时间间隔列表
 
     # 遍历JSON中的每个表和股票代码
@@ -128,110 +219,25 @@ def main():
                         if min_price is not None and validate_price <= min_price:
                             output_line = f"{table_name} {name} {interval}W_newlow"
                             print(output_line)
-                            output1.append(output_line)
+                            output.append(output_line)
                             break  # 只输出最长的时间周期
 
-    # 将结果写入所有输出文件
-    for output_file in output_files:
-        with open(output_file, 'w') as f:
-            f.write('\n'.join(output1))
-        print(f"结果已保存到文件: {output_file}")
+    if output:
+        output_files = create_output_files()
+        # 将结果写入所有输出文件
+        for output_file in output_files:
+            with open(output_file, 'w') as f:
+                f.write('\n'.join(output))
+            print(f"结果已保存到文件: {output_file}")
     
-    final_output1 = "\n".join(output1)
+        final_output = "\n".join(output)
 
-    # 解析final_output1，构建更新数据
-    def parse_output(output):
-        updates = {}
-        lines = output.split('\n')
-        for line in lines:
-            if line.strip():  # 添加这个检查，确保不处理空行
-                category, symbol, _ = line.split()
-                if category in updates:
-                    updates[category].append(symbol)
-                else:
-                    updates[category] = [symbol]
-        return updates
-    
-    def update_json_data(config_path, updates, blacklist_newlow):
-        with open(config_path, 'r', encoding='utf-8') as file:
-            data = json.load(file, object_pairs_hook=OrderedDict)
-
-        for category, symbols in updates.items():
-            if category in data:
-                for symbol in symbols:
-                    if symbol not in data[category] and symbol not in blacklist_newlow:
-                        data[category][symbol] = ""  # 使用新格式写入
-            else:
-                data[category] = {symbol: "" for symbol in symbols if symbol not in blacklist_newlow}
-
-        with open(config_path, 'w', encoding='utf-8') as file:
-            json.dump(data, file, ensure_ascii=False, indent=4)
-    
-    def parse_output_color(output):
-        updates_color = {}
-        lines = output.split('\n')
-        for line in lines:
-            if line.strip():  # 确保不处理空行
-                parts = line.split()
-                category = parts[0]
-                symbol = parts[1]
-                descriptor = parts[2]  # 形如 '3W_newlow'
-
-                # 解析周数和类型（newhigh或newlow）
-                week_part, _ = descriptor.split('_')
-                if 'W' in week_part:
-                    weeks = int(week_part.replace('W', ''))
-                    if weeks in [3, 6]:
-                        category_list = 'blue_keywords'
-                    else:
-                        continue  # 其他周数不处理
-                else:
-                    continue  # 如果不是以'W'结尾，跳过
-
-                if category_list in updates_color:
-                    if symbol not in updates_color[category_list]:
-                        updates_color[category_list].append(symbol)
-                else:
-                    updates_color[category_list] = [symbol]
-        return updates_color
-    
-    def update_color_json(color_config_path, updates_colors, blacklist_newlow, existing_sectors_panel):
-        with open(color_config_path, 'r', encoding='utf-8') as file:
-            all_colors = json.load(file)
-
-        # 创建一个新的字典，排除 "red_keywords"
-        colors = {k: v for k, v in all_colors.items() if k != "red_keywords"}
-
-        # 创建一个集合，包含所有已存在于sectors_panel.json中的symbol
-        existing_symbols = set()
-        for category in existing_sectors_panel.values():
-            existing_symbols.update(category.keys())
-
-        for category_list, names in updates_colors.items():
-            for name in names:
-                if name not in colors.get(category_list, []):
-                    if name in existing_symbols:
-                        # 如果symbol已存在于sectors_panel.json中，打印日志
-                        print(f"Symbol {name} 已存在于 sectors_panel.json 中，不添加到 {category_list}")
-                    else:
-                        if category_list in colors:
-                            colors[category_list].append(name)
-                        else:
-                            colors[category_list] = [name]
-
-        # 在写回文件之前，将 "red_keywords" 添加回去
-        colors["red_keywords"] = all_colors.get("red_keywords", [])
-
-        with open(color_config_path, 'w', encoding='utf-8') as file:
-            json.dump(colors, file, ensure_ascii=False, indent=4)
-
-    # 在更新之前，先读取sectors_panel.json的内容
-    with open("/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json", 'r', encoding='utf-8') as file:
-        existing_sectors_panel = json.load(file)
-    
-    if final_output1.strip():  # 检查final_output1是否为空
-        updates = parse_output(final_output1)
-        updates_color = parse_output_color(final_output1)
+        # 在更新之前，先读取sectors_panel.json的内容
+        with open("/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json", 'r', encoding='utf-8') as file:
+            existing_sectors_panel = json.load(file)
+        
+        updates = parse_output(final_output)
+        updates_color = parse_output_color(final_output)
 
         config_json = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json"
         update_json_data(config_json, updates, blacklist_newlow)
@@ -241,14 +247,8 @@ def main():
         update_color_json(color_json_path, updates_color, blacklist_newlow, existing_sectors_panel)
         print("Colors.json文件已成功更新！")
     else:
-        error_message = "analyse_5000，没有符合条件的股票被检索出来，无法进行后续的更新操作。"
+        error_message = "analyse_5000，没有符合条件的股票被检索出来。"
         log_and_print_error(error_message)
-
-def log_and_print_error(error_message):
-    formatted_error_message = log_error_with_timestamp(error_message)
-    print(f"错误: {error_message}")
-    with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
-        error_file.write(formatted_error_message)
 
 if __name__ == "__main__":
     try:

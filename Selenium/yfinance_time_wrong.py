@@ -3,6 +3,8 @@ import sqlite3
 import json
 from datetime import datetime, timedelta
 import traceback  # 用于获取完整的错误信息
+import re
+import os
 
 def log_error_with_timestamp(error_message):
     # 获取当前日期和时间
@@ -10,13 +12,53 @@ def log_error_with_timestamp(error_message):
     # 在错误信息前加入时间戳
     return f"[{timestamp}] {error_message}\n"
 
+def process_error_file(error_file_path, sectors_file_path):
+    with open(error_file_path, 'r') as error_file:
+        error_content = error_file.read()
+    
+    pattern = r'\[.*?\] (\w+) (\w+): No price data found for the given date range\.'
+    matches = re.findall(pattern, error_content)
+    
+    with open(sectors_file_path, 'r') as sectors_file:
+        sectors_data = json.load(sectors_file)
+    
+    for group, symbol in matches:
+        if group in sectors_data and symbol not in sectors_data[group]:
+            sectors_data[group].append(symbol)
+    
+    with open(sectors_file_path, 'w') as sectors_file:
+        json.dump(sectors_data, sectors_file, indent=4)
+
+def clear_sectors(sectors_file_path):
+    with open(sectors_file_path, 'r') as sectors_file:
+        sectors_data = json.load(sectors_file)
+    
+    for group in sectors_data:
+        sectors_data[group] = []
+    
+    with open(sectors_file_path, 'w') as sectors_file:
+        json.dump(sectors_data, sectors_file, indent=4)
+
+# 主程序开始
+sectors_file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json'
+error_file_path = '/Users/yanzhang/Documents/News/Today_error1.txt'
+
+# 检查错误文件是否存在
+if not os.path.exists(error_file_path):
+    print(f"Error: 文件 {error_file_path} 不存在.")
+    print("程序执行结束")
+    exit()
+
+# 处理错误文件并更新sectors文件
+process_error_file(error_file_path, sectors_file_path)
+
 now = datetime.now()
 # 判断今天的星期数，如果是周日(6)或周一(0)，则不执行程序
 if now.weekday() in (0, 6):
     print("Today is either Sunday or Monday. The script will not run.")
 else:
     # 读取JSON文件
-    with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_time_wrong2.json', 'r') as file:
+    with open(sectors_file_path, 'r') as file:
         stock_groups = json.load(file)
 
     # 读取symbol_mapping JSON文件
@@ -82,5 +124,9 @@ else:
     print("所有数据已成功写入数据库")
     # 提交事务
     conn.commit()
-    # 关闭连接
-    conn.close()    
+    conn.close()
+
+    # 清除所有组别中的symbol
+    clear_sectors(sectors_file_path)
+
+print("程序执行完毕")

@@ -109,7 +109,8 @@
         "COP",
         "OVV",
         "MNSO",
-        "APLS"
+        "APLS",
+        "ALV"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -175,7 +176,8 @@
         "CIVI",
         "MRNA",
         "BMRN",
-        "DJT"
+        "DJT",
+        "BIIB"
     ],
     "orange_keywords": [
         "NASDAQ",

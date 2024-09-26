@@ -527,7 +527,9 @@
     "HYEM",
     "HAWX",
     "FXI",
-    "GNR"
+    "GNR",
+    "NFLT",
+    "GRID"
   ],
   "Basic_Materials": [
     "LIN",

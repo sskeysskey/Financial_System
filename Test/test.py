@@ -1,32 +1,29 @@
+import yfinance as yf
+import sqlite3
 import json
-import os
+from datetime import datetime, timedelta
+import traceback  # 用于获取完整的错误信息
 import re
-import glob
+import os
 
-def find_Stock_50_file():
-    """查找Stock_50_开头的TXT文件"""
-    txt_file_pattern = os.path.join(TXT_FILE_DIRECTORY, "Stock_50_*.txt")
-    txt_files = glob.glob(txt_file_pattern)
-    if not txt_files:
-        raise FileNotFoundError("未找到以 'Stock_50_' 开头的TXT文件。")
-    return txt_files[0]
 
-def read_file(file_path):
-    """读取文件内容"""
-    with open(file_path, 'r') as file:
-        return file.read()
 
-TXT_FILE_DIRECTORY = "/Users/yanzhang/Documents/News/"
-txt_file_path = find_Stock_50_file()
-txt_content = read_file(txt_file_path)
-JSON_FILE_PATH_ALL = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json"
+def clear_sectors(sectors_file_path):
+    with open(sectors_file_path, 'r') as sectors_file:
+        sectors_data = json.load(sectors_file)
+    
+    for group in sectors_data:
+        sectors_data[group] = []
+    
+    with open(sectors_file_path, 'w') as sectors_file:
+        json.dump(sectors_data, sectors_file, indent=4)
 
-data_all = json.loads(read_file(JSON_FILE_PATH_ALL))
+# 主程序开始
+sectors_file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json'
+error_file_path = '/Users/yanzhang/Documents/News/Today_error1.txt'
 
-pattern = re.compile(r"Added\s+'(\w+(-\w+)?)'\s+to\s+(\w+)")
-matches = pattern.findall(txt_content)
 
-for symbol, _, group in matches:
-    symbol_count = sum(symbol in symbols for symbols in data_all.values())
+    # 清除所有组别中的symbol
+clear_sectors(sectors_file_path)
 
-print(f"共出现了{symbol_count}次。")
+print("程序执行完毕")

@@ -11,7 +11,8 @@
         "LULU": "",
         "MBLY": "",
         "STLA": "",
-        "MNSO": ""
+        "MNSO": "",
+        "ALV": ""
     },
     "Energy": {
         "PBF": "石油精炼",
@@ -45,7 +46,10 @@
         "MRNA": "",
         "NVO": "",
         "GMAB": "",
-        "MCK": ""
+        "MCK": "",
+        "BIIB": "",
+        "BMRN": "",
+        "APLS": ""
     },
     "Crypto": {
         "Bitcoin": "",

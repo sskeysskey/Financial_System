@@ -71,7 +71,7 @@ else:
             except Exception as e:
                 formatted_error_message = log_error_with_timestamp(str(e))
                 # 将错误信息追加到文件中
-                with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                with open('/Users/yanzhang/Documents/News/Today_error1.txt', 'a') as error_file:
                     error_file.write(formatted_error_message)
 
         # 在完成每个group_name后打印信息
