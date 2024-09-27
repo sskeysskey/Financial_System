@@ -36,22 +36,26 @@ def login_once(driver, login_url):
     )
     print("登录成功，继续执行其他任务")
 
-def is_blacklisted(symbol):
+def is_blacklisted(symbol, blacklist):
     """检查给定的股票符号是否在黑名单中"""
-    return symbol in blacklist
+    return symbol in blacklist.get('screener', [])
+
+def load_blacklist(file_path):
+    with open(file_path, 'r') as file:
+        return json.load(file)
 
 def process_urls(driver, urls, output, output_500, output_5000):
     for url, sector in urls:
         process_sector(driver, url, sector, output, output_500, output_5000)
 
-def fetch_data(driver, url):
+def fetch_data(driver, url, blacklist):
     driver.get(url)
     results = []
     quote_links = driver.find_elements(By.XPATH, '//a[@data-test="quoteLink"]')
-    
+
     for quote_link in quote_links:
         symbol = quote_link.text
-        if is_blacklisted(symbol):
+        if is_blacklisted(symbol, blacklist):
             continue
         
         symbol_xpath = f'//fin-streamer[@data-symbol="{symbol}"]'
@@ -256,8 +260,8 @@ def update_json_5000(data, sector, file_path_5000, output_5000, log_enabled):
         file.truncate()
         json.dump(json_data, file, indent=2)
 
-def process_sector(driver, url, sector, output, output_500, output_5000):
-    data = fetch_data(driver, url)
+def process_sector(driver, url, sector, output, output_500, output_5000, blacklist):
+    data = fetch_data(driver, url, blacklist)
     update_json(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', output, log_enabled=True, write_symbols=True)
     update_json(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json', output, log_enabled=False, write_symbols=False)
     # 处理 Sectors_500.json
@@ -335,30 +339,12 @@ def backup_file(file_name, source_dir, backup_dir):
         return False
 
 chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
-
 service = Service(executable_path=chrome_driver_path)
 driver = webdriver.Chrome(service=service)
 
-# 定义黑名单
-blacklist = {"CTA-PA", "FWONK", "FOXA", "NWSA", "PARAA", "LSXMA",
-    "LSXMB", "LBRDA", "LBTYA", "LBTYB", "LEN-B", "BF-A", "MKC-V",
-    "TAP-A", "PBR-A", "BRK-B", "JPM-PD", "JPM-PC", "BML-PH",
-    "BAC-PE", "BAC-PK", "BAC-PL", "BAC-PB", "BML-PL", "BML-PJ", "WFC-PY",
-    "WFC-PL", "WFC-PC", "GS-PA", "GS-PK", "GS-PD", "MS-PK", "MS-PI",
-    "MS-PF", "MS-PA", "MS-PE", "USB-PH", "USB-PP", "SCHW-PD",
-    "MET-PA", "MET-PE", "ALL-PH", "ALL-PB", "KEY-PK", "KEY-PI",
-    "KEY-PJ", "CFG-PD", "RF-PB", "RF-PC", "HIG-PG", "STT-PG",
-    "GS-PC", "RNR-PF", "VOYA-PB", "BNRE-A", "OAK-PB", "ATH-PA",
-    "SNV-PD", "HEI-A", "UHAL-B", "MOG-B", "SPG-PJ", "PSA-PH",
-    "PSA-PK", "DLR-PK", "DLR-PJ", "NLY-PG", "NLY-PF", "MAA-PI",
-    "AGNCN", "VNO-PL", "VNO-PM", "FRT-PC", "AMH-PH", "AMH-PG",
-    "KIM-PM", "KIM-PL", "DUK-PA", "EBR-B", "CIG-C", "CMS-PB",
-    "CWEN-A", "ELPC", "BML-PG", "SLG-PI", "NEE-PR", "APO-PA",
-    "YNDX", "CUK", "BBDO", "SLMBP", "BPYPP", "GOOG","CPG", "PHYS",
-    "CTA-PB", "FITBI", "FLUT", "ZG", "BNRE", "BZ", "VNO", "CHT",
-    "SWAV", "BIO-B", "RBRK", "CNHI", "FER", "LOAR", "ACGLO", "AIRC",
-    "WRK", "ETRN", "WSO-B", "DJTWW", "ORKA", "LSXMK"
-    }
+# 加载blacklist.json文件
+blacklist_file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'
+blacklist = load_blacklist(blacklist_file_path)
 
 output = []  # 用于收集50亿以上信息的列表
 output_500 = []  # 用于收集500亿以上信息的列表
@@ -418,7 +404,7 @@ urls = [
 
 try:
     login_once(driver, login_url)
-    process_urls(driver, urls, output, output_500, output_5000)
+    process_urls(driver, urls, output, output_500, output_5000, blacklist)
 finally:
     driver.quit()
 print("所有爬取任务完成。")

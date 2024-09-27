@@ -115,6 +115,7 @@ def compare_today_yesterday(config_path, description_path, blacklist, interested
             if table_name in interested_sectors:
                 for name in names:
                     if name in blacklist:
+                        log_error_with_timestamp(f"跳过黑名单中的股票: {name}", error_file_path)
                         continue
                     try:
                         results = get_latest_available_dates(cursor, table_name, name)

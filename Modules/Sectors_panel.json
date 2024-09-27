@@ -17,8 +17,7 @@
     "Energy": {
         "PBF": "石油精炼",
         "CHRD": "",
-        "VAL": "",
-        "NFE": ""
+        "VAL": ""
     },
     "Technology": {
         "SNOW": "",
@@ -27,7 +26,9 @@
         "QLYS": "",
         "ADBE": ""
     },
-    "Utilities": {},
+    "Utilities": {
+        "NFE": ""
+    },
     "Consumer_Defensive": {
         "EL": "雅诗兰黛",
         "DG": ""
