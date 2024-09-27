@@ -2,7 +2,8 @@
     "cyan_keywords": [
         "UNH",
         "ADBE",
-        "VRTX"
+        "VRTX",
+        "E"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -33,7 +34,6 @@
         "PBF",
         "JBL",
         "ABNB",
-        "MUR",
         "PBR",
         "LYFT",
         "MNST",
@@ -110,7 +110,9 @@
         "OVV",
         "MNSO",
         "APLS",
-        "ALV"
+        "ALV",
+        "WFRD",
+        "VRN"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -177,7 +179,8 @@
         "MRNA",
         "BMRN",
         "DJT",
-        "BIIB"
+        "BIIB",
+        "MUR"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -231,7 +234,11 @@
         "Shanghai",
         "Shenzhen",
         "FXY",
-        "MCK"
+        "MCK",
+        "SHEL",
+        "COP",
+        "BP",
+        "EQNR"
     ],
     "red_keywords": [
         "USNonFarm",

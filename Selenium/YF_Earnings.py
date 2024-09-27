@@ -15,8 +15,11 @@ import json
 file_path = '/Users/yanzhang/Documents/News/Earnings_Release_next.txt'
 backup_dir = '/Users/yanzhang/Documents/News/backup/backup'
 
+# 检查文件是否已经存在
+file_already_exists = os.path.exists(file_path)
+
 # 如果文件存在，进行备份
-if os.path.exists(file_path):
+if file_already_exists:
     timestamp = datetime.now().strftime('%y%m%d')
     backup_filename = f'Earnings_Release_next_{timestamp}.txt'
     backup_path = os.path.join(backup_dir, backup_filename)
@@ -29,7 +32,7 @@ if os.path.exists(file_path):
 
 # 读取原有内容（如果文件存在）
 existing_content = set()
-if os.path.exists(file_path):
+if file_already_exists:
     with open(file_path, 'r') as file:
         for line in file:
             # 只取第一个冒号之前的部分作为键
@@ -132,19 +135,24 @@ conn.close()
 # 关闭浏览器
 driver.quit()
 
+# 如果文件存在，移除开头和结尾的空行
 if os.path.exists(file_path):
-    # 移除最后一行的回车换行符
     with open(file_path, 'r') as file:
         lines = file.readlines()
 
-    # 去除开头和结尾的空行，保留内容之间的空行
-    lines = [line for line in lines if line.strip() or any(lines[i].strip() for i in range(len(lines)) if i != lines.index(line))]
+    # 去除开头的空行
+    while lines and not lines[0].strip():
+        lines.pop(0)
+
+    # 去除结尾的空行
+    while lines and not lines[-1].strip():
+        lines.pop()
 
     # 重新写回文件
     with open(file_path, 'w') as file:
         file.writelines(lines)
 
-# 如果有新内容添加，显示提示
-if new_content_added:
+# 如果有新内容添加，并且文件原本已经存在，显示提示
+if new_content_added and file_already_exists:
     applescript_code = 'display dialog "新内容已添加。" buttons {"OK"} default button "OK"'
     subprocess.run(['osascript', '-e', applescript_code], check=True)

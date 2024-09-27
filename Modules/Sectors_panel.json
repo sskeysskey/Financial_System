@@ -17,7 +17,12 @@
     "Energy": {
         "PBF": "石油精炼",
         "CHRD": "",
-        "VAL": ""
+        "VAL": "",
+        "SHEL": "",
+        "COP": "",
+        "EQNR": "",
+        "WFRD": "",
+        "MTDR": ""
     },
     "Technology": {
         "SNOW": "",

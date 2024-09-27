@@ -70,7 +70,7 @@ def fetch_data(max_retries=3):
             
             for row in rows:
                 symbol_element = WebDriverWait(row, 10).until(
-                    EC.presence_of_element_located((By.XPATH, './/span[@class="symbol yf-ravs5v"]'))
+                    EC.presence_of_element_located((By.XPATH, './/span[@class="symbol yf-1jpysdn"]'))
                 )
                 crypto_symbol = symbol_element.text.strip()
                 

@@ -121,12 +121,16 @@ with open(file_path, 'a') as output_file:
 driver.quit()
 
 if os.path.exists(file_path):
-    # 移除最后一行的回车换行符
     with open(file_path, 'r') as file:
         lines = file.readlines()
 
-    # 去除开头和结尾的空行，保留内容之间的空行
-    lines = [line for line in lines if line.strip() or any(lines[i].strip() for i in range(len(lines)) if i != lines.index(line))]
+    # 去除开头的空行
+    while lines and not lines[0].strip():
+        lines.pop(0)
+
+    # 去除结尾的空行
+    while lines and not lines[-1].strip():
+        lines.pop()
 
     # 重新写回文件
     with open(file_path, 'w') as file:

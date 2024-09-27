@@ -44,9 +44,9 @@ def load_blacklist(file_path):
     with open(file_path, 'r') as file:
         return json.load(file)
 
-def process_urls(driver, urls, output, output_500, output_5000):
+def process_urls(driver, urls, output, output_500, output_5000, blacklist):
     for url, sector in urls:
-        process_sector(driver, url, sector, output, output_500, output_5000)
+        process_sector(driver, url, sector, output, output_500, output_5000, blacklist)
 
 def fetch_data(driver, url, blacklist):
     driver.get(url)

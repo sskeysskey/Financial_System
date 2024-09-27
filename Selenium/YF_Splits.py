@@ -14,8 +14,11 @@ import json
 file_path = '/Users/yanzhang/Documents/News/Stock_Splits_next.txt'
 backup_dir = '/Users/yanzhang/Documents/News/backup/backup'
 
+# 检查文件是否已经存在
+file_already_exists = os.path.exists(file_path)
+
 # 如果文件存在，进行备份
-if os.path.exists(file_path):
+if file_already_exists:
     timestamp = datetime.now().strftime('%y%m%d')
     backup_filename = f'Stock_Splits_next_{timestamp}.txt'
     backup_path = os.path.join(backup_dir, backup_filename)
@@ -28,7 +31,7 @@ if os.path.exists(file_path):
 
 # 读取原有内容（如果文件存在）
 existing_content = set()
-if os.path.exists(file_path):
+if file_already_exists:
     with open(file_path, 'r') as file:
         existing_content = set(file.read().splitlines())
 
@@ -114,7 +117,7 @@ if results:
             file.writelines(lines)
     
     # 如果有新内容添加，显示提示
-    if new_content_added:
+    if file_already_exists and new_content_added:
         applescript_code = 'display dialog "新内容已添加。" buttons {"OK"} default button "OK"'
         subprocess.run(['osascript', '-e', applescript_code], check=True)
 else:
