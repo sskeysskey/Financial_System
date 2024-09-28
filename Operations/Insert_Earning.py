@@ -36,7 +36,7 @@ def parse_stock_data(content, stock_name):
 
 def check_last_record_date(cursor, name, current_date):
     cursor.execute("""
-        SELECT date FROM Earning
+        SELECT date, price FROM Earning
         WHERE name = ?
         ORDER BY date DESC
         LIMIT 1
@@ -45,9 +45,13 @@ def check_last_record_date(cursor, name, current_date):
     
     if result:
         last_date = datetime.date.fromisoformat(result[0])
+        price = result[1]
         days_difference = (current_date - last_date).days
-        return days_difference > 60  # 超过两个月（假设每月30天）
-    return True  # 如果没有找到记录，允许插入
+        if days_difference > 60:
+            return True, None, None  # 没有问题，可以插入
+        else:
+            return False, last_date, price  # 返回最新的日期和价格
+    return True, None, None  # 如果没有找到记录，允许插入
 
 def show_alert(message):
     # AppleScript代码模板
@@ -61,7 +65,9 @@ def insert_data(db_path, date, name, price):
         cursor = conn.cursor()
         current_date = datetime.date.fromisoformat(date)
         
-        if check_last_record_date(cursor, name, current_date):
+        allowed_to_insert, last_date, last_price = check_last_record_date(cursor, name, current_date)
+        
+        if allowed_to_insert:
             try:
                 cursor.execute("""
                     INSERT INTO Earning (date, name, price)
@@ -73,7 +79,12 @@ def insert_data(db_path, date, name, price):
             except sqlite3.IntegrityError:
                 show_alert(f"{name} 在 {date} 的记录已存在。")
         else:
-            show_alert(f"{name} 的最新记录距离现在不足两个月，无法添加新数据。")
+            if last_date and last_price is not None:
+                show_alert(f"{name} 的最新记录距离现在不足两个月，无法添加新数据。\n"
+                           f"最新记录日期：{last_date}\n"
+                           f"价格：{last_price}")
+            else:
+                show_alert(f"{name} 的最新记录距离现在不足两个月，无法添加新数据。")
         return False
 
 def main():
