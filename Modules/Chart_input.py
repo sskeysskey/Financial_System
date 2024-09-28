@@ -9,7 +9,6 @@ import matplotlib
 import tkinter as tk
 from tkinter import simpledialog, scrolledtext, font as tkFont
 from functools import lru_cache
-import numpy as np
 from scipy.interpolate import interp1d
 
 @lru_cache(maxsize=None)
