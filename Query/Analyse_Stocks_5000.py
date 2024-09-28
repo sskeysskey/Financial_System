@@ -88,6 +88,9 @@ def update_json_data(config_path, updates, blacklist_newlow):
             for symbol in symbols:
                 if symbol not in data[category] and symbol not in blacklist_newlow:
                     data[category][symbol] = ""  # 使用新格式写入
+                    print(f"将symbol '{symbol}' 添加到类别 '{category}' 中")
+                else:
+                    print(f"symbol '{symbol}' 已存在于类别 '{category}' 或在黑名单中，跳过")
         else:
             data[category] = {symbol: "" for symbol in symbols if symbol not in blacklist_newlow}
 
@@ -129,16 +132,25 @@ def update_color_json(color_config_path, updates_colors, blacklist_newlow, exist
     # 创建一个新的字典，排除 "red_keywords"
     colors = {k: v for k, v in all_colors.items() if k != "red_keywords"}
 
-    # 创建一个集合，包含所有已存在于sectors_panel.json中的symbol
+    # 创建一个集合，包含所有已存在于 sectors_panel.json 中的 symbol
     existing_symbols = set()
     for category in existing_sectors_panel.values():
         existing_symbols.update(category.keys())
 
     for category_list, names in updates_colors.items():
         for name in names:
+            # 检查该 symbol 是否存在于 colors.json 中的其他分组，且不在 red_keywords 中
+            symbol_exists_elsewhere = any(
+                name in symbols for group, symbols in colors.items() if group != category_list
+            )
+
+            if symbol_exists_elsewhere:
+                print(f"Symbol {name} 已存在于其他分组中，跳过添加到 {category_list}")
+                continue  # 跳过当前 symbol 的添加
+
             if name not in colors.get(category_list, []):
                 if name in existing_symbols:
-                    # 如果symbol已存在于sectors_panel.json中，打印日志
+                    # 如果 symbol 已存在于 sectors_panel.json 中，打印日志
                     print(f"Symbol {name} 已存在于 sectors_panel.json 中，不添加到 {category_list}")
                 else:
                     if category_list in colors:
@@ -146,8 +158,8 @@ def update_color_json(color_config_path, updates_colors, blacklist_newlow, exist
                         print(f"将 '{name}' 添加到已存在的 '{category_list}' 类别中")
                     else:
                         colors[category_list] = [name]
-                        print(f"创建新类别 '{category_list}' 并添加 '{name}'")
-
+                        print(f"'{name}' 被添加到新的 '{category_list}' 类别中")
+    
     # 在写回文件之前，将 "red_keywords" 添加回去
     colors["red_keywords"] = all_colors.get("red_keywords", [])
 
@@ -241,11 +253,9 @@ def main():
 
         config_json = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json"
         update_json_data(config_json, updates, blacklist_newlow)
-        print("Sectors_Panel.json文件已成功更新！")
 
         color_json_path = '/Users/yanzhang/Documents/Financial_System/Modules/Colors.json'
         update_color_json(color_json_path, updates_color, blacklist_newlow, existing_sectors_panel)
-        print("Colors.json文件已成功更新！")
     else:
         error_message = "analyse_5000，没有符合条件的股票被检索出来。"
         log_and_print_error(error_message)

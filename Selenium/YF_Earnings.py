@@ -79,7 +79,7 @@ new_content_added = False
 
 # 使用追加模式打开文件
 with open(file_path, 'a') as output_file:
-    output_file.write('\n')
+    # output_file.write('\n')
     change_date = start_date
     delta = timedelta(days=1)
     
@@ -134,23 +134,6 @@ conn.close()
 
 # 关闭浏览器
 driver.quit()
-
-# 如果文件存在，移除开头和结尾的空行
-if os.path.exists(file_path):
-    with open(file_path, 'r') as file:
-        lines = file.readlines()
-
-    # 去除开头的空行
-    while lines and not lines[0].strip():
-        lines.pop(0)
-
-    # 去除结尾的空行
-    while lines and not lines[-1].strip():
-        lines.pop()
-
-    # 重新写回文件
-    with open(file_path, 'w') as file:
-        file.writelines(lines)
 
 # 如果有新内容添加，并且文件原本已经存在，显示提示
 if new_content_added and file_already_exists:

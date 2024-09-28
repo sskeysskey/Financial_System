@@ -72,5 +72,6 @@
     "GDP 2nd Estimate*": "USGDP",
     "GDP Cons Spending Prelim*": "USConspending",
     "Core PCE Price Index YY*": "CorePCEY",
-    "Core PCE Price Index MM *": "CorePCEM"
+    "Core PCE Price Index MM *": "CorePCEM",
+    "U Mich Sentiment Final": "USConfidence"
 }

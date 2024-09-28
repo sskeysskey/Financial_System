@@ -36,7 +36,8 @@
     },
     "Consumer_Defensive": {
         "EL": "雅诗兰黛",
-        "DG": ""
+        "DG": "",
+        "FMX": ""
     },
     "Industrials": {
         "ATKR": "",
@@ -55,7 +56,8 @@
         "MCK": "",
         "BIIB": "",
         "BMRN": "",
-        "APLS": ""
+        "APLS": "",
+        "LLY": ""
     },
     "Crypto": {
         "Bitcoin": "",

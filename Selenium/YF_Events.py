@@ -63,7 +63,7 @@ Event_Filter = {
     "PCE Price Index MM*", "Unemployment Rate*", "ISM N-Mfg PMI",
     "U Mich Sentiment Prelim", "New Home Sales-Units *", "New Home Sales Chg MM *",
     "GDP Cons Spending Prelim*", "Core PCE Prices Prelim*",
-    "Corporate Profits Prelim*", "Initial Jobless Clm*"
+    "Corporate Profits Prelim*", "Initial Jobless Clm*", "U Mich Sentiment Final"
 }
 
 # 定义一个包含所有目标国家代码的集合
@@ -75,7 +75,7 @@ new_content_added = False
 
 # 使用追加模式打开文件
 with open(file_path, 'a') as output_file:
-    output_file.write('\n')
+    # output_file.write('\n')
     change_date = start_date
     delta = timedelta(days=1)
     
@@ -119,22 +119,6 @@ with open(file_path, 'a') as output_file:
 
 # 关闭浏览器
 driver.quit()
-
-if os.path.exists(file_path):
-    with open(file_path, 'r') as file:
-        lines = file.readlines()
-
-    # 去除开头的空行
-    while lines and not lines[0].strip():
-        lines.pop(0)
-
-    # 去除结尾的空行
-    while lines and not lines[-1].strip():
-        lines.pop()
-
-    # 重新写回文件
-    with open(file_path, 'w') as file:
-        file.writelines(lines)
 
 # 只有当原始文件存在且有新内容添加时才显示弹窗
 if original_file_exists and new_content_added:

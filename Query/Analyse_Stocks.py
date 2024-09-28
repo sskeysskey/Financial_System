@@ -39,6 +39,22 @@ def create_output_files():
     
     return output_files
 
+def write_output_to_file(output, file_path):
+    """将 output 写入指定文件"""
+    try:
+        # 确保目标文件夹存在
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        # 写入文件
+        with open(file_path, 'w') as f:
+            f.write('\n'.join(output))
+        print(f"结果已保存到文件: {file_path}")
+    except Exception as e:
+        error_message = f"写入文件时发生错误: {e}"
+        print(error_message)
+        formatted_error_message = log_error_with_timestamp(error_message)
+        with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+            error_file.write(formatted_error_message)
+
 def get_price_comparison(cursor, table_name, interval, name, validate):
     today = datetime.now()
     ex_validate = validate - timedelta(days=1)
@@ -177,7 +193,9 @@ def main():
         data = json.load(file)
 
     output = []
+    output1 = []
     intervals = [120, 60, 24, 13]  # 以月份表示的时间间隔列表
+    highintervals = [120]
 
     # 遍历JSON中的每个表和股票代码
     for table_name, names in data.items():
@@ -218,6 +236,16 @@ def main():
                                 error_file.write(formatted_error_message)
                             continue  # 处理下一个时间间隔
 
+                    # 检查是否接近最高价格
+                    for highinterval in highintervals:
+                        max_price, _ = price_extremes.get(highinterval, (None, None))
+                        if max_price is not None and validate_price >= max_price:
+                            if highinterval >= 12:
+                                years = highinterval // 12
+                                output_line = f"{table_name} {name} {years}Y_newhigh"
+                                print(output_line)
+                                output1.append(output_line)
+
                     # 检查是否接近最低价格
                     for interval in intervals:
                         _, min_price = price_extremes.get(interval, (None, None))
@@ -244,11 +272,9 @@ def main():
 
         config_json = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json"
         update_json_data(config_json, updates, blacklist_newlow)
-        print("Sectors_Panel.json文件已成功更新！")
 
         color_json_path = '/Users/yanzhang/Documents/Financial_System/Modules/Colors.json'
         update_color_json(color_json_path, updates_color, blacklist_newlow)
-        print("Colors.json文件已成功更新！")
     else:
         error_message = "final_output为空，无法进行更新操作。"
         formatted_error_message = log_error_with_timestamp(error_message)
@@ -256,5 +282,9 @@ def main():
         with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
             error_file.write(formatted_error_message)
 
+    if output1:
+        output1_file_path = '/Users/yanzhang/Documents/News/10Y_newhigh.txt'
+        write_output_to_file(output1, output1_file_path)
+        
 if __name__ == "__main__":
     main()
