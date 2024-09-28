@@ -111,10 +111,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     ax2.tick_params(axis='y', colors='white')
 
     highlight_point = ax1.scatter([], [], s=100, color='red', zorder=5)
-    # line1, = ax1.plot(dates, prices, marker='o', markersize=1, linestyle='-', linewidth=2, color='b', picker=5, label='Price')
-    line1, = ax1.plot(dates, prices, marker='o', markersize=1, linestyle='-', linewidth=1, color='lightblue', picker=5, label='Price')
-    fill = ax1.fill_between(dates, prices, color='lightblue', alpha=0.3)
-    line2, = ax2.plot(dates, volumes, marker='o', markersize=1, linestyle='-', linewidth=1, color='r', picker=5, label='Volume')
+    
+    line1, = ax1.plot(dates, prices, marker='o', markersize=2, linestyle='-', linewidth=2, color='cyan', alpha=0.7, label='Price')
+    line2, = ax2.plot(dates, volumes, marker='o', markersize=2, linestyle='-', linewidth=2, color='magenta', alpha=0.7, label='Volume')
+    fill = ax1.fill_between(dates, prices, color='cyan', alpha=0.2)
     line2.set_visible(show_volume)
 
     def clean_percentage_string(percentage_str):

@@ -475,7 +475,9 @@
     "FXI",
     "GNR",
     "NFLT",
-    "GRID"
+    "GRID",
+    "MEAR",
+    "USSG"
   ],
   "Basic_Materials": [
     "LIN",

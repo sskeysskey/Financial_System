@@ -184,6 +184,24 @@ def update_color_json(color_config_path, updates_colors, blacklist_newlow):
     except Exception as e:
         print(f"写入文件时发生错误: {e}")
 
+def load_symbols_from_file(file_path):
+    """从文件中读取symbol列表"""
+    symbols = set()
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            for line in file:
+                parts = line.split()
+                if len(parts) == 3:  # 确保每行有三个字段
+                    symbol = parts[1]  # 提取symbol
+                    symbols.add(symbol)
+    except Exception as e:
+        error_message = f"读取文件 {file_path} 时发生错误: {e}"
+        print(error_message)
+        formatted_error_message = log_error_with_timestamp(error_message)
+        with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+            error_file.write(formatted_error_message)
+    return symbols
+
 def main():    
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
     blacklist_path = '/Users/yanzhang/Documents/Financial_System/Modules/blacklist.json'
@@ -196,6 +214,9 @@ def main():
     output1 = []
     intervals = [120, 60, 24, 13]  # 以月份表示的时间间隔列表
     highintervals = [120]
+
+    # 读取10Y_newhigh.txt文件中的symbol列表
+    existing_symbols = load_symbols_from_file('/Users/yanzhang/Documents/News/backup/10Y_newhigh.txt')
 
     # 遍历JSON中的每个表和股票代码
     for table_name, names in data.items():
@@ -283,8 +304,15 @@ def main():
             error_file.write(formatted_error_message)
 
     if output1:
-        output1_file_path = '/Users/yanzhang/Documents/News/10Y_newhigh.txt'
-        write_output_to_file(output1, output1_file_path)
+        # 过滤掉已经存在于10Y_newhigh.txt文件中的symbol
+        filtered_output1 = [
+            line for line in output1
+            if line.split()[1] not in existing_symbols
+        ]
+
+        if filtered_output1:  # 只有在有新的symbol时才写入文件
+            output1_file_path = '/Users/yanzhang/Documents/News/10Y_newhigh_new.txt'
+            write_output_to_file(filtered_output1, output1_file_path)
         
 if __name__ == "__main__":
     main()
