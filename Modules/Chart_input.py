@@ -9,6 +9,8 @@ import matplotlib
 import tkinter as tk
 from tkinter import simpledialog, scrolledtext, font as tkFont
 from functools import lru_cache
+import numpy as np
+from scipy.interpolate import interp1d
 
 @lru_cache(maxsize=None)
 def fetch_data(db_path, table_name, name):
@@ -28,6 +30,30 @@ def fetch_data(db_path, table_name, name):
             if not result:
                 raise ValueError("没有查询到可用数据")
             return result
+
+def smooth_curve(dates, prices, num_points=500):
+    """
+    通过插值生成更多的点来让曲线更平滑
+    :param dates: 原始日期数据
+    :param prices: 原始价格数据
+    :param num_points: 插值生成的点数，默认值为500
+    """
+    # 将日期转化为数值
+    date_nums = matplotlib.dates.date2num(dates)
+
+    # 创建插值函数，kind='cubic' 表示三次插值法
+    interp_func = interp1d(date_nums, prices, kind='cubic')
+
+    # 生成更多的日期点
+    new_date_nums = np.linspace(min(date_nums), max(date_nums), num_points)
+
+    # 计算插值后的价格
+    new_prices = interp_func(new_date_nums)
+
+    # 将数值转化回日期
+    new_dates = matplotlib.dates.num2date(new_date_nums)
+
+    return new_dates, new_prices
 
 def process_data(data):
     if not data:
@@ -99,6 +125,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         display_dialog("没有有效的数据来绘制图表。")
         return
 
+    # 使用插值函数生成更多的平滑数据点
+    smooth_dates, smooth_prices = smooth_curve(dates, prices)
+
     fig, ax1 = plt.subplots(figsize=(13, 6))
     fig.subplots_adjust(left=0.05, bottom=0.1, right=0.91, top=0.9)
     ax2 = ax1.twinx()
@@ -112,7 +141,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     highlight_point = ax1.scatter([], [], s=100, color='red', zorder=5)
     
-    line1, = ax1.plot(dates, prices, marker='o', markersize=2, linestyle='-', linewidth=2, color='cyan', alpha=0.7, label='Price')
+    # 绘制插值后的平滑曲线
+    line1, = ax1.plot(smooth_dates, smooth_prices, marker='', linestyle='-', linewidth=2, color='cyan', alpha=0.7, label='Price')
     line2, = ax2.plot(dates, volumes, marker='o', markersize=2, linestyle='-', linewidth=2, color='magenta', alpha=0.7, label='Volume')
     fill = ax1.fill_between(dates, prices, color='cyan', alpha=0.2)
     line2.set_visible(show_volume)
