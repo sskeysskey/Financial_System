@@ -145,14 +145,45 @@ def create_selection_window():
                     button_text = translation if translation else keyword
                     button_text += f" {compare_data.get(keyword, '')}"
 
-                    ttk.Button(button_frame, text=button_text, style=button_style,
-                               command=lambda k=keyword: on_keyword_selected_chart(k, selection_window)).pack(side="left", fill="x", expand=True)
+                    button = ttk.Button(button_frame, text=button_text, style=button_style,
+                                        command=lambda k=keyword: on_keyword_selected_chart(k, selection_window))
+
+                    # 创建右键菜单
+                    menu = tk.Menu(button, tearoff=0)
+                    menu.add_command(label="删除", command=lambda k=keyword, g=db_key: delete_item(k, g))
+
+                    # 绑定右键点击事件
+                    button.bind("<Button-2>", lambda event, m=menu: m.post(event.x_root, event.y_root))
+
+                    button.pack(side="left", fill="x", expand=True)
 
                     link_label = tk.Label(button_frame, text="🔢", fg="gray", cursor="hand2")
                     link_label.pack(side="right", fill="x", expand=False)
                     link_label.bind("<Button-1>", lambda event, k=keyword: on_keyword_selected(k))
 
     canvas.pack(side="left", fill="both", expand=True)
+
+def delete_item(keyword, group):
+    # 从 config 中删除该关键词
+    if keyword in config[group]:
+        if isinstance(config[group], dict):
+            del config[group][keyword]
+        else:
+            config[group].remove(keyword)
+        
+        # 将修改后的数据写回 sectors_panel.json 文件
+        with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json', 'w', encoding='utf-8') as file:
+            json.dump(config, file, ensure_ascii=False, indent=4)
+        
+        print(f"已成功删除 {keyword} from {group}")
+        
+        # 刷新选择窗口
+        refresh_selection_window()
+
+def refresh_selection_window():
+    for widget in root.winfo_children():
+        widget.destroy()
+    create_selection_window()
 
 def get_button_style(keyword):
     color_styles = {
