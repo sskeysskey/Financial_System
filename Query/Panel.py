@@ -117,8 +117,8 @@ def create_selection_window():
 
     categories = [
         ['Basic_Materials', 'Communication_Services', 'Consumer_Cyclical'],
-        ['Technology', 'Energy', 'Utilities'],
-        ['Industrials', 'Consumer_Defensive'],
+        ['Technology', 'Energy'],
+        ['Industrials', 'Consumer_Defensive', 'Utilities'],
         ['Healthcare', 'Financial_Services', 'Real_Estate'],
         ['Bonds', 'Crypto', 'Indices'],
         ['Commodities'],
