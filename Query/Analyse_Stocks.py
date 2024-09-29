@@ -202,8 +202,37 @@ def load_symbols_from_file(file_path):
             error_file.write(formatted_error_message)
     return symbols
 
+def clean_old_backups(directory, file_patterns, days=4):
+    """
+    删除备份目录中超过指定天数的文件
+    
+    :param directory: 备份文件所在的目录
+    :param file_patterns: 要清理的文件模式列表，每个元素是一个元组 (前缀, 日期位置)
+    :param days: 保留的天数
+    """
+    now = datetime.now()
+    cutoff = now - timedelta(days=days)
+
+    for filename in os.listdir(directory):
+        for prefix, date_position in file_patterns:
+            if filename.startswith(prefix):
+                try:
+                    parts = filename.split('_')
+                    date_str = parts[date_position].split('.')[0]  # 获取日期部分
+                    file_date = datetime.strptime(date_str, '%m%d')
+                    file_date = file_date.replace(year=now.year)
+                    
+                    if file_date < cutoff:
+                        file_path = os.path.join(directory, filename)
+                        os.remove(file_path)
+                        print(f"删除旧备份文件：{file_path}")
+                    break  # 文件已处理，无需检查其他模式
+                except Exception as e:
+                    print(f"跳过文件：{filename}，原因：{e}")
+
 def main():    
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
+    backup_directory = '/Users/yanzhang/Documents/News/backup/backup'
     blacklist_path = '/Users/yanzhang/Documents/Financial_System/Modules/blacklist.json'
     blacklist_newlow = load_blacklist_newlow(blacklist_path)
     
@@ -211,7 +240,7 @@ def main():
         data = json.load(file)
 
     output = []
-    output1 = []
+    output_high = []
     intervals = [120, 60, 24, 13]  # 以月份表示的时间间隔列表
     highintervals = [120]
 
@@ -265,7 +294,7 @@ def main():
                                 years = highinterval // 12
                                 output_line = f"{table_name} {name} {years}Y_newhigh"
                                 print(output_line)
-                                output1.append(output_line)
+                                output_high.append(output_line)
 
                     # 检查是否接近最低价格
                     for interval in intervals:
@@ -303,16 +332,29 @@ def main():
         with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
             error_file.write(formatted_error_message)
 
-    if output1:
+    if output_high:
         # 过滤掉已经存在于10Y_newhigh.txt文件中的symbol
-        filtered_output1 = [
-            line for line in output1
+        filtered_output_high = [
+            line for line in output_high
             if line.split()[1] not in existing_symbols
         ]
 
-        if filtered_output1:  # 只有在有新的symbol时才写入文件
-            output1_file_path = '/Users/yanzhang/Documents/News/10Y_newhigh_new.txt'
-            write_output_to_file(filtered_output1, output1_file_path)
+        if filtered_output_high:  # 只有在有新的symbol时才写入文件
+            output_high_file_path = '/Users/yanzhang/Documents/News/10Y_newhigh_new.txt'
+            write_output_to_file(filtered_output_high, output_high_file_path)
+
+    # 定义要清理的文件模式
+    file_patterns = [
+        ("Earnings_Release_next_", -1), # 日期在最后一个下划线后
+        ("Economic_Events_next_", -1),
+        ("NewLow_", -1),
+        ("NewLow500_", -1),
+        ("NewLow5000_", -1),
+        ("Stock_Splits_next_", -1)
+    ]
+
+    # 调用清理旧备份文件的函数
+    clean_old_backups(backup_directory, file_patterns)
         
 if __name__ == "__main__":
     main()

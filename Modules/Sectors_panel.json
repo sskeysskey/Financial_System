@@ -138,9 +138,9 @@
         "EURUSD": ""
     },
     "Economics": {
-        "CorePCEY": "27 CorePCEY",
-        "CorePCEM": "27 CorePCEM",
-        "USInitial": "26 USInitial"
+        "USNonFarm": "04 USNonFarm",
+        "USUnemploy": "04 USUnemploy",
+        "USInitial": "03 USInitial"
     },
     "ETFs_US": {
         "EDV": "长期国债",

@@ -7,12 +7,14 @@ import argparse
 # 文件路径
 files = {
     'ETFs': '/Users/yanzhang/Documents/News/backup/ETFs.txt',
+    'ETFs': '/Users/yanzhang/Documents/News/backup/10Y_newhigh.txt',
     'Earnings_Release': '/Users/yanzhang/Documents/News/backup/Earnings_Release.txt',
     'Economic_Events': '/Users/yanzhang/Documents/News/backup/Economic_Events.txt'
 }
 
 new_files = {
     'ETFs': '/Users/yanzhang/Documents/News/ETFs_new.txt',
+    'ETFs': '/Users/yanzhang/Documents/News/10Y_newhigh_new.txt',
     'Earnings_Release': '/Users/yanzhang/Documents/News/Earnings_Release_new.txt',
     'Economic_Events': '/Users/yanzhang/Documents/News/Economic_Events_new.txt'
 }
@@ -73,7 +75,6 @@ def process_file(new_file, existing_file):
             lines = file_a.readlines()
             for i, line in enumerate(lines):
                 if 'Earnings_Release' in new_file:
-                    # 只对 Earnings_Release 文件进行处理
                     # 使用正则表达式去除 " : 数字" 部分
                     processed_line = re.sub(r'\s*:\s*\d+\s*', '', line, count=1)
                     formatted_line = format_line(processed_line)
@@ -82,8 +83,10 @@ def process_file(new_file, existing_file):
                     else:
                         file_b.write(formatted_line + '\n')
                 else:
-                    # 对于其他文件，直接写入原始行
-                    file_b.write(line)
+                    if i == len(lines) - 1:  # 如果是最后一行
+                        file_b.write(line.rstrip())  # 移除行尾的空白字符，但不添加新行
+                    else:
+                        file_b.write(line)
         os.remove(new_file)
 
 def backup_diff_file(diff_file, backup_dir):

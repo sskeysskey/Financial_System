@@ -6,6 +6,7 @@ import subprocess
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QLabel, QTextBrowser, QMainWindow, QAction
 from PyQt5.QtGui import QFont, QKeySequence
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl
+import sqlite3
 
 json_path = "/Users/yanzhang/Documents/Financial_System/Modules/description.json"
 
@@ -109,12 +110,13 @@ class MainWindow(QMainWindow):
             for result in results:
                 if len(result) == 3:  # 股票结果
                     symbol, name, tags = result
-                    # 创建 symbol 链接
                     html += f"<p><a href='symbol://{symbol}' style='color: {color}; text-decoration: underline; font-size: {font_size}px;'>{symbol} - {name} - {tags}</a></p>"
-                else:  # ETF结果
+                else:  # ETF 结果
                     symbol, tags = result
-                    # 创建 symbol 链接
-                    html += f"<p><a href='symbol://{symbol}' style='color: {color}; text-decoration: underline; font-size: {font_size}px;'>{symbol} - {tags}</a></p>"
+                    # 获取 ETF 的最新成交量
+                    latest_volume = get_latest_etf_volume(symbol)
+                    # 显示 ETF 结果并附加最新成交量
+                    html += f"<p><a href='symbol://{symbol}' style='color: {color}; text-decoration: underline; font-size: {font_size}px;'>{symbol} - {tags} - {latest_volume}</a></p>"
         return html
 
     def open_file(self, url):
@@ -233,6 +235,24 @@ def levenshtein_distance(s1, s2):
             current_row.append(min(insertions, deletions, substitutions))
         previous_row = current_row
     return previous_row[-1]
+
+def get_latest_etf_volume(etf_name):
+    db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    # 查询最新的 volume
+    cursor.execute("SELECT volume FROM ETFs WHERE name = ? ORDER BY date DESC LIMIT 1", (etf_name,))
+    result = cursor.fetchone()
+    
+    conn.close()
+    
+    if result:
+        volume = result[0]
+        # 将 volume 转换为 K 单位并返回
+        return f"{int(volume / 1000)}K"
+    else:
+        return "N/A"
 
 if __name__ == "__main__":
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
