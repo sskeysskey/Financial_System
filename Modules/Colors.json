@@ -242,7 +242,8 @@
         "SHEL",
         "COP",
         "BP",
-        "EQNR"
+        "EQNR",
+        "TTE"
     ],
     "red_keywords": [
         "USInitial",

@@ -91,9 +91,9 @@ def update_json_data(config_path, updates, blacklist_newlow):
             for symbol in symbols:
                 if symbol not in data[category] and symbol not in blacklist_newlow:
                     data[category][symbol] = ""  # 使用新格式写入
-                    print(f"将symbol '{symbol}' 添加到类别 '{category}' 中")
+                    print(f"将symbol '{symbol}' 添加到Panel文件的类别 '{category}' 中")
                 else:
-                    print(f"symbol '{symbol}' 已存在于类别 '{category}' 或在黑名单中，跳过")
+                    print(f"symbol '{symbol}' 已存在于Panel文件的类别 '{category}' 或在黑名单中，跳过")
         else:
             data[category] = {symbol: "" for symbol in symbols if symbol not in blacklist_newlow}
 
@@ -150,7 +150,7 @@ def update_color_json(color_config_path, updates_colors, blacklist_newlow, exist
             )
 
             if symbol_exists_elsewhere:
-                print(f"Symbol {name} 已存在于其他分组中，跳过添加到 {category_list}")
+                print(f"Symbol {name} 已存在于Colors其他分组中，跳过添加到 {category_list}")
                 continue  # 跳过当前 symbol 的添加
 
             if name not in colors.get(category_list, []):
@@ -160,7 +160,7 @@ def update_color_json(color_config_path, updates_colors, blacklist_newlow, exist
                 else:
                     if category_list in colors:
                         colors[category_list].append(name)
-                        print(f"将 '{name}' 添加到已存在的 '{category_list}' 类别中")
+                        print(f"将 '{name}' 添加到Colors已存在的 '{category_list}' 类别中")
                     else:
                         colors[category_list] = [name]
                         print(f"'{name}' 被添加到新的 '{category_list}' 类别中")
@@ -180,11 +180,32 @@ def log_and_print_error(error_message):
     with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
         error_file.write(formatted_error_message)
 
+def load_stock_splits(file_path):
+    """从Stock_Splits_next.txt文件中加载symbol列表"""
+    stock_splits_symbols = set()
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            for line in file:
+                if ':' in line:
+                    symbol = line.split(':')[0]  # 提取冒号前面的symbol
+                    stock_splits_symbols.add(symbol.strip())
+    except Exception as e:
+        error_message = f"读取文件 {file_path} 时发生错误: {e}"
+        print(error_message)
+        formatted_error_message = log_error_with_timestamp(error_message)
+        with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+            error_file.write(formatted_error_message)
+    return stock_splits_symbols
+
 def main():    
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
     blacklist_path = '/Users/yanzhang/Documents/Financial_System/Modules/blacklist.json'
     blacklist_newlow = load_blacklist_newlow(blacklist_path)
     
+    # 加载拆股文件的symbol列表
+    stock_splits_file = '/Users/yanzhang/Documents/News/Stock_Splits_next.txt'
+    stock_splits_symbols = load_stock_splits(stock_splits_file)
+
     with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_500.json', 'r') as file:
         data = json.load(file)
 
@@ -234,10 +255,21 @@ def main():
                     for interval in intervals:
                         _, min_price = price_extremes.get(interval, (None, None))
                         if min_price is not None and validate_price <= min_price:
-                            output_line = f"{table_name} {name} {interval}M_newlow"
-                            print(output_line)
-                            output.append(output_line)
-                            break  # 只输出最长的时间周期
+                            if interval >= 12:
+                                # 在生成output_line之前，检查name是否在拆股文件中
+                                if name in stock_splits_symbols:
+                                    error_message = f"由于{table_name}的 {name} 存在于拆股文档中，所以不添加入output_50"
+                                    print(error_message)
+                                    formatted_error_message = log_error_with_timestamp(error_message)
+                                    with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                                        error_file.write(formatted_error_message)
+                                    break  # 跳过此name的处理
+                                
+                                years = interval // 12
+                                output_line = f"{table_name} {name} {years}Y_newlow"
+                                print(output_line)
+                                output.append(output_line)
+                                break  # 只输出最长的时间周期
 
     if output:
         output_files = create_output_files()

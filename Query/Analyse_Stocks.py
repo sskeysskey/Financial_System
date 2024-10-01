@@ -218,10 +218,14 @@ def clean_old_backups(directory, file_patterns, days=4):
             if filename.startswith(prefix):
                 try:
                     parts = filename.split('_')
-                    date_str = parts[date_position].split('.')[0]  # 获取日期部分
+                    # 提取日期部分，并确保只获取日期的最后4位
+                    date_str = parts[date_position].split('.')[0][-4:]
+                    # 确保日期是按照MMDD格式解析
                     file_date = datetime.strptime(date_str, '%m%d')
+                    # 将年份替换为当前年份
                     file_date = file_date.replace(year=now.year)
                     
+                    # 如果文件日期早于截止日期，则删除文件
                     if file_date < cutoff:
                         file_path = os.path.join(directory, filename)
                         os.remove(file_path)
@@ -230,11 +234,32 @@ def clean_old_backups(directory, file_patterns, days=4):
                 except Exception as e:
                     print(f"跳过文件：{filename}，原因：{e}")
 
+def load_stock_splits(file_path):
+    """从Stock_Splits_next.txt文件中加载symbol列表"""
+    stock_splits_symbols = set()
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            for line in file:
+                if ':' in line:
+                    symbol = line.split(':')[0]  # 提取冒号前面的symbol
+                    stock_splits_symbols.add(symbol.strip())
+    except Exception as e:
+        error_message = f"读取文件 {file_path} 时发生错误: {e}"
+        print(error_message)
+        formatted_error_message = log_error_with_timestamp(error_message)
+        with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+            error_file.write(formatted_error_message)
+    return stock_splits_symbols
+
 def main():    
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
     backup_directory = '/Users/yanzhang/Documents/News/backup/backup'
     blacklist_path = '/Users/yanzhang/Documents/Financial_System/Modules/blacklist.json'
     blacklist_newlow = load_blacklist_newlow(blacklist_path)
+    
+    # 加载拆股文件的symbol列表
+    stock_splits_file = '/Users/yanzhang/Documents/News/Stock_Splits_next.txt'
+    stock_splits_symbols = load_stock_splits(stock_splits_file)
     
     with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as file:
         data = json.load(file)
@@ -301,6 +326,15 @@ def main():
                         _, min_price = price_extremes.get(interval, (None, None))
                         if min_price is not None and validate_price <= min_price:
                             if interval >= 12:
+                                # 在生成output_line之前，检查name是否在拆股文件中
+                                if name in stock_splits_symbols:
+                                    error_message = f"由于{table_name}的 {name} 存在于拆股文档中，所以不添加入output_50"
+                                    print(error_message)
+                                    formatted_error_message = log_error_with_timestamp(error_message)
+                                    with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                                        error_file.write(formatted_error_message)
+                                    break  # 跳过此name的处理
+                                
                                 years = interval // 12
                                 output_line = f"{table_name} {name} {years}Y_newlow"
                                 print(output_line)

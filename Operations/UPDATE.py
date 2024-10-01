@@ -4,30 +4,28 @@ import sqlite3
 conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
 cursor = conn.cursor()
 
-# 执行拆股操作并保留两位小数
-# name = 'DECK'
-# price_divisor = 6
+# 执行拆股操作 I ， 并保留两位小数
+# name = 'SMCI'
+# price_divisor = 10
 
 # cursor.execute("""
-#     UPDATE Consumer_Cyclical 
+#     UPDATE Technology 
 #     SET price = ROUND(price / ?, 2) 
 #     WHERE name = ?
 # """, (price_divisor, name))
 
 # 执行拆股操作 II
-# price_multiplier = 2 / 3  # 2股拆3股的乘数
-
-# name = 'SIRI'
-# price_multiplier = 10  # 2股拆3股的乘数
+# name = 'RYAAY'
+# price_multiplier = 2 / 5  # 2股拆5股的乘数
 
 # cursor.execute("""
-#     UPDATE Communication_Services 
+#     UPDATE Industrials 
 #     SET price = ROUND(price * ?, 2)  
 #     WHERE name = ?
 # """, (price_multiplier, name))
 
 # 更新价格字段
-# cursor.execute("UPDATE Consumer_Cyclical SET price = 156.28 WHERE id = 739630")
+# cursor.execute("UPDATE Technology SET price = 41.65 WHERE id = 865591")
 # cursor.execute("UPDATE Economics SET price = -0.2 WHERE id = 252")
 
 # 保留两位小数

@@ -16,7 +16,8 @@ def process_error_file(error_file_path, sectors_file_path):
     with open(error_file_path, 'r') as error_file:
         error_content = error_file.read()
     
-    pattern = r'\[.*?\] (\w+) (\w+): No price data found for the given date range\.'
+    # 修改后的正则表达式，确保匹配带有特殊符号的股票代码
+    pattern = r'\[.*?\] (\w+) ([\w^]+): No price data found for the given date range\.'
     matches = re.findall(pattern, error_content)
     
     with open(sectors_file_path, 'r') as sectors_file:
@@ -81,8 +82,11 @@ else:
     # 定义需要特殊处理的group_name
     special_groups = ["Currencies", "Bonds", "Crypto", "Commodities"]
 
+    # 初始化总数据计数器
+    total_data_count = 0
+
     for group_name, tickers in stock_groups.items():
-        data_count = 0  # 初始化计数器
+        data_count = 0  # 初始化分组数据计数器
         for ticker_symbol in tickers:
             try:
                 # 使用 yfinance 下载股票数据
@@ -112,21 +116,28 @@ else:
                         c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)", (date, mapped_name, price, volume))
                     
                     data_count += 1  # 成功插入一条数据，计数器增加
+
             except Exception as e:
                 formatted_error_message = log_error_with_timestamp(str(e))
                 # 将错误信息追加到文件中
                 with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
                     error_file.write(formatted_error_message)
 
+        # 累加到总数据计数器
+        total_data_count += data_count
+
         # 在完成每个group_name后打印信息
         print(f"{group_name} 数据处理完成，总共下载了 {data_count} 条数据。")
 
-    print("所有数据已成功写入数据库")
+    # 根据总计数器的值输出最终日志信息
+    if total_data_count == 0:
+        print("没有数据被写入数据库")
+    else:
+        print(f"共有 {total_data_count} 个数据成功写入数据库")
+
     # 提交事务
     conn.commit()
     conn.close()
 
     # 清除所有组别中的symbol
     clear_sectors(sectors_file_path)
-
-print("程序执行完毕")
