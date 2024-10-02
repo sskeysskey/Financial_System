@@ -478,7 +478,10 @@
     "GRID",
     "MEAR",
     "USSG",
-    "IJK"
+    "IJK",
+    "TDTF",
+    "DBEU",
+    "SPYX"
   ],
   "Basic_Materials": [
     "LIN",

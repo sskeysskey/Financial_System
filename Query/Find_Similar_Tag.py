@@ -76,7 +76,7 @@ def main(symbol):
 
 
 # 过滤掉的tags集合
-excluded_tags = {"巴西","美国","以色列","加拿大","英国","瑞士"}
+excluded_tags = {"美国","加拿大","英国"}
 
 # 读取JSON文件
 with open('/Users/yanzhang/Documents/Financial_System/Modules/description.json', 'r') as file:

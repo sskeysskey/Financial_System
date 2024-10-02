@@ -32,7 +32,8 @@ def fetch_data(db_path, table_name, name):
 
 def smooth_curve(dates, prices, num_points=500):
     """
-    通过插值生成更多的点来让曲线更平滑
+    通过插值生成更多的点来让曲线更平滑。
+    如果数据点少于四个，使用线性插值；否则使用三次插值。
     :param dates: 原始日期数据
     :param prices: 原始价格数据
     :param num_points: 插值生成的点数，默认值为500
@@ -40,8 +41,11 @@ def smooth_curve(dates, prices, num_points=500):
     # 将日期转化为数值
     date_nums = matplotlib.dates.date2num(dates)
 
-    # 创建插值函数，kind='cubic' 表示三次插值法
-    interp_func = interp1d(date_nums, prices, kind='cubic')
+    # 如果数据点不足四个，使用线性插值；否则使用三次插值
+    if len(dates) < 4:
+        interp_func = interp1d(date_nums, prices, kind='linear')
+    else:
+        interp_func = interp1d(date_nums, prices, kind='cubic')
 
     # 生成更多的日期点
     new_date_nums = np.linspace(min(date_nums), max(date_nums), num_points)
