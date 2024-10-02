@@ -15,7 +15,7 @@ def check_duplicates(filename):
     return duplicates
 
 # 使用示例
-filename = '/Users/yanzhang/Documents/News/backup/Earnings_Release.txt'
+filename = '/Users/yanzhang/Documents/News/backup/ETFs.txt'
 result = check_duplicates(filename)
 
 if result:

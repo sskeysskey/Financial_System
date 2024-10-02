@@ -7,14 +7,14 @@ import argparse
 # 文件路径
 files = {
     'ETFs': '/Users/yanzhang/Documents/News/backup/ETFs.txt',
-    'ETFs': '/Users/yanzhang/Documents/News/backup/10Y_newhigh.txt',
+    '10Y_newhigh': '/Users/yanzhang/Documents/News/backup/10Y_newhigh.txt',
     'Earnings_Release': '/Users/yanzhang/Documents/News/backup/Earnings_Release.txt',
     'Economic_Events': '/Users/yanzhang/Documents/News/backup/Economic_Events.txt'
 }
 
 new_files = {
     'ETFs': '/Users/yanzhang/Documents/News/ETFs_new.txt',
-    'ETFs': '/Users/yanzhang/Documents/News/10Y_newhigh_new.txt',
+    '10Y_newhigh': '/Users/yanzhang/Documents/News/10Y_newhigh_new.txt',
     'Earnings_Release': '/Users/yanzhang/Documents/News/Earnings_Release_new.txt',
     'Economic_Events': '/Users/yanzhang/Documents/News/Economic_Events_new.txt'
 }
@@ -89,12 +89,43 @@ def process_file(new_file, existing_file):
                         file_b.write(line)
         os.remove(new_file)
 
+def get_symbols(file_path):
+    symbols = set()
+    with open(file_path, 'r') as file:
+        for line in file:
+            symbol = line.split(':', 1)[0].strip()
+            symbols.add(symbol)
+    return symbols
+
+def process_etf_file(new_file, existing_file):
+    if not os.path.exists(new_file):
+        return
+
+    existing_symbols = get_symbols(existing_file)
+    
+    with open(new_file, 'r') as file_new, open(existing_file, 'a+') as file_existing:
+        file_existing.seek(0, 2)  # Move to the end of the file
+        if file_existing.tell() > 0:  # Check if file is not empty
+            file_existing.write('\n')  # Add a newline if the file is not empty
+        
+        lines = file_new.readlines()
+        for i, line in enumerate(lines):
+            symbol = line.split(':', 1)[0].strip()
+            if symbol not in existing_symbols:
+                if i == len(lines) - 1:  # 如果是最后一行
+                    file_existing.write(line.rstrip())  # 移除行尾的空白字符，但不添加新行
+                else:
+                    file_existing.write(line)
+                existing_symbols.add(symbol)  # Update the set with the new symbol
+
+    os.remove(new_file)
+
 def backup_diff_file(diff_file, backup_dir):
     if os.path.exists(diff_file):
         # 获取当前时间
         current_date = datetime.now()
         # 获取当前时间戳
-        timestamp = current_date.strftime('%Y%m%d')
+        timestamp = current_date.strftime('%y%m%d')
         # 新的文件名
         new_filename = f"ETFs_diff_{timestamp}.txt"
         # 目标路径
@@ -108,7 +139,7 @@ def backup_diff_file(diff_file, backup_dir):
             if filename.startswith("ETFs_diff_") and filename.endswith(".txt"):
                 file_date_str = filename[10:18]  # 提取日期部分
                 try:
-                    file_date = datetime.strptime(file_date_str, '%Y%m%d')
+                    file_date = datetime.strptime(file_date_str, '%y%m%d')
                     if file_date <= four_days_ago:
                         file_path = os.path.join(backup_dir, filename)
                         os.remove(file_path)
@@ -119,7 +150,8 @@ def backup_diff_file(diff_file, backup_dir):
 def main(mode):
     if mode == 'etf':
         if 1 <= current_day <= 6:  # 周二到周天
-            process_file(new_files['ETFs'], files['ETFs'])
+            process_etf_file(new_files['ETFs'], files['ETFs'])
+            process_file(new_files['10Y_newhigh'], files['10Y_newhigh'])
             # 备份 diff 文件
             backup_diff_file(diff_file, backup_dir)
     elif mode == 'other':

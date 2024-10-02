@@ -258,7 +258,7 @@ def main():
                             if interval >= 12:
                                 # 在生成output_line之前，检查name是否在拆股文件中
                                 if name in stock_splits_symbols:
-                                    error_message = f"由于{table_name}的 {name} 存在于拆股文档中，所以不添加入output_50"
+                                    error_message = f"由于{table_name}的 {name} 存在于拆股文档中，所以不添加入output_500"
                                     print(error_message)
                                     formatted_error_message = log_error_with_timestamp(error_message)
                                     with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
@@ -294,7 +294,7 @@ def main():
         color_json_path = '/Users/yanzhang/Documents/Financial_System/Modules/Colors.json'
         update_color_json(color_json_path, updates_color, blacklist_newlow, existing_sectors_panel)
     else:
-        error_message = "final_output为空，无法进行更新操作。"
+        error_message = "analyse_500，没有符合条件的股票被检索出来。"
         log_and_print_error(error_message)
 
 if __name__ == "__main__":

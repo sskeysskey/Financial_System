@@ -531,7 +531,8 @@
     "NFLT",
     "GRID",
     "MEAR",
-    "USSG"
+    "USSG",
+    "IJK"
   ],
   "Basic_Materials": [
     "LIN",
@@ -1196,7 +1197,8 @@
     "GAB-PG",
     "BNT",
     "VIRT",
-    "CEF"
+    "CEF",
+    "QFIN"
   ],
   "Healthcare": [
     "LLY",

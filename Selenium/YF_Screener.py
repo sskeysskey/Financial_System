@@ -24,7 +24,7 @@ def login_once(driver, login_url):
         EC.presence_of_element_located((By.ID, "login-passwd"))
     )
     password_input = driver.find_element(By.ID, "login-passwd")
-    password_input.send_keys("!@#$Abcd")
+    password_input.send_keys("2345@Abcd")
     password_input.send_keys(Keys.RETURN)
     
     # 等待找到id为header-profile-button或ybarAccountMenu其中任意一个表示登录成功

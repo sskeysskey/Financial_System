@@ -24,7 +24,7 @@
         "CNYUSD",
         "VNQ",
         "US10Y",
-        "CNYA"
+        "ASHR"
     ],
     "white_keywords": [
         "BHP",
@@ -169,7 +169,6 @@
         "ACI",
         "CVX",
         "BEN",
-        "GFS",
         "NFE",
         "BBWI",
         "NTR",
@@ -182,7 +181,9 @@
         "BMRN",
         "DJT",
         "BIIB",
-        "MUR"
+        "MUR",
+        "HUM",
+        "ACHC"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -227,7 +228,8 @@
         "CSAN",
         "PARA",
         "SIRI",
-        "LINE"
+        "LINE",
+        "GFS"
     ],
     "green_keywords": [
         "EURCNY",

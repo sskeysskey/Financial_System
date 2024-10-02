@@ -253,7 +253,7 @@ def main():
                             if interval >= 12:
                                 # 在生成output_line之前，检查name是否在拆股文件中
                                 if name in stock_splits_symbols:
-                                    error_message = f"由于{table_name}的 {name} 存在于拆股文档中，所以不添加入output_50"
+                                    error_message = f"由于{table_name}的 {name} 存在于拆股文档中，所以不添加入output_5000"
                                     print(error_message)
                                     formatted_error_message = log_error_with_timestamp(error_message)
                                     with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:

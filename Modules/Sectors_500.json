@@ -95,7 +95,9 @@
     "OKE",
     "PSX",
     "FANG",
-    "E"
+    "E",
+    "TRP",
+    "KMI"
   ],
   "Financial_Services": [
     "BRK-A",
@@ -280,7 +282,8 @@
     "NXPI",
     "FTNT",
     "ADSK",
-    "TTD"
+    "TTD",
+    "PAYX"
   ],
   "Utilities": [
     "NEE",

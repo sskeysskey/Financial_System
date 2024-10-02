@@ -55,7 +55,9 @@
         "MCK": "",
         "BIIB": "",
         "BMRN": "",
-        "APLS": ""
+        "APLS": "",
+        "HUM": "",
+        "ACHC": ""
     },
     "Crypto": {
         "Bitcoin": "",
@@ -115,7 +117,7 @@
         "IBIT": "比特币",
         "SMH": "半导体",
         "CQQQ": "中国科技",
-        "CNYA": "A股",
+        "ASHR": "A股",
         "DXJ": "日本",
         "INDA": "印度",
         "EWT": "台湾",

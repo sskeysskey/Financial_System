@@ -123,11 +123,12 @@ else:
                 with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
                     error_file.write(formatted_error_message)
 
+        # Only print if data_count > 0
+        if data_count > 0:
+            print(f"{group_name} 数据处理完成，总共下载了 {data_count} 条数据。")
+
         # 累加到总数据计数器
         total_data_count += data_count
-
-        # 在完成每个group_name后打印信息
-        print(f"{group_name} 数据处理完成，总共下载了 {data_count} 条数据。")
 
     # 根据总计数器的值输出最终日志信息
     if total_data_count == 0:

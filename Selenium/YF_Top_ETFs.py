@@ -131,7 +131,7 @@ def save_data(urls, existing_json, new_file, today_file, diff_file, compare_file
 def backup_diff_file(diff_file, backup_dir):
     if os.path.exists(diff_file):
         # 获取当前时间戳
-        timestamp = datetime.now().strftime('%Y%m%d')
+        timestamp = datetime.now().strftime('%y%m%d')
         # 新的文件名
         new_filename = f"ETFs_diff_{timestamp}.txt"
         # 目标路径

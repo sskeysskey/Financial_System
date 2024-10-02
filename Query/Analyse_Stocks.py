@@ -202,7 +202,7 @@ def load_symbols_from_file(file_path):
             error_file.write(formatted_error_message)
     return symbols
 
-def clean_old_backups(directory, file_patterns, days=4):
+def clean_old_backups(directory, file_patterns, days=7):
     """
     删除备份目录中超过指定天数的文件
     
@@ -318,7 +318,6 @@ def main():
                             if highinterval >= 12:
                                 years = highinterval // 12
                                 output_line = f"{table_name} {name} {years}Y_newhigh"
-                                print(output_line)
                                 output_high.append(output_line)
 
                     # 检查是否接近最低价格
@@ -360,7 +359,7 @@ def main():
         color_json_path = '/Users/yanzhang/Documents/Financial_System/Modules/Colors.json'
         update_color_json(color_json_path, updates_color, blacklist_newlow)
     else:
-        error_message = "final_output为空，无法进行更新操作。"
+        error_message = "analyse_50，没有符合条件的股票被检索出来。"
         formatted_error_message = log_error_with_timestamp(error_message)
         # 将错误信息追加到文件中
         with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
@@ -387,7 +386,7 @@ def main():
         ("Stock_Splits_next_", -1)
     ]
 
-    # 调用清理旧备份文件的函数
+    # 执行清理旧备份文件的函数
     clean_old_backups(backup_directory, file_patterns)
         
 if __name__ == "__main__":
