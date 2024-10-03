@@ -28,7 +28,7 @@ class SearchWorker(QThread):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("文件搜索")
+        self.setWindowTitle("公司、股票和ETF搜索")
         self.setGeometry(350, 200, 800, 600)
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
