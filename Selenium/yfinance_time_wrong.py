@@ -19,12 +19,14 @@ def process_error_file(error_file_path, sectors_file_path):
     # 修改后的正则表达式，确保匹配带有特殊符号的股票代码
     pattern = r'\[.*?\] (\w+) ([\w^]+): No price data found for the given date range\.'
     matches = re.findall(pattern, error_content)
+    print(f"在 today_error1 中找到 {len(matches)} 个匹配项。")  # 日志：匹配结果数量
     
     with open(sectors_file_path, 'r') as sectors_file:
         sectors_data = json.load(sectors_file)
     
     for group, symbol in matches:
         if group in sectors_data and symbol not in sectors_data[group]:
+            print(f"将 {symbol} 添加到 {group} 组中。")  # 日志：添加symbol
             sectors_data[group].append(symbol)
     
     with open(sectors_file_path, 'w') as sectors_file:
@@ -39,6 +41,7 @@ def clear_sectors(sectors_file_path):
     
     with open(sectors_file_path, 'w') as sectors_file:
         json.dump(sectors_data, sectors_file, indent=4)
+    print(f"清除完成，empty的所有组内symbol已被清空。")  # 日志：清除完成
 
 # 主程序开始
 sectors_file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json'
@@ -89,7 +92,7 @@ else:
         data_count = 0  # 初始化分组数据计数器
         for ticker_symbol in tickers:
             try:
-                # 使用 yfinance 下载股票数据
+                print(f"开始下载 {ticker_symbol} 的数据，日期范围: {start_date} 到 {end_date}.")  # 日志：下载数据
                 data = yf.download(ticker_symbol, start=start_date, end=end_date)
                 if data.empty:
                     # raise ValueError(f"{ticker_symbol}: No price data found for the given date range.")
@@ -116,6 +119,8 @@ else:
                         c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)", (date, mapped_name, price, volume))
                     
                     data_count += 1  # 成功插入一条数据，计数器增加
+
+                print(f"成功插入 {data_count} 条 {ticker_symbol} 的数据到 {table_name} 表中。")  # 日志：插入数据
 
             except Exception as e:
                 formatted_error_message = log_error_with_timestamp(str(e))

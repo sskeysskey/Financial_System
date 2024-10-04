@@ -80,7 +80,6 @@
         "MCD",
         "BDX",
         "SBAC",
-        "ATKR",
         "G",
         "QLYS",
         "WMG",
@@ -180,10 +179,11 @@
         "MRNA",
         "BMRN",
         "DJT",
-        "BIIB",
         "MUR",
         "HUM",
-        "ACHC"
+        "ACHC",
+        "ETSY",
+        "ATKR"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -229,7 +229,8 @@
         "PARA",
         "SIRI",
         "LINE",
-        "GFS"
+        "GFS",
+        "BIIB"
     ],
     "green_keywords": [
         "EURCNY",

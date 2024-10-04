@@ -56,7 +56,7 @@ def process_Stock_50():
             if group in data_empty:
                 # 计算symbol在data_all中出现的次数
                 symbol_count = sum(symbol in symbols for symbols in data_all.values())
-                print(f"'{symbol}' 在 Sectors_All.json 中出现 {symbol_count} 次")
+                print(f"'{symbol}' 在 Sectors_All.json 的 {group} 中出现 {symbol_count} 次")
 
                 if symbol_count >= 2:
                     log_error_with_timestamp(f"Symbol '{symbol}' 在 Sectors_All.json 中出现了 {symbol_count} 次，未添加到 {group} 组别。", ERROR_FILE_PATH)
@@ -64,11 +64,11 @@ def process_Stock_50():
                 else:
                     data_empty[group].append(symbol)
                     updates_count += 1
-                    print(f"成功将 '{symbol}' 添加到 '{group}' 组别")
+                    print(f"成功将 '{symbol}' 添加到Sectors_empty的 '{group}' 组别")
 
         if updates_count > 0:
             write_json(JSON_FILE_PATH_EMPTY, data_empty)
-            print(f"JSON文件已成功更新！共更新了 {updates_count} 条记录。")
+            print(f"empty.json文件已成功更新！共更新了 {updates_count} 条记录。")
         else:
             print("没有新的Symbol需要添加，empty文件保持不变。")
 

@@ -535,7 +535,8 @@
     "IJK",
     "TDTF",
     "DBEU",
-    "SPYX"
+    "SPYX",
+    "DRAG"
   ],
   "Basic_Materials": [
     "LIN",
@@ -992,7 +993,8 @@
     "RIG",
     "VRN",
     "TBN",
-    "VIST"
+    "VIST",
+    "CNX"
   ],
   "Financial_Services": [
     "BRK-A",
