@@ -16,10 +16,10 @@ stock_config = [
     # {'table': 'Indices', 'name': 'S&P500'},
     # {'table': 'Technology', 'name': 'CRWD'},
     # {'table': 'Technology', 'name': 'AMD'},
-    {'table': 'ETFs', 'name': 'URA'},
+    {'table': 'ETFs', 'name': 'CNYA'},
     # {'table': 'ETFs', 'name': 'DBC'},
     # {'table': 'ETFs', 'name': 'EDV'},
-    {'table': 'Commodities', 'name': 'Uranium'},
+    # {'table': 'Commodities', 'name': 'Uranium'},
     # {'table': 'Commodities', 'name': 'Steel'},
     # {'table': 'Currencies', 'name': 'DXY'},
     # {'table': 'Currencies', 'name': 'DXY'},
@@ -33,11 +33,11 @@ stock_config = [
 colors = ['tab:blue', 'tab:red', 'tab:green', 'tab:purple', 'tab:pink', 'tab:brown', 'tab:gray', 'tab:olive', 'tab:cyan']
 
 # 自定义时间范围
-custom_start_date = '2000-01-01'
+custom_start_date = '2022-01-01'
 custom_end_date = datetime.now().strftime('%Y-%m-%d')
 
-# custom_start_date = '2017-11-01'
-# custom_end_date = '2024-08-05'
+# custom_start_date = '2022-01-01'
+# custom_end_date = '2022-08-05'
 
 dfs = {}
 with sqlite3.connect(db_path) as conn:
