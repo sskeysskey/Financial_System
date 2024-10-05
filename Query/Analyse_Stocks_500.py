@@ -43,12 +43,13 @@ def get_price_comparison(cursor, table_name, interval, name, validate):
     today = datetime.now()
     ex_validate = validate - timedelta(days=1)
     
-    # 判断interval是否小于1，若是，则按天数计算
-    if interval == 1.5:
-        days = int(interval * 30)  # 将月份转换为天数
-        past_date = validate - timedelta(days=days - 1)
-    else:
-        past_date = today - relativedelta(months=int(interval))
+    # 判断interval是否是小数，若是，则按天数计算
+    # if interval == 1.5:
+    #     days = int(interval * 30)  # 将月份转换为天数
+    #     past_date = validate - timedelta(days=days - 1)
+    # else:
+
+    past_date = today - relativedelta(months=int(interval))
     
     query = f"""
     SELECT MAX(price), MIN(price)
@@ -255,21 +256,19 @@ def main():
                     for interval in intervals:
                         _, min_price = price_extremes.get(interval, (None, None))
                         if min_price is not None and validate_price <= min_price:
-                            if interval >= 12:
-                                # 在生成output_line之前，检查name是否在拆股文件中
-                                if name in stock_splits_symbols:
-                                    error_message = f"由于{table_name}的 {name} 存在于拆股文档中，所以不添加入output_500"
-                                    print(error_message)
-                                    formatted_error_message = log_error_with_timestamp(error_message)
-                                    with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
-                                        error_file.write(formatted_error_message)
-                                    break  # 跳过此name的处理
-                                
-                                years = interval // 12
-                                output_line = f"{table_name} {name} {years}Y_newlow"
-                                print(output_line)
-                                output.append(output_line)
-                                break  # 只输出最长的时间周期
+                            # 在生成output_line之前，检查name是否在拆股文件中
+                            if name in stock_splits_symbols:
+                                error_message = f"由于{table_name}的 {name} 存在于拆股文档中，所以不添加入output_500"
+                                print(error_message)
+                                formatted_error_message = log_error_with_timestamp(error_message)
+                                with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                                    error_file.write(formatted_error_message)
+                                break  # 跳过此name的处理
+                            
+                            output_line = f"{table_name} {name} {interval}M_newlow"
+                            print(output_line)
+                            output.append(output_line)
+                            break  # 只输出最长的时间周期
 
     if output:
         output_files = create_output_files()

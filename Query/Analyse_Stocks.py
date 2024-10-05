@@ -107,6 +107,9 @@ def update_json_data(config_path, updates, blacklist_newlow):
             for symbol in symbols:
                 if symbol not in data[category] and symbol not in blacklist_newlow:
                     data[category][symbol] = ""  # 使用新格式写入
+                    print(f"将symbol '{symbol}' 添加到Panel文件的类别 '{category}' 中")
+                else:
+                    print(f"symbol '{symbol}' 已存在于Panel文件的类别 '{category}' 或在黑名单中，跳过")
         else:
             data[category] = {symbol: "" for symbol in symbols if symbol not in blacklist_newlow}
 
@@ -203,13 +206,6 @@ def load_symbols_from_file(file_path):
     return symbols
 
 def clean_old_backups(directory, file_patterns, days=7):
-    """
-    删除备份目录中超过指定天数的文件
-    
-    :param directory: 备份文件所在的目录
-    :param file_patterns: 要清理的文件模式列表，每个元素是一个元组 (前缀, 日期位置)
-    :param days: 保留的天数
-    """
     now = datetime.now()
     cutoff = now - timedelta(days=days)
 

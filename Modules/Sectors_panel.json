@@ -47,17 +47,14 @@
     },
     "Financial_Services": {},
     "Healthcare": {
-        "CVS": "",
         "DXCM": "德康血糖",
         "MRNA": "",
         "NVO": "",
         "GMAB": "",
         "MCK": "",
         "BIIB": "",
-        "BMRN": "",
-        "APLS": "",
         "HUM": "",
-        "ACHC": ""
+        "REGN": ""
     },
     "Crypto": {
         "Bitcoin": "",
@@ -94,6 +91,7 @@
         "BalticDry": "",
         "Silver": "",
         "Copper": "",
+        "Uranium": "",
         "Nickel": "镍",
         "Aluminum": "铝",
         "Steel": "",
@@ -126,11 +124,9 @@
         "EMB": "新美债",
         "EMLC": "新本债",
         "LIT": "锂矿电池",
-        "URA": "铀矿核能"
-    },
-    "Commodities2": {
-        "Lithium": "",
-        "Uranium": ""
+        "URA": "铀矿核能",
+        "UUP": "追踪美元",
+        "FXY": "多日空美"
     },
     "Currencies": {
         "DXY": "美元指数",
@@ -150,12 +146,11 @@
         "USHY": "高收益债",
         "DVY": "高股息",
         "TDTF": "通胀保护",
-        "FXY": "多日空美",
         "XLK": "科技",
         "IYH": "医疗",
         "RTH": "零售",
         "XLI": "工业",
-        "VFH": "金融",
+        "IYF": "金融",
         "XLY": "非必需",
         "VNQ": "房地产",
         "XAR": "国防航天",

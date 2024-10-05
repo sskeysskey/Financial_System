@@ -3,13 +3,15 @@
         "UNH",
         "ADBE",
         "VRTX",
-        "E"
+        "E",
+        "REGN"
     ],
     "blue_keywords": [
         "HANGSENG",
         "Copper",
         "CrudeOil",
         "USDINR",
+        "UUP",
         "Solana",
         "DXJ",
         "SCHD",
@@ -246,7 +248,9 @@
         "COP",
         "BP",
         "EQNR",
-        "TTE"
+        "TTE",
+        "MRK",
+        "ELV"
     ],
     "red_keywords": [
         "USInitial",

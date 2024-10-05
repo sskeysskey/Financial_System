@@ -25,7 +25,7 @@ cursor = conn.cursor()
 # """, (price_multiplier, name))
 
 # 更新价格字段
-# cursor.execute("UPDATE Technology SET price = 81.41 WHERE id = 865998")
+# cursor.execute("UPDATE Basic_Materials SET price = 11.45 WHERE id = 402863")
 # cursor.execute("UPDATE Economics SET price = -0.2 WHERE id = 252")
 
 # 保留两位小数

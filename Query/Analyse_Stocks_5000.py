@@ -37,16 +37,6 @@ def create_output_files():
     return output_files
 
 def get_price_comparison(cursor, table_name, interval, name, validate):
-    """
-    获取指定时间间隔内的最高价和最低价。
-    
-    :param cursor: 数据库游标
-    :param table_name: 表名
-    :param interval: 时间间隔（以周为单位）
-    :param name: 股票代码
-    :param validate: 验证日期（datetime对象）
-    :return: (max_price, min_price) 或 None
-    """
     ex_validate = validate - timedelta(days=1)
     past_date = validate - timedelta(weeks=interval)
 
@@ -250,21 +240,19 @@ def main():
                     for interval in intervals:
                         _, min_price = price_extremes.get(interval, (None, None))
                         if min_price is not None and validate_price <= min_price:
-                            if interval >= 12:
-                                # 在生成output_line之前，检查name是否在拆股文件中
-                                if name in stock_splits_symbols:
-                                    error_message = f"由于{table_name}的 {name} 存在于拆股文档中，所以不添加入output_5000"
-                                    print(error_message)
-                                    formatted_error_message = log_error_with_timestamp(error_message)
-                                    with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
-                                        error_file.write(formatted_error_message)
-                                    break  # 跳过此name的处理
-                                
-                                years = interval // 12
-                                output_line = f"{table_name} {name} {years}Y_newlow"
-                                print(output_line)
-                                output.append(output_line)
-                                break  # 只输出最长的时间周期
+                            # 在生成output_line之前，检查name是否在拆股文件中
+                            if name in stock_splits_symbols:
+                                error_message = f"由于{table_name}的 {name} 存在于拆股文档中，所以不添加入output_5000"
+                                print(error_message)
+                                formatted_error_message = log_error_with_timestamp(error_message)
+                                with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                                    error_file.write(formatted_error_message)
+                                break  # 跳过此name的处理
+                            
+                            output_line = f"{table_name} {name} {interval}W_newlow"
+                            print(output_line)
+                            output.append(output_line)
+                            break  # 只输出最长的时间周期
 
     if output:
         output_files = create_output_files()
