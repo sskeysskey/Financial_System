@@ -136,9 +136,12 @@
         "EURUSD": ""
     },
     "Economics": {
-        "USNonFarm": "04 USNonFarm",
-        "USUnemploy": "04 USUnemploy",
-        "USInitial": "03 USInitial"
+        "USTrade": "08 USTrade",
+        "USCPI": "10 USCPI",
+        "CoreCPI": "10 CoreCPI",
+        "USPPI": "11 USPPI",
+        "USConfidence": "11 USConfidence",
+        "USInitial": "10 USInitial"
     },
     "ETFs_US": {
         "TLT": "",

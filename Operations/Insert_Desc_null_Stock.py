@@ -189,12 +189,6 @@ def main():
 
     new_description2 = read_clipboard().replace('\n', ' ').replace('\r', ' ')
     
-    if "ETF" in new_description1 and "ETF" in new_description2:
-        # AppleScript代码
-        applescript_code = 'display dialog "要添加的好像是ETF而不是Stock" buttons {"OK"} default button "OK"'
-        subprocess.run(['osascript', '-e', applescript_code], check=True)
-        sys.exit()
-    
     # 弹出输入 symbol_name 的窗口
     stock_name = input_symbol_name(new_name)
 
