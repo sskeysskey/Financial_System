@@ -9,7 +9,8 @@
         "happy"
       ],
       "description1": "**美股代码“ERJ”** 代表的是巴西航空工业公司",
-      "description2": "Embraer SA（股票代码“ERJ”）是一家巴西公司，专注于设计、制造和销售飞机及其部件，服务于商业、国防和行政航空领域。"
+      "description2": "Embraer SA（股票代码“ERJ”）是一家巴西公司，专注于设计、制造和销售飞机及其部件，服务于商业、国防和行政航空领域。",
+      "value": ""
     },
     {
       "symbol": "ACN",
@@ -20,7 +21,8 @@
         "外包服务"
       ],
       "description1": "埃森哲是一家全球领先的专业服务公司，提供一系列服务和解决方案，包括 **咨询、技术服务、和外包服务**。",
-      "description2": "美股代码ACN代表的是埃森哲公司（Accenture plc），这是一家全球性的管理咨询、信息技术和业务流程外包的跨国公司。"
+      "description2": "美股代码ACN代表的是埃森哲公司（Accenture plc），这是一家全球性的管理咨询、信息技术和业务流程外包的跨国公司。",
+      "value": ""
     },
     {
       "symbol": "HAL",
@@ -33,7 +35,8 @@
         "油田服务"
       ],
       "description1": "**公司名称**：Halliburton Company  **行业**：Halliburton是一家主要从事**油田服务**的公司。",
-      "description2": "美股代码HAL代表的是哈里伯顿公司（Halliburton Company），它是一家全球性的高收益能源服务公司"
+      "description2": "美股代码HAL代表的是哈里伯顿公司（Halliburton Company），它是一家全球性的高收益能源服务公司",
+      "value": ""
     }
   ],
   "etfs": [
@@ -41,18 +44,22 @@
       "symbol": "BLOK",
       "name": "JPMorgan U.S. Value Factor ETF, 2711093",
       "tag": [
-        "Food",
-        "Eating"
+        "枪支",
+        "武器"
       ],
       "description1": "**Amplify Transformational Data Sharing ETF**（基金代码：BLOK）",
-      "description2": "Amplify Transformational Data Sharing ETF（股票代码：BLOK）是一个交易所交易基金（ETF）"
+      "description2": "Amplify Transformational Data Sharing ETF（股票代码：BLOK）是一个交易所交易基金（ETF）",
+      "value": ""
     },
     {
       "symbol": "NFE",
       "name": "iShares Core MSCI Pacific ETF, 4340344",
-      "tag": [],
+      "tag": [
+        "枪支"
+      ],
       "description1": "New Fortress Energy Inc.** 这是一家总部位于美国的高收益全球能源基础设施公司",
-      "description2": "New Fortress Energy Inc.（新堡壘能源公司"
+      "description2": "New Fortress Energy Inc.（新堡壘能源公司",
+      "value": ""
     },
     {
       "symbol": "CNYA",
@@ -62,7 +69,8 @@
         "A股"
       ],
       "description1": "**CNYA**是**iShares MSCI China A ETF**的简称",
-      "description2": "CNYA是iShares MSCI China A ETF的代码"
+      "description2": "CNYA是iShares MSCI China A ETF的代码",
+      "value": ""
     }
   ]
 }

@@ -1,6 +1,7 @@
 {
     "Basic_Materials": {
         "MOS": "美盛化肥",
+        "ALTM": "",
         "VALE": "",
         "CLF": ""
     },
@@ -146,9 +147,6 @@
     "ETFs_US": {
         "TLT": "",
         "EDV": "",
-        "USHY": "高收益债",
-        "DVY": "高股息",
-        "TDTF": "通胀保护",
         "XLK": "科技",
         "IYH": "医疗",
         "RTH": "零售",

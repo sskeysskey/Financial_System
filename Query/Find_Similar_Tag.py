@@ -5,6 +5,9 @@ import pyperclip
 import subprocess
 from time import sleep
 
+# 过滤掉的tags集合
+excluded_tags = {}
+
 def copy2clipboard():
     script = '''
     tell application "System Events"
@@ -73,10 +76,6 @@ def main(symbol):
 
     # 自动打开文件
     os.system(f'open "{output_path}"')
-
-
-# 过滤掉的tags集合
-excluded_tags = {"美国","加拿大","英国"}
 
 # 读取JSON文件
 with open('/Users/yanzhang/Documents/Financial_System/Modules/description.json', 'r') as file:
