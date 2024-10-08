@@ -19,11 +19,8 @@
         "PBF": "石油精炼",
         "CHRD": "",
         "VAL": "",
-        "COP": "",
         "EQNR": "",
-        "WFRD": "",
-        "MTDR": "",
-        "TTE": ""
+        "WFRD": ""
     },
     "Technology": {
         "SNOW": "",
@@ -60,7 +57,6 @@
         "REGN": "",
         "MRK": "",
         "ELV": "",
-        "VRTX": "",
         "ZBH": "",
         "ACHC": "",
         "APLS": ""
@@ -154,7 +150,6 @@
     },
     "ETFs_US": {
         "TLT": "",
-        "EDV": "",
         "XLK": "科技",
         "IYH": "医疗",
         "RTH": "零售",
