@@ -847,7 +847,8 @@
     "GPI",
     "PSNYW",
     "GAP",
-    "BOOT"
+    "BOOT",
+    "CPRI"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -1358,7 +1359,8 @@
     "RARE",
     "AVTR",
     "OSCR",
-    "RDNT"
+    "RDNT",
+    "BHVN"
   ],
   "Industrials": [
     "GE",

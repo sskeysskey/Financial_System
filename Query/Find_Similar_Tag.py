@@ -27,16 +27,22 @@ def find_tags_by_symbol(symbol, data):
     return []
 
 def find_symbols_by_tags(target_tags, data):
-    related_symbols = {'stocks': {}, 'etfs': {}}
-    # 遍历stocks和etfs，找到所有与目标tags模糊匹配的symbol
+    related_symbols = {'stocks': [], 'etfs': []}
+    # 将目标标签转换为小写，用于后续比较
+    target_tags_set = set(tag.lower() for tag in target_tags)
+    
     for category in ['stocks', 'etfs']:
         for item in data[category]:
             tags = item.get('tag', [])
-            # 对每个tag进行正则表达式匹配
-            for t_tag in target_tags:
-                pattern = re.compile(re.escape(t_tag), re.IGNORECASE)  # 创建模糊匹配的正则表达式模式
-                if any(pattern.search(tag) for tag in tags):
-                    related_symbols[category][item['symbol']] = tags  # 将symbol和其tags一起存储
+            matched_tags = [tag for tag in tags if tag.lower() in target_tags_set]
+            
+            if len(matched_tags) >= 1:
+                related_symbols[category].append((item['symbol'], matched_tags, tags))
+    
+    # 对每个类别的结果按匹配标签数量降序排序
+    for category in related_symbols:
+        related_symbols[category].sort(key=lambda x: len(x[1]), reverse=True)
+    
     return related_symbols
 
 def main(symbol):
@@ -51,23 +57,21 @@ def main(symbol):
         related_symbols = find_symbols_by_tags(target_tags, data)
     
         # 移除原始symbol以避免自引用
-        if symbol in related_symbols['stocks']:
-            del related_symbols['stocks'][symbol]
-        if symbol in related_symbols['etfs']:
-            del related_symbols['etfs'][symbol]
+        related_symbols['stocks'] = [item for item in related_symbols['stocks'] if item[0] != symbol]
+        related_symbols['etfs'] = [item for item in related_symbols['etfs'] if item[0] != symbol]
         
         output_lines.append(f"\n")
         
         # 添加stocks结果
         output_lines.append("\n【Stocks】\n")
-        for sym, tags in related_symbols['stocks'].items():
-            output_lines.append(f"{sym}: {tags}\n")
+        for sym, matched_tags, all_tags in related_symbols['stocks']:
+            output_lines.append(f"{sym:<7}{len(matched_tags):<3} {all_tags}\n")
         
         # 添加etfs结果并加标题
         if related_symbols['etfs']:
             output_lines.append("\n【ETFs】\n")
-            for sym, tags in related_symbols['etfs'].items():
-                output_lines.append(f"{sym}: {tags}\n")
+            for sym, matched_tags, all_tags in related_symbols['etfs']:
+                output_lines.append(f"{sym:<7}{len(matched_tags):<3} {all_tags}\n")
 
     # 写入文件
     output_path = '/Users/yanzhang/Documents/News/similar.txt'

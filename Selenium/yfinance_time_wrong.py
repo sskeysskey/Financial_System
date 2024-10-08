@@ -17,7 +17,7 @@ def process_error_file(error_file_path, sectors_file_path):
         error_content = error_file.read()
     
     # 修改后的正则表达式，确保匹配带有特殊符号的股票代码
-    pattern = r'\[.*?\] (\w+) ([\w^]+): No price data found for the given date range\.'
+    pattern = r'\[.*?\] (\w+) ([\w.^=]+): No price data found for the given date range\.'
     matches = re.findall(pattern, error_content)
     print(f"在 today_error1 中找到 {len(matches)} 个匹配项。")  # 日志：匹配结果数量
     

@@ -185,6 +185,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 tags = item.get('tag', [])
                 fullname = item.get('name', '')
                 tag_str = ','.join(tags)
+                if len(tag_str) > 25:
+                    tag_str = tag_str[:25] + '...'  # 限制tag_str长度为15字符，超出部分用...表示
                 clickable = True
                 found = True
                 break

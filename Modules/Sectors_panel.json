@@ -30,7 +30,8 @@
         "STM": "意法",
         "INTC": "",
         "QLYS": "",
-        "ADBE": ""
+        "ADBE": "",
+        "INTU": ""
     },
     "Utilities": {
         "NFE": ""
@@ -41,7 +42,8 @@
     },
     "Industrials": {
         "ATKR": "",
-        "BA": "波音"
+        "BA": "波音",
+        "RTO": ""
     },
     "Real_Estate": {
         "LINE": ""
@@ -55,7 +57,13 @@
         "MCK": "",
         "BIIB": "",
         "HUM": "",
-        "REGN": ""
+        "REGN": "",
+        "MRK": "",
+        "ELV": "",
+        "VRTX": "",
+        "ZBH": "",
+        "ACHC": "",
+        "APLS": ""
     },
     "Crypto": {
         "Bitcoin": "",
