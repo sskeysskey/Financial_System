@@ -24,11 +24,34 @@ def process_error_file(error_file_path, sectors_file_path):
     with open(sectors_file_path, 'r') as sectors_file:
         sectors_data = json.load(sectors_file)
     
+    # 将匹配的symbol添加到相应的分组中
     for group, symbol in matches:
         if group in sectors_data and symbol not in sectors_data[group]:
             print(f"将 {symbol} 添加到 {group} 组中。")  # 日志：添加symbol
             sectors_data[group].append(symbol)
+
+    # 将更新后的数据写回 sectors 文件
+    with open(sectors_file_path, 'w') as sectors_file:
+        json.dump(sectors_data, sectors_file, indent=4)
+
+def process_crypto(sectors_file_path):
+    with open(sectors_file_path, 'r') as sectors_file:
+        sectors_data = json.load(sectors_file)
     
+    # 手动添加加密货币项到 Crypto 分组
+    crypto_symbols = ["BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD"]
+    
+    # 检查是否存在 Crypto 分组，如果没有则创建
+    if "Crypto" not in sectors_data:
+        sectors_data["Crypto"] = []
+
+    # 将四个加密货币项添加到 Crypto 分组中（避免重复添加）
+    for crypto_symbol in crypto_symbols:
+        if crypto_symbol not in sectors_data["Crypto"]:
+            print(f"将 {crypto_symbol} 添加到 Crypto 组中。")  # 日志：添加Crypto symbol
+            sectors_data["Crypto"].append(crypto_symbol)
+
+    # 将更新后的数据写回 sectors 文件
     with open(sectors_file_path, 'w') as sectors_file:
         json.dump(sectors_data, sectors_file, indent=4)
 
@@ -50,11 +73,11 @@ error_file_path = '/Users/yanzhang/Documents/News/Today_error1.txt'
 # 检查错误文件是否存在
 if not os.path.exists(error_file_path):
     print(f"Error: 文件 {error_file_path} 不存在.")
-    print("程序执行结束")
-    exit()
+else:    
+    # 处理错误文件并更新sectors文件
+    process_error_file(error_file_path, sectors_file_path)
 
-# 处理错误文件并更新sectors文件
-process_error_file(error_file_path, sectors_file_path)
+process_crypto(sectors_file_path)
 
 now = datetime.now()
 # 判断今天的星期数，如果是周日(6)或周一(0)，则不执行程序
@@ -120,7 +143,7 @@ else:
                     
                     data_count += 1  # 成功插入一条数据，计数器增加
 
-                print(f"成功插入 {data_count} 条 {ticker_symbol} 的数据到 {table_name} 表中。")  # 日志：插入数据
+                print(f"成功插入 第{data_count}条 {ticker_symbol} 的数据到 {table_name} 中。")  # 日志：插入数据
 
             except Exception as e:
                 formatted_error_message = log_error_with_timestamp(str(e))

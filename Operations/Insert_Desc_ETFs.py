@@ -64,7 +64,8 @@ def add_or_update_etf(symbol, entry, data, json_file, description1, description2
             "name": etf_name,
             "tag": entry.get().split(),
             "description1": description1,
-            "description2": description2
+            "description2": description2,
+            "value": ""
         }
         data["etfs"].append(new_etf)
     

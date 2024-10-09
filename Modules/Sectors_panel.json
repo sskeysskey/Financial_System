@@ -13,7 +13,8 @@
         "MBLY": "",
         "STLA": "",
         "MNSO": "",
-        "ALV": ""
+        "ALV": "",
+        "LKQ": ""
     },
     "Energy": {
         "PBF": "石油精炼",
@@ -59,7 +60,8 @@
         "ELV": "",
         "ZBH": "",
         "ACHC": "",
-        "APLS": ""
+        "APLS": "",
+        "GSK": ""
     },
     "Crypto": {
         "Bitcoin": "",

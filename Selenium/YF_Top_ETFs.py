@@ -23,11 +23,11 @@ def fetch_data(url):
     
     for row in rows:
         # 在当前行中提取Symbol
-        symbol_element = row.find_element(By.CSS_SELECTOR, 'span.symbol.yf-1jpysdn')
+        symbol_element = row.find_element(By.CSS_SELECTOR, 'span.symbol.yf-138ga19')
         symbol = symbol_element.text.strip()
         
         # 在当前行中提取Name
-        name_element = row.find_element(By.CSS_SELECTOR, 'span.yf-1jpysdn.longName')
+        name_element = row.find_element(By.CSS_SELECTOR, 'span.yf-138ga19.longName')
         name = name_element.text.strip()
 
         # 在当前行中提取Volume，并移除逗号以转换为整数

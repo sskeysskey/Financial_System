@@ -86,7 +86,8 @@ def add_stock(symbol, stock_name, entry, data, json_file, description1, descript
         "name": stock_name,
         "tag": entry.get().split(),
         "description1": description1,
-        "description2": description2
+        "description2": description2,
+        "value": ""
     }
     data["stocks"].append(new_stock)
     with open(json_file, "w", encoding="utf-8") as file:

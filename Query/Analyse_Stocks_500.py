@@ -93,8 +93,10 @@ def update_json_data(config_path, updates, blacklist_newlow):
                 if symbol not in data[category] and symbol not in blacklist_newlow:
                     data[category][symbol] = ""  # 使用新格式写入
                     print(f"将symbol '{symbol}' 添加到Panel文件的类别 '{category}' 中")
+                elif symbol in data[category]:
+                    print(f"'{symbol}' 已存在于Panel文件的类别 '{category}' 中，跳过")
                 else:
-                    print(f"symbol '{symbol}' 已存在于Panel文件的类别 '{category}' 或在黑名单中，跳过")
+                    print(f"'{symbol}' 在黑名单中，跳过")
         else:
             data[category] = {symbol: "" for symbol in symbols if symbol not in blacklist_newlow}
 

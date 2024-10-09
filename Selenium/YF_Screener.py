@@ -35,10 +35,13 @@ def get_element_value(driver, xpath, default='--', as_float=False):
         value = element.get_attribute('value') if as_float else element.text.strip()
         # 如果是浮点数模式，且值不是 N/A，则转换为浮点数
         if as_float:
-            return float(value) if value != 'N/A' else default
+            if value == 'N/A':
+                return default
+            else:
+                return float(value)
         else:
             # 如果不是浮点数模式，专门处理 "N/A" 的情况
-            return float(value) if value != 'N/A' else default
+            return value if value != 'N/A' else default
     except (NoSuchElementException, ValueError):
         return default
 
@@ -71,7 +74,7 @@ def fetch_data(driver, url, blacklist):
         market_cap = get_element_value(driver, f'{symbol_xpath}[@data-field="marketCap"]', as_float=True)
         price = get_element_value(driver, f'{symbol_xpath}[@data-field="regularMarketPrice"]', as_float=True)
         volume = get_element_value(driver, f'{symbol_xpath}[@data-field="regularMarketVolume"]', as_float=True)
-        pe_ratio = get_element_value(driver, f'{symbol_xpath}/ancestor::tr/td[@aria-label="PE Ratio (TTM)"]', as_float=False)
+        pe_ratio = get_element_value(driver, f'{symbol_xpath}/ancestor::tr/td[@aria-label="PE Ratio (TTM)"]', as_float=True)
         name = get_element_value(driver, f'{symbol_xpath}/ancestor::tr/td[@aria-label="Name"]', as_float=False)
 
         if market_cap != '--':

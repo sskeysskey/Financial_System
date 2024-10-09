@@ -490,7 +490,8 @@
     "VEA",
     "SPLB",
     "ESGV",
-    "CHAU"
+    "CHAU",
+    "KNG"
   ],
   "Basic_Materials": [
     "LIN",
@@ -1495,7 +1496,8 @@
     "CSWI",
     "LTM",
     "SNDR",
-    "BCO"
+    "BCO",
+    "SARO"
   ],
   "Real_Estate": [
     "PLD",
