@@ -91,7 +91,6 @@
         "GTLS",
         "TNET",
         "NE",
-        "VAL",
         "CHRD",
         "TM",
         "SLB",
@@ -102,7 +101,6 @@
         "NUE",
         "HES",
         "HAL",
-        "EC",
         "DINO",
         "TX",
         "HXL",
@@ -188,7 +186,9 @@
         "ETSY",
         "ATKR",
         "ZBH",
-        "RTO"
+        "RTO",
+        "EC",
+        "VAL"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -235,7 +235,8 @@
         "SIRI",
         "LINE",
         "GFS",
-        "BIIB"
+        "BIIB",
+        "SARO"
     ],
     "green_keywords": [
         "EURCNY",

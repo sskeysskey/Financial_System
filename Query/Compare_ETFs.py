@@ -69,7 +69,7 @@ def compare_today_yesterday(config_path, description_path, blacklist, interested
             if table_name in interested_sectors:
                 for name in names:
                     if name in blacklist:
-                        log_error_with_timestamp(f"跳过黑名单中的ETF: {name}", error_file_path)
+                        print(f"跳过黑名单中的ETF: {name}", error_file_path)
                         continue
                     try:
                         results = get_latest_four_dates(cursor, table_name, name)
@@ -161,7 +161,10 @@ def clean_old_backups(directory, prefix="CompareETFs_", days=4):
 if __name__ == '__main__':
     config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
     description_path = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
-    blacklist = []
+    
+    blacklist = ["ERY","TQQQ","QLD","SOXL","SPXL","SVXY","YINN","CHAU","UVXY",
+                "VIXY","VXX","SPXS","SPXU","ZSL","AGQ","SCO","UCO"]
+
     interested_sectors = ["ETFs"]
     file_path = '/Users/yanzhang/Documents/News/CompareETFs.txt'
     directory_backup = '/Users/yanzhang/Documents/News/site/'

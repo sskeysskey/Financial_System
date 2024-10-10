@@ -28,23 +28,6 @@ def login_once(driver, login_url, username, password):
     ))
     print("登录成功，继续执行其他任务")
 
-# 辅助函数，用于获取元素并处理异常
-def get_element_value(driver, xpath, default='--', as_float=False):
-    try:
-        element = driver.find_element(By.XPATH, xpath)
-        value = element.get_attribute('value') if as_float else element.text.strip()
-        # 如果是浮点数模式，且值不是 N/A，则转换为浮点数
-        if as_float:
-            if value == 'N/A':
-                return default
-            else:
-                return float(value)
-        else:
-            # 如果不是浮点数模式，专门处理 "N/A" 的情况
-            return value if value != 'N/A' else default
-    except (NoSuchElementException, ValueError):
-        return default
-
 # 检查是否在黑名单中
 def is_blacklisted(symbol, blacklist):
     """检查给定的股票符号是否在黑名单中"""
@@ -58,6 +41,28 @@ def load_blacklist(file_path):
 def process_urls(driver, urls, output, output_500, output_5000, blacklist):
     for url, sector in urls:
         process_sector(driver, url, sector, output, output_500, output_5000, blacklist)
+
+# 辅助函数，用于获取元素并处理异常
+def get_element_value(driver, xpath, default='--', as_float=False):
+    try:
+        element = driver.find_element(By.XPATH, xpath)
+        value = element.get_attribute('value') if as_float else element.text.strip()
+        # 如果是浮点数模式，则转换为浮点数
+        if as_float:
+            return float(value)
+        else:
+            # 如果不是浮点数模式，专门处理 "N/A" 的情况
+            return float(value) if value != 'N/A' else default
+    except (NoSuchElementException, ValueError):
+        return default
+
+def get_element_name(driver, xpath, default='--'):
+    try:
+        element = driver.find_element(By.XPATH, xpath)
+        value = element.text.strip()
+        return value
+    except (NoSuchElementException, ValueError):
+        return default
 
 def fetch_data(driver, url, blacklist):
     driver.get(url)
@@ -74,8 +79,8 @@ def fetch_data(driver, url, blacklist):
         market_cap = get_element_value(driver, f'{symbol_xpath}[@data-field="marketCap"]', as_float=True)
         price = get_element_value(driver, f'{symbol_xpath}[@data-field="regularMarketPrice"]', as_float=True)
         volume = get_element_value(driver, f'{symbol_xpath}[@data-field="regularMarketVolume"]', as_float=True)
-        pe_ratio = get_element_value(driver, f'{symbol_xpath}/ancestor::tr/td[@aria-label="PE Ratio (TTM)"]', as_float=True)
-        name = get_element_value(driver, f'{symbol_xpath}/ancestor::tr/td[@aria-label="Name"]', as_float=False)
+        pe_ratio = get_element_value(driver, f'{symbol_xpath}/ancestor::tr/td[@aria-label="PE Ratio (TTM)"]', as_float=False)
+        name = get_element_name(driver, f'{symbol_xpath}/ancestor::tr/td[@aria-label="Name"]')
 
         if market_cap != '--':
             results.append((symbol, market_cap, pe_ratio, name, price, volume))

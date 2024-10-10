@@ -545,7 +545,10 @@
     "SPLB",
     "ESGV",
     "CHAU",
-    "KNG"
+    "KNG",
+    "SLV",
+    "AGQ",
+    "BOIL"
   ],
   "Basic_Materials": [
     "LIN",
@@ -1835,7 +1838,8 @@
     "PAYX",
     "ACIW",
     "OS",
-    "CLVT"
+    "CLVT",
+    "TSEM"
   ],
   "Utilities": [
     "NEE",
