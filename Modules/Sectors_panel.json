@@ -41,10 +41,12 @@
         "ATKR": "",
         "BA": "波音",
         "RTO": "",
-        "SARO": ""
+        "SARO": "",
+        "HXL": ""
     },
     "Real_Estate": {
-        "LINE": ""
+        "LINE": "",
+        "PLD": ""
     },
     "Financial_Services": {},
     "Healthcare": {
@@ -61,7 +63,8 @@
         "ZBH": "",
         "ACHC": "",
         "APLS": "",
-        "GSK": ""
+        "GSK": "",
+        "AZN": ""
     },
     "Crypto": {
         "Bitcoin": "",

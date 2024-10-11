@@ -103,7 +103,7 @@ def parse_output_color(output):
             week_part, _ = descriptor.split('_')
             if 'W' in week_part:
                 weeks = int(week_part.replace('W', ''))
-                if weeks in [3, 6]:
+                if weeks in [6, 8, 10]:
                     category_list = 'blue_keywords'
                 else:
                     continue  # 其他周数不处理
@@ -197,7 +197,7 @@ def main():
         data = json.load(file)
 
     output = []
-    intervals = [6, 8]  # 使用周为单位的时间间隔列表
+    intervals = [6, 8, 10]  # 使用周为单位的时间间隔列表
 
     # 遍历JSON中的每个表和股票代码
     for table_name, names in data.items():

@@ -213,7 +213,7 @@ def main():
         data = json.load(file)
 
     output = []    
-    intervals = [6, 3]  # 以月份表示的时间间隔列表
+    intervals = [3, 6]  # 以月份表示的时间间隔列表
 
     # 遍历JSON中的每个表和股票代码
     for table_name, names in data.items():
