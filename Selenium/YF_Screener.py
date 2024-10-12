@@ -94,6 +94,11 @@ def fetch_data(driver, url, blacklist):
             file.write(f"{result[0]}: {result[4]}, {result[5]}\n")
     return results
 
+# 辅助函数：将市值转换为“亿”单位
+def simplify_market_cap_threshold(market_cap_threshold):
+    """将市值门槛除以1e8，返回简化后的数字"""
+    return market_cap_threshold / 1e8
+
 # 通用的更新JSON函数
 def update_json(data, sector, file_path, output, log_enabled, market_cap_threshold, write_symbols=False):
     with open(file_path, 'r+') as file:
@@ -102,6 +107,9 @@ def update_json(data, sector, file_path, output, log_enabled, market_cap_thresho
         all_symbols = set(current_sectors.keys())
         new_symbols = []
 
+        # 计算简化后的市值门槛
+        simplified_market_cap_threshold = simplify_market_cap_threshold(market_cap_threshold)
+
         for symbol, market_cap, pe_ratio, name, price, volume in data:
             current_sector = current_sectors.get(symbol)
 
@@ -109,7 +117,7 @@ def update_json(data, sector, file_path, output, log_enabled, market_cap_thresho
             if market_cap < market_cap_threshold:
                 if current_sector and symbol in json_data[current_sector]:
                     if log_enabled:
-                        message = f"'{symbol}' should be Removed from {current_sector}."
+                        message = f"'{symbol}' should be Removed from {current_sector}_{int(simplified_market_cap_threshold)}."
                         print(message)
                         output.append(message)
             else:
@@ -117,7 +125,8 @@ def update_json(data, sector, file_path, output, log_enabled, market_cap_thresho
                     json_data[sector].append(symbol)
                     new_symbols.append((symbol, name))
                     if log_enabled:
-                        message = f"Added '{symbol}' to {sector}."
+                        # 在这里将简化后的市值门槛值加入消息
+                        message = f"Added '{symbol}' to {sector}_{int(simplified_market_cap_threshold)}."
                         print(message)
                         output.append(message)
 
