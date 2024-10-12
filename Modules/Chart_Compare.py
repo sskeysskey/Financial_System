@@ -82,8 +82,8 @@ class StockComparisonApp(QWidget):
         # 获取所有输入框中输入的股票代码
         symbols = [input.text().upper() for input in self.symbol_inputs if input.text().strip()]
 
-        if len(symbols) < 2:
-            self.label.setText('请至少输入两个股票代码')
+        if len(symbols) == 0:
+            self.label.setText('请至少输入一个股票代码')
             self.label.setStyleSheet('color: red')
             return
 
@@ -92,7 +92,11 @@ class StockComparisonApp(QWidget):
         end_date = self.end_date_edit.date().toString('yyyy-MM-dd')
 
         # 调用后续的股票比较逻辑
-        self.label.setText(f'正在比较 {", ".join(symbols)}')
+        if len(symbols) == 1:
+            self.label.setText(f'正在显示 {symbols[0]} 的价格曲线')
+        else:
+            self.label.setText(f'正在比较 {", ".join(symbols)}')
+            
         self.label.setStyleSheet('color: gold')
 
         # 在这里进行后续的查询和图表展示操作
@@ -141,29 +145,37 @@ class StockComparisonApp(QWidget):
         # 设置中文字体
         zh_font = fm.FontProperties(fname='/Users/yanzhang/Library/Fonts/FangZhengHeiTiJianTi-1.ttf')
 
-        # 绘制第一个股票价格曲线
-        first_name, (first_df, first_color) = next(iter(dfs.items()))
+        # 如果只有一个股票，绘制单一曲线
+        if len(symbols) == 1:
+            symbol = symbols[0]
+            df, color = dfs[symbol]
+            ax1.plot(df.index, df['price'], label=symbol, color=color, linewidth=2)
+            ax1.legend([symbol], loc='upper left', prop=zh_font)
+            ax1.set_title(f'{symbol} 价格曲线', fontproperties=zh_font)
+        else:
+            # 绘制第一个股票价格曲线
+            first_name, (first_df, first_color) = next(iter(dfs.items()))
 
-        line1, = ax1.plot(first_df.index, first_df['price'], label=first_name, color=first_color, linewidth=2)
-        ax1.tick_params(axis='y', labelcolor=first_color)
+            line1, = ax1.plot(first_df.index, first_df['price'], label=first_name, color=first_color, linewidth=2)
+            ax1.tick_params(axis='y', labelcolor=first_color)
 
-        # 绘制其他股票价格曲线
-        second_axes = [ax1]
-        lines = [line1]
-        for i, (name, (df, color)) in enumerate(list(dfs.items())[1:], 1):
-            ax = ax1.twinx()
-            if i > 1:
-                ax.spines['right'].set_position(('outward', 60 * (i - 1)))
-            
-            line, = ax.plot(df.index, df['price'], label=name, color=color, linewidth=2)
-            ax.tick_params(axis='y', labelcolor=color)
-            second_axes.append(ax)
-            lines.append(line)
+            # 绘制其他股票价格曲线
+            second_axes = [ax1]
+            lines = [line1]
+            for i, (name, (df, color)) in enumerate(list(dfs.items())[1:], 1):
+                ax = ax1.twinx()
+                if i > 1:
+                    ax.spines['right'].set_position(('outward', 60 * (i - 1)))
+                
+                line, = ax.plot(df.index, df['price'], label=name, color=color, linewidth=2)
+                ax.tick_params(axis='y', labelcolor=color)
+                second_axes.append(ax)
+                lines.append(line)
 
-        # 设置图例
-        lines_labels = [ax.get_legend_handles_labels() for ax in second_axes]
-        lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
-        ax1.legend(lines, labels, loc='upper left', prop=zh_font)
+            # 设置图例
+            lines_labels = [ax.get_legend_handles_labels() for ax in second_axes]
+            lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
+            ax1.legend(lines, labels, loc='upper left', prop=zh_font)
 
         # 设置图表标题
         plt.grid(True)

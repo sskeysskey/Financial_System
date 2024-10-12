@@ -89,9 +89,9 @@ class MainWindow(QMainWindow):
 
         html_content = ""
 
+        html_content += self.insert_results_html("Stock_symbol", matched_names_stocks_symbol, 'cyan', 16)
         html_content += self.insert_results_html("Stock_tag", matched_names_stocks_tag, 'white', 16)
         html_content += self.insert_results_html("ETF_tag", matched_names_etfs_tag, 'white', 16)
-        html_content += self.insert_results_html("Stock_symbol", matched_names_stocks_symbol, 'cyan', 16)
         html_content += self.insert_results_html("ETF_symbol", matched_names_etfs_symbol, 'cyan', 16)
         html_content += self.insert_results_html("Stock_name", matched_names_stocks_name, 'white', 16)
         html_content += self.insert_results_html("ETF_name", matched_names_etfs_name, 'white', 16)
