@@ -63,11 +63,11 @@
         "APLS": "",
         "AZN": ""
     },
-    "Crypto": {
-        "Bitcoin": "",
-        "Ether": "",
-        "Binance": "",
-        "Solana": ""
+    "Bonds": {
+        "US2Y": "",
+        "US10Y": "",
+        "JP10Y": "",
+        "IND10Y": ""
     },
     "Indices": {
         "VIX": "恐慌指数",
@@ -85,11 +85,11 @@
         "Australia": "",
         "Brazil": ""
     },
-    "Bonds": {
-        "US2Y": "",
-        "US10Y": "",
-        "JP10Y": "",
-        "IND10Y": ""
+    "Crypto": {
+        "Bitcoin": "",
+        "Ether": "",
+        "Binance": "",
+        "Solana": ""
     },
     "Commodities": {
         "CrudeOil": "",

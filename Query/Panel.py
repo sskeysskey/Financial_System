@@ -120,7 +120,7 @@ def create_selection_window():
         ['Technology', 'Energy'],
         ['Industrials', 'Consumer_Defensive', 'Utilities'],
         ['Healthcare', 'Financial_Services', 'Real_Estate'],
-        ['Bonds', 'Crypto', 'Indices'],
+        ['Crypto', 'Bonds', 'Indices'],
         ['Commodities'],
         ['Currencies', 'ETFs'],
         ['Economics', 'ETFs_US']

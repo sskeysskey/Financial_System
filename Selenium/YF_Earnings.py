@@ -1,4 +1,5 @@
 import os
+import json
 import sqlite3
 import shutil
 import subprocess
@@ -9,7 +10,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.chrome.service import Service
-import json
 
 # 文件路径
 file_path = '/Users/yanzhang/Documents/News/Earnings_Release_next.txt'
@@ -53,6 +53,18 @@ with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json',
 # 加载颜色关键词JSON文件
 with open('/Users/yanzhang/Documents/Financial_System/Modules/colors.json', 'r') as file:
     color_data = json.load(file)
+
+# 定义颜色分组与后缀的映射关系
+color_suffix_map = {
+    "white_keywords": "W",
+    "yellow_keywords": "Y",
+    "orange_keywords": "O",
+    "purple_keywords": "P",
+    "black_keywords": "B",
+    "blue_keywords": "b",
+    "green_keywords": "G",
+    "cyan_keywords": "C"  # 假设有 cyan 分组
+}
 
 # 将所有颜色关键词整合到一个集合中，排除red_keywords组别
 color_keys = set()
@@ -109,6 +121,7 @@ with open(file_path, 'a') as output_file:
                         call_time = row.find_element(By.XPATH, './/td[contains(@aria-label, "Earnings Call Time")]/span').text
                     except NoSuchElementException:
                         call_time = "No call time available"
+                    
                     if "Earnings Release" in event_name or "Shareholders Meeting" in event_name:
                         for category, symbols in data.items():
                             if symbol in symbols:
@@ -118,9 +131,17 @@ with open(file_path, 'a') as output_file:
                                 volume = volume_row[0] if volume_row else "No volume data"
                                 
                                 original_symbol = symbol  # 保留原始公司名称
-                                # 检查颜色关键词
-                                if symbol in color_keys:
-                                    symbol += ":L"
+
+                                # 检查颜色关键词并根据所在分组添加后缀
+                                suffix = ""
+                                for color_group, group_symbols in color_data.items():
+                                    if symbol in group_symbols and color_group != "red_keywords":
+                                        suffix = color_suffix_map.get(color_group, "")
+                                        break
+                                
+                                if suffix:
+                                    symbol += f":{suffix}"
+
                                 entry = f"{symbol:<7}: {volume:<10}: {formatted_change_date} - {call_time}"
                                 if original_symbol not in existing_content:
                                     output_file.write(entry + "\n")

@@ -5,11 +5,11 @@ conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
 cursor = conn.cursor()
 
 # 执行拆股操作 I ， 并保留两位小数
-# name = 'SONY'
-# price_divisor = 5
+# name = 'SCHG'
+# price_divisor = 4
 
 # cursor.execute("""
-#     UPDATE Technology 
+#     UPDATE ETFs 
 #     SET price = ROUND(price / ?, 2) 
 #     WHERE name = ?
 # """, (price_divisor, name))
