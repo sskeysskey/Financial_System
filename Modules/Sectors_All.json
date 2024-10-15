@@ -1007,7 +1007,8 @@
     "VRN",
     "TBN",
     "VIST",
-    "CNX"
+    "CNX",
+    "EXE"
   ],
   "Financial_Services": [
     "BRK-A",

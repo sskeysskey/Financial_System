@@ -117,7 +117,7 @@ def update_json(data, sector, file_path, output, log_enabled, market_cap_thresho
             if market_cap < market_cap_threshold:
                 if current_sector and symbol in json_data[current_sector]:
                     if log_enabled:
-                        message = f"'{symbol}' should be Removed from {current_sector}_{int(simplified_market_cap_threshold)}."
+                        message = f"'{symbol}' should be Removed from {current_sector} {int(simplified_market_cap_threshold)}."
                         print(message)
                         output.append(message)
             else:
@@ -126,7 +126,7 @@ def update_json(data, sector, file_path, output, log_enabled, market_cap_thresho
                     new_symbols.append((symbol, name))
                     if log_enabled:
                         # 在这里将简化后的市值门槛值加入消息
-                        message = f"Added '{symbol}' to {sector}_{int(simplified_market_cap_threshold)}."
+                        message = f"Added '{symbol}' to {sector} {int(simplified_market_cap_threshold)}."
                         print(message)
                         output.append(message)
 

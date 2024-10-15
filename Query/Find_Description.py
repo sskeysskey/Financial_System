@@ -15,7 +15,7 @@ class CustomTextBrowser(QTextBrowser):
         super().__init__(*args, **kwargs)
 
 class SearchWorker(QThread):
-    finished = pyqtSignal(str, str)
+    results_ready = pyqtSignal(object)
 
     def __init__(self, keywords, json_path):
         super().__init__()
@@ -23,7 +23,25 @@ class SearchWorker(QThread):
         self.json_path = json_path
 
     def run(self):
-        self.finished.emit(self.json_path, self.keywords)
+        # 在此方法中执行耗时的搜索操作
+        matched_names_stocks, matched_names_etfs = search_json_for_keywords(self.json_path, self.keywords)
+        (matched_names_stocks_tag, matched_names_etfs_tag, 
+        matched_names_stocks_name, matched_names_etfs_name,
+        matched_names_stocks_symbol, matched_names_etfs_symbol) = search_tag_for_keywords(self.json_path, self.keywords)
+
+        self.results = {
+            'matched_names_stocks': matched_names_stocks,
+            'matched_names_etfs': matched_names_etfs,
+            'matched_names_stocks_tag': matched_names_stocks_tag,
+            'matched_names_etfs_tag': matched_names_etfs_tag,
+            'matched_names_stocks_name': matched_names_stocks_name,
+            'matched_names_etfs_name': matched_names_etfs_name,
+            'matched_names_stocks_symbol': matched_names_stocks_symbol,
+            'matched_names_etfs_symbol': matched_names_etfs_symbol
+        }
+
+        # 发射包含结果的信号
+        self.results_ready.emit(self.results)
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -67,25 +85,33 @@ class MainWindow(QMainWindow):
 
     def start_search(self):
         keywords = self.input_field.text()
+        if not keywords.strip():
+            return  # 如果用户没有输入关键词，则不进行搜索
         self.loading_label.show()
         self.result_area.clear()
         self.result_area.setEnabled(False)
         self.search_button.setEnabled(False)
         self.input_field.setEnabled(False)
+
         self.worker = SearchWorker(keywords, json_path)
-        self.worker.finished.connect(self.show_results)
+        self.worker.results_ready.connect(self.show_results)
         self.worker.start()
 
-    def show_results(self, json_path, keywords):
+    def show_results(self, results):
         self.loading_label.hide()
         self.result_area.setEnabled(True)
         self.search_button.setEnabled(True)
         self.input_field.setEnabled(True)
-        
-        matched_names_stocks, matched_names_etfs = search_json_for_keywords(json_path, keywords)
-        (matched_names_stocks_tag, matched_names_etfs_tag, 
-        matched_names_stocks_name, matched_names_etfs_name,
-        matched_names_stocks_symbol, matched_names_etfs_symbol) = search_tag_for_keywords(json_path, keywords)
+
+        # 解包结果
+        matched_names_stocks = results['matched_names_stocks']
+        matched_names_etfs = results['matched_names_etfs']
+        matched_names_stocks_tag = results['matched_names_stocks_tag']
+        matched_names_etfs_tag = results['matched_names_etfs_tag']
+        matched_names_stocks_name = results['matched_names_stocks_name']
+        matched_names_etfs_name = results['matched_names_etfs_name']
+        matched_names_stocks_symbol = results['matched_names_stocks_symbol']
+        matched_names_etfs_symbol = results['matched_names_etfs_symbol']
 
         html_content = ""
 
@@ -178,15 +204,15 @@ def search_tag_for_keywords(json_path, keywords, max_distance=1):
         exact_results = [
             (item['symbol'], item.get('name', ''), ' '.join(item.get('tag', []))) if category == 'stocks' else (item['symbol'], ' '.join(item.get('tag', [])))
             for item in data.get(category, [])
-            if all(keyword in item[search_field].lower() for keyword in keywords_lower)
+            if all(keyword in item.get(search_field, '').lower() for keyword in keywords_lower)
         ]
         if exact_results:
             return exact_results
-        
+
         return [
             (item['symbol'], item.get('name', ''), ' '.join(item.get('tag', []))) if category == 'stocks' else (item['symbol'], ' '.join(item.get('tag', [])))
             for item in data.get(category, [])
-            if all(fuzzy_match(item[search_field], keyword) for keyword in keywords_lower)
+            if all(fuzzy_match(item.get(search_field, ''), keyword) for keyword in keywords_lower)
         ]
 
     def search_category_for_tag(category):
@@ -204,7 +230,7 @@ def search_tag_for_keywords(json_path, keywords, max_distance=1):
         ]
         if exact_results:
             return sorted(exact_results, key=match_score, reverse=True)
-        
+
         return [
             (item['symbol'], item.get('name', ''), ' '.join(item.get('tag', []))) if category == 'stocks' else (item['symbol'], ' '.join(item.get('tag', [])))
             for item in data.get(category, [])
@@ -240,14 +266,14 @@ def get_latest_etf_volume(etf_name):
     db_path = "/Users/yanzhang/Documents/Database/Finance.db"
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-    
+
     # 查询最新的 volume
     cursor.execute("SELECT volume FROM ETFs WHERE name = ? ORDER BY date DESC LIMIT 1", (etf_name,))
     result = cursor.fetchone()
-    
+
     conn.close()
-    
-    if result:
+
+    if result and result[0] is not None:
         volume = result[0]
         # 将 volume 转换为 K 单位并返回
         return f"{int(volume / 1000)}K"
@@ -257,7 +283,7 @@ def get_latest_etf_volume(etf_name):
 if __name__ == "__main__":
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
-    
+
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
@@ -276,6 +302,7 @@ if __name__ == "__main__":
             else:
                 print("剪贴板为空，请复制一些文本后再试。")
     else:
-        print("请提供参数 input 或 paste")
+        # 如果没有提供参数，则仅显示窗口，让用户手动输入
+        pass
 
     sys.exit(app.exec_())
