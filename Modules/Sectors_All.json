@@ -622,7 +622,8 @@
     "ASH",
     "BCPC",
     "SSL",
-    "KNF"
+    "KNF",
+    "SMG"
   ],
   "Communication_Services": [
     "GOOGL",
@@ -973,7 +974,6 @@
     "PR",
     "PAA",
     "FTI",
-    "CHK",
     "APA",
     "YPF",
     "DINO",
@@ -1367,7 +1367,8 @@
     "AVTR",
     "OSCR",
     "RDNT",
-    "BHVN"
+    "BHVN",
+    "CRNX"
   ],
   "Industrials": [
     "GE",

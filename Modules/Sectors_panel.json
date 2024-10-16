@@ -13,21 +13,26 @@
         "STLA": "",
         "MNSO": "",
         "ALV": "",
-        "LKQ": ""
+        "LKQ": "",
+        "DOOO": ""
     },
     "Energy": {
         "PBF": "石油精炼",
         "CHRD": "",
         "VAL": "",
         "EQNR": "",
-        "WFRD": ""
+        "WFRD": "",
+        "MPC": "",
+        "DINO": "",
+        "NE": ""
     },
     "Technology": {
         "SNOW": "",
         "STM": "意法",
         "INTC": "",
         "QLYS": "",
-        "ADBE": ""
+        "ADBE": "",
+        "ASML": ""
     },
     "Utilities": {
         "NFE": ""
@@ -61,7 +66,9 @@
         "ZBH": "",
         "ACHC": "",
         "APLS": "",
-        "AZN": ""
+        "AZN": "",
+        "UNH": "",
+        "ELV": ""
     },
     "Bonds": {
         "US2Y": "",

@@ -7,7 +7,9 @@
         "REGN",
         "INTU",
         "AZN",
-        "PLD"
+        "PLD",
+        "MPC",
+        "ASML"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -190,7 +192,9 @@
         "ZBH",
         "RTO",
         "EC",
-        "VAL"
+        "VAL",
+        "DOOO",
+        "ALGM"
     ],
     "orange_keywords": [
         "NASDAQ",
