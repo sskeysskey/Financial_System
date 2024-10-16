@@ -4,9 +4,20 @@ import os
 import pyperclip
 import subprocess
 from time import sleep
+from decimal import Decimal  # 引入Decimal模块
 
-# 过滤掉的tags集合
-excluded_tags = {}
+# 按权重分组的标签字典
+weight_groups = {
+    Decimal('0.2'): ['美国', '英国', '加拿大', '中国', '以色列', '瑞士', '德国', '法国', '日本', '印度'],
+    Decimal('1.5'): ['保险', '医疗', '医院', '飞机'],
+    Decimal('2.0'): ['医疗保险', '医院运营', '关节置换', "飞机制造"]
+}
+
+# 动态生成标签权重配置表
+tags_weight_config = {tag: weight for weight, tags in weight_groups.items() for tag in tags}
+
+# 默认权重
+DEFAULT_WEIGHT = Decimal('1')
 
 def copy2clipboard():
     script = '''
@@ -18,43 +29,87 @@ def copy2clipboard():
     subprocess.run(['osascript', '-e', script], check=True)
 
 def find_tags_by_symbol(symbol, data):
+    tags_with_weight = []
     # 遍历stocks和etfs，找到匹配的symbol并返回其tags
     for category in ['stocks', 'etfs']:
         for item in data[category]:
             if item['symbol'] == symbol:
-                # 过滤掉不需要的tags
-                return [tag for tag in item['tag'] if tag not in excluded_tags]
+                for tag in item['tag']:
+                    # 从tags_weight_config中获取权重，找不到则使用默认权重
+                    weight = tags_weight_config.get(tag, DEFAULT_WEIGHT)
+                    tags_with_weight.append((tag, weight))
+                return tags_with_weight
     return []
 
-def find_symbols_by_tags(target_tags, data):
+def find_symbols_by_tags(target_tags_with_weight, data):
     related_symbols = {'stocks': [], 'etfs': []}
-    # 将目标标签转换为小写，用于后续比较
-    target_tags_set = set(tag.lower() for tag in target_tags)
-    
+
+    # 创建一个目标标签字典，键为小写标签，值为权重
+    target_tags_dict = {tag.lower(): weight for tag, weight in target_tags_with_weight}
+
     for category in ['stocks', 'etfs']:
         for item in data[category]:
             tags = item.get('tag', [])
-            matched_tags = [tag for tag in tags if tag.lower() in target_tags_set]
-            
-            if len(matched_tags) >= 1:
+            matched_tags = []
+            used_tags = set()  # 用于记录已经匹配过的标签（无论是完全匹配还是部分匹配）
+
+            # 第一阶段：处理完全匹配
+            for tag in tags:
+                tag_lower = tag.lower()
+                if tag_lower in target_tags_dict and tag_lower not in used_tags:
+                    matched_tags.append((tag, target_tags_dict[tag_lower]))
+                    used_tags.add(tag_lower)  # 标记该标签已被完全匹配
+
+            # 第二阶段：处理部分匹配，仅针对未被完全匹配的标签
+            for tag in tags:
+                tag_lower = tag.lower()
+                if tag_lower in used_tags:
+                    continue  # 跳过已被完全匹配的标签
+                for target_tag, target_weight in target_tags_dict.items():
+                    # 只有当目标tag包含源tag并且目标tag的长度大于等于源tag时才算部分匹配
+                    if target_tag in tag_lower and len(tag_lower) >= len(target_tag):
+                        if target_tag not in used_tags:
+                            matched_tags.append((tag, target_weight))
+                            used_tags.add(target_tag)  # 标记该部分匹配的标签避免重复计数
+                        break  # 每个标签只匹配一次
+
+            if matched_tags:
                 related_symbols[category].append((item['symbol'], matched_tags, tags))
-    
-    # 对每个类别的结果按匹配标签数量降序排序
+
+    # 按总权重降序排序
     for category in related_symbols:
-        related_symbols[category].sort(key=lambda x: len(x[1]), reverse=True)
-    
+        related_symbols[category].sort(
+            key=lambda x: sum(weight for _, weight in x[1]),
+            reverse=True
+        )
+
     return related_symbols
 
-def main(symbol):
-    # 找到给定symbol的tags
-    target_tags = find_tags_by_symbol(symbol, data)
-    output_lines = [f"Tags for {symbol}: {target_tags}"]
+def load_compare_data(file_path):
+    compare_data = {}
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+        for line in lines:
+            if ':' in line:
+                sym, value = line.split(':', 1)
+                compare_data[sym.strip()] = value.strip()
+    return compare_data
 
-    if not target_tags:
+def main(symbol):
+    # 加载compare_all文件中的数据
+    compare_data = load_compare_data('/Users/yanzhang/Documents/News/backup/Compare_All.txt')
+    
+    # 找到给定symbol的tags及其权重
+    target_tags_with_weight = find_tags_by_symbol(symbol, data)
+    
+    # 将 Decimal 转换为浮点数并生成输出
+    output_lines = [f"Tags with weight for {symbol}: {[(tag, float(weight)) for tag, weight in target_tags_with_weight]}"]
+
+    if not target_tags_with_weight:
         output_lines.append("No tags found for the given symbol.\n")
     else:
         # 找到所有与这些tags模糊匹配的symbols和tags
-        related_symbols = find_symbols_by_tags(target_tags, data)
+        related_symbols = find_symbols_by_tags(target_tags_with_weight, data)
     
         # 移除原始symbol以避免自引用
         related_symbols['stocks'] = [item for item in related_symbols['stocks'] if item[0] != symbol]
@@ -65,15 +120,18 @@ def main(symbol):
         # 添加stocks结果
         output_lines.append("\n【Stocks】\n")
         for sym, matched_tags, all_tags in related_symbols['stocks']:
-            output_lines.append(f"{sym:<7}{len(matched_tags):<3} {all_tags}\n")
+            compare_value = compare_data.get(sym, '')
+            total_weight = round(sum(float(weight) for _, weight in matched_tags), 2)  # 转换为浮点数并舍入
+            output_lines.append(f"{sym:<7}{total_weight:<3} {compare_value:<12}{all_tags}\n")
         
         # 添加etfs结果并加标题
         if related_symbols['etfs']:
             output_lines.append("\n【ETFs】\n")
             for sym, matched_tags, all_tags in related_symbols['etfs']:
-                output_lines.append(f"{sym:<7}{len(matched_tags):<3} {all_tags}\n")
-
-    # 写入文件
+                compare_value = compare_data.get(sym, '')
+                total_weight = round(sum(float(weight) for _, weight in matched_tags), 2)  # 转换为浮点数并舍入
+                output_lines.append(f"{sym:<7}{total_weight:<3} {compare_value:<10}{all_tags}\n")
+    
     output_path = '/Users/yanzhang/Documents/News/similar.txt'
     with open(output_path, 'w') as file:
         file.writelines(output_lines)
