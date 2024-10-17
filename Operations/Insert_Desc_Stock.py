@@ -148,6 +148,13 @@ def main():
 
     new_description2 = read_clipboard().replace('\n', ' ').replace('\r', ' ')
     
+    # **新增逻辑：比较new_description1和new_description2**
+    if new_description1 == new_description2:
+        print("new_description1 和 new_description2 一致，将 new_description2 置为空。")
+        new_description2 = ""  # 如果一致，将new_description2置为空
+    else:
+        print("new_description1 和 new_description2 不一致，继续执行原逻辑。")
+
     if "ETF" in new_description1 and "ETF" in new_description2:
         # AppleScript代码
         applescript_code = 'display dialog "要添加的好像是ETF而不是Stock" buttons {"OK"} default button "OK"'

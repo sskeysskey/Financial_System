@@ -24,7 +24,8 @@
         "WFRD": "",
         "MPC": "",
         "DINO": "",
-        "NE": ""
+        "NE": "",
+        "TTE": ""
     },
     "Technology": {
         "SNOW": "",
@@ -32,7 +33,8 @@
         "INTC": "",
         "QLYS": "",
         "ADBE": "",
-        "ASML": ""
+        "ASML": "",
+        "KLAC": ""
     },
     "Utilities": {
         "NFE": ""

@@ -70,21 +70,25 @@ data_sets = {
     'Commodities': [
         # ('2024-03-12', 'Crude Oil', 77.25),
         # ('2024-03-05', 'Natural gas', 2.095),
-        #  ('2024-05-09', 'Silver', 28.132),
+        # ('2024-05-09', 'Silver', 28.132),
     ],
     'Economics': [
         # ('2017-08-10', 'USGDP', 2.3),
         # ('2024-09-11', 'CoreCPI', 3.2),
-        #  ('2015-12-15', 'USInterest', 0.25),
-        #  ('2024-04-20', 'USNonFarm', 315.0),
-        #  ('2024-04-04', 'USTrade', -69.46),
-        #  ('2024-04-26', 'CorePCEY', 2.8),
-        #  ('2024-06-13', 'USPPI', 2.2)
+        # ('2015-12-15', 'USInterest', 0.25),
+        # ('2024-04-20', 'USNonFarm', 315.0),
+        # ('2024-04-04', 'USTrade', -69.46),
+        # ('2024-04-26', 'CorePCEY', 2.8),
+        # ('2024-06-13', 'USPPI', 2.2)
         # ('2024-06-18', 'USRetailM', 0.3),
         # ('2024-07-05', 'USUnemploy', 4.1),
     ],
     'ETFs': [
         # ('2024-08-13', 'DGZ', 8.83, 100),
+        # ('2024-07-11', 'CoreCPI', 3.3)
+    ],
+    'Basic_Materials': [
+        # ('2024-10-16', 'NUE', 154.27, 0),
         # ('2024-07-11', 'CoreCPI', 3.3)
     ]
 }
@@ -98,6 +102,7 @@ databases = [
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Bonds', 'columns': ['date', 'name', 'price']},
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Economics', 'columns': ['date', 'name', 'price']},
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'ETFs', 'columns': ['date', 'name', 'price', 'volume']},
+    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Basic_Materials', 'columns': ['date', 'name', 'price', 'volume']},
 ]
 
 # 对每个数据库执行数据插入操作

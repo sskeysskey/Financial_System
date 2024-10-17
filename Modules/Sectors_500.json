@@ -158,7 +158,8 @@
     "ALL",
     "CM",
     "ARES",
-    "AMP"
+    "AMP",
+    "COIN"
   ],
   "Healthcare": [
     "LLY",
@@ -301,6 +302,7 @@
     "CEG",
     "AEP",
     "SRE",
-    "PCG"
+    "PCG",
+    "D"
   ]
 }

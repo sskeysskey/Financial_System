@@ -1162,7 +1162,9 @@
     "BNT",
     "VIRT",
     "CEF",
-    "QFIN"
+    "QFIN",
+    "CNS",
+    "MC"
   ],
   "Healthcare": [
     "LLY",
@@ -1314,7 +1316,8 @@
     "OSCR",
     "RDNT",
     "BHVN",
-    "CRNX"
+    "CRNX",
+    "ACLX"
   ],
   "Industrials": [
     "GE",
@@ -1502,7 +1505,8 @@
     "LTM",
     "SNDR",
     "BCO",
-    "SARO"
+    "SARO",
+    "STRL"
   ],
   "Real_Estate": [
     "PLD",
@@ -1787,7 +1791,8 @@
     "ACIW",
     "OS",
     "CLVT",
-    "TSEM"
+    "TSEM",
+    "YOU"
   ],
   "Utilities": [
     "NEE",
