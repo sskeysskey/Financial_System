@@ -26,8 +26,7 @@ def load_blacklist_newlow(file_path):
 def create_output_files():
     """创建两个输出文件并返回文件路径"""
     output_dirs = [
-        '/Users/yanzhang/Documents/News/backup/backup',
-        '/Users/yanzhang/Documents/News'
+        '/Users/yanzhang/Documents/News/backup/backup'
     ]
     timestamp = datetime.now().strftime("%y%m%d")
     file_name = f"NewLow500_{timestamp}.txt"
@@ -93,6 +92,14 @@ def update_json_data(config_path, updates, blacklist_newlow):
                 if symbol not in data[category] and symbol not in blacklist_newlow:
                     data[category][symbol] = ""  # 使用新格式写入
                     print(f"将symbol '{symbol}' 添加到Panel文件的类别 '{category}' 中")
+
+                    # 将symbol和category写入文件
+                    timestamp = datetime.now().strftime("%y%m%d")
+                    file_path = f"/Users/yanzhang/Documents/News/NewLow500_{timestamp}.txt"
+                    
+                    with open(file_path, 'a', encoding='utf-8') as f:
+                        f.write(f"{category} {symbol}\n")
+
                 elif symbol in data[category]:
                     print(f"'{symbol}' 已存在于Panel文件的类别 '{category}' 中，跳过")
                 else:
