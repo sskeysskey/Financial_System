@@ -1,9 +1,7 @@
 {
     "Basic_Materials": {
         "MOS": "美盛化肥",
-        "ALTM": "",
-        "VALE": "",
-        "CLF": ""
+        "VALE": ""
     },
     "Communication_Services": {
         "DJT": ""
@@ -13,7 +11,6 @@
         "STLA": "",
         "MNSO": "",
         "ALV": "",
-        "LKQ": "",
         "DOOO": ""
     },
     "Energy": {
@@ -21,20 +18,19 @@
         "CHRD": "",
         "VAL": "",
         "EQNR": "",
-        "WFRD": "",
         "MPC": "",
         "DINO": "",
-        "NE": "",
-        "TTE": ""
+        "NE": ""
     },
     "Technology": {
         "SNOW": "",
         "STM": "意法",
         "INTC": "",
         "QLYS": "",
-        "ADBE": "",
         "ASML": "",
-        "KLAC": ""
+        "KLAC": "",
+        "LRCX": "",
+        "ACLS": ""
     },
     "Utilities": {
         "NFE": ""
@@ -46,13 +42,10 @@
     "Industrials": {
         "ATKR": "",
         "BA": "波音",
-        "RTO": "",
-        "SARO": "",
-        "HXL": ""
+        "RTO": ""
     },
     "Real_Estate": {
-        "LINE": "",
-        "PLD": ""
+        "LINE": ""
     },
     "Financial_Services": {},
     "Healthcare": {
@@ -60,17 +53,12 @@
         "MRNA": "",
         "NVO": "",
         "GMAB": "",
-        "MCK": "",
         "BIIB": "",
         "HUM": "",
-        "REGN": "",
         "MRK": "",
-        "ZBH": "",
-        "ACHC": "",
-        "APLS": "",
         "AZN": "",
-        "UNH": "",
-        "ELV": ""
+        "ELV": "",
+        "CNC": ""
     },
     "Bonds": {
         "US2Y": "",

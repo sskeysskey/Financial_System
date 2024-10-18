@@ -10,7 +10,8 @@
         "PLD",
         "MPC",
         "ASML",
-        "KLAC"
+        "KLAC",
+        "LRCX"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -118,7 +119,9 @@
         "APLS",
         "ALV",
         "WFRD",
-        "VRN"
+        "VRN",
+        "CNC",
+        "ACLS"
     ],
     "yellow_keywords": [
         "Nikkei",

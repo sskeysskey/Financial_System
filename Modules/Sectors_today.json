@@ -1158,7 +1158,6 @@
     "TRU",
     "UMBF",
     "THG",
-    "GAB-PG",
     "BNT",
     "VIRT",
     "CEF",
@@ -1573,7 +1572,8 @@
     "KRG",
     "LINE",
     "EPR-PG",
-    "PECO"
+    "PECO",
+    "KRC"
   ],
   "Technology": [
     "MSFT",
