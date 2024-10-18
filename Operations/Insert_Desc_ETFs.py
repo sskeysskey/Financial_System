@@ -171,6 +171,13 @@ def main():
         find_and_click("kimicopy") or find_and_click("xinghuocopy")
 
     new_description2 = read_clipboard().replace('\n', ' ').replace('\r', ' ')
+
+    # **新增逻辑：比较new_description1和new_description2**
+    if new_description1 == new_description2:
+        print("new_description1 和 new_description2 一致，将 new_description2 置为空。")
+        new_description2 = ""  # 如果一致，将new_description2置为空
+    else:
+        print("new_description1 和 new_description2 不一致，继续执行原逻辑。")
     
     root = tk.Tk()
     root.title("Add ETF")

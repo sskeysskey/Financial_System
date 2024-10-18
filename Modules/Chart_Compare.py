@@ -29,7 +29,7 @@ class StockComparisonApp(QWidget):
         self.start_date_edit = QDateEdit(self)
         self.start_date_edit.setFont(QFont('Arial', 12))
         self.start_date_edit.setCalendarPopup(True)
-        self.start_date_edit.setDate(QDate(2024, 1, 1))  # 默认开始日期
+        self.start_date_edit.setDate(QDate(2019, 1, 1))  # 默认开始日期
         # self.layout.addWidget(QLabel('选择开始日期:', self))
         self.layout.addWidget(self.start_date_edit)
 
@@ -63,6 +63,10 @@ class StockComparisonApp(QWidget):
 
         # 设置布局
         self.setLayout(self.layout)
+
+        # 设置焦点到第一个symbol输入框
+        self.symbol_inputs[0].setFocus()
+
         self.show()
 
     def add_symbol_input(self):
@@ -74,6 +78,9 @@ class StockComparisonApp(QWidget):
             symbol_input.returnPressed.connect(self.compare_stocks)
             self.layout.addWidget(symbol_input, len(self.symbol_inputs) + 1)
             self.symbol_inputs.append(symbol_input)
+
+            # 设置焦点到新添加的输入框
+            self.symbol_inputs[-1].setFocus()
         else:
             self.label.setText(f'最多只能添加 {self.max_symbols} 个股票代码')
             self.label.setStyleSheet('color: red')
