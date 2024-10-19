@@ -96,7 +96,6 @@
         "W",
         "GTLS",
         "TNET",
-        "NE",
         "CHRD",
         "TM",
         "SLB",
@@ -121,7 +120,8 @@
         "WFRD",
         "VRN",
         "CNC",
-        "ACLS"
+        "ACLS",
+        "ELV"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -198,7 +198,8 @@
         "EC",
         "VAL",
         "DOOO",
-        "ALGM"
+        "ALGM",
+        "NE"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -264,7 +265,6 @@
         "EQNR",
         "TTE",
         "MRK",
-        "ELV",
         "GSK"
     ],
     "red_keywords": [

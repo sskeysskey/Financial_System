@@ -177,11 +177,11 @@ def load_stock_splits(file_path):
                     symbol = line.split(':')[0]  # 提取冒号前面的symbol
                     stock_splits_symbols.add(symbol.strip())
     except Exception as e:
-        error_message = f"读取文件 {file_path} 时发生错误: {e}"
         print(error_message)
-        formatted_error_message = log_error_with_timestamp(error_message)
-        with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
-            error_file.write(formatted_error_message)
+        # error_message = f"读取文件 {file_path} 时发生错误: {e}"
+        # formatted_error_message = log_error_with_timestamp(error_message)
+        # with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+        #     error_file.write(formatted_error_message)
     return stock_splits_symbols
 
 def main():    

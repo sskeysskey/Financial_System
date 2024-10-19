@@ -328,7 +328,6 @@
     "COWZ",
     "LVHI",
     "BIZD",
-    "XSMO",
     "QGRO",
     "IHDG",
     "IOO",
@@ -361,10 +360,7 @@
     "FLQM",
     "TDTT",
     "SLYV",
-    "OMFS",
-    "SLYG",
     "VOE",
-    "SMLF",
     "IEO",
     "HEDJ",
     "IJS",
@@ -437,7 +433,6 @@
     "VWOB",
     "TMF",
     "RWJ",
-    "ISMD",
     "OUSM",
     "BOCT",
     "POCT",
@@ -550,7 +545,8 @@
     "AGQ",
     "BOIL",
     "KWEB",
-    "IQIN"
+    "IQIN",
+    "DSTL"
   ],
   "Basic_Materials": [
     "LIN",
@@ -1010,7 +1006,8 @@
     "TBN",
     "VIST",
     "CNX",
-    "EXE"
+    "EXE",
+    "SOBO"
   ],
   "Financial_Services": [
     "BRK-A",
@@ -1561,7 +1558,8 @@
     "SNDR",
     "BCO",
     "SARO",
-    "STRL"
+    "STRL",
+    "AMTM"
   ],
   "Real_Estate": [
     "PLD",
@@ -1629,7 +1627,8 @@
     "LINE",
     "EPR-PG",
     "PECO",
-    "KRC"
+    "KRC",
+    "SLG"
   ],
   "Technology": [
     "MSFT",
@@ -1817,7 +1816,6 @@
     "QLYS",
     "SMAR",
     "TENB",
-    "SQSP",
     "EEFT",
     "PEGA",
     "ALGM",
