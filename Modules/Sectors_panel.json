@@ -142,8 +142,8 @@
         "EURUSD": ""
     },
     "Economics": {
-        "USRetailM": "17 USRetailM",
-        "USInitial": "17 USInitial"
+        "USInitial": "24 USInitial",
+        "USConfidence": "25 USConfidence"
     },
     "ETFs_US": {
         "TLT": "",

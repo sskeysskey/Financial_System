@@ -93,6 +93,7 @@ class MainWindow(QMainWindow):
         self.search_button.setEnabled(False)
         self.input_field.setEnabled(False)
 
+        # 传递是否有空格的信息
         self.worker = SearchWorker(keywords, json_path)
         self.worker.results_ready.connect(self.show_results)
         self.worker.start()
@@ -115,11 +116,23 @@ class MainWindow(QMainWindow):
 
         html_content = ""
 
-        html_content += self.insert_results_html("Stock_symbol", matched_names_stocks_symbol, 'cyan', 16)
-        html_content += self.insert_results_html("Stock_tag", matched_names_stocks_tag, 'white', 16)
-        html_content += self.insert_results_html("ETF_tag", matched_names_etfs_tag, 'white', 16)
-        html_content += self.insert_results_html("ETF_symbol", matched_names_etfs_symbol, 'cyan', 16)
-        html_content += self.insert_results_html("Stock_name", matched_names_stocks_name, 'white', 16)
+        # 判断关键词是否含有空格
+        keywords = self.input_field.text()
+        if " " in keywords:
+            # 有空格时，优先展示 stock_name 和 stock_tag
+            html_content += self.insert_results_html("Stock_name", matched_names_stocks_name, 'white', 16)
+            html_content += self.insert_results_html("Stock_tag", matched_names_stocks_tag, 'white', 16)
+            html_content += self.insert_results_html("ETF_tag", matched_names_etfs_tag, 'white', 16)
+            html_content += self.insert_results_html("Stock_symbol", matched_names_stocks_symbol, 'cyan', 16)
+            html_content += self.insert_results_html("ETF_symbol", matched_names_etfs_symbol, 'cyan', 16)  
+        else:
+            # 无空格时，优先展示 stock_symbol
+            html_content += self.insert_results_html("Stock_symbol", matched_names_stocks_symbol, 'cyan', 16)
+            html_content += self.insert_results_html("ETF_symbol", matched_names_etfs_symbol, 'cyan', 16)  
+            html_content += self.insert_results_html("Stock_tag", matched_names_stocks_tag, 'white', 16)
+            html_content += self.insert_results_html("ETF_tag", matched_names_etfs_tag, 'white', 16)
+            html_content += self.insert_results_html("Stock_name", matched_names_stocks_name, 'white', 16)
+
         html_content += self.insert_results_html("ETF_name", matched_names_etfs_name, 'white', 16)
         html_content += self.insert_results_html("Stock_Description", matched_names_stocks, 'gray', 16)
         html_content += self.insert_results_html("ETFs_Description", matched_names_etfs, 'gray', 16)
