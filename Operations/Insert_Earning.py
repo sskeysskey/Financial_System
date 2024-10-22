@@ -1,7 +1,7 @@
 import sqlite3
 import pyperclip
 import datetime
-import re
+import json
 import subprocess
 
 def Copy_Command_C():
@@ -13,26 +13,31 @@ def Copy_Command_C():
     # 运行AppleScript
     subprocess.run(['osascript', '-e', script])
 
-def get_stock_data(file_path):
-    with open(file_path, 'r', encoding='utf-8') as file:
-        return file.read()
-
-def parse_stock_data(content, stock_name):
-    pattern = rf'{re.escape(stock_name)}.*?:\s*([-]?\d+\.\d+)%'
-    match = re.search(pattern, content)
-    if match:
-        return float(match.group(1))
+def get_table_name_from_symbol(symbol, json_file_path):
+    with open(json_file_path, 'r', encoding='utf-8') as file:
+        sectors_data = json.load(file)
+    
+    for table_name, symbols in sectors_data.items():
+        if symbol in symbols:
+            return table_name
     return None
 
-# def parse_stock_data(content, stock_name):
-#     # 修改正则表达式以匹配百分号
-#     pattern = rf'{re.escape(stock_name)}\.10\.\*\.-\s*:\s*([-]?\d+\.\d+%?)' 
-#     match = re.search(pattern, content)
-#     if match:
-#         # 去除百分号并转换为浮点数
-#         return float(match.group(1).rstrip('%')) 
-#     else:
-#         return None
+def get_last_two_prices(cursor, table_name, name):
+    query = f"""
+        SELECT date, price FROM {table_name}
+        WHERE name = ?
+        ORDER BY date DESC
+        LIMIT 2
+    """
+    cursor.execute(query, (name,))
+    return cursor.fetchall()
+
+def calculate_percentage_change(latest_price, previous_price):
+    if previous_price == 0:
+        return 0  # 避免除以零
+    # 计算百分比变化并保留两位小数
+    percentage_change = (latest_price - previous_price) / previous_price * 100
+    return round(percentage_change, 2)
 
 def check_last_record_date(cursor, name, current_date):
     cursor.execute("""
@@ -89,24 +94,36 @@ def insert_data(db_path, date, name, price):
 
 def main():
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
-    file_path = '/Users/yanzhang/Documents/News/CompareStock.txt'
+    json_file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
     
     Copy_Command_C()
-    # 从剪贴板获取股票名称
-    stock_name = pyperclip.paste().strip()
+    stock_name = pyperclip.paste().strip()  # 从剪贴板获取symbol
     
-    # 获取昨天的日期
-    yesterday = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+    table_name = get_table_name_from_symbol(stock_name, json_file_path)
+    if not table_name:
+        show_alert(f"无法找到 {stock_name} 所属的表")
+        return
     
-    # 读取并解析股票数据
-    content = get_stock_data(file_path)
-    price = parse_stock_data(content, stock_name)
-    
-    if price is not None:
-        # 尝试插入数据到数据库
-        insert_data(db_path, yesterday, stock_name, price)
-    else:
-        show_alert(f"无法找到 {stock_name} 的数据")
+    with sqlite3.connect(db_path) as conn:
+        cursor = conn.cursor()
+        
+        # 获取该symbol的最新两条价格记录
+        records = get_last_two_prices(cursor, table_name, stock_name)
+        if len(records) < 2:
+            show_alert(f"{stock_name} 没有足够的价格数据来计算变化")
+            return
+        
+        latest_price = records[0][1]
+        previous_price = records[1][1]
+        
+        # 计算百分比变化
+        percentage_change = calculate_percentage_change(latest_price, previous_price)
+        
+        # 获取昨天的日期
+        yesterday = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+        
+        # 尝试将数据插入到Earning表
+        insert_data(db_path, yesterday, stock_name, percentage_change)
 
 if __name__ == "__main__":
     main()

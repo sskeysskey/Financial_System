@@ -546,7 +546,8 @@
     "BOIL",
     "KWEB",
     "IQIN",
-    "DSTL"
+    "DSTL",
+    "SLYG"
   ],
   "Basic_Materials": [
     "LIN",
@@ -1603,7 +1604,6 @@
     "CUBE",
     "BXP",
     "JLL",
-    "AGNCM",
     "FRT",
     "EGP",
     "OHI",
