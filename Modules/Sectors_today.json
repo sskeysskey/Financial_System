@@ -630,7 +630,8 @@
     "USM",
     "DJT",
     "LUMN",
-    "MSGS"
+    "MSGS",
+    "NBIS"
   ],
   "Consumer_Cyclical": [
     "AMZN",
@@ -1792,7 +1793,8 @@
     "OS",
     "CLVT",
     "TSEM",
-    "YOU"
+    "YOU",
+    "QTWO"
   ],
   "Utilities": [
     "NEE",

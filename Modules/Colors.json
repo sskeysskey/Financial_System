@@ -11,7 +11,8 @@
         "MPC",
         "ASML",
         "KLAC",
-        "LRCX"
+        "LRCX",
+        "CI"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -23,7 +24,8 @@
         "DXJ",
         "SCHD",
         "NVO",
-        "LLY"
+        "LLY",
+        "SONY"
     ],
     "purple_keywords": [
         "Bitcoin",
@@ -40,7 +42,6 @@
         "PPG",
         "ROKU",
         "NTES",
-        "STLA",
         "PBF",
         "JBL",
         "ABNB",
@@ -119,9 +120,9 @@
         "ALV",
         "WFRD",
         "VRN",
-        "CNC",
         "ACLS",
-        "ELV"
+        "ELV",
+        "NXT"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -199,7 +200,10 @@
         "VAL",
         "DOOO",
         "ALGM",
-        "NE"
+        "NE",
+        "STLA",
+        "MTN",
+        "CNC"
     ],
     "orange_keywords": [
         "NASDAQ",

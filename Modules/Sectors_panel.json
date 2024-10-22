@@ -30,7 +30,9 @@
         "ASML": "",
         "KLAC": "",
         "LRCX": "",
-        "ACLS": ""
+        "ACLS": "",
+        "SONY": "",
+        "NXT": ""
     },
     "Utilities": {
         "NFE": ""
@@ -42,10 +44,12 @@
     "Industrials": {
         "ATKR": "",
         "BA": "波音",
-        "RTO": ""
+        "RTO": "",
+        "TNET": ""
     },
     "Real_Estate": {
-        "LINE": ""
+        "LINE": "",
+        "PLD": ""
     },
     "Financial_Services": {},
     "Healthcare": {
@@ -60,7 +64,8 @@
         "ELV": "",
         "CNC": "",
         "REGN": "",
-        "ACHC": ""
+        "ACHC": "",
+        "CI": ""
     },
     "Bonds": {
         "US2Y": "",
