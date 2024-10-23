@@ -12,7 +12,8 @@
         "ASML",
         "KLAC",
         "LRCX",
-        "CI"
+        "CI",
+        "DHR"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -122,7 +123,8 @@
         "VRN",
         "ACLS",
         "ELV",
-        "NXT"
+        "NXT",
+        "MOH"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -203,7 +205,9 @@
         "NE",
         "STLA",
         "MTN",
-        "CNC"
+        "CNC",
+        "SSL",
+        "GPC"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -221,7 +225,8 @@
         "BIO",
         "EL",
         "DG",
-        "DLTR"
+        "DLTR",
+        "NBIS"
     ],
     "black_keywords": [
         "Cotton",

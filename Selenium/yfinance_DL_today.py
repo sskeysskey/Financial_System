@@ -3,12 +3,41 @@ import sqlite3
 import json
 from datetime import datetime, timedelta
 import traceback  # 用于获取完整的错误信息
+import pyautogui
+import random
+import time
+import threading
+
+# 添加鼠标移动功能的函数
+def move_mouse_periodically():
+    while True:
+        try:
+            # 获取屏幕尺寸
+            screen_width, screen_height = pyautogui.size()
+            
+            # 随机生成目标位置，避免移动到屏幕边缘
+            x = random.randint(100, screen_width - 100)
+            y = random.randint(100, screen_height - 100)
+            
+            # 缓慢移动鼠标到随机位置
+            pyautogui.moveTo(x, y, duration=1)
+            
+            # 等待30-60秒再次移动
+            time.sleep(random.randint(30, 60))
+            
+        except Exception as e:
+            print(f"鼠标移动出错: {str(e)}")
+            time.sleep(60)
 
 def log_error_with_timestamp(error_message):
     # 获取当前日期和时间
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
     # 在错误信息前加入时间戳
     return f"[{timestamp}] {error_message}\n"
+
+# 在主程序开始前启动鼠标移动线程
+mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
+mouse_thread.start()
 
 now = datetime.now()
 # 判断今天的星期数，如果是周日(6)或周一(0)，则不执行程序

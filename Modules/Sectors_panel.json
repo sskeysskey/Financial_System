@@ -1,17 +1,21 @@
 {
     "Basic_Materials": {
         "MOS": "美盛化肥",
-        "VALE": ""
+        "VALE": "",
+        "SSL": ""
     },
     "Communication_Services": {
-        "DJT": ""
+        "DJT": "",
+        "NBIS": ""
     },
     "Consumer_Cyclical": {
         "MBLY": "",
         "STLA": "",
         "MNSO": "",
         "ALV": "",
-        "DOOO": ""
+        "DOOO": "",
+        "GPC": "",
+        "LKQ": ""
     },
     "Energy": {
         "PBF": "石油精炼",
@@ -20,7 +24,9 @@
         "EQNR": "",
         "MPC": "",
         "DINO": "",
-        "NE": ""
+        "NE": "",
+        "WFRD": "",
+        "TBN": ""
     },
     "Technology": {
         "SNOW": "",
@@ -31,8 +37,8 @@
         "KLAC": "",
         "LRCX": "",
         "ACLS": "",
-        "SONY": "",
-        "NXT": ""
+        "NXT": "",
+        "SONY": ""
     },
     "Utilities": {
         "NFE": ""
@@ -47,10 +53,7 @@
         "RTO": "",
         "TNET": ""
     },
-    "Real_Estate": {
-        "LINE": "",
-        "PLD": ""
-    },
+    "Real_Estate": {},
     "Financial_Services": {},
     "Healthcare": {
         "DXCM": "德康血糖",
@@ -60,12 +63,14 @@
         "BIIB": "",
         "HUM": "",
         "MRK": "",
-        "AZN": "",
         "ELV": "",
         "CNC": "",
         "REGN": "",
-        "ACHC": "",
-        "CI": ""
+        "DHR": "",
+        "CI": "",
+        "GSK": "",
+        "MOH": "",
+        "ACHC": ""
     },
     "Bonds": {
         "US2Y": "",
