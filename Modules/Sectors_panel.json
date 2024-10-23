@@ -1,8 +1,7 @@
 {
     "Basic_Materials": {
         "MOS": "美盛化肥",
-        "VALE": "",
-        "SSL": ""
+        "VALE": ""
     },
     "Communication_Services": {
         "DJT": "",
@@ -25,8 +24,7 @@
         "MPC": "",
         "DINO": "",
         "NE": "",
-        "WFRD": "",
-        "TBN": ""
+        "WFRD": ""
     },
     "Technology": {
         "SNOW": "",
@@ -37,8 +35,7 @@
         "KLAC": "",
         "LRCX": "",
         "ACLS": "",
-        "NXT": "",
-        "SONY": ""
+        "NXT": ""
     },
     "Utilities": {
         "NFE": ""
@@ -66,11 +63,8 @@
         "ELV": "",
         "CNC": "",
         "REGN": "",
-        "DHR": "",
         "CI": "",
-        "GSK": "",
-        "MOH": "",
-        "ACHC": ""
+        "MOH": ""
     },
     "Bonds": {
         "US2Y": "",
@@ -136,7 +130,6 @@
         "INDA": "印度",
         "EWT": "台湾",
         "EMXC": "新除中",
-        "SPEM": "新含中",
         "EMB": "新美债",
         "EMLC": "新本债",
         "LIT": "锂矿电池",

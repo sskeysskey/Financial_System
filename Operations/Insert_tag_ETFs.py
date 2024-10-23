@@ -23,23 +23,13 @@ def load_symbol_names(file_path):
     return symbol_names
 
 def add_or_update_etf(symbol, new_tags, data, json_file, symbol_names):
-    etf_exists = False
+    # 由于在显示输入框前已经验证过，这里只需要处理更新操作
     for etf in data["etfs"]:
         if etf["symbol"] == symbol:
-            etf_exists = True
             etf["tag"].extend(tag for tag in new_tags if tag not in etf["tag"])
             break
-    if not etf_exists:
-        etf_name = symbol_names.get(symbol, "")
-        new_etf = {
-            "symbol": symbol,
-            "name": etf_name,
-            "tag": new_tags,
-            "description1": "",
-            "description2": ""
-        }
-        data["etfs"].append(new_etf)
     save_data(data, json_file)
+    return True
 
 def Copy_Command_C():
     script = '''
@@ -54,8 +44,17 @@ def on_key_press(event, symbol, entry, data, json_file, root, symbol_names):
         root.destroy()
     elif event.keysym == 'Return':
         input_tags = entry.get().split()
-        add_or_update_etf(symbol, input_tags, data, json_file, symbol_names)
-        root.destroy()
+        if add_or_update_etf(symbol, input_tags, data, json_file, symbol_names):
+            root.destroy()
+
+def check_symbol_exists(symbol, data):
+    """检查symbol是否存在于data中"""
+    return any(etf["symbol"] == symbol for etf in data["etfs"])
+
+def show_error_dialog(message):
+    """显示错误提示对话框"""
+    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+    subprocess.run(['osascript', '-e', applescript_code], check=True)
 
 def main():
     Copy_Command_C()
@@ -66,13 +65,18 @@ def main():
     symbol_names = load_symbol_names(symbol_name_file)
 
     new_name = pyperclip.paste().replace('"', '').replace("'", "")
+    
+    # 首先验证是否是有效的ETF代码格式
     if not new_name.isupper() or not new_name.isalpha():
-        # AppleScript代码
-        applescript_code = 'display dialog "不是有效的ETFs代码！" buttons {"OK"} default button "OK"'
-        # 使用subprocess调用osascript
-        process = subprocess.run(['osascript', '-e', applescript_code], check=True)
+        show_error_dialog("不是有效的ETFs代码！")
+        sys.exit()
+    
+    # 然后验证是否存在于description.json中
+    if not check_symbol_exists(new_name, data):
+        show_error_dialog(f"[{new_name}] 不在现有ETF列表中，请先添加到Description中!")
         sys.exit()
 
+    # 只有通过所有验证才显示输入窗口
     root = tk.Tk()
     root.title("Add or Update ETF")
     
@@ -82,7 +86,8 @@ def main():
     entry = tk.Entry(root)
     entry.pack()
     entry.focus_set()
-    button = tk.Button(root, text="添加或更新ETF", command=lambda: on_key_press(tk.Event(), new_name, entry, data, json_file, root, symbol_names))
+    button = tk.Button(root, text="更新ETF标签", 
+                      command=lambda: on_key_press(tk.Event(), new_name, entry, data, json_file, root, symbol_names))
     button.pack()
     root.bind('<Key>', lambda event: on_key_press(event, new_name, entry, data, json_file, root, symbol_names))
     root.mainloop()
