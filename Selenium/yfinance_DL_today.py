@@ -2,7 +2,6 @@ import yfinance as yf
 import sqlite3
 import json
 from datetime import datetime, timedelta
-import traceback  # 用于获取完整的错误信息
 import pyautogui
 import random
 import time
@@ -27,7 +26,7 @@ def move_mouse_periodically():
             
         except Exception as e:
             print(f"鼠标移动出错: {str(e)}")
-            time.sleep(60)
+            time.sleep(30)
 
 def log_error_with_timestamp(error_message):
     # 获取当前日期和时间

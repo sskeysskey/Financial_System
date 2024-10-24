@@ -8,6 +8,31 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support import expected_conditions as EC
+import pyautogui
+import random
+import time
+import threading
+
+# 添加鼠标移动功能的函数
+def move_mouse_periodically():
+    while True:
+        try:
+            # 获取屏幕尺寸
+            screen_width, screen_height = pyautogui.size()
+            
+            # 随机生成目标位置，避免移动到屏幕边缘
+            x = random.randint(100, screen_width - 100)
+            y = random.randint(100, screen_height - 100)
+            
+            # 缓慢移动鼠标到随机位置
+            pyautogui.moveTo(x, y, duration=1)
+            
+            # 等待30-60秒再次移动
+            time.sleep(random.randint(30, 60))
+            
+        except Exception as e:
+            print(f"鼠标移动出错: {str(e)}")
+            time.sleep(30)
 
 # 登录函数
 def login_once(driver, login_url, username, password):
@@ -200,6 +225,10 @@ def backup_file(file_name, source_dir, backup_dir):
         return True
     print(f"文件不存在: {file_path}")
     return False
+
+# 在主程序开始前启动鼠标移动线程
+mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
+mouse_thread.start()
 
 # 主程序逻辑
 chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
