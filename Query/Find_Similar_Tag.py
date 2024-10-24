@@ -4,14 +4,23 @@ import os
 import pyperclip
 import subprocess
 from time import sleep
-from decimal import Decimal  # 引入Decimal模块
+from decimal import Decimal
 
-# 按权重分组的标签字典
-weight_groups = {
-    Decimal('0.2'): ['美国', '英国', '加拿大', '中国', '以色列', '瑞士', '德国', '法国', '日本', '印度'],
-    Decimal('1.5'): ['保险', '医疗', '医院', '飞机', "AI", "芯片"],
-    Decimal('2.0'): ['医疗保险', '医院运营', '关节置换', "飞机制造", "工业软件", "EDA"]
-}
+# 读取权重配置文件
+def load_weight_groups():
+    weight_groups = {}
+    try:
+        with open('/Users/yanzhang/Documents/Financial_System/Modules/tags_weight.json', 'r', encoding='utf-8') as f:
+            raw_data = json.load(f)
+            # 将字符串key转换为Decimal
+            weight_groups = {Decimal(k): v for k, v in raw_data.items()}
+        return weight_groups
+    except Exception as e:
+        print(f"加载权重配置文件时出错: {e}")
+        return {}
+
+# 加载权重组
+weight_groups = load_weight_groups()
 
 # 动态生成标签权重配置表
 tags_weight_config = {tag: weight for weight, tags in weight_groups.items() for tag in tags}

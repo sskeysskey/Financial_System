@@ -7,6 +7,7 @@ import tkinter.font as tkFont
 from tkinter import ttk, scrolledtext
 from datetime import datetime, timedelta
 from collections import OrderedDict
+import subprocess
 
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
 from Chart_input import plot_financial_data
@@ -152,6 +153,12 @@ def create_selection_window():
                     menu = tk.Menu(button, tearoff=0)
                     menu.add_command(label="删除", command=lambda k=keyword, g=db_key: delete_item(k, g))
 
+                    # 新增“Add to Earning”选项
+                    menu.add_command(label="Add to Earning", command=lambda k=keyword: add_to_earning(k))
+
+                    # 新增“Forced Addding to Earning”选项
+                    menu.add_command(label="Forced Adding to Earning", command=lambda k=keyword: add_to_earning_force(k))
+
                     # 绑定右键点击事件
                     button.bind("<Button-2>", lambda event, m=menu: m.post(event.x_root, event.y_root))
 
@@ -162,6 +169,18 @@ def create_selection_window():
                     link_label.bind("<Button-1>", lambda event, k=keyword: on_keyword_selected(k))
 
     canvas.pack(side="left", fill="both", expand=True)
+
+def add_to_earning(keyword):
+    # 调用 earning.py 脚本
+    subprocess.run(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', 
+                    '/Users/yanzhang/Documents/Financial_System/Operations/Insert_Earning.py', 
+                    keyword])
+
+def add_to_earning_force(keyword):
+    # 调用 earning.py 脚本
+    subprocess.run(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', 
+                    '/Users/yanzhang/Documents/Financial_System/Operations/Insert_Earning_Force.py', 
+                    keyword])
 
 def delete_item(keyword, group):
     # 从 config 中删除该关键词

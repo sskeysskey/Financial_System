@@ -3,6 +3,7 @@ import pyperclip
 import datetime
 import json
 import subprocess
+import sys
 
 def Copy_Command_C():
     script = '''
@@ -92,16 +93,30 @@ def insert_data(db_path, date, name, price):
                 show_alert(f"{name} 的最新记录距离现在不足两个月，无法添加新数据。")
         return False
 
-def main():
+def main(symbol=None):
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
     json_file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
+    # 定义允许的表名集合
+    ALLOWED_TABLES = {'Basic_Materials', 'Communication_Services', 'Consumer_Cyclical','Technology', 'Energy',
+                        'Industrials', 'Consumer_Defensive', 'Utilities', 'Healthcare', 'Financial_Services',
+                        'Real_Estate'}
     
-    Copy_Command_C()
-    stock_name = pyperclip.paste().strip()  # 从剪贴板获取symbol
+    # 如果没有传递 symbol 参数，则从剪贴板中获取symbol
+    if symbol is None:
+        Copy_Command_C()
+        stock_name = pyperclip.paste().strip()  # 从剪贴板获取symbol
+    else:
+        stock_name = symbol.strip()  # 使用传递进来的symbol
     
     table_name = get_table_name_from_symbol(stock_name, json_file_path)
+    
     if not table_name:
         show_alert(f"无法找到 {stock_name} 所属的表")
+        return
+    
+    # 检查表名是否在允许的集合中
+    if table_name not in ALLOWED_TABLES:
+        show_alert(f"{stock_name} 不是有效的股票代码，无法添加到earning数据库中")
         return
     
     with sqlite3.connect(db_path) as conn:
@@ -126,4 +141,8 @@ def main():
         insert_data(db_path, yesterday, stock_name, percentage_change)
 
 if __name__ == "__main__":
-    main()
+    # 如果有传参，则使用传递的参数；如果没有传参，则 symbol = None
+    if len(sys.argv) > 1:
+        main(sys.argv[1])  # 使用传递的第一个参数作为 symbol
+    else:
+        main()  # 没有传参时，执行默认行为

@@ -1,13 +1,10 @@
 {
     "Basic_Materials": {
         "MOS": "美盛化肥",
-        "VALE": "",
-        "LYB": "",
-        "SSL": ""
+        "VALE": ""
     },
     "Communication_Services": {
-        "DJT": "",
-        "NBIS": ""
+        "DJT": ""
     },
     "Consumer_Cyclical": {
         "MBLY": "",
@@ -16,8 +13,7 @@
         "ALV": "",
         "DOOO": "",
         "GPC": "",
-        "LKQ": "",
-        "TSLA": ""
+        "LKQ": ""
     },
     "Energy": {
         "PBF": "石油精炼",
@@ -27,8 +23,7 @@
         "MPC": "",
         "DINO": "",
         "NE": "",
-        "WFRD": "",
-        "TBN": ""
+        "WFRD": ""
     },
     "Technology": {
         "SNOW": "",
@@ -40,9 +35,7 @@
         "LRCX": "",
         "ACLS": "",
         "NXT": "",
-        "SONY": "",
-        "ADBE": "",
-        "INTU": ""
+        "SONY": ""
     },
     "Utilities": {
         "NFE": ""
@@ -54,8 +47,7 @@
     "Industrials": {
         "ATKR": "",
         "BA": "波音",
-        "RTO": "",
-        "TNET": ""
+        "RTO": ""
     },
     "Real_Estate": {},
     "Financial_Services": {},
