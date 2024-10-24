@@ -26,7 +26,8 @@
         "SCHD",
         "NVO",
         "LLY",
-        "SONY"
+        "SONY",
+        "TSLA"
     ],
     "purple_keywords": [
         "Bitcoin",
@@ -107,7 +108,6 @@
         "NOV",
         "NUE",
         "HES",
-        "HAL",
         "DINO",
         "TX",
         "HXL",
@@ -124,7 +124,8 @@
         "ACLS",
         "ELV",
         "NXT",
-        "MOH"
+        "MOH",
+        "LYB"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -207,7 +208,8 @@
         "MTN",
         "CNC",
         "SSL",
-        "GPC"
+        "GPC",
+        "HAL"
     ],
     "orange_keywords": [
         "NASDAQ",
