@@ -49,6 +49,7 @@ def login_once(driver, login_url, username, password):
 
     WebDriverWait(driver, 120).until(EC.any_of(
         EC.presence_of_element_located((By.ID, "header-profile-button")),
+        EC.presence_of_element_located((By.ID, "ybarMailIndicator")),
         EC.presence_of_element_located((By.ID, "ybarAccountMenu"))
     ))
     print("登录成功，继续执行其他任务")

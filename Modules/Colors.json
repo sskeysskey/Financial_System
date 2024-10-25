@@ -13,7 +13,9 @@
         "KLAC",
         "LRCX",
         "CI",
-        "DHR"
+        "DHR",
+        "TMO",
+        "UNP"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -125,7 +127,8 @@
         "ELV",
         "NXT",
         "MOH",
-        "LYB"
+        "LYB",
+        "ICLR"
     ],
     "yellow_keywords": [
         "Nikkei",
