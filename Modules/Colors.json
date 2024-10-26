@@ -15,7 +15,8 @@
         "CI",
         "DHR",
         "TMO",
-        "UNP"
+        "UNP",
+        "CL"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -212,7 +213,8 @@
         "CNC",
         "SSL",
         "GPC",
-        "HAL"
+        "HAL",
+        "CPRI"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -261,7 +263,8 @@
         "LINE",
         "GFS",
         "BIIB",
-        "SARO"
+        "SARO",
+        "XRAY"
     ],
     "green_keywords": [
         "EURCNY",
