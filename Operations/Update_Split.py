@@ -3,44 +3,52 @@ import json
 import pyperclip
 import sys
 import subprocess
-from PyQt5.QtWidgets import QApplication, QInputDialog, QLineEdit, QWidget
+import time
+from PyQt5.QtWidgets import QApplication, QInputDialog, QLineEdit, QWidget, QMessageBox
 from PyQt5.QtCore import Qt
 
+def get_clipboard_content():
+    """获取剪贴板内容，包含错误处理"""
+    try:
+        content = pyperclip.paste()
+        return content.strip() if content else ""
+    except Exception:
+        return ""
+
 def copy2clipboard():
-    script = '''
-    tell application "System Events"
-        keystroke "c" using {command down}
-        delay 0.5
-    end tell
-    '''
-    subprocess.run(['osascript', '-e', script], check=True)
+    """执行复制操作并等待复制完成"""
+    try:
+        script = '''
+        tell application "System Events"
+            keystroke "c" using {command down}
+        end tell
+        '''
+        subprocess.run(['osascript', '-e', script], check=True)
+        # 给系统一点时间来完成复制操作
+        time.sleep(0.5)
+        return True
+    except subprocess.CalledProcessError:
+        return False
 
-copy2clipboard()
-
-# 从剪贴板获取内容
-name = pyperclip.paste().strip()
-
-# 加载 JSON 文件
-with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as f:
-    sectors_data = json.load(f)
-
-# 从 JSON 数据中查找表名
-def find_table_name(stock_name, sectors_data):
-    for table_name, stock_list in sectors_data.items():
-        if stock_name in stock_list:
-            return table_name
+def get_stock_symbol(default_symbol=""):
+    """获取股票代码"""
+    app = QApplication.instance() or QApplication(sys.argv)
+    
+    input_dialog = QInputDialog()
+    input_dialog.setWindowTitle("输入股票代码")
+    input_dialog.setLabelText("请输入股票代码:")
+    input_dialog.setTextValue(default_symbol)
+    input_dialog.setWindowFlags(input_dialog.windowFlags() | Qt.WindowStaysOnTopHint)
+    
+    if input_dialog.exec_() == QInputDialog.Accepted:
+        # 直接将输入转换为大写
+        return input_dialog.textValue().strip().upper()
     return None
-
-# 找到表名
-table_name = find_table_name(name, sectors_data)
-
-# 如果表名不存在，抛出错误
-if table_name is None:
-    raise ValueError(f"股票代码 {name} 不在 JSON 文件中找到对应的表名。")
 
 # 使用 PyQt5 实现弹出界面获取 price_divisor
 def get_price_divisor():
-    app = QApplication(sys.argv)
+    """获取拆股比例"""
+    app = QApplication.instance() or QApplication(sys.argv)
 
     # 创建一个 QInputDialog 对象
     input_dialog = QInputDialog()
@@ -65,33 +73,91 @@ def get_price_divisor():
     # 显示对话框并获取用户输入
     if input_dialog.exec_() == QInputDialog.Accepted:
         return input_dialog.doubleValue()
+    return None
+
+def main():
+    app = QApplication.instance() or QApplication(sys.argv)
+    
+    # 保存初始剪贴板内容
+    initial_content = get_clipboard_content()
+    
+    # 执行复制操作
+    if not copy2clipboard():
+        QMessageBox.warning(None, "警告", "复制操作失败")
+        return
+    
+    # 获取复制后的剪贴板内容
+    new_content = get_clipboard_content()
+    
+    # 根据剪贴板内容变化确定股票代码
+    if initial_content == new_content:
+        name = get_stock_symbol()
+        if name is None:  # 用户点击取消
+            return
     else:
-        raise ValueError("用户未输入有效的价格除数")
+        name = get_stock_symbol(new_content)
+        if name is None:  # 用户点击取消
+            return
+            
+    if not name:  # 检查股票代码是否为空
+        QMessageBox.warning(None, "警告", "股票代码不能为空")
+        return
 
-# 获取用户输入的 price_divisor
-price_divisor = get_price_divisor()
+    # 加载 JSON 文件
+    try:
+        with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as f:
+            sectors_data = json.load(f)
+    except Exception as e:
+        QMessageBox.critical(None, "错误", f"无法加载JSON文件: {str(e)}")
+        return
 
-# 连接到SQLite数据库
-conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
-cursor = conn.cursor()
+    # 查找表名
+    table_name = None
+    for t_name, stock_list in sectors_data.items():
+        if name in stock_list:
+            table_name = t_name
+            break
 
-# 获取该股票的最新日期
-cursor.execute(f"""
-    SELECT MAX(date) 
-    FROM {table_name} 
-    WHERE name = ?
-""", (name,))
-latest_date = cursor.fetchone()[0]  # 获取最新日期
+    if table_name is None:
+        QMessageBox.warning(None, "警告", f"股票代码 {name} 不在JSON文件中找到对应的表名。")
+        return
 
-# 执行拆股操作，排除最新日期的数据
-cursor.execute(f"""
-    UPDATE {table_name} 
-    SET price = ROUND(price / ?, 2) 
-    WHERE name = ? AND date < ?
-""", (price_divisor, name, latest_date))
+    # 获取拆股比例
+    price_divisor = get_price_divisor()
+    if price_divisor is None:  # 用户点击取消
+        return
+        
+    if price_divisor <= 0:  # 验证拆股比例
+        QMessageBox.warning(None, "警告", "拆股比例必须大于0")
+        return
+    
+    try:
+        # 连接数据库并执行更新
+        conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
+        cursor = conn.cursor()
 
-# 提交更改
-conn.commit()
+        # 获取最新日期
+        cursor.execute(f"SELECT MAX(date) FROM {table_name} WHERE name = ?", (name,))
+        latest_date = cursor.fetchone()[0]
 
-# 关闭数据库连接
-conn.close()
+        if not latest_date:
+            QMessageBox.warning(None, "警告", f"未找到股票 {name} 的数据")
+            conn.close()
+            return
+
+        # 执行拆股操作
+        cursor.execute(f"""
+            UPDATE {table_name} 
+            SET price = ROUND(price / ?, 2) 
+            WHERE name = ? AND date < ?
+        """, (price_divisor, name, latest_date))
+
+        conn.commit()
+        conn.close()
+
+        QMessageBox.information(None, "成功", "拆股操作已完成")
+    except Exception as e:
+        QMessageBox.critical(None, "错误", f"数据库操作失败: {str(e)}")
+
+if __name__ == "__main__":
+    main()

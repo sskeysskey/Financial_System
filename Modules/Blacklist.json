@@ -106,7 +106,8 @@
         "IEP",
         "RIG",
         "VRN",
-        "E"
+        "E",
+        "TNET"
     ],
     "screener": [
         "CTA-PA",

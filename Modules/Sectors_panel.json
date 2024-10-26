@@ -1,8 +1,7 @@
 {
     "Basic_Materials": {
         "MOS": "美盛化肥",
-        "VALE": "",
-        "LYB": ""
+        "VALE": ""
     },
     "Communication_Services": {
         "DJT": ""
@@ -14,8 +13,7 @@
         "ALV": "",
         "DOOO": "",
         "GPC": "",
-        "LKQ": "",
-        "CPRI": ""
+        "LKQ": ""
     },
     "Energy": {
         "PBF": "石油精炼",
@@ -23,23 +21,18 @@
         "VAL": "",
         "EQNR": "",
         "MPC": "",
-        "DINO": "",
         "NE": "",
-        "WFRD": "",
-        "TBN": ""
+        "WFRD": ""
     },
     "Technology": {
         "SNOW": "",
         "STM": "意法",
         "INTC": "",
-        "QLYS": "",
         "ASML": "",
         "KLAC": "",
         "LRCX": "",
         "ACLS": "",
-        "NXT": "",
-        "SONY": "",
-        "ADBE": ""
+        "NXT": ""
     },
     "Utilities": {
         "NFE": ""
@@ -50,35 +43,23 @@
         "CL": ""
     },
     "Industrials": {
-        "ATKR": "",
         "BA": "波音",
         "RTO": "",
-        "UNP": "",
-        "TNET": "",
-        "SARO": ""
+        "UNP": ""
     },
-    "Real_Estate": {
-        "PLD": ""
-    },
+    "Real_Estate": {},
     "Financial_Services": {},
     "Healthcare": {
         "DXCM": "德康血糖",
         "MRNA": "",
         "NVO": "",
-        "GMAB": "",
-        "BIIB": "",
         "HUM": "",
         "MRK": "",
         "ELV": "",
         "CNC": "",
         "REGN": "",
         "CI": "",
-        "MOH": "",
-        "DHR": "",
-        "GSK": "",
-        "ACHC": "",
         "AZN": "",
-        "TMO": "",
         "ICLR": ""
     },
     "Bonds": {
