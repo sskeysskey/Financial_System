@@ -141,8 +141,11 @@
         "EURUSD": ""
     },
     "Economics": {
-        "USInitial": "24 USInitial",
-        "USConfidence": "25 USConfidence"
+        "CorePCEY": "31 CorePCEY",
+        "CorePCEM": "31 CorePCEM",
+        "USNonFarm": "01 USNonFarm",
+        "USUnemploy": "01 USUnemploy",
+        "USInitial": "31 USInitial"
     },
     "ETFs_US": {
         "TLT": "",
