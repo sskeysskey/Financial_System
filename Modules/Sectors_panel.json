@@ -1,8 +1,7 @@
 {
     "Basic_Materials": {
         "MOS": "美盛化肥",
-        "VALE": "",
-        "SSL": ""
+        "VALE": ""
     },
     "Communication_Services": {
         "DJT": ""
@@ -34,18 +33,14 @@
         "KLAC": "",
         "LRCX": "",
         "ACLS": "",
-        "NXT": "",
-        "ADBE": ""
+        "NXT": ""
     },
     "Utilities": {
         "NFE": ""
     },
     "Consumer_Defensive": {
         "EL": "雅诗兰黛",
-        "DG": "",
-        "CL": "",
-        "KO": "",
-        "KDP": ""
+        "DG": ""
     },
     "Industrials": {
         "BA": "波音",

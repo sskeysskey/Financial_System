@@ -4,8 +4,66 @@ import pyperclip
 import sys
 import subprocess
 import time
-from PyQt5.QtWidgets import QApplication, QInputDialog, QLineEdit, QWidget, QMessageBox
-from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import (QApplication, QInputDialog, QLineEdit, QWidget, 
+                           QMessageBox, QDialog, QVBoxLayout, QRadioButton, 
+                           QDateEdit, QDialogButtonBox, QLabel)
+from PyQt5.QtCore import Qt, QDate
+
+class DateSelectionDialog(QDialog):
+    """日期选择对话框"""
+    def __init__(self, latest_date, parent=None):
+        super().__init__(parent)
+        self.setup_ui(latest_date)
+        
+    def setup_ui(self, latest_date):
+        self.setWindowTitle("选择日期")
+        self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
+        
+        layout = QVBoxLayout()
+        
+        # 创建单选按钮和日期选择器
+        self.latest_radio = QRadioButton(f"使用最新日期 ({latest_date})")
+        self.custom_radio = QRadioButton("选择自定义日期:")
+        self.latest_radio.setChecked(True)  # 默认选中最新日期
+        
+        # 创建日期选择器
+        self.date_edit = QDateEdit()
+        self.date_edit.setCalendarPopup(True)  # 允许弹出日历
+        self.date_edit.setDate(QDate.fromString(latest_date, "yyyy-MM-dd"))
+        self.date_edit.setEnabled(False)  # 初始状态禁用
+        
+        # 创建按钮
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+        )
+        
+        # 添加所有控件到布局
+        layout.addWidget(self.latest_radio)
+        layout.addWidget(self.custom_radio)
+        layout.addWidget(self.date_edit)
+        layout.addWidget(button_box)
+        
+        self.setLayout(layout)
+        
+        # 连接信号
+        self.custom_radio.toggled.connect(self.date_edit.setEnabled)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        
+    def get_selected_date(self):
+        """返回选中的日期"""
+        if self.latest_radio.isChecked():
+            # 返回显示的最新日期文本,而不是None
+            latest_date = self.latest_radio.text()
+        return latest_date[latest_date.find("(")+1:latest_date.find(")")]
+        return self.date_edit.date().toString("yyyy-MM-dd")
+
+def get_adjustment_date(latest_date):
+    """获取调整日期"""
+    dialog = DateSelectionDialog(latest_date)
+    if dialog.exec_() == QDialog.Accepted:
+        return dialog.get_selected_date()
+    return None
 
 def get_clipboard_content():
     """获取剪贴板内容，包含错误处理"""
@@ -132,7 +190,6 @@ def main():
         return
     
     try:
-        # 连接数据库并执行更新
         conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
         cursor = conn.cursor()
 
@@ -145,12 +202,21 @@ def main():
             conn.close()
             return
 
+        # 获取调整日期
+        adjustment_date = get_adjustment_date(latest_date)
+        if adjustment_date is None:  # 用户取消操作
+            conn.close()
+            return
+            
+        # 使用选择的日期或最新日期
+        target_date = adjustment_date if adjustment_date else latest_date
+
         # 执行拆股操作
         cursor.execute(f"""
             UPDATE {table_name} 
             SET price = ROUND(price / ?, 2) 
             WHERE name = ? AND date < ?
-        """, (price_divisor, name, latest_date))
+        """, (price_divisor, name, target_date))
 
         conn.commit()
         conn.close()

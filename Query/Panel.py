@@ -154,6 +154,9 @@ def create_selection_window():
                     menu.add_command(label="删除", command=lambda k=keyword, g=db_key: delete_item(k, g))
 
                     # 新增“Add to Earning”选项
+                    menu.add_command(label="加入黑名单", command=lambda k=keyword, g=db_key: add_to_blacklist(k, g))
+
+                    # 新增“Add to Earning”选项
                     menu.add_command(label="Add to Earning", command=lambda k=keyword: add_to_earning(k))
 
                     # 新增“Forced Addding to Earning”选项
@@ -170,14 +173,18 @@ def create_selection_window():
 
     canvas.pack(side="left", fill="both", expand=True)
 
+def add_to_blacklist(keyword, group):
+    delete_item(keyword, group)
+    subprocess.run(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', 
+                    '/Users/yanzhang/Documents/Financial_System/Operations/Insert_Blacklist.py', 
+                    keyword])
+
 def add_to_earning(keyword):
-    # 调用 earning.py 脚本
     subprocess.run(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', 
                     '/Users/yanzhang/Documents/Financial_System/Operations/Insert_Earning.py', 
                     keyword])
 
 def add_to_earning_force(keyword):
-    # 调用 earning.py 脚本
     subprocess.run(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', 
                     '/Users/yanzhang/Documents/Financial_System/Operations/Insert_Earning_Force.py', 
                     keyword])

@@ -107,7 +107,8 @@
         "RIG",
         "VRN",
         "E",
-        "TNET"
+        "TNET",
+        "SSL"
     ],
     "screener": [
         "CTA-PA",

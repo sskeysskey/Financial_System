@@ -6,6 +6,8 @@
         "IEP",
         "RIG"
     ],
-    "newlow_500": [],
-    "screener": []
+    "screener": [
+        "AAPL",
+        "IBM"
+    ]
 }
