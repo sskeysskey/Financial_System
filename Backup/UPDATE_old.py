@@ -42,7 +42,7 @@ def update_data(db_path, table_name, data):
 
 data_sets = {
     'Crypto': [
-        # (22, "2024-03-15", "Bitcoin", "65695", 3),
+        # (10434, "2024-10-28", "Bitcoin", "69920.5", 3),
         # (22, "2024-03-15", "Bitcoin", "70841.1", 3),
         # (22, "2024-03-15", "Bitcoin", "65695", 3)
     ],
