@@ -43,7 +43,8 @@
     "USDPHP",
     "USDEGP",
     "USDARS",
-    "USDMYR"
+    "USDMYR",
+    "USDMXN"
   ],
   "Crypto": [
     "Bitcoin",

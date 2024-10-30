@@ -42,6 +42,7 @@
     "EGP=X": "USDEGP",
     "ARS=X": "USDARS",
     "MYR=X": "USDMYR",
+    "MXN=X": "USDMXN",
     "BTC-USD": "Bitcoin",
     "ETH-USD": "Ether",
     "SOL-USD": "Solana",
