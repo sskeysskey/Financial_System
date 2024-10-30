@@ -294,7 +294,8 @@
     "PAYX",
     "FICO",
     "TEAM",
-    "APP"
+    "APP",
+    "MSTR"
   ],
   "Utilities": [
     "NEE",

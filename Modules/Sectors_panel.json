@@ -13,7 +13,9 @@
         "ALV": "",
         "DOOO": "",
         "GPC": "",
-        "LKQ": ""
+        "LKQ": "",
+        "DHI": "",
+        "CPRI": ""
     },
     "Energy": {
         "PBF": "石油精炼",
@@ -23,7 +25,10 @@
         "MPC": "",
         "NE": "",
         "WFRD": "",
-        "DINO": ""
+        "DINO": "",
+        "SHEL": "",
+        "TTE": "",
+        "PSX": ""
     },
     "Technology": {
         "SNOW": "",
@@ -40,7 +45,10 @@
     },
     "Consumer_Defensive": {
         "EL": "雅诗兰黛",
-        "DG": ""
+        "DG": "",
+        "KO": "",
+        "CL": "",
+        "KDP": ""
     },
     "Industrials": {
         "BA": "波音",
@@ -48,7 +56,11 @@
         "UNP": "",
         "SARO": ""
     },
-    "Real_Estate": {},
+    "Real_Estate": {
+        "PLD": "",
+        "AMT": "",
+        "CCI": ""
+    },
     "Financial_Services": {},
     "Healthcare": {
         "DXCM": "德康血糖",
@@ -63,7 +75,8 @@
         "AZN": "",
         "ICLR": "",
         "TMO": "",
-        "DHR": ""
+        "DHR": "",
+        "RDY": ""
     },
     "Bonds": {
         "US2Y": "",

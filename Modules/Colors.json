@@ -18,7 +18,13 @@
         "UNP",
         "CL",
         "KO",
-        "KDP"
+        "KDP",
+        "DHI",
+        "PSX",
+        "TD",
+        "RDY",
+        "AMT",
+        "CCI"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -49,7 +55,6 @@
         "PPG",
         "ROKU",
         "NTES",
-        "PBF",
         "JBL",
         "ABNB",
         "PBR",
@@ -58,7 +63,6 @@
         "ROK",
         "TEAM",
         "RMBS",
-        "BP",
         "LW",
         "EQT",
         "ELP",
@@ -127,7 +131,6 @@
         "WFRD",
         "VRN",
         "ACLS",
-        "ELV",
         "NXT",
         "MOH",
         "LYB",
@@ -216,7 +219,10 @@
         "SSL",
         "GPC",
         "HAL",
-        "CPRI"
+        "CPRI",
+        "BP",
+        "PBF",
+        "ELV"
     ],
     "orange_keywords": [
         "NASDAQ",
