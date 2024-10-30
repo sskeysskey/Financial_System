@@ -156,11 +156,16 @@ def create_selection_window():
                     # 新增“Add to Earning”选项
                     menu.add_command(label="加入黑名单", command=lambda k=keyword, g=db_key: add_to_blacklist(k, g))
 
+                    menu.add_separator()  # 添加分隔线
+
                     # 新增“Add to Earning”选项
                     menu.add_command(label="Add to Earning", command=lambda k=keyword: add_to_earning(k))
 
                     # 新增“Forced Addding to Earning”选项
                     menu.add_command(label="Forced Adding to Earning", command=lambda k=keyword: add_to_earning_force(k))
+
+                    menu.add_separator()  # 添加分隔线
+                    menu.add_command(label="在富途中搜索", command=lambda k=keyword: execute_stock_futu(k))
 
                     # 绑定右键点击事件
                     button.bind("<Button-2>", lambda event, m=menu: m.post(event.x_root, event.y_root))
@@ -188,6 +193,19 @@ def add_to_earning_force(keyword):
     subprocess.run(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', 
                     '/Users/yanzhang/Documents/Financial_System/Operations/Insert_Earning_Force.py', 
                     keyword])
+
+def execute_stock_futu(keyword):
+    """执行 stock_futu.scpt 脚本并传递关键词参数"""
+    try:
+        subprocess.run([
+            'osascript',
+            '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt',  # 请修改为实际路径
+            keyword
+        ], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"执行脚本时出错: {e}")
+    except Exception as e:
+        print(f"发生未知错误: {e}")
 
 def delete_item(keyword, group):
     # 从 config 中删除该关键词

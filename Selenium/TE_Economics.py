@@ -75,7 +75,8 @@ with webdriver.Chrome(service=service) as driver:
         "Unemployment Rate": "USUnemploy"
     }
     Economics2 = {
-        "Initial Jobless Claims": "USInitial"
+        "Initial Jobless Claims": "USInitial",
+        "ADP Employment Change": "USNonFarmA",
     }
     Economics3 = {
         "Core PCE Price Index Annual Change": "CorePCEY",

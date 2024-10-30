@@ -26,9 +26,7 @@
         "NE": "",
         "WFRD": "",
         "DINO": "",
-        "SHEL": "",
-        "TTE": "",
-        "PSX": ""
+        "TTE": ""
     },
     "Technology": {
         "SNOW": "",
@@ -45,22 +43,15 @@
     },
     "Consumer_Defensive": {
         "EL": "雅诗兰黛",
-        "DG": "",
         "KO": "",
         "CL": "",
         "KDP": ""
     },
     "Industrials": {
         "BA": "波音",
-        "RTO": "",
-        "UNP": "",
         "SARO": ""
     },
-    "Real_Estate": {
-        "PLD": "",
-        "AMT": "",
-        "CCI": ""
-    },
+    "Real_Estate": {},
     "Financial_Services": {},
     "Healthcare": {
         "DXCM": "德康血糖",
@@ -74,8 +65,6 @@
         "CI": "",
         "AZN": "",
         "ICLR": "",
-        "TMO": "",
-        "DHR": "",
         "RDY": ""
     },
     "Bonds": {

@@ -92,7 +92,8 @@ Event_Filter = {
     "PCE Price Index MM*", "Unemployment Rate*", "ISM N-Mfg PMI",
     "U Mich Sentiment Prelim", "New Home Sales-Units *", "New Home Sales Chg MM *",
     "GDP Cons Spending Prelim*", "Core PCE Prices Prelim*",
-    "Corporate Profits Prelim*", "Initial Jobless Clm*", "U Mich Sentiment Final"
+    "Corporate Profits Prelim*", "Initial Jobless Clm*", "U Mich Sentiment Final",
+    "GDP Advance*"
 }
 
 # 定义一个包含所有目标国家代码的集合
