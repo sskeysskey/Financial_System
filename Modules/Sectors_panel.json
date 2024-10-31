@@ -1,7 +1,8 @@
 {
     "Basic_Materials": {
         "MOS": "美盛化肥",
-        "VALE": ""
+        "VALE": "",
+        "LYB": ""
     },
     "Communication_Services": {
         "DJT": ""
@@ -15,7 +16,9 @@
         "GPC": "",
         "LKQ": "",
         "DHI": "",
-        "CPRI": ""
+        "CPRI": "",
+        "AZO": "",
+        "LCID": ""
     },
     "Energy": {
         "PBF": "石油精炼",
@@ -26,7 +29,8 @@
         "NE": "",
         "WFRD": "",
         "DINO": "",
-        "TTE": ""
+        "TTE": "",
+        "PSX": ""
     },
     "Technology": {
         "SNOW": "",
@@ -36,7 +40,9 @@
         "KLAC": "",
         "LRCX": "",
         "ACLS": "",
-        "NXT": ""
+        "NXT": "",
+        "CDW": "",
+        "QRVO": ""
     },
     "Utilities": {
         "NFE": ""
@@ -45,11 +51,15 @@
         "EL": "雅诗兰黛",
         "KO": "",
         "CL": "",
-        "KDP": ""
+        "KDP": "",
+        "PEP": "",
+        "HSY": "",
+        "BG": ""
     },
     "Industrials": {
         "BA": "波音",
-        "SARO": ""
+        "SARO": "",
+        "CNI": ""
     },
     "Real_Estate": {},
     "Financial_Services": {},
@@ -65,7 +75,14 @@
         "CI": "",
         "AZN": "",
         "ICLR": "",
-        "RDY": ""
+        "RDY": "",
+        "LLY": "",
+        "DHR": "",
+        "GSK": "",
+        "BIIB": "",
+        "GMAB": "",
+        "BMRN": "",
+        "OPCH": ""
     },
     "Bonds": {
         "US2Y": "",

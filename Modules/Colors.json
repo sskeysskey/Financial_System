@@ -24,7 +24,10 @@
         "TD",
         "RDY",
         "AMT",
-        "CCI"
+        "CCI",
+        "AZO",
+        "PEP",
+        "CNI"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -134,7 +137,8 @@
         "NXT",
         "MOH",
         "LYB",
-        "ICLR"
+        "ICLR",
+        "CDW"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -199,7 +203,6 @@
         "CTRA",
         "CIVI",
         "MRNA",
-        "BMRN",
         "DJT",
         "MUR",
         "HUM",
@@ -222,7 +225,11 @@
         "CPRI",
         "BP",
         "PBF",
-        "ELV"
+        "ELV",
+        "HSY",
+        "BG",
+        "OPCH",
+        "QRVO"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -241,7 +248,8 @@
         "EL",
         "DG",
         "DLTR",
-        "NBIS"
+        "NBIS",
+        "BMRN"
     ],
     "black_keywords": [
         "Cotton",
@@ -272,7 +280,8 @@
         "GFS",
         "BIIB",
         "SARO",
-        "XRAY"
+        "XRAY",
+        "LCID"
     ],
     "green_keywords": [
         "EURCNY",

@@ -1551,7 +1551,8 @@
     "SARO",
     "STRL",
     "AMTM",
-    "HRI"
+    "HRI",
+    "GTES"
   ],
   "Real_Estate": [
     "PLD",
@@ -1619,7 +1620,8 @@
     "EPR-PG",
     "PECO",
     "KRC",
-    "SLG"
+    "SLG",
+    "CTRE"
   ],
   "Technology": [
     "MSFT",
@@ -1838,7 +1840,8 @@
     "CLVT",
     "TSEM",
     "YOU",
-    "QTWO"
+    "QTWO",
+    "AVT"
   ],
   "Utilities": [
     "NEE",
