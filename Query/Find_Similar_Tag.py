@@ -3,6 +3,7 @@ import re
 import os
 import pyperclip
 import subprocess
+import sys
 from time import sleep
 from decimal import Decimal
 
@@ -148,20 +149,26 @@ def main(symbol):
     # 自动打开文件
     os.system(f'open "{output_path}"')
 
-# 读取JSON文件
-with open('/Users/yanzhang/Documents/Financial_System/Modules/description.json', 'r') as file:
-    data = json.load(file)
+if __name__ == '__main__':
+    # 检查是否有命令行参数
+    if len(sys.argv) > 1:
+        # 使用命令行参数作为输入
+        symbol = sys.argv[1]
+    else:
+        # 没有命令行参数时，使用原有的剪贴板逻辑
+        copy2clipboard()
+        symbol = pyperclip.paste().strip()
 
-copy2clipboard()
-# 从剪贴板获取输入
-clipboard_content = pyperclip.paste().strip()
+    # 读取JSON文件
+    with open('/Users/yanzhang/Documents/Financial_System/Modules/description.json', 'r') as file:
+        data = json.load(file)
 
-# 使用剪贴板内容作为输入
-main(clipboard_content)
-sleep(2)
+    # 执行主程序
+    main(symbol)
+    sleep(2)
 
-try:
-    os.remove('/Users/yanzhang/Documents/News/similar.txt')
-    print(f"文件已删除")
-except OSError as e:
-    print(f"删除文件时出错: {e}")
+    try:
+        os.remove('/Users/yanzhang/Documents/News/similar.txt')
+        print(f"文件已删除")
+    except OSError as e:
+        print(f"删除文件时出错: {e}")

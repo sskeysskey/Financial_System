@@ -154,18 +154,18 @@ def create_selection_window():
                     menu.add_command(label="删除", command=lambda k=keyword, g=db_key: delete_item(k, g))
 
                     # 新增“Add to Earning”选项
-                    menu.add_command(label="加入黑名单", command=lambda k=keyword, g=db_key: add_to_blacklist(k, g))
-
-                    menu.add_separator()  # 添加分隔线
-
-                    # 新增“Add to Earning”选项
                     menu.add_command(label="Add to Earning", command=lambda k=keyword: add_to_earning(k))
-
-                    # 新增“Forced Addding to Earning”选项
-                    menu.add_command(label="Forced Adding to Earning", command=lambda k=keyword: add_to_earning_force(k))
 
                     menu.add_separator()  # 添加分隔线
                     menu.add_command(label="在富途中搜索", command=lambda k=keyword: execute_stock_futu(k))
+                    menu.add_command(label="找相似", command=lambda k=keyword: find_similiar(k))
+
+                    menu.add_separator()  # 添加分隔线
+                    # 新增“Add to Earning”选项
+                    menu.add_command(label="加入黑名单", command=lambda k=keyword, g=db_key: add_to_blacklist(k, g))
+
+                    # 新增“Forced Addding to Earning”选项
+                    menu.add_command(label="Forced Adding to Earning", command=lambda k=keyword: add_to_earning_force(k))
 
                     # 绑定右键点击事件
                     button.bind("<Button-2>", lambda event, m=menu: m.post(event.x_root, event.y_root))
@@ -182,6 +182,11 @@ def add_to_blacklist(keyword, group):
     delete_item(keyword, group)
     subprocess.run(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', 
                     '/Users/yanzhang/Documents/Financial_System/Operations/Insert_Blacklist.py', 
+                    keyword])
+
+def find_similiar(keyword):
+    subprocess.run(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', 
+                    '/Users/yanzhang/Documents/Financial_System/Query/Find_Similar_Tag.py', 
                     keyword])
 
 def add_to_earning(keyword):

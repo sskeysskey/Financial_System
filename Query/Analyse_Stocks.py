@@ -255,6 +255,39 @@ def load_stock_splits(file_path):
         #     error_file.write(formatted_error_message)
     return stock_splits_symbols
 
+def read_compare_all(file_path):
+    """读取Compare_All.txt并返回symbol到数据的映射"""
+    compare_data = {}
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                if ':' in line:
+                    symbol, data = line.strip().split(':', 1)
+                    compare_data[symbol.strip()] = data.strip()
+    except Exception as e:
+        print(f"读取Compare_All.txt时发生错误: {e}")
+    return compare_data
+
+def process_high_data(input_lines, compare_data):
+    """处理高点数据并添加Compare_All的信息"""
+    processed_lines = []
+    for line in input_lines:
+        parts = line.split()
+        if len(parts) >= 3:  # 确保行有足够的部分
+            sector = parts[0]
+            symbol = parts[1]
+            # 查找symbol在compare_data中的数据
+            compare_info = compare_data.get(symbol, '')
+            if compare_info:
+                # 组合新的行，不包含"10Y_newhigh"
+                new_line = f"{sector} {symbol} {compare_info}"
+                processed_lines.append(new_line)
+            else:
+                # 如果在Compare_All中没找到对应数据，保持原样但去除"10Y_newhigh"
+                new_line = f"{sector} {symbol}"
+                processed_lines.append(new_line)
+    return processed_lines
+
 def main():    
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
     backup_directory = '/Users/yanzhang/Documents/News/backup/backup'
@@ -370,20 +403,28 @@ def main():
             error_file.write(formatted_error_message)
 
     if output_high:
+        # 读取Compare_All.txt
+        compare_data = read_compare_all('/Users/yanzhang/Documents/News/backup/Compare_All.txt')
+        
         # 过滤掉已经存在于10Y_newhigh.txt文件中的symbol
         filtered_output_high = [
             line for line in output_high
             if line.split()[1] not in existing_symbols
         ]
 
-        if filtered_output_high:  # 只有在有新的symbol时才写入文件
+        if filtered_output_high:
+            # 处理数据并添加Compare_All的信息
+            processed_output = process_high_data(filtered_output_high, compare_data)
+            
+            # 写入处理后的数据
             output_high_file_path = '/Users/yanzhang/Documents/News/10Y_newhigh_new.txt'
-            write_output_to_file(filtered_output_high, output_high_file_path)
+            write_output_to_file(processed_output, output_high_file_path)
 
     # 定义要清理的文件模式
     file_patterns = [
         ("Earnings_Release_next_", -1), # 日期在最后一个下划线后
         ("Economic_Events_next_", -1),
+        ("ETFs_diff_", -1),
         ("NewLow_", -1),
         ("NewLow500_", -1),
         ("NewLow5000_", -1),

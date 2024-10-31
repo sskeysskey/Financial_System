@@ -74,7 +74,7 @@ if __name__ == '__main__':
     db_info = [
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Economics',
         #  'condition': "name = 'USInflation'", 'fields': '*',
-        #  'include_condition': True},
+        #  'include_condition': False},
 
         # {'path': '/Users/yanzhang/Documents/Database/Analysis.db', 'table': 'High_low',
         #   'condition': "name = 'Energy'", 'fields': '*',

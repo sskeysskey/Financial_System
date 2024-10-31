@@ -10,15 +10,13 @@
     "Consumer_Cyclical": {
         "MBLY": "",
         "STLA": "",
-        "MNSO": "",
         "ALV": "",
         "DOOO": "",
         "GPC": "",
         "LKQ": "",
         "DHI": "",
         "CPRI": "",
-        "AZO": "",
-        "LCID": ""
+        "AZO": ""
     },
     "Energy": {
         "PBF": "石油精炼",
@@ -38,27 +36,20 @@
         "INTC": "",
         "ASML": "",
         "KLAC": "",
-        "LRCX": "",
         "ACLS": "",
-        "NXT": "",
-        "CDW": "",
-        "QRVO": ""
+        "NXT": ""
     },
-    "Utilities": {
-        "NFE": ""
-    },
+    "Utilities": {},
     "Consumer_Defensive": {
         "EL": "雅诗兰黛",
-        "KO": "",
+        "KO": "可口可乐",
         "CL": "",
-        "KDP": "",
-        "PEP": "",
-        "HSY": "",
-        "BG": ""
+        "PEP": "百事可乐",
+        "HSY": "好时",
+        "BG": "邦吉"
     },
     "Industrials": {
         "BA": "波音",
-        "SARO": "",
         "CNI": ""
     },
     "Real_Estate": {},
@@ -73,15 +64,7 @@
         "CNC": "",
         "REGN": "",
         "CI": "",
-        "AZN": "",
         "ICLR": "",
-        "RDY": "",
-        "LLY": "",
-        "DHR": "",
-        "GSK": "",
-        "BIIB": "",
-        "GMAB": "",
-        "BMRN": "",
         "OPCH": ""
     },
     "Bonds": {
@@ -142,7 +125,6 @@
         "DBC": "大宗商品",
         "IBIT": "比特币",
         "SMH": "半导体",
-        "CQQQ": "中国科技",
         "ASHR": "A股",
         "DXJ": "日本",
         "INDA": "印度",
@@ -173,7 +155,6 @@
         "TLT": "",
         "XLK": "科技",
         "IYH": "医疗",
-        "RTH": "零售",
         "XLI": "工业",
         "IYF": "金融",
         "XLY": "非必需",

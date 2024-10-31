@@ -110,7 +110,8 @@
         "TNET",
         "SSL",
         "BSBR",
-        "DG"
+        "DG",
+        "LCID"
     ],
     "screener": [
         "CTA-PA",
