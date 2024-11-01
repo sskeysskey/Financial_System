@@ -842,7 +842,8 @@
     "PSNYW",
     "GAP",
     "BOOT",
-    "CPRI"
+    "CPRI",
+    "SHAK"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -1550,7 +1551,8 @@
     "STRL",
     "AMTM",
     "HRI",
-    "GTES"
+    "GTES",
+    "MATX"
   ],
   "Real_Estate": [
     "PLD",

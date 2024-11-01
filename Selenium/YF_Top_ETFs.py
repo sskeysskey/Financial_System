@@ -47,15 +47,15 @@ def fetch_data(url):
     data_list = []
 
     # 找到所有的数据行
-    rows = driver.find_elements(By.CSS_SELECTOR, 'tr.row.false.yf-1dbt8wv')
+    rows = driver.find_elements(By.CSS_SELECTOR, 'tr.row.false.yf-paf8n5')
     
     for row in rows:
         # 在当前行中提取Symbol
-        symbol_element = row.find_element(By.CSS_SELECTOR, 'span.symbol.yf-138ga19')
+        symbol_element = row.find_element(By.CSS_SELECTOR, 'span.symbol.yf-1m808gl')
         symbol = symbol_element.text.strip()
         
         # 在当前行中提取Name
-        name_element = row.find_element(By.CSS_SELECTOR, 'span.yf-138ga19.longName')
+        name_element = row.find_element(By.CSS_SELECTOR, 'span.yf-paf8n5')
         name = name_element.text.strip()
 
         # 在当前行中提取Volume，并移除逗号以转换为整数

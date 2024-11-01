@@ -2,7 +2,8 @@
     "Basic_Materials": {
         "MOS": "美盛化肥",
         "VALE": "",
-        "LYB": ""
+        "LYB": "",
+        "NEM": ""
     },
     "Communication_Services": {
         "DJT": ""
@@ -37,7 +38,13 @@
         "ASML": "",
         "KLAC": "",
         "ACLS": "",
-        "NXT": ""
+        "NXT": "",
+        "MSFT": "",
+        "ADBE": "",
+        "CDW": "",
+        "UMC": "",
+        "QRVO": "",
+        "QLYS": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -46,14 +53,23 @@
         "CL": "",
         "PEP": "百事可乐",
         "HSY": "好时",
-        "BG": "邦吉"
+        "BG": "邦吉",
+        "PG": "",
+        "BUD": ""
     },
     "Industrials": {
         "BA": "波音",
-        "CNI": ""
+        "CNI": "",
+        "HII": "",
+        "HXL": "",
+        "SARO": ""
     },
-    "Real_Estate": {},
-    "Financial_Services": {},
+    "Real_Estate": {
+        "PLD": ""
+    },
+    "Financial_Services": {
+        "BRK-A": ""
+    },
     "Healthcare": {
         "DXCM": "德康血糖",
         "MRNA": "",
@@ -65,7 +81,18 @@
         "REGN": "",
         "CI": "",
         "ICLR": "",
-        "OPCH": ""
+        "OPCH": "",
+        "LLY": "",
+        "AZN": "",
+        "NVS": "",
+        "TMO": "",
+        "PFE": "",
+        "GSK": "",
+        "RDY": "",
+        "BIIB": "",
+        "GMAB": "",
+        "BMRN": "",
+        "ACHC": ""
     },
     "Bonds": {
         "US2Y": "",

@@ -27,7 +27,12 @@
         "CCI",
         "AZO",
         "PEP",
-        "CNI"
+        "CNI",
+        "NEM",
+        "PG",
+        "BUD",
+        "NVS",
+        "PFE"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -41,7 +46,9 @@
         "NVO",
         "LLY",
         "SONY",
-        "TSLA"
+        "TSLA",
+        "BRK-A",
+        "MSFT"
     ],
     "purple_keywords": [
         "Bitcoin",
@@ -94,7 +101,6 @@
         "VIPS",
         "POOL",
         "SITE",
-        "BSBR",
         "XP",
         "VIV",
         "TIMB",
@@ -132,13 +138,14 @@
         "APLS",
         "ALV",
         "WFRD",
-        "VRN",
         "ACLS",
         "NXT",
         "MOH",
         "LYB",
         "ICLR",
-        "CDW"
+        "CDW",
+        "TTE",
+        "UMC"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -229,7 +236,10 @@
         "HSY",
         "BG",
         "OPCH",
-        "QRVO"
+        "QRVO",
+        "VRN",
+        "BSBR",
+        "HII"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -246,7 +256,6 @@
         "PAYC",
         "BF-B",
         "BIO",
-        "EL",
         "DG",
         "DLTR",
         "NBIS",
@@ -282,7 +291,8 @@
         "BIIB",
         "SARO",
         "XRAY",
-        "LCID"
+        "LCID",
+        "EL"
     ],
     "green_keywords": [
         "EURCNY",
@@ -298,7 +308,6 @@
         "COP",
         "BP",
         "EQNR",
-        "TTE",
         "MRK",
         "GSK"
     ],
