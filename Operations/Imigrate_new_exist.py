@@ -101,23 +101,41 @@ def process_etf_file(new_file, existing_file):
     if not os.path.exists(new_file):
         return
 
-    existing_symbols = get_symbols(existing_file)
+    # 读取现有文件的所有内容（不使用 readlines 以避免自动添加换行符）
+    with open(existing_file, 'r') as f:
+        existing_content = f.read()
     
-    with open(new_file, 'r') as file_new, open(existing_file, 'a+') as file_existing:
-        file_existing.seek(0, 2)  # Move to the end of the file
-        if file_existing.tell() > 0:  # Check if file is not empty
-            file_existing.write('\n')  # Add a newline if the file is not empty
-        
-        lines = file_new.readlines()
-        for i, line in enumerate(lines):
-            symbol = line.split(':', 1)[0].strip()
-            if symbol not in existing_symbols:
-                if i == len(lines) - 1:  # 如果是最后一行
-                    file_existing.write(line.rstrip())  # 移除行尾的空白字符，但不添加新行
-                else:
-                    file_existing.write(line)
-                existing_symbols.add(symbol)  # Update the set with the new symbol
-
+    # 获取现有的符号集
+    existing_symbols = {line.split(':', 1)[0].strip() 
+                       for line in existing_content.split('\n') if line.strip()}
+    
+    # 读取新文件的所有内容
+    with open(new_file, 'r') as f:
+        new_content = f.read()
+    
+    # 处理新内容
+    new_lines_to_add = []
+    for line in new_content.split('\n'):
+        if not line.strip():
+            continue
+        symbol = line.split(':', 1)[0].strip()
+        if symbol not in existing_symbols:
+            new_lines_to_add.append(line)
+            existing_symbols.add(symbol)
+    
+    # 写入合并后的内容
+    if new_lines_to_add:
+        with open(existing_file, 'w') as f:
+            if existing_content and existing_content.strip():
+                # 如果现有内容非空，添加新内容时需要换行符分隔
+                content_to_write = existing_content + '\n' + '\n'.join(new_lines_to_add)
+            else:
+                # 如果现有内容为空，直接写入新内容
+                content_to_write = '\n'.join(new_lines_to_add)
+            
+            # 写入内容，确保末尾没有换行符
+            f.write(content_to_write.rstrip('\n'))
+    
     os.remove(new_file)
 
 def backup_diff_file(diff_file, backup_dir):
