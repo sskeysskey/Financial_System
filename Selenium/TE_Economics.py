@@ -82,7 +82,8 @@ with webdriver.Chrome(service=service) as driver:
         "Core PCE Price Index Annual Change": "CorePCEY",
         "Core PCE Price Index MoM": "CorePCEM",
         "Core Inflation Rate": "CoreCPI",
-        "Producer Prices Change": "USPPI"
+        "Producer Prices Change": "USPPI",
+        "PCE Price Index Annual Change": "PCEY"
     }
     Economics4 = {
         "Real Consumer Spending": "USConspending"

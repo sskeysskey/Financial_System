@@ -64,6 +64,7 @@
     "GDP Advance*": "USGDP",
     "GDP 2nd Estimate*": "USGDP",
     "CPI YY, NSA*": "USCPI",
+    "Fed Funds Tgt Rate *": "USInterest",
     "Non-Farm Payrolls*": "USNonFarm",
     "ADP National Employment*": "USNonFarmA",
     "International Trade $ *": "USTrade",
@@ -76,5 +77,6 @@
     "Core PCE Price Index YY*": "CorePCEY",
     "Core PCE Price Index MM *": "CorePCEM",
     "Core CPI YY, NSA*": "CoreCPI",
-    "GDP Cons Spending Prelim*": "USConspending"
+    "GDP Cons Spending Prelim*": "USConspending",
+    "PCE Price Index YY *": "PCEY"
 }
