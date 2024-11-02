@@ -89,14 +89,6 @@ def process_file(new_file, existing_file):
                         file_b.write(line)
         os.remove(new_file)
 
-def get_symbols(file_path):
-    symbols = set()
-    with open(file_path, 'r') as file:
-        for line in file:
-            symbol = line.split(':', 1)[0].strip()
-            symbols.add(symbol)
-    return symbols
-
 def process_etf_file(new_file, existing_file):
     if not os.path.exists(new_file):
         return
