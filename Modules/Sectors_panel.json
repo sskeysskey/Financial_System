@@ -15,7 +15,6 @@
         "DOOO": "",
         "GPC": "",
         "LKQ": "",
-        "DHI": "",
         "CPRI": "",
         "AZO": ""
     },
@@ -24,11 +23,11 @@
         "CHRD": "",
         "VAL": "",
         "EQNR": "",
-        "MPC": "",
         "NE": "",
         "WFRD": "",
-        "DINO": "",
         "TTE": "",
+        "PBR": "",
+        "MPC": "",
         "PSX": ""
     },
     "Technology": {
@@ -39,12 +38,7 @@
         "KLAC": "",
         "ACLS": "",
         "NXT": "",
-        "MSFT": "",
-        "ADBE": "",
-        "CDW": "",
-        "UMC": "",
-        "QRVO": "",
-        "QLYS": ""
+        "INFY": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -55,17 +49,21 @@
         "HSY": "好时",
         "BG": "邦吉",
         "PG": "",
-        "BUD": ""
+        "BUD": "",
+        "KDP": ""
     },
     "Industrials": {
         "BA": "波音",
-        "CNI": "",
         "HII": "",
-        "HXL": "",
+        "CP": "",
+        "MDU": "",
         "SARO": ""
     },
     "Real_Estate": {
-        "PLD": ""
+        "AMT": "",
+        "O": "",
+        "CCI": "",
+        "LINE": ""
     },
     "Financial_Services": {
         "BRK-A": ""
@@ -74,24 +72,16 @@
         "DXCM": "德康血糖",
         "MRNA": "",
         "NVO": "",
-        "HUM": "",
         "MRK": "",
-        "ELV": "",
-        "CNC": "",
         "REGN": "",
-        "CI": "",
-        "ICLR": "",
-        "OPCH": "",
-        "LLY": "",
-        "AZN": "",
+        "AZN": "阿斯利康",
         "NVS": "",
-        "TMO": "",
+        "RDY": "印度仿制",
+        "BIIB": "渤健",
+        "LLY": "",
         "PFE": "",
-        "GSK": "",
-        "RDY": "",
-        "BIIB": "",
-        "GMAB": "",
-        "BMRN": "",
+        "CVS": "",
+        "ICLR": "",
         "ACHC": ""
     },
     "Bonds": {

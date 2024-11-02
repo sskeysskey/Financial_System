@@ -32,7 +32,10 @@
         "PG",
         "BUD",
         "NVS",
-        "PFE"
+        "PFE",
+        "CP",
+        "O",
+        "INFY"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -239,7 +242,9 @@
         "QRVO",
         "VRN",
         "BSBR",
-        "HII"
+        "HII",
+        "RCI",
+        "MDU"
     ],
     "orange_keywords": [
         "NASDAQ",
