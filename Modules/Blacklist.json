@@ -111,7 +111,8 @@
         "SSL",
         "BSBR",
         "DG",
-        "LCID"
+        "LCID",
+        "PBR"
     ],
     "screener": [
         "CTA-PA",

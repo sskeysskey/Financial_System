@@ -15,8 +15,7 @@
         "DOOO": "",
         "GPC": "",
         "LKQ": "",
-        "CPRI": "",
-        "AZO": ""
+        "CPRI": ""
     },
     "Energy": {
         "PBF": "石油精炼",
@@ -26,7 +25,6 @@
         "NE": "",
         "WFRD": "",
         "TTE": "",
-        "PBR": "",
         "MPC": "",
         "PSX": ""
     },
@@ -36,9 +34,7 @@
         "INTC": "",
         "ASML": "",
         "KLAC": "",
-        "ACLS": "",
-        "NXT": "",
-        "INFY": ""
+        "ACLS": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -55,15 +51,10 @@
     "Industrials": {
         "BA": "波音",
         "HII": "",
-        "CP": "",
-        "MDU": "",
-        "SARO": ""
+        "CP": ""
     },
     "Real_Estate": {
-        "AMT": "",
-        "O": "",
-        "CCI": "",
-        "LINE": ""
+        "O": ""
     },
     "Financial_Services": {
         "BRK-A": ""
@@ -77,12 +68,7 @@
         "AZN": "阿斯利康",
         "NVS": "",
         "RDY": "印度仿制",
-        "BIIB": "渤健",
-        "LLY": "",
-        "PFE": "",
-        "CVS": "",
-        "ICLR": "",
-        "ACHC": ""
+        "CVS": ""
     },
     "Bonds": {
         "US2Y": "",
@@ -162,11 +148,10 @@
         "EURUSD": ""
     },
     "Economics": {
-        "CorePCEY": "31 CorePCEY",
-        "CorePCEM": "31 CorePCEM",
-        "USNonFarm": "01 USNonFarm",
-        "USUnemploy": "01 USUnemploy",
-        "USInitial": "31 USInitial"
+        "USTrade": "05 USTrade",
+        "USInterest": "07 USInterest",
+        "USConfidence": "08 USConfidence",
+        "USInitial": "07 USInitial"
     },
     "ETFs_US": {
         "TLT": "",

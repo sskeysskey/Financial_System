@@ -51,6 +51,17 @@ def find_tags_by_symbol(symbol, data):
                 return tags_with_weight
     return []
 
+# 添加新的判断函数
+def get_symbol_type(symbol, data):
+    """判断symbol属于stock还是etf"""
+    for item in data['stocks']:
+        if item['symbol'] == symbol:
+            return 'stock'
+    for item in data['etfs']:
+        if item['symbol'] == symbol:
+            return 'etf'
+    return None
+
 def find_symbols_by_tags(target_tags_with_weight, data):
     related_symbols = {'stocks': [], 'etfs': []}
 
@@ -127,20 +138,21 @@ def main(symbol):
         
         output_lines.append(f"\n")
         
-        # 添加stocks结果
-        output_lines.append("\n【Stocks】\n")
-        for sym, matched_tags, all_tags in related_symbols['stocks']:
-            compare_value = compare_data.get(sym, '')
-            total_weight = round(sum(float(weight) for _, weight in matched_tags), 2)  # 转换为浮点数并舍入
-            output_lines.append(f"{sym:<7}{total_weight:<3} {compare_value:<12}{all_tags}\n")
+        # 获取symbol类型
+        symbol_type = get_symbol_type(symbol, data)
         
-        # 添加etfs结果并加标题
-        if related_symbols['etfs']:
-            output_lines.append("\n【ETFs】\n")
-            for sym, matched_tags, all_tags in related_symbols['etfs']:
-                compare_value = compare_data.get(sym, '')
-                total_weight = round(sum(float(weight) for _, weight in matched_tags), 2)  # 转换为浮点数并舍入
-                output_lines.append(f"{sym:<7}{total_weight:<3} {compare_value:<10}{all_tags}\n")
+        # 根据symbol类型决定显示顺序
+        categories_order = ['etfs', 'stocks'] if symbol_type == 'etf' else ['stocks', 'etfs']
+        
+        # 按确定的顺序输出结果
+        for category in categories_order:
+            title = "【ETFs】" if category == 'etfs' else "【Stocks】"
+            if related_symbols[category]:  # 只在有结果时显示类别标题
+                output_lines.append(f"\n{title}\n")
+                for sym, matched_tags, all_tags in related_symbols[category]:
+                    compare_value = compare_data.get(sym, '')
+                    total_weight = round(sum(float(weight) for _, weight in matched_tags), 2)
+                    output_lines.append(f"{sym:<7}{total_weight:<3} {compare_value:<12}{all_tags}\n")
     
     output_path = '/Users/yanzhang/Documents/News/similar.txt'
     with open(output_path, 'w') as file:
