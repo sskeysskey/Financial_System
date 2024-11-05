@@ -6,7 +6,8 @@
         "NEM": ""
     },
     "Communication_Services": {
-        "DJT": ""
+        "DJT": "",
+        "META": ""
     },
     "Consumer_Cyclical": {
         "MBLY": "",
@@ -34,7 +35,8 @@
         "INTC": "",
         "ASML": "",
         "KLAC": "",
-        "ACLS": ""
+        "ACLS": "",
+        "INFY": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -46,18 +48,21 @@
         "BG": "邦吉",
         "PG": "",
         "BUD": "",
-        "KDP": ""
+        "KDP": "",
+        "MDLZ": ""
     },
     "Industrials": {
         "BA": "波音",
         "HII": "",
-        "CP": ""
+        "CP": "",
+        "UNP": ""
     },
     "Real_Estate": {
         "O": ""
     },
     "Financial_Services": {
-        "BRK-A": ""
+        "BRK-A": "",
+        "EG": ""
     },
     "Healthcare": {
         "DXCM": "德康血糖",
@@ -68,7 +73,13 @@
         "AZN": "阿斯利康",
         "NVS": "",
         "RDY": "印度仿制",
-        "CVS": ""
+        "CVS": "",
+        "LLY": "",
+        "JNJ": "",
+        "PFE": "",
+        "BIIB": "",
+        "ICLR": "",
+        "OPCH": ""
     },
     "Bonds": {
         "US2Y": "",

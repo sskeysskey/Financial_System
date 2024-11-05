@@ -35,7 +35,9 @@
         "PFE",
         "CP",
         "O",
-        "INFY"
+        "INFY",
+        "MDLZ",
+        "JNJ"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -51,7 +53,8 @@
         "SONY",
         "TSLA",
         "BRK-A",
-        "MSFT"
+        "MSFT",
+        "META"
     ],
     "purple_keywords": [
         "Bitcoin",
@@ -148,7 +151,8 @@
         "ICLR",
         "CDW",
         "TTE",
-        "UMC"
+        "UMC",
+        "EG"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -297,7 +301,8 @@
         "SARO",
         "XRAY",
         "LCID",
-        "EL"
+        "EL",
+        "BCE"
     ],
     "green_keywords": [
         "EURCNY",
