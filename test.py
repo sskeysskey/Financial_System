@@ -1,253 +1,271 @@
-from selenium import webdriver
-from selenium.webdriver.common.by import By
 import os
 import json
-import shutil
-from selenium.webdriver.chrome.service import Service
-from datetime import datetime, timedelta
-import pyautogui
-import random
-import time
-import threading
+import sys
+import subprocess
+import tkinter as tk
+from tkinter import ttk, messagebox
+import pyperclip
 
-# 添加鼠标移动功能的函数
-def move_mouse_periodically():
-    while True:
-        try:
-            # 获取屏幕尺寸
-            screen_width, screen_height = pyautogui.size()
-            
-            # 随机生成目标位置，避免移动到屏幕边缘
-            x = random.randint(100, screen_width - 100)
-            y = random.randint(100, screen_height - 100)
-            
-            # 缓慢移动鼠标到随机位置
-            pyautogui.moveTo(x, y, duration=1)
-            
-            # 等待30-60秒再次移动
-            time.sleep(random.randint(30, 60))
-            
-        except Exception as e:
-            print(f"鼠标移动出错: {str(e)}")
-            time.sleep(30)
+def copy2clipboard():
+    script = '''
+    tell application "System Events"
+        keystroke "c" using {command down}
+        delay 0.5
+    end tell
+    '''
+    subprocess.run(['osascript', '-e', script], check=True)
 
-# 在主程序开始前启动鼠标移动线程
-mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
-mouse_thread.start()
-
-# ChromeDriver 路径
-chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
-
-# 设置 ChromeDriver
-service = Service(executable_path=chrome_driver_path)
-driver = webdriver.Chrome(service=service)
-
-def convert_volume(volume_str):
-    """转换交易量字符串为整数"""
-    try:
-        # 移除所有逗号
-        volume_str = volume_str.replace(",", "")
+class TagEditor:
+    def __init__(self, init_symbol=None):
+        self.json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/description.json"
+        self.load_json_data()
         
-        # 处理百万单位
-        if 'M' in volume_str:
-            return int(float(volume_str.replace('M', '')) * 1000000)
-        # 处理千单位
-        elif 'K' in volume_str:
-            return int(float(volume_str.replace('K', '')) * 1000)
-        # 处理十亿单位
-        elif 'B' in volume_str:
-            return int(float(volume_str.replace('B', '')) * 1000000000)
-        # 处理普通数字
+        self.root = tk.Tk()
+        self.root.title("Tag Editor")
+        self.root.geometry("500x600")
+        
+        # 初始化UI
+        self.init_ui()
+        
+        # 将窗口置顶
+        self.root.lift()
+        self.root.focus_force()
+        
+        # 处理初始化数据
+        if init_symbol:
+            self.process_symbol(init_symbol)
         else:
-            return int(float(volume_str))
-    except Exception as e:
-        print(f"转换交易量出错: {volume_str} - {str(e)}")
-        return 0
-
-def fetch_data(url):
-    try:
-        # 等待页面加载
-        driver.get(url)
-        data_list = []
-        
-        # 找到所有的行
-        rows = driver.find_elements(By.CSS_SELECTOR, "tbody.body tr.row")
-        
-        for row in rows:
-            try:
-                # 获取symbol
-                symbol_element = row.find_element(By.CSS_SELECTOR, "span.symbol")
-                symbol = symbol_element.text.strip()
-                
-                # 获取name
-                name_element = row.find_element(By.CSS_SELECTOR, "div[title]")
-                name = name_element.get_attribute("title").strip()
-                
-                # 获取volume并处理
-                volume_element = row.find_element(By.CSS_SELECTOR, "fin-streamer[data-field='regularMarketVolume']")
-                volume_str = volume_element.text.strip()
-                volume = convert_volume(volume_str)
-                
-                # 添加到数据列表
-                if symbol and name and volume > 0:
-                    data_list.append((symbol, name, volume))
-                    
-            except Exception as e:
-                print(f"处理行时出错: {str(e)}")
-                continue
-                
-        return data_list
-        
-    except Exception as e:
-        print(f"获取数据时出错: {str(e)}")
-        return []
-
-def load_compare_data(compare_file):
-    compare_data = {}
-    with open(compare_file, 'r') as file:
-        for line in file:
-            parts = line.split(':')
-            if len(parts) == 2:
-                symbol, percentage = parts[0].strip(), parts[1].strip()
-                compare_data[symbol] = percentage
-    return compare_data
-
-def save_data(urls, existing_json, new_file, today_file, diff_file, compare_file):
-    # 首先访问Yahoo Finance主页
-    driver.get("https://finance.yahoo.com/markets/etfs/top/")
-    # 等待2秒
-    time.sleep(2)
+            self.process_clipboard()
     
-    # 读取a.json文件中的etfs的symbol字段
-    with open(existing_json, 'r') as json_file:
-        data = json.load(json_file)
-        existing_symbols = {etf['symbol'] for etf in data['etfs']}
-    
-    # 读取compare_all.txt文件中的百分比数据
-    compare_data = load_compare_data(compare_file)
-    
-    # 收集新数据
-    total_data_list = []
-    filter_data_list = []
-    for url in urls:
-        data_list = fetch_data(url)
-        for symbol, name, volume in data_list:
-            if volume > 200000:
-                total_data_list.append(f"{symbol}: {name}, {volume}")
-                if symbol not in existing_symbols:
-                    filter_data_list.append(f"{symbol}: {name}, {volume}")
-                    existing_symbols.add(symbol)
+    def process_symbol(self, symbol):
+        """处理指定的symbol"""
+        if symbol:
+            category, item = self.find_symbol(symbol)
+            if item:
+                self.current_category = category
+                self.current_item = item
+                self.update_ui(item)
+            else:
+                messagebox.showinfo("提示", f"未找到Symbol: {symbol}")
 
-    # 写入新数据文件（仅在filter_data_list不为空时）
-    if filter_data_list:
-        with open(new_file, "w") as file:
-            for i, line in enumerate(filter_data_list):
-                if i < len(filter_data_list) - 1:
-                    file.write(f"{line}\n")  # 非最后一行添加换行符
-                else:
-                    file.write(line)  # 最后一行不添加任何后缀
+    def load_json_data(self):
+        try:
+            with open(self.json_file_path, 'r', encoding='utf-8') as file:
+                self.data = json.load(file)
+        except Exception as e:
+            messagebox.showerror("Error", f"加载JSON文件失败: {str(e)}")
+            self.data = {"stocks": [], "etfs": []}
 
-    # 获取昨天的日期
-    yesterday = (datetime.now() - timedelta(1)).strftime('%m%d')
+    def save_json_data(self):
+        try:
+            with open(self.json_file_path, 'w', encoding='utf-8') as file:
+                json.dump(self.data, file, ensure_ascii=False, indent=2)
+            messagebox.showinfo("成功", "保存成功！")
+        except Exception as e:
+            messagebox.showerror("Error", f"保存失败: {str(e)}")
 
-    if os.path.exists(today_file):
-        # 备份今天的文件
-        backup_today_file = f"/Users/yanzhang/Documents/News/site/ETFs_today_{yesterday}.txt"
-        shutil.copy2(today_file, backup_today_file)
-
-    if not os.path.exists(today_file):
-        # 如果today_file不存在，写入所有新数据
-        with open(today_file, "w") as file:
-            for i, line in enumerate(total_data_list):
-                if i < len(total_data_list) - 1:
-                    file.write(f"{line}\n")
-                else:
-                    file.write(line)
-    else:
-        # 如果today_file存在，比较并写入diff_file
-        with open(today_file, "r") as file:
-            existing_lines = file.readlines()
-            existing_symbols_today = {line.split(":")[0].strip() for line in existing_lines}
+    def init_ui(self):
+        # Symbol显示
+        self.symbol_label = ttk.Label(self.root, text="Symbol: ")
+        self.symbol_label.pack(pady=10)
         
-        diff_data_list = []
-        for line in total_data_list:
-            symbol = line.split(":")[0].strip()
-            if symbol not in existing_symbols_today:
-                percentage = compare_data.get(symbol, "")
-                if percentage:
-                    line = f"{symbol:<7} {percentage if percentage else '':<10}: {line.split(':', 1)[1]}"
-                diff_data_list.append(line)
+        # Tags列表框
+        self.tags_frame = ttk.LabelFrame(self.root, text="Tags")
+        self.tags_frame.pack(padx=10, pady=5, fill="both", expand=True)
+        
+        # 创建一个框架来容纳列表框和移动按钮
+        list_buttons_frame = ttk.Frame(self.tags_frame)
+        list_buttons_frame.pack(fill="both", expand=True)
+        
+        # 添加上下移动按钮
+        move_buttons_frame = ttk.Frame(list_buttons_frame)
+        move_buttons_frame.pack(side="left", padx=5, fill="y")
+        
+        ttk.Button(move_buttons_frame, text="↑", width=3,
+                  command=self.move_tag_up).pack(pady=2)
+        ttk.Button(move_buttons_frame, text="↓", width=3,
+                  command=self.move_tag_down).pack(pady=2)
+        
+        # Tags列表框
+        self.tags_listbox = tk.Listbox(list_buttons_frame)
+        self.tags_listbox.pack(side="left", padx=5, pady=5, fill="both", expand=True)
+        
+        # 绑定双击事件用于编辑
+        self.tags_listbox.bind('<Double-Button-1>', self.on_double_click)
+        
+        # 添加新tag输入框和按钮的框架
+        input_frame = ttk.Frame(self.root)
+        input_frame.pack(pady=5, fill="x", padx=10)
+        
+        self.new_tag_var = tk.StringVar()
+        self.new_tag_entry = ttk.Entry(input_frame, textvariable=self.new_tag_var)
+        self.new_tag_entry.pack(side="left", padx=5, fill="x", expand=True)
+        
+        # 按钮框架
+        buttons_frame = ttk.Frame(self.root)
+        buttons_frame.pack(pady=5, padx=10, fill="x")
+        
+        # 按钮
+        ttk.Button(buttons_frame, text="添加新标签", 
+                  command=self.add_tag).pack(side="left", padx=2)
+        ttk.Button(buttons_frame, text="删除标签", 
+                  command=self.delete_tag).pack(side="left", padx=2)
+        ttk.Button(buttons_frame, text="保存更改", 
+                  command=self.save_changes).pack(side="left", padx=2)
 
-        with open(diff_file, "w") as file:
-            for i, line in enumerate(diff_data_list):
-                if i < len(diff_data_list) - 1:
-                    file.write(f"{line}\n")
+        # 绑定回车键到保存功能
+        self.root.bind('<Return>', lambda e: self.save_changes())
+
+    def on_double_click(self, event):
+        """处理双击编辑事件"""
+        selection = self.tags_listbox.curselection()
+        if not selection:
+            return
+            
+        index = selection[0]
+        old_tag = self.tags_listbox.get(index)
+        
+        # 创建编辑对话框
+        edit_window = tk.Toplevel(self.root)
+        edit_window.title("编辑标签")
+        edit_window.geometry("300x100")
+        
+        # 使对话框成为模态窗口
+        edit_window.transient(self.root)
+        edit_window.grab_set()
+        
+        # 创建编辑框
+        edit_var = tk.StringVar(value=old_tag)
+        edit_entry = ttk.Entry(edit_window, textvariable=edit_var)
+        edit_entry.pack(padx=10, pady=10, fill="x")
+        
+        def save_edit():
+            new_tag = edit_var.get().strip()
+            if new_tag and new_tag != old_tag:
+                self.current_item['tag'][index] = new_tag
+                self.tags_listbox.delete(index)
+                self.tags_listbox.insert(index, new_tag)
+            edit_window.destroy()
+            
+        # 添加确认按钮
+        ttk.Button(edit_window, text="确认", command=save_edit).pack(pady=5)
+        
+        # 聚焦到编辑框并选中全部文本
+        edit_entry.focus_set()
+        edit_entry.select_range(0, tk.END)
+        
+        # 绑定回车键
+        edit_entry.bind('<Return>', lambda e: save_edit())
+
+    def move_tag_up(self):
+        """将选中的tag向上移动"""
+        selection = self.tags_listbox.curselection()
+        if not selection or selection[0] == 0:
+            return
+            
+        index = selection[0]
+        tag = self.current_item['tag'].pop(index)
+        self.current_item['tag'].insert(index-1, tag)
+        
+        # 更新列表显示
+        self.tags_listbox.delete(0, tk.END)
+        for tag in self.current_item['tag']:
+            self.tags_listbox.insert(tk.END, tag)
+        self.tags_listbox.selection_set(index-1)
+
+    def move_tag_down(self):
+        """将选中的tag向下移动"""
+        selection = self.tags_listbox.curselection()
+        if not selection or selection[0] == self.tags_listbox.size()-1:
+            return
+            
+        index = selection[0]
+        tag = self.current_item['tag'].pop(index)
+        self.current_item['tag'].insert(index+1, tag)
+        
+        # 更新列表显示
+        self.tags_listbox.delete(0, tk.END)
+        for tag in self.current_item['tag']:
+            self.tags_listbox.insert(tk.END, tag)
+        self.tags_listbox.selection_set(index+1)
+
+    # [之前的其他方法保持不变...]
+    def find_symbol(self, symbol):
+        """查找symbol对应的数据"""
+        for category in ['stocks', 'etfs']:
+            for item in self.data[category]:
+                if item['symbol'] == symbol:
+                    return category, item
+        return None, None
+
+    def process_clipboard(self):
+        """处理剪贴板内容"""
+        try:
+            clipboard_text = pyperclip.paste().strip()
+            if clipboard_text:
+                category, item = self.find_symbol(clipboard_text)
+                if item:
+                    self.current_category = category
+                    self.current_item = item
+                    self.update_ui(item)
                 else:
-                    file.write(line)
-        # 覆盖写入today_file
-        with open(today_file, "w") as file:
-            for i, line in enumerate(total_data_list):
-                if i < len(total_data_list) - 1:
-                    file.write(f"{line}\n")
-                else:
-                    file.write(line)
+                    messagebox.showinfo("提示", f"未找到Symbol: {clipboard_text}")
+            else:
+                messagebox.showinfo("提示", "剪贴板为空")
+        except Exception as e:
+            messagebox.showerror("Error", f"剪贴板读取失败: {str(e)}")
 
-def backup_diff_file(diff_file, backup_dir):
-    if os.path.exists(diff_file):
-        # 获取当前时间戳
-        timestamp = datetime.now().strftime('%y%m%d')
-        # 新的文件名
-        new_filename = f"ETFs_diff_{timestamp}.txt"
-        # 目标路径
-        target_path = os.path.join(backup_dir, new_filename)
-        # 移动文件
-        shutil.move(diff_file, target_path)
+    def update_ui(self, item):
+        """更新UI显示"""
+        self.symbol_label.config(text=f"Symbol: {item['symbol']}")
+        self.tags_listbox.delete(0, tk.END)
+        for tag in item['tag']:
+            self.tags_listbox.insert(tk.END, tag)
 
-def clean_old_backups(directory, prefix="ETFs_today_", days=4):
-    """删除备份目录中超过指定天数的文件"""
-    now = datetime.now()
-    cutoff = now - timedelta(days=days)
+    def add_tag(self):
+        """添加新tag"""
+        new_tag = self.new_tag_var.get().strip()
+        if new_tag and hasattr(self, 'current_item'):
+            if new_tag not in self.current_item['tag']:
+                self.current_item['tag'].append(new_tag)
+                self.tags_listbox.insert(tk.END, new_tag)
+                self.new_tag_var.set("")
+            else:
+                messagebox.showinfo("提示", "该标签已存在")
 
-    for filename in os.listdir(directory):
-        if filename.startswith(prefix):  # 只处理特定前缀的文件
-            try:
-                date_str = filename.split('_')[-1].split('.')[0]  # 获取日期部分
-                file_date = datetime.strptime(date_str, '%m%d')
-                # 将年份设置为今年
-                file_date = file_date.replace(year=now.year)
-                if file_date < cutoff:
-                    file_path = os.path.join(directory, filename)
-                    os.remove(file_path)
-                    print(f"删除旧备份文件：{file_path}")
-            except Exception as e:
-                print(f"跳过文件：{filename}，原因：{e}")
+    def delete_tag(self):
+        """删除选中的tag"""
+        selection = self.tags_listbox.curselection()
+        if selection and hasattr(self, 'current_item'):
+            index = selection[0]
+            tag = self.tags_listbox.get(index)
+            self.current_item['tag'].remove(tag)
+            self.tags_listbox.delete(index)
 
-# diff 文件路径
-diff_file = '/Users/yanzhang/Documents/News/ETFs_diff.txt'
-backup_dir = '/Users/yanzhang/Documents/News/backup/backup'
-backup_diff_file(diff_file, backup_dir)
+    def save_changes(self):
+        """保存更改到JSON文件"""
+        if hasattr(self, 'current_item'):
+            self.save_json_data()
+        else:
+            messagebox.showinfo("提示", "没有可保存的更改")
 
-# URL列表
-urls = [
-    "https://finance.yahoo.com/markets/etfs/top/?start=0&count=100",
-    "https://finance.yahoo.com/markets/etfs/top/?start=100&count=100",
-    "https://finance.yahoo.com/markets/etfs/top/?start=200&count=100",
-    "https://finance.yahoo.com/markets/etfs/top/?start=300&count=100",
-    "https://finance.yahoo.com/markets/etfs/top/?start=400&count=100"
-]
+    def run(self):
+        """运行程序"""
+        self.root.mainloop()
 
-existing_json = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
-new_file = '/Users/yanzhang/Documents/News/ETFs_new.txt'
-today_file = '/Users/yanzhang/Documents/News/site/ETFs_today.txt'
-diff_file = '/Users/yanzhang/Documents/News/ETFs_diff.txt'
-compare_file = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
+def main():
+    # 检查是否有命令行参数
+    init_symbol = None
+    if len(sys.argv) > 1:
+        init_symbol = sys.argv[1].upper()  # 转换为大写以确保匹配
+    
+    # 如果没有命令行参数，执行复制操作
+    if not init_symbol:
+        copy2clipboard()
+    
+    # 创建并运行应用
+    app = TagEditor(init_symbol)
+    app.run()
 
-try:
-    save_data(urls, existing_json, new_file, today_file, diff_file, compare_file)
-finally:
-    driver.quit()
-print("所有爬取任务完成。")
-
-# 调用清理旧备份文件的函数
-directory_backup = '/Users/yanzhang/Documents/News/site/'
-clean_old_backups(directory_backup)
+if __name__ == "__main__":
+    main()

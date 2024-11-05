@@ -157,7 +157,7 @@ def create_selection_window():
                     menu.add_command(label="Add to Earning", command=lambda k=keyword: execute_external_script('earning', k))
 
                     menu.add_separator()  # 添加分隔线
-                    menu.add_command(label="添加Tags", command=lambda k=keyword: execute_external_script('tag', k))
+                    menu.add_command(label="编辑Tags", command=lambda k=keyword: execute_external_script('tags', k))
                     menu.add_command(label="在富途中搜索", command=lambda k=keyword: execute_external_script('futu', k))
                     menu.add_command(label="找相似", command=lambda k=keyword: execute_external_script('similar', k))
 
@@ -188,7 +188,7 @@ def execute_external_script(script_type, keyword, group=None):
     script_configs = {
         'blacklist': f'{base_path}/Operations/Insert_Blacklist.py',
         'similar': f'{base_path}/Query/Find_Similar_Tag.py',
-        'tag': f'{base_path}/Operations/Insert_tag_Stock.py',
+        'tags': f'{base_path}/Operations/Tags_Editor.py',
         'earning': f'{base_path}/Operations/Insert_Earning.py',
         'earning_force': f'{base_path}/Operations/Insert_Earning_Force.py',
         'futu': '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt'
