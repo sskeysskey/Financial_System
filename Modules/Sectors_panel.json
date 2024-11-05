@@ -2,7 +2,6 @@
     "Basic_Materials": {
         "MOS": "美盛化肥",
         "VALE": "",
-        "LYB": "",
         "NEM": ""
     },
     "Communication_Services": {
@@ -35,8 +34,7 @@
         "INTC": "",
         "ASML": "",
         "KLAC": "",
-        "ACLS": "",
-        "INFY": ""
+        "ACLS": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -46,23 +44,18 @@
         "PEP": "百事可乐",
         "HSY": "好时",
         "BG": "邦吉",
-        "PG": "",
-        "BUD": "",
-        "KDP": "",
         "MDLZ": ""
     },
     "Industrials": {
         "BA": "波音",
         "HII": "",
-        "CP": "",
         "UNP": ""
     },
     "Real_Estate": {
         "O": ""
     },
     "Financial_Services": {
-        "BRK-A": "",
-        "EG": ""
+        "BRK-A": ""
     },
     "Healthcare": {
         "DXCM": "德康血糖",
@@ -77,9 +70,7 @@
         "LLY": "",
         "JNJ": "",
         "PFE": "",
-        "BIIB": "",
-        "ICLR": "",
-        "OPCH": ""
+        "ICLR": ""
     },
     "Bonds": {
         "US2Y": "",

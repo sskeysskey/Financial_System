@@ -154,22 +154,20 @@ def create_selection_window():
                     menu.add_command(label="删除", command=lambda k=keyword, g=db_key: delete_item(k, g))
 
                     # 新增“Add to Earning”选项
-                    menu.add_command(label="Add to Earning", command=lambda k=keyword: add_to_earning(k))
+                    menu.add_command(label="Add to Earning", command=lambda k=keyword: execute_external_script('earning', k))
 
                     menu.add_separator()  # 添加分隔线
-                    menu.add_command(label="在富途中搜索", command=lambda k=keyword: execute_stock_futu(k))
-                    menu.add_command(label="找相似", command=lambda k=keyword: find_similiar(k))
+                    menu.add_command(label="添加Tags", command=lambda k=keyword: execute_external_script('tag', k))
+                    menu.add_command(label="在富途中搜索", command=lambda k=keyword: execute_external_script('futu', k))
+                    menu.add_command(label="找相似", command=lambda k=keyword: execute_external_script('similar', k))
 
                     menu.add_separator()  # 添加分隔线
-                    # 新增“Add to Earning”选项
-                    menu.add_command(label="加入黑名单", command=lambda k=keyword, g=db_key: add_to_blacklist(k, g))
-
+                    menu.add_command(label="加入黑名单", command=lambda k=keyword, g=db_key: execute_external_script('blacklist', k, g))
                     # 新增“Forced Addding to Earning”选项
-                    menu.add_command(label="Forced Adding to Earning", command=lambda k=keyword: add_to_earning_force(k))
+                    menu.add_command(label="Forced Adding to Earning", command=lambda k=keyword: execute_external_script('earning_force', k))
 
                     # 绑定右键点击事件
                     button.bind("<Button-2>", lambda event, m=menu: m.post(event.x_root, event.y_root))
-
                     button.pack(side="left", fill="x", expand=True)
 
                     link_label = tk.Label(button_frame, text="🔢", fg="gray", cursor="hand2")
@@ -178,35 +176,34 @@ def create_selection_window():
 
     canvas.pack(side="left", fill="both", expand=True)
 
-def add_to_blacklist(keyword, group):
-    delete_item(keyword, group)
-    subprocess.run(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', 
-                    '/Users/yanzhang/Documents/Financial_System/Operations/Insert_Blacklist.py', 
-                    keyword])
-
-def find_similiar(keyword):
-    subprocess.run(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', 
-                    '/Users/yanzhang/Documents/Financial_System/Query/Find_Similar_Tag.py', 
-                    keyword])
-
-def add_to_earning(keyword):
-    subprocess.run(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', 
-                    '/Users/yanzhang/Documents/Financial_System/Operations/Insert_Earning.py', 
-                    keyword])
-
-def add_to_earning_force(keyword):
-    subprocess.run(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', 
-                    '/Users/yanzhang/Documents/Financial_System/Operations/Insert_Earning_Force.py', 
-                    keyword])
-
-def execute_stock_futu(keyword):
-    """执行 stock_futu.scpt 脚本并传递关键词参数"""
+def execute_external_script(script_type, keyword, group=None):
+    """统一处理外部脚本执行的通用函数
+    
+    Args:
+        script_type (str): 脚本类型标识
+        keyword (str): 关键词
+        group (str, optional): 分组名称
+    """
+    base_path = '/Users/yanzhang/Documents/Financial_System'
+    script_configs = {
+        'blacklist': f'{base_path}/Operations/Insert_Blacklist.py',
+        'similar': f'{base_path}/Query/Find_Similar_Tag.py',
+        'tag': f'{base_path}/Operations/Insert_tag_Stock.py',
+        'earning': f'{base_path}/Operations/Insert_Earning.py',
+        'earning_force': f'{base_path}/Operations/Insert_Earning_Force.py',
+        'futu': '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt'
+    }
+    
     try:
-        subprocess.run([
-            'osascript',
-            '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt',  # 请修改为实际路径
-            keyword
-        ], check=True)
+        if script_type == 'futu':
+            subprocess.run(['osascript', script_configs[script_type], keyword], check=True)
+        else:
+            python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
+            subprocess.run([python_path, script_configs[script_type], keyword], check=True)
+            
+        if script_type == 'blacklist' and group:
+            delete_item(keyword, group)
+            
     except subprocess.CalledProcessError as e:
         print(f"执行脚本时出错: {e}")
     except Exception as e:
@@ -220,8 +217,9 @@ def delete_item(keyword, group):
         else:
             config[group].remove(keyword)
         
-        # 将修改后的数据写回 sectors_panel.json 文件
-        with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json', 'w', encoding='utf-8') as file:
+        # 更新配置文件
+        config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json'
+        with open(config_path, 'w', encoding='utf-8') as file:
             json.dump(config, file, ensure_ascii=False, indent=4)
         
         print(f"已成功删除 {keyword} from {group}")
