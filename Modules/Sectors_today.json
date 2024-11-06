@@ -1147,7 +1147,8 @@
     "CEF",
     "QFIN",
     "CNS",
-    "MC"
+    "MC",
+    "BGC"
   ],
   "Healthcare": [
     "LLY",
@@ -1479,7 +1480,6 @@
     "DY",
     "CNH",
     "ULS",
-    "SRCL",
     "GATX",
     "EXPO",
     "JOBY",
@@ -1783,7 +1783,8 @@
     "TSEM",
     "YOU",
     "QTWO",
-    "AVT"
+    "AVT",
+    "INGM"
   ],
   "Utilities": [
     "NEE",
