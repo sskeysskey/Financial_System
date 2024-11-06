@@ -63,6 +63,30 @@ def delete_from_json_file(file_path, symbol):
         print(f"处理文件 {file_path} 时出错: {e}")
         return False
 
+def add_to_blacklist(blacklist_file, symbol):
+    try:
+        # 读取blacklist文件
+        with open(blacklist_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        # 检查symbol是否已经在screener列表中
+        if symbol in data['screener']:
+            print(f"{symbol} 已经在blacklist的screener列表中")
+            return False
+        
+        # 添加symbol到screener列表
+        data['screener'].append(symbol)
+        
+        # 写回文件
+        with open(blacklist_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4)
+        
+        print(f"成功将 {symbol} 添加到blacklist的screener列表中")
+        return True
+    except Exception as e:
+        print(f"处理blacklist文件时出错: {e}")
+        return False
+
 def delete_records_by_names(db_file, table_name, stock_names):
     """从数据库中删除记录"""
     if not stock_names:
@@ -84,10 +108,11 @@ def delete_records_by_names(db_file, table_name, stock_names):
         conn.close()
 
 def main():
-    db_path = '/Users/yanzhang/Documents/Database/Finance.db'
+    db_path = '/Users/yanzhang/Downloads/backup/DB_backup/Finance.db'
+    # db_path = '/Users/yanzhang/Documents/Database/Finance.db'
     sector_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
     sector_today_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json'  # 添加sector_today.json路径
-    
+    blacklist_file = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'
     # 获取剪贴板内容
     symbol = get_clipboard_content()
     if not symbol:
@@ -108,15 +133,25 @@ def main():
     # 处理 sector_today.json
     delete_result2 = delete_from_json_file(sector_today_file, symbol)
     
+    # 3. 添加到blacklist
+    add_result = add_to_blacklist(blacklist_file, symbol)
+    
     # 输出总结
+    print("\n操作总结:")
     if delete_result1 or delete_result2:
-        print(f"JSON文件更新完成:")
+        print("JSON文件更新情况:")
         if delete_result1:
             print("- Sectors_All.json 已更新")
         if delete_result2:
             print("- sector_today.json 已更新")
     else:
-        print("在JSON文件中未找到匹配项")
+        print("- 在sector文件中未找到匹配项")
+    
+    print("Blacklist更新情况:")
+    if add_result:
+        print("- 已成功更新blacklist")
+    else:
+        print("- blacklist更新未执行或未发生变化")
 
 if __name__ == "__main__":
     main()
