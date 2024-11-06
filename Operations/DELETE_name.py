@@ -108,8 +108,8 @@ def delete_records_by_names(db_file, table_name, stock_names):
         conn.close()
 
 def main():
-    db_path = '/Users/yanzhang/Downloads/backup/DB_backup/Finance.db'
-    # db_path = '/Users/yanzhang/Documents/Database/Finance.db'
+    # db_path = '/Users/yanzhang/Downloads/backup/DB_backup/Finance.db'
+    db_path = '/Users/yanzhang/Documents/Database/Finance.db'
     sector_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
     sector_today_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json'  # 添加sector_today.json路径
     blacklist_file = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'

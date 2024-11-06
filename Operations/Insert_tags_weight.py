@@ -133,7 +133,7 @@ def add_tag():
                 with open('/Users/yanzhang/Documents/Financial_System/Modules/tags_weight.json', 'w', encoding='utf-8') as f:
                     json.dump(data, f, ensure_ascii=False, indent=4)
 
-                messagebox.showinfo("成功", f"标签 '{new_tag}' 已成功添加到权重 {weight} 分组!")
+                messagebox.showinfo("成功", "成功！")
                 input_window.destroy()
 
             except Exception as e:

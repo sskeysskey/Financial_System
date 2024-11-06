@@ -4,8 +4,62 @@ import os
 import pyperclip
 import subprocess
 import sys
-from time import sleep
+import time
 from decimal import Decimal
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import (QApplication, QInputDialog, QMessageBox)
+
+def get_stock_symbol(default_symbol=""):
+    """获取股票代码"""
+    app = QApplication.instance() or QApplication(sys.argv)
+    
+    input_dialog = QInputDialog()
+    input_dialog.setWindowTitle("输入股票代码")
+    input_dialog.setLabelText("请输入股票代码:")
+    input_dialog.setTextValue(default_symbol)
+    
+    # 设置窗口标志，确保窗口始终在最前面
+    input_dialog.setWindowFlags(
+        Qt.WindowTitleHint | 
+        Qt.CustomizeWindowHint | 
+        Qt.WindowCloseButtonHint
+    )
+    
+    # 显示并激活窗口
+    input_dialog.show()
+    input_dialog.activateWindow()
+    input_dialog.raise_()
+    
+    # 强制获取焦点
+    input_dialog.setFocus(Qt.OtherFocusReason)
+    
+    if input_dialog.exec_() == QInputDialog.Accepted:
+        # 直接将输入转换为大写
+        return input_dialog.textValue().strip().upper()
+    return None
+
+def get_clipboard_content():
+    """获取剪贴板内容，包含错误处理"""
+    try:
+        content = pyperclip.paste()
+        return content.strip() if content else ""
+    except Exception:
+        return ""
+
+def copy2clipboard():
+    """执行复制操作并等待复制完成"""
+    try:
+        script = '''
+        tell application "System Events"
+            keystroke "c" using {command down}
+        end tell
+        '''
+        subprocess.run(['osascript', '-e', script], check=True)
+        # 给系统一点时间来完成复制操作
+        time.sleep(0.5)
+        return True
+    except subprocess.CalledProcessError:
+        return False
 
 # 读取权重配置文件
 def load_weight_groups():
@@ -28,15 +82,6 @@ tags_weight_config = {tag: weight for weight, tags in weight_groups.items() for 
 
 # 默认权重
 DEFAULT_WEIGHT = Decimal('1')
-
-def copy2clipboard():
-    script = '''
-    tell application "System Events"
-	    keystroke "c" using {command down}
-        delay 0.5
-    end tell
-    '''
-    subprocess.run(['osascript', '-e', script], check=True)
 
 def find_tags_by_symbol(symbol, data):
     tags_with_weight = []
@@ -162,25 +207,51 @@ def main(symbol):
     os.system(f'open "{output_path}"')
 
 if __name__ == '__main__':
-    # 检查是否有命令行参数
-    if len(sys.argv) > 1:
-        # 使用命令行参数作为输入
-        symbol = sys.argv[1]
-    else:
-        # 没有命令行参数时，使用原有的剪贴板逻辑
-        copy2clipboard()
-        symbol = pyperclip.paste().strip()
-
-    # 读取JSON文件
-    with open('/Users/yanzhang/Documents/Financial_System/Modules/description.json', 'r') as file:
-        data = json.load(file)
-
-    # 执行主程序
-    main(symbol)
-    sleep(2)
-
     try:
-        os.remove('/Users/yanzhang/Documents/News/similar.txt')
-        print(f"文件已删除")
-    except OSError as e:
-        print(f"删除文件时出错: {e}")
+        # 检查是否有命令行参数
+        if len(sys.argv) > 1:
+            # 使用命令行参数作为输入
+            symbol = sys.argv[1]
+        else:
+            # 没有命令行参数时，使用原有的剪贴板逻辑
+            # 保存初始剪贴板内容
+            initial_content = get_clipboard_content()
+            
+            # 执行复制操作
+            copy2clipboard()
+            
+            # 获取复制后的剪贴板内容
+            new_content = get_clipboard_content()
+            
+            # 根据剪贴板内容变化确定股票代码
+            if initial_content == new_content:
+                symbol = get_stock_symbol(new_content)
+                if symbol is None:  # 用户点击取消
+                    sys.exit()  # 使用sys.exit()替代return
+            else:
+                # symbol = get_stock_symbol(new_content)
+                symbol = new_content
+                if symbol is None:  # 用户点击取消
+                    sys.exit()  # 使用sys.exit()替代return
+                    
+            if not symbol:  # 检查股票代码是否为空
+                QMessageBox.warning(None, "警告", "股票代码不能为空")
+                sys.exit()  # 使用sys.exit()替代return
+
+        # 读取JSON文件
+        with open('/Users/yanzhang/Documents/Financial_System/Modules/description.json', 'r') as file:
+            data = json.load(file)
+
+        # 执行主程序
+        main(symbol)
+        time.sleep(2)
+
+        try:
+            os.remove('/Users/yanzhang/Documents/News/similar.txt')
+            print("文件已删除")
+        except OSError as e:
+            print(f"删除文件时出错: {e}")
+            
+    except Exception as e:
+        print(f"程序执行出错: {e}")
+        sys.exit(1)

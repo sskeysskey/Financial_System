@@ -43,7 +43,6 @@ def get_stock_symbol(default_symbol=""):
     
     # 设置窗口标志，确保窗口始终在最前面
     input_dialog.setWindowFlags(
-        Qt.WindowStaysOnTopHint | 
         Qt.WindowTitleHint | 
         Qt.CustomizeWindowHint | 
         Qt.WindowCloseButtonHint
@@ -64,12 +63,7 @@ def get_stock_symbol(default_symbol=""):
 
 class TagEditor(QMainWindow):
     def __init__(self, init_symbol=None):
-        super().__init__()
-        # 设置窗口标志
-        self.setWindowFlags(
-            self.windowFlags() | 
-            Qt.WindowStaysOnTopHint
-        )
+        super().__init__()        
         self.json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/description.json"
         self.load_json_data()
         
@@ -95,13 +89,25 @@ class TagEditor(QMainWindow):
             self.process_symbol(init_symbol)
         else:
             self.process_clipboard()
+            
+        # 设置焦点到输入框
+        QApplication.processEvents()  # 确保UI已经完全加载
+        self.new_tag_input.setFocus()
     
     def show(self):
         """重写 show 方法，确保窗口显示时properly激活"""
         super().show()
         self.activateWindow()
         self.raise_()
-        self.setFocus(Qt.OtherFocusReason)
+        # 确保输入框获得焦点
+        self.new_tag_input.setFocus(Qt.OtherFocusReason)
+
+    def showEvent(self, event):
+        """重写showEvent以确保窗口显示后输入框获得焦点"""
+        super().showEvent(event)
+        # 使用Timer确保在窗口完全显示后设置焦点
+        from PyQt5.QtCore import QTimer
+        QTimer.singleShot(100, self.new_tag_input.setFocus)
         
     def process_symbol(self, symbol):
         """处理指定的symbol"""
@@ -127,10 +133,24 @@ class TagEditor(QMainWindow):
         try:
             with open(self.json_file_path, 'w', encoding='utf-8') as file:
                 json.dump(self.data, file, ensure_ascii=False, indent=2)
-            QMessageBox.information(self, "成功", "保存成功！")
+            # 创建一个消息框并连接其按钮点击事件
+            msg_box = QMessageBox(self)
+            msg_box.setIcon(QMessageBox.Information)
+            msg_box.setText("保存成功！")
+            msg_box.setWindowTitle("成功")
+            msg_box.setStandardButtons(QMessageBox.Ok)
+            
+            # 连接按钮点击事件
+            msg_box.buttonClicked.connect(lambda _: self.close_application())
+            
+            msg_box.exec_()
         except Exception as e:
             QMessageBox.critical(self, "Error", f"保存失败: {str(e)}")
 
+    def close_application(self):
+        """关闭应用程序"""
+        QApplication.quit()
+        
     def init_ui(self):
         # Symbol显示
         self.symbol_label = QLabel("Symbol: ")
@@ -298,11 +318,12 @@ def main():
         
         new_content = get_clipboard_content()
         if initial_content == new_content:
-            init_symbol = get_stock_symbol()
+            init_symbol = get_stock_symbol(new_content)
             if init_symbol is None:
                 return
         else:
-            init_symbol = get_stock_symbol(new_content)
+            # init_symbol = get_stock_symbol(new_content)
+            init_symbol = new_content
             if init_symbol is None:
                 return
     
