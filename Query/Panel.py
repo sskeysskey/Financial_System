@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from collections import OrderedDict
 import subprocess
 
-sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
+sys.path.append('/Users/yanzhang/Documents/Financial_System/Query')
 from Chart_input import plot_financial_data
 
 class SymbolManager:

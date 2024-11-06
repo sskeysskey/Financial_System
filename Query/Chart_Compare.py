@@ -5,8 +5,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 from matplotlib.dates import DateFormatter, num2date
-from PyQt5.QtWidgets import (QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QLabel, QDateEdit, QHBoxLayout)
-from PyQt5.QtGui import QFont
+from PyQt5.QtWidgets import (QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QLabel, QDateEdit, QHBoxLayout, QAction)
+from PyQt5.QtGui import QFont, QKeySequence
 from PyQt5.QtCore import Qt, QDate
 from datetime import datetime
 
@@ -60,6 +60,13 @@ class StockComparisonApp(QWidget):
         self.compare_button.setFont(QFont('Arial', 12))
         self.compare_button.clicked.connect(self.compare_stocks)
         self.layout.addWidget(self.compare_button)
+
+        # 添加 ESC 键关闭窗口的功能
+        self.shortcut_close = QKeySequence("Esc")
+        self.quit_action = QAction("Quit", self)
+        self.quit_action.setShortcut(self.shortcut_close)
+        self.quit_action.triggered.connect(self.close)
+        self.addAction(self.quit_action)
 
         # 设置布局
         self.setLayout(self.layout)

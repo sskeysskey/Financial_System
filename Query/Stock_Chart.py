@@ -8,7 +8,7 @@ import pyperclip
 from functools import lru_cache
 import concurrent.futures
 
-sys.path.append('/Users/yanzhang/Documents/Financial_System/Modules')
+sys.path.append('/Users/yanzhang/Documents/Financial_System/Query')
 from Chart_input import plot_financial_data
 
 @lru_cache(maxsize=None)
