@@ -1,4 +1,3 @@
-import os
 import json
 import sys
 import time
@@ -41,7 +40,22 @@ def get_stock_symbol(default_symbol=""):
     input_dialog.setWindowTitle("输入股票代码")
     input_dialog.setLabelText("请输入股票代码:")
     input_dialog.setTextValue(default_symbol)
-    input_dialog.setWindowFlags(input_dialog.windowFlags() | Qt.WindowStaysOnTopHint)
+    
+    # 设置窗口标志，确保窗口始终在最前面
+    input_dialog.setWindowFlags(
+        Qt.WindowStaysOnTopHint | 
+        Qt.WindowTitleHint | 
+        Qt.CustomizeWindowHint | 
+        Qt.WindowCloseButtonHint
+    )
+    
+    # 显示并激活窗口
+    input_dialog.show()
+    input_dialog.activateWindow()
+    input_dialog.raise_()
+    
+    # 强制获取焦点
+    input_dialog.setFocus(Qt.OtherFocusReason)
     
     if input_dialog.exec_() == QInputDialog.Accepted:
         # 直接将输入转换为大写
@@ -51,6 +65,11 @@ def get_stock_symbol(default_symbol=""):
 class TagEditor(QMainWindow):
     def __init__(self, init_symbol=None):
         super().__init__()
+        # 设置窗口标志
+        self.setWindowFlags(
+            self.windowFlags() | 
+            Qt.WindowStaysOnTopHint
+        )
         self.json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/description.json"
         self.load_json_data()
         
@@ -77,9 +96,12 @@ class TagEditor(QMainWindow):
         else:
             self.process_clipboard()
     
-    def close_application(self):
-        """关闭应用程序"""
-        self.root.quit()
+    def show(self):
+        """重写 show 方法，确保窗口显示时properly激活"""
+        super().show()
+        self.activateWindow()
+        self.raise_()
+        self.setFocus(Qt.OtherFocusReason)
         
     def process_symbol(self, symbol):
         """处理指定的symbol"""
@@ -90,7 +112,8 @@ class TagEditor(QMainWindow):
                 self.current_item = item
                 self.update_ui(item)
             else:
-                messagebox.showinfo("提示", f"未找到Symbol: {symbol}")
+                # messagebox.showinfo("提示", f"未找到Symbol: {symbol}")
+                QMessageBox.information(self, "提示", f"未找到Symbol: {symbol}")
 
     def load_json_data(self):
         try:
@@ -107,11 +130,6 @@ class TagEditor(QMainWindow):
             QMessageBox.information(self, "成功", "保存成功！")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"保存失败: {str(e)}")
-
-    def restore_focus(self):
-        """恢复主窗口焦点"""
-        self.root.lift()
-        self.root.focus_force()
 
     def init_ui(self):
         # Symbol显示
@@ -222,11 +240,14 @@ class TagEditor(QMainWindow):
                     self.current_item = item
                     self.update_ui(item)
                 else:
-                    messagebox.showinfo("提示", f"未找到Symbol: {clipboard_text}")
+                    # messagebox.showinfo("提示", f"未找到Symbol: {clipboard_text}")
+                    QMessageBox.information(self, "提示", f"未找到Symbol: {clipboard_text}")
             else:
-                messagebox.showinfo("提示", "剪贴板为空")
+                # messagebox.showinfo("提示", "剪贴板为空")
+                QMessageBox.information(self, "提示", "剪贴板为空")
         except Exception as e:
-            messagebox.showerror("Error", f"剪贴板读取失败: {str(e)}")
+            # messagebox.showerror("Error", f"剪贴板读取失败: {str(e)}")
+            QMessageBox.information(self, "Error", f"剪贴板读取失败: {str(e)}")
 
     def update_ui(self, item):
         """更新UI显示"""
@@ -259,11 +280,8 @@ class TagEditor(QMainWindow):
         if hasattr(self, 'current_item'):
             self.save_json_data()
         else:
-            messagebox.showinfo("提示", "没有可保存的更改")
-
-    def run(self):
-        """运行程序"""
-        self.root.mainloop()
+            # messagebox.showinfo("提示", "没有可保存的更改")
+            QMessageBox.information(self, "提示", "没有可保存的更改")
 
 def main():
     app = QApplication(sys.argv)

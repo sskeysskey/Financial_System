@@ -6,9 +6,25 @@ import pyautogui
 import random
 import time
 import threading
+import tkinter as tk
+from tkinter import messagebox
 
-# 添加鼠标移动功能的函数
+def create_mouse_prompt():
+    """创建询问是否启用鼠标移动的弹窗"""
+    root = tk.Tk()
+    root.withdraw()  # 隐藏主窗口
+    
+    response = messagebox.askyesno(
+        "功能选择",
+        "是否启用鼠标随机移动防止黑屏功能？",
+        icon='question'
+    )
+    
+    root.destroy()
+    return response
+
 def move_mouse_periodically():
+    """鼠标随机移动功能"""
     while True:
         try:
             # 获取屏幕尺寸
@@ -29,84 +45,93 @@ def move_mouse_periodically():
             time.sleep(30)
 
 def log_error_with_timestamp(error_message):
-    # 获取当前日期和时间
+    """错误日志记录"""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
     # 在错误信息前加入时间戳
     return f"[{timestamp}] {error_message}\n"
 
-# 在主程序开始前启动鼠标移动线程
-mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
-mouse_thread.start()
+def main():
+    now = datetime.now()
+    # 判断今天的星期数，如果是周日(6)或周一(0)，则不执行程序
+    if now.weekday() in (0, 6):
+        print("Today is either Sunday or Monday. The script will not run.")
+    else:
+        # 询问用户是否启用鼠标移动功能
+        enable_mouse_movement = create_mouse_prompt()
+        
+        # 如果用户选择启用鼠标移动，则启动鼠标移动线程
+        if enable_mouse_movement:
+            mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
+            mouse_thread.start()
+            print("已启用鼠标随机移动功能")
+        else:
+            print("未启用鼠标随机移动功能")
 
-now = datetime.now()
-# 判断今天的星期数，如果是周日(6)或周一(0)，则不执行程序
-if now.weekday() in (0, 6):
-    print("Today is either Sunday or Monday. The script will not run.")
-else:
-    # 读取JSON文件
-    with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json', 'r') as file:
-        stock_groups = json.load(file)
+        # 读取JSON文件
+        with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json', 'r') as file:
+            stock_groups = json.load(file)
 
-    # 读取symbol_mapping JSON文件
-    with open('/Users/yanzhang/Documents/Financial_System/Modules/Symbol_mapping.json', 'r') as file:
-        symbol_mapping = json.load(file)
+        # 读取symbol_mapping JSON文件
+        with open('/Users/yanzhang/Documents/Financial_System/Modules/Symbol_mapping.json', 'r') as file:
+            symbol_mapping = json.load(file)
 
-    today = now.date()
-    yesterday = today - timedelta(days=1)
+        today = now.date()
+        yesterday = today - timedelta(days=1)
 
-    # 定义时间范围
-    start_date = yesterday.strftime('%Y-%m-%d')
-    end_date = today.strftime('%Y-%m-%d')
+        # 定义时间范围
+        start_date = yesterday.strftime('%Y-%m-%d')
+        end_date = today.strftime('%Y-%m-%d')
 
-    # 连接到SQLite数据库
-    conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
-    c = conn.cursor()
+        # 连接到SQLite数据库
+        conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
+        c = conn.cursor()
 
-    # 定义需要特殊处理的group_name
-    special_groups = ["Currencies", "Bonds", "Crypto", "Commodities"]
+        # 定义需要特殊处理的group_name
+        special_groups = ["Currencies", "Bonds", "Crypto", "Commodities"]
 
-    for group_name, tickers in stock_groups.items():
-        data_count = 0  # 初始化计数器
-        for ticker_symbol in tickers:
-            try:
-                # 使用 yfinance 下载股票数据
-                data = yf.download(ticker_symbol, start=start_date, end=end_date)
-                if data.empty:
-                    raise ValueError(f"{group_name} {ticker_symbol}: No price data found for the given date range.")
+        for group_name, tickers in stock_groups.items():
+            data_count = 0  # 初始化计数器
+            for ticker_symbol in tickers:
+                try:
+                    # 使用 yfinance 下载股票数据
+                    data = yf.download(ticker_symbol, start=start_date, end=end_date)
+                    if data.empty:
+                        raise ValueError(f"{group_name} {ticker_symbol}: No price data found for the given date range.")
 
-                # 插入数据到相应的表中
-                table_name = group_name.replace(" ", "_")  # 确保表名没有空格
-                mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)  # 从映射字典获取名称，如果不存在则使用原始 ticker_symbol
-                for index, row in data.iterrows():
-                    date = index.strftime('%Y-%m-%d')
-                    # date = "2024-06-11"
-                    if group_name in ["Currencies", "Bonds"]:
-                        price = round(row['Close'], 4)
-                    elif group_name in ["Crypto"]:
-                        price = round(row['Close'], 1)
-                    elif group_name in ["Commodities"]:
-                        price = round(row['Close'], 3)
-                    else:
-                        price = round(row['Close'], 2)
+                    # 插入数据到相应的表中
+                    table_name = group_name.replace(" ", "_")  # 确保表名没有空格
+                    mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)  # 从映射字典获取名称，如果不存在则使用原始 ticker_symbol
+                    for index, row in data.iterrows():
+                        date = index.strftime('%Y-%m-%d')
+                        # date = "2024-06-11"
+                        if group_name in ["Currencies", "Bonds"]:
+                            price = round(row['Close'], 4)
+                        elif group_name in ["Crypto"]:
+                            price = round(row['Close'], 1)
+                        elif group_name in ["Commodities"]:
+                            price = round(row['Close'], 3)
+                        else:
+                            price = round(row['Close'], 2)
 
-                    if group_name in special_groups:
-                        c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price) VALUES (?, ?, ?)", (date, mapped_name, price))
-                    else:
-                        volume = int(row['Volume'])
-                        c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)", (date, mapped_name, price, volume))
-                    
-                    data_count += 1  # 成功插入一条数据，计数器增加
-            except Exception as e:
-                formatted_error_message = log_error_with_timestamp(str(e))
-                # 将错误信息追加到文件中
-                with open('/Users/yanzhang/Documents/News/Today_error1.txt', 'a') as error_file:
-                    error_file.write(formatted_error_message)
+                        if group_name in special_groups:
+                            c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price) VALUES (?, ?, ?)", (date, mapped_name, price))
+                        else:
+                            volume = int(row['Volume'])
+                            c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)", (date, mapped_name, price, volume))
+                        
+                        data_count += 1  # 成功插入一条数据，计数器增加
+                except Exception as e:
+                    with open('/Users/yanzhang/Documents/News/Today_error1.txt', 'a') as error_file:
+                        error_file.write(log_error_with_timestamp(str(e)))
 
-        # 在完成每个group_name后打印信息
-        print(f"{group_name} 数据处理完成，总共下载了 {data_count} 条数据。")
+            # 在完成每个group_name后打印信息
+            print(f"{group_name} 数据处理完成，总共下载了 {data_count} 条数据。")
 
-    print("所有数据已成功写入数据库")
-    # 提交事务
-    conn.commit()
-    # 关闭连接
-    conn.close()    
+        print("所有数据已成功写入数据库")
+        # 提交事务
+        conn.commit()
+        # 关闭连接
+        conn.close()
+
+if __name__ == "__main__":
+    main()
