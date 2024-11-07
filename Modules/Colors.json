@@ -38,7 +38,14 @@
         "INFY",
         "MDLZ",
         "JNJ",
-        "NXPI"
+        "NXPI",
+        "UL",
+        "ING",
+        "SNY",
+        "HCA",
+        "ZTS",
+        "NEE",
+        "AEP"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -153,7 +160,10 @@
         "CDW",
         "TTE",
         "UMC",
-        "EG"
+        "EG",
+        "PKX",
+        "HMC",
+        "SMCI"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -251,7 +261,8 @@
         "HII",
         "RCI",
         "MDU",
-        "CE"
+        "CE",
+        "ENPH"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -305,7 +316,9 @@
         "XRAY",
         "LCID",
         "EL",
-        "BCE"
+        "BCE",
+        "PACS",
+        "CLVT"
     ],
     "green_keywords": [
         "EURCNY",

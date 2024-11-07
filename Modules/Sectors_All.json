@@ -607,7 +607,8 @@
     "BCPC",
     "SSL",
     "KNF",
-    "SMG"
+    "SMG",
+    "CLF"
   ],
   "Communication_Services": [
     "GOOGL",
@@ -841,7 +842,9 @@
     "GAP",
     "BOOT",
     "CPRI",
-    "SHAK"
+    "SHAK",
+    "EAT",
+    "RUSHB"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -995,7 +998,8 @@
     "VIST",
     "CNX",
     "EXE",
-    "SOBO"
+    "SOBO",
+    "CRC"
   ],
   "Financial_Services": [
     "BRK-A",
@@ -1204,7 +1208,12 @@
     "QFIN",
     "CNS",
     "MC",
-    "BGC"
+    "BGC",
+    "PIPR",
+    "LAZ",
+    "VLY",
+    "SFBS",
+    "HWC"
   ],
   "Healthcare": [
     "LLY",
@@ -1550,7 +1559,11 @@
     "AMTM",
     "HRI",
     "GTES",
-    "MATX"
+    "MATX",
+    "IESC",
+    "RXO",
+    "ACA",
+    "FELE"
   ],
   "Real_Estate": [
     "PLD",
@@ -1840,7 +1853,8 @@
     "YOU",
     "QTWO",
     "AVT",
-    "INGM"
+    "INGM",
+    "BDC"
   ],
   "Utilities": [
     "NEE",

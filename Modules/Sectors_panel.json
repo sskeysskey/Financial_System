@@ -16,7 +16,9 @@
         "DOOO": "",
         "GPC": "",
         "LKQ": "",
-        "CPRI": ""
+        "CPRI": "",
+        "DHI": "",
+        "HMC": ""
     },
     "Energy": {
         "PBF": "石油精炼",
@@ -26,8 +28,7 @@
         "NE": "",
         "WFRD": "",
         "TTE": "",
-        "MPC": "",
-        "PSX": ""
+        "MPC": ""
     },
     "Technology": {
         "SNOW": "",
@@ -37,9 +38,15 @@
         "KLAC": "",
         "ACLS": "",
         "INFY": "",
-        "NXPI": ""
+        "NXPI": "",
+        "SMCI": "",
+        "ENPH": "",
+        "CLVT": ""
     },
-    "Utilities": {},
+    "Utilities": {
+        "NEE": "",
+        "AEP": ""
+    },
     "Consumer_Defensive": {
         "EL": "雅诗兰黛",
         "KO": "可口可乐",
@@ -47,19 +54,25 @@
         "PEP": "百事可乐",
         "HSY": "好时",
         "BG": "邦吉",
-        "MDLZ": "",
-        "KDP": ""
+        "MDLZ": "亿滋国际",
+        "KDP": "",
+        "PG": "",
+        "UL": "",
+        "BUD": "",
+        "DEO": ""
     },
     "Industrials": {
         "BA": "波音",
-        "HII": "",
-        "UNP": ""
+        "HII": ""
     },
     "Real_Estate": {
-        "O": ""
+        "O": "",
+        "AMT": "",
+        "CCI": "",
+        "LINE": ""
     },
     "Financial_Services": {
-        "BRK-A": ""
+        "ING": ""
     },
     "Healthcare": {
         "DXCM": "德康血糖",
@@ -72,10 +85,15 @@
         "RDY": "印度仿制",
         "CVS": "",
         "LLY": "",
-        "JNJ": "",
         "PFE": "",
         "ICLR": "",
-        "OPCH": ""
+        "OPCH": "",
+        "JNJ": "",
+        "SNY": "",
+        "HCA": "",
+        "GSK": "",
+        "ZTS": "",
+        "PACS": ""
     },
     "Bonds": {
         "US2Y": "",
