@@ -533,7 +533,10 @@
     "XSMO",
     "FMB",
     "HTAB",
-    "IMCG"
+    "IMCG",
+    "QYLD",
+    "SPDW",
+    "VGLT"
   ],
   "Basic_Materials": [
     "LIN",

@@ -1,24 +1,15 @@
 {
     "Basic_Materials": {
-        "MOS": "美盛化肥",
-        "VALE": "",
         "NEM": "",
         "CE": ""
     },
     "Communication_Services": {
-        "DJT": "",
-        "META": ""
+        "DJT": ""
     },
     "Consumer_Cyclical": {
-        "MBLY": "",
         "STLA": "",
-        "ALV": "",
-        "DOOO": "",
         "GPC": "",
-        "LKQ": "",
-        "CPRI": "",
-        "DHI": "",
-        "HMC": ""
+        "CPRI": ""
     },
     "Energy": {
         "PBF": "石油精炼",
@@ -37,43 +28,33 @@
         "ASML": "",
         "KLAC": "",
         "ACLS": "",
-        "INFY": "",
         "NXPI": "",
         "SMCI": "",
-        "ENPH": "",
-        "CLVT": ""
+        "ENPH": "太阳能"
     },
     "Utilities": {
         "NEE": "",
         "AEP": ""
     },
     "Consumer_Defensive": {
-        "EL": "雅诗兰黛",
         "KO": "可口可乐",
         "CL": "",
         "PEP": "百事可乐",
         "HSY": "好时",
         "BG": "邦吉",
         "MDLZ": "亿滋国际",
-        "KDP": "",
         "PG": "",
-        "UL": "",
-        "BUD": "",
+        "UL": "联合利华",
         "DEO": ""
     },
     "Industrials": {
-        "BA": "波音",
-        "HII": ""
+        "BA": "波音"
     },
     "Real_Estate": {
         "O": "",
-        "AMT": "",
-        "CCI": "",
-        "LINE": ""
+        "AMT": ""
     },
-    "Financial_Services": {
-        "ING": ""
-    },
+    "Financial_Services": {},
     "Healthcare": {
         "DXCM": "德康血糖",
         "MRNA": "",
@@ -86,12 +67,9 @@
         "CVS": "",
         "LLY": "",
         "PFE": "",
-        "ICLR": "",
         "OPCH": "",
-        "JNJ": "",
         "SNY": "",
         "HCA": "",
-        "GSK": "",
         "ZTS": "",
         "PACS": ""
     },

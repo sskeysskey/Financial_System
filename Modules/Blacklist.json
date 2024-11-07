@@ -111,7 +111,10 @@
         "BSBR",
         "DG",
         "LCID",
-        "PBR"
+        "PBR",
+        "CLVT",
+        "EL",
+        "LINE"
     ],
     "screener": [
         "CTA-PA",
