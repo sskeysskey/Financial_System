@@ -1,43 +1,39 @@
 {
     "Basic_Materials": {
-        "NEM": "",
-        "CE": ""
+        "NEM": "金矿",
+        "CE": "赛菜默"
     },
     "Communication_Services": {
         "DJT": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
-        "GPC": "",
-        "CPRI": "",
+        "CPRI": "范思哲",
         "MELI": "",
-        "HMC": "",
-        "DOOO": ""
+        "DOOO": "摩托艇"
     },
     "Energy": {
         "PBF": "石油精炼",
-        "CHRD": "",
-        "VAL": "",
-        "EQNR": "",
+        "VAL": "海上钻井",
+        "EQNR": "挪威风电",
         "NE": "",
-        "WFRD": "",
-        "TTE": "道达尔",
-        "MPC": ""
+        "WFRD": "陆上钻井",
+        "TTE": "道达尔"
     },
     "Technology": {
         "SNOW": "",
         "STM": "意法",
         "INTC": "",
         "ASML": "",
-        "KLAC": "",
-        "ACLS": "",
+        "KLAC": "科磊PCB",
+        "ACLS": "晶圆",
         "NXPI": "",
         "SMCI": "",
         "ENPH": "太阳能"
     },
     "Utilities": {
-        "NEE": "",
-        "AEP": ""
+        "NEE": "可再生",
+        "AEP": "美国电力"
     },
     "Consumer_Defensive": {
         "KO": "可口可乐",
@@ -46,40 +42,39 @@
         "HSY": "好时",
         "BG": "邦吉",
         "MDLZ": "亿滋国际",
-        "PG": "",
+        "PG": "宝洁",
         "UL": "联合利华",
-        "DEO": ""
+        "DEO": "Walker"
     },
     "Industrials": {
         "BA": "波音"
     },
     "Real_Estate": {
-        "O": "",
-        "AMT": ""
+        "O": "7-11",
+        "AMT": "塔"
     },
     "Financial_Services": {
-        "ING": ""
+        "ING": "荷兰国际"
     },
     "Healthcare": {
         "DXCM": "德康血糖",
         "MRNA": "",
-        "NVO": "",
-        "MRK": "",
-        "REGN": "",
+        "NVO": "诺和诺德",
+        "MRK": "默沙东",
+        "REGN": "再生元",
         "AZN": "阿斯利康",
-        "NVS": "",
+        "NVS": "诺华",
         "RDY": "印度仿制",
         "CVS": "",
-        "LLY": "",
-        "PFE": "",
+        "LLY": "礼来",
+        "PFE": "辉瑞",
         "OPCH": "静脉输液",
         "SNY": "赛诺菲",
-        "HCA": "",
-        "ZTS": "",
-        "PACS": "",
-        "JNJ": "",
-        "BDX": "",
-        "ICLR": ""
+        "HCA": "医院运营",
+        "ZTS": "宠物药",
+        "PACS": "急症护理",
+        "BDX": "碧迪",
+        "ICLR": "生物制药"
     },
     "Bonds": {
         "US2Y": "",

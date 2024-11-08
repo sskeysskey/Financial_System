@@ -177,7 +177,19 @@ def create_selection_window():
 
     canvas.pack(side="left", fill="both", expand=True)
 
+def refresh_selection_window():
+    global config  # 添加全局声明
+    
+    # 重新加载配置文件
+    config = load_json('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json')
+    
+    # 刷新界面
+    for widget in root.winfo_children():
+        widget.destroy()
+    create_selection_window()
+    
 def rename_item(keyword, group):
+    global config  # 添加全局声明
     try:
         # 创建输入对话框
         new_name = tk.simpledialog.askstring("重命名", f"请为 {keyword} 输入新名称：")
@@ -198,7 +210,7 @@ def rename_item(keyword, group):
                     json.dump(config_data, file, ensure_ascii=False, indent=4)
                 
                 print(f"已将 {keyword} 的描述更新为: {new_name}")
-                
+                config = load_json(config_path)
                 # 刷新选择窗口
                 refresh_selection_window()
             else:

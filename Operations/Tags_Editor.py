@@ -131,26 +131,15 @@ class TagEditor(QMainWindow):
             self.data = {"stocks": [], "etfs": []}
 
     def save_json_data(self):
+        """保存数据到JSON文件并退出程序"""
         try:
             with open(self.json_file_path, 'w', encoding='utf-8') as file:
                 json.dump(self.data, file, ensure_ascii=False, indent=2)
-            # 创建一个消息框并连接其按钮点击事件
-            msg_box = QMessageBox(self)
-            msg_box.setIcon(QMessageBox.Information)
-            msg_box.setText("保存成功！")
-            msg_box.setWindowTitle("成功")
-            msg_box.setStandardButtons(QMessageBox.Ok)
-            
-            # 连接按钮点击事件
-            msg_box.buttonClicked.connect(lambda _: self.close_application())
-            
-            msg_box.exec_()
+            # 直接退出程序
+            QApplication.quit()
         except Exception as e:
+            # 保留错误提示，因为这是重要的错误信息
             QMessageBox.critical(self, "Error", f"保存失败: {str(e)}")
-
-    def close_application(self):
-        """关闭应用程序"""
-        QApplication.quit()
         
     def init_ui(self):
         # Symbol显示
@@ -261,13 +250,10 @@ class TagEditor(QMainWindow):
                     self.current_item = item
                     self.update_ui(item)
                 else:
-                    # messagebox.showinfo("提示", f"未找到Symbol: {clipboard_text}")
                     QMessageBox.information(self, "提示", f"未找到Symbol: {clipboard_text}")
             else:
-                # messagebox.showinfo("提示", "剪贴板为空")
                 QMessageBox.information(self, "提示", "剪贴板为空")
         except Exception as e:
-            # messagebox.showerror("Error", f"剪贴板读取失败: {str(e)}")
             QMessageBox.information(self, "Error", f"剪贴板读取失败: {str(e)}")
 
     def update_ui(self, item):
@@ -301,7 +287,6 @@ class TagEditor(QMainWindow):
         if hasattr(self, 'current_item'):
             self.save_json_data()
         else:
-            # messagebox.showinfo("提示", "没有可保存的更改")
             QMessageBox.information(self, "提示", "没有可保存的更改")
 
 def main():
