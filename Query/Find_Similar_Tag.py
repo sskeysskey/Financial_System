@@ -213,10 +213,7 @@ if __name__ == '__main__':
             # 使用命令行参数作为输入
             symbol = sys.argv[1]
         else:
-            # 没有命令行参数时，使用原有的剪贴板逻辑
-            # 保存初始剪贴板内容
-            initial_content = get_clipboard_content()
-            
+            pyperclip.copy('')
             # 执行复制操作
             copy2clipboard()
             
@@ -224,13 +221,16 @@ if __name__ == '__main__':
             new_content = get_clipboard_content()
             
             # 根据剪贴板内容变化确定股票代码
-            if initial_content == new_content:
-                symbol = get_stock_symbol(new_content)
+            if not new_content:
+                symbol = get_stock_symbol()
                 if symbol is None:  # 用户点击取消
                     sys.exit()  # 使用sys.exit()替代return
             else:
-                # symbol = get_stock_symbol(new_content)
-                symbol = new_content
+                if re.match('^[A-Z-]+$', new_content):
+                    # symbol = get_stock_symbol(new_content)
+                    symbol = new_content
+                else:
+                    symbol = get_stock_symbol(new_content)
                 if symbol is None:  # 用户点击取消
                     sys.exit()  # 使用sys.exit()替代return
                     

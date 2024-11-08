@@ -946,7 +946,8 @@
     "CNX",
     "EXE",
     "SOBO",
-    "CRC"
+    "CRC",
+    "LB"
   ],
   "Financial_Services": [
     "BRK-A",
@@ -1314,7 +1315,8 @@
     "BHVN",
     "CRNX",
     "ACLX",
-    "PRCT"
+    "PRCT",
+    "WAY"
   ],
   "Industrials": [
     "GE",
@@ -1510,7 +1512,8 @@
     "IESC",
     "RXO",
     "ACA",
-    "FELE"
+    "FELE",
+    "ROAD"
   ],
   "Real_Estate": [
     "PLD",
@@ -1801,7 +1804,11 @@
     "QTWO",
     "AVT",
     "INGM",
-    "BDC"
+    "BDC",
+    "SITM",
+    "FRSH",
+    "WK",
+    "LITE"
   ],
   "Utilities": [
     "NEE",
@@ -1855,6 +1862,7 @@
     "TLN",
     "BIPC",
     "IDA",
-    "POR"
+    "POR",
+    "ORA"
   ]
 }

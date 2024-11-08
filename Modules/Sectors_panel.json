@@ -9,7 +9,10 @@
     "Consumer_Cyclical": {
         "STLA": "",
         "GPC": "",
-        "CPRI": ""
+        "CPRI": "",
+        "MELI": "",
+        "HMC": "",
+        "DOOO": ""
     },
     "Energy": {
         "PBF": "石油精炼",
@@ -18,7 +21,7 @@
         "EQNR": "",
         "NE": "",
         "WFRD": "",
-        "TTE": "",
+        "TTE": "道达尔",
         "MPC": ""
     },
     "Technology": {
@@ -38,7 +41,7 @@
     },
     "Consumer_Defensive": {
         "KO": "可口可乐",
-        "CL": "",
+        "CL": "高露洁",
         "PEP": "百事可乐",
         "HSY": "好时",
         "BG": "邦吉",
@@ -54,7 +57,9 @@
         "O": "",
         "AMT": ""
     },
-    "Financial_Services": {},
+    "Financial_Services": {
+        "ING": ""
+    },
     "Healthcare": {
         "DXCM": "德康血糖",
         "MRNA": "",
@@ -67,11 +72,14 @@
         "CVS": "",
         "LLY": "",
         "PFE": "",
-        "OPCH": "",
-        "SNY": "",
+        "OPCH": "静脉输液",
+        "SNY": "赛诺菲",
         "HCA": "",
         "ZTS": "",
-        "PACS": ""
+        "PACS": "",
+        "JNJ": "",
+        "BDX": "",
+        "ICLR": ""
     },
     "Bonds": {
         "US2Y": "",

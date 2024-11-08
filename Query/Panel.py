@@ -152,6 +152,7 @@ def create_selection_window():
                     # 创建右键菜单
                     menu = tk.Menu(button, tearoff=0)
                     menu.add_command(label="删除", command=lambda k=keyword, g=db_key: delete_item(k, g))
+                    menu.add_command(label="改名", command=lambda k=keyword, g=db_key: rename_item(k, g))
 
                     # 新增“Add to Earning”选项
                     menu.add_command(label="Add to Earning", command=lambda k=keyword: execute_external_script('earning', k))
@@ -175,6 +176,35 @@ def create_selection_window():
                     link_label.bind("<Button-1>", lambda event, k=keyword: on_keyword_selected(k))
 
     canvas.pack(side="left", fill="both", expand=True)
+
+def rename_item(keyword, group):
+    try:
+        # 创建输入对话框
+        new_name = tk.simpledialog.askstring("重命名", f"请为 {keyword} 输入新名称：")
+        
+        if new_name is not None:  # 用户点击了确定而不是取消
+            config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json'
+            
+            # 读取配置文件
+            with open(config_path, 'r', encoding='utf-8') as file:
+                config_data = json.load(file)
+            
+            # 更新名称
+            if group in config_data and keyword in config_data[group]:
+                config_data[group][keyword] = new_name
+                
+                # 保存更新后的配置
+                with open(config_path, 'w', encoding='utf-8') as file:
+                    json.dump(config_data, file, ensure_ascii=False, indent=4)
+                
+                print(f"已将 {keyword} 的描述更新为: {new_name}")
+                
+                # 刷新选择窗口
+                refresh_selection_window()
+            else:
+                print(f"未找到 {keyword} 在 {group} 中")
+    except Exception as e:
+        print(f"重命名过程中发生错误: {e}")
 
 def execute_external_script(script_type, keyword, group=None):
     """统一处理外部脚本执行的通用函数

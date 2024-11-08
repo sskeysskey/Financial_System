@@ -1,3 +1,4 @@
+import re
 import json
 import sys
 import time
@@ -312,20 +313,21 @@ def main():
         init_symbol = sys.argv[1].upper()
     
     if not init_symbol:
-        initial_content = get_clipboard_content()
+        pyperclip.copy('')
         if not copy2clipboard():
             return
         
         new_content = get_clipboard_content()
-        if initial_content == new_content:
-            init_symbol = get_stock_symbol(new_content)
-            if init_symbol is None:
-                return
+        if not new_content:
+            init_symbol = get_stock_symbol()
         else:
-            # init_symbol = get_stock_symbol(new_content)
-            init_symbol = new_content
-            if init_symbol is None:
-                return
+            if re.match('^[A-Z-]+$', new_content):
+                init_symbol = new_content
+            else:
+                init_symbol = get_stock_symbol(new_content)
+
+        if init_symbol is None:
+            return
     
     editor = TagEditor(init_symbol)
     editor.show()
