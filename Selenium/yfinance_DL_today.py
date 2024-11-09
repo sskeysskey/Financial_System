@@ -6,45 +6,29 @@ import pyautogui
 import random
 import time
 import threading
-import tkinter as tk
-from tkinter import messagebox
+from PyQt5.QtWidgets import QApplication, QMessageBox
+import sys
 
 def create_mouse_prompt():
     """创建询问是否启用鼠标移动的弹窗"""
-    class DialogWindow:
-        def __init__(self):
-            self.result = None
-            self.root = tk.Tk()
-            self.root.withdraw()
-            
-        def show_dialog(self):
-            self.result = messagebox.askyesno(
-                "功能选择",
-                "是否启用鼠标随机移动防止黑屏功能？",
-                icon='question'
-            )
-            self.root.destroy()
-            return self.result
+    # 确保只创建一个QApplication实例
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
     
-    dialog = DialogWindow()
-    return dialog.show_dialog()
-
-# def create_mouse_prompt():
-#     """创建询问是否启用鼠标移动的弹窗"""
-#     root = tk.Tk()
-#     root.withdraw()  # 隐藏主窗口
+    # 创建消息框
+    msg_box = QMessageBox()
+    msg_box.setWindowTitle("功能选择")
+    msg_box.setText("是否启用鼠标随机移动防止黑屏功能？")
+    msg_box.setIcon(QMessageBox.Question)
+    msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+    msg_box.setDefaultButton(QMessageBox.No)
     
-#     try:
-#         response = messagebox.askyesno(
-#             "功能选择",
-#             "是否启用鼠标随机移动防止黑屏功能？",
-#             icon='question'
-#         )
-#     finally:
-#         root.quit()     # 退出事件循环
-#         root.destroy()  # 销毁窗口
-        
-#     return response
+    # 显示对话框并获取结果
+    result = msg_box.exec_()
+    
+    # 转换结果为布尔值
+    return result == QMessageBox.Yes
 
 def move_mouse_periodically():
     """鼠标随机移动功能"""

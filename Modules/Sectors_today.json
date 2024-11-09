@@ -859,7 +859,8 @@
     "HIMS",
     "OLLI",
     "FRPT",
-    "FLO"
+    "FLO",
+    "LOPE"
   ],
   "Energy": [
     "XOM",
@@ -1161,7 +1162,8 @@
     "LAZ",
     "VLY",
     "SFBS",
-    "HWC"
+    "HWC",
+    "UPST"
   ],
   "Healthcare": [
     "LLY",
@@ -1316,7 +1318,8 @@
     "CRNX",
     "ACLX",
     "PRCT",
-    "WAY"
+    "WAY",
+    "ADMA"
   ],
   "Industrials": [
     "GE",
@@ -1808,7 +1811,8 @@
     "SITM",
     "FRSH",
     "WK",
-    "LITE"
+    "LITE",
+    "IONQ"
   ],
   "Utilities": [
     "NEE",

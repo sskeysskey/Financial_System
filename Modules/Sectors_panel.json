@@ -1,7 +1,8 @@
 {
     "Basic_Materials": {
         "NEM": "金矿",
-        "CE": "赛菜默"
+        "CE": "赛菜默",
+        "DOW": ""
     },
     "Communication_Services": {
         "DJT": ""
@@ -10,7 +11,8 @@
         "STLA": "",
         "CPRI": "范思哲",
         "MELI": "",
-        "DOOO": "摩托艇"
+        "DOOO": "摩托艇",
+        "HMC": ""
     },
     "Energy": {
         "PBF": "石油精炼",
@@ -18,7 +20,8 @@
         "EQNR": "挪威风电",
         "NE": "",
         "WFRD": "陆上钻井",
-        "TTE": "道达尔"
+        "TTE": "道达尔",
+        "TDW": ""
     },
     "Technology": {
         "SNOW": "",
@@ -29,7 +32,8 @@
         "ACLS": "晶圆",
         "NXPI": "",
         "SMCI": "",
-        "ENPH": "太阳能"
+        "ENPH": "太阳能",
+        "QRVO": ""
     },
     "Utilities": {
         "NEE": "可再生",
@@ -44,7 +48,8 @@
         "MDLZ": "亿滋国际",
         "PG": "宝洁",
         "UL": "联合利华",
-        "DEO": "Walker"
+        "DEO": "Walker",
+        "BF-B": ""
     },
     "Industrials": {
         "BA": "波音"
@@ -54,7 +59,8 @@
         "AMT": "塔"
     },
     "Financial_Services": {
-        "ING": "荷兰国际"
+        "ING": "荷兰国际",
+        "LYG": ""
     },
     "Healthcare": {
         "DXCM": "德康血糖",
@@ -74,7 +80,10 @@
         "ZTS": "宠物药",
         "PACS": "急症护理",
         "BDX": "碧迪",
-        "ICLR": "生物制药"
+        "ICLR": "生物制药",
+        "JNJ": "",
+        "BIIB": "",
+        "ACHC": ""
     },
     "Bonds": {
         "US2Y": "",
@@ -134,7 +143,7 @@
         "DBC": "大宗商品",
         "IBIT": "比特币",
         "SOXX": "半导体",
-        "ASHR": "A股",
+        "ASHR": "A股大型",
         "DXJ": "日本",
         "INDA": "印度",
         "EWT": "台湾",

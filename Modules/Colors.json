@@ -46,7 +46,8 @@
         "ZTS",
         "NEE",
         "AEP",
-        "MELI"
+        "MELI",
+        "LYG"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -164,7 +165,8 @@
         "EG",
         "PKX",
         "HMC",
-        "SMCI"
+        "SMCI",
+        "TDW"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -263,7 +265,8 @@
         "RCI",
         "MDU",
         "CE",
-        "ENPH"
+        "ENPH",
+        "DOW"
     ],
     "orange_keywords": [
         "NASDAQ",
