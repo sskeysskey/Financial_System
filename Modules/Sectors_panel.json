@@ -1,8 +1,7 @@
 {
     "Basic_Materials": {
         "NEM": "金矿",
-        "CE": "赛菜默",
-        "DOW": ""
+        "CE": "赛菜默"
     },
     "Communication_Services": {
         "DJT": ""
@@ -11,8 +10,7 @@
         "STLA": "",
         "CPRI": "范思哲",
         "MELI": "",
-        "DOOO": "摩托艇",
-        "HMC": ""
+        "DOOO": "摩托艇"
     },
     "Energy": {
         "PBF": "石油精炼",
@@ -20,8 +18,7 @@
         "EQNR": "挪威风电",
         "NE": "",
         "WFRD": "陆上钻井",
-        "TTE": "道达尔",
-        "TDW": ""
+        "TTE": "道达尔"
     },
     "Technology": {
         "SNOW": "",
@@ -30,38 +27,23 @@
         "ASML": "",
         "KLAC": "科磊PCB",
         "ACLS": "晶圆",
-        "NXPI": "",
         "SMCI": "",
         "ENPH": "太阳能",
         "QRVO": ""
     },
-    "Utilities": {
-        "NEE": "可再生",
-        "AEP": "美国电力"
-    },
+    "Utilities": {},
     "Consumer_Defensive": {
         "KO": "可口可乐",
         "CL": "高露洁",
         "PEP": "百事可乐",
         "HSY": "好时",
-        "BG": "邦吉",
-        "MDLZ": "亿滋国际",
-        "PG": "宝洁",
-        "UL": "联合利华",
-        "DEO": "Walker",
-        "BF-B": ""
+        "BG": "邦吉"
     },
     "Industrials": {
         "BA": "波音"
     },
-    "Real_Estate": {
-        "O": "7-11",
-        "AMT": "塔"
-    },
-    "Financial_Services": {
-        "ING": "荷兰国际",
-        "LYG": ""
-    },
+    "Real_Estate": {},
+    "Financial_Services": {},
     "Healthcare": {
         "DXCM": "德康血糖",
         "MRNA": "",
@@ -72,18 +54,7 @@
         "NVS": "诺华",
         "RDY": "印度仿制",
         "CVS": "",
-        "LLY": "礼来",
-        "PFE": "辉瑞",
-        "OPCH": "静脉输液",
-        "SNY": "赛诺菲",
-        "HCA": "医院运营",
-        "ZTS": "宠物药",
-        "PACS": "急症护理",
-        "BDX": "碧迪",
-        "ICLR": "生物制药",
-        "JNJ": "",
-        "BIIB": "",
-        "ACHC": ""
+        "PACS": "急症护理"
     },
     "Bonds": {
         "US2Y": "",

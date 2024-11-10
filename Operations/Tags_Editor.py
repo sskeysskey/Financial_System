@@ -80,7 +80,7 @@ class TagEditor(QMainWindow):
         self.shortcut_close = QKeySequence("Esc")
         self.quit_action = QAction("Quit", self)
         self.quit_action.setShortcut(self.shortcut_close)
-        self.quit_action.triggered.connect(self.close)
+        self.quit_action.triggered.connect(self.close)  # 直接连接到close()
         self.addAction(self.quit_action)
         
         self.init_ui()
@@ -131,16 +131,15 @@ class TagEditor(QMainWindow):
             self.data = {"stocks": [], "etfs": []}
 
     def save_json_data(self):
-        """保存数据到JSON文件并退出程序"""
+        """保存数据到JSON文件"""
         try:
             with open(self.json_file_path, 'w', encoding='utf-8') as file:
                 json.dump(self.data, file, ensure_ascii=False, indent=2)
-            # 直接退出程序
-            QApplication.quit()
+            return True
         except Exception as e:
             # 保留错误提示，因为这是重要的错误信息
             QMessageBox.critical(self, "Error", f"保存失败: {str(e)}")
-        
+            return False
     def init_ui(self):
         # Symbol显示
         self.symbol_label = QLabel("Symbol: ")
@@ -283,12 +282,33 @@ class TagEditor(QMainWindow):
             self.tags_list.takeItem(self.tags_list.row(current_item))
 
     def save_changes(self):
-        """保存更改到JSON文件"""
+        """通过按钮保存更改"""
         if hasattr(self, 'current_item'):
-            self.save_json_data()
+            if self.save_json_data():
+                QApplication.quit()
         else:
             QMessageBox.information(self, "提示", "没有可保存的更改")
 
+    def closeEvent(self, event):
+        """重写关闭事件，实现自动保存"""
+        if hasattr(self, 'current_item'):
+            if self.save_json_data():
+                event.accept()  # 保存成功，接受关闭事件
+            else:
+                # 保存失败，询问用户是否仍要关闭
+                reply = QMessageBox.question(
+                    self,
+                    '保存失败',
+                    "数据保存失败，是否仍要关闭程序？",
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No
+                )
+                if reply == QMessageBox.Yes:
+                    event.accept()
+                else:
+                    event.ignore()
+        else:
+            event.accept()  # 如果没有修改，直接关闭
 def main():
     app = QApplication(sys.argv)
     
