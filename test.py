@@ -1,271 +1,337 @@
 import os
-import json
 import sys
-import subprocess
-import tkinter as tk
-from tkinter import ttk, messagebox
+import json
 import pyperclip
+import subprocess
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QLabel, QTextBrowser, QMainWindow, QAction
+from PyQt5.QtGui import QFont, QKeySequence
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl
+import sqlite3
 
-def copy2clipboard():
-    script = '''
-    tell application "System Events"
-        keystroke "c" using {command down}
-        delay 0.5
-    end tell
-    '''
-    subprocess.run(['osascript', '-e', script], check=True)
+json_path = "/Users/yanzhang/Documents/Financial_System/Modules/description.json"
 
-class TagEditor:
-    def __init__(self, init_symbol=None):
-        self.json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/description.json"
-        self.load_json_data()
-        
-        self.root = tk.Tk()
-        self.root.title("Tag Editor")
-        self.root.geometry("500x600")
-        
-        # 初始化UI
-        self.init_ui()
-        
-        # 将窗口置顶
-        self.root.lift()
-        self.root.focus_force()
-        
-        # 处理初始化数据
-        if init_symbol:
-            self.process_symbol(init_symbol)
-        else:
-            self.process_clipboard()
-    
-    def process_symbol(self, symbol):
-        """处理指定的symbol"""
-        if symbol:
-            category, item = self.find_symbol(symbol)
-            if item:
-                self.current_category = category
-                self.current_item = item
-                self.update_ui(item)
-            else:
-                messagebox.showinfo("提示", f"未找到Symbol: {symbol}")
+class CustomTextBrowser(QTextBrowser):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-    def load_json_data(self):
-        try:
-            with open(self.json_file_path, 'r', encoding='utf-8') as file:
-                self.data = json.load(file)
-        except Exception as e:
-            messagebox.showerror("Error", f"加载JSON文件失败: {str(e)}")
-            self.data = {"stocks": [], "etfs": []}
+class SearchWorker(QThread):
+    results_ready = pyqtSignal(object)
 
-    def save_json_data(self):
-        try:
-            with open(self.json_file_path, 'w', encoding='utf-8') as file:
-                json.dump(self.data, file, ensure_ascii=False, indent=2)
-            messagebox.showinfo("成功", "保存成功！")
-        except Exception as e:
-            messagebox.showerror("Error", f"保存失败: {str(e)}")
-
-    def init_ui(self):
-        # Symbol显示
-        self.symbol_label = ttk.Label(self.root, text="Symbol: ")
-        self.symbol_label.pack(pady=10)
-        
-        # Tags列表框
-        self.tags_frame = ttk.LabelFrame(self.root, text="Tags")
-        self.tags_frame.pack(padx=10, pady=5, fill="both", expand=True)
-        
-        # 创建一个框架来容纳列表框和移动按钮
-        list_buttons_frame = ttk.Frame(self.tags_frame)
-        list_buttons_frame.pack(fill="both", expand=True)
-        
-        # 添加上下移动按钮
-        move_buttons_frame = ttk.Frame(list_buttons_frame)
-        move_buttons_frame.pack(side="left", padx=5, fill="y")
-        
-        ttk.Button(move_buttons_frame, text="↑", width=3,
-                  command=self.move_tag_up).pack(pady=2)
-        ttk.Button(move_buttons_frame, text="↓", width=3,
-                  command=self.move_tag_down).pack(pady=2)
-        
-        # Tags列表框
-        self.tags_listbox = tk.Listbox(list_buttons_frame)
-        self.tags_listbox.pack(side="left", padx=5, pady=5, fill="both", expand=True)
-        
-        # 绑定双击事件用于编辑
-        self.tags_listbox.bind('<Double-Button-1>', self.on_double_click)
-        
-        # 添加新tag输入框和按钮的框架
-        input_frame = ttk.Frame(self.root)
-        input_frame.pack(pady=5, fill="x", padx=10)
-        
-        self.new_tag_var = tk.StringVar()
-        self.new_tag_entry = ttk.Entry(input_frame, textvariable=self.new_tag_var)
-        self.new_tag_entry.pack(side="left", padx=5, fill="x", expand=True)
-        
-        # 按钮框架
-        buttons_frame = ttk.Frame(self.root)
-        buttons_frame.pack(pady=5, padx=10, fill="x")
-        
-        # 按钮
-        ttk.Button(buttons_frame, text="添加新标签", 
-                  command=self.add_tag).pack(side="left", padx=2)
-        ttk.Button(buttons_frame, text="删除标签", 
-                  command=self.delete_tag).pack(side="left", padx=2)
-        ttk.Button(buttons_frame, text="保存更改", 
-                  command=self.save_changes).pack(side="left", padx=2)
-
-        # 绑定回车键到保存功能
-        self.root.bind('<Return>', lambda e: self.save_changes())
-
-    def on_double_click(self, event):
-        """处理双击编辑事件"""
-        selection = self.tags_listbox.curselection()
-        if not selection:
-            return
-            
-        index = selection[0]
-        old_tag = self.tags_listbox.get(index)
-        
-        # 创建编辑对话框
-        edit_window = tk.Toplevel(self.root)
-        edit_window.title("编辑标签")
-        edit_window.geometry("300x100")
-        
-        # 使对话框成为模态窗口
-        edit_window.transient(self.root)
-        edit_window.grab_set()
-        
-        # 创建编辑框
-        edit_var = tk.StringVar(value=old_tag)
-        edit_entry = ttk.Entry(edit_window, textvariable=edit_var)
-        edit_entry.pack(padx=10, pady=10, fill="x")
-        
-        def save_edit():
-            new_tag = edit_var.get().strip()
-            if new_tag and new_tag != old_tag:
-                self.current_item['tag'][index] = new_tag
-                self.tags_listbox.delete(index)
-                self.tags_listbox.insert(index, new_tag)
-            edit_window.destroy()
-            
-        # 添加确认按钮
-        ttk.Button(edit_window, text="确认", command=save_edit).pack(pady=5)
-        
-        # 聚焦到编辑框并选中全部文本
-        edit_entry.focus_set()
-        edit_entry.select_range(0, tk.END)
-        
-        # 绑定回车键
-        edit_entry.bind('<Return>', lambda e: save_edit())
-
-    def move_tag_up(self):
-        """将选中的tag向上移动"""
-        selection = self.tags_listbox.curselection()
-        if not selection or selection[0] == 0:
-            return
-            
-        index = selection[0]
-        tag = self.current_item['tag'].pop(index)
-        self.current_item['tag'].insert(index-1, tag)
-        
-        # 更新列表显示
-        self.tags_listbox.delete(0, tk.END)
-        for tag in self.current_item['tag']:
-            self.tags_listbox.insert(tk.END, tag)
-        self.tags_listbox.selection_set(index-1)
-
-    def move_tag_down(self):
-        """将选中的tag向下移动"""
-        selection = self.tags_listbox.curselection()
-        if not selection or selection[0] == self.tags_listbox.size()-1:
-            return
-            
-        index = selection[0]
-        tag = self.current_item['tag'].pop(index)
-        self.current_item['tag'].insert(index+1, tag)
-        
-        # 更新列表显示
-        self.tags_listbox.delete(0, tk.END)
-        for tag in self.current_item['tag']:
-            self.tags_listbox.insert(tk.END, tag)
-        self.tags_listbox.selection_set(index+1)
-
-    # [之前的其他方法保持不变...]
-    def find_symbol(self, symbol):
-        """查找symbol对应的数据"""
-        for category in ['stocks', 'etfs']:
-            for item in self.data[category]:
-                if item['symbol'] == symbol:
-                    return category, item
-        return None, None
-
-    def process_clipboard(self):
-        """处理剪贴板内容"""
-        try:
-            clipboard_text = pyperclip.paste().strip()
-            if clipboard_text:
-                category, item = self.find_symbol(clipboard_text)
-                if item:
-                    self.current_category = category
-                    self.current_item = item
-                    self.update_ui(item)
-                else:
-                    messagebox.showinfo("提示", f"未找到Symbol: {clipboard_text}")
-            else:
-                messagebox.showinfo("提示", "剪贴板为空")
-        except Exception as e:
-            messagebox.showerror("Error", f"剪贴板读取失败: {str(e)}")
-
-    def update_ui(self, item):
-        """更新UI显示"""
-        self.symbol_label.config(text=f"Symbol: {item['symbol']}")
-        self.tags_listbox.delete(0, tk.END)
-        for tag in item['tag']:
-            self.tags_listbox.insert(tk.END, tag)
-
-    def add_tag(self):
-        """添加新tag"""
-        new_tag = self.new_tag_var.get().strip()
-        if new_tag and hasattr(self, 'current_item'):
-            if new_tag not in self.current_item['tag']:
-                self.current_item['tag'].append(new_tag)
-                self.tags_listbox.insert(tk.END, new_tag)
-                self.new_tag_var.set("")
-            else:
-                messagebox.showinfo("提示", "该标签已存在")
-
-    def delete_tag(self):
-        """删除选中的tag"""
-        selection = self.tags_listbox.curselection()
-        if selection and hasattr(self, 'current_item'):
-            index = selection[0]
-            tag = self.tags_listbox.get(index)
-            self.current_item['tag'].remove(tag)
-            self.tags_listbox.delete(index)
-
-    def save_changes(self):
-        """保存更改到JSON文件"""
-        if hasattr(self, 'current_item'):
-            self.save_json_data()
-        else:
-            messagebox.showinfo("提示", "没有可保存的更改")
+    def __init__(self, keywords, json_path):
+        super().__init__()
+        self.keywords = keywords
+        self.json_path = json_path
 
     def run(self):
-        """运行程序"""
-        self.root.mainloop()
+        # 在此方法中执行耗时的搜索操作
+        matched_names_stocks, matched_names_etfs = search_json_for_keywords(self.json_path, self.keywords)
+        (matched_names_stocks_tag, matched_names_etfs_tag, 
+        matched_names_stocks_name, matched_names_etfs_name,
+        matched_names_stocks_symbol, matched_names_etfs_symbol) = search_tag_for_keywords(self.json_path, self.keywords)
 
-def main():
-    # 检查是否有命令行参数
-    init_symbol = None
-    if len(sys.argv) > 1:
-        init_symbol = sys.argv[1].upper()  # 转换为大写以确保匹配
-    
-    # 如果没有命令行参数，执行复制操作
-    if not init_symbol:
-        copy2clipboard()
-    
-    # 创建并运行应用
-    app = TagEditor(init_symbol)
-    app.run()
+        self.results = {
+            'matched_names_stocks': matched_names_stocks,
+            'matched_names_etfs': matched_names_etfs,
+            'matched_names_stocks_tag': matched_names_stocks_tag,
+            'matched_names_etfs_tag': matched_names_etfs_tag,
+            'matched_names_stocks_name': matched_names_stocks_name,
+            'matched_names_etfs_name': matched_names_etfs_name,
+            'matched_names_stocks_symbol': matched_names_stocks_symbol,
+            'matched_names_etfs_symbol': matched_names_etfs_symbol
+        }
+
+        # 发射包含结果的信号
+        self.results_ready.emit(self.results)
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("公司、股票和ETF搜索")
+        self.setGeometry(350, 200, 800, 600)
+        self.central_widget = QWidget()
+        self.setCentralWidget(self.central_widget)
+        self.layout = QVBoxLayout(self.central_widget)
+
+        self.input_layout = QHBoxLayout()
+        self.input_field = QLineEdit()
+        self.input_field.setFixedHeight(30)
+        self.input_field.setFont(QFont("Arial", 18))
+        self.search_button = QPushButton("搜索")
+        self.search_button.setFixedSize(60, 30)
+        self.input_layout.addWidget(self.input_field, 7)
+        self.input_layout.addWidget(self.search_button, 1)
+        self.layout.addLayout(self.input_layout)
+
+        self.loading_label = QLabel("正在搜索...", self)
+        self.loading_label.setAlignment(Qt.AlignCenter)
+        self.loading_label.setFont(QFont("Arial", 14))
+        self.loading_label.hide()
+        self.layout.addWidget(self.loading_label)
+
+        self.result_area = CustomTextBrowser()
+        self.result_area.anchorClicked.connect(self.open_file)
+        self.result_area.setFont(QFont("Arial", 12))
+        self.layout.addWidget(self.result_area)
+
+        self.search_button.clicked.connect(self.start_search)
+        self.input_field.returnPressed.connect(self.start_search)
+
+        # 添加 ESC 键关闭窗口的功能
+        self.shortcut_close = QKeySequence("Esc")
+        self.quit_action = QAction("Quit", self)
+        self.quit_action.setShortcut(self.shortcut_close)
+        self.quit_action.triggered.connect(self.close)
+        self.addAction(self.quit_action)
+
+    def start_search(self):
+        keywords = self.input_field.text()
+        if not keywords.strip():
+            return  # 如果用户没有输入关键词，则不进行搜索
+        self.loading_label.show()
+        self.result_area.clear()
+        self.result_area.setEnabled(False)
+        self.search_button.setEnabled(False)
+        self.input_field.setEnabled(False)
+
+        # 传递是否有空格的信息
+        self.worker = SearchWorker(keywords, json_path)
+        self.worker.results_ready.connect(self.show_results)
+        self.worker.start()
+
+    def show_results(self, results):
+        self.loading_label.hide()
+        self.result_area.setEnabled(True)
+        self.search_button.setEnabled(True)
+        self.input_field.setEnabled(True)
+
+        # 解包结果
+        matched_names_stocks = results['matched_names_stocks']
+        matched_names_etfs = results['matched_names_etfs']
+        matched_names_stocks_tag = results['matched_names_stocks_tag']
+        matched_names_etfs_tag = results['matched_names_etfs_tag']
+        matched_names_stocks_name = results['matched_names_stocks_name']
+        matched_names_etfs_name = results['matched_names_etfs_name']
+        matched_names_stocks_symbol = results['matched_names_stocks_symbol']
+        matched_names_etfs_symbol = results['matched_names_etfs_symbol']
+
+        keywords = self.input_field.text().lower().split()
+
+        def has_exact_match(results_list):
+            if not results_list:
+                return False
+            for result in results_list:
+                text = ' '.join(str(item).lower() for item in result)
+                if any(all(keyword in text for keyword in keywords) for result in results_list):
+                    return True
+            return False
+
+        # 创建带有原始索引的显示顺序列表
+        display_order = []
+        categories = [
+            ("Stock_symbol", matched_names_stocks_symbol, 'cyan'),
+            ("ETF_symbol", matched_names_etfs_symbol, 'cyan'),
+            ("Stock_name", matched_names_stocks_name, 'white'),
+            ("Stock_tag", matched_names_stocks_tag, 'white'),
+            ("ETF_tag", matched_names_etfs_tag, 'white')
+        ]
+
+        # 添加原始索引到列表中
+        for idx, (category, results, color) in enumerate(categories):
+            has_exact = has_exact_match(results)
+            display_order.append((has_exact, idx, category, results, color))
+
+        # 使用has_exact和原始索引进行排序
+        display_order.sort(key=lambda x: (not x[0], x[1]))
+
+        html_content = ""
+
+        # 生成HTML内容
+        for _, _, category, results, color in display_order:
+            if results:  # 只显示有结果的类别
+                html_content += self.insert_results_html(category, results, color, 16)
+
+        # 添加固定在末尾的类别
+        html_content += self.insert_results_html("ETF_name", matched_names_etfs_name, 'white', 16)
+        html_content += self.insert_results_html("Stock_Description", matched_names_stocks, 'gray', 16)
+        html_content += self.insert_results_html("ETFs_Description", matched_names_etfs, 'gray', 16)
+
+        self.result_area.setHtml(html_content)
+        self.result_area.verticalScrollBar().setValue(0)
+
+    def insert_results_html(self, category, results, color, font_size):
+        html = ""
+        if results:
+            html += f"<h2 style='color: yellow; font-size: 16px;'>{category}:</h2>"
+            for result in results:
+                if len(result) == 3:  # 股票结果
+                    symbol, name, tags = result
+                    html += f"<p><a href='symbol://{symbol}' style='color: {color}; text-decoration: underline; font-size: {font_size}px;'>{symbol} - {name} - {tags}</a></p>"
+                else:  # ETF 结果
+                    symbol, tags = result
+                    # 获取 ETF 的最新成交量
+                    latest_volume = get_latest_etf_volume(symbol)
+                    # 显示 ETF 结果并附加最新成交量
+                    html += f"<p><a href='symbol://{symbol}' style='color: {color}; text-decoration: underline; font-size: {font_size}px;'>{symbol} - {tags} - {latest_volume}</a></p>"
+        return html
+
+    def open_file(self, url):
+        if url.scheme() == 'symbol':
+            # 提取 symbol
+            symbol = url.toString().replace('symbol://', '').strip()
+            if symbol:
+                # 将 symbol 复制到剪贴板
+                pyperclip.copy(symbol)
+                # 获取 stock_chart.py 的绝对路径
+                stock_chart_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '/Users/yanzhang/Documents/Financial_System/Query/Stock_Chart.py')
+                # 调用 stock_chart.py，传递 'paste' 参数
+                subprocess.Popen([sys.executable, stock_chart_path, 'paste'])
+        else:
+            file_path = url.toLocalFile()
+            if not file_path:
+                file_path = url.toString()
+            try:
+                if sys.platform == "win32":
+                    os.startfile(file_path)
+                else:
+                    subprocess.call(("open", file_path))
+            except Exception as e:
+                print(f"无法打开文件 {file_path}: {e}")
+
+def search_json_for_keywords(json_path, keywords):
+    with open(json_path, 'r') as file:
+        data = json.load(file)
+    keywords_lower = [keyword.strip().lower() for keyword in keywords.split()]
+
+    def search_category(category):
+        if category == 'stocks':
+            return [
+                (item['symbol'], item.get('name', ''), ' '.join(item.get('tag', []))) 
+                for item in data.get(category, [])
+                if all(keyword in ' '.join([item['description1'], item['description2']]).lower() for keyword in keywords_lower)
+            ]
+        else:  # ETFs
+            return [
+                (item['symbol'], ' '.join(item.get('tag', []))) 
+                for item in data.get(category, [])
+                if all(keyword in ' '.join([item['description1'], item['description2']]).lower() for keyword in keywords_lower)
+            ]
+
+    return search_category('stocks'), search_category('etfs')
+
+def search_tag_for_keywords(json_path, keywords, max_distance=1):
+    with open(json_path, 'r') as file:
+        data = json.load(file)
+    keywords_lower = [keyword.strip().lower() for keyword in keywords.split()]
+
+    def fuzzy_match(text, keyword):
+        if len(keyword) <= 1:  # 对于单个字符，只进行精确匹配
+            return keyword in text.lower()
+        words = text.lower().split()
+        return any(levenshtein_distance(word, keyword) <= max_distance for word in words)
+
+    def two_step_search(category, search_field):
+        exact_results = [
+            (item['symbol'], item.get('name', ''), ' '.join(item.get('tag', []))) if category == 'stocks' else (item['symbol'], ' '.join(item.get('tag', [])))
+            for item in data.get(category, [])
+            if all(keyword in item.get(search_field, '').lower() for keyword in keywords_lower)
+        ]
+        if exact_results:
+            return exact_results
+
+        return [
+            (item['symbol'], item.get('name', ''), ' '.join(item.get('tag', []))) if category == 'stocks' else (item['symbol'], ' '.join(item.get('tag', [])))
+            for item in data.get(category, [])
+            if all(fuzzy_match(item.get(search_field, ''), keyword) for keyword in keywords_lower)
+        ]
+
+    def search_category_for_tag(category):
+        # 定义一个计算匹配分数的函数
+        def match_score(item):
+            tags = item[2].lower() if category == 'stocks' else item[1].lower()
+            exact_matches = sum(keyword in tags for keyword in keywords_lower)
+            fuzzy_matches = sum(any(fuzzy_match(tag.lower(), keyword) for tag in tags.split()) for keyword in keywords_lower)
+            return (exact_matches, fuzzy_matches)
+
+        exact_results = [
+            (item['symbol'], item.get('name', ''), ' '.join(item.get('tag', []))) if category == 'stocks' else (item['symbol'], ' '.join(item.get('tag', [])))
+            for item in data.get(category, [])
+            if all(keyword in ' '.join(item.get('tag', [])).lower() for keyword in keywords_lower)
+        ]
+        if exact_results:
+            return sorted(exact_results, key=match_score, reverse=True)
+
+        return [
+            (item['symbol'], item.get('name', ''), ' '.join(item.get('tag', []))) if category == 'stocks' else (item['symbol'], ' '.join(item.get('tag', [])))
+            for item in data.get(category, [])
+            if all(any(fuzzy_match(tag, keyword) for tag in item.get('tag', [])) for keyword in keywords_lower)
+        ]
+
+    return (
+        search_category_for_tag('stocks'),
+        search_category_for_tag('etfs'),
+        two_step_search('stocks', 'name'),
+        two_step_search('etfs', 'name'),
+        two_step_search('stocks', 'symbol'),
+        two_step_search('etfs', 'symbol')
+    )
+
+def levenshtein_distance(s1, s2):
+    if len(s1) < len(s2):
+        return levenshtein_distance(s2, s1)
+    if len(s2) == 0:
+        return len(s1)
+    previous_row = range(len(s2) + 1)
+    for i, c1 in enumerate(s1):
+        current_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            insertions = previous_row[j + 1] + 1
+            deletions = current_row[j] + 1
+            substitutions = previous_row[j] + (c1 != c2)
+            current_row.append(min(insertions, deletions, substitutions))
+        previous_row = current_row
+    return previous_row[-1]
+
+def get_latest_etf_volume(etf_name):
+    db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    # 查询最新的 volume
+    cursor.execute("SELECT volume FROM ETFs WHERE name = ? ORDER BY date DESC LIMIT 1", (etf_name,))
+    result = cursor.fetchone()
+
+    conn.close()
+
+    if result and result[0] is not None:
+        volume = result[0]
+        # 将 volume 转换为 K 单位并返回
+        return f"{int(volume / 1000)}K"
+    else:
+        return "N/A"
 
 if __name__ == "__main__":
-    main()
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+
+    if len(sys.argv) > 1:
+        arg = sys.argv[1]
+        if arg == "input":
+            # 显示窗口，让用户输入
+            pass
+        elif arg == "paste":
+            # 使用剪贴板内容进行搜索
+            clipboard_content = pyperclip.paste()
+            if clipboard_content:
+                window.input_field.setText(clipboard_content)
+                window.start_search()
+            else:
+                print("剪贴板为空，请复制一些文本后再试。")
+    else:
+        # 如果没有提供参数，则仅显示窗口，让用户手动输入
+        pass
+
+    sys.exit(app.exec_())

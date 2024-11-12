@@ -1,7 +1,8 @@
 {
     "Basic_Materials": {
         "NEM": "金矿",
-        "CE": "赛菜默"
+        "CE": "赛菜默",
+        "DOW": ""
     },
     "Communication_Services": {
         "DJT": ""
@@ -10,7 +11,8 @@
         "STLA": "",
         "CPRI": "范思哲",
         "MELI": "",
-        "DOOO": "摩托艇"
+        "DOOO": "摩托艇",
+        "W": ""
     },
     "Energy": {
         "PBF": "石油精炼",
@@ -18,7 +20,8 @@
         "EQNR": "挪威风电",
         "NE": "",
         "WFRD": "陆上钻井",
-        "TTE": "道达尔"
+        "TTE": "道达尔",
+        "TDW": ""
     },
     "Technology": {
         "SNOW": "",
@@ -29,20 +32,27 @@
         "ACLS": "晶圆",
         "SMCI": "",
         "ENPH": "太阳能",
-        "QRVO": ""
+        "QRVO": "",
+        "MCHP": ""
     },
-    "Utilities": {},
+    "Utilities": {
+        "AEP": ""
+    },
     "Consumer_Defensive": {
         "KO": "可口可乐",
         "CL": "高露洁",
         "PEP": "百事可乐",
         "HSY": "好时",
-        "BG": "邦吉"
+        "BG": "邦吉",
+        "UL": "",
+        "BUD": ""
     },
     "Industrials": {
         "BA": "波音"
     },
-    "Real_Estate": {},
+    "Real_Estate": {
+        "AMT": ""
+    },
     "Financial_Services": {},
     "Healthcare": {
         "DXCM": "德康血糖",
@@ -54,7 +64,13 @@
         "NVS": "诺华",
         "RDY": "印度仿制",
         "CVS": "",
-        "PACS": "急症护理"
+        "PACS": "急症护理",
+        "JNJ": "",
+        "ABBV": "",
+        "PFE": "",
+        "SNY": "",
+        "BIIB": "",
+        "ICLR": ""
     },
     "Bonds": {
         "US2Y": "",
@@ -134,10 +150,11 @@
         "EURUSD": ""
     },
     "Economics": {
-        "USTrade": "05 USTrade",
-        "USInterest": "07 USInterest",
-        "USConfidence": "08 USConfidence",
-        "USInitial": "07 USInitial"
+        "USCPI": "13 USCPI",
+        "CoreCPI": "13 CoreCPI",
+        "USPPI": "14 USPPI",
+        "USRetailM": "15 USRetailM",
+        "USInitial": "14 USInitial"
     },
     "ETFs_US": {
         "TLT": "",

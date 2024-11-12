@@ -114,32 +114,48 @@ class MainWindow(QMainWindow):
         matched_names_stocks_symbol = results['matched_names_stocks_symbol']
         matched_names_etfs_symbol = results['matched_names_etfs_symbol']
 
+        keywords = self.input_field.text().lower().split()
+
+        def has_exact_match(results_list):
+            if not results_list:
+                return False
+            for result in results_list:
+                text = ' '.join(str(item).lower() for item in result)
+                if any(all(keyword in text for keyword in keywords) for result in results_list):
+                    return True
+            return False
+
+        # 创建带有原始索引的显示顺序列表
+        display_order = []
+        categories = [
+            ("Stock_symbol", matched_names_stocks_symbol, 'cyan'),
+            ("ETF_symbol", matched_names_etfs_symbol, 'cyan'),
+            ("Stock_name", matched_names_stocks_name, 'white'),
+            ("Stock_tag", matched_names_stocks_tag, 'white'),
+            ("ETF_tag", matched_names_etfs_tag, 'white')
+        ]
+
+        # 添加原始索引到列表中
+        for idx, (category, results, color) in enumerate(categories):
+            has_exact = has_exact_match(results)
+            display_order.append((has_exact, idx, category, results, color))
+
+        # 使用has_exact和原始索引进行排序
+        display_order.sort(key=lambda x: (not x[0], x[1]))
+
         html_content = ""
 
-        # 判断关键词是否含有空格
-        keywords = self.input_field.text()
-        if " " in keywords:
-            # 有空格时，优先展示 stock_name 和 stock_tag
-            html_content += self.insert_results_html("Stock_name", matched_names_stocks_name, 'white', 16)
-            html_content += self.insert_results_html("Stock_tag", matched_names_stocks_tag, 'white', 16)
-            html_content += self.insert_results_html("ETF_tag", matched_names_etfs_tag, 'white', 16)
-            html_content += self.insert_results_html("Stock_symbol", matched_names_stocks_symbol, 'cyan', 16)
-            html_content += self.insert_results_html("ETF_symbol", matched_names_etfs_symbol, 'cyan', 16)  
-        else:
-            # 无空格时，优先展示 stock_symbol
-            html_content += self.insert_results_html("Stock_symbol", matched_names_stocks_symbol, 'cyan', 16)
-            html_content += self.insert_results_html("ETF_symbol", matched_names_etfs_symbol, 'cyan', 16)  
-            html_content += self.insert_results_html("Stock_tag", matched_names_stocks_tag, 'white', 16)
-            html_content += self.insert_results_html("ETF_tag", matched_names_etfs_tag, 'white', 16)
-            html_content += self.insert_results_html("Stock_name", matched_names_stocks_name, 'white', 16)
+        # 生成HTML内容
+        for _, _, category, results, color in display_order:
+            if results:  # 只显示有结果的类别
+                html_content += self.insert_results_html(category, results, color, 16)
 
+        # 添加固定在末尾的类别
         html_content += self.insert_results_html("ETF_name", matched_names_etfs_name, 'white', 16)
         html_content += self.insert_results_html("Stock_Description", matched_names_stocks, 'gray', 16)
         html_content += self.insert_results_html("ETFs_Description", matched_names_etfs, 'gray', 16)
 
         self.result_area.setHtml(html_content)
-
-        # 滚动到顶部
         self.result_area.verticalScrollBar().setValue(0)
 
     def insert_results_html(self, category, results, color, font_size):

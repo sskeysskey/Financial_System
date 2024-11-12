@@ -6,8 +6,9 @@ import pyautogui
 import random
 import time
 import threading
-from PyQt5.QtWidgets import QApplication, QMessageBox
 import sys
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QApplication, QMessageBox, QDesktopWidget
 
 def create_mouse_prompt():
     """创建询问是否启用鼠标移动的弹窗"""
@@ -23,6 +24,21 @@ def create_mouse_prompt():
     msg_box.setIcon(QMessageBox.Question)
     msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
     msg_box.setDefaultButton(QMessageBox.No)
+    
+    # 设置窗口标志，使其始终显示在最前面
+    msg_box.setWindowFlags(msg_box.windowFlags() | 
+                          Qt.WindowStaysOnTopHint | 
+                          Qt.WindowActive)
+    
+    # 移动到屏幕中心
+    center = QDesktopWidget().availableGeometry().center()
+    msg_box.move(center.x() - msg_box.width() // 2,
+                 center.y() - msg_box.height() // 2)
+    
+    # 激活窗口
+    msg_box.show()
+    msg_box.activateWindow()
+    msg_box.raise_()
     
     # 显示对话框并获取结果
     result = msg_box.exec_()
