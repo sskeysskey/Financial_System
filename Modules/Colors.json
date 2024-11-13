@@ -48,7 +48,10 @@
         "AEP",
         "MELI",
         "LYG",
-        "ABBV"
+        "ABBV",
+        "LEN",
+        "BBVA",
+        "AMGN"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -98,7 +101,6 @@
         "SIGI",
         "PEN",
         "EW",
-        "BA",
         "DXCM",
         "SOFI",
         "SYM",
@@ -168,7 +170,8 @@
         "HMC",
         "SMCI",
         "TDW",
-        "MCHP"
+        "EDU",
+        "FRO"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -197,7 +200,6 @@
         "APTV",
         "ULTA",
         "VALE",
-        "PUK",
         "AAL",
         "WDS",
         "MGA",
@@ -267,7 +269,11 @@
         "MDU",
         "CE",
         "ENPH",
-        "DOW"
+        "DOW",
+        "MRK",
+        "BA",
+        "REXR",
+        "MCHP"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -324,7 +330,9 @@
         "BCE",
         "PACS",
         "CLVT",
-        "DLTR"
+        "DLTR",
+        "TLK",
+        "PUK"
     ],
     "green_keywords": [
         "EURCNY",
@@ -340,7 +348,6 @@
         "COP",
         "BP",
         "EQNR",
-        "MRK",
         "GSK"
     ],
     "red_keywords": [

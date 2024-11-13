@@ -1,26 +1,31 @@
 {
     "Basic_Materials": {
         "NEM": "金矿",
-        "CE": "赛菜默"
+        "CE": "赛莱默",
+        "DOW": "",
+        "LYB": ""
     },
     "Communication_Services": {
-        "DJT": ""
+        "DJT": "",
+        "TLK": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
         "CPRI": "范思哲",
         "MELI": "",
         "DOOO": "摩托艇",
-        "W": ""
+        "W": "Wayfair",
+        "DHI": "",
+        "LEN": "",
+        "HMC": ""
     },
     "Energy": {
         "PBF": "石油精炼",
         "VAL": "海上钻井",
         "EQNR": "挪威风电",
-        "NE": "",
-        "WFRD": "陆上钻井",
         "TTE": "道达尔",
-        "TDW": ""
+        "TDW": "",
+        "FRO": ""
     },
     "Technology": {
         "SNOW": "",
@@ -32,9 +37,10 @@
         "SMCI": "",
         "ENPH": "太阳能",
         "QRVO": "",
-        "MCHP": ""
+        "MCHP": "单片机"
     },
     "Utilities": {
+        "NEE": "",
         "AEP": ""
     },
     "Consumer_Defensive": {
@@ -43,16 +49,25 @@
         "PEP": "百事可乐",
         "HSY": "好时",
         "BG": "邦吉",
-        "UL": "",
-        "BUD": ""
+        "UL": "联合利华",
+        "BUD": "",
+        "BF-B": "",
+        "EDU": ""
     },
     "Industrials": {
-        "BA": "波音"
+        "BA": "波音",
+        "CP": ""
     },
     "Real_Estate": {
-        "AMT": ""
+        "AMT": "",
+        "PLD": "",
+        "CCI": "",
+        "REXR": ""
     },
-    "Financial_Services": {},
+    "Financial_Services": {
+        "BBVA": "",
+        "ING": ""
+    },
     "Healthcare": {
         "DXCM": "德康血糖",
         "MRNA": "",
@@ -62,14 +77,19 @@
         "AZN": "阿斯利康",
         "NVS": "诺华",
         "RDY": "印度仿制",
-        "CVS": "",
         "PACS": "急症护理",
         "JNJ": "",
-        "ABBV": "",
+        "ABBV": "艾伯维",
+        "TMO": "",
+        "DHR": "",
+        "AMGN": "",
         "PFE": "",
         "SNY": "",
+        "GSK": "",
+        "CVS": "",
+        "CNC": "",
         "BIIB": "",
-        "ICLR": ""
+        "ACHC": ""
     },
     "Bonds": {
         "US2Y": "",
