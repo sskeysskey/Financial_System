@@ -537,7 +537,9 @@
     "QYLD",
     "SPDW",
     "VGLT",
-    "FEMS"
+    "FEMS",
+    "ROUS",
+    "IGLB"
   ],
   "Basic_Materials": [
     "LIN",
