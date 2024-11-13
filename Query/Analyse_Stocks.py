@@ -428,7 +428,8 @@ def main():
         ("NewLow_", -1),
         ("NewLow500_", -1),
         ("NewLow5000_", -1),
-        ("Stock_Splits_next_", -1)
+        ("Stock_Splits_next_", -1),
+        ("TodayCNH_", -1)
     ]
 
     # 执行清理旧备份文件的函数
