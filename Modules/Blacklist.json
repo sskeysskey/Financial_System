@@ -114,7 +114,9 @@
         "PBR",
         "CLVT",
         "EL",
-        "LINE"
+        "LINE",
+        "TLK",
+        "HMC"
     ],
     "screener": [
         "CTA-PA",

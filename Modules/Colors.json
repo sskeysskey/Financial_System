@@ -51,7 +51,8 @@
         "ABBV",
         "LEN",
         "BBVA",
-        "AMGN"
+        "AMGN",
+        "ADI"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -166,7 +167,6 @@
         "TTE",
         "UMC",
         "EG",
-        "PKX",
         "HMC",
         "SMCI",
         "TDW",
@@ -273,7 +273,10 @@
         "MRK",
         "BA",
         "REXR",
-        "MCHP"
+        "MCHP",
+        "PKX",
+        "LEGN",
+        "SWKS"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -332,7 +335,8 @@
         "CLVT",
         "DLTR",
         "TLK",
-        "PUK"
+        "PUK",
+        "LBTYK"
     ],
     "green_keywords": [
         "EURCNY",

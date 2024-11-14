@@ -2,22 +2,20 @@
     "Basic_Materials": {
         "NEM": "金矿",
         "CE": "赛莱默",
+        "VALE": "",
         "DOW": "",
         "LYB": ""
     },
     "Communication_Services": {
         "DJT": "",
-        "TLK": ""
+        "NTES": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
         "CPRI": "范思哲",
-        "MELI": "",
         "DOOO": "摩托艇",
         "W": "Wayfair",
-        "DHI": "",
-        "LEN": "",
-        "HMC": ""
+        "DHI": "德尔惠"
     },
     "Energy": {
         "PBF": "石油精炼",
@@ -28,31 +26,32 @@
         "FRO": ""
     },
     "Technology": {
-        "SNOW": "",
         "STM": "意法",
         "INTC": "",
         "ASML": "",
         "KLAC": "科磊PCB",
         "ACLS": "晶圆",
-        "SMCI": "",
         "ENPH": "太阳能",
         "QRVO": "",
-        "MCHP": "单片机"
+        "MCHP": "单片机",
+        "ADI": "",
+        "NXPI": "",
+        "SMCI": "",
+        "CDW": "",
+        "SWKS": ""
     },
     "Utilities": {
-        "NEE": "",
-        "AEP": ""
+        "AEP": "美国电力",
+        "NEE": ""
     },
     "Consumer_Defensive": {
         "KO": "可口可乐",
         "CL": "高露洁",
-        "PEP": "百事可乐",
-        "HSY": "好时",
-        "BG": "邦吉",
         "UL": "联合利华",
+        "BF-B": "杰克丹尼",
+        "EDU": "",
         "BUD": "",
-        "BF-B": "",
-        "EDU": ""
+        "DEO": ""
     },
     "Industrials": {
         "BA": "波音",
@@ -60,8 +59,6 @@
     },
     "Real_Estate": {
         "AMT": "",
-        "PLD": "",
-        "CCI": "",
         "REXR": ""
     },
     "Financial_Services": {
@@ -69,27 +66,22 @@
         "ING": ""
     },
     "Healthcare": {
-        "DXCM": "德康血糖",
         "MRNA": "",
         "NVO": "诺和诺德",
         "MRK": "默沙东",
         "REGN": "再生元",
-        "AZN": "阿斯利康",
-        "NVS": "诺华",
-        "RDY": "印度仿制",
-        "PACS": "急症护理",
-        "JNJ": "",
         "ABBV": "艾伯维",
-        "TMO": "",
-        "DHR": "",
-        "AMGN": "",
-        "PFE": "",
+        "CNC": "",
+        "NVS": "",
         "SNY": "",
         "GSK": "",
-        "CVS": "",
-        "CNC": "",
+        "RDY": "",
         "BIIB": "",
-        "ACHC": ""
+        "ICLR": "",
+        "GMAB": "",
+        "LEGN": "",
+        "ACHC": "",
+        "OPCH": ""
     },
     "Bonds": {
         "US2Y": "",
