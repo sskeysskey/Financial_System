@@ -116,7 +116,12 @@
         "EL",
         "LINE",
         "TLK",
-        "HMC"
+        "HMC",
+        "DOW",
+        "LYB",
+        "BUD",
+        "BBVA",
+        "ACHC"
     ],
     "screener": [
         "CTA-PA",

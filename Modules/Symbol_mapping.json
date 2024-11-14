@@ -72,6 +72,7 @@
     "U Mich Sentiment Final": "USConfidence",
     "Initial Jobless Clm*": "USInitial",
     "PPI Final Demand YY*": "USPPI",
+    "PPI exFood/Energy YY*": "CorePPI",
     "Retail Sales MM *": "USRetailM",
     "Unemployment Rate*": "USUnemploy",
     "Core PCE Price Index YY*": "CorePCEY",

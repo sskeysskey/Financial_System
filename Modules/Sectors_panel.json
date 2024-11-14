@@ -2,13 +2,10 @@
     "Basic_Materials": {
         "NEM": "金矿",
         "CE": "赛莱默",
-        "VALE": "",
-        "DOW": "",
-        "LYB": ""
+        "VALE": ""
     },
     "Communication_Services": {
-        "DJT": "",
-        "NTES": ""
+        "DJT": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
@@ -22,7 +19,7 @@
         "VAL": "海上钻井",
         "EQNR": "挪威风电",
         "TTE": "道达尔",
-        "TDW": "",
+        "TDW": "潮水钻井",
         "FRO": ""
     },
     "Technology": {
@@ -32,13 +29,8 @@
         "KLAC": "科磊PCB",
         "ACLS": "晶圆",
         "ENPH": "太阳能",
-        "QRVO": "",
         "MCHP": "单片机",
-        "ADI": "",
-        "NXPI": "",
-        "SMCI": "",
-        "CDW": "",
-        "SWKS": ""
+        "SMCI": ""
     },
     "Utilities": {
         "AEP": "美国电力",
@@ -49,22 +41,15 @@
         "CL": "高露洁",
         "UL": "联合利华",
         "BF-B": "杰克丹尼",
-        "EDU": "",
-        "BUD": "",
-        "DEO": ""
+        "EDU": ""
     },
     "Industrials": {
-        "BA": "波音",
-        "CP": ""
+        "BA": "波音"
     },
     "Real_Estate": {
-        "AMT": "",
         "REXR": ""
     },
-    "Financial_Services": {
-        "BBVA": "",
-        "ING": ""
-    },
+    "Financial_Services": {},
     "Healthcare": {
         "MRNA": "",
         "NVO": "诺和诺德",
@@ -75,13 +60,7 @@
         "NVS": "",
         "SNY": "",
         "GSK": "",
-        "RDY": "",
-        "BIIB": "",
-        "ICLR": "",
-        "GMAB": "",
-        "LEGN": "",
-        "ACHC": "",
-        "OPCH": ""
+        "ICLR": ""
     },
     "Bonds": {
         "US2Y": "",

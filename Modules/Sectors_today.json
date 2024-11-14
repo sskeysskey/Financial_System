@@ -483,7 +483,9 @@
     "VGLT",
     "FEMS",
     "ROUS",
-    "IGLB"
+    "IGLB",
+    "GCOW",
+    "EDIV"
   ],
   "Basic_Materials": [
     "LIN",
