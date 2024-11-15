@@ -52,7 +52,11 @@
         "LEN",
         "BBVA",
         "AMGN",
-        "ADI"
+        "ADI",
+        "LIN",
+        "LMT",
+        "TDG",
+        "NOC"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -171,7 +175,8 @@
         "SMCI",
         "TDW",
         "EDU",
-        "FRO"
+        "FRO",
+        "UGP"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -276,7 +281,8 @@
         "MCHP",
         "PKX",
         "LEGN",
-        "SWKS"
+        "SWKS",
+        "BRKR"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -296,7 +302,8 @@
         "DG",
         "NBIS",
         "BMRN",
-        "QRVO"
+        "QRVO",
+        "COLD"
     ],
     "black_keywords": [
         "Cotton",
@@ -336,7 +343,9 @@
         "DLTR",
         "TLK",
         "PUK",
-        "LBTYK"
+        "LBTYK",
+        "BAX",
+        "INGM"
     ],
     "green_keywords": [
         "EURCNY",

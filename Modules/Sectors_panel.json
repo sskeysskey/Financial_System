@@ -2,7 +2,8 @@
     "Basic_Materials": {
         "NEM": "金矿",
         "CE": "赛莱默",
-        "VALE": ""
+        "VALE": "",
+        "LIN": ""
     },
     "Communication_Services": {
         "DJT": ""
@@ -20,7 +21,8 @@
         "EQNR": "挪威风电",
         "TTE": "道达尔",
         "TDW": "潮水钻井",
-        "FRO": ""
+        "FRO": "",
+        "UGP": ""
     },
     "Technology": {
         "STM": "意法",
@@ -30,7 +32,10 @@
         "ACLS": "晶圆",
         "ENPH": "太阳能",
         "MCHP": "单片机",
-        "SMCI": ""
+        "SMCI": "",
+        "ADI": "",
+        "CDW": "",
+        "INGM": ""
     },
     "Utilities": {
         "AEP": "美国电力",
@@ -41,13 +46,21 @@
         "CL": "高露洁",
         "UL": "联合利华",
         "BF-B": "杰克丹尼",
-        "EDU": ""
+        "EDU": "",
+        "MDLZ": ""
     },
     "Industrials": {
-        "BA": "波音"
+        "BA": "波音",
+        "LMT": "",
+        "CP": "",
+        "TDG": "",
+        "NOC": "",
+        "SARO": ""
     },
     "Real_Estate": {
-        "REXR": ""
+        "REXR": "",
+        "O": "",
+        "COLD": ""
     },
     "Financial_Services": {},
     "Healthcare": {
@@ -60,7 +73,19 @@
         "NVS": "",
         "SNY": "",
         "GSK": "",
-        "ICLR": ""
+        "ICLR": "",
+        "JNJ": "",
+        "TMO": "",
+        "DHR": "",
+        "AMGN": "",
+        "PFE": "",
+        "HCA": "",
+        "RDY": "",
+        "BIIB": "",
+        "GMAB": "",
+        "BAX": "",
+        "BMRN": "",
+        "BRKR": ""
     },
     "Bonds": {
         "US2Y": "",

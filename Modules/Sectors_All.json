@@ -79,6 +79,7 @@
     "USConfidence",
     "USInitial",
     "USPPI",
+    "CorePPI",
     "USRetailM",
     "USUnemploy",
     "CorePCEY",
@@ -853,7 +854,8 @@
     "SHAK",
     "EAT",
     "RUSHB",
-    "WRD"
+    "WRD",
+    "KTB"
   ],
   "Consumer_Defensive": [
     "WMT",
