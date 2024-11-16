@@ -82,11 +82,13 @@
     "CorePPI",
     "USRetailM",
     "USUnemploy",
+    "PCEY",
     "CorePCEY",
     "CorePCEM",
     "CoreCPI",
     "USConspending",
-    "PCEY"
+    "ImportPriceM",
+    "ImportPriceY"
   ],
   "Commodities": [
     "Gold",

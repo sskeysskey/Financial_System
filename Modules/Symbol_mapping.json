@@ -79,5 +79,7 @@
     "Core PCE Price Index MM *": "CorePCEM",
     "Core CPI YY, NSA*": "CoreCPI",
     "GDP Cons Spending Prelim*": "USConspending",
-    "PCE Price Index YY *": "PCEY"
+    "PCE Price Index YY *": "PCEY",
+    "Import Prices MM*": "ImportPriceM",
+    "Import Prices YY*": "ImportPriceY"
 }

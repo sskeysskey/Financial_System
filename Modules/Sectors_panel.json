@@ -1,31 +1,24 @@
 {
     "Basic_Materials": {
-        "NEM": "金矿",
+        "NEM": "Newmont",
         "CE": "赛莱默",
         "VALE": "",
         "LIN": ""
     },
     "Communication_Services": {
         "DJT": "",
-        "META": "",
-        "IPG": ""
+        "META": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
-        "CPRI": "",
         "DOOO": "摩托艇",
-        "W": "Wayfair",
-        "DHI": "德尔惠",
-        "RACE": ""
+        "DHI": "德尔惠"
     },
     "Energy": {
         "PBF": "石油精炼",
         "VAL": "海上钻井",
-        "EQNR": "挪威风电",
-        "TTE": "道达尔",
         "TDW": "潮水钻井",
-        "FRO": "",
-        "UGP": ""
+        "FRO": ""
     },
     "Technology": {
         "STM": "意法",
@@ -34,48 +27,26 @@
         "KLAC": "科磊PCB",
         "ACLS": "晶圆",
         "ENPH": "太阳能",
-        "MCHP": "单片机",
-        "SMCI": "",
-        "ADI": "",
-        "CDW": "",
-        "INGM": "",
-        "AVGO": "",
-        "AMAT": "",
-        "LRCX": "",
-        "NXPI": "",
-        "UMC": "",
-        "AKAM": ""
+        "SMCI": "超微",
+        "AMAT": "应用材料",
+        "LRCX": "拉姆研究",
+        "NXPI": "恩智浦"
     },
-    "Utilities": {
-        "AEP": "美国电力",
-        "NEE": ""
-    },
+    "Utilities": {},
     "Consumer_Defensive": {
         "KO": "可口可乐",
-        "CL": "高露洁",
-        "UL": "联合利华",
-        "BF-B": "杰克丹尼",
-        "EDU": "",
-        "MDLZ": "",
         "PEP": "",
-        "DEO": "",
-        "KDP": "",
         "HSY": "",
         "SJM": ""
     },
     "Industrials": {
         "BA": "波音",
-        "LMT": "",
-        "CP": "",
+        "LMT": "马丁",
         "TDG": "",
-        "NOC": "",
-        "SARO": "",
-        "RELX": "",
-        "GD": "",
-        "TRI": ""
+        "NOC": "诺斯罗普",
+        "GD": "通用动力"
     },
     "Real_Estate": {
-        "REXR": "",
         "O": "",
         "COLD": ""
     },
@@ -88,30 +59,9 @@
         "ABBV": "艾伯维",
         "CNC": "",
         "NVS": "",
-        "SNY": "",
-        "GSK": "",
-        "ICLR": "",
-        "JNJ": "",
-        "TMO": "",
-        "DHR": "",
-        "AMGN": "",
-        "PFE": "",
-        "HCA": "",
-        "RDY": "",
-        "BIIB": "",
-        "GMAB": "",
-        "BAX": "",
-        "BMRN": "",
-        "BRKR": "",
         "LLY": "",
         "AZN": "",
         "ELV": "",
-        "CVS": "",
-        "BDX": "",
-        "LEGN": "",
-        "IONS": "",
-        "OPCH": "",
-        "APLS": "",
         "PACS": ""
     },
     "Bonds": {
@@ -204,13 +154,13 @@
         "IYH": "医疗",
         "XLI": "工业",
         "IYF": "金融",
-        "XLY": "非必需",
+        "XLP": "必需消费",
+        "XLY": "非必需消费",
         "XLRE": "房地产",
         "XAR": "国防航天",
         "KIE": "保险",
         "XLB": "原材料",
         "PAVE": "基础设施",
-        "XLP": "必需消费",
         "XLE": "能源",
         "XLU": "公共事业"
     }
