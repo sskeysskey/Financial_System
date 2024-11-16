@@ -4,7 +4,6 @@
         "ADBE",
         "VRTX",
         "E",
-        "REGN",
         "INTU",
         "AZN",
         "PLD",
@@ -26,13 +25,11 @@
         "AMT",
         "CCI",
         "AZO",
-        "PEP",
         "CNI",
         "NEM",
         "PG",
         "BUD",
         "NVS",
-        "PFE",
         "CP",
         "O",
         "INFY",
@@ -56,7 +53,12 @@
         "LIN",
         "LMT",
         "TDG",
-        "NOC"
+        "NOC",
+        "RACE",
+        "RELX",
+        "GD",
+        "TRI",
+        "AMAT"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -73,7 +75,8 @@
         "TSLA",
         "BRK-A",
         "MSFT",
-        "META"
+        "META",
+        "AVGO"
     ],
     "purple_keywords": [
         "Bitcoin",
@@ -162,7 +165,6 @@
         "APLS",
         "ALV",
         "WFRD",
-        "ACLS",
         "NXT",
         "MOH",
         "LYB",
@@ -176,7 +178,12 @@
         "TDW",
         "EDU",
         "FRO",
-        "UGP"
+        "UGP",
+        "PEP",
+        "REGN",
+        "GSK",
+        "IONS",
+        "AKAM"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -282,7 +289,10 @@
         "PKX",
         "LEGN",
         "SWKS",
-        "BRKR"
+        "BRKR",
+        "IPG",
+        "SJM",
+        "ACLS"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -301,7 +311,6 @@
         "BIO",
         "DG",
         "NBIS",
-        "BMRN",
         "QRVO",
         "COLD"
     ],
@@ -345,7 +354,9 @@
         "PUK",
         "LBTYK",
         "BAX",
-        "INGM"
+        "INGM",
+        "PFE",
+        "BMRN"
     ],
     "green_keywords": [
         "EURCNY",
@@ -360,8 +371,7 @@
         "SHEL",
         "COP",
         "BP",
-        "EQNR",
-        "GSK"
+        "EQNR"
     ],
     "red_keywords": [
         "USCPI",

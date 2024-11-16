@@ -6,14 +6,17 @@
         "LIN": ""
     },
     "Communication_Services": {
-        "DJT": ""
+        "DJT": "",
+        "META": "",
+        "IPG": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
         "CPRI": "",
         "DOOO": "摩托艇",
         "W": "Wayfair",
-        "DHI": "德尔惠"
+        "DHI": "德尔惠",
+        "RACE": ""
     },
     "Energy": {
         "PBF": "石油精炼",
@@ -35,7 +38,13 @@
         "SMCI": "",
         "ADI": "",
         "CDW": "",
-        "INGM": ""
+        "INGM": "",
+        "AVGO": "",
+        "AMAT": "",
+        "LRCX": "",
+        "NXPI": "",
+        "UMC": "",
+        "AKAM": ""
     },
     "Utilities": {
         "AEP": "美国电力",
@@ -47,7 +56,12 @@
         "UL": "联合利华",
         "BF-B": "杰克丹尼",
         "EDU": "",
-        "MDLZ": ""
+        "MDLZ": "",
+        "PEP": "",
+        "DEO": "",
+        "KDP": "",
+        "HSY": "",
+        "SJM": ""
     },
     "Industrials": {
         "BA": "波音",
@@ -55,7 +69,10 @@
         "CP": "",
         "TDG": "",
         "NOC": "",
-        "SARO": ""
+        "SARO": "",
+        "RELX": "",
+        "GD": "",
+        "TRI": ""
     },
     "Real_Estate": {
         "REXR": "",
@@ -85,7 +102,17 @@
         "GMAB": "",
         "BAX": "",
         "BMRN": "",
-        "BRKR": ""
+        "BRKR": "",
+        "LLY": "",
+        "AZN": "",
+        "ELV": "",
+        "CVS": "",
+        "BDX": "",
+        "LEGN": "",
+        "IONS": "",
+        "OPCH": "",
+        "APLS": "",
+        "PACS": ""
     },
     "Bonds": {
         "US2Y": "",
