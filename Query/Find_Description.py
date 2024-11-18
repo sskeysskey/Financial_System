@@ -21,6 +21,7 @@ class SearchWorker(QThread):
         super().__init__()
         self.keywords = keywords
         self.json_path = json_path
+        self.compare_data = load_compare_data()
 
     def run(self):
         # 在此方法中执行耗时的搜索操作
@@ -87,6 +88,8 @@ class MainWindow(QMainWindow):
         keywords = self.input_field.text()
         if not keywords.strip():
             return  # 如果用户没有输入关键词，则不进行搜索
+        # 更新compare数据
+        self.compare_data = load_compare_data()
         self.loading_label.show()
         self.result_area.clear()
         self.result_area.setEnabled(False)
@@ -165,13 +168,29 @@ class MainWindow(QMainWindow):
             for result in results:
                 if len(result) == 3:  # 股票结果
                     symbol, name, tags = result
-                    html += f"<p><a href='symbol://{symbol}' style='color: {color}; text-decoration: underline; font-size: {font_size}px;'>{symbol} - {name} - {tags}</a></p>"
+                    # 查找compare数据
+                    compare_info = self.compare_data.get(symbol, "")
+                    if compare_info:
+                        display_text = f"{symbol}  {compare_info}  {name} - {tags}"
+                    else:
+                        display_text = f"{symbol} - {name} - {tags}"
+                    html += f"<p><a href='symbol://{symbol}' style='color: {color}; text-decoration: underline; font-size: {font_size}px;'>{display_text}</a></p>"
                 else:  # ETF 结果
                     symbol, tags = result
                     # 获取 ETF 的最新成交量
                     latest_volume = get_latest_etf_volume(symbol)
-                    # 显示 ETF 结果并附加最新成交量
-                    html += f"<p><a href='symbol://{symbol}' style='color: {color}; text-decoration: underline; font-size: {font_size}px;'>{symbol} - {tags} - {latest_volume}</a></p>"
+                    # 查找compare数据
+                    compare_info = self.compare_data.get(symbol, "")
+                    # 构建显示文本
+                    display_parts = [symbol]
+                    if compare_info:
+                        display_parts.append(compare_info)
+                    display_parts.append(tags)
+                    if latest_volume and latest_volume != "N/A":  # 只在有有效成交量时添加
+                        display_parts.append(latest_volume)
+                    
+                    display_text = " - ".join(display_parts)
+                    html += f"<p><a href='symbol://{symbol}' style='color: {color}; text-decoration: underline; font-size: {font_size}px;'>{display_text}</a></p>"
         return html
 
     def open_file(self, url):
@@ -308,6 +327,19 @@ def get_latest_etf_volume(etf_name):
         return f"{int(volume / 1000)}K"
     else:
         return "N/A"
+
+def load_compare_data():
+    compare_data = {}
+    try:
+        with open("/Users/yanzhang/Documents/News/backup/Compare_All.txt", "r") as f:
+            for line in f:
+                if ":" in line:
+                    symbol, value = line.strip().split(":", 1)
+                    compare_data[symbol.strip()] = value.strip()
+    except Exception as e:
+        print(f"读取Compare_All.txt出错: {e}")
+        return {}
+    return compare_data
 
 if __name__ == "__main__":
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
