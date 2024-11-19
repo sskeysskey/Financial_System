@@ -33,7 +33,6 @@
         "CP",
         "O",
         "INFY",
-        "MDLZ",
         "JNJ",
         "NXPI",
         "UL",
@@ -158,7 +157,6 @@
         "HXL",
         "RRC",
         "FMX",
-        "COTY",
         "COP",
         "OVV",
         "MNSO",
@@ -183,7 +181,11 @@
         "REGN",
         "GSK",
         "IONS",
-        "AKAM"
+        "AKAM",
+        "MDLZ",
+        "KHC",
+        "CAG",
+        "BBIO"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -292,7 +294,8 @@
         "BRKR",
         "IPG",
         "SJM",
-        "ACLS"
+        "ACLS",
+        "COTY"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -356,7 +359,8 @@
         "BAX",
         "INGM",
         "PFE",
-        "BMRN"
+        "BMRN",
+        "AMTM"
     ],
     "green_keywords": [
         "EURCNY",

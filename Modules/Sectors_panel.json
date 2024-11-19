@@ -12,13 +12,15 @@
     "Consumer_Cyclical": {
         "STLA": "",
         "DOOO": "摩托艇",
-        "DHI": "德尔惠"
+        "DHI": "德尔惠",
+        "NKE": ""
     },
     "Energy": {
         "PBF": "石油精炼",
         "VAL": "海上钻井",
         "TDW": "潮水钻井",
-        "FRO": ""
+        "FRO": "",
+        "UGP": ""
     },
     "Technology": {
         "STM": "意法",
@@ -37,14 +39,22 @@
         "KO": "可口可乐",
         "PEP": "",
         "HSY": "",
-        "SJM": ""
+        "SJM": "",
+        "MDLZ": "",
+        "KDP": "",
+        "KHC": "",
+        "BF-B": "",
+        "CAG": ""
     },
     "Industrials": {
         "BA": "波音",
         "LMT": "马丁",
         "TDG": "",
         "NOC": "诺斯罗普",
-        "GD": "通用动力"
+        "GD": "通用动力",
+        "CP": "",
+        "TRI": "",
+        "AMTM": ""
     },
     "Real_Estate": {
         "O": "",
@@ -62,7 +72,18 @@
         "LLY": "",
         "AZN": "",
         "ELV": "",
-        "PACS": ""
+        "PACS": "",
+        "TMO": "",
+        "DHR": "",
+        "AMGN": "",
+        "HCA": "",
+        "BDX": "",
+        "RDY": "",
+        "BIIB": "",
+        "ICLR": "",
+        "BMRN": "",
+        "BRKR": "",
+        "BBIO": ""
     },
     "Bonds": {
         "US2Y": "",

@@ -992,7 +992,8 @@
     "EXE",
     "SOBO",
     "CRC",
-    "LB"
+    "LB",
+    "TGS"
   ],
   "Financial_Services": [
     "BRK-A",
@@ -1560,7 +1561,8 @@
     "RXO",
     "ACA",
     "FELE",
-    "ROAD"
+    "ROAD",
+    "BE"
   ],
   "Real_Estate": [
     "PLD",
