@@ -13,7 +13,8 @@
         "STLA": "",
         "DOOO": "摩托艇",
         "DHI": "德尔惠",
-        "NKE": ""
+        "NKE": "",
+        "RACE": ""
     },
     "Energy": {
         "PBF": "石油精炼",
@@ -32,19 +33,17 @@
         "SMCI": "超微",
         "AMAT": "应用材料",
         "LRCX": "拉姆研究",
-        "NXPI": "恩智浦"
+        "NXPI": "恩智浦",
+        "CDW": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
         "KO": "可口可乐",
         "PEP": "",
         "HSY": "",
-        "SJM": "",
-        "MDLZ": "",
-        "KDP": "",
+        "CAG": "",
         "KHC": "",
-        "BF-B": "",
-        "CAG": ""
+        "BF-B": ""
     },
     "Industrials": {
         "BA": "波音",
@@ -54,10 +53,10 @@
         "GD": "通用动力",
         "CP": "",
         "TRI": "",
+        "CNI": "",
         "AMTM": ""
     },
     "Real_Estate": {
-        "O": "",
         "COLD": ""
     },
     "Financial_Services": {},
@@ -73,17 +72,13 @@
         "AZN": "",
         "ELV": "",
         "PACS": "",
-        "TMO": "",
-        "DHR": "",
-        "AMGN": "",
+        "VRTX": "",
+        "MDT": "",
         "HCA": "",
         "BDX": "",
-        "RDY": "",
         "BIIB": "",
-        "ICLR": "",
-        "BMRN": "",
-        "BRKR": "",
-        "BBIO": ""
+        "GMAB": "",
+        "BRKR": ""
     },
     "Bonds": {
         "US2Y": "",

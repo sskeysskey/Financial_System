@@ -110,7 +110,7 @@ def update_json_data(config_path, updates, blacklist_newlow):
                     
                     # 将symbol和category写入文件
                     timestamp = datetime.now().strftime("%y%m%d")
-                    file_path = f"/Users/yanzhang/Documents/News/NewLow_{timestamp}.txt"
+                    file_path = f"/Users/yanzhang/Documents/News/site/NewLow_{timestamp}.txt"
                     with open(file_path, 'a', encoding='utf-8') as f:
                         f.write(f"{category} {symbol}\n")
                         
@@ -225,7 +225,7 @@ def clean_old_backups(directory, file_patterns, days=7):
                     # 提取日期部分，并确保只获取日期的最后4位
                     date_str = parts[date_position].split('.')[0][-4:]
                     # 确保日期是按照MMDD格式解析
-                    file_date = datetime.strptime(date_str, '%m%d')
+                    file_date = datetime.strptime(date_str, '%y%m%d')
                     # 将年份替换为当前年份
                     file_date = file_date.replace(year=now.year)
                     
@@ -429,7 +429,10 @@ def main():
         ("NewLow500_", -1),
         ("NewLow5000_", -1),
         ("Stock_Splits_next_", -1),
-        ("TodayCNH_", -1)
+        ("TodayCNH_", -1),
+        ("Stock_50_", -1),
+        ("Stock_500_", -1),
+        ("Stock_50000_", -1)
     ]
 
     # 执行清理旧备份文件的函数

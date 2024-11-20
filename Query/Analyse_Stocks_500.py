@@ -95,7 +95,7 @@ def update_json_data(config_path, updates, blacklist_newlow):
 
                     # 将symbol和category写入文件
                     timestamp = datetime.now().strftime("%y%m%d")
-                    file_path = f"/Users/yanzhang/Documents/News/NewLow500_{timestamp}.txt"
+                    file_path = f"/Users/yanzhang/Documents/News/site/NewLow500_{timestamp}.txt"
                     
                     with open(file_path, 'a', encoding='utf-8') as f:
                         f.write(f"{category} {symbol}\n")

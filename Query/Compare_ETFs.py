@@ -148,7 +148,7 @@ def clean_old_backups(directory, prefix="CompareETFs_", days=4):
         if filename.startswith(prefix):  # 只处理特定前缀的文件
             try:
                 date_str = filename.split('_')[-1].split('.')[0]  # 获取日期部分
-                file_date = datetime.strptime(date_str, '%m%d')
+                file_date = datetime.strptime(date_str, '%y%m%d')
                 # 将年份设置为今年
                 file_date = file_date.replace(year=now.year)
                 if file_date < cutoff:
@@ -172,7 +172,7 @@ if __name__ == '__main__':
     
     if os.path.exists(file_path):
         yesterday = datetime.now() - timedelta(days=1)
-        timestamp = yesterday.strftime('%m%d')
+        timestamp = yesterday.strftime('%y%m%d')
         directory, filename = os.path.split(file_path)
         name, extension = os.path.splitext(filename)
         new_filename = f"{name}_{timestamp}{extension}"

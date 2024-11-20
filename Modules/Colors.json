@@ -57,7 +57,8 @@
         "RELX",
         "GD",
         "TRI",
-        "AMAT"
+        "AMAT",
+        "MDT"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -177,13 +178,11 @@
         "EDU",
         "FRO",
         "UGP",
-        "PEP",
         "REGN",
         "GSK",
         "IONS",
         "AKAM",
         "MDLZ",
-        "KHC",
         "CAG",
         "BBIO"
     ],
@@ -295,7 +294,9 @@
         "IPG",
         "SJM",
         "ACLS",
-        "COTY"
+        "COTY",
+        "PEP",
+        "KHC"
     ],
     "orange_keywords": [
         "NASDAQ",

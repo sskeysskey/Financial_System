@@ -148,7 +148,7 @@ def save_data(urls, existing_json, new_file, today_file, diff_file, compare_file
                     file.write(line)  # 最后一行不添加任何后缀
 
     # 获取昨天的日期
-    yesterday = (datetime.now() - timedelta(1)).strftime('%m%d')
+    yesterday = (datetime.now() - timedelta(1)).strftime('%y%m%d')
 
     if os.path.exists(today_file):
         # 备份今天的文件
@@ -212,7 +212,7 @@ def clean_old_backups(directory, prefix="ETFs_today_", days=4):
         if filename.startswith(prefix):  # 只处理特定前缀的文件
             try:
                 date_str = filename.split('_')[-1].split('.')[0]  # 获取日期部分
-                file_date = datetime.strptime(date_str, '%m%d')
+                file_date = datetime.strptime(date_str, '%y%m%d')
                 # 将年份设置为今年
                 file_date = file_date.replace(year=now.year)
                 if file_date < cutoff:

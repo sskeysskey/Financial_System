@@ -181,7 +181,7 @@ def save_output_to_file(output, directory, filename):
         print(f"没有内容需要保存到 {filename}")
         return
 
-    current_time = datetime.now().strftime('%m%d')
+    current_time = datetime.now().strftime('%y%m%d')
     filename = f"{filename.split('.')[0]}_{current_time}.txt"
     os.makedirs(directory, exist_ok=True)
     file_path = os.path.join(directory, filename)
@@ -199,7 +199,7 @@ def clean_old_backups(directory, file_patterns, days=4):
             if filename.startswith(prefix):
                 try:
                     date_str = filename.split('_')[date_position].split('.')[0]
-                    file_date = datetime.strptime(date_str, '%m%d').replace(year=now.year)
+                    file_date = datetime.strptime(date_str, '%y%m%d').replace(year=now.year)
                     if file_date < cutoff:
                         file_path = os.path.join(directory, filename)
                         os.remove(file_path)
@@ -218,7 +218,7 @@ def log_error_with_timestamp(error_message, file_path):
 def backup_file(file_name, source_dir, backup_dir):
     file_path = os.path.join(source_dir, file_name)
     if os.path.exists(file_path):
-        timestamp = (datetime.now() - timedelta(days=1)).strftime('%m%d')
+        timestamp = (datetime.now() - timedelta(days=1)).strftime('%y%m%d')
         new_filename = f"{os.path.splitext(file_name)[0]}_{timestamp}{os.path.splitext(file_name)[1]}"
         new_file_path = os.path.join(backup_dir, new_filename)
         os.rename(file_path, new_file_path)
@@ -301,7 +301,7 @@ try:
 finally:
     driver.quit()
 
-output_directory = '/Users/yanzhang/Documents/News'
+output_directory = '/Users/yanzhang/Documents/News/backup/backup'
 save_output_to_file(output, output_directory, filename='Stock_50.txt')
 save_output_to_file(output_500, output_directory, filename='Stock_500.txt')
 save_output_to_file(output_5000, output_directory, filename='Stock_5000.txt')
@@ -309,7 +309,10 @@ save_output_to_file(output_5000, output_directory, filename='Stock_5000.txt')
 # 定义要清理的文件模式
 file_patterns = [
     ("marketcap_pe_", -1),  # 日期在最后一个下划线后
-    ("price_volume_", -1)
+    ("price_volume_", -1),
+    ("NewLow_", -1),
+    ("NewLow500_", -1),
+    ("NewLow5000_", -1)
 ]
 
 # 调用清理旧备份文件的函数
