@@ -3,7 +3,6 @@
         "UNH",
         "ADBE",
         "VRTX",
-        "E",
         "INTU",
         "AZN",
         "PLD",
@@ -58,7 +57,10 @@
         "GD",
         "TRI",
         "AMAT",
-        "MDT"
+        "MDT",
+        "ECL",
+        "TGT",
+        "QCOM"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -179,12 +181,13 @@
         "FRO",
         "UGP",
         "REGN",
-        "GSK",
         "IONS",
         "AKAM",
         "MDLZ",
         "CAG",
-        "BBIO"
+        "BBIO",
+        "E",
+        "AES"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -296,7 +299,9 @@
         "ACLS",
         "COTY",
         "PEP",
-        "KHC"
+        "KHC",
+        "GSK",
+        "ST"
     ],
     "orange_keywords": [
         "NASDAQ",

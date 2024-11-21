@@ -215,28 +215,30 @@ def load_symbols_from_file(file_path):
 
 def clean_old_backups(directory, file_patterns, days=7):
     now = datetime.now()
-    cutoff = now - timedelta(days=days)
+    cutoff = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days)
 
     for filename in os.listdir(directory):
         for prefix, date_position in file_patterns:
             if filename.startswith(prefix):
                 try:
                     parts = filename.split('_')
-                    # 提取日期部分，并确保只获取日期的最后4位
-                    date_str = parts[date_position].split('.')[0][-4:]
-                    # 确保日期是按照MMDD格式解析
+                    # 提取日期部分，确保获取完整的6位日期 (YYMMDD)
+                    date_str = parts[date_position].split('.')[0][-6:]  # 修改这里，获取6位
+                    # 解析完整的YYMMDD格式
                     file_date = datetime.strptime(date_str, '%y%m%d')
-                    # 将年份替换为当前年份
-                    file_date = file_date.replace(year=now.year)
+                    # 设置文件日期的时间为当天开始(0点)
+                    file_date = file_date.replace(hour=0, minute=0, second=0, microsecond=0)
                     
                     # 如果文件日期早于截止日期，则删除文件
                     if file_date < cutoff:
                         file_path = os.path.join(directory, filename)
                         os.remove(file_path)
                         print(f"删除旧备份文件：{file_path}")
+                    else:
+                        print(f"保留文件：{filename}，日期 {file_date.strftime('%Y-%m-%d')} 在保留范围内")
                     break  # 文件已处理，无需检查其他模式
                 except Exception as e:
-                    print(f"跳过文件：{filename}，原因：{e}")
+                    print(f"处理文件出错：{filename}，原因：{e}")
 
 def load_stock_splits(file_path):
     """从Stock_Splits_next.txt文件中加载symbol列表"""

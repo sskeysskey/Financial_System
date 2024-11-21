@@ -3,7 +3,8 @@
         "NEM": "Newmont",
         "CE": "赛莱默",
         "VALE": "",
-        "LIN": ""
+        "LIN": "",
+        "ECL": ""
     },
     "Communication_Services": {
         "DJT": "",
@@ -14,14 +15,15 @@
         "DOOO": "摩托艇",
         "DHI": "德尔惠",
         "NKE": "",
-        "RACE": ""
+        "RACE": "法拉利"
     },
     "Energy": {
         "PBF": "石油精炼",
         "VAL": "海上钻井",
         "TDW": "潮水钻井",
         "FRO": "",
-        "UGP": ""
+        "UGP": "",
+        "TBN": ""
     },
     "Technology": {
         "STM": "意法",
@@ -34,16 +36,22 @@
         "AMAT": "应用材料",
         "LRCX": "拉姆研究",
         "NXPI": "恩智浦",
-        "CDW": ""
+        "AVGO": "",
+        "QCOM": "",
+        "ST": "",
+        "INGM": ""
     },
-    "Utilities": {},
+    "Utilities": {
+        "AES": ""
+    },
     "Consumer_Defensive": {
         "KO": "可口可乐",
         "PEP": "",
         "HSY": "",
         "CAG": "",
         "KHC": "",
-        "BF-B": ""
+        "BF-B": "",
+        "TGT": ""
     },
     "Industrials": {
         "BA": "波音",
@@ -54,11 +62,10 @@
         "CP": "",
         "TRI": "",
         "CNI": "",
-        "AMTM": ""
+        "AMTM": "",
+        "HXL": ""
     },
-    "Real_Estate": {
-        "COLD": ""
-    },
+    "Real_Estate": {},
     "Financial_Services": {},
     "Healthcare": {
         "MRNA": "",
@@ -73,12 +80,13 @@
         "ELV": "",
         "PACS": "",
         "VRTX": "",
-        "MDT": "",
         "HCA": "",
+        "BRKR": "",
+        "SNY": "",
+        "MDT": "",
+        "GSK": "",
         "BDX": "",
-        "BIIB": "",
-        "GMAB": "",
-        "BRKR": ""
+        "GMAB": ""
     },
     "Bonds": {
         "US2Y": "",

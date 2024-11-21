@@ -94,7 +94,57 @@ class TagEditor(QMainWindow):
         # 设置焦点到输入框
         QApplication.processEvents()  # 确保UI已经完全加载
         self.new_tag_input.setFocus()
+
+        # 确保tags_list可以接收键盘焦点
+        self.tags_list.setFocusPolicy(Qt.StrongFocus)
     
+    def edit_current_tag(self):
+        """编辑当前选中的标签"""
+        current_item = self.tags_list.currentItem()
+        if not current_item:
+            return
+            
+        row = self.tags_list.row(current_item)
+        old_tag = current_item.text()
+        
+        new_tag, ok = QInputDialog.getText(
+            self,
+            "编辑标签",
+            "请输入新标签:",
+            QLineEdit.Normal,
+            old_tag
+        )
+        
+        if ok and new_tag.strip() and new_tag != old_tag:
+            self.current_item['tag'][row] = new_tag.strip()
+            current_item.setText(new_tag.strip())
+
+    def delete_current_tag(self):
+        """删除当前选中的标签"""
+        current_item = self.tags_list.currentItem()
+        if current_item and hasattr(self, 'current_item'):
+            tag = current_item.text()
+            self.current_item['tag'].remove(tag)
+            self.tags_list.takeItem(self.tags_list.row(current_item))
+
+    def keyPressEvent(self, event):
+        """处理键盘事件"""
+        # 如果焦点在标签列表上
+        if self.tags_list.hasFocus() and self.tags_list.currentItem():
+            if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:
+                # 按下回车键，编辑当前标签
+                self.edit_current_tag()
+                event.accept()
+                return
+            elif event.key() == Qt.Key_Delete or event.key() == Qt.Key_Backspace:
+                # 按下删除键，删除当前标签
+                self.delete_current_tag()
+                event.accept()
+                return
+        
+        # 对于其他键盘事件，调用父类的处理方法
+        super().keyPressEvent(event)
+
     def show(self):
         """重写 show 方法，确保窗口显示时properly激活"""
         super().show()
@@ -189,21 +239,7 @@ class TagEditor(QMainWindow):
         """处理双击编辑事件"""
         if not item:
             return
-            
-        row = self.tags_list.row(item)
-        old_tag = item.text()
-        
-        new_tag, ok = QInputDialog.getText(
-            self,
-            "编辑标签",
-            "请输入新标签:",
-            QLineEdit.Normal,
-            old_tag
-        )
-        
-        if ok and new_tag.strip() and new_tag != old_tag:
-            self.current_item['tag'][row] = new_tag.strip()
-            item.setText(new_tag.strip())
+        self.edit_current_tag()
 
     def move_tag_up(self):
         """将选中的tag向上移动"""
@@ -274,12 +310,8 @@ class TagEditor(QMainWindow):
                 QMessageBox.information(self, "提示", "该标签已存在")
 
     def delete_tag(self):
-        """删除选中的tag"""
-        current_item = self.tags_list.currentItem()
-        if current_item and hasattr(self, 'current_item'):
-            tag = current_item.text()
-            self.current_item['tag'].remove(tag)
-            self.tags_list.takeItem(self.tags_list.row(current_item))
+        """删除选中的tag（按钮触发）"""
+        self.delete_current_tag()
 
     def save_changes(self):
         """通过按钮保存更改"""

@@ -109,7 +109,7 @@ def get_symbol_type(symbol, data):
 
 def find_symbols_by_tags(target_tags_with_weight, data):
     related_symbols = {'stocks': [], 'etfs': []}
-
+    
     # 创建一个目标标签字典，键为小写标签，值为权重
     target_tags_dict = {tag.lower(): weight for tag, weight in target_tags_with_weight}
 
@@ -117,27 +117,28 @@ def find_symbols_by_tags(target_tags_with_weight, data):
         for item in data[category]:
             tags = item.get('tag', [])
             matched_tags = []
-            used_tags = set()  # 用于记录已经匹配过的标签（无论是完全匹配还是部分匹配）
+            used_tags = set()  # 用于记录已经匹配过的标签
 
-            # 第一阶段：处理完全匹配
+            # 第一阶段：完全匹配，使用原始权重
             for tag in tags:
                 tag_lower = tag.lower()
                 if tag_lower in target_tags_dict and tag_lower not in used_tags:
                     matched_tags.append((tag, target_tags_dict[tag_lower]))
                     used_tags.add(tag_lower)  # 标记该标签已被完全匹配
 
-            # 第二阶段：处理部分匹配，仅针对未被完全匹配的标签
+            # 第二阶段：部分匹配，使用默认权重 1.0
             for tag in tags:
                 tag_lower = tag.lower()
                 if tag_lower in used_tags:
                     continue  # 跳过已被完全匹配的标签
-                for target_tag, target_weight in target_tags_dict.items():
-                    # 只有当目标tag包含源tag并且目标tag的长度大于等于源tag时才算部分匹配
-                    if target_tag in tag_lower and len(tag_lower) >= len(target_tag):
+                for target_tag, _ in target_tags_dict.items():
+                    # 检查是否为包含关系（任意一方包含另一方）
+                    if (target_tag in tag_lower or tag_lower in target_tag) and tag_lower != target_tag:
                         if target_tag not in used_tags:
-                            matched_tags.append((tag, target_weight))
-                            used_tags.add(target_tag)  # 标记该部分匹配的标签避免重复计数
-                        break  # 每个标签只匹配一次
+                            # 使用默认权重 1.0 而不是原始权重
+                            matched_tags.append((tag, Decimal('1.0')))
+                            used_tags.add(target_tag)
+                        break
 
             if matched_tags:
                 related_symbols[category].append((item['symbol'], matched_tags, tags))
