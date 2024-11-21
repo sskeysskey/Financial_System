@@ -29,7 +29,7 @@ cursor = conn.cursor()
 # cursor.execute("UPDATE Currencies SET date = '2024-11-14' WHERE id = 143561")
 
 # 保留两位小数
-# cursor.execute("UPDATE Industrials SET price = ROUND(price, 2) WHERE name = 'TTEK'")
+# cursor.execute("UPDATE Currencies SET price = ROUND(price, 2) WHERE name = 'DXY'")
 # cursor.execute("UPDATE Technology SET price = ROUND(price, 2) WHERE name = 'MSTR'")
 
 # 将所有name为'Russian'的记录改为'Russia'

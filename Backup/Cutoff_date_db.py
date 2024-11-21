@@ -13,7 +13,7 @@ def optimize_database(db_path, json_path):
     cursor = conn.cursor()
     
     # 设置截止日期
-    cutoff_date = '2001-09-01'
+    cutoff_date = '2002-09-01'
     
     try:
         # 遍历所有表

@@ -3,12 +3,10 @@
         "NEM": "Newmont",
         "CE": "赛莱默",
         "VALE": "",
-        "LIN": "",
-        "ECL": ""
+        "ECL": "艺康"
     },
     "Communication_Services": {
-        "DJT": "",
-        "META": ""
+        "DJT": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
@@ -20,10 +18,7 @@
     "Energy": {
         "PBF": "石油精炼",
         "VAL": "海上钻井",
-        "TDW": "潮水钻井",
-        "FRO": "",
-        "UGP": "",
-        "TBN": ""
+        "TDW": "潮水钻井"
     },
     "Technology": {
         "STM": "意法",
@@ -37,9 +32,7 @@
         "LRCX": "拉姆研究",
         "NXPI": "恩智浦",
         "AVGO": "",
-        "QCOM": "",
-        "ST": "",
-        "INGM": ""
+        "QCOM": ""
     },
     "Utilities": {
         "AES": ""
@@ -49,8 +42,6 @@
         "PEP": "",
         "HSY": "",
         "CAG": "",
-        "KHC": "",
-        "BF-B": "",
         "TGT": ""
     },
     "Industrials": {
@@ -58,12 +49,7 @@
         "LMT": "马丁",
         "TDG": "",
         "NOC": "诺斯罗普",
-        "GD": "通用动力",
-        "CP": "",
-        "TRI": "",
-        "CNI": "",
-        "AMTM": "",
-        "HXL": ""
+        "GD": "通用动力"
     },
     "Real_Estate": {},
     "Financial_Services": {},
@@ -78,15 +64,7 @@
         "LLY": "",
         "AZN": "",
         "ELV": "",
-        "PACS": "",
-        "VRTX": "",
-        "HCA": "",
-        "BRKR": "",
-        "SNY": "",
-        "MDT": "",
-        "GSK": "",
-        "BDX": "",
-        "GMAB": ""
+        "VRTX": ""
     },
     "Bonds": {
         "US2Y": "",
