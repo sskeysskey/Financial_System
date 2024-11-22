@@ -32,7 +32,9 @@
         "LRCX": "拉姆研究",
         "NXPI": "恩智浦",
         "AVGO": "",
-        "QCOM": ""
+        "QCOM": "",
+        "UMC": "",
+        "INGM": ""
     },
     "Utilities": {
         "AES": ""
@@ -42,7 +44,8 @@
         "PEP": "",
         "HSY": "",
         "CAG": "",
-        "TGT": ""
+        "TGT": "",
+        "DEO": ""
     },
     "Industrials": {
         "BA": "波音",
@@ -64,7 +67,10 @@
         "LLY": "",
         "AZN": "",
         "ELV": "",
-        "VRTX": ""
+        "VRTX": "",
+        "HCA": "",
+        "RDY": "",
+        "PACS": ""
     },
     "Bonds": {
         "US2Y": "",

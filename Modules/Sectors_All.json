@@ -509,7 +509,6 @@
     "AGQ",
     "BOIL",
     "KWEB",
-    "IQIN",
     "DSTL",
     "XSMO",
     "FMB",
@@ -1208,7 +1207,8 @@
     "VLY",
     "SFBS",
     "HWC",
-    "UPST"
+    "UPST",
+    "WTM"
   ],
   "Healthcare": [
     "LLY",

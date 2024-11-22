@@ -101,7 +101,8 @@
     "TRP",
     "KMI",
     "OXY",
-    "SU"
+    "SU",
+    "LNG"
   ],
   "Financial_Services": [
     "BRK-A",
@@ -234,7 +235,8 @@
     "RYAAY",
     "LHX",
     "CMI",
-    "VRT"
+    "VRT",
+    "PWR"
   ],
   "Real_Estate": [
     "PLD",
@@ -300,7 +302,8 @@
     "TEAM",
     "APP",
     "MSTR",
-    "SQ"
+    "SQ",
+    "SNOW"
   ],
   "Utilities": [
     "NEE",
