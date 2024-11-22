@@ -14,7 +14,7 @@ def log_error_with_timestamp(error_message):
 # end_date = "2024-11-17"
 
 # 适合于半自定义抓取
-# start_date = "2000-09-17"
+# start_date = "2002-09-17"
 # today = datetime.now()
 # end_date = today.strftime('%Y-%m-%d')
 

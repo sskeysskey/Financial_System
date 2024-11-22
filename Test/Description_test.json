@@ -4,6 +4,7 @@
       "symbol": "ERJ",
       "name": "ERJ",
       "tag": [
+        "美国",
         "贸易公司",
         "meme",
         "happy"
@@ -16,6 +17,7 @@
       "symbol": "ACN",
       "name": "Accenture",
       "tag": [
+        "美国",
         "埃森哲",
         "管理咨询",
         "外包服务"
@@ -44,6 +46,7 @@
       "name": "JPMorgan U.S. Value Factor ETF, 2711093",
       "tag": [
         "枪支",
+        "美国",
         "武器"
       ],
       "description1": "**Amplify Transformational Data Sharing ETF**（基金代码：BLOK）",
@@ -65,7 +68,8 @@
       "name": "iShares MSCI China A ETF",
       "tag": [
         "中国",
-        "A股"
+        "A股",
+        "美国"
       ],
       "description1": "**CNYA**是**iShares MSCI China A ETF**的简称",
       "description2": "CNYA是iShares MSCI China A ETF的代码",

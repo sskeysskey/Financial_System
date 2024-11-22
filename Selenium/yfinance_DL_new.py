@@ -70,7 +70,7 @@ def process_stock_data(stock_groups: Dict[str, List[str]], start_date: str, end_
         conn.commit()
 
 def main():
-    start_date = "2000-09-17"
+    start_date = "2002-09-17"
     end_date = datetime.now().strftime('%Y-%m-%d')
     sectors_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json'
     symbol_mapping_file = '/Users/yanzhang/Documents/Financial_System/Modules/Symbol_mapping.json'

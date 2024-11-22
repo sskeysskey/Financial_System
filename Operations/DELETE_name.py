@@ -107,34 +107,65 @@ def delete_records_by_names(db_file, table_name, stock_names):
     finally:
         conn.close()
 
+def is_in_etfs_sector(symbol, sector_files):
+    """
+    检查symbol是否在ETFs分组中
+    
+    Args:
+        symbol (str): 要检查的股票代码
+        sector_files (list): 需要检查的sector文件路径列表
+    
+    Returns:
+        bool: 如果在ETFs分组中返回True，否则返回False
+    """
+    try:
+        for file_path in sector_files:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                if 'ETFs' in data and symbol in data['ETFs']:
+                    return True
+        return False
+    except Exception as e:
+        print(f"检查ETFs分组时出错: {e}")
+        return False
+
 def main():
     # db_path = '/Users/yanzhang/Downloads/backup/DB_backup/Finance.db'
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
     sector_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
     sector_today_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json'  # 添加sector_today.json路径
     blacklist_file = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'
+    
     # 获取剪贴板内容
     symbol = get_clipboard_content()
     if not symbol:
         print("剪贴板为空")
         return
     
-    # 1. 数据库操作
+    # 1. 首先检查是否在ETFs分组中
+    sector_files = [sector_file, sector_today_file]
+    is_etf = is_in_etfs_sector(symbol, sector_files)
+    if is_etf:
+        print(f"{symbol} 属于ETFs分组，将只进行删除操作而不添加到blacklist")
+    
+    # 2. 数据库操作
     sector = find_sector_for_symbol(sector_file, symbol)
     if sector:
         delete_records_by_names(db_path, sector, [symbol])
     else:
         print(f"未找到股票代码 {symbol} 对应的sector")
     
-    # 2. JSON文件操作
+    # 3. JSON文件操作
     # 处理 Sectors_All.json
     delete_result1 = delete_from_json_file(sector_file, symbol)
     
     # 处理 sector_today.json
     delete_result2 = delete_from_json_file(sector_today_file, symbol)
     
-    # 3. 添加到blacklist
-    add_result = add_to_blacklist(blacklist_file, symbol)
+    # 4. 根据之前的ETFs检查结果决定是否添加到blacklist
+    add_result = False
+    if not is_etf:
+        add_result = add_to_blacklist(blacklist_file, symbol)
     
     # 输出总结
     print("\n操作总结:")
@@ -150,6 +181,8 @@ def main():
     print("Blacklist更新情况:")
     if add_result:
         print("- 已成功更新blacklist")
+    elif is_etf:
+        print("- 由于属于ETFs分组，未添加到blacklist")
     else:
         print("- blacklist更新未执行或未发生变化")
 
