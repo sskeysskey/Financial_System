@@ -769,7 +769,8 @@
     "EAT",
     "RUSHB",
     "WRD",
-    "KTB"
+    "KTB",
+    "SG"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -882,7 +883,6 @@
     "CTRA",
     "TS",
     "EQT",
-    "MRO",
     "TPL",
     "WES",
     "OVV",
@@ -927,7 +927,8 @@
     "SOBO",
     "CRC",
     "LB",
-    "TGS"
+    "TGS",
+    "NXE"
   ],
   "Financial_Services": [
     "BRK-A",
@@ -1271,7 +1272,6 @@
     "BLCO",
     "OGN",
     "OPCH",
-    "RCM",
     "DOCS",
     "MDGL",
     "INSM",
@@ -1566,7 +1566,9 @@
     "PECO",
     "KRC",
     "SLG",
-    "CTRE"
+    "CTRE",
+    "IRT",
+    "CUZ"
   ],
   "Technology": [
     "MSFT",
@@ -1794,7 +1796,8 @@
     "WK",
     "LITE",
     "IONQ",
-    "SRAD"
+    "SRAD",
+    "CORZ"
   ],
   "Utilities": [
     "NEE",
@@ -1849,6 +1852,8 @@
     "BIPC",
     "IDA",
     "POR",
-    "ORA"
+    "ORA",
+    "NJR",
+    "PAM"
   ]
 }

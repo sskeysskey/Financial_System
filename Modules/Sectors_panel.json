@@ -17,7 +17,8 @@
     "Energy": {
         "PBF": "石油精炼",
         "VAL": "海上钻井",
-        "TDW": "潮水钻井"
+        "TDW": "潮水钻井",
+        "TBN": ""
     },
     "Technology": {
         "STM": "意法",
@@ -52,7 +53,11 @@
         "GD": "通用动力"
     },
     "Real_Estate": {},
-    "Financial_Services": {},
+    "Financial_Services": {
+        "SAN": "",
+        "ING": "",
+        "LYG": ""
+    },
     "Healthcare": {
         "MRNA": "",
         "NVO": "诺和诺德",
