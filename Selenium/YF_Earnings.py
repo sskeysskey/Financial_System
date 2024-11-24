@@ -101,8 +101,8 @@ for key, symbols in color_data.items():
     if key != "red_keywords":
         color_keys.update(symbols)
 
-# start_date = datetime(2024, 9, 8)
-# end_date = datetime(2024, 9, 14)
+# start_date = datetime(2024, 11, 24)
+# end_date = datetime(2024, 11, 30)
 
 # 获取当前系统日期
 current_date = datetime.now()
@@ -117,6 +117,7 @@ conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
 
 new_content_added = False
+MAX_PAGES = 20  # 设置最大页数限制
 
 # 使用追加模式打开文件
 with open(file_path, 'a') as output_file:
@@ -128,8 +129,9 @@ with open(file_path, 'a') as output_file:
         formatted_change_date = change_date.strftime('%Y-%m-%d')
         offset = 0
         has_data = True
+        page_count = 0
         
-        while has_data:
+        while has_data and page_count < MAX_PAGES:
             url = f"https://finance.yahoo.com/calendar/earnings?from={start_date.strftime('%Y-%m-%d')}&to={end_date.strftime('%Y-%m-%d')}&day={formatted_change_date}&offset={offset}&size=100"
             driver.get(url)
             
@@ -137,11 +139,17 @@ with open(file_path, 'a') as output_file:
             wait = WebDriverWait(driver, 4)
             try:
                 rows = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "tr.simpTblRow")))
+                # 添加判断：如果返回的行数小于100，说明已经到最后一页
+                if len(rows) < 100:
+                    has_data = False
+                    
+                # 如果没有任何数据，也结束循环
+                if len(rows) == 0:
+                    has_data = False
+                    
             except TimeoutException:
-                rows = []  # 如果超时，则设置 rows 为空列表
-            
-            if not rows:
-                has_data = False
+                has_data = False  # 如果超时，结束循环
+                rows = []
             else:
                 for row in rows:
                     symbol = row.find_element(By.CSS_SELECTOR, 'a[data-test="quoteLink"]').text
@@ -177,6 +185,7 @@ with open(file_path, 'a') as output_file:
                                     new_content_added = True
                                 
                 offset += 100  # 为下一个子页面增加 offset
+                page_count += 1
         change_date += delta  # 日期增加一天
 
 # 关闭数据库连接
