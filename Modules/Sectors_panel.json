@@ -18,7 +18,9 @@
         "PBF": "石油精炼",
         "VAL": "海上钻井",
         "TDW": "潮水钻井",
-        "TBN": ""
+        "TBN": "",
+        "SHEL": "",
+        "TTE": ""
     },
     "Technology": {
         "STM": "意法",
@@ -33,7 +35,8 @@
         "NXPI": "恩智浦",
         "AVGO": "",
         "QCOM": "",
-        "UMC": "联电"
+        "UMC": "联电",
+        "TSM": ""
     },
     "Utilities": {
         "AES": ""
@@ -47,10 +50,11 @@
     },
     "Industrials": {
         "BA": "波音",
-        "LMT": "马丁",
+        "LMT": "洛克希德",
         "TDG": "",
         "NOC": "诺斯罗普",
-        "GD": "通用动力"
+        "GD": "通用动力",
+        "TRI": ""
     },
     "Real_Estate": {},
     "Financial_Services": {

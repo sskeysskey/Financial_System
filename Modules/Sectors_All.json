@@ -1203,7 +1203,8 @@
     "SFBS",
     "HWC",
     "UPST",
-    "WTM"
+    "WTM",
+    "FLG"
   ],
   "Healthcare": [
     "LLY",
@@ -1856,7 +1857,8 @@
     "LITE",
     "IONQ",
     "SRAD",
-    "CORZ"
+    "CORZ",
+    "BOX"
   ],
   "Utilities": [
     "NEE",

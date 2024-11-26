@@ -213,7 +213,7 @@ def load_symbols_from_file(file_path):
             error_file.write(formatted_error_message)
     return symbols
 
-def clean_old_backups(directory, file_patterns, days=7):
+def clean_old_backups(directory, file_patterns, days=3):
     now = datetime.now()
     cutoff = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days)
 
