@@ -196,7 +196,6 @@
     "PFFD",
     "CQQQ",
     "CHIQ",
-    "OEF",
     "DIVI",
     "LIT",
     "KBA",
@@ -345,7 +344,6 @@
     "TMF",
     "RWJ",
     "OUSM",
-    "BOCT",
     "POCT",
     "CNYA",
     "IPAC",
@@ -456,7 +454,10 @@
     "GCOW",
     "EDIV",
     "VYM",
-    "WGMI"
+    "WGMI",
+    "CMBS",
+    "QTUM",
+    "MDYV"
   ],
   "Basic_Materials": [
     "LIN",

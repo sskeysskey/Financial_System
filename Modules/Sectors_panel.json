@@ -20,7 +20,7 @@
         "TDW": "潮水钻井",
         "TBN": "",
         "SHEL": "",
-        "TTE": ""
+        "TTE": "道达尔"
     },
     "Technology": {
         "STM": "意法",
@@ -32,7 +32,6 @@
         "SMCI": "超微",
         "AMAT": "应用材料",
         "LRCX": "拉姆研究",
-        "NXPI": "恩智浦",
         "AVGO": "",
         "QCOM": "",
         "UMC": "联电",
@@ -58,8 +57,6 @@
     },
     "Real_Estate": {},
     "Financial_Services": {
-        "SAN": "",
-        "ING": "",
         "LYG": ""
     },
     "Healthcare": {
@@ -70,12 +67,9 @@
         "ABBV": "艾伯维",
         "CNC": "",
         "NVS": "",
-        "LLY": "",
         "AZN": "",
         "ELV": "",
-        "VRTX": "",
-        "HCA": "",
-        "PACS": ""
+        "HCA": ""
     },
     "Bonds": {
         "US2Y": "",
