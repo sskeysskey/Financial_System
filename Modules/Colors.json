@@ -93,7 +93,6 @@
         "ASHR"
     ],
     "white_keywords": [
-        "BHP",
         "PPG",
         "ROKU",
         "NTES",
@@ -188,7 +187,8 @@
         "CAG",
         "BBIO",
         "E",
-        "AES"
+        "AES",
+        "MMS"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -303,7 +303,9 @@
         "KHC",
         "GSK",
         "ST",
-        "BIDU"
+        "BIDU",
+        "BHP",
+        "SEM"
     ],
     "orange_keywords": [
         "NASDAQ",

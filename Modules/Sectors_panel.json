@@ -2,7 +2,8 @@
     "Basic_Materials": {
         "NEM": "Newmont",
         "CE": "赛莱默",
-        "VALE": ""
+        "VALE": "",
+        "BHP": ""
     },
     "Communication_Services": {
         "DJT": ""
@@ -20,7 +21,8 @@
         "TDW": "潮水钻井",
         "TBN": "",
         "SHEL": "",
-        "TTE": "道达尔"
+        "TTE": "道达尔",
+        "FRO": ""
     },
     "Technology": {
         "STM": "意法",
@@ -53,11 +55,13 @@
         "TDG": "",
         "NOC": "诺斯罗普",
         "GD": "通用动力",
-        "TRI": ""
+        "TRI": "",
+        "MMS": ""
     },
     "Real_Estate": {},
     "Financial_Services": {
-        "LYG": ""
+        "LYG": "",
+        "ING": ""
     },
     "Healthcare": {
         "MRNA": "",
@@ -69,7 +73,8 @@
         "NVS": "",
         "AZN": "",
         "ELV": "",
-        "HCA": ""
+        "HCA": "",
+        "SEM": ""
     },
     "Bonds": {
         "US2Y": "",

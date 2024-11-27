@@ -253,7 +253,6 @@
     "SDVY",
     "GTO",
     "JMUB",
-    "FNDX",
     "COWZ",
     "LVHI",
     "BIZD",
@@ -840,7 +839,8 @@
     "OLLI",
     "FRPT",
     "FLO",
-    "LOPE"
+    "LOPE",
+    "PRMB"
   ],
   "Energy": [
     "XOM",
