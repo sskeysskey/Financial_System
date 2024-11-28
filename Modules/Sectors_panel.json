@@ -2,8 +2,7 @@
     "Basic_Materials": {
         "NEM": "Newmont",
         "CE": "赛莱默",
-        "VALE": "",
-        "BHP": ""
+        "VALE": ""
     },
     "Communication_Services": {
         "DJT": ""
@@ -11,7 +10,6 @@
     "Consumer_Cyclical": {
         "STLA": "",
         "DOOO": "摩托艇",
-        "DHI": "德尔惠",
         "NKE": "",
         "RACE": "法拉利"
     },
@@ -19,9 +17,7 @@
         "PBF": "石油精炼",
         "VAL": "海上钻井",
         "TDW": "潮水钻井",
-        "TBN": "",
         "SHEL": "",
-        "TTE": "道达尔",
         "FRO": ""
     },
     "Technology": {
@@ -34,33 +30,27 @@
         "SMCI": "超微",
         "AMAT": "应用材料",
         "LRCX": "拉姆研究",
+        "TSM": "",
         "AVGO": "",
-        "QCOM": "",
-        "UMC": "联电",
-        "TSM": ""
+        "UMC": ""
     },
     "Utilities": {
         "AES": ""
     },
     "Consumer_Defensive": {
-        "KO": "可口可乐",
         "PEP": "",
         "HSY": "",
-        "CAG": "",
         "TGT": ""
     },
     "Industrials": {
         "BA": "波音",
         "LMT": "洛克希德",
-        "TDG": "",
         "NOC": "诺斯罗普",
         "GD": "通用动力",
-        "TRI": "",
-        "MMS": ""
+        "MMS": "政府服务"
     },
     "Real_Estate": {},
     "Financial_Services": {
-        "LYG": "",
         "ING": ""
     },
     "Healthcare": {
@@ -68,13 +58,11 @@
         "NVO": "诺和诺德",
         "MRK": "默沙东",
         "REGN": "再生元",
-        "ABBV": "艾伯维",
         "CNC": "",
         "NVS": "",
         "AZN": "",
         "ELV": "",
-        "HCA": "",
-        "SEM": ""
+        "BDX": ""
     },
     "Bonds": {
         "US2Y": "",
