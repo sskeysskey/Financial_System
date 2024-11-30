@@ -27,7 +27,6 @@
         "CNI",
         "NEM",
         "PG",
-        "BUD",
         "NVS",
         "CP",
         "O",
@@ -61,7 +60,8 @@
         "ECL",
         "TGT",
         "QCOM",
-        "SAN"
+        "SAN",
+        "NU"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -125,7 +125,6 @@
         "DBX",
         "MAT",
         "CMCSA",
-        "EBR",
         "GXO",
         "VIPS",
         "POOL",
@@ -188,7 +187,8 @@
         "BBIO",
         "E",
         "AES",
-        "MMS"
+        "MMS",
+        "BUD"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -305,7 +305,8 @@
         "ST",
         "BIDU",
         "BHP",
-        "SEM"
+        "SEM",
+        "EBR"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -370,7 +371,8 @@
         "INGM",
         "PFE",
         "BMRN",
-        "AMTM"
+        "AMTM",
+        "BBD"
     ],
     "green_keywords": [
         "EURCNY",

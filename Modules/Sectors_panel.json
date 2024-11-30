@@ -51,7 +51,8 @@
     },
     "Real_Estate": {},
     "Financial_Services": {
-        "ING": ""
+        "ING": "",
+        "NU": ""
     },
     "Healthcare": {
         "MRNA": "",
@@ -62,7 +63,8 @@
         "NVS": "",
         "AZN": "",
         "ELV": "",
-        "BDX": ""
+        "BDX": "",
+        "PACS": ""
     },
     "Bonds": {
         "US2Y": "",

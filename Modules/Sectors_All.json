@@ -607,7 +607,6 @@
     "BIDU",
     "EA",
     "BCE",
-    "ORAN",
     "PINS",
     "SNAP",
     "TTWO",
@@ -1172,7 +1171,6 @@
     "PSLV",
     "FNB",
     "PFSI",
-    "NYCB",
     "HOMB",
     "ACT",
     "RDN",
@@ -1627,7 +1625,8 @@
     "SLG",
     "CTRE",
     "IRT",
-    "CUZ"
+    "CUZ",
+    "MAC"
   ],
   "Technology": [
     "MSFT",
