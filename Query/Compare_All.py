@@ -4,11 +4,22 @@ import json
 import re
 import os
 
-def log_error_with_timestamp(error_message):
-    # 获取当前日期和时间
+def log_error_with_timestamp(error_message, file_path=None):
+    """
+    记录带时间戳的错误信息
+    
+    Args:
+        error_message: 错误信息
+        file_path: 可选的错误日志文件路径
+    """
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-    # 在错误信息前加入时间戳
-    return f"[{timestamp}] {error_message}\n"
+    formatted_message = f"[{timestamp}] {error_message}\n"
+    
+    if file_path:
+        with open(file_path, 'a') as error_file:
+            error_file.write(formatted_message)
+    
+    return formatted_message
 
 def read_latest_date_info(gainer_loser_path):
     if not os.path.exists(gainer_loser_path):
@@ -29,13 +40,18 @@ def read_earnings_release(filepath, error_file_path):
     # 修改后的正则表达式
     pattern_colon = re.compile(r'([\w-]+)(?::[\w]+)?\s*:\s*\d+\s*:\s*(\d{4}-\d{2}-\d{2})')
 
-    with open(filepath, 'r') as file:
-        for line in file:
-            match = pattern_colon.search(line)
-            company = match.group(1).strip()
-            date = match.group(2)
-            day = date.split('-')[2]  # 只取日期的天数
-            earnings_companies[company] = day
+    try:
+        with open(filepath, 'r') as file:
+            for line in file:
+                match = pattern_colon.search(line)
+                if match:  # 添加空值检查
+                    company = match.group(1).strip()
+                    date = match.group(2)
+                    day = date.split('-')[2]
+                    earnings_companies[company] = day
+    except Exception as e:
+        log_error_with_timestamp(f"处理文件 {filepath} 时发生错误: {str(e)}", error_file_path)
+        
     return earnings_companies
 
 def compare_today_yesterday(config_path, output_file, gainer_loser_path, earning_file, error_file_path, additional_output_file):
