@@ -18,7 +18,8 @@
         "VAL": "海上钻井",
         "TDW": "潮水钻井",
         "SHEL": "",
-        "FRO": ""
+        "FRO": "",
+        "TBN": ""
     },
     "Technology": {
         "STM": "意法",
@@ -31,7 +32,6 @@
         "AMAT": "应用材料",
         "LRCX": "拉姆研究",
         "TSM": "",
-        "AVGO": "",
         "UMC": ""
     },
     "Utilities": {
@@ -64,7 +64,8 @@
         "AZN": "",
         "ELV": "",
         "BDX": "",
-        "PACS": ""
+        "PACS": "",
+        "AMGN": ""
     },
     "Bonds": {
         "US2Y": "",

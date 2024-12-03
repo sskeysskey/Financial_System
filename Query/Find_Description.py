@@ -117,20 +117,27 @@ class MainWindow(QMainWindow):
         matched_names_stocks_symbol = results['matched_names_stocks_symbol']
         matched_names_etfs_symbol = results['matched_names_etfs_symbol']
 
-        keywords = self.input_field.text().lower().split()
+        search_term = self.input_field.text().strip().upper()
 
-        def has_exact_match(results_list):
-            if not results_list:
-                return False
-            for result in results_list:
-                text = ' '.join(str(item).lower() for item in result)
-                if any(all(keyword in text for keyword in keywords) for result in results_list):
-                    return True
-            return False
+        def sort_by_exact_match(items, search_term):
+            exact_matches = []
+            partial_matches = []
+            
+            for item in items:
+                symbol = item[0]  # 获取symbol（第一个元素）
+                if symbol == search_term:
+                    exact_matches.append(item)
+                else:
+                    partial_matches.append(item)
+            
+            return exact_matches + partial_matches
 
-        # 创建带有原始索引的显示顺序列表
-        display_order = []
-        categories = [
+        # 对symbol结果进行排序
+        matched_names_stocks_symbol = sort_by_exact_match(matched_names_stocks_symbol, search_term)
+        matched_names_etfs_symbol = sort_by_exact_match(matched_names_etfs_symbol, search_term)
+
+        # 创建显示顺序列表
+        display_order = [
             ("Stock_symbol", matched_names_stocks_symbol, 'cyan'),
             ("ETF_symbol", matched_names_etfs_symbol, 'cyan'),
             ("Stock_name", matched_names_stocks_name, 'white'),
@@ -138,18 +145,10 @@ class MainWindow(QMainWindow):
             ("ETF_tag", matched_names_etfs_tag, 'white')
         ]
 
-        # 添加原始索引到列表中
-        for idx, (category, results, color) in enumerate(categories):
-            has_exact = has_exact_match(results)
-            display_order.append((has_exact, idx, category, results, color))
-
-        # 使用has_exact和原始索引进行排序
-        display_order.sort(key=lambda x: (not x[0], x[1]))
-
         html_content = ""
 
         # 生成HTML内容
-        for _, _, category, results, color in display_order:
+        for category, results, color in display_order:
             if results:  # 只显示有结果的类别
                 html_content += self.insert_results_html(category, results, color, 16)
 
@@ -249,19 +248,32 @@ def search_tag_for_keywords(json_path, keywords, max_distance=1):
         return any(levenshtein_distance(word, keyword) <= max_distance for word in words)
 
     def two_step_search(category, search_field):
-        exact_results = [
+        search_term = keywords.strip().upper()
+        results = []
+        
+        # 首先添加完全匹配的结果
+        exact_matches = [
             (item['symbol'], item.get('name', ''), ' '.join(item.get('tag', []))) if category == 'stocks' else (item['symbol'], ' '.join(item.get('tag', [])))
             for item in data.get(category, [])
-            if all(keyword in item.get(search_field, '').lower() for keyword in keywords_lower)
+            if item['symbol'] == search_term
         ]
-        if exact_results:
-            return exact_results
-
-        return [
+        
+        # 然后添加部分匹配的结果
+        partial_matches = [
             (item['symbol'], item.get('name', ''), ' '.join(item.get('tag', []))) if category == 'stocks' else (item['symbol'], ' '.join(item.get('tag', [])))
             for item in data.get(category, [])
-            if all(fuzzy_match(item.get(search_field, ''), keyword) for keyword in keywords_lower)
+            if item['symbol'] != search_term and all(keyword in item.get(search_field, '').lower() for keyword in keywords_lower)
         ]
+        
+        # 最后添加模糊匹配的结果
+        fuzzy_matches = [
+            (item['symbol'], item.get('name', ''), ' '.join(item.get('tag', []))) if category == 'stocks' else (item['symbol'], ' '.join(item.get('tag', [])))
+            for item in data.get(category, [])
+            if item['symbol'] not in [x[0] for x in exact_matches + partial_matches] and
+            all(fuzzy_match(item.get(search_field, ''), keyword) for keyword in keywords_lower)
+        ]
+        
+        return exact_matches + partial_matches + fuzzy_matches
 
     def search_category_for_tag(category):
         # 定义一个计算匹配分数的函数
