@@ -39,7 +39,7 @@ def process_crypto(sectors_file_path):
         sectors_data = json.load(sectors_file)
     
     # 手动添加加密货币项到 Crypto 分组
-    crypto_symbols = ["BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD"]
+    crypto_symbols = ["BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD", "XRP-USD"]
     
     # 检查是否存在 Crypto 分组，如果没有则创建
     if "Crypto" not in sectors_data:

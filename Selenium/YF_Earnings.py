@@ -101,15 +101,15 @@ for key, symbols in color_data.items():
     if key != "red_keywords":
         color_keys.update(symbols)
 
-# start_date = datetime(2024, 11, 24)
-# end_date = datetime(2024, 11, 30)
+start_date = datetime(2024, 12, 2)
+end_date = datetime(2024, 12, 9)
 
-# 获取当前系统日期
-current_date = datetime.now()
-# 计算离当前最近的周天
-start_date = current_date + timedelta(days=(6 - current_date.weekday()))
-# 计算往后延6天的周六
-end_date = start_date + timedelta(days=6)
+# # 获取当前系统日期
+# current_date = datetime.now()
+# # 计算离当前最近的周天
+# start_date = current_date + timedelta(days=(6 - current_date.weekday()))
+# # 计算往后延6天的周六
+# end_date = start_date + timedelta(days=6)
 
 # 初始化数据库连接
 db_path = '/Users/yanzhang/Documents/Database/Finance.db'
@@ -136,7 +136,8 @@ with open(file_path, 'a') as output_file:
             # 使用显式等待确保元素加载
             wait = WebDriverWait(driver, 4)
             try:
-                rows = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "tr.simpTblRow")))
+                # 等待表格主体加载
+                rows = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "tr.row.yf-2twxe2")))
             except TimeoutException:
                 rows = []  # 如果超时，则设置 rows 为空列表
             
@@ -144,12 +145,8 @@ with open(file_path, 'a') as output_file:
                 has_data = False
             else:
                 for row in rows:
-                    symbol = row.find_element(By.CSS_SELECTOR, 'a[data-test="quoteLink"]').text
-                    event_name = row.find_element(By.CSS_SELECTOR, 'td[aria-label="Event Name"]').text
-                    try:
-                        call_time = row.find_element(By.XPATH, './/td[contains(@aria-label, "Earnings Call Time")]/span').text
-                    except NoSuchElementException:
-                        call_time = "No call time available"
+                    symbol = row.find_element(By.CSS_SELECTOR, 'a.loud-link[title]').get_attribute('title')
+                    event_name = row.find_element(By.CSS_SELECTOR, 'td.tw-text-left.tw-max-w-xs:not(.tw-whitespace-normal)').text.strip()
                     
                     if "Earnings Release" in event_name or "Shareholders Meeting" in event_name:
                         for category, symbols in data.items():
@@ -171,7 +168,7 @@ with open(file_path, 'a') as output_file:
                                 if suffix:
                                     symbol += f":{suffix}"
 
-                                entry = f"{symbol:<7}: {volume:<10}: {formatted_change_date} - {call_time}"
+                                entry = f"{symbol:<7}: {volume:<10}: {formatted_change_date}"
                                 if original_symbol not in existing_content:
                                     output_file.write(entry + "\n")
                                     new_content_added = True

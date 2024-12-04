@@ -47,6 +47,7 @@
     "ETH-USD": "Ether",
     "SOL-USD": "Solana",
     "BNB-USD": "Binance",
+    "XRP-USD": "XRP",
     "^HSI": "HANGSENG",
     "^IXIC": "NASDAQ",
     "^DJI": "DowJones",

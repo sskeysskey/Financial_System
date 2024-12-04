@@ -202,7 +202,6 @@
     "FLTW",
     "EWJV",
     "TUR",
-    "INDS",
     "FIW",
     "REZ",
     "EZA",
@@ -333,7 +332,6 @@
     "QLD",
     "PEY",
     "VOOG",
-    "IAK",
     "KCE",
     "FXY",
     "UITB",
@@ -373,7 +371,6 @@
     "RWL",
     "COM",
     "ILCG",
-    "ICF",
     "SPXL",
     "SPXS",
     "SVXY",
@@ -386,7 +383,6 @@
     "FSMB",
     "FHLC",
     "EMHY",
-    "TPYP",
     "REET",
     "TLH",
     "VCLT",
@@ -454,7 +450,8 @@
     "WGMI",
     "CMBS",
     "QTUM",
-    "MDYV"
+    "MDYV",
+    "EWY"
   ],
   "Basic_Materials": [
     "LIN",
@@ -1797,7 +1794,10 @@
     "IONQ",
     "SRAD",
     "CORZ",
-    "BOX"
+    "BOX",
+    "IDCC",
+    "SMTC",
+    "INTA"
   ],
   "Utilities": [
     "NEE",
