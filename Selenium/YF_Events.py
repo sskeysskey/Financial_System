@@ -70,15 +70,15 @@ chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
 service = Service(executable_path=chrome_driver_path)
 driver = webdriver.Chrome(service=service)
 
-# start_date = datetime(2024, 9, 8)
-# end_date = datetime(2024, 9, 14)
+start_date = datetime(2024, 12, 2)
+end_date = datetime(2024, 12, 8)
 
-# 获取当前系统日期
-current_date = datetime.now()
-# 计算离当前最近的周天
-start_date = current_date + timedelta(days=(6 - current_date.weekday()))
-# 计算往后延6天的周六
-end_date = start_date + timedelta(days=6)
+# # 获取当前系统日期
+# current_date = datetime.now()
+# # 计算离当前最近的周天
+# start_date = current_date + timedelta(days=(6 - current_date.weekday()))
+# # 计算往后延6天的周六
+# end_date = start_date + timedelta(days=6)
 
 Event_Filter = {
     "GDP 2nd Estimate*", "Non-Farm Payrolls*", "Core PCE Price Index MM *",
@@ -121,7 +121,18 @@ with open(file_path, 'a') as output_file:
             
             wait = WebDriverWait(driver, 4)
             try:
-                rows = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "tr.simpTblRow")))
+                table_container = wait.until(EC.presence_of_element_located(
+                    (By.CSS_SELECTOR, "div.table-container.yf-2twxe2")))
+                
+                # 然后定位所有行
+                rows = table_container.find_elements(By.CSS_SELECTOR, "tr.row.yf-2twxe2")
+
+                # # 定位包含table的div容器，使用class中稳定的部分
+                # table_container = wait.until(EC.presence_of_element_located(
+                #     (By.CSS_SELECTOR, "div.table-container")))
+                
+                # # 直接选择table下的所有tr
+                # rows = table_container.find_elements(By.TAG_NAME, "tr")
             except TimeoutException:
                 rows = []  # 如果超时，则设置 rows 为空列表
             
@@ -130,8 +141,16 @@ with open(file_path, 'a') as output_file:
             else:
                 try:
                     for row in rows:
-                        event = row.find_element(By.CSS_SELECTOR, 'td[aria-label="Event"]').text
-                        country = row.find_element(By.CSS_SELECTOR, 'td[aria-label="Country"]').text
+                        tds = row.find_elements(By.CSS_SELECTOR, "td.yf-2twxe2")
+                        if len(tds) >= 2:
+                            event = tds[0].text
+                            country = tds[1].text
+                        
+                        # # 直接获取所有td元素
+                        # cells = row.find_elements(By.TAG_NAME, "td")
+                        # if len(cells) >= 2:
+                        #     event = cells[0].text.strip()
+                        #     country = cells[1].text.strip()
 
                         if event in Event_Filter and country in target_countries:
                             try:

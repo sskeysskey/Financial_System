@@ -138,6 +138,10 @@ with open(file_path, 'a') as output_file:
             try:
                 # 等待表格主体加载
                 rows = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "tr.row.yf-2twxe2")))
+                
+                # 首先定位到表格，然后找到表格体中的所有行
+                # table = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "table")))
+                # rows = table.find_elements(By.CSS_SELECTOR, "tbody > tr")
             except TimeoutException:
                 rows = []  # 如果超时，则设置 rows 为空列表
             
@@ -146,7 +150,15 @@ with open(file_path, 'a') as output_file:
             else:
                 for row in rows:
                     symbol = row.find_element(By.CSS_SELECTOR, 'a.loud-link[title]').get_attribute('title')
+                    # symbol = row.find_element(By.CSS_SELECTOR, 'a[title][href*="/quote/"]').get_attribute('title')
                     event_name = row.find_element(By.CSS_SELECTOR, 'td.tw-text-left.tw-max-w-xs:not(.tw-whitespace-normal)').text.strip()
+
+                    # cells = row.find_elements(By.TAG_NAME, 'td')
+                    # # 假设事件名称在第三个单元格（索引2）
+                    # if len(cells) >= 3:
+                    #     event_name = cells[2].text.strip()
+                    # else:
+                    #     continue
                     
                     if "Earnings Release" in event_name or "Shareholders Meeting" in event_name:
                         for category, symbols in data.items():

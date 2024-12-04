@@ -13,8 +13,7 @@
     },
     "Energy": {
         "VAL": "海上钻井",
-        "TDW": "潮水钻井",
-        "FRO": ""
+        "TDW": "潮水钻井"
     },
     "Technology": {
         "STM": "意法",
@@ -56,8 +55,7 @@
         "AZN": "",
         "ELV": "",
         "PACS": "",
-        "AMGN": "",
-        "BDX": ""
+        "AMGN": ""
     },
     "Bonds": {
         "US2Y": "",
@@ -135,11 +133,12 @@
         "EURUSD": ""
     },
     "Economics": {
-        "USCPI": "13 USCPI",
-        "CoreCPI": "13 CoreCPI",
-        "USPPI": "14 USPPI",
-        "USRetailM": "15 USRetailM",
-        "USInitial": "14 USInitial"
+        "USNonFarmA": "04 USNonFarmA",
+        "USInitial": "05 USInitial",
+        "USTrade": "05 USTrade",
+        "USUnemploy": "06 USUnemploy",
+        "USNonFarm": "06 USNonFarm",
+        "USConfidence": "06 USConfidence"
     },
     "ETFs_US": {
         "TLT": "",

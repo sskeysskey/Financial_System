@@ -73,15 +73,15 @@ driver = webdriver.Chrome(service=service)
 with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as file:
     data = json.load(file)
 
-# start_date = datetime(2024, 6, 30)
-# end_date = datetime(2024, 7, 6)
+start_date = datetime(2024, 12, 2)
+end_date = datetime(2024, 12, 8)
 
-# 获取当前系统日期
-current_date = datetime.now()
-# 计算离当前最近的周天（周日）
-start_date = current_date + timedelta(days=(6 - current_date.weekday()))
-# 计算往后延6天的日期
-end_date = start_date + timedelta(days=6)
+# # 获取当前系统日期
+# current_date = datetime.now()
+# # 计算离当前最近的周天（周日）
+# start_date = current_date + timedelta(days=(6 - current_date.weekday()))
+# # 计算往后延6天的日期
+# end_date = start_date + timedelta(days=6)
 
 new_content_added = False
 
@@ -101,14 +101,61 @@ while change_date <= end_date:
         driver.get(url)
         
         try:
-            rows = WebDriverWait(driver, 4).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "tr.simpTblRow")))
+            rows = WebDriverWait(driver, 4).until(
+                EC.presence_of_all_elements_located((By.CSS_SELECTOR, "tr.row.yf-2twxe2"))
+            )
+
+    #         rows = WebDriverWait(driver, 4).until(
+    #     EC.presence_of_all_elements_located((By.CSS_SELECTOR, "table tbody tr"))
+    # )
+    
+            # 备选方案2：使用更复杂的属性组合
+            # rows = WebDriverWait(driver, 4).until(
+            #     EC.presence_of_all_elements_located((
+            #         By.CSS_SELECTOR, 
+            #         "table tbody tr[role='row']"
+            #     ))
+            # )
+
+            # # 备选方案3：使用XPath（功能更强大但性能略低）
+            # rows = WebDriverWait(driver, 4).until(
+            #     EC.presence_of_all_elements_located((
+            #         By.XPATH, 
+            #         "//table//tbody/tr"
+            #     ))
+            # )
         except TimeoutException:
             has_data = False
             continue
         
         for row in rows:
-            symbol = row.find_element(By.CSS_SELECTOR, 'a[data-test="quoteLink"]').text
-            company = row.find_element(By.CSS_SELECTOR, 'td[aria-label="Company"]').text
+            try:
+                # 获取股票代码(symbol)
+                symbol = row.find_element(
+                    By.CSS_SELECTOR, 
+                    'a.loud-link.fin-size-small'
+                ).text
+                
+                # 获取公司名称(company)
+                company = row.find_element(
+                    By.CSS_SELECTOR, 
+                    'td.tw-text-left.tw-max-w-xs.tw-whitespace-normal'
+                ).text
+
+                # 获取股票代码：使用更通用的属性选择器
+                # symbol = row.find_element(
+                #     By.CSS_SELECTOR, 
+                #     'td:first-child a[href^="/quote/"]'
+                # ).text
+                
+                # # 获取公司名称：使用位置和语义化属性
+                # company = row.find_element(
+                #     By.CSS_SELECTOR, 
+                #     'td:nth-child(2)'  # 第二列就是公司名称
+                # ).text.strip()
+            except Exception as e:
+                print(f"Error extracting data from row: {e}")
+                continue
             
             for category, symbols in data.items():
                 if symbol in symbols:
