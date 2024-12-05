@@ -73,15 +73,15 @@ driver = webdriver.Chrome(service=service)
 with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as file:
     data = json.load(file)
 
-start_date = datetime(2024, 12, 2)
-end_date = datetime(2024, 12, 8)
+# start_date = datetime(2024, 12, 2)
+# end_date = datetime(2024, 12, 8)
 
-# # 获取当前系统日期
-# current_date = datetime.now()
-# # 计算离当前最近的周天（周日）
-# start_date = current_date + timedelta(days=(6 - current_date.weekday()))
-# # 计算往后延6天的日期
-# end_date = start_date + timedelta(days=6)
+# 获取当前系统日期
+current_date = datetime.now()
+# 计算离当前最近的周天（周日）
+start_date = current_date + timedelta(days=(6 - current_date.weekday()))
+# 计算往后延6天的日期
+end_date = start_date + timedelta(days=6)
 
 new_content_added = False
 

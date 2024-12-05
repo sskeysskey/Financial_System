@@ -13,7 +13,11 @@
     },
     "Energy": {
         "VAL": "海上钻井",
-        "TDW": "潮水钻井"
+        "TDW": "潮水钻井",
+        "XOM": "",
+        "SHEL": "",
+        "CHRD": "",
+        "TBN": ""
     },
     "Technology": {
         "STM": "意法",
@@ -25,7 +29,9 @@
         "SMCI": "超微",
         "AMAT": "应用材料",
         "LRCX": "拉姆研究",
-        "UMC": ""
+        "UMC": "",
+        "ANET": "",
+        "MCHP": ""
     },
     "Utilities": {
         "AES": "",
@@ -33,7 +39,9 @@
     },
     "Consumer_Defensive": {
         "HSY": "",
-        "TGT": ""
+        "TGT": "",
+        "MDLZ": "",
+        "DEO": ""
     },
     "Industrials": {
         "BA": "波音",
@@ -43,7 +51,8 @@
         "MMS": "政府服务"
     },
     "Real_Estate": {
-        "O": ""
+        "O": "",
+        "REXR": ""
     },
     "Financial_Services": {
         "ING": "",
@@ -55,7 +64,10 @@
         "AZN": "",
         "ELV": "",
         "PACS": "",
-        "AMGN": ""
+        "AMGN": "",
+        "JNJ": "",
+        "HCA": "",
+        "TFX": ""
     },
     "Bonds": {
         "US2Y": "",

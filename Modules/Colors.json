@@ -81,7 +81,8 @@
         "MSFT",
         "META",
         "AVGO",
-        "TSM"
+        "TSM",
+        "XOM"
     ],
     "purple_keywords": [
         "Bitcoin",
@@ -167,7 +168,6 @@
         "WFRD",
         "NXT",
         "MOH",
-        "LYB",
         "ICLR",
         "CDW",
         "TTE",
@@ -188,7 +188,8 @@
         "E",
         "AES",
         "MMS",
-        "BUD"
+        "BUD",
+        "TFX"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -307,7 +308,9 @@
         "BHP",
         "SEM",
         "EBR",
-        "BDX"
+        "BDX",
+        "LYB",
+        "ANET"
     ],
     "orange_keywords": [
         "NASDAQ",

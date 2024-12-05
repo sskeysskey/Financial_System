@@ -70,15 +70,15 @@ chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
 service = Service(executable_path=chrome_driver_path)
 driver = webdriver.Chrome(service=service)
 
-start_date = datetime(2024, 12, 2)
-end_date = datetime(2024, 12, 8)
+# start_date = datetime(2024, 12, 2)
+# end_date = datetime(2024, 12, 8)
 
-# # 获取当前系统日期
-# current_date = datetime.now()
-# # 计算离当前最近的周天
-# start_date = current_date + timedelta(days=(6 - current_date.weekday()))
-# # 计算往后延6天的周六
-# end_date = start_date + timedelta(days=6)
+# 获取当前系统日期
+current_date = datetime.now()
+# 计算离当前最近的周天
+start_date = current_date + timedelta(days=(6 - current_date.weekday()))
+# 计算往后延6天的周六
+end_date = start_date + timedelta(days=6)
 
 Event_Filter = {
     "GDP 2nd Estimate*", "Non-Farm Payrolls*", "Core PCE Price Index MM *",

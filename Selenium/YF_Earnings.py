@@ -101,15 +101,15 @@ for key, symbols in color_data.items():
     if key != "red_keywords":
         color_keys.update(symbols)
 
-start_date = datetime(2024, 12, 2)
-end_date = datetime(2024, 12, 9)
+# start_date = datetime(2024, 12, 2)
+# end_date = datetime(2024, 12, 9)
 
-# # 获取当前系统日期
-# current_date = datetime.now()
-# # 计算离当前最近的周天
-# start_date = current_date + timedelta(days=(6 - current_date.weekday()))
-# # 计算往后延6天的周六
-# end_date = start_date + timedelta(days=6)
+# 获取当前系统日期
+current_date = datetime.now()
+# 计算离当前最近的周天
+start_date = current_date + timedelta(days=(6 - current_date.weekday()))
+# 计算往后延6天的周六
+end_date = start_date + timedelta(days=6)
 
 # 初始化数据库连接
 db_path = '/Users/yanzhang/Documents/Database/Finance.db'
