@@ -9,7 +9,9 @@
     },
     "Consumer_Cyclical": {
         "STLA": "",
-        "RACE": "法拉利"
+        "RACE": "法拉利",
+        "DHI": "",
+        "LEN": ""
     },
     "Energy": {
         "VAL": "海上钻井",
@@ -31,7 +33,10 @@
         "LRCX": "拉姆研究",
         "UMC": "",
         "ANET": "",
-        "MCHP": ""
+        "MCHP": "",
+        "TXN": "",
+        "UBER": "",
+        "NXPI": ""
     },
     "Utilities": {
         "AES": "",
@@ -67,7 +72,8 @@
         "AMGN": "",
         "JNJ": "",
         "HCA": "",
-        "TFX": ""
+        "TFX": "",
+        "DHR": ""
     },
     "Bonds": {
         "US2Y": "",
@@ -130,11 +136,10 @@
         "SOXX": "半导体",
         "ASHR": "A股大型",
         "DXJ": "日本",
-        "INDA": "印度",
         "EWT": "台湾",
         "LIT": "锂矿电池",
         "URA": "铀矿核能",
-        "UUP": "追踪美元",
+        "UUP": "多美",
         "FXY": "多日空美"
     },
     "Currencies": {

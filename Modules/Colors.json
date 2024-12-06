@@ -19,7 +19,6 @@
         "KDP",
         "DHI",
         "PSX",
-        "TD",
         "RDY",
         "AMT",
         "CCI",
@@ -62,7 +61,9 @@
         "QCOM",
         "SAN",
         "NU",
-        "SO"
+        "SO",
+        "TXN",
+        "UBER"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -310,7 +311,8 @@
         "EBR",
         "BDX",
         "LYB",
-        "ANET"
+        "ANET",
+        "TD"
     ],
     "orange_keywords": [
         "NASDAQ",
