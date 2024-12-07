@@ -509,7 +509,11 @@
     "CMBS",
     "QTUM",
     "MDYV",
-    "EWY"
+    "EWY",
+    "IGV",
+    "FNDX",
+    "NANR",
+    "SCHP"
   ],
   "Basic_Materials": [
     "LIN",
@@ -1856,7 +1860,10 @@
     "BOX",
     "IDCC",
     "SMTC",
-    "INTA"
+    "INTA",
+    "SOUN",
+    "AI",
+    "ASAN"
   ],
   "Utilities": [
     "NEE",

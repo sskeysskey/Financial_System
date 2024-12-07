@@ -10,7 +10,7 @@
     "Consumer_Cyclical": {
         "STLA": "",
         "RACE": "法拉利",
-        "DHI": "",
+        "DHI": "德尔惠",
         "LEN": ""
     },
     "Energy": {
@@ -18,8 +18,9 @@
         "TDW": "潮水钻井",
         "XOM": "",
         "SHEL": "",
+        "FANG": "",
         "CHRD": "",
-        "TBN": ""
+        "FRO": ""
     },
     "Technology": {
         "STM": "意法",
@@ -32,11 +33,9 @@
         "AMAT": "应用材料",
         "LRCX": "拉姆研究",
         "UMC": "",
-        "ANET": "",
         "MCHP": "",
-        "TXN": "",
-        "UBER": "",
-        "NXPI": ""
+        "NXPI": "",
+        "ST": ""
     },
     "Utilities": {
         "AES": "",
@@ -53,14 +52,17 @@
         "LMT": "洛克希德",
         "NOC": "诺斯罗普",
         "GD": "通用动力",
-        "MMS": "政府服务"
+        "MMS": "政府服务",
+        "RTX": "",
+        "UPS": ""
     },
     "Real_Estate": {
         "O": "",
-        "REXR": ""
+        "REXR": "",
+        "PLD": "",
+        "CCI": ""
     },
     "Financial_Services": {
-        "ING": "",
         "NU": ""
     },
     "Healthcare": {
@@ -70,10 +72,14 @@
         "ELV": "",
         "PACS": "",
         "AMGN": "",
-        "JNJ": "",
         "HCA": "",
         "TFX": "",
-        "DHR": ""
+        "DHR": "",
+        "UNH": "",
+        "JNJ": "",
+        "MDT": "",
+        "BDX": "",
+        "CNC": ""
     },
     "Bonds": {
         "US2Y": "",

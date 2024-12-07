@@ -63,7 +63,9 @@
         "NU",
         "SO",
         "TXN",
-        "UBER"
+        "UBER",
+        "FANG",
+        "RTX"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -147,7 +149,6 @@
         "W",
         "GTLS",
         "TNET",
-        "CHRD",
         "TM",
         "SLB",
         "RIG",
@@ -312,7 +313,8 @@
         "BDX",
         "LYB",
         "ANET",
-        "TD"
+        "TD",
+        "CHRD"
     ],
     "orange_keywords": [
         "NASDAQ",
