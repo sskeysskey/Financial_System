@@ -19,23 +19,19 @@
         "XOM": "",
         "SHEL": "",
         "FANG": "",
-        "CHRD": "",
-        "FRO": ""
+        "CHRD": ""
     },
     "Technology": {
-        "STM": "意法",
         "INTC": "",
         "ASML": "",
         "KLAC": "科磊PCB",
         "ACLS": "晶圆",
         "ENPH": "太阳能",
-        "SMCI": "超微",
         "AMAT": "应用材料",
         "LRCX": "拉姆研究",
-        "UMC": "",
+        "UMC": "联电",
         "MCHP": "",
-        "NXPI": "",
-        "ST": ""
+        "NXPI": ""
     },
     "Utilities": {
         "AES": "",
@@ -44,8 +40,7 @@
     "Consumer_Defensive": {
         "HSY": "",
         "TGT": "",
-        "MDLZ": "",
-        "DEO": ""
+        "MDLZ": ""
     },
     "Industrials": {
         "BA": "波音",
@@ -53,32 +48,20 @@
         "NOC": "诺斯罗普",
         "GD": "通用动力",
         "MMS": "政府服务",
-        "RTX": "",
+        "RTX": "雷神",
         "UPS": ""
     },
     "Real_Estate": {
-        "O": "",
-        "REXR": "",
-        "PLD": "",
-        "CCI": ""
+        "REXR": ""
     },
-    "Financial_Services": {
-        "NU": ""
-    },
+    "Financial_Services": {},
     "Healthcare": {
-        "MRK": "默沙东",
         "NVS": "",
-        "AZN": "",
         "ELV": "",
         "PACS": "",
         "AMGN": "",
         "HCA": "",
-        "TFX": "",
-        "DHR": "",
         "UNH": "",
-        "JNJ": "",
-        "MDT": "",
-        "BDX": "",
         "CNC": ""
     },
     "Bonds": {

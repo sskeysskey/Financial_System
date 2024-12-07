@@ -53,7 +53,7 @@ def check_last_record_date(cursor, name, current_date):
         last_date = datetime.date.fromisoformat(result[0])
         price = result[1]
         days_difference = (current_date - last_date).days
-        if days_difference > 60:
+        if days_difference > 30:
             return True, None, None  # 没有问题，可以插入
         else:
             return False, last_date, price  # 返回最新的日期和价格
@@ -86,11 +86,11 @@ def insert_data(db_path, date, name, price):
                 show_alert(f"{name} 在 {date} 的记录已存在。")
         else:
             if last_date and last_price is not None:
-                show_alert(f"{name} 的最新记录距离现在不足两个月，无法添加新数据。\n"
+                show_alert(f"{name} 的最新记录距离现在不足1个月，无法添加新数据。\n"
                            f"最新记录日期：{last_date}\n"
                            f"价格：{last_price}")
             else:
-                show_alert(f"{name} 的最新记录距离现在不足两个月，无法添加新数据。")
+                show_alert(f"{name} 的最新记录距离现在不足1个月，无法添加新数据。")
         return False
 
 def main(symbol=None):

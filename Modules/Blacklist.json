@@ -130,7 +130,9 @@
         "CPRI",
         "UGP",
         "GSK",
-        "TTE"
+        "TTE",
+        "CCI",
+        "ST"
     ],
     "screener": [
         "CTA-PA",
