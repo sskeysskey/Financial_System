@@ -9,7 +9,6 @@
     },
     "Consumer_Cyclical": {
         "STLA": "",
-        "RACE": "法拉利",
         "DHI": "德尔惠",
         "LEN": ""
     },
@@ -139,12 +138,12 @@
         "EURUSD": ""
     },
     "Economics": {
-        "USNonFarmA": "04 USNonFarmA",
-        "USInitial": "05 USInitial",
-        "USTrade": "05 USTrade",
-        "USUnemploy": "06 USUnemploy",
-        "USNonFarm": "06 USNonFarm",
-        "USConfidence": "06 USConfidence"
+        "CoreCPI": "11 CoreCPI",
+        "USCPI": "11 USCPI",
+        "USPPI": "12 USPPI",
+        "USInitial": "12 USInitial",
+        "CorePPI": "12 CorePPI",
+        "ImportPriceM": "13 ImportPriceM"
     },
     "ETFs_US": {
         "TLT": "",
