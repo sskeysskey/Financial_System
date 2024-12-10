@@ -2,7 +2,8 @@
     "Basic_Materials": {
         "NEM": "Newmont",
         "CE": "赛莱默",
-        "VALE": ""
+        "VALE": "",
+        "LIN": ""
     },
     "Communication_Services": {
         "DJT": ""
@@ -18,7 +19,8 @@
         "XOM": "",
         "SHEL": "",
         "FANG": "",
-        "CHRD": ""
+        "CHRD": "",
+        "FRO": ""
     },
     "Technology": {
         "INTC": "",
@@ -30,7 +32,8 @@
         "LRCX": "拉姆研究",
         "UMC": "联电",
         "MCHP": "",
-        "NXPI": ""
+        "NXPI": "",
+        "AMD": ""
     },
     "Utilities": {
         "AES": "",
@@ -48,12 +51,15 @@
         "GD": "通用动力",
         "MMS": "政府服务",
         "RTX": "雷神",
-        "UPS": ""
+        "UPS": "",
+        "CNI": ""
     },
     "Real_Estate": {
         "REXR": ""
     },
-    "Financial_Services": {},
+    "Financial_Services": {
+        "MMC": ""
+    },
     "Healthcare": {
         "NVS": "",
         "ELV": "",
@@ -61,7 +67,8 @@
         "AMGN": "",
         "HCA": "",
         "UNH": "",
-        "CNC": ""
+        "CNC": "",
+        "MDT": ""
     },
     "Bonds": {
         "US2Y": "",

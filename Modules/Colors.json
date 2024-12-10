@@ -23,7 +23,6 @@
         "AMT",
         "CCI",
         "AZO",
-        "CNI",
         "NEM",
         "PG",
         "NVS",
@@ -65,7 +64,9 @@
         "TXN",
         "UBER",
         "FANG",
-        "RTX"
+        "RTX",
+        "MMC",
+        "AMD"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -189,9 +190,9 @@
         "BBIO",
         "E",
         "AES",
-        "MMS",
         "BUD",
-        "TFX"
+        "TFX",
+        "CNI"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -314,7 +315,8 @@
         "LYB",
         "ANET",
         "TD",
-        "CHRD"
+        "CHRD",
+        "MMS"
     ],
     "orange_keywords": [
         "NASDAQ",
