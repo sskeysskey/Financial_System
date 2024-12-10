@@ -132,7 +132,8 @@
         "GSK",
         "TTE",
         "CCI",
-        "ST"
+        "ST",
+        "CHRD"
     ],
     "screener": [
         "CTA-PA",
@@ -264,6 +265,7 @@
         "MRO",
         "TLX",
         "ORAN",
-        "NYCB"
+        "NYCB",
+        "LBRDK"
     ]
 }

@@ -504,7 +504,8 @@
     "IGV",
     "FNDX",
     "NANR",
-    "SCHP"
+    "SCHP",
+    "MTUM"
   ],
   "Basic_Materials": [
     "LIN",
@@ -629,7 +630,6 @@
     "TKO",
     "EDR",
     "NYT",
-    "LBRDK",
     "FYBR",
     "KT",
     "LBTYK",
