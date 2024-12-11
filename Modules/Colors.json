@@ -66,7 +66,10 @@
         "FANG",
         "RTX",
         "MMC",
-        "AMD"
+        "AMD",
+        "CB",
+        "AFL",
+        "D"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -192,7 +195,8 @@
         "AES",
         "BUD",
         "TFX",
-        "CNI"
+        "CNI",
+        "WLK"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -395,10 +399,7 @@
         "Shenzhen",
         "FXY",
         "MCK",
-        "SHEL",
-        "COP",
-        "BP",
-        "EQNR"
+        "SHEL"
     ],
     "red_keywords": [
         "CoreCPI",

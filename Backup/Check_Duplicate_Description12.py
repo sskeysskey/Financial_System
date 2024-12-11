@@ -1,6 +1,7 @@
 import json
 # 文件路径
 file_path = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
+
 # 读取JSON文件
 with open(file_path, 'r', encoding='utf-8') as file:
     data = json.load(file)

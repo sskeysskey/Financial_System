@@ -125,13 +125,13 @@ def update_color_json(color_config_path, updates_colors, blacklist_newlow, exist
     colors = {k: v for k, v in all_colors.items() if k != "red_keywords"}
 
     # 创建一个集合，包含所有已存在于 sectors_panel.json 中的 symbol
-    existing_symbols = set()
-    for category in existing_sectors_panel.values():
-        existing_symbols.update(category.keys())
+    # existing_symbols = set()
+    # for category in existing_sectors_panel.values():
+    #     existing_symbols.update(category.keys())
 
     for category_list, names in updates_colors.items():
         for name in names:
-            # 检查该 symbol 是否存在于 colors.json 中的其他分组，且不在 red_keywords 中
+            # 检查该 symbol 是否存在于 colors.json 中的其他分组，且不在 category_list 中
             symbol_exists_elsewhere = any(
                 name in symbols for group, symbols in colors.items() if group != category_list
             )
@@ -141,16 +141,17 @@ def update_color_json(color_config_path, updates_colors, blacklist_newlow, exist
                 continue  # 跳过当前 symbol 的添加
 
             if name not in colors.get(category_list, []):
-                if name in existing_symbols:
+                # if name in existing_symbols:
                     # 如果 symbol 已存在于 sectors_panel.json 中，打印日志
-                    print(f"Symbol {name} 已存在于 sectors_panel.json 中，不添加到 {category_list}")
+                # else:
+                if category_list in colors:
+                    colors[category_list].append(name)
+                    print(f"将 '{name}' 添加到Colors已存在的 '{category_list}' 类别中")
                 else:
-                    if category_list in colors:
-                        colors[category_list].append(name)
-                        print(f"将 '{name}' 添加到Colors已存在的 '{category_list}' 类别中")
-                    else:
-                        colors[category_list] = [name]
-                        print(f"'{name}' 被添加到新的 '{category_list}' 类别中")
+                    colors[category_list] = [name]
+                    print(f"'{name}' 被添加到新的 '{category_list}' 类别中")
+            else:
+                print(f"Symbol {name} 已存在于 {category_list} 中。")
     
     # 在写回文件之前，将 "red_keywords" 添加回去
     colors["red_keywords"] = all_colors.get("red_keywords", [])

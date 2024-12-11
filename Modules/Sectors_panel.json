@@ -3,7 +3,9 @@
         "NEM": "Newmont",
         "CE": "赛莱默",
         "VALE": "",
-        "LIN": ""
+        "LIN": "",
+        "OLN": "",
+        "WLK": ""
     },
     "Communication_Services": {
         "DJT": ""
@@ -18,7 +20,9 @@
         "TDW": "潮水钻井",
         "XOM": "",
         "SHEL": "",
-        "FANG": ""
+        "FANG": "",
+        "WFRD": "",
+        "FRO": ""
     },
     "Technology": {
         "INTC": "",
@@ -31,11 +35,15 @@
         "UMC": "联电",
         "MCHP": "",
         "NXPI": "",
-        "AMD": ""
+        "AMD": "",
+        "TXN": "",
+        "UBER": ""
     },
     "Utilities": {
         "AES": "",
-        "SO": "南方电力"
+        "SO": "南方电力",
+        "NEE": "",
+        "D": ""
     },
     "Consumer_Defensive": {
         "HSY": "",
@@ -50,13 +58,17 @@
         "MMS": "政府服务",
         "RTX": "雷神",
         "UPS": "",
-        "CNI": ""
+        "CNI": "",
+        "SARO": ""
     },
     "Real_Estate": {
-        "REXR": ""
+        "REXR": "",
+        "O": ""
     },
     "Financial_Services": {
-        "MMC": ""
+        "MMC": "",
+        "CB": "",
+        "AFL": ""
     },
     "Healthcare": {
         "NVS": "",
@@ -66,7 +78,9 @@
         "HCA": "",
         "UNH": "",
         "CNC": "",
-        "MDT": ""
+        "MDT": "",
+        "JNJ": "",
+        "BAX": ""
     },
     "Bonds": {
         "US2Y": "",
