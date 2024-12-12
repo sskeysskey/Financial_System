@@ -69,7 +69,10 @@
         "AMD",
         "CB",
         "AFL",
-        "D"
+        "D",
+        "GE",
+        "PSA",
+        "DUK"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -193,10 +196,10 @@
         "BBIO",
         "E",
         "AES",
-        "BUD",
         "TFX",
         "CNI",
-        "WLK"
+        "WLK",
+        "IBRX"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -242,7 +245,6 @@
         "NIO",
         "LKQ",
         "CZR",
-        "CVS",
         "DAR",
         "MOS",
         "TU",
@@ -320,7 +322,8 @@
         "ANET",
         "TD",
         "CHRD",
-        "MMS"
+        "MMS",
+        "BUD"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -386,7 +389,8 @@
         "PFE",
         "BMRN",
         "AMTM",
-        "BBD"
+        "BBD",
+        "CVS"
     ],
     "green_keywords": [
         "EURCNY",

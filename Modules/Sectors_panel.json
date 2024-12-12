@@ -22,7 +22,8 @@
         "SHEL": "",
         "FANG": "",
         "WFRD": "",
-        "FRO": ""
+        "FRO": "",
+        "COP": ""
     },
     "Technology": {
         "INTC": "",
@@ -43,7 +44,8 @@
         "AES": "",
         "SO": "南方电力",
         "NEE": "",
-        "D": ""
+        "D": "",
+        "DUK": ""
     },
     "Consumer_Defensive": {
         "HSY": "",
@@ -59,11 +61,14 @@
         "RTX": "雷神",
         "UPS": "",
         "CNI": "",
-        "SARO": ""
+        "SARO": "",
+        "GE": ""
     },
     "Real_Estate": {
         "REXR": "",
-        "O": ""
+        "O": "",
+        "PLD": "",
+        "PSA": ""
     },
     "Financial_Services": {
         "MMC": "",
@@ -80,7 +85,11 @@
         "CNC": "",
         "MDT": "",
         "JNJ": "",
-        "BAX": ""
+        "BAX": "",
+        "CI": "",
+        "CVS": "",
+        "TFX": "",
+        "IBRX": ""
     },
     "Bonds": {
         "US2Y": "",
