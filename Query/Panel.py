@@ -117,10 +117,10 @@ def create_selection_window():
         frame.pack(side="left", padx=1, pady=3, fill="both", expand=True)
 
     categories = [
-        ['Basic_Materials', 'Communication_Services', 'Consumer_Cyclical'],
+        ['Basic_Materials', 'Real_Estate', 'Consumer_Cyclical'],
         ['Technology', 'Energy'],
         ['Industrials', 'Consumer_Defensive', 'Utilities'],
-        ['Healthcare', 'Financial_Services', 'Real_Estate'],
+        ['Healthcare', 'Financial_Services', 'Communication_Services'],
         ['Bonds', 'Indices'],
         ['Commodities'],
         ['Currencies', 'ETFs', 'Crypto'],

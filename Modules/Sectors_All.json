@@ -505,7 +505,8 @@
     "FNDX",
     "NANR",
     "SCHP",
-    "MTUM"
+    "MTUM",
+    "FXO"
   ],
   "Basic_Materials": [
     "LIN",

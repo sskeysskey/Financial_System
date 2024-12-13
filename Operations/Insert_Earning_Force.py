@@ -74,21 +74,23 @@ def insert_data(db_path, date, name, price):
         has_recent_data, last_date, last_price = check_last_record_date(cursor, name, current_date)
         
         if has_recent_data:
-            try:
-                # 覆盖更新已有记录
-                cursor.execute("""
-                    UPDATE Earning
-                    SET price = ?, date = ?
-                    WHERE name = ?
-                """, (price, date, name))
+            # 执行更新操作
+            cursor.execute("""
+                UPDATE Earning
+                SET price = ?, date = ?
+                WHERE name = ? AND date = ?
+            """, (price, date, name, last_date.isoformat()))
+            
+            if cursor.rowcount > 0:
                 conn.commit()
                 show_alert(f"已成功强制覆盖更新：\n名称 {name}\n日期 {date}\n价格 {price}")
                 return True
-            except sqlite3.IntegrityError:
-                show_alert(f"{name} 的记录更新失败。")
+            else:
+                show_alert(f"未找到可更新的记录：{name}")
+                return False
         else:
             show_alert(f"{name} 没有近两个月的记录，无法添加新数据。")
-        return False
+            return False
 
 def main(symbol=None):
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'

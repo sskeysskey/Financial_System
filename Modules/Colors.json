@@ -72,7 +72,9 @@
         "D",
         "GE",
         "PSA",
-        "DUK"
+        "DUK",
+        "CNQ",
+        "LHX"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -164,7 +166,6 @@
         "NOV",
         "NUE",
         "HES",
-        "DINO",
         "TX",
         "HXL",
         "RRC",
@@ -180,7 +181,6 @@
         "ICLR",
         "CDW",
         "TTE",
-        "UMC",
         "EG",
         "HMC",
         "SMCI",
@@ -323,7 +323,9 @@
         "TD",
         "CHRD",
         "MMS",
-        "BUD"
+        "BUD",
+        "DINO",
+        "UMC"
     ],
     "orange_keywords": [
         "NASDAQ",

@@ -5,7 +5,8 @@
         "VALE": "",
         "LIN": "",
         "OLN": "",
-        "WLK": ""
+        "WLK": "",
+        "NUE": ""
     },
     "Communication_Services": {
         "DJT": ""
@@ -17,13 +18,14 @@
     },
     "Energy": {
         "VAL": "海上钻井",
-        "TDW": "潮水钻井",
         "XOM": "",
         "SHEL": "",
         "FANG": "",
         "WFRD": "",
-        "FRO": "",
-        "COP": ""
+        "COP": "",
+        "CNQ": "",
+        "DINO": "",
+        "FRO": ""
     },
     "Technology": {
         "INTC": "",
@@ -35,34 +37,31 @@
         "LRCX": "拉姆研究",
         "UMC": "联电",
         "MCHP": "",
-        "NXPI": "",
         "AMD": "",
-        "TXN": "",
-        "UBER": ""
+        "UBER": "",
+        "ADBE": ""
     },
     "Utilities": {
         "AES": "",
         "SO": "南方电力",
         "NEE": "",
         "D": "",
-        "DUK": ""
+        "DUK": "",
+        "AEP": ""
     },
     "Consumer_Defensive": {
-        "HSY": "",
-        "TGT": "",
-        "MDLZ": ""
+        "HSY": ""
     },
     "Industrials": {
-        "BA": "波音",
         "LMT": "洛克希德",
         "NOC": "诺斯罗普",
         "GD": "通用动力",
         "MMS": "政府服务",
         "RTX": "雷神",
-        "UPS": "",
         "CNI": "",
         "SARO": "",
-        "GE": ""
+        "GE": "",
+        "LHX": ""
     },
     "Real_Estate": {
         "REXR": "",
@@ -80,16 +79,17 @@
         "ELV": "",
         "PACS": "",
         "AMGN": "",
-        "HCA": "",
+        "HCA": "医院",
         "UNH": "",
         "CNC": "",
-        "MDT": "",
-        "JNJ": "",
         "BAX": "",
         "CI": "",
         "CVS": "",
         "TFX": "",
-        "IBRX": ""
+        "JNJ": "",
+        "SNY": "",
+        "MDT": "",
+        "BIIB": ""
     },
     "Bonds": {
         "US2Y": "",

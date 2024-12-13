@@ -130,7 +130,8 @@
         "TTE",
         "CCI",
         "ST",
-        "CHRD"
+        "CHRD",
+        "IBRX"
     ],
     "screener": [
         "CTA-PA",
