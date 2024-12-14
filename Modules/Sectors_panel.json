@@ -3,10 +3,12 @@
         "NEM": "Newmont",
         "CE": "赛莱默",
         "VALE": "",
+        "OLN": "氯碱",
+        "NUE": "",
         "LIN": "",
-        "OLN": "",
+        "FCX": "",
         "WLK": "",
-        "NUE": ""
+        "CLF": ""
     },
     "Communication_Services": {
         "DJT": ""
@@ -25,7 +27,7 @@
         "COP": "",
         "CNQ": "",
         "DINO": "",
-        "FRO": ""
+        "NE": ""
     },
     "Technology": {
         "INTC": "",
@@ -34,20 +36,22 @@
         "ACLS": "晶圆",
         "ENPH": "太阳能",
         "AMAT": "应用材料",
-        "LRCX": "拉姆研究",
         "UMC": "联电",
         "MCHP": "",
         "AMD": "",
         "UBER": "",
-        "ADBE": ""
+        "ADBE": "",
+        "NVDA": "",
+        "NXPI": "",
+        "SAIC": "",
+        "INGM": ""
     },
     "Utilities": {
         "AES": "",
         "SO": "南方电力",
-        "NEE": "",
         "D": "",
-        "DUK": "",
-        "AEP": ""
+        "AEP": "",
+        "DUK": ""
     },
     "Consumer_Defensive": {
         "HSY": ""
@@ -58,16 +62,16 @@
         "GD": "通用动力",
         "MMS": "政府服务",
         "RTX": "雷神",
-        "CNI": "",
-        "SARO": "",
         "GE": "",
-        "LHX": ""
+        "LHX": "",
+        "CNI": ""
     },
     "Real_Estate": {
         "REXR": "",
         "O": "",
         "PLD": "",
-        "PSA": ""
+        "PSA": "",
+        "ARE": ""
     },
     "Financial_Services": {
         "MMC": "",
@@ -82,14 +86,18 @@
         "HCA": "医院",
         "UNH": "",
         "CNC": "",
-        "BAX": "",
-        "CI": "",
         "CVS": "",
-        "TFX": "",
         "JNJ": "",
         "SNY": "",
+        "REGN": "",
         "MDT": "",
-        "BIIB": ""
+        "CI": "",
+        "BIIB": "",
+        "GMAB": "",
+        "BAX": "",
+        "TFX": "",
+        "CRSP": "",
+        "TMDX": ""
     },
     "Bonds": {
         "US2Y": "",

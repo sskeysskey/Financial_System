@@ -6,7 +6,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.chrome.service import Service
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException, TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
 import pyautogui
 import random
@@ -68,57 +68,152 @@ def process_urls(driver, urls, output, output_500, output_5000, blacklist):
     for url, sector in urls:
         process_sector(driver, url, sector, output, output_500, output_5000, blacklist)
 
-# 辅助函数，用于获取元素并处理异常
-def get_element_value(driver, xpath, default='--', as_float=False):
-    try:
-        element = driver.find_element(By.XPATH, xpath)
-        value = element.get_attribute('value') if as_float else element.text.strip()
-        # 如果是浮点数模式，则转换为浮点数
-        if as_float:
-            return float(value)
-        else:
-            # 如果不是浮点数模式，专门处理 "N/A" 的情况
-            return float(value) if value != 'N/A' else default
-    except (NoSuchElementException, ValueError):
-        return default
-
-def get_element_name(driver, xpath, default='--'):
-    try:
-        element = driver.find_element(By.XPATH, xpath)
-        value = element.text.strip()
-        return value
-    except (NoSuchElementException, ValueError):
-        return default
-
 def fetch_data(driver, url, blacklist):
     driver.get(url)
     results = []
-    quote_links = driver.find_elements(By.XPATH, '//a[@data-test="quoteLink"]')
-
-    for quote_link in quote_links:
-        symbol = quote_link.text
-        if is_blacklisted(symbol, blacklist):
-            continue
+    
+    try:
+        # 等待表格完全加载，使用更具体的等待条件
+        WebDriverWait(driver, 15).until(
+            EC.presence_of_all_elements_located((By.XPATH, "//table/tbody/tr/td/fin-streamer"))
+        )
         
-        # 使用辅助函数来获取数据
-        symbol_xpath = f'//fin-streamer[@data-symbol="{symbol}"]'
-        market_cap = get_element_value(driver, f'{symbol_xpath}[@data-field="marketCap"]', as_float=True)
-        price = get_element_value(driver, f'{symbol_xpath}[@data-field="regularMarketPrice"]', as_float=True)
-        volume = get_element_value(driver, f'{symbol_xpath}[@data-field="regularMarketVolume"]', as_float=True)
-        pe_ratio = get_element_value(driver, f'{symbol_xpath}/ancestor::tr/td[@aria-label="PE Ratio (TTM)"]', as_float=False)
-        name = get_element_name(driver, f'{symbol_xpath}/ancestor::tr/td[@aria-label="Name"]')
-
-        if market_cap != '--':
-            results.append((symbol, market_cap, pe_ratio, name, price, volume))
+        # 一次性获取所有需要的数据
+        rows = driver.find_elements(By.XPATH, "//table/tbody/tr")
         
-    # 将结果写入到 txt 文件
-    with open('/Users/yanzhang/Documents/News/backup/marketcap_pe.txt', 'a') as file:  # 修改 'w' 为 'a'
+        for row in rows:
+            try:
+                # 使用更简单和稳定的选择器
+                data = {
+                    'symbol': row.find_element(By.CSS_SELECTOR, "span[class*='symbol']").text.strip(),
+                    'name': row.find_element(By.CSS_SELECTOR, "td:nth-child(2)").text.strip(),
+                    'price': row.find_element(By.CSS_SELECTOR, "fin-streamer[data-field='intradayprice']").text.strip(),
+                    'volume': row.find_element(By.CSS_SELECTOR, "fin-streamer[data-field='dayvolume']").text.strip(),
+                    'market_cap': row.find_element(By.CSS_SELECTOR, "fin-streamer[data-field='intradaymarketcap']").text.strip(),
+                    'pe_ratio': row.find_element(By.CSS_SELECTOR, "fin-streamer[data-field='peratio.lasttwelvemonths']").text.strip()
+                }
+                
+                if is_blacklisted(data['symbol'], blacklist):
+                    continue
+                
+                # 数据处理
+                price = parse_number(data['price'])
+                volume = parse_volume(data['volume'])
+                market_cap = parse_market_cap(data['market_cap'])
+                pe_ratio = parse_number(data['pe_ratio'])
+                
+                if market_cap != '--':
+                    results.append((
+                        data['symbol'],
+                        market_cap,
+                        pe_ratio,
+                        data['name'],
+                        price,
+                        volume
+                    ))
+                    
+            except Exception as e:
+                continue
+                
+        # 批量写入文件
+        write_results_to_files(results)
+        
+        return results
+        
+    except TimeoutException:
+        print("页面加载超时")
+        return []
+
+def parse_number(text):
+    """
+    解析数字，处理无效值、负数、逗号等特殊情况
+    """
+    try:
+        if isinstance(text, (int, float)):
+            return float(text)
+            
+        if not isinstance(text, str):
+            return '--'
+            
+        # 处理无效值
+        if text in ['--', '-', '', 'N/A']:
+            return '--'
+            
+        # 清理文本
+        clean_text = text.strip()
+        
+        # 如果是带span标签的文本，提取数字部分
+        if '<span' in clean_text:
+            # 使用简单的文本提取方法
+            clean_text = clean_text.split('>')[1].split('<')[0].strip()
+        
+        # 移除所有逗号和多余的空格
+        clean_text = clean_text.replace(',', '').replace(' ', '')
+        
+        # 转换为浮点数
+        return float(clean_text)
+        
+    except (ValueError, AttributeError, IndexError) as e:
+        print(f"数字解析错误: {text} - {str(e)}")
+        return '--'
+
+def parse_volume(text):
+    """解析交易量"""
+    if text in ['--', '-', '']:
+        return '--'
+    multiplier = 1
+    if 'M' in text:
+        multiplier = 1e6
+        text = text.replace('M', '')
+    elif 'K' in text:
+        multiplier = 1e3
+        text = text.replace('K', '')
+    return float(text.replace(',', '')) * multiplier
+
+def parse_market_cap(text):
+    """解析市值，并确保精确的整数输出"""
+    if text in ['--', '-', '']:
+        return '--'
+        
+    try:
+        # 首先尝试获取data-value属性的精确值
+        if 'data-value="' in text:
+            value = float(text.split('data-value="')[1].split('"')[0])
+            return round(value)  # 使用round确保整数输出
+            
+        # 如果没有data-value，则处理显示值
+        multiplier = 1
+        clean_text = text.strip()
+        
+        if 'T' in clean_text:
+            multiplier = 1e12
+            clean_text = clean_text.replace('T', '')
+        elif 'B' in clean_text:
+            multiplier = 1e9
+            clean_text = clean_text.replace('B', '')
+        elif 'M' in clean_text:
+            multiplier = 1e6
+            clean_text = clean_text.replace('M', '')
+            
+        # 移除逗号并转换为浮点数
+        value = float(clean_text.replace(',', '')) * multiplier
+        return round(value)  # 使用round确保整数输出
+        
+    except (ValueError, AttributeError) as e:
+        print(f"市值解析错误: {text} - {str(e)}")
+        return '--'
+
+def write_results_to_files(results):
+    """批量写入文件"""
+    with open('/Users/yanzhang/Documents/News/backup/marketcap_pe.txt', 'a') as f1, \
+         open('/Users/yanzhang/Documents/News/backup/price_volume.txt', 'a') as f2:
         for result in results:
-            file.write(f"{result[0]}: {result[1]}, {result[2]}\n")
-    with open('/Users/yanzhang/Documents/News/backup/price_volume.txt', 'a') as file:  # 修改 'w' 为 'a'
-        for result in results:
-            file.write(f"{result[0]}: {result[4]}, {result[5]}\n")
-    return results
+            # 使用整数格式化市值
+            market_cap = result[1]
+            if market_cap != '--':
+                market_cap = f"{int(market_cap)}"
+            f1.write(f"{result[0]}: {market_cap}, {result[2]}\n")
+            f2.write(f"{result[0]}: {result[4]}, {result[5]}\n")
 
 # 辅助函数：将市值转换为“亿”单位
 def simplify_market_cap_threshold(market_cap_threshold):
@@ -147,8 +242,8 @@ def update_json(data, sector, file_path, output, log_enabled, market_cap_thresho
                         print(message)
                         output.append(message)
             else:
-                if symbol not in json_data[sector]:
-                    json_data[sector].append(symbol)
+                if symbol not in json_data.get(sector, []):
+                    json_data.setdefault(sector, []).append(symbol)
                     new_symbols.append((symbol, name))
                     if log_enabled:
                         # 在这里将简化后的市值门槛值加入消息
@@ -208,6 +303,7 @@ def clean_old_backups(directory, file_patterns, days=4):
                 except Exception as e:
                     print(f"跳过文件：{filename}，原因：{e}")
 
+# 记录带时间戳的错误信息
 def log_error_with_timestamp(error_message, file_path):
     """记录带时间戳的错误信息"""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -256,42 +352,24 @@ for file in files_to_backup:
 
 login_url = "https://login.yahoo.com"
 urls = [
-    ('https://finance.yahoo.com/screener/511d9b57-07dd-4d6a-8188-0c812754034f?offset=0&count=100',
-    'Technology'),
-    ('https://finance.yahoo.com/screener/511d9b57-07dd-4d6a-8188-0c812754034f?count=100&offset=100',
-    'Technology'),
-    ('https://finance.yahoo.com/screener/511d9b57-07dd-4d6a-8188-0c812754034f?count=100&offset=200',
-    'Technology'),
-    ('https://finance.yahoo.com/screener/8e86de0a-46e0-469f-85d0-a367d5aa6e6b?offset=0&count=100',
-    'Industrials'),
-    ('https://finance.yahoo.com/screener/8e86de0a-46e0-469f-85d0-a367d5aa6e6b?count=100&offset=100',
-    'Industrials'),
-    ('https://finance.yahoo.com/screener/45ecdc79-d64e-46ce-8491-62261d2f0c78?offset=0&count=100',
-    'Financial_Services'),
-    ('https://finance.yahoo.com/screener/45ecdc79-d64e-46ce-8491-62261d2f0c78?count=100&offset=100',
-    'Financial_Services'),
-    ('https://finance.yahoo.com/screener/45ecdc79-d64e-46ce-8491-62261d2f0c78?count=100&offset=200',
-    'Financial_Services'),
-    ('https://finance.yahoo.com/screener/e5221069-608f-419e-a3ff-24e61e4a07ac?offset=0&count=100',
-    'Basic_Materials'),
-    ('https://finance.yahoo.com/screener/90966b0c-2902-425c-870a-f19eb1ffd0b8?offset=0&count=100',
-    'Consumer_Defensive'),
-    ('https://finance.yahoo.com/screener/84e650e0-3916-4907-ad56-2fba4209fa3f?offset=0&count=100',
-    'Utilities'),
-    ('https://finance.yahoo.com/screener/1788e450-82cf-449a-b284-b174e8e3f6d6?offset=0&count=100',
-    'Energy'),
-    ('https://finance.yahoo.com/screener/877aec73-036f-40c3-9768-1c03e937afb7?offset=0&count=100',
-    'Consumer_Cyclical'),
-    ('https://finance.yahoo.com/screener/877aec73-036f-40c3-9768-1c03e937afb7?count=100&offset=100',
-    'Consumer_Cyclical'),
-    ('https://finance.yahoo.com/screener/9a217ba3-966a-4340-83b9-edb160f05f8e?offset=0&count=100',
-    'Real_Estate'),
-    ('https://finance.yahoo.com/screener/f99d96f0-a144-48be-b220-0be74c55ebf4?offset=0&count=100',
-    'Healthcare'),
-    ('https://finance.yahoo.com/screener/f99d96f0-a144-48be-b220-0be74c55ebf4?count=100&offset=100',
-    'Healthcare'),
-    ('https://finance.yahoo.com/screener/360b16ee-2692-4617-bd1a-a6c715dd0c29?offset=0&count=100',
-    'Communication_Services'),
+    ('https://finance.yahoo.com/research-hub/screener/511d9b57-07dd-4d6a-8188-0c812754034f/?start=0&count=100', 'Technology'),
+    ('https://finance.yahoo.com/research-hub/screener/511d9b57-07dd-4d6a-8188-0c812754034f/?start=100&count=100', 'Technology'),
+    ('https://finance.yahoo.com/research-hub/screener/511d9b57-07dd-4d6a-8188-0c812754034f/?start=200&count=100', 'Technology'),
+    ('https://finance.yahoo.com/research-hub/screener/8e86de0a-46e0-469f-85d0-a367d5aa6e6b/?start=0&count=100', 'Industrials'),
+    ('https://finance.yahoo.com/research-hub/screener/8e86de0a-46e0-469f-85d0-a367d5aa6e6b/?start=100&count=100', 'Industrials'),
+    ('https://finance.yahoo.com/research-hub/screener/45ecdc79-d64e-46ce-8491-62261d2f0c78/?start=0&count=100', 'Financial_Services'),
+    ('https://finance.yahoo.com/research-hub/screener/45ecdc79-d64e-46ce-8491-62261d2f0c78/?start=100&count=100', 'Financial_Services'),
+    ('https://finance.yahoo.com/research-hub/screener/45ecdc79-d64e-46ce-8491-62261d2f0c78/?start=200&count=100', 'Financial_Services'),
+    ('https://finance.yahoo.com/research-hub/screener/e5221069-608f-419e-a3ff-24e61e4a07ac/?start=0&count=100', 'Basic_Materials'),
+    ('https://finance.yahoo.com/research-hub/screener/90966b0c-2902-425c-870a-f19eb1ffd0b8/?start=0&count=100', 'Consumer_Defensive'),
+    ('https://finance.yahoo.com/research-hub/screener/84e650e0-3916-4907-ad56-2fba4209fa3f/?start=0&count=100', 'Utilities'),
+    ('https://finance.yahoo.com/research-hub/screener/1788e450-82cf-449a-b284-b174e8e3f6d6/?start=0&count=100', 'Energy'),
+    ('https://finance.yahoo.com/research-hub/screener/877aec73-036f-40c3-9768-1c03e937afb7/?start=0&count=100', 'Consumer_Cyclical'),
+    ('https://finance.yahoo.com/research-hub/screener/877aec73-036f-40c3-9768-1c03e937afb7/?start=100&count=100', 'Consumer_Cyclical'),
+    ('https://finance.yahoo.com/research-hub/screener/9a217ba3-966a-4340-83b9-edb160f05f8e/?start=0&count=100', 'Real_Estate'),
+    ('https://finance.yahoo.com/research-hub/screener/f99d96f0-a144-48be-b220-0be74c55ebf4/?start=0&count=100', 'Healthcare'),
+    ('https://finance.yahoo.com/research-hub/screener/f99d96f0-a144-48be-b220-0be74c55ebf4/?start=100&count=100', 'Healthcare'),
+    ('https://finance.yahoo.com/research-hub/screener/360b16ee-2692-4617-bd1a-a6c715dd0c29/?start=0&count=100', 'Communication_Services'),
 ]
 
 try:

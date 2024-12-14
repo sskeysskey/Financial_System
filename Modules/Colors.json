@@ -74,7 +74,8 @@
         "PSA",
         "DUK",
         "CNQ",
-        "LHX"
+        "LHX",
+        "FCX"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -94,7 +95,8 @@
         "META",
         "AVGO",
         "TSM",
-        "XOM"
+        "XOM",
+        "NVDA"
     ],
     "purple_keywords": [
         "Bitcoin",
@@ -160,11 +162,9 @@
         "TNET",
         "TM",
         "SLB",
-        "RIG",
         "CX",
         "MTDR",
         "NOV",
-        "NUE",
         "HES",
         "TX",
         "HXL",
@@ -197,9 +197,12 @@
         "E",
         "AES",
         "TFX",
-        "CNI",
         "WLK",
-        "IBRX"
+        "IBRX",
+        "CRSP",
+        "TMDX",
+        "ARE",
+        "SAIC"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -325,7 +328,10 @@
         "MMS",
         "BUD",
         "DINO",
-        "UMC"
+        "UMC",
+        "NUE",
+        "RIG",
+        "CNI"
     ],
     "orange_keywords": [
         "NASDAQ",

@@ -131,7 +131,8 @@
         "CCI",
         "ST",
         "CHRD",
-        "IBRX"
+        "IBRX",
+        "FRO"
     ],
     "screener": [
         "CTA-PA",
