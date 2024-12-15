@@ -7,8 +7,7 @@
         "NUE": "",
         "LIN": "",
         "FCX": "",
-        "WLK": "",
-        "CLF": ""
+        "WLK": ""
     },
     "Communication_Services": {
         "DJT": ""
@@ -21,37 +20,29 @@
     "Energy": {
         "VAL": "海上钻井",
         "XOM": "",
-        "SHEL": "",
         "FANG": "",
         "WFRD": "",
         "COP": "",
         "CNQ": "",
-        "DINO": "",
         "NE": ""
     },
     "Technology": {
         "INTC": "",
-        "ASML": "",
-        "KLAC": "科磊PCB",
         "ACLS": "晶圆",
-        "ENPH": "太阳能",
         "AMAT": "应用材料",
         "UMC": "联电",
         "MCHP": "",
         "AMD": "",
         "UBER": "",
-        "ADBE": "",
         "NVDA": "",
-        "NXPI": "",
-        "SAIC": "",
-        "INGM": ""
+        "NXPI": ""
     },
     "Utilities": {
         "AES": "",
         "SO": "南方电力",
         "D": "",
-        "AEP": "",
-        "DUK": ""
+        "AEP": "美国电力",
+        "DUK": "杜克电力"
     },
     "Consumer_Defensive": {
         "HSY": ""
@@ -63,15 +54,12 @@
         "MMS": "政府服务",
         "RTX": "雷神",
         "GE": "",
-        "LHX": "",
-        "CNI": ""
+        "LHX": ""
     },
     "Real_Estate": {
         "REXR": "",
-        "O": "",
-        "PLD": "",
-        "PSA": "",
-        "ARE": ""
+        "PLD": "仓储",
+        "PSA": "公共仓库"
     },
     "Financial_Services": {
         "MMC": "",
@@ -81,23 +69,15 @@
     "Healthcare": {
         "NVS": "",
         "ELV": "",
-        "PACS": "",
         "AMGN": "",
         "HCA": "医院",
         "UNH": "",
         "CNC": "",
         "CVS": "",
         "JNJ": "",
-        "SNY": "",
         "REGN": "",
-        "MDT": "",
-        "CI": "",
-        "BIIB": "",
-        "GMAB": "",
-        "BAX": "",
-        "TFX": "",
-        "CRSP": "",
-        "TMDX": ""
+        "CI": "信诺保险",
+        "TMDX": "器官移植"
     },
     "Bonds": {
         "US2Y": "",

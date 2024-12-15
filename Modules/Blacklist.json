@@ -132,7 +132,9 @@
         "ST",
         "CHRD",
         "IBRX",
-        "FRO"
+        "FRO",
+        "CLF",
+        "ARE"
     ],
     "screener": [
         "CTA-PA",
