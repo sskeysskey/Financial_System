@@ -82,29 +82,49 @@ def compare_today_yesterday(config_path, output_file, gainer_loser_path, earning
                 with sqlite3.connect(db_path) as conn:
                     cursor = conn.cursor()
 
+                    # 首先检查表结构
+                    cursor.execute(f"PRAGMA table_info({table_name})")
+                    columns = [column[1] for column in cursor.fetchall()]
+                    has_volume = 'volume' in columns
+
+                    # 根据是否有 volume 字段调整查询
+                    if has_volume:
+                        query = f"""
+                        SELECT date, price, volume FROM {table_name} 
+                        WHERE name = ? AND date IN (?, ?) ORDER BY date DESC
+                        """
+                    else:
+                        query = f"""
+                        SELECT date, price FROM {table_name} 
+                        WHERE name = ? AND date IN (?, ?) ORDER BY date DESC
+                        """
+
+                    # 获取最近两个日期
                     query_two_closest_dates = f"""
                     SELECT date FROM {table_name}
                     WHERE name = ? ORDER BY date DESC LIMIT 2
                     """
                     cursor.execute(query_two_closest_dates, (keyword,))
-                    results = cursor.fetchall()
+                    dates = cursor.fetchall()
 
-                    if len(results) < 2:
+                    if len(dates) < 2:
                         raise Exception(f"错误：无法找到{table_name}下的{keyword}的两个有效数据日期。")
 
-                    latest_date = results[0][0]
-                    second_latest_date = results[1][0]
+                    latest_date = dates[0][0]
+                    second_latest_date = dates[1][0]
 
-                    query = f"""
-                    SELECT date, price FROM {table_name} 
-                    WHERE name = ? AND date IN (?, ?) ORDER BY date DESC
-                    """
                     cursor.execute(query, (keyword, latest_date, second_latest_date))
                     results = cursor.fetchall()
 
-                    if len(results) == 2:
+                    if len(results) >= 2:
                         latest_price = float(results[0][1]) if results[0][1] is not None else 0
                         second_latest_price = float(results[1][1]) if results[1][1] is not None else 0
+                        
+                        # 处理 volume
+                        latest_volume = 0
+                        if has_volume and len(results[0]) > 2:
+                            latest_volume = results[0][2] if results[0][2] is not None else 0
+
                         change = latest_price - second_latest_price
                         if second_latest_price != 0:
                             percentage_change = (change / second_latest_price) * 100
@@ -119,7 +139,11 @@ def compare_today_yesterday(config_path, output_file, gainer_loser_path, earning
                                 change_text = "0%"  # 两个价格都为零
                             raise ValueError(f" {table_name} 下的 {keyword}的 second_latest_price 为零")
 
-                        # 检查是否连续两天或三天上涨
+                        # 只在有 volume 字段且 volume > 5000000 时添加星号
+                        if has_volume and latest_volume > 5000000:
+                            change_text += '*'
+
+                        # 检查是否连续两天或三天上涨或下跌
                         consecutive_rise = 0
                         consecutive_fall = 0
                         if keyword in config.get(table_name, {}):

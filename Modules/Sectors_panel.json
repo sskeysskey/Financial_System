@@ -154,12 +154,13 @@
         "EURUSD": ""
     },
     "Economics": {
-        "CoreCPI": "11 CoreCPI",
-        "USCPI": "11 USCPI",
-        "USPPI": "12 USPPI",
-        "USInitial": "12 USInitial",
-        "CorePPI": "12 CorePPI",
-        "ImportPriceM": "13 ImportPriceM"
+        "USRetailM": "17 USRetailM",
+        "USInterest": "18 USInterest",
+        "USInitial": "19 USInitial",
+        "CorePCEY": "20 CorePCEY",
+        "CorePCEM": "20 CorePCEM",
+        "PCEY": "20 PCEY",
+        "USConfidence": "20 USConfidence"
     },
     "ETFs_US": {
         "TLT": "",
