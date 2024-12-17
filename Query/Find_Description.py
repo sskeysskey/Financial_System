@@ -141,6 +141,7 @@ class MainWindow(QMainWindow):
             ("Stock_symbol", matched_names_stocks_symbol, 'cyan'),
             ("ETF_symbol", matched_names_etfs_symbol, 'cyan'),
             ("Stock_name", matched_names_stocks_name, 'white'),
+            ("ETF_name", matched_names_etfs_name, 'white'),
             ("Stock_tag", matched_names_stocks_tag, 'white'),
             ("ETF_tag", matched_names_etfs_tag, 'white')
         ]
@@ -153,7 +154,6 @@ class MainWindow(QMainWindow):
                 html_content += self.insert_results_html(category, results, color, 16)
 
         # 添加固定在末尾的类别
-        html_content += self.insert_results_html("ETF_name", matched_names_etfs_name, 'white', 16)
         html_content += self.insert_results_html("Stock_Description", matched_names_stocks, 'gray', 16)
         html_content += self.insert_results_html("ETFs_Description", matched_names_etfs, 'gray', 16)
 
@@ -249,28 +249,51 @@ def search_tag_for_keywords(json_path, keywords, max_distance=1):
 
     def two_step_search(category, search_field):
         search_term = keywords.strip().upper()
-        results = []
+        search_term_lower = keywords.strip().lower()
         
-        # 首先添加完全匹配的结果
+        def exact_match(item):
+            if search_field == 'name':
+                return item.get('name', '').lower() == search_term_lower
+            elif search_field == 'symbol':
+                return item.get('symbol', '').upper() == search_term
+            return False
+        
+        def partial_match(item):
+            if search_field == 'name':
+                return all(keyword in item.get('name', '').lower() for keyword in keywords_lower)
+            elif search_field == 'symbol':
+                return all(keyword in item.get('symbol', '').upper() for keyword in keywords_lower)
+            return False
+        
+        def fuzzy_match_item(item):
+            if search_field == 'name':
+                return all(fuzzy_match(item.get('name', ''), keyword) for keyword in keywords_lower)
+            elif search_field == 'symbol':
+                return all(fuzzy_match(item.get('symbol', ''), keyword) for keyword in keywords_lower)
+            return False
+        
         exact_matches = [
-            (item['symbol'], item.get('name', ''), ' '.join(item.get('tag', []))) if category == 'stocks' else (item['symbol'], ' '.join(item.get('tag', [])))
+            (item['symbol'], item.get('name', ''), ' '.join(item.get('tag', []))) 
+            if category == 'stocks' 
+            else (item['symbol'], ' '.join(item.get('tag', [])))
             for item in data.get(category, [])
-            if item['symbol'] == search_term
+            if exact_match(item)
         ]
         
-        # 然后添加部分匹配的结果
         partial_matches = [
-            (item['symbol'], item.get('name', ''), ' '.join(item.get('tag', []))) if category == 'stocks' else (item['symbol'], ' '.join(item.get('tag', [])))
+            (item['symbol'], item.get('name', ''), ' '.join(item.get('tag', []))) 
+            if category == 'stocks' 
+            else (item['symbol'], ' '.join(item.get('tag', [])))
             for item in data.get(category, [])
-            if item['symbol'] != search_term and all(keyword in item.get(search_field, '').lower() for keyword in keywords_lower)
+            if not exact_match(item) and partial_match(item)
         ]
         
-        # 最后添加模糊匹配的结果
         fuzzy_matches = [
-            (item['symbol'], item.get('name', ''), ' '.join(item.get('tag', []))) if category == 'stocks' else (item['symbol'], ' '.join(item.get('tag', [])))
+            (item['symbol'], item.get('name', ''), ' '.join(item.get('tag', []))) 
+            if category == 'stocks' 
+            else (item['symbol'], ' '.join(item.get('tag', [])))
             for item in data.get(category, [])
-            if item['symbol'] not in [x[0] for x in exact_matches + partial_matches] and
-            all(fuzzy_match(item.get(search_field, ''), keyword) for keyword in keywords_lower)
+            if not exact_match(item) and not partial_match(item) and fuzzy_match_item(item)
         ]
         
         return exact_matches + partial_matches + fuzzy_matches

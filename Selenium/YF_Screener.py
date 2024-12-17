@@ -61,63 +61,103 @@ def is_blacklisted(symbol, blacklist):
 
 # 加载黑名单
 def load_blacklist(file_path):
-    with open(file_path, 'r') as file:
+    with open(file_path, 'r', encoding='utf-8') as file:
         return json.load(file)
 
 def process_urls(driver, urls, output, output_500, output_5000, blacklist):
     for url, sector in urls:
         process_sector(driver, url, sector, output, output_500, output_5000, blacklist)
 
+def retry_on_stale(max_attempts=3):
+    """装饰器: 处理StaleElementReferenceException"""
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_attempts):
+                try:
+                    return func(*args, **kwargs)
+                except StaleElementReferenceException:
+                    if attempt == max_attempts - 1:
+                        raise
+                    print(f"Stale element, retrying... (attempt {attempt + 1})")
+            return None
+        return wrapper
+    return decorator
+
 def fetch_data(driver, url, blacklist):
     driver.get(url)
     results = []
     
     try:
-        # 等待表格完全加载，使用更具体的等待条件
+        # 等待页面加载完成
         WebDriverWait(driver, 15).until(
-            EC.presence_of_all_elements_located((By.XPATH, "//table/tbody/tr/td/fin-streamer"))
+            EC.presence_of_element_located((By.TAG_NAME, "tbody"))
         )
         
-        # 一次性获取所有需要的数据
-        rows = driver.find_elements(By.XPATH, "//table/tbody/tr")
+        @retry_on_stale(max_attempts=3)
+        def extract_row_data(row):
+            """提取单行数据"""
+            # 使用WebDriverWait确保元素可见
+            wait = WebDriverWait(row, 5)
+            
+            symbol = wait.until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "span.symbol"))
+            ).text.strip()
+            
+            name = wait.until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "div.lalign"))
+            ).text.strip()
+            
+            price = wait.until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "fin-streamer[data-field='regularMarketPrice']"))
+            ).text.strip()
+            
+            volume = wait.until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "fin-streamer[data-field='regularMarketVolume']"))
+            ).text.strip()
+            
+            market_cap = wait.until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "fin-streamer[data-field='marketCap']"))
+            ).text.strip()
+            
+            pe_ratio = wait.until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "fin-streamer[data-field='peRatioLtm']"))
+            ).text.strip()
+            
+            return symbol, name, price, volume, market_cap, pe_ratio
+
+        # 获取所有行
+        rows = WebDriverWait(driver, 10).until(
+            EC.presence_of_all_elements_located((By.XPATH, "//table/tbody/tr"))
+        )
         
         for row in rows:
             try:
-                # 使用更简单和稳定的选择器
-                data = {
-                    'symbol': row.find_element(By.CSS_SELECTOR, "span[class*='symbol']").text.strip(),
-                    'name': row.find_element(By.CSS_SELECTOR, "td:nth-child(2)").text.strip(),
-                    'price': row.find_element(By.CSS_SELECTOR, "fin-streamer[data-field='intradayprice']").text.strip(),
-                    'volume': row.find_element(By.CSS_SELECTOR, "fin-streamer[data-field='dayvolume']").text.strip(),
-                    'market_cap': row.find_element(By.CSS_SELECTOR, "fin-streamer[data-field='intradaymarketcap']").text.strip(),
-                    'pe_ratio': row.find_element(By.CSS_SELECTOR, "fin-streamer[data-field='peratio.lasttwelvemonths']").text.strip()
-                }
+                symbol, name, price, volume, market_cap, pe_ratio = extract_row_data(row)
                 
-                if is_blacklisted(data['symbol'], blacklist):
+                if is_blacklisted(symbol, blacklist):
                     continue
-                
+                    
                 # 数据处理
-                price = parse_number(data['price'])
-                volume = parse_volume(data['volume'])
-                market_cap = parse_market_cap(data['market_cap'])
-                pe_ratio = parse_number(data['pe_ratio'])
+                price_parsed = parse_number(price)
+                volume_parsed = parse_volume(volume)
+                market_cap_parsed = parse_market_cap(market_cap)
+                pe_ratio_parsed = parse_number(pe_ratio)
                 
-                if market_cap != '--':
+                if market_cap_parsed != '--':
                     results.append((
-                        data['symbol'],
-                        market_cap,
-                        pe_ratio,
-                        data['name'],
-                        price,
-                        volume
+                        symbol,
+                        market_cap_parsed,
+                        pe_ratio_parsed,
+                        name,
+                        price_parsed,
+                        volume_parsed
                     ))
                     
             except Exception as e:
+                print(f"处理行时出错: {str(e)}")
                 continue
                 
-        # 批量写入文件
         write_results_to_files(results)
-        
         return results
         
     except TimeoutException:
@@ -175,44 +215,27 @@ def parse_market_cap(text):
     if text in ['--', '-', '']:
         return '--'
         
-    try:
-        # 首先尝试获取data-value属性的精确值
-        if 'data-value="' in text:
-            value = float(text.split('data-value="')[1].split('"')[0])
-            return round(value)  # 使用round确保整数输出
-            
-        # 如果没有data-value，则处理显示值
-        multiplier = 1
-        clean_text = text.strip()
+    multiplier = 1
+    clean_text = text.strip()
+    
+    if 'T' in clean_text:
+        multiplier = 1e12
+        clean_text = clean_text.replace('T', '')
+    elif 'B' in clean_text:
+        multiplier = 1e9
+        clean_text = clean_text.replace('B', '')
+    elif 'M' in clean_text:
+        multiplier = 1e6
+        clean_text = clean_text.replace('M', '')
         
-        if 'T' in clean_text:
-            multiplier = 1e12
-            clean_text = clean_text.replace('T', '')
-        elif 'B' in clean_text:
-            multiplier = 1e9
-            clean_text = clean_text.replace('B', '')
-        elif 'M' in clean_text:
-            multiplier = 1e6
-            clean_text = clean_text.replace('M', '')
-            
-        # 移除逗号并转换为浮点数
-        value = float(clean_text.replace(',', '')) * multiplier
-        return round(value)  # 使用round确保整数输出
-        
-    except (ValueError, AttributeError) as e:
-        print(f"市值解析错误: {text} - {str(e)}")
-        return '--'
+    return float(clean_text.replace(',', '')) * multiplier
 
 def write_results_to_files(results):
     """批量写入文件"""
-    with open('/Users/yanzhang/Documents/News/backup/marketcap_pe.txt', 'a') as f1, \
-         open('/Users/yanzhang/Documents/News/backup/price_volume.txt', 'a') as f2:
+    with open('/Users/yanzhang/Documents/News/backup/marketcap_pe.txt', 'a', encoding='utf-8') as f1, \
+         open('/Users/yanzhang/Documents/News/backup/price_volume.txt', 'a', encoding='utf-8') as f2:
         for result in results:
-            # 使用整数格式化市值
-            market_cap = result[1]
-            if market_cap != '--':
-                market_cap = f"{int(market_cap)}"
-            f1.write(f"{result[0]}: {market_cap}, {result[2]}\n")
+            f1.write(f"{result[0]}: {result[1]}, {result[2]}\n")
             f2.write(f"{result[0]}: {result[4]}, {result[5]}\n")
 
 # 辅助函数：将市值转换为“亿”单位
@@ -222,7 +245,7 @@ def simplify_market_cap_threshold(market_cap_threshold):
 
 # 通用的更新JSON函数
 def update_json(data, sector, file_path, output, log_enabled, market_cap_threshold, write_symbols=False):
-    with open(file_path, 'r+') as file:
+    with open(file_path, 'r+', encoding='utf-8') as file:
         json_data = json.load(file)
         current_sectors = {symbol: sec for sec, symbols in json_data.items() for symbol in symbols}
         all_symbols = set(current_sectors.keys())
@@ -256,7 +279,7 @@ def update_json(data, sector, file_path, output, log_enabled, market_cap_thresho
         json.dump(json_data, file, indent=2)
 
     if new_symbols and write_symbols:
-        with open('/Users/yanzhang/Documents/News/backup/symbol_names.txt', 'a') as symbol_file:
+        with open('/Users/yanzhang/Documents/News/backup/symbol_names.txt', 'a', encoding='utf-8') as symbol_file:
             for symbol, name in new_symbols:
                 symbol_file.write(f"{symbol}: {name}\n")
 
@@ -303,13 +326,6 @@ def clean_old_backups(directory, file_patterns, days=4):
                 except Exception as e:
                     print(f"跳过文件：{filename}，原因：{e}")
 
-# 记录带时间戳的错误信息
-def log_error_with_timestamp(error_message, file_path):
-    """记录带时间戳的错误信息"""
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-    with open(file_path, 'a') as error_file:
-        error_file.write(f"[{timestamp}] {error_message}\n")
-
 # 备份文件
 def backup_file(file_name, source_dir, backup_dir):
     file_path = os.path.join(source_dir, file_name)
@@ -337,7 +353,6 @@ blacklist_file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Blackl
 blacklist = load_blacklist(blacklist_file_path)
 
 output, output_500, output_5000 = [], [], []
-ERROR_FILE_PATH = '/Users/yanzhang/Documents/News/Today_error.txt'
 
 # 定义源目录和备份目录
 source_directory = '/Users/yanzhang/Documents/News/backup/'
