@@ -80,7 +80,9 @@
         "CARR",
         "CSX",
         "NSC",
-        "URI"
+        "URI",
+        "ICE",
+        "ROP"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -101,7 +103,8 @@
         "AVGO",
         "TSM",
         "XOM",
-        "NVDA"
+        "NVDA",
+        "ORCL"
     ],
     "purple_keywords": [
         "Bitcoin",
@@ -165,7 +168,6 @@
         "GTLS",
         "TNET",
         "TM",
-        "SLB",
         "CX",
         "MTDR",
         "NOV",
@@ -208,7 +210,9 @@
         "ASH",
         "MPC",
         "PSX",
-        "NDSN"
+        "NDSN",
+        "CHE",
+        "AOS"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -340,7 +344,8 @@
         "TTE",
         "CVE",
         "JNJ",
-        "ELP"
+        "ELP",
+        "SLB"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -369,7 +374,6 @@
         "Wheat",
         "Oat",
         "Corn",
-        "IronOre",
         "Soybean",
         "Lithium",
         "VFC",

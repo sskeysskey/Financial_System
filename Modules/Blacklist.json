@@ -134,7 +134,17 @@
         "IBRX",
         "FRO",
         "CLF",
-        "ARE"
+        "ARE",
+        "BHP",
+        "SHEL",
+        "EQNR",
+        "SU",
+        "CVE",
+        "DINO",
+        "PBF",
+        "CNI",
+        "MDT",
+        "GMAB"
     ],
     "screener": [
         "CTA-PA",

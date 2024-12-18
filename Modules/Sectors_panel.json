@@ -4,39 +4,31 @@
         "CE": "赛莱默",
         "VALE": "",
         "OLN": "氯碱",
-        "NUE": "",
+        "NUE": "纽柯钢铁",
         "LIN": "",
         "FCX": "",
-        "WLK": "",
-        "BHP": "",
-        "SCCO": "",
-        "ASH": ""
+        "WLK": "塑料乙烯",
+        "SCCO": "南方铜业",
+        "ASH": "化学品"
     },
-    "Communication_Services": {
-        "DJT": ""
-    },
+    "Communication_Services": {},
     "Consumer_Cyclical": {
         "STLA": "",
         "DHI": "德尔惠",
         "LEN": "",
-        "SBUX": ""
+        "SBUX": "",
+        "LKQ": ""
     },
     "Energy": {
         "VAL": "海上钻井",
         "XOM": "",
         "FANG": "",
         "WFRD": "",
-        "COP": "",
+        "COP": "康菲石油",
         "CNQ": "",
         "NE": "",
-        "SHEL": "",
-        "EQNR": "",
         "MPC": "",
-        "PSX": "",
-        "SU": "",
-        "CVE": "",
-        "DINO": "",
-        "PBF": ""
+        "PSX": ""
     },
     "Technology": {
         "INTC": "",
@@ -45,57 +37,60 @@
         "UMC": "联电",
         "MCHP": "",
         "AMD": "",
-        "UBER": "",
         "NVDA": "",
         "NXPI": "",
+        "ORCL": "",
         "ADBE": "",
         "TXN": "",
+        "ROP": "",
         "INGM": ""
     },
     "Utilities": {
         "AES": "",
         "SO": "南方电力",
         "D": "",
-        "AEP": "美国电力",
         "DUK": "杜克电力",
         "NEE": ""
     },
     "Consumer_Defensive": {
         "HSY": "",
         "PEP": "",
-        "BG": "",
-        "DAR": ""
+        "BG": "邦吉",
+        "MDLZ": ""
     },
     "Industrials": {
         "LMT": "洛克希德",
-        "NOC": "诺斯罗普",
         "GD": "通用动力",
         "MMS": "政府服务",
-        "RTX": "雷神",
         "GE": "",
         "LHX": "",
-        "CNI": "",
+        "NSC": "货运铁路",
+        "URI": "工业设备",
+        "UNP": "",
+        "CP": "",
         "CARR": "",
         "CSX": "",
-        "NSC": "",
-        "URI": "",
-        "NDSN": ""
+        "NDSN": "",
+        "AOS": "",
+        "SARO": "",
+        "AMTM": ""
     },
     "Real_Estate": {
         "REXR": "",
         "PLD": "仓储",
         "PSA": "公共仓库",
-        "O": ""
+        "O": "",
+        "AMT": ""
     },
     "Financial_Services": {
         "MMC": "",
-        "CB": "",
         "AFL": "",
-        "AIG": ""
+        "AIG": "",
+        "ICE": ""
     },
     "Healthcare": {
         "NVS": "",
-        "ELV": "",
+        "ELV": "医疗保险",
         "AMGN": "",
         "HCA": "医院",
         "UNH": "",
@@ -105,11 +100,9 @@
         "REGN": "",
         "CI": "信诺保险",
         "TMDX": "器官移植",
-        "SNY": "",
-        "MDT": "",
-        "GMAB": "",
-        "BAX": "",
-        "TFX": ""
+        "BAX": "透析设备",
+        "HUM": "",
+        "CHE": ""
     },
     "Bonds": {
         "US2Y": "",
@@ -132,13 +125,6 @@
         "Korea": "",
         "Australia": "",
         "Brazil": ""
-    },
-    "Crypto": {
-        "Bitcoin": "",
-        "Ether": "",
-        "Binance": "",
-        "Solana": "",
-        "XRP": ""
     },
     "Commodities": {
         "CrudeOil": "",
@@ -165,6 +151,13 @@
         "Oat": "",
         "LeanHogs": "猪肉",
         "LiveCattle": "牛肉"
+    },
+    "Crypto": {
+        "Bitcoin": "",
+        "Ether": "",
+        "Binance": "",
+        "Solana": "",
+        "XRP": ""
     },
     "ETFs": {
         "DBC": "大宗商品",
