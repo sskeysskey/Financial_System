@@ -19,7 +19,6 @@
         "DHI",
         "RDY",
         "AMT",
-        "CCI",
         "AZO",
         "NEM",
         "PG",
@@ -40,7 +39,6 @@
         "ABBV",
         "LEN",
         "BBVA",
-        "AMGN",
         "ADI",
         "LIN",
         "LMT",
@@ -70,7 +68,6 @@
         "GE",
         "PSA",
         "DUK",
-        "CNQ",
         "LHX",
         "FCX",
         "SCCO",
@@ -82,7 +79,17 @@
         "NSC",
         "URI",
         "ICE",
-        "ROP"
+        "ROP",
+        "SHW",
+        "VZ",
+        "LOW",
+        "EOG",
+        "RY",
+        "PGR",
+        "ABT",
+        "CAT",
+        "DELL",
+        "PCG"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -104,7 +111,8 @@
         "TSM",
         "XOM",
         "NVDA",
-        "ORCL"
+        "ORCL",
+        "JPM"
     ],
     "purple_keywords": [
         "Bitcoin",
@@ -172,7 +180,6 @@
         "MTDR",
         "NOV",
         "HES",
-        "TX",
         "HXL",
         "RRC",
         "FMX",
@@ -196,7 +203,6 @@
         "REGN",
         "IONS",
         "AKAM",
-        "MDLZ",
         "CAG",
         "BBIO",
         "E",
@@ -212,7 +218,29 @@
         "PSX",
         "NDSN",
         "CHE",
-        "AOS"
+        "AOS",
+        "RIO",
+        "PHI",
+        "QSR",
+        "AVY",
+        "MGM",
+        "BC",
+        "STZ",
+        "FLO",
+        "SHEL",
+        "CNQ",
+        "FCFS",
+        "AMGN",
+        "IQV",
+        "ELAN",
+        "WMS",
+        "OSK",
+        "TKR",
+        "CCI",
+        "CSGP",
+        "STAG",
+        "WEX",
+        "OLED"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -303,7 +331,6 @@
         "BG",
         "OPCH",
         "VRN",
-        "BSBR",
         "HII",
         "MDU",
         "CE",
@@ -345,7 +372,13 @@
         "CVE",
         "JNJ",
         "ELP",
-        "SLB"
+        "SLB",
+        "TX",
+        "F",
+        "MDLZ",
+        "ABEV",
+        "ADM",
+        "OTEX"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -366,7 +399,9 @@
         "NBIS",
         "QRVO",
         "COLD",
-        "TFX"
+        "TFX",
+        "FMC",
+        "BSBR"
     ],
     "black_keywords": [
         "Cotton",
@@ -425,8 +460,7 @@
         "Shanghai",
         "Shenzhen",
         "FXY",
-        "MCK",
-        "SHEL"
+        "MCK"
     ],
     "red_keywords": [
         "USNonFarmA",

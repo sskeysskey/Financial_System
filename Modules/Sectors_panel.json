@@ -9,15 +9,31 @@
         "FCX": "",
         "WLK": "塑料乙烯",
         "SCCO": "南方铜业",
-        "ASH": "化学品"
+        "ASH": "化学品",
+        "RIO": "",
+        "SHW": "",
+        "ECL": "",
+        "MOS": "",
+        "FMC": ""
     },
-    "Communication_Services": {},
+    "Communication_Services": {
+        "VZ": "",
+        "PHI": ""
+    },
     "Consumer_Cyclical": {
         "STLA": "",
         "DHI": "德尔惠",
         "LEN": "",
         "SBUX": "",
-        "LKQ": ""
+        "LKQ": "",
+        "LOW": "",
+        "MELI": "",
+        "RACE": "",
+        "F": "",
+        "QSR": "",
+        "AVY": "",
+        "MGM": "",
+        "BC": ""
     },
     "Energy": {
         "VAL": "海上钻井",
@@ -28,7 +44,8 @@
         "CNQ": "",
         "NE": "",
         "MPC": "",
-        "PSX": ""
+        "PSX": "",
+        "EOG": ""
     },
     "Technology": {
         "INTC": "",
@@ -43,20 +60,33 @@
         "ADBE": "",
         "TXN": "",
         "ROP": "",
-        "INGM": ""
+        "INGM": "",
+        "QCOM": "",
+        "DELL": "",
+        "CDW": "",
+        "WEX": "",
+        "OLED": "",
+        "SAIC": ""
     },
     "Utilities": {
         "AES": "",
         "SO": "南方电力",
         "D": "",
         "DUK": "杜克电力",
-        "NEE": ""
+        "NEE": "",
+        "AEP": "",
+        "PCG": ""
     },
     "Consumer_Defensive": {
         "HSY": "",
         "PEP": "",
         "BG": "邦吉",
-        "MDLZ": ""
+        "MDLZ": "",
+        "STZ": "",
+        "KHC": "",
+        "ADM": "",
+        "DAR": "",
+        "FLO": ""
     },
     "Industrials": {
         "LMT": "洛克希德",
@@ -73,20 +103,40 @@
         "NDSN": "",
         "AOS": "",
         "SARO": "",
-        "AMTM": ""
+        "AMTM": "",
+        "CAT": "",
+        "RTX": "",
+        "UPS": "",
+        "TDG": "",
+        "NOC": "",
+        "WMS": "",
+        "OSK": "",
+        "TKR": "",
+        "ATKR": ""
     },
     "Real_Estate": {
         "REXR": "",
         "PLD": "仓储",
         "PSA": "公共仓库",
         "O": "",
-        "AMT": ""
+        "AMT": "",
+        "CSGP": "",
+        "COLD": "",
+        "STAG": ""
     },
     "Financial_Services": {
         "MMC": "",
         "AFL": "",
         "AIG": "",
-        "ICE": ""
+        "ICE": "",
+        "BRK-A": "",
+        "JPM": "",
+        "RY": "",
+        "PGR": "",
+        "CB": "",
+        "NU": "",
+        "ING": "",
+        "FCFS": ""
     },
     "Healthcare": {
         "NVS": "",
@@ -102,7 +152,15 @@
         "TMDX": "器官移植",
         "BAX": "透析设备",
         "HUM": "",
-        "CHE": ""
+        "CHE": "",
+        "ABT": "",
+        "VRTX": "",
+        "ZTS": "",
+        "IQV": "",
+        "BIIB": "",
+        "TFX": "",
+        "ELAN": "",
+        "CRSP": ""
     },
     "Bonds": {
         "US2Y": "",
