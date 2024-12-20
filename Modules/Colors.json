@@ -1,11 +1,9 @@
 {
     "cyan_keywords": [
         "UNH",
-        "ADBE",
         "VRTX",
         "INTU",
         "AZN",
-        "PLD",
         "ASML",
         "KLAC",
         "LRCX",
@@ -75,7 +73,6 @@
         "SU",
         "AIG",
         "CARR",
-        "CSX",
         "NSC",
         "URI",
         "ICE",
@@ -89,7 +86,12 @@
         "ABT",
         "CAT",
         "DELL",
-        "PCG"
+        "PCG",
+        "HD",
+        "UBS",
+        "CTAS",
+        "MU",
+        "SNPS"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -178,7 +180,6 @@
         "TM",
         "CX",
         "MTDR",
-        "NOV",
         "HES",
         "HXL",
         "RRC",
@@ -206,14 +207,12 @@
         "CAG",
         "BBIO",
         "E",
-        "AES",
         "WLK",
         "IBRX",
         "CRSP",
         "TMDX",
         "ARE",
         "SAIC",
-        "ASH",
         "MPC",
         "PSX",
         "NDSN",
@@ -224,7 +223,6 @@
         "QSR",
         "AVY",
         "MGM",
-        "BC",
         "STZ",
         "FLO",
         "SHEL",
@@ -240,7 +238,14 @@
         "CSGP",
         "STAG",
         "WEX",
-        "OLED"
+        "OLED",
+        "RS",
+        "VLO",
+        "CHX",
+        "CSX",
+        "PLD",
+        "ADBE",
+        "AMKR"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -378,7 +383,11 @@
         "MDLZ",
         "ABEV",
         "ADM",
-        "OTEX"
+        "OTEX",
+        "ASH",
+        "BC",
+        "NOV",
+        "AES"
     ],
     "orange_keywords": [
         "NASDAQ",

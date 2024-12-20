@@ -88,47 +88,44 @@ def fetch_data(driver, url, blacklist):
     results = []
     
     try:
-        # 等待页面加载完成
-        WebDriverWait(driver, 15).until(
-            EC.presence_of_element_located((By.TAG_NAME, "tbody"))
-        )
+        # 增加等待时间并使用显式等待
+        wait = WebDriverWait(driver, 20)
+        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "table tbody tr")))
+        
+        # 添加短暂延迟让页面完全加载
+        time.sleep(2)
         
         @retry_on_stale(max_attempts=3)
         def extract_row_data(row):
             """提取单行数据"""
-            # 使用WebDriverWait确保元素可见
-            wait = WebDriverWait(row, 5)
-            
-            symbol = wait.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "span.symbol"))
-            ).text.strip()
-            
-            name = wait.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "div.lalign"))
-            ).text.strip()
-            
-            price = wait.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "fin-streamer[data-field='regularMarketPrice']"))
-            ).text.strip()
-            
-            volume = wait.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "fin-streamer[data-field='regularMarketVolume']"))
-            ).text.strip()
-            
-            market_cap = wait.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "fin-streamer[data-field='marketCap']"))
-            ).text.strip()
-            
-            pe_ratio = wait.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "fin-streamer[data-field='peRatioLtm']"))
-            ).text.strip()
-            
-            return symbol, name, price, volume, market_cap, pe_ratio
+            try:
+                # 使用更精确的选择器
+                symbol = row.find_element(By.CSS_SELECTOR, "a[data-testid='table-cell-ticker'] span.symbol").text.strip()
+                
+                name = row.find_element(By.CSS_SELECTOR, "div[title]").get_attribute("title").strip()
+                
+                price = row.find_element(By.CSS_SELECTOR, "fin-streamer[data-field='regularMarketPrice']").get_attribute("data-value").strip()
+                
+                # 对于volume，先尝试获取文本内容
+                volume_element = row.find_element(By.XPATH, ".//td[contains(@class, 'yf-2twxe2')][8]")
+                volume = volume_element.text.strip()
+                
+                # 对于market cap，先尝试获取文本内容
+                market_cap_element = row.find_element(By.XPATH, ".//td[contains(@class, 'yf-2twxe2')][10]")
+                market_cap = market_cap_element.text.strip()
+                
+                # 对于PE ratio，使用XPath定位包含PE ratio的单元格
+                pe_ratio_element = row.find_element(By.XPATH, ".//td[contains(@class, 'yf-2twxe2')][11]")
+                pe_ratio = pe_ratio_element.text.strip()
+                
+                return symbol, name, price, volume, market_cap, pe_ratio
+                
+            except Exception as e:
+                print(f"提取行数据时出错: {str(e)}")
+                raise
 
         # 获取所有行
-        rows = WebDriverWait(driver, 10).until(
-            EC.presence_of_all_elements_located((By.XPATH, "//table/tbody/tr"))
-        )
+        rows = driver.find_elements(By.CSS_SELECTOR, "table tbody tr")
         
         for row in rows:
             try:
@@ -162,6 +159,9 @@ def fetch_data(driver, url, blacklist):
         
     except TimeoutException:
         print("页面加载超时")
+        return []
+    except Exception as e:
+        print(f"获取数据时出错: {str(e)}")
         return []
 
 def parse_number(text):

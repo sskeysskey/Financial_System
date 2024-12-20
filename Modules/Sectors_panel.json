@@ -5,7 +5,13 @@
         "LIN": "",
         "WLK": "塑料乙烯",
         "ASH": "",
-        "SHW": ""
+        "SHW": "",
+        "RIO": "",
+        "SCCO": "",
+        "ECL": "",
+        "FCX": "",
+        "RS": "",
+        "FMC": ""
     },
     "Communication_Services": {},
     "Consumer_Cyclical": {
@@ -15,7 +21,12 @@
         "LOW": "劳氏",
         "MELI": "",
         "RACE": "法拉利",
-        "QSR": "汉堡王"
+        "QSR": "汉堡王",
+        "HD": "",
+        "LEN": "",
+        "AVY": "",
+        "LKQ": "",
+        "BC": ""
     },
     "Energy": {
         "VAL": "海上钻井",
@@ -25,7 +36,12 @@
         "NE": "",
         "MPC": "",
         "PSX": "",
-        "EOG": ""
+        "EOG": "",
+        "XOM": "",
+        "CVX": "",
+        "FANG": "",
+        "VLO": "",
+        "CHX": ""
     },
     "Technology": {
         "INTC": "",
@@ -38,12 +54,22 @@
         "TXN": "",
         "QCOM": "",
         "OLED": "",
-        "SAIC": ""
+        "SAIC": "",
+        "ADBE": "",
+        "MU": "",
+        "DELL": "",
+        "SNPS": "",
+        "ROP": "",
+        "MCHP": "",
+        "STM": "",
+        "AMKR": "",
+        "ACLS": ""
     },
     "Utilities": {
         "SO": "南方电力",
         "DUK": "杜克电力",
-        "AEP": ""
+        "AEP": "",
+        "NEE": ""
     },
     "Consumer_Defensive": {
         "HSY": "",
@@ -51,7 +77,9 @@
         "BG": "邦吉",
         "MDLZ": "",
         "ADM": "",
-        "FLO": ""
+        "FLO": "",
+        "STZ": "",
+        "DAR": ""
     },
     "Industrials": {
         "LMT": "洛克希德",
@@ -62,19 +90,36 @@
         "NSC": "货运铁路",
         "URI": "联合租赁",
         "CARR": "",
-        "CAT": "卡特彼勒"
+        "CAT": "卡特彼勒",
+        "UNP": "",
+        "UPS": "",
+        "CTAS": "",
+        "NOC": "",
+        "CSX": "",
+        "NDSN": "",
+        "AOS": "",
+        "OSK": "",
+        "TKR": "",
+        "AMTM": ""
     },
     "Real_Estate": {
         "REXR": "",
         "PLD": "仓储",
-        "STAG": ""
+        "STAG": "",
+        "AMT": "",
+        "PSA": ""
     },
     "Financial_Services": {
         "MMC": "",
         "AFL": "",
         "ICE": "洲际",
         "BRK-A": "",
-        "CB": ""
+        "CB": "",
+        "RY": "",
+        "PGR": "",
+        "UBS": "",
+        "SAN": "",
+        "NU": ""
     },
     "Healthcare": {
         "NVS": "",
@@ -90,7 +135,13 @@
         "VRTX": "",
         "TFX": "",
         "ELAN": "",
-        "CRSP": ""
+        "CRSP": "",
+        "JNJ": "",
+        "DHR": "",
+        "ZTS": "",
+        "CVS": "",
+        "BAX": "",
+        "TMDX": ""
     },
     "Bonds": {
         "US2Y": "",
