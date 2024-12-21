@@ -1,147 +1,78 @@
 {
     "Basic_Materials": {
         "CE": "赛莱默",
-        "OLN": "氯碱",
         "LIN": "",
         "WLK": "塑料乙烯",
-        "ASH": "",
         "SHW": "",
-        "RIO": "",
         "SCCO": "",
         "ECL": "",
-        "FCX": "",
         "RS": "",
-        "FMC": ""
+        "ASH": ""
     },
     "Communication_Services": {},
     "Consumer_Cyclical": {
         "STLA": "",
-        "DHI": "德尔惠",
         "SBUX": "",
         "LOW": "劳氏",
-        "MELI": "",
-        "RACE": "法拉利",
-        "QSR": "汉堡王",
         "HD": "",
         "LEN": "",
-        "AVY": "",
-        "LKQ": "",
-        "BC": ""
+        "BABA": ""
     },
     "Energy": {
-        "VAL": "海上钻井",
         "WFRD": "",
-        "COP": "康菲石油",
-        "CNQ": "",
-        "NE": "",
-        "MPC": "",
-        "PSX": "",
+        "MPC": "马拉松",
         "EOG": "",
-        "XOM": "",
-        "CVX": "",
-        "FANG": "",
-        "VLO": "",
-        "CHX": ""
+        "VLO": ""
     },
     "Technology": {
         "INTC": "",
         "AMAT": "应用材料",
         "AMD": "",
         "NVDA": "",
-        "UMC": "联电",
-        "NXPI": "",
         "ORCL": "",
-        "TXN": "",
-        "QCOM": "",
-        "OLED": "",
         "SAIC": "",
-        "ADBE": "",
         "MU": "",
-        "DELL": "",
-        "SNPS": "",
-        "ROP": "",
         "MCHP": "",
-        "STM": "",
-        "AMKR": "",
-        "ACLS": ""
+        "SNPS": ""
     },
     "Utilities": {
         "SO": "南方电力",
         "DUK": "杜克电力",
-        "AEP": "",
-        "NEE": ""
+        "AEP": ""
     },
     "Consumer_Defensive": {
         "HSY": "",
         "PEP": "",
-        "BG": "邦吉",
-        "MDLZ": "",
-        "ADM": "",
-        "FLO": "",
-        "STZ": "",
-        "DAR": ""
+        "UL": "",
+        "FLO": ""
     },
     "Industrials": {
         "LMT": "洛克希德",
         "GD": "通用动力",
-        "MMS": "政府服务",
         "GE": "",
-        "LHX": "",
-        "NSC": "货运铁路",
         "URI": "联合租赁",
-        "CARR": "",
         "CAT": "卡特彼勒",
-        "UNP": "",
-        "UPS": "",
-        "CTAS": "",
-        "NOC": "",
-        "CSX": "",
-        "NDSN": "",
-        "AOS": "",
-        "OSK": "",
-        "TKR": "",
-        "AMTM": ""
+        "CTAS": ""
     },
-    "Real_Estate": {
-        "REXR": "",
-        "PLD": "仓储",
-        "STAG": "",
-        "AMT": "",
-        "PSA": ""
-    },
+    "Real_Estate": {},
     "Financial_Services": {
-        "MMC": "",
-        "AFL": "",
         "ICE": "洲际",
         "BRK-A": "",
-        "CB": "",
-        "RY": "",
-        "PGR": "",
-        "UBS": "",
-        "SAN": "",
-        "NU": ""
+        "CB": "安达保险",
+        "UBS": ""
     },
     "Healthcare": {
         "NVS": "",
         "ELV": "医疗保险",
-        "AMGN": "",
-        "HCA": "医院",
         "UNH": "",
         "CNC": "",
-        "REGN": "",
         "CI": "信诺保险",
         "HUM": "",
         "CHE": "",
         "VRTX": "",
-        "TFX": "",
-        "ELAN": "",
-        "CRSP": "",
-        "JNJ": "",
-        "DHR": "",
-        "ZTS": "",
-        "CVS": "",
-        "BAX": "",
-        "TMDX": ""
+        "TMDX": "",
+        "NVO": "",
+        "REGN": ""
     },
     "Bonds": {
         "US2Y": "",

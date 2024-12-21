@@ -99,7 +99,6 @@
     "FSTA",
     "CIBR",
     "GXG",
-    "FXZ",
     "JPIB",
     "EPU",
     "IDX",
@@ -256,7 +255,6 @@
     "SPMB",
     "JCPB",
     "IEF",
-    "VRIG",
     "BSJP",
     "SCHR",
     "BIV",
@@ -364,7 +362,6 @@
     "SHV",
     "IYK",
     "CEMB",
-    "FHLC",
     "EMHY",
     "REET",
     "TLH",
@@ -436,7 +433,8 @@
     "NANR",
     "SCHP",
     "MTUM",
-    "FXO"
+    "FXO",
+    "VAW"
   ],
   "Basic_Materials": [
     "LIN",

@@ -92,37 +92,29 @@ def fetch_data(driver, url, blacklist):
         wait = WebDriverWait(driver, 20)
         wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "table tbody tr")))
         
-        # 添加短暂延迟让页面完全加载
-        time.sleep(2)
-        
         @retry_on_stale(max_attempts=3)
         def extract_row_data(row):
             """提取单行数据"""
-            try:
-                # 使用更精确的选择器
-                symbol = row.find_element(By.CSS_SELECTOR, "a[data-testid='table-cell-ticker'] span.symbol").text.strip()
-                
-                name = row.find_element(By.CSS_SELECTOR, "div[title]").get_attribute("title").strip()
-                
-                price = row.find_element(By.CSS_SELECTOR, "fin-streamer[data-field='regularMarketPrice']").get_attribute("data-value").strip()
-                
-                # 对于volume，先尝试获取文本内容
-                volume_element = row.find_element(By.XPATH, ".//td[contains(@class, 'yf-2twxe2')][8]")
-                volume = volume_element.text.strip()
-                
-                # 对于market cap，先尝试获取文本内容
-                market_cap_element = row.find_element(By.XPATH, ".//td[contains(@class, 'yf-2twxe2')][10]")
-                market_cap = market_cap_element.text.strip()
-                
-                # 对于PE ratio，使用XPath定位包含PE ratio的单元格
-                pe_ratio_element = row.find_element(By.XPATH, ".//td[contains(@class, 'yf-2twxe2')][11]")
-                pe_ratio = pe_ratio_element.text.strip()
-                
-                return symbol, name, price, volume, market_cap, pe_ratio
-                
-            except Exception as e:
-                print(f"提取行数据时出错: {str(e)}")
-                raise
+            # 使用更精确的选择器
+            symbol = row.find_element(By.CSS_SELECTOR, "a[data-testid='table-cell-ticker'] span.symbol").text.strip()
+            
+            name = row.find_element(By.CSS_SELECTOR, "div[title]").get_attribute("title").strip()
+            
+            price = row.find_element(By.CSS_SELECTOR, "fin-streamer[data-field='regularMarketPrice']").get_attribute("data-value").strip()
+            
+            # 对于volume，先尝试获取文本内容
+            volume_element = row.find_element(By.XPATH, ".//td[contains(@class, 'yf-2twxe2')][8]")
+            volume = volume_element.text.strip()
+            
+            # 对于market cap，先尝试获取文本内容
+            market_cap_element = row.find_element(By.XPATH, ".//td[contains(@class, 'yf-2twxe2')][10]")
+            market_cap = market_cap_element.text.strip()
+            
+            # 对于PE ratio，使用XPath定位包含PE ratio的单元格
+            pe_ratio_element = row.find_element(By.XPATH, ".//td[contains(@class, 'yf-2twxe2')][11]")
+            pe_ratio = pe_ratio_element.text.strip()
+            
+            return symbol, name, price, volume, market_cap, pe_ratio
 
         # 获取所有行
         rows = driver.find_elements(By.CSS_SELECTOR, "table tbody tr")
@@ -346,7 +338,18 @@ mouse_thread.start()
 # 主程序逻辑
 chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
 service = Service(executable_path=chrome_driver_path)
-driver = webdriver.Chrome(service=service)
+# driver = webdriver.Chrome(service=service)
+
+# 设置Chrome选项
+chrome_options = webdriver.ChromeOptions()
+chrome_options.add_argument('--disable-gpu')
+chrome_options.add_argument('--no-sandbox')
+chrome_options.add_argument('--disable-dev-shm-usage')
+chrome_options.add_argument('--disable-animations')
+chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+
+# 在创建driver时使用这些选项
+driver = webdriver.Chrome(service=service, options=chrome_options)
 
 # 加载blacklist.json文件
 blacklist_file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'

@@ -91,7 +91,8 @@
         "UBS",
         "CTAS",
         "MU",
-        "SNPS"
+        "SNPS",
+        "BABA"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -102,7 +103,6 @@
         "Solana",
         "DXJ",
         "SCHD",
-        "NVO",
         "LLY",
         "SONY",
         "TSLA",
@@ -245,7 +245,8 @@
         "CSX",
         "PLD",
         "ADBE",
-        "AMKR"
+        "AMKR",
+        "NVO"
     ],
     "yellow_keywords": [
         "Nikkei",
