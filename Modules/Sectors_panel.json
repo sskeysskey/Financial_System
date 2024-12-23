@@ -111,7 +111,7 @@
         "Platinum": "铂金",
         "Cocoa": "",
         "Coffee": "",
-        "Corn": "",
+        "YuMi": "玉米",
         "Soybean": "",
         "Cotton": "",
         "OrangeJuice": "桔汁",
@@ -149,13 +149,7 @@
         "EURUSD": ""
     },
     "Economics": {
-        "USRetailM": "17 USRetailM",
-        "USInterest": "18 USInterest",
-        "USInitial": "19 USInitial",
-        "CorePCEY": "20 CorePCEY",
-        "CorePCEM": "20 CorePCEM",
-        "PCEY": "20 PCEY",
-        "USConfidence": "20 USConfidence"
+        "USInitial": "26 USInitial"
     },
     "ETFs_US": {
         "TLT": "",

@@ -97,7 +97,7 @@
     "CrudeOil",
     "Naturalgas",
     "Brent",
-    "Corn",
+    "YuMi",
     "Oat",
     "Rice",
     "Soybean",
@@ -367,7 +367,6 @@
     "PCEF",
     "IGEB",
     "HDEF",
-    "FGD",
     "IFRA",
     "DRSK",
     "SUSB",
@@ -494,7 +493,9 @@
     "SCHP",
     "MTUM",
     "FXO",
-    "VAW"
+    "VAW",
+    "VIGI",
+    "PJUL"
   ],
   "Basic_Materials": [
     "LIN",
@@ -797,7 +798,6 @@
     "SKY",
     "LTH",
     "GPI",
-    "PSNYW",
     "GAP",
     "BOOT",
     "CPRI",
