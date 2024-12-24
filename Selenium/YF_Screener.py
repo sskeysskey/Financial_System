@@ -116,9 +116,65 @@ def fetch_data(driver, url, blacklist):
             
             return symbol, name, price, volume, market_cap, pe_ratio
 
+        # @retry_on_stale(max_attempts=3)
+        # def extract_row_data(row):
+        #     """提取单行数据,使用多重定位策略"""
+            
+        #     def safe_get_value(element, methods):
+        #         """安全获取元素值的辅助函数,支持多种定位方法"""
+        #         for method in methods:
+        #             try:
+        #                 value = method(element)
+        #                 if value and value.strip() not in ['', '--', 'N/A']:
+        #                     return value.strip()
+        #             except:
+        #                 continue
+        #         return '--'
+
+        #     # 对于volume的多重定位策略
+        #     def get_volume(row):
+        #         methods = [
+        #             lambda r: r.find_element(By.CSS_SELECTOR, "td:nth-child(8)").text,  # 按位置
+        #             lambda r: r.find_element(By.CSS_SELECTOR, "fin-streamer[data-field='volume']").get_attribute("data-value"),  # 按属性
+        #             lambda r: r.find_elements(By.TAG_NAME, "td")[7].text,  # 按索引
+        #             lambda r: r.find_element(By.XPATH, ".//td[contains(text(), 'M') or contains(text(), 'K')]").text  # 按内容特征
+        #         ]
+        #         return safe_get_value(row, methods)
+
+        #     # 对于market cap的多重定位策略    
+        #     def get_market_cap(row):
+        #         methods = [
+        #             lambda r: r.find_element(By.CSS_SELECTOR, "td:nth-child(10)").text,  # 按位置
+        #             lambda r: r.find_element(By.CSS_SELECTOR, "fin-streamer[data-field='marketCap']").get_attribute("data-value"),  # 按属性
+        #             lambda r: r.find_elements(By.TAG_NAME, "td")[9].text,  # 按索引
+        #             lambda r: r.find_element(By.XPATH, ".//td[contains(text(), 'T') or contains(text(), 'B') or contains(text(), 'M')]").text  # 按内容特征
+        #         ]
+        #         return safe_get_value(row, methods)
+
+        #     # 对于PE ratio的多重定位策略
+        #     def get_pe_ratio(row):
+        #         methods = [
+        #             lambda r: r.find_element(By.CSS_SELECTOR, "td:nth-child(11)").text,  # 按位置
+        #             lambda r: r.find_element(By.CSS_SELECTOR, "fin-streamer[data-field='peRatio']").get_attribute("data-value"),  # 按属性
+        #             lambda r: r.find_elements(By.TAG_NAME, "td")[10].text,  # 按索引
+        #             lambda r: r.find_element(By.XPATH, ".//td[contains(@aria-label, 'P/E')]").text  # 按标签含义
+        #         ]
+        #         return safe_get_value(row, methods)
+
+        #     # 其他字段保持不变...
+        #     symbol = row.find_element(By.CSS_SELECTOR, "a[data-testid='table-cell-ticker'] span.symbol").text.strip()
+        #     name = row.find_element(By.CSS_SELECTOR, "div[title]").get_attribute("title").strip()
+        #     price = row.find_element(By.CSS_SELECTOR, "fin-streamer[data-field='regularMarketPrice']").get_attribute("data-value").strip()
+            
+        #     # 使用新的多重定位策略获取数据
+        #     volume = get_volume(row)
+        #     market_cap = get_market_cap(row)
+        #     pe_ratio = get_pe_ratio(row)
+            
+        #     return symbol, name, price, volume, market_cap, pe_ratio
+
         # 获取所有行
         rows = driver.find_elements(By.CSS_SELECTOR, "table tbody tr")
-        
         for row in rows:
             try:
                 symbol, name, price, volume, market_cap, pe_ratio = extract_row_data(row)

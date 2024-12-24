@@ -33,7 +33,8 @@
         "SAIC": "",
         "MU": "",
         "MCHP": "",
-        "SNPS": ""
+        "SNPS": "",
+        "ARM": ""
     },
     "Utilities": {
         "SO": "南方电力",
@@ -44,7 +45,9 @@
         "HSY": "",
         "PEP": "",
         "UL": "",
-        "FLO": ""
+        "FLO": "",
+        "STZ": "",
+        "BF-B": ""
     },
     "Industrials": {
         "LMT": "洛克希德",
@@ -52,14 +55,17 @@
         "GE": "",
         "URI": "联合租赁",
         "CAT": "卡特彼勒",
-        "CTAS": ""
+        "CTAS": "",
+        "WM": "",
+        "EXPD": ""
     },
     "Real_Estate": {},
     "Financial_Services": {
         "ICE": "洲际",
         "BRK-A": "",
         "CB": "安达保险",
-        "UBS": ""
+        "UBS": "",
+        "NU": ""
     },
     "Healthcare": {
         "NVS": "",
@@ -156,7 +162,7 @@
         "XLK": "科技",
         "IYH": "医疗",
         "XLI": "工业",
-        "IYF": "金融",
+        "XLF": "金融",
         "XLP": "必需消费",
         "XLY": "非必需消费",
         "XLRE": "房地产",

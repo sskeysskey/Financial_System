@@ -92,7 +92,9 @@
         "CTAS",
         "MU",
         "SNPS",
-        "BABA"
+        "BABA",
+        "WM",
+        "ARM"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -246,7 +248,8 @@
         "PLD",
         "ADBE",
         "AMKR",
-        "NVO"
+        "NVO",
+        "EXPD"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -382,7 +385,6 @@
         "TX",
         "F",
         "MDLZ",
-        "ABEV",
         "ADM",
         "OTEX",
         "ASH",
@@ -458,7 +460,8 @@
         "AMTM",
         "BBD",
         "CVS",
-        "RCI"
+        "RCI",
+        "ABEV"
     ],
     "green_keywords": [
         "EURCNY",
