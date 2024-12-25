@@ -297,7 +297,6 @@
         "CZR",
         "DAR",
         "MOS",
-        "TU",
         "OXY",
         "CLF",
         "ALTM",
@@ -413,7 +412,8 @@
         "COLD",
         "TFX",
         "FMC",
-        "BSBR"
+        "BSBR",
+        "TU"
     ],
     "black_keywords": [
         "Cotton",

@@ -15,14 +15,14 @@
         "SBUX": "",
         "LOW": "劳氏",
         "HD": "",
-        "LEN": "",
-        "BABA": ""
+        "LEN": ""
     },
     "Energy": {
         "WFRD": "",
         "MPC": "马拉松",
         "EOG": "",
-        "VLO": ""
+        "VLO": "",
+        "FRO": ""
     },
     "Technology": {
         "INTC": "",
@@ -33,7 +33,6 @@
         "SAIC": "",
         "MU": "",
         "MCHP": "",
-        "SNPS": "",
         "ARM": ""
     },
     "Utilities": {
@@ -56,7 +55,6 @@
         "URI": "联合租赁",
         "CAT": "卡特彼勒",
         "CTAS": "",
-        "WM": "",
         "EXPD": ""
     },
     "Real_Estate": {},
