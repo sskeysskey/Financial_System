@@ -75,6 +75,7 @@ stock_symbols = [match[0] for match in matches]
 
 # 准备保存数据的字典
 shares_data = {}
+symbol_names = {}  # 新增字典来存储公司名称
 
 # 将匹配的内容添加到JSON数据中对应的组别
 for symbol in stock_symbols:
@@ -83,11 +84,23 @@ for symbol in stock_symbols:
     try:
         # 查找Shares Outstanding的数据
         shares_outstanding_element = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.XPATH, "//td[text()='Shares Outstanding']/following-sibling::td"))
+            EC.presence_of_element_located((By.XPATH, "//td[text()='Shares Outstanding']/following-sibling::td"))
+            )
+        
+        # 新增：查找公司名称
+        company_name_element = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//h1[@class='yf-xxbei9']"))
         )
+        
+        # 获取数据
         shares_outstanding = shares_outstanding_element.text
+        company_name = company_name_element.text.split('(')[0].strip()  # 分割并去除括号内容和空格
+        
+        # 转换和存储数据
         shares_outstanding_converted = convert_shares_format(shares_outstanding)
         shares_data[symbol] = shares_outstanding_converted
+        symbol_names[symbol] = company_name
+        
     except Exception as e:
         print(f"Error fetching data for {symbol}: {str(e)}")
 
@@ -101,3 +114,11 @@ with open("/Users/yanzhang/Documents/News/backup/Shares.txt", "a+") as file:
     for symbol, shares in shares_data.items():
         if f"{symbol}: {shares}" not in existing_data:
             file.write(f"{symbol}: {shares}\n")
+
+# 写入公司名称数据
+with open('/Users/yanzhang/Documents/News/backup/symbol_names.txt', 'a+', encoding='utf-8') as symbol_file:
+    symbol_file.seek(0)
+    existing_names = symbol_file.read()
+    for symbol, name in symbol_names.items():
+        if f"{symbol}: {name}" not in existing_names:
+            symbol_file.write(f"{symbol}: {name}\n")

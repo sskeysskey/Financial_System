@@ -6,8 +6,7 @@
         "SHW": "",
         "SCCO": "",
         "ECL": "",
-        "RS": "",
-        "ASH": ""
+        "RS": ""
     },
     "Communication_Services": {},
     "Consumer_Cyclical": {
@@ -29,11 +28,8 @@
         "AMAT": "应用材料",
         "AMD": "",
         "NVDA": "",
-        "ORCL": "",
-        "SAIC": "",
         "MU": "",
-        "MCHP": "",
-        "ARM": ""
+        "MCHP": ""
     },
     "Utilities": {
         "SO": "南方电力",
@@ -43,10 +39,7 @@
     "Consumer_Defensive": {
         "HSY": "",
         "PEP": "",
-        "UL": "",
-        "FLO": "",
-        "STZ": "",
-        "BF-B": ""
+        "UL": "联合利华"
     },
     "Industrials": {
         "LMT": "洛克希德",
@@ -54,29 +47,22 @@
         "GE": "",
         "URI": "联合租赁",
         "CAT": "卡特彼勒",
-        "CTAS": "",
-        "EXPD": ""
+        "CTAS": ""
     },
     "Real_Estate": {},
     "Financial_Services": {
         "ICE": "洲际",
         "BRK-A": "",
-        "CB": "安达保险",
-        "UBS": "",
-        "NU": ""
+        "CB": "安达保险"
     },
     "Healthcare": {
-        "NVS": "",
         "ELV": "医疗保险",
         "UNH": "",
         "CNC": "",
         "CI": "信诺保险",
         "HUM": "",
-        "CHE": "",
         "VRTX": "",
-        "TMDX": "",
-        "NVO": "",
-        "REGN": ""
+        "NVO": ""
     },
     "Bonds": {
         "US2Y": "",
