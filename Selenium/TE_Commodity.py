@@ -75,7 +75,7 @@ def main():
         driver.get('https://tradingeconomics.com/commodities')
         commodities = [
             "Coal", "Uranium", "Steel", "Lithium", "Wheat", "Palm Oil", "Aluminum",
-            "Nickel", "Tin", "Zinc", "Palladium", "Poultry", "Salmon", "Iron Ore"
+            "Nickel", "Tin", "Zinc", "Palladium", "Poultry", "Salmon", "Iron Ore", "Orange Juice"
         ]
 
         for commodity in commodities:
