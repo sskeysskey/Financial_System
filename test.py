@@ -1,99 +1,79 @@
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from datetime import datetime, timedelta
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from datetime import datetime, timedelta
 import sqlite3
-import logging
 
-# 设置日志
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# 获取当前时间
+now = datetime.now()
 
-# ChromeDriver 路径
-CHROME_DRIVER_PATH = "/Users/yanzhang/Downloads/backup/chromedriver"
-DB_PATH = '/Users/yanzhang/Documents/Database/Finance.db'
-
-def setup_driver():
-    service = Service(executable_path=CHROME_DRIVER_PATH)
-    return webdriver.Chrome(service=service)
-
-def setup_database():
-    conn = sqlite3.connect(DB_PATH)
+# 判断今天的星期数，如果是周日(6)或周一(0)，则不执行程序
+if now.weekday() in (0, 6):
+    print("Today is either Sunday or Monday. The script will not run.")
+else:
+    # 初始化数据库连接
+    conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
     cursor = conn.cursor()
+    # 创建表
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Commodities (
+    CREATE TABLE IF NOT EXISTS Currencies (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         date TEXT,
         name TEXT,
-        price REAL,
-        UNIQUE(date, name)
+        price REAL
     );
     ''')
     conn.commit()
-    return conn, cursor
 
-def fetch_commodity_data_str(driver, commodity_name, xpath='./ancestor::tr'):
-    element = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.LINK_TEXT, commodity_name))
-    )
-    row = element.find_element(By.XPATH, xpath)
-    price_str = row.find_element(By.ID, 'p').text.strip()
-    return float(price_str.replace(',', ''))
+    # ChromeDriver 路径
+    chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
+    service = Service(executable_path=chrome_driver_path)
 
-def fetch_commodity_data(driver, commodity_name, xpath='./ancestor::tr'):
-    element = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.LINK_TEXT, commodity_name))
-    )
-    row = element.find_element(By.XPATH, xpath)
-    return row.find_element(By.ID, 'p').text.strip()
-
-def main():
-    now = datetime.now()
-    if now.weekday() in (0, 6):
-        logging.info("Today is either Sunday or Monday. The script will not run.")
-        return
-
-    driver = setup_driver()
-    conn, cursor = setup_database()
+    # 设置WebDriver
+    options = webdriver.ChromeOptions()
+    # options.add_argument('--headless')  # 无界面模式
+    driver = webdriver.Chrome(service=service, options=options)
 
     try:
-        yesterday = (now - timedelta(days=1)).strftime('%Y-%m-%d')
-        all_data = []
-
-        # US commodity data
-        driver.get('https://tradingeconomics.com/commodity/baltic')
-        us_commodities = []
-        for us_commodity in us_commodities:
-            try:
-                price = fetch_commodity_data_str(driver, us_commodity)
-                all_data.append((yesterday, us_commodity.replace(" ", ""), price))
-            except Exception as e:
-                logging.error(f"Failed to retrieve data for {us_commodity}: {e}")
-
-        # Other commodity data
-        driver.get('https://tradingeconomics.com/commodities')
-        commodities = [
-            "Orange Juice"
+        # 访问网页
+        driver.get('https://tradingeconomics.com/currencies?base=cny')
+        Currencies = [
+            "CNYIRR"
         ]
 
-        for commodity in commodities:
-            try:
-                price = fetch_commodity_data(driver, commodity)
-                all_data.append((yesterday, commodity.replace(" ", ""), price))
-            except Exception as e:
-                logging.error(f"Failed to retrieve data for {commodity}: {e}")
+        all_data = []
+        # 获取当前时间
+        now = datetime.now()
+        # 获取前一天的日期
+        yesterday = now - timedelta(days=1)
+        # 格式化输出
+        today = yesterday.strftime('%Y-%m-%d')
 
-        cursor.executemany('INSERT OR REPLACE INTO Commodities (date, name, price) VALUES (?, ?, ?)', all_data)
+        # 查找并处理数据
+        for Currency in Currencies:
+            try:
+                element = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.LINK_TEXT, Currency))
+                )
+                row = element.find_element(By.XPATH, './ancestor::tr')
+                price = row.find_element(By.ID, 'p').text.strip()
+                
+                # 将数据格式化后添加到列表
+                all_data.append((today, Currency, price))
+            except Exception as e:
+                print(f"Failed to retrieve data for {Currencies}: {e}")
+        
+        # 插入数据到数据库
+        cursor.executemany('INSERT INTO Currencies (date, name, price) VALUES (?, ?, ?)', all_data)
         conn.commit()
-        logging.info(f"Total {len(all_data)} records have been inserted into the database.")
+        # 打印插入的数据条数
+        print(f"Total {len(all_data)} records have been inserted into the database.")
 
     except Exception as e:
-        logging.error(f"An error occurred: {e}")
-        conn.rollback()
+        print(f"An error occurred: {e}")
+        conn.rollback()  # 回滚在异常发生时的所有操作
     finally:
         driver.quit()
         conn.close()
-
-if __name__ == "__main__":
-    main()

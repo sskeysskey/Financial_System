@@ -389,7 +389,8 @@
         "ASH",
         "BC",
         "NOV",
-        "AES"
+        "AES",
+        "MSM"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -461,7 +462,8 @@
         "BBD",
         "CVS",
         "RCI",
-        "ABEV"
+        "ABEV",
+        "WRD"
     ],
     "green_keywords": [
         "EURCNY",

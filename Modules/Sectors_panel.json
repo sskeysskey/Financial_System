@@ -14,7 +14,8 @@
         "SBUX": "",
         "LOW": "劳氏",
         "HD": "",
-        "LEN": ""
+        "LEN": "",
+        "WRD": ""
     },
     "Energy": {
         "WFRD": "",
@@ -29,7 +30,8 @@
         "AMD": "",
         "NVDA": "",
         "MU": "",
-        "MCHP": ""
+        "MCHP": "",
+        "SNPS": ""
     },
     "Utilities": {
         "SO": "南方电力",
@@ -48,7 +50,8 @@
         "GE": "",
         "URI": "联合租赁",
         "CAT": "卡特彼勒",
-        "CTAS": ""
+        "CTAS": "",
+        "MSM": ""
     },
     "Real_Estate": {},
     "Financial_Services": {

@@ -12,6 +12,7 @@ import pyautogui
 import random
 import time
 import threading
+# from bs4 import BeautifulSoup
 
 # 添加鼠标移动功能的函数
 def move_mouse_periodically():
@@ -68,8 +69,8 @@ def process_urls(driver, urls, output, output_500, output_5000, blacklist):
     for url, sector in urls:
         process_sector(driver, url, sector, output, output_500, output_5000, blacklist)
 
-def retry_on_stale(max_attempts=3):
-    """装饰器: 处理StaleElementReferenceException"""
+def retry_on_stale(max_attempts=5, delay=1):
+    """装饰器: 处理StaleElementReferenceException并增加重试间隔"""
     def decorator(func):
         def wrapper(*args, **kwargs):
             for attempt in range(max_attempts):
@@ -79,109 +80,50 @@ def retry_on_stale(max_attempts=3):
                     if attempt == max_attempts - 1:
                         raise
                     print(f"Stale element, retrying... (attempt {attempt + 1})")
-            return None
+                    time.sleep(delay)
         return wrapper
     return decorator
+
+@retry_on_stale(max_attempts=5, delay=1)
+def extract_row_data(driver, index):
+    """提取单行数据，通过行索引重新定位元素"""
+    rows = driver.find_elements(By.CSS_SELECTOR, "table tbody tr")
+    if index >= len(rows):
+        raise IndexError("Row index out of range")
+    row = rows[index]
+    
+    symbol = row.find_element(By.CSS_SELECTOR, "a[data-testid='table-cell-ticker'] span.symbol").text.strip()
+    name = row.find_element(By.CSS_SELECTOR, "div[title]").get_attribute("title").strip()
+    price = row.find_element(By.CSS_SELECTOR, "fin-streamer[data-field='regularMarketPrice']").get_attribute("data-value").strip()
+    
+    volume_element = row.find_element(By.XPATH, ".//td[contains(@class, 'yf-2twxe2')][8]")
+    volume = volume_element.text.strip()
+    
+    market_cap_element = row.find_element(By.XPATH, ".//td[contains(@class, 'yf-2twxe2')][10]")
+    market_cap = market_cap_element.text.strip()
+    
+    pe_ratio_element = row.find_element(By.XPATH, ".//td[contains(@class, 'yf-2twxe2')][11]")
+    pe_ratio = pe_ratio_element.text.strip()
+    
+    return symbol, name, price, volume, market_cap, pe_ratio
 
 def fetch_data(driver, url, blacklist):
     driver.get(url)
     results = []
     
     try:
-        # 增加等待时间并使用显式等待
-        wait = WebDriverWait(driver, 20)
-        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "table tbody tr")))
+        wait = WebDriverWait(driver, 30)
+        wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "table tbody tr")))
         
-        @retry_on_stale(max_attempts=3)
-        def extract_row_data(row):
-            """提取单行数据"""
-            # 使用更精确的选择器
-            symbol = row.find_element(By.CSS_SELECTOR, "a[data-testid='table-cell-ticker'] span.symbol").text.strip()
-            
-            name = row.find_element(By.CSS_SELECTOR, "div[title]").get_attribute("title").strip()
-            
-            price = row.find_element(By.CSS_SELECTOR, "fin-streamer[data-field='regularMarketPrice']").get_attribute("data-value").strip()
-            
-            # 对于volume，先尝试获取文本内容
-            volume_element = row.find_element(By.XPATH, ".//td[contains(@class, 'yf-2twxe2')][8]")
-            volume = volume_element.text.strip()
-            
-            # 对于market cap，先尝试获取文本内容
-            market_cap_element = row.find_element(By.XPATH, ".//td[contains(@class, 'yf-2twxe2')][10]")
-            market_cap = market_cap_element.text.strip()
-            
-            # 对于PE ratio，使用XPath定位包含PE ratio的单元格
-            pe_ratio_element = row.find_element(By.XPATH, ".//td[contains(@class, 'yf-2twxe2')][11]")
-            pe_ratio = pe_ratio_element.text.strip()
-            
-            return symbol, name, price, volume, market_cap, pe_ratio
+        total_rows = len(driver.find_elements(By.CSS_SELECTOR, "table tbody tr"))
 
-        # @retry_on_stale(max_attempts=3)
-        # def extract_row_data(row):
-        #     """提取单行数据,使用多重定位策略"""
-            
-        #     def safe_get_value(element, methods):
-        #         """安全获取元素值的辅助函数,支持多种定位方法"""
-        #         for method in methods:
-        #             try:
-        #                 value = method(element)
-        #                 if value and value.strip() not in ['', '--', 'N/A']:
-        #                     return value.strip()
-        #             except:
-        #                 continue
-        #         return '--'
-
-        #     # 对于volume的多重定位策略
-        #     def get_volume(row):
-        #         methods = [
-        #             lambda r: r.find_element(By.CSS_SELECTOR, "td:nth-child(8)").text,  # 按位置
-        #             lambda r: r.find_element(By.CSS_SELECTOR, "fin-streamer[data-field='volume']").get_attribute("data-value"),  # 按属性
-        #             lambda r: r.find_elements(By.TAG_NAME, "td")[7].text,  # 按索引
-        #             lambda r: r.find_element(By.XPATH, ".//td[contains(text(), 'M') or contains(text(), 'K')]").text  # 按内容特征
-        #         ]
-        #         return safe_get_value(row, methods)
-
-        #     # 对于market cap的多重定位策略    
-        #     def get_market_cap(row):
-        #         methods = [
-        #             lambda r: r.find_element(By.CSS_SELECTOR, "td:nth-child(10)").text,  # 按位置
-        #             lambda r: r.find_element(By.CSS_SELECTOR, "fin-streamer[data-field='marketCap']").get_attribute("data-value"),  # 按属性
-        #             lambda r: r.find_elements(By.TAG_NAME, "td")[9].text,  # 按索引
-        #             lambda r: r.find_element(By.XPATH, ".//td[contains(text(), 'T') or contains(text(), 'B') or contains(text(), 'M')]").text  # 按内容特征
-        #         ]
-        #         return safe_get_value(row, methods)
-
-        #     # 对于PE ratio的多重定位策略
-        #     def get_pe_ratio(row):
-        #         methods = [
-        #             lambda r: r.find_element(By.CSS_SELECTOR, "td:nth-child(11)").text,  # 按位置
-        #             lambda r: r.find_element(By.CSS_SELECTOR, "fin-streamer[data-field='peRatio']").get_attribute("data-value"),  # 按属性
-        #             lambda r: r.find_elements(By.TAG_NAME, "td")[10].text,  # 按索引
-        #             lambda r: r.find_element(By.XPATH, ".//td[contains(@aria-label, 'P/E')]").text  # 按标签含义
-        #         ]
-        #         return safe_get_value(row, methods)
-
-        #     # 其他字段保持不变...
-        #     symbol = row.find_element(By.CSS_SELECTOR, "a[data-testid='table-cell-ticker'] span.symbol").text.strip()
-        #     name = row.find_element(By.CSS_SELECTOR, "div[title]").get_attribute("title").strip()
-        #     price = row.find_element(By.CSS_SELECTOR, "fin-streamer[data-field='regularMarketPrice']").get_attribute("data-value").strip()
-            
-        #     # 使用新的多重定位策略获取数据
-        #     volume = get_volume(row)
-        #     market_cap = get_market_cap(row)
-        #     pe_ratio = get_pe_ratio(row)
-            
-        #     return symbol, name, price, volume, market_cap, pe_ratio
-
-        # 获取所有行
-        rows = driver.find_elements(By.CSS_SELECTOR, "table tbody tr")
-        for row in rows:
+        for index in range(total_rows):
             try:
-                symbol, name, price, volume, market_cap, pe_ratio = extract_row_data(row)
+                symbol, name, price, volume, market_cap, pe_ratio = extract_row_data(driver, index)
                 
                 if is_blacklisted(symbol, blacklist):
                     continue
-                    
+                
                 # 数据处理
                 price_parsed = parse_number(price)
                 volume_parsed = parse_volume(volume)
@@ -198,6 +140,9 @@ def fetch_data(driver, url, blacklist):
                         volume_parsed
                     ))
                     
+            except StaleElementReferenceException as e:
+                print(f"StaleElementReferenceException on URL: {url}, row index: {index} - {str(e)}")
+                continue
             except Exception as e:
                 print(f"处理行时出错: {str(e)}")
                 continue
@@ -211,6 +156,60 @@ def fetch_data(driver, url, blacklist):
     except Exception as e:
         print(f"获取数据时出错: {str(e)}")
         return []
+
+# def fetch_data_bs(driver, url, blacklist):
+#     driver.get(url)
+#     results = []
+    
+#     try:
+#         wait = WebDriverWait(driver, 30)
+#         wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "table tbody tr")))
+        
+#         page_source = driver.page_source
+#         soup = BeautifulSoup(page_source, 'html.parser')
+#         rows = soup.select("table tbody tr")
+        
+#         for row in rows:
+#             try:
+#                 symbol = row.select_one("a[data-testid='table-cell-ticker'] span.symbol").get_text(strip=True)
+#                 name = row.select_one("div[title]").get('title').strip()
+#                 price = row.select_one("fin-streamer[data-field='regularMarketPrice']").get('data-value').strip()
+#                 volume = row.select("td")[7].get_text(strip=True)
+#                 market_cap = row.select("td")[9].get_text(strip=True)
+#                 pe_ratio = row.select("td")[10].get_text(strip=True)
+                
+#                 if is_blacklisted(symbol, blacklist):
+#                     continue
+                
+#                 # 数据处理
+#                 price_parsed = parse_number(price)
+#                 volume_parsed = parse_volume(volume)
+#                 market_cap_parsed = parse_market_cap(market_cap)
+#                 pe_ratio_parsed = parse_number(pe_ratio)
+                
+#                 if market_cap_parsed != '--':
+#                     results.append((
+#                         symbol,
+#                         market_cap_parsed,
+#                         pe_ratio_parsed,
+#                         name,
+#                         price_parsed,
+#                         volume_parsed
+#                     ))
+                    
+#             except Exception as e:
+#                 print(f"处理行时出错: {str(e)}")
+#                 continue
+                
+#         write_results_to_files(results)
+#         return results
+        
+#     except TimeoutException:
+#         print("页面加载超时")
+#         return []
+#     except Exception as e:
+#         print(f"获取数据时出错: {str(e)}")
+#         return []
 
 def parse_number(text):
     """
@@ -402,6 +401,9 @@ chrome_options.add_argument('--disable-gpu')
 chrome_options.add_argument('--no-sandbox')
 chrome_options.add_argument('--disable-dev-shm-usage')
 chrome_options.add_argument('--disable-animations')
+chrome_options.add_argument('--disable-extensions')
+chrome_options.add_argument('--disable-infobars')
+chrome_options.add_argument('--disable-popup-blocking')
 chrome_options.add_argument('--disable-blink-features=AutomationControlled')
 
 # 在创建driver时使用这些选项
