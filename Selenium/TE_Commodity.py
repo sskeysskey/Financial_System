@@ -33,13 +33,33 @@ def setup_database():
     conn.commit()
     return conn, cursor
 
-def fetch_commodity_data_str(driver, commodity_name, xpath='./ancestor::tr'):
-    element = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.LINK_TEXT, commodity_name))
-    )
-    row = element.find_element(By.XPATH, xpath)
-    price_str = row.find_element(By.ID, 'p').text.strip()
-    return float(price_str.replace(',', ''))
+# def fetch_commodity_data_str(driver, commodity_name, xpath='./ancestor::tr'):
+#     element = WebDriverWait(driver, 10).until(
+#         EC.presence_of_element_located((By.LINK_TEXT, commodity_name))
+#     )
+#     row = element.find_element(By.XPATH, xpath)
+#     price_str = row.find_element(By.ID, 'p').text.strip()
+#     return float(price_str.replace(',', ''))
+
+def fetch_baltic_dry_price(driver):
+    try:
+        logging.info("Starting to fetch Baltic Dry price...")
+        table = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CLASS_NAME, "table-responsive"))
+        )
+        logging.info("Table found successfully")
+        
+        price_element = driver.find_element(
+            By.XPATH, 
+            "//div[@class='table-responsive']//table//tr/td[position()=2]"
+        )
+        price_str = price_element.text.strip()
+        price = float(price_str.replace(',', ''))
+        logging.info(f"Successfully fetched Baltic Dry price: {price}")
+        return price
+    except Exception as e:
+        logging.error(f"Failed to fetch Baltic Dry price: {e}")
+        return None
 
 def fetch_commodity_data(driver, commodity_name, xpath='./ancestor::tr'):
     element = WebDriverWait(driver, 10).until(
@@ -61,15 +81,11 @@ def main():
         yesterday = (now - timedelta(days=1)).strftime('%Y-%m-%d')
         all_data = []
 
-        # US commodity data
+        # Baltic Dry data
         driver.get('https://tradingeconomics.com/commodity/baltic')
-        us_commodities = ["Baltic Dry"]
-        for us_commodity in us_commodities:
-            try:
-                price = fetch_commodity_data_str(driver, us_commodity)
-                all_data.append((yesterday, us_commodity.replace(" ", ""), price))
-            except Exception as e:
-                logging.error(f"Failed to retrieve data for {us_commodity}: {e}")
+        price = fetch_baltic_dry_price(driver)
+        if price is not None:
+            all_data.append((yesterday, "BalticDry", price))
 
         # Other commodity data
         driver.get('https://tradingeconomics.com/commodities')

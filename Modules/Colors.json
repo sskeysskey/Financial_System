@@ -94,7 +94,8 @@
         "SNPS",
         "BABA",
         "WM",
-        "ARM"
+        "ARM",
+        "PDD"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -249,7 +250,8 @@
         "ADBE",
         "AMKR",
         "NVO",
-        "EXPD"
+        "EXPD",
+        "HOG"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -478,24 +480,25 @@
         "MCK"
     ],
     "red_keywords": [
-        "CorePCEY",
-        "USNonFarmA",
-        "USConfidence",
-        "ImportPriceM",
-        "CorePCEM",
         "ImportPriceY",
-        "USUnemploy",
-        "USPPI",
-        "USRetailM",
-        "USGDP",
-        "CorePPI",
-        "CoreCPI",
+        "USTrade",
         "USInterest",
-        "USCPI",
-        "USConspending",
-        "PCEY",
         "USInitial",
+        "CorePCEM",
+        "USUnemploy",
+        "USCPI",
+        "CorePPI",
+        "USConfidence",
+        "CorePCEY",
+        "ImportPriceM",
+        "USGDP",
+        "USPPI",
+        "USConspending",
         "USNonFarm",
-        "USTrade"
+        "USNonFarmA",
+        "CoreCPI",
+        "USRetailM",
+        "PCEY",
+        "MTD"
     ]
 }

@@ -464,7 +464,9 @@
     "FXO",
     "VAW",
     "VIGI",
-    "PJUL"
+    "PJUL",
+    "VNLA",
+    "ARGT"
   ],
   "Basic_Materials": [
     "LIN",
@@ -937,7 +939,8 @@
     "CRC",
     "LB",
     "TGS",
-    "NXE"
+    "NXE",
+    "CRK"
   ],
   "Financial_Services": [
     "BRK-A",

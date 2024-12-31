@@ -6,7 +6,8 @@
         "SHW": "",
         "SCCO": "",
         "ECL": "",
-        "RS": ""
+        "RS": "",
+        "ASH": ""
     },
     "Communication_Services": {},
     "Consumer_Cyclical": {
@@ -15,7 +16,9 @@
         "LOW": "劳氏",
         "HD": "",
         "LEN": "",
-        "WRD": ""
+        "WRD": "",
+        "PDD": "",
+        "HOG": ""
     },
     "Energy": {
         "WFRD": "",
@@ -31,7 +34,10 @@
         "NVDA": "",
         "MU": "",
         "MCHP": "",
-        "SNPS": ""
+        "ARM": "",
+        "SNPS": "",
+        "ROP": "",
+        "OLED": ""
     },
     "Utilities": {
         "SO": "南方电力",
@@ -51,13 +57,17 @@
         "URI": "联合租赁",
         "CAT": "卡特彼勒",
         "CTAS": "",
-        "MSM": ""
+        "MSM": "",
+        "WM": "",
+        "NOC": "",
+        "LHX": ""
     },
     "Real_Estate": {},
     "Financial_Services": {
         "ICE": "洲际",
         "BRK-A": "",
-        "CB": "安达保险"
+        "CB": "安达保险",
+        "PGR": ""
     },
     "Healthcare": {
         "ELV": "医疗保险",
@@ -66,7 +76,11 @@
         "CI": "信诺保险",
         "HUM": "",
         "VRTX": "",
-        "NVO": ""
+        "NVO": "",
+        "JNJ": "",
+        "ZTS": "",
+        "BAX": "",
+        "TMDX": ""
     },
     "Bonds": {
         "US2Y": "",
@@ -143,7 +157,7 @@
         "EURUSD": ""
     },
     "Economics": {
-        "USInitial": "26 USInitial"
+        "USInitial": "02 USInitial"
     },
     "ETFs_US": {
         "TLT": "",
