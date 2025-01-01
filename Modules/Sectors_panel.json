@@ -3,27 +3,20 @@
         "CE": "赛莱默",
         "LIN": "",
         "WLK": "塑料乙烯",
-        "SHW": "",
         "SCCO": "",
-        "ECL": "",
         "RS": "",
-        "ASH": ""
+        "ASH": "",
+        "ECL": ""
     },
     "Communication_Services": {},
     "Consumer_Cyclical": {
         "STLA": "",
         "SBUX": "",
-        "LOW": "劳氏",
-        "HD": "",
-        "LEN": "",
-        "WRD": "",
-        "PDD": "",
-        "HOG": ""
+        "PDD": ""
     },
     "Energy": {
         "WFRD": "",
         "MPC": "马拉松",
-        "EOG": "",
         "VLO": "",
         "FRO": ""
     },
@@ -34,15 +27,15 @@
         "NVDA": "",
         "MU": "",
         "MCHP": "",
+        "OLED": "",
         "ARM": "",
         "SNPS": "",
-        "ROP": "",
-        "OLED": ""
+        "ROP": ""
     },
     "Utilities": {
         "SO": "南方电力",
         "DUK": "杜克电力",
-        "AEP": ""
+        "CEG": ""
     },
     "Consumer_Defensive": {
         "HSY": "",
@@ -53,32 +46,28 @@
     "Industrials": {
         "LMT": "洛克希德",
         "GD": "通用动力",
-        "GE": "",
         "URI": "联合租赁",
-        "CAT": "卡特彼勒",
         "CTAS": "",
         "MSM": "",
+        "LHX": "",
         "WM": "",
-        "NOC": "",
-        "LHX": ""
+        "TT": "",
+        "TRI": "",
+        "ITW": "",
+        "SARO": ""
     },
     "Real_Estate": {},
     "Financial_Services": {
         "ICE": "洲际",
-        "BRK-A": "",
-        "CB": "安达保险",
-        "PGR": ""
+        "BRK-A": ""
     },
     "Healthcare": {
         "ELV": "医疗保险",
         "UNH": "",
         "CNC": "",
-        "CI": "信诺保险",
         "HUM": "",
-        "VRTX": "",
         "NVO": "",
         "JNJ": "",
-        "ZTS": "",
         "BAX": "",
         "TMDX": ""
     },

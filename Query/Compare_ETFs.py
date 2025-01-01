@@ -163,7 +163,8 @@ if __name__ == '__main__':
     description_path = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
     
     blacklist = ["ERY","TQQQ","QLD","SOXL","SPXL","SVXY","YINN","CHAU","UVXY",
-                "VIXY","VXX","SPXS","SPXU","ZSL","AGQ","SCO","UCO","TMF","SOXS","BOIL","TWM","KOLD"]
+                "VIXY","VXX","SPXS","SPXU","ZSL","AGQ","SCO","UCO","TMF","SOXS",
+                "BOIL","TWM","KOLD","UNG"]
 
     interested_sectors = ["ETFs"]
     file_path = '/Users/yanzhang/Documents/News/CompareETFs.txt'

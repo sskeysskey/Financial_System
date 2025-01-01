@@ -12,7 +12,7 @@ import pyautogui
 import random
 import time
 import threading
-# from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup
 
 # 添加鼠标移动功能的函数
 def move_mouse_periodically():
@@ -115,11 +115,18 @@ def fetch_data(driver, url, blacklist):
         wait = WebDriverWait(driver, 30)
         wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "table tbody tr")))
         
-        total_rows = len(driver.find_elements(By.CSS_SELECTOR, "table tbody tr"))
-
-        for index in range(total_rows):
+        page_source = driver.page_source
+        soup = BeautifulSoup(page_source, 'html.parser')
+        rows = soup.select("table tbody tr")
+        
+        for row in rows:
             try:
-                symbol, name, price, volume, market_cap, pe_ratio = extract_row_data(driver, index)
+                symbol = row.select_one("a[data-testid='table-cell-ticker'] span.symbol").get_text(strip=True)
+                name = row.select_one("div[title]").get('title').strip()
+                price = row.select_one("fin-streamer[data-field='regularMarketPrice']").get('data-value').strip()
+                volume = row.select("td")[7].get_text(strip=True)
+                market_cap = row.select("td")[9].get_text(strip=True)
+                pe_ratio = row.select("td")[10].get_text(strip=True)
                 
                 if is_blacklisted(symbol, blacklist):
                     continue
@@ -140,9 +147,6 @@ def fetch_data(driver, url, blacklist):
                         volume_parsed
                     ))
                     
-            except StaleElementReferenceException as e:
-                print(f"StaleElementReferenceException on URL: {url}, row index: {index} - {str(e)}")
-                continue
             except Exception as e:
                 print(f"处理行时出错: {str(e)}")
                 continue
@@ -156,60 +160,6 @@ def fetch_data(driver, url, blacklist):
     except Exception as e:
         print(f"获取数据时出错: {str(e)}")
         return []
-
-# def fetch_data_bs(driver, url, blacklist):
-#     driver.get(url)
-#     results = []
-    
-#     try:
-#         wait = WebDriverWait(driver, 30)
-#         wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "table tbody tr")))
-        
-#         page_source = driver.page_source
-#         soup = BeautifulSoup(page_source, 'html.parser')
-#         rows = soup.select("table tbody tr")
-        
-#         for row in rows:
-#             try:
-#                 symbol = row.select_one("a[data-testid='table-cell-ticker'] span.symbol").get_text(strip=True)
-#                 name = row.select_one("div[title]").get('title').strip()
-#                 price = row.select_one("fin-streamer[data-field='regularMarketPrice']").get('data-value').strip()
-#                 volume = row.select("td")[7].get_text(strip=True)
-#                 market_cap = row.select("td")[9].get_text(strip=True)
-#                 pe_ratio = row.select("td")[10].get_text(strip=True)
-                
-#                 if is_blacklisted(symbol, blacklist):
-#                     continue
-                
-#                 # 数据处理
-#                 price_parsed = parse_number(price)
-#                 volume_parsed = parse_volume(volume)
-#                 market_cap_parsed = parse_market_cap(market_cap)
-#                 pe_ratio_parsed = parse_number(pe_ratio)
-                
-#                 if market_cap_parsed != '--':
-#                     results.append((
-#                         symbol,
-#                         market_cap_parsed,
-#                         pe_ratio_parsed,
-#                         name,
-#                         price_parsed,
-#                         volume_parsed
-#                     ))
-                    
-#             except Exception as e:
-#                 print(f"处理行时出错: {str(e)}")
-#                 continue
-                
-#         write_results_to_files(results)
-#         return results
-        
-#     except TimeoutException:
-#         print("页面加载超时")
-#         return []
-#     except Exception as e:
-#         print(f"获取数据时出错: {str(e)}")
-#         return []
 
 def parse_number(text):
     """

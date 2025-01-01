@@ -26,7 +26,7 @@ cursor = conn.cursor()
 
 # 更新价格字段
 # cursor.execute("UPDATE Commodities SET price = 15.22 WHERE id = 103901")
-# cursor.execute("UPDATE Currencies SET date = '2024-12-23' WHERE id = 144544")
+# cursor.execute("UPDATE Currencies SET date = '2024-12-31' WHERE id = 144763")
 
 # 保留两位小数
 # cursor.execute("UPDATE Currencies SET price = ROUND(price, 2) WHERE name = 'DXY'")

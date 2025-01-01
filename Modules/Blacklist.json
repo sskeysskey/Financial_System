@@ -204,7 +204,9 @@
         "STAG",
         "AMT",
         "PSA",
-        "BF-B"
+        "BF-B",
+        "WRD",
+        "HOG"
     ],
     "screener": [
         "CTA-PA",

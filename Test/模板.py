@@ -1,3 +1,53 @@
+def fetch_data(driver, url, blacklist):
+    driver.get(url)
+    results = []
+    
+    try:
+        wait = WebDriverWait(driver, 30)
+        wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "table tbody tr")))
+        
+        total_rows = len(driver.find_elements(By.CSS_SELECTOR, "table tbody tr"))
+
+        for index in range(total_rows):
+            try:
+                symbol, name, price, volume, market_cap, pe_ratio = extract_row_data(driver, index)
+                
+                if is_blacklisted(symbol, blacklist):
+                    continue
+                
+                # 数据处理
+                price_parsed = parse_number(price)
+                volume_parsed = parse_volume(volume)
+                market_cap_parsed = parse_market_cap(market_cap)
+                pe_ratio_parsed = parse_number(pe_ratio)
+                
+                if market_cap_parsed != '--':
+                    results.append((
+                        symbol,
+                        market_cap_parsed,
+                        pe_ratio_parsed,
+                        name,
+                        price_parsed,
+                        volume_parsed
+                    ))
+                    
+            except StaleElementReferenceException as e:
+                print(f"StaleElementReferenceException on URL: {url}, row index: {index} - {str(e)}")
+                continue
+            except Exception as e:
+                print(f"处理行时出错: {str(e)}")
+                continue
+                
+        write_results_to_files(results)
+        return results
+        
+    except TimeoutException:
+        print("页面加载超时")
+        return []
+    except Exception as e:
+        print(f"获取数据时出错: {str(e)}")
+        return []
+# ——————————————————————————————————————————————————————————————————————————————————————————
 options.add_argument('--headless')  # 无界面模式
 driver = webdriver.Chrome(service=service, options=options)
 # ——————————————————————————————————————————————————————————————————————————————————————————
