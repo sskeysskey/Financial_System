@@ -3,10 +3,7 @@
         "CE": "赛莱默",
         "LIN": "",
         "WLK": "塑料乙烯",
-        "SCCO": "",
-        "RS": "",
-        "ASH": "",
-        "ECL": ""
+        "ASH": ""
     },
     "Communication_Services": {},
     "Consumer_Cyclical": {
@@ -27,10 +24,7 @@
         "NVDA": "",
         "MU": "",
         "MCHP": "",
-        "OLED": "",
-        "ARM": "",
-        "SNPS": "",
-        "ROP": ""
+        "OLED": ""
     },
     "Utilities": {
         "SO": "南方电力",
@@ -48,13 +42,9 @@
         "GD": "通用动力",
         "URI": "联合租赁",
         "CTAS": "",
-        "MSM": "",
         "LHX": "",
         "WM": "",
-        "TT": "",
-        "TRI": "",
-        "ITW": "",
-        "SARO": ""
+        "TT": ""
     },
     "Real_Estate": {},
     "Financial_Services": {
@@ -62,12 +52,11 @@
         "BRK-A": ""
     },
     "Healthcare": {
-        "ELV": "医疗保险",
+        "ELV": "",
         "UNH": "",
         "CNC": "",
         "HUM": "",
         "NVO": "",
-        "JNJ": "",
         "BAX": "",
         "TMDX": ""
     },

@@ -13,26 +13,16 @@ def is_stock_groups_empty(stock_groups: Dict[str, List[str]]) -> bool:
     """检查所有股票组是否为空"""
     return all(len(tickers) == 0 for tickers in stock_groups.values())
 
-# def get_price_format(group_name: str) -> str:
-#     """根据组名决定价格格式"""
-#     if group_name in ["Currencies", "Bonds"]:
-#         return ".4f"
-#     elif group_name == "Crypto":
-#         return ".1f"
-#     elif group_name == "Commodities":
-#         return ".3f"
-#     else:
-#         return ".2f"
-def get_price_format(group_name: str) -> str:
+def get_price_format(group_name: str) -> int:  # 改为返回整数
     """根据组名决定价格小数位数"""
     if group_name in ["Currencies", "Bonds"]:
-        return "4"
+        return 4
     elif group_name == "Crypto":
-        return "1"
+        return 1
     elif group_name == "Commodities":
-        return "3"
+        return 3
     else:
-        return "2"
+        return 2
 
 def insert_data(c: sqlite3.Cursor, table_name: str, date: str, name: str, price: float, volume: int = None):
     """插入数据到数据库"""
@@ -60,12 +50,11 @@ def process_stock_data(stock_groups: Dict[str, List[str]], start_date: str, end_
 
                     table_name = group_name.replace(" ", "_")
                     mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)
-                    price_format = get_price_format(group_name)
+                    decimal_places = get_price_format(group_name)  # 获取小数位数
 
                     for index, row in data.iterrows():
                         date = index.strftime('%Y-%m-%d')
-                        # price = float(f"{row['Close']:{price_format}}")
-                        price = round(float(row['Close']), int(price_format[1]))
+                        price = round(float(row['Close']), decimal_places)  # 直接使用整数作为小数位数
                         
                         if group_name in special_groups:
                             insert_data(c, table_name, date, mapped_name, price)

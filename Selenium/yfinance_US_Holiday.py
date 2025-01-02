@@ -30,6 +30,9 @@ else:
     start_date = yesterday.strftime('%Y-%m-%d')
     end_date = today.strftime('%Y-%m-%d')
 
+    # start_date = "2025-01-02"
+    # end_date = "2025-01-03"
+
     # 连接到SQLite数据库
     conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
     c = conn.cursor()

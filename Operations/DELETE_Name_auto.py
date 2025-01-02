@@ -174,33 +174,43 @@ def main():
     if not symbol:
         print("剪贴板为空")
         return
+
+    # 1. 首先检查是否在sectors_all.json中存在
+    exists_in_sectors = False
+    try:
+        with open(sector_file, 'r') as f:
+            sectors_data = json.load(f)
+            # 检查symbol是否存在于任何sector中
+            exists_in_sectors = any(symbol in symbols for symbols in sectors_data.values())
+    except Exception as e:
+        print(f"检查sectors_all.json时出错: {e}")
+        return
     
-    # 1. 首先检查是否在ETFs分组中
+    # 2. 首先检查是否在ETFs分组中
     sector_files = [sector_file, sector_today_file]
     is_etf = is_in_etfs_sector(symbol, sector_files)
     if is_etf:
         print(f"{symbol} 属于ETFs分组，将只进行删除操作而不添加到blacklist")
     
-    # 2. 数据库操作
+    # 3. 数据库操作
     sector = find_sector_for_symbol(sector_file, symbol)
     if sector:
         delete_records_by_names(db_path, sector, [symbol])
     else:
         print(f"未找到股票代码 {symbol} 对应的sector")
     
-    # 3. JSON文件操作
-    # 处理 Sectors_All.json
+    # 4.处理 Sectors_All.json
     delete_result1 = delete_from_json_file(sector_file, symbol)
     
     # 处理 sector_today.json
     delete_result2 = delete_from_json_file(sector_today_file, symbol)
     
-    # 4. 根据之前的ETFs检查结果决定是否添加到blacklist
+    # 5. 根据之前的ETFs检查结果决定是否添加到blacklist
     add_result = False
-    if not is_etf:
+    if exists_in_sectors and not is_etf:
         add_result = add_to_blacklist(blacklist_file, symbol)
     
-    # 输出总结
+    # 6.输出总结
     print("\n操作总结:")
     if delete_result1 or delete_result2:
         print("JSON文件更新情况:")
@@ -219,14 +229,13 @@ def main():
     else:
         print("- blacklist更新未执行或未发生变化")
 
-    if delete_result1 or delete_result2:
-        delete_result = delete_from_description_json(description_file, symbol)
-        if delete_result:
-            print("\ndescription.json更新情况:")
-            print(f"- 已从ETFs列表中删除 {symbol}")
-        else:
-            print("\ndescription.json更新情况:")
-            print(f"- 在ETFs列表中未找到 {symbol}")
+    delete_result = delete_from_description_json(description_file, symbol)
+    if delete_result:
+        print("\ndescription.json更新情况:")
+        print(f"- 已从ETFs列表中删除 {symbol}")
+    else:
+        print("\ndescription.json更新情况:")
+        print(f"- 在ETFs列表中未找到 {symbol}")
 
 if __name__ == "__main__":
     main()

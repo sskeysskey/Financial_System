@@ -206,7 +206,9 @@
         "PSA",
         "BF-B",
         "WRD",
-        "HOG"
+        "HOG",
+        "ARM",
+        "MSM"
     ],
     "screener": [
         "CTA-PA",
