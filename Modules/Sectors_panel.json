@@ -3,13 +3,23 @@
         "CE": "赛莱默",
         "LIN": "",
         "WLK": "塑料乙烯",
-        "ASH": ""
+        "ASH": "",
+        "SHW": "",
+        "ECL": "",
+        "APD": "",
+        "PPG": ""
     },
     "Communication_Services": {},
     "Consumer_Cyclical": {
         "STLA": "",
         "SBUX": "",
-        "PDD": ""
+        "PDD": "",
+        "RACE": "",
+        "LEN": "",
+        "BALL": "",
+        "AVY": "",
+        "GNTX": "",
+        "SON": ""
     },
     "Energy": {
         "WFRD": "",
@@ -24,12 +34,19 @@
         "NVDA": "",
         "MU": "",
         "MCHP": "",
-        "OLED": ""
+        "OLED": "",
+        "SNPS": "",
+        "ROP": "",
+        "NXPI": "",
+        "CDW": "",
+        "NSIT": "",
+        "ENTG": ""
     },
     "Utilities": {
         "SO": "南方电力",
         "DUK": "杜克电力",
-        "CEG": ""
+        "CEG": "",
+        "KEP": ""
     },
     "Consumer_Defensive": {
         "HSY": "",
@@ -44,12 +61,19 @@
         "CTAS": "",
         "LHX": "",
         "WM": "",
-        "TT": ""
+        "TT": "",
+        "CAT": "",
+        "ITW": "",
+        "TXT": "",
+        "EXPD": "",
+        "SARO": ""
     },
     "Real_Estate": {},
     "Financial_Services": {
         "ICE": "洲际",
-        "BRK-A": ""
+        "BRK-A": "",
+        "AJG": "",
+        "UWMC": ""
     },
     "Healthcare": {
         "ELV": "",

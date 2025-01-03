@@ -98,7 +98,9 @@
         "PDD",
         "TT",
         "ITW",
-        "CEG"
+        "CEG",
+        "APD",
+        "AJG"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -133,7 +135,6 @@
         "ASHR"
     ],
     "white_keywords": [
-        "PPG",
         "ROKU",
         "NTES",
         "JBL",
@@ -254,7 +255,14 @@
         "AMKR",
         "NVO",
         "EXPD",
-        "HOG"
+        "HOG",
+        "BALL",
+        "GNTX",
+        "UWMC",
+        "TXT",
+        "NSIT",
+        "ENTG",
+        "KEP"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -395,7 +403,8 @@
         "BC",
         "NOV",
         "AES",
-        "MSM"
+        "MSM",
+        "PPG"
     ],
     "orange_keywords": [
         "NASDAQ",
