@@ -4,22 +4,19 @@
         "LIN": "",
         "WLK": "塑料乙烯",
         "ASH": "",
-        "SHW": "",
-        "ECL": "",
-        "APD": "",
-        "PPG": ""
+        "PPG": "",
+        "NEU": ""
     },
     "Communication_Services": {},
     "Consumer_Cyclical": {
         "STLA": "",
-        "SBUX": "",
         "PDD": "",
-        "RACE": "",
         "LEN": "",
         "BALL": "",
         "AVY": "",
-        "GNTX": "",
-        "SON": ""
+        "SON": "",
+        "NKE": "",
+        "GNTX": ""
     },
     "Energy": {
         "WFRD": "",
@@ -35,24 +32,21 @@
         "MU": "",
         "MCHP": "",
         "OLED": "",
-        "SNPS": "",
-        "ROP": "",
         "NXPI": "",
         "CDW": "",
-        "NSIT": "",
         "ENTG": ""
     },
     "Utilities": {
         "SO": "南方电力",
-        "DUK": "杜克电力",
-        "CEG": "",
-        "KEP": ""
+        "DUK": "杜克电力"
     },
     "Consumer_Defensive": {
         "HSY": "",
         "PEP": "",
         "UL": "联合利华",
-        "STZ": ""
+        "STZ": "",
+        "CL": "",
+        "KOF": ""
     },
     "Industrials": {
         "LMT": "洛克希德",
@@ -60,12 +54,7 @@
         "URI": "联合租赁",
         "CTAS": "",
         "LHX": "",
-        "WM": "",
-        "TT": "",
-        "CAT": "",
-        "ITW": "",
         "TXT": "",
-        "EXPD": "",
         "SARO": ""
     },
     "Real_Estate": {},
@@ -82,7 +71,8 @@
         "HUM": "",
         "NVO": "",
         "BAX": "",
-        "TMDX": ""
+        "TMDX": "",
+        "HCA": ""
     },
     "Bonds": {
         "US2Y": "",
@@ -164,7 +154,7 @@
     "ETFs_US": {
         "TLT": "",
         "XLK": "科技",
-        "IYH": "医疗",
+        "XLV": "医疗",
         "XLI": "工业",
         "XLF": "金融",
         "XLP": "必需消费",

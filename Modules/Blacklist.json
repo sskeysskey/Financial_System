@@ -208,7 +208,8 @@
         "WRD",
         "HOG",
         "ARM",
-        "MSM"
+        "MSM",
+        "KEP"
     ],
     "screener": [
         "CTA-PA",

@@ -262,7 +262,9 @@
         "TXT",
         "NSIT",
         "ENTG",
-        "KEP"
+        "KEP",
+        "NEU",
+        "KOF"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -404,7 +406,8 @@
         "NOV",
         "AES",
         "MSM",
-        "PPG"
+        "PPG",
+        "CIG"
     ],
     "orange_keywords": [
         "NASDAQ",

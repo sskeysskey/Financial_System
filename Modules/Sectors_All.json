@@ -190,7 +190,6 @@
     "IWF",
     "SCHG",
     "QQQ",
-    "IYH",
     "XLU",
     "XLV",
     "GDX",
@@ -453,7 +452,9 @@
     "PJUL",
     "VNLA",
     "ARGT",
-    "MTUM"
+    "MTUM",
+    "DYNF",
+    "LQDI"
   ],
   "Basic_Materials": [
     "LIN",
