@@ -248,21 +248,21 @@ def search_tag_for_keywords(json_path, keywords, max_distance=1):
         return any(levenshtein_distance(word, keyword) <= max_distance for word in words)
 
     def two_step_search(category, search_field):
-        search_term = keywords.strip().upper()
-        search_term_lower = keywords.strip().lower()
+        search_term = keywords.strip().lower()  # 使用小写
+        search_term_lower = search_term  # 统一使用小写
         
         def exact_match(item):
             if search_field == 'name':
                 return item.get('name', '').lower() == search_term_lower
             elif search_field == 'symbol':
-                return item.get('symbol', '').upper() == search_term
+                return item.get('symbol', '').lower() == search_term_lower
             return False
         
         def partial_match(item):
             if search_field == 'name':
                 return all(keyword in item.get('name', '').lower() for keyword in keywords_lower)
             elif search_field == 'symbol':
-                return all(keyword in item.get('symbol', '').upper() for keyword in keywords_lower)
+                return all(keyword in item.get('symbol', '').lower() for keyword in keywords_lower)
             return False
         
         def fuzzy_match_item(item):
