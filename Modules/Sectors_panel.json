@@ -5,8 +5,7 @@
         "WLK": "塑料乙烯",
         "ASH": "",
         "PPG": "",
-        "NEU": "",
-        "APD": ""
+        "NEU": ""
     },
     "Communication_Services": {},
     "Consumer_Cyclical": {
@@ -16,9 +15,7 @@
         "BALL": "",
         "AVY": "",
         "SON": "",
-        "NKE": "",
-        "GNTX": "",
-        "REYN": ""
+        "NKE": ""
     },
     "Energy": {
         "WFRD": "",
@@ -30,31 +27,23 @@
         "INTC": "",
         "AMAT": "应用材料",
         "AMD": "",
-        "NVDA": "",
         "MU": "",
         "MCHP": "",
         "OLED": "",
         "NXPI": "",
         "CDW": "",
-        "ENTG": "",
-        "ROP": ""
+        "ENTG": ""
     },
     "Utilities": {
         "SO": "南方电力",
-        "DUK": "杜克电力",
-        "AEP": ""
+        "DUK": "杜克电力"
     },
     "Consumer_Defensive": {
         "HSY": "",
         "PEP": "",
-        "UL": "联合利华",
         "STZ": "",
-        "CL": "",
         "KOF": "",
-        "PG": "",
-        "KO": "",
         "MDLZ": "",
-        "KDP": "",
         "GIS": "",
         "CPB": "",
         "FLO": ""
@@ -65,10 +54,7 @@
         "URI": "联合租赁",
         "CTAS": "",
         "LHX": "",
-        "TXT": "",
-        "SARO": "",
-        "RTX": "",
-        "NOC": ""
+        "TXT": ""
     },
     "Real_Estate": {
         "INVH": ""
@@ -88,9 +74,7 @@
         "CNC": "",
         "HUM": "",
         "NVO": "",
-        "BAX": "",
-        "TMDX": "",
-        "AMGN": ""
+        "TMDX": ""
     },
     "Bonds": {
         "US2Y": "",
