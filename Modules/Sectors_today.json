@@ -1082,7 +1082,8 @@
     "UPST",
     "WTM",
     "FLG",
-    "MAIN"
+    "MAIN",
+    "BBAR"
   ],
   "Healthcare": [
     "LLY",

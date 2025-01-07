@@ -10,8 +10,8 @@ def log_error_with_timestamp(error_message):
     return f"[{timestamp}] {error_message}\n"
 
 # 适合于纯自定义抓取
-# start_date = "2024-12-26"
-# end_date = "2024-12-27"
+# start_date = "2025-01-06"
+# end_date = "2025-01-06"
 
 # 适合于半自定义抓取
 # start_date = "2002-09-17"

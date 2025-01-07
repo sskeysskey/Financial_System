@@ -5,7 +5,8 @@
         "WLK": "塑料乙烯",
         "ASH": "",
         "PPG": "",
-        "NEU": ""
+        "NEU": "",
+        "APD": ""
     },
     "Communication_Services": {},
     "Consumer_Cyclical": {
@@ -16,7 +17,8 @@
         "AVY": "",
         "SON": "",
         "NKE": "",
-        "GNTX": ""
+        "GNTX": "",
+        "REYN": ""
     },
     "Energy": {
         "WFRD": "",
@@ -34,11 +36,13 @@
         "OLED": "",
         "NXPI": "",
         "CDW": "",
-        "ENTG": ""
+        "ENTG": "",
+        "ROP": ""
     },
     "Utilities": {
         "SO": "南方电力",
-        "DUK": "杜克电力"
+        "DUK": "杜克电力",
+        "AEP": ""
     },
     "Consumer_Defensive": {
         "HSY": "",
@@ -46,7 +50,14 @@
         "UL": "联合利华",
         "STZ": "",
         "CL": "",
-        "KOF": ""
+        "KOF": "",
+        "PG": "",
+        "KO": "",
+        "MDLZ": "",
+        "KDP": "",
+        "GIS": "",
+        "CPB": "",
+        "FLO": ""
     },
     "Industrials": {
         "LMT": "洛克希德",
@@ -55,14 +66,21 @@
         "CTAS": "",
         "LHX": "",
         "TXT": "",
-        "SARO": ""
+        "SARO": "",
+        "RTX": "",
+        "NOC": ""
     },
-    "Real_Estate": {},
+    "Real_Estate": {
+        "INVH": ""
+    },
     "Financial_Services": {
         "ICE": "洲际",
         "BRK-A": "",
         "AJG": "",
-        "UWMC": ""
+        "UWMC": "",
+        "PGR": "",
+        "CB": "",
+        "MMC": ""
     },
     "Healthcare": {
         "ELV": "",
@@ -71,7 +89,8 @@
         "HUM": "",
         "NVO": "",
         "BAX": "",
-        "TMDX": ""
+        "TMDX": "",
+        "AMGN": ""
     },
     "Bonds": {
         "US2Y": "",
@@ -148,7 +167,12 @@
         "EURUSD": ""
     },
     "Economics": {
-        "USInitial": "02 USInitial"
+        "USTrade": "07 USTrade",
+        "USNonFarmA": "08 USNonFarmA",
+        "USNonFarm": "10 USNonFarm",
+        "USUnemploy": "10 USUnemploy",
+        "USConfidence": "10 USConfidence",
+        "USInitial": "09 USInitial"
     },
     "ETFs_US": {
         "TLT": "",
