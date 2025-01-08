@@ -15,7 +15,9 @@
         "BALL": "",
         "AVY": "",
         "SON": "",
-        "NKE": ""
+        "NKE": "",
+        "HD": "",
+        "GNTX": ""
     },
     "Energy": {
         "WFRD": "",
@@ -32,7 +34,11 @@
         "OLED": "",
         "NXPI": "",
         "CDW": "",
-        "ENTG": ""
+        "ENTG": "",
+        "ORCL": "",
+        "PANW": "",
+        "ROP": "",
+        "FICO": ""
     },
     "Utilities": {
         "SO": "南方电力",
@@ -46,7 +52,9 @@
         "MDLZ": "",
         "GIS": "",
         "CPB": "",
-        "FLO": ""
+        "FLO": "",
+        "CL": "",
+        "KDP": ""
     },
     "Industrials": {
         "LMT": "洛克希德",
@@ -54,10 +62,17 @@
         "URI": "联合租赁",
         "CTAS": "",
         "LHX": "",
-        "TXT": ""
+        "TXT": "",
+        "NOC": "",
+        "ITW": "",
+        "FERG": "",
+        "TTC": "",
+        "MSA": "",
+        "SARO": ""
     },
     "Real_Estate": {
-        "INVH": ""
+        "INVH": "",
+        "NNN": ""
     },
     "Financial_Services": {
         "ICE": "洲际",
@@ -66,15 +81,15 @@
         "UWMC": "",
         "PGR": "",
         "CB": "",
-        "MMC": ""
+        "MMC": "",
+        "AON": ""
     },
     "Healthcare": {
         "ELV": "",
         "UNH": "",
         "CNC": "",
         "HUM": "",
-        "NVO": "",
-        "TMDX": ""
+        "NVO": ""
     },
     "Bonds": {
         "US2Y": "",

@@ -35,7 +35,6 @@
         "MELI",
         "LYG",
         "ABBV",
-        "LEN",
         "BBVA",
         "ADI",
         "LIN",
@@ -99,7 +98,10 @@
         "ITW",
         "CEG",
         "APD",
-        "AJG"
+        "AJG",
+        "AON",
+        "PANW",
+        "FICO"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -224,11 +226,9 @@
         "NDSN",
         "CHE",
         "AOS",
-        "RIO",
         "PHI",
         "QSR",
         "AVY",
-        "MGM",
         "STZ",
         "SHEL",
         "CNQ",
@@ -266,7 +266,11 @@
         "REYN",
         "CPB",
         "INVH",
-        "ROP"
+        "ROP",
+        "LEN",
+        "FERG",
+        "MSA",
+        "NNN"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -411,7 +415,10 @@
         "PPG",
         "CIG",
         "GIS",
-        "FLO"
+        "FLO",
+        "RIO",
+        "MGM",
+        "TTC"
     ],
     "orange_keywords": [
         "NASDAQ",

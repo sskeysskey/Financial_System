@@ -1741,7 +1741,8 @@
     "INTA",
     "SOUN",
     "AI",
-    "ASAN"
+    "ASAN",
+    "GDS"
   ],
   "Utilities": [
     "NEE",
