@@ -73,6 +73,7 @@
     "Initial Jobless Clm*": "USInitial",
     "PPI Final Demand YY*": "USPPI",
     "PPI exFood/Energy YY*": "CorePPI",
+    "ISM N-Mfg PMI": "USNonPMI",
     "Retail Sales MM *": "USRetailM",
     "Unemployment Rate*": "USUnemploy",
     "Core PCE Price Index YY*": "CorePCEY",

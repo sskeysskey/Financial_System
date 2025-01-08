@@ -100,10 +100,12 @@ def main():
 
         today = now.date()
         yesterday = today - timedelta(days=1)
+        tomorrow = today + timedelta(days=1)
 
         # 定义时间范围
         start_date = yesterday.strftime('%Y-%m-%d')
-        end_date = today.strftime('%Y-%m-%d')
+        # end_date = today.strftime('%Y-%m-%d')
+        end_date = tomorrow.strftime('%Y-%m-%d')
 
         # 连接到SQLite数据库
         conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
@@ -127,6 +129,8 @@ def main():
                     else:
                         # 如果没有昨天的数据，则使用最新可用的数据
                         row = data.iloc[-1]
+                        actual_date = data.index[-1]
+                        print(f"警告: {ticker_symbol} 使用了 {actual_date.strftime('%Y-%m-%d')} 的数据作为 {yesterday.strftime('%Y-%m-%d')} 的数据")
 
                     # 将日期统一设为昨天
                     date = yesterday.strftime('%Y-%m-%d')

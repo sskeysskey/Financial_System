@@ -126,7 +126,6 @@ def main():
         "poesuccess": "/Users/yanzhang/Documents/python_code/Resource/poe_copy_success.png",
         "poethumb": "/Users/yanzhang/Documents/python_code/Resource/poe_thumb.png",
         "kimicopy": "/Users/yanzhang/Documents/python_code/Resource/Kimi_copy.png",
-        "xinghuocopy": "/Users/yanzhang/Documents/python_code/Resource/xinghuo_copy.png",
         "poecopy": "/Users/yanzhang/Documents/python_code/Resource/poe_copy.png",
     }
     templates = {key: cv2.imread(path, cv2.IMREAD_COLOR) for key, path in template_paths.items()}
@@ -151,7 +150,7 @@ def main():
         if find_and_click("poecopy"):
             print("找到图片位置")
     else:
-        if find_and_click("kimicopy") or find_and_click("xinghuocopy"):
+        if find_and_click("kimicopy"):
             print("找到copy图了，准备点击copy...")
 
     sleep(1)
@@ -168,7 +167,7 @@ def main():
             while not find_image("poesuccess"):
                 sleep(1)
     else:
-        find_and_click("kimicopy") or find_and_click("xinghuocopy")
+        find_and_click("kimicopy")
 
     new_description2 = read_clipboard().replace('\n', ' ').replace('\r', ' ')
 

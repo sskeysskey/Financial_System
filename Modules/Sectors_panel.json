@@ -10,14 +10,12 @@
     "Communication_Services": {},
     "Consumer_Cyclical": {
         "STLA": "",
-        "PDD": "",
         "LEN": "",
         "BALL": "",
         "AVY": "",
         "SON": "",
         "NKE": "",
-        "HD": "",
-        "GNTX": ""
+        "HD": ""
     },
     "Energy": {
         "WFRD": "",
@@ -35,9 +33,6 @@
         "NXPI": "",
         "CDW": "",
         "ENTG": "",
-        "ORCL": "",
-        "PANW": "",
-        "ROP": "",
         "FICO": ""
     },
     "Utilities": {
@@ -48,30 +43,21 @@
         "HSY": "",
         "PEP": "",
         "STZ": "",
-        "KOF": "",
         "MDLZ": "",
         "GIS": "",
-        "CPB": "",
-        "FLO": "",
-        "CL": "",
-        "KDP": ""
+        "FLO": ""
     },
     "Industrials": {
         "LMT": "洛克希德",
         "GD": "通用动力",
         "URI": "联合租赁",
-        "CTAS": "",
         "LHX": "",
         "TXT": "",
-        "NOC": "",
-        "ITW": "",
         "FERG": "",
         "TTC": "",
-        "MSA": "",
-        "SARO": ""
+        "MSA": ""
     },
     "Real_Estate": {
-        "INVH": "",
         "NNN": ""
     },
     "Financial_Services": {

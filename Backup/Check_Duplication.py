@@ -10,14 +10,20 @@ def has_duplicates(items):
 
 # 给定的列表
 items = [
-    "Initial Jobless Clm*", "GDP 2nd Estimate*",
-    "Non-Farm Payrolls*", "Core PCE Price Index MM *",
+     "GDP 2nd Estimate*", "Non-Farm Payrolls*", "Core PCE Price Index MM *",
     "Core PCE Price Index YY*", "ISM Manufacturing PMI",
     "ADP National Employment*", "International Trade $ *",
     "ISM N-Mfg PMI", "CPI YY, NSA*", "Core CPI MM, SA*",
     "CPI MM, SA*", "Core CPI YY, NSA*", "Fed Funds Tgt Rate *",
     "PPI Final Demand YY*", "PPI exFood/Energy MM*", "PPI ex Food/Energy/Tr MM*",
-    "PPI Final Demand MM*", "Retail Sales MM *", "GDP Final*", "Core PCE Prices Fnal*"
+    "PPI Final Demand MM*", "Retail Sales MM *", "GDP Final*", "Core PCE Prices Fnal*",
+    "PCE Prices Final *", "GDP Cons Spending Final*", "Pending Homes Index",
+    "PCE Price Index MM*", "Unemployment Rate*", "U Mich Sentiment Prelim",
+    "New Home Sales-Units *", "New Home Sales Chg MM *",
+    "GDP Cons Spending Prelim*", "Core PCE Prices Prelim*",
+    "Corporate Profits Prelim*", "Initial Jobless Clm*", "U Mich Sentiment Final",
+    "GDP Advance*", "PCE Price Index YY *", "PPI exFood/Energy YY*", "Import Prices MM*",
+    "Import Prices YY*"
 ]
 
 # 判断是否有重复项

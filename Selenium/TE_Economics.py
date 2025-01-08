@@ -31,6 +31,7 @@ def insert_data(conn, data):
             try:
                 c.execute('INSERT INTO Economics (date, name, price) VALUES (?, ?, ?)', entry)
                 conn.commit()
+                print(f"[成功] 插入 {entry[0]} 的 {entry[1]} 数据 (价格: {entry[2]})")
             except sqlite3.IntegrityError as e:
                 print(f"Data already exists and was not added. Error: {e}")
 
@@ -72,7 +73,8 @@ with webdriver.Chrome(service=service) as driver:
         "Balance of Trade": "USTrade",
         "Consumer Confidence": "USConfidence",
         "Retail Sales MoM": "USRetailM",
-        "Unemployment Rate": "USUnemploy"
+        "Unemployment Rate": "USUnemploy",
+        "Non Manufacturing PMI": "USNonPMI"
     }
     Economics2 = {
         "Initial Jobless Claims": "USInitial",
