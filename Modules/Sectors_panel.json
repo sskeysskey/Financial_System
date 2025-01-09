@@ -5,7 +5,8 @@
         "WLK": "塑料乙烯",
         "ASH": "",
         "PPG": "",
-        "NEU": ""
+        "NEU": "",
+        "SSD": ""
     },
     "Communication_Services": {},
     "Consumer_Cyclical": {
@@ -15,7 +16,10 @@
         "AVY": "",
         "SON": "",
         "NKE": "",
-        "HD": ""
+        "HD": "",
+        "MCD": "",
+        "GNTX": "",
+        "RRR": ""
     },
     "Energy": {
         "WFRD": "",
@@ -33,7 +37,10 @@
         "NXPI": "",
         "CDW": "",
         "ENTG": "",
-        "FICO": ""
+        "FICO": "",
+        "PANW": "",
+        "ON": "",
+        "OS": ""
     },
     "Utilities": {
         "SO": "南方电力",
@@ -45,7 +52,9 @@
         "STZ": "",
         "MDLZ": "",
         "GIS": "",
-        "FLO": ""
+        "FLO": "",
+        "CPB": "",
+        "SJM": ""
     },
     "Industrials": {
         "LMT": "洛克希德",
@@ -55,7 +64,9 @@
         "TXT": "",
         "FERG": "",
         "TTC": "",
-        "MSA": ""
+        "MSA": "",
+        "TRI": "",
+        "ITW": ""
     },
     "Real_Estate": {
         "NNN": ""
@@ -64,18 +75,20 @@
         "ICE": "洲际",
         "BRK-A": "",
         "AJG": "",
-        "UWMC": "",
         "PGR": "",
+        "AON": "",
         "CB": "",
-        "MMC": "",
-        "AON": ""
+        "LYG": "",
+        "RKT": ""
     },
     "Healthcare": {
         "ELV": "",
         "UNH": "",
         "CNC": "",
         "HUM": "",
-        "NVO": ""
+        "NVO": "",
+        "JNJ": "",
+        "ZBH": ""
     },
     "Bonds": {
         "US2Y": "",

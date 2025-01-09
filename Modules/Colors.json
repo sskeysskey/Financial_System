@@ -223,7 +223,6 @@
         "SAIC",
         "MPC",
         "PSX",
-        "NDSN",
         "CHE",
         "AOS",
         "PHI",
@@ -270,7 +269,10 @@
         "LEN",
         "FERG",
         "MSA",
-        "NNN"
+        "NNN",
+        "SSD",
+        "RRR",
+        "RKT"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -418,7 +420,9 @@
         "FLO",
         "RIO",
         "MGM",
-        "TTC"
+        "TTC",
+        "NDSN",
+        "ON"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -491,7 +495,8 @@
         "CVS",
         "RCI",
         "ABEV",
-        "WRD"
+        "WRD",
+        "OS"
     ],
     "green_keywords": [
         "EURCNY",

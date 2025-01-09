@@ -100,12 +100,12 @@ def main():
 
         today = now.date()
         yesterday = today - timedelta(days=1)
-        tomorrow = today + timedelta(days=1)
+        # tomorrow = today + timedelta(days=1)
 
         # 定义时间范围
         start_date = yesterday.strftime('%Y-%m-%d')
-        # end_date = today.strftime('%Y-%m-%d')
-        end_date = tomorrow.strftime('%Y-%m-%d')
+        end_date = today.strftime('%Y-%m-%d')
+        # end_date = tomorrow.strftime('%Y-%m-%d')
 
         # 连接到SQLite数据库
         conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
@@ -123,41 +123,28 @@ def main():
                     if data.empty:
                         raise ValueError(f"{group_name} {ticker_symbol}: No price data found for the given date range.")
 
-                    # 尝试获取昨天的数据
-                    if yesterday in data.index:
-                        row = data.loc[yesterday]
-                    else:
-                        # 如果没有昨天的数据，则使用最新可用的数据
-                        row = data.iloc[-1]
-                        actual_date = data.index[-1]
-                        print(f"警告: {ticker_symbol} 使用了 {actual_date.strftime('%Y-%m-%d')} 的数据作为 {yesterday.strftime('%Y-%m-%d')} 的数据")
-
-                    # 将日期统一设为昨天
-                    date = yesterday.strftime('%Y-%m-%d')
-
-                    # 根据不同的group_name处理价格精度
-                    if group_name in ["Currencies", "Bonds"]:
-                        price = round(row['Close'], 4)
-                    elif group_name in ["Crypto"]:
-                        price = round(row['Close'], 1)
-                    elif group_name in ["Commodities"]:
-                        price = round(row['Close'], 3)
-                    else:
-                        price = round(row['Close'], 2)
-
-                    mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)  # 获取映射名称
+                    # 插入数据到相应的表中
                     table_name = group_name.replace(" ", "_")  # 确保表名没有空格
+                    mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)  # 从映射字典获取名称，如果不存在则使用原始 ticker_symbol
+                    for index, row in data.iterrows():
+                        # date = index.strftime('%Y-%m-%d')
+                        date = yesterday.strftime('%Y-%m-%d')
+                        if group_name in ["Currencies", "Bonds"]:
+                            price = round(row['Close'], 4)
+                        elif group_name in ["Crypto"]:
+                            price = round(row['Close'], 1)
+                        elif group_name in ["Commodities"]:
+                            price = round(row['Close'], 3)
+                        else:
+                            price = round(row['Close'], 2)
 
-                    if group_name in special_groups:
-                        c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price) VALUES (?, ?, ?)", 
-                                (date, mapped_name, price))
-                    else:
-                        volume = int(row['Volume'])
-                        c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)", 
-                                (date, mapped_name, price, volume))
-                    
-                    data_count += 1  # 成功插入一条数据，计数器增加
-
+                        if group_name in special_groups:
+                            c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price) VALUES (?, ?, ?)", (date, mapped_name, price))
+                        else:
+                            volume = int(row['Volume'])
+                            c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)", (date, mapped_name, price, volume))
+                        
+                        data_count += 1  # 成功插入一条数据，计数器增加
                 except Exception as e:
                     with open('/Users/yanzhang/Documents/News/Today_error1.txt', 'a') as error_file:
                         error_file.write(log_error_with_timestamp(str(e)))
