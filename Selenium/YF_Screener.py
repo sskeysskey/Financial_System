@@ -244,21 +244,33 @@ def simplify_market_cap_threshold(market_cap_threshold):
 def update_json(data, sector, file_path, output, log_enabled, market_cap_threshold, write_symbols=False):
     with open(file_path, 'r+', encoding='utf-8') as file:
         json_data = json.load(file)
-        current_sectors = {symbol: sec for sec, symbols in json_data.items() for symbol in symbols}
-        all_symbols = set(current_sectors.keys())
+        # current_sectors = {symbol: sec for sec, symbols in json_data.items() for symbol in symbols}
+        # all_symbols = set(current_sectors.keys())
+        
+        # 构建一个 symbol 到所有 sector 的映射，以便检查 symbol 是否存在于其他 sectors 中
+        symbol_to_sectors = {}
+        for sec, symbols in json_data.items():
+            for sym in symbols:
+                if sym not in symbol_to_sectors:
+                    symbol_to_sectors[sym] = []
+                symbol_to_sectors[sym].append(sec)
+
         new_symbols = []
 
         # 计算简化后的市值门槛
         simplified_market_cap_threshold = simplify_market_cap_threshold(market_cap_threshold)
 
         for symbol, market_cap, pe_ratio, name, price, volume in data:
-            current_sector = current_sectors.get(symbol)
+            # current_sector = current_sectors.get(symbol)
+            current_sectors = symbol_to_sectors.get(symbol, [])
 
             # 市值判断逻辑
             if market_cap < market_cap_threshold:
-                if current_sector and symbol in json_data[current_sector]:
+                # if current_sector and symbol in json_data[current_sector]:
+                if current_sectors and symbol in json_data.get(current_sectors[0], []):
                     if log_enabled:
-                        message = f"'{symbol}' should be Removed from {current_sector} {int(simplified_market_cap_threshold)}."
+                        # message = f"'{symbol}' should be Removed from {current_sector} {int(simplified_market_cap_threshold)}."
+                        message = f"'{symbol}' should be Removed from  {current_sectors[0]}  {int(simplified_market_cap_threshold)}."
                         print(message)
                         output.append(message)
             else:
@@ -268,6 +280,12 @@ def update_json(data, sector, file_path, output, log_enabled, market_cap_thresho
                     if log_enabled:
                         # 在这里将简化后的市值门槛值加入消息
                         message = f"Added '{symbol}' to {sector} {int(simplified_market_cap_threshold)}."
+                        
+                        # 检查 symbol 是否已存在于其他 sectors 中
+                        other_sectors = [sec for sec in current_sectors if sec != sector]
+                        if other_sectors:
+                            message += f" 已存在于其他 sectors: {', '.join(other_sectors)}."
+                        
                         print(message)
                         output.append(message)
 
@@ -276,9 +294,18 @@ def update_json(data, sector, file_path, output, log_enabled, market_cap_thresho
         json.dump(json_data, file, indent=2)
 
     if new_symbols and write_symbols:
-        with open('/Users/yanzhang/Documents/News/backup/symbol_names.txt', 'a', encoding='utf-8') as symbol_file:
+        # 读取现有的symbol_names文件内容（如果存在）
+        existing_symbols = set()
+        symbol_names_path = '/Users/yanzhang/Documents/News/backup/symbol_names.txt'
+        if os.path.exists(symbol_names_path):
+            with open(symbol_names_path, 'r', encoding='utf-8') as symbol_file:
+                for line in symbol_file:
+                    if ':' in line:
+                        existing_symbols.add(line.split(':')[0].strip())
+        with open(symbol_names_path, 'a', encoding='utf-8') as symbol_file:
             for symbol, name in new_symbols:
-                symbol_file.write(f"{symbol}: {name}\n")
+                if symbol not in existing_symbols:
+                    symbol_file.write(f"{symbol}: {name}\n")
 
 # 处理不同的市值条件
 def process_sector(driver, url, sector, output, output_500, output_5000, blacklist):

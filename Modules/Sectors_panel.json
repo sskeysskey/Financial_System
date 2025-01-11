@@ -3,12 +3,19 @@
         "CE": "赛莱默",
         "LIN": "",
         "WLK": "塑料乙烯",
-        "ASH": "",
+        "SHW": "",
+        "ECL": "",
         "PPG": "",
+        "SSD": "",
         "NEU": "",
-        "SSD": ""
+        "ASH": ""
     },
-    "Communication_Services": {},
+    "Communication_Services": {
+        "TMUS": "",
+        "VOD": "",
+        "OMC": "",
+        "IPG": ""
+    },
     "Consumer_Cyclical": {
         "STLA": "",
         "LEN": "",
@@ -16,9 +23,13 @@
         "AVY": "",
         "SON": "",
         "NKE": "",
-        "HD": "",
         "MCD": "",
+        "BABA": "",
+        "JD": "",
+        "YUM": "",
         "GNTX": "",
+        "CZR": "",
+        "MTH": "",
         "RRR": ""
     },
     "Energy": {
@@ -38,13 +49,19 @@
         "CDW": "",
         "ENTG": "",
         "FICO": "",
-        "PANW": "",
         "ON": "",
-        "OS": ""
+        "AAPL": "",
+        "ORCL": "",
+        "ROP": "",
+        "UMC": "",
+        "NOVT": "",
+        "TENB": ""
     },
     "Utilities": {
         "SO": "南方电力",
-        "DUK": "杜克电力"
+        "DUK": "杜克电力",
+        "NEE": "",
+        "SRE": ""
     },
     "Consumer_Defensive": {
         "HSY": "",
@@ -53,8 +70,14 @@
         "MDLZ": "",
         "GIS": "",
         "FLO": "",
-        "CPB": "",
-        "SJM": ""
+        "SJM": "",
+        "PG": "",
+        "PM": "",
+        "UL": "",
+        "CL": "",
+        "KDP": "",
+        "MNST": "",
+        "CAG": ""
     },
     "Industrials": {
         "LMT": "洛克希德",
@@ -64,12 +87,17 @@
         "TXT": "",
         "FERG": "",
         "TTC": "",
-        "MSA": "",
+        "CAT": "",
         "TRI": "",
-        "ITW": ""
+        "ITW": "",
+        "CARR": "",
+        "EXPD": "",
+        "MSA": "",
+        "LSTR": ""
     },
     "Real_Estate": {
-        "NNN": ""
+        "NNN": "",
+        "STWD": ""
     },
     "Financial_Services": {
         "ICE": "洲际",
@@ -78,8 +106,14 @@
         "PGR": "",
         "AON": "",
         "CB": "",
-        "LYG": "",
-        "RKT": ""
+        "V": "",
+        "HDB": "",
+        "BLK": "",
+        "IBN": "",
+        "MCO": "",
+        "BNS": "",
+        "TRV": "",
+        "ALL": ""
     },
     "Healthcare": {
         "ELV": "",
@@ -88,7 +122,7 @@
         "HUM": "",
         "NVO": "",
         "JNJ": "",
-        "ZBH": ""
+        "REGN": ""
     },
     "Bonds": {
         "US2Y": "",

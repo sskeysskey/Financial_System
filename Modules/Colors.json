@@ -58,7 +58,6 @@
         "FANG",
         "RTX",
         "MMC",
-        "AMD",
         "CB",
         "AFL",
         "D",
@@ -101,7 +100,18 @@
         "AJG",
         "AON",
         "PANW",
-        "FICO"
+        "FICO",
+        "TMUS",
+        "JD",
+        "PM",
+        "HDB",
+        "BLK",
+        "IBN",
+        "MCO",
+        "BNS",
+        "TRV",
+        "ALL",
+        "SRE"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -123,7 +133,9 @@
         "XOM",
         "NVDA",
         "ORCL",
-        "JPM"
+        "JPM",
+        "V",
+        "AAPL"
     ],
     "purple_keywords": [
         "Bitcoin",
@@ -210,9 +222,7 @@
         "FRO",
         "UGP",
         "REGN",
-        "IONS",
         "AKAM",
-        "CAG",
         "BBIO",
         "E",
         "WLK",
@@ -228,7 +238,6 @@
         "PHI",
         "QSR",
         "AVY",
-        "STZ",
         "SHEL",
         "CNQ",
         "FCFS",
@@ -238,7 +247,6 @@
         "WMS",
         "OSK",
         "TKR",
-        "CCI",
         "CSGP",
         "STAG",
         "WEX",
@@ -263,7 +271,6 @@
         "NEU",
         "KOF",
         "REYN",
-        "CPB",
         "INVH",
         "ROP",
         "LEN",
@@ -272,7 +279,15 @@
         "NNN",
         "SSD",
         "RRR",
-        "RKT"
+        "RKT",
+        "OMC",
+        "YUM",
+        "MTH",
+        "LSTR",
+        "STWD",
+        "AMD",
+        "NOVT",
+        "TENB"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -422,7 +437,10 @@
         "MGM",
         "TTC",
         "NDSN",
-        "ON"
+        "ON",
+        "STZ",
+        "CAG",
+        "IONS"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -437,7 +455,6 @@
         "EMXC",
         "GPN",
         "PAYC",
-        "BF-B",
         "BIO",
         "DG",
         "NBIS",
@@ -446,7 +463,9 @@
         "TFX",
         "FMC",
         "BSBR",
-        "TU"
+        "TU",
+        "CPB",
+        "CCI"
     ],
     "black_keywords": [
         "Cotton",
@@ -496,7 +515,9 @@
         "RCI",
         "ABEV",
         "WRD",
-        "OS"
+        "OS",
+        "VOD",
+        "BF-B"
     ],
     "green_keywords": [
         "EURCNY",

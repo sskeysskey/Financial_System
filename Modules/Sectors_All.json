@@ -1494,8 +1494,7 @@
     "ACA",
     "FELE",
     "ROAD",
-    "BE",
-    "PONY"
+    "BE"
   ],
   "Real_Estate": [
     "PLD",
@@ -1804,7 +1803,8 @@
     "SOUN",
     "AI",
     "ASAN",
-    "GDS"
+    "GDS",
+    "PONY"
   ],
   "Utilities": [
     "NEE",

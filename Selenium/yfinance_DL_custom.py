@@ -3,26 +3,34 @@ import sqlite3
 import json
 from datetime import datetime, timedelta
 
+now = datetime.now()
+today = now.date()
+tomorrow = today + timedelta(days=1)
+yesterday = today - timedelta(days=1)
+yesterday_date = yesterday.strftime('%Y-%m-%d')
+
+# 适合于纯自定义抓取
+# start_date = "2025-01-10"
+# end_date = "2025-01-11"
+
+# 适合于半自定义抓取
+# start_date = "2002-09-17"
+# end_date = today.strftime('%Y-%m-%d')
+
+# 适合于抓取明天的数据
+# tomorrow = today + timedelta(days=1)
+# start_date = today.strftime('%Y-%m-%d')
+# end_date = tomorrow.strftime('%Y-%m-%d')
+
+# 适合于只抓今天
+start_date = yesterday.strftime('%Y-%m-%d')
+end_date = today.strftime('%Y-%m-%d')
+
 def log_error_with_timestamp(error_message):
     # 获取当前日期和时间
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
     # 在错误信息前加入时间戳
     return f"[{timestamp}] {error_message}\n"
-
-# 适合于纯自定义抓取
-# start_date = "2025-01-07"
-# end_date = "2025-01-08"
-
-# 适合于半自定义抓取
-# start_date = "2002-09-17"
-# today = datetime.now()
-# end_date = today.strftime('%Y-%m-%d')
-
-# 适合于只抓今天
-today = datetime.now()
-yesterday = today - timedelta(days=1)
-start_date = yesterday.strftime('%Y-%m-%d')
-end_date = today.strftime('%Y-%m-%d')
 
 # 读取JSON文件
 with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json', 'r') as file:
@@ -53,7 +61,7 @@ for group_name, tickers in stock_groups.items():
             table_name = group_name.replace(" ", "_")  # 确保表名没有空格
             mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)
             for index, row in data.iterrows():
-                date = index.strftime('%Y-%m-%d')
+                date = yesterday_date  # 使用昨天的日期
                 if group_name in ["Currencies", "Bonds"]:
                     price = round(row['Close'], 4)
                 elif group_name in ["Crypto"]:
