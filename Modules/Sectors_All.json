@@ -450,7 +450,10 @@
     "ARGT",
     "MTUM",
     "DYNF",
-    "LQDI"
+    "LQDI",
+    "VRIG",
+    "REZ",
+    "IXN"
   ],
   "Basic_Materials": [
     "LIN",

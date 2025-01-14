@@ -118,40 +118,87 @@ def parse_output_color(output):
     return updates_color
 
 def update_color_json(color_config_path, updates_colors, blacklist_newlow, existing_sectors_panel):
+    # 定义颜色优先级，数字越小优先级越高
+    color_priority = {
+        'black_keywords': 1,
+        'orange_keywords': 2,
+        'yellow_keywords': 3,
+        'white_keywords': 4,
+        'blue_keywords': 5
+    }
+
     with open(color_config_path, 'r', encoding='utf-8') as file:
         all_colors = json.load(file)
 
     # 创建一个新的字典，排除 "red_keywords"
     colors = {k: v for k, v in all_colors.items() if k != "red_keywords"}
 
-    # 创建一个集合，包含所有已存在于 sectors_panel.json 中的 symbol
-    # existing_symbols = set()
-    # for category in existing_sectors_panel.values():
-    #     existing_symbols.update(category.keys())
+    # 创建一个映射，从 symbol 到它所在的颜色分组
+    symbol_to_color = {}
+    for color, symbols in colors.items():
+        for symbol in symbols:
+            symbol_to_color[symbol] = color
 
     for category_list, names in updates_colors.items():
+        if category_list not in color_priority:
+                log_and_print_error(f"未知的颜色类别: {category_list}, 跳过。")
+                continue  # 跳过未知的颜色类别
+
+        new_priority = color_priority[category_list]
+        
         for name in names:
-            # 检查该 symbol 是否存在于 colors.json 中的其他分组，且不在 category_list 中
-            symbol_exists_elsewhere = any(
-                name in symbols for group, symbols in colors.items() if group != category_list
-            )
+            # # 检查该 symbol 是否存在于 colors.json 中的其他分组，且不在 category_list 中
+            # symbol_exists_elsewhere = any(
+            #     name in symbols for group, symbols in colors.items() if group != category_list
+            # )
 
-            if symbol_exists_elsewhere:
-                print(f"Symbol {name} 已存在于Colors其他分组中，跳过添加到 {category_list}")
-                continue  # 跳过当前 symbol 的添加
+            # if symbol_exists_elsewhere:
+            #     print(f"Symbol {name} 已存在于Colors其他分组中，跳过添加到 {category_list}")
+            #     continue  # 跳过当前 symbol 的添加
 
-            if name not in colors.get(category_list, []):
-                # if name in existing_symbols:
-                    # 如果 symbol 已存在于 sectors_panel.json 中，打印日志
-                # else:
+            # if name not in colors.get(category_list, []):
+            #     if category_list in colors:
+            #         colors[category_list].append(name)
+            #         print(f"将 '{name}' 添加到Colors已存在的 '{category_list}' 类别中")
+            #     else:
+            #         colors[category_list] = [name]
+            #         print(f"'{name}' 被添加到新的 '{category_list}' 类别中")
+            # else:
+            #     print(f"Symbol {name} 已存在于 {category_list} 中。")
+
+            existing_color = symbol_to_color.get(name)
+
+            if existing_color:
+                existing_priority = color_priority.get(existing_color, float('inf'))  # 如果颜色不在优先级列表中，默认最低优先级
+
+                if new_priority < existing_priority:
+                    # 新颜色优先级更高，进行移除和添加
+                    colors[existing_color].remove(name)
+                    if not colors[existing_color]:
+                        del colors[existing_color]  # 如果某颜色列表为空，删除该键
+                    if category_list in colors:
+                        colors[category_list].append(name)
+                    else:
+                        colors[category_list] = [name]
+                    # 更新 symbol_to_color 映射
+                    symbol_to_color[name] = category_list
+
+                    log_message = f"Symbol {name} 从 {existing_color} 移动到 {category_list}。"
+                    log_and_print_error(log_message)
+                else:
+                    # 新颜色优先级低于或等于现有颜色，跳过
+                    log_message = f"Symbol {name} 已在 {existing_color} 中，其优先级高于或等于 {category_list}，跳过。"
+                    log_and_print_error(log_message)
+            else:
+                # Symbol 不存在于任何颜色分组中，直接添加
                 if category_list in colors:
                     colors[category_list].append(name)
-                    print(f"将 '{name}' 添加到Colors已存在的 '{category_list}' 类别中")
                 else:
                     colors[category_list] = [name]
-                    print(f"'{name}' 被添加到新的 '{category_list}' 类别中")
-            else:
-                print(f"Symbol {name} 已存在于 {category_list} 中。")
+                symbol_to_color[name] = category_list
+
+                log_message = f"Symbol {name} 添加到 {category_list}。"
+                log_and_print_error(log_message)
     
     # 在写回文件之前，将 "red_keywords" 添加回去
     colors["red_keywords"] = all_colors.get("red_keywords", [])
@@ -160,7 +207,8 @@ def update_color_json(color_config_path, updates_colors, blacklist_newlow, exist
         with open(color_config_path, 'w', encoding='utf-8') as file:
             json.dump(colors, file, ensure_ascii=False, indent=4)
     except Exception as e:
-        print(f"写入文件时发生错误: {e}")
+        error_msg = f"写入文件时发生错误: {e}"
+        log_and_print_error(error_msg)
 
 def log_and_print_error(error_message):
     formatted_error_message = log_error_with_timestamp(error_message)

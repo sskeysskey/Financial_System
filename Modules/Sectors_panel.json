@@ -1,36 +1,25 @@
 {
     "Basic_Materials": {
         "CE": "赛莱默",
-        "LIN": "",
         "WLK": "塑料乙烯",
         "SHW": "",
-        "ECL": "",
-        "PPG": "",
-        "SSD": "",
         "NEU": "",
         "ASH": ""
     },
     "Communication_Services": {
         "TMUS": "",
-        "VOD": "",
         "OMC": "",
         "IPG": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
         "LEN": "",
-        "BALL": "",
-        "AVY": "",
         "SON": "",
         "NKE": "",
         "MCD": "",
         "BABA": "",
         "JD": "",
-        "YUM": "",
-        "GNTX": "",
-        "CZR": "",
-        "MTH": "",
-        "RRR": ""
+        "MTH": ""
     },
     "Energy": {
         "WFRD": "",
@@ -42,26 +31,29 @@
         "INTC": "",
         "AMAT": "应用材料",
         "AMD": "",
-        "MU": "",
         "MCHP": "",
-        "OLED": "",
         "NXPI": "",
-        "CDW": "",
         "ENTG": "",
-        "FICO": "",
         "ON": "",
         "AAPL": "",
         "ORCL": "",
-        "ROP": "",
         "UMC": "",
+        "PANW": "",
+        "DELL": "",
+        "FICO": "",
+        "MSFT": "",
+        "OLED": "",
         "NOVT": "",
-        "TENB": ""
+        "ACLS": "",
+        "OS": ""
     },
     "Utilities": {
         "SO": "南方电力",
         "DUK": "杜克电力",
         "NEE": "",
-        "SRE": ""
+        "SRE": "",
+        "EIX": "",
+        "WTRG": ""
     },
     "Consumer_Defensive": {
         "HSY": "",
@@ -71,29 +63,17 @@
         "GIS": "",
         "FLO": "",
         "SJM": "",
-        "PG": "",
-        "PM": "",
         "UL": "",
-        "CL": "",
-        "KDP": "",
-        "MNST": "",
-        "CAG": ""
+        "DEO": ""
     },
     "Industrials": {
         "LMT": "洛克希德",
         "GD": "通用动力",
         "URI": "联合租赁",
         "LHX": "",
-        "TXT": "",
-        "FERG": "",
         "TTC": "",
-        "CAT": "",
         "TRI": "",
-        "ITW": "",
-        "CARR": "",
-        "EXPD": "",
-        "MSA": "",
-        "LSTR": ""
+        "RYAAY": ""
     },
     "Real_Estate": {
         "NNN": "",
@@ -102,27 +82,23 @@
     "Financial_Services": {
         "ICE": "洲际",
         "BRK-A": "",
-        "AJG": "",
-        "PGR": "",
         "AON": "",
-        "CB": "",
         "V": "",
-        "HDB": "",
         "BLK": "",
-        "IBN": "",
-        "MCO": "",
-        "BNS": "",
         "TRV": "",
-        "ALL": ""
+        "ALL": "",
+        "HDB": "",
+        "IBN": ""
     },
     "Healthcare": {
         "ELV": "",
         "UNH": "",
-        "CNC": "",
         "HUM": "",
         "NVO": "",
         "JNJ": "",
-        "REGN": ""
+        "REGN": "",
+        "MRNA": "",
+        "HOLX": ""
     },
     "Bonds": {
         "US2Y": "",
@@ -199,12 +175,13 @@
         "EURUSD": ""
     },
     "Economics": {
-        "USTrade": "07 USTrade",
-        "USNonFarmA": "08 USNonFarmA",
-        "USNonFarm": "10 USNonFarm",
-        "USUnemploy": "10 USUnemploy",
-        "USConfidence": "10 USConfidence",
-        "USInitial": "09 USInitial"
+        "CorePPI": "14 CorePPI",
+        "USPPI": "14 USPPI",
+        "USCPI": "15 USCPI",
+        "CoreCPI": "15 CoreCPI",
+        "ImportPriceM": "16 ImportPriceM",
+        "USRetailM": "16 USRetailM",
+        "USInitial": "16 USInitial"
     },
     "ETFs_US": {
         "TLT": "",
