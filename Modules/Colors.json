@@ -212,13 +212,11 @@
         "EDU",
         "FRO",
         "UGP",
-        "REGN",
         "AKAM",
         "BBIO",
         "E",
         "WLK",
         "IBRX",
-        "CRSP",
         "TMDX",
         "ARE",
         "SAIC",
@@ -280,7 +278,9 @@
         "NOVT",
         "TENB",
         "HOLX",
-        "WTRG"
+        "WTRG",
+        "M",
+        "CRL"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -434,7 +434,9 @@
         "STZ",
         "CAG",
         "IONS",
-        "EIX"
+        "EIX",
+        "REGN",
+        "CRSP"
     ],
     "orange_keywords": [
         "NASDAQ",

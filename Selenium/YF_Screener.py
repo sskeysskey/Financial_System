@@ -1,5 +1,6 @@
 import os
 import json
+import pickle
 from selenium import webdriver
 from datetime import datetime, timedelta
 from selenium.webdriver.common.by import By
@@ -13,6 +14,29 @@ import random
 import time
 import threading
 from bs4 import BeautifulSoup
+
+# 保存Cookie到文件
+def save_cookies(driver, cookie_file):
+    with open(cookie_file, 'wb') as file:
+        pickle.dump(driver.get_cookies(), file)
+    print("Cookie已保存到文件。")
+
+# 从文件加载Cookie
+def load_cookies(driver, cookie_file):
+    if os.path.exists(cookie_file):
+        with open(cookie_file, 'rb') as file:
+            cookies = pickle.load(file)
+            for cookie in cookies:
+                # 删除过期的Cookie
+                if 'expiry' in cookie:
+                    if cookie['expiry'] < time.time():
+                        continue
+                driver.add_cookie(cookie)
+        print("Cookie已从文件加载。")
+        return True
+    else:
+        print("Cookie文件不存在，需要重新登录。")
+        return False
 
 # 添加鼠标移动功能的函数
 def move_mouse_periodically():
@@ -371,7 +395,6 @@ mouse_thread.start()
 # 主程序逻辑
 chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
 service = Service(executable_path=chrome_driver_path)
-# driver = webdriver.Chrome(service=service)
 
 # 设置Chrome选项
 chrome_options = webdriver.ChromeOptions()
@@ -426,8 +449,61 @@ urls = [
     ('https://finance.yahoo.com/research-hub/screener/360b16ee-2692-4617-bd1a-a6c715dd0c29/?start=0&count=100', 'Communication_Services'),
 ]
 
+# 定义Cookie文件的路径
+cookie_file = '/Users/yanzhang/Documents/Financial_System/Modules/yahoo_cookies.pkl'
+
+# # 尝试加载Cookie
+# if load_cookies(driver, cookie_file):
+#     # 刷新页面以应用Cookie
+#     driver.refresh()
+    
+#     # 检查是否成功登录，例如检查某个登录后可见的元素
+#     try:
+#         WebDriverWait(driver, 120).until(EC.any_of(
+#         EC.presence_of_element_located((By.ID, "header-profile-button")),
+#         EC.presence_of_element_located((By.ID, "ybarMailIndicator")),
+#         EC.presence_of_element_located((By.ID, "ybarAccountMenu")),
+#         EC.presence_of_element_located((By.ID, "ybarAccountMenuOpener"))
+#     ))
+#         print("通过Cookie登录成功。")
+#     except TimeoutException:
+#         print("Cookie失效，需重新登录。")
+#         login_once(driver, login_url, "yansteven188@gmail.com", "2345@Abcd")
+#         save_cookies(driver, cookie_file)
+# else:
+#     # 如果没有Cookie文件或加载失败，执行登录
+#     login_once(driver, login_url, "yansteven188@gmail.com", "2345@Abcd")
+#     save_cookies(driver, cookie_file)
+
+# try:
+#     # login_once(driver, login_url, "yansteven188@gmail.com", "2345@Abcd")
+#     for url, sector in urls:
+#         process_sector(driver, url, sector, output, output_500, output_5000, blacklist)
+# finally:
+#     driver.quit()
+
 try:
-    login_once(driver, login_url, "yansteven188@gmail.com", "2345@Abcd")
+    # 打开登录页面
+    driver.get("https://www.yahoo.com/")
+    
+    if load_cookies(driver, cookie_file):
+        driver.refresh()
+        try:
+            WebDriverWait(driver, 120).until(EC.any_of(
+            EC.presence_of_element_located((By.ID, "header-profile-button")),
+            EC.presence_of_element_located((By.ID, "ybarMailIndicator")),
+            EC.presence_of_element_located((By.ID, "ybarAccountMenu")),
+            EC.presence_of_element_located((By.ID, "ybarAccountMenuOpener"))
+        ))
+            print("通过Cookie登录成功。")
+        except TimeoutException:
+            print("Cookie失效，需重新登录。")
+            login_once(driver, login_url, "yansteven188@gmail.com", "2345@Abcd")
+            save_cookies(driver, cookie_file)
+    else:
+        login_once(driver, login_url, "yansteven188@gmail.com", "2345@Abcd")
+        save_cookies(driver, cookie_file)
+
     for url, sector in urls:
         process_sector(driver, url, sector, output, output_500, output_5000, blacklist)
 finally:

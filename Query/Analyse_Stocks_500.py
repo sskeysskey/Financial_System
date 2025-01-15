@@ -168,33 +168,9 @@ def update_color_json(color_config_path, updates_colors, blacklist_newlow, exist
         new_priority = color_priority[category_list]
 
         for name in names:
-            # # 检查该 symbol 是否存在于 colors.json 中的其他分组，且不在 red_keywords 中
-            # symbol_exists_elsewhere = any(
-            #     name in symbols for group, symbols in colors.items() if group != category_list
-            # )
-
-            # if symbol_exists_elsewhere:
-            #     print(f"Symbol {name} 已存在于Colors其他分组中，跳过添加到 {category_list}")
-            #     continue  # 跳过当前 symbol 的添加
-
-            # if name not in colors.get(category_list, []):
-            #     # if name in existing_symbols:
-            #         # 如果 symbol 已存在于 sectors_panel.json 中，打印日志
-            #     # else:
-            #     if category_list in colors:
-            #         colors[category_list].append(name)
-            #         print(f"将 '{name}' 添加到Colors已存在的 '{category_list}' 类别中")
-            #     else:
-            #         colors[category_list] = [name]
-            #         print(f"'{name}' 被添加到新的 '{category_list}' 类别中")
-            # else:
-            #     print(f"Symbol {name} 已存在于 {category_list} 中。")
-
             existing_color = symbol_to_color.get(name)
-
             if existing_color:
                 existing_priority = color_priority.get(existing_color, float('inf'))  # 如果颜色不在优先级列表中，默认最低优先级
-
                 if new_priority < existing_priority:
                     # 新颜色优先级更高，进行移除和添加
                     colors[existing_color].remove(name)

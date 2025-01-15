@@ -19,32 +19,28 @@
         "MCD": "",
         "BABA": "",
         "JD": "",
-        "MTH": ""
+        "M": ""
     },
     "Energy": {
-        "WFRD": "",
-        "MPC": "马拉松",
-        "VLO": "",
-        "FRO": ""
+        "WFRD": ""
     },
     "Technology": {
         "INTC": "",
-        "AMAT": "应用材料",
         "AMD": "",
         "MCHP": "",
         "NXPI": "",
         "ENTG": "",
         "ON": "",
         "AAPL": "",
-        "ORCL": "",
         "UMC": "",
         "PANW": "",
-        "DELL": "",
         "FICO": "",
-        "MSFT": "",
         "OLED": "",
-        "NOVT": "",
         "ACLS": "",
+        "MSFT": "",
+        "SONY": "",
+        "DELL": "",
+        "TTD": "",
         "OS": ""
     },
     "Utilities": {
@@ -52,8 +48,7 @@
         "DUK": "杜克电力",
         "NEE": "",
         "SRE": "",
-        "EIX": "",
-        "WTRG": ""
+        "EIX": ""
     },
     "Consumer_Defensive": {
         "HSY": "",
@@ -63,17 +58,13 @@
         "GIS": "",
         "FLO": "",
         "SJM": "",
-        "UL": "",
-        "DEO": ""
+        "DEO": "",
+        "UL": ""
     },
     "Industrials": {
-        "LMT": "洛克希德",
-        "GD": "通用动力",
         "URI": "联合租赁",
-        "LHX": "",
         "TTC": "",
-        "TRI": "",
-        "RYAAY": ""
+        "TRI": ""
     },
     "Real_Estate": {
         "NNN": "",
@@ -81,24 +72,21 @@
     },
     "Financial_Services": {
         "ICE": "洲际",
-        "BRK-A": "",
         "AON": "",
-        "V": "",
         "BLK": "",
         "TRV": "",
-        "ALL": "",
-        "HDB": "",
-        "IBN": ""
+        "ALL": ""
     },
     "Healthcare": {
-        "ELV": "",
         "UNH": "",
         "HUM": "",
         "NVO": "",
         "JNJ": "",
         "REGN": "",
         "MRNA": "",
-        "HOLX": ""
+        "HOLX": "",
+        "LLY": "",
+        "CRL": ""
     },
     "Bonds": {
         "US2Y": "",

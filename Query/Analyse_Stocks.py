@@ -213,30 +213,54 @@ def load_symbols_from_file(file_path):
             error_file.write(formatted_error_message)
     return symbols
 
-def clean_old_backups(directory, file_patterns, days=3):
-    now = datetime.now()
-    cutoff = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days)
+# def clean_old_backups(directory, file_patterns, days=3):
+#     now = datetime.now()
+#     cutoff = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days)
 
+#     for filename in os.listdir(directory):
+#         for prefix, date_position in file_patterns:
+#             if filename.startswith(prefix):
+#                 try:
+#                     parts = filename.split('_')
+#                     # 提取日期部分，确保获取完整的6位日期 (YYMMDD)
+#                     date_str = parts[date_position].split('.')[0][-6:]  # 修改这里，获取6位
+#                     # 解析完整的YYMMDD格式
+#                     file_date = datetime.strptime(date_str, '%y%m%d')
+#                     # 设置文件日期的时间为当天开始(0点)
+#                     file_date = file_date.replace(hour=0, minute=0, second=0, microsecond=0)
+                    
+#                     # 如果文件日期早于截止日期，则删除文件
+#                     if file_date < cutoff:
+#                         file_path = os.path.join(directory, filename)
+#                         os.remove(file_path)
+#                         print(f"删除旧备份文件：{file_path}")
+#                     else:
+#                         print(f"保留文件：{filename}，日期 {file_date.strftime('%Y-%m-%d')} 在保留范围内")
+#                     break  # 文件已处理，无需检查其他模式
+#                 except Exception as e:
+#                     print(f"处理文件出错：{filename}，原因：{e}")
+def clean_old_backups(directory, file_patterns):
+    now = datetime.now()
+    
     for filename in os.listdir(directory):
-        for prefix, date_position in file_patterns:
+        for prefix, date_position, retention_days in file_patterns:
             if filename.startswith(prefix):
                 try:
+                    # 计算该文件模式的截止日期
+                    cutoff = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=retention_days)
+                    
                     parts = filename.split('_')
-                    # 提取日期部分，确保获取完整的6位日期 (YYMMDD)
-                    date_str = parts[date_position].split('.')[0][-6:]  # 修改这里，获取6位
-                    # 解析完整的YYMMDD格式
+                    date_str = parts[date_position].split('.')[0][-6:]
                     file_date = datetime.strptime(date_str, '%y%m%d')
-                    # 设置文件日期的时间为当天开始(0点)
                     file_date = file_date.replace(hour=0, minute=0, second=0, microsecond=0)
                     
-                    # 如果文件日期早于截止日期，则删除文件
                     if file_date < cutoff:
                         file_path = os.path.join(directory, filename)
                         os.remove(file_path)
                         print(f"删除旧备份文件：{file_path}")
                     else:
                         print(f"保留文件：{filename}，日期 {file_date.strftime('%Y-%m-%d')} 在保留范围内")
-                    break  # 文件已处理，无需检查其他模式
+                    break
                 except Exception as e:
                     print(f"处理文件出错：{filename}，原因：{e}")
 
@@ -422,19 +446,33 @@ def main():
             output_high_file_path = '/Users/yanzhang/Documents/News/10Y_newhigh_new.txt'
             write_output_to_file(processed_output, output_high_file_path)
 
-    # 定义要清理的文件模式
+    # # 定义要清理的文件模式
+    # file_patterns = [
+    #     ("Earnings_Release_next_", -1), # 日期在最后一个下划线后
+    #     ("Economic_Events_next_", -1),
+    #     ("ETFs_diff_", -1),
+    #     ("NewLow_", -1),
+    #     ("NewLow500_", -1),
+    #     ("NewLow5000_", -1),
+    #     ("Stock_Splits_next_", -1),
+    #     ("TodayCNH_", -1),
+    #     ("Stock_50_", -1),
+    #     ("Stock_500_", -1),
+    #     ("Stock_5000_", -1)
+    # ]
+    # 定义要清理的文件模式，每个模式现在包含三个元素：(前缀, 日期位置, 保留天数)
     file_patterns = [
-        ("Earnings_Release_next_", -1), # 日期在最后一个下划线后
-        ("Economic_Events_next_", -1),
-        ("ETFs_diff_", -1),
-        ("NewLow_", -1),
-        ("NewLow500_", -1),
-        ("NewLow5000_", -1),
-        ("Stock_Splits_next_", -1),
-        ("TodayCNH_", -1),
-        ("Stock_50_", -1),
-        ("Stock_500_", -1),
-        ("Stock_5000_", -1)
+        ("Earnings_Release_next_", -1, 13),    # 保留13天
+        ("Economic_Events_next_", -1, 13),     # 保留13天
+        ("ETFs_diff_", -1, 3),                 # 保留3天
+        ("NewLow_", -1, 3),
+        ("NewLow500_", -1, 3),
+        ("NewLow5000_", -1, 3),
+        ("Stock_Splits_next_", -1, 3),
+        ("TodayCNH_", -1, 3),
+        ("Stock_50_", -1, 3),
+        ("Stock_500_", -1, 3),
+        ("Stock_5000_", -1, 3)
     ]
 
     # 执行清理旧备份文件的函数

@@ -1,40 +1,63 @@
+# ——————————————————————————————————————————————————————————————————————————————————————————
+# 检查该 symbol 是否存在于 colors.json 中的其他分组，且不在 red_keywords 中
+symbol_exists_elsewhere = any(
+    name in symbols for group, symbols in colors.items() if group != category_list
+)
+
+if symbol_exists_elsewhere:
+    print(f"Symbol {name} 已存在于Colors其他分组中，跳过添加到 {category_list}")
+    continue  # 跳过当前 symbol 的添加
+
+if name not in colors.get(category_list, []):
+    # if name in existing_symbols:
+        # 如果 symbol 已存在于 sectors_panel.json 中，打印日志
+    # else:
+    if category_list in colors:
+        colors[category_list].append(name)
+        print(f"将 '{name}' 添加到Colors已存在的 '{category_list}' 类别中")
+    else:
+        colors[category_list] = [name]
+        print(f"'{name}' 被添加到新的 '{category_list}' 类别中")
+else:
+    print(f"Symbol {name} 已存在于 {category_list} 中。")
+# ——————————————————————————————————————————————————————————————————————————————————————————
 for group_name, tickers in stock_groups.items():
-            data_count = 0  # 初始化计数器
-            for ticker_symbol in tickers:
-                try:
-                    # 使用 yfinance 下载股票数据
-                    data = yf.download(ticker_symbol, start=start_date, end=end_date)
-                    if data.empty:
-                        raise ValueError(f"{group_name} {ticker_symbol}: No price data found for the given date range.")
+    data_count = 0  # 初始化计数器
+    for ticker_symbol in tickers:
+        try:
+            # 使用 yfinance 下载股票数据
+            data = yf.download(ticker_symbol, start=start_date, end=end_date)
+            if data.empty:
+                raise ValueError(f"{group_name} {ticker_symbol}: No price data found for the given date range.")
 
-                    # 插入数据到相应的表中
-                    table_name = group_name.replace(" ", "_")  # 确保表名没有空格
-                    mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)  # 从映射字典获取名称，如果不存在则使用原始 ticker_symbol
-                    for index, row in data.iterrows():
-                        date = index.strftime('%Y-%m-%d')
-                        # date = "2024-06-11"
-                        if group_name in ["Currencies", "Bonds"]:
-                            price = round(row['Close'], 4)
-                        elif group_name in ["Crypto"]:
-                            price = round(row['Close'], 1)
-                        elif group_name in ["Commodities"]:
-                            price = round(row['Close'], 3)
-                        else:
-                            price = round(row['Close'], 2)
+            # 插入数据到相应的表中
+            table_name = group_name.replace(" ", "_")  # 确保表名没有空格
+            mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)  # 从映射字典获取名称，如果不存在则使用原始 ticker_symbol
+            for index, row in data.iterrows():
+                date = index.strftime('%Y-%m-%d')
+                # date = "2024-06-11"
+                if group_name in ["Currencies", "Bonds"]:
+                    price = round(row['Close'], 4)
+                elif group_name in ["Crypto"]:
+                    price = round(row['Close'], 1)
+                elif group_name in ["Commodities"]:
+                    price = round(row['Close'], 3)
+                else:
+                    price = round(row['Close'], 2)
 
-                        if group_name in special_groups:
-                            c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price) VALUES (?, ?, ?)", (date, mapped_name, price))
-                        else:
-                            volume = int(row['Volume'])
-                            c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)", (date, mapped_name, price, volume))
-                        
-                        data_count += 1  # 成功插入一条数据，计数器增加
-                except Exception as e:
-                    with open('/Users/yanzhang/Documents/News/Today_error1.txt', 'a') as error_file:
-                        error_file.write(log_error_with_timestamp(str(e)))
+                if group_name in special_groups:
+                    c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price) VALUES (?, ?, ?)", (date, mapped_name, price))
+                else:
+                    volume = int(row['Volume'])
+                    c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)", (date, mapped_name, price, volume))
+                
+                data_count += 1  # 成功插入一条数据，计数器增加
+        except Exception as e:
+            with open('/Users/yanzhang/Documents/News/Today_error1.txt', 'a') as error_file:
+                error_file.write(log_error_with_timestamp(str(e)))
 
-            # 在完成每个group_name后打印信息
-            print(f"{group_name} 数据处理完成，总共下载了 {data_count} 条数据。")
+    # 在完成每个group_name后打印信息
+    print(f"{group_name} 数据处理完成，总共下载了 {data_count} 条数据。")
 # ——————————————————————————————————————————————————————————————————————————————————————————
 def fetch_data(driver, url, blacklist):
     driver.get(url)
