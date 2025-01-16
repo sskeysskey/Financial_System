@@ -4,7 +4,7 @@ import json
 import sqlite3
 import tkinter as tk
 import tkinter.font as tkFont
-from tkinter import ttk, scrolledtext
+from tkinter import ttk, scrolledtext, simpledialog
 from datetime import datetime, timedelta
 from collections import OrderedDict
 import subprocess
@@ -12,21 +12,42 @@ import subprocess
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Query')
 from Chart_input import plot_financial_data
 
+# 定义 categories 全局变量
+categories = [
+    ['Basic_Materials', 'Consumer_Cyclical', 'Real_Estate'],
+    ['Energy', 'Technology'],
+    ['Utilities', 'Industrials', 'Consumer_Defensive'],
+    ['Communication_Services', 'Financial_Services', 'Healthcare'],
+    ['Bonds', 'Indices'],
+    ['Commodities'],
+    ['Crypto', 'ETFs', 'Currencies'],
+    ['Economics', 'ETFs_US']
+]
+
 class SymbolManager:
-    def __init__(self, config):
+    def __init__(self, config, categories):
         self.symbols = []
         self.current_index = -1
-        for category in config.values():
-            if isinstance(category, dict):
-                self.symbols.extend(category.keys())
-            else:
-                self.symbols.extend(category)
+        for category_group in categories:
+            for sector in category_group:
+                if sector in config:
+                    sector_content = config[sector]
+                    if isinstance(sector_content, dict):
+                        self.symbols.extend(sector_content.keys())
+                    else:
+                        self.symbols.extend(sector_content)
+        if not self.symbols:
+            print("Warning: No symbols found based on the provided categories and config.")
 
     def next_symbol(self):
+        if not self.symbols:
+            return None
         self.current_index = (self.current_index + 1) % len(self.symbols)
         return self.symbols[self.current_index]
 
     def previous_symbol(self):
+        if not self.symbols:
+            return None
         self.current_index = (self.current_index - 1) % len(self.symbols)
         return self.symbols[self.current_index]
 
@@ -46,7 +67,8 @@ def handle_arrow_key(direction):
     else:
         symbol = symbol_manager.previous_symbol()
     
-    on_keyword_selected_chart(symbol, None)
+    if symbol:
+        on_keyword_selected_chart(symbol, None)
 
 def load_json(path):
     with open(path, 'r', encoding='utf-8') as file:
@@ -112,25 +134,16 @@ def create_selection_window():
     canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
     canvas.configure(xscrollcommand=scrollbar.set)
 
-    color_frames = [tk.Frame(scrollable_frame) for _ in range(8)]
+    color_frames = [tk.Frame(scrollable_frame) for _ in range(len(categories))]  # 动态根据 categories 数量创建 frame
     for frame in color_frames:
         frame.pack(side="left", padx=1, pady=3, fill="both", expand=True)
 
-    categories = [
-        ['Basic_Materials', 'Real_Estate', 'Consumer_Cyclical'],
-        ['Technology', 'Energy'],
-        ['Industrials', 'Consumer_Defensive', 'Utilities'],
-        ['Healthcare', 'Financial_Services', 'Communication_Services'],
-        ['Bonds', 'Indices'],
-        ['Commodities'],
-        ['Currencies', 'ETFs', 'Crypto'],
-        ['Economics', 'ETFs_US']
-    ]
-
+    # 使用全局的 categories
     for index, category_group in enumerate(categories):
-        for db_key, keywords in config.items():
-            if db_key in category_group:
-                frame = tk.LabelFrame(color_frames[index], text=db_key, padx=1, pady=3)
+        for sector in category_group:
+            if sector in config:
+                keywords = config[sector]
+                frame = tk.LabelFrame(color_frames[index], text=sector, padx=1, pady=3)
                 frame.pack(side="top", padx=1, pady=3, fill="both", expand=True)
 
                 if isinstance(keywords, dict):
@@ -151,8 +164,8 @@ def create_selection_window():
 
                     # 创建右键菜单
                     menu = tk.Menu(button, tearoff=0)
-                    menu.add_command(label="删除", command=lambda k=keyword, g=db_key: delete_item(k, g))
-                    menu.add_command(label="改名", command=lambda k=keyword, g=db_key: rename_item(k, g))
+                    menu.add_command(label="删除", command=lambda k=keyword, g=sector: delete_item(k, g))
+                    menu.add_command(label="改名", command=lambda k=keyword, g=sector: rename_item(k, g))
 
                     # 新增“Add to Earning”选项
                     menu.add_command(label="Add to Earning", command=lambda k=keyword: execute_external_script('earning', k))
@@ -163,7 +176,7 @@ def create_selection_window():
                     menu.add_command(label="找相似", command=lambda k=keyword: execute_external_script('similar', k))
 
                     menu.add_separator()  # 添加分隔线
-                    menu.add_command(label="加入黑名单", command=lambda k=keyword, g=db_key: execute_external_script('blacklist', k, g))
+                    menu.add_command(label="加入黑名单", command=lambda k=keyword, g=sector: execute_external_script('blacklist', k, g))
                     # 新增“Forced Addding to Earning”选项
                     menu.add_command(label="Forced Adding to Earning", command=lambda k=keyword: execute_external_script('earning_force', k))
 
@@ -174,7 +187,7 @@ def create_selection_window():
                     link_label = tk.Label(button_frame, text="🔢", fg="gray", cursor="hand2")
                     link_label.pack(side="right", fill="x", expand=False)
                     link_label.bind("<Button-1>", lambda event, k=keyword: on_keyword_selected(k))
-
+    
     canvas.pack(side="left", fill="both", expand=True)
 
 def refresh_selection_window():
@@ -192,9 +205,9 @@ def rename_item(keyword, group):
     global config  # 添加全局声明
     try:
         # 创建输入对话框
-        new_name = tk.simpledialog.askstring("重命名", f"请为 {keyword} 输入新名称：")
+        new_name = simpledialog.askstring("重命名", f"请为 {keyword} 输入新名称：")
         
-        if new_name is not None:  # 用户点击了确定而不是取消
+        if new_name is not None and new_name.strip() != "":  # 用户点击了确定且输入不为空
             config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json'
             
             # 读取配置文件
@@ -203,7 +216,7 @@ def rename_item(keyword, group):
             
             # 更新名称
             if group in config_data and keyword in config_data[group]:
-                config_data[group][keyword] = new_name
+                config_data[group][keyword] = new_name.strip()
                 
                 # 保存更新后的配置
                 with open(config_path, 'w', encoding='utf-8') as file:
@@ -215,6 +228,8 @@ def rename_item(keyword, group):
                 refresh_selection_window()
             else:
                 print(f"未找到 {keyword} 在 {group} 中")
+        else:
+            print("重命名被取消或输入为空。")
     except Exception as e:
         print(f"重命名过程中发生错误: {e}")
 
@@ -252,8 +267,10 @@ def execute_external_script(script_type, keyword, group=None):
         print(f"发生未知错误: {e}")
 
 def delete_item(keyword, group):
+    global config  # 添加全局声明
+    
     # 从 config 中删除该关键词
-    if keyword in config[group]:
+    if group in config and keyword in config[group]:
         if isinstance(config[group], dict):
             del config[group][keyword]
         else:
@@ -268,11 +285,8 @@ def delete_item(keyword, group):
         
         # 刷新选择窗口
         refresh_selection_window()
-
-def refresh_selection_window():
-    for widget in root.winfo_children():
-        widget.destroy()
-    create_selection_window()
+    else:
+        print(f"{keyword} 不存在于 {group} 中")
 
 def get_button_style(keyword):
     color_styles = {
@@ -287,7 +301,7 @@ def get_button_style(keyword):
         "green": "Green.TButton",
     }
     for color, style in color_styles.items():
-        if keyword in keyword_colors[f"{color}_keywords"]:
+        if keyword in keyword_colors.get(f"{color}_keywords", []):
             return style
     return "Default.TButton"
 
@@ -354,6 +368,6 @@ if __name__ == '__main__':
     shares = load_text_data('/Users/yanzhang/Documents/News/backup/Shares.txt')
     marketcap_pe_data = load_marketcap_pe_data('/Users/yanzhang/Documents/News/backup/marketcap_pe.txt')
 
-    symbol_manager = SymbolManager(config)
+    symbol_manager = SymbolManager(config, categories)  # 传入 categories
     create_selection_window()
     root.mainloop()

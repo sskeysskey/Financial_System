@@ -106,7 +106,6 @@
     "BLOK",
     "BITB",
     "BBJP",
-    "TMFC",
     "PFXF",
     "URTH",
     "FLBL",
@@ -273,7 +272,6 @@
     "SHYG",
     "ANGL",
     "QLD",
-    "VOOG",
     "KCE",
     "FXY",
     "EMB",
@@ -340,7 +338,6 @@
     "IXC",
     "RING",
     "USRT",
-    "GOVI",
     "SPIP",
     "IMTM",
     "BCD",
@@ -351,7 +348,6 @@
     "GNR",
     "GRID",
     "MEAR",
-    "TDTF",
     "YINN",
     "IWP",
     "SCHB",
@@ -1435,7 +1431,8 @@
     "ACA",
     "FELE",
     "ROAD",
-    "BE"
+    "BE",
+    "KTOS"
   ],
   "Real_Estate": [
     "PLD",

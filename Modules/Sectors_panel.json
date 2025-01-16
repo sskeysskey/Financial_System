@@ -6,20 +6,8 @@
         "NEU": "",
         "ASH": ""
     },
-    "Communication_Services": {
-        "TMUS": "",
-        "OMC": "",
-        "IPG": ""
-    },
-    "Consumer_Cyclical": {
-        "STLA": "",
-        "LEN": "",
-        "SON": "",
-        "NKE": "",
-        "MCD": "",
-        "BABA": "",
-        "JD": "",
-        "M": ""
+    "Real_Estate": {
+        "NNN": ""
     },
     "Energy": {
         "WFRD": ""
@@ -36,17 +24,19 @@
         "PANW": "",
         "FICO": "",
         "OLED": "",
-        "ACLS": "",
-        "MSFT": "",
-        "SONY": "",
-        "DELL": "",
-        "TTD": "",
-        "OS": ""
+        "ACLS": ""
+    },
+    "Consumer_Cyclical": {
+        "STLA": "",
+        "LEN": "",
+        "SON": "",
+        "NKE": "",
+        "BABA": "",
+        "JD": ""
     },
     "Utilities": {
         "SO": "南方电力",
         "DUK": "杜克电力",
-        "NEE": "",
         "SRE": "",
         "EIX": ""
     },
@@ -57,35 +47,34 @@
         "MDLZ": "",
         "GIS": "",
         "FLO": "",
-        "SJM": "",
         "DEO": "",
-        "UL": ""
+        "UL": "",
+        "SJM": ""
     },
     "Industrials": {
         "URI": "联合租赁",
         "TTC": "",
         "TRI": ""
     },
-    "Real_Estate": {
-        "NNN": "",
-        "STWD": ""
+    "Communication_Services": {
+        "TMUS": "",
+        "OMC": "",
+        "IPG": ""
     },
     "Financial_Services": {
         "ICE": "洲际",
-        "AON": "",
+        "AON": "怡安保险",
         "BLK": "",
-        "TRV": "",
-        "ALL": ""
+        "TRV": ""
     },
     "Healthcare": {
         "UNH": "",
-        "HUM": "",
         "NVO": "",
-        "JNJ": "",
         "REGN": "",
         "MRNA": "",
-        "HOLX": "",
         "LLY": "",
+        "HOLX": "",
+        "BMRN": "",
         "CRL": ""
     },
     "Bonds": {

@@ -124,7 +124,6 @@
         "DXJ",
         "SCHD",
         "LLY",
-        "SONY",
         "TSLA",
         "BRK-A",
         "MSFT",
@@ -225,7 +224,6 @@
         "CHE",
         "AOS",
         "PHI",
-        "QSR",
         "AVY",
         "SHEL",
         "CNQ",
@@ -268,6 +266,7 @@
         "NNN",
         "SSD",
         "RRR",
+        "SONY",
         "RKT",
         "OMC",
         "YUM",
@@ -436,7 +435,8 @@
         "IONS",
         "EIX",
         "REGN",
-        "CRSP"
+        "CRSP",
+        "QSR"
     ],
     "orange_keywords": [
         "NASDAQ",
