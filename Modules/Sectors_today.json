@@ -386,7 +386,10 @@
     "LQDI",
     "VRIG",
     "REZ",
-    "IXN"
+    "IXN",
+    "IGF",
+    "UITB",
+    "VONG"
   ],
   "Basic_Materials": [
     "LIN",
@@ -861,7 +864,8 @@
     "TGS",
     "NXE",
     "CRK",
-    "AROC"
+    "AROC",
+    "PAGP"
   ],
   "Financial_Services": [
     "BRK-A",
