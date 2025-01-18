@@ -112,7 +112,8 @@
         "TRV",
         "ALL",
         "SRE",
-        "MCK"
+        "MCK",
+        "LLY"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -123,7 +124,6 @@
         "Solana",
         "DXJ",
         "SCHD",
-        "LLY",
         "TSLA",
         "BRK-A",
         "MSFT",
@@ -279,7 +279,6 @@
         "HOLX",
         "WTRG",
         "M",
-        "CRL",
         "PVH"
     ],
     "yellow_keywords": [
@@ -437,7 +436,8 @@
         "EIX",
         "REGN",
         "CRSP",
-        "QSR"
+        "QSR",
+        "CRL"
     ],
     "orange_keywords": [
         "NASDAQ",

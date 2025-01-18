@@ -1,4 +1,123 @@
 # ——————————————————————————————————————————————————————————————————————————————————————————
+def get_column_indexes(driver):
+    """解析表头，获取各列的索引"""
+    header = driver.find_elements(By.CSS_SELECTOR, "table thead tr th")
+    column_mapping = {}
+    for idx, th in enumerate(header, start=1):
+        header_text = th.text.strip().lower()
+        if 'volume' in header_text:
+            column_mapping['volume'] = idx
+        elif 'market cap' in header_text:
+            column_mapping['market_cap'] = idx
+        elif 'pe ratio' in header_text or 'p/e' in header_text:
+            column_mapping['pe_ratio'] = idx
+    return column_mapping
+
+@retry_on_stale(max_attempts=5, delay=1)
+def extract_row_data_dynamic(driver, index, column_mapping):
+    """根据动态列映射提取单行数据"""
+    rows = driver.find_elements(By.CSS_SELECTOR, "table tbody tr")
+    if index >= len(rows):
+        raise IndexError("Row index out of range")
+    row = rows[index]
+    
+    symbol = row.find_element(By.CSS_SELECTOR, "a[data-testid='table-cell-ticker'] span.symbol").text.strip()
+    name = row.find_element(By.CSS_SELECTOR, "div[title]").get_attribute("title").strip()
+    price = row.find_element(By.CSS_SELECTOR, "fin-streamer[data-field='regularMarketPrice']").get_attribute("data-value").strip()
+    
+    volume = '--'
+    market_cap = '--'
+    pe_ratio = '--'
+    
+    if 'volume' in column_mapping:
+        try:
+            volume = row.find_element(By.XPATH, f"./td[{column_mapping['volume']}]").text.strip()
+        except NoSuchElementException:
+            pass
+    
+    if 'market_cap' in column_mapping:
+        try:
+            market_cap = row.find_element(By.XPATH, f"./td[{column_mapping['market_cap']}]").text.strip()
+        except NoSuchElementException:
+            pass
+    
+    if 'pe_ratio' in column_mapping:
+        try:
+            pe_ratio = row.find_element(By.XPATH, f"./td[{column_mapping['pe_ratio']}]").text.strip()
+        except NoSuchElementException:
+            pass
+    
+    return symbol, name, price, volume, market_cap, pe_ratio
+
+# 在主程序中使用动态列映射
+def fetch_data_dynamic(driver, url, blacklist, column_mapping):
+    driver.get(url)
+    results = []
+    
+    try:
+        wait = WebDriverWait(driver, 30)
+        wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "table tbody tr")))
+        
+        for index in range(len(driver.find_elements(By.CSS_SELECTOR, "table tbody tr"))):
+            try:
+                symbol, name, price, volume, market_cap, pe_ratio = extract_row_data_dynamic(driver, index, column_mapping)
+                
+                if is_blacklisted(symbol, blacklist):
+                    continue
+                
+                # 数据处理
+                price_parsed = parse_number(price)
+                volume_parsed = parse_volume(volume)
+                market_cap_parsed = parse_market_cap(market_cap)
+                pe_ratio_parsed = parse_number(pe_ratio)
+                
+                if market_cap_parsed != '--':
+                    results.append((
+                        symbol,
+                        market_cap_parsed,
+                        pe_ratio_parsed,
+                        name,
+                        price_parsed,
+                        volume_parsed
+                    ))
+                    
+            except Exception as e:
+                print(f"处理行时出错: {str(e)}")
+                continue
+                
+        write_results_to_files(results)
+        return results
+        
+    except TimeoutException:
+        print("页面加载超时")
+        return []
+    except Exception as e:
+        print(f"获取数据时出错: {str(e)}")
+        return []
+
+# 在主程序中初始化列映射
+try:
+    driver.get(urls[0][0])  # 访问第一个URL以获取表头
+    column_mapping = get_column_indexes(driver)
+    print(f"列映射: {column_mapping}")
+except Exception as e:
+    print(f"初始化列映射时出错: {str(e)}")
+    column_mapping = {}
+
+# 使用动态列映射抓取数据
+def process_sector_dynamic(driver, url, sector, output, output_500, output_5000, blacklist, column_mapping):
+    data = fetch_data_dynamic(driver, url, blacklist, column_mapping)
+    update_json(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', output, log_enabled=True, market_cap_threshold=5000000000, write_symbols=True)
+    update_json(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json', output, log_enabled=False, market_cap_threshold=5000000000)
+    
+    # 处理 500 亿和 5000 亿市值
+    update_json(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_500.json', output_500, log_enabled=True, market_cap_threshold=50000000000)
+    update_json(data, sector, '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_5000.json', output_5000, log_enabled=True, market_cap_threshold=500000000000)
+
+# 在循环中使用动态处理函数
+for url, sector in urls:
+    process_sector_dynamic(driver, url, sector, output, output_500, output_5000, blacklist, column_mapping)
+# ——————————————————————————————————————————————————————————————————————————————————————————
 # 检查该 symbol 是否存在于 colors.json 中的其他分组，且不在 red_keywords 中
 symbol_exists_elsewhere = any(
     name in symbols for group, symbols in colors.items() if group != category_list

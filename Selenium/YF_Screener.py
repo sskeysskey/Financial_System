@@ -129,6 +129,21 @@ def extract_row_data(driver, index):
     
     pe_ratio_element = row.find_element(By.XPATH, ".//td[contains(@class, 'yf-2twxe2')][11]")
     pe_ratio = pe_ratio_element.text.strip()
+
+    # try:
+    #     volume = row.find_element(By.XPATH, "./td[8]").text.strip()
+    # except NoSuchElementException:
+    #     volume = '--'
+    
+    # try:
+    #     market_cap = row.find_element(By.XPATH, "./td[10]").text.strip()
+    # except NoSuchElementException:
+    #     market_cap = '--'
+    
+    # try:
+    #     pe_ratio = row.find_element(By.XPATH, "./td[11]").text.strip()
+    # except NoSuchElementException:
+    #     pe_ratio = '--'
     
     return symbol, name, price, volume, market_cap, pe_ratio
 

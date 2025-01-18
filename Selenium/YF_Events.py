@@ -121,18 +121,12 @@ with open(file_path, 'a') as output_file:
             
             wait = WebDriverWait(driver, 4)
             try:
+                # 定位包含table的div容器，使用class中稳定的部分
                 table_container = wait.until(EC.presence_of_element_located(
-                    (By.CSS_SELECTOR, "div.table-container.yf-2twxe2")))
+                    (By.CSS_SELECTOR, "div.table-container")))
                 
-                # 然后定位所有行
-                rows = table_container.find_elements(By.CSS_SELECTOR, "tr.row.yf-2twxe2")
-
-                # # 定位包含table的div容器，使用class中稳定的部分
-                # table_container = wait.until(EC.presence_of_element_located(
-                #     (By.CSS_SELECTOR, "div.table-container")))
-                
-                # # 直接选择table下的所有tr
-                # rows = table_container.find_elements(By.TAG_NAME, "tr")
+                # 直接选择table下的所有tr
+                rows = table_container.find_elements(By.TAG_NAME, "tr")
             except TimeoutException:
                 rows = []  # 如果超时，则设置 rows 为空列表
             
@@ -141,30 +135,48 @@ with open(file_path, 'a') as output_file:
             else:
                 try:
                     for row in rows:
-                        tds = row.find_elements(By.CSS_SELECTOR, "td.yf-2twxe2")
-                        if len(tds) >= 2:
-                            event = tds[0].text
-                            country = tds[1].text
+                        # 跳过可能的表头行
+                        if row.get_attribute("role") == "columnheader":
+                            continue
                         
-                        # # 直接获取所有td元素
-                        # cells = row.find_elements(By.TAG_NAME, "td")
-                        # if len(cells) >= 2:
-                        #     event = cells[0].text.strip()
-                        #     country = cells[1].text.strip()
+                        # 直接获取所有td元素
+                        cells = row.find_elements(By.TAG_NAME, "td")
 
-                        if event in Event_Filter and country in target_countries:
-                            try:
-                                event_time = row.find_element(By.CSS_SELECTOR, 'td[aria-label="Event Time"]').text
-                            except NoSuchElementException:
-                                event_time = "No event time available"
-
-                            entry = f"{formatted_change_date} : {event} [{country}]"
-                            if entry not in existing_content:
-                                output_file.write(entry + "\n")
-                                new_content_added = True
-                    offset += 100   # 为下一个子页面增加 offset
+                        # 确保行中至少有足够的单元格
+                        if len(cells) < 2:
+                            continue
+                        # 安全地获取事件和国家信息
+                        try:
+                            event = cells[0].text.strip()
+                            country = cells[1].text.strip()
+                            
+                            # 只有当事件和国家都符合过滤条件时才处理
+                            if event and country and event in Event_Filter and country in target_countries:
+                                try:
+                                    # 尝试获取事件时间
+                                    event_time = next(
+                                        (cell.text for cell in cells if cell.get_attribute('aria-label') == 'Event Time'),
+                                        "No event time available"
+                                    )
+                                    
+                                    # 构造条目并写入
+                                    entry = f"{formatted_change_date} : {event} [{country}]"
+                                    if entry not in existing_content:
+                                        output_file.write(entry + "\n")
+                                        new_content_added = True
+                                        
+                                except Exception as e:
+                                    print(f"处理事件时间时出错: {str(e)}")
+                                    continue
+                                    
+                        except Exception as e:
+                            print(f"处理表格行时出错: {str(e)}")
+                            continue
+                            
+                    offset += 100  # 为下一个子页面增加 offset
+                    
                 except TimeoutException:
-                    print(f"No data found for date {formatted_change_date}. Skipping to next date.")
+                    print(f"日期 {formatted_change_date} 没有找到数据。跳转到下一个日期。")
         change_date += delta
 
 # 关闭浏览器

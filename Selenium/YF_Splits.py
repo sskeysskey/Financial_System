@@ -101,14 +101,6 @@ while change_date <= end_date:
         driver.get(url)
         
         try:
-            rows = WebDriverWait(driver, 4).until(
-                EC.presence_of_all_elements_located((By.CSS_SELECTOR, "tr.row.yf-2twxe2"))
-            )
-
-    #         rows = WebDriverWait(driver, 4).until(
-    #     EC.presence_of_all_elements_located((By.CSS_SELECTOR, "table tbody tr"))
-    # )
-    
             # 备选方案2：使用更复杂的属性组合
             # rows = WebDriverWait(driver, 4).until(
             #     EC.presence_of_all_elements_located((
@@ -118,12 +110,12 @@ while change_date <= end_date:
             # )
 
             # # 备选方案3：使用XPath（功能更强大但性能略低）
-            # rows = WebDriverWait(driver, 4).until(
-            #     EC.presence_of_all_elements_located((
-            #         By.XPATH, 
-            #         "//table//tbody/tr"
-            #     ))
-            # )
+            rows = WebDriverWait(driver, 4).until(
+                EC.presence_of_all_elements_located((
+                    By.XPATH, 
+                    "//table//tbody/tr"
+                ))
+            )
         except TimeoutException:
             has_data = False
             continue
@@ -142,7 +134,7 @@ while change_date <= end_date:
                     'td.tw-text-left.tw-max-w-xs.tw-whitespace-normal'
                 ).text
 
-                # 获取股票代码：使用更通用的属性选择器
+                # # 获取股票代码：使用更通用的属性选择器
                 # symbol = row.find_element(
                 #     By.CSS_SELECTOR, 
                 #     'td:first-child a[href^="/quote/"]'
