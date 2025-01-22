@@ -21,6 +21,34 @@ def convert_shares_format(shares_str):
         return int(float(shares_str.replace('k', '')) * 10**3)
     return int(shares_str)  # 如果没有单位标识符，直接返回原始字符串
 
+# 首先添加一个处理公司名称的函数
+def clean_company_name(name):
+    # 移除常见的公司后缀
+    suffixes = [
+        ', Inc.',
+        ' Inc.',
+        ', LLC',
+        ' LLC',
+        ', Ltd.',
+        ' Ltd.',
+        ', Limited',
+        ' Limited',
+        ', Corp.',
+        ' Corp.',
+        ', Corporation',
+        ' Corporation',
+        ', Co.',
+        ' Co.',
+        ', Company',
+        ' Company'
+    ]
+    
+    cleaned_name = name
+    for suffix in suffixes:
+        cleaned_name = cleaned_name.replace(suffix, '')
+    
+    return cleaned_name.strip()
+
 chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
 
 # 设置 ChromeDriver
@@ -115,10 +143,13 @@ with open("/Users/yanzhang/Documents/News/backup/Shares.txt", "a+") as file:
         if f"{symbol}: {shares}" not in existing_data:
             file.write(f"{symbol}: {shares}\n")
 
-# 写入公司名称数据
+# 修改写入公司名称数据的部分
 with open('/Users/yanzhang/Documents/News/backup/symbol_names.txt', 'a+', encoding='utf-8') as symbol_file:
     symbol_file.seek(0)
     existing_names = symbol_file.read()
     for symbol, name in symbol_names.items():
-        if f"{symbol}: {name}" not in existing_names:
-            symbol_file.write(f"{symbol}: {name}\n")
+        # 清理公司名称
+        cleaned_name = clean_company_name(name)
+        entry = f"{symbol}: {cleaned_name}"
+        if entry not in existing_names:
+            symbol_file.write(f"{entry}\n")

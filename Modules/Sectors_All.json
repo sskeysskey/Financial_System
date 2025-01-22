@@ -452,7 +452,8 @@
     "IXN",
     "IGF",
     "UITB",
-    "VONG"
+    "VONG",
+    "IOO"
   ],
   "Basic_Materials": [
     "LIN",
@@ -836,7 +837,8 @@
     "FLO",
     "LOPE",
     "PRMB",
-    "CALM"
+    "CALM",
+    "LRN"
   ],
   "Energy": [
     "XOM",
@@ -1300,7 +1302,8 @@
     "PRCT",
     "WAY",
     "ADMA",
-    "ALKS"
+    "ALKS",
+    "GH"
   ],
   "Industrials": [
     "GE",
@@ -1809,7 +1812,8 @@
     "AI",
     "ASAN",
     "GDS",
-    "PONY"
+    "PONY",
+    "QXO"
   ],
   "Utilities": [
     "NEE",

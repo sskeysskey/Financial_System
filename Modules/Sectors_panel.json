@@ -50,7 +50,8 @@
         "FLO": "",
         "DEO": "",
         "UL": "",
-        "SJM": ""
+        "SJM": "",
+        "EDU": ""
     },
     "Industrials": {
         "URI": "联合租赁",
@@ -66,7 +67,8 @@
         "ICE": "洲际",
         "AON": "怡安保险",
         "BLK": "",
-        "TRV": ""
+        "TRV": "",
+        "IBN": ""
     },
     "Healthcare": {
         "UNH": "",
@@ -76,6 +78,7 @@
         "LLY": "",
         "HOLX": "",
         "CRL": "",
+        "MRK": "",
         "TMDX": ""
     },
     "Bonds": {
@@ -105,7 +108,7 @@
         "Naturalgas": "天然气",
         "HuangJin": "黄金",
         "BalticDry": "",
-        "Silver": "",
+        "Silver": "白银",
         "Copper": "",
         "Uranium": "",
         "Nickel": "镍",
