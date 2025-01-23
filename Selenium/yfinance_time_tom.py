@@ -81,7 +81,7 @@ else:
     # 处理错误文件并更新sectors文件
     process_error_file(error_file_path, sectors_file_path)
 
-# process_crypto(sectors_file_path)
+process_crypto(sectors_file_path)
 
 now = datetime.now()
 
