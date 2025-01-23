@@ -410,7 +410,6 @@
     "FXI",
     "GNR",
     "GRID",
-    "MEAR",
     "YINN",
     "IWP",
     "SCHB",
@@ -453,7 +452,8 @@
     "IGF",
     "UITB",
     "VONG",
-    "IOO"
+    "IOO",
+    "FLMI"
   ],
   "Basic_Materials": [
     "LIN",
@@ -1813,7 +1813,8 @@
     "ASAN",
     "GDS",
     "PONY",
-    "QXO"
+    "QXO",
+    "CLBT"
   ],
   "Utilities": [
     "NEE",
