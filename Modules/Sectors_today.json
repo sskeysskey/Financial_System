@@ -1238,7 +1238,8 @@
     "WAY",
     "ADMA",
     "ALKS",
-    "GH"
+    "GH",
+    "AXSM"
   ],
   "Industrials": [
     "GE",
@@ -1805,6 +1806,7 @@
     "POR",
     "ORA",
     "NJR",
-    "PAM"
+    "PAM",
+    "OKLO"
   ]
 }

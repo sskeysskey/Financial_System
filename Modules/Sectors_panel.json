@@ -24,7 +24,8 @@
         "PANW": "",
         "FICO": "",
         "OLED": "",
-        "ACLS": ""
+        "ACLS": "",
+        "INTU": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
@@ -62,7 +63,8 @@
     "Communication_Services": {
         "TMUS": "",
         "OMC": "",
-        "IPG": ""
+        "IPG": "",
+        "EA": ""
     },
     "Financial_Services": {
         "ICE": "洲际",
