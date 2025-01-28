@@ -25,6 +25,7 @@ cursor = conn.cursor()
 # """, (price_multiplier, name))
 
 # 更新价格字段
+# cursor.execute("UPDATE Earning SET price = 1.9 WHERE id = 919")
 # cursor.execute("UPDATE Commodities SET price = 13.85 WHERE id = 104735")
 # cursor.execute("UPDATE Currencies SET date = '2025-01-06' WHERE id = 144913")
 

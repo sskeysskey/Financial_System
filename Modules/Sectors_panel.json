@@ -21,12 +21,15 @@
         "ON": "",
         "AAPL": "",
         "UMC": "",
-        "PANW": "",
         "FICO": "",
         "OLED": "",
         "ACLS": "",
-        "INTU": "",
-        "SAIC": ""
+        "SAIC": "",
+        "NVDA": "",
+        "TSM": "",
+        "AVGO": "",
+        "AMKR": "",
+        "NOVT": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
@@ -40,7 +43,6 @@
     "Utilities": {
         "SO": "南方电力",
         "DUK": "杜克电力",
-        "SRE": "",
         "EIX": "",
         "WTRG": ""
     },
@@ -49,11 +51,8 @@
         "PEP": "",
         "STZ": "",
         "MDLZ": "",
-        "GIS": "",
-        "FLO": "",
         "DEO": "",
         "UL": "",
-        "SJM": "",
         "EDU": ""
     },
     "Industrials": {
@@ -79,17 +78,19 @@
         "NVO": "",
         "REGN": "",
         "MRNA": "",
-        "LLY": "",
-        "HOLX": "",
         "CRL": "",
         "MRK": "",
-        "TMDX": ""
+        "TMDX": "",
+        "RDY": ""
     },
     "Bonds": {
         "US2Y": "",
         "US10Y": "",
         "JP10Y": "",
-        "IND10Y": ""
+        "IND10Y": "",
+        "BR10Y": "",
+        "UK10Y": "",
+        "TUR10Y": ""
     },
     "Indices": {
         "VIX": "恐慌指数",
@@ -157,11 +158,30 @@
         "USDCNY": "",
         "USDJPY": "",
         "CNYJPY": "",
-        "EURUSD": ""
+        "EURUSD": "",
+        "GBPUSD": "",
+        "CNYINR": "",
+        "CNYKRW": "",
+        "CNYRUB": "",
+        "CNYPHP": "",
+        "CNYIDR": "",
+        "USDRUB": "",
+        "USDKRW": "",
+        "USDTRY": "",
+        "USDSGD": "",
+        "USDTWD": "",
+        "USDIDR": "",
+        "USDPHP": "",
+        "USDMYR": "",
+        "USDMXN": ""
     },
     "Economics": {
-        "USConfidence": "24 USConfidence",
-        "USInitial": "23 USInitial"
+        "USInterest": "29 USInterest",
+        "USGDP": "30 USGDP",
+        "PCEY": "31 PCEY",
+        "CorePCEM": "31 CorePCEM",
+        "CorePCEY": "31 CorePCEY",
+        "USInitial": "30 USInitial"
     },
     "ETFs_US": {
         "TLT": "",

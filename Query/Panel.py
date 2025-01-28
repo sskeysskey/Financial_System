@@ -1,11 +1,3 @@
-# o1优化后代码
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-"""
-a.py - Optimized Code (functionality remains unchanged)
-"""
-
 import os
 import sys
 import json
@@ -23,7 +15,6 @@ import subprocess
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Query')
 from Chart_input import plot_financial_data
 
-
 # ----------------------------------------------------------------------
 # Constants / Global Configurations
 # ----------------------------------------------------------------------
@@ -35,6 +26,17 @@ COMPARE_DATA_PATH = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
 SHARES_PATH = '/Users/yanzhang/Documents/News/backup/Shares.txt'
 MARKETCAP_PATH = '/Users/yanzhang/Documents/News/backup/marketcap_pe.txt'
 DB_PATH = '/Users/yanzhang/Documents/Database/Finance.db'
+
+DISPLAY_LIMITS = {
+    'default': 'all',  # 默认显示全部
+    'Indices': 14,
+    "Bonds": 'all',
+    'Commodities': 24,
+    'ETFs': 10,
+    'Currencies': 5,
+    'Economics': 7,
+    'ETFs_US': 14,
+}
 
 # Define categories as a global variable
 categories = [
@@ -57,7 +59,6 @@ config = {}
 keyword_colors = {}
 sector_data = {}
 json_data = {}
-
 
 # ----------------------------------------------------------------------
 # Classes
@@ -102,10 +103,18 @@ class SymbolManager:
     def reset(self):
         self.current_index = -1
 
-
 # ----------------------------------------------------------------------
 # Utility / Helper Functions
 # ----------------------------------------------------------------------
+def limit_items(items, sector):
+    """
+    根据配置限制显示数量
+    """
+    limit = DISPLAY_LIMITS.get(sector, DISPLAY_LIMITS.get('default', 'all'))
+    if limit == 'all':
+        return items
+    return list(items)[:limit]
+
 def load_json(path):
     """
     Loads a JSON file from the given path, preserving key order.
@@ -127,7 +136,6 @@ def load_text_data(path):
             data[cleaned_key] = value
     return data
 
-
 def load_marketcap_pe_data(path):
     """
     Loads data from a text file in the format 'key: marketcap, pe'.
@@ -139,7 +147,6 @@ def load_marketcap_pe_data(path):
             marketcap_val, pe_val = map(str.strip, values.split(','))
             data[key] = (float(marketcap_val), pe_val)
     return data
-
 
 def get_button_style(keyword):
     """
@@ -160,7 +167,6 @@ def get_button_style(keyword):
         if keyword in keyword_colors.get(f"{color}_keywords", []):
             return style
     return "Default.TButton"
-
 
 def query_database(db_path, table_name, condition):
     """
@@ -186,7 +192,6 @@ def query_database(db_path, table_name, condition):
             row_str = ' | '.join(str(item).ljust(col_widths[idx]) for idx, item in enumerate(row))
             output_lines.append(row_str + '\n')
         return ''.join(output_lines)
-
 
 def execute_external_script(script_type, keyword, group=None):
     """
@@ -238,7 +243,6 @@ def delete_item(keyword, group):
     else:
         print(f"{keyword} 不存在于 {group} 中")
 
-
 def rename_item(keyword, group):
     """
     Renames (updates the description for) a given keyword in a specified group.
@@ -265,7 +269,6 @@ def rename_item(keyword, group):
     except Exception as e:
         print(f"重命名过程中发生错误: {e}")
 
-
 def on_keyword_selected(value):
     """
     Handles clicking the "🔢" label to display relevant database entries
@@ -276,7 +279,6 @@ def on_keyword_selected(value):
         condition = f"name = '{value}'"
         result = query_database(DB_PATH, sector, condition)
         create_window(result)
-
 
 def on_keyword_selected_chart(value, parent_window):
     """
@@ -294,7 +296,6 @@ def on_keyword_selected_chart(value, parent_window):
             DB_PATH, sector, value, compare_value, shares_value,
             marketcap_val, pe_val, json_data, '1Y', False
         )
-
 
 def create_window(content):
     """
@@ -314,7 +315,6 @@ def create_window(content):
     text_area.insert(tk.INSERT, content)
     text_area.configure(state='disabled')
 
-
 def close_app(window):
     """
     Destroys the given window and resets the SymbolManager's index.
@@ -322,7 +322,6 @@ def close_app(window):
     global symbol_manager
     symbol_manager.reset()
     window.destroy()
-
 
 def refresh_selection_window():
     """
@@ -333,7 +332,6 @@ def refresh_selection_window():
     for widget in root.winfo_children():
         widget.destroy()
     create_selection_window()
-
 
 def handle_arrow_key(direction):
     """
@@ -348,7 +346,6 @@ def handle_arrow_key(direction):
 
     if symbol:
         on_keyword_selected_chart(symbol, None)
-
 
 # ----------------------------------------------------------------------
 # TKinter GUI Setup
@@ -380,7 +377,6 @@ def create_custom_style():
             "TButton",
             background=[('active', '!disabled', 'pressed', 'focus', 'hover', 'alternate', 'selected', 'background')]
         )
-
 
 def create_selection_window():
     """
@@ -421,9 +417,15 @@ def create_selection_window():
 
                 # Retain original order
                 if isinstance(keywords, dict):
-                    items = keywords.items()
+                    items = limit_items(keywords.items(), sector)
                 else:
-                    items = [(kw, kw) for kw in keywords]
+                    items = limit_items([(kw, kw) for kw in keywords], sector)
+
+                # 显示条目数量信息
+                total = len(keywords) if isinstance(keywords, dict) else len(keywords)
+                shown = len(items)
+                sector_label = f"{sector} ({shown}/{total})" if shown != total else sector
+                frame.configure(text=sector_label)
 
                 for keyword, translation in items:
                     button_frame = tk.Frame(frame)
@@ -466,7 +468,6 @@ def create_selection_window():
 
     canvas.pack(side="left", fill="both", expand=True)
     scrollbar.pack(side="bottom", fill="x")
-
 
 # ----------------------------------------------------------------------
 # Main Execution
