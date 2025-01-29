@@ -65,7 +65,6 @@
         "PSA",
         "DUK",
         "LHX",
-        "FCX",
         "SCCO",
         "SBUX",
         "SU",
@@ -280,7 +279,9 @@
         "WTRG",
         "M",
         "PVH",
-        "EA"
+        "EA",
+        "FCX",
+        "LFUS"
     ],
     "yellow_keywords": [
         "Nikkei",

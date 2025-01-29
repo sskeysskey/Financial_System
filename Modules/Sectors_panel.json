@@ -4,7 +4,8 @@
         "WLK": "塑料乙烯",
         "SHW": "",
         "NEU": "",
-        "ASH": ""
+        "ASH": "",
+        "SCCO": ""
     },
     "Real_Estate": {
         "NNN": ""
@@ -29,7 +30,10 @@
         "TSM": "",
         "AVGO": "",
         "AMKR": "",
-        "NOVT": ""
+        "NOVT": "",
+        "TXN": "",
+        "DELL": "",
+        "LFUS": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
@@ -58,7 +62,8 @@
     "Industrials": {
         "URI": "联合租赁",
         "TTC": "",
-        "TRI": ""
+        "TRI": "",
+        "LMT": ""
     },
     "Communication_Services": {
         "TMUS": "",
