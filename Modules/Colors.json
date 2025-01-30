@@ -8,7 +8,6 @@
         "KLAC",
         "LRCX",
         "CI",
-        "DHR",
         "TMO",
         "UNP",
         "CL",
@@ -82,7 +81,6 @@
         "ABT",
         "CAT",
         "DELL",
-        "PCG",
         "HD",
         "UBS",
         "CTAS",
@@ -281,7 +279,9 @@
         "PVH",
         "EA",
         "FCX",
-        "LFUS"
+        "LFUS",
+        "DHR",
+        "PCG"
     ],
     "yellow_keywords": [
         "Nikkei",

@@ -17,53 +17,42 @@
         "INTC": "",
         "AMD": "",
         "MCHP": "",
-        "NXPI": "",
-        "ENTG": "",
         "ON": "",
         "AAPL": "",
         "UMC": "",
         "FICO": "",
-        "OLED": "",
         "ACLS": "",
         "SAIC": "",
         "NVDA": "",
         "TSM": "",
-        "AVGO": "",
         "AMKR": "",
-        "NOVT": "",
+        "LFUS": "",
         "TXN": "",
-        "DELL": "",
-        "LFUS": ""
+        "INTU": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
         "LEN": "",
         "SON": "",
-        "NKE": "",
-        "BABA": "",
-        "JD": "",
-        "MCD": ""
+        "NKE": ""
     },
     "Utilities": {
         "SO": "南方电力",
         "DUK": "杜克电力",
-        "EIX": "",
-        "WTRG": ""
+        "EIX": ""
     },
     "Consumer_Defensive": {
         "HSY": "",
-        "PEP": "",
         "STZ": "",
         "MDLZ": "",
-        "DEO": "",
-        "UL": "",
         "EDU": ""
     },
     "Industrials": {
         "URI": "联合租赁",
         "TTC": "",
-        "TRI": "",
-        "LMT": ""
+        "LMT": "",
+        "GD": "",
+        "CARR": ""
     },
     "Communication_Services": {
         "TMUS": "",
@@ -72,21 +61,17 @@
         "EA": ""
     },
     "Financial_Services": {
-        "ICE": "洲际",
-        "AON": "怡安保险",
-        "BLK": "",
-        "TRV": "",
-        "IBN": ""
+        "AON": "怡安保险"
     },
     "Healthcare": {
-        "UNH": "",
         "NVO": "",
         "REGN": "",
         "MRNA": "",
         "CRL": "",
         "MRK": "",
         "TMDX": "",
-        "RDY": ""
+        "RDY": "",
+        "DHR": ""
     },
     "Bonds": {
         "US2Y": "",
