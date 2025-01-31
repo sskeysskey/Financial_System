@@ -1,7 +1,6 @@
 {
     "Basic_Materials": {
         "CE": "赛莱默",
-        "WLK": "塑料乙烯",
         "SHW": "",
         "NEU": "",
         "ASH": "",
@@ -20,25 +19,22 @@
         "ON": "",
         "AAPL": "",
         "UMC": "",
-        "FICO": "",
         "ACLS": "",
         "SAIC": "",
         "NVDA": "",
         "TSM": "",
         "AMKR": "",
-        "LFUS": "",
         "TXN": "",
-        "INTU": ""
+        "INTU": "",
+        "MSFT": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
         "LEN": "",
-        "SON": "",
-        "NKE": ""
+        "AVY": ""
     },
     "Utilities": {
         "SO": "南方电力",
-        "DUK": "杜克电力",
         "EIX": ""
     },
     "Consumer_Defensive": {
@@ -48,7 +44,6 @@
         "EDU": ""
     },
     "Industrials": {
-        "URI": "联合租赁",
         "TTC": "",
         "LMT": "",
         "GD": "",

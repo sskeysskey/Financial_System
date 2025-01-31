@@ -164,7 +164,6 @@
         "CAE",
         "DBX",
         "MAT",
-        "CMCSA",
         "GXO",
         "VIPS",
         "POOL",
@@ -439,7 +438,8 @@
         "REGN",
         "CRSP",
         "QSR",
-        "CRL"
+        "CRL",
+        "CMCSA"
     ],
     "orange_keywords": [
         "NASDAQ",
