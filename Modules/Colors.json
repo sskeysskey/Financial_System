@@ -245,7 +245,6 @@
         "EXPD",
         "HOG",
         "BALL",
-        "GNTX",
         "UWMC",
         "TXT",
         "NSIT",
@@ -280,7 +279,8 @@
         "FCX",
         "LFUS",
         "DHR",
-        "PCG"
+        "PCG",
+        "ELF"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -439,7 +439,8 @@
         "CRSP",
         "QSR",
         "CRL",
-        "CMCSA"
+        "CMCSA",
+        "GNTX"
     ],
     "orange_keywords": [
         "NASDAQ",
