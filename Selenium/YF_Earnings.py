@@ -190,6 +190,6 @@ conn.close()
 driver.quit()
 
 # 如果有新内容添加，并且文件原本已经存在，显示提示
-if new_content_added and file_already_exists:
-    applescript_code = 'display dialog "新内容已添加。" buttons {"OK"} default button "OK"'
-    subprocess.run(['osascript', '-e', applescript_code], check=True)
+# if new_content_added and file_already_exists:
+#     applescript_code = 'display dialog "新内容已添加。" buttons {"OK"} default button "OK"'
+#     subprocess.run(['osascript', '-e', applescript_code], check=True)

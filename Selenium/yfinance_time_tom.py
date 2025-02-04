@@ -70,6 +70,40 @@ def clear_sectors(sectors_file_path):
         json.dump(sectors_data, sectors_file, indent=4)
     print(f"清除完成，empty的所有组内symbol已被清空。")  # 日志：清除完成
 
+def download_and_process_data(ticker_symbol, start_date, end_date, group_name, c, symbol_mapping, yesterday_date, special_groups):
+    """尝试下载和处理数据的函数"""
+    data = yf.download(ticker_symbol, start=start_date, end=end_date)
+    if data.empty:
+        return False, 0
+    
+    # 插入数据到相应的表中
+    data_count = 0
+    table_name = group_name.replace(" ", "_")
+    mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)
+    
+    for index, row in data.iterrows():
+        date = yesterday_date
+        if group_name in ["Currencies", "Bonds"]:
+            price = round(row['Close'], 4)
+        elif group_name in ["Crypto"]:
+            price = round(row['Close'], 1)
+        elif group_name in ["Commodities"]:
+            price = round(row['Close'], 3)
+        else:
+            price = round(row['Close'], 2)
+
+        if group_name in special_groups:
+            c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price) VALUES (?, ?, ?)", 
+                     (date, mapped_name, price))
+        else:
+            volume = int(row['Volume'])
+            c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)", 
+                     (date, mapped_name, price, volume))
+        
+        data_count += 1
+    
+    return True, data_count
+
 # 主程序开始
 sectors_file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json'
 error_file_path = '/Users/yanzhang/Documents/News/Today_error1.txt'
@@ -84,28 +118,27 @@ else:
 process_crypto(sectors_file_path)
 
 now = datetime.now()
+today = now.date()
+yesterday = today - timedelta(days=1)
+ex_yesterday = yesterday - timedelta(days=1)
+tomorrow = today + timedelta(days=1)
+
+yesterday_date = yesterday.strftime('%Y-%m-%d')
+
+# 定义三种不同的日期范围配置
+date_ranges = [
+    (yesterday.strftime('%Y-%m-%d'), today.strftime('%Y-%m-%d')),
+    (today.strftime('%Y-%m-%d'), tomorrow.strftime('%Y-%m-%d')),
+    (ex_yesterday.strftime('%Y-%m-%d'), yesterday.strftime('%Y-%m-%d'))
+]
 
 # 读取JSON文件
 with open(sectors_file_path, 'r') as file:
     stock_groups = json.load(file)
 
-# 读取symbol_mapping JSON文件
 with open('/Users/yanzhang/Documents/Financial_System/Modules/Symbol_mapping.json', 'r') as file:
     symbol_mapping = json.load(file)
 
-today = now.date()
-yesterday = today - timedelta(days=1)
-tomorrow = today + timedelta(days=1)
-
-# 定义时间范围
-yesterday_date = yesterday.strftime('%Y-%m-%d')
-start_date = today.strftime('%Y-%m-%d')
-end_date = tomorrow.strftime('%Y-%m-%d')
-
-# start_date = yesterday.strftime('%Y-%m-%d')
-# end_date = today.strftime('%Y-%m-%d')
-
-# 连接到SQLite数据库
 conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
 c = conn.cursor()
 
@@ -118,44 +151,31 @@ total_data_count = 0
 for group_name, tickers in stock_groups.items():
     data_count = 0  # 初始化分组数据计数器
     for ticker_symbol in tickers:
-        try:
-            print(f"开始下载 {ticker_symbol} 的数据，日期范围: {start_date} 到 {end_date}.")  # 日志：下载数据
-            data = yf.download(ticker_symbol, start=start_date, end=end_date)
-            if data.empty:
-                # raise ValueError(f"{ticker_symbol}: No price data found for the given date range.")
-                raise ValueError(f"{group_name} {ticker_symbol}: No price data found for the given date range.")
-
-            # 插入数据到相应的表中
-            table_name = group_name.replace(" ", "_")  # 确保表名没有空格
-            mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)  # 从映射字典获取名称，如果不存在则使用原始 ticker_symbol
-            for index, row in data.iterrows():
-                date = yesterday_date  # 使用昨天的日期
-                if group_name in ["Currencies", "Bonds"]:
-                    price = round(row['Close'], 4)
-                elif group_name in ["Crypto"]:
-                    price = round(row['Close'], 1)
-                elif group_name in ["Commodities"]:
-                    price = round(row['Close'], 3)
-                else:
-                    price = round(row['Close'], 2)
-
-                if group_name in special_groups:
-                    c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price) VALUES (?, ?, ?)", (date, mapped_name, price))
-                else:
-                    volume = int(row['Volume'])
-                    c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)", (date, mapped_name, price, volume))
+        success = False
+        
+        for start_date, end_date in date_ranges:
+            try:
+                print(f"尝试下载 {ticker_symbol} 的数据，日期范围: {start_date} 到 {end_date}")
+                success, current_count = download_and_process_data(
+                    ticker_symbol, start_date, end_date, group_name, c,
+                    symbol_mapping, yesterday_date, special_groups
+                )
                 
-                data_count += 1  # 成功插入一条数据，计数器增加
+                if success:
+                    print(f"成功插入 第{current_count}条 {ticker_symbol} 的数据")
+                    data_count += current_count
+                    break  # 如果成功，退出日期范围循环
+            
+            except Exception as e:
+                if start_date == date_ranges[-1][0]:  # 如果是最后一次尝试
+                    formatted_error_message = log_error_with_timestamp(f"{group_name} {ticker_symbol}: {str(e)}")
+                    with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                        error_file.write(formatted_error_message)
+                continue  # 如果失败，继续尝试下一个日期范围
+        
+        if not success:
+            print(f"无法获取 {ticker_symbol} 的数据，所有日期范围都已尝试")
 
-            print(f"成功插入 第{data_count}条 {ticker_symbol} 的数据到 {table_name} 中。")  # 日志：插入数据
-
-        except Exception as e:
-            formatted_error_message = log_error_with_timestamp(str(e))
-            # 将错误信息追加到文件中
-            with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
-                error_file.write(formatted_error_message)
-
-    # Only print if data_count > 0
     if data_count > 0:
         print(f"{group_name} 数据处理完成，总共下载了 {data_count} 条数据。")
 

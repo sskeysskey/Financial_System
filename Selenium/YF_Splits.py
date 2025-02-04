@@ -185,8 +185,8 @@ if results:
             file.writelines(lines)
     
     # 如果有新内容添加，显示提示
-    if file_already_exists and new_content_added:
-        applescript_code = 'display dialog "新内容已添加。" buttons {"OK"} default button "OK"'
-        subprocess.run(['osascript', '-e', applescript_code], check=True)
+    # if file_already_exists and new_content_added:
+    #     applescript_code = 'display dialog "新内容已添加。" buttons {"OK"} default button "OK"'
+    #     subprocess.run(['osascript', '-e', applescript_code], check=True)
 else:
     print("没有新内容添加，文件保持不变。")

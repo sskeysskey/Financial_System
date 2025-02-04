@@ -183,6 +183,6 @@ with open(file_path, 'a') as output_file:
 driver.quit()
 
 # 只有当原始文件存在且有新内容添加时才显示弹窗
-if original_file_exists and new_content_added:
-    applescript_code = 'display dialog "新内容已添加。" buttons {"OK"} default button "OK"'
-    subprocess.run(['osascript', '-e', applescript_code], check=True)
+# if original_file_exists and new_content_added:
+#     applescript_code = 'display dialog "新内容已添加。" buttons {"OK"} default button "OK"'
+#     subprocess.run(['osascript', '-e', applescript_code], check=True)

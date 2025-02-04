@@ -183,7 +183,6 @@
     "IYW",
     "IHI",
     "XLRE",
-    "VUG",
     "IVW",
     "SPYG",
     "IWF",
@@ -438,7 +437,8 @@
     "MMIT",
     "SDCI",
     "FLTR",
-    "DDWM"
+    "DDWM",
+    "SCHX"
   ],
   "Basic_Materials": [
     "LIN",
@@ -892,7 +892,6 @@
     "NE",
     "CHX",
     "DTM",
-    "ENLC",
     "FRO",
     "PBF",
     "SM",

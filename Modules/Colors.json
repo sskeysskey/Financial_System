@@ -23,7 +23,6 @@
         "CP",
         "O",
         "INFY",
-        "NXPI",
         "UL",
         "ING",
         "SNY",
@@ -110,7 +109,8 @@
         "ALL",
         "SRE",
         "MCK",
-        "LLY"
+        "LLY",
+        "FDX"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -279,8 +279,10 @@
         "FCX",
         "LFUS",
         "DHR",
-        "PCG",
-        "ELF"
+        "ELF",
+        "TFII",
+        "STN",
+        "NXPI"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -440,7 +442,8 @@
         "QSR",
         "CRL",
         "CMCSA",
-        "GNTX"
+        "GNTX",
+        "PCG"
     ],
     "orange_keywords": [
         "NASDAQ",

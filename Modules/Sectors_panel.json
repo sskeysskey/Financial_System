@@ -4,7 +4,8 @@
         "SHW": "",
         "NEU": "",
         "ASH": "",
-        "SCCO": ""
+        "SCCO": "",
+        "PPG": ""
     },
     "Real_Estate": {
         "NNN": ""
@@ -24,13 +25,18 @@
         "NVDA": "",
         "TSM": "",
         "AMKR": "",
-        "MSFT": ""
+        "MSFT": "",
+        "ADI": "",
+        "DELL": "",
+        "NXPI": "",
+        "OLED": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
         "LEN": "",
         "AVY": "",
-        "GNTX": ""
+        "GNTX": "",
+        "DOOO": ""
     },
     "Utilities": {
         "SO": "南方电力",
@@ -41,14 +47,18 @@
         "STZ": "",
         "MDLZ": "",
         "EDU": "",
-        "ELF": ""
+        "ELF": "",
+        "MNST": ""
     },
     "Industrials": {
         "TTC": "",
         "LMT": "",
         "GD": "",
         "CARR": "",
-        "LSTR": ""
+        "LSTR": "",
+        "FDX": "",
+        "TFII": "",
+        "STN": ""
     },
     "Communication_Services": {
         "TMUS": "",

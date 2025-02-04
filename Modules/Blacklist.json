@@ -362,6 +362,7 @@
         "AGR",
         "SMAR",
         "BGNE",
-        "SQ"
+        "SQ",
+        "ENLC"
     ]
 }
