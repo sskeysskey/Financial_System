@@ -29,14 +29,17 @@
         "ADI": "",
         "DELL": "",
         "NXPI": "",
-        "OLED": ""
+        "OLED": "",
+        "INTU": "",
+        "MANH": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
         "LEN": "",
         "AVY": "",
         "GNTX": "",
-        "DOOO": ""
+        "DOOO": "",
+        "BALL": ""
     },
     "Utilities": {
         "SO": "南方电力",
@@ -54,11 +57,10 @@
         "TTC": "",
         "LMT": "",
         "GD": "",
-        "CARR": "",
         "LSTR": "",
-        "FDX": "",
         "TFII": "",
-        "STN": ""
+        "STN": "",
+        "TXT": ""
     },
     "Communication_Services": {
         "TMUS": "",
@@ -173,12 +175,13 @@
         "USDMXN": ""
     },
     "Economics": {
-        "USInterest": "29 USInterest",
-        "USGDP": "30 USGDP",
-        "PCEY": "31 PCEY",
-        "CorePCEM": "31 CorePCEM",
-        "CorePCEY": "31 CorePCEY",
-        "USInitial": "30 USInitial"
+        "USNonFarmA": "05 USNonFarmA",
+        "USTrade": "05 USTrade",
+        "USNonPMI": "05 USNonPMI",
+        "USUnemploy": "07 USUnemploy",
+        "USNonFarm": "07 USNonFarm",
+        "USConfidence": "07 USConfidence",
+        "USInitial": "06 USInitial"
     },
     "ETFs_US": {
         "TLT": "",

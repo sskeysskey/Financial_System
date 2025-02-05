@@ -9,5 +9,8 @@
     "screener": [
         "AAPL",
         "IBM"
+    ],
+    "etf": [
+        "SQQ"
     ]
 }

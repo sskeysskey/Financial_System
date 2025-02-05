@@ -165,7 +165,8 @@ def main():
     # db_path = '/Users/yanzhang/Downloads/backup/DB_backup/Finance.db'
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
     sector_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
-    sector_today_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json'  # 添加sector_today.json路径
+    sector_today_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json'
+    sector_500_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_500.json'
     blacklist_file = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'
     description_file = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
     
@@ -199,11 +200,14 @@ def main():
     else:
         print(f"未找到股票代码 {symbol} 对应的sector")
     
-    # 4.处理 Sectors_All.json
+    # 4.处理所有sector文件
     delete_result1 = delete_from_json_file(sector_file, symbol)
     
     # 处理 sector_today.json
     delete_result2 = delete_from_json_file(sector_today_file, symbol)
+
+    # 添加对sector_500的处理
+    delete_result3 = delete_from_json_file(sector_500_file, symbol)
     
     # 5. 根据之前的ETFs检查结果决定是否添加到blacklist
     add_result = False
@@ -212,12 +216,14 @@ def main():
     
     # 6.输出总结
     print("\n操作总结:")
-    if delete_result1 or delete_result2:
+    if delete_result1 or delete_result2 or delete_result3:  # 修改条件判断
         print("JSON文件更新情况:")
         if delete_result1:
             print("- Sectors_All.json 已更新")
         if delete_result2:
             print("- sector_today.json 已更新")
+        if delete_result3:
+            print("- Sectors_500.json 已更新")
     else:
         print("- 在sector文件中未找到匹配项")
     
