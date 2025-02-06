@@ -438,7 +438,8 @@
     "SDCI",
     "FLTR",
     "DDWM",
-    "SCHX"
+    "SCHX",
+    "BSJP"
   ],
   "Basic_Materials": [
     "LIN",
@@ -1287,7 +1288,8 @@
     "ADMA",
     "ALKS",
     "GH",
-    "AXSM"
+    "AXSM",
+    "VRNA"
   ],
   "Industrials": [
     "GE",
@@ -1796,7 +1798,8 @@
     "GDS",
     "PONY",
     "QXO",
-    "CLBT"
+    "CLBT",
+    "RELY"
   ],
   "Utilities": [
     "NEE",

@@ -2,10 +2,9 @@
     "Basic_Materials": {
         "CE": "赛莱默",
         "SHW": "",
-        "NEU": "",
         "ASH": "",
-        "SCCO": "",
-        "PPG": ""
+        "PPG": "",
+        "WLK": ""
     },
     "Real_Estate": {
         "NNN": ""
@@ -21,17 +20,10 @@
         "AAPL": "",
         "UMC": "",
         "ACLS": "",
-        "SAIC": "",
-        "NVDA": "",
-        "TSM": "",
         "AMKR": "",
-        "MSFT": "",
-        "ADI": "",
-        "DELL": "",
         "NXPI": "",
-        "OLED": "",
-        "INTU": "",
-        "MANH": ""
+        "MANH": "",
+        "INTU": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
@@ -39,7 +31,8 @@
         "AVY": "",
         "GNTX": "",
         "DOOO": "",
-        "BALL": ""
+        "BALL": "",
+        "TSLA": ""
     },
     "Utilities": {
         "SO": "南方电力",
@@ -51,15 +44,14 @@
         "MDLZ": "",
         "EDU": "",
         "ELF": "",
-        "MNST": ""
+        "MNST": "",
+        "DEO": ""
     },
     "Industrials": {
         "TTC": "",
         "LMT": "",
         "GD": "",
         "LSTR": "",
-        "TFII": "",
-        "STN": "",
         "TXT": ""
     },
     "Communication_Services": {
@@ -78,8 +70,6 @@
         "MRNA": "",
         "CRL": "",
         "MRK": "",
-        "TMDX": "",
-        "RDY": "",
         "DHR": ""
     },
     "Bonds": {

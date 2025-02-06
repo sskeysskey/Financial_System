@@ -266,7 +266,6 @@
         "OMC",
         "YUM",
         "MTH",
-        "LSTR",
         "STWD",
         "AMD",
         "NOVT",
@@ -444,7 +443,8 @@
         "CRL",
         "CMCSA",
         "GNTX",
-        "PCG"
+        "PCG",
+        "LSTR"
     ],
     "orange_keywords": [
         "NASDAQ",
