@@ -232,7 +232,6 @@
         "TKR",
         "CSGP",
         "STAG",
-        "WEX",
         "OLED",
         "RS",
         "VLO",
@@ -252,7 +251,6 @@
         "KEP",
         "NEU",
         "KOF",
-        "REYN",
         "INVH",
         "ROP",
         "LEN",
@@ -282,7 +280,9 @@
         "TFII",
         "STN",
         "NXPI",
-        "MANH"
+        "MANH",
+        "CROX",
+        "VRNS"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -383,7 +383,6 @@
         "MCHP",
         "PKX",
         "LEGN",
-        "SWKS",
         "BRKR",
         "IPG",
         "SJM",
@@ -444,7 +443,9 @@
         "CMCSA",
         "GNTX",
         "PCG",
-        "LSTR"
+        "LSTR",
+        "REYN",
+        "WEX"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -469,7 +470,8 @@
         "BSBR",
         "TU",
         "CPB",
-        "CCI"
+        "CCI",
+        "SWKS"
     ],
     "black_keywords": [
         "Cotton",

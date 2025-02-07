@@ -29,7 +29,13 @@
     "MYR=X",
     "MXN=X"
   ],
-  "Crypto": [],
+  "Crypto": [
+    "BTC-USD",
+    "ETH-USD",
+    "SOL-USD",
+    "BNB-USD",
+    "XRP-USD"
+  ],
   "Indices": [
     "^HSI",
     "^IXIC",
@@ -226,7 +232,6 @@
     "IJH",
     "TDTT",
     "HEDJ",
-    "HFXI",
     "XCEM",
     "HYG",
     "SOXL",
@@ -376,7 +381,8 @@
     "FLTR",
     "DDWM",
     "SCHX",
-    "BSJP"
+    "IWP",
+    "SPGM"
   ],
   "Basic_Materials": [
     "LIN",
@@ -469,7 +475,6 @@
     "CHTR",
     "BIDU",
     "EA",
-    "BCE",
     "PINS",
     "SNAP",
     "TTWO",

@@ -23,7 +23,8 @@
         "AMKR": "",
         "NXPI": "",
         "MANH": "",
-        "INTU": ""
+        "SWKS": "",
+        "VRNS": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
@@ -32,7 +33,8 @@
         "GNTX": "",
         "DOOO": "",
         "BALL": "",
-        "TSLA": ""
+        "TSLA": "",
+        "CROX": ""
     },
     "Utilities": {
         "SO": "南方电力",
@@ -45,14 +47,16 @@
         "EDU": "",
         "ELF": "",
         "MNST": "",
-        "DEO": ""
+        "DEO": "",
+        "CL": ""
     },
     "Industrials": {
         "TTC": "",
         "LMT": "",
         "GD": "",
         "LSTR": "",
-        "TXT": ""
+        "TXT": "",
+        "HII": ""
     },
     "Communication_Services": {
         "TMUS": "",
@@ -70,7 +74,8 @@
         "MRNA": "",
         "CRL": "",
         "MRK": "",
-        "DHR": ""
+        "DHR": "",
+        "HOLX": ""
     },
     "Bonds": {
         "US2Y": "",

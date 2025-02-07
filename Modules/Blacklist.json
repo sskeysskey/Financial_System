@@ -364,6 +364,7 @@
         "SMAR",
         "BGNE",
         "SQ",
-        "ENLC"
+        "ENLC",
+        "BCE"
     ]
 }
