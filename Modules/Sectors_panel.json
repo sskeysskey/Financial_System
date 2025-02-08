@@ -3,8 +3,7 @@
         "CE": "赛莱默",
         "SHW": "",
         "ASH": "",
-        "PPG": "",
-        "WLK": ""
+        "PPG": ""
     },
     "Real_Estate": {
         "NNN": ""
@@ -16,39 +15,40 @@
         "INTC": "",
         "AMD": "",
         "MCHP": "",
-        "ON": "",
-        "AAPL": "",
-        "UMC": "",
         "ACLS": "",
         "AMKR": "",
-        "NXPI": "",
         "MANH": "",
         "SWKS": "",
-        "VRNS": ""
+        "MSFT": "",
+        "TXN": "",
+        "INTU": "",
+        "ADI": "",
+        "OLED": "",
+        "ARW": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
         "LEN": "",
         "AVY": "",
-        "GNTX": "",
         "DOOO": "",
-        "BALL": "",
         "TSLA": "",
-        "CROX": ""
+        "NKE": "",
+        "BALL": "",
+        "CROX": "",
+        "BWA": "",
+        "MTH": ""
     },
     "Utilities": {
-        "SO": "南方电力",
         "EIX": ""
     },
     "Consumer_Defensive": {
         "HSY": "",
         "STZ": "",
         "MDLZ": "",
-        "EDU": "",
         "ELF": "",
         "MNST": "",
         "DEO": "",
-        "CL": ""
+        "CL": "高露洁"
     },
     "Industrials": {
         "TTC": "",
@@ -56,26 +56,28 @@
         "GD": "",
         "LSTR": "",
         "TXT": "",
-        "HII": ""
+        "HII": "",
+        "MMS": ""
     },
     "Communication_Services": {
         "TMUS": "",
         "OMC": "",
         "IPG": "",
-        "EA": ""
+        "GOOGL": ""
     },
     "Financial_Services": {
         "AON": "怡安保险",
         "EG": ""
     },
     "Healthcare": {
-        "NVO": "",
-        "REGN": "",
         "MRNA": "",
         "CRL": "",
         "MRK": "",
         "DHR": "",
-        "HOLX": ""
+        "ZBH": "",
+        "HOLX": "",
+        "CYTK": "",
+        "AVTR": ""
     },
     "Bonds": {
         "US2Y": "",
