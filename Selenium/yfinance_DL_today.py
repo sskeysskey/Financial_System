@@ -73,38 +73,62 @@ def log_error_with_timestamp(error_message):
     # 在错误信息前加入时间戳
     return f"[{timestamp}] {error_message}\n"
 
-def download_and_process_data(ticker_symbol, start_date, end_date, group_name, c, symbol_mapping, yesterday_date, special_groups):
-    """尝试下载和处理数据的函数"""
-    data = yf.download(ticker_symbol, start=start_date, end=end_date)
-    if data.empty:
-        return False, 0
-    
-    data_count = 0
-    table_name = group_name.replace(" ", "_")
-    mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)
-    
-    for index, row in data.iterrows():
-        date = yesterday_date
-        if group_name in ["Currencies", "Bonds"]:
-            price = round(row['Close'], 4)
-        elif group_name in ["Crypto"]:
-            price = round(row['Close'], 1)
-        elif group_name in ["Commodities"]:
-            price = round(row['Close'], 3)
-        else:
-            price = round(row['Close'], 2)
+def ensure_directory_exists(filepath):
+    """确保目录存在，如果不存在则创建"""
+    import os
+    directory = os.path.dirname(filepath)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
-        if group_name in special_groups:
-            c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price) VALUES (?, ?, ?)", 
-                     (date, mapped_name, price))
-        else:
-            volume = int(row['Volume'])
-            c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)", 
-                     (date, mapped_name, price, volume))
+def write_error_log(error_message, filepath):
+    """写入错误日志的安全方法"""
+    try:
+        ensure_directory_exists(filepath)
+        with open(filepath, 'a', encoding='utf-8') as error_file:
+            error_file.write(error_message)
+        return True
+    except Exception as e:
+        print(f"写入错误日志失败: {str(e)}")
+        return False
+
+def download_and_process_data(ticker_symbol, start_date, end_date, group_name, c, symbol_mapping, yesterday_date, special_groups, error_log_path):
+    """尝试下载和处理数据的函数"""
+    try:
+        data = yf.download(ticker_symbol, start=start_date, end=end_date)
+        if data.empty:
+            return False, 0
         
-        data_count += 1
-    
-    return True, data_count
+        data_count = 0
+        table_name = group_name.replace(" ", "_")
+        mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)
+        
+        for index, row in data.iterrows():
+            date = yesterday_date
+            if group_name in ["Currencies", "Bonds"]:
+                price = round(row['Close'], 4)
+            elif group_name in ["Crypto"]:
+                price = round(row['Close'], 1)
+            elif group_name in ["Commodities"]:
+                price = round(row['Close'], 3)
+            else:
+                price = round(row['Close'], 2)
+
+            if group_name in special_groups:
+                c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price) VALUES (?, ?, ?)", 
+                        (date, mapped_name, price))
+            else:
+                volume = int(row['Volume'])
+                c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)", 
+                        (date, mapped_name, price, volume))
+            
+            data_count += 1
+        
+        return True, data_count
+
+    except Exception as e:
+        error_message = log_error_with_timestamp(f"{group_name} {ticker_symbol}: {str(e)}")
+        write_error_log(error_message, error_log_path)
+        return False, 0
 
 def main():
     now = datetime.now()
@@ -147,6 +171,8 @@ def main():
     special_groups = ["Currencies", "Bonds", "Crypto", "Commodities"]
     total_data_count = 0
 
+    ERROR_LOG_PATH = '/Users/yanzhang/Documents/News/Today_error1.txt'
+    
     for group_name, tickers in stock_groups.items():
         data_count = 0
         for ticker_symbol in tickers:
@@ -157,7 +183,8 @@ def main():
                     print(f"尝试下载 {ticker_symbol} 的数据，日期范围: {start_date} 到 {end_date}")
                     success, current_count = download_and_process_data(
                         ticker_symbol, start_date, end_date, group_name, c,
-                        symbol_mapping, yesterday.strftime('%Y-%m-%d'), special_groups
+                        symbol_mapping, yesterday.strftime('%Y-%m-%d'), special_groups,
+                        ERROR_LOG_PATH
                     )
                     
                     if success:
@@ -166,12 +193,13 @@ def main():
                         break  # 如果成功，退出日期范围循环
                 
                 except Exception as e:
-                    if start_date == date_ranges[-1][0]:  # 如果是最后一次尝试
-                        with open('/Users/yanzhang/Documents/News/Today_error1.txt', 'a') as error_file:
-                            error_file.write(log_error_with_timestamp(f"{group_name} {ticker_symbol}: {str(e)}"))
-                    continue  # 如果失败，继续尝试下一个日期范围
-            
+                    error_message = log_error_with_timestamp(f"未预期的错误 {group_name} {ticker_symbol}: {str(e)}")
+                    write_error_log(error_message, ERROR_LOG_PATH)
+                    continue
+
             if not success:
+                error_message = log_error_with_timestamp(f"无法获取 {ticker_symbol} 的数据，所有日期范围都已尝试")
+                write_error_log(error_message, ERROR_LOG_PATH)
                 print(f"无法获取 {ticker_symbol} 的数据，所有日期范围都已尝试")
 
         if data_count > 0:
