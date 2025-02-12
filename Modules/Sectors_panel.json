@@ -1,8 +1,6 @@
 {
     "Basic_Materials": {
         "CE": "赛莱默",
-        "SHW": "",
-        "ASH": "",
         "PPG": ""
     },
     "Real_Estate": {
@@ -19,25 +17,22 @@
         "AMKR": "",
         "MANH": "",
         "SWKS": "",
-        "MSFT": "",
         "TXN": "",
-        "INTU": "",
-        "ADI": "",
         "OLED": "",
-        "ARW": "",
-        "ON": ""
+        "ON": "",
+        "ADI": "",
+        "FICO": "",
+        "SPSC": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
         "LEN": "",
-        "AVY": "",
         "DOOO": "",
         "TSLA": "",
         "NKE": "",
         "BALL": "",
         "CROX": "",
         "BWA": "",
-        "MTH": "",
         "GNTX": ""
     },
     "Utilities": {
@@ -61,7 +56,8 @@
         "LSTR": "",
         "TXT": "",
         "HII": "",
-        "MMS": ""
+        "MMS": "",
+        "BAH": ""
     },
     "Communication_Services": {
         "TMUS": "",
@@ -81,7 +77,11 @@
         "ZBH": "",
         "HOLX": "",
         "CYTK": "",
-        "AVTR": ""
+        "AVTR": "",
+        "REGN": "",
+        "MOH": "",
+        "ILMN": "",
+        "CRNX": ""
     },
     "Bonds": {
         "US2Y": "",
