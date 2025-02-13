@@ -365,6 +365,8 @@
         "BGNE",
         "SQ",
         "ENLC",
-        "BCE"
+        "BCE",
+        "BBD",
+        "CBSH"
     ]
 }

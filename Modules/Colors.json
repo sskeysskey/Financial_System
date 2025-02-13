@@ -200,7 +200,6 @@
         "MOH",
         "ICLR",
         "CDW",
-        "EG",
         "HMC",
         "SMCI",
         "TDW",
@@ -287,7 +286,10 @@
         "ILMN",
         "CRNX",
         "BAH",
-        "SPSC"
+        "SPSC",
+        "NXST",
+        "J",
+        "TTEK"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -455,7 +457,8 @@
         "HOLX",
         "RHI",
         "ARW",
-        "HOG"
+        "HOG",
+        "EG"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -481,7 +484,9 @@
         "TU",
         "CPB",
         "CCI",
-        "SWKS"
+        "SWKS",
+        "HRL",
+        "MKTX"
     ],
     "black_keywords": [
         "Cotton",
