@@ -40,7 +40,6 @@
         "NOC",
         "RACE",
         "RELX",
-        "GD",
         "TRI",
         "AMAT",
         "MDT",
@@ -61,7 +60,6 @@
         "GE",
         "PSA",
         "DUK",
-        "LHX",
         "SCCO",
         "SBUX",
         "SU",
@@ -109,7 +107,8 @@
         "SRE",
         "MCK",
         "LLY",
-        "FDX"
+        "FDX",
+        "TTD"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -164,7 +163,6 @@
         "CAE",
         "DBX",
         "MAT",
-        "GXO",
         "VIPS",
         "POOL",
         "SITE",
@@ -198,7 +196,6 @@
         "WFRD",
         "NXT",
         "MOH",
-        "ICLR",
         "CDW",
         "HMC",
         "SMCI",
@@ -289,7 +286,9 @@
         "SPSC",
         "NXST",
         "J",
-        "TTEK"
+        "TTEK",
+        "GD",
+        "LHX"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -458,7 +457,10 @@
         "RHI",
         "ARW",
         "HOG",
-        "EG"
+        "EG",
+        "WST",
+        "ICLR",
+        "GXO"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -486,7 +488,8 @@
         "CCI",
         "SWKS",
         "HRL",
-        "MKTX"
+        "MKTX",
+        "CGNX"
     ],
     "black_keywords": [
         "Cotton",

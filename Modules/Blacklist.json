@@ -224,7 +224,8 @@
         "M",
         "STWD",
         "PVH",
-        "SAIC"
+        "SAIC",
+        "CRNX"
     ],
     "screener": [
         "CTA-PA",
@@ -367,6 +368,7 @@
         "ENLC",
         "BCE",
         "BBD",
-        "CBSH"
+        "CBSH",
+        "SUM"
     ]
 }

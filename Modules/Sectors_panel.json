@@ -23,7 +23,9 @@
         "MSFT": "",
         "INTU": "",
         "ARW": "",
-        "OS": ""
+        "OS": "",
+        "TTD": "",
+        "CGNX": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
@@ -34,7 +36,8 @@
         "BALL": "",
         "CROX": "",
         "BWA": "",
-        "GNTX": ""
+        "GNTX": "",
+        "MTH": ""
     },
     "Utilities": {
         "EIX": ""
@@ -46,7 +49,6 @@
         "ELF": "",
         "DEO": "",
         "GIS": "",
-        "FLO": "",
         "HRL": ""
     },
     "Industrials": {
@@ -62,30 +64,21 @@
         "TTEK": ""
     },
     "Communication_Services": {
-        "TMUS": "",
-        "OMC": "",
         "IPG": "",
-        "GOOGL": "",
-        "NXST": ""
+        "GOOGL": ""
     },
     "Financial_Services": {
-        "AON": "怡安保险",
-        "EG": "",
         "MKTX": ""
     },
     "Healthcare": {
         "MRNA": "",
         "CRL": "",
         "MRK": "",
-        "DHR": "",
-        "HOLX": "",
-        "AVTR": "",
         "REGN": "",
-        "MOH": "",
         "ILMN": "",
-        "CRNX": "",
         "CNC": "",
-        "ICLR": ""
+        "ICLR": "",
+        "WST": ""
     },
     "Bonds": {
         "US2Y": "",
