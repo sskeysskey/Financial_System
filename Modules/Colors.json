@@ -288,7 +288,9 @@
         "J",
         "TTEK",
         "GD",
-        "LHX"
+        "LHX",
+        "KBR",
+        "INFA"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -450,7 +452,6 @@
         "GNTX",
         "PCG",
         "LSTR",
-        "REYN",
         "WEX",
         "BWA",
         "HOLX",
@@ -541,7 +542,8 @@
         "WRD",
         "OS",
         "VOD",
-        "BF-B"
+        "BF-B",
+        "REYN"
     ],
     "green_keywords": [
         "EURCNY",

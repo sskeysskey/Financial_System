@@ -515,7 +515,7 @@ try:
     if load_cookies(driver, cookie_file):
         driver.refresh()
         try:
-            WebDriverWait(driver, 120).until(EC.any_of(
+            WebDriverWait(driver, 60).until(EC.any_of(
                 EC.presence_of_element_located((By.ID, "header-profile-button")),
                 EC.presence_of_element_located((By.ID, "ybarMailIndicator")),
                 EC.presence_of_element_located((By.ID, "ybarAccountMenu")),

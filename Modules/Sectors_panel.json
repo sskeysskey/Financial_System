@@ -25,7 +25,9 @@
         "ARW": "",
         "OS": "",
         "TTD": "",
-        "CGNX": ""
+        "CGNX": "",
+        "INFA": "",
+        "NOVT": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
@@ -61,7 +63,9 @@
         "GD": "",
         "LHX": "",
         "J": "",
-        "TTEK": ""
+        "TTEK": "",
+        "NOC": "",
+        "KBR": ""
     },
     "Communication_Services": {
         "IPG": "",
@@ -78,7 +82,11 @@
         "ILMN": "",
         "CNC": "",
         "ICLR": "",
-        "WST": ""
+        "WST": "",
+        "NVO": "",
+        "ZTS": "",
+        "HOLX": "",
+        "AVTR": ""
     },
     "Bonds": {
         "US2Y": "",

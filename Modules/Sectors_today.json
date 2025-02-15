@@ -683,7 +683,6 @@
     "SHAK",
     "EAT",
     "RUSHB",
-    "WRD",
     "KTB",
     "SG",
     "URBN",
@@ -1732,7 +1731,9 @@
     "PONY",
     "QXO",
     "CLBT",
-    "RELY"
+    "RELY",
+    "WRD",
+    "KC"
   ],
   "Utilities": [
     "NEE",
