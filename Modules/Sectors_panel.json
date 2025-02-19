@@ -1,92 +1,60 @@
 {
     "Basic_Materials": {
-        "CE": "赛莱默",
-        "PPG": ""
+        "CE": "赛莱默"
     },
     "Real_Estate": {},
-    "Energy": {
-        "WFRD": ""
-    },
+    "Energy": {},
     "Technology": {
-        "INTC": "",
         "AMD": "",
-        "MCHP": "",
         "ACLS": "",
         "AMKR": "",
-        "MANH": "",
         "SWKS": "",
-        "TXN": "",
-        "OLED": "",
-        "ON": "",
         "FICO": "",
         "SPSC": "",
-        "MSFT": "",
-        "INTU": "",
-        "ARW": "",
-        "OS": "",
         "TTD": "",
-        "CGNX": "",
         "INFA": "",
-        "NOVT": ""
+        "MSI": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
         "LEN": "",
         "DOOO": "",
-        "TSLA": "",
-        "NKE": "",
         "BALL": "",
-        "CROX": "",
-        "BWA": "",
-        "GNTX": "",
-        "MTH": ""
+        "GNTX": ""
     },
     "Utilities": {
         "EIX": ""
     },
     "Consumer_Defensive": {
-        "HSY": "",
         "STZ": "",
-        "MDLZ": "",
         "ELF": "",
         "DEO": "",
         "GIS": "",
-        "HRL": ""
+        "HRL": "",
+        "SJM": "",
+        "FLO": ""
     },
     "Industrials": {
-        "TTC": "",
         "LMT": "",
-        "TXT": "",
-        "HII": "",
         "MMS": "",
         "BAH": "",
         "GD": "",
         "LHX": "",
-        "J": "",
-        "TTEK": "",
-        "NOC": "",
-        "KBR": ""
+        "TTEK": ""
     },
-    "Communication_Services": {
-        "IPG": "",
-        "GOOGL": ""
-    },
+    "Communication_Services": {},
     "Financial_Services": {
         "MKTX": ""
     },
     "Healthcare": {
-        "MRNA": "",
         "CRL": "",
         "MRK": "",
-        "REGN": "",
         "ILMN": "",
-        "CNC": "",
         "ICLR": "",
         "WST": "",
         "NVO": "",
-        "ZTS": "",
-        "HOLX": "",
-        "AVTR": ""
+        "UNH": "",
+        "CNC": ""
     },
     "Bonds": {
         "US2Y": "",
@@ -181,13 +149,7 @@
         "USDMXN": ""
     },
     "Economics": {
-        "USCPI": "12 USCPI",
-        "CoreCPI": "12 CoreCPI",
-        "CorePPI": "13 CorePPI",
-        "USPPI": "13 USPPI",
-        "USInitial": "13 USInitial",
-        "ImportPriceM": "14 ImportPriceM",
-        "USRetailM": "14 USRetailM"
+        "USConfidence": "21 USConfidence"
     },
     "ETFs_US": {
         "TLT": "",
@@ -204,5 +166,27 @@
         "PAVE": "基础设施",
         "XLE": "能源",
         "XLU": "公共事业"
+    },
+    "Economic_All": {
+        "USGDP": "",
+        "USCPI": "",
+        "USInterest": "",
+        "USNonFarm": "",
+        "USNonFarmA": "",
+        "USTrade": "",
+        "USConfidence": "",
+        "USRetailM": "",
+        "CoreCPI": "",
+        "CorePPI": "",
+        "USPPI": "",
+        "USNonPMI": "",
+        "USUnemploy": "",
+        "CorePCEY": "",
+        "CorePCEM": "",
+        "USConspending": "",
+        "PCEY": "",
+        "USInitial": "",
+        "ImportPriceM": "",
+        "ImportPriceY": ""
     }
 }

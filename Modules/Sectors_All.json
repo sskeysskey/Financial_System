@@ -213,7 +213,6 @@
     "DGRW",
     "PAVE",
     "VPL",
-    "IEFA",
     "SCHF",
     "RDVY",
     "EMXC",
@@ -432,8 +431,22 @@
     "SPGM",
     "FALN",
     "PXH",
-    "AUSF",
-    "QEFA"
+    "IEFA",
+    "IJJ",
+    "DON",
+    "PPA",
+    "SPMD",
+    "FV",
+    "SMLF",
+    "SYLD",
+    "LVHI",
+    "DEM",
+    "IWB",
+    "FLRN",
+    "SCHO",
+    "JMST",
+    "IGIB",
+    "BIV"
   ],
   "Basic_Materials": [
     "LIN",
@@ -568,7 +581,8 @@
     "DJT",
     "LUMN",
     "MSGS",
-    "NBIS"
+    "NBIS",
+    "GSAT"
   ],
   "Consumer_Cyclical": [
     "AMZN",
@@ -815,7 +829,8 @@
     "LOPE",
     "PRMB",
     "CALM",
-    "LRN"
+    "LRN",
+    "OTLY"
   ],
   "Energy": [
     "XOM",

@@ -91,33 +91,40 @@ def write_error_log(error_message, filepath):
         print(f"写入错误日志失败: {str(e)}")
         return False
 
+def get_price_format(group_name: str) -> int:
+    """根据组名决定价格小数位数"""
+    if group_name in ["Currencies", "Bonds"]:
+        return 4
+    elif group_name == "Crypto":
+        return 1
+    elif group_name == "Commodities":
+        return 3
+    else:
+        return 2
+
 def download_and_process_data(ticker_symbol, start_date, end_date, group_name, c, symbol_mapping, yesterday_date, special_groups, error_log_path):
     """尝试下载和处理数据的函数"""
     try:
-        data = yf.download(ticker_symbol, start=start_date, end=end_date)
+        data = yf.download(ticker_symbol, start=start_date, end=end_date, auto_adjust=True)
         if data.empty:
             return False, 0
         
         data_count = 0
         table_name = group_name.replace(" ", "_")
         mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)
+        decimal_places = get_price_format(group_name)
         
         for index, row in data.iterrows():
             date = yesterday_date
-            if group_name in ["Currencies", "Bonds"]:
-                price = round(row['Close'], 4)
-            elif group_name in ["Crypto"]:
-                price = round(row['Close'], 1)
-            elif group_name in ["Commodities"]:
-                price = round(row['Close'], 3)
-            else:
-                price = round(row['Close'], 2)
+            # 使用.iloc[0]来获取Series的值
+            price = round(float(row['Close'].iloc[0]), decimal_places)
 
             if group_name in special_groups:
                 c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price) VALUES (?, ?, ?)", 
                         (date, mapped_name, price))
             else:
-                volume = int(row['Volume'])
+                # 使用.iloc[0]来获取Series的值
+                volume = int(row['Volume'].iloc[0])
                 c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)", 
                         (date, mapped_name, price, volume))
             
@@ -188,7 +195,7 @@ def main():
                     )
                     
                     if success:
-                        print(f"成功插入 第{current_count}条 {ticker_symbol} 的数据")
+                        print(f"成功插入 {current_count}条 {ticker_symbol} 的数据")
                         data_count += current_count
                         break  # 如果成功，退出日期范围循环
                 

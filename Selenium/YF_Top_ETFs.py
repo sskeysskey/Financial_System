@@ -10,7 +10,7 @@ import random
 import time
 import threading
 
-# 添加鼠标移动功能的函数
+# 添加鼠标移动功能的函数x
 def move_mouse_periodically():
     while True:
         try:
@@ -112,7 +112,10 @@ def load_compare_data(compare_file):
                 compare_data[symbol] = percentage
     return compare_data
 
-def save_data(urls, existing_json, new_file, today_file, diff_file, compare_file):
+def save_data(urls, existing_json, new_file, today_file, diff_file, compare_file, blacklist_file):
+    # 加载黑名单
+    blacklist = load_blacklist(blacklist_file)
+
     # 首先访问Yahoo Finance主页
     driver.get("https://finance.yahoo.com/markets/etfs/top/")
     # 等待2秒
@@ -132,6 +135,10 @@ def save_data(urls, existing_json, new_file, today_file, diff_file, compare_file
     for url in urls:
         data_list = fetch_data(url)
         for symbol, name, volume in data_list:
+            # 检查是否在黑名单中
+            if is_blacklisted(symbol, blacklist):
+                continue  # 跳过黑名单中的symbol
+                
             if volume > 200000:
                 total_data_list.append(f"{symbol}: {name}, {volume}")
                 if symbol not in existing_symbols:
@@ -172,7 +179,8 @@ def save_data(urls, existing_json, new_file, today_file, diff_file, compare_file
         diff_data_list = []
         for line in total_data_list:
             symbol = line.split(":")[0].strip()
-            if symbol not in existing_symbols_today:
+            # 检查是否在黑名单中
+            if symbol not in existing_symbols_today and not is_blacklisted(symbol, blacklist):
                 percentage = compare_data.get(symbol, "")
                 if percentage:
                     line = f"{symbol:<7} {percentage if percentage else '':<10}: {line.split(':', 1)[1]}"
@@ -222,6 +230,20 @@ def clean_old_backups(directory, prefix="ETFs_today_", days=4):
             except Exception as e:
                 print(f"跳过文件：{filename}，原因：{e}")
 
+def load_blacklist(blacklist_file):
+    """加载黑名单数据"""
+    try:
+        with open(blacklist_file, 'r') as file:
+            blacklist_data = json.load(file)
+            return set(blacklist_data.get('etf', []))  # 只返回etf分组的数据
+    except Exception as e:
+        print(f"加载黑名单文件出错: {str(e)}")
+        return set()
+
+def is_blacklisted(symbol, blacklist):
+    """检查symbol是否在黑名单中"""
+    return symbol in blacklist
+
 # diff 文件路径
 diff_file = '/Users/yanzhang/Documents/News/ETFs_diff.txt'
 backup_dir = '/Users/yanzhang/Documents/News/backup/backup'
@@ -241,9 +263,10 @@ new_file = '/Users/yanzhang/Documents/News/ETFs_new.txt'
 today_file = '/Users/yanzhang/Documents/News/site/ETFs_today.txt'
 diff_file = '/Users/yanzhang/Documents/News/ETFs_diff.txt'
 compare_file = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
+blacklist_file = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'
 
 try:
-    save_data(urls, existing_json, new_file, today_file, diff_file, compare_file)
+    save_data(urls, existing_json, new_file, today_file, diff_file, compare_file, blacklist_file)
 finally:
     driver.quit()
 print("所有爬取任务完成。")

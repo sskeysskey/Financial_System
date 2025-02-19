@@ -5,6 +5,13 @@ import pyperclip
 import subprocess
 from PyQt5.QtWidgets import QMessageBox
 
+def show_alert(message):
+    # AppleScript代码模板
+    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+    
+    # 使用subprocess调用osascript
+    process = subprocess.run(['osascript', '-e', applescript_code], check=True)
+
 def get_clipboard_content():
     """获取剪贴板内容，包含错误处理"""
     try:
@@ -173,7 +180,7 @@ def main():
     # 获取剪贴板内容
     symbol = get_clipboard_content()
     if not symbol:
-        print("剪贴板为空")
+        show_alert("剪贴板为空")
         return
 
     # 1. 首先检查是否在sectors_all.json中存在

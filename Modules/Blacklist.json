@@ -224,7 +224,8 @@
         "STWD",
         "PVH",
         "SAIC",
-        "CRNX"
+        "CRNX",
+        "CGNX"
     ],
     "screener": [
         "CTA-PA",
@@ -369,5 +370,41 @@
         "BBD",
         "CBSH",
         "SUM"
+    ],
+    "etf": [
+        "VDE",
+        "IHDG",
+        "IMTM",
+        "IVLU",
+        "IYF",
+        "VO",
+        "HFXI",
+        "FTEC",
+        "VBR",
+        "FSMD",
+        "FNDX",
+        "IVE",
+        "XMMO",
+        "MGV",
+        "FLQM",
+        "VXF",
+        "XMHQ",
+        "YYY",
+        "IGM",
+        "VOOG",
+        "SPMO",
+        "HYS",
+        "VUG",
+        "VRIG",
+        "NEAR",
+        "SPTS",
+        "ONEQ",
+        "MGK",
+        "VHT",
+        "IWY",
+        "USMC",
+        "IYH",
+        "UITB",
+        "FMB"
     ]
 }

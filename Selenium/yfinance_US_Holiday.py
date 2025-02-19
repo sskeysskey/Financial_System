@@ -10,6 +10,17 @@ def log_error_with_timestamp(error_message):
     # 在错误信息前加入时间戳
     return f"[{timestamp}] {error_message}\n"
 
+def get_price_format(group_name: str) -> int:
+    """根据组名决定价格小数位数"""
+    if group_name in ["Currencies", "Bonds"]:
+        return 4
+    elif group_name == "Crypto":
+        return 1
+    elif group_name == "Commodities":
+        return 3
+    else:
+        return 2
+
 now = datetime.now()
 # 判断今天的星期数，如果是周日(6)或周一(0)，则不执行程序
 if now.weekday() in (0, 6):
@@ -45,29 +56,24 @@ else:
         for ticker_symbol in tickers:
             try:
                 # 使用 yfinance 下载股票数据
-                data = yf.download(ticker_symbol, start=start_date, end=end_date)
-                if data.empty:
+                data = yf.download(ticker_symbol, start=start_date, end=end_date, auto_adjust=True)
+                if data is None or data.empty:
                     raise ValueError(f"{group_name} {ticker_symbol}: No price data found for the given date range.")
 
                 # 插入数据到相应的表中
                 table_name = group_name.replace(" ", "_")  # 确保表名没有空格
                 mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)  # 从映射字典获取名称，如果不存在则使用原始 ticker_symbol
+                decimal_places = get_price_format(group_name)
                 for index, row in data.iterrows():
                     date = index.strftime('%Y-%m-%d')
-                    # date = "2024-06-11"
-                    if group_name in ["Currencies", "Bonds"]:
-                        price = round(row['Close'], 4)
-                    elif group_name in ["Crypto"]:
-                        price = round(row['Close'], 1)
-                    elif group_name in ["Commodities"]:
-                        price = round(row['Close'], 3)
-                    else:
-                        price = round(row['Close'], 2)
+                    # 使用.iloc[0]来获取Series的值
+                    price = round(float(row['Close'].iloc[0]), decimal_places)
 
                     if group_name in special_groups:
                         c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price) VALUES (?, ?, ?)", (date, mapped_name, price))
                     else:
-                        volume = int(row['Volume'])
+                        # 使用.iloc[0]来获取Series的值
+                        volume = int(row['Volume'].iloc[0])
                         c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)", (date, mapped_name, price, volume))
                     
                     data_count += 1  # 成功插入一条数据，计数器增加

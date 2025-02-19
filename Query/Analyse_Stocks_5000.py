@@ -212,7 +212,7 @@ def update_color_json(color_config_path, updates_colors, blacklist_newlow, exist
 
 def log_and_print_error(error_message):
     formatted_error_message = log_error_with_timestamp(error_message)
-    print(f"错误: {error_message}")
+    print(f"注意！ {error_message}")
     with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
         error_file.write(formatted_error_message)
 

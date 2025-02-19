@@ -6,6 +6,8 @@ from typing import Optional, Tuple
 
 def copy2clipboard():
     script = '''
+    set the clipboard to ""
+    delay 0.3
     tell application "System Events"
         keystroke "c" using {command down}
         delay 0.5
@@ -15,6 +17,36 @@ def copy2clipboard():
 
 def is_uppercase_letters(text: str) -> bool:
     return bool(re.match(r'^[A-Z]+$', text))
+
+def remove_from_blacklist(symbol: str) -> None:
+    """
+    从blacklist.json的etf组中移除指定的symbol
+    """
+    blacklist_file = '/Users/yanzhang/Documents/Financial_System/Modules/blacklist.json'
+    try:
+        with open(blacklist_file, 'r+') as file:
+            data = json.load(file)
+            if symbol in data.get('etf', []):
+                data['etf'].remove(symbol)
+                file.seek(0)
+                json.dump(data, file, indent=2)
+                file.truncate()
+                print(f"已从blacklist的etf组中移除 {symbol}")
+    except Exception as e:
+        print(f"更新blacklist文件时出错: {str(e)}")
+
+def check_blacklist(symbol: str) -> bool:
+    """
+    检查symbol是否在blacklist.json的etf组中
+    返回True表示在黑名单中，False表示不在
+    """
+    try:
+        with open('/Users/yanzhang/Documents/Financial_System/Modules/blacklist.json', 'r') as file:
+            data = json.load(file)
+            return symbol in data.get('etf', [])
+    except Exception as e:
+        print(f"读取blacklist文件时出错: {str(e)}")
+        return False
 
 def find_symbol_group(filename: str, symbol: str) -> Optional[str]:
     """
@@ -47,6 +79,11 @@ def check_and_update_files(symbol: str) -> None:
     """
     检查并更新所有文件
     """
+    # 如果在黑名单中，先移除
+    if check_blacklist(symbol):
+        remove_from_blacklist(symbol)
+        print(f"检测到 {symbol} 在blacklist的etf组中，已移除")
+
     ALL_FILE = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
     TODAY_FILE = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json'
     EMPTY_FILE = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json'

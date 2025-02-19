@@ -12,6 +12,25 @@ def log_error_with_timestamp(error_message, error_file_path):
     with open(error_file_path, 'a') as error_file:
         error_file.write(f"[{timestamp}] {error_message}\n")
 
+# def read_earnings_release(filepath, error_file_path):
+#     if not os.path.exists(filepath):
+#         log_error_with_timestamp(f"文件 {filepath} 不存在。", error_file_path)
+#         return {}
+
+#     earnings_companies = {}
+
+#     # 修改后的正则表达式
+#     pattern_colon = re.compile(r'([\w-]+)(?::[\w]+)?\s*:\s*\d+\s*:\s*(\d{4}-\d{2}-\d{2})')
+
+#     with open(filepath, 'r') as file:
+#         for line in file:
+#             match = pattern_colon.search(line)
+#             company = match.group(1).strip()
+#             date = match.group(2)
+#             day = date.split('-')[2]  # 只取日期的天数
+#             earnings_companies[company] = day
+#     return earnings_companies
+
 def read_earnings_release(filepath, error_file_path):
     if not os.path.exists(filepath):
         log_error_with_timestamp(f"文件 {filepath} 不存在。", error_file_path)
@@ -19,16 +38,24 @@ def read_earnings_release(filepath, error_file_path):
 
     earnings_companies = {}
 
-    # 修改后的正则表达式
-    pattern_colon = re.compile(r'([\w-]+)(?::[\w]+)?\s*:\s*\d+\s*:\s*(\d{4}-\d{2}-\d{2})')
+    # 修改正则表达式以更好地匹配文件格式
+    pattern_colon = re.compile(r'^([^:]+)(?::[YWBCOb])?\s*:\s*\d+\s*:\s*(\d{4}-\d{2}-\d{2})')
 
     with open(filepath, 'r') as file:
-        for line in file:
+        for line_number, line in enumerate(file, 1):  # 添加行号
+            line = line.strip()
+            if not line:  # 跳过空行
+                continue
+                
             match = pattern_colon.search(line)
-            company = match.group(1).strip()
-            date = match.group(2)
-            day = date.split('-')[2]  # 只取日期的天数
-            earnings_companies[company] = day
+            if match:  # 添加判断，确保match不是None
+                company = match.group(1).strip()
+                date = match.group(2)
+                day = date.split('-')[2]  # 只取日期的天数
+                earnings_companies[company] = day
+            else:
+                log_error_with_timestamp(f"第 {line_number} 行无法解析: '{line}'", error_file_path)
+                
     return earnings_companies
 
 def read_gainers_losers(filepath):

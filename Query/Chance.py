@@ -13,7 +13,7 @@ def write_json_file(file_path, data):
         json.dump(data, file, ensure_ascii=False, indent=4)
 
 # 读取 Analysis.json
-analysis_data = read_json_file('/Users/yanzhang/Documents/Financial_System/Modules/chance.json')
+analysis_data = read_json_file('/Users/yanzhang/Documents/Financial_System/Modules/Chance.json')
 
 # 读取 description.json
 description_data = read_json_file('/Users/yanzhang/Documents/Financial_System/Modules/description.json')

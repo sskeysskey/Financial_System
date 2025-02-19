@@ -44,7 +44,7 @@ def process_stock_data(stock_groups: Dict[str, List[str]], start_date: str, end_
         for group_name, tickers in stock_groups.items():
             for ticker_symbol in tickers:
                 try:
-                    data = yf.download(ticker_symbol, start=start_date, end=end_date)
+                    data = yf.download(ticker_symbol, start=start_date, end=end_date, auto_adjust=True)
                     if data.empty:
                         raise ValueError(f"{group_name} {ticker_symbol}: No price data found for the given date range.")
 
@@ -54,12 +54,14 @@ def process_stock_data(stock_groups: Dict[str, List[str]], start_date: str, end_
 
                     for index, row in data.iterrows():
                         date = index.strftime('%Y-%m-%d')
-                        price = round(float(row['Close']), decimal_places)  # 直接使用整数作为小数位数
+                        # 修改这里：使用.iloc[0]
+                        price = round(float(row['Close'].iloc[0]), decimal_places)
                         
                         if group_name in special_groups:
                             insert_data(c, table_name, date, mapped_name, price)
                         else:
-                            volume = int(row['Volume'])
+                            # 修改这里：使用.iloc[0]
+                            volume = int(row['Volume'].iloc[0])
                             insert_data(c, table_name, date, mapped_name, price, volume)
 
                 except Exception as e:
