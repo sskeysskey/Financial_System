@@ -93,6 +93,24 @@ def insert_data(db_path, date, name, price):
                 show_alert(f"{name} 的最新记录距离现在不足1个月，无法添加新数据。")
         return False
 
+def get_user_input():
+    # AppleScript代码，弹出输入对话框
+    applescript_code = '''
+    display dialog "请输入股票代码:" default answer "" buttons {"取消", "确定"} default button "确定"
+    '''
+    try:
+        # 运行 AppleScript 并获取结果
+        result = subprocess.run(['osascript', '-e', applescript_code], 
+                              capture_output=True, text=True, check=True)
+        # 解析返回的结果
+        if 'button returned:确定' in result.stdout:
+            # 提取用户输入的文本
+            user_input = result.stdout.split('text returned:')[1].strip()
+            return user_input.upper()  # 转换为大写
+        return None
+    except subprocess.CalledProcessError:
+        return None
+
 def main(symbol=None):
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
     json_file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
@@ -104,9 +122,17 @@ def main(symbol=None):
     # 如果没有传递 symbol 参数，则从剪贴板中获取symbol
     if symbol is None:
         Copy_Command_C()
-        stock_name = pyperclip.paste().strip()  # 从剪贴板获取symbol
+        stock_name = pyperclip.paste()
+        
+        # 如果剪贴板为空或者内容无效，弹出输入框
+        if not stock_name or not stock_name.strip():
+            stock_name = get_user_input()
+            if not stock_name:  # 如果用户取消输入
+                return
     else:
         stock_name = symbol.strip()  # 使用传递进来的symbol
+    
+    stock_name = stock_name.strip()  # 确保去除首尾空格
     
     table_name = get_table_name_from_symbol(stock_name, json_file_path)
     

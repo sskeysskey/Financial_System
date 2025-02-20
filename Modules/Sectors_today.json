@@ -1507,7 +1507,8 @@
     "CTRE",
     "IRT",
     "CUZ",
-    "MAC"
+    "MAC",
+    "COMP"
   ],
   "Technology": [
     "MSFT",
@@ -1748,7 +1749,8 @@
     "CLBT",
     "RELY",
     "KC",
-    "WRD"
+    "WRD",
+    "SLAB"
   ],
   "Utilities": [
     "NEE",

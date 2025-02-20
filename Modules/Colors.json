@@ -12,7 +12,6 @@
         "CL",
         "KO",
         "KDP",
-        "RDY",
         "AMT",
         "AZO",
         "NEM",
@@ -151,7 +150,6 @@
         "EQT",
         "PATH",
         "LPLA",
-        "SIGI",
         "PEN",
         "EW",
         "DXCM",
@@ -293,7 +291,12 @@
         "LHX",
         "KBR",
         "INFA",
-        "ALGN"
+        "ALGN",
+        "WING",
+        "IBP",
+        "RDY",
+        "QGEN",
+        "PSN"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -385,7 +388,6 @@
         "VRN",
         "HII",
         "MDU",
-        "CE",
         "ENPH",
         "DOW",
         "MRK",
@@ -464,7 +466,8 @@
         "WST",
         "ICLR",
         "GXO",
-        "TNET"
+        "TNET",
+        "SIGI"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -494,7 +497,8 @@
         "HRL",
         "MKTX",
         "CGNX",
-        "CAG"
+        "CAG",
+        "CE"
     ],
     "black_keywords": [
         "Cotton",

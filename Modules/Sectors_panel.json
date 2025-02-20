@@ -13,14 +13,19 @@
         "SPSC": "",
         "TTD": "",
         "INFA": "",
-        "MSI": ""
+        "MSI": "",
+        "PSN": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
         "LEN": "",
         "DOOO": "",
         "BALL": "",
-        "GNTX": ""
+        "GNTX": "",
+        "CMG": "",
+        "WING": "",
+        "IBP": "",
+        "MTH": ""
     },
     "Utilities": {
         "EIX": ""
@@ -40,11 +45,16 @@
         "BAH": "",
         "GD": "",
         "LHX": "",
-        "TTEK": ""
+        "TTEK": "",
+        "NOC": "",
+        "GWW": "",
+        "KBR": "",
+        "LSTR": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
-        "MKTX": ""
+        "MKTX": "",
+        "SIGI": ""
     },
     "Healthcare": {
         "CRL": "",
@@ -54,7 +64,10 @@
         "WST": "",
         "NVO": "",
         "UNH": "",
-        "CNC": ""
+        "CNC": "",
+        "RDY": "",
+        "ALGN": "",
+        "QGEN": ""
     },
     "Bonds": {
         "US2Y": "",
@@ -82,7 +95,7 @@
         "Brazil": ""
     },
     "Commodities": {
-        "CrudeOil": "",
+        "CrudeOil": "原油",
         "Naturalgas": "天然气",
         "HuangJin": "黄金",
         "BalticDry": "",
@@ -132,21 +145,27 @@
         "USDJPY": "",
         "CNYJPY": "",
         "EURUSD": "",
+        "CNYARS": "阿根廷",
         "GBPUSD": "",
-        "CNYINR": "",
+        "CNYINR": "印度卢比",
         "CNYKRW": "",
-        "CNYRUB": "",
-        "CNYPHP": "",
-        "CNYIDR": "",
-        "USDRUB": "",
+        "CNYRUB": "俄罗斯卢布",
+        "CNYPHP": "菲律宾比索",
+        "CNYIDR": "印度尼西亚卢比",
+        "USDRUB": "俄罗斯卢布",
         "USDKRW": "",
         "USDTRY": "",
         "USDSGD": "",
         "USDTWD": "",
-        "USDIDR": "",
-        "USDPHP": "",
-        "USDMYR": "",
-        "USDMXN": ""
+        "USDIDR": "印度尼西亚卢比",
+        "USDPHP": "菲律宾比索",
+        "USDMYR": "马来西亚",
+        "USDMXN": "墨西哥",
+        "USDARS": "阿根廷",
+        "USDEGP": "埃及",
+        "USDBRL": "巴西",
+        "CNYTHB": "泰国",
+        "CNYIRR": "伊朗"
     },
     "Economics": {
         "USConfidence": "21 USConfidence"
