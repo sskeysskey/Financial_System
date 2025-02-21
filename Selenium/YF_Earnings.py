@@ -14,6 +14,7 @@ import pyautogui
 import random
 import time
 import threading
+import math
 
 # 添加鼠标移动功能的函数
 def move_mouse_periodically():
@@ -35,6 +36,42 @@ def move_mouse_periodically():
         except Exception as e:
             print(f"鼠标移动出错: {str(e)}")
             time.sleep(30)
+
+def get_total_pages_for_date(driver, date_str):
+    try:
+        # 等待页面加载完成
+        wait = WebDriverWait(driver, 10)
+        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "header.yf-1tmy20")))
+        
+        # 获取所有日期标题
+        headers = driver.find_elements(By.CSS_SELECTOR, "header.yf-1tmy20")
+        
+        for header in headers:
+            if date_str in header.text:
+                # 找到对应日期的container
+                parent_container = header.find_element(By.XPATH, "./..")
+                try:
+                    # 找到earnings数量元素
+                    earnings_element = parent_container.find_element(By.CSS_SELECTOR, "div.pill")
+                    earnings_text = earnings_element.text.split('\n')[0]
+                    print(f"找到 {date_str} 的 earnings 数量: {earnings_text}")
+                    
+                    # 提取数字部分
+                    earnings_count = int(earnings_text.split()[0])  # 分割字符串并取第一个数字部分
+                    
+                    # 计算页数
+                    total_pages = math.ceil(earnings_count / 100.0)
+                    print(f"计算得到页数: {total_pages} (earnings数量: {earnings_count})")
+                    return total_pages
+                except Exception as e:
+                    print(f"获取earnings数量时出错: {str(e)}")
+                    return 1
+        
+        print(f"未找到日期 {date_str} 的数据")
+        return 1
+    except Exception as e:
+        print(f"获取页数时出错: {str(e)}")
+        return 1
 
 # 在主程序开始前启动鼠标移动线程
 mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
@@ -123,15 +160,25 @@ with open(file_path, 'a') as output_file:
     # output_file.write('\n')
     change_date = start_date
     delta = timedelta(days=1)
+    has_duplicate = False  # 添加标志来跟踪是否发现重复
     
     while change_date <= end_date:
         formatted_change_date = change_date.strftime('%Y-%m-%d')
-        offset = 0
-        has_data = True
+        # 首先加载该日期的页面
+        initial_url = f"https://finance.yahoo.com/calendar/earnings?from={start_date.strftime('%Y-%m-%d')}&to={end_date.strftime('%Y-%m-%d')}&day={formatted_change_date}"
+        driver.get(initial_url)
+        # time.sleep(3)  # 增加等待时间确保页面完全加载
         
-        while has_data:
+        # 获取当天需要抓取的页数
+        date_str = change_date.strftime('%a, %b %d')  # 转换日期格式以匹配页面显示
+        total_pages = get_total_pages_for_date(driver, date_str)
+        print(f"日期 {formatted_change_date} 需要抓取 {total_pages} 页")
+
+        for page in range(total_pages):
+            offset = page * 100
             url = f"https://finance.yahoo.com/calendar/earnings?from={start_date.strftime('%Y-%m-%d')}&to={end_date.strftime('%Y-%m-%d')}&day={formatted_change_date}&offset={offset}&size=100"
             driver.get(url)
+            # time.sleep(2)  # 添加页面加载延迟
             
             # 使用显式等待确保元素加载
             wait = WebDriverWait(driver, 4)
@@ -139,12 +186,7 @@ with open(file_path, 'a') as output_file:
                 # 首先定位到表格，然后找到表格体中的所有行
                 table = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "table")))
                 rows = table.find_elements(By.CSS_SELECTOR, "tbody > tr")
-            except TimeoutException:
-                rows = []  # 如果超时，则设置 rows 为空列表
-            
-            if not rows:
-                has_data = False
-            else:
+                
                 for row in rows:
                     symbol = row.find_element(By.CSS_SELECTOR, 'a[title][href*="/quote/"]').get_attribute('title')
 
@@ -165,25 +207,27 @@ with open(file_path, 'a') as output_file:
                                 
                                 original_symbol = symbol  # 保留原始公司名称
 
-                                # 检查颜色关键词并根据所在分组添加后缀
-                                suffix = ""
                                 for color_group, group_symbols in color_data.items():
                                     if symbol in group_symbols and color_group != "red_keywords":
                                         suffix = color_suffix_map.get(color_group, "")
+                                        if suffix:
+                                            symbol += f":{suffix}"
                                         break
                                 
-                                if suffix:
-                                    symbol += f":{suffix}"
-
                                 entry = f"{symbol:<7}: {volume:<10}: {formatted_change_date}"
                                 if original_symbol not in existing_content:
                                     output_file.write(entry + "\n")
                                     new_content_added = True
-                                
-                offset += 100  # 为下一个子页面增加 offset
-        change_date += delta  # 日期增加一天
+                                    existing_content.add(original_symbol)  # 添加到已存在集合中
+                
+            except TimeoutException:
+                print(f"页面 {page + 1} 加载超时，跳过该页")
+                continue
+            
+            time.sleep(random.uniform(1, 2))  # 随机延迟
+            
+        change_date += delta
 
-# 关闭数据库连接
 conn.close()
 
 # 关闭浏览器

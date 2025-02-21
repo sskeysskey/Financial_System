@@ -1,4 +1,72 @@
 # ——————————————————————————————————————————————————————————————————————————————————————————
+while change_date <= end_date:
+        formatted_change_date = change_date.strftime('%Y-%m-%d')
+        offset = 0
+        has_data = True
+        
+        while has_data and not has_duplicate:  # 修改while条件
+            url = f"https://finance.yahoo.com/calendar/earnings?from={start_date.strftime('%Y-%m-%d')}&to={end_date.strftime('%Y-%m-%d')}&day={formatted_change_date}&offset={offset}&size=100"
+            driver.get(url)
+            
+            # 使用显式等待确保元素加载
+            wait = WebDriverWait(driver, 4)
+            try:
+                table = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "table")))
+                rows = table.find_elements(By.CSS_SELECTOR, "tbody > tr")
+            except TimeoutException:
+                rows = []
+            
+            if not rows:
+                has_data = False
+            else:
+                for row in rows:
+                    symbol = row.find_element(By.CSS_SELECTOR, 'a[title][href*="/quote/"]').get_attribute('title')
+
+                    cells = row.find_elements(By.TAG_NAME, 'td')
+                    if len(cells) >= 3:
+                        event_name = cells[2].text.strip()
+                    else:
+                        continue
+                    
+                    if "Earnings Release" in event_name or "Shareholders Meeting" in event_name:
+                        # 如果发现symbol已存在，设置重复标志并跳出循环
+                        if symbol in existing_content:
+                            has_duplicate = True
+                            break
+                            
+                        for category, symbols in data.items():
+                            if symbol in symbols:
+                                cursor.execute(f"SELECT volume FROM {category} WHERE name = ? ORDER BY date DESC LIMIT 1", (symbol,))
+                                volume_row = cursor.fetchone()
+                                volume = volume_row[0] if volume_row else "No volume data"
+                                
+                                original_symbol = symbol
+
+                                suffix = ""
+                                for color_group, group_symbols in color_data.items():
+                                    if symbol in group_symbols and color_group != "red_keywords":
+                                        suffix = color_suffix_map.get(color_group, "")
+                                        break
+                                
+                                if suffix:
+                                    symbol += f":{suffix}"
+
+                                entry = f"{symbol:<7}: {volume:<10}: {formatted_change_date}"
+                                if original_symbol not in existing_content:
+                                    output_file.write(entry + "\n")
+                                    new_content_added = True
+                                    existing_content.add(original_symbol)  # 添加到已存在集合中
+                
+                if has_duplicate:
+                    break  # 如果发现重复，跳出内层循环
+                
+                offset += 100  # 为下一个子页面增加 offset
+
+        if has_duplicate:
+            has_duplicate = False  # 重置重复标志
+        
+        change_date += delta  # 日期增加一天
+# ——————————————————————————————————————————————————————————————————————————————————————————
 def get_column_indexes(driver):
     """解析表头，获取各列的索引"""
     header = driver.find_elements(By.CSS_SELECTOR, "table thead tr th")
