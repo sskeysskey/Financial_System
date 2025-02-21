@@ -369,7 +369,8 @@
         "BCE",
         "BBD",
         "CBSH",
-        "SUM"
+        "SUM",
+        "ETR"
     ],
     "etf": [
         "VDE",
@@ -405,6 +406,14 @@
         "USMC",
         "IYH",
         "UITB",
-        "FMB"
+        "FMB",
+        "DLN",
+        "PBUS",
+        "YLD",
+        "FNDA",
+        "VB",
+        "XSMO",
+        "DIVI",
+        "FNDF"
     ]
 }

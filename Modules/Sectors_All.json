@@ -446,7 +446,10 @@
     "SCHO",
     "JMST",
     "IGIB",
-    "BIV"
+    "BIV",
+    "FTLS",
+    "GOVI",
+    "BSJP"
   ],
   "Basic_Materials": [
     "LIN",
@@ -1827,7 +1830,6 @@
     "EIX",
     "WEC",
     "AWK",
-    "ETR",
     "DTE",
     "FE",
     "ES",

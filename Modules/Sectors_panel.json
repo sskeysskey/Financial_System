@@ -12,9 +12,9 @@
         "FICO": "",
         "SPSC": "",
         "TTD": "",
-        "INFA": "",
-        "MSI": "",
-        "PSN": ""
+        "PSN": "",
+        "NICE": "",
+        "NOVT": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
@@ -25,7 +25,8 @@
         "CMG": "",
         "WING": "",
         "IBP": "",
-        "MTH": ""
+        "MTH": "",
+        "DECK": ""
     },
     "Utilities": {
         "EIX": ""
@@ -47,9 +48,11 @@
         "LHX": "",
         "TTEK": "",
         "NOC": "",
-        "GWW": "",
         "KBR": "",
-        "LSTR": ""
+        "CAT": "",
+        "PWR": "",
+        "TFII": "",
+        "FCN": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
@@ -60,7 +63,6 @@
         "CRL": "",
         "MRK": "",
         "ILMN": "",
-        "ICLR": "",
         "WST": "",
         "NVO": "",
         "UNH": "",

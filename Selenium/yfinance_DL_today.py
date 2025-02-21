@@ -102,40 +102,84 @@ def get_price_format(group_name: str) -> int:
     else:
         return 2
 
-def download_and_process_data(ticker_symbol, start_date, end_date, group_name, c, symbol_mapping, yesterday_date, special_groups, error_log_path):
-    """尝试下载和处理数据的函数"""
-    try:
-        data = yf.download(ticker_symbol, start=start_date, end=end_date, auto_adjust=True)
-        if data.empty:
-            return False, 0
+# def download_and_process_data(ticker_symbol, start_date, end_date, group_name, c, symbol_mapping, yesterday_date, special_groups, error_log_path):
+#     """尝试下载和处理数据的函数"""
+#     try:
+#         data = yf.download(ticker_symbol, start=start_date, end=end_date, auto_adjust=True)
+#         if data.empty:
+#             return False, 0
         
-        data_count = 0
-        table_name = group_name.replace(" ", "_")
-        mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)
-        decimal_places = get_price_format(group_name)
+#         data_count = 0
+#         table_name = group_name.replace(" ", "_")
+#         mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)
+#         decimal_places = get_price_format(group_name)
         
-        for index, row in data.iterrows():
-            date = yesterday_date
-            # 使用.iloc[0]来获取Series的值
-            price = round(float(row['Close'].iloc[0]), decimal_places)
+#         for index, row in data.iterrows():
+#             date = yesterday_date
+#             # 使用.iloc[0]来获取Series的值
+#             price = round(float(row['Close'].iloc[0]), decimal_places)
 
-            if group_name in special_groups:
-                c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price) VALUES (?, ?, ?)", 
-                        (date, mapped_name, price))
-            else:
-                # 使用.iloc[0]来获取Series的值
-                volume = int(row['Volume'].iloc[0])
-                c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)", 
-                        (date, mapped_name, price, volume))
+#             if group_name in special_groups:
+#                 c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price) VALUES (?, ?, ?)", 
+#                         (date, mapped_name, price))
+#             else:
+#                 # 使用.iloc[0]来获取Series的值
+#                 volume = int(row['Volume'].iloc[0])
+#                 c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)", 
+#                         (date, mapped_name, price, volume))
             
-            data_count += 1
+#             data_count += 1
         
-        return True, data_count
+#         return True, data_count
 
-    except Exception as e:
-        error_message = log_error_with_timestamp(f"{group_name} {ticker_symbol}: {str(e)}")
-        write_error_log(error_message, error_log_path)
-        return False, 0
+#     except Exception as e:
+#         error_message = log_error_with_timestamp(f"{group_name} {ticker_symbol}: {str(e)}")
+#         write_error_log(error_message, error_log_path)
+#         return False, 0
+
+def download_and_process_data(ticker_symbol, start_date, end_date, group_name, c, symbol_mapping, yesterday_date, special_groups, error_log_path, max_retries=3, retry_delay=2):
+    """尝试下载和处理数据的函数，包含重试机制"""
+    for attempt in range(max_retries):
+        try:
+            data = yf.download(ticker_symbol, start=start_date, end=end_date, auto_adjust=True)
+            if data.empty:
+                if attempt < max_retries - 1:
+                    print(f"{ticker_symbol}: 第{attempt + 1}次尝试获取数据为空，{retry_delay}秒后重试...")
+                    time.sleep(retry_delay)
+                    continue
+                return False, 0
+            
+            data_count = 0
+            table_name = group_name.replace(" ", "_")
+            mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)
+            decimal_places = get_price_format(group_name)
+            
+            for index, row in data.iterrows():
+                date = yesterday_date
+                price = round(float(row['Close'].iloc[0]), decimal_places)
+
+                if group_name in special_groups:
+                    c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price) VALUES (?, ?, ?)", 
+                            (date, mapped_name, price))
+                else:
+                    volume = int(row['Volume'].iloc[0])
+                    c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)", 
+                            (date, mapped_name, price, volume))
+                
+                data_count += 1
+            
+            return True, data_count
+
+        except Exception as e:
+            if attempt < max_retries - 1:
+                print(f"{ticker_symbol}: 第{attempt + 1}次尝试失败，{retry_delay}秒后重试... 错误: {str(e)}")
+                time.sleep(retry_delay)
+            else:
+                error_message = log_error_with_timestamp(f"{group_name} {ticker_symbol}: 在{max_retries}次尝试后失败: {str(e)}")
+                write_error_log(error_message, error_log_path)
+                return False, 0
+
+    return False, 0
 
 def main():
     now = datetime.now()
@@ -191,7 +235,7 @@ def main():
                     success, current_count = download_and_process_data(
                         ticker_symbol, start_date, end_date, group_name, c,
                         symbol_mapping, yesterday.strftime('%Y-%m-%d'), special_groups,
-                        ERROR_LOG_PATH
+                        ERROR_LOG_PATH, max_retries=3, retry_delay=2
                     )
                     
                     if success:

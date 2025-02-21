@@ -109,7 +109,9 @@
         "TTD",
         "CMG",
         "GWW",
-        "MSI"
+        "MSI",
+        "DECK",
+        "PWR"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -271,7 +273,6 @@
         "LFUS",
         "DHR",
         "ELF",
-        "TFII",
         "STN",
         "NXPI",
         "MANH",
@@ -296,7 +297,8 @@
         "IBP",
         "RDY",
         "QGEN",
-        "PSN"
+        "PSN",
+        "NICE"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -467,7 +469,9 @@
         "ICLR",
         "GXO",
         "TNET",
-        "SIGI"
+        "SIGI",
+        "TFII",
+        "FCN"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -497,8 +501,7 @@
         "HRL",
         "MKTX",
         "CGNX",
-        "CAG",
-        "CE"
+        "CAG"
     ],
     "black_keywords": [
         "Cotton",
@@ -551,7 +554,8 @@
         "OS",
         "VOD",
         "BF-B",
-        "REYN"
+        "REYN",
+        "CE"
     ],
     "green_keywords": [
         "EURCNY",
