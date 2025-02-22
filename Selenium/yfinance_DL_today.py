@@ -235,7 +235,7 @@ def main():
                     success, current_count = download_and_process_data(
                         ticker_symbol, start_date, end_date, group_name, c,
                         symbol_mapping, yesterday.strftime('%Y-%m-%d'), special_groups,
-                        ERROR_LOG_PATH, max_retries=3, retry_delay=2
+                        ERROR_LOG_PATH, max_retries=3, retry_delay=3
                     )
                     
                     if success:

@@ -1,9 +1,14 @@
 {
     "Basic_Materials": {
-        "CE": "赛莱默"
+        "CE": "赛莱默",
+        "MLM": "",
+        "BCC": "",
+        "WLK": ""
     },
     "Real_Estate": {},
-    "Energy": {},
+    "Energy": {
+        "SM": ""
+    },
     "Technology": {
         "AMD": "",
         "ACLS": "",
@@ -13,7 +18,17 @@
         "SPSC": "",
         "TTD": "",
         "PSN": "",
-        "NICE": ""
+        "NICE": "",
+        "MSFT": "",
+        "INTU": "",
+        "SNPS": "",
+        "MSI": "",
+        "PTC": "",
+        "CACI": "",
+        "INFA": "",
+        "GLOB": "",
+        "NOVT": "",
+        "PI": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
@@ -25,7 +40,11 @@
         "WING": "",
         "IBP": "",
         "MTH": "",
-        "DECK": ""
+        "DECK": "",
+        "AMZN": "",
+        "LOW": "",
+        "ROST": "",
+        "ANF": ""
     },
     "Utilities": {
         "EIX": ""
@@ -47,12 +66,23 @@
         "KBR": "",
         "PWR": "",
         "TFII": "",
-        "FCN": ""
+        "FCN": "",
+        "CAT": "",
+        "ETN": "",
+        "TT": "",
+        "URI": "",
+        "GWW": "",
+        "VRT": "",
+        "BLD": ""
     },
-    "Communication_Services": {},
+    "Communication_Services": {
+        "GOOGL": "",
+        "NXST": ""
+    },
     "Financial_Services": {
         "MKTX": "",
-        "SIGI": ""
+        "SIGI": "",
+        "PYPL": ""
     },
     "Healthcare": {
         "CRL": "",
@@ -62,7 +92,9 @@
         "NVO": "",
         "UNH": "",
         "CNC": "",
-        "ALGN": ""
+        "ALGN": "",
+        "RDY": "",
+        "AVTR": ""
     },
     "Bonds": {
         "US2Y": "",

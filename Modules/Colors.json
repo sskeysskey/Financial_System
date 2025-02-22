@@ -111,7 +111,12 @@
         "GWW",
         "MSI",
         "DECK",
-        "PWR"
+        "PWR",
+        "ROST",
+        "PYPL",
+        "UNH",
+        "ETN",
+        "VRT"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -135,7 +140,7 @@
         "V",
         "AAPL",
         "GOOGL",
-        "UNH"
+        "AMZN"
     ],
     "white_keywords": [
         "ROKU",
@@ -284,13 +289,11 @@
         "ILMN",
         "CRNX",
         "BAH",
-        "SPSC",
         "NXST",
         "J",
         "TTEK",
         "GD",
         "LHX",
-        "KBR",
         "INFA",
         "ALGN",
         "WING",
@@ -298,7 +301,16 @@
         "RDY",
         "QGEN",
         "PSN",
-        "NICE"
+        "NICE",
+        "MLM",
+        "BCC",
+        "ANF",
+        "SM",
+        "BLD",
+        "PTC",
+        "CACI",
+        "GLOB",
+        "PI"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -471,7 +483,9 @@
         "TNET",
         "SIGI",
         "TFII",
-        "FCN"
+        "FCN",
+        "KBR",
+        "SPSC"
     ],
     "orange_keywords": [
         "NASDAQ",
