@@ -72,7 +72,7 @@ def clear_sectors(sectors_file_path):
 
 def download_and_process_data(ticker_symbol, start_date, end_date, group_name, c, symbol_mapping, yesterday_date, special_groups):
     """尝试下载和处理数据的函数"""
-    data = yf.download(ticker_symbol, start=start_date, end=end_date)
+    data = yf.download(ticker_symbol, start=start_date, end=end_date, auto_adjust=True)
     if data.empty:
         return False, 0
     
@@ -84,19 +84,19 @@ def download_and_process_data(ticker_symbol, start_date, end_date, group_name, c
     for index, row in data.iterrows():
         date = yesterday_date
         if group_name in ["Currencies", "Bonds"]:
-            price = round(row['Close'], 4)
+            price = round(float(row['Close'].iloc[0]), 4)
         elif group_name in ["Crypto"]:
-            price = round(row['Close'], 1)
+            price = round(float(row['Close'].iloc[0]), 1)
         elif group_name in ["Commodities"]:
-            price = round(row['Close'], 3)
+            price = round(float(row['Close'].iloc[0]), 3)
         else:
-            price = round(row['Close'], 2)
+            price = round(float(row['Close'].iloc[0]), 2)
 
         if group_name in special_groups:
             c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price) VALUES (?, ?, ?)", 
                      (date, mapped_name, price))
         else:
-            volume = int(row['Volume'])
+            volume = int(row['Volume'].iloc[0])
             c.execute(f"INSERT OR REPLACE INTO {table_name} (date, name, price, volume) VALUES (?, ?, ?, ?)", 
                      (date, mapped_name, price, volume))
         
