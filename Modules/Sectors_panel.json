@@ -195,7 +195,11 @@
         "CNYIRR": "伊朗"
     },
     "Economics": {
-        "USConfidence": "21 USConfidence"
+        "USGDP": "26 USGDP",
+        "USConspending": "26 USConspending",
+        "PCEY": "27 PCEY",
+        "CorePCEM": "28 CorePCEM",
+        "CorePCEY": "28 CorePCEY"
     },
     "ETFs_US": {
         "TLT": "",
