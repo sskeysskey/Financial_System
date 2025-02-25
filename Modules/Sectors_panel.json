@@ -3,7 +3,8 @@
         "CE": "赛莱默",
         "MLM": "",
         "BCC": "",
-        "WLK": ""
+        "WLK": "",
+        "UFPI": ""
     },
     "Real_Estate": {},
     "Energy": {
@@ -28,7 +29,10 @@
         "INFA": "",
         "GLOB": "",
         "NOVT": "",
-        "PI": ""
+        "PI": "",
+        "TSM": "",
+        "WDC": "",
+        "MANH": ""
     },
     "Consumer_Cyclical": {
         "STLA": "",
@@ -44,7 +48,8 @@
         "AMZN": "",
         "LOW": "",
         "ROST": "",
-        "ANF": ""
+        "ANF": "",
+        "HD": ""
     },
     "Utilities": {
         "EIX": ""
@@ -54,7 +59,8 @@
         "ELF": "",
         "DEO": "",
         "GIS": "",
-        "HRL": ""
+        "HRL": "",
+        "LW": ""
     },
     "Industrials": {
         "LMT": "",
@@ -73,7 +79,9 @@
         "URI": "",
         "GWW": "",
         "VRT": "",
-        "BLD": ""
+        "BLD": "",
+        "J": "",
+        "LSTR": ""
     },
     "Communication_Services": {
         "GOOGL": "",

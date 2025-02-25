@@ -114,9 +114,10 @@
         "PWR",
         "ROST",
         "PYPL",
-        "UNH",
         "ETN",
-        "VRT"
+        "VRT",
+        "UNH",
+        "MSFT"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -129,7 +130,6 @@
         "SCHD",
         "TSLA",
         "BRK-A",
-        "MSFT",
         "META",
         "AVGO",
         "TSM",
@@ -153,7 +153,6 @@
         "ROK",
         "TEAM",
         "RMBS",
-        "LW",
         "EQT",
         "PATH",
         "LPLA",
@@ -310,7 +309,9 @@
         "PTC",
         "CACI",
         "GLOB",
-        "PI"
+        "PI",
+        "UFPI",
+        "WDC"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -485,7 +486,8 @@
         "TFII",
         "FCN",
         "KBR",
-        "SPSC"
+        "SPSC",
+        "LW"
     ],
     "orange_keywords": [
         "NASDAQ",
