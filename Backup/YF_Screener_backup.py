@@ -302,10 +302,9 @@ def simplify_market_cap_threshold(market_cap_threshold):
 
 
 def update_json(data, sector, file_path, output, log_enabled,
-                market_cap_threshold, write_symbols=False, check_removal=False):
+                market_cap_threshold, write_symbols=False):
     """
     在JSON文件中更新记录，根据市值要求添加或删除股票符号
-    check_removal: True表示执行删除操作(用于500亿和5000亿文件)
     """
     with open(file_path, 'r+', encoding='utf-8') as file:
         json_data = json.load(file)
@@ -325,26 +324,14 @@ def update_json(data, sector, file_path, output, log_enabled,
         for symbol, market_cap, pe_ratio, name, price, volume in data:
             current_sectors = symbol_to_sectors.get(symbol, [])
 
-            if market_cap != '--' and float(market_cap) < market_cap_threshold:
-                # 市值低于阈值的处理
-                if check_removal:
-                    # 500亿和5000亿文件执行实际删除
-                    for sec in list(json_data.keys()):
-                        if symbol in json_data[sec]:
-                            json_data[sec].remove(symbol)
-                            if log_enabled:
-                                message = f"Removed '{symbol}' from {sec} due to market cap below {int(simplified_market_cap_threshold)}."
-                                print(message)
-                                output.append(message)
-                else:
-                    # 50亿文件只记录日志，不删除
-                    if symbol in json_data.get(sector, []):
-                        if log_enabled:
-                            message = f"'{symbol}' should be Removed from {sector} {int(simplified_market_cap_threshold)}."
-                            print(message)
-                            output.append(message)
+            # 市值判断逻辑
+            if market_cap < market_cap_threshold:
+                if current_sectors and symbol in json_data.get(current_sectors[0], []):
+                    if log_enabled:
+                        message = f"'{symbol}' should be Removed from  {current_sectors[0]}  {int(simplified_market_cap_threshold)}."
+                        print(message)
+                        output.append(message)
             else:
-                # 市值达标，添加新股票
                 if symbol not in json_data.get(sector, []):
                     json_data.setdefault(sector, []).append(symbol)
                     new_symbols.append((symbol, name))
@@ -379,8 +366,6 @@ def process_sector(driver, url, sector, output, output_500, output_5000, blackli
     处理不同的市值区间，并更新相应的JSON文件
     """
     data = fetch_data(driver, url, blacklist)
-    
-    # 50亿普通文件，不执行删除操作
     update_json(
         data,
         sector,
@@ -388,8 +373,7 @@ def process_sector(driver, url, sector, output, output_500, output_5000, blackli
         output,
         log_enabled=True,
         market_cap_threshold=5000000000,
-        write_symbols=True,
-        check_removal=False
+        write_symbols=True
     )
     update_json(
         data,
@@ -397,19 +381,17 @@ def process_sector(driver, url, sector, output, output_500, output_5000, blackli
         '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json',
         output,
         log_enabled=False,
-        market_cap_threshold=5000000000,
-        check_removal=False
+        market_cap_threshold=5000000000
     )
 
-    # 500亿和5000亿文件，执行删除操作
+    # 处理 500 亿和 5000 亿市值
     update_json(
         data,
         sector,
         '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_500.json',
         output_500,
         log_enabled=True,
-        market_cap_threshold=50000000000,
-        check_removal=True
+        market_cap_threshold=50000000000
     )
     update_json(
         data,
@@ -417,8 +399,7 @@ def process_sector(driver, url, sector, output, output_500, output_5000, blackli
         '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_5000.json',
         output_5000,
         log_enabled=True,
-        market_cap_threshold=500000000000,
-        check_removal=True
+        market_cap_threshold=500000000000
     )
 
 

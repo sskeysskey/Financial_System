@@ -9,9 +9,7 @@
     "APD",
     "FCX",
     "NEM",
-    "CRH",
-    "VALE",
-    "AEM"
+    "CRH"
   ],
   "Communication_Services": [
     "GOOGL",
@@ -24,7 +22,6 @@
     "CMCSA",
     "SPOT",
     "DASH",
-    "AMX",
     "NTES",
     "CHTR"
   ],
@@ -47,18 +44,12 @@
     "ABNB",
     "ORLY",
     "MAR",
-    "DHI",
     "HLT",
     "AZO",
     "GM",
-    "LEN",
-    "ROST",
-    "HMC",
-    "DECK",
     "SE",
     "JD",
-    "RCL",
-    "LULU"
+    "RCL"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -76,7 +67,6 @@
     "CL",
     "DEO",
     "TGT",
-    "KDP",
     "MNST"
   ],
   "Energy": [
@@ -95,16 +85,9 @@
     "SLB",
     "WMB",
     "ET",
-    "MPC",
     "OKE",
     "PSX",
-    "FANG",
-    "E",
-    "TRP",
     "KMI",
-    "OXY",
-    "SU",
-    "LNG",
     "MPLX"
   ],
   "Financial_Services": [
@@ -159,16 +142,11 @@
     "BK",
     "MFG",
     "MFC",
-    "ALL",
-    "CM",
     "ARES",
     "AMP",
     "COIN",
-    "AIG",
     "LYG",
-    "BCS",
-    "DFS",
-    "HOOD"
+    "BCS"
   ],
   "Healthcare": [
     "LLY",
@@ -200,8 +178,7 @@
     "ZTS",
     "CVS",
     "BDX",
-    "MCK",
-    "RDY"
+    "MCK"
   ],
   "Industrials": [
     "GE",
@@ -234,16 +211,8 @@
     "EMR",
     "NSC",
     "PCAR",
-    "URI",
-    "GWW",
     "JCI",
     "CPRT",
-    "RYAAY",
-    "LHX",
-    "CMI",
-    "VRT",
-    "PWR",
-    "AXON",
     "HWM"
   ],
   "Real_Estate": [
@@ -254,8 +223,7 @@
     "PSA",
     "SPG",
     "O",
-    "DLR",
-    "CCI"
+    "DLR"
   ],
   "Technology": [
     "AAPL",
@@ -304,15 +272,11 @@
     "NXPI",
     "FTNT",
     "ADSK",
-    "TTD",
     "PAYX",
-    "FICO",
     "TEAM",
     "APP",
     "MSTR",
     "SNOW",
-    "DDOG",
-    "WIT",
     "NET"
   ],
   "Utilities": [
@@ -323,9 +287,6 @@
     "GEV",
     "CEG",
     "AEP",
-    "SRE",
-    "PCG",
-    "D",
-    "VST"
+    "SRE"
   ]
 }

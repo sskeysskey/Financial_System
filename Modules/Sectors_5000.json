@@ -11,9 +11,7 @@
   "Consumer_Defensive": [
     "WMT"
   ],
-  "Energy": [
-    "XOM"
-  ],
+  "Energy": [],
   "Financial_Services": [
     "BRK-A",
     "JPM",
@@ -21,9 +19,7 @@
     "MA"
   ],
   "Healthcare": [
-    "LLY",
-    "NVO",
-    "UNH"
+    "LLY"
   ],
   "Industrials": [],
   "Real_Estate": [],
@@ -32,8 +28,7 @@
     "MSFT",
     "NVDA",
     "TSM",
-    "AVGO",
-    "ORCL"
+    "AVGO"
   ],
   "Utilities": []
 }
