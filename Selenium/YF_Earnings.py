@@ -138,9 +138,6 @@ for key, symbols in color_data.items():
     if key != "red_keywords":
         color_keys.update(symbols)
 
-# start_date = datetime(2024, 12, 2)
-# end_date = datetime(2024, 12, 9)
-
 # 获取当前系统日期
 current_date = datetime.now()
 # 计算离当前最近的周天
