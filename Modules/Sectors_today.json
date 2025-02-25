@@ -256,7 +256,6 @@
     "IFRA",
     "SUSB",
     "SHYG",
-    "ANGL",
     "QLD",
     "KCE",
     "FXY",
@@ -392,7 +391,10 @@
     "BSJP",
     "HTAB",
     "PHO",
-    "ARKW"
+    "ARKW",
+    "DSTL",
+    "PRFZ",
+    "AIA"
   ],
   "Basic_Materials": [
     "LIN",

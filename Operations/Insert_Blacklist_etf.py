@@ -36,7 +36,7 @@ def add_to_blacklist(blacklist_file, symbol):
         with open(blacklist_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4)
         
-        show_alert(f"成功！")
+        show_alert(f"成功！ {symbol}")
         return True
     except Exception as e:
         show_alert(f"处理blacklist文件时出错: {e}")

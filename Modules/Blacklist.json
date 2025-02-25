@@ -225,7 +225,12 @@
         "PVH",
         "SAIC",
         "CRNX",
-        "CGNX"
+        "CGNX",
+        "SM",
+        "WDC",
+        "LW",
+        "ALGN",
+        "AVTR"
     ],
     "screener": [
         "CTA-PA",
@@ -422,6 +427,8 @@
         "IMCG",
         "JMOM",
         "SPGP",
-        "VCR"
+        "VCR",
+        "HYDB",
+        "VV"
     ]
 }

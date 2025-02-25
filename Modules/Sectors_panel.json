@@ -1,108 +1,57 @@
 {
     "Basic_Materials": {
         "CE": "赛莱默",
-        "MLM": "",
         "BCC": "",
-        "WLK": "",
         "UFPI": ""
     },
     "Real_Estate": {},
-    "Energy": {
-        "SM": ""
-    },
+    "Energy": {},
     "Technology": {
         "AMD": "",
-        "ACLS": "",
-        "AMKR": "",
         "SWKS": "",
         "FICO": "",
-        "SPSC": "",
         "TTD": "",
         "PSN": "",
-        "NICE": "",
-        "MSFT": "",
-        "INTU": "",
-        "SNPS": "",
-        "MSI": "",
-        "PTC": "",
         "CACI": "",
-        "INFA": "",
-        "GLOB": "",
-        "NOVT": "",
         "PI": "",
-        "TSM": "",
-        "WDC": "",
         "MANH": ""
     },
     "Consumer_Cyclical": {
-        "STLA": "",
         "LEN": "",
         "DOOO": "",
-        "BALL": "",
         "GNTX": "",
         "CMG": "",
         "WING": "",
         "IBP": "",
-        "MTH": "",
         "DECK": "",
-        "AMZN": "",
         "LOW": "",
-        "ROST": "",
-        "ANF": "",
-        "HD": ""
+        "ANF": ""
     },
     "Utilities": {
         "EIX": ""
     },
     "Consumer_Defensive": {
-        "STZ": "",
         "ELF": "",
         "DEO": "",
-        "GIS": "",
-        "HRL": "",
-        "LW": ""
+        "HRL": ""
     },
     "Industrials": {
         "LMT": "",
-        "MMS": "",
         "BAH": "",
         "GD": "",
-        "LHX": "",
-        "TTEK": "",
+        "TTEK": "德照科技",
         "KBR": "",
         "PWR": "",
         "TFII": "",
-        "FCN": "",
-        "CAT": "",
-        "ETN": "",
-        "TT": "",
-        "URI": "",
-        "GWW": "",
-        "VRT": "",
-        "BLD": "",
-        "J": "",
-        "LSTR": ""
+        "VRT": "维谛",
+        "BLD": ""
     },
-    "Communication_Services": {
-        "GOOGL": "",
-        "NXST": ""
-    },
-    "Financial_Services": {
-        "MKTX": "",
-        "SIGI": "",
-        "PYPL": ""
-    },
+    "Communication_Services": {},
+    "Financial_Services": {},
     "Healthcare": {
-        "CRL": "",
-        "MRK": "",
         "ILMN": "",
         "WST": "",
-        "NVO": "",
-        "UNH": "",
-        "CNC": "",
-        "ALGN": "",
-        "RDY": "",
-        "AVTR": ""
+        "UNH": ""
     },
     "Bonds": {
         "US2Y": "",
@@ -203,11 +152,12 @@
         "CNYIRR": "伊朗"
     },
     "Economics": {
-        "USGDP": "26 USGDP",
-        "USConspending": "26 USConspending",
-        "PCEY": "27 PCEY",
+        "USGDP": "27 USGDP",
+        "USConspending": "27 USConspending",
+        "USInitial": "27 USInitial",
+        "CorePCEY": "28 CorePCEY",
         "CorePCEM": "28 CorePCEM",
-        "CorePCEY": "28 CorePCEY"
+        "PCEY": "28 PCEY"
     },
     "ETFs_US": {
         "TLT": "",
