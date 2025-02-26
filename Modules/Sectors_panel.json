@@ -153,9 +153,12 @@
         "GBPUSD": "",
         "CNYINR": "印度卢比",
         "CNYKRW": "",
+        "CNYEGP": "埃及",
         "CNYRUB": "俄罗斯卢布",
         "CNYPHP": "菲律宾比索",
         "CNYIDR": "印度尼西亚卢比",
+        "CNYTHB": "泰国",
+        "CNYIRR": "伊朗",
         "USDRUB": "俄罗斯卢布",
         "USDKRW": "",
         "USDTRY": "",
@@ -167,9 +170,7 @@
         "USDMXN": "墨西哥",
         "USDARS": "阿根廷",
         "USDEGP": "埃及",
-        "USDBRL": "巴西",
-        "CNYTHB": "泰国",
-        "CNYIRR": "伊朗"
+        "USDBRL": "巴西"
     },
     "Economics": {
         "USGDP": "27 USGDP",
