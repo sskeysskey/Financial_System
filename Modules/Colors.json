@@ -1,7 +1,6 @@
 {
     "cyan_keywords": [
         "VRTX",
-        "INTU",
         "AZN",
         "ASML",
         "KLAC",
@@ -79,7 +78,6 @@
         "UBS",
         "CTAS",
         "MU",
-        "SNPS",
         "BABA",
         "WM",
         "ARM",
@@ -117,7 +115,9 @@
         "ETN",
         "VRT",
         "UNH",
-        "MSFT"
+        "KKR",
+        "MSFT",
+        "CDNS"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -300,7 +300,6 @@
         "RDY",
         "QGEN",
         "PSN",
-        "NICE",
         "MLM",
         "BCC",
         "ANF",
@@ -311,7 +310,11 @@
         "GLOB",
         "PI",
         "UFPI",
-        "WDC"
+        "WDC",
+        "INTU",
+        "SNPS",
+        "ONTO",
+        "MKSI"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -487,7 +490,8 @@
         "FCN",
         "KBR",
         "SPSC",
-        "LW"
+        "LW",
+        "NICE"
     ],
     "orange_keywords": [
         "NASDAQ",

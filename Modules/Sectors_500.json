@@ -8,7 +8,6 @@
     "ECL",
     "APD",
     "FCX",
-    "NEM",
     "CRH"
   ],
   "Communication_Services": [
@@ -146,7 +145,8 @@
     "AMP",
     "COIN",
     "LYG",
-    "BCS"
+    "BCS",
+    "ALL"
   ],
   "Healthcare": [
     "LLY",
@@ -222,7 +222,6 @@
     "WELL",
     "PSA",
     "SPG",
-    "O",
     "DLR"
   ],
   "Technology": [
@@ -276,8 +275,7 @@
     "TEAM",
     "APP",
     "MSTR",
-    "SNOW",
-    "NET"
+    "SNOW"
   ],
   "Utilities": [
     "NEE",
@@ -286,7 +284,6 @@
     "NGG",
     "GEV",
     "CEG",
-    "AEP",
-    "SRE"
+    "AEP"
   ]
 }

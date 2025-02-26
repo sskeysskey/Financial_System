@@ -14,7 +14,17 @@
         "PSN": "",
         "CACI": "",
         "PI": "",
-        "MANH": ""
+        "MANH": "",
+        "MSFT": "",
+        "TSM": "",
+        "INTU": "",
+        "SNPS": "",
+        "CDNS": "",
+        "NICE": "",
+        "ONTO": "",
+        "INFA": "",
+        "MKSI": "",
+        "OS": ""
     },
     "Consumer_Cyclical": {
         "LEN": "",
@@ -25,7 +35,8 @@
         "IBP": "",
         "DECK": "",
         "LOW": "",
-        "ANF": ""
+        "ANF": "",
+        "TSLA": ""
     },
     "Utilities": {
         "EIX": ""
@@ -44,14 +55,23 @@
         "PWR": "",
         "TFII": "",
         "VRT": "维谛",
-        "BLD": ""
+        "BLD": "",
+        "ETN": "",
+        "J": ""
     },
-    "Communication_Services": {},
-    "Financial_Services": {},
+    "Communication_Services": {
+        "GOOGL": "",
+        "NXST": ""
+    },
+    "Financial_Services": {
+        "KKR": "",
+        "PYPL": ""
+    },
     "Healthcare": {
         "ILMN": "",
         "WST": "",
-        "UNH": ""
+        "UNH": "",
+        "RDY": ""
     },
     "Bonds": {
         "US2Y": "",
