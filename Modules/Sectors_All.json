@@ -345,7 +345,6 @@
     "CANE",
     "DSI",
     "RWL",
-    "COM",
     "SPXL",
     "SPXS",
     "SVXY",
@@ -403,7 +402,6 @@
     "QTUM",
     "EWY",
     "IGV",
-    "NANR",
     "SCHP",
     "FXO",
     "VAW",
@@ -450,7 +448,8 @@
     "ARKW",
     "DSTL",
     "PRFZ",
-    "AIA"
+    "AIA",
+    "SPYX"
   ],
   "Basic_Materials": [
     "LIN",
