@@ -5,7 +5,9 @@
         "UFPI": ""
     },
     "Real_Estate": {},
-    "Energy": {},
+    "Energy": {
+        "WFRD": ""
+    },
     "Technology": {
         "AMD": "",
         "SWKS": "",
@@ -13,18 +15,13 @@
         "TTD": "",
         "PSN": "",
         "CACI": "",
-        "PI": "",
         "MANH": "",
-        "MSFT": "",
-        "TSM": "",
         "INTU": "",
         "SNPS": "",
         "CDNS": "",
         "NICE": "",
         "ONTO": "",
-        "INFA": "",
-        "MKSI": "",
-        "OS": ""
+        "SPSC": ""
     },
     "Consumer_Cyclical": {
         "LEN": "",
@@ -35,7 +32,6 @@
         "IBP": "",
         "DECK": "",
         "LOW": "",
-        "ANF": "",
         "TSLA": ""
     },
     "Utilities": {
@@ -52,16 +48,13 @@
         "GD": "",
         "TTEK": "德照科技",
         "KBR": "",
-        "PWR": "",
         "TFII": "",
         "VRT": "维谛",
-        "BLD": "",
-        "ETN": "",
         "J": ""
     },
     "Communication_Services": {
-        "GOOGL": "",
-        "NXST": ""
+        "NXST": "",
+        "GOOGL": ""
     },
     "Financial_Services": {
         "KKR": "",
@@ -70,7 +63,6 @@
     "Healthcare": {
         "ILMN": "",
         "WST": "",
-        "UNH": "",
         "RDY": ""
     },
     "Bonds": {

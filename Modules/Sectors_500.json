@@ -145,8 +145,7 @@
     "AMP",
     "COIN",
     "LYG",
-    "BCS",
-    "ALL"
+    "BCS"
   ],
   "Healthcare": [
     "LLY",
@@ -213,7 +212,8 @@
     "PCAR",
     "JCI",
     "CPRT",
-    "HWM"
+    "HWM",
+    "CMI"
   ],
   "Real_Estate": [
     "PLD",
@@ -284,6 +284,7 @@
     "NGG",
     "GEV",
     "CEG",
-    "AEP"
+    "AEP",
+    "VST"
   ]
 }

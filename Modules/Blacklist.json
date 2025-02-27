@@ -230,7 +230,10 @@
         "WDC",
         "LW",
         "ALGN",
-        "AVTR"
+        "AVTR",
+        "PI",
+        "MKSI",
+        "INFA"
     ],
     "screener": [
         "CTA-PA",
@@ -429,6 +432,10 @@
         "SPGP",
         "VCR",
         "HYDB",
-        "VV"
+        "VV",
+        "FXU",
+        "ANGL",
+        "FNDB",
+        "OEF"
     ]
 }

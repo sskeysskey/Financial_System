@@ -249,9 +249,9 @@ def main():
                     continue
 
             if not success:
-                error_message = log_error_with_timestamp(f"无法获取 {ticker_symbol} 的数据，所有日期范围都已尝试")
+                error_message = log_error_with_timestamp(f"在 {group_name} 中，无法获取 {ticker_symbol} 的数据，所有日期范围都已尝试")
                 write_error_log(error_message, ERROR_LOG_PATH)
-                print(f"无法获取 {ticker_symbol} 的数据，所有日期范围都已尝试")
+                print(f"在 {group_name} 中，无法获取 {ticker_symbol} 的数据，所有日期范围都已尝试")
 
         if data_count > 0:
             print(f"{group_name} 数据处理完成，总共下载了 {data_count} 条数据。")

@@ -314,7 +314,8 @@
         "INTU",
         "SNPS",
         "ONTO",
-        "MKSI"
+        "MKSI",
+        "BSY"
     ],
     "yellow_keywords": [
         "Nikkei",
