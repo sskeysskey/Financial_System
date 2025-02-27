@@ -16,8 +16,6 @@
         "PSN": "",
         "CACI": "",
         "MANH": "",
-        "INTU": "",
-        "SNPS": "",
         "CDNS": "",
         "NICE": "",
         "ONTO": "",
@@ -31,7 +29,6 @@
         "WING": "",
         "IBP": "",
         "DECK": "",
-        "LOW": "",
         "TSLA": ""
     },
     "Utilities": {
@@ -49,8 +46,7 @@
         "TTEK": "德照科技",
         "KBR": "",
         "TFII": "",
-        "VRT": "维谛",
-        "J": ""
+        "VRT": "维谛"
     },
     "Communication_Services": {
         "NXST": ""
@@ -113,7 +109,14 @@
         "Rice": "",
         "Oat": "",
         "LeanHogs": "猪肉",
-        "LiveCattle": "牛肉"
+        "LiveCattle": "牛肉",
+        "PalmOil": "棕榈油",
+        "Coal": "煤炭",
+        "Tin": "锡",
+        "Zinc": "锌",
+        "Palladium": "钯",
+        "Poultry": "家禽",
+        "Salmon": "三文鱼"
     },
     "Crypto": {
         "Bitcoin": "",
