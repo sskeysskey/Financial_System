@@ -38,7 +38,6 @@
         "RACE",
         "RELX",
         "TRI",
-        "AMAT",
         "MDT",
         "ECL",
         "TGT",
@@ -116,8 +115,8 @@
         "VRT",
         "UNH",
         "KKR",
-        "MSFT",
-        "CDNS"
+        "CDNS",
+        "MSFT"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -284,8 +283,6 @@
         "VRNS",
         "DHI",
         "CYTK",
-        "AVTR",
-        "ILMN",
         "CRNX",
         "BAH",
         "NXST",
@@ -315,7 +312,13 @@
         "SNPS",
         "ONTO",
         "MKSI",
-        "BSY"
+        "BSY",
+        "NXE",
+        "VTRS",
+        "TECH",
+        "SRPT",
+        "RRX",
+        "AMAT"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -492,7 +495,9 @@
         "KBR",
         "SPSC",
         "LW",
-        "NICE"
+        "NICE",
+        "WPP",
+        "AVTR"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -576,7 +581,8 @@
         "VOD",
         "BF-B",
         "REYN",
-        "CE"
+        "CE",
+        "ILMN"
     ],
     "green_keywords": [
         "EURCNY",
