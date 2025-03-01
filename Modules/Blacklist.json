@@ -233,7 +233,8 @@
         "AVTR",
         "PI",
         "MKSI",
-        "INFA"
+        "INFA",
+        "SWKS"
     ],
     "screener": [
         "CTA-PA",
@@ -438,6 +439,12 @@
         "FNDB",
         "OEF",
         "FLRT",
-        "DRSK"
+        "DRSK",
+        "MGC",
+        "IYG",
+        "DDWM",
+        "LQDH",
+        "EUSA",
+        "IDMO"
     ]
 }

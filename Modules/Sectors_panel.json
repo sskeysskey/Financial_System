@@ -3,18 +3,18 @@
         "CE": "赛莱默",
         "BCC": "",
         "UFPI": "",
-        "MLM": ""
+        "SCCO": "",
+        "ASH": ""
     },
-    "Real_Estate": {},
+    "Real_Estate": {
+        "DLR": ""
+    },
     "Energy": {
         "WFRD": "",
-        "NXE": ""
+        "TDW": ""
     },
     "Technology": {
         "AMD": "",
-        "SWKS": "",
-        "FICO": "",
-        "TTD": "",
         "PSN": "",
         "CACI": "",
         "MANH": "",
@@ -22,28 +22,22 @@
         "NICE": "",
         "ONTO": "",
         "SPSC": "",
-        "MSFT": "",
         "TSM": "",
-        "AVGO": "",
-        "AMAT": "",
         "ANET": "",
-        "INFY": "",
-        "SNPS": "",
-        "AMKR": "",
-        "GLOB": "",
         "ACLS": "",
-        "OS": ""
+        "INFY": "",
+        "FSLR": "",
+        "ENPH": ""
     },
     "Consumer_Cyclical": {
         "LEN": "",
         "DOOO": "",
-        "GNTX": "",
         "CMG": "",
         "WING": "",
         "IBP": "",
         "DECK": "",
         "TSLA": "",
-        "AMZN": ""
+        "GNTX": ""
     },
     "Utilities": {
         "EIX": ""
@@ -54,20 +48,15 @@
         "HRL": ""
     },
     "Industrials": {
-        "LMT": "",
         "BAH": "",
-        "GD": "",
         "TTEK": "德照科技",
-        "KBR": "",
         "TFII": "",
         "VRT": "维谛",
-        "TT": "",
         "RRX": "",
-        "LSTR": ""
+        "MMS": ""
     },
     "Communication_Services": {
         "NXST": "",
-        "GOOGL": "",
         "WPP": ""
     },
     "Financial_Services": {
@@ -77,13 +66,11 @@
     "Healthcare": {
         "ILMN": "",
         "WST": "",
-        "RDY": "",
-        "HOLX": "",
         "VTRS": "",
         "TECH": "",
-        "SRPT": "",
-        "BRKR": "",
-        "QGEN": ""
+        "QGEN": "",
+        "RDY": "",
+        "BRKR": ""
     },
     "Bonds": {
         "US2Y": "",

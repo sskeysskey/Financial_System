@@ -339,7 +339,6 @@
     "SPDW",
     "VGLT",
     "GCOW",
-    "EDIV",
     "VYM",
     "WGMI",
     "QTUM",
@@ -392,7 +391,10 @@
     "DSTL",
     "PRFZ",
     "AIA",
-    "SPYX"
+    "SPYX",
+    "DIVB",
+    "EMHY",
+    "EMGF"
   ],
   "Basic_Materials": [
     "LIN",
