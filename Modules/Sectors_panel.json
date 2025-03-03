@@ -1,9 +1,6 @@
 {
     "Basic_Materials": {
         "CE": "赛莱默",
-        "BCC": "",
-        "UFPI": "",
-        "SCCO": "",
         "ASH": ""
     },
     "Real_Estate": {
@@ -22,10 +19,8 @@
         "NICE": "",
         "ONTO": "",
         "SPSC": "",
-        "TSM": "",
         "ANET": "",
         "ACLS": "",
-        "INFY": "",
         "FSLR": "",
         "ENPH": ""
     },
@@ -36,12 +31,9 @@
         "WING": "",
         "IBP": "",
         "DECK": "",
-        "TSLA": "",
-        "GNTX": ""
+        "TSLA": ""
     },
-    "Utilities": {
-        "EIX": ""
-    },
+    "Utilities": {},
     "Consumer_Defensive": {
         "ELF": "",
         "DEO": "",
@@ -55,13 +47,9 @@
         "RRX": "",
         "MMS": ""
     },
-    "Communication_Services": {
-        "NXST": "",
-        "WPP": ""
-    },
+    "Communication_Services": {},
     "Financial_Services": {
-        "KKR": "",
-        "PYPL": ""
+        "KKR": ""
     },
     "Healthcare": {
         "ILMN": "",
@@ -69,8 +57,7 @@
         "VTRS": "",
         "TECH": "",
         "QGEN": "",
-        "RDY": "",
-        "BRKR": ""
+        "RDY": ""
     },
     "Bonds": {
         "US2Y": "",
@@ -179,12 +166,11 @@
         "USDBRL": "巴西"
     },
     "Economics": {
-        "USGDP": "27 USGDP",
-        "USConspending": "27 USConspending",
-        "USInitial": "27 USInitial",
-        "CorePCEY": "28 CorePCEY",
-        "CorePCEM": "28 CorePCEM",
-        "PCEY": "28 PCEY"
+        "USNonFarmA": "05 USNonFarmA",
+        "USNonPMI": "05 USNonPMI",
+        "USTrade": "06 USTrade",
+        "USNonFarm": "07 USNonFarm",
+        "USUnemploy": "07 USUnemploy"
     },
     "ETFs_US": {
         "TLT": "",

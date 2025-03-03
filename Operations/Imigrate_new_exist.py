@@ -1,8 +1,8 @@
 import os
 import re
-from datetime import datetime, timedelta
 import shutil
 import argparse
+from datetime import datetime, timedelta
 
 # 文件路径
 files = {
@@ -144,7 +144,7 @@ def backup_diff_file(diff_file, backup_dir):
         shutil.move(diff_file, target_path)
 
         # 删除四天前的备份文件
-        four_days_ago = current_date - timedelta(days=4)
+        four_days_ago = current_date - timedelta(days=14)
         for filename in os.listdir(backup_dir):
             if filename.startswith("ETFs_diff_") and filename.endswith(".txt"):
                 file_date_str = filename[10:18]  # 提取日期部分

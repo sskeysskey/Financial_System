@@ -424,8 +424,6 @@
     "FALN",
     "PXH",
     "IEFA",
-    "IJJ",
-    "DON",
     "PPA",
     "SPMD",
     "FV",
@@ -446,12 +444,13 @@
     "PHO",
     "ARKW",
     "DSTL",
-    "PRFZ",
     "AIA",
     "SPYX",
     "DIVB",
     "EMHY",
-    "EMGF"
+    "EMGF",
+    "WTV",
+    "ROBO"
   ],
   "Basic_Materials": [
     "LIN",

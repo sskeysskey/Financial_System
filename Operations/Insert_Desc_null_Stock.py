@@ -161,7 +161,7 @@ def main():
             return True
         return False
 
-    found_poe = find_and_click("poethumb", 50)
+    found_poe = find_and_click("poethumb", 80)
     if found_poe:
         pyautogui.click(button='right')
         sleep(1)
@@ -177,7 +177,7 @@ def main():
     execute_applescript(script_path)
     sleep(1)
     if not found_poe:
-        found_poe = find_and_click("poethumb", 50)
+        found_poe = find_and_click("poethumb", 80)
         if found_poe:
             pyautogui.click(button='right')
             while not find_and_click("poecopy"):
@@ -209,4 +209,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    # 测试

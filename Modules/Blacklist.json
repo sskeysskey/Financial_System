@@ -234,7 +234,9 @@
         "PI",
         "MKSI",
         "INFA",
-        "SWKS"
+        "SWKS",
+        "WPP",
+        "PYPL"
     ],
     "screener": [
         "CTA-PA",
@@ -445,6 +447,9 @@
         "DDWM",
         "LQDH",
         "EUSA",
-        "IDMO"
+        "IDMO",
+        "LRGF",
+        "HYGH",
+        "INTF"
     ]
 }
