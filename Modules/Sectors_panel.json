@@ -1,14 +1,23 @@
 {
     "Basic_Materials": {
         "CE": "赛莱默",
-        "ASH": ""
+        "ASH": "",
+        "SCCO": "",
+        "MLM": "",
+        "ALB": "",
+        "UFPI": "",
+        "BCC": "",
+        "WLK": ""
     },
     "Real_Estate": {
         "DLR": ""
     },
     "Energy": {
         "WFRD": "",
-        "TDW": ""
+        "TDW": "",
+        "FANG": "",
+        "CRC": "",
+        "NXE": ""
     },
     "Technology": {
         "AMD": "",
@@ -22,7 +31,24 @@
         "ANET": "",
         "ACLS": "",
         "FSLR": "",
-        "ENPH": ""
+        "ENPH": "",
+        "MSFT": "",
+        "NVDA": "",
+        "TSM": "",
+        "AVGO": "",
+        "AMAT": "",
+        "INFY": "",
+        "DELL": "",
+        "SNPS": "",
+        "ON": "",
+        "PTC": "",
+        "AMKR": "",
+        "GLOB": "",
+        "ARW": "",
+        "LFUS": "",
+        "ENTG": "",
+        "TTD": "",
+        "OS": ""
     },
     "Consumer_Cyclical": {
         "LEN": "",
@@ -31,13 +57,21 @@
         "WING": "",
         "IBP": "",
         "DECK": "",
-        "TSLA": ""
+        "TSLA": "",
+        "AMZN": "",
+        "W": "",
+        "BWA": "",
+        "GNTX": "",
+        "ANF": "",
+        "MTH": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
         "ELF": "",
         "DEO": "",
-        "HRL": ""
+        "HRL": "",
+        "TGT": "",
+        "EDU": ""
     },
     "Industrials": {
         "BAH": "",
@@ -45,9 +79,22 @@
         "TFII": "",
         "VRT": "维谛",
         "RRX": "",
-        "MMS": ""
+        "MMS": "",
+        "CAT": "",
+        "ETN": "",
+        "IR": "",
+        "J": "",
+        "IEX": "",
+        "NVT": "",
+        "BLD": "",
+        "LSTR": "",
+        "AMTM": ""
     },
-    "Communication_Services": {},
+    "Communication_Services": {
+        "GOOGL": "",
+        "OMC": "",
+        "IPG": ""
+    },
     "Financial_Services": {
         "KKR": ""
     },
@@ -57,7 +104,13 @@
         "VTRS": "",
         "TECH": "",
         "QGEN": "",
-        "RDY": ""
+        "RDY": "",
+        "MRNA": "",
+        "SRPT": "",
+        "BRKR": "",
+        "BIO": "",
+        "OGN": "",
+        "BHVN": ""
     },
     "Bonds": {
         "US2Y": "",

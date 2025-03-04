@@ -87,8 +87,7 @@
     "OKE",
     "PSX",
     "KMI",
-    "MPLX",
-    "LNG"
+    "MPLX"
   ],
   "Financial_Services": [
     "BRK-A",
@@ -215,8 +214,7 @@
     "PCAR",
     "JCI",
     "CPRT",
-    "HWM",
-    "CMI"
+    "HWM"
   ],
   "Real_Estate": [
     "PLD",
@@ -225,7 +223,8 @@
     "WELL",
     "PSA",
     "SPG",
-    "DLR"
+    "DLR",
+    "O"
   ],
   "Technology": [
     "AAPL",
