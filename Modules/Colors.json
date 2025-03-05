@@ -60,7 +60,6 @@
         "AIG",
         "CARR",
         "NSC",
-        "URI",
         "ICE",
         "SHW",
         "VZ",
@@ -114,7 +113,10 @@
         "KKR",
         "DLR",
         "NVDA",
-        "TSM"
+        "TSM",
+        "PNC",
+        "MFC",
+        "PCAR"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -263,7 +265,6 @@
         "TENB",
         "WTRG",
         "M",
-        "PVH",
         "EA",
         "FCX",
         "LFUS",
@@ -316,11 +317,24 @@
         "OGN",
         "BHVN",
         "IR",
-        "IEX",
         "NVT",
         "MSFT",
         "CDNS",
-        "TTD"
+        "TTD",
+        "CMC",
+        "FND",
+        "SEE",
+        "PR",
+        "TROW",
+        "DNB",
+        "A",
+        "URI",
+        "BLDR",
+        "TREX",
+        "FBIN",
+        "HST",
+        "RHP",
+        "CCCS"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -504,7 +518,9 @@
         "ALGN",
         "FSLR",
         "AMKR",
-        "SAIC"
+        "SAIC",
+        "PVH",
+        "IEX"
     ],
     "orange_keywords": [
         "NASDAQ",

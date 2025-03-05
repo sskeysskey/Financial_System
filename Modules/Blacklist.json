@@ -236,7 +236,12 @@
         "INFA",
         "SWKS",
         "WPP",
-        "PYPL"
+        "PYPL",
+        "W",
+        "BWA",
+        "TDW",
+        "ELF",
+        "OGN"
     ],
     "screener": [
         "CTA-PA",

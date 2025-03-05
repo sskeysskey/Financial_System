@@ -45,7 +45,6 @@
     "MAR",
     "HLT",
     "AZO",
-    "GM",
     "SE",
     "JD",
     "RCL"
@@ -142,12 +141,10 @@
     "MFG",
     "MFC",
     "ARES",
-    "AMP",
     "COIN",
     "LYG",
     "BCS",
-    "ALL",
-    "AIG"
+    "ALL"
   ],
   "Healthcare": [
     "LLY",
