@@ -45,7 +45,7 @@ def analyze_stock_data(file_path):
     return newhigh_sorted, newlow_sorted
 
 def main():
-    file_path = '/Users/yanzhang/Documents/News/site/AnalyseStock.txt'
+    file_path = '/Users/yanzhang/Documents/News/backup/site/AnalyseStock.txt'
     newhigh_sorted, newlow_sorted = analyze_stock_data(file_path)
 
 if __name__ == "__main__":

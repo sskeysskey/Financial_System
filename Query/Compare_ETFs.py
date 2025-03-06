@@ -168,7 +168,7 @@ if __name__ == '__main__':
 
     interested_sectors = ["ETFs"]
     file_path = '/Users/yanzhang/Documents/News/CompareETFs.txt'
-    directory_backup = '/Users/yanzhang/Documents/News/site/'
+    directory_backup = '/Users/yanzhang/Documents/News/backup/site/'
     error_file_path = '/Users/yanzhang/Documents/News/Today_error.txt'
     
     if os.path.exists(file_path):

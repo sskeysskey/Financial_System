@@ -159,7 +159,7 @@ def save_data(urls, existing_json, new_file, today_file, diff_file, compare_file
 
     if os.path.exists(today_file):
         # 备份今天的文件
-        backup_today_file = f"/Users/yanzhang/Documents/News/site/ETFs_today_{yesterday}.txt"
+        backup_today_file = f"/Users/yanzhang/Documents/News/backup/site/ETFs_today_{yesterday}.txt"
         shutil.copy2(today_file, backup_today_file)
 
     if not os.path.exists(today_file):
@@ -261,7 +261,7 @@ urls = [
 
 existing_json = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
 new_file = '/Users/yanzhang/Documents/News/ETFs_new.txt'
-today_file = '/Users/yanzhang/Documents/News/site/ETFs_today.txt'
+today_file = '/Users/yanzhang/Documents/News/backup/site/ETFs_today.txt'
 diff_file = '/Users/yanzhang/Documents/News/ETFs_diff.txt'
 compare_file = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
 blacklist_file = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'
@@ -273,5 +273,5 @@ finally:
 print("所有爬取任务完成。")
 
 # 调用清理旧备份文件的函数
-directory_backup = '/Users/yanzhang/Documents/News/site/'
+directory_backup = '/Users/yanzhang/Documents/News/backup/site/'
 clean_old_backups(directory_backup)

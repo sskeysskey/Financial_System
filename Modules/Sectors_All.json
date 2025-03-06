@@ -216,7 +216,6 @@
     "EMXC",
     "IQLT",
     "IWR",
-    "IDEV",
     "DGS",
     "JMBS",
     "DIA",
@@ -454,7 +453,8 @@
     "RSPN",
     "PKB",
     "HEZU",
-    "PRFZ"
+    "PRFZ",
+    "FEMS"
   ],
   "Basic_Materials": [
     "LIN",

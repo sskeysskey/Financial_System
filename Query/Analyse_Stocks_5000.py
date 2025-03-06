@@ -24,7 +24,7 @@ def create_output_files():
     """创建两个输出文件并返回文件路径"""
     output_dirs = [
         '/Users/yanzhang/Documents/News/backup/backup',
-        '/Users/yanzhang/Documents/News/site'
+        '/Users/yanzhang/Documents/News/backup/site'
     ]
     timestamp = datetime.now().strftime("%y%m%d")
     file_name = f"NewLow5000_{timestamp}.txt"

@@ -251,7 +251,7 @@ if __name__ == '__main__':
                           "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare", "Industrials",
                           "Real_Estate", "Technology", "Utilities"]
     file_path = '/Users/yanzhang/Documents/News/CompareStock.txt'
-    directory_backup = '/Users/yanzhang/Documents/News/site/'
+    directory_backup = '/Users/yanzhang/Documents/News/backup/site/'
     error_file_path = '/Users/yanzhang/Documents/News/Today_error.txt'
     
     if os.path.exists(file_path):

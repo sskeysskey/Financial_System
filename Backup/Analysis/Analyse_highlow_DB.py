@@ -56,7 +56,7 @@ def analyze_stock_data(file_path, db_path):
     return newhigh_sorted, newlow_sorted
 
 def main():
-    file_path = '/Users/yanzhang/Documents/News/site/AnalyseStock.txt'
+    file_path = '/Users/yanzhang/Documents/News/backup/site/AnalyseStock.txt'
     db_path = '/Users/yanzhang/Documents/Database/Analysis.db'
     newhigh_sorted, newlow_sorted = analyze_stock_data(file_path, db_path)
     print("成功写入数据库")

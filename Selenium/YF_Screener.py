@@ -501,7 +501,7 @@ blacklist = load_blacklist(blacklist_file_path)
 output, output_500, output_5000 = [], [], []
 
 source_directory = '/Users/yanzhang/Documents/News/backup/'
-backup_directory = '/Users/yanzhang/Documents/News/site/'
+backup_directory = '/Users/yanzhang/Documents/News/backup/site'
 
 files_to_backup = ['marketcap_pe.txt', 'price_volume.txt']
 for file in files_to_backup:
