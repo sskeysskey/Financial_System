@@ -241,7 +241,15 @@
         "BWA",
         "TDW",
         "ELF",
-        "OGN"
+        "OGN",
+        "ALB",
+        "STLA",
+        "SEE",
+        "AMKR",
+        "IPG",
+        "PNC",
+        "TROW",
+        "DNB"
     ],
     "screener": [
         "CTA-PA",
@@ -469,6 +477,19 @@
         "RWJ",
         "PRN",
         "SMLF",
-        "SPGM"
+        "SPGM",
+        "IGBH",
+        "FYLD",
+        "FHLC",
+        "TMFC",
+        "VONE",
+        "QGRO",
+        "IYK",
+        "EES",
+        "OUSM",
+        "USVM",
+        "EQWL",
+        "ATMP",
+        "FNCL"
     ]
 }

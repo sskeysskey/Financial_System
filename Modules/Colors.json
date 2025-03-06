@@ -116,7 +116,9 @@
         "TSM",
         "PNC",
         "MFC",
-        "PCAR"
+        "PCAR",
+        "XOM",
+        "OKE"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -131,7 +133,6 @@
         "BRK-A",
         "META",
         "AVGO",
-        "XOM",
         "ORCL",
         "JPM",
         "V",
@@ -326,7 +327,6 @@
         "SEE",
         "PR",
         "TROW",
-        "DNB",
         "A",
         "URI",
         "BLDR",
@@ -334,7 +334,8 @@
         "FBIN",
         "HST",
         "RHP",
-        "CCCS"
+        "CCCS",
+        "THO"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -606,7 +607,8 @@
         "BF-B",
         "REYN",
         "CE",
-        "ILMN"
+        "ILMN",
+        "DNB"
     ],
     "green_keywords": [
         "EURCNY",

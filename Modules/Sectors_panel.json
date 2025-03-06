@@ -2,15 +2,7 @@
     "Basic_Materials": {
         "CE": "赛莱默",
         "ASH": "",
-        "ALB": "",
-        "UFPI": "",
-        "BCC": "",
-        "WLK": "",
-        "SCCO": "",
-        "MLM": "",
-        "PPG": "",
-        "SSD": "",
-        "CMC": ""
+        "BCC": "木材"
     },
     "Real_Estate": {
         "DLR": "",
@@ -20,103 +12,63 @@
     "Energy": {
         "WFRD": "",
         "NXE": "",
+        "XOM": "",
+        "OKE": "",
         "FANG": "",
         "PR": "",
-        "MTDR": "",
-        "CRC": ""
+        "MTDR": ""
     },
     "Technology": {
         "AMD": "",
         "PSN": "政府服务",
         "CACI": "政府服务",
         "CDNS": "芯片设计",
-        "ONTO": "半导体",
         "ANET": "",
         "ACLS": "芯片",
         "FSLR": "太阳能",
         "ENPH": "太阳能",
         "AVGO": "",
-        "SNPS": "芯片设计",
-        "ON": "传统芯片",
-        "AMKR": "半导体",
+        "ON": "安森美",
         "TTD": "",
-        "INFY": "",
-        "DELL": "",
-        "PTC": "",
-        "MANH": "",
-        "ARW": "",
-        "LFUS": "",
-        "OS": ""
+        "MANH": ""
     },
     "Consumer_Cyclical": {
         "LEN": "",
         "WING": "",
-        "IBP": "",
         "DECK": "",
         "TSLA": "",
         "AMZN": "",
         "ANF": "",
-        "HD": "",
-        "STLA": "",
-        "FND": "",
         "GNTX": "",
         "CZR": "",
-        "SEE": "",
-        "DOOO": ""
+        "DOOO": "",
+        "THO": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
         "DEO": "",
         "HRL": "",
-        "TGT": "",
-        "EDU": ""
+        "EDU": "",
+        "TGT": ""
     },
     "Industrials": {
         "BAH": "政府服务",
         "TTEK": "政府服务",
         "TFII": "",
-        "VRT": "维谛",
-        "NVT": "",
-        "BLD": "",
-        "LSTR": "",
-        "AMTM": "",
-        "CAT": "",
-        "TT": "",
-        "CARR": "",
-        "PCAR": "",
-        "URI": "",
-        "FERG": "",
-        "IR": "",
-        "BLDR": "",
-        "J": "",
-        "IEX": "",
-        "TXT": "",
-        "RRX": "",
-        "TREX": "",
-        "FBIN": "",
         "TTC": ""
     },
     "Communication_Services": {
-        "GOOGL": "",
-        "IPG": ""
+        "GOOGL": ""
     },
     "Financial_Services": {
-        "JPM": "",
-        "KKR": "",
-        "PNC": "",
-        "MFC": "",
-        "TROW": "",
-        "DNB": ""
+        "KKR": ""
     },
     "Healthcare": {
         "ILMN": "",
         "MRNA": "",
         "BIO": "",
-        "A": "",
-        "HOLX": "",
-        "TECH": "",
         "BRKR": "",
-        "QGEN": "",
+        "HOLX": "",
         "BHVN": ""
     },
     "Bonds": {

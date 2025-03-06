@@ -47,7 +47,8 @@
     "AZO",
     "SE",
     "JD",
-    "RCL"
+    "RCL",
+    "GM"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -84,7 +85,6 @@
     "WMB",
     "ET",
     "OKE",
-    "PSX",
     "KMI",
     "MPLX"
   ],
@@ -144,7 +144,8 @@
     "COIN",
     "LYG",
     "BCS",
-    "ALL"
+    "ALL",
+    "AIG"
   ],
   "Healthcare": [
     "LLY",
