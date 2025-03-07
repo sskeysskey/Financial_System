@@ -8,7 +8,8 @@
     "ECL",
     "APD",
     "FCX",
-    "CRH"
+    "CRH",
+    "NEM"
   ],
   "Communication_Services": [
     "GOOGL",
@@ -86,7 +87,8 @@
     "ET",
     "OKE",
     "KMI",
-    "MPLX"
+    "MPLX",
+    "PSX"
   ],
   "Financial_Services": [
     "BRK-A",
@@ -140,7 +142,6 @@
     "BK",
     "MFG",
     "MFC",
-    "ARES",
     "COIN",
     "LYG",
     "BCS",

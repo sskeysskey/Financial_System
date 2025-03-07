@@ -103,7 +103,6 @@
         "CMG",
         "GWW",
         "MSI",
-        "DECK",
         "PWR",
         "ROST",
         "PYPL",
@@ -112,13 +111,20 @@
         "UNH",
         "KKR",
         "DLR",
-        "NVDA",
         "TSM",
         "PNC",
         "MFC",
         "PCAR",
         "XOM",
-        "OKE"
+        "OKE",
+        "BX",
+        "NVDA",
+        "ORCL",
+        "ACN",
+        "NOW",
+        "APH",
+        "MRVL",
+        "ADSK"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -133,7 +139,6 @@
         "BRK-A",
         "META",
         "AVGO",
-        "ORCL",
         "JPM",
         "V",
         "AAPL",
@@ -189,7 +194,6 @@
         "CX",
         "MTDR",
         "HES",
-        "HXL",
         "RRC",
         "FMX",
         "OVV",
@@ -335,7 +339,9 @@
         "HST",
         "RHP",
         "CCCS",
-        "THO"
+        "THO",
+        "DECK",
+        "HUBB"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -521,7 +527,9 @@
         "AMKR",
         "SAIC",
         "PVH",
-        "IEX"
+        "IEX",
+        "HXL",
+        "MDB"
     ],
     "orange_keywords": [
         "NASDAQ",

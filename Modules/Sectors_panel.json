@@ -28,7 +28,20 @@
         "AVGO": "",
         "ON": "安森美",
         "TTD": "",
-        "MANH": ""
+        "MANH": "",
+        "NVDA": "",
+        "ORCL": "",
+        "ACN": "",
+        "NOW": "",
+        "AMAT": "",
+        "DELL": "",
+        "APH": "",
+        "MRVL": "",
+        "ADSK": "",
+        "CDW": "",
+        "ONTO": "",
+        "GLOB": "",
+        "MDB": ""
     },
     "Consumer_Cyclical": {
         "LEN": "",
@@ -38,25 +51,40 @@
         "AMZN": "",
         "GNTX": "",
         "CZR": "",
-        "DOOO": ""
+        "DOOO": "",
+        "ANF": ""
     },
-    "Utilities": {},
+    "Utilities": {
+        "CEG": ""
+    },
     "Consumer_Defensive": {
         "DEO": "",
         "HRL": "",
-        "EDU": ""
+        "EDU": "",
+        "TGT": ""
     },
     "Industrials": {
         "BAH": "政府服务",
         "TTEK": "政府服务",
         "TFII": "",
-        "TTC": ""
+        "TTC": "",
+        "ETN": "",
+        "TT": "",
+        "FERG": "",
+        "HUBB": "",
+        "RTO": "",
+        "TREX": "",
+        "HXL": "",
+        "AMTM": ""
     },
     "Communication_Services": {
-        "GOOGL": ""
+        "GOOGL": "",
+        "META": ""
     },
     "Financial_Services": {
-        "KKR": ""
+        "KKR": "",
+        "JPM": "",
+        "BX": ""
     },
     "Healthcare": {
         "ILMN": "",
