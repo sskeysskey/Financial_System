@@ -249,7 +249,10 @@
         "IPG",
         "PNC",
         "TROW",
-        "DNB"
+        "DNB",
+        "HST",
+        "THO",
+        "BHVN"
     ],
     "screener": [
         "CTA-PA",

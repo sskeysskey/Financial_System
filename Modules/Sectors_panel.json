@@ -5,9 +5,7 @@
         "BCC": "木材"
     },
     "Real_Estate": {
-        "DLR": "",
-        "HST": "",
-        "RHP": ""
+        "DLR": ""
     },
     "Energy": {
         "WFRD": "",
@@ -38,18 +36,15 @@
         "DECK": "",
         "TSLA": "",
         "AMZN": "",
-        "ANF": "",
         "GNTX": "",
         "CZR": "",
-        "DOOO": "",
-        "THO": ""
+        "DOOO": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
         "DEO": "",
         "HRL": "",
-        "EDU": "",
-        "TGT": ""
+        "EDU": ""
     },
     "Industrials": {
         "BAH": "政府服务",
@@ -68,8 +63,7 @@
         "MRNA": "",
         "BIO": "",
         "BRKR": "",
-        "HOLX": "",
-        "BHVN": ""
+        "HOLX": ""
     },
     "Bonds": {
         "US2Y": "",
