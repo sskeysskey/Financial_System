@@ -2,10 +2,13 @@
     "Basic_Materials": {
         "CE": "赛莱默",
         "ASH": "",
-        "BCC": "木材"
+        "BCC": "木材",
+        "MLM": "",
+        "VMC": ""
     },
     "Real_Estate": {
-        "DLR": ""
+        "DLR": "",
+        "EQIX": ""
     },
     "Energy": {
         "WFRD": "",
@@ -17,7 +20,6 @@
         "MTDR": ""
     },
     "Technology": {
-        "AMD": "",
         "PSN": "政府服务",
         "CACI": "政府服务",
         "CDNS": "芯片设计",
@@ -27,21 +29,18 @@
         "ENPH": "太阳能",
         "AVGO": "",
         "ON": "安森美",
-        "TTD": "",
         "MANH": "",
-        "NVDA": "",
-        "ORCL": "",
-        "ACN": "",
         "NOW": "",
         "AMAT": "",
-        "DELL": "",
-        "APH": "",
         "MRVL": "",
-        "ADSK": "",
-        "CDW": "",
         "ONTO": "",
+        "MDB": "",
+        "CRM": "",
+        "DELL": "",
+        "ADSK": "",
         "GLOB": "",
-        "MDB": ""
+        "SPSC": "",
+        "TTD": ""
     },
     "Consumer_Cyclical": {
         "LEN": "",
@@ -52,7 +51,9 @@
         "GNTX": "",
         "CZR": "",
         "DOOO": "",
-        "ANF": ""
+        "ANF": "",
+        "HD": "",
+        "CMG": ""
     },
     "Utilities": {
         "CEG": ""
@@ -61,7 +62,8 @@
         "DEO": "",
         "HRL": "",
         "EDU": "",
-        "TGT": ""
+        "TGT": "",
+        "WMT": ""
     },
     "Industrials": {
         "BAH": "政府服务",
@@ -75,7 +77,8 @@
         "RTO": "",
         "TREX": "",
         "HXL": "",
-        "AMTM": ""
+        "AMTM": "",
+        "NVT": ""
     },
     "Communication_Services": {
         "GOOGL": "",
@@ -84,14 +87,17 @@
     "Financial_Services": {
         "KKR": "",
         "JPM": "",
-        "BX": ""
+        "BX": "",
+        "BN": "",
+        "APO": ""
     },
     "Healthcare": {
         "ILMN": "",
         "MRNA": "",
         "BIO": "",
         "BRKR": "",
-        "HOLX": ""
+        "HOLX": "",
+        "COO": ""
     },
     "Bonds": {
         "US2Y": "",

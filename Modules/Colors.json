@@ -124,7 +124,11 @@
         "NOW",
         "APH",
         "MRVL",
-        "ADSK"
+        "ADSK",
+        "BN",
+        "APO",
+        "EQIX",
+        "CRM"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -143,7 +147,8 @@
         "V",
         "AAPL",
         "GOOGL",
-        "AMZN"
+        "AMZN",
+        "WMT"
     ],
     "white_keywords": [
         "ROKU",
@@ -341,7 +346,9 @@
         "CCCS",
         "THO",
         "DECK",
-        "HUBB"
+        "HUBB",
+        "VMC",
+        "COO"
     ],
     "yellow_keywords": [
         "Nikkei",

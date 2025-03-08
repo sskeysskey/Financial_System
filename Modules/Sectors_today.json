@@ -397,7 +397,9 @@
     "PKB",
     "HEZU",
     "PRFZ",
-    "FEMS"
+    "FEMS",
+    "EZU",
+    "QINT"
   ],
   "Basic_Materials": [
     "LIN",
