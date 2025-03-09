@@ -252,7 +252,12 @@
         "DNB",
         "HST",
         "THO",
-        "BHVN"
+        "BHVN",
+        "MDB",
+        "TTD",
+        "GLOB",
+        "TGT",
+        "TREX"
     ],
     "screener": [
         "CTA-PA",
@@ -505,6 +510,9 @@
         "ILCV",
         "FUTY",
         "VPU",
-        "IUSG"
+        "IUSG",
+        "VOT",
+        "FLQL",
+        "FSTA"
     ]
 }

@@ -6,18 +6,11 @@
         "MLM": "",
         "VMC": ""
     },
-    "Real_Estate": {
-        "DLR": "",
-        "EQIX": ""
-    },
+    "Real_Estate": {},
     "Energy": {
         "WFRD": "",
         "NXE": "",
-        "XOM": "",
-        "OKE": "",
-        "FANG": "",
-        "PR": "",
-        "MTDR": ""
+        "FANG": ""
     },
     "Technology": {
         "PSN": "政府服务",
@@ -27,20 +20,11 @@
         "ACLS": "芯片",
         "FSLR": "太阳能",
         "ENPH": "太阳能",
-        "AVGO": "",
         "ON": "安森美",
         "MANH": "",
-        "NOW": "",
         "AMAT": "",
         "MRVL": "",
-        "ONTO": "",
-        "MDB": "",
-        "CRM": "",
-        "DELL": "",
-        "ADSK": "",
-        "GLOB": "",
-        "SPSC": "",
-        "TTD": ""
+        "SPSC": ""
     },
     "Consumer_Cyclical": {
         "LEN": "",
@@ -51,9 +35,7 @@
         "GNTX": "",
         "CZR": "",
         "DOOO": "",
-        "ANF": "",
-        "HD": "",
-        "CMG": ""
+        "ANF": ""
     },
     "Utilities": {
         "CEG": ""
@@ -61,8 +43,6 @@
     "Consumer_Defensive": {
         "DEO": "",
         "HRL": "",
-        "EDU": "",
-        "TGT": "",
         "WMT": ""
     },
     "Industrials": {
@@ -71,14 +51,9 @@
         "TFII": "",
         "TTC": "",
         "ETN": "",
-        "TT": "",
-        "FERG": "",
         "HUBB": "",
         "RTO": "",
-        "TREX": "",
-        "HXL": "",
-        "AMTM": "",
-        "NVT": ""
+        "AMTM": "政府服务"
     },
     "Communication_Services": {
         "GOOGL": "",
@@ -88,7 +63,6 @@
         "KKR": "",
         "JPM": "",
         "BX": "",
-        "BN": "",
         "APO": ""
     },
     "Healthcare": {
@@ -96,7 +70,6 @@
         "MRNA": "",
         "BIO": "",
         "BRKR": "",
-        "HOLX": "",
         "COO": ""
     },
     "Bonds": {
@@ -206,11 +179,12 @@
         "USDBRL": "巴西"
     },
     "Economics": {
-        "USNonFarmA": "05 USNonFarmA",
-        "USNonPMI": "05 USNonPMI",
-        "USTrade": "06 USTrade",
-        "USNonFarm": "07 USNonFarm",
-        "USUnemploy": "07 USUnemploy"
+        "CoreCPI": "12 CoreCPI",
+        "USCPI": "12 USCPI",
+        "CorePPI": "13 CorePPI",
+        "USPPI": "13 USPPI",
+        "USInitial": "13 USInitial",
+        "USConfidence": "14 USConfidence"
     },
     "ETFs_US": {
         "TLT": "",
