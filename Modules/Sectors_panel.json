@@ -138,6 +138,7 @@
         "XRP": ""
     },
     "ETFs": {
+        "SCHD": "股息分红",
         "DBC": "大宗商品",
         "IBIT": "比特币",
         "SOXX": "半导体",
@@ -165,6 +166,7 @@
         "CNYIDR": "印度尼西亚卢比",
         "CNYTHB": "泰国",
         "CNYIRR": "伊朗",
+        "CNYUSD": "人民币兑美元",
         "USDRUB": "俄罗斯卢布",
         "USDKRW": "",
         "USDTRY": "",
@@ -176,7 +178,8 @@
         "USDMXN": "墨西哥",
         "USDARS": "阿根廷",
         "USDEGP": "埃及",
-        "USDBRL": "巴西"
+        "USDBRL": "巴西",
+        "USDINR": "印度卢比"
     },
     "Economics": {
         "CoreCPI": "12 CoreCPI",
