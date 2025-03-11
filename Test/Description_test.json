@@ -42,24 +42,6 @@
         }
       ],
       "value": ""
-    },
-    {
-      "symbol": "HAL",
-      "name": "Halliburton",
-      "tag": [
-        "哈里伯顿",
-        "油田服务",
-        "钻井",
-        "石油"
-      ],
-      "description1": "**公司名称**：Halliburton Company  **行业**：Halliburton是一家主要从事**油田服务**的公司。",
-      "description2": "美股代码HAL代表的是哈里伯顿公司（Halliburton Company），它是一家全球性的高收益能源服务公司",
-      "description3": [
-        {
-          "2025-03-11": "单股票测试记录一下2"
-        }
-      ],
-      "value": ""
     }
   ],
   "etfs": [
@@ -88,23 +70,6 @@
       ],
       "description1": "New Fortress Energy Inc.** 这是一家总部位于美国的高收益全球能源基础设施公司",
       "description2": "New Fortress Energy Inc.（新堡壘能源公司",
-      "description3": [
-        {
-          "2025-03-11": "单股票测试记录一下2"
-        }
-      ],
-      "value": ""
-    },
-    {
-      "symbol": "CNYA",
-      "name": "iShares MSCI China A ETF",
-      "tag": [
-        "中国",
-        "A股",
-        "美国"
-      ],
-      "description1": "**CNYA**是**iShares MSCI China A ETF**的简称",
-      "description2": "CNYA是iShares MSCI China A ETF的代码",
       "description3": [
         {
           "2025-03-11": "单股票测试记录一下2"
