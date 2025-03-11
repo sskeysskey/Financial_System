@@ -183,6 +183,60 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     fill = ax1.fill_between(dates, prices, color='cyan', alpha=0.2)
     line2.set_visible(show_volume)
 
+    # 处理全局标记点和特定股票标记点
+    global_markers = {}
+    specific_markers = {}
+    
+    # 获取全局标记点
+    if 'global' in json_data:
+        for date_str, text in json_data['global'].items():
+            try:
+                marker_date = datetime.strptime(date_str, "%Y-%m-%d")
+                global_markers[marker_date] = text
+            except ValueError:
+                print(f"无法解析全局标记日期: {date_str}")
+    
+    # 获取特定股票的标记点
+    found_item = None
+    for source in ['stocks', 'etfs']:
+        for item in json_data.get(source, []):
+            if item['symbol'] == name and 'description3' in item:
+                found_item = item
+                for date_obj in item.get('description3', []):
+                    for date_str, text in date_obj.items():
+                        try:
+                            marker_date = datetime.strptime(date_str, "%Y-%m-%d")
+                            specific_markers[marker_date] = text
+                        except ValueError:
+                            print(f"无法解析特定标记日期: {date_str}")
+                break
+        if found_item:
+            break
+    
+    # 标记点
+    global_scatter_points = []
+    specific_scatter_points = []
+    
+    # 绘制全局标记点（黄色）
+    for marker_date, text in global_markers.items():
+        if min(dates) <= marker_date <= max(dates):
+            closest_date_idx = (np.abs(np.array(dates) - marker_date)).argmin()
+            closest_date = dates[closest_date_idx]
+            price_at_date = prices[closest_date_idx]
+            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='yellow', 
+                                 alpha=0.7, zorder=4, picker=5)
+            global_scatter_points.append((scatter, closest_date, price_at_date, text))
+    
+    # 绘制特定股票标记点（橙色）
+    for marker_date, text in specific_markers.items():
+        if min(dates) <= marker_date <= max(dates):
+            closest_date_idx = (np.abs(np.array(dates) - marker_date)).argmin()
+            closest_date = dates[closest_date_idx]
+            price_at_date = prices[closest_date_idx]
+            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='orange', 
+                                 alpha=0.7, zorder=4, picker=5)
+            specific_scatter_points.append((scatter, closest_date, price_at_date, text))
+
     def clean_percentage_string(percentage_str):
         """
         将可能包含 % 符号的字符串转换为浮点数。
@@ -204,7 +258,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     filtered_compare = re.sub(r'[\u4e00-\u9fff+]', '', compare)
     compare_value = clean_percentage_string(filtered_compare)
 
-    # 根据compare和换手额做“可疑”标记
+    # 根据compare和换手额做"可疑"标记
     if turnover is not None and turnover < 100 and compare_value is not None and compare_value > 0:
         turnover_str = f"可疑{turnover_str}"
 
@@ -287,10 +341,30 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     def on_pick(event):
         """
-        当点击标题（可点击）时，展示对应信息窗口。
+        当点击标题（可点击）或标记点时，展示对应信息窗口。
         """
         if event.artist == title:
             show_stock_etf_info()
+        elif event.artist in [point[0] for point in global_scatter_points + specific_scatter_points]:
+            # 查找被点击的标记点
+            for scatter, date, price, text in global_scatter_points + specific_scatter_points:
+                if event.artist == scatter:
+                    # 更新注释并显示
+                    annot.xy = (date, price)
+                    annot.set_text(f"{datetime.strftime(date, '%Y-%m-%d')}\n{price}\n{text}")
+                    annot.get_bbox_patch().set_alpha(0.8)
+                    annot.set_fontsize(16)
+                    # 调整注释显示位置
+                    midpoint = max(dates) - (max(dates) - min(dates)) / 2
+                    if date < midpoint:
+                        annot.set_position((50, -20))
+                    else:
+                        annot.set_position((-150, -20))
+                    annot.set_visible(True)
+                    highlight_point.set_offsets([date, price])
+                    highlight_point.set_visible(True)
+                    fig.canvas.draw_idle()
+                    break
 
     def on_keyword_selected(db_path, table_name, name):
         """
@@ -395,12 +469,34 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         x_data, y_data = line1.get_data()
         xval, yval = x_data[ind["ind"][0]], y_data[ind["ind"][0]]
         annot.xy = (xval, yval)
+        
+        # 查找当前日期是否有标记信息
+        current_date = xval.replace(tzinfo=None)
+        marker_text = None
+        
+        # 查找全局标记
+        for marker_date, text in global_markers.items():
+            if abs((marker_date - current_date).total_seconds()) < 86400:  # 一天内
+                marker_text = text
+                break
+                
+        # 查找特定股票标记
+        if not marker_text:
+            for marker_date, text in specific_markers.items():
+                if abs((marker_date - current_date).total_seconds()) < 86400:  # 一天内
+                    marker_text = text
+                    break
+                
         # 如果鼠标按下，则显示与初始点的百分比变化，否则显示日期和数值
         if mouse_pressed and initial_price is not None:
             percent_change = ((yval - initial_price) / initial_price) * 100
             text = f"{percent_change:.1f}%"
         else:
-            text = f"{datetime.strftime(xval, '%Y-%m-%d')}\n{yval}"
+            if marker_text:
+                text = f"{datetime.strftime(xval, '%Y-%m-%d')}\n{yval}\n{marker_text}"
+            else:
+                text = f"{datetime.strftime(xval, '%Y-%m-%d')}\n{yval}"
+        
         annot.set_text(text)
         annot.get_bbox_patch().set_alpha(0.4)
         annot.set_fontsize(16)
@@ -466,6 +562,12 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         nonlocal fill
         fill = update_plot(line1, fill, line2, filtered_dates, filtered_prices, filtered_volumes, ax1, ax2, show_volume)
         radio.circles[list(time_options.keys()).index(val)].set_facecolor('red')
+        
+        # 更新标记点显示
+        for scatter, date, _, _ in global_scatter_points + specific_scatter_points:
+            scatter.set_visible(min_date <= date if years != 0 else True)
+            
+        fig.canvas.draw_idle()
 
     def toggle_volume():
         """
