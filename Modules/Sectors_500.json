@@ -7,7 +7,6 @@
     "SCCO",
     "ECL",
     "APD",
-    "FCX",
     "CRH"
   ],
   "Communication_Services": [
@@ -124,7 +123,6 @@
     "BN",
     "PYPL",
     "PNC",
-    "NU",
     "USB",
     "APO",
     "AJG",
@@ -140,8 +138,6 @@
     "COF",
     "BK",
     "MFG",
-    "MFC",
-    "COIN",
     "LYG",
     "BCS",
     "ALL",
@@ -177,7 +173,8 @@
     "ZTS",
     "CVS",
     "BDX",
-    "MCK"
+    "MCK",
+    "COR"
   ],
   "Industrials": [
     "GE",
@@ -211,8 +208,7 @@
     "NSC",
     "PCAR",
     "JCI",
-    "CPRT",
-    "HWM"
+    "CPRT"
   ],
   "Real_Estate": [
     "PLD",
@@ -221,7 +217,6 @@
     "WELL",
     "PSA",
     "SPG",
-    "DLR",
     "O"
   ],
   "Technology": [
@@ -274,8 +269,7 @@
     "PAYX",
     "TEAM",
     "APP",
-    "MSTR",
-    "SNOW"
+    "MSTR"
   ],
   "Utilities": [
     "NEE",

@@ -4,13 +4,18 @@
         "ASH": "",
         "BCC": "木材",
         "MLM": "",
-        "VMC": ""
+        "VMC": "",
+        "CMC": ""
     },
-    "Real_Estate": {},
+    "Real_Estate": {
+        "EQIX": "",
+        "SPG": ""
+    },
     "Energy": {
         "WFRD": "",
         "NXE": "",
-        "FANG": ""
+        "FANG": "",
+        "PR": ""
     },
     "Technology": {
         "PSN": "政府服务",
@@ -24,7 +29,26 @@
         "MANH": "",
         "AMAT": "",
         "MRVL": "",
-        "SPSC": ""
+        "SPSC": "",
+        "AAPL": "",
+        "MSFT": "",
+        "NVDA": "",
+        "TSM": "",
+        "ORCL": "",
+        "AMD": "",
+        "CRM": "",
+        "ACN": "",
+        "NOW": "",
+        "INFY": "",
+        "DELL": "",
+        "SNPS": "",
+        "MSI": "",
+        "ADSK": "",
+        "DDOG": "",
+        "ONTO": "",
+        "LFUS": "",
+        "VRNS": "",
+        "OS": ""
     },
     "Consumer_Cyclical": {
         "LEN": "",
@@ -35,7 +59,13 @@
         "GNTX": "",
         "CZR": "",
         "DOOO": "",
-        "ANF": ""
+        "ANF": "",
+        "HD": "",
+        "CMG": "",
+        "SKX": "",
+        "CHDN": "",
+        "FUN": "",
+        "VVV": ""
     },
     "Utilities": {
         "CEG": ""
@@ -43,7 +73,8 @@
     "Consumer_Defensive": {
         "DEO": "",
         "HRL": "",
-        "WMT": ""
+        "WMT": "",
+        "FRPT": ""
     },
     "Industrials": {
         "BAH": "政府服务",
@@ -53,7 +84,18 @@
         "ETN": "",
         "HUBB": "",
         "RTO": "",
-        "AMTM": "政府服务"
+        "AMTM": "政府服务",
+        "TT": "",
+        "PH": "",
+        "FDX": "",
+        "FERG": "",
+        "OC": "",
+        "NVT": "",
+        "SAIA": "",
+        "RRX": "",
+        "MSA": "",
+        "FLR": "",
+        "HXL": ""
     },
     "Communication_Services": {
         "GOOGL": "",
@@ -63,14 +105,24 @@
         "KKR": "",
         "JPM": "",
         "BX": "",
-        "APO": ""
+        "APO": "",
+        "BAC": "",
+        "AXP": "",
+        "BLK": "",
+        "MCO": "",
+        "BN": "",
+        "USB": "",
+        "TFC": ""
     },
     "Healthcare": {
         "ILMN": "",
         "MRNA": "",
         "BIO": "",
         "BRKR": "",
-        "COO": ""
+        "COO": "",
+        "A": "",
+        "NBIX": "",
+        "SRPT": ""
     },
     "Bonds": {
         "US2Y": "",
