@@ -476,14 +476,14 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         
         # 查找全局标记
         for marker_date, text in global_markers.items():
-            if abs((marker_date - current_date).total_seconds()) < 86400:  # 一天内
+            if abs((marker_date - current_date).total_seconds()) < 172800:  # 两天内
                 marker_text = text
                 break
                 
         # 查找特定股票标记
         if not marker_text:
             for marker_date, text in specific_markers.items():
-                if abs((marker_date - current_date).total_seconds()) < 86400:  # 一天内
+                if abs((marker_date - current_date).total_seconds()) < 172800:  # 两天内
                     marker_text = text
                     break
                 
