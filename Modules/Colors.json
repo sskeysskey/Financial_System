@@ -133,7 +133,11 @@
         "PH",
         "SPG",
         "NVDA",
-        "TSM"
+        "TSM",
+        "MAR",
+        "HLT",
+        "SPGI",
+        "AAPL"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -150,7 +154,6 @@
         "AVGO",
         "JPM",
         "V",
-        "AAPL",
         "GOOGL",
         "AMZN",
         "WMT"
@@ -362,7 +365,11 @@
         "OC",
         "SAIA",
         "FLR",
-        "DDOG"
+        "DDOG",
+        "EXP",
+        "ODFL",
+        "RXO",
+        "TER"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -553,7 +560,8 @@
         "MDB",
         "GLOB",
         "LFUS",
-        "BILL"
+        "BILL",
+        "JBHT"
     ],
     "orange_keywords": [
         "NASDAQ",

@@ -458,7 +458,6 @@
     "NEU",
     "BCC",
     "WLK",
-    "ALTM",
     "ASH",
     "BCPC",
     "SSL",
@@ -526,7 +525,8 @@
     "LUMN",
     "MSGS",
     "NBIS",
-    "GSAT"
+    "GSAT",
+    "TIGO"
   ],
   "Consumer_Cyclical": [
     "AMZN",

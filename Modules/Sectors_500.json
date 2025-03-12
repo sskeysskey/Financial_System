@@ -7,7 +7,9 @@
     "SCCO",
     "ECL",
     "APD",
-    "CRH"
+    "CRH",
+    "FCX",
+    "AEM"
   ],
   "Communication_Services": [
     "GOOGL",
@@ -141,7 +143,8 @@
     "LYG",
     "BCS",
     "ALL",
-    "AIG"
+    "AIG",
+    "NU"
   ],
   "Healthcare": [
     "LLY",
@@ -208,7 +211,8 @@
     "NSC",
     "PCAR",
     "JCI",
-    "CPRT"
+    "CPRT",
+    "HWM"
   ],
   "Real_Estate": [
     "PLD",
@@ -216,8 +220,7 @@
     "EQIX",
     "WELL",
     "PSA",
-    "SPG",
-    "O"
+    "SPG"
   ],
   "Technology": [
     "AAPL",

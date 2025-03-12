@@ -404,7 +404,8 @@
         "SUM",
         "ETR",
         "TPX",
-        "HCP"
+        "HCP",
+        "ALTM"
     ],
     "etf": [
         "VDE",
