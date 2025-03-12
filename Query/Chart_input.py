@@ -95,7 +95,8 @@ def update_plot(line1, fill, line2, dates, prices, volumes, ax1, ax2, show_volum
     """
     line1.set_data(dates, prices)
     fill.remove()
-    fill = ax1.fill_between(dates, prices, color='lightblue', alpha=0.3)
+    # 添加edgecolor='none'或linewidth=0参数来移除边缘线
+    fill = ax1.fill_between(dates, prices, color='lightblue', alpha=0.3, edgecolor='none')
     if volumes:
         line2.set_data(dates, volumes)
     
