@@ -338,7 +338,6 @@
     "SCHP",
     "FXO",
     "VAW",
-    "PJUL",
     "VNLA",
     "ARGT",
     "DYNF",
@@ -390,7 +389,9 @@
     "PRFZ",
     "FEMS",
     "EZU",
-    "QINT"
+    "QINT",
+    "AGZ",
+    "BOCT"
   ],
   "Basic_Materials": [
     "LIN",

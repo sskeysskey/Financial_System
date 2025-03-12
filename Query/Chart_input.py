@@ -98,7 +98,14 @@ def update_plot(line1, fill, line2, dates, prices, volumes, ax1, ax2, show_volum
     fill = ax1.fill_between(dates, prices, color='lightblue', alpha=0.3)
     if volumes:
         line2.set_data(dates, volumes)
-    ax1.set_xlim(np.min(dates), np.max(dates))
+    
+    # 修改这一行，增加右侧余量
+    date_min = np.min(dates)
+    date_max = np.max(dates)
+    date_range = date_max - date_min
+    right_margin = date_range * 0.01  # 添加5%的右侧余量
+    ax1.set_xlim(date_min, date_max + right_margin)
+    
     ax1.set_ylim(np.min(prices), np.max(prices))
     if show_volume and volumes:
         ax2.set_ylim(0, np.max(volumes))
@@ -115,6 +122,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     - 1~9：快速切换不同时间区间
     - `：弹出信息对话框
     - d：查询数据库并弹窗显示
+    - c：切换显示或隐藏标记点（黄色全局点和橙色特定点）
     - 方向键上下：在不同时间区间间移动
     - ESC：关闭所有图表，并在panel为True时退出系统
     """
@@ -126,6 +134,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     initial_price = None
     initial_date = None
     fill = None
+    show_markers = False  # 修改为默认不显示标记点
 
     try:
         data = fetch_data(db_path, table_name, name)
@@ -224,7 +233,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             closest_date = dates[closest_date_idx]
             price_at_date = prices[closest_date_idx]
             scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='yellow', 
-                                 alpha=0.7, zorder=4, picker=5)
+                                #  alpha=0.7, zorder=4, picker=5)
+                                 alpha=0.7, zorder=4, picker=5, visible=show_markers)  # 初始设为不可见
             global_scatter_points.append((scatter, closest_date, price_at_date, text))
     
     # 绘制特定股票标记点（橙色）
@@ -234,7 +244,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             closest_date = dates[closest_date_idx]
             price_at_date = prices[closest_date_idx]
             scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='orange', 
-                                 alpha=0.7, zorder=4, picker=5)
+                                #  alpha=0.7, zorder=4, picker=5)
+                                 alpha=0.7, zorder=4, picker=5, visible=show_markers)  # 初始设为不可见
             specific_scatter_points.append((scatter, closest_date, price_at_date, text))
 
     def clean_percentage_string(percentage_str):
@@ -339,9 +350,28 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     return
         display_dialog(f"未找到 {name} 的信息")
 
+    def toggle_markers():
+        """
+        切换标记点的显示状态，不弹出提示框
+        """
+        nonlocal show_markers
+        show_markers = not show_markers
+        
+        # 更新所有标记点的可见性
+        for scatter, _, _, _ in global_scatter_points + specific_scatter_points:
+            scatter.set_visible(show_markers)
+        
+        # 如果当前有高亮的标记点且标记点被隐藏，则也隐藏高亮和注释
+        if not show_markers and highlight_point.get_visible():
+            highlight_point.set_visible(False)
+            annot.set_visible(False)
+            
+        fig.canvas.draw_idle()
+
     def on_pick(event):
         """
         当点击标题（可点击）或标记点时，展示对应信息窗口。
+        如果标记点不可见，则不会触发点击事件。
         """
         if event.artist == title:
             show_stock_etf_info()
@@ -553,6 +583,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         years = time_options[val]
         if years == 0:
             filtered_dates, filtered_prices, filtered_volumes = dates, prices, volumes
+            min_date = min(dates)
         else:
             min_date = datetime.now() - timedelta(days=years * 365)
             filtered_dates = [d for d in dates if d >= min_date]
@@ -563,9 +594,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         fill = update_plot(line1, fill, line2, filtered_dates, filtered_prices, filtered_volumes, ax1, ax2, show_volume)
         radio.circles[list(time_options.keys()).index(val)].set_facecolor('red')
         
-        # 更新标记点显示
+        # 更新标记点显示，确保同时考虑时间范围和总体可见性设置
         for scatter, date, _, _ in global_scatter_points + specific_scatter_points:
-            scatter.set_visible(min_date <= date if years != 0 else True)
+            # scatter.set_visible((min_date <= date if years != 0 else True) and show_markers)
+            scatter.set_visible((min_date <= date) and show_markers)
             
         fig.canvas.draw_idle()
 
@@ -583,6 +615,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         """
         actions = {
             'v': toggle_volume,
+            'c': toggle_markers,  # 新增：F键切换标记点显示
             '1': lambda: radio.set_active(7),
             '2': lambda: radio.set_active(1),
             '3': lambda: radio.set_active(3),
