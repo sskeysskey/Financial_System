@@ -538,12 +538,21 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         annot.set_text(text)
         annot.get_bbox_patch().set_alpha(0.4)
         annot.set_fontsize(16)
-        # 调整注释显示位置，避免超出图表边界
-        midpoint = max(x_data) - (max(x_data) - min(x_data)) / 2
-        if xval < midpoint:
+        
+        # 更智能地调整注释位置
+        x_range = ax1.get_xlim()
+        position_ratio = (matplotlib.dates.date2num(xval) - x_range[0]) / (x_range[1] - x_range[0])
+        
+        # 根据点在图表中的水平位置调整注释
+        if position_ratio > 0.7:  # 如果点在右侧30%区域
+            # 估计文本长度，越长偏移越大
+            text_length = len(text)
+            x_offset = -20 - min(text_length * 4, 300)  # 根据文本长度动态调整左偏移
+            annot.set_position((x_offset, -20))
+        elif position_ratio < 0.3:  # 如果点在左侧30%区域
             annot.set_position((50, -20))
-        else:
-            annot.set_position((-130, -20))
+        else:  # 中间区域
+            annot.set_position((0, -60))  # 放到下方
 
     def hover(event):
         """
