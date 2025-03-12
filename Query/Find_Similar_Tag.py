@@ -126,17 +126,21 @@ def find_symbols_by_tags(target_tags_with_weight, data):
                     matched_tags.append((tag, target_tags_dict[tag_lower]))
                     used_tags.add(tag_lower)  # 标记该标签已被完全匹配
 
-            # 第二阶段：部分匹配，使用默认权重 1.0
+            # 第二阶段：部分匹配，根据原始权重大小决定使用哪个权重
             for tag in tags:
                 tag_lower = tag.lower()
                 if tag_lower in used_tags:
                     continue  # 跳过已被完全匹配的标签
-                for target_tag, _ in target_tags_dict.items():
+                for target_tag, target_weight in target_tags_dict.items():
                     # 检查是否为包含关系（任意一方包含另一方）
                     if (target_tag in tag_lower or tag_lower in target_tag) and tag_lower != target_tag:
                         if target_tag not in used_tags:
-                            # 使用默认权重 1.0 而不是原始权重
-                            matched_tags.append((tag, Decimal('1.0')))
+                            # 如果原始标签权重>1，使用1.0，否则使用原始标签权重
+                            if target_weight > Decimal('1.0'):
+                                weight_to_use = Decimal('1.0')
+                            else:
+                                weight_to_use = target_weight
+                            matched_tags.append((tag, weight_to_use))
                             used_tags.add(target_tag)
                         break
 
