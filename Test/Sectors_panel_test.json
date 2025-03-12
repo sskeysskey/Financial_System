@@ -1,7 +1,4 @@
 {
-    "My_Order": {
-        "CRWD": ""
-    },
     "Basic_Materials": {
         "MOS": "美盛化肥"
     },
@@ -51,24 +48,26 @@
         "CrudeOil": "",
         "LiveCattle": "牛肉"
     },
-    "ETFs_Oversea": {
-        "CQQQ": "中国科技",
-        "TUR": "土耳其"
-    },
-    "ETFs_Commodity": {
-        "URA": "铀矿核能"
-    },
     "Currencies": {
         "DXY": "美元指数",
         "EURUSD": ""
     },
     "Economics": {
-        "USInitial": "25初请失业"
+        "CoreCPI": "12 CoreCPI",
+        "USCPI": "12 USCPI",
+        "CorePPI": "13 CorePPI",
+        "USPPI": "13 USPPI",
+        "USInitial": "13 USInitial",
+        "USConfidence": "14 USConfidence"
     },
     "ETFs_US": {
         "SPTI": "中期国债",
         "USHY": "高收益债",
         "DVY": "高股息",
         "TDTF": "通胀保护"
+    },
+    "Economic_All": {
+        "USGDP": "",
+        "USCPI": ""
     }
 }
