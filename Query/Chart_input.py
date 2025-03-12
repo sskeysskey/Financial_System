@@ -503,30 +503,37 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         
         # 查找当前日期是否有标记信息
         current_date = xval.replace(tzinfo=None)
-        marker_text = None
+        global_marker_text = None
+        specific_marker_text = None
         
         # 查找全局标记
         for marker_date, text in global_markers.items():
             if abs((marker_date - current_date).total_seconds()) < 172800:  # 两天内
-                marker_text = text
+                global_marker_text = text
                 break
                 
         # 查找特定股票标记
-        if not marker_text:
-            for marker_date, text in specific_markers.items():
-                if abs((marker_date - current_date).total_seconds()) < 172800:  # 两天内
-                    marker_text = text
-                    break
+        for marker_date, text in specific_markers.items():
+            if abs((marker_date - current_date).total_seconds()) < 172800:  # 两天内
+                specific_marker_text = text
+                break
                 
         # 如果鼠标按下，则显示与初始点的百分比变化，否则显示日期和数值
         if mouse_pressed and initial_price is not None:
             percent_change = ((yval - initial_price) / initial_price) * 100
             text = f"{percent_change:.1f}%"
         else:
-            if marker_text:
-                text = f"{datetime.strftime(xval, '%Y-%m-%d')}\n{yval}\n{marker_text}"
-            else:
-                text = f"{datetime.strftime(xval, '%Y-%m-%d')}\n{yval}"
+            # 显示日期和价格
+            text = f"{datetime.strftime(xval, '%Y-%m-%d')}\n{yval}"
+            
+            # 添加标记文本信息（如果有）
+            if global_marker_text and specific_marker_text:
+                # 两种标记都有时，全局标记在上，特定标记在下
+                text += f"\n{global_marker_text}\n{specific_marker_text}"
+            elif global_marker_text:
+                text += f"\n{global_marker_text}"
+            elif specific_marker_text:
+                text += f"\n{specific_marker_text}"
         
         annot.set_text(text)
         annot.get_bbox_patch().set_alpha(0.4)
