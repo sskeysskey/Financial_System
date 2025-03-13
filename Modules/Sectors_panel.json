@@ -11,19 +11,24 @@
     "Technology": {
         "ANET": "",
         "AAPL": "",
-        "TSM": ""
+        "TSM": "",
+        "JBL": "",
+        "SMTC": ""
     },
     "Consumer_Cyclical": {
         "DECK": "",
         "SKX": "",
         "VVV": "",
-        "HLT": ""
+        "HLT": "",
+        "ULTA": ""
     },
     "Utilities": {
-        "CEG": ""
+        "CEG": "",
+        "EBR": ""
     },
     "Consumer_Defensive": {
-        "WMT": ""
+        "WMT": "",
+        "DG": ""
     },
     "Industrials": {
         "BAH": "",
@@ -39,7 +44,8 @@
         "APO": "",
         "AXP": "",
         "BLK": "",
-        "SPGI": ""
+        "SPGI": "",
+        "FUTU": ""
     },
     "Healthcare": {
         "NVO": ""
