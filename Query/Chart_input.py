@@ -124,6 +124,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     - `：弹出信息对话框
     - d：查询数据库并弹窗显示
     - c：切换显示或隐藏标记点（黄色全局点和橙色特定点）
+    - x：切换显示或隐藏收益公告日期点（绿色点）
     - 方向键上下：在不同时间区间间移动
     - ESC：关闭所有图表，并在panel为True时退出系统
     """
@@ -136,6 +137,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     initial_date = None
     fill = None
     show_markers = False  # 修改为默认不显示标记点
+    show_earning_markers = False  # 默认不显示收益点
 
     try:
         data = fetch_data(db_path, table_name, name)
@@ -196,6 +198,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     # 处理全局标记点和特定股票标记点
     global_markers = {}
     specific_markers = {}
+    earning_markers = {}  # 新增：收益公告标记点
     
     # 获取全局标记点
     if 'global' in json_data:
@@ -223,9 +226,25 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         if found_item:
             break
     
+    # 新增：从Earning表获取收益公告日期和价格变动
+    try:
+        with sqlite3.connect(db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT date, price FROM Earning WHERE name = ? ORDER BY date", (name,))
+            for date_str, price_change in cursor.fetchall():
+                try:
+                    marker_date = datetime.strptime(date_str, "%Y-%m-%d")
+                    # 存储价格变动作为标记文本
+                    earning_markers[marker_date] = f"收益公告: {price_change}%"
+                except ValueError:
+                    print(f"无法解析收益公告日期: {date_str}")
+    except sqlite3.OperationalError as e:
+        print(f"获取收益数据失败: {e}")
+    
     # 标记点
     global_scatter_points = []
     specific_scatter_points = []
+    earning_scatter_points = []  # 新增：收益公告标记点列表
     
     # 绘制全局标记点（黄色）
     for marker_date, text in global_markers.items():
@@ -233,7 +252,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             closest_date_idx = (np.abs(np.array(dates) - marker_date)).argmin()
             closest_date = dates[closest_date_idx]
             price_at_date = prices[closest_date_idx]
-            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='yellow', 
+            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='red', 
                                 #  alpha=0.7, zorder=4, picker=5)
                                  alpha=0.7, zorder=4, picker=5, visible=show_markers)  # 初始设为不可见
             global_scatter_points.append((scatter, closest_date, price_at_date, text))
@@ -248,6 +267,16 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                                 #  alpha=0.7, zorder=4, picker=5)
                                  alpha=0.7, zorder=4, picker=5, visible=show_markers)  # 初始设为不可见
             specific_scatter_points.append((scatter, closest_date, price_at_date, text))
+    
+    # 新增：绘制收益公告标记点（绿色）
+    for marker_date, text in earning_markers.items():
+        if min(dates) <= marker_date <= max(dates):
+            closest_date_idx = (np.abs(np.array(dates) - marker_date)).argmin()
+            closest_date = dates[closest_date_idx]
+            price_at_date = prices[closest_date_idx]
+            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='white', 
+                                 alpha=0.7, zorder=4, picker=5, visible=show_earning_markers)
+            earning_scatter_points.append((scatter, closest_date, price_at_date, text))
 
     def clean_percentage_string(percentage_str):
         """
@@ -368,6 +397,24 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             annot.set_visible(False)
             
         fig.canvas.draw_idle()
+    
+    def toggle_earning_markers():
+        """
+        切换收益公告标记点的显示状态
+        """
+        nonlocal show_earning_markers
+        show_earning_markers = not show_earning_markers
+        
+        # 更新所有收益公告标记点的可见性
+        for scatter, _, _, _ in earning_scatter_points:
+            scatter.set_visible(show_earning_markers)
+        
+        # 如果当前有高亮的标记点且标记点被隐藏，则也隐藏高亮和注释
+        if not show_earning_markers and highlight_point.get_visible():
+            highlight_point.set_visible(False)
+            annot.set_visible(False)
+            
+        fig.canvas.draw_idle()
 
     def on_pick(event):
         """
@@ -376,9 +423,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         """
         if event.artist == title:
             show_stock_etf_info()
-        elif event.artist in [point[0] for point in global_scatter_points + specific_scatter_points]:
+        elif event.artist in [point[0] for point in global_scatter_points + specific_scatter_points + earning_scatter_points]:
             # 查找被点击的标记点
-            for scatter, date, price, text in global_scatter_points + specific_scatter_points:
+            for scatter, date, price, text in global_scatter_points + specific_scatter_points + earning_scatter_points:
                 if event.artist == scatter:
                     # 更新注释并显示
                     annot.xy = (date, price)
@@ -505,6 +552,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         current_date = xval.replace(tzinfo=None)
         global_marker_text = None
         specific_marker_text = None
+        earning_marker_text = None  # 新增：收益公告文本
         
         # 查找全局标记
         for marker_date, text in global_markers.items():
@@ -517,6 +565,12 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             if abs((marker_date - current_date).total_seconds()) < 172800:  # 两天内
                 specific_marker_text = text
                 break
+        
+        # 查找收益公告标记
+        for marker_date, text in earning_markers.items():
+            if abs((marker_date - current_date).total_seconds()) < 172800:  # 两天内
+                earning_marker_text = text
+                break
                 
         # 如果鼠标按下，则显示与初始点的百分比变化，否则显示日期和数值
         if mouse_pressed and initial_price is not None:
@@ -527,13 +581,16 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             text = f"{datetime.strftime(xval, '%Y-%m-%d')}\n{yval}"
             
             # 添加标记文本信息（如果有）
-            if global_marker_text and specific_marker_text:
-                # 两种标记都有时，全局标记在上，特定标记在下
-                text += f"\n{global_marker_text}\n{specific_marker_text}"
-            elif global_marker_text:
-                text += f"\n{global_marker_text}"
-            elif specific_marker_text:
-                text += f"\n{specific_marker_text}"
+            marker_texts = []
+            if global_marker_text:
+                marker_texts.append(global_marker_text)
+            if specific_marker_text:
+                marker_texts.append(specific_marker_text)
+            if earning_marker_text:
+                marker_texts.append(earning_marker_text)
+                
+            if marker_texts:
+                text += "\n" + "\n".join(marker_texts)
         
         annot.set_text(text)
         annot.get_bbox_patch().set_alpha(0.4)
@@ -611,10 +668,14 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         fill = update_plot(line1, fill, line2, filtered_dates, filtered_prices, filtered_volumes, ax1, ax2, show_volume)
         radio.circles[list(time_options.keys()).index(val)].set_facecolor('red')
         
-        # 更新标记点显示，确保同时考虑时间范围和总体可见性设置
+        # 更新黄色和橙色标记点显示，考虑时间范围和总体可见性设置
         for scatter, date, _, _ in global_scatter_points + specific_scatter_points:
             # scatter.set_visible((min_date <= date if years != 0 else True) and show_markers)
             scatter.set_visible((min_date <= date) and show_markers)
+            
+        # 更新绿色收益公告标记点显示，考虑时间范围和总体可见性设置
+        for scatter, date, _, _ in earning_scatter_points:
+            scatter.set_visible((min_date <= date) and show_earning_markers)
             
         fig.canvas.draw_idle()
 
@@ -632,7 +693,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         """
         actions = {
             'v': toggle_volume,
-            'c': toggle_markers,  # 新增：F键切换标记点显示
+            'c': toggle_markers,  # 'c'键切换黄色和橙色标记点显示
+            'x': toggle_earning_markers,  # 新增：'x'键切换绿色收益公告标记点显示
             '1': lambda: radio.set_active(7),
             '2': lambda: radio.set_active(1),
             '3': lambda: radio.set_active(3),
