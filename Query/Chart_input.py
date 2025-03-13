@@ -137,7 +137,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     initial_date = None
     fill = None
     show_markers = False  # 修改为默认不显示标记点
-    show_earning_markers = False  # 默认不显示收益点
+    show_earning_markers = True  # 默认不显示收益点
 
     try:
         data = fetch_data(db_path, table_name, name)
@@ -713,7 +713,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         actions = {
             'v': toggle_volume,
             'c': toggle_markers,  # 'c'键切换黄色和橙色标记点显示
-            'x': toggle_earning_markers,  # 新增：'x'键切换绿色收益公告标记点显示
+            'a': toggle_earning_markers,  # 新增：'x'键切换绿色收益公告标记点显示
             '1': lambda: radio.set_active(7),
             '2': lambda: radio.set_active(1),
             '3': lambda: radio.set_active(3),

@@ -26,7 +26,7 @@ cursor = conn.cursor()
 
 # 更新价格字段
 # cursor.execute("UPDATE Earning SET price = 5.2 WHERE id = 1393")
-# cursor.execute("UPDATE Earning SET date = '2025-02-25' WHERE id = 1393")
+cursor.execute("UPDATE Earning SET date = '2025-02-21' WHERE id = 1401")
 # cursor.execute("UPDATE Commodities SET price = 13.85 WHERE id = 104735")
 # cursor.execute("UPDATE Currencies SET date = '2025-01-06' WHERE id = 144913")
 

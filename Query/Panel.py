@@ -348,6 +348,62 @@ def handle_arrow_key(direction):
         on_keyword_selected_chart(symbol, None)
 
 # ----------------------------------------------------------------------
+# 新增部分：Tooltip 辅助函数定义，根据新的 description.json 文件结构，
+# 从 "stocks" 和 "etfs" 中查找指定 symbol 对应的 tag 信息。
+# ----------------------------------------------------------------------
+def get_tags_for_symbol(symbol):
+    """
+    根据 symbol 在 json_data 中查找 tag 信息，
+    如果在 stocks 或 etfs 中找到则返回 tag 数组，否则返回 "无标签"。
+    """
+    for item in json_data.get("stocks", []):
+        if item.get("symbol", "") == symbol:
+            return item.get("tag", "无标签")
+    for item in json_data.get("etfs", []):
+        if item.get("symbol", "") == symbol:
+            return item.get("tag", "无标签")
+    return "无标签"
+
+def add_tooltip(widget, symbol):
+    """
+    为指定的 Tkinter 控件绑定鼠标悬停显示浮窗的事件，
+    浮窗中显示该 symbol 的 tag 信息（从 description.json 中提取）。
+    """
+    def on_enter(event):
+        tags_info = get_tags_for_symbol(symbol)
+        print("tags_info:", tags_info)  # 调试用，检查标签数据是否正确提取
+        # 如果 tag 为列表，则转换为逗号分隔的字符串
+        if isinstance(tags_info, list):
+            tags_info = ", ".join(tags_info)
+        tooltip = tk.Toplevel(widget)
+        tooltip.wm_overrideredirect(True)  # 去掉窗口边框
+        # 浮窗的位置：在鼠标坐标附近
+        x = event.x_root + 20
+        y = event.y_root + 10
+        tooltip.wm_geometry(f"+{x}+{y}")
+        # 浮窗内样式可以根据需要调整
+        # 显示字体设置为 Arial，前景色明确设为黑色
+        label = tk.Label(
+            tooltip,
+            text=tags_info,
+            background="lightyellow",
+            fg="black",         # 明确设置前景色
+            relief="solid",
+            borderwidth=1,
+            font=("Arial", 20)  # 如有问题可尝试 Arial 或其他系统自带字体
+        )
+        label.pack(ipadx=5, ipady=3)  # 增加一点内边距
+        widget.tooltip = tooltip
+
+    def on_leave(event):
+        if hasattr(widget, "tooltip") and widget.tooltip is not None:
+            widget.tooltip.destroy()
+            widget.tooltip = None
+
+    widget.bind("<Enter>", on_enter)
+    widget.bind("<Leave>", on_leave)
+
+# ----------------------------------------------------------------------
 # TKinter GUI Setup
 # ----------------------------------------------------------------------
 def create_custom_style():
@@ -440,7 +496,7 @@ def create_selection_window():
                         command=lambda k=keyword: on_keyword_selected_chart(k, selection_window)
                     )
 
-                    # Right-click menu
+                    # 右键菜单配置
                     menu = tk.Menu(button, tearoff=0)
                     menu.add_command(label="删除", command=lambda k=keyword, g=sector: delete_item(k, g))
                     menu.add_command(label="改名", command=lambda k=keyword, g=sector: rename_item(k, g))
@@ -457,8 +513,13 @@ def create_selection_window():
                     menu.add_command(label="加入黑名单", command=lambda k=keyword, g=sector: execute_external_script('blacklist', k, g))
                     menu.add_command(label="Forced Adding to Earning", command=lambda k=keyword: execute_external_script('earning_force', k))
 
-                    # Bind right-click (Button-2 on Mac, often Button-3 on Windows)
+                    # 绑定右键（Mac 使用 Button-2，Windows 通常是 Button-3）
                     button.bind("<Button-2>", lambda event, m=menu: m.post(event.x_root, event.y_root))
+                    
+                    # *******************************
+                    # 为按钮增加 Tooltip 功能（根据新的 description.json 文件结构）
+                    add_tooltip(button, keyword)
+                    # *******************************
 
                     button.pack(side="left", fill="x", expand=True)
 

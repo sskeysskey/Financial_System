@@ -1,13 +1,7 @@
 {
     "Basic_Materials": {
-        "CE": "赛莱默",
-        "ASH": "",
-        "BCC": "木材",
-        "MLM": "",
-        "VMC": "",
-        "CMC": "",
-        "EXP": "",
-        "SSD": "",
+        "VMC": "火神",
+        "EXP": "建筑材料",
         "WLK": ""
     },
     "Real_Estate": {
@@ -16,13 +10,10 @@
     },
     "Energy": {
         "WFRD": "",
-        "NXE": "",
-        "FANG": "",
-        "PR": ""
+        "NXE": ""
     },
     "Technology": {
         "PSN": "政府服务",
-        "CACI": "政府服务",
         "CDNS": "芯片设计",
         "ANET": "",
         "ACLS": "芯片",
@@ -31,19 +22,11 @@
         "ON": "安森美",
         "MANH": "",
         "AMAT": "",
-        "MRVL": "",
         "SPSC": "",
         "AAPL": "",
         "MSFT": "",
-        "NVDA": "",
         "TSM": "",
-        "ORCL": "",
-        "AMD": "",
         "CRM": "",
-        "ACN": "",
-        "NOW": "",
-        "INFY": "",
-        "DELL": "",
         "SNPS": "",
         "MSI": "",
         "ADSK": "",
@@ -62,31 +45,13 @@
         "ARW": ""
     },
     "Consumer_Cyclical": {
-        "LEN": "",
-        "WING": "",
         "DECK": "",
-        "TSLA": "",
-        "AMZN": "",
         "GNTX": "",
-        "CZR": "",
-        "DOOO": "",
-        "ANF": "",
         "HD": "",
-        "CMG": "",
-        "SKX": "",
-        "CHDN": "",
-        "FUN": "",
+        "SKX": "斯凯奇",
+        "CHDN": "赛马",
         "VVV": "",
-        "LOW": "",
-        "ABNB": "",
-        "MAR": "",
-        "HLT": "",
-        "RRR": "",
-        "ROST": "",
-        "AVY": "",
-        "H": "",
-        "SON": "",
-        "ASO": ""
+        "HLT": ""
     },
     "Utilities": {
         "CEG": ""
