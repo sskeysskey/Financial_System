@@ -226,7 +226,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         if found_item:
             break
     
-    # 新增：从Earning表获取收益公告日期和价格变动
+    # 修改获取收益公告日期和价格变动的部分
     try:
         with sqlite3.connect(db_path) as conn:
             cursor = conn.cursor()
@@ -234,8 +234,19 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             for date_str, price_change in cursor.fetchall():
                 try:
                     marker_date = datetime.strptime(date_str, "%Y-%m-%d")
-                    # 存储价格变动作为标记文本
-                    earning_markers[marker_date] = f"昨日财报收益: {price_change}%"
+                    # 查找该日期在价格数据中的索引
+                    closest_date_idx = (np.abs(np.array(dates) - marker_date)).argmin()
+                    closest_date = dates[closest_date_idx]
+                    price_at_date = prices[closest_date_idx]
+                    
+                    # 获取最新价格
+                    latest_price = prices[-1]
+                    
+                    # 计算从财报日期到最新日期的价格变化百分比
+                    price_change_to_present = ((latest_price - price_at_date) / price_at_date) * 100
+                    
+                    # 存储价格变动作为标记文本，包含财报收益和至今变化
+                    earning_markers[marker_date] = f"昨日财报收益: {price_change}%\n至今变化: {price_change_to_present:.2f}%"
                 except ValueError:
                     print(f"无法解析收益公告日期: {date_str}")
     except sqlite3.OperationalError as e:
@@ -268,7 +279,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                                  alpha=0.7, zorder=4, picker=5, visible=show_markers)  # 初始设为不可见
             specific_scatter_points.append((scatter, closest_date, price_at_date, text))
     
-    # 新增：绘制收益公告标记点（绿色）
+    # 新增：绘制财报收益公告标记点（绿色）
     for marker_date, text in earning_markers.items():
         if min(dates) <= marker_date <= max(dates):
             closest_date_idx = (np.abs(np.array(dates) - marker_date)).argmin()

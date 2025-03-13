@@ -1,7 +1,7 @@
 {
     "Basic_Materials": {
-        "VMC": "火神",
-        "EXP": "建筑材料",
+        "VMC": "",
+        "EXP": "",
         "WLK": ""
     },
     "Real_Estate": {
@@ -13,13 +13,7 @@
         "NXE": ""
     },
     "Technology": {
-        "PSN": "政府服务",
-        "CDNS": "芯片设计",
         "ANET": "",
-        "ACLS": "芯片",
-        "FSLR": "太阳能",
-        "ENPH": "太阳能",
-        "ON": "安森美",
         "MANH": "",
         "AMAT": "",
         "SPSC": "",
@@ -28,19 +22,6 @@
         "TSM": "",
         "CRM": "",
         "SNPS": "",
-        "MSI": "",
-        "ADSK": "",
-        "DDOG": "",
-        "ONTO": "",
-        "LFUS": "",
-        "VRNS": "",
-        "OS": "",
-        "TXN": "",
-        "APH": "",
-        "CDW": "",
-        "PTC": "",
-        "TER": "",
-        "NOVT": "",
         "ENTG": "",
         "ARW": ""
     },
@@ -48,8 +29,8 @@
         "DECK": "",
         "GNTX": "",
         "HD": "",
-        "SKX": "斯凯奇",
-        "CHDN": "赛马",
+        "SKX": "",
+        "CHDN": "",
         "VVV": "",
         "HLT": ""
     },
@@ -57,77 +38,28 @@
         "CEG": ""
     },
     "Consumer_Defensive": {
-        "DEO": "",
-        "HRL": "",
-        "WMT": "",
-        "FRPT": ""
+        "WMT": ""
     },
     "Industrials": {
-        "BAH": "政府服务",
-        "TTEK": "政府服务",
-        "TFII": "",
-        "TTC": "",
-        "ETN": "",
-        "HUBB": "",
-        "RTO": "",
-        "AMTM": "政府服务",
-        "TT": "",
-        "PH": "",
-        "FDX": "",
-        "FERG": "",
-        "OC": "",
-        "NVT": "",
-        "SAIA": "",
-        "RRX": "",
-        "MSA": "",
-        "FLR": "",
-        "HXL": "",
-        "ODFL": "",
-        "BLDR": "",
-        "JBHT": "",
-        "J": "",
-        "IEX": "",
-        "LSTR": "",
-        "RXO": "",
-        "FBIN": "",
-        "FCN": "",
-        "AVAV": "",
+        "BAH": "",
+        "AMTM": "",
+        "BLDR": "建筑材料",
         "HRI": ""
     },
     "Communication_Services": {
-        "GOOGL": "",
-        "META": "",
-        "OMC": ""
+        "GOOGL": ""
     },
     "Financial_Services": {
-        "KKR": "",
         "JPM": "",
         "BX": "",
         "APO": "",
-        "BAC": "",
         "AXP": "",
         "BLK": "",
-        "MCO": "",
-        "BN": "",
-        "USB": "",
-        "TFC": "",
-        "V": "",
         "SPGI": ""
     },
     "Healthcare": {
-        "ILMN": "",
-        "MRNA": "",
-        "BIO": "",
-        "BRKR": "",
-        "COO": "",
-        "A": "",
-        "NBIX": "",
-        "SRPT": "",
-        "ICLR": "",
         "TECH": "",
-        "RDY": "",
-        "NVO": "",
-        "HOLX": ""
+        "NVO": ""
     },
     "Bonds": {
         "US2Y": "",
@@ -139,13 +71,13 @@
         "TUR10Y": ""
     },
     "Indices": {
-        "VIX": "恐慌指数",
+        "VIX": "",
         "NASDAQ": "",
         "S&P500": "",
         "DowJones": "",
-        "HANGSENG": "恒生",
-        "Shanghai": "上证",
-        "Shenzhen": "深证",
+        "HANGSENG": "",
+        "Shanghai": "",
+        "Shenzhen": "",
         "Nikkei": "",
         "India": "",
         "Singapore": "",
@@ -195,17 +127,17 @@
         "XRP": ""
     },
     "ETFs": {
-        "SCHD": "股息分红",
-        "DBC": "大宗商品",
-        "IBIT": "比特币",
-        "SOXX": "半导体",
-        "ASHR": "A股大型",
-        "DXJ": "日本",
-        "EWT": "台湾",
-        "LIT": "锂矿电池",
-        "URA": "铀矿核能",
-        "UUP": "多美",
-        "FXY": "多日空美"
+        "SCHD": "",
+        "DBC": "",
+        "IBIT": "",
+        "SOXX": "",
+        "ASHR": "",
+        "DXJ": "",
+        "EWT": "",
+        "LIT": "",
+        "URA": "",
+        "UUP": "",
+        "FXY": ""
     },
     "Currencies": {
         "DXY": "美元指数",
