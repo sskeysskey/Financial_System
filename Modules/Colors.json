@@ -103,7 +103,6 @@
         "GWW",
         "MSI",
         "PWR",
-        "ROST",
         "PYPL",
         "ETN",
         "VRT",
@@ -357,7 +356,6 @@
         "COO",
         "CMG",
         "SKX",
-        "CHDN",
         "FUN",
         "VVV",
         "FRPT",
@@ -369,7 +367,12 @@
         "EXP",
         "ODFL",
         "RXO",
-        "TER"
+        "TER",
+        "ROST",
+        "H",
+        "ASO",
+        "AVAV",
+        "HRI"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -561,7 +564,8 @@
         "GLOB",
         "LFUS",
         "BILL",
-        "JBHT"
+        "JBHT",
+        "CHDN"
     ],
     "orange_keywords": [
         "NASDAQ",

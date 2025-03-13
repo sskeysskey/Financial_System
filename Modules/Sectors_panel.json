@@ -6,7 +6,9 @@
         "MLM": "",
         "VMC": "",
         "CMC": "",
-        "EXP": ""
+        "EXP": "",
+        "SSD": "",
+        "WLK": ""
     },
     "Real_Estate": {
         "EQIX": "",
@@ -56,7 +58,8 @@
         "PTC": "",
         "TER": "",
         "NOVT": "",
-        "ENTG": ""
+        "ENTG": "",
+        "ARW": ""
     },
     "Consumer_Cyclical": {
         "LEN": "",
@@ -78,7 +81,12 @@
         "ABNB": "",
         "MAR": "",
         "HLT": "",
-        "RRR": ""
+        "RRR": "",
+        "ROST": "",
+        "AVY": "",
+        "H": "",
+        "SON": "",
+        "ASO": ""
     },
     "Utilities": {
         "CEG": ""
@@ -115,11 +123,16 @@
         "J": "",
         "IEX": "",
         "LSTR": "",
-        "RXO": ""
+        "RXO": "",
+        "FBIN": "",
+        "FCN": "",
+        "AVAV": "",
+        "HRI": ""
     },
     "Communication_Services": {
         "GOOGL": "",
-        "META": ""
+        "META": "",
+        "OMC": ""
     },
     "Financial_Services": {
         "KKR": "",
@@ -147,7 +160,9 @@
         "SRPT": "",
         "ICLR": "",
         "TECH": "",
-        "RDY": ""
+        "RDY": "",
+        "NVO": "",
+        "HOLX": ""
     },
     "Bonds": {
         "US2Y": "",

@@ -22,8 +22,7 @@
     "CMCSA",
     "SPOT",
     "DASH",
-    "NTES",
-    "CHTR"
+    "NTES"
   ],
   "Consumer_Cyclical": [
     "AMZN",
@@ -66,7 +65,6 @@
     "BTI",
     "CL",
     "DEO",
-    "TGT",
     "MNST"
   ],
   "Energy": [
@@ -144,7 +142,8 @@
     "BCS",
     "ALL",
     "AIG",
-    "NU"
+    "NU",
+    "MFC"
   ],
   "Healthcare": [
     "LLY",
@@ -176,8 +175,7 @@
     "ZTS",
     "CVS",
     "BDX",
-    "MCK",
-    "COR"
+    "MCK"
   ],
   "Industrials": [
     "GE",
@@ -220,7 +218,8 @@
     "EQIX",
     "WELL",
     "PSA",
-    "SPG"
+    "SPG",
+    "DLR"
   ],
   "Technology": [
     "AAPL",
@@ -272,7 +271,8 @@
     "PAYX",
     "TEAM",
     "APP",
-    "MSTR"
+    "MSTR",
+    "SNOW"
   ],
   "Utilities": [
     "NEE",
