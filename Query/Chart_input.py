@@ -235,7 +235,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 try:
                     marker_date = datetime.strptime(date_str, "%Y-%m-%d")
                     # 存储价格变动作为标记文本
-                    earning_markers[marker_date] = f"收益公告: {price_change}%"
+                    earning_markers[marker_date] = f"昨日财报收益: {price_change}%"
                 except ValueError:
                     print(f"无法解析收益公告日期: {date_str}")
     except sqlite3.OperationalError as e:
