@@ -599,6 +599,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         annot.set_text(text)
         annot.get_bbox_patch().set_alpha(0.4)
         annot.set_fontsize(16)
+        
         # 检查点的垂直位置
         y_range = ax1.get_ylim()
         y_position_ratio = (yval - y_range[0]) / (y_range[1] - y_range[0])
