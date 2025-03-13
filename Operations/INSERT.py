@@ -91,6 +91,10 @@ data_sets = {
     'Basic_Materials': [
         # ('2024-10-16', 'NUE', 154.27, 0),
         # ('2024-07-11', 'CoreCPI', 3.3)
+    ],
+    'Earning': [
+        # ('2025-01-24', 'AXP', -1.4)
+        
     ]
 }
 
@@ -100,6 +104,7 @@ databases = [
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies', 'columns': ['date', 'name', 'price']},
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities', 'columns': ['date', 'name', 'price']},
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto', 'columns': ['date', 'name', 'price']},
+    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Earning', 'columns': ['date', 'name', 'price']},
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Bonds', 'columns': ['date', 'name', 'price']},
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Economics', 'columns': ['date', 'name', 'price']},
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'ETFs', 'columns': ['date', 'name', 'price', 'volume']},

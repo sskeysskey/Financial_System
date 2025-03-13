@@ -1,36 +1,21 @@
 {
     "Basic_Materials": {
         "VMC": "",
-        "EXP": "",
-        "WLK": ""
+        "EXP": ""
     },
-    "Real_Estate": {
-        "EQIX": "",
-        "SPG": ""
-    },
+    "Real_Estate": {},
     "Energy": {
         "WFRD": "",
         "NXE": ""
     },
     "Technology": {
         "ANET": "",
-        "MANH": "",
-        "AMAT": "",
-        "SPSC": "",
         "AAPL": "",
-        "MSFT": "",
-        "TSM": "",
-        "CRM": "",
-        "SNPS": "",
-        "ENTG": "",
-        "ARW": ""
+        "TSM": ""
     },
     "Consumer_Cyclical": {
         "DECK": "",
-        "GNTX": "",
-        "HD": "",
         "SKX": "",
-        "CHDN": "",
         "VVV": "",
         "HLT": ""
     },
@@ -51,14 +36,12 @@
     },
     "Financial_Services": {
         "JPM": "",
-        "BX": "",
         "APO": "",
         "AXP": "",
         "BLK": "",
         "SPGI": ""
     },
     "Healthcare": {
-        "TECH": "",
         "NVO": ""
     },
     "Bonds": {

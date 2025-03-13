@@ -152,9 +152,9 @@ if __name__ == '__main__':
         #     'condition': "name = ''", 'fields': '*',
         # 'include_condition': True},
 
-        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Earning',
-            'condition': "name = 'AAPL'", 'fields': '*',
-        'include_condition': True},
+        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Earning',
+        #     'condition': "name = 'WMT'", 'fields': '*',
+        # 'include_condition': True},
     ]
     
     # 遍历数据库信息列表，对每个数据库执行查询并收集结果
