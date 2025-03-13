@@ -599,21 +599,35 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         annot.set_text(text)
         annot.get_bbox_patch().set_alpha(0.4)
         annot.set_fontsize(16)
+        # 检查点的垂直位置
+        y_range = ax1.get_ylim()
+        y_position_ratio = (yval - y_range[0]) / (y_range[1] - y_range[0])
         
         # 更智能地调整注释位置
         x_range = ax1.get_xlim()
         position_ratio = (matplotlib.dates.date2num(xval) - x_range[0]) / (x_range[1] - x_range[0])
         
-        # 根据点在图表中的水平位置调整注释
+        # 根据点在图表中的水平和垂直位置调整注释
+        if y_position_ratio < 0.2:  # 如果点在底部区域（靠近X轴）
+            # 将注释向上方移动
+            y_offset = 60  # 设置一个较大的向上偏移
+        else:
+            y_offset = -20  # 默认向下偏移
+        
+        # 根据水平位置调整
         if position_ratio > 0.7:  # 如果点在右侧30%区域
             # 估计文本长度，越长偏移越大
             text_length = len(text)
-            x_offset = -20 - min(text_length * 4, 300)  # 根据文本长度动态调整左偏移
-            annot.set_position((x_offset, -20))
+            x_offset = -20 - min(text_length * 6, 300)  # 根据文本长度动态调整左偏移
+            annot.set_position((x_offset, y_offset))
         elif position_ratio < 0.3:  # 如果点在左侧30%区域
-            annot.set_position((50, -20))
+            annot.set_position((50, y_offset))
         else:  # 中间区域
-            annot.set_position((0, -60))  # 放到下方
+            # 如果在底部区域，仍然向上偏移
+            if y_position_ratio < 0.2:
+                annot.set_position((0, y_offset))
+            else:
+                annot.set_position((0, -60))  # 放到下方
 
     def hover(event):
         """
