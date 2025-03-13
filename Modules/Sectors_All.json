@@ -148,7 +148,6 @@
     "THD",
     "XAR",
     "EWD",
-    "FCOM",
     "IAI",
     "CWB",
     "CIBR",
@@ -441,14 +440,14 @@
     "IPKW",
     "CMBS",
     "VDC",
-    "RSPN",
     "HEZU",
     "PRFZ",
     "FEMS",
     "EZU",
     "QINT",
     "AGZ",
-    "BOCT"
+    "BOCT",
+    "IXP"
   ],
   "Basic_Materials": [
     "LIN",

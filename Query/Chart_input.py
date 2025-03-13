@@ -168,7 +168,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     ax1.tick_params(axis='y', colors='white')
     ax2.tick_params(axis='y', colors='white')
 
-    highlight_point = ax1.scatter([], [], s=100, color='red', zorder=5)
+    highlight_point = ax1.scatter([], [], s=100, color='blue', zorder=5)
     
     # 绘制插值后的平滑曲线
     line1, = ax1.plot(
@@ -252,7 +252,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             closest_date_idx = (np.abs(np.array(dates) - marker_date)).argmin()
             closest_date = dates[closest_date_idx]
             price_at_date = prices[closest_date_idx]
-            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='red', 
+            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='orange', 
                                 #  alpha=0.7, zorder=4, picker=5)
                                  alpha=0.7, zorder=4, picker=5, visible=show_markers)  # 初始设为不可见
             global_scatter_points.append((scatter, closest_date, price_at_date, text))
@@ -263,7 +263,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             closest_date_idx = (np.abs(np.array(dates) - marker_date)).argmin()
             closest_date = dates[closest_date_idx]
             price_at_date = prices[closest_date_idx]
-            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='orange', 
+            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='red', 
                                 #  alpha=0.7, zorder=4, picker=5)
                                  alpha=0.7, zorder=4, picker=5, visible=show_markers)  # 初始设为不可见
             specific_scatter_points.append((scatter, closest_date, price_at_date, text))
@@ -752,7 +752,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             mouse_pressed = False
 
     # 参考线
-    vline = ax1.axvline(x=dates[0], color='red', linestyle='--', linewidth=1, visible=False)
+    vline = ax1.axvline(x=dates[0], color='blue', linestyle='--', linewidth=1, visible=False)
 
     # 连接事件
     plt.gcf().canvas.mpl_connect("motion_notify_event", hover)
