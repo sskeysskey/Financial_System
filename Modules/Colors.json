@@ -98,7 +98,6 @@
         "ALL",
         "SRE",
         "MCK",
-        "LLY",
         "FDX",
         "GWW",
         "MSI",
@@ -136,6 +135,9 @@
         "MAR",
         "HLT",
         "SPGI",
+        "BKNG",
+        "MS",
+        "MET",
         "AAPL"
     ],
     "blue_keywords": [
@@ -155,7 +157,8 @@
         "V",
         "GOOGL",
         "AMZN",
-        "WMT"
+        "WMT",
+        "LLY"
     ],
     "white_keywords": [
         "ROKU",
@@ -169,7 +172,6 @@
         "TEAM",
         "RMBS",
         "EQT",
-        "PATH",
         "LPLA",
         "PEN",
         "EW",
@@ -200,7 +202,6 @@
         "QLYS",
         "WMG",
         "DLB",
-        "W",
         "GTLS",
         "TM",
         "CX",
@@ -326,7 +327,6 @@
         "SRPT",
         "RRX",
         "AMAT",
-        "TGT",
         "FANG",
         "CRC",
         "OGN",
@@ -335,7 +335,6 @@
         "NVT",
         "MSFT",
         "CDNS",
-        "TTD",
         "CMC",
         "FND",
         "SEE",
@@ -346,7 +345,6 @@
         "BLDR",
         "TREX",
         "FBIN",
-        "HST",
         "RHP",
         "CCCS",
         "THO",
@@ -372,7 +370,17 @@
         "H",
         "ASO",
         "AVAV",
-        "HRI"
+        "HRI",
+        "PHM",
+        "LEVI",
+        "PRU",
+        "OBDC",
+        "IDXX",
+        "OSCR",
+        "FSS",
+        "CSL",
+        "FRT",
+        "HPE"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -565,7 +573,12 @@
         "LFUS",
         "BILL",
         "JBHT",
-        "CHDN"
+        "CHDN",
+        "W",
+        "TGT",
+        "KNX",
+        "HST",
+        "TTD"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -652,7 +665,8 @@
         "REYN",
         "CE",
         "ILMN",
-        "DNB"
+        "DNB",
+        "PATH"
     ],
     "green_keywords": [
         "EURCNY",

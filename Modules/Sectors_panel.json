@@ -1,9 +1,16 @@
 {
     "Basic_Materials": {
         "VMC": "",
-        "EXP": ""
+        "EXP": "",
+        "SSD": "",
+        "BCC": "",
+        "WLK": "",
+        "ASH": ""
     },
-    "Real_Estate": {},
+    "Real_Estate": {
+        "FRT": "",
+        "RHP": ""
+    },
     "Energy": {
         "WFRD": "",
         "NXE": ""
@@ -13,14 +20,58 @@
         "AAPL": "",
         "TSM": "",
         "JBL": "",
-        "SMTC": ""
+        "SMTC": "",
+        "MSFT": "",
+        "CRM": "",
+        "ACN": "",
+        "TXN": "",
+        "SNPS": "",
+        "APH": "",
+        "NXPI": "",
+        "ADSK": "",
+        "MCHP": "",
+        "DDOG": "",
+        "ON": "",
+        "CDW": "",
+        "HPE": "",
+        "PTC": "",
+        "TER": "",
+        "MANH": "",
+        "PATH": "",
+        "SPSC": "",
+        "ARW": "",
+        "NOVT": "",
+        "OS": ""
     },
     "Consumer_Cyclical": {
         "DECK": "",
         "SKX": "",
         "VVV": "",
         "HLT": "",
-        "ULTA": ""
+        "ULTA": "",
+        "AMZN": "",
+        "HD": "",
+        "LOW": "",
+        "BKNG": "",
+        "CMG": "",
+        "ABNB": "",
+        "MAR": "",
+        "LEN": "",
+        "ROST": "",
+        "PHM": "",
+        "AVY": "",
+        "H": "",
+        "FND": "",
+        "WING": "",
+        "ALV": "",
+        "LEVI": "",
+        "GNTX": "",
+        "CZR": "",
+        "ANF": "",
+        "MTH": "",
+        "SON": "",
+        "RRR": "",
+        "ASO": ""
     },
     "Utilities": {
         "CEG": "",
@@ -34,10 +85,34 @@
         "BAH": "",
         "AMTM": "",
         "BLDR": "建筑材料",
-        "HRI": ""
+        "HRI": "",
+        "PH": "",
+        "PCAR": "",
+        "URI": "",
+        "FERG": "",
+        "ODFL": "",
+        "IR": "",
+        "GPN": "",
+        "HUBB": "",
+        "JBHT": "",
+        "J": "",
+        "IEX": "",
+        "OC": "",
+        "SAIA": "",
+        "RRX": "",
+        "FBIN": "",
+        "TTC": "",
+        "KNX": "",
+        "MSA": "",
+        "LSTR": "",
+        "HXL": "",
+        "FSS": "",
+        "CSL": ""
     },
     "Communication_Services": {
-        "GOOGL": ""
+        "GOOGL": "",
+        "META": "",
+        "OMC": ""
     },
     "Financial_Services": {
         "JPM": "",
@@ -45,10 +120,28 @@
         "AXP": "",
         "BLK": "",
         "SPGI": "",
-        "FUTU": ""
+        "FUTU": "",
+        "V": "",
+        "BX": "",
+        "MS": "",
+        "MCO": "",
+        "BN": "",
+        "USB": "",
+        "MET": "",
+        "PRU": "",
+        "OBDC": ""
     },
     "Healthcare": {
-        "NVO": ""
+        "NVO": "",
+        "LLY": "",
+        "A": "",
+        "IDXX": "",
+        "COO": "",
+        "ILMN": "",
+        "HOLX": "",
+        "VTRS": "",
+        "BIO": "",
+        "OSCR": ""
     },
     "Bonds": {
         "US2Y": "",

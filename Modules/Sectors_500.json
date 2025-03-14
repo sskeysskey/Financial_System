@@ -9,7 +9,8 @@
     "APD",
     "CRH",
     "FCX",
-    "AEM"
+    "AEM",
+    "NEM"
   ],
   "Communication_Services": [
     "GOOGL",
@@ -142,8 +143,7 @@
     "BCS",
     "ALL",
     "AIG",
-    "NU",
-    "MFC"
+    "NU"
   ],
   "Healthcare": [
     "LLY",
@@ -209,8 +209,7 @@
     "NSC",
     "PCAR",
     "JCI",
-    "CPRT",
-    "HWM"
+    "CPRT"
   ],
   "Real_Estate": [
     "PLD",
@@ -218,8 +217,7 @@
     "EQIX",
     "WELL",
     "PSA",
-    "SPG",
-    "DLR"
+    "SPG"
   ],
   "Technology": [
     "AAPL",
@@ -271,8 +269,7 @@
     "PAYX",
     "TEAM",
     "APP",
-    "MSTR",
-    "SNOW"
+    "MSTR"
   ],
   "Utilities": [
     "NEE",
