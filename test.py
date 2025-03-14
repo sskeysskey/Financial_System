@@ -1,75 +1,84 @@
-import json
+import sqlite3
 import tkinter as tk
-from tkinter import simpledialog
+import tkinter.font as tkFont
+from tkinter import scrolledtext
+from datetime import datetime
 
-# 定义文件路径
-SECTORS_FILE = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
-DESCRIPTION_FILE = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
-
-# 读取JSON文件
-def load_json_files():
-    with open(SECTORS_FILE, 'r', encoding='utf-8') as f:
-        sectors = json.load(f)
-    with open(DESCRIPTION_FILE, 'r', encoding='utf-8') as f:
-        descriptions = json.load(f)
-    return sectors, descriptions
-
-# 检查是否存在于stocks中
-def check_symbol_exists(symbol, stocks):
-    return any(stock['symbol'] == symbol for stock in stocks)
-
-# 创建新的stock项
-def create_new_stock(symbol, input_text):
-    tags = input_text.split()
-    return {
-        "symbol": symbol,
-        "name": symbol,
-        "tag": tags,
-        "description1": "",
-        "description2": "",
-        "description3": [{}],
-        "value": ""
-    }
-
-def process_bonds_sector():
-    # 读取JSON文件
-    sectors, descriptions = load_json_files()
+def query_database(db_file, table_name, condition, fields, include_condition):
+    # 连接到 SQLite 数据库
+    conn = sqlite3.connect(db_file)
+    cursor = conn.cursor()
     
-    # 创建tkinter根窗口但不显示
-    root = tk.Tk()
-    root.withdraw()
-    
-    # 只处理Bonds分组
-    modified = False
-    bonds_symbols = sectors.get('Commodities', [])
-    
-    print("开始处理Bonds分组...")
-    for symbol in bonds_symbols:
-        # 检查symbol是否存在于stocks中
-        if not check_symbol_exists(symbol, descriptions['stocks']):
-            # 弹出输入框
-            prompt = f"Symbol '{symbol}' 不存在于stocks中。请输入标签（用空格分隔）："
-            user_input = simpledialog.askstring("输入标签", prompt)
-            
-            if user_input:
-                # 创建新的stock项并添加到descriptions中
-                new_stock = create_new_stock(symbol, user_input)
-                descriptions['stocks'].append(new_stock)
-                modified = True
-                print(f"已添加新的stock项: {symbol}")
-    
-    # 如果有修改，保存到文件
-    if modified:
-        try:
-            with open(DESCRIPTION_FILE, 'w', encoding='utf-8') as f:
-                json.dump(descriptions, f, ensure_ascii=False, indent=2)
-                print("文件已更新")
-        except Exception as e:
-            print("文件写入失败:", str(e))
+    # 根据 include_condition 决定是否添加 WHERE 条件
+    if include_condition and condition:
+        query = f"SELECT {fields} FROM {table_name} WHERE {condition} ORDER BY date DESC, id DESC;"
     else:
-        print("Bonds分组中没有需要添加的项目")
+        query = f"SELECT {fields} FROM {table_name} ORDER BY date DESC, id DESC;"
+    
+    cursor.execute(query)
+    
+    # 获取查询结果
+    rows = cursor.fetchall()
+    if not rows:
+        return "没有数据可显示。\n"
 
-    root.destroy()
+    # 获取列名，并确定每列的最大宽度
+    columns = [description[0] for description in cursor.description]
+    col_widths = [max(len(str(row[i])) for row in rows + [columns]) for i in range(len(columns))]
+    
+    # 准备输出的文本
+    output_text = ' | '.join([col.ljust(col_widths[idx]) for idx, col in enumerate(columns)]) + '\n'
+    output_text += '-' * len(output_text) + '\n'
+    for row in rows:
+        output_text += ' | '.join([str(item).ljust(col_widths[idx]) for idx, item in enumerate(row)]) + '\n'
+    
+    # 关闭连接
+    conn.close()
+    return output_text
 
-if __name__ == "__main__":
-    process_bonds_sector()
+def create_window(content):
+    # 创建主窗口
+    root = tk.Tk()
+    root.title("数据库查询结果")
+    root.lift()
+    root.focus_force()
+
+    # 窗口尺寸和位置设置
+    window_width = 900
+    window_height = 600
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    center_x = int(screen_width / 2 - window_width / 2)
+    center_y = int(screen_height / 2 - window_height / 2)
+    root.geometry(f'{window_width}x{window_height}+{center_x}+{center_y}')
+
+    # 按ESC键关闭窗口
+    root.bind('<Escape>', lambda e: root.destroy())
+    
+    # 创建带滚动条的文本区域
+    text_font = tkFont.Font(family="Courier", size=20)
+    text_area = scrolledtext.ScrolledText(root, wrap=tk.WORD, width=100, height=30, font=text_font)
+    text_area.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+    
+    # 插入文本内容
+    text_area.insert(tk.INSERT, content)
+    text_area.configure(state='disabled')
+    
+    # 运行窗口
+    root.mainloop()
+
+if __name__ == '__main__':
+    db_info = [
+        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Earning',
+            'condition': "name = 'DG'", 'fields': '*',
+        'include_condition': True},
+    ]
+    
+    # 遍历数据库信息列表，对每个数据库执行查询并收集结果
+    full_content = ""
+    for info in db_info:
+        full_content += f"Querying table {info['table']} in database at: {info['path']}\n"
+        result = query_database(info['path'], info['table'], info['condition'], info['fields'], info['include_condition'])
+        full_content += result + "\n" + "-"*50+"\n"
+    # 创建窗口展示查询结果
+    create_window(full_content)

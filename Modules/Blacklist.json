@@ -536,6 +536,8 @@
         "BAPR",
         "USRT",
         "SHYL",
-        "VIS"
+        "VIS",
+        "VDC",
+        "FCOM"
     ]
 }
