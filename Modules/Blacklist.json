@@ -266,7 +266,10 @@
         "FLR",
         "TFC",
         "SRPT",
-        "SPG"
+        "SPG",
+        "ALV",
+        "LEVI",
+        "ASO"
     ],
     "screener": [
         "CTA-PA",

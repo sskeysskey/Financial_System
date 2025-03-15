@@ -263,8 +263,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             closest_date_idx = (np.abs(np.array(dates) - marker_date)).argmin()
             closest_date = dates[closest_date_idx]
             price_at_date = prices[closest_date_idx]
-            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='orange', 
-                                #  alpha=0.7, zorder=4, picker=5)
+            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='red', 
+                                #  alpha=0.7, zorder=4, picker=5) # 初始设为可见
                                  alpha=0.7, zorder=4, picker=5, visible=show_markers)  # 初始设为不可见
             global_scatter_points.append((scatter, closest_date, price_at_date, text))
     
@@ -274,8 +274,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             closest_date_idx = (np.abs(np.array(dates) - marker_date)).argmin()
             closest_date = dates[closest_date_idx]
             price_at_date = prices[closest_date_idx]
-            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='red', 
-                                #  alpha=0.7, zorder=4, picker=5)
+            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='orange', 
+                                #  alpha=0.7, zorder=4, picker=5) # 初始设为可见
                                  alpha=0.7, zorder=4, picker=5, visible=show_markers)  # 初始设为不可见
             specific_scatter_points.append((scatter, closest_date, price_at_date, text))
     

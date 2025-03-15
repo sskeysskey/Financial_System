@@ -506,7 +506,7 @@ def create_selection_window():
                     menu.add_command(label="添加到 Earning", command=lambda k=keyword: execute_external_script('earning', k))
                     
                     # "编辑earning数据库" option
-                    menu.add_command(label="编辑 Earning_DB", command=lambda k=keyword: execute_external_script('editor_earning', k))
+                    menu.add_command(label="编辑 DB", command=lambda k=keyword: execute_external_script('editor_earning', k))
 
                     menu.add_separator()
                     menu.add_command(label="编辑 Tags", command=lambda k=keyword: execute_external_script('tags', k))

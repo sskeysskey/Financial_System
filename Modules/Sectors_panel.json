@@ -1,18 +1,13 @@
 {
     "Basic_Materials": {},
-    "Real_Estate": {
-        "FRT": "",
-        "RHP": ""
-    },
+    "Real_Estate": {},
     "Energy": {
-        "WFRD": "",
-        "NXE": ""
+        "WFRD": ""
     },
     "Technology": {
         "ANET": "",
         "AAPL": "",
         "TSM": "",
-        "JBL": "",
         "SMTC": "",
         "MSFT": "",
         "CRM": "",
@@ -41,17 +36,7 @@
         "HLT": "",
         "AMZN": "",
         "ABNB": "",
-        "H": "",
-        "WING": "",
-        "ALV": "",
-        "LEVI": "",
-        "GNTX": "",
-        "CZR": "",
-        "ANF": "",
-        "MTH": "",
-        "SON": "",
-        "RRR": "",
-        "ASO": ""
+        "H": ""
     },
     "Utilities": {
         "CEG": "",
