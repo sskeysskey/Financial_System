@@ -1,12 +1,5 @@
 {
-    "Basic_Materials": {
-        "VMC": "",
-        "EXP": "",
-        "SSD": "",
-        "BCC": "",
-        "WLK": "",
-        "ASH": ""
-    },
+    "Basic_Materials": {},
     "Real_Estate": {
         "FRT": "",
         "RHP": ""
@@ -45,18 +38,10 @@
     },
     "Consumer_Cyclical": {
         "DECK": "",
-        "SKX": "",
-        "VVV": "",
         "HLT": "",
         "AMZN": "",
-        "HD": "",
-        "BKNG": "",
         "ABNB": "",
-        "MAR": "",
-        "PHM": "",
-        "AVY": "",
         "H": "",
-        "FND": "",
         "WING": "",
         "ALV": "",
         "LEVI": "",

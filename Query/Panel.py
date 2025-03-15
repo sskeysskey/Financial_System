@@ -201,7 +201,8 @@ def execute_external_script(script_type, keyword, group=None):
     script_configs = {
         'blacklist': f'{base_path}/Operations/Insert_Blacklist.py',
         'similar': f'{base_path}/Query/Find_Similar_Tag.py',
-        'tags': f'{base_path}/Operations/Tags_Editor.py',
+        'tags': f'{base_path}/Operations/Editor_Symbol_Tags.py',
+        'editor_earning': f'{base_path}/Operations/Editor_Symbol_DB.py',
         'earning': f'{base_path}/Operations/Insert_Earning.py',
         'earning_force': f'{base_path}/Operations/Insert_Earning_Force.py',
         'futu': '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt'
@@ -502,10 +503,13 @@ def create_selection_window():
                     menu.add_command(label="改名", command=lambda k=keyword, g=sector: rename_item(k, g))
 
                     # "Add to Earning" option
-                    menu.add_command(label="Add to Earning", command=lambda k=keyword: execute_external_script('earning', k))
+                    menu.add_command(label="添加到 Earning", command=lambda k=keyword: execute_external_script('earning', k))
+                    
+                    # "编辑earning数据库" option
+                    menu.add_command(label="编辑 Earning_DB", command=lambda k=keyword: execute_external_script('editor_earning', k))
 
                     menu.add_separator()
-                    menu.add_command(label="编辑Tags", command=lambda k=keyword: execute_external_script('tags', k))
+                    menu.add_command(label="编辑 Tags", command=lambda k=keyword: execute_external_script('tags', k))
                     menu.add_command(label="在富途中搜索", command=lambda k=keyword: execute_external_script('futu', k))
                     menu.add_command(label="找相似", command=lambda k=keyword: execute_external_script('similar', k))
 

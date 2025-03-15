@@ -6,7 +6,7 @@ from datetime import datetime
 class App:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("Finance Input")
+        self.root.title("添加财报信息")
         
         # 获取屏幕尺寸
         screen_width = self.root.winfo_screenwidth()
@@ -31,7 +31,7 @@ class App:
     def create_first_screen(self):
         self.clear_window()
         
-        label = tk.Label(self.root, text="请输入股票代码：")
+        label = tk.Label(self.root, text="请输入要添加财报信息的股票代码：")
         label.pack(pady=20)
         
         self.entry = tk.Entry(self.root)

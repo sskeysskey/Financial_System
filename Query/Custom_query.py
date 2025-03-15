@@ -153,7 +153,7 @@ if __name__ == '__main__':
         # 'include_condition': True},
 
         {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Earning',
-            'condition': "name = 'S'", 'fields': '*',
+            'condition': "name = 'SMTC'", 'fields': '*',
         'include_condition': True},
     ]
     

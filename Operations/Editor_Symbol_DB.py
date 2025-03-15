@@ -2,6 +2,7 @@ import sqlite3
 import tkinter as tk
 from tkinter import ttk, messagebox
 import pyperclip
+import argparse
 
 # 查询数据库，返回列名和记录数据
 def query_database_data(db_file, table_name, condition, fields, include_condition):
@@ -69,14 +70,17 @@ def open_edit_window(record, columns, db_info, tree):
     edit_win = tk.Toplevel()
     edit_win.title("编辑记录")
     
+    # 添加ESC键绑定
+    edit_win.bind("<Escape>", lambda e: edit_win.destroy())
+    
     entries = {}
-    # 针对每个字段创建一个标签和 Entry 来展示数据
+    # 针对每个字段创建一个标签和 Entry 控件来展示数据
     for idx, col in enumerate(columns):
         tk.Label(edit_win, text=col).grid(row=idx, column=0, padx=5, pady=5, sticky="e")
         entry = tk.Entry(edit_win, width=30)
         entry.insert(0, record[idx])
         entry.grid(row=idx, column=1, padx=5, pady=5)
-        # 如果是 id 字段就设为只读（假设 id 为主键）
+        # 如果是 id 字段设为只读（假设 id 为主键）
         if col == "id":
             entry.config(state="readonly")
         entries[col] = entry
@@ -85,7 +89,7 @@ def open_edit_window(record, columns, db_info, tree):
     def save_changes():
         record_id = record[columns.index("id")]
         new_values = {}
-        # 将非 id 字段的值取出
+        # 取出非 id 字段的值
         for col in columns:
             if col == "id":
                 continue
@@ -126,6 +130,13 @@ def create_main_window(db_info):
     root.title("数据库查询与编辑")
     root.geometry("900x600")
     
+    # 自动激活窗口在最前台
+    root.lift()
+    root.focus_force()
+    
+    # 按 ESC 键关闭窗口退出程序
+    root.bind("<Escape>", lambda e: root.destroy())
+
     frame = tk.Frame(root)
     frame.pack(fill=tk.BOTH, expand=True)
     
@@ -149,16 +160,20 @@ def create_main_window(db_info):
     root.mainloop()
 
 if __name__ == '__main__':
-    # 获取剪贴板内容，用作查询条件
-    clipboard_content = pyperclip.paste()
+    # 创建命令行参数解析器
+    parser = argparse.ArgumentParser(description='数据库查询程序')
+    parser.add_argument('name', type=str, help='要查询的名称', default='')
+    
+    # 解析命令行参数
+    args = parser.parse_args()
     
     # 数据库配置信息
     db_info = {
         'path': '/Users/yanzhang/Documents/Database/Finance.db',  # 数据库路径
         'table': 'Earning',  # 数据表名称
-        'condition': f"name = '{clipboard_content}'" if clipboard_content else "",
+        'condition': f"name = '{args.name}'" if args.name else "",
         'fields': '*',  # 查询全部字段
-        'include_condition': True if clipboard_content else False
+        'include_condition': True if args.name else False
     }
     
     create_main_window(db_info)
