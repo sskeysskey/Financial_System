@@ -414,7 +414,8 @@
         "ETR",
         "TPX",
         "HCP",
-        "ALTM"
+        "ALTM",
+        "AZPN"
     ],
     "etf": [
         "VDE",
@@ -538,6 +539,9 @@
         "SHYL",
         "VIS",
         "VDC",
-        "FCOM"
+        "FCOM",
+        "DGRS",
+        "ONEY",
+        "GSY"
     ]
 }

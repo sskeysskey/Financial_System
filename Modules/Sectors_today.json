@@ -138,7 +138,6 @@
     "JQUA",
     "QQQE",
     "GLD",
-    "SPHB",
     "SPTM",
     "ITOT",
     "IAU",
@@ -388,7 +387,9 @@
     "QINT",
     "AGZ",
     "BOCT",
-    "IXP"
+    "IXP",
+    "NULG",
+    "PSP"
   ],
   "Basic_Materials": [
     "LIN",
@@ -1619,7 +1620,6 @@
     "GRAB",
     "DT",
     "MANH",
-    "AZPN",
     "LOGI",
     "JKHY",
     "FLEX",
