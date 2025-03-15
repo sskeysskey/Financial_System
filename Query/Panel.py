@@ -205,11 +205,15 @@ def execute_external_script(script_type, keyword, group=None):
         'editor_earning': f'{base_path}/Operations/Editor_Symbol_DB.py',
         'earning': f'{base_path}/Operations/Insert_Earning.py',
         'earning_force': f'{base_path}/Operations/Insert_Earning_Force.py',
-        'futu': '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt'
+        'futu': '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt',
+        'kimi': '/Users/yanzhang/Documents/ScriptEditor/Earning_CheckKimi.scpt'
     }
 
     try:
         if script_type == 'futu':
+            subprocess.run(['osascript', script_configs[script_type], keyword], check=True)
+        
+        if script_type == 'kimi':
             subprocess.run(['osascript', script_configs[script_type], keyword], check=True)
         else:
             python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
@@ -501,6 +505,7 @@ def create_selection_window():
                     menu = tk.Menu(button, tearoff=0)
                     menu.add_command(label="删除", command=lambda k=keyword, g=sector: delete_item(k, g))
                     menu.add_command(label="改名", command=lambda k=keyword, g=sector: rename_item(k, g))
+                    menu.add_command(label="Kimi检索财报", command=lambda k=keyword: execute_external_script('kimi', k))
 
                     # "Add to Earning" option
                     menu.add_command(label="添加到 Earning", command=lambda k=keyword: execute_external_script('earning', k))

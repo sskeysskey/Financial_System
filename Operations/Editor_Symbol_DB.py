@@ -114,6 +114,9 @@ def open_edit_window(record, columns, db_info, tree):
             except Exception as e:
                 messagebox.showerror("错误", str(e))
     
+    # 为整个窗口添加回车键绑定
+    edit_win.bind("<Return>", lambda e: save_changes())
+    
     tk.Button(edit_win, text="保存修改", command=save_changes).grid(row=len(columns), column=0, padx=5, pady=10)
     tk.Button(edit_win, text="删除记录", command=delete_this_record).grid(row=len(columns), column=1, padx=5, pady=10)
 
