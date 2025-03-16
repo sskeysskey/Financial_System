@@ -148,12 +148,10 @@
         "USDINR": "印度卢比"
     },
     "Economics": {
-        "CoreCPI": "12 CoreCPI",
-        "USCPI": "12 USCPI",
-        "CorePPI": "13 CorePPI",
-        "USPPI": "13 USPPI",
-        "USInitial": "13 USInitial",
-        "USConfidence": "14 USConfidence"
+        "USRetailM": "17 USRetailM",
+        "ImportPriceM": "18 ImportPriceM",
+        "USInterest": "19 USInterest",
+        "USInitial": "20 USInitial"
     },
     "ETFs_US": {
         "TLT": "",
