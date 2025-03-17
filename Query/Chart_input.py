@@ -124,7 +124,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     - `：弹出信息对话框
     - d：查询数据库并弹窗显示
     - c：切换显示或隐藏标记点（黄色全局点和橙色特定点）
-    - x：切换显示或隐藏收益公告日期点（绿色点）
+    - a：切换显示或隐藏收益公告日期点（白色点）
     - 方向键上下：在不同时间区间间移动
     - ESC：关闭所有图表，并在panel为True时退出系统
     """
@@ -181,6 +181,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         alpha=0.7,
         label='Price'
     )
+    # 在每个原始价格点处添加一个小小的白色散点
+    ax1.scatter(dates, prices, s=5, color='white', zorder=1)
+    
     line2, = ax2.plot(
         dates,
         volumes,
@@ -279,7 +282,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                                  alpha=0.7, zorder=4, picker=5, visible=show_markers)  # 初始设为不可见
             specific_scatter_points.append((scatter, closest_date, price_at_date, text))
     
-    # 新增：绘制财报收益公告标记点（绿色）
+    # 新增：绘制财报收益公告标记点（白色）
     for marker_date, text in earning_markers.items():
         if min(dates) <= marker_date <= max(dates):
             closest_date_idx = (np.abs(np.array(dates) - marker_date)).argmin()
@@ -438,7 +441,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             # 查找被点击的标记点
             for scatter, date, price, text in global_scatter_points + specific_scatter_points + earning_scatter_points:
                 if event.artist == scatter:
-                    # 更新注释并显示
+                    # 更新注释内容和显示位置
                     annot.xy = (date, price)
                     annot.set_text(f"{datetime.strftime(date, '%Y-%m-%d')}\n{price}\n{text}")
                     annot.get_bbox_patch().set_alpha(0.8)
@@ -591,11 +594,14 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         if mouse_pressed and initial_price is not None:
             percent_change = ((yval - initial_price) / initial_price) * 100
             text = f"{percent_change:.1f}%"
+            annot.set_color('white')  # 百分比变化使用白色
         else:
             # 显示日期和价格
-            text = f"{datetime.strftime(xval, '%Y-%m-%d')}\n{yval}"
+            # text = f"{datetime.strftime(xval, '%Y-%m-%d')}\n{yval}" # 显示当天价格
+            text = f"{datetime.strftime(xval, '%Y-%m-%d')}" # 不显示当天价格
             
             # 添加标记文本信息（如果有）
+            has_earning_marker = False
             marker_texts = []
             if global_marker_text:
                 marker_texts.append(global_marker_text)
@@ -603,9 +609,15 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 marker_texts.append(specific_marker_text)
             if earning_marker_text:
                 marker_texts.append(earning_marker_text)
+                has_earning_marker = True
                 
             if marker_texts:
                 text += "\n" + "\n".join(marker_texts)
+            # 如果是收益公告，设置为黄色，否则为白色
+            if has_earning_marker and not (global_marker_text or specific_marker_text):
+                annot.set_color('yellow')  # 收益公告标记使用黄色文字
+            else:
+                annot.set_color('white')  # 其他标记使用白色文字
         
         annot.set_text(text)
         annot.get_bbox_patch().set_alpha(0.4)
@@ -656,7 +668,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
                 # 判断鼠标位置是否接近数据点的容差（tolerance）值来提高敏感度，根据差值判断是否接近某个数据点
                 # 如果你将它调大，比如改为 0.1 或 0.2，那么即便鼠标离数据点稍远一些，仍然可以触发高亮蓝色价格点
-                date_distance = 0.1 * ((ax1.get_xlim()[1] - ax1.get_xlim()[0]) / 365)
+                date_distance = 0.2 * ((ax1.get_xlim()[1] - ax1.get_xlim()[0]) / 365)
                 if np.isclose(
                     matplotlib.dates.date2num(x_data[nearest_index]),
                     matplotlib.dates.date2num(current_date),
@@ -725,7 +737,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         actions = {
             'v': toggle_volume,
             'c': toggle_markers,  # 'c'键切换黄色和橙色标记点显示
-            'a': toggle_earning_markers,  # 新增：'x'键切换绿色收益公告标记点显示
+            'a': toggle_earning_markers,  # 新增：'a'键切换白色收益公告标记点显示
             '1': lambda: radio.set_active(7),
             '2': lambda: radio.set_active(1),
             '3': lambda: radio.set_active(3),
