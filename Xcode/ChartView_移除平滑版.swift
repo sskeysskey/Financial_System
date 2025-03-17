@@ -815,27 +815,6 @@ struct StockLineChartView: UIViewRepresentable {
         }
     }
 
-    private func calculateLineTension(_ timeRange: TimeRange) -> Double {
-        switch timeRange {
-        case .all:
-            return 0.4
-        case .tenYears:
-            return 0.3
-        case .fiveYears:
-            return 0.2
-        case .twoYears:
-            return 0.15
-        case .oneYear:
-            return 0.1
-        case .sixMonths:
-            return 0.075
-        case .threeMonths:
-            return 0.05
-        case .oneMonth:
-            return 0.025
-        }
-    }
-
     private func configureXAxis(_ xAxis: XAxis) {
         xAxis.labelPosition = .bottom
         xAxis.valueFormatter = DateAxisValueFormatter(timeRange: timeRange)
