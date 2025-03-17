@@ -654,8 +654,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 x_data, y_data = line1.get_data()
                 nearest_index = (np.abs(np.array(x_data) - current_date)).argmin()
 
-                # 根据差值判断是否接近某个数据点
-                date_distance = 0.05 * ((ax1.get_xlim()[1] - ax1.get_xlim()[0]) / 365)
+                # 判断鼠标位置是否接近数据点的容差（tolerance）值来提高敏感度，根据差值判断是否接近某个数据点
+                # 如果你将它调大，比如改为 0.1 或 0.2，那么即便鼠标离数据点稍远一些，仍然可以触发高亮蓝色价格点
+                date_distance = 0.1 * ((ax1.get_xlim()[1] - ax1.get_xlim()[0]) / 365)
                 if np.isclose(
                     matplotlib.dates.date2num(x_data[nearest_index]),
                     matplotlib.dates.date2num(current_date),
