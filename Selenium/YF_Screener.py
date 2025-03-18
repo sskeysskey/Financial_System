@@ -18,9 +18,9 @@ from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import (
     NoSuchElementException,
     StaleElementReferenceException,
-    TimeoutException
+    TimeoutException,
+    InvalidCookieDomainException
 )
-
 
 def save_cookies(driver, cookie_file):
     """

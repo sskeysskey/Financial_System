@@ -23,7 +23,8 @@
     "CMCSA",
     "SPOT",
     "DASH",
-    "NTES"
+    "NTES",
+    "CHTR"
   ],
   "Consumer_Cyclical": [
     "AMZN",
@@ -176,7 +177,8 @@
     "ZTS",
     "CVS",
     "BDX",
-    "MCK"
+    "MCK",
+    "COR"
   ],
   "Industrials": [
     "GE",
