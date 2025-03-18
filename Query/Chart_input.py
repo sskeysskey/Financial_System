@@ -181,8 +181,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         alpha=0.7,
         label='Price'
     )
-    # 在每个原始价格点处添加一个小小的白色散点
-    ax1.scatter(dates, prices, s=5, color='white', zorder=1)
+    # 在每个原始价格点处添加一个小小的白色散点，并保存散点对象引用
+    small_dot_scatter = ax1.scatter(dates, prices, s=5, color='white', zorder=1)
     
     line2, = ax2.plot(
         dates,
@@ -711,6 +711,11 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         fill = update_plot(line1, fill, line2, filtered_dates, filtered_prices, filtered_volumes, ax1, ax2, show_volume)
         radio.circles[list(time_options.keys()).index(val)].set_facecolor('red')
         
+        # 根据所选时间区间控制原始价格点散点的显示
+        if val in ["1m", "3m", "6m", "1Y"]:
+            small_dot_scatter.set_visible(True)
+        else:
+            small_dot_scatter.set_visible(False)
         # 更新黄色和橙色标记点显示，考虑时间范围和总体可见性设置
         for scatter, date, _, _ in global_scatter_points + specific_scatter_points:
             # scatter.set_visible((min_date <= date if years != 0 else True) and show_markers)
