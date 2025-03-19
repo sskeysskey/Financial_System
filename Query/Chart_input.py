@@ -599,7 +599,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             # 显示当前日期、当前价格和当前价格跟最新价格的百分比差值
             latest_price = prices[-1]  # 获取最新日期的价格
             current_price = yval       # 当前鼠标位置的价格
-            percent_diff = ((current_price - latest_price) / latest_price) * 100  # 计算百分比差值
+            percent_diff = ((latest_price - current_price) / current_price) * 100  # 计算百分比差值
             # text = f"{datetime.strftime(xval, '%Y-%m-%d')}\n{current_price:.2f} ({percent_diff:.2f}%)"  # 显示日期、当前价格和百分比差值
             text = f"{datetime.strftime(xval, '%Y-%m-%d')}\n{percent_diff:.2f}%"  # 显示日期、当前价格和百分比差值
             

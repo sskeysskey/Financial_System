@@ -260,6 +260,14 @@ class App:
                 self.save_data()
         
         event_root.bind('<Return>', lambda e: handle_event())
+        # 在 Text 组件上直接绑定 <Return>，并通过返回 "break" 阻止默认插入换行符
+        def on_return(event):
+            handle_event()
+            return "break"  # 阻止默认行为
+        
+        text_widget.bind("<Return>", on_return)
+        
+        # 你可以继续绑定 Escape 键来关闭窗口
         event_root.bind('<Escape>', lambda e: event_root.destroy())
         
         def focus_and_lift():
