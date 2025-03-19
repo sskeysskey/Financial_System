@@ -596,9 +596,12 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             text = f"{percent_change:.1f}%"
             annot.set_color('white')  # 百分比变化使用白色
         else:
-            # 显示日期和价格
-            # text = f"{datetime.strftime(xval, '%Y-%m-%d')}\n{yval}" # 显示当天价格
-            text = f"{datetime.strftime(xval, '%Y-%m-%d')}" # 不显示当天价格
+            # 显示当前日期、当前价格和当前价格跟最新价格的百分比差值
+            latest_price = prices[-1]  # 获取最新日期的价格
+            current_price = yval       # 当前鼠标位置的价格
+            percent_diff = ((current_price - latest_price) / latest_price) * 100  # 计算百分比差值
+            # text = f"{datetime.strftime(xval, '%Y-%m-%d')}\n{current_price:.2f} ({percent_diff:.2f}%)"  # 显示日期、当前价格和百分比差值
+            text = f"{datetime.strftime(xval, '%Y-%m-%d')}\n{percent_diff:.2f}%"  # 显示日期、当前价格和百分比差值
             
             # 添加标记文本信息（如果有）
             has_earning_marker = False
@@ -636,7 +639,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             # 将注释向上方移动
             y_offset = 60  # 设置一个较大的向上偏移
         else:
-            y_offset = -20  # 默认向下偏移
+            y_offset = -70  # 默认向下偏移
         
         # 根据水平位置调整
         if position_ratio > 0.7:  # 如果点在右侧30%区域
@@ -649,9 +652,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         else:  # 中间区域
             # 如果在底部区域，仍然向上偏移
             if y_position_ratio < 0.2:
-                annot.set_position((0, y_offset))
+                annot.set_position((-200, y_offset))
             else:
-                annot.set_position((0, -60))  # 放到下方
+                annot.set_position((-200, -70))  # 放到下方
 
     def hover(event):
         """
@@ -712,7 +715,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         radio.circles[list(time_options.keys()).index(val)].set_facecolor('red')
         
         # 根据所选时间区间控制原始价格点散点的显示
-        if val in ["1m", "3m", "6m", "1Y"]:
+        if val in ["1m", "3m", "6m"]:
             small_dot_scatter.set_visible(True)
         else:
             small_dot_scatter.set_visible(False)
