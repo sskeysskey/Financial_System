@@ -383,13 +383,14 @@
     "PRFZ",
     "FEMS",
     "EZU",
-    "QINT",
     "AGZ",
     "BOCT",
     "IXP",
     "NULG",
     "PSP",
-    "FVAL"
+    "FVAL",
+    "MEAR",
+    "EYLD"
   ],
   "Basic_Materials": [
     "LIN",
