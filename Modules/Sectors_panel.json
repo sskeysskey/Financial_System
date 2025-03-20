@@ -1,5 +1,7 @@
 {
-    "Basic_Materials": {},
+    "Basic_Materials": {
+        "WLK": ""
+    },
     "Real_Estate": {},
     "Energy": {
         "WFRD": ""
@@ -15,7 +17,9 @@
         "HLT": "",
         "AMZN": "",
         "ABNB": "",
-        "H": ""
+        "H": "",
+        "FND": "",
+        "GNTX": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {},
@@ -25,7 +29,9 @@
         "PH": "",
         "SAIA": "关注财报",
         "KNX": "关注财报",
-        "ODFL": ""
+        "ODFL": "",
+        "JBHT": "",
+        "LSTR": ""
     },
     "Communication_Services": {
         "GOOGL": "",

@@ -226,7 +226,6 @@
         "AKAM",
         "BBIO",
         "E",
-        "WLK",
         "IBRX",
         "TMDX",
         "ARE",
@@ -578,7 +577,8 @@
         "TGT",
         "KNX",
         "HST",
-        "TTD"
+        "TTD",
+        "WLK"
     ],
     "orange_keywords": [
         "NASDAQ",
