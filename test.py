@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter import messagebox  # 添加这一行导入messagebox
 import json
 from datetime import datetime, timedelta
 import calendar
@@ -180,8 +181,17 @@ class App:
             
             for section in ['stocks', 'etfs']:
                 for item in self.data[section]:
-                    item_tags = item.get('tag', '').split()
-                    # 检查是否有任何标签匹配
+                    # 获取item的tag并处理不同的数据类型情况
+                    item_tags = []
+                    tag_value = item.get('tag', '')
+                    
+                    # 处理不同类型的tag字段
+                    if isinstance(tag_value, str):
+                        item_tags = tag_value.split()
+                    elif isinstance(tag_value, list):
+                        item_tags = tag_value
+                    
+                    # 检查是否有任何标签完全匹配
                     if any(tag in item_tags for tag in tags):
                         found_symbols.add(item['symbol'])
             
@@ -198,7 +208,7 @@ class App:
                                   (f" 等..." if len(self.selected_symbols) > 5 else ""))
                 
                 # 确认是否继续
-                confirm = tk.messagebox.askyesno("确认", f"找到 {len(self.selected_symbols)} 个符合条件的symbol，是否继续？")
+                confirm = messagebox.askyesno("确认", f"找到 {len(self.selected_symbols)} 个符合条件的symbol，是否继续？")
                 if confirm:
                     tag_root.destroy()
                     self.date_window()
@@ -421,8 +431,10 @@ class App:
             for symbol in self.selected_symbols:
                 # 查找并更新特定symbol的description3
                 for section in ['stocks', 'etfs']:
+                    found = False
                     for item in self.data[section]:
                         if item['symbol'] == symbol:
+                            found = True
                             # 检查是否已存在相同日期的事件
                             if 'description3' in item and isinstance(item['description3'], list) and item['description3'] and isinstance(item['description3'][0], dict):
                                 if self.selected_date in item['description3'][0]:
@@ -458,13 +470,15 @@ class App:
                             
                             updated_count += 1
                             break
+                    if found:
+                        break
             
         self.save_json()
         
         # 创建成功提示框
         success_root = tk.Tk()
         if self.selected_type == "特定" and len(self.selected_symbols) > 1:
-            success_root.title(f"成功 - 已更新{len(self.selected_symbols)}个Symbol")
+            success_root.title(f"成功 - 已更新{updated_count}个Symbol")
         else:
             success_root.title("成功")
         
