@@ -9,17 +9,12 @@
     "Technology": {
         "ANET": "",
         "AAPL": "",
-        "TSM": "",
-        "APH": ""
+        "TSM": ""
     },
     "Consumer_Cyclical": {
         "DECK": "",
         "HLT": "",
-        "AMZN": "",
-        "ABNB": "",
-        "H": "",
-        "FND": "",
-        "GNTX": ""
+        "AMZN": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {},
@@ -28,10 +23,7 @@
         "BLDR": "关注财报",
         "PH": "",
         "SAIA": "关注财报",
-        "KNX": "关注财报",
-        "ODFL": "",
-        "JBHT": "",
-        "LSTR": ""
+        "KNX": "关注财报"
     },
     "Communication_Services": {
         "GOOGL": "",
