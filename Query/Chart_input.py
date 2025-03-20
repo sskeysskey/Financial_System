@@ -136,7 +136,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     initial_price = None
     initial_date = None
     fill = None
-    show_markers = False  # 修改为默认不显示标记点
+    show_global_markers = False  # 红色点默认不显示
+    show_specific_markers = True  # 橙色点默认显示
     show_earning_markers = True  # 默认不显示收益点
 
     try:
@@ -257,7 +258,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             price_at_date = prices[closest_date_idx]
             scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='red', 
                                 #  alpha=0.7, zorder=4, picker=5) # 初始设为可见
-                                 alpha=0.7, zorder=4, picker=5, visible=show_markers)  # 初始设为不可见
+                                 alpha=0.7, zorder=4, picker=5, visible=show_global_markers)  # 初始设为不可见
             global_scatter_points.append((scatter, closest_date, price_at_date, text))
     
     # 绘制特定股票标记点（橙色）
@@ -268,7 +269,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             price_at_date = prices[closest_date_idx]
             scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='orange', 
                                 #  alpha=0.7, zorder=4, picker=5) # 初始设为可见
-                                 alpha=0.7, zorder=4, picker=5, visible=show_markers)  # 初始设为不可见
+                                 alpha=0.7, zorder=4, picker=5, visible=show_specific_markers)  # 初始设为不可见
             specific_scatter_points.append((scatter, closest_date, price_at_date, text))
     
     # 新增：绘制财报收益公告标记点（白色）
@@ -383,22 +384,50 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     return
         display_dialog(f"未找到 {name} 的信息")
 
-    def toggle_markers():
+    def toggle_global_markers():
         """
-        切换标记点的显示状态，不弹出提示框
+        切换全局标记点（红色）的显示状态
         """
-        nonlocal show_markers
-        show_markers = not show_markers
+        nonlocal show_global_markers
+        show_global_markers = not show_global_markers
         
-        # 更新所有标记点的可见性
-        for scatter, _, _, _ in global_scatter_points + specific_scatter_points:
-            scatter.set_visible(show_markers)
+        # 更新所有全局标记点的可见性
+        for scatter, _, _, _ in global_scatter_points:
+            scatter.set_visible(show_global_markers)
         
-        # 如果当前有高亮的标记点且标记点被隐藏，则也隐藏高亮和注释
-        if not show_markers and highlight_point.get_visible():
-            highlight_point.set_visible(False)
-            annot.set_visible(False)
-            
+        # 如果当前有高亮的标记点且该类标记点被隐藏，则也隐藏高亮和注释
+        if not show_global_markers and highlight_point.get_visible():
+            # 检查当前高亮的是否为全局标记点
+            current_pos = highlight_point.get_offsets()[0]
+            for scatter, date, price, _ in global_scatter_points:
+                if date == current_pos[0] and price == current_pos[1]:
+                    highlight_point.set_visible(False)
+                    annot.set_visible(False)
+                    break
+                
+        fig.canvas.draw_idle()
+
+    def toggle_specific_markers():
+        """
+        切换特定股票标记点（橙色）的显示状态
+        """
+        nonlocal show_specific_markers
+        show_specific_markers = not show_specific_markers
+        
+        # 更新所有特定股票标记点的可见性
+        for scatter, _, _, _ in specific_scatter_points:
+            scatter.set_visible(show_specific_markers)
+        
+        # 如果当前有高亮的标记点且该类标记点被隐藏，则也隐藏高亮和注释
+        if not show_specific_markers and highlight_point.get_visible():
+            # 检查当前高亮的是否为特定股票标记点
+            current_pos = highlight_point.get_offsets()[0]
+            for scatter, date, price, _ in specific_scatter_points:
+                if date == current_pos[0] and price == current_pos[1]:
+                    highlight_point.set_visible(False)
+                    annot.set_visible(False)
+                    break
+                
         fig.canvas.draw_idle()
     
     def toggle_earning_markers():
@@ -559,13 +588,13 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         
         # 只有当标记点可见时才显示对应的事件文本
         # 查找全局标记
-        if show_markers:
+        if show_global_markers:
             for marker_date, text in global_markers.items():
                 if abs((marker_date - current_date).total_seconds()) < 86400:  # 两天内
                     global_marker_text = text
                     break
                 
-            # 查找特定股票标记
+        if show_specific_markers:
             for marker_date, text in specific_markers.items():
                 if abs((marker_date - current_date).total_seconds()) < 86400:  # 两天内
                     specific_marker_text = text
@@ -710,10 +739,14 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             small_dot_scatter.set_visible(True)
         else:
             small_dot_scatter.set_visible(False)
-        # 更新红色和橙色标记点显示，考虑时间范围和总体可见性设置
-        for scatter, date, _, _ in global_scatter_points + specific_scatter_points:
-            # scatter.set_visible((min_date <= date if years != 0 else True) and show_markers)
-            scatter.set_visible((min_date <= date) and show_markers)
+
+        # 更新红色标记点显示，考虑时间范围和红色标记点可见性设置
+        for scatter, date, _, _ in global_scatter_points:
+            scatter.set_visible((min_date <= date) and show_global_markers)
+            
+        # 更新橙色标记点显示，考虑时间范围和橙色标记点可见性设置
+        for scatter, date, _, _ in specific_scatter_points:
+            scatter.set_visible((min_date <= date) and show_specific_markers)
             
         # 更新绿色收益公告标记点显示，考虑时间范围和总体可见性设置
         for scatter, date, _, _ in earning_scatter_points:
@@ -735,8 +768,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         """
         actions = {
             'v': toggle_volume,
-            'c': toggle_markers,  # 'c'键切换红色和橙色标记点显示
-            'a': toggle_earning_markers,  # 新增：'a'键切换白色收益公告标记点显示
+            'c': toggle_global_markers,  # 'c'键切换红色全局标记点显示
+            'x': toggle_specific_markers,  # 'x'键切换橙色特定股票标记点显示
+            'a': toggle_earning_markers,  # 'a'键切换白色收益公告标记点显示（保持不变）
             '1': lambda: radio.set_active(7),
             '2': lambda: radio.set_active(1),
             '3': lambda: radio.set_active(3),
