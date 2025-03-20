@@ -123,7 +123,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     - 1~9：快速切换不同时间区间
     - `：弹出信息对话框
     - d：查询数据库并弹窗显示
-    - c：切换显示或隐藏标记点（黄色全局点和橙色特定点）
+    - c：切换显示或隐藏标记点（红色全局点和橙色特定点）
     - a：切换显示或隐藏收益公告日期点（白色点）
     - 方向键上下：在不同时间区间间移动
     - ESC：关闭所有图表，并在panel为True时退出系统
@@ -249,7 +249,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     specific_scatter_points = []
     earning_scatter_points = []  # 新增：收益公告标记点列表
     
-    # 绘制全局标记点（黄色）
+    # 绘制全局标记点（红色）
     for marker_date, text in global_markers.items():
         if min(dates) <= marker_date <= max(dates):
             closest_date_idx = (np.abs(np.array(dates) - marker_date)).argmin()
@@ -605,7 +605,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 
             if marker_texts:
                 text += "\n" + "\n".join(marker_texts)
-            # 如果是收益公告，设置为黄色，否则为白色
+            # 如果是收益公告，设置为黄色字体，否则为白色
             if has_earning_marker and not (global_marker_text or specific_marker_text):
                 annot.set_color('yellow')  # 收益公告标记使用黄色文字
             else:
@@ -627,6 +627,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         if y_position_ratio < 0.2:  # 如果点在底部区域（靠近X轴）
             # 将注释向上方移动
             y_offset = 60  # 设置一个较大的向上偏移
+        elif y_position_ratio > 0.8:    # 如果点在顶部区域
+            y_offset = -120  # 默认向下偏移
         else:
             y_offset = -70  # 默认向下偏移
         
@@ -708,7 +710,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             small_dot_scatter.set_visible(True)
         else:
             small_dot_scatter.set_visible(False)
-        # 更新黄色和橙色标记点显示，考虑时间范围和总体可见性设置
+        # 更新红色和橙色标记点显示，考虑时间范围和总体可见性设置
         for scatter, date, _, _ in global_scatter_points + specific_scatter_points:
             # scatter.set_visible((min_date <= date if years != 0 else True) and show_markers)
             scatter.set_visible((min_date <= date) and show_markers)
@@ -733,7 +735,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         """
         actions = {
             'v': toggle_volume,
-            'c': toggle_markers,  # 'c'键切换黄色和橙色标记点显示
+            'c': toggle_markers,  # 'c'键切换红色和橙色标记点显示
             'a': toggle_earning_markers,  # 新增：'a'键切换白色收益公告标记点显示
             '1': lambda: radio.set_active(7),
             '2': lambda: radio.set_active(1),
