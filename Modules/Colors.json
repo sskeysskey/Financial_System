@@ -98,7 +98,6 @@
         "ALL",
         "SRE",
         "MCK",
-        "FDX",
         "GWW",
         "MSI",
         "PWR",
@@ -380,7 +379,10 @@
         "CSL",
         "FRT",
         "HPE",
-        "JHX"
+        "JHX",
+        "KBH",
+        "FG",
+        "FDX"
     ],
     "yellow_keywords": [
         "Nikkei",
