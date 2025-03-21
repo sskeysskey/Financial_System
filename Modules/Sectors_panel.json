@@ -1,9 +1,5 @@
 {
-    "Basic_Materials": {
-        "JHX": "",
-        "WLK": "",
-        "ASH": ""
-    },
+    "Basic_Materials": {},
     "Real_Estate": {},
     "Energy": {
         "WFRD": ""
@@ -12,8 +8,7 @@
         "ANET": "",
         "TSM": "",
         "ACN": "",
-        "MCHP": "",
-        "NOVT": ""
+        "MCHP": ""
     },
     "Consumer_Cyclical": {
         "DECK": "",
@@ -45,10 +40,7 @@
         "MCO": "关注财报",
         "BN": "关注财报"
     },
-    "Healthcare": {
-        "REGN": "",
-        "BRKR": ""
-    },
+    "Healthcare": {},
     "Bonds": {
         "US2Y": "",
         "US10Y": "",
