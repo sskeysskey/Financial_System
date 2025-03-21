@@ -447,7 +447,9 @@
     "PSP",
     "FVAL",
     "MEAR",
-    "EYLD"
+    "EYLD",
+    "EDIV",
+    "DBEU"
   ],
   "Basic_Materials": [
     "LIN",
