@@ -1,4 +1,5 @@
 import sqlite3
+import subprocess
 from datetime import datetime, timedelta
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -58,6 +59,20 @@ def navigate_to_section(driver, section_css, link_text):
         print(f"成功切换到 {section_css} 并找到 '{link_text}' 的链接，继续执行程序。")
     except TimeoutException:
         print(f"未能在页面上找到 '{link_text}' 的链接。")
+
+def display_dialog(message):
+    # AppleScript代码模板
+    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+    subprocess.run(['osascript', '-e', applescript_code], check=True)
+
+def check_day():
+    """检查当前日期是否为周日或周一"""
+    return datetime.now().weekday() in [6, 0]  # 6 代表周日，0 代表周一
+
+if check_day():
+        message = "今天不是周日或周一，不执行更新操作。"
+        display_dialog(message)
+        return
 
 # ChromeDriver 路径
 chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"

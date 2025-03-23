@@ -33,14 +33,6 @@ def setup_database():
     conn.commit()
     return conn, cursor
 
-# def fetch_commodity_data_str(driver, commodity_name, xpath='./ancestor::tr'):
-#     element = WebDriverWait(driver, 10).until(
-#         EC.presence_of_element_located((By.LINK_TEXT, commodity_name))
-#     )
-#     row = element.find_element(By.XPATH, xpath)
-#     price_str = row.find_element(By.ID, 'p').text.strip()
-#     return float(price_str.replace(',', ''))
-
 def fetch_baltic_dry_price(driver):
     try:
         logging.info("Starting to fetch Baltic Dry price...")

@@ -5,6 +5,7 @@ import pickle
 import random
 import time
 import threading
+import subprocess
 from datetime import datetime, timedelta
 
 import pyautogui
@@ -476,6 +477,19 @@ def backup_file(file_name, source_dir, backup_dir):
     print(f"文件不存在: {file_path}")
     return False
 
+def display_dialog(message):
+    # AppleScript代码模板
+    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+    subprocess.run(['osascript', '-e', applescript_code], check=True)
+
+def check_day():
+    """检查当前日期是否为周日或周一"""
+    return datetime.now().weekday() in [6, 0]  # 6 代表周日，0 代表周一
+
+if check_day():
+    message = "今天是周日或周一，不需要执行抓取操作。"
+    display_dialog(message)
+    return
 
 # 在主程序开始前启动鼠标移动线程
 mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
