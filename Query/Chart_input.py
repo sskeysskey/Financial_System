@@ -390,6 +390,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         """
         nonlocal show_global_markers
         show_global_markers = not show_global_markers
+        update_marker_visibility()
         
         # 更新所有全局标记点的可见性
         for scatter, _, _, _ in global_scatter_points:
@@ -413,6 +414,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         """
         nonlocal show_specific_markers
         show_specific_markers = not show_specific_markers
+        update_marker_visibility()
         
         # 更新所有特定股票标记点的可见性
         for scatter, _, _, _ in specific_scatter_points:
@@ -448,6 +450,27 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             
         fig.canvas.draw_idle()
 
+    def update_marker_visibility():
+        """根据当前 radio 按钮的选中值和各开关状态，更新三类标记的可见性。"""
+        # 提取当前时间区间内显示的最早日期
+        current_val = radio.value_selected
+        if current_val in time_options:
+            years = time_options[current_val]
+            if years == 0:
+                min_date = min(dates)
+            else:
+                min_date = datetime.now() - timedelta(days=years * 365)
+        else:
+            min_date = min(dates)
+
+        for scatter, date, _, _ in global_scatter_points:
+            scatter.set_visible((min_date <= date) and show_global_markers)
+        for scatter, date, _, _ in specific_scatter_points:
+            scatter.set_visible((min_date <= date) and show_specific_markers)
+        for scatter, date, _, _ in earning_scatter_points:
+            scatter.set_visible((min_date <= date) and show_earning_markers)
+        fig.canvas.draw_idle()
+    
     def on_pick(event):
         """
         当点击标题（可点击）或标记点时，展示对应信息窗口。
