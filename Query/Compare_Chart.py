@@ -92,9 +92,29 @@ class StockComparisonApp(QWidget):
             self.label.setText(f'最多只能添加 {self.max_symbols} 个股票代码')
             self.label.setStyleSheet('color: red')
 
+    def format_symbol(self, symbol):
+        """尝试将用户输入的 symbol 转换为数据库中存在的格式"""
+        # 首先加载 JSON 数据
+        with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as f:
+            sector_data = json.load(f)
+        
+        # 从所有 symbol 列表中搜寻匹配项
+        for table, symbol_list in sector_data.items():
+            # 如果用户输入能直接匹配，则直接返回
+            if symbol in symbol_list:
+                return symbol
+            # 尝试大写及首字母大写后匹配
+            if symbol.upper() in symbol_list:
+                return symbol.upper()
+            if symbol.capitalize() in symbol_list:
+                return symbol.capitalize()
+        # 若都找不到，则返回原字符串
+        return symbol
+    
     def compare_stocks(self):
         # 获取所有输入框中输入的股票代码
-        symbols = [input.text().upper() for input in self.symbol_inputs if input.text().strip()]
+        symbols = [self.format_symbol(input.text().strip())
+            for input in self.symbol_inputs if input.text().strip()]
 
         if len(symbols) == 0:
             self.label.setText('请至少输入一个股票代码')
