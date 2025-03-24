@@ -486,101 +486,105 @@ def check_day():
     """检查当前日期是否为周日或周一"""
     return datetime.now().weekday() in [6, 0]  # 6 代表周日，0 代表周一
 
-if check_day():
-    message = "今天是周日或周一，不需要执行抓取操作。"
-    display_dialog(message)
-    return
+def main():
+    if check_day():
+        message = "今天是周日或周一，不需要执行抓取操作。"
+        display_dialog(message)
+        return
 
-# 在主程序开始前启动鼠标移动线程
-mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
-mouse_thread.start()
+    # 在主程序开始前启动鼠标移动线程
+    mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
+    mouse_thread.start()
 
-chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
-service = Service(executable_path=chrome_driver_path)
+    chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
+    service = Service(executable_path=chrome_driver_path)
 
-chrome_options = webdriver.ChromeOptions()
-chrome_options.add_argument('--disable-gpu')
-chrome_options.add_argument('--no-sandbox')
-chrome_options.add_argument('--disable-dev-shm-usage')
-chrome_options.add_argument('--disable-animations')
-chrome_options.add_argument('--disable-extensions')
-chrome_options.add_argument('--disable-infobars')
-chrome_options.add_argument('--disable-popup-blocking')
-chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+    chrome_options = webdriver.ChromeOptions()
+    chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument('--no-sandbox')
+    chrome_options.add_argument('--disable-dev-shm-usage')
+    chrome_options.add_argument('--disable-animations')
+    chrome_options.add_argument('--disable-extensions')
+    chrome_options.add_argument('--disable-infobars')
+    chrome_options.add_argument('--disable-popup-blocking')
+    chrome_options.add_argument('--disable-blink-features=AutomationControlled')
 
-driver = webdriver.Chrome(service=service, options=chrome_options)
-blacklist_file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'
-blacklist = load_blacklist(blacklist_file_path)
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+    blacklist_file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'
+    blacklist = load_blacklist(blacklist_file_path)
 
-output, output_500, output_5000 = [], [], []
+    output, output_500, output_5000 = [], [], []
 
-source_directory = '/Users/yanzhang/Documents/News/backup/'
-backup_directory = '/Users/yanzhang/Documents/News/backup/site'
+    source_directory = '/Users/yanzhang/Documents/News/backup/'
+    backup_directory = '/Users/yanzhang/Documents/News/backup/site'
 
-files_to_backup = ['marketcap_pe.txt', 'price_volume.txt']
-for file in files_to_backup:
-    backup_file(file, source_directory, backup_directory)
+    files_to_backup = ['marketcap_pe.txt', 'price_volume.txt']
+    for file in files_to_backup:
+        backup_file(file, source_directory, backup_directory)
 
-login_url = "https://login.yahoo.com"
-urls = [
-    ('https://finance.yahoo.com/research-hub/screener/511d9b57-07dd-4d6a-8188-0c812754034f/?start=0&count=100', 'Technology'),
-    ('https://finance.yahoo.com/research-hub/screener/511d9b57-07dd-4d6a-8188-0c812754034f/?start=100&count=100', 'Technology'),
-    ('https://finance.yahoo.com/research-hub/screener/511d9b57-07dd-4d6a-8188-0c812754034f/?start=200&count=100', 'Technology'),
-    ('https://finance.yahoo.com/research-hub/screener/8e86de0a-46e0-469f-85d0-a367d5aa6e6b/?start=0&count=100', 'Industrials'),
-    ('https://finance.yahoo.com/research-hub/screener/8e86de0a-46e0-469f-85d0-a367d5aa6e6b/?start=100&count=100', 'Industrials'),
-    ('https://finance.yahoo.com/research-hub/screener/45ecdc79-d64e-46ce-8491-62261d2f0c78/?start=0&count=100', 'Financial_Services'),
-    ('https://finance.yahoo.com/research-hub/screener/45ecdc79-d64e-46ce-8491-62261d2f0c78/?start=100&count=100', 'Financial_Services'),
-    ('https://finance.yahoo.com/research-hub/screener/45ecdc79-d64e-46ce-8491-62261d2f0c78/?start=200&count=100', 'Financial_Services'),
-    ('https://finance.yahoo.com/research-hub/screener/e5221069-608f-419e-a3ff-24e61e4a07ac/?start=0&count=100', 'Basic_Materials'),
-    ('https://finance.yahoo.com/research-hub/screener/90966b0c-2902-425c-870a-f19eb1ffd0b8/?start=0&count=100', 'Consumer_Defensive'),
-    ('https://finance.yahoo.com/research-hub/screener/84e650e0-3916-4907-ad56-2fba4209fa3f/?start=0&count=100', 'Utilities'),
-    ('https://finance.yahoo.com/research-hub/screener/1788e450-82cf-449a-b284-b174e8e3f6d6/?start=0&count=100', 'Energy'),
-    ('https://finance.yahoo.com/research-hub/screener/877aec73-036f-40c3-9768-1c03e937afb7/?start=0&count=100', 'Consumer_Cyclical'),
-    ('https://finance.yahoo.com/research-hub/screener/877aec73-036f-40c3-9768-1c03e937afb7/?start=100&count=100', 'Consumer_Cyclical'),
-    ('https://finance.yahoo.com/research-hub/screener/9a217ba3-966a-4340-83b9-edb160f05f8e/?start=0&count=100', 'Real_Estate'),
-    ('https://finance.yahoo.com/research-hub/screener/f99d96f0-a144-48be-b220-0be74c55ebf4/?start=0&count=100', 'Healthcare'),
-    ('https://finance.yahoo.com/research-hub/screener/f99d96f0-a144-48be-b220-0be74c55ebf4/?start=100&count=100', 'Healthcare'),
-    ('https://finance.yahoo.com/research-hub/screener/360b16ee-2692-4617-bd1a-a6c715dd0c29/?start=0&count=100', 'Communication_Services'),
-]
+    login_url = "https://login.yahoo.com"
+    urls = [
+        ('https://finance.yahoo.com/research-hub/screener/511d9b57-07dd-4d6a-8188-0c812754034f/?start=0&count=100', 'Technology'),
+        ('https://finance.yahoo.com/research-hub/screener/511d9b57-07dd-4d6a-8188-0c812754034f/?start=100&count=100', 'Technology'),
+        ('https://finance.yahoo.com/research-hub/screener/511d9b57-07dd-4d6a-8188-0c812754034f/?start=200&count=100', 'Technology'),
+        ('https://finance.yahoo.com/research-hub/screener/8e86de0a-46e0-469f-85d0-a367d5aa6e6b/?start=0&count=100', 'Industrials'),
+        ('https://finance.yahoo.com/research-hub/screener/8e86de0a-46e0-469f-85d0-a367d5aa6e6b/?start=100&count=100', 'Industrials'),
+        ('https://finance.yahoo.com/research-hub/screener/45ecdc79-d64e-46ce-8491-62261d2f0c78/?start=0&count=100', 'Financial_Services'),
+        ('https://finance.yahoo.com/research-hub/screener/45ecdc79-d64e-46ce-8491-62261d2f0c78/?start=100&count=100', 'Financial_Services'),
+        ('https://finance.yahoo.com/research-hub/screener/45ecdc79-d64e-46ce-8491-62261d2f0c78/?start=200&count=100', 'Financial_Services'),
+        ('https://finance.yahoo.com/research-hub/screener/e5221069-608f-419e-a3ff-24e61e4a07ac/?start=0&count=100', 'Basic_Materials'),
+        ('https://finance.yahoo.com/research-hub/screener/90966b0c-2902-425c-870a-f19eb1ffd0b8/?start=0&count=100', 'Consumer_Defensive'),
+        ('https://finance.yahoo.com/research-hub/screener/84e650e0-3916-4907-ad56-2fba4209fa3f/?start=0&count=100', 'Utilities'),
+        ('https://finance.yahoo.com/research-hub/screener/1788e450-82cf-449a-b284-b174e8e3f6d6/?start=0&count=100', 'Energy'),
+        ('https://finance.yahoo.com/research-hub/screener/877aec73-036f-40c3-9768-1c03e937afb7/?start=0&count=100', 'Consumer_Cyclical'),
+        ('https://finance.yahoo.com/research-hub/screener/877aec73-036f-40c3-9768-1c03e937afb7/?start=100&count=100', 'Consumer_Cyclical'),
+        ('https://finance.yahoo.com/research-hub/screener/9a217ba3-966a-4340-83b9-edb160f05f8e/?start=0&count=100', 'Real_Estate'),
+        ('https://finance.yahoo.com/research-hub/screener/f99d96f0-a144-48be-b220-0be74c55ebf4/?start=0&count=100', 'Healthcare'),
+        ('https://finance.yahoo.com/research-hub/screener/f99d96f0-a144-48be-b220-0be74c55ebf4/?start=100&count=100', 'Healthcare'),
+        ('https://finance.yahoo.com/research-hub/screener/360b16ee-2692-4617-bd1a-a6c715dd0c29/?start=0&count=100', 'Communication_Services'),
+    ]
 
-cookie_file = '/Users/yanzhang/Documents/Financial_System/Modules/yahoo_cookies.pkl'
+    cookie_file = '/Users/yanzhang/Documents/Financial_System/Modules/yahoo_cookies.pkl'
 
-try:
-    driver.get("https://www.yahoo.com/")
-    if load_cookies(driver, cookie_file):
-        driver.refresh()
-        try:
-            WebDriverWait(driver, 60).until(EC.any_of(
-                EC.presence_of_element_located((By.ID, "header-profile-button")),
-                EC.presence_of_element_located((By.ID, "ybarMailIndicator")),
-                EC.presence_of_element_located((By.ID, "ybarAccountMenu")),
-                EC.presence_of_element_located((By.ID, "ybarAccountMenuOpener"))
-            ))
-            print("通过Cookie登录成功。")
-        except TimeoutException:
-            print("Cookie失效，需重新登录。")
+    try:
+        driver.get("https://www.yahoo.com/")
+        if load_cookies(driver, cookie_file):
+            driver.refresh()
+            try:
+                WebDriverWait(driver, 60).until(EC.any_of(
+                    EC.presence_of_element_located((By.ID, "header-profile-button")),
+                    EC.presence_of_element_located((By.ID, "ybarMailIndicator")),
+                    EC.presence_of_element_located((By.ID, "ybarAccountMenu")),
+                    EC.presence_of_element_located((By.ID, "ybarAccountMenuOpener"))
+                ))
+                print("通过Cookie登录成功。")
+            except TimeoutException:
+                print("Cookie失效，需重新登录。")
+                login_once(driver, login_url, "yansteven188@gmail.com", "2345@Abcd")
+                save_cookies(driver, cookie_file)
+        else:
             login_once(driver, login_url, "yansteven188@gmail.com", "2345@Abcd")
             save_cookies(driver, cookie_file)
-    else:
-        login_once(driver, login_url, "yansteven188@gmail.com", "2345@Abcd")
-        save_cookies(driver, cookie_file)
 
-    for url, sector in urls:
-        process_sector(driver, url, sector, output, output_500, output_5000, blacklist)
+        for url, sector in urls:
+            process_sector(driver, url, sector, output, output_500, output_5000, blacklist)
 
-finally:
-    driver.quit()
+    finally:
+        driver.quit()
 
-output_directory = '/Users/yanzhang/Documents/News/backup/backup'
-save_output_to_file(output, output_directory, filename='Stock_50.txt')
-save_output_to_file(output_500, output_directory, filename='Stock_500.txt')
-save_output_to_file(output_5000, output_directory, filename='Stock_5000.txt')
+    output_directory = '/Users/yanzhang/Documents/News/backup/backup'
+    save_output_to_file(output, output_directory, filename='Stock_50.txt')
+    save_output_to_file(output_500, output_directory, filename='Stock_500.txt')
+    save_output_to_file(output_5000, output_directory, filename='Stock_5000.txt')
 
-file_patterns = [
-    ("marketcap_pe_", -1),
-    ("price_volume_", -1),
-    ("NewLow_", -1),
-    ("NewLow500_", -1),
-    ("NewLow5000_", -1)
-]
-clean_old_backups(backup_directory, file_patterns)
+    file_patterns = [
+        ("marketcap_pe_", -1),
+        ("price_volume_", -1),
+        ("NewLow_", -1),
+        ("NewLow500_", -1),
+        ("NewLow5000_", -1)
+    ]
+    clean_old_backups(backup_directory, file_patterns)
+
+if __name__ == "__main__":
+    main()
