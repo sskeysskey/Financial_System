@@ -81,7 +81,8 @@ def open_edit_window(record, columns, db_info, tree, root):
     edit_win.bind("<Escape>", lambda e: edit_win.destroy())
     
     entries = {}
-    # 针对每个字段创建一个标签和 Entry 控件来展示数据
+    date_entry = None  # 用于存储date输入框的引用
+    
     for idx, col in enumerate(columns):
         tk.Label(edit_win, text=col).grid(row=idx, column=0, padx=5, pady=5, sticky="e")
         entry = tk.Entry(edit_win, width=30)
@@ -91,6 +92,8 @@ def open_edit_window(record, columns, db_info, tree, root):
         if col == "id":
             entry.config(state="readonly")
         entries[col] = entry
+        if col == "date":  # 如果是date字段，保存其引用
+            date_entry = entry
 
     # 保存修改的处理函数
     def save_changes():
@@ -126,6 +129,9 @@ def open_edit_window(record, columns, db_info, tree, root):
     
     tk.Button(edit_win, text="保存修改", command=save_changes).grid(row=len(columns), column=0, padx=5, pady=10)
     tk.Button(edit_win, text="删除记录", command=delete_this_record).grid(row=len(columns), column=1, padx=5, pady=10)
+    # 如果找到date输入框，设置焦点
+    if date_entry:
+        date_entry.focus_set()
 
 # 双击 Treeview 的事件响应函数
 def on_double_click(event, tree, db_info, columns, root):
