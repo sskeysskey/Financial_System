@@ -399,7 +399,6 @@
         "APA",
         "DOX",
         "ICL",
-        "NKE",
         "GMAB",
         "PCTY",
         "CNH",
@@ -416,7 +415,6 @@
         "MGA",
         "GGB",
         "LSCC",
-        "DEO",
         "ALB",
         "AGCO",
         "CHK",
@@ -612,7 +610,9 @@
         "MKTX",
         "CGNX",
         "CAG",
-        "OTEX"
+        "OTEX",
+        "NKE",
+        "DEO"
     ],
     "black_keywords": [
         "Cotton",
