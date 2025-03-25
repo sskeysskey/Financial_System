@@ -175,6 +175,23 @@ def create_main_window(db_info):
                                       db_info['include_condition'])
     refresh_treeview(tree, db_info)
     
+    # 添加删除记录的函数
+    def delete_selected_record(event):
+        selected = tree.selection()
+        if selected:
+            record = tree.item(selected[0], "values")
+            if messagebox.askyesno("确认删除", "是否要删除该记录？"):
+                record_id = record[tree["columns"].index("id")]
+                try:
+                    delete_record(db_info['path'], db_info['table'], record_id)
+                    messagebox.showinfo("成功", "记录删除成功！")
+                    refresh_treeview(tree, db_info)
+                except Exception as e:
+                    messagebox.showerror("错误", str(e))
+    
+    # 绑定 Delete 键事件
+    root.bind("<BackSpace>", delete_selected_record)
+    
     # 双击时弹出编辑窗口，传递root作为参数
     tree.bind("<Double-1>", lambda event: on_double_click(event, tree, db_info, tree["columns"], root))
     
