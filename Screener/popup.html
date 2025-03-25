@@ -11,33 +11,9 @@
             font-family: Arial, sans-serif;
         }
 
-        button {
-            padding: 8px 15px;
-            background-color: #4285f4;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 10px;
-            width: 100%;
-        }
-
-        button:hover {
-            background-color: #3367d6;
-        }
-
-        textarea {
-            width: 100%;
-            height: 150px;
-            margin-top: 10px;
-            font-family: monospace;
-            font-size: 12px;
-        }
-
-        .status {
-            margin-top: 10px;
-            font-size: 14px;
-            color: #666;
+        h2 {
+            margin-top: 0;
+            margin-bottom: 15px;
         }
 
         .progress {
@@ -47,7 +23,6 @@
             background-color: #f0f0f0;
             border-radius: 5px;
             overflow: hidden;
-            display: none;
         }
 
         .progress-bar {
@@ -56,54 +31,22 @@
             background-color: #4285f4;
             transition: width 0.3s;
         }
+
+        .status {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+            min-height: 40px;
+        }
     </style>
 </head>
 
 <body>
     <h2>Yahoo Finance Data Scraper</h2>
-    <textarea id="urlsInput" placeholder="Input URLs and categories, format: URL, Category
-Example:
-https://finance.yahoo.com/research-hub/screener/xxx, Technology
-https://finance.yahoo.com/research-hub/screener/yyy, Industrials">('https://finance.yahoo.com/research-hub/screener/511d9b57-07dd-4d6a-8188-0c812754034f/?start=0&count=100',
-'Technology'),
-('https://finance.yahoo.com/research-hub/screener/511d9b57-07dd-4d6a-8188-0c812754034f/?start=100&count=100',
-'Technology'),
-('https://finance.yahoo.com/research-hub/screener/511d9b57-07dd-4d6a-8188-0c812754034f/?start=200&count=100',
-'Technology'),
-('https://finance.yahoo.com/research-hub/screener/8e86de0a-46e0-469f-85d0-a367d5aa6e6b/?start=0&count=100',
-'Industrials'),
-('https://finance.yahoo.com/research-hub/screener/8e86de0a-46e0-469f-85d0-a367d5aa6e6b/?start=100&count=100',
-'Industrials'),
-('https://finance.yahoo.com/research-hub/screener/45ecdc79-d64e-46ce-8491-62261d2f0c78/?start=0&count=100',
-'Financial_Services'),
-('https://finance.yahoo.com/research-hub/screener/45ecdc79-d64e-46ce-8491-62261d2f0c78/?start=100&count=100',
-'Financial_Services'),
-('https://finance.yahoo.com/research-hub/screener/45ecdc79-d64e-46ce-8491-62261d2f0c78/?start=200&count=100',
-'Financial_Services'),
-('https://finance.yahoo.com/research-hub/screener/e5221069-608f-419e-a3ff-24e61e4a07ac/?start=0&count=100',
-'Basic_Materials'),
-('https://finance.yahoo.com/research-hub/screener/90966b0c-2902-425c-870a-f19eb1ffd0b8/?start=0&count=100',
-'Consumer_Defensive'),
-('https://finance.yahoo.com/research-hub/screener/84e650e0-3916-4907-ad56-2fba4209fa3f/?start=0&count=100',
-'Utilities'),
-('https://finance.yahoo.com/research-hub/screener/1788e450-82cf-449a-b284-b174e8e3f6d6/?start=0&count=100', 'Energy'),
-('https://finance.yahoo.com/research-hub/screener/877aec73-036f-40c3-9768-1c03e937afb7/?start=0&count=100',
-'Consumer_Cyclical'),
-('https://finance.yahoo.com/research-hub/screener/877aec73-036f-40c3-9768-1c03e937afb7/?start=100&count=100',
-'Consumer_Cyclical'),
-('https://finance.yahoo.com/research-hub/screener/9a217ba3-966a-4340-83b9-edb160f05f8e/?start=0&count=100',
-'Real_Estate'),
-('https://finance.yahoo.com/research-hub/screener/f99d96f0-a144-48be-b220-0be74c55ebf4/?start=0&count=100',
-'Healthcare'),
-('https://finance.yahoo.com/research-hub/screener/f99d96f0-a144-48be-b220-0be74c55ebf4/?start=100&count=100',
-'Healthcare'),
-('https://finance.yahoo.com/research-hub/screener/360b16ee-2692-4617-bd1a-a6c715dd0c29/?start=0&count=100',
-'Communication_Services')</textarea>
-    <button id="startScraping">Start Scraping</button>
     <div class="progress">
         <div class="progress-bar" id="progressBar"></div>
     </div>
-    <div class="status" id="status">Ready</div>
+    <div class="status" id="status">Initializing...</div>
 
     <script src="popup.js"></script>
 </body>
