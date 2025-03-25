@@ -16,7 +16,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             // Generate filename
             const now = new Date();
             const timestamp = now.toISOString().replace(/[:.]/g, '-').replace('T', '_').substring(0, 19);
-            const filename = `finance_data_${timestamp}.txt`;
+            const filename = `screener_${timestamp}.txt`;
 
             // Convert the text to a blob using Blob API
             const blob = new Blob([textContent], { type: 'text/plain' });
