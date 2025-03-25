@@ -60,26 +60,33 @@ document.addEventListener('DOMContentLoaded', function () {
         // Create a new tab
         const tab = await chrome.tabs.create({ url, active: false });
 
-        // Wait for page to load and scrape data
         try {
-          // Wait for page to load then inject and execute content script
-          await new Promise(resolve => setTimeout(resolve, 8000)); // Wait for page to load
+          // 等待页面加载完成 - 使用更可靠的方法
+          await waitForPageLoad(tab.id);
+
+          statusDiv.textContent = `Page ${i + 1}/${urls.length} loaded, extracting data...`;
 
           let results = [];
           try {
-            results = await new Promise((resolve) => {
+            // 发送消息到content脚本开始抓取数据
+            results = await new Promise((resolve, reject) => {
               chrome.tabs.sendMessage(tab.id, {
                 action: "scrapeData",
                 category
               }, (response) => {
-                resolve(response || []);
+                if (chrome.runtime.lastError) {
+                  reject(new Error(chrome.runtime.lastError.message));
+                } else {
+                  resolve(response || []);
+                }
               });
 
-              // 设置超时，防止无响应
-              setTimeout(() => resolve([]), 30000);
+              // 设置超时，防止永久等待
+              setTimeout(() => reject(new Error("Scraping timeout")), 60000);
             });
           } catch (err) {
-            console.error("Error getting response:", err);
+            console.error("Error getting data:", err);
+            statusDiv.textContent = `Error extracting data from page ${i + 1}: ${err.message}`;
             results = [];
           }
 
@@ -87,14 +94,18 @@ document.addEventListener('DOMContentLoaded', function () {
             allResults = [...allResults, ...results];
             statusDiv.textContent = `Scraped ${i + 1}/${urls.length}: Got ${results.length} records`;
           } else {
-            statusDiv.textContent = `Scrape ${i + 1}/${urls.length} failed or no data`;
+            statusDiv.textContent = `Scrape ${i + 1}/${urls.length} complete, but no matching data found`;
           }
         } catch (err) {
-          console.error("Error scraping data:", err);
-          statusDiv.textContent = `Error scraping ${i + 1}/${urls.length}: ${err.message}`;
+          console.error(`Error processing ${url}:`, err);
+          statusDiv.textContent = `Error on page ${i + 1}/${urls.length}: ${err.message}`;
         } finally {
           // Close the tab
-          await chrome.tabs.remove(tab.id);
+          try {
+            await chrome.tabs.remove(tab.id);
+          } catch (err) {
+            console.error("Error closing tab:", err);
+          }
         }
       }
 
@@ -121,5 +132,78 @@ document.addEventListener('DOMContentLoaded', function () {
       console.error("Processing error:", err);
       statusDiv.textContent = "Error: " + err.message;
     }
+  }
+
+  // 等待页面加载完成的函数
+  async function waitForPageLoad(tabId) {
+    return new Promise((resolve, reject) => {
+      let checkCount = 0;
+      const maxChecks = 60; // 最多检查60次（相当于60秒）
+
+      // 检查页面是否加载完成的函数
+      function checkPageLoad() {
+        chrome.scripting.executeScript({
+          target: { tabId: tabId },
+          function: () => {
+            // 检查页面是否有表格数据
+            const tableRows = document.querySelectorAll('table tbody tr');
+            // 检查加载状态和表格存在性
+            return {
+              readyState: document.readyState,
+              hasTable: tableRows && tableRows.length > 0,
+              rowCount: tableRows ? tableRows.length : 0
+            };
+          }
+        }, (results) => {
+          if (chrome.runtime.lastError) {
+            // 如果页面还没准备好，继续等待
+            checkCount++;
+            if (checkCount >= maxChecks) {
+              reject(new Error("Page load timeout after 60 seconds"));
+            } else {
+              setTimeout(checkPageLoad, 1000); // 1秒后再次检查
+            }
+            return;
+          }
+
+          if (!results || results.length === 0) {
+            checkCount++;
+            if (checkCount >= maxChecks) {
+              reject(new Error("Script execution failed"));
+            } else {
+              setTimeout(checkPageLoad, 1000);
+            }
+            return;
+          }
+
+          const pageStatus = results[0].result;
+
+          // 如果文档已完成加载，并且找到了表格数据，则认为页面已准备好
+          if (pageStatus.readyState === 'complete' && pageStatus.hasTable && pageStatus.rowCount > 0) {
+            // 表格已加载，再等待2秒确保所有数据都渲染完成
+            setTimeout(resolve, 2000);
+          } else if (pageStatus.readyState === 'complete' && checkCount >= 15) {
+            // 如果页面加载完成但15秒后仍未找到表格，可能是页面结构问题
+            if (pageStatus.hasTable) {
+              // 找到表格但行数为0，可能需要更多等待时间
+              setTimeout(checkPageLoad, 1000);
+            } else {
+              reject(new Error("Table not found in the page after 15 seconds"));
+            }
+          } else {
+            // 继续等待页面加载
+            checkCount++;
+            if (checkCount >= maxChecks) {
+              reject(new Error("Page load timeout"));
+            } else {
+              setTimeout(checkPageLoad, 1000);
+            }
+          }
+        });
+      }
+
+      // 开始检查页面加载状态
+      checkPageLoad();
+    });
   }
 });
