@@ -46,14 +46,21 @@ def refresh_treeview(tree, db_info):
     for item in tree.get_children():
         tree.delete(item)
     
-    columns, rows = query_database_data(db_info['path'], db_info['table'], 
-                                          db_info['condition'], db_info['fields'], 
+    columns, rows = query_database_data(db_info['path'],
+                                          db_info['table'],
+                                          db_info['condition'],
+                                          db_info['fields'],
                                           db_info['include_condition'])
     
     if not rows:
+        # 显示提示框，用户点击“确定”后继续执行
         messagebox.showinfo("提示", "没有数据可显示")
-        return
-    
+        # 获取主窗口并销毁（这里使用 tree.winfo_toplevel() 获取主窗口）
+        root = tree.winfo_toplevel()
+        root.destroy()  # 销毁主窗口
+        import sys
+        sys.exit(0)     # 强制退出程序
+
     # 设置列
     tree["columns"] = columns
     tree["show"] = "headings"
@@ -192,14 +199,14 @@ if __name__ == '__main__':
             # 创建一个简单的输入对话框
             def get_input():
                 dialog = tk.Toplevel(root)
-                dialog.title("输入")
+                dialog.title("请输入Symbol")
                 dialog.geometry("300x100")
                 
                 # 自动激活窗口在最前台
                 dialog.lift()
                 dialog.focus_force()
                 
-                label = tk.Label(dialog, text="请输入内容:")
+                label = tk.Label(dialog, text="编辑财报数据")
                 label.pack(pady=5)
                 
                 entry = tk.Entry(dialog, width=30)

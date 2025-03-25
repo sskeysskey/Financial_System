@@ -1,63 +1,32 @@
 {
-    "Basic_Materials": {
-        "WLK": "",
-        "JHX": ""
-    },
+    "Basic_Materials": {},
     "Real_Estate": {},
     "Energy": {
         "WFRD": ""
     },
-    "Technology": {
-        "ANET": "",
-        "TSM": "",
-        "ACN": "",
-        "MCHP": "",
-        "NXPI": "",
-        "NOVT": ""
-    },
+    "Technology": {},
     "Consumer_Cyclical": {
         "DECK": "",
-        "HLT": "",
-        "AMZN": "",
-        "NKE": "",
-        "LEN": "",
-        "AVY": "",
-        "KBH": ""
+        "HLT": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
-        "FLO": "",
-        "DEO": ""
+        "FLO": "关注财报"
     },
     "Industrials": {
         "BAH": "关注财报",
         "BLDR": "关注财报",
-        "PH": "",
         "SAIA": "关注财报",
-        "KNX": "关注财报",
-        "PCAR": "",
-        "ODFL": "",
-        "LSTR": "",
-        "FCN": "",
-        "FSS": ""
+        "KNX": "关注财报"
     },
-    "Communication_Services": {
-        "GOOGL": "",
-        "META": "",
-        "OMC": ""
-    },
+    "Communication_Services": {},
     "Financial_Services": {
         "JPM": "关注财报",
-        "AXP": "",
         "MS": "关注财报",
         "MCO": "关注财报",
-        "BN": "关注财报",
-        "FG": ""
+        "BN": "关注财报"
     },
-    "Healthcare": {
-        "REGN": "",
-        "BRKR": ""
-    },
+    "Healthcare": {},
     "Bonds": {
         "US2Y": "",
         "US10Y": "",
