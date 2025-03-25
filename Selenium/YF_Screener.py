@@ -138,33 +138,6 @@ def retry_on_stale(max_attempts=5, delay=1):
         return wrapper
     return decorator
 
-
-@retry_on_stale(max_attempts=5, delay=1)
-def extract_row_data(driver, index):
-    """
-    提取单行数据，通过行索引重新定位元素
-    """
-    rows = driver.find_elements(By.CSS_SELECTOR, "table tbody tr")
-    if index >= len(rows):
-        raise IndexError("Row index out of range")
-
-    row = rows[index]
-    symbol = row.find_element(By.CSS_SELECTOR, "a[data-testid='table-cell-ticker'] span.symbol").text.strip()
-    name = row.find_element(By.CSS_SELECTOR, "div[title]").get_attribute("title").strip()
-    price = row.find_element(By.CSS_SELECTOR, "fin-streamer[data-field='regularMarketPrice']").get_attribute("data-value").strip()
-
-    volume_element = row.find_element(By.XPATH, ".//td[contains(@class, 'yf-2twxe2')][8]")
-    volume = volume_element.text.strip()
-
-    market_cap_element = row.find_element(By.XPATH, ".//td[contains(@class, 'yf-2twxe2')][10]")
-    market_cap = market_cap_element.text.strip()
-
-    pe_ratio_element = row.find_element(By.XPATH, ".//td[contains(@class, 'yf-2twxe2')][11]")
-    pe_ratio = pe_ratio_element.text.strip()
-
-    return symbol, name, price, volume, market_cap, pe_ratio
-
-
 def fetch_data(driver, url, blacklist):
     """
     从指定URL抓取数据，并处理黑名单过滤逻辑
