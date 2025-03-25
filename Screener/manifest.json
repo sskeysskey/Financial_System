@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "Finance Data Scraper",
+    "name": "Screener Data Scraper",
     "version": "1.0",
     "description": "Scrape Yahoo Finance data and save locally",
     "permissions": [

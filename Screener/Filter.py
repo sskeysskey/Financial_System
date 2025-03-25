@@ -1,6 +1,8 @@
 import json
 import glob
 import os
+import time
+import subprocess
 
 # 读取screener数据文件
 def read_screener_file(filepath):
@@ -49,15 +51,34 @@ def compare_differences(screener_data, sectors_data, blacklist):
     
     return differences
 
+def count_files(prefix):
+    """
+    计算Downloads目录中指定前缀开头的文件数量
+    """
+    download_dir = "/Users/yanzhang/Downloads/"
+    files = glob.glob(os.path.join(download_dir, f"{prefix}_*.txt"))
+    return len(files)
+
+def extension_launch():
+    script = '''
+    tell application "System Events"
+        keystroke "d" using option down
+    end tell
+    '''
+    # 运行AppleScript
+    subprocess.run(['osascript', '-e', script])
+
 # 主函数
 def main():
-    # 查找Downloads目录下最新的screener_开头的txt文件
-    downloads_path = '/Users/yanzhang/Downloads'
-    screener_files = glob.glob(os.path.join(downloads_path, 'screener_*.txt'))
+    extension_launch()
     
-    if not screener_files:
-        print("未找到符合条件的文件！")
-        return
+    while count_files("screener") < 1:
+        time.sleep(2)
+        print(".", end="", flush=True)
+    
+    # 查找Downloads目录下最新的screener_开头的txt文件
+    downloads_path = '/Users/yanzhang/Downloads/'
+    screener_files = glob.glob(os.path.join(downloads_path, 'screener_*.txt'))
     
     # 按文件修改时间排序，获取最新的文件
     screener_file = max(screener_files, key=os.path.getmtime)
@@ -72,14 +93,27 @@ def main():
     blacklist = read_blacklist_file(blacklist_file)
     
     # 比较差异并过滤黑名单
-    differences = compare_differences(screener_data, sectors_data, blacklist)
+    differences = compare_differences(screener_data, sectors_data, blacklist)    
     
-    # 打印结果
-    for sector, diff in differences.items():
-        print(f"\n部门: {sector}")
-        if diff['in_screener_not_in_sectors']:
-            print("在screener文件中有，但在sectors_all中没有的符号 (已过滤screener黑名单):")
-            print(diff['in_screener_not_in_sectors'])
+    if not differences:
+        applescript_code = 'display dialog "没有发现差异！" buttons {"OK"} default button "OK"'
+        subprocess.run(['osascript', '-e', applescript_code], check=True)
+    else:
+        # 准备写入文件的内容
+        output_content = []
+        for sector, diff in differences.items():
+            output_content.append(f"\n部门: {sector}")
+            if diff['in_screener_not_in_sectors']:
+                output_content.append("在screener文件中有，但在sectors_all中没有的符号 (已过滤screener黑名单):")
+                output_content.append(str(diff['in_screener_not_in_sectors']))
+        
+        # 写入文件
+        output_file = '/Users/yanzhang/Documents/News/screener_sectors.txt'
+        with open(output_file, 'w') as f:
+            f.write('\n'.join(output_content))
+        
+        applescript_code = 'display dialog "发现差异并已写入文件！" buttons {"OK"} default button "OK"'
+        subprocess.run(['osascript', '-e', applescript_code], check=True)
 
 if __name__ == "__main__":
     main()
