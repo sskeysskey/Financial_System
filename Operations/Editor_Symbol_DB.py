@@ -1,8 +1,8 @@
+import sys
 import sqlite3
 import tkinter as tk
 from tkinter import ttk, messagebox
 import pyperclip
-import argparse
 
 # 查询数据库，返回列名和记录数据
 def query_database_data(db_file, table_name, condition, fields, include_condition):
@@ -66,11 +66,11 @@ def refresh_treeview(tree, db_info):
         tree.insert("", tk.END, values=row)
 
 # 当用户双击一行时，打开编辑窗口
-def open_edit_window(record, columns, db_info, tree):
-    edit_win = tk.Toplevel()
+def open_edit_window(record, columns, db_info, tree, root):
+    edit_win = tk.Toplevel(root)  # 明确指定父窗口
     edit_win.title("编辑记录")
     
-    # 添加ESC键绑定
+    # 添加ESC键绑定，关闭编辑窗口
     edit_win.bind("<Escape>", lambda e: edit_win.destroy())
     
     entries = {}
@@ -121,11 +121,11 @@ def open_edit_window(record, columns, db_info, tree):
     tk.Button(edit_win, text="删除记录", command=delete_this_record).grid(row=len(columns), column=1, padx=5, pady=10)
 
 # 双击 Treeview 的事件响应函数
-def on_double_click(event, tree, db_info, columns):
+def on_double_click(event, tree, db_info, columns, root):
     selected = tree.selection()
     if selected:
         record = tree.item(selected[0], "values")
-        open_edit_window(record, columns, db_info, tree)
+        open_edit_window(record, columns, db_info, tree, root)
 
 # 创建主窗口，显示查询结果并实现交互编辑功能
 def create_main_window(db_info):
@@ -137,8 +137,19 @@ def create_main_window(db_info):
     root.lift()
     root.focus_force()
     
+    # 添加一个标志来跟踪程序是否应该退出
+    should_exit = [False]
+    
+    # 重写窗口关闭事件处理程序
+    def on_closing():
+        should_exit[0] = True
+        root.destroy()
+    
+    # 设置窗口关闭处理
+    root.protocol("WM_DELETE_WINDOW", on_closing)
+    
     # 按 ESC 键关闭窗口退出程序
-    root.bind("<Escape>", lambda e: root.destroy())
+    root.bind("<Escape>", lambda e: on_closing())
 
     frame = tk.Frame(root)
     frame.pack(fill=tk.BOTH, expand=True)
@@ -153,30 +164,97 @@ def create_main_window(db_info):
     
     # 初始刷新数据
     columns, _ = query_database_data(db_info['path'], db_info['table'], 
-                                       db_info['condition'], db_info['fields'], 
-                                       db_info['include_condition'])
+                                      db_info['condition'], db_info['fields'], 
+                                      db_info['include_condition'])
     refresh_treeview(tree, db_info)
     
-    # 双击时弹出编辑窗口
-    tree.bind("<Double-1>", lambda event: on_double_click(event, tree, db_info, tree["columns"]))
+    # 双击时弹出编辑窗口，传递root作为参数
+    tree.bind("<Double-1>", lambda event: on_double_click(event, tree, db_info, tree["columns"], root))
     
+    # 使用mainloop并在退出时检查标志
     root.mainloop()
+    
+    # 如果标志设置为True，则确保程序完全退出
+    if should_exit[0]:
+        import os
+        os._exit(0)  # 强制终止进程
 
 if __name__ == '__main__':
-    # 创建命令行参数解析器
-    parser = argparse.ArgumentParser(description='数据库查询程序')
-    parser.add_argument('name', type=str, help='要查询的名称', default='')
-    
-    # 解析命令行参数
-    args = parser.parse_args()
+    if len(sys.argv) > 1:
+        arg = sys.argv[1]
+        if arg == "paste":
+            clipboard_content = pyperclip.paste()
+        elif arg == "input":
+            # 使用tkinter创建简单的输入对话框而不是控制台输入
+            root = tk.Tk()
+            root.withdraw()  # 隐藏主窗口
+            
+            # 创建一个简单的输入对话框
+            def get_input():
+                dialog = tk.Toplevel(root)
+                dialog.title("输入")
+                dialog.geometry("300x100")
+                
+                # 自动激活窗口在最前台
+                dialog.lift()
+                dialog.focus_force()
+                
+                label = tk.Label(dialog, text="请输入内容:")
+                label.pack(pady=5)
+                
+                entry = tk.Entry(dialog, width=30)
+                entry.pack(pady=5)
+                entry.focus_set()  # 自动聚焦到输入框
+                
+                result = [None]  # 使用列表存储结果，便于在函数内修改
+                
+                def on_ok():
+                    result[0] = entry.get().upper()  # 获取输入并转为大写
+                    dialog.destroy()
+                
+                # 取消按钮
+                def on_cancel():
+                    dialog.destroy()
+                    # 确保程序在取消时完全退出
+                    import os
+                    os._exit(0)
+                
+                # 按钮区域
+                button_frame = tk.Frame(dialog)
+                button_frame.pack(pady=5)
+                
+                ok_button = tk.Button(button_frame, text="确定", command=on_ok)
+                ok_button.pack(side=tk.LEFT, padx=5)
+                
+                cancel_button = tk.Button(button_frame, text="取消", command=on_cancel)
+                cancel_button.pack(side=tk.LEFT, padx=5)
+                
+                # 绑定回车键和ESC键
+                dialog.bind("<Return>", lambda e: on_ok())
+                dialog.bind("<Escape>", lambda e: on_cancel())
+                
+                # 等待对话框关闭
+                dialog.wait_window(dialog)
+                return result[0]
+            
+            clipboard_content = get_input()
+            # 如果用户取消了输入，退出程序
+            if clipboard_content is None:
+                import os
+                os._exit(0)  # 强制终止进程
+            
+            root.destroy()  # 销毁临时根窗口
+    else:
+        print("请提供参数 input 或 paste")
+        sys.exit(1)
     
     # 数据库配置信息
     db_info = {
         'path': '/Users/yanzhang/Documents/Database/Finance.db',  # 数据库路径
         'table': 'Earning',  # 数据表名称
-        'condition': f"name = '{args.name}'" if args.name else "",
+        'condition': f"name = '{clipboard_content}'" if clipboard_content else "",
         'fields': '*',  # 查询全部字段
-        'include_condition': True if args.name else False
+        'include_condition': True if clipboard_content else False
     }
     
     create_main_window(db_info)

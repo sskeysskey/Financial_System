@@ -147,7 +147,9 @@
     "ALL",
     "AIG",
     "NU",
-    "MFC"
+    "MFC",
+    "COIN",
+    "DB"
   ],
   "Healthcare": [
     "LLY",

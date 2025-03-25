@@ -527,7 +527,8 @@
     "MSGS",
     "NBIS",
     "GSAT",
-    "TIGO"
+    "TIGO",
+    "ANGI"
   ],
   "Consumer_Cyclical": [
     "AMZN",
