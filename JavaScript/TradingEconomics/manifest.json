@@ -1,0 +1,37 @@
+{
+    "manifest_version": 3,
+    "name": "TradingEconomics Data Collector",
+    "version": "1.0",
+    "description": "Scrapes economic data from tradingeconomics.com",
+    "permissions": [
+        "activeTab",
+        "scripting",
+        "storage",
+        "downloads"
+    ],
+    "host_permissions": [
+        "https://tradingeconomics.com/*"
+    ],
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": {
+            "48": "icon.png"
+        }
+    },
+    "background": {
+        "service_worker": "background.js"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://tradingeconomics.com/*"
+            ],
+            "js": [
+                "content.js"
+            ]
+        }
+    ],
+    "icons": {
+        "48": "icon.png"
+    }
+}
