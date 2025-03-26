@@ -252,7 +252,6 @@
         "CSX",
         "PLD",
         "ADBE",
-        "NVO",
         "EXPD",
         "BALL",
         "UWMC",
@@ -382,7 +381,8 @@
         "JHX",
         "KBH",
         "FG",
-        "FDX"
+        "FDX",
+        "GPK"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -522,7 +522,6 @@
         "PPG",
         "CIG",
         "GIS",
-        "FLO",
         "RIO",
         "MGM",
         "TTC",
@@ -579,7 +578,8 @@
         "KNX",
         "HST",
         "TTD",
-        "WLK"
+        "WLK",
+        "NVO"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -612,7 +612,8 @@
         "CAG",
         "OTEX",
         "NKE",
-        "DEO"
+        "DEO",
+        "FLO"
     ],
     "black_keywords": [
         "Cotton",

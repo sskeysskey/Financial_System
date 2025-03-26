@@ -1,5 +1,8 @@
 {
-    "Basic_Materials": {},
+    "Basic_Materials": {
+        "JHX": "",
+        "WLK": ""
+    },
     "Real_Estate": {},
     "Energy": {
         "WFRD": ""
@@ -7,11 +10,15 @@
     "Technology": {},
     "Consumer_Cyclical": {
         "DECK": "",
-        "HLT": ""
+        "HLT": "",
+        "NKE": "",
+        "GPK": "",
+        "KBH": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
-        "FLO": "关注财报"
+        "FLO": "关注财报",
+        "DEO": ""
     },
     "Industrials": {
         "BAH": "关注财报",
@@ -26,7 +33,12 @@
         "MCO": "关注财报",
         "BN": "关注财报"
     },
-    "Healthcare": {},
+    "Healthcare": {
+        "NVO": "",
+        "REGN": "",
+        "VTRS": "",
+        "BRKR": ""
+    },
     "Bonds": {
         "US2Y": "",
         "US10Y": "",
