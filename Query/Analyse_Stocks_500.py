@@ -233,7 +233,7 @@ def load_stock_splits(file_path):
         #     error_file.write(formatted_error_message)
     return stock_splits_symbols
 
-def main():    
+def main():
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
     blacklist_path = '/Users/yanzhang/Documents/Financial_System/Modules/blacklist.json'
     blacklist_newlow = load_blacklist_newlow(blacklist_path)
@@ -245,7 +245,7 @@ def main():
     with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_500.json', 'r') as file:
         data = json.load(file)
 
-    output = []    
+    output = []
     intervals = [5]  # 以月份表示的时间间隔列表
 
     # 遍历JSON中的每个表和股票代码

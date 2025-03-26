@@ -11,30 +11,14 @@
             padding: 10px;
         }
 
-        button {
-            background-color: #4285f4;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            width: 100%;
-            margin-top: 10px;
-        }
-
-        button:hover {
-            background-color: #3367d6;
-        }
-
-        #status {
-            margin-top: 10px;
-            color: #666;
+        h2 {
+            color: #4285f4;
+            margin-bottom: 10px;
         }
 
         .progress {
             margin-top: 10px;
-            height: 5px;
+            height: 10px;
             width: 100%;
             background-color: #f0f0f0;
             border-radius: 5px;
@@ -47,17 +31,34 @@
             border-radius: 5px;
             transition: width 0.3s;
         }
+
+        #status {
+            margin-top: 10px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        #errorMessage {
+            color: #d93025;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 
 <body>
     <h2>Economics Data Scraper</h2>
-    <p>Click the button below to start scraping data from Trading Economics.</p>
-    <button id="scrapeButton">Scrape Economic Data</button>
+    <p id="startupMessage">Scraping automatically started...</p>
     <div class="progress">
         <div class="progress-bar" id="progressBar"></div>
     </div>
-    <div id="status">Ready</div>
+    <div id="status">Initializing...</div>
+    <div id="errorMessage"></div>
+    <input type="hidden" id="autoStartFlag" value="true">
     <script src="popup.js"></script>
 </body>
 

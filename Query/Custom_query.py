@@ -89,8 +89,8 @@ if __name__ == '__main__':
         # 'include_condition': True},
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities',
-        #     'condition': "name = 'Zinc'", 'fields': '*',
-        # 'include_condition': False},
+        #     'condition': "name = 'Rice'", 'fields': '*',
+        # 'include_condition': True},
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto',
         #   'condition': "name = 'Solana'", 'fields': '*',
