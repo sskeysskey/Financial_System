@@ -156,7 +156,8 @@ async function fetchDataFromSection(indicators, dateStr) {
                 try {
                     const price = parseFloat(priceStr.replace(',', ''));
                     if (!isNaN(price)) {
-                        scrapedData.push([dateStr, value, price]);
+                        // 添加第四个字段 "Economics" 作为 Category
+                        scrapedData.push([dateStr, value, price, "Economics"]);
                         console.log(`Successfully scraped ${key}: ${price}`);
                     } else {
                         console.log(`Failed to convert ${key} value '${priceStr}' to number, skipping.`);
@@ -229,7 +230,8 @@ function waitForElement(selector, timeout = 10000) {
 
 // Convert the data to CSV format
 function convertToCSV(data) {
-    const header = 'date,name,price\n';
+    // 修改 header 以包含新的 Category 列
+    const header = 'date,name,price,category\n';
     const rows = data.map(row => row.join(',')).join('\n');
     return header + rows;
 }

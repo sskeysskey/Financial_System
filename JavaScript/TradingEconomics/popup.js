@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', function () {
             // Download the CSV file
             chrome.downloads.download({
                 url: message.dataUrl,
-                filename: 'economic_data_' + new Date().toISOString().split('T')[0] + '.csv',
+                filename: 'economic_' + new Date().toISOString().split('T')[0] + '.csv',
                 saveAs: false
             }, () => {
                 statusDiv.textContent = "Data downloaded to /Users/yanzhang/Downloads";
