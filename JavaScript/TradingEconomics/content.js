@@ -18,7 +18,8 @@ const economicsSections = [
             "Non Manufacturing PMI": "USNonPMI"
         },
         nextSection: 'a[data-bs-target="#labour"]',
-        nextSectionLinkText: "Manufacturing Payrolls"
+        nextSectionLinkText: "Manufacturing Payrolls",
+        category: "Economics"
     },
     {
         indicators: {
@@ -26,7 +27,8 @@ const economicsSections = [
             "ADP Employment Change": "USNonFarmA"
         },
         nextSection: 'a[data-bs-target="#prices"]',
-        nextSectionLinkText: "Core Consumer Prices"
+        nextSectionLinkText: "Core Consumer Prices",
+        category: "Economics"
     },
     {
         indicators: {
@@ -40,14 +42,16 @@ const economicsSections = [
             "Import Prices YoY": "ImportPriceY"
         },
         nextSection: 'a[data-bs-target="#gdp"]',
-        nextSectionLinkText: "GDP Constant Prices"
+        nextSectionLinkText: "GDP Constant Prices",
+        category: "Economics"
     },
     {
         indicators: {
             "Real Consumer Spending": "USConspending"
         },
         nextSection: null,
-        nextSectionLinkText: null
+        nextSectionLinkText: null,
+        category: "Economics"  // 添加category属性
     }
 ];
 
@@ -92,9 +96,10 @@ async function processCurrentSection(dateStr) {
         // Get the indicators for the current section
         const sectionData = economicsSections[currentSection];
         const indicators = sectionData.indicators;
+        const category = sectionData.category; // 获取当前section的category
 
         // Scrape data from current section
-        await fetchDataFromSection(indicators, dateStr);
+        await fetchDataFromSection(indicators, dateStr, category); // 传入category参数
 
         // Update progress
         updateProgress(`Completed section ${currentSection + 1}`, 25 + (currentSection * 25));
@@ -131,7 +136,7 @@ async function processCurrentSection(dateStr) {
 }
 
 // Fetch data from the current section
-async function fetchDataFromSection(indicators, dateStr) {
+async function fetchDataFromSection(indicators, dateStr, category) {
     for (const [key, value] of Object.entries(indicators)) {
         try {
             // Try to find the element using XPath
@@ -156,9 +161,8 @@ async function fetchDataFromSection(indicators, dateStr) {
                 try {
                     const price = parseFloat(priceStr.replace(',', ''));
                     if (!isNaN(price)) {
-                        // 添加第四个字段 "Economics" 作为 Category
-                        scrapedData.push([dateStr, value, price, "Economics"]);
-                        console.log(`Successfully scraped ${key}: ${price}`);
+                        scrapedData.push([dateStr, value, price, category]);
+                        console.log(`Successfully scraped ${key}: ${price} (${category})`);
                     } else {
                         console.log(`Failed to convert ${key} value '${priceStr}' to number, skipping.`);
                     }
@@ -230,7 +234,6 @@ function waitForElement(selector, timeout = 10000) {
 
 // Convert the data to CSV format
 function convertToCSV(data) {
-    // 修改 header 以包含新的 Category 列
     const header = 'date,name,price,category\n';
     const rows = data.map(row => row.join(',')).join('\n');
     return header + rows;
