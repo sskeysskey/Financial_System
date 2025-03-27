@@ -23,8 +23,7 @@
   "Consumer_Cyclical": [],
   "Consumer_Defensive": [],
   "Energy": [
-    "EAS",
-    "Gold",
+    "GOLD",
     "TU"
   ],
   "Financial_Services": [],
@@ -32,7 +31,9 @@
   "Industrials": [],
   "Real_Estate": [],
   "Technology": [
-    "WBD"
+    "WBD",
+    "AAPL",
+    "NVDA"
   ],
   "Utilities": []
 }
