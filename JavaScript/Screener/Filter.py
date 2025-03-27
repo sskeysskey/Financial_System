@@ -316,5 +316,12 @@ def main():
     output_file = '/Users/yanzhang/Documents/News/screener_sectors.txt'
     write_log_file(output_file, added_symbols, changes_5000, changes_500, moved_symbols)
 
+    # 等待1秒
+    time.sleep(1)
+
+    # 打开文件
+    # 在 macOS 系统下使用 open 命令打开文件
+    os.system(f"open {output_file}")
+
 if __name__ == "__main__":
     main()
