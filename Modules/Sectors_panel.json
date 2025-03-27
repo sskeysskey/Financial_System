@@ -7,13 +7,21 @@
     "Energy": {
         "WFRD": ""
     },
-    "Technology": {},
+    "Technology": {
+        "AVGO": "",
+        "FSLR": "",
+        "ENTG": "",
+        "PONY": ""
+    },
     "Consumer_Cyclical": {
         "DECK": "",
         "HLT": "",
         "NKE": "",
         "GPK": "",
-        "KBH": ""
+        "KBH": "",
+        "RACE": "",
+        "FND": "",
+        "ANF": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -37,7 +45,8 @@
         "NVO": "",
         "REGN": "",
         "VTRS": "",
-        "BRKR": ""
+        "BRKR": "",
+        "ILMN": ""
     },
     "Bonds": {
         "US2Y": "",
