@@ -2,6 +2,7 @@ import json
 import glob
 import os
 import time
+import sqlite3
 import subprocess
 from datetime import datetime
 
@@ -49,9 +50,10 @@ def filter_screener_symbols(symbols, blacklist):
     return [symbol for symbol in symbols if symbol not in screener_symbols]
 
 # 比较差异并更新sectors文件
-def compare_and_update_sectors(screener_data, sectors_all_data, sectors_today_data, sectors_empty_data, blacklist):
+def compare_and_update_sectors(screener_data, sectors_all_data, sectors_today_data, sectors_empty_data, blacklist, db_file):
     differences = {}
     added_symbols = []
+    moved_symbols = []  # 新增：记录移动的symbols
     
     # 遍历screener数据中的每个部门
     for sector, symbols in screener_data.items():
@@ -67,9 +69,28 @@ def compare_and_update_sectors(screener_data, sectors_all_data, sectors_today_da
                     'in_screener_not_in_sectors': filtered_screener_not_in_sectors
                 }
                 
-                # 将差异的symbol添加到sectors_all_data和sectors_today_data
+                # 对每个新symbol检查是否存在于其他sector中
                 for symbol in filtered_screener_not_in_sectors:
+                    # 检查symbol是否在其他sector中
+                    found_in_other_sector = False
+                    
+                    for other_sector, other_symbols in sectors_all_data.items():
+                        if other_sector != sector and symbol in other_symbols:
+                            found_in_other_sector = True
+                            
+                            # 在移动symbol之前，先删除数据库中的记录
+                            delete_records_by_names(db_file, other_sector, [symbol])
+                            
+                            # 从原sector中删除
+                            sectors_all_data[other_sector].remove(symbol)
+                            if other_sector in sectors_today_data and symbol in sectors_today_data[other_sector]:
+                                sectors_today_data[other_sector].remove(symbol)
+                            moved_symbols.append(f"将symbol '{symbol}' 从 '{other_sector}' 中移除")
+                            break
+                    
+                    # 添加到新的sector
                     sectors_all_data[sector].append(symbol)
+                    added_symbols.append(f"将symbol '{symbol}' 添加到 '{sector}' 部门")
                     
                     # 确保sectors_today_data中有该sector
                     if sector not in sectors_today_data:
@@ -78,17 +99,15 @@ def compare_and_update_sectors(screener_data, sectors_all_data, sectors_today_da
                     # 将symbol添加到sectors_today_data中
                     sectors_today_data[sector].append(symbol)
 
-                    # 确保sectors_today_data中有该sector
+                    # 确保sectors_empty_data中有该sector
                     if sector not in sectors_empty_data:
-                        sectors_today_data[sector] = []
+                        sectors_empty_data[sector] = []
                     
-                    # 将symbol添加到sectors_today_data中
-                    sectors_empty_data[sector].append(symbol)
-                    
-                    # 记录添加的symbol
-                    added_symbols.append(f"将symbol '{symbol}' 添加到 '{sector}' 部门")
+                    # 将symbol添加到sectors_empty_data中（如果不存在）
+                    if symbol not in sectors_empty_data[sector]:
+                        sectors_empty_data[sector].append(symbol)
     
-    return differences, sectors_all_data, sectors_today_data, sectors_empty_data, added_symbols
+    return differences, sectors_all_data, sectors_today_data, sectors_empty_data, added_symbols, moved_symbols
 
 def count_files(prefix):
     """
@@ -133,6 +152,15 @@ def process_sectors_5000(sectors_5000, screener_data, market_caps, blacklist):
                 market_caps[symbol] >= 500000000000 and 
                 symbol not in sectors_5000[sector] and
                 not is_in_blacklist(symbol, blacklist)):
+                
+                # 新增：检查symbol是否在其他sector中存在
+                for other_sector in sectors_5000:
+                    if other_sector != sector and symbol in sectors_5000[other_sector]:
+                        sectors_5000[other_sector].remove(symbol)
+                        changes_5000.append(f"将{symbol}从5000.json的{other_sector}组中删除")
+                        break
+                
+                # 添加到新sector
                 sectors_5000[sector].append(symbol)
                 changes_5000.append(f"向5000.json的{sector}组中添加了{symbol}(市值: {market_caps[symbol]})")
             # 移除了在黑名单中的记录
@@ -165,33 +193,35 @@ def process_sectors_500(sectors_500, screener_data, market_caps, blacklist):
                 market_caps[symbol] >= 50000000000 and 
                 symbol not in sectors_500[sector] and
                 not is_in_blacklist(symbol, blacklist)):
+                
+                # 新增：检查symbol是否在其他sector中存在
+                for other_sector in sectors_500:
+                    if other_sector != sector and symbol in sectors_500[other_sector]:
+                        sectors_500[other_sector].remove(symbol)
+                        changes_500.append(f"将{symbol}从500.json的{other_sector}组删除")
+                        break
+                
+                # 添加到新sector
                 sectors_500[sector].append(symbol)
                 changes_500.append(f"向500.json的{sector}组中添加了{symbol}(市值: {market_caps[symbol]})")
             # 移除了在黑名单中的记录
     
     return sectors_500, changes_500
 
-# 写入日志文件
-def write_log_file(output_file, original_differences, added_symbols, changes_5000, changes_500):
+# 修改write_log_file函数来包含移动的symbols信息
+def write_log_file(output_file, added_symbols, changes_5000, changes_500, moved_symbols):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     with open(output_file, 'w') as f:
-        f.write(f"=== 更新时间: {timestamp} ===\n\n")
+        f.write(f"=== Sectors_All变更: {timestamp} ===\n\n")
         
-        # 写入原有差异信息
-        if not original_differences:
-            f.write("今天没有Symbol要添加到Sector_All中！\n\n")
-        else:
-            f.write("发现原有差异：\n")
-            for sector, diff in original_differences.items():
-                f.write(f"\n部门: {sector}\n")
-                if diff['in_screener_not_in_sectors']:
-                    f.write("在screener文件中有，但在sectors_all中没有的符号 (已过滤screener黑名单):\n")
-                    f.write(str(diff['in_screener_not_in_sectors']) + "\n")
+        # 写入移动的symbols信息
+        if moved_symbols:
+            for move in moved_symbols:
+                f.write(f"- {move}\n")
         
         # 写入添加到sectors的symbols信息
         if added_symbols:
-            f.write("\n=== 已添加到Sectors文件的Symbols ===\n")
             for change in added_symbols:
                 f.write(f"- {change}\n")
         
@@ -211,6 +241,26 @@ def write_log_file(output_file, original_differences, added_symbols, changes_500
         else:
             f.write("没有变更\n")
 
+def delete_records_by_names(db_file, table_name, stock_names):
+    """从数据库中删除记录"""
+    if not stock_names:
+        print("没有提供要删除的股票代码")
+        return
+        
+    conn = sqlite3.connect(db_file)
+    
+    try:
+        cur = conn.cursor()
+        placeholders = ', '.join('?' for _ in stock_names)
+        sql = f"DELETE FROM {table_name} WHERE name IN ({placeholders});"
+        cur.execute(sql, stock_names)
+        conn.commit()
+        print(f"成功从表 {table_name} 中删除 {stock_names} 的 {cur.rowcount} 条记录。")
+    except sqlite3.Error as e:
+        print(f"数据库错误: {e}")
+    finally:
+        conn.close()
+
 # 主函数
 def main():
     extension_launch()
@@ -227,6 +277,7 @@ def main():
     screener_file = max(screener_files, key=os.path.getmtime)
     print(f"使用文件: {screener_file}")
     
+    db_file = '/Users/yanzhang/Documents/Database/Finance.db'
     sectors_all_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
     sectors_today_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_Today.json'
     sectors_empty_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json'
@@ -244,8 +295,8 @@ def main():
     blacklist = read_blacklist_file(blacklist_file)
     
     # 比较差异并更新sectors文件
-    differences, updated_sectors_all, updated_sectors_today, updated_sectors_empty, added_symbols = compare_and_update_sectors(
-        screener_data, sectors_all_data, sectors_today_data, sectors_empty_data, blacklist
+    differences, updated_sectors_all, updated_sectors_today, updated_sectors_empty, added_symbols, moved_symbols = compare_and_update_sectors(
+        screener_data, sectors_all_data, sectors_today_data, sectors_empty_data, blacklist, db_file
     )
     
     # 保存更新后的sectors文件
@@ -263,7 +314,7 @@ def main():
     
     # 写入汇总日志文件
     output_file = '/Users/yanzhang/Documents/News/screener_sectors.txt'
-    write_log_file(output_file, differences, added_symbols, changes_5000, changes_500)
+    write_log_file(output_file, added_symbols, changes_5000, changes_500, moved_symbols)
 
 if __name__ == "__main__":
     main()

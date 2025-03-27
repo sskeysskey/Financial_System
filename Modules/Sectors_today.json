@@ -534,6 +534,7 @@
     ],
     "Consumer_Cyclical": [
         "AMZN",
+        "TSLA",
         "HD",
         "TM",
         "BABA",
@@ -703,8 +704,7 @@
         "KTB",
         "SG",
         "URBN",
-        "ASO",
-        "TSLA"
+        "ASO"
     ],
     "Consumer_Defensive": [
         "WMT",
