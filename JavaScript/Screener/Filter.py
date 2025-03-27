@@ -48,15 +48,16 @@ def filter_screener_symbols(symbols, blacklist):
     screener_symbols = set(blacklist.get('screener', []))
     return [symbol for symbol in symbols if symbol not in screener_symbols]
 
-# 比较差异
-def compare_differences(screener_data, sectors_data, blacklist):
+# 比较差异并更新sectors文件
+def compare_and_update_sectors(screener_data, sectors_all_data, sectors_today_data, sectors_empty_data, blacklist):
     differences = {}
+    added_symbols = []
     
     # 遍历screener数据中的每个部门
     for sector, symbols in screener_data.items():
-        if sector in sectors_data:
+        if sector in sectors_all_data:
             # 在screener中有，但在sectors_all中没有的symbols
-            in_screener_not_in_sectors = set(symbols) - set(sectors_data[sector])
+            in_screener_not_in_sectors = set(symbols) - set(sectors_all_data[sector])
             
             # 过滤掉黑名单中的screener符号
             filtered_screener_not_in_sectors = filter_screener_symbols(in_screener_not_in_sectors, blacklist)
@@ -65,8 +66,29 @@ def compare_differences(screener_data, sectors_data, blacklist):
                 differences[sector] = {
                     'in_screener_not_in_sectors': filtered_screener_not_in_sectors
                 }
+                
+                # 将差异的symbol添加到sectors_all_data和sectors_today_data
+                for symbol in filtered_screener_not_in_sectors:
+                    sectors_all_data[sector].append(symbol)
+                    
+                    # 确保sectors_today_data中有该sector
+                    if sector not in sectors_today_data:
+                        sectors_today_data[sector] = []
+                    
+                    # 将symbol添加到sectors_today_data中
+                    sectors_today_data[sector].append(symbol)
+
+                    # 确保sectors_today_data中有该sector
+                    if sector not in sectors_empty_data:
+                        sectors_today_data[sector] = []
+                    
+                    # 将symbol添加到sectors_today_data中
+                    sectors_empty_data[sector].append(symbol)
+                    
+                    # 记录添加的symbol
+                    added_symbols.append(f"将symbol '{symbol}' 添加到 '{sector}' 部门")
     
-    return differences
+    return differences, sectors_all_data, sectors_today_data, sectors_empty_data, added_symbols
 
 def count_files(prefix):
     """
@@ -150,7 +172,7 @@ def process_sectors_500(sectors_500, screener_data, market_caps, blacklist):
     return sectors_500, changes_500
 
 # 写入日志文件
-def write_log_file(output_file, original_differences, changes_5000, changes_500):
+def write_log_file(output_file, original_differences, added_symbols, changes_5000, changes_500):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     with open(output_file, 'w') as f:
@@ -158,7 +180,7 @@ def write_log_file(output_file, original_differences, changes_5000, changes_500)
         
         # 写入原有差异信息
         if not original_differences:
-            f.write("没有发现原有差异！\n\n")
+            f.write("今天没有Symbol要添加到Sector_All中！\n\n")
         else:
             f.write("发现原有差异：\n")
             for sector, diff in original_differences.items():
@@ -166,6 +188,12 @@ def write_log_file(output_file, original_differences, changes_5000, changes_500)
                 if diff['in_screener_not_in_sectors']:
                     f.write("在screener文件中有，但在sectors_all中没有的符号 (已过滤screener黑名单):\n")
                     f.write(str(diff['in_screener_not_in_sectors']) + "\n")
+        
+        # 写入添加到sectors的symbols信息
+        if added_symbols:
+            f.write("\n=== 已添加到Sectors文件的Symbols ===\n")
+            for change in added_symbols:
+                f.write(f"- {change}\n")
         
         # 写入5000.json变更信息
         f.write("\n=== Sectors_5000.json 变更 ===\n")
@@ -200,6 +228,8 @@ def main():
     print(f"使用文件: {screener_file}")
     
     sectors_all_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
+    sectors_today_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_Today.json'
+    sectors_empty_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json'
     sectors_5000_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_5000.json'
     sectors_500_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_500.json'
     blacklist_file = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'
@@ -207,12 +237,21 @@ def main():
     # 读取数据
     screener_data, market_caps = read_screener_file(screener_file)
     sectors_all_data = read_sectors_file(sectors_all_file)
+    sectors_today_data = read_sectors_file(sectors_today_file)
+    sectors_empty_data = read_sectors_file(sectors_empty_file)
     sectors_5000_data = read_sectors_file(sectors_5000_file)
     sectors_500_data = read_sectors_file(sectors_500_file)
     blacklist = read_blacklist_file(blacklist_file)
     
-    # 比较差异并过滤黑名单
-    differences = compare_differences(screener_data, sectors_all_data, blacklist)
+    # 比较差异并更新sectors文件
+    differences, updated_sectors_all, updated_sectors_today, updated_sectors_empty, added_symbols = compare_and_update_sectors(
+        screener_data, sectors_all_data, sectors_today_data, sectors_empty_data, blacklist
+    )
+    
+    # 保存更新后的sectors文件
+    save_sectors_file(sectors_all_file, updated_sectors_all)
+    save_sectors_file(sectors_today_file, updated_sectors_today)
+    save_sectors_file(sectors_empty_file, updated_sectors_empty)
     
     # 处理Sectors_5000.json
     updated_sectors_5000, changes_5000 = process_sectors_5000(sectors_5000_data, screener_data, market_caps, blacklist)
@@ -224,43 +263,7 @@ def main():
     
     # 写入汇总日志文件
     output_file = '/Users/yanzhang/Documents/News/screener_sectors.txt'
-    write_log_file(output_file, differences, changes_5000, changes_500)
-    
-    # 准备弹窗消息
-    message = ""
-    
-    # 添加原有差异信息
-    if not differences:
-        message += "没有发现原有差异！\n\n"
-    else:
-        message += "发现原有差异并已写入文件！\n\n"
-    
-    # 添加5000.json变更信息
-    if changes_5000:
-        message += "Sectors_5000.json 变更:\n"
-        for change in changes_5000[:10]:  # 限制显示数量避免弹窗过大
-            message += f"- {change}\n"
-        if len(changes_5000) > 10:
-            message += f"- 以及其他 {len(changes_5000) - 10} 项变更...\n"
-        message += "\n"
-    else:
-        message += "Sectors_5000.json 没有变更\n\n"
-    
-    # 添加500.json变更信息
-    if changes_500:
-        message += "Sectors_500.json 变更:\n"
-        for change in changes_500[:10]:  # 限制显示数量避免弹窗过大
-            message += f"- {change}\n"
-        if len(changes_500) > 10:
-            message += f"- 以及其他 {len(changes_500) - 10} 项变更...\n"
-    else:
-        message += "Sectors_500.json 没有变更\n"
-    
-    message += "\n所有变更已写入日志文件！"
-    
-    # 显示弹窗
-    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK" with title "处理结果"'
-    subprocess.run(['osascript', '-e', applescript_code], check=True)
+    write_log_file(output_file, differences, added_symbols, changes_5000, changes_500)
 
 if __name__ == "__main__":
     main()
