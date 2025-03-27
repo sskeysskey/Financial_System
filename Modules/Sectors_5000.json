@@ -1,35 +1,36 @@
 {
-  "Basic_Materials": [],
-  "Communication_Services": [
-    "GOOGL",
-    "META"
-  ],
-  "Consumer_Cyclical": [
-    "AMZN",
-    "TSLA"
-  ],
-  "Consumer_Defensive": [
-    "WMT"
-  ],
-  "Energy": [
-    "XOM"
-  ],
-  "Financial_Services": [
-    "BRK-A",
-    "JPM",
-    "V"
-  ],
-  "Healthcare": [
-    "LLY"
-  ],
-  "Industrials": [],
-  "Real_Estate": [],
-  "Technology": [
-    "AAPL",
-    "MSFT",
-    "NVDA",
-    "TSM",
-    "AVGO"
-  ],
-  "Utilities": []
+    "Basic_Materials": [],
+    "Communication_Services": [
+        "GOOGL",
+        "META"
+    ],
+    "Consumer_Cyclical": [
+        "AMZN",
+        "TSLA"
+    ],
+    "Consumer_Defensive": [
+        "WMT"
+    ],
+    "Energy": [
+        "XOM"
+    ],
+    "Financial_Services": [
+        "BRK-A",
+        "JPM",
+        "V",
+        "MA"
+    ],
+    "Healthcare": [
+        "LLY"
+    ],
+    "Industrials": [],
+    "Real_Estate": [],
+    "Technology": [
+        "AAPL",
+        "MSFT",
+        "NVDA",
+        "TSM",
+        "AVGO"
+    ],
+    "Utilities": []
 }

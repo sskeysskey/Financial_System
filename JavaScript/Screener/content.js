@@ -58,15 +58,6 @@ async function scrapeFinanceData(category) {
                 const symbol = symbolElement.textContent.trim();
                 console.log(`Found symbol: ${symbol}`);
 
-                // Get name - updated selector based on the HTML structure
-                const nameElement = row.querySelector("div[title]");
-                if (!nameElement) {
-                    console.log("No name element found in row");
-                    continue;
-                }
-                const name = nameElement.getAttribute('title').trim();
-                console.log(`Found name: ${name}`);
-
                 // Get market cap - finding the correct cell that contains market cap
                 // Market cap is in the 10th cell (index 9) according to your HTML
                 const cells = row.querySelectorAll("td");
@@ -105,10 +96,9 @@ async function scrapeFinanceData(category) {
                     results.push({
                         symbol,
                         marketCap,
-                        name,
                         category
                     });
-                    console.log(`Added to results: ${symbol}, ${marketCap}, ${name}, ${category}`);
+                    console.log(`Added to results: ${symbol}, ${marketCap}, ${category}`);
                 } else {
                     console.log(`Skipped: Market cap ${marketCap} is less than 5 billion`);
                 }

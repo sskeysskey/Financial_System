@@ -13,10 +13,7 @@
         "https://finance.yahoo.com/*"
     ],
     "action": {
-        "default_popup": "popup.html",
-        "default_icon": {
-            "48": "icon.png"
-        }
+        "default_popup": "popup.html"
     },
     "background": {
         "service_worker": "background.js"
@@ -31,8 +28,5 @@
             ],
             "run_at": "document_idle"
         }
-    ],
-    "icons": {
-        "48": "icon.png"
-    }
+    ]
 }

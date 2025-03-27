@@ -10,7 +10,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             // Generate text content
             let textContent = "";
             data.forEach(item => {
-                textContent += `${item.symbol}: ${item.marketCap}, ${item.name}, ${item.category}\n`;
+                textContent += `${item.symbol}: ${item.marketCap}, ${item.category}\n`;
             });
 
             // Generate filename
