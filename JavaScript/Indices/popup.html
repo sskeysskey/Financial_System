@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Stock Data Scraper</title>
+    <style>
+        body {
+            width: 300px;
+            padding: 10px;
+            font-family: Arial, sans-serif;
+        }
+
+        .status {
+            margin-top: 10px;
+            padding: 5px;
+            border-radius: 3px;
+            background-color: #f0f0f0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .status-item {
+            margin: 5px 0;
+            padding: 3px;
+        }
+
+        .success {
+            color: green;
+        }
+
+        .error {
+            color: red;
+        }
+
+        .in-progress {
+            color: blue;
+        }
+    </style>
+</head>
+
+<body>
+    <h3>Stock Data Scraper</h3>
+    <p>Scraping is running automatically...</p>
+    <div class="status" id="status-container">
+        <div class="status-item in-progress" id="init-status">Initializing...</div>
+    </div>
+    <script src="popup.js"></script>
+</body>
+
+</html>
