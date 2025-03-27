@@ -90,6 +90,21 @@ def get_user_input_custom(root, prompt):
     input_dialog.title(prompt)
     input_dialog.geometry('280x90')
     
+    # 获取屏幕宽度和高度
+    screen_width = input_dialog.winfo_screenwidth()
+    screen_height = input_dialog.winfo_screenheight()
+    
+    # 获取窗口宽度和高度
+    window_width = 280
+    window_height = 90
+    
+    # 计算居中位置
+    x = (screen_width - window_width) // 2
+    y = (screen_height - window_height) // 2 - 200
+    
+    # 设置窗口位置
+    input_dialog.geometry(f'{window_width}x{window_height}+{x}+{y}')
+    
     entry = tk.Entry(input_dialog, width=20, font=('Helvetica', 18))
     entry.pack(pady=20, ipady=10)
     entry.focus_set()
