@@ -2,6 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support import expected_conditions as EC
 import os
 import re
@@ -49,11 +50,19 @@ def clean_company_name(name):
     
     return cleaned_name.strip()
 
+chrome_options = Options()
+chrome_options.add_argument("--disable-extensions")
+chrome_options.add_argument("--disable-gpu")
+chrome_options.add_argument("--disable-dev-shm-usage")
+chrome_options.add_argument("--no-sandbox")
+chrome_options.add_argument("--blink-settings=imagesEnabled=false")  # 禁用图片加载
+chrome_options.page_load_strategy = 'eager'  # 使用eager策略，DOM准备好就开始
+
 chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
 
 # 设置 ChromeDriver
 service = Service(executable_path=chrome_driver_path)
-driver = webdriver.Chrome(service=service)
+driver = webdriver.Chrome(service=service, options=chrome_options)
 
 # 文件目录路径
 txt_file_directory = "/Users/yanzhang/Documents/News/backup/backup/"

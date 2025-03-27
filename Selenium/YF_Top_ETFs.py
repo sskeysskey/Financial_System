@@ -5,6 +5,7 @@ import json
 import shutil
 from selenium.webdriver.chrome.service import Service
 from datetime import datetime, timedelta
+from selenium.webdriver.chrome.options import Options
 import pyautogui
 import random
 import time
@@ -35,12 +36,19 @@ def move_mouse_periodically():
 mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
 mouse_thread.start()
 
+chrome_options = Options()
+chrome_options.add_argument("--disable-extensions")
+chrome_options.add_argument("--disable-gpu")
+chrome_options.add_argument("--disable-dev-shm-usage")
+chrome_options.add_argument("--no-sandbox")
+chrome_options.add_argument("--blink-settings=imagesEnabled=false")  # 禁用图片加载
+chrome_options.page_load_strategy = 'eager'  # 使用eager策略，DOM准备好就开始
+
 # ChromeDriver 路径
 chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
-
 # 设置 ChromeDriver
 service = Service(executable_path=chrome_driver_path)
-driver = webdriver.Chrome(service=service)
+driver = webdriver.Chrome(service=service, options=chrome_options)
 
 def convert_volume(volume_str):
     """转换交易量字符串为整数"""
