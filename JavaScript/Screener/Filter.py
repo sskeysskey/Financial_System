@@ -54,6 +54,8 @@ def compare_and_update_sectors(screener_data, sectors_all_data, sectors_today_da
     differences = {}
     added_symbols = []
     moved_symbols = []  # 新增：记录移动的symbols
+    db_delete_logs = []
+    has_changes = False
     
     # 遍历screener数据中的每个部门
     for sector, symbols in screener_data.items():
@@ -65,6 +67,7 @@ def compare_and_update_sectors(screener_data, sectors_all_data, sectors_today_da
             filtered_screener_not_in_sectors = filter_screener_symbols(in_screener_not_in_sectors, blacklist)
             
             if filtered_screener_not_in_sectors:
+                has_changes = True
                 differences[sector] = {
                     'in_screener_not_in_sectors': filtered_screener_not_in_sectors
                 }
@@ -79,7 +82,8 @@ def compare_and_update_sectors(screener_data, sectors_all_data, sectors_today_da
                             found_in_other_sector = True
                             
                             # 在移动symbol之前，先删除数据库中的记录
-                            delete_records_by_names(db_file, other_sector, [symbol])
+                            delete_logs = delete_records_by_names(db_file, other_sector, [symbol])
+                            db_delete_logs.extend(delete_logs)
                             
                             # 从原sector中删除
                             sectors_all_data[other_sector].remove(symbol)
@@ -107,7 +111,10 @@ def compare_and_update_sectors(screener_data, sectors_all_data, sectors_today_da
                     if symbol not in sectors_empty_data[sector]:
                         sectors_empty_data[sector].append(symbol)
     
-    return differences, sectors_all_data, sectors_today_data, sectors_empty_data, added_symbols, moved_symbols
+    if not has_changes:
+        added_symbols.append("Sectors_All文件没有需要更新的内容")
+    
+    return differences, sectors_all_data, sectors_today_data, sectors_empty_data, added_symbols, moved_symbols, db_delete_logs
 
 def count_files(prefix):
     """
@@ -209,7 +216,7 @@ def process_sectors_500(sectors_500, screener_data, market_caps, blacklist):
     return sectors_500, changes_500
 
 # 修改write_log_file函数来包含移动的symbols信息
-def write_log_file(output_file, added_symbols, changes_5000, changes_500, moved_symbols):
+def write_log_file(output_file, added_symbols, changes_5000, changes_500, moved_symbols, db_delete_logs):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     with open(output_file, 'w') as f:
@@ -224,6 +231,12 @@ def write_log_file(output_file, added_symbols, changes_5000, changes_500, moved_
         if added_symbols:
             for change in added_symbols:
                 f.write(f"- {change}\n")
+                
+        # 写入数据库删除记录
+        if db_delete_logs:
+            f.write("\n=== 数据库删除记录 ===\n")
+            for log in db_delete_logs:
+                f.write(f"- {log}\n")
         
         # 写入5000.json变更信息
         f.write("\n=== Sectors_5000.json 变更 ===\n")
@@ -243,9 +256,10 @@ def write_log_file(output_file, added_symbols, changes_5000, changes_500, moved_
 
 def delete_records_by_names(db_file, table_name, stock_names):
     """从数据库中删除记录"""
+    delete_log = []
     if not stock_names:
         print("没有提供要删除的股票代码")
-        return
+        return delete_log
         
     conn = sqlite3.connect(db_file)
     
@@ -255,11 +269,15 @@ def delete_records_by_names(db_file, table_name, stock_names):
         sql = f"DELETE FROM {table_name} WHERE name IN ({placeholders});"
         cur.execute(sql, stock_names)
         conn.commit()
-        print(f"成功从表 {table_name} 中删除 {stock_names} 的 {cur.rowcount} 条记录。")
+        if cur.rowcount > 0:
+            log_msg = f"成功从表 {table_name} 中删除 {stock_names} 的 {cur.rowcount} 条记录"
+            print(log_msg)
+            delete_log.append(log_msg)
     except sqlite3.Error as e:
         print(f"数据库错误: {e}")
     finally:
         conn.close()
+        return delete_log
 
 # 主函数
 def main():
@@ -295,7 +313,7 @@ def main():
     blacklist = read_blacklist_file(blacklist_file)
     
     # 比较差异并更新sectors文件
-    differences, updated_sectors_all, updated_sectors_today, updated_sectors_empty, added_symbols, moved_symbols = compare_and_update_sectors(
+    differences, updated_sectors_all, updated_sectors_today, updated_sectors_empty, added_symbols, moved_symbols, db_delete_logs = compare_and_update_sectors(
         screener_data, sectors_all_data, sectors_today_data, sectors_empty_data, blacklist, db_file
     )
     
@@ -314,7 +332,7 @@ def main():
     
     # 写入汇总日志文件
     output_file = '/Users/yanzhang/Documents/News/screener_sectors.txt'
-    write_log_file(output_file, added_symbols, changes_5000, changes_500, moved_symbols)
+    write_log_file(output_file, added_symbols, changes_5000, changes_500, moved_symbols, db_delete_logs)
 
     # 等待1秒
     time.sleep(1)
