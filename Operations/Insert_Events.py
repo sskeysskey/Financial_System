@@ -389,7 +389,7 @@ class App:
         frame = ttk.Frame(event_root, padding="10")
         frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
-        ttk.Label(frame, text="请输入事件描述:").grid(row=0, column=0, pady=5)
+        ttk.Label(frame, text="请输入事件描述 (Shift+Enter 提交):").grid(row=0, column=0, pady=5)
         
         # 设置文本框字体大小
         text_widget = tk.Text(frame, height=5, width=40, font=('TkDefaultFont', 14))
@@ -402,15 +402,12 @@ class App:
                 event_root.destroy()
                 self.save_data()
         
-        event_root.bind('<Return>', lambda e: handle_event())
-        # 在 Text 组件上直接绑定 <Return>，并通过返回 "break" 阻止默认插入换行符
-        def on_return(event):
+        # 使用 Shift+Return 作为提交快捷键
+        def on_shift_return(event):
             handle_event()
-            return "break"  # 阻止默认行为
+            return "break"
         
-        text_widget.bind("<Return>", on_return)
-        
-        # 你可以继续绑定 Escape 键来关闭窗口
+        text_widget.bind("<Shift-Return>", on_shift_return)
         event_root.bind('<Escape>', lambda e: event_root.destroy())
         
         def focus_and_lift():

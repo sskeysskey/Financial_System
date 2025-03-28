@@ -273,7 +273,9 @@
         "ARW",
         "J",
         "USB",
-        "OSCR"
+        "OSCR",
+        "SWK",
+        "VTRS"
     ],
     "screener": [
         "CTA-PA",
@@ -556,6 +558,7 @@
         "HAWX",
         "JVAL",
         "SKOR",
-        "DXJ"
+        "DXJ",
+        "HMOP"
     ]
 }

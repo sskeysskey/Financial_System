@@ -106,7 +106,6 @@ def open_edit_window(record, columns, db_info, tree, root):
             new_values[col] = entries[col].get()
         try:
             update_record(db_info['path'], db_info['table'], record_id, new_values)
-            messagebox.showinfo("成功", "记录更新成功！")
             edit_win.destroy()
             refresh_treeview(tree, db_info)
         except Exception as e:
