@@ -1,9 +1,13 @@
 {
     "Basic_Materials": {
         "JHX": "",
-        "WLK": ""
+        "WLK": "",
+        "PPG": ""
     },
-    "Real_Estate": {},
+    "Real_Estate": {
+        "EQIX": "",
+        "RHP": ""
+    },
     "Energy": {
         "WFRD": ""
     },
@@ -11,7 +15,13 @@
         "AVGO": "",
         "FSLR": "",
         "ENTG": "",
-        "PONY": ""
+        "PONY": "",
+        "TSM": "",
+        "MRVL": "",
+        "NXPI": "",
+        "MCHP": "",
+        "NOVT": "",
+        "ACLS": ""
     },
     "Consumer_Cyclical": {
         "DECK": "",
@@ -32,7 +42,8 @@
         "BAH": "关注财报",
         "BLDR": "关注财报",
         "SAIA": "关注财报",
-        "KNX": "关注财报"
+        "KNX": "关注财报",
+        "SWK": ""
     },
     "Communication_Services": {},
     "Financial_Services": {

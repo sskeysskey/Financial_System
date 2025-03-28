@@ -130,7 +130,6 @@
         "PH",
         "SPG",
         "NVDA",
-        "TSM",
         "MAR",
         "HLT",
         "SPGI",
@@ -138,7 +137,8 @@
         "MS",
         "MET",
         "AAPL",
-        "GOOGL"
+        "GOOGL",
+        "TSM"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -382,7 +382,8 @@
         "KBH",
         "FG",
         "FDX",
-        "GPK"
+        "GPK",
+        "SWK"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -531,7 +532,6 @@
         "IONS",
         "EIX",
         "REGN",
-        "CRSP",
         "QSR",
         "CRL",
         "CMCSA",
@@ -613,7 +613,8 @@
         "OTEX",
         "NKE",
         "DEO",
-        "FLO"
+        "FLO",
+        "CRSP"
     ],
     "black_keywords": [
         "Cotton",
