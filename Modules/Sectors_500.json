@@ -89,8 +89,7 @@
         "KMI",
         "MPLX",
         "PSX",
-        "LNG",
-        "TRP"
+        "LNG"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -146,9 +145,7 @@
         "BCS",
         "ALL",
         "AIG",
-        "NU",
-        "MFC",
-        "DB"
+        "MFC"
     ],
     "Healthcare": [
         "LLY",
@@ -216,8 +213,7 @@
         "PCAR",
         "JCI",
         "CPRT",
-        "HWM",
-        "WCN"
+        "HWM"
     ],
     "Real_Estate": [
         "PLD",
@@ -271,14 +267,12 @@
         "CRWD",
         "MRVL",
         "ROP",
-        "NXPI",
         "FTNT",
         "ADSK",
         "PAYX",
         "TEAM",
         "APP",
-        "MSTR",
-        "SNOW"
+        "MSTR"
     ],
     "Utilities": [
         "NEE",
