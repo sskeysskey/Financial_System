@@ -158,7 +158,7 @@ def main():
     
     # 根据命令行参数选择JSON文件路径和输出目录
     if args.mode.lower() == 'empty':
-        json_file_path = "/Users/yanzhang/Documents/Financial_System/Test/Sectors_empty.json"
+        json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json"
         # 使用backup目录
         shares_file_path = "/Users/yanzhang/Documents/News/backup/Shares.txt"
         symbol_names_file_path = "/Users/yanzhang/Documents/News/backup/symbol_names.txt"

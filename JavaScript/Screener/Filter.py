@@ -29,10 +29,39 @@ def read_sectors_file(filepath):
     with open(filepath, 'r') as f:
         return json.load(f)
 
-# 保存sectors配置文件
-def save_sectors_file(filepath, data):
+# 比较两个字典是否相同
+def is_dict_changed(old_dict, new_dict):
+    """比较两个字典是否有实质变化"""
+    if set(old_dict.keys()) != set(new_dict.keys()):
+        return True
+    
+    for key in old_dict:
+        if sorted(old_dict[key]) != sorted(new_dict[key]):
+            return True
+    
+    return False
+
+# 修改保存sectors配置文件函数
+def save_sectors_file(filepath, new_data, old_data=None):
+    """只有当数据真正变化时才保存文件"""
+    # 如果没有提供旧数据，则从文件中读取
+    if old_data is None:
+        try:
+            with open(filepath, 'r') as f:
+                old_data = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            old_data = {}
+    
+    # 检查数据是否真的变化了
+    if not is_dict_changed(old_data, new_data):
+        print(f"文件 {filepath} 没有变化，跳过保存")
+        return False
+    
+    # 如果有变化，则保存文件
     with open(filepath, 'w') as f:
-        json.dump(data, f, indent=4)
+        json.dump(new_data, f, indent=4)
+    print(f"文件 {filepath} 有变化，已保存")
+    return True
 
 # 读取黑名单文件
 def read_blacklist_file(filepath):
@@ -317,10 +346,15 @@ def main():
         screener_data, sectors_all_data, sectors_today_data, sectors_empty_data, blacklist, db_file
     )
     
-    # 保存更新后的sectors文件
-    save_sectors_file(sectors_all_file, updated_sectors_all)
-    save_sectors_file(sectors_today_file, updated_sectors_today)
-    save_sectors_file(sectors_empty_file, updated_sectors_empty)
+    # 保存更新后的sectors文件，只有在有变化时才保存
+    all_saved = save_sectors_file(sectors_all_file, updated_sectors_all, sectors_all_data)
+    today_saved = save_sectors_file(sectors_today_file, updated_sectors_today, sectors_today_data)
+    empty_saved = save_sectors_file(sectors_empty_file, updated_sectors_empty, sectors_empty_data)
+    
+    # 如果没有变化则修改日志
+    if not (all_saved or today_saved or empty_saved):
+        if "Sectors_All文件没有需要更新的内容" not in added_symbols:
+            added_symbols.append("Sectors_All文件没有需要更新的内容")
     
     # 处理Sectors_5000.json
     updated_sectors_5000, changes_5000 = process_sectors_5000(sectors_5000_data, screener_data, market_caps, blacklist)
@@ -335,7 +369,7 @@ def main():
     write_log_file(output_file, added_symbols, changes_5000, changes_500, moved_symbols, db_delete_logs)
 
     # 等待1秒
-    time.sleep(1)
+    time.sleep(2)
 
     # 打开文件
     # 在 macOS 系统下使用 open 命令打开文件
