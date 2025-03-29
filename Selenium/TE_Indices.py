@@ -4,14 +4,8 @@ from datetime import datetime, timedelta
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.options import Options
 import sqlite3
-
-# ChromeDriver 路径
-chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
-
-# 设置 ChromeDriver
-service = Service(executable_path=chrome_driver_path)
-driver = webdriver.Chrome(service=service)
 
 # 获取当前时间
 now = datetime.now()
@@ -20,6 +14,20 @@ now = datetime.now()
 if now.weekday() in (0, 6):
     print("Today is either Sunday or Monday. The script will not run.")
 else:
+    # 设置Chrome选项以提高性能
+    chrome_options = Options()
+    chrome_options.add_argument("--disable-extensions")  # 禁用扩展
+    chrome_options.add_argument("--disable-gpu")  # 禁用GPU加速
+    chrome_options.add_argument("--disable-dev-shm-usage")  # 禁用开发者工具
+    chrome_options.add_argument("--no-sandbox")  # 禁用沙盒模式
+    chrome_options.add_argument("--blink-settings=imagesEnabled=false")  # 禁用图片加载
+    chrome_options.page_load_strategy = 'eager'  # 使用eager策略，DOM准备好就开始
+
+    # 设置ChromeDriver路径并初始化
+    chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
+    service = Service(executable_path=chrome_driver_path)
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+
     # 初始化数据库连接
     conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
     cursor = conn.cursor()
