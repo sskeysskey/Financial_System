@@ -275,7 +275,8 @@
         "USB",
         "OSCR",
         "SWK",
-        "VTRS"
+        "VTRS",
+        "SMG"
     ],
     "screener": [
         "CTA-PA",

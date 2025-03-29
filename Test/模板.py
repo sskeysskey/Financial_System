@@ -1,4 +1,16 @@
 # ——————————————————————————————————————————————————————————————————————————————————————————
+def draw_underline(text_obj, fig, ax1):
+    """
+    给可点击的标题下方画一条下划线视觉提示。
+    """
+    x, y = text_obj.get_position()
+    text_renderer = text_obj.get_window_extent(renderer=fig.canvas.get_renderer())
+    linewidth = text_renderer.width
+    line = matplotlib.lines.Line2D([x, x + linewidth], [y - 2, y - 2], transform=ax1.transData, color='blue', linewidth=2)
+    ax1.add_line(line)
+
+draw_underline(title, fig, ax1)
+# ——————————————————————————————————————————————————————————————————————————————————————————
 import os
 import json
 import sqlite3

@@ -273,8 +273,11 @@ if __name__ == '__main__':
                 os._exit(0)  # 强制终止进程
             
             root.destroy()  # 销毁临时根窗口
+        else:
+            # 新增处理方式：直接使用命令行参数作为clipboard_content
+            clipboard_content = arg.upper()  # 转为大写以保持一致性
     else:
-        print("请提供参数 input 或 paste")
+        print("请提供参数: input、paste 或直接提供Symbol名称")
         sys.exit(1)
     
     # 数据库配置信息

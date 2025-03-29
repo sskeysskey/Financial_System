@@ -79,16 +79,6 @@ def display_dialog(message):
     applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
     subprocess.run(['osascript', '-e', applescript_code], check=True)
 
-def draw_underline(text_obj, fig, ax1):
-    """
-    给可点击的标题下方画一条下划线视觉提示。
-    """
-    x, y = text_obj.get_position()
-    text_renderer = text_obj.get_window_extent(renderer=fig.canvas.get_renderer())
-    linewidth = text_renderer.width
-    line = matplotlib.lines.Line2D([x, x + linewidth], [y - 2, y - 2], transform=ax1.transData, color='blue', linewidth=2)
-    ax1.add_line(line)
-
 def update_plot(line1, fill, line2, dates, prices, volumes, ax1, ax2, show_volume):
     """
     根据筛选后的数据更新图表。
@@ -169,7 +159,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     ax1.tick_params(axis='y', colors='white')
     ax2.tick_params(axis='y', colors='white')
 
-    highlight_point = ax1.scatter([], [], s=100, color='blue', zorder=5)
+    highlight_point = ax1.scatter([], [], s=100, color='cyan', zorder=5)
     
     # 绘制插值后的平滑曲线
     line1, = ax1.plot(
@@ -556,7 +546,6 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     # 给标题添加可点击下划线
     if clickable:
-        draw_underline(title, fig, ax1)
         fig.canvas.mpl_connect('pick_event', on_pick)
 
     ax1.grid(True, color='gray', alpha=0.1, linestyle='--')
@@ -660,6 +649,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             # 如果是收益公告，设置为黄色字体，否则为白色
             if has_earning_marker and not (global_marker_text or specific_marker_text):
                 annot.set_color('yellow')  # 收益公告标记使用黄色文字
+            elif global_marker_text and not (specific_marker_text or has_earning_marker):
+                annot.set_color('red')    # 全局标记使用红色文字
+            elif specific_marker_text and not (global_marker_text or has_earning_marker):
+                annot.set_color('orange')    # 特殊标记使用橘色文字
             else:
                 annot.set_color('white')  # 其他标记使用白色文字
         
@@ -847,7 +840,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             mouse_pressed = False
 
     # 参考线
-    vline = ax1.axvline(x=dates[0], color='blue', linestyle='--', linewidth=1, visible=False)
+    vline = ax1.axvline(x=dates[0], color='cyan', linestyle='--', linewidth=1, visible=False)
 
     # 连接事件
     plt.gcf().canvas.mpl_connect("motion_notify_event", hover)
