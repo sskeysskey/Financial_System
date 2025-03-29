@@ -424,7 +424,9 @@
         "TPX",
         "HCP",
         "ALTM",
-        "AZPN"
+        "AZPN",
+        "EDR",
+        "ALTR"
     ],
     "etf": [
         "VDE",

@@ -6,7 +6,6 @@
         "KLAC",
         "LRCX",
         "CI",
-        "TMO",
         "UNP",
         "CL",
         "KO",
@@ -16,7 +15,6 @@
         "NEM",
         "PG",
         "NVS",
-        "CP",
         "O",
         "INFY",
         "UL",
@@ -137,6 +135,7 @@
         "MS",
         "MET",
         "AAPL",
+        "CRH",
         "GOOGL",
         "TSM"
     ],
@@ -215,7 +214,6 @@
         "WFRD",
         "NXT",
         "MOH",
-        "CDW",
         "HMC",
         "SMCI",
         "TDW",
@@ -249,7 +247,6 @@
         "RS",
         "VLO",
         "CHX",
-        "CSX",
         "PLD",
         "ADBE",
         "EXPD",
@@ -317,9 +314,7 @@
         "SNPS",
         "ONTO",
         "MKSI",
-        "BSY",
         "NXE",
-        "VTRS",
         "TECH",
         "SRPT",
         "RRX",
@@ -383,7 +378,13 @@
         "FG",
         "FDX",
         "GPK",
-        "SWK"
+        "SWK",
+        "EMN",
+        "ESI",
+        "SMG",
+        "PAG",
+        "TMO",
+        "NTAP"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -489,7 +490,6 @@
         "PEP",
         "KHC",
         "GSK",
-        "ST",
         "BIDU",
         "BHP",
         "SEM",
@@ -579,7 +579,13 @@
         "HST",
         "TTD",
         "WLK",
-        "NVO"
+        "NVO",
+        "VTRS",
+        "CP",
+        "CSX",
+        "CDW",
+        "BSY",
+        "EPAM"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -614,7 +620,8 @@
         "NKE",
         "DEO",
         "FLO",
-        "CRSP"
+        "CRSP",
+        "ST"
     ],
     "black_keywords": [
         "Cotton",
