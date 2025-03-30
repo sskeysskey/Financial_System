@@ -134,6 +134,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     show_global_markers = False  # 红色点默认不显示
     show_specific_markers = True  # 橙色点默认显示
     show_earning_markers = True  # 默认不显示收益点
+    show_all_annotations = True  # 新增：浮窗默认显示
 
     try:
         data = fetch_data(db_path, table_name, name)
@@ -155,7 +156,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     smooth_dates, smooth_prices = smooth_curve(dates, prices)
 
     fig, ax1 = plt.subplots(figsize=(13, 6))
-    fig.subplots_adjust(left=0.05, bottom=0.1, right=0.91, top=0.9)
+    # fig.subplots_adjust(left=0.05, bottom=0.1, right=0.91, top=0.9)
+    fig.subplots_adjust(left=0.1, bottom=0.1, right=0.88, top=0.9)
     ax2 = ax1.twinx()
 
     fig.patch.set_facecolor('black')
@@ -198,6 +200,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     global_markers = {}
     specific_markers = {}
     earning_markers = {}  # 新增：收益公告标记点
+    # 保存所有注释的引用
+    all_annotations = []
     
     # 获取全局标记点
     if 'global' in json_data:
@@ -277,6 +281,121 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                                  alpha=0.7, zorder=4, picker=5, visible=show_earning_markers)
             earning_scatter_points.append((scatter, closest_date, price_at_date, text))
 
+    # 为每个全局标记点(红色点)创建固定注释
+    for scatter, date, price, text in global_scatter_points:
+        # 创建箭头注释
+        annotation = ax1.annotate(
+            text,
+            xy=(date, price),  # 箭头指向的位置
+            xytext=(20, 20),  # 文本相对于点的偏移
+            textcoords="offset points",
+            bbox=dict(boxstyle="round", fc="black", alpha=0.8),
+            arrowprops=dict(arrowstyle="->", color='red'),
+            color='red',
+            fontsize=12,
+            visible=False  # 默认隐藏(因为红色点默认隐藏)
+        )
+        all_annotations.append((annotation, 'global', date, price))
+
+    # 为每个特定股票标记点(橙色点)创建固定注释
+    for scatter, date, price, text in specific_scatter_points:
+        # 创建箭头注释
+        annotation = ax1.annotate(
+            text,
+            xy=(date, price),  # 箭头指向的位置
+            xytext=(20, -20),  # 文本相对于点的偏移
+            textcoords="offset points",
+            bbox=dict(boxstyle="round", fc="black", alpha=0.8),
+            arrowprops=dict(arrowstyle="->", color='orange'),
+            color='orange',
+            fontsize=12,
+            visible=show_specific_markers and show_all_annotations  # 默认显示
+        )
+        all_annotations.append((annotation, 'specific', date, price))
+
+    # 为每个收益公告标记点(白色点)创建固定注释
+    for scatter, date, price, text in earning_scatter_points:
+        # 创建箭头注释
+        annotation = ax1.annotate(
+            text,
+            xy=(date, price),  # 箭头指向的位置
+            xytext=(-120, 30),  # 文本相对于点的偏移
+            textcoords="offset points",
+            bbox=dict(boxstyle="round", fc="black", alpha=0.8),
+            arrowprops=dict(arrowstyle="->", color='white'),
+            color='yellow',
+            fontsize=12,
+            visible=show_earning_markers and show_all_annotations  # 默认显示
+        )
+        all_annotations.append((annotation, 'earning', date, price))
+
+    def optimize_annotation_positions():
+        """优化所有可见注释的位置以避免重叠"""
+        visible_annotations = [a for a, _, _, _ in all_annotations if a.get_visible()]
+        
+        if not visible_annotations:
+            return
+            
+        # 将注释按日期排序
+        visible_annotations.sort(key=lambda a: matplotlib.dates.date2num(a.xy[0]))
+        
+        # 定义基本偏移量
+        offsets = {
+            'global': (50, 30),    # 红色点注释偏右上
+            'specific': (30, -60), # 橙色点注释偏右下
+            'earning': (-120, 30)  # 白色点注释偏左上
+        }
+        
+        # 更新位置
+        for i, (anno, anno_type, _, _) in enumerate([a for a in all_annotations if a[0].get_visible()]):
+            date = anno.xy[0]
+            price = anno.xy[1]
+            
+            # 获取基本偏移
+            base_offset = offsets[anno_type]
+            
+            # 确定位置 - 根据点在图上的水平位置调整
+            x_range = ax1.get_xlim()
+            position_ratio = (matplotlib.dates.date2num(date) - x_range[0]) / (x_range[1] - x_range[0])
+            
+            if position_ratio > 0.85:  # 很靠右的点
+                offset = (-120, base_offset[1])  # 注释放在左侧
+            elif position_ratio > 0.6:  # 靠右的点
+                offset = (-100, base_offset[1])  # 注释放在左侧
+            elif position_ratio < 0.15:  # 很靠左的点
+                offset = (60, base_offset[1])   # 注释放在右侧
+            else:  # 默认使用基本偏移
+                offset = base_offset
+                
+            # 对于相邻点尝试错开垂直位置
+            if i > 0 and abs(matplotlib.dates.date2num(date) - 
+                            matplotlib.dates.date2num(all_annotations[i-1][2])) < (x_range[1] - x_range[0])/50:
+                # 如果与前一个点很接近，垂直错开
+                offset = (offset[0], offset[1] + 30)
+                
+            # 设置新的偏移位置
+            anno.xytext = offset
+
+    # 添加一个新的函数来控制所有浮窗的显示或隐藏
+    def toggle_all_annotations():
+        """切换所有注释的显示状态"""
+        nonlocal show_all_annotations
+        show_all_annotations = not show_all_annotations
+        
+        # 更新所有注释的可见性
+        for annotation, anno_type, _, _ in all_annotations:
+            if anno_type == 'global':
+                annotation.set_visible(show_global_markers and show_all_annotations)
+            elif anno_type == 'specific':
+                annotation.set_visible(show_specific_markers and show_all_annotations)
+            elif anno_type == 'earning':
+                annotation.set_visible(show_earning_markers and show_all_annotations)
+        
+        # 优化注释位置
+        optimize_annotation_positions()
+        
+        fig.canvas.draw_idle()
+    
     def clean_percentage_string(percentage_str):
         """
         将可能包含 % 符号的字符串转换为浮点数。
@@ -379,58 +498,49 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     return
         display_dialog(f"未找到 {name} 的信息")
 
+    # 修改toggle_global_markers函数
     def toggle_global_markers():
-        """
-        切换全局标记点（红色）的显示状态
-        """
+        """切换全局标记点（红色）的显示状态"""
         nonlocal show_global_markers
         show_global_markers = not show_global_markers
-        update_marker_visibility()
         
         # 更新所有全局标记点的可见性
         for scatter, _, _, _ in global_scatter_points:
             scatter.set_visible(show_global_markers)
         
-        # 如果当前有高亮的标记点且该类标记点被隐藏，则也隐藏高亮和注释
-        if not show_global_markers and highlight_point.get_visible():
-            # 检查当前高亮的是否为全局标记点
-            current_pos = highlight_point.get_offsets()[0]
-            for scatter, date, price, _ in global_scatter_points:
-                if date == current_pos[0] and price == current_pos[1]:
-                    highlight_point.set_visible(False)
-                    annot.set_visible(False)
-                    break
-                
+        # 更新对应注释的可见性
+        for annotation, anno_type, _, _ in all_annotations:
+            if anno_type == 'global':
+                annotation.set_visible(show_global_markers and show_all_annotations)
+        
+        # 优化注释位置
+        optimize_annotation_positions()
+        
         fig.canvas.draw_idle()
 
+    # 修改toggle_specific_markers函数
     def toggle_specific_markers():
-        """
-        切换特定股票标记点（橙色）的显示状态
-        """
+        """切换特定股票标记点（橙色）的显示状态"""
         nonlocal show_specific_markers
         show_specific_markers = not show_specific_markers
-        update_marker_visibility()
         
         # 更新所有特定股票标记点的可见性
         for scatter, _, _, _ in specific_scatter_points:
             scatter.set_visible(show_specific_markers)
         
-        # 如果当前有高亮的标记点且该类标记点被隐藏，则也隐藏高亮和注释
-        if not show_specific_markers and highlight_point.get_visible():
-            # 检查当前高亮的是否为特定股票标记点
-            current_pos = highlight_point.get_offsets()[0]
-            for scatter, date, price, _ in specific_scatter_points:
-                if date == current_pos[0] and price == current_pos[1]:
-                    highlight_point.set_visible(False)
-                    annot.set_visible(False)
-                    break
-                
+        # 更新对应注释的可见性
+        for annotation, anno_type, _, _ in all_annotations:
+            if anno_type == 'specific':
+                annotation.set_visible(show_specific_markers and show_all_annotations)
+        
+        # 优化注释位置
+        optimize_annotation_positions()
+        
         fig.canvas.draw_idle()
-    
+
+    # 修改toggle_earning_markers函数
     def toggle_earning_markers():
-        """
-        切换收益公告标记点的显示状态
-        """
+        """切换收益公告标记点的显示状态"""
         nonlocal show_earning_markers
         show_earning_markers = not show_earning_markers
         
@@ -438,15 +548,19 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         for scatter, _, _, _ in earning_scatter_points:
             scatter.set_visible(show_earning_markers)
         
-        # 如果当前有高亮的标记点且标记点被隐藏，则也隐藏高亮和注释
-        if not show_earning_markers and highlight_point.get_visible():
-            highlight_point.set_visible(False)
-            annot.set_visible(False)
-            
+        # 更新对应注释的可见性
+        for annotation, anno_type, _, _ in all_annotations:
+            if anno_type == 'earning':
+                annotation.set_visible(show_earning_markers and show_all_annotations)
+        
+        # 优化注释位置
+        optimize_annotation_positions()
+        
         fig.canvas.draw_idle()
 
+    # 修改update_marker_visibility函数来同时更新注释
     def update_marker_visibility():
-        """根据当前 radio 按钮的选中值和各开关状态，更新三类标记的可见性。"""
+        """根据当前时间区间和各开关状态，更新标记点和注释的可见性。"""
         # 提取当前时间区间内显示的最早日期
         current_val = radio.value_selected
         if current_val in time_options:
@@ -458,12 +572,29 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         else:
             min_date = min(dates)
 
+        # 更新标记点可见性
         for scatter, date, _, _ in global_scatter_points:
             scatter.set_visible((min_date <= date) and show_global_markers)
         for scatter, date, _, _ in specific_scatter_points:
             scatter.set_visible((min_date <= date) and show_specific_markers)
         for scatter, date, _, _ in earning_scatter_points:
             scatter.set_visible((min_date <= date) and show_earning_markers)
+        
+        # 更新注释可见性
+        for annotation, anno_type, date, _ in all_annotations:
+            if min_date <= date:
+                if anno_type == 'global':
+                    annotation.set_visible(show_global_markers and show_all_annotations)
+                elif anno_type == 'specific':
+                    annotation.set_visible(show_specific_markers and show_all_annotations)
+                elif anno_type == 'earning':
+                    annotation.set_visible(show_earning_markers and show_all_annotations)
+            else:
+                annotation.set_visible(False)
+        
+        # 优化注释位置
+        optimize_annotation_positions()
+        
         fig.canvas.draw_idle()
     
     def on_pick(event):
@@ -582,7 +713,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     default_index = list(time_options.keys()).index(default_time_range)
 
     # 配置单选按钮
-    rax = plt.axes([0.95, 0.005, 0.05, 0.8], facecolor='black')
+    # rax = plt.axes([0.95, 0.005, 0.05, 0.8], facecolor='black')
+    rax = plt.axes([0.02, 0.005, 0.05, 0.8], facecolor='black')
     radio = RadioButtons(rax, list(time_options.keys()), active=default_index)
     for label in radio.labels:
         label.set_color('white')
@@ -590,22 +722,26 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     radio.circles[default_index].set_facecolor('red')
 
     # 添加"编辑财报"按钮
-    edit_btn_ax = plt.axes([0.92, 0.94, 0.06, 0.05], facecolor='black')  # 调整位置在财报按钮上方
+    # edit_btn_ax = plt.axes([0.92, 0.94, 0.06, 0.05], facecolor='black')  # 调整位置在财报按钮上方
+    edit_btn_ax = plt.axes([0.01, 0.94, 0.06, 0.05], facecolor='black')
     edit_btn = plt.Button(edit_btn_ax, '编辑', color='darkred', hovercolor='firebrick')
     edit_btn.label.set_color('white')
 
     # 添加"添加财报"按钮
-    earning_btn_ax = plt.axes([0.92, 0.88, 0.06, 0.05], facecolor='black')
+    # earning_btn_ax = plt.axes([0.92, 0.88, 0.06, 0.05], facecolor='black')
+    earning_btn_ax = plt.axes([0.01, 0.88, 0.06, 0.05], facecolor='black')
     earning_btn = plt.Button(earning_btn_ax, '新增', color='darkblue', hovercolor='steelblue')
     earning_btn.label.set_color('white')
     
     # 添加"标签tags编辑财报"按钮
-    tags_btn_ax = plt.axes([0.92, 0.82, 0.06, 0.05], facecolor='black')  # 调整位置在财报按钮上方
+    # tags_btn_ax = plt.axes([0.92, 0.82, 0.06, 0.05], facecolor='black')  # 调整位置在财报按钮上方
+    tags_btn_ax = plt.axes([0.01, 0.82, 0.06, 0.05], facecolor='black')
     tags_btn = plt.Button(tags_btn_ax, 'Tags', color='darkred', hovercolor='steelblue')
     tags_btn.label.set_color('white')
 
     # 添加"新增输入事件"按钮
-    event_btn_ax = plt.axes([0.92, 0.76, 0.06, 0.05], facecolor='black')  # 调整位置在财报按钮上方
+    # event_btn_ax = plt.axes([0.92, 0.76, 0.06, 0.05], facecolor='black')  # 调整位置在财报按钮上方
+    event_btn_ax = plt.axes([0.01, 0.76, 0.06, 0.05], facecolor='black')
     event_btn = plt.Button(event_btn_ax, 'Event', color='darkred', hovercolor='steelblue')
     event_btn.label.set_color('white')
     
@@ -830,6 +966,12 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         for scatter, date, _, _ in earning_scatter_points:
             scatter.set_visible((min_date <= date) and show_earning_markers)
             
+        # 更新标记点显示后，同时更新注释显示
+        update_marker_visibility()
+        
+        # 优化注释位置
+        optimize_annotation_positions()
+
         fig.canvas.draw_idle()
 
     def toggle_volume():
@@ -849,6 +991,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             'c': toggle_global_markers,  # 'c'键切换红色全局标记点显示
             'x': toggle_specific_markers,  # 'x'键切换橙色特定股票标记点显示
             'a': toggle_earning_markers,  # 'a'键切换白色收益公告标记点显示（保持不变）
+            'r': toggle_all_annotations,  # 'q'键切换所有浮窗的显示/隐藏
             'n': lambda: open_earning_input(None),  # 添加'n'键快捷方式
             'e': lambda: open_earning_edit(None),  # 添加'e'键快捷方式
             't': lambda: open_tags_edit(None),  # 添加't'键快捷方式
@@ -930,4 +1073,5 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     # 初始化图表
     update(default_time_range)
     print("图表绘制完成，等待用户操作...")
+    optimize_annotation_positions()
     plt.show()
