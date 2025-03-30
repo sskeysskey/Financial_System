@@ -160,6 +160,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     fig.subplots_adjust(left=0.1, bottom=0.1, right=0.88, top=0.9)
     ax2 = ax1.twinx()
 
+    # 隐藏ax2的轴线和刻度
+    # ax2.axis('off')
+
     fig.patch.set_facecolor('black')
     ax1.set_facecolor('black')
     ax1.tick_params(axis='x', colors='white')
@@ -988,10 +991,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         """
         actions = {
             'v': toggle_volume,
-            'c': toggle_global_markers,  # 'c'键切换红色全局标记点显示
+            'r': toggle_global_markers,  # 'r'键切换红色全局标记点显示
             'x': toggle_specific_markers,  # 'x'键切换橙色特定股票标记点显示
             'a': toggle_earning_markers,  # 'a'键切换白色收益公告标记点显示（保持不变）
-            'r': toggle_all_annotations,  # 'q'键切换所有浮窗的显示/隐藏
+            'c': toggle_all_annotations,  # 'c'键切换所有浮窗的显示/隐藏
             'n': lambda: open_earning_input(None),  # 添加'n'键快捷方式
             'e': lambda: open_earning_edit(None),  # 添加'e'键快捷方式
             't': lambda: open_tags_edit(None),  # 添加't'键快捷方式
