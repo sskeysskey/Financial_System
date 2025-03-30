@@ -133,3 +133,29 @@ Canvas { context, size in
         }
     }
 }
+// ————————————————————————————————————————————————————————————————————————————————————————
+# 添加"编辑财报"按钮
+edit_btn_ax = plt.axes([0.01, 0.94, 0.06, 0.05], facecolor='black')
+edit_btn = plt.Button(edit_btn_ax, '编辑', color='darkblue', hovercolor='steelblue')
+edit_btn.label.set_color('white')
+
+# 添加"添加财报"按钮
+earning_btn_ax = plt.axes([0.01, 0.88, 0.06, 0.05], facecolor='black')
+earning_btn = plt.Button(earning_btn_ax, '新增', color='darkblue', hovercolor='steelblue')
+earning_btn.label.set_color('white')
+
+# 添加"标签tags编辑财报"按钮
+tags_btn_ax = plt.axes([0.01, 0.82, 0.06, 0.05], facecolor='black')
+tags_btn = plt.Button(tags_btn_ax, 'Tags', color='darkblue', hovercolor='steelblue')
+tags_btn.label.set_color('white')
+
+# 添加"新增输入事件"按钮
+event_btn_ax = plt.axes([0.01, 0.76, 0.06, 0.05], facecolor='black')
+event_btn = plt.Button(event_btn_ax, 'Event', color='darkblue', hovercolor='steelblue')
+event_btn.label.set_color('white')
+
+earning_btn.on_clicked(open_earning_input)
+edit_btn.on_clicked(open_earning_edit)
+tags_btn.on_clicked(open_tags_edit)
+event_btn.on_clicked(open_event_input)
+// ————————————————————————————————————————————————————————————————————————————————————————

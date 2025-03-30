@@ -156,8 +156,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     smooth_dates, smooth_prices = smooth_curve(dates, prices)
 
     fig, ax1 = plt.subplots(figsize=(13, 6))
-    # fig.subplots_adjust(left=0.05, bottom=0.1, right=0.91, top=0.9)
-    fig.subplots_adjust(left=0.1, bottom=0.1, right=0.88, top=0.9)
+    fig.subplots_adjust(left=0.05, bottom=0.1, right=0.83, top=0.9)
     ax2 = ax1.twinx()
 
     # 隐藏ax2的轴线和刻度
@@ -716,37 +715,12 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     default_index = list(time_options.keys()).index(default_time_range)
 
     # 配置单选按钮
-    # rax = plt.axes([0.95, 0.005, 0.05, 0.8], facecolor='black')
-    rax = plt.axes([0.02, 0.005, 0.05, 0.8], facecolor='black')
+    rax = plt.axes([0.95, 0.005, 0.05, 0.8], facecolor='black')
     radio = RadioButtons(rax, list(time_options.keys()), active=default_index)
     for label in radio.labels:
         label.set_color('white')
         label.set_fontsize(14)
     radio.circles[default_index].set_facecolor('red')
-
-    # 添加"编辑财报"按钮
-    # edit_btn_ax = plt.axes([0.92, 0.94, 0.06, 0.05], facecolor='black')  # 调整位置在财报按钮上方
-    edit_btn_ax = plt.axes([0.01, 0.94, 0.06, 0.05], facecolor='black')
-    edit_btn = plt.Button(edit_btn_ax, '编辑', color='darkblue', hovercolor='firebrick')
-    edit_btn.label.set_color('white')
-
-    # 添加"添加财报"按钮
-    # earning_btn_ax = plt.axes([0.92, 0.88, 0.06, 0.05], facecolor='black')
-    earning_btn_ax = plt.axes([0.01, 0.88, 0.06, 0.05], facecolor='black')
-    earning_btn = plt.Button(earning_btn_ax, '新增', color='darkblue', hovercolor='steelblue')
-    earning_btn.label.set_color('white')
-    
-    # 添加"标签tags编辑财报"按钮
-    # tags_btn_ax = plt.axes([0.92, 0.82, 0.06, 0.05], facecolor='black')  # 调整位置在财报按钮上方
-    tags_btn_ax = plt.axes([0.01, 0.82, 0.06, 0.05], facecolor='black')
-    tags_btn = plt.Button(tags_btn_ax, 'Tags', color='darkblue', hovercolor='steelblue')
-    tags_btn.label.set_color('white')
-
-    # 添加"新增输入事件"按钮
-    # event_btn_ax = plt.axes([0.92, 0.76, 0.06, 0.05], facecolor='black')  # 调整位置在财报按钮上方
-    event_btn_ax = plt.axes([0.01, 0.76, 0.06, 0.05], facecolor='black')
-    event_btn = plt.Button(event_btn_ax, 'Event', color='darkblue', hovercolor='steelblue')
-    event_btn.label.set_color('white')
     
     def open_earning_input(event):
         """启动财报输入程序并传递当前symbol"""
@@ -779,11 +753,6 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Operations/Insert_Events.py', name])
         except Exception as e:
             display_dialog(f"启动财报输入程序失败: {e}")
-    
-    earning_btn.on_clicked(open_earning_input)
-    edit_btn.on_clicked(open_earning_edit)
-    tags_btn.on_clicked(open_tags_edit)
-    event_btn.on_clicked(open_event_input)
 
     def update_annot(ind):
         """
