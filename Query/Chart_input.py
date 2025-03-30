@@ -161,7 +161,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     ax2 = ax1.twinx()
 
     # 隐藏ax2的轴线和刻度
-    # ax2.axis('off')
+    ax2.axis('off')
 
     fig.patch.set_facecolor('black')
     ax1.set_facecolor('black')
@@ -727,7 +727,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     # 添加"编辑财报"按钮
     # edit_btn_ax = plt.axes([0.92, 0.94, 0.06, 0.05], facecolor='black')  # 调整位置在财报按钮上方
     edit_btn_ax = plt.axes([0.01, 0.94, 0.06, 0.05], facecolor='black')
-    edit_btn = plt.Button(edit_btn_ax, '编辑', color='darkred', hovercolor='firebrick')
+    edit_btn = plt.Button(edit_btn_ax, '编辑', color='darkblue', hovercolor='firebrick')
     edit_btn.label.set_color('white')
 
     # 添加"添加财报"按钮
@@ -739,13 +739,13 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     # 添加"标签tags编辑财报"按钮
     # tags_btn_ax = plt.axes([0.92, 0.82, 0.06, 0.05], facecolor='black')  # 调整位置在财报按钮上方
     tags_btn_ax = plt.axes([0.01, 0.82, 0.06, 0.05], facecolor='black')
-    tags_btn = plt.Button(tags_btn_ax, 'Tags', color='darkred', hovercolor='steelblue')
+    tags_btn = plt.Button(tags_btn_ax, 'Tags', color='darkblue', hovercolor='steelblue')
     tags_btn.label.set_color('white')
 
     # 添加"新增输入事件"按钮
     # event_btn_ax = plt.axes([0.92, 0.76, 0.06, 0.05], facecolor='black')  # 调整位置在财报按钮上方
     event_btn_ax = plt.axes([0.01, 0.76, 0.06, 0.05], facecolor='black')
-    event_btn = plt.Button(event_btn_ax, 'Event', color='darkred', hovercolor='steelblue')
+    event_btn = plt.Button(event_btn_ax, 'Event', color='darkblue', hovercolor='steelblue')
     event_btn.label.set_color('white')
     
     def open_earning_input(event):
