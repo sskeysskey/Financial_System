@@ -223,6 +223,13 @@ if __name__ == '__main__':
                 dialog = tk.Toplevel(root)
                 dialog.title("请输入Symbol")
                 dialog.geometry("300x100")
+                # 窗口居中显示
+                dialog.update_idletasks()  # 更新以确保获取正确的窗口尺寸
+                width = dialog.winfo_width()
+                height = dialog.winfo_height()
+                x = (dialog.winfo_screenwidth() // 2) - (width // 2)
+                y = (dialog.winfo_screenheight() // 2) - (height // 2) - 200
+                dialog.geometry('{}x{}+{}+{}'.format(width, height, x, y))
                 
                 # 自动激活窗口在最前台
                 dialog.lift()

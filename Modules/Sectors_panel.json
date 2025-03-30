@@ -114,7 +114,6 @@
         "IBIT": "",
         "SOXX": "",
         "ASHR": "",
-        "DXJ": "",
         "EWT": "",
         "LIT": "",
         "URA": "",
@@ -153,11 +152,12 @@
         "USDINR": "印度卢比"
     },
     "Economics": {
-        "USInitial": "27 USInitial",
-        "CorePCEM": "28 CorePCEM",
-        "PCEY": "28 PCEY",
-        "CorePCEY": "28 CorePCEY",
-        "USConfidence": "28 USConfidence"
+        "USNonFarmA": "02 USNonFarmA",
+        "USTrade": "03 USTrade",
+        "USInitial": "03 USInitial",
+        "USNonPMI": "03 USNonPMI",
+        "USUnemploy": "04 USUnemploy",
+        "USNonFarm": "04 USNonFarm"
     },
     "ETFs_US": {
         "TLT": "",
