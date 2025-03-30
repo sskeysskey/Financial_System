@@ -2,9 +2,10 @@ import tkinter as tk
 from tkinter import ttk
 import sqlite3
 from datetime import datetime
+import sys  # 添加导入
 
 class App:
-    def __init__(self):
+    def __init__(self, init_symbol=None):  # 修改初始化函数接受参数
         self.root = tk.Tk()
         self.root.title("添加财报信息")
         
@@ -22,7 +23,12 @@ class App:
         # 绑定ESC键到所有窗口
         self.root.bind('<Escape>', self.close_app)
         
-        self.create_first_screen()
+        # 如果提供了初始symbol，直接进入第二步
+        if init_symbol:
+            self.stock_name = init_symbol.upper()
+            self.create_second_screen()
+        else:
+            self.create_first_screen()
         
         # 将窗口置于最前
         self.root.lift()
@@ -165,5 +171,11 @@ def init_database():
 
 if __name__ == "__main__":
     init_database()
-    app = App()
+    
+    # 检查是否提供了命令行参数
+    init_symbol = None
+    if len(sys.argv) > 1:
+        init_symbol = sys.argv[1]
+        
+    app = App(init_symbol)
     app.run()

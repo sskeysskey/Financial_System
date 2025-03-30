@@ -115,6 +115,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     - d：查询数据库并弹窗显示
     - c：切换显示或隐藏标记点（红色全局点和橙色特定点）
     - a：切换显示或隐藏收益公告日期点（白色点）
+    - e：启动财报数据编辑程序
+    - n：启动财报数据输入程序
+    - t：启动标签Tags编辑程序
+    - w：启动新增Event程序
     - 方向键上下：在不同时间区间间移动
     - ESC：关闭所有图表，并在panel为True时退出系统
     """
@@ -584,6 +588,63 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         label.set_fontsize(14)
     radio.circles[default_index].set_facecolor('red')
 
+    # 添加"编辑财报"按钮
+    edit_btn_ax = plt.axes([0.92, 0.94, 0.06, 0.05], facecolor='black')  # 调整位置在财报按钮上方
+    edit_btn = plt.Button(edit_btn_ax, '编辑', color='darkred', hovercolor='firebrick')
+    edit_btn.label.set_color('white')
+
+    # 添加"添加财报"按钮
+    earning_btn_ax = plt.axes([0.92, 0.88, 0.06, 0.05], facecolor='black')
+    earning_btn = plt.Button(earning_btn_ax, '新增', color='darkblue', hovercolor='steelblue')
+    earning_btn.label.set_color('white')
+    
+    # 添加"标签tags编辑财报"按钮
+    tags_btn_ax = plt.axes([0.92, 0.82, 0.06, 0.05], facecolor='black')  # 调整位置在财报按钮上方
+    tags_btn = plt.Button(tags_btn_ax, 'Tags', color='darkred', hovercolor='steelblue')
+    tags_btn.label.set_color('white')
+
+    # 添加"新增输入事件"按钮
+    event_btn_ax = plt.axes([0.92, 0.76, 0.06, 0.05], facecolor='black')  # 调整位置在财报按钮上方
+    event_btn = plt.Button(event_btn_ax, 'Event', color='darkred', hovercolor='steelblue')
+    event_btn.label.set_color('white')
+    
+    def open_earning_input(event):
+        """启动财报输入程序并传递当前symbol"""
+        try:
+            # 使用subprocess启动b.py，并传递当前symbol作为参数
+            subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Operations/Insert_Earning_Manual.py', name])
+        except Exception as e:
+            display_dialog(f"启动财报输入程序失败: {e}")
+    
+    def open_earning_edit(event):
+        """启动财报输入程序并传递当前symbol"""
+        try:
+            # 使用subprocess启动b.py，并传递当前symbol作为参数
+            subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Operations/Editor_Symbol_DB.py', name])
+        except Exception as e:
+            display_dialog(f"启动财报输入程序失败: {e}")
+
+    def open_tags_edit(event):
+        """启动财报输入程序并传递当前symbol"""
+        try:
+            # 使用subprocess启动b.py，并传递当前symbol作为参数
+            subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Operations/Editor_Symbol_Tags.py', name])
+        except Exception as e:
+            display_dialog(f"启动财报输入程序失败: {e}")
+
+    def open_event_input(event):
+        """启动财报输入程序并传递当前symbol"""
+        try:
+            # 使用subprocess启动b.py，并传递当前symbol作为参数
+            subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Operations/Insert_Events.py', name])
+        except Exception as e:
+            display_dialog(f"启动财报输入程序失败: {e}")
+    
+    earning_btn.on_clicked(open_earning_input)
+    edit_btn.on_clicked(open_earning_edit)
+    tags_btn.on_clicked(open_tags_edit)
+    event_btn.on_clicked(open_event_input)
+
     def update_annot(ind):
         """
         更新工具提示位置和文本内容。
@@ -787,6 +848,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             'c': toggle_global_markers,  # 'c'键切换红色全局标记点显示
             'x': toggle_specific_markers,  # 'x'键切换橙色特定股票标记点显示
             'a': toggle_earning_markers,  # 'a'键切换白色收益公告标记点显示（保持不变）
+            'n': lambda: open_earning_input(None),  # 添加'n'键快捷方式
+            'e': lambda: open_earning_edit(None),  # 添加'e'键快捷方式
+            't': lambda: open_tags_edit(None),  # 添加't'键快捷方式
+            'w': lambda: open_event_input(None),  # 添加'w'键快捷方式
             '1': lambda: radio.set_active(7),
             '2': lambda: radio.set_active(1),
             '3': lambda: radio.set_active(3),

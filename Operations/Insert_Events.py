@@ -6,9 +6,10 @@ from datetime import datetime, timedelta
 import calendar
 import platform
 import os
+import sys
 
 class App:
-    def __init__(self):
+    def __init__(self, symbol=None):  # 添加参数
         self.data = self.load_json()
         self.selected_type = None
         self.selected_date = None
@@ -16,7 +17,32 @@ class App:
         self.selected_symbols = []  # 新增：用于保存多个符合标签的symbols
         self.event_text = None
         
-        self.main_window()
+        if symbol:  # 如果传入了symbol参数
+            self.selected_type = "特定"
+            self.selected_symbol = symbol.upper()  # 转换为大写
+            self.selected_symbols = [self.selected_symbol]
+            
+            # 验证symbol是否存在
+            found = False
+            for section in ['stocks', 'etfs']:
+                for item in self.data[section]:
+                    if item['symbol'] == self.selected_symbol:
+                        found = True
+                        break
+                if found:
+                    break
+            
+            if found:
+                self.date_window()  # 直接跳转到日期选择窗口
+            else:
+                # 如果symbol不存在，显示错误消息并退出
+                root = tk.Tk()
+                root.withdraw()  # 隐藏主窗口
+                messagebox.showerror("错误", f"Symbol {self.selected_symbol} 不存在！")
+                root.destroy()
+                return
+        else:
+            self.main_window()  # 如果没有参数，按原流程执行
 
     def load_json(self):
         with open('/Users/yanzhang/Documents/Financial_System/Modules/description.json', 'r', encoding='utf-8') as f:
@@ -515,4 +541,9 @@ class App:
         success_root.mainloop()
 
 if __name__ == "__main__":
-    App()
+    if len(sys.argv) > 1:
+        # 如果有命令行参数，将第一个参数作为symbol传入
+        App(sys.argv[1])
+    else:
+        # 如果没有参数，正常启动程序
+        App()
