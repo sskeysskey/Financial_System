@@ -283,100 +283,52 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                                  alpha=0.7, zorder=4, picker=5, visible=show_earning_markers)
             earning_scatter_points.append((scatter, closest_date, price_at_date, text))
 
-    # 为每个全局标记点(红色点)创建固定注释
-    for scatter, date, price, text in global_scatter_points:
-        # 创建箭头注释
+    # 为每个全局标记点(红色点)创建固定注释，交替设置左上与左下偏移
+    red_offsets = [(-60, 50),(50, -60), (-70, 45), (-50, -45)]  # 第一个为左上、第二个为右下、第三个还是为左上、第四个为右上
+    for i, (scatter, date, price, text) in enumerate(global_scatter_points):
+        offset = red_offsets[i % 4]
         annotation = ax1.annotate(
             text,
             xy=(date, price),  # 箭头指向的位置
-            xytext=(20, 20),  # 文本相对于点的偏移
+            xytext=offset,     # 使用交替的偏移
             textcoords="offset points",
             bbox=dict(boxstyle="round", fc="black", alpha=0.8),
             arrowprops=dict(arrowstyle="->", color='red'),
             color='red',
             fontsize=12,
-            visible=False  # 默认隐藏(因为红色点默认隐藏)
+            visible=False  # 默认隐藏(因为红色点初始设定为不可见)
         )
         all_annotations.append((annotation, 'global', date, price))
 
-    # 为每个特定股票标记点(橙色点)创建固定注释
+    # 为每个特定股票标记点(橙色点)创建固定注释（保持原有的右下偏移）
     for scatter, date, price, text in specific_scatter_points:
-        # 创建箭头注释
         annotation = ax1.annotate(
             text,
-            xy=(date, price),  # 箭头指向的位置
-            xytext=(20, -20),  # 文本相对于点的偏移
+            xy=(date, price),
+            xytext=(20, -20),
             textcoords="offset points",
             bbox=dict(boxstyle="round", fc="black", alpha=0.8),
             arrowprops=dict(arrowstyle="->", color='orange'),
             color='orange',
             fontsize=12,
-            visible=show_specific_markers and show_all_annotations  # 默认显示
+            visible=show_specific_markers and show_all_annotations
         )
         all_annotations.append((annotation, 'specific', date, price))
 
-    # 为每个收益公告标记点(白色点)创建固定注释
+    # 为每个收益公告标记点(白色点)创建固定注释，将偏移修改为右上（例如 (50,50)）
     for scatter, date, price, text in earning_scatter_points:
-        # 创建箭头注释
         annotation = ax1.annotate(
             text,
-            xy=(date, price),  # 箭头指向的位置
-            xytext=(-120, 30),  # 文本相对于点的偏移
+            xy=(date, price),
+            xytext=(50, 50),  # 修改为右上偏移
             textcoords="offset points",
             bbox=dict(boxstyle="round", fc="black", alpha=0.8),
             arrowprops=dict(arrowstyle="->", color='white'),
             color='yellow',
             fontsize=12,
-            visible=show_earning_markers and show_all_annotations  # 默认显示
+            visible=show_earning_markers and show_all_annotations
         )
         all_annotations.append((annotation, 'earning', date, price))
-
-    def optimize_annotation_positions():
-        """优化所有可见注释的位置以避免重叠"""
-        visible_annotations = [a for a, _, _, _ in all_annotations if a.get_visible()]
-        
-        if not visible_annotations:
-            return
-            
-        # 将注释按日期排序
-        visible_annotations.sort(key=lambda a: matplotlib.dates.date2num(a.xy[0]))
-        
-        # 定义基本偏移量
-        offsets = {
-            'global': (50, 30),    # 红色点注释偏右上
-            'specific': (30, -60), # 橙色点注释偏右下
-            'earning': (-120, 30)  # 白色点注释偏左上
-        }
-        
-        # 更新位置
-        for i, (anno, anno_type, _, _) in enumerate([a for a in all_annotations if a[0].get_visible()]):
-            date = anno.xy[0]
-            price = anno.xy[1]
-            
-            # 获取基本偏移
-            base_offset = offsets[anno_type]
-            
-            # 确定位置 - 根据点在图上的水平位置调整
-            x_range = ax1.get_xlim()
-            position_ratio = (matplotlib.dates.date2num(date) - x_range[0]) / (x_range[1] - x_range[0])
-            
-            if position_ratio > 0.85:  # 很靠右的点
-                offset = (-120, base_offset[1])  # 注释放在左侧
-            elif position_ratio > 0.6:  # 靠右的点
-                offset = (-100, base_offset[1])  # 注释放在左侧
-            elif position_ratio < 0.15:  # 很靠左的点
-                offset = (60, base_offset[1])   # 注释放在右侧
-            else:  # 默认使用基本偏移
-                offset = base_offset
-                
-            # 对于相邻点尝试错开垂直位置
-            if i > 0 and abs(matplotlib.dates.date2num(date) - 
-                            matplotlib.dates.date2num(all_annotations[i-1][2])) < (x_range[1] - x_range[0])/50:
-                # 如果与前一个点很接近，垂直错开
-                offset = (offset[0], offset[1] + 30)
-                
-            # 设置新的偏移位置
-            anno.xytext = offset
 
     # 添加一个新的函数来控制所有浮窗的显示或隐藏
     def toggle_all_annotations():
@@ -392,9 +344,6 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 annotation.set_visible(show_specific_markers and show_all_annotations)
             elif anno_type == 'earning':
                 annotation.set_visible(show_earning_markers and show_all_annotations)
-        
-        # 优化注释位置
-        optimize_annotation_positions()
         
         fig.canvas.draw_idle()
     
@@ -515,9 +464,6 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             if anno_type == 'global':
                 annotation.set_visible(show_global_markers and show_all_annotations)
         
-        # 优化注释位置
-        optimize_annotation_positions()
-        
         fig.canvas.draw_idle()
 
     # 修改toggle_specific_markers函数
@@ -535,9 +481,6 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             if anno_type == 'specific':
                 annotation.set_visible(show_specific_markers and show_all_annotations)
         
-        # 优化注释位置
-        optimize_annotation_positions()
-        
         fig.canvas.draw_idle()
 
     # 修改toggle_earning_markers函数
@@ -554,9 +497,6 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         for annotation, anno_type, _, _ in all_annotations:
             if anno_type == 'earning':
                 annotation.set_visible(show_earning_markers and show_all_annotations)
-        
-        # 优化注释位置
-        optimize_annotation_positions()
         
         fig.canvas.draw_idle()
 
@@ -593,9 +533,6 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     annotation.set_visible(show_earning_markers and show_all_annotations)
             else:
                 annotation.set_visible(False)
-        
-        # 优化注释位置
-        optimize_annotation_positions()
         
         fig.canvas.draw_idle()
     
@@ -940,9 +877,6 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             
         # 更新标记点显示后，同时更新注释显示
         update_marker_visibility()
-        
-        # 优化注释位置
-        optimize_annotation_positions()
 
         fig.canvas.draw_idle()
 
@@ -1045,5 +979,4 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     # 初始化图表
     update(default_time_range)
     print("图表绘制完成，等待用户操作...")
-    optimize_annotation_positions()
     plt.show()

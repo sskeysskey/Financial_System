@@ -388,7 +388,6 @@
     "IGV",
     "SCHP",
     "FXO",
-    "VAW",
     "VNLA",
     "ARGT",
     "DYNF",
@@ -438,9 +437,7 @@
     "FEMS",
     "EZU",
     "AGZ",
-    "BOCT",
     "IXP",
-    "NULG",
     "PSP",
     "FVAL",
     "MEAR",
@@ -451,7 +448,10 @@
     "EWJ",
     "IXJ",
     "VPC",
-    "ENFR"
+    "ENFR",
+    "FMAT",
+    "BJUL",
+    "NUDM"
   ],
   "Basic_Materials": [
     "LIN",

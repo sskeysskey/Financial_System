@@ -1,933 +1,404 @@
-# o1优化后代码
-import re
-import sqlite3
+import os
+import sys
+import json
+import pyperclip
 import subprocess
-import numpy as np
-from datetime import datetime, timedelta
-import matplotlib.pyplot as plt
-from matplotlib.widgets import RadioButtons
-import matplotlib
-import tkinter as tk
-from tkinter import simpledialog, scrolledtext, font as tkFont
-from functools import lru_cache
-from scipy.interpolate import interp1d
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QLabel, QTextBrowser, QMainWindow, QAction
+from PyQt5.QtGui import QFont, QKeySequence
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl
+import sqlite3
 
-@lru_cache(maxsize=None)
-def fetch_data(db_path, table_name, name):
-    """
-    从数据库中获取指定名称的日期、价格、成交量数据。
-    如果表中存在volume字段，则一起返回，否则只返回date和price。
-    """
-    with sqlite3.connect(db_path) as conn:
-        cursor = conn.cursor()
-        try:
-            # 为查询字段添加索引
-            cursor.execute(f"CREATE INDEX IF NOT EXISTS idx_name ON {table_name} (name);")
-            query = f"SELECT date, price, volume FROM {table_name} WHERE name = ? ORDER BY date;"
-            result = cursor.execute(query, (name,)).fetchall()
-            if not result:
-                raise ValueError("没有查询到可用数据")
-            return result
-        except sqlite3.OperationalError:
-            query = f"SELECT date, price FROM {table_name} WHERE name = ? ORDER BY date;"
-            result = cursor.execute(query, (name,)).fetchall()
-            if not result:
-                raise ValueError("没有查询到可用数据")
-            return result
+json_path = "/Users/yanzhang/Documents/Financial_System/Modules/description.json"
 
-def smooth_curve(dates, prices, num_points=500):
-    """
-    通过插值生成更多的点来让曲线更平滑。
-    如果数据点少于四个，使用线性插值；否则使用三次插值。
-    """
-    date_nums = matplotlib.dates.date2num(dates)
-    if len(dates) < 4:
-        interp_func = interp1d(date_nums, prices, kind='linear')
-    else:
-        interp_func = interp1d(date_nums, prices, kind='cubic')
+class CustomTextBrowser(QTextBrowser):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-    new_date_nums = np.linspace(min(date_nums), max(date_nums), num_points)
-    new_prices = interp_func(new_date_nums)
-    new_dates = matplotlib.dates.num2date(new_date_nums)
+class SearchWorker(QThread):
+    results_ready = pyqtSignal(object)
 
-    return new_dates, new_prices
+    def __init__(self, keywords, json_path):
+        super().__init__()
+        self.keywords = keywords
+        self.json_path = json_path
+        self.compare_data = load_compare_data()
 
-def process_data(data):
-    """
-    将数据库返回的数据处理为日期、价格、成交量三个列表。
-    如果数据为空，则抛出异常。
-    """
-    if not data:
-        raise ValueError("没有可供处理的数据")
-        
-    dates, prices, volumes = [], [], []
-    for row in data:
-        date = datetime.strptime(row[0], "%Y-%m-%d")
-        price = float(row[1]) if row[1] is not None else None
-        volume = int(row[2]) if len(row) > 2 and row[2] is not None else None
-        if price is not None:
-            dates.append(date)
-            prices.append(price)
-            volumes.append(volume)
-    
-    return dates, prices, volumes
+    def run(self):
+        # 在此方法中执行耗时的搜索操作
+        matched_names_stocks, matched_names_etfs = search_json_for_keywords(self.json_path, self.keywords)
+        (matched_names_stocks_tag, matched_names_etfs_tag, 
+        matched_names_stocks_name, matched_names_etfs_name,
+        matched_names_stocks_symbol, matched_names_etfs_symbol) = search_tag_for_keywords(self.json_path, self.keywords)
 
-def display_dialog(message):
-    """
-    使用 AppleScript 在 macOS 上弹出提示对话框。
-    """
-    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
-    subprocess.run(['osascript', '-e', applescript_code], check=True)
-
-def update_plot(line1, fill, line2, dates, prices, volumes, ax1, ax2, show_volume):
-    """
-    根据筛选后的数据更新图表。
-    """
-    line1.set_data(dates, prices)
-    fill.remove()
-    # 添加edgecolor='none'或linewidth=0参数来移除边缘线
-    fill = ax1.fill_between(dates, prices, color='lightblue', alpha=0.3, edgecolor='none')
-    if volumes:
-        line2.set_data(dates, volumes)
-    
-    # 修改这一行，增加右侧余量
-    date_min = np.min(dates)
-    date_max = np.max(dates)
-    date_range = date_max - date_min
-    right_margin = date_range * 0.01  # 添加5%的右侧余量
-    ax1.set_xlim(date_min, date_max + right_margin)
-    
-    ax1.set_ylim(np.min(prices), np.max(prices))
-    if show_volume and volumes:
-        ax2.set_ylim(0, np.max(volumes))
-    line2.set_visible(show_volume)
-    plt.draw()
-    return fill
-
-def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe, json_data,
-                        default_time_range="1Y", panel="False"):
-    """
-    主函数，绘制股票或ETF的时间序列图表。支持成交量、标签说明、信息弹窗、区间切换等功能。
-    按键说明：
-    - v：显示或隐藏成交量
-    - 1~9：快速切换不同时间区间
-    - `：弹出信息对话框
-    - d：查询数据库并弹窗显示
-    - c：切换显示或隐藏标记点（红色全局点)
-    - a：切换显示或隐藏收益公告日期点（白色点）
-    - x：切换显示或隐藏标记点（橙色特定点)
-    - e：启动财报数据编辑程序
-    - n：启动财报数据输入程序
-    - t：启动标签Tags编辑程序
-    - w：启动新增Event程序
-    - 方向键上下：在不同时间区间间移动
-    - ESC：关闭所有图表，并在panel为True时退出系统
-    """
-    plt.close('all')  # 关闭所有图表
-    matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
-
-    show_volume = False
-    mouse_pressed = False
-    initial_price = None
-    initial_date = None
-    fill = None
-    show_global_markers = False  # 红色点默认不显示
-    show_specific_markers = True  # 橙色点默认显示
-    show_earning_markers = True  # 默认不显示收益点
-
-    try:
-        data = fetch_data(db_path, table_name, name)
-    except ValueError as e:
-        display_dialog(f"{e}")
-        return
-
-    try:
-        dates, prices, volumes = process_data(data)
-    except ValueError as e:
-        display_dialog(f"{e}")
-        return
-
-    if not dates or not prices:
-        display_dialog("没有有效的数据来绘制图表。")
-        return
-
-    # 使用插值函数生成更多的平滑数据点
-    smooth_dates, smooth_prices = smooth_curve(dates, prices)
-
-    fig, ax1 = plt.subplots(figsize=(13, 6))
-    fig.subplots_adjust(left=0.05, bottom=0.1, right=0.91, top=0.9)
-    ax2 = ax1.twinx()
-
-    fig.patch.set_facecolor('black')
-    ax1.set_facecolor('black')
-    ax1.tick_params(axis='x', colors='white')
-    ax1.tick_params(axis='y', colors='white')
-    ax2.tick_params(axis='y', colors='white')
-
-    highlight_point = ax1.scatter([], [], s=100, color='cyan', zorder=5)
-    
-    # 绘制插值后的平滑曲线
-    line1, = ax1.plot(
-        smooth_dates,
-        smooth_prices,
-        marker='',
-        linestyle='-',
-        linewidth=2,
-        color='cyan',
-        alpha=0.7,
-        label='Price'
-    )
-    # 在每个原始价格点处添加一个小小的白色散点，并保存散点对象引用
-    small_dot_scatter = ax1.scatter(dates, prices, s=5, color='white', zorder=1)
-    
-    line2, = ax2.plot(
-        dates,
-        volumes,
-        marker='o',
-        markersize=2,
-        linestyle='-',
-        linewidth=2,
-        color='magenta',
-        alpha=0.7,
-        label='Volume'
-    )
-    fill = ax1.fill_between(dates, prices, color='cyan', alpha=0.2)
-    line2.set_visible(show_volume)
-
-    # 处理全局标记点和特定股票标记点
-    global_markers = {}
-    specific_markers = {}
-    earning_markers = {}  # 新增：收益公告标记点
-    
-    # 获取全局标记点
-    if 'global' in json_data:
-        for date_str, text in json_data['global'].items():
-            try:
-                marker_date = datetime.strptime(date_str, "%Y-%m-%d")
-                global_markers[marker_date] = text
-            except ValueError:
-                print(f"无法解析全局标记日期: {date_str}")
-    
-    # 获取特定股票的标记点
-    found_item = None
-    for source in ['stocks', 'etfs']:
-        for item in json_data.get(source, []):
-            if item['symbol'] == name and 'description3' in item:
-                found_item = item
-                for date_obj in item.get('description3', []):
-                    for date_str, text in date_obj.items():
-                        try:
-                            marker_date = datetime.strptime(date_str, "%Y-%m-%d")
-                            specific_markers[marker_date] = text
-                        except ValueError:
-                            print(f"无法解析特定标记日期: {date_str}")
-                break
-        if found_item:
-            break
-    
-    # 修改获取收益公告日期的部分
-    try:
-        with sqlite3.connect(db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT date, price FROM Earning WHERE name = ? ORDER BY date", (name,))
-            for date_str, price_change in cursor.fetchall():
-                try:
-                    marker_date = datetime.strptime(date_str, "%Y-%m-%d")
-                    # 标记文本为财报收益
-                    earning_markers[marker_date] = f"昨日财报: {price_change}%"
-                except ValueError:
-                    print(f"无法解析收益公告日期: {date_str}")
-    except sqlite3.OperationalError as e:
-        print(f"获取收益数据失败: {e}")
-    
-    # 标记点
-    global_scatter_points = []
-    specific_scatter_points = []
-    earning_scatter_points = []  # 新增：收益公告标记点列表
-    
-    # 绘制全局标记点（红色）
-    for marker_date, text in global_markers.items():
-        if min(dates) <= marker_date <= max(dates):
-            closest_date_idx = (np.abs(np.array(dates) - marker_date)).argmin()
-            closest_date = dates[closest_date_idx]
-            price_at_date = prices[closest_date_idx]
-            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='red', 
-                                #  alpha=0.7, zorder=4, picker=5) # 初始设为可见
-                                 alpha=0.7, zorder=4, picker=5, visible=show_global_markers)  # 初始设为不可见
-            global_scatter_points.append((scatter, closest_date, price_at_date, text))
-    
-    # 绘制特定股票标记点（橙色）
-    for marker_date, text in specific_markers.items():
-        if min(dates) <= marker_date <= max(dates):
-            closest_date_idx = (np.abs(np.array(dates) - marker_date)).argmin()
-            closest_date = dates[closest_date_idx]
-            price_at_date = prices[closest_date_idx]
-            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='orange', 
-                                #  alpha=0.7, zorder=4, picker=5) # 初始设为可见
-                                 alpha=0.7, zorder=4, picker=5, visible=show_specific_markers)  # 初始设为不可见
-            specific_scatter_points.append((scatter, closest_date, price_at_date, text))
-    
-    # 新增：绘制财报收益公告标记点（白色）
-    for marker_date, text in earning_markers.items():
-        if min(dates) <= marker_date <= max(dates):
-            closest_date_idx = (np.abs(np.array(dates) - marker_date)).argmin()
-            closest_date = dates[closest_date_idx]
-            price_at_date = prices[closest_date_idx]
-            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='white', 
-                                 alpha=0.7, zorder=4, picker=5, visible=show_earning_markers)
-            earning_scatter_points.append((scatter, closest_date, price_at_date, text))
-
-    def clean_percentage_string(percentage_str):
-        """
-        将可能包含 % 符号的字符串转换为浮点数。
-        """
-        try:
-            return float(percentage_str.strip('%'))
-        except ValueError:
-            return None
-
-    # 计算换手额（单位：百万）
-    turnover = (
-        (volumes[-1] * prices[-1]) / 1e6
-        if volumes and volumes[-1] is not None and prices[-1] is not None
-        else None
-    )
-    turnover_str = f"{turnover:.1f}" if turnover is not None else ""
-
-    # 从compare中去除中文和加号
-    filtered_compare = re.sub(r'[\u4e00-\u9fff+]', '', compare)
-    compare_value = clean_percentage_string(filtered_compare)
-
-    # 根据compare和换手额做"可疑"标记
-    if turnover is not None and turnover < 100 and compare_value is not None and compare_value > 0:
-        turnover_str = f"可疑{turnover_str}"
-
-    turnover_rate = (
-        f"{(volumes[-1] / int(share)) * 100:.2f}"
-        if volumes and volumes[-1] is not None and share not in [None, "N/A"]
-        else ""
-    )
-    marketcap_in_billion = (
-        f"{float(marketcap) / 1e9:.1f}B"
-        if marketcap not in [None, "N/A"]
-        else ""
-    )
-    pe_text = f"{pe}" if pe not in [None, "N/A"] else ""
-
-    clickable = False
-    tag_str = ""
-    fullname = ""
-    data_sources = ['stocks', 'etfs']
-    found = False
-
-    # 在JSON中查找对应的name信息以展示完整名称、标签、描述等
-    for source in data_sources:
-        for item in json_data.get(source, []):
-            if item['symbol'] == name:
-                tags = item.get('tag', [])
-                fullname = item.get('name', '')
-                tag_str = ','.join(tags)
-                if len(tag_str) > 25:
-                    tag_str = tag_str[:25] + '...'
-                clickable = True
-                found = True
-                break
-        if found:
-            break
-
-    # 组合标题
-    title_text = (
-        f'{name}  {compare}  {turnover_str}M/{turnover_rate} '
-        f'{marketcap_in_billion} {pe_text}"{table_name}" {fullname} {tag_str}'
-    )
-    title_style = {
-        'color': 'orange' if clickable else 'lightgray',
-        'fontsize': 16 if clickable else 15,
-        'fontweight': 'bold',
-        'picker': clickable,
-    }
-    title = ax1.set_title(title_text, **title_style)
-
-    def show_stock_etf_info(event=None):
-        """
-        展示当前name在JSON数据中的信息（如全名、标签、描述等）。
-        如果未找到则弹框提示。
-        """
-        for source in data_sources:
-            for item in json_data.get(source, []):
-                if item['symbol'] == name:
-                    descriptions = item
-                    root = tk.Tk()
-                    root.withdraw()  # 隐藏主窗口
-                    top = tk.Toplevel(root)
-                    top.title("Information")
-                    top.geometry("600x750")
-                    font_size = ('Arial', 22)
-                    text_box = scrolledtext.ScrolledText(top, wrap=tk.WORD, font=font_size)
-                    text_box.pack(expand=True, fill='both')
-                    info = (
-                        f"{name}\n"
-                        f"{descriptions['name']}\n\n"
-                        f"{descriptions['tag']}\n\n"
-                        f"{descriptions['description1']}\n\n"
-                        f"{descriptions['description2']}"
-                    )
-                    text_box.insert(tk.END, info)
-                    text_box.config(state=tk.DISABLED)
-                    top.bind('<Escape>', lambda event: root.destroy())
-                    root.mainloop()
-                    return
-        display_dialog(f"未找到 {name} 的信息")
-
-    def toggle_global_markers():
-        """
-        切换全局标记点（红色）的显示状态
-        """
-        nonlocal show_global_markers
-        show_global_markers = not show_global_markers
-        update_marker_visibility()
-        
-        # 更新所有全局标记点的可见性
-        for scatter, _, _, _ in global_scatter_points:
-            scatter.set_visible(show_global_markers)
-        
-        # 如果当前有高亮的标记点且该类标记点被隐藏，则也隐藏高亮和注释
-        if not show_global_markers and highlight_point.get_visible():
-            # 检查当前高亮的是否为全局标记点
-            current_pos = highlight_point.get_offsets()[0]
-            for scatter, date, price, _ in global_scatter_points:
-                if date == current_pos[0] and price == current_pos[1]:
-                    highlight_point.set_visible(False)
-                    annot.set_visible(False)
-                    break
-                
-        fig.canvas.draw_idle()
-
-    def toggle_specific_markers():
-        """
-        切换特定股票标记点（橙色）的显示状态
-        """
-        nonlocal show_specific_markers
-        show_specific_markers = not show_specific_markers
-        update_marker_visibility()
-        
-        # 更新所有特定股票标记点的可见性
-        for scatter, _, _, _ in specific_scatter_points:
-            scatter.set_visible(show_specific_markers)
-        
-        # 如果当前有高亮的标记点且该类标记点被隐藏，则也隐藏高亮和注释
-        if not show_specific_markers and highlight_point.get_visible():
-            # 检查当前高亮的是否为特定股票标记点
-            current_pos = highlight_point.get_offsets()[0]
-            for scatter, date, price, _ in specific_scatter_points:
-                if date == current_pos[0] and price == current_pos[1]:
-                    highlight_point.set_visible(False)
-                    annot.set_visible(False)
-                    break
-                
-        fig.canvas.draw_idle()
-    
-    def toggle_earning_markers():
-        """
-        切换收益公告标记点的显示状态
-        """
-        nonlocal show_earning_markers
-        show_earning_markers = not show_earning_markers
-        
-        # 更新所有收益公告标记点的可见性
-        for scatter, _, _, _ in earning_scatter_points:
-            scatter.set_visible(show_earning_markers)
-        
-        # 如果当前有高亮的标记点且标记点被隐藏，则也隐藏高亮和注释
-        if not show_earning_markers and highlight_point.get_visible():
-            highlight_point.set_visible(False)
-            annot.set_visible(False)
-            
-        fig.canvas.draw_idle()
-
-    def update_marker_visibility():
-        """根据当前 radio 按钮的选中值和各开关状态，更新三类标记的可见性。"""
-        # 提取当前时间区间内显示的最早日期
-        current_val = radio.value_selected
-        if current_val in time_options:
-            years = time_options[current_val]
-            if years == 0:
-                min_date = min(dates)
-            else:
-                min_date = datetime.now() - timedelta(days=years * 365)
-        else:
-            min_date = min(dates)
-
-        for scatter, date, _, _ in global_scatter_points:
-            scatter.set_visible((min_date <= date) and show_global_markers)
-        for scatter, date, _, _ in specific_scatter_points:
-            scatter.set_visible((min_date <= date) and show_specific_markers)
-        for scatter, date, _, _ in earning_scatter_points:
-            scatter.set_visible((min_date <= date) and show_earning_markers)
-        fig.canvas.draw_idle()
-    
-    def on_pick(event):
-        """
-        当点击标题（可点击）或标记点时，展示对应信息窗口。
-        如果标记点不可见，则不会触发点击事件。
-        """
-        if event.artist == title:
-            show_stock_etf_info()
-        elif event.artist in [point[0] for point in global_scatter_points + specific_scatter_points + earning_scatter_points]:
-            # 查找被点击的标记点
-            for scatter, date, price, text in global_scatter_points + specific_scatter_points + earning_scatter_points:
-                if event.artist == scatter:
-                    # 更新注释内容和显示位置
-                    annot.xy = (date, price)
-                    annot.set_text(f"{datetime.strftime(date, '%Y-%m-%d')}\n{price}\n{text}")
-                    annot.get_bbox_patch().set_alpha(0.8)
-                    annot.set_fontsize(16)
-                    # 调整注释显示位置
-                    midpoint = max(dates) - (max(dates) - min(dates)) / 2
-                    if date < midpoint:
-                        annot.set_position((50, -20))
-                    else:
-                        annot.set_position((-150, -20))
-                    annot.set_visible(True)
-                    highlight_point.set_offsets([date, price])
-                    highlight_point.set_visible(True)
-                    fig.canvas.draw_idle()
-                    break
-
-    def on_keyword_selected(db_path, table_name, name):
-        """
-        按关键字查询数据库并弹框显示结果。
-        """
-        condition = f"name = '{name}'"
-        result = query_database(db_path, table_name, condition)
-        create_window(result)
-
-    def query_database(db_path, table_name, condition):
-        """
-        根据条件查询数据库并返回结果的字符串形式。
-        """
-        with sqlite3.connect(db_path) as conn:
-            cursor = conn.cursor()
-            query = f"SELECT * FROM {table_name} WHERE {condition} ORDER BY date DESC;"
-            cursor.execute(query)
-            rows = cursor.fetchall()
-            if not rows:
-                return "今天没有数据可显示。\n"
-            columns = [description[0] for description in cursor.description]
-            col_widths = [
-                max(len(str(row[i])) for row in rows + [columns])
-                for i in range(len(columns))
-            ]
-            output_text = ' | '.join(
-                [col.ljust(col_widths[idx]) for idx, col in enumerate(columns)]
-            ) + '\n'
-            output_text += '-' * len(output_text) + '\n'
-            for row in rows:
-                output_text += ' | '.join(
-                    [str(item).ljust(col_widths[idx]) for idx, item in enumerate(row)]
-                ) + '\n'
-            return output_text
-
-    def create_window(content):
-        """
-        创建新窗口显示查询数据库的结果。
-        """
-        root = tk.Tk()
-        root.withdraw()  # 隐藏主窗口
-        top = tk.Toplevel(root)
-        top.title("数据库查询结果")
-        window_width, window_height = 900, 600
-        center_x = (top.winfo_screenwidth() - window_width) // 2
-        center_y = (top.winfo_screenheight() - window_height) // 2
-        top.geometry(f'{window_width}x{window_height}+{center_x}+{center_y}')
-        top.bind('<Escape>', lambda event: root.destroy())
-
-        text_font = tkFont.Font(family="Courier", size=20)
-        text_area = scrolledtext.ScrolledText(top, wrap=tk.WORD, width=100, height=30, font=text_font)
-        text_area.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
-        text_area.insert(tk.INSERT, content)
-        text_area.configure(state='disabled')
-        root.mainloop()
-
-    # 给标题添加可点击下划线
-    if clickable:
-        fig.canvas.mpl_connect('pick_event', on_pick)
-
-    ax1.grid(True, color='gray', alpha=0.1, linestyle='--')
-    plt.xticks(rotation=45)
-
-    annot = ax1.annotate(
-        "",
-        xy=(0, 0),
-        xytext=(20, 20),
-        textcoords="offset points",
-        bbox=dict(boxstyle="round", fc="black"),
-        arrowprops=dict(arrowstyle="->"),
-        color='white'
-    )
-    annot.set_visible(False)
-
-    # 定义可选时间范围
-    time_options = {
-        "1m": 0.08,
-        "3m": 0.25,
-        "6m": 0.5,
-        "1Y": 1,
-        "2Y": 2,
-        "3Y": 3,
-        "5Y": 5,
-        "10Y": 10,
-        "All": 0
-    }
-    default_index = list(time_options.keys()).index(default_time_range)
-
-    # 配置单选按钮
-    rax = plt.axes([0.95, 0.005, 0.05, 0.8], facecolor='black')
-    radio = RadioButtons(rax, list(time_options.keys()), active=default_index)
-    for label in radio.labels:
-        label.set_color('white')
-        label.set_fontsize(14)
-    radio.circles[default_index].set_facecolor('red')
-
-    # 添加"编辑财报"按钮
-    edit_btn_ax = plt.axes([0.92, 0.94, 0.06, 0.05], facecolor='black')  # 调整位置在财报按钮上方
-    edit_btn = plt.Button(edit_btn_ax, '编辑', color='darkred', hovercolor='firebrick')
-    edit_btn.label.set_color('white')
-
-    # 添加"添加财报"按钮
-    earning_btn_ax = plt.axes([0.92, 0.88, 0.06, 0.05], facecolor='black')
-    earning_btn = plt.Button(earning_btn_ax, '新增', color='darkblue', hovercolor='steelblue')
-    earning_btn.label.set_color('white')
-    
-    # 添加"标签tags编辑财报"按钮
-    tags_btn_ax = plt.axes([0.92, 0.82, 0.06, 0.05], facecolor='black')  # 调整位置在财报按钮上方
-    tags_btn = plt.Button(tags_btn_ax, 'Tags', color='darkred', hovercolor='steelblue')
-    tags_btn.label.set_color('white')
-
-    # 添加"新增输入事件"按钮
-    event_btn_ax = plt.axes([0.92, 0.76, 0.06, 0.05], facecolor='black')  # 调整位置在财报按钮上方
-    event_btn = plt.Button(event_btn_ax, 'Event', color='darkred', hovercolor='steelblue')
-    event_btn.label.set_color('white')
-    
-    def open_earning_input(event):
-        """启动财报输入程序并传递当前symbol"""
-        try:
-            # 使用subprocess启动b.py，并传递当前symbol作为参数
-            subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Operations/Insert_Earning_Manual.py', name])
-        except Exception as e:
-            display_dialog(f"启动财报输入程序失败: {e}")
-    
-    def open_earning_edit(event):
-        """启动财报输入程序并传递当前symbol"""
-        try:
-            # 使用subprocess启动b.py，并传递当前symbol作为参数
-            subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Operations/Editor_Symbol_DB.py', name])
-        except Exception as e:
-            display_dialog(f"启动财报输入程序失败: {e}")
-
-    def open_tags_edit(event):
-        """启动财报输入程序并传递当前symbol"""
-        try:
-            # 使用subprocess启动b.py，并传递当前symbol作为参数
-            subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Operations/Editor_Symbol_Tags.py', name])
-        except Exception as e:
-            display_dialog(f"启动财报输入程序失败: {e}")
-
-    def open_event_input(event):
-        """启动财报输入程序并传递当前symbol"""
-        try:
-            # 使用subprocess启动b.py，并传递当前symbol作为参数
-            subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Operations/Insert_Events.py', name])
-        except Exception as e:
-            display_dialog(f"启动财报输入程序失败: {e}")
-    
-    earning_btn.on_clicked(open_earning_input)
-    edit_btn.on_clicked(open_earning_edit)
-    tags_btn.on_clicked(open_tags_edit)
-    event_btn.on_clicked(open_event_input)
-
-    def update_annot(ind):
-        """
-        更新工具提示位置和文本内容。
-        """
-        x_data, y_data = line1.get_data()
-        xval, yval = x_data[ind["ind"][0]], y_data[ind["ind"][0]]
-        annot.xy = (xval, yval)
-        
-        # 查找当前日期是否有标记信息
-        current_date = xval.replace(tzinfo=None)
-        global_marker_text = None
-        specific_marker_text = None
-        earning_marker_text = None  # 新增：收益公告文本
-        
-        # 只有当标记点可见时才显示对应的事件文本
-        # 查找全局标记
-        if show_global_markers:
-            for marker_date, text in global_markers.items():
-                if abs((marker_date - current_date).total_seconds()) < 86400:  # 两天内
-                    global_marker_text = text
-                    break
-                
-        if show_specific_markers:
-            for marker_date, text in specific_markers.items():
-                if abs((marker_date - current_date).total_seconds()) < 86400:  # 两天内
-                    specific_marker_text = text
-                    break
-    
-        # 只有当收益标记点可见时才显示收益事件文本
-        if show_earning_markers:
-            # 查找收益公告标记
-            for marker_date, text in earning_markers.items():
-                if abs((marker_date - current_date).total_seconds()) < 86400:  # 两天内
-                    earning_marker_text = text
-                    break
-                
-        # 如果鼠标按下，则显示与初始点的百分比变化，否则显示日期和数值
-        if mouse_pressed and initial_price is not None:
-            percent_change = ((yval - initial_price) / initial_price) * 100
-            text = f"{percent_change:.1f}%"
-            annot.set_color('white')  # 百分比变化使用白色
-        else:
-            # 显示当前日期、当前价格和当前价格跟最新价格的百分比差值
-            latest_price = prices[-1]  # 获取最新日期的价格
-            current_price = yval       # 当前鼠标位置的价格
-            percent_diff = ((latest_price - current_price) / current_price) * 100  # 计算百分比差值
-            text = f"{datetime.strftime(xval, '%Y-%m-%d')}\n{current_price:.2f}\n\n{percent_diff:.2f}%"  # 显示日期、当前价格和百分比差值
-            # text = f"{datetime.strftime(xval, '%Y-%m-%d')}\n{percent_diff:.2f}%"  # 显示日期、当前价格和百分比差值
-            
-            # 添加标记文本信息（如果有）
-            has_earning_marker = False
-            marker_texts = []
-            if global_marker_text:
-                marker_texts.append(global_marker_text)
-            if specific_marker_text:
-                marker_texts.append(specific_marker_text)
-            if earning_marker_text:
-                marker_texts.append(earning_marker_text)
-                has_earning_marker = True
-                
-            if marker_texts:
-                text += "\n" + "\n".join(marker_texts)
-            # 如果是收益公告，设置为黄色字体，否则为白色
-            if has_earning_marker and not (global_marker_text or specific_marker_text):
-                annot.set_color('yellow')  # 收益公告标记使用黄色文字
-            elif global_marker_text and not (specific_marker_text or has_earning_marker):
-                annot.set_color('red')    # 全局标记使用红色文字
-            elif specific_marker_text and not (global_marker_text or has_earning_marker):
-                annot.set_color('orange')    # 特殊标记使用橘色文字
-            else:
-                annot.set_color('white')  # 其他标记使用白色文字
-        
-        annot.set_text(text)
-        annot.get_bbox_patch().set_alpha(0.4)
-        annot.set_fontsize(16)
-        
-        # 检查点的垂直位置
-        y_range = ax1.get_ylim()
-        y_position_ratio = (yval - y_range[0]) / (y_range[1] - y_range[0])
-        
-        # 更智能地调整注释位置
-        x_range = ax1.get_xlim()
-        position_ratio = (matplotlib.dates.date2num(xval) - x_range[0]) / (x_range[1] - x_range[0])
-        
-        # 根据点在图表中的水平和垂直位置调整注释
-        if y_position_ratio < 0.2:  # 如果点在底部区域（靠近X轴）
-            # 将注释向上方移动
-            y_offset = 60  # 设置一个较大的向上偏移
-        elif y_position_ratio > 0.8:    # 如果点在顶部区域
-            y_offset = -120  # 默认向下偏移
-        else:
-            y_offset = -70  # 默认向下偏移
-        
-        # 根据水平位置调整
-        if position_ratio > 0.7:  # 如果点在右侧30%区域
-            # 估计文本长度，越长偏移越大
-            text_length = len(text)
-            x_offset = -20 - min(text_length * 6, 300)  # 根据文本长度动态调整左偏移
-            annot.set_position((x_offset, y_offset))
-        elif position_ratio < 0.3:  # 如果点在左侧30%区域
-            annot.set_position((50, y_offset))
-        else:  # 中间区域
-            # 如果在底部区域，仍然向上偏移
-            if y_position_ratio < 0.2:
-                annot.set_position((-200, y_offset))
-            else:
-                annot.set_position((-200, -70))  # 放到下方
-
-    def hover(event):
-        """
-        鼠标在图表上滑动时，更新垂直参考线、注释、以及高亮最近的数据点。
-        """
-        if event.inaxes in [ax1, ax2]:
-            if event.xdata:
-                current_date = matplotlib.dates.num2date(event.xdata).replace(tzinfo=None)
-                vline.set_xdata(current_date)
-                vline.set_visible(True)
-                fig.canvas.draw_idle()
-                x_data, y_data = line1.get_data()
-                nearest_index = (np.abs(np.array(x_data) - current_date)).argmin()
-
-                # 判断鼠标位置是否接近数据点的容差（tolerance）值来提高敏感度，根据差值判断是否接近某个数据点
-                # 如果你将它调大，比如改为 0.1 或 0.2，那么即便鼠标离数据点稍远一些，仍然可以触发高亮蓝色价格点
-                date_distance = 0.2 * ((ax1.get_xlim()[1] - ax1.get_xlim()[0]) / 365)
-                if np.isclose(
-                    matplotlib.dates.date2num(x_data[nearest_index]),
-                    matplotlib.dates.date2num(current_date),
-                    atol=date_distance
-                ):
-                    update_annot({"ind": [nearest_index]})
-                    annot.set_visible(True)
-                    highlight_point.set_offsets([x_data[nearest_index], y_data[nearest_index]])
-                    highlight_point.set_visible(True)
-                else:
-                    annot.set_visible(False)
-                    highlight_point.set_visible(False)
-                fig.canvas.draw_idle()
-            else:
-                vline.set_visible(False)
-                annot.set_visible(False)
-                highlight_point.set_visible(False)
-                fig.canvas.draw_idle()
-        elif event.inaxes == rax:
-            vline.set_visible(False)
-            annot.set_visible(False)
-            highlight_point.set_visible(False)
-            fig.canvas.draw_idle()
-
-    def update(val):
-        """
-        根据单选按钮选项更新图表显示的时间范围。
-        """
-        years = time_options[val]
-        if years == 0:
-            filtered_dates, filtered_prices, filtered_volumes = dates, prices, volumes
-            min_date = min(dates)
-        else:
-            min_date = datetime.now() - timedelta(days=years * 365)
-            filtered_dates = [d for d in dates if d >= min_date]
-            filtered_prices = [p for d, p in zip(dates, prices) if d >= min_date]
-            filtered_volumes = [v for d, v in zip(dates, volumes) if d >= min_date] if volumes else None
-
-        nonlocal fill
-        fill = update_plot(line1, fill, line2, filtered_dates, filtered_prices, filtered_volumes, ax1, ax2, show_volume)
-        radio.circles[list(time_options.keys()).index(val)].set_facecolor('red')
-        
-        # 根据所选时间区间控制原始价格点散点的显示
-        if val in ["1m", "3m", "6m"]:
-            small_dot_scatter.set_visible(True)
-        else:
-            small_dot_scatter.set_visible(False)
-
-        # 更新红色标记点显示，考虑时间范围和红色标记点可见性设置
-        for scatter, date, _, _ in global_scatter_points:
-            scatter.set_visible((min_date <= date) and show_global_markers)
-            
-        # 更新橙色标记点显示，考虑时间范围和橙色标记点可见性设置
-        for scatter, date, _, _ in specific_scatter_points:
-            scatter.set_visible((min_date <= date) and show_specific_markers)
-            
-        # 更新绿色收益公告标记点显示，考虑时间范围和总体可见性设置
-        for scatter, date, _, _ in earning_scatter_points:
-            scatter.set_visible((min_date <= date) and show_earning_markers)
-            
-        fig.canvas.draw_idle()
-
-    def toggle_volume():
-        """
-        显示或隐藏成交量曲线。
-        """
-        nonlocal show_volume
-        show_volume = not show_volume
-        update(radio.value_selected)
-
-    def on_key(event):
-        """
-        处理键盘事件，用于快捷操作图表。
-        """
-        actions = {
-            'v': toggle_volume,
-            'c': toggle_global_markers,  # 'c'键切换红色全局标记点显示
-            'x': toggle_specific_markers,  # 'x'键切换橙色特定股票标记点显示
-            'a': toggle_earning_markers,  # 'a'键切换白色收益公告标记点显示（保持不变）
-            'n': lambda: open_earning_input(None),  # 添加'n'键快捷方式
-            'e': lambda: open_earning_edit(None),  # 添加'e'键快捷方式
-            't': lambda: open_tags_edit(None),  # 添加't'键快捷方式
-            'w': lambda: open_event_input(None),  # 添加'w'键快捷方式
-            '1': lambda: radio.set_active(7),
-            '2': lambda: radio.set_active(1),
-            '3': lambda: radio.set_active(3),
-            '4': lambda: radio.set_active(4),
-            '5': lambda: radio.set_active(5),
-            '6': lambda: radio.set_active(6),
-            '7': lambda: radio.set_active(8),
-            '8': lambda: radio.set_active(2),
-            '9': lambda: radio.set_active(0),
-            '`': show_stock_etf_info,
-            'd': lambda: on_keyword_selected(db_path, table_name, name)
+        self.results = {
+            'matched_names_stocks': matched_names_stocks,
+            'matched_names_etfs': matched_names_etfs,
+            'matched_names_stocks_tag': matched_names_stocks_tag,
+            'matched_names_etfs_tag': matched_names_etfs_tag,
+            'matched_names_stocks_name': matched_names_stocks_name,
+            'matched_names_etfs_name': matched_names_etfs_name,
+            'matched_names_stocks_symbol': matched_names_stocks_symbol,
+            'matched_names_etfs_symbol': matched_names_etfs_symbol
         }
-        if event.key in actions:
-            actions[event.key]()
 
-        # 处理方向键在不同时间区间间移动
-        current_index = list(time_options.keys()).index(radio.value_selected)
-        if event.key == 'up' and current_index > 0:
-            radio.set_active(current_index - 1)
-        elif event.key == 'down' and current_index < len(time_options) - 1:
-            radio.set_active(current_index + 1)
+        # 发射包含结果的信号
+        self.results_ready.emit(self.results)
 
-    def close_everything(event, panel_flag):
-        """
-        按下ESC时关闭图表，并在panel为真时退出系统。
-        """
-        if event.key == 'escape':
-            plt.close('all')
-            if panel_flag:
-                import sys
-                sys.exit(0)
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("公司、股票和ETF搜索")
+        self.setGeometry(350, 200, 800, 600)
+        self.central_widget = QWidget()
+        self.setCentralWidget(self.central_widget)
+        self.layout = QVBoxLayout(self.central_widget)
 
-    def on_mouse_press(event):
-        """
-        记录鼠标左键按下时的价格和日期，用于计算百分比变化。
-        """
-        nonlocal mouse_pressed, initial_price, initial_date
-        if event.button == 1:
-            mouse_pressed = True
-            nearest_index = (np.abs(np.array(dates) -
-                            matplotlib.dates.num2date(event.xdata).replace(tzinfo=None))).argmin()
-            initial_price = prices[nearest_index]
-            initial_date = dates[nearest_index]
+        self.input_layout = QHBoxLayout()
+        self.input_field = QLineEdit()
+        self.input_field.setFixedHeight(30)
+        self.input_field.setFont(QFont("Arial", 18))
+        self.search_button = QPushButton("搜索")
+        self.search_button.setFixedSize(60, 30)
+        self.input_layout.addWidget(self.input_field, 7)
+        self.input_layout.addWidget(self.search_button, 1)
+        self.layout.addLayout(self.input_layout)
 
-    def on_mouse_release(event):
-        """
-        鼠标左键释放时，停止显示百分比变化。
-        """
-        nonlocal mouse_pressed
-        if event.button == 1:
-            mouse_pressed = False
+        self.loading_label = QLabel("正在搜索...", self)
+        self.loading_label.setAlignment(Qt.AlignCenter)
+        self.loading_label.setFont(QFont("Arial", 14))
+        self.loading_label.hide()
+        self.layout.addWidget(self.loading_label)
 
-    # 参考线
-    vline = ax1.axvline(x=dates[0], color='cyan', linestyle='--', linewidth=1, visible=False)
+        self.result_area = CustomTextBrowser()
+        self.result_area.anchorClicked.connect(self.open_file)
+        self.result_area.setFont(QFont("Arial", 12))
+        self.layout.addWidget(self.result_area)
 
-    # 连接事件
-    plt.gcf().canvas.mpl_connect("motion_notify_event", hover)
-    plt.gcf().canvas.mpl_connect('key_press_event', on_key)
-    plt.gcf().canvas.mpl_connect('key_press_event', lambda e: close_everything(e, panel))
-    plt.gcf().canvas.mpl_connect('button_press_event', on_mouse_press)
-    plt.gcf().canvas.mpl_connect('button_release_event', on_mouse_release)
-    radio.on_clicked(update)
+        self.search_button.clicked.connect(self.start_search)
+        self.input_field.returnPressed.connect(self.start_search)
 
-    def hide_annot_on_leave(event):
-        """
-        当鼠标离开图表区域时，隐藏注释和高亮点。
-        """
-        annot.set_visible(False)
-        highlight_point.set_visible(False)
-        vline.set_visible(False)
-        fig.canvas.draw_idle()
+        # 添加 ESC 键关闭窗口的功能
+        self.shortcut_close = QKeySequence("Esc")
+        self.quit_action = QAction("Quit", self)
+        self.quit_action.setShortcut(self.shortcut_close)
+        self.quit_action.triggered.connect(self.close)
+        self.addAction(self.quit_action)
 
-    plt.gcf().canvas.mpl_connect('figure_leave_event', hide_annot_on_leave)
+    def start_search(self):
+        keywords = self.input_field.text()
+        if not keywords.strip():
+            return  # 如果用户没有输入关键词，则不进行搜索
+        # 更新compare数据
+        self.compare_data = load_compare_data()
+        self.loading_label.show()
+        self.result_area.clear()
+        self.result_area.setEnabled(False)
+        self.search_button.setEnabled(False)
+        self.input_field.setEnabled(False)
 
-    # 初始化图表
-    update(default_time_range)
-    print("图表绘制完成，等待用户操作...")
-    plt.show()
+        # 传递是否有空格的信息
+        self.worker = SearchWorker(keywords, json_path)
+        self.worker.results_ready.connect(self.show_results)
+        self.worker.start()
+
+    def show_results(self, results):
+        self.loading_label.hide()
+        self.result_area.setEnabled(True)
+        self.search_button.setEnabled(True)
+        self.input_field.setEnabled(True)
+
+        # 解包结果
+        matched_names_stocks = results['matched_names_stocks']
+        matched_names_etfs = results['matched_names_etfs']
+        matched_names_stocks_tag = results['matched_names_stocks_tag']
+        matched_names_etfs_tag = results['matched_names_etfs_tag']
+        matched_names_stocks_name = results['matched_names_stocks_name']
+        matched_names_etfs_name = results['matched_names_etfs_name']
+        matched_names_stocks_symbol = results['matched_names_stocks_symbol']
+        matched_names_etfs_symbol = results['matched_names_etfs_symbol']
+
+        search_term = self.input_field.text().strip().upper()
+
+        def sort_by_exact_match(items, search_term):
+            exact_matches = []
+            partial_matches = []
+            
+            for item in items:
+                symbol = item[0]  # 获取symbol（第一个元素）
+                if symbol == search_term:
+                    exact_matches.append(item)
+                else:
+                    partial_matches.append(item)
+            
+            return exact_matches + partial_matches
+
+        # 对symbol结果进行排序
+        matched_names_stocks_symbol = sort_by_exact_match(matched_names_stocks_symbol, search_term)
+        matched_names_etfs_symbol = sort_by_exact_match(matched_names_etfs_symbol, search_term)
+
+        # 创建显示顺序列表
+        display_order = [
+            ("Stock_symbol", matched_names_stocks_symbol, 'cyan'),
+            ("ETF_symbol", matched_names_etfs_symbol, 'cyan'),
+            ("Stock_name", matched_names_stocks_name, 'white'),
+            ("ETF_name", matched_names_etfs_name, 'white'),
+            ("Stock_tag", matched_names_stocks_tag, 'white'),
+            ("ETF_tag", matched_names_etfs_tag, 'white')
+        ]
+
+        html_content = ""
+
+        # 生成HTML内容
+        for category, results, color in display_order:
+            if results:  # 只显示有结果的类别
+                html_content += self.insert_results_html(category, results, color, 16)
+
+        # 添加固定在末尾的类别
+        html_content += self.insert_results_html("Stock_Description", matched_names_stocks, 'gray', 16)
+        html_content += self.insert_results_html("ETFs_Description", matched_names_etfs, 'gray', 16)
+
+        self.result_area.setHtml(html_content)
+        self.result_area.verticalScrollBar().setValue(0)
+
+    def insert_results_html(self, category, results, color, font_size):
+        html = ""
+        if results:
+            html += f"<h2 style='color: yellow; font-size: 16px;'>{category}:</h2>"
+            for result in results:
+                if len(result) == 3:  # 股票结果
+                    symbol, name, tags = result
+                    # 查找compare数据
+                    compare_info = self.compare_data.get(symbol, "")
+                    if compare_info:
+                        display_text = f"{symbol}  {compare_info}  {name} - {tags}"
+                    else:
+                        display_text = f"{symbol} - {name} - {tags}"
+                    html += f"<p><a href='symbol://{symbol}' style='color: {color}; text-decoration: underline; font-size: {font_size}px;'>{display_text}</a></p>"
+                else:  # ETF 结果
+                    symbol, tags = result
+                    # 获取 ETF 的最新成交量
+                    latest_volume = get_latest_etf_volume(symbol)
+                    # 查找compare数据
+                    compare_info = self.compare_data.get(symbol, "")
+                    # 构建显示文本
+                    display_parts = [symbol]
+                    if compare_info:
+                        display_parts.append(compare_info)
+                    display_parts.append(tags)
+                    if latest_volume and latest_volume != "N/A":  # 只在有有效成交量时添加
+                        display_parts.append(latest_volume)
+                    
+                    display_text = " - ".join(display_parts)
+                    html += f"<p><a href='symbol://{symbol}' style='color: {color}; text-decoration: underline; font-size: {font_size}px;'>{display_text}</a></p>"
+        return html
+
+    def open_file(self, url):
+        if url.scheme() == 'symbol':
+            # 提取 symbol
+            symbol = url.toString().replace('symbol://', '').strip()
+            if symbol:
+                # 将 symbol 复制到剪贴板
+                pyperclip.copy(symbol)
+                # 获取 stock_chart.py 的绝对路径
+                stock_chart_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '/Users/yanzhang/Documents/Financial_System/Query/Stock_Chart.py')
+                # 调用 stock_chart.py，传递 'paste' 参数
+                subprocess.Popen([sys.executable, stock_chart_path, 'paste'])
+        else:
+            file_path = url.toLocalFile()
+            if not file_path:
+                file_path = url.toString()
+            try:
+                if sys.platform == "win32":
+                    os.startfile(file_path)
+                else:
+                    subprocess.call(("open", file_path))
+            except Exception as e:
+                print(f"无法打开文件 {file_path}: {e}")
+
+def search_json_for_keywords(json_path, keywords):
+    with open(json_path, 'r') as file:
+        data = json.load(file)
+    keywords_lower = [keyword.strip().lower() for keyword in keywords.split()]
+
+    def search_category(category):
+        if category == 'stocks':
+            return [
+                (item['symbol'], item.get('name', ''), ' '.join(item.get('tag', []))) 
+                for item in data.get(category, [])
+                if all(keyword in ' '.join([item['description1'], item['description2']]).lower() for keyword in keywords_lower)
+            ]
+        else:  # ETFs
+            return [
+                (item['symbol'], ' '.join(item.get('tag', []))) 
+                for item in data.get(category, [])
+                if all(keyword in ' '.join([item['description1'], item['description2']]).lower() for keyword in keywords_lower)
+            ]
+
+    return search_category('stocks'), search_category('etfs')
+
+def search_tag_for_keywords(json_path, keywords, max_distance=1):
+    with open(json_path, 'r') as file:
+        data = json.load(file)
+    keywords_lower = [keyword.strip().lower() for keyword in keywords.split()]
+
+    def fuzzy_match(text, keyword):
+        if len(keyword) <= 1:  # 对于单个字符，只进行精确匹配
+            return keyword in text.lower()
+        words = text.lower().split()
+        return any(levenshtein_distance(word, keyword) <= max_distance for word in words)
+
+    def two_step_search(category, search_field):
+        search_term = keywords.strip().lower()  # 使用小写
+        search_term_lower = search_term  # 统一使用小写
+        
+        def exact_match(item):
+            if search_field == 'name':
+                return item.get('name', '').lower() == search_term_lower
+            elif search_field == 'symbol':
+                return item.get('symbol', '').lower() == search_term_lower
+            return False
+        
+        def partial_match(item):
+            if search_field == 'name':
+                return all(keyword in item.get('name', '').lower() for keyword in keywords_lower)
+            elif search_field == 'symbol':
+                return all(keyword in item.get('symbol', '').lower() for keyword in keywords_lower)
+            return False
+        
+        def fuzzy_match_item(item):
+            if search_field == 'name':
+                return all(fuzzy_match(item.get('name', ''), keyword) for keyword in keywords_lower)
+            elif search_field == 'symbol':
+                return all(fuzzy_match(item.get('symbol', ''), keyword) for keyword in keywords_lower)
+            return False
+        
+        exact_matches = [
+            (item['symbol'], item.get('name', ''), ' '.join(item.get('tag', []))) 
+            if category == 'stocks' 
+            else (item['symbol'], ' '.join(item.get('tag', [])))
+            for item in data.get(category, [])
+            if exact_match(item)
+        ]
+        
+        partial_matches = [
+            (item['symbol'], item.get('name', ''), ' '.join(item.get('tag', []))) 
+            if category == 'stocks' 
+            else (item['symbol'], ' '.join(item.get('tag', [])))
+            for item in data.get(category, [])
+            if not exact_match(item) and partial_match(item)
+        ]
+        
+        fuzzy_matches = [
+            (item['symbol'], item.get('name', ''), ' '.join(item.get('tag', []))) 
+            if category == 'stocks' 
+            else (item['symbol'], ' '.join(item.get('tag', [])))
+            for item in data.get(category, [])
+            if not exact_match(item) and not partial_match(item) and fuzzy_match_item(item)
+        ]
+        
+        return exact_matches + partial_matches + fuzzy_matches
+
+    def search_category_for_tag(category):
+        # 定义一个计算匹配分数的函数
+        def match_score(item):
+            tags = item[2].lower() if category == 'stocks' else item[1].lower()
+            exact_matches = sum(keyword in tags for keyword in keywords_lower)
+            fuzzy_matches = sum(any(fuzzy_match(tag.lower(), keyword) for tag in tags.split()) for keyword in keywords_lower)
+            return (exact_matches, fuzzy_matches)
+
+        exact_results = [
+            (item['symbol'], item.get('name', ''), ' '.join(item.get('tag', []))) if category == 'stocks' else (item['symbol'], ' '.join(item.get('tag', [])))
+            for item in data.get(category, [])
+            if all(keyword in ' '.join(item.get('tag', [])).lower() for keyword in keywords_lower)
+        ]
+        if exact_results:
+            return sorted(exact_results, key=match_score, reverse=True)
+
+        return [
+            (item['symbol'], item.get('name', ''), ' '.join(item.get('tag', []))) if category == 'stocks' else (item['symbol'], ' '.join(item.get('tag', [])))
+            for item in data.get(category, [])
+            if all(any(fuzzy_match(tag, keyword) for tag in item.get('tag', [])) for keyword in keywords_lower)
+        ]
+
+    return (
+        search_category_for_tag('stocks'),
+        search_category_for_tag('etfs'),
+        two_step_search('stocks', 'name'),
+        two_step_search('etfs', 'name'),
+        two_step_search('stocks', 'symbol'),
+        two_step_search('etfs', 'symbol')
+    )
+
+def levenshtein_distance(s1, s2):
+    if len(s1) < len(s2):
+        return levenshtein_distance(s2, s1)
+    if len(s2) == 0:
+        return len(s1)
+    previous_row = range(len(s2) + 1)
+    for i, c1 in enumerate(s1):
+        current_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            insertions = previous_row[j + 1] + 1
+            deletions = current_row[j] + 1
+            substitutions = previous_row[j] + (c1 != c2)
+            current_row.append(min(insertions, deletions, substitutions))
+        previous_row = current_row
+    return previous_row[-1]
+
+def get_latest_etf_volume(etf_name):
+    db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    # 查询最新的 volume
+    cursor.execute("SELECT volume FROM ETFs WHERE name = ? ORDER BY date DESC LIMIT 1", (etf_name,))
+    result = cursor.fetchone()
+
+    conn.close()
+
+    if result and result[0] is not None:
+        volume = result[0]
+        # 将 volume 转换为 K 单位并返回
+        return f"{int(volume / 1000)}K"
+    else:
+        return "N/A"
+
+def load_compare_data():
+    compare_data = {}
+    try:
+        with open("/Users/yanzhang/Documents/News/backup/Compare_All.txt", "r") as f:
+            for line in f:
+                if ":" in line:
+                    symbol, value = line.strip().split(":", 1)
+                    compare_data[symbol.strip()] = value.strip()
+    except Exception as e:
+        print(f"读取Compare_All.txt出错: {e}")
+        return {}
+    return compare_data
+
+if __name__ == "__main__":
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+
+    if len(sys.argv) > 1:
+        arg = sys.argv[1]
+        if arg == "input":
+            # 显示窗口，让用户输入
+            pass
+        elif arg == "paste":
+            # 使用剪贴板内容进行搜索
+            clipboard_content = pyperclip.paste()
+            if clipboard_content:
+                window.input_field.setText(clipboard_content)
+                window.start_search()
+            else:
+                print("剪贴板为空，请复制一些文本后再试。")
+    else:
+        # 如果没有提供参数，则仅显示窗口，让用户手动输入
+        pass
+
+    sys.exit(app.exec_())
