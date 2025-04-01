@@ -155,7 +155,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     # 使用插值函数生成更多的平滑数据点
     smooth_dates, smooth_prices = smooth_curve(dates, prices)
 
+    #这里可以修改整个表格的大小
     fig, ax1 = plt.subplots(figsize=(15, 8))
+    
+    # 这里调整图表居上边沿的距离
     fig.subplots_adjust(left=0.05, bottom=0.1, right=0.83, top=0.8)
     ax2 = ax1.twinx()
 
