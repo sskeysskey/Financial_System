@@ -100,7 +100,6 @@
         "MSI",
         "PWR",
         "PYPL",
-        "ETN",
         "VRT",
         "UNH",
         "KKR",
@@ -137,7 +136,9 @@
         "AAPL",
         "CRH",
         "GOOGL",
-        "TSM"
+        "TSM",
+        "AMZN",
+        "WDAY"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -154,7 +155,6 @@
         "AVGO",
         "JPM",
         "V",
-        "AMZN",
         "WMT",
         "LLY"
     ],
@@ -209,7 +209,6 @@
         "FMX",
         "OVV",
         "MNSO",
-        "APLS",
         "ALV",
         "WFRD",
         "NXT",
@@ -236,7 +235,6 @@
         "CNQ",
         "FCFS",
         "AMGN",
-        "IQV",
         "ELAN",
         "WMS",
         "OSK",
@@ -316,7 +314,6 @@
         "MKSI",
         "NXE",
         "TECH",
-        "SRPT",
         "RRX",
         "AMAT",
         "FANG",
@@ -357,7 +354,6 @@
         "EXP",
         "ODFL",
         "RXO",
-        "TER",
         "ROST",
         "H",
         "ASO",
@@ -384,7 +380,13 @@
         "SMG",
         "PAG",
         "TMO",
-        "NTAP"
+        "NTAP",
+        "TECK",
+        "MEDP",
+        "PCVX",
+        "RARE",
+        "ETN",
+        "PSTG"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -444,7 +446,6 @@
         "DVN",
         "CTRA",
         "CIVI",
-        "MRNA",
         "DJT",
         "MUR",
         "HUM",
@@ -585,7 +586,10 @@
         "CSX",
         "CDW",
         "BSY",
-        "EPAM"
+        "EPAM",
+        "IQV",
+        "SRPT",
+        "TER"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -621,7 +625,9 @@
         "DEO",
         "FLO",
         "CRSP",
-        "ST"
+        "ST",
+        "MRNA",
+        "APLS"
     ],
     "black_keywords": [
         "Cotton",

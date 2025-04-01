@@ -213,7 +213,8 @@
         "PCAR",
         "JCI",
         "CPRT",
-        "HWM"
+        "HWM",
+        "WCN"
     ],
     "Real_Estate": [
         "PLD",
@@ -221,7 +222,8 @@
         "EQIX",
         "WELL",
         "PSA",
-        "SPG"
+        "SPG",
+        "O"
     ],
     "Technology": [
         "AAPL",
