@@ -155,8 +155,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     # 使用插值函数生成更多的平滑数据点
     smooth_dates, smooth_prices = smooth_curve(dates, prices)
 
-    fig, ax1 = plt.subplots(figsize=(13, 6))
-    fig.subplots_adjust(left=0.05, bottom=0.1, right=0.83, top=0.9)
+    fig, ax1 = plt.subplots(figsize=(15, 8))
+    fig.subplots_adjust(left=0.05, bottom=0.1, right=0.83, top=0.8)
     ax2 = ax1.twinx()
 
     # 隐藏ax2的轴线和刻度
@@ -416,7 +416,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         'fontweight': 'bold',
         'picker': clickable,
     }
-    title = ax1.set_title(title_text, **title_style)
+    # 在设置标题的代码部分
+    title = ax1.set_title(title_text, **title_style, pad=70)  # 增加pad参数
 
     def show_stock_etf_info(event=None):
         """
