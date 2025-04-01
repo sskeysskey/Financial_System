@@ -666,15 +666,20 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     def open_earning_input(event):
         """启动财报输入程序并传递当前symbol"""
         try:
-            # 使用subprocess启动b.py，并传递当前symbol作为参数
             subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Operations/Insert_Earning_Manual.py', name])
         except Exception as e:
             display_dialog(f"启动财报输入程序失败: {e}")
+
+    def check_earning_kimi(event):
+        """启动财报输入程序并传递当前symbol"""
+        try:
+            subprocess.Popen(['osascript', '/Users/yanzhang/Documents/ScriptEditor/CheckKimi_Earning.scpt', name])
+        except Exception as e:
+            display_dialog(f"启动AppleScript程序失败: {e}")
     
     def open_earning_edit(event):
         """启动财报输入程序并传递当前symbol"""
         try:
-            # 使用subprocess启动b.py，并传递当前symbol作为参数
             subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Operations/Editor_Symbol_DB.py', name])
         except Exception as e:
             display_dialog(f"启动财报输入程序失败: {e}")
@@ -682,7 +687,6 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     def open_tags_edit(event):
         """启动财报输入程序并传递当前symbol"""
         try:
-            # 使用subprocess启动b.py，并传递当前symbol作为参数
             subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Operations/Editor_Symbol_Tags.py', name])
         except Exception as e:
             display_dialog(f"启动财报输入程序失败: {e}")
@@ -690,7 +694,6 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     def open_event_input(event):
         """启动财报输入程序并传递当前symbol"""
         try:
-            # 使用subprocess启动b.py，并传递当前symbol作为参数
             subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Operations/Insert_Events.py', name])
         except Exception as e:
             display_dialog(f"启动财报输入程序失败: {e}")
@@ -902,10 +905,11 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             'x': toggle_specific_markers,  # 'x'键切换橙色特定股票标记点显示
             'a': toggle_earning_markers,  # 'a'键切换白色收益公告标记点显示（保持不变）
             'c': toggle_all_annotations,  # 'c'键切换所有浮窗的显示/隐藏
-            'n': lambda: open_earning_input(None),  # 添加'n'键快捷方式
-            'e': lambda: open_earning_edit(None),  # 添加'e'键快捷方式
-            't': lambda: open_tags_edit(None),  # 添加't'键快捷方式
-            'w': lambda: open_event_input(None),  # 添加'w'键快捷方式
+            'n': lambda: open_earning_input(None),
+            'e': lambda: open_earning_edit(None),
+            't': lambda: open_tags_edit(None),
+            'w': lambda: open_event_input(None),
+            'k': lambda: check_earning_kimi(None),
             '1': lambda: radio.set_active(7),
             '2': lambda: radio.set_active(1),
             '3': lambda: radio.set_active(3),

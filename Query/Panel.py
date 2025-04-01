@@ -206,7 +206,7 @@ def execute_external_script(script_type, keyword, group=None):
         'earning': f'{base_path}/Operations/Insert_Earning.py',
         'earning_force': f'{base_path}/Operations/Insert_Earning_Force.py',
         'futu': '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt',
-        'kimi': '/Users/yanzhang/Documents/ScriptEditor/Earning_CheckKimi.scpt'
+        'kimi': '/Users/yanzhang/Documents/ScriptEditor/CheckKimi_Earning.scpt'
     }
 
     try:

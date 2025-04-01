@@ -1,70 +1,34 @@
 {
     "Basic_Materials": {
-        "CRH": "",
-        "TECK": "",
         "JHX": "",
         "ESI": ""
     },
-    "Real_Estate": {
-        "EQIX": "",
-        "RHP": ""
-    },
+    "Real_Estate": {},
     "Energy": {
         "NXE": ""
     },
     "Technology": {
         "AVGO": "",
         "TSM": "",
-        "ONTO": "",
-        "MSFT": "",
-        "ORCL": "",
-        "CRM": "",
-        "ANET": "",
-        "WDAY": "",
-        "MRVL": "",
-        "MCHP": "",
-        "ON": "",
-        "CDW": "",
-        "NTAP": "",
-        "TER": "",
-        "PSTG": "",
-        "EPAM": "",
-        "OLED": "",
-        "LFUS": "",
-        "NOVT": "",
-        "ENTG": "",
-        "ACLS": "",
-        "PONY": ""
+        "ONTO": ""
     },
     "Consumer_Cyclical": {
         "DECK": "",
         "HLT": "",
         "AMZN": "",
-        "MAR": "",
-        "GNTX": "",
-        "CZR": ""
+        "MAR": ""
     },
     "Utilities": {
         "CEG": ""
     },
     "Consumer_Defensive": {
-        "FLO": "关注财报",
-        "DEO": "",
-        "FRPT": ""
+        "FLO": "关注财报"
     },
     "Industrials": {
         "BAH": "关注财报",
         "BLDR": "关注财报",
         "SAIA": "关注财报",
-        "KNX": "关注财报",
-        "FSS": "",
-        "ETN": "",
-        "HUBB": "",
-        "NVT": "",
-        "RRX": "",
-        "MSA": "",
-        "HXL": "",
-        "AVAV": ""
+        "KNX": "关注财报"
     },
     "Communication_Services": {
         "GOOGL": "",
@@ -80,14 +44,7 @@
         "NVO": "",
         "TMO": "",
         "MRNA": "",
-        "ICLR": "",
-        "ILMN": "",
-        "MEDP": "",
-        "CRL": "",
-        "BRKR": "",
-        "PCVX": "",
-        "CYTK": "",
-        "RARE": ""
+        "PCVX": ""
     },
     "Bonds": {
         "US2Y": "",
