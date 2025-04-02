@@ -10,29 +10,44 @@
     "Technology": {
         "AVGO": "",
         "TSM": "",
-        "ONTO": ""
+        "ONTO": "",
+        "ADI": "",
+        "ON": "",
+        "EPAM": "",
+        "OLED": "",
+        "NSIT": "",
+        "LFUS": "",
+        "NOVT": "",
+        "ENTG": "",
+        "PONY": ""
     },
     "Consumer_Cyclical": {
         "DECK": "",
         "HLT": "",
         "AMZN": "",
-        "MAR": ""
+        "MAR": "",
+        "FND": "",
+        "CZR": "",
+        "RRR": ""
     },
     "Utilities": {
         "CEG": ""
     },
     "Consumer_Defensive": {
-        "FLO": "关注财报"
+        "FLO": "关注财报",
+        "DEO": ""
     },
     "Industrials": {
         "BAH": "关注财报",
         "BLDR": "关注财报",
         "SAIA": "关注财报",
-        "KNX": "关注财报"
+        "KNX": "关注财报",
+        "HXL": ""
     },
     "Communication_Services": {
         "GOOGL": "",
-        "META": ""
+        "META": "",
+        "ANGI": ""
     },
     "Financial_Services": {
         "JPM": "关注财报",
@@ -44,7 +59,21 @@
         "NVO": "",
         "TMO": "",
         "MRNA": "",
-        "PCVX": ""
+        "PCVX": "",
+        "DHR": "",
+        "PFE": "",
+        "REGN": "",
+        "A": "",
+        "MTD": "",
+        "ICLR": "",
+        "ILMN": "",
+        "NBIX": "",
+        "TECH": "",
+        "MEDP": "",
+        "CRL": "",
+        "BRKR": "",
+        "ROIV": "",
+        "BIO": ""
     },
     "Bonds": {
         "US2Y": "",

@@ -530,7 +530,8 @@
     "NBIS",
     "GSAT",
     "TIGO",
-    "ANGI"
+    "ANGI",
+    "NMAX"
   ],
   "Consumer_Cyclical": [
     "AMZN",
@@ -1751,7 +1752,8 @@
     "RELY",
     "KC",
     "WRD",
-    "SLAB"
+    "SLAB",
+    "CRWV"
   ],
   "Utilities": [
     "NEE",

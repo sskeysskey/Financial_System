@@ -224,7 +224,6 @@
         "E",
         "IBRX",
         "TMDX",
-        "ARE",
         "MPC",
         "PSX",
         "CHE",
@@ -383,10 +382,11 @@
         "NTAP",
         "TECK",
         "MEDP",
-        "PCVX",
         "RARE",
         "ETN",
-        "PSTG"
+        "PSTG",
+        "MTD",
+        "ROIV"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -403,7 +403,6 @@
         "APA",
         "DOX",
         "ICL",
-        "GMAB",
         "PCTY",
         "CNH",
         "WY",
@@ -588,8 +587,8 @@
         "BSY",
         "EPAM",
         "IQV",
-        "SRPT",
-        "TER"
+        "TER",
+        "PCVX"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -627,7 +626,10 @@
         "CRSP",
         "ST",
         "MRNA",
-        "APLS"
+        "APLS",
+        "GMAB",
+        "SRPT",
+        "ARE"
     ],
     "black_keywords": [
         "Cotton",
@@ -685,7 +687,8 @@
         "ILMN",
         "DNB",
         "PATH",
-        "PONY"
+        "PONY",
+        "ANGI"
     ],
     "green_keywords": [
         "EURCNY",

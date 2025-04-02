@@ -11,14 +11,137 @@ import time
 import random
 import pyautogui
 import threading
-import argparse  # 新增：导入argparse模块
+import tkinter as tk
+from tkinter import simpledialog, messagebox, ttk
 
-# 新增：命令行参数处理
-def parse_arguments():
-    parser = argparse.ArgumentParser(description='股票数据抓取工具')
-    parser.add_argument('--mode', type=str, default='normal', 
-                        help='运行模式: normal或empty。默认为normal')
-    return parser.parse_args()
+def check_empty_json_has_content(json_file_path):
+    """检查empty.json中是否有任何分组包含内容"""
+    with open(json_file_path, 'r') as file:
+        data = json.load(file)
+    
+    for group, items in data.items():
+        if items:  # 如果该分组有任何项目
+            return True
+    
+    return False
+
+def add_symbol_to_json_files(symbol, group):
+    """将symbol添加到指定的JSON文件的对应分组中"""
+    base_dir = "/Users/yanzhang/Documents/Financial_System/Modules/"
+    json_files = ["Sectors_empty.json", "Sectors_All.json", "Sectors_today.json"]
+    
+    for json_file in json_files:
+        file_path = os.path.join(base_dir, json_file)
+        
+        # 如果文件不存在，创建一个空的JSON结构
+        if not os.path.exists(file_path):
+            with open(file_path, 'w') as f:
+                json.dump({}, f)
+        
+        # 读取文件内容
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+        
+        # 如果组不存在，创建一个空列表
+        if group not in data:
+            data[group] = []
+        
+        # 如果symbol不在该组中，添加它
+        if symbol not in data[group]:
+            data[group].append(symbol)
+        
+        # 写回文件
+        with open(file_path, 'w') as f:
+            json.dump(data, f, indent=2)
+
+def show_input_dialog():
+    """显示输入对话框，让用户输入symbol并选择分组"""
+    root = tk.Tk()
+    root.title("输入Symbol")
+    root.geometry("400x300")
+    
+    result = {"symbol": "", "group": ""}
+    
+    # 读取empty.json获取所有分组
+    with open("/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json", 'r') as f:
+        data = json.load(f)
+        groups = list(data.keys())
+    
+    # 创建输入框和标签
+    tk.Label(root, text="请输入Stock Symbol:").pack(pady=10)
+    symbol_entry = tk.Entry(root)
+    symbol_entry.pack(pady=5)
+    
+    tk.Label(root, text="请选择分组:").pack(pady=10)
+    group_combobox = ttk.Combobox(root, values=groups)
+    group_combobox.pack(pady=5)
+    if groups:
+        group_combobox.current(0)
+    
+    def on_ok():
+        symbol = symbol_entry.get().strip().upper()
+        group = group_combobox.get()
+        
+        if not symbol:
+            messagebox.showerror("错误", "Symbol不能为空")
+            return
+        
+        if not group:
+            messagebox.showerror("错误", "必须选择一个分组")
+            return
+        
+        result["symbol"] = symbol
+        result["group"] = group
+        root.destroy()
+    
+    def on_cancel():
+        root.destroy()
+    
+    # 创建按钮
+    button_frame = tk.Frame(root)
+    button_frame.pack(pady=20)
+    
+    tk.Button(button_frame, text="确定", command=on_ok).pack(side=tk.LEFT, padx=10)
+    tk.Button(button_frame, text="取消", command=on_cancel).pack(side=tk.LEFT, padx=10)
+    
+    root.mainloop()
+    
+    return result
+
+def show_option_dialog():
+    """显示选项对话框，让用户选择'输入symbol'或'全部爬取'"""
+    def close_app(event=None):
+        root.quit()
+    
+    root = tk.Tk()
+    root.title("选择操作模式")
+    root.geometry("300x150")
+    root.lift()
+    root.focus_force()
+
+    root.bind('<Escape>', close_app)  # 注意这里不要加括号
+    
+    result = {"choice": ""}
+    
+    def select_input_symbol():
+        result["choice"] = "input_symbol"
+        root.destroy()
+    
+    def select_crawl_all():
+        result["choice"] = "crawl_all"
+        root.destroy()
+
+    tk.Label(root, text="请选择操作模式:").pack(pady=10)
+    
+    button_frame = tk.Frame(root)
+    button_frame.pack(pady=20)
+    
+    tk.Button(button_frame, text="输入symbol", command=select_input_symbol, width=12).pack(side=tk.LEFT, padx=10)
+    tk.Button(button_frame, text="全部爬取", command=select_crawl_all, width=12).pack(side=tk.LEFT, padx=10)
+    
+    root.mainloop()
+    
+    return result["choice"]
 
 def convert_shares_format(shares_str):
     # 转换股票数量的表示方式，例如 "15.33B" 转换为 15330000000
@@ -42,46 +165,11 @@ def convert_shares_format(shares_str):
 def clean_company_name(name):
     # 移除常见的公司后缀
     suffixes = [
-        ', Inc.',
-        ' Inc.',
-        ', LLC',
-        ' LLC',
-        ', Ltd.',
-        ' Ltd.',
-        ', Limited',
-        ' Limited',
-        ', Corp.',
-        ' Corp.',
-        ', Corporation',
-        ' Corporation',
-        ', Co.',
-        ' Co.',
-        ', Company',
-        ' Company',
-        ' Bros',
-        ' plc',
-        ' Group',
-        ' S.A.',
-        ' N.V.',
-        ' Holdings',
-        ' S.A.B.',
-        ' C.V.',
-        ' Ltd',
-        ' Holding',
-        ' Companies',
-        ' PLC',
-        '& plc',
-        ' Incorporated',
-        ' AG',
-        ' &',
-        ' SE',
-        '- Petrobras',
-        ' L.P.',
-        ', L.P.',
-        ', LP',
-        'de C.V.',
-        ' Inc',
-        ', Incorporated'
+        ', Inc.', ' Inc.', ', LLC', ' LLC', ', Ltd.', ' Ltd.', ', Limited', ' Limited', ', Corp.', ' Corp.',
+        ', Corporation', ' Corporation', ', Co.', ' Co.', ', Company', ' Company', ' Bros', ' plc', ' Group', ' S.A.',
+        ' N.V.', ' Holdings', ' S.A.B.', ' C.V.', ' Ltd', ' Holding', ' Companies', ' PLC', '& plc', ' Incorporated',
+        ' AG', ' &', ' SE', '- Petrobras', ' L.P.', ', L.P.', ', LP', 'de C.V.', ' Inc', ', Incorporated',
+        ' S.p.A.', ' A/S', ' A.S.', ' p.l.c.', ', S. A. B. de C. V.', ' - COPEL', ' - CEMIG', ' - SABESP', ' - Eletrobrás'
     ]
     
     cleaned_name = name
@@ -120,7 +208,7 @@ def get_existing_symbols(file_path):
                     existing_symbols.add(symbol)
     return existing_symbols
 
-# 添加鼠标移动功能的函数x
+# 添加鼠标移动功能的函数
 def move_mouse_periodically():
     while True:
         try:
@@ -153,24 +241,54 @@ def wait_for_element(driver, by, value, timeout=10):
         return None
 
 def main():
-    # 解析命令行参数
-    args = parse_arguments()
+    empty_json_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json"
     
-    # 根据命令行参数选择JSON文件路径和输出目录
-    if args.mode.lower() == 'empty':
-        json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json"
-        # 使用backup目录
+    # 检查empty.json是否有内容
+    has_content = check_empty_json_has_content(empty_json_path)
+    
+    # 根据检查结果决定使用哪种模式
+    if has_content:
+        # empty.json有内容，使用测试模式
+        json_file_path = empty_json_path
         shares_file_path = "/Users/yanzhang/Documents/News/backup/Shares.txt"
         symbol_names_file_path = "/Users/yanzhang/Documents/News/backup/symbol_names.txt"
         marketcap_pe_file_path = "/Users/yanzhang/Documents/News/backup/marketcap_pe.txt"
         print("使用空测试文件模式和backup目录...")
     else:
-        json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json"
-        # 使用Downloads目录
-        shares_file_path = "/Users/yanzhang/Downloads/Shares.txt"
-        symbol_names_file_path = "/Users/yanzhang/Downloads/symbol_names.txt"
-        marketcap_pe_file_path = "/Users/yanzhang/Downloads/marketcap_pe.txt"
-        print("使用正常模式和Downloads目录...")
+        # empty.json没有内容，弹出选择对话框
+        choice = show_option_dialog()
+        
+        if choice == "input_symbol":
+            # 用户选择"输入symbol"
+            result = show_input_dialog()
+            
+            if result["symbol"] and result["group"]:
+                # 将symbol添加到JSON文件
+                add_symbol_to_json_files(result["symbol"], result["group"])
+                print(f"已将 {result['symbol']} 添加到 {result['group']} 分组")
+                
+                # 使用测试模式
+                json_file_path = empty_json_path
+                shares_file_path = "/Users/yanzhang/Documents/News/backup/Shares.txt"
+                symbol_names_file_path = "/Users/yanzhang/Documents/News/backup/symbol_names.txt"
+                marketcap_pe_file_path = "/Users/yanzhang/Documents/News/backup/marketcap_pe.txt"
+                print("使用空测试文件模式和backup目录...")
+            else:
+                print("用户取消了操作或没有输入有效信息，程序退出")
+                return
+        
+        elif choice == "crawl_all":
+            # 用户选择"全部爬取"
+            json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json"
+            shares_file_path = "/Users/yanzhang/Downloads/Shares.txt"
+            symbol_names_file_path = "/Users/yanzhang/Downloads/symbol_names.txt"
+            marketcap_pe_file_path = "/Users/yanzhang/Downloads/marketcap_pe.txt"
+            print("使用正常模式和Downloads目录...")
+        
+        else:
+            # 用户取消了选择
+            print("用户取消了操作，程序退出")
+            return
     
     # 在主程序开始前启动鼠标移动线程
     mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
