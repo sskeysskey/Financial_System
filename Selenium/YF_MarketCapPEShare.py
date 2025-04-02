@@ -12,7 +12,15 @@ import random
 import pyautogui
 import threading
 import tkinter as tk
-from tkinter import simpledialog, messagebox, ttk
+from tkinter import messagebox, ttk
+import argparse  # 新增：导入argparse模块
+
+# 新增：命令行参数处理
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='股票数据抓取工具')
+    parser.add_argument('--mode', type=str, default='normal', 
+                        help='运行模式: normal或empty。默认为normal')
+    return parser.parse_args()
 
 def check_empty_json_has_content(json_file_path):
     """检查empty.json中是否有任何分组包含内容"""
@@ -55,10 +63,16 @@ def add_symbol_to_json_files(symbol, group):
             json.dump(data, f, indent=2)
 
 def show_input_dialog():
+    def close_app(event=None):
+        root.quit()
+    
     """显示输入对话框，让用户输入symbol并选择分组"""
     root = tk.Tk()
     root.title("输入Symbol")
     root.geometry("400x300")
+    root.lift()
+    root.focus_force()
+    root.bind('<Escape>', close_app)  # 注意这里不要加括号
     
     result = {"symbol": "", "group": ""}
     
@@ -71,6 +85,7 @@ def show_input_dialog():
     tk.Label(root, text="请输入Stock Symbol:").pack(pady=10)
     symbol_entry = tk.Entry(root)
     symbol_entry.pack(pady=5)
+    symbol_entry.focus_set()
     
     tk.Label(root, text="请选择分组:").pack(pady=10)
     group_combobox = ttk.Combobox(root, values=groups)
@@ -108,41 +123,6 @@ def show_input_dialog():
     
     return result
 
-def show_option_dialog():
-    """显示选项对话框，让用户选择'输入symbol'或'全部爬取'"""
-    def close_app(event=None):
-        root.quit()
-    
-    root = tk.Tk()
-    root.title("选择操作模式")
-    root.geometry("300x150")
-    root.lift()
-    root.focus_force()
-
-    root.bind('<Escape>', close_app)  # 注意这里不要加括号
-    
-    result = {"choice": ""}
-    
-    def select_input_symbol():
-        result["choice"] = "input_symbol"
-        root.destroy()
-    
-    def select_crawl_all():
-        result["choice"] = "crawl_all"
-        root.destroy()
-
-    tk.Label(root, text="请选择操作模式:").pack(pady=10)
-    
-    button_frame = tk.Frame(root)
-    button_frame.pack(pady=20)
-    
-    tk.Button(button_frame, text="输入symbol", command=select_input_symbol, width=12).pack(side=tk.LEFT, padx=10)
-    tk.Button(button_frame, text="全部爬取", command=select_crawl_all, width=12).pack(side=tk.LEFT, padx=10)
-    
-    root.mainloop()
-    
-    return result["choice"]
-
 def convert_shares_format(shares_str):
     # 转换股票数量的表示方式，例如 "15.33B" 转换为 15330000000
     if shares_str == 'N/A' or shares_str == '-':
@@ -161,7 +141,7 @@ def convert_shares_format(shares_str):
     except ValueError:
         return 0  # 如果无法转换为浮点数，返回0
 
-# 首先添加一个处理公司名称的函数
+# 处理公司名称的函数
 def clean_company_name(name):
     # 移除常见的公司后缀
     suffixes = [
@@ -241,25 +221,26 @@ def wait_for_element(driver, by, value, timeout=10):
         return None
 
 def main():
-    empty_json_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json"
+    # 解析命令行参数
+    args = parse_arguments()
     
-    # 检查empty.json是否有内容
-    has_content = check_empty_json_has_content(empty_json_path)
-    
-    # 根据检查结果决定使用哪种模式
-    if has_content:
-        # empty.json有内容，使用测试模式
-        json_file_path = empty_json_path
-        shares_file_path = "/Users/yanzhang/Documents/News/backup/Shares.txt"
-        symbol_names_file_path = "/Users/yanzhang/Documents/News/backup/symbol_names.txt"
-        marketcap_pe_file_path = "/Users/yanzhang/Documents/News/backup/marketcap_pe.txt"
-        print("使用空测试文件模式和backup目录...")
-    else:
-        # empty.json没有内容，弹出选择对话框
-        choice = show_option_dialog()
+    # 根据命令行参数选择JSON文件路径和输出目录
+    if args.mode.lower() == 'empty':
+        empty_json_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json"
         
-        if choice == "input_symbol":
-            # 用户选择"输入symbol"
+        # 检查empty.json是否有内容
+        has_content = check_empty_json_has_content(empty_json_path)
+        
+        # 根据检查结果决定使用哪种模式
+        if has_content:
+            # empty.json有内容，使用测试模式
+            json_file_path = empty_json_path
+            shares_file_path = "/Users/yanzhang/Documents/News/backup/Shares.txt"
+            symbol_names_file_path = "/Users/yanzhang/Documents/News/backup/symbol_names.txt"
+            marketcap_pe_file_path = "/Users/yanzhang/Documents/News/backup/marketcap_pe.txt"
+            print("使用空测试文件模式和backup目录...")
+        else:
+            # empty.json没有内容，直接弹出输入symbol对话框（取消选择步骤）
             result = show_input_dialog()
             
             if result["symbol"] and result["group"]:
@@ -276,19 +257,13 @@ def main():
             else:
                 print("用户取消了操作或没有输入有效信息，程序退出")
                 return
-        
-        elif choice == "crawl_all":
-            # 用户选择"全部爬取"
-            json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json"
-            shares_file_path = "/Users/yanzhang/Downloads/Shares.txt"
-            symbol_names_file_path = "/Users/yanzhang/Downloads/symbol_names.txt"
-            marketcap_pe_file_path = "/Users/yanzhang/Downloads/marketcap_pe.txt"
-            print("使用正常模式和Downloads目录...")
-        
-        else:
-            # 用户取消了选择
-            print("用户取消了操作，程序退出")
-            return
+    else:
+        # 参数为normal格式
+        json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json"
+        shares_file_path = "/Users/yanzhang/Downloads/Shares.txt"
+        symbol_names_file_path = "/Users/yanzhang/Downloads/symbol_names.txt"
+        marketcap_pe_file_path = "/Users/yanzhang/Downloads/marketcap_pe.txt"
+        print("使用正常模式和Downloads目录...")
     
     # 在主程序开始前启动鼠标移动线程
     mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)

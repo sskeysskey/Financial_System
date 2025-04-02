@@ -242,8 +242,20 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             for date_str, price_change in cursor.fetchall():
                 try:
                     marker_date = datetime.strptime(date_str, "%Y-%m-%d")
-                    # 标记文本为财报收益
-                    earning_markers[marker_date] = f"昨日财报: {price_change}%"
+                    # 查找与 marker_date 最接近的日期（假设主数据的 dates 列表已经生成）
+                    closest_date = min(dates, key=lambda d: abs(d - marker_date))
+                    index = dates.index(closest_date)
+                    marker_price = prices[index]  # 获取该日期对应的价格
+                    latest_price = prices[-1]     # 最新一天的价格
+
+                    # 计算当天价格与最新价格之间的百分比差值，注意防止除以0
+                    if marker_price and marker_price != 0:
+                        diff_percent = ((latest_price - marker_price) / marker_price) * 100
+                    else:
+                        diff_percent = 0
+
+                    # 拼接提示文本，先显示最新价差，再显示昨日财报数据
+                    earning_markers[marker_date] = f"最新价差: {diff_percent:.2f}%\n昨日财报: {price_change}%"
                 except ValueError:
                     print(f"无法解析收益公告日期: {date_str}")
     except sqlite3.OperationalError as e:

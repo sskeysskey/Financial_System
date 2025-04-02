@@ -377,7 +377,6 @@
     "CMBS",
     "HEZU",
     "PRFZ",
-    "FEMS",
     "EZU",
     "AGZ",
     "IXP",
@@ -394,7 +393,8 @@
     "ENFR",
     "FMAT",
     "BJUL",
-    "NUDM"
+    "NUDM",
+    "EEMS"
   ],
   "Basic_Materials": [
     "LIN",

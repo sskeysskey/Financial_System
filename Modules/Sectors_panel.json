@@ -1,7 +1,6 @@
 {
     "Basic_Materials": {
-        "JHX": "",
-        "ESI": ""
+        "JHX": ""
     },
     "Real_Estate": {},
     "Energy": {
@@ -12,23 +11,13 @@
         "TSM": "",
         "ONTO": "",
         "ADI": "",
-        "ON": "",
-        "EPAM": "",
-        "OLED": "",
-        "NSIT": "",
-        "LFUS": "",
-        "NOVT": "",
-        "ENTG": "",
-        "PONY": ""
+        "ON": ""
     },
     "Consumer_Cyclical": {
         "DECK": "",
         "HLT": "",
         "AMZN": "",
-        "MAR": "",
-        "FND": "",
-        "CZR": "",
-        "RRR": ""
+        "MAR": ""
     },
     "Utilities": {
         "CEG": ""
@@ -41,13 +30,11 @@
         "BAH": "关注财报",
         "BLDR": "关注财报",
         "SAIA": "关注财报",
-        "KNX": "关注财报",
-        "HXL": ""
+        "KNX": "关注财报"
     },
     "Communication_Services": {
         "GOOGL": "",
-        "META": "",
-        "ANGI": ""
+        "META": ""
     },
     "Financial_Services": {
         "JPM": "关注财报",
@@ -57,23 +44,8 @@
     },
     "Healthcare": {
         "NVO": "",
-        "TMO": "",
         "MRNA": "",
-        "PCVX": "",
-        "DHR": "",
-        "PFE": "",
-        "REGN": "",
-        "A": "",
-        "MTD": "",
-        "ICLR": "",
-        "ILMN": "",
-        "NBIX": "",
-        "TECH": "",
-        "MEDP": "",
-        "CRL": "",
-        "BRKR": "",
-        "ROIV": "",
-        "BIO": ""
+        "PCVX": ""
     },
     "Bonds": {
         "US2Y": "",

@@ -278,7 +278,8 @@
         "VTRS",
         "SMG",
         "CYTK",
-        "RARE"
+        "RARE",
+        "ANGI"
     ],
     "screener": [
         "CTA-PA",
@@ -566,6 +567,8 @@
         "DXJ",
         "HMOP",
         "BBRE",
-        "IETC"
+        "IETC",
+        "FIDU",
+        "VUSE"
     ]
 }
