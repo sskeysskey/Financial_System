@@ -12,8 +12,7 @@
         "ONTO": "",
         "ADI": "",
         "ON": "",
-        "ENTG": "",
-        "PONY": ""
+        "ENTG": ""
     },
     "Consumer_Cyclical": {
         "DECK": "",
@@ -36,9 +35,7 @@
     },
     "Communication_Services": {
         "GOOGL": "",
-        "META": "",
-        "OMC": "",
-        "NMAX": ""
+        "META": ""
     },
     "Financial_Services": {
         "JPM": "关注财报",
@@ -49,8 +46,7 @@
     "Healthcare": {
         "NVO": "",
         "MRNA": "",
-        "PCVX": "",
-        "HOLX": ""
+        "PCVX": ""
     },
     "Bonds": {
         "US2Y": "",
