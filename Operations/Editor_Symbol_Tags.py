@@ -58,8 +58,8 @@ def get_stock_symbol(default_symbol=""):
     input_dialog.setFocus(Qt.OtherFocusReason)
     
     if input_dialog.exec_() == QInputDialog.Accepted:
-        # 直接将输入转换为大写
-        return input_dialog.textValue().strip().upper()
+        # 不再自动转换为大写，而是保留原始输入
+        return input_dialog.textValue().strip()
     return None
 
 class TagEditor(QMainWindow):
@@ -161,16 +161,34 @@ class TagEditor(QMainWindow):
         QTimer.singleShot(100, self.new_tag_input.setFocus)
         
     def process_symbol(self, symbol):
-        """处理指定的symbol"""
-        if symbol:
-            category, item = self.find_symbol(symbol)
-            if item:
-                self.current_category = category
-                self.current_item = item
-                self.update_ui(item)
-            else:
-                # messagebox.showinfo("提示", f"未找到Symbol: {symbol}")
-                QMessageBox.information(self, "提示", f"未找到Symbol: {symbol}")
+        """处理指定的symbol，尝试多种形式"""
+        if not symbol:
+            return
+            
+        # 保存原始输入
+        original_symbol = symbol
+        
+        # 方法1: 尝试全部大写
+        uppercase_symbol = original_symbol.upper()
+        category, item = self.find_symbol(uppercase_symbol)
+        
+        # 方法2: 如果没找到，尝试原始输入
+        if not item and uppercase_symbol != original_symbol:
+            category, item = self.find_symbol(original_symbol)
+        
+        # 方法3: 如果还没找到，尝试首字母大写
+        if not item:
+            title_symbol = original_symbol.title()
+            if title_symbol != original_symbol and title_symbol != uppercase_symbol:
+                category, item = self.find_symbol(title_symbol)
+        
+        # 显示结果
+        if item:
+            self.current_category = category
+            self.current_item = item
+            self.update_ui(item)
+        else:
+            QMessageBox.information(self, "提示", f"未找到Symbol: {original_symbol}")
 
     def load_json_data(self):
         try:
@@ -267,7 +285,7 @@ class TagEditor(QMainWindow):
 
     # [之前的其他方法保持不变...]
     def find_symbol(self, symbol):
-        """查找symbol对应的数据"""
+        """查找symbol对应的数据，先尝试原始输入，再尝试全部大写"""
         for category in ['stocks', 'etfs']:
             for item in self.data[category]:
                 if item['symbol'] == symbol:
@@ -279,13 +297,7 @@ class TagEditor(QMainWindow):
         try:
             clipboard_text = pyperclip.paste().strip()
             if clipboard_text:
-                category, item = self.find_symbol(clipboard_text)
-                if item:
-                    self.current_category = category
-                    self.current_item = item
-                    self.update_ui(item)
-                else:
-                    QMessageBox.information(self, "提示", f"未找到Symbol: {clipboard_text}")
+                self.process_symbol(clipboard_text)
             else:
                 QMessageBox.information(self, "提示", "剪贴板为空")
         except Exception as e:
@@ -358,10 +370,7 @@ def main():
         if not new_content:
             init_symbol = get_stock_symbol()
         else:
-            if re.match('^[A-Z-]+$', new_content):
-                init_symbol = new_content
-            else:
-                init_symbol = get_stock_symbol(new_content)
+            init_symbol = new_content
 
         if init_symbol is None:
             return
