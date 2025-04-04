@@ -267,19 +267,41 @@ def write_log_file(output_file, added_symbols, changes_5000, changes_500, moved_
             for log in db_delete_logs:
                 f.write(f"- {log}\n")
         
-        # 写入5000.json变更信息
+        # 处理5000.json变更信息
         f.write("\n=== Sectors_5000.json 变更 ===\n")
         if changes_5000:
-            for change in changes_5000:
-                f.write(f"- {change}\n")
+            # 分离剔除和添加的记录
+            removals_5000 = [change for change in changes_5000 if "剔除" in change]
+            additions_5000 = [change for change in changes_5000 if "添加" in change]
+            
+            if removals_5000:
+                f.write("\n剔除记录：\n")
+                for removal in removals_5000:
+                    f.write(f"- {removal}\n")
+            
+            if additions_5000:
+                f.write("\n添加记录：\n")
+                for addition in additions_5000:
+                    f.write(f"- {addition}\n")
         else:
             f.write("没有变更\n")
         
-        # 写入500.json变更信息
+        # 处理500.json变更信息
         f.write("\n=== Sectors_500.json 变更 ===\n")
         if changes_500:
-            for change in changes_500:
-                f.write(f"- {change}\n")
+            # 分离剔除和添加的记录
+            removals_500 = [change for change in changes_500 if "剔除" in change]
+            additions_500 = [change for change in changes_500 if "添加" in change]
+            
+            if removals_500:
+                f.write("\n剔除记录：\n")
+                for removal in removals_500:
+                    f.write(f"- {removal}\n")
+            
+            if additions_500:
+                f.write("\n添加记录：\n")
+                for addition in additions_500:
+                    f.write(f"- {addition}\n")
         else:
             f.write("没有变更\n")
 

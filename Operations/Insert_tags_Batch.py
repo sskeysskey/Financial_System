@@ -63,9 +63,12 @@ class TagAdder:
         self.root.bind('<Return>', lambda e: self.handle_tag_search())
         self.root.bind('<Escape>', lambda e: self.root.destroy())
         
-        # 将窗口置于最前台并激活
-        self.root.after(100, lambda: self.set_window_to_front(self.root))
-        self.tag_entry.focus_set()
+        def focus_and_lift():
+            self.set_window_to_front(self.root)
+            self.tag_entry.focus_set()  # 设置输入框焦点
+    
+        # 使用更短的延迟时间，并确保在窗口显示后立即设置焦点
+        self.root.after(1, focus_and_lift)
         
         self.root.mainloop()
 

@@ -191,7 +191,6 @@
     "XLE",
     "FENY",
     "VYMI",
-    "DBEF",
     "ICOW",
     "SDVY",
     "JMUB",
@@ -249,7 +248,6 @@
     "EMB",
     "VWOB",
     "TMF",
-    "POCT",
     "CNYA",
     "IPAC",
     "INDA",
@@ -394,7 +392,9 @@
     "FMAT",
     "BJUL",
     "NUDM",
-    "EEMS"
+    "EEMS",
+    "EFA",
+    "PJUL"
   ],
   "Basic_Materials": [
     "LIN",
