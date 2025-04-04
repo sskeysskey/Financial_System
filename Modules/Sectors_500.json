@@ -8,7 +8,6 @@
         "ECL",
         "APD",
         "CRH",
-        "FCX",
         "AEM",
         "NEM"
     ],
@@ -67,7 +66,8 @@
         "BTI",
         "CL",
         "DEO",
-        "MNST"
+        "MNST",
+        "KR"
     ],
     "Energy": [
         "XOM",
@@ -88,8 +88,6 @@
         "OKE",
         "KMI",
         "MPLX",
-        "PSX",
-        "LNG",
         "TRP"
     ],
     "Financial_Services": [
@@ -134,7 +132,6 @@
         "AFL",
         "BBVA",
         "ING",
-        "TFC",
         "BMO",
         "TRV",
         "IBKR",
@@ -146,8 +143,7 @@
         "BCS",
         "ALL",
         "AIG",
-        "MFC",
-        "NU"
+        "MFC"
     ],
     "Healthcare": [
         "LLY",
@@ -211,8 +207,6 @@
         "CSX",
         "RSG",
         "EMR",
-        "NSC",
-        "PCAR",
         "JCI",
         "CPRT",
         "HWM",
@@ -224,8 +218,7 @@
         "EQIX",
         "WELL",
         "PSA",
-        "SPG",
-        "DLR"
+        "SPG"
     ],
     "Technology": [
         "AAPL",
@@ -269,15 +262,13 @@
         "MSI",
         "WDAY",
         "CRWD",
-        "MRVL",
         "ROP",
         "FTNT",
         "ADSK",
         "PAYX",
         "TEAM",
         "APP",
-        "MSTR",
-        "SNOW"
+        "MSTR"
     ],
     "Utilities": [
         "NEE",
