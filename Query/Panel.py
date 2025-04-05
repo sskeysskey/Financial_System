@@ -125,27 +125,44 @@ def load_json(path):
 
 def load_text_data(path):
     """
-    Loads key-value pairs from a text file in the format 'key: value'.
+    加载文本文件的数据。如果数据中包含逗号，则拆分为元组，
+    否则直接返回字符串。
     """
     data = {}
-    with open(path, 'r') as file:
+    with open(path, 'r', encoding='utf-8') as file:
         for line in file:
+            line = line.strip()
+            if not line:
+                continue  # 跳过空行
+            # 分割 key 和 value
             key, value = map(str.strip, line.split(':', 1))
-            # Extracts the last word from the key portion
+            # 提取 key 的最后一个单词
             cleaned_key = key.split()[-1]
-            data[cleaned_key] = value
+            # 如果 value 中包含逗号，则拆分后存储为元组
+            if ',' in value:
+                parts = [p.strip() for p in value.split(',')]
+                data[cleaned_key] = tuple(parts)
+            else:
+                data[cleaned_key] = value
     return data
 
 def load_marketcap_pe_data(path):
     """
     Loads data from a text file in the format 'key: marketcap, pe'.
+    如果数据多出了其他项，只读取前两个项（忽略后续的额外数据）。
     """
     data = {}
     with open(path, 'r') as file:
         for line in file:
+            # 按":"分割成key和values
             key, values = map(str.strip, line.split(':', 1))
-            marketcap_val, pe_val = map(str.strip, values.split(','))
-            data[key] = (float(marketcap_val), pe_val)
+            parts = [p.strip() for p in values.split(',')]
+            if len(parts) >= 2:
+                # 只取前两个数据，忽略其他数据
+                marketcap_val, pe_val, *_ = parts
+                data[key] = (float(marketcap_val), pe_val)
+            else:
+                print(f"格式异常：{line}")
     return data
 
 def get_button_style(keyword):
