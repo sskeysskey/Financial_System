@@ -8,7 +8,6 @@
         "ECL",
         "APD",
         "CRH",
-        "AEM",
         "NEM"
     ],
     "Communication_Services": [
@@ -22,8 +21,7 @@
         "CMCSA",
         "SPOT",
         "DASH",
-        "NTES",
-        "CHTR"
+        "NTES"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -47,9 +45,7 @@
         "HLT",
         "AZO",
         "SE",
-        "JD",
-        "RCL",
-        "GM"
+        "JD"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -66,8 +62,7 @@
         "BTI",
         "CL",
         "DEO",
-        "MNST",
-        "KR"
+        "MNST"
     ],
     "Energy": [
         "XOM",
@@ -82,13 +77,9 @@
         "EOG",
         "CNQ",
         "EPD",
-        "SLB",
         "WMB",
         "ET",
-        "OKE",
-        "KMI",
-        "MPLX",
-        "TRP"
+        "KMI"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -135,15 +126,10 @@
         "BMO",
         "TRV",
         "IBKR",
-        "MET",
         "COF",
         "BK",
         "MFG",
-        "LYG",
-        "BCS",
-        "ALL",
-        "AIG",
-        "MFC"
+        "LYG"
     ],
     "Healthcare": [
         "LLY",
@@ -207,17 +193,13 @@
         "CSX",
         "RSG",
         "EMR",
-        "JCI",
-        "CPRT",
-        "HWM",
-        "WCN"
+        "CPRT"
     ],
     "Real_Estate": [
         "PLD",
         "AMT",
         "EQIX",
         "WELL",
-        "PSA",
         "SPG"
     ],
     "Technology": [
@@ -266,7 +248,6 @@
         "FTNT",
         "ADSK",
         "PAYX",
-        "TEAM",
         "APP",
         "MSTR"
     ],
