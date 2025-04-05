@@ -287,7 +287,8 @@
         "DXCM",
         "KRC",
         "FRT",
-        "DEO"
+        "DEO",
+        "PINS"
     ],
     "screener": [
         "CTA-PA",
@@ -581,6 +582,23 @@
         "VUSE",
         "IDHQ",
         "JPIB",
-        "VOOV"
+        "VOOV",
+        "FLDR",
+        "PHYL",
+        "PTNQ",
+        "IHF",
+        "FREL",
+        "AOA",
+        "IJK",
+        "MDYG",
+        "VOX",
+        "RSPN",
+        "IUS",
+        "VAW",
+        "EFV",
+        "XNTK",
+        "IAK",
+        "RSPG",
+        "IEO"
     ]
 }

@@ -19,12 +19,33 @@ def lazy_load_data(path, data_type='json'):
         else:
             data = {}
             for line in file:
+                line = line.strip()
+                if not line:
+                    continue  # 忽略空行
                 key, value = map(str.strip, line.split(':', 1))
                 if data_type == 'marketcap_pe':
-                    marketcap, pe = map(str.strip, value.split(','))
-                    data[key] = (float(marketcap), pe)
+                    parts = [p.strip() for p in value.split(',')]
+                    if len(parts) >= 2:
+                        # 忽略其他额外的数据项
+                        marketcap, pe, *_ = parts
+                        data[key.strip()] = (float(marketcap), pe)
+                    else:
+                        raise ValueError(f"数据格式错误：{line}")
+                elif "shares.txt" in path.lower():
+                    # 当处理 shares.txt 文件时，读取多个字段
+                    parts = [p.strip() for p in value.split(',')]
+                    if len(parts) == 2:
+                        try:
+                            share_val = int(parts[0])
+                        except ValueError:
+                            share_val = parts[0]
+                        pb_text = parts[1]
+                        data[key.strip()] = (share_val, pb_text)
+                    else:
+                        # 只有一个数字时，设置 pb_text 默认值
+                        data[key.strip()] = (int(parts[0]), "--")
                 else:
-                    data[key.split()[-1]] = value
+                    data[key.strip()] = value
             return data
 
 def close_app(root):

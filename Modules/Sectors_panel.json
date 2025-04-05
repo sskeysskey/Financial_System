@@ -29,18 +29,8 @@
     },
     "Energy": {
         "XOM": "",
-        "EOG": "",
-        "ET": "",
-        "MPC": "",
-        "VLO": "",
         "FANG": "",
-        "PR": "",
-        "WFRD": "",
-        "MTDR": "",
-        "FRO": "",
-        "MGY": "",
-        "CRC": "",
-        "NXE": ""
+        "MTDR": ""
     },
     "Technology": {
         "TSM": "",
@@ -229,11 +219,7 @@
     "Communication_Services": {
         "GOOGL": "",
         "META": "",
-        "DIS": "",
-        "PINS": "",
-        "OMC": "",
-        "MTCH": "",
-        "NMAX": ""
+        "DIS": ""
     },
     "Financial_Services": {
         "JPM": "关注财报",
@@ -241,10 +227,7 @@
         "MCO": "关注财报",
         "BN": "关注财报",
         "AXP": "",
-        "KKR": "",
-        "V": "",
         "MA": "",
-        "BAC": "",
         "BX": "",
         "GS": "",
         "WFC": "",

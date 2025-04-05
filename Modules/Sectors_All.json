@@ -417,7 +417,6 @@
     "BIV",
     "FTLS",
     "GOVI",
-    "BSJP",
     "HTAB",
     "PHO",
     "DSTL",
@@ -451,7 +450,13 @@
     "NUDM",
     "EEMS",
     "EFA",
-    "PJUL"
+    "PJUL",
+    "BOCT",
+    "KNG",
+    "SUSA",
+    "AIQ",
+    "DWLD",
+    "GDXJ"
   ],
   "Basic_Materials": [
     "LIN",

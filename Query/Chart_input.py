@@ -126,6 +126,13 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     plt.close('all')  # 关闭所有图表
     matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
 
+    # 如果传入的 share 是一个元组，则拆分为 share_val 与 pb_text
+    if isinstance(share, tuple):
+        share_val, pb_text = share
+    else:
+        share_val = share
+        pb_text = "N/A"
+
     show_volume = False
     mouse_pressed = False
     initial_price = None
@@ -381,15 +388,21 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     # 从compare中去除中文和加号
     filtered_compare = re.sub(r'[\u4e00-\u9fff+]', '', compare)
+    def clean_percentage_string(percentage_str):
+        try:
+            return float(percentage_str.strip('%'))
+        except ValueError:
+            return None
     compare_value = clean_percentage_string(filtered_compare)
 
     # 根据compare和换手额做"可疑"标记
     if turnover is not None and turnover < 100 and compare_value is not None and compare_value > 0:
         turnover_str = f"可疑{turnover_str}"
 
+    # 注意：这里用 share_val（而不是原来的 share）来计算换手率
     turnover_rate = (
-        f"{(volumes[-1] / int(share)) * 100:.2f}"
-        if volumes and volumes[-1] is not None and share not in [None, "N/A"]
+        f"{(volumes[-1] / int(share_val)) * 100:.2f}"
+        if volumes and volumes[-1] is not None and share_val not in [None, "N/A"]
         else ""
     )
     marketcap_in_billion = (
@@ -420,10 +433,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         if found:
             break
 
-    # 组合标题
+    # 组合标题，增加 pb_text 字段
     title_text = (
         f'{name}  {compare}  {turnover_str}M/{turnover_rate} '
-        f'{marketcap_in_billion} {pe_text}"{table_name}" {fullname} {tag_str}'
+        f'{marketcap_in_billion} {pe_text} {pb_text} "{table_name}" {fullname} {tag_str}'
     )
     title_style = {
         'color': 'orange' if clickable else 'lightgray',

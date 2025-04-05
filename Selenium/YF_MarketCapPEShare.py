@@ -328,18 +328,34 @@ def main():
                 
                 # 查找Shares Outstanding数据
                 shares_outstanding_element = wait_for_element(driver, By.XPATH, "//td[text()='Shares Outstanding']/following-sibling::td", timeout=3)
+                shares_outstanding_converted = 0
                 if shares_outstanding_element:
                     shares_outstanding = shares_outstanding_element.text
-                    shares_outstanding_converted = convert_shares_format(shares_outstanding)
-                    
-                    # 保存股票数量到Shares.txt（追加模式）
-                    with open(shares_file_path, 'a', encoding='utf-8') as file:
-                        file.write(f"{symbol}: {int(shares_outstanding_converted)}\n")
-                    
-                    print(f"已保存 {symbol} 的股票数量: {int(shares_outstanding_converted)}")
+                    shares_outstanding_converted = convert_shares_format(shares_outstanding)                    
+                    print(f"已获取 {symbol} 的股票数量: {int(shares_outstanding_converted)}")
                 else:
                     print(f"无法获取 {symbol} 的股票数量")
                 
+                # 查找Price/Book数据
+                price_book_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Price/Book')]/following-sibling::td[1]", timeout=3)
+                price_book_value = "--"  # 默认为--，表示没有Price/Book值
+                if price_book_element:
+                    price_book_text = price_book_element.text
+                    if price_book_text != 'N/A' and price_book_text != '-':
+                        try:
+                            price_book_value = float(price_book_text)
+                            price_book_value = str(price_book_value)
+                        except ValueError:
+                            pass
+                    print(f"已获取 {symbol} 的Price/Book: {price_book_value}")
+                else:
+                    print(f"无法获取 {symbol} 的Price/Book")
+                
+                # 保存股票数量和Price/Book到Shares.txt（追加模式）
+                with open(shares_file_path, 'a', encoding='utf-8') as file:
+                    file.write(f"{symbol}: {int(shares_outstanding_converted)}, {price_book_value}\n")
+                
+                print(f"已保存 {symbol} 的股票数量和Price/Book: {int(shares_outstanding_converted)}, {price_book_value}")
                 # 查找Market Cap数据
                 market_cap_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Market Cap')]/following-sibling::td[1]", timeout=3)
                 market_cap_converted = 0
@@ -361,7 +377,7 @@ def main():
                 
                 # 保存市值和PE到marketcap_pe.txt（追加模式）
                 with open(marketcap_pe_file_path, 'a', encoding='utf-8') as file:
-                    file.write(f"{symbol}: {market_cap_converted}, {pe_str}\n")
+                    file.write(f"{symbol}: {market_cap_converted}, {pe_str}, {price_book_value}\n")
                 
                 print(f"已保存 {symbol} 的市值和PE: {market_cap_converted}, {pe_str}")
                 
