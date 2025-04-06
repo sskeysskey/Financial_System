@@ -131,7 +131,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         share_val, pb_text = share
     else:
         share_val = share
-        pb_text = "N/A"
+        pb_text = ""
 
     show_volume = False
     mouse_pressed = False
@@ -379,12 +379,27 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             return None
 
     # 计算换手额（单位：百万）
+    # turnover = (
+    #     (volumes[-1] * prices[-1]) / 1e6
+    #     if volumes and volumes[-1] is not None and prices[-1] is not None
+    #     else None
+    # )
+    # turnover_str = f"{turnover:.1f}" if turnover is not None else ""
+
     turnover = (
         (volumes[-1] * prices[-1]) / 1e6
         if volumes and volumes[-1] is not None and prices[-1] is not None
         else None
     )
-    turnover_str = f"{turnover:.1f}" if turnover is not None else ""
+
+    if turnover is not None:
+        if turnover >= 1000:  # 大于等于1000M时转换为B
+            turnover = turnover / 1000  # 转换为B
+            turnover_str = f"{turnover:.1f}B"
+        else:  # 小于1000M时保持M
+            turnover_str = f"{turnover:.1f}M"
+    else:
+        turnover_str = ""
 
     # 从compare中去除中文和加号
     filtered_compare = re.sub(r'[\u4e00-\u9fff+]', '', compare)
@@ -435,7 +450,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     # 组合标题，增加 pb_text 字段
     title_text = (
-        f'{name}  {compare}  {turnover_str}M/{turnover_rate} '
+        f'{name}  {compare}  {turnover_str} {turnover_rate} '
         f'{marketcap_in_billion} {pe_text} {pb_text} "{table_name}" {fullname} {tag_str}'
     )
     title_style = {

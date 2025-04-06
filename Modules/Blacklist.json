@@ -288,7 +288,19 @@
         "KRC",
         "FRT",
         "DEO",
-        "PINS"
+        "PINS",
+        "GPN",
+        "ALLY",
+        "OBDC",
+        "OMF",
+        "PDI",
+        "JHG",
+        "LAZ",
+        "RRX",
+        "DD",
+        "IFF",
+        "CE",
+        "COLM"
     ],
     "screener": [
         "CTA-PA",
