@@ -14,8 +14,8 @@ yesterday_date = yesterday.strftime('%Y-%m-%d')
 # end_date = "2025-01-11"
 
 # 适合于半自定义抓取
-# start_date = "2002-09-17"
-# end_date = today.strftime('%Y-%m-%d')
+start_date = "2002-09-17"
+end_date = today.strftime('%Y-%m-%d')
 
 # 适合于抓取明天的数据
 # tomorrow = today + timedelta(days=1)
@@ -23,8 +23,8 @@ yesterday_date = yesterday.strftime('%Y-%m-%d')
 # end_date = tomorrow.strftime('%Y-%m-%d')
 
 # 适合于只抓今天
-start_date = yesterday.strftime('%Y-%m-%d')
-end_date = today.strftime('%Y-%m-%d')
+# start_date = yesterday.strftime('%Y-%m-%d')
+# end_date = today.strftime('%Y-%m-%d')
 
 def get_price_format(group_name: str) -> int:
     """根据组名决定价格小数位数"""
@@ -72,7 +72,7 @@ for group_name, tickers in stock_groups.items():
             mapped_name = symbol_mapping.get(ticker_symbol, ticker_symbol)
             decimal_places = get_price_format(group_name)
             for index, row in data.iterrows():
-                date = yesterday_date  # 使用昨天的日期
+                date = index.strftime('%Y-%m-%d')  # 使用数据的实际日期
                 # 使用.iloc[0]来获取Series的值
                 price = round(float(row['Close'].iloc[0]), decimal_places)
 
