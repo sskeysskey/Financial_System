@@ -181,6 +181,26 @@ def download_and_process_data(ticker_symbol, start_date, end_date, group_name, c
 
     return False, 0
 
+def update_empty_json(symbol, group_name, empty_json_path):
+    """更新empty.json文件，添加未成功抓取的symbol"""
+    try:
+        # 读取现有的empty.json文件
+        with open(empty_json_path, 'r') as file:
+            empty_data = json.load(file)
+        
+        # 如果symbol不在对应group的列表中，则添加
+        if symbol not in empty_data[group_name]:
+            empty_data[group_name].append(symbol)
+            
+            # 写回文件
+            with open(empty_json_path, 'w') as file:
+                json.dump(empty_data, file, indent=2)
+            
+            print(f"已将 {symbol} 添加到 {group_name} 的empty列表中")
+            
+    except Exception as e:
+        print(f"更新empty.json文件时出错: {str(e)}")
+
 def main():
     now = datetime.now()
     # 判断今天的星期数，如果是周日(6)或周一(0)，则不执行程序
@@ -202,6 +222,8 @@ def main():
 
     with open('/Users/yanzhang/Documents/Financial_System/Modules/Symbol_mapping.json', 'r') as file:
         symbol_mapping = json.load(file)
+
+    EMPTY_JSON_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json'
 
     today = now.date()
     yesterday = today - timedelta(days=1)
@@ -252,6 +274,8 @@ def main():
                 error_message = log_error_with_timestamp(f"在 {group_name} 中，无法获取 {ticker_symbol} 的数据，所有日期范围都已尝试")
                 write_error_log(error_message, ERROR_LOG_PATH)
                 print(f"在 {group_name} 中，无法获取 {ticker_symbol} 的数据，所有日期范围都已尝试")
+                # 添加到empty.json文件
+                update_empty_json(ticker_symbol, group_name, EMPTY_JSON_PATH)
 
         if data_count > 0:
             print(f"{group_name} 数据处理完成，总共下载了 {data_count} 条数据。")
