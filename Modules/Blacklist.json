@@ -300,7 +300,12 @@
         "DD",
         "IFF",
         "CE",
-        "COLM"
+        "COLM",
+        "SBUX",
+        "CZR",
+        "MHK",
+        "SON",
+        "QRVO"
     ],
     "screener": [
         "CTA-PA",

@@ -92,6 +92,10 @@ data_sets = {
         # ('2024-10-16', 'NUE', 154.27, 0),
         # ('2024-07-11', 'CoreCPI', 3.3)
     ],
+    'Industrials': [
+        # ('2025-04-07', 'ZWS', 29.67, 1955932),
+        # ('2024-07-11', 'CoreCPI', 3.3)
+    ],
     'Earning': [
         # ('2025-01-24', 'AXP', -1.4)
         
@@ -109,6 +113,7 @@ databases = [
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Economics', 'columns': ['date', 'name', 'price']},
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'ETFs', 'columns': ['date', 'name', 'price', 'volume']},
     {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Basic_Materials', 'columns': ['date', 'name', 'price', 'volume']},
+    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Industrials', 'columns': ['date', 'name', 'price', 'volume']},
 ]
 
 # 对每个数据库执行数据插入操作
