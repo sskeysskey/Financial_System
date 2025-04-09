@@ -5,10 +5,10 @@ import pyperclip
 import subprocess
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit,
-    QLabel, QMainWindow, QAction, QScrollArea, QToolButton, QSizePolicy
+    QLabel, QMainWindow, QAction, QScrollArea, QToolButton, QSizePolicy,
 )
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl, QTimer
 from PyQt5.QtGui import QFont, QKeySequence
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl
 import sqlite3
 
 # JSON 文件路径
@@ -476,9 +476,25 @@ class MainWindow(QMainWindow):
             f"</span>"
         )
         lbl.setText(label_html)
-        lbl.clicked.connect(lambda: self.open_symbol(symbol))
+        # 修改点击信号连接：传入标签本身和 symbol 信息
+        lbl.clicked.connect(lambda: self.handle_label_click(lbl, symbol))
         lbl.setToolTip("点击以复制 symbol 并打开图表")
         return lbl
+
+    def handle_label_click(self, label, symbol):
+        """
+        处理点击标签时的反馈效果：
+        1. 先改变标签的背景色（例如设置为黄色高亮）
+        2. 使用 QTimer 在短暂延时后恢复原来的样式
+        3. 调用 open_symbol() 打开图表
+        """
+        original_style = label.styleSheet()
+        # 设置一个临时背景色，例如黄色
+        label.setStyleSheet(original_style + " background-color: white;")
+        # 300 毫秒后恢复原有样式
+        QTimer.singleShot(300, lambda: label.setStyleSheet(original_style))
+        # 调用原有的打开图表函数
+        self.open_symbol(symbol)
 
     def open_symbol(self, symbol):
         """
