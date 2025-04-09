@@ -386,8 +386,8 @@ class MainWindow(QMainWindow):
 
         # 定义各结果组的显示顺序、名称及颜色
         display_order = [
-            ("Stock_symbol", matched_names_stocks_symbol, 'cyan'),
-            ("ETF_symbol", matched_names_etfs_symbol, 'cyan'),
+            ("Stock_symbol", matched_names_stocks_symbol, 'white'),
+            ("ETF_symbol", matched_names_etfs_symbol, 'white'),
             ("Stock_name", matched_names_stocks_name, 'white'),
             ("ETF_name", matched_names_etfs_name, 'white'),
             ("Stock_tag", matched_names_stocks_tag, 'white'),
@@ -470,9 +470,9 @@ class MainWindow(QMainWindow):
         # 使用富文本 HTML 设定 symbol 为蓝色，其余部分使用传入的 color
         # 在外层添加统一的样式：增大行间距(line-height)和字间距(letter-spacing)
         label_html = (
-            f"<span style='line-height: 1.8; letter-spacing: 1px;'>"
-            f"<span style='color: cyan; text-decoration: underline; font-size: {font_size}px;'>{symbol}</span>"
-            f"<span style='color: {color}; text-decoration: underline; font-size: {font_size}px;'>{remainder}</span>"
+            f"<span style='line-height: 2.2; letter-spacing: 1px;'>"
+            f"<span style='color: cyan; font-size: {font_size}px;'>{symbol}</span>"
+            f"<span style='color: {color}; font-size: {font_size}px;'>{remainder}</span>"
             f"</span>"
         )
         lbl.setText(label_html)
