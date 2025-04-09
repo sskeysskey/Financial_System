@@ -396,7 +396,6 @@
     "IGF",
     "VONG",
     "IOO",
-    "FLMI",
     "SDCI",
     "FLTR",
     "SCHX",
@@ -459,7 +458,8 @@
     "GDXJ",
     "NANR",
     "FSMB",
-    "KBWP"
+    "KBWP",
+    "MMIT"
   ],
   "Basic_Materials": [
     "LIN",

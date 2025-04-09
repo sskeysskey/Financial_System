@@ -8,7 +8,8 @@
         "ECL",
         "APD",
         "CRH",
-        "NEM"
+        "NEM",
+        "AEM"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -187,8 +188,6 @@
         "CNI",
         "ITW",
         "MMM",
-        "FDX",
-        "CARR",
         "CSX",
         "RSG",
         "EMR",
@@ -246,7 +245,6 @@
         "ROP",
         "FTNT",
         "ADSK",
-        "PAYX",
         "APP",
         "MSTR"
     ],

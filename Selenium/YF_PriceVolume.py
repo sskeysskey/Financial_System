@@ -9,11 +9,17 @@ import time
 import random
 import pyautogui
 import threading
-import tkinter as tk
-from tkinter import messagebox, ttk
 import argparse
 import sqlite3
 import datetime
+import subprocess
+
+def show_alert(message):
+    # AppleScript代码模板
+    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+    
+    # 使用subprocess调用osascript
+    process = subprocess.run(['osascript', '-e', applescript_code], check=True)
 
 # 新增：命令行参数处理
 def parse_arguments():
@@ -112,10 +118,7 @@ def main():
         
         # 如果没有内容，弹窗提示并退出程序
         if not has_content:
-            root = tk.Tk()
-            root.withdraw()  # 隐藏主窗口
-            messagebox.showinfo("提示", "Empty.json文件中没有任何内容，程序将退出。")
-            root.destroy()
+            show_alert(f"Empty.json文件中没有任何内容，程序将退出。")
             return
     else:
         # 参数为normal格式
@@ -211,11 +214,8 @@ def main():
         driver.quit()
         
         # 显示成功提示
-        root = tk.Tk()
-        root.withdraw()  # 隐藏主窗口
-        messagebox.showinfo("完成", "股票数据抓取完成并已写入数据库！")
-        root.destroy()
-        
+        show_alert(f"股票数据抓取完成并已写入数据库！")
+
         print("数据抓取和保存完成！")
 
 if __name__ == "__main__":
