@@ -41,7 +41,7 @@ def process_bonds_sector():
     
     # 只处理Bonds分组
     modified = False
-    bonds_symbols = sectors.get('Currencies', [])
+    bonds_symbols = sectors.get('Indices', [])
     
     print("开始处理Bonds分组...")
     for symbol in bonds_symbols:

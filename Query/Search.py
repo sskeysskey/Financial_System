@@ -478,7 +478,6 @@ class MainWindow(QMainWindow):
         lbl.setText(label_html)
         # 修改点击信号连接：传入标签本身和 symbol 信息
         lbl.clicked.connect(lambda: self.handle_label_click(lbl, symbol))
-        lbl.setToolTip("点击以复制 symbol 并打开图表")
         return lbl
 
     def handle_label_click(self, label, symbol):
