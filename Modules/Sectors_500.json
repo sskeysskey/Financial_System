@@ -45,7 +45,10 @@
         "MAR",
         "AZO",
         "SE",
-        "JD"
+        "JD",
+        "RCL",
+        "HLT",
+        "GM"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -79,7 +82,8 @@
         "EPD",
         "WMB",
         "ET",
-        "KMI"
+        "KMI",
+        "SLB"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -129,7 +133,14 @@
         "COF",
         "BK",
         "MFG",
-        "LYG"
+        "LYG",
+        "NU",
+        "MET",
+        "AIG",
+        "ALL",
+        "MFC",
+        "TFC",
+        "BCS"
     ],
     "Healthcare": [
         "LLY",
@@ -191,7 +202,12 @@
         "CSX",
         "RSG",
         "EMR",
-        "CPRT"
+        "CPRT",
+        "CARR",
+        "FDX",
+        "JCI",
+        "HWM",
+        "NSC"
     ],
     "Real_Estate": [
         "PLD",
@@ -246,7 +262,10 @@
         "FTNT",
         "ADSK",
         "APP",
-        "MSTR"
+        "MSTR",
+        "TEAM",
+        "MRVL",
+        "PAYX"
     ],
     "Utilities": [
         "NEE",
