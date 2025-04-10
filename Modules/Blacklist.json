@@ -651,6 +651,12 @@
         "FEMS",
         "KORP",
         "RSPH",
-        "XSVM"
+        "XSVM",
+        "IMCV",
+        "POCT",
+        "IGRO",
+        "TLH",
+        "SCHR",
+        "IEI"
     ]
 }

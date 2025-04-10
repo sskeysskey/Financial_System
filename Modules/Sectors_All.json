@@ -459,7 +459,10 @@
     "FSMB",
     "KBWP",
     "MMIT",
-    "TMV"
+    "TMV",
+    "HSRT",
+    "HTAB",
+    "FLMI"
   ],
   "Basic_Materials": [
     "LIN",
