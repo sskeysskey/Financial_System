@@ -23,15 +23,14 @@
   "Consumer_Cyclical": [],
   "Consumer_Defensive": [],
   "Energy": [
-    "GOLD",
-    "TU"
+    "SHEL",
+    "CNQ"
   ],
   "Financial_Services": [],
   "Healthcare": [],
   "Industrials": [],
   "Real_Estate": [],
   "Technology": [
-    "WBD",
     "AAPL",
     "NVDA"
   ],

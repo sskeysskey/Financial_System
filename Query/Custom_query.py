@@ -98,7 +98,7 @@ if __name__ == '__main__':
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Bonds',
         #   'condition': "name = 'US10Y'", 'fields': '*',
-        # 'include_condition': True},
+        # 'include_condition': False},
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'ETFs',
         #   'condition': "name = 'SCO'", 'fields': '*',
@@ -106,7 +106,7 @@ if __name__ == '__main__':
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Basic_Materials',
         #     'condition': "name = 'CTA-PB'", 'fields': '*',
-        # 'include_condition': True},
+        # 'include_condition': False},
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Communication_Services',
         #     'condition': "id = '284897'", 'fields': '*',

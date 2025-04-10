@@ -21,6 +21,21 @@ def show_alert(message):
     # 使用subprocess调用osascript
     process = subprocess.run(['osascript', '-e', applescript_code], check=True)
 
+def clear_symbols_from_json(json_file_path, sector, symbol):
+    """从指定的JSON文件中清除特定分组中的特定符号"""
+    try:
+        with open(json_file_path, 'r') as file:
+            data = json.load(file)
+            
+        if sector in data and symbol in data[sector]:
+            data[sector].remove(symbol)
+            
+        with open(json_file_path, 'w') as file:
+            json.dump(data, file, indent=4)
+            
+    except Exception as e:
+        print(f"清除symbol时发生错误: {str(e)}")
+
 # 新增：命令行参数处理
 def parse_arguments():
     parser = argparse.ArgumentParser(description='股票数据抓取工具')
@@ -123,6 +138,7 @@ def main():
     else:
         # 参数为normal格式
         json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json"
+        # json_file_path = "/Users/yanzhang/Documents/Financial_System/Test/Sectors_All_test.json"
     
     # 在主程序开始前启动鼠标移动线程
     mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
@@ -197,6 +213,10 @@ def main():
                         conn.commit()
                         
                         print(f"已保存 {symbol} 到 {sector} 表: 价格={price}, 成交量={volume}")
+                        
+                        # 如果是empty模式，则在成功保存后清除该symbol
+                        if args.mode.lower() == 'empty':
+                            clear_symbols_from_json(json_file_path, sector, symbol)
                     else:
                         print(f"抓取 {symbol} 失败，未能获取到完整数据")
                 
@@ -215,7 +235,6 @@ def main():
         
         # 显示成功提示
         show_alert(f"股票数据抓取完成并已写入数据库！")
-
         print("数据抓取和保存完成！")
 
 if __name__ == "__main__":
