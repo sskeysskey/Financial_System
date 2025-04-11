@@ -54,13 +54,24 @@ def check_empty_json_has_content(json_file_path):
     
     return False
 
+# 新增：读取symbol_mapping.json
+def load_symbol_mapping(mapping_file_path):
+    try:
+        with open(mapping_file_path, 'r') as file:
+            return json.load(file)
+    except Exception as e:
+        print(f"读取symbol映射文件时发生错误: {str(e)}")
+        return {}
+
 # 读取JSON文件获取股票符号和分组
 def get_stock_symbols_from_json(json_file_path):
-    # 指定要提取的目标分类
+    # 扩展目标分类
     target_sectors = [
         'Basic_Materials', 'Consumer_Cyclical', 'Real_Estate', 'Energy',
         'Technology', 'Utilities', 'Industrials', 'Consumer_Defensive',
-        'Communication_Services', 'Financial_Services', 'Healthcare'
+        'Communication_Services', 'Financial_Services', 'Healthcare', 'ETFs',
+        # 新增分组
+        'Bonds', 'Currencies', 'Crypto', 'Indices', 'Commodities', 'Economics'
     ]
     
     with open(json_file_path, 'r') as file:
@@ -106,19 +117,39 @@ def wait_for_element(driver, by, value, timeout=10):
     except Exception as e:
         return None
 
-# 确保数据库表存在
-def ensure_table_exists(conn, table_name):
+# 确保数据库表存在 - 针对不同类型的表使用不同的结构
+def ensure_table_exists(conn, table_name, table_type="standard"):
     cursor = conn.cursor()
-    cursor.execute(f'''
-    CREATE TABLE IF NOT EXISTS {table_name} (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        date TEXT,
-        name TEXT,
-        price REAL,
-        volume INTEGER
-    )
-    ''')
+    
+    if table_type == "no_volume":
+        # 不需要volume字段的表结构
+        cursor.execute(f'''
+        CREATE TABLE IF NOT EXISTS {table_name} (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT,
+            name TEXT,
+            price REAL
+        )
+        ''')
+    else:
+        # 标准表结构，包含volume
+        cursor.execute(f'''
+        CREATE TABLE IF NOT EXISTS {table_name} (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT,
+            name TEXT,
+            price REAL,
+            volume INTEGER
+        )
+        ''')
+    
     conn.commit()
+
+# 新增：判断分组类型的函数
+def is_no_volume_sector(sector):
+    """判断是否为不需要抓取volume的分组"""
+    no_volume_sectors = ['Bonds', 'Currencies', 'Crypto', 'Indices', 'Commodities', 'Economics']
+    return sector in no_volume_sectors
 
 def main():
     # 解析命令行参数
@@ -137,8 +168,11 @@ def main():
             return
     else:
         # 参数为normal格式
-        json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json"
-        # json_file_path = "/Users/yanzhang/Documents/Financial_System/Test/Sectors_All_test.json"
+        json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json"
+    
+    # 加载symbol映射关系
+    mapping_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/symbol_mapping.json"
+    symbol_mapping = load_symbol_mapping(mapping_file_path)
     
     # 在主程序开始前启动鼠标移动线程
     mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
@@ -175,8 +209,12 @@ def main():
     try:
         # 逐个分组抓取股票数据
         for sector, symbols in symbols_by_sector.items():
-            # 确保表存在
-            ensure_table_exists(conn, sector)
+            # 判断该分组是否需要抓取volume
+            is_no_volume = is_no_volume_sector(sector)
+            
+            # 根据分组类型确保对应表存在
+            table_type = "no_volume" if is_no_volume else "standard"
+            ensure_table_exists(conn, sector, table_type)
             
             for symbol in symbols:
                 try:
@@ -193,32 +231,55 @@ def main():
                         except ValueError:
                             print(f"无法转换价格: {price_text}")
                     
-                    # 查找Volume数据 - 使用新的XPath
-                    volume_element = wait_for_element(driver, By.XPATH, "//fin-streamer[@data-field='regularMarketVolume']", timeout=5)
-                    volume = None
-                    if volume_element:
-                        volume_text = volume_element.text
-                        try:
-                            volume = int(volume_text.replace(',', ''))
-                        except ValueError:
-                            print(f"无法转换成交量: {volume_text}")
+                    # 决定要存储的name
+                    display_name = symbol
+                    if is_no_volume and symbol in symbol_mapping:
+                        display_name = symbol_mapping[symbol]
                     
-                    # 如果成功获取到数据，写入数据库
-                    if price is not None and volume is not None:
-                        cursor = conn.cursor()
-                        cursor.execute(f'''
-                        INSERT INTO {sector} (date, name, price, volume)
-                        VALUES (?, ?, ?, ?)
-                        ''', (current_date, symbol, price, volume))
-                        conn.commit()
-                        
-                        print(f"已保存 {symbol} 到 {sector} 表: 价格={price}, 成交量={volume}")
-                        
-                        # 如果是empty模式，则在成功保存后清除该symbol
-                        if args.mode.lower() == 'empty':
-                            clear_symbols_from_json(json_file_path, sector, symbol)
+                    if is_no_volume:
+                        # 不需要volume的分组，只存储价格
+                        if price is not None:
+                            cursor = conn.cursor()
+                            cursor.execute(f'''
+                            INSERT INTO {sector} (date, name, price)
+                            VALUES (?, ?, ?)
+                            ''', (current_date, display_name, price))
+                            conn.commit()
+                            
+                            print(f"已保存 {symbol} ({display_name}) 到 {sector} 表: 价格={price}")
+                            
+                            # 如果是empty模式，则在成功保存后清除该symbol
+                            if args.mode.lower() == 'empty':
+                                clear_symbols_from_json(json_file_path, sector, symbol)
+                        else:
+                            print(f"抓取 {symbol} 失败，未能获取到价格数据")
                     else:
-                        print(f"抓取 {symbol} 失败，未能获取到完整数据")
+                        # 需要抓取volume的标准分组
+                        volume_element = wait_for_element(driver, By.XPATH, "//fin-streamer[@data-field='regularMarketVolume']", timeout=5)
+                        volume = None
+                        if volume_element:
+                            volume_text = volume_element.text
+                            try:
+                                volume = int(volume_text.replace(',', ''))
+                            except ValueError:
+                                print(f"无法转换成交量: {volume_text}")
+                        
+                        # 如果成功获取到数据，写入数据库
+                        if price is not None and volume is not None:
+                            cursor = conn.cursor()
+                            cursor.execute(f'''
+                            INSERT INTO {sector} (date, name, price, volume)
+                            VALUES (?, ?, ?, ?)
+                            ''', (current_date, display_name, price, volume))
+                            conn.commit()
+                            
+                            print(f"已保存 {symbol} 到 {sector} 表: 价格={price}, 成交量={volume}")
+                            
+                            # 如果是empty模式，则在成功保存后清除该symbol
+                            if args.mode.lower() == 'empty':
+                                clear_symbols_from_json(json_file_path, sector, symbol)
+                        else:
+                            print(f"抓取 {symbol} 失败，未能获取到完整数据")
                 
                 except Exception as e:
                     print(f"抓取 {symbol} 时发生错误: {str(e)}")

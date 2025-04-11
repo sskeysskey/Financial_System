@@ -326,7 +326,8 @@
         "PATH",
         "MSGS",
         "DDOG",
-        "MTCH"
+        "MTCH",
+        "NLY"
     ],
     "screener": [
         "CTA-PA",
@@ -657,6 +658,8 @@
         "IGRO",
         "TLH",
         "SCHR",
-        "IEI"
+        "IEI",
+        "TAXF",
+        "JPME"
     ]
 }

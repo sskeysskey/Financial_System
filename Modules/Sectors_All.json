@@ -433,7 +433,6 @@
     "AGZ",
     "IXP",
     "PSP",
-    "FVAL",
     "MEAR",
     "EYLD",
     "EDIV",
@@ -462,7 +461,8 @@
     "TMV",
     "HSRT",
     "HTAB",
-    "FLMI"
+    "FLMI",
+    "GOVI"
   ],
   "Basic_Materials": [
     "LIN",
