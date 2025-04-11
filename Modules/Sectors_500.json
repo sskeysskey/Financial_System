@@ -47,8 +47,7 @@
         "SE",
         "JD",
         "RCL",
-        "HLT",
-        "GM"
+        "HLT"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -82,8 +81,7 @@
         "EPD",
         "WMB",
         "ET",
-        "KMI",
-        "SLB"
+        "KMI"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -134,13 +132,8 @@
         "BK",
         "MFG",
         "LYG",
-        "NU",
-        "MET",
         "AIG",
-        "ALL",
-        "MFC",
-        "TFC",
-        "BCS"
+        "ALL"
     ],
     "Healthcare": [
         "LLY",
@@ -206,8 +199,7 @@
         "CARR",
         "FDX",
         "JCI",
-        "HWM",
-        "NSC"
+        "HWM"
     ],
     "Real_Estate": [
         "PLD",
@@ -264,7 +256,6 @@
         "APP",
         "MSTR",
         "TEAM",
-        "MRVL",
         "PAYX"
     ],
     "Utilities": [

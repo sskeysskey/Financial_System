@@ -54,7 +54,6 @@
         "CTAS",
         "BABA",
         "WM",
-        "PDD",
         "TT",
         "CEG",
         "APD",
@@ -214,7 +213,6 @@
         "VLO",
         "ADBE",
         "BALL",
-        "UWMC",
         "NSIT",
         "KEP",
         "NEU",
@@ -463,7 +461,11 @@
         "GTLB",
         "MTSI",
         "S",
-        "CRUS"
+        "CRUS",
+        "PDD",
+        "KMX",
+        "MATX",
+        "NLY"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -716,7 +718,8 @@
         "RHP",
         "AMD",
         "FTV",
-        "SLAB"
+        "SLAB",
+        "UWMC"
     ],
     "orange_keywords": [
         "NASDAQ",
