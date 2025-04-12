@@ -133,7 +133,9 @@
         "MFG",
         "LYG",
         "AIG",
-        "ALL"
+        "ALL",
+        "NU",
+        "BCS"
     ],
     "Healthcare": [
         "LLY",
@@ -199,7 +201,8 @@
         "CARR",
         "FDX",
         "JCI",
-        "HWM"
+        "HWM",
+        "WCN"
     ],
     "Real_Estate": [
         "PLD",

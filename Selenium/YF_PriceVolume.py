@@ -71,7 +71,7 @@ def get_stock_symbols_from_json(json_file_path):
         'Technology', 'Utilities', 'Industrials', 'Consumer_Defensive',
         'Communication_Services', 'Financial_Services', 'Healthcare', 'ETFs',
         # 新增分组
-        'Bonds', 'Currencies', 'Crypto', 'Indices', 'Commodities', 'Economics'
+        'Bonds', 'Currencies', 'Crypto', 'Commodities', 'Economics', 'Indices'
     ]
     
     with open(json_file_path, 'r') as file:
@@ -145,11 +145,17 @@ def ensure_table_exists(conn, table_name, table_type="standard"):
     
     conn.commit()
 
-# 新增：判断分组类型的函数
+# 修改：判断分组类型的函数，从no_volume_sectors中移除'Indices'
 def is_no_volume_sector(sector):
     """判断是否为不需要抓取volume的分组"""
-    no_volume_sectors = ['Bonds', 'Currencies', 'Crypto', 'Indices', 'Commodities', 'Economics']
+    no_volume_sectors = ['Bonds', 'Currencies', 'Crypto', 'Commodities', 'Economics']
     return sector in no_volume_sectors
+
+# 新增：判断是否需要使用symbol映射的函数
+def needs_symbol_mapping(sector):
+    """判断是否需要使用symbol_mapping中的名称"""
+    mapping_sectors = ['Bonds', 'Currencies', 'Crypto', 'Commodities', 'Economics', 'Indices']
+    return sector in mapping_sectors
 
 def main():
     # 解析命令行参数
@@ -169,6 +175,7 @@ def main():
     else:
         # 参数为normal格式
         json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json"
+        # json_file_path = "/Users/yanzhang/Documents/Financial_System/Test/Sectors_All_test.json"
     
     # 加载symbol映射关系
     mapping_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/symbol_mapping.json"
@@ -212,6 +219,9 @@ def main():
             # 判断该分组是否需要抓取volume
             is_no_volume = is_no_volume_sector(sector)
             
+            # 判断是否需要使用symbol映射
+            use_mapping = needs_symbol_mapping(sector)
+            
             # 根据分组类型确保对应表存在
             table_type = "no_volume" if is_no_volume else "standard"
             ensure_table_exists(conn, sector, table_type)
@@ -233,7 +243,7 @@ def main():
                     
                     # 决定要存储的name
                     display_name = symbol
-                    if is_no_volume and symbol in symbol_mapping:
+                    if use_mapping and symbol in symbol_mapping:
                         display_name = symbol_mapping[symbol]
                     
                     if is_no_volume:
@@ -254,7 +264,7 @@ def main():
                         else:
                             print(f"抓取 {symbol} 失败，未能获取到价格数据")
                     else:
-                        # 需要抓取volume的标准分组
+                        # 需要抓取volume的分组
                         volume_element = wait_for_element(driver, By.XPATH, "//fin-streamer[@data-field='regularMarketVolume']", timeout=5)
                         volume = None
                         if volume_element:
@@ -273,7 +283,7 @@ def main():
                             ''', (current_date, display_name, price, volume))
                             conn.commit()
                             
-                            print(f"已保存 {symbol} 到 {sector} 表: 价格={price}, 成交量={volume}")
+                            print(f"已保存 {symbol} ({display_name}) 到 {sector} 表: 价格={price}, 成交量={volume}")
                             
                             # 如果是empty模式，则在成功保存后清除该symbol
                             if args.mode.lower() == 'empty':

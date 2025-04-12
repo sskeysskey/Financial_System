@@ -485,7 +485,6 @@
         "PCTY",
         "CNH",
         "WY",
-        "JAZZ",
         "SQM",
         "LULU",
         "ULTA",
@@ -793,7 +792,8 @@
         "ICLR",
         "IONS",
         "AKAM",
-        "BILL"
+        "BILL",
+        "JAZZ"
     ],
     "black_keywords": [
         "Cotton",

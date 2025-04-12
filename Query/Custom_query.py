@@ -82,19 +82,19 @@ if __name__ == '__main__':
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Indices',
         #   'condition': "name = 'Nikkei'", 'fields': '*',
-        # 'include_condition': True},
+        # 'include_condition': False},
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies',
-        #   'condition': "name = 'CNYARS'", 'fields': '*',
-        # 'include_condition': False},
+        #   'condition': "name = 'EURUSD'", 'fields': '*',
+        # 'include_condition': True},
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities',
         #     'condition': "name = 'Rice'", 'fields': '*',
-        # 'include_condition': True},
+        # 'include_condition': False},
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto',
         #   'condition': "name = 'Solana'", 'fields': '*',
-        # 'include_condition': True},
+        # 'include_condition': False},
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Bonds',
         #   'condition': "name = 'US10Y'", 'fields': '*',
@@ -102,7 +102,7 @@ if __name__ == '__main__':
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'ETFs',
         #   'condition': "name = 'SCO'", 'fields': '*',
-        # 'include_condition': True},
+        # 'include_condition': False},
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Basic_Materials',
         #     'condition': "name = 'CTA-PB'", 'fields': '*',
