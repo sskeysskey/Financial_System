@@ -164,7 +164,7 @@ if __name__ == '__main__':
     
     blacklist = ["ERY","TQQQ","QLD","SOXL","SPXL","SVXY","YINN","CHAU","UVXY",
                 "VIXY","VXX","SPXS","SPXU","ZSL","AGQ","SCO","TMF","SOXS",
-                "BOIL","TWM","KOLD"]
+                "BOIL","TWM","KOLD","TMV"]
 
     interested_sectors = ["ETFs"]
     file_path = '/Users/yanzhang/Documents/News/CompareETFs.txt'

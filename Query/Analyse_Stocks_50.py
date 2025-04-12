@@ -109,10 +109,10 @@ def update_json_data(config_path, updates, blacklist_newlow):
                     print(f"将symbol '{symbol}' 添加到Panel文件的类别 '{category}' 中")
                     
                     # 将symbol和category写入文件
-                    timestamp = datetime.now().strftime("%y%m%d")
-                    file_path = f"/Users/yanzhang/Documents/News/backup/site/NewLow_{timestamp}.txt"
-                    with open(file_path, 'a', encoding='utf-8') as f:
-                        f.write(f"{category} {symbol}\n")
+                    # timestamp = datetime.now().strftime("%y%m%d")
+                    # file_path = f"/Users/yanzhang/Documents/News/backup/site/NewLow_{timestamp}.txt"
+                    # with open(file_path, 'a', encoding='utf-8') as f:
+                    #     f.write(f"{category} {symbol}\n")
                         
                 elif symbol in data[category]:
                     print(f"'{symbol}' 已存在于Panel文件的类别 '{category}' 中，跳过")
@@ -378,12 +378,12 @@ def main():
                                 break  # 只输出最长的时间周期
 
     if output:
-        output_files = create_output_files()
-        # 将结果写入所有输出文件
-        for output_file in output_files:
-            with open(output_file, 'w') as f:
-                f.write('\n'.join(output))
-            print(f"结果已保存到文件: {output_file}")
+        # output_files = create_output_files()
+        # # 将结果写入所有输出文件
+        # for output_file in output_files:
+        #     with open(output_file, 'w') as f:
+        #         f.write('\n'.join(output))
+        #     print(f"结果已保存到文件: {output_file}")
         
         final_output = "\n".join(output)
 

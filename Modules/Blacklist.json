@@ -327,7 +327,8 @@
         "MSGS",
         "DDOG",
         "MTCH",
-        "NLY"
+        "NLY",
+        "BAX"
     ],
     "screener": [
         "CTA-PA",
@@ -660,6 +661,7 @@
         "SCHR",
         "IEI",
         "TAXF",
-        "JPME"
+        "JPME",
+        "CORP"
     ]
 }

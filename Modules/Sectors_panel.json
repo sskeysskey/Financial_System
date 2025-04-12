@@ -8,8 +8,7 @@
     "Consumer_Cyclical": {
         "DECK": "",
         "AMZN": "",
-        "PDD": "",
-        "KBH": ""
+        "PDD": ""
     },
     "Utilities": {
         "CEG": ""
@@ -22,27 +21,20 @@
         "BLDR": "关注财报",
         "SAIA": "关注财报",
         "KNX": "关注财报",
-        "DAL": "",
         "MATX": ""
     },
     "Communication_Services": {
-        "GOOGL": "",
-        "NMAX": ""
+        "GOOGL": ""
     },
     "Financial_Services": {
-        "JPM": "关注财报",
-        "MS": "关注财报",
         "MCO": "关注财报",
-        "BN": "关注财报",
-        "BLK": "",
-        "FG": ""
+        "BN": "关注财报"
     },
     "Healthcare": {
         "NVO": "",
         "MRNA": "",
         "LLY": "",
         "MRK": "",
-        "BAX": "",
         "CRL": ""
     },
     "Bonds": {

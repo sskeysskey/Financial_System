@@ -306,12 +306,12 @@ def main():
                             break  # 只输出最长的时间周期
 
     if output:
-        output_files = create_output_files()
-        # 将结果写入所有输出文件
-        for output_file in output_files:
-            with open(output_file, 'w') as f:
-                f.write('\n'.join(output))
-            print(f"结果已保存到文件: {output_file}")
+        # output_files = create_output_files()
+        # # 将结果写入所有输出文件
+        # for output_file in output_files:
+        #     with open(output_file, 'w') as f:
+        #         f.write('\n'.join(output))
+        #     print(f"结果已保存到文件: {output_file}")
     
         final_output = "\n".join(output)
 

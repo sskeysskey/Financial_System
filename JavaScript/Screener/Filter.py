@@ -4,7 +4,7 @@ import os
 import time
 import sqlite3
 import subprocess
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # 读取screener数据文件
 def read_screener_file(filepath):
@@ -330,7 +330,27 @@ def delete_records_by_names(db_file, table_name, stock_names):
         conn.close()
         return delete_log
 
-# 主函数
+def clean_old_backups(directory, file_patterns, days=4):
+    """
+    删除超过指定天数的旧备份文件
+    """
+    now = datetime.now()
+    cutoff = now - timedelta(days=days)
+
+    for filename in os.listdir(directory):
+        for prefix, date_position in file_patterns:
+            if filename.startswith(prefix):
+                try:
+                    date_str = filename.split('_')[date_position].split('.')[0]
+                    file_date = datetime.strptime(date_str, '%y%m%d').replace(year=now.year)
+                    if file_date < cutoff:
+                        file_path = os.path.join(directory, filename)
+                        os.remove(file_path)
+                        print(f"删除旧备份文件：{file_path}")
+                    break
+                except Exception as e:
+                    print(f"跳过文件：{filename}，原因：{e}")
+
 def main():
     extension_launch()
     
@@ -353,6 +373,7 @@ def main():
     sectors_5000_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_5000.json'
     sectors_500_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_500.json'
     blacklist_file = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'
+    backup_directory = '/Users/yanzhang/Documents/News/backup/site'
     
     # 读取数据
     screener_data, market_caps = read_screener_file(screener_file)
@@ -390,12 +411,19 @@ def main():
     output_file = '/Users/yanzhang/Documents/News/screener_sectors.txt'
     write_log_file(output_file, added_symbols, changes_5000, changes_500, moved_symbols, db_delete_logs)
 
-    # 等待1秒
+    # 等待2秒
     time.sleep(2)
 
     # 打开文件
     # 在 macOS 系统下使用 open 命令打开文件
     os.system(f"open {output_file}")
+
+    file_patterns = [
+        ("NewLow_", -1),
+        ("NewLow500_", -1),
+        ("NewLow5000_", -1)
+    ]
+    clean_old_backups(backup_directory, file_patterns)
 
 if __name__ == "__main__":
     main()

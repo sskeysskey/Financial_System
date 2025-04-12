@@ -110,17 +110,17 @@ def fetch_data(url):
         print(f"获取数据时出错: {str(e)}")
         return []
 
-def load_compare_data(compare_file):
-    compare_data = {}
-    with open(compare_file, 'r') as file:
-        for line in file:
-            parts = line.split(':')
-            if len(parts) == 2:
-                symbol, percentage = parts[0].strip(), parts[1].strip()
-                compare_data[symbol] = percentage
-    return compare_data
+# def load_compare_data(compare_file):
+#     compare_data = {}
+#     with open(compare_file, 'r') as file:
+#         for line in file:
+#             parts = line.split(':')
+#             if len(parts) == 2:
+#                 symbol, percentage = parts[0].strip(), parts[1].strip()
+#                 compare_data[symbol] = percentage
+#     return compare_data
 
-def save_data(urls, existing_json, new_file, today_file, diff_file, compare_file, blacklist_file):
+def save_data(urls, existing_json, new_file, blacklist_file):
     # 加载黑名单
     blacklist = load_blacklist(blacklist_file)
 
@@ -135,7 +135,7 @@ def save_data(urls, existing_json, new_file, today_file, diff_file, compare_file
         existing_symbols = {etf['symbol'] for etf in data['etfs']}
     
     # 读取compare_all.txt文件中的百分比数据
-    compare_data = load_compare_data(compare_file)
+    # compare_data = load_compare_data(compare_file)
     
     # 收集新数据
     total_data_list = []
@@ -163,80 +163,80 @@ def save_data(urls, existing_json, new_file, today_file, diff_file, compare_file
                     file.write(line)  # 最后一行不添加任何后缀
 
     # 获取昨天的日期
-    yesterday = (datetime.now() - timedelta(1)).strftime('%y%m%d')
+    # yesterday = (datetime.now() - timedelta(1)).strftime('%y%m%d')
 
-    if os.path.exists(today_file):
-        # 备份今天的文件
-        backup_today_file = f"/Users/yanzhang/Documents/News/backup/site/ETFs_today_{yesterday}.txt"
-        shutil.copy2(today_file, backup_today_file)
+    # if os.path.exists(today_file):
+    #     # 备份今天的文件
+    #     backup_today_file = f"/Users/yanzhang/Documents/News/backup/site/ETFs_today_{yesterday}.txt"
+    #     shutil.copy2(today_file, backup_today_file)
 
-    if not os.path.exists(today_file):
-        # 如果today_file不存在，写入所有新数据
-        with open(today_file, "w") as file:
-            for i, line in enumerate(total_data_list):
-                if i < len(total_data_list) - 1:
-                    file.write(f"{line}\n")
-                else:
-                    file.write(line)
-    else:
-        # 如果today_file存在，比较并写入diff_file
-        with open(today_file, "r") as file:
-            existing_lines = file.readlines()
-            existing_symbols_today = {line.split(":")[0].strip() for line in existing_lines}
+    # if not os.path.exists(today_file):
+    #     # 如果today_file不存在，写入所有新数据
+    #     with open(today_file, "w") as file:
+    #         for i, line in enumerate(total_data_list):
+    #             if i < len(total_data_list) - 1:
+    #                 file.write(f"{line}\n")
+    #             else:
+    #                 file.write(line)
+    # else:
+    #     # 如果today_file存在，比较并写入diff_file
+    #     with open(today_file, "r") as file:
+    #         existing_lines = file.readlines()
+    #         existing_symbols_today = {line.split(":")[0].strip() for line in existing_lines}
         
-        diff_data_list = []
-        for line in total_data_list:
-            symbol = line.split(":")[0].strip()
-            # 检查是否在黑名单中
-            if symbol not in existing_symbols_today and not is_blacklisted(symbol, blacklist):
-                percentage = compare_data.get(symbol, "")
-                if percentage:
-                    line = f"{symbol:<7} {percentage if percentage else '':<10}: {line.split(':', 1)[1]}"
-                diff_data_list.append(line)
+    #     diff_data_list = []
+    #     for line in total_data_list:
+    #         symbol = line.split(":")[0].strip()
+    #         # 检查是否在黑名单中
+    #         if symbol not in existing_symbols_today and not is_blacklisted(symbol, blacklist):
+    #             percentage = compare_data.get(symbol, "")
+    #             if percentage:
+    #                 line = f"{symbol:<7} {percentage if percentage else '':<10}: {line.split(':', 1)[1]}"
+    #             diff_data_list.append(line)
 
-        with open(diff_file, "w") as file:
-            for i, line in enumerate(diff_data_list):
-                if i < len(diff_data_list) - 1:
-                    file.write(f"{line}\n")
-                else:
-                    file.write(line)
-        # 覆盖写入today_file
-        with open(today_file, "w") as file:
-            for i, line in enumerate(total_data_list):
-                if i < len(total_data_list) - 1:
-                    file.write(f"{line}\n")
-                else:
-                    file.write(line)
+    #     with open(diff_file, "w") as file:
+    #         for i, line in enumerate(diff_data_list):
+    #             if i < len(diff_data_list) - 1:
+    #                 file.write(f"{line}\n")
+    #             else:
+    #                 file.write(line)
+    #     # 覆盖写入today_file
+    #     with open(today_file, "w") as file:
+    #         for i, line in enumerate(total_data_list):
+    #             if i < len(total_data_list) - 1:
+    #                 file.write(f"{line}\n")
+    #             else:
+    #                 file.write(line)
 
-def backup_diff_file(diff_file, backup_dir):
-    if os.path.exists(diff_file):
-        # 获取当前时间戳
-        timestamp = datetime.now().strftime('%y%m%d')
-        # 新的文件名
-        new_filename = f"ETFs_diff_{timestamp}.txt"
-        # 目标路径
-        target_path = os.path.join(backup_dir, new_filename)
-        # 移动文件
-        shutil.move(diff_file, target_path)
+# def backup_diff_file(diff_file, backup_dir):
+#     if os.path.exists(diff_file):
+#         # 获取当前时间戳
+#         timestamp = datetime.now().strftime('%y%m%d')
+#         # 新的文件名
+#         new_filename = f"ETFs_diff_{timestamp}.txt"
+#         # 目标路径
+#         target_path = os.path.join(backup_dir, new_filename)
+#         # 移动文件
+#         shutil.move(diff_file, target_path)
 
-def clean_old_backups(directory, prefix="ETFs_today_", days=4):
-    """删除备份目录中超过指定天数的文件"""
-    now = datetime.now()
-    cutoff = now - timedelta(days=days)
+# def clean_old_backups(directory, prefix="ETFs_today_", days=4):
+#     """删除备份目录中超过指定天数的文件"""
+#     now = datetime.now()
+#     cutoff = now - timedelta(days=days)
 
-    for filename in os.listdir(directory):
-        if filename.startswith(prefix):  # 只处理特定前缀的文件
-            try:
-                date_str = filename.split('_')[-1].split('.')[0]  # 获取日期部分
-                file_date = datetime.strptime(date_str, '%y%m%d')
-                # 将年份设置为今年
-                file_date = file_date.replace(year=now.year)
-                if file_date < cutoff:
-                    file_path = os.path.join(directory, filename)
-                    os.remove(file_path)
-                    print(f"删除旧备份文件：{file_path}")
-            except Exception as e:
-                print(f"跳过文件：{filename}，原因：{e}")
+#     for filename in os.listdir(directory):
+#         if filename.startswith(prefix):  # 只处理特定前缀的文件
+#             try:
+#                 date_str = filename.split('_')[-1].split('.')[0]  # 获取日期部分
+#                 file_date = datetime.strptime(date_str, '%y%m%d')
+#                 # 将年份设置为今年
+#                 file_date = file_date.replace(year=now.year)
+#                 if file_date < cutoff:
+#                     file_path = os.path.join(directory, filename)
+#                     os.remove(file_path)
+#                     print(f"删除旧备份文件：{file_path}")
+#             except Exception as e:
+#                 print(f"跳过文件：{filename}，原因：{e}")
 
 def load_blacklist(blacklist_file):
     """加载黑名单数据"""
@@ -253,9 +253,9 @@ def is_blacklisted(symbol, blacklist):
     return symbol in blacklist
 
 # diff 文件路径
-diff_file = '/Users/yanzhang/Documents/News/ETFs_diff.txt'
-backup_dir = '/Users/yanzhang/Documents/News/backup/backup'
-backup_diff_file(diff_file, backup_dir)
+# diff_file = '/Users/yanzhang/Documents/News/ETFs_diff.txt'
+# backup_dir = '/Users/yanzhang/Documents/News/backup/backup'
+# backup_diff_file(diff_file, backup_dir)
 
 # URL列表
 urls = [
@@ -269,17 +269,17 @@ urls = [
 
 existing_json = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
 new_file = '/Users/yanzhang/Documents/News/ETFs_new.txt'
-today_file = '/Users/yanzhang/Documents/News/backup/site/ETFs_today.txt'
-diff_file = '/Users/yanzhang/Documents/News/ETFs_diff.txt'
-compare_file = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
+# today_file = '/Users/yanzhang/Documents/News/backup/site/ETFs_today.txt'
+# diff_file = '/Users/yanzhang/Documents/News/ETFs_diff.txt'
+# compare_file = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
 blacklist_file = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'
 
 try:
-    save_data(urls, existing_json, new_file, today_file, diff_file, compare_file, blacklist_file)
+    save_data(urls, existing_json, new_file, blacklist_file)
 finally:
     driver.quit()
 print("所有爬取任务完成。")
 
 # 调用清理旧备份文件的函数
-directory_backup = '/Users/yanzhang/Documents/News/backup/site/'
-clean_old_backups(directory_backup)
+# directory_backup = '/Users/yanzhang/Documents/News/backup/site/'
+# clean_old_backups(directory_backup)
