@@ -64,7 +64,8 @@
         "BTI",
         "CL",
         "DEO",
-        "MNST"
+        "MNST",
+        "KR"
     ],
     "Energy": [
         "XOM",
@@ -81,7 +82,8 @@
         "EPD",
         "WMB",
         "ET",
-        "KMI"
+        "KMI",
+        "MPLX"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -135,7 +137,9 @@
         "AIG",
         "ALL",
         "NU",
-        "BCS"
+        "BCS",
+        "MET",
+        "MFC"
     ],
     "Healthcare": [
         "LLY",
@@ -202,14 +206,16 @@
         "FDX",
         "JCI",
         "HWM",
-        "WCN"
+        "WCN",
+        "NSC"
     ],
     "Real_Estate": [
         "PLD",
         "AMT",
         "EQIX",
         "WELL",
-        "SPG"
+        "SPG",
+        "PSA"
     ],
     "Technology": [
         "AAPL",
