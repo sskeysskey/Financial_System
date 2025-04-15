@@ -317,15 +317,12 @@ def main():
     existing_names = get_existing_symbols(symbol_names_file_path)
     existing_marketcap_pe = get_existing_symbols(marketcap_pe_file_path)
 
-    # 合并所有已处理的符号
-    all_processed = existing_shares.union(existing_names).union(existing_marketcap_pe)
-
     try:
         # 逐个抓取股票数据
         for symbol in stock_symbols:
-            # 如果已经处理过，则跳过
-            if symbol in all_processed:
-                print(f"已抓取过 {symbol}，跳过...")
+            # 只有当三个文件都包含该符号时，才跳过
+            if symbol in existing_shares and symbol in existing_names and symbol in existing_marketcap_pe:
+                print(f"已在所有文件中抓取过 {symbol}，跳过...")
                 continue
             
             try:
