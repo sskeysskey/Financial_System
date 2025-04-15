@@ -94,51 +94,35 @@ def add_symbol_to_json_files(symbol, group):
             json.dump(data, f, indent=2)
 
 def show_input_dialog(default_symbol=""):
+    """
+    修改后的对话框：
+    仅用于输入symbol，输入后自动转换为大写，不需要选择分组
+    """
     def close_app(event=None):
         root.quit()
     
-    """显示输入对话框，让用户输入symbol并选择分组"""
     root = tk.Tk()
     root.title("输入Symbol")
-    root.geometry("400x300")
+    root.geometry("400x150")
     root.lift()
     root.focus_force()
-    root.bind('<Escape>', close_app)  # 注意这里不要加括号
+    root.bind('<Escape>', close_app)
     
-    result = {"symbol": "", "group": ""}
-    
-    # 读取empty.json获取所有分组
-    with open("/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json", 'r') as f:
-        data = json.load(f)
-        groups = list(data.keys())
+    symbol = ""
     
     # 创建输入框和标签
     tk.Label(root, text="请输入Stock Symbol:").pack(pady=10)
     symbol_entry = tk.Entry(root)
     symbol_entry.pack(pady=5)
     
-    # 如果有默认值，预填充输入框
     if default_symbol:
         symbol_entry.insert(0, default_symbol)
-        
+    
     symbol_entry.focus_set()
     
-    tk.Label(root, text="请选择分组:").pack(pady=10)
-    group_combobox = ttk.Combobox(root, values=groups)
-    group_combobox.pack(pady=5)
-    if groups:
-        group_combobox.current(0)
-    
     def on_ok():
-        symbol = symbol_entry.get().strip().upper()
-        group = group_combobox.get()
-        
-        if not symbol:
-            show_alert("Symbol不能为空")
-            return
-        
-        result["symbol"] = symbol
-        result["group"] = group
+        nonlocal symbol
+        symbol = symbol_entry.get().strip().upper()  # 自动转换为大写
         root.destroy()
     
     def on_cancel():
@@ -153,7 +137,7 @@ def show_input_dialog(default_symbol=""):
     
     root.mainloop()
     
-    return result
+    return symbol
 
 def convert_shares_format(shares_str):
     # 转换股票数量的表示方式，例如 "15.33B" 转换为 15330000000
@@ -195,7 +179,7 @@ def get_stock_symbols_from_json(json_file_path):
     with open(json_file_path, 'r') as file:
         sectors_data = json.load(file)
     
-    # 只提取指定分类的股票符号
+    # 只提取指定分类的股票符号，注意这里的target_sectors需与实际分组对应
     target_sectors = [
         'Basic_Materials', 'Consumer_Cyclical', 'Real_Estate', 'Energy',
         'Technology', 'Utilities', 'Industrials', 'Consumer_Defensive',
@@ -251,7 +235,7 @@ def wait_for_element(driver, by, value, timeout=10):
         return element
     except Exception as e:
         return None
-    
+
 def clear_empty_json():
     """清空 Sectors_empty.json 文件中的所有股票符号，但保留分组结构"""
     empty_json_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json"
@@ -267,6 +251,22 @@ def clear_empty_json():
         json.dump(data, file, indent=2)
     
     print("已清空 Sectors_empty.json 文件中的所有股票符号")
+
+def get_group_for_symbol(symbol):
+    """
+    从 Sectors_All.json 中自动匹配symbol所属的分组（忽略大小写）
+    """
+    base_dir = "/Users/yanzhang/Documents/Financial_System/Modules/"
+    sectors_all_path = os.path.join(base_dir, "Sectors_All.json")
+    with open(sectors_all_path, 'r') as f:
+        data = json.load(f)
+    
+    for group, symbols in data.items():
+        # 将比对双方都转换为大写
+        symbols_upper = [s.upper() for s in symbols]
+        if symbol in symbols_upper:
+            return group
+    return None
 
 def main():
     # 解析命令行参数
@@ -288,29 +288,34 @@ def main():
             marketcap_pe_file_path = "/Users/yanzhang/Documents/News/backup/marketcap_pe.txt"
             print("使用空测试文件模式和backup目录...")
         else:
-            # 获取剪贴板内容
+            # 首先尝试从剪贴板获取内容
             Copy_Command_C()
-            clipboard_content = pyperclip.paste()            
-
-            # empty.json没有内容，弹出输入symbol对话框，预填充剪贴板内容
-            result = show_input_dialog(default_symbol=clipboard_content)
-
-            if result["symbol"] and result["group"]:
-                # 将symbol添加到JSON文件
-                add_symbol_to_json_files(result["symbol"], result["group"])
-                print(f"已将 {result['symbol']} 添加到 {result['group']} 分组")
-                
-                # 使用测试模式
-                json_file_path = empty_json_path
-                shares_file_path = "/Users/yanzhang/Documents/News/backup/Shares.txt"
-                symbol_names_file_path = "/Users/yanzhang/Documents/News/backup/symbol_names.txt"
-                marketcap_pe_file_path = "/Users/yanzhang/Documents/News/backup/marketcap_pe.txt"
-                print("使用空测试文件模式和backup目录...")
+            clipboard_content = (pyperclip.paste() or "").strip()
+            
+            if clipboard_content:
+                symbol = clipboard_content.upper()
             else:
-                print("用户取消了操作或没有输入有效信息，程序退出")
+                # 剪贴板无内容则显示输入对话框
+                symbol = show_input_dialog(default_symbol="").strip().upper()
+            
+            if not symbol:
+                print("未输入有效的股票Symbol，程序退出")
                 return
+            
+            group = get_group_for_symbol(symbol)
+            if group:
+                add_symbol_to_json_files(symbol, group)
+                print(f"已将 {symbol} 自动匹配到 {group} 分组并写入 Sectors_empty.json")
+            else:
+                show_alert(f"在 Sectors_All.json 中未找到 {symbol} 对应的分组")
+                return
+            
+            json_file_path = empty_json_path
+            shares_file_path = "/Users/yanzhang/Documents/News/backup/Shares.txt"
+            symbol_names_file_path = "/Users/yanzhang/Documents/News/backup/symbol_names.txt"
+            marketcap_pe_file_path = "/Users/yanzhang/Documents/News/backup/marketcap_pe.txt"
+            print("使用空测试文件模式和backup目录...")
     else:
-        # 参数为normal格式
         json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json"
         shares_file_path = "/Users/yanzhang/Downloads/Shares.txt"
         symbol_names_file_path = "/Users/yanzhang/Downloads/symbol_names.txt"
@@ -321,7 +326,7 @@ def main():
     mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
     mouse_thread.start()
 
-    # 设置Chrome选项以提高性能
+    # 设置Chrome选项
     chrome_options = Options()
     chrome_options.add_argument("--disable-extensions")
     chrome_options.add_argument("--disable-gpu")
@@ -339,7 +344,7 @@ def main():
     driver.set_page_load_timeout(20)  # 页面加载超时时间
     driver.set_script_timeout(10)  # 脚本执行超时时间
 
-    # 从JSON文件获取股票符号
+    # 从JSON文件获取股票符号（只提取指定分组）
     stock_symbols = get_stock_symbols_from_json(json_file_path)
 
     # 获取已处理的股票符号
@@ -383,7 +388,7 @@ def main():
                 shares_outstanding_converted = 0
                 if shares_outstanding_element:
                     shares_outstanding = shares_outstanding_element.text
-                    shares_outstanding_converted = convert_shares_format(shares_outstanding)                    
+                    shares_outstanding_converted = convert_shares_format(shares_outstanding)
                     print(f"已获取 {symbol} 的股票数量: {int(shares_outstanding_converted)}")
                 else:
                     print(f"无法获取 {symbol} 的股票数量")
@@ -458,7 +463,7 @@ def main():
         
         # 如果有内容，询问是否清空
         if has_content:
-            if show_yes_no_dialog("抓取完成，是否清空 Sectors_empty.json 中的股票符号？"):
+            if show_yes_no_dialog("抓取结束，是否清空 Sectors_empty.json 中的股票符号？"):
                 clear_empty_json()
 
 if __name__ == "__main__":

@@ -271,7 +271,7 @@ def main():
                     continue
 
             if not success:
-                error_message = log_error_with_timestamp(f"在 {group_name} 中，无法获取 {ticker_symbol} 的数据，所有日期范围都已尝试")
+                error_message = log_error_with_timestamp(f"sectors_empty.json已插入{ticker_symbol}，因为在 {group_name} 无法获取 {ticker_symbol} 的数据，所有日期范围都已尝试")
                 write_error_log(error_message, ERROR_LOG_PATH)
                 print(f"在 {group_name} 中，无法获取 {ticker_symbol} 的数据，所有日期范围都已尝试")
                 # 添加到empty.json文件
