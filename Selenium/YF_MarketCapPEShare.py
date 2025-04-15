@@ -5,7 +5,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 import os
-import re
 import json
 import time
 import random
@@ -14,7 +13,7 @@ import pyperclip
 import threading
 import subprocess
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import ttk
 import argparse  # 新增：导入argparse模块
 
 def Copy_Command_C():
@@ -27,6 +26,13 @@ def Copy_Command_C():
     '''
     # 运行AppleScript
     subprocess.run(['osascript', '-e', script])
+
+def show_alert(message):
+    # AppleScript代码模板
+    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+    
+    # 使用subprocess调用osascript
+    subprocess.run(['osascript', '-e', applescript_code], check=True)
 
 # 新增：命令行参数处理
 def parse_arguments():
@@ -116,11 +122,7 @@ def show_input_dialog(default_symbol=""):
         group = group_combobox.get()
         
         if not symbol:
-            messagebox.showerror("错误", "Symbol不能为空")
-            return
-        
-        if not group:
-            messagebox.showerror("错误", "必须选择一个分组")
+            show_alert("Symbol不能为空")
             return
         
         result["symbol"] = symbol
@@ -320,9 +322,10 @@ def main():
     try:
         # 逐个抓取股票数据
         for symbol in stock_symbols:
-            # 只有当三个文件都包含该符号时，才跳过
+            # 检查是否所有文件都已包含此symbol，如果是则完全跳过
             if symbol in existing_shares and symbol in existing_names and symbol in existing_marketcap_pe:
                 print(f"已在所有文件中抓取过 {symbol}，跳过...")
+                show_alert(f"{symbol} 已经在三个文件中都存在了！")
                 continue
             
             try:
@@ -336,11 +339,13 @@ def main():
                     company_name = company_name_element.text.split('(')[0].strip()
                     cleaned_company_name = clean_company_name(company_name)
                     
-                    # 保存公司名称到symbol_names.txt（追加模式）
-                    with open(symbol_names_file_path, 'a', encoding='utf-8') as file:
-                        file.write(f"{symbol}: {cleaned_company_name}\n")
-                    
-                    print(f"已保存 {symbol} 的公司名称: {cleaned_company_name}")
+                    # 保存公司名称到symbol_names.txt（追加模式），先检查是否已存在
+                    if symbol not in existing_names:
+                        with open(symbol_names_file_path, 'a', encoding='utf-8') as file:
+                            file.write(f"{symbol}: {cleaned_company_name}\n")
+                        print(f"已保存 {symbol} 的公司名称: {cleaned_company_name}")
+                    else:
+                        print(f"{symbol} 的公司名称已存在，跳过写入")
                 else:
                     print(f"无法获取 {symbol} 的公司名称")
                     cleaned_company_name = symbol  # 如果无法获取公司名称，使用股票符号作为替代
@@ -370,11 +375,14 @@ def main():
                 else:
                     print(f"无法获取 {symbol} 的Price/Book")
                 
-                # 保存股票数量和Price/Book到Shares.txt（追加模式）
-                with open(shares_file_path, 'a', encoding='utf-8') as file:
-                    file.write(f"{symbol}: {int(shares_outstanding_converted)}, {price_book_value}\n")
+                # 保存股票数量和Price/Book到Shares.txt（追加模式），先检查是否已存在
+                if symbol not in existing_shares:
+                    with open(shares_file_path, 'a', encoding='utf-8') as file:
+                        file.write(f"{symbol}: {int(shares_outstanding_converted)}, {price_book_value}\n")
+                    print(f"已保存 {symbol} 的股票数量和Price/Book: {int(shares_outstanding_converted)}, {price_book_value}")
+                else:
+                    print(f"{symbol} 的股票数量和Price/Book已存在，跳过写入")
                 
-                print(f"已保存 {symbol} 的股票数量和Price/Book: {int(shares_outstanding_converted)}, {price_book_value}")
                 # 查找Market Cap数据
                 market_cap_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Market Cap')]/following-sibling::td[1]", timeout=3)
                 market_cap_converted = 0
@@ -394,13 +402,15 @@ def main():
                         except ValueError:
                             pass
                 
-                # 保存市值和PE到marketcap_pe.txt（追加模式）
-                with open(marketcap_pe_file_path, 'a', encoding='utf-8') as file:
-                    file.write(f"{symbol}: {market_cap_converted}, {pe_str}, {price_book_value}\n")
+                # 保存市值和PE到marketcap_pe.txt（追加模式），先检查是否已存在
+                if symbol not in existing_marketcap_pe:
+                    with open(marketcap_pe_file_path, 'a', encoding='utf-8') as file:
+                        file.write(f"{symbol}: {market_cap_converted}, {pe_str}, {price_book_value}\n")
+                    print(f"已保存 {symbol} 的市值和PE: {market_cap_converted}, {pe_str}")
+                else:
+                    print(f"{symbol} 的市值和PE已存在，跳过写入")
                 
-                print(f"已保存 {symbol} 的市值和PE: {market_cap_converted}, {pe_str}")
-                
-                print(f"成功抓取 {symbol} 的所有数据")
+                print(f"成功处理 {symbol} 的所有数据")
             
             except Exception as e:
                 print(f"抓取 {symbol} 时发生错误: {str(e)}")

@@ -7,7 +7,9 @@
   "ETFs": [],
   "Economics": [],
   "Basic_Materials": [],
-  "Communication_Services": [],
+  "Communication_Services": [
+    "NFLX"
+  ],
   "Consumer_Cyclical": [],
   "Consumer_Defensive": [],
   "Energy": [],
@@ -15,8 +17,6 @@
   "Healthcare": [],
   "Industrials": [],
   "Real_Estate": [],
-  "Technology": [
-    "AAPL"
-  ],
+  "Technology": [],
   "Utilities": []
 }
