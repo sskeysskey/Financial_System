@@ -34,6 +34,18 @@ def show_alert(message):
     # 使用subprocess调用osascript
     subprocess.run(['osascript', '-e', applescript_code], check=True)
 
+def show_yes_no_dialog(message):
+    """显示是/否对话框并返回用户选择结果"""
+    # AppleScript代码模板
+    applescript_code = f'display dialog "{message}" buttons {{"否", "是"}} default button "是"'
+    
+    # 使用subprocess调用osascript并获取返回结果
+    result = subprocess.run(['osascript', '-e', applescript_code], 
+                            capture_output=True, text=True, check=False)
+    
+    # 检查返回结果是否包含"是"按钮被点击的信息
+    return "button returned:是" in result.stdout
+
 # 新增：命令行参数处理
 def parse_arguments():
     parser = argparse.ArgumentParser(description='股票数据抓取工具')
@@ -239,6 +251,22 @@ def wait_for_element(driver, by, value, timeout=10):
         return element
     except Exception as e:
         return None
+    
+def clear_empty_json():
+    """清空 Sectors_empty.json 文件中的所有股票符号，但保留分组结构"""
+    empty_json_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json"
+    with open(empty_json_path, 'r') as file:
+        data = json.load(file)
+    
+    # 清空每个分组中的内容，但保留分组
+    for group in data:
+        data[group] = []
+    
+    # 写回文件
+    with open(empty_json_path, 'w') as file:
+        json.dump(data, file, indent=2)
+    
+    print("已清空 Sectors_empty.json 文件中的所有股票符号")
 
 def main():
     # 解析命令行参数
@@ -423,6 +451,15 @@ def main():
         driver.quit()
         
         print("数据抓取完成！")
+
+        # 检查sectors_empty.json是否有内容
+        empty_json_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json"
+        has_content = check_empty_json_has_content(empty_json_path)
+        
+        # 如果有内容，询问是否清空
+        if has_content:
+            if show_yes_no_dialog("抓取完成，是否清空 Sectors_empty.json 中的股票符号？"):
+                clear_empty_json()
 
 if __name__ == "__main__":
     main()

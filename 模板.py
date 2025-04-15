@@ -1,4 +1,26 @@
 # ——————————————————————————————————————————————————————————————————————————————————————————
+def show_alert(message):
+    # AppleScript代码模板
+    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+    
+    # 使用subprocess调用osascript
+    subprocess.run(['osascript', '-e', applescript_code], check=True)
+
+def show_yes_no_dialog(message):
+    """显示是/否对话框并返回用户选择结果"""
+    # AppleScript代码模板
+    applescript_code = f'display dialog "{message}" buttons {{"否", "是"}} default button "是"'
+    
+    # 使用subprocess调用osascript并获取返回结果
+    result = subprocess.run(['osascript', '-e', applescript_code], 
+                            capture_output=True, text=True, check=False)
+    
+    # 检查返回结果是否包含"是"按钮被点击的信息
+    return "button returned:是" in result.stdout
+
+if show_yes_no_dialog("抓取完成，是否清空 Sectors_empty.json 中的股票符号？"):
+    clear_empty_json()
+# ——————————————————————————————————————————————————————————————————————————————————————————
 def draw_underline(text_obj, fig, ax1):
     """
     给可点击的标题下方画一条下划线视觉提示。
@@ -445,7 +467,7 @@ symbol_exists_elsewhere = any(
 
 if symbol_exists_elsewhere:
     print(f"Symbol {name} 已存在于Colors其他分组中，跳过添加到 {category_list}")
-    continue  # 跳过当前 symbol 的添加
+    # continue  # 跳过当前 symbol 的添加
 
 if name not in colors.get(category_list, []):
     # if name in existing_symbols:
@@ -1064,9 +1086,9 @@ def search_category_for_name(category):
         if all(fuzzy_match(item['name'], keyword) for keyword in keywords_lower)
     ]
 
-return (
-    search_category_for_tag('stocks'), search_category_for_tag('etfs'),
-    search_category_for_name('stocks'), search_category_for_name('etfs')
-)
+    return (
+        search_category_for_tag('stocks'), search_category_for_tag('etfs'),
+        search_category_for_name('stocks'), search_category_for_name('etfs')
+    )
 # ——————————————————————————————————————————————————————————————————————————————————————————
 # ——————————————————————————————————————————————————————————————————————————————————————————
