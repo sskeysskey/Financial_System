@@ -45,14 +45,17 @@ def add_to_blacklist(blacklist_file, symbol):
 def main():
     blacklist_file = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'
 
-    # 获取股票代码
+    # 获取剪贴板内容
     Copy_Command_C()
-    stock_name = pyperclip.paste().strip()
+    clipboard_content = pyperclip.paste()
     
-    # 验证股票代码不为空
-    if not stock_name:
+    # 验证剪贴板内容是否有效
+    if not clipboard_content:
         show_alert("没有有效的股票代码")
         return
+
+    # 去除首尾空格
+    stock_name = clipboard_content.strip()
     
     # 更新黑名单
     add_to_blacklist(blacklist_file, stock_name)

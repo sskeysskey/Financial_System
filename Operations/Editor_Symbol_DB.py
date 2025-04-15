@@ -220,19 +220,22 @@ if __name__ == '__main__':
         # 创建一个简单的输入对话框
         def get_input():
             dialog = tk.Toplevel(root)
+            # 先隐藏窗口，防止其在定位前显示
+            dialog.withdraw()  
             dialog.title("请输入Symbol")
             dialog.geometry("300x100")
-            # 窗口居中显示
-            dialog.update_idletasks()  # 更新以确保获取正确的窗口尺寸
-            width = dialog.winfo_width()
-            height = dialog.winfo_height()
+            dialog.update_idletasks()  # 刷新以获取正确窗口尺寸
+
+            # 固定对话框大小（也可以根据需求使用winfo_width/winfo_height）
+            width = 300
+            height = 100
+            # 居中计算
             x = (dialog.winfo_screenwidth() // 2) - (width // 2)
             y = (dialog.winfo_screenheight() // 2) - (height // 2) - 200
-            dialog.geometry('{}x{}+{}+{}'.format(width, height, x, y))
-            
-            # 自动激活窗口在最前台
-            dialog.lift()
-            dialog.focus_force()
+            dialog.geometry(f"{width}x{height}+{x}+{y}")
+
+            # 定位完成后，再显示窗口
+            dialog.deiconify()  
             
             label = tk.Label(dialog, text="编辑财报数据")
             label.pack(pady=5)
@@ -241,20 +244,18 @@ if __name__ == '__main__':
             entry.pack(pady=5)
             entry.focus_set()  # 自动聚焦到输入框
             
-            result = [None]  # 使用列表存储结果，便于在函数内修改
+            result = [None]  # 使用列表存储结果，便于在内部函数中修改值
             
             def on_ok():
                 result[0] = entry.get().upper()  # 获取输入并转为大写
                 dialog.destroy()
             
-            # 取消按钮
             def on_cancel():
                 dialog.destroy()
                 # 确保程序在取消时完全退出
                 import os
                 os._exit(0)
             
-            # 按钮区域
             button_frame = tk.Frame(dialog)
             button_frame.pack(pady=5)
             
@@ -268,7 +269,6 @@ if __name__ == '__main__':
             dialog.bind("<Return>", lambda e: on_ok())
             dialog.bind("<Escape>", lambda e: on_cancel())
             
-            # 等待对话框关闭
             dialog.wait_window(dialog)
             return result[0]
         
