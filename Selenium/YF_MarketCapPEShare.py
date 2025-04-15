@@ -10,10 +10,23 @@ import json
 import time
 import random
 import pyautogui
+import pyperclip
 import threading
+import subprocess
 import tkinter as tk
 from tkinter import messagebox, ttk
 import argparse  # 新增：导入argparse模块
+
+def Copy_Command_C():
+    script = '''
+    set the clipboard to ""
+    delay 0.3
+    tell application "System Events"
+        keystroke "c" using command down
+    end tell
+    '''
+    # 运行AppleScript
+    subprocess.run(['osascript', '-e', script])
 
 # 新增：命令行参数处理
 def parse_arguments():
@@ -62,7 +75,7 @@ def add_symbol_to_json_files(symbol, group):
         with open(file_path, 'w') as f:
             json.dump(data, f, indent=2)
 
-def show_input_dialog():
+def show_input_dialog(default_symbol=""):
     def close_app(event=None):
         root.quit()
     
@@ -85,6 +98,11 @@ def show_input_dialog():
     tk.Label(root, text="请输入Stock Symbol:").pack(pady=10)
     symbol_entry = tk.Entry(root)
     symbol_entry.pack(pady=5)
+    
+    # 如果有默认值，预填充输入框
+    if default_symbol:
+        symbol_entry.insert(0, default_symbol)
+        
     symbol_entry.focus_set()
     
     tk.Label(root, text="请选择分组:").pack(pady=10)
@@ -240,9 +258,13 @@ def main():
             marketcap_pe_file_path = "/Users/yanzhang/Documents/News/backup/marketcap_pe.txt"
             print("使用空测试文件模式和backup目录...")
         else:
-            # empty.json没有内容，直接弹出输入symbol对话框（取消选择步骤）
-            result = show_input_dialog()
-            
+            # 获取剪贴板内容
+            Copy_Command_C()
+            clipboard_content = pyperclip.paste()            
+
+            # empty.json没有内容，弹出输入symbol对话框，预填充剪贴板内容
+            result = show_input_dialog(default_symbol=clipboard_content)
+
             if result["symbol"] and result["group"]:
                 # 将symbol添加到JSON文件
                 add_symbol_to_json_files(result["symbol"], result["group"])

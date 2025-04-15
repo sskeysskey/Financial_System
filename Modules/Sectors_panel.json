@@ -7,8 +7,7 @@
     "Technology": {},
     "Consumer_Cyclical": {
         "DECK": "",
-        "AMZN": "",
-        "PDD": ""
+        "AMZN": ""
     },
     "Utilities": {
         "CEG": ""
@@ -38,8 +37,8 @@
         "CRL": ""
     },
     "Bonds": {
-        "US2Y": "",
         "US10Y": "",
+        "US2Y": "",
         "JP10Y": "",
         "IND10Y": "",
         "BR10Y": "",

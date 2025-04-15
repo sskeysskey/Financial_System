@@ -2,9 +2,7 @@
   "Bonds": [],
   "Currencies": [],
   "Crypto": [],
-  "Indices": [
-    "^BSESN"
-  ],
+  "Indices": [],
   "Commodities": [],
   "ETFs": [],
   "Economics": [],
@@ -17,6 +15,8 @@
   "Healthcare": [],
   "Industrials": [],
   "Real_Estate": [],
-  "Technology": [],
+  "Technology": [
+    "AAPL"
+  ],
   "Utilities": []
 }

@@ -16,7 +16,7 @@ def show_alert(message):
     applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
     
     # 使用subprocess调用osascript
-    process = subprocess.run(['osascript', '-e', applescript_code], check=True)
+    subprocess.run(['osascript', '-e', applescript_code], check=True)
 
 def add_to_blacklist(blacklist_file, symbol):
     try:

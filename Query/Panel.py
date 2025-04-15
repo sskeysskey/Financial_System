@@ -46,7 +46,7 @@ categories = [
     ['Communication_Services', 'Financial_Services', 'Healthcare'],
     ['Bonds', 'Indices'],
     ['Commodities'],
-    ['Crypto', 'ETFs', 'Currencies'],
+    ['Currencies', 'Crypto', 'ETFs'],
     ['Economics', 'ETFs_US']
 ]
 

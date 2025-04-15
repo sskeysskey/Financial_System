@@ -222,7 +222,7 @@ if __name__ == '__main__':
             dialog = tk.Toplevel(root)
             # 先隐藏窗口，防止其在定位前显示
             dialog.withdraw()  
-            dialog.title("请输入Symbol")
+            dialog.title("编辑财报数据")
             dialog.geometry("300x100")
             dialog.update_idletasks()  # 刷新以获取正确窗口尺寸
 
@@ -237,7 +237,7 @@ if __name__ == '__main__':
             # 定位完成后，再显示窗口
             dialog.deiconify()  
             
-            label = tk.Label(dialog, text="编辑财报数据")
+            label = tk.Label(dialog, text="请输入Symbol")
             label.pack(pady=5)
             
             entry = tk.Entry(dialog, width=30)
