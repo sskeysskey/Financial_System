@@ -1,4 +1,13 @@
 # ——————————————————————————————————————————————————————————————————————————————————————————
+def Copy_Command_C():
+    script = '''
+    tell application "System Events"
+        keystroke "c" using command down
+    end tell
+    '''
+    # 运行AppleScript
+    subprocess.run(['osascript', '-e', script])
+# ——————————————————————————————————————————————————————————————————————————————————————————
 def show_alert(message):
     # AppleScript代码模板
     applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'

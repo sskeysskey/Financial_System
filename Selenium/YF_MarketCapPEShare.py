@@ -14,7 +14,7 @@ import threading
 import subprocess
 import tkinter as tk
 from tkinter import ttk
-import argparse  # 新增：导入argparse模块
+import argparse
 
 def Copy_Command_C():
     script = '''
