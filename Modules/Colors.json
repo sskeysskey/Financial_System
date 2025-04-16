@@ -521,7 +521,6 @@
         "HUM",
         "ACHC",
         "ATKR",
-        "ZBH",
         "EC",
         "VAL",
         "DOOO",
@@ -793,7 +792,8 @@
         "IONS",
         "AKAM",
         "BILL",
-        "JAZZ"
+        "JAZZ",
+        "ZBH"
     ],
     "black_keywords": [
         "Cotton",

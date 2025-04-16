@@ -64,8 +64,7 @@
         "BTI",
         "CL",
         "DEO",
-        "MNST",
-        "KR"
+        "MNST"
     ],
     "Energy": [
         "XOM",
@@ -83,7 +82,9 @@
         "WMB",
         "ET",
         "KMI",
-        "MPLX"
+        "MPLX",
+        "LNG",
+        "TRP"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -206,8 +207,7 @@
         "FDX",
         "JCI",
         "HWM",
-        "WCN",
-        "NSC"
+        "WCN"
     ],
     "Real_Estate": [
         "PLD",

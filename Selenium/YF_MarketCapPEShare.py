@@ -384,14 +384,54 @@ def main():
                     cleaned_company_name = symbol  # 如果无法获取公司名称，使用股票符号作为替代
                 
                 # 查找Shares Outstanding数据
-                shares_outstanding_element = wait_for_element(driver, By.XPATH, "//td[text()='Shares Outstanding']/following-sibling::td", timeout=3)
+                shares_outstanding = "N/A"
                 shares_outstanding_converted = 0
-                if shares_outstanding_element:
+
+                # 尝试通过XPath获取
+                shares_outstanding_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Shares Outstanding')]/following-sibling::td[1]", timeout=5)
+                if shares_outstanding_element and shares_outstanding_element.text:
                     shares_outstanding = shares_outstanding_element.text
-                    shares_outstanding_converted = convert_shares_format(shares_outstanding)
-                    print(f"已获取 {symbol} 的股票数量: {int(shares_outstanding_converted)}")
+                    print(f"通过XPath获取到 {symbol} 的股票数量: {shares_outstanding}")
                 else:
-                    print(f"无法获取 {symbol} 的股票数量")
+                    # 尝试其他XPath
+                    alternative_xpaths = [
+                        "//span[contains(text(), 'Shares Outstanding')]/../../following-sibling::td",
+                        "//th[contains(text(), 'Shares Outstanding')]/following-sibling::td"
+                    ]
+                    
+                    for xpath in alternative_xpaths:
+                        alt_element = wait_for_element(driver, By.XPATH, xpath, timeout=3)
+                        if alt_element and alt_element.text:
+                            shares_outstanding = alt_element.text
+                            print(f"通过备选XPath获取到 {symbol} 的股票数量: {shares_outstanding}")
+                            break
+                    
+                    # 如果XPath方法都失败，尝试JavaScript方法
+                    if shares_outstanding == "N/A":
+                        try:
+                            js_result = driver.execute_script("""
+                                const elements = document.querySelectorAll('td');
+                                for (let i = 0; i < elements.length; i++) {
+                                    if (elements[i].textContent.includes('Shares Outstanding')) {
+                                        return elements[i].nextElementSibling ? elements[i].nextElementSibling.textContent : 'Not found';
+                                    }
+                                }
+                                return 'Not found';
+                            """)
+                            
+                            if js_result and js_result != 'Not found':
+                                shares_outstanding = js_result
+                                print(f"通过JavaScript获取到 {symbol} 的股票数量: {shares_outstanding}")
+                        except Exception as js_error:
+                            print(f"JavaScript获取 {symbol} 的股票数量失败: {str(js_error)}")
+
+                # 转换股票数量格式
+                if shares_outstanding != "N/A" and shares_outstanding != '-':
+                    shares_outstanding_converted = convert_shares_format(shares_outstanding)
+                    if shares_outstanding_converted == 0:
+                        print(f"警告: {symbol} 的股票数量转换为0，原始值: {shares_outstanding}")
+                else:
+                    print(f"无法获取 {symbol} 的股票数量，使用默认值0")
                 
                 # 查找Price/Book数据
                 price_book_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Price/Book')]/following-sibling::td[1]", timeout=3)
