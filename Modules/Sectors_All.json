@@ -38,6 +38,7 @@
     "USDINR",
     "USDBRL",
     "USDRUB",
+    "USDTHB",
     "USDKRW",
     "USDTRY",
     "USDSGD",
@@ -461,7 +462,8 @@
     "HSRT",
     "HTAB",
     "FLMI",
-    "GOVI"
+    "GOVI",
+    "EMQQ"
   ],
   "Basic_Materials": [
     "LIN",

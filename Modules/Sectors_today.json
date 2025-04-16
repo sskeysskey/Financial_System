@@ -23,6 +23,7 @@
     "KRW=X",
     "TRY=X",
     "SGD=X",
+    "THB=X",
     "TWD=X",
     "IDR=X",
     "PHP=X",
@@ -404,7 +405,8 @@
     "HSRT",
     "HTAB",
     "FLMI",
-    "GOVI"
+    "GOVI",
+    "EMQQ"
   ],
   "Basic_Materials": [
     "LIN",

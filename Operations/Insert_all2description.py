@@ -14,7 +14,7 @@ def load_json_files():
         descriptions = json.load(f)
     return sectors, descriptions
 
-# 检查是否存在于stocks中
+# 检查symbol是否存在于stocks中
 def check_symbol_exists(symbol, stocks):
     return any(stock['symbol'] == symbol for stock in stocks)
 
@@ -31,7 +31,7 @@ def create_new_stock(symbol, input_text):
         "value": ""
     }
 
-def process_bonds_sector():
+def process_all_sectors():
     # 读取JSON文件
     sectors, descriptions = load_json_files()
     
@@ -39,26 +39,27 @@ def process_bonds_sector():
     root = tk.Tk()
     root.withdraw()
     
-    # 只处理Bonds分组
     modified = False
-    bonds_symbols = sectors.get('Indices', [])
     
-    print("开始处理Bonds分组...")
-    for symbol in bonds_symbols:
-        # 检查symbol是否存在于stocks中
-        if not check_symbol_exists(symbol, descriptions['stocks']):
-            # 弹出输入框
-            prompt = f"Symbol '{symbol}' 不存在于stocks中。请输入标签（用空格分隔）："
-            user_input = simpledialog.askstring("输入标签", prompt)
-            
-            if user_input:
-                # 创建新的stock项并添加到descriptions中
-                new_stock = create_new_stock(symbol, user_input)
-                descriptions['stocks'].append(new_stock)
-                modified = True
-                print(f"已添加新的stock项: {symbol}")
+    # 遍历sectors中的所有分组，排除 "ETFs" 分组
+    for group, symbols in sectors.items():
+        if group == "ETFs":
+            print(f"跳过分组: {group}")
+            continue
+        print(f"正在处理分组: {group} ...")
+        for symbol in symbols:
+            # 检查symbol是否存在于stocks中
+            if not check_symbol_exists(symbol, descriptions['stocks']):
+                prompt = f"在'{group}'分组中，Symbol '{symbol}' 不存在于stocks中。\n请输入标签（用空格分隔）："
+                user_input = simpledialog.askstring("输入标签", prompt)
+                if user_input:
+                    # 创建新的stock项并添加到descriptions中
+                    new_stock = create_new_stock(symbol, user_input)
+                    descriptions['stocks'].append(new_stock)
+                    modified = True
+                    print(f"已添加新的stock项: {symbol} (分组: {group})")
     
-    # 如果有修改，保存到文件
+    # 如果有修改，则保存到文件
     if modified:
         try:
             with open(DESCRIPTION_FILE, 'w', encoding='utf-8') as f:
@@ -67,9 +68,9 @@ def process_bonds_sector():
         except Exception as e:
             print("文件写入失败:", str(e))
     else:
-        print("Bonds分组中没有需要添加的项目")
-
+        print("所有分组中均无需要添加的项目")
+    
     root.destroy()
 
 if __name__ == "__main__":
-    process_bonds_sector()
+    process_all_sectors()
