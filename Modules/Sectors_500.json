@@ -138,9 +138,7 @@
         "AIG",
         "ALL",
         "NU",
-        "BCS",
-        "MET",
-        "MFC"
+        "BCS"
     ],
     "Healthcare": [
         "LLY",
@@ -204,7 +202,6 @@
         "EMR",
         "CPRT",
         "CARR",
-        "FDX",
         "JCI",
         "HWM",
         "WCN"
@@ -215,7 +212,9 @@
         "EQIX",
         "WELL",
         "SPG",
-        "PSA"
+        "PSA",
+        "O",
+        "DLR"
     ],
     "Technology": [
         "AAPL",

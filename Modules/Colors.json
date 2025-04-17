@@ -102,7 +102,6 @@
         "WDAY",
         "RCL",
         "GS",
-        "META",
         "ET",
         "JPM",
         "MA",
@@ -131,7 +130,8 @@
         "KMI",
         "AAPL",
         "TSM",
-        "MSTR"
+        "MSTR",
+        "META"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -219,7 +219,6 @@
         "KOF",
         "INVH",
         "ROP",
-        "LEN",
         "FERG",
         "MSA",
         "NNN",
@@ -262,7 +261,6 @@
         "ONTO",
         "NXE",
         "AMAT",
-        "OGN",
         "BHVN",
         "IR",
         "NVT",
@@ -717,7 +715,8 @@
         "AMD",
         "FTV",
         "SLAB",
-        "UWMC"
+        "UWMC",
+        "LEN"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -867,7 +866,8 @@
         "SOBO",
         "RARE",
         "GXO",
-        "COLD"
+        "COLD",
+        "OGN"
     ],
     "green_keywords": [
         "EURCNY",

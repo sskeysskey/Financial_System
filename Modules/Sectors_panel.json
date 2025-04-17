@@ -7,33 +7,49 @@
     "Technology": {},
     "Consumer_Cyclical": {
         "DECK": "",
-        "AMZN": ""
+        "AMZN": "",
+        "LEN": "",
+        "FND": "",
+        "KMX": "",
+        "CROX": "",
+        "IBP": "",
+        "KBH": ""
     },
     "Utilities": {
         "CEG": ""
     },
     "Consumer_Defensive": {
-        "FLO": "关注财报"
+        "FLO": "关注财报",
+        "PEP": "",
+        "GIS": ""
     },
     "Industrials": {
         "BAH": "关注财报",
         "BLDR": "关注财报",
         "SAIA": "关注财报",
         "KNX": "关注财报",
-        "MATX": ""
+        "MATX": "",
+        "ODFL": "",
+        "JBHT": "",
+        "RXO": ""
     },
     "Communication_Services": {
-        "GOOGL": ""
+        "GOOGL": "",
+        "META": ""
     },
     "Financial_Services": {
         "MCO": "关注财报",
-        "BN": "关注财报"
+        "BN": "关注财报",
+        "CG": ""
     },
     "Healthcare": {
         "NVO": "",
         "MRNA": "",
         "LLY": "",
-        "MRK": ""
+        "MRK": "",
+        "BMY": "",
+        "ZBH": "",
+        "HOLX": ""
     },
     "Bonds": {
         "US10Y": "",
