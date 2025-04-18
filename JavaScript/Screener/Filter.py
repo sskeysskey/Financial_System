@@ -80,7 +80,6 @@ def filter_screener_symbols(symbols, blacklist):
 
 # 比较差异并更新sectors文件
 def compare_and_update_sectors(screener_data, sectors_all_data, sectors_today_data, sectors_empty_data, blacklist, db_file):
-    differences = {}
     added_symbols = []
     moved_symbols = []  # 新增：记录移动的symbols
     db_delete_logs = []
@@ -97,19 +96,12 @@ def compare_and_update_sectors(screener_data, sectors_all_data, sectors_today_da
             
             if filtered_screener_not_in_sectors:
                 has_changes = True
-                differences[sector] = {
-                    'in_screener_not_in_sectors': filtered_screener_not_in_sectors
-                }
                 
                 # 对每个新symbol检查是否存在于其他sector中
                 for symbol in filtered_screener_not_in_sectors:
                     # 检查symbol是否在其他sector中
-                    found_in_other_sector = False
-                    
                     for other_sector, other_symbols in sectors_all_data.items():
                         if other_sector != sector and symbol in other_symbols:
-                            found_in_other_sector = True
-                            
                             # 在移动symbol之前，先删除数据库中的记录
                             delete_logs = delete_records_by_names(db_file, other_sector, [symbol])
                             db_delete_logs.extend(delete_logs)
@@ -143,7 +135,7 @@ def compare_and_update_sectors(screener_data, sectors_all_data, sectors_today_da
     if not has_changes:
         added_symbols.append("Sectors_All文件没有需要更新的内容")
     
-    return differences, sectors_all_data, sectors_today_data, sectors_empty_data, added_symbols, moved_symbols, db_delete_logs
+    return sectors_all_data, sectors_today_data, sectors_empty_data, added_symbols, moved_symbols, db_delete_logs
 
 def count_files(prefix):
     """
@@ -385,7 +377,7 @@ def main():
     blacklist = read_blacklist_file(blacklist_file)
     
     # 比较差异并更新sectors文件
-    differences, updated_sectors_all, updated_sectors_today, updated_sectors_empty, added_symbols, moved_symbols, db_delete_logs = compare_and_update_sectors(
+    updated_sectors_all, updated_sectors_today, updated_sectors_empty, added_symbols, moved_symbols, db_delete_logs = compare_and_update_sectors(
         screener_data, sectors_all_data, sectors_today_data, sectors_empty_data, blacklist, db_file
     )
     
