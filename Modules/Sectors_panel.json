@@ -11,7 +11,8 @@
         "LEN": "",
         "FND": "",
         "KMX": "",
-        "CROX": ""
+        "CROX": "",
+        "SG": ""
     },
     "Utilities": {
         "CEG": ""
@@ -40,7 +41,12 @@
         "MRK": "",
         "BMY": "",
         "ZBH": "",
-        "HOLX": ""
+        "HOLX": "",
+        "UNH": "",
+        "BDX": "",
+        "ICLR": "",
+        "TECH": "",
+        "BRKR": ""
     },
     "Bonds": {
         "US10Y": "",

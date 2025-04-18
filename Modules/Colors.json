@@ -463,7 +463,8 @@
         "PDD",
         "KMX",
         "MATX",
-        "NLY"
+        "NLY",
+        "SG"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -674,7 +675,6 @@
         "DHR",
         "GEHC",
         "COO",
-        "TECH",
         "RGEN",
         "TXT",
         "RRX",
@@ -792,7 +792,8 @@
         "AKAM",
         "BILL",
         "JAZZ",
-        "ZBH"
+        "ZBH",
+        "TECH"
     ],
     "black_keywords": [
         "Cotton",

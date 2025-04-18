@@ -415,11 +415,12 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         turnover_str = f"可疑{turnover_str}"
 
     # 注意：这里用 share_val（而不是原来的 share）来计算换手率
-    turnover_rate = (
-        f"{(volumes[-1] / int(share_val)) * 100:.2f}"
-        if volumes and volumes[-1] is not None and share_val not in [None, "N/A"]
-        else ""
-    )
+    try:
+        share_int = int(share_val)
+        turnover_rate = f"{(volumes[-1] / share_int) * 100:.2f}" if (volumes and volumes[-1] is not None and share_int > 0) else ""
+    except (ValueError, ZeroDivisionError, TypeError):
+        turnover_rate = ""
+        
     marketcap_in_billion = (
         f"{float(marketcap) / 1e9:.1f}B"
         if marketcap not in [None, "N/A"]

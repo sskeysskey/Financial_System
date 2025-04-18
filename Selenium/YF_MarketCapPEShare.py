@@ -268,6 +268,53 @@ def get_group_for_symbol(symbol):
             return group
     return None
 
+# —— 1. 新增：从 Sectors_All.json 提取所有分组名 —— #
+def extract_group_names():
+    """
+    读取 Sectors_All.json，将所有顶层 key（即分组名）提取为列表返回
+    """
+    base_dir = "/Users/yanzhang/Documents/Financial_System/Modules/"
+    sectors_all_path = os.path.join(base_dir, "Sectors_All.json")
+    with open(sectors_all_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    return list(data.keys())
+
+# —— 2. 新增：弹出带下拉框的对话，供用户选择分组 —— #
+def show_group_selection_dialog(groups):
+    """
+    弹出一个小窗口，groups 为字符串列表，用户从下拉列表中选一个分组，返回选择的分组名。
+    取消或关闭窗口返回空字符串。
+    """
+    selected = {'group': ''}
+
+    def on_ok():
+        selected['group'] = combo.get().strip()
+        root.destroy()
+
+    def on_cancel():
+        root.destroy()
+
+    root = tk.Tk()
+    root.title("请选择分组")
+    root.geometry("300x120")
+    root.resizable(False, False)
+    # 确保窗口置顶
+    root.attributes('-topmost', True)
+
+    tk.Label(root, text="在下拉列表中选择一个分组：").pack(pady=(10, 5))
+
+    combo = ttk.Combobox(root, values=groups, state='readonly')
+    combo.pack(pady=5, padx=10, fill='x')
+    combo.current(0)
+
+    btn_frame = tk.Frame(root)
+    btn_frame.pack(pady=(10, 5))
+    tk.Button(btn_frame, text="确定", width=10, command=on_ok).pack(side='left', padx=5)
+    tk.Button(btn_frame, text="取消", width=10, command=on_cancel).pack(side='left', padx=5)
+
+    root.mainloop()
+    return selected['group']
+
 def main():
     # 解析命令行参数
     args = parse_arguments()
@@ -303,12 +350,17 @@ def main():
                 return
             
             group = get_group_for_symbol(symbol)
+            if not group:
+                show_alert(f"在 Sectors_All.json 中未找到 {symbol} 对应的分组，请手动选择。")
+                # 自动匹配失败，弹出下拉列表让用户选
+                groups = extract_group_names()
+                group = show_group_selection_dialog(groups)
+                if not group:
+                    show_alert("未选择分组，程序退出")
+                    return
             if group:
                 add_symbol_to_json_files(symbol, group)
                 print(f"已将 {symbol} 自动匹配到 {group} 分组并写入 Sectors_empty.json")
-            else:
-                show_alert(f"在 Sectors_All.json 中未找到 {symbol} 对应的分组")
-                return
             
             json_file_path = empty_json_path
             shares_file_path = "/Users/yanzhang/Documents/News/backup/Shares.txt"

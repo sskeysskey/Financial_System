@@ -118,8 +118,8 @@ def save_data(urls, existing_json, new_file, blacklist_file):
     driver.get("https://finance.yahoo.com/markets/etfs/top/")
     # 等待2秒
     time.sleep(2)
-    
-    # 读取a.json文件中的etfs的symbol字段
+
+    # 读取已存在的 symbol
     with open(existing_json, 'r') as json_file:
         data = json.load(json_file)
         existing_symbols = {etf['symbol'] for etf in data['etfs']}
@@ -135,19 +135,21 @@ def save_data(urls, existing_json, new_file, blacklist_file):
                 continue  # 跳过黑名单中的symbol
                 
             if volume > 200000:
-                total_data_list.append(f"{symbol}: {name}, {volume}")
+                total_data_list.append((symbol, name, volume))
                 if symbol not in existing_symbols:
                     filter_data_list.append(f"{symbol}: {name}, {volume}")
                     existing_symbols.add(symbol)
 
-    # 写入新数据文件（仅在filter_data_list不为空时）
+    # 如果有新的条目，写入 new_file，否则打印提示
     if filter_data_list:
         with open(new_file, "w") as file:
             for i, line in enumerate(filter_data_list):
-                if i < len(filter_data_list) - 1:
-                    file.write(f"{line}\n")  # 非最后一行添加换行符
-                else:
-                    file.write(line)  # 最后一行不添加任何后缀
+                # 最后一行不加换行
+                suffix = "\n" if i < len(filter_data_list) - 1 else ""
+                file.write(line + suffix)
+        print(f"已写入 {len(filter_data_list)} 条新ETF 到：{new_file}")
+    else:
+        print("没有新的 ETF 需要写入。")
 
 def load_blacklist(blacklist_file):
     """加载黑名单数据"""
@@ -194,14 +196,18 @@ target_dir = "/Users/yanzhang/Documents/News/backup"
 # 确保目标目录存在
 os.makedirs(target_dir, exist_ok=True)
 
-# 查找并移动所有符合模式的文件
-for source_file in glob.glob(source_pattern):
-    target_file = os.path.join(target_dir, os.path.basename(source_file))
-    shutil.move(source_file, target_file)
-    print(f"已移动: {source_file} -> {target_file}")
+# 一次性移动所有匹配 screener_*.txt 的文件
+for src in glob.glob(source_pattern):
+    dst = os.path.join(target_dir, os.path.basename(src))
+    shutil.move(src, dst)
+    print(f"已移动: {src} -> {dst}")
 
-# 移动第二个指定文件
-shutil.move(source_file2, os.path.join(target_dir, os.path.basename(source_file2)))
-print(f"已移动: {source_file2} -> {os.path.join(target_dir, os.path.basename(source_file2))}")
+# 单独移动第二个文件，先检查是否存在
+if os.path.exists(source_file2):
+    dst2 = os.path.join(target_dir, os.path.basename(source_file2))
+    shutil.move(source_file2, dst2)
+    print(f"已移动: {source_file2} -> {dst2}")
+else:
+    print(f"警告: 文件不存在，跳过移动: {source_file2}")
 
-print(f"所有文件已成功移动到 {target_dir}")
+print(f"所有文件处理完毕，目录: {target_dir}")

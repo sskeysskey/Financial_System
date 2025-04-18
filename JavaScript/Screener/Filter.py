@@ -115,7 +115,7 @@ def compare_and_update_sectors(screener_data, sectors_all_data, sectors_today_da
                     
                     # 添加到新的sector
                     sectors_all_data[sector].append(symbol)
-                    added_symbols.append(f"将symbol '{symbol}' 添加到 '{sector}' 部门")
+                    added_symbols.append(f"将symbol '{symbol}' 添加到 '{sector}' 部门，请使用Ctrl+Option+9")
                     
                     # 确保sectors_today_data中有该sector
                     if sector not in sectors_today_data:
