@@ -390,14 +390,9 @@ def main():
     )
     
     # 保存更新后的sectors文件，只有在有变化时才保存
-    all_saved = save_sectors_file(sectors_all_file, updated_sectors_all, sectors_all_data)
-    today_saved = save_sectors_file(sectors_today_file, updated_sectors_today, sectors_today_data)
-    empty_saved = save_sectors_file(sectors_empty_file, updated_sectors_empty, sectors_empty_data)
-    
-    # 如果没有变化则修改日志
-    if not (all_saved or today_saved or empty_saved):
-        if "Sectors_All文件没有需要更新的内容" not in added_symbols:
-            added_symbols.append("Sectors_All文件没有需要更新的内容")
+    save_sectors_file(sectors_all_file, updated_sectors_all)
+    save_sectors_file(sectors_today_file, updated_sectors_today)
+    save_sectors_file(sectors_empty_file, updated_sectors_empty)
     
     # 处理Sectors_5000.json
     updated_sectors_5000, changes_5000 = process_sectors_5000(sectors_5000_data, screener_data, market_caps, blacklist)

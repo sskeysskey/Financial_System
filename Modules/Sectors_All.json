@@ -455,7 +455,6 @@
     "DWLD",
     "GDXJ",
     "NANR",
-    "FSMB",
     "KBWP",
     "MMIT",
     "TMV",
@@ -463,7 +462,11 @@
     "HTAB",
     "FLMI",
     "GOVI",
-    "EMQQ"
+    "EMQQ",
+    "SMMU",
+    "REGL",
+    "QINT",
+    "RSPU"
   ],
   "Basic_Materials": [
     "LIN",

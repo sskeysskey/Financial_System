@@ -11,9 +11,7 @@
         "LEN": "",
         "FND": "",
         "KMX": "",
-        "CROX": "",
-        "IBP": "",
-        "KBH": ""
+        "CROX": ""
     },
     "Utilities": {
         "CEG": ""
@@ -25,13 +23,7 @@
     },
     "Industrials": {
         "BAH": "关注财报",
-        "BLDR": "关注财报",
-        "SAIA": "关注财报",
-        "KNX": "关注财报",
-        "MATX": "",
-        "ODFL": "",
-        "JBHT": "",
-        "RXO": ""
+        "MATX": ""
     },
     "Communication_Services": {
         "GOOGL": "",
@@ -39,8 +31,7 @@
     },
     "Financial_Services": {
         "MCO": "关注财报",
-        "BN": "关注财报",
-        "CG": ""
+        "BN": "关注财报"
     },
     "Healthcare": {
         "NVO": "",
