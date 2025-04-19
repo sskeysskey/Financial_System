@@ -4,7 +4,7 @@ import json
 import pyperclip
 import pyautogui
 import numpy as np
-from time import sleep
+import time
 from PIL import ImageGrab
 import tkinter as tk
 import sys
@@ -31,7 +31,7 @@ def activate_chrome():
     '''
     subprocess.run(['osascript', '-e', script])
 
-def input_symbol_name(symbol):
+def input_symbol_name():
     root = tk.Tk()
     root.title("Input Stock Name")
     root.lift()  # 将窗口提升到顶层
@@ -41,27 +41,21 @@ def input_symbol_name(symbol):
     name_entry = tk.Entry(root, textvariable=name_var)
     name_entry.pack()
     name_entry.focus_set()
-    button = tk.Button(root, text="添加 Name", command=lambda: add_stock(symbol, stock_name, entry, data, json_file, description1, description2, root, success_flag))
+
+    # 只需要退出主循环，把对话框关闭
+    button = tk.Button(root, text="确定", command=root.quit)
     button.pack()
 
-    cancel_flag = [False]
+    root.bind('<Return>', lambda e: root.quit())
+    root.bind('<Escape>', lambda e: setattr(root, 'cancelled', True) or root.quit())
 
-    def on_name_enter(event):
-        root.quit()
-
-    def on_escape(event):
-        cancel_flag[0] = True
-        root.quit()
-
-    name_entry.bind('<Return>', on_name_enter)
-    root.bind('<Escape>', on_escape)
     root.mainloop()
-
+    cancelled = getattr(root, 'cancelled', False)
     stock_name = name_var.get()
     root.destroy()
-    
-    if cancel_flag[0]:
-        return ""  # 返回空字符串而不是 None
+
+    if cancelled:
+        return ""   # 或者你想要的其它“取消”信号
     return stock_name
 
 def input_tags(symbol, stock_name, data, json_file, description1, description2):
@@ -164,33 +158,33 @@ def main():
     found_poe = find_and_click("poethumb", 80)
     if found_poe:
         pyautogui.click(button='right')
-        sleep(1)
+        time.sleep(1)
         if find_and_click("poecopy"):
             print("找到图片位置")
     else:
         if find_and_click("kimicopy"):
             print("找到copy图了，准备点击copy...")
 
-    sleep(1)
+    time.sleep(1)
     new_description1 = read_clipboard().replace('\n', ' ').replace('\r', ' ')
     script_path = '/Users/yanzhang/Documents/ScriptEditor/Shift2Kimi.scpt' if found_poe else '/Users/yanzhang/Documents/ScriptEditor/Shift2Poe.scpt'
     execute_applescript(script_path)
-    sleep(1)
+    time.sleep(1)
     if not found_poe:
         found_poe = find_and_click("poethumb", 80)
         if found_poe:
             pyautogui.click(button='right')
             while not find_and_click("poecopy"):
-                sleep(1)
+                time.sleep(1)
             while not find_image("poesuccess"):
-                sleep(1)
+                time.sleep(1)
     else:
         find_and_click("kimicopy")
 
     new_description2 = read_clipboard().replace('\n', ' ').replace('\r', ' ')
     
     # 弹出输入 symbol_name 的窗口
-    stock_name = input_symbol_name(new_name)
+    stock_name = input_symbol_name()
 
     if stock_name == "":
         applescript_code = 'display dialog "操作已取消，股票名称将被设置为空字符串。" buttons {"OK"} default button "OK"'

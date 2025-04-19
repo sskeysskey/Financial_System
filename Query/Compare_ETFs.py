@@ -2,7 +2,6 @@ from datetime import datetime, timedelta
 import sqlite3
 import json
 import os
-import re
 
 def create_connection(db_file):
     return sqlite3.connect(db_file)

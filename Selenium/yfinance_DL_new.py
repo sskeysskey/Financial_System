@@ -1,7 +1,7 @@
 import yfinance as yf
 import sqlite3
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, List, Any
 
 def log_error_with_timestamp(error_message: str) -> str:

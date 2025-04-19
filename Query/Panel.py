@@ -5,7 +5,6 @@ import sqlite3
 import tkinter as tk
 import tkinter.font as tkFont
 from tkinter import ttk, scrolledtext, simpledialog
-from datetime import datetime, timedelta
 from collections import OrderedDict
 import subprocess
 

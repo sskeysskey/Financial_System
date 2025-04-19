@@ -1,12 +1,11 @@
 import os
 import shutil
-import subprocess
 from selenium import webdriver
 from datetime import datetime, timedelta
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 import json
@@ -192,10 +191,5 @@ if results:
         
         with open(file_path, 'w') as file:
             file.writelines(lines)
-    
-    # 如果有新内容添加，显示提示
-    # if file_already_exists and new_content_added:
-    #     applescript_code = 'display dialog "新内容已添加。" buttons {"OK"} default button "OK"'
-    #     subprocess.run(['osascript', '-e', applescript_code], check=True)
 else:
     print("没有新内容添加，文件保持不变。")

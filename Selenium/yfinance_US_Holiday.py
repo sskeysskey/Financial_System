@@ -2,7 +2,6 @@ import yfinance as yf
 import sqlite3
 import json
 from datetime import datetime, timedelta
-import traceback  # 用于获取完整的错误信息
 
 def log_error_with_timestamp(error_message):
     # 获取当前日期和时间

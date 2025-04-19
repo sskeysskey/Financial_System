@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit,
     QLabel, QMainWindow, QAction, QScrollArea, QToolButton, QSizePolicy,
 )
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl, QTimer
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 from PyQt5.QtGui import QFont, QKeySequence
 import sqlite3
 

@@ -4,11 +4,10 @@ import json
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
-from matplotlib.dates import DateFormatter, num2date
-from PyQt5.QtWidgets import (QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QLabel, QDateEdit, QHBoxLayout, QAction)
+from matplotlib.dates import num2date
+from PyQt5.QtWidgets import (QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QLabel, QDateEdit, QAction)
 from PyQt5.QtGui import QFont, QKeySequence
-from PyQt5.QtCore import Qt, QDate
-from datetime import datetime
+from PyQt5.QtCore import QDate
 
 class StockComparisonApp(QWidget):
     def __init__(self):

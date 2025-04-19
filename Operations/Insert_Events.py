@@ -3,7 +3,6 @@ from tkinter import ttk
 from tkinter import messagebox  # 添加这一行导入messagebox
 import json
 from datetime import datetime, timedelta
-import calendar
 import platform
 import os
 import sys

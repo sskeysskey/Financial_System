@@ -2,7 +2,6 @@ import os
 import json
 import sqlite3
 import shutil
-import subprocess
 from selenium import webdriver
 from datetime import datetime, timedelta
 from selenium.webdriver.common.by import By
@@ -197,8 +196,3 @@ conn.close()
 
 # 关闭浏览器
 driver.quit()
-
-# 如果有新内容添加，并且文件原本已经存在，显示提示
-# if new_content_added and file_already_exists:
-#     applescript_code = 'display dialog "新内容已添加。" buttons {"OK"} default button "OK"'
-#     subprocess.run(['osascript', '-e', applescript_code], check=True)

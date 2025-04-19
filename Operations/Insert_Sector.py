@@ -2,7 +2,7 @@ import json
 import pyperclip
 import re
 import subprocess
-from typing import Optional, Tuple
+from typing import Optional
 
 def copy2clipboard():
     script = '''

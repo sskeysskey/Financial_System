@@ -3,7 +3,6 @@ import sys
 import json
 import subprocess
 import tkinter as tk
-from datetime import datetime
 import pyperclip
 from functools import lru_cache
 import concurrent.futures

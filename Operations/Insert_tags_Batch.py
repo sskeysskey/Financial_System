@@ -4,7 +4,6 @@ from tkinter import messagebox
 import json
 import platform
 import os
-import sys
 
 class TagAdder:
     def __init__(self):

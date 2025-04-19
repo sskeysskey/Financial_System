@@ -4,9 +4,9 @@ import pyperclip
 import sys
 import subprocess
 import time
-from PyQt5.QtWidgets import (QApplication, QInputDialog, QLineEdit, QWidget, 
+from PyQt5.QtWidgets import (QApplication, QInputDialog, QLineEdit, 
                            QMessageBox, QDialog, QVBoxLayout, QRadioButton, 
-                           QDateEdit, QDialogButtonBox, QLabel)
+                           QDateEdit, QDialogButtonBox)
 from PyQt5.QtCore import Qt, QDate
 
 class DateSelectionDialog(QDialog):

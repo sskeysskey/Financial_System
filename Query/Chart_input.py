@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import RadioButtons
 import matplotlib
 import tkinter as tk
-from tkinter import simpledialog, scrolledtext, font as tkFont
+from tkinter import scrolledtext, font as tkFont
 from functools import lru_cache
 from scipy.interpolate import interp1d
 

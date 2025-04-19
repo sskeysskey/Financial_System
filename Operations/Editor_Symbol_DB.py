@@ -2,7 +2,6 @@ import sys
 import sqlite3
 import tkinter as tk
 from tkinter import ttk, messagebox
-import pyperclip
 
 # 查询数据库，返回列名和记录数据
 def query_database_data(db_file, table_name, condition, fields, include_condition):

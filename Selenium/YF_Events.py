@@ -1,6 +1,5 @@
 import os
 import shutil
-import subprocess
 from selenium import webdriver
 from datetime import datetime, timedelta
 from selenium.webdriver.common.by import By
@@ -190,8 +189,3 @@ with open(file_path, 'a') as output_file:
 
 # 关闭浏览器
 driver.quit()
-
-# 只有当原始文件存在且有新内容添加时才显示弹窗
-# if original_file_exists and new_content_added:
-#     applescript_code = 'display dialog "新内容已添加。" buttons {"OK"} default button "OK"'
-#     subprocess.run(['osascript', '-e', applescript_code], check=True)

@@ -3,7 +3,6 @@ import pyperclip
 import tkinter as tk
 import subprocess
 import re
-import sys
 
 def copy2clipboard():
     script = '''

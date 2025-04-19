@@ -1,5 +1,4 @@
 import pyperclip
-import os
 
 def match_symbol_name():
     # 读取剪贴板内容

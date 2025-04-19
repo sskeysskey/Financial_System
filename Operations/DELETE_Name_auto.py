@@ -1,9 +1,7 @@
 import sqlite3
 import json
-import time
 import pyperclip
 import subprocess
-from PyQt5.QtWidgets import QMessageBox
 
 def show_alert(message):
     # AppleScript代码模板

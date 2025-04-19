@@ -5,7 +5,6 @@ import sqlite3
 import tkinter as tk
 from tkinter import scrolledtext
 from tkinter.font import Font
-from datetime import datetime
 import pyperclip
 import subprocess
 
