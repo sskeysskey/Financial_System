@@ -121,7 +121,13 @@ def input_mapping(root, data, db_path, user_input):
                       db_path):
         close_app(root)
     else:
-        display_dialog("未找到匹配的数据项。")
+        # 把没找到的符号拷贝到剪贴板，然后用 show_description.py 的 paste 模式来弹 description 界面
+        pyperclip.copy(input_trimmed)
+        subprocess.run([
+            sys.executable,
+            '/Users/yanzhang/Documents/Financial_System/Query/show_description.py',
+            'paste'
+        ], check=True)
         close_app(root)
 
 def get_user_input_custom(root, prompt):
