@@ -48,6 +48,7 @@ def input_symbol_name():
 
     root.bind('<Return>', lambda e: root.quit())
     root.bind('<Escape>', lambda e: setattr(root, 'cancelled', True) or root.quit())
+    root.protocol("WM_DELETE_WINDOW", lambda: setattr(root, 'cancelled', True) or root.quit())
 
     root.mainloop()
     cancelled = getattr(root, 'cancelled', False)
