@@ -7,12 +7,7 @@
     "Technology": {},
     "Consumer_Cyclical": {
         "DECK": "",
-        "AMZN": "",
-        "LEN": "",
-        "FND": "",
-        "KMX": "",
-        "CROX": "",
-        "SG": ""
+        "AMZN": ""
     },
     "Utilities": {
         "CEG": ""
@@ -23,8 +18,7 @@
         "GIS": ""
     },
     "Industrials": {
-        "BAH": "关注财报",
-        "MATX": ""
+        "BAH": "关注财报"
     },
     "Communication_Services": {
         "GOOGL": "",
@@ -37,16 +31,9 @@
     "Healthcare": {
         "NVO": "",
         "MRNA": "",
-        "LLY": "",
         "MRK": "",
         "BMY": "",
-        "ZBH": "",
-        "HOLX": "",
-        "UNH": "",
-        "BDX": "",
-        "ICLR": "",
-        "TECH": "",
-        "BRKR": ""
+        "ICLR": ""
     },
     "Bonds": {
         "US10Y": "",
