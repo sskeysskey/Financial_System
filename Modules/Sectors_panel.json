@@ -148,11 +148,7 @@
         "USDBRL": "巴西",
         "USDINR": "印度卢比"
     },
-    "Economics": {
-        "ImportPriceM": "15 ImportPriceM",
-        "USRetailM": "16 USRetailM",
-        "USInitial": "17 USInitial"
-    },
+    "Economics": {},
     "ETFs_US": {
         "TLT": "",
         "XLK": "科技",
