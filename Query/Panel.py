@@ -32,7 +32,7 @@ DISPLAY_LIMITS = {
     "Bonds": 'all',
     'Commodities': 24,
     'ETFs': 10,
-    'Currencies': 5,
+    'Currencies': 6,
     'Economics': 7,
     'ETFs_US': 14,
 }

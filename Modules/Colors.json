@@ -75,7 +75,6 @@
         "MSI",
         "PWR",
         "PYPL",
-        "UNH",
         "KKR",
         "DLR",
         "PNC",
@@ -124,14 +123,14 @@
         "EPD",
         "MUFG",
         "GOOGL",
-        "AMZN",
         "TSLA",
         "WMT",
         "KMI",
         "AAPL",
         "TSM",
         "MSTR",
-        "META"
+        "META",
+        "AMZN"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -518,12 +517,10 @@
         "DJT",
         "MUR",
         "HUM",
-        "ACHC",
         "ATKR",
         "EC",
         "VAL",
         "DOOO",
-        "ALGM",
         "STLA",
         "CNC",
         "SSL",
@@ -577,7 +574,6 @@
         "ADM",
         "BC",
         "NOV",
-        "AES",
         "MSM",
         "PPG",
         "CIG",
@@ -716,7 +712,8 @@
         "FTV",
         "SLAB",
         "UWMC",
-        "LEN"
+        "LEN",
+        "UNH"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -793,7 +790,9 @@
         "BILL",
         "JAZZ",
         "ZBH",
-        "TECH"
+        "TECH",
+        "ACHC",
+        "AES"
     ],
     "black_keywords": [
         "Cotton",
@@ -868,7 +867,9 @@
         "RARE",
         "GXO",
         "COLD",
-        "OGN"
+        "OGN",
+        "ALGM",
+        "CRWV"
     ],
     "green_keywords": [
         "EURCNY",
