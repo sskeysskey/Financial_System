@@ -22,7 +22,8 @@
         "CMCSA",
         "SPOT",
         "DASH",
-        "NTES"
+        "NTES",
+        "AMX"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -46,7 +47,8 @@
         "AZO",
         "SE",
         "JD",
-        "RCL"
+        "RCL",
+        "HLT"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -136,7 +138,11 @@
         "MFG",
         "LYG",
         "NU",
-        "BCS"
+        "BCS",
+        "ALL",
+        "AIG",
+        "MFC",
+        "MET"
     ],
     "Healthcare": [
         "LLY",
@@ -201,7 +207,9 @@
         "CPRT",
         "CARR",
         "WCN",
-        "FDX"
+        "FDX",
+        "JCI",
+        "HWM"
     ],
     "Real_Estate": [
         "PLD",
@@ -210,7 +218,8 @@
         "WELL",
         "SPG",
         "PSA",
-        "O"
+        "O",
+        "DLR"
     ],
     "Technology": [
         "AAPL",
