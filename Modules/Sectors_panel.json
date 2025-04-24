@@ -5,28 +5,23 @@
     },
     "Energy": {},
     "Technology": {
-        "ACN": "",
         "TXN": "",
-        "MRVL": ""
+        "MRVL": "",
+        "ENPH": ""
     },
     "Consumer_Cyclical": {
         "DECK": "",
         "AMZN": "",
-        "H": "",
-        "MOD": ""
+        "H": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
         "FLO": "关注财报",
-        "PEP": "",
-        "FRPT": ""
+        "PEP": ""
     },
     "Industrials": {
         "BAH": "关注财报",
-        "AAL": "",
-        "HRI": "",
-        "MATX": "",
-        "RTX": ""
+        "AAL": ""
     },
     "Communication_Services": {
         "GOOGL": "",
@@ -41,8 +36,7 @@
         "MRNA": "",
         "MRK": "",
         "BMY": "",
-        "UNH": "",
-        "ICLR": ""
+        "UNH": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -119,7 +113,6 @@
         "SOXX": "",
         "ASHR": "",
         "EWT": "",
-        "LIT": "",
         "URA": "",
         "UUP": "",
         "FXY": ""

@@ -9,7 +9,8 @@
         "APD",
         "CRH",
         "NEM",
-        "AEM"
+        "AEM",
+        "FCX"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -48,7 +49,8 @@
         "SE",
         "JD",
         "RCL",
-        "HLT"
+        "HLT",
+        "GM"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -142,7 +144,8 @@
         "ALL",
         "AIG",
         "MFC",
-        "MET"
+        "MET",
+        "DB"
     ],
     "Healthcare": [
         "LLY",
@@ -209,7 +212,8 @@
         "WCN",
         "FDX",
         "JCI",
-        "HWM"
+        "HWM",
+        "NSC"
     ],
     "Real_Estate": [
         "PLD",
