@@ -88,7 +88,8 @@
         "KMI",
         "MPLX",
         "LNG",
-        "TRP"
+        "TRP",
+        "OKE"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -145,7 +146,9 @@
         "AIG",
         "MFC",
         "MET",
-        "DB"
+        "DB",
+        "COIN",
+        "TFC"
     ],
     "Healthcare": [
         "LLY",
@@ -273,7 +276,8 @@
         "APP",
         "MSTR",
         "TEAM",
-        "PAYX"
+        "PAYX",
+        "SNOW"
     ],
     "Utilities": [
         "NEE",

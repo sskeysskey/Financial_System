@@ -5,23 +5,26 @@
     },
     "Energy": {},
     "Technology": {
-        "TXN": "",
         "MRVL": "",
-        "ENPH": ""
+        "FI": ""
     },
     "Consumer_Cyclical": {
         "DECK": "",
         "AMZN": "",
-        "H": ""
+        "H": "",
+        "JD": "",
+        "CHDN": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
         "FLO": "关注财报",
-        "PEP": ""
+        "PEP": "",
+        "GIS": ""
     },
     "Industrials": {
         "BAH": "关注财报",
-        "AAL": ""
+        "AAL": "",
+        "POOL": ""
     },
     "Communication_Services": {
         "GOOGL": "",
