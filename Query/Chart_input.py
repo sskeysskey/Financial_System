@@ -322,12 +322,17 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         )
         all_annotations.append((annotation, 'global', date, price))
 
-    # 为每个特定股票标记点(橙色点)创建固定注释（保持原有的右下偏移）
-    for scatter, date, price, text in specific_scatter_points:
+    # 为每个特定股票标记点(橙色点)创建固定注释，左右交替偏移
+    specific_offsets = [
+        (20, -20),    # 偶数（i=0,2,4…）向右下
+        (-150, -20)   # 奇数（i=1,3,5…）向左下
+    ]
+    for i, (scatter, date, price, text) in enumerate(specific_scatter_points):
+        offset = specific_offsets[i % 2]
         annotation = ax1.annotate(
             text,
             xy=(date, price),
-            xytext=(20, -20),
+            xytext=offset,
             textcoords="offset points",
             bbox=dict(boxstyle="round", fc="black", alpha=0.8),
             arrowprops=dict(arrowstyle="->", color='orange'),
