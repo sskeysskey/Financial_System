@@ -276,7 +276,6 @@
         "VVV",
         "FRPT",
         "OC",
-        "SAIA",
         "FLR",
         "DDOG",
         "EXP",
@@ -463,7 +462,8 @@
         "KMX",
         "MATX",
         "NLY",
-        "SG"
+        "SG",
+        "APPF"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -606,7 +606,6 @@
         "SPSC",
         "LW",
         "NICE",
-        "AVTR",
         "ELF",
         "COP",
         "FSLR",
@@ -713,7 +712,8 @@
         "SLAB",
         "UWMC",
         "LEN",
-        "UNH"
+        "UNH",
+        "SAIA"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -792,7 +792,8 @@
         "ZBH",
         "TECH",
         "ACHC",
-        "AES"
+        "AES",
+        "AVTR"
     ],
     "black_keywords": [
         "Cotton",

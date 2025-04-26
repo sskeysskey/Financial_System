@@ -24,7 +24,8 @@
         "SPOT",
         "DASH",
         "NTES",
-        "AMX"
+        "AMX",
+        "CHTR"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -216,7 +217,8 @@
         "FDX",
         "JCI",
         "HWM",
-        "NSC"
+        "NSC",
+        "GEV"
     ],
     "Real_Estate": [
         "PLD",
@@ -225,7 +227,6 @@
         "WELL",
         "SPG",
         "PSA",
-        "O",
         "DLR"
     ],
     "Technology": [
@@ -277,14 +278,14 @@
         "MSTR",
         "TEAM",
         "PAYX",
-        "SNOW"
+        "SNOW",
+        "MRVL"
     ],
     "Utilities": [
         "NEE",
         "SO",
         "DUK",
         "NGG",
-        "GEV",
         "CEG",
         "AEP"
     ]

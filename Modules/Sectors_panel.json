@@ -5,34 +5,31 @@
     },
     "Energy": {},
     "Technology": {
-        "MRVL": "",
-        "FI": ""
+        "APPF": ""
     },
     "Consumer_Cyclical": {
         "DECK": "",
         "AMZN": "",
-        "H": "",
-        "JD": "",
-        "CHDN": ""
+        "H": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
         "FLO": "关注财报",
-        "PEP": "",
-        "GIS": ""
+        "GIS": "",
+        "PEP": ""
     },
     "Industrials": {
         "BAH": "关注财报",
-        "AAL": "",
-        "POOL": ""
+        "ODFL": "",
+        "SAIA": ""
     },
     "Communication_Services": {
         "GOOGL": "",
         "META": ""
     },
     "Financial_Services": {
-        "MCO": "关注财报",
-        "BN": "关注财报"
+        "BN": "关注财报",
+        "AON": ""
     },
     "Healthcare": {
         "NVO": "",

@@ -185,7 +185,7 @@ def process_sectors_5000(sectors_5000, screener_data, market_caps, blacklist):
                 for other_sector in sectors_5000:
                     if other_sector != sector and symbol in sectors_5000[other_sector]:
                         sectors_5000[other_sector].remove(symbol)
-                        changes_5000.append(f"将{symbol}从5000.json的{other_sector}组中删除")
+                        changes_5000.append(f"从5000.json的{other_sector}组中剔除了{symbol}")
                         break
                 
                 # 添加到新sector
@@ -226,7 +226,8 @@ def process_sectors_500(sectors_500, screener_data, market_caps, blacklist):
                 for other_sector in sectors_500:
                     if other_sector != sector and symbol in sectors_500[other_sector]:
                         sectors_500[other_sector].remove(symbol)
-                        changes_500.append(f"将{symbol}从500.json的{other_sector}组删除")
+                        # 改成“剔除”才能被后续的removals_500捕捉到
+                        changes_500.append(f"从500.json的{other_sector}组中剔除了{symbol}")
                         break
                 
                 # 添加到新sector

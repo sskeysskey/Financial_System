@@ -102,7 +102,7 @@ Event_Filter = {
     "GDP Cons Spending Prelim*", "Core PCE Prices Prelim*",
     "Corporate Profits Prelim*", "Initial Jobless Clm*", "U Mich Sentiment Final",
     "GDP Advance*", "PCE Price Index YY *", "PPI exFood/Energy YY*", "Import Prices MM*",
-    "Import Prices YY*"
+    "Import Prices YY*", "U Mich Sentiment Final*"
 }
 
 # 定义一个包含所有目标国家代码的集合

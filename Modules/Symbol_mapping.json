@@ -76,6 +76,7 @@
     "International Trade $ *": "USTrade",
     "U Mich Sentiment Prelim": "USConfidence",
     "U Mich Sentiment Final": "USConfidence",
+    "U Mich Sentiment Final*": "USConfidence",
     "Initial Jobless Clm*": "USInitial",
     "PPI Final Demand YY*": "USPPI",
     "PPI exFood/Energy YY*": "CorePPI",

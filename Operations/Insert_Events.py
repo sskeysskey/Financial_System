@@ -496,48 +496,6 @@ class App:
                         break
             
         self.save_json()
-        
-        # 创建成功提示框
-        success_root = tk.Tk()
-        if self.selected_type == "特定" and len(self.selected_symbols) > 1:
-            success_root.title(f"成功 - 已更新{updated_count}个Symbol")
-        else:
-            success_root.title("成功")
-        
-        # 设置窗口位置在屏幕中央
-        window_width = 250
-        window_height = 150
-        screen_width = success_root.winfo_screenwidth()
-        screen_height = success_root.winfo_screenheight()
-        x = (screen_width - window_width) // 2
-        y = (screen_height - window_height) // 2
-        success_root.geometry(f"{window_width}x{window_height}+{x}+{y}")
-        
-        frame = ttk.Frame(success_root, padding="10")
-        frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        
-        if self.selected_type == "特定" and len(self.selected_symbols) > 1:
-            success_text = f"保存成功！\n共更新了 {updated_count} 个Symbol"
-        else:
-            success_text = "保存成功！"
-            
-        success_label = ttk.Label(frame, text=success_text, font=('TkDefaultFont', 14))
-        success_label.grid(row=0, column=0, pady=20)
-        
-        def close_window(event=None):
-            success_root.destroy()
-        
-        # 绑定多个关闭按键
-        success_root.bind('<Return>', close_window)
-        success_root.bind('<Escape>', close_window)
-        
-        def focus_and_lift():
-            self.set_window_to_front(success_root)
-        
-        # 将窗口置于最前台并激活
-        success_root.after(100, focus_and_lift)
-        
-        success_root.mainloop()
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
