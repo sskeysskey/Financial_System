@@ -143,7 +143,11 @@
         "USDBRL": "巴西",
         "USDINR": "印度卢比"
     },
-    "Economics": {},
+    "Economics": {
+        "PCEY": "30 PCEY",
+        "CorePCEY": "30 CorePCEY",
+        "CorePCEM": "30 CorePCEM"
+    },
     "ETFs_US": {
         "TLT": "",
         "XLK": "科技",

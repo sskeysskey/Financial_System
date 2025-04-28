@@ -5,15 +5,48 @@ import pyperclip
 import subprocess
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit,
-    QLabel, QMainWindow, QAction, QScrollArea, QToolButton, QSizePolicy,
+    QLabel, QMainWindow, QAction, QScrollArea, QToolButton, QSizePolicy, QListWidget, QListWidgetItem
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 from PyQt5.QtGui import QFont, QKeySequence
 import sqlite3
+import pickle
 
 # JSON 文件路径
 json_path = "/Users/yanzhang/Documents/Financial_System/Modules/description.json"
 
+
+# 添加新的SearchHistory类来管理搜索历史
+class SearchHistory:
+    def __init__(self, max_size=20):
+        self.max_size = max_size
+        self.history_file = "/Users/yanzhang/Documents/Financial_System/Modules/search_history.pkl"
+        self.history = self.load_history()
+
+    def add(self, query):
+        if query in self.history:
+            self.history.remove(query)
+        self.history.insert(0, query)
+        if len(self.history) > self.max_size:
+            self.history = self.history[:self.max_size]
+        self.save_history()
+
+    def get_history(self):
+        return self.history
+
+    def load_history(self):
+        try:
+            with open(self.history_file, 'rb') as f:
+                return pickle.load(f)
+        except:
+            return []
+
+    def save_history(self):
+        try:
+            with open(self.history_file, 'wb') as f:
+                pickle.dump(self.history, f)
+        except Exception as e:
+            print(f"保存搜索历史失败: {e}")
 
 class ClickableLabel(QLabel):
     """
@@ -301,6 +334,25 @@ class MainWindow(QMainWindow):
         self.input_layout.addWidget(self.search_button, 1)
         self.layout.addLayout(self.input_layout)
 
+        # 搜索历史管理器
+        self.search_history = SearchHistory()
+        
+        # 搜索历史列表
+        self.history_list = QListWidget(self)
+        self.history_list.setMaximumHeight(200)
+        self.history_list.setVisible(False)
+        self.history_list.itemClicked.connect(self.use_history_item)
+        self.layout.insertWidget(1, self.history_list)  # 插入到搜索框下方
+        
+        # 输入框焦点事件连接
+        self.input_field.focusInEvent = self.show_history
+        self.input_field.focusOutEvent = self.hide_history_delayed
+
+        # 添加计时器用于延迟隐藏历史记录列表
+        self.hide_timer = QTimer()
+        self.hide_timer.setSingleShot(True)
+        self.hide_timer.timeout.connect(self.hide_history)
+
         # 搜索中提示
         self.loading_label = QLabel("正在搜索...", self)
         self.loading_label.setAlignment(Qt.AlignCenter)
@@ -330,11 +382,39 @@ class MainWindow(QMainWindow):
 
         self.compare_data = {}
 
+    def show_history(self, event):
+        """显示搜索历史记录"""
+        self.history_list.clear()
+        for item in self.search_history.get_history():
+            self.history_list.addItem(QListWidgetItem(item))
+        self.history_list.setVisible(True)
+        super(QLineEdit, self.input_field).focusInEvent(event)
+
+    def hide_history_delayed(self, event):
+        """延迟隐藏搜索历史记录"""
+        self.hide_timer.start(200)  # 200ms延迟
+        super(QLineEdit, self.input_field).focusOutEvent(event)
+
+    def hide_history(self):
+        """隐藏搜索历史记录"""
+        self.history_list.setVisible(False)
+
+    def use_history_item(self, item):
+        """使用历史记录项"""
+        self.input_field.setText(item.text())
+        self.history_list.setVisible(False)
+        self.start_search()
+    
+    # 修改start_search方法，添加历史记录保存功能
     def start_search(self):
         keywords = self.input_field.text()
         if not keywords.strip():
-            return  # 空输入直接返回
-        # 刷新 compare 数据
+            return
+            
+        # 保存到搜索历史
+        self.search_history.add(keywords.strip())
+        
+        # 原有的搜索逻辑保持不变
         self.compare_data = load_compare_data()
         self.loading_label.show()
         self.clear_results()
