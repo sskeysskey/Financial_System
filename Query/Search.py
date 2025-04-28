@@ -337,12 +337,24 @@ class MainWindow(QMainWindow):
         # 搜索历史管理器
         self.search_history = SearchHistory()
         
-        # 搜索历史列表
+        # 修改搜索历史列表的样式
         self.history_list = QListWidget(self)
         self.history_list.setMaximumHeight(200)
         self.history_list.setVisible(False)
         self.history_list.itemClicked.connect(self.use_history_item)
-        self.layout.insertWidget(1, self.history_list)  # 插入到搜索框下方
+        self.history_list.setStyleSheet("""
+            QListWidget {
+                font-size: 16px;
+            }
+            QListWidget::item {
+                padding: 8px;
+                border-bottom: 1px solid #444;
+            }
+            QListWidget::item:hover {
+                background-color: #333;
+            }
+        """)
+        self.layout.insertWidget(1, self.history_list)
         
         # 输入框焦点事件连接
         self.input_field.focusInEvent = self.show_history
