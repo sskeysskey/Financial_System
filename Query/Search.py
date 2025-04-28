@@ -357,8 +357,12 @@ class MainWindow(QMainWindow):
         self.layout.insertWidget(1, self.history_list)
         
         # 输入框焦点事件连接
-        self.input_field.focusInEvent = self.show_history
-        self.input_field.focusOutEvent = self.hide_history_delayed
+        self._orig_focus_in = self.input_field.focusInEvent
+        self._orig_focus_out = self.input_field.focusOutEvent
+
+        # 绑定新的 focus 事件：先调用原始，再做自己的事
+        self.input_field.focusInEvent = self._input_focus_in
+        self.input_field.focusOutEvent = self._input_focus_out
 
         # 添加计时器用于延迟隐藏历史记录列表
         self.hide_timer = QTimer()
@@ -394,18 +398,27 @@ class MainWindow(QMainWindow):
 
         self.compare_data = {}
 
-    def show_history(self, event):
-        """显示搜索历史记录"""
-        self.history_list.clear()
-        for item in self.search_history.get_history():
-            self.history_list.addItem(QListWidgetItem(item))
-        self.history_list.setVisible(True)
-        super(QLineEdit, self.input_field).focusInEvent(event)
+    def _input_focus_in(self, event):
+         """
+         聚焦时：先调用原始 focusInEvent 保证光标显示，
+         然后显示历史并全选全部文本。
+         """
+         # 1) 原始处理（光标闪烁、光标位置等）
+         self._orig_focus_in(event)
+         # 2) 显示历史
+         self.history_list.clear()
+         for item in self.search_history.get_history():
+             self.history_list.addItem(QListWidgetItem(item))
+         self.history_list.setVisible(True)
+         # 3) 延时 0ms 再全选，保证等 Qt 把焦点内的光标处理完
+         QTimer.singleShot(0, self.input_field.selectAll)
 
-    def hide_history_delayed(self, event):
-        """延迟隐藏搜索历史记录"""
-        self.hide_timer.start(200)  # 200ms延迟
-        super(QLineEdit, self.input_field).focusOutEvent(event)
+    def _input_focus_out(self, event):
+        """
+        失去焦点时：先调用原始 focusOutEvent，再延时隐藏历史列表
+        """
+        self._orig_focus_out(event)
+        self.hide_timer.start(200)
 
     def hide_history(self):
         """隐藏搜索历史记录"""
