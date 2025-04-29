@@ -1,8 +1,6 @@
 {
     "Basic_Materials": {},
-    "Real_Estate": {
-        "DOC": ""
-    },
+    "Real_Estate": {},
     "Energy": {},
     "Technology": {},
     "Consumer_Cyclical": {
@@ -16,15 +14,13 @@
         "GIS": "关注财报"
     },
     "Industrials": {
-        "BAH": "关注财报",
-        "SAIA": ""
+        "BAH": "关注财报"
     },
     "Communication_Services": {
         "META": ""
     },
     "Financial_Services": {
-        "BN": "关注财报",
-        "ERIE": ""
+        "BN": "关注财报"
     },
     "Healthcare": {
         "NVO": "",
