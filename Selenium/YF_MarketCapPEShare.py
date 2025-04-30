@@ -51,6 +51,8 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='股票数据抓取工具')
     parser.add_argument('--mode', type=str, default='normal', 
                         help='运行模式: normal或empty。默认为normal')
+    parser.add_argument('--clear', action='store_true',
+                        help='抓取结束后直接清空 Sectors_empty.json，无需弹窗确认')
     return parser.parse_args()
 
 def check_empty_json_has_content(json_file_path):
@@ -555,8 +557,9 @@ def main():
         
         # 如果有内容，询问是否清空
         if has_content:
-            if show_yes_no_dialog("抓取结束，是否清空 Sectors_empty.json 中的股票符号？"):
-                clear_empty_json()
-
+            if args.clear:
+                if show_yes_no_dialog("抓取结束，是否清空 Sectors_empty.json 中的股票符号？"):
+                    clear_empty_json()
+                    
 if __name__ == "__main__":
     main()
