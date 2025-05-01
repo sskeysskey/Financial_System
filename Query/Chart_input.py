@@ -324,8 +324,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     # 为每个特定股票标记点(橙色点)创建固定注释，左右交替偏移
     specific_offsets = [
-        (20, -20),    # 偶数（i=0,2,4…）向右下
-        (-150, -20)   # 奇数（i=1,3,5…）向左下
+        (-150, 50),    # 偶数（i=0,2,4…）向右下
+        (20, -50)   # 奇数（i=1,3,5…）向左下
     ]
     for i, (scatter, date, price, text) in enumerate(specific_scatter_points):
         offset = specific_offsets[i % 2]

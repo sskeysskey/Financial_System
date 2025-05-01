@@ -48,9 +48,18 @@ def check_last_record_date(cursor, name, current_date):
         LIMIT 1
     """, (name,))
     result = cursor.fetchone()
-    
+
     if result:
-        last_date = datetime.date.fromisoformat(result[0])
+        # 1. 先把字符串补齐到 YYYY-MM-DD
+        date_str = result[0]
+        parts = date_str.split('-')
+        if len(parts) == 3:
+            year, month, day = parts
+            month = month.zfill(2)
+            day   = day.zfill(2)
+            date_str = f"{year}-{month}-{day}"
+        # 2. 再用 fromisoformat
+        last_date = datetime.date.fromisoformat(date_str)
         price = result[1]
         days_difference = (current_date - last_date).days
         if days_difference > 30:

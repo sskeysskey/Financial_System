@@ -168,7 +168,7 @@ def clean_company_name(name):
         ' N.V.', ' Holdings', ' S.A.B.', ' C.V.', ' Ltd', ' Holding', ' Companies', ' PLC', '& plc', ' Incorporated',
         ' AG', ' &', ' SE', '- Petrobras', ' L.P.', ', L.P.', ', LP', 'de C.V.', ' Inc', ', Incorporated',
         ' S.p.A.', ' A/S', ' A.S.', ' p.l.c.', ', S. A. B. de C. V.', ' - COPEL', ' - CEMIG', ' - SABESP', ' - Eletrobrás',
-        ' Plc'
+        ' Plc', ',B. de', ' Worldwide'
     ]
     
     cleaned_name = name

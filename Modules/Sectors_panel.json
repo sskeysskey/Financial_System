@@ -1,35 +1,25 @@
 {
-    "Basic_Materials": {
-        "UFPI": ""
-    },
+    "Basic_Materials": {},
     "Real_Estate": {},
     "Energy": {},
-    "Technology": {
-        "ENPH": ""
-    },
+    "Technology": {},
     "Consumer_Cyclical": {
-        "DECK": "",
         "AMZN": "",
         "H": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
         "FLO": "关注财报",
-        "GIS": "关注财报",
-        "LANC": ""
+        "GIS": "关注财报"
     },
     "Industrials": {
-        "BAH": "关注财报",
-        "SAIA": ""
+        "BAH": "关注财报"
     },
-    "Communication_Services": {
-        "META": ""
-    },
+    "Communication_Services": {},
     "Financial_Services": {
         "BN": "关注财报"
     },
     "Healthcare": {
-        "NVO": "",
         "MRNA": "",
         "UNH": ""
     },

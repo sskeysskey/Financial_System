@@ -437,6 +437,14 @@ def main():
 
     # 执行清理旧备份文件的函数
     clean_old_backups(backup_directory, file_patterns)
+
+    # 增加对新目录的清理
+    second_backup_directory = '/Users/yanzhang/Documents/News/backup'
+    second_file_patterns = [
+        ("article_copier_", -1, 3),
+        ("screener_sectors_", -1, 3),
+    ]
+    clean_old_backups(second_backup_directory, second_file_patterns)
         
 if __name__ == "__main__":
     main()

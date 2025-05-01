@@ -24,9 +24,12 @@ class SearchHistory:
         self.history = self.load_history()
 
     def add(self, query):
+        # 确保添加前移除已存在的重复项
         if query in self.history:
             self.history.remove(query)
+        # 插入到最前面
         self.history.insert(0, query)
+        # 限制历史记录大小
         if len(self.history) > self.max_size:
             self.history = self.history[:self.max_size]
         self.save_history()
@@ -83,7 +86,8 @@ class SearchWorker(QThread):
         super().__init__()
         self.keywords = keywords
         self.json_path = json_path
-        self.compare_data = load_compare_data()
+        # 注意：load_compare_data 现在在主线程调用，确保UI不卡顿
+        # self.compare_data = load_compare_data() # 不再在worker中加载
 
     def run(self):
         # 耗时搜索操作
@@ -143,6 +147,8 @@ class CollapsibleWidget(QWidget):
     def addContentWidget(self, widget: QWidget):
         """向内容区域添加控件"""
         self.content_layout.addWidget(widget)
+        # 调整内容区域大小以适应新添加的控件
+        self.content_area.adjustSize()
 
 
 def levenshtein_distance(s1, s2):
@@ -339,30 +345,42 @@ class MainWindow(QMainWindow):
         
         # 修改搜索历史列表的样式
         self.history_list = QListWidget(self)
-        self.history_list.setMaximumHeight(200)
-        self.history_list.setVisible(False)
+        self.history_list.setMaximumHeight(200) # 限制最大高度
+        self.history_list.setVisible(False) # 初始隐藏
         self.history_list.itemClicked.connect(self.use_history_item)
+        # 设置样式
         self.history_list.setStyleSheet("""
             QListWidget {
-                font-size: 16px;
+                font-size: 16px; /* 字体稍大 */
+                border: 1px solid #555; /* 边框 */
+                background-color: #2d2d2d; /* 深色背景 */
+                color: #ccc; /* 浅色文字 */
+                outline: 0; /* 移除焦点时的虚线框 */
             }
             QListWidget::item {
-                padding: 8px;
-                border-bottom: 1px solid #444;
+                padding: 8px 12px; /* 增加内边距 */
+                border-bottom: 1px solid #444; /* 项目间分隔线 */
             }
             QListWidget::item:hover {
-                background-color: #333;
+                background-color: #3a3a3a; /* 悬停背景色 */
+            }
+            QListWidget::item:selected {
+                background-color: #0078d7; /* 选中背景色 (蓝色) */
+                color: white; /* 选中文字颜色 */
             }
         """)
-        self.layout.insertWidget(1, self.history_list)
-        
-        # 输入框焦点事件连接
+        # 将历史列表插入到输入框下方
+        self.layout.insertWidget(1, self.history_list) # 插入到索引1的位置
+
+        # 输入框焦点事件连接 - 保存原始事件处理器
         self._orig_focus_in = self.input_field.focusInEvent
         self._orig_focus_out = self.input_field.focusOutEvent
+        self._orig_key_press = self.input_field.keyPressEvent # <-- 新增：保存原始按键事件
 
-        # 绑定新的 focus 事件：先调用原始，再做自己的事
+        # 绑定新的事件处理器
         self.input_field.focusInEvent = self._input_focus_in
         self.input_field.focusOutEvent = self._input_focus_out
+        self.input_field.keyPressEvent = self._input_key_press # <-- 新增：绑定新的按键事件
 
         # 添加计时器用于延迟隐藏历史记录列表
         self.hide_timer = QTimer()
@@ -381,13 +399,13 @@ class MainWindow(QMainWindow):
         self.result_scroll.setWidgetResizable(True)
         self.result_container = QWidget()
         self.results_layout = QVBoxLayout(self.result_container)
-        self.results_layout.setAlignment(Qt.AlignTop)
+        self.results_layout.setAlignment(Qt.AlignTop) # 结果从顶部开始排列
         self.result_container.setLayout(self.results_layout)
         self.result_scroll.setWidget(self.result_container)
         self.layout.addWidget(self.result_scroll)
 
         self.search_button.clicked.connect(self.start_search)
-        self.input_field.returnPressed.connect(self.start_search)
+        self.input_field.returnPressed.connect(self.start_search) # 保留回车直接搜索
 
         # 添加 ESC 键快捷关闭功能
         self.shortcut_close = QKeySequence("Esc")
@@ -396,7 +414,7 @@ class MainWindow(QMainWindow):
         self.quit_action.triggered.connect(self.close)
         self.addAction(self.quit_action)
 
-        self.compare_data = {}
+        self.compare_data = {} # 初始化 compare_data
 
     def _input_focus_in(self, event):
          """
@@ -407,9 +425,17 @@ class MainWindow(QMainWindow):
          self._orig_focus_in(event)
          # 2) 显示历史
          self.history_list.clear()
-         for item in self.search_history.get_history():
-             self.history_list.addItem(QListWidgetItem(item))
-         self.history_list.setVisible(True)
+         history_items = self.search_history.get_history()
+         if history_items: # 仅当有历史记录时才显示
+             for item in history_items:
+                 self.history_list.addItem(QListWidgetItem(item))
+             self.history_list.setVisible(True)
+             # 调整历史列表宽度以匹配输入框
+             self.history_list.setFixedWidth(self.input_field.width())
+             # 默认不选中任何项，让用户按 ↓ 开始选择
+             self.history_list.setCurrentRow(-1)
+         else:
+             self.history_list.setVisible(False) # 没有历史则不显示
          # 3) 延时 0ms 再全选，保证等 Qt 把焦点内的光标处理完
          QTimer.singleShot(0, self.input_field.selectAll)
 
@@ -417,37 +443,119 @@ class MainWindow(QMainWindow):
         """
         失去焦点时：先调用原始 focusOutEvent，再延时隐藏历史列表
         """
+        # 检查新的焦点是否在历史列表内，如果是，则不隐藏
+        new_focus_widget = QApplication.focusWidget()
+        if new_focus_widget == self.history_list:
+            # 如果焦点转移到列表本身（例如通过Tab键），不立即隐藏
+            # 但我们主要关心鼠标点击，所以延时隐藏通常是好的
+            pass # 可以选择在这里直接返回，避免启动计时器
+
         self._orig_focus_out(event)
-        self.hide_timer.start(200)
+        # 延时隐藏，给点击历史项留出时间
+        self.hide_timer.start(200) # 200ms 延迟
+
+    def _input_key_press(self, event):
+        """
+        处理输入框中的按键事件，特别是方向键和回车键，
+        用于导航和选择搜索历史列表。
+        """
+        # 检查历史列表是否可见且有内容
+        if self.history_list.isVisible() and self.history_list.count() > 0:
+            key = event.key()
+            current_row = self.history_list.currentRow()
+            num_items = self.history_list.count()
+
+            if key == Qt.Key_Down:
+                next_row = min(current_row + 1, num_items - 1)
+                # 如果当前没有选中项（-1），按向下键选中第一个
+                if current_row == -1:
+                    next_row = 0
+                self.history_list.setCurrentRow(next_row)
+                event.accept() # 阻止光标在输入框中移动
+                return # 处理完毕
+
+            elif key == Qt.Key_Up:
+                next_row = max(current_row - 1, 0)
+                 # 如果当前没有选中项（-1），按向上键选中最后一个
+                if current_row == -1:
+                     next_row = num_items - 1 # 选中最后一个
+                self.history_list.setCurrentRow(next_row)
+                event.accept() # 阻止光标在输入框中移动
+                return # 处理完毕
+
+            elif key in (Qt.Key_Return, Qt.Key_Enter):
+                # 如果有选中的历史项，使用该项进行搜索
+                if current_row != -1:
+                    selected_item = self.history_list.item(current_row)
+                    if selected_item:
+                        self.input_field.setText(selected_item.text())
+                        self.hide_history() # 隐藏历史列表
+                        self.start_search() # 开始搜索
+                        event.accept() # 阻止默认的回车事件（如触发行编辑器的returnPressed信号）
+                        return # 处理完毕
+                else:
+                    # 如果没有选中项，但列表可见，按回车则直接搜索当前输入框内容
+                    # 并且隐藏列表
+                    self.hide_history()
+                    # 让原始的回车处理（连接到start_search）执行
+                    # 但这里我们还是调用 start_search 并阻止事件，避免潜在的双重调用
+                    self.start_search()
+                    event.accept()
+                    return
+
+            elif key == Qt.Key_Escape:
+                 # 按 ESC 时，如果历史列表可见，则隐藏它，否则让主窗口处理关闭
+                 self.hide_history()
+                 event.accept()
+                 return # 阻止 ESC 关闭窗口（如果列表可见）
+
+        # 对于其他所有按键（包括字母、数字、退格等）或历史列表不可见时
+        # 调用原始的 keyPressEvent 处理函数
+        self._orig_key_press(event)
+
 
     def hide_history(self):
         """隐藏搜索历史记录"""
         self.history_list.setVisible(False)
 
     def use_history_item(self, item):
-        """使用历史记录项"""
+        """点击历史记录项时触发"""
         self.input_field.setText(item.text())
-        self.history_list.setVisible(False)
-        self.start_search()
-    
+        self.hide_history() # 隐藏列表
+        self.start_search() # 开始搜索
+
     # 修改start_search方法，添加历史记录保存功能
     def start_search(self):
         keywords = self.input_field.text()
         if not keywords.strip():
+            # 如果输入为空，可以选择清除结果或不执行任何操作
+            self.clear_results()
             return
-            
-        # 保存到搜索历史
-        self.search_history.add(keywords.strip())
-        
-        # 原有的搜索逻辑保持不变
-        self.compare_data = load_compare_data()
-        self.loading_label.show()
-        self.clear_results()
-        self.search_button.setEnabled(False)
-        self.input_field.setEnabled(False)
 
+        # 保存到搜索历史 (确保在搜索前保存)
+        self.search_history.add(keywords.strip())
+
+        # 确保历史列表此时是隐藏的
+        self.hide_history()
+
+        # 加载 compare_data 放在主线程，避免阻塞 worker
+        self.compare_data = load_compare_data()
+
+        self.loading_label.show()
+        self.clear_results() # 清除旧结果
+        self.search_button.setEnabled(False)
+        self.input_field.setEnabled(False) # 禁用输入直到搜索完成
+
+        # 创建并启动后台搜索线程
         self.worker = SearchWorker(keywords, json_path)
         self.worker.results_ready.connect(self.show_results)
+        # 线程结束后重新启用UI
+        self.worker.finished.connect(lambda: (
+            self.loading_label.hide(),
+            self.search_button.setEnabled(True),
+            self.input_field.setEnabled(True),
+            self.input_field.setFocus() # 搜索结束后重新聚焦输入框
+        ))
         self.worker.start()
 
     def clear_results(self):
@@ -455,12 +563,10 @@ class MainWindow(QMainWindow):
         while self.results_layout.count():
             child = self.results_layout.takeAt(0)
             if child.widget():
-                child.widget().deleteLater()
+                child.widget().deleteLater() # 安全删除控件
 
     def show_results(self, results):
-        self.loading_label.hide()
-        self.search_button.setEnabled(True)
-        self.input_field.setEnabled(True)
+        # 注意：此方法现在由 results_ready 信号触发，在主线程执行
 
         # 解包搜索结果
         matched_names_stocks = results['matched_names_stocks']
@@ -468,12 +574,13 @@ class MainWindow(QMainWindow):
         matched_names_stocks_tag = results['matched_names_stocks_tag']
         matched_names_etfs_tag = results['matched_names_etfs_tag']
         matched_names_stocks_name = results['matched_names_stocks_name']
-        matched_names_etfs_name = results['matched_names_etfs_name']
+        matched_names_etfs_name = results['matched_names_etfs_name'] # 注意ETF可能没有name字段
         matched_names_stocks_symbol = results['matched_names_stocks_symbol']
         matched_names_etfs_symbol = results['matched_names_etfs_symbol']
 
-        search_term = self.input_field.text().strip().upper()
+        search_term = self.input_field.text().strip().upper() # 获取当前搜索词用于排序
 
+        # 排序函数：将与搜索词完全匹配的 symbol 放到最前面
         def sort_by_exact_match(items, search_term):
             exact_matches = []
             partial_matches = []
