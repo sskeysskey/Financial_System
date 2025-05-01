@@ -324,7 +324,9 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("公司、股票和ETF搜索")
-        self.setGeometry(350, 200, 800, 600)
+        # 前面两个是配置整个窗口界面的位置，后面是界面的宽度和高度
+        self.setGeometry(300, 200, 1000, 600)
+        
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout(self.central_widget)
