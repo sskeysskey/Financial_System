@@ -379,6 +379,10 @@ class MainWindow(QMainWindow):
         self._orig_focus_out = self.input_field.focusOutEvent
         self._orig_key_press = self.input_field.keyPressEvent # <-- 新增：保存原始按键事件
 
+        # 保存并重载 mousePressEvent
+        self._orig_mouse_press = self.input_field.mousePressEvent
+        self.input_field.mousePressEvent = self._input_mouse_press
+
         # 绑定新的事件处理器
         self.input_field.focusInEvent = self._input_focus_in
         self.input_field.focusOutEvent = self._input_focus_out
@@ -418,28 +422,34 @@ class MainWindow(QMainWindow):
 
         self.compare_data = {} # 初始化 compare_data
 
+    def display_history(self):
+        """加载并显示搜索历史列表（不做全选）"""
+        self.history_list.clear()
+        history_items = self.search_history.get_history()
+        if history_items:
+            for item in history_items:
+                self.history_list.addItem(QListWidgetItem(item))
+            self.history_list.setVisible(True)
+            self.history_list.setFixedWidth(self.input_field.width())
+            self.history_list.setCurrentRow(-1)
+        else:
+            self.history_list.setVisible(False)
+    
     def _input_focus_in(self, event):
-         """
-         聚焦时：先调用原始 focusInEvent 保证光标显示，
-         然后显示历史并全选全部文本。
-         """
-         # 1) 原始处理（光标闪烁、光标位置等）
-         self._orig_focus_in(event)
-         # 2) 显示历史
-         self.history_list.clear()
-         history_items = self.search_history.get_history()
-         if history_items: # 仅当有历史记录时才显示
-             for item in history_items:
-                 self.history_list.addItem(QListWidgetItem(item))
-             self.history_list.setVisible(True)
-             # 调整历史列表宽度以匹配输入框
-             self.history_list.setFixedWidth(self.input_field.width())
-             # 默认不选中任何项，让用户按 ↓ 开始选择
-             self.history_list.setCurrentRow(-1)
-         else:
-             self.history_list.setVisible(False) # 没有历史则不显示
-         # 3) 延时 0ms 再全选，保证等 Qt 把焦点内的光标处理完
-         QTimer.singleShot(0, self.input_field.selectAll)
+        # 1) 原始处理
+        self._orig_focus_in(event)
+        # 2) 显示历史并全选
+        self.display_history()
+        QTimer.singleShot(0, self.input_field.selectAll)
+
+    def _input_mouse_press(self, event):
+        """
+        当已经有焦点时，再次点击输入框也要弹出历史列表
+        """
+        # 1) 先调用原始的 mousePressEvent，让光标定位
+        self._orig_mouse_press(event)
+        # 2) 再显示历史列表（但不 selectAll）
+        self.display_history()
 
     def _input_focus_out(self, event):
         """
