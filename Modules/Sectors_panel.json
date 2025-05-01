@@ -4,7 +4,9 @@
     },
     "Real_Estate": {},
     "Energy": {},
-    "Technology": {},
+    "Technology": {
+        "ENPH": ""
+    },
     "Consumer_Cyclical": {
         "DECK": "",
         "AMZN": "",
@@ -13,7 +15,8 @@
     "Utilities": {},
     "Consumer_Defensive": {
         "FLO": "关注财报",
-        "GIS": "关注财报"
+        "GIS": "关注财报",
+        "LANC": ""
     },
     "Industrials": {
         "BAH": "关注财报",

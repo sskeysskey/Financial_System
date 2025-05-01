@@ -143,7 +143,7 @@ def main():
         location, _ = find_image_on_screen(templates[template_key])
         return location is not None
 
-    found_poe = find_and_click("poethumb", 50)
+    found_poe = find_and_click("poethumb", 40)
     if found_poe:
         pyautogui.click(button='right')
         sleep(1)
@@ -159,7 +159,7 @@ def main():
     execute_applescript(script_path)
     sleep(1)
     if not found_poe:
-        found_poe = find_and_click("poethumb", 50)
+        found_poe = find_and_click("poethumb", 40)
         if found_poe:
             pyautogui.click(button='right')
             while not find_and_click("poecopy"):

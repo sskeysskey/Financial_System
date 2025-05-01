@@ -1,17 +1,28 @@
-from selenium import webdriver
-from selenium.webdriver.common.by import By
 import os
 import json
 import shutil
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-import pyautogui
 import random
 import time
 import glob
+import pyautogui
 import threading
+import logging
 
-# 添加鼠标移动功能的函数x
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+# ---------------------- 日志配置 ----------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+# ---------------------- 鼠标防挂机线程 ----------------------
 def move_mouse_periodically():
     while True:
         try:
@@ -36,6 +47,7 @@ def move_mouse_periodically():
 mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
 mouse_thread.start()
 
+# ---------------------- Selenium 配置 ----------------------
 chrome_options = Options()
 chrome_options.add_argument("--disable-extensions")
 chrome_options.add_argument("--disable-gpu")
@@ -44,128 +56,129 @@ chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--blink-settings=imagesEnabled=false")  # 禁用图片加载
 chrome_options.page_load_strategy = 'eager'  # 使用eager策略，DOM准备好就开始
 
-# ChromeDriver 路径
 chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
-# 设置 ChromeDriver
 service = Service(executable_path=chrome_driver_path)
 driver = webdriver.Chrome(service=service, options=chrome_options)
 
+# ---------------------- 工具函数 ----------------------
 def convert_volume(volume_str):
     """转换交易量字符串为整数"""
     try:
-        # 移除所有逗号
+        orig = volume_str
         volume_str = volume_str.replace(",", "")
-        
-        # 处理百万单位
         if 'M' in volume_str:
-            return int(float(volume_str.replace('M', '')) * 1000000)
-        # 处理千单位
+            val = int(float(volume_str.replace('M', '')) * 1_000_000)
         elif 'K' in volume_str:
-            return int(float(volume_str.replace('K', '')) * 1000)
-        # 处理十亿单位
+            val = int(float(volume_str.replace('K', '')) * 1_000)
         elif 'B' in volume_str:
-            return int(float(volume_str.replace('B', '')) * 1000000000)
-        # 处理普通数字
+            val = int(float(volume_str.replace('B', '')) * 1_000_000_000)
         else:
-            return int(float(volume_str))
+            val = int(float(volume_str))
+        logging.debug(f"convert_volume: '{orig}' -> {val}")
+        return val
     except Exception as e:
-        print(f"转换交易量出错: {volume_str} - {str(e)}")
+        logging.error(f"转换交易量出错: '{volume_str}' - {e}")
         return 0
-
-def fetch_data(url):
-    try:
-        # 等待页面加载
-        driver.get(url)
-        data_list = []
-        
-        # 找到所有的行
-        rows = driver.find_elements(By.CSS_SELECTOR, "tbody.body tr.row")
-        
-        for row in rows:
-            try:
-                # 获取symbol
-                symbol_element = row.find_element(By.CSS_SELECTOR, "span.symbol")
-                symbol = symbol_element.text.strip()
-                
-                # 获取name
-                name_element = row.find_element(By.CSS_SELECTOR, "div[title]")
-                name = name_element.get_attribute("title").strip()
-                
-                # 获取volume并处理
-                volume_element = row.find_element(By.CSS_SELECTOR, "fin-streamer[data-field='regularMarketVolume']")
-                volume_str = volume_element.text.strip()
-                volume = convert_volume(volume_str)
-                
-                # 添加到数据列表
-                if symbol and name and volume > 0:
-                    data_list.append((symbol, name, volume))
-                    
-            except Exception as e:
-                print(f"处理行时出错: {str(e)}")
-                continue
-                
-        return data_list
-        
-    except Exception as e:
-        print(f"获取数据时出错: {str(e)}")
-        return []
-
-def save_data(urls, existing_json, new_file, blacklist_file):
-    # 加载黑名单
-    blacklist = load_blacklist(blacklist_file)
-
-    # 首先访问Yahoo Finance主页
-    driver.get("https://finance.yahoo.com/markets/etfs/top/")
-    # 等待2秒
-    time.sleep(2)
-
-    # 读取已存在的 symbol
-    with open(existing_json, 'r') as json_file:
-        data = json.load(json_file)
-        existing_symbols = {etf['symbol'] for etf in data['etfs']}
-    
-    # 收集新数据
-    total_data_list = []
-    filter_data_list = []
-    for url in urls:
-        data_list = fetch_data(url)
-        for symbol, name, volume in data_list:
-            # 检查是否在黑名单中
-            if is_blacklisted(symbol, blacklist):
-                continue  # 跳过黑名单中的symbol
-                
-            if volume > 200000:
-                total_data_list.append((symbol, name, volume))
-                if symbol not in existing_symbols:
-                    filter_data_list.append(f"{symbol}: {name}, {volume}")
-                    existing_symbols.add(symbol)
-
-    # 如果有新的条目，写入 new_file，否则打印提示
-    if filter_data_list:
-        with open(new_file, "w") as file:
-            for i, line in enumerate(filter_data_list):
-                # 最后一行不加换行
-                suffix = "\n" if i < len(filter_data_list) - 1 else ""
-                file.write(line + suffix)
-        print(f"已写入 {len(filter_data_list)} 条新ETF 到：{new_file}")
-    else:
-        print("没有新的 ETF 需要写入。")
 
 def load_blacklist(blacklist_file):
     """加载黑名单数据"""
     try:
-        with open(blacklist_file, 'r') as file:
-            blacklist_data = json.load(file)
-            return set(blacklist_data.get('etf', []))  # 只返回etf分组的数据
+        with open(blacklist_file, 'r') as f:
+            data = json.load(f)
+        bl = set(data.get('etf', []))
+        logging.info(f"已加载黑名单，共 {len(bl)} 条")
+        return bl
     except Exception as e:
-        print(f"加载黑名单文件出错: {str(e)}")
+        logging.error(f"加载黑名单文件出错: {e}")
         return set()
 
 def is_blacklisted(symbol, blacklist):
-    """检查symbol是否在黑名单中"""
     return symbol in blacklist
 
-# URL列表
+# ---------------------- 抓取逻辑 ----------------------
+def fetch_data(url):
+    logging.info(f"开始抓取: {url}")
+    try:
+        driver.get(url)
+        # 等待 tbody 下至少一行 tr 出现
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "tbody tr"))
+        )
+        rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
+        logging.info(f"在 {url} 找到 {len(rows)} 行数据")
+
+        data_list = []
+        for idx, row in enumerate(rows, start=1):
+            try:
+                # symbol
+                symbol = row.find_element(By.CSS_SELECTOR, "span.symbol").text.strip()
+                # name
+                name = row.find_element(By.CSS_SELECTOR, "td:nth-child(2) div").get_attribute("title").strip()
+                # volume，用模糊匹配 data-field 属性
+                vol_el = row.find_element(
+                    By.CSS_SELECTOR,
+                    "fin-streamer[data-field*='regularMarketVolume'], fin-streamer[data-field*='regular MarketVolume']"
+                )
+                volume_str = vol_el.text.strip()
+                volume = convert_volume(volume_str)
+
+                logging.debug(f"Row {idx}: {symbol} | {name} | {volume_str} -> {volume}")
+                if symbol and name and volume > 0:
+                    data_list.append((symbol, name, volume))
+                else:
+                    logging.warning(f"Row {idx} 数据不完整或 volume=0，跳过")
+            except Exception as e:
+                logging.error(f"处理第 {idx} 行时出错: {e}")
+
+        return data_list
+
+    except Exception as e:
+        logging.error(f"获取数据时出错: {e}")
+        return []
+
+def save_data(urls, existing_json, new_file, blacklist_file):
+    logging.info("===== 开始保存数据 =====")
+    blacklist = load_blacklist(blacklist_file)
+
+    # 预热主页
+    driver.get("https://finance.yahoo.com/markets/etfs/top/")
+    time.sleep(2)
+
+    with open(existing_json, 'r') as f:
+        data = json.load(f)
+    existing_symbols = {etf['symbol'] for etf in data.get('etfs', [])}
+    logging.info(f"已存在的 ETF 数量: {len(existing_symbols)}")
+
+    total_data_list = []
+    filter_data_list = []
+
+    for url in urls:
+        fetched = fetch_data(url)
+        logging.info(f"{url} 抓取到 {len(fetched)} 条记录")
+        for symbol, name, volume in fetched:
+            if is_blacklisted(symbol, blacklist):
+                logging.info(f"Symbol {symbol} 在黑名单中，跳过")
+                continue
+            if volume <= 200_000:
+                logging.debug(f"{symbol} volume={volume} <=200k，跳过")
+                continue
+
+            total_data_list.append((symbol, name, volume))
+            if symbol not in existing_symbols:
+                logging.info(f"发现新 ETF: {symbol} ({name}), volume={volume}")
+                filter_data_list.append(f"{symbol}: {name}, {volume}")
+                existing_symbols.add(symbol)
+
+    if filter_data_list:
+        with open(new_file, "w") as f:
+            for i, line in enumerate(filter_data_list):
+                suffix = "\n" if i < len(filter_data_list) - 1 else ""
+                f.write(line + suffix)
+        logging.info(f"已写入 {len(filter_data_list)} 条新 ETF 到：{new_file}")
+    else:
+        logging.info("没有新的 ETF 需要写入。")
+
+# ---------------------- 主流程 ----------------------
 urls = [
     "https://finance.yahoo.com/markets/etfs/top/?start=0&count=100",
     "https://finance.yahoo.com/markets/etfs/top/?start=100&count=100",
@@ -176,22 +189,20 @@ urls = [
 ]
 
 existing_json = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
-new_file = '/Users/yanzhang/Documents/News/ETFs_new.txt'
+new_file       = '/Users/yanzhang/Documents/News/ETFs_new.txt'
 blacklist_file = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'
 
 try:
     save_data(urls, existing_json, new_file, blacklist_file)
 finally:
     driver.quit()
-print("所有爬取任务完成。")
+    logging.info("Selenium 已退出，抓取任务结束。")
 
-# 源目录和文件模式
+# ---------------------- 文件移动 ----------------------
 downloads_dir = "/Users/yanzhang/Downloads/"
 source_pattern = os.path.join(downloads_dir, "screener_*.txt")
-source_file2 = "/Users/yanzhang/Documents/News/screener_sectors.txt"
-
-# 目标目录
-target_dir = "/Users/yanzhang/Documents/News/backup"
+source_file2   = "/Users/yanzhang/Documents/News/screener_sectors.txt"
+target_dir     = "/Users/yanzhang/Documents/News/backup"
 
 # 确保目标目录存在
 os.makedirs(target_dir, exist_ok=True)
@@ -200,14 +211,14 @@ os.makedirs(target_dir, exist_ok=True)
 for src in glob.glob(source_pattern):
     dst = os.path.join(target_dir, os.path.basename(src))
     shutil.move(src, dst)
-    print(f"已移动: {src} -> {dst}")
+    logging.info(f"已移动: {src} -> {dst}")
 
 # 单独移动第二个文件，先检查是否存在
 if os.path.exists(source_file2):
     dst2 = os.path.join(target_dir, os.path.basename(source_file2))
     shutil.move(source_file2, dst2)
-    print(f"已移动: {source_file2} -> {dst2}")
+    logging.info(f"已移动: {source_file2} -> {dst2}")
 else:
-    print(f"警告: 文件不存在，跳过移动: {source_file2}")
+    logging.warning(f"文件不存在，跳过移动: {source_file2}")
 
-print(f"所有文件处理完毕，目录: {target_dir}")
+logging.info(f"所有文件处理完毕，目录: {target_dir}")

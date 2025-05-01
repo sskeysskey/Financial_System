@@ -50,8 +50,7 @@
         "SE",
         "JD",
         "RCL",
-        "HLT",
-        "GM"
+        "HLT"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -89,8 +88,7 @@
         "KMI",
         "MPLX",
         "LNG",
-        "TRP",
-        "OKE"
+        "TRP"
     ],
     "Financial_Services": [
         "BRK-A",
