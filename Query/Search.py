@@ -332,12 +332,14 @@ class MainWindow(QMainWindow):
         # 搜索输入区域
         self.input_layout = QHBoxLayout()
         self.input_field = QLineEdit()
-        self.input_field.setFixedHeight(30)
+        self.input_field.setFixedHeight(40)
         self.input_field.setFont(QFont("Arial", 18))
         self.search_button = QPushButton("搜索")
-        self.search_button.setFixedSize(60, 30)
-        self.input_layout.addWidget(self.input_field, 7)
-        self.input_layout.addWidget(self.search_button, 1)
+        # --- 调整按钮高度以匹配输入框 ---
+        self.search_button.setFixedHeight(45) # 使按钮高度与输入框一致
+        self.search_button.setFixedWidth(80) # 可以适当增加宽度
+        self.input_layout.addWidget(self.input_field) # 默认拉伸
+        self.input_layout.addWidget(self.search_button) # 不拉伸
         self.layout.addLayout(self.input_layout)
 
         # 搜索历史管理器
