@@ -212,6 +212,9 @@ def main():
     
     # 获取当前日期
     current_date = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+
+    # 计算“前天”日期
+    prev_date = (datetime.datetime.now() - datetime.timedelta(days=2)).strftime('%Y-%m-%d')
     
     try:
         # 逐个分组抓取股票数据
@@ -256,11 +259,26 @@ def main():
                             ''', (current_date, display_name, price))
                             conn.commit()
                             
-                            print(f"已保存 {symbol} ({display_name}) 到 {sector} 表: 价格={price}")
+                            print(f"已保存 {symbol} 至 {sector}：价格={price}")
                             
-                            # 如果是empty模式，则在成功保存后清除该symbol
+                            # 1) 清除 JSON 中的 symbol
                             if args.mode.lower() == 'empty':
                                 clear_symbols_from_json(json_file_path, sector, symbol)
+                                # 2) 比较“前天”价格
+                                cursor.execute(f'''
+                                    SELECT price FROM {sector}
+                                    WHERE date = ? AND name = ?
+                                ''', (prev_date, display_name))
+                                row = cursor.fetchone()
+                                if row:
+                                    prev_price = row[0]
+                                    if prev_price == price:
+                                        show_alert(
+                                            f"{display_name} 在 {sector} 中：\n"
+                                            f"{prev_date} 价格 = {prev_price}\n"
+                                            f"{current_date} 价格 = {price}\n"
+                                            "价格未发生变化！"
+                                        )
                         else:
                             print(f"抓取 {symbol} 失败，未能获取到价格数据")
                     else:
@@ -283,11 +301,27 @@ def main():
                             ''', (current_date, display_name, price, volume))
                             conn.commit()
                             
-                            print(f"已保存 {symbol} ({display_name}) 到 {sector} 表: 价格={price}, 成交量={volume}")
+                            print(f"已保存 {symbol} 至 {sector}：价格={price}, 成交量={volume}")
                             
                             # 如果是empty模式，则在成功保存后清除该symbol
                             if args.mode.lower() == 'empty':
                                 clear_symbols_from_json(json_file_path, sector, symbol)
+                                
+                                # 比较“前天”价格
+                                cursor.execute(f'''
+                                    SELECT price FROM {sector}
+                                    WHERE date = ? AND name = ?
+                                ''', (prev_date, display_name))
+                                row = cursor.fetchone()
+                                if row:
+                                    prev_price = row[0]
+                                    if prev_price == price:
+                                        show_alert(
+                                            f"{display_name} 在 {sector} 中：\n"
+                                            f"{prev_date} 价格 = {prev_price}\n"
+                                            f"{current_date} 价格 = {price}\n"
+                                            "价格未发生变化！"
+                                        )
                         else:
                             print(f"抓取 {symbol} 失败，未能获取到完整数据")
                 

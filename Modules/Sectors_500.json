@@ -178,7 +178,6 @@
         "GSK",
         "ZTS",
         "CVS",
-        "BDX",
         "MCK",
         "COR"
     ],
@@ -216,7 +215,8 @@
         "JCI",
         "HWM",
         "NSC",
-        "GEV"
+        "GEV",
+        "GWW"
     ],
     "Real_Estate": [
         "PLD",
