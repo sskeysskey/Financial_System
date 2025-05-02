@@ -344,6 +344,9 @@ class MainWindow(QMainWindow):
         self.input_layout.addWidget(self.search_button) # 不拉伸
         self.layout.addLayout(self.input_layout)
 
+        # 只有当第一个参数是 'paste' 时，我们才 suppress history
+        self.suppress_history = len(sys.argv) > 1 and sys.argv[1] == "paste"
+
         # 搜索历史管理器
         self.search_history = SearchHistory()
         
@@ -425,7 +428,11 @@ class MainWindow(QMainWindow):
         self.compare_data = {} # 初始化 compare_data
 
     def display_history(self):
-        """加载并显示搜索历史列表（不做全选）"""
+        """加载并显示搜索历史列表"""
+        # 如果被 suppress 了，就直接返回
+        if getattr(self, "suppress_history", False):
+            return
+
         self.history_list.clear()
         history_items = self.search_history.get_history()
         if history_items:
@@ -440,7 +447,11 @@ class MainWindow(QMainWindow):
     def _input_focus_in(self, event):
         # 1) 原始处理
         self._orig_focus_in(event)
-        # 2) 显示历史并全选
+        
+        # 如果 suppress 了，就不弹
+        if getattr(self, "suppress_history", False):
+            return
+        # 2) 否则显示历史并全选
         self.display_history()
         QTimer.singleShot(0, self.input_field.selectAll)
 
@@ -450,8 +461,9 @@ class MainWindow(QMainWindow):
         """
         # 1) 先调用原始的 mousePressEvent，让光标定位
         self._orig_mouse_press(event)
-        # 2) 再显示历史列表（但不 selectAll）
-        self.display_history()
+        # 2) 再显示历史列表（但不 selectAll），除非 suppress
+        if not getattr(self, "suppress_history", False):
+            self.display_history()
 
     def _input_focus_out(self, event):
         """
