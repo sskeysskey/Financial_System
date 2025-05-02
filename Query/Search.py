@@ -461,9 +461,13 @@ class MainWindow(QMainWindow):
         """
         # 1) 先调用原始的 mousePressEvent，让光标定位
         self._orig_mouse_press(event)
-        # 2) 再显示历史列表（但不 selectAll），除非 suppress
-        if not getattr(self, "suppress_history", False):
-            self.display_history()
+
+        # 2) 取消初次 suppress 的限制，以后都可以弹历史
+        if getattr(self, "suppress_history", False):
+            self.suppress_history = False
+
+        # 3) 无条件弹出历史列表
+        self.display_history()
 
     def _input_focus_out(self, event):
         """
