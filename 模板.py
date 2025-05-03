@@ -1,4 +1,48 @@
 # ——————————————————————————————————————————————————————————————————————————————————————————
+def show_toast(message, duration=2000):
+    """
+    在屏幕右下角弹出一个无边框悬浮窗，duration 毫秒后自动销毁。
+    """
+    # 新建一个顶层窗口
+    root = tk.Tk()
+    root.overrideredirect(True)           # 去掉标题栏和边框
+    root.attributes('-topmost', True)     # 置顶
+
+    # 如果想让整个窗口背景也是绿色，可以加上这一句
+    root.configure(bg='green')
+
+    # 文字标签
+    label = tk.Label(
+        root,
+        text=message,
+        bg='green',     # 背景改成绿色
+        fg='white',     # 字体改成黑色
+        font=('Helvetica', 22),
+        justify='left',
+        anchor='w',
+        padx=10,
+        pady=5
+    )
+    label.pack()
+
+    # 计算放在屏幕右下角
+    root.update_idletasks()
+    w = root.winfo_width()
+    h = root.winfo_height()
+    sw = root.winfo_screenwidth()
+    sh = root.winfo_screenheight()
+    
+    # 水平居中，垂直居中下方偏移 50px
+    x = (sw - w) // 2
+    # 换成你想要的偏移量
+    y = (sh - h) // 2
+    
+    root.geometry(f'{w}x{h}+{x}+{y}')
+
+    # duration 毫秒后销毁自己
+    root.after(duration, root.destroy)
+    root.mainloop()
+# ——————————————————————————————————————————————————————————————————————————————————————————
 def Copy_Command_C():
     script = '''
     tell application "System Events"

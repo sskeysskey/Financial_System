@@ -1,12 +1,9 @@
 {
-    "Basic_Materials": {
-        "WLK": ""
-    },
+    "Basic_Materials": {},
     "Real_Estate": {},
     "Energy": {},
     "Technology": {},
     "Consumer_Cyclical": {
-        "AMZN": "",
         "H": ""
     },
     "Utilities": {},
@@ -22,9 +19,7 @@
         "BN": "关注财报"
     },
     "Healthcare": {
-        "UNH": "",
-        "BDX": "",
-        "HOLX": ""
+        "UNH": ""
     },
     "Bonds": {
         "US10Y": "",

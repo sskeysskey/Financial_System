@@ -5,6 +5,53 @@ import json
 import subprocess
 import sys
 
+# 在文件开头加上
+import tkinter as tk
+
+def show_toast(message, duration=2000):
+    """
+    在屏幕右下角弹出一个无边框悬浮窗，duration 毫秒后自动销毁。
+    """
+    # 新建一个顶层窗口
+    root = tk.Tk()
+    root.overrideredirect(True)           # 去掉标题栏和边框
+    root.attributes('-topmost', True)     # 置顶
+
+    # 如果想让整个窗口背景也是绿色，可以加上这一句
+    root.configure(bg='green')
+
+    # 文字标签
+    label = tk.Label(
+        root,
+        text=message,
+        bg='green',     # 背景改成绿色
+        fg='white',     # 字体改成黑色
+        font=('Helvetica', 22),
+        justify='left',
+        anchor='w',
+        padx=10,
+        pady=5
+    )
+    label.pack()
+
+    # 计算放在屏幕右下角
+    root.update_idletasks()
+    w = root.winfo_width()
+    h = root.winfo_height()
+    sw = root.winfo_screenwidth()
+    sh = root.winfo_screenheight()
+    
+    # 水平居中，垂直居中下方偏移 50px
+    x = (sw - w) // 2 - 120
+    # 换成你想要的偏移量
+    y = (sh - h) // 2
+    
+    root.geometry(f'{w}x{h}+{x}+{y}')
+
+    # duration 毫秒后销毁自己
+    root.after(duration, root.destroy)
+    root.mainloop()
+
 def Copy_Command_C():
     script = '''
     tell application "System Events"
@@ -81,6 +128,7 @@ def insert_data(db_path, date, name, price):
         current_date = datetime.date.fromisoformat(date)
         
         allowed_to_insert, last_date, last_price = check_last_record_date(cursor, name, current_date)
+        formatted_last = f"{last_price:+.2f}%"
         
         if allowed_to_insert:
             try:
@@ -89,15 +137,18 @@ def insert_data(db_path, date, name, price):
                     VALUES (?, ?, ?)
                 """, (date, name, price))
                 conn.commit()
-                show_alert(f"已成功添加：\n名称 {name}\n日期 {date}\n价格 {price}")
+                show_toast(f"成功！\n\n"
+                           f"写入价格：{last_price}", duration=3000)
                 return True
             except sqlite3.IntegrityError:
                 show_alert(f"{name} 在 {date} 的记录已存在。")
         else:
             if last_date and last_price is not None:
-                show_alert(f"{name} 的最新记录距离现在不足1个月，无法添加新数据。\n"
-                           f"最新记录日期：{last_date}\n"
-                           f"价格：{last_price}")
+                # show_toast(f"{name} 的最新记录距离现在不足1个月，无法添加新数据。\n"
+                #            f"最新记录日期：{last_date}\n\n"
+                #            f"价格：{last_price}", duration=3000)
+                show_toast(f"失败！\n\n"
+                           f"{formatted_last}", duration=4000)
             else:
                 show_alert(f"{name} 的最新记录距离现在不足1个月，无法添加新数据。")
         return False
