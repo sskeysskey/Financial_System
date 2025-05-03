@@ -89,20 +89,31 @@ start_date = current_date + timedelta(days=(6 - current_date.weekday()))
 end_date = start_date + timedelta(days=6)
 
 Event_Filter = {
-    "GDP 2nd Estimate*", "Non-Farm Payrolls*", "Core PCE Price Index MM *",
-    "Core PCE Price Index YY*", "ISM Manufacturing PMI",
-    "ADP National Employment*", "International Trade $ *",
-    "ISM N-Mfg PMI", "CPI YY, NSA*", "Core CPI MM, SA*",
-    "CPI MM, SA*", "Core CPI YY, NSA*", "Fed Funds Tgt Rate *",
-    "PPI Final Demand YY*", "PPI exFood/Energy MM*", "PPI ex Food/Energy/Tr MM*",
-    "PPI Final Demand MM*", "Retail Sales MM *", "GDP Final*", "Core PCE Prices Fnal*",
-    "PCE Prices Final *", "GDP Cons Spending Final*", "Pending Homes Index",
-    "PCE Price Index MM*", "Unemployment Rate*", "U Mich Sentiment Prelim",
-    "New Home Sales-Units *", "New Home Sales Chg MM *",
-    "GDP Cons Spending Prelim*", "Core PCE Prices Prelim*",
-    "Corporate Profits Prelim*", "Initial Jobless Clm*", "U Mich Sentiment Final",
-    "GDP Advance*", "PCE Price Index YY *", "PPI exFood/Energy YY*", "Import Prices MM*",
-    "Import Prices YY*", "U Mich Sentiment Final*", "GDP Advance", "ADP National Employment"
+    "GDP 2nd Estimate*", "GDP 2nd Estimate", "Non-Farm Payrolls*", "Non-Farm Payrolls",
+    "Core PCE Price Index MM *", "Core PCE Price Index MM", "Core PCE Price Index MM*",
+    "Core PCE Price Index YY*", "Core PCE Price Index YY",
+    "ISM Manufacturing PMI", "ISM Manufacturing PMI*","ISM Manufacturing PMI *",
+    "ADP National Employment*", "ADP National Employment", "International Trade",
+    "International Trade $ *", "International Trade $", "International Trade $*",
+    "ISM N-Mfg PMI", "ISM N-Mfg PMI*", "ISM N-Mfg PMI *", "CPI YY, NSA*", "CPI YY, NSA",
+    "Core CPI MM, SA*", "Core CPI MM, SA", "CPI MM, SA*", "CPI MM, SA",
+    "Core CPI YY, NSA*", "Core CPI YY, NSA", "Fed Funds Tgt Rate *", "Fed Funds Tgt Rate",
+    "PPI Final Demand YY*", "PPI Final Demand YY", "PPI exFood/Energy MM*", "PPI exFood/Energy MM",
+    "PPI ex Food/Energy/Tr MM*", "PPI ex Food/Energy/Tr MM",
+    "PPI Final Demand MM*", "PPI Final Demand MM",
+    "Retail Sales MM *", "Retail Sales MM", "Retail Sales MM*",
+    "GDP Final*", "GDP Final", "Core PCE Prices Fnal*", "Core PCE Prices Fnal",
+    "PCE Prices Final *", "PCE Prices Final", "GDP Cons Spending Final*", "GDP Cons Spending Final",
+    "PCE Price Index MM*", "PCE Price Index MM", "Unemployment Rate*", "Unemployment Rate",
+    "U Mich Sentiment Prelim", "U Mich Sentiment Prelim*", "U Mich Sentiment Prelim *",
+    "New Home Sales-Units *", "New Home Sales-Units", "Initial Jobless Clm*",  "Initial Jobless Clm",
+    "New Home Sales Chg MM *", "New Home Sales Chg MM", "GDP Advance*", "GDP Advance",
+    "GDP Cons Spending Prelim*", "GDP Cons Spending Prelim",
+    "Core PCE Prices Prelim*",  "Core PCE Prices Prelim",
+    "Corporate Profits Prelim*", "Corporate Profits Prelim", "PCE Price Index YY*",
+    "PCE Price Index YY *", "PCE Price Index YY", "PPI exFood/Energy YY*", "PPI exFood/Energy YY",
+    "Import Prices MM*", "Import Prices MM", "U Mich Sentiment Final*", "U Mich Sentiment Final"
+    "Import Prices YY*", "Import Prices YY"
 }
 
 # 定义一个包含所有目标国家代码的集合

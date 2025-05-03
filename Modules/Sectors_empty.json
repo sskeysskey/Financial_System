@@ -1,20 +1,24 @@
 {
-    "Bonds": [],
-    "Currencies": [],
-    "Crypto": [],
-    "Indices": [],
-    "Commodities": [],
-    "ETFs": [],
-    "Economics": [],
-    "Basic_Materials": [],
-    "Communication_Services": [],
-    "Consumer_Cyclical": [],
-    "Consumer_Defensive": [],
-    "Energy": [],
-    "Financial_Services": [],
-    "Healthcare": [],
-    "Industrials": [],
-    "Real_Estate": [],
-    "Technology": [],
-    "Utilities": []
+  "Bonds": [],
+  "Currencies": [],
+  "Crypto": [],
+  "Indices": [],
+  "Commodities": [],
+  "ETFs": [],
+  "Economics": [],
+  "Basic_Materials": [],
+  "Communication_Services": [],
+  "Consumer_Cyclical": [
+    "BERY"
+  ],
+  "Consumer_Defensive": [],
+  "Energy": [],
+  "Financial_Services": [],
+  "Healthcare": [],
+  "Industrials": [
+    "BECN"
+  ],
+  "Real_Estate": [],
+  "Technology": [],
+  "Utilities": []
 }

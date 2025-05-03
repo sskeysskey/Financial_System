@@ -640,7 +640,6 @@
         "FND",
         "WYNN",
         "THO",
-        "COLM",
         "RH",
         "FUN",
         "ASO",
@@ -797,7 +796,8 @@
         "TECH",
         "ACHC",
         "AES",
-        "AVTR"
+        "AVTR",
+        "COLM"
     ],
     "black_keywords": [
         "Cotton",
