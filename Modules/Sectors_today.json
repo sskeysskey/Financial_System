@@ -409,7 +409,8 @@
     "REGL",
     "QINT",
     "RSPU",
-    "HTUS"
+    "HTUS",
+    "DXJ"
   ],
   "Basic_Materials": [
     "LIN",
