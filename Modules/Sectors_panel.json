@@ -139,9 +139,7 @@
         "USDINR": "印度卢比"
     },
     "Economics": {
-        "PCEY": "30 PCEY",
-        "CorePCEY": "30 CorePCEY",
-        "CorePCEM": "30 CorePCEM"
+        "USNonPMI": "05 USNonPMI"
     },
     "ETFs_US": {
         "TLT": "",
