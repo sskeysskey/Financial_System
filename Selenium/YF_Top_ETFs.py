@@ -7,6 +7,7 @@ import glob
 import pyautogui
 import threading
 import logging
+import subprocess             # ← 新增
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -14,6 +15,14 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+
+# ---------------------- AppleScript 提示框 ----------------------
+def show_alert(message):
+    """
+    使用 AppleScript 弹出对话框
+    """
+    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+    subprocess.run(['osascript', '-e', applescript_code], check=True)
 
 # ---------------------- 日志配置 ----------------------
 logging.basicConfig(
@@ -177,6 +186,7 @@ def save_data(urls, existing_json, new_file, blacklist_file):
         logging.info(f"已写入 {len(filter_data_list)} 条新 ETF 到：{new_file}")
     else:
         logging.info("没有新的 ETF 需要写入。")
+        show_alert("没有发现新的 ETF")   # ← 在这里弹窗
 
 # ---------------------- 主流程 ----------------------
 urls = [

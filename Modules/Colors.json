@@ -467,7 +467,8 @@
         "ERIE",
         "DOC",
         "LANC",
-        "CHD"
+        "CHD",
+        "KRYS"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -597,7 +598,6 @@
         "WEX",
         "BWA",
         "HOLX",
-        "RHI",
         "ARW",
         "HOG",
         "EG",
@@ -735,7 +735,6 @@
         "DG",
         "NBIS",
         "QRVO",
-        "TFX",
         "FMC",
         "BSBR",
         "TU",
@@ -754,7 +753,6 @@
         "APLS",
         "GMAB",
         "SRPT",
-        "ARE",
         "W",
         "GNTX",
         "FIVE",
@@ -797,7 +795,8 @@
         "ACHC",
         "AES",
         "AVTR",
-        "COLM"
+        "COLM",
+        "RHI"
     ],
     "black_keywords": [
         "Cotton",
@@ -874,7 +873,9 @@
         "COLD",
         "OGN",
         "ALGM",
-        "CRWV"
+        "CRWV",
+        "TFX",
+        "ARE"
     ],
     "green_keywords": [
         "EURCNY",

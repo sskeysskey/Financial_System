@@ -8,24 +8,24 @@ import sys
 # 在文件开头加上
 import tkinter as tk
 
-def show_toast(message, duration=2000):
+def show_toast(message, duration=2000, bg="green", fg="white"):
     """
-    在屏幕右下角弹出一个无边框悬浮窗，duration 毫秒后自动销毁。
+    在屏幕中间弹出一个无边框悬浮窗，duration 毫秒后自动销毁。
+    bg/fg 分别是背景色和前景色（文字色）。
     """
     # 新建一个顶层窗口
     root = tk.Tk()
     root.overrideredirect(True)           # 去掉标题栏和边框
     root.attributes('-topmost', True)     # 置顶
 
-    # 如果想让整个窗口背景也是绿色，可以加上这一句
-    root.configure(bg='green')
+    root.configure(bg=bg)
 
     # 文字标签
     label = tk.Label(
         root,
         text=message,
-        bg='green',     # 背景改成绿色
-        fg='white',     # 字体改成黑色
+        bg=bg,
+        fg=fg,
         font=('Helvetica', 22),
         justify='left',
         anchor='w',
@@ -42,7 +42,7 @@ def show_toast(message, duration=2000):
     sh = root.winfo_screenheight()
     
     # 水平居中，垂直居中下方偏移 50px
-    x = (sw - w) // 2 - 120
+    x = (sw - w) // 2 + 40
     # 换成你想要的偏移量
     y = (sh - h) // 2
     
@@ -128,7 +128,7 @@ def insert_data(db_path, date, name, price):
         current_date = datetime.date.fromisoformat(date)
         
         allowed_to_insert, last_date, last_price = check_last_record_date(cursor, name, current_date)
-        formatted_last = f"{last_price:+.2f}%"
+        formatted_price = f"{price:+.2f}%"
         
         if allowed_to_insert:
             try:
@@ -137,8 +137,8 @@ def insert_data(db_path, date, name, price):
                     VALUES (?, ?, ?)
                 """, (date, name, price))
                 conn.commit()
-                show_toast(f"成功！\n\n"
-                           f"写入价格：{last_price}", duration=3000)
+                # 成功：绿色背景
+                show_toast(f"成功！\n\n{formatted_price}", duration=3000)
                 return True
             except sqlite3.IntegrityError:
                 show_alert(f"{name} 在 {date} 的记录已存在。")
@@ -147,8 +147,9 @@ def insert_data(db_path, date, name, price):
                 # show_toast(f"{name} 的最新记录距离现在不足1个月，无法添加新数据。\n"
                 #            f"最新记录日期：{last_date}\n\n"
                 #            f"价格：{last_price}", duration=3000)
-                show_toast(f"失败！\n\n"
-                           f"{formatted_last}", duration=4000)
+                formatted_last = f"{last_price:+.2f}%"
+                # 失败：红色背景
+                show_toast(f"失败！\n\n{formatted_last}", duration=4000, bg="red")
             else:
                 show_alert(f"{name} 的最新记录距离现在不足1个月，无法添加新数据。")
         return False

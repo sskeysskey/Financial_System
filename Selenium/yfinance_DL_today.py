@@ -203,9 +203,8 @@ def update_empty_json(symbol, group_name, empty_json_path):
 
 def main():
     now = datetime.now()
-    # 判断今天的星期数，如果是周日(6)或周一(0)，则不执行程序
-    if now.weekday() in (0, 6):
-        print("Today is either Sunday or Monday. The script will not run.")
+    if now.weekday() in (0, 6): # 周日是6，周一是0
+        print("今天是周日或周一，脚本不运行。")
         return
 
     enable_mouse_movement = create_mouse_prompt()
