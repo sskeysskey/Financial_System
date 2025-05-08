@@ -18,6 +18,7 @@ json_path = "/Users/yanzhang/Documents/Financial_System/Modules/description.json
 
 # 添加新的SearchHistory类来管理搜索历史
 class SearchHistory:
+    # 默认情况下最多会保存 20 条搜索历史记录
     def __init__(self, max_size=20):
         self.max_size = max_size
         self.history_file = "/Users/yanzhang/Documents/Financial_System/Modules/search_history.pkl"

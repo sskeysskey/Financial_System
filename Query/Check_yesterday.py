@@ -15,7 +15,7 @@ FILTER_LIST = {
     'USInterest', 'USGDP', 'USCPI', 'USNonFarmA', 'USRetailM', 'USUnemploy',
     'USNonFarm', 'USConfidence', 'USInitial', 'USPPI', 'USNonPMI', 'CorePPI',
     'PCEY', 'CorePCEY', 'CorePCEM', 'CoreCPI', 'USConspending', 'ImportPriceM',
-    'ImportPriceY'
+    'ImportPriceY', 'USTrade', 'CNYI', 'JPYI', 'EURI', 'CHFI', 'GBPI'
 }
 
 yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')

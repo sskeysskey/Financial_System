@@ -410,7 +410,9 @@
     "QINT",
     "RSPU",
     "HTUS",
-    "DXJ"
+    "DXJ",
+    "FDD",
+    "EUFN"
   ],
   "Basic_Materials": [
     "LIN",

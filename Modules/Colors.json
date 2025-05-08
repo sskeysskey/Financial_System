@@ -267,7 +267,6 @@
         "CDNS",
         "PR",
         "URI",
-        "BLDR",
         "TREX",
         "DECK",
         "HUBB",
@@ -716,7 +715,8 @@
         "UWMC",
         "LEN",
         "UNH",
-        "SAIA"
+        "SAIA",
+        "BLDR"
     ],
     "orange_keywords": [
         "NASDAQ",

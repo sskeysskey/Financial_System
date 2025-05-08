@@ -4,6 +4,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
+from tqdm import tqdm
 import os
 import json
 import time
@@ -388,6 +389,9 @@ def main():
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--blink-settings=imagesEnabled=false")  # 禁用图片加载
+    # 无头模式：后台运行
+    chrome_options.add_argument('--headless')
+    chrome_options.add_argument('--window-size=1920,1080')
     chrome_options.page_load_strategy = 'eager'  # 使用eager策略，DOM准备好就开始
 
     # 设置ChromeDriver路径
@@ -409,7 +413,9 @@ def main():
 
     try:
         # 逐个抓取股票数据
-        for symbol in stock_symbols:
+        for symbol in tqdm(stock_symbols,
+                       desc="Processing symbols",
+                       unit="sym"):
             # 检查是否所有文件都已包含此symbol，如果是则完全跳过
             if symbol in existing_shares and symbol in existing_names and symbol in existing_marketcap_pe:
                 print(f"已在所有文件中抓取过 {symbol}，跳过...")

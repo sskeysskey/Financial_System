@@ -4,6 +4,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
+from tqdm import tqdm
 import json
 import time
 import random
@@ -36,11 +37,27 @@ def clear_symbols_from_json(json_file_path, sector, symbol):
     except Exception as e:
         print(f"清除symbol时发生错误: {str(e)}")
 
-# 新增：命令行参数处理
+def clear_empty_json(json_file_path):
+    """
+    清空 Sectors_empty.json 中所有分组的 symbol 列表，保留分组结构
+    """
+    try:
+        with open(json_file_path, 'r') as f:
+            data = json.load(f)
+        for sector in data:
+            data[sector] = []
+        with open(json_file_path, 'w') as f:
+            json.dump(data, f, indent=4)
+        print(f"已清空 {json_file_path} 中的所有 symbol")
+    except Exception as e:
+        print(f"清空整个 JSON 时出错: {e}")
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description='股票数据抓取工具')
     parser.add_argument('--mode', type=str, default='normal', 
                         help='运行模式: normal或empty。默认为normal')
+    parser.add_argument('--clear', action='store_true',
+                        help='在 empty 模式下，抓取结束后清空 Sectors_empty.json 中剩余的 symbols')
     return parser.parse_args()
 
 def check_empty_json_has_content(json_file_path):
@@ -164,13 +181,8 @@ def main():
     # 根据命令行参数选择JSON文件路径
     if args.mode.lower() == 'empty':
         json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json"
-        
-        # 检查empty.json是否有内容
-        has_content = check_empty_json_has_content(json_file_path)
-        
-        # 如果没有内容，弹窗提示并退出程序
-        if not has_content:
-            show_alert(f"Empty.json文件中没有任何内容，程序将退出。")
+        if not check_empty_json_has_content(json_file_path):
+            show_alert("Empty.json 文件中没有任何内容，程序将退出。")
             return
     else:
         # 参数为normal格式
@@ -180,10 +192,9 @@ def main():
     # 加载symbol映射关系
     mapping_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/symbol_mapping.json"
     symbol_mapping = load_symbol_mapping(mapping_file_path)
-    
-    # 在主程序开始前启动鼠标移动线程
-    mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
-    mouse_thread.start()
+
+    # 开启防挂机鼠标线程
+    threading.Thread(target=move_mouse_periodically, daemon=True).start()
 
     # 设置Chrome选项以提高性能
     chrome_options = Options()
@@ -192,6 +203,8 @@ def main():
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--blink-settings=imagesEnabled=false")  # 禁用图片加载
+    chrome_options.add_argument('--headless')
+    chrome_options.add_argument('--window-size=1920,1080')
     chrome_options.page_load_strategy = 'eager'  # 使用eager策略，DOM准备好就开始
 
     # 设置ChromeDriver路径
@@ -218,7 +231,9 @@ def main():
     
     try:
         # 逐个分组抓取股票数据
-        for sector, symbols in symbols_by_sector.items():
+        for sector, symbols in tqdm(list(symbols_by_sector.items()),
+                                   desc="Sectors",
+                                   unit="sector"):
             # 判断该分组是否需要抓取volume
             is_no_volume = is_no_volume_sector(sector)
             
@@ -229,7 +244,11 @@ def main():
             table_type = "no_volume" if is_no_volume else "standard"
             ensure_table_exists(conn, sector, table_type)
             
-            for symbol in symbols:
+            # 内层进度：每个分组里的 symbol
+            for symbol in tqdm(symbols,
+                               desc=f"{sector}",
+                               unit="symbol",
+                               leave=False):
                 try:
                     url = f"https://finance.yahoo.com/quote/{symbol}/"
                     driver.get(url)
@@ -326,20 +345,23 @@ def main():
                             print(f"抓取 {symbol} 失败，未能获取到完整数据")
                 
                 except Exception as e:
-                    print(f"抓取 {symbol} 时发生错误: {str(e)}")
+                    print(f"抓取 {symbol} 时发生错误: {e}")
                 
                 # 添加短暂延迟，避免请求过于频繁
                 time.sleep(random.uniform(1, 2))
-    
+
     finally:
         # 关闭数据库连接
         conn.close()
         
         # 关闭浏览器
         driver.quit()
-        
-        # 显示成功提示
-        show_alert(f"股票数据抓取完成并已写入数据库！")
+
+        # 如果传入了 --clear，并且是 empty 模式，清空整个 JSON
+        if args.mode.lower() == 'empty' and args.clear:
+            clear_empty_json(json_file_path)
+            show_alert("股票数据抓取完成并已写入数据库！同时，已清空 Sectors_empty.json 中的 symbols")
+
         print("数据抓取和保存完成！")
 
 if __name__ == "__main__":
