@@ -1,26 +1,18 @@
 {
     "Basic_Materials": {
-        "UFPI": "",
-        "BCC": "",
-        "WLK": ""
+        "UFPI": ""
     },
     "Real_Estate": {},
     "Energy": {},
-    "Technology": {
-        "ENPH": ""
-    },
+    "Technology": {},
     "Consumer_Cyclical": {},
     "Utilities": {},
     "Consumer_Defensive": {
         "FLO": "关注财报",
-        "GIS": "关注财报",
-        "CHD": "",
-        "LANC": ""
+        "GIS": "关注财报"
     },
     "Industrials": {
-        "BAH": "关注财报",
-        "BLDR": "",
-        "EXPO": ""
+        "BAH": "关注财报"
     },
     "Communication_Services": {},
     "Financial_Services": {
@@ -28,8 +20,7 @@
     },
     "Healthcare": {
         "UNH": "",
-        "MRNA": "",
-        "KRYS": ""
+        "MRNA": ""
     },
     "Bonds": {
         "US10Y": "",

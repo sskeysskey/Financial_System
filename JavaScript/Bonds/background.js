@@ -65,7 +65,6 @@ function generateCSV(data) {
 }
 
 // Function to save CSV file
-// Function to save CSV file
 function saveCSV(csv) {
     // 使用 Data URL 而不是 Blob URL
     const dataUrl = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
