@@ -380,7 +380,7 @@ def main():
         # 如果传入了 --clear，并且是 empty 模式，清空整个 JSON
         if args.mode.lower() == 'empty' and args.clear:
             clear_empty_json(json_file_path)
-            show_alert("股票数据抓取完成并已写入数据库！同时，已清空 Sectors_empty.json 中的 symbols")
+            # show_alert("股票数据抓取完成并已写入数据库！同时，已清空 Sectors_empty.json 中的 symbols")
 
         print("数据抓取和保存完成！")
 

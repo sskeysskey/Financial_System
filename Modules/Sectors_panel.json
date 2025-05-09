@@ -16,11 +16,13 @@
     },
     "Communication_Services": {},
     "Financial_Services": {
-        "BN": "关注财报"
+        "BN": "关注财报",
+        "FG": ""
     },
     "Healthcare": {
         "UNH": "",
-        "MRNA": ""
+        "MRNA": "",
+        "BMY": ""
     },
     "Bonds": {
         "US10Y": "",
