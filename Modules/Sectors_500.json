@@ -50,7 +50,8 @@
         "SE",
         "JD",
         "RCL",
-        "HLT"
+        "HLT",
+        "GM"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -147,7 +148,8 @@
         "MET",
         "DB",
         "TFC",
-        "ARES"
+        "ARES",
+        "COIN"
     ],
     "Healthcare": [
         "LLY",
@@ -215,7 +217,9 @@
         "JCI",
         "HWM",
         "GEV",
-        "GWW"
+        "GWW",
+        "AXON",
+        "NSC"
     ],
     "Real_Estate": [
         "PLD",

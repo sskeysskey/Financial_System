@@ -194,17 +194,28 @@ def main():
     symbol_mapping = load_symbol_mapping(mapping_file_path)
 
     # 开启防挂机鼠标线程
-    threading.Thread(target=move_mouse_periodically, daemon=True).start()
+    # threading.Thread(target=move_mouse_periodically, daemon=True).start()
 
     # 设置Chrome选项以提高性能
     chrome_options = Options()
+    
+    # --- Headless模式相关设置 ---
+    chrome_options.add_argument('--headless=new') # 推荐使用新的 headless 模式
+    chrome_options.add_argument('--window-size=1920,1080')
+
+    # --- 伪装设置 ---
+    user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.7049.115" # 你可以更新为一个最新的Chrome User-Agent
+    chrome_options.add_argument(f'user-agent={user_agent}')
+    chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    chrome_options.add_experimental_option('useAutomationExtension', False)
+
+    # --- 性能相关设置 ---
     chrome_options.add_argument("--disable-extensions")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--blink-settings=imagesEnabled=false")  # 禁用图片加载
-    chrome_options.add_argument('--headless')
-    chrome_options.add_argument('--window-size=1920,1080')
     chrome_options.page_load_strategy = 'eager'  # 使用eager策略，DOM准备好就开始
 
     # 设置ChromeDriver路径
@@ -254,7 +265,7 @@ def main():
                     driver.get(url)
                     
                     # 查找Price数据 - 使用新的XPath
-                    price_element = wait_for_element(driver, By.XPATH, "//span[@data-testid='qsp-price']", timeout=5)
+                    price_element = wait_for_element(driver, By.XPATH, "//span[@data-testid='qsp-price']", timeout=7)
                     price = None
                     if price_element:
                         price_text = price_element.text
@@ -302,7 +313,7 @@ def main():
                             print(f"抓取 {symbol} 失败，未能获取到价格数据")
                     else:
                         # 需要抓取volume的分组
-                        volume_element = wait_for_element(driver, By.XPATH, "//fin-streamer[@data-field='regularMarketVolume']", timeout=5)
+                        volume_element = wait_for_element(driver, By.XPATH, "//fin-streamer[@data-field='regularMarketVolume']", timeout=7)
                         volume = None
                         if volume_element:
                             volume_text = volume_element.text
@@ -344,8 +355,17 @@ def main():
                         else:
                             print(f"抓取 {symbol} 失败，未能获取到完整数据")
                 
+                # 在抓取失败的逻辑中添加
                 except Exception as e:
                     print(f"抓取 {symbol} 时发生错误: {e}")
+                    # 添加调试代码
+                    try:
+                        driver.save_screenshot(f'debug_screenshot_{symbol}.png')
+                        with open(f'debug_page_source_{symbol}.html', 'w', encoding='utf-8') as f:
+                            f.write(driver.page_source)
+                        print(f"已保存 {symbol} 的调试截图和页面源码。")
+                    except Exception as debug_e:
+                        print(f"保存调试信息时出错: {debug_e}")
                 
                 # 添加短暂延迟，避免请求过于频繁
                 time.sleep(random.uniform(1, 2))
