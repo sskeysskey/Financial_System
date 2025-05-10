@@ -16,11 +16,10 @@ import datetime
 import subprocess
 
 def show_alert(message):
-    # AppleScript代码模板
+    # AppleScript 代码模板
     applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
-    
-    # 使用subprocess调用osascript
-    process = subprocess.run(['osascript', '-e', applescript_code], check=True)
+    # 使用 subprocess 调用 osascript
+    subprocess.run(['osascript', '-e', applescript_code], check=True)
 
 def clear_symbols_from_json(json_file_path, sector, symbol):
     """从指定的JSON文件中清除特定分组中的特定符号"""
@@ -184,10 +183,11 @@ def main():
         if not check_empty_json_has_content(json_file_path):
             show_alert("Empty.json 文件中没有任何内容，程序将退出。")
             return
-    else:
+    elif args.mode.lower() == 'normal':
         # 参数为normal格式
         json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json"
-        # json_file_path = "/Users/yanzhang/Documents/Financial_System/Test/Sectors_All_test.json"
+    else:
+        json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_US_holiday.json"
     
     # 加载symbol映射关系
     mapping_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/symbol_mapping.json"
@@ -377,10 +377,18 @@ def main():
         # 关闭浏览器
         driver.quit()
 
-        # 如果传入了 --clear，并且是 empty 模式，清空整个 JSON
-        if args.mode.lower() == 'empty' and args.clear:
-            clear_empty_json(json_file_path)
-            # show_alert("股票数据抓取完成并已写入数据库！同时，已清空 Sectors_empty.json 中的 symbols")
+        # 只有在 empty 模式下才做下面的判断
+        if args.mode.lower() == 'empty':
+            if args.clear:
+                # 带了 --clear，执行整表清空
+                clear_empty_json(json_file_path)
+                show_alert("股票数据抓取完成并已写入数据库！\n同时已清空 Sectors_empty.json 中的所有 symbols。")
+            else:
+                # 未带 --clear，只检查是否所有分组都已空
+                if not check_empty_json_has_content(json_file_path):
+                    show_alert("所有分组已清空 ✅\n ✅Sectors_empty.json 中没有剩余 symbols。")
+                else:
+                    show_alert("⚠️ 有分组仍有 symbols 未清空\n⚠️ 请检查 Sectors_empty.json 。")
 
         print("数据抓取和保存完成！")
 

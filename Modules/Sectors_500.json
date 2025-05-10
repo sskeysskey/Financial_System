@@ -148,8 +148,7 @@
         "MET",
         "DB",
         "TFC",
-        "ARES",
-        "COIN"
+        "ARES"
     ],
     "Healthcare": [
         "LLY",
@@ -280,7 +279,8 @@
         "TEAM",
         "PAYX",
         "SNOW",
-        "FICO"
+        "FICO",
+        "MRVL"
     ],
     "Utilities": [
         "NEE",

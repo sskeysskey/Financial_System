@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>数据抓取</title>
+    <meta charset="UTF-_8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            width: 250px;
+            /* 调整弹出窗口宽度 */
+            padding: 10px;
+            text-align: center;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            margin: 10px 0;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #status {
+            margin-top: 10px;
+            font-size: 0.9em;
+            min-height: 20px;
+            /* 为状态消息保留空间 */
+        }
+
+        .success {
+            color: green;
+        }
+
+        .error {
+            color: red;
+        }
+
+        .info {
+            color: blue;
+        }
+    </style>
+</head>
+
+<body>
+    <h3>网页数据抓取</h3>
+    <button id="scrapeDataButton">开始抓取并下载CSV</button>
+    <div id="status">点击按钮开始操作。</div>
+    <script src="popup.js"></script>
+</body>
+
+</html>

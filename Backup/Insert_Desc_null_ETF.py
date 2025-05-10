@@ -109,7 +109,7 @@ def validate_new_name(new_name):
         # AppleScript代码
         applescript_code = 'display dialog "不是ETF代码！" buttons {"OK"} default button "OK"'
         # 使用subprocess调用osascript
-        process = subprocess.run(['osascript', '-e', applescript_code], check=True)
+        subprocess.run(['osascript', '-e', applescript_code], check=True)
         sys.exit()
     return new_name
 
@@ -118,7 +118,7 @@ def check_etf_exists(data, new_name):
         # AppleScript代码
         applescript_code = 'display dialog "ETF代码已存在！" buttons {"OK"} default button "OK"'
         # 使用subprocess调用osascript
-        process = subprocess.run(['osascript', '-e', applescript_code], check=True)
+        subprocess.run(['osascript', '-e', applescript_code], check=True)
         sys.exit()
 
 def execute_applescript(script_path):

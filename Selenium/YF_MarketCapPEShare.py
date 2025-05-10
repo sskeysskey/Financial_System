@@ -6,6 +6,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from tqdm import tqdm
 import os
+import re
 import json
 import time
 import random
@@ -162,14 +163,26 @@ def convert_shares_format(shares_str):
 
 # 处理公司名称的函数
 def clean_company_name(name):
+    # 1. 先把 " del …" 或 " de …"（前后都要空格，忽略大小写）及其后面所有内容一起去掉
+    #    \s           匹配前面的空格
+    #    (?:del|de)   匹配 del 或 de
+    #    \s+          至少一个空格
+    #    .*           后面所有内容
+    name = re.sub(r'\s(?:del|de)\s+.*', '', name, flags=re.IGNORECASE)
+
     # 移除常见的公司后缀
     suffixes = [
         ', Inc.', ' Inc.', ', LLC', ' LLC', ', Ltd.', ' Ltd.', ', Limited', ' Limited', ', Corp.', ' Corp.',
         ', Corporation', ' Corporation', ', Co.', ' Co.', ', Company', ' Company', ' Bros', ' plc', ' Group', ' S.A.',
         ' N.V.', ' Holdings', ' S.A.B.', ' C.V.', ' Ltd', ' Holding', ' Companies', ' PLC', '& plc', ' Incorporated',
-        ' AG', ' &', ' SE', '- Petrobras', ' L.P.', ', L.P.', ', LP', 'de C.V.', ' Inc', ', Incorporated',
+        ' AG', ' &', ' SE', '- Petrobras', ' L.P.', ', L.P.', ', LP', ' LP', 'de C.V.', ' Inc', ', Incorporated',
+        ' National Information Services', ' American Pipeline,'
         ' S.p.A.', ' A/S', ' A.S.', ' p.l.c.', ', S. A. B. de C. V.', ' - COPEL', ' - CEMIG', ' - SABESP', ' - Eletrobrás',
-        ' Plc', ',B. de', ' Worldwide'
+        ' Plc', ',B. de', ' Worldwide', ' International', ' Technologies', ' and', ' Bancorp', ' Bancshares', ' Solutions',
+        ' Bankshares', ' Services', ' Fund', ' Bancorporation', ' Association', ' Management', ' Entertainment',
+        ' Interactive Software', ' Technology', ' SA', ' Partners', ' Innovations', ' Brasileiras',
+        ' Enterprise', ' DI', ' Alliance', ' Associates', ' Systems,' ' Systems', ' Kaspi.kz', ' Manufacturing',
+        ' Participações', ' Partners,', ' Investment Trust', ' Properties', ' Equities'
     ]
     
     cleaned_name = name
@@ -441,6 +454,7 @@ def main():
                         with open(symbol_names_file_path, 'a', encoding='utf-8') as file:
                             file.write(f"{symbol}: {cleaned_company_name}\n")
                         print(f"已保存 {symbol} 的公司名称: {cleaned_company_name}")
+                        existing_names.add(symbol)   # 写完后更新 set
                     else:
                         print(f"{symbol} 的公司名称已存在，跳过写入")
                 else:
@@ -517,6 +531,7 @@ def main():
                     with open(shares_file_path, 'a', encoding='utf-8') as file:
                         file.write(f"{symbol}: {int(shares_outstanding_converted)}, {price_book_value}\n")
                     print(f"已保存 {symbol} 的股票数量和Price/Book: {int(shares_outstanding_converted)}, {price_book_value}")
+                    existing_shares.add(symbol)
                 else:
                     print(f"{symbol} 的股票数量和Price/Book已存在，跳过写入")
                 
@@ -544,6 +559,7 @@ def main():
                     with open(marketcap_pe_file_path, 'a', encoding='utf-8') as file:
                         file.write(f"{symbol}: {market_cap_converted}, {pe_str}, {price_book_value}\n")
                     print(f"已保存 {symbol} 的市值和PE: {market_cap_converted}, {pe_str}")
+                    existing_marketcap_pe.add(symbol)
                 else:
                     print(f"{symbol} 的市值和PE已存在，跳过写入")
                 
