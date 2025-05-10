@@ -5,6 +5,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from tqdm import tqdm
+import sys
 import json
 import time
 import random
@@ -14,6 +15,44 @@ import argparse
 import sqlite3
 import datetime
 import subprocess
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QApplication, QMessageBox, QDesktopWidget
+
+def create_mouse_prompt():
+    """创建询问是否启用鼠标移动的弹窗"""
+    # 确保只创建一个QApplication实例
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+    
+    # 创建消息框
+    msg_box = QMessageBox()
+    msg_box.setWindowTitle("功能选择")
+    msg_box.setText("是否启用鼠标随机移动防止黑屏功能？")
+    msg_box.setIcon(QMessageBox.Question)
+    msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+    msg_box.setDefaultButton(QMessageBox.No)
+    
+    # 设置窗口标志，使其始终显示在最前面
+    msg_box.setWindowFlags(msg_box.windowFlags() | 
+                          Qt.WindowStaysOnTopHint | 
+                          Qt.WindowActive)
+    
+    # 移动到屏幕中心
+    center = QDesktopWidget().availableGeometry().center()
+    msg_box.move(center.x() - msg_box.width() // 2,
+                 center.y() - msg_box.height() // 2)
+    
+    # 激活窗口
+    msg_box.show()
+    msg_box.activateWindow()
+    msg_box.raise_()
+    
+    # 显示对话框并获取结果
+    result = msg_box.exec_()
+    
+    # 转换结果为布尔值
+    return result == QMessageBox.Yes
 
 def show_alert(message):
     # AppleScript 代码模板
@@ -193,8 +232,14 @@ def main():
     mapping_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/symbol_mapping.json"
     symbol_mapping = load_symbol_mapping(mapping_file_path)
 
-    # 开启防挂机鼠标线程
-    # threading.Thread(target=move_mouse_periodically, daemon=True).start()
+    enable_mouse_movement = create_mouse_prompt()
+
+    if enable_mouse_movement:
+        # 开启防挂机鼠标线程
+        threading.Thread(target=move_mouse_periodically, daemon=True).start()
+        print("已启用鼠标随机移动功能")
+    else:
+        print("未启用鼠标随机移动功能")
 
     # 设置Chrome选项以提高性能
     chrome_options = Options()

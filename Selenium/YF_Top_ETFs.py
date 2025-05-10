@@ -15,6 +15,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
 
 # ---------------------- AppleScript 提示框 ----------------------
 def show_alert(message):
@@ -108,9 +109,20 @@ def is_blacklisted(symbol, blacklist):
 def fetch_data(url):
     logging.info(f"开始抓取: {url}")
     try:
-        driver.get(url)
+        # 为 driver.get() 设置一个超时，例如15秒
+        # 这个设置是持久的，除非再次修改。可以在每次get之前设置，或在初始化driver后全局设置一次。
+        # 为确保每次都生效，可以在这里设置。
+        driver.set_page_load_timeout(5)
+        try:
+            driver.get(url)
+        except TimeoutException:
+            logging.warning(f"页面加载超时 {url} (在5秒内)，但将继续尝试查找元素。")
+            # 可选: 尝试停止页面进一步加载，以释放资源并可能加快后续操作
+            # driver.execute_script("window.stop();") # 使用时需谨慎测试
+
         # 等待 tbody 下至少一行 tr 出现
-        WebDriverWait(driver, 10).until(
+        # 这里的等待时间可以根据实际情况调整，如果页面加载确实慢，可以适当增加
+        WebDriverWait(driver, 10).until( # 显式等待10秒
             EC.presence_of_element_located((By.CSS_SELECTOR, "tbody tr"))
         )
         rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
@@ -119,11 +131,9 @@ def fetch_data(url):
         data_list = []
         for idx, row in enumerate(rows, start=1):
             try:
-                # symbol
                 symbol = row.find_element(By.CSS_SELECTOR, "span.symbol").text.strip()
-                # name
                 name = row.find_element(By.CSS_SELECTOR, "td:nth-child(2) div").get_attribute("title").strip()
-                # volume，用模糊匹配 data-field 属性
+                
                 vol_el = row.find_element(
                     By.CSS_SELECTOR,
                     "fin-streamer[data-field*='regularMarketVolume'], fin-streamer[data-field*='regular MarketVolume']"
@@ -132,17 +142,20 @@ def fetch_data(url):
                 volume = convert_volume(volume_str)
 
                 logging.debug(f"Row {idx}: {symbol} | {name} | {volume_str} -> {volume}")
-                if symbol and name and volume > 0:
+                if symbol and name and volume > 0: # 确保name也被正确获取
                     data_list.append((symbol, name, volume))
                 else:
-                    logging.warning(f"Row {idx} 数据不完整或 volume=0，跳过")
+                    logging.warning(f"Row {idx} 数据不完整或 volume=0 (Symbol: {symbol}, Name: {name}, Volume: {volume})，跳过")
             except Exception as e:
-                logging.error(f"处理第 {idx} 行时出错: {e}")
+                logging.error(f"处理第 {idx} 行时出错: {e}. Row HTML (sample): {row.get_attribute('outerHTML')[:200]}") # 打印部分行HTML帮助调试
 
         return data_list
 
+    except TimeoutException: # 这个是显式等待 (WebDriverWait) 的超时
+        logging.error(f"等待 tbody tr 超时于 {url}. 页面可能未正确加载或结构已更改。")
+        return []
     except Exception as e:
-        logging.error(f"获取数据时出错: {e}")
+        logging.error(f"获取数据时发生未知错误于 {url}: {e}")
         return []
 
 def save_data(urls, existing_json, new_file, blacklist_file):
@@ -151,7 +164,7 @@ def save_data(urls, existing_json, new_file, blacklist_file):
 
     # 预热主页
     driver.get("https://finance.yahoo.com/markets/etfs/top/")
-    time.sleep(2)
+    time.sleep(1)
 
     with open(existing_json, 'r') as f:
         data = json.load(f)

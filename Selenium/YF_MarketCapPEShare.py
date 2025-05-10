@@ -7,6 +7,7 @@ from selenium.webdriver.chrome.options import Options
 from tqdm import tqdm
 import os
 import re
+import sys
 import json
 import time
 import random
@@ -17,6 +18,66 @@ import subprocess
 import tkinter as tk
 from tkinter import ttk
 import argparse
+
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QApplication, QMessageBox, QDesktopWidget
+
+def create_mouse_prompt():
+    """创建询问是否启用鼠标移动的弹窗"""
+    # 确保只创建一个QApplication实例
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+    
+    # 创建消息框
+    msg_box = QMessageBox()
+    msg_box.setWindowTitle("功能选择")
+    msg_box.setText("是否启用鼠标随机移动防止黑屏功能？")
+    msg_box.setIcon(QMessageBox.Question)
+    msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+    msg_box.setDefaultButton(QMessageBox.No)
+    
+    # 设置窗口标志，使其始终显示在最前面
+    msg_box.setWindowFlags(msg_box.windowFlags() | 
+                          Qt.WindowStaysOnTopHint | 
+                          Qt.WindowActive)
+    
+    # 移动到屏幕中心
+    center = QDesktopWidget().availableGeometry().center()
+    msg_box.move(center.x() - msg_box.width() // 2,
+                 center.y() - msg_box.height() // 2)
+    
+    # 激活窗口
+    msg_box.show()
+    msg_box.activateWindow()
+    msg_box.raise_()
+    
+    # 显示对话框并获取结果
+    result = msg_box.exec_()
+    
+    # 转换结果为布尔值
+    return result == QMessageBox.Yes
+
+# 添加鼠标移动功能的函数
+def move_mouse_periodically():
+    while True:
+        try:
+            # 获取屏幕尺寸
+            screen_width, screen_height = pyautogui.size()
+            
+            # 随机生成目标位置，避免移动到屏幕边缘
+            x = random.randint(100, screen_width - 100)
+            y = random.randint(100, screen_height - 100)
+            
+            # 缓慢移动鼠标到随机位置
+            pyautogui.moveTo(x, y, duration=1)
+            
+            # 等待30-60秒再次移动
+            time.sleep(random.randint(30, 60))
+            
+        except Exception as e:
+            print(f"鼠标移动出错: {str(e)}")
+            time.sleep(30)
 
 def Copy_Command_C():
     script = '''
@@ -176,13 +237,13 @@ def clean_company_name(name):
         ', Corporation', ' Corporation', ', Co.', ' Co.', ', Company', ' Company', ' Bros', ' plc', ' Group', ' S.A.',
         ' N.V.', ' Holdings', ' S.A.B.', ' C.V.', ' Ltd', ' Holding', ' Companies', ' PLC', '& plc', ' Incorporated',
         ' AG', ' &', ' SE', '- Petrobras', ' L.P.', ', L.P.', ', LP', ' LP', 'de C.V.', ' Inc', ', Incorporated',
-        ' National Information Services', ' American Pipeline,'
-        ' S.p.A.', ' A/S', ' A.S.', ' p.l.c.', ', S. A. B. de C. V.', ' - COPEL', ' - CEMIG', ' - SABESP', ' - Eletrobrás',
-        ' Plc', ',B. de', ' Worldwide', ' International', ' Technologies', ' and', ' Bancorp', ' Bancshares', ' Solutions',
+        ' National Information Services', ' American Pipeline,', ' - SABESP', ' - Eletrobrás', ' Solutions',
+        ' S.p.A.', ' A/S', ' A.S.', ' p.l.c.', ', S. A. B. de C. V.', ' - COPEL', ' - CEMIG', ' Equities',
+        ' Plc', ',B. de', ' Worldwide', ' International', ' Technologies', ' and', ' Bancorp', ' Bancshares',
         ' Bankshares', ' Services', ' Fund', ' Bancorporation', ' Association', ' Management', ' Entertainment',
-        ' Interactive Software', ' Technology', ' SA', ' Partners', ' Innovations', ' Brasileiras',
+        ' Interactive Software', ' Technology', ' SA', ' Partners', ' Innovations', ' Brasileiras', ' Properties',
         ' Enterprise', ' DI', ' Alliance', ' Associates', ' Systems,' ' Systems', ' Kaspi.kz', ' Manufacturing',
-        ' Participações', ' Partners,', ' Investment Trust', ' Properties', ' Equities'
+        ' Participações', ' Partners,', ' Investment Trust'
     ]
     
     cleaned_name = name
@@ -390,10 +451,15 @@ def main():
         symbol_names_file_path = "/Users/yanzhang/Downloads/symbol_names.txt"
         marketcap_pe_file_path = "/Users/yanzhang/Downloads/marketcap_pe.txt"
         print("使用正常模式和Downloads目录...")
-    
-    # 在主程序开始前启动鼠标移动线程
-    mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
-    mouse_thread.start()
+
+    enable_mouse_movement = create_mouse_prompt()
+
+    if enable_mouse_movement:
+        # 开启防挂机鼠标线程
+        threading.Thread(target=move_mouse_periodically, daemon=True).start()
+        print("已启用鼠标随机移动功能")
+    else:
+        print("未启用鼠标随机移动功能")
 
     # 设置Chrome选项
     chrome_options = Options()
