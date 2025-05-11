@@ -4,37 +4,25 @@
     },
     "Real_Estate": {},
     "Energy": {},
-    "Technology": {
-        "ONTO": ""
-    },
-    "Consumer_Cyclical": {
-        "SG": ""
-    },
+    "Technology": {},
+    "Consumer_Cyclical": {},
     "Utilities": {},
     "Consumer_Defensive": {
         "FLO": "关注财报",
         "GIS": "关注财报",
-        "PG": "",
-        "PEP": "",
         "CHD": ""
     },
     "Industrials": {
         "BAH": "关注财报"
     },
     "Communication_Services": {},
-    "Financial_Services": {
-        "BN": "关注财报",
-        "FG": ""
-    },
+    "Financial_Services": {},
     "Healthcare": {
         "UNH": "",
         "MRNA": "",
         "MRK": "",
         "TMO": "",
-        "REGN": "",
-        "BMY": "",
-        "ICLR": "",
-        "KRYS": ""
+        "REGN": ""
     },
     "Bonds": {
         "US10Y": "",

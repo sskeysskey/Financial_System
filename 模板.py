@@ -1,4 +1,12 @@
 # ——————————————————————————————————————————————————————————————————————————————————————————
+# # --- 或者，使用 INSERT OR IGNORE ---
+        # insert_or_ignore_sql = f"""
+        # INSERT OR IGNORE INTO {safe_table_name} (date, name, price, volume)
+        # VALUES (?, ?, ?, ?);
+        # """
+        # # --- 修改结束 ---
+        # cursor.executemany(insert_or_ignore_sql, data_to_insert)
+# ——————————————————————————————————————————————————————————————————————————————————————————
 def show_toast(message, duration=2000):
     """
     在屏幕右下角弹出一个无边框悬浮窗，duration 毫秒后自动销毁。

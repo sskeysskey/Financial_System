@@ -128,17 +128,8 @@ def process_csv_file(csv_filepath, symbol, group_name, db_path):
             volume = excluded.volume;
         """
         # --- 修改结束 ---
-        
         # executemany 仍然适用，它会为每一行数据执行这个 UPSERT 语句
         cursor.executemany(upsert_sql, data_to_insert)
-
-        # # --- 或者，使用 INSERT OR IGNORE ---
-        # insert_or_ignore_sql = f"""
-        # INSERT OR IGNORE INTO {safe_table_name} (date, name, price, volume)
-        # VALUES (?, ?, ?, ?);
-        # """
-        # # --- 修改结束 ---
-        # cursor.executemany(insert_or_ignore_sql, data_to_insert)
 
         conn.commit()
         print(f"成功处理 {len(data_to_insert)} 条数据从 {os.path.basename(csv_filepath)} ({symbol}) 到表 {safe_table_name} (插入或更新)。")

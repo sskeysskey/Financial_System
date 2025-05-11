@@ -76,14 +76,25 @@
         const cells = Array.from(r.querySelectorAll('td'));
         // 简单容错
         if (cells.length <= Math.max(cols.date, cols.close, cols.volume)) return;
-        // 提取
+
+        // 1) 解析日期
         let rawDate = cells[cols.date].textContent.trim()
             .split('::')[0].replace(/"/g, '');
         let d = new Date(rawDate);
         const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        const price = parseFloat(cells[cols.close].textContent.trim().replace(/,/g, ''));
-        const volume = parseInt(cells[cols.volume].textContent.trim().replace(/,/g, ''), 10);
-        if (!isNaN(d) && !isNaN(price) && !isNaN(volume)) {
+
+        // 2) 解析价格
+        const priceText = cells[cols.close].textContent.trim().replace(/,/g, '');
+        const price = parseFloat(priceText);
+
+        // 3) 解析成交量，如果是 "-" 就当作 null
+        const volText = cells[cols.volume].textContent.trim().replace(/,/g, '');
+        let volume = null;
+        if (volText !== '-' && !isNaN(parseInt(volText, 10))) {
+            volume = parseInt(volText, 10);
+        }
+
+        if (!isNaN(d) && !isNaN(price)) {
             scraped.push({ date, price, volume });
         }
     });
@@ -93,10 +104,20 @@
         return;
     }
 
+    // —— 根据是否有有效 volume 决定 CSV 列 —— 
+    const includeVolume = scraped.some(e => e.volume !== null);
+
     // 组装 CSV
-    let csv = 'date,price,volume\n';
+    let csv = includeVolume
+        ? 'date,price,volume\n'
+        : 'date,price\n';
+
     scraped.forEach(e => {
-        csv += `${e.date},${e.price},${e.volume}\n`;
+        let line = `${e.date},${e.price}`;
+        if (includeVolume) {
+            line += e.volume !== null ? `,${e.volume}` : ',';
+        }
+        csv += line + '\n';
     });
 
     // 发消息给 background.js 去下载
