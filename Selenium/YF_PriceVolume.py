@@ -334,7 +334,7 @@ def main():
                             ''', (current_date, display_name, price))
                             conn.commit()
                             
-                            print(f"已保存 {symbol} 至 {sector}：价格={price}")
+                            print(f"已保存 {display_name} 至 {sector}：价格={price}")
                             
                             # 1) 清除 JSON 中的 symbol
                             if args.mode.lower() == 'empty':
@@ -376,7 +376,7 @@ def main():
                             ''', (current_date, display_name, price, volume))
                             conn.commit()
                             
-                            print(f"已保存 {symbol} 至 {sector}：价格={price}, 成交量={volume}")
+                            print(f"已保存 {display_name} 至 {sector}：价格={price}, 成交量={volume}")
                             
                             # 如果是empty模式，则在成功保存后清除该symbol
                             if args.mode.lower() == 'empty':
