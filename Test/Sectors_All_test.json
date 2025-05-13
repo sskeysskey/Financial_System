@@ -6,12 +6,12 @@
   "Currencies": [],
   "Crypto": [],
   "Indices": [],
-  "Commodities": [
+  "Commodities": [],
+  "ETFs": [
     "IOSP",
     "TUR10Y",
     "EA"
   ],
-  "ETFs": [],
   "Economics": [
     "SPTI",
     "PICK",

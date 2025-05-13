@@ -142,7 +142,7 @@
         "USDINR": "印度卢比"
     },
     "Economics": {
-        "USNonPMI": "05 USNonPMI"
+        "USConfidence": "16 USConfidence"
     },
     "ETFs_US": {
         "TLT": "",

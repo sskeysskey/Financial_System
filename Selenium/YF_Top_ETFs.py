@@ -7,7 +7,9 @@ import glob
 import pyautogui
 import threading
 import logging
-import subprocess             # ← 新增
+import subprocess
+import sqlite3
+from datetime import datetime, timedelta
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -50,7 +52,7 @@ def move_mouse_periodically():
             time.sleep(random.randint(30, 60))
             
         except Exception as e:
-            print(f"鼠标移动出错: {str(e)}")
+            logging.warning(f"鼠标移动出错: {e}")
             time.sleep(30)
 
 # 在主程序开始前启动鼠标移动线程
@@ -74,174 +76,192 @@ driver = webdriver.Chrome(service=service, options=chrome_options)
 def convert_volume(volume_str):
     """转换交易量字符串为整数"""
     try:
-        orig = volume_str
-        volume_str = volume_str.replace(",", "")
-        if 'M' in volume_str:
-            val = int(float(volume_str.replace('M', '')) * 1_000_000)
-        elif 'K' in volume_str:
-            val = int(float(volume_str.replace('K', '')) * 1_000)
-        elif 'B' in volume_str:
-            val = int(float(volume_str.replace('B', '')) * 1_000_000_000)
-        else:
-            val = int(float(volume_str))
-        logging.debug(f"convert_volume: '{orig}' -> {val}")
-        return val
+        s = volume_str.replace(",", "")
+        if 'M' in s:
+            return int(float(s.replace('M','')) * 1_000_000)
+        if 'K' in s:
+            return int(float(s.replace('K','')) * 1_000)
+        if 'B' in s:
+            return int(float(s.replace('B','')) * 1_000_000_000)
+        return int(float(s))
     except Exception as e:
-        logging.error(f"转换交易量出错: '{volume_str}' - {e}")
+        logging.error(f"convert_volume 错误: '{volume_str}' -> {e}")
         return 0
 
 def load_blacklist(blacklist_file):
     """加载黑名单数据"""
     try:
-        with open(blacklist_file, 'r') as f:
+        with open(blacklist_file) as f:
             data = json.load(f)
         bl = set(data.get('etf', []))
-        logging.info(f"已加载黑名单，共 {len(bl)} 条")
+        logging.info(f"已加载黑名单 {len(bl)} 条")
         return bl
     except Exception as e:
-        logging.error(f"加载黑名单文件出错: {e}")
+        logging.error(f"加载黑名单失败: {e}")
         return set()
 
-def is_blacklisted(symbol, blacklist):
-    return symbol in blacklist
+def is_blacklisted(symbol, bl):
+    return symbol in bl
 
-# ---------------------- 抓取逻辑 ----------------------
+# ---------------------- 数据抓取 ----------------------
 def fetch_data(url):
-    logging.info(f"开始抓取: {url}")
+    logging.info(f"Fetching {url}")
+    driver.set_page_load_timeout(5)
     try:
-        # 为 driver.get() 设置一个超时，例如15秒
-        # 这个设置是持久的，除非再次修改。可以在每次get之前设置，或在初始化driver后全局设置一次。
-        # 为确保每次都生效，可以在这里设置。
-        driver.set_page_load_timeout(5)
-        try:
-            driver.get(url)
-        except TimeoutException:
-            logging.warning(f"页面加载超时 {url} (在5秒内)，但将继续尝试查找元素。")
-            # 可选: 尝试停止页面进一步加载，以释放资源并可能加快后续操作
-            # driver.execute_script("window.stop();") # 使用时需谨慎测试
-
-        # 等待 tbody 下至少一行 tr 出现
-        # 这里的等待时间可以根据实际情况调整，如果页面加载确实慢，可以适当增加
-        WebDriverWait(driver, 10).until( # 显式等待10秒
+        driver.get(url)
+    except TimeoutException:
+        logging.warning("页面加载超时，继续查找元素…")
+    try:
+        WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "tbody tr"))
         )
         rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
-        logging.info(f"在 {url} 找到 {len(rows)} 行数据")
-
-        data_list = []
-        for idx, row in enumerate(rows, start=1):
-            try:
-                symbol = row.find_element(By.CSS_SELECTOR, "span.symbol").text.strip()
-                name = row.find_element(By.CSS_SELECTOR, "td:nth-child(2) div").get_attribute("title").strip()
-                
-                vol_el = row.find_element(
-                    By.CSS_SELECTOR,
-                    "fin-streamer[data-field*='regularMarketVolume'], fin-streamer[data-field*='regular MarketVolume']"
-                )
-                volume_str = vol_el.text.strip()
-                volume = convert_volume(volume_str)
-
-                logging.debug(f"Row {idx}: {symbol} | {name} | {volume_str} -> {volume}")
-                if symbol and name and volume > 0: # 确保name也被正确获取
-                    data_list.append((symbol, name, volume))
-                else:
-                    logging.warning(f"Row {idx} 数据不完整或 volume=0 (Symbol: {symbol}, Name: {name}, Volume: {volume})，跳过")
-            except Exception as e:
-                logging.error(f"处理第 {idx} 行时出错: {e}. Row HTML (sample): {row.get_attribute('outerHTML')[:200]}") # 打印部分行HTML帮助调试
-
-        return data_list
-
-    except TimeoutException: # 这个是显式等待 (WebDriverWait) 的超时
-        logging.error(f"等待 tbody tr 超时于 {url}. 页面可能未正确加载或结构已更改。")
-        return []
-    except Exception as e:
-        logging.error(f"获取数据时发生未知错误于 {url}: {e}")
+        logging.info(f"找到 {len(rows)} 行")
+    except TimeoutException:
+        logging.error("tbody tr 未出现，跳过此页")
         return []
 
-def save_data(urls, existing_json, new_file, blacklist_file):
-    logging.info("===== 开始保存数据 =====")
-    blacklist = load_blacklist(blacklist_file)
+    results = []
+    for idx, row in enumerate(rows, start=1):
+        try:
+            symbol = row.find_element(By.CSS_SELECTOR, "span.symbol").text.strip()
+            name = row.find_element(By.CSS_SELECTOR, "td:nth-child(2) div").get_attribute("title").strip()
+            # price
+            price_el = row.find_element(
+                By.CSS_SELECTOR,
+                "fin-streamer[data-field*='regularMarketPrice']"
+            )
+            price = float(price_el.get_attribute("value") or price_el.text)
+            # volume
+            vol_el = row.find_element(
+                By.CSS_SELECTOR,
+                "fin-streamer[data-field*='regularMarketVolume']"
+            )
+            volume = convert_volume(vol_el.text.strip())
+
+            if symbol and name and volume > 0:
+                results.append((symbol, name, price, volume))
+            else:
+                logging.info(f"跳过行 {idx}: 数据不完整 or volume=0")
+        except Exception as e:
+            logging.error(f"处理行 {idx} 出错: {e}")
+    return results
+
+# ---------------------- 保存与写库 ----------------------
+def save_data(urls, existing_json, new_file, blacklist_file, sectors_file, db_path):
+    logging.info("===== 开始保存 =====")
+    bl = load_blacklist(blacklist_file)
 
     # 预热主页
     driver.get("https://finance.yahoo.com/markets/etfs/top/")
     time.sleep(1)
 
-    with open(existing_json, 'r') as f:
-        data = json.load(f)
-    existing_symbols = {etf['symbol'] for etf in data.get('etfs', [])}
-    logging.info(f"已存在的 ETF 数量: {len(existing_symbols)}")
+    # 加载已有描述，总用来筛除 new_file 文本
+    with open(existing_json) as f:
+        existing = json.load(f)
+    existing_symbols = {etf['symbol'] for etf in existing.get('etfs', [])}
+    logging.info(f"已有 ETF: {len(existing_symbols)}")
 
-    total_data_list = []
-    filter_data_list = []
+    # 加载 sectors
+    with open(sectors_file) as f:
+        sectors = json.load(f)
+    etf_sectors = set(sectors.get("ETFs", []))
+    logging.info(f"Sectors_All 中 ETF 分组共 {len(etf_sectors)} 条")
+
+    # 数据库连接
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    # 取昨天日期
+    yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+
+    new_txt_lines = []
 
     for url in urls:
-        fetched = fetch_data(url)
-        logging.info(f"{url} 抓取到 {len(fetched)} 条记录")
-        for symbol, name, volume in fetched:
-            if is_blacklisted(symbol, blacklist):
-                logging.info(f"Symbol {symbol} 在黑名单中，跳过")
+        data = fetch_data(url)
+        logging.info(f"{url} 抓取 {len(data)} 条")
+        for symbol, name, price, volume in data:
+            # 黑名单
+            if is_blacklisted(symbol, bl):
                 continue
+            # volume 过滤
             if volume <= 200_000:
-                logging.debug(f"{symbol} volume={volume} <=200k，跳过")
+                continue
+            # sector 过滤：只处理属于 sectors["ETFs"] 的
+            if symbol not in etf_sectors:
                 continue
 
-            total_data_list.append((symbol, name, volume))
+            # 文本新 ETF 列表（和原逻辑保持一致）
             if symbol not in existing_symbols:
-                logging.info(f"发现新 ETF: {symbol} ({name}), volume={volume}")
-                filter_data_list.append(f"{symbol}: {name}, {volume}")
+                new_txt_lines.append(f"{symbol}: {name}, {volume}")
                 existing_symbols.add(symbol)
 
-    if filter_data_list:
+            # 数据库去重插入
+            cursor.execute(
+                "SELECT 1 FROM ETFs WHERE name=? AND date=? LIMIT 1",
+                (symbol, yesterday)
+            )
+            if cursor.fetchone():
+                logging.info(f"{symbol} 已有 {yesterday} 数据，跳过写库")
+            else:
+                cursor.execute(
+                    "INSERT INTO ETFs (date, name, price, volume) VALUES (?, ?, ?, ?)",
+                    (yesterday, symbol, price, volume)
+                )
+                logging.info(f"写入 DB: {symbol} | {yesterday} | price={price} | vol={volume}")
+
+    conn.commit()
+    conn.close()
+
+    # 将新发现写入文本
+    if new_txt_lines:
         with open(new_file, "w") as f:
-            for i, line in enumerate(filter_data_list):
-                suffix = "\n" if i < len(filter_data_list) - 1 else ""
-                f.write(line + suffix)
-        logging.info(f"已写入 {len(filter_data_list)} 条新 ETF 到：{new_file}")
+            f.write("\n".join(new_txt_lines))
+        logging.info(f"写入 {len(new_txt_lines)} 条新 ETF 到 {new_file}")
     else:
-        logging.info("没有新的 ETF 需要写入。")
-        show_alert("没有发现新的 ETF")   # ← 在这里弹窗
+        logging.info("无新 ETF，弹窗提示")
+        show_alert("没有发现新的 ETF")
 
 # ---------------------- 主流程 ----------------------
-urls = [
-    "https://finance.yahoo.com/markets/etfs/top/?start=0&count=100",
-    "https://finance.yahoo.com/markets/etfs/top/?start=100&count=100",
-    "https://finance.yahoo.com/markets/etfs/top/?start=200&count=100",
-    "https://finance.yahoo.com/markets/etfs/top/?start=300&count=100",
-    "https://finance.yahoo.com/markets/etfs/top/?start=400&count=100",
-    "https://finance.yahoo.com/markets/etfs/top/?start=500&count=100"
-]
+if __name__ == "__main__":
+    urls = [
+        "https://finance.yahoo.com/markets/etfs/top/?start=0&count=100",
+        "https://finance.yahoo.com/markets/etfs/top/?start=100&count=100",
+        "https://finance.yahoo.com/markets/etfs/top/?start=200&count=100",
+        "https://finance.yahoo.com/markets/etfs/top/?start=300&count=100",
+        "https://finance.yahoo.com/markets/etfs/top/?start=400&count=100",
+        "https://finance.yahoo.com/markets/etfs/top/?start=500&count=100"
+    ]
+    existing_json    = "/Users/yanzhang/Documents/Financial_System/Modules/description.json"
+    new_file         = "/Users/yanzhang/Documents/News/ETFs_new.txt"
+    blacklist_file   = "/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json"
+    sectors_file     = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json"
+    db_path          = "/Users/yanzhang/Documents/Database/Finance.db"
 
-existing_json = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
-new_file       = '/Users/yanzhang/Documents/News/ETFs_new.txt'
-blacklist_file = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'
+    try:
+        save_data(urls, existing_json, new_file, blacklist_file, sectors_file, db_path)
+    finally:
+        driver.quit()
+        logging.info("抓取完成，浏览器已退出。")
 
-try:
-    save_data(urls, existing_json, new_file, blacklist_file)
-finally:
-    driver.quit()
-    logging.info("Selenium 已退出，抓取任务结束。")
+    # ---------------------- 文件移动 ----------------------
+    downloads_dir = "/Users/yanzhang/Downloads/"
+    source_pattern = os.path.join(downloads_dir, "screener_*.txt")
+    source_file2   = "/Users/yanzhang/Documents/News/screener_sectors.txt"
+    target_dir     = "/Users/yanzhang/Documents/News/backup"
+    os.makedirs(target_dir, exist_ok=True)
 
-# ---------------------- 文件移动 ----------------------
-downloads_dir = "/Users/yanzhang/Downloads/"
-source_pattern = os.path.join(downloads_dir, "screener_*.txt")
-source_file2   = "/Users/yanzhang/Documents/News/screener_sectors.txt"
-target_dir     = "/Users/yanzhang/Documents/News/backup"
+    # 一次性移动所有匹配 screener_*.txt 的文件
+    for src in glob.glob(source_pattern):
+        dst = os.path.join(target_dir, os.path.basename(src))
+        shutil.move(src, dst)
+        logging.info(f"已移动: {src} -> {dst}")
 
-# 确保目标目录存在
-os.makedirs(target_dir, exist_ok=True)
+    # 单独移动第二个文件，先检查是否存在
+    if os.path.exists(source_file2):
+        dst2 = os.path.join(target_dir, os.path.basename(source_file2))
+        shutil.move(source_file2, dst2)
+        logging.info(f"已移动: {source_file2} -> {dst2}")
+    else:
+        logging.warning(f"不存在，跳过: {source_file2}")
 
-# 一次性移动所有匹配 screener_*.txt 的文件
-for src in glob.glob(source_pattern):
-    dst = os.path.join(target_dir, os.path.basename(src))
-    shutil.move(src, dst)
-    logging.info(f"已移动: {src} -> {dst}")
-
-# 单独移动第二个文件，先检查是否存在
-if os.path.exists(source_file2):
-    dst2 = os.path.join(target_dir, os.path.basename(source_file2))
-    shutil.move(source_file2, dst2)
-    logging.info(f"已移动: {source_file2} -> {dst2}")
-else:
-    logging.warning(f"文件不存在，跳过移动: {source_file2}")
-
-logging.info(f"所有文件处理完毕，目录: {target_dir}")
+    logging.info("所有文件处理完毕。")

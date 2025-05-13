@@ -6,23 +6,88 @@ import sqlite3
 import subprocess
 from datetime import datetime, timedelta
 
+def insert_screener_records(db_file, screener_data, prices, volumes):
+    """
+    把 screener 抓到的 price/volume 写入到对应 sector 表，
+    date = 昨天(系统时间-1天)。
+    如果昨天已有同一只票的记录，则跳过不插入。
+    """
+    # 计算“昨天”的日期字符串
+    yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+
+    conn = sqlite3.connect(db_file)
+    cur = conn.cursor()
+
+    # 取出数据库中已有的表名，避免 typo 或 SQL 注入
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    valid_tables = {row[0] for row in cur.fetchall()}
+
+    inserted = 0
+    skipped  = 0
+
+    for sector, symbols in screener_data.items():
+        if sector not in valid_tables:
+            print(f"⚠️ 警告：数据库中不存在表 `{sector}`，已跳过该 sector 的写入")
+            continue
+
+        for symbol in symbols:
+            price = prices.get(symbol)
+            vol   = volumes.get(symbol)
+            if price is None or vol is None:
+                # 不该发生，保证 read_screener_file 一定把 price/volume 都解析了
+                continue
+
+            # 检查昨天同一只票的记录是否已存在
+            cur.execute(
+                f'SELECT 1 FROM "{sector}" WHERE date=? AND name=? LIMIT 1;',
+                (yesterday, symbol)
+            )
+            if cur.fetchone():
+                skipped += 1
+                continue
+
+            # 不存在则插入
+            cur.execute(
+                f'''INSERT INTO "{sector}" (date, name, price, volume)
+                    VALUES (?, ?, ?, ?);''',
+                (yesterday, symbol, price, vol)
+            )
+            inserted += 1
+
+    conn.commit()
+    conn.close()
+
+    print(f"✅ 插入完成：{inserted} 条新纪录，跳过 {skipped} 条已有记录（日期：{yesterday}）")
+
 # 读取screener数据文件
 def read_screener_file(filepath):
     screener_data = {}
     market_caps = {}
+    prices = {}
+    volumes = {}
     with open(filepath, 'r') as f:
         for line in f:
-            if line.strip():
-                parts = line.strip().split(', ')
-                symbol_part = parts[0].split(': ')
-                symbol = symbol_part[0]
-                # 提取market cap并转换为浮点数
-                market_cap_str = symbol_part[1]
-                market_cap = float(market_cap_str)
-                sector = parts[-1]
-                screener_data.setdefault(sector, []).append(symbol)
-                market_caps[symbol] = market_cap
-    return screener_data, market_caps
+            line = line.strip()
+            if not line: 
+                continue
+            parts = line.split(', ')
+            # parts 示例: ['MSFT: 3340000000000', 'Technology', '449.26', '17094000']
+            # 我们只关心前两项
+            sym_cap, sector = parts[0], parts[1]
+            
+            # 提取 symbol 和 market cap
+            symbol, cap_str = sym_cap.split(': ')
+            market_cap = float(cap_str)
+            
+            screener_data.setdefault(sector, []).append(symbol)
+            market_caps[symbol] = market_cap
+            
+            # 如果你以后需要 price/volume，可以这样解析：
+            price = float(parts[2])  
+            vol = int(round(float(parts[3])))
+            prices[symbol] = price
+            volumes[symbol] = vol
+    return screener_data, market_caps, prices, volumes
 
 # 读取sectors配置文件
 def read_sectors_file(filepath):
@@ -351,11 +416,11 @@ def main():
         time.sleep(2)
         print(".", end="", flush=True)
     
-    # 查找Downloads目录下最新的screener_开头的txt文件
+    # # 查找Downloads目录下最新的screener_开头的txt文件
     downloads_path = '/Users/yanzhang/Downloads/'
     screener_files = glob.glob(os.path.join(downloads_path, 'screener_*.txt'))
     
-    # 按文件修改时间排序，获取最新的文件
+    # # 按文件修改时间排序，获取最新的文件
     screener_file = max(screener_files, key=os.path.getmtime)
     print(f"使用文件: {screener_file}")
     
@@ -369,7 +434,7 @@ def main():
     backup_directory = '/Users/yanzhang/Documents/News/backup/site'
     
     # 读取数据
-    screener_data, market_caps = read_screener_file(screener_file)
+    screener_data, market_caps, prices, volumes = read_screener_file(screener_file)
     sectors_all_data = read_sectors_file(sectors_all_file)
     sectors_today_data = read_sectors_file(sectors_today_file)
     sectors_empty_data = read_sectors_file(sectors_empty_file)
@@ -381,6 +446,9 @@ def main():
     updated_sectors_all, updated_sectors_today, updated_sectors_empty, added_symbols, moved_symbols, db_delete_logs = compare_and_update_sectors(
         screener_data, sectors_all_data, sectors_today_data, sectors_empty_data, blacklist, db_file
     )
+    
+    # —— 把“昨天”价格、成交量写到对应 sector 表 —— 
+    insert_screener_records(db_file, screener_data, prices, volumes)
     
     # 保存更新后的sectors文件，只有在有变化时才保存
     save_sectors_file(sectors_all_file, updated_sectors_all)
@@ -402,7 +470,6 @@ def main():
     # 等待2秒
     time.sleep(2)
 
-    # 打开文件
     # 在 macOS 系统下使用 open 命令打开文件
     os.system(f"open {output_file}")
 

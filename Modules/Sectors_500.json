@@ -68,8 +68,7 @@
         "BTI",
         "CL",
         "DEO",
-        "MNST",
-        "KR"
+        "MNST"
     ],
     "Energy": [
         "XOM",
@@ -87,9 +86,9 @@
         "WMB",
         "ET",
         "KMI",
-        "MPLX",
         "LNG",
-        "TRP"
+        "MPC",
+        "SLB"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -148,7 +147,11 @@
         "MET",
         "DB",
         "TFC",
-        "ARES"
+        "ARES",
+        "COIN",
+        "DFS",
+        "HOOD",
+        "AMP"
     ],
     "Healthcare": [
         "LLY",
@@ -180,7 +183,8 @@
         "ZTS",
         "CVS",
         "MCK",
-        "COR"
+        "COR",
+        "BDX"
     ],
     "Industrials": [
         "GE",
@@ -211,14 +215,14 @@
         "EMR",
         "CPRT",
         "CARR",
-        "WCN",
         "FDX",
         "JCI",
         "HWM",
         "GEV",
         "GWW",
         "AXON",
-        "NSC"
+        "NSC",
+        "PCAR"
     ],
     "Real_Estate": [
         "PLD",
@@ -280,7 +284,8 @@
         "PAYX",
         "SNOW",
         "FICO",
-        "MRVL"
+        "MRVL",
+        "NXPI"
     ],
     "Utilities": [
         "NEE",
