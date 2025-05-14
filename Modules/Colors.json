@@ -520,7 +520,6 @@
         "CIVI",
         "DJT",
         "MUR",
-        "HUM",
         "ATKR",
         "EC",
         "VAL",
@@ -581,7 +580,6 @@
         "MSM",
         "PPG",
         "CIG",
-        "GIS",
         "RIO",
         "MGM",
         "TTC",
@@ -796,7 +794,9 @@
         "AES",
         "AVTR",
         "COLM",
-        "RHI"
+        "RHI",
+        "GIS",
+        "HUM"
     ],
     "black_keywords": [
         "Cotton",

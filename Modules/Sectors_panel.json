@@ -2,12 +2,15 @@
     "Basic_Materials": {},
     "Real_Estate": {},
     "Energy": {},
-    "Technology": {},
+    "Technology": {
+        "KSPI": ""
+    },
     "Consumer_Cyclical": {},
     "Utilities": {},
     "Consumer_Defensive": {
         "FLO": "关注财报",
-        "GIS": "关注财报"
+        "GIS": "关注财报",
+        "PEP": ""
     },
     "Industrials": {
         "BAH": "关注财报"
@@ -17,7 +20,8 @@
     "Healthcare": {
         "UNH": "",
         "MRNA": "",
-        "MRK": ""
+        "MRK": "",
+        "HUM": ""
     },
     "Bonds": {
         "US10Y": "",

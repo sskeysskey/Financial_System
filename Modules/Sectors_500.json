@@ -25,7 +25,8 @@
         "DASH",
         "NTES",
         "AMX",
-        "CHTR"
+        "CHTR",
+        "RBLX"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -88,7 +89,11 @@
         "KMI",
         "LNG",
         "MPC",
-        "SLB"
+        "SLB",
+        "PSX",
+        "MPLX",
+        "OKE",
+        "TRP"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -222,7 +227,8 @@
         "GWW",
         "AXON",
         "NSC",
-        "PCAR"
+        "PCAR",
+        "PWR"
     ],
     "Real_Estate": [
         "PLD",
@@ -285,7 +291,8 @@
         "SNOW",
         "FICO",
         "MRVL",
-        "NXPI"
+        "NXPI",
+        "NET"
     ],
     "Utilities": [
         "NEE",
@@ -293,6 +300,7 @@
         "DUK",
         "NGG",
         "CEG",
-        "AEP"
+        "AEP",
+        "VST"
     ]
 }
