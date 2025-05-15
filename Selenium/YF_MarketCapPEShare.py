@@ -650,7 +650,7 @@ def main():
         # 如果有内容，询问是否清空
         if has_content:
             if args.clear:
-                if show_yes_no_dialog("抓取结束，是否清空 Sectors_empty.json 中的股票符号？"):
+                # if show_yes_no_dialog("抓取结束，是否清空 Sectors_empty.json 中的股票符号？"):
                     clear_empty_json()
                     
 if __name__ == "__main__":

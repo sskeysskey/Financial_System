@@ -2,9 +2,7 @@
     "Basic_Materials": {},
     "Real_Estate": {},
     "Energy": {},
-    "Technology": {
-        "KSPI": ""
-    },
+    "Technology": {},
     "Consumer_Cyclical": {},
     "Utilities": {},
     "Consumer_Defensive": {
@@ -21,7 +19,11 @@
         "UNH": "",
         "MRNA": "",
         "MRK": "",
-        "HUM": ""
+        "HUM": "",
+        "LLY": "",
+        "BMY": "",
+        "ICLR": "",
+        "KRYS": ""
     },
     "Bonds": {
         "US10Y": "",

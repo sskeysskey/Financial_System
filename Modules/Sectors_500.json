@@ -188,8 +188,7 @@
         "ZTS",
         "CVS",
         "MCK",
-        "COR",
-        "BDX"
+        "COR"
     ],
     "Industrials": [
         "GE",
@@ -227,7 +226,6 @@
         "GWW",
         "AXON",
         "NSC",
-        "PCAR",
         "PWR"
     ],
     "Real_Estate": [

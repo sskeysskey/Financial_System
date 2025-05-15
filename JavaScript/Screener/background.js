@@ -13,9 +13,12 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             text += `${item.symbol}: ${item.marketCap}, ${item.category}, ${item.price}, ${item.volume}\n`;
         });
 
-        // 生成文件名
-        const ts = new Date().toISOString().replace(/[:.]/g, "-").replace("T", "_").slice(0, 19);
-        const filename = `screener_${ts}.txt`;
+        // 生成文件名：yymmdd
+        const now = new Date();
+        const yy = String(now.getFullYear() % 100).padStart(2, "0");
+        const mm = String(now.getMonth() + 1).padStart(2, "0");
+        const dd = String(now.getDate()).padStart(2, "0");
+        const filename = `screener_${yy}${mm}${dd}.txt`;
 
         const blob = new Blob([text], { type: 'text/plain' });
         const reader = new FileReader();
