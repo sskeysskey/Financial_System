@@ -5,9 +5,7 @@
     "Technology": {
         "FI": ""
     },
-    "Consumer_Cyclical": {
-        "SG": ""
-    },
+    "Consumer_Cyclical": {},
     "Utilities": {},
     "Consumer_Defensive": {
         "FLO": "关注财报",
@@ -23,10 +21,7 @@
         "UNH": "",
         "MRNA": "",
         "MRK": "",
-        "HUM": "",
-        "LLY": "",
-        "ICLR": "",
-        "KRYS": ""
+        "LLY": ""
     },
     "Bonds": {
         "US10Y": "",
