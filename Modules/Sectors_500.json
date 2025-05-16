@@ -52,7 +52,8 @@
         "JD",
         "RCL",
         "HLT",
-        "GM"
+        "GM",
+        "ROST"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -226,7 +227,8 @@
         "GWW",
         "AXON",
         "NSC",
-        "PWR"
+        "PWR",
+        "PCAR"
     ],
     "Real_Estate": [
         "PLD",

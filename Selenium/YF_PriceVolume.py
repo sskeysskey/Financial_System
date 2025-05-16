@@ -348,12 +348,13 @@ def main():
                                 if row:
                                     prev_price = row[0]
                                     if prev_price == price:
-                                        show_alert(
-                                            f"{display_name} 在 {sector} 中：\n"
-                                            f"{prev_date} 价格 = {prev_price}\n"
-                                            f"{current_date} 价格 = {price}\n"
-                                            "价格未发生变化！"
-                                        )
+                                        # show_alert(
+                                        #     f"{display_name} 在 {sector} 中：\n"
+                                        #     f"{prev_date} 价格 = {prev_price}\n"
+                                        #     f"{current_date} 价格 = {price}\n"
+                                        #     "价格未发生变化！"
+                                        # )
+                                        print(f"抓取 {display_name} 成功，价格未发生变化")
                         else:
                             print(f"抓取 {symbol} 失败，未能获取到价格数据")
                     else:
@@ -391,12 +392,13 @@ def main():
                                 if row:
                                     prev_price = row[0]
                                     if prev_price == price:
-                                        show_alert(
-                                            f"{display_name} 在 {sector} 中：\n"
-                                            f"{prev_date} 价格 = {prev_price}\n"
-                                            f"{current_date} 价格 = {price}\n"
-                                            "价格未发生变化！"
-                                        )
+                                        # show_alert(
+                                        #     f"{display_name} 在 {sector} 中：\n"
+                                        #     f"{prev_date} 价格 = {prev_price}\n"
+                                        #     f"{current_date} 价格 = {price}\n"
+                                        #     "价格未发生变化！"
+                                        # )
+                                        print(f"抓取 {display_name} 成功，价格未发生变化")
                         else:
                             print(f"抓取 {symbol} 失败，未能获取到完整数据")
                 
