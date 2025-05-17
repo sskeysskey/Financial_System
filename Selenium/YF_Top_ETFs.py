@@ -66,7 +66,11 @@ chrome_options.add_argument("--disable-gpu")
 chrome_options.add_argument("--disable-dev-shm-usage")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--blink-settings=imagesEnabled=false")  # 禁用图片加载
-chrome_options.page_load_strategy = 'eager'  # 使用eager策略，DOM准备好就开始
+# Update your Chrome options with these settings
+chrome_options.page_load_strategy = 'none'  # Don't wait for full page load
+chrome_options.add_argument("--disable-site-isolation-trials")
+chrome_options.add_argument("--disable-web-security")
+chrome_options.add_argument("--dns-prefetch-disable")
 
 chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
 service = Service(executable_path=chrome_driver_path)
@@ -106,13 +110,22 @@ def is_blacklisted(symbol, bl):
 # ---------------------- 数据抓取 ----------------------
 def fetch_data(url):
     logging.info(f"Fetching {url}")
-    driver.set_page_load_timeout(5)
+    driver.set_page_load_timeout(10)  # Allow more time for initial load
     try:
         driver.get(url)
-    except TimeoutException:
-        logging.warning("页面加载超时，继续查找元素…")
+        # Stop page loading after DOM is available
+        WebDriverWait(driver, 2).until(
+            EC.presence_of_element_located((By.TAG_NAME, "body"))
+        )
+        # Stop further loading
+        driver.execute_script("window.stop();")
+    except Exception as e:
+        logging.warning(f"页面加载异常: {e}")
+        driver.execute_script("window.stop();")  # Force stop loading
+        
     try:
-        WebDriverWait(driver, 10).until(
+        # Wait only for the specific table rows we need
+        WebDriverWait(driver, 5).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "tbody tr"))
         )
         rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
@@ -152,6 +165,11 @@ def save_data(urls, existing_json, new_file, blacklist_file, sectors_file, db_pa
     logging.info("===== 开始保存 =====")
     bl = load_blacklist(blacklist_file)
 
+    # Clear cookies and cache between page loads
+    driver.delete_all_cookies()
+    driver.execute_script("window.localStorage.clear();")
+    driver.execute_script("window.sessionStorage.clear();")
+    
     # 预热主页
     driver.get("https://finance.yahoo.com/markets/etfs/top/")
     time.sleep(1)

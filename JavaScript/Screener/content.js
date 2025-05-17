@@ -58,8 +58,8 @@ async function scrapeFinanceData(category) {
             if (!marketCapText) continue;
             const marketCap = parseMarketCap(marketCapText);
 
-            // 6) 只保留市值 ≥ 50 亿
-            if (marketCap !== "--" && marketCap >= 5e9) {
+            // 只要有数值型市值就收集
+            if (typeof marketCap === "number" && !isNaN(marketCap)) {
                 results.push({ symbol, marketCap, category, price, volume });
             }
         } catch (e) {
@@ -72,7 +72,7 @@ async function scrapeFinanceData(category) {
 
 // 将带后缀的字符串转成纯数字
 function parseMarketCap(text) {
-    if (!text || text === "--") return "--";
+    if (!text || text === "--") return NaN;
     let m = 1;
     let s = text.trim().toUpperCase();
     if (s.endsWith("T")) { m = 1e12; s = s.slice(0, -1); }

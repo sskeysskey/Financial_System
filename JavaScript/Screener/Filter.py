@@ -411,19 +411,21 @@ def clean_old_backups(directory, file_patterns, days=4):
 
 def main():
     extension_launch()
-    
-    while count_files("screener") < 1:
+
+    # —— 原有等待 screener_above_*.txt 的逻辑，直到文件出现 —— 
+    while count_files("screener_above") < 1:
         time.sleep(2)
         print(".", end="", flush=True)
     
-    # # 查找Downloads目录下最新的screener_开头的txt文件
+    # # 查找Downloads目录下最新的screener_above_开头的txt文件
     downloads_path = '/Users/yanzhang/Downloads/'
-    screener_files = glob.glob(os.path.join(downloads_path, 'screener_*.txt'))
+    screener_files = glob.glob(os.path.join(downloads_path, 'screener_above_*.txt'))
     
     # # 按文件修改时间排序，获取最新的文件
     screener_file = max(screener_files, key=os.path.getmtime)
-    print(f"使用文件: {screener_file}")
-    
+    print(f"使用 above 文件: {screener_file}")
+
+    # —— 你原来的变量初始化 —— 
     db_file = '/Users/yanzhang/Documents/Database/Finance.db'
     sectors_all_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
     sectors_today_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_Today.json'
@@ -462,6 +464,28 @@ def main():
     # 处理Sectors_500.json
     updated_sectors_500, changes_500 = process_sectors_500(sectors_500_data, screener_data, market_caps, blacklist)
     save_sectors_file(sectors_500_file, updated_sectors_500)
+    
+    # —— 新增：处理 screener_below —— 
+    below_files = glob.glob(os.path.join(downloads_path, 'screener_below_*.txt'))
+    if below_files:
+        screener_below_file = max(below_files, key=os.path.getmtime)
+        print(f"使用 below 文件: {screener_below_file}")
+        below_data, _, below_prices, below_volumes = read_screener_file(screener_below_file)
+
+        # 只保留那些 sector 在 sectors_all_data 中存在，且 symbol 已经在对应列表中
+        valid_below_data = {}
+        for sector, symbols in below_data.items():
+            if sector not in sectors_all_data:
+                continue
+            # 进一步过滤：symbol 必须已经在 sectors_all_data[sector] 里
+            matched = [s for s in symbols if s in sectors_all_data[sector]]
+            if matched:
+                valid_below_data[sector] = matched
+
+        if valid_below_data:
+            insert_screener_records(db_file, valid_below_data, below_prices, below_volumes)
+        else:
+            print("⚠️ screener_below 中没有匹配到 sectors_all.json 里已有的 symbol，跳过写入")
     
     # 写入汇总日志文件
     output_file = '/Users/yanzhang/Documents/News/screener_sectors.txt'
