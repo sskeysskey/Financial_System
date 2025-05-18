@@ -138,7 +138,9 @@
         "USDBRL": "巴西",
         "USDINR": "印度卢比"
     },
-    "Economics": {},
+    "Economics": {
+        "USInitial": "22 USInitial"
+    },
     "ETFs_US": {
         "TLT": "",
         "XLK": "科技",
