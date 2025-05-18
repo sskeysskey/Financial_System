@@ -22,6 +22,24 @@ import argparse
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication, QMessageBox, QDesktopWidget
 
+def resolve_data_path(filename):
+    """
+    优先返回 ~/Downloads/filename，如果不存在则返回 ~/Documents/News/backup/filename。
+    如果两处都不存在，则默认返回 ~/Downloads/filename（后面写文件会自动创建）。
+    """
+    downloads_dir = os.path.expanduser("~/Downloads")
+    backup_dir   = os.path.expanduser("~/Documents/News/backup")
+    dl = os.path.join(downloads_dir, filename)
+    bu = os.path.join(backup_dir, filename)
+    if os.path.exists(dl):
+        return dl
+    elif os.path.exists(bu):
+        return bu
+    else:
+        # 两处都不存在，默认写到 Downloads
+        os.makedirs(downloads_dir, exist_ok=True)
+        return dl
+
 def create_mouse_prompt():
     """创建询问是否启用鼠标移动的弹窗"""
     # 确保只创建一个QApplication实例
@@ -408,9 +426,9 @@ def main():
         if has_content:
             # empty.json有内容，使用测试模式
             json_file_path = empty_json_path
-            shares_file_path = "/Users/yanzhang/Documents/News/backup/Shares.txt"
-            symbol_names_file_path = "/Users/yanzhang/Documents/News/backup/symbol_names.txt"
-            marketcap_pe_file_path = "/Users/yanzhang/Documents/News/backup/marketcap_pe.txt"
+            shares_file_path        = resolve_data_path("Shares.txt")
+            symbol_names_file_path  = resolve_data_path("symbol_names.txt")
+            marketcap_pe_file_path  = resolve_data_path("marketcap_pe.txt")
             print("使用空测试文件模式和backup目录...")
         else:
             # 首先尝试从剪贴板获取内容
@@ -530,11 +548,15 @@ def main():
                 # 查找Shares Outstanding数据
                 shares_outstanding = "N/A"
                 shares_outstanding_converted = 0
+                got_shares = False   # 标记是否真正拿到了 shares
+                got_price_book = False  # 标记是否真正拿到了 price/book
 
                 # 尝试通过XPath获取
                 shares_outstanding_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Shares Outstanding')]/following-sibling::td[1]", timeout=5)
-                if shares_outstanding_element and shares_outstanding_element.text:
+                # if shares_outstanding_element and shares_outstanding_element.text:
+                if shares_outstanding_element and shares_outstanding_element.text not in ("N/A", "-"):
                     shares_outstanding = shares_outstanding_element.text
+                    got_shares = True
                     print(f"通过XPath获取到 {symbol} 的股票数量: {shares_outstanding}")
                 else:
                     # 尝试其他XPath
@@ -545,8 +567,10 @@ def main():
                     
                     for xpath in alternative_xpaths:
                         alt_element = wait_for_element(driver, By.XPATH, xpath, timeout=3)
-                        if alt_element and alt_element.text:
+                        # if alt_element and alt_element.text:
+                        if alt_element and alt_element.text not in ("N/A", "-"):
                             shares_outstanding = alt_element.text
+                            got_shares = True
                             print(f"通过备选XPath获取到 {symbol} 的股票数量: {shares_outstanding}")
                             break
                     
@@ -565,6 +589,7 @@ def main():
                             
                             if js_result and js_result != 'Not found':
                                 shares_outstanding = js_result
+                                got_shares = True
                                 print(f"通过JavaScript获取到 {symbol} 的股票数量: {shares_outstanding}")
                         except Exception as js_error:
                             print(f"JavaScript获取 {symbol} 的股票数量失败: {str(js_error)}")
@@ -586,6 +611,7 @@ def main():
                         try:
                             price_book_value = float(price_book_text)
                             price_book_value = str(price_book_value)
+                            got_price_book = True
                         except ValueError:
                             pass
                     print(f"已获取 {symbol} 的Price/Book: {price_book_value}")
@@ -593,7 +619,7 @@ def main():
                     print(f"无法获取 {symbol} 的Price/Book")
                 
                 # 保存股票数量和Price/Book到Shares.txt（追加模式），先检查是否已存在
-                if symbol not in existing_shares:
+                if symbol not in existing_shares and (got_shares or got_price_book):
                     with open(shares_file_path, 'a', encoding='utf-8') as file:
                         file.write(f"{symbol}: {int(shares_outstanding_converted)}, {price_book_value}\n")
                     print(f"已保存 {symbol} 的股票数量和Price/Book: {int(shares_outstanding_converted)}, {price_book_value}")
@@ -604,9 +630,11 @@ def main():
                 # 查找Market Cap数据
                 market_cap_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Market Cap')]/following-sibling::td[1]", timeout=3)
                 market_cap_converted = 0
-                if market_cap_element:
+                got_marketcap = False
+                if market_cap_element and market_cap_element not in ("N/A", "-"):
                     market_cap = market_cap_element.text
                     market_cap_converted = convert_shares_format(market_cap)
+                    got_marketcap = True
                 
                 # 查找Trailing P/E数据
                 pe_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Trailing P/E')]/following-sibling::td[1]", timeout=3)
@@ -621,7 +649,7 @@ def main():
                             pass
                 
                 # 保存市值和PE到marketcap_pe.txt（追加模式），先检查是否已存在
-                if symbol not in existing_marketcap_pe:
+                if symbol not in existing_marketcap_pe and got_marketcap and got_price_book:
                     with open(marketcap_pe_file_path, 'a', encoding='utf-8') as file:
                         file.write(f"{symbol}: {market_cap_converted}, {pe_str}, {price_book_value}\n")
                     print(f"已保存 {symbol} 的市值和PE: {market_cap_converted}, {pe_str}")

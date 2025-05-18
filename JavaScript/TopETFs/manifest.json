@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "Yahoo ETF Scraper",
+    "name": "TopETFs Scraper",
     "version": "1.0",
     "description": "Scrapes ETF data from Yahoo Finance",
     "permissions": [

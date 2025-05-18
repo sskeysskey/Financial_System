@@ -51,7 +51,7 @@
     },
     "Commodities": {
         "CrudeOil": "",
-        "HuangJin": "",
+        "Huangjin": "",
         "Naturalgas": "",
         "BalticDry": "",
         "Silver": "",
@@ -138,9 +138,7 @@
         "USDBRL": "巴西",
         "USDINR": "印度卢比"
     },
-    "Economics": {
-        "USConfidence": "16 USConfidence"
-    },
+    "Economics": {},
     "ETFs_US": {
         "TLT": "",
         "XLK": "科技",
