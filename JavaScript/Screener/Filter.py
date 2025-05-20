@@ -60,11 +60,12 @@ def insert_screener_records(db_file, screener_data, prices, volumes):
     print(f"✅ 插入完成：{inserted} 条新纪录，跳过 {skipped} 条已有记录（日期：{yesterday}）")
 
 # 读取screener数据文件
-def read_screener_file(filepath):
+def read_screener_file(filepath, blacklist):
     screener_data = {}
     market_caps = {}
     prices = {}
     volumes = {}
+    screener_blacklist_symbols = set(blacklist.get('screener', [])) # 提前获取黑名单符号集合，提高效率
     with open(filepath, 'r') as f:
         for line in f:
             line = line.strip()
@@ -75,16 +76,29 @@ def read_screener_file(filepath):
             # 我们只关心前两项
             sym_cap, sector = parts[0], parts[1]
             
-            # 提取 symbol 和 market cap
-            symbol, cap_str = sym_cap.split(': ')
-            market_cap = float(cap_str)
-            
-            screener_data.setdefault(sector, []).append(symbol)
-            market_caps[symbol] = market_cap
+            # 提取 symbol
+            try:
+                symbol, cap_str = sym_cap.split(': ')
+            except ValueError:
+                print(f"⚠️ 警告：无法解析行 '{line}' 中的 symbol 和 market cap，已跳过。")
+                continue
+
+            # 在这里检查 symbol 是否在黑名单的 screener 分组中
+            if symbol in screener_blacklist_symbols:
+                # print(f"ℹ️ Symbol '{symbol}' 在黑名单的 screener 分组中，已从文件 '{filepath}' 的读取中跳过。") # 可选的日志输出
+                continue # 如果在黑名单中，则跳过当前行的后续处理
+
+            try:
+                market_cap = float(cap_str)
+                price = float(parts[2])
+                vol = int(round(float(parts[3])))
+            except (ValueError, IndexError) as e:
+                print(f"⚠️ 警告：解析行 '{line}' 的数值数据失败 (symbol: {symbol}) - {e}，已跳过。")
+                continue
             
             # 如果你以后需要 price/volume，可以这样解析：
-            price = float(parts[2])  
-            vol = int(round(float(parts[3])))
+            screener_data.setdefault(sector, []).append(symbol)
+            market_caps[symbol] = market_cap
             prices[symbol] = price
             volumes[symbol] = vol
     return screener_data, market_caps, prices, volumes
@@ -180,7 +194,7 @@ def compare_and_update_sectors(screener_data, sectors_all_data, sectors_today_da
                     
                     # 添加到新的sector
                     sectors_all_data[sector].append(symbol)
-                    added_symbols.append(f"将symbol '{symbol}' 添加到 '{sector}' 部门，请使用Ctrl+Option+9")
+                    added_symbols.append(f"将symbol '{symbol}' 添加到 '{sector}' 部门，请使用Ctrl+Option+9，然后到Yahoo页面再使用Ctrl+Option+E抓取历史数据。再使用Ctrl+Option+1抓取description，使用Ctrl+option+X抓取财报数据。")
                     
                     # 确保sectors_today_data中有该sector
                     if sector not in sectors_today_data:
@@ -436,13 +450,13 @@ def main():
     backup_directory = '/Users/yanzhang/Documents/News/backup/site'
     
     # 读取数据
-    screener_data, market_caps, prices, volumes = read_screener_file(screener_file)
+    blacklist = read_blacklist_file(blacklist_file)
+    screener_data, market_caps, prices, volumes = read_screener_file(screener_file, blacklist)
     sectors_all_data = read_sectors_file(sectors_all_file)
     sectors_today_data = read_sectors_file(sectors_today_file)
     sectors_empty_data = read_sectors_file(sectors_empty_file)
     sectors_5000_data = read_sectors_file(sectors_5000_file)
     sectors_500_data = read_sectors_file(sectors_500_file)
-    blacklist = read_blacklist_file(blacklist_file)
     
     # 比较差异并更新sectors文件
     updated_sectors_all, updated_sectors_today, updated_sectors_empty, added_symbols, moved_symbols, db_delete_logs = compare_and_update_sectors(
@@ -470,7 +484,7 @@ def main():
     if below_files:
         screener_below_file = max(below_files, key=os.path.getmtime)
         print(f"使用 below 文件: {screener_below_file}")
-        below_data, _, below_prices, below_volumes = read_screener_file(screener_below_file)
+        below_data, _, below_prices, below_volumes = read_screener_file(screener_below_file, blacklist)
 
         # 只保留那些 sector 在 sectors_all_data 中存在，且 symbol 已经在对应列表中
         valid_below_data = {}

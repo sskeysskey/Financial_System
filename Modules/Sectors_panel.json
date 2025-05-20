@@ -3,7 +3,9 @@
     "Real_Estate": {},
     "Energy": {},
     "Technology": {},
-    "Consumer_Cyclical": {},
+    "Consumer_Cyclical": {
+        "SG": ""
+    },
     "Utilities": {},
     "Consumer_Defensive": {
         "FLO": "关注财报",
