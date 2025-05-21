@@ -1,6 +1,7 @@
 import sqlite3
 import json
 import os
+import shutil
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from collections import OrderedDict
@@ -288,6 +289,83 @@ def process_high_data(input_lines, compare_data):
                 processed_lines.append(new_line)
     return processed_lines
 
+def move_files_to_backup():
+    # --- 配置路径 ---
+    downloads_dir = "/Users/yanzhang/Downloads"
+    news_dir = "/Users/yanzhang/Documents/News"
+    backup_dir = os.path.join(news_dir, "backup") # 备份目录路径
+
+    # --- 1. 确保备份目录存在 ---
+    try:
+        os.makedirs(backup_dir, exist_ok=True)
+        print(f"备份目录 '{backup_dir}' 已确保存在。")
+    except OSError as e:
+        print(f"创建目录 {backup_dir} 时出错: {e}")
+        return # 如果无法创建备份目录，则退出
+
+    # --- 2. 将 /Users/yanzhang/Downloads 目录下所有以 screener_ 开头的 txt 文件移动到 backup 目录 ---
+    print(f"\n开始处理 '{downloads_dir}' 目录下的 'screener_*.txt' 文件...")
+    try:
+        for filename in os.listdir(downloads_dir):
+            if filename.startswith("screener_") and filename.endswith(".txt"):
+                source_path = os.path.join(downloads_dir, filename)
+                destination_path = os.path.join(backup_dir, filename)
+
+                # 确保源路径是一个文件
+                if os.path.isfile(source_path):
+                    try:
+                        shutil.move(source_path, destination_path)
+                        print(f"已移动: '{source_path}' -> '{destination_path}'")
+                    except Exception as e:
+                        print(f"移动文件 '{source_path}' 时出错: {e}")
+                else:
+                    print(f"跳过: '{source_path}' 不是一个文件。")
+    except FileNotFoundError:
+        print(f"错误: 目录 '{downloads_dir}' 未找到。")
+    except Exception as e:
+        print(f"处理 'screener_*.txt' 文件时发生意外错误: {e}")
+
+    # --- 3. 将 /Users/yanzhang/Downloads 目录下所有以 topetf_ 开头的 csv 文件移动到 backup 目录 ---
+    print(f"\n开始处理 '{downloads_dir}' 目录下的 'topetf_*.csv' 文件...")
+    try:
+        for filename in os.listdir(downloads_dir):
+            if filename.startswith("topetf_") and filename.endswith(".csv"):
+                source_path = os.path.join(downloads_dir, filename)
+                destination_path = os.path.join(backup_dir, filename)
+
+                # 确保源路径是一个文件
+                if os.path.isfile(source_path):
+                    try:
+                        shutil.move(source_path, destination_path)
+                        print(f"已移动: '{source_path}' -> '{destination_path}'")
+                    except Exception as e:
+                        print(f"移动文件 '{source_path}' 时出错: {e}")
+                else:
+                    print(f"跳过: '{source_path}' 不是一个文件。")
+    except FileNotFoundError:
+        # 这个错误可能在上面已经被报告过了，但为了完整性再次检查
+        print(f"错误: 目录 '{downloads_dir}' 未找到。")
+    except Exception as e:
+        print(f"处理 'topetf_*.csv' 文件时发生意外错误: {e}")
+
+    # --- 4. 将 /Users/yanzhang/Documents/News/screener_sectors.txt 移动到 backup 目录 ---
+    print(f"\n开始处理特定文件 'screener_sectors.txt'...")
+    specific_source_file = os.path.join(news_dir, "screener_sectors.txt")
+    # 从源文件路径中获取文件名，以确保目标文件名正确
+    specific_filename = os.path.basename(specific_source_file)
+    specific_dest_file = os.path.join(backup_dir, specific_filename)
+
+    if os.path.isfile(specific_source_file):
+        try:
+            shutil.move(specific_source_file, specific_dest_file)
+            print(f"已移动: '{specific_source_file}' -> '{specific_dest_file}'")
+        except Exception as e:
+            print(f"移动文件 '{specific_source_file}' 时出错: {e}")
+    else:
+        print(f"跳过: 特定文件 '{specific_source_file}' 未找到或不是一个文件。")
+
+    print("\n所有文件操作已完成。")
+
 def main():    
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
     backup_directory = '/Users/yanzhang/Documents/News/backup/backup'
@@ -420,6 +498,8 @@ def main():
             output_high_file_path = '/Users/yanzhang/Documents/News/10Y_newhigh_new.txt'
             write_output_to_file(processed_output, output_high_file_path)
 
+    move_files_to_backup()
+    
     # 定义要清理的文件模式，每个模式现在包含三个元素：(前缀, 日期位置, 保留天数)
     file_patterns = [
         ("Earnings_Release_next_", -1, 13),    # 保留13天
@@ -442,7 +522,9 @@ def main():
     second_backup_directory = '/Users/yanzhang/Documents/News/backup'
     second_file_patterns = [
         ("article_copier_", -1, 3),
-        ("screener_", -1, 3),
+        ("screener_above_", -1, 3),
+        ("screener_below_", -1, 3),
+        ("topetf_", -1, 3),
     ]
     clean_old_backups(second_backup_directory, second_file_patterns)
         

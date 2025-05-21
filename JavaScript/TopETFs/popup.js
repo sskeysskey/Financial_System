@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', function () {
     const statusDiv = document.getElementById('status');
-    const startButton = document.getElementById('startScrapeButton');
+    // Remove the line below:
+    // const startButton = document.getElementById('startScrapeButton');
 
     function addLogMessage(message, type = 'info') {
         const logItem = document.createElement('div');
@@ -10,34 +11,29 @@ document.addEventListener('DOMContentLoaded', function () {
         statusDiv.scrollTop = statusDiv.scrollHeight; // Auto-scroll to the latest message
     }
 
-    startButton.addEventListener('click', function () {
-        addLogMessage('Scraping process initiated by user.', 'info');
-        startButton.disabled = true; // Disable button after clicking
-        startButton.textContent = 'Scraping...';
-
-        chrome.runtime.sendMessage({ action: 'startYahooScraping' }, function (response) {
-            if (chrome.runtime.lastError) {
-                addLogMessage(`Error starting scraping: ${chrome.runtime.lastError.message}`, 'error');
-                startButton.disabled = false;
-                startButton.textContent = 'Start Scraping ETFs';
-            } else if (response && response.status === 'started') {
-                addLogMessage('Background process for Yahoo ETFs initiated.', 'info');
-            } else {
-                addLogMessage('Failed to start background process or no response.', 'error');
-                startButton.disabled = false;
-                startButton.textContent = 'Start Scraping ETFs';
-            }
-        });
+    // Add the message sending logic here to start scraping automatically
+    addLogMessage('Popup loaded. Starting scraping process automatically.', 'info');
+    chrome.runtime.sendMessage({ action: 'startYahooScraping' }, function (response) {
+        if (chrome.runtime.lastError) {
+            addLogMessage(`Error starting scraping: ${chrome.runtime.lastError.message}`, 'error');
+            // If there's an error starting, maybe show a retry message or similar
+        } else if (response && response.status === 'started') {
+            addLogMessage('Background process for Yahoo ETFs initiated.', 'info');
+        } else {
+            addLogMessage('Failed to start background process or no response.', 'error');
+        }
     });
+
 
     // Listen for status updates and CSV download requests
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         if (message.type === 'statusUpdate') { // Changed from 'status' to avoid conflict
             addLogMessage(message.text, message.logType || 'info');
-            if (message.completed) {
-                startButton.disabled = false;
-                startButton.textContent = 'Start Scraping ETFs';
-            }
+            // Remove the line below:
+            // if (message.completed) {
+            //     startButton.disabled = false;
+            //     startButton.textContent = 'Start Scraping ETFs';
+            // }
         } else if (message.type === 'csvData') {
             // This part handles the download triggered by background.js
             const blob = new Blob([message.data], { type: 'text/csv;charset=utf-8;' });

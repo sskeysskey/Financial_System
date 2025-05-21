@@ -115,7 +115,11 @@ async function startYahooScrapingProcess() {
         if (allYahooETFData.length > 0) {
             updatePopupStatus(`Generating CSV with ${allYahooETFData.length} ETF records...`, 'info');
             const csv = generateETFCSV(allYahooETFData);
-            const timestamp = new Date().toISOString().replace(/[:.-]/g, '').slice(0, -4); // YYYYMMDDTHHMMSS
+            const now = new Date();
+            const year = now.getFullYear().toString().slice(-2); // 获取年份的后两位，例如 2025 -> 25
+            const month = (now.getMonth() + 1).toString().padStart(2, '0'); // 获取月份 (0-11)，所以 +1，并补零到两位，例如 5 -> 05
+            const day = now.getDate().toString().padStart(2, '0'); // 获取日期，并补零到两位，例如 21 -> 21
+            const timestamp = `${year}${month}${day}`; // 拼接成 YYMMDD 格式，例如 250521
             const filename = `topetf_${timestamp}.csv`;
 
             // Instead of chrome.downloads.download, send to popup.js
@@ -133,8 +137,8 @@ async function startYahooScrapingProcess() {
             try {
                 // Optional: close the tab after scraping is done or if an error occurs
                 // For debugging, you might want to leave it open.
-                // await chrome.tabs.remove(tab.id);
-                // updatePopupStatus('Scraping tab closed.', 'info');
+                await chrome.tabs.remove(tab.id);
+                updatePopupStatus('Scraping tab closed.', 'info');
             } catch (closeError) {
                 console.error("Error closing tab:", closeError);
             }
