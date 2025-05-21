@@ -57,7 +57,11 @@ const tasks = [
             const date = null; // 由 background 填充
             if (thisUrl.includes('/commodity/baltic')) {
                 const td = document.querySelector('table tr td:nth-child(2)');
-                if (td) out.push({ name: 'BalticDry', price: td.textContent.trim() });
+                if (td) {
+                    const raw = td.textContent.trim();          // e.g. "1,340.00"
+                    const price = raw.replace(/,/g, '');        // 变成 "1340.00"
+                    out.push({ name: 'BalticDry', price });
+                }
             } else {
                 // commodity 列表示例
                 const list = ["Coal", "Uranium", "Steel", "Lithium", "Wheat", "Palm Oil", "Aluminum",
