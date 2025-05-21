@@ -474,7 +474,8 @@
         "HTUS",
         "DXJ",
         "FDD",
-        "EUFN"
+        "EUFN",
+        "BJAN"
     ],
     "Basic_Materials": [
         "LIN",
@@ -1683,7 +1684,6 @@
         "LOGI",
         "JKHY",
         "FLEX",
-        "ZI",
         "DOCU",
         "JNPR",
         "ONTO",

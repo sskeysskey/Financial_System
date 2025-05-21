@@ -70,7 +70,8 @@
         "BTI",
         "CL",
         "DEO",
-        "MNST"
+        "MNST",
+        "KR"
     ],
     "Energy": [
         "XOM",
@@ -90,7 +91,6 @@
         "KMI",
         "LNG",
         "MPC",
-        "PSX",
         "MPLX",
         "TRP"
     ],
@@ -227,7 +227,8 @@
         "AXON",
         "NSC",
         "PWR",
-        "PCAR"
+        "PCAR",
+        "WCN"
     ],
     "Real_Estate": [
         "PLD",
@@ -288,7 +289,6 @@
         "TEAM",
         "PAYX",
         "SNOW",
-        "FICO",
         "MRVL",
         "NXPI",
         "NET"

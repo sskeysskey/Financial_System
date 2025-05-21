@@ -35,7 +35,7 @@ cursor = conn.cursor()
 # cursor.execute("UPDATE Technology SET price = ROUND(price, 2) WHERE name = 'MSTR'")
 
 # 将所有name为'Russian'的记录改为'Russia'
-cursor.execute("UPDATE Commodities SET name = 'Huangjin' WHERE name = 'HuangJin'")
+# cursor.execute("UPDATE Commodities SET name = 'Huangjin' WHERE name = 'HuangJin'")
 # cursor.execute("UPDATE Commodities SET name = 'YuMi' WHERE name = 'Corn'")
 
 # 更新数据库表中所有记录的price字段，保留2位小数

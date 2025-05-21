@@ -15,6 +15,64 @@ SYMBOL_MAPPING_PATH = "/Users/yanzhang/Documents/Financial_System/Modules/Symbol
 DB_PATH = "/Users/yanzhang/Documents/Database/Finance.db"
 ERROR_LOG_PATH = "/Users/yanzhang/Documents/News/Today_error.txt"
 
+def add_symbol_to_etfs_group_in_json(symbol_to_add, json_path):
+    """
+    将指定的 symbol 添加到 Sectors_All.json 文件中的 "ETFs" 分组。
+    如果 "ETFs" 组不存在，则创建它。
+    如果 symbol 已存在于 "ETFs" 组中，则不重复添加。
+    Symbol 在存入JSON前会被转换为大写。
+
+    返回:
+        bool: 如果成功更新或 symbol 已存在，返回 True。如果发生错误，返回 False。
+    """
+    try:
+        # 1. 读取现有的 JSON 数据
+        try:
+            with open(json_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except FileNotFoundError:
+            # 如果文件不存在，则初始化为空字典，后续会创建 "ETFs" 键
+            print(f"信息: JSON 文件 {json_path} 未找到，将创建一个新的。")
+            data = {}
+        except json.JSONDecodeError:
+            print(f"错误: JSON 文件 {json_path} 格式无效。无法自动添加 symbol '{symbol_to_add}'。")
+            # 可以选择创建一个新的空文件或者报错退出，这里我们尝试重置
+            alert_msg = f"Sectors_All.json 文件格式错误，无法自动添加 {symbol_to_add} 到 ETFs 组。请检查文件。"
+            # 你可以决定是否在这里调用 alert_and_exit 或仅记录错误并继续（可能导致后续问题）
+            # 为了安全起见，这里可以选择不修改文件并返回False
+            # subprocess.run(['osascript', '-e', f'display dialog "{alert_msg}" with title "JSON 错误" buttons {{"OK"}} default button "OK"'])
+            print(alert_msg) # 打印到控制台
+            return False # 表示添加失败
+
+        # 2. 获取或创建 "ETFs" 组
+        if "ETFs" not in data:
+            data["ETFs"] = []
+            print(f"信息: 在 {json_path} 中创建了新的 'ETFs' 组。")
+        elif not isinstance(data["ETFs"], list):
+            print(f"警告: {json_path} 中的 'ETFs' 键不是一个列表。将重置为一个新列表。")
+            data["ETFs"] = []
+
+        # 3. 将 symbol 添加到 "ETFs" 组 (如果尚未存在)
+        if symbol_to_add not in data["ETFs"]:
+            data["ETFs"].append(symbol_to_add)
+            print(f"Symbol '{symbol_to_add}' 已添加到 {json_path} 的 'ETFs' 组中。")
+            
+            # 4. 写回更新后的 JSON 数据
+            try:
+                with open(json_path, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, indent=4, ensure_ascii=False) # indent=4 for pretty printing
+                return True # 表示成功更新
+            except IOError as e:
+                print(f"错误: 无法写入更新到 JSON 文件 {json_path}: {e}")
+                return False # 表示写入失败
+        else:
+            print(f"Symbol '{symbol_to_add}' 已存在于 {json_path} 的 'ETFs' 组中，无需重复添加。")
+            return True # Symbol 已存在，也视为一种成功状态
+
+    except Exception as e:
+        print(f"更新 {json_path} 时发生未知错误: {e}")
+        return False
+
 def alert_and_exit(msg):
     """
     弹出 macOS 警示框，写日志，然后退出脚本。
@@ -186,15 +244,37 @@ def process_csv_file(csv_filepath, symbol, group_name, db_path):
             has_vol_in_csv = 'volume' in header
             # 收集数据
             rows = []
-            for lineno, row in enumerate(reader, start=2):
+            for lineno, row in enumerate(reader, start=2): # lineno 从2开始，因为表头是第1行
                 if len(row) != len(header):
                     print(f"警告: {csv_filepath} 第 {lineno} 行列数 {len(row)} ≠ 表头列数 {len(header)}，跳过。")
                     continue
+                
                 # 提取通用的 date, price
-                date_val = row[header.index('date')]
-                price_val = float(row[header.index('price')])
+                try:
+                    date_val = row[header.index('date')]
+                    price_val = float(row[header.index('price')])
+                except ValueError as ve:
+                    print(f"警告: {csv_filepath} 第 {lineno} 行 date 或 price 转换错误: {row}. 错误: {ve}. 跳过此行。")
+                    continue
+                except IndexError:
+                    print(f"警告: {csv_filepath} 第 {lineno} 行缺少 'date' 或 'price' 列 (或表头不匹配)。跳过此行。")
+                    continue
+
                 if has_vol_in_csv:
-                    volume_val = int(row[header.index('volume')])
+                    volume_str = row[header.index('volume')].strip() # 获取 volume 字符串并去除首尾空格
+                    volume_val = 0 # 默认为 0
+                    if volume_str: # 如果字符串不为空
+                        try:
+                            volume_val = int(volume_str)
+                        except ValueError:
+                            # 如果转换失败 (例如, volume_str 是 "N/A" 或其他非数字字符)
+                            print(f"警告: {csv_filepath} 第 {lineno} 行 'volume' 值 '{volume_str}' 无效，将设为 0")
+                            # volume_val 保持为 None
+                    else:
+                        # 如果 volume_str 为空字符串
+                        print(f"警告: {csv_filepath} 第 {lineno} 行 'volume' 值为空，将设为 0")
+                        # volume_val 保持为 None
+                    
                     rows.append((date_val, symbol, price_val, volume_val))
                 else:
                     rows.append((date_val, symbol, price_val))
@@ -202,27 +282,52 @@ def process_csv_file(csv_filepath, symbol, group_name, db_path):
         print(f"读取 CSV {csv_filepath} 时出错: {e}")
         return False
 
+    if not rows: # 如果在读取CSV后没有收集到任何行（可能所有行都有问题）
+        print(f"文件 {csv_filepath} 中没有可处理的数据。")
+        # 根据您的逻辑，这里可以返回 True 或 False。如果认为空文件或全错误文件是“已处理”，则 True。
+        # 如果希望它被标记为失败，则 False。
+        # 假设我们认为这是一个可以安全删除（如果后续逻辑是删除）的情况，返回True。
+        # 但如果这意味着没有数据插入，并且这是个问题，则应该返回False或记录更严重的错误。
+        # 为了与原逻辑一致（原逻辑在无数据插入时返回True），这里也返回True。
+        # 但要注意，如果是因为所有行都转换失败，这可能隐藏了问题。
+        # 一个更稳健的做法可能是，如果rows为空但文件本身非空，则记录一个更明确的错误。
+        # 不过，当前错误是 int('')，所以至少会有一行尝试被处理。
+        return True
+
+
     # --- 打开数据库 & 确保表存在 ---
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     safe_table = f'"{group_name}"'
     # 确保表存在（原 create_table_if_not_exists 会创建带 volume 的表）
-    create_table_if_not_exists(conn, group_name)
+    try:
+        create_table_if_not_exists(conn, group_name)
+    except sqlite3.Error as e:
+        print(f"确保表 {safe_table} 存在时发生数据库错误: {e}")
+        conn.close()
+        return False
+
 
     # --- 读取表结构，判断表里是否有 volume 列 ---
     cursor.execute(f'PRAGMA table_info({safe_table});')
-    cols = [row[1] for row in cursor.fetchall()]  # row[1] 是列名
+    cols = [col_info[1] for col_info in cursor.fetchall()]  # col_info[1] 是列名
     has_vol_in_db = 'volume' in cols
 
     # --- 对比 CSV vs DB 列 状态，不匹配时报错退出 ---
     if has_vol_in_db != has_vol_in_csv:
         if has_vol_in_db and not has_vol_in_csv:
-            msg = f"表 {group_name} 有 volume 列，但 CSV {os.path.basename(csv_filepath)} 中缺少 volume。"
-        else:
-            msg = f"表 {group_name} 无 volume 列，但 CSV {os.path.basename(csv_filepath)} 中包含 volume。"
-        alert_and_exit(msg)
+            msg = f"表 {group_name} 有 volume 列，但 CSV {os.path.basename(csv_filepath)} 中缺少 volume 列头。"
+        else: # not has_vol_in_db and has_vol_in_csv
+            msg = f"表 {group_name} 无 volume 列，但 CSV {os.path.basename(csv_filepath)} 中包含 volume 列头。"
+        conn.close() # 关闭数据库连接前调用 alert_and_exit
+        alert_and_exit(msg) # 这个函数会退出脚本
 
     # --- 根据是否含 volume 动态构建 UPSERT 语句 & 数据 ---
+    # 注意：现在 rows 中的数据元组结构是统一的（对于有volume的CSV，第四个元素是volume或None）
+    # 或者（对于没有volume列的CSV，元组只有3个元素）
+    # 我们需要确保传递给 executemany 的数据结构与 SQL 语句匹配
+
+    final_rows_for_db = []
     if has_vol_in_db and has_vol_in_csv:
         # 四列 upsert
         upsert_sql = f"""
@@ -232,7 +337,8 @@ def process_csv_file(csv_filepath, symbol, group_name, db_path):
             price = excluded.price,
             volume = excluded.volume;
         """
-    else:
+        final_rows_for_db = rows # rows 已经是 (date, symbol, price, volume_val)
+    elif not has_vol_in_db and not has_vol_in_csv:
         # 只有 date,name,price
         upsert_sql = f"""
         INSERT INTO {safe_table} (date, name, price)
@@ -240,16 +346,23 @@ def process_csv_file(csv_filepath, symbol, group_name, db_path):
         ON CONFLICT(date, name) DO UPDATE SET
             price = excluded.price;
         """
+        final_rows_for_db = rows # rows 已经是 (date, symbol, price)
+    else:
+        # 这种情况理论上已经被前面的 alert_and_exit 覆盖了，但作为防御性编程可以保留
+        print(f"逻辑错误: CSV 和 DB 的 volume 列状态不匹配，但未被 alert_and_exit 捕获。CSV: {has_vol_in_csv}, DB: {has_vol_in_db}")
+        conn.close()
+        return False
+
 
     # --- 执行批量写入 ---
     try:
-        cursor.executemany(upsert_sql, rows)
+        cursor.executemany(upsert_sql, final_rows_for_db)
         conn.commit()
-        print(f"成功处理 {len(rows)} 行 数据 —— {os.path.basename(csv_filepath)} → 表 {group_name}")
+        print(f"成功处理 {len(final_rows_for_db)} 行 数据 —— {os.path.basename(csv_filepath)} → 表 {group_name}")
         return True
     except sqlite3.Error as e:
         conn.rollback()
-        print(f"数据库操作失败: {e}")
+        print(f"数据库操作失败 ({os.path.basename(csv_filepath)} -> {group_name}): {e}")
         return False
     finally:
         conn.close()
@@ -280,8 +393,10 @@ def main():
     print("--- 开始处理CSV文件 ---")
     # 1. 加载 symbol 到 group 的映射
     symbol_to_group_map = load_symbol_to_group_map(SECTORS_JSON_PATH)
-    if symbol_to_group_map is None:
-        print("无法加载 symbol-group 映射，程序终止。")
+    if symbol_to_group_map is None: # load_symbol_to_group_map 内部已处理错误并返回 {} 或 None
+        # 如果 load_symbol_to_group_map 返回 None (严重错误)，则终止
+        # 如果返回 {} (例如文件为空或格式错误但未抛出异常)，程序会继续，但映射为空
+        print("无法加载 symbol-group 映射，程序终止。") # 保持原有逻辑，如果load函数返回None则终止
         return
 
     # 2. 加载符号别名映射 (如果文件不存在或格式错，就返回空 dict)
@@ -297,7 +412,7 @@ def main():
     print(f"找到 {len(csv_files)} 个CSV文件待处理: {csv_files}")
 
     processed_count = 0
-    skipped_count = 0
+    skipped_count = 0 # 注意：这个变量的含义可能需要调整，因为现在文件不会因为找不到group而被跳过
 
     # 4. 逐个处理 CSV 文件
     for csv_filepath in csv_files:
@@ -319,33 +434,52 @@ def main():
         #      如果有，就用 alias_map[symbol]，否则还是 symbol
         symbol = symbol_alias_map.get(symbol, symbol)
         print(f"  [2] 映射后最终 symbol: {symbol}")
-        # --- c. 查 group, 其余逻辑不变 ---
-        group_name = symbol_to_group_map.get(symbol.upper()) # 假设JSON中的symbol是大写的，或者根据实际情况调整
+        
+        # --- c. 查 group ---
+        # 假设JSON中的symbol是大写的，或者根据实际情况调整
+        group_name = symbol_to_group_map.get(symbol) 
 
-        if group_name:
-            print(f"Symbol: {symbol}, 对应 Group (表名): {group_name}")
-            # c. & d. & e. & f. & g. 处理CSV并写入数据库
-            success = process_csv_file(csv_filepath, symbol, group_name, DB_PATH)
-            
-            if success:
-                # h. 如果成功，删除 CSV 文件
-                try:
-                    os.remove(csv_filepath)
-                    print(f"成功处理并删除了文件: {csv_filepath}")
-                    processed_count += 1
-                except OSError as e:
-                    print(f"错误: 删除文件 {csv_filepath} 失败: {e}")
+        # --- 如果 group_name 未找到，则设置为 "ETFs" 并更新 JSON 及内存映射 ---
+        if group_name is None:
+            # 将 symbol 添加到 Sectors_All.json 的 ETFs 组
+            if add_symbol_to_etfs_group_in_json(symbol, SECTORS_JSON_PATH):
+                # 如果成功添加到 JSON 文件，也更新内存中的 symbol_to_group_map
+                # 这样，如果在同一次运行中（理论上不太可能处理同一个 symbol 两次）再次查找，
+                # 或者如果 load_symbol_to_group_map 在开始时未能加载 "ETFs" 组（例如JSON文件最初没有ETFs组）
+                # 这能确保内存映射是最新的。
+                group_name = "ETFs"
+                print(f"内存中的 symbol_to_group_map 已更新：'{symbol}' -> '{group_name}'")
             else:
-                print(f"处理文件 {csv_filepath} 失败，文件未删除。")
-                skipped_count += 1
+                # 如果添加到 JSON 失败，可以选择是否继续处理，或者标记为跳过
+                # 这里我们选择继续处理，但 group_name 仍然是 "ETFs"
+                # 但 Sectors_All.json 可能没有被更新
+                print(f"注意: Symbol '{symbol}' 未能成功添加到 {SECTORS_JSON_PATH}。仍将尝试使用 Group '{group_name}' 处理。")
+
+        # 现在 group_name 一定有值 (要么是找到的，要么是 "ETFs")
+        print(f"Symbol: {symbol}, 对应 Group (表名): {group_name}")
+
+        # c. & d. & e. & f. & g. 处理CSV并写入数据库
+        # 原来的 if group_name: 条件可以移除，因为 group_name 总是有值
+        success = process_csv_file(csv_filepath, symbol, group_name, DB_PATH)
+        
+        if success:
+            # h. 如果成功，删除 CSV 文件
+            try:
+                os.remove(csv_filepath)
+                print(f"成功处理并删除了文件: {csv_filepath}")
+                processed_count += 1
+            except OSError as e:
+                print(f"错误: 删除文件 {csv_filepath} 失败: {e}")
+                # 如果删除失败，也算作未完全成功，可以归入 skipped_count 或新增一个计数
+                skipped_count += 1 # 视情况调整，这里暂时将删除失败也计入skipped
         else:
-            print(f"警告: 未在 Sectors_All.json 中找到 Symbol '{symbol}' (来自文件 {filename}) 对应的 Group。跳过此文件。")
+            print(f"处理文件 {csv_filepath} 失败，文件未删除。")
             skipped_count += 1
             
     print("\n--- CSV文件处理完成 ---")
     print(f"总计: {len(csv_files)} 个文件。")
     print(f"成功处理并删除: {processed_count} 个文件。")
-    print(f"跳过或处理失败: {skipped_count} 个文件。")
+    print(f"处理失败、删除失败或JSON更新可能存在问题: {skipped_count} 个文件。")
 
 if __name__ == "__main__":
     main()

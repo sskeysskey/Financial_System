@@ -12,7 +12,7 @@ json_file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All
 blacklist_json_path = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'
 db_file_path = '/Users/yanzhang/Documents/Database/Finance.db'
 output_dir = '/Users/yanzhang/Documents/News'
-output_txt_file = os.path.join(output_dir, 'ETF_new.txt')
+output_txt_file = os.path.join(output_dir, 'ETFs_new.txt')
 
 def count_files(prefix):
     """
