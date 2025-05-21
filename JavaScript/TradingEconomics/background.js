@@ -96,13 +96,44 @@ const tasks = [
     {
         name: 'Economics',
         urls: ['https://tradingeconomics.com/united-states/indicators'],
-        scraper: ([], thisUrl) => {
-            // 这里示例只抓 GDP Growth Rate
+        scraper: (allUrls, thisUrl) => {
+            // “指标名称 → CSV 中的字段名” 映射
+            const map = {
+                "GDP Growth Rate": "USGDP",
+                "Non Farm Payrolls": "USNonFarm",
+                "Inflation Rate": "USCPI",
+                "Interest Rate": "USInterest",
+                "Balance of Trade": "USTrade",
+                "Consumer Confidence": "USConfidence",
+                "Retail Sales MoM": "USRetailM",
+                "Unemployment Rate": "USUnemploy",
+                "Non Manufacturing PMI": "USNonPMI",
+                "Initial Jobless Claims": "USInitial",
+                "ADP Employment Change": "USNonFarmA",
+                "Core PCE Price Index Annual Change": "CorePCEY",
+                "Core PCE Price Index MoM": "CorePCEM",
+                "Core Inflation Rate": "CoreCPI",
+                "Producer Prices Change": "USPPI",
+                "Core Producer Prices YoY": "CorePPI",
+                "PCE Price Index Annual Change": "PCEY",
+                "Import Prices MoM": "ImportPriceM",
+                "Import Prices YoY": "ImportPriceY",
+                "Real Consumer Spending": "USConspending"
+            };
             const out = [];
-            const xpath = "//td[normalize-space(.)='GDP Growth Rate']/following-sibling::td";
-            const el = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-            if (el) out.push({ name: 'USGDP', price: el.textContent.trim() });
-            // … 同理可扩展其他指标 …
+            // 遍历所有第一列
+            document.querySelectorAll('td:first-child').forEach(td => {
+                const key = td.textContent.trim();
+                if (map[key]) {
+                    const vtd = td.nextElementSibling;
+                    if (vtd) {
+                        out.push({
+                            name: map[key],
+                            price: vtd.textContent.trim()
+                        });
+                    }
+                }
+            });
             return out;
         },
         filename: () => `economics_${today()}.csv`
