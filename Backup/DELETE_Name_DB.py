@@ -32,7 +32,7 @@ def delete_records_by_names(db_file, table_name, stock_names):
 db_path = '/Users/yanzhang/Documents/Database/Finance.db'  # 配置数据库文件路径
 table = 'Technology'
 stock_names_to_delete = [
-    "STNE"
+    "ZI"
 ]
 
 delete_records_by_names(db_path, table, stock_names_to_delete)

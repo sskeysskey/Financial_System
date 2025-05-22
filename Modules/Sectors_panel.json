@@ -1,9 +1,14 @@
 {
-    "Basic_Materials": {},
+    "Basic_Materials": {
+        "WLK": ""
+    },
     "Real_Estate": {},
     "Energy": {},
     "Technology": {},
-    "Consumer_Cyclical": {},
+    "Consumer_Cyclical": {
+        "IBP": "",
+        "SG": ""
+    },
     "Utilities": {},
     "Consumer_Defensive": {
         "FLO": "关注财报",
@@ -16,7 +21,11 @@
     "Financial_Services": {},
     "Healthcare": {
         "MRNA": "",
-        "MRK": ""
+        "MRK": "",
+        "TMO": "",
+        "ICLR": "",
+        "TECH": "",
+        "KRYS": ""
     },
     "Bonds": {
         "US10Y": "",

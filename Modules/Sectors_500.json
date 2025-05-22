@@ -70,8 +70,7 @@
         "BTI",
         "CL",
         "DEO",
-        "MNST",
-        "KR"
+        "MNST"
     ],
     "Energy": [
         "XOM",
@@ -151,11 +150,9 @@
         "MET",
         "DB",
         "TFC",
-        "ARES",
         "COIN",
         "DFS",
-        "HOOD",
-        "AMP"
+        "HOOD"
     ],
     "Healthcare": [
         "LLY",
@@ -188,7 +185,8 @@
         "CVS",
         "MCK",
         "COR",
-        "BDX"
+        "BDX",
+        "HLN"
     ],
     "Industrials": [
         "GE",
@@ -227,7 +225,6 @@
         "AXON",
         "NSC",
         "PWR",
-        "PCAR",
         "WCN"
     ],
     "Real_Estate": [
