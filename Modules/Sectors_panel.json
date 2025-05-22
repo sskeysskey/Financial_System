@@ -5,10 +5,7 @@
     "Real_Estate": {},
     "Energy": {},
     "Technology": {},
-    "Consumer_Cyclical": {
-        "IBP": "",
-        "SG": ""
-    },
+    "Consumer_Cyclical": {},
     "Utilities": {},
     "Consumer_Defensive": {
         "FLO": "关注财报",
@@ -21,11 +18,7 @@
     "Financial_Services": {},
     "Healthcare": {
         "MRNA": "",
-        "MRK": "",
-        "TMO": "",
-        "ICLR": "",
-        "TECH": "",
-        "KRYS": ""
+        "MRK": ""
     },
     "Bonds": {
         "US10Y": "",

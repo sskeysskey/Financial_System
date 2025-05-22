@@ -330,7 +330,8 @@
         "NLY",
         "BAX",
         "DOC",
-        "ZBH"
+        "ZBH",
+        "SG"
     ],
     "screener": [
         "CTA-PA",
@@ -705,6 +706,7 @@
         "FSMB",
         "PSC",
         "DTD",
-        "FVAL"
+        "FVAL",
+        "PFM"
     ]
 }
