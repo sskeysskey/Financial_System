@@ -4,7 +4,9 @@
     },
     "Real_Estate": {},
     "Energy": {},
-    "Technology": {},
+    "Technology": {
+        "ENPH": ""
+    },
     "Consumer_Cyclical": {},
     "Utilities": {},
     "Consumer_Defensive": {
@@ -18,7 +20,10 @@
     "Financial_Services": {},
     "Healthcare": {
         "MRNA": "",
-        "MRK": ""
+        "MRK": "",
+        "LLY": "",
+        "HUM": "",
+        "KRYS": ""
     },
     "Bonds": {
         "US10Y": "",

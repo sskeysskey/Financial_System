@@ -539,7 +539,6 @@
         "VRN",
         "HII",
         "MDU",
-        "ENPH",
         "MRK",
         "BA",
         "PKX",
@@ -796,7 +795,8 @@
         "RHI",
         "GIS",
         "HUM",
-        "UNH"
+        "UNH",
+        "ENPH"
     ],
     "black_keywords": [
         "Cotton",

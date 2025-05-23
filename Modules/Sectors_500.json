@@ -152,7 +152,8 @@
         "TFC",
         "COIN",
         "DFS",
-        "HOOD"
+        "HOOD",
+        "ARES"
     ],
     "Healthcare": [
         "LLY",
@@ -185,7 +186,6 @@
         "CVS",
         "MCK",
         "COR",
-        "BDX",
         "HLN"
     ],
     "Industrials": [
@@ -224,7 +224,6 @@
         "GWW",
         "AXON",
         "NSC",
-        "PWR",
         "WCN"
     ],
     "Real_Estate": [
@@ -287,7 +286,6 @@
         "PAYX",
         "SNOW",
         "MRVL",
-        "NXPI",
         "NET"
     ],
     "Utilities": [
