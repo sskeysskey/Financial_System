@@ -543,7 +543,6 @@
         "BA",
         "PKX",
         "LEGN",
-        "BRKR",
         "IPG",
         "SJM",
         "ACLS",
@@ -796,7 +795,8 @@
         "GIS",
         "HUM",
         "UNH",
-        "ENPH"
+        "ENPH",
+        "BRKR"
     ],
     "black_keywords": [
         "Cotton",
