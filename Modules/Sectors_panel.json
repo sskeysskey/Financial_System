@@ -7,8 +7,7 @@
     "Real_Estate": {},
     "Energy": {},
     "Technology": {
-        "ENPH": "",
-        "KSPI": ""
+        "ENPH": ""
     },
     "Consumer_Cyclical": {
         "DKS": "",
@@ -19,21 +18,13 @@
         "FLO": "关注财报",
         "GIS": "关注财报"
     },
-    "Industrials": {
-        "BAH": "关注财报",
-        "BCO": ""
-    },
+    "Industrials": {},
     "Communication_Services": {},
     "Financial_Services": {},
     "Healthcare": {
         "MRNA": "",
-        "MRK": "",
         "LLY": "",
-        "HUM": "",
-        "KRYS": "",
-        "TMO": "",
-        "RVTY": "",
-        "BRKR": ""
+        "HUM": ""
     },
     "Bonds": {
         "US10Y": "",
