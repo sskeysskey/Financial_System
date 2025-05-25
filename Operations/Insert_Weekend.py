@@ -13,15 +13,6 @@ to_add_crypto = ["BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD", "XRP-USD"]
 existing_crypto = set(data.get('Crypto', []))
 data['Crypto'] = list(existing_crypto.union(to_add_crypto))
 
-# 3. 修改 Commodities 数组
-#（示例：直接替换）
-to_add_commodities = ["GC=F", "CL=F", "SI=F", "HG=F"]
-# data['Commodities'] = to_add_commodities
-
-# 如果你想在原有 Commodities 基础上追加，并去重，改成下面两行即可：
-existing_commodities = set(data.get('Commodities', []))
-data['Commodities'] = list(existing_commodities.union(to_add_commodities))
-
 # 4. 写回文件
 with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json', 'w', encoding='utf-8') as f:
     json.dump(data, f, ensure_ascii=False, indent=2)
