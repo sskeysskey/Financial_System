@@ -89,6 +89,9 @@ def main(db1_path, db2_path):
 
 if __name__ == "__main__":
     # 请确保路径正确，如果路径包含中文或特殊字符，可能需要特别处理或使用原始字符串 (r"路径")
-    db1_path = '/Users/yanzhang/Downloads/backup/DB_backup/Finance.db'
-    db2_path = '/Users/yanzhang/Documents/Database/Finance.db'
+    # db1_path = '/Users/yanzhang/Downloads/backup/DB_backup/Finance.db'
+    # db2_path = '/Users/yanzhang/Documents/Database/Finance.db'
+    
+    db1_path = '/Users/yanzhang/Downloads/backup/DB_backup/Firstrade.db'
+    db2_path = '/Users/yanzhang/Documents/Database/Firstrade.db'
     main(db1_path, db2_path)
