@@ -64,5 +64,6 @@ def plot_financial_data(csv_file_path, start_date_str=None, end_date_str=None):
         print(f"处理文件时发生错误：{e}")
 
 if __name__ == '__main__':
-    file_path = '/Users/yanzhang/Downloads/Firstrade/Deals.csv'
-    plot_financial_data(file_path, start_date_str='2023-01-01', end_date_str='2024-01-01')
+    # file_path = '/Users/yanzhang/Downloads/Firstrade/Deals.csv'
+    file_path = '/Users/yanzhang/Downloads/Deal_simulated_trend.csv'
+    plot_financial_data(file_path, start_date_str='2022-01-01', end_date_str='2023-01-01')
