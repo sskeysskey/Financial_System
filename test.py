@@ -1,49 +1,86 @@
 import sqlite3
+from datetime import date, timedelta
 
-# 数据库文件的路径
-db_path = '/Users/yanzhang/Documents/Database/Firstrade.db'
+def add_data_to_deals(db_path, start_date_str, end_date_str, value):
+    """
+    向 Firstrade.db 数据库的 Deals 表中插入指定日期范围和数值的数据。
+
+    参数:
+    db_path (str):数据库文件的路径。
+    start_date_str (str): 开始日期的字符串，格式为 'YYYY-MM-DD'。
+    end_date_str (str): 结束日期的字符串，格式为 'YYYY-MM-DD'。
+    value (float): 要插入的数值。
+    """
+    try:
+        # 连接到 SQLite 数据库
+        # 如果数据库文件不存在，会自动在当前目录创建
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # 将字符串日期转换为 date 对象
+        start_date = date.fromisoformat(start_date_str)
+        end_date = date.fromisoformat(end_date_str)
+
+        # 生成需要插入的日期列表
+        current_date = start_date
+        dates_to_insert = []
+        while current_date <= end_date:
+            dates_to_insert.append((current_date.isoformat(), value))
+            current_date += timedelta(days=1)
+
+        # 准备 SQL 插入语句
+        # 我们不需要手动插入 id，因为如果它是主键且自增，SQLite 会自动处理
+        # 如果 id 不是自增的，您可能需要先查询最大的 id 然后加1，或者将其设置为 NULL（如果允许）
+        # 这里假设 id 是自增的或者可以不指定
+        sql = "INSERT INTO Deals (date, value) VALUES (?, ?)"
+
+        # 执行批量插入
+        cursor.executemany(sql, dates_to_insert)
+
+        # 提交事务
+        conn.commit()
+        print(f"成功插入 {len(dates_to_insert)} 条数据到 Deals 表。")
+
+    except sqlite3.Error as e:
+        print(f"数据库操作发生错误: {e}")
+        if conn:
+            conn.rollback() # 如果发生错误，回滚更改
+    finally:
+        # 关闭数据库连接
+        if conn:
+            conn.close()
+
+# --- 使用示例 ---
+# 数据库文件路径 (请确保路径正确)
+database_file = '/Users/yanzhang/Documents/Database/Firstrade.db'
 
 # 要插入的数据
-date_value = '2020-11-29'
-value_value = 5000
-type_value = 1
+start_date_string = '2025-05-30'
+end_date_string = '2025-05-31'
+value_to_insert = 1097.68
 
-try:
-    # 1. 连接到 SQLite 数据库
-    # 如果数据库文件不存在，会自动在当前目录创建一个
-    conn = sqlite3.connect(db_path)
+# 调用函数插入数据
+add_data_to_deals(database_file, start_date_string, end_date_string, value_to_insert)
 
-    # 2. 创建一个 Cursor 对象
-    # Cursor 对象用于执行 SQL 语句
-    cursor = conn.cursor()
+# (可选) 验证插入的数据
+def verify_data(db_path, start_date_str, end_date_str):
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        sql = "SELECT id, date, value FROM Deals WHERE date BETWEEN ? AND ? ORDER BY date"
+        cursor.execute(sql, (start_date_str, end_date_str))
+        rows = cursor.fetchall()
+        if rows:
+            print("\n验证插入的数据:")
+            for row in rows:
+                print(f"id: {row[0]}, date: {row[1]}, value: {row[2]}")
+        else:
+            print(f"\n在日期范围 {start_date_str} 到 {end_date_str} 未找到数据。")
+    except sqlite3.Error as e:
+        print(f"验证数据时发生错误: {e}")
+    finally:
+        if conn:
+            conn.close()
 
-    # 3. 准备 SQL INSERT 语句
-    # 我们不需要为 id 列插入值，因为它通常是自动生成的
-    sql_insert_query = """
-    INSERT INTO Deposit (date, value, type)
-    VALUES (?, ?, ?);
-    """
-    # 将要插入的数据放入一个元组中
-    data_to_insert = (date_value, value_value, type_value)
-
-    # 4. 执行 SQL 语句
-    cursor.execute(sql_insert_query, data_to_insert)
-
-    # 5. 提交事务
-    # 对于修改数据的操作（INSERT, UPDATE, DELETE），需要提交事务才能使更改生效
-    conn.commit()
-
-    print(f"数据 ('{date_value}', {value_value}, {type_value}) 已成功插入到 Deposit 表中。")
-    print(f"新插入行的 rowid (通常是 id) 为: {cursor.lastrowid}")
-
-except sqlite3.Error as e:
-    print(f"数据库操作发生错误: {e}")
-    if conn:
-        # 如果发生错误，回滚任何更改
-        conn.rollback()
-finally:
-    # 6. 关闭数据库连接
-    # 无论操作是否成功，都应该关闭连接
-    if conn:
-        conn.close()
-        print("数据库连接已关闭。")
+# 调用验证函数
+verify_data(database_file, start_date_string, end_date_string)
