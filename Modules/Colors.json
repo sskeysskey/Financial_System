@@ -260,7 +260,6 @@
         "ONTO",
         "NXE",
         "AMAT",
-        "BHVN",
         "IR",
         "NVT",
         "MSFT",
@@ -711,7 +710,8 @@
         "UWMC",
         "LEN",
         "SAIA",
-        "BLDR"
+        "BLDR",
+        "BHVN"
     ],
     "orange_keywords": [
         "NASDAQ",

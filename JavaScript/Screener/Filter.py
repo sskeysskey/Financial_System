@@ -2,6 +2,9 @@ import json
 import glob
 import os
 import time
+import random
+import pyautogui
+import threading
 import sqlite3
 import subprocess
 from datetime import datetime, timedelta
@@ -423,7 +426,30 @@ def clean_old_backups(directory, file_patterns, days=4):
                 except Exception as e:
                     print(f"跳过文件：{filename}，原因：{e}")
 
+# 添加鼠标移动功能的函数
+def move_mouse_periodically():
+    while True:
+        try:
+            # 获取屏幕尺寸
+            screen_width, screen_height = pyautogui.size()
+            
+            # 随机生成目标位置，避免移动到屏幕边缘
+            x = random.randint(100, screen_width - 100)
+            y = random.randint(100, screen_height - 100)
+            
+            # 缓慢移动鼠标到随机位置
+            pyautogui.moveTo(x, y, duration=1)
+            
+            # 等待30-60秒再次移动
+            time.sleep(random.randint(30, 60))
+            
+        except Exception as e:
+            print(f"鼠标移动出错: {str(e)}")
+            time.sleep(30)
+
 def main():
+    threading.Thread(target=move_mouse_periodically, daemon=True).start()
+    
     extension_launch()
 
     # —— 原有等待 screener_above_*.txt 的逻辑，直到文件出现 —— 

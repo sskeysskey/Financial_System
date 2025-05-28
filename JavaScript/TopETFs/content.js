@@ -4,6 +4,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         try {
             const results = [];
             let targetTable = null;
+            let headerIndexMap = {}; // To store column indices by header name
 
             // --- 更稳健的表格选择逻辑 ---
             console.log("Yahoo ETF Scraper: content.js - Attempting to find the target table...");
@@ -79,6 +80,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
             if (targetTable) {
                 console.log("Yahoo ETF Scraper: content.js - Target table identified:", targetTable);
+
+                // --- 获取表头并映射列名到索引 ---
+                const headers = Array.from(targetTable.querySelectorAll('thead th'));
+                headers.forEach((th, index) => {
+                    const text = th.textContent.trim().toLowerCase();
+                    // 我们需要更灵活地匹配，因为表头文本可能会变化
+                    if (text.includes('symbol')) headerIndexMap.symbol = index;
+                    else if (text.includes('name')) headerIndexMap.name = index;
+                    // "price (intraday)" 或 "price"
+                    else if (text.includes('price')) headerIndexMap.price = index;
+                    else if (text.includes('volume')) headerIndexMap.volume = index;
+                    // 你可以根据需要添加更多列的映射
+                });
+
+                console.log("Yahoo ETF Scraper: content.js - Header index map:", headerIndexMap);
+
+                // 检查关键列是否都已映射，如果某些列的表头找不到，则提取会失败
+                if (headerIndexMap.symbol === undefined || headerIndexMap.name === undefined || headerIndexMap.price === undefined || headerIndexMap.volume === undefined) {
+                    console.error("Yahoo ETF Scraper: content.js - Critical headers (symbol, name, price, volume) not found or mapped. Check table structure and header texts.");
+                    sendResponse({ success: false, error: "Critical headers not found in table.", data: [] });
+                    return true; // 确保异步响应被发送
+                }
+
+
                 const rows = targetTable.querySelectorAll('tbody tr');
                 console.log(`Yahoo ETF Scraper: content.js - Found ${rows.length} rows in the table.`);
 
@@ -86,76 +111,101 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     try {
                         const cells = row.querySelectorAll('td');
                         if (cells.length === 0) {
-                            // console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} has no cells, skipping.`);
+                            console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} has no cells, skipping.`);
                             return;
                         }
 
                         let symbol = null, name = null, price = null, volume = null;
 
-                        // --- 数据提取逻辑 (使用 aria-label 辅助定位，如果存在) ---
-                        // Symbol (通常在第一列)
-                        const symbolCell = row.querySelector('td[aria-label="Symbol"]') || cells[0];
-                        if (symbolCell) {
-                            const symbolLink = symbolCell.querySelector('a[data-testid="table-cell-ticker"]');
+                        // --- 新的数据提取逻辑 ---
+
+                        // Symbol
+                        if (cells[headerIndexMap.symbol]) {
+                            // 尝试更具体的选择器，如果存在的话
+                            const symbolLink = cells[headerIndexMap.symbol].querySelector('a[data-testid="table-cell-ticker"]');
                             if (symbolLink) {
-                                const symbolSpan = symbolLink.querySelector('span.symbol');
-                                symbol = symbolSpan ? symbolSpan.textContent.trim() : symbolLink.textContent.trim();
-                            } else { // 如果没有链接，直接取单元格文本
-                                symbol = symbolCell.textContent.trim();
+                                symbol = symbolLink.textContent.trim();
+                            } else {
+                                symbol = cells[headerIndexMap.symbol].textContent.trim();
                             }
+                            console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Raw Symbol Cell Content:`, cells[headerIndexMap.symbol].innerHTML);
+                            console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Extracted Symbol:`, symbol);
+                        } else {
+                            console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Symbol cell not found using index ${headerIndexMap.symbol}.`);
                         }
 
-                        // Name (通常在第二列)
-                        const nameCell = row.querySelector('td[aria-label="Name"]') || cells[1];
-                        if (nameCell) {
-                            const nameDiv = nameCell.querySelector('div[title]');
-                            name = nameDiv ? nameDiv.getAttribute('title').trim() : nameCell.textContent.trim();
-                        }
-
-                        // Price (查找包含 fin-streamer[data-field="regularMarketPrice"])
-                        // 遍历所有单元格，直到找到包含价格的 fin-streamer
-                        for (let i = 0; i < cells.length; i++) {
-                            const priceStreamer = cells[i].querySelector('fin-streamer[data-field="regularMarketPrice"]');
-                            if (priceStreamer) {
-                                price = priceStreamer.getAttribute('data-value');
-                                break;
+                        // Name
+                        if (cells[headerIndexMap.name]) {
+                            // 雅虎财经的名称有时在 title 属性中，有时直接是文本
+                            const nameDivWithTitle = cells[headerIndexMap.name].querySelector('div[title]');
+                            if (nameDivWithTitle && nameDivWithTitle.getAttribute('title')) {
+                                name = nameDivWithTitle.getAttribute('title').trim();
+                            } else {
+                                name = cells[headerIndexMap.name].textContent.trim();
                             }
+                            console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Raw Name Cell Content:`, cells[headerIndexMap.name].innerHTML);
+                            console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Extracted Name:`, name);
+                        } else {
+                            console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Name cell not found using index ${headerIndexMap.name}.`);
                         }
 
-                        // Volume (查找包含 fin-streamer[data-field="regularMarketVolume"])
-                        for (let i = 0; i < cells.length; i++) {
-                            const volumeStreamer = cells[i].querySelector('fin-streamer[data-field="regularMarketVolume"]');
-                            if (volumeStreamer) {
-                                volume = volumeStreamer.getAttribute('data-value');
-                                break;
+                        // Price
+                        // 页面上的价格通常是动态加载的，但如果结构改变，我们需要直接从DOM中获取
+                        // 你的HTML片段显示价格是 "105.63"
+                        if (cells[headerIndexMap.price]) {
+                            // 尝试查找 fin-streamer (旧逻辑，可能不再有效)
+                            let priceStreamer = cells[headerIndexMap.price].querySelector('fin-streamer[data-field="regularMarketPrice"]');
+                            if (priceStreamer && priceStreamer.hasAttribute('value') && priceStreamer.getAttribute('value').trim() !== "") {
+                                price = priceStreamer.getAttribute('value').trim();
+                            } else { // 如果 fin-streamer 找不到或没有value，直接取单元格文本
+                                price = cells[headerIndexMap.price].textContent.trim();
                             }
+                            console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Raw Price Cell Content:`, cells[headerIndexMap.price].innerHTML);
+                            console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Extracted Price:`, price);
+                        } else {
+                            console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Price cell not found using index ${headerIndexMap.price}.`);
                         }
 
-                        if (volume) {
-                            volume = volume.replace(/,/g, '');
+                        // Volume
+                        // 页面上的成交量也是动态的
+                        // 你的HTML片段显示成交量是 "2.327M"
+                        if (cells[headerIndexMap.volume]) {
+                            // 尝试查找 fin-streamer (旧逻辑)
+                            let volumeStreamer = cells[headerIndexMap.volume].querySelector('fin-streamer[data-field="regularMarketVolume"], fin-streamer[data-field="volume"]');
+                            if (volumeStreamer && volumeStreamer.hasAttribute('value') && volumeStreamer.getAttribute('value').trim() !== "") {
+                                volume = volumeStreamer.getAttribute('value').trim();
+                            } else { // 直接取单元格文本
+                                volume = cells[headerIndexMap.volume].textContent.trim();
+                            }
+                            console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Raw Volume Cell Content:`, cells[headerIndexMap.volume].innerHTML);
+                            console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Extracted Volume:`, volume);
+                        } else {
+                            console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Volume cell not found using index ${headerIndexMap.volume}.`);
                         }
 
-                        // console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex}: Symbol='${symbol}', Name='${name}', Price='${price}', Volume='${volume}'`);
 
-                        if (symbol && name && price && volume) {
+                        if (symbol && name && price !== null && volume !== null) { // price 和 volume 可以是 0
                             results.push({ symbol, name, price, volume });
                         } else {
-                            // console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex}: Missing some data. S:${symbol}, N:${name}, P:${price}, V:${volume}`);
+                            console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Missing data, skipping. Symbol: ${symbol}, Name: ${name}, Price: ${price}, Volume: ${volume}`);
                         }
+
                     } catch (e) {
-                        console.error(`Yahoo ETF Scraper: content.js - Error processing row ${rowIndex}:`, e, row.innerHTML);
+                        console.error(`Yahoo ETF Scraper: content.js - Error processing row ${rowIndex}:`, e, "Row HTML:", row.innerHTML);
                     }
                 });
-                console.log(`Yahoo ETF Scraper: content.js - Successfully processed ${results.length} ETFs from this page.`);
+
+                console.log(`Yahoo ETF Scraper: content.js - Successfully scraped ${results.length} ETFs from current page.`);
                 sendResponse({ success: true, data: results });
+
             } else {
-                console.error("Yahoo ETF Scraper: content.js - Target table NOT found after all attempts for URL:", window.location.href);
-                sendResponse({ success: false, error: 'Could not find the target ETF table on the page.' });
+                console.error("Yahoo ETF Scraper: content.js - Target table could not be found on the page.");
+                sendResponse({ success: false, error: "Table not found on page.", data: [] });
             }
         } catch (error) {
-            console.error('Yahoo ETF Scraper: content.js - Critical error in scrapeYahooETFs:', error);
-            sendResponse({ success: false, error: error.message });
+            console.error("Yahoo ETF Scraper: content.js - Error in 'scrapeYahooETFs' message handler:", error);
+            sendResponse({ success: false, error: error.message, data: [] });
         }
-        return true;
+        return true; // Indicate that the response will be sent asynchronously
     }
 });
