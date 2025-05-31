@@ -128,8 +128,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                             } else {
                                 symbol = cells[headerIndexMap.symbol].textContent.trim();
                             }
-                            console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Raw Symbol Cell Content:`, cells[headerIndexMap.symbol].innerHTML);
-                            console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Extracted Symbol:`, symbol);
+                            // console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Raw Symbol Cell Content:`, cells[headerIndexMap.symbol].innerHTML);
+                            // console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Extracted Symbol:`, symbol);
                         } else {
                             console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Symbol cell not found using index ${headerIndexMap.symbol}.`);
                         }
@@ -143,8 +143,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                             } else {
                                 name = cells[headerIndexMap.name].textContent.trim();
                             }
-                            console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Raw Name Cell Content:`, cells[headerIndexMap.name].innerHTML);
-                            console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Extracted Name:`, name);
+                            // console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Raw Name Cell Content:`, cells[headerIndexMap.name].innerHTML);
+                            // console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Extracted Name:`, name);
                         } else {
                             console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Name cell not found using index ${headerIndexMap.name}.`);
                         }
@@ -153,18 +153,36 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         // 页面上的价格通常是动态加载的，但如果结构改变，我们需要直接从DOM中获取
                         // 你的HTML片段显示价格是 "105.63"
                         if (cells[headerIndexMap.price]) {
-                            // 尝试查找 fin-streamer (旧逻辑，可能不再有效)
-                            let priceStreamer = cells[headerIndexMap.price].querySelector('fin-streamer[data-field="regularMarketPrice"]');
-                            if (priceStreamer && priceStreamer.hasAttribute('value') && priceStreamer.getAttribute('value').trim() !== "") {
-                                price = priceStreamer.getAttribute('value').trim();
-                            } else { // 如果 fin-streamer 找不到或没有value，直接取单元格文本
-                                price = cells[headerIndexMap.price].textContent.trim();
+                            const priceCell = cells[headerIndexMap.price];
+                            // 优先尝试从具有特定 data-field 的 fin-streamer 获取 value
+                            let priceStreamer = priceCell.querySelector('fin-streamer[data-field="regularMarketPrice"]');
+                            if (priceStreamer) {
+                                if (priceStreamer.hasAttribute('value') && priceStreamer.getAttribute('value').trim() !== "") {
+                                    price = priceStreamer.getAttribute('value').trim();
+                                } else {
+                                    // 如果 value 属性为空或不存在，则取该 fin-streamer 的 textContent
+                                    price = priceStreamer.textContent.trim();
+                                }
+                            } else {
+                                // 如果找不到特定的 fin-streamer，尝试获取单元格内第一个看起来像数字的文本
+                                // 这通常是价格本身，避免获取到后面的变化量和百分比
+                                const cellText = priceCell.textContent.trim();
+                                // 正则表达式匹配开头的数字 (可能包含小数点)
+                                const priceMatch = cellText.match(/^[\d\.]+/);
+                                if (priceMatch) {
+                                    price = priceMatch[0];
+                                } else {
+                                    // 如果还是没匹配到，记录警告，price 将为 null
+                                    console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Could not extract price from cell content: '${cellText}' using fallback.`);
+                                    price = priceCell.textContent.trim(); // 作为最后的手段，取全部内容，但通常不应到这一步
+                                }
                             }
-                            console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Raw Price Cell Content:`, cells[headerIndexMap.price].innerHTML);
-                            console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Extracted Price:`, price);
+                            // console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Raw Price Cell Content:`, priceCell.innerHTML);
+                            // console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Extracted Price:`, price);
                         } else {
                             console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Price cell not found using index ${headerIndexMap.price}.`);
                         }
+
 
                         // Volume
                         // 页面上的成交量也是动态的
@@ -177,8 +195,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                             } else { // 直接取单元格文本
                                 volume = cells[headerIndexMap.volume].textContent.trim();
                             }
-                            console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Raw Volume Cell Content:`, cells[headerIndexMap.volume].innerHTML);
-                            console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Extracted Volume:`, volume);
+                            // console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Raw Volume Cell Content:`, cells[headerIndexMap.volume].innerHTML);
+                            // console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Extracted Volume:`, volume);
                         } else {
                             console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Volume cell not found using index ${headerIndexMap.volume}.`);
                         }
