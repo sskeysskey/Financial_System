@@ -1,3 +1,28 @@
+function normalizeVolume(raw) {
+    if (!raw || typeof raw !== 'string') return '';
+    // 去掉前后空白
+    let s = raw.trim().toUpperCase();
+    // 记录倍数
+    let mul = 1;
+    if (s.endsWith('B')) {
+        mul = 1e9;
+        s = s.slice(0, -1);
+    } else if (s.endsWith('M')) {
+        mul = 1e6;
+        s = s.slice(0, -1);
+    } else if (s.endsWith('K')) {
+        mul = 1e3;
+        s = s.slice(0, -1);
+    }
+    // 去掉所有逗号
+    s = s.replace(/,/g, '');
+    // 解析浮点数
+    const n = parseFloat(s);
+    if (isNaN(n)) return '';
+    // 四舍五入取整
+    return Math.round(n * mul).toString();
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'scrapeYahooETFs') {
         console.log("Yahoo ETF Scraper: content.js - 'scrapeYahooETFs' action received for URL:", window.location.href);
@@ -115,7 +140,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                             return;
                         }
 
-                        let symbol = null, name = null, price = null, volume = null;
+                        let symbol = null, name = null, price = null, rawVol = null;
 
                         // --- 新的数据提取逻辑 ---
 
@@ -187,27 +212,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         // Volume
                         // 页面上的成交量也是动态的
                         // 你的HTML片段显示成交量是 "2.327M"
+
                         if (cells[headerIndexMap.volume]) {
-                            // 尝试查找 fin-streamer (旧逻辑)
-                            let volumeStreamer = cells[headerIndexMap.volume].querySelector('fin-streamer[data-field="regularMarketVolume"], fin-streamer[data-field="volume"]');
-                            if (volumeStreamer && volumeStreamer.hasAttribute('value') && volumeStreamer.getAttribute('value').trim() !== "") {
-                                volume = volumeStreamer.getAttribute('value').trim();
-                            } else { // 直接取单元格文本
-                                volume = cells[headerIndexMap.volume].textContent.trim();
+                            let vs = cells[headerIndexMap.volume].querySelector(
+                                'fin-streamer[data-field="regularMarketVolume"], fin-streamer[data-field="volume"]'
+                            );
+                            if (vs && vs.hasAttribute('value') && vs.getAttribute('value').trim() !== "") {
+                                rawVol = vs.getAttribute('value').trim();
+                            } else {
+                                rawVol = cells[headerIndexMap.volume].textContent.trim();
                             }
-                            // console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Raw Volume Cell Content:`, cells[headerIndexMap.volume].innerHTML);
-                            // console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Extracted Volume:`, volume);
-                        } else {
-                            console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Volume cell not found using index ${headerIndexMap.volume}.`);
                         }
+                        // 把 rawVol 传给 normalizeVolume 得到最终 volume
+                        const volume = normalizeVolume(rawVol);
 
-
-                        if (symbol && name && price !== null && volume !== null) { // price 和 volume 可以是 0
+                        // 最后 push 的时候用 volume 而不是 rawVol
+                        if (symbol && name && price !== null && volume !== null) {
                             results.push({ symbol, name, price, volume });
-                        } else {
-                            console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Missing data, skipping. Symbol: ${symbol}, Name: ${name}, Price: ${price}, Volume: ${volume}`);
                         }
-
                     } catch (e) {
                         console.error(`Yahoo ETF Scraper: content.js - Error processing row ${rowIndex}:`, e, "Row HTML:", row.innerHTML);
                     }
