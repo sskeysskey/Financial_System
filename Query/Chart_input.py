@@ -726,7 +726,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     def open_earning_edit(event):
         """启动财报输入程序并传递当前symbol"""
         try:
-            subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Operations/Editor_Symbol_DB.py', name])
+            subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Operations/Editor_Earning_DB.py', name])
         except Exception as e:
             display_dialog(f"启动财报输入程序失败: {e}")
 

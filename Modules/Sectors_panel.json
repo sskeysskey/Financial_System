@@ -10,8 +10,7 @@
         "ENPH": ""
     },
     "Consumer_Cyclical": {
-        "KMX": "",
-        "SKY": ""
+        "KMX": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -27,9 +26,7 @@
     "Healthcare": {
         "MRNA": "",
         "LLY": "",
-        "HUM": "",
-        "REGN": "",
-        "COO": ""
+        "HUM": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -149,11 +146,12 @@
         "USDINR": "印度卢比"
     },
     "Economics": {
-        "USInitial": "29 USInitial",
-        "CorePCEM": "30 CorePCEM",
-        "PCEY": "30 PCEY",
-        "CorePCEY": "30 CorePCEY",
-        "USConfidence": "30 USConfidence"
+        "USNonFarmA": "04 USNonFarmA",
+        "USNonPMI": "04 USNonPMI",
+        "USTrade": "05 USTrade",
+        "USNonFarm": "06 USNonFarm",
+        "USUnemploy": "06 USUnemploy",
+        "USInitial": "05 USInitial"
     },
     "ETFs_US": {
         "TLT": "",
