@@ -2,7 +2,8 @@
     "Basic_Materials": {
         "WLK": "",
         "UFPI": "",
-        "EXP": ""
+        "EXP": "",
+        "BCC": ""
     },
     "Real_Estate": {},
     "Energy": {},
@@ -10,7 +11,9 @@
         "ENPH": ""
     },
     "Consumer_Cyclical": {
-        "KMX": ""
+        "KMX": "",
+        "TSCO": "",
+        "SKY": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -19,14 +22,18 @@
     },
     "Industrials": {
         "WSO": "",
-        "BCO": ""
+        "BCO": "",
+        "BLDR": ""
     },
     "Communication_Services": {},
     "Financial_Services": {},
     "Healthcare": {
         "MRNA": "",
         "LLY": "",
-        "HUM": ""
+        "HUM": "",
+        "CNC": "",
+        "COO": "",
+        "BIO": ""
     },
     "Bonds": {
         "US10Y": "",
