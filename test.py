@@ -1,86 +1,190 @@
+import json
 import sqlite3
-from datetime import date, timedelta
+from datetime import date
+from dateutil.relativedelta import relativedelta # For easy date calculations like "6 months ago"
+import os
 
-def add_data_to_deals(db_path, start_date_str, end_date_str, value):
-    """
-    向 Firstrade.db 数据库的 Deals 表中插入指定日期范围和数值的数据。
+# --- Configuration ---
+DB_PATH = "/Users/yanzhang/Documents/Database/Finance.db"
+JSON_PATH = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json"
+OUTPUT_PATH = "/Users/yanzhang/Documents/News/highlow.txt"
 
-    参数:
-    db_path (str):数据库文件的路径。
-    start_date_str (str): 开始日期的字符串，格式为 'YYYY-MM-DD'。
-    end_date_str (str): 结束日期的字符串，格式为 'YYYY-MM-DD'。
-    value (float): 要插入的数值。
-    """
+# Categories to process as per your request
+TARGET_CATEGORIES = [
+    "Bonds", "Currencies", "Crypto", "Indices",
+    "Commodities", "ETFs", "Economics"
+]
+
+# Time intervals and their corresponding labels for the output file
+# The relativedelta objects represent "going back in time"
+TIME_INTERVALS_CONFIG = {
+    "[1 months]": relativedelta(months=-1),
+    "[3 months]": relativedelta(months=-3),
+    "[6 months]": relativedelta(months=-6),
+    "[1Y]": relativedelta(years=-1),
+    "[2Y]": relativedelta(years=-2),
+    "[5Y]": relativedelta(years=-5)
+}
+
+def get_db_connection(db_file):
+    """Establishes a connection to the SQLite database."""
     try:
-        # 连接到 SQLite 数据库
-        # 如果数据库文件不存在，会自动在当前目录创建
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-
-        # 将字符串日期转换为 date 对象
-        start_date = date.fromisoformat(start_date_str)
-        end_date = date.fromisoformat(end_date_str)
-
-        # 生成需要插入的日期列表
-        current_date = start_date
-        dates_to_insert = []
-        while current_date <= end_date:
-            dates_to_insert.append((current_date.isoformat(), value))
-            current_date += timedelta(days=1)
-
-        # 准备 SQL 插入语句
-        # 我们不需要手动插入 id，因为如果它是主键且自增，SQLite 会自动处理
-        # 如果 id 不是自增的，您可能需要先查询最大的 id 然后加1，或者将其设置为 NULL（如果允许）
-        # 这里假设 id 是自增的或者可以不指定
-        sql = "INSERT INTO Deals (date, value) VALUES (?, ?)"
-
-        # 执行批量插入
-        cursor.executemany(sql, dates_to_insert)
-
-        # 提交事务
-        conn.commit()
-        print(f"成功插入 {len(dates_to_insert)} 条数据到 Deals 表。")
-
+        conn = sqlite3.connect(db_file)
+        conn.row_factory = sqlite3.Row # Access columns by name
+        return conn
     except sqlite3.Error as e:
-        print(f"数据库操作发生错误: {e}")
-        if conn:
-            conn.rollback() # 如果发生错误，回滚更改
-    finally:
-        # 关闭数据库连接
-        if conn:
-            conn.close()
+        print(f"Error connecting to database {db_file}: {e}")
+        raise
 
-# --- 使用示例 ---
-# 数据库文件路径 (请确保路径正确)
-database_file = '/Users/yanzhang/Documents/Database/Firstrade.db'
-
-# 要插入的数据
-start_date_string = '2025-05-30'
-end_date_string = '2025-05-31'
-value_to_insert = 1097.68
-
-# 调用函数插入数据
-add_data_to_deals(database_file, start_date_string, end_date_string, value_to_insert)
-
-# (可选) 验证插入的数据
-def verify_data(db_path, start_date_str, end_date_str):
+def load_json_data(json_file):
+    """Loads data from a JSON file."""
     try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        sql = "SELECT id, date, value FROM Deals WHERE date BETWEEN ? AND ? ORDER BY date"
-        cursor.execute(sql, (start_date_str, end_date_str))
-        rows = cursor.fetchall()
-        if rows:
-            print("\n验证插入的数据:")
-            for row in rows:
-                print(f"id: {row[0]}, date: {row[1]}, value: {row[2]}")
-        else:
-            print(f"\n在日期范围 {start_date_str} 到 {end_date_str} 未找到数据。")
-    except sqlite3.Error as e:
-        print(f"验证数据时发生错误: {e}")
-    finally:
-        if conn:
-            conn.close()
+        with open(json_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print(f"Error: JSON file not found at {json_file}")
+        raise
+    except json.JSONDecodeError:
+        print(f"Error: Could not decode JSON from {json_file}")
+        raise
 
-# 调用验证函数
-verify_data(database_file, start_date_string, end_date_string)
+def get_latest_price_and_date(cursor, table_name, symbol):
+    """Fetches the latest price and date for a given symbol in a table."""
+    try:
+        query = f'SELECT date, price FROM "{table_name}" WHERE name = ? ORDER BY date DESC LIMIT 1'
+        cursor.execute(query, (symbol,))
+        return cursor.fetchone()
+    except sqlite3.OperationalError as e:
+        # This can happen if the table doesn't exist or has an unexpected structure
+        print(f"Warning: Could not query table '{table_name}' for symbol '{symbol}'. Error: {e}. Skipping symbol.")
+        return None
+
+
+def get_prices_in_range(cursor, table_name, symbol, start_date_str, end_date_str):
+    """Fetches all prices for a symbol within a given date range."""
+    try:
+        query = f'SELECT price FROM "{table_name}" WHERE name = ? AND date BETWEEN ? AND ?'
+        cursor.execute(query, (symbol, start_date_str, end_date_str))
+        # Filter out None prices that might be in the database
+        return [row['price'] for row in cursor.fetchall() if row['price'] is not None]
+    except sqlite3.OperationalError as e:
+        print(f"Warning: Could not query price range in table '{table_name}' for symbol '{symbol}'. Error: {e}. Skipping range.")
+        return []
+
+
+def main():
+    """Main function to perform the analysis and write the output."""
+    print("Starting financial analysis...")
+
+    # Ensure output directory exists
+    output_dir = os.path.dirname(OUTPUT_PATH)
+    if output_dir and not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        print(f"Created output directory: {output_dir}")
+
+    try:
+        all_sectors_data = load_json_data(JSON_PATH)
+        conn = get_db_connection(DB_PATH)
+        cursor = conn.cursor()
+    except Exception as e:
+        print(f"Critical setup error: {e}. Exiting.")
+        return
+
+    # Initialize results structure
+    # Example: results = {"[6 months]": {"Low": [], "High": []}, ...}
+    results = {label: {"Low": [], "High": []} for label in TIME_INTERVALS_CONFIG.keys()}
+
+    for category_name in TARGET_CATEGORIES:
+        if category_name not in all_sectors_data:
+            print(f"Warning: Category '{category_name}' not found in JSON. Skipping.")
+            continue
+
+        symbols_in_category = all_sectors_data[category_name]
+        if not symbols_in_category:
+            # print(f"Info: No symbols in category '{category_name}'. Skipping.") # Can be verbose
+            continue
+
+        table_name = category_name # As per problem: table name matches category name
+
+        print(f"\nProcessing Category: {table_name}")
+        for symbol_name in symbols_in_category:
+            print(f"  Analyzing Symbol: {symbol_name}")
+
+            latest_data = get_latest_price_and_date(cursor, table_name, symbol_name)
+
+            if not latest_data:
+                print(f"    No data found for symbol '{symbol_name}' in table '{table_name}'.")
+                continue
+
+            try:
+                latest_date_str, latest_price = latest_data['date'], latest_data['price']
+                # Convert date string (YYYY-MM-DD) to a date object
+                latest_date_obj = date.fromisoformat(latest_date_str)
+            except (TypeError, ValueError) as e:
+                print(f"    Invalid date format or data for {symbol_name} ('{latest_date_str}'). Error: {e}. Skipping.")
+                continue
+            
+            if latest_price is None: # Check if price is NULL
+                print(f"    Latest price for {symbol_name} on {latest_date_str} is NULL. Skipping.")
+                continue
+
+            print(f"    Latest price for {symbol_name}: {latest_price} on {latest_date_str}")
+
+            for interval_label, time_delta in TIME_INTERVALS_CONFIG.items():
+                # Calculate the start date for the interval
+                start_date_obj = latest_date_obj + time_delta
+                start_date_str = start_date_obj.isoformat()
+
+                # Fetch all prices for the symbol within this historical interval (inclusive of the latest date)
+                prices_in_interval = get_prices_in_range(cursor, table_name, symbol_name, start_date_str, latest_date_str)
+
+                if not prices_in_interval:
+                    # print(f"      No price data for {symbol_name} in interval {interval_label} ({start_date_str} to {latest_date_str}).")
+                    continue
+                
+                min_price_in_interval = min(prices_in_interval)
+                max_price_in_interval = max(prices_in_interval)
+
+                # print(f"      Interval {interval_label} ({start_date_str} to {latest_date_str}): Min={min_price_in_interval}, Max={max_price_in_interval}")
+
+                if latest_price == min_price_in_interval:
+                    if symbol_name not in results[interval_label]["Low"]:
+                        results[interval_label]["Low"].append(symbol_name)
+                        print(f"      !!! {symbol_name} is at a {interval_label} LOW: {latest_price}")
+                
+                if latest_price == max_price_in_interval:
+                    if symbol_name not in results[interval_label]["High"]:
+                        results[interval_label]["High"].append(symbol_name)
+                        print(f"      !!! {symbol_name} is at a {interval_label} HIGH: {latest_price}")
+
+    # Close the database connection
+    if conn:
+        conn.close()
+
+    # Write results to the output file
+    print(f"\nWriting results to {OUTPUT_PATH}...")
+    try:
+        with open(OUTPUT_PATH, 'w', encoding='utf-8') as outfile:
+            for interval_label, data in results.items():
+                outfile.write(f"{interval_label}\n")
+                outfile.write("Low:\n")
+                if data["Low"]:
+                    outfile.write(", ".join(data["Low"]) + "\n")
+                else:
+                    outfile.write("\n") # Empty line if no lows for this period
+
+                outfile.write("High:\n")
+                if data["High"]:
+                    outfile.write(", ".join(data["High"]) + "\n")
+                else:
+                    outfile.write("\n") # Empty line if no highs for this period
+                
+                if interval_label != list(results.keys())[-1]: # Add extra newline unless it's the last block
+                    outfile.write("\n")
+
+        print("Analysis complete. Output file generated.")
+    except IOError:
+        print(f"Error: Could not write to output file {OUTPUT_PATH}")
+
+if __name__ == "__main__":
+    main()

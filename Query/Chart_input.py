@@ -83,24 +83,77 @@ def update_plot(line1, fill, line2, dates, prices, volumes, ax1, ax2, show_volum
     """
     根据筛选后的数据更新图表。
     """
+    # 处理 prices 和 dates 可能为空的情况
+    if not dates or not prices:
+        line1.set_data([], [])
+        if fill:
+            fill.remove() # 确保移除旧的fill对象
+            fill = None   # 将fill置为None，因为没有新的fill被创建
+        if volumes: # 假设volumes与dates/prices长度一致或已处理
+            line2.set_data([], [])
+        
+        # 设置默认的轴范围当没有数据时
+        ax1.set_xlim(datetime.now() - timedelta(days=1), datetime.now())
+        ax1.set_ylim(0, 1) # 或者其他合适的默认范围
+        if show_volume:
+            ax2.set_ylim(0, 1)
+        line2.set_visible(show_volume and bool(volumes)) # 仅当有数据时显示
+        plt.draw()
+        return fill # 返回 None 因为 fill 被移除了
+
+    # --- 数据存在，继续绘图 ---
     line1.set_data(dates, prices)
-    fill.remove()
+    if fill:
+        fill.remove()
+    
     # 添加edgecolor='none'或linewidth=0参数来移除边缘线
     fill = ax1.fill_between(dates, prices, color='lightblue', alpha=0.3, edgecolor='none')
-    if volumes:
-        line2.set_data(dates, volumes)
     
-    # 修改这一行，增加右侧余量
-    date_min = np.min(dates)
-    date_max = np.max(dates)
-    date_range = date_max - date_min
-    right_margin = date_range * 0.01  # 添加5%的右侧余量
-    ax1.set_xlim(date_min, date_max + right_margin)
+    if volumes: # 确保 volumes 列表不为空
+        line2.set_data(dates, volumes) # 假设 dates 和 volumes 长度匹配
+    else: # 如果 volumes 为空或None
+        line2.set_data([],[])
+
+    # X轴范围设置
+    date_min_val = np.min(dates)
+    date_max_val = np.max(dates)
+    if date_min_val == date_max_val:
+        # 为单个日期点扩展X轴范围
+        ax1.set_xlim(date_min_val - timedelta(days=1), date_max_val + timedelta(days=1))
+    else:
+        date_range = date_max_val - date_min_val
+        right_margin = date_range * 0.01  # 添加1%的右侧余量
+        ax1.set_xlim(date_min_val, date_max_val + right_margin)
     
-    ax1.set_ylim(np.min(prices), np.max(prices))
-    if show_volume and volumes:
-        ax2.set_ylim(0, np.max(volumes))
-    line2.set_visible(show_volume)
+    # Y轴价格范围设置
+    min_p = np.min(prices)
+    max_p = np.max(prices)
+    if min_p == max_p:
+        buffer = abs(min_p * 0.1) if min_p != 0 else 0.1
+        buffer = max(buffer, 1e-6) # 确保buffer有一个最小正值
+        min_p -= buffer
+        max_p += buffer
+        if min_p >= max_p: # 进一步安全检查
+            max_p = min_p + buffer # 确保 max_p > min_p
+    ax1.set_ylim(min_p, max_p)
+    
+    # Y轴成交量范围设置 (ax2)
+    if show_volume:
+        if volumes:
+            valid_volumes = [v for v in volumes if v is not None]
+            if valid_volumes:
+                min_v = np.min(valid_volumes) # 通常成交量不为负，所以min_v可能是0
+                max_v = np.max(valid_volumes)
+                if max_v == min_v : # 所有成交量相同或只有一个点
+                     ax2.set_ylim(0, max_v + 1 if max_v is not None else 1) # 从0开始，给最大值加一点buffer
+                else:
+                     ax2.set_ylim(0, max_v) # 成交量Y轴通常从0开始
+            else: # valid_volumes 为空
+                ax2.set_ylim(0, 1) # 默认范围
+        else: # volumes 列表本身为空或None
+            ax2.set_ylim(0, 1)
+            
+    line2.set_visible(show_volume and bool(volumes)) # bool(volumes) 检查volumes是否非空
     plt.draw()
     return fill
 
