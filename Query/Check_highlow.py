@@ -168,7 +168,7 @@ def main():
         table_name = category_name
         print(f"\nProcessing Category: {table_name}")
         for symbol_name in symbols_in_category:
-            print(f"  Analyzing Symbol: {symbol_name}")
+            # print(f"  Analyzing Symbol: {symbol_name}")
             latest_data = get_latest_price_and_date(cursor, table_name, symbol_name)
 
             if not latest_data:
@@ -183,7 +183,7 @@ def main():
             if latest_price is None:
                 print(f"    Latest price for {symbol_name} on {latest_date_str} is NULL. Skipping.")
                 continue
-            print(f"    Latest price for {symbol_name}: {latest_price} on {latest_date_str}")
+            # print(f"    Latest price for {symbol_name}: {latest_price} on {latest_date_str}")
 
             for interval_label, time_delta in TIME_INTERVALS_CONFIG.items():
                 start_date_obj = latest_date_obj + time_delta
@@ -199,12 +199,12 @@ def main():
                 if latest_price == min_price_in_interval:
                     if symbol_name not in current_run_results[interval_label]["Low"]:
                         current_run_results[interval_label]["Low"].append(symbol_name)
-                        print(f"      !!! {symbol_name} is at a {interval_label} LOW: {latest_price}")
+                        # print(f"      !!! {symbol_name} is at a {interval_label} LOW: {latest_price}")
                 
                 if latest_price == max_price_in_interval:
                     if symbol_name not in current_run_results[interval_label]["High"]:
                         current_run_results[interval_label]["High"].append(symbol_name)
-                        print(f"      !!! {symbol_name} is at a {interval_label} HIGH: {latest_price}")
+                        # print(f"      !!! {symbol_name} is at a {interval_label} HIGH: {latest_price}")
     if conn:
         conn.close()
 
@@ -212,32 +212,46 @@ def main():
     print(f"\nReading backup file from {BACKUP_OUTPUT_PATH}...")
     backup_results_parsed = parse_highlow_file(BACKUP_OUTPUT_PATH)
 
-    # Create a deep copy of current_run_results to modify for the main output file (with "(new)" tags)
-    # The current_run_results itself will be saved to backup without "(new)" tags.
-    results_for_main_output = copy.deepcopy(current_run_results)
+    # 构建一个只存放“新增”符号的结果字典
+    results_for_main_output = {
+        label: {"Low": [], "High": []}
+        for label in TIME_INTERVALS_CONFIG.keys()
+    }
 
-    print("Comparing current results with backup and adding '(new)' tags...")
+    print("Filtering only newly appeared symbols (no '(new)' tag)...")
     for interval_label in TIME_INTERVALS_CONFIG.keys():
-        for list_type in ["Low", "High"]: # "Low" or "High"
-            newly_generated_symbols = results_for_main_output[interval_label][list_type]
-            backup_symbols = backup_results_parsed.get(interval_label, {}).get(list_type, [])
-            
-            # Create a new list to hold symbols, possibly with "(new)" tags
-            updated_symbol_list = []
-            for symbol in newly_generated_symbols:
-                if symbol not in backup_symbols:
-                    updated_symbol_list.append(f"{symbol}(new)")
-                    print(f"  Marked as new in {interval_label} {list_type}: {symbol}")
-                else:
-                    updated_symbol_list.append(symbol)
-            results_for_main_output[interval_label][list_type] = updated_symbol_list
-    # --- End of new logic ---
+        for list_type in ("Low", "High"):
+            current_symbols = current_run_results[interval_label][list_type]
+            backup_symbols  = backup_results_parsed.get(interval_label, {}).get(list_type, [])
+            # 只保留在 current_symbols 中但不在 backup_symbols 中的
+            new_only = [sym for sym in current_symbols if sym not in backup_symbols]
+            if new_only:
+                print(f"  {interval_label} {list_type} 新增: {', '.join(new_only)}")
+            results_for_main_output[interval_label][list_type] = new_only
+    # --- End of 新逻辑 ---
 
-    # Write results to the main output file (with "(new)" tags)
-    print(f"\nWriting results with (new) tags to {OUTPUT_PATH}...")
-    write_results_to_file(results_for_main_output, OUTPUT_PATH)
+    # 检查是否有任何新增符号
+    has_any_new = any(
+        results_for_main_output[label][lt]
+        for label in results_for_main_output
+        for lt in ("Low", "High")
+    )
 
-    # Write the raw current run results (without "(new)" tags) to the backup file, overwriting it
+    # 只有在发现新增符号时才写主输出文件
+    if has_any_new:
+        # 只保留那些真正有新增的区间，丢弃所有 Low/High 都为空的区间
+        filtered_results = {
+            label: data
+            for label, data in results_for_main_output.items()
+            if data["Low"] or data["High"]
+        }
+
+        print(f"\nWriting filtered new-only results to {OUTPUT_PATH}...")
+        write_results_to_file(filtered_results, OUTPUT_PATH)
+    else:
+        print("\nNo new symbols found. Skip writing main output file.")
+
+    # 无论是否有新增，都要用完整的 current_run_results 更新备份文件
     print(f"\nUpdating backup file at {BACKUP_OUTPUT_PATH} with current raw results...")
     write_results_to_file(current_run_results, BACKUP_OUTPUT_PATH)
 
