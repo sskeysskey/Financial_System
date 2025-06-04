@@ -1,18 +1,16 @@
 {
     "Basic_Materials": {
-        "WLK": "",
         "UFPI": "",
-        "EXP": "",
         "BCC": ""
     },
-    "Real_Estate": {},
+    "Real_Estate": {
+        "HR": ""
+    },
     "Energy": {},
     "Technology": {
         "ENPH": ""
     },
     "Consumer_Cyclical": {
-        "KMX": "",
-        "TSCO": "",
         "SKY": ""
     },
     "Utilities": {},
@@ -20,20 +18,16 @@
         "FLO": "关注财报",
         "GIS": "关注财报"
     },
-    "Industrials": {
-        "WSO": "",
-        "BCO": "",
-        "BLDR": ""
-    },
+    "Industrials": {},
     "Communication_Services": {},
-    "Financial_Services": {},
+    "Financial_Services": {
+        "BRK-A": ""
+    },
     "Healthcare": {
         "MRNA": "",
         "LLY": "",
-        "HUM": "",
-        "CNC": "",
-        "COO": "",
-        "BIO": ""
+        "REGN": "",
+        "COO": ""
     },
     "Bonds": {
         "US10Y": "",

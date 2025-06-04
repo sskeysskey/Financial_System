@@ -333,7 +333,8 @@
         "ZBH",
         "SG",
         "KSPI",
-        "RVTY"
+        "RVTY",
+        "WLK"
     ],
     "screener": [
         "CTA-PA",
@@ -710,6 +711,7 @@
         "PSC",
         "DTD",
         "FVAL",
-        "PFM"
+        "PFM",
+        "IBD"
     ]
 }

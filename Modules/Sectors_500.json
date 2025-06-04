@@ -184,8 +184,7 @@
         "ZTS",
         "CVS",
         "MCK",
-        "COR",
-        "HLN"
+        "COR"
     ],
     "Industrials": [
         "GE",
@@ -222,7 +221,6 @@
         "GWW",
         "AXON",
         "NSC",
-        "WCN",
         "PWR"
     ],
     "Real_Estate": [
@@ -285,7 +283,8 @@
         "PAYX",
         "SNOW",
         "MRVL",
-        "NET"
+        "NET",
+        "NXPI"
     ],
     "Utilities": [
         "NEE",

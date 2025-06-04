@@ -25,7 +25,7 @@ async function scrapeYahooETFFromTab(tabId, url) {
                 if (tabIdUpdated === tabId && changeInfo.status === 'complete') {
                     chrome.tabs.onUpdated.removeListener(listener);
                     // Additional delay for dynamic content loading
-                    setTimeout(resolve, 5000); // Increased delay for Yahoo
+                    setTimeout(resolve, 2000); // Increased delay for Yahoo
                 }
             };
             chrome.tabs.onUpdated.addListener(listener);

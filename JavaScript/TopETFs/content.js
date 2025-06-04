@@ -1,8 +1,8 @@
+// /Users/yanzhang/Documents/Financial_System/JavaScript/TopETFs/content.js
+
 function normalizeVolume(raw) {
     if (!raw || typeof raw !== 'string') return '';
-    // 去掉前后空白
     let s = raw.trim().toUpperCase();
-    // 记录倍数
     let mul = 1;
     if (s.endsWith('B')) {
         mul = 1e9;
@@ -14,238 +14,246 @@ function normalizeVolume(raw) {
         mul = 1e3;
         s = s.slice(0, -1);
     }
-    // 去掉所有逗号
     s = s.replace(/,/g, '');
-    // 解析浮点数
     const n = parseFloat(s);
     if (isNaN(n)) return '';
-    // 四舍五入取整
     return Math.round(n * mul).toString();
+}
+
+const MAX_WAIT_TIME_TABLE = 30000; // 最大等待表格加载时间 (30秒)
+const CHECK_INTERVAL_TABLE = 500;  // 检查表格是否存在的时间间隔 (每500毫秒)
+
+// 封装表格查找逻辑
+function findTargetTableAndHeaders() {
+    let targetTable = null;
+    let headerIndexMap = {};
+    let headersFound = false;
+
+    console.log("Yahoo ETF Scraper: content.js - Attempting to find the target table...");
+
+    // 尝试1: 通过 data-testid="scr-res-table"
+    const scrResTableDiv = document.querySelector('div[data-testid="scr-res-table"]');
+    if (scrResTableDiv) {
+        targetTable = scrResTableDiv.querySelector('table');
+        if (targetTable) {
+            console.log("Yahoo ETF Scraper: content.js - Table found via 'scr-res-table' data-testid.");
+        }
+    }
+
+    // 尝试2: 通过 data-testid="top-etfs-table"
+    if (!targetTable) {
+        const topEtfsTableDiv = document.querySelector('div[data-testid="top-etfs-table"]');
+        if (topEtfsTableDiv) {
+            targetTable = topEtfsTableDiv.querySelector('table');
+            if (targetTable) {
+                console.log("Yahoo ETF Scraper: content.js - Table found via 'top-etfs-table' data-testid.");
+            }
+        }
+    }
+
+    // 尝试3: 通过表头文本匹配
+    if (!targetTable) {
+        console.log("Yahoo ETF Scraper: content.js - Table not found by data-testid, trying header content matching.");
+        const tables = document.querySelectorAll('table');
+        for (let table of tables) {
+            const thElements = Array.from(table.querySelectorAll('thead th'));
+            const headerTexts = thElements.map(th => th.textContent.trim().toLowerCase());
+            const hasSymbolHeader = headerTexts.some(text => text.includes('symbol'));
+            const hasNameHeader = headerTexts.some(text => text.includes('name'));
+            const hasPriceHeader = headerTexts.some(text => text.includes('price')); // 增加价格表头检查
+            const hasVolumeHeader = headerTexts.some(text => text.includes('volume')); // 增加成交量表头检查
+            const hasBodyRows = table.querySelector('tbody tr');
+
+            if (hasSymbolHeader && hasNameHeader && hasPriceHeader && hasVolumeHeader && hasBodyRows) {
+                targetTable = table;
+                console.log("Yahoo ETF Scraper: content.js - Target table found by flexible header text matching.");
+                break;
+            }
+        }
+    }
+
+    // 尝试4: 查找页面上主要的、包含多行数据的表格 (W(100%) 类)
+    if (!targetTable) {
+        console.log("Yahoo ETF Scraper: content.js - Table still not found, trying class 'W(100%)' and row count.");
+        const tables = document.querySelectorAll('table.W\\(100\\%\\)'); // 转义括号
+        let potentialTable = null;
+        if (tables.length === 1 && tables[0].querySelector('tbody tr')) {
+            potentialTable = tables[0];
+        } else if (tables.length > 0) {
+            let maxRows = 0;
+            tables.forEach(tbl => {
+                const rowCount = tbl.querySelectorAll('tbody tr').length;
+                if (rowCount > maxRows) {
+                    maxRows = rowCount;
+                    potentialTable = tbl;
+                }
+            });
+        }
+        // 确保选中的表格有足够的数据行，例如至少5-10行，避免选中小的辅助表格
+        if (potentialTable && potentialTable.querySelectorAll('tbody tr').length > 5) {
+            targetTable = potentialTable;
+            console.log(`Yahoo ETF Scraper: content.js - Table found by 'W(100%)' class and significant row count.`);
+        } else {
+            console.log(`Yahoo ETF Scraper: content.js - 'W(100%)' table check did not yield a suitable table.`);
+        }
+    }
+
+    if (targetTable) {
+        // 获取表头并映射列名到索引
+        const thElements = Array.from(targetTable.querySelectorAll('thead th'));
+        thElements.forEach((th, index) => {
+            const text = th.textContent.trim().toLowerCase();
+            if (text.includes('symbol')) headerIndexMap.symbol = index;
+            else if (text.includes('name')) headerIndexMap.name = index;
+            else if (text.includes('price')) headerIndexMap.price = index;
+            else if (text.includes('volume')) headerIndexMap.volume = index;
+        });
+
+        // 检查关键列是否都已映射
+        if (headerIndexMap.symbol !== undefined && headerIndexMap.name !== undefined &&
+            headerIndexMap.price !== undefined && headerIndexMap.volume !== undefined) {
+            headersFound = true;
+            console.log("Yahoo ETF Scraper: content.js - Header index map:", headerIndexMap);
+        } else {
+            console.warn("Yahoo ETF Scraper: content.js - Critical headers (symbol, name, price, volume) not fully mapped. Table might be found, but headers are problematic.", headerIndexMap);
+            // 清空 targetTable 如果表头不完整，迫使重试或最终失败
+            // targetTable = null; // 或者标记为 header_incomplete
+        }
+    }
+
+    return { table: targetTable, headerMap: headerIndexMap, headersComplete: headersFound };
+}
+
+
+async function scrapeDataWhenReady(sendResponse) {
+    console.log("Yahoo ETF Scraper: content.js - Starting to wait for target table and its headers...");
+    let elapsedTime = 0;
+    let tableSearchResult;
+
+    while (elapsedTime < MAX_WAIT_TIME_TABLE) {
+        tableSearchResult = findTargetTableAndHeaders();
+        if (tableSearchResult.table && tableSearchResult.headersComplete) {
+            console.log(`Yahoo ETF Scraper: content.js - Target table and complete headers found after ${elapsedTime}ms.`);
+            break;
+        }
+        await new Promise(resolve => setTimeout(resolve, CHECK_INTERVAL_TABLE));
+        elapsedTime += CHECK_INTERVAL_TABLE;
+        console.log(`Yahoo ETF Scraper: content.js - Waiting for table/headers... ${elapsedTime}ms elapsed.`);
+        if (!tableSearchResult.table) {
+            console.log("Yahoo ETF Scraper: content.js - Table not yet found in this interval.");
+        } else if (!tableSearchResult.headersComplete) {
+            console.log("Yahoo ETF Scraper: content.js - Table found, but headers are incomplete or not as expected. Will re-check.");
+        }
+    }
+
+    const { table: targetTable, headerMap: headerIndexMap, headersComplete } = tableSearchResult;
+
+    if (!targetTable) {
+        console.error(`Yahoo ETF Scraper: content.js - Target table could not be found on the page after ${MAX_WAIT_TIME_TABLE / 1000}s.`);
+        sendResponse({ success: false, error: `Table not found on page after ${MAX_WAIT_TIME_TABLE / 1000}s.`, data: [] });
+        return;
+    }
+
+    if (!headersComplete) {
+        console.error("Yahoo ETF Scraper: content.js - Critical headers (symbol, name, price, volume) not found or mapped correctly even after waiting. Check table structure and header texts.", headerIndexMap);
+        sendResponse({ success: false, error: "Critical headers not found/mapped in table.", data: [] });
+        return;
+    }
+
+    console.log("Yahoo ETF Scraper: content.js - Target table identified:", targetTable);
+    const results = [];
+    const rows = targetTable.querySelectorAll('tbody tr');
+    console.log(`Yahoo ETF Scraper: content.js - Found ${rows.length} rows in the table.`);
+
+    rows.forEach((row, rowIndex) => {
+        try {
+            const cells = row.querySelectorAll('td');
+            if (cells.length < Math.max(headerIndexMap.symbol, headerIndexMap.name, headerIndexMap.price, headerIndexMap.volume) + 1) {
+                console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} has insufficient cells (${cells.length}), skipping.`);
+                return;
+            }
+
+            let symbol = null, name = null, price = null, rawVol = null;
+
+            // Symbol
+            if (cells[headerIndexMap.symbol]) {
+                const symbolLink = cells[headerIndexMap.symbol].querySelector('a[data-testid="table-cell-ticker"]');
+                symbol = symbolLink ? symbolLink.textContent.trim() : cells[headerIndexMap.symbol].textContent.trim();
+            } else {
+                console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Symbol cell not found at index ${headerIndexMap.symbol}.`);
+            }
+
+            // Name
+            if (cells[headerIndexMap.name]) {
+                const nameDivWithTitle = cells[headerIndexMap.name].querySelector('div[title]');
+                name = (nameDivWithTitle && nameDivWithTitle.getAttribute('title')) ? nameDivWithTitle.getAttribute('title').trim() : cells[headerIndexMap.name].textContent.trim();
+            } else {
+                console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Name cell not found at index ${headerIndexMap.name}.`);
+            }
+
+            // Price
+            if (cells[headerIndexMap.price]) {
+                const priceCell = cells[headerIndexMap.price];
+                let priceStreamer = priceCell.querySelector('fin-streamer[data-field="regularMarketPrice"]');
+                if (priceStreamer) {
+                    price = (priceStreamer.hasAttribute('value') && priceStreamer.getAttribute('value').trim() !== "") ? priceStreamer.getAttribute('value').trim() : priceStreamer.textContent.trim();
+                } else {
+                    const cellText = priceCell.textContent.trim();
+                    const priceMatch = cellText.match(/^[\d,]+\.?\d*/); // Improved regex to match numbers with commas and decimals
+                    if (priceMatch) {
+                        price = priceMatch[0].replace(/,/g, ''); // Remove commas before parsing
+                    } else {
+                        console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Could not extract price from cell content: '${cellText}' using fallback.`);
+                        price = priceCell.textContent.trim().replace(/,/g, '');
+                    }
+                }
+            } else {
+                console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Price cell not found at index ${headerIndexMap.price}.`);
+            }
+
+            // Volume
+            if (cells[headerIndexMap.volume]) {
+                let vs = cells[headerIndexMap.volume].querySelector(
+                    'fin-streamer[data-field="regularMarketVolume"], fin-streamer[data-field="volume"]'
+                );
+                if (vs && vs.hasAttribute('value') && vs.getAttribute('value').trim() !== "") {
+                    rawVol = vs.getAttribute('value').trim();
+                } else {
+                    rawVol = cells[headerIndexMap.volume].textContent.trim();
+                }
+            } else {
+                console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Volume cell not found at index ${headerIndexMap.volume}.`);
+            }
+            const volume = normalizeVolume(rawVol);
+
+            if (symbol && name && price !== null && volume !== null) {
+                results.push({ symbol, name, price, volume });
+            } else {
+                console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Missing data. Symbol: '${symbol}', Name: '${name}', Price: '${price}', RawVol: '${rawVol}' (Normalized Vol: '${volume}'). Skipping row.`);
+            }
+        } catch (e) {
+            console.error(`Yahoo ETF Scraper: content.js - Error processing row ${rowIndex}:`, e, "Row HTML:", row.innerHTML);
+        }
+    });
+
+    if (results.length > 0) {
+        console.log(`Yahoo ETF Scraper: content.js - Successfully scraped ${results.length} ETFs from current page.`);
+        sendResponse({ success: true, data: results });
+    } else if (rows.length > 0 && results.length === 0) {
+        console.warn(`Yahoo ETF Scraper: content.js - Found ${rows.length} rows, but scraped 0 ETFs. Check cell parsing logic or data format.`);
+        sendResponse({ success: false, error: "Table rows found, but no data could be extracted.", data: [] });
+    } else { // rows.length === 0
+        console.warn(`Yahoo ETF Scraper: content.js - No data rows found in the table, although table structure was identified.`);
+        sendResponse({ success: false, error: "Table found, but it contains no data rows.", data: [] });
+    }
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'scrapeYahooETFs') {
         console.log("Yahoo ETF Scraper: content.js - 'scrapeYahooETFs' action received for URL:", window.location.href);
-        try {
-            const results = [];
-            let targetTable = null;
-            let headerIndexMap = {}; // To store column indices by header name
-
-            // --- 更稳健的表格选择逻辑 ---
-            console.log("Yahoo ETF Scraper: content.js - Attempting to find the target table...");
-
-            // 优先尝试1: 通过更具体的 data-testid (如果存在)
-            // Yahoo Finance 列表格通常在 <div data-testid="scr-res-table"> 下
-            const scrResTableDiv = document.querySelector('div[data-testid="scr-res-table"]');
-            if (scrResTableDiv) {
-                targetTable = scrResTableDiv.querySelector('table');
-                if (targetTable) {
-                    console.log("Yahoo ETF Scraper: content.js - Table found via 'scr-res-table' data-testid.");
-                }
-            }
-
-            // 尝试2: 通过 'top-etfs-table' data-testid (之前的尝试)
-            if (!targetTable) {
-                const topEtfsTableDiv = document.querySelector('div[data-testid="top-etfs-table"]');
-                if (topEtfsTableDiv) {
-                    targetTable = topEtfsTableDiv.querySelector('table');
-                    if (targetTable) {
-                        console.log("Yahoo ETF Scraper: content.js - Table found via 'top-etfs-table' data-testid.");
-                    }
-                }
-            }
-
-            // 尝试3: 查找包含特定表头文本的表格 (更灵活的文本匹配)
-            if (!targetTable) {
-                console.log("Yahoo ETF Scraper: content.js - Table not found by data-testid, trying header content matching.");
-                const tables = document.querySelectorAll('table');
-                for (let table of tables) {
-                    const headers = Array.from(table.querySelectorAll('thead th'));
-                    const headerTexts = headers.map(th => th.textContent.trim().toLowerCase());
-
-                    // 检查是否包含 "symbol" 和 "name" (不区分大小写)
-                    const hasSymbolHeader = headerTexts.some(text => text.includes('symbol'));
-                    const hasNameHeader = headerTexts.some(text => text.includes('name'));
-                    const hasPriceHeader = headerTexts.some(text => text.includes('price')); // 可选，增加确定性
-                    const hasBodyRows = table.querySelector('tbody tr');
-
-                    if (hasSymbolHeader && hasNameHeader && hasPriceHeader && hasBodyRows) {
-                        targetTable = table;
-                        console.log("Yahoo ETF Scraper: content.js - Target table found by flexible header text matching.");
-                        break;
-                    }
-                }
-            }
-
-            // 尝试4: 查找页面上主要的、包含多行数据的表格 (作为最后的备选)
-            // 这个选择器 W(100%) 是 Yahoo Finance 中常见的表格宽度类，但仍需谨慎
-            if (!targetTable) {
-                console.log("Yahoo ETF Scraper: content.js - Table still not found, trying class 'W(100%)' and row count.");
-                const tables = document.querySelectorAll('table.W\\(100\\%\\)'); // 需要转义括号
-                if (tables.length === 1 && tables[0].querySelector('tbody tr')) { // 如果页面只有一个这样的主表格
-                    targetTable = tables[0];
-                    console.log("Yahoo ETF Scraper: content.js - Table found by single 'W(100%)' class.");
-                } else if (tables.length > 0) { // 如果有多个，选包含最多数据行的那个
-                    let maxRows = 0;
-                    let potentialTable = null;
-                    tables.forEach(tbl => {
-                        const rowCount = tbl.querySelectorAll('tbody tr').length;
-                        if (rowCount > maxRows) {
-                            maxRows = rowCount;
-                            potentialTable = tbl;
-                        }
-                    });
-                    if (potentialTable && maxRows > 0) { // 至少要有一行数据
-                        targetTable = potentialTable;
-                        console.log(`Yahoo ETF Scraper: content.js - Table found by 'W(100%)' class and max rows (${maxRows}).`);
-                    }
-                }
-            }
-
-
-            if (targetTable) {
-                console.log("Yahoo ETF Scraper: content.js - Target table identified:", targetTable);
-
-                // --- 获取表头并映射列名到索引 ---
-                const headers = Array.from(targetTable.querySelectorAll('thead th'));
-                headers.forEach((th, index) => {
-                    const text = th.textContent.trim().toLowerCase();
-                    // 我们需要更灵活地匹配，因为表头文本可能会变化
-                    if (text.includes('symbol')) headerIndexMap.symbol = index;
-                    else if (text.includes('name')) headerIndexMap.name = index;
-                    // "price (intraday)" 或 "price"
-                    else if (text.includes('price')) headerIndexMap.price = index;
-                    else if (text.includes('volume')) headerIndexMap.volume = index;
-                    // 你可以根据需要添加更多列的映射
-                });
-
-                console.log("Yahoo ETF Scraper: content.js - Header index map:", headerIndexMap);
-
-                // 检查关键列是否都已映射，如果某些列的表头找不到，则提取会失败
-                if (headerIndexMap.symbol === undefined || headerIndexMap.name === undefined || headerIndexMap.price === undefined || headerIndexMap.volume === undefined) {
-                    console.error("Yahoo ETF Scraper: content.js - Critical headers (symbol, name, price, volume) not found or mapped. Check table structure and header texts.");
-                    sendResponse({ success: false, error: "Critical headers not found in table.", data: [] });
-                    return true; // 确保异步响应被发送
-                }
-
-
-                const rows = targetTable.querySelectorAll('tbody tr');
-                console.log(`Yahoo ETF Scraper: content.js - Found ${rows.length} rows in the table.`);
-
-                rows.forEach((row, rowIndex) => {
-                    try {
-                        const cells = row.querySelectorAll('td');
-                        if (cells.length === 0) {
-                            console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} has no cells, skipping.`);
-                            return;
-                        }
-
-                        let symbol = null, name = null, price = null, rawVol = null;
-
-                        // --- 新的数据提取逻辑 ---
-
-                        // Symbol
-                        if (cells[headerIndexMap.symbol]) {
-                            // 尝试更具体的选择器，如果存在的话
-                            const symbolLink = cells[headerIndexMap.symbol].querySelector('a[data-testid="table-cell-ticker"]');
-                            if (symbolLink) {
-                                symbol = symbolLink.textContent.trim();
-                            } else {
-                                symbol = cells[headerIndexMap.symbol].textContent.trim();
-                            }
-                            // console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Raw Symbol Cell Content:`, cells[headerIndexMap.symbol].innerHTML);
-                            // console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Extracted Symbol:`, symbol);
-                        } else {
-                            console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Symbol cell not found using index ${headerIndexMap.symbol}.`);
-                        }
-
-                        // Name
-                        if (cells[headerIndexMap.name]) {
-                            // 雅虎财经的名称有时在 title 属性中，有时直接是文本
-                            const nameDivWithTitle = cells[headerIndexMap.name].querySelector('div[title]');
-                            if (nameDivWithTitle && nameDivWithTitle.getAttribute('title')) {
-                                name = nameDivWithTitle.getAttribute('title').trim();
-                            } else {
-                                name = cells[headerIndexMap.name].textContent.trim();
-                            }
-                            // console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Raw Name Cell Content:`, cells[headerIndexMap.name].innerHTML);
-                            // console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Extracted Name:`, name);
-                        } else {
-                            console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Name cell not found using index ${headerIndexMap.name}.`);
-                        }
-
-                        // Price
-                        // 页面上的价格通常是动态加载的，但如果结构改变，我们需要直接从DOM中获取
-                        // 你的HTML片段显示价格是 "105.63"
-                        if (cells[headerIndexMap.price]) {
-                            const priceCell = cells[headerIndexMap.price];
-                            // 优先尝试从具有特定 data-field 的 fin-streamer 获取 value
-                            let priceStreamer = priceCell.querySelector('fin-streamer[data-field="regularMarketPrice"]');
-                            if (priceStreamer) {
-                                if (priceStreamer.hasAttribute('value') && priceStreamer.getAttribute('value').trim() !== "") {
-                                    price = priceStreamer.getAttribute('value').trim();
-                                } else {
-                                    // 如果 value 属性为空或不存在，则取该 fin-streamer 的 textContent
-                                    price = priceStreamer.textContent.trim();
-                                }
-                            } else {
-                                // 如果找不到特定的 fin-streamer，尝试获取单元格内第一个看起来像数字的文本
-                                // 这通常是价格本身，避免获取到后面的变化量和百分比
-                                const cellText = priceCell.textContent.trim();
-                                // 正则表达式匹配开头的数字 (可能包含小数点)
-                                const priceMatch = cellText.match(/^[\d\.]+/);
-                                if (priceMatch) {
-                                    price = priceMatch[0];
-                                } else {
-                                    // 如果还是没匹配到，记录警告，price 将为 null
-                                    console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Could not extract price from cell content: '${cellText}' using fallback.`);
-                                    price = priceCell.textContent.trim(); // 作为最后的手段，取全部内容，但通常不应到这一步
-                                }
-                            }
-                            // console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Raw Price Cell Content:`, priceCell.innerHTML);
-                            // console.log(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Extracted Price:`, price);
-                        } else {
-                            console.warn(`Yahoo ETF Scraper: content.js - Row ${rowIndex} - Price cell not found using index ${headerIndexMap.price}.`);
-                        }
-
-
-                        // Volume
-                        // 页面上的成交量也是动态的
-                        // 你的HTML片段显示成交量是 "2.327M"
-
-                        if (cells[headerIndexMap.volume]) {
-                            let vs = cells[headerIndexMap.volume].querySelector(
-                                'fin-streamer[data-field="regularMarketVolume"], fin-streamer[data-field="volume"]'
-                            );
-                            if (vs && vs.hasAttribute('value') && vs.getAttribute('value').trim() !== "") {
-                                rawVol = vs.getAttribute('value').trim();
-                            } else {
-                                rawVol = cells[headerIndexMap.volume].textContent.trim();
-                            }
-                        }
-                        // 把 rawVol 传给 normalizeVolume 得到最终 volume
-                        const volume = normalizeVolume(rawVol);
-
-                        // 最后 push 的时候用 volume 而不是 rawVol
-                        if (symbol && name && price !== null && volume !== null) {
-                            results.push({ symbol, name, price, volume });
-                        }
-                    } catch (e) {
-                        console.error(`Yahoo ETF Scraper: content.js - Error processing row ${rowIndex}:`, e, "Row HTML:", row.innerHTML);
-                    }
-                });
-
-                console.log(`Yahoo ETF Scraper: content.js - Successfully scraped ${results.length} ETFs from current page.`);
-                sendResponse({ success: true, data: results });
-
-            } else {
-                console.error("Yahoo ETF Scraper: content.js - Target table could not be found on the page.");
-                sendResponse({ success: false, error: "Table not found on page.", data: [] });
-            }
-        } catch (error) {
-            console.error("Yahoo ETF Scraper: content.js - Error in 'scrapeYahooETFs' message handler:", error);
-            sendResponse({ success: false, error: error.message, data: [] });
-        }
-        return true; // Indicate that the response will be sent asynchronously
+        scrapeDataWhenReady(sendResponse);
+        return true; // Crucial: Indicates that the response will be sent asynchronously.
     }
+    // Optional: handle other messages or return false if not handling them asynchronously.
+    // return true; // If you have other async message handlers.
 });
