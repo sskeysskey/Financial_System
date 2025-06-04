@@ -955,9 +955,15 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             min_date = min(dates)
         else:
             min_date = datetime.now() - timedelta(days=years * 365)
-            filtered_dates = [d for d in dates if d >= min_date]
-            filtered_prices = [p for d, p in zip(dates, prices) if d >= min_date]
-            filtered_volumes = [v for d, v in zip(dates, volumes) if d >= min_date] if volumes else None
+            filtered_dates = [d for d in dates  if d >= min_date]
+            filtered_prices = [p for d,p in zip(dates, prices)  if d >= min_date]
+            filtered_volumes= [v for d,v in zip(dates, volumes) if d >= min_date] if volumes else None
+
+        # ––––– 如果某个区间竟然把所有点都筛没了，但我们确实有老数据，就默认显示最后一条 –––––
+        if not filtered_dates and dates:
+            filtered_dates  = [dates[-1]]
+            filtered_prices = [prices[-1]]
+            filtered_volumes= [volumes[-1]] if volumes else None
 
         nonlocal fill
         fill = update_plot(line1, fill, line2, filtered_dates, filtered_prices, filtered_volumes, ax1, ax2, show_volume)
