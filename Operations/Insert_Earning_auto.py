@@ -83,8 +83,46 @@ class MainWindow(QMainWindow):
 
         cw.setLayout(vlay)
         self.setCentralWidget(cw)
-        self.resize(800, 600)
+        self.resize(1024, 900) # 你已经设置了窗口大小
 
+        # 新增：将窗口移动到屏幕中央
+        self.center_window()
+
+    def center_window(self):
+        """将窗口移动到屏幕中央"""
+        try:
+            # 获取主屏幕
+            screen = QApplication.primaryScreen()
+            if not screen:
+                # 如果没有主屏幕（不太可能，但作为备用），尝试获取第一个屏幕
+                screens = QApplication.screens()
+                if not screens:
+                    return # 没有可用屏幕
+                screen = screens[0]
+
+            screen_geometry = screen.availableGeometry() # 获取可用屏幕区域几何信息
+            window_geometry = self.frameGeometry()    # 获取窗口框架几何信息（包括标题栏）
+
+            # 计算中心点并移动窗口
+            center_point = screen_geometry.center()
+            window_geometry.moveCenter(center_point)
+            self.move(window_geometry.topLeft())
+
+        except Exception as e:
+            print(f"Error centering window: {e}")
+            # 如果出现异常，可以尝试旧方法或不进行居中
+            # 对于非常旧的 PyQt5 版本，可能需要 QDesktopWidget
+            try:
+                from PyQt5.QtWidgets import QDesktopWidget
+                qr = self.frameGeometry()
+                cp = QDesktopWidget().availableGeometry().center()
+                qr.moveCenter(cp)
+                self.move(qr.topLeft())
+            except ImportError:
+                pass # QDesktopWidget 不可用
+            except Exception as e_old:
+                print(f"Error centering window with QDesktopWidget: {e_old}")
+                
     def process_date1(self):
         """
         扫描“昨天”的 symbols，计算百分比，
@@ -148,7 +186,7 @@ class MainWindow(QMainWindow):
         # 禁用按钮并提示
         btn = self.table1.cellWidget(row, 2)
         btn.setEnabled(False)
-        QMessageBox.information(self, action, f"{symbol} @ {self.date1} → {pct}%  {action}")
+        # QMessageBox.information(self, action, f"{symbol} @ {self.date1} → {pct}%  {action}")
 
     def process_date2(self):
         """
@@ -183,13 +221,13 @@ class MainWindow(QMainWindow):
             self.table2.setItem(row, 2, QTableWidgetItem(str(pct_old) if pct_old is not None else ""))
 
             btn = QPushButton("替换")
-            btn.clicked.connect(partial(self.on_replace_date2, symbol, pct_new, row))
+            btn.clicked.connect(partial(self.on_replace_date2, symbol, pct_new, row, btn))
             self.table2.setCellWidget(row, 3, btn)
 
-    def on_replace_date2(self, symbol, new_pct, row):
+    def on_replace_date2(self, symbol, new_pct, row, btn):
         """
         点击“替换”后，将 new_pct 写回 Earning 表中，覆盖该 symbol 最新一行，
-        并在界面上更新旧百分比列
+        并在界面上更新旧百分比列，同时禁用按钮。
         """
         # 首先确认覆盖
         reply = QMessageBox.question(
@@ -200,7 +238,7 @@ class MainWindow(QMainWindow):
         if reply != QMessageBox.Yes:
             return
 
-        # 用子查询定位最新那一行
+        # 用子查询定位最新那一行，同时更新 price 和 date
         self.cur.execute("""
             UPDATE Earning
                SET price=?, date=?
@@ -211,9 +249,13 @@ class MainWindow(QMainWindow):
         """, (new_pct, self.date1, symbol, symbol))
         self.conn.commit()
 
-        # 更新界面
+        # 更新界面上的“旧百分比”列
         self.table2.setItem(row, 2, QTableWidgetItem(str(new_pct)))
-        QMessageBox.information(self, "已替换", f"{symbol} 的百分比已更新为 {new_pct}%")
+
+        btn.setText("已替换")
+        btn.setEnabled(False)
+
+        # QMessageBox.information(self, "已替换", f"{symbol} 的百分比已更新为 {new_pct}%")
 
     def _get_price_from_table(self, table: str, dt: str, symbol: str):
         """

@@ -4,8 +4,7 @@ from datetime import date
 from dateutil.relativedelta import relativedelta
 import os
 import re # For parsing the backup file
-from collections import defaultdict
-import copy # For deep copying results
+from collections import OrderedDict
 
 # --- Configuration ---
 DB_PATH = "/Users/yanzhang/Documents/Database/Finance.db"
@@ -188,11 +187,17 @@ def main():
             for interval_label, time_delta in TIME_INTERVALS_CONFIG.items():
                 start_date_obj = latest_date_obj + time_delta
                 start_date_str = start_date_obj.isoformat()
-                prices_in_interval = get_prices_in_range(cursor, table_name, symbol_name, start_date_str, latest_date_str)
+                prices_in_interval = get_prices_in_range(
+                    cursor, table_name, symbol_name,
+                    start_date_str, latest_date_str
+                )
 
-                if not prices_in_interval:
+                # ===== 新增这两行 =====
+                # 如果这个区间里只有最新一条（或根本没有）数据，就跳过，不当高低点
+                if len(prices_in_interval) < 2:
                     continue
-                
+                # =======================
+
                 min_price_in_interval = min(prices_in_interval)
                 max_price_in_interval = max(prices_in_interval)
 
@@ -239,15 +244,33 @@ def main():
 
     # 只有在发现新增符号时才写主输出文件
     if has_any_new:
-        # 只保留那些真正有新增的区间，丢弃所有 Low/High 都为空的区间
+        # 只保留那些真正有新增的区间
         filtered_results = {
             label: data
             for label, data in results_for_main_output.items()
             if data["Low"] or data["High"]
         }
 
-        print(f"\nWriting filtered new-only results to {OUTPUT_PATH}...")
-        write_results_to_file(filtered_results, OUTPUT_PATH)
+        # 1) 先倒序：5Y→2Y→1Y→6m→3m→1m
+        rev_filtered = OrderedDict(reversed(list(filtered_results.items())))
+
+        # 2) 跨区间去重：同一类型（Low/High）在更长区间出现过，就不在后面的区间显示
+        cascade = OrderedDict()
+        seen_low, seen_high = set(), set()
+        for interval_label, data in rev_filtered.items():
+            # 只取之前没出现过的
+            new_low  = [s for s in data["Low"]  if s not in seen_low]
+            new_high = [s for s in data["High"] if s not in seen_high]
+
+            cascade[interval_label] = {
+                "Low":  new_low,
+                "High": new_high
+            }
+            seen_low .update(new_low)
+            seen_high.update(new_high)
+
+        print(f"\nWriting cascaded new-only results to {OUTPUT_PATH}…")
+        write_results_to_file(cascade, OUTPUT_PATH)
     else:
         print("\nNo new symbols found. Skip writing main output file.")
 
