@@ -290,9 +290,8 @@ def main():
         # 打开错误文件，方便查看
         open_error_file()
     else:
+        Insert_DB()
         # 无任何缺失，直接弹框提示
         show_alert("所有数据都已成功入库，没有遗漏。")
-        Insert_DB()
-
 if __name__ == '__main__':
     main()

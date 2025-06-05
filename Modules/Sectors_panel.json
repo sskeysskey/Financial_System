@@ -16,14 +16,17 @@
         "FLO": "关注财报",
         "GIS": "关注财报"
     },
-    "Industrials": {},
+    "Industrials": {
+        "BAH": ""
+    },
     "Communication_Services": {},
     "Financial_Services": {
         "BRK-A": ""
     },
     "Healthcare": {
         "MRNA": "",
-        "LLY": ""
+        "LLY": "",
+        "REGN": ""
     },
     "Bonds": {
         "US10Y": "",

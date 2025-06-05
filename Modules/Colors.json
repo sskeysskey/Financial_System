@@ -151,7 +151,6 @@
         "NTES",
         "JBL",
         "ABNB",
-        "PBR",
         "LYFT",
         "MNST",
         "TEAM",
@@ -236,7 +235,6 @@
         "DHI",
         "CYTK",
         "CRNX",
-        "BAH",
         "NXST",
         "J",
         "TTEK",
@@ -714,7 +712,9 @@
         "LEN",
         "SAIA",
         "BLDR",
-        "BHVN"
+        "BHVN",
+        "PBR",
+        "BAH"
     ],
     "orange_keywords": [
         "NASDAQ",

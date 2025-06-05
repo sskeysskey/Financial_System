@@ -1,11 +1,9 @@
 import sys
-import os
 import json
 import sqlite3
 from datetime import date, timedelta
 from functools import partial
 
-from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget,
     QVBoxLayout, QGroupBox, QTableWidget, QTableWidgetItem,

@@ -16,25 +16,50 @@ def get_table_data_as_dict(conn, table_name, id_column):
     columns = [description[0] for description in cursor.description]
     # 确保主键列名存在于查询结果的列名中
     if id_column not in columns:
-        # 理论上，如果 get_table_primary_key 成功返回了 id_column，
-        # 那么 SELECT * 的结果中应该包含这一列。
-        # 但为保险起见，可以添加错误处理。
         print(f"错误：在表 {table_name} 的查询结果中未找到主键列 {id_column}。")
         return {}
-    idx = columns.index(id_column)
-    data_dict = {row[idx]: row for row in rows}
+    try:
+        idx = columns.index(id_column)
+    except ValueError:
+        # 这种情况理论上不应该发生，因为上面已经检查了 id_column in columns
+        # 但为了健壮性，可以再次确认
+        print(f"严重错误：主键列 {id_column} 在列名列表 {columns} 中未找到，即使之前检查通过。")
+        return {}
+        
+    data_dict = {}
+    for row in rows:
+        # 确保行数据足够长以访问主键索引
+        if idx < len(row):
+            data_dict[row[idx]] = row
+        else:
+            # 这种情况可能发生在数据行不完整或存在问题时
+            print(f"警告：在表 {table_name} 中，行 {row} 的长度不足以获取主键列 {id_column} (索引 {idx})。")
     return data_dict
 
 def compare_table_data(table_name, data1, data2):
-    # table_name 参数在此函数中未被使用，可以考虑移除或在未来用于更详细的日志
-    diff_ids = []
+    # table_name 参数在此函数中未被使用，但保留以备将来用于更详细的日志
+    
+    ids_only_in_db1 = []
+    ids_only_in_db2 = []
+    ids_with_mismatched_data = []
+    
     all_ids = set(data1.keys()).union(set(data2.keys()))
-    for record_id in all_ids: # 将变量名 id 改为 record_id 以避免与内置函数 id冲突
+    
+    for record_id in all_ids:
         row1 = data1.get(record_id)
         row2 = data2.get(record_id)
-        if row1 != row2:
-            diff_ids.append(record_id)
-    return diff_ids
+        
+        if row1 is not None and row2 is None:
+            ids_only_in_db1.append(record_id)
+        elif row1 is None and row2 is not None:
+            ids_only_in_db2.append(record_id)
+        elif row1 is not None and row2 is not None:
+            # 两个数据库中都存在该ID的记录
+            if row1 != row2:
+                ids_with_mismatched_data.append(record_id)
+        # else: row1 is None and row2 is None - 这种情况不应发生，因为 record_id 来自至少一个库的keys
+            
+    return ids_only_in_db1, ids_only_in_db2, ids_with_mismatched_data
 
 def main(db1_path, db2_path):
     conn1 = sqlite3.connect(db1_path)
@@ -53,45 +78,60 @@ def main(db1_path, db2_path):
     common_tables = tables1.intersection(tables2)
 
     for table in common_tables:
+        # print(f"--- 正在比较表: {table} ---")
         id_column1 = get_table_primary_key(conn1, table)
         id_column2 = get_table_primary_key(conn2, table)
         
         if id_column1 is None and id_column2 is None:
-            print(f"表 {table} 在两个数据库中均缺少主键。")
+            print(f"表 {table}: 在两个数据库中均缺少主键。跳过比较。")
             continue
         elif id_column1 is None:
-            print(f"表 {table} 在第一个数据库中缺少主键 (DB2 主键: {id_column2})。")
+            print(f"表 {table}: 在第一个数据库中缺少主键 (DB2 主键: {id_column2})。跳过比较。")
             continue
         elif id_column2 is None:
-            print(f"表 {table} 在第二个数据库中缺少主键 (DB1 主键: {id_column1})。")
+            print(f"表 {table}: 在第二个数据库中缺少主键 (DB1 主键: {id_column1})。跳过比较。")
             continue
         elif id_column1 != id_column2:
-            print(f"表 {table} 的主键不匹配。DB1 主键: {id_column1}, DB2 主键: {id_column2}。")
+            print(f"表 {table}: 主键不匹配。DB1 主键: {id_column1}, DB2 主键: {id_column2}。跳过比较。")
             continue
         
-        # 此时 id_column1 和 id_column2 相同且不为 None
         primary_key_column = id_column1 
         
         data1 = get_table_data_as_dict(conn1, table, primary_key_column)
         data2 = get_table_data_as_dict(conn2, table, primary_key_column)
         
-        diff_ids = compare_table_data(table, data1, data2)
-        if diff_ids:
-            print(f"表 {table} 在以下ID的数据存在差异: {diff_ids}")
-            # --- 新增代码开始 ---
-            print(f"在表 {table} 中，总共有 {len(diff_ids)} 个不同的ID。")
-            # --- 新增代码结束 ---
+        ids_only_in_db1, ids_only_in_db2, ids_with_mismatched_data = compare_table_data(table, data1, data2)
+        
+        total_diff_count = len(ids_only_in_db1) + len(ids_only_in_db2) + len(ids_with_mismatched_data)
+
+        if total_diff_count > 0:
+            print(f"表 {table} 存在数据差异:")
+
+            # 进一步细化到每个ID的归属
+            all_differing_ids = sorted(list(set(ids_only_in_db1 + ids_only_in_db2 + ids_with_mismatched_data)))
+            if len(all_differing_ids) > 0 : # 确保列表不是空的才打印
+                # print(f"  详细差异说明:")
+                for diff_id in all_differing_ids:
+                    if diff_id in ids_only_in_db1:
+                        print(f"    ID {diff_id}: 仅存在于第一个数据库 ({db1_path})。")
+                    elif diff_id in ids_only_in_db2:
+                        print(f"    ID {diff_id}: 仅存在于第二个数据库 ({db2_path})。")
+                    elif diff_id in ids_with_mismatched_data:
+                        print(f"    ID {diff_id}: 在两个数据库中均存在，但数据不一致。")
+            
+            print(f"  在表 {table} 中，总共有 {total_diff_count} 条记录存在差异。")
         else:
-            print(f"表 {table} 没有数据差异。")
+            print(f"表 {table}: 没有数据差异。")
+        print("-" * 30) # 添加分隔线
 
     conn1.close()
     conn2.close()
 
 if __name__ == "__main__":
-    # 请确保路径正确，如果路径包含中文或特殊字符，可能需要特别处理或使用原始字符串 (r"路径")
-    # db1_path = '/Users/yanzhang/Downloads/backup/DB_backup/Finance.db'
-    # db2_path = '/Users/yanzhang/Documents/Database/Finance.db'
+    # 请确保路径正确
+    db1_path = '/Users/yanzhang/Downloads/backup/DB_backup/Finance.db'
+    db2_path = '/Users/yanzhang/Documents/Database/Finance.db'
     
-    db1_path = '/Users/yanzhang/Downloads/backup/DB_backup/Firstrade.db'
-    db2_path = '/Users/yanzhang/Documents/Database/Firstrade.db'
+    # db1_path = '/Users/yanzhang/Downloads/backup/DB_backup/Firstrade.db'
+    # db2_path = '/Users/yanzhang/Documents/Database/Firstrade.db'
     main(db1_path, db2_path)
