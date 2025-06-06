@@ -14,18 +14,24 @@
     "Utilities": {},
     "Consumer_Defensive": {
         "FLO": "关注财报",
-        "GIS": "关注财报"
+        "GIS": "关注财报",
+        "CLX": ""
     },
     "Industrials": {
         "BAH": ""
     },
-    "Communication_Services": {},
+    "Communication_Services": {
+        "OMC": ""
+    },
     "Financial_Services": {
         "BRK-A": ""
     },
     "Healthcare": {
         "MRNA": "",
-        "LLY": ""
+        "LLY": "",
+        "REGN": "",
+        "CNC": "",
+        "BMRN": ""
     },
     "Bonds": {
         "US10Y": "",
