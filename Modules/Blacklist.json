@@ -335,7 +335,8 @@
         "KSPI",
         "RVTY",
         "WLK",
-        "HR"
+        "HR",
+        "BMRN"
     ],
     "screener": [
         "CTA-PA",
@@ -714,6 +715,9 @@
         "FVAL",
         "PFM",
         "IBD",
-        "PIZ"
+        "PIZ",
+        "IGEB",
+        "FLJP",
+        "ARKW"
     ]
 }

@@ -233,7 +233,8 @@ class MainWindow(QMainWindow):
         reply = QMessageBox.question(
             self, "确认替换",
             f"真的要把 {symbol} 的旧百分比替换成 {new_pct}% 吗？",
-            QMessageBox.Yes | QMessageBox.No
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.Yes   # 这里把 YES 设为默认
         )
         if reply != QMessageBox.Yes:
             return

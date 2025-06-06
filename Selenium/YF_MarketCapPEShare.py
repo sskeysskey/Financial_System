@@ -99,8 +99,6 @@ def move_mouse_periodically():
 
 def Copy_Command_C():
     script = '''
-    set the clipboard to ""
-    delay 0.3
     tell application "System Events"
         keystroke "c" using command down
     end tell
@@ -604,16 +602,18 @@ def main():
                 
                 # 查找Price/Book数据
                 price_book_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Price/Book')]/following-sibling::td[1]", timeout=3)
-                price_book_value = "--"  # 默认为--，表示没有Price/Book值
                 if price_book_element:
-                    price_book_text = price_book_element.text
-                    if price_book_text != 'N/A' and price_book_text != '-':
+                    text = price_book_element.text.strip()
+                    if text in ('N/A', '-', '--'):
+                        price_book_value = "--"
+                        got_price_book = True   # 把“--”也当成“已经取到”
+                    else:
                         try:
-                            price_book_value = float(price_book_text)
-                            price_book_value = str(price_book_value)
+                            price_book_value = str(float(text))
                             got_price_book = True
-                        except ValueError:
-                            pass
+                        except:
+                            price_book_value = "--"
+                            got_price_book = True
                     print(f"已获取 {symbol} 的Price/Book: {price_book_value}")
                 else:
                     print(f"无法获取 {symbol} 的Price/Book")
@@ -625,16 +625,17 @@ def main():
                     print(f"已保存 {symbol} 的股票数量和Price/Book: {int(shares_outstanding_converted)}, {price_book_value}")
                     existing_shares.add(symbol)
                 else:
-                    print(f"{symbol} 的股票数量和Price/Book已存在，跳过写入")
+                    print(f"{symbol} 的股票数量和Price/Book已存在或未抓取到，跳过写入")
                 
                 # 查找Market Cap数据
                 market_cap_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Market Cap')]/following-sibling::td[1]", timeout=3)
                 market_cap_converted = 0
                 got_marketcap = False
-                if market_cap_element and market_cap_element not in ("N/A", "-"):
-                    market_cap = market_cap_element.text
-                    market_cap_converted = convert_shares_format(market_cap)
-                    got_marketcap = True
+                if market_cap_element:
+                    text = market_cap_element.text.strip()
+                    if text not in ('N/A', '-'):
+                        market_cap_converted = convert_shares_format(text)
+                        got_marketcap = True
                 
                 # 查找Trailing P/E数据
                 pe_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Trailing P/E')]/following-sibling::td[1]", timeout=3)
@@ -649,13 +650,13 @@ def main():
                             pass
                 
                 # 保存市值和PE到marketcap_pe.txt（追加模式），先检查是否已存在
-                if symbol not in existing_marketcap_pe and got_marketcap and got_price_book:
+                if symbol not in existing_marketcap_pe and got_marketcap:
                     with open(marketcap_pe_file_path, 'a', encoding='utf-8') as file:
                         file.write(f"{symbol}: {market_cap_converted}, {pe_str}, {price_book_value}\n")
                     print(f"已保存 {symbol} 的市值和PE: {market_cap_converted}, {pe_str}")
                     existing_marketcap_pe.add(symbol)
                 else:
-                    print(f"{symbol} 的市值和PE已存在，跳过写入")
+                    print(f"{symbol} 的市值和PE已在文件中存在或页面未抓取到，跳过写入")
                 
                 print(f"成功处理 {symbol} 的所有数据")
             

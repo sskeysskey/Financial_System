@@ -27,11 +27,7 @@
         "BRK-A": ""
     },
     "Healthcare": {
-        "MRNA": "",
-        "LLY": "",
-        "REGN": "",
-        "CNC": "",
-        "BMRN": ""
+        "MRNA": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -52,6 +48,7 @@
         "Shenzhen": "",
         "EURO50": "",
         "UK100": "",
+        "Russell": "",
         "panEURO100": "",
         "Nikkei": "",
         "India": "",

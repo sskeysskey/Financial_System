@@ -429,7 +429,6 @@
     "EMGF",
     "WTV",
     "ROBO",
-    "IPKW",
     "HEZU",
     "PRFZ",
     "EZU",
@@ -454,7 +453,6 @@
     "KNG",
     "SUSA",
     "AIQ",
-    "DWLD",
     "GDXJ",
     "NANR",
     "KBWP",
@@ -472,7 +470,8 @@
     "DXJ",
     "FDD",
     "EUFN",
-    "BJAN"
+    "BJAN",
+    "VIGI"
   ],
   "Basic_Materials": [
     "LIN",
@@ -1144,7 +1143,8 @@
     "WTM",
     "FLG",
     "MAIN",
-    "BBAR"
+    "BBAR",
+    "CRCL"
   ],
   "Healthcare": [
     "LLY",
