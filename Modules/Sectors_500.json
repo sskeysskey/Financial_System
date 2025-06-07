@@ -152,7 +152,8 @@
         "TFC",
         "COIN",
         "HOOD",
-        "ARES"
+        "ARES",
+        "AMP"
     ],
     "Healthcare": [
         "LLY",
@@ -185,7 +186,8 @@
         "CVS",
         "MCK",
         "COR",
-        "HLN"
+        "HLN",
+        "BDX"
     ],
     "Industrials": [
         "GE",
