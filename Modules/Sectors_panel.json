@@ -8,14 +8,11 @@
     "Technology": {
         "ENPH": ""
     },
-    "Consumer_Cyclical": {
-        "SKY": ""
-    },
+    "Consumer_Cyclical": {},
     "Utilities": {},
     "Consumer_Defensive": {
         "FLO": "关注财报",
-        "GIS": "关注财报",
-        "CLX": ""
+        "GIS": "关注财报"
     },
     "Industrials": {
         "BAH": ""
