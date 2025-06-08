@@ -148,12 +148,8 @@
         "USDINR": "印度卢比"
     },
     "Economics": {
-        "USNonFarmA": "04 USNonFarmA",
-        "USNonPMI": "04 USNonPMI",
-        "USTrade": "05 USTrade",
-        "USNonFarm": "06 USNonFarm",
-        "USUnemploy": "06 USUnemploy",
-        "USInitial": "05 USInitial"
+        "USConfidence": "13 USConfidence",
+        "USInitial": "12 USInitial"
     },
     "ETFs_US": {
         "TLT": "",
