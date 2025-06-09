@@ -9,8 +9,8 @@ from collections import OrderedDict
 # --- Configuration ---
 DB_PATH = "/Users/yanzhang/Documents/Database/Finance.db"
 JSON_PATH = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json"
-OUTPUT_PATH = "/Users/yanzhang/Documents/News/highlow.txt"
-BACKUP_OUTPUT_PATH = "/Users/yanzhang/Documents/News/backup/highlow.txt" # Path for the backup file
+OUTPUT_PATH = "/Users/yanzhang/Documents/News/HighLow.txt"
+BACKUP_OUTPUT_PATH = "/Users/yanzhang/Documents/News/backup/HighLow.txt" # Path for the backup file
 
 # Categories to process as per your request
 TARGET_CATEGORIES = [
@@ -71,7 +71,7 @@ def get_prices_in_range(cursor, table_name, symbol, start_date_str, end_date_str
         return []
 
 def parse_highlow_file(filepath):
-    """Parses a highlow.txt file into a dictionary structure."""
+    """Parses a HighLow.txt file into a dictionary structure."""
     parsed_data = {label: {"Low": [], "High": []} for label in TIME_INTERVALS_CONFIG.keys()}
     current_interval_label = None
     current_list_type = None # "Low" or "High"
