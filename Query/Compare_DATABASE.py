@@ -62,6 +62,11 @@ def compare_table_data(table_name, data1, data2):
     return ids_only_in_db1, ids_only_in_db2, ids_with_mismatched_data
 
 def main(db1_path, db2_path):
+    # 定义一个内部类或直接定义变量来存储 ANSI 颜色代码
+    class Colors:
+        RED = '\033[91m'   # 亮红色
+        RESET = '\033[0m'  # 重置颜色
+
     conn1 = sqlite3.connect(db1_path)
     conn2 = sqlite3.connect(db2_path)
 
@@ -76,31 +81,34 @@ def main(db1_path, db2_path):
     tables1 = set([table[0] for table in tables1_tuples if table[0] != 'sqlite_sequence'])
     tables2 = set([table[0] for table in tables2_tuples if table[0] != 'sqlite_sequence'])
 
-    # --- 新增逻辑：报告表级别的差异 ---
+    # --- 报告表级别的差异 (使用红色高亮) ---
     
     # 1. 找出只在 db1 中存在的表
     only_in_db1 = tables1 - tables2
     if only_in_db1:
-        print(f"--- 仅存在于第一个数据库 ({db1_path}) 的表 ---")
+        # 使用 f-string 将颜色代码包裹在字符串两端
+        print(f"{Colors.RED}--- 仅存在于第一个数据库 ({db1_path}) 的表 ---{Colors.RESET}")
         for table in sorted(list(only_in_db1)):
-            print(f"表 '{table}'")
+            print(f"{Colors.RED}表 '{table}'{Colors.RESET}")
         print("-" * 30)
 
     # 2. 找出只在 db2 中存在的表
     only_in_db2 = tables2 - tables1
     if only_in_db2:
-        print(f"--- 仅存在于第二个数据库 ({db2_path}) 的表 ---")
+        print(f"{Colors.RED}--- 仅存在于第二个数据库 ({db2_path}) 的表 ---{Colors.RESET}")
         for table in sorted(list(only_in_db2)):
-            print(f"表 '{table}'")
+            print(f"{Colors.RED}表 '{table}'{Colors.RESET}")
         print("-" * 30)
 
-    # --- 现有逻辑：比较共有表的数据 ---
+    # --- 比较共有表的数据 (保持原样) ---
     common_tables = tables1.intersection(tables2)
     
     if common_tables:
         print("--- 开始比较共有表的数据 ---")
 
     for table in sorted(list(common_tables)):
+        # (这部分代码与之前版本完全相同，为了简洁此处省略)
+        # (在您的文件中，请保留这部分完整的代码)
         # print(f"--- 正在比较表: {table} ---")
         id_column1 = get_table_primary_key(conn1, table)
         id_column2 = get_table_primary_key(conn2, table)

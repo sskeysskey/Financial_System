@@ -179,12 +179,16 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     plt.close('all')  # 关闭所有图表
     matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
 
-    # 如果传入的 share 是一个元组，则拆分为 share_val 与 pb_text
+    # --- 修改开始: 处理 pb_text ---
+    # 如果传入的 share 是一个元组，则拆分为 share_val 与 pb
     if isinstance(share, tuple):
-        share_val, pb_text = share
+        share_val, pb = share
+        # 如果 pb 是 None 或空字符串，则显示 '--'，否则显示其值
+        pb_text = f"{pb}" if pb not in [None, ""] else "--"
     else:
         share_val = share
-        pb_text = ""
+        pb_text = "--"  # 如果没提供元组，pb默认为'--'
+    # --- 修改结束 ---
 
     show_volume = False
     mouse_pressed = False
@@ -474,17 +478,35 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     # 注意：这里用 share_val（而不是原来的 share）来计算换手率
     try:
+        # 尝试将 share_val 转换为整数
+        # 如果 share_val 是 'N/A' 或其他非数字字符串，会进入 except 块
         share_int = int(share_val)
-        turnover_rate = f"{(volumes[-1] / share_int) * 100:.2f}" if (volumes and volumes[-1] is not None and share_int > 0) else ""
-    except (ValueError, ZeroDivisionError, TypeError):
-        turnover_rate = ""
+        if volumes and volumes[-1] is not None and share_int > 0:
+            turnover_rate = f"{(volumes[-1] / share_int) * 100:.2f}"
+        else:
+            # 如果成交量数据缺失或股本为0，则显示'--'
+            turnover_rate = "--"
+    except (ValueError, TypeError):
+        # 如果 share_val 无法转换为整数 (例如 'N/A')
+        turnover_rate = "--"
+    # --- 修改结束 ---
         
-    marketcap_in_billion = (
-        f"{float(marketcap) / 1e9:.1f}B"
-        if marketcap not in [None, "N/A"]
-        else ""
-    )
-    pe_text = f"{pe}" if pe not in [None, "N/A"] else ""
+    # --- 修改开始: 格式化 marketcap ---
+    marketcap_in_billion = ""
+    if marketcap not in [None, "N/A"]:
+        mc_val = float(marketcap) / 1e9
+        # 检查除以10亿后的值是否为整数
+        if mc_val == int(mc_val):
+            # 如果是整数，则不显示小数点
+            marketcap_in_billion = f"{int(mc_val)}B"
+        else:
+            # 如果有小数，则保留一位小数
+            marketcap_in_billion = f"{mc_val:.1f}B"
+    # --- 修改结束 ---
+
+    # --- 修改开始: 处理 pe_text ---
+    pe_text = f"{pe}" if pe not in [None, "N/A"] else "--"
+    # --- 修改结束 ---
 
     clickable = False
     tag_str = ""
@@ -959,7 +981,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             filtered_prices = [p for d,p in zip(dates, prices)  if d >= min_date]
             filtered_volumes= [v for d,v in zip(dates, volumes) if d >= min_date] if volumes else None
 
-        # ––––– 如果某个区间竟然把所有点都筛没了，但我们确实有老数据，就默认显示最后一条 –––––
+        # ---------- 如果某个区间竟然把所有点都筛没了，但我们确实有老数据，就默认显示最后一条 ----------
         if not filtered_dates and dates:
             filtered_dates  = [dates[-1]]
             filtered_prices = [prices[-1]]

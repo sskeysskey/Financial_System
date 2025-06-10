@@ -25,6 +25,8 @@ cursor = conn.cursor()
 # """, (price_multiplier, name))
 
 # 更新价格字段
+# cursor.execute("UPDATE MNSPP SET marketcap = 25650000000.0 WHERE id = 1219")
+# cursor.execute("UPDATE MNSPP SET pb = 34.43 WHERE id = 1219")
 # cursor.execute("UPDATE Earning SET price = -24.6 WHERE id = 1624")
 # cursor.execute("UPDATE Earning SET date = '2024-09-13' WHERE id = 1624")
 # cursor.execute("UPDATE Commodities SET price = 14.20 WHERE id = 105273")
