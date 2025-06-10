@@ -73,26 +73,53 @@ def main(db1_path, db2_path):
     cursor2.execute("SELECT name FROM sqlite_master WHERE type='table';")
     tables2_tuples = cursor2.fetchall()
 
-    tables1 = set([table[0] for table in tables1_tuples])
-    tables2 = set([table[0] for table in tables2_tuples])
-    common_tables = tables1.intersection(tables2)
+    tables1 = set([table[0] for table in tables1_tuples if table[0] != 'sqlite_sequence'])
+    tables2 = set([table[0] for table in tables2_tuples if table[0] != 'sqlite_sequence'])
 
-    for table in common_tables:
+    # --- 新增逻辑：报告表级别的差异 ---
+    
+    # 1. 找出只在 db1 中存在的表
+    only_in_db1 = tables1 - tables2
+    if only_in_db1:
+        print(f"--- 仅存在于第一个数据库 ({db1_path}) 的表 ---")
+        for table in sorted(list(only_in_db1)):
+            print(f"表 '{table}'")
+        print("-" * 30)
+
+    # 2. 找出只在 db2 中存在的表
+    only_in_db2 = tables2 - tables1
+    if only_in_db2:
+        print(f"--- 仅存在于第二个数据库 ({db2_path}) 的表 ---")
+        for table in sorted(list(only_in_db2)):
+            print(f"表 '{table}'")
+        print("-" * 30)
+
+    # --- 现有逻辑：比较共有表的数据 ---
+    common_tables = tables1.intersection(tables2)
+    
+    if common_tables:
+        print("--- 开始比较共有表的数据 ---")
+
+    for table in sorted(list(common_tables)):
         # print(f"--- 正在比较表: {table} ---")
         id_column1 = get_table_primary_key(conn1, table)
         id_column2 = get_table_primary_key(conn2, table)
         
         if id_column1 is None and id_column2 is None:
             print(f"表 {table}: 在两个数据库中均缺少主键。跳过比较。")
+            print("-" * 30) # 添加分隔线
             continue
         elif id_column1 is None:
             print(f"表 {table}: 在第一个数据库中缺少主键 (DB2 主键: {id_column2})。跳过比较。")
+            print("-" * 30) # 添加分隔线
             continue
         elif id_column2 is None:
             print(f"表 {table}: 在第二个数据库中缺少主键 (DB1 主键: {id_column1})。跳过比较。")
+            print("-" * 30) # 添加分隔线
             continue
         elif id_column1 != id_column2:
             print(f"表 {table}: 主键不匹配。DB1 主键: {id_column1}, DB2 主键: {id_column2}。跳过比较。")
+            print("-" * 30) # 添加分隔线
             continue
         
         primary_key_column = id_column1 
