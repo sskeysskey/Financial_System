@@ -22,11 +22,11 @@
         "T",
         "CMCSA",
         "SPOT",
-        "DASH",
         "NTES",
         "AMX",
         "CHTR",
-        "RBLX"
+        "RBLX",
+        "APP"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -53,7 +53,8 @@
         "RCL",
         "HLT",
         "GM",
-        "CPNG"
+        "CPNG",
+        "DASH"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -185,9 +186,7 @@
         "ZTS",
         "CVS",
         "MCK",
-        "COR",
-        "HLN",
-        "BDX"
+        "COR"
     ],
     "Industrials": [
         "GE",
@@ -280,7 +279,6 @@
         "ROP",
         "FTNT",
         "ADSK",
-        "APP",
         "MSTR",
         "TEAM",
         "PAYX",

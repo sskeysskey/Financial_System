@@ -8,8 +8,12 @@
     "Technology": {
         "ENPH": ""
     },
-    "Consumer_Cyclical": {},
-    "Utilities": {},
+    "Consumer_Cyclical": {
+        "MUSA": ""
+    },
+    "Utilities": {
+        "EIX": ""
+    },
     "Consumer_Defensive": {
         "FLO": "关注财报",
         "GIS": "关注财报"
