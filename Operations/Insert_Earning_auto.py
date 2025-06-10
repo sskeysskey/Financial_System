@@ -123,6 +123,21 @@ class MainWindow(QMainWindow):
             except Exception as e_old:
                 print(f"Error centering window with QDesktopWidget: {e_old}")
                 
+    def _get_prev_price(self, table: str, dt: str, symbol: str):
+        """
+        从指定表里找 name=symbol 且 date<dt 的最近一条 price
+        """
+        sql = f"""
+            SELECT price
+              FROM `{table}`
+             WHERE name=? AND date<? 
+          ORDER BY date DESC
+             LIMIT 1
+        """
+        self.cur.execute(sql, (symbol, dt))
+        r = self.cur.fetchone()
+        return r["price"] if r else None
+    
     def process_date1(self):
         """
         扫描“昨天”的 symbols，计算百分比，
@@ -133,10 +148,17 @@ class MainWindow(QMainWindow):
             if not sector:
                 continue
             # 从 sector 表中取 price
+            # 1) 当日收盘
             p1 = self._get_price_from_table(sector, self.date1, symbol)
-            p2 = self._get_price_from_table(sector, self.date2, symbol)
-            if p1 is None or p2 is None or p2 == 0:
+            if p1 is None:
                 continue
+
+            # 2) 上一交易日收盘（动态查找）
+            p2 = self._get_prev_price(sector, self.date1, symbol)
+            if p2 is None or p2 == 0:
+                continue
+
+            # 计算涨跌 %
             pct = round((p1 - p2) / p2 * 100, 2)
 
             row = self.table1.rowCount()

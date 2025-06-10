@@ -5,9 +5,7 @@
     },
     "Real_Estate": {},
     "Energy": {},
-    "Technology": {
-        "ENPH": ""
-    },
+    "Technology": {},
     "Consumer_Cyclical": {
         "MUSA": ""
     },
@@ -15,21 +13,16 @@
         "EIX": ""
     },
     "Consumer_Defensive": {
-        "FLO": "关注财报",
         "GIS": "关注财报"
     },
     "Industrials": {
         "BAH": ""
     },
-    "Communication_Services": {
-        "OMC": ""
-    },
+    "Communication_Services": {},
     "Financial_Services": {
         "BRK-A": ""
     },
-    "Healthcare": {
-        "MRNA": ""
-    },
+    "Healthcare": {},
     "Bonds": {
         "US10Y": "",
         "US2Y": "",
