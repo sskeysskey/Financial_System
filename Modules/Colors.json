@@ -547,7 +547,6 @@
         "PKX",
         "LEGN",
         "IPG",
-        "SJM",
         "ACLS",
         "COTY",
         "PEP",
@@ -802,7 +801,8 @@
         "UNH",
         "ENPH",
         "BRKR",
-        "GLOB"
+        "GLOB",
+        "SJM"
     ],
     "black_keywords": [
         "Cotton",

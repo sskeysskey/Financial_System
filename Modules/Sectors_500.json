@@ -45,7 +45,6 @@
         "RACE",
         "CMG",
         "ABNB",
-        "ORLY",
         "MAR",
         "AZO",
         "SE",
@@ -92,7 +91,8 @@
         "LNG",
         "MPC",
         "MPLX",
-        "TRP"
+        "TRP",
+        "SLB"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -186,7 +186,8 @@
         "ZTS",
         "CVS",
         "MCK",
-        "COR"
+        "COR",
+        "BDX"
     ],
     "Industrials": [
         "GE",
@@ -232,7 +233,8 @@
         "WELL",
         "SPG",
         "PSA",
-        "DLR"
+        "DLR",
+        "O"
     ],
     "Technology": [
         "AAPL",

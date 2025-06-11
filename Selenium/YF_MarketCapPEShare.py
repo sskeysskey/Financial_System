@@ -18,9 +18,148 @@ import subprocess
 import tkinter as tk
 from tkinter import ttk
 import argparse
+import sqlite3  # 新增：导入sqlite3库
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication, QMessageBox, QDesktopWidget
+
+# --- 新增：数据库操作函数 ---
+
+def create_db_connection(db_file):
+    """ 创建一个到SQLite数据库的连接 """
+    conn = None
+    try:
+        conn = sqlite3.connect(db_file)
+        # 让查询结果可以像字典一样通过列名访问
+        conn.row_factory = sqlite3.Row
+        print("成功连接到数据库。")
+    except sqlite3.Error as e:
+        print(f"数据库连接错误: {e}")
+        show_alert(f"数据库连接错误: {e}")
+    return conn
+
+def get_stock_from_db(conn, symbol):
+    """ 从MNSPP表中根据symbol查询股票数据 """
+    try:
+        cur = conn.cursor()
+        # 使用 upper() 进行不区分大小写的比较
+        cur.execute("SELECT * FROM MNSPP WHERE upper(symbol) = ?", (symbol.upper(),))
+        row = cur.fetchone()
+        return row  # 返回一个sqlite3.Row对象或None
+    except sqlite3.Error as e:
+        print(f"从数据库查询 {symbol} 时出错: {e}")
+        return None
+
+def should_update_field(db_value, scraped_value_str):
+    """
+    根据您的更新规则，判断一个字段是否需要更新。
+    返回 (是否更新_bool, 转换后的新值_float_or_int)
+    """
+    # 规则：如果抓取到的是空、0或'--'，则认为无效
+    is_scraped_valid = False
+    scraped_value = 0
+    
+    if scraped_value_str not in ('N/A', '-', '--', None):
+        try:
+            # 尝试将抓取到的值转为浮点数
+            val = float(scraped_value_str)
+            if val != 0:
+                is_scraped_valid = True
+                scraped_value = val
+        except (ValueError, TypeError):
+            is_scraped_valid = False
+
+    # 规则：如果数据库中的值是空或0，则认为无效
+    is_db_valid = db_value is not None and float(db_value) != 0
+
+    # 如果抓取到的数据无效，则不更新
+    if not is_scraped_valid:
+        return False, None
+
+    # 如果抓取到的数据有效，但数据库数据无效，则更新
+    if not is_db_valid:
+        return True, scraped_value
+
+    # 如果两者都有效，但值不相同（处理浮点数精度问题），则更新
+    if abs(float(db_value) - scraped_value) > 1e-9: # 比较浮点数差异
+        return True, scraped_value
+
+    # 其他情况（两者都无效，或两者都有效且值相同）不更新
+    return False, None
+
+
+def update_stock_in_db(conn, symbol, scraped_data, db_record):
+    """
+    根据新抓取的数据更新数据库中的记录。
+    scraped_data: 包含新数据的字典。
+    db_record: 从数据库查询到的旧数据（sqlite3.Row对象）。
+    """
+    updates = []
+    params = []
+
+    # 检查 'name' 字段
+    if db_record['name'] != scraped_data['name']:
+        updates.append("name = ?")
+        params.append(scraped_data['name'])
+
+    # 检查 'shares' 字段
+    update_shares, new_shares = should_update_field(db_record['shares'], scraped_data['shares'])
+    if update_shares:
+        updates.append("shares = ?")
+        params.append(int(new_shares)) # Shares应该是整数
+
+    # 检查 'marketcap' 字段
+    update_marketcap, new_marketcap = should_update_field(db_record['marketcap'], scraped_data['marketcap'])
+    if update_marketcap:
+        updates.append("marketcap = ?")
+        params.append(new_marketcap)
+
+    # 检查 'pe_ratio' 字段
+    update_pe, new_pe = should_update_field(db_record['pe_ratio'], scraped_data['pe'])
+    if update_pe:
+        updates.append("pe_ratio = ?")
+        params.append(new_pe)
+
+    # 检查 'pb' 字段
+    update_pb, new_pb = should_update_field(db_record['pb'], scraped_data['pb'])
+    if update_pb:
+        updates.append("pb = ?")
+        params.append(new_pb)
+
+    if not updates:
+        print(f"数据库中 {symbol} 的数据已是最新，无需更新。")
+        return
+
+    try:
+        sql = f"UPDATE MNSPP SET {', '.join(updates)} WHERE upper(symbol) = ?"
+        params.append(symbol.upper())
+        
+        cur = conn.cursor()
+        cur.execute(sql, tuple(params))
+        conn.commit()
+        print(f"已更新数据库中 {symbol} 的记录: {', '.join(field.split(' ')[0] for field in updates)}")
+    except sqlite3.Error as e:
+        print(f"更新数据库中 {symbol} 的记录时出错: {e}")
+
+
+def insert_stock_into_db(conn, symbol, name, shares, marketcap, pe, pb):
+    """ 向MNSPP表中插入一条新的股票记录 """
+    sql = ''' INSERT INTO MNSPP(symbol, name, shares, marketcap, pe_ratio, pb)
+              VALUES(?,?,?,?,?,?) '''
+    try:
+        cur = conn.cursor()
+        # 将'--'或无效值转换成数据库的NULL
+        pe_to_db = None if pe in ('--', 'N/A', '-') else float(pe)
+        pb_to_db = None if pb in ('--', 'N/A', '-') else float(pb)
+        
+        cur.execute(sql, (symbol, name, int(shares), marketcap, pe_to_db, pb_to_db))
+        conn.commit()
+        print(f"已将新symbol {symbol} 插入到数据库。")
+    except (sqlite3.Error, ValueError) as e:
+        print(f"向数据库插入 {symbol} 时出错: {e}")
+
+
+# --- 以下是您原有的代码，无需改动 ---
 
 def resolve_data_path(filename):
     """
@@ -362,7 +501,7 @@ def get_group_for_symbol(symbol):
             return group
     return None
 
-# —— 1. 新增：从 Sectors_All.json 提取所有分组名 —— #
+# ---- 1. 新增：从 Sectors_All.json 提取所有分组名 ---- #
 def extract_group_names():
     """
     读取 Sectors_All.json，将所有顶层 key（即分组名）提取为列表返回
@@ -373,7 +512,7 @@ def extract_group_names():
         data = json.load(f)
     return list(data.keys())
 
-# —— 2. 新增：弹出带下拉框的对话，供用户选择分组 —— #
+# ---- 2. 新增：弹出带下拉框的对话，供用户选择分组 ---- #
 def show_group_selection_dialog(groups):
     """
     弹出一个小窗口，groups 为字符串列表，用户从下拉列表中选一个分组，返回选择的分组名。
@@ -408,6 +547,7 @@ def show_group_selection_dialog(groups):
 
     root.mainloop()
     return selected['group']
+
 
 def main():
     # 解析命令行参数
@@ -467,6 +607,13 @@ def main():
         symbol_names_file_path = "/Users/yanzhang/Downloads/symbol_names.txt"
         marketcap_pe_file_path = "/Users/yanzhang/Downloads/marketcap_pe.txt"
         print("使用正常模式和Downloads目录...")
+
+    # --- 数据库连接 ---
+    db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+    db_conn = create_db_connection(db_path)
+    if not db_conn:
+        print("无法连接到数据库，程序退出。")
+        return
 
     enable_mouse_movement = create_mouse_prompt()
 
@@ -659,17 +806,52 @@ def main():
                     print(f"{symbol} 的市值和PE已在文件中存在或页面未抓取到，跳过写入")
                 
                 print(f"成功处理 {symbol} 的所有数据")
-            
+
+                # --- 新增：数据库操作逻辑 ---
+                print(f"--- 开始处理 {symbol} 的数据库操作 ---")
+                db_record = get_stock_from_db(db_conn, symbol)
+                
+                # 将所有抓取到的数据打包成一个字典
+                scraped_data = {
+                    "name": cleaned_company_name,
+                    "shares": shares_outstanding_converted,
+                    "marketcap": market_cap_converted,
+                    "pe": pe_str,
+                    "pb": price_book_value
+                }
+
+                if db_record:
+                    # 数据库中存在该记录，执行更新逻辑
+                    update_stock_in_db(db_conn, symbol, scraped_data, db_record)
+                else:
+                    # 数据库中不存在，弹窗提示并插入新记录
+                    show_alert(f"注意：新Symbol '{symbol}' 在数据库中未找到，将添加新记录。")
+                    insert_stock_into_db(
+                        db_conn, symbol, 
+                        scraped_data['name'], 
+                        scraped_data['shares'], 
+                        scraped_data['marketcap'], 
+                        scraped_data['pe'], 
+                        scraped_data['pb']
+                    )
+                print(f"--- 完成 {symbol} 的数据库操作 ---")
+
             except Exception as e:
-                print(f"抓取 {symbol} 时发生错误: {str(e)}")
+                print(f"处理 {symbol} 时发生主循环错误: {str(e)}")
             
             # 添加短暂延迟，避免请求过于频繁
             time.sleep(1)
     
     finally:
         # 关闭浏览器
-        driver.quit()
+        if 'driver' in locals() and driver:
+            driver.quit()
         
+        # --- 新增：关闭数据库连接 ---
+        if db_conn:
+            db_conn.close()
+            print("数据库连接已关闭。")
+
         print("数据抓取完成！")
 
         # 检查sectors_empty.json是否有内容
