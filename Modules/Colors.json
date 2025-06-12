@@ -124,7 +124,6 @@
         "MUFG",
         "GOOGL",
         "TSLA",
-        "WMT",
         "KMI",
         "AAPL",
         "TSM",
@@ -144,7 +143,8 @@
         "DXJ",
         "SCHD",
         "BRK-A",
-        "V"
+        "V",
+        "WMT"
     ],
     "white_keywords": [
         "ROKU",

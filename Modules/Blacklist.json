@@ -521,7 +521,8 @@
         "GOLD",
         "ZI",
         "DFS",
-        "BEPC"
+        "BEPC",
+        "PUK-PA"
     ],
     "etf": [
         "VDE",
@@ -719,6 +720,7 @@
         "PIZ",
         "IGEB",
         "FLJP",
-        "ARKW"
+        "ARKW",
+        "IDU"
     ]
 }
