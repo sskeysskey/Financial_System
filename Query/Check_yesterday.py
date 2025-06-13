@@ -4,9 +4,9 @@ import os
 import sys
 import subprocess
 from datetime import datetime, timedelta
-from typing import Callable, Tuple
+from typing import Callable, Tuple, Optional
 
-# ———— 请根据实际情况修改下面这几个路径 ———— #
+# -------- 请根据实际情况修改下面这几个路径 -------- #
 DB_PATH = '/Users/yanzhang/Documents/Database/Finance.db'
 SECTORS_ALL_JSON = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
 SECTOR_EMPTY_JSON = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json'
@@ -33,10 +33,11 @@ def insert_ratio(
     result_name: str,
     op: Callable[[float, float], float] = lambda a, b: a / b,
     digits: int = 2
-) -> Tuple[int, int]:
+) -> Tuple[int, Optional[int]]:
     """
     取 name1/name2 最新日期的数据，按 op(name1_price, name2_price) 计算结果，
     四舍五入到小数点后 digits 位，插入到 result_name。
+    如果 result_name 在该日期的数据已存在，则跳过。
     返回 (插入条数, lastrowid)。
     """
     # 1) 找最新日期
@@ -49,7 +50,18 @@ def insert_ratio(
         raise ValueError(f"没有找到 {name1}/{name2} 的任何数据")
     latest_date = row[0]
 
-    # 2) 取两个品种的 price
+    # -------- 新增的核心逻辑：在插入前检查数据是否已存在 -------- #
+    cursor.execute(
+        "SELECT 1 FROM Currencies WHERE name = ? AND date = ?",
+        (result_name, latest_date)
+    )
+    if cursor.fetchone():
+        # 如果 fetchone() 返回了东西，说明数据已存在
+        print(f"数据已存在: '{result_name}' 在 {latest_date} 的记录已存在，跳过插入。")
+        return 0, None  # 返回 0 表示没有行被插入, lastrowid 为 None
+    # ---------------------------------------------------- #
+
+    # 2) 取两个品种的 price (仅当数据不存在时才执行)
     cursor.execute(
         "SELECT price FROM Currencies WHERE name = ? AND date = ?",
         (name1, latest_date)
@@ -72,6 +84,7 @@ def insert_ratio(
     raw = op(price1, price2)
     result = round(raw, digits)
 
+    print(f"正在插入: '{result_name}' 在 {latest_date} 的数据，值为 {result}")
     cursor.execute(
         "INSERT INTO Currencies (date, name, price) VALUES (?, ?, ?)",
         (latest_date, result_name, result)
@@ -91,7 +104,8 @@ def Insert_DB():
             'CNYI',
             digits=3
         )
-        print(f"CNYI 插入: {cnt1} 条 (lastrowid={lid1})")
+        if cnt1 > 0:
+            print(f"CNYI 插入: {cnt1} 条 (lastrowid={lid1})")
 
         # JPYI = DXY / USDJPY，保留 4 位小数
         cnt2, lid2 = insert_ratio(
@@ -101,7 +115,8 @@ def Insert_DB():
             'JPYI',
             digits=4
         )
-        print(f"JPYI 插入: {cnt2} 条 (lastrowid={lid2})")
+        if cnt2 > 0:
+            print(f"JPYI 插入: {cnt2} 条 (lastrowid={lid2})")
 
         # EURI = DXY * EURUSD，使用默认 2 位小数
         cnt3, lid3 = insert_ratio(
@@ -111,7 +126,8 @@ def Insert_DB():
             'EURI',
             op=lambda a, b: a * b
         )
-        print(f"EURI 插入: {cnt3} 条 (lastrowid={lid3})")
+        if cnt3 > 0:
+            print(f"EURI 插入: {cnt3} 条 (lastrowid={lid3})")
 
         # CHFI = DXY / USDCHF，使用默认 2 位小数
         cnt4, lid4 = insert_ratio(
@@ -120,7 +136,8 @@ def Insert_DB():
             'USDCHF',
             'CHFI'
         )
-        print(f"CHFI 插入: {cnt4} 条 (lastrowid={lid4})")
+        if cnt4 > 0:
+            print(f"CHFI 插入: {cnt4} 条 (lastrowid={lid4})")
 
         # GBPI = DXY * GBPUSD，使用默认 2 位小数
         cnt5, lid5 = insert_ratio(
@@ -130,15 +147,18 @@ def Insert_DB():
             'GBPI',
             op=lambda a, b: a * b
         )
-        print(f"GBPI 插入: {cnt5} 条 (lastrowid={lid5})")
+        if cnt5 > 0:
+            print(f"GBPI 插入: {cnt5} 条 (lastrowid={lid5})")
 
         conn.commit()
+        print("\n数据库操作完成。")
 
     except ValueError as ve:
         print("数据准备失败：", ve)
         conn.rollback()
         sys.exit(1)
     except sqlite3.IntegrityError as ie:
+        # 这个错误现在不太可能因为重复数据而触发，但保留它是好习惯，以防其他约束问题
         print("插入失败，可能违反唯一性约束：", ie)
         conn.rollback()
         sys.exit(1)
@@ -293,5 +313,6 @@ def main():
         Insert_DB()
         # 无任何缺失，直接弹框提示
         show_alert("所有数据都已成功入库，没有遗漏。")
+
 if __name__ == '__main__':
     main()

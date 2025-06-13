@@ -160,11 +160,58 @@ def filter_screener_symbols(symbols, blacklist):
     screener_symbols = set(blacklist.get('screener', []))
     return [symbol for symbol in symbols if symbol not in screener_symbols]
 
-# 比较差异并更新sectors文件
+
+# 【新增】函数：用于将股票数据从一个数据库表移动到另一个表
+def move_stock_data_in_db(db_file, source_sector, dest_sector, symbol):
+    """
+    将单个股票的所有历史数据从一个 sector 表移动到另一个 sector 表。
+    这是一个事务性操作，确保数据要么完全移动，要么在出错时保持原样。
+    """
+    log_message = ""
+    conn = sqlite3.connect(db_file)
+    try:
+        cur = conn.cursor()
+
+        # 1. 从源表中查询该股票的所有记录
+        cur.execute(f'SELECT date, name, price, volume FROM "{source_sector}" WHERE name = ?', (symbol,))
+        records_to_move = cur.fetchall()
+
+        if not records_to_move:
+            log_message = f"信息：在源表 '{source_sector}' 中没有找到 '{symbol}' 的数据，无需移动。"
+            print(log_message)
+            return log_message
+
+        # 2. 将查询到的记录批量插入到目标表
+        # 注意：这里假设目标表已存在。您的代码逻辑似乎能保证这一点。
+        cur.executemany(
+            f'INSERT INTO "{dest_sector}" (date, name, price, volume) VALUES (?, ?, ?, ?)',
+            records_to_move
+        )
+
+        # 3. 从源表中删除该股票的所有记录
+        cur.execute(f'DELETE FROM "{source_sector}" WHERE name = ?', (symbol,))
+
+        # 4. 提交事务
+        conn.commit()
+        
+        log_message = f"成功将 symbol '{symbol}' 的 {len(records_to_move)} 条历史记录从表 '{source_sector}' 移动到 '{dest_sector}'"
+        print(f"✅ {log_message}")
+
+    except sqlite3.Error as e:
+        # 如果发生任何数据库错误，回滚所有更改
+        conn.rollback()
+        log_message = f"❌ 移动 symbol '{symbol}' 从 '{source_sector}' 到 '{dest_sector}' 失败: {e}"
+        print(log_message)
+    finally:
+        conn.close()
+    
+    return log_message
+
+# 【修改】比较差异并更新sectors文件的函数
 def compare_and_update_sectors(screener_data, sectors_all_data, sectors_today_data, sectors_empty_data, blacklist, db_file):
     added_symbols = []
-    moved_symbols = []  # 新增：记录移动的symbols
-    db_delete_logs = []
+    moved_symbols = []
+    db_operation_logs = [] # 日志名修改为更通用的名字
     has_changes = False
     
     # 遍历screener数据中的每个部门
@@ -181,23 +228,31 @@ def compare_and_update_sectors(screener_data, sectors_all_data, sectors_today_da
                 
                 # 对每个新symbol检查是否存在于其他sector中
                 for symbol in filtered_screener_not_in_sectors:
+                    moved = False
                     # 检查symbol是否在其他sector中
                     for other_sector, other_symbols in sectors_all_data.items():
                         if other_sector != sector and symbol in other_symbols:
-                            # 在移动symbol之前，先删除数据库中的记录
-                            delete_logs = delete_records_by_names(db_file, other_sector, [symbol])
-                            db_delete_logs.extend(delete_logs)
+                            # 【修改】核心逻辑：调用移动函数，而不是删除函数
+                            # 将数据库中的记录从旧表移动到新表
+                            move_log = move_stock_data_in_db(db_file, other_sector, sector, symbol)
+                            if move_log:
+                                db_operation_logs.append(move_log)
                             
-                            # 从原sector中删除
+                            # 从原sector的JSON数据中删除
                             sectors_all_data[other_sector].remove(symbol)
                             if other_sector in sectors_today_data and symbol in sectors_today_data[other_sector]:
                                 sectors_today_data[other_sector].remove(symbol)
-                            moved_symbols.append(f"将symbol '{symbol}' 从 '{other_sector}' 中移除")
+                            
+                            moved_symbols.append(f"将 symbol '{symbol}' 从 '{other_sector}' 移动到 '{sector}'")
+                            moved = True
                             break
                     
                     # 添加到新的sector
                     sectors_all_data[sector].append(symbol)
-                    added_symbols.append(f"将 '{symbol}' 添加到 '{sector}'，先使用Ctrl+Option+9抓取marketcapshare，再到Yahoo页面使用Ctrl+Comamnd+9抓取历史数据。然后使用Ctrl+Option+1和Ctrl+V抓取description，最后使用Ctrl+option+X抓取财报数据。")
+                    
+                    # 如果不是移动过来的，而是全新的，则添加到 added_symbols 列表
+                    if not moved:
+                        added_symbols.append(f"将 '{symbol}' 添加到 '{sector}'，先使用Ctrl+Option+9抓取marketcapshare，再到Yahoo页面使用Ctrl+Comamnd+9抓取历史数据。然后使用Ctrl+Option+1和Ctrl+V抓取description，最后使用Ctrl+option+X抓取财报数据。")
                     
                     # 确保sectors_today_data中有该sector
                     if sector not in sectors_today_data:
@@ -217,7 +272,8 @@ def compare_and_update_sectors(screener_data, sectors_all_data, sectors_today_da
     if not has_changes:
         added_symbols.append("Sectors_All文件没有需要更新的内容")
     
-    return sectors_all_data, sectors_today_data, sectors_empty_data, added_symbols, moved_symbols, db_delete_logs
+    return sectors_all_data, sectors_today_data, sectors_empty_data, added_symbols, moved_symbols, db_operation_logs
+
 
 def count_files(prefix):
     """
@@ -241,7 +297,7 @@ def process_sectors_5000(sectors_5000, screener_data, market_caps, blacklist):
     changes_5000 = []
     
     # 第一步：从5000.json中剔除小于5000亿的symbol
-    for sector, symbols in sectors_5000.items():
+    for sector, symbols in list(sectors_5000.items()): # 使用 list() 避免在迭代时修改字典
         to_remove = []
         for symbol in symbols:
             if symbol in market_caps and market_caps[symbol] < 500000000000:  # 5000亿
@@ -267,13 +323,12 @@ def process_sectors_5000(sectors_5000, screener_data, market_caps, blacklist):
                 for other_sector in sectors_5000:
                     if other_sector != sector and symbol in sectors_5000[other_sector]:
                         sectors_5000[other_sector].remove(symbol)
-                        changes_5000.append(f"从5000.json的{other_sector}组中剔除了{symbol}")
+                        changes_5000.append(f"从5000.json的{other_sector}组中剔除了{symbol} (因板块变更)")
                         break
                 
                 # 添加到新sector
                 sectors_5000[sector].append(symbol)
                 changes_5000.append(f"向5000.json的{sector}组中添加了{symbol}(市值: {market_caps[symbol]})")
-            # 移除了在黑名单中的记录
     
     return sectors_5000, changes_5000
 
@@ -282,7 +337,7 @@ def process_sectors_500(sectors_500, screener_data, market_caps, blacklist):
     changes_500 = []
     
     # 第三步：从500.json中剔除小于500亿的symbol
-    for sector, symbols in sectors_500.items():
+    for sector, symbols in list(sectors_500.items()): # 使用 list() 避免在迭代时修改字典
         to_remove = []
         for symbol in symbols:
             if symbol in market_caps and market_caps[symbol] < 50000000000:  # 500亿
@@ -308,42 +363,45 @@ def process_sectors_500(sectors_500, screener_data, market_caps, blacklist):
                 for other_sector in sectors_500:
                     if other_sector != sector and symbol in sectors_500[other_sector]:
                         sectors_500[other_sector].remove(symbol)
-                        # 改成“剔除”才能被后续的removals_500捕捉到
-                        changes_500.append(f"从500.json的{other_sector}组中剔除了{symbol}")
+                        changes_500.append(f"从500.json的{other_sector}组中剔除了{symbol} (因板块变更)")
                         break
                 
                 # 添加到新sector
                 sectors_500[sector].append(symbol)
                 changes_500.append(f"向500.json的{sector}组中添加了{symbol}(市值: {market_caps[symbol]})")
-            # 移除了在黑名单中的记录
     
     return sectors_500, changes_500
 
-# 修改write_log_file函数来包含移动的symbols信息
-def write_log_file(output_file, added_symbols, changes_5000, changes_500, moved_symbols, db_delete_logs):
+# 【修改】write_log_file函数来包含移动的symbols信息
+def write_log_file(output_file, added_symbols, changes_5000, changes_500, moved_symbols, db_operation_logs):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     with open(output_file, 'w') as f:
-        f.write(f"=== Sectors_All变更: {timestamp} ===\n\n")
+        f.write(f"=== Sectors_All 变更日志: {timestamp} ===\n\n")
         
-        # 写入移动的symbols信息
+        # 写入移动的symbols信息（JSON文件层面）
         if moved_symbols:
+            f.write("--- 板块移动的 Symbols ---\n")
             for move in moved_symbols:
                 f.write(f"- {move}\n")
-        
-        # 写入添加到sectors的symbols信息
+            f.write("\n")
+
+        # 写入新添加的symbols信息
         if added_symbols:
+            f.write("--- 新增的 Symbols ---\n")
             for change in added_symbols:
                 f.write(f"- {change}\n")
+            f.write("\n")
                 
-        # 写入数据库删除记录
-        if db_delete_logs:
-            f.write("\n=== 数据库删除记录 ===\n")
-            for log in db_delete_logs:
+        # 写入数据库操作记录
+        if db_operation_logs:
+            f.write("--- 数据库操作记录 ---\n")
+            for log in db_operation_logs:
                 f.write(f"- {log}\n")
+            f.write("\n")
         
         # 处理5000.json变更信息
-        f.write("\n=== Sectors_5000.json 变更 ===\n")
+        f.write("=== Sectors_5000.json 变更 ===\n")
         if changes_5000:
             # 分离剔除和添加的记录
             removals_5000 = [change for change in changes_5000 if "剔除" in change]
@@ -379,31 +437,6 @@ def write_log_file(output_file, added_symbols, changes_5000, changes_500, moved_
                     f.write(f"- {addition}\n")
         else:
             f.write("没有变更\n")
-
-def delete_records_by_names(db_file, table_name, stock_names):
-    """从数据库中删除记录"""
-    delete_log = []
-    if not stock_names:
-        print("没有提供要删除的股票代码")
-        return delete_log
-        
-    conn = sqlite3.connect(db_file)
-    
-    try:
-        cur = conn.cursor()
-        placeholders = ', '.join('?' for _ in stock_names)
-        sql = f"DELETE FROM {table_name} WHERE name IN ({placeholders});"
-        cur.execute(sql, stock_names)
-        conn.commit()
-        if cur.rowcount > 0:
-            log_msg = f"成功从表 {table_name} 中删除 {stock_names} 的 {cur.rowcount} 条记录"
-            print(log_msg)
-            delete_log.append(log_msg)
-    except sqlite3.Error as e:
-        print(f"数据库错误: {e}")
-    finally:
-        conn.close()
-        return delete_log
 
 def clean_old_backups(directory, file_patterns, days=4):
     """
@@ -452,10 +485,11 @@ def main():
     
     extension_launch()
 
-    # —— 原有等待 screener_above_*.txt 的逻辑，直到文件出现 —— 
+    # ---- 原有等待 screener_above_*.txt 的逻辑，直到文件出现 ---- 
     while count_files("screener_above") < 1:
         time.sleep(2)
         print(".", end="", flush=True)
+    print() # 换行
     
     # # 查找Downloads目录下最新的screener_above_开头的txt文件
     downloads_path = '/Users/yanzhang/Downloads/'
@@ -465,7 +499,7 @@ def main():
     screener_file = max(screener_files, key=os.path.getmtime)
     print(f"使用 above 文件: {screener_file}")
 
-    # —— 你原来的变量初始化 —— 
+    # ---- 你原来的变量初始化 ---- 
     db_file = '/Users/yanzhang/Documents/Database/Finance.db'
     sectors_all_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
     sectors_today_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_Today.json'
@@ -485,11 +519,11 @@ def main():
     sectors_500_data = read_sectors_file(sectors_500_file)
     
     # 比较差异并更新sectors文件
-    updated_sectors_all, updated_sectors_today, updated_sectors_empty, added_symbols, moved_symbols, db_delete_logs = compare_and_update_sectors(
+    updated_sectors_all, updated_sectors_today, updated_sectors_empty, added_symbols, moved_symbols, db_operation_logs = compare_and_update_sectors(
         screener_data, sectors_all_data, sectors_today_data, sectors_empty_data, blacklist, db_file
     )
     
-    # —— 把“昨天”价格、成交量写到对应 sector 表 —— 
+    # ---- 把“昨天”价格、成交量写到对应 sector 表 ---- 
     insert_screener_records(db_file, screener_data, prices, volumes)
     
     # 保存更新后的sectors文件，只有在有变化时才保存
@@ -505,7 +539,7 @@ def main():
     updated_sectors_500, changes_500 = process_sectors_500(sectors_500_data, screener_data, market_caps, blacklist)
     save_sectors_file(sectors_500_file, updated_sectors_500)
     
-    # —— 新增：处理 screener_below —— 
+    # ---- 新增：处理 screener_below ---- 
     below_files = glob.glob(os.path.join(downloads_path, 'screener_below_*.txt'))
     if below_files:
         screener_below_file = max(below_files, key=os.path.getmtime)
@@ -518,7 +552,7 @@ def main():
             if sector not in sectors_all_data:
                 continue
             # 进一步过滤：symbol 必须已经在 sectors_all_data[sector] 里
-            matched = [s for s in symbols if s in sectors_all_data[sector]]
+            matched = [s for s in symbols if s in updated_sectors_all[sector]] # 使用更新后的 all data
             if matched:
                 valid_below_data[sector] = matched
 
@@ -529,7 +563,7 @@ def main():
     
     # 写入汇总日志文件
     output_file = '/Users/yanzhang/Documents/News/screener_sectors.txt'
-    write_log_file(output_file, added_symbols, changes_5000, changes_500, moved_symbols, db_delete_logs)
+    write_log_file(output_file, added_symbols, changes_5000, changes_500, moved_symbols, db_operation_logs)
 
     # 等待2秒
     time.sleep(2)

@@ -480,7 +480,8 @@
     "KNF",
     "SMG",
     "CLF",
-    "OR"
+    "OR",
+    "SBSW"
   ],
   "Communication_Services": [
     "GOOGL",
@@ -545,7 +546,8 @@
     "ANGI",
     "SNRE",
     "TTD",
-    "APP"
+    "APP",
+    "SATS"
   ],
   "Consumer_Cyclical": [
     "AMZN",
@@ -1694,7 +1696,6 @@
     "EXLS",
     "ITRI",
     "VRNS",
-    "SATS",
     "CVLT",
     "CRDO",
     "ACLS",

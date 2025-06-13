@@ -49,7 +49,7 @@ def fill_missing_ratio_data(
             dates_to_fill.append(date_val)
 
     if not dates_to_fill:
-        print(f"没有找到需要为 {result_name} 补充的历史数据。")
+        print(f"✅ 没有找到需要为 {result_name} 补充的历史数据。")
         return 0
 
     print(f"找到 {len(dates_to_fill)} 个日期需要为 {result_name} 补充数据。")
@@ -86,9 +86,9 @@ def fill_missing_ratio_data(
             print(f"警告：在日期 {date_to_process} 处理 {result_name} 时发生错误: {e}，跳过。")
     
     if inserted_count > 0:
-        print(f"成功为 {result_name} 补充了 {inserted_count} 条历史数据。")
+        print(f"✅ 成功为 {result_name} 补充了 {inserted_count} 条历史数据。")
     else:
-        print(f"{result_name} 没有补充新的历史数据（可能都已存在或无法计算）。")
+        print(f"🤔 {result_name} 没有补充新的历史数据（可能都已存在或无法计算）。")
     return inserted_count
 
 
@@ -101,28 +101,16 @@ def insert_ratio(
     digits: int = 2
 ) -> Tuple[int, int]:
     """
-    取 name1/name2 最新共同日期的数据，按 op(name1_price, name2_price) 计算结果，
-    四舍五入到小数点后 digits 位，插入到 result_name。
-    如果该日期的 result_name 数据已存在，则跳过插入。
-    返回 (插入条数, lastrowid)。如果跳过，返回 (0, -1)。
+    取 name1/name2 最新共同日期的数据，按 op 计算结果并插入或更新。
+    - 如果目标数据不存在，则插入。
+    - 如果目标数据已存在但值不同，则更新。
+    - 如果目标数据已存在且值相同，则跳过。
+    返回 (操作行数, lastrowid)。
+    - 插入: (1, new_id)
+    - 更新: (1, -1)
+    - 跳过: (0, -1)
     """
     # 1) 找 name1 和 name2 共同的最新日期
-    # 首先找到 name1 的最新日期
-    cursor.execute("SELECT MAX(date) FROM Currencies WHERE name = ?", (name1,))
-    date1_row = cursor.fetchone()
-    if not date1_row or not date1_row[0]:
-        raise ValueError(f"没有找到 {name1} 的任何数据")
-    latest_date_name1 = date1_row[0]
-
-    # 然后找到 name2 的最新日期
-    cursor.execute("SELECT MAX(date) FROM Currencies WHERE name = ?", (name2,))
-    date2_row = cursor.fetchone()
-    if not date2_row or not date2_row[0]:
-        raise ValueError(f"没有找到 {name2} 的任何数据")
-    latest_date_name2 = date2_row[0]
-
-    # 取两者中较早的那个最新日期，作为共同的最新日期
-    # 或者更严谨地，应该找到两个品种都有数据的最新日期
     cursor.execute(
         """
         SELECT T1.date
@@ -174,18 +162,18 @@ def insert_ratio(
             # print(f"{result_name} 在 {latest_date} 的数据已存在且值相同 ({result})，跳过最新数据插入。")
             return 0, -1 
         else:
-            # 如果值不同，可以选择更新，或报错，或记录并跳过
-            # 当前选择记录并跳过，以避免自动修改可能由其他方式确认过的数据
-            print(f"警告: {result_name} 在 {latest_date} 的数据已存在但值不同。")
-            print(f"  数据库中值: {existing_data[0]}, 根据最新 {name1}/{name2} 计算值: {result}。跳过插入。")
-            # 若要更新:
-            # cursor.execute("UPDATE Currencies SET price = ? WHERE date = ? AND name = ?", (result, latest_date, result_name))
-            # print(f"  {result_name} 在 {latest_date} 的数据已更新为 {result}。")
-            # return cursor.rowcount, -1 # rowcount for update, -1 as no new rowid
-            return 0, -1
+            # 如果值不同，执行更新操作
+            print(f"🔄 信息: {result_name} 在 {latest_date} 的数据已存在但值不同，将执行更新。")
+            print(f"    数据库旧值: {existing_data[0]}")
+            print(f"    新计算值:   {result}")
+            cursor.execute(
+                "UPDATE Currencies SET price = ? WHERE date = ? AND name = ?",
+                (result, latest_date, result_name)
+            )
+            # 返回更新的行数 (通常是1) 和 -1 (因为没有新 lastrowid)
+            return cursor.rowcount, -1
 
-    # 3) 计算并插入（保留 digits 位小数）
-    # (计算已提前，用于与现有数据比较)
+    # 3) 如果数据不存在，则计算并插入
     cursor.execute(
         "INSERT INTO Currencies (date, name, price) VALUES (?, ?, ?)",
         (latest_date, result_name, result)
@@ -210,31 +198,29 @@ def main():
         fill_missing_ratio_data(cursor, 'DXY', 'GBPUSD', 'GBPI', op=lambda a, b: a * b, digits=2)
 
         print("\n开始处理（或确认）最新日期的数据：")
+        
         # --- 然后，处理（或确认）最新日期的数据 ---
-        # CNYI = DXY / USDCNY，保留 3 位小数
-        cnt1, lid1 = insert_ratio(cursor, 'DXY', 'USDCNY', 'CNYI', digits=3)
-        if cnt1 > 0: print(f"CNYI 最新数据插入: {cnt1} 条 (date={cursor.execute('SELECT date FROM Currencies WHERE rowid=?', (lid1,)).fetchone()[0]}, lastrowid={lid1})")
-        else: print(f"CNYI 最新数据已存在或无法计算，未插入。")
+        # 定义要处理的指数列表，简化代码
+        ratios_to_process = [
+            {'n1': 'DXY', 'n2': 'USDCNY', 'res': 'CNYI', 'op': lambda a, b: a / b, 'dig': 3},
+            {'n1': 'DXY', 'n2': 'USDJPY', 'res': 'JPYI', 'op': lambda a, b: a / b, 'dig': 4},
+            {'n1': 'DXY', 'n2': 'EURUSD', 'res': 'EURI', 'op': lambda a, b: a * b, 'dig': 2},
+            {'n1': 'DXY', 'n2': 'USDCHF', 'res': 'CHFI', 'op': lambda a, b: a / b, 'dig': 2},
+            {'n1': 'DXY', 'n2': 'GBPUSD', 'res': 'GBPI', 'op': lambda a, b: a * b, 'dig': 2},
+        ]
 
-        # JPYI = DXY / USDJPY，保留 4 位小数
-        cnt2, lid2 = insert_ratio(cursor, 'DXY', 'USDJPY', 'JPYI', digits=4)
-        if cnt2 > 0: print(f"JPYI 最新数据插入: {cnt2} 条 (date={cursor.execute('SELECT date FROM Currencies WHERE rowid=?', (lid2,)).fetchone()[0]}, lastrowid={lid2})")
-        else: print(f"JPYI 最新数据已存在或无法计算，未插入。")
+        for r in ratios_to_process:
+            cnt, lid = insert_ratio(cursor, r['n1'], r['n2'], r['res'], op=r['op'], digits=r['dig'])
+            
+            if cnt > 0:  # cnt > 0 意味着发生了插入或更新
+                if lid > 0:  # lid > 0 意味着是插入操作
+                    date_val = cursor.execute('SELECT date FROM Currencies WHERE rowid=?', (lid,)).fetchone()[0]
+                    print(f"✔️  {r['res']:<4} 最新数据已插入: {cnt} 条 (日期={date_val}, ID={lid})")
+                else:  # lid == -1 意味着是更新操作
+                    print(f"🔄  {r['res']:<4} 最新数据已更新。")
+            else:  # cnt == 0 意味着数据已存在且值相同，跳过
+                print(f"👌  {r['res']:<4} 最新数据已存在且值相同，无需操作。")
 
-        # EURI = DXY * EURUSD，使用默认 2 位小数
-        cnt3, lid3 = insert_ratio(cursor, 'DXY', 'EURUSD', 'EURI', op=lambda a, b: a * b)
-        if cnt3 > 0: print(f"EURI 最新数据插入: {cnt3} 条 (date={cursor.execute('SELECT date FROM Currencies WHERE rowid=?', (lid3,)).fetchone()[0]}, lastrowid={lid3})")
-        else: print(f"EURI 最新数据已存在或无法计算，未插入。")
-
-        # CHFI = DXY / USDCHF，使用默认 2 位小数
-        cnt4, lid4 = insert_ratio(cursor, 'DXY', 'USDCHF', 'CHFI')
-        if cnt4 > 0: print(f"CHFI 最新数据插入: {cnt4} 条 (date={cursor.execute('SELECT date FROM Currencies WHERE rowid=?', (lid4,)).fetchone()[0]}, lastrowid={lid4})")
-        else: print(f"CHFI 最新数据已存在或无法计算，未插入。")
-
-        # GBPI = DXY * GBPUSD，使用默认 2 位小数
-        cnt5, lid5 = insert_ratio(cursor, 'DXY', 'GBPUSD', 'GBPI', op=lambda a, b: a * b)
-        if cnt5 > 0: print(f"GBPI 最新数据插入: {cnt5} 条 (date={cursor.execute('SELECT date FROM Currencies WHERE rowid=?', (lid5,)).fetchone()[0]}, lastrowid={lid5})")
-        else: print(f"GBPI 最新数据已存在或无法计算，未插入。")
 
         conn.commit()
         print("\n所有操作完成并已提交。")

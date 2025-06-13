@@ -433,7 +433,35 @@ def main():
             else:
                 # 未带 --clear，只检查是否所有分组都已空
                 if not check_empty_json_has_content(json_file_path):
-                    show_alert("所有分组已清空 ✅\n ✅Sectors_empty.json 中没有剩余 symbols。")
+                    # --- 代码修改开始 ---
+                    # 抓取完成，所有分组已清空，现在调用另一个脚本
+                    show_alert("所有分组已清空 ✅\n✅ Sectors_empty.json 中没有剩余 symbols。\n\n接下来将调用补充脚本...")
+                    
+                    script_to_run = "/Users/yanzhang/Documents/Financial_System/Operations/Insert_Currencies_Index.py"
+                    
+                    try:
+                        print(f"正在调用脚本: {script_to_run}")
+                        # 使用 subprocess.run 执行脚本
+                        # sys.executable 确保使用当前 Python 解释器
+                        # check=True 会在脚本执行失败时抛出异常
+                        subprocess.run([sys.executable, script_to_run], check=True)
+                        
+                        print(f"脚本 {script_to_run} 执行成功。")
+                        show_alert(f"补充脚本执行成功！\n\n路径:\n{script_to_run}")
+
+                    except FileNotFoundError:
+                        error_message = f"错误：找不到要调用的脚本。\n请检查路径是否正确：\n{script_to_run}"
+                        print(error_message)
+                        show_alert(error_message)
+                    except subprocess.CalledProcessError as e:
+                        error_message = f"执行脚本 {script_to_run} 时发生错误。\n\n错误信息: {e}"
+                        print(error_message)
+                        show_alert(error_message)
+                    except Exception as e:
+                        error_message = f"调用脚本时发生未知错误: {e}"
+                        print(error_message)
+                        show_alert(error_message)
+                    # --- 代码修改结束 ---
                 else:
                     show_alert("⚠️ 有分组仍有 symbols 未清空\n⚠️ 请检查 Sectors_empty.json 。")
 
