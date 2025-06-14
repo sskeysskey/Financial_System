@@ -129,8 +129,7 @@
         "TSM",
         "MSTR",
         "META",
-        "AMZN",
-        "CPRT"
+        "AMZN"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -470,7 +469,8 @@
         "SKY",
         "HR",
         "CLX",
-        "MUSA"
+        "MUSA",
+        "CPRT"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -586,7 +586,6 @@
         "NDSN",
         "ON",
         "STZ",
-        "EIX",
         "REGN",
         "QSR",
         "CMCSA",
@@ -802,7 +801,8 @@
         "ENPH",
         "BRKR",
         "GLOB",
-        "SJM"
+        "SJM",
+        "EIX"
     ],
     "black_keywords": [
         "Cotton",

@@ -94,7 +94,8 @@
         "TRP",
         "SLB",
         "E",
-        "PSX"
+        "PSX",
+        "SU"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -155,8 +156,7 @@
         "TFC",
         "COIN",
         "HOOD",
-        "ARES",
-        "AMP"
+        "ARES"
     ],
     "Healthcare": [
         "LLY",
@@ -188,8 +188,7 @@
         "ZTS",
         "CVS",
         "MCK",
-        "COR",
-        "BDX"
+        "COR"
     ],
     "Industrials": [
         "GE",

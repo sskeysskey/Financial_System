@@ -3,7 +3,6 @@ import sqlite3
 from datetime import date
 from dateutil.relativedelta import relativedelta
 import os
-import re # For parsing the backup file
 from collections import OrderedDict
 
 # --- Configuration ---
@@ -113,6 +112,11 @@ def write_results_to_file(results_data, output_filepath):
     try:
         with open(output_filepath, 'w', encoding='utf-8') as outfile:
             for interval_label, data in results_data.items():
+                # ===== 新增逻辑：如果过滤后一个区间高低点都为空，则不输出该区间 =====
+                if not data["Low"] and not data["High"]:
+                    continue
+                # =================================================================
+
                 outfile.write(f"{interval_label}\n")
                 outfile.write("Low:\n")
                 if data["Low"]:
@@ -151,6 +155,10 @@ def main():
     except Exception as e:
         print(f"Critical setup error: {e}. Exiting.")
         return
+
+    # ===== 新增：提前获取所有ETF符号，方便后续筛选 =====
+    etf_symbols = set(all_sectors_data.get("ETFs", []))
+    # =================================================
 
     # This will hold the raw results from the current analysis (without "(new)" tags)
     current_run_results = {label: {"Low": [], "High": []} for label in TIME_INTERVALS_CONFIG.keys()}
@@ -233,9 +241,33 @@ def main():
             if new_only:
                 print(f"  {interval_label} {list_type} 新增: {', '.join(new_only)}")
             results_for_main_output[interval_label][list_type] = new_only
-    # --- End of 新逻辑 ---
 
-    # 检查是否有任何新增符号
+    # ===== 修改部分：将过滤逻辑推广到Low和High =====
+    print("\nApplying ETF High/Low filter for the main output file...")
+    # 变量名修改得更通用
+    ETF_SHORT_TERM_EXCLUSION_INTERVALS = ["[1 months]", "[3 months]"]
+    
+    for interval_label, data in results_for_main_output.items():
+        # 检查是否是需要过滤的短期区间
+        if interval_label in ETF_SHORT_TERM_EXCLUSION_INTERVALS:
+            # 同时处理 "Low" 和 "High" 列表
+            for list_type in ("Low", "High"):
+                symbol_list = data[list_type]
+                if not symbol_list:
+                    continue
+                
+                # 重建列表，只保留那些不是ETF的品种
+                original_count = len(symbol_list)
+                filtered_list = [symbol for symbol in symbol_list if symbol not in etf_symbols]
+                
+                if len(filtered_list) < original_count:
+                    removed_count = original_count - len(filtered_list)
+                    print(f"  Filtered out {removed_count} ETF(s) from '{interval_label}' {list_type} list for main output.")
+                
+                # 用过滤后的列表更新结果
+                results_for_main_output[interval_label][list_type] = filtered_list
+    # =================================================================
+
     has_any_new = any(
         results_for_main_output[label][lt]
         for label in results_for_main_output
@@ -262,15 +294,22 @@ def main():
             new_low  = [s for s in data["Low"]  if s not in seen_low]
             new_high = [s for s in data["High"] if s not in seen_high]
 
-            cascade[interval_label] = {
-                "Low":  new_low,
-                "High": new_high
-            }
-            seen_low .update(new_low)
-            seen_high.update(new_high)
+            # 只有当去重后列表不为空时，才添加到最终结果中
+            if new_low or new_high:
+                cascade[interval_label] = {
+                    "Low":  new_low,
+                    "High": new_high
+                }
+                seen_low .update(new_low)
+                seen_high.update(new_high)
+        
+        # 再次检查，因为去重后可能变为空
+        if cascade:
+            print(f"\nWriting cascaded new-only results to {OUTPUT_PATH}…")
+            write_results_to_file(cascade, OUTPUT_PATH)
+        else:
+            print("\nNo new symbols remaining after cascading. Skip writing main output file.")
 
-        print(f"\nWriting cascaded new-only results to {OUTPUT_PATH}…")
-        write_results_to_file(cascade, OUTPUT_PATH)
     else:
         print("\nNo new symbols found. Skip writing main output file.")
 

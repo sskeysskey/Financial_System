@@ -189,7 +189,7 @@ try:
     # - text=True: 将标准输出和标准错误解码为文本（使用指定的 encoding）。
     # - encoding='utf-8': 指定用于解码的编码，确保中文等字符正确显示。
     result = subprocess.run(
-        ['python', check_yesterday_script_path],
+        ['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', check_yesterday_script_path],
         check=True,
         capture_output=True,
         text=True,
