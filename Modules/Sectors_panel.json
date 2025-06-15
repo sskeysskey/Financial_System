@@ -9,9 +9,7 @@
     "Technology": {},
     "Consumer_Cyclical": {
         "MUSA": "",
-        "BBWI": "",
-        "GPK": "",
-        "SKY": ""
+        "GPK": ""
     },
     "Utilities": {
         "EIX": ""
@@ -19,8 +17,7 @@
     "Consumer_Defensive": {
         "GIS": "关注财报",
         "WMT": "",
-        "FLO": "",
-        "CLX": ""
+        "FLO": ""
     },
     "Industrials": {
         "BAH": "",
@@ -156,8 +153,7 @@
         "USDINR": "印度卢比"
     },
     "Economics": {
-        "USConfidence": "13 USConfidence",
-        "USInitial": "12 USInitial"
+        "USInitial": "18 USInitial"
     },
     "ETFs_US": {
         "TLT": "",
