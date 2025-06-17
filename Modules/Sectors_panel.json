@@ -12,7 +12,8 @@
         "GPK": ""
     },
     "Utilities": {
-        "EIX": ""
+        "EIX": "",
+        "POR": ""
     },
     "Consumer_Defensive": {
         "GIS": "关注财报",
@@ -30,7 +31,9 @@
     "Financial_Services": {
         "BRK-A": ""
     },
-    "Healthcare": {},
+    "Healthcare": {
+        "CNC": ""
+    },
     "Bonds": {
         "US10Y": "",
         "US2Y": "",

@@ -470,7 +470,8 @@
         "HR",
         "CLX",
         "MUSA",
-        "CPRT"
+        "CPRT",
+        "POR"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -736,7 +737,6 @@
         "FMC",
         "BSBR",
         "TU",
-        "CPB",
         "CCI",
         "HRL",
         "MKTX",
@@ -881,7 +881,8 @@
         "ALGM",
         "CRWV",
         "TFX",
-        "ARE"
+        "ARE",
+        "CPB"
     ],
     "green_keywords": [
         "EURCNY",

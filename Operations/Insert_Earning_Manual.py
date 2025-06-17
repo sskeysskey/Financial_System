@@ -1,5 +1,4 @@
 import tkinter as tk
-from tkinter import ttk
 import sqlite3
 from datetime import datetime
 import sys  # 添加导入

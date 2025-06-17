@@ -482,7 +482,8 @@
         "CLF",
         "OR",
         "SBSW",
-        "TFPM"
+        "TFPM",
+        "MP"
     ],
     "Communication_Services": [
         "GOOGL",
