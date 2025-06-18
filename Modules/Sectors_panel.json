@@ -6,24 +6,26 @@
     },
     "Real_Estate": {},
     "Energy": {},
-    "Technology": {},
+    "Technology": {
+        "ENPH": ""
+    },
     "Consumer_Cyclical": {
         "MUSA": "",
         "GPK": ""
     },
     "Utilities": {
-        "EIX": ""
+        "EIX": "",
+        "POR": ""
     },
     "Consumer_Defensive": {
         "GIS": "关注财报",
         "WMT": "",
-        "FLO": ""
+        "FLO": "",
+        "STZ": "",
+        "CLX": "",
+        "FRPT": ""
     },
-    "Industrials": {
-        "BAH": "",
-        "CPRT": "",
-        "WSO": ""
-    },
+    "Industrials": {},
     "Communication_Services": {
         "OMC": ""
     },
@@ -31,7 +33,9 @@
         "BRK-A": ""
     },
     "Healthcare": {
-        "CNC": ""
+        "CNC": "",
+        "TMO": "",
+        "SNY": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -113,9 +117,7 @@
         "UUP": "",
         "FXY": ""
     },
-    "highlow": {
-        "THD": ""
-    },
+    "highlow": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

@@ -159,7 +159,6 @@
         "PEN",
         "EW",
         "SOFI",
-        "TAP",
         "STVN",
         "CSCO",
         "ESLT",
@@ -586,7 +585,6 @@
         "TTC",
         "NDSN",
         "ON",
-        "STZ",
         "REGN",
         "QSR",
         "CMCSA",
@@ -715,7 +713,8 @@
         "BLDR",
         "BHVN",
         "PBR",
-        "BAH"
+        "BAH",
+        "TAP"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -802,7 +801,8 @@
         "BRKR",
         "GLOB",
         "SJM",
-        "EIX"
+        "EIX",
+        "STZ"
     ],
     "black_keywords": [
         "Cotton",
