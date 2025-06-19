@@ -470,7 +470,8 @@
         "CLX",
         "MUSA",
         "CPRT",
-        "POR"
+        "POR",
+        "AAON"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -491,7 +492,6 @@
         "CNH",
         "WY",
         "SQM",
-        "LULU",
         "ULTA",
         "VALE",
         "AAL",
@@ -802,7 +802,8 @@
         "GLOB",
         "SJM",
         "EIX",
-        "STZ"
+        "STZ",
+        "LULU"
     ],
     "black_keywords": [
         "Cotton",

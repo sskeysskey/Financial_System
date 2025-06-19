@@ -11,7 +11,10 @@
     },
     "Consumer_Cyclical": {
         "MUSA": "",
-        "GPK": ""
+        "GPK": "",
+        "LOW": "",
+        "LULU": "",
+        "MTH": ""
     },
     "Utilities": {
         "EIX": "",
@@ -25,12 +28,18 @@
         "CLX": "",
         "FRPT": ""
     },
-    "Industrials": {},
+    "Industrials": {
+        "CPRT": "",
+        "WSO": "",
+        "POOL": "",
+        "AAON": ""
+    },
     "Communication_Services": {
         "OMC": ""
     },
     "Financial_Services": {
-        "BRK-A": ""
+        "BRK-A": "",
+        "V": ""
     },
     "Healthcare": {
         "CNC": "",
