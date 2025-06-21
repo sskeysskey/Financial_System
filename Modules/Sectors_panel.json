@@ -4,7 +4,9 @@
         "BCC": "",
         "EXP": ""
     },
-    "Real_Estate": {},
+    "Real_Estate": {
+        "NSA": ""
+    },
     "Energy": {},
     "Technology": {
         "ENPH": ""
@@ -14,7 +16,8 @@
         "GPK": "",
         "LOW": "",
         "LULU": "",
-        "MTH": ""
+        "MTH": "",
+        "JD": ""
     },
     "Utilities": {
         "EIX": "",
@@ -32,7 +35,9 @@
         "CPRT": "",
         "WSO": "",
         "POOL": "",
-        "AAON": ""
+        "AAON": "",
+        "BAH": "",
+        "EXPO": ""
     },
     "Communication_Services": {
         "OMC": ""

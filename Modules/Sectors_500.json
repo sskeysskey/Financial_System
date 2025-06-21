@@ -71,7 +71,8 @@
         "BTI",
         "CL",
         "DEO",
-        "MNST"
+        "MNST",
+        "KR"
     ],
     "Energy": [
         "XOM",
@@ -282,7 +283,6 @@
         "FTNT",
         "ADSK",
         "MSTR",
-        "TEAM",
         "PAYX",
         "SNOW",
         "MRVL",
