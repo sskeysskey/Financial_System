@@ -9,50 +9,10 @@ import sys
 import json
 import time
 import random
-import pyautogui
-import threading
 import argparse
 import sqlite3
 import datetime
 import subprocess
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication, QMessageBox, QDesktopWidget
-
-# def create_mouse_prompt():
-#     """创建询问是否启用鼠标移动的弹窗"""
-#     # 确保只创建一个QApplication实例
-#     app = QApplication.instance()
-#     if app is None:
-#         app = QApplication(sys.argv)
-    
-#     # 创建消息框
-#     msg_box = QMessageBox()
-#     msg_box.setWindowTitle("功能选择")
-#     msg_box.setText("是否启用鼠标随机移动防止黑屏功能？")
-#     msg_box.setIcon(QMessageBox.Question)
-#     msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-#     msg_box.setDefaultButton(QMessageBox.No)
-    
-#     # 设置窗口标志，使其始终显示在最前面
-#     msg_box.setWindowFlags(msg_box.windowFlags() | 
-#                           Qt.WindowStaysOnTopHint | 
-#                           Qt.WindowActive)
-    
-#     # 移动到屏幕中心
-#     center = QDesktopWidget().availableGeometry().center()
-#     msg_box.move(center.x() - msg_box.width() // 2,
-#                  center.y() - msg_box.height() // 2)
-    
-#     # 激活窗口
-#     msg_box.show()
-#     msg_box.activateWindow()
-#     msg_box.raise_()
-    
-#     # 显示对话框并获取结果
-#     result = msg_box.exec_()
-    
-#     # 转换结果为布尔值
-#     return result == QMessageBox.Yes
 
 def show_alert(message):
     # AppleScript 代码模板
@@ -140,27 +100,6 @@ def get_stock_symbols_from_json(json_file_path):
     
     return symbols_by_sector
 
-# 添加鼠标移动功能的函数
-# def move_mouse_periodically():
-#     while True:
-#         try:
-#             # 获取屏幕尺寸
-#             screen_width, screen_height = pyautogui.size()
-            
-#             # 随机生成目标位置，避免移动到屏幕边缘
-#             x = random.randint(100, screen_width - 100)
-#             y = random.randint(100, screen_height - 100)
-            
-#             # 缓慢移动鼠标到随机位置
-#             pyautogui.moveTo(x, y, duration=1)
-            
-#             # 等待30-60秒再次移动
-#             time.sleep(random.randint(30, 60))
-            
-#         except Exception as e:
-#             print(f"鼠标移动出错: {str(e)}")
-#             time.sleep(30)
-
 # 优化等待策略的函数
 def wait_for_element(driver, by, value, timeout=10):
     """等待元素加载完成并返回"""
@@ -231,15 +170,6 @@ def main():
     # 加载symbol映射关系
     mapping_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/symbol_mapping.json"
     symbol_mapping = load_symbol_mapping(mapping_file_path)
-
-    # enable_mouse_movement = create_mouse_prompt()
-
-    # if enable_mouse_movement:
-    #     # 开启防挂机鼠标线程
-    #     threading.Thread(target=move_mouse_periodically, daemon=True).start()
-    #     print("已启用鼠标随机移动功能")
-    # else:
-    #     print("未启用鼠标随机移动功能")
 
     # 设置Chrome选项以提高性能
     chrome_options = Options()
@@ -426,14 +356,11 @@ def main():
 
         # 只有在 empty 模式下才做下面的判断
         if args.mode.lower() == 'empty':
-            if args.clear:
-                # 带了 --clear，执行整表清空
-                clear_empty_json(json_file_path)
-                show_alert("股票数据抓取完成并已写入数据库！\n同时已清空 Sectors_empty.json 中的所有 symbols。")
-            else:
-                # 未带 --clear，只检查是否所有分组都已空
-                if not check_empty_json_has_content(json_file_path):
-                    # --- 代码修改开始 ---
+            if not check_empty_json_has_content(json_file_path):
+                if args.weekend:
+                    # 带了 --clear，执行整表清空
+                    show_alert("所有分组已清空 ✅\n✅ Sectors_empty.json 中没有剩余 symbols。\n\n接下来将调用补充脚本...")
+                else:
                     # 抓取完成，所有分组已清空，现在调用另一个脚本
                     show_alert("所有分组已清空 ✅\n✅ Sectors_empty.json 中没有剩余 symbols。\n\n接下来将调用补充脚本...")
                     
@@ -462,8 +389,8 @@ def main():
                         print(error_message)
                         show_alert(error_message)
                     # --- 代码修改结束 ---
-                else:
-                    show_alert("⚠️ 有分组仍有 symbols 未清空\n⚠️ 请检查 Sectors_empty.json 。")
+            else:
+                show_alert("⚠️ 有分组仍有 symbols 未清空\n⚠️ 请检查 Sectors_empty.json 。")
 
         print("数据抓取和保存完成！")
 

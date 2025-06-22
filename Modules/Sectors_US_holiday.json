@@ -1,12 +1,11 @@
 {
-  "Bonds": [
-    
-  ],
+  "Bonds": [],
   "Currencies": [
     "DX-Y.NYB",
     "EURUSD=X",
     "GBPUSD=X",
     "JPY=X",
+    "CHF=X",
     "CNYEUR=X",
     "CNYGBP=X",
     "CNYJPY=X",
@@ -38,10 +37,6 @@
     "^KS11",
     "^AXJO"
   ],
-  "Commodities": [
-    
-  ],
-  "ETFs": [
-    
-  ]
+  "Commodities": [],
+  "ETFs": []
 }

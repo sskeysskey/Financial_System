@@ -797,6 +797,13 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             subprocess.Popen(['osascript', '/Users/yanzhang/Documents/ScriptEditor/CheckKimi_Earning.scpt', name])
         except Exception as e:
             display_dialog(f"启动AppleScript程序失败: {e}")
+
+    def check_stock_futu(event):
+        """启动查询程序并传递当前symbol"""
+        try:
+            subprocess.Popen(['osascript', '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt', name])
+        except Exception as e:
+            display_dialog(f"启动AppleScript程序失败: {e}")
     
     def open_earning_edit(event):
         """启动财报输入程序并传递当前symbol"""
@@ -1037,6 +1044,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             't': lambda: open_tags_edit(None),
             'w': lambda: open_event_input(None),
             'k': lambda: check_earning_kimi(None),
+            'u': lambda: check_stock_futu(None),
             '1': lambda: radio.set_active(7),
             '2': lambda: radio.set_active(1),
             '3': lambda: radio.set_active(3),
