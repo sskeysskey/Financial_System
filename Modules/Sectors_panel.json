@@ -170,7 +170,11 @@
         "USDINR": "印度卢比"
     },
     "Economics": {
-        "USInitial": "18 USInitial"
+        "USInitial": "26 USInitial",
+        "PCEY": "27 PCEY",
+        "CorePCEY": "27 CorePCEY",
+        "CorePCEM": "27 CorePCEM",
+        "USConfidence": "27 USConfidence"
     },
     "ETFs_US": {
         "TLT": "",
