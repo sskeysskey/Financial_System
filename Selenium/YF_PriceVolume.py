@@ -56,6 +56,8 @@ def parse_arguments():
                         help='运行模式: normal或empty。默认为normal')
     parser.add_argument('--clear', action='store_true',
                         help='在 empty 模式下，抓取结束后清空 Sectors_empty.json 中剩余的 symbols')
+    parser.add_argument('--weekend', action='store_true',
+                        help='在 周末 模式下，只抓取，不执行清空 Sectors_empty.json 操作')
     return parser.parse_args()
 
 def check_empty_json_has_content(json_file_path):
@@ -358,8 +360,8 @@ def main():
         if args.mode.lower() == 'empty':
             if not check_empty_json_has_content(json_file_path):
                 if args.weekend:
-                    # 带了 --clear，执行整表清空
-                    show_alert("所有分组已清空 ✅\n✅ Sectors_empty.json 中没有剩余 symbols。\n\n接下来将调用补充脚本...")
+                    # 带了 --weekend，执行简单指令即可
+                    show_alert("所有分组已清空 ✅\n✅ Sectors_empty.json 中没有剩余 symbols。\n\n接下来程序将结束...")
                 else:
                     # 抓取完成，所有分组已清空，现在调用另一个脚本
                     show_alert("所有分组已清空 ✅\n✅ Sectors_empty.json 中没有剩余 symbols。\n\n接下来将调用补充脚本...")
