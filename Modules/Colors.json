@@ -471,7 +471,8 @@
         "MUSA",
         "CPRT",
         "POR",
-        "AAON"
+        "AAON",
+        "TKC"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -528,7 +529,6 @@
         "VAL",
         "DOOO",
         "STLA",
-        "CNC",
         "SSL",
         "GPC",
         "HAL",
@@ -803,7 +803,8 @@
         "SJM",
         "EIX",
         "STZ",
-        "LULU"
+        "LULU",
+        "CNC"
     ],
     "black_keywords": [
         "Cotton",

@@ -15,7 +15,8 @@
         "MUSA": "",
         "GPK": "",
         "LOW": "",
-        "LULU": ""
+        "LULU": "",
+        "DECK": ""
     },
     "Utilities": {
         "EIX": ""
@@ -35,7 +36,8 @@
         "EXPO": ""
     },
     "Communication_Services": {
-        "OMC": ""
+        "OMC": "",
+        "TKC": ""
     },
     "Financial_Services": {
         "BRK-A": "",
