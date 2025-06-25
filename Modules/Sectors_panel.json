@@ -1,8 +1,6 @@
 {
     "Basic_Materials": {
-        "UFPI": "",
-        "BCC": "",
-        "EXP": ""
+        "UFPI": ""
     },
     "Real_Estate": {},
     "Energy": {},
@@ -20,7 +18,6 @@
     },
     "Consumer_Defensive": {
         "GIS": "关注财报",
-        "WMT": "",
         "FLO": "",
         "STZ": "",
         "CLX": "",
@@ -32,12 +29,9 @@
         "BAH": "",
         "EXPO": ""
     },
-    "Communication_Services": {
-        "OMC": ""
-    },
+    "Communication_Services": {},
     "Financial_Services": {
-        "BRK-A": "",
-        "V": ""
+        "BRK-A": ""
     },
     "Healthcare": {
         "CNC": "",
