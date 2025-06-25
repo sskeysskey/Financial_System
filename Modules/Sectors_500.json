@@ -92,8 +92,7 @@
         "KMI",
         "LNG",
         "MPC",
-        "MPLX",
-        "E"
+        "MPLX"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -154,7 +153,8 @@
         "COIN",
         "HOOD",
         "ARES",
-        "AMP"
+        "AMP",
+        "NDAQ"
     ],
     "Healthcare": [
         "LLY",

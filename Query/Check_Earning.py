@@ -18,8 +18,8 @@ def analyze_financial_data():
     db_file_path = os.path.join(base_path, 'Documents/Database/Finance.db')
     
     # 将输出路径明确区分为 news 路径和 backup 路径
-    news_file_path = '/Users/yanzhang/Documents/News/qualified_symbols.txt'
-    backup_file_path = '/Users/yanzhang/Documents/News/backup/qualified_symbols.txt'
+    news_file_path = '/Users/yanzhang/Documents/News/Earning_Symbols.txt'
+    backup_file_path = '/Users/yanzhang/Documents/News/backup/Earning_Symbols.txt'
 
     # --- 1.1. 确保 backup 目录存在 ---
     # 这是一个好的编程习惯，确保在写入文件前，其所在的目录是存在的
