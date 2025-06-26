@@ -786,7 +786,8 @@
         "SG",
         "URBN",
         "ASO",
-        "DASH"
+        "DASH",
+        "SGHC"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -1497,7 +1498,8 @@
         "KTOS",
         "GEV",
         "ACHR",
-        "CAR"
+        "CAR",
+        "AEIS"
     ],
     "Real_Estate": [
         "PLD",

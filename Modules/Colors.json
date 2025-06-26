@@ -472,7 +472,8 @@
         "CPRT",
         "POR",
         "AAON",
-        "TKC"
+        "TKC",
+        "CAVA"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -549,7 +550,6 @@
         "IPG",
         "ACLS",
         "COTY",
-        "PEP",
         "GSK",
         "BIDU",
         "BHP",
@@ -740,10 +740,8 @@
         "HRL",
         "MKTX",
         "CGNX",
-        "CAG",
         "OTEX",
         "NKE",
-        "DEO",
         "FLO",
         "CRSP",
         "MRNA",
@@ -804,7 +802,8 @@
         "EIX",
         "STZ",
         "LULU",
-        "CNC"
+        "CNC",
+        "PEP"
     ],
     "black_keywords": [
         "Cotton",
@@ -884,7 +883,9 @@
         "CRWV",
         "TFX",
         "ARE",
-        "CPB"
+        "CPB",
+        "DEO",
+        "CAG"
     ],
     "green_keywords": [
         "EURCNY",

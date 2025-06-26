@@ -220,7 +220,6 @@
         "JCI",
         "HWM",
         "GEV",
-        "GWW",
         "AXON",
         "NSC",
         "PWR"
@@ -232,8 +231,7 @@
         "WELL",
         "SPG",
         "PSA",
-        "DLR",
-        "O"
+        "DLR"
     ],
     "Technology": [
         "AAPL",
@@ -281,12 +279,12 @@
         "FTNT",
         "ADSK",
         "MSTR",
-        "PAYX",
         "SNOW",
         "MRVL",
         "NET",
         "NXPI",
-        "TEAM"
+        "TEAM",
+        "TEL"
     ],
     "Utilities": [
         "NEE",

@@ -2,7 +2,9 @@
     "Basic_Materials": {
         "UFPI": ""
     },
-    "Real_Estate": {},
+    "Real_Estate": {
+        "NSA": ""
+    },
     "Energy": {},
     "Technology": {
         "ENPH": ""
@@ -11,17 +13,21 @@
         "GPK": "",
         "LOW": "",
         "LULU": "",
-        "DECK": ""
+        "DECK": "",
+        "MCD": "",
+        "CAVA": ""
     },
     "Utilities": {
-        "EIX": ""
+        "EIX": "",
+        "POR": ""
     },
     "Consumer_Defensive": {
         "GIS": "关注财报",
         "FLO": "",
         "STZ": "",
         "CLX": "",
-        "FRPT": ""
+        "FRPT": "",
+        "PEP": ""
     },
     "Industrials": {
         "CPRT": "",
@@ -31,7 +37,8 @@
     },
     "Communication_Services": {},
     "Financial_Services": {
-        "BRK-A": ""
+        "BRK-A": "",
+        "ERIE": ""
     },
     "Healthcare": {
         "CNC": "",

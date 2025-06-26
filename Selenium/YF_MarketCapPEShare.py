@@ -7,24 +7,16 @@ from selenium.webdriver.chrome.options import Options
 from tqdm import tqdm
 import os
 import re
-import sys
 import json
 import time
-import random
-import pyautogui
 import pyperclip
-import threading
 import subprocess
 import tkinter as tk
 from tkinter import ttk
 import argparse
 import sqlite3  # 新增：导入sqlite3库
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication, QMessageBox, QDesktopWidget
-
 # --- 新增：数据库操作函数 ---
-
 def create_db_connection(db_file):
     """ 创建一个到SQLite数据库的连接 """
     conn = None
@@ -159,8 +151,6 @@ def insert_stock_into_db(conn, symbol, name, shares, marketcap, pe, pb):
         print(f"向数据库插入 {symbol} 时出错: {e}")
 
 
-# --- 以下是您原有的代码，无需改动 ---
-
 def resolve_data_path(filename):
     """
     优先返回 ~/Downloads/filename，如果不存在则返回 ~/Documents/News/backup/filename。
@@ -178,63 +168,6 @@ def resolve_data_path(filename):
         # 两处都不存在，默认写到 Downloads
         os.makedirs(downloads_dir, exist_ok=True)
         return dl
-
-def create_mouse_prompt():
-    """创建询问是否启用鼠标移动的弹窗"""
-    # 确保只创建一个QApplication实例
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication(sys.argv)
-    
-    # 创建消息框
-    msg_box = QMessageBox()
-    msg_box.setWindowTitle("功能选择")
-    msg_box.setText("是否启用鼠标随机移动防止黑屏功能？")
-    msg_box.setIcon(QMessageBox.Question)
-    msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-    msg_box.setDefaultButton(QMessageBox.No)
-    
-    # 设置窗口标志，使其始终显示在最前面
-    msg_box.setWindowFlags(msg_box.windowFlags() | 
-                          Qt.WindowStaysOnTopHint | 
-                          Qt.WindowActive)
-    
-    # 移动到屏幕中心
-    center = QDesktopWidget().availableGeometry().center()
-    msg_box.move(center.x() - msg_box.width() // 2,
-                 center.y() - msg_box.height() // 2)
-    
-    # 激活窗口
-    msg_box.show()
-    msg_box.activateWindow()
-    msg_box.raise_()
-    
-    # 显示对话框并获取结果
-    result = msg_box.exec_()
-    
-    # 转换结果为布尔值
-    return result == QMessageBox.Yes
-
-# 添加鼠标移动功能的函数
-def move_mouse_periodically():
-    while True:
-        try:
-            # 获取屏幕尺寸
-            screen_width, screen_height = pyautogui.size()
-            
-            # 随机生成目标位置，避免移动到屏幕边缘
-            x = random.randint(100, screen_width - 100)
-            y = random.randint(100, screen_height - 100)
-            
-            # 缓慢移动鼠标到随机位置
-            pyautogui.moveTo(x, y, duration=1)
-            
-            # 等待30-60秒再次移动
-            time.sleep(random.randint(30, 60))
-            
-        except Exception as e:
-            print(f"鼠标移动出错: {str(e)}")
-            time.sleep(30)
 
 def Copy_Command_C():
     script = '''
@@ -437,27 +370,6 @@ def get_existing_symbols(file_path):
                     existing_symbols.add(symbol)
     return existing_symbols
 
-# 添加鼠标移动功能的函数
-def move_mouse_periodically():
-    while True:
-        try:
-            # 获取屏幕尺寸
-            screen_width, screen_height = pyautogui.size()
-            
-            # 随机生成目标位置，避免移动到屏幕边缘
-            x = random.randint(100, screen_width - 100)
-            y = random.randint(100, screen_height - 100)
-            
-            # 缓慢移动鼠标到随机位置
-            pyautogui.moveTo(x, y, duration=1)
-            
-            # 等待30-60秒再次移动
-            time.sleep(random.randint(30, 60))
-            
-        except Exception as e:
-            print(f"鼠标移动出错: {str(e)}")
-            time.sleep(30)
-
 # 优化等待策略的函数
 def wait_for_element(driver, by, value, timeout=10):
     """等待元素加载完成并返回"""
@@ -614,15 +526,6 @@ def main():
     if not db_conn:
         print("无法连接到数据库，程序退出。")
         return
-
-    enable_mouse_movement = create_mouse_prompt()
-
-    if enable_mouse_movement:
-        # 开启防挂机鼠标线程
-        threading.Thread(target=move_mouse_periodically, daemon=True).start()
-        print("已启用鼠标随机移动功能")
-    else:
-        print("未启用鼠标随机移动功能")
 
     # 设置Chrome选项
     chrome_options = Options()
