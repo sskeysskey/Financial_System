@@ -118,7 +118,9 @@ def analyze_financial_data():
                         continue # 不满足条件，处理下一个 symbol
 
                     # e. 如果价格持续上升，则计算平均价并获取最新价
-                    average_price = sum(prices) / len(prices)
+                    # 旧代码: average_price = sum(prices) / len(prices)
+                    # <--- 修改点 1: 将计算平均价改为计算财报日价格中的最低价
+                    min_price_on_earning_dates = min(prices)
 
                     # 获取该 symbol 在其板块表中的最新价格
                     latest_price_query = f'SELECT price FROM "{sector_name}" WHERE name = ? ORDER BY date DESC LIMIT 1'
@@ -131,12 +133,16 @@ def analyze_financial_data():
                     latest_price = latest_price_result[0]
 
                     # f. 条件3: 比较最新价是否高于平均价
-                    if latest_price < average_price:
+                    # 旧代码: if latest_price < average_price:
+                    # <--- 修改点 2: 比较最新价是否低于财报日的 "最低价"
+                    if latest_price < min_price_on_earning_dates:
                         print(f"  [符合条件!] Symbol: {symbol}")
                         print(f"    - Earning 日期数量: {len(earning_dates)}")
                         print(f"    - 价格持续上升: {prices}")
-                        print(f"    - 平均价: {average_price:.2f}")
-                        print(f"    - 最新价: {latest_price:.2f} (高于平均价)")
+                        # 旧代码 print(f"    - 平均价: {average_price:.2f}")
+                        # 旧代码 print(f"    - 最新价: {latest_price:.2f} (高于平均价)")
+                        print(f"    - 财报日最低价: {min_price_on_earning_dates:.2f}") # 原为 "平均价"
+                        print(f"    - 最新价: {latest_price:.2f} (低于财报日最低价)") # 原为 "高于平均价" (原文此处逻辑有误，应为低于)
                         qualified_symbols.append(symbol)
 
     except sqlite3.Error as e:

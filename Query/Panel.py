@@ -34,13 +34,13 @@ DISPLAY_LIMITS = {
     'Currencies': 6,
     'Economics': 7,
     'ETFs_US': 14,
-    'Earning_highlow': 15,
+    'Qualified_Symbol': 15,
 }
 
 # Define categories as a global variable
 categories = [
     ['Basic_Materials', 'Consumer_Cyclical', 'Real_Estate'],
-    ['Energy', 'Technology', 'Earning_highlow'],
+    ['Energy', 'Technology', 'Qualified_Symbol'],
     ['Utilities', 'Industrials', 'Consumer_Defensive'],
     ['Communication_Services', 'Financial_Services', 'Healthcare'],
     ['Bonds', 'Indices'],
