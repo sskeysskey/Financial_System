@@ -339,7 +339,10 @@
         "BMRN",
         "BBWI",
         "SKY",
-        "TKC"
+        "TKC",
+        "FLG",
+        "TRP",
+        "VTR"
     ],
     "screener": [
         "CTA-PA",

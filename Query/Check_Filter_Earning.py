@@ -56,6 +56,7 @@ def analyze_financial_data():
     - 用本次的完整结果覆盖更新备份文件。
     - 如果没有新增内容，则不生成 news 文件，并删除旧的 news 文件。
     - (新) 将本次完整结果更新到指定的 JSON 文件中。
+    - (新) 在写入 panel.json 前，使用 Blacklist.json 进行过滤。
     """
     # --- 1. 配置路径 ---
     # 请根据您的实际情况修改这些路径
@@ -67,13 +68,11 @@ def analyze_financial_data():
     # 将输出路径明确区分为 news 路径和 backup 路径
     news_file_path = '/Users/yanzhang/Documents/News/Earning_Symbols.txt'
     backup_file_path = '/Users/yanzhang/Documents/News/backup/Earning_Symbols.txt'
-
-    # --- 新增路径配置 ---
-    # 您提到的 "Sectors_panel_test" 文件路径
-    # 注意：您提供的路径指向一个 .py 文件，但其内容是 JSON。
-    # 通常不建议用 .py 后缀存储纯数据文件。这里我将其命名为 .json 后缀，这是一个更好的实践。
-    # 如果您必须使用 .py 后缀，只需修改文件名即可。
+    
     target_json_for_filter_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json'
+
+    # ### 新增代码块 1: 定义黑名单文件路径 ###
+    blacklist_json_path = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'
 
 
     # --- 1.1. 确保 backup 目录存在 ---
@@ -101,6 +100,28 @@ def analyze_financial_data():
         print(f"错误: JSON 文件格式不正确: {json_file_path}")
         return
 
+    # ### 新增代码块 2: 加载黑名单数据 ###
+    print("\n--- 开始加载黑名单数据 ---")
+    blacklist_newlow_set = set()
+    try:
+        with open(blacklist_json_path, 'r', encoding='utf-8') as f:
+            blacklist_data = json.load(f)
+            # 使用 .get('newlow', []) 来安全地获取列表，如果 'newlow' 键不存在，则返回一个空列表
+            newlow_list = blacklist_data.get('newlow', [])
+            if newlow_list:
+                # 将列表转换为集合，以提高后续的查找效率
+                blacklist_newlow_set = set(newlow_list)
+                print(f"成功加载 {len(blacklist_newlow_set)} 个 symbol 到 'newlow' 黑名单。")
+            else:
+                print("'newlow' 黑名单为空或不存在。")
+    except FileNotFoundError:
+        print(f"警告: 黑名单文件未找到，将不进行任何过滤: {blacklist_json_path}")
+    except json.JSONDecodeError:
+        print(f"警告: 黑名单文件格式不正确，将不进行任何过滤: {blacklist_json_path}")
+    except Exception as e:
+        print(f"警告: 加载黑名单时发生未知错误，将不进行任何过滤: {e}")
+
+
     qualified_symbols = [] # 用于存储所有满足条件的股票代码
 
     # --- 4. 连接数据库并执行分析 ---
@@ -108,7 +129,7 @@ def analyze_financial_data():
         # 使用 with 语句确保数据库连接在使用后能被安全关闭
         with sqlite3.connect(db_file_path) as conn:
             cursor = conn.cursor()
-            print("数据库连接成功，开始分析...")
+            print("\n数据库连接成功，开始分析...")
 
             # 遍历 JSON 文件中的每个板块
             for sector_name, symbols in all_sectors_data.items():
@@ -207,7 +228,7 @@ def analyze_financial_data():
         print(f"发生未知错误: {e}")
         return
 
-    # --- 5. 处理和写入结果 (### 核心逻辑修改区域 ###) ---
+    # --- 5. 处理和写入结果 ---
     if not qualified_symbols:
         print("\n分析完成，没有找到任何符合所有条件的股票。")
     else:
@@ -235,26 +256,40 @@ def analyze_financial_data():
     current_symbols_set = set(qualified_symbols)
     new_symbols = current_symbols_set - backup_symbols
 
-    # 5.3 根据是否有新增 symbol，统一处理 news 文件和 JSON 文件
-    if new_symbols:
-        print(f"\n发现 {len(new_symbols)} 个新的 symbol，将更新 news 文件和 JSON 文件。")
+    # ### 新增代码块 3: 使用黑名单过滤新增的 symbol ###
+    if blacklist_newlow_set:
+        # 使用集合的差集运算来移除在黑名单中的 symbol
+        filtered_new_symbols = new_symbols - blacklist_newlow_set
         
-        # (A) 更新 JSON 文件，只写入新增的 symbol
-        update_json_with_earning_filter(new_symbols, target_json_for_filter_path)
+        # 打印出被过滤掉的 symbol，方便追踪
+        removed_by_blacklist = new_symbols - filtered_new_symbols
+        if removed_by_blacklist:
+            print(f"\n根据 'newlow' 黑名单，已过滤掉 {len(removed_by_blacklist)} 个新增 symbol: {sorted(list(removed_by_blacklist))}")
+    else:
+        # 如果黑名单为空，则不过滤
+        filtered_new_symbols = new_symbols
+
+
+    # ### 修改点: 使用过滤后的 `filtered_new_symbols` 进行判断和写入 ###
+    if filtered_new_symbols:
+        print(f"\n发现 {len(filtered_new_symbols)} 个新的、且不在黑名单中的 symbol，将更新 news 文件和 JSON 文件。")
         
-        # (B) 写入 news 文件，也只写入新增的 symbol
+        # (A) 更新 JSON 文件，只写入过滤后的新增 symbol
+        update_json_with_earning_filter(filtered_new_symbols, target_json_for_filter_path)
+        
+        # (B) 写入 news 文件，也只写入过滤后的新增 symbol
         try:
             with open(news_file_path, 'w', encoding='utf-8') as f:
                 # 为了保持输出顺序一致，可以对 new_symbols 排序后写入
-                for symbol in sorted(list(new_symbols)):
+                for symbol in sorted(list(filtered_new_symbols)):
                     f.write(symbol + '\n')
             print(f"新增结果已成功写入到文件: {news_file_path}")
         except IOError as e:
             print(f"错误: 无法写入 news 文件: {e}")
             
     else:
-        # 当没有新内容时，检查旧文件是否存在，如果存在则删除
-        print("\n与上次相比，没有发现新的符合条件的股票。")
+        # 如果没有新的 symbol，或者所有新的 symbol 都在黑名单中
+        print("\n与上次相比，没有发现新的、符合条件的股票（或所有新增股票均在黑名单中）。")
         
         # (A) 清空 JSON 文件中的 Earning_Filter 组
         # 传递一个空列表给函数，它会自动写入一个空的 {}
@@ -269,8 +304,8 @@ def analyze_financial_data():
             # 使用 OSError 捕获与文件系统操作相关的错误
             print(f"错误: 无法删除旧的 news 文件: {e}")
 
-    # 5.4 用本次的完整结果覆盖更新 backup 文件 (### 此处逻辑保持不变 ###)
-    # 备份文件必须总是保存当前所有符合条件的 symbol，以便下一次运行时进行正确的比较
+    # 5.4 用本次的完整结果覆盖更新 backup 文件 (逻辑保持不变)
+    # 备份文件必须总是保存当前所有符合条件的 symbol (不过滤黑名单)，以便下一次运行时进行正确的比较
     print(f"\n正在用本次扫描到的 {len(qualified_symbols)} 个完整结果更新备份文件...")
     try:
         with open(backup_file_path, 'w', encoding='utf-8') as f:

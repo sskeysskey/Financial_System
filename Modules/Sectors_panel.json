@@ -10,8 +10,6 @@
         "ENPH": ""
     },
     "Consumer_Cyclical": {
-        "GPK": "",
-        "LOW": "",
         "LULU": "",
         "DECK": "",
         "MCD": "",
@@ -22,7 +20,6 @@
         "POR": ""
     },
     "Consumer_Defensive": {
-        "GIS": "关注财报",
         "FLO": "",
         "STZ": "",
         "CLX": "",
@@ -30,19 +27,15 @@
         "PEP": ""
     },
     "Industrials": {
-        "CPRT": "",
-        "WSO": "",
         "BAH": "",
         "EXPO": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
-        "BRK-A": "",
-        "ERIE": ""
+        "BRK-A": ""
     },
     "Healthcare": {
         "CNC": "",
-        "TMO": "",
         "SNY": ""
     },
     "Bonds": {
@@ -129,32 +122,15 @@
         "HALO": "",
         "COKE": "",
         "BRK-A": "",
-        "RUSHB": ""
+        "RUSHB": "",
+        "TM": "",
+        "WCN": "",
+        "WSO": ""
     },
     "Earning_Filter": {
-        "ADC": "",
-        "AFL": "",
-        "AMH": "",
-        "ANF": "",
-        "BAM": "",
         "BBAR": "",
-        "CCI": "",
-        "FLG": "",
         "JD": "",
-        "KNF": "",
-        "LB": "",
-        "PAM": "",
-        "PHI": "",
-        "RBA": "",
-        "THG": "",
-        "TKC": "",
-        "TM": "",
-        "TRP": "",
-        "VERX": "",
-        "VTR": "",
-        "WCN": "",
-        "WTW": "",
-        "Z": ""
+        "PAM": ""
     },
     "Currencies": {
         "DXY": "美元指数",
