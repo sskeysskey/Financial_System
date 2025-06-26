@@ -70,5 +70,11 @@
     "Economic_All": {
         "USGDP": "",
         "USCPI": ""
+    },
+    "Qualified_Symbol": {
+        "HALO": ""
+    },
+    "Earning_Filter": {
+        "HALO": ""
     }
 }

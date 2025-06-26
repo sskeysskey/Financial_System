@@ -126,9 +126,37 @@
         "FXY": ""
     },
     "Qualified_Symbol": {
-        "MCD": "",
+        "HALO": ""
+    },
+    "Earning_Filter": {
+        "ADC": "",
+        "AFL": "",
+        "AMH": "",
+        "ANF": "",
+        "BAM": "",
+        "BBAR": "",
+        "BRK-A": "",
+        "CCI": "",
+        "COKE": "",
+        "FLG": "",
         "HALO": "",
-        "BBAR": ""
+        "JD": "",
+        "KNF": "",
+        "LB": "",
+        "MCD": "",
+        "PAM": "",
+        "PHI": "",
+        "RBA": "",
+        "RUSHB": "",
+        "THG": "",
+        "TKC": "",
+        "TM": "",
+        "TRP": "",
+        "VERX": "",
+        "VTR": "",
+        "WCN": "",
+        "WTW": "",
+        "Z": ""
     },
     "Currencies": {
         "DXY": "美元指数",

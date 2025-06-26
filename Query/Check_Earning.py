@@ -2,6 +2,52 @@ import json
 import sqlite3
 import os
 
+# --- 新增功能函数 ---
+def update_json_with_earning_filter(symbols_list, target_json_path):
+    """
+    将分析结果写入指定的 JSON 文件中的 'Earning_Filter' 组。
+
+    Args:
+        symbols_list (list or set): 符合条件的股票代码列表或集合。
+        target_json_path (str): 目标 JSON 文件的路径。
+    """
+    print(f"\n--- 开始更新 JSON 文件: {os.path.basename(target_json_path)} ---")
+    
+    # 1. 准备要写入的数据
+    # 根据需求，将股票列表转换为 {"symbol": "", ...} 格式的字典
+    earning_filter_group = {symbol: "" for symbol in sorted(symbols_list)}
+    
+    try:
+        # 2. 读取现有的 JSON 数据
+        # 使用 'r+' 模式，如果文件不存在会报错，这符合我们的逻辑，因为我们是更新一个现有结构的文件
+        with open(target_json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        # 3. 更新数据
+        # 直接对加载的 Python 字典进行操作，覆盖或创建 'Earning_Filter' 键
+        data['Earning_Filter'] = earning_filter_group
+        # ### 修改点：打印信息时使用 len(symbols_list) ###
+        print(f"已将 'Earning_Filter' 组更新为包含 {len(symbols_list)} 个 symbol。")
+
+        # 4. 将更新后的数据写回文件
+        # 使用 'w' 模式来完整覆盖旧文件内容
+        with open(target_json_path, 'w', encoding='utf-8') as f:
+            # indent=4 保持文件格式美观，易于阅读
+            # ensure_ascii=False 确保中文字符能被正确写入
+            json.dump(data, f, indent=4, ensure_ascii=False)
+        
+        print(f"成功将更新后的内容写入到: {target_json_path}")
+
+    except FileNotFoundError:
+        print(f"错误: 目标 JSON 文件未找到，请检查路径: {target_json_path}")
+    except json.JSONDecodeError:
+        print(f"错误: 目标 JSON 文件格式不正确，无法解析: {target_json_path}")
+    except IOError as e:
+        print(f"错误: 读写 JSON 文件时发生错误: {e}")
+    except Exception as e:
+        print(f"更新 JSON 文件时发生未知错误: {e}")
+
+
 def analyze_financial_data():
     """
     根据指定规则分析金融数据，并筛选出符合条件的股票代码。
@@ -9,6 +55,7 @@ def analyze_financial_data():
     - 将本次结果与备份文件比对，只将新增的 symbol 写入 news 文件。
     - 用本次的完整结果覆盖更新备份文件。
     - 如果没有新增内容，则不生成 news 文件，并删除旧的 news 文件。
+    - (新) 将本次完整结果更新到指定的 JSON 文件中。
     """
     # --- 1. 配置路径 ---
     # 请根据您的实际情况修改这些路径
@@ -20,6 +67,14 @@ def analyze_financial_data():
     # 将输出路径明确区分为 news 路径和 backup 路径
     news_file_path = '/Users/yanzhang/Documents/News/Earning_Symbols.txt'
     backup_file_path = '/Users/yanzhang/Documents/News/backup/Earning_Symbols.txt'
+
+    # --- 新增路径配置 ---
+    # 您提到的 "Sectors_panel_test" 文件路径
+    # 注意：您提供的路径指向一个 .py 文件，但其内容是 JSON。
+    # 通常不建议用 .py 后缀存储纯数据文件。这里我将其命名为 .json 后缀，这是一个更好的实践。
+    # 如果您必须使用 .py 后缀，只需修改文件名即可。
+    target_json_for_filter_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json'
+
 
     # --- 1.1. 确保 backup 目录存在 ---
     # 这是一个好的编程习惯，确保在写入文件前，其所在的目录是存在的
@@ -152,14 +207,15 @@ def analyze_financial_data():
         print(f"发生未知错误: {e}")
         return
 
-    # --- 5. 处理和写入结果 (已按新需求重构) ---
+    # --- 5. 处理和写入结果 (### 核心逻辑修改区域 ###) ---
     if not qualified_symbols:
         print("\n分析完成，没有找到任何符合所有条件的股票。")
-        return
+    else:
+        print(f"\n分析完成，共找到 {len(qualified_symbols)} 个符合条件的股票: {sorted(qualified_symbols)}")        
 
-    print(f"\n分析完成，共找到 {len(qualified_symbols)} 个符合条件的股票。")
 
-    # 5.1 读取 backup 文件中的旧数据
+    # --- 5.2. 处理 news 和 backup 文本文件 (保留原有逻辑) ---
+    print("\n--- 开始处理 news 和 backup 文本文件 ---")
     backup_symbols = set()
     try:
         with open(backup_file_path, 'r', encoding='utf-8') as f:
@@ -179,11 +235,15 @@ def analyze_financial_data():
     current_symbols_set = set(qualified_symbols)
     new_symbols = current_symbols_set - backup_symbols
 
-    # 5.3 将新增的 symbol 写入 news 文件
+    # 5.3 根据是否有新增 symbol，统一处理 news 文件和 JSON 文件
     if new_symbols:
-        print(f"\n发现 {len(new_symbols)} 个新的 symbol，将写入 news 文件。")
+        print(f"\n发现 {len(new_symbols)} 个新的 symbol，将更新 news 文件和 JSON 文件。")
+        
+        # (A) 更新 JSON 文件，只写入新增的 symbol
+        update_json_with_earning_filter(new_symbols, target_json_for_filter_path)
+        
+        # (B) 写入 news 文件，也只写入新增的 symbol
         try:
-            # 当有新内容时，'w' 模式会覆盖或创建文件
             with open(news_file_path, 'w', encoding='utf-8') as f:
                 # 为了保持输出顺序一致，可以对 new_symbols 排序后写入
                 for symbol in sorted(list(new_symbols)):
@@ -191,9 +251,16 @@ def analyze_financial_data():
             print(f"新增结果已成功写入到文件: {news_file_path}")
         except IOError as e:
             print(f"错误: 无法写入 news 文件: {e}")
+            
     else:
         # 当没有新内容时，检查旧文件是否存在，如果存在则删除
         print("\n与上次相比，没有发现新的符合条件的股票。")
+        
+        # (A) 清空 JSON 文件中的 Earning_Filter 组
+        # 传递一个空列表给函数，它会自动写入一个空的 {}
+        update_json_with_earning_filter([], target_json_for_filter_path)
+        
+        # (B) 删除旧的 news 文件
         try:
             if os.path.exists(news_file_path):
                 os.remove(news_file_path)
@@ -202,12 +269,13 @@ def analyze_financial_data():
             # 使用 OSError 捕获与文件系统操作相关的错误
             print(f"错误: 无法删除旧的 news 文件: {e}")
 
-    # 5.4 用本次的完整结果覆盖更新 backup 文件
+    # 5.4 用本次的完整结果覆盖更新 backup 文件 (### 此处逻辑保持不变 ###)
+    # 备份文件必须总是保存当前所有符合条件的 symbol，以便下一次运行时进行正确的比较
     print(f"\n正在用本次扫描到的 {len(qualified_symbols)} 个完整结果更新备份文件...")
     try:
         with open(backup_file_path, 'w', encoding='utf-8') as f:
             # 将本次所有符合条件的 symbol 写入备份文件，为下次比对做准备
-            for symbol in qualified_symbols:
+            for symbol in sorted(qualified_symbols):
                 f.write(symbol + '\n')
         print(f"备份文件已成功更新: {backup_file_path}")
     except IOError as e:
