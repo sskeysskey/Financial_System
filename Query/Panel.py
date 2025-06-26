@@ -291,6 +291,54 @@ def rename_item(keyword, group):
     except Exception as e:
         print(f"重命名过程中发生错误: {e}")
 
+# ======================================================================
+# 新增函数：将 symbol 移动到 Qualified_Symbol 分组
+# ======================================================================
+def move_item_to_qualified_symbol(keyword, source_group):
+    """
+    将一个 symbol 从其源分组移动到 'Qualified_Symbol' 分组。
+    """
+    global config
+    target_group = 'Qualified_Symbol'
+
+    # 检查源分组和关键字是否存在
+    if source_group in config and isinstance(config[source_group], dict) and keyword in config[source_group]:
+        # 确保目标分组存在，如果不存在则创建一个
+        if target_group not in config:
+            config[target_group] = {}
+        elif not isinstance(config[target_group], dict):
+            print(f"错误: 目标分组 '{target_group}' 的格式不是预期的字典。")
+            return
+
+        # 如果 symbol 已经在目标分组中，则无需移动
+        if keyword in config[target_group]:
+            print(f"{keyword} 已经存在于 {target_group} 中，无需移动。")
+            # 仍然从源分组中删除
+            del config[source_group][keyword]
+        else:
+            # 获取要移动的条目的值（即它的描述）
+            item_value = config[source_group][keyword]
+
+            # 添加到目标分组
+            config[target_group][keyword] = item_value
+
+            # 从源分组中删除
+            del config[source_group][keyword]
+
+        # 将更新后的配置写回 JSON 文件
+        try:
+            with open(CONFIG_PATH, 'w', encoding='utf-8') as file:
+                json.dump(config, file, ensure_ascii=False, indent=4)
+            print(f"已成功将 {keyword} 从 {source_group} 移动到 {target_group}")
+
+            # 刷新界面以显示更改
+            refresh_selection_window()
+        except Exception as e:
+            print(f"保存文件时出错: {e}")
+    else:
+        print(f"错误: 在 {source_group} 中未找到 {keyword}，或该分组格式不正确。")
+# ======================================================================
+
 def on_keyword_selected(value):
     """
     Handles clicking the "🔢" label to display relevant database entries
@@ -522,6 +570,13 @@ def create_selection_window():
                     menu = tk.Menu(button, tearoff=0)
                     menu.add_command(label="删除", command=lambda k=keyword, g=sector: delete_item(k, g))
                     menu.add_command(label="改名", command=lambda k=keyword, g=sector: rename_item(k, g))
+                    
+                    # ======================================================================
+                    # 在此为右键菜单添加“移动”选项
+                    # ======================================================================
+                    menu.add_command(label="移动到 Qualified_Symbol", command=lambda k=keyword, g=sector: move_item_to_qualified_symbol(k, g))
+                    # ======================================================================
+
                     menu.add_command(label="Kimi检索财报", command=lambda k=keyword: execute_external_script('kimi', k))
 
                     # "Add to Earning" option

@@ -126,7 +126,10 @@
         "FXY": ""
     },
     "Qualified_Symbol": {
-        "HALO": ""
+        "HALO": "",
+        "COKE": "",
+        "BRK-A": "",
+        "RUSHB": ""
     },
     "Earning_Filter": {
         "ADC": "",
@@ -135,19 +138,14 @@
         "ANF": "",
         "BAM": "",
         "BBAR": "",
-        "BRK-A": "",
         "CCI": "",
-        "COKE": "",
         "FLG": "",
-        "HALO": "",
         "JD": "",
         "KNF": "",
         "LB": "",
-        "MCD": "",
         "PAM": "",
         "PHI": "",
         "RBA": "",
-        "RUSHB": "",
         "THG": "",
         "TKC": "",
         "TM": "",
