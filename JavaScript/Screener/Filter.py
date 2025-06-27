@@ -483,7 +483,7 @@ def move_mouse_periodically():
 def main():
     threading.Thread(target=move_mouse_periodically, daemon=True).start()
     
-    extension_launch()
+    # extension_launch()
 
     # ---- 原有等待 screener_above_*.txt 的逻辑，直到文件出现 ---- 
     while count_files("screener_above") < 1:

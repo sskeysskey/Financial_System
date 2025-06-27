@@ -7,13 +7,15 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             return true;
         }
 
-        // 构造文本内容
+        // 构造Python脚本期望的文本内容
+        // 格式: SYMBOL: MARKETCAP, CATEGORY, PRICE, VOLUME
         let text = "";
         data.forEach(item => {
+            // 注意这里的字段顺序和格式
             text += `${item.symbol}: ${item.marketCap}, ${item.category}, ${item.price}, ${item.volume}\n`;
         });
 
-        // 如果 caller 提供了 filename，就用它；否则生成默认 screener_YYMMDD.txt
+        // 获取文件名 (逻辑保持不变)
         let filename = request.filename;
         if (!filename) {
             const now = new Date();
@@ -23,6 +25,12 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             filename = `screener_${yy}${mm}${dd}.txt`;
         }
 
+        // 将文件名后缀从 .csv 改回 .txt (如果之前改过的话)
+        if (filename.endsWith('.csv')) {
+            filename = filename.replace('.csv', '.txt');
+        }
+
+        // 创建并下载文件 (逻辑保持不变)
         const blob = new Blob([text], { type: 'text/plain' });
         const reader = new FileReader();
         reader.onload = function () {
@@ -42,6 +50,6 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         reader.onerror = () => sendResponse({ success: false, error: "FileReader error" });
         reader.readAsDataURL(blob);
 
-        return true; // async
+        return true; // 异步操作
     }
 });

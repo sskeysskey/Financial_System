@@ -92,7 +92,8 @@
         "KMI",
         "LNG",
         "MPC",
-        "MPLX"
+        "MPLX",
+        "E"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -231,7 +232,8 @@
         "WELL",
         "SPG",
         "PSA",
-        "DLR"
+        "DLR",
+        "O"
     ],
     "Technology": [
         "AAPL",
@@ -284,7 +286,8 @@
         "NET",
         "NXPI",
         "TEAM",
-        "TEL"
+        "TEL",
+        "PAYX"
     ],
     "Utilities": [
         "NEE",

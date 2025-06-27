@@ -11,6 +11,8 @@ import subprocess
 # --- 配置路径 ---
 DOWNLOADS_DIR = "/Users/yanzhang/Downloads"
 SECTORS_JSON_PATH = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json"
+# --- 新增：指向需要被修改的 "empty" JSON 文件 ---
+SECTORS_EMPTY_JSON_PATH = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json"
 SYMBOL_MAPPING_PATH = "/Users/yanzhang/Documents/Financial_System/Modules/Symbol_mapping.json"
 DB_PATH = "/Users/yanzhang/Documents/Database/Finance.db"
 ERROR_LOG_PATH = "/Users/yanzhang/Documents/News/Today_error.txt"
@@ -71,6 +73,59 @@ def add_symbol_to_etfs_group_in_json(symbol_to_add, json_path):
 
     except Exception as e:
         print(f"更新 {json_path} 时发生未知错误: {e}")
+        return False
+
+# --- 新增函数：从 Sectors_empty.json 中移除 symbol ---
+def remove_symbol_from_empty_json(symbol, group_name, json_path):
+    """
+    在指定的 JSON 文件中，从给定的 group_name 列表中移除 symbol。
+
+    参数:
+        symbol (str): 要移除的股票代码。
+        group_name (str): symbol 所属的组名 (JSON中的键)。
+        json_path (str): Sectors_empty.json 文件的路径。
+
+    返回:
+        bool: 如果成功移除、symbol本就不在或成功写回文件，则返回 True。否则返回 False。
+    """
+    try:
+        # 1. 读取 "empty" JSON 文件
+        try:
+            with open(json_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except FileNotFoundError:
+            print(f"错误: 'empty' JSON 文件 {json_path} 未找到。无法移除 symbol '{symbol}'。")
+            return False
+        except json.JSONDecodeError:
+            print(f"错误: 'empty' JSON 文件 {json_path} 格式无效。无法移除 symbol '{symbol}'。")
+            return False
+
+        # 2. 检查组是否存在以及 symbol 是否在组内
+        if group_name in data and isinstance(data.get(group_name), list):
+            if symbol in data[group_name]:
+                # 3. 如果存在，则移除
+                data[group_name].remove(symbol)
+                print(f"从 {json_path} 的 '{group_name}' 组中移除了 symbol '{symbol}'。")
+                
+                # 4. 写回更新后的 JSON 数据
+                try:
+                    with open(json_path, 'w', encoding='utf-8') as f:
+                        json.dump(data, f, indent=4, ensure_ascii=False)
+                    return True  # 成功移除并写回
+                except IOError as e:
+                    print(f"错误: 无法将更改写回 'empty' JSON 文件 {json_path}: {e}")
+                    return False # 写入失败
+            else:
+                # Symbol 不在列表中，这不算错误，任务目标（确保它不在）已经达成
+                print(f"信息: Symbol '{symbol}' 不在 {json_path} 的 '{group_name}' 组中，无需移除。")
+                return True
+        else:
+            # 组名不存在或其值不是列表，同样不算错误
+            print(f"警告: 在 {json_path} 中未找到组 '{group_name}' 或其值不是列表。无法执行移除操作。")
+            return True
+
+    except Exception as e:
+        print(f"从 {json_path} 移除 symbol 时发生未知错误: {e}")
         return False
 
 def alert_and_exit(msg):
@@ -158,78 +213,6 @@ def create_table_if_not_exists(db_connection, table_name):
         print(f"创建表 {safe_table_name} 时发生数据库错误: {e}")
         raise # 重新抛出异常，让调用者处理
 
-# def process_csv_file(csv_filepath, symbol, group_name, db_path):
-#     """
-#     处理单个CSV文件：读取数据并将其插入到指定的数据库表中。
-#     """
-#     data_to_insert = []
-#     try:
-#         with open(csv_filepath, 'r', newline='', encoding='utf-8') as f_csv:
-#             reader = csv.reader(f_csv, delimiter=',') # 确保分隔符是逗号
-#             header = next(reader)
-#             expected_header = ['date', 'price', 'volume']
-#             if header != expected_header:
-#                 print(f"警告: 文件 {csv_filepath} 的表头 {header} 与预期的 {expected_header} 不符。仍将尝试处理。")
-
-#             for i, row in enumerate(reader):
-#                 if len(row) == 3:
-#                     date_val, price_str, volume_str = row
-#                     try:
-#                         price_val = float(price_str)
-#                         volume_val = int(volume_str)
-#                         # 'name' 列将存储从文件名中提取的 symbol
-#                         data_to_insert.append((date_val, symbol, price_val, volume_val))
-#                     except ValueError as ve:
-#                         print(f"警告: 文件 {csv_filepath} 第 {i+2} 行数据转换错误: {row}. 错误: {ve}. 跳过此行。")
-#                 else:
-#                     print(f"警告: 文件 {csv_filepath} 第 {i+2} 行数据列数不为3: {row}. 跳过此行。")
-#     except FileNotFoundError:
-#         print(f"错误: CSV 文件 {csv_filepath} 在读取时未找到。")
-#         return False
-#     except Exception as e:
-#         print(f"读取 CSV 文件 {csv_filepath} 时发生错误: {e}")
-#         return False
-
-#     if not data_to_insert:
-#         print(f"文件 {csv_filepath} 中没有可插入的数据。")
-#         return True # 认为处理完成，因为没有数据可插
-
-#     conn = None
-#     try:
-#         conn = sqlite3.connect(db_path)
-#         cursor = conn.cursor()
-        
-#         # 确保表存在 (如果需要，会创建带 UNIQUE 约束的表)
-#         create_table_if_not_exists(conn, group_name)
-
-#         safe_table_name = f'"{group_name}"'
-        
-#         # --- 修改点在这里: 使用 UPSERT ---
-#         # 如果 date 和 name 的组合已存在，则更新 price 和 volume
-#         upsert_sql = f"""
-#         INSERT INTO {safe_table_name} (date, name, price, volume)
-#         VALUES (?, ?, ?, ?)
-#         ON CONFLICT(date, name) DO UPDATE SET
-#             price = excluded.price,
-#             volume = excluded.volume;
-#         """
-#         # --- 修改结束 ---
-#         # executemany 仍然适用，它会为每一行数据执行这个 UPSERT 语句
-#         cursor.executemany(upsert_sql, data_to_insert)
-
-#         conn.commit()
-#         print(f"成功处理 {len(data_to_insert)} 条数据从 {os.path.basename(csv_filepath)} ({symbol}) 到表 {safe_table_name} (插入或更新)。")
-#         return True
-#     except sqlite3.Error as e:
-#         # 这里的错误现在不太可能是 UNIQUE constraint failed 了，除非有其他约束
-#         print(f"处理文件 {csv_filepath} ({symbol}) 并将其操作到表 {group_name} 时发生数据库错误: {e}")
-#         if conn:
-#             conn.rollback()
-#         return False
-#     finally:
-#         if conn:
-#             conn.close()
-
 def process_csv_file(csv_filepath, symbol, group_name, db_path):
     """
     处理单个 CSV 文件：根据表结构动态决定插入哪些列，
@@ -284,14 +267,6 @@ def process_csv_file(csv_filepath, symbol, group_name, db_path):
 
     if not rows: # 如果在读取CSV后没有收集到任何行（可能所有行都有问题）
         print(f"文件 {csv_filepath} 中没有可处理的数据。")
-        # 根据您的逻辑，这里可以返回 True 或 False。如果认为空文件或全错误文件是“已处理”，则 True。
-        # 如果希望它被标记为失败，则 False。
-        # 假设我们认为这是一个可以安全删除（如果后续逻辑是删除）的情况，返回True。
-        # 但如果这意味着没有数据插入，并且这是个问题，则应该返回False或记录更严重的错误。
-        # 为了与原逻辑一致（原逻辑在无数据插入时返回True），这里也返回True。
-        # 但要注意，如果是因为所有行都转换失败，这可能隐藏了问题。
-        # 一个更稳健的做法可能是，如果rows为空但文件本身非空，则记录一个更明确的错误。
-        # 不过，当前错误是 int('')，所以至少会有一行尝试被处理。
         return True
 
 
@@ -463,8 +438,10 @@ def main():
         success = process_csv_file(csv_filepath, symbol, group_name, DB_PATH)
         
         if success:
-            # h. 如果成功，删除 CSV 文件
+            # 调用新函数移除 symbol
+            remove_symbol_from_empty_json(symbol, group_name, SECTORS_EMPTY_JSON_PATH)
             try:
+                # h. 如果成功，删除 CSV 文件
                 os.remove(csv_filepath)
                 print(f"成功处理并删除了文件: {csv_filepath}")
                 processed_count += 1
