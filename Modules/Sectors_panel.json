@@ -24,7 +24,8 @@
         "STZ": "",
         "CLX": "",
         "FRPT": "",
-        "PEP": ""
+        "PEP": "",
+        "GIS": ""
     },
     "Industrials": {
         "BAH": "",
@@ -32,7 +33,8 @@
     },
     "Communication_Services": {},
     "Financial_Services": {
-        "BRK-A": ""
+        "BRK-A": "",
+        "ERIE": ""
     },
     "Healthcare": {
         "CNC": "",
@@ -128,9 +130,8 @@
         "WSO": ""
     },
     "Earning_Filter": {
-        "BBAR": "",
-        "JD": "",
-        "PAM": ""
+        "SBAC": "",
+        "WMT": ""
     },
     "Currencies": {
         "DXY": "美元指数",
