@@ -93,7 +93,8 @@
         "LNG",
         "MPC",
         "MPLX",
-        "E"
+        "E",
+        "TRP"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -223,7 +224,8 @@
         "GEV",
         "AXON",
         "NSC",
-        "PWR"
+        "PWR",
+        "GWW"
     ],
     "Real_Estate": [
         "PLD",
@@ -232,8 +234,7 @@
         "WELL",
         "SPG",
         "PSA",
-        "DLR",
-        "O"
+        "DLR"
     ],
     "Technology": [
         "AAPL",
@@ -286,7 +287,6 @@
         "NET",
         "NXPI",
         "TEAM",
-        "TEL",
         "PAYX"
     ],
     "Utilities": [

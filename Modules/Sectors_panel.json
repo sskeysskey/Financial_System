@@ -13,7 +13,8 @@
         "LULU": "",
         "DECK": "",
         "MCD": "",
-        "CAVA": ""
+        "CAVA": "",
+        "GPK": ""
     },
     "Utilities": {
         "EIX": "",
@@ -126,12 +127,11 @@
         "BRK-A": "",
         "RUSHB": "",
         "TM": "",
-        "WCN": "",
-        "WSO": ""
+        "WCN": ""
     },
     "Earning_Filter": {
-        "SBAC": "",
-        "WMT": ""
+        "AWK": "",
+        "MMS": ""
     },
     "Currencies": {
         "DXY": "美元指数",
