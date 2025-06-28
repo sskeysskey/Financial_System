@@ -41,9 +41,9 @@ DISPLAY_LIMITS = {
 # Define categories as a global variable
 categories = [
     ['Basic_Materials', 'Consumer_Cyclical', 'Real_Estate'],
-    ['Energy', 'Technology', 'Qualified_Symbol', 'Earning_Filter'],
+    ['Energy', 'Technology', 'Qualified_Symbol'],
     ['Utilities', 'Industrials', 'Consumer_Defensive'],
-    ['Communication_Services', 'Financial_Services', 'Healthcare'],
+    ['Communication_Services', 'Financial_Services', 'Healthcare', 'Earning_Filter'],
     ['Bonds', 'Indices'],
     ['Commodities'],
     ['Currencies', 'Crypto', 'ETFs'],

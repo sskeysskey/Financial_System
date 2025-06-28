@@ -1,7 +1,5 @@
 {
-    "Basic_Materials": {
-        "UFPI": ""
-    },
+    "Basic_Materials": {},
     "Real_Estate": {
         "NSA": ""
     },
@@ -20,14 +18,7 @@
         "EIX": "",
         "POR": ""
     },
-    "Consumer_Defensive": {
-        "FLO": "",
-        "STZ": "",
-        "CLX": "",
-        "FRPT": "",
-        "PEP": "",
-        "GIS": ""
-    },
+    "Consumer_Defensive": {},
     "Industrials": {
         "BAH": "",
         "EXPO": ""
@@ -38,8 +29,7 @@
         "ERIE": ""
     },
     "Healthcare": {
-        "CNC": "",
-        "SNY": ""
+        "CNC": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -123,16 +113,13 @@
     },
     "Qualified_Symbol": {
         "HALO": "",
-        "COKE": "",
-        "BRK-A": "",
-        "RUSHB": "",
-        "TM": "",
-        "WCN": ""
-    },
-    "Earning_Filter": {
         "AWK": "",
-        "MMS": ""
+        "MMS": "",
+        "STZ": "",
+        "FLO": "",
+        "CLX": ""
     },
+    "Earning_Filter": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
