@@ -909,25 +909,25 @@
         "ASHR"
     ],
     "red_keywords": [
+        "USUnemploy",
+        "ImportPriceM",
+        "USConfidence",
+        "USNonFarm",
+        "USTrade",
+        "USNonFarmA",
+        "CorePCEY",
+        "PCEY",
+        "USConspending",
         "USGDP",
+        "USNonPMI",
         "CorePPI",
         "USRetailM",
-        "USUnemploy",
-        "USTrade",
-        "USNonFarm",
-        "USInitial",
-        "USNonFarmA",
         "USCPI",
-        "USConspending",
-        "CorePCEY",
-        "ImportPriceM",
-        "CorePCEM",
         "USInterest",
         "USPPI",
-        "ImportPriceY",
-        "USConfidence",
         "CoreCPI",
-        "PCEY",
-        "USNonPMI"
+        "CorePCEM",
+        "USInitial",
+        "ImportPriceY"
     ]
 }
