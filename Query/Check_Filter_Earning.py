@@ -100,7 +100,7 @@ def analyze_financial_data():
         print(f"错误: JSON 文件格式不正确: {json_file_path}")
         return
 
-    # ### 新增代码块 2: 加载黑名单数据 ###
+    # --- 加载黑名单数据 ---
     print("\n--- 开始加载黑名单数据 ---")
     blacklist_newlow_set = set()
     try:
@@ -182,19 +182,30 @@ def analyze_financial_data():
 
                     prices = [row[1] for row in price_data]
 
-                    # d. 条件2: 检查价格是否持续上升
+                    # <--- 修改点: 只取最新的最多三个价格进行比较 --->
+                    # 使用列表切片，prices[-3:] 会自动处理：
+                    # - 如果列表长度小于3，则取整个列表
+                    # - 如果列表长度大于等于3，则取最后三个元素
+                    prices_to_check = prices[-3:]
+
+                    # d. 条件2: 检查价格是否持续上升 (在筛选后的子列表中)
                     is_continuously_increasing = True
-                    for i in range(1, len(prices)):
-                        # 如果当前价格不比前一个价格高，则不满足条件
-                        if prices[i] <= prices[i-1]:
-                            is_continuously_increasing = False
-                            break
+                    # 只有当有至少2个价格点时，比较才有意义
+                    if len(prices_to_check) > 1:
+                        # 循环遍历的是 prices_to_check 而不是完整的 prices
+                        for i in range(1, len(prices_to_check)):
+                            if prices_to_check[i] <= prices_to_check[i-1]:
+                                is_continuously_increasing = False
+                                break
+                    else:
+                        # 如果只有一个价格点（或没有），无法判断是否上升，视为不满足
+                        is_continuously_increasing = False
                     
                     if not is_continuously_increasing:
                         continue # 不满足条件，处理下一个 symbol
 
                     # e. 如果价格持续上升，则计算平均价并获取最新价
-                    # 旧代码: average_price = sum(prices) / len(prices)
+                    # 旧代码: average_price = sum(prices_to_check) / len(prices_to_check)
                     # <--- 修改点 1: 将计算平均价改为计算财报日价格中的最低价
                     min_price_on_earning_dates = min(prices)
 
@@ -234,8 +245,7 @@ def analyze_financial_data():
     else:
         print(f"\n分析完成，共找到 {len(qualified_symbols)} 个符合条件的股票: {sorted(qualified_symbols)}")        
 
-
-    # --- 5.2. 处理 news 和 backup 文本文件 (保留原有逻辑) ---
+    # --- 5.2. 处理 news 和 backup 文本文件 ---
     print("\n--- 开始处理 news 和 backup 文本文件 ---")
     backup_symbols = set()
     try:

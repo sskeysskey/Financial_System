@@ -16,7 +16,7 @@ from tkinter import ttk
 import argparse
 import sqlite3  # 新增：导入sqlite3库
 
-# --- 新增：数据库操作函数 ---
+# --- 数据库操作函数 ---
 def create_db_connection(db_file):
     """ 创建一个到SQLite数据库的连接 """
     conn = None
@@ -79,7 +79,7 @@ def should_update_field(db_value, scraped_value_str):
     # 其他情况（两者都无效，或两者都有效且值相同）不更新
     return False, None
 
-
+# --- 修改点 1: 移除 update_stock_in_db 中关于 name 的部分 ---
 def update_stock_in_db(conn, symbol, scraped_data, db_record):
     """
     根据新抓取的数据更新数据库中的记录。
@@ -89,10 +89,7 @@ def update_stock_in_db(conn, symbol, scraped_data, db_record):
     updates = []
     params = []
 
-    # 检查 'name' 字段
-    if db_record['name'] != scraped_data['name']:
-        updates.append("name = ?")
-        params.append(scraped_data['name'])
+    # 移除了对 'name' 字段的检查和更新逻辑
 
     # 检查 'shares' 字段
     update_shares, new_shares = should_update_field(db_record['shares'], scraped_data['shares'])
@@ -133,18 +130,20 @@ def update_stock_in_db(conn, symbol, scraped_data, db_record):
     except sqlite3.Error as e:
         print(f"更新数据库中 {symbol} 的记录时出错: {e}")
 
-
-def insert_stock_into_db(conn, symbol, name, shares, marketcap, pe, pb):
-    """ 向MNSPP表中插入一条新的股票记录 """
-    sql = ''' INSERT INTO MNSPP(symbol, name, shares, marketcap, pe_ratio, pb)
-              VALUES(?,?,?,?,?,?) '''
+# --- 修改点 2: 移除 insert_stock_into_db 中的 name 参数和相关逻辑 ---
+def insert_stock_into_db(conn, symbol, shares, marketcap, pe, pb):
+    """ 向MNSPP表中插入一条新的股票记录 (已移除name列) """
+    # 修改了SQL语句，去掉了 name 列和对应的占位符
+    sql = ''' INSERT INTO MNSPP(symbol, shares, marketcap, pe_ratio, pb)
+              VALUES(?,?,?,?,?) '''
     try:
         cur = conn.cursor()
         # 将'--'或无效值转换成数据库的NULL
         pe_to_db = None if pe in ('--', 'N/A', '-') else float(pe)
         pb_to_db = None if pb in ('--', 'N/A', '-') else float(pb)
         
-        cur.execute(sql, (symbol, name, int(shares), marketcap, pe_to_db, pb_to_db))
+        # 修改了 execute 的参数，移除了 name
+        cur.execute(sql, (symbol, int(shares), marketcap, pe_to_db, pb_to_db))
         conn.commit()
         print(f"已将新symbol {symbol} 插入到数据库。")
     except (sqlite3.Error, ValueError) as e:
@@ -477,7 +476,7 @@ def main():
             # empty.json有内容，使用测试模式
             json_file_path = empty_json_path
             shares_file_path        = resolve_data_path("Shares.txt")
-            symbol_names_file_path  = resolve_data_path("symbol_names.txt")
+            # symbol_names_file_path  = resolve_data_path("symbol_names.txt")
             marketcap_pe_file_path  = resolve_data_path("marketcap_pe.txt")
             print("使用空测试文件模式和backup目录...")
         else:
@@ -510,13 +509,13 @@ def main():
             
             json_file_path = empty_json_path
             shares_file_path = "/Users/yanzhang/Documents/News/backup/Shares.txt"
-            symbol_names_file_path = "/Users/yanzhang/Documents/News/backup/symbol_names.txt"
+            # symbol_names_file_path = "/Users/yanzhang/Documents/News/backup/symbol_names.txt"
             marketcap_pe_file_path = "/Users/yanzhang/Documents/News/backup/marketcap_pe.txt"
             print("使用空测试文件模式和backup目录...")
     else:
         json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json"
         shares_file_path = "/Users/yanzhang/Downloads/Shares.txt"
-        symbol_names_file_path = "/Users/yanzhang/Downloads/symbol_names.txt"
+        # symbol_names_file_path = "/Users/yanzhang/Downloads/symbol_names.txt"
         marketcap_pe_file_path = "/Users/yanzhang/Downloads/marketcap_pe.txt"
         print("使用正常模式和Downloads目录...")
 
@@ -556,7 +555,7 @@ def main():
 
     # 获取已处理的股票符号
     existing_shares = get_existing_symbols(shares_file_path)
-    existing_names = get_existing_symbols(symbol_names_file_path)
+    # existing_names = get_existing_symbols(symbol_names_file_path)
     existing_marketcap_pe = get_existing_symbols(marketcap_pe_file_path)
 
     try:
@@ -565,7 +564,8 @@ def main():
                        desc="Processing symbols",
                        unit="sym"):
             # 检查是否所有文件都已包含此symbol，如果是则完全跳过
-            if symbol in existing_shares and symbol in existing_names and symbol in existing_marketcap_pe:
+            if symbol in existing_shares and symbol in existing_marketcap_pe:
+                # if symbol in existing_shares and symbol in existing_names and symbol in existing_marketcap_pe:
                 print(f"已在所有文件中抓取过 {symbol}，跳过...")
                 show_alert(f"{symbol} 已经在三个文件中都存在了！")
                 continue
@@ -573,25 +573,6 @@ def main():
             try:
                 url = f"https://finance.yahoo.com/quote/{symbol}/key-statistics/"
                 driver.get(url)
-                
-                # 首先等待公司名称出现，这通常是最快加载的元素之一
-                company_name_element = wait_for_element(driver, By.XPATH, "//h1[@class='yf-xxbei9']", timeout=5)
-                
-                if company_name_element:
-                    company_name = company_name_element.text.split('(')[0].strip()
-                    cleaned_company_name = clean_company_name(company_name)
-                    
-                    # 保存公司名称到symbol_names.txt（追加模式），先检查是否已存在
-                    if symbol not in existing_names:
-                        with open(symbol_names_file_path, 'a', encoding='utf-8') as file:
-                            file.write(f"{symbol}: {cleaned_company_name}\n")
-                        print(f"已保存 {symbol} 的公司名称: {cleaned_company_name}")
-                        existing_names.add(symbol)   # 写完后更新 set
-                    else:
-                        print(f"{symbol} 的公司名称已存在，跳过写入")
-                else:
-                    print(f"无法获取 {symbol} 的公司名称")
-                    cleaned_company_name = symbol  # 如果无法获取公司名称，使用股票符号作为替代
                 
                 # 查找Shares Outstanding数据
                 shares_outstanding = "N/A"
@@ -714,9 +695,8 @@ def main():
                 print(f"--- 开始处理 {symbol} 的数据库操作 ---")
                 db_record = get_stock_from_db(db_conn, symbol)
                 
-                # 将所有抓取到的数据打包成一个字典
+                # --- 修改点 3: 构建 scraped_data 时移除 name ---
                 scraped_data = {
-                    "name": cleaned_company_name,
                     "shares": shares_outstanding_converted,
                     "marketcap": market_cap_converted,
                     "pe": pe_str,
@@ -729,9 +709,9 @@ def main():
                 else:
                     # 数据库中不存在，弹窗提示并插入新记录
                     show_alert(f"注意：新Symbol '{symbol}' 在数据库中未找到，将添加新记录。")
+                    # --- 修改点 4: 调用 insert_stock_into_db 时移除 name 参数 ---
                     insert_stock_into_db(
                         db_conn, symbol, 
-                        scraped_data['name'], 
                         scraped_data['shares'], 
                         scraped_data['marketcap'], 
                         scraped_data['pe'], 

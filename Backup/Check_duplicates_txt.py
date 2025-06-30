@@ -16,7 +16,6 @@ def check_duplicates(filename):
 
 # 使用示例
 # filename = '/Users/yanzhang/Documents/News/backup/ETFs.txt'
-# filename = '/Users/yanzhang/Documents/News/backup/symbol_names.txt'
 filename = '/Users/yanzhang/Documents/News/backup/marketcap_pe.txt'
 result = check_duplicates(filename)
 

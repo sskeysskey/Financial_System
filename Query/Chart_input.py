@@ -529,11 +529,20 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         if found:
             break
 
-    # 组合标题，增加 pb_text 字段
-    title_text = (
-        f'{name}  {compare}  {turnover_str} {turnover_rate} '
-        f'{marketcap_in_billion} {pe_text} {pb_text} "{table_name}" {fullname} {tag_str}'
-    )
+    # 根据 table_name 动态组合标题
+    if table_name == 'ETFs':
+        # 如果是ETF，则不显示市值、PE和PB
+        title_text = (
+            f'{name}  {compare}  {turnover_str} '
+            f'"{table_name}" {fullname} {tag_str}'
+        )
+    else:
+        # 对于其他类型（如股票），正常显示所有指标
+        title_text = (
+            f'{name}  {compare}  {turnover_str} {turnover_rate} '
+            f'{marketcap_in_billion} {pe_text} {pb_text} "{table_name}" {fullname} {tag_str}'
+        )
+
     title_style = {
         'color': 'orange' if clickable else 'lightgray',
         'fontsize': 16 if clickable else 15,
