@@ -1,212 +1,258 @@
 import json
-import sqlite3
+import argparse
+import sys
 import os
+from tkinter import Tk, Frame, Label, Entry, Text, Button, Scrollbar, Canvas, Toplevel
+try:
+    import pyperclip
+except ImportError:
+    pyperclip = None
 
-def analyze_financial_data():
+# 您的JSON文件路径
+# 请确保这个路径是正确的，或者根据您的实际情况修改
+JSON_FILE_PATH = "/Users/yanzhang/Documents/Financial_System/Modules/description.json"
+
+class DescriptionEditor:
     """
-    根据指定规则分析金融数据，并筛选出符合条件的股票代码。
-    新功能：
-    - 将本次结果与备份文件比对，只将新增的 symbol 写入 news 文件。
-    - 用本次的完整结果覆盖更新备份文件。
-    - 如果没有新增内容，则不生成 news 文件，并删除旧的 news 文件。
+    一个用于编辑 description3 字段的 Tkinter GUI 窗口。
     """
-    # --- 1. 配置路径 ---
-    # 请根据您的实际情况修改这些路径
-    # 使用 os.path.expanduser('~') 来获取用户主目录，使得路径更具可移植性
-    base_path = os.path.expanduser('~')
-    json_file_path = os.path.join(base_path, 'Documents/Financial_System/Modules/Sectors_All.json')
-    db_file_path = os.path.join(base_path, 'Documents/Database/Finance.db')
-    
-    # 将输出路径明确区分为 news 路径和 backup 路径
-    news_file_path = '/Users/yanzhang/Documents/News/qualified_symbols.txt'
-    backup_file_path = '/Users/yanzhang/Documents/News/backup/qualified_symbols.txt'
+    def __init__(self, master, item_data, save_callback):
+        """
+        初始化编辑器窗口。
 
-    # --- 1.1. 确保 backup 目录存在 ---
-    # 这是一个好的编程习惯，确保在写入文件前，其所在的目录是存在的
-    backup_dir = os.path.dirname(backup_file_path)
-    if not os.path.exists(backup_dir):
-        os.makedirs(backup_dir)
-        print(f"已创建备份目录: {backup_dir}")
+        :param master: Tkinter 的主窗口或 Toplevel 窗口。
+        :param item_data: 要编辑的股票或ETF项目字典。
+        :param save_callback: 保存数据时要调用的函数。
+        """
+        self.master = master
+        self.item_data = item_data
+        self.save_callback = save_callback
+        
+        # 从 description3 字段提取数据。
+        # 它的结构是 [{ "date": "text", ... }]，我们只处理第一个字典。
+        if self.item_data.get('description3') and isinstance(self.item_data['description3'], list) and len(self.item_data['description3']) > 0:
+            self.descriptions = self.item_data['description3'][0]
+        else:
+            self.descriptions = {}
 
-    # --- 2. 定义目标板块 ---
-    target_sectors = {
-        "Basic_Materials", "Communication_Services", "Consumer_Cyclical",
-        "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare",
-        "Industrials", "Real_Estate", "Technology", "Utilities"
-    }
+        self.master.title(f"编辑 {self.item_data.get('symbol', 'N/A')} 的 Description3")
+        # 设置窗口关闭事件
+        self.master.protocol("WM_DELETE_WINDOW", self._on_closing)
+        
+        # --- 创建可滚动的区域 ---
+        main_frame = Frame(self.master)
+        main_frame.pack(fill='both', expand=True, padx=10, pady=10)
 
-    # --- 3. 加载 JSON 数据 ---
+        canvas = Canvas(main_frame)
+        scrollbar = Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+        self.scrollable_frame = Frame(canvas)
+
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(
+                scrollregion=canvas.bbox("all")
+            )
+        )
+
+        canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # 存放每一行输入控件的列表
+        self.entry_widgets = []
+        self._populate_entries()
+
+        # --- 底部控制按钮 ---
+        button_frame = Frame(self.master)
+        button_frame.pack(fill='x', padx=10, pady=(0, 10))
+
+        add_button = Button(button_frame, text="添加新记录", command=self._add_new_entry)
+        add_button.pack(side='left', padx=5)
+
+        save_button = Button(button_frame, text="保存并关闭", command=self._on_save, bg="#4CAF50", fg="white")
+        save_button.pack(side='right', padx=5)
+
+    def _populate_entries(self):
+        """用当前的 description 数据填充滚动区域内的控件。"""
+        # 清空旧的控件
+        for widget in self.scrollable_frame.winfo_children():
+            widget.destroy()
+        self.entry_widgets.clear()
+
+        # 为每条记录创建控件
+        sorted_dates = sorted(self.descriptions.keys(), reverse=True)
+        for date_str in sorted_dates:
+            text_str = self.descriptions[date_str]
+            self._create_entry_row(date_str, text_str)
+
+    def _create_entry_row(self, date_str, text_str):
+        """为单条记录创建一行编辑控件。"""
+        row_frame = Frame(self.scrollable_frame, bd=2, relief="groove", padx=5, pady=5)
+        row_frame.pack(fill='x', expand=True, pady=5)
+
+        # 日期部分
+        date_label = Label(row_frame, text="日期 (YYYY-MM-DD):")
+        date_label.pack(anchor='w')
+        date_entry = Entry(row_frame, width=50)
+        date_entry.insert(0, date_str)
+        date_entry.pack(fill='x', expand=True, pady=(0, 5))
+
+        # 内容部分
+        desc_label = Label(row_frame, text="内容:")
+        desc_label.pack(anchor='w')
+        # 使用 Text 控件以支持多行文本编辑
+        text_widget = Text(row_frame, height=4, wrap='word')
+        text_widget.insert('1.0', text_str)
+        text_widget.pack(fill='x', expand=True)
+
+        # 删除按钮
+        delete_button = Button(row_frame, text="删除此条记录", command=lambda f=row_frame: self._delete_entry(f), bg="#f44336", fg="white")
+        delete_button.pack(anchor='e', pady=5)
+        
+        # 将控件和框架保存起来，以便后续读取或删除
+        self.entry_widgets.append({
+            'frame': row_frame,
+            'date': date_entry,
+            'text': text_widget
+        })
+
+    def _add_new_entry(self):
+        """在界面上添加一组新的、空白的输入框。"""
+        self._create_entry_row("YYYY-MM-DD", "请在此处输入新内容...")
+
+    def _delete_entry(self, frame_to_delete):
+        """删除指定框架对应的记录。"""
+        # 找到要删除的控件组
+        widget_to_remove = None
+        for widgets in self.entry_widgets:
+            if widgets['frame'] == frame_to_delete:
+                widget_to_remove = widgets
+                break
+        
+        if widget_to_remove:
+            self.entry_widgets.remove(widget_to_remove)
+            frame_to_delete.destroy()
+
+    def _on_save(self):
+        """收集所有输入框的数据，并调用回调函数进行保存。"""
+        new_descriptions = {}
+        for widgets in self.entry_widgets:
+            date_str = widgets['date'].get().strip()
+            # Text控件获取内容的方式是 .get('1.0', 'end-1c')
+            # '1.0' 表示第一行第0个字符，'end-1c' 表示结尾再减去一个字符（Tkinter会自动加一个换行符）
+            text_str = widgets['text'].get('1.0', 'end-1c').strip()
+
+            if date_str and text_str: # 确保日期和内容都不为空
+                new_descriptions[date_str] = text_str
+        
+        # 更新原始数据结构
+        self.item_data['description3'] = [new_descriptions]
+        
+        # 调用主程序中的保存函数
+        self.save_callback()
+        
+        # 关闭窗口
+        self.master.destroy()
+
+    def _on_closing(self):
+        """处理直接点击关闭按钮的事件，避免未保存的更改丢失。"""
+        # 在这里可以添加一个确认对话框，为了简化，我们直接关闭
+        print("窗口已关闭，未保存任何更改。")
+        self.master.destroy()
+
+
+def load_data(file_path):
+    """从JSON文件加载数据。"""
+    if not os.path.exists(file_path):
+        print(f"错误: JSON文件未找到于路径 '{file_path}'")
+        return None
     try:
-        with open(json_file_path, 'r', encoding='utf-8') as f:
-            all_sectors_data = json.load(f)
-    except FileNotFoundError:
-        print(f"错误: JSON 文件未找到，请检查路径: {json_file_path}")
-        return
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
     except json.JSONDecodeError:
-        print(f"错误: JSON 文件格式不正确: {json_file_path}")
-        return
-
-    qualified_symbols = [] # 用于存储所有满足条件的股票代码
-
-    # --- 4. 连接数据库并执行分析 ---
-    try:
-        # 使用 with 语句确保数据库连接在使用后能被安全关闭
-        with sqlite3.connect(db_file_path) as conn:
-            cursor = conn.cursor()
-            print("数据库连接成功，开始分析...")
-
-            # 遍历 JSON 文件中的每个板块
-            for sector_name, symbols in all_sectors_data.items():
-                # 如果当前板块不是我们关心的目标板块，则跳过
-                if sector_name not in target_sectors:
-                    continue
-                
-                print(f"\n正在处理板块: {sector_name}...")
-
-                if not symbols:
-                    print(f"板块 {sector_name} 中没有股票代码，已跳过。")
-                    continue
-
-                # 遍历板块中的每一个股票代码
-                for symbol in symbols:
-                    # a. 从 Earning 表中查找该 symbol 对应的所有日期
-                    # ORDER BY date ASC 确保日期按时间顺序排列
-                    cursor.execute(
-                        "SELECT date FROM Earning WHERE name = ? ORDER BY date ASC",
-                        (symbol,)
-                    )
-                    earning_dates_result = cursor.fetchall()
-                    
-                    # 将查询结果 (元组列表) 转换为日期字符串列表
-                    earning_dates = [row[0] for row in earning_dates_result]
-
-                    # b. 条件1: 检查 Earning 表中记录是否至少有两条
-                    if len(earning_dates) < 2:
-                        continue # 不满足条件，处理下一个 symbol
-
-                    # c. 根据获取到的日期，去对应的板块表中查询价格
-                    # 构造 SQL 查询中的占位符，例如 '?, ?, ?'
-                    placeholders = ', '.join(['?'] * len(earning_dates))
-                    # SQL 查询语句，表名不能用 ? 参数化，但因为我们是从自己的JSON文件中获取的，所以是安全的
-                    query = f"""
-                        SELECT date, price 
-                        FROM "{sector_name}" 
-                        WHERE name = ? AND date IN ({placeholders})
-                        ORDER BY date ASC
-                    """
-                    # 参数包括 symbol 和所有的 earning_dates
-                    params = (symbol, *earning_dates)
-                    
-                    cursor.execute(query, params)
-                    price_data = cursor.fetchall()
-
-                    # 如果在板块表中找到的数据量和 Earning 表中的日期数量不匹配，说明数据不完整，跳过
-                    if len(price_data) != len(earning_dates):
-                        continue
-
-                    prices = [row[1] for row in price_data]
-
-                    # d. 条件2: 检查价格是否持续上升
-                    is_continuously_increasing = True
-                    for i in range(1, len(prices)):
-                        # 如果当前价格不比前一个价格高，则不满足条件
-                        if prices[i] <= prices[i-1]:
-                            is_continuously_increasing = False
-                            break
-                    
-                    if not is_continuously_increasing:
-                        continue # 不满足条件，处理下一个 symbol
-
-                    # e. 如果价格持续上升，则计算平均价并获取最新价
-                    average_price = sum(prices) / len(prices)
-
-                    # 获取该 symbol 在其板块表中的最新价格
-                    latest_price_query = f'SELECT price FROM "{sector_name}" WHERE name = ? ORDER BY date DESC LIMIT 1'
-                    cursor.execute(latest_price_query, (symbol,))
-                    latest_price_result = cursor.fetchone()
-
-                    if latest_price_result is None:
-                        continue # 没有找到最新价格，跳过
-
-                    latest_price = latest_price_result[0]
-
-                    # f. 条件3: 比较最新价是否高于平均价
-                    if latest_price < average_price:
-                        print(f"  [符合条件!] Symbol: {symbol}")
-                        print(f"    - Earning 日期数量: {len(earning_dates)}")
-                        print(f"    - 价格持续上升: {prices}")
-                        print(f"    - 平均价: {average_price:.2f}")
-                        print(f"    - 最新价: {latest_price:.2f} (高于平均价)")
-                        qualified_symbols.append(symbol)
-
-    except sqlite3.Error as e:
-        print(f"数据库错误: {e}")
-        return
+        print(f"错误: JSON文件 '{file_path}' 格式无效。")
+        return None
     except Exception as e:
-        print(f"发生未知错误: {e}")
-        return
+        print(f"读取文件时发生未知错误: {e}")
+        return None
 
-    # --- 5. 处理和写入结果 (已按新需求重构) ---
-    if not qualified_symbols:
-        print("\n分析完成，没有找到任何符合所有条件的股票。")
-        return
-
-    print(f"\n分析完成，共找到 {len(qualified_symbols)} 个符合条件的股票。")
-
-    # 5.1 读取 backup 文件中的旧数据
-    backup_symbols = set()
+def save_data(file_path, data):
+    """将数据保存到JSON文件。"""
     try:
-        with open(backup_file_path, 'r', encoding='utf-8') as f:
-            # 使用集合推导式高效地读取所有旧的 symbol
-            # .strip() 用于移除每行末尾的换行符和可能的空白
-            backup_symbols = {line.strip() for line in f if line.strip()}
-        print(f"成功从备份文件加载了 {len(backup_symbols)} 个旧的 symbol。")
-    except FileNotFoundError:
-        print(f"未找到备份文件: {backup_file_path}。将视作首次运行。")
-    except IOError as e:
-        print(f"错误: 无法读取备份文件: {e}")
-        # 如果无法读取备份，则无法进行比对，直接退出以防数据错乱
-        return
+        with open(file_path, 'w', encoding='utf-8') as f:
+            # ensure_ascii=False 保证中文字符正确写入
+            # indent=2 使JSON文件格式化，易于阅读
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        print(f"数据已成功保存到 '{file_path}'")
+    except Exception as e:
+        print(f"保存文件时发生错误: {e}")
 
-    # 5.2 找出本次新增的 symbol
-    # 将本次结果也转换为集合，利用集合的差集运算，找出新 symbol
-    current_symbols_set = set(qualified_symbols)
-    new_symbols = current_symbols_set - backup_symbols
+def find_item(symbol, data):
+    """在stocks和etfs列表中查找指定的symbol。"""
+    for group_key in ['stocks', 'etfs']:
+        if group_key in data:
+            for item in data[group_key]:
+                if item.get('symbol') == symbol:
+                    return item
+    return None
 
-    # 5.3 将新增的 symbol 写入 news 文件
-    if new_symbols:
-        print(f"\n发现 {len(new_symbols)} 个新的 symbol，将写入 news 文件。")
-        try:
-            # 当有新内容时，'w' 模式会覆盖或创建文件
-            with open(news_file_path, 'w', encoding='utf-8') as f:
-                # 为了保持输出顺序一致，可以对 new_symbols 排序后写入
-                for symbol in sorted(list(new_symbols)):
-                    f.write(symbol + '\n')
-            print(f"新增结果已成功写入到文件: {news_file_path}")
-        except IOError as e:
-            print(f"错误: 无法写入 news 文件: {e}")
+def main():
+    """主执行函数。"""
+    parser = argparse.ArgumentParser(description="编辑金融JSON文件中指定symbol的description3字段。")
+    parser.add_argument("-s", "--symbol", type=str, help="要编辑的股票或ETF的symbol。")
+    args = parser.parse_args()
+
+    symbol = args.symbol
+
+    # 如果未通过参数提供symbol，则尝试从剪贴板获取
+    if not symbol:
+        if pyperclip:
+            try:
+                clipboard_content = pyperclip.paste().strip()
+                if clipboard_content:
+                    print(f"从剪贴板获取到 Symbol: '{clipboard_content}'")
+                    symbol = clipboard_content
+                else:
+                    print("剪贴板为空。")
+            except pyperclip.PyperclipException as e:
+                print(f"无法访问剪贴板: {e}. 请使用 -s 参数提供 symbol。")
+        else:
+            print("Pyperclip 库未安装，无法从剪贴板获取。请使用 -s 参数提供 symbol。")
+
+    if not symbol:
+        parser.print_help()
+        sys.exit(1)
+
+    # 加载数据
+    all_data = load_data(JSON_FILE_PATH)
+    if all_data is None:
+        sys.exit(1)
+
+    # 查找项目
+    item_to_edit = find_item(symbol, all_data)
+
+    if item_to_edit:
+        # 创建 Tkinter 主窗口并启动编辑器
+        root = Tk()
+        # 将主窗口隐藏，只显示我们的编辑器对话框
+        root.withdraw() 
+        
+        # 创建一个 Toplevel 窗口作为我们的编辑器
+        editor_window = Toplevel(root)
+
+        # 定义保存操作
+        def on_save_action():
+            save_data(JSON_FILE_PATH, all_data)
+
+        app = DescriptionEditor(editor_window, item_to_edit, on_save_action)
+        
+        # 运行 Tkinter 事件循环
+        root.mainloop()
     else:
-        # 当没有新内容时，检查旧文件是否存在，如果存在则删除
-        print("\n与上次相比，没有发现新的符合条件的股票。")
-        try:
-            if os.path.exists(news_file_path):
-                os.remove(news_file_path)
-                print(f"已删除旧的 news 文件，因为本次没有新内容: {news_file_path}")
-        except OSError as e:
-            # 使用 OSError 捕获与文件系统操作相关的错误
-            print(f"错误: 无法删除旧的 news 文件: {e}")
+        print(f"错误: 在 'stocks' 或 'etfs' 组中未找到 Symbol '{symbol}'。")
+        sys.exit(1)
 
-    # 5.4 用本次的完整结果覆盖更新 backup 文件
-    print(f"\n正在用本次扫描到的 {len(qualified_symbols)} 个完整结果更新备份文件...")
-    try:
-        with open(backup_file_path, 'w', encoding='utf-8') as f:
-            # 将本次所有符合条件的 symbol 写入备份文件，为下次比对做准备
-            for symbol in qualified_symbols:
-                f.write(symbol + '\n')
-        print(f"备份文件已成功更新: {backup_file_path}")
-    except IOError as e:
-        print(f"错误: 无法更新备份文件: {e}")
-
-
-if __name__ == '__main__':
-    analyze_financial_data()
+if __name__ == "__main__":
+    main()

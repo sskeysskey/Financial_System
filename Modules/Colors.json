@@ -196,7 +196,6 @@
         "TMDX",
         "MPC",
         "PSX",
-        "CHE",
         "PHI",
         "AVY",
         "SHEL",
@@ -705,7 +704,6 @@
         "FRT",
         "RHP",
         "AMD",
-        "FTV",
         "SLAB",
         "UWMC",
         "LEN",
@@ -714,7 +712,8 @@
         "BHVN",
         "PBR",
         "BAH",
-        "TAP"
+        "TAP",
+        "CHE"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -803,7 +802,8 @@
         "STZ",
         "LULU",
         "CNC",
-        "PEP"
+        "PEP",
+        "FTV"
     ],
     "black_keywords": [
         "Cotton",

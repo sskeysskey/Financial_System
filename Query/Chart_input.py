@@ -1045,9 +1045,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         actions = {
             'v': toggle_volume,
             'r': toggle_global_markers,  # 'r'键切换红色全局标记点显示
-            'x': toggle_specific_markers,  # 'x'键切换橙色特定股票标记点显示
+            'x': toggle_all_annotations,  # 'x'键切换橙色特定股票标记点显示
             'a': toggle_earning_markers,  # 'a'键切换白色收益公告标记点显示（保持不变）
-            'c': toggle_all_annotations,  # 'c'键切换所有浮窗的显示/隐藏
+            'c': toggle_specific_markers,  # 'c'键切换所有浮窗的显示/隐藏
             'n': lambda: open_earning_input(None),
             'e': lambda: open_earning_edit(None),
             't': lambda: open_tags_edit(None),

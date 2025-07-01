@@ -8,28 +8,17 @@
         "ENPH": ""
     },
     "Consumer_Cyclical": {
-        "LULU": "",
-        "DECK": "",
-        "MCD": "",
-        "CAVA": "",
-        "GPK": ""
+        "LULU": ""
     },
-    "Utilities": {
-        "EIX": "",
-        "POR": ""
-    },
+    "Utilities": {},
     "Consumer_Defensive": {},
-    "Industrials": {
-        "BAH": "",
-        "EXPO": ""
-    },
+    "Industrials": {},
     "Communication_Services": {},
     "Financial_Services": {
-        "BRK-A": "",
-        "ERIE": ""
+        "BRK-A": ""
     },
     "Healthcare": {
-        "CNC": ""
+        "CHE": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -113,13 +102,12 @@
     },
     "Qualified_Symbol": {
         "HALO": "",
-        "AWK": "",
-        "MMS": "",
         "STZ": "",
-        "FLO": "",
         "CLX": ""
     },
-    "Earning_Filter": {},
+    "Earning_Filter": {
+        "BJ": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
