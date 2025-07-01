@@ -182,31 +182,49 @@ def analyze_financial_data():
 
                     prices = [row[1] for row in price_data]
 
-                    # <--- 修改点: 只取最新的最多三个价格进行比较 --->
-                    # 使用列表切片，prices[-3:] 会自动处理：
-                    # - 如果列表长度小于3，则取整个列表
-                    # - 如果列表长度大于等于3，则取最后三个元素
+                    # ##################################################################
+                    # ### --- 代码修改核心区域 --- ###
+                    # ##################################################################
+                    
+                    # ### --- 旧逻辑开始 (将被替换) --- ###
+                    # prices_to_check = prices[-3:]
+                    # is_continuously_increasing = True
+                    # if len(prices_to_check) > 1:
+                    #     for i in range(1, len(prices_to_check)):
+                    #         if prices_to_check[i] <= prices_to_check[i-1]:
+                    #             is_continuously_increasing = False
+                    #             break
+                    # else:
+                    #     is_continuously_increasing = False
+                    # if not is_continuously_increasing:
+                    #     continue
+                    # ### --- 旧逻辑结束 --- ###
+                    
+                    
+                    # ### +++ 新逻辑开始 +++ ###
+                    # d. 条件2: 检查最新一期财报价格是否高于最近(最多)三个财报价格的平均值
+                    
+                    # 1. 获取最近最多三个财报日的价格。
+                    #    切片 `prices[-3:]` 会自动处理列表长度不足3的情况。
                     prices_to_check = prices[-3:]
 
-                    # d. 条件2: 检查价格是否持续上升 (在筛选后的子列表中)
-                    is_continuously_increasing = True
-                    # 只有当有至少2个价格点时，比较才有意义
-                    if len(prices_to_check) > 1:
-                        # 循环遍历的是 prices_to_check 而不是完整的 prices
-                        for i in range(1, len(prices_to_check)):
-                            if prices_to_check[i] <= prices_to_check[i-1]:
-                                is_continuously_increasing = False
-                                break
-                    else:
-                        # 如果只有一个价格点（或没有），无法判断是否上升，视为不满足
-                        is_continuously_increasing = False
-                    
-                    if not is_continuously_increasing:
-                        continue # 不满足条件，处理下一个 symbol
+                    # 2. 必须至少有两个价格点才有比较的意义。
+                    if len(prices_to_check) < 2:
+                        continue # 数据不足，处理下一个 symbol
 
-                    # e. 如果价格持续上升，则计算平均价并获取最新价
-                    # 旧代码: average_price = sum(prices_to_check) / len(prices_to_check)
-                    # <--- 修改点 1: 将计算平均价改为计算财报日价格中的最低价
+                    # 3. 计算这些价格的平均值。
+                    average_of_recent_earnings = sum(prices_to_check) / len(prices_to_check)
+                    
+                    # 4. 获取最新一期的财报日价格（即列表中的最后一个价格）。
+                    latest_earning_price = prices_to_check[-1]
+
+                    # 5. 如果最新一期财报价格不高于平均值，则不满足条件，跳过。
+                    if latest_earning_price <= average_of_recent_earnings:
+                        continue # 不满足条件，处理下一个 symbol
+                    
+                    # 如果代码能执行到这里，说明已满足“最新财报价 > 近期均价”的条件，可以继续下一步分析。
+
+                    # e. 条件满足后，获取财报日最低价和股票最新价，进行下一步判断
                     min_price_on_earning_dates = min(prices)
 
                     # 获取该 symbol 在其板块表中的最新价格
@@ -219,17 +237,16 @@ def analyze_financial_data():
 
                     latest_price = latest_price_result[0]
 
-                    # f. 条件3: 比较最新价是否高于平均价
-                    # 旧代码: if latest_price < average_price:
-                    # <--- 修改点 2: 比较最新价是否低于财报日的 "最低价"
+                    # f. 条件3: 比较最新价是否低于财报日的 "最低价"
                     if latest_price < min_price_on_earning_dates:
+                        # 为了方便调试，更新这里的打印信息以反映新的筛选逻辑
                         print(f"  [符合条件!] Symbol: {symbol}")
-                        print(f"    - Earning 日期数量: {len(earning_dates)}")
-                        print(f"    - 价格持续上升: {prices}")
-                        # 旧代码 print(f"    - 平均价: {average_price:.2f}")
-                        # 旧代码 print(f"    - 最新价: {latest_price:.2f} (高于平均价)")
-                        print(f"    - 财报日最低价: {min_price_on_earning_dates:.2f}") # 原为 "平均价"
-                        print(f"    - 最新价: {latest_price:.2f} (低于财报日最低价)") # 原为 "高于平均价" (原文此处逻辑有误，应为低于)
+                        print(f"    - 最近财报日价格: {prices_to_check}")
+                        print(f"    - 最近财报日均价: {average_of_recent_earnings:.2f}")
+                        print(f"    - 最新财报日价格: {latest_earning_price:.2f} (高于均价，通过第一轮筛选)")
+                        print(f"    ---------------------------------")
+                        print(f"    - 所有财报日最低价: {min_price_on_earning_dates:.2f}")
+                        print(f"    - 股票当前最新价: {latest_price:.2f} (低于财报日最低价，通过第二轮筛选)")
                         qualified_symbols.append(symbol)
 
     except sqlite3.Error as e:
