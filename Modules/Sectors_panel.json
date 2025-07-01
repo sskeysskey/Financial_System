@@ -106,17 +106,10 @@
         "CLX": ""
     },
     "Earning_Filter": {
-        "ADC": "",
-        "ANF": "",
         "BJ": "",
         "BRK-A": "",
         "HALO": "",
-        "HUM": "",
-        "JD": "",
-        "KDP": "",
-        "MCD": "",
-        "MMYT": "",
-        "WCN": ""
+        "JD": ""
     },
     "Currencies": {
         "DXY": "美元指数",

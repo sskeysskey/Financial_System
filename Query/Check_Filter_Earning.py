@@ -74,9 +74,9 @@ def analyze_financial_data():
     # ### 新增代码块 1: 定义黑名单文件路径 ###
     blacklist_json_path = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'
 
-    # ### 新增/修改 1: 定义成交额阈值 ###
-    # 使用下划线提高大数字的可读性，100_000_000 代表一亿
-    TURNOVER_THRESHOLD = 100_000_000
+    # ### 新增/修改 1: 定义筛选常量 ###
+    TURNOVER_THRESHOLD = 150_000_000  # 成交额阈值：一亿
+    PRICE_DROP_PERCENTAGE = 0.07     # 价格回撤阈值：7%
 
     # --- 1.1. 确保 backup 目录存在 ---
     # 这是一个好的编程习惯，确保在写入文件前，其所在的目录是存在的
@@ -184,31 +184,8 @@ def analyze_financial_data():
                         continue
 
                     prices = [row[1] for row in price_data]
-
-                    # ##################################################################
-                    # ### --- 代码修改核心区域 --- ###
-                    # ##################################################################
                     
-                    # ### --- 旧逻辑开始 (将被替换) --- ###
-                    # prices_to_check = prices[-3:]
-                    # is_continuously_increasing = True
-                    # if len(prices_to_check) > 1:
-                    #     for i in range(1, len(prices_to_check)):
-                    #         if prices_to_check[i] <= prices_to_check[i-1]:
-                    #             is_continuously_increasing = False
-                    #             break
-                    # else:
-                    #     is_continuously_increasing = False
-                    # if not is_continuously_increasing:
-                    #     continue
-                    # ### --- 旧逻辑结束 --- ###
-                    
-                    
-                    # ### +++ 新逻辑开始 +++ ###
-                    # d. 条件2: 检查最新一期财报价格是否高于最近(最多)三个财报价格的平均值
-                    
-                    # 1. 获取最近最多三个财报日的价格。
-                    #    切片 `prices[-3:]` 会自动处理列表长度不足3的情况。
+                    # 条件1: 最新财报日价格 > 最近(<=3)财报日均价
                     prices_to_check = prices[-3:]
 
                     # 2. 必须至少有两个价格点才有比较的意义。
@@ -230,8 +207,7 @@ def analyze_financial_data():
                     # e. 条件满足后，获取财报日最低价和股票最新价，进行下一步判断
                     min_price_on_earning_dates = min(prices)
 
-                    # ### 新增/修改 2: 修改SQL查询，同时获取最新价格和最新成交量 ###
-                    # 原来只查询 price，现在查询 price 和 volume，以提高效率
+                    # 获取最新交易日的 价格 和 成交量
                     latest_data_query = f'SELECT price, volume FROM "{sector_name}" WHERE name = ? ORDER BY date DESC LIMIT 1'
                     cursor.execute(latest_data_query, (symbol,))
                     latest_data_result = cursor.fetchone()
@@ -242,25 +218,27 @@ def analyze_financial_data():
                     # 从查询结果中解包得到价格和成交量
                     latest_price, latest_volume = latest_data_result
 
-                    # 条件2: 比较最新价是否低于财报日的 "最低价"
-                    if latest_price < min_price_on_earning_dates:
+                    # ### 新增/修改 2: 合并价格判断条件 ###
+                    # 条件2: 最新价 < 所有财报日中的最低价
+                    # 条件3: 最新价 < 最新财报日价格 * (1 - 7%)
+                    price_condition_1 = latest_price < min_price_on_earning_dates
+                    price_condition_2 = latest_price <= latest_earning_price * (1 - PRICE_DROP_PERCENTAGE)
+
+                    if price_condition_1 and price_condition_2:
                         
-                        # ### 新增/修改 3: 增加成交额判断 ###
                         # 计算最新成交额
                         latest_turnover = latest_price * latest_volume
                         
-                        # 条件3: 判断最新成交额是否不小于阈值（一亿）
+                        # 条件4: 最新成交额 >= 1亿
                         if latest_turnover >= TURNOVER_THRESHOLD:
-                            # 只有所有三个条件都满足，才将 symbol 加入列表并打印信息
+                            # 所有条件都满足，才加入列表并打印信息
                             print(f"  [符合所有条件!] Symbol: {symbol}")
-                            print(f"    - 最近财报日价格: {prices_to_check}")
-                            print(f"    - 最近财报日均价: {average_of_recent_earnings:.2f}")
-                            print(f"    - 最新财报日价格: {latest_earning_price:.2f} (高于均价 ✅)")
+                            print(f"    - 最近财报日均价: {average_of_recent_earnings:.2f}, 最新财报日价格: {latest_earning_price:.2f} (价格高于均价 ✅)")
                             print(f"    ---------------------------------")
                             print(f"    - 所有财报日最低价: {min_price_on_earning_dates:.2f}")
-                            print(f"    - 股票当前最新价: {latest_price:.2f} (低于财报日最低价 ✅)")
+                            print(f"    - 最新价比财报日价低至少 {PRICE_DROP_PERCENTAGE:.0%}: {latest_price:.2f} <= {latest_earning_price * (1 - PRICE_DROP_PERCENTAGE):.2f} (✅)")
+                            print(f"    - 股票当前最新价: {latest_price:.2f} (低于所有财报日最低价 ✅)")
                             print(f"    ---------------------------------")
-                            # 使用 f-string 的格式化功能 `:,` 来增加千位分隔符，方便阅读
                             print(f"    - 最新成交额: {latest_turnover:,.2f} (>= {TURNOVER_THRESHOLD:,.0f} ✅)")
                             qualified_symbols.append(symbol)
 
