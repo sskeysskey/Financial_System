@@ -107,25 +107,16 @@
     },
     "Earning_Filter": {
         "ADC": "",
-        "AMH": "",
         "ANF": "",
-        "BBAR": "",
         "BJ": "",
         "BRK-A": "",
-        "COKE": "",
         "HALO": "",
         "HUM": "",
         "JD": "",
         "KDP": "",
-        "KNF": "",
         "MCD": "",
         "MMYT": "",
-        "PAM": "",
-        "RLI": "",
-        "RUSHB": "",
-        "TM": "",
-        "WCN": "",
-        "Z": ""
+        "WCN": ""
     },
     "Currencies": {
         "DXY": "美元指数",
