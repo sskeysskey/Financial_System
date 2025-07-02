@@ -86,6 +86,9 @@ class DescriptionEditorApp:
         self.master.title(f"编辑 {self.item_data.get('symbol', '')} 的 Description3")
         self.master.geometry("800x600")
 
+        # --- 新增: 为“全选”复选框创建变量 ---
+        self.select_all_var = BooleanVar()
+
         # --- 创建主框架和滚动条 ---
         main_frame = Frame(master)
         main_frame.pack(fill=tk.BOTH, expand=1)
@@ -122,6 +125,26 @@ class DescriptionEditorApp:
         self.add_button = Button(button_frame, text="添加新条目", command=self._add_new_row)
         self.add_button.pack(side=tk.LEFT, padx=10)
 
+    # --- 新增: 全选/全不选 功能函数 ---
+    def _toggle_select_all(self):
+        """
+        根据“全选”复选框的状态，设置所有条目的复选框状态。
+        """
+        is_checked = self.select_all_var.get()
+        for row in self.rows:
+            row['check_var'].set(is_checked)
+
+    # --- 新增: 更新“全选”复选框状态的函数 ---
+    def _update_select_all_state(self):
+        """
+        检查是否所有条目都被选中，并相应地更新“全选”复选框。
+        """
+        if not self.rows: # 如果没有条目，则全选框不勾选
+            self.select_all_var.set(False)
+            return
+            
+        all_checked = all(row['check_var'].get() for row in self.rows)
+        self.select_all_var.set(all_checked)
 
     def _create_widgets(self):
         """根据events_dict动态创建界面元素。"""
@@ -136,7 +159,11 @@ class DescriptionEditorApp:
         # 创建表头
         header_frame = Frame(self.scrollable_frame)
         header_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=2)
-        Checkbutton(header_frame).grid(row=0, column=0, padx=5)
+        
+        # --- 修改: 将表头复选框与变量和命令关联 ---
+        header_checkbutton = Checkbutton(header_frame, variable=self.select_all_var, command=self._toggle_select_all)
+        header_checkbutton.grid(row=0, column=0, padx=5)
+        
         tk.Label(header_frame, text="日期 (YYYY-MM-DD)", font=('Helvetica', 10, 'bold')).grid(row=0, column=1, padx=5)
         tk.Label(header_frame, text="内容描述", font=('Helvetica', 10, 'bold')).grid(row=0, column=2, padx=5)
         self.scrollable_frame.grid_columnconfigure(2, weight=1) # 让内容列自适应宽度
@@ -149,7 +176,8 @@ class DescriptionEditorApp:
 
             # 1. 复选框
             check_var = BooleanVar()
-            checkbutton = Checkbutton(row_frame, variable=check_var)
+            # --- 修改: 为每个复选框添加命令，以便在点击时更新“全选”框的状态 ---
+            checkbutton = Checkbutton(row_frame, variable=check_var, command=self._update_select_all_state)
             checkbutton.grid(row=0, column=0, padx=5)
 
             # 2. 日期输入框
@@ -169,6 +197,9 @@ class DescriptionEditorApp:
                 'desc_text': desc_text,
                 'original_date': date_key # 记录原始日期，以便在日期被修改时也能找到原条目
             })
+        
+        # --- 新增: 创建完所有控件后，更新一次“全选”框的初始状态 ---
+        self._update_select_all_state()
 
     def _add_new_row(self):
         """在界面上添加一个空的新行，用于创建新条目。"""
@@ -178,7 +209,8 @@ class DescriptionEditorApp:
         row_frame.grid_columnconfigure(2, weight=1)
 
         check_var = BooleanVar()
-        checkbutton = Checkbutton(row_frame, variable=check_var)
+        # --- 修改: 新增的复选框也需要关联更新函数 ---
+        checkbutton = Checkbutton(row_frame, variable=check_var, command=self._update_select_all_state)
         checkbutton.grid(row=0, column=0, padx=5)
 
         date_entry = Entry(row_frame, width=15)
@@ -195,6 +227,9 @@ class DescriptionEditorApp:
             'desc_text': desc_text,
             'original_date': None # 这是一个新条目
         })
+        
+        # --- 新增: 添加新行后，由于新行默认未选中，需要更新“全选”框的状态 ---
+        self._update_select_all_state()
 
 
     def _delete_selected(self):
