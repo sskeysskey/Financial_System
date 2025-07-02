@@ -103,13 +103,11 @@
     "Qualified_Symbol": {
         "HALO": "",
         "STZ": "",
-        "CLX": ""
+        "CLX": "",
+        "BJ": ""
     },
     "Earning_Filter": {
-        "BJ": "",
-        "BRK-A": "",
-        "HALO": "",
-        "JD": ""
+        "Z": ""
     },
     "Currencies": {
         "DXY": "美元指数",

@@ -94,7 +94,7 @@
         "MPC",
         "MPLX",
         "E",
-        "TRP"
+        "PSX"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -188,7 +188,8 @@
         "ZTS",
         "CVS",
         "MCK",
-        "COR"
+        "COR",
+        "BDX"
     ],
     "Industrials": [
         "GE",
@@ -225,7 +226,9 @@
         "AXON",
         "NSC",
         "PWR",
-        "GWW"
+        "GWW",
+        "PCAR",
+        "URI"
     ],
     "Real_Estate": [
         "PLD",
