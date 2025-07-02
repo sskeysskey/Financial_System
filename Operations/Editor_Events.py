@@ -277,6 +277,9 @@ def main():
 
     # 4. 启动GUI应用
     root = tk.Tk()
+    root.lift()
+    root.attributes('-topmost', True)
+    root.focus_force()
     app = DescriptionEditorApp(root, full_data, item_data)
     root.mainloop()
 
