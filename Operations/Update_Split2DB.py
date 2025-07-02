@@ -90,13 +90,15 @@ def copy2clipboard():
 
 def get_stock_symbol(default_symbol=""):
     """获取股票代码"""
-    app = QApplication.instance() or QApplication(sys.argv)
     
     input_dialog = QInputDialog()
     input_dialog.setWindowTitle("输入股票代码")
     input_dialog.setLabelText("请输入股票代码:")
     input_dialog.setTextValue(default_symbol)
+    # input_dialog.setWindowFlags(input_dialog.windowFlags() | Qt.WindowStaysOnTopHint)
     input_dialog.setWindowFlags(input_dialog.windowFlags() | Qt.WindowStaysOnTopHint)
+    from PyQt5.QtCore import QTimer
+    QTimer.singleShot(0, lambda: (input_dialog.raise_(), input_dialog.activateWindow()))
     
     if input_dialog.exec_() == QInputDialog.Accepted:
         # 直接将输入转换为大写
@@ -106,7 +108,6 @@ def get_stock_symbol(default_symbol=""):
 # 使用 PyQt5 实现弹出界面获取 price_divisor
 def get_price_divisor():
     """获取拆股比例"""
-    app = QApplication.instance() or QApplication(sys.argv)
 
     # 创建一个 QInputDialog 对象
     input_dialog = QInputDialog()

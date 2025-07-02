@@ -3,7 +3,7 @@ import sys
 import os
 import pyperclip
 import tkinter as tk
-from tkinter import messagebox, Text, Entry, Checkbutton, Button, Frame, Scrollbar, Canvas, BooleanVar
+from tkinter import messagebox, Text, Entry, Checkbutton, Button, Frame, Scrollbar, Canvas, BooleanVar, simpledialog
 
 # --- 核心功能函数 ---
 
@@ -118,6 +118,10 @@ class DescriptionEditorApp:
 
         self.save_button = Button(button_frame, text="保存所有更改", command=self._save_changes)
         self.save_button.pack(side=tk.RIGHT, padx=10)
+
+        # --- 新增: "复制到..." 按钮 ---
+        self.copy_button = Button(button_frame, text="复制到...", command=self._copy_to_symbols)
+        self.copy_button.pack(side=tk.RIGHT, padx=10)
 
         self.delete_button = Button(button_frame, text="删除选中项", command=self._delete_selected)
         self.delete_button.pack(side=tk.RIGHT, padx=10)
@@ -255,6 +259,77 @@ class DescriptionEditorApp:
             self._create_widgets()
             messagebox.showinfo("成功", "选中的条目已从界面移除。\n请点击'保存所有更改'以更新JSON文件。")
 
+    # --- 新增: "复制到..." 功能的实现 ---
+    def _copy_to_symbols(self):
+        """将选中的条目复制到其他一个或多个symbol中。"""
+        # 1. 收集所有选中的条目
+        items_to_copy = []
+        for row in self.rows:
+            if row['check_var'].get():
+                date = row['date_entry'].get().strip()
+                desc = row['desc_text'].get("1.0", "end-1c").strip()
+                if date and date != "YYYY-MM-DD" and desc:
+                    items_to_copy.append({'date': date, 'desc': desc})
+        
+        if not items_to_copy:
+            messagebox.showinfo("提示", "没有选中任何有效的条目进行复制。")
+            return
+
+        # 2. 弹出对话框让用户输入目标symbols
+        # 使用 simpledialog 获取用户输入
+        target_symbols_str = simpledialog.askstring(
+            "复制到...",
+            "请输入目标Symbol (多个Symbol请用空格分隔):",
+            parent=self.master
+        )
+
+        if not target_symbols_str:
+            return # 用户取消或未输入
+
+        target_symbols = target_symbols_str.strip().split()
+        if not target_symbols:
+            return
+
+        # 3. 执行复制操作
+        successful_copies = []
+        failed_symbols = []
+        
+        for symbol in target_symbols:
+            # 查找目标item
+            target_item = find_item_by_symbol(self.full_data, symbol)
+            
+            if target_item:
+                # 获取目标item的description3字典
+                # find_item_by_symbol确保了description3的基本结构
+                target_events_dict = target_item['description3'][0]
+                
+                # 将选中的条目逐一添加到目标字典中（如果已存在则覆盖）
+                for item in items_to_copy:
+                    target_events_dict[item['date']] = item['desc']
+                
+                successful_copies.append(symbol)
+            else:
+                failed_symbols.append(symbol)
+
+        # 4. 保存所有更改到JSON文件
+        if successful_copies:
+            if not save_data(self.full_data):
+                # 如果保存失败，save_data内部会显示错误，这里可以提前返回
+                messagebox.showerror("复制失败", "数据已在内存中修改，但保存到文件时失败。")
+                return
+        
+        # 5. 构建并显示最终结果报告
+        report_message = ""
+        if successful_copies:
+            report_message += f"成功将 {len(items_to_copy)} 个条目复制到: \n" + ", ".join(successful_copies)
+        
+        if failed_symbols:
+            if report_message:
+                report_message += "\n\n"
+            report_message += "未在JSON文件中找到以下Symbol: \n" + ", ".join(failed_symbols)
+
+        messagebox.showinfo("复制操作完成", report_message)
+
 
     def _save_changes(self):
         """将界面上的所有更改同步到数据结构并保存到文件。"""
@@ -313,9 +388,8 @@ def main():
     # 4. 启动GUI应用
     root = tk.Tk()
     root.lift()
-    root.attributes('-topmost', True)
     root.focus_force()
-    app = DescriptionEditorApp(root, full_data, item_data)
+    DescriptionEditorApp(root, full_data, item_data)
     root.mainloop()
 
 
