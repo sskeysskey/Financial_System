@@ -1,14 +1,12 @@
 import sys
 import json
-import sqlite3
 from collections import OrderedDict
-import subprocess # <--- 1. 新增导入
-import math
+import subprocess
 
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QGroupBox, QScrollArea, QLabel, QFrame,
-    QMenu, QAction # <--- 1. 新增导入
+    QMenu, QAction
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QCursor, QColor, QFont
@@ -25,7 +23,7 @@ from Chart_input import plot_financial_data
 # ----------------------------------------------------------------------
 # 如果一个时间段内的项目超过这个数量，则单独成为一列。
 # 同时，这也是合并列中项目总数的上限。
-MAX_ITEMS_PER_COLUMN = 13
+MAX_ITEMS_PER_COLUMN = 11
 
 # 文件路径
 HIGH_LOW_PATH = '/Users/yanzhang/Documents/News/HighLow.txt'
@@ -37,6 +35,8 @@ COMPARE_DATA_PATH = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
 SHARES_PATH = '/Users/yanzhang/Documents/News/backup/Shares.txt'
 MARKETCAP_PATH = '/Users/yanzhang/Documents/News/backup/marketcap_pe.txt'
 DB_PATH = '/Users/yanzhang/Documents/Database/Finance.db'
+# 按钮＋标签固定宽度（像素）
+SYMBOL_WIDGET_FIXED_WIDTH = 150
 
 # ----------------------------------------------------------------------
 # Classes
@@ -540,35 +540,44 @@ class HighLowWindow(QMainWindow):
 
     def create_symbol_widget(self, symbol):
         """
-        创建一个 QWidget，垂直包含按钮和其下方的标签栏，
-        保证二者同宽。
+        创建一个 QWidget，垂直包含按钮和它下方的左对齐文本标签，
+        并统一固定宽度。
         """
-        # 1. 创建按钮（仍保持右键菜单、点击信号等逻辑）
+        # 1) 按钮（保留原来的点击 & 右键菜单逻辑）
         button = self.create_symbol_button(symbol)
+        button.setFixedWidth(SYMBOL_WIDGET_FIXED_WIDTH)
 
-        # 2. 获取标签文本
+        # 2) 拿到标签文本
         tags_info = self.get_tags_for_symbol(symbol)
         if isinstance(tags_info, list):
             tags_info = ", ".join(tags_info)
 
-        # 3. 创建下方的 QLabel 作为横栏
+        # 3) 普通 QLabel，左对齐，并固定宽度
         label = QLabel(tags_info)
-        label.setAlignment(Qt.AlignCenter)
-        # 你可以根据喜好调整样式
+        # 左对齐 + 垂直居中
+        label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        label.setFixedWidth(SYMBOL_WIDGET_FIXED_WIDTH)
+
+        # 用实例的 fontMetrics 拿高度
+        fm = label.fontMetrics()
+        label.setFixedHeight(fm.height() + 14)
+
+        # 保持浅黄底黑字，给左侧留点 padding
         label.setStyleSheet("""
             background-color: lightyellow;
             color: black;
-            font-size: 12px;
-            padding: 2px;
+            font-size: 16px;
+            padding-left: 4px;
         """)
 
-        # 4. 用一个 QWidget 把按钮和标签包装起来
+        # 4) 按钮 + 标签 装到同宽的容器里
         container = QWidget()
         vlay = QVBoxLayout(container)
-        vlay.setContentsMargins(0,0,0,0)
+        vlay.setContentsMargins(0, 0, 0, 0)
         vlay.setSpacing(2)
         vlay.addWidget(button)
         vlay.addWidget(label)
+        container.setFixedWidth(SYMBOL_WIDGET_FIXED_WIDTH)
 
         return container
 
