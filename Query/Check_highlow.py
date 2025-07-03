@@ -147,9 +147,11 @@ class HighLowWindow(QMainWindow):
     def init_ui(self):
         """初始化UI界面"""
         self.setWindowTitle("High/Low Viewer")
-        self.setGeometry(100, 100, 1600, 1000) # 适当增大了窗口初始尺寸
+        self.setGeometry(100, 100, 1600, 1000)
 
-        # 使用 QScrollArea 以便内容可滚动
+        # --- 【关键改动 1】: 设置焦点策略，让窗口能接收键盘事件 ---
+        self.setFocusPolicy(Qt.StrongFocus)
+        
         scroll_area = QScrollArea(self)
         scroll_area.setWidgetResizable(True)
         self.setCentralWidget(scroll_area)
@@ -434,6 +436,26 @@ class HighLowWindow(QMainWindow):
         except Exception as e:
             print(f"调用 plot_financial_data 时出错: {e}")
 
+    # --- 【关键改动 2】: 重写 keyPressEvent 方法 ---
+    def keyPressEvent(self, event):
+        """
+        重写键盘事件处理器以响应按键。
+        """
+        # 检查按下的键是否是 Escape 键
+        if event.key() == Qt.Key_Escape:
+            print("Escape key pressed. Closing application...")
+            self.close()  # 调用 close() 方法来关闭窗口
+        else:
+            # 对于其他按键，调用父类的实现以保留默认行为
+            super().keyPressEvent(event)
+
+    # --- 【关键改动 3】: 重写 closeEvent 方法以确保程序退出 ---
+    def closeEvent(self, event):
+        """
+        重写关闭事件，确保应用程序完全退出。
+        """
+        QApplication.quit()
+        event.accept() # 接受关闭事件
 
 # ----------------------------------------------------------------------
 # 主执行入口
