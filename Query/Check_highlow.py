@@ -3,10 +3,10 @@ import json
 from collections import OrderedDict
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QGroupBox, QScrollArea, QLabel
+    QPushButton, QGroupBox, QScrollArea, QLabel, QFrame
 )
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QCursor, QColor
+from PyQt5.QtGui import QCursor, QColor, QFont
 
 # ----------------------------------------------------------------------
 # 确保可以从您的自定义模块导入
@@ -18,7 +18,10 @@ from Chart_input import plot_financial_data
 # ----------------------------------------------------------------------
 # 常量 / 全局配置 (从 a.py 借用)
 # ----------------------------------------------------------------------
-# 新增 HighLow 文件路径
+# 新增：如果一个时间段内的项目超过这个数量，则单独成为一列
+MAX_ITEMS_PER_COLUMN = 15
+
+# 文件路径
 HIGH_LOW_PATH = '/Users/yanzhang/Documents/News/HighLow.txt'
 
 # 复用 a.py 中的路径
@@ -120,7 +123,7 @@ class HighLowWindow(QMainWindow):
     def init_ui(self):
         """初始化UI界面"""
         self.setWindowTitle("High/Low Viewer")
-        self.setGeometry(150, 150, 1200, 800)
+        self.setGeometry(100, 100, 1600, 900) # 适当增大了窗口初始尺寸
 
         # 使用 QScrollArea 以便内容可滚动
         scroll_area = QScrollArea(self)
@@ -130,25 +133,57 @@ class HighLowWindow(QMainWindow):
         scroll_content = QWidget()
         scroll_area.setWidget(scroll_content)
 
-        # 主布局：一个水平布局，分为左右两列
+        # 主布局：一个水平布局，容纳左右两个主要部分
         main_layout = QHBoxLayout(scroll_content)
         scroll_content.setLayout(main_layout)
 
-        # 创建左列 (Low) 和右列 (High) 的垂直布局
-        self.low_layout = QVBoxLayout()
-        self.low_layout.setAlignment(Qt.AlignTop)
-        self.high_layout = QVBoxLayout()
-        self.high_layout.setAlignment(Qt.AlignTop)
+        # --- 创建左侧 (LOW) 的主容器 ---
+        low_main_container = QWidget()
+        low_main_layout = QVBoxLayout(low_main_container)
+        low_main_layout.setContentsMargins(0, 0, 0, 0)
+        
+        low_title = QLabel("LOW")
+        low_title.setFont(QFont("Arial", 20, QFont.Bold))
+        low_title.setAlignment(Qt.AlignCenter)
+        
+        # low_columns_layout 将水平容纳多个列
+        self.low_columns_layout = QHBoxLayout()
+        
+        low_main_layout.addWidget(low_title)
+        low_main_layout.addLayout(self.low_columns_layout)
+        low_main_layout.addStretch(1) # 保证内容向上对齐
 
-        main_layout.addLayout(self.low_layout)
-        main_layout.addLayout(self.high_layout)
+        # --- 创建右侧 (HIGH) 的主容器 ---
+        high_main_container = QWidget()
+        high_main_layout = QVBoxLayout(high_main_container)
+        high_main_layout.setContentsMargins(0, 0, 0, 0)
 
-        # 应用样式并填充控件
+        high_title = QLabel("HIGH")
+        high_title.setFont(QFont("Arial", 20, QFont.Bold))
+        high_title.setAlignment(Qt.AlignCenter)
+        
+        # high_columns_layout 将水平容纳多个列
+        self.high_columns_layout = QHBoxLayout()
+
+        high_main_layout.addWidget(high_title)
+        high_main_layout.addLayout(self.high_columns_layout)
+        high_main_layout.addStretch(1) # 保证内容向上对齐
+
+        # 将左右主容器添加到主布局中，并用分隔线隔开
+        main_layout.addWidget(low_main_container, 1) # 权重为1
+        
+        separator = QFrame()
+        separator.setFrameShape(QFrame.VLine)
+        separator.setFrameShadow(QFrame.Sunken)
+        main_layout.addWidget(separator)
+
+        main_layout.addWidget(high_main_container, 1) # 权重为1
+
         self.apply_stylesheet()
         self.populate_ui()
 
     def apply_stylesheet(self):
-        """创建并应用 QSS 样式表 (从 a.py 借用)"""
+        """创建并应用 QSS 样式表"""
         button_styles = {
             "Cyan": ("cyan", "black"), "Blue": ("blue", "white"),
             "Purple": ("purple", "white"), "Green": ("green", "white"),
@@ -210,35 +245,61 @@ class HighLowWindow(QMainWindow):
 
     def populate_ui(self):
         """
-        根据解析的 high_low_data 动态创建界面上的所有控件
+        根据数据动态创建界面。超过阈值的项目将独立成列。
         """
-        # 遍历每个时间段 (e.g., '5Y', '2Y')
+        # 分别填充 Low 和 High 两大区域
+        self._populate_category_columns(self.low_columns_layout, 'Low')
+        self._populate_category_columns(self.high_columns_layout, 'High')
+
+    def _populate_category_columns(self, parent_layout, category_name):
+        """
+        辅助函数，用于为一个类别（Low 或 High）填充所有列。
+        :param parent_layout: QHBoxLayout，用于添加新的列
+        :param category_name: 'Low' 或 'High'
+        """
+        large_groups = []
+        normal_groups = []
+
+        # 1. 将所有时间段根据其项目数量分类
         for period, categories in self.high_low_data.items():
-            # --- 处理 Low 列表 ---
-            low_symbols = categories.get('Low', [])
-            if low_symbols: # 仅当列表不为空时创建 GroupBox
-                low_group_box = QGroupBox(f"{period} Low")
-                low_group_layout = QVBoxLayout()
-                low_group_box.setLayout(low_group_layout)
-                
-                for symbol in low_symbols:
-                    button = self.create_symbol_button(symbol)
-                    low_group_layout.addWidget(button)
-                
-                self.low_layout.addWidget(low_group_box)
+            symbols = categories.get(category_name, [])
+            if not symbols:
+                continue
+            
+            group_title = f"{period} {category_name}"
+            if len(symbols) > MAX_ITEMS_PER_COLUMN:
+                large_groups.append((group_title, symbols))
+            else:
+                normal_groups.append((group_title, symbols))
 
-            # --- 处理 High 列表 ---
-            high_symbols = categories.get('High', [])
-            if high_symbols: # 仅当列表不为空时创建 GroupBox
-                high_group_box = QGroupBox(f"{period} High")
-                high_group_layout = QVBoxLayout()
-                high_group_box.setLayout(high_group_layout)
+        # 2. 为每个 "大分组" 创建一个独立的列
+        for title, symbols in large_groups:
+            column_layout = QVBoxLayout()
+            column_layout.setAlignment(Qt.AlignTop)
+            group_box = self._create_period_groupbox(title, symbols)
+            column_layout.addWidget(group_box)
+            parent_layout.addLayout(column_layout)
 
-                for symbol in high_symbols:
-                    button = self.create_symbol_button(symbol)
-                    high_group_layout.addWidget(button)
+        # 3. 将所有 "普通分组" 放入一个共享的列中
+        if normal_groups:
+            column_layout = QVBoxLayout()
+            column_layout.setAlignment(Qt.AlignTop)
+            for title, symbols in normal_groups:
+                group_box = self._create_period_groupbox(title, symbols)
+                column_layout.addWidget(group_box)
+            parent_layout.addLayout(column_layout)
 
-                self.high_layout.addWidget(high_group_box)
+    def _create_period_groupbox(self, title, symbols):
+        """辅助函数，创建一个包含所有symbol按钮的GroupBox"""
+        group_box = QGroupBox(title)
+        group_layout = QVBoxLayout()
+        group_box.setLayout(group_layout)
+
+        for symbol in symbols:
+            button = self.create_symbol_button(symbol)
+            group_layout.addWidget(button)
+        
+        return group_box
 
     def create_symbol_button(self, symbol):
         """辅助函数，用于创建一个配置好的 symbol 按钮"""
