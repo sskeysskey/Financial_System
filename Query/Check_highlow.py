@@ -25,7 +25,7 @@ from Chart_input import plot_financial_data
 # ----------------------------------------------------------------------
 # 如果一个时间段内的项目超过这个数量，则单独成为一列。
 # 同时，这也是合并列中项目总数的上限。
-MAX_ITEMS_PER_COLUMN = 15
+MAX_ITEMS_PER_COLUMN = 13
 
 # 文件路径
 HIGH_LOW_PATH = '/Users/yanzhang/Documents/News/HighLow.txt'
@@ -397,8 +397,9 @@ class HighLowWindow(QMainWindow):
         group_box.setLayout(group_layout)
 
         for symbol in symbols:
-            button = self.create_symbol_button(symbol)
-            group_layout.addWidget(button)
+            # 用新的小容器替代单个按钮
+            widget = self.create_symbol_widget(symbol)
+            group_layout.addWidget(widget)
         
         return group_box
 
@@ -536,6 +537,40 @@ class HighLowWindow(QMainWindow):
         self.symbol_manager.reset()
         QApplication.quit()
         event.accept() # 接受关闭事件
+
+    def create_symbol_widget(self, symbol):
+        """
+        创建一个 QWidget，垂直包含按钮和其下方的标签栏，
+        保证二者同宽。
+        """
+        # 1. 创建按钮（仍保持右键菜单、点击信号等逻辑）
+        button = self.create_symbol_button(symbol)
+
+        # 2. 获取标签文本
+        tags_info = self.get_tags_for_symbol(symbol)
+        if isinstance(tags_info, list):
+            tags_info = ", ".join(tags_info)
+
+        # 3. 创建下方的 QLabel 作为横栏
+        label = QLabel(tags_info)
+        label.setAlignment(Qt.AlignCenter)
+        # 你可以根据喜好调整样式
+        label.setStyleSheet("""
+            background-color: lightyellow;
+            color: black;
+            font-size: 12px;
+            padding: 2px;
+        """)
+
+        # 4. 用一个 QWidget 把按钮和标签包装起来
+        container = QWidget()
+        vlay = QVBoxLayout(container)
+        vlay.setContentsMargins(0,0,0,0)
+        vlay.setSpacing(2)
+        vlay.addWidget(button)
+        vlay.addWidget(label)
+
+        return container
 
 # ----------------------------------------------------------------------
 # 主执行入口
