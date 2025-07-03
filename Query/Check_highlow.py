@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QCursor, QColor, QFont
+import math # 导入 math 模块用于计算总页数
 
 # ----------------------------------------------------------------------
 # 确保可以从您的自定义模块导入
@@ -139,8 +140,7 @@ class HighLowWindow(QMainWindow):
         # --- 创建左侧 (LOW) 的主容器 ---
         low_main_container = QWidget()
         low_main_layout = QVBoxLayout(low_main_container)
-        low_main_layout.setContentsMargins(0, 0, 0, 0)
-        
+        low_main_layout.setContentsMargins(10, 0, 10, 0)
         low_title = QLabel("LOW")
         low_title.setFont(QFont("Arial", 20, QFont.Bold))
         low_title.setAlignment(Qt.AlignCenter)
@@ -155,8 +155,7 @@ class HighLowWindow(QMainWindow):
         # --- 创建右侧 (HIGH) 的主容器 ---
         high_main_container = QWidget()
         high_main_layout = QVBoxLayout(high_main_container)
-        high_main_layout.setContentsMargins(0, 0, 0, 0)
-
+        high_main_layout.setContentsMargins(10, 0, 10, 0)
         high_title = QLabel("HIGH")
         high_title.setFont(QFont("Arial", 20, QFont.Bold))
         high_title.setAlignment(Qt.AlignCenter)
@@ -256,43 +255,41 @@ class HighLowWindow(QMainWindow):
 
     def _populate_category_columns(self, parent_layout, category_name):
         """
-        【关键改动 2】: 实现动态列合并（Bin Packing）算法
+        【关键改动】: 采用两步法：1. 扁平化数据 2. 应用统一的打包算法
         """
-        large_groups = []
-        normal_groups = []
-
-        # 1. 将所有时间段根据其项目数量分类
+        # --- 步骤 1: 预处理和扁平化 ---
+        # 创建一个统一的列表，其中所有分组都保证 <= 15 项。
+        all_display_groups = []
         for period, categories in self.high_low_data.items():
             symbols = categories.get(category_name, [])
             if not symbols:
                 continue
-            
-            group_data = (f"{period} {category_name}", symbols)
-            if len(symbols) > MAX_ITEMS_PER_COLUMN:
-                large_groups.append(group_data)
+
+            original_title = f"{period} {category_name}"
+            num_symbols = len(symbols)
+
+            if num_symbols > MAX_ITEMS_PER_COLUMN:
+                # 如果是“大分组”，则在此处将其拆分为带编号的小分组
+                for i in range(0, num_symbols, MAX_ITEMS_PER_COLUMN):
+                    symbol_chunk = symbols[i:i + MAX_ITEMS_PER_COLUMN]
+                    chunk_index = (i // MAX_ITEMS_PER_COLUMN) + 1
+                    chunk_title = f"{original_title} ({chunk_index})"
+                    all_display_groups.append((chunk_title, symbol_chunk))
             else:
-                normal_groups.append(group_data)
+                # 如果是“小分组”，直接添加
+                all_display_groups.append((original_title, symbols))
 
-        # 2. 为每个 "大分组" 创建一个独立的列
-        for title, symbols in large_groups:
-            column_layout = QVBoxLayout()
-            column_layout.setAlignment(Qt.AlignTop)
-            group_box = self._create_period_groupbox(title, symbols)
-            column_layout.addWidget(group_box)
-            parent_layout.addLayout(column_layout)
-
-        # 3. 将所有 "普通分组" 智能地放入一个或多个列中
-        if not normal_groups:
+        # --- 步骤 2: 对扁平化后的列表应用统一的列打包算法 ---
+        if not all_display_groups:
             return
 
         current_column_layout = None
         current_column_count = 0
 
-        for title, symbols in normal_groups:
+        for title, symbols in all_display_groups:
             group_item_count = len(symbols)
 
-            # 如果当前列不存在，或者将要添加的组会导致当前列超限
-            # 那么我们就需要一个新列
+            # 如果当前列无法容纳这个新分组，则“封箱”旧列，并创建新列
             if current_column_layout is None or (current_column_count + group_item_count > MAX_ITEMS_PER_COLUMN):
                 # 如果当前列不是None（意味着它是一个已满的列），先把它添加到父布局中
                 if current_column_layout is not None:
