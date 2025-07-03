@@ -11,10 +11,6 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QCursor, QColor, QFont
 
-# ----------------------------------------------------------------------
-# 确保可以从您的自定义模块导入
-# ----------------------------------------------------------------------
-# 请确保此路径正确，以便能够导入 plot_financial_data
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Query')
 from Chart_input import plot_financial_data
 
