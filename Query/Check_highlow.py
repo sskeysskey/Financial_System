@@ -123,7 +123,7 @@ class HighLowWindow(QMainWindow):
     def init_ui(self):
         """初始化UI界面"""
         self.setWindowTitle("High/Low Viewer")
-        self.setGeometry(100, 100, 1600, 900) # 适当增大了窗口初始尺寸
+        self.setGeometry(100, 100, 1600, 1000) # 适当增大了窗口初始尺寸
 
         # 使用 QScrollArea 以便内容可滚动
         scroll_area = QScrollArea(self)
@@ -322,14 +322,40 @@ class HighLowWindow(QMainWindow):
         
         return group_box
 
+    # --- 【新增方法】: 从 panel.py 移植过来的标签查找函数 ---
+    def get_tags_for_symbol(self, symbol):
+        """
+        根据 symbol 在 self.json_data 中查找 tag 信息。
+        这模拟了 panel.py 中的行为，遍历 'stocks' 和 'etfs' 列表。
+        """
+        for item in self.json_data.get("stocks", []):
+            if item.get("symbol") == symbol:
+                return item.get("tag", "无标签")
+        for item in self.json_data.get("etfs", []):
+            if item.get("symbol") == symbol:
+                return item.get("tag", "无标签")
+        return "无标签"
+    
     def create_symbol_button(self, symbol):
-        """辅助函数，用于创建一个配置好的 symbol 按钮"""
+        """辅助函数，用于创建一个配置好的 symbol 按钮，并添加悬浮提示。"""
         button_text = f"{symbol} {self.compare_data.get(symbol, '')}"
         button = QPushButton(button_text)
         button.setObjectName(self.get_button_style_name(symbol))
         button.setCursor(QCursor(Qt.PointingHandCursor))
         # 使用 lambda 捕获当前的 symbol 值
         button.clicked.connect(lambda _, s=symbol: self.on_symbol_click(s))
+
+        # --- 【关键修改】: 调用新的辅助函数并美化 Tooltip ---
+        tags_info = self.get_tags_for_symbol(symbol)
+        
+        # 如果返回的是列表（尽管在此函数中不会），将其转换为字符串
+        if isinstance(tags_info, list):
+            tags_info = ", ".join(tags_info)
+            
+        # 使用富文本格式化 Tooltip，就像 panel.py 中一样
+        button.setToolTip(f"<div style='font-size: 20px; background-color: lightyellow; color: black;'>{tags_info}</div>")
+        # --- 【修改结束】 ---
+
         return button
 
     def on_symbol_click(self, symbol):
