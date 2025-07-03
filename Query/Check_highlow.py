@@ -16,15 +16,14 @@ sys.path.append('/Users/yanzhang/Documents/Financial_System/Query')
 from Chart_input import plot_financial_data
 
 # ----------------------------------------------------------------------
-# 常量 / 全局配置 (从 a.py 借用)
+# 常量 / 全局配置
 # ----------------------------------------------------------------------
-# 新增：如果一个时间段内的项目超过这个数量，则单独成为一列
+# 如果一个时间段内的项目超过这个数量，则单独成为一列。
+# 同时，这也是合并列中项目总数的上限。
 MAX_ITEMS_PER_COLUMN = 15
 
 # 文件路径
 HIGH_LOW_PATH = '/Users/yanzhang/Documents/News/HighLow.txt'
-
-# 复用 a.py 中的路径
 CONFIG_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json'
 COLORS_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Colors.json'
 DESCRIPTION_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
@@ -35,7 +34,7 @@ MARKETCAP_PATH = '/Users/yanzhang/Documents/News/backup/marketcap_pe.txt'
 DB_PATH = '/Users/yanzhang/Documents/Database/Finance.db'
 
 # ----------------------------------------------------------------------
-# 工具 / 辅助函数 (部分从 a.py 借用)
+# 工具 / 辅助函数 (与之前版本相同)
 # ----------------------------------------------------------------------
 
 def parse_high_low_file(path):
@@ -169,15 +168,19 @@ class HighLowWindow(QMainWindow):
         high_main_layout.addLayout(self.high_columns_layout)
         high_main_layout.addStretch(1) # 保证内容向上对齐
 
-        # 将左右主容器添加到主布局中，并用分隔线隔开
-        main_layout.addWidget(low_main_container, 1) # 权重为1
+        # --- 【关键改动 1】: 移除 addWidget 中的拉伸因子 ---
+        # 之前是 addWidget(..., 1)，现在不带 '1'，让宽度自适应内容
+        main_layout.addWidget(low_main_container)
         
         separator = QFrame()
         separator.setFrameShape(QFrame.VLine)
         separator.setFrameShadow(QFrame.Sunken)
         main_layout.addWidget(separator)
 
-        main_layout.addWidget(high_main_container, 1) # 权重为1
+        main_layout.addWidget(high_main_container)
+        
+        # 在末尾添加一个拉伸，这样所有内容会靠左对齐，而不是被拉伸以填满窗口
+        main_layout.addStretch(1)
 
         self.apply_stylesheet()
         self.populate_ui()
@@ -253,9 +256,7 @@ class HighLowWindow(QMainWindow):
 
     def _populate_category_columns(self, parent_layout, category_name):
         """
-        辅助函数，用于为一个类别（Low 或 High）填充所有列。
-        :param parent_layout: QHBoxLayout，用于添加新的列
-        :param category_name: 'Low' 或 'High'
+        【关键改动 2】: 实现动态列合并（Bin Packing）算法
         """
         large_groups = []
         normal_groups = []
@@ -266,11 +267,11 @@ class HighLowWindow(QMainWindow):
             if not symbols:
                 continue
             
-            group_title = f"{period} {category_name}"
+            group_data = (f"{period} {category_name}", symbols)
             if len(symbols) > MAX_ITEMS_PER_COLUMN:
-                large_groups.append((group_title, symbols))
+                large_groups.append(group_data)
             else:
-                normal_groups.append((group_title, symbols))
+                normal_groups.append(group_data)
 
         # 2. 为每个 "大分组" 创建一个独立的列
         for title, symbols in large_groups:
@@ -280,14 +281,37 @@ class HighLowWindow(QMainWindow):
             column_layout.addWidget(group_box)
             parent_layout.addLayout(column_layout)
 
-        # 3. 将所有 "普通分组" 放入一个共享的列中
-        if normal_groups:
-            column_layout = QVBoxLayout()
-            column_layout.setAlignment(Qt.AlignTop)
-            for title, symbols in normal_groups:
-                group_box = self._create_period_groupbox(title, symbols)
-                column_layout.addWidget(group_box)
-            parent_layout.addLayout(column_layout)
+        # 3. 将所有 "普通分组" 智能地放入一个或多个列中
+        if not normal_groups:
+            return
+
+        current_column_layout = None
+        current_column_count = 0
+
+        for title, symbols in normal_groups:
+            group_item_count = len(symbols)
+
+            # 如果当前列不存在，或者将要添加的组会导致当前列超限
+            # 那么我们就需要一个新列
+            if current_column_layout is None or (current_column_count + group_item_count > MAX_ITEMS_PER_COLUMN):
+                # 如果当前列不是None（意味着它是一个已满的列），先把它添加到父布局中
+                if current_column_layout is not None:
+                    parent_layout.addLayout(current_column_layout)
+
+                # 创建一个新列
+                current_column_layout = QVBoxLayout()
+                current_column_layout.setAlignment(Qt.AlignTop)
+                current_column_count = 0  # 重置计数器
+
+            # 将当前的 groupbox 添加到当前列中
+            group_box = self._create_period_groupbox(title, symbols)
+            current_column_layout.addWidget(group_box)
+            current_column_count += group_item_count # 更新当前列的项目总数
+
+        # 循环结束后，不要忘记添加最后一个正在构建的列
+        if current_column_layout is not None:
+            parent_layout.addLayout(current_column_layout)
+
 
     def _create_period_groupbox(self, title, symbols):
         """辅助函数，创建一个包含所有symbol按钮的GroupBox"""
@@ -322,11 +346,6 @@ class HighLowWindow(QMainWindow):
         
         if not sector:
             print(f"警告: 在 Sectors_All.json 中找不到 '{symbol}' 的板块信息。")
-            # 即使找不到板块，也可以尝试绘图，plot_financial_data 内部可能有备用逻辑
-            # 或者在这里直接返回
-            # return
-
-        # 2. 获取相关数据
         compare_value = self.compare_data.get(symbol, "N/A")
         shares_value = self.shares.get(symbol, "N/A")
         marketcap_val, pe_val = self.marketcap_pe_data.get(symbol, (None, 'N/A'))
