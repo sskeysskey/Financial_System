@@ -88,13 +88,12 @@
     "Qualified_Symbol": {
         "HALO": "",
         "ELV": "",
-        "CNC": "",
-        "MOH": "",
         "MMYT": ""
     },
     "Earning_Filter": {
         "HUM": "",
-        "WCN": ""
+        "WCN": "",
+        "CNC": ""
     },
     "Currencies": {
         "DXY": "美元指数",
