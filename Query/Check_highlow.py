@@ -1,13 +1,17 @@
 import sys
 import json
+import sqlite3
 from collections import OrderedDict
+import subprocess # <--- 1. 新增导入
+import math
+
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QGroupBox, QScrollArea, QLabel, QFrame
+    QPushButton, QGroupBox, QScrollArea, QLabel, QFrame,
+    QMenu, QAction # <--- 1. 新增导入
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QCursor, QColor, QFont
-import math # 导入 math 模块用于计算总页数
 
 # ----------------------------------------------------------------------
 # 确保可以从您的自定义模块导入
@@ -35,18 +39,38 @@ MARKETCAP_PATH = '/Users/yanzhang/Documents/News/backup/marketcap_pe.txt'
 DB_PATH = '/Users/yanzhang/Documents/Database/Finance.db'
 
 # ----------------------------------------------------------------------
-# 工具 / 辅助函数 (与之前版本相同)
+# 工具 / 辅助函数
 # ----------------------------------------------------------------------
 
+# --- 2. 从 panel.py 移植过来的函数 ---
+def execute_external_script(script_type, keyword):
+    """
+    使用非阻塞方式执行外部脚本。
+    """
+    base_path = '/Users/yanzhang/Documents/Financial_System'
+    # 我们只需要 'tags' 的配置，但为了完整性，可以保留其他配置
+    script_configs = {
+        'tags': f'{base_path}/Operations/Editor_Symbol_Tags.py',
+        # ... 其他脚本配置可以放在这里 ...
+    }
+
+    script_path = script_configs.get(script_type)
+    if not script_path:
+        print(f"错误: 未知的脚本类型 '{script_type}'")
+        return
+
+    try:
+        python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
+        # 使用 Popen 进行非阻塞调用
+        subprocess.Popen([python_path, script_path, keyword])
+    except Exception as e:
+        print(f"执行脚本 '{script_path}' 时发生错误: {e}")
+
+# (其他辅助函数无变动)
 def parse_high_low_file(path):
-    """
-    解析 HighLow.txt 文件，返回一个有序字典。
-    结构: {'5Y': {'Low': ['SPXS', ...], 'High': ['USDTRY', ...]}, ...}
-    """
     data = OrderedDict()
     current_period = None
     current_category = None
-
     with open(path, 'r', encoding='utf-8') as file:
         for line in file:
             line = line.strip()
@@ -193,7 +217,6 @@ class HighLowWindow(QMainWindow):
             "Orange": ("orange", "black"), "Red": ("red", "black"),
             "Black": ("black", "white"), "Default": ("gray", "black")
         }
-        
         qss = ""
         for name, (bg, fg) in button_styles.items():
             qss += f"""
@@ -224,6 +247,7 @@ class HighLowWindow(QMainWindow):
         }
         """
         self.setStyleSheet(qss)
+
 
     def lighten_color(self, color_name, factor=1.2):
         """一个简单的函数来让颜色变亮，用于:hover效果"""
@@ -336,8 +360,29 @@ class HighLowWindow(QMainWindow):
                 return item.get("tag", "无标签")
         return "无标签"
     
+    # --- 3. 新增方法：用于创建和显示右键菜单 ---
+    def show_context_menu(self, symbol):
+        """
+        创建并显示一个只包含“编辑 Tags”的右键菜单。
+        """
+        menu = QMenu()
+        
+        # 创建一个 QAction
+        edit_tags_action = QAction("编辑 Tags", self)
+        
+        # 将其 triggered 信号连接到执行外部脚本的函数
+        edit_tags_action.triggered.connect(
+            lambda: execute_external_script('tags', symbol)
+        )
+        
+        # 将 QAction 添加到菜单中
+        menu.addAction(edit_tags_action)
+        
+        # 在当前鼠标位置显示菜单
+        menu.exec_(QCursor.pos())
+
     def create_symbol_button(self, symbol):
-        """辅助函数，用于创建一个配置好的 symbol 按钮，并添加悬浮提示。"""
+        """辅助函数，用于创建一个配置好的 symbol 按钮。"""
         button_text = f"{symbol} {self.compare_data.get(symbol, '')}"
         button = QPushButton(button_text)
         button.setObjectName(self.get_button_style_name(symbol))
@@ -354,7 +399,14 @@ class HighLowWindow(QMainWindow):
             
         # 使用富文本格式化 Tooltip，就像 panel.py 中一样
         button.setToolTip(f"<div style='font-size: 20px; background-color: lightyellow; color: black;'>{tags_info}</div>")
-        # --- 【修改结束】 ---
+
+        # --- 4. 启用并连接右键菜单 ---
+        button.setContextMenuPolicy(Qt.CustomContextMenu)
+        button.customContextMenuRequested.connect(
+            # 使用 lambda 忽略 pos 参数，只传递 symbol
+            lambda pos, s=symbol: self.show_context_menu(s)
+        )
+        # --- 修改结束 ---
 
         return button
 

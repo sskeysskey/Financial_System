@@ -397,7 +397,7 @@ class MainWindow(QMainWindow):
             ("查询数据库...", lambda: self.on_keyword_selected(keyword)),
             ("Kimi检索财报", lambda: execute_external_script('kimi', keyword)),
             ("添加到 Earning", lambda: execute_external_script('earning', keyword)),
-            ("编辑 DB", lambda: execute_external_script('editor_earning', keyword)),
+            ("编辑 Earing DB", lambda: execute_external_script('editor_earning', keyword)),
             None,
             ("编辑 Tags", lambda: execute_external_script('tags', keyword)),
             ("在富途中搜索", lambda: execute_external_script('futu', keyword)),
