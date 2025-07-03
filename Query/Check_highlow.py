@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (
     QPushButton, QGroupBox, QScrollArea, QLabel, QFrame,
     QMenu, QAction
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QCursor, QColor, QFont
 
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Query')
@@ -33,6 +33,18 @@ MARKETCAP_PATH = '/Users/yanzhang/Documents/News/backup/marketcap_pe.txt'
 DB_PATH = '/Users/yanzhang/Documents/Database/Finance.db'
 # 按钮＋标签固定宽度（像素）
 SYMBOL_WIDGET_FIXED_WIDTH = 150
+
+class ClickableLabel(QLabel):
+    clicked = pyqtSignal()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # 鼠标变手型
+        self.setCursor(QCursor(Qt.PointingHandCursor))
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.clicked.emit()
+        super().mousePressEvent(event)
 
 # ----------------------------------------------------------------------
 # Classes
@@ -267,7 +279,7 @@ class HighLowWindow(QMainWindow):
             "Purple": ("purple", "white"), "Green": ("green", "white"),
             "White": ("white", "black"), "Yellow": ("yellow", "black"),
             "Orange": ("orange", "black"), "Red": ("red", "black"),
-            "Black": ("black", "white"), "Default": ("gray", "black")
+            "Black": ("black", "white"), "Default": ("#111111", "gray")
         }
         qss = ""
         for name, (bg, fg) in button_styles.items():
@@ -548,8 +560,8 @@ class HighLowWindow(QMainWindow):
         if isinstance(tags_info, list):
             tags_info = ", ".join(tags_info)
 
-        # 3) 普通 QLabel，左对齐，并固定宽度
-        label = QLabel(tags_info)
+        # --- 用 ClickableLabel 替代普通 QLabel ---
+        label = ClickableLabel(tags_info)
         # 左对齐 + 垂直居中
         label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         label.setFixedWidth(SYMBOL_WIDGET_FIXED_WIDTH)
@@ -566,7 +578,10 @@ class HighLowWindow(QMainWindow):
             padding-left: 4px;
         """)
 
-        # 4) 按钮 + 标签 装到同宽的容器里
+        # 点击 label 时也调用 on_symbol_click
+        label.clicked.connect(lambda: self.on_symbol_click(symbol))
+
+        # --- 把按钮 + 可点标签 装容器 ---
         container = QWidget()
         vlay = QVBoxLayout(container)
         vlay.setContentsMargins(0, 0, 0, 0)
