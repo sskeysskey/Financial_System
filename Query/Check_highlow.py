@@ -1,323 +1,317 @@
+import sys
 import json
-import sqlite3
-from datetime import date
-from dateutil.relativedelta import relativedelta
-import os
 from collections import OrderedDict
+from PyQt5.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QPushButton, QGroupBox, QScrollArea, QLabel
+)
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QCursor, QColor
 
-# --- Configuration ---
-DB_PATH = "/Users/yanzhang/Documents/Database/Finance.db"
-JSON_PATH = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json"
-OUTPUT_PATH = "/Users/yanzhang/Documents/News/HighLow.txt"
-BACKUP_OUTPUT_PATH = "/Users/yanzhang/Documents/News/backup/HighLow.txt" # Path for the backup file
+# ----------------------------------------------------------------------
+# 确保可以从您的自定义模块导入
+# ----------------------------------------------------------------------
+# 请确保此路径正确，以便能够导入 plot_financial_data
+sys.path.append('/Users/yanzhang/Documents/Financial_System/Query')
+from Chart_input import plot_financial_data
 
-# Categories to process as per your request
-TARGET_CATEGORIES = [
-    "Bonds", "Currencies", "Crypto", "Indices",
-    "Commodities", "ETFs", "Economics"
-]
+# ----------------------------------------------------------------------
+# 常量 / 全局配置 (从 a.py 借用)
+# ----------------------------------------------------------------------
+# 新增 HighLow 文件路径
+HIGH_LOW_PATH = '/Users/yanzhang/Documents/News/HighLow.txt'
 
-# Time intervals and their corresponding labels for the output file
-TIME_INTERVALS_CONFIG = {
-    "[1 months]": relativedelta(months=-1),
-    "[3 months]": relativedelta(months=-3),
-    "[6 months]": relativedelta(months=-6),
-    "[1Y]": relativedelta(years=-1),
-    "[2Y]": relativedelta(years=-2),
-    "[5Y]": relativedelta(years=-5)
-}
+# 复用 a.py 中的路径
+CONFIG_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json'
+COLORS_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Colors.json'
+DESCRIPTION_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
+SECTORS_ALL_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
+COMPARE_DATA_PATH = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
+SHARES_PATH = '/Users/yanzhang/Documents/News/backup/Shares.txt'
+MARKETCAP_PATH = '/Users/yanzhang/Documents/News/backup/marketcap_pe.txt'
+DB_PATH = '/Users/yanzhang/Documents/Database/Finance.db'
 
-def get_db_connection(db_file):
-    """Establishes a connection to the SQLite database."""
-    try:
-        conn = sqlite3.connect(db_file)
-        conn.row_factory = sqlite3.Row
-        return conn
-    except sqlite3.Error as e:
-        print(f"Error connecting to database {db_file}: {e}")
-        raise
+# ----------------------------------------------------------------------
+# 工具 / 辅助函数 (部分从 a.py 借用)
+# ----------------------------------------------------------------------
 
-def load_json_data(json_file):
-    """Loads data from a JSON file."""
-    try:
-        with open(json_file, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        print(f"Error: JSON file not found at {json_file}")
-        raise
-    except json.JSONDecodeError:
-        print(f"Error: Could not decode JSON from {json_file}")
-        raise
+def parse_high_low_file(path):
+    """
+    解析 HighLow.txt 文件，返回一个有序字典。
+    结构: {'5Y': {'Low': ['SPXS', ...], 'High': ['USDTRY', ...]}, ...}
+    """
+    data = OrderedDict()
+    current_period = None
+    current_category = None
 
-def get_latest_price_and_date(cursor, table_name, symbol):
-    """Fetches the latest price and date for a given symbol in a table."""
-    try:
-        query = f'SELECT date, price FROM "{table_name}" WHERE name = ? ORDER BY date DESC LIMIT 1'
-        cursor.execute(query, (symbol,))
-        return cursor.fetchone()
-    except sqlite3.OperationalError as e:
-        print(f"Warning: Could not query table '{table_name}' for symbol '{symbol}'. Error: {e}. Skipping symbol.")
-        return None
-
-def get_prices_in_range(cursor, table_name, symbol, start_date_str, end_date_str):
-    """Fetches all prices for a symbol within a given date range."""
-    try:
-        query = f'SELECT price FROM "{table_name}" WHERE name = ? AND date BETWEEN ? AND ?'
-        cursor.execute(query, (symbol, start_date_str, end_date_str))
-        return [row['price'] for row in cursor.fetchall() if row['price'] is not None]
-    except sqlite3.OperationalError as e:
-        print(f"Warning: Could not query price range in table '{table_name}' for symbol '{symbol}'. Error: {e}. Skipping range.")
-        return []
-
-def parse_highlow_file(filepath):
-    """Parses a HighLow.txt file into a dictionary structure."""
-    parsed_data = {label: {"Low": [], "High": []} for label in TIME_INTERVALS_CONFIG.keys()}
-    current_interval_label = None
-    current_list_type = None # "Low" or "High"
-
-    try:
-        with open(filepath, 'r', encoding='utf-8') as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-
-                if line.startswith("[") and line.endswith("]"):
-                    current_interval_label = line
-                    if current_interval_label not in parsed_data: # Handle unknown intervals gracefully
-                        parsed_data[current_interval_label] = {"Low": [], "High": []}
-                    current_list_type = None # Reset list type for new interval
-                elif line.lower() == "low:":
-                    current_list_type = "Low"
-                elif line.lower() == "high:":
-                    current_list_type = "High"
-                elif current_interval_label and current_list_type:
-                    # Remove (new) tags and split symbols
-                    symbols = [s.replace("(new)", "").strip() for s in line.split(',') if s.strip()]
-                    parsed_data[current_interval_label][current_list_type].extend(symbols)
-    except FileNotFoundError:
-        print(f"Info: Backup file {filepath} not found. Assuming all items are new.")
-    except Exception as e:
-        print(f"Error parsing backup file {filepath}: {e}")
-    return parsed_data
-
-
-def write_results_to_file(results_data, output_filepath):
-    """Writes the results dictionary to the specified output file."""
-    output_dir = os.path.dirname(output_filepath)
-    if output_dir and not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-        print(f"Created output directory: {output_dir}")
-
-    try:
-        with open(output_filepath, 'w', encoding='utf-8') as outfile:
-            for interval_label, data in results_data.items():
-                # ===== 新增逻辑：如果过滤后一个区间高低点都为空，则不输出该区间 =====
-                if not data["Low"] and not data["High"]:
-                    continue
-                # =================================================================
-
-                outfile.write(f"{interval_label}\n")
-                outfile.write("Low:\n")
-                if data["Low"]:
-                    outfile.write(", ".join(data["Low"]) + "\n")
-                else:
-                    outfile.write("\n")
-
-                outfile.write("High:\n")
-                if data["High"]:
-                    outfile.write(", ".join(data["High"]) + "\n")
-                else:
-                    outfile.write("\n")
-
-                if interval_label != list(results_data.keys())[-1]:
-                    outfile.write("\n")
-        print(f"Successfully wrote results to {output_filepath}")
-    except IOError as e:
-        print(f"Error: Could not write to output file {output_filepath}. Error: {e}")
-
-
-def main():
-    """Main function to perform the analysis and write the output."""
-    print("Starting financial analysis...")
-
-    # Ensure output directories exist
-    for path in [OUTPUT_PATH, BACKUP_OUTPUT_PATH]:
-        output_dir = os.path.dirname(path)
-        if output_dir and not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-            print(f"Created directory: {output_dir}")
-
-    try:
-        all_sectors_data = load_json_data(JSON_PATH)
-        conn = get_db_connection(DB_PATH)
-        cursor = conn.cursor()
-    except Exception as e:
-        print(f"Critical setup error: {e}. Exiting.")
-        return
-
-    # ===== 新增：提前获取所有ETF符号，方便后续筛选 =====
-    etf_symbols = set(all_sectors_data.get("ETFs", []))
-    # =================================================
-
-    # This will hold the raw results from the current analysis (without "(new)" tags)
-    current_run_results = {label: {"Low": [], "High": []} for label in TIME_INTERVALS_CONFIG.keys()}
-
-    for category_name in TARGET_CATEGORIES:
-        if category_name not in all_sectors_data:
-            print(f"Warning: Category '{category_name}' not found in JSON. Skipping.")
-            continue
-
-        symbols_in_category = all_sectors_data[category_name]
-        if not symbols_in_category:
-            continue
-
-        table_name = category_name
-        print(f"\nProcessing Category: {table_name}")
-        for symbol_name in symbols_in_category:
-            # print(f"  Analyzing Symbol: {symbol_name}")
-            latest_data = get_latest_price_and_date(cursor, table_name, symbol_name)
-
-            if not latest_data:
-                print(f"    No data found for symbol '{symbol_name}' in table '{table_name}'.")
+    with open(path, 'r', encoding='utf-8') as file:
+        for line in file:
+            line = line.strip()
+            if not line:
                 continue
-            try:
-                latest_date_str, latest_price = latest_data['date'], latest_data['price']
-                latest_date_obj = date.fromisoformat(latest_date_str)
-            except (TypeError, ValueError) as e:
-                print(f"    Invalid date format or data for {symbol_name} ('{latest_date_str}'). Error: {e}. Skipping.")
-                continue
-            if latest_price is None:
-                print(f"    Latest price for {symbol_name} on {latest_date_str} is NULL. Skipping.")
-                continue
-            # print(f"    Latest price for {symbol_name}: {latest_price} on {latest_date_str}")
 
-            for interval_label, time_delta in TIME_INTERVALS_CONFIG.items():
-                start_date_obj = latest_date_obj + time_delta
-                start_date_str = start_date_obj.isoformat()
-                prices_in_interval = get_prices_in_range(
-                    cursor, table_name, symbol_name,
-                    start_date_str, latest_date_str
-                )
+            if line.startswith('[') and line.endswith(']'):
+                current_period = line[1:-1]
+                data[current_period] = {'Low': [], 'High': []}
+                current_category = None # 新周期开始，重置类别
+            elif line.lower() == 'low:':
+                if current_period:
+                    current_category = 'Low'
+            elif line.lower() == 'high:':
+                if current_period:
+                    current_category = 'High'
+            elif current_period and current_category:
+                # 这一行是 symbols
+                symbols = [symbol.strip() for symbol in line.split(',') if symbol.strip()]
+                data[current_period][current_category].extend(symbols)
+    return data
 
-                # ===== 新增这两行 =====
-                # 如果这个区间里只有最新一条（或根本没有）数据，就跳过，不当高低点
-                if len(prices_in_interval) < 2:
-                    continue
-                # =======================
+def load_json(path):
+    """加载 JSON 文件"""
+    with open(path, 'r', encoding='utf-8') as file:
+        return json.load(file, object_pairs_hook=OrderedDict)
 
-                min_price_in_interval = min(prices_in_interval)
-                max_price_in_interval = max(prices_in_interval)
+def load_text_data(path):
+    """加载文本文件数据，如 Compare_All.txt"""
+    data = {}
+    with open(path, 'r', encoding='utf-8') as file:
+        for line in file:
+            line = line.strip()
+            if not line: continue
+            key, value = map(str.strip, line.split(':', 1))
+            cleaned_key = key.split()[-1]
+            if ',' in value:
+                parts = [p.strip() for p in value.split(',')]
+                data[cleaned_key] = tuple(parts)
+            else:
+                data[cleaned_key] = value
+    return data
 
-                if latest_price == min_price_in_interval:
-                    if symbol_name not in current_run_results[interval_label]["Low"]:
-                        current_run_results[interval_label]["Low"].append(symbol_name)
-                        # print(f"      !!! {symbol_name} is at a {interval_label} LOW: {latest_price}")
-                
-                if latest_price == max_price_in_interval:
-                    if symbol_name not in current_run_results[interval_label]["High"]:
-                        current_run_results[interval_label]["High"].append(symbol_name)
-                        # print(f"      !!! {symbol_name} is at a {interval_label} HIGH: {latest_price}")
-    if conn:
-        conn.close()
+def load_marketcap_pe_data(path):
+    """加载市值和PE数据"""
+    data = {}
+    with open(path, 'r') as file:
+        for line in file:
+            key, values = map(str.strip, line.split(':', 1))
+            parts = [p.strip() for p in values.split(',')]
+            if len(parts) >= 2:
+                marketcap_val, pe_val, *_ = parts
+                data[key] = (float(marketcap_val), pe_val)
+    return data
 
-    # --- New logic for comparing with backup and adding (new) tags ---
-    print(f"\nReading backup file from {BACKUP_OUTPUT_PATH}...")
-    backup_results_parsed = parse_highlow_file(BACKUP_OUTPUT_PATH)
-
-    # 构建一个只存放“新增”符号的结果字典
-    results_for_main_output = {
-        label: {"Low": [], "High": []}
-        for label in TIME_INTERVALS_CONFIG.keys()
-    }
-
-    print("Filtering only newly appeared symbols (no '(new)' tag)...")
-    for interval_label in TIME_INTERVALS_CONFIG.keys():
-        for list_type in ("Low", "High"):
-            current_symbols = current_run_results[interval_label][list_type]
-            backup_symbols  = backup_results_parsed.get(interval_label, {}).get(list_type, [])
-            # 只保留在 current_symbols 中但不在 backup_symbols 中的
-            new_only = [sym for sym in current_symbols if sym not in backup_symbols]
-            if new_only:
-                print(f"  {interval_label} {list_type} 新增: {', '.join(new_only)}")
-            results_for_main_output[interval_label][list_type] = new_only
-
-    # ===== 修改部分：将过滤逻辑推广到Low和High =====
-    print("\nApplying ETF High/Low filter for the main output file...")
-    # 变量名修改得更通用
-    ETF_SHORT_TERM_EXCLUSION_INTERVALS = ["[1 months]", "[3 months]"]
-    
-    for interval_label, data in results_for_main_output.items():
-        # 检查是否是需要过滤的短期区间
-        if interval_label in ETF_SHORT_TERM_EXCLUSION_INTERVALS:
-            # 同时处理 "Low" 和 "High" 列表
-            for list_type in ("Low", "High"):
-                symbol_list = data[list_type]
-                if not symbol_list:
-                    continue
-                
-                # 重建列表，只保留那些不是ETF的品种
-                original_count = len(symbol_list)
-                filtered_list = [symbol for symbol in symbol_list if symbol not in etf_symbols]
-                
-                if len(filtered_list) < original_count:
-                    removed_count = original_count - len(filtered_list)
-                    print(f"  Filtered out {removed_count} ETF(s) from '{interval_label}' {list_type} list for main output.")
-                
-                # 用过滤后的列表更新结果
-                results_for_main_output[interval_label][list_type] = filtered_list
-    # =================================================================
-
-    has_any_new = any(
-        results_for_main_output[label][lt]
-        for label in results_for_main_output
-        for lt in ("Low", "High")
-    )
-
-    # 只有在发现新增符号时才写主输出文件
-    if has_any_new:
-        # 只保留那些真正有新增的区间
-        filtered_results = {
-            label: data
-            for label, data in results_for_main_output.items()
-            if data["Low"] or data["High"]
-        }
-
-        # 1) 先倒序：5Y→2Y→1Y→6m→3m→1m
-        rev_filtered = OrderedDict(reversed(list(filtered_results.items())))
-
-        # 2) 跨区间去重：同一类型（Low/High）在更长区间出现过，就不在后面的区间显示
-        cascade = OrderedDict()
-        seen_low, seen_high = set(), set()
-        for interval_label, data in rev_filtered.items():
-            # 只取之前没出现过的
-            new_low  = [s for s in data["Low"]  if s not in seen_low]
-            new_high = [s for s in data["High"] if s not in seen_high]
-
-            # 只有当去重后列表不为空时，才添加到最终结果中
-            if new_low or new_high:
-                cascade[interval_label] = {
-                    "Low":  new_low,
-                    "High": new_high
-                }
-                seen_low .update(new_low)
-                seen_high.update(new_high)
+# ----------------------------------------------------------------------
+# PyQt5 主应用窗口
+# ----------------------------------------------------------------------
+class HighLowWindow(QMainWindow):
+    def __init__(self, high_low_data, keyword_colors, sector_data, compare_data, shares, marketcap_pe_data, json_data):
+        super().__init__()
         
-        # 再次检查，因为去重后可能变为空
-        if cascade:
-            print(f"\nWriting cascaded new-only results to {OUTPUT_PATH}…")
-            write_results_to_file(cascade, OUTPUT_PATH)
-        else:
-            print("\nNo new symbols remaining after cascading. Skip writing main output file.")
+        # 将加载的数据存储为实例变量
+        self.high_low_data = high_low_data
+        self.keyword_colors = keyword_colors
+        self.sector_data = sector_data
+        self.compare_data = compare_data
+        self.shares = shares
+        self.marketcap_pe_data = marketcap_pe_data
+        self.json_data = json_data
+        
+        self.init_ui()
 
-    else:
-        print("\nNo new symbols found. Skip writing main output file.")
+    def init_ui(self):
+        """初始化UI界面"""
+        self.setWindowTitle("High/Low Viewer")
+        self.setGeometry(150, 150, 1200, 800)
 
-    # 无论是否有新增，都要用完整的 current_run_results 更新备份文件
-    print(f"\nUpdating backup file at {BACKUP_OUTPUT_PATH} with current raw results...")
-    write_results_to_file(current_run_results, BACKUP_OUTPUT_PATH)
+        # 使用 QScrollArea 以便内容可滚动
+        scroll_area = QScrollArea(self)
+        scroll_area.setWidgetResizable(True)
+        self.setCentralWidget(scroll_area)
 
-    print("\nAnalysis complete. Output files generated/updated.")
+        scroll_content = QWidget()
+        scroll_area.setWidget(scroll_content)
 
-if __name__ == "__main__":
-    main()
+        # 主布局：一个水平布局，分为左右两列
+        main_layout = QHBoxLayout(scroll_content)
+        scroll_content.setLayout(main_layout)
+
+        # 创建左列 (Low) 和右列 (High) 的垂直布局
+        self.low_layout = QVBoxLayout()
+        self.low_layout.setAlignment(Qt.AlignTop)
+        self.high_layout = QVBoxLayout()
+        self.high_layout.setAlignment(Qt.AlignTop)
+
+        main_layout.addLayout(self.low_layout)
+        main_layout.addLayout(self.high_layout)
+
+        # 应用样式并填充控件
+        self.apply_stylesheet()
+        self.populate_ui()
+
+    def apply_stylesheet(self):
+        """创建并应用 QSS 样式表 (从 a.py 借用)"""
+        button_styles = {
+            "Cyan": ("cyan", "black"), "Blue": ("blue", "white"),
+            "Purple": ("purple", "white"), "Green": ("green", "white"),
+            "White": ("white", "black"), "Yellow": ("yellow", "black"),
+            "Orange": ("orange", "black"), "Red": ("red", "black"),
+            "Black": ("black", "white"), "Default": ("gray", "black")
+        }
+        
+        qss = ""
+        for name, (bg, fg) in button_styles.items():
+            qss += f"""
+            QPushButton#{name} {{
+                background-color: {bg};
+                color: {fg};
+                font-size: 16px;
+                padding: 5px;
+                border: 1px solid #333;
+                border-radius: 4px;
+            }}
+            QPushButton#{name}:hover {{
+                background-color: {self.lighten_color(bg)};
+            }}
+            """
+        qss += """
+        QGroupBox {
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 15px;
+            border: 1px solid gray;
+            border-radius: 5px;
+        }
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            subcontrol-position: top center; /* 标题居中 */
+            padding: 0 10px;
+        }
+        """
+        self.setStyleSheet(qss)
+
+    def lighten_color(self, color_name, factor=1.2):
+        """一个简单的函数来让颜色变亮，用于:hover效果"""
+        color = QColor(color_name)
+        h, s, l, a = color.getHslF()
+        l = min(1.0, l * factor)
+        color.setHslF(h, s, l, a)
+        return color.name()
+
+    def get_button_style_name(self, keyword):
+        """返回按钮的 objectName 以应用 QSS 样式 (从 a.py 借用)"""
+        color_map = {
+            "red": "Red", "cyan": "Cyan", "blue": "Blue", "purple": "Purple",
+            "yellow": "Yellow", "orange": "Orange", "black": "Black",
+            "white": "White", "green": "Green"
+        }
+        for color, style_name in color_map.items():
+            if keyword in self.keyword_colors.get(f"{color}_keywords", []):
+                return style_name
+        return "Default"
+
+    def populate_ui(self):
+        """
+        根据解析的 high_low_data 动态创建界面上的所有控件
+        """
+        # 遍历每个时间段 (e.g., '5Y', '2Y')
+        for period, categories in self.high_low_data.items():
+            # --- 处理 Low 列表 ---
+            low_symbols = categories.get('Low', [])
+            if low_symbols: # 仅当列表不为空时创建 GroupBox
+                low_group_box = QGroupBox(f"{period} Low")
+                low_group_layout = QVBoxLayout()
+                low_group_box.setLayout(low_group_layout)
+                
+                for symbol in low_symbols:
+                    button = self.create_symbol_button(symbol)
+                    low_group_layout.addWidget(button)
+                
+                self.low_layout.addWidget(low_group_box)
+
+            # --- 处理 High 列表 ---
+            high_symbols = categories.get('High', [])
+            if high_symbols: # 仅当列表不为空时创建 GroupBox
+                high_group_box = QGroupBox(f"{period} High")
+                high_group_layout = QVBoxLayout()
+                high_group_box.setLayout(high_group_layout)
+
+                for symbol in high_symbols:
+                    button = self.create_symbol_button(symbol)
+                    high_group_layout.addWidget(button)
+
+                self.high_layout.addWidget(high_group_box)
+
+    def create_symbol_button(self, symbol):
+        """辅助函数，用于创建一个配置好的 symbol 按钮"""
+        button_text = f"{symbol} {self.compare_data.get(symbol, '')}"
+        button = QPushButton(button_text)
+        button.setObjectName(self.get_button_style_name(symbol))
+        button.setCursor(QCursor(Qt.PointingHandCursor))
+        # 使用 lambda 捕获当前的 symbol 值
+        button.clicked.connect(lambda _, s=symbol: self.on_symbol_click(s))
+        return button
+
+    def on_symbol_click(self, symbol):
+        """
+        当一个 symbol 按钮被点击时调用此函数，功能与 a.py 中的 on_keyword_selected_chart 类似
+        """
+        print(f"按钮 '{symbol}' 被点击，准备显示图表...")
+        
+        # 1. 查找 symbol 属于哪个 sector
+        sector = next((s for s, names in self.sector_data.items() if symbol in names), None)
+        
+        if not sector:
+            print(f"警告: 在 Sectors_All.json 中找不到 '{symbol}' 的板块信息。")
+            # 即使找不到板块，也可以尝试绘图，plot_financial_data 内部可能有备用逻辑
+            # 或者在这里直接返回
+            # return
+
+        # 2. 获取相关数据
+        compare_value = self.compare_data.get(symbol, "N/A")
+        shares_value = self.shares.get(symbol, "N/A")
+        marketcap_val, pe_val = self.marketcap_pe_data.get(symbol, (None, 'N/A'))
+
+        # 3. 调用绘图函数
+        try:
+            plot_financial_data(
+                DB_PATH, sector, symbol, compare_value, shares_value,
+                marketcap_val, pe_val, self.json_data, '1Y', False
+            )
+        except Exception as e:
+            print(f"调用 plot_financial_data 时出错: {e}")
+
+
+# ----------------------------------------------------------------------
+# 主执行入口
+# ----------------------------------------------------------------------
+if __name__ == '__main__':
+    # 1. 加载所有需要的数据
+    print("正在加载数据...")
+    try:
+        high_low_data = parse_high_low_file(HIGH_LOW_PATH)
+        keyword_colors = load_json(COLORS_PATH)
+        json_data = load_json(DESCRIPTION_PATH)
+        sector_data = load_json(SECTORS_ALL_PATH)
+        compare_data = load_text_data(COMPARE_DATA_PATH)
+        shares = load_text_data(SHARES_PATH)
+        marketcap_pe_data = load_marketcap_pe_data(MARKETCAP_PATH)
+        print("数据加载完成。")
+    except FileNotFoundError as e:
+        print(f"错误: 找不到文件 {e.filename}。请检查路径是否正确。")
+        sys.exit(1)
+    except Exception as e:
+        print(f"加载数据时发生未知错误: {e}")
+        sys.exit(1)
+
+    # 2. 创建并运行 PyQt5 应用
+    app = QApplication(sys.argv)
+    main_window = HighLowWindow(
+        high_low_data,
+        keyword_colors,
+        sector_data,
+        compare_data,
+        shares,
+        marketcap_pe_data,
+        json_data
+    )
+    main_window.show()
+    sys.exit(app.exec_())
