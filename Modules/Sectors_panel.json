@@ -90,11 +90,11 @@
         "ELV": "",
         "CNC": "",
         "MOH": "",
-        "MMYT": "",
-        "WCN": ""
+        "MMYT": ""
     },
     "Earning_Filter": {
-        "HUM": ""
+        "HUM": "",
+        "WCN": ""
     },
     "Currencies": {
         "DXY": "美元指数",
