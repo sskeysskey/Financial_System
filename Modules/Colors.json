@@ -186,7 +186,6 @@
         "FMX",
         "MNSO",
         "NXT",
-        "MOH",
         "HMC",
         "SMCI",
         "EDU",
@@ -713,7 +712,8 @@
         "PBR",
         "BAH",
         "TAP",
-        "CHE"
+        "CHE",
+        "MOH"
     ],
     "orange_keywords": [
         "NASDAQ",

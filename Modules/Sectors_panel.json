@@ -18,7 +18,10 @@
         "BRK-A": ""
     },
     "Healthcare": {
-        "CHE": ""
+        "CHE": "",
+        "ELV": "",
+        "CNC": "",
+        "MOH": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -107,7 +110,10 @@
         "BJ": ""
     },
     "Earning_Filter": {
-        "Z": ""
+        "HUM": "",
+        "MMYT": "",
+        "MOH": "",
+        "WCN": ""
     },
     "Currencies": {
         "DXY": "美元指数",
