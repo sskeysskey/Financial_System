@@ -2,11 +2,11 @@ import re
 import sys
 import json
 import subprocess
-import tkinter as tk
 import pyperclip
 from functools import lru_cache
 import concurrent.futures
-import sqlite3  # 新增: 导入sqlite3库
+import sqlite3
+from PyQt5.QtWidgets import QApplication, QInputDialog, QLineEdit
 
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Query')
 from Chart_input import plot_financial_data
@@ -29,11 +29,6 @@ def lazy_load_data(path, data_type='json'):
                 key, value = map(str.strip, line.split(':', 1))
                 data[key] = value
             return data
-
-def close_app(root):
-    if root:
-        root.quit()
-        root.destroy()
 
 def display_dialog(message):
     # AppleScript代码模板
@@ -125,14 +120,13 @@ def load_data_parallel():
     
     return results
 
-def input_mapping(root, data, db_path, user_input):
+def input_mapping(data, db_path, user_input):
     """
     修改后的输入映射函数。
-    - 调用 match_and_plot 时不再传递 shares 和 marketcap_pe 数据。
+    - 不再需要 root 参数，也不再调用 close_app。
     """
     if not user_input:
         print("未输入任何内容，程序即将退出。")
-        close_app(root)
         return
 
     input_trimmed = user_input.strip()
@@ -140,7 +134,8 @@ def input_mapping(root, data, db_path, user_input):
                       data['/Users/yanzhang/Documents/News/backup/Compare_All.txt'],
                       data['/Users/yanzhang/Documents/Financial_System/Modules/description.json'],
                       db_path):
-        close_app(root)
+        # 任务完成，函数返回后程序将自动退出
+        pass
     else:
         # 把没找到的符号拷贝到剪贴板，然后用 show_description.py 的 paste 模式来弹 description 界面
         pyperclip.copy(input_trimmed)
@@ -149,45 +144,41 @@ def input_mapping(root, data, db_path, user_input):
             '/Users/yanzhang/Documents/Financial_System/Query/show_description.py',
             'paste'
         ], check=True)
-        close_app(root)
 
-def get_user_input_custom(root, prompt):
-    input_dialog = tk.Toplevel(root)
-    input_dialog.title(prompt)
-    input_dialog.geometry('280x90')
+# 使用PyQt5重写的用户输入对话框函数
+def get_user_input_qt(prompt):
+    """
+    使用 PyQt5 QInputDialog 显示一个输入对话框。
+    - 自动从剪贴板获取内容并填充输入框。
+    - QInputDialog 默认就会选中预填充的文本。
+    - 窗口会根据操作系统风格自动居中。
+    - 如果用户点击 "OK"，返回输入的文本；如果点击 "Cancel" 或关闭窗口，返回 None。
+    """
+    # 获取剪贴板内容
+    clipboard_content = QApplication.clipboard().text()
 
-    screen_width = input_dialog.winfo_screenwidth()
-    screen_height = input_dialog.winfo_screenheight()
-    position_right = int(screen_width / 2 - 140)
-    position_down = int(screen_height / 2 - 140) - 100
-    input_dialog.geometry(f"280x90+{position_right}+{position_down}")
+    # 显示输入对话框
+    # QInputDialog.getText() 返回一个元组 (text, ok_pressed)
+    user_input, ok = QInputDialog.getText(
+        None,           # 父窗口 (无)
+        prompt,         # 对话框标题
+        f"{prompt}:",   # 对话框内的标签文本
+        QLineEdit.Normal, # 输入模式 (正常文本)
+        clipboard_content # 默认填充文本
+    )
 
-    entry = tk.Entry(input_dialog, width=20, font=('Helvetica', 18))
-    entry.pack(pady=20, ipady=10)
-    entry.focus_set()
+    if ok and user_input:
+        return user_input
+    else:
+        # 如果用户取消或输入为空，则返回None
+        return None
 
-    try:
-        entry.insert(0, root.clipboard_get())
-    except tk.TclError:
-        pass
-    entry.select_range(0, tk.END)
-
-    user_input = None
-
-    def on_submit():
-        nonlocal user_input
-        user_input = entry.get()
-        input_dialog.destroy()
-
-    entry.bind('<Return>', lambda event: on_submit())
-    input_dialog.bind('<Escape>', lambda event: input_dialog.destroy())
-    input_dialog.wait_window(input_dialog)
-    return user_input
+# get_user_input_custom 函数已被 get_user_input_qt 替代，可以删除
 
 if __name__ == '__main__':
-    root = tk.Tk()
-    root.withdraw()
-    root.bind('<Escape>', lambda event: close_app(root))
+    # 任何PyQt5应用都必须创建一个QApplication实例
+    # sys.argv 允许Qt处理命令行参数
+    app = QApplication(sys.argv)
 
     data = load_data_parallel()
     db_path = '/Users/yanzhang/Documents/Database/Finance.db'
@@ -195,13 +186,15 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         arg = sys.argv[1]
         if arg == "paste":
+            # pyperclip.paste() 依然可用，或者使用Qt的剪贴板
             clipboard_content = pyperclip.paste()
-            input_mapping(root, data, db_path, clipboard_content)
+            # 调用更新后的 input_mapping
+            input_mapping(data, db_path, clipboard_content)
         elif arg == "input":
-            user_input = get_user_input_custom(root, "请输入")
-            input_mapping(root, data, db_path, user_input)
+            # 调用新的Qt输入函数
+            user_input = get_user_input_qt("请输入")
+            # 调用更新后的 input_mapping
+            input_mapping(data, db_path, user_input)
     else:
         print("请提供参数 input 或 paste")
         sys.exit(1)
-
-    root.mainloop()

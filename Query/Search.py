@@ -13,7 +13,6 @@ import sqlite3
 import pickle
 from enum import Enum
 
-# JSON 文件路径
 json_path = "/Users/yanzhang/Documents/Financial_System/Modules/description.json"
 
 # --- 1. 引入 MatchCategory 枚举 (模仿 Swift) ---

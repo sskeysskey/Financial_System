@@ -1,4 +1,3 @@
-# o1优化后代码
 import re
 import sqlite3
 import subprocess
@@ -7,10 +6,13 @@ from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 from matplotlib.widgets import RadioButtons
 import matplotlib
-import tkinter as tk
-from tkinter import scrolledtext, font as tkFont
 from functools import lru_cache
 from scipy.interpolate import interp1d
+
+# 导入 PyQt5 相关模块
+from PyQt5.QtWidgets import QApplication, QDialog, QVBoxLayout, QTextEdit, QMessageBox
+from PyQt5.QtGui import QFont
+from PyQt5.QtCore import Qt
 
 @lru_cache(maxsize=None)
 def fetch_data(db_path, table_name, name):
@@ -157,9 +159,42 @@ def update_plot(line1, fill, line2, dates, prices, volumes, ax1, ax2, show_volum
     plt.draw()
     return fill
 
+# --- PyQt5 替换实现 ---
+class InfoDialog(QDialog):
+    """一个自定义的对话框，用于显示信息，并支持按ESC键关闭"""
+    def __init__(self, title, content, font_family, font_size, width, height, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        self.setGeometry(0, 0, width, height)
+        self.center_on_screen()
+
+        layout = QVBoxLayout(self)
+        
+        text_box = QTextEdit(self)
+        text_box.setReadOnly(True)
+        text_box.setFont(QFont(font_family, font_size))
+        text_box.setText(content)
+        
+        layout.addWidget(text_box)
+        self.setLayout(layout)
+
+    def keyPressEvent(self, event):
+        """重写按键事件，当按下ESC时关闭窗口"""
+        if event.key() == Qt.Key_Escape:
+            self.close()
+
+    def center_on_screen(self):
+        """将窗口居中显示"""
+        screen_geometry = QApplication.desktop().screenGeometry()
+        x = (screen_geometry.width() - self.width()) // 2
+        y = (screen_geometry.height() - self.height()) // 2
+        self.move(x, y)
+
 def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe, json_data,
                         default_time_range="1Y", panel="False"):
     """
+    # 确保PyQt5应用实例存在，这是显示任何Qt窗口的前提
+    app = QApplication.instance() or QApplication(sys.argv)
     主函数，绘制股票或ETF的时间序列图表。支持成交量、标签说明、信息弹窗、区间切换等功能。
     按键说明：
     - v：显示或隐藏成交量
@@ -178,6 +213,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     """
     plt.close('all')  # 关闭所有图表
     matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
+    matplotlib.rcParams['toolbar'] = 'none'  # <-- 添加这一行来隐藏工具栏
 
     # --- 修改开始: 处理 pb_text ---
     # 如果传入的 share 是一个元组，则拆分为 share_val 与 pb
@@ -554,21 +590,12 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     def show_stock_etf_info(event=None):
         """
-        展示当前name在JSON数据中的信息（如全名、标签、描述等）。
-        如果未找到则弹框提示。
+        使用 PyQt5 展示当前name在JSON数据中的信息。
         """
         for source in data_sources:
             for item in json_data.get(source, []):
                 if item['symbol'] == name:
                     descriptions = item
-                    root = tk.Tk()
-                    root.withdraw()  # 隐藏主窗口
-                    top = tk.Toplevel(root)
-                    top.title("Information")
-                    top.geometry("600x750")
-                    font_size = ('Arial', 22)
-                    text_box = scrolledtext.ScrolledText(top, wrap=tk.WORD, font=font_size)
-                    text_box.pack(expand=True, fill='both')
                     info = (
                         f"{name}\n"
                         f"{descriptions['name']}\n\n"
@@ -576,10 +603,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                         f"{descriptions['description1']}\n\n"
                         f"{descriptions['description2']}"
                     )
-                    text_box.insert(tk.END, info)
-                    text_box.config(state=tk.DISABLED)
-                    top.bind('<Escape>', lambda event: root.destroy())
-                    root.mainloop()
+                    # 创建并显示对话框
+                    dialog = InfoDialog("Information", info, 'Arial', 22, 600, 750)
+                    dialog.exec_()
                     return
         display_dialog(f"未找到 {name} 的信息")
 
@@ -698,13 +724,13 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     fig.canvas.draw_idle()
                     break
 
-    def on_keyword_selected(db_path, table_name, name):
+    # --- PyQt5 替换实现 ---
+    def create_window_qt(content):
         """
-        按关键字查询数据库并弹框显示结果。
+        使用 PyQt5 创建新窗口显示查询数据库的结果。
         """
-        condition = f"name = '{name}'"
-        result = query_database(db_path, table_name, condition)
-        create_window(result)
+        dialog = InfoDialog("数据库查询结果", content, "Courier", 20, 900, 600)
+        dialog.exec_()
 
     def query_database(db_path, table_name, condition):
         """
@@ -732,28 +758,14 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 ) + '\n'
             return output_text
 
-    def create_window(content):
+    def on_keyword_selected(db_path, table_name, name):
         """
-        创建新窗口显示查询数据库的结果。
+        按关键字查询数据库并弹框显示结果。
         """
-        root = tk.Tk()
-        root.withdraw()  # 隐藏主窗口
-        top = tk.Toplevel(root)
-        top.title("数据库查询结果")
-        window_width, window_height = 900, 600
-        center_x = (top.winfo_screenwidth() - window_width) // 2
-        center_y = (top.winfo_screenheight() - window_height) // 2
-        top.geometry(f'{window_width}x{window_height}+{center_x}+{center_y}')
-        top.bind('<Escape>', lambda event: root.destroy())
+        condition = f"name = '{name}'"
+        result = query_database(db_path, table_name, condition)
+        create_window_qt(result) # 调用 PyQt5 版本的窗口
 
-        text_font = tkFont.Font(family="Courier", size=20)
-        text_area = scrolledtext.ScrolledText(top, wrap=tk.WORD, width=100, height=30, font=text_font)
-        text_area.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
-        text_area.insert(tk.INSERT, content)
-        text_area.configure(state='disabled')
-        root.mainloop()
-
-    # 给标题添加可点击下划线
     if clickable:
         fig.canvas.mpl_connect('pick_event', on_pick)
 
