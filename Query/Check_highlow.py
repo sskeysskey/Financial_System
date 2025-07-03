@@ -39,6 +39,44 @@ MARKETCAP_PATH = '/Users/yanzhang/Documents/News/backup/marketcap_pe.txt'
 DB_PATH = '/Users/yanzhang/Documents/Database/Finance.db'
 
 # ----------------------------------------------------------------------
+# Classes
+# ----------------------------------------------------------------------
+# --- 1. 从 panel.py 移植并修改 SymbolManager 类 ---
+class SymbolManager:
+    """
+    一个更通用的 SymbolManager，直接接收一个 symbol 列表。
+    """
+    def __init__(self, symbol_list):
+        # 使用 OrderedDict.fromkeys 来自动去重并保持顺序
+        self.symbols = list(OrderedDict.fromkeys(symbol_list))
+        self.current_index = -1
+        if not self.symbols:
+            print("Warning: SymbolManager received an empty list of symbols.")
+
+    def next_symbol(self):
+        if not self.symbols:
+            return None
+        self.current_index = (self.current_index + 1) % len(self.symbols)
+        return self.symbols[self.current_index]
+
+    def previous_symbol(self):
+        if not self.symbols:
+            return None
+        self.current_index = (self.current_index - 1 + len(self.symbols)) % len(self.symbols)
+        return self.symbols[self.current_index]
+
+    def set_current_symbol(self, symbol):
+        try:
+            self.current_index = self.symbols.index(symbol)
+        except ValueError:
+            print(f"Warning: Symbol '{symbol}' not found in the manager's list.")
+            # 保持当前索引不变或重置
+            # self.current_index = -1
+
+    def reset(self):
+        self.current_index = -1
+
+# ----------------------------------------------------------------------
 # 工具 / 辅助函数
 # ----------------------------------------------------------------------
 
@@ -141,6 +179,22 @@ class HighLowWindow(QMainWindow):
         self.shares = shares
         self.marketcap_pe_data = marketcap_pe_data
         self.json_data = json_data
+        
+        # --- 2. 创建并初始化 SymbolManager ---
+        # 从 high_low_data 构建一个扁平的、有序的 symbol 列表
+        all_symbols = []
+        
+        # 第一步：先添加所有 Low 的 symbols
+        for period_data in high_low_data.values():
+            all_symbols.extend(period_data.get('Low', []))
+            
+        # 第二步：再添加所有 High 的 symbols
+        for period_data in high_low_data.values():
+            all_symbols.extend(period_data.get('High', []))
+        
+        # 将构建好的、具有正确顺序的列表传递给 SymbolManager
+        self.symbol_manager = SymbolManager(all_symbols)
+        # --- 【修改结束】 ---
         
         self.init_ui()
 
@@ -413,16 +467,16 @@ class HighLowWindow(QMainWindow):
         return button
 
     def on_symbol_click(self, symbol):
-        """
-        当一个 symbol 按钮被点击时调用此函数，功能与 a.py 中的 on_keyword_selected_chart 类似
-        """
+        # --- 3. 在点击时更新 SymbolManager 并设置焦点 ---
         print(f"按钮 '{symbol}' 被点击，准备显示图表...")
         
-        # 1. 查找 symbol 属于哪个 sector
-        sector = next((s for s, names in self.sector_data.items() if symbol in names), None)
+        # 告诉管理器当前查看的是哪个 symbol
+        self.symbol_manager.set_current_symbol(symbol)
         
+        sector = next((s for s, names in self.sector_data.items() if symbol in names), None)
         if not sector:
             print(f"警告: 在 Sectors_All.json 中找不到 '{symbol}' 的板块信息。")
+        
         compare_value = self.compare_data.get(symbol, "N/A")
         shares_value = self.shares.get(symbol, "N/A")
         marketcap_val, pe_val = self.marketcap_pe_data.get(symbol, (None, 'N/A'))
@@ -433,18 +487,41 @@ class HighLowWindow(QMainWindow):
                 DB_PATH, sector, symbol, compare_value, shares_value,
                 marketcap_val, pe_val, self.json_data, '1Y', False
             )
+            # 在绘图后，让主窗口重新获得焦点以响应键盘事件
+            self.setFocus()
         except Exception as e:
             print(f"调用 plot_financial_data 时出错: {e}")
 
-    # --- 【关键改动 2】: 重写 keyPressEvent 方法 ---
+    # --- 4. 新增处理方向键的方法 ---
+    def handle_arrow_key(self, direction):
+        """
+        根据方向键获取下一个或上一个 symbol 并显示图表。
+        """
+        if direction == 'down':
+            symbol = self.symbol_manager.next_symbol()
+        elif direction == 'up':
+            symbol = self.symbol_manager.previous_symbol()
+        else:
+            return
+
+        if symbol:
+            # 直接调用 on_symbol_click 来处理图表显示
+            self.on_symbol_click(symbol)
+
     def keyPressEvent(self, event):
         """
         重写键盘事件处理器以响应按键。
         """
-        # 检查按下的键是否是 Escape 键
-        if event.key() == Qt.Key_Escape:
+        key = event.key()
+        
+        # --- 5. 在键盘事件中添加对上下键的处理 ---
+        if key == Qt.Key_Escape:
             print("Escape key pressed. Closing application...")
-            self.close()  # 调用 close() 方法来关闭窗口
+            self.close()
+        elif key == Qt.Key_Down:
+            self.handle_arrow_key('down')
+        elif key == Qt.Key_Up:
+            self.handle_arrow_key('up')
         else:
             # 对于其他按键，调用父类的实现以保留默认行为
             super().keyPressEvent(event)
@@ -454,6 +531,9 @@ class HighLowWindow(QMainWindow):
         """
         重写关闭事件，确保应用程序完全退出。
         """
+        # --- 6. 在关闭时重置 SymbolManager ---
+        print("Resetting symbol manager and quitting.")
+        self.symbol_manager.reset()
         QApplication.quit()
         event.accept() # 接受关闭事件
 
