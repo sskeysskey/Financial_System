@@ -4,9 +4,7 @@
         "NSA": ""
     },
     "Energy": {},
-    "Technology": {
-        "ENPH": ""
-    },
+    "Technology": {},
     "Consumer_Cyclical": {
         "LULU": ""
     },
@@ -92,21 +90,8 @@
         "Solana": "",
         "XRP": ""
     },
-    "ETFs": {
-        "SCHD": "",
-        "DBC": "",
-        "IBIT": "",
-        "SOXX": "",
-        "ASHR": "",
-        "EWT": "",
-        "URA": "",
-        "UUP": "",
-        "FXY": ""
-    },
     "Qualified_Symbol": {
         "HALO": "",
-        "STZ": "",
-        "CLX": "",
         "BJ": ""
     },
     "Earning_Filter": {

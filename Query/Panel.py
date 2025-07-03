@@ -1,11 +1,19 @@
 import sys
 import json
 import sqlite3
-import tkinter as tk
-import tkinter.font as tkFont
-from tkinter import ttk, scrolledtext, simpledialog
 from collections import OrderedDict
 import subprocess
+
+# ----------------------------------------------------------------------
+# PyQt5 Imports - Replacing Tkinter
+# ----------------------------------------------------------------------
+from PyQt5.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QPushButton, QGroupBox, QScrollArea, QLabel, QTextEdit, QDialog,
+    QInputDialog, QMenu, QAction
+)
+from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtGui import QFont, QCursor
 
 # ----------------------------------------------------------------------
 # Update sys.path so we can import from custom modules
@@ -27,15 +35,14 @@ DB_PATH = '/Users/yanzhang/Documents/Database/Finance.db'
 
 DISPLAY_LIMITS = {
     'default': 'all',  # 默认显示全部
-    'Indices': 14,
+    'Indices': 'all',
     "Bonds": 'all',
-    'Commodities': 24,
-    'ETFs': 10,
-    'Currencies': 6,
-    'Economics': 7,
-    'ETFs_US': 14,
-    'Qualified_Symbol': 15,
-    'Earning_Filter': 15
+    'Commodities': 'all',
+    'Currencies': 'all',
+    'Economics': 'all',
+    'ETFs_US': 'all',
+    'Qualified_Symbol': 'all',
+    'Earning_Filter': 'all'
 }
 
 # Define categories as a global variable
@@ -46,7 +53,7 @@ categories = [
     ['Communication_Services', 'Financial_Services', 'Healthcare', 'Earning_Filter'],
     ['Bonds', 'Indices'],
     ['Commodities'],
-    ['Currencies', 'Crypto', 'ETFs'],
+    ['Crypto', 'Currencies'],
     ['Economics', 'ETFs_US']
 ]
 
@@ -64,10 +71,6 @@ json_data = {}
 # Classes
 # ----------------------------------------------------------------------
 class SymbolManager:
-    """
-    Manages navigation between symbols (next, previous) while keeping track
-    of a current index.
-    """
     def __init__(self, config_data, all_categories):
         self.symbols = []
         self.current_index = -1
@@ -116,9 +119,6 @@ def limit_items(items, sector):
     return list(items)[:limit]
 
 def load_json(path):
-    """
-    Loads a JSON file from the given path, preserving key order.
-    """
     with open(path, 'r', encoding='utf-8') as file:
         return json.load(file, object_pairs_hook=OrderedDict)
 
@@ -165,31 +165,7 @@ def load_marketcap_pe_data(path):
                 print(f"格式异常：{line}")
     return data
 
-def get_button_style(keyword):
-    """
-    Determines the style of a button based on keyword color classification.
-    """
-    color_styles = {
-        "red": "Red.TButton",
-        "cyan": "Cyan.TButton",
-        "blue": "Blue.TButton",
-        "purple": "Purple.TButton",
-        "yellow": "Yellow.TButton",
-        "orange": "Orange.TButton",
-        "black": "Black.TButton",
-        "white": "White.TButton",
-        "green": "Green.TButton",
-    }
-    for color, style in color_styles.items():
-        if keyword in keyword_colors.get(f"{color}_keywords", []):
-            return style
-    return "Default.TButton"
-
 def query_database(db_path, table_name, condition):
-    """
-    Queries the specified table in the database using provided condition (WHERE clause).
-    Returns formatted string of the results.
-    """
     with sqlite3.connect(db_path) as conn:
         cursor = conn.cursor()
         query = f"SELECT * FROM {table_name} WHERE {condition} ORDER BY date DESC;"
@@ -210,10 +186,8 @@ def query_database(db_path, table_name, condition):
             output_lines.append(row_str + '\n')
         return ''.join(output_lines)
 
-def execute_external_script(script_type, keyword, group=None):
-    """
-    Unified handler for scripted external operations.
-    """
+# *** 函数已修改为非阻塞式调用 ***
+def execute_external_script(script_type, keyword, group=None, main_window=None):
     base_path = '/Users/yanzhang/Documents/Financial_System'
     script_configs = {
         'blacklist': f'{base_path}/Operations/Insert_Blacklist.py',
@@ -227,200 +201,24 @@ def execute_external_script(script_type, keyword, group=None):
     }
 
     try:
-        if script_type == 'futu':
-            subprocess.run(['osascript', script_configs[script_type], keyword], check=True)
-        
-        if script_type == 'kimi':
-            subprocess.run(['osascript', script_configs[script_type], keyword], check=True)
+        # 使用 Popen 进行非阻塞调用
+        if script_type in ['futu', 'kimi']:
+            subprocess.Popen(['osascript', script_configs[script_type], keyword]) # <--- 修改为 Popen
         else:
             python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
-            subprocess.run([python_path, script_configs[script_type], keyword], check=True)
+            subprocess.Popen([python_path, script_configs[script_type], keyword]) # <--- 修改为 Popen
 
-        if script_type == 'blacklist' and group:
-            delete_item(keyword, group)
+        # 注意：因为 Popen 是非阻塞的，如果 'blacklist' 脚本也需要时间运行，
+        # delete_item 可能会在脚本完成前执行。
+        # 但对于黑名单这种操作，通常很快，所以这里暂时保持不变是可行的。
+        if script_type == 'blacklist' and group and main_window:
+            main_window.delete_item(keyword, group)
 
     except subprocess.CalledProcessError as e:
         print(f"执行脚本时出错: {e}")
     except Exception as e:
         print(f"发生未知错误: {e}")
 
-
-def delete_item(keyword, group):
-    """
-    Deletes the given keyword from the specified group in the config,
-    and refreshes the GUI window.
-    """
-    global config
-    if group in config and keyword in config[group]:
-        if isinstance(config[group], dict):
-            del config[group][keyword]
-        else:
-            config[group].remove(keyword)
-
-        with open(CONFIG_PATH, 'w', encoding='utf-8') as file:
-            json.dump(config, file, ensure_ascii=False, indent=4)
-
-        print(f"已成功删除 {keyword} from {group}")
-        refresh_selection_window()
-    else:
-        print(f"{keyword} 不存在于 {group} 中")
-
-def rename_item(keyword, group):
-    """
-    Renames (updates the description for) a given keyword in a specified group.
-    """
-    global config
-    try:
-        new_name = simpledialog.askstring("重命名", f"请为 {keyword} 输入新名称：")
-        if new_name is not None and new_name.strip() != "":
-            with open(CONFIG_PATH, 'r', encoding='utf-8') as file:
-                config_data = json.load(file)
-
-            if group in config_data and keyword in config_data[group]:
-                config_data[group][keyword] = new_name.strip()
-                with open(CONFIG_PATH, 'w', encoding='utf-8') as file:
-                    json.dump(config_data, file, ensure_ascii=False, indent=4)
-
-                print(f"已将 {keyword} 的描述更新为: {new_name}")
-                config = load_json(CONFIG_PATH)
-                refresh_selection_window()
-            else:
-                print(f"未找到 {keyword} 在 {group} 中")
-        else:
-            print("重命名被取消或输入为空。")
-    except Exception as e:
-        print(f"重命名过程中发生错误: {e}")
-
-# ======================================================================
-# 新增函数：将 symbol 移动到 Qualified_Symbol 分组
-# ======================================================================
-def move_item_to_qualified_symbol(keyword, source_group):
-    """
-    将一个 symbol 从其源分组移动到 'Qualified_Symbol' 分组。
-    """
-    global config
-    target_group = 'Qualified_Symbol'
-
-    # 检查源分组和关键字是否存在
-    if source_group in config and isinstance(config[source_group], dict) and keyword in config[source_group]:
-        # 确保目标分组存在，如果不存在则创建一个
-        if target_group not in config:
-            config[target_group] = {}
-        elif not isinstance(config[target_group], dict):
-            print(f"错误: 目标分组 '{target_group}' 的格式不是预期的字典。")
-            return
-
-        # 如果 symbol 已经在目标分组中，则无需移动
-        if keyword in config[target_group]:
-            print(f"{keyword} 已经存在于 {target_group} 中，无需移动。")
-            # 仍然从源分组中删除
-            del config[source_group][keyword]
-        else:
-            # 获取要移动的条目的值（即它的描述）
-            item_value = config[source_group][keyword]
-
-            # 添加到目标分组
-            config[target_group][keyword] = item_value
-
-            # 从源分组中删除
-            del config[source_group][keyword]
-
-        # 将更新后的配置写回 JSON 文件
-        try:
-            with open(CONFIG_PATH, 'w', encoding='utf-8') as file:
-                json.dump(config, file, ensure_ascii=False, indent=4)
-            print(f"已成功将 {keyword} 从 {source_group} 移动到 {target_group}")
-
-            # 刷新界面以显示更改
-            refresh_selection_window()
-        except Exception as e:
-            print(f"保存文件时出错: {e}")
-    else:
-        print(f"错误: 在 {source_group} 中未找到 {keyword}，或该分组格式不正确。")
-# ======================================================================
-
-def on_keyword_selected(value):
-    """
-    Handles clicking the "🔢" label to display relevant database entries
-    for the selected keyword.
-    """
-    sector = next((s for s, names in sector_data.items() if value in names), None)
-    if sector:
-        condition = f"name = '{value}'"
-        result = query_database(DB_PATH, sector, condition)
-        create_window(result)
-
-def on_keyword_selected_chart(value, parent_window):
-    """
-    Plots the financial data for the keyword and sets the current symbol
-    in SymbolManager. Also retrieves compare, shares, marketcap, and PE data.
-    """
-    global symbol_manager
-    sector = next((s for s, names in sector_data.items() if value in names), None)
-    if sector:
-        symbol_manager.set_current_symbol(value)
-        compare_value = compare_data.get(value, "N/A")
-        shares_value = shares.get(value, "N/A")
-        marketcap_val, pe_val = marketcap_pe_data.get(value, (None, 'N/A'))
-        plot_financial_data(
-            DB_PATH, sector, value, compare_value, shares_value,
-            marketcap_val, pe_val, json_data, '1Y', False
-        )
-
-def create_window(content):
-    """
-    Opens a new Toplevel window to display database query results.
-    """
-    top = tk.Toplevel(root)
-    top.title("数据库查询结果")
-    window_width, window_height = 900, 600
-    center_x = (top.winfo_screenwidth() - window_width) // 2
-    center_y = (top.winfo_screenheight() - window_height) // 2
-    top.geometry(f'{window_width}x{window_height}+{center_x}+{center_y}')
-    top.bind('<Escape>', lambda e: close_app(top))
-
-    text_font = tkFont.Font(family="Courier", size=20)
-    text_area = scrolledtext.ScrolledText(top, wrap=tk.WORD, width=100, height=30, font=text_font)
-    text_area.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
-    text_area.insert(tk.INSERT, content)
-    text_area.configure(state='disabled')
-
-def close_app(window):
-    """
-    Destroys the given window and resets the SymbolManager's index.
-    """
-    global symbol_manager
-    symbol_manager.reset()
-    window.destroy()
-
-def refresh_selection_window():
-    """
-    Reloads the config from disk and rebuilds the selection window.
-    """
-    global config
-    config = load_json(CONFIG_PATH)
-    for widget in root.winfo_children():
-        widget.destroy()
-    create_selection_window()
-
-def handle_arrow_key(direction):
-    """
-    Handles the Up/Down arrow key events to cycle through symbols
-    and update the chart.
-    """
-    global symbol_manager
-    if direction == 'down':
-        symbol = symbol_manager.next_symbol()
-    else:
-        symbol = symbol_manager.previous_symbol()
-
-    if symbol:
-        on_keyword_selected_chart(symbol, None)
-
-# ----------------------------------------------------------------------
-# 新增部分：Tooltip 辅助函数定义，根据新的 description.json 文件结构，
-# 从 "stocks" 和 "etfs" 中查找指定 symbol 对应的 tag 信息。
-# ----------------------------------------------------------------------
 def get_tags_for_symbol(symbol):
     """
     根据 symbol 在 json_data 中查找 tag 信息，
@@ -434,182 +232,331 @@ def get_tags_for_symbol(symbol):
             return item.get("tag", "无标签")
     return "无标签"
 
-def add_tooltip(widget, symbol):
-    """
-    为指定的 Tkinter 控件绑定鼠标悬停显示浮窗的事件，
-    浮窗中显示该 symbol 的 tag 信息（从 description.json 中提取）。
-    """
-    def on_enter(event):
-        tags_info = get_tags_for_symbol(symbol)
-        print("tags_info:", tags_info)  # 调试用，检查标签数据是否正确提取
-        # 如果 tag 为列表，则转换为逗号分隔的字符串
-        if isinstance(tags_info, list):
-            tags_info = ", ".join(tags_info)
-        tooltip = tk.Toplevel(widget)
-        tooltip.wm_overrideredirect(True)  # 去掉窗口边框
-        # 浮窗的位置：在鼠标坐标附近
-        x = event.x_root + 20
-        y = event.y_root + 10
-        tooltip.wm_geometry(f"+{x}+{y}")
-        # 浮窗内样式可以根据需要调整
-        # 显示字体设置为 Arial，前景色明确设为黑色
-        label = tk.Label(
-            tooltip,
-            text=tags_info,
-            background="lightyellow",
-            fg="black",         # 明确设置前景色
-            relief="solid",
-            borderwidth=1,
-            font=("Arial", 20)  # 如有问题可尝试 Arial 或其他系统自带字体
-        )
-        label.pack(ipadx=5, ipady=3)  # 增加一点内边距
-        widget.tooltip = tooltip
-
-    def on_leave(event):
-        if hasattr(widget, "tooltip") and widget.tooltip is not None:
-            widget.tooltip.destroy()
-            widget.tooltip = None
-
-    widget.bind("<Enter>", on_enter)
-    widget.bind("<Leave>", on_leave)
-
 # ----------------------------------------------------------------------
-# TKinter GUI Setup
+# PyQt5 Main Application Window (已移除小按钮并更新右键菜单)
 # ----------------------------------------------------------------------
-def create_custom_style():
-    """
-    Creates custom ttk styles for various color-coded TButtons.
-    """
-    style = ttk.Style()
-    style.theme_use('alt')
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        # 将全局变量作为实例变量
+        global config, symbol_manager
+        self.config = config
+        self.symbol_manager = symbol_manager
+        
+        self.init_ui()
 
-    # Background/foreground combos
-    button_styles = {
-        "Cyan": ("cyan", "black"),
-        "Blue": ("blue", "white"),
-        "Purple": ("purple", "white"),
-        "Green": ("green", "white"),
-        "White": ("white", "black"),
-        "Yellow": ("yellow", "black"),
-        "Orange": ("orange", "black"),
-        "Red": ("red", "black"),
-        "Black": ("black", "white"),
-        "Default": ("gray", "black")
-    }
+    def init_ui(self):
+        self.setWindowTitle("选择查询关键字")
+        # self.setGeometry(100, 100, 1480, 900)
 
-    for name, (bg, fg) in button_styles.items():
-        style.configure(f"{name}.TButton", background=bg, foreground=fg, font=('Helvetica', 16))
-        style.map(
-            "TButton",
-            background=[('active', '!disabled', 'pressed', 'focus', 'hover', 'alternate', 'selected', 'background')]
-        )
+        # 创建 QScrollArea 作为主滚动区域
+        self.scroll_area = QScrollArea(self)
+        self.scroll_area.setWidgetResizable(True)
+        self.setCentralWidget(self.scroll_area)
 
-def create_selection_window():
-    """
-    Builds the main selection window. Dynamically creates frames and buttons
-    based on 'categories' and 'config' data. Allows user to navigate symbols.
-    """
-    selection_window = tk.Toplevel(root)
-    selection_window.title("选择查询关键字")
-    selection_window.geometry("1480x900")
+        # 创建一个容器 QWidget 用于存放所有内容
+        self.scroll_content = QWidget()
+        self.scroll_area.setWidget(self.scroll_content)
 
-    # Key bindings
-    selection_window.bind('<Escape>', lambda e: close_app(root))
-    selection_window.bind('<Down>', lambda e: handle_arrow_key('down'))
-    selection_window.bind('<Up>', lambda e: handle_arrow_key('up'))
+        # 创建水平布局来容纳垂直的列
+        self.main_layout = QHBoxLayout(self.scroll_content)
+        self.scroll_content.setLayout(self.main_layout)
 
-    canvas = tk.Canvas(selection_window)
-    scrollbar = tk.Scrollbar(selection_window, orient="horizontal", command=canvas.xview)
-    scrollable_frame = tk.Frame(canvas)
+        self.apply_stylesheet()
+        self.populate_widgets()
 
-    scrollable_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+    def apply_stylesheet(self):
+        """创建并应用 QSS 样式表"""
+        # 映射颜色到 QSS 样式
+        button_styles = {
+            "Cyan": ("cyan", "black"), "Blue": ("blue", "white"),
+            "Purple": ("purple", "white"), "Green": ("green", "white"),
+            "White": ("white", "black"), "Yellow": ("yellow", "black"),
+            "Orange": ("orange", "black"), "Red": ("red", "black"),
+            "Black": ("black", "white"), "Default": ("gray", "black")
+        }
+        
+        qss = ""
+        for name, (bg, fg) in button_styles.items():
+            qss += f"""
+            QPushButton#{name} {{
+                background-color: {bg};
+                color: {fg};
+                font-size: 16px;
+                padding: 5px;
+                border: 1px solid #333;
+                border-radius: 4px;
+            }}
+            QPushButton#{name}:hover {{
+                background-color: {self.lighten_color(bg)};
+            }}
+            """
+        qss += """
+        QGroupBox {
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            subcontrol-position: top left;
+            padding: 0 3px;
+        }
+        """
+        self.setStyleSheet(qss)
 
-    create_custom_style()
-    canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-    canvas.configure(xscrollcommand=scrollbar.set)
+    def lighten_color(self, color_name, factor=1.2):
+        """一个简单的函数来让颜色变亮，用于:hover效果"""
+        from PyQt5.QtGui import QColor
+        color = QColor(color_name)
+        h, s, l, a = color.getHslF()
+        l = min(1.0, l * factor)
+        color.setHslF(h, s, l, a)
+        return color.name()
 
-    # Create one frame per category group
-    color_frames = [tk.Frame(scrollable_frame) for _ in range(len(categories))]
-    for frame in color_frames:
-        frame.pack(side="left", padx=1, pady=3, fill="both", expand=True)
+    def get_button_style_name(self, keyword):
+        """返回按钮的 objectName 以应用 QSS 样式"""
+        color_map = {
+            "red": "Red", "cyan": "Cyan", "blue": "Blue", "purple": "Purple",
+            "yellow": "Yellow", "orange": "Orange", "black": "Black",
+            "white": "White", "green": "Green"
+        }
+        for color, style_name in color_map.items():
+            if keyword in keyword_colors.get(f"{color}_keywords", []):
+                return style_name
+        return "Default"
 
-    # Build the interface
-    for index, category_group in enumerate(categories):
-        for sector in category_group:
-            if sector in config:
-                keywords = config[sector]
-                frame = tk.LabelFrame(color_frames[index], text=sector, padx=1, pady=3)
-                frame.pack(side="top", padx=1, pady=3, fill="both", expand=True)
+    def populate_widgets(self):
+        """动态创建界面上的所有控件 (已移除小按钮)"""
+        column_layouts = [QVBoxLayout() for _ in categories]
+        for layout in column_layouts:
+            layout.setAlignment(Qt.AlignTop) # 让内容从顶部开始排列
+            self.main_layout.addLayout(layout)
 
-                # Retain original order
-                if isinstance(keywords, dict):
-                    items = limit_items(keywords.items(), sector)
+        for index, category_group in enumerate(categories):
+            for sector in category_group:
+                if sector in self.config:
+                    keywords = self.config[sector]
+                    
+                    # 创建 QGroupBox
+                    group_box = QGroupBox()
+                    group_box.setLayout(QVBoxLayout())
+                    column_layouts[index].addWidget(group_box)
+
+                    items = limit_items(keywords.items() if isinstance(keywords, dict) else [(kw, kw) for kw in keywords], sector)
+                    
+                    total = len(keywords)
+                    shown = len(items)
+                    sector_label = f"{sector} ({shown}/{total})" if shown != total else sector
+                    group_box.setTitle(sector_label)
+
+                    for keyword, translation in items:
+                        button_container = QWidget()
+                        row_layout = QHBoxLayout(button_container)
+                        row_layout.setContentsMargins(0, 0, 0, 0)
+                        row_layout.setSpacing(5)
+
+                        # 创建主按钮
+                        button_text = translation if translation else keyword
+                        button_text += f" {compare_data.get(keyword, '')}"
+                        button = QPushButton(button_text)
+                        button.setObjectName(self.get_button_style_name(keyword))
+                        button.setCursor(QCursor(Qt.PointingHandCursor))
+                        button.clicked.connect(lambda _, k=keyword: self.on_keyword_selected_chart(k))
+                        
+                        # 设置 Tooltip
+                        tags_info = get_tags_for_symbol(keyword)
+                        if isinstance(tags_info, list):
+                            tags_info = ", ".join(tags_info)
+                        button.setToolTip(f"<div style='font-size: 20px; background-color: lightyellow; color: black;'>{tags_info}</div>")
+
+                        # 设置右键菜单
+                        button.setContextMenuPolicy(Qt.CustomContextMenu)
+                        # 修正后的代码
+                        button.customContextMenuRequested.connect(
+                            # lambda 仍然会接收到 pos 信号，但我们忽略它
+                            lambda pos, k=keyword, g=sector: self.show_context_menu(k, g)
+                        )
+                        
+                        row_layout.addWidget(button)
+                        group_box.layout().addWidget(button_container)
+
+    def show_context_menu(self, keyword, group):
+        """创建并显示右键菜单 (已添加查询数据库功能)"""
+        menu = QMenu()
+        
+        actions = [
+            ("删除", lambda: self.delete_item(keyword, group)),
+            ("改名", lambda: self.rename_item(keyword, group)),
+            ("移动到 Qualified_Symbol", lambda: self.move_item_to_qualified_symbol(keyword, group)),
+            None,
+            # --- 在这里添加新菜单项 ---
+            ("查询数据库...", lambda: self.on_keyword_selected(keyword)),
+            ("Kimi检索财报", lambda: execute_external_script('kimi', keyword)),
+            ("添加到 Earning", lambda: execute_external_script('earning', keyword)),
+            ("编辑 DB", lambda: execute_external_script('editor_earning', keyword)),
+            None,
+            ("编辑 Tags", lambda: execute_external_script('tags', keyword)),
+            ("在富途中搜索", lambda: execute_external_script('futu', keyword)),
+            ("找相似", lambda: execute_external_script('similar', keyword)),
+            None,
+            ("加入黑名单", lambda: execute_external_script('blacklist', keyword, group, self)),
+            ("Forced Adding to Earning", lambda: execute_external_script('earning_force', keyword)),
+        ]
+
+        for item in actions:
+            if item is None:
+                menu.addSeparator()
+            else:
+                text, callback = item
+                menu.addAction(QAction(text, self, triggered=callback))
+                
+        # 使用 QCursor.pos() 获取当前鼠标的全局位置来显示菜单
+        menu.exec_(QCursor.pos()) # <--- 关键修改在这里
+
+    def refresh_selection_window(self):
+        """重新加载配置并刷新UI"""
+        global config
+        config = load_json(CONFIG_PATH)
+        self.config = config
+        
+        # 清空现有布局
+        while self.main_layout.count():
+            layout_item = self.main_layout.takeAt(0)
+            if layout_item.widget():
+                layout_item.widget().deleteLater()
+            elif layout_item.layout():
+                # 递归清空子布局
+                self.clear_layout(layout_item.layout())
+
+        self.populate_widgets()
+
+    def clear_layout(self, layout):
+        """辅助函数，用于递归删除布局中的所有控件"""
+        if layout is not None:
+            while layout.count():
+                item = layout.takeAt(0)
+                widget = item.widget()
+                if widget is not None:
+                    widget.deleteLater()
                 else:
-                    items = limit_items([(kw, kw) for kw in keywords], sector)
+                    self.clear_layout(item.layout())
 
-                # 显示条目数量信息
-                total = len(keywords) if isinstance(keywords, dict) else len(keywords)
-                shown = len(items)
-                sector_label = f"{sector} ({shown}/{total})" if shown != total else sector
-                frame.configure(text=sector_label)
+    def on_keyword_selected_chart(self, value):
+        sector = next((s for s, names in sector_data.items() if value in names), None)
+        if sector:
+            self.symbol_manager.set_current_symbol(value)
+            compare_value = compare_data.get(value, "N/A")
+            shares_value = shares.get(value, "N/A")
+            marketcap_val, pe_val = marketcap_pe_data.get(value, (None, 'N/A'))
+            plot_financial_data(
+                DB_PATH, sector, value, compare_value, shares_value,
+                marketcap_val, pe_val, json_data, '1Y', False
+            )
 
-                for keyword, translation in items:
-                    button_frame = tk.Frame(frame)
-                    button_frame.pack(side="top", fill="x", padx=1, pady=3)
+    def on_keyword_selected(self, value):
+        sector = next((s for s, names in sector_data.items() if value in names), None)
+        if sector:
+            condition = f"name = '{value}'"
+            result = query_database(DB_PATH, sector, condition)
+            self.create_db_view_window(result)
+            
+    def create_db_view_window(self, content):
+        """使用 QDialog 创建一个新的窗口来显示数据库查询结果"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("数据库查询结果")
+        dialog.setGeometry(200, 200, 900, 600)
+        
+        layout = QVBoxLayout(dialog)
+        text_area = QTextEdit()
+        text_area.setFont(QFont("Courier", 14)) # Courier是等宽字体
+        text_area.setPlainText(content)
+        text_area.setReadOnly(True)
+        
+        layout.addWidget(text_area)
+        dialog.setLayout(layout)
+        dialog.exec_() # 使用 exec_() 以模态方式显示
 
-                    button_style = get_button_style(keyword)
-                    button_text = translation if translation else keyword
-                    button_text += f" {compare_data.get(keyword, '')}"
+    def handle_arrow_key(self, direction):
+        if direction == 'down':
+            symbol = self.symbol_manager.next_symbol()
+        else:
+            symbol = self.symbol_manager.previous_symbol()
+        if symbol:
+            self.on_keyword_selected_chart(symbol)
 
-                    button = ttk.Button(
-                        button_frame, text=button_text, style=button_style,
-                        command=lambda k=keyword: on_keyword_selected_chart(k, selection_window)
-                    )
+    def keyPressEvent(self, event):
+        """重写键盘事件处理器"""
+        key = event.key()
+        if key == Qt.Key_Escape:
+            self.close()
+        elif key == Qt.Key_Down:
+            self.handle_arrow_key('down')
+        elif key == Qt.Key_Up:
+            self.handle_arrow_key('up')
+        else:
+            super().keyPressEvent(event)
 
-                    # 右键菜单配置
-                    menu = tk.Menu(button, tearoff=0)
-                    menu.add_command(label="删除", command=lambda k=keyword, g=sector: delete_item(k, g))
-                    menu.add_command(label="改名", command=lambda k=keyword, g=sector: rename_item(k, g))
-                    
-                    # ======================================================================
-                    # 在此为右键菜单添加“移动”选项
-                    # ======================================================================
-                    menu.add_command(label="移动到 Qualified_Symbol", command=lambda k=keyword, g=sector: move_item_to_qualified_symbol(k, g))
-                    # ======================================================================
+    def closeEvent(self, event):
+        """关闭窗口时重置 symbol_manager"""
+        self.symbol_manager.reset()
+        QApplication.quit()
 
-                    menu.add_command(label="Kimi检索财报", command=lambda k=keyword: execute_external_script('kimi', k))
+    # --- 功能函数，现在是类的方法 ---
+    def delete_item(self, keyword, group):
+        if group in self.config and keyword in self.config[group]:
+            if isinstance(self.config[group], dict):
+                del self.config[group][keyword]
+            else:
+                self.config[group].remove(keyword)
+            with open(CONFIG_PATH, 'w', encoding='utf-8') as file:
+                json.dump(self.config, file, ensure_ascii=False, indent=4)
+            print(f"已成功删除 {keyword} from {group}")
+            self.refresh_selection_window()
+        else:
+            print(f"{keyword} 不存在于 {group} 中")
 
-                    # "Add to Earning" option
-                    menu.add_command(label="添加到 Earning", command=lambda k=keyword: execute_external_script('earning', k))
-                    
-                    # "编辑earning数据库" option
-                    menu.add_command(label="编辑 DB", command=lambda k=keyword: execute_external_script('editor_earning', k))
+    def rename_item(self, keyword, group):
+        new_name, ok = QInputDialog.getText(self, "重命名", f"请为 {keyword} 输入新名称：")
+        if ok and new_name.strip():
+            with open(CONFIG_PATH, 'r', encoding='utf-8') as file:
+                config_data = json.load(file)
+            if group in config_data and keyword in config_data[group]:
+                config_data[group][keyword] = new_name.strip()
+                with open(CONFIG_PATH, 'w', encoding='utf-8') as file:
+                    json.dump(config_data, file, ensure_ascii=False, indent=4)
+                print(f"已将 {keyword} 的描述更新为: {new_name}")
+                self.refresh_selection_window()
+            else:
+                print(f"未找到 {keyword} 在 {group} 中")
+        else:
+            print("重命名被取消或输入为空。")
 
-                    menu.add_separator()
-                    menu.add_command(label="编辑 Tags", command=lambda k=keyword: execute_external_script('tags', k))
-                    menu.add_command(label="在富途中搜索", command=lambda k=keyword: execute_external_script('futu', k))
-                    menu.add_command(label="找相似", command=lambda k=keyword: execute_external_script('similar', k))
+    def move_item_to_qualified_symbol(self, keyword, source_group):
+        target_group = 'Qualified_Symbol'
+        if source_group in self.config and isinstance(self.config[source_group], dict) and keyword in self.config[source_group]:
+            if target_group not in self.config:
+                self.config[target_group] = {}
+            elif not isinstance(self.config[target_group], dict):
+                print(f"错误: 目标分组 '{target_group}' 的格式不是预期的字典。")
+                return
 
-                    menu.add_separator()
-                    menu.add_command(label="加入黑名单", command=lambda k=keyword, g=sector: execute_external_script('blacklist', k, g))
-                    menu.add_command(label="Forced Adding to Earning", command=lambda k=keyword: execute_external_script('earning_force', k))
-
-                    # 绑定右键（Mac 使用 Button-2，Windows 通常是 Button-3）
-                    button.bind("<Button-2>", lambda event, m=menu: m.post(event.x_root, event.y_root))
-                    
-                    # *******************************
-                    # 为按钮增加 Tooltip 功能（根据新的 description.json 文件结构）
-                    add_tooltip(button, keyword)
-                    # *******************************
-
-                    button.pack(side="left", fill="x", expand=True)
-
-                    link_label = tk.Label(button_frame, text="🔢", fg="gray", cursor="hand2")
-                    link_label.pack(side="right", fill="x", expand=False)
-                    link_label.bind("<Button-1>", lambda event, k=keyword: on_keyword_selected(k))
-
-    canvas.pack(side="left", fill="both", expand=True)
-    scrollbar.pack(side="bottom", fill="x")
+            if keyword in self.config[target_group]:
+                print(f"{keyword} 已经存在于 {target_group} 中，无需移动。")
+                del self.config[source_group][keyword]
+            else:
+                item_value = self.config[source_group].pop(keyword)
+                self.config[target_group][keyword] = item_value
+            
+            try:
+                with open(CONFIG_PATH, 'w', encoding='utf-8') as file:
+                    json.dump(self.config, file, ensure_ascii=False, indent=4)
+                print(f"已成功将 {keyword} 从 {source_group} 移动到 {target_group}")
+                self.refresh_selection_window()
+            except Exception as e:
+                print(f"保存文件时出错: {e}")
+        else:
+            print(f"错误: 在 {source_group} 中未找到 {keyword}，或该分组格式不正确。")
 
 # ----------------------------------------------------------------------
 # Main Execution
@@ -620,20 +567,14 @@ if __name__ == '__main__':
     config = load_json(CONFIG_PATH)
     json_data = load_json(DESCRIPTION_PATH)
     sector_data = load_json(SECTORS_ALL_PATH)
-
     compare_data = load_text_data(COMPARE_DATA_PATH)
     shares = load_text_data(SHARES_PATH)
     marketcap_pe_data = load_marketcap_pe_data(MARKETCAP_PATH)
 
-    # Initialize main Tk
-    root = tk.Tk()
-    root.withdraw()
-
-    # Create SymbolManager
     symbol_manager = SymbolManager(config, categories)
 
-    # Create selection window (main GUI)
-    create_selection_window()
-
-    # Start GUI loop
-    root.mainloop()
+    # Create and run PyQt5 application
+    app = QApplication(sys.argv)
+    main_window = MainWindow()
+    main_window.showMaximized()
+    sys.exit(app.exec_())
