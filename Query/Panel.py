@@ -248,6 +248,9 @@ class MainWindow(QMainWindow):
     def init_ui(self):
         self.setWindowTitle("选择查询关键字")
         # self.setGeometry(100, 100, 1480, 900)
+        
+        # <--- 第1处修改：设置主窗口的焦点策略，使其能接收键盘事件 ---
+        self.setFocusPolicy(Qt.StrongFocus)
 
         # 创建 QScrollArea 作为主滚动区域
         self.scroll_area = QScrollArea(self)
@@ -453,6 +456,8 @@ class MainWindow(QMainWindow):
                 DB_PATH, sector, value, compare_value, shares_value,
                 marketcap_val, pe_val, json_data, '1Y', False
             )
+            # <--- 第2处修改：在绘图后让主窗口重新获得焦点，以便响应键盘事件 ---
+            self.setFocus()
 
     def on_keyword_selected(self, value):
         sector = next((s for s, names in sector_data.items() if value in names), None)
@@ -495,6 +500,7 @@ class MainWindow(QMainWindow):
         elif key == Qt.Key_Up:
             self.handle_arrow_key('up')
         else:
+            # 对于其他按键，调用父类的实现，以保留默认行为（例如，如果需要的话）
             super().keyPressEvent(event)
 
     def closeEvent(self, event):

@@ -15,12 +15,7 @@
     "Financial_Services": {
         "BRK-A": ""
     },
-    "Healthcare": {
-        "CHE": "",
-        "ELV": "",
-        "CNC": "",
-        "MOH": ""
-    },
+    "Healthcare": {},
     "Bonds": {
         "US10Y": "",
         "US2Y": "",
@@ -92,13 +87,14 @@
     },
     "Qualified_Symbol": {
         "HALO": "",
-        "BJ": ""
+        "ELV": "",
+        "CNC": "",
+        "MOH": "",
+        "MMYT": "",
+        "WCN": ""
     },
     "Earning_Filter": {
-        "HUM": "",
-        "MMYT": "",
-        "MOH": "",
-        "WCN": ""
+        "HUM": ""
     },
     "Currencies": {
         "DXY": "美元指数",
