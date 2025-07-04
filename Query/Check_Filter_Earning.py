@@ -77,6 +77,7 @@ def analyze_financial_data():
     # ### 新增/修改 1: 定义筛选常量 ###
     TURNOVER_THRESHOLD = 150_000_000  # 成交额阈值：一亿
     PRICE_DROP_PERCENTAGE = 0.07     # 价格回撤阈值：7%
+    EARNING_DROP_RATIO = 0.05  # 5%
 
     # --- 1.1. 确保 backup 目录存在 ---
     # 这是一个好的编程习惯，确保在写入文件前，其所在的目录是存在的
@@ -198,8 +199,10 @@ def analyze_financial_data():
                     # 4. 获取最新一期的财报日价格（即列表中的最后一个价格）。
                     latest_earning_price = prices_to_check[-1]
 
-                    # 5. 如果最新一期财报价格不高于平均值，则不满足条件，跳过。
-                    if latest_earning_price <= average_of_recent_earnings:
+                    # 5. 如果最新一期财报价格低于 “平均值下浮5%” 后的阈值，则跳过
+                    threshold_price = average_of_recent_earnings * (1 - EARNING_DROP_RATIO)
+                    if latest_earning_price <= threshold_price:
+                        # print(f"    跳过：{symbol} 最新财报价 {latest_earning_price:.2f} <= {threshold_price:.2f}")
                         continue # 不满足条件，处理下一个 symbol
                     
                     # 如果代码能执行到这里，说明已满足“最新财报价 > 近期均价”的条件，可以继续下一步分析。
