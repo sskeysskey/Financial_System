@@ -16,6 +16,9 @@ class StockComparisonApp(QWidget):
         self.symbol_inputs = []  # 存储所有symbol输入框
         self.initUI()
 
+        # 处理命令行参数
+        self.handle_args()
+
     def initUI(self):
         # 设置窗口标题和大小
         self.setWindowTitle('股票比较工具')
@@ -69,11 +72,25 @@ class StockComparisonApp(QWidget):
 
         # 设置布局
         self.setLayout(self.layout)
-
-        # 设置焦点到第一个symbol输入框
+        # 默认让第一个输入框获得焦点
         self.symbol_inputs[0].setFocus()
-
         self.show()
+
+    def handle_args(self):
+        """如果命令行带参数，自动填第一个输入框并聚焦第二个"""
+        args = sys.argv[1:]
+        if not args:
+            return
+
+        first = args[0].strip()
+        if first:
+            # 直接填入（也可以改用 self.format_symbol(first)）
+            self.symbol_inputs[0].setText(first)
+            # 确保至少有第二个输入框
+            if len(self.symbol_inputs) < 2:
+                self.add_symbol_input()
+            # 焦点移到第二个输入框
+            self.symbol_inputs[1].setFocus()
 
     def add_symbol_input(self):
         """动态添加股票代码输入框"""
@@ -82,11 +99,10 @@ class StockComparisonApp(QWidget):
             symbol_input.setFont(QFont('Arial', 14))
             symbol_input.setPlaceholderText(f'股票代码 {len(self.symbol_inputs) + 1}')
             symbol_input.returnPressed.connect(self.compare_stocks)
-            self.layout.addWidget(symbol_input, len(self.symbol_inputs) + 1)
+            # 在布局末尾添加
+            self.layout.addWidget(symbol_input)
             self.symbol_inputs.append(symbol_input)
-
-            # 设置焦点到新添加的输入框
-            self.symbol_inputs[-1].setFocus()
+            symbol_input.setFocus()
         else:
             self.label.setText(f'最多只能添加 {self.max_symbols} 个股票代码')
             self.label.setStyleSheet('color: red')
@@ -109,7 +125,7 @@ class StockComparisonApp(QWidget):
                 return symbol.capitalize()
         # 若都找不到，则返回原字符串
         return symbol
-    
+
     def compare_stocks(self):
         # 获取所有输入框中输入的股票代码
         symbols = [self.format_symbol(input.text().strip())

@@ -853,6 +853,12 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         except Exception as e:
             display_dialog(f"启动财报输入程序失败: {e}")
 
+    def open_symbol_compare(event):
+        try:
+            subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Query/Compare_Chart.py', name])
+        except Exception as e:
+            display_dialog(f"启动财报输入程序失败: {e}")
+
     def update_annot(ind):
         """
         更新工具提示位置和文本内容。
@@ -1073,6 +1079,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             'q': lambda: open_event_edit(None),
             'k': lambda: check_earning_kimi(None),
             'u': lambda: check_stock_futu(None),
+            'p': lambda: open_symbol_compare(None),
             '1': lambda: radio.set_active(7),
             '2': lambda: radio.set_active(1),
             '3': lambda: radio.set_active(3),
