@@ -15,7 +15,10 @@
     "Financial_Services": {
         "BRK-A": ""
     },
-    "Healthcare": {},
+    "Healthcare": {
+        "ELV": "",
+        "CNC": ""
+    },
     "Bonds": {
         "US10Y": "",
         "US2Y": "",
@@ -90,11 +93,7 @@
         "ELV": "",
         "MMYT": ""
     },
-    "Earning_Filter": {
-        "HUM": "",
-        "WCN": "",
-        "CNC": ""
-    },
+    "Earning_Filter": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
