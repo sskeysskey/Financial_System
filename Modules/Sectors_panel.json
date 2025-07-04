@@ -16,7 +16,6 @@
         "BRK-A": ""
     },
     "Healthcare": {
-        "ELV": "",
         "CNC": ""
     },
     "Bonds": {
@@ -140,7 +139,7 @@
         "USNonPMI": "03 USNonPMI",
         "USInitial": "03 USInitial"
     },
-    "ETFs_US": {
+    "ETFs": {
         "TLT": "",
         "XLK": "科技",
         "XLV": "医疗",

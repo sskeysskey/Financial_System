@@ -40,7 +40,7 @@ DISPLAY_LIMITS = {
     'Commodities': 'all',
     'Currencies': 'all',
     'Economics': 'all',
-    'ETFs_US': 'all',
+    'ETFs': 'all',
     'Qualified_Symbol': 'all',
     'Earning_Filter': 'all'
 }
@@ -54,7 +54,7 @@ categories = [
     ['Bonds', 'Indices'],
     ['Commodities'],
     ['Crypto', 'Currencies'],
-    ['Economics', 'ETFs_US']
+    ['Economics', 'ETFs']
 ]
 
 # Global variables initialized below; placeholders for IDE clarity
