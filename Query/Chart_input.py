@@ -804,6 +804,30 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         label.set_color('white')
         label.set_fontsize(14)
     radio.circles[default_index].set_facecolor('red')
+
+    # ——— 添加快捷键说明 ———
+    instructions = (
+        "N： 新财报\n"
+        "E： 改财报\n"
+        "T： 新标签\n"
+        "W： 新事件\n"
+        "Q： 改事件\n"
+        "K： 查kimi\n"
+        "U： 查富途\n"
+        "P： 做比较"
+    )
+
+    # 在 radio 按钮的 axes 上方绘制说明文字
+    rax.text(
+        0.5, 1.02,             # 相对坐标：(x=0.5 居中, y=1.02 在 axes 之上)
+        instructions,
+        transform=rax.transAxes,
+        ha="center",           # 水平居中
+        va="bottom",           # 从 bottom 开始向上排
+        color="white",
+        fontsize=10,
+        fontfamily="Arial Unicode MS"
+    )
     
     def open_earning_input(event):
         """启动财报输入程序并传递当前symbol"""
