@@ -814,7 +814,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         "Q： 改事件\n"
         "K： 查kimi\n"
         "U： 查富途\n"
-        "P： 做比较"
+        "P： 做比较\n"
+        "L： 查相似"
     )
 
     # 在 radio 按钮的 axes 上方绘制说明文字
@@ -880,6 +881,12 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     def open_symbol_compare(event):
         try:
             subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Query/Compare_Chart.py', name])
+        except Exception as e:
+            display_dialog(f"启动财报输入程序失败: {e}")
+
+    def open_similar_tags(event):
+        try:
+            subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Query/Find_Similar_Tag.py', name])
         except Exception as e:
             display_dialog(f"启动财报输入程序失败: {e}")
 
@@ -1104,6 +1111,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             'k': lambda: check_earning_kimi(None),
             'u': lambda: check_stock_futu(None),
             'p': lambda: open_symbol_compare(None),
+            'l': lambda: open_similar_tags(None),
             '1': lambda: radio.set_active(7),
             '2': lambda: radio.set_active(1),
             '3': lambda: radio.set_active(3),
