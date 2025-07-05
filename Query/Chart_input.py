@@ -9,8 +9,7 @@ import matplotlib
 from functools import lru_cache
 from scipy.interpolate import interp1d
 
-# 导入 PyQt5 相关模块
-from PyQt5.QtWidgets import QApplication, QDialog, QVBoxLayout, QTextEdit, QMessageBox
+from PyQt5.QtWidgets import QApplication, QDialog, QVBoxLayout, QTextEdit
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt
 
