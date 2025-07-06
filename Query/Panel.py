@@ -195,7 +195,6 @@ def execute_external_script(script_type, keyword, group=None, main_window=None):
         'tags': f'{base_path}/Operations/Editor_Symbol_Tags.py',
         'editor_earning': f'{base_path}/Operations/Editor_Earning_DB.py',
         'earning': f'{base_path}/Operations/Insert_Earning.py',
-        'earning_force': f'{base_path}/Operations/Insert_Earning_Force.py',
         'futu': '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt',
         'kimi': '/Users/yanzhang/Documents/ScriptEditor/CheckKimi_Earning.scpt'
     }
@@ -406,7 +405,6 @@ class MainWindow(QMainWindow):
             ("找相似", lambda: execute_external_script('similar', keyword)),
             None,
             ("加入黑名单", lambda: execute_external_script('blacklist', keyword, group, self)),
-            ("Forced Adding to Earning", lambda: execute_external_script('earning_force', keyword)),
         ]
 
         for item in actions:
