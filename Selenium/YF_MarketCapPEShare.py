@@ -563,9 +563,21 @@ def main():
         for symbol in tqdm(stock_symbols,
                        desc="Processing symbols",
                        unit="sym"):
+            
+            # -------------------- 新增的重置逻辑 (核心修复) --------------------
+            # 在每次循环开始时，重置所有相关变量，防止数据污染
+            shares_outstanding = "N/A"
+            shares_outstanding_converted = 0
+            price_book_value = "--"
+            market_cap_converted = 0
+            pe_str = "--"
+            got_shares = False
+            got_price_book = False
+            got_marketcap = False
+            # -------------------------------------------------------------------
+
             # 检查是否所有文件都已包含此symbol，如果是则完全跳过
             if symbol in existing_shares and symbol in existing_marketcap_pe:
-                # if symbol in existing_shares and symbol in existing_names and symbol in existing_marketcap_pe:
                 print(f"已在所有文件中抓取过 {symbol}，跳过...")
                 show_alert(f"{symbol} 已经在三个文件中都存在了！")
                 continue
@@ -575,14 +587,8 @@ def main():
                 driver.get(url)
                 
                 # 查找Shares Outstanding数据
-                shares_outstanding = "N/A"
-                shares_outstanding_converted = 0
-                got_shares = False   # 标记是否真正拿到了 shares
-                got_price_book = False  # 标记是否真正拿到了 price/book
-
-                # 尝试通过XPath获取
+                # (这里不需要重置 shares_outstanding 和 got_shares，因为它们已在循环顶部重置)
                 shares_outstanding_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Shares Outstanding')]/following-sibling::td[1]", timeout=5)
-                # if shares_outstanding_element and shares_outstanding_element.text:
                 if shares_outstanding_element and shares_outstanding_element.text not in ("N/A", "-"):
                     shares_outstanding = shares_outstanding_element.text
                     got_shares = True
@@ -622,34 +628,35 @@ def main():
                                 print(f"通过JavaScript获取到 {symbol} 的股票数量: {shares_outstanding}")
                         except Exception as js_error:
                             print(f"JavaScript获取 {symbol} 的股票数量失败: {str(js_error)}")
+                    if not got_shares:
+                         print(f"无法获取 {symbol} 的股票数量，使用默认值0")
 
                 # 转换股票数量格式
-                if shares_outstanding != "N/A" and shares_outstanding != '-':
+                if got_shares: # 只在成功获取到时才转换
                     shares_outstanding_converted = convert_shares_format(shares_outstanding)
                     if shares_outstanding_converted == 0:
                         print(f"警告: {symbol} 的股票数量转换为0，原始值: {shares_outstanding}")
-                else:
-                    print(f"无法获取 {symbol} 的股票数量，使用默认值0")
                 
                 # 查找Price/Book数据
                 price_book_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Price/Book')]/following-sibling::td[1]", timeout=3)
                 if price_book_element:
                     text = price_book_element.text.strip()
-                    if text in ('N/A', '-', '--'):
+                    if text in ('N/A', '-', '--', ''): # 增加对空字符串的判断
                         price_book_value = "--"
-                        got_price_book = True   # 把“--”也当成“已经取到”
                     else:
                         try:
-                            price_book_value = str(float(text))
-                            got_price_book = True
-                        except:
+                            # 确保转换后有意义
+                            pb_float = float(text)
+                            price_book_value = str(pb_float)
+                            got_price_book = True # 只有在成功转换为数字后才标记为True
+                        except ValueError:
                             price_book_value = "--"
-                            got_price_book = True
                     print(f"已获取 {symbol} 的Price/Book: {price_book_value}")
                 else:
                     print(f"无法获取 {symbol} 的Price/Book")
                 
-                # 保存股票数量和Price/Book到Shares.txt（追加模式），先检查是否已存在
+                # 保存股票数量和Price/Book到Shares.txt
+                # 修改判断条件：只有在明确抓取到有效数据时才写入
                 if symbol not in existing_shares and (got_shares or got_price_book):
                     with open(shares_file_path, 'a', encoding='utf-8') as file:
                         file.write(f"{symbol}: {int(shares_outstanding_converted)}, {price_book_value}\n")
@@ -660,31 +667,31 @@ def main():
                 
                 # 查找Market Cap数据
                 market_cap_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Market Cap')]/following-sibling::td[1]", timeout=3)
-                market_cap_converted = 0
-                got_marketcap = False
                 if market_cap_element:
                     text = market_cap_element.text.strip()
-                    if text not in ('N/A', '-'):
+                    if text not in ('N/A', '-', '', '--'):
                         market_cap_converted = convert_shares_format(text)
-                        got_marketcap = True
+                        if market_cap_converted > 0: # 确保转换后的市值有效
+                            got_marketcap = True
                 
                 # 查找Trailing P/E数据
                 pe_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Trailing P/E')]/following-sibling::td[1]", timeout=3)
-                pe_str = "--"  # 默认为--，表示没有PE值
                 if pe_element:
-                    pe_ratio_text = pe_element.text
-                    if pe_ratio_text != 'N/A' and pe_ratio_text != '-':
+                    pe_ratio_text = pe_element.text.strip()
+                    if pe_ratio_text not in ('N/A', '-', '', '--'):
                         try:
                             pe_ratio = float(pe_ratio_text)
                             pe_str = str(pe_ratio)
                         except ValueError:
-                            pass
+                            pe_str = "--"
                 
-                # 保存市值和PE到marketcap_pe.txt（追加模式），先检查是否已存在
+                # 保存市值和PE到marketcap_pe.txt
+                # 修改判断条件：只有在明确抓取到有效市值时才写入
                 if symbol not in existing_marketcap_pe and got_marketcap:
                     with open(marketcap_pe_file_path, 'a', encoding='utf-8') as file:
+                        # 注意：这里写入的 price_book_value 是本次循环抓取到的最新值
                         file.write(f"{symbol}: {market_cap_converted}, {pe_str}, {price_book_value}\n")
-                    print(f"已保存 {symbol} 的市值和PE: {market_cap_converted}, {pe_str}")
+                    print(f"已保存 {symbol} 的市值和PE: {market_cap_converted}, {pe_str}, {price_book_value}")
                     existing_marketcap_pe.add(symbol)
                 else:
                     print(f"{symbol} 的市值和PE已在文件中存在或页面未抓取到，跳过写入")
