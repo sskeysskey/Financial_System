@@ -469,7 +469,8 @@
     "VIGI",
     "IPKW",
     "EUAD",
-    "FMAT"
+    "FMAT",
+    "VNM"
   ],
   "Basic_Materials": [
     "LIN",
