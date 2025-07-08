@@ -252,7 +252,7 @@ def compare_and_update_sectors(screener_data, sectors_all_data, sectors_today_da
                     
                     # 如果不是移动过来的，而是全新的，则添加到 added_symbols 列表
                     if not moved:
-                        added_symbols.append(f"将 '{symbol}' 添加到 '{sector}'，先使用Ctrl+Option+9抓取marketcapshare，再到Yahoo页面使用Ctrl+Comamnd+9抓取历史数据。然后使用Ctrl+Option+1和Ctrl+V抓取description，最后使用Ctrl+option+X抓取财报数据。")
+                        added_symbols.append(f"将 '{symbol}' 添加到 '{sector}'，先使用Ctrl+Option+9抓取marketcapshare，再到Yahoo页面使用Ctrl+Comamnd+9抓取历史数据。然后使用Ctrl+Option+1和Ctrl+V抓取description，最后使用Ctrl+option+U抓取财报数据。")
                     
                     # 确保sectors_today_data中有该sector
                     if sector not in sectors_today_data:

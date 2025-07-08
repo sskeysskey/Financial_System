@@ -138,8 +138,6 @@ def execute_applescript(script_path):
 
 def main():
     json_file = "/Users/yanzhang/Documents/Financial_System/Modules/description.json"
-    
-    # 已删除 symbol_name_file 和 load_symbol_names 的调用
 
     with open(json_file, 'r', encoding='utf-8') as file:
         data = json.load(file)

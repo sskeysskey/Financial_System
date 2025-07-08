@@ -9,14 +9,19 @@
         "LULU": ""
     },
     "Utilities": {},
-    "Consumer_Defensive": {},
+    "Consumer_Defensive": {
+        "FLO": ""
+    },
     "Industrials": {},
     "Communication_Services": {},
     "Financial_Services": {
         "BRK-A": ""
     },
     "Healthcare": {
-        "CNC": ""
+        "CNC": "",
+        "ELV": "",
+        "MOH": "",
+        "CHE": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -92,7 +97,18 @@
         "ELV": "",
         "MMYT": ""
     },
-    "Earning_Filter": {},
+    "Earning_Filter": {
+        "BABA": "",
+        "CLX": "",
+        "CPRT": "",
+        "ELV": "",
+        "EQIX": "",
+        "FTV": "",
+        "HUBS": "",
+        "MKC": "",
+        "OKTA": "",
+        "TM": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
