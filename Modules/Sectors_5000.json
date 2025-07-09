@@ -12,7 +12,9 @@
     "Consumer_Defensive": [
         "WMT"
     ],
-    "Energy": [],
+    "Energy": [
+        "XOM"
+    ],
     "Financial_Services": [
         "BRK-A",
         "JPM",

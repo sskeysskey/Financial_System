@@ -95,7 +95,8 @@
         "MPC",
         "MPLX",
         "E",
-        "PSX"
+        "PSX",
+        "SLB"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -293,8 +294,7 @@
         "NXPI",
         "TEAM",
         "PAYX",
-        "TEL",
-        "DDOG"
+        "TEL"
     ],
     "Utilities": [
         "NEE",

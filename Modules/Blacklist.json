@@ -530,7 +530,9 @@
         "BEPC",
         "PUK-PA",
         "CSWI",
-        "X"
+        "X",
+        "LANC",
+        "AZEK"
     ],
     "etf": [
         "VDE",
@@ -736,6 +738,8 @@
         "JHMD",
         "UEVM",
         "AUSF",
-        "QMOM"
+        "QMOM",
+        "ARKK",
+        "EPP"
     ]
 }
