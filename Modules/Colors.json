@@ -9,7 +9,6 @@
         "AMT",
         "AZO",
         "NEM",
-        "PG",
         "NVS",
         "O",
         "UL",
@@ -471,7 +470,8 @@
         "POR",
         "AAON",
         "TKC",
-        "CAVA"
+        "CAVA",
+        "PG"
     ],
     "yellow_keywords": [
         "Nikkei",

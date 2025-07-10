@@ -1066,7 +1066,6 @@
     "CRVL",
     "COLB",
     "FUTU",
-    "ESGR",
     "PJT",
     "DNB",
     "TRU",
@@ -1233,7 +1232,8 @@
     "ALKS",
     "GH",
     "AXSM",
-    "VRNA"
+    "VRNA",
+    "RYTM"
   ],
   "Industrials": [
     "GE",

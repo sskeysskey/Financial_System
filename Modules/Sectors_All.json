@@ -471,7 +471,8 @@
     "EUAD",
     "FMAT",
     "VNM",
-    "EWH"
+    "EWH",
+    "ISCF"
   ],
   "Basic_Materials": [
     "LIN",
@@ -1130,7 +1131,6 @@
     "CRVL",
     "COLB",
     "FUTU",
-    "ESGR",
     "PJT",
     "DNB",
     "TRU",
@@ -1297,7 +1297,8 @@
     "ALKS",
     "GH",
     "AXSM",
-    "VRNA"
+    "VRNA",
+    "RYTM"
   ],
   "Industrials": [
     "GE",

@@ -10,18 +10,20 @@
     },
     "Utilities": {},
     "Consumer_Defensive": {
-        "FLO": ""
+        "FLO": "",
+        "PG": ""
     },
-    "Industrials": {},
+    "Industrials": {
+        "CPRT": ""
+    },
     "Communication_Services": {},
     "Financial_Services": {
         "BRK-A": ""
     },
     "Healthcare": {
         "CNC": "",
-        "ELV": "",
         "MOH": "",
-        "CHE": ""
+        "ELV": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -94,14 +96,10 @@
     },
     "Qualified_Symbol": {
         "HALO": "",
-        "ELV": "",
-        "MMYT": ""
+        "ELV": ""
     },
     "Earning_Filter": {
-        "BJ": "",
-        "FICO": "",
-        "MCD": "",
-        "WCN": ""
+        "FTV": ""
     },
     "Currencies": {
         "DXY": "美元指数",

@@ -532,7 +532,8 @@
         "CSWI",
         "X",
         "LANC",
-        "AZEK"
+        "AZEK",
+        "ESGR"
     ],
     "etf": [
         "VDE",
@@ -740,6 +741,7 @@
         "AUSF",
         "QMOM",
         "ARKK",
-        "EPP"
+        "EPP",
+        "BFOR"
     ]
 }
