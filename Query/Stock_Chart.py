@@ -171,8 +171,6 @@ def get_user_input_qt(prompt):
         # 如果用户取消或输入为空，则返回None
         return None
 
-# get_user_input_custom 函数已被 get_user_input_qt 替代，可以删除
-
 if __name__ == '__main__':
     # 任何PyQt5应用都必须创建一个QApplication实例
     # sys.argv 允许Qt处理命令行参数
