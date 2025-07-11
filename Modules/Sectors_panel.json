@@ -6,7 +6,8 @@
     "Energy": {},
     "Technology": {},
     "Consumer_Cyclical": {
-        "LULU": ""
+        "LULU": "",
+        "JD": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -18,12 +19,13 @@
     },
     "Communication_Services": {},
     "Financial_Services": {
-        "BRK-A": ""
+        "BRK-A": "",
+        "PGR": ""
     },
     "Healthcare": {
         "CNC": "",
-        "MOH": "",
-        "ELV": ""
+        "ELV": "",
+        "MOH": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -99,7 +101,8 @@
         "ELV": ""
     },
     "Earning_Filter": {
-        "FTV": ""
+        "HUM": "",
+        "OKTA": ""
     },
     "Currencies": {
         "DXY": "美元指数",

@@ -102,8 +102,6 @@ def load_data_parallel():
     data_sources = [
         ('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'json'),
         ('/Users/yanzhang/Documents/News/backup/Compare_All.txt', 'compare'),
-        # ('/Users/yanzhang/Documents/News/backup/Shares.txt', 'compare'), # 已移除
-        # ('/Users/yanzhang/Documents/News/backup/marketcap_pe.txt', 'marketcap_pe'), # 已移除
         ('/Users/yanzhang/Documents/Financial_System/Modules/description.json', 'json')
     ]
     

@@ -533,7 +533,8 @@
         "X",
         "LANC",
         "AZEK",
-        "ESGR"
+        "ESGR",
+        "JNPR"
     ],
     "etf": [
         "VDE",
@@ -742,6 +743,7 @@
         "QMOM",
         "ARKK",
         "EPP",
-        "BFOR"
+        "BFOR",
+        "RWR"
     ]
 }

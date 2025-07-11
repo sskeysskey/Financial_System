@@ -337,14 +337,14 @@ def main():
                 # 在抓取失败的逻辑中添加
                 except Exception as e:
                     print(f"抓取 {symbol} 时发生错误: {e}")
-                    # 添加调试代码
-                    try:
-                        driver.save_screenshot(f'debug_screenshot_{symbol}.png')
-                        with open(f'debug_page_source_{symbol}.html', 'w', encoding='utf-8') as f:
-                            f.write(driver.page_source)
-                        print(f"已保存 {symbol} 的调试截图和页面源码。")
-                    except Exception as debug_e:
-                        print(f"保存调试信息时出错: {debug_e}")
+                    # # 添加调试代码
+                    # try:
+                    #     driver.save_screenshot(f'debug_screenshot_{symbol}.png')
+                    #     with open(f'debug_page_source_{symbol}.html', 'w', encoding='utf-8') as f:
+                    #         f.write(driver.page_source)
+                    #     print(f"已保存 {symbol} 的调试截图和页面源码。")
+                    # except Exception as debug_e:
+                    #     print(f"保存调试信息时出错: {debug_e}")
                 
                 # 添加短暂延迟，避免请求过于频繁
                 time.sleep(random.uniform(1, 2))
