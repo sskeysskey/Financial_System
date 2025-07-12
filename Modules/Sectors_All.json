@@ -471,7 +471,8 @@
     "FMAT",
     "VNM",
     "EWH",
-    "ISCF"
+    "ISCF",
+    "EWZ"
   ],
   "Basic_Materials": [
     "LIN",
