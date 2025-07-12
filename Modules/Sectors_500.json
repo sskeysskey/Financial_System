@@ -96,7 +96,8 @@
         "MPLX",
         "E",
         "PSX",
-        "SLB"
+        "SLB",
+        "SU"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -239,7 +240,8 @@
         "WELL",
         "SPG",
         "PSA",
-        "DLR"
+        "DLR",
+        "O"
     ],
     "Technology": [
         "AAPL",
@@ -291,7 +293,6 @@
         "MRVL",
         "NET",
         "NXPI",
-        "TEAM",
         "PAYX",
         "TEL"
     ],

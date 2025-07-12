@@ -163,7 +163,7 @@ with open(file_path, 'a') as output_file:
                     else:
                         continue
                     
-                    if "Earnings Release" in event_name or "Shareholders Meeting" in event_name:
+                    if "Earnings Release" in event_name or "Shareholders Meeting" in event_name or " Earnings Announcement" in event_name:
                         for category, symbols in data.items():
                             if symbol in symbols:
                                 # 查询数据库获取交易量

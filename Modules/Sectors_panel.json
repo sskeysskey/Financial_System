@@ -4,7 +4,9 @@
         "NSA": ""
     },
     "Energy": {},
-    "Technology": {},
+    "Technology": {
+        "IT": ""
+    },
     "Consumer_Cyclical": {
         "LULU": "",
         "JD": ""
@@ -20,12 +22,14 @@
     "Communication_Services": {},
     "Financial_Services": {
         "BRK-A": "",
-        "PGR": ""
+        "PGR": "",
+        "MMC": ""
     },
     "Healthcare": {
         "CNC": "",
         "ELV": "",
-        "MOH": ""
+        "MOH": "",
+        "CHE": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -101,7 +105,7 @@
         "ELV": ""
     },
     "Earning_Filter": {
-        "HUM": ""
+        "ADC": ""
     },
     "Currencies": {
         "DXY": "美元指数",
