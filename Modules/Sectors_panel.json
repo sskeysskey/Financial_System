@@ -102,11 +102,15 @@
     },
     "Qualified_Symbol": {
         "HALO": "",
-        "ELV": ""
+        "ELV": "",
+        "CI": "",
+        "DRI": "",
+        "DUOL": "",
+        "BRK-A": "",
+        "ONON": "",
+        "OSCR": ""
     },
-    "Earning_Filter": {
-        "ADC": ""
-    },
+    "Earning_Filter": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

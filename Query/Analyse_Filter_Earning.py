@@ -66,8 +66,8 @@ def analyze_financial_data():
     db_file_path = os.path.join(base_path, 'Documents/Database/Finance.db')
     
     # 将输出路径明确区分为 news 路径和 backup 路径
-    news_file_path = '/Users/yanzhang/Documents/News/Earning_Symbols.txt'
-    backup_file_path = '/Users/yanzhang/Documents/News/backup/Earning_Symbols.txt'
+    news_file_path = '/Users/yanzhang/Documents/News/Filter_Earning.txt'
+    backup_file_path = '/Users/yanzhang/Documents/News/backup/Filter_Earning.txt'
     
     target_json_for_filter_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json'
 
@@ -221,13 +221,13 @@ def analyze_financial_data():
                     # 从查询结果中解包得到价格和成交量
                     latest_price, latest_volume = latest_data_result
 
-                    # ### 新增/修改 2: 合并价格判断条件 ###
                     # 条件2: 最新价 < 所有财报日中的最低价
                     # 条件3: 最新价 < 最新财报日价格 * (1 - 7%)
-                    price_condition_1 = latest_price < min_price_on_earning_dates
+                    # price_condition_1 = latest_price < min_price_on_earning_dates
                     price_condition_2 = latest_price <= latest_earning_price * (1 - PRICE_DROP_PERCENTAGE)
 
-                    if price_condition_1 and price_condition_2:
+                    # if price_condition_1 and price_condition_2:
+                    if price_condition_2:
                         
                         # 计算最新成交额
                         latest_turnover = latest_price * latest_volume
