@@ -88,33 +88,50 @@ start_date = current_date + timedelta(days=(6 - current_date.weekday()))
 # 计算往后延6天的周六
 end_date = start_date + timedelta(days=6)
 
-Event_Filter = {
-    "GDP 2nd Estimate*", "GDP 2nd Estimate", "Non-Farm Payrolls*", "Non-Farm Payrolls",
-    "Core PCE Price Index MM *", "Core PCE Price Index MM", "Core PCE Price Index MM*",
-    "Core PCE Price Index YY*", "Core PCE Price Index YY",
-    "ISM Manufacturing PMI", "ISM Manufacturing PMI*","ISM Manufacturing PMI *",
-    "ADP National Employment*", "ADP National Employment", "International Trade",
-    "International Trade $ *", "International Trade $", "International Trade $*",
-    "ISM N-Mfg PMI", "ISM N-Mfg PMI*", "ISM N-Mfg PMI *", "CPI YY, NSA*", "CPI YY, NSA",
-    "Core CPI MM, SA*", "Core CPI MM, SA", "CPI MM, SA*", "CPI MM, SA",
-    "Core CPI YY, NSA*", "Core CPI YY, NSA", "Fed Funds Tgt Rate *", "Fed Funds Tgt Rate",
-    "PPI Final Demand YY*", "PPI Final Demand YY", "PPI exFood/Energy MM*", "PPI exFood/Energy MM",
-    "PPI ex Food/Energy/Tr MM*", "PPI ex Food/Energy/Tr MM",
-    "PPI Final Demand MM*", "PPI Final Demand MM",
-    "Retail Sales MM *", "Retail Sales MM", "Retail Sales MM*",
-    "GDP Final*", "GDP Final", "Core PCE Prices Fnal*", "Core PCE Prices Fnal",
-    "PCE Prices Final *", "PCE Prices Final", "GDP Cons Spending Final*", "GDP Cons Spending Final",
-    "PCE Price Index MM*", "PCE Price Index MM", "Unemployment Rate*", "Unemployment Rate",
-    "U Mich Sentiment Prelim", "U Mich Sentiment Prelim*", "U Mich Sentiment Prelim *",
-    "New Home Sales-Units *", "New Home Sales-Units", "Initial Jobless Clm*",  "Initial Jobless Clm",
-    "New Home Sales Chg MM *", "New Home Sales Chg MM", "GDP Advance*", "GDP Advance",
-    "GDP Cons Spending Prelim*", "GDP Cons Spending Prelim",
-    "Core PCE Prices Prelim*",  "Core PCE Prices Prelim",
-    "Corporate Profits Prelim*", "Corporate Profits Prelim", "PCE Price Index YY*",
-    "PCE Price Index YY *", "PCE Price Index YY", "PPI exFood/Energy YY*", "PPI exFood/Energy YY",
-    "Import Prices MM*", "Import Prices MM", "U Mich Sentiment Final*", "U Mich Sentiment Final"
-    "Import Prices YY*", "Import Prices YY"
+# <<< 更改开始 >>>
+# ----------------------------------------------------------------------------------
+# 1. 简化事件过滤器，只保留核心事件名称作为“基本名称”
+#    程序将检查从网站获取的事件名称是否以这些基本名称开头。
+Event_Filter_Bases = {
+    "GDP 2nd Estimate",
+    "GDP Advance",
+    "GDP Final",
+    "GDP Cons Spending Prelim",
+    "GDP Cons Spending Final",
+    "Non-Farm Payrolls",
+    "ISM N-Mfg PMI",
+    "ISM Manufacturing PMI",
+    "ADP National Employment",
+    "Unemployment Rate",
+    "International Trade",
+    "Import Prices MM",
+    "Import Prices YY"
+    "CPI MM, SA",
+    "CPI YY, NSA",
+    "Core CPI MM, SA",
+    "Core CPI YY, NSA",
+    "Fed Funds Tgt Rate",
+    "PPI Final Demand YY",
+    "PPI exFood/Energy MM",
+    "PPI exFood/Energy YY",
+    "PPI ex Food/Energy/Tr MM",
+    "PPI Final Demand MM",
+    "PCE Prices Final",
+    "PCE Price Index MM",
+    "PCE Price Index YY",
+    "Core PCE Prices Final",
+    "Core PCE Prices Prelim",
+    "Core PCE Price Index MM",
+    "Core PCE Price Index YY",
+    "U Mich Sentiment Prelim",
+    "Retail Sales MM",
+    "Initial Jobless Clm",
+    "U Mich Sentiment Final",
+    "New Home Sales Chg MM",
+    "New Home Sales-Units",
 }
+# ----------------------------------------------------------------------------------
+# <<< 更改结束 >>>
 
 # 定义一个包含所有目标国家代码的集合
 target_countries = {
@@ -152,50 +169,51 @@ with open(file_path, 'a') as output_file:
             if not rows:
                 has_data = False
             else:
-                try:
-                    for row in rows:
-                        # 跳过可能的表头行
-                        if row.get_attribute("role") == "columnheader":
-                            continue
-                        
-                        # 直接获取所有td元素
-                        cells = row.find_elements(By.TAG_NAME, "td")
-
-                        # 确保行中至少有足够的单元格
-                        if len(cells) < 2:
-                            continue
-                        # 安全地获取事件和国家信息
-                        try:
-                            event = cells[0].text.strip()
-                            country = cells[1].text.strip()
-                            
-                            # 只有当事件和国家都符合过滤条件时才处理
-                            if event and country and event in Event_Filter and country in target_countries:
-                                try:
-                                    # 尝试获取事件时间
-                                    event_time = next(
-                                        (cell.text for cell in cells if cell.get_attribute('aria-label') == 'Event Time'),
-                                        "No event time available"
-                                    )
-                                    
-                                    # 构造条目并写入
-                                    entry = f"{formatted_change_date} : {event} [{country}]"
-                                    if entry not in existing_content:
-                                        output_file.write(entry + "\n")
-                                        new_content_added = True
-                                        
-                                except Exception as e:
-                                    print(f"处理事件时间时出错: {str(e)}")
-                                    continue
-                                    
-                        except Exception as e:
-                            print(f"处理表格行时出错: {str(e)}")
-                            continue
-                            
-                    offset += 100  # 为下一个子页面增加 offset
+                for row in rows:
+                    if row.get_attribute("role") == "columnheader":
+                        continue
                     
-                except TimeoutException:
-                    print(f"日期 {formatted_change_date} 没有找到数据。跳转到下一个日期。")
+                    cells = row.find_elements(By.TAG_NAME, "td")
+
+                    if len(cells) < 2:
+                        continue
+                    
+                    try:
+                        event = cells[0].text.strip()
+                        country = cells[1].text.strip()
+                        
+                        # <<< 更改开始 >>>
+                        # ----------------------------------------------------------------------------------
+                        # 2. 修改匹配和写入逻辑
+                        #    不再使用 "in" 进行精确匹配，而是遍历基本名称列表，进行前缀匹配。
+                        if event and country and country in target_countries:
+                            matched_base_event = None
+                            # 遍历所有基本事件名称
+                            for base_event in Event_Filter_Bases:
+                                # 如果网站上的事件名称以我们的某个基本名称开头
+                                if event.startswith(base_event):
+                                    # 记录这个基本名称，它将用于写入文件
+                                    matched_base_event = base_event
+                                    # 找到后即可退出内层循环
+                                    break
+                            
+                            # 如果找到了匹配项
+                            if matched_base_event:
+                                # 构造条目时，使用 matched_base_event (基本名称) 而不是 event (网站上的完整名称)
+                                entry = f"{formatted_change_date} : {matched_base_event} [{country}]"
+                                if entry not in existing_content:
+                                    output_file.write(entry + "\n")
+                                    existing_content.add(entry) # 实时更新，防止同一批次内重复写入
+                                    new_content_added = True
+                        # ----------------------------------------------------------------------------------
+                        # <<< 更改结束 >>>
+                                    
+                    except Exception as e:
+                        print(f"处理表格行时出错: {str(e)}")
+                        continue
+                            
+                offset += 100
+                    
         change_date += delta
 
 # 关闭浏览器
