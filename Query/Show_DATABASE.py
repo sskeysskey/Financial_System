@@ -9,7 +9,7 @@ def generate_html_report(db_name, tables_data, output_file='db_visualization.htm
 
     :param db_name: 数据库的名称
     :param tables_data: 一个字典，包含每个表的结构和内容
-    :param output_file: 输出的HTML文件名
+    :param output_file: 输出的HTML文件名 (现在是包含完整路径的文件名)
     """
     # HTML模板的开始部分，包含CSS样式
     html_content = f"""
@@ -184,6 +184,12 @@ def generate_html_report(db_name, tables_data, output_file='db_visualization.htm
 </body>
 </html>
     """
+    
+    # 确保目标目录存在
+    output_dir = os.path.dirname(output_file)
+    if output_dir and not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        print(f"已创建目录: {output_dir}")
 
     # 写入文件
     with open(output_file, 'w', encoding='utf-8') as f:
@@ -191,11 +197,13 @@ def generate_html_report(db_name, tables_data, output_file='db_visualization.htm
     print(f"报告已生成: {output_file}")
     return os.path.abspath(output_file)
 
-def visualize_sqlite_db(db_path, content_limit=100):
+# --- 修改部分 1: 增加 output_dir 参数 ---
+def visualize_sqlite_db(db_path, output_dir, content_limit=100):
     """
     连接到SQLite数据库，提取信息，并生成可视化报告。
 
     :param db_path: SQLite数据库文件的路径
+    :param output_dir: 生成的HTML报告的输出目录
     :param content_limit: 每个表预览内容的行数限制
     """
     if not os.path.exists(db_path):
@@ -239,9 +247,16 @@ def visualize_sqlite_db(db_path, content_limit=100):
         if conn:
             conn.close()
 
-    # 3. 生成HTML报告
+    # --- 修改部分 2: 构建完整的输出路径 ---
     db_name = os.path.basename(db_path)
-    report_path = generate_html_report(db_name, tables_data)
+    # 为了避免文件名冲突，可以基于数据库名来命名HTML文件
+    output_filename = f"{os.path.splitext(db_name)[0]}_visualization.html"
+    # 使用 os.path.join 来创建完整、跨平台的输出路径
+    report_output_path = os.path.join(output_dir, output_filename)
+
+    # 3. 生成HTML报告
+    # --- 修改部分 3: 将新的完整路径传递给生成函数 ---
+    report_path = generate_html_report(db_name, tables_data, output_file=report_output_path)
     
     # 4. 在浏览器中打开报告
     if report_path:
@@ -253,5 +268,9 @@ if __name__ == "__main__":
     # 对于Windows用户，路径可能像这样: r"C:\Users\YourUser\Documents\Database\Finance.db"
     database_file_path = "/Users/yanzhang/Documents/Database/Finance.db"
     
-    # 调用主函数开始执行
-    visualize_sqlite_db(database_file_path, content_limit=100)
+    # --- 修改部分 4: 指定HTML报告的输出目录 ---
+    # 这是您希望保存HTML文件的目录
+    report_save_directory = "/Users/yanzhang/Downloads"
+    
+    # 调用主函数开始执行，并传入输出目录
+    visualize_sqlite_db(database_file_path, output_dir=report_save_directory, content_limit=100)
