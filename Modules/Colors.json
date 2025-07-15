@@ -128,7 +128,8 @@
         "TSM",
         "MSTR",
         "META",
-        "AMZN"
+        "AMZN",
+        "BRK-A"
     ],
     "blue_keywords": [
         "HANGSENG",
@@ -140,7 +141,6 @@
         "Solana",
         "DXJ",
         "SCHD",
-        "BRK-A",
         "V",
         "WMT"
     ],
@@ -776,7 +776,6 @@
         "CRL",
         "RTO",
         "ALB",
-        "WPP",
         "BBY",
         "KHC",
         "ICLR",
@@ -885,7 +884,8 @@
         "ARE",
         "CPB",
         "DEO",
-        "CAG"
+        "CAG",
+        "WPP"
     ],
     "green_keywords": [
         "EURCNY",

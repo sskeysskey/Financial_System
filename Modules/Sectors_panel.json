@@ -9,7 +9,8 @@
     },
     "Consumer_Cyclical": {
         "LULU": "",
-        "JD": ""
+        "JD": "",
+        "DECK": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -110,7 +111,12 @@
         "ONON": "",
         "OSCR": ""
     },
-    "Earning_Filter": {},
+    "Earning_Filter": {
+        "CHWY": "",
+        "CVS": "",
+        "IOT": "",
+        "STE": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

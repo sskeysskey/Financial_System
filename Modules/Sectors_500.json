@@ -50,7 +50,6 @@
         "MAR",
         "AZO",
         "SE",
-        "JD",
         "RCL",
         "HLT",
         "GM",
@@ -97,7 +96,8 @@
         "E",
         "PSX",
         "SLB",
-        "SU"
+        "SU",
+        "TRP"
     ],
     "Financial_Services": [
         "BRK-A",
