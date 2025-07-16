@@ -251,17 +251,36 @@ class MainWindow(QMainWindow):
         
         symbol = symbol_button.text()
 
-        # 创建菜单
+        # 1. 定义菜单的结构和内容
+        # 格式: (菜单显示文本, 对应的 script_type)
+        # None 代表一个分隔符
+        menu_config = [
+            ("Kimi检索财报", "kimi"),
+            ("添加到 Earning", "earning"),
+            ("编辑 Earing DB", "editor_earning"),
+            None,  # 分隔符
+            ("编辑 Tags", "tags"),
+            ("在富途中搜索", "futu"),
+            ("找相似", "similar"),
+            None,  # 分隔符
+            ("加入黑名单", "blacklist"),
+        ]
+
+        # 2. 创建菜单并动态添加项目
         menu = QMenu()
-
-        # 创建“在富途中搜索”动作
-        futu_action = QAction("在富途中搜索", self)
-        # 使用 lambda 捕获当前的 symbol，并连接到执行脚本的函数
-        futu_action.triggered.connect(lambda: execute_external_script('futu', symbol))
-        menu.addAction(futu_action)
-
-        # 在当前光标位置显示菜单
-        # QCursor.pos() 获取的是全局屏幕坐标，正是 menu.exec_() 所需要的
+        for item in menu_config:
+            if item is None:
+                menu.addSeparator()
+            else:
+                label, script_type = item
+                action = QAction(label, self)
+                # 使用 lambda 和 partial 确保传递正确的参数
+                action.triggered.connect(
+                    partial(execute_external_script, script_type, symbol)
+                )
+                menu.addAction(action)
+        
+        # 3. 显示菜单
         menu.exec_(QCursor.pos())
 
     # --- 4. 新增：处理Symbol按钮点击事件的函数 ---
