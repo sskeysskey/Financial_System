@@ -6,6 +6,7 @@ import os
 
 # --- 配置部分 ---
 # 定义源文件和目标目录的路径，方便管理
+LOCAL_DOWNLOAD_BACKUP = '/Users/yanzhang/Downloads/backup/DB_backup'
 # 原始备份目标目录
 GITHUB_IO_DIR = '/Users/yanzhang/Documents/sskeysskey.github.io/economics'
 # 新增的带时间戳备份的目标目录
@@ -16,7 +17,7 @@ VERSION_JSON_PATH = os.path.join(LOCAL_SERVER_DIR, 'version.json')
 # 定义需要进行简单覆盖备份的文件
 # 格式为: { "源文件路径": "目标文件路径" }
 SIMPLE_BACKUP_FILES = {
-    '/Users/yanzhang/Documents/Database/Finance.db': os.path.join(GITHUB_IO_DIR, 'Finance.db'),
+    '/Users/yanzhang/Documents/Database/Finance.db': os.path.join(LOCAL_DOWNLOAD_BACKUP, 'Finance.db'),
     '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json': os.path.join(GITHUB_IO_DIR, 'sectors_panel.json'),
     '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json': os.path.join(GITHUB_IO_DIR, 'sectors_all.json'),
     '/Users/yanzhang/Documents/Financial_System/Modules/description.json': os.path.join(GITHUB_IO_DIR, 'description.json'),

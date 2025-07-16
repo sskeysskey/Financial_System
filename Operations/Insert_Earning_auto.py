@@ -3,12 +3,72 @@ import json
 import sqlite3
 from datetime import date, timedelta
 from functools import partial
+from collections import OrderedDict  # 导入以支持 b.py 中的 load_json
 
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget,
     QVBoxLayout, QGroupBox, QTableWidget, QTableWidgetItem,
     QPushButton, QMessageBox
 )
+# --- 新增导入 ---
+from PyQt5.QtGui import QFont, QColor
+
+# ----------------------------------------------------------------------
+# 1. 新增：从 b.py 借鉴的路径和模块导入
+# ----------------------------------------------------------------------
+# 添加自定义模块的路径，以便可以导入 Chart_input
+sys.path.append('/Users/yanzhang/Documents/Financial_System/Query')
+from Chart_input import plot_financial_data
+
+# 定义所有需要用到的文件路径，方便管理
+TXT_PATH = "/Users/yanzhang/Documents/News/Earnings_Release_new.txt"
+SECTORS_JSON_PATH = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json"
+DB_PATH = "/Users/yanzhang/Documents/Database/Finance.db"
+DESCRIPTION_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
+COMPARE_DATA_PATH = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
+SHARES_PATH = '/Users/yanzhang/Documents/News/backup/Shares.txt'
+MARKETCAP_PATH = '/Users/yanzhang/Documents/News/backup/marketcap_pe.txt'
+
+
+# ----------------------------------------------------------------------
+# 2. 新增：从 b.py 借鉴的数据加载辅助函数
+# ----------------------------------------------------------------------
+def load_json(path):
+    """加载 JSON 文件，并保持顺序"""
+    with open(path, 'r', encoding='utf-8') as file:
+        return json.load(file, object_pairs_hook=OrderedDict)
+
+def load_text_data(path):
+    """加载 key: value 格式的文本文件"""
+    data = {}
+    with open(path, 'r', encoding='utf-8') as file:
+        for line in file:
+            line = line.strip()
+            if not line:
+                continue
+            key, value = map(str.strip, line.split(':', 1))
+            cleaned_key = key.split()[-1]
+            if ',' in value:
+                parts = [p.strip() for p in value.split(',')]
+                data[cleaned_key] = tuple(parts)
+            else:
+                data[cleaned_key] = value
+    return data
+
+def load_marketcap_pe_data(path):
+    """加载 'key: marketcap, pe' 格式的文本文件"""
+    data = {}
+    with open(path, 'r') as file:
+        for line in file:
+            key, values = map(str.strip, line.split(':', 1))
+            parts = [p.strip() for p in values.split(',')]
+            if len(parts) >= 2:
+                marketcap_val, pe_val, *_ = parts
+                data[key] = (float(marketcap_val), pe_val)
+            else:
+                print(f"格式异常：{line}")
+    return data
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -20,10 +80,9 @@ class MainWindow(QMainWindow):
         self.date1 = (today - timedelta(days=1)).strftime("%Y-%m-%d")   # 昨天
         self.date2 = (today - timedelta(days=2)).strftime("%Y-%m-%d")   # 前天
 
-        # 2. 解析 txt 文件，按日期分类 symbol
+        # 2. 解析 txt 文件
         self.symbols_by_date = {self.date1: [], self.date2: []}
-        txt_path = "/Users/yanzhang/Documents/News/Earnings_Release_new.txt"
-        with open(txt_path, "r", encoding="utf-8") as f:
+        with open(TXT_PATH, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if not line:
@@ -34,18 +93,23 @@ class MainWindow(QMainWindow):
                 if dt in self.symbols_by_date:
                     self.symbols_by_date[dt].append(symbol)
 
-        # 3. 载入 sector 配置，并反向索引 symbol->sector
+        # 3. 载入 sector 配置
         self.symbol_to_sector = {}
-        json_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json"
-        with open(json_path, "r", encoding="utf-8") as f:
+        with open(SECTORS_JSON_PATH, "r", encoding="utf-8") as f:
             sectors = json.load(f)
         for sector_name, syms in sectors.items():
             for s in syms:
                 self.symbol_to_sector[s] = sector_name
 
-        # 4. 连接数据库
-        db_path = "/Users/yanzhang/Documents/Database/Finance.db"
-        self.conn = sqlite3.connect(db_path)
+        # --- 4. 新增：加载绘图所需的数据 ---
+        self.description_data = load_json(DESCRIPTION_PATH)
+        self.compare_data = load_text_data(COMPARE_DATA_PATH)
+        self.shares_data = load_text_data(SHARES_PATH)
+        self.marketcap_pe_data = load_marketcap_pe_data(MARKETCAP_PATH)
+
+        # 5. 连接数据库
+        self.db_path = DB_PATH  # 将路径保存为实例变量
+        self.conn = sqlite3.connect(self.db_path)
         self.conn.row_factory = sqlite3.Row
         self.cur = self.conn.cursor()
 
@@ -67,16 +131,20 @@ class MainWindow(QMainWindow):
         self.table1 = QTableWidget(0, 3)
         self.table1.setHorizontalHeaderLabels(["Symbol", "百分比(%)", "操作"])
         self.table1.horizontalHeader().setStretchLastSection(True)
+        # --- 新增：连接单元格点击信号 ---
+        self.table1.cellClicked.connect(self.on_symbol_clicked)
         lay1.addWidget(self.table1)
         gb1.setLayout(lay1)
         vlay.addWidget(gb1)
 
-        # 第二部分：前天的 symbols，可“替换”
-        gb2 = QGroupBox(f"日期 {self.date2} 符合条件的 Symbols （可替换旧百分比）")
+        # 第二部分
+        gb2 = QGroupBox(f"日期 {self.date2} 符合条件的 Symbols （点击 Symbol 显示图表，可替换旧百分比）")
         lay2 = QVBoxLayout()
         self.table2 = QTableWidget(0, 4)
         self.table2.setHorizontalHeaderLabels(["Symbol", "新百分比(%)", "旧百分比(%)", "操作"])
         self.table2.horizontalHeader().setStretchLastSection(True)
+        # --- 新增：连接单元格点击信号 ---
+        self.table2.cellClicked.connect(self.on_symbol_clicked)
         lay2.addWidget(self.table2)
         gb2.setLayout(lay2)
         vlay.addWidget(gb2)
@@ -87,6 +155,53 @@ class MainWindow(QMainWindow):
 
         # 新增：将窗口移动到屏幕中央
         self.center_window()
+
+    # --- 5. 新增：实现点击 Symbol 后的处理函数 ---
+    def on_symbol_clicked(self, row, column):
+        """当表格中的单元格被点击时触发"""
+        # 检查是否点击的是第一列 (Symbol 列)
+        if column != 0:
+            return
+
+        # 获取被点击的表格控件
+        table = self.sender()
+        if not table:
+            return
+
+        # 获取 symbol
+        symbol_item = table.item(row, 0)
+        if not symbol_item:
+            return
+        symbol = symbol_item.text()
+
+        # 准备调用 plot_financial_data 所需的参数
+        sector = self.symbol_to_sector.get(symbol)
+        if not sector:
+            QMessageBox.warning(self, "错误", f"未找到 Symbol '{symbol}' 对应的板块(Sector)。")
+            return
+
+        compare_value = self.compare_data.get(symbol, "N/A")
+        shares_value = self.shares_data.get(symbol, "N/A")
+        marketcap_val, pe_val = self.marketcap_pe_data.get(symbol, (None, 'N/A'))
+
+        # 调用绘图函数
+        print(f"正在为 {symbol} (板块: {sector}) 生成图表...")
+        try:
+            plot_financial_data(
+                self.db_path,
+                sector,
+                symbol,
+                compare_value,
+                shares_value,
+                marketcap_val,
+                pe_val,
+                self.description_data,
+                '1Y',  # 默认时间周期
+                False
+            )
+        except Exception as e:
+            QMessageBox.critical(self, "绘图失败", f"生成图表时发生错误: {e}")
+            print(f"绘图失败: {e}")
 
     def center_window(self):
         """将窗口移动到屏幕中央"""
@@ -163,7 +278,16 @@ class MainWindow(QMainWindow):
 
             row = self.table1.rowCount()
             self.table1.insertRow(row)
-            self.table1.setItem(row, 0, QTableWidgetItem(symbol))
+
+            # --- 修改：美化 Symbol 单元格，使其看起来可点击 ---
+            symbol_item = QTableWidgetItem(symbol)
+            font = QFont()
+            font.setUnderline(True)
+            symbol_item.setFont(font)
+            symbol_item.setForeground(QColor("blue"))
+            self.table1.setItem(row, 0, symbol_item)
+            # --- 修改结束 ---
+
             self.table1.setItem(row, 1, QTableWidgetItem(str(pct)))
 
             btn = QPushButton("替换")
@@ -238,7 +362,16 @@ class MainWindow(QMainWindow):
             # 在界面上显示
             row = self.table2.rowCount()
             self.table2.insertRow(row)
-            self.table2.setItem(row, 0, QTableWidgetItem(symbol))
+
+            # --- 修改：美化 Symbol 单元格，使其看起来可点击 ---
+            symbol_item = QTableWidgetItem(symbol)
+            font = QFont()
+            font.setUnderline(True)
+            symbol_item.setFont(font)
+            symbol_item.setForeground(QColor("blue"))
+            self.table2.setItem(row, 0, symbol_item)
+            # --- 修改结束 ---
+
             self.table2.setItem(row, 1, QTableWidgetItem(str(pct_new)))
             self.table2.setItem(row, 2, QTableWidgetItem(str(pct_old) if pct_old is not None else ""))
 
