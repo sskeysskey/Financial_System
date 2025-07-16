@@ -157,16 +157,19 @@ class MainWindow(QMainWindow):
         cw = QWidget()
         vlay = QVBoxLayout()
 
+        # --- 1. 新增：定义QSS样式表 ---
+        self.apply_stylesheet()
+        
         # 第一部分：昨天的 symbols，延迟写入，带“替换”按钮
+
         gb1 = QGroupBox(f"日期 {self.date1} 符合条件的 Symbols（点击“替换”写入/覆盖）")
         lay1 = QVBoxLayout()
         # 3 列：Symbol, 百分比, 操作
         self.table1 = QTableWidget(0, 3)
         self.table1.setHorizontalHeaderLabels(["Symbol", "百分比(%)", "操作"])
         self.table1.horizontalHeader().setStretchLastSection(True)
-        # --- 新增：连接单元格点击信号 ---
-        self.table1.cellClicked.connect(self.on_symbol_clicked)
-        # --- 3. 新增：为 table1 设置右键菜单策略并连接信号 ---
+        # --- 2. 移除 cellClicked 连接，因为现在点击的是按钮 ---
+        # self.table1.cellClicked.connect(self.on_symbol_clicked)
         self.table1.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table1.customContextMenuRequested.connect(self.show_table_context_menu)
         lay1.addWidget(self.table1)
@@ -179,9 +182,8 @@ class MainWindow(QMainWindow):
         self.table2 = QTableWidget(0, 4)
         self.table2.setHorizontalHeaderLabels(["Symbol", "新百分比(%)", "旧百分比(%)", "操作"])
         self.table2.horizontalHeader().setStretchLastSection(True)
-        # --- 新增：连接单元格点击信号 ---
-        self.table2.cellClicked.connect(self.on_symbol_clicked)
-        # --- 3. 新增：为 table2 设置右键菜单策略并连接信号 ---
+        # --- 2. 移除 cellClicked 连接 ---
+        # self.table2.cellClicked.connect(self.on_symbol_clicked)
         self.table2.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table2.customContextMenuRequested.connect(self.show_table_context_menu)
         lay2.addWidget(self.table2)
@@ -195,9 +197,42 @@ class MainWindow(QMainWindow):
         # 新增：将窗口移动到屏幕中央
         self.center_window()
 
-    # ----------------------------------------------------------------------
-    # 4. 新增：实现显示右键菜单的函数
-    # ----------------------------------------------------------------------
+    def apply_stylesheet(self):
+        """定义并应用全局样式表"""
+        qss = """
+        /* 为Symbol按钮定义一个特殊的objectName，以便单独设置样式 */
+        QPushButton#SymbolButton {
+            background-color: #3498db; /* 漂亮的蓝色 */
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px; /* 圆角 */
+            font-weight: bold;
+        }
+        QPushButton#SymbolButton:hover {
+            background-color: #2980b9; /* 鼠标悬停时颜色变深 */
+        }
+        QPushButton#SymbolButton:pressed {
+            background-color: #1f618d; /* 按下时颜色更深 */
+        }
+
+        /* 也可以为普通的“替换”按钮设置一个默认样式 */
+        QPushButton {
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        QPushButton:hover {
+            background-color: #e0e0e0;
+        }
+        QPushButton:disabled {
+            background-color: #d0d0d0;
+            color: #888;
+        }
+        """
+        self.setStyleSheet(qss)
+
     def show_table_context_menu(self, pos):
         """当在表格上右键点击时，创建并显示上下文菜单"""
         # 获取被点击的表格控件
@@ -207,12 +242,14 @@ class MainWindow(QMainWindow):
 
         # 根据点击位置获取单元格项目
         item = table.itemAt(pos)
-        if item is None or item.column() != 0:
-            # 如果没有点到任何项目，或者点的不是第一列 (Symbol列)，则不显示菜单
-            return
+        if item is None or item.column() != 0: return
 
-        # 获取 symbol
-        symbol = item.text()
+        # --- 3. 修改：从cell widget获取symbol，而不是item的文本 ---
+        symbol_button = table.cellWidget(item.row(), 0)
+        if not isinstance(symbol_button, QPushButton):
+            return # 如果单元格里不是按钮，则忽略
+        
+        symbol = symbol_button.text()
 
         # 创建菜单
         menu = QMenu()
@@ -227,17 +264,9 @@ class MainWindow(QMainWindow):
         # QCursor.pos() 获取的是全局屏幕坐标，正是 menu.exec_() 所需要的
         menu.exec_(QCursor.pos())
 
-    # ... (on_symbol_clicked, center_window 等其他方法保持不变) ...
-    def on_symbol_clicked(self, row, column):
-        if column != 0: return
-        table = self.sender()
-        if not table: return
-        symbol_item = table.item(row, 0)
-        if not symbol_item:
-            return
-        symbol = symbol_item.text()
-
-        # 准备调用 plot_financial_data 所需的参数
+    # --- 4. 新增：处理Symbol按钮点击事件的函数 ---
+    def on_symbol_button_clicked(self, symbol):
+        """当Symbol按钮被点击时，显示图表"""
         sector = self.symbol_to_sector.get(symbol)
         if not sector:
             QMessageBox.warning(self, "错误", f"未找到 Symbol '{symbol}' 对应的板块(Sector)。")
@@ -330,20 +359,23 @@ class MainWindow(QMainWindow):
             row = self.table1.rowCount()
             self.table1.insertRow(row)
 
-            # --- 修改：美化 Symbol 单元格，使其看起来可点击 ---
-            symbol_item = QTableWidgetItem(symbol)
-            font = QFont()
-            font.setUnderline(True)
-            symbol_item.setFont(font)
-            symbol_item.setForeground(QColor("blue"))
-            self.table1.setItem(row, 0, symbol_item)
+            # --- 5. 修改：将Symbol文本替换为QPushButton ---
+            # 创建一个空的item占位，因为setCellWidget需要一个item存在
+            self.table1.setItem(row, 0, QTableWidgetItem()) 
+
+            symbol_btn = QPushButton(symbol)
+            symbol_btn.setObjectName("SymbolButton") # 应用我们定义的QSS样式
+            symbol_btn.setCursor(QCursor(Qt.PointingHandCursor)) # 设置鼠标手势
+            # 连接按钮的点击信号到新的处理函数
+            symbol_btn.clicked.connect(partial(self.on_symbol_button_clicked, symbol))
+            self.table1.setCellWidget(row, 0, symbol_btn)
             # --- 修改结束 ---
 
             self.table1.setItem(row, 1, QTableWidgetItem(str(pct)))
 
-            btn = QPushButton("替换")
-            btn.clicked.connect(partial(self.on_replace_date1, symbol, pct, row))
-            self.table1.setCellWidget(row, 2, btn)
+            replace_btn = QPushButton("替换")
+            replace_btn.clicked.connect(partial(self.on_replace_date1, symbol, pct, row))
+            self.table1.setCellWidget(row, 2, replace_btn)
 
     def on_replace_date1(self, symbol, pct, row):
         """
@@ -414,21 +446,21 @@ class MainWindow(QMainWindow):
             row = self.table2.rowCount()
             self.table2.insertRow(row)
 
-            # --- 修改：美化 Symbol 单元格，使其看起来可点击 ---
-            symbol_item = QTableWidgetItem(symbol)
-            font = QFont()
-            font.setUnderline(True)
-            symbol_item.setFont(font)
-            symbol_item.setForeground(QColor("blue"))
-            self.table2.setItem(row, 0, symbol_item)
+            # --- 5. 修改：将Symbol文本替换为QPushButton ---
+            self.table2.setItem(row, 0, QTableWidgetItem()) # 同样需要占位item
+
+            symbol_btn = QPushButton(symbol)
+            symbol_btn.setObjectName("SymbolButton")
+            symbol_btn.setCursor(QCursor(Qt.PointingHandCursor))
+            symbol_btn.clicked.connect(partial(self.on_symbol_button_clicked, symbol))
+            self.table2.setCellWidget(row, 0, symbol_btn)
             # --- 修改结束 ---
 
             self.table2.setItem(row, 1, QTableWidgetItem(str(pct_new)))
             self.table2.setItem(row, 2, QTableWidgetItem(str(pct_old) if pct_old is not None else ""))
-
-            btn = QPushButton("替换")
-            btn.clicked.connect(partial(self.on_replace_date2, symbol, pct_new, row, btn))
-            self.table2.setCellWidget(row, 3, btn)
+            replace_btn = QPushButton("替换")
+            replace_btn.clicked.connect(partial(self.on_replace_date2, symbol, pct_new, row, replace_btn))
+            self.table2.setCellWidget(row, 3, replace_btn)
 
     def on_replace_date2(self, symbol, new_pct, row, btn):
         """
