@@ -1,6 +1,7 @@
 import sys
 import json
 import sqlite3
+import subprocess  # 1. 新增导入：用于执行外部脚本
 from datetime import date, timedelta
 from functools import partial
 from collections import OrderedDict  # 导入以支持 b.py 中的 load_json
@@ -8,10 +9,11 @@ from collections import OrderedDict  # 导入以支持 b.py 中的 load_json
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget,
     QVBoxLayout, QGroupBox, QTableWidget, QTableWidgetItem,
-    QPushButton, QMessageBox
+    QPushButton, QMessageBox,
+    QMenu, QAction  # 1. 新增导入：用于创建右键菜单
 )
-# --- 新增导入 ---
-from PyQt5.QtGui import QFont, QColor
+from PyQt5.QtGui import QFont, QColor, QCursor # 1. 新增导入：用于获取光标位置
+from PyQt5.QtCore import Qt # 1. 新增导入：用于设置菜单策略
 
 # ----------------------------------------------------------------------
 # 1. 新增：从 b.py 借鉴的路径和模块导入
@@ -33,6 +35,37 @@ MARKETCAP_PATH = '/Users/yanzhang/Documents/News/backup/marketcap_pe.txt'
 # ----------------------------------------------------------------------
 # 2. 新增：从 b.py 借鉴的数据加载辅助函数
 # ----------------------------------------------------------------------
+def execute_external_script(script_type, keyword):
+    """
+    执行外部脚本（AppleScript 或 Python）。
+    此函数直接从 b.py 移植而来。
+    """
+    base_path = '/Users/yanzhang/Documents/Financial_System'
+    script_configs = {
+        'blacklist': f'{base_path}/Operations/Insert_Blacklist.py',
+        'similar': f'{base_path}/Query/Find_Similar_Tag.py',
+        'tags': f'{base_path}/Operations/Editor_Symbol_Tags.py',
+        'editor_earning': f'{base_path}/Operations/Editor_Earning_DB.py',
+        'earning': f'{base_path}/Operations/Insert_Earning.py',
+        'futu': '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt',
+        'kimi': '/Users/yanzhang/Documents/ScriptEditor/CheckKimi_Earning.scpt'
+    }
+
+    try:
+        # 使用 Popen 进行非阻塞调用
+        if script_type in ['futu', 'kimi']:
+            # 对于 AppleScript，使用 osascript
+            subprocess.Popen(['osascript', script_configs[script_type], keyword])
+        else:
+            # 对于 Python 脚本
+            python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
+            subprocess.Popen([python_path, script_configs[script_type], keyword])
+    except Exception as e:
+        # 在GUI中，最好用QMessageBox显示错误，但此处为了简单，先打印
+        print(f"执行脚本时出错: {e}")
+        QMessageBox.critical(None, "脚本执行错误", f"执行 '{script_type}' 脚本时发生错误:\n{e}")
+
+# ... (之前添加的数据加载函数 load_json, load_text_data 等保持不变) ...
 def load_json(path):
     """加载 JSON 文件，并保持顺序"""
     with open(path, 'r', encoding='utf-8') as file:
@@ -133,6 +166,9 @@ class MainWindow(QMainWindow):
         self.table1.horizontalHeader().setStretchLastSection(True)
         # --- 新增：连接单元格点击信号 ---
         self.table1.cellClicked.connect(self.on_symbol_clicked)
+        # --- 3. 新增：为 table1 设置右键菜单策略并连接信号 ---
+        self.table1.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.table1.customContextMenuRequested.connect(self.show_table_context_menu)
         lay1.addWidget(self.table1)
         gb1.setLayout(lay1)
         vlay.addWidget(gb1)
@@ -145,6 +181,9 @@ class MainWindow(QMainWindow):
         self.table2.horizontalHeader().setStretchLastSection(True)
         # --- 新增：连接单元格点击信号 ---
         self.table2.cellClicked.connect(self.on_symbol_clicked)
+        # --- 3. 新增：为 table2 设置右键菜单策略并连接信号 ---
+        self.table2.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.table2.customContextMenuRequested.connect(self.show_table_context_menu)
         lay2.addWidget(self.table2)
         gb2.setLayout(lay2)
         vlay.addWidget(gb2)
@@ -156,19 +195,43 @@ class MainWindow(QMainWindow):
         # 新增：将窗口移动到屏幕中央
         self.center_window()
 
-    # --- 5. 新增：实现点击 Symbol 后的处理函数 ---
-    def on_symbol_clicked(self, row, column):
-        """当表格中的单元格被点击时触发"""
-        # 检查是否点击的是第一列 (Symbol 列)
-        if column != 0:
-            return
-
+    # ----------------------------------------------------------------------
+    # 4. 新增：实现显示右键菜单的函数
+    # ----------------------------------------------------------------------
+    def show_table_context_menu(self, pos):
+        """当在表格上右键点击时，创建并显示上下文菜单"""
         # 获取被点击的表格控件
         table = self.sender()
         if not table:
             return
 
+        # 根据点击位置获取单元格项目
+        item = table.itemAt(pos)
+        if item is None or item.column() != 0:
+            # 如果没有点到任何项目，或者点的不是第一列 (Symbol列)，则不显示菜单
+            return
+
         # 获取 symbol
+        symbol = item.text()
+
+        # 创建菜单
+        menu = QMenu()
+
+        # 创建“在富途中搜索”动作
+        futu_action = QAction("在富途中搜索", self)
+        # 使用 lambda 捕获当前的 symbol，并连接到执行脚本的函数
+        futu_action.triggered.connect(lambda: execute_external_script('futu', symbol))
+        menu.addAction(futu_action)
+
+        # 在当前光标位置显示菜单
+        # QCursor.pos() 获取的是全局屏幕坐标，正是 menu.exec_() 所需要的
+        menu.exec_(QCursor.pos())
+
+    # ... (on_symbol_clicked, center_window 等其他方法保持不变) ...
+    def on_symbol_clicked(self, row, column):
+        if column != 0: return
+        table = self.sender()
+        if not table: return
         symbol_item = table.item(row, 0)
         if not symbol_item:
             return
@@ -225,19 +288,7 @@ class MainWindow(QMainWindow):
 
         except Exception as e:
             print(f"Error centering window: {e}")
-            # 如果出现异常，可以尝试旧方法或不进行居中
-            # 对于非常旧的 PyQt5 版本，可能需要 QDesktopWidget
-            try:
-                from PyQt5.QtWidgets import QDesktopWidget
-                qr = self.frameGeometry()
-                cp = QDesktopWidget().availableGeometry().center()
-                qr.moveCenter(cp)
-                self.move(qr.topLeft())
-            except ImportError:
-                pass # QDesktopWidget 不可用
-            except Exception as e_old:
-                print(f"Error centering window with QDesktopWidget: {e_old}")
-                
+
     def _get_prev_price(self, table: str, dt: str, symbol: str):
         """
         从指定表里找 name=symbol 且 date<dt 的最近一条 price
