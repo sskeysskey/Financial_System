@@ -29,8 +29,7 @@ COLORS_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Colors.json'
 DESCRIPTION_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
 SECTORS_ALL_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
 COMPARE_DATA_PATH = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
-SHARES_PATH = '/Users/yanzhang/Documents/News/backup/Shares.txt'
-MARKETCAP_PATH = '/Users/yanzhang/Documents/News/backup/marketcap_pe.txt'
+# ### 删除 ###: 移除了 SHARES_PATH 和 MARKETCAP_PATH
 DB_PATH = '/Users/yanzhang/Documents/Database/Finance.db'
 
 DISPLAY_LIMITS = {
@@ -60,8 +59,7 @@ categories = [
 # Global variables initialized below; placeholders for IDE clarity
 symbol_manager = None
 compare_data = {}
-shares = {}
-marketcap_pe_data = {}
+# ### 删除 ###: 移除了 shares 和 marketcap_pe_data 全局变量
 config = {}
 keyword_colors = {}
 sector_data = {}
@@ -146,24 +144,27 @@ def load_text_data(path):
                 data[cleaned_key] = value
     return data
 
-def load_marketcap_pe_data(path):
+# ### 删除 ###: 移除了不再需要的 load_marketcap_pe_data 函数
+
+# ### 新增 ###: 从 b.py 借鉴的数据库查询函数
+def fetch_mnspp_data_from_db(db_path, symbol):
     """
-    Loads data from a text file in the format 'key: marketcap, pe'.
-    如果数据多出了其他项，只读取前两个项（忽略后续的额外数据）。
+    根据股票代码从MNSPP表中查询 shares, marketcap, pe_ratio, pb。
+    如果未找到，则返回默认值。
     """
-    data = {}
-    with open(path, 'r') as file:
-        for line in file:
-            # 按":"分割成key和values
-            key, values = map(str.strip, line.split(':', 1))
-            parts = [p.strip() for p in values.split(',')]
-            if len(parts) >= 2:
-                # 只取前两个数据，忽略其他数据
-                marketcap_val, pe_val, *_ = parts
-                data[key] = (float(marketcap_val), pe_val)
-            else:
-                print(f"格式异常：{line}")
-    return data
+    with sqlite3.connect(db_path) as conn:
+        cursor = conn.cursor()
+        query = "SELECT shares, marketcap, pe_ratio, pb FROM MNSPP WHERE symbol = ?"
+        cursor.execute(query, (symbol,))
+        result = cursor.fetchone()
+
+    if result:
+        # 数据库查到了数据，返回实际值
+        shares, marketcap, pe, pb = result
+        return shares, marketcap, pe, pb
+    else:
+        # 数据库没查到，返回默认值
+        return "N/A", None, "N/A", "--"
 
 def query_database(db_path, table_name, condition):
     with sqlite3.connect(db_path) as conn:
@@ -451,15 +452,20 @@ class MainWindow(QMainWindow):
                 else:
                     self.clear_layout(item.layout())
 
+    # ### 修改 ###: 更新此方法以使用新的数据库查询函数
     def on_keyword_selected_chart(self, value):
         sector = next((s for s, names in sector_data.items() if value in names), None)
         if sector:
             self.symbol_manager.set_current_symbol(value)
             compare_value = compare_data.get(value, "N/A")
-            shares_value = shares.get(value, "N/A")
-            marketcap_val, pe_val = marketcap_pe_data.get(value, (None, 'N/A'))
+            
+            # 从数据库获取 shares, marketcap, pe, pb
+            shares_val, marketcap_val, pe_val, pb_val = fetch_mnspp_data_from_db(DB_PATH, value)
+            
+            # 调用绘图函数，注意参数的变化：
+            # - shares_value 现在是一个包含 (shares, pb) 的元组
             plot_financial_data(
-                DB_PATH, sector, value, compare_value, shares_value,
+                DB_PATH, sector, value, compare_value, (shares_val, pb_val),
                 marketcap_val, pe_val, json_data, '1Y', False
             )
             # <--- 第2处修改：在绘图后让主窗口重新获得焦点，以便响应键盘事件 ---
@@ -636,9 +642,8 @@ if __name__ == '__main__':
     json_data = load_json(DESCRIPTION_PATH)
     sector_data = load_json(SECTORS_ALL_PATH)
     compare_data = load_text_data(COMPARE_DATA_PATH)
-    shares = load_text_data(SHARES_PATH)
-    marketcap_pe_data = load_marketcap_pe_data(MARKETCAP_PATH)
-
+    # ### 删除 ###: 移除了对 shares 和 marketcap_pe_data 的加载
+    
     symbol_manager = SymbolManager(config, categories)
 
     # Create and run PyQt5 application

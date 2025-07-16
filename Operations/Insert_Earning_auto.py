@@ -28,8 +28,9 @@ SECTORS_JSON_PATH = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_
 DB_PATH = "/Users/yanzhang/Documents/Database/Finance.db"
 DESCRIPTION_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
 COMPARE_DATA_PATH = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
-SHARES_PATH = '/Users/yanzhang/Documents/News/backup/Shares.txt'
-MARKETCAP_PATH = '/Users/yanzhang/Documents/News/backup/marketcap_pe.txt'
+# ### 删除 ###: 移除了 SHARES_PATH 和 MARKETCAP_PATH
+# SHARES_PATH = '/Users/yanzhang/Documents/News/backup/Shares.txt'
+# MARKETCAP_PATH = '/Users/yanzhang/Documents/News/backup/marketcap_pe.txt'
 
 
 # ----------------------------------------------------------------------
@@ -88,19 +89,25 @@ def load_text_data(path):
                 data[cleaned_key] = value
     return data
 
-def load_marketcap_pe_data(path):
-    """加载 'key: marketcap, pe' 格式的文本文件"""
-    data = {}
-    with open(path, 'r') as file:
-        for line in file:
-            key, values = map(str.strip, line.split(':', 1))
-            parts = [p.strip() for p in values.split(',')]
-            if len(parts) >= 2:
-                marketcap_val, pe_val, *_ = parts
-                data[key] = (float(marketcap_val), pe_val)
-            else:
-                print(f"格式异常：{line}")
-    return data
+# ### 删除 ###: 移除了不再需要的 load_marketcap_pe_data 函数
+
+# ### 新增 ###: 从 b.py 和 a.py 借鉴的数据库查询函数
+def fetch_mnspp_data_from_db(db_path, symbol):
+    """
+    根据股票代码从MNSPP表中查询 shares, marketcap, pe_ratio, pb。
+    如果未找到，则返回默认值。
+    """
+    with sqlite3.connect(db_path) as conn:
+        cursor = conn.cursor()
+        query = "SELECT shares, marketcap, pe_ratio, pb FROM MNSPP WHERE symbol = ?"
+        cursor.execute(query, (symbol,))
+        result = cursor.fetchone()
+
+    if result:
+        shares, marketcap, pe, pb = result
+        return shares, marketcap, pe, pb
+    else:
+        return "N/A", None, "N/A", "--"
 
 
 class MainWindow(QMainWindow):
@@ -134,11 +141,11 @@ class MainWindow(QMainWindow):
             for s in syms:
                 self.symbol_to_sector[s] = sector_name
 
-        # --- 4. 新增：加载绘图所需的数据 ---
+        # ### 修改 ###: 移除对 shares 和 marketcap 文件的加载
         self.description_data = load_json(DESCRIPTION_PATH)
         self.compare_data = load_text_data(COMPARE_DATA_PATH)
-        self.shares_data = load_text_data(SHARES_PATH)
-        self.marketcap_pe_data = load_marketcap_pe_data(MARKETCAP_PATH)
+        # self.shares_data = load_text_data(SHARES_PATH) # 已删除
+        # self.marketcap_pe_data = load_marketcap_pe_data(MARKETCAP_PATH) # 已删除
 
         # 5. 连接数据库
         self.db_path = DB_PATH  # 将路径保存为实例变量
@@ -282,27 +289,28 @@ class MainWindow(QMainWindow):
         # 3. 显示菜单
         menu.exec_(QCursor.pos())
 
-    # --- 4. 新增：处理Symbol按钮点击事件的函数 ---
+    # ### 修改 ###: 更新此方法以使用新的数据库查询逻辑
     def on_symbol_button_clicked(self, symbol):
-        """当Symbol按钮被点击时，显示图表"""
+        """当Symbol按钮被点击时，从数据库获取数据并显示图表"""
         sector = self.symbol_to_sector.get(symbol)
         if not sector:
             QMessageBox.warning(self, "错误", f"未找到 Symbol '{symbol}' 对应的板块(Sector)。")
             return
 
         compare_value = self.compare_data.get(symbol, "N/A")
-        shares_value = self.shares_data.get(symbol, "N/A")
-        marketcap_val, pe_val = self.marketcap_pe_data.get(symbol, (None, 'N/A'))
+        
+        # 从数据库获取 shares, marketcap, pe, pb
+        shares_val, marketcap_val, pe_val, pb_val = fetch_mnspp_data_from_db(self.db_path, symbol)
 
-        # 调用绘图函数
         print(f"正在为 {symbol} (板块: {sector}) 生成图表...")
         try:
+            # 调用绘图函数，注意参数的变化
             plot_financial_data(
                 self.db_path,
                 sector,
                 symbol,
                 compare_value,
-                shares_value,
+                (shares_val, pb_val),  # 将 shares 和 pb 组合成元组传入
                 marketcap_val,
                 pe_val,
                 self.description_data,
