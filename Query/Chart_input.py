@@ -354,7 +354,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                         diff_percent = 0
 
                     # 拼接提示文本，先显示最新价差，再显示昨日财报数据
-                    earning_markers[marker_date] = f"{date_str}\n最新价差: {diff_percent:.2f}%\n昨日财报: {price_change}%"
+                    earning_markers[marker_date] = f"{date_str}\n昨日财报: {price_change}%\n最新价差: {diff_percent:.2f}%"
                 except ValueError:
                     print(f"无法解析收益公告日期: {date_str}")
     except sqlite3.OperationalError as e:
@@ -443,7 +443,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             textcoords="offset points",
             bbox=dict(boxstyle="round", fc="black", alpha=0.8),
             arrowprops=dict(arrowstyle="->", color='white'),
-            color='yellow',
+            color='gray',
             fontsize=12,
             visible=show_earning_markers and show_all_annotations
         )
@@ -804,7 +804,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         label.set_fontsize(14)
     radio.circles[default_index].set_facecolor('red')
 
-    # ——— 添加快捷键说明 ———
+    # ------ 添加快捷键说明 ------
     instructions = (
         "N： 新财报\n"
         "E： 改财报\n"
@@ -931,35 +931,54 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             text = f"{percent_change:.1f}%"
             annot.set_color('white')  # 百分比变化使用白色
         else:
-            # 显示当前日期、当前价格和当前价格跟最新价格的百分比差值
-            latest_price = prices[-1]  # 获取最新日期的价格
-            current_price = yval       # 当前鼠标位置的价格
-            percent_diff = ((latest_price - current_price) / current_price) * 100  # 计算百分比差值
-            text = f"{datetime.strftime(xval, '%Y-%m-%d')}\n{current_price:.2f}\n\n{percent_diff:.2f}%"  # 显示日期、当前价格和百分比差值
-            # text = f"{datetime.strftime(xval, '%Y-%m-%d')}\n{percent_diff:.2f}%"  # 显示日期、当前价格和百分比差值
-            
-            # 添加标记文本信息（如果有）
-            has_earning_marker = False
+            # --- 这是修改的核心逻辑 ---
+            text_parts = []
+            latest_price = prices[-1]
+            current_price = yval
+            percent_diff = ((latest_price - current_price) / current_price) * 100
+
+            # 1. 添加日期和当前价格
+            text_parts.append(f"{datetime.strftime(xval, '%Y-%m-%d')}")
+            text_parts.append(f"{current_price:.2f}")
+            text_parts.append("") # 添加一个空行
+
+            # 2. 添加标记文本（全局和特定）
             marker_texts = []
             if global_marker_text:
                 marker_texts.append(global_marker_text)
             if specific_marker_text:
-                marker_texts.append(specific_marker_text)
+                marker_texts.append(specific_marker_text + "\n")
+
+            # 3. 特殊处理财报标记文本，只提取需要的部分
+            has_earning_marker = False
             if earning_marker_text:
-                marker_texts.append(earning_marker_text)
+                # 从预存的财报信息中，只提取包含“昨日财报”的那一行
+                for line in earning_marker_text.split('\n'):
+                    if "昨日财报" in line:
+                        marker_texts.append(line)
+                        break
                 has_earning_marker = True
-                
+            
             if marker_texts:
-                text += "\n" + "\n".join(marker_texts)
-            # 如果是收益公告，设置为黄色字体，否则为白色
+                text_parts.extend(marker_texts)
+
+            # 4. 在最下方添加与最新价的百分比差值
+            text_parts.append(f"最新价差: {percent_diff:.2f}%")
+            
+            # 组合所有部分
+            text = "\n".join(text_parts)
+            
+            # 设置颜色
             if has_earning_marker and not (global_marker_text or specific_marker_text):
-                annot.set_color('yellow')  # 收益公告标记使用黄色文字
+                annot.set_color('white')  # 收益公告标记使用黄色文字
             elif global_marker_text and not (specific_marker_text or has_earning_marker):
                 annot.set_color('red')    # 全局标记使用红色文字
             elif specific_marker_text and not (global_marker_text or has_earning_marker):
                 annot.set_color('orange')    # 特殊标记使用橘色文字
+            elif global_marker_text and (specific_marker_text or has_earning_marker):
+                annot.set_color('purple')    # 全局标记使用红色文字
             else:
-                annot.set_color('white')  # 其他标记使用白色文字
+                annot.set_color('yellow')  # 其他标记使用白色文字
         
         annot.set_text(text)
         annot.get_bbox_patch().set_alpha(0.4)

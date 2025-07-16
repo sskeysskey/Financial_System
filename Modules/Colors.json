@@ -443,7 +443,6 @@
         "KRG",
         "SLG",
         "MAC",
-        "ACN",
         "ARM",
         "INFY",
         "GTLB",
@@ -471,7 +470,11 @@
         "AAON",
         "TKC",
         "CAVA",
-        "PG"
+        "PG",
+        "TSN",
+        "CNA",
+        "ELS",
+        "IRT"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -713,7 +716,8 @@
         "BAH",
         "TAP",
         "CHE",
-        "MOH"
+        "MOH",
+        "ACN"
     ],
     "orange_keywords": [
         "NASDAQ",

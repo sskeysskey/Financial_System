@@ -184,11 +184,11 @@ def update_color_json(color_config_path, updates_colors, blacklist_newlow, exist
                     symbol_to_color[name] = category_list
 
                     log_message = f"Symbol {name} 从 {existing_color} 移动到 {category_list}。"
-                    log_and_print_error(log_message)
+                    # log_and_print_error(log_message)
                 else:
                     # 新颜色优先级低于或等于现有颜色，跳过
                     log_message = f"Symbol {name} 已在 {existing_color} 中，其优先级高于或等于 {category_list}，跳过。"
-                    log_and_print_error(log_message)
+                    # log_and_print_error(log_message)
             else:
                 # Symbol 不存在于任何颜色分组中，直接添加
                 if category_list in colors:
@@ -198,7 +198,7 @@ def update_color_json(color_config_path, updates_colors, blacklist_newlow, exist
                 symbol_to_color[name] = category_list
 
                 log_message = f"Symbol {name} 添加到 {category_list}。"
-                log_and_print_error(log_message)
+                # log_and_print_error(log_message)
     
     # 在写回文件之前，将 "red_keywords" 添加回去
     colors["red_keywords"] = all_colors.get("red_keywords", [])

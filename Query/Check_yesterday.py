@@ -312,7 +312,7 @@ def main():
     else:
         Insert_DB()
         # 无任何缺失，直接弹框提示
-        show_alert("所有数据都已成功入库，没有遗漏。")
+        show_alert("包含CNYI等所有数据都已成功入库，没有遗漏。")
 
 if __name__ == '__main__':
     main()

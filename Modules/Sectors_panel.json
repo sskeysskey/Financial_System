@@ -1,36 +1,46 @@
 {
     "Basic_Materials": {},
     "Real_Estate": {
-        "NSA": ""
+        "ELS": "",
+        "IRT": ""
     },
     "Energy": {},
     "Technology": {
-        "IT": ""
+        "IT": "",
+        "ACN": "",
+        "FTV": ""
     },
     "Consumer_Cyclical": {
         "LULU": "",
-        "JD": "",
         "DECK": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
         "FLO": "",
-        "PG": ""
+        "PG": "",
+        "GIS": "",
+        "TSN": ""
     },
     "Industrials": {
-        "CPRT": ""
+        "CPRT": "",
+        "KBR": "",
+        "EXPO": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
         "BRK-A": "",
         "PGR": "",
-        "MMC": ""
+        "MMC": "",
+        "AJG": "",
+        "CNA": "",
+        "FG": ""
     },
     "Healthcare": {
         "CNC": "",
         "ELV": "",
         "MOH": "",
-        "CHE": ""
+        "CHE": "",
+        "HUM": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -102,20 +112,20 @@
         "XRP": ""
     },
     "Qualified_Symbol": {
-        "HALO": "",
         "ELV": "",
         "CI": "",
         "DRI": "",
         "DUOL": "",
         "BRK-A": "",
         "ONON": "",
-        "OSCR": ""
-    },
-    "Earning_Filter": {
+        "OSCR": "",
         "CHWY": "",
         "CVS": "",
-        "IOT": "",
         "STE": ""
+    },
+    "Earning_Filter": {
+        "ERIC": "",
+        "LYFT": ""
     },
     "Currencies": {
         "DXY": "美元指数",
