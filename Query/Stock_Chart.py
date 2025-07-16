@@ -13,10 +13,6 @@ from Chart_input import plot_financial_data
 
 @lru_cache(maxsize=None)
 def lazy_load_data(path, data_type='json'):
-    """
-    懒加载函数，现在只处理JSON和通用文本文件。
-    移除了对 marketcap_pe.txt 和 Shares.txt 的特定处理逻辑。
-    """
     with open(path, 'r', encoding='utf-8') as file:
         if data_type == 'json':
             return json.load(file)
@@ -95,10 +91,6 @@ def match_and_plot(input_trimmed, sector_data, compare_data, json_data, db_path)
     return False
 
 def load_data_parallel():
-    """
-    修改后的并行加载函数。
-    - 移除了 marketcap_pe.txt 和 Shares.txt 的加载任务。
-    """
     data_sources = [
         ('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'json'),
         ('/Users/yanzhang/Documents/News/backup/Compare_All.txt', 'compare'),

@@ -15,9 +15,6 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QFont, QColor, QCursor # 1. 新增导入：用于获取光标位置
 from PyQt5.QtCore import Qt # 1. 新增导入：用于设置菜单策略
 
-# ----------------------------------------------------------------------
-# 1. 新增：从 b.py 借鉴的路径和模块导入
-# ----------------------------------------------------------------------
 # 添加自定义模块的路径，以便可以导入 Chart_input
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Query')
 from Chart_input import plot_financial_data
@@ -28,14 +25,7 @@ SECTORS_JSON_PATH = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_
 DB_PATH = "/Users/yanzhang/Documents/Database/Finance.db"
 DESCRIPTION_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
 COMPARE_DATA_PATH = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
-# ### 删除 ###: 移除了 SHARES_PATH 和 MARKETCAP_PATH
-# SHARES_PATH = '/Users/yanzhang/Documents/News/backup/Shares.txt'
-# MARKETCAP_PATH = '/Users/yanzhang/Documents/News/backup/marketcap_pe.txt'
 
-
-# ----------------------------------------------------------------------
-# 2. 新增：从 b.py 借鉴的数据加载辅助函数
-# ----------------------------------------------------------------------
 def execute_external_script(script_type, keyword):
     """
     执行外部脚本（AppleScript 或 Python）。
@@ -47,7 +37,6 @@ def execute_external_script(script_type, keyword):
         'similar': f'{base_path}/Query/Find_Similar_Tag.py',
         'tags': f'{base_path}/Operations/Editor_Symbol_Tags.py',
         'editor_earning': f'{base_path}/Operations/Editor_Earning_DB.py',
-        # 'earning': f'{base_path}/Operations/Insert_Earning.py',
         'futu': '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt',
         'kimi': '/Users/yanzhang/Documents/ScriptEditor/CheckKimi_Earning.scpt'
     }
@@ -144,8 +133,6 @@ class MainWindow(QMainWindow):
         # ### 修改 ###: 移除对 shares 和 marketcap 文件的加载
         self.description_data = load_json(DESCRIPTION_PATH)
         self.compare_data = load_text_data(COMPARE_DATA_PATH)
-        # self.shares_data = load_text_data(SHARES_PATH) # 已删除
-        # self.marketcap_pe_data = load_marketcap_pe_data(MARKETCAP_PATH) # 已删除
 
         # 5. 连接数据库
         self.db_path = DB_PATH  # 将路径保存为实例变量
@@ -262,7 +249,6 @@ class MainWindow(QMainWindow):
         # None 代表一个分隔符
         menu_config = [
             ("Kimi检索财报", "kimi"),
-            # ("添加到 Earning", "earning"),
             ("编辑 Earing DB", "editor_earning"),
             None,  # 分隔符
             ("编辑 Tags", "tags"),
@@ -400,7 +386,7 @@ class MainWindow(QMainWindow):
             self.table1.setItem(row, 1, QTableWidgetItem(str(pct)))
 
             # --- 替换按钮的修改 ---
-            replace_btn = QPushButton("替换")
+            replace_btn = QPushButton("写入")
             replace_btn.setObjectName("ReplaceButton") # 应用新样式
             # 将按钮的点击信号连接到处理函数，并把按钮自身作为参数传过去
             replace_btn.clicked.connect(partial(self.on_replace_date1, symbol, pct, replace_btn))

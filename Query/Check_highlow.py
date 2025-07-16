@@ -1,5 +1,6 @@
 import sys
 import json
+import sqlite3 # ### 新增 ###: 导入 sqlite3
 from collections import OrderedDict
 import subprocess
 
@@ -28,8 +29,7 @@ COLORS_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Colors.json'
 DESCRIPTION_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
 SECTORS_ALL_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
 COMPARE_DATA_PATH = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
-SHARES_PATH = '/Users/yanzhang/Documents/News/backup/Shares.txt'
-MARKETCAP_PATH = '/Users/yanzhang/Documents/News/backup/marketcap_pe.txt'
+# ### 删除 ###: 移除了 SHARES_PATH 和 MARKETCAP_PATH
 DB_PATH = '/Users/yanzhang/Documents/Database/Finance.db'
 # 按钮＋标签固定宽度（像素）
 SYMBOL_WIDGET_FIXED_WIDTH = 150
@@ -160,23 +160,30 @@ def load_text_data(path):
                 data[cleaned_key] = value
     return data
 
-def load_marketcap_pe_data(path):
-    """加载市值和PE数据"""
-    data = {}
-    with open(path, 'r') as file:
-        for line in file:
-            key, values = map(str.strip, line.split(':', 1))
-            parts = [p.strip() for p in values.split(',')]
-            if len(parts) >= 2:
-                marketcap_val, pe_val, *_ = parts
-                data[key] = (float(marketcap_val), pe_val)
-    return data
+# ### 删除 ###: 移除了不再需要的 load_marketcap_pe_data 函数
+
+# ### 新增 ###: 从其他脚本借鉴的数据库查询函数
+def fetch_mnspp_data_from_db(db_path, symbol):
+    """
+    根据股票代码从MNSPP表中查询 shares, marketcap, pe_ratio, pb。
+    """
+    with sqlite3.connect(db_path) as conn:
+        cursor = conn.cursor()
+        query = "SELECT shares, marketcap, pe_ratio, pb FROM MNSPP WHERE symbol = ?"
+        cursor.execute(query, (symbol,))
+        result = cursor.fetchone()
+    if result:
+        shares, marketcap, pe, pb = result
+        return shares, marketcap, pe, pb
+    else:
+        return "N/A", None, "N/A", "--"
 
 # ----------------------------------------------------------------------
 # PyQt5 主应用窗口
 # ----------------------------------------------------------------------
 class HighLowWindow(QMainWindow):
-    def __init__(self, high_low_data, keyword_colors, sector_data, compare_data, shares, marketcap_pe_data, json_data):
+    # ### 修改 ###: 移除 __init__ 方法签名中的 shares 和 marketcap_pe_data
+    def __init__(self, high_low_data, keyword_colors, sector_data, compare_data, json_data):
         super().__init__()
         
         # 将加载的数据存储为实例变量
@@ -184,9 +191,8 @@ class HighLowWindow(QMainWindow):
         self.keyword_colors = keyword_colors
         self.sector_data = sector_data
         self.compare_data = compare_data
-        self.shares = shares
-        self.marketcap_pe_data = marketcap_pe_data
         self.json_data = json_data
+        # ### 删除 ###: 移除了 self.shares 和 self.marketcap_pe_data 的赋值
         
         # --- 2. 创建并初始化 SymbolManager ---
         # 从 high_low_data 构建一个扁平的、有序的 symbol 列表
@@ -475,6 +481,7 @@ class HighLowWindow(QMainWindow):
 
         return button
 
+    # ### 修改 ###: 更新此方法以使用新的数据库查询逻辑
     def on_symbol_click(self, symbol):
         # --- 3. 在点击时更新 SymbolManager 并设置焦点 ---
         print(f"按钮 '{symbol}' 被点击，准备显示图表...")
@@ -487,13 +494,14 @@ class HighLowWindow(QMainWindow):
             print(f"警告: 在 Sectors_All.json 中找不到 '{symbol}' 的板块信息。")
         
         compare_value = self.compare_data.get(symbol, "N/A")
-        shares_value = self.shares.get(symbol, "N/A")
-        marketcap_val, pe_val = self.marketcap_pe_data.get(symbol, (None, 'N/A'))
+        
+        # 从数据库获取 shares, marketcap, pe, pb
+        shares_val, marketcap_val, pe_val, pb_val = fetch_mnspp_data_from_db(DB_PATH, symbol)
 
-        # 3. 调用绘图函数
         try:
+            # 调用绘图函数，注意参数的变化
             plot_financial_data(
-                DB_PATH, sector, symbol, compare_value, shares_value,
+                DB_PATH, sector, symbol, compare_value, (shares_val, pb_val),
                 marketcap_val, pe_val, self.json_data, '1Y', False
             )
             # 在绘图后，让主窗口重新获得焦点以响应键盘事件
@@ -604,8 +612,7 @@ if __name__ == '__main__':
         json_data = load_json(DESCRIPTION_PATH)
         sector_data = load_json(SECTORS_ALL_PATH)
         compare_data = load_text_data(COMPARE_DATA_PATH)
-        shares = load_text_data(SHARES_PATH)
-        marketcap_pe_data = load_marketcap_pe_data(MARKETCAP_PATH)
+        # ### 删除 ###: 移除了对 shares 和 marketcap_pe_data 的加载
         print("数据加载完成。")
     except FileNotFoundError as e:
         print(f"错误: 找不到文件 {e.filename}。请检查路径是否正确。")
@@ -616,13 +623,12 @@ if __name__ == '__main__':
 
     # 2. 创建并运行 PyQt5 应用
     app = QApplication(sys.argv)
+    # ### 修改 ###: 移除传递给 HighLowWindow 的 shares 和 marketcap_pe_data 参数
     main_window = HighLowWindow(
         high_low_data,
         keyword_colors,
         sector_data,
         compare_data,
-        shares,
-        marketcap_pe_data,
         json_data
     )
     main_window.show()
