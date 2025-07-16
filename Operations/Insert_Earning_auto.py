@@ -8,7 +8,7 @@ from collections import OrderedDict  # 导入以支持 b.py 中的 load_json
 
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget,
-    QVBoxLayout, QGroupBox, QTableWidget, QTableWidgetItem,
+    QVBoxLayout, QHBoxLayout, QGroupBox, QTableWidget, QTableWidgetItem, # 新增 QHBoxLayout
     QPushButton, QMessageBox,
     QMenu, QAction  # 1. 新增导入：用于创建右键菜单
 )
@@ -46,7 +46,7 @@ def execute_external_script(script_type, keyword):
         'similar': f'{base_path}/Query/Find_Similar_Tag.py',
         'tags': f'{base_path}/Operations/Editor_Symbol_Tags.py',
         'editor_earning': f'{base_path}/Operations/Editor_Earning_DB.py',
-        'earning': f'{base_path}/Operations/Insert_Earning.py',
+        # 'earning': f'{base_path}/Operations/Insert_Earning.py',
         'futu': '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt',
         'kimi': '/Users/yanzhang/Documents/ScriptEditor/CheckKimi_Earning.scpt'
     }
@@ -192,15 +192,16 @@ class MainWindow(QMainWindow):
 
         cw.setLayout(vlay)
         self.setCentralWidget(cw)
-        self.resize(1024, 900) # 你已经设置了窗口大小
+        self.resize(500, 900) # 你已经设置了窗口大小
 
         # 新增：将窗口移动到屏幕中央
         self.center_window()
 
+    # --- 1. 修改：为“替换”按钮添加新样式 ---
     def apply_stylesheet(self):
         """定义并应用全局样式表"""
         qss = """
-        /* 为Symbol按钮定义一个特殊的objectName，以便单独设置样式 */
+        /* Symbol 按钮的样式 */
         QPushButton#SymbolButton {
             background-color: #3498db; /* 漂亮的蓝色 */
             color: white;
@@ -209,26 +210,24 @@ class MainWindow(QMainWindow):
             border-radius: 4px; /* 圆角 */
             font-weight: bold;
         }
-        QPushButton#SymbolButton:hover {
-            background-color: #2980b9; /* 鼠标悬停时颜色变深 */
-        }
-        QPushButton#SymbolButton:pressed {
-            background-color: #1f618d; /* 按下时颜色更深 */
-        }
+        QPushButton#SymbolButton:hover { background-color: #2980b9; }
+        QPushButton#SymbolButton:pressed { background-color: #1f618d; }
 
-        /* 也可以为普通的“替换”按钮设置一个默认样式 */
-        QPushButton {
-            background-color: #f0f0f0;
-            border: 1px solid #ccc;
-            padding: 5px 10px;
+        /* 替换按钮的样式 */
+        QPushButton#ReplaceButton {
+            background-color: #2ecc71; /* 漂亮的绿色 */
+            color: white;
+            border: none;
+            padding: 5px 15px; /* 增加水平内边距 */
             border-radius: 4px;
+            font-weight: bold;
         }
-        QPushButton:hover {
-            background-color: #e0e0e0;
+        QPushButton#ReplaceButton:hover {
+            background-color: #27ae60; /* 悬停时变深 */
         }
-        QPushButton:disabled {
-            background-color: #d0d0d0;
-            color: #888;
+        QPushButton#ReplaceButton:disabled {
+            background-color: #95a5a6; /* 禁用时变为灰色 */
+            color: #ecf0f1;
         }
         """
         self.setStyleSheet(qss)
@@ -256,7 +255,7 @@ class MainWindow(QMainWindow):
         # None 代表一个分隔符
         menu_config = [
             ("Kimi检索财报", "kimi"),
-            ("添加到 Earning", "earning"),
+            # ("添加到 Earning", "earning"),
             ("编辑 Earing DB", "editor_earning"),
             None,  # 分隔符
             ("编辑 Tags", "tags"),
@@ -392,20 +391,25 @@ class MainWindow(QMainWindow):
 
             self.table1.setItem(row, 1, QTableWidgetItem(str(pct)))
 
+            # --- 替换按钮的修改 ---
             replace_btn = QPushButton("替换")
-            replace_btn.clicked.connect(partial(self.on_replace_date1, symbol, pct, row))
-            self.table1.setCellWidget(row, 2, replace_btn)
+            replace_btn.setObjectName("ReplaceButton") # 应用新样式
+            # 将按钮的点击信号连接到处理函数，并把按钮自身作为参数传过去
+            replace_btn.clicked.connect(partial(self.on_replace_date1, symbol, pct, replace_btn))
 
-    def on_replace_date1(self, symbol, pct, row):
-        """
-        第一部分“替换”按钮回调：检查是否已存在同一天同symbol记录，
-        如果存在询问覆盖，否则直接写入。
-        """
-        # 检查是否已有记录
-        self.cur.execute(
-            "SELECT id FROM Earning WHERE date=? AND name=?",
-            (self.date1, symbol)
-        )
+            # 创建容器和布局来控制按钮大小和位置
+            container = QWidget()
+            layout = QHBoxLayout(container)
+            layout.addWidget(replace_btn)
+            layout.setAlignment(Qt.AlignCenter) # 关键：让按钮居中，保持最佳大小
+            layout.setContentsMargins(0, 0, 0, 0) # 移除布局边距
+
+            self.table1.setCellWidget(row, 2, container) # 将容器放入单元格
+
+    # --- 3. 修改：on_replace_date1 的签名，直接接收按钮实例 ---
+    def on_replace_date1(self, symbol, pct, btn):
+        # ... (数据库操作逻辑不变) ...
+        self.cur.execute("SELECT id FROM Earning WHERE date=? AND name=?", (self.date1, symbol))
         exists = self.cur.fetchone() is not None
 
         if exists:
@@ -431,11 +435,12 @@ class MainWindow(QMainWindow):
             action = "已写入"
 
         self.conn.commit()
-        # 禁用按钮并提示
-        btn = self.table1.cellWidget(row, 2)
+        
+        # 直接使用传入的 btn 对象，不再需要从表格中查找
         btn.setEnabled(False)
         # QMessageBox.information(self, action, f"{symbol} @ {self.date1} → {pct}%  {action}")
 
+    # --- 4. 修改：在 process_date2 中也使用容器和布局 ---
     def process_date2(self):
         """
         对前天的 symbols：
@@ -477,10 +482,22 @@ class MainWindow(QMainWindow):
 
             self.table2.setItem(row, 1, QTableWidgetItem(str(pct_new)))
             self.table2.setItem(row, 2, QTableWidgetItem(str(pct_old) if pct_old is not None else ""))
-            replace_btn = QPushButton("替换")
-            replace_btn.clicked.connect(partial(self.on_replace_date2, symbol, pct_new, row, replace_btn))
-            self.table2.setCellWidget(row, 3, replace_btn)
 
+            # --- 替换按钮的修改 ---
+            replace_btn = QPushButton("替换")
+            replace_btn.setObjectName("ReplaceButton") # 应用新样式
+            replace_btn.clicked.connect(partial(self.on_replace_date2, symbol, pct_new, row, replace_btn))
+
+            # 创建容器和布局
+            container = QWidget()
+            layout = QHBoxLayout(container)
+            layout.addWidget(replace_btn)
+            layout.setAlignment(Qt.AlignCenter)
+            layout.setContentsMargins(0, 0, 0, 0)
+            
+            self.table2.setCellWidget(row, 3, container) # 将容器放入单元格
+
+    # on_replace_date2 方法本身不需要修改，因为它已经接收了 btn 参数
     def on_replace_date2(self, symbol, new_pct, row, btn):
         """
         点击“替换”后，将 new_pct 写回 Earning 表中，覆盖该 symbol 最新一行，
@@ -513,8 +530,25 @@ class MainWindow(QMainWindow):
         btn.setText("已替换")
         btn.setEnabled(False)
 
-        # QMessageBox.information(self, "已替换", f"{symbol} 的百分比已更新为 {new_pct}%")
-
+    # ... (center_window, _get_prev_price, _get_price_from_table, main 等保持不变) ...
+    def center_window(self):
+        try:
+            screen = QApplication.primaryScreen()
+            if not screen:
+                screens = QApplication.screens()
+                if not screens: return
+                screen = screens[0]
+            screen_geometry = screen.availableGeometry()
+            window_geometry = self.frameGeometry()
+            center_point = screen_geometry.center()
+            window_geometry.moveCenter(center_point)
+            self.move(window_geometry.topLeft())
+        except Exception as e: print(f"Error centering window: {e}")
+    def _get_prev_price(self, table: str, dt: str, symbol: str):
+        sql = f"SELECT price FROM `{table}` WHERE name=? AND date<? ORDER BY date DESC LIMIT 1"
+        self.cur.execute(sql, (symbol, dt))
+        r = self.cur.fetchone()
+        return r["price"] if r else None
     def _get_price_from_table(self, table: str, dt: str, symbol: str):
         """
         从指定表里取单个价格
