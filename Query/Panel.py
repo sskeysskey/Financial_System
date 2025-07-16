@@ -9,7 +9,7 @@ import subprocess
 # ----------------------------------------------------------------------
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QGroupBox, QScrollArea, QLabel, QTextEdit, QDialog,
+    QPushButton, QGroupBox, QScrollArea, QTextEdit, QDialog,
     QInputDialog, QMenu, QAction
 )
 from PyQt5.QtCore import Qt
