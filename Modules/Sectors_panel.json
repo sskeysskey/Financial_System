@@ -7,8 +7,7 @@
     "Energy": {},
     "Technology": {
         "IT": "",
-        "ACN": "",
-        "FTV": ""
+        "ACN": ""
     },
     "Consumer_Cyclical": {
         "LULU": "",
@@ -29,11 +28,8 @@
     "Communication_Services": {},
     "Financial_Services": {
         "BRK-A": "",
-        "PGR": "",
         "MMC": "",
-        "AJG": "",
-        "CNA": "",
-        "FG": ""
+        "AJG": ""
     },
     "Healthcare": {
         "CNC": "",
@@ -119,13 +115,11 @@
         "OSCR": "",
         "CHWY": "",
         "CVS": "",
-        "STE": ""
-    },
-    "Earning_Filter": {
+        "STE": "",
         "BJ": "",
-        "COST": "",
-        "ONON": ""
+        "COST": ""
     },
+    "Earning_Filter": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

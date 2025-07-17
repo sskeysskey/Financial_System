@@ -15,16 +15,30 @@ LOCAL_SERVER_DIR = '/Users/yanzhang/LocalServer/Resources/Finance'
 VERSION_JSON_PATH = os.path.join(LOCAL_SERVER_DIR, 'version.json')
 
 # 定义需要进行简单覆盖备份的文件
-# 格式为: { "源文件路径": "目标文件路径" }
+# 格式为: { "源文件路径": ["目标文件路径1", "目标文件路径2", ...] }
 SIMPLE_BACKUP_FILES = {
-    '/Users/yanzhang/Documents/Database/Finance.db': os.path.join(LOCAL_DOWNLOAD_BACKUP, 'Finance.db'),
-    '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json': os.path.join(GITHUB_IO_DIR, 'sectors_panel.json'),
-    '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json': os.path.join(GITHUB_IO_DIR, 'sectors_all.json'),
-    '/Users/yanzhang/Documents/Financial_System/Modules/description.json': os.path.join(GITHUB_IO_DIR, 'description.json'),
-    '/Users/yanzhang/Documents/News/CompareStock.txt': os.path.join(GITHUB_IO_DIR, 'comparestock.txt'),
-    '/Users/yanzhang/Documents/News/CompareETFs.txt': os.path.join(GITHUB_IO_DIR, 'Compareetfs.txt'),
-    '/Users/yanzhang/Documents/News/backup/marketcap_pe.txt': os.path.join(GITHUB_IO_DIR, 'marketcap_pe.txt'),
-    '/Users/yanzhang/Documents/Database/Finance.db': os.path.join(LOCAL_SERVER_DIR, 'Finance.db'),
+    '/Users/yanzhang/Documents/Database/Finance.db': [
+        os.path.join(LOCAL_DOWNLOAD_BACKUP, 'Finance.db'),
+        os.path.join(LOCAL_SERVER_DIR,    'Finance.db')
+    ],
+    '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json': [
+        os.path.join(GITHUB_IO_DIR, 'sectors_panel.json')
+    ],
+    '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json': [
+        os.path.join(GITHUB_IO_DIR, 'sectors_all.json')
+    ],
+    '/Users/yanzhang/Documents/Financial_System/Modules/description.json': [
+        os.path.join(GITHUB_IO_DIR, 'description.json')
+    ],
+    '/Users/yanzhang/Documents/News/CompareStock.txt': [
+        os.path.join(GITHUB_IO_DIR, 'comparestock.txt')
+    ],
+    '/Users/yanzhang/Documents/News/CompareETFs.txt': [
+        os.path.join(GITHUB_IO_DIR, 'Compareetfs.txt')
+    ],
+    '/Users/yanzhang/Documents/News/backup/marketcap_pe.txt': [
+        os.path.join(GITHUB_IO_DIR, 'marketcap_pe.txt')
+    ],
 }
 
 # 定义需要进行时间戳备份的源文件列表
@@ -42,6 +56,7 @@ TIMESTAMP_BACKUP_SOURCES = [
 def copy_and_overwrite(source_path, destination_path):
     """简单的文件复制和覆盖功能"""
     try:
+        os.makedirs(os.path.dirname(destination_path), exist_ok=True)
         shutil.copy2(source_path, destination_path)
         print(f"文件已从 {source_path} 复制到 {destination_path}。")
     except FileNotFoundError:
@@ -60,7 +75,7 @@ def backup_with_timestamp_and_cleanup():
 
     # 1. 计算时间戳
     yesterday = datetime.now() - timedelta(days=1)
-    timestamp = yesterday.strftime('%y%m%d') # 格式化为 YYMMDD
+    timestamp = yesterday.strftime('%y%m%d')  # 格式化为 YYMMDD
 
     newly_created_files_info = []
     source_base_names = set()
@@ -130,11 +145,10 @@ def update_version_json(new_files_info, updated_base_names):
         # 更新版本号
         try:
             major, minor = data.get('version', '1.0').split('.')
-            new_version = f"{major}.{int(minor) + 1}"
-            data['version'] = new_version
-            print(f"版本号已更新为: {new_version}")
+            data['version'] = f"{major}.{int(minor) + 1}"
+            print(f"版本号已更新为: {data['version']}")
         except ValueError:
-            print(f"警告: 版本号格式不正确，重置为 '1.1'")
+            print("警告: 版本号格式不正确，重置为 '1.1'")
             data['version'] = '1.1'
 
 
@@ -142,25 +156,21 @@ def update_version_json(new_files_info, updated_base_names):
         # 逻辑：保留那些基础文件名不在 updated_base_names 集合中的文件条目
         existing_files = data.get('files', [])
         filtered_files = []
-        for file_entry in existing_files:
-            entry_name = file_entry.get('name', '')
-            # 分离基础文件名进行比较
-            parts = entry_name.split('_')
+        for entry in existing_files:
+            name = entry.get('name', '')
+            parts = name.split('_')
             if len(parts) > 1:
                 base_name = '_'.join(parts[:-1])
                 if base_name not in updated_base_names:
-                    filtered_files.append(file_entry)
+                    filtered_files.append(entry)
             else:
-                # 如果文件名不含时间戳，也保留
-                filtered_files.append(file_entry)
+                filtered_files.append(entry)
 
-        # 添加新文件的信息
         data['files'] = filtered_files + new_files_info
-        
-        # 写回更新后的数据到version.json
+
         with open(VERSION_JSON_PATH, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
-        
+
         print(f"{VERSION_JSON_PATH} 已成功更新。")
 
     except json.JSONDecodeError:
@@ -168,15 +178,13 @@ def update_version_json(new_files_info, updated_base_names):
     except Exception as e:
         print(f"更新 {VERSION_JSON_PATH} 时发生未知错误: {e}")
 
-
 def export_db_to_json():
     """
     将数据库中最近一年的数据导出为 finance.json。
-    这部分逻辑与您原始代码保持一致。
     """
     print("\n--- 开始将数据库导出为 JSON ---")
     db_file = '/Users/yanzhang/Documents/Database/Finance.db'
-    json_output_file = '/Users/yanzhang/Documents/sskeysskey.github.io/economics/finance.json'
+    json_output_file = os.path.join(GITHUB_IO_DIR, 'finance.json')
     
     try:
         conn = sqlite3.connect(db_file)
@@ -187,38 +195,41 @@ def export_db_to_json():
         database_dict = {}
         one_year_ago = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
 
-        for table_name in tables:
-            table_name = table_name[0]
+        for (table_name,) in tables:
             cursor.execute(f"PRAGMA table_info({table_name})")
-            columns = cursor.fetchall()
-            column_names = [col[1] for col in columns]
+            cols = cursor.fetchall()
+            col_names = [c[1] for c in cols]
             
-            if 'date' in column_names:
-                cursor.execute(f"SELECT * FROM {table_name} WHERE date >= ? ORDER BY date DESC", (one_year_ago,))
+            if 'date' in col_names:
+                cursor.execute(
+                    f"SELECT * FROM {table_name} WHERE date >= ? ORDER BY date DESC",
+                    (one_year_ago,)
+                )
             else:
                 cursor.execute(f"SELECT * FROM {table_name}")
-            
+
             rows = cursor.fetchall()
-            table_data = [dict(zip(column_names, row)) for row in rows]
-            database_dict[table_name] = table_data
+            database_dict[table_name] = [
+                dict(zip(col_names, row)) for row in rows
+            ]
 
         with open(json_output_file, 'w', encoding='utf-8') as f:
             json.dump(database_dict, f, indent=4, default=str)
 
         conn.close()
-        print(f"数据库 {db_file} 中最近一年的数据已成功导出为 {os.path.basename(json_output_file)} 文件。")
+        print(f"数据库 {db_file} 中最近一年的数据已成功导出为 {os.path.basename(json_output_file)}。")
     except sqlite3.Error as e:
         print(f"数据库操作失败: {e}")
     except Exception as e:
         print(f"导出JSON时发生错误: {e}")
 
-
 # --- 主程序执行 ---
 if __name__ == "__main__":
     # 1. 执行简单的覆盖备份
     print("--- 开始执行简单覆盖备份 ---")
-    for source, dest in SIMPLE_BACKUP_FILES.items():
-        copy_and_overwrite(source, dest)
+    for source, dest_list in SIMPLE_BACKUP_FILES.items():
+        for dest in dest_list:
+            copy_and_overwrite(source, dest)
 
     # 2. 执行带时间戳的备份、清理和version.json更新
     backup_with_timestamp_and_cleanup()

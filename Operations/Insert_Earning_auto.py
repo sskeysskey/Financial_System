@@ -434,9 +434,9 @@ class MainWindow(QMainWindow):
 
         self.conn.commit()
         
-        # 直接使用传入的 btn 对象，不再需要从表格中查找
+        # 修改这里：同时改变按钮文本和状态
+        btn.setText(action)  # 新增这行：改变按钮文本为"已写入"或"已覆盖"
         btn.setEnabled(False)
-        # QMessageBox.information(self, action, f"{symbol} @ {self.date1} → {pct}%  {action}")
 
     # --- 4. 修改：在 process_date2 中也使用容器和布局 ---
     def process_date2(self):
