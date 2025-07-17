@@ -9,10 +9,10 @@ from collections import OrderedDict  # 导入以支持 b.py 中的 load_json
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget,
     QVBoxLayout, QHBoxLayout, QGroupBox, QTableWidget, QTableWidgetItem, # 新增 QHBoxLayout
-    QPushButton, QMessageBox,
+    QPushButton, QMessageBox, QShortcut,
     QMenu, QAction  # 1. 新增导入：用于创建右键菜单
 )
-from PyQt5.QtGui import QFont, QColor, QCursor # 1. 新增导入：用于获取光标位置
+from PyQt5.QtGui import QCursor, QKeySequence # 1. 新增导入：用于获取光标位置
 from PyQt5.QtCore import Qt # 1. 新增导入：用于设置菜单策略
 
 # 添加自定义模块的路径，以便可以导入 Chart_input
@@ -134,6 +134,10 @@ class MainWindow(QMainWindow):
         self.description_data = load_json(DESCRIPTION_PATH)
         self.compare_data = load_text_data(COMPARE_DATA_PATH)
 
+        # 增加一行：Esc 退出
+        esc_shortcut = QShortcut(QKeySequence(Qt.Key_Escape), self)
+        esc_shortcut.activated.connect(self.close)
+
         # 5. 连接数据库
         self.db_path = DB_PATH  # 将路径保存为实例变量
         self.conn = sqlite3.connect(self.db_path)
@@ -248,11 +252,11 @@ class MainWindow(QMainWindow):
         # 格式: (菜单显示文本, 对应的 script_type)
         # None 代表一个分隔符
         menu_config = [
-            ("Kimi检索财报", "kimi"),
+            ("在富途中搜索", "futu"),
             ("编辑 Earing DB", "editor_earning"),
             None,  # 分隔符
             ("编辑 Tags", "tags"),
-            ("在富途中搜索", "futu"),
+            ("Kimi检索财报", "kimi"),
             ("找相似", "similar"),
             None,  # 分隔符
             ("加入黑名单", "blacklist"),

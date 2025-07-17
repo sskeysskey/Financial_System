@@ -101,7 +101,7 @@ if __name__ == '__main__':
         # 'include_condition': False},
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'ETFs',
-        #   'condition': "name = 'SCO'", 'fields': '*',
+        #   'condition': "id = '2263365'", 'fields': '*',
         # 'include_condition': False},
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Basic_Materials',

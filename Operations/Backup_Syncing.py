@@ -24,6 +24,7 @@ SIMPLE_BACKUP_FILES = {
     '/Users/yanzhang/Documents/News/CompareStock.txt': os.path.join(GITHUB_IO_DIR, 'comparestock.txt'),
     '/Users/yanzhang/Documents/News/CompareETFs.txt': os.path.join(GITHUB_IO_DIR, 'Compareetfs.txt'),
     '/Users/yanzhang/Documents/News/backup/marketcap_pe.txt': os.path.join(GITHUB_IO_DIR, 'marketcap_pe.txt'),
+    '/Users/yanzhang/Documents/Database/Finance.db': os.path.join(LOCAL_SERVER_DIR, 'Finance.db'),
 }
 
 # 定义需要进行时间戳备份的源文件列表
@@ -32,14 +33,11 @@ TIMESTAMP_BACKUP_SOURCES = [
     '/Users/yanzhang/Documents/News/Earnings_Release_new.txt',
     '/Users/yanzhang/Documents/News/HighLow.txt',
     '/Users/yanzhang/Documents/Financial_System/Modules/tags_weight.json',
-    '/Users/yanzhang/Documents/Database/Finance.db',
     '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json',
     '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json',
     '/Users/yanzhang/Documents/Financial_System/Modules/description.json',
     '/Users/yanzhang/Documents/News/CompareStock.txt',
 ]
-
-# --- 函数定义 ---
 
 def copy_and_overwrite(source_path, destination_path):
     """简单的文件复制和覆盖功能"""
@@ -85,9 +83,12 @@ def backup_with_timestamp_and_cleanup():
         copy_and_overwrite(source_path, destination_path)
         
         # 收集新文件的信息用于更新version.json
+        # 新增一行：将 .txt 映射为 "text"，其他按扩展名小写
+        file_type = 'text' if extension.lower() == '.txt' else extension.lstrip('.').lower()
+
         newly_created_files_info.append({
             "name": new_filename,
-            "type": extension.lstrip('.')
+            "type": file_type
         })
 
     # 3. 清理旧文件

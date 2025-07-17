@@ -1,6 +1,5 @@
 import sys
 import json
-import sqlite3 # ### 新增 ###: 导入 sqlite3
 from collections import OrderedDict
 import subprocess
 
@@ -160,29 +159,13 @@ def load_text_data(path):
                 data[cleaned_key] = value
     return data
 
-# ### 删除 ###: 移除了不再需要的 load_marketcap_pe_data 函数
-
-# ### 新增 ###: 从其他脚本借鉴的数据库查询函数
-def fetch_mnspp_data_from_db(db_path, symbol):
-    """
-    根据股票代码从MNSPP表中查询 shares, marketcap, pe_ratio, pb。
-    """
-    with sqlite3.connect(db_path) as conn:
-        cursor = conn.cursor()
-        query = "SELECT shares, marketcap, pe_ratio, pb FROM MNSPP WHERE symbol = ?"
-        cursor.execute(query, (symbol,))
-        result = cursor.fetchone()
-    if result:
-        shares, marketcap, pe, pb = result
-        return shares, marketcap, pe, pb
-    else:
-        return "N/A", None, "N/A", "--"
+# ### 删除 ###: 彻底移除了 fetch_mnspp_data_from_db 函数
 
 # ----------------------------------------------------------------------
 # PyQt5 主应用窗口
 # ----------------------------------------------------------------------
 class HighLowWindow(QMainWindow):
-    # ### 修改 ###: 移除 __init__ 方法签名中的 shares 和 marketcap_pe_data
+    # ### 修改 ###: 构造函数完全不接收 shares 和 marketcap 数据
     def __init__(self, high_low_data, keyword_colors, sector_data, compare_data, json_data):
         super().__init__()
         
@@ -481,7 +464,7 @@ class HighLowWindow(QMainWindow):
 
         return button
 
-    # ### 修改 ###: 更新此方法以使用新的数据库查询逻辑
+    # ### 修改 ###: 彻底移除获取 marketcap 和 shares 的逻辑
     def on_symbol_click(self, symbol):
         # --- 3. 在点击时更新 SymbolManager 并设置焦点 ---
         print(f"按钮 '{symbol}' 被点击，准备显示图表...")
@@ -495,16 +478,22 @@ class HighLowWindow(QMainWindow):
         
         compare_value = self.compare_data.get(symbol, "N/A")
         
-        # 从数据库获取 shares, marketcap, pe, pb
-        shares_val, marketcap_val, pe_val, pb_val = fetch_mnspp_data_from_db(DB_PATH, symbol)
-
+        # 此处不再从数据库或文件获取 marketcap/shares/pe/pb
+        
         try:
-            # 调用绘图函数，注意参数的变化
+            # 调用绘图函数，为不需要的参数传递默认/占位符值
             plot_financial_data(
-                DB_PATH, sector, symbol, compare_value, (shares_val, pb_val),
-                marketcap_val, pe_val, self.json_data, '1Y', False
+                DB_PATH, 
+                sector, 
+                symbol, 
+                compare_value, 
+                "N/A",  # shares_value 的占位符
+                None,   # marketcap_val 的占位符
+                "N/A",  # pe_val 的占位符
+                self.json_data, 
+                '1Y', 
+                False
             )
-            # 在绘图后，让主窗口重新获得焦点以响应键盘事件
             self.setFocus()
         except Exception as e:
             print(f"调用 plot_financial_data 时出错: {e}")
@@ -612,7 +601,7 @@ if __name__ == '__main__':
         json_data = load_json(DESCRIPTION_PATH)
         sector_data = load_json(SECTORS_ALL_PATH)
         compare_data = load_text_data(COMPARE_DATA_PATH)
-        # ### 删除 ###: 移除了对 shares 和 marketcap_pe_data 的加载
+        # ### 删除 ###: 此处不再加载 shares 和 marketcap_pe 数据
         print("数据加载完成。")
     except FileNotFoundError as e:
         print(f"错误: 找不到文件 {e.filename}。请检查路径是否正确。")
@@ -623,7 +612,7 @@ if __name__ == '__main__':
 
     # 2. 创建并运行 PyQt5 应用
     app = QApplication(sys.argv)
-    # ### 修改 ###: 移除传递给 HighLowWindow 的 shares 和 marketcap_pe_data 参数
+    # ### 修改 ###: 构造函数调用中不再传递 shares 和 marketcap_pe_data
     main_window = HighLowWindow(
         high_low_data,
         keyword_colors,

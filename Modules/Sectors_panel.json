@@ -38,8 +38,6 @@
     "Healthcare": {
         "CNC": "",
         "ELV": "",
-        "MOH": "",
-        "CHE": "",
         "HUM": ""
     },
     "Bonds": {
@@ -124,8 +122,9 @@
         "STE": ""
     },
     "Earning_Filter": {
-        "ERIC": "",
-        "LYFT": ""
+        "BJ": "",
+        "COST": "",
+        "ONON": ""
     },
     "Currencies": {
         "DXY": "美元指数",

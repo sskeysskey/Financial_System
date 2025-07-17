@@ -164,9 +164,24 @@ def main(db1_path, db2_path):
 
 if __name__ == "__main__":
     # 请确保路径正确
-    db1_path = '/Users/yanzhang/Downloads/backup/DB_backup/Finance.db'
-    db2_path = '/Users/yanzhang/Documents/Database/Finance.db'
+    # db1_path = '/Users/yanzhang/Downloads/backup/DB_backup/Finance.db'
+    # db2_path = '/Users/yanzhang/Documents/Database/Finance.db'
     
-    # db1_path = '/Users/yanzhang/Downloads/backup/DB_backup/Firstrade.db'
-    # db2_path = '/Users/yanzhang/Documents/Database/Firstrade.db'
-    main(db1_path, db2_path)
+    db1_path = '/Users/yanzhang/LocalServer/Resources/Finance/Finance.db'
+    db2_path = '/Users/yanzhang/Documents/Books/Finance.db'
+    
+    # main(db1_path, db2_path)
+
+    output_file = '/Users/yanzhang/Downloads/a.txt'
+
+    # 将所有 print 的输出重定向到文件
+    import sys
+    with open(output_file, 'w', encoding='utf-8') as f:
+        original_stdout = sys.stdout
+        sys.stdout = f
+        try:
+            main(db1_path, db2_path)
+        finally:
+            sys.stdout = original_stdout
+
+    print(f"已将差异结果写入 {output_file}")

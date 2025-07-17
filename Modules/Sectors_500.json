@@ -10,7 +10,8 @@
         "CRH",
         "NEM",
         "AEM",
-        "FCX"
+        "FCX",
+        "CTVA"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -228,7 +229,9 @@
         "NSC",
         "PWR",
         "GWW",
-        "URI"
+        "URI",
+        "PCAR",
+        "LHX"
     ],
     "Real_Estate": [
         "PLD",
@@ -236,7 +239,8 @@
         "EQIX",
         "WELL",
         "SPG",
-        "DLR"
+        "DLR",
+        "PSA"
     ],
     "Technology": [
         "AAPL",
