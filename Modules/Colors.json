@@ -474,7 +474,8 @@
         "TSN",
         "CNA",
         "ELS",
-        "IRT"
+        "IRT",
+        "LNTH"
     ],
     "yellow_keywords": [
         "Nikkei",

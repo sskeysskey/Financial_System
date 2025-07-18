@@ -95,8 +95,7 @@
         "MPC",
         "MPLX",
         "E",
-        "PSX",
-        "TRP"
+        "PSX"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -228,9 +227,7 @@
         "AXON",
         "NSC",
         "PWR",
-        "GWW",
         "URI",
-        "PCAR",
         "LHX"
     ],
     "Real_Estate": [
@@ -239,8 +236,7 @@
         "EQIX",
         "WELL",
         "SPG",
-        "DLR",
-        "PSA"
+        "DLR"
     ],
     "Technology": [
         "AAPL",

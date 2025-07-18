@@ -2,7 +2,8 @@
     "Basic_Materials": {},
     "Real_Estate": {
         "ELS": "",
-        "IRT": ""
+        "IRT": "",
+        "NSA": ""
     },
     "Energy": {},
     "Technology": {
@@ -34,7 +35,11 @@
     "Healthcare": {
         "CNC": "",
         "ELV": "",
-        "HUM": ""
+        "HUM": "",
+        "LLY": "",
+        "ABT": "",
+        "MOH": "",
+        "LNTH": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -106,20 +111,14 @@
         "XRP": ""
     },
     "Qualified_Symbol": {
-        "ELV": "",
-        "CI": "",
-        "DRI": "",
-        "DUOL": "",
-        "BRK-A": "",
-        "ONON": "",
-        "OSCR": "",
         "CHWY": "",
         "CVS": "",
-        "STE": "",
-        "BJ": "",
         "COST": ""
     },
-    "Earning_Filter": {},
+    "Earning_Filter": {
+        "LYFT": "",
+        "STE": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

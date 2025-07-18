@@ -216,8 +216,13 @@ def visualize_sqlite_db(db_path, output_dir, content_limit=100):
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
-        # 1. 获取所有表名
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        # 1. 获取所有用户表名（过滤掉 sqlite_ 开头的系统表）
+        cursor.execute("""
+            SELECT name
+            FROM sqlite_master
+            WHERE type='table'
+            AND name NOT LIKE 'sqlite_%';
+        """)
         tables = [row[0] for row in cursor.fetchall()]
         print(f"在数据库中找到 {len(tables)} 个表: {', '.join(tables)}")
 
@@ -232,7 +237,14 @@ def visualize_sqlite_db(db_path, output_dir, content_limit=100):
             tables_data[table_name]['schema'] = schema
 
             # 直接用一条 SQL 拿到倒序的后 N 条
-            cursor.execute(f"SELECT * FROM '{table_name}' ORDER BY rowid DESC LIMIT {content_limit};")
+            cursor.execute(f"""
+            SELECT * FROM (
+                SELECT * FROM '{table_name}'
+                ORDER BY id DESC
+                LIMIT {content_limit}
+            ) sub
+            ORDER BY id DESC;
+            """)
             content_preview = cursor.fetchall()
             # 获取列名
             content_headers = [description[0] for description in cursor.description] if cursor.description else []
@@ -266,8 +278,8 @@ def visualize_sqlite_db(db_path, output_dir, content_limit=100):
 if __name__ == "__main__":
     # 请将这里的路径修改为您自己的数据库文件路径
     # 对于Windows用户，路径可能像这样: r"C:\Users\YourUser\Documents\Database\Finance.db"
-    # database_file_path = "/Users/yanzhang/Documents/Database/Finance.db"
-    database_file_path = "/Users/yanzhang/LocalServer/Resources/Finance/Finance.db"
+    database_file_path = "/Users/yanzhang/Documents/Database/Finance.db"
+    # database_file_path = "/Users/yanzhang/LocalServer/Resources/Finance/Finance.db"
     
     # --- 修改部分 4: 指定HTML报告的输出目录 ---
     # 这是您希望保存HTML文件的目录
