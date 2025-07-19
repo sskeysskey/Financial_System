@@ -1,8 +1,9 @@
 {
-    "Basic_Materials": {},
+    "Basic_Materials": {
+        "BCC": ""
+    },
     "Real_Estate": {
         "ELS": "",
-        "IRT": "",
         "NSA": ""
     },
     "Energy": {},
@@ -19,7 +20,8 @@
         "FLO": "",
         "PG": "",
         "GIS": "",
-        "TSN": ""
+        "TSN": "",
+        "CL": ""
     },
     "Industrials": {
         "CPRT": "",
@@ -39,7 +41,9 @@
         "LLY": "",
         "ABT": "",
         "MOH": "",
-        "LNTH": ""
+        "LNTH": "",
+        "CI": "",
+        "CHE": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -113,11 +117,11 @@
     "Qualified_Symbol": {
         "CHWY": "",
         "CVS": "",
-        "COST": ""
+        "COST": "",
+        "STE": ""
     },
     "Earning_Filter": {
-        "LYFT": "",
-        "STE": ""
+        "ONON": ""
     },
     "Currencies": {
         "DXY": "美元指数",

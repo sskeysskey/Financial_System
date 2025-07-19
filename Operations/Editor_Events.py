@@ -358,7 +358,7 @@ class DescriptionEditorApp:
             for row in self.rows:
                 row['original_date'] = row['date_entry'].get().strip()
 
-            messagebox.showinfo("成功", "所有更改已成功保存到JSON文件！")
+            # messagebox.showinfo("成功", "所有更改已成功保存到JSON文件！")
             # 保存成功后刷新界面，以确保排序和状态正确
             self._create_widgets()
         else:
@@ -371,7 +371,7 @@ def main():
     # 1. 获取Symbol
     symbol = get_symbol_from_input()
     if not symbol:
-        messagebox.showerror("错误", "未能获取到有效的Symbol。\n请确保剪贴板内容正确，或通过命令行参数提供。")
+        messagebox.showerror("错误", "未能获取到有效的Symbol。")
         return
 
     # 2. 加载JSON数据
@@ -387,6 +387,10 @@ def main():
 
     # 4. 启动GUI应用
     root = tk.Tk()
+
+    # 在这里绑定 ESC 关闭程序
+    root.bind('<Escape>', lambda e: root.destroy())
+
     root.lift()
     root.focus_force()
     DescriptionEditorApp(root, full_data, item_data)

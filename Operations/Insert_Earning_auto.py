@@ -153,7 +153,8 @@ class MainWindow(QMainWindow):
 
     def _init_ui(self):
         cw = QWidget()
-        vlay = QVBoxLayout()
+        # vlay = QVBoxLayout()
+        hlay = QHBoxLayout()
 
         # --- 1. 新增：定义QSS样式表 ---
         self.apply_stylesheet()
@@ -172,7 +173,8 @@ class MainWindow(QMainWindow):
         self.table1.customContextMenuRequested.connect(self.show_table_context_menu)
         lay1.addWidget(self.table1)
         gb1.setLayout(lay1)
-        vlay.addWidget(gb1)
+        # vlay.addWidget(gb1)
+        hlay.addWidget(gb1)
 
         # 第二部分
         gb2 = QGroupBox(f"日期 {self.date2} 符合条件的 Symbols （点击 Symbol 显示图表，可替换旧百分比）")
@@ -186,11 +188,14 @@ class MainWindow(QMainWindow):
         self.table2.customContextMenuRequested.connect(self.show_table_context_menu)
         lay2.addWidget(self.table2)
         gb2.setLayout(lay2)
-        vlay.addWidget(gb2)
+        # vlay.addWidget(gb2)
+        hlay.addWidget(gb2)
 
-        cw.setLayout(vlay)
+        # cw.setLayout(vlay)
+        cw.setLayout(hlay)
         self.setCentralWidget(cw)
-        self.resize(500, 900) # 你已经设置了窗口大小
+        # self.resize(500, 900) # 你已经设置了窗口大小
+        self.resize(900, 900)
 
         # 新增：将窗口移动到屏幕中央
         self.center_window()

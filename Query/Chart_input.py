@@ -442,8 +442,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             xytext=(50, 50),  # 修改为右上偏移
             textcoords="offset points",
             bbox=dict(boxstyle="round", fc="black", alpha=0.8),
-            arrowprops=dict(arrowstyle="->", color='white'),
-            color='gray',
+            arrowprops=dict(arrowstyle="->", color='cyan'),
+            color='white',
             fontsize=12,
             visible=show_earning_markers and show_all_annotations
         )
@@ -978,7 +978,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             elif global_marker_text and (specific_marker_text or has_earning_marker):
                 annot.set_color('purple')    # 全局标记使用红色文字
             else:
-                annot.set_color('yellow')  # 其他标记使用白色文字
+                annot.set_color('cyan')  # 其他标记使用白色文字
         
         annot.set_text(text)
         annot.get_bbox_patch().set_alpha(0.4)

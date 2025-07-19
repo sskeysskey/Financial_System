@@ -228,7 +228,8 @@
         "NSC",
         "PWR",
         "URI",
-        "LHX"
+        "LHX",
+        "GWW"
     ],
     "Real_Estate": [
         "PLD",
@@ -289,7 +290,8 @@
         "NET",
         "NXPI",
         "PAYX",
-        "TEL"
+        "TEL",
+        "TEAM"
     ],
     "Utilities": [
         "NEE",

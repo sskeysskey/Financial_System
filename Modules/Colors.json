@@ -242,7 +242,6 @@
         "QGEN",
         "PSN",
         "MLM",
-        "BCC",
         "ANF",
         "BLD",
         "PTC",
@@ -718,7 +717,8 @@
         "TAP",
         "CHE",
         "MOH",
-        "ACN"
+        "ACN",
+        "BCC"
     ],
     "orange_keywords": [
         "NASDAQ",
