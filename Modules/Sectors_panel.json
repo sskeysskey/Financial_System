@@ -38,9 +38,7 @@
         "CNC": "",
         "ELV": "",
         "HUM": "",
-        "LLY": "",
         "ABT": "",
-        "MOH": "",
         "LNTH": "",
         "CI": "",
         "CHE": ""
@@ -115,14 +113,11 @@
         "XRP": ""
     },
     "Qualified_Symbol": {
-        "CHWY": "",
         "CVS": "",
-        "COST": "",
-        "STE": ""
+        "STE": "",
+        "MOH": ""
     },
-    "Earning_Filter": {
-        "ONON": ""
-    },
+    "Earning_Filter": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

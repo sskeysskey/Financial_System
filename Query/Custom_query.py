@@ -101,8 +101,8 @@ if __name__ == '__main__':
         # 'include_condition': False},
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'ETFs',
-        #   'condition': "id = '2263365'", 'fields': '*',
-        # 'include_condition': False},
+        #   'condition': "id = '2263847'", 'fields': '*',
+        # 'include_condition': True},
 
         # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Basic_Materials',
         #     'condition': "name = 'CTA-PB'", 'fields': '*',
