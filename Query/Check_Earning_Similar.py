@@ -176,20 +176,62 @@ def find_tags_by_symbol_b(symbol, data):
                     tags_with_weight.append((tag, weight))
                 return tags_with_weight
     return []
+
+# <<< 关键修正：替换为 b.py 的完整两阶段匹配逻辑 >>>
 def find_symbols_by_tags_b(target_tags_with_weight, data, original_symbol):
+    """
+    使用精确匹配和部分匹配两阶段算法查找相关股票。
+    """
     related_symbols = {'stocks': [], 'etfs': []}
     target_tags_dict = {tag.lower(): weight for tag, weight in target_tags_with_weight}
+
     for category in ['stocks', 'etfs']:
         for item in data.get(category, []):
-            if item.get('symbol') == original_symbol: continue
+            # 跳过原始股票本身
+            if item.get('symbol') == original_symbol:
+                continue
+
             tags = item.get('tag', [])
-            matched_tags = [(tag, target_tags_dict[tag.lower()]) for tag in tags if tag.lower() in target_tags_dict]
-            if matched_tags:
-                total_weight = sum(w for _, w in matched_tags)
+            matched_tags_with_weight = []
+            used_target_tags = set()  # 用于记录已经匹配过的目标标签，避免重复计算
+
+            # 第一阶段：精确匹配
+            for tag in tags:
+                tag_lower = tag.lower()
+                if tag_lower in target_tags_dict and tag_lower not in used_target_tags:
+                    matched_tags_with_weight.append((tag, target_tags_dict[tag_lower]))
+                    used_target_tags.add(tag_lower)
+
+            # 第二阶段：部分匹配 (模糊匹配)
+            for tag in tags:
+                tag_lower = tag.lower()
+                # 如果这个标签已经被精确匹配过了，就跳过
+                if tag_lower in used_target_tags:
+                    continue
+                
+                for target_tag, target_weight in target_tags_dict.items():
+                    # 如果目标标签已经被用过了，也跳过
+                    if target_tag in used_target_tags:
+                        continue
+                    
+                    # 检查是否为包含关系（任意一方包含另一方），且不完全相等
+                    if (target_tag in tag_lower or tag_lower in target_tag) and tag_lower != target_tag:
+                        # 根据原始权重决定部分匹配的权重
+                        weight_to_use = Decimal('1.0') if target_weight > Decimal('1.0') else target_weight
+                        matched_tags_with_weight.append((tag, weight_to_use))
+                        used_target_tags.add(target_tag) # 标记此目标tag已用
+                        break # 移动到下一个item的tag
+
+            if matched_tags_with_weight:
+                total_weight = sum(weight for _, weight in matched_tags_with_weight)
                 related_symbols[category].append((item['symbol'], total_weight))
-    for category in related_symbols:
-        related_symbols[category].sort(key=lambda x: x[1], reverse=True)
-    return related_symbols['stocks'] + related_symbols['etfs']
+
+    # 合并并按总权重降序排序
+    combined_list = related_symbols['stocks'] + related_symbols['etfs']
+    combined_list.sort(key=lambda x: x[1], reverse=True)
+    
+    return combined_list
+
 
 # ----------------------------------------------------------------------
 # PyQt5 Main Application Window
