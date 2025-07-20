@@ -246,52 +246,70 @@ class EarningsWindow(QMainWindow):
         earnings_schedule, _ = parse_earnings_file(EARNINGS_FILE_PATH)
 
         for date_str, data in earnings_schedule.items():
+            # 1) 日期 GroupBox
             date_group = QGroupBox(date_str)
             date_group.setCheckable(True)
-            # --- 修改：根据加载的状态设置是否展开 ---
-            # 默认值为 True (展开)
+            # 根据保存的状态决定是否展开
             is_date_expanded = self.expansion_states.get(date_str, {}).get("_is_expanded", True)
             date_group.setChecked(is_date_expanded)
             self.main_layout.addWidget(date_group)
 
+            # 日期内容容器
             date_content_widget = QWidget()
+            # —— 新增：初始可见性
+            date_content_widget.setVisible(is_date_expanded)
             date_group_layout = QVBoxLayout(date_content_widget)
             date_group_layout.setContentsMargins(10, 5, 5, 5)
+
+            # 将内容容器加入到可折叠的 GroupBox
             date_group.setLayout(QVBoxLayout())
             date_group.layout().addWidget(date_content_widget)
+            # 切换时同步可见性
             date_group.toggled.connect(date_content_widget.setVisible)
 
+            # 盘前/盘后两个子分组
             for time_code in ['BMO', 'AMC']:
                 symbols = data.get(time_code)
-                if not symbols: continue
+                if not symbols:
+                    continue
 
                 time_label = "盘前 (BMO)" if time_code == 'BMO' else "盘后 (AMC)"
                 time_group = QGroupBox(time_label)
                 time_group.setCheckable(True)
-                # --- 修改：根据加载的状态设置是否展开 ---
+                # 根据保存的状态决定是否展开
                 is_time_expanded = self.expansion_states.get(date_str, {}).get(time_code, True)
                 time_group.setChecked(is_time_expanded)
                 date_group_layout.addWidget(time_group)
 
+                # 时间段内容容器
                 time_content_widget = QWidget()
+                # —— 新增：初始可见性
+                time_content_widget.setVisible(is_time_expanded)
                 time_layout = QGridLayout(time_content_widget)
                 time_layout.setColumnStretch(1, 1)
+
                 time_group.setLayout(QVBoxLayout())
                 time_group.layout().addWidget(time_content_widget)
                 time_group.toggled.connect(time_content_widget.setVisible)
 
+                # 为每个 ticker 创建按钮和关联按钮
                 for row_index, symbol in enumerate(symbols):
-                    # ... (创建按钮等逻辑) ...
+                    # 主按钮
                     button_text = f"{symbol} {compare_data.get(symbol, '')}"
                     symbol_button = QPushButton(button_text)
                     symbol_button.setObjectName(self.get_button_style_name(symbol))
                     symbol_button.clicked.connect(lambda _, k=symbol: self.on_keyword_selected_chart(k))
                     tags_info = get_tags_for_symbol(symbol)
                     tags_info_str = ", ".join(tags_info) if isinstance(tags_info, list) else tags_info
-                    symbol_button.setToolTip(f"<div style='font-size: 20px; background-color: lightyellow; color: black;'>{tags_info_str}</div>")
+                    symbol_button.setToolTip(
+                        f"<div style='font-size:20px;background-color:lightyellow;color:black;'>{tags_info_str}</div>"
+                    )
                     symbol_button.setContextMenuPolicy(Qt.CustomContextMenu)
-                    symbol_button.customContextMenuRequested.connect(lambda pos, k=symbol: self.show_context_menu(k))
-                    
+                    symbol_button.customContextMenuRequested.connect(
+                        lambda pos, k=symbol: self.show_context_menu(k)
+                    )
+
+                    # 相关符号容器
                     related_container = QWidget()
                     related_layout = QHBoxLayout(related_container)
                     related_layout.setContentsMargins(2, 2, 2, 2)
@@ -303,18 +321,24 @@ class EarningsWindow(QMainWindow):
                         related_symbols_data = find_symbols_by_tags_b(target_tags, json_data, symbol)
                         if related_symbols_data:
                             related_container.setObjectName("RelatedContainer")
-                            # --- 修改：使用常量限制数量 ---
                             for rel_symbol, _ in related_symbols_data[:RELATED_SYMBOLS_LIMIT]:
                                 rel_button = QPushButton(f"{rel_symbol} {compare_data.get(rel_symbol, '')}")
                                 rel_button.setObjectName(self.get_button_style_name(rel_symbol))
-                                rel_button.clicked.connect(lambda _, k=rel_symbol: self.on_keyword_selected_chart(k))
+                                rel_button.clicked.connect(
+                                    lambda _, k=rel_symbol: self.on_keyword_selected_chart(k)
+                                )
                                 rel_tags = get_tags_for_symbol(rel_symbol)
                                 rel_tags_str = ", ".join(rel_tags) if isinstance(rel_tags, list) else rel_tags
-                                rel_button.setToolTip(f"<div style='font-size: 20px; background-color: lightyellow; color: black;'>{rel_tags_str}</div>")
+                                rel_button.setToolTip(
+                                    f"<div style='font-size:20px;background-color:lightyellow;color:black;'>{rel_tags_str}</div>"
+                                )
                                 rel_button.setContextMenuPolicy(Qt.CustomContextMenu)
-                                rel_button.customContextMenuRequested.connect(lambda pos, k=rel_symbol: self.show_context_menu(k))
+                                rel_button.customContextMenuRequested.connect(
+                                    lambda pos, k=rel_symbol: self.show_context_menu(k)
+                                )
                                 related_layout.addWidget(rel_button)
 
+                    # 将按钮和相关容器加入布局
                     time_layout.addWidget(symbol_button, row_index, 0)
                     time_layout.addWidget(related_container, row_index, 1)
 
