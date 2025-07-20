@@ -103,7 +103,11 @@ def load_text_data(path):
         print(f"Error: Text data file not found at {path}")
     return data
 
+# <<< 关键修正 #1: 修改 parse_earnings_file 函数以支持动态时间代码 >>>
 def parse_earnings_file(path):
+    """
+    解析财报文件，动态处理所有类型的时间代码 (BMO, AMC, TNS, etc.)。
+    """
     earnings_schedule = OrderedDict()
     all_symbols = []
     try:
@@ -114,14 +118,37 @@ def parse_earnings_file(path):
                 parts = [p.strip() for p in line.split(':')]
                 if len(parts) == 3:
                     symbol, time_code, date_str = parts
+                    time_code_upper = time_code.upper()
+
+                    # 如果日期是第一次出现，为其创建一个有序字典
                     if date_str not in earnings_schedule:
-                        earnings_schedule[date_str] = {'BMO': [], 'AMC': []}
-                    if time_code.upper() in ['BMO', 'AMC']:
-                        earnings_schedule[date_str][time_code.upper()].append(symbol)
-                        if symbol not in all_symbols:
-                            all_symbols.append(symbol)
+                        earnings_schedule[date_str] = OrderedDict()
+
+                    # 如果该日期下，此时间代码是第一次出现，为其创建一个空列表
+                    if time_code_upper not in earnings_schedule[date_str]:
+                        earnings_schedule[date_str][time_code_upper] = []
+                    
+                    # 将股票代码添加到对应的列表中
+                    earnings_schedule[date_str][time_code_upper].append(symbol)
+                    if symbol not in all_symbols:
+                        all_symbols.append(symbol)
     except FileNotFoundError:
         print(f"Error: Earnings file not found at {path}")
+    
+    # 对每个日期内的时间代码进行排序，确保 BMO 在 AMC 之前
+    for date_str in earnings_schedule:
+        sorted_times = OrderedDict()
+        # 优先处理 BMO 和 AMC
+        if 'BMO' in earnings_schedule[date_str]:
+            sorted_times['BMO'] = earnings_schedule[date_str]['BMO']
+        if 'AMC' in earnings_schedule[date_str]:
+            sorted_times['AMC'] = earnings_schedule[date_str]['AMC']
+        # 添加其他所有时间代码
+        for time_code, symbols in earnings_schedule[date_str].items():
+            if time_code not in sorted_times:
+                sorted_times[time_code] = symbols
+        earnings_schedule[date_str] = sorted_times
+
     return OrderedDict(sorted(earnings_schedule.items())), all_symbols
 
 # ... (其他辅助函数 fetch_mnspp_data_from_db, get_tags_for_symbol, 等等都无变化, 为简洁省略) ...
@@ -293,16 +320,27 @@ class EarningsWindow(QMainWindow):
             date_group.setLayout(QVBoxLayout())
             date_group.layout().addWidget(date_content_widget)
             date_group.toggled.connect(date_content_widget.setVisible)
+            date_content_widget.setVisible(is_date_expanded)
 
-            # 盘前/盘后两个子分组
-            for time_code in ['BMO', 'AMC']:
+            # 定义已知时间代码的标签，用于更友好的显示
+            known_time_labels = {"BMO": "盘前 (BMO)", "AMC": "盘后 (AMC)", "TNS": "未定 (TNS)"}
+
+            # 不再使用硬编码列表，而是遍历从文件中解析出的所有时间代码
+            for time_code in data:
                 symbols = data.get(time_code)
                 if not symbols:
                     continue
 
-                time_label = "盘前 (BMO)" if time_code == 'BMO' else "盘后 (AMC)"
+                # 动态生成标签，如果是不认识的代码，就直接显示代码本身
+                time_label = known_time_labels.get(time_code, time_code)
+                
                 time_group = QGroupBox(time_label)
                 time_group.setCheckable(True)
+                
+                # <<< 关键修正 #3a: 为分组框设置一个自定义属性，用于后续识别 >>>
+                # 这比检查标题文本更可靠
+                time_group.setProperty("time_code", time_code)
+
                 is_time_expanded = self.expansion_states.get(date_str, {}).get(time_code, True)
                 time_group.setChecked(is_time_expanded)
                 date_group_layout.addWidget(time_group)
@@ -316,6 +354,7 @@ class EarningsWindow(QMainWindow):
                 time_group.setLayout(QVBoxLayout())
                 time_group.layout().addWidget(time_content_widget)
                 time_group.toggled.connect(time_content_widget.setVisible)
+                time_content_widget.setVisible(is_time_expanded)
 
                 # 为每个 ticker 创建按钮和关联按钮
                 for row_index, symbol in enumerate(symbols):
@@ -389,11 +428,10 @@ class EarningsWindow(QMainWindow):
                 time_groups = date_group.findChildren(QGroupBox)
                 for time_group in time_groups:
                     if time_group.isCheckable():
-                        title = time_group.title()
-                        if "BMO" in title:
-                            states[date_str]["BMO"] = time_group.isChecked()
-                        elif "AMC" in title:
-                            states[date_str]["AMC"] = time_group.isChecked()
+                        # 使用之前设置的自定义属性来获取时间代码
+                        time_code = time_group.property("time_code")
+                        if time_code:
+                            states[date_str][time_code] = time_group.isChecked()
         
         try:
             with open(EXPANSION_STATE_PATH, 'w', encoding='utf-8') as f:
