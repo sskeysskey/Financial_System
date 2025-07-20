@@ -3,9 +3,6 @@ import json
 import sqlite3
 from collections import OrderedDict
 import subprocess
-import os
-import re
-import time
 from decimal import Decimal
 
 # ----------------------------------------------------------------------
@@ -13,11 +10,11 @@ from decimal import Decimal
 # ----------------------------------------------------------------------
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QGroupBox, QScrollArea, QTextEdit, QDialog,
-    QInputDialog, QMenu, QAction, QGridLayout, QLabel, QFrame
+    QPushButton, QGroupBox, QScrollArea, 
+    QMenu, QAction, QGridLayout
 )
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont, QCursor
+from PyQt5.QtGui import QCursor
 
 # ----------------------------------------------------------------------
 # Update sys.path so we can import from custom modules
@@ -54,11 +51,7 @@ tags_weight_config = {}
 DEFAULT_WEIGHT = Decimal('1')
 
 
-# ----------------------------------------------------------------------
-# Classes
-# ----------------------------------------------------------------------
-class SymbolManager:
-    # ... (代码无变化, 为简洁省略)
+class SymbolManager:    
     def __init__(self, symbols_list):
         self.symbols = symbols_list
         self.current_index = -1
@@ -81,7 +74,6 @@ class SymbolManager:
 # ----------------------------------------------------------------------
 
 def load_json(path):
-    # ... (代码无变化, 为简洁省略)
     try:
         with open(path, 'r', encoding='utf-8') as file:
             return json.load(file, object_pairs_hook=OrderedDict)
@@ -100,7 +92,6 @@ def load_expansion_states(path):
         return {}
 
 def load_text_data(path):
-    # ... (代码无变化, 为简洁省略)
     data = {}
     try:
         with open(path, 'r', encoding='utf-8') as file:
@@ -115,7 +106,6 @@ def load_text_data(path):
     return data
 
 def parse_earnings_file(path):
-    # ... (代码无变化, 为简洁省略)
     earnings_schedule = OrderedDict()
     all_symbols = []
     try:
@@ -260,7 +250,6 @@ class EarningsWindow(QMainWindow):
         self.populate_ui()
 
     def apply_stylesheet(self):
-        # ... (代码无变化, 为简洁省略)
         button_styles = { "Cyan": ("cyan", "black"), "Blue": ("blue", "white"), "Purple": ("purple", "white"), "Green": ("green", "white"), "White": ("white", "black"), "Yellow": ("yellow", "black"), "Orange": ("orange", "black"), "Red": ("red", "black"), "Black": ("black", "white"), "Default": ("#ddd", "black") }
         qss = ""
         for name, (bg, fg) in button_styles.items():
@@ -269,7 +258,6 @@ class EarningsWindow(QMainWindow):
         self.setStyleSheet(qss)
 
     def lighten_color(self, color_name, factor=1.2):
-        # ... (代码无变化, 为简洁省略)
         from PyQt5.QtGui import QColor
         color = QColor(color_name)
         h, s, l, a = color.getHslF()
@@ -278,8 +266,7 @@ class EarningsWindow(QMainWindow):
         return color.name()
 
     def get_button_style_name(self, keyword):
-        # ... (代码无变化, 为简洁省略)
-        color_map = { "red": "Red", "cyan": "Cyan", "blue": "Blue", "purple": "Purple", "yellow": "Yellow", "orange": "Orange", "black": "Black", "white": "White", "green": "Green" }
+        color_map = { "cyan": "Cyan", "blue": "Blue", "purple": "Purple", "yellow": "Yellow", "orange": "Orange", "black": "Black", "white": "White", "green": "Green", "red": "Red",}
         for color, style_name in color_map.items():
             if keyword in keyword_colors.get(f"{color}_keywords", []): return style_name
         return "Default"
@@ -418,7 +405,6 @@ class EarningsWindow(QMainWindow):
             print(f"保存状态文件时出错: {e}")
 
     def show_context_menu(self, keyword):
-        # ... (代码无变化, 为简洁省略)
         menu = QMenu(self)
         actions = [ ("添加到 Earning", lambda: execute_external_script('earning', keyword)), ("编辑 Earing DB", lambda: execute_external_script('editor_earning', keyword)), ("Kimi检索财报", lambda: execute_external_script('kimi', keyword)), None, ("编辑 Tags", lambda: execute_external_script('tags', keyword)), ("在富途中搜索", lambda: execute_external_script('futu', keyword)), ("找相似(旧版)", lambda: execute_external_script('similar', keyword)), None, ("加入黑名单", lambda: execute_external_script('blacklist', keyword)), ]
         for item in actions:
@@ -429,7 +415,6 @@ class EarningsWindow(QMainWindow):
         menu.exec_(QCursor.pos())
 
     def on_keyword_selected_chart(self, value):
-        # ... (代码无变化, 为简洁省略)
         global symbol_manager
         sector = next((s for s, names in sector_data.items() if value in names), None)
         if sector:
@@ -440,13 +425,11 @@ class EarningsWindow(QMainWindow):
             self.setFocus()
 
     def handle_arrow_key(self, direction):
-        # ... (代码无变化, 为简洁省略)
         global symbol_manager
         symbol = symbol_manager.next_symbol() if direction == 'down' else symbol_manager.previous_symbol()
         if symbol: self.on_keyword_selected_chart(symbol)
 
     def keyPressEvent(self, event):
-        # ... (代码无变化, 为简洁省略)
         key = event.key()
         if key == Qt.Key_Escape: self.close()
         elif key == Qt.Key_Down: self.handle_arrow_key('down')
@@ -463,11 +446,7 @@ class EarningsWindow(QMainWindow):
         QApplication.quit()
         # event.accept() # QApplication.quit()会处理关闭，所以这行不是必须的
 
-# ----------------------------------------------------------------------
-# Main Execution
-# ----------------------------------------------------------------------
 if __name__ == '__main__':
-    # ... (代码无变化, 为简洁省略)
     keyword_colors = load_json(COLORS_PATH)
     config = load_json(CONFIG_PATH)
     json_data = load_json(DESCRIPTION_PATH)
