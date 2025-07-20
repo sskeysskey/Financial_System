@@ -39,7 +39,7 @@ TAGS_WEIGHT_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/tags_weig
 
 # --- 新增常量 ---
 # 用于保存展开/折叠状态的文件路径
-EXPANSION_STATE_PATH = '/Users/yanzhang/Documents/News/earnings_viewer_state.json'
+EXPANSION_STATE_PATH = '/Users/yanzhang/Documents/Financial_System/Query/Check_Earning_Similar.json'
 # 控制显示的相关股票数量
 RELATED_SYMBOLS_LIMIT = 10
 
