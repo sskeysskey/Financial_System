@@ -245,26 +245,27 @@ class EarningsWindow(QMainWindow):
     def populate_ui(self):
         earnings_schedule, _ = parse_earnings_file(EARNINGS_FILE_PATH)
 
+        # 预先构建一个所有合法 sector symbols 的集合，用于过滤
+        valid_symbols = set()
+        for names in sector_data.values():
+            valid_symbols.update(names)
+
         for date_str, data in earnings_schedule.items():
             # 1) 日期 GroupBox
             date_group = QGroupBox(date_str)
             date_group.setCheckable(True)
-            # 根据保存的状态决定是否展开
             is_date_expanded = self.expansion_states.get(date_str, {}).get("_is_expanded", True)
             date_group.setChecked(is_date_expanded)
             self.main_layout.addWidget(date_group)
 
             # 日期内容容器
             date_content_widget = QWidget()
-            # —— 新增：初始可见性
             date_content_widget.setVisible(is_date_expanded)
             date_group_layout = QVBoxLayout(date_content_widget)
             date_group_layout.setContentsMargins(10, 5, 5, 5)
 
-            # 将内容容器加入到可折叠的 GroupBox
             date_group.setLayout(QVBoxLayout())
             date_group.layout().addWidget(date_content_widget)
-            # 切换时同步可见性
             date_group.toggled.connect(date_content_widget.setVisible)
 
             # 盘前/盘后两个子分组
@@ -276,14 +277,12 @@ class EarningsWindow(QMainWindow):
                 time_label = "盘前 (BMO)" if time_code == 'BMO' else "盘后 (AMC)"
                 time_group = QGroupBox(time_label)
                 time_group.setCheckable(True)
-                # 根据保存的状态决定是否展开
                 is_time_expanded = self.expansion_states.get(date_str, {}).get(time_code, True)
                 time_group.setChecked(is_time_expanded)
                 date_group_layout.addWidget(time_group)
 
                 # 时间段内容容器
                 time_content_widget = QWidget()
-                # —— 新增：初始可见性
                 time_content_widget.setVisible(is_time_expanded)
                 time_layout = QGridLayout(time_content_widget)
                 time_layout.setColumnStretch(1, 1)
@@ -316,12 +315,18 @@ class EarningsWindow(QMainWindow):
                     related_layout.setSpacing(5)
                     related_layout.setAlignment(Qt.AlignLeft)
 
+                    # 计算关联 symbols，并过滤掉不在 sector_data 里的
                     target_tags = find_tags_by_symbol_b(symbol, json_data)
                     if target_tags:
                         related_symbols_data = find_symbols_by_tags_b(target_tags, json_data, symbol)
                         if related_symbols_data:
                             related_container.setObjectName("RelatedContainer")
-                            for rel_symbol, _ in related_symbols_data[:RELATED_SYMBOLS_LIMIT]:
+                            count = 0
+                            for rel_symbol, _ in related_symbols_data:
+                                if rel_symbol not in valid_symbols:
+                                    continue
+                                if count >= RELATED_SYMBOLS_LIMIT:
+                                    break
                                 rel_button = QPushButton(f"{rel_symbol} {compare_data.get(rel_symbol, '')}")
                                 rel_button.setObjectName(self.get_button_style_name(rel_symbol))
                                 rel_button.clicked.connect(
@@ -337,6 +342,7 @@ class EarningsWindow(QMainWindow):
                                     lambda pos, k=rel_symbol: self.show_context_menu(k)
                                 )
                                 related_layout.addWidget(rel_button)
+                                count += 1
 
                     # 将按钮和相关容器加入布局
                     time_layout.addWidget(symbol_button, row_index, 0)
