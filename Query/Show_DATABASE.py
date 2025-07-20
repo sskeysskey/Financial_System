@@ -201,6 +201,7 @@ def generate_html_report(db_name, tables_data, output_file='db_visualization.htm
 def visualize_sqlite_db(db_path, output_dir, content_limit=100):
     """
     连接到SQLite数据库，提取信息，并生成可视化报告。
+    (此版本已更新，可自动格式化 changed_at 并智能排序)
 
     :param db_path: SQLite数据库文件的路径
     :param output_dir: 生成的HTML报告的输出目录
@@ -211,6 +212,7 @@ def visualize_sqlite_db(db_path, output_dir, content_limit=100):
         return
 
     tables_data = {}
+    conn = None  # 在 try 外部初始化 conn
     try:
         # 连接数据库
         conn = sqlite3.connect(db_path)
@@ -231,20 +233,57 @@ def visualize_sqlite_db(db_path, output_dir, content_limit=100):
             print(f"正在处理表: {table_name}...")
             tables_data[table_name] = {}
 
-            # a. 获取表结构
-            cursor.execute(f"PRAGMA table_info('{table_name}');")
+            # a. 获取表结构和所有列名
+            cursor.execute(f'PRAGMA table_info("{table_name}");')
             schema = cursor.fetchall()
             tables_data[table_name]['schema'] = schema
+            col_names = [s[1] for s in schema]
 
-            # 直接用一条 SQL 拿到倒序的后 N 条
-            cursor.execute(f"""
-            SELECT * FROM (
-                SELECT * FROM '{table_name}'
-                ORDER BY id DESC
+            # ==================== 新增/修改部分开始 ====================
+
+            # b. 智能决定用于排序的列，使查询更健壮
+            if 'id' in col_names:
+                order_col = 'id'
+            elif 'date' in col_names:
+                order_col = 'date'
+            elif 'changed_at' in col_names:
+                order_col = 'changed_at'
+            else:
+                order_col = 'rowid' # 使用 rowid 作为最后的保障
+
+            # c. 动态构建 SELECT 子句，用于格式化 changed_at
+            select_fields = []
+            if 'changed_at' in col_names:
+                for col in col_names:
+                    if col == 'changed_at':
+                        # 对 changed_at 列应用格式化和时区转换
+                        select_fields.append(f"strftime('%Y-%m-%d %H:%M:%S', {col}, 'localtime') AS {col}")
+                    else:
+                        # 其他列保持原样，使用引号避免关键字问题
+                        select_fields.append(f'"{col}"')
+                select_clause = ", ".join(select_fields)
+            else:
+                # 如果没有 changed_at 列，就查询所有字段
+                select_clause = "*"
+
+            # d. 构建最终的、更强大的SQL查询语句
+            #    注意：列名和表名都用双引号括起来，以支持包含特殊字符的名称
+            sql_query = f"""
+            SELECT {select_clause}
+            FROM (
+                SELECT * FROM "{table_name}"
+                ORDER BY "{order_col}" DESC
                 LIMIT {content_limit}
-            ) sub
-            ORDER BY id DESC;
-            """)
+            ) AS sub
+            ORDER BY "{order_col}" DESC;
+            """
+            print(f"为表 '{table_name}' 执行的SQL: {sql_query.strip()}")
+            
+            # 执行查询
+            cursor.execute(sql_query)
+            
+            # ==================== 新增/修改部分结束 ====================
+            
             content_preview = cursor.fetchall()
             # 获取列名
             content_headers = [description[0] for description in cursor.description] if cursor.description else []

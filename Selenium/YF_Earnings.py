@@ -154,42 +154,43 @@ with open(file_path, 'a') as output_file:
                 has_data = False
             else:
                 for row in rows:
-                    symbol = row.find_element(By.CSS_SELECTOR, 'a[title][href*="/quote/"]').get_attribute('title')
+                    try:
+                        symbol = row.find_element(By.CSS_SELECTOR, 'a[title][href*="/quote/"]').get_attribute('title')
 
-                    cells = row.find_elements(By.TAG_NAME, 'td')
-                    # 假设事件名称在第三个单元格（索引2）
-                    if len(cells) >= 3:
-                        event_name = cells[2].text.strip()
-                    else:
+                        cells = row.find_elements(By.TAG_NAME, 'td')
+                        # 检查单元格数量是否足够，我们需要至少4个单元格来获取时间和事件名称
+                        if len(cells) >= 4:
+                            event_name = cells[2].text.strip()
+                            # "Earnings Call Time" 在第四个单元格 (索引为3)
+                            call_time = cells[3].text.strip()
+                            # 如果 call_time 为空，则给一个默认的占位符
+                            if not call_time or call_time == '-':
+                                call_time = "N/A"
+                        else:
+                            # 如果单元格不够，则无法获取所需信息，跳过此行
+                            continue
+                        
+                        if "Earnings Release" in event_name or "Shareholders Meeting" in event_name or "Earnings Announcement" in event_name:
+                            for category, symbols in data.items():
+                                if symbol in symbols:
+                                    # 构建新的输出格式: "SYMBOL   BMO: YYYY-MM-DD"
+                                    # 使用 f-string 和对齐来格式化输出
+                                    entry = f"{symbol:<7}: {call_time:<4}: {formatted_change_date}"
+                                    
+                                    if symbol not in existing_content:
+                                        output_file.write(entry + "\n")
+                                        new_content_added = True
+                                        # 将新添加的symbol也加入到集合中，防止在同一次运行中重复添加
+                                        existing_content.add(symbol)
+                        # --- 修改结束 ---
+                                        
+                    except Exception as e:
+                        # 捕获处理单行时可能出现的错误，避免整个循环中断
+                        print(f"处理行数据时出错: {e}, Symbol: {symbol if 'symbol' in locals() else 'N/A'}")
                         continue
-                    
-                    if "Earnings Release" in event_name or "Shareholders Meeting" in event_name or " Earnings Announcement" in event_name:
-                        for category, symbols in data.items():
-                            if symbol in symbols:
-                                # 查询数据库获取交易量
-                                cursor.execute(f"SELECT volume FROM {category} WHERE name = ? ORDER BY date DESC LIMIT 1", (symbol,))
-                                volume_row = cursor.fetchone()
-                                volume = volume_row[0] if volume_row else "No volume data"
-                                
-                                original_symbol = symbol  # 保留原始公司名称
 
-                                # 检查颜色关键词并根据所在分组添加后缀
-                                suffix = ""
-                                for color_group, group_symbols in color_data.items():
-                                    if symbol in group_symbols and color_group != "red_keywords":
-                                        suffix = color_suffix_map.get(color_group, "")
-                                        break
-                                
-                                if suffix:
-                                    symbol += f":{suffix}"
-
-                                entry = f"{symbol:<7}: {volume:<10}: {formatted_change_date}"
-                                if original_symbol not in existing_content:
-                                    output_file.write(entry + "\n")
-                                    new_content_added = True
-                                
-                offset += 100  # 为下一个子页面增加 offset
-        change_date += delta  # 日期增加一天
+                offset += 100
+        change_date += delta
 
 # 关闭数据库连接
 conn.close()
