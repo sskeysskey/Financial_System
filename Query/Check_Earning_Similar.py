@@ -25,7 +25,6 @@ from Chart_input import plot_financial_data
 # ----------------------------------------------------------------------
 # Constants / Global Configurations
 # ----------------------------------------------------------------------
-CONFIG_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json'
 COLORS_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Colors.json'
 DESCRIPTION_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
 SECTORS_ALL_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
@@ -43,7 +42,6 @@ RELATED_SYMBOLS_LIMIT = 10
 # 全局变量
 symbol_manager = None
 compare_data = {}
-config = {}
 keyword_colors = {}
 sector_data = {}
 json_data = {}
@@ -229,7 +227,6 @@ def find_symbols_by_tags_b(target_tags_with_weight, data, original_symbol):
 class EarningsWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.config = config
         # --- 修改：加载状态 ---
         self.expansion_states = load_expansion_states(EXPANSION_STATE_PATH)
         self.init_ui()
@@ -448,7 +445,6 @@ class EarningsWindow(QMainWindow):
 
 if __name__ == '__main__':
     keyword_colors = load_json(COLORS_PATH)
-    config = load_json(CONFIG_PATH)
     json_data = load_json(DESCRIPTION_PATH)
     sector_data = load_json(SECTORS_ALL_PATH)
     compare_data = load_text_data(COMPARE_DATA_PATH)
