@@ -490,7 +490,7 @@ class EarningsWindow(QMainWindow):
 
     def show_context_menu(self, keyword):
         menu = QMenu(self)
-        actions = [ ("添加到 Earning", lambda: execute_external_script('earning', keyword)), ("编辑 Earing DB", lambda: execute_external_script('editor_earning', keyword)), ("Kimi检索财报", lambda: execute_external_script('kimi', keyword)), None, ("编辑 Tags", lambda: execute_external_script('tags', keyword)), ("在富途中搜索", lambda: execute_external_script('futu', keyword)), ("找相似(旧版)", lambda: execute_external_script('similar', keyword)), None, ("加入黑名单", lambda: execute_external_script('blacklist', keyword)), ]
+        actions = [ ("在富途中搜索", lambda: execute_external_script('futu', keyword)), ("添加到 Earning", lambda: execute_external_script('earning', keyword)), ("编辑 Earing DB", lambda: execute_external_script('editor_earning', keyword)), ("Kimi检索财报", lambda: execute_external_script('kimi', keyword)), None, ("编辑 Tags", lambda: execute_external_script('tags', keyword)), ("找相似(旧版)", lambda: execute_external_script('similar', keyword)), None, ("加入黑名单", lambda: execute_external_script('blacklist', keyword)), ]
         for item in actions:
             if item is None: menu.addSeparator()
             else:
