@@ -11,9 +11,9 @@ from decimal import Decimal
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QGroupBox, QScrollArea, 
-    QMenu, QAction, QGridLayout
+    QMenu, QAction, QGridLayout, QLineEdit, QMessageBox
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QCursor
 
 # ----------------------------------------------------------------------
@@ -256,12 +256,25 @@ class EarningsWindow(QMainWindow):
         super().__init__()
         # --- 修改：加载状态 ---
         self.expansion_states = load_expansion_states(EXPANSION_STATE_PATH)
+        self.button_mapping = {}   # ← 用于保存 symbol -> (button, date_group, time_group)
         self.init_ui()
 
     def init_ui(self):
-        self.setWindowTitle("财报日历查看器 (V3 - 状态记忆)")
-        # ... (init_ui 的其余部分无变化, 为简洁省略) ...
+        self.setWindowTitle("财报日历查看器 (V3 - 状态记忆＋搜索)")
         self.setFocusPolicy(Qt.StrongFocus)
+
+        # 新增：搜索栏
+        top_widget = QWidget()
+        top_lay    = QHBoxLayout(top_widget)
+        self.search_line   = QLineEdit()
+        self.search_button = QPushButton("搜索 Symbol")
+        top_lay.addWidget(self.search_line)
+        top_lay.addWidget(self.search_button)
+        self.search_line.setPlaceholderText("输入要搜索的 Symbol，然后按回车或点击“搜索 Symbol”")
+        self.search_line.returnPressed.connect(self.on_search)
+        self.search_button.clicked.connect(self.on_search)
+
+        # 原有的 scroll_area / main_layout
         self.scroll_area = QScrollArea(self)
         self.scroll_area.setWidgetResizable(True)
         self.setCentralWidget(self.scroll_area)
@@ -270,6 +283,15 @@ class EarningsWindow(QMainWindow):
         self.main_layout = QVBoxLayout(self.scroll_content)
         self.scroll_content.setLayout(self.main_layout)
         self.main_layout.setAlignment(Qt.AlignTop)
+
+        # 把搜索栏插到最顶上
+        container = QWidget()
+        container_l = QVBoxLayout(container)
+        container_l.setContentsMargins(0,0,0,0)
+        container_l.addWidget(top_widget)
+        container_l.addWidget(self.scroll_area)
+        self.setCentralWidget(container)
+
         self.apply_stylesheet()
         self.populate_ui()
 
@@ -295,6 +317,30 @@ class EarningsWindow(QMainWindow):
             if keyword in keyword_colors.get(f"{color}_keywords", []): return style_name
         return "Default"
 
+    def on_search(self):
+        key = self.search_line.text().strip().upper()
+        if not key:
+            return
+        if key not in self.button_mapping:
+            QMessageBox.information(self, "未找到", f"Symbol “{key}” 不在当前财报列表中。")
+            return
+        self.locate_symbol(key)
+
+    def locate_symbol(self, symbol):
+        btn, date_grp, time_grp = self.button_mapping[symbol]
+
+        # 展开对应的日期和时段
+        if not date_grp.isChecked():
+            date_grp.setChecked(True)
+        if not time_grp.isChecked():
+            time_grp.setChecked(True)
+
+        # 延迟一点，让 layout 生效后再滚动
+        QTimer.singleShot(100, lambda: self.scroll_area.ensureWidgetVisible(btn))
+        # 或者直接： self.scroll_area.ensureWidgetVisible(btn)
+        # 最后给按钮一个聚焦，方便用户看到
+        btn.setFocus()
+    
     def populate_ui(self):
         earnings_schedule, _ = parse_earnings_file(EARNINGS_FILE_PATH)
 
@@ -365,6 +411,9 @@ class EarningsWindow(QMainWindow):
                     symbol_button.clicked.connect(lambda _, k=symbol: self.on_keyword_selected_chart(k))
                     tags_info = get_tags_for_symbol(symbol)
                     tags_info_str = ", ".join(tags_info) if isinstance(tags_info, list) else tags_info
+                    # —— 新增：记录映射 —— 
+                    self.button_mapping[symbol] = (symbol_button, date_group, time_group)
+
                     symbol_button.setToolTip(
                         f"<div style='font-size:20px;background-color:lightyellow;color:black;'>{tags_info_str}</div>"
                     )

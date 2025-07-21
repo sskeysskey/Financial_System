@@ -303,6 +303,7 @@ class MainWindow(QMainWindow):
         """)
         self.layout.insertWidget(1, self.history_list)
 
+        # 重写 input_field 的事件以显示/隐藏历史
         self._orig_focus_in = self.input_field.focusInEvent
         self._orig_focus_out = self.input_field.focusOutEvent
         self._orig_key_press = self.input_field.keyPressEvent
@@ -334,9 +335,8 @@ class MainWindow(QMainWindow):
         self.search_button.clicked.connect(self.start_search)
         self.input_field.returnPressed.connect(self.start_search)
 
-        self.shortcut_close = QKeySequence("Esc")
         self.quit_action = QAction("Quit", self)
-        self.quit_action.setShortcut(self.shortcut_close)
+        self.quit_action.setShortcut(QKeySequence("Esc"))
         self.quit_action.triggered.connect(self.close)
         self.addAction(self.quit_action)
 
@@ -354,15 +354,25 @@ class MainWindow(QMainWindow):
         self.clear_results()
         self.search_button.setEnabled(False)
         self.input_field.setEnabled(False)
+
+        # 创建并启动 Worker
         self.worker = SearchWorker(keywords, json_path)
         self.worker.results_ready.connect(self.show_results)
-        self.worker.finished.connect(lambda: (
-            self.loading_label.hide(),
-            self.search_button.setEnabled(True),
-            self.input_field.setEnabled(True),
-            self.input_field.setFocus()
-        ))
+        # 改动：改为 on_search_finished
+        self.worker.finished.connect(self.on_search_finished)
         self.worker.start()
+
+    def on_search_finished(self):
+        # 恢复按钮和输入框状态
+        self.loading_label.hide()
+        self.search_button.setEnabled(True)
+        self.input_field.setEnabled(True)
+        self.input_field.setFocus()
+
+        # 如果是 paste 启动，就全选输入框内容，然后只做一次
+        if getattr(self, "suppress_history", False):
+            self.input_field.selectAll()
+            self.suppress_history = False
 
     def clear_results(self):
         while self.results_layout.count():
