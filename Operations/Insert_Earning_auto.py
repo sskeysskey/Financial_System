@@ -111,16 +111,29 @@ class MainWindow(QMainWindow):
 
         # 2. 解析 txt 文件
         self.symbols_by_date = {self.date1: [], self.date2: []}
+        self.symbol_to_period = {}
         with open(TXT_PATH, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if not line:
                     continue
-                # symbol 在第一冒号前，date 在最后冒号后
-                symbol = line.split(":", 1)[0].strip()
-                dt = line.rsplit(":", 1)[1].strip()
+                parts = [p.strip() for p in line.split(":")]
+                # e.g. ["COKE", "AMC", "2025-07-24"]
+                symbol, period, dt = parts[0], parts[1], parts[2]
                 if dt in self.symbols_by_date:
-                    self.symbols_by_date[dt].append(symbol)
+                    self.symbols_by_date[dt].append((symbol, period))
+                    self.symbol_to_period[symbol] = period
+
+        # 2. 对每个日期的列表按照指定顺序排序
+        desired_order = ['BMO', 'AMC', 'TNS']
+        def order_key(item):
+            _, per = item
+            if per in desired_order:
+                return (desired_order.index(per), "")
+            else:
+                return (len(desired_order), per)
+        for dt in self.symbols_by_date:
+            self.symbols_by_date[dt].sort(key=order_key)
 
         # 3. 载入 sector 配置
         self.symbol_to_sector = {}
@@ -164,8 +177,10 @@ class MainWindow(QMainWindow):
         gb1 = QGroupBox(f"日期 {self.date1} 符合条件的 Symbols（点击“替换”写入/覆盖）")
         lay1 = QVBoxLayout()
         # 3 列：Symbol, 百分比, 操作
-        self.table1 = QTableWidget(0, 3)
-        self.table1.setHorizontalHeaderLabels(["Symbol", "百分比(%)", "操作"])
+        self.table1 = QTableWidget(0, 4)
+        self.table1.setHorizontalHeaderLabels(
+            ["Symbol", "时段", "百分比(%)", "操作"]
+        )
         self.table1.horizontalHeader().setStretchLastSection(True)
         # --- 2. 移除 cellClicked 连接，因为现在点击的是按钮 ---
         # self.table1.cellClicked.connect(self.on_symbol_clicked)
@@ -179,8 +194,11 @@ class MainWindow(QMainWindow):
         # 第二部分
         gb2 = QGroupBox(f"日期 {self.date2} 符合条件的 Symbols （点击 Symbol 显示图表，可替换旧百分比）")
         lay2 = QVBoxLayout()
-        self.table2 = QTableWidget(0, 4)
-        self.table2.setHorizontalHeaderLabels(["Symbol", "新百分比(%)", "旧百分比(%)", "操作"])
+        # table2 现在有 5 列：Symbol, 时段, 新百分比, 旧百分比, 操作
+        self.table2 = QTableWidget(0, 5)
+        self.table2.setHorizontalHeaderLabels(
+            ["Symbol", "时段", "新百分比(%)", "旧百分比(%)", "操作"]
+        )
         self.table2.horizontalHeader().setStretchLastSection(True)
         # --- 2. 移除 cellClicked 连接 ---
         # self.table2.cellClicked.connect(self.on_symbol_clicked)
@@ -195,7 +213,7 @@ class MainWindow(QMainWindow):
         cw.setLayout(hlay)
         self.setCentralWidget(cw)
         # self.resize(500, 900) # 你已经设置了窗口大小
-        self.resize(900, 900)
+        self.resize(1200, 900)
 
         # 新增：将窗口移动到屏幕中央
         self.center_window()
@@ -359,7 +377,7 @@ class MainWindow(QMainWindow):
         扫描“昨天”的 symbols，计算百分比，
         但不写库，只在界面添加“替换”按钮，点击后再写入/覆盖。
         """
-        for symbol in self.symbols_by_date[self.date1]:
+        for symbol, period in self.symbols_by_date[self.date1]:
             sector = self.symbol_to_sector.get(symbol)
             if not sector:
                 continue
@@ -382,32 +400,33 @@ class MainWindow(QMainWindow):
 
             # --- 5. 修改：将Symbol文本替换为QPushButton ---
             # 创建一个空的item占位，因为setCellWidget需要一个item存在
-            self.table1.setItem(row, 0, QTableWidgetItem()) 
+            # 0: Symbol 按钮
+            self.table1.setItem(row, 0, QTableWidgetItem())
+            btn = QPushButton(symbol)
+            btn.setObjectName("SymbolButton")
+            btn.clicked.connect(partial(self.on_symbol_button_clicked, symbol))
+            self.table1.setCellWidget(row, 0, btn)
 
-            symbol_btn = QPushButton(symbol)
-            symbol_btn.setObjectName("SymbolButton") # 应用我们定义的QSS样式
-            symbol_btn.setCursor(QCursor(Qt.PointingHandCursor)) # 设置鼠标手势
-            # 连接按钮的点击信号到新的处理函数
-            symbol_btn.clicked.connect(partial(self.on_symbol_button_clicked, symbol))
-            self.table1.setCellWidget(row, 0, symbol_btn)
-            # --- 修改结束 ---
+            # 1: 时段
+            self.table1.setItem(row, 1, QTableWidgetItem(period))
 
-            self.table1.setItem(row, 1, QTableWidgetItem(str(pct)))
+            # 2: 百分比
+            self.table1.setItem(row, 2, QTableWidgetItem(str(pct)))
 
-            # --- 替换按钮的修改 ---
+            # 3: 替换 按钮（逻辑同原来，只是列索引变了）
             replace_btn = QPushButton("写入")
-            replace_btn.setObjectName("ReplaceButton") # 应用新样式
-            # 将按钮的点击信号连接到处理函数，并把按钮自身作为参数传过去
-            replace_btn.clicked.connect(partial(self.on_replace_date1, symbol, pct, replace_btn))
+            replace_btn.setObjectName("ReplaceButton")
+            replace_btn.clicked.connect(
+                partial(self.on_replace_date1, symbol, pct, replace_btn)
+            )
 
-            # 创建容器和布局来控制按钮大小和位置
+            # self.table1.setCellWidget(row, 2, container) # 将容器放入单元格
             container = QWidget()
-            layout = QHBoxLayout(container)
-            layout.addWidget(replace_btn)
-            layout.setAlignment(Qt.AlignCenter) # 关键：让按钮居中，保持最佳大小
-            layout.setContentsMargins(0, 0, 0, 0) # 移除布局边距
-
-            self.table1.setCellWidget(row, 2, container) # 将容器放入单元格
+            hl = QHBoxLayout(container)
+            hl.addWidget(replace_btn)
+            hl.setAlignment(Qt.AlignCenter)
+            hl.setContentsMargins(0,0,0,0) # 移除布局边距
+            self.table1.setCellWidget(row, 3, container) # 将容器放入单元格
 
     # --- 3. 修改：on_replace_date1 的签名，直接接收按钮实例 ---
     def on_replace_date1(self, symbol, pct, btn):
@@ -451,7 +470,7 @@ class MainWindow(QMainWindow):
          - 读 Earning 表取旧百分比
          - 显示在 table2，并加“替换”按钮
         """
-        for symbol in self.symbols_by_date[self.date2]:
+        for symbol, period in self.symbols_by_date[self.date2]:
             sector = self.symbol_to_sector.get(symbol)
             if not sector:
                 continue
@@ -473,32 +492,36 @@ class MainWindow(QMainWindow):
             row = self.table2.rowCount()
             self.table2.insertRow(row)
 
-            # --- 5. 修改：将Symbol文本替换为QPushButton ---
-            self.table2.setItem(row, 0, QTableWidgetItem()) # 同样需要占位item
+            # 0: Symbol 按钮
+            self.table2.setItem(row, 0, QTableWidgetItem())
+            btn = QPushButton(symbol)
+            btn.setObjectName("SymbolButton")
+            btn.clicked.connect(partial(self.on_symbol_button_clicked, symbol))
+            self.table2.setCellWidget(row, 0, btn)
 
-            symbol_btn = QPushButton(symbol)
-            symbol_btn.setObjectName("SymbolButton")
-            symbol_btn.setCursor(QCursor(Qt.PointingHandCursor))
-            symbol_btn.clicked.connect(partial(self.on_symbol_button_clicked, symbol))
-            self.table2.setCellWidget(row, 0, symbol_btn)
-            # --- 修改结束 ---
+            # 1: 时段
+            self.table2.setItem(row, 1, QTableWidgetItem(period))
 
-            self.table2.setItem(row, 1, QTableWidgetItem(str(pct_new)))
-            self.table2.setItem(row, 2, QTableWidgetItem(str(pct_old) if pct_old is not None else ""))
+            # 2: 新百分比
+            self.table2.setItem(row, 2, QTableWidgetItem(str(pct_new)))
 
-            # --- 替换按钮的修改 ---
+            # 3: 旧百分比
+            self.table2.setItem(row, 3, QTableWidgetItem(
+                "" if pct_old is None else str(pct_old)
+            ))
+
+            # 4: 替换 按钮
             replace_btn = QPushButton("替换")
-            replace_btn.setObjectName("ReplaceButton") # 应用新样式
-            replace_btn.clicked.connect(partial(self.on_replace_date2, symbol, pct_new, row, replace_btn))
-
-            # 创建容器和布局
+            replace_btn.setObjectName("ReplaceButton")
+            replace_btn.clicked.connect(
+                partial(self.on_replace_date2, symbol, pct_new, row, replace_btn)
+            )
             container = QWidget()
-            layout = QHBoxLayout(container)
-            layout.addWidget(replace_btn)
-            layout.setAlignment(Qt.AlignCenter)
-            layout.setContentsMargins(0, 0, 0, 0)
-            
-            self.table2.setCellWidget(row, 3, container) # 将容器放入单元格
+            hl = QHBoxLayout(container)
+            hl.addWidget(replace_btn)
+            hl.setAlignment(Qt.AlignCenter)
+            hl.setContentsMargins(0,0,0,0)
+            self.table2.setCellWidget(row, 4, container)
 
     # on_replace_date2 方法本身不需要修改，因为它已经接收了 btn 参数
     def on_replace_date2(self, symbol, new_pct, row, btn):

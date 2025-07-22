@@ -1,411 +1,595 @@
 import sys
 import json
 import sqlite3
-from collections import OrderedDict
-import subprocess
-import os
-import re
-import time
-from decimal import Decimal
+import subprocess  # 1. 新增导入：用于执行外部脚本
+from datetime import date, timedelta
+from functools import partial
+from collections import OrderedDict  # 导入以支持 b.py 中的 load_json
 
-# ----------------------------------------------------------------------
-# PyQt5 Imports
-# ----------------------------------------------------------------------
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QGroupBox, QScrollArea, QTextEdit, QDialog,
-    QInputDialog, QMenu, QAction, QGridLayout, QLabel, QFrame
+    QApplication, QMainWindow, QWidget,
+    QVBoxLayout, QHBoxLayout, QGroupBox, QTableWidget, QTableWidgetItem, # 新增 QHBoxLayout
+    QPushButton, QMessageBox, QShortcut,
+    QMenu, QAction  # 1. 新增导入：用于创建右键菜单
 )
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont, QCursor
+from PyQt5.QtGui import QCursor, QKeySequence # 1. 新增导入：用于获取光标位置
+from PyQt5.QtCore import Qt # 1. 新增导入：用于设置菜单策略
 
-# ----------------------------------------------------------------------
-# Update sys.path so we can import from custom modules
-# ----------------------------------------------------------------------
+# 添加自定义模块的路径，以便可以导入 Chart_input
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Query')
 from Chart_input import plot_financial_data
 
-# ----------------------------------------------------------------------
-# Constants / Global Configurations
-# ----------------------------------------------------------------------
-CONFIG_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json'
-COLORS_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Colors.json'
+# 定义所有需要用到的文件路径，方便管理
+TXT_PATH = "/Users/yanzhang/Documents/News/Earnings_Release_new.txt"
+SECTORS_JSON_PATH = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json"
+DB_PATH = "/Users/yanzhang/Documents/Database/Finance.db"
 DESCRIPTION_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
-SECTORS_ALL_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
 COMPARE_DATA_PATH = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
-DB_PATH = '/Users/yanzhang/Documents/Database/Finance.db'
-EARNINGS_FILE_PATH = '/Users/yanzhang/Documents/News/Earnings_Release_new.txt'
-TAGS_WEIGHT_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/tags_weight.json'
 
-# --- 新增常量 ---
-# 用于保存展开/折叠状态的文件路径
-EXPANSION_STATE_PATH = '/Users/yanzhang/Documents/News/earnings_viewer_state.json'
-# 控制显示的相关股票数量
-RELATED_SYMBOLS_LIMIT = 10
-
-# 全局变量
-symbol_manager = None
-compare_data = {}
-config = {}
-keyword_colors = {}
-sector_data = {}
-json_data = {}
-tags_weight_config = {}
-DEFAULT_WEIGHT = Decimal('1')
-
-
-# ----------------------------------------------------------------------
-# Classes
-# ----------------------------------------------------------------------
-class SymbolManager:
-    # ... (代码无变化, 为简洁省略)
-    def __init__(self, symbols_list):
-        self.symbols = symbols_list
-        self.current_index = -1
-        if not self.symbols: print("Warning: No symbols loaded into SymbolManager.")
-    def next_symbol(self):
-        if not self.symbols: return None
-        self.current_index = (self.current_index + 1) % len(self.symbols)
-        return self.symbols[self.current_index]
-    def previous_symbol(self):
-        if not self.symbols: return None
-        self.current_index = (self.current_index - 1) % len(self.symbols)
-        return self.symbols[self.current_index]
-    def set_current_symbol(self, symbol):
-        if symbol in self.symbols: self.current_index = self.symbols.index(symbol)
-        else: print(f"Warning: Symbol {symbol} not found in the list.")
-    def reset(self): self.current_index = -1
-
-# ----------------------------------------------------------------------
-# Utility / Helper Functions
-# ----------------------------------------------------------------------
-
-def load_json(path):
-    # ... (代码无变化, 为简洁省略)
-    try:
-        with open(path, 'r', encoding='utf-8') as file:
-            return json.load(file, object_pairs_hook=OrderedDict)
-    except (FileNotFoundError, json.JSONDecodeError) as e:
-        print(f"Error loading JSON from {path}: {e}")
-        return {}
-
-# --- 新增函数：加载展开/折叠状态 ---
-def load_expansion_states(path):
-    """从JSON文件加载并返回展开/折叠状态字典"""
-    try:
-        with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        # 如果文件不存在或格式错误，返回空字典，程序将使用默认展开状态
-        return {}
-
-def load_text_data(path):
-    # ... (代码无变化, 为简洁省略)
-    data = {}
-    try:
-        with open(path, 'r', encoding='utf-8') as file:
-            for line in file:
-                line = line.strip()
-                if not line or ':' not in line: continue
-                key, value = map(str.strip, line.split(':', 1))
-                cleaned_key = key.split()[-1]
-                data[cleaned_key] = tuple(p.strip() for p in value.split(',')) if ',' in value else value
-    except FileNotFoundError:
-        print(f"Error: Text data file not found at {path}")
-    return data
-
-def parse_earnings_file(path):
-    # ... (代码无变化, 为简洁省略)
-    earnings_schedule = OrderedDict()
-    all_symbols = []
-    try:
-        with open(path, 'r', encoding='utf-8') as file:
-            for line in file:
-                line = line.strip()
-                if not line: continue
-                parts = [p.strip() for p in line.split(':')]
-                if len(parts) == 3:
-                    symbol, time_code, date_str = parts
-                    if date_str not in earnings_schedule:
-                        earnings_schedule[date_str] = {'BMO': [], 'AMC': []}
-                    if time_code.upper() in ['BMO', 'AMC']:
-                        earnings_schedule[date_str][time_code.upper()].append(symbol)
-                        if symbol not in all_symbols:
-                            all_symbols.append(symbol)
-    except FileNotFoundError:
-        print(f"Error: Earnings file not found at {path}")
-    return OrderedDict(sorted(earnings_schedule.items())), all_symbols
-
-# ... (其他辅助函数 fetch_mnspp_data_from_db, get_tags_for_symbol, 等等都无变化, 为简洁省略) ...
-def fetch_mnspp_data_from_db(db_path, symbol):
-    with sqlite3.connect(db_path) as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT shares, marketcap, pe_ratio, pb FROM MNSPP WHERE symbol = ?", (symbol,))
-        result = cursor.fetchone()
-    return result if result else ("N/A", None, "N/A", "--")
-def get_tags_for_symbol(symbol):
-    for category in ["stocks", "etfs"]:
-        for item in json_data.get(category, []):
-            if item.get("symbol") == symbol:
-                return item.get("tag", "无标签")
-    return "无标签"
 def execute_external_script(script_type, keyword):
+    """
+    执行外部脚本（AppleScript 或 Python）。
+    此函数直接从 b.py 移植而来。
+    """
     base_path = '/Users/yanzhang/Documents/Financial_System'
-    script_configs = { 'blacklist': f'{base_path}/Operations/Insert_Blacklist.py', 'similar': f'{base_path}/Query/Find_Similar_Tag.py', 'tags': f'{base_path}/Operations/Editor_Symbol_Tags.py', 'editor_earning': f'{base_path}/Operations/Editor_Earning_DB.py', 'earning': f'{base_path}/Operations/Insert_Earning.py', 'futu': '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt', 'kimi': '/Users/yanzhang/Documents/ScriptEditor/CheckKimi_Earning.scpt' }
+    script_configs = {
+        'blacklist': f'{base_path}/Operations/Insert_Blacklist.py',
+        'similar': f'{base_path}/Query/Find_Similar_Tag.py',
+        'tags': f'{base_path}/Operations/Editor_Symbol_Tags.py',
+        'editor_earning': f'{base_path}/Operations/Editor_Earning_DB.py',
+        'futu': '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt',
+        'kimi': '/Users/yanzhang/Documents/ScriptEditor/CheckKimi_Earning.scpt'
+    }
+
     try:
-        if script_type in ['futu', 'kimi']: subprocess.Popen(['osascript', script_configs[script_type], keyword])
+        # 使用 Popen 进行非阻塞调用
+        if script_type in ['futu', 'kimi']:
+            # 对于 AppleScript，使用 osascript
+            subprocess.Popen(['osascript', script_configs[script_type], keyword])
         else:
+            # 对于 Python 脚本
             python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
             subprocess.Popen([python_path, script_configs[script_type], keyword])
-    except Exception as e: print(f"执行脚本时出错: {e}")
-def load_weight_groups():
-    try:
-        with open(TAGS_WEIGHT_PATH, 'r', encoding='utf-8') as f:
-            raw_data = json.load(f)
-            return {Decimal(k): v for k, v in raw_data.items()}
     except Exception as e:
-        print(f"加载权重配置文件时出错: {e}")
-        return {}
-def find_tags_by_symbol_b(symbol, data):
-    tags_with_weight = []
-    for category in ['stocks', 'etfs']:
-        for item in data.get(category, []):
-            if item.get('symbol') == symbol:
-                for tag in item.get('tag', []):
-                    weight = tags_weight_config.get(tag, DEFAULT_WEIGHT)
-                    tags_with_weight.append((tag, weight))
-                return tags_with_weight
-    return []
-def find_symbols_by_tags_b(target_tags_with_weight, data, original_symbol):
-    related_symbols = {'stocks': [], 'etfs': []}
-    target_tags_dict = {tag.lower(): weight for tag, weight in target_tags_with_weight}
-    for category in ['stocks', 'etfs']:
-        for item in data.get(category, []):
-            if item.get('symbol') == original_symbol: continue
-            tags = item.get('tag', [])
-            matched_tags = [(tag, target_tags_dict[tag.lower()]) for tag in tags if tag.lower() in target_tags_dict]
-            if matched_tags:
-                total_weight = sum(w for _, w in matched_tags)
-                related_symbols[category].append((item['symbol'], total_weight))
-    for category in related_symbols:
-        related_symbols[category].sort(key=lambda x: x[1], reverse=True)
-    return related_symbols['stocks'] + related_symbols['etfs']
+        # 在GUI中，最好用QMessageBox显示错误，但此处为了简单，先打印
+        print(f"执行脚本时出错: {e}")
+        QMessageBox.critical(None, "脚本执行错误", f"执行 '{script_type}' 脚本时发生错误:\n{e}")
 
-# ----------------------------------------------------------------------
-# PyQt5 Main Application Window
-# ----------------------------------------------------------------------
-class EarningsWindow(QMainWindow):
+# ... (之前添加的数据加载函数 load_json, load_text_data 等保持不变) ...
+def load_json(path):
+    """加载 JSON 文件，并保持顺序"""
+    with open(path, 'r', encoding='utf-8') as file:
+        return json.load(file, object_pairs_hook=OrderedDict)
+
+def load_text_data(path):
+    """加载 key: value 格式的文本文件"""
+    data = {}
+    with open(path, 'r', encoding='utf-8') as file:
+        for line in file:
+            line = line.strip()
+            if not line:
+                continue
+            key, value = map(str.strip, line.split(':', 1))
+            cleaned_key = key.split()[-1]
+            if ',' in value:
+                parts = [p.strip() for p in value.split(',')]
+                data[cleaned_key] = tuple(parts)
+            else:
+                data[cleaned_key] = value
+    return data
+
+# ### 删除 ###: 移除了不再需要的 load_marketcap_pe_data 函数
+
+# ### 新增 ###: 从 b.py 和 a.py 借鉴的数据库查询函数
+def fetch_mnspp_data_from_db(db_path, symbol):
+    """
+    根据股票代码从MNSPP表中查询 shares, marketcap, pe_ratio, pb。
+    如果未找到，则返回默认值。
+    """
+    with sqlite3.connect(db_path) as conn:
+        cursor = conn.cursor()
+        query = "SELECT shares, marketcap, pe_ratio, pb FROM MNSPP WHERE symbol = ?"
+        cursor.execute(query, (symbol,))
+        result = cursor.fetchone()
+
+    if result:
+        shares, marketcap, pe, pb = result
+        return shares, marketcap, pe, pb
+    else:
+        return "N/A", None, "N/A", "--"
+
+
+class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.config = config
-        # --- 修改：加载状态 ---
-        self.expansion_states = load_expansion_states(EXPANSION_STATE_PATH)
-        self.init_ui()
+        self.setWindowTitle("Earnings 百分比处理")
 
-    def init_ui(self):
-        self.setWindowTitle("财报日历查看器 (V3 - 状态记忆)")
-        # ... (init_ui 的其余部分无变化, 为简洁省略) ...
-        self.setFocusPolicy(Qt.StrongFocus)
-        self.scroll_area = QScrollArea(self)
-        self.scroll_area.setWidgetResizable(True)
-        self.setCentralWidget(self.scroll_area)
-        self.scroll_content = QWidget()
-        self.scroll_area.setWidget(self.scroll_content)
-        self.main_layout = QVBoxLayout(self.scroll_content)
-        self.scroll_content.setLayout(self.main_layout)
-        self.main_layout.setAlignment(Qt.AlignTop)
+        # 1. 计算日期
+        today = date.today()
+        self.date1 = (today - timedelta(days=1)).strftime("%Y-%m-%d")   # 昨天
+        self.date2 = (today - timedelta(days=2)).strftime("%Y-%m-%d")   # 前天
+
+        # 2. 解析 txt 文件
+        self.symbols_by_date = {self.date1: [], self.date2: []}
+        # 在 MainWindow.__init__() 中，紧跟 self.symbols_by_date 定义后，替换原有读取：
+        self.symbol_to_timing = {}
+        mapping = {"BMO": "前", "TNS": "未", "AMC": "后"}
+
+        with open(TXT_PATH, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                # 分三段：symbol : timing_key : date
+                parts = [p.strip() for p in line.split(":", 2)]
+                if len(parts) != 3:
+                    continue
+                symbol, timing_key, dt = parts
+                # 转译
+                trans = mapping.get(timing_key, timing_key)
+                self.symbol_to_timing[symbol] = trans
+                # 只收集我们关心的两个日期
+                if dt in self.symbols_by_date:
+                    self.symbols_by_date[dt].append(symbol)
+
+        # 3. 载入 sector 配置
+        self.symbol_to_sector = {}
+        with open(SECTORS_JSON_PATH, "r", encoding="utf-8") as f:
+            sectors = json.load(f)
+        for sector_name, syms in sectors.items():
+            for s in syms:
+                self.symbol_to_sector[s] = sector_name
+
+        # ### 修改 ###: 移除对 shares 和 marketcap 文件的加载
+        self.description_data = load_json(DESCRIPTION_PATH)
+        self.compare_data = load_text_data(COMPARE_DATA_PATH)
+
+        # 增加一行：Esc 退出
+        esc_shortcut = QShortcut(QKeySequence(Qt.Key_Escape), self)
+        esc_shortcut.activated.connect(self.close)
+
+        # 5. 连接数据库
+        self.db_path = DB_PATH  # 将路径保存为实例变量
+        self.conn = sqlite3.connect(self.db_path)
+        self.conn.row_factory = sqlite3.Row
+        self.cur = self.conn.cursor()
+
+        # 5. 构建界面
+        self._init_ui()
+
+        # 6. 分两部分处理
+        self.process_date1()
+        self.process_date2()
+
+    def _init_ui(self):
+        cw = QWidget()
+        # vlay = QVBoxLayout()
+        hlay = QHBoxLayout()
+
+        # --- 1. 新增：定义QSS样式表 ---
         self.apply_stylesheet()
-        self.populate_ui()
+        
+        # 第一部分：昨天的 symbols，延迟写入，带“替换”按钮
 
+        gb1 = QGroupBox(f"日期 {self.date1} 符合条件的 Symbols（点击“替换”写入/覆盖）")
+        lay1 = QVBoxLayout()
+        # 3 列：Symbol, 百分比, 操作
+        self.table1 = QTableWidget(0, 3)
+        self.table1.setHorizontalHeaderLabels(["Symbol", "百分比(%)", "操作"])
+        self.table1.horizontalHeader().setStretchLastSection(True)
+        # --- 2. 移除 cellClicked 连接，因为现在点击的是按钮 ---
+        # self.table1.cellClicked.connect(self.on_symbol_clicked)
+        self.table1.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.table1.customContextMenuRequested.connect(self.show_table_context_menu)
+        lay1.addWidget(self.table1)
+        gb1.setLayout(lay1)
+        # vlay.addWidget(gb1)
+        hlay.addWidget(gb1)
+
+        # 第二部分
+        gb2 = QGroupBox(f"日期 {self.date2} 符合条件的 Symbols （点击 Symbol 显示图表，可替换旧百分比）")
+        lay2 = QVBoxLayout()
+        self.table2 = QTableWidget(0, 4)
+        self.table2.setHorizontalHeaderLabels(["Symbol", "新百分比(%)", "旧百分比(%)", "操作"])
+        self.table2.horizontalHeader().setStretchLastSection(True)
+        # --- 2. 移除 cellClicked 连接 ---
+        # self.table2.cellClicked.connect(self.on_symbol_clicked)
+        self.table2.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.table2.customContextMenuRequested.connect(self.show_table_context_menu)
+        lay2.addWidget(self.table2)
+        gb2.setLayout(lay2)
+        # vlay.addWidget(gb2)
+        hlay.addWidget(gb2)
+
+        # cw.setLayout(vlay)
+        cw.setLayout(hlay)
+        self.setCentralWidget(cw)
+        # self.resize(500, 900) # 你已经设置了窗口大小
+        self.resize(900, 900)
+
+        # 新增：将窗口移动到屏幕中央
+        self.center_window()
+
+    # --- 1. 修改：为“替换”按钮添加新样式 ---
     def apply_stylesheet(self):
-        # ... (代码无变化, 为简洁省略)
-        button_styles = { "Cyan": ("cyan", "black"), "Blue": ("blue", "white"), "Purple": ("purple", "white"), "Green": ("green", "white"), "White": ("white", "black"), "Yellow": ("yellow", "black"), "Orange": ("orange", "black"), "Red": ("red", "black"), "Black": ("black", "white"), "Default": ("#ddd", "black") }
-        qss = ""
-        for name, (bg, fg) in button_styles.items():
-            qss += f""" QPushButton#{name} {{ background-color: {bg}; color: {fg}; font-size: 16px; padding: 5px; border: 1px solid #333; border-radius: 4px; }} QPushButton#{name}:hover {{ background-color: {self.lighten_color(bg)}; }} """
-        qss += """ QGroupBox { font-size: 16px; font-weight: bold; margin-top: 10px; } QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top left; padding: 0 5px; } QGroupBox[checkable="true"]::indicator { left: 5px; } QGroupBox[checkable="true"]::title { padding-left: 25px; } QWidget#RelatedContainer { border: 1px solid #ccc; border-radius: 4px; margin-left: 5px; } """
+        """定义并应用全局样式表"""
+        qss = """
+        /* Symbol 按钮的样式 */
+        QPushButton#SymbolButton {
+            background-color: #3498db; /* 漂亮的蓝色 */
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px; /* 圆角 */
+            font-weight: bold;
+        }
+        QPushButton#SymbolButton:hover { background-color: #2980b9; }
+        QPushButton#SymbolButton:pressed { background-color: #1f618d; }
+
+        /* 替换按钮的样式 */
+        QPushButton#ReplaceButton {
+            background-color: #2ecc71; /* 漂亮的绿色 */
+            color: white;
+            border: none;
+            padding: 5px 15px; /* 增加水平内边距 */
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        QPushButton#ReplaceButton:hover {
+            background-color: #27ae60; /* 悬停时变深 */
+        }
+        QPushButton#ReplaceButton:disabled {
+            background-color: #95a5a6; /* 禁用时变为灰色 */
+            color: #ecf0f1;
+        }
+        """
         self.setStyleSheet(qss)
 
-    def lighten_color(self, color_name, factor=1.2):
-        # ... (代码无变化, 为简洁省略)
-        from PyQt5.QtGui import QColor
-        color = QColor(color_name)
-        h, s, l, a = color.getHslF()
-        l = min(1.0, l * factor)
-        color.setHslF(h, s, l, a)
-        return color.name()
+    def show_table_context_menu(self, pos):
+        """当在表格上右键点击时，创建并显示上下文菜单"""
+        # 获取被点击的表格控件
+        table = self.sender()
+        if not table:
+            return
 
-    def get_button_style_name(self, keyword):
-        # ... (代码无变化, 为简洁省略)
-        color_map = { "red": "Red", "cyan": "Cyan", "blue": "Blue", "purple": "Purple", "yellow": "Yellow", "orange": "Orange", "black": "Black", "white": "White", "green": "Green" }
-        for color, style_name in color_map.items():
-            if keyword in keyword_colors.get(f"{color}_keywords", []): return style_name
-        return "Default"
+        # 根据点击位置获取单元格项目
+        item = table.itemAt(pos)
+        if item is None or item.column() != 0: return
 
-    def populate_ui(self):
-        earnings_schedule, _ = parse_earnings_file(EARNINGS_FILE_PATH)
-
-        for date_str, data in earnings_schedule.items():
-            date_group = QGroupBox(date_str)
-            date_group.setCheckable(True)
-            # --- 修改：根据加载的状态设置是否展开 ---
-            # 默认值为 True (展开)
-            is_date_expanded = self.expansion_states.get(date_str, {}).get("_is_expanded", True)
-            date_group.setChecked(is_date_expanded)
-            self.main_layout.addWidget(date_group)
-
-            date_content_widget = QWidget()
-            date_group_layout = QVBoxLayout(date_content_widget)
-            date_group_layout.setContentsMargins(10, 5, 5, 5)
-            date_group.setLayout(QVBoxLayout())
-            date_group.layout().addWidget(date_content_widget)
-            date_group.toggled.connect(date_content_widget.setVisible)
-
-            for time_code in ['BMO', 'AMC']:
-                symbols = data.get(time_code)
-                if not symbols: continue
-
-                time_label = "盘前 (BMO)" if time_code == 'BMO' else "盘后 (AMC)"
-                time_group = QGroupBox(time_label)
-                time_group.setCheckable(True)
-                # --- 修改：根据加载的状态设置是否展开 ---
-                is_time_expanded = self.expansion_states.get(date_str, {}).get(time_code, True)
-                time_group.setChecked(is_time_expanded)
-                date_group_layout.addWidget(time_group)
-
-                time_content_widget = QWidget()
-                time_layout = QGridLayout(time_content_widget)
-                time_layout.setColumnStretch(1, 1)
-                time_group.setLayout(QVBoxLayout())
-                time_group.layout().addWidget(time_content_widget)
-                time_group.toggled.connect(time_content_widget.setVisible)
-
-                for row_index, symbol in enumerate(symbols):
-                    # ... (创建按钮等逻辑) ...
-                    button_text = f"{symbol} {compare_data.get(symbol, '')}"
-                    symbol_button = QPushButton(button_text)
-                    symbol_button.setObjectName(self.get_button_style_name(symbol))
-                    symbol_button.clicked.connect(lambda _, k=symbol: self.on_keyword_selected_chart(k))
-                    tags_info = get_tags_for_symbol(symbol)
-                    tags_info_str = ", ".join(tags_info) if isinstance(tags_info, list) else tags_info
-                    symbol_button.setToolTip(f"<div style='font-size: 20px; background-color: lightyellow; color: black;'>{tags_info_str}</div>")
-                    symbol_button.setContextMenuPolicy(Qt.CustomContextMenu)
-                    symbol_button.customContextMenuRequested.connect(lambda pos, k=symbol: self.show_context_menu(k))
-                    
-                    related_container = QWidget()
-                    related_layout = QHBoxLayout(related_container)
-                    related_layout.setContentsMargins(2, 2, 2, 2)
-                    related_layout.setSpacing(5)
-                    related_layout.setAlignment(Qt.AlignLeft)
-
-                    target_tags = find_tags_by_symbol_b(symbol, json_data)
-                    if target_tags:
-                        related_symbols_data = find_symbols_by_tags_b(target_tags, json_data, symbol)
-                        if related_symbols_data:
-                            related_container.setObjectName("RelatedContainer")
-                            # --- 修改：使用常量限制数量 ---
-                            for rel_symbol, _ in related_symbols_data[:RELATED_SYMBOLS_LIMIT]:
-                                rel_button = QPushButton(f"{rel_symbol} {compare_data.get(rel_symbol, '')}")
-                                rel_button.setObjectName(self.get_button_style_name(rel_symbol))
-                                rel_button.clicked.connect(lambda _, k=rel_symbol: self.on_keyword_selected_chart(k))
-                                rel_tags = get_tags_for_symbol(rel_symbol)
-                                rel_tags_str = ", ".join(rel_tags) if isinstance(rel_tags, list) else rel_tags
-                                rel_button.setToolTip(f"<div style='font-size: 20px; background-color: lightyellow; color: black;'>{rel_tags_str}</div>")
-                                rel_button.setContextMenuPolicy(Qt.CustomContextMenu)
-                                rel_button.customContextMenuRequested.connect(lambda pos, k=rel_symbol: self.show_context_menu(k))
-                                related_layout.addWidget(rel_button)
-
-                    time_layout.addWidget(symbol_button, row_index, 0)
-                    time_layout.addWidget(related_container, row_index, 1)
-
-    # --- 新增方法：保存展开/折叠状态 ---
-    def save_expansion_states(self):
-        """遍历UI并保存所有可折叠GroupBox的状态到JSON文件"""
-        states = {}
-        # 遍历主布局中的所有日期GroupBox
-        for i in range(self.main_layout.count()):
-            date_group = self.main_layout.itemAt(i).widget()
-            if isinstance(date_group, QGroupBox) and date_group.isCheckable():
-                date_str = date_group.title()
-                states[date_str] = {"_is_expanded": date_group.isChecked()}
-                
-                # 查找日期GroupBox内的盘前/盘后GroupBox
-                time_groups = date_group.findChildren(QGroupBox)
-                for time_group in time_groups:
-                    if time_group.isCheckable():
-                        title = time_group.title()
-                        if "BMO" in title:
-                            states[date_str]["BMO"] = time_group.isChecked()
-                        elif "AMC" in title:
-                            states[date_str]["AMC"] = time_group.isChecked()
+        # --- 3. 修改：从cell widget获取symbol，而不是item的文本 ---
+        symbol_btn = table.cellWidget(item.row(), 0)
+        if not isinstance(symbol_btn, QPushButton):
+            return
         
-        try:
-            with open(EXPANSION_STATE_PATH, 'w', encoding='utf-8') as f:
-                json.dump(states, f, indent=4)
-        except Exception as e:
-            print(f"保存状态文件时出错: {e}")
+        symbol = symbol_btn.property("symbol")
 
-    def show_context_menu(self, keyword):
-        # ... (代码无变化, 为简洁省略)
-        menu = QMenu(self)
-        actions = [ ("添加到 Earning", lambda: execute_external_script('earning', keyword)), ("编辑 Earing DB", lambda: execute_external_script('editor_earning', keyword)), ("Kimi检索财报", lambda: execute_external_script('kimi', keyword)), None, ("编辑 Tags", lambda: execute_external_script('tags', keyword)), ("在富途中搜索", lambda: execute_external_script('futu', keyword)), ("找相似(旧版)", lambda: execute_external_script('similar', keyword)), None, ("加入黑名单", lambda: execute_external_script('blacklist', keyword)), ]
-        for item in actions:
-            if item is None: menu.addSeparator()
+        # 1. 定义菜单的结构和内容
+        # 格式: (菜单显示文本, 对应的 script_type)
+        # None 代表一个分隔符
+        menu_config = [
+            ("在富途中搜索", "futu"),
+            ("编辑 Earing DB", "editor_earning"),
+            None,  # 分隔符
+            ("编辑 Tags", "tags"),
+            ("Kimi检索财报", "kimi"),
+            ("找相似", "similar"),
+            None,  # 分隔符
+            ("加入黑名单", "blacklist"),
+        ]
+
+        # 2. 创建菜单并动态添加项目
+        menu = QMenu()
+        for item in menu_config:
+            if item is None:
+                menu.addSeparator()
             else:
-                text, callback = item
-                menu.addAction(QAction(text, self, triggered=callback))
+                label, script_type = item
+                action = QAction(label, self)
+                # 使用 lambda 和 partial 确保传递正确的参数
+                action.triggered.connect(
+                    partial(execute_external_script, script_type, symbol)
+                )
+                menu.addAction(action)
+        
+        # 3. 显示菜单
         menu.exec_(QCursor.pos())
 
-    def on_keyword_selected_chart(self, value):
-        # ... (代码无变化, 为简洁省略)
-        global symbol_manager
-        sector = next((s for s, names in sector_data.items() if value in names), None)
-        if sector:
-            symbol_manager.set_current_symbol(value)
-            compare_value = compare_data.get(value, "N/A")
-            shares_val, marketcap_val, pe_val, pb_val = fetch_mnspp_data_from_db(DB_PATH, value)
-            plot_financial_data( DB_PATH, sector, value, compare_value, (shares_val, pb_val), marketcap_val, pe_val, json_data, '1Y', False )
-            self.setFocus()
+    # ### 修改 ###: 更新此方法以使用新的数据库查询逻辑
+    def on_symbol_button_clicked(self, symbol):
+        """当Symbol按钮被点击时，从数据库获取数据并显示图表"""
+        sector = self.symbol_to_sector.get(symbol)
+        if not sector:
+            QMessageBox.warning(self, "错误", f"未找到 Symbol '{symbol}' 对应的板块(Sector)。")
+            return
 
-    def handle_arrow_key(self, direction):
-        # ... (代码无变化, 为简洁省略)
-        global symbol_manager
-        symbol = symbol_manager.next_symbol() if direction == 'down' else symbol_manager.previous_symbol()
-        if symbol: self.on_keyword_selected_chart(symbol)
-
-    def keyPressEvent(self, event):
-        # ... (代码无变化, 为简洁省略)
-        key = event.key()
-        if key == Qt.Key_Escape: self.close()
-        elif key == Qt.Key_Down: self.handle_arrow_key('down')
-        elif key == Qt.Key_Up: self.handle_arrow_key('up')
-        else: super().keyPressEvent(event)
-
-    def closeEvent(self, event):
-        """在关闭窗口前保存状态"""
-        # --- 修改：调用保存状态的方法 ---
-        self.save_expansion_states()
+        compare_value = self.compare_data.get(symbol, "N/A")
         
-        global symbol_manager
-        symbol_manager.reset()
-        QApplication.quit()
-        # event.accept() # QApplication.quit()会处理关闭，所以这行不是必须的
+        # 从数据库获取 shares, marketcap, pe, pb
+        shares_val, marketcap_val, pe_val, pb_val = fetch_mnspp_data_from_db(self.db_path, symbol)
 
-# ----------------------------------------------------------------------
-# Main Execution
-# ----------------------------------------------------------------------
-if __name__ == '__main__':
-    # ... (代码无变化, 为简洁省略)
-    keyword_colors = load_json(COLORS_PATH)
-    config = load_json(CONFIG_PATH)
-    json_data = load_json(DESCRIPTION_PATH)
-    sector_data = load_json(SECTORS_ALL_PATH)
-    compare_data = load_text_data(COMPARE_DATA_PATH)
-    weight_groups = load_weight_groups()
-    tags_weight_config = {tag: weight for weight, tags in weight_groups.items() for tag in tags}
-    _, all_symbols_in_earnings = parse_earnings_file(EARNINGS_FILE_PATH)
-    symbol_manager = SymbolManager(all_symbols_in_earnings)
+        print(f"正在为 {symbol} (板块: {sector}) 生成图表...")
+        try:
+            # 调用绘图函数，注意参数的变化
+            plot_financial_data(
+                self.db_path,
+                sector,
+                symbol,
+                compare_value,
+                (shares_val, pb_val),  # 将 shares 和 pb 组合成元组传入
+                marketcap_val,
+                pe_val,
+                self.description_data,
+                '1Y',  # 默认时间周期
+                False
+            )
+        except Exception as e:
+            QMessageBox.critical(self, "绘图失败", f"生成图表时发生错误: {e}")
+            print(f"绘图失败: {e}")
+
+    def center_window(self):
+        """将窗口移动到屏幕中央"""
+        try:
+            # 获取主屏幕
+            screen = QApplication.primaryScreen()
+            if not screen:
+                # 如果没有主屏幕（不太可能，但作为备用），尝试获取第一个屏幕
+                screens = QApplication.screens()
+                if not screens:
+                    return # 没有可用屏幕
+                screen = screens[0]
+
+            screen_geometry = screen.availableGeometry() # 获取可用屏幕区域几何信息
+            window_geometry = self.frameGeometry()    # 获取窗口框架几何信息（包括标题栏）
+
+            # 计算中心点并移动窗口
+            center_point = screen_geometry.center()
+            window_geometry.moveCenter(center_point)
+            self.move(window_geometry.topLeft())
+
+        except Exception as e:
+            print(f"Error centering window: {e}")
+
+    def _get_prev_price(self, table: str, dt: str, symbol: str):
+        """
+        从指定表里找 name=symbol 且 date<dt 的最近一条 price
+        """
+        sql = f"""
+            SELECT price
+              FROM `{table}`
+             WHERE name=? AND date<? 
+          ORDER BY date DESC
+             LIMIT 1
+        """
+        self.cur.execute(sql, (symbol, dt))
+        r = self.cur.fetchone()
+        return r["price"] if r else None
+    
+    def process_date1(self):
+        """
+        扫描“昨天”的 symbols，计算百分比，
+        但不写库，只在界面添加“替换”按钮，点击后再写入/覆盖。
+        """
+        for symbol in self.symbols_by_date[self.date1]:
+            sector = self.symbol_to_sector.get(symbol)
+            if not sector:
+                continue
+            # 从 sector 表中取 price
+            # 1) 当日收盘
+            p1 = self._get_price_from_table(sector, self.date1, symbol)
+            if p1 is None:
+                continue
+
+            # 2) 上一交易日收盘（动态查找）
+            p2 = self._get_prev_price(sector, self.date1, symbol)
+            if p2 is None or p2 == 0:
+                continue
+
+            # 计算涨跌 %
+            pct = round((p1 - p2) / p2 * 100, 2)
+
+            row = self.table1.rowCount()
+            self.table1.insertRow(row)
+
+            # --- 5. 修改：将Symbol文本替换为QPushButton ---
+            # 创建一个空的item占位，因为setCellWidget需要一个item存在
+            self.table1.setItem(row, 0, QTableWidgetItem()) 
+
+            trans = self.symbol_to_timing.get(symbol, "")
+            display = f"{symbol}-{trans}" if trans else symbol
+
+            symbol_btn = QPushButton(display)
+            symbol_btn.setObjectName("SymbolButton")
+            symbol_btn.setCursor(QCursor(Qt.PointingHandCursor))
+            # 把原始 symbol 存进去
+            symbol_btn.setProperty("symbol", symbol)
+            symbol_btn.clicked.connect(partial(self.on_symbol_button_clicked, symbol))
+            self.table1.setCellWidget(row, 0, symbol_btn)
+            # --- 修改结束 ---
+
+            self.table1.setItem(row, 1, QTableWidgetItem(str(pct)))
+
+            # --- 替换按钮的修改 ---
+            replace_btn = QPushButton("写入")
+            replace_btn.setObjectName("ReplaceButton") # 应用新样式
+            # 将按钮的点击信号连接到处理函数，并把按钮自身作为参数传过去
+            replace_btn.clicked.connect(partial(self.on_replace_date1, symbol, pct, replace_btn))
+
+            # 创建容器和布局来控制按钮大小和位置
+            container = QWidget()
+            layout = QHBoxLayout(container)
+            layout.addWidget(replace_btn)
+            layout.setAlignment(Qt.AlignCenter) # 关键：让按钮居中，保持最佳大小
+            layout.setContentsMargins(0, 0, 0, 0) # 移除布局边距
+
+            self.table1.setCellWidget(row, 2, container) # 将容器放入单元格
+
+    # --- 3. 修改：on_replace_date1 的签名，直接接收按钮实例 ---
+    def on_replace_date1(self, symbol, pct, btn):
+        # ... (数据库操作逻辑不变) ...
+        self.cur.execute("SELECT id FROM Earning WHERE date=? AND name=?", (self.date1, symbol))
+        exists = self.cur.fetchone() is not None
+
+        if exists:
+            reply = QMessageBox.question(
+                self, "确认覆盖",
+                f"Earning 表中已存在 {symbol} 在 {self.date1} 的记录，是否覆盖？",
+                QMessageBox.Yes | QMessageBox.No
+            )
+            if reply != QMessageBox.Yes:
+                return
+            # 执行更新
+            self.cur.execute(
+                "UPDATE Earning SET price=? WHERE date=? AND name=?",
+                (pct, self.date1, symbol)
+            )
+            action = "已覆盖"
+        else:
+            # 执行插入
+            self.cur.execute(
+                "INSERT INTO Earning (date, name, price) VALUES (?, ?, ?)",
+                (self.date1, symbol, pct)
+            )
+            action = "已写入"
+
+        self.conn.commit()
+        
+        # 修改这里：同时改变按钮文本和状态
+        btn.setText(action)  # 新增这行：改变按钮文本为"已写入"或"已覆盖"
+        btn.setEnabled(False)
+
+    # --- 4. 修改：在 process_date2 中也使用容器和布局 ---
+    def process_date2(self):
+        """
+        对前天的 symbols：
+         - 查表算百分比
+         - 读 Earning 表取旧百分比
+         - 显示在 table2，并加“替换”按钮
+        """
+        for symbol in self.symbols_by_date[self.date2]:
+            sector = self.symbol_to_sector.get(symbol)
+            if not sector:
+                continue
+            p1 = self._get_price_from_table(sector, self.date1, symbol)
+            p2 = self._get_price_from_table(sector, self.date2, symbol)
+            if p1 is None or p2 is None or p2 == 0:
+                continue
+            pct_new = round((p1 - p2) / p2 * 100, 2)
+
+            # 从 Earning 表里取该 symbol 最新一条记录的 price
+            self.cur.execute(
+                "SELECT price FROM Earning WHERE name=? ORDER BY date DESC LIMIT 1",
+                (symbol,)
+            )
+            rowr = self.cur.fetchone()
+            pct_old = rowr["price"] if rowr else None
+
+            # 在界面上显示
+            row = self.table2.rowCount()
+            self.table2.insertRow(row)
+
+            # --- 5. 修改：将Symbol文本替换为QPushButton ---
+            self.table2.setItem(row, 0, QTableWidgetItem()) # 同样需要占位item
+
+            # 在 process_date2 的对应位置也做一模一样的改法：
+            trans = self.symbol_to_timing.get(symbol, "")
+            display = f"{symbol}-{trans}" if trans else symbol
+
+            symbol_btn = QPushButton(display)
+            symbol_btn.setObjectName("SymbolButton")
+            symbol_btn.setCursor(QCursor(Qt.PointingHandCursor))
+            symbol_btn.setProperty("symbol", symbol)
+            symbol_btn.clicked.connect(partial(self.on_symbol_button_clicked, symbol))
+            self.table2.setCellWidget(row, 0, symbol_btn)
+            # --- 修改结束 ---
+
+            self.table2.setItem(row, 1, QTableWidgetItem(str(pct_new)))
+            self.table2.setItem(row, 2, QTableWidgetItem(str(pct_old) if pct_old is not None else ""))
+
+            # --- 替换按钮的修改 ---
+            replace_btn = QPushButton("替换")
+            replace_btn.setObjectName("ReplaceButton") # 应用新样式
+            replace_btn.clicked.connect(partial(self.on_replace_date2, symbol, pct_new, row, replace_btn))
+
+            # 创建容器和布局
+            container = QWidget()
+            layout = QHBoxLayout(container)
+            layout.addWidget(replace_btn)
+            layout.setAlignment(Qt.AlignCenter)
+            layout.setContentsMargins(0, 0, 0, 0)
+            
+            self.table2.setCellWidget(row, 3, container) # 将容器放入单元格
+
+    # on_replace_date2 方法本身不需要修改，因为它已经接收了 btn 参数
+    def on_replace_date2(self, symbol, new_pct, row, btn):
+        """
+        点击“替换”后，将 new_pct 写回 Earning 表中，覆盖该 symbol 最新一行，
+        并在界面上更新旧百分比列，同时禁用按钮。
+        """
+        # 首先确认覆盖
+        reply = QMessageBox.question(
+            self, "确认替换",
+            f"真的要把 {symbol} 的旧百分比替换成 {new_pct}% 吗？",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.Yes   # 这里把 YES 设为默认
+        )
+        if reply != QMessageBox.Yes:
+            return
+
+        # 用子查询定位最新那一行，同时更新 price 和 date
+        self.cur.execute("""
+            UPDATE Earning
+               SET price=?, date=?
+             WHERE name=?
+               AND id = (
+                   SELECT id FROM Earning WHERE name=? ORDER BY date DESC LIMIT 1
+               )
+        """, (new_pct, self.date1, symbol, symbol))
+        self.conn.commit()
+
+        # 更新界面上的“旧百分比”列
+        self.table2.setItem(row, 2, QTableWidgetItem(str(new_pct)))
+
+        btn.setText("已替换")
+        btn.setEnabled(False)
+
+    # ... (center_window, _get_prev_price, _get_price_from_table, main 等保持不变) ...
+    def center_window(self):
+        try:
+            screen = QApplication.primaryScreen()
+            if not screen:
+                screens = QApplication.screens()
+                if not screens: return
+                screen = screens[0]
+            screen_geometry = screen.availableGeometry()
+            window_geometry = self.frameGeometry()
+            center_point = screen_geometry.center()
+            window_geometry.moveCenter(center_point)
+            self.move(window_geometry.topLeft())
+        except Exception as e: print(f"Error centering window: {e}")
+    def _get_prev_price(self, table: str, dt: str, symbol: str):
+        sql = f"SELECT price FROM `{table}` WHERE name=? AND date<? ORDER BY date DESC LIMIT 1"
+        self.cur.execute(sql, (symbol, dt))
+        r = self.cur.fetchone()
+        return r["price"] if r else None
+    def _get_price_from_table(self, table: str, dt: str, symbol: str):
+        """
+        从指定表里取单个价格
+        """
+        try:
+            self.cur.execute(
+                f"SELECT price FROM `{table}` WHERE date=? AND name=?",
+                (dt, symbol)
+            )
+            r = self.cur.fetchone()
+            return r["price"] if r else None
+        except sqlite3.OperationalError:
+            return None
+
+def main():
     app = QApplication(sys.argv)
-    main_window = EarningsWindow()
-    main_window.showMaximized()
+    w = MainWindow()
+    w.show()
     sys.exit(app.exec_())
+
+if __name__ == "__main__":
+    main()
