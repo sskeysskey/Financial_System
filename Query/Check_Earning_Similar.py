@@ -31,6 +31,7 @@ SECTORS_ALL_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_A
 COMPARE_DATA_PATH = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
 DB_PATH = '/Users/yanzhang/Documents/Database/Finance.db'
 EARNINGS_FILE_PATH = '/Users/yanzhang/Documents/News/Earnings_Release_new.txt'
+EARNINGS_FILE_NEXT_PATH = '/Users/yanzhang/Documents/News/Earnings_Release_next.txt' 
 TAGS_WEIGHT_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/tags_weight.json'
 
 # --- 新增常量 ---
@@ -70,6 +71,46 @@ class SymbolManager:
 # ----------------------------------------------------------------------
 # Utility / Helper Functions
 # ----------------------------------------------------------------------
+
+def parse_multiple_earnings_files(paths):
+    """
+    对传入的多个 earnings 文件依次调用 parse_earnings_file，
+    将它们按日期→时段合并到一个 OrderedDict 中，并去重。
+    返回 (merged_schedule, all_symbols)。
+    """
+    merged = OrderedDict()
+    all_symbols = []
+
+    for p in paths:
+        sched, syms = parse_earnings_file(p)
+        # 合并 schedule
+        for date_str, times in sched.items():
+            if date_str not in merged:
+                merged[date_str] = OrderedDict()
+            for tc, slist in times.items():
+                if tc not in merged[date_str]:
+                    merged[date_str][tc] = []
+                for s in slist:
+                    if s not in merged[date_str][tc]:
+                        merged[date_str][tc].append(s)
+        # 合并 symbol 列表
+        for s in syms:
+            if s not in all_symbols:
+                all_symbols.append(s)
+
+    # 重新给每个日期内部排序：BMO→AMC→其它
+    for date_str, times in merged.items():
+        ordered = OrderedDict()
+        if 'BMO' in times: ordered['BMO'] = times['BMO']
+        if 'AMC' in times: ordered['AMC'] = times['AMC']
+        for tc, slist in times.items():
+            if tc not in ordered:
+                ordered[tc] = slist
+        merged[date_str] = ordered
+
+    # 最后按日期排序 key
+    merged = OrderedDict(sorted(merged.items()))
+    return merged, all_symbols
 
 def get_symbol_type(symbol):
     """判断 symbol 是属于 stocks 还是 etfs，返回 'stock' 或 'etf'。"""
@@ -363,7 +404,10 @@ class EarningsWindow(QMainWindow):
         btn.setFocus()
     
     def populate_ui(self):
-        earnings_schedule, _ = parse_earnings_file(EARNINGS_FILE_PATH)
+        earnings_schedule, _ = parse_multiple_earnings_files([
+            EARNINGS_FILE_PATH,
+            EARNINGS_FILE_NEXT_PATH
+        ])
 
         # 预先构建一个所有合法 sector symbols 的集合，用于过滤
         valid_symbols = set()
@@ -558,7 +602,10 @@ if __name__ == '__main__':
     compare_data = load_text_data(COMPARE_DATA_PATH)
     weight_groups = load_weight_groups()
     tags_weight_config = {tag: weight for weight, tags in weight_groups.items() for tag in tags}
-    _, all_symbols_in_earnings = parse_earnings_file(EARNINGS_FILE_PATH)
+    _, all_symbols_in_earnings = parse_multiple_earnings_files([
+        EARNINGS_FILE_PATH,
+        EARNINGS_FILE_NEXT_PATH
+    ])
     symbol_manager = SymbolManager(all_symbols_in_earnings)
     app = QApplication(sys.argv)
     main_window = EarningsWindow()

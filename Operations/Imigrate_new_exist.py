@@ -1,8 +1,7 @@
 import os
 import re
-import shutil
 import argparse
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # 文件路径
 files = {
@@ -23,12 +22,6 @@ next_files = {
     'Earnings_Release': '/Users/yanzhang/Documents/News/Earnings_Release_next.txt',
     'Economic_Events': '/Users/yanzhang/Documents/News/Economic_Events_next.txt'
 }
-
-# diff 文件路径
-diff_file = '/Users/yanzhang/Documents/News/ETFs_diff.txt'
-
-# 备份目录
-backup_dir = '/Users/yanzhang/Documents/News/backup/backup'
 
 # 获取当前星期几，0是周一，6是周日
 current_day = datetime.now().weekday()
@@ -53,7 +46,7 @@ def process_and_rename_files():
 
     if earnings_files_exist:
         # 处理 Earnings_Release 的 new 文件
-        process_file(new_files['Earnings_Release'], files['Earnings_Release'])
+        process_earnings(new_files['Earnings_Release'], files['Earnings_Release'])
 
         # 重命名 Earnings_Release 的 next 文件为 new 文件
         os.rename(next_files['Earnings_Release'], new_files['Earnings_Release'])
@@ -67,6 +60,31 @@ def process_and_rename_files():
             os.rename(next_files['Economic_Events'], new_files['Economic_Events'])
     else:
         print("Some required files are missing. No action taken.")
+
+def process_earnings(new_file, backup_file):
+    if not os.path.exists(new_file):
+        return
+
+    with open(new_file, 'r') as fin, open(backup_file, 'a') as fout:
+        fout.write('\n')
+        lines = [L.rstrip('\n') for L in fin]
+        for idx, line in enumerate(lines):
+            parts = [p.strip() for p in line.split(':')]
+            if len(parts) == 3:
+                symbol, _, date = parts
+                out = f"{symbol:<7}: {date}"
+            elif len(parts) == 2:
+                symbol, date = parts
+                out = f"{symbol:<7}: {date}"
+            else:
+                out = line.strip()
+
+            # 最后一行不加换行
+            if idx < len(lines) - 1:
+                fout.write(out + "\n")
+            else:
+                fout.write(out)
+    os.remove(new_file)
 
 def process_file(new_file, existing_file):
     if os.path.exists(new_file):
@@ -130,44 +148,18 @@ def process_etf_file(new_file, existing_file):
     
     os.remove(new_file)
 
-def backup_diff_file(diff_file, backup_dir):
-    if os.path.exists(diff_file):
-        # 获取当前时间
-        current_date = datetime.now()
-        # 获取当前时间戳
-        timestamp = current_date.strftime('%y%m%d')
-        # 新的文件名
-        new_filename = f"ETFs_diff_{timestamp}.txt"
-        # 目标路径
-        target_path = os.path.join(backup_dir, new_filename)
-        # 移动文件
-        shutil.move(diff_file, target_path)
-
-        # 删除四天前的备份文件
-        four_days_ago = current_date - timedelta(days=14)
-        for filename in os.listdir(backup_dir):
-            if filename.startswith("ETFs_diff_") and filename.endswith(".txt"):
-                file_date_str = filename[10:18]  # 提取日期部分
-                try:
-                    file_date = datetime.strptime(file_date_str, '%y%m%d')
-                    if file_date <= four_days_ago:
-                        file_path = os.path.join(backup_dir, filename)
-                        os.remove(file_path)
-                except ValueError:
-                    # 如果日期解析失败，跳过该文件
-                    continue
-
 def main(mode):
     if mode == 'etf':
         if 1 <= current_day <= 6:  # 周二到周天
             process_etf_file(new_files['ETFs'], files['ETFs'])
             process_file(new_files['10Y_newhigh'], files['10Y_newhigh'])
-            # 备份 diff 文件
-            backup_diff_file(diff_file, backup_dir)
     elif mode == 'other':
         # if current_day == 6 or 0 <= current_day <=3:  # 周天或周一到周四
         if current_day == 6 or current_day == 0:  # 周天或周一
             process_and_rename_files()
+        else:
+            print("Not right date. Only Saturday and Sunday can do.")
+            
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process files based on the given mode.')

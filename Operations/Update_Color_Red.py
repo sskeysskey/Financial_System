@@ -3,7 +3,7 @@ import subprocess
 from datetime import datetime
 
 def display_dialog(message):
-    # AppleScript代码模板
+    # AppleScript 代码模板
     applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
     subprocess.run(['osascript', '-e', applescript_code], check=True)
 
@@ -12,7 +12,7 @@ def check_day():
     return datetime.now().weekday() in [6, 0]  # 6 代表周日，0 代表周一
 
 def parse_earnings_release(file_path):
-    """解析Earnings Release文件，提取symbol"""
+    """解析 Earnings Release 文件，提取 symbol"""
     symbols = set()
     try:
         with open(file_path, 'r') as file:
@@ -23,7 +23,7 @@ def parse_earnings_release(file_path):
     except FileNotFoundError:
         print(f"文件未找到: {file_path}")
     except Exception as e:
-        print(f"读取文件时发生错误: {e}")
+        print(f"读取文件时发生错误 ({file_path}): {e}")
     return symbols
 
 def main():
@@ -32,12 +32,20 @@ def main():
         display_dialog(message)
         return
 
-    earnings_release_path = '/Users/yanzhang/Documents/News/Earnings_Release_new.txt'
+    # 两个 Earnings Release 文件路径
+    earnings_release_paths = [
+        '/Users/yanzhang/Documents/News/Earnings_Release_new.txt',
+        '/Users/yanzhang/Documents/News/Earnings_Release_next.txt'
+    ]
     color_json_path = '/Users/yanzhang/Documents/Financial_System/Modules/Colors.json'
     sectors_all_json_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
-    
-    earnings_symbols = parse_earnings_release(earnings_release_path)
 
+    # 合并两个文件中的 symbols
+    earnings_symbols = set()
+    for path in earnings_release_paths:
+        earnings_symbols |= parse_earnings_release(path)
+
+    # 读取 Sectors_All.json 中的 Economics 部分
     try:
         with open(sectors_all_json_path, 'r', encoding='utf-8') as file:
             sectors_data = json.load(file)
@@ -46,13 +54,13 @@ def main():
         print(f"文件未找到: {sectors_all_json_path}")
         economics_symbols = set()
     except json.JSONDecodeError:
-        print(f"JSON解析错误: {sectors_all_json_path}")
+        print(f"JSON 解析错误: {sectors_all_json_path}")
         economics_symbols = set()
     except Exception as e:
-        print(f"读取文件时发生错误: {e}")
+        print(f"读取文件时发生错误 ({sectors_all_json_path}): {e}")
         economics_symbols = set()
 
-    # 读取颜色json文件
+    # 读取 Colors.json
     try:
         with open(color_json_path, 'r', encoding='utf-8') as file:
             colors = json.load(file)
@@ -60,18 +68,23 @@ def main():
         print(f"文件未找到: {color_json_path}")
         colors = {}
     except json.JSONDecodeError:
-        print(f"JSON解析错误: {color_json_path}")
+        print(f"JSON 解析错误: {color_json_path}")
         colors = {}
     except Exception as e:
-        print(f"读取文件时发生错误: {e}")
+        print(f"读取文件时发生错误 ({color_json_path}): {e}")
         colors = {}
 
-    colors['red_keywords'] = list(set(colors.get('red_keywords', [])) & economics_symbols)
+    # 先保留 colors 中已有的、又在 economics_symbols 中的 red_keywords
+    colors['red_keywords'] = list(
+        set(colors.get('red_keywords', [])) & economics_symbols
+    )
 
+    # 将所有新的 earnings_symbols（不在已有 red_keywords 中）加入
     for symbol in earnings_symbols:
         if symbol and symbol not in colors['red_keywords']:
             colors['red_keywords'].append(symbol)
 
+    # 写回 Colors.json
     try:
         with open(color_json_path, 'w', encoding='utf-8') as file:
             json.dump(colors, file, ensure_ascii=False, indent=4)

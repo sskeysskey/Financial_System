@@ -43,6 +43,18 @@ mouse_thread.start()
 # 文件路径
 file_path = '/Users/yanzhang/Documents/News/Earnings_Release_next.txt'
 backup_dir = '/Users/yanzhang/Documents/News/backup/backup'
+# 1. 先加载已有的 Earnings_Release.txt，把 (symbol, date) 存到一个 set 里
+earnings_release_path = '/Users/yanzhang/Documents/News/backup/Earnings_Release.txt'
+
+existing_release_entries = set()
+if os.path.exists(earnings_release_path):
+    with open(earnings_release_path, 'r') as f:
+        for line in f:
+            parts = line.strip().split(':')
+            if len(parts) >= 2:
+                sym = parts[0].strip()
+                date = parts[1].strip()
+                existing_release_entries.add((sym, date))
 
 # 检查文件是否已经存在
 file_already_exists = os.path.exists(file_path)
@@ -87,37 +99,15 @@ driver = webdriver.Chrome(service=service, options=chrome_options)
 with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as file:
     data = json.load(file)
 
-# 加载颜色关键词JSON文件
-with open('/Users/yanzhang/Documents/Financial_System/Modules/colors.json', 'r') as file:
-    color_data = json.load(file)
+start_date = datetime(2025, 7, 20)
+end_date = datetime(2025, 7, 26)
 
-# 定义颜色分组与后缀的映射关系
-color_suffix_map = {
-    "white_keywords": "W",
-    "yellow_keywords": "Y",
-    "orange_keywords": "O",
-    "purple_keywords": "P",
-    "black_keywords": "B",
-    "blue_keywords": "b",
-    "green_keywords": "G",
-    "cyan_keywords": "C"  # 假设有 cyan 分组
-}
-
-# 将所有颜色关键词整合到一个集合中，排除red_keywords组别
-color_keys = set()
-for key, symbols in color_data.items():
-    if key != "red_keywords":
-        color_keys.update(symbols)
-
-# start_date = datetime(2024, 12, 2)
-# end_date = datetime(2024, 12, 9)
-
-# 获取当前系统日期
-current_date = datetime.now()
-# 计算离当前最近的周天
-start_date = current_date + timedelta(days=(6 - current_date.weekday()))
-# 计算往后延6天的周六
-end_date = start_date + timedelta(days=6)
+# # 获取当前系统日期
+# current_date = datetime.now()
+# # 计算离当前最近的周天
+# start_date = current_date + timedelta(days=(6 - current_date.weekday()))
+# # 计算往后延6天的周六
+# end_date = start_date + timedelta(days=6)
 
 # 初始化数据库连接
 db_path = '/Users/yanzhang/Documents/Database/Finance.db'
@@ -169,15 +159,23 @@ with open(file_path, 'a') as output_file:
                         else:
                             # 如果单元格不够，则无法获取所需信息，跳过此行
                             continue
-                        
+
+                        # --- 新增：在写入前进行日期过滤 ---
+                        event_date_obj = datetime.strptime(formatted_change_date, '%Y-%m-%d')
+                        if event_date_obj < start_date or event_date_obj > end_date:
+                            # 日期超出范围，跳过这一行
+                            continue
+                        # --- 新增结束 ---
+
                         if "Earnings Release" in event_name or "Shareholders Meeting" in event_name or "Earnings Announcement" in event_name:
                             for category, symbols in data.items():
                                 if symbol in symbols:
                                     # 构建新的输出格式: "SYMBOL   BMO: YYYY-MM-DD"
                                     # 使用 f-string 和对齐来格式化输出
                                     entry = f"{symbol:<7}: {call_time:<4}: {formatted_change_date}"
+                                    key = (symbol, formatted_change_date)
                                     
-                                    if symbol not in existing_content:
+                                    if symbol not in existing_content and key not in existing_release_entries:
                                         output_file.write(entry + "\n")
                                         new_content_added = True
                                         # 将新添加的symbol也加入到集合中，防止在同一次运行中重复添加
