@@ -231,8 +231,32 @@ class MainWindow(QMainWindow):
             border-radius: 4px; /* 圆角 */
             font-weight: bold;
         }
-        QPushButton#SymbolButton:hover { background-color: #2980b9; }
-        QPushButton#SymbolButton:pressed { background-color: #1f618d; }
+        /* BMO：保持原先的蓝色 */
+        QPushButton#SymbolButton[period="BMO"] {
+            background-color: #3498db;
+            color: white;
+        }
+        QPushButton#SymbolButton[period="BMO"]:hover {
+            background-color: #2980b9;
+        }
+
+        /* AMC：深蓝色 */
+        QPushButton#SymbolButton[period="AMC"] {
+            background-color: #2c3e50;
+            color: white;
+        }
+        QPushButton#SymbolButton[period="AMC"]:hover {
+            background-color: #1f2d3d;
+        }
+
+        /* TNS：紫色 */
+        QPushButton#SymbolButton[period="TNS"] {
+            background-color: #8e44ad;
+            color: white;
+        }
+        QPushButton#SymbolButton[period="TNS"]:hover {
+            background-color: #732d91;
+        }
 
         /* 替换按钮的样式 */
         QPushButton#ReplaceButton {
@@ -404,6 +428,8 @@ class MainWindow(QMainWindow):
             self.table1.setItem(row, 0, QTableWidgetItem())
             btn = QPushButton(symbol)
             btn.setObjectName("SymbolButton")
+            btn.setProperty("period", period)        # ← 增加这一行
+            btn.setCursor(QCursor(Qt.PointingHandCursor))
             btn.clicked.connect(partial(self.on_symbol_button_clicked, symbol))
             self.table1.setCellWidget(row, 0, btn)
 
@@ -416,6 +442,7 @@ class MainWindow(QMainWindow):
             # 3: 替换 按钮（逻辑同原来，只是列索引变了）
             replace_btn = QPushButton("写入")
             replace_btn.setObjectName("ReplaceButton")
+            replace_btn.setCursor(QCursor(Qt.PointingHandCursor))
             replace_btn.clicked.connect(
                 partial(self.on_replace_date1, symbol, pct, replace_btn)
             )
@@ -496,6 +523,8 @@ class MainWindow(QMainWindow):
             self.table2.setItem(row, 0, QTableWidgetItem())
             btn = QPushButton(symbol)
             btn.setObjectName("SymbolButton")
+            btn.setProperty("period", period)        # ← 增加这一行
+            btn.setCursor(QCursor(Qt.PointingHandCursor))
             btn.clicked.connect(partial(self.on_symbol_button_clicked, symbol))
             self.table2.setCellWidget(row, 0, btn)
 
@@ -513,6 +542,7 @@ class MainWindow(QMainWindow):
             # 4: 替换 按钮
             replace_btn = QPushButton("替换")
             replace_btn.setObjectName("ReplaceButton")
+            replace_btn.setCursor(QCursor(Qt.PointingHandCursor))
             replace_btn.clicked.connect(
                 partial(self.on_replace_date2, symbol, pct_new, row, replace_btn)
             )
