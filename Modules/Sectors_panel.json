@@ -21,8 +21,7 @@
         "FLO": "",
         "PG": "",
         "GIS": "",
-        "TSN": "",
-        "CL": ""
+        "TSN": ""
     },
     "Industrials": {
         "CPRT": "",
@@ -32,7 +31,6 @@
     "Communication_Services": {},
     "Financial_Services": {
         "BRK-A": "",
-        "MMC": "",
         "AJG": ""
     },
     "Healthcare": {
@@ -44,8 +42,6 @@
         "CI": "",
         "CHE": "",
         "WAT": "",
-        "MOH": "",
-        "GMED": "",
         "INSP": ""
     },
     "Bonds": {
@@ -119,7 +115,8 @@
     },
     "Qualified_Symbol": {
         "CVS": "",
-        "MOH": ""
+        "MOH": "",
+        "CL": ""
     },
     "Earning_Filter": {
         "CHWY": "",

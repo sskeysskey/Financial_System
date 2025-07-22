@@ -3,7 +3,7 @@ import json
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QLineEdit, QListWidget, QListWidgetItem,
-    QInputDialog, QMessageBox, QAbstractItemView
+    QInputDialog, QMessageBox, QAbstractItemView, QMenu
 )
 from PyQt5.QtCore import Qt, pyqtSignal
 
@@ -51,14 +51,18 @@ class TagEditor(QMainWindow):
         super().__init__()
         self.json_path = '/Users/yanzhang/Documents/Financial_System/Modules/tags_weight.json'  # 假设 JSON 文件在同目录下
         self.data = {}
-        self.list_widgets = {}  # 用于存储权重和对应的 QListWidget 的映射
+        self.list_widgets = {}
+        self.base_window_title = "标签权重编辑器"
+        
+        # 新增：用于跟踪数据是否被修改的“脏标记”
+        self.is_dirty = False
 
         self.init_ui()
         self.load_data_and_populate()
 
     def init_ui(self):
         """初始化用户界面"""
-        self.setWindowTitle("标签权重编辑器")
+        self.setWindowTitle(self.base_window_title)
         self.setGeometry(100, 100, 1000, 600)
 
         # --- 创建主布局 ---
@@ -87,6 +91,12 @@ class TagEditor(QMainWindow):
         self.add_column_btn.clicked.connect(self.add_new_column)
         top_layout.addWidget(self.add_column_btn)
 
+        # 新增：删除按钮
+        self.delete_btn = QPushButton("删除选中")
+        self.delete_btn.setStyleSheet("background-color: #f44336; color: white;")
+        self.delete_btn.clicked.connect(self.on_delete_button_clicked)
+        top_layout.addWidget(self.delete_btn)
+
         self.save_btn = QPushButton("保存更改")
         self.save_btn.setStyleSheet("background-color: #4CAF50; color: white;") # 突出显示
         self.save_btn.clicked.connect(self.save_data)
@@ -98,6 +108,12 @@ class TagEditor(QMainWindow):
         self.columns_layout = QHBoxLayout()
         main_layout.addLayout(self.columns_layout)
 
+    def _mark_as_dirty(self):
+        """将状态标记为已修改，并更新窗口标题"""
+        if not self.is_dirty:
+            self.is_dirty = True
+            self.setWindowTitle(f"{self.base_window_title} *")
+
     def load_data_and_populate(self):
         """加载 JSON 数据并填充UI"""
         try:
@@ -107,6 +123,7 @@ class TagEditor(QMainWindow):
             # 如果文件不存在或格式错误，创建一个默认的空结构
             self.data = {"1.0": []}
             QMessageBox.warning(self, "警告", f"未找到或无法解析 {self.json_path}。\n已创建一个新的空数据结构。")
+            self._mark_as_dirty() # 因为创建了新数据，所以也算“脏”状态
         
         self.populate_columns()
 
@@ -136,7 +153,10 @@ class TagEditor(QMainWindow):
             list_widget.itemDoubleClicked.connect(self.edit_item) # 双击编辑
             list_widget.item_moved.connect(self.handle_item_move) # 处理跨列表拖拽
             
-            # 填充标签
+            # 新增：为列表启用右键菜单
+            list_widget.setContextMenuPolicy(Qt.CustomContextMenu)
+            list_widget.customContextMenuRequested.connect(self.show_context_menu)
+            
             for tag in self.data[weight]:
                 item = QListWidgetItem(tag)
                 item.setFlags(item.flags() | Qt.ItemIsEditable) # 设置为可编辑
@@ -177,7 +197,11 @@ class TagEditor(QMainWindow):
             tag, ok = QInputDialog.getText(self, "新增标签", f"在权重 {weight} 下输入新标签名:")
             if ok and tag:
                 tag = tag.strip()
-                # 检查是否已存在
+                # 修复：检查标签是否为空
+                if not tag:
+                    QMessageBox.warning(self, "新增失败", "标签名不能为空！")
+                    return
+                
                 if any(tag in tags for tags in self.data.values()):
                     QMessageBox.warning(self, "错误", f"标签 '{tag}' 已存在于某个栏目中！")
                     return
@@ -187,6 +211,7 @@ class TagEditor(QMainWindow):
                 item = QListWidgetItem(tag)
                 item.setFlags(item.flags() | Qt.ItemIsEditable)
                 self.list_widgets[weight].addItem(item)
+                self._mark_as_dirty() # 标记更改
 
     def add_new_column(self):
         """新增一个栏目（权重）"""
@@ -200,53 +225,52 @@ class TagEditor(QMainWindow):
                     QMessageBox.warning(self, "错误", f"权重 '{weight}' 已存在！")
                 else:
                     self.data[weight] = []
-                    self.populate_columns() # 重新生成整个界面以保证顺序
+                    self.populate_columns()
+                    self._mark_as_dirty() # 标记更改
             except ValueError:
                 QMessageBox.warning(self, "错误", "请输入有效的数字作为权重！")
 
     def edit_item(self, item):
-        """当项目被双击时，进入编辑模式"""
-        # QListWidgetItem 已设为可编辑，双击会自动触发
-        # 但我们需要在编辑结束后更新 self.data
+        """当项目被双击时，进入编辑模式，并在编辑后进行验证"""
         list_widget = item.listWidget()
         # 记录旧文本，以便在数据模型中找到并替换它
         old_text = item.text() 
         
-        # itemChanged 信号会在编辑完成后发出，但我们无法直接获取旧值
-        # 一个简单的策略是直接在编辑后重新同步整个列表的数据
-        # 这里我们连接一个一次性信号处理器来更新数据
-        def on_editing_finished():
-            new_text = item.text()
+        # 使用一次性连接来处理编辑完成事件
+        def on_editing_finished(changed_item):
+            # 确保是同一个项目触发的信号
+            if changed_item is not item:
+                return
+
+            new_text = item.text().strip()
             weight = list_widget.weight
             
-            # 检查新标签是否与除自身外的其他标签重复
-            is_duplicate = False
-            for w, tags in self.data.items():
-                for t in tags:
-                    if t == new_text and t != old_text:
-                        is_duplicate = True
-                        break
-                if is_duplicate:
-                    break
-            
-            if is_duplicate:
-                 QMessageBox.warning(self, "编辑失败", f"标签 '{new_text}' 已存在！")
-                 item.setText(old_text) # 恢复旧文本
+            # 修复：验证新标签名是否为空
+            if not new_text:
+                QMessageBox.warning(self, "编辑失败", "标签名不能为空！")
+                item.setText(old_text) # 恢复旧文本
             else:
-                try:
-                    # 更新数据模型
-                    index = self.data[weight].index(old_text)
-                    self.data[weight][index] = new_text
-                except ValueError:
-                    # 如果旧文本找不到（不太可能发生），则忽略
-                    pass
+                # 检查新标签是否与除自身外的其他标签重复
+                is_duplicate = any(new_text == t for w, tags in self.data.items() for t in tags if t != old_text)
+                
+                if is_duplicate:
+                    QMessageBox.warning(self, "编辑失败", f"标签 '{new_text}' 已存在！")
+                    item.setText(old_text) # 恢复旧文本
+                else:
+                    try:
+                        index = self.data[weight].index(old_text)
+                        self.data[weight][index] = new_text
+                        self._mark_as_dirty() # 标记更改
+                    except ValueError:
+                        pass # 如果旧文本找不到，忽略
             
-            # 断开这个临时连接，避免重复触发
+            # 断开连接，避免重复触发或内存泄漏
             try:
                 list_widget.itemChanged.disconnect(on_editing_finished)
             except TypeError:
                 pass
 
+        # 在编辑前连接信号
         list_widget.itemChanged.connect(on_editing_finished)
 
     def keyPressEvent(self, event):
@@ -257,24 +281,59 @@ class TagEditor(QMainWindow):
             if isinstance(focused_widget, QListWidget):
                 self.delete_selected_items(focused_widget)
 
-    def delete_selected_items(self, list_widget):
-        """删除指定列表中的选中项"""
-        selected_items = list_widget.selectedItems()
-        if not selected_items:
+    def on_delete_button_clicked(self):
+        """处理顶部删除按钮的点击事件"""
+        # 找出所有列表中被选中的项目
+        all_selected_items = []
+        for list_widget in self.list_widgets.values():
+            all_selected_items.extend(list_widget.selectedItems())
+
+        if not all_selected_items:
+            QMessageBox.information(self, "提示", "请先在列表中选中要删除的项目。")
+            return
+        
+        # 统一调用删除逻辑，只需确认一次
+        self.delete_selected_items()
+
+    def delete_selected_items(self, list_widget_context=None):
+        """删除所有列表中的选中项"""
+        # 如果提供了特定列表的上下文（例如来自右键菜单），则只处理该列表
+        widgets_to_process = [list_widget_context] if list_widget_context else self.list_widgets.values()
+        
+        items_to_delete = []
+        for lw in widgets_to_process:
+            items_to_delete.extend(lw.selectedItems())
+
+        if not items_to_delete:
             return
 
         reply = QMessageBox.question(self, '确认删除', 
-                                     f"确定要删除选中的 {len(selected_items)} 个项目吗?",
+                                     f"确定要删除选中的 {len(items_to_delete)} 个项目吗?",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
         if reply == QMessageBox.Yes:
-            weight = list_widget.weight
-            for item in selected_items:
-                # 从UI中移除
+            for item in items_to_delete:
+                list_widget = item.listWidget()
+                weight = list_widget.weight
                 list_widget.takeItem(list_widget.row(item))
-                # 从数据模型中移除
                 if item.text() in self.data[weight]:
                     self.data[weight].remove(item.text())
+            self._mark_as_dirty() # 标记更改
+
+    def show_context_menu(self, position):
+        """显示右键上下文菜单"""
+        list_widget = self.sender()
+        if not list_widget.selectedItems():
+            return
+
+        menu = QMenu()
+        delete_action = menu.addAction("删除选中项")
+        
+        action = menu.exec_(list_widget.mapToGlobal(position))
+
+        if action == delete_action:
+            # 调用删除逻辑，并传入当前列表作为上下文
+            self.delete_selected_items(list_widget)
 
     def handle_item_move(self, source_weight, dest_weight, texts):
         """处理项目在不同列表间移动的逻辑"""
@@ -288,36 +347,42 @@ class TagEditor(QMainWindow):
             if text not in self.data[dest_weight]:
                 self.data[dest_weight].append(text)
         
-        # 从源UI中移除（因为拖拽操作会自动完成，但我们需要确保删除）
-        source_list_widget = self.list_widgets[source_weight]
-        # 拖拽操作后，源列表中的项目已经被移除了，我们只需要更新数据模型即可
-        # 重新填充界面以确保一致性
         self.populate_columns()
-
+        self._mark_as_dirty() # 标记更改
 
     def save_data(self):
         """将当前数据写回 JSON 文件"""
         try:
             with open(self.json_path, 'w', encoding='utf-8') as f:
                 json.dump(self.data, f, ensure_ascii=False, indent=4)
+            
+            # 保存成功后，重置“脏标记”和窗口标题
+            self.is_dirty = False
+            self.setWindowTitle(self.base_window_title)
+            
             QMessageBox.information(self, "成功", "所有更改已成功保存！")
         except Exception as e:
             QMessageBox.critical(self, "错误", f"保存文件时发生错误: {e}")
 
     def closeEvent(self, event):
-        """关闭窗口前提示保存"""
-        reply = QMessageBox.question(self, '退出确认',
-                                     "您有未保存的更改。是否在退出前保存？",
-                                     QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
-                                     QMessageBox.Cancel)
+        """关闭窗口前检查是否有未保存的更改"""
+        # 只有在 is_dirty 为 True 时才弹出提示
+        if self.is_dirty:
+            reply = QMessageBox.question(self, '退出确认',
+                                         "您有未保存的更改。是否在退出前保存？",
+                                         QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
+                                         QMessageBox.Cancel)
 
-        if reply == QMessageBox.Save:
-            self.save_data()
-            event.accept()
-        elif reply == QMessageBox.Discard:
-            event.accept()
+            if reply == QMessageBox.Save:
+                self.save_data()
+                event.accept()
+            elif reply == QMessageBox.Discard:
+                event.accept()
+            else: # Cancel
+                event.ignore()
         else:
-            event.ignore()
+            # 如果没有未保存的更改，直接接受退出事件
+            event.accept()
 
 
 if __name__ == '__main__':

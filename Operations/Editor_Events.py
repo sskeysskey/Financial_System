@@ -36,39 +36,55 @@ def save_data(data):
 
 def get_symbol_from_input():
     """
-    获取symbol，优先从命令行参数获取，其次从剪贴板获取。
+    获取 symbol，优先从命令行参数获取，其次从剪贴板获取，如果都没有，则弹框手动输入。
     """
-    # 途径2：从命令行参数获取
+    # 途径1：命令行参数
     if len(sys.argv) > 1:
-        print(f"从命令行参数获取 Symbol: {sys.argv[1]}")
-        return sys.argv[1].strip()
-    
-    # 途径1：从剪贴板获取
+        sym = sys.argv[1].strip()
+        if sym:
+            print(f"从命令行参数获取 Symbol: {sym}")
+            return sym
+
+    # 途径2：剪贴板
     try:
-        symbol = pyperclip.paste().strip()
-        if symbol:
-            print(f"从剪贴板获取 Symbol: {symbol}")
-            return symbol
+        raw = pyperclip.paste()
     except pyperclip.PyperclipException:
-        messagebox.showwarning("警告", "无法访问剪贴板。请手动输入或使用命令行参数。")
-    
-    return None
+        raw = None
+
+    if raw:
+        sym = raw.strip()
+        if sym:
+            print(f"从剪贴板获取 Symbol: {sym}")
+            return sym
+
+    # 途径3：弹框手动输入
+    # 这里需要先创建一个临时的 Tk 窗口来承载对话框
+    root = tk.Tk()
+    root.withdraw()  # 隐藏主窗口
+    sym = simpledialog.askstring(
+        "输入 Symbol",
+        "未检测到命令行参数或剪贴板内容。\n请输入股票/ETF 的 Symbol：",
+        parent=root
+    )
+    root.destroy()
+
+    if sym:
+        return sym.strip()
+    else:
+        return None
 
 def find_item_by_symbol(data, symbol):
-    """在stocks和etfs中根据symbol查找对应的项目。"""
+    """在stocks和etfs中根据symbol（不区分大小写）查找对应的项目。"""
     if not data or not symbol:
         return None
-        
+    target = symbol.lower()
     for group_key in ['stocks', 'etfs']:
-        if group_key in data:
-            for item in data[group_key]:
-                if item.get('symbol') == symbol:
-                    # 确保description3字段存在且是特定格式
-                    if 'description3' not in item:
-                        item['description3'] = [{}]
-                    elif not item['description3']: # 如果是空列表
-                        item['description3'].append({})
-                    return item
+        for item in data.get(group_key, []):
+            if item.get('symbol', '').lower() == target:
+                # 确保 description3 存在且是一列表内 dict
+                if 'description3' not in item or not item['description3']:
+                    item['description3'] = [{}]
+                return item
     return None
 
 # --- 图形用户界面 (GUI) ---
@@ -307,7 +323,7 @@ class DescriptionEditorApp:
                 for item in items_to_copy:
                     target_events_dict[item['date']] = item['desc']
                 
-                successful_copies.append(symbol)
+                successful_copies.append(target_item['symbol'])
             else:
                 failed_symbols.append(symbol)
 
@@ -367,28 +383,43 @@ class DescriptionEditorApp:
 # --- 主程序入口 ---
 
 def main():
-    """程序主逻辑。"""
-    # 1. 获取Symbol
+    # 1. 尝试拿命令行/剪贴板初始 symbol
     symbol = get_symbol_from_input()
-    if not symbol:
-        messagebox.showerror("错误", "未能获取到有效的Symbol。")
-        return
 
     # 2. 加载JSON数据
     full_data = load_data()
     if full_data is None:
         return
 
-    # 3. 查找对应的项目
-    item_data = find_item_by_symbol(full_data, symbol)
-    if item_data is None:
-        messagebox.showerror("未找到", f"在JSON文件中未找到Symbol为 '{symbol}' 的项目。")
-        return
+    # 3. 创一个隐藏的 Tk，用来弹出输入对话框
+    hidden_root = tk.Tk()
+    hidden_root.withdraw()
 
-    # 4. 启动GUI应用
+    # 4. 先试第一次查找
+    item_data = find_item_by_symbol(full_data, symbol) if symbol else None
+
+    # 5. 如果没找到，就循环让用户输入
+    while item_data is None:
+        prompt = "未在 JSON 中找到 Symbol：" \
+                 f"'{symbol}'。\n请重新输入要编辑的 Symbol：" \
+                 "\n（取消则退出）"
+        symbol = simpledialog.askstring("输入 Symbol", prompt, parent=hidden_root)
+        if not symbol:
+            # 用户按了 取消 或者输入空
+            messagebox.showinfo("已取消", "未指定合法的 Symbol，程序退出。", parent=hidden_root)
+            hidden_root.destroy()
+            return
+        # 再次查找
+        item_data = find_item_by_symbol(full_data, symbol)
+
+    # 6. 找到后，把 JSON 里原始的大小写 symbol 也读出来
+    symbol = item_data['symbol']
+
+    # 7. 销毁隐藏窗口，启动真正的主窗口
+    hidden_root.destroy()
+
     root = tk.Tk()
-
-    # 在这里绑定 ESC 关闭程序
+    # ESC 关闭快捷键
     root.bind('<Escape>', lambda e: root.destroy())
 
     root.lift()
