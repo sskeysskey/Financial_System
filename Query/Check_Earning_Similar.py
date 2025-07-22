@@ -71,6 +71,16 @@ class SymbolManager:
 # Utility / Helper Functions
 # ----------------------------------------------------------------------
 
+def get_symbol_type(symbol):
+    """判断 symbol 是属于 stocks 还是 etfs，返回 'stock' 或 'etf'。"""
+    for item in json_data.get('stocks', []):
+        if item.get('symbol') == symbol:
+            return 'stock'
+    for item in json_data.get('etfs', []):
+        if item.get('symbol') == symbol:
+            return 'etf'
+    return None
+
 def load_json(path):
     try:
         with open(path, 'r', encoding='utf-8') as file:
@@ -195,57 +205,68 @@ def find_tags_by_symbol_b(symbol, data):
 # <<< 关键修正：替换为 b.py 的完整两阶段匹配逻辑 >>>
 def find_symbols_by_tags_b(target_tags_with_weight, data, original_symbol):
     """
-    使用精确匹配和部分匹配两阶段算法查找相关股票。
+    与 b.py 保持完全一致的两阶段匹配：
+    先精准匹配，再做部分匹配；最后按照 symbol 类型顺序输出（同类型先，异类型后）。
+    返回 [(symbol, total_weight), ...]。
     """
-    related_symbols = {'stocks': [], 'etfs': []}
-    target_tags_dict = {tag.lower(): weight for tag, weight in target_tags_with_weight}
+    from decimal import Decimal
+
+    related = {'stocks': [], 'etfs': []}
+    # 构造小写标签->权重字典
+    target_dict = {tag.lower(): weight for tag, weight in target_tags_with_weight}
 
     for category in ['stocks', 'etfs']:
         for item in data.get(category, []):
-            # 跳过原始股票本身
-            if item.get('symbol') == original_symbol:
+            sym = item.get('symbol')
+            if sym == original_symbol:
                 continue
 
             tags = item.get('tag', [])
-            matched_tags_with_weight = []
-            used_target_tags = set()  # 用于记录已经匹配过的目标标签，避免重复计算
+            matched = []
+            used = set()
 
-            # 第一阶段：精确匹配
+            # 阶段一：精确匹配
             for tag in tags:
-                tag_lower = tag.lower()
-                if tag_lower in target_tags_dict and tag_lower not in used_target_tags:
-                    matched_tags_with_weight.append((tag, target_tags_dict[tag_lower]))
-                    used_target_tags.add(tag_lower)
+                tl = tag.lower()
+                if tl in target_dict and tl not in used:
+                    matched.append((tag, target_dict[tl]))
+                    used.add(tl)
 
-            # 第二阶段：部分匹配 (模糊匹配)
+            # 阶段二：部分匹配
             for tag in tags:
-                tag_lower = tag.lower()
-                # 如果这个标签已经被精确匹配过了，就跳过
-                if tag_lower in used_target_tags:
+                tl = tag.lower()
+                if tl in used:
                     continue
-                
-                for target_tag, target_weight in target_tags_dict.items():
-                    # 如果目标标签已经被用过了，也跳过
-                    if target_tag in used_target_tags:
-                        continue
-                    
-                    # 检查是否为包含关系（任意一方包含另一方），且不完全相等
-                    if (target_tag in tag_lower or tag_lower in target_tag) and tag_lower != target_tag:
-                        # 根据原始权重决定部分匹配的权重
-                        weight_to_use = Decimal('1.0') if target_weight > Decimal('1.0') else target_weight
-                        matched_tags_with_weight.append((tag, weight_to_use))
-                        used_target_tags.add(target_tag) # 标记此目标tag已用
-                        break # 移动到下一个item的tag
+                for tgt, w in target_dict.items():
+                    if tgt in tl or tl in tgt:
+                        if tl != tgt and tgt not in used:
+                            # 原 weight > 1 用 1.0，否则用原 weight
+                            weight_to_use = Decimal('1.0') if w > Decimal('1.0') else w
+                            matched.append((tag, weight_to_use))
+                            used.add(tgt)
+                        break
 
-            if matched_tags_with_weight:
-                total_weight = sum(weight for _, weight in matched_tags_with_weight)
-                related_symbols[category].append((item['symbol'], total_weight))
+            if matched:
+                total = sum(w for _, w in matched)
+                related[category].append((sym, total))
 
-    # 合并并按总权重降序排序
-    combined_list = related_symbols['stocks'] + related_symbols['etfs']
-    combined_list.sort(key=lambda x: x[1], reverse=True)
-    
-    return combined_list
+    # 各自排序
+    for cat in related:
+        related[cat].sort(key=lambda x: x[1], reverse=True)
+
+    # 决定当前 symbol 类型，先同类型再异类型
+    stype = get_symbol_type(original_symbol)
+    if stype == 'etf':
+        order = ['etfs', 'stocks']
+    else:
+        order = ['stocks', 'etfs']
+
+    # 合并输出
+    combined = []
+    for cat in order:
+        combined.extend(related[cat])
+
+    return combined
 
 
 # ----------------------------------------------------------------------
