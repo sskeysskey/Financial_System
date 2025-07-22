@@ -474,7 +474,9 @@
         "CNA",
         "ELS",
         "IRT",
-        "LNTH"
+        "LNTH",
+        "WAT",
+        "GMED"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -604,7 +606,6 @@
         "FCN",
         "KBR",
         "SPSC",
-        "LW",
         "NICE",
         "ELF",
         "COP",
@@ -718,7 +719,8 @@
         "CHE",
         "MOH",
         "ACN",
-        "BCC"
+        "BCC",
+        "INSP"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -807,7 +809,8 @@
         "LULU",
         "CNC",
         "PEP",
-        "FTV"
+        "FTV",
+        "LW"
     ],
     "black_keywords": [
         "Cotton",

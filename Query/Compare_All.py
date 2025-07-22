@@ -36,22 +36,18 @@ def read_earnings_release(filepath, error_file_path):
         return {}
 
     earnings_companies = {}
-
-    # 修改后的正则表达式
-    pattern_colon = re.compile(r'([\w-]+)(?::[\w]+)?\s*:\s*\d+\s*:\s*(\d{4}-\d{2}-\d{2})')
-
     try:
-        with open(filepath, 'r') as file:
-            for line in file:
-                match = pattern_colon.search(line)
-                if match:  # 添加空值检查
-                    company = match.group(1).strip()
-                    date = match.group(2)
-                    day = date.split('-')[2]
+        with open(filepath, 'r') as f:
+            for line in f:
+                parts = [p.strip() for p in line.split(':')]
+                # 期望形如 ['VZ', 'BMO', '2025-07-21']
+                if len(parts) == 3:
+                    company, _, date = parts
+                    day = date.split('-')[2]  # 取日
                     earnings_companies[company] = day
     except Exception as e:
-        log_error_with_timestamp(f"处理文件 {filepath} 时发生错误: {str(e)}", error_file_path)
-        
+        log_error_with_timestamp(f"处理文件 {filepath} 时发生错误: {e}", error_file_path)
+
     return earnings_companies
 
 def compare_today_yesterday(config_path, output_file, gainer_loser_path, earning_file, error_file_path, additional_output_file):

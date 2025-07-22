@@ -27,8 +27,7 @@
         "AMX",
         "CHTR",
         "RBLX",
-        "APP",
-        "GSAT"
+        "APP"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -227,9 +226,7 @@
         "AXON",
         "NSC",
         "PWR",
-        "URI",
-        "LHX",
-        "GWW"
+        "URI"
     ],
     "Real_Estate": [
         "PLD",

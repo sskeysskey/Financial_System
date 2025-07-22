@@ -13,7 +13,8 @@
     },
     "Consumer_Cyclical": {
         "LULU": "",
-        "DECK": ""
+        "DECK": "",
+        "KMX": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -41,7 +42,11 @@
         "ABT": "",
         "LNTH": "",
         "CI": "",
-        "CHE": ""
+        "CHE": "",
+        "WAT": "",
+        "MOH": "",
+        "GMED": "",
+        "INSP": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -117,7 +122,14 @@
         "STE": "",
         "MOH": ""
     },
-    "Earning_Filter": {},
+    "Earning_Filter": {
+        "CHWY": "",
+        "GME": "",
+        "GWRE": "",
+        "IOT": "",
+        "MMYT": "",
+        "TMDX": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
