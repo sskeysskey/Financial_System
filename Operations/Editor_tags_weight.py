@@ -208,7 +208,7 @@ class TagEditor(QMainWindow):
                     return
                 
                 if any(tag in tags for tags in self.data.values()):
-                    QMessageBox.warning(self, "错误", f"标签 '{tag}' 已存在于某个栏目中！")
+                    QMessageBox.warning(self, "错误", f"标签 '{tag}' 已存在于要添加的栏目中！")
                     return
                 
                 # 更新数据和UI
@@ -342,18 +342,29 @@ class TagEditor(QMainWindow):
 
     def handle_item_move(self, source_weight, dest_weight, texts):
         """处理项目在不同列表间移动的逻辑"""
-        # 从源数据中移除
+        # 1) 更新底层数据结构
         for text in texts:
             if text in self.data[source_weight]:
                 self.data[source_weight].remove(text)
-        
-        # 添加到目标数据中
-        for text in texts:
             if text not in self.data[dest_weight]:
                 self.data[dest_weight].append(text)
-        
-        self.populate_columns()
-        self._mark_as_dirty() # 标记更改
+
+        # 2) 在对应的两个 QListWidget 上局部更新
+        src_list = self.list_widgets[source_weight]
+        dst_list = self.list_widgets[dest_weight]
+        for text in texts:
+            # 从源列表移除
+            for row in range(src_list.count()):
+                if src_list.item(row).text() == text:
+                    src_list.takeItem(row)
+                    break
+            # 往目标列表添加
+            item = QListWidgetItem(text)
+            item.setFlags(item.flags() | Qt.ItemIsEditable)
+            dst_list.addItem(item)
+
+        # 3) 标记为脏
+        self._mark_as_dirty()
 
     def save_data(self):
         """将当前数据写回 JSON 文件"""

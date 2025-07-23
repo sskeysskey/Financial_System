@@ -391,6 +391,11 @@ class MainWindow(QMainWindow):
         menu = QMenu()
         
         actions = [
+            ("在富途中搜索", lambda: execute_external_script('futu', keyword)),
+            None,
+            ("添加新事件", lambda: execute_external_script('event_input', keyword)),
+            ("编辑事件", lambda: execute_external_script('event_editor', keyword)),
+            None,
             ("删除", lambda: self.delete_item(keyword, group)),
             ("改名", lambda: self.rename_item(keyword, group)),
             ("移动到 Qualified_Symbol", lambda: self.move_item_to_qualified_symbol(keyword, group)),
@@ -403,11 +408,8 @@ class MainWindow(QMainWindow):
             ("添加到 Earning", lambda: execute_external_script('earning', keyword)),
             ("编辑 Earing DB", lambda: execute_external_script('editor_earning', keyword)),
             None,
-            ("添加新事件", lambda: execute_external_script('event_input', keyword)),
-            ("编辑事件", lambda: execute_external_script('event_editor', keyword)),
-            None,
             ("编辑 Tags", lambda: execute_external_script('tags', keyword)),
-            ("在富途中搜索", lambda: execute_external_script('futu', keyword)),
+            
             ("找相似", lambda: execute_external_script('similar', keyword)),
             None,
             ("加入黑名单", lambda: execute_external_script('blacklist', keyword, group, self)),

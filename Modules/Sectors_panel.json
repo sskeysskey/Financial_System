@@ -14,7 +14,8 @@
     "Consumer_Cyclical": {
         "LULU": "",
         "DECK": "",
-        "KMX": ""
+        "KMX": "",
+        "IBP": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -40,12 +41,8 @@
         "CNC": "",
         "ELV": "",
         "HUM": "",
-        "ABT": "",
-        "LNTH": "",
         "CI": "",
-        "CHE": "",
-        "WAT": "",
-        "INSP": ""
+        "WAT": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -119,11 +116,11 @@
     "Qualified_Symbol": {
         "CVS": "",
         "MOH": "",
-        "CL": ""
+        "CL": "",
+        "CHE": ""
     },
     "Earning_Filter": {
-        "NOK": "",
-        "STE": ""
+        "NOK": ""
     },
     "Currencies": {
         "DXY": "美元指数",

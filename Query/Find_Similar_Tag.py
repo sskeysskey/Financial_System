@@ -167,14 +167,21 @@ def load_compare_data(file_path):
     return compare_data
 
 def main(symbol):
-    # 加载compare_all文件中的数据
+    # 加载 compare_all 文件中的数据
     compare_data = load_compare_data('/Users/yanzhang/Documents/News/backup/Compare_All.txt')
     
-    # 找到给定symbol的tags及其权重
+    # 找到给定 symbol 的 tags 及其权重
     target_tags_with_weight = find_tags_by_symbol(symbol, data)
     
+    # 从 compare_data 里取出源 symbol 的百分比（如果没有则为空字符串）
+    compare_value = compare_data.get(symbol, '')
+    
     # 将 Decimal 转换为浮点数并生成输出
-    output_lines = [f"Tags with weight for {symbol}: {[(tag, float(weight)) for tag, weight in target_tags_with_weight]}"]
+    # 在第一行里加上 compare_value
+    output_lines = [
+        f"Tags with weight for {symbol} ({compare_value}): "
+        f"{[(tag, float(weight)) for tag, weight in target_tags_with_weight]}"
+    ]
 
     if not target_tags_with_weight:
         output_lines.append("No tags found for the given symbol.\n")

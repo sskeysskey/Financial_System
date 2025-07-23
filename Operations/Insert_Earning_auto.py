@@ -50,7 +50,6 @@ def get_tags_for_symbol(symbol, desc_data):
 def execute_external_script(script_type, keyword):
     """
     执行外部脚本（AppleScript 或 Python）。
-    此函数直接从 b.py 移植而来。
     """
     base_path = '/Users/yanzhang/Documents/Financial_System'
     # --- 第1处修改：在这里添加新增事件的脚本路径 ---
