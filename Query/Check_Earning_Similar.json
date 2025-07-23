@@ -1,6 +1,7 @@
 {
     "2025-07-21": {
-        "_is_expanded": false,
+        "_is_expanded": true,
+        "BMO": false,
         "AMC": true
     },
     "2025-07-22": {

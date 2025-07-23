@@ -90,7 +90,6 @@
         "WMB",
         "ET",
         "KMI",
-        "LNG",
         "MPC",
         "MPLX",
         "E",
@@ -226,7 +225,10 @@
         "AXON",
         "NSC",
         "PWR",
-        "URI"
+        "URI",
+        "PCAR",
+        "GWW",
+        "LHX"
     ],
     "Real_Estate": [
         "PLD",
@@ -234,7 +236,9 @@
         "EQIX",
         "WELL",
         "SPG",
-        "DLR"
+        "DLR",
+        "PSA",
+        "O"
     ],
     "Technology": [
         "AAPL",
@@ -297,6 +301,7 @@
         "NGG",
         "CEG",
         "AEP",
-        "VST"
+        "VST",
+        "SRE"
     ]
 }

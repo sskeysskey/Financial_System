@@ -12,25 +12,6 @@ def log_error_with_timestamp(error_message, error_file_path):
     with open(error_file_path, 'a') as error_file:
         error_file.write(f"[{timestamp}] {error_message}\n")
 
-# def read_earnings_release(filepath, error_file_path):
-#     if not os.path.exists(filepath):
-#         log_error_with_timestamp(f"文件 {filepath} 不存在。", error_file_path)
-#         return {}
-
-#     earnings_companies = {}
-
-#     # 修改后的正则表达式
-#     pattern_colon = re.compile(r'([\w-]+)(?::[\w]+)?\s*:\s*\d+\s*:\s*(\d{4}-\d{2}-\d{2})')
-
-#     with open(filepath, 'r') as file:
-#         for line in file:
-#             match = pattern_colon.search(line)
-#             company = match.group(1).strip()
-#             date = match.group(2)
-#             day = date.split('-')[2]  # 只取日期的天数
-#             earnings_companies[company] = day
-#     return earnings_companies
-
 def read_earnings_release(filepath, error_file_path):
     if not os.path.exists(filepath):
         log_error_with_timestamp(f"文件 {filepath} 不存在。", error_file_path)
@@ -38,24 +19,34 @@ def read_earnings_release(filepath, error_file_path):
 
     earnings_companies = {}
 
-    # 修改正则表达式以更好地匹配文件格式
-    pattern_colon = re.compile(r'^([^:]+)(?::[YWBCOb])?\s*:\s*\d+\s*:\s*(\d{4}-\d{2}-\d{2})')
-
     with open(filepath, 'r') as file:
         for line_number, line in enumerate(file, 1):  # 添加行号
             line = line.strip()
             if not line:  # 跳过空行
                 continue
-                
-            match = pattern_colon.search(line)
-            if match:  # 添加判断，确保match不是None
-                company = match.group(1).strip()
-                date = match.group(2)
-                day = date.split('-')[2]  # 只取日期的天数
-                earnings_companies[company] = day
+
+            # 用冒号分段
+            parts = [p.strip() for p in line.split(':')]
+            # 至少要有三段：公司名、（中间不关心）、日期
+            if len(parts) >= 3:
+                company = parts[0]
+                date_str = parts[-1]
+                # 校验一下日期格式
+                m = re.match(r'(\d{4})-(\d{2})-(\d{2})$', date_str)
+                if m:
+                    day = m.group(3)  # 只取“天”
+                    earnings_companies[company] = day
+                else:
+                    log_error_with_timestamp(
+                        f"第 {line_number} 行日期格式不对: '{date_str}'",
+                        error_file_path
+                    )
             else:
-                log_error_with_timestamp(f"第 {line_number} 行无法解析: '{line}'", error_file_path)
-                
+                log_error_with_timestamp(
+                    f"第 {line_number} 行无法解析: '{line}'",
+                    error_file_path
+                )
+
     return earnings_companies
 
 def read_gainers_losers(filepath):

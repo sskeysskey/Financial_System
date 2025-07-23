@@ -22,7 +22,6 @@
         "ABBV",
         "BBVA",
         "LIN",
-        "LMT",
         "TDG",
         "NOC",
         "RELX",
@@ -142,7 +141,8 @@
         "DXJ",
         "SCHD",
         "V",
-        "WMT"
+        "WMT",
+        "NFLX"
     ],
     "white_keywords": [
         "ROKU",
@@ -476,7 +476,8 @@
         "IRT",
         "LNTH",
         "WAT",
-        "GMED"
+        "GMED",
+        "LMT"
     ],
     "yellow_keywords": [
         "Nikkei",

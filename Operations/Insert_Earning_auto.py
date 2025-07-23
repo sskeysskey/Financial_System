@@ -108,6 +108,7 @@ class MainWindow(QMainWindow):
         today = date.today()
         self.date1 = (today - timedelta(days=1)).strftime("%Y-%m-%d")   # 昨天
         self.date2 = (today - timedelta(days=2)).strftime("%Y-%m-%d")   # 前天
+        self.three_days_ago = (today - timedelta(days=3)).strftime("%Y-%m-%d")
 
         # 2. 解析 txt 文件
         self.symbols_by_date = {self.date1: [], self.date2: []}
@@ -212,8 +213,7 @@ class MainWindow(QMainWindow):
         # cw.setLayout(vlay)
         cw.setLayout(hlay)
         self.setCentralWidget(cw)
-        # self.resize(500, 900) # 你已经设置了窗口大小
-        self.resize(1200, 900)
+        self.resize(1200, 1000)
 
         # 新增：将窗口移动到屏幕中央
         self.center_window()
@@ -493,40 +493,51 @@ class MainWindow(QMainWindow):
     def process_date2(self):
         """
         对前天的 symbols：
-         - 查表算百分比
-         - 读 Earning 表取旧百分比
-         - 显示在 table2，并加“替换”按钮
+         - 计算 pct_new
+         - 三天内查 Earning 表，看是替换还是写入
+         - 在 table2 里显示“新百分比”、“旧百分比”，按钮根据场景不同
         """
         for symbol, period in self.symbols_by_date[self.date2]:
             sector = self.symbol_to_sector.get(symbol)
             if not sector:
                 continue
+
+            # 计算 pct_new
             p1 = self._get_price_from_table(sector, self.date1, symbol)
             p2 = self._get_price_from_table(sector, self.date2, symbol)
             if p1 is None or p2 is None or p2 == 0:
                 continue
             pct_new = round((p1 - p2) / p2 * 100, 2)
 
-            # 从 Earning 表里取该 symbol 最新一条记录的 price
+            # 三天内查最新一条 Earning
             self.cur.execute(
-                "SELECT price FROM Earning WHERE name=? ORDER BY date DESC LIMIT 1",
-                (symbol,)
+                "SELECT id, price FROM Earning "
+                " WHERE name=? AND date>=? "
+                " ORDER BY date DESC LIMIT 1",
+                (symbol, self.three_days_ago)
             )
             rowr = self.cur.fetchone()
-            pct_old = rowr["price"] if rowr else None
+            if rowr:
+                old_pct = rowr["price"]
+                exists = True
+                record_id = rowr["id"]
+            else:
+                old_pct = None
+                exists = False
+                record_id = None
 
-            # 在界面上显示
+            # 插入一行到 table2
             row = self.table2.rowCount()
             self.table2.insertRow(row)
 
-            # 0: Symbol 按钮
+            # —— Symbol 按钮
             self.table2.setItem(row, 0, QTableWidgetItem())
-            btn = QPushButton(symbol)
-            btn.setObjectName("SymbolButton")
-            btn.setProperty("period", period)        # ← 增加这一行
-            btn.setCursor(QCursor(Qt.PointingHandCursor))
-            btn.clicked.connect(partial(self.on_symbol_button_clicked, symbol))
-            self.table2.setCellWidget(row, 0, btn)
+            btn_sym = QPushButton(symbol)
+            btn_sym.setObjectName("SymbolButton")
+            btn_sym.setProperty("period", period)
+            btn_sym.setCursor(QCursor(Qt.PointingHandCursor))
+            btn_sym.clicked.connect(partial(self.on_symbol_button_clicked, symbol))
+            self.table2.setCellWidget(row, 0, btn_sym)
 
             # 1: 时段
             self.table2.setItem(row, 1, QTableWidgetItem(period))
@@ -535,58 +546,67 @@ class MainWindow(QMainWindow):
             self.table2.setItem(row, 2, QTableWidgetItem(str(pct_new)))
 
             # 3: 旧百分比
-            self.table2.setItem(row, 3, QTableWidgetItem(
-                "" if pct_old is None else str(pct_old)
-            ))
+            self.table2.setItem(row, 3, QTableWidgetItem("" if old_pct is None else str(old_pct)))
 
-            # 4: 替换 按钮
-            replace_btn = QPushButton("替换")
-            replace_btn.setObjectName("ReplaceButton")
-            replace_btn.setCursor(QCursor(Qt.PointingHandCursor))
-            replace_btn.clicked.connect(
-                partial(self.on_replace_date2, symbol, pct_new, row, replace_btn)
-            )
+            # 4: 操作按钮：替换 或 写入
+            op_btn = QPushButton("替换" if exists else "写入")
+            op_btn.setObjectName("ReplaceButton")
+            op_btn.setCursor(QCursor(Qt.PointingHandCursor))
+
+            if exists:
+                # 替换：更新已有那条 record_id
+                op_btn.clicked.connect(
+                    partial(self.on_replace_date2, symbol, pct_new, record_id, row, op_btn)
+                )
+            else:
+                # 走写入 —— 直接复用 date1 的“写入”逻辑
+                op_btn.clicked.connect(
+                    lambda _,
+                        sym=symbol,
+                        pct=pct_new,
+                        r=row,
+                        b=op_btn: (
+                        # 1) 调用 date1 那边的写入/覆盖
+                        self.on_replace_date1(sym, pct, b),
+                        # 2) 写完之后把“旧百分比”列（索引 3）更新一下
+                        self.table2.setItem(r, 3, QTableWidgetItem(str(pct)))
+                    )
+                )
+
+            # 将按钮居中放入 cell
             container = QWidget()
             hl = QHBoxLayout(container)
-            hl.addWidget(replace_btn)
+            hl.addWidget(op_btn)
             hl.setAlignment(Qt.AlignCenter)
             hl.setContentsMargins(0,0,0,0)
             self.table2.setCellWidget(row, 4, container)
 
-    # on_replace_date2 方法本身不需要修改，因为它已经接收了 btn 参数
-    def on_replace_date2(self, symbol, new_pct, row, btn):
+    def on_replace_date2(self, symbol, new_pct, record_id, row, btn):
         """
-        点击“替换”后，将 new_pct 写回 Earning 表中，覆盖该 symbol 最新一行，
-        并在界面上更新旧百分比列，同时禁用按钮。
+        已有三天内旧记录时，替换那条 id=record_id。
         """
         # 首先确认覆盖
         reply = QMessageBox.question(
             self, "确认替换",
-            f"真的要把 {symbol} 的旧百分比替换成 {new_pct}% 吗？",
+            f"真的要把 {symbol} 最近一次 ({self.three_days_ago} 之后) 的旧百分比替换成 {new_pct}% 吗？",
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.Yes   # 这里把 YES 设为默认
         )
         if reply != QMessageBox.Yes:
             return
 
-        # 用子查询定位最新那一行，同时更新 price 和 date
-        self.cur.execute("""
-            UPDATE Earning
-               SET price=?, date=?
-             WHERE name=?
-               AND id = (
-                   SELECT id FROM Earning WHERE name=? ORDER BY date DESC LIMIT 1
-               )
-        """, (new_pct, self.date1, symbol, symbol))
+        # 更新那条记录，并把 date 改成昨天（self.date1）
+        self.cur.execute(
+            "UPDATE Earning SET price=?, date=? WHERE id=?",
+            (new_pct, self.date1, record_id)
+        )
         self.conn.commit()
 
-        # 更新界面上的“旧百分比”列
-        self.table2.setItem(row, 2, QTableWidgetItem(str(new_pct)))
-
+        # 界面同步
+        self.table2.setItem(row, 3, QTableWidgetItem(str(new_pct)))
         btn.setText("已替换")
         btn.setEnabled(False)
 
-    # ... (center_window, _get_prev_price, _get_price_from_table, main 等保持不变) ...
     def center_window(self):
         try:
             screen = QApplication.primaryScreen()

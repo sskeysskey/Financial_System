@@ -26,9 +26,12 @@
     "Industrials": {
         "CPRT": "",
         "KBR": "",
-        "EXPO": ""
+        "EXPO": "",
+        "LMT": ""
     },
-    "Communication_Services": {},
+    "Communication_Services": {
+        "NFLX": ""
+    },
     "Financial_Services": {
         "BRK-A": "",
         "AJG": ""
@@ -119,10 +122,8 @@
         "CL": ""
     },
     "Earning_Filter": {
-        "CHWY": "",
-        "IOT": "",
-        "MMYT": "",
-        "TMDX": ""
+        "NOK": "",
+        "STE": ""
     },
     "Currencies": {
         "DXY": "美元指数",
