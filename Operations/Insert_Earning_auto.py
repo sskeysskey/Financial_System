@@ -9,7 +9,7 @@ from collections import OrderedDict  # 导入以支持 b.py 中的 load_json
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget,
     QVBoxLayout, QHBoxLayout, QGroupBox, QTableWidget, QTableWidgetItem, # 新增 QHBoxLayout
-    QPushButton, QMessageBox, QShortcut,
+    QPushButton, QMessageBox, QShortcut, QLabel,
     QMenu, QAction  # 1. 新增导入：用于创建右键菜单
 )
 from PyQt5.QtGui import QCursor, QKeySequence # 1. 新增导入：用于获取光标位置
@@ -201,6 +201,7 @@ class MainWindow(QMainWindow):
         self.table1.setHorizontalHeaderLabels(
             ["Symbol", "时段", "百分比(%)", "操作"]
         )
+        self.table1.verticalHeader().setVisible(False)
         self.table1.horizontalHeader().setStretchLastSection(True)
         # --- 2. 移除 cellClicked 连接，因为现在点击的是按钮 ---
         # self.table1.cellClicked.connect(self.on_symbol_clicked)
@@ -219,6 +220,7 @@ class MainWindow(QMainWindow):
         self.table2.setHorizontalHeaderLabels(
             ["Symbol", "时段", "新百分比(%)", "旧百分比(%)", "操作"]
         )
+        self.table2.verticalHeader().setVisible(False)
         self.table2.horizontalHeader().setStretchLastSection(True)
         # --- 2. 移除 cellClicked 连接 ---
         # self.table2.cellClicked.connect(self.on_symbol_clicked)
@@ -295,6 +297,27 @@ class MainWindow(QMainWindow):
         }
         """
         self.setStyleSheet(qss)
+
+    def _add_tag_row(self, table: QTableWidget, row: int, tags: list):
+        """
+        在 table 的 row 行后面插入一行，用来显示 tags。
+        整行横跨所有列，里面放一个 QLabel。
+        """
+        tag_str = ", ".join(tags) if tags else "无标签"
+        # 在主行之后插入新的一行
+        table.insertRow(row + 1)
+        # 横跨所有列
+        table.setSpan(row + 1, 0, 1, table.columnCount())
+        # QLabel 显示 tags
+        lbl = QLabel(tag_str)
+        # 可选：调整样式
+        lbl.setStyleSheet("color: #777777; font-style: italic; padding:4px;")
+        table.setCellWidget(row + 1, 0, lbl)
+        # 禁止选中这一行
+        for c in range(table.columnCount()):
+            item = table.item(row + 1, c)
+            if item:
+                item.setFlags(Qt.NoItemFlags)
 
     def show_table_context_menu(self, pos):
         """当在表格上右键点击时，创建并显示上下文菜单"""
@@ -451,7 +474,6 @@ class MainWindow(QMainWindow):
             self.table1.insertRow(row)
 
             # --- 5. 修改：将Symbol文本替换为QPushButton ---
-            # 创建一个空的item占位，因为setCellWidget需要一个item存在
             # 0: Symbol 按钮
             self.table1.setItem(row, 0, QTableWidgetItem())
             btn = QPushButton(symbol)
@@ -498,6 +520,11 @@ class MainWindow(QMainWindow):
             hl.setAlignment(Qt.AlignCenter)
             hl.setContentsMargins(0,0,0,0) # 移除布局边距
             self.table1.setCellWidget(row, 3, container) # 将容器放入单元格
+
+            # ===== 在这里，拿到 tags 并插入 tag row =====
+            tags = get_tags_for_symbol(symbol, self.description_data)
+            self._add_tag_row(self.table1, row, tags)
+            # ===== 完成 =====
             
             # --- BMO 自动写入 ---
             if period == "BMO":
@@ -637,12 +664,16 @@ class MainWindow(QMainWindow):
             # 3: 旧百分比
             self.table2.setItem(row, 3, QTableWidgetItem("" if old_pct is None else str(old_pct)))
 
+            # ===== 新增：tag row =====
+            tags = get_tags_for_symbol(symbol, self.description_data)
+            self._add_tag_row(self.table2, row, tags)
+            # ===== 完成 =====
+
             # 4: 操作按钮：替换 或 写入
             op_btn = QPushButton("替换" if exists else "写入")
             op_btn.setObjectName("ReplaceButton")
             op_btn.setCursor(QCursor(Qt.PointingHandCursor))
 
-            # ### 新增逻辑开始 ###
             # 如果存在旧记录，并且新旧百分比数值一致，则直接将按钮设为“已替换”并禁用
             if exists and pct_new == old_pct:
                 op_btn.setText("已替换")

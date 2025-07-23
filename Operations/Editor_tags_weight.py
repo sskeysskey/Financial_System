@@ -3,9 +3,10 @@ import json
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QLineEdit, QListWidget, QListWidgetItem,
-    QInputDialog, QMessageBox, QAbstractItemView, QMenu
+    QInputDialog, QMessageBox, QAbstractItemView, QMenu, QShortcut
 )
 from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtGui import QKeySequence
 
 # --- 自定义 QListWidget 以支持拖拽事件 ---
 # 我们需要创建一个自定义类来更好地处理从一个列表拖拽到另一个列表的逻辑
@@ -107,6 +108,10 @@ class TagEditor(QMainWindow):
         # --- 栏目显示区 ---
         self.columns_layout = QHBoxLayout()
         main_layout.addLayout(self.columns_layout)
+
+        # ↓—— 在 init_ui 的最后，添加：
+        esc_shortcut = QShortcut(QKeySequence(Qt.Key_Escape), self)
+        esc_shortcut.activated.connect(self.close)
 
     def _mark_as_dirty(self):
         """将状态标记为已修改，并更新窗口标题"""
