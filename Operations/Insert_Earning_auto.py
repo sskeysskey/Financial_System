@@ -26,6 +26,12 @@ DB_PATH = "/Users/yanzhang/Documents/Database/Finance.db"
 DESCRIPTION_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
 COMPARE_DATA_PATH = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
 
+PERIOD_DISPLAY = {
+    "BMO": "↩︎",
+    "AMC": "↪︎",
+    "TNS": "？"
+}
+
 def get_tags_for_symbol(symbol, desc_data):
     """
     仿 b.py 中的逻辑：从 description.json（desc_data）里找 tags。
@@ -501,7 +507,8 @@ class MainWindow(QMainWindow):
             self.table1.setCellWidget(row, 0, btn)
 
             # 1: 时段
-            self.table1.setItem(row, 1, QTableWidgetItem(period))
+            display_period = PERIOD_DISPLAY.get(period, period)
+            self.table1.setItem(row, 1, QTableWidgetItem(display_period))
 
             # 2: 百分比
             # --- 百分比列：字体变大、金色 ---
@@ -661,7 +668,8 @@ class MainWindow(QMainWindow):
             self.table2.setCellWidget(row, 0, btn_sym)
 
             # 1: 时段
-            self.table2.setItem(row, 1, QTableWidgetItem(period))
+            display_period = PERIOD_DISPLAY.get(period, period)
+            self.table2.setItem(row, 1, QTableWidgetItem(display_period))
 
             # 2: 新百分比
             font = QFont("Arial", 14, QFont.Bold)
