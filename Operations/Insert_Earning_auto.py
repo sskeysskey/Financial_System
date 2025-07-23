@@ -547,7 +547,8 @@ class MainWindow(QMainWindow):
             )
             rowr = self.cur.fetchone()
             if rowr:
-                old_pct = rowr["price"]
+                # 注意：数据库取出的 price 可能是字符串或数字，统一转为 float 比较
+                old_pct = float(rowr["price"])
                 exists = True
                 record_id = rowr["id"]
             else:
@@ -559,7 +560,7 @@ class MainWindow(QMainWindow):
             row = self.table2.rowCount()
             self.table2.insertRow(row)
 
-            # —— Symbol 按钮
+            # ---- Symbol 按钮
             self.table2.setItem(row, 0, QTableWidgetItem())
             btn_sym = QPushButton(symbol)
             btn_sym.setObjectName("SymbolButton")
@@ -582,25 +583,33 @@ class MainWindow(QMainWindow):
             op_btn.setObjectName("ReplaceButton")
             op_btn.setCursor(QCursor(Qt.PointingHandCursor))
 
-            if exists:
-                # 替换：更新已有那条 record_id
-                op_btn.clicked.connect(
-                    partial(self.on_replace_date2, symbol, pct_new, record_id, row, op_btn)
-                )
+            # ### 新增逻辑开始 ###
+            # 如果存在旧记录，并且新旧百分比数值一致，则直接将按钮设为“已替换”并禁用
+            if exists and pct_new == old_pct:
+                op_btn.setText("已替换")
+                op_btn.setEnabled(False)
+            # ### 新增逻辑结束 ###
             else:
-                # 走写入 —— 直接复用 date1 的“写入”逻辑
-                op_btn.clicked.connect(
-                    lambda _,
-                        sym=symbol,
-                        pct=pct_new,
-                        r=row,
-                        b=op_btn: (
-                        # 1) 调用 date1 那边的写入/覆盖
-                        self.on_replace_date1(sym, pct, b),
-                        # 2) 写完之后把“旧百分比”列（索引 3）更新一下
-                        self.table2.setItem(r, 3, QTableWidgetItem(str(pct)))
+                # ### 原有逻辑（移入else块） ###
+                if exists:
+                    # 替换：更新已有那条 record_id
+                    op_btn.clicked.connect(
+                        partial(self.on_replace_date2, symbol, pct_new, record_id, row, op_btn)
                     )
-                )
+                else:
+                    # 走写入 ---- 直接复用 date1 的“写入”逻辑
+                    op_btn.clicked.connect(
+                        lambda _,
+                            sym=symbol,
+                            pct=pct_new,
+                            r=row,
+                            b=op_btn: (
+                            # 1) 调用 date1 那边的写入/覆盖
+                            self.on_replace_date1(sym, pct, b),
+                            # 2) 写完之后把“旧百分比”列（索引 3）更新一下
+                            self.table2.setItem(r, 3, QTableWidgetItem(str(pct)))
+                        )
+                    )
 
             # 将按钮居中放入 cell
             container = QWidget()
