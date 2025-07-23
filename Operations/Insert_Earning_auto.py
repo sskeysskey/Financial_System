@@ -26,6 +26,21 @@ DB_PATH = "/Users/yanzhang/Documents/Database/Finance.db"
 DESCRIPTION_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
 COMPARE_DATA_PATH = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
 
+def get_tags_for_symbol(symbol, desc_data):
+    """
+    仿 b.py 中的逻辑：从 description.json（desc_data）里找 tags。
+    desc_data 格式应包含 "stocks" / "etfs" 两个列表，每项是 { "symbol": ..., "tag": [...] }
+    """
+    # 优先在 stocks 里找
+    for item in desc_data.get("stocks", []):
+        if item.get("symbol") == symbol:
+            return item.get("tag", [])
+    # 再在 etfs 里找
+    for item in desc_data.get("etfs", []):
+        if item.get("symbol") == symbol:
+            return item.get("tag", [])
+    return []
+
 def execute_external_script(script_type, keyword):
     """
     执行外部脚本（AppleScript 或 Python）。
@@ -444,6 +459,23 @@ class MainWindow(QMainWindow):
             btn.setProperty("period", period)        # ← 增加这一行
             btn.setCursor(QCursor(Qt.PointingHandCursor))
             btn.clicked.connect(partial(self.on_symbol_button_clicked, symbol))
+            # ===== 新增：给按钮加 tooltip =====
+            tags = get_tags_for_symbol(symbol, self.description_data)
+            if tags:
+                # 如果 tags 是列表，就用逗号拼一下；也可以直接展示列表
+                tooltip = ", ".join(tags)
+            else:
+                tooltip = "无标签"
+            # 你可以用 HTML 调整样式
+            btn.setToolTip(
+                f"<div style='font-size:18pt; "
+                f"background:lightyellow; "
+                f"color:#222222;"
+                f"padding:4px;'>"
+                f"{tooltip}"
+                f"</div>"
+            )
+            # ===== 结束 =====
             self.table1.setCellWidget(row, 0, btn)
 
             # 1: 时段
@@ -577,6 +609,23 @@ class MainWindow(QMainWindow):
             btn_sym.setProperty("period", period)
             btn_sym.setCursor(QCursor(Qt.PointingHandCursor))
             btn_sym.clicked.connect(partial(self.on_symbol_button_clicked, symbol))
+            # ===== 新增：给按钮加 tooltip =====
+            tags = get_tags_for_symbol(symbol, self.description_data)
+            if tags:
+                # 如果 tags 是列表，就用逗号拼一下；也可以直接展示列表
+                tooltip = ", ".join(tags)
+            else:
+                tooltip = "无标签"
+            # 你可以用 HTML 调整样式
+            btn_sym.setToolTip(
+                f"<div style='font-size:18pt; "
+                f"background:lightyellow; "
+                f"color:#222222;"
+                f"padding:4px;'>"
+                f"{tooltip}"
+                f"</div>"
+            )
+            # ===== 结束 =====
             self.table2.setCellWidget(row, 0, btn_sym)
 
             # 1: 时段
