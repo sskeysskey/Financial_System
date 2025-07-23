@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import (
     QPushButton, QMessageBox, QShortcut, QLabel,
     QMenu, QAction  # 1. 新增导入：用于创建右键菜单
 )
-from PyQt5.QtGui import QCursor, QKeySequence # 1. 新增导入：用于获取光标位置
+from PyQt5.QtGui import QCursor, QKeySequence, QFont, QBrush, QColor # 1. 新增导入：用于获取光标位置
 from PyQt5.QtCore import Qt # 1. 新增导入：用于设置菜单策略
 
 # 添加自定义模块的路径，以便可以导入 Chart_input
@@ -255,7 +255,7 @@ class MainWindow(QMainWindow):
         /* BMO：保持原先的蓝色 */
         QPushButton#SymbolButton[period="BMO"] {
             background-color: #3498db;
-            color: white;
+            color: black;
         }
         QPushButton#SymbolButton[period="BMO"]:hover {
             background-color: #2980b9;
@@ -311,7 +311,7 @@ class MainWindow(QMainWindow):
         # QLabel 显示 tags
         lbl = QLabel(tag_str)
         # 可选：调整样式
-        lbl.setStyleSheet("color: #777777; font-style: italic; padding:4px;")
+        lbl.setStyleSheet("color: lightyellow; font-style: italic; padding:4px;")
         table.setCellWidget(row + 1, 0, lbl)
         # 禁止选中这一行
         for c in range(table.columnCount()):
@@ -504,7 +504,12 @@ class MainWindow(QMainWindow):
             self.table1.setItem(row, 1, QTableWidgetItem(period))
 
             # 2: 百分比
-            self.table1.setItem(row, 2, QTableWidgetItem(str(pct)))
+            # --- 百分比列：字体变大、金色 ---
+            item_pct = QTableWidgetItem(f"{pct}")
+            font = QFont("Arial", 14, QFont.Bold)           # 14pt 粗体
+            item_pct.setFont(font)
+            item_pct.setForeground(QBrush(QColor(255,215,0)))  # RGB(255,215,0) 就是 “gold”
+            self.table1.setItem(row, 2, item_pct)
 
             # 3: “写入” 按钮
             replace_btn = QPushButton("写入")
@@ -659,10 +664,20 @@ class MainWindow(QMainWindow):
             self.table2.setItem(row, 1, QTableWidgetItem(period))
 
             # 2: 新百分比
-            self.table2.setItem(row, 2, QTableWidgetItem(str(pct_new)))
+            font = QFont("Arial", 14, QFont.Bold)
+            item_new = QTableWidgetItem(f"{pct_new}")
+            item_new.setFont(font)
+            item_new.setForeground(QBrush(QColor(255,215,0)))
+            self.table2.setItem(row, 2, item_new)
 
             # 3: 旧百分比
-            self.table2.setItem(row, 3, QTableWidgetItem("" if old_pct is None else str(old_pct)))
+            if old_pct is not None:
+                item_old = QTableWidgetItem(f"{old_pct}")
+                item_old.setFont(font)
+                item_old.setForeground(QBrush(QColor(255,215,0)))
+                self.table2.setItem(row, 3, item_old)
+            else:
+                self.table2.setItem(row, 3, QTableWidgetItem(""))
 
             # ===== 新增：tag row =====
             tags = get_tags_for_symbol(symbol, self.description_data)
