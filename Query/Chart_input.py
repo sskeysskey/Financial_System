@@ -1,4 +1,5 @@
 import re
+import sys
 import sqlite3
 import subprocess
 import numpy as np
@@ -189,11 +190,43 @@ class InfoDialog(QDialog):
         y = (screen_geometry.height() - self.height()) // 2
         self.move(x, y)
 
+# ### 新增：统一的外部脚本执行函数 ###
+def execute_external_script(script_type, keyword):
+    """
+    根据脚本类型和关键字，以非阻塞方式执行外部Python或AppleScript脚本。
+    """
+    # 集中管理所有外部脚本的路径
+    base_path = '/Users/yanzhang/Documents/Financial_System'
+    script_configs = {
+        'earning_input': f'{base_path}/Operations/Insert_Earning_Manual.py',
+        'earning_edit': f'{base_path}/Operations/Editor_Earning_DB.py',
+        'tags_edit': f'{base_path}/Operations/Editor_Symbol_Tags.py',
+        'event_input': f'{base_path}/Operations/Insert_Events.py',
+        'event_edit': f'{base_path}/Operations/Editor_Events.py',
+        'symbol_compare': f'{base_path}/Query/Compare_Chart.py',
+        'similar_tags': f'{base_path}/Query/Find_Similar_Tag.py',
+        'check_kimi': '/Users/yanzhang/Documents/ScriptEditor/CheckKimi_Earning.scpt',
+        'check_futu': '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt'
+    }
+
+    script_path = script_configs.get(script_type)
+    if not script_path:
+        display_dialog(f"未知的脚本类型: {script_type}")
+        return
+
+    try:
+        # 根据文件扩展名判断是AppleScript还是Python脚本
+        if script_path.endswith('.scpt'):
+            subprocess.Popen(['osascript', script_path, keyword])
+        else:
+            python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
+            subprocess.Popen([python_path, script_path, keyword])
+    except Exception as e:
+        display_dialog(f"启动程序失败: {e}")
+
 def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe, json_data,
                         default_time_range="1Y", panel="False"):
     """
-    # 确保PyQt5应用实例存在，这是显示任何Qt窗口的前提
-    app = QApplication.instance() or QApplication(sys.argv)
     主函数，绘制股票或ETF的时间序列图表。支持成交量、标签说明、信息弹窗、区间切换等功能。
     按键说明：
     - v：显示或隐藏成交量
@@ -211,6 +244,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     - 方向键上下：在不同时间区间间移动
     - ESC：关闭所有图表，并在panel为True时退出系统
     """
+    # 确保PyQt5应用实例存在
+    app = QApplication.instance() or QApplication(sys.argv)
     plt.close('all')  # 关闭所有图表
     matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
     matplotlib.rcParams['toolbar'] = 'none'  # <-- 添加这一行来隐藏工具栏
@@ -476,14 +511,6 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         except ValueError:
             return None
 
-    # 计算换手额（单位：百万）
-    # turnover = (
-    #     (volumes[-1] * prices[-1]) / 1e6
-    #     if volumes and volumes[-1] is not None and prices[-1] is not None
-    #     else None
-    # )
-    # turnover_str = f"{turnover:.1f}" if turnover is not None else ""
-
     turnover = (
         (volumes[-1] * prices[-1]) / 1e6
         if volumes and volumes[-1] is not None and prices[-1] is not None
@@ -501,11 +528,6 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     # 从compare中去除中文和加号
     filtered_compare = re.sub(r'[\u4e00-\u9fff+]', '', compare)
-    def clean_percentage_string(percentage_str):
-        try:
-            return float(percentage_str.strip('%'))
-        except ValueError:
-            return None
     compare_value = clean_percentage_string(filtered_compare)
 
     # 根据compare和换手额做"可疑"标记
@@ -830,59 +852,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         fontfamily="Arial Unicode MS"
     )
     
-    def open_earning_input(event):
-        try:
-            subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Operations/Insert_Earning_Manual.py', name])
-        except Exception as e:
-            display_dialog(f"启动财报输入程序失败: {e}")
-
-    def check_earning_kimi(event):
-        try:
-            subprocess.Popen(['osascript', '/Users/yanzhang/Documents/ScriptEditor/CheckKimi_Earning.scpt', name])
-        except Exception as e:
-            display_dialog(f"启动AppleScript程序失败: {e}")
-
-    def check_stock_futu(event):
-        try:
-            subprocess.Popen(['osascript', '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt', name])
-        except Exception as e:
-            display_dialog(f"启动AppleScript程序失败: {e}")
-    
-    def open_earning_edit(event):
-        try:
-            subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Operations/Editor_Earning_DB.py', name])
-        except Exception as e:
-            display_dialog(f"启动财报输入程序失败: {e}")
-
-    def open_tags_edit(event):
-        try:
-            subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Operations/Editor_Symbol_Tags.py', name])
-        except Exception as e:
-            display_dialog(f"启动财报输入程序失败: {e}")
-
-    def open_event_input(event):
-        try:
-            subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Operations/Insert_Events.py', name])
-        except Exception as e:
-            display_dialog(f"启动财报输入程序失败: {e}")
-
-    def open_event_edit(event):
-        try:
-            subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Operations/Editor_Events.py', name])
-        except Exception as e:
-            display_dialog(f"启动财报输入程序失败: {e}")
-
-    def open_symbol_compare(event):
-        try:
-            subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Query/Compare_Chart.py', name])
-        except Exception as e:
-            display_dialog(f"启动财报输入程序失败: {e}")
-
-    def open_similar_tags(event):
-        try:
-            subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Query/Find_Similar_Tag.py', name])
-        except Exception as e:
-            display_dialog(f"启动财报输入程序失败: {e}")
+    # ### 删除：所有独立的 open_* 和 check_* 函数已被移除 ###
 
     def update_annot(ind):
         """
@@ -1116,15 +1086,15 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             'x': toggle_all_annotations,  # 'x'键切换橙色特定股票标记点显示
             'a': toggle_earning_markers,  # 'a'键切换白色收益公告标记点显示（保持不变）
             'c': toggle_specific_markers,  # 'c'键切换所有浮窗的显示/隐藏
-            'n': lambda: open_earning_input(None),
-            'e': lambda: open_earning_edit(None),
-            't': lambda: open_tags_edit(None),
-            'w': lambda: open_event_input(None),
-            'q': lambda: open_event_edit(None),
-            'k': lambda: check_earning_kimi(None),
-            'u': lambda: check_stock_futu(None),
-            'p': lambda: open_symbol_compare(None),
-            'l': lambda: open_similar_tags(None),
+            'n': lambda: execute_external_script('earning_input', name),
+            'e': lambda: execute_external_script('earning_edit', name),
+            't': lambda: execute_external_script('tags_edit', name),
+            'w': lambda: execute_external_script('event_input', name),
+            'q': lambda: execute_external_script('event_edit', name),
+            'k': lambda: execute_external_script('check_kimi', name),
+            'u': lambda: execute_external_script('check_futu', name),
+            'p': lambda: execute_external_script('symbol_compare', name),
+            'l': lambda: execute_external_script('similar_tags', name),
             '1': lambda: radio.set_active(7),
             '2': lambda: radio.set_active(1),
             '3': lambda: radio.set_active(3),
