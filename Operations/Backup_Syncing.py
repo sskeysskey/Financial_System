@@ -45,6 +45,7 @@ SIMPLE_BACKUP_FILES = {
 TIMESTAMP_BACKUP_SOURCES = [
     '/Users/yanzhang/Documents/News/backup/Compare_All.txt',
     '/Users/yanzhang/Documents/News/Earnings_Release_new.txt',
+    '/Users/yanzhang/Documents/News/Earnings_Release_next.txt',
     '/Users/yanzhang/Documents/News/HighLow.txt',
     '/Users/yanzhang/Documents/Financial_System/Modules/tags_weight.json',
     '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json',
