@@ -399,7 +399,9 @@ class MainWindow(QMainWindow):
     def process_date1(self):
         """
         扫描“昨天”的 symbols，计算百分比，
-        但不写库，只在界面添加“替换”按钮，点击后再写入/覆盖。
+        在界面添加“替换”按钮，点击后可写入/覆盖；
+        如果时段是 BMO，则在启动时就自动写入（仅首次），
+        并更新按钮状态。
         """
         for symbol, period in self.symbols_by_date[self.date1]:
             sector = self.symbol_to_sector.get(symbol)
@@ -419,6 +421,7 @@ class MainWindow(QMainWindow):
             # 计算涨跌 %
             pct = round((p1 - p2) / p2 * 100, 2)
 
+            # 插入一行
             row = self.table1.rowCount()
             self.table1.insertRow(row)
 
@@ -439,7 +442,7 @@ class MainWindow(QMainWindow):
             # 2: 百分比
             self.table1.setItem(row, 2, QTableWidgetItem(str(pct)))
 
-            # 3: 替换 按钮（逻辑同原来，只是列索引变了）
+            # 3: “写入” 按钮
             replace_btn = QPushButton("写入")
             replace_btn.setObjectName("ReplaceButton")
             replace_btn.setCursor(QCursor(Qt.PointingHandCursor))
@@ -447,15 +450,41 @@ class MainWindow(QMainWindow):
                 partial(self.on_replace_date1, symbol, pct, replace_btn)
             )
 
-            # self.table1.setCellWidget(row, 2, container) # 将容器放入单元格
             container = QWidget()
             hl = QHBoxLayout(container)
             hl.addWidget(replace_btn)
             hl.setAlignment(Qt.AlignCenter)
             hl.setContentsMargins(0,0,0,0) # 移除布局边距
             self.table1.setCellWidget(row, 3, container) # 将容器放入单元格
+            
+            # --- BMO 自动写入 ---
+            if period == "BMO":
+                self.auto_write_date1(symbol, pct, replace_btn)
 
-    # --- 3. 修改：on_replace_date1 的签名，直接接收按钮实例 ---
+    def auto_write_date1(self, symbol, pct, btn):
+        """
+        如果当天 self.date1 在 Earning 表里还没有 symbol 记录，就插入；
+        无论插入与否，都把按钮设为“已写入”并禁用。
+        """
+        # 检查当天是否已写入
+        self.cur.execute(
+            "SELECT 1 FROM Earning WHERE date=? AND name=?",
+            (self.date1, symbol)
+        )
+        already = self.cur.fetchone() is not None
+
+        if not already:
+            # 执行插入，不弹框
+            self.cur.execute(
+                "INSERT INTO Earning (date, name, price) VALUES (?, ?, ?)",
+                (self.date1, symbol, pct)
+            )
+            self.conn.commit()
+
+        # 更新按钮状态
+        btn.setText("已写入")
+        btn.setEnabled(False)
+    
     def on_replace_date1(self, symbol, pct, btn):
         # ... (数据库操作逻辑不变) ...
         self.cur.execute("SELECT id FROM Earning WHERE date=? AND name=?", (self.date1, symbol))
