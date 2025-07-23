@@ -196,6 +196,8 @@ def execute_external_script(script_type, keyword, group=None, main_window=None):
         'tags': f'{base_path}/Operations/Editor_Symbol_Tags.py',
         'editor_earning': f'{base_path}/Operations/Editor_Earning_DB.py',
         'earning': f'{base_path}/Operations/Insert_Earning.py',
+        'event_input': f'{base_path}/Operations/Insert_Events.py',  # <--- 新增这一行
+        'event_editor': f'{base_path}/Operations/Editor_Events.py',  # <--- 新增这一行
         'futu': '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt',
         'kimi': '/Users/yanzhang/Documents/ScriptEditor/CheckKimi_Earning.scpt'
     }
@@ -400,6 +402,9 @@ class MainWindow(QMainWindow):
             ("Kimi检索财报", lambda: execute_external_script('kimi', keyword)),
             ("添加到 Earning", lambda: execute_external_script('earning', keyword)),
             ("编辑 Earing DB", lambda: execute_external_script('editor_earning', keyword)),
+            None,
+            ("添加新事件", lambda: execute_external_script('event_input', keyword)),
+            ("编辑事件", lambda: execute_external_script('event_editor', keyword)),
             None,
             ("编辑 Tags", lambda: execute_external_script('tags', keyword)),
             ("在富途中搜索", lambda: execute_external_script('futu', keyword)),

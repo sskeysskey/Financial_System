@@ -32,11 +32,15 @@ def execute_external_script(script_type, keyword):
     此函数直接从 b.py 移植而来。
     """
     base_path = '/Users/yanzhang/Documents/Financial_System'
+    # --- 第1处修改：在这里添加新增事件的脚本路径 ---
     script_configs = {
         'blacklist': f'{base_path}/Operations/Insert_Blacklist.py',
         'similar': f'{base_path}/Query/Find_Similar_Tag.py',
         'tags': f'{base_path}/Operations/Editor_Symbol_Tags.py',
+        'input_earning': f'{base_path}/Operations/Insert_Earning_Manual.py',
         'editor_earning': f'{base_path}/Operations/Editor_Earning_DB.py',
+        'event_input': f'{base_path}/Operations/Insert_Events.py',  # <--- 新增这一行
+        'event_editor': f'{base_path}/Operations/Editor_Events.py',  # <--- 新增这一行
         'futu': '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt',
         'kimi': '/Users/yanzhang/Documents/ScriptEditor/CheckKimi_Earning.scpt'
     }
@@ -300,12 +304,18 @@ class MainWindow(QMainWindow):
         # None 代表一个分隔符
         menu_config = [
             ("在富途中搜索", "futu"),
-            ("编辑 Earing DB", "editor_earning"),
             None,  # 分隔符
+            ("新增 财报", "input_earning"),
+            ("编辑 Earing 数据", "editor_earning"),
+            None,
             ("编辑 Tags", "tags"),
+            None,
+            ("新增事件", "event_input"),  # <--- 新增这一行
+            ("编辑事件", "event_editor"),  # <--- 新增这一行
+            None,
             ("Kimi检索财报", "kimi"),
             ("找相似", "similar"),
-            None,  # 分隔符
+            None,
             ("加入黑名单", "blacklist"),
         ]
 

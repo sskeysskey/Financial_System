@@ -207,6 +207,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     - n：启动财报数据输入程序
     - t：启动标签Tags编辑程序
     - w：启动新增Event程序
+    - q：启动修改Event程序
     - 方向键上下：在不同时间区间间移动
     - ESC：关闭所有图表，并在panel为True时退出系统
     """
@@ -830,42 +831,36 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     )
     
     def open_earning_input(event):
-        """启动财报输入程序并传递当前symbol"""
         try:
             subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Operations/Insert_Earning_Manual.py', name])
         except Exception as e:
             display_dialog(f"启动财报输入程序失败: {e}")
 
     def check_earning_kimi(event):
-        """启动财报输入程序并传递当前symbol"""
         try:
             subprocess.Popen(['osascript', '/Users/yanzhang/Documents/ScriptEditor/CheckKimi_Earning.scpt', name])
         except Exception as e:
             display_dialog(f"启动AppleScript程序失败: {e}")
 
     def check_stock_futu(event):
-        """启动查询程序并传递当前symbol"""
         try:
             subprocess.Popen(['osascript', '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt', name])
         except Exception as e:
             display_dialog(f"启动AppleScript程序失败: {e}")
     
     def open_earning_edit(event):
-        """启动财报输入程序并传递当前symbol"""
         try:
             subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Operations/Editor_Earning_DB.py', name])
         except Exception as e:
             display_dialog(f"启动财报输入程序失败: {e}")
 
     def open_tags_edit(event):
-        """启动财报输入程序并传递当前symbol"""
         try:
             subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Operations/Editor_Symbol_Tags.py', name])
         except Exception as e:
             display_dialog(f"启动财报输入程序失败: {e}")
 
     def open_event_input(event):
-        """启动财报输入程序并传递当前symbol"""
         try:
             subprocess.Popen(['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', '/Users/yanzhang/Documents/Financial_System/Operations/Insert_Events.py', name])
         except Exception as e:
