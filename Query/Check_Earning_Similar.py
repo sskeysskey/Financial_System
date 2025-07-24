@@ -5,9 +5,6 @@ from collections import OrderedDict
 import subprocess
 from decimal import Decimal
 
-# ----------------------------------------------------------------------
-# PyQt5 Imports
-# ----------------------------------------------------------------------
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QGroupBox, QScrollArea, QMenu, QAction,
