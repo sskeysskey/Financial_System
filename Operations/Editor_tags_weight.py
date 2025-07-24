@@ -366,7 +366,7 @@ class TagEditor(QMainWindow):
         # 3) 标记为脏
         self._mark_as_dirty()
 
-    def save_data(self):
+    def save_data(self, notify=True):
         """将当前数据写回 JSON 文件"""
         try:
             with open(self.json_path, 'w', encoding='utf-8') as f:
@@ -375,10 +375,11 @@ class TagEditor(QMainWindow):
             # 保存成功后，重置“脏标记”和窗口标题
             self.is_dirty = False
             self.setWindowTitle(self.base_window_title)
-            
-            QMessageBox.information(self, "成功", "所有更改已成功保存！")
+            # 根据 notify 决定是否弹提示
+            if notify:
+                QMessageBox.information(self, "成功", "所有更改已成功保存！")
         except Exception as e:
-            QMessageBox.critical(self, "错误", f"保存文件时发生错误: {e}")
+             QMessageBox.critical(self, "错误", f"保存文件时发生错误: {e}")
 
     def closeEvent(self, event):
         """关闭窗口前检查是否有未保存的更改"""
@@ -390,7 +391,7 @@ class TagEditor(QMainWindow):
                                          QMessageBox.Cancel)
 
             if reply == QMessageBox.Save:
-                self.save_data()
+                self.save_data(notify=False)
                 event.accept()
             elif reply == QMessageBox.Discard:
                 event.accept()

@@ -54,7 +54,8 @@
         "GM",
         "CPNG",
         "DASH",
-        "JD"
+        "JD",
+        "HMC"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -93,7 +94,8 @@
         "MPC",
         "MPLX",
         "E",
-        "PSX"
+        "PSX",
+        "LNG"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -146,7 +148,6 @@
         "NU",
         "BCS",
         "ALL",
-        "AIG",
         "MFC",
         "MET",
         "DB",

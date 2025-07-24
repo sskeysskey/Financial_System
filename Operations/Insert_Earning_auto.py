@@ -122,6 +122,14 @@ def fetch_mnspp_data_from_db(db_path, symbol):
     else:
         return "N/A", None, "N/A", "--"
 
+# 新增：SymbolButton 子类
+class SymbolButton(QPushButton):
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton and (event.modifiers() & Qt.ShiftModifier):
+            # Command+Click
+            execute_external_script('futu', self.text())
+            return
+        super().mousePressEvent(event)
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -481,7 +489,7 @@ class MainWindow(QMainWindow):
             # --- 5. 修改：将Symbol文本替换为QPushButton ---
             # 0: Symbol 按钮
             self.table1.setItem(row, 0, QTableWidgetItem())
-            btn = QPushButton(symbol)
+            btn = SymbolButton(symbol)
             btn.setObjectName("SymbolButton")
             btn.setProperty("period", period)        # ← 增加这一行
             btn.setCursor(QCursor(Qt.PointingHandCursor))
@@ -642,7 +650,7 @@ class MainWindow(QMainWindow):
 
             # ---- Symbol 按钮
             self.table2.setItem(row, 0, QTableWidgetItem())
-            btn_sym = QPushButton(symbol)
+            btn_sym = SymbolButton(symbol)
             btn_sym.setObjectName("SymbolButton")
             btn_sym.setProperty("period", period)
             btn_sym.setCursor(QCursor(Qt.PointingHandCursor))

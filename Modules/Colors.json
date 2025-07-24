@@ -116,7 +116,6 @@
         "NVDA",
         "AVGO",
         "ADP",
-        "FI",
         "SHOP",
         "EPD",
         "MUFG",
@@ -477,7 +476,9 @@
         "LNTH",
         "WAT",
         "GMED",
-        "LMT"
+        "LMT",
+        "OTIS",
+        "FI"
     ],
     "yellow_keywords": [
         "Nikkei",
