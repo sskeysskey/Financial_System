@@ -283,7 +283,7 @@ class EarningsWindow(QMainWindow):
         self.init_ui()
 
     def init_ui(self):
-        self.setWindowTitle("财报日历查看器 (去除折叠功能)")
+        self.setWindowTitle("财报日历查看器 (延迟计算相关)")
         self.setFocusPolicy(Qt.StrongFocus)
 
         # 搜索栏
@@ -373,7 +373,7 @@ class EarningsWindow(QMainWindow):
         for names in sector_data.values():
             valid_symbols.update(names)
 
-        known_time_labels = {"BMO": "盘前 (BMO)", "AMC": "盘后 (AMC)", "TNS": "未定 (TNS)"}
+        known_time_labels = {"BMO": "盘前 (BMO)", "AMC": "盘后 (AMC)", "TNS": "待定 (TNS)"}
 
         for date_str, times in earnings_schedule.items():
             # 日期分组
@@ -420,29 +420,36 @@ class EarningsWindow(QMainWindow):
                     hl.setAlignment(Qt.AlignLeft)
                     container.setVisible(False)
 
-                    tg = find_tags_by_symbol_b(sym, json_data)
-                    if tg:
-                        rels = find_symbols_by_tags_b(tg, json_data, sym)
-                        cnt = 0
-                        for r_sym, _ in rels:
-                            if r_sym not in valid_symbols or cnt>=RELATED_SYMBOLS_LIMIT:
-                                continue
-                            rb = QPushButton(f"{r_sym} {compare_data.get(r_sym,'')}")
-                            rb.setObjectName(self.get_button_style_name(r_sym))
-                            rb.clicked.connect(lambda _, s=r_sym: self.on_keyword_selected_chart(s))
-                            rt = get_tags_for_symbol(r_sym)
-                            rt_str = ", ".join(rt) if isinstance(rt, list) else rt
-                            rb.setToolTip(f"<div style='font-size:20px;background-color:lightyellow;color:black;'>{rt_str}</div>")
-                            rb.setContextMenuPolicy(Qt.CustomContextMenu)
-                            rb.customContextMenuRequested.connect(lambda pos, s=r_sym: self.show_context_menu(s))
-                            hl.addWidget(rb)
-                            cnt += 1
-
-                    related.clicked.connect(lambda _, c=container: c.setVisible(not c.isVisible()))
+                    # 点击“相关”才动态计算并展开
+                    related.clicked.connect(lambda _, s=sym, c=container, vs=valid_symbols: self.toggle_related(s, c, vs))
 
                     time_layout.addWidget(btn, row, 0)
                     time_layout.addWidget(related, row, 1)
                     time_layout.addWidget(container, row, 2)
+
+    def toggle_related(self, sym, container, valid_symbols):
+        # 如果还没有计算过，就动态计算并添加按钮
+        layout = container.layout()
+        if layout.count() == 0:
+            tg = find_tags_by_symbol_b(sym, json_data)
+            if tg:
+                rels = find_symbols_by_tags_b(tg, json_data, sym)
+                cnt = 0
+                for r_sym, _ in rels:
+                    if r_sym not in valid_symbols or cnt >= RELATED_SYMBOLS_LIMIT:
+                        continue
+                    rb = QPushButton(f"{r_sym} {compare_data.get(r_sym,'')}")
+                    rb.setObjectName(self.get_button_style_name(r_sym))
+                    rb.clicked.connect(lambda _, s=r_sym: self.on_keyword_selected_chart(s))
+                    rt = get_tags_for_symbol(r_sym)
+                    rt_str = ", ".join(rt) if isinstance(rt, list) else rt
+                    rb.setToolTip(f"<div style='font-size:20px;background-color:lightyellow;color:black;'>{rt_str}</div>")
+                    rb.setContextMenuPolicy(Qt.CustomContextMenu)
+                    rb.customContextMenuRequested.connect(lambda pos, s=r_sym: self.show_context_menu(s))
+                    layout.addWidget(rb)
+                    cnt += 1
+        # 切换显示/隐藏
+        container.setVisible(not container.isVisible())
 
     def show_context_menu(self, keyword):
         menu = QMenu(self)
