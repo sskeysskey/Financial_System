@@ -113,6 +113,12 @@ class TagEditor(QMainWindow):
         esc_shortcut = QShortcut(QKeySequence(Qt.Key_Escape), self)
         esc_shortcut.activated.connect(self.close)
 
+        # Cmd+N （Mac） 或 Ctrl+N（Windows/Linux），跨平台“新建”
+        new_sc = QShortcut(QKeySequence.New, self)
+        # 关键：全应用生效
+        new_sc.setContext(Qt.ApplicationShortcut)
+        new_sc.activated.connect(self.add_new_tag)
+
     def _mark_as_dirty(self):
         """将状态标记为已修改，并更新窗口标题"""
         if not self.is_dirty:
