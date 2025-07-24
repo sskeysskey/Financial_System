@@ -1,7 +1,7 @@
 {
     "2025-07-21": {
         "_is_expanded": true,
-        "BMO": false,
+        "BMO": true,
         "AMC": true
     },
     "2025-07-22": {
@@ -10,33 +10,33 @@
         "AMC": true
     },
     "2025-07-23": {
-        "_is_expanded": false,
+        "_is_expanded": true,
         "BMO": true,
         "AMC": true
     },
     "2025-07-24": {
-        "_is_expanded": false,
+        "_is_expanded": true,
         "BMO": true,
         "AMC": true
     },
     "2025-07-25": {
-        "_is_expanded": false,
+        "_is_expanded": true,
         "BMO": true,
         "TNS": true
     },
     "2025-07-28": {
-        "_is_expanded": false,
+        "_is_expanded": true,
         "BMO": true,
         "AMC": true
     },
     "2025-07-29": {
-        "_is_expanded": false,
+        "_is_expanded": true,
         "BMO": true,
         "AMC": true,
         "TNS": true
     },
     "2025-07-30": {
-        "_is_expanded": false,
+        "_is_expanded": true,
         "BMO": true,
         "AMC": true,
         "TNS": true
@@ -48,13 +48,13 @@
         "TNS": true
     },
     "2025-08-01": {
-        "_is_expanded": false,
+        "_is_expanded": true,
         "BMO": true,
         "AMC": true,
         "TNS": true
     },
     "2025-08-02": {
-        "_is_expanded": false,
+        "_is_expanded": true,
         "TNS": true
     }
 }

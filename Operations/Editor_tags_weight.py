@@ -155,7 +155,14 @@ class TagEditor(QMainWindow):
             column_vbox = QVBoxLayout()
             
             # 栏目标题
-            title_label = QLabel(f"权重: {weight}")
+            # 栏目标题，针对不同权重加上后缀说明
+            mapping = {
+                "0.2": "（待定）",
+                "1.3": "（普遍分类）",
+                "2.0": "（专业术语）"
+            }
+            suffix = mapping.get(weight, "")
+            title_label = QLabel(f"权重: {weight}{suffix}")
             title_label.setStyleSheet("font-weight: bold; font-size: 14px;")
             column_vbox.addWidget(title_label)
             

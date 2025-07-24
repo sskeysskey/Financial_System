@@ -10,8 +10,8 @@ from decimal import Decimal
 # ----------------------------------------------------------------------
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QGroupBox, QScrollArea, 
-    QMenu, QAction, QGridLayout, QLineEdit, QMessageBox
+    QPushButton, QGroupBox, QScrollArea, QMenu, QAction,
+    QGridLayout, QLineEdit, QMessageBox
 )
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QCursor
@@ -31,7 +31,7 @@ SECTORS_ALL_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_A
 COMPARE_DATA_PATH = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
 DB_PATH = '/Users/yanzhang/Documents/Database/Finance.db'
 EARNINGS_FILE_PATH = '/Users/yanzhang/Documents/News/Earnings_Release_new.txt'
-EARNINGS_FILE_NEXT_PATH = '/Users/yanzhang/Documents/News/Earnings_Release_next.txt' 
+EARNINGS_FILE_NEXT_PATH = '/Users/yanzhang/Documents/News/Earnings_Release_next.txt'
 TAGS_WEIGHT_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/tags_weight.json'
 
 # --- 新增常量 ---
@@ -342,8 +342,10 @@ class EarningsWindow(QMainWindow):
         self.setCentralWidget(self.scroll_area)
         self.scroll_content = QWidget()
         self.scroll_area.setWidget(self.scroll_content)
-        self.main_layout = QVBoxLayout(self.scroll_content)
+        # 新版：横向排日期
+        self.main_layout = QHBoxLayout(self.scroll_content)
         self.scroll_content.setLayout(self.main_layout)
+        # 如果你希望在顶端对齐：
         self.main_layout.setAlignment(Qt.AlignTop)
 
         # 把搜索栏插到最顶上
@@ -460,7 +462,7 @@ class EarningsWindow(QMainWindow):
                 time_content_widget = QWidget()
                 time_content_widget.setVisible(is_time_expanded)
                 time_layout = QGridLayout(time_content_widget)
-                time_layout.setColumnStretch(1, 1)
+                time_layout.setColumnStretch(2, 1)
 
                 time_group.setLayout(QVBoxLayout())
                 time_group.layout().addWidget(time_content_widget)
@@ -474,6 +476,11 @@ class EarningsWindow(QMainWindow):
                     symbol_button = QPushButton(button_text)
                     symbol_button.setObjectName(self.get_button_style_name(symbol))
                     symbol_button.clicked.connect(lambda _, k=symbol: self.on_keyword_selected_chart(k))
+
+                    # 2) “相关” 按钮（初始隐藏 related_container）
+                    related_button = QPushButton("相关")
+                    related_button.setFixedWidth(50)  # 可选：控制宽度
+
                     tags_info = get_tags_for_symbol(symbol)
                     tags_info_str = ", ".join(tags_info) if isinstance(tags_info, list) else tags_info
                     # —— 新增：记录映射 —— 
@@ -493,6 +500,8 @@ class EarningsWindow(QMainWindow):
                     related_layout.setContentsMargins(2, 2, 2, 2)
                     related_layout.setSpacing(5)
                     related_layout.setAlignment(Qt.AlignLeft)
+                    related_container.setVisible(False)
+                    related_container.setObjectName("RelatedContainer")
 
                     # 计算关联 symbols，并过滤掉不在 sector_data 里的
                     target_tags = find_tags_by_symbol_b(symbol, json_data)
@@ -523,9 +532,15 @@ class EarningsWindow(QMainWindow):
                                 related_layout.addWidget(rel_button)
                                 count += 1
 
-                    # 将按钮和相关容器加入布局
-                    time_layout.addWidget(symbol_button, row_index, 0)
-                    time_layout.addWidget(related_container, row_index, 1)
+                    # 4) 连接“相关”按钮：点击切换 related_container 的可见性
+                    related_button.clicked.connect(
+                        lambda _, cont=related_container: cont.setVisible(not cont.isVisible())
+                    )
+
+                    # 5) 把三件事依次加入网格：symbol_button / related_button / related_container
+                    time_layout.addWidget(symbol_button,    row_index, 0)
+                    time_layout.addWidget(related_button,   row_index, 1)
+                    time_layout.addWidget(related_container,row_index, 2)
 
     # --- 新增方法：保存展开/折叠状态 ---
     def save_expansion_states(self):

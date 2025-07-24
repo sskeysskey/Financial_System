@@ -1,21 +1,16 @@
 {
-    "Basic_Materials": {
-        "BCC": ""
-    },
+    "Basic_Materials": {},
     "Real_Estate": {
-        "ELS": "",
         "NSA": ""
     },
     "Energy": {},
     "Technology": {
         "IT": "",
-        "ACN": "",
-        "FI": ""
+        "ACN": ""
     },
     "Consumer_Cyclical": {
         "LULU": "",
         "DECK": "",
-        "KMX": "",
         "IBP": ""
     },
     "Utilities": {},
@@ -119,7 +114,6 @@
     },
     "Qualified_Symbol": {
         "CVS": "",
-        "MOH": "",
         "CL": "",
         "CHE": ""
     },
