@@ -11,7 +11,7 @@ from decimal import Decimal
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QGroupBox, QScrollArea, QMenu, QAction,
-    QGridLayout, QLineEdit, QMessageBox, QSizePolicy, QLayout
+    QGridLayout, QLineEdit, QMessageBox
 )
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QCursor
@@ -34,13 +34,8 @@ EARNINGS_FILE_PATH = '/Users/yanzhang/Documents/News/Earnings_Release_new.txt'
 EARNINGS_FILE_NEXT_PATH = '/Users/yanzhang/Documents/News/Earnings_Release_next.txt'
 TAGS_WEIGHT_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/tags_weight.json'
 
-# --- 新增常量 ---
-# 用于保存展开/折叠状态的文件路径
-EXPANSION_STATE_PATH = '/Users/yanzhang/Documents/Financial_System/Query/Check_Earning_Similar.json'
-# 控制显示的相关股票数量
 RELATED_SYMBOLS_LIMIT = 10
 
-# 全局变量
 symbol_manager = None
 compare_data = {}
 keyword_colors = {}
@@ -79,10 +74,6 @@ class SymbolManager:
         self.current_index = -1
 
 
-# ----------------------------------------------------------------------
-# Utility / Helper Functions
-# ----------------------------------------------------------------------
-
 def parse_multiple_earnings_files(paths):
     merged = OrderedDict()
     all_symbols = []
@@ -100,7 +91,6 @@ def parse_multiple_earnings_files(paths):
             if s not in all_symbols:
                 all_symbols.append(s)
 
-    # 排序时间代码：BMO → AMC → 其他
     for date_str, times in merged.items():
         ordered = OrderedDict()
         if 'BMO' in times: ordered['BMO'] = times['BMO']
@@ -125,16 +115,15 @@ def parse_earnings_file(path):
                 parts = [p.strip() for p in line.split(':')]
                 if len(parts) == 3:
                     symbol, time_code, date_str = parts
-                    time_code_upper = time_code.upper()
+                    tc = time_code.upper()
                     earnings_schedule.setdefault(date_str, OrderedDict())
-                    earnings_schedule[date_str].setdefault(time_code_upper, [])
-                    earnings_schedule[date_str][time_code_upper].append(symbol)
+                    earnings_schedule[date_str].setdefault(tc, [])
+                    earnings_schedule[date_str][tc].append(symbol)
                     if symbol not in all_symbols:
                         all_symbols.append(symbol)
     except FileNotFoundError:
         print(f"Error: Earnings file not found at {path}")
 
-    # 排序每个日期内的时间代码
     for date_str, times in earnings_schedule.items():
         sorted_times = OrderedDict()
         if 'BMO' in times: sorted_times['BMO'] = times['BMO']
@@ -163,14 +152,6 @@ def load_json(path):
             return json.load(file, object_pairs_hook=OrderedDict)
     except (FileNotFoundError, json.JSONDecodeError) as e:
         print(f"Error loading JSON from {path}: {e}")
-        return {}
-
-
-def load_expansion_states(path):
-    try:
-        with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
         return {}
 
 
@@ -250,7 +231,6 @@ def find_tags_by_symbol_b(symbol, data):
 
 
 def find_symbols_by_tags_b(target_tags_with_weight, data, original_symbol):
-    from decimal import Decimal
     related = {'stocks': [], 'etfs': []}
     target_dict = {tag.lower(): weight for tag, weight in target_tags_with_weight}
 
@@ -263,14 +243,12 @@ def find_symbols_by_tags_b(target_tags_with_weight, data, original_symbol):
             matched = []
             used = set()
 
-            # 阶段一：精确匹配
             for tag in tags:
                 tl = tag.lower()
                 if tl in target_dict and tl not in used:
                     matched.append((tag, target_dict[tl]))
                     used.add(tl)
 
-            # 阶段二：部分匹配
             for tag in tags:
                 tl = tag.lower()
                 if tl in used:
@@ -298,18 +276,14 @@ def find_symbols_by_tags_b(target_tags_with_weight, data, original_symbol):
     return combined
 
 
-# ----------------------------------------------------------------------
-# PyQt5 Main Application Window
-# ----------------------------------------------------------------------
 class EarningsWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.expansion_states = load_expansion_states(EXPANSION_STATE_PATH)
         self.button_mapping = {}
         self.init_ui()
 
     def init_ui(self):
-        self.setWindowTitle("财报日历查看器 (V3 - 状态记忆＋搜索)")
+        self.setWindowTitle("财报日历查看器 (去除折叠功能)")
         self.setFocusPolicy(Qt.StrongFocus)
 
         # 搜索栏
@@ -323,16 +297,14 @@ class EarningsWindow(QMainWindow):
         self.search_line.returnPressed.connect(self.on_search)
         self.search_button.clicked.connect(self.on_search)
 
-        # Scroll + 主布局
+        # 主滚动区
         self.scroll_area = QScrollArea(self)
         self.scroll_area.setWidgetResizable(True)
         self.scroll_content = QWidget()
         self.scroll_area.setWidget(self.scroll_content)
         self.main_layout = QHBoxLayout(self.scroll_content)
-        # 横向左对齐 + 纵向顶对齐
         self.main_layout.setAlignment(Qt.AlignLeft | Qt.AlignTop)
 
-        # 容器装 搜索栏 + 数据区
         container = QWidget()
         container_l = QVBoxLayout(container)
         container_l.setContentsMargins(0, 0, 0, 0)
@@ -348,7 +320,7 @@ class EarningsWindow(QMainWindow):
             "Cyan": ("cyan", "black"), "Blue": ("blue", "white"),
             "Purple": ("purple", "white"), "Green": ("green", "white"),
             "White": ("white", "black"), "Yellow": ("yellow", "black"),
-            "Orange": ("orange", "black"), "Red": ("red", "white"),
+            "Orange": ("orange", "black"), "Red": ("red", "black"),
             "Black": ("black", "white"), "Default": ("#ddd", "black")
         }
         qss = ""
@@ -358,13 +330,7 @@ class EarningsWindow(QMainWindow):
                 f"font-size:16px; padding:5px; border:1px solid #333; border-radius:4px; }} "
                 f"QPushButton#{name}:hover {{ background-color:{self.lighten_color(bg)}; }} "
             )
-        qss += (
-            "QGroupBox { font-size:16px; font-weight:bold; margin-top:10px; } "
-            "QGroupBox::title { subcontrol-origin:margin; subcontrol-position:top left; padding:0 5px; } "
-            "QGroupBox[checkable=\"true\"]::indicator { left:5px; } "
-            "QGroupBox[checkable=\"true\"]::title { padding-left:25px; } "
-            "QWidget#RelatedContainer { border:1px solid #ccc; border-radius:4px; margin-left:5px; }"
-        )
+        qss += "QGroupBox { font-size:16px; font-weight:bold; margin-top:10px; }"
         self.setStyleSheet(qss)
 
     def lighten_color(self, color_name, factor=1.2):
@@ -391,16 +357,9 @@ class EarningsWindow(QMainWindow):
         if not key:
             return
         if key not in self.button_mapping:
-            QMessageBox.information(self, "未找到", f"Symbol “{key}” 不在当前财报列表中。")
+            QMessageBox.information(self, "未找到", f"Symbol “{key}” 不在当前列表中。")
             return
-        self.locate_symbol(key)
-
-    def locate_symbol(self, symbol):
-        btn, date_grp, time_grp = self.button_mapping[symbol]
-        if not date_grp.isChecked():
-            date_grp.setChecked(True)
-        if not time_grp.isChecked():
-            time_grp.setChecked(True)
+        btn, _, _ = self.button_mapping[key]
         QTimer.singleShot(100, lambda: self.scroll_area.ensureWidgetVisible(btn))
         btn.setFocus()
 
@@ -414,140 +373,80 @@ class EarningsWindow(QMainWindow):
         for names in sector_data.values():
             valid_symbols.update(names)
 
-        for date_str, data in earnings_schedule.items():
-            # 1) 日期 GroupBox
+        known_time_labels = {"BMO": "盘前 (BMO)", "AMC": "盘后 (AMC)", "TNS": "未定 (TNS)"}
+
+        for date_str, times in earnings_schedule.items():
+            # 日期分组
             date_group = QGroupBox(date_str)
-            date_group.setCheckable(True)
-            is_date_expanded = self.expansion_states.get(date_str, {}).get("_is_expanded", True)
-            date_group.setChecked(is_date_expanded)
+            date_layout = QVBoxLayout()
+            date_layout.setContentsMargins(10, 25, 10, 10)   # ← 留出标题高度
+            date_layout.setSpacing(10)
+            date_group.setLayout(date_layout)
+            self.main_layout.addWidget(date_group, 0, Qt.AlignLeft | Qt.AlignTop)
 
-            # —— 关键修改：让日期框高度“包裹内容” —— 
-            vb = QVBoxLayout()
-            vb.setSizeConstraint(QLayout.SetFixedSize)
-            date_group.setLayout(vb)
-
-            # stretch=0, alignment=Qt.AlignTop
-            self.main_layout.addWidget(date_group, 0, Qt.AlignTop)
-
-            # 日期内容容器
-            date_content_widget = QWidget()
-            date_content_widget.setVisible(is_date_expanded)
-            date_group_layout = QVBoxLayout(date_content_widget)
-            date_group_layout.setContentsMargins(10, 5, 5, 5)
-
-            vb.addWidget(date_content_widget)
-            date_group.toggled.connect(date_content_widget.setVisible)
-
-            # 已知时间代码标签
-            known_time_labels = {"BMO": "盘前 (BMO)", "AMC": "盘后 (AMC)", "TNS": "未定 (TNS)"}
-
-            for time_code, symbols in data.items():
+            for tc, symbols in times.items():
                 if not symbols:
                     continue
+                time_group = QGroupBox(known_time_labels.get(tc, tc))
+                time_layout = QGridLayout()
+                time_layout.setContentsMargins(10, 20, 10, 10)  # ← 同样留出标题高度
+                time_layout.setHorizontalSpacing(5)
+                time_layout.setVerticalSpacing(5)
+                time_group.setLayout(time_layout)
+                date_layout.addWidget(time_group)
 
-                time_label = known_time_labels.get(time_code, time_code)
-                time_group = QGroupBox(time_label)
-                time_group.setCheckable(True)
-                time_group.setProperty("time_code", time_code)
-                is_time_expanded = self.expansion_states.get(date_str, {}).get(time_code, True)
-                time_group.setChecked(is_time_expanded)
-                date_group_layout.addWidget(time_group)
+                for row, sym in enumerate(symbols):
+                    txt = f"{sym} {compare_data.get(sym, '')}"
+                    btn = QPushButton(txt)
+                    btn.setObjectName(self.get_button_style_name(sym))
+                    btn.clicked.connect(lambda _, s=sym: self.on_keyword_selected_chart(s))
 
-                time_content_widget = QWidget()
-                time_content_widget.setVisible(is_time_expanded)
-                time_layout = QGridLayout(time_content_widget)
-                time_layout.setColumnStretch(2, 1)
+                    related = QPushButton("相关")
+                    related.setFixedWidth(50)
 
-                time_group.setLayout(QVBoxLayout())
-                time_group.layout().addWidget(time_content_widget)
-                time_group.toggled.connect(time_content_widget.setVisible)
+                    tags = get_tags_for_symbol(sym)
+                    tags_str = ", ".join(tags) if isinstance(tags, list) else tags
+                    self.button_mapping[sym] = (btn, date_group, time_group)
 
-                for row_index, symbol in enumerate(symbols):
-                    button_text = f"{symbol} {compare_data.get(symbol, '')}"
-                    symbol_button = QPushButton(button_text)
-                    symbol_button.setObjectName(self.get_button_style_name(symbol))
-                    symbol_button.clicked.connect(lambda _, k=symbol: self.on_keyword_selected_chart(k))
+                    btn.setToolTip(f"<div style='font-size:20px;background-color:lightyellow;color:black;'>{tags_str}</div>")
+                    btn.setContextMenuPolicy(Qt.CustomContextMenu)
+                    btn.customContextMenuRequested.connect(lambda pos, s=sym: self.show_context_menu(s))
 
-                    related_button = QPushButton("相关")
-                    related_button.setFixedWidth(50)
+                    # 相关容器
+                    container = QWidget()
+                    hl = QHBoxLayout(container)
+                    hl.setContentsMargins(2,2,2,2)
+                    hl.setSpacing(5)
+                    hl.setAlignment(Qt.AlignLeft)
+                    container.setVisible(False)
 
-                    tags_info = get_tags_for_symbol(symbol)
-                    tags_str = ", ".join(tags_info) if isinstance(tags_info, list) else tags_info
-                    self.button_mapping[symbol] = (symbol_button, date_group, time_group)
-
-                    symbol_button.setToolTip(
-                        f"<div style='font-size:20px;"
-                        f"background-color:lightyellow;color:black;'>{tags_str}</div>"
-                    )
-                    symbol_button.setContextMenuPolicy(Qt.CustomContextMenu)
-                    symbol_button.customContextMenuRequested.connect(
-                        lambda pos, k=symbol: self.show_context_menu(k)
-                    )
-
-                    related_container = QWidget()
-                    related_layout = QHBoxLayout(related_container)
-                    related_layout.setContentsMargins(2, 2, 2, 2)
-                    related_layout.setSpacing(5)
-                    related_layout.setAlignment(Qt.AlignLeft)
-                    related_container.setVisible(False)
-                    related_container.setObjectName("RelatedContainer")
-
-                    # 计算并显示“相关”按钮
-                    target_tags = find_tags_by_symbol_b(symbol, json_data)
-                    if target_tags:
-                        related_symbols_data = find_symbols_by_tags_b(target_tags, json_data, symbol)
-                        count = 0
-                        for rel_symbol, _ in related_symbols_data:
-                            if rel_symbol not in valid_symbols:
+                    tg = find_tags_by_symbol_b(sym, json_data)
+                    if tg:
+                        rels = find_symbols_by_tags_b(tg, json_data, sym)
+                        cnt = 0
+                        for r_sym, _ in rels:
+                            if r_sym not in valid_symbols or cnt>=RELATED_SYMBOLS_LIMIT:
                                 continue
-                            if count >= RELATED_SYMBOLS_LIMIT:
-                                break
-                            rb = QPushButton(f"{rel_symbol} {compare_data.get(rel_symbol, '')}")
-                            rb.setObjectName(self.get_button_style_name(rel_symbol))
-                            rb.clicked.connect(lambda _, k=rel_symbol: self.on_keyword_selected_chart(k))
-                            rt = get_tags_for_symbol(rel_symbol)
+                            rb = QPushButton(f"{r_sym} {compare_data.get(r_sym,'')}")
+                            rb.setObjectName(self.get_button_style_name(r_sym))
+                            rb.clicked.connect(lambda _, s=r_sym: self.on_keyword_selected_chart(s))
+                            rt = get_tags_for_symbol(r_sym)
                             rt_str = ", ".join(rt) if isinstance(rt, list) else rt
-                            rb.setToolTip(
-                                f"<div style='font-size:20px;"
-                                f"background-color:lightyellow;color:black;'>{rt_str}</div>"
-                            )
+                            rb.setToolTip(f"<div style='font-size:20px;background-color:lightyellow;color:black;'>{rt_str}</div>")
                             rb.setContextMenuPolicy(Qt.CustomContextMenu)
-                            rb.customContextMenuRequested.connect(
-                                lambda pos, k=rel_symbol: self.show_context_menu(k)
-                            )
-                            related_layout.addWidget(rb)
-                            count += 1
+                            rb.customContextMenuRequested.connect(lambda pos, s=r_sym: self.show_context_menu(s))
+                            hl.addWidget(rb)
+                            cnt += 1
 
-                    related_button.clicked.connect(
-                        lambda _, cont=related_container: cont.setVisible(not cont.isVisible())
-                    )
+                    related.clicked.connect(lambda _, c=container: c.setVisible(not c.isVisible()))
 
-                    time_layout.addWidget(symbol_button, row_index, 0)
-                    time_layout.addWidget(related_button, row_index, 1)
-                    time_layout.addWidget(related_container, row_index, 2)
-
-    def save_expansion_states(self):
-        states = {}
-        for i in range(self.main_layout.count()):
-            date_group = self.main_layout.itemAt(i).widget()
-            if isinstance(date_group, QGroupBox) and date_group.isCheckable():
-                date_str = date_group.title()
-                states[date_str] = {"_is_expanded": date_group.isChecked()}
-                time_groups = date_group.findChildren(QGroupBox)
-                for time_group in time_groups:
-                    if time_group.isCheckable():
-                        tc = time_group.property("time_code")
-                        if tc:
-                            states[date_str][tc] = time_group.isChecked()
-        try:
-            with open(EXPANSION_STATE_PATH, 'w', encoding='utf-8') as f:
-                json.dump(states, f, indent=4)
-        except Exception as e:
-            print(f"保存状态文件时出错: {e}")
+                    time_layout.addWidget(btn, row, 0)
+                    time_layout.addWidget(related, row, 1)
+                    time_layout.addWidget(container, row, 2)
 
     def show_context_menu(self, keyword):
         menu = QMenu(self)
-        actions = [
+        acts = [
             ("在富途中搜索", lambda: execute_external_script('futu', keyword)),
             ("添加到 Earning", lambda: execute_external_script('earning', keyword)),
             ("编辑 Earing DB", lambda: execute_external_script('editor_earning', keyword)),
@@ -558,47 +457,42 @@ class EarningsWindow(QMainWindow):
             None,
             ("加入黑名单", lambda: execute_external_script('blacklist', keyword)),
         ]
-        for item in actions:
+        for item in acts:
             if item is None:
                 menu.addSeparator()
             else:
-                text, callback = item
-                menu.addAction(QAction(text, self, triggered=callback))
+                text, cb = item
+                menu.addAction(QAction(text, self, triggered=cb))
         menu.exec_(QCursor.pos())
 
-    def on_keyword_selected_chart(self, value):
+    def on_keyword_selected_chart(self, sym):
         global symbol_manager
-        sector = next((s for s, names in sector_data.items() if value in names), None)
+        sector = next((s for s, lst in sector_data.items() if sym in lst), None)
         if sector:
-            symbol_manager.set_current_symbol(value)
-            compare_value = compare_data.get(value, "N/A")
-            shares_val, marketcap_val, pe_val, pb_val = fetch_mnspp_data_from_db(DB_PATH, value)
-            plot_financial_data(
-                DB_PATH, sector, value, compare_value,
-                (shares_val, pb_val), marketcap_val, pe_val,
-                json_data, '1Y', False
-            )
+            symbol_manager.set_current_symbol(sym)
+            cmp = compare_data.get(sym, "N/A")
+            shares, mcap, pe, pb = fetch_mnspp_data_from_db(DB_PATH, sym)
+            plot_financial_data(DB_PATH, sector, sym, cmp, (shares, pb), mcap, pe, json_data, '1Y', False)
             self.setFocus()
 
-    def handle_arrow_key(self, direction):
-        global symbol_manager
-        symbol = symbol_manager.next_symbol() if direction == 'down' else symbol_manager.previous_symbol()
-        if symbol:
-            self.on_keyword_selected_chart(symbol)
-
-    def keyPressEvent(self, event):
-        key = event.key()
-        if key == Qt.Key_Escape:
+    def keyPressEvent(self, ev):
+        k = ev.key()
+        if k == Qt.Key_Escape:
             self.close()
-        elif key == Qt.Key_Down:
-            self.handle_arrow_key('down')
-        elif key == Qt.Key_Up:
-            self.handle_arrow_key('up')
+        elif k == Qt.Key_Down:
+            self.on_arrow('down')
+        elif k == Qt.Key_Up:
+            self.on_arrow('up')
         else:
-            super().keyPressEvent(event)
+            super().keyPressEvent(ev)
 
-    def closeEvent(self, event):
-        self.save_expansion_states()
+    def on_arrow(self, dir_):
+        global symbol_manager
+        sym = symbol_manager.next_symbol() if dir_=='down' else symbol_manager.previous_symbol()
+        if sym:
+            self.on_keyword_selected_chart(sym)
+
+    def closeEvent(self, ev):
         global symbol_manager
         symbol_manager.reset()
         QApplication.quit()
@@ -609,18 +503,12 @@ if __name__ == '__main__':
     json_data = load_json(DESCRIPTION_PATH)
     sector_data = load_json(SECTORS_ALL_PATH)
     compare_data = load_text_data(COMPARE_DATA_PATH)
-    weight_groups = load_weight_groups()
-    tags_weight_config = {
-        tag: weight
-        for weight, tags in weight_groups.items()
-        for tag in tags
-    }
-    _, all_symbols_in_earnings = parse_multiple_earnings_files([
-        EARNINGS_FILE_PATH,
-        EARNINGS_FILE_NEXT_PATH
-    ])
-    symbol_manager = SymbolManager(all_symbols_in_earnings)
+    wg = load_weight_groups()
+    tags_weight_config = {tag: w for w, tags in wg.items() for tag in tags}
+    _, syms = parse_multiple_earnings_files([EARNINGS_FILE_PATH, EARNINGS_FILE_NEXT_PATH])
+    symbol_manager = SymbolManager(syms)
+
     app = QApplication(sys.argv)
-    main_window = EarningsWindow()
-    main_window.showMaximized()
+    win = EarningsWindow()
+    win.showMaximized()
     sys.exit(app.exec_())
