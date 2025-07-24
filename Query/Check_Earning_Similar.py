@@ -22,9 +22,7 @@ from PyQt5.QtGui import QCursor
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Query')
 from Chart_input import plot_financial_data
 
-# ----------------------------------------------------------------------
-# Constants / Global Configurations
-# ----------------------------------------------------------------------
+
 COLORS_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Colors.json'
 DESCRIPTION_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
 SECTORS_ALL_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
@@ -35,6 +33,7 @@ EARNINGS_FILE_NEXT_PATH = '/Users/yanzhang/Documents/News/Earnings_Release_next.
 TAGS_WEIGHT_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/tags_weight.json'
 
 RELATED_SYMBOLS_LIMIT = 10
+MAX_PER_COLUMN = 20
 
 symbol_manager = None
 compare_data = {}
@@ -395,37 +394,44 @@ class EarningsWindow(QMainWindow):
                 time_group.setLayout(time_layout)
                 date_layout.addWidget(time_group)
 
-                for row, sym in enumerate(symbols):
+                for idx, sym in enumerate(symbols):
+                    row = idx % MAX_PER_COLUMN
+                    col_block = idx // MAX_PER_COLUMN
+                    base_col = col_block * 3
+
                     txt = f"{sym}"
                     btn = QPushButton(txt)
                     btn.setObjectName(self.get_button_style_name(sym))
                     btn.clicked.connect(lambda _, s=sym: self.on_keyword_selected_chart(s))
 
-                    related = QPushButton("相关")
+                    related = QPushButton("...")
                     related.setFixedWidth(50)
 
                     tags = get_tags_for_symbol(sym)
                     tags_str = ", ".join(tags) if isinstance(tags, list) else tags
                     self.button_mapping[sym] = (btn, date_group, time_group)
 
-                    btn.setToolTip(f"<div style='font-size:20px;background-color:lightyellow;color:black;'>{tags_str}</div>")
+                    btn.setToolTip(
+                        f"<div style='font-size:20px;background-color:lightyellow;color:black;'>{tags_str}</div>")
                     btn.setContextMenuPolicy(Qt.CustomContextMenu)
                     btn.customContextMenuRequested.connect(lambda pos, s=sym: self.show_context_menu(s))
 
                     # 相关容器
                     container = QWidget()
                     hl = QHBoxLayout(container)
-                    hl.setContentsMargins(2,2,2,2)
+                    hl.setContentsMargins(2, 2, 2, 2)
                     hl.setSpacing(5)
                     hl.setAlignment(Qt.AlignLeft)
                     container.setVisible(False)
 
                     # 点击“相关”才动态计算并展开
-                    related.clicked.connect(lambda _, s=sym, c=container, vs=valid_symbols: self.toggle_related(s, c, vs))
+                    related.clicked.connect(
+                        lambda _, s=sym, c=container, vs=valid_symbols: self.toggle_related(s, c, vs)
+                    )
 
-                    time_layout.addWidget(btn, row, 0)
-                    time_layout.addWidget(related, row, 1)
-                    time_layout.addWidget(container, row, 2)
+                    time_layout.addWidget(btn, row, base_col)
+                    time_layout.addWidget(related, row, base_col + 1)
+                    time_layout.addWidget(container, row, base_col + 2)
 
     def toggle_related(self, sym, container, valid_symbols):
         # 如果还没有计算过，就动态计算并添加按钮
@@ -443,7 +449,8 @@ class EarningsWindow(QMainWindow):
                     rb.clicked.connect(lambda _, s=r_sym: self.on_keyword_selected_chart(s))
                     rt = get_tags_for_symbol(r_sym)
                     rt_str = ", ".join(rt) if isinstance(rt, list) else rt
-                    rb.setToolTip(f"<div style='font-size:20px;background-color:lightyellow;color:black;'>{rt_str}</div>")
+                    rb.setToolTip(
+                        f"<div style='font-size:20px;background-color:lightyellow;color:black;'>{rt_str}</div>")
                     rb.setContextMenuPolicy(Qt.CustomContextMenu)
                     rb.customContextMenuRequested.connect(lambda pos, s=r_sym: self.show_context_menu(s))
                     layout.addWidget(rb)
@@ -495,7 +502,7 @@ class EarningsWindow(QMainWindow):
 
     def on_arrow(self, dir_):
         global symbol_manager
-        sym = symbol_manager.next_symbol() if dir_=='down' else symbol_manager.previous_symbol()
+        sym = symbol_manager.next_symbol() if dir_ == 'down' else symbol_manager.previous_symbol()
         if sym:
             self.on_keyword_selected_chart(sym)
 
