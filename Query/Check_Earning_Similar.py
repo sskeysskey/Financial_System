@@ -396,7 +396,7 @@ class EarningsWindow(QMainWindow):
                 date_layout.addWidget(time_group)
 
                 for row, sym in enumerate(symbols):
-                    txt = f"{sym} {compare_data.get(sym, '')}"
+                    txt = f"{sym}"
                     btn = QPushButton(txt)
                     btn.setObjectName(self.get_button_style_name(sym))
                     btn.clicked.connect(lambda _, s=sym: self.on_keyword_selected_chart(s))
@@ -438,7 +438,7 @@ class EarningsWindow(QMainWindow):
                 for r_sym, _ in rels:
                     if r_sym not in valid_symbols or cnt >= RELATED_SYMBOLS_LIMIT:
                         continue
-                    rb = QPushButton(f"{r_sym} {compare_data.get(r_sym,'')}")
+                    rb = QPushButton(f"{r_sym}")
                     rb.setObjectName(self.get_button_style_name(r_sym))
                     rb.clicked.connect(lambda _, s=r_sym: self.on_keyword_selected_chart(s))
                     rt = get_tags_for_symbol(r_sym)
