@@ -348,7 +348,7 @@ class EarningsWindow(QMainWindow):
             "Cyan": ("cyan", "black"), "Blue": ("blue", "white"),
             "Purple": ("purple", "white"), "Green": ("green", "white"),
             "White": ("white", "black"), "Yellow": ("yellow", "black"),
-            "Orange": ("orange", "black"), "Red": ("red", "black"),
+            "Orange": ("orange", "black"), "Red": ("red", "white"),
             "Black": ("black", "white"), "Default": ("#ddd", "black")
         }
         qss = ""
