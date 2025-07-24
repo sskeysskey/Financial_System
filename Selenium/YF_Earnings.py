@@ -15,191 +15,176 @@ import random
 import time
 import threading
 
-# 添加鼠标移动功能的函数
+# ———— 1. 鼠标防 AFK 线程 —————————————————————
 def move_mouse_periodically():
     while True:
         try:
-            # 获取屏幕尺寸
-            screen_width, screen_height = pyautogui.size()
-            
-            # 随机生成目标位置，避免移动到屏幕边缘
-            x = random.randint(100, screen_width - 100)
-            y = random.randint(100, screen_height - 100)
-            
-            # 缓慢移动鼠标到随机位置
+            w, h = pyautogui.size()
+            x = random.randint(100, w-100)
+            y = random.randint(100, h-100)
             pyautogui.moveTo(x, y, duration=1)
-            
-            # 等待30-60秒再次移动
-            time.sleep(random.randint(30, 60))
-            
+            time.sleep(random.randint(30,60))
         except Exception as e:
             print(f"鼠标移动出错: {e}")
             time.sleep(30)
 
-# 在主程序开始前启动鼠标移动线程
-mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
-mouse_thread.start()
+threading.Thread(target=move_mouse_periodically, daemon=True).start()
 
-# 文件路径
-file_path = '/Users/yanzhang/Documents/News/Earnings_Release_next.txt'
-backup_dir = '/Users/yanzhang/Documents/News/backup/backup'
-# 1. 先加载已有的 Earnings_Release.txt，把 (symbol, date) 存到一个 set 里
+# ———— 2. 路径 & 备份 —————————————————————————
+file_path           = '/Users/yanzhang/Documents/News/Earnings_Release_next.txt'
+backup_dir          = '/Users/yanzhang/Documents/News/backup/backup'
 earnings_release_path = '/Users/yanzhang/Documents/News/backup/Earnings_Release.txt'
 
-# 1. 加载主发行日文件，记录已存在的 (symbol, date)
+# （A）加载主发行日文件中的 (symbol, date) 去重集
 existing_release_entries = set()
 if os.path.exists(earnings_release_path):
     with open(earnings_release_path, 'r') as f:
         for line in f:
             parts = line.strip().split(':')
             if len(parts) >= 2:
-                sym = parts[0].strip()
-                date = parts[1].strip()
-                existing_release_entries.add((sym, date))
+                s = parts[0].strip()
+                d = parts[1].strip()
+                existing_release_entries.add((s,d))
 
-# 2. 如果 next.txt 已存在，先备份
-file_already_exists = os.path.exists(file_path)
-
-# 如果文件存在，进行备份
-if file_already_exists:
-    timestamp = datetime.now().strftime('%y%m%d')
-    backup_filename = f'Earnings_Release_next_{timestamp}.txt'
-    backup_path = os.path.join(backup_dir, backup_filename)
-    
-    # 确保备份目录存在
+# （B）备份旧 next.txt（如果存在）
+file_exists = os.path.exists(file_path)
+if file_exists:
+    ts = datetime.now().strftime('%y%m%d')
     os.makedirs(backup_dir, exist_ok=True)
-    shutil.copy2(file_path, os.path.join(backup_dir, backup_filename))
+    shutil.copy2(file_path, os.path.join(backup_dir, f'Earnings_Release_next_{ts}.txt'))
 
-# 3. 读取 next.txt 已有的三元组 (symbol, call_time, date)
-existing_next_entries = set()
-if file_already_exists:
+# （C）把 next.txt 读入内存，构造 two data structures：
+#     1. existing_lines: 原始行列表
+#     2. existing_next_map: symbol -> (call_time, date)
+existing_lines    = []
+existing_next_map = {}
+if file_exists:
     with open(file_path, 'r') as f:
         for line in f:
-            parts = line.strip().split(':')
+            ln = line.rstrip('\n')
+            existing_lines.append(ln)
+            parts = ln.split(':')
             if len(parts) >= 3:
-                sym = parts[0].strip()
+                sym       = parts[0].strip()
                 call_time = parts[1].strip()
-                date = parts[2].strip()
-                existing_next_entries.add((sym, call_time, date))
+                date      = parts[2].strip()
+                existing_next_map[sym] = (call_time, date)
 
-# Selenium + Chrome 配置
+# 准备一个列表收新条目
+new_entries = []
+
+# ———— 3. Selenium & DB 初始化 ——————————————————
 chrome_options = Options()
-chrome_options.add_argument("--disable-extensions")
-chrome_options.add_argument("--disable-gpu")
-chrome_options.add_argument("--disable-dev-shm-usage")
-chrome_options.add_argument("--no-sandbox")
-chrome_options.add_argument("--blink-settings=imagesEnabled=false")  # 禁用图片加载
-chrome_options.page_load_strategy = 'eager'  # 使用eager策略，DOM准备好就开始
+for arg in ["--disable-extensions","--disable-gpu","--disable-dev-shm-usage",
+            "--no-sandbox","--blink-settings=imagesEnabled=false"]:
+    chrome_options.add_argument(arg)
+chrome_options.page_load_strategy = 'eager'
+service = Service(executable_path="/Users/yanzhang/Downloads/backup/chromedriver")
+driver  = webdriver.Chrome(service=service, options=chrome_options)
 
-# ChromeDriver 路径
-chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
-
-# 设置 ChromeDriver
-service = Service(executable_path=chrome_driver_path)
-driver = webdriver.Chrome(service=service, options=chrome_options)
-
-# 加载行业 JSON
 with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as f:
-    data = json.load(f)
+    sectors_data = json.load(f)
 
-# 时间区间
-start_date = datetime(2025, 7, 28)
-end_date   = datetime(2025, 8, 3)
-
-# # 获取当前系统日期
-# current_date = datetime.now()
-# # 计算离当前最近的周天
-# start_date = current_date + timedelta(days=(6 - current_date.weekday()))
-# # 计算往后延6天的周六
-# end_date = start_date + timedelta(days=6)
-
-# 初始化数据库连接
-db_path = '/Users/yanzhang/Documents/Database/Finance.db'
-conn = sqlite3.connect(db_path)
+conn   = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
 cursor = conn.cursor()
 
-new_content_added = False
+start_date = datetime(2025, 7, 28)
+end_date   = datetime(2025, 8, 2)
+delta      = timedelta(days=1)
 
-# 使用追加模式打开文件
-with open(file_path, 'a') as output_file:
-    # output_file.write('\n')
-    change_date = start_date
-    delta = timedelta(days=1)
-
-    while change_date <= end_date:
-        formatted_change_date = change_date.strftime('%Y-%m-%d')
-        offset = 0
-        has_data = True
-
-        while has_data:
-            url = (
-                f"https://finance.yahoo.com/calendar/earnings"
-                f"?from={start_date.strftime('%Y-%m-%d')}"
-                f"&to={end_date.strftime('%Y-%m-%d')}"
-                f"&day={formatted_change_date}"
-                f"&offset={offset}&size=100"
+# ———— 4. 爬取主逻辑 —————————————————————————
+for single_date in (start_date + i*delta for i in range((end_date-start_date).days+1)):
+    ds = single_date.strftime('%Y-%m-%d')
+    offset = 0
+    while True:
+        url = (
+            f"https://finance.yahoo.com/calendar/earnings"
+            f"?from={start_date:%Y-%m-%d}&to={end_date:%Y-%m-%d}"
+            f"&day={ds}&offset={offset}&size=100"
+        )
+        driver.get(url)
+        try:
+            tbl = WebDriverWait(driver, 4).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "table"))
             )
-            driver.get(url)
-            
-            # 使用显式等待确保元素加载
-            wait = WebDriverWait(driver, 4)
+            rows = tbl.find_elements(By.CSS_SELECTOR, "tbody > tr")
+        except TimeoutException:
+            break
+
+        if not rows:
+            break
+
+        for row in rows:
             try:
-                # 首先定位到表格，然后找到表格体中的所有行
-                table = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "table")))
-                rows = table.find_elements(By.CSS_SELECTOR, "tbody > tr")
-            except TimeoutException:
-                rows = []  # 如果超时，则设置 rows 为空列表
-            
-            if not rows:
-                has_data = False
-            else:
-                for row in rows:
-                    try:
-                        symbol = row.find_element(By.CSS_SELECTOR, 'a[title][href*="/quote/"]').get_attribute('title')
-                        cells = row.find_elements(By.TAG_NAME, 'td')
-                        if len(cells) < 4:
-                            continue
-                        event_name = cells[2].text.strip()
-                        call_time  = cells[3].text.strip() or "N/A"
+                symbol = row.find_element(
+                    By.CSS_SELECTOR, 'a[title][href*="/quote/"]'
+                ).get_attribute('title')
+                cells = row.find_elements(By.TAG_NAME, 'td')
+                if len(cells) < 4:
+                    continue
 
-                        # 只要含有下列关键词之一
-                        if not any(k in event_name for k in
-                                   ["Earnings Release", "Shareholders Meeting", "Earnings Announcement"]):
-                            continue
+                event_name = cells[2].text.strip()
+                call_time  = cells[3].text.strip() or "N/A"
 
-                        # --- 新增：在写入前进行日期过滤 ---
-                        event_date_obj = datetime.strptime(formatted_change_date, '%Y-%m-%d')
-                        if event_date_obj < start_date or event_date_obj > end_date:
-                            # 日期超出范围，跳过这一行
-                            continue
-                        # --- 新增结束 ---
+                if not any(k in event_name for k in 
+                           ["Earnings Release",
+                            "Shareholders Meeting",
+                            "Earnings Announcement"]):
+                    continue
 
-                        # 检查是否在行业列表里
-                        for category, symbols in data.items():
-                            if symbol in symbols:
-                                key_main = (symbol, formatted_change_date)
-                                key_next = (symbol, call_time, formatted_change_date)
+                # —— 主发行日文件级别去重，不变 —— 
+                if (symbol, ds) in existing_release_entries:
+                    continue
 
-                                # 1) 如果主发行日文件已经有 (symbol, date)，跳过
-                                # 2) 如果 next.txt 已经有完全一致的三元组，也跳过
-                                if key_main in existing_release_entries or key_next in existing_next_entries:
-                                    break
+                # —— 确保在我们的“行业符号”合集里 —— 
+                found_in_sector = any(
+                    symbol in lst for lst in sectors_data.values()
+                )
+                if not found_in_sector:
+                    continue
 
-                                # 否则追加
-                                entry = f"{symbol:<7}: {call_time:<4}: {formatted_change_date}"
-                                output_file.write(entry + "\n")
-                                new_content_added = True
-                                existing_next_entries.add(key_next)
-                                break  # 找到所属 category 即可，不再在其它 category 中重复写
+                new_line = f"{symbol:<7}: {call_time:<4}: {ds}"
 
-                    except Exception as e:
-                        print(f"处理行数据时出错: {e}")
+                if symbol in existing_next_map:
+                    old_ct, old_dt = existing_next_map[symbol]
+                    # 若完全相同，则跳过
+                    if old_ct == call_time and old_dt == ds:
                         continue
+                    # 否则：移除原行，追加新行
+                    # 1) 从 existing_lines 中剔除所有该 symbol 的行
+                    existing_lines = [
+                        ln for ln in existing_lines
+                        if not ln.split(':')[0].strip() == symbol
+                    ]
+                    # 2) 更新映射
+                    existing_next_map[symbol] = (call_time, ds)
+                    # 3) 把 new_line 加到待写列表
+                    new_entries.append(new_line)
 
-                offset += 100
+                else:
+                    # 第一次见到此 symbol，直接追加
+                    existing_next_map[symbol] = (call_time, ds)
+                    new_entries.append(new_line)
 
-        change_date += delta
+            except Exception as e:
+                print(f"处理行出错: {e}")
+                continue
 
-# 清理
+        offset += 100
+
+# ———— 5. 把内存中的 existing_lines + new_entries 一起写回文件 —————————
+if new_entries:
+    with open(file_path, 'w') as f:
+        # 先写保留的旧行
+        for ln in existing_lines:
+            f.write(ln + "\n")
+        # 再写所有新行（按发现顺序）
+        for ln in new_entries:
+            f.write(ln + "\n")
+    print(f"更新了 {len(new_entries)} 条记录到 {file_path}")
+else:
+    print("没有发现可更新的新记录。")
+
+# ———— 6. 收尾 —————————————————————————————
 conn.close()
 driver.quit()
