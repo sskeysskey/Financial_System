@@ -102,9 +102,6 @@ def load_text_data(path):
                 data[cleaned_key] = value
     return data
 
-# ### 删除 ###: 移除了不再需要的 load_marketcap_pe_data 函数
-
-# ### 新增 ###: 从 b.py 和 a.py 借鉴的数据库查询函数
 def fetch_mnspp_data_from_db(db_path, symbol):
     """
     根据股票代码从MNSPP表中查询 shares, marketcap, pe_ratio, pb。
@@ -205,8 +202,8 @@ class MainWindow(QMainWindow):
         # --- 1. 新增：定义QSS样式表 ---
         self.apply_stylesheet()
         
-        # 第一部分：昨天的 symbols，延迟写入，带“替换”按钮
-
+        # --- 第一部分：定义 date1 (昨天) 的 GroupBox ---
+        # 这个部分现在将显示在右侧
         gb1 = QGroupBox(f"日期 {self.date1} 符合条件的 Symbols（点击“替换”写入/覆盖）")
         lay1 = QVBoxLayout()
         # 3 列：Symbol, 百分比, 操作
@@ -222,10 +219,9 @@ class MainWindow(QMainWindow):
         self.table1.customContextMenuRequested.connect(self.show_table_context_menu)
         lay1.addWidget(self.table1)
         gb1.setLayout(lay1)
-        # vlay.addWidget(gb1)
-        hlay.addWidget(gb1)
 
-        # 第二部分
+        # --- 第二部分：定义 date2 (前天) 的 GroupBox ---
+        # 这个部分现在将显示在左侧
         gb2 = QGroupBox(f"日期 {self.date2} 符合条件的 Symbols （点击 Symbol 显示图表，可替换旧百分比）")
         lay2 = QVBoxLayout()
         # table2 现在有 5 列：Symbol, 时段, 新百分比, 旧百分比, 操作
@@ -241,8 +237,13 @@ class MainWindow(QMainWindow):
         self.table2.customContextMenuRequested.connect(self.show_table_context_menu)
         lay2.addWidget(self.table2)
         gb2.setLayout(lay2)
-        # vlay.addWidget(gb2)
+
+        # ==================== 核心修改：调换左右栏目 ====================
+        # 先添加 gb2 (前天的数据)，它将显示在左边
         hlay.addWidget(gb2)
+        # 再添加 gb1 (昨天的数据)，它将显示在右边
+        hlay.addWidget(gb1)
+        # ============================================================
 
         # cw.setLayout(vlay)
         cw.setLayout(hlay)
@@ -372,16 +373,13 @@ class MainWindow(QMainWindow):
 
         # 2. 创建菜单并动态添加项目
         menu = QMenu()
-        for item in menu_config:
-            if item is None:
+        for item_config in menu_config:
+            if item_config is None:
                 menu.addSeparator()
             else:
-                label, script_type = item
+                label, script_type = item_config
                 action = QAction(label, self)
-                # 使用 lambda 和 partial 确保传递正确的参数
-                action.triggered.connect(
-                    partial(execute_external_script, script_type, symbol)
-                )
+                action.triggered.connect(partial(execute_external_script, script_type, symbol))
                 menu.addAction(action)
         
         # 3. 显示菜单
