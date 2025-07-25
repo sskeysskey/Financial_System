@@ -258,13 +258,15 @@ class MainWindow(QMainWindow):
     def _add_tag_row(self, table: QTableWidget, row: int, tags: list):
         """在 table 的 row 行后面插入一行，用来显示 tags。"""
         tag_str = ", ".join(tags) if tags else "无标签"
-        table.insertRow(row + 1)
-        table.setSpan(row + 1, 0, 1, table.columnCount())
+        insert_row = row + 1
+        table.insertRow(insert_row)
+        table.setSpan(insert_row, 0, 1, table.columnCount())
         lbl = QLabel(tag_str)
         ### 修改 4：为Tags标签应用文本溢出截断样式 ###
         lbl.setStyleSheet("""
             color: lightyellow; 
             font-style: italic; 
+            font-size: 18pt;
             padding: 4px;
             white-space: nowrap;
             overflow: hidden;
@@ -275,6 +277,8 @@ class MainWindow(QMainWindow):
             item = table.item(row + 1, c)
             if item:
                 item.setFlags(Qt.NoItemFlags)
+
+        table.setRowHeight(insert_row, 35)  # 比如 30px
 
     def show_table_context_menu(self, pos):
         """当在表格上右键点击时，创建并显示上下文菜单"""
