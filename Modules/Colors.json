@@ -32,7 +32,6 @@
         "SO",
         "UBER",
         "RTX",
-        "MMC",
         "CB",
         "AFL",
         "D",
@@ -448,7 +447,6 @@
         "S",
         "CRUS",
         "PDD",
-        "KMX",
         "MATX",
         "NLY",
         "SG",
@@ -471,14 +469,18 @@
         "PG",
         "TSN",
         "CNA",
-        "ELS",
         "IRT",
         "LNTH",
         "WAT",
         "GMED",
         "LMT",
         "OTIS",
-        "FI"
+        "FI",
+        "BCPC",
+        "MMC",
+        "RLI",
+        "UHS",
+        "SEM"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -558,7 +560,6 @@
         "GSK",
         "BIDU",
         "BHP",
-        "SEM",
         "EBR",
         "LYB",
         "ANET",
@@ -722,7 +723,9 @@
         "MOH",
         "ACN",
         "BCC",
-        "INSP"
+        "INSP",
+        "KMX",
+        "ELS"
     ],
     "orange_keywords": [
         "NASDAQ",

@@ -13,9 +13,6 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QCursor
 
-# ----------------------------------------------------------------------
-# Update sys.path so we can import from custom modules
-# ----------------------------------------------------------------------
 sys.path.append('/Users/yanzhang/Documents/Financial_System/Query')
 from Chart_input import plot_financial_data
 
@@ -40,6 +37,14 @@ json_data = {}
 tags_weight_config = {}
 DEFAULT_WEIGHT = Decimal('1')
 
+# 新增：SymbolButton 子类
+class SymbolButton(QPushButton):
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton and (event.modifiers() & Qt.ShiftModifier):
+            # Command+Click
+            execute_external_script('futu', self.text())
+            return
+        super().mousePressEvent(event)
 
 class SymbolManager:
     def __init__(self, symbols_list):
@@ -397,7 +402,7 @@ class EarningsWindow(QMainWindow):
                     base_col = col_block * 3
 
                     txt = f"{sym}"
-                    btn = QPushButton(txt)
+                    btn = SymbolButton(txt)
                     btn.setObjectName(self.get_button_style_name(sym))
                     btn.clicked.connect(lambda _, s=sym: self.on_keyword_selected_chart(s))
 
@@ -441,7 +446,7 @@ class EarningsWindow(QMainWindow):
                 for r_sym, _ in rels:
                     if r_sym not in valid_symbols or cnt >= RELATED_SYMBOLS_LIMIT:
                         continue
-                    rb = QPushButton(f"{r_sym}")
+                    rb = SymbolButton(f"{r_sym}")
                     rb.setObjectName(self.get_button_style_name(r_sym))
                     rb.clicked.connect(lambda _, s=r_sym: self.on_keyword_selected_chart(s))
                     rt = get_tags_for_symbol(r_sym)
