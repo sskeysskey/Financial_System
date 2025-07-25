@@ -189,7 +189,7 @@ class MainWindow(QMainWindow):
         gb2 = QGroupBox(f"日期 {self.date2} 符合条件的 Symbols （点击 Symbol 显示图表，可替换旧百分比）")
         lay2 = QVBoxLayout()
         self.table2 = QTableWidget(0, 6)
-        self.table2.setHorizontalHeaderLabels(["Symbol", "时段", "新百分比(%)", "旧百分比(%)", "操作", "——————————————"])
+        self.table2.setHorizontalHeaderLabels(["Symbol股票代码", "时段", "新百分比(%)", "旧百分比(%)", "操作", "————————————"])
         self.table2.verticalHeader().setVisible(False)
         self.table2.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table2.customContextMenuRequested.connect(self.show_table_context_menu)
@@ -200,7 +200,7 @@ class MainWindow(QMainWindow):
         gb1 = QGroupBox(f"日期 {self.date1} 符合条件的 Symbols（点击“替换”写入/覆盖）")
         lay1 = QVBoxLayout()
         self.table1 = QTableWidget(0, 5)
-        self.table1.setHorizontalHeaderLabels(["Symbol", "时段", "百分比(%)", "操作", "—————————————"])
+        self.table1.setHorizontalHeaderLabels(["Symbol股票代码", "时段", "百分比(%)", "操作", "———————————"])
         self.table1.verticalHeader().setVisible(False)
         self.table1.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table1.customContextMenuRequested.connect(self.show_table_context_menu)
@@ -225,7 +225,7 @@ class MainWindow(QMainWindow):
         hlay.addWidget(gb_today, 4)     # 今天 (右)，伸缩比例为1，使其更窄
 
         gb2 .setMaximumWidth(500)
-        gb1 .setMaximumWidth(400)
+        gb1 .setMaximumWidth(420)
         gb_today.setMaximumWidth(400)
 
         cw.setLayout(hlay)
@@ -279,27 +279,36 @@ class MainWindow(QMainWindow):
     def show_table_context_menu(self, pos):
         """当在表格上右键点击时，创建并显示上下文菜单"""
         table = self.sender()
-        if not table: return
-        item = table.itemAt(pos)
-        # ### 修改 ###：因为 tags 行也是 cell widget，需要更精确的判断
-        if item is None:
-             # 如果点击在空白处，尝试获取该行的第一个单元格的widget
-            row = table.rowAt(pos.y())
-            if row == -1: return
-            widget = table.cellWidget(row, 0)
-            # 如果是标签行，则不显示菜单
-            if isinstance(widget, QLabel): return
-            # 否则，尝试获取上一行的按钮（如果是数据行）
-            if row > 0 and isinstance(table.cellWidget(row-1, 0), SymbolButton):
-                 symbol_button = table.cellWidget(row-1, 0)
-            else:
-                return
+        if not table:
+            return
+
+        # 根据点击位置确定行、列
+        row = table.rowAt(pos.y())
+        col = table.columnAt(pos.x())
+        # 只允许在第一列（Symbol / Tag 列）弹菜单
+        if row == -1 or col != 0:
+            return
+
+        # 尝试拿当前行第0列的 widget
+        widget = table.cellWidget(row, 0)
+        symbol_button = None
+
+        if isinstance(widget, SymbolButton):
+            # 直接点在 SymbolButton 上
+            symbol_button = widget
+        elif isinstance(widget, QLabel):
+            # 点在标签行，去上一行取 SymbolButton
+            if row > 0:
+                prev = table.cellWidget(row - 1, 0)
+                if isinstance(prev, SymbolButton):
+                    symbol_button = prev
         else:
-            # 如果点击在单元格上
-            if item.column() != 0: return
-            symbol_button = table.cellWidget(item.row(), 0)
-        
-        if not isinstance(symbol_button, SymbolButton): return
+            # 既不是按钮也不是标签，忽略
+            return
+
+        if not symbol_button:
+            return
+
         symbol = symbol_button.text()
 
         menu_config = [
@@ -320,7 +329,7 @@ class MainWindow(QMainWindow):
                 action = QAction(label, self)
                 action.triggered.connect(partial(execute_external_script, script_type, symbol))
                 menu.addAction(action)
-        
+
         menu.exec_(QCursor.pos())
 
     def on_symbol_button_clicked(self, symbol):
@@ -566,7 +575,7 @@ class MainWindow(QMainWindow):
             op_btn.setCursor(QCursor(Qt.PointingHandCursor))
 
             if auto_written or pct_new == old_pct:
-                op_btn.setText("已写入" if auto_written else "已替换")
+                op_btn.setText("已写入" if auto_written else "已写入")
                 op_btn.setEnabled(False)
             else:
                 op_btn.setText("替换")
