@@ -220,13 +220,17 @@ class MainWindow(QMainWindow):
 
         # --- 3. UI更新：调整布局顺序和伸缩比例 ---
         # 按 左-中-右 的顺序添加 GroupBox
-        hlay.addWidget(gb2, 3)          # 前天 (左)，伸缩比例为3
-        hlay.addWidget(gb1, 3)          # 昨天 (中)，伸缩比例为3
+        hlay.addWidget(gb2, 2)          # 前天 (左)，伸缩比例为3
+        hlay.addWidget(gb1, 2)          # 昨天 (中)，伸缩比例为3
         hlay.addWidget(gb_today, 1)     # 今天 (右)，伸缩比例为1，使其更窄
+
+        gb2 .setMaximumWidth(400)
+        gb1 .setMaximumWidth(300)
+        gb_today.setMaximumWidth(200)
 
         cw.setLayout(hlay)
         self.setCentralWidget(cw)
-        self.resize(1600, 1000) # 增加了宽度以容纳新栏目
+        self.resize(600, 1000) # 增加了宽度以容纳新栏目
         self.center_window()
 
     def apply_stylesheet(self):
