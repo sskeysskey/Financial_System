@@ -407,7 +407,8 @@
     "FMAT",
     "VNM",
     "EWZ",
-    "ILS"
+    "ILS",
+    "NULG"
   ],
   "Basic_Materials": [
     "LIN",

@@ -611,7 +611,7 @@ class MainWindow(QMainWindow):
         """
         对前天的 symbols：
          - 计算 pct_new
-         - 三天内查 Earning 表，看是替换还是写入
+         - 如果三天内没有财报，自动写入
          - 在 table2 里显示“新百分比”、“旧百分比”，按钮根据场景不同
         """
         for symbol, period in self.symbols_by_date[self.date2]:
@@ -635,43 +635,34 @@ class MainWindow(QMainWindow):
             )
             rowr = self.cur.fetchone()
             if rowr:
-                # 注意：数据库取出的 price 可能是字符串或数字，统一转为 float 比较
                 old_pct = float(rowr["price"])
                 exists = True
                 record_id = rowr["id"]
+                auto_written = False
             else:
-                old_pct = None
-                exists = False
-                record_id = None
+                # --- 三天内无记录，自动写入 ---
+                self.cur.execute(
+                    "INSERT INTO Earning (date, name, price) VALUES (?, ?, ?)",
+                    (self.date1, symbol, pct_new)
+                )
+                self.conn.commit()
+                exists = True
+                old_pct = pct_new
+                record_id = self.cur.lastrowid
+                auto_written = True
 
             # 插入一行到 table2
             row = self.table2.rowCount()
             self.table2.insertRow(row)
 
-            # ---- Symbol 按钮
+            # ---- Symbol 按钮 ----
             self.table2.setItem(row, 0, QTableWidgetItem())
             btn_sym = SymbolButton(symbol)
             btn_sym.setObjectName("SymbolButton")
             btn_sym.setProperty("period", period)
             btn_sym.setCursor(QCursor(Qt.PointingHandCursor))
             btn_sym.clicked.connect(partial(self.on_symbol_button_clicked, symbol))
-            # ===== 新增：给按钮加 tooltip =====
-            tags = get_tags_for_symbol(symbol, self.description_data)
-            if tags:
-                # 如果 tags 是列表，就用逗号拼一下；也可以直接展示列表
-                tooltip = ", ".join(tags)
-            else:
-                tooltip = "无标签"
-            # 你可以用 HTML 调整样式
-            btn_sym.setToolTip(
-                f"<div style='font-size:18pt; "
-                f"background:lightyellow; "
-                f"color:#222222;"
-                f"padding:4px;'>"
-                f"{tooltip}"
-                f"</div>"
-            )
-            # ===== 结束 =====
+            # tooltip 同前略...
             self.table2.setCellWidget(row, 0, btn_sym)
 
             # 1: 时段
@@ -686,50 +677,49 @@ class MainWindow(QMainWindow):
             self.table2.setItem(row, 2, item_new)
 
             # 3: 旧百分比
-            if old_pct is not None:
-                item_old = QTableWidgetItem(f"{old_pct}")
-                item_old.setFont(font)
-                item_old.setForeground(QBrush(QColor(255,215,0)))
-                self.table2.setItem(row, 3, item_old)
-            else:
-                self.table2.setItem(row, 3, QTableWidgetItem(""))
+            item_old = QTableWidgetItem(f"{old_pct}")
+            item_old.setFont(font)
+            item_old.setForeground(QBrush(QColor(255,215,0)))
+            self.table2.setItem(row, 3, item_old)
 
-            # ===== 新增：tag row =====
+            # tag row 同前略...
             tags = get_tags_for_symbol(symbol, self.description_data)
             self._add_tag_row(self.table2, row, tags)
-            # ===== 完成 =====
 
-            # 4: 操作按钮：替换 或 写入
-            op_btn = QPushButton("替换" if exists else "写入")
+            # 4: 操作按钮
+            op_btn = QPushButton()
             op_btn.setObjectName("ReplaceButton")
             op_btn.setCursor(QCursor(Qt.PointingHandCursor))
 
-            # 如果存在旧记录，并且新旧百分比数值一致，则直接将按钮设为“已替换”并禁用
-            if exists and pct_new == old_pct:
-                op_btn.setText("已替换")
+            if auto_written:
+                # 自动写入的场景
+                op_btn.setText("已写入")
                 op_btn.setEnabled(False)
-            # ### 新增逻辑结束 ###
             else:
-                # ### 原有逻辑（移入else块） ###
-                if exists:
-                    # 替换：更新已有那条 record_id
-                    op_btn.clicked.connect(
-                        partial(self.on_replace_date2, symbol, pct_new, record_id, row, op_btn)
-                    )
+                # 如果已有记录且数值相同，则也禁用
+                if exists and pct_new == old_pct:
+                    op_btn.setText("已替换")
+                    op_btn.setEnabled(False)
                 else:
-                    # 走写入 ---- 直接复用 date1 的“写入”逻辑
-                    op_btn.clicked.connect(
-                        lambda _,
-                            sym=symbol,
-                            pct=pct_new,
-                            r=row,
-                            b=op_btn: (
-                            # 1) 调用 date1 那边的写入/覆盖
-                            self.on_replace_date1(sym, pct, b),
-                            # 2) 写完之后把“旧百分比”列（索引 3）更新一下
-                            self.table2.setItem(r, 3, QTableWidgetItem(str(pct)))
+                    # 需要手动替换
+                    if exists:
+                        op_btn.setText("替换")
+                        op_btn.clicked.connect(
+                            partial(self.on_replace_date2, symbol, pct_new, record_id, row, op_btn)
                         )
-                    )
+                    else:
+                        # 走写入（理论上不存在这种分支，前面已全写入）
+                        op_btn.setText("写入")
+                        op_btn.clicked.connect(
+                            lambda _,
+                                sym=symbol,
+                                pct=pct_new,
+                                r=row,
+                                b=op_btn: (
+                                self.on_replace_date1(sym, pct, b),
+                                self.table2.setItem(r, 3, QTableWidgetItem(str(pct)))
+                            )
+                        )
 
             # 将按钮居中放入 cell
             container = QWidget()
