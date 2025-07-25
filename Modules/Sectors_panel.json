@@ -9,12 +9,10 @@
     "Energy": {},
     "Technology": {
         "IT": "",
-        "ACN": "",
-        "FI": ""
+        "ACN": ""
     },
     "Consumer_Cyclical": {
         "LULU": "",
-        "DECK": "",
         "IBP": "",
         "CMG": "",
         "LKQ": "",
@@ -132,10 +130,7 @@
     },
     "Earning_Filter": {
         "BROS": "",
-        "CALM": "",
-        "OSCR": "",
-        "PNFP": "",
-        "SIGI": ""
+        "CALM": ""
     },
     "Currencies": {
         "DXY": "美元指数",

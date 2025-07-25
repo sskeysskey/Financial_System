@@ -32,8 +32,8 @@ def read_latest_date_info(gainer_loser_path):
 
 def read_earnings_release(filepath, error_file_path):
     """
-    读取一个收益发布文件，将格式 AAPL : XXX : 2025-07-21
-    转成 { 'AAPL': '21', ... }
+    读取一个收益发布文件，将格式 AAPL : BMO : 2025-07-21
+    转成 { 'AAPL': {'day':'21','type':'BMO'}, ... }
     """
     if not os.path.exists(filepath):
         log_error_with_timestamp(f"文件 {filepath} 不存在。", error_file_path)
@@ -46,9 +46,12 @@ def read_earnings_release(filepath, error_file_path):
                 parts = [p.strip() for p in line.split(':')]
                 # 期望形如 ['VZ', 'BMO', '2025-07-21']
                 if len(parts) == 3:
-                    company, _, date = parts
+                    company, rel_type, date = parts
                     day = date.split('-')[2]  # 取日
-                    earnings_companies[company] = day
+                    earnings_companies[company] = {
+                        'day': day,
+                        'type': rel_type  # 保存 BMO/AMC/TNS
+                    }
     except Exception as e:
         log_error_with_timestamp(f"处理文件 {filepath} 时发生错误: {e}", error_file_path)
 
@@ -63,6 +66,13 @@ def compare_today_yesterday(
     error_file_path,
     additional_output_file
 ):
+    # 在函数开头或者合适的位置，先定义一个映射：
+    type_map = {
+        'BMO': '前',
+        'AMC': '后',
+        'TNS': '未'
+    }
+
     # 读取 gainer/loser
     latest_date, latest_info = read_latest_date_info(gainer_loser_path)
     gainers = latest_info.get("gainer", [])
@@ -189,8 +199,11 @@ def compare_today_yesterday(
                             suffix = ""
 
                         if keyword in earnings_data:
-                            # earnings_data 中的 value 就是发布日的“日”部分
-                            output.append(f"{keyword}: {earnings_data[keyword]}财{change_text}{suffix}")
+                            info = earnings_data[keyword]
+                            day  = info['day']
+                            typ  = info['type']
+                            char = type_map.get(typ, '财')   # 默认回落到“财”
+                            output.append(f"{keyword}: {day}{char}{change_text}{suffix}")
                         else:
                             output.append(f"{keyword}: {change_text}{suffix}")
                     else:

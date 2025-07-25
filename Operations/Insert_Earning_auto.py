@@ -265,7 +265,6 @@ class MainWindow(QMainWindow):
         ### 修改 4：为Tags标签应用文本溢出截断样式 ###
         lbl.setStyleSheet("""
             color: lightyellow; 
-            font-style: italic; 
             font-size: 18pt;
             padding: 4px;
             white-space: nowrap;
@@ -278,7 +277,7 @@ class MainWindow(QMainWindow):
             if item:
                 item.setFlags(Qt.NoItemFlags)
 
-        table.setRowHeight(insert_row, 35)  # 比如 30px
+        table.setRowHeight(insert_row, 45)  # 比如 30px
 
     def show_table_context_menu(self, pos):
         """当在表格上右键点击时，创建并显示上下文菜单"""
