@@ -188,8 +188,8 @@ class MainWindow(QMainWindow):
         # --- 前天栏目 (左) ---
         gb2 = QGroupBox(f"日期 {self.date2} 符合条件的 Symbols （点击 Symbol 显示图表，可替换旧百分比）")
         lay2 = QVBoxLayout()
-        self.table2 = QTableWidget(0, 5)
-        self.table2.setHorizontalHeaderLabels(["Symbol", "时段", "新百分比(%)", "旧百分比(%)", "操作"])
+        self.table2 = QTableWidget(0, 6)
+        self.table2.setHorizontalHeaderLabels(["Symbol", "时段", "新百分比(%)", "旧百分比(%)", "操作", "——————————————"])
         self.table2.verticalHeader().setVisible(False)
         self.table2.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table2.customContextMenuRequested.connect(self.show_table_context_menu)
@@ -199,8 +199,8 @@ class MainWindow(QMainWindow):
         # --- 昨天栏目 (中) ---
         gb1 = QGroupBox(f"日期 {self.date1} 符合条件的 Symbols（点击“替换”写入/覆盖）")
         lay1 = QVBoxLayout()
-        self.table1 = QTableWidget(0, 4)
-        self.table1.setHorizontalHeaderLabels(["Symbol", "时段", "百分比(%)", "操作"])
+        self.table1 = QTableWidget(0, 5)
+        self.table1.setHorizontalHeaderLabels(["Symbol", "时段", "百分比(%)", "操作", "—————————————"])
         self.table1.verticalHeader().setVisible(False)
         self.table1.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table1.customContextMenuRequested.connect(self.show_table_context_menu)
@@ -210,8 +210,8 @@ class MainWindow(QMainWindow):
         # --- 2. UI更新：新增今天栏目 (右) ---
         gb_today = QGroupBox(f"日期 {self.today_str} (盘前 BMO)")
         lay_today = QVBoxLayout()
-        self.table_today = QTableWidget(0, 2) # 只有两列
-        self.table_today.setHorizontalHeaderLabels(["Symbol", "时段"])
+        self.table_today = QTableWidget(0, 3) # 只有两列
+        self.table_today.setHorizontalHeaderLabels(["Symbol", "时段", "————————————————————————"])
         self.table_today.verticalHeader().setVisible(False)
         self.table_today.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table_today.customContextMenuRequested.connect(self.show_table_context_menu)
@@ -220,17 +220,17 @@ class MainWindow(QMainWindow):
 
         # --- 3. UI更新：调整布局顺序和伸缩比例 ---
         # 按 左-中-右 的顺序添加 GroupBox
-        hlay.addWidget(gb2, 2)          # 前天 (左)，伸缩比例为3
-        hlay.addWidget(gb1, 2)          # 昨天 (中)，伸缩比例为3
-        hlay.addWidget(gb_today, 1)     # 今天 (右)，伸缩比例为1，使其更窄
+        hlay.addWidget(gb2, 5)          # 前天 (左)，伸缩比例为3
+        hlay.addWidget(gb1, 5)          # 昨天 (中)，伸缩比例为3
+        hlay.addWidget(gb_today, 4)     # 今天 (右)，伸缩比例为1，使其更窄
 
-        gb2 .setMaximumWidth(400)
-        gb1 .setMaximumWidth(300)
-        gb_today.setMaximumWidth(200)
+        gb2 .setMaximumWidth(500)
+        gb1 .setMaximumWidth(400)
+        gb_today.setMaximumWidth(400)
 
         cw.setLayout(hlay)
         self.setCentralWidget(cw)
-        self.resize(600, 1000) # 增加了宽度以容纳新栏目
+        self.resize(1400, 1000) # 增加了宽度以容纳新栏目
         self.center_window()
 
     def apply_stylesheet(self):
