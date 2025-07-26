@@ -190,6 +190,7 @@ def query_database(db_path, table_name, condition):
 # *** 函数已修改为非阻塞式调用 ***
 def execute_external_script(script_type, keyword, group=None, main_window=None):
     base_path = '/Users/yanzhang/Documents/Financial_System'
+    python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
     script_configs = {
         'blacklist': f'{base_path}/Operations/Insert_Blacklist.py',
         'similar': f'{base_path}/Query/Find_Similar_Tag.py',
@@ -203,12 +204,25 @@ def execute_external_script(script_type, keyword, group=None, main_window=None):
     }
 
     try:
-        # 使用 Popen 进行非阻塞调用
-        if script_type in ['futu', 'kimi']:
-            subprocess.Popen(['osascript', script_configs[script_type], keyword]) # <--- 修改为 Popen
+        # 1) 对于 “编辑 Tags”、“新增事件”、“编辑事件” —— 阻塞调用，跑完后刷新 UI
+        if script_type in ('tags', 'event_input', 'event_editor'):
+            if script_type in ('futu', 'kimi'):
+                cmd = ['osascript', script_configs[script_type], keyword]
+            else:
+                cmd = [python_path, script_configs[script_type], keyword]
+            subprocess.run(cmd)   # ⬅︎ 阻塞，等脚本写完文件
+
+            # 重新 load 外部文件，并刷新面板
+            if main_window:
+                global json_data, compare_data
+                json_data    = load_json(DESCRIPTION_PATH)
+                main_window.refresh_selection_window()
         else:
-            python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
-            subprocess.Popen([python_path, script_configs[script_type], keyword]) # <--- 修改为 Popen
+            if script_type in ['futu', 'kimi']:
+                subprocess.Popen(['osascript', script_configs[script_type], keyword]) # <--- 修改为 Popen
+            else:
+                python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
+                subprocess.Popen([python_path, script_configs[script_type], keyword]) # <--- 修改为 Popen
 
         # 注意：因为 Popen 是非阻塞的，如果 'blacklist' 脚本也需要时间运行，
         # delete_item 可能会在脚本完成前执行。
@@ -393,8 +407,8 @@ class MainWindow(QMainWindow):
         actions = [
             ("在富途中搜索", lambda: execute_external_script('futu', keyword)),
             None,
-            ("添加新事件", lambda: execute_external_script('event_input', keyword)),
-            ("编辑事件", lambda: execute_external_script('event_editor', keyword)),
+            ("添加新事件",    lambda: execute_external_script('event_input', keyword, group, self)),
++            ("编辑事件",      lambda: execute_external_script('event_editor', keyword, group, self)),
             None,
             ("删除", lambda: self.delete_item(keyword, group)),
             ("改名", lambda: self.rename_item(keyword, group)),
@@ -408,8 +422,7 @@ class MainWindow(QMainWindow):
             ("添加到 Earning", lambda: execute_external_script('earning', keyword)),
             ("编辑 Earing DB", lambda: execute_external_script('editor_earning', keyword)),
             None,
-            ("编辑 Tags", lambda: execute_external_script('tags', keyword)),
-            
+            ("编辑 Tags",     lambda: execute_external_script('tags', keyword, group, self)),
             ("找相似", lambda: execute_external_script('similar', keyword)),
             None,
             ("加入黑名单", lambda: execute_external_script('blacklist', keyword, group, self)),
@@ -461,6 +474,12 @@ class MainWindow(QMainWindow):
 
     # ### 修改 ###: 更新此方法以使用新的数据库查询函数
     def on_keyword_selected_chart(self, value):
+        # —— 在真正 plot 之前，先 reload 一下外部可能改动过的文件 —— 
+        global json_data, compare_data
+        try:
+            json_data    = load_json(DESCRIPTION_PATH)
+        except Exception as e:
+            print("重新加载 description/compare 数据出错:", e)
         sector = next((s for s, names in sector_data.items() if value in names), None)
         if sector:
             self.symbol_manager.set_current_symbol(value)

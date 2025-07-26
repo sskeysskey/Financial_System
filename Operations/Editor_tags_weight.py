@@ -354,29 +354,49 @@ class TagEditor(QMainWindow):
             self.delete_selected_items(list_widget)
 
     def handle_item_move(self, source_weight, dest_weight, texts):
-        """处理项目在不同列表间移动的逻辑"""
-        # 1) 更新底层数据结构
-        for text in texts:
+        """处理项目在不同列表间移动的逻辑，添加重复检查"""
+        # 1) 先找出哪些标签在目标列表里已经存在
+        duplicates = [t for t in texts if t in self.data[dest_weight]]
+        if duplicates:
+            QMessageBox.warning(
+                self,
+                "重复标签",
+                f"以下标签已存在于权重 {dest_weight} 列表中，将被跳过：\n" +
+                "\n".join(duplicates)
+            )
+
+        # 2) 真正需要移动的标签
+        texts_to_move = [t for t in texts if t not in duplicates]
+        if not texts_to_move:
+            # 全部都是重复的，不做任何事
+            return
+
+        # 3) 更新底层数据结构
+        for text in texts_to_move:
+            # 从源列表数据中移除
             if text in self.data[source_weight]:
                 self.data[source_weight].remove(text)
-            if text not in self.data[dest_weight]:
-                self.data[dest_weight].append(text)
+            # 添加到目标列表数据中
+            self.data[dest_weight].append(text)
 
-        # 2) 在对应的两个 QListWidget 上局部更新
+        # 4) 在对应的两个 QListWidget 上局部更新
         src_list = self.list_widgets[source_weight]
         dst_list = self.list_widgets[dest_weight]
-        for text in texts:
-            # 从源列表移除
+
+        # 4.1 先移除源列表里的那些被移动的项
+        for text in texts_to_move:
             for row in range(src_list.count()):
                 if src_list.item(row).text() == text:
                     src_list.takeItem(row)
                     break
-            # 往目标列表添加
+
+        # 4.2 再把它们加到目标列表里
+        for text in texts_to_move:
             item = QListWidgetItem(text)
             item.setFlags(item.flags() | Qt.ItemIsEditable)
             dst_list.addItem(item)
 
-        # 3) 标记为脏
+        # 5) 标记为脏
         self._mark_as_dirty()
 
     def save_data(self, notify=True):

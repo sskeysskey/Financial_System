@@ -242,10 +242,10 @@ class MainWindow(QMainWindow):
         }
         QPushButton#SymbolButton[period="BMO"] { background-color: #3498db; color: black; }
         QPushButton#SymbolButton[period="BMO"]:hover { background-color: #2980b9; }
-        QPushButton#SymbolButton[period="AMC"] { background-color: #2c3e50; color: white; }
-        QPushButton#SymbolButton[period="AMC"]:hover { background-color: #1f2d3d; }
-        QPushButton#SymbolButton[period="TNS"] { background-color: #8e44ad; color: white; }
-        QPushButton#SymbolButton[period="TNS"]:hover { background-color: #732d91; }
+        QPushButton#SymbolButton[period="AMC"] { background-color: #8e44ad; color: white; }
+        QPushButton#SymbolButton[period="AMC"]:hover { background-color: #732d91; }
+        QPushButton#SymbolButton[period="TNS"] { background-color: #2c3e50; color: white; }
+        QPushButton#SymbolButton[period="TNS"]:hover { background-color: #1f2d3d; }
         QPushButton#ReplaceButton {
             background-color: #2ecc71; color: white; border: none;
             padding: 5px 15px; border-radius: 4px; font-weight: bold;
@@ -336,7 +336,9 @@ class MainWindow(QMainWindow):
         menu.exec_(QCursor.pos())
 
     def on_symbol_button_clicked(self, symbol):
-        """当Symbol按钮被点击时，从数据库获取数据并显示图表"""
+        """当 Symbol 按钮被点击时，从数据库获取数据并显示图表"""
+        # ←—— 在这里重新加载你可能修改过的文件
+        self.description_data = load_json(DESCRIPTION_PATH)
         sector = self.symbol_to_sector.get(symbol)
         if not sector:
             QMessageBox.warning(self, "错误", f"未找到 Symbol '{symbol}' 对应的板块(Sector)。")
