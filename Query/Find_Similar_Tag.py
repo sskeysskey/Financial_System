@@ -6,11 +6,10 @@ import subprocess
 import sys
 import time
 from decimal import Decimal
-from collections import OrderedDict
 
-from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (QApplication, QInputDialog, QMessageBox, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-                             QPushButton, QGroupBox, QScrollArea, QLabel, QFrame, QMenu, QAction)
+                             QPushButton, QGroupBox, QScrollArea, QLabel, QMenu, QAction)
 from PyQt5.QtGui import QCursor, QFont
 
 # --- 检查并添加必要的路径 ---
@@ -167,24 +166,38 @@ def get_clipboard_content():
     except Exception:
         return ""
 
+# ### 修改 1: 替换为功能更全的 execute_external_script 函数 ###
 def execute_external_script(script_type, keyword):
-    """以非阻塞方式执行外部 Python 脚本 (来自 b.py)"""
+    """以非阻塞方式执行外部脚本（Python 或 AppleScript）"""
+    base_path = '/Users/yanzhang/Documents/Financial_System'
     script_configs = {
-        'tags': '/Users/yanzhang/Documents/Financial_System/Operations/Editor_Symbol_Tags.py',
+        'blacklist': f'{base_path}/Operations/Insert_Blacklist.py',
+        'similar':  f'{base_path}/Query/Find_Similar_Tag.py',
+        'tags':     f'{base_path}/Operations/Editor_Symbol_Tags.py',
+        'editor_earning': f'{base_path}/Operations/Editor_Earning_DB.py',
+        'earning':  f'{base_path}/Operations/Insert_Earning.py',
+        'futu':     '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt',
+        'kimi':     '/Users/yanzhang/Documents/ScriptEditor/CheckKimi_Earning.scpt'
     }
     script_path = script_configs.get(script_type)
     if not script_path:
         print(f"错误: 未知的脚本类型 '{script_type}'")
         return
+        
     try:
-        python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
-        subprocess.Popen([python_path, script_path, keyword])
+        if script_type in ['futu', 'kimi']:
+            # 执行 AppleScript
+            subprocess.Popen(['osascript', script_path, keyword])
+        else:
+            # 执行 Python 脚本
+            python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
+            subprocess.Popen([python_path, script_path, keyword])
     except Exception as e:
         print(f"执行脚本 '{script_path}' 时发生错误: {e}")
 
 
 # ======================================================================
-# 2. 全新的 PyQt5 主窗口类
+# 2. PyQt5 主窗口类
 # ======================================================================
 
 class SimilarityViewerWindow(QMainWindow):
@@ -361,12 +374,34 @@ class SimilarityViewerWindow(QMainWindow):
             QMessageBox.critical(self, "绘图错误", f"调用 plot_financial_data 时出错: {e}")
             print(f"调用 plot_financial_data 时出错: {e}")
 
+    # ### 修改 2: 扩展右键菜单的选项 ###
     def show_context_menu(self, symbol):
-        """创建并显示右键上下文菜单"""
+        """创建并显示一个包含丰富选项的右键上下文菜单"""
         menu = QMenu(self)
-        edit_action = QAction("编辑 Tags", self)
-        edit_action.triggered.connect(lambda: execute_external_script('tags', symbol))
-        menu.addAction(edit_action)
+        
+        # 定义菜单项：(文本, 回调函数)
+        actions = [
+            ("在富途中搜索", lambda: execute_external_script('futu', symbol)),
+            ("添加到 Earning", lambda: execute_external_script('earning', symbol)),
+            ("编辑 Earing DB", lambda: execute_external_script('editor_earning', symbol)),
+            ("Kimi检索财报", lambda: execute_external_script('kimi', symbol)),
+            None,  # 分隔符
+            ("编辑 Tags", lambda: execute_external_script('tags', symbol)),
+            ("找相似(旧版)", lambda: execute_external_script('similar', symbol)),
+            None,  # 分隔符
+            ("加入黑名单", lambda: execute_external_script('blacklist', symbol)),
+        ]
+
+        # 动态创建并添加菜单项
+        for item in actions:
+            if item is None:
+                menu.addSeparator()
+            else:
+                text, callback = item
+                action = QAction(text, self)
+                action.triggered.connect(callback)
+                menu.addAction(action)
+        
         menu.exec_(QCursor.pos())
 
     def get_tags_for_symbol(self, symbol):
@@ -436,6 +471,24 @@ class SimilarityViewerWindow(QMainWindow):
         QToolTip {
             border: 1px solid #C0C0C0;
             border-radius: 4px;
+        }
+        QMenu {
+            background-color: #3C3C3C;
+            color: #E0E0E0;
+            border: 1px solid #555;
+            font-size: 14px;
+        }
+        QMenu::item {
+            padding: 8px 25px 8px 20px;
+        }
+        QMenu::item:selected {
+            background-color: #007ACC;
+        }
+        QMenu::separator {
+            height: 1px;
+            background: #555;
+            margin-left: 10px;
+            margin-right: 10px;
         }
         """
 
