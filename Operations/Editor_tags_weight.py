@@ -208,7 +208,16 @@ class TagEditor(QMainWindow):
 
         # 让用户选择要添加到哪个栏目
         weights = sorted(self.data.keys(), key=float)
-        weight, ok = QInputDialog.getItem(self, "选择栏目", "请选择要添加标签的权重栏目:", weights, 0, False)
+        # 先计算“2.0”在列表中的下标，如果不存在就退回到 0
+        default_index = weights.index("2.0") if "2.0" in weights else 0
+        weight, ok = QInputDialog.getItem(
+            self,
+            "选择栏目",
+            "请选择要添加标签的权重栏目:",
+            weights,
+            default_index,
+            False
+        )
         
         if ok and weight:
             # 获取新标签名
@@ -419,9 +428,9 @@ class TagEditor(QMainWindow):
         # 只有在 is_dirty 为 True 时才弹出提示
         if self.is_dirty:
             reply = QMessageBox.question(self, '退出确认',
-                                         "您有未保存的更改。是否在退出前保存？",
-                                         QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
-                                         QMessageBox.Cancel)
+                             "您有未保存的更改。是否在退出前保存？",
+                             QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
+                             QMessageBox.Save)
 
             if reply == QMessageBox.Save:
                 self.save_data(notify=False)
