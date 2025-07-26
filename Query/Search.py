@@ -390,9 +390,6 @@ class MainWindow(QMainWindow):
 
     # --- 3. 简化 show_results 方法 ---
     def show_results(self, sorted_groups):
-        # 此方法现在接收一个已经排好序的组列表
-        # sorted_groups = [{'category_name': str, 'results': [(item, score), ...]}, ...]
-        
         # 检查是否有完全匹配symbol的结果，并自动打开
         search_term = self.input_field.text().strip().upper()
         if sorted_groups:
@@ -402,11 +399,6 @@ class MainWindow(QMainWindow):
                 first_item, first_score = first_group['results'][0]
                 if first_item.get('symbol', '').upper() == search_term:
                     self.open_symbol(first_item['symbol'])
-                    # 可以选择打开后关闭搜索窗口
-                    # self.close()
-                    # <-- 主要改动：移除了这里的 return 语句
-                    # 现在程序会打开图表，然后继续执行下面的代码来显示结果列表
-                    # return # 直接返回，不显示列表
 
         # 这个循环现在总会执行，无论是否自动打开了图表
         for group_data in sorted_groups:
