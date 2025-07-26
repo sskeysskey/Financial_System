@@ -16,10 +16,6 @@ from PyQt5.QtCore import Qt
 
 @lru_cache(maxsize=None)
 def fetch_data(db_path, table_name, name):
-    """
-    从数据库中获取指定名称的日期、价格、成交量数据。
-    如果表中存在volume字段，则一起返回，否则只返回date和price。
-    """
     with sqlite3.connect(db_path) as conn:
         cursor = conn.cursor()
         try:
@@ -38,10 +34,6 @@ def fetch_data(db_path, table_name, name):
             return result
 
 def smooth_curve(dates, prices, num_points=500):
-    """
-    通过插值生成更多的点来让曲线更平滑。
-    如果数据点少于四个，使用线性插值；否则使用三次插值。
-    """
     date_nums = matplotlib.dates.date2num(dates)
     if len(dates) < 4:
         interp_func = interp1d(date_nums, prices, kind='linear')
@@ -55,10 +47,6 @@ def smooth_curve(dates, prices, num_points=500):
     return new_dates, new_prices
 
 def process_data(data):
-    """
-    将数据库返回的数据处理为日期、价格、成交量三个列表。
-    如果数据为空，则抛出异常。
-    """
     if not data:
         raise ValueError("没有可供处理的数据")
         
@@ -75,16 +63,10 @@ def process_data(data):
     return dates, prices, volumes
 
 def display_dialog(message):
-    """
-    使用 AppleScript 在 macOS 上弹出提示对话框。
-    """
     applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
     subprocess.run(['osascript', '-e', applescript_code], check=True)
 
 def update_plot(line1, fill, line2, dates, prices, volumes, ax1, ax2, show_volume):
-    """
-    根据筛选后的数据更新图表。
-    """
     # 处理 prices 和 dates 可能为空的情况
     if not dates or not prices:
         line1.set_data([], [])
@@ -192,9 +174,6 @@ class InfoDialog(QDialog):
 
 # ### 新增：统一的外部脚本执行函数 ###
 def execute_external_script(script_type, keyword):
-    """
-    根据脚本类型和关键字，以非阻塞方式执行外部Python或AppleScript脚本。
-    """
     # 集中管理所有外部脚本的路径
     base_path = '/Users/yanzhang/Documents/Financial_System'
     script_configs = {
