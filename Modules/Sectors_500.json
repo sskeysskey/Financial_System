@@ -25,7 +25,6 @@
         "SPOT",
         "NTES",
         "AMX",
-        "CHTR",
         "RBLX",
         "APP"
     ],
@@ -95,7 +94,8 @@
         "MPLX",
         "E",
         "PSX",
-        "LNG"
+        "LNG",
+        "SLB"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -230,7 +230,8 @@
         "PCAR",
         "GWW",
         "LHX",
-        "CMI"
+        "CMI",
+        "VRT"
     ],
     "Real_Estate": [
         "PLD",
@@ -294,7 +295,8 @@
         "NXPI",
         "PAYX",
         "TEL",
-        "TEAM"
+        "TEAM",
+        "DDOG"
     ],
     "Utilities": [
         "NEE",

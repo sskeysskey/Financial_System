@@ -40,7 +40,9 @@
     },
     "Financial_Services": {
         "BRK-A": "",
-        "AJG": ""
+        "AJG": "",
+        "CB": "",
+        "RLI": ""
     },
     "Healthcare": {
         "ELV": "",
@@ -125,8 +127,9 @@
         "CHE": ""
     },
     "Earning_Filter": {
-        "BROS": "",
-        "CALM": ""
+        "BJ": "",
+        "GME": "",
+        "SNV": ""
     },
     "Currencies": {
         "DXY": "美元指数",

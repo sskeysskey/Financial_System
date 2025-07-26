@@ -582,7 +582,7 @@ class MainWindow(QMainWindow):
                 op_btn.setEnabled(False)
             else:
                 op_btn.setText("替换")
-                op_btn.clicked.connect(partial(self.on_replace_date2, symbol, pct_new, record_id, row, op_btn))
+                op_btn.clicked.connect(partial(self.on_replace_date2, symbol, pct_new, record_id, op_btn))
 
             container = QWidget()
             hl = QHBoxLayout(container)
@@ -597,15 +597,46 @@ class MainWindow(QMainWindow):
         for i in range(len(tags_to_add) - 1, -1, -1):
             self._add_tag_row(table, i, tags_to_add[i])
 
-    def on_replace_date2(self, symbol, new_pct, record_id, row, btn):
+    def on_replace_date2(self, symbol, new_pct, record_id, btn):
         """替换三天内的旧记录"""
-        reply = QMessageBox.question(self, "确认替换", f"真的要把 {symbol} 最近一次 ({self.three_days_ago} 之后) 的旧百分比替换成 {new_pct}% 吗？", QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
-        if reply != QMessageBox.Yes: return
+        reply = QMessageBox.question(
+            self,
+            "确认替换",
+            f"真的要把 {symbol} 最近一次 ({self.three_days_ago} 之后) 的旧百分比替换成 {new_pct}% 吗？",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.Yes
+        )
+        if reply != QMessageBox.Yes:
+            return
 
-        self.cur.execute("UPDATE Earning SET price=?, date=? WHERE id=?", (new_pct, self.date1, record_id))
+        # 1. 更新数据库
+        self.cur.execute(
+            "UPDATE Earning SET price=?, date=? WHERE id=?",
+            (new_pct, self.date1, record_id)
+        )
         self.conn.commit()
 
-        self.table2.setItem(row, 3, QTableWidgetItem(str(new_pct)))
+        # 2. 在表格中找到这个按钮所在的行
+        table = self.table2
+        found_row = None
+        for r in range(table.rowCount()):
+            container = table.cellWidget(r, 4)  # 我们把操作按钮放在第 4 列
+            if container:
+                # container 是一个 QWidget，我们把按钮放在它的 layout[0]
+                btn_in_cell = container.layout().itemAt(0).widget()
+                if btn_in_cell is btn:
+                    found_row = r
+                    break
+
+        # 3. 更新“旧百分比”这一列（第 3 列）
+        if found_row is not None:
+            item_old = table.item(found_row, 3)
+            if item_old:
+                item_old.setText(str(new_pct))
+            else:
+                table.setItem(found_row, 3, QTableWidgetItem(str(new_pct)))
+
+        # 4. 禁用按钮并改文字
         btn.setText("已替换")
         btn.setEnabled(False)
 
