@@ -290,7 +290,10 @@ class SimilarityViewerWindow(QMainWindow):
         compare_value = self.compare_data.get(self.source_symbol, "")
         compare_label = QLabel(compare_value)
         compare_label.setFixedWidth(120)
-        compare_label.setObjectName("CompareLabel")
+        if re.search(r'-\d+(\.\d+)?%', compare_value):
+            compare_label.setStyleSheet("color: #EF9A9A;")
+        else:
+            compare_label.setObjectName("CompareLabel")
         compare_label.setAlignment(Qt.AlignCenter)
         
         # ### 修改 2: 使用富文本(HTML)格式化标签，放大字体并突出权重数字 ###
@@ -337,7 +340,12 @@ class SimilarityViewerWindow(QMainWindow):
         compare_value = self.compare_data.get(sym, '')
         compare_label = QLabel(compare_value)
         compare_label.setFixedWidth(120)
-        compare_label.setObjectName("CompareLabel")
+        # 如果是负数百分比，就整行显示淡红色，否则使用原有的绿色
+        if re.search(r'-\d+(\.\d+)?%', compare_value):
+            compare_label.setStyleSheet("color: #EF9A9A;")
+        else:
+            compare_label.setObjectName("CompareLabel")
+        compare_label.setAlignment(Qt.AlignCenter)
 
         # 4. 所有 Tags
         tags_str = ",   ".join(all_tags)
