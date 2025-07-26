@@ -87,27 +87,27 @@ class SymbolManager:
 # 工具 / 辅助函数
 # ----------------------------------------------------------------------
 
-# --- 2. 从 panel.py 移植过来的函数 ---
 def execute_external_script(script_type, keyword):
-    """
-    使用非阻塞方式执行外部脚本。
-    """
+    """以非阻塞方式执行外部脚本（Python 或 AppleScript）"""
     base_path = '/Users/yanzhang/Documents/Financial_System'
-    # 我们只需要 'tags' 的配置，但为了完整性，可以保留其他配置
     script_configs = {
-        'tags': f'{base_path}/Operations/Editor_Symbol_Tags.py',
-        # ... 其他脚本配置可以放在这里 ...
+        'similar':  f'{base_path}/Query/Find_Similar_Tag.py',
+        'tags':     f'{base_path}/Operations/Editor_Symbol_Tags.py',
+        'futu':     '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt',
     }
-
     script_path = script_configs.get(script_type)
     if not script_path:
         print(f"错误: 未知的脚本类型 '{script_type}'")
         return
-
+        
     try:
-        python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
-        # 使用 Popen 进行非阻塞调用
-        subprocess.Popen([python_path, script_path, keyword])
+        if script_type in ['futu']:
+            # 执行 AppleScript
+            subprocess.Popen(['osascript', script_path, keyword])
+        else:
+            # 执行 Python 脚本
+            python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
+            subprocess.Popen([python_path, script_path, keyword])
     except Exception as e:
         print(f"执行脚本 '{script_path}' 时发生错误: {e}")
 
@@ -286,6 +286,27 @@ class HighLowWindow(QMainWindow):
             }}
             """
         qss += """
+        /* 整体背景和边框 */
+        QMenu {
+            background-color: #2C2C2C;
+            color: #E0E0E0;
+            border: 1px solid #555;
+        }
+        /* 菜单项常态与悬停 */
+        QMenu::item {
+            padding: 6px 25px 6px 20px;
+            background: transparent;
+        }
+        QMenu::item:selected {
+            background-color: #007ACC;
+            color: white;
+        }
+        /* 分隔符 */
+        QMenu::separator {
+            height: 1px;
+            background: #555;
+            margin: 4px 10px 4px 10px;
+        }
         QGroupBox {
             font-size: 16px;
             font-weight: bold;
@@ -417,22 +438,26 @@ class HighLowWindow(QMainWindow):
     # --- 3. 新增方法：用于创建和显示右键菜单 ---
     def show_context_menu(self, symbol):
         """
-        创建并显示一个只包含“编辑 Tags”的右键菜单。
+        创建并显示包含丰富选项的右键菜单
         """
-        menu = QMenu()
-        
-        # 创建一个 QAction
-        edit_tags_action = QAction("编辑 Tags", self)
-        
-        # 将其 triggered 信号连接到执行外部脚本的函数
-        edit_tags_action.triggered.connect(
-            lambda: execute_external_script('tags', symbol)
-        )
-        
-        # 将 QAction 添加到菜单中
-        menu.addAction(edit_tags_action)
-        
-        # 在当前鼠标位置显示菜单
+        menu = QMenu(self)
+
+        # 定义要显示的菜单项：(显示文本, 回调函数)
+        actions = [
+            ("查相似",  lambda: execute_external_script('similar', symbol)),
+            ("富途查询",      lambda: execute_external_script('futu', symbol)),
+            ("——",            None),  # 分隔符
+            ("编辑 Tags",     lambda: execute_external_script('tags', symbol)),
+        ]
+
+        for text, callback in actions:
+            if callback is None:
+                menu.addSeparator()
+            else:
+                act = menu.addAction(text)
+                act.triggered.connect(callback)
+
+        # 在光标位置弹出菜单
         menu.exec_(QCursor.pos())
 
     def create_symbol_button(self, symbol):

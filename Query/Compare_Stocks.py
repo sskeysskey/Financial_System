@@ -71,25 +71,6 @@ def read_gainers_losers(filepath):
     else:
         return [], []
 
-def get_latest_two_dates(cursor, table_name, name):
-    query = f"""
-    SELECT date FROM {table_name}
-    WHERE name = ? 
-    ORDER BY date DESC
-    LIMIT 2
-    """
-    cursor.execute(query, (name,))
-    return cursor.fetchall()
-
-def get_prices(cursor, table_name, name, dates):
-    query = f"""
-    SELECT date, price, volume FROM {table_name}
-    WHERE name = ? AND date IN (?, ?)
-    ORDER BY date DESC
-    """
-    cursor.execute(query, (name, *dates))
-    return cursor.fetchall()
-
 def get_latest_available_dates(cursor, table_name, name, limit=4):
     query = f"""
     SELECT date FROM {table_name}
@@ -110,17 +91,29 @@ def get_prices_available_days(cursor, table_name, name, dates):
     cursor.execute(query, (name, *dates))
     return cursor.fetchall()
 
-def compare_today_yesterday(config_path, description_path, blacklist, interested_sectors, db_path, earnings_path, gainers_losers_path, output_path, error_file_path):
+def compare_today_yesterday(config_path,
+                            description_path,
+                            blacklist,
+                            interested_sectors,
+                            db_path,
+                            earnings_new_path,
+                            earnings_next_path,
+                            gainers_losers_path,
+                            output_path,
+                            error_file_path):
+    # 读取配置和描述
     with open(config_path, 'r') as file:
         data = json.load(file)
-
-    earnings_companies = read_earnings_release(earnings_path, error_file_path)
-    gainers, losers = read_gainers_losers(gainers_losers_path)
-
     with open(description_path, 'r') as file:
         description_data = json.load(file)
 
-    # 构建symbol到tag的映射
+    # 读取两份财报文件
+    earnings_new = read_earnings_release(earnings_new_path, error_file_path)
+    earnings_next = read_earnings_release(earnings_next_path, error_file_path)
+
+    gainers, losers = read_gainers_losers(gainers_losers_path)
+
+    # 构建 symbol -> tags 映射
     symbol_to_tags = {}
     for item in description_data.get("stocks", []) + description_data.get("etfs", []):
         symbol_to_tags[item["symbol"]] = item.get("tag", [])
@@ -130,87 +123,90 @@ def compare_today_yesterday(config_path, description_path, blacklist, interested
     with create_connection(db_path) as conn:
         cursor = conn.cursor()
         for table_name, names in data.items():
-            if table_name in interested_sectors:
-                for name in names:
-                    if name in blacklist:
-                        log_error_with_timestamp(f"跳过黑名单中的股票: {name}", error_file_path)
-                        continue
-                    try:
-                        results = get_latest_available_dates(cursor, table_name, name)
-                        if len(results) < 2:
-                            raise ValueError(f"无法找到 {table_name} 下的 {name} 足够的历史数据进行比较。")
+            if table_name not in interested_sectors:
+                continue
+            for name in names:
+                if name in blacklist:
+                    log_error_with_timestamp(f"跳过黑名单中的股票: {name}", error_file_path)
+                    continue
+                try:
+                    # 获取最新可用的日期列表
+                    date_rows = get_latest_available_dates(cursor, table_name, name)
+                    if len(date_rows) < 2:
+                        raise ValueError(f"无法找到 {table_name} 下的 {name} 足够的历史数据进行比较。")
+                    dates = [r[0] for r in date_rows]
+                    prices = get_prices_available_days(cursor, table_name, name, dates)
+                    if len(prices) < 2:
+                        raise ValueError(f"无法比较 {table_name} 下的 {name}，因为缺少必要的数据。")
 
-                        dates = [result[0] for result in results]
-                        prices = get_prices_available_days(cursor, table_name, name, dates)
+                    # 计算价格及成交量变化
+                    latest_price, latest_volume = prices[0][1], prices[0][2]
+                    prev_price, prev_volume = prices[1][1], prices[1][2]
+                    change = latest_price - prev_price
+                    percentage_change = (change / prev_price * 100) if prev_price else 0
+                    volume_change = latest_volume - prev_volume
+                    percentage_volume_change = (volume_change / prev_volume * 100) if prev_volume else 0
 
-                        if len(prices) >= 2:
-                            latest_price, second_latest_price = prices[0][1], prices[1][1]
-                            latest_volume, second_latest_volume = prices[0][2], prices[1][2]
-                            change = latest_price - second_latest_price
-                            if second_latest_price != 0:
-                                percentage_change = (change / second_latest_price) * 100
-                            else:
-                                raise ValueError(f" {table_name} 下的 {name} 的 second_latest_price 为零")
-                            volume_change = latest_volume - second_latest_volume
-                            if second_latest_volume != 0:
-                                percentage_volume_change = (volume_change / second_latest_volume) * 100
-                            else:
-                                raise ValueError(f" {table_name} 下的 {name} 的 second_latest_volume 为零")
+                    # 连续涨跌
+                    consecutive_rise = 0
+                    if len(prices) >= 3 and prices[0][1] > prices[1][1] > prices[2][1]:
+                        consecutive_rise = 2 + (1 if len(prices) >= 4 and prices[2][1] > prices[3][1] else 0)
+                    consecutive_fall = 0
+                    if len(prices) >= 3 and prices[0][1] < prices[1][1] < prices[2][1]:
+                        consecutive_fall = 2 + (1 if len(prices) >= 4 and prices[2][1] < prices[3][1] else 0)
 
-                            # 检查连续上涨
-                            consecutive_rise = 0
-                            if len(prices) >= 3 and prices[0][1] > prices[1][1] and prices[1][1] > prices[2][1]:
-                                consecutive_rise = 2
-                                if len(prices) >= 4 and prices[2][1] > prices[3][1]:
-                                    consecutive_rise = 3
+                    output.append((
+                        f"{table_name} {name}",
+                        percentage_change,
+                        latest_volume,
+                        percentage_volume_change,
+                        consecutive_rise,
+                        consecutive_fall
+                    ))
+                except Exception as e:
+                    log_error_with_timestamp(str(e), error_file_path)
 
-                            # 检查连续下跌
-                            consecutive_fall = 0
-                            if len(prices) >= 3 and prices[0][1] < prices[1][1] and prices[1][1] < prices[2][1]:
-                                consecutive_fall = 2
-                                if len(prices) >= 4 and prices[2][1] < prices[3][1]:
-                                    consecutive_fall = 3
-
-                            output.append((f"{table_name} {name}", percentage_change, latest_volume, percentage_volume_change, consecutive_rise, consecutive_fall))
-                        else:
-                            raise ValueError(f"无法比较 {table_name} 下的 {name}，因为缺少必要的数据。")
-                    except Exception as e:
-                        log_error_with_timestamp(str(e), error_file_path)
-
+    # 生成输出文件
     if output:
         output.sort(key=lambda x: x[1], reverse=True)
         with open(output_path, 'w') as file:
-            for line in output:
-                sector, company = line[0].rsplit(' ', 1)
-                percentage_change, latest_volume, percentage_volume_change, consecutive_rise, consecutive_fall = line[1], line[2], line[3], line[4], line[5]
-                
-                original_company = company  # 保留原始公司名称
-                if original_company in earnings_companies:
-                    company += f'.{earnings_companies[original_company]}'
-                if latest_volume > 5000000:
-                    company += '.*'
-                if original_company in gainers:
-                    company += '.>'
-                elif original_company in losers:
-                    company += '.<'
-                
-                # 添加连续上涨标记
-                if consecutive_rise == 2:
-                    company += '.+'
-                elif consecutive_rise == 3:
-                    company += '.++'
+            for entry in output:
+                sector, company = entry[0].rsplit(' ', 1)
+                pct_change, vol, pct_vol_change, cr, cf = entry[1:]
+                original = company
 
-                # 添加连续下跌标记
-                if consecutive_fall == 2:
+                # 来自 earnings_new 的标注
+                if original in earnings_new:
+                    company += f".{earnings_new[original]}"
+                # 来自 earnings_next 的标注
+                if original in earnings_next:
+                    company += f".{earnings_next[original]}"
+
+                # 大成交量标记
+                if vol > 5_000_000:
+                    company += '.*'
+                # 涨跌家数标记
+                if original in gainers:
+                    company += '.>'
+                elif original in losers:
+                    company += '.<'
+
+                # 连续涨跌标记
+                if cr == 2:
+                    company += '.+'
+                elif cr == 3:
+                    company += '.++'
+                if cf == 2:
                     company += '.-'
-                elif consecutive_fall == 3:
+                elif cf == 3:
                     company += '.--'
-                
-                # 获取对应symbol的tags
-                tags = symbol_to_tags.get(original_company, [])
-                tags_str = ', '.join(f'{tag}' for tag in tags)
-                
-                file.write(f"{sector:<25}{company:<15}: {percentage_change:>6.2f}%  {tags_str}\n")
+
+                # 标签
+                tags = symbol_to_tags.get(original, [])
+                tags_str = ', '.join(tags)
+
+                file.write(f"{sector:<25}{company:<15}: {pct_change:>6.2f}%  {tags_str}\n")
+
         print(f"{output_path} 已生成。")
     else:
         log_error_with_timestamp("输出为空，无法进行保存文件操作。", error_file_path)
@@ -219,47 +215,55 @@ def clean_old_backups(directory, prefix="CompareStock_", days=4):
     """删除备份目录中超过指定天数的文件"""
     now = datetime.now()
     cutoff = now - timedelta(days=days)
-
     for filename in os.listdir(directory):
-        if filename.startswith(prefix):  # 只处理特定前缀的文件
-            try:
-                date_str = filename.split('_')[-1].split('.')[0]  # 获取日期部分
-                file_date = datetime.strptime(date_str, '%y%m%d')
-                # 将年份设置为今年
-                file_date = file_date.replace(year=now.year)
-                if file_date < cutoff:
-                    file_path = os.path.join(directory, filename)
-                    os.remove(file_path)
-                    print(f"删除旧备份文件：{file_path}")
-            except Exception as e:
-                print(f"跳过文件：{filename}，原因：{e}")
+        if not filename.startswith(prefix):
+            continue
+        try:
+            date_str = filename.split('_')[-1].split('.')[0]
+            file_date = datetime.strptime(date_str, '%y%m%d').replace(year=now.year)
+            if file_date < cutoff:
+                os.remove(os.path.join(directory, filename))
+                print(f"删除旧备份文件：{filename}")
+        except Exception as e:
+            print(f"跳过文件：{filename}，原因：{e}")
 
 if __name__ == '__main__':
     config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
     description_path = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
     blacklist = []
-    interested_sectors = ["Basic_Materials", "Communication_Services", "Consumer_Cyclical",
-                          "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare", "Industrials",
-                          "Real_Estate", "Technology", "Utilities"]
+    interested_sectors = [
+        "Basic_Materials", "Communication_Services", "Consumer_Cyclical",
+        "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare",
+        "Industrials", "Real_Estate", "Technology", "Utilities"
+    ]
     file_path = '/Users/yanzhang/Documents/News/CompareStock.txt'
     directory_backup = '/Users/yanzhang/Documents/News/backup/site/'
     error_file_path = '/Users/yanzhang/Documents/News/Today_error.txt'
-    
+
+    # 备份并重命名昨日的 CompareStock.txt
     if os.path.exists(file_path):
         yesterday = datetime.now() - timedelta(days=1)
         timestamp = yesterday.strftime('%y%m%d')
         directory, filename = os.path.split(file_path)
-        name, extension = os.path.splitext(filename)
-        new_filename = f"{name}_{timestamp}{extension}"
+        name, ext = os.path.splitext(filename)
+        new_filename = f"{name}_{timestamp}{ext}"
         new_file_path = os.path.join(directory_backup, new_filename)
         os.rename(file_path, new_file_path)
         print(f"文件已重命名为: {new_file_path}")
     else:
         print("文件不存在")
-    
-    compare_today_yesterday(config_path, description_path, blacklist, interested_sectors,
-                            '/Users/yanzhang/Documents/Database/Finance.db',
-                            '/Users/yanzhang/Documents/News/Earnings_Release_new.txt',
-                            '/Users/yanzhang/Documents/Financial_System/Modules/Gainer_Loser.json',
-                            file_path, error_file_path)
+
+    compare_today_yesterday(
+        config_path,
+        description_path,
+        blacklist,
+        interested_sectors,
+        '/Users/yanzhang/Documents/Database/Finance.db',
+        '/Users/yanzhang/Documents/News/Earnings_Release_new.txt',
+        '/Users/yanzhang/Documents/News/Earnings_Release_next.txt',
+        '/Users/yanzhang/Documents/Financial_System/Modules/Gainer_Loser.json',
+        file_path,
+        error_file_path
+    )
+
     clean_old_backups(directory_backup)

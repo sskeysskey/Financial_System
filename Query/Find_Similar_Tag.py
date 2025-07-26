@@ -1,6 +1,5 @@
 import json
 import re
-import os
 import pyperclip
 import subprocess
 import sys
@@ -23,10 +22,6 @@ try:
 except ImportError:
     print(f"错误：无法从路径 '{chart_input_path}' 导入 'plot_financial_data'。请检查文件是否存在。")
     sys.exit(1)
-
-# ======================================================================
-# 1. 从 a.py 和 b.py 整合的常量和辅助函数
-# ======================================================================
 
 # --- 文件路径 ---
 DESCRIPTION_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
@@ -133,9 +128,6 @@ def load_json_data(file_path):
         print(f"警告: 找不到 JSON 文件 {file_path}")
         return {}
 
-
-# --- UI 和系统交互函数 (来自 a.py 和 b.py) ---
-
 def get_stock_symbol(default_symbol=""):
     """使用 PyQt 对话框获取股票代码"""
     app = QApplication.instance() or QApplication(sys.argv)
@@ -237,7 +229,7 @@ class SimilarityViewerWindow(QMainWindow):
     def populate_ui(self, layout):
         """动态创建和填充UI元素"""
         # 1. 源 Symbol 信息
-        source_group = QGroupBox("源 (Source)")
+        source_group = QGroupBox("-")
         source_layout = QVBoxLayout()
         source_group.setLayout(source_layout)
         
@@ -253,7 +245,7 @@ class SimilarityViewerWindow(QMainWindow):
         categories_order = ['etfs', 'stocks'] if symbol_type == 'etf' else ['stocks', 'etfs']
 
         for category in categories_order:
-            category_title = "相关 ETFs (Related ETFs)" if category == 'etfs' else "相关股票 (Related Stocks)"
+            category_title = "-" if category == 'etfs' else "-"
             symbols_list = self.related_symbols.get(category, [])
             
             if not symbols_list: # 如果没有相关内容，则跳过
@@ -289,7 +281,7 @@ class SimilarityViewerWindow(QMainWindow):
         # --- 新增：源 symbol 的 Compare 值 ---
         compare_value = self.compare_data.get(self.source_symbol, "")
         compare_label = QLabel(compare_value)
-        compare_label.setFixedWidth(120)
+        compare_label.setFixedWidth(150)
         if re.search(r'-\d+(\.\d+)?%', compare_value):
             compare_label.setStyleSheet("color: #EF9A9A;")
         else:
@@ -308,7 +300,7 @@ class SimilarityViewerWindow(QMainWindow):
         html_tags_str = ", ".join(html_tags_parts)
         
         # 创建一个支持富文本的QLabel
-        label = QLabel(f"<div style='font-size: 22px;'><b>Tags:</b> {html_tags_str}</div>")
+        label = QLabel(f"<div style='font-size: 20px;'><b>   </b> {html_tags_str}</div>")
         label.setWordWrap(True)
         label.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
@@ -339,7 +331,7 @@ class SimilarityViewerWindow(QMainWindow):
         # 3. Compare 值
         compare_value = self.compare_data.get(sym, '')
         compare_label = QLabel(compare_value)
-        compare_label.setFixedWidth(120)
+        compare_label.setFixedWidth(140)
         # 如果是负数百分比，就整行显示淡红色，否则使用原有的绿色
         if re.search(r'-\d+(\.\d+)?%', compare_value):
             compare_label.setStyleSheet("color: #EF9A9A;")
@@ -359,7 +351,7 @@ class SimilarityViewerWindow(QMainWindow):
         layout.addWidget(tags_label)
         layout.setStretch(0, 2) # button
         layout.setStretch(1, 1) # weight
-        layout.setStretch(2, 2) # compare
+        layout.setStretch(2, 3) # compare
         layout.setStretch(3, 8) # tags
 
         return container
@@ -495,7 +487,7 @@ class SimilarityViewerWindow(QMainWindow):
             color: #D0D0D0;
         }
         #WeightLabel {
-            color: #F9A825; /* 黄色以突出权重 */
+            color: #BDBDBD; /* 黄色以突出权重 */
             font-weight: bold;
             background-color: #2E2E2E;
             border-radius: 4px;
