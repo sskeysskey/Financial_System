@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import json
 import pyperclip
@@ -439,7 +440,15 @@ class MainWindow(QMainWindow):
     def create_result_label(self, display_text, symbol, color, font_size):
         lbl = ClickableLabel()
         lbl.setTextFormat(Qt.RichText)
+        # 把“数字+前/后”这类子串渲染成淡黄色
         remainder = display_text[len(symbol):] if display_text.startswith(symbol) else display_text
+        # 高亮 “31前” “29后” 这类
+        # 匹配：一段数字后面跟 “前” 或 “后”
+        pattern = r"(\d+(?:前|后))"
+        # 替换成 <span style='color:#FFFF99'>…</span>
+        remainder = re.sub(pattern,
+                           r"<span style='color:#FFFF99'>\1</span>",
+                           remainder)
         label_html = (
             f"<span style='line-height: 2.2; letter-spacing: 1px;'>"
             f"<span style='color: cyan; font-size: {font_size}px;'>{symbol}</span>"
