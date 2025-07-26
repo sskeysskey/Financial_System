@@ -485,11 +485,13 @@
     "yellow_keywords": [
         "Nikkei",
         "CNYJPY",
+        "USDTWD",
+        "JPYI",
+        "CNYI",
         "Huangjin",
         "Silver",
         "URA",
         "EDV",
-        "EMB",
         "India",
         "Cocoa",
         "SPTI",
@@ -912,6 +914,7 @@
         "FXY"
     ],
     "purple_keywords": [
+        "VNM",
         "Bitcoin",
         "DXY",
         "DBC",

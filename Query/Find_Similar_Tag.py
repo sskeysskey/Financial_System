@@ -403,12 +403,13 @@ class SimilarityViewerWindow(QMainWindow):
         # 定义菜单项：(文本, 回调函数)
         actions = [
             ("在富途中搜索", lambda: execute_external_script('futu', symbol)),
+            ("编辑 Tags", lambda: execute_external_script('tags', symbol)),
+            None,  # 分隔符
+            ("找相似", lambda: execute_external_script('similar', symbol)),
+            None,  # 分隔符
             ("添加到 Earning", lambda: execute_external_script('earning', symbol)),
             ("编辑 Earing DB", lambda: execute_external_script('editor_earning', symbol)),
             ("Kimi检索财报", lambda: execute_external_script('kimi', symbol)),
-            None,  # 分隔符
-            ("编辑 Tags", lambda: execute_external_script('tags', symbol)),
-            ("找相似(旧版)", lambda: execute_external_script('similar', symbol)),
             None,  # 分隔符
             ("加入黑名单", lambda: execute_external_script('blacklist', symbol)),
         ]
