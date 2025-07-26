@@ -281,6 +281,7 @@ class MainWindow(QMainWindow):
 
         self.input_layout = QHBoxLayout()
         self.input_field = QLineEdit()
+        self.input_field.textChanged.connect(self.on_text_changed)
         self.input_field.setFixedHeight(40)
         self.input_field.setFont(QFont("Arial", 18))
         self.search_button = QPushButton("搜索")
@@ -363,6 +364,12 @@ class MainWindow(QMainWindow):
         self.worker.finished.connect(self.on_search_finished)
         self.worker.start()
 
+    def on_text_changed(self, text: str):
+         if not text.strip():
+             self.display_history()
+         else:
+             self.hide_history()
+             
     def on_search_finished(self):
         # 恢复按钮和输入框状态
         self.loading_label.hide()
