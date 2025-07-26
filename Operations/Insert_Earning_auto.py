@@ -412,8 +412,6 @@ class MainWindow(QMainWindow):
             
             tags = get_tags_for_symbol(symbol, self.description_data)
             tags_to_add.append(tags) # 收集tags
-            tooltip = ", ".join(tags) if tags else "无标签"
-            btn.setToolTip(f"<div style='font-size:18pt; background:lightyellow; color:#222222; padding:4px;'>{tooltip}</div>")
 
             # 1: 时段
             display_period = PERIOD_DISPLAY.get(period, period)
@@ -459,8 +457,6 @@ class MainWindow(QMainWindow):
             
             tags = get_tags_for_symbol(symbol, self.description_data)
             tags_to_add.append(tags)
-            tooltip = ", ".join(tags) if tags else "无标签"
-            btn.setToolTip(f"<div style='font-size:18pt; background:lightyellow; color:#222222; padding:4px;'>{tooltip}</div>")
 
             table.setItem(row, 1, QTableWidgetItem(PERIOD_DISPLAY.get(period, period)))
 
