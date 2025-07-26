@@ -10,7 +10,7 @@ from decimal import Decimal
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (QApplication, QInputDialog, QMessageBox, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QPushButton, QGroupBox, QScrollArea, QLabel, QMenu, QAction)
-from PyQt5.QtGui import QCursor, QFont
+from PyQt5.QtGui import QCursor
 
 # --- 检查并添加必要的路径 ---
 # 确保可以找到 Chart_input 模块
@@ -217,7 +217,8 @@ class SimilarityViewerWindow(QMainWindow):
     def init_ui(self):
         """初始化用户界面"""
         self.setWindowTitle(f"相似度分析: {self.source_symbol}")
-        self.setGeometry(150, 150, 1200, 800)
+        # ### 修改 3: 增加窗口默认宽度 ###
+        self.setGeometry(150, 150, 1600, 1000)
         self.setStyleSheet(self.get_stylesheet())
 
         # --- 创建主滚动区域 ---
@@ -283,16 +284,35 @@ class SimilarityViewerWindow(QMainWindow):
 
         # 左侧按钮
         button = self.create_symbol_button(self.source_symbol)
-        button.setMinimumHeight(40) # 让按钮更高一些
+        button.setMinimumHeight(20)
+
+        # --- 新增：源 symbol 的 Compare 值 ---
+        compare_value = self.compare_data.get(self.source_symbol, "")
+        compare_label = QLabel(compare_value)
+        compare_label.setFixedWidth(120)
+        compare_label.setObjectName("CompareLabel")
+        compare_label.setAlignment(Qt.AlignCenter)
         
-        # 右侧标签信息
-        tags_str = ", ".join([f"{tag}({float(weight):.2f})" for tag, weight in self.source_tags])
-        label = QLabel(f"<b>Tags:</b> {tags_str}")
+        # ### 修改 2: 使用富文本(HTML)格式化标签，放大字体并突出权重数字 ###
+        # 定义醒目的颜色
+        highlight_color = "#F9A825" # 与下方权重标签一致的黄色
+        
+        # 构建HTML格式的标签字符串
+        html_tags_parts = []
+        for tag, weight in self.source_tags:
+            html_tags_parts.append(f"{tag}  <font color='{highlight_color}'>{float(weight):.2f}</font>")
+        
+        html_tags_str = ", ".join(html_tags_parts)
+        
+        # 创建一个支持富文本的QLabel
+        label = QLabel(f"<div style='font-size: 22px;'><b>Tags:</b> {html_tags_str}</div>")
         label.setWordWrap(True)
         label.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
-        layout.addWidget(button, 1) # 按钮占 1 份
-        layout.addWidget(label, 4) # 标签占 4 份
+        # 按钮、Compare、Tags 三部分并排
+        layout.addWidget(button,       1)  # Symbol 按钮
+        layout.addWidget(compare_label,1)  # Compare 值
+        layout.addWidget(label,        4)  # Tags 显示
 
         return container
 
@@ -304,6 +324,7 @@ class SimilarityViewerWindow(QMainWindow):
 
         # 1. Symbol 按钮
         button = self.create_symbol_button(sym)
+        button.setMinimumHeight(60)
         
         # 2. 总权重
         total_weight = round(sum(float(w) for _, w in matched_tags), 2)
@@ -319,7 +340,7 @@ class SimilarityViewerWindow(QMainWindow):
         compare_label.setObjectName("CompareLabel")
 
         # 4. 所有 Tags
-        tags_str = ", ".join(all_tags)
+        tags_str = ",   ".join(all_tags)
         tags_label = QLabel(tags_str)
         tags_label.setObjectName("TagsLabel")
         tags_label.setWordWrap(True)
@@ -403,6 +424,16 @@ class SimilarityViewerWindow(QMainWindow):
                 menu.addAction(action)
         
         menu.exec_(QCursor.pos())
+        
+    # ### 修改 1: 增加键盘事件处理，实现ESC键关闭功能 ###
+    def keyPressEvent(self, event):
+        """重写键盘事件处理器"""
+        if event.key() == Qt.Key_Escape:
+            print("ESC被按下，正在关闭窗口...")
+            self.close()
+        else:
+            # 对于其他按键，调用父类的实现以保留默认行为
+            super().keyPressEvent(event)
 
     def get_tags_for_symbol(self, symbol):
         """辅助函数，为 Tooltip 获取 tags"""
@@ -421,7 +452,7 @@ class SimilarityViewerWindow(QMainWindow):
             background-color: #2E2E2E;
         }
         QGroupBox {
-            font-size: 16px;
+            font-size: 12px;
             font-weight: bold;
             color: #E0E0E0;
             border: 1px solid #555;
@@ -452,13 +483,13 @@ class SimilarityViewerWindow(QMainWindow):
             background-color: #0099FF;
         }
         QLabel {
-            font-size: 14px;
+            font-size: 20px;
             color: #D0D0D0;
         }
         #WeightLabel {
             color: #F9A825; /* 黄色以突出权重 */
             font-weight: bold;
-            background-color: #424242;
+            background-color: #2E2E2E;
             border-radius: 4px;
         }
         #CompareLabel {
@@ -491,10 +522,6 @@ class SimilarityViewerWindow(QMainWindow):
             margin-right: 10px;
         }
         """
-
-# ======================================================================
-# 3. 主执行入口
-# ======================================================================
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
