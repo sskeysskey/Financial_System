@@ -6,264 +6,496 @@ import subprocess
 import sys
 import time
 from decimal import Decimal
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (QApplication, QInputDialog, QMessageBox)
+from collections import OrderedDict
 
-def get_stock_symbol(default_symbol=""):
-    """获取股票代码"""
-    app = QApplication.instance() or QApplication(sys.argv)
-    
-    input_dialog = QInputDialog()
-    input_dialog.setWindowTitle("输入股票代码")
-    input_dialog.setLabelText("请输入股票代码:")
-    input_dialog.setTextValue(default_symbol)
-    
-    # 设置窗口标志，确保窗口始终在最前面
-    input_dialog.setWindowFlags(
-        Qt.WindowTitleHint | 
-        Qt.CustomizeWindowHint | 
-        Qt.WindowCloseButtonHint
-    )
-    
-    # 显示并激活窗口
-    input_dialog.show()
-    input_dialog.activateWindow()
-    input_dialog.raise_()
-    
-    # 强制获取焦点
-    input_dialog.setFocus(Qt.OtherFocusReason)
-    
-    if input_dialog.exec_() == QInputDialog.Accepted:
-        # 直接将输入转换为大写
-        return input_dialog.textValue().strip().upper()
-    return None
+from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtWidgets import (QApplication, QInputDialog, QMessageBox, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+                             QPushButton, QGroupBox, QScrollArea, QLabel, QFrame, QMenu, QAction)
+from PyQt5.QtGui import QCursor, QFont
 
-def get_clipboard_content():
-    """获取剪贴板内容，包含错误处理"""
-    try:
-        content = pyperclip.paste()
-        return content.strip() if content else ""
-    except Exception:
-        return ""
+# --- 检查并添加必要的路径 ---
+# 确保可以找到 Chart_input 模块
+chart_input_path = '/Users/yanzhang/Documents/Financial_System/Query'
+if chart_input_path not in sys.path:
+    sys.path.append(chart_input_path)
 
-def copy2clipboard():
-    """执行复制操作并等待复制完成"""
-    try:
-        script = '''
-        tell application "System Events"
-            keystroke "c" using {command down}
-        end tell
-        '''
-        subprocess.run(['osascript', '-e', script], check=True)
-        # 给系统一点时间来完成复制操作
-        time.sleep(0.5)
-        return True
-    except subprocess.CalledProcessError:
-        return False
+try:
+    from Chart_input import plot_financial_data
+except ImportError:
+    print(f"错误：无法从路径 '{chart_input_path}' 导入 'plot_financial_data'。请检查文件是否存在。")
+    sys.exit(1)
 
-# 读取权重配置文件
+# ======================================================================
+# 1. 从 a.py 和 b.py 整合的常量和辅助函数
+# ======================================================================
+
+# --- 文件路径 ---
+DESCRIPTION_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
+WEIGHT_CONFIG_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/tags_weight.json'
+COMPARE_DATA_PATH = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
+DB_PATH = '/Users/yanzhang/Documents/Database/Finance.db'
+SECTORS_ALL_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
+
+# --- 默认权重 ---
+DEFAULT_WEIGHT = Decimal('1')
+
+# --- 核心逻辑函数 (来自 a.py) ---
+
 def load_weight_groups():
-    weight_groups = {}
+    """读取权重配置文件"""
     try:
-        with open('/Users/yanzhang/Documents/Financial_System/Modules/tags_weight.json', 'r', encoding='utf-8') as f:
+        with open(WEIGHT_CONFIG_PATH, 'r', encoding='utf-8') as f:
             raw_data = json.load(f)
-            # 将字符串key转换为Decimal
-            weight_groups = {Decimal(k): v for k, v in raw_data.items()}
-        return weight_groups
+            return {Decimal(k): v for k, v in raw_data.items()}
     except Exception as e:
         print(f"加载权重配置文件时出错: {e}")
         return {}
 
-# 加载权重组
-weight_groups = load_weight_groups()
-
-# 动态生成标签权重配置表
-tags_weight_config = {tag: weight for weight, tags in weight_groups.items() for tag in tags}
-
-# 默认权重
-DEFAULT_WEIGHT = Decimal('1')
-
-def find_tags_by_symbol(symbol, data):
+def find_tags_by_symbol(symbol, data, tags_weight_config):
+    """根据 symbol 查找其 tags 和对应的权重"""
     tags_with_weight = []
-    # 遍历stocks和etfs，找到匹配的symbol并返回其tags
     for category in ['stocks', 'etfs']:
-        for item in data[category]:
-            if item['symbol'] == symbol:
-                for tag in item['tag']:
-                    # 从tags_weight_config中获取权重，找不到则使用默认权重
+        for item in data.get(category, []):
+            if item.get('symbol') == symbol:
+                for tag in item.get('tag', []):
                     weight = tags_weight_config.get(tag, DEFAULT_WEIGHT)
                     tags_with_weight.append((tag, weight))
                 return tags_with_weight
     return []
 
-# 添加新的判断函数
 def get_symbol_type(symbol, data):
-    """判断symbol属于stock还是etf"""
-    for item in data['stocks']:
-        if item['symbol'] == symbol:
+    """判断 symbol 属于 stock 还是 etf"""
+    for item in data.get('stocks', []):
+        if item.get('symbol') == symbol:
             return 'stock'
-    for item in data['etfs']:
-        if item['symbol'] == symbol:
+    for item in data.get('etfs', []):
+        if item.get('symbol') == symbol:
             return 'etf'
     return None
 
 def find_symbols_by_tags(target_tags_with_weight, data):
+    """根据目标 tags 查找所有相关的 symbols"""
     related_symbols = {'stocks': [], 'etfs': []}
-    
-    # 创建一个目标标签字典，键为小写标签，值为权重
     target_tags_dict = {tag.lower(): weight for tag, weight in target_tags_with_weight}
 
     for category in ['stocks', 'etfs']:
-        for item in data[category]:
+        for item in data.get(category, []):
             tags = item.get('tag', [])
             matched_tags = []
-            used_tags = set()  # 用于记录已经匹配过的标签
+            used_tags = set()
 
-            # 第一阶段：完全匹配，使用原始权重
+            # 完全匹配
             for tag in tags:
                 tag_lower = tag.lower()
                 if tag_lower in target_tags_dict and tag_lower not in used_tags:
                     matched_tags.append((tag, target_tags_dict[tag_lower]))
-                    used_tags.add(tag_lower)  # 标记该标签已被完全匹配
+                    used_tags.add(tag_lower)
 
-            # 第二阶段：部分匹配，根据原始权重大小决定使用哪个权重
+            # 部分匹配
             for tag in tags:
                 tag_lower = tag.lower()
                 if tag_lower in used_tags:
-                    continue  # 跳过已被完全匹配的标签
+                    continue
                 for target_tag, target_weight in target_tags_dict.items():
-                    # 检查是否为包含关系（任意一方包含另一方）
                     if (target_tag in tag_lower or tag_lower in target_tag) and tag_lower != target_tag:
                         if target_tag not in used_tags:
-                            # 如果原始标签权重>1，使用1.0，否则使用原始标签权重
-                            if target_weight > Decimal('1.0'):
-                                weight_to_use = Decimal('1.0')
-                            else:
-                                weight_to_use = target_weight
+                            weight_to_use = Decimal('1.0') if target_weight > Decimal('1.0') else target_weight
                             matched_tags.append((tag, weight_to_use))
                             used_tags.add(target_tag)
                         break
-
+            
             if matched_tags:
                 related_symbols[category].append((item['symbol'], matched_tags, tags))
 
-    # 按总权重降序排序
     for category in related_symbols:
-        related_symbols[category].sort(
-            key=lambda x: sum(weight for _, weight in x[1]),
-            reverse=True
-        )
+        related_symbols[category].sort(key=lambda x: sum(w for _, w in x[1]), reverse=True)
 
     return related_symbols
 
 def load_compare_data(file_path):
+    """加载 Compare_All.txt 数据"""
     compare_data = {}
-    with open(file_path, 'r') as file:
-        lines = file.readlines()
-        for line in lines:
-            if ':' in line:
-                sym, value = line.split(':', 1)
-                compare_data[sym.strip()] = value.strip()
+    try:
+        with open(file_path, 'r') as file:
+            for line in file:
+                if ':' in line:
+                    sym, value = line.split(':', 1)
+                    compare_data[sym.strip()] = value.strip()
+    except FileNotFoundError:
+        print(f"警告: 找不到文件 {file_path}")
     return compare_data
 
-def main(symbol):
-    # 加载 compare_all 文件中的数据
-    compare_data = load_compare_data('/Users/yanzhang/Documents/News/backup/Compare_All.txt')
-    
-    # 找到给定 symbol 的 tags 及其权重
-    target_tags_with_weight = find_tags_by_symbol(symbol, data)
-    
-    # 从 compare_data 里取出源 symbol 的百分比（如果没有则为空字符串）
-    compare_value = compare_data.get(symbol, '')
-    
-    # 将 Decimal 转换为浮点数并生成输出
-    # 在第一行里加上 compare_value
-    output_lines = [
-        f"Tags with weight for {symbol} ({compare_value}): "
-        f"{[(tag, float(weight)) for tag, weight in target_tags_with_weight]}"
-    ]
+def load_json_data(file_path):
+    """通用 JSON 加载函数"""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            return json.load(file)
+    except FileNotFoundError:
+        print(f"警告: 找不到 JSON 文件 {file_path}")
+        return {}
 
-    if not target_tags_with_weight:
-        output_lines.append("No tags found for the given symbol.\n")
-    else:
-        # 找到所有与这些tags模糊匹配的symbols和tags
-        related_symbols = find_symbols_by_tags(target_tags_with_weight, data)
-    
-        # 移除原始symbol以避免自引用
-        related_symbols['stocks'] = [item for item in related_symbols['stocks'] if item[0] != symbol]
-        related_symbols['etfs'] = [item for item in related_symbols['etfs'] if item[0] != symbol]
+
+# --- UI 和系统交互函数 (来自 a.py 和 b.py) ---
+
+def get_stock_symbol(default_symbol=""):
+    """使用 PyQt 对话框获取股票代码"""
+    app = QApplication.instance() or QApplication(sys.argv)
+    input_dialog = QInputDialog()
+    input_dialog.setWindowTitle("输入股票代码")
+    input_dialog.setLabelText("请输入股票代码:")
+    input_dialog.setTextValue(default_symbol)
+    input_dialog.setWindowFlags(input_dialog.windowFlags() | Qt.WindowStaysOnTopHint)
+    if input_dialog.exec_() == QInputDialog.Accepted:
+        return input_dialog.textValue().strip().upper()
+    return None
+
+def copy2clipboard():
+    """执行 macOS 复制命令"""
+    try:
+        script = 'tell application "System Events" to keystroke "c" using {command down}'
+        subprocess.run(['osascript', '-e', script], check=True, timeout=1)
+        time.sleep(0.2)
+        return True
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+        print(f"复制操作失败: {e}")
+        return False
+
+def get_clipboard_content():
+    """安全地获取剪贴板内容"""
+    try:
+        return pyperclip.paste().strip()
+    except Exception:
+        return ""
+
+def execute_external_script(script_type, keyword):
+    """以非阻塞方式执行外部 Python 脚本 (来自 b.py)"""
+    script_configs = {
+        'tags': '/Users/yanzhang/Documents/Financial_System/Operations/Editor_Symbol_Tags.py',
+    }
+    script_path = script_configs.get(script_type)
+    if not script_path:
+        print(f"错误: 未知的脚本类型 '{script_type}'")
+        return
+    try:
+        python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
+        subprocess.Popen([python_path, script_path, keyword])
+    except Exception as e:
+        print(f"执行脚本 '{script_path}' 时发生错误: {e}")
+
+
+# ======================================================================
+# 2. 全新的 PyQt5 主窗口类
+# ======================================================================
+
+class SimilarityViewerWindow(QMainWindow):
+    def __init__(self, source_symbol, source_tags, related_symbols, all_data):
+        super().__init__()
+        self.source_symbol = source_symbol
+        self.source_tags = source_tags
+        self.related_symbols = related_symbols
         
-        output_lines.append(f"\n")
+        # 将所有需要的数据存储为实例变量
+        self.json_data = all_data['description']
+        self.compare_data = all_data['compare']
+        self.sector_data = all_data['sectors']
+
+        self.init_ui()
+
+    def init_ui(self):
+        """初始化用户界面"""
+        self.setWindowTitle(f"相似度分析: {self.source_symbol}")
+        self.setGeometry(150, 150, 1200, 800)
+        self.setStyleSheet(self.get_stylesheet())
+
+        # --- 创建主滚动区域 ---
+        scroll_area = QScrollArea(self)
+        scroll_area.setWidgetResizable(True)
+        self.setCentralWidget(scroll_area)
+
+        # --- 主容器和布局 ---
+        main_widget = QWidget()
+        scroll_area.setWidget(main_widget)
+        main_layout = QVBoxLayout(main_widget)
+
+        # --- 填充内容 ---
+        self.populate_ui(main_layout)
+
+    def populate_ui(self, layout):
+        """动态创建和填充UI元素"""
+        # 1. 源 Symbol 信息
+        source_group = QGroupBox("源 (Source)")
+        source_layout = QVBoxLayout()
+        source_group.setLayout(source_layout)
         
-        # 获取symbol类型
-        symbol_type = get_symbol_type(symbol, data)
+        source_widget = self.create_source_symbol_widget()
+        source_layout.addWidget(source_widget)
+        layout.addWidget(source_group)
+
+        # 2. 创建一个水平布局来并排显示 Stocks 和 ETFs
+        related_layout = QHBoxLayout()
         
-        # 根据symbol类型决定显示顺序
+        symbol_type = get_symbol_type(self.source_symbol, self.json_data)
+        # 根据源 symbol 类型决定显示顺序
         categories_order = ['etfs', 'stocks'] if symbol_type == 'etf' else ['stocks', 'etfs']
-        
-        # 按确定的顺序输出结果
-        for category in categories_order:
-            title = "【ETFs】" if category == 'etfs' else "【Stocks】"
-            if related_symbols[category]:  # 只在有结果时显示类别标题
-                output_lines.append(f"\n{title}\n")
-                for sym, matched_tags, all_tags in related_symbols[category]:
-                    compare_value = compare_data.get(sym, '')
-                    total_weight = round(sum(float(weight) for _, weight in matched_tags), 2)
-                    output_lines.append(f"{sym:<7}{total_weight:<3} {compare_value:<12}{all_tags}\n")
-    
-    output_path = '/Users/yanzhang/Documents/News/similar.txt'
-    with open(output_path, 'w') as file:
-        file.writelines(output_lines)
 
-    # 自动打开文件
-    os.system(f'open "{output_path}"')
+        for category in categories_order:
+            category_title = "相关 ETFs (Related ETFs)" if category == 'etfs' else "相关股票 (Related Stocks)"
+            symbols_list = self.related_symbols.get(category, [])
+            
+            if not symbols_list: # 如果没有相关内容，则跳过
+                continue
+
+            group_box = QGroupBox(category_title)
+            group_layout = QVBoxLayout()
+            group_box.setLayout(group_layout)
+            group_layout.setAlignment(Qt.AlignTop) # 内容顶部对齐
+
+            for sym, matched_tags, all_tags in symbols_list:
+                # 排除源 symbol 自身
+                if sym == self.source_symbol:
+                    continue
+                widget = self.create_similar_symbol_widget(sym, matched_tags, all_tags)
+                group_layout.addWidget(widget)
+            
+            related_layout.addWidget(group_box)
+        
+        layout.addLayout(related_layout)
+        layout.addStretch(1) # 添加一个伸缩项，让所有内容向上推
+
+    def create_source_symbol_widget(self):
+        """为源 Symbol 创建一个专属的信息展示控件"""
+        container = QWidget()
+        layout = QHBoxLayout(container)
+        layout.setContentsMargins(5, 5, 5, 5)
+
+        # 左侧按钮
+        button = self.create_symbol_button(self.source_symbol)
+        button.setMinimumHeight(40) # 让按钮更高一些
+        
+        # 右侧标签信息
+        tags_str = ", ".join([f"{tag}({float(weight):.2f})" for tag, weight in self.source_tags])
+        label = QLabel(f"<b>Tags:</b> {tags_str}")
+        label.setWordWrap(True)
+        label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+
+        layout.addWidget(button, 1) # 按钮占 1 份
+        layout.addWidget(label, 4) # 标签占 4 份
+
+        return container
+
+    def create_similar_symbol_widget(self, sym, matched_tags, all_tags):
+        """为每个相似的 Symbol 创建一个信息行控件"""
+        container = QWidget()
+        layout = QHBoxLayout(container)
+        layout.setContentsMargins(0, 2, 0, 2) # 紧凑的垂直边距
+
+        # 1. Symbol 按钮
+        button = self.create_symbol_button(sym)
+        
+        # 2. 总权重
+        total_weight = round(sum(float(w) for _, w in matched_tags), 2)
+        weight_label = QLabel(f"{total_weight:.2f}")
+        weight_label.setFixedWidth(45)
+        weight_label.setObjectName("WeightLabel")
+        weight_label.setAlignment(Qt.AlignCenter)
+
+        # 3. Compare 值
+        compare_value = self.compare_data.get(sym, '')
+        compare_label = QLabel(compare_value)
+        compare_label.setFixedWidth(120)
+        compare_label.setObjectName("CompareLabel")
+
+        # 4. 所有 Tags
+        tags_str = ", ".join(all_tags)
+        tags_label = QLabel(tags_str)
+        tags_label.setObjectName("TagsLabel")
+        tags_label.setWordWrap(True)
+
+        layout.addWidget(button)
+        layout.addWidget(weight_label)
+        layout.addWidget(compare_label)
+        layout.addWidget(tags_label)
+        layout.setStretch(0, 2) # button
+        layout.setStretch(1, 1) # weight
+        layout.setStretch(2, 2) # compare
+        layout.setStretch(3, 8) # tags
+
+        return container
+
+    def create_symbol_button(self, symbol):
+        """创建并配置一个标准的 Symbol 按钮"""
+        button = QPushButton(symbol)
+        button.setCursor(QCursor(Qt.PointingHandCursor))
+        button.setFixedWidth(90)
+        button.setObjectName("SymbolButton")
+        
+        # 左键点击事件
+        button.clicked.connect(lambda _, s=symbol: self.on_symbol_click(s))
+        
+        # 设置 Tooltip
+        tags_info = self.get_tags_for_symbol(symbol)
+        if isinstance(tags_info, list):
+            tags_info = ", ".join(tags_info)
+        button.setToolTip(f"<div style='font-size: 16px; background-color: #FFFFE0; color: black; padding: 5px;'>{tags_info}</div>")
+        
+        # 右键菜单事件
+        button.setContextMenuPolicy(Qt.CustomContextMenu)
+        button.customContextMenuRequested.connect(lambda pos, s=symbol: self.show_context_menu(s))
+        
+        return button
+
+    def on_symbol_click(self, symbol):
+        """处理 Symbol 按钮的左键点击事件"""
+        print(f"正在为 '{symbol}' 生成图表...")
+        sector = next((s for s, names in self.sector_data.items() if symbol in names), None)
+        compare_value = self.compare_data.get(symbol, "N/A")
+        
+        try:
+            # 调用从 b.py 移植的绘图函数
+            plot_financial_data(
+                DB_PATH, sector, symbol, compare_value, 
+                "N/A", None, "N/A", # 传递占位符
+                self.json_data, '1Y', False
+            )
+        except Exception as e:
+            QMessageBox.critical(self, "绘图错误", f"调用 plot_financial_data 时出错: {e}")
+            print(f"调用 plot_financial_data 时出错: {e}")
+
+    def show_context_menu(self, symbol):
+        """创建并显示右键上下文菜单"""
+        menu = QMenu(self)
+        edit_action = QAction("编辑 Tags", self)
+        edit_action.triggered.connect(lambda: execute_external_script('tags', symbol))
+        menu.addAction(edit_action)
+        menu.exec_(QCursor.pos())
+
+    def get_tags_for_symbol(self, symbol):
+        """辅助函数，为 Tooltip 获取 tags"""
+        for item in self.json_data.get("stocks", []):
+            if item.get("symbol") == symbol:
+                return item.get("tag", ["无标签"])
+        for item in self.json_data.get("etfs", []):
+            if item.get("symbol") == symbol:
+                return item.get("tag", ["无标签"])
+        return ["未找到"]
+
+    def get_stylesheet(self):
+        """返回整个应用的 QSS 样式表"""
+        return """
+        QMainWindow {
+            background-color: #2E2E2E;
+        }
+        QGroupBox {
+            font-size: 16px;
+            font-weight: bold;
+            color: #E0E0E0;
+            border: 1px solid #555;
+            border-radius: 8px;
+            margin-top: 10px;
+            padding: 20px 10px 10px 10px;
+        }
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            subcontrol-position: top left;
+            padding: 0 10px;
+            color: #00AEEF; /* 亮蓝色标题 */
+            left: 10px;
+        }
+        QScrollArea {
+            border: none;
+        }
+        #SymbolButton {
+            background-color: #007ACC;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #005C99;
+        }
+        #SymbolButton:hover {
+            background-color: #0099FF;
+        }
+        QLabel {
+            font-size: 14px;
+            color: #D0D0D0;
+        }
+        #WeightLabel {
+            color: #F9A825; /* 黄色以突出权重 */
+            font-weight: bold;
+            background-color: #424242;
+            border-radius: 4px;
+        }
+        #CompareLabel {
+            color: #A5D6A7; /* 浅绿色 */
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+        }
+        #TagsLabel {
+            color: #BDBDBD; /* 灰色 */
+        }
+        QToolTip {
+            border: 1px solid #C0C0C0;
+            border-radius: 4px;
+        }
+        """
+
+# ======================================================================
+# 3. 主执行入口
+# ======================================================================
 
 if __name__ == '__main__':
-    try:
-        # 检查是否有命令行参数
-        if len(sys.argv) > 1:
-            # 使用命令行参数作为输入
-            symbol = sys.argv[1]
-        else:
-            pyperclip.copy('')
-            # 执行复制操作
-            copy2clipboard()
-            
-            # 获取复制后的剪贴板内容
-            new_content = get_clipboard_content()
-            
-            # 根据剪贴板内容变化确定股票代码
-            if not new_content:
-                symbol = get_stock_symbol()
-                if symbol is None:  # 用户点击取消
-                    sys.exit()  # 使用sys.exit()替代return
+    app = QApplication(sys.argv)
+    
+    # --- 步骤 1: 获取股票代码 (来自 a.py) ---
+    symbol = None
+    if len(sys.argv) > 1:
+        symbol = sys.argv[1].strip().upper()
+    else:
+        pyperclip.copy('')
+        if copy2clipboard():
+            content = get_clipboard_content()
+            if content and re.match('^[A-Z.-]+$', content):
+                symbol = content
             else:
-                if re.match('^[A-Z-]+$', new_content):
-                    # symbol = get_stock_symbol(new_content)
-                    symbol = new_content
-                else:
-                    symbol = get_stock_symbol(new_content)
-                if symbol is None:  # 用户点击取消
-                    sys.exit()  # 使用sys.exit()替代return
-                    
-            if not symbol:  # 检查股票代码是否为空
-                QMessageBox.warning(None, "警告", "股票代码不能为空")
-                sys.exit()  # 使用sys.exit()替代return
+                symbol = get_stock_symbol(content)
+        else:
+            symbol = get_stock_symbol()
 
-        # 读取JSON文件
-        with open('/Users/yanzhang/Documents/Financial_System/Modules/description.json', 'r') as file:
-            data = json.load(file)
+    if not symbol:
+        QMessageBox.warning(None, "警告", "未提供有效的股票代码，程序将退出。")
+        sys.exit()
 
-        # 执行主程序
-        main(symbol)
-        time.sleep(2)
-
-        try:
-            os.remove('/Users/yanzhang/Documents/News/similar.txt')
-            print("文件已删除")
-        except OSError as e:
-            print(f"删除文件时出错: {e}")
-            
+    # --- 步骤 2: 加载所有数据 ---
+    print("正在加载所需数据...")
+    try:
+        description_data = load_json_data(DESCRIPTION_PATH)
+        weight_groups = load_weight_groups()
+        tags_weight_config = {tag: weight for weight, tags in weight_groups.items() for tag in tags}
+        compare_data = load_compare_data(COMPARE_DATA_PATH)
+        sector_data = load_json_data(SECTORS_ALL_PATH)
+        
+        all_data_package = {
+            "description": description_data,
+            "compare": compare_data,
+            "sectors": sector_data
+        }
     except Exception as e:
-        print(f"程序执行出错: {e}")
+        QMessageBox.critical(None, "错误", f"加载数据文件时出错: {e}")
         sys.exit(1)
+
+    # --- 步骤 3: 执行核心分析逻辑 (来自 a.py 的 main 函数) ---
+    print(f"正在为 '{symbol}' 分析相似度...")
+    target_tags = find_tags_by_symbol(symbol, description_data, tags_weight_config)
+
+    if not target_tags:
+        QMessageBox.information(None, "未找到", f"在数据库中找不到符号 '{symbol}' 的标签。")
+        sys.exit()
+
+    related_symbols = find_symbols_by_tags(target_tags, description_data)
+    
+    # --- 步骤 4: 创建并显示GUI窗口 ---
+    print("分析完成，正在启动UI...")
+    main_window = SimilarityViewerWindow(symbol, target_tags, related_symbols, all_data_package)
+    main_window.show()
+    
+    sys.exit(app.exec_())

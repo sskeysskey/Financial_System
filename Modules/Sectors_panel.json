@@ -18,9 +18,7 @@
         "LKQ": "",
         "KMX": ""
     },
-    "Utilities": {
-        "POR": ""
-    },
+    "Utilities": {},
     "Consumer_Defensive": {
         "FLO": "",
         "PG": "",
@@ -30,19 +28,16 @@
     },
     "Industrials": {
         "CPRT": "",
-        "KBR": "",
-        "EXPO": "",
-        "LMT": "",
-        "OTIS": ""
+        "KBR": "政府服务",
+        "EXPO": "政府服务",
+        "LMT": ""
     },
     "Communication_Services": {
         "NFLX": ""
     },
     "Financial_Services": {
         "BRK-A": "",
-        "AJG": "",
-        "CB": "",
-        "RLI": ""
+        "AJG": ""
     },
     "Healthcare": {
         "ELV": "",
@@ -51,7 +46,7 @@
         "CVS": "",
         "MOH": "",
         "UHS": "",
-        "SEM": ""
+        "SEM": "医院"
     },
     "Bonds": {
         "US10Y": "",
@@ -127,9 +122,7 @@
         "CHE": ""
     },
     "Earning_Filter": {
-        "BJ": "",
-        "GME": "",
-        "SNV": ""
+        "BJ": ""
     },
     "Currencies": {
         "DXY": "美元指数",
