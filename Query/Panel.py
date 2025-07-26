@@ -391,41 +391,42 @@ class MainWindow(QMainWindow):
 
                         # 设置右键菜单
                         button.setContextMenuPolicy(Qt.CustomContextMenu)
-                        # 修正后的代码
                         button.customContextMenuRequested.connect(
-                            # lambda 仍然会接收到 pos 信号，但我们忽略它
-                            lambda pos, k=keyword, g=sector: self.show_context_menu(k, g)
+                            # 收到局部坐标 pos，把它映射为全局坐标，再连同 keyword, group 一并传给 show_context_menu
+                            lambda local_pos, btn=button, k=keyword, g=sector:
+                                self.show_context_menu(btn.mapToGlobal(local_pos), k, g)
                         )
                         
                         row_layout.addWidget(button)
                         group_box.layout().addWidget(button_container)
 
-    def show_context_menu(self, keyword, group):
-        """创建并显示右键菜单 (已添加查询数据库功能)"""
-        menu = QMenu()
-        
+    # --------------------------------------------------
+    # 新：接收三个参数：global_pos、keyword、group
+    # --------------------------------------------------
+    def show_context_menu(self, global_pos, keyword, group):
+        # 给 menu 指定 parent，防止被垃圾回收
+        menu = QMenu(self)
+
         actions = [
             ("在富途中搜索", lambda: execute_external_script('futu', keyword)),
             None,
             ("添加新事件",    lambda: execute_external_script('event_input', keyword, group, self)),
-+            ("编辑事件",      lambda: execute_external_script('event_editor', keyword, group, self)),
+            ("编辑事件",      lambda: execute_external_script('event_editor', keyword, group, self)),
             None,
-            ("删除", lambda: self.delete_item(keyword, group)),
-            ("改名", lambda: self.rename_item(keyword, group)),
-            ("移动到 Qualified_Symbol", lambda: self.move_item_to_qualified_symbol(keyword, group)),
-            ### 修改处：在这里添加新的菜单项 ###
-            ("移回到 Earning_Filter", lambda: self.move_item_to_earning_filter(keyword, group)),
+            ("删除",          lambda: self.delete_item(keyword, group)),
+            ("改名",          lambda: self.rename_item(keyword, group)),
+            ("移动到 Qualified_Symbol",      lambda: self.move_item_to_qualified_symbol(keyword, group)),
+            ("移回到 Earning_Filter",       lambda: self.move_item_to_earning_filter(keyword, group)),
             None,
-            # --- 在这里添加新菜单项 ---
-            ("查询数据库...", lambda: self.on_keyword_selected(keyword)),
-            ("Kimi检索财报", lambda: execute_external_script('kimi', keyword)),
+            ("查询数据库...",  lambda: self.on_keyword_selected(keyword)),
+            ("Kimi检索财报",   lambda: execute_external_script('kimi', keyword)),
             ("添加到 Earning", lambda: execute_external_script('earning', keyword)),
             ("编辑 Earing DB", lambda: execute_external_script('editor_earning', keyword)),
             None,
-            ("编辑 Tags",     lambda: execute_external_script('tags', keyword, group, self)),
-            ("找相似", lambda: execute_external_script('similar', keyword)),
+            ("编辑 Tags",      lambda: execute_external_script('tags', keyword, group, self)),
+            ("找相似",         lambda: execute_external_script('similar', keyword)),
             None,
-            ("加入黑名单", lambda: execute_external_script('blacklist', keyword, group, self)),
+            ("加入黑名单",     lambda: execute_external_script('blacklist', keyword, group, self)),
         ]
 
         for item in actions:
@@ -433,16 +434,16 @@ class MainWindow(QMainWindow):
                 menu.addSeparator()
             else:
                 text, callback = item
-                action = QAction(text, self, triggered=callback)
-                # 如果symbol已经在目标分组，则禁用移动选项
+                act = menu.addAction(text)
+                act.triggered.connect(callback)
+                # 对“移动”菜单项做禁用判断
                 if text == "移动到 Qualified_Symbol" and group == "Qualified_Symbol":
-                    action.setEnabled(False)
+                    act.setEnabled(False)
                 if text == "移回到 Earning_Filter" and group == "Earning_Filter":
-                    action.setEnabled(False)
-                menu.addAction(action)
-                
-        # 使用 QCursor.pos() 获取当前鼠标的全局位置来显示菜单
-        menu.exec_(QCursor.pos()) # <--- 关键修改在这里
+                    act.setEnabled(False)
+
+        # 在指定的 global_pos 显示菜单
+        menu.exec_(global_pos)
 
     def refresh_selection_window(self):
         """重新加载配置并刷新UI"""
