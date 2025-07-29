@@ -316,10 +316,10 @@ class MainWindow(QMainWindow):
 
         menu_config = [
             ("在富途中搜索", "futu"), None,
-            ("新增 财报", "input_earning"), ("编辑 Earing 数据", "editor_earning"), None,
+            ("找相似", "similar"), None,
             ("编辑 Tags", "tags"), None,
-            ("新增事件", "event_input"), ("编辑事件", "event_editor"), None,
-            ("Kimi检索财报", "kimi"), ("找相似", "similar"), None,
+            ("新增 财报", "input_earning"), ("编辑 Earing 数据", "editor_earning"), None,
+            ("新增事件", "event_input"), ("编辑事件", "event_editor"), ("Kimi检索财报", "kimi"), None,
             ("加入黑名单", "blacklist"),
         ]
 

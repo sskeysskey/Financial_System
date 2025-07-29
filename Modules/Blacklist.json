@@ -540,7 +540,9 @@
         "ESGR",
         "JNPR",
         "CHX",
-        "ANSS"
+        "ANSS",
+        "HES",
+        "BPMC"
     ],
     "etf": [
         "VDE",

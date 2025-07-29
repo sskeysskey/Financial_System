@@ -1,7 +1,11 @@
 import os
 import re
+import sys
 import argparse
 from datetime import datetime
+
+# 锁文件，用于记录上次执行日期
+LOCK_FILE = os.path.join(os.path.dirname(__file__), '.last_run_date')
 
 # 文件路径
 files = {
@@ -26,6 +30,22 @@ next_files = {
 # 获取当前星期几，0是周一，6是周日
 current_day = datetime.now().weekday()
 
+def check_run_once_today():
+    """
+    每天只能执行一次。利用 LOCK_FILE 存储上次执行日期（格式 YYYY-MM-DD）。
+    如果日期与今天相同，直接退出；否则更新为今天。
+    """
+    today_str = datetime.now().strftime('%Y-%m-%d')
+    if os.path.exists(LOCK_FILE):
+        with open(LOCK_FILE, 'r') as lf:
+            last = lf.read().strip()
+        if last == today_str:
+            print(f"脚本今天 ({today_str}) 已执行过，退出。")
+            sys.exit(1)
+    # 更新为今天
+    with open(LOCK_FILE, 'w') as lf:
+        lf.write(today_str)
+
 def format_line(line):
     parts = re.split(r'\s*:\s*', line.strip(), 2)
     if len(parts) == 3:
@@ -44,13 +64,21 @@ def process_and_rename_files():
         next_files['Earnings_Release']
     ])
 
+    events_files_exist = all(os.path.exists(f) for f in [
+        new_files['Economic_Events'],
+        next_files['Economic_Events']
+    ])
+
     if earnings_files_exist:
         # 处理 Earnings_Release 的 new 文件
         process_earnings(new_files['Earnings_Release'], files['Earnings_Release'])
 
         # 重命名 Earnings_Release 的 next 文件为 new 文件
         os.rename(next_files['Earnings_Release'], new_files['Earnings_Release'])
+    else:
+        print("Earnings_Release 相关文件缺失，未执行任何操作。")
 
+    if events_files_exist:    
         # 如果 Economic_Events 的 new 文件存在，则处理它
         if os.path.exists(new_files['Economic_Events']):
             process_file(new_files['Economic_Events'], files['Economic_Events'])
@@ -59,12 +87,11 @@ def process_and_rename_files():
         if os.path.exists(next_files['Economic_Events']):
             os.rename(next_files['Economic_Events'], new_files['Economic_Events'])
     else:
-        print("Some required files are missing. No action taken.")
+        print("Economic_Events 相关文件缺失，未执行任何操作。")
 
 def process_earnings(new_file, backup_file):
     if not os.path.exists(new_file):
         return
-
     with open(new_file, 'r') as fin, open(backup_file, 'a') as fout:
         fout.write('\n')
         lines = [L.rstrip('\n') for L in fin]
@@ -150,20 +177,22 @@ def process_etf_file(new_file, existing_file):
 
 def main(mode):
     if mode == 'etf':
+        # 周二到周天允许运行
         if 1 <= current_day <= 6:  # 周二到周天
             process_etf_file(new_files['ETFs'], files['ETFs'])
             process_file(new_files['10Y_newhigh'], files['10Y_newhigh'])
+        else:
+            print("Not right date. ETF 模式只在周二到周天运行。")
     elif mode == 'other':
-        # if current_day == 6 or 0 <= current_day <=3:  # 周天或周一到周四
-        if current_day == 6 or current_day == 0:  # 周天或周一
+        # 周日或周一允许运行
+        if current_day in (0):
+            check_run_once_today()
             process_and_rename_files()
         else:
-            print("Not right date. Only Saturday and Sunday can do.")
-            
+            print("Not right date. Other 模式只在周一运行。")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process files based on the given mode.')
     parser.add_argument('mode', choices=['etf', 'other'], help='The processing mode: etf or other')
     args = parser.parse_args()
-
     main(args.mode)

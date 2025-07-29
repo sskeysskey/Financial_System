@@ -10,8 +10,7 @@
         "CRH",
         "NEM",
         "AEM",
-        "FCX",
-        "CTVA"
+        "FCX"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -95,7 +94,8 @@
         "E",
         "PSX",
         "LNG",
-        "SLB"
+        "SLB",
+        "SU"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -240,8 +240,7 @@
         "WELL",
         "SPG",
         "DLR",
-        "PSA",
-        "O"
+        "PSA"
     ],
     "Technology": [
         "AAPL",

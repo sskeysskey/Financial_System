@@ -9,18 +9,23 @@ base_path = "/Users/yanzhang/Documents/"
 news_path = os.path.join(base_path, "News")
 db_path = os.path.join(base_path, "Database")
 config_path = os.path.join(base_path, "Financial_System", "Modules")
+backup_file = os.path.join(news_path, "backup", "NextWeek_Earning.txt")
 
 # 输入文件
 earnings_release_file = os.path.join(news_path, "Earnings_Release_next.txt")
-sectors_json_file = os.path.join(config_path, "Sectors_All.json")
-db_file = os.path.join(db_path, "Finance.db")
+sectors_json_file  = os.path.join(config_path, "Sectors_All.json")
+db_file            = os.path.join(db_path, "Finance.db")
 
 # 输出文件
-output_file = os.path.join(news_path, "Filter_Earning1.txt")
+output_file        = os.path.join(news_path, "NextWeek_Earning.txt")
+
+# 黑名单和面板 JSON 路径
+blacklist_json_file = os.path.join(config_path, "Blacklist.json")
+panel_json_file     = os.path.join(config_path, "Sectors_panel.json")
 
 # --- 2. 可配置参数 ---
-# 您可以在这里修改需要查询的最近财报次数
-NUM_EARNINGS_TO_CHECK = 2  # <--- 修改点：将2改为可配置的变量
+NUM_EARNINGS_TO_CHECK = 2  # 查询近 N 次财报
+MIN_DROP_PERCENTAGE   = 0.04 # 最新收盘价必须至少比历史财报日价格低 4%
 
 def create_symbol_to_sector_map(json_file_path):
     """
@@ -64,11 +69,53 @@ def get_symbols_from_release_file(file_path):
         print(f"错误: 财报发布文件未找到 at {file_path}")
     return symbols
 
+def load_blacklist(json_file_path):
+    """
+    从 Blacklist.json 中加载 'newlow' 黑名单，返回一个 set。
+    """
+    try:
+        with open(json_file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        newlow = data.get('newlow', [])
+        bl_set = set(newlow)
+        print(f"成功加载黑名单 'newlow': 共 {len(bl_set)} 个 symbol。")
+        return bl_set
+    except FileNotFoundError:
+        print(f"警告: 未找到黑名单文件: {json_file_path}，将不进行过滤。")
+    except json.JSONDecodeError:
+        print(f"警告: 黑名单文件格式无效: {json_file_path}，将不进行过滤。")
+    except Exception as e:
+        print(f"警告: 加载黑名单时发生错误: {e}，将不进行过滤。")
+    return set()
+
+def update_json_group(symbols_list, target_json_path, group_name):
+    """
+    将 symbols_list 写入 target_json_path 的 group_name 分组，
+    格式为 { group_name: {symbol1: "", symbol2: "", ...}, ... }
+    """
+    print(f"\n--- 更新 JSON 文件: {os.path.basename(target_json_path)} 下的组 '{group_name}' ---")
+    try:
+        with open(target_json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        print(f"错误: 目标 JSON 文件未找到: {target_json_path}")
+        return
+    except json.JSONDecodeError:
+        print(f"错误: 目标 JSON 文件格式不正确: {target_json_path}")
+        return
+
+    # 构造新的分组
+    group_dict = {symbol: "" for symbol in sorted(symbols_list)}
+    data[group_name] = group_dict
+
+    try:
+        with open(target_json_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+        print(f"成功将 {len(symbols_list)} 个 symbol 写入组 '{group_name}'.")
+    except Exception as e:
+        print(f"错误: 写入 JSON 文件失败: {e}")
+
 def process_stocks():
-    """
-    主处理函数，执行所有逻辑。
-    """
-    # --- 2. 加载数据 ---
     print("开始处理...")
     symbols_to_check = get_symbols_from_release_file(earnings_release_file)
     symbol_sector_map = create_symbol_to_sector_map(sectors_json_file)
@@ -161,11 +208,13 @@ def process_stocks():
             # <--- 修改点：检查最新价是否低于所有N个财报日的价格
             # all() 函数会检查一个可迭代对象中的所有元素是否都为True
             # (latest_price < p for p in earnings_day_prices) 是一个生成器表达式，高效地进行每一次比较
-            if all(latest_price < p for p in earnings_day_prices):
-                print(f"*** 条件满足: {symbol} 的最新价 {latest_price} 低于所有 {NUM_EARNINGS_TO_CHECK} 次财报日价格。 ***")
+            # 4% 跌幅条件
+            threshold = 1 - MIN_DROP_PERCENTAGE
+            if all(latest_price < p * threshold for p in earnings_day_prices):
+                print(f"*** 条件满足: {symbol} 的最新价 {latest_price} 至少比所有 {NUM_EARNINGS_TO_CHECK} 次财报日收盘价低 {MIN_DROP_PERCENTAGE*100:.0f}%。 ***")
                 filtered_symbols.append(symbol)
             else:
-                print(f"条件不满足: {symbol} 的最新价未低于所有 {NUM_EARNINGS_TO_CHECK} 次财报日价格。")
+                print(f"条件不满足: {symbol} 的最新价未同时低于所有财报日价格并且跌幅达 {MIN_DROP_PERCENTAGE*100:.0f}%。")
 
     except sqlite3.Error as e:
         print(f"数据库错误: {e}")
@@ -174,15 +223,85 @@ def process_stocks():
             conn.close()
             print("\n数据库连接已关闭。")
 
-    # --- 5. 写入结果到文件 ---
+    # --- 5. 应用黑名单过滤 & 更新 JSON 面板 ---
+    print("\n--- 应用黑名单过滤 & 更新 JSON 面板 ---")
+    blacklist_set   = load_blacklist(blacklist_json_file)
+    # 过滤掉在 blacklist_set 中的 symbol
+    final_symbols   = [s for s in filtered_symbols if s not in blacklist_set]
+    print(f"最终待写入的 symbol: {final_symbols}")
+
+    # --- 5.1 过滤 MNSPP 表中的无效 pe_ratio ---
+    print("\n--- 过滤 MNSPP 表中的无效 pe_ratio ---")
+    valid_symbols = []
+    conn_m = None
     try:
-        with open(output_file, 'w', encoding='utf-8') as f:
-            for symbol in filtered_symbols:
-                f.write(f"{symbol}\n")
-        print(f"\n处理完成。满足条件的股票已写入到: {output_file}")
-        print(f"筛选出的股票列表: {filtered_symbols}")
+        conn_m = sqlite3.connect(db_file)
+        cursor_m = conn_m.cursor()
+        for sym in final_symbols:
+            cursor_m.execute("SELECT pe_ratio FROM MNSPP WHERE symbol = ?", (sym,))
+            row = cursor_m.fetchone()
+            pe = row[0] if row else None
+            # 过滤掉 "--", "null", "" 或 None
+            if pe is not None and str(pe).strip() not in ("--", "null", ""):
+                valid_symbols.append(sym)
+            else:
+                print(f"过滤: {sym} 的 pe_ratio 无效: {pe}")
+    except sqlite3.Error as e:
+        print(f"MNSPP 查询数据库错误: {e}")
+    finally:
+        if conn_m:
+            conn_m.close()
+    final_symbols = valid_symbols
+    print(f"经过 pe_ratio 过滤后: {final_symbols}")
+
+    # --- 与 backup 比对，只写新增 ---
+    backup_dir = os.path.dirname(backup_file)
+    if not os.path.exists(backup_dir):
+        os.makedirs(backup_dir, exist_ok=True)
+
+    # 读取备份文件（旧的符号集合）
+    try:
+        with open(backup_file, 'r', encoding='utf-8') as f:
+            old_set = {line.strip() for line in f if line.strip()}
+        print(f"已从备份加载 {len(old_set)} 个旧的 symbol。")
+    except FileNotFoundError:
+        old_set = set()
+        print("未找到备份文件，视作首次运行。")
+
+    # 计算“新增”符号
+    new_set = set(final_symbols) - old_set
+    if new_set:
+        print(f"本次新增 {len(new_set)} 个 symbol: {sorted(new_set)}")
+    else:
+        print("本次没有发现新的 symbol。")
+
+    # 只把新增写到 NextWeek_Earning.txt（news 文件）
+    if new_set:
+        try:
+            with open(output_file, 'w', encoding='utf-8') as f:
+                for sym in sorted(new_set):
+                    f.write(sym + '\n')
+            print(f"新增结果已写入: {output_file}")
+        except IOError as e:
+            print(f"写入 news 文件时错误: {e}")
+    else:
+        # 如果没有新增且旧 news 文件存在，就删掉它
+        if os.path.exists(output_file):
+            os.remove(output_file)
+            print(f"无新增，已删除旧的 news 文件: {output_file}")
+
+    # --- 3. 更新 JSON 面板（只写新增 new_set） ---
+    # 如果 new_set 为空，update_json_group 会写一个空的 {} 过去
+    update_json_group(new_set, panel_json_file, "Next_Week")
+
+    # --- 最后，把本次完整 final_symbols 覆盖写回 备份文件 ---
+    try:
+        with open(backup_file, 'w', encoding='utf-8') as f:
+            for sym in sorted(final_symbols):
+                f.write(sym + '\n')
+        print(f"备份文件已更新，共 {len(final_symbols)} 个 symbol: {backup_file}")
     except IOError as e:
-        print(f"写入文件时发生错误: {e}")
+        print(f"更新备份文件时错误: {e}")
 
 # --- 程序入口 ---
 if __name__ == "__main__":

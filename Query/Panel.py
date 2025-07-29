@@ -40,14 +40,14 @@ DISPLAY_LIMITS = {
     'Currencies': 'all',
     'Economics': 'all',
     'ETFs': 'all',
-    'Qualified_Symbol': 'all',
+    'Qualified': 'all',
     'Earning_Filter': 'all'
 }
 
 # Define categories as a global variable
 categories = [
-    ['Basic_Materials', 'Consumer_Cyclical', 'Real_Estate'],
-    ['Energy', 'Technology', 'Qualified_Symbol', 'Earning_Filter'],
+    ['Basic_Materials', 'Consumer_Cyclical', 'Real_Estate', 'Next_Week'],
+    ['Energy', 'Technology', 'Qualified', 'Earning_Filter'],
     ['Utilities', 'Industrials', 'Consumer_Defensive'],
     ['Communication_Services', 'Financial_Services', 'Healthcare'],
     ['Bonds', 'Indices'],
@@ -415,7 +415,7 @@ class MainWindow(QMainWindow):
             None,
             ("删除",          lambda: self.delete_item(keyword, group)),
             ("改名",          lambda: self.rename_item(keyword, group)),
-            ("移动到 Qualified_Symbol",      lambda: self.move_item_to_qualified_symbol(keyword, group)),
+            ("移动到 Qualified",      lambda: self.move_item_to_Qualified(keyword, group)),
             ("移回到 Earning_Filter",       lambda: self.move_item_to_earning_filter(keyword, group)),
             None,
             ("查询数据库...",  lambda: self.on_keyword_selected(keyword)),
@@ -437,7 +437,7 @@ class MainWindow(QMainWindow):
                 act = menu.addAction(text)
                 act.triggered.connect(callback)
                 # 对“移动”菜单项做禁用判断
-                if text == "移动到 Qualified_Symbol" and group == "Qualified_Symbol":
+                if text == "移动到 Qualified" and group == "Qualified":
                     act.setEnabled(False)
                 if text == "移回到 Earning_Filter" and group == "Earning_Filter":
                     act.setEnabled(False)
@@ -577,8 +577,8 @@ class MainWindow(QMainWindow):
         else:
             print("重命名被取消或输入为空。")
 
-    def move_item_to_qualified_symbol(self, keyword, source_group):
-        target_group = 'Qualified_Symbol'
+    def move_item_to_Qualified(self, keyword, source_group):
+        target_group = 'Qualified'
         if source_group in self.config and isinstance(self.config[source_group], dict) and keyword in self.config[source_group]:
             if target_group not in self.config:
                 self.config[target_group] = {}

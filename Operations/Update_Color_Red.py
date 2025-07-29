@@ -9,7 +9,7 @@ def display_dialog(message):
 
 def check_day():
     """检查当前日期是否为周日或周一"""
-    return datetime.now().weekday() in [6, 0]  # 6 代表周日，0 代表周一
+    return datetime.now().weekday() in [0, 1]  # 1 代表周一周二
 
 def parse_earnings_release(file_path):
     """解析 Earnings Release 文件，提取 symbol"""
@@ -28,7 +28,7 @@ def parse_earnings_release(file_path):
 
 def main():
     if not check_day():
-        message = "今天不是周日或周一，不执行更新操作。"
+        message = "今天不是周一或周二，不执行更新操作。"
         display_dialog(message)
         return
 

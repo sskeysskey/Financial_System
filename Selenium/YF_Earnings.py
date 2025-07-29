@@ -105,7 +105,6 @@ def pick_date_range():
     root.resizable(False, False)
 
     # 置顶
-    root.attributes('-topmost', True)
     root.lift()
     root.focus_force()
 

@@ -9,7 +9,8 @@
     "Energy": {},
     "Technology": {
         "IT": "",
-        "ACN": ""
+        "ACN": "",
+        "FI": ""
     },
     "Consumer_Cyclical": {
         "LULU": "",
@@ -24,20 +25,26 @@
         "PG": "",
         "GIS": "",
         "CL": "",
-        "TSN": ""
+        "TSN": "",
+        "KO": ""
     },
     "Industrials": {
         "CPRT": "",
         "KBR": "政府服务",
         "EXPO": "政府服务",
-        "LMT": ""
+        "LMT": "",
+        "OTIS": ""
     },
     "Communication_Services": {
         "NFLX": ""
     },
     "Financial_Services": {
         "BRK-A": "",
-        "AJG": ""
+        "AJG": "",
+        "PGR": "",
+        "CB": "",
+        "MMC": "",
+        "RLI": ""
     },
     "Healthcare": {
         "ELV": "",
@@ -117,12 +124,18 @@
         "Solana": "",
         "XRP": ""
     },
-    "Qualified_Symbol": {
+    "Qualified": {
         "CVS": "",
         "CHE": ""
     },
     "Earning_Filter": {
-        "BJ": ""
+        "IOT": "",
+        "QS": "",
+        "WST": ""
+    },
+    "Next_Week": {
+        "CROX": "",
+        "TSN": ""
     },
     "Currencies": {
         "DXY": "美元指数",
@@ -163,8 +176,16 @@
         "USDINR": "印度卢比"
     },
     "Economics": {
-        "USInitial": "24 USInitial",
-        "USConfidence": "26 USConfidence"
+        "USNonFarmA": "30 USNonFarmA",
+        "USGDP": "30 USGDP",
+        "USInterest": "30 USInterest",
+        "USInitial": "31 USInitial",
+        "CorePCEM": "31 CorePCEM",
+        "PCEY": "31 PCEY",
+        "CorePCEY": "31 CorePCEY",
+        "USNonFarm": "01 USNonFarm",
+        "USUnemploy": "01 USUnemploy",
+        "USConfidence": "01 USConfidence"
     },
     "ETFs": {
         "TLT": "",

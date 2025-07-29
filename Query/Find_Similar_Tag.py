@@ -187,10 +187,15 @@ def execute_external_script(script_type, keyword):
     except Exception as e:
         print(f"执行脚本 '{script_path}' 时发生错误: {e}")
 
-
-# ======================================================================
-# 2. PyQt5 主窗口类
-# ======================================================================
+class SymbolButton(QPushButton):
+    """扩展 QPushButton，使 Shift+Left-Click 触发富途搜索"""
+    def mousePressEvent(self, event):
+        # 如果按住 Shift 并且是左键，就调用富途中搜索
+        if event.button() == Qt.LeftButton and (event.modifiers() & Qt.ShiftModifier):
+            execute_external_script('futu', self.text())
+            return
+        # 否则按常规流程处理
+        super().mousePressEvent(event)
 
 class SimilarityViewerWindow(QMainWindow):
     def __init__(self, source_symbol, source_tags, related_symbols, all_data):
@@ -259,6 +264,11 @@ class SimilarityViewerWindow(QMainWindow):
             for sym, matched_tags, all_tags in symbols_list:
                 # 排除源 symbol 自身
                 if sym == self.source_symbol:
+                    continue
+                # 如果没有 compare_all 数据，就跳过
+                # （compare_data 存在才显示）
+                cmp = self.compare_data.get(sym, "").strip()
+                if not cmp:
                     continue
                 widget = self.create_similar_symbol_widget(sym, matched_tags, all_tags)
                 group_layout.addWidget(widget)
@@ -358,7 +368,7 @@ class SimilarityViewerWindow(QMainWindow):
 
     def create_symbol_button(self, symbol):
         """创建并配置一个标准的 Symbol 按钮"""
-        button = QPushButton(symbol)
+        button = SymbolButton(symbol)
         button.setCursor(QCursor(Qt.PointingHandCursor))
         button.setFixedWidth(90)
         button.setObjectName("SymbolButton")

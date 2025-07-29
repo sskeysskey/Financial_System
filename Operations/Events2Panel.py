@@ -7,9 +7,9 @@ def display_dialog(message):
     applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
     subprocess.run(['osascript', '-e', applescript_code], check=True)
 
-def is_sunday_or_monday():
-    """检查当前日期是否为周日或周一"""
-    return datetime.now().weekday() in {6, 0} # 6 代表周日，0 代表周一
+def is_monday():
+    """检查当前日期是否为周一"""
+    return datetime.now().weekday() in {0, 1} # 0 代表周一周二
 
 def update_sectors_panel():
     """更新sectors_panel的主要逻辑"""
@@ -62,10 +62,10 @@ def update_sectors_panel():
         display_dialog(error_message)
 
 def main():
-    if is_sunday_or_monday():
+    if is_monday():
         update_sectors_panel()
     else:
-        display_dialog("今天不是周日或周一，不执行更新操作。")
+        display_dialog("今天不是周一周二，不执行更新操作。")
 
 if __name__ == "__main__":
     main()

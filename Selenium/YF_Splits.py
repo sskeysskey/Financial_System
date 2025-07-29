@@ -12,7 +12,16 @@ import json
 import pyautogui
 import random
 import time
+import sys
 import threading
+
+# —— 插入开始 ——  
+# 判断今天是否为周五（4）或周六（5），否则直接退出
+today = datetime.now().weekday()  
+if today not in (4, 5):  
+    print("今天不是周五或周六，程序退出。")  
+    sys.exit(0)  
+# —— 插入结束 ——  
 
 # 添加鼠标移动功能的函数
 def move_mouse_periodically():
@@ -81,8 +90,8 @@ driver = webdriver.Chrome(service=service, options=chrome_options)
 with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as file:
     data = json.load(file)
 
-# start_date = datetime(2024, 12, 2)
-# end_date = datetime(2024, 12, 8)
+# start_date = datetime(2025, 7, 28)
+# end_date = datetime(2025, 8, 3)
 
 # 获取当前系统日期
 current_date = datetime.now()

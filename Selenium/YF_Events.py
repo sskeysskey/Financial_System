@@ -11,7 +11,16 @@ from selenium.common.exceptions import TimeoutException
 import pyautogui
 import random
 import time
+import sys
 import threading
+
+# —— 插入开始 ——  
+# 判断今天是否为周五（4）或周六（5），否则直接退出
+today = datetime.now().weekday()  
+if today not in (4, 5):  
+    print("今天不是周五或周六，程序退出。")  
+    sys.exit(0)  
+# —— 插入结束 ——  
 
 # 添加鼠标移动功能的函数
 def move_mouse_periodically():
@@ -78,8 +87,8 @@ chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
 service = Service(executable_path=chrome_driver_path)
 driver = webdriver.Chrome(service=service, options=chrome_options)
 
-# start_date = datetime(2024, 12, 2)
-# end_date = datetime(2024, 12, 8)
+# start_date = datetime(2025, 8, 4)
+# end_date = datetime(2025, 8, 9)
 
 # 获取当前系统日期
 current_date = datetime.now()
@@ -182,8 +191,6 @@ with open(file_path, 'a') as output_file:
                         event = cells[0].text.strip()
                         country = cells[1].text.strip()
                         
-                        # <<< 更改开始 >>>
-                        # ----------------------------------------------------------------------------------
                         # 2. 修改匹配和写入逻辑
                         #    不再使用 "in" 进行精确匹配，而是遍历基本名称列表，进行前缀匹配。
                         if event and country and country in target_countries:
