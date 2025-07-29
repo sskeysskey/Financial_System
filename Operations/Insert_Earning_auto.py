@@ -113,9 +113,17 @@ def fetch_mnspp_data_from_db(db_path, symbol):
 
 class SymbolButton(QPushButton):
     def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton and (event.modifiers() & Qt.ShiftModifier):
-            execute_external_script('futu', self.text())
-            return
+        if event.button() == Qt.LeftButton:
+            mods = event.modifiers()
+            # Option(⌥) + 左键 → 找相似
+            if mods & Qt.AltModifier:
+                execute_external_script('similar', self.text())
+                return
+            # Shift + 左键 → 在富途中搜索
+            elif mods & Qt.ShiftModifier:
+                execute_external_script('futu', self.text())
+                return
+        # 其他情况走原有行为（例如普通左键点击会触发 on_symbol_button_clicked）
         super().mousePressEvent(event)
 
 class MainWindow(QMainWindow):
@@ -466,7 +474,8 @@ class MainWindow(QMainWindow):
             item_pct = QTableWidgetItem(f"{pct}")
             font = QFont("Arial", 14, QFont.Bold)
             item_pct.setFont(font)
-            item_pct.setForeground(QBrush(QColor(255, 215, 0)))
+            color = QColor(255, 0, 0) if pct < 0 else QColor(255, 215, 0)
+            item_pct.setForeground(QBrush(color))
             table.setItem(row, 2, item_pct)
 
             # “写入” 按钮
@@ -562,13 +571,17 @@ class MainWindow(QMainWindow):
             table.setItem(row, 1, QTableWidgetItem(PERIOD_DISPLAY.get(period, period)))
 
             font = QFont("Arial", 14, QFont.Bold)
+            # 修改为判断正负：
             item_new = QTableWidgetItem(f"{pct_new}")
             item_new.setFont(font)
-            item_new.setForeground(QBrush(QColor(255, 215, 0)))
+            color_new = QColor(255, 0, 0) if pct_new < 0 else QColor(255, 215, 0)
+            item_new.setForeground(QBrush(color_new))
             table.setItem(row, 2, item_new)
+
             item_old = QTableWidgetItem(f"{old_pct}")
             item_old.setFont(font)
-            item_old.setForeground(QBrush(QColor(255, 215, 0)))
+            color_old = QColor(255, 0, 0) if old_pct < 0 else QColor(255, 215, 0)
+            item_old.setForeground(QBrush(color_old))
             table.setItem(row, 3, item_old)
 
             op_btn = QPushButton()
@@ -630,7 +643,11 @@ class MainWindow(QMainWindow):
         if found_row is not None:
             item_old = table.item(found_row, 3)
             if item_old:
+                # 修改为重新设色：
                 item_old.setText(str(new_pct))
+                np = float(new_pct)
+                color = QColor(255, 0, 0) if np < 0 else QColor(255, 215, 0)
+                item_old.setForeground(QBrush(color))
             else:
                 table.setItem(found_row, 3, QTableWidgetItem(str(new_pct)))
 

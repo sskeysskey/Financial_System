@@ -40,10 +40,17 @@ DEFAULT_WEIGHT = Decimal('1')
 # 新增：SymbolButton 子类
 class SymbolButton(QPushButton):
     def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton and (event.modifiers() & Qt.ShiftModifier):
-            # Command+Click
-            execute_external_script('futu', self.text())
-            return
+        if event.button() == Qt.LeftButton:
+            mods = event.modifiers()
+            # Option(⌥) + 左键 → 找相似
+            if mods & Qt.AltModifier:
+                execute_external_script('similar', self.text())
+                return
+            # Shift + 左键 → 在富途中搜索
+            elif mods & Qt.ShiftModifier:
+                execute_external_script('futu', self.text())
+                return
+        # 其他情况走原有行为（例如普通左键点击会触发 on_symbol_button_clicked）
         super().mousePressEvent(event)
 
 class SymbolManager:

@@ -1,5 +1,6 @@
 import json
 import re
+import sqlite3
 import pyperclip
 import subprocess
 import sys
@@ -34,6 +35,20 @@ SECTORS_ALL_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_A
 DEFAULT_WEIGHT = Decimal('1')
 
 # --- 核心逻辑函数 (来自 a.py) ---
+
+def fetch_mnspp_data_from_db(db_path, symbol):
+    with sqlite3.connect(db_path) as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT shares, marketcap, pe_ratio, pb FROM MNSPP WHERE symbol = ?",
+            (symbol,)
+        )
+        row = cur.fetchone()
+    if row:
+        return row  # shares, marketcap, pe_ratio, pb
+    else:
+        # 找不到时给默认
+        return "N/A", None, "N/A", "--"
 
 def load_weight_groups():
     """读取权重配置文件"""
@@ -188,13 +203,18 @@ def execute_external_script(script_type, keyword):
         print(f"执行脚本 '{script_path}' 时发生错误: {e}")
 
 class SymbolButton(QPushButton):
-    """扩展 QPushButton，使 Shift+Left-Click 触发富途搜索"""
     def mousePressEvent(self, event):
-        # 如果按住 Shift 并且是左键，就调用富途中搜索
-        if event.button() == Qt.LeftButton and (event.modifiers() & Qt.ShiftModifier):
-            execute_external_script('futu', self.text())
-            return
-        # 否则按常规流程处理
+        if event.button() == Qt.LeftButton:
+            mods = event.modifiers()
+            # Option(⌥) + 左键 → 找相似
+            if mods & Qt.AltModifier:
+                execute_external_script('similar', self.text())
+                return
+            # Shift + 左键 → 在富途中搜索
+            elif mods & Qt.ShiftModifier:
+                execute_external_script('futu', self.text())
+                return
+        # 其他情况走原有行为（例如普通左键点击会触发 on_symbol_button_clicked）
         super().mousePressEvent(event)
 
 class SimilarityViewerWindow(QMainWindow):
@@ -393,14 +413,23 @@ class SimilarityViewerWindow(QMainWindow):
         print(f"正在为 '{symbol}' 生成图表...")
         sector = next((s for s, names in self.sector_data.items() if symbol in names), None)
         compare_value = self.compare_data.get(symbol, "N/A")
+        # 先取出四个指标
+        shares_val, marketcap_val, pe_val, pb_val = fetch_mnspp_data_from_db(DB_PATH, symbol)
         
         try:
             # 调用从 b.py 移植的绘图函数
             plot_financial_data(
-                DB_PATH, sector, symbol, compare_value, 
-                "N/A", None, "N/A", # 传递占位符
-                self.json_data, '1Y', False
-            )
+            DB_PATH,
+            sector,
+            symbol,
+            compare_value,
+            (shares_val, pb_val),
+            marketcap_val,
+            pe_val,
+            self.json_data,
+            '1Y',
+            False
+        )
         except Exception as e:
             QMessageBox.critical(self, "绘图错误", f"调用 plot_financial_data 时出错: {e}")
             print(f"调用 plot_financial_data 时出错: {e}")
