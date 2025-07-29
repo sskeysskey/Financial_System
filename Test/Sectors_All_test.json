@@ -1,0 +1,38 @@
+{
+  "Bonds": [
+    "US10Y",
+    "UK10Y"
+  ],
+  "Currencies": [],
+  "Crypto": [],
+  "Indices": [],
+  "Commodities": [],
+  "ETFs": [
+    "IOSP",
+    "TUR10Y",
+    "EA"
+  ],
+  "Economics": [
+    "SPTI",
+    "PICK",
+    "LIT",
+    "URA"
+  ],
+  "Basic_Materials": [],
+  "Communication_Services": [],
+  "Consumer_Cyclical": [],
+  "Consumer_Defensive": [],
+  "Energy": [
+    "SHEL",
+    "CNQ"
+  ],
+  "Financial_Services": [],
+  "Healthcare": [],
+  "Industrials": [],
+  "Real_Estate": [],
+  "Technology": [
+    "AAPL",
+    "NVDA"
+  ],
+  "Utilities": []
+}

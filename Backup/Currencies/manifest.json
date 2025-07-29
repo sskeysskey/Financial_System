@@ -1,0 +1,20 @@
+{
+    "manifest_version": 3,
+    "name": "Currency Scraper",
+    "version": "1.0",
+    "description": "Scrapes currency data from Trading Economics",
+    "permissions": [
+        "tabs",
+        "downloads",
+        "scripting"
+    ],
+    "host_permissions": [
+        "https://tradingeconomics.com/*"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "action": {
+        "default_popup": "popup.html"
+    }
+}

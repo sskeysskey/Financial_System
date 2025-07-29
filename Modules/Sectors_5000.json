@@ -1,0 +1,36 @@
+{
+    "Basic_Materials": [],
+    "Communication_Services": [
+        "GOOGL",
+        "META",
+        "NFLX"
+    ],
+    "Consumer_Cyclical": [
+        "AMZN",
+        "TSLA"
+    ],
+    "Consumer_Defensive": [
+        "WMT"
+    ],
+    "Energy": [],
+    "Financial_Services": [
+        "BRK-A",
+        "JPM",
+        "V",
+        "MA"
+    ],
+    "Healthcare": [
+        "LLY"
+    ],
+    "Industrials": [],
+    "Real_Estate": [],
+    "Technology": [
+        "AAPL",
+        "MSFT",
+        "NVDA",
+        "TSM",
+        "AVGO",
+        "ORCL"
+    ],
+    "Utilities": []
+}

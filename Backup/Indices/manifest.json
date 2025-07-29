@@ -1,0 +1,31 @@
+{
+    "manifest_version": 3,
+    "name": "Indices Data Scraper",
+    "version": "1.0",
+    "description": "Scrapes stock data from Trading Economics",
+    "permissions": [
+        "tabs",
+        "scripting",
+        "downloads",
+        "storage"
+    ],
+    "host_permissions": [
+        "https://tradingeconomics.com/*"
+    ],
+    "action": {
+        "default_popup": "popup.html"
+    },
+    "background": {
+        "service_worker": "background.js"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://tradingeconomics.com/stocks"
+            ],
+            "js": [
+                "content.js"
+            ]
+        }
+    ]
+}
