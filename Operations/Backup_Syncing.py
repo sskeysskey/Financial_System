@@ -7,8 +7,7 @@ import os
 # --- 配置部分 ---
 # 定义源文件和目标目录的路径，方便管理
 LOCAL_DOWNLOAD_BACKUP = '/Users/yanzhang/Downloads/backup/DB_backup'
-# 原始备份目标目录
-GITHUB_IO_DIR = '/Users/yanzhang/Documents/sskeysskey.github.io/economics'
+
 # 新增的带时间戳备份的目标目录
 LOCAL_SERVER_DIR = '/Users/yanzhang/LocalServer/Resources/Finance'
 # version.json 文件路径
@@ -20,24 +19,6 @@ SIMPLE_BACKUP_FILES = {
     '/Users/yanzhang/Documents/Database/Finance.db': [
         os.path.join(LOCAL_DOWNLOAD_BACKUP, 'Finance.db'),
         os.path.join(LOCAL_SERVER_DIR,    'Finance.db')
-    ],
-    '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json': [
-        os.path.join(GITHUB_IO_DIR, 'sectors_panel.json')
-    ],
-    '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json': [
-        os.path.join(GITHUB_IO_DIR, 'sectors_all.json')
-    ],
-    '/Users/yanzhang/Documents/Financial_System/Modules/description.json': [
-        os.path.join(GITHUB_IO_DIR, 'description.json')
-    ],
-    '/Users/yanzhang/Documents/News/CompareStock.txt': [
-        os.path.join(GITHUB_IO_DIR, 'comparestock.txt')
-    ],
-    '/Users/yanzhang/Documents/News/CompareETFs.txt': [
-        os.path.join(GITHUB_IO_DIR, 'Compareetfs.txt')
-    ],
-    '/Users/yanzhang/Documents/News/backup/marketcap_pe.txt': [
-        os.path.join(GITHUB_IO_DIR, 'marketcap_pe.txt')
     ],
 }
 
@@ -179,51 +160,6 @@ def update_version_json(new_files_info, updated_base_names):
     except Exception as e:
         print(f"更新 {VERSION_JSON_PATH} 时发生未知错误: {e}")
 
-def export_db_to_json():
-    """
-    将数据库中最近一年的数据导出为 finance.json。
-    """
-    print("\n--- 开始将数据库导出为 JSON ---")
-    db_file = '/Users/yanzhang/Documents/Database/Finance.db'
-    json_output_file = os.path.join(GITHUB_IO_DIR, 'finance.json')
-    
-    try:
-        conn = sqlite3.connect(db_file)
-        cursor = conn.cursor()
-
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-        tables = cursor.fetchall()
-        database_dict = {}
-        one_year_ago = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
-
-        for (table_name,) in tables:
-            cursor.execute(f"PRAGMA table_info({table_name})")
-            cols = cursor.fetchall()
-            col_names = [c[1] for c in cols]
-            
-            if 'date' in col_names:
-                cursor.execute(
-                    f"SELECT * FROM {table_name} WHERE date >= ? ORDER BY date DESC",
-                    (one_year_ago,)
-                )
-            else:
-                cursor.execute(f"SELECT * FROM {table_name}")
-
-            rows = cursor.fetchall()
-            database_dict[table_name] = [
-                dict(zip(col_names, row)) for row in rows
-            ]
-
-        with open(json_output_file, 'w', encoding='utf-8') as f:
-            json.dump(database_dict, f, indent=4, default=str)
-
-        conn.close()
-        print(f"数据库 {db_file} 中最近一年的数据已成功导出为 {os.path.basename(json_output_file)}。")
-    except sqlite3.Error as e:
-        print(f"数据库操作失败: {e}")
-    except Exception as e:
-        print(f"导出JSON时发生错误: {e}")
-
 # --- 主程序执行 ---
 if __name__ == "__main__":
     # 1. 执行简单的覆盖备份
@@ -234,8 +170,5 @@ if __name__ == "__main__":
 
     # 2. 执行带时间戳的备份、清理和version.json更新
     backup_with_timestamp_and_cleanup()
-
-    # 3. 执行数据库到JSON的导出
-    export_db_to_json()
     
     print("\n所有任务已完成。")

@@ -100,7 +100,6 @@
     "IAI",
     "CWB",
     "CIBR",
-    "GXG",
     "EPU",
     "IDX",
     "XLI",
@@ -408,7 +407,8 @@
     "VNM",
     "EWZ",
     "ILS",
-    "NULG"
+    "NULG",
+    "COLO"
   ],
   "Basic_Materials": [
     "LIN",

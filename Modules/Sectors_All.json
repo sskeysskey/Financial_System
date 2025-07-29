@@ -162,7 +162,6 @@
     "IAI",
     "CWB",
     "CIBR",
-    "GXG",
     "EPU",
     "IDX",
     "XLI",
@@ -474,7 +473,8 @@
     "EWZ",
     "ILS",
     "FCAL",
-    "NULG"
+    "NULG",
+    "COLO"
   ],
   "Basic_Materials": [
     "LIN",
