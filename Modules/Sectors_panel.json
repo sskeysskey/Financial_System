@@ -20,7 +20,6 @@
     },
     "Utilities": {},
     "Consumer_Defensive": {
-        "PG": "",
         "GIS": "",
         "CL": "",
         "TSN": ""
@@ -32,8 +31,7 @@
         "OTIS": ""
     },
     "Communication_Services": {
-        "NFLX": "",
-        "CHTR": ""
+        "NFLX": ""
     },
     "Financial_Services": {
         "BRK-A": "",
@@ -44,7 +42,6 @@
         "HUM": "",
         "CI": "",
         "CVS": "",
-        "UHS": "",
         "SEM": "医院",
         "NVO": "",
         "UNH": "",
@@ -126,10 +123,8 @@
     },
     "Earning_Filter": {
         "BJ": "",
-        "BMI": "",
         "BRO": "",
         "EXEL": "",
-        "LYFT": "",
         "PEN": "",
         "VRSN": ""
     },
