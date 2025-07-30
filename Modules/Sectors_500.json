@@ -10,7 +10,8 @@
         "CRH",
         "NEM",
         "AEM",
-        "FCX"
+        "FCX",
+        "CTVA"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -240,7 +241,8 @@
         "WELL",
         "SPG",
         "DLR",
-        "PSA"
+        "PSA",
+        "O"
     ],
     "Technology": [
         "AAPL",
@@ -295,7 +297,8 @@
         "PAYX",
         "TEL",
         "TEAM",
-        "DDOG"
+        "DDOG",
+        "GLW"
     ],
     "Utilities": [
         "NEE",

@@ -582,7 +582,7 @@ class HighLowWindow(QMainWindow):
         if isinstance(tags_info, list):
             tags_info = ", ".join(tags_info)
 
-        # --- 用 ClickableLabel 替代普通 QLabel ---
+        # 用 ClickableLabel 替代普通 QLabel
         label = ClickableLabel(tags_info)
         # 左对齐 + 垂直居中
         label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
@@ -603,7 +603,13 @@ class HighLowWindow(QMainWindow):
         # 点击 label 时也调用 on_symbol_click
         label.clicked.connect(lambda: self.on_symbol_click(symbol))
 
-        # --- 把按钮 + 可点标签 装容器 ---
+        # —— 新增这两行 —— 
+        # 让 label 响应右键，用同一个上下文菜单
+        label.setContextMenuPolicy(Qt.CustomContextMenu)
+        label.customContextMenuRequested.connect(lambda pos, s=symbol: self.show_context_menu(s))
+        # —— 结束 —— 
+
+        # 把按钮 + 可点标签 装容器
         container = QWidget()
         vlay = QVBoxLayout(container)
         vlay.setContentsMargins(0, 0, 0, 0)

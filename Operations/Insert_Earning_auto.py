@@ -244,6 +244,7 @@ class MainWindow(QMainWindow):
     def apply_stylesheet(self):
         """定义并应用全局样式表"""
         qss = """
+        /* SymbolButton 保持不变 */
         QPushButton#SymbolButton {
             background-color: #3498db; color: white; border: none;
             padding: 5px 10px; border-radius: 4px; font-weight: bold;
@@ -254,12 +255,23 @@ class MainWindow(QMainWindow):
         QPushButton#SymbolButton[period="AMC"]:hover { background-color: #732d91; }
         QPushButton#SymbolButton[period="TNS"] { background-color: #2c3e50; color: white; }
         QPushButton#SymbolButton[period="TNS"]:hover { background-color: #1f2d3d; }
+
+        /* 把写入/替换按钮改为深灰色 */
         QPushButton#ReplaceButton {
-            background-color: #2ecc71; color: white; border: none;
-            padding: 5px 15px; border-radius: 4px; font-weight: bold;
+            background-color: #555555;    /* 深灰 */
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 4px;
+            font-weight: bold;
         }
-        QPushButton#ReplaceButton:hover { background-color: #27ae60; }
-        QPushButton#ReplaceButton:disabled { background-color: #95a5a6; color: #ecf0f1; }
+        QPushButton#ReplaceButton:hover {
+            background-color: #444444;    /* 更深灰 */
+        }
+        QPushButton#ReplaceButton:disabled {
+            background-color: #333333;    /* 最深灰 */
+            color: #888888;               /* 灰色文字 */
+        }
         """
         self.setStyleSheet(qss)
 

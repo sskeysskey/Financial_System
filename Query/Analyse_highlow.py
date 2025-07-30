@@ -17,14 +17,15 @@ TARGET_CATEGORIES = [
     "Commodities", "ETFs", "Economics"
 ]
 
-# Time intervals and their corresponding labels for the output file
+# 修改为（注意插入顺序决定输出顺序）：
 TIME_INTERVALS_CONFIG = {
-    "[1 months]": relativedelta(months=-1),
-    "[3 months]": relativedelta(months=-3),
-    "[6 months]": relativedelta(months=-6),
-    "[1Y]": relativedelta(years=-1),
-    "[2Y]": relativedelta(years=-2),
-    "[5Y]": relativedelta(years=-5)
+    "[0.5 months]": relativedelta(days=-15),   # ← 新增半月
+    "[1 months]":   relativedelta(months=-1),
+    "[3 months]":   relativedelta(months=-3),
+    "[6 months]":   relativedelta(months=-6),
+    "[1Y]":         relativedelta(years=-1),
+    "[2Y]":         relativedelta(years=-2),
+    "[5Y]":         relativedelta(years=-5)
 }
 
 def get_db_connection(db_file):
@@ -245,7 +246,7 @@ def main():
     # ===== 修改部分：将过滤逻辑推广到Low和High =====
     print("\nApplying ETF High/Low filter for the main output file...")
     # 变量名修改得更通用
-    ETF_SHORT_TERM_EXCLUSION_INTERVALS = ["[1 months]", "[3 months]"]
+    ETF_SHORT_TERM_EXCLUSION_INTERVALS = ["[0.5 months]", "[1 months]", "[3 months]"]
     
     for interval_label, data in results_for_main_output.items():
         # 检查是否是需要过滤的短期区间

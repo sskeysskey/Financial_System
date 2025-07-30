@@ -370,7 +370,6 @@
         "LECO",
         "ATI",
         "FLS",
-        "EXPO",
         "CUBE",
         "TXN",
         "KLAC",
@@ -480,7 +479,9 @@
         "MMC",
         "RLI",
         "UHS",
-        "SEM"
+        "SEM",
+        "CHTR",
+        "MMSI"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -513,7 +514,6 @@
         "OLN",
         "BNTX",
         "AMX",
-        "UPS",
         "NIO",
         "LKQ",
         "CZR",
@@ -727,7 +727,8 @@
         "BCC",
         "INSP",
         "KMX",
-        "ELS"
+        "ELS",
+        "EXPO"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -817,7 +818,8 @@
         "CNC",
         "PEP",
         "FTV",
-        "LW"
+        "LW",
+        "UPS"
     ],
     "black_keywords": [
         "Cotton",
