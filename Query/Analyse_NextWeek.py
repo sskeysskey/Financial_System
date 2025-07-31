@@ -127,10 +127,11 @@ def process_stocks():
     print(f"待检查的股票列表: {symbols_to_check}")
     print(f"配置: 将检查最近 {NUM_EARNINGS_TO_CHECK} 次财报。")
     
-    # 用于存储满足条件的股票
-    filtered_symbols = []
-    
-    # --- 3. 连接数据库并处理 ---
+    # 用于存储各策略满足条件的股票
+    filtered_1 = []  # 原策略
+    filtered_2 = []  # 新增策略
+    # filtered_3 = []  # 预留将来使用
+
     conn = None
     try:
         conn = sqlite3.connect(db_file)
@@ -181,54 +182,68 @@ def process_stocks():
                 if price_result:
                     prices[date_str] = price_result[0]
                 else:
-                    print(f"警告: 未能在表 {table_name} 中找到 {symbol} 在 {date_str} 的价格。")
-            
+                    print(f"警告: 表 {table_name} 中未找到 {symbol} 在 {date_str} 的价格。")
+            if len(prices) < NUM_EARNINGS_TO_CHECK:
+                print(f"信息: 未能获取 {symbol} 全部 {NUM_EARNINGS_TO_CHECK} 次财报日的完整价格数据，已跳过。")
+                continue
+
             # 查询最新收盘价
             cursor.execute(
                 f'SELECT price FROM "{table_name}" WHERE name = ? ORDER BY date DESC LIMIT 1',
                 (symbol,)
             )
             latest_price_result = cursor.fetchone()
-            if latest_price_result:
-                latest_price = latest_price_result[0]
-                print(f"最新收盘价: {latest_price}")
-            else:
-                print(f"警告: 未能在表 {table_name} 中找到 {symbol} 的任何价格数据，已跳过。")
+            if not latest_price_result:
+                print(f"警告: 未能在 {table_name} 中找到 {symbol} 的任何价格数据，已跳过。")
                 continue
+            latest_price = latest_price_result[0]
+            print(f"最新收盘价: {latest_price}")
 
-            # <--- 修改点：确保获取了所有N个财报日的价格
-            if len(prices) < NUM_EARNINGS_TO_CHECK:
-                print(f"信息: 未能获取 {symbol} 全部 {NUM_EARNINGS_TO_CHECK} 次财报日的完整价格数据，已跳过。")
-                continue
+            earnings_day_prices = [prices[d] for d in earnings_dates]
+            print(f"财报日价格列表 (按日期降序): {earnings_day_prices}")
 
-            earnings_day_prices = list(prices.values())
-            print(f"财报日价格列表: {earnings_day_prices}")
-
-            # 步骤D: 应用过滤条件
-            # <--- 修改点：检查最新价是否低于所有N个财报日的价格
-            # all() 函数会检查一个可迭代对象中的所有元素是否都为True
-            # (latest_price < p for p in earnings_day_prices) 是一个生成器表达式，高效地进行每一次比较
-            # 4% 跌幅条件
             threshold = 1 - MIN_DROP_PERCENTAGE
-            if all(latest_price < p * threshold for p in earnings_day_prices):
-                print(f"*** 条件满足: {symbol} 的最新价 {latest_price} 至少比所有 {NUM_EARNINGS_TO_CHECK} 次财报日收盘价低 {MIN_DROP_PERCENTAGE*100:.0f}%。 ***")
-                filtered_symbols.append(symbol)
-            else:
-                print(f"条件不满足: {symbol} 的最新价未同时低于所有财报日价格并且跌幅达 {MIN_DROP_PERCENTAGE*100:.0f}%。")
 
+            # 策略 1: 最新价比所有 N 次财报日价格都低至少 4%
+            cond1 = all(latest_price < p * threshold for p in earnings_day_prices)
+            if cond1:
+                print(f"*** [filtered_1] 条件满足: {symbol} 的最新价 {latest_price} 比所有 {NUM_EARNINGS_TO_CHECK} 次财报日收盘价低 {MIN_DROP_PERCENTAGE*100:.0f}%。 ***")
+                filtered_1.append(symbol)
+            else:
+                print(f"[filtered_1] 条件不满足: {symbol}")
+
+            # 策略 2: N 次财报日收盘价递增 && 最新价比最近一次财报价低至少 4%
+            # 将 prices 按时间升序排列
+            asc_prices = list(reversed(earnings_day_prices))
+            increasing = all(asc_prices[i] < asc_prices[i+1] for i in range(len(asc_prices)-1))
+            most_recent_er_price = earnings_day_prices[0]  # 第一项是最近一次财报收盘价
+            cond2 = increasing and (latest_price < most_recent_er_price * threshold)
+            if cond2:
+                print(f"*** [filtered_2] 条件满足: {symbol} 的过去 {NUM_EARNINGS_TO_CHECK} 次财报日收盘价递增，且最新价 {latest_price} 比最近一次财报价 {most_recent_er_price} 低 {MIN_DROP_PERCENTAGE*100:.0f}%。 ***")
+                filtered_2.append(symbol)
+            else:
+                print(f"[filtered_2] 条件不满足: {symbol}")
+
+        print("\n数据库处理完成。")
     except sqlite3.Error as e:
         print(f"数据库错误: {e}")
     finally:
         if conn:
             conn.close()
-            print("\n数据库连接已关闭。")
+            print("数据库连接已关闭。")
+
+    # 合并所有策略的结果（去重）
+    combined_filtered = list(set(filtered_1 + filtered_2))
+    print(f"\n策略结果汇总:")
+    print(f"  filtered_1: {filtered_1}")
+    print(f"  filtered_2: {filtered_2}")
+    print(f"  合并去重后总计: {combined_filtered}")
 
     # --- 5. 应用黑名单过滤 & 更新 JSON 面板 ---
     print("\n--- 应用黑名单过滤 & 更新 JSON 面板 ---")
-    blacklist_set   = load_blacklist(blacklist_json_file)
-    # 过滤掉在 blacklist_set 中的 symbol
-    final_symbols   = [s for s in filtered_symbols if s not in blacklist_set]
-    print(f"最终待写入的 symbol: {final_symbols}")
+    blacklist_set = load_blacklist(blacklist_json_file)
+    final_symbols = [s for s in combined_filtered if s not in blacklist_set]
+    print(f"去除黑名单后: {final_symbols}")
 
     # --- 5.1 过滤 MNSPP 表中的无效 pe_ratio ---
     print("\n--- 过滤 MNSPP 表中的无效 pe_ratio ---")
@@ -272,11 +287,6 @@ def process_stocks():
     new_set = set(final_symbols) - old_set
     if new_set:
         print(f"本次新增 {len(new_set)} 个 symbol: {sorted(new_set)}")
-    else:
-        print("本次没有发现新的 symbol。")
-
-    # 只把新增写到 NextWeek_Earning.txt（news 文件）
-    if new_set:
         try:
             with open(output_file, 'w', encoding='utf-8') as f:
                 for sym in sorted(new_set):
@@ -285,6 +295,7 @@ def process_stocks():
         except IOError as e:
             print(f"写入 news 文件时错误: {e}")
     else:
+        print("本次没有发现新的 symbol。")
         # 如果没有新增且旧 news 文件存在，就删掉它
         if os.path.exists(output_file):
             os.remove(output_file)

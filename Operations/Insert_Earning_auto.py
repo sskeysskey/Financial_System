@@ -335,11 +335,12 @@ class MainWindow(QMainWindow):
         symbol = symbol_button.text()
 
         menu_config = [
+            ("新增事件", "event_input"), None,
+            ("编辑 Tags", "tags"), None,
+            ("编辑事件", "event_editor"), ("Kimi检索财报", "kimi"), None,
             ("在富途中搜索", "futu"), None,
             ("找相似", "similar"), None,
-            ("编辑 Tags", "tags"), None,
             ("新增 财报", "input_earning"), ("编辑 Earing 数据", "editor_earning"), None,
-            ("新增事件", "event_input"), ("编辑事件", "event_editor"), ("Kimi检索财报", "kimi"), None,
             ("加入黑名单", "blacklist"),
         ]
 

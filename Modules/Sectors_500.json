@@ -10,8 +10,7 @@
         "CRH",
         "NEM",
         "AEM",
-        "FCX",
-        "CTVA"
+        "FCX"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -53,8 +52,7 @@
         "GM",
         "CPNG",
         "DASH",
-        "JD",
-        "HMC"
+        "JD"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -94,9 +92,7 @@
         "MPLX",
         "E",
         "PSX",
-        "LNG",
-        "SLB",
-        "SU"
+        "LNG"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -241,8 +237,7 @@
         "WELL",
         "SPG",
         "DLR",
-        "PSA",
-        "O"
+        "PSA"
     ],
     "Technology": [
         "AAPL",

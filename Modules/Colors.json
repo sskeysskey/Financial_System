@@ -481,7 +481,8 @@
         "UHS",
         "SEM",
         "CHTR",
-        "MMSI"
+        "MMSI",
+        "WIX"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -727,8 +728,7 @@
         "BCC",
         "INSP",
         "KMX",
-        "ELS",
-        "EXPO"
+        "ELS"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -751,7 +751,6 @@
         "BSBR",
         "TU",
         "CCI",
-        "HRL",
         "MKTX",
         "CGNX",
         "OTEX",
@@ -819,7 +818,8 @@
         "PEP",
         "FTV",
         "LW",
-        "UPS"
+        "UPS",
+        "EXPO"
     ],
     "black_keywords": [
         "Cotton",
@@ -902,7 +902,8 @@
         "CPB",
         "DEO",
         "CAG",
-        "WPP"
+        "WPP",
+        "HRL"
     ],
     "green_keywords": [
         "EURCNY",
