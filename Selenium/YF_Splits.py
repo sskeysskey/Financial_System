@@ -49,8 +49,8 @@ mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
 mouse_thread.start()
 
 # 文件路径
-file_path = '/Users/yanzhang/Documents/News/Stock_Splits_next.txt'
-backup_dir = '/Users/yanzhang/Documents/News/backup/backup'
+file_path = '/Users/yanzhang/Coding/News/Stock_Splits_next.txt'
+backup_dir = '/Users/yanzhang/Coding/News/backup/backup'
 
 # 检查文件是否已经存在
 file_already_exists = os.path.exists(file_path)
@@ -87,7 +87,7 @@ service = Service(executable_path=chrome_driver_path)
 driver = webdriver.Chrome(service=service, options=chrome_options)
 
 # 加载JSON文件
-with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as file:
+with open('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json', 'r') as file:
     data = json.load(file)
 
 # start_date = datetime(2025, 7, 28)

@@ -124,7 +124,7 @@ def execute_applescript(script_path):
         print(f"Error running AppleScript: {e}")
 
 def main():
-    json_file = "/Users/yanzhang/Documents/Financial_System/Modules/description.json"
+    json_file = "/Users/yanzhang/Coding/Financial_System/Modules/description.json"
 
     with open(json_file, 'r', encoding='utf-8') as file:
         data = json.load(file)
@@ -134,10 +134,10 @@ def main():
 
     activate_chrome()
     template_paths = {
-        "poesuccess": "/Users/yanzhang/Documents/python_code/Resource/poe_copy_success.png",
-        "poethumb": "/Users/yanzhang/Documents/python_code/Resource/poe_thumb.png",
-        "kimicopy": "/Users/yanzhang/Documents/python_code/Resource/Kimi_copy.png",
-        "poecopy": "/Users/yanzhang/Documents/python_code/Resource/poe_copy.png",
+        "poesuccess": "/Users/yanzhang/Coding/python_code/Resource/poe_copy_success.png",
+        "poethumb": "/Users/yanzhang/Coding/python_code/Resource/poe_thumb.png",
+        "kimicopy": "/Users/yanzhang/Coding/python_code/Resource/Kimi_copy.png",
+        "poecopy": "/Users/yanzhang/Coding/python_code/Resource/poe_copy.png",
     }
     templates = {key: cv2.imread(path, cv2.IMREAD_COLOR) for key, path in template_paths.items()}
 
@@ -168,7 +168,7 @@ def main():
 
     time.sleep(1)
     new_description1 = read_clipboard().replace('\n', ' ').replace('\r', ' ')
-    script_path = '/Users/yanzhang/Documents/ScriptEditor/Shift2Kimi.scpt' if found_poe else '/Users/yanzhang/Documents/ScriptEditor/Shift2Poe.scpt'
+    script_path = '/Users/yanzhang/Coding/ScriptEditor/Shift2Kimi.scpt' if found_poe else '/Users/yanzhang/Coding/ScriptEditor/Shift2Poe.scpt'
     execute_applescript(script_path)
     time.sleep(1)
     if not found_poe:

@@ -1,7 +1,7 @@
 import sqlite3
 
 # 数据库文件路径
-db_path = '/Users/yanzhang/Documents/Database/Finance.db'
+db_path = '/Users/yanzhang/Coding/Database/Finance.db'
 conn = None
 
 try:

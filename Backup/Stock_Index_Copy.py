@@ -27,10 +27,10 @@ def find_image_on_screen(template, threshold=0.9):
 def main():
     # 定义模板路径字典
     template_paths = {
-        "menuindex": "/Users/yanzhang/Documents/python_code/Resource/Stock_menu_index.png",
-        "searchlogo": "/Users/yanzhang/Documents/python_code/Resource/Stock_search_logo.png",
-        "shiftwatchlist": "/Users/yanzhang/Documents/python_code/Resource/Stock_shift_watchlist.png",
-        "watchlistindex": "/Users/yanzhang/Documents/python_code/Resource/Stock_watchlist_Index.png",
+        "menuindex": "/Users/yanzhang/Coding/python_code/Resource/Stock_menu_index.png",
+        "searchlogo": "/Users/yanzhang/Coding/python_code/Resource/Stock_search_logo.png",
+        "shiftwatchlist": "/Users/yanzhang/Coding/python_code/Resource/Stock_shift_watchlist.png",
+        "watchlistindex": "/Users/yanzhang/Coding/python_code/Resource/Stock_watchlist_Index.png",
     }
 
     # 读取所有模板图片，并存储在字典中

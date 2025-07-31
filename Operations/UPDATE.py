@@ -1,7 +1,7 @@
 import sqlite3
 
 # 连接到SQLite数据库
-conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
+conn = sqlite3.connect('/Users/yanzhang/Coding/Database/Finance.db')
 cursor = conn.cursor()
 
 # 执行拆股操作 I ， 并保留两位小数

@@ -89,12 +89,12 @@ if __name__ == '__main__':
     root.withdraw()  # Hide the root window
 
     database_info = {
-        'CommodityDB1': {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities'},
-        'CommodityDB2': {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities'},
-        'CommodityDB3': {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities'},
-        'StocksDB': {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Stocks'},
-        'CryptoDB': {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto'},
-        'CurrencyDB': {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies'}
+        'CommodityDB1': {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Commodities'},
+        'CommodityDB2': {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Commodities'},
+        'CommodityDB3': {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Commodities'},
+        'StocksDB': {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Stocks'},
+        'CryptoDB': {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Crypto'},
+        'CurrencyDB': {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Currencies'}
     }
 
     database_mapping = {

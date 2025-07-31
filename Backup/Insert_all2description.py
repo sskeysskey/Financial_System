@@ -3,8 +3,8 @@ import tkinter as tk
 from tkinter import simpledialog
 
 # 定义文件路径
-SECTORS_FILE = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
-DESCRIPTION_FILE = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
+SECTORS_FILE = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
+DESCRIPTION_FILE = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
 
 # 读取JSON文件
 def load_json_files():

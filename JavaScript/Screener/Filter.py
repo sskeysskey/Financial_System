@@ -500,14 +500,14 @@ def main():
     print(f"使用 above 文件: {screener_file}")
 
     # ---- 你原来的变量初始化 ---- 
-    db_file = '/Users/yanzhang/Documents/Database/Finance.db'
-    sectors_all_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
-    sectors_today_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_Today.json'
-    sectors_empty_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json'
-    sectors_5000_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_5000.json'
-    sectors_500_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_500.json'
-    blacklist_file = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'
-    backup_directory = '/Users/yanzhang/Documents/News/backup/site'
+    db_file = '/Users/yanzhang/Coding/Database/Finance.db'
+    sectors_all_file = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
+    sectors_today_file = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_Today.json'
+    sectors_empty_file = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json'
+    sectors_5000_file = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_5000.json'
+    sectors_500_file = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_500.json'
+    blacklist_file = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
+    backup_directory = '/Users/yanzhang/Coding/News/backup/site'
     
     # 读取数据
     blacklist = read_blacklist_file(blacklist_file)
@@ -562,7 +562,7 @@ def main():
             print("⚠️ screener_below 中没有匹配到 sectors_all.json 里已有的 symbol，跳过写入")
     
     # 写入汇总日志文件
-    output_file = '/Users/yanzhang/Documents/News/screener_sectors.txt'
+    output_file = '/Users/yanzhang/Coding/News/screener_sectors.txt'
     write_log_file(output_file, added_symbols, changes_5000, changes_500, moved_symbols, db_operation_logs)
 
     # 等待2秒

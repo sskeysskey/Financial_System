@@ -65,7 +65,7 @@ service = Service(executable_path=chrome_driver_path)
 driver = webdriver.Chrome(service=service, options=chrome_options)
 
 # 文件目录路径
-txt_file_directory = "/Users/yanzhang/Documents/News/backup/backup/"
+txt_file_directory = "/Users/yanzhang/Coding/News/backup/backup/"
 
 # 找到以Stock_50_开头的第一个TXT文件
 txt_file_pattern = os.path.join(txt_file_directory, "Stock_50_*.txt")
@@ -145,7 +145,7 @@ for symbol in stock_symbols:
 driver.quit()
 
 # 将结果写入shares.txt，避免重复写入
-with open("/Users/yanzhang/Documents/News/backup/Shares.txt", "a+") as file:
+with open("/Users/yanzhang/Coding/News/backup/Shares.txt", "a+") as file:
     file.seek(0)
     existing_data = file.read()
     for symbol, shares in shares_data.items():
@@ -153,7 +153,7 @@ with open("/Users/yanzhang/Documents/News/backup/Shares.txt", "a+") as file:
             file.write(f"{symbol}: {shares}\n")
 
 # 修改写入公司名称数据的部分
-with open('/Users/yanzhang/Documents/News/backup/symbol_names.txt', 'a+', encoding='utf-8') as symbol_file:
+with open('/Users/yanzhang/Coding/News/backup/symbol_names.txt', 'a+', encoding='utf-8') as symbol_file:
     symbol_file.seek(0)
     existing_names = symbol_file.read()
     for symbol, name in symbol_names.items():

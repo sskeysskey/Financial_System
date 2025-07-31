@@ -44,15 +44,15 @@ def log_error_with_timestamp(error_message):
     return f"[{timestamp}] {error_message}\n"
 
 # 读取JSON文件
-with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json', 'r') as file:
+with open('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json', 'r') as file:
     stock_groups = json.load(file)
 
 # 连接到SQLite数据库
-conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
+conn = sqlite3.connect('/Users/yanzhang/Coding/Database/Finance.db')
 c = conn.cursor()
 
 # 读取symbol_mapping JSON文件
-with open('/Users/yanzhang/Documents/Financial_System/Modules/Symbol_mapping.json', 'r') as file:
+with open('/Users/yanzhang/Coding/Financial_System/Modules/Symbol_mapping.json', 'r') as file:
     symbol_mapping = json.load(file)
 
 # 定义需要特殊处理的group_name
@@ -87,7 +87,7 @@ for group_name, tickers in stock_groups.items():
         except Exception as e:
                 formatted_error_message = log_error_with_timestamp(str(e))
                 # 将错误信息追加到文件中
-                with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                with open('/Users/yanzhang/Coding/News/Today_error.txt', 'a') as error_file:
                     error_file.write(formatted_error_message)
 
 # 提交事务
@@ -100,5 +100,5 @@ for group_name in stock_groups:
     stock_groups[group_name] = []
 
 # 写回到JSON文件
-with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json', 'w') as file:
+with open('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json', 'w') as file:
     json.dump(stock_groups, file, indent=4)

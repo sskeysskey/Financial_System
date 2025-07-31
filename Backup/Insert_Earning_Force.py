@@ -140,8 +140,8 @@ def insert_data(db_path, date, name, price):
             return False
 
 def main(symbol=None):
-    db_path = '/Users/yanzhang/Documents/Database/Finance.db'
-    json_file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
+    db_path = '/Users/yanzhang/Coding/Database/Finance.db'
+    json_file_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
     # 定义允许的表名集合
     ALLOWED_TABLES = {'Basic_Materials', 'Communication_Services', 'Consumer_Cyclical','Technology', 'Energy',
                         'Industrials', 'Consumer_Defensive', 'Utilities', 'Healthcare', 'Financial_Services',

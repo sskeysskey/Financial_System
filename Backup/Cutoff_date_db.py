@@ -57,8 +57,8 @@ def optimize_database(db_path, json_path):
 
 def main():
     # 获取数据库文件大小（优化前）
-    db_path = '/Users/yanzhang/Documents/Database/Finance.db'  # 替换为实际的数据库路径
-    json_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'  # JSON 文件路径
+    db_path = '/Users/yanzhang/Coding/Database/Finance.db'  # 替换为实际的数据库路径
+    json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'  # JSON 文件路径
     
     initial_size = os.path.getsize(db_path) / (1024 * 1024)  # 转换为 MB
     

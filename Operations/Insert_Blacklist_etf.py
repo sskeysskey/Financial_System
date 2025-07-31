@@ -43,7 +43,7 @@ def add_to_blacklist(blacklist_file, symbol):
         return False
 
 def main():
-    blacklist_file = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'
+    blacklist_file = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
 
     # 获取剪贴板内容
     Copy_Command_C()

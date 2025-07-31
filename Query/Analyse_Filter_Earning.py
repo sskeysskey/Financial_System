@@ -66,13 +66,13 @@ def analyze_financial_data():
     db_file_path = os.path.join(base_path, 'Documents/Database/Finance.db')
     
     # 将输出路径明确区分为 news 路径和 backup 路径
-    news_file_path = '/Users/yanzhang/Documents/News/Filter_Earning.txt'
-    backup_file_path = '/Users/yanzhang/Documents/News/backup/Filter_Earning.txt'
+    news_file_path = '/Users/yanzhang/Coding/News/Filter_Earning.txt'
+    backup_file_path = '/Users/yanzhang/Coding/News/backup/Filter_Earning.txt'
     
-    target_json_for_filter_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json'
+    target_json_for_filter_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
 
     # ### 新增代码块 1: 定义黑名单文件路径 ###
-    blacklist_json_path = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'
+    blacklist_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
 
     # ### 新增/修改 1: 定义筛选常量 ###
     TURNOVER_THRESHOLD = 150_000_000  # 成交额阈值：一亿五千万

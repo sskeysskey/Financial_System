@@ -1,7 +1,7 @@
 import sqlite3
 
 # 数据库文件的路径
-db_path = '/Users/yanzhang/Documents/Database/Firstrade.db'
+db_path = '/Users/yanzhang/Coding/Database/Firstrade.db'
 
 # 要删除的数据的 id
 ids_to_delete = [30]

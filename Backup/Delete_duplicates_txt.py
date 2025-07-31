@@ -20,8 +20,8 @@ def remove_duplicates(input_filename, output_filename):
     return duplicates
 
 # 使用示例
-input_filename = '/Users/yanzhang/Documents/News/backup/ETFs.txt'
-output_filename = '/Users/yanzhang/Documents/News/backup/ETFs_no_duplicates.txt'
+input_filename = '/Users/yanzhang/Coding/News/backup/ETFs.txt'
+output_filename = '/Users/yanzhang/Coding/News/backup/ETFs_no_duplicates.txt'
 result = remove_duplicates(input_filename, output_filename)
 
 if result:

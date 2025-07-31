@@ -26,11 +26,11 @@ if now.weekday() in (0, 6):
     print("Today is either Sunday or Monday. The script will not run.")
 else:
     # 读取JSON文件
-    with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_US_holiday.json', 'r') as file:
+    with open('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_US_holiday.json', 'r') as file:
         stock_groups = json.load(file)
 
     # 读取symbol_mapping JSON文件
-    with open('/Users/yanzhang/Documents/Financial_System/Modules/Symbol_mapping.json', 'r') as file:
+    with open('/Users/yanzhang/Coding/Financial_System/Modules/Symbol_mapping.json', 'r') as file:
         symbol_mapping = json.load(file)
 
     today = now.date()
@@ -44,7 +44,7 @@ else:
     # end_date = "2025-01-03"
 
     # 连接到SQLite数据库
-    conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
+    conn = sqlite3.connect('/Users/yanzhang/Coding/Database/Finance.db')
     c = conn.cursor()
 
     # 定义需要特殊处理的group_name
@@ -79,7 +79,7 @@ else:
             except Exception as e:
                 formatted_error_message = log_error_with_timestamp(str(e))
                 # 将错误信息追加到文件中
-                with open('/Users/yanzhang/Documents/News/Today_error1.txt', 'a') as error_file:
+                with open('/Users/yanzhang/Coding/News/Today_error1.txt', 'a') as error_file:
                     error_file.write(formatted_error_message)
 
         # 在完成每个group_name后打印信息

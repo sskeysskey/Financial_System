@@ -6,10 +6,10 @@ import os
 from collections import OrderedDict
 
 # --- Configuration ---
-DB_PATH = "/Users/yanzhang/Documents/Database/Finance.db"
-JSON_PATH = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json"
-OUTPUT_PATH = "/Users/yanzhang/Documents/News/HighLow.txt"
-BACKUP_OUTPUT_PATH = "/Users/yanzhang/Documents/News/backup/HighLow.txt" # Path for the backup file
+DB_PATH = "/Users/yanzhang/Coding/Database/Finance.db"
+JSON_PATH = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json"
+OUTPUT_PATH = "/Users/yanzhang/Coding/News/HighLow.txt"
+BACKUP_OUTPUT_PATH = "/Users/yanzhang/Coding/News/backup/HighLow.txt" # Path for the backup file
 
 # Categories to process as per your request
 TARGET_CATEGORIES = [

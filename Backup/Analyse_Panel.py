@@ -50,16 +50,16 @@ def get_latest_price_and_date(cursor, table_name, name):
 def main():
     output = []  # 用于收集输出信息的列表
     databases = [
-        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Indices', 'names': ('NASDAQ',
+        {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Indices', 'names': ('NASDAQ',
             'S&P500', 'Shanghai', 'Shenzhen', 'Nikkei', 'India', 'HANGSENG', 'Russell', 'VIX', 'Brazil', 'Russian')},
 
-        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto', 'names': ('Bitcoin',
+        {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Crypto', 'names': ('Bitcoin',
             'Ether', 'Solana', 'Binance')},
 
-        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies', 'names': ('DXY',
+        {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Currencies', 'names': ('DXY',
             'USDCNY', 'USDJPY', 'CNYEUR', 'GBPCNY', 'USDARS')},
 
-        {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities', 'names': ('Brent',
+        {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Commodities', 'names': ('Brent',
             'CrudeOil', 'Naturalgas', 'Gold', 'Copper', 'Coffee', 'Cocoa', 'Rice', 'Corn', 'Oat', 'LeanHogs',
             'LiveCattle', 'Cotton', 'OrangeJuice', 'Sugar', 'Silver', 'Soybean')},
     ]
@@ -81,7 +81,7 @@ def main():
                 else:
                     error_message = f"没有找到{name}的历史价格数据。"
                     formatted_error_message = log_error_with_timestamp(error_message)
-                    with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                    with open('/Users/yanzhang/Coding/News/Today_error.txt', 'a') as error_file:
                         error_file.write(formatted_error_message)
                     continue
                 
@@ -97,7 +97,7 @@ def main():
                     except Exception as e:
                         formatted_error_message = log_error_with_timestamp(str(e))
                         # 将错误信息追加到文件中
-                        with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                        with open('/Users/yanzhang/Coding/News/Today_error.txt', 'a') as error_file:
                             error_file.write(formatted_error_message)
                         continue  # 处理下一个时间间隔
 
@@ -181,7 +181,7 @@ def main():
             
     final_output = "\n".join(output)
     # 将输出保存到文件
-    file_path = '/Users/yanzhang/Documents/News/AnalysePanel.txt'
+    file_path = '/Users/yanzhang/Coding/News/AnalysePanel.txt'
     with open(file_path, 'w', encoding='utf-8') as file:
         file.write(final_output)
     print(f"文件已保存到 {file_path}")

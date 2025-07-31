@@ -10,9 +10,9 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 # --- 文件路径配置 ---
 # 请确保这些路径是正确的
-blacklist_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json"
+blacklist_file_path = "/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json"
 screener_file_path = "/Users/yanzhang/Downloads/screener_below_250520.txt"
-db_file_path = "/Users/yanzhang/Documents/Database/Finance.db"
+db_file_path = "/Users/yanzhang/Coding/Database/Finance.db"
 
 def process_stock_data_deletion():
     """

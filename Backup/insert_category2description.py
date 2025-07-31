@@ -1,7 +1,7 @@
 import json
 
 # 定义文件路径
-file_path = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
+file_path = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
 
 # 第一步：读取 JSON 文件
 with open(file_path, 'r', encoding='utf-8') as file:

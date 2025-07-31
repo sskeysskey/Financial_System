@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 # ChromeDriver 路径
 CHROME_DRIVER_PATH = "/Users/yanzhang/Downloads/backup/chromedriver"
-DB_PATH = '/Users/yanzhang/Documents/Database/Finance.db'
+DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
 
 def setup_driver():
     # 设置Chrome选项以提高性能

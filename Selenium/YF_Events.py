@@ -48,8 +48,8 @@ mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
 mouse_thread.start()
 
 # 文件路径
-file_path = '/Users/yanzhang/Documents/News/Economic_Events_next.txt'
-backup_dir = '/Users/yanzhang/Documents/News/backup/backup'
+file_path = '/Users/yanzhang/Coding/News/Economic_Events_next.txt'
+backup_dir = '/Users/yanzhang/Coding/News/backup/backup'
 
 # 检查原始文件是否存在
 original_file_exists = os.path.exists(file_path)

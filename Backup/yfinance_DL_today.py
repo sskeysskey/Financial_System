@@ -216,13 +216,13 @@ def main():
     else:
         print("未启用鼠标随机移动功能")
 
-    with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json', 'r') as file:
+    with open('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_today.json', 'r') as file:
         stock_groups = json.load(file)
 
-    with open('/Users/yanzhang/Documents/Financial_System/Modules/Symbol_mapping.json', 'r') as file:
+    with open('/Users/yanzhang/Coding/Financial_System/Modules/Symbol_mapping.json', 'r') as file:
         symbol_mapping = json.load(file)
 
-    EMPTY_JSON_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json'
+    EMPTY_JSON_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json'
 
     today = now.date()
     yesterday = today - timedelta(days=1)
@@ -236,14 +236,14 @@ def main():
         (ex_yesterday.strftime('%Y-%m-%d'), yesterday.strftime('%Y-%m-%d'))
     ]
 
-    conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
+    conn = sqlite3.connect('/Users/yanzhang/Coding/Database/Finance.db')
     c = conn.cursor()
 
     # 定义需要特殊处理的group_name
     special_groups = ["Currencies", "Bonds", "Crypto", "Commodities"]
     total_data_count = 0
 
-    ERROR_LOG_PATH = '/Users/yanzhang/Documents/News/Today_error1.txt'
+    ERROR_LOG_PATH = '/Users/yanzhang/Coding/News/Today_error1.txt'
     
     for group_name, tickers in stock_groups.items():
         data_count = 0

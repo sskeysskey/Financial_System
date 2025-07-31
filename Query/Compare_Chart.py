@@ -110,7 +110,7 @@ class StockComparisonApp(QWidget):
     def format_symbol(self, symbol):
         """尝试将用户输入的 symbol 转换为数据库中存在的格式"""
         # 首先加载 JSON 数据
-        with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as f:
+        with open('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json', 'r') as f:
             sector_data = json.load(f)
         
         # 从所有 symbol 列表中搜寻匹配项
@@ -156,7 +156,7 @@ class StockComparisonApp(QWidget):
         colors = ['tab:blue', 'tab:red', 'tab:green', 'tab:purple', 'tab:pink', 'tab:brown', 'tab:gray', 'tab:olive', 'tab:cyan', 'tab:orange']
 
         # 查询数据库
-        db_path = '/Users/yanzhang/Documents/Database/Finance.db'
+        db_path = '/Users/yanzhang/Coding/Database/Finance.db'
         conn = sqlite3.connect(db_path)
 
         # 创建字典来存储每个symbol的数据
@@ -259,7 +259,7 @@ class StockComparisonApp(QWidget):
         plt.show()
 
     def find_table_by_symbol(self, symbol):
-        with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as f:
+        with open('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json', 'r') as f:
             sector_data = json.load(f)
 
         for table, symbols in sector_data.items():

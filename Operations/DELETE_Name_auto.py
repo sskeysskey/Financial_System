@@ -147,13 +147,13 @@ def delete_from_description_json(description_file, symbol):
 
 def main():
     # db_path = '/Users/yanzhang/Downloads/backup/DB_backup/Finance.db'
-    db_path = '/Users/yanzhang/Documents/Database/Finance.db'
-    sector_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
-    sector_today_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json'
-    sector_500_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_500.json'
-    sector_empty_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json'
-    blacklist_file = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'
-    description_file = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
+    db_path = '/Users/yanzhang/Coding/Database/Finance.db'
+    sector_file = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
+    sector_today_file = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_today.json'
+    sector_500_file = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_500.json'
+    sector_empty_file = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json'
+    blacklist_file = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
+    description_file = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
     
     # 获取剪贴板内容
     symbol = get_clipboard_content()

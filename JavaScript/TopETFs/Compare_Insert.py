@@ -8,10 +8,10 @@ import time
 import subprocess
 
 # --- 配置 ---
-json_file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
-blacklist_json_path = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'
-db_file_path = '/Users/yanzhang/Documents/Database/Finance.db'
-output_dir = '/Users/yanzhang/Documents/News'
+json_file_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
+blacklist_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
+db_file_path = '/Users/yanzhang/Coding/Database/Finance.db'
+output_dir = '/Users/yanzhang/Coding/News'
 output_txt_file = os.path.join(output_dir, 'ETFs_new.txt')
 
 def count_files(prefix):
@@ -179,7 +179,7 @@ else:
 # --- 8. 调用 Check_yesterday.py 脚本 ---
 print("\n--------------------------------------------------")
 print("--- 开始执行 Check_yesterday.py 脚本 ---")
-check_yesterday_script_path = '/Users/yanzhang/Documents/Financial_System/Query/Check_yesterday.py'
+check_yesterday_script_path = '/Users/yanzhang/Coding/Financial_System/Query/Check_yesterday.py'
 
 try:
     # 使用 subprocess.run 来执行另一个 Python 脚本。

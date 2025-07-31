@@ -147,7 +147,7 @@ def get_clipboard_content():
         return ""
 
 def main():
-    json_file = "/Users/yanzhang/Documents/Financial_System/Modules/description.json"
+    json_file = "/Users/yanzhang/Coding/Financial_System/Modules/description.json"
     
     try:
         with open(json_file, 'r', encoding='utf-8') as file:

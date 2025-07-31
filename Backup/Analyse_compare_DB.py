@@ -4,7 +4,7 @@ from datetime import date
 
 def connect_db():
     # 连接到SQLite数据库
-    conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Analysis.db')
+    conn = sqlite3.connect('/Users/yanzhang/Coding/Database/Analysis.db')
     return conn
 
 def insert_data(conn, date, name, rate):
@@ -92,4 +92,4 @@ def analyze_sector_impacts(filename):
         print("{:<30} {:<10.2f} {:<10.2f}".format(sector, count, percentage))
 
 # 调用函数
-analyze_sector_impacts('/Users/yanzhang/Documents/News/CompareStock.txt')
+analyze_sector_impacts('/Users/yanzhang/Coding/News/CompareStock.txt')

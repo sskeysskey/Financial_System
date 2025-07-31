@@ -8,7 +8,7 @@ import concurrent.futures
 import sqlite3
 from PyQt5.QtWidgets import QApplication, QInputDialog, QLineEdit
 
-sys.path.append('/Users/yanzhang/Documents/Financial_System/Query')
+sys.path.append('/Users/yanzhang/Coding/Financial_System/Query')
 from Chart_input import plot_financial_data
 
 @lru_cache(maxsize=None)
@@ -92,9 +92,9 @@ def match_and_plot(input_trimmed, sector_data, compare_data, json_data, db_path)
 
 def load_data_parallel():
     data_sources = [
-        ('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'json'),
-        ('/Users/yanzhang/Documents/News/backup/Compare_All.txt', 'compare'),
-        ('/Users/yanzhang/Documents/Financial_System/Modules/description.json', 'json')
+        ('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json', 'json'),
+        ('/Users/yanzhang/Coding/News/backup/Compare_All.txt', 'compare'),
+        ('/Users/yanzhang/Coding/Financial_System/Modules/description.json', 'json')
     ]
     
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
@@ -120,9 +120,9 @@ def input_mapping(data, db_path, user_input):
         return
 
     input_trimmed = user_input.strip()
-    if match_and_plot(input_trimmed, data['/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'],
-                      data['/Users/yanzhang/Documents/News/backup/Compare_All.txt'],
-                      data['/Users/yanzhang/Documents/Financial_System/Modules/description.json'],
+    if match_and_plot(input_trimmed, data['/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'],
+                      data['/Users/yanzhang/Coding/News/backup/Compare_All.txt'],
+                      data['/Users/yanzhang/Coding/Financial_System/Modules/description.json'],
                       db_path):
         # 任务完成，函数返回后程序将自动退出
         pass
@@ -131,7 +131,7 @@ def input_mapping(data, db_path, user_input):
         pyperclip.copy(input_trimmed)
         subprocess.run([
             sys.executable,
-            '/Users/yanzhang/Documents/Financial_System/Query/show_description.py',
+            '/Users/yanzhang/Coding/Financial_System/Query/show_description.py',
             'paste'
         ], check=True)
 
@@ -169,7 +169,7 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
 
     data = load_data_parallel()
-    db_path = '/Users/yanzhang/Documents/Database/Finance.db'
+    db_path = '/Users/yanzhang/Coding/Database/Finance.db'
 
     if len(sys.argv) > 1:
         arg = sys.argv[1]

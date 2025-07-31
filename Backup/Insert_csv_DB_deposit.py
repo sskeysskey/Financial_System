@@ -3,7 +3,7 @@ import csv
 from datetime import datetime
 
 # --- 配置参数 ---
-db_path = '/Users/yanzhang/Documents/Database/Firstrade.db'
+db_path = '/Users/yanzhang/Coding/Database/Firstrade.db'
 # 假设您的 CSV 文件名为 deposit.csv 并且与脚本在同一目录或您提供完整路径
 csv_path = '/Users/yanzhang/Downloads/deposit.csv' # 请确保这是您 CSV 文件的正确路径
 table_name = 'Deposit'

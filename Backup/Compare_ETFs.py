@@ -158,17 +158,17 @@ def clean_old_backups(directory, prefix="CompareETFs_", days=4):
                 print(f"跳过文件：{filename}，原因：{e}")
 
 if __name__ == '__main__':
-    config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
-    description_path = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
+    config_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
+    description_path = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
     
     blacklist = ["ERY","TQQQ","QLD","SOXL","SPXL","SVXY","YINN","CHAU","UVXY",
                 "VIXY","VXX","SPXS","SPXU","ZSL","AGQ","SCO","TMF","SOXS",
                 "BOIL","TWM","KOLD","TMV"]
 
     interested_sectors = ["ETFs"]
-    file_path = '/Users/yanzhang/Documents/News/CompareETFs.txt'
-    directory_backup = '/Users/yanzhang/Documents/News/backup/site/'
-    error_file_path = '/Users/yanzhang/Documents/News/Today_error.txt'
+    file_path = '/Users/yanzhang/Coding/News/CompareETFs.txt'
+    directory_backup = '/Users/yanzhang/Coding/News/backup/site/'
+    error_file_path = '/Users/yanzhang/Coding/News/Today_error.txt'
     
     if os.path.exists(file_path):
         yesterday = datetime.now() - timedelta(days=1)
@@ -183,6 +183,6 @@ if __name__ == '__main__':
         print("文件不存在")
     
     compare_today_yesterday(config_path, description_path, blacklist, interested_sectors,
-                            '/Users/yanzhang/Documents/Database/Finance.db',
+                            '/Users/yanzhang/Coding/Database/Finance.db',
                             file_path, error_file_path)
     clean_old_backups(directory_backup)

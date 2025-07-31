@@ -261,8 +261,8 @@ def write_results_to_files(results):
     """
     批量写入文件
     """
-    with open('/Users/yanzhang/Documents/News/backup/marketcap_pe.txt', 'a', encoding='utf-8') as f1, \
-         open('/Users/yanzhang/Documents/News/backup/price_volume.txt', 'a', encoding='utf-8') as f2:
+    with open('/Users/yanzhang/Coding/News/backup/marketcap_pe.txt', 'a', encoding='utf-8') as f1, \
+         open('/Users/yanzhang/Coding/News/backup/price_volume.txt', 'a', encoding='utf-8') as f2:
         for result in results:
             f1.write(f"{result[0]}: {result[1]}, {result[2]}\n")
             f2.write(f"{result[0]}: {result[4]}, {result[5]}\n")
@@ -335,7 +335,7 @@ def update_json(data, sector, file_path, output, log_enabled,
         json.dump(json_data, file, indent=2)
 
     if new_symbols and write_symbols:
-        symbol_names_path = '/Users/yanzhang/Documents/News/backup/symbol_names.txt'
+        symbol_names_path = '/Users/yanzhang/Coding/News/backup/symbol_names.txt'
         existing_symbols = set()
         if os.path.exists(symbol_names_path):
             with open(symbol_names_path, 'r', encoding='utf-8') as symbol_file:
@@ -358,7 +358,7 @@ def process_sector(driver, url, sector, output, output_500, output_5000, blackli
     update_json(
         data,
         sector,
-        '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json',
+        '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json',
         output,
         log_enabled=True,
         market_cap_threshold=5000000000,
@@ -368,7 +368,7 @@ def process_sector(driver, url, sector, output, output_500, output_5000, blackli
     update_json(
         data,
         sector,
-        '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json',
+        '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_today.json',
         output,
         log_enabled=False,
         market_cap_threshold=5000000000,
@@ -379,7 +379,7 @@ def process_sector(driver, url, sector, output, output_500, output_5000, blackli
     update_json(
         data,
         sector,
-        '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_500.json',
+        '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_500.json',
         output_500,
         log_enabled=True,
         market_cap_threshold=50000000000,
@@ -388,7 +388,7 @@ def process_sector(driver, url, sector, output, output_500, output_5000, blackli
     update_json(
         data,
         sector,
-        '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_5000.json',
+        '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_5000.json',
         output_5000,
         log_enabled=True,
         market_cap_threshold=500000000000,
@@ -483,13 +483,13 @@ def main():
     chrome_options.add_argument('--disable-blink-features=AutomationControlled')
 
     driver = webdriver.Chrome(service=service, options=chrome_options)
-    blacklist_file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'
+    blacklist_file_path = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
     blacklist = load_blacklist(blacklist_file_path)
 
     output, output_500, output_5000 = [], [], []
 
-    source_directory = '/Users/yanzhang/Documents/News/backup/'
-    backup_directory = '/Users/yanzhang/Documents/News/backup/site'
+    source_directory = '/Users/yanzhang/Coding/News/backup/'
+    backup_directory = '/Users/yanzhang/Coding/News/backup/site'
 
     files_to_backup = ['marketcap_pe.txt', 'price_volume.txt']
     for file in files_to_backup:
@@ -517,7 +517,7 @@ def main():
         ('https://finance.yahoo.com/research-hub/screener/360b16ee-2692-4617-bd1a-a6c715dd0c29/?start=0&count=100', 'Communication_Services'),
     ]
 
-    cookie_file = '/Users/yanzhang/Documents/Financial_System/Modules/yahoo_cookies.pkl'
+    cookie_file = '/Users/yanzhang/Coding/Financial_System/Modules/yahoo_cookies.pkl'
 
     try:
         driver.get("https://www.yahoo.com/")
@@ -545,7 +545,7 @@ def main():
     finally:
         driver.quit()
 
-    output_directory = '/Users/yanzhang/Documents/News/backup/backup'
+    output_directory = '/Users/yanzhang/Coding/News/backup/backup'
     save_output_to_file(output, output_directory, filename='Stock_50.txt')
     save_output_to_file(output_500, output_directory, filename='Stock_500.txt')
     save_output_to_file(output_5000, output_directory, filename='Stock_5000.txt')

@@ -30,7 +30,7 @@ def find_tables_with_flo(db_path):
     return tables_with_flo
 
 # 使用示例
-db_path = '/Users/yanzhang/Documents/Database/Finance.db'
+db_path = '/Users/yanzhang/Coding/Database/Finance.db'
 result = find_tables_with_flo(db_path)
 
 print(json.dumps({"Tables containing 'FLO'": result}, indent=2))

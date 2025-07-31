@@ -2,8 +2,8 @@ import json
 import re
 
 # 定义文件路径
-error_file_path = "/Users/yanzhang/Documents/News/Today_error.txt"
-json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json"
+error_file_path = "/Users/yanzhang/Coding/News/Today_error.txt"
+json_file_path = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json"
 
 # 读取报错文件内容
 with open(error_file_path, 'r') as error_file:

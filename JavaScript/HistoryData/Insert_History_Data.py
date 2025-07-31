@@ -10,12 +10,12 @@ import subprocess
 
 # --- 配置路径 ---
 DOWNLOADS_DIR = "/Users/yanzhang/Downloads"
-SECTORS_JSON_PATH = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json"
+SECTORS_JSON_PATH = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json"
 # --- 新增：指向需要被修改的 "empty" JSON 文件 ---
-SECTORS_EMPTY_JSON_PATH = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json"
-SYMBOL_MAPPING_PATH = "/Users/yanzhang/Documents/Financial_System/Modules/Symbol_mapping.json"
-DB_PATH = "/Users/yanzhang/Documents/Database/Finance.db"
-ERROR_LOG_PATH = "/Users/yanzhang/Documents/News/Today_error.txt"
+SECTORS_EMPTY_JSON_PATH = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json"
+SYMBOL_MAPPING_PATH = "/Users/yanzhang/Coding/Financial_System/Modules/Symbol_mapping.json"
+DB_PATH = "/Users/yanzhang/Coding/Database/Finance.db"
+ERROR_LOG_PATH = "/Users/yanzhang/Coding/News/Today_error.txt"
 
 def add_symbol_to_etfs_group_in_json(symbol_to_add, json_path):
     """

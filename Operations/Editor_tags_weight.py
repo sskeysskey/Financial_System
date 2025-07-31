@@ -50,7 +50,7 @@ class DroppableListWidget(QListWidget):
 class TagEditor(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.json_path = '/Users/yanzhang/Documents/Financial_System/Modules/tags_weight.json'  # 假设 JSON 文件在同目录下
+        self.json_path = '/Users/yanzhang/Coding/Financial_System/Modules/tags_weight.json'  # 假设 JSON 文件在同目录下
         self.data = {}
         self.list_widgets = {}
         self.base_window_title = "标签权重编辑器"

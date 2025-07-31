@@ -91,11 +91,11 @@ def main():
             print("未启用鼠标随机移动功能")
 
         # 读取JSON文件
-        with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json', 'r') as file:
+        with open('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_today.json', 'r') as file:
             stock_groups = json.load(file)
 
         # 读取symbol_mapping JSON文件
-        with open('/Users/yanzhang/Documents/Financial_System/Modules/Symbol_mapping.json', 'r') as file:
+        with open('/Users/yanzhang/Coding/Financial_System/Modules/Symbol_mapping.json', 'r') as file:
             symbol_mapping = json.load(file)
 
         today = now.date()
@@ -106,7 +106,7 @@ def main():
         end_date = today.strftime('%Y-%m-%d')
 
         # 连接到SQLite数据库
-        conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
+        conn = sqlite3.connect('/Users/yanzhang/Coding/Database/Finance.db')
         c = conn.cursor()
 
         # 定义需要特殊处理的group_name
@@ -144,7 +144,7 @@ def main():
                         
                         data_count += 1  # 成功插入一条数据，计数器增加
                 except Exception as e:
-                    with open('/Users/yanzhang/Documents/News/Today_error1.txt', 'a') as error_file:
+                    with open('/Users/yanzhang/Coding/News/Today_error1.txt', 'a') as error_file:
                         error_file.write(log_error_with_timestamp(str(e)))
 
             # 在完成每个group_name后打印信息

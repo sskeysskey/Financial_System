@@ -11,8 +11,8 @@ from contextlib import contextmanager
 
 # 配置常量
 CHROME_DRIVER_PATH = "/Users/yanzhang/Downloads/backup/chromedriver"
-TXT_FILE_PATH = "/Users/yanzhang/Documents/News/Today_error.txt"
-DB_PATH = "/Users/yanzhang/Documents/Database/Finance.db"
+TXT_FILE_PATH = "/Users/yanzhang/Coding/News/Today_error.txt"
+DB_PATH = "/Users/yanzhang/Coding/Database/Finance.db"
 
 @contextmanager
 def get_driver():

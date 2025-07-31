@@ -218,7 +218,7 @@ def check_empty_json_has_content(json_file_path):
 
 def add_symbol_to_json_files(symbol, group):
     """将symbol添加到指定的JSON文件的对应分组中"""
-    base_dir = "/Users/yanzhang/Documents/Financial_System/Modules/"
+    base_dir = "/Users/yanzhang/Coding/Financial_System/Modules/"
     json_files = ["Sectors_empty.json", "Sectors_All.json", "Sectors_today.json"]
     
     for json_file in json_files:
@@ -382,7 +382,7 @@ def wait_for_element(driver, by, value, timeout=10):
 
 def clear_empty_json():
     """清空 Sectors_empty.json 文件中的所有股票符号，但保留分组结构"""
-    empty_json_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json"
+    empty_json_path = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json"
     with open(empty_json_path, 'r') as file:
         data = json.load(file)
     
@@ -400,7 +400,7 @@ def get_group_for_symbol(symbol):
     """
     从 Sectors_All.json 中自动匹配symbol所属的分组（忽略大小写）
     """
-    base_dir = "/Users/yanzhang/Documents/Financial_System/Modules/"
+    base_dir = "/Users/yanzhang/Coding/Financial_System/Modules/"
     sectors_all_path = os.path.join(base_dir, "Sectors_All.json")
     with open(sectors_all_path, 'r') as f:
         data = json.load(f)
@@ -417,7 +417,7 @@ def extract_group_names():
     """
     读取 Sectors_All.json，将所有顶层 key（即分组名）提取为列表返回
     """
-    base_dir = "/Users/yanzhang/Documents/Financial_System/Modules/"
+    base_dir = "/Users/yanzhang/Coding/Financial_System/Modules/"
     sectors_all_path = os.path.join(base_dir, "Sectors_All.json")
     with open(sectors_all_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
@@ -466,7 +466,7 @@ def main():
     
     # 根据命令行参数选择JSON文件路径和输出目录
     if args.mode.lower() == 'empty':
-        empty_json_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json"
+        empty_json_path = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json"
         
         # 检查empty.json是否有内容
         has_content = check_empty_json_has_content(empty_json_path)
@@ -508,19 +508,19 @@ def main():
                 print(f"已将 {symbol} 自动匹配到 {group} 分组并写入 Sectors_empty.json")
             
             json_file_path = empty_json_path
-            shares_file_path = "/Users/yanzhang/Documents/News/backup/Shares.txt"
-            # symbol_names_file_path = "/Users/yanzhang/Documents/News/backup/symbol_names.txt"
-            marketcap_pe_file_path = "/Users/yanzhang/Documents/News/backup/marketcap_pe.txt"
+            shares_file_path = "/Users/yanzhang/Coding/News/backup/Shares.txt"
+            # symbol_names_file_path = "/Users/yanzhang/Coding/News/backup/symbol_names.txt"
+            marketcap_pe_file_path = "/Users/yanzhang/Coding/News/backup/marketcap_pe.txt"
             print("使用空测试文件模式和backup目录...")
     else:
-        json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json"
+        json_file_path = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json"
         shares_file_path = "/Users/yanzhang/Downloads/Shares.txt"
         # symbol_names_file_path = "/Users/yanzhang/Downloads/symbol_names.txt"
         marketcap_pe_file_path = "/Users/yanzhang/Downloads/marketcap_pe.txt"
         print("使用正常模式和Downloads目录...")
 
     # --- 数据库连接 ---
-    db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+    db_path = "/Users/yanzhang/Coding/Database/Finance.db"
     db_conn = create_db_connection(db_path)
     if not db_conn:
         print("无法连接到数据库，程序退出。")
@@ -753,7 +753,7 @@ def main():
         print("数据抓取完成！")
 
         # 检查sectors_empty.json是否有内容
-        empty_json_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json"
+        empty_json_path = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json"
         has_content = check_empty_json_has_content(empty_json_path)
         
         # 如果有内容，询问是否清空

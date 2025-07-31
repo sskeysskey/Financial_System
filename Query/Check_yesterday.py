@@ -7,12 +7,12 @@ from datetime import datetime, timedelta
 from typing import Callable, Tuple, Optional
 
 # -------- 请根据实际情况修改下面这几个路径 -------- #
-DB_PATH = '/Users/yanzhang/Documents/Database/Finance.db'
-SECTORS_ALL_JSON = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
-SECTOR_EMPTY_JSON = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json'
-ERROR_FILE = '/Users/yanzhang/Documents/News/Today_error2.txt'
+DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
+SECTORS_ALL_JSON = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
+SECTOR_EMPTY_JSON = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json'
+ERROR_FILE = '/Users/yanzhang/Coding/News/Today_error2.txt'
 # 新增：符号映射文件路径
-SYMBOL_MAPPING_JSON = '/Users/yanzhang/Documents/Financial_System/Modules/Symbol_mapping.json'
+SYMBOL_MAPPING_JSON = '/Users/yanzhang/Coding/Financial_System/Modules/Symbol_mapping.json'
 
 
 # 不需要写入 empty 的 symbol

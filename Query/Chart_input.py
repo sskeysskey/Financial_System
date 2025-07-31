@@ -175,7 +175,7 @@ class InfoDialog(QDialog):
 # ### 新增：统一的外部脚本执行函数 ###
 def execute_external_script(script_type, keyword):
     # 集中管理所有外部脚本的路径
-    base_path = '/Users/yanzhang/Documents/Financial_System'
+    base_path = '/Users/yanzhang/Coding/Financial_System'
     script_configs = {
         'earning_input': f'{base_path}/Operations/Insert_Earning_Manual.py',
         'earning_edit': f'{base_path}/Operations/Editor_Earning_DB.py',
@@ -184,8 +184,8 @@ def execute_external_script(script_type, keyword):
         'event_edit': f'{base_path}/Operations/Editor_Events.py',
         'symbol_compare': f'{base_path}/Query/Compare_Chart.py',
         'similar_tags': f'{base_path}/Query/Find_Similar_Tag.py',
-        'check_kimi': '/Users/yanzhang/Documents/ScriptEditor/CheckKimi_Earning.scpt',
-        'check_futu': '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt'
+        'check_kimi': '/Users/yanzhang/Coding/ScriptEditor/CheckKimi_Earning.scpt',
+        'check_futu': '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt'
     }
 
     script_path = script_configs.get(script_type)

@@ -1,6 +1,6 @@
 import sqlite3
 
-db_path = '/Users/yanzhang/Documents/Database/Finance.db'
+db_path = '/Users/yanzhang/Coding/Database/Finance.db'
 conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
 

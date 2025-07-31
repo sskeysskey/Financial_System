@@ -5,10 +5,10 @@ import glob
 from datetime import datetime
 
 # 文件路径定义
-TXT_FILE_DIRECTORY = "/Users/yanzhang/Documents/News/backup/backup"
-JSON_FILE_PATH_EMPTY = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json"
-JSON_FILE_PATH_ALL = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json"
-ERROR_FILE_PATH = '/Users/yanzhang/Documents/News/Today_error.txt'
+TXT_FILE_DIRECTORY = "/Users/yanzhang/Coding/News/backup/backup"
+JSON_FILE_PATH_EMPTY = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json"
+JSON_FILE_PATH_ALL = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json"
+ERROR_FILE_PATH = '/Users/yanzhang/Coding/News/Today_error.txt'
 
 # 错误日志函数
 def log_error_with_timestamp(error_message, file_path):

@@ -51,12 +51,12 @@ def find_file_path_with_fallback(filename, primary_dir, fallback_dir):
 
 # --- 0. 定义文件路径 ---
 # JSON 文件路径
-sector_all_json_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
-sector_empty_json_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json' # 同时也是输出路径
+sector_all_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
+sector_empty_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json' # 同时也是输出路径
 
 # TXT 文件的主目录和备用目录
 primary_txt_dir = '/Users/yanzhang/Downloads/'
-fallback_txt_dir = '/Users/yanzhang/Documents/News/backup/'
+fallback_txt_dir = '/Users/yanzhang/Coding/News/backup/'
 
 # TXT 文件名
 marketcap_filename = 'marketcap_pe.txt'

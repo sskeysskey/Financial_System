@@ -2,8 +2,8 @@ import json
 from collections import OrderedDict
 
 # 假设您的JSON数据存储在一个名为data.json的文件中
-input_filename = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
-output_filename = '/Users/yanzhang/Documents/Financial_System/Modules/description_test3.json'
+input_filename = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
+output_filename = '/Users/yanzhang/Coding/Financial_System/Modules/description_test3.json'
 
 # 读取JSON数据
 with open(input_filename, 'r', encoding='utf-8') as file:

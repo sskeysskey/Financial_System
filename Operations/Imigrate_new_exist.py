@@ -9,22 +9,22 @@ LOCK_FILE = os.path.join(os.path.dirname(__file__), '.last_run_date')
 
 # 文件路径
 files = {
-    'ETFs': '/Users/yanzhang/Documents/News/backup/ETFs.txt',
-    '10Y_newhigh': '/Users/yanzhang/Documents/News/backup/10Y_newhigh.txt',
-    'Earnings_Release': '/Users/yanzhang/Documents/News/backup/Earnings_Release.txt',
-    'Economic_Events': '/Users/yanzhang/Documents/News/backup/Economic_Events.txt'
+    'ETFs': '/Users/yanzhang/Coding/News/backup/ETFs.txt',
+    '10Y_newhigh': '/Users/yanzhang/Coding/News/backup/10Y_newhigh.txt',
+    'Earnings_Release': '/Users/yanzhang/Coding/News/backup/Earnings_Release.txt',
+    'Economic_Events': '/Users/yanzhang/Coding/News/backup/Economic_Events.txt'
 }
 
 new_files = {
-    'ETFs': '/Users/yanzhang/Documents/News/ETFs_new.txt',
-    '10Y_newhigh': '/Users/yanzhang/Documents/News/10Y_newhigh_new.txt',
-    'Earnings_Release': '/Users/yanzhang/Documents/News/Earnings_Release_new.txt',
-    'Economic_Events': '/Users/yanzhang/Documents/News/Economic_Events_new.txt'
+    'ETFs': '/Users/yanzhang/Coding/News/ETFs_new.txt',
+    '10Y_newhigh': '/Users/yanzhang/Coding/News/10Y_newhigh_new.txt',
+    'Earnings_Release': '/Users/yanzhang/Coding/News/Earnings_Release_new.txt',
+    'Economic_Events': '/Users/yanzhang/Coding/News/Economic_Events_new.txt'
 }
 
 next_files = {
-    'Earnings_Release': '/Users/yanzhang/Documents/News/Earnings_Release_next.txt',
-    'Economic_Events': '/Users/yanzhang/Documents/News/Economic_Events_next.txt'
+    'Earnings_Release': '/Users/yanzhang/Coding/News/Earnings_Release_next.txt',
+    'Economic_Events': '/Users/yanzhang/Coding/News/Economic_Events_next.txt'
 }
 
 # 获取当前星期几，0是周一，6是周日

@@ -104,8 +104,8 @@ if __name__ == "__main__":
     # 请将以下路径替换为您的实际文件路径
     # 注意：在Python字符串中，反斜杠 '\' 是转义字符。
     # 您可以使用正斜杠 '/' 或者双反斜杠 '\\'。
-    json_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json"
-    db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+    json_path = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json"
+    db_path = "/Users/yanzhang/Coding/Database/Finance.db"
 
     # 确保路径是正确的
     # 如果您在Windows上，路径可能看起来像:

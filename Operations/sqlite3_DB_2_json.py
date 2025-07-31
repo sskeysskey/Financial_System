@@ -3,7 +3,7 @@ import json
 from datetime import datetime, timedelta
 
 # 连接到 SQLite 数据库文件
-db_file = '/Users/yanzhang/Documents/Database/Finance.db'  # 你的数据库文件路径
+db_file = '/Users/yanzhang/Coding/Database/Finance.db'  # 你的数据库文件路径
 conn = sqlite3.connect(db_file)
 cursor = conn.cursor()
 
@@ -48,7 +48,7 @@ for table_name in tables:
 json_data = json.dumps(database_dict, indent=4, default=str)
 
 # 将 JSON 字符串写入文件
-with open('/Users/yanzhang/Documents/sskeysskey.github.io/economics/finance.json', 'w', encoding='utf-8') as json_file:
+with open('/Users/yanzhang/Coding/sskeysskey.github.io/economics/finance.json', 'w', encoding='utf-8') as json_file:
     json_file.write(json_data)
 
 # 关闭数据库连接

@@ -13,10 +13,10 @@ def write_json_file(file_path, data):
         json.dump(data, file, ensure_ascii=False, indent=4)
 
 # 读取 Analysis.json
-analysis_data = read_json_file('/Users/yanzhang/Documents/Financial_System/Modules/Chance.json')
+analysis_data = read_json_file('/Users/yanzhang/Coding/Financial_System/Modules/Chance.json')
 
 # 读取 description.json
-description_data = read_json_file('/Users/yanzhang/Documents/Financial_System/Modules/description.json')
+description_data = read_json_file('/Users/yanzhang/Coding/Financial_System/Modules/description.json')
 
 # Step 1: 清空 description.json 中所有项目的 value 字段
 for stock_type in ['stocks', 'etfs']:
@@ -38,7 +38,7 @@ for category, subcategories in analysis_data.items():
                         item['value'] = str(first_value)  # 更新对应的 value 字段
 
 # Step 4: 更新后的 description.json 写回文件
-write_json_file('/Users/yanzhang/Documents/Financial_System/Modules/description.json', description_data)
+write_json_file('/Users/yanzhang/Coding/Financial_System/Modules/description.json', description_data)
 
 # Step 5: 提取 value 不为空的项目并按 value 排序
 non_empty_value_items = []

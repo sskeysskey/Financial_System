@@ -8,10 +8,10 @@ def create_and_populate_db():
     """
     # --- 1. 定义文件和数据库路径 ---
     # 请确保这些路径是正确的
-    db_path = '/Users/yanzhang/Documents/Database/Finance.db'
-    marketcap_pe_file = '/Users/yanzhang/Documents/News/backup/marketcap_pe.txt'
-    shares_file = '/Users/yanzhang/Documents/News/backup/Shares.txt'
-    names_file = '/Users/yanzhang/Documents/News/backup/symbol_names.txt'
+    db_path = '/Users/yanzhang/Coding/Database/Finance.db'
+    marketcap_pe_file = '/Users/yanzhang/Coding/News/backup/marketcap_pe.txt'
+    shares_file = '/Users/yanzhang/Coding/News/backup/Shares.txt'
+    names_file = '/Users/yanzhang/Coding/News/backup/symbol_names.txt'
     
     # --- 2. 解析数据文件 ---
     # 使用字典来存储解析后的数据，以股票代码为键

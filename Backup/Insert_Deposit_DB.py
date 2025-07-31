@@ -1,7 +1,7 @@
 import sqlite3
 
 # 数据库文件的路径
-db_path = '/Users/yanzhang/Documents/Database/Firstrade.db'
+db_path = '/Users/yanzhang/Coding/Database/Firstrade.db'
 
 # 要插入的数据
 date_value = '2020-11-29'

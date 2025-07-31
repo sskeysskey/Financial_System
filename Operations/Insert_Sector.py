@@ -22,7 +22,7 @@ def remove_from_blacklist(symbol: str) -> None:
     """
     从blacklist.json的etf组中移除指定的symbol
     """
-    blacklist_file = '/Users/yanzhang/Documents/Financial_System/Modules/blacklist.json'
+    blacklist_file = '/Users/yanzhang/Coding/Financial_System/Modules/blacklist.json'
     try:
         with open(blacklist_file, 'r+') as file:
             data = json.load(file)
@@ -41,7 +41,7 @@ def check_blacklist(symbol: str) -> bool:
     返回True表示在黑名单中，False表示不在
     """
     try:
-        with open('/Users/yanzhang/Documents/Financial_System/Modules/blacklist.json', 'r') as file:
+        with open('/Users/yanzhang/Coding/Financial_System/Modules/blacklist.json', 'r') as file:
             data = json.load(file)
             return symbol in data.get('etf', [])
     except Exception as e:
@@ -84,9 +84,9 @@ def check_and_update_files(symbol: str) -> None:
         remove_from_blacklist(symbol)
         print(f"检测到 {symbol} 在blacklist的etf组中，已移除")
 
-    ALL_FILE = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
-    TODAY_FILE = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json'
-    EMPTY_FILE = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json'
+    ALL_FILE = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
+    TODAY_FILE = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_today.json'
+    EMPTY_FILE = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json'
     
     # 检查symbol在all和today文件中的位置
     group_in_all = find_symbol_group(ALL_FILE, symbol)

@@ -26,7 +26,7 @@ def load_blacklist_newlow(file_path):
 def create_output_files():
     """创建两个输出文件并返回文件路径"""
     output_dirs = [
-        '/Users/yanzhang/Documents/News/backup/backup'
+        '/Users/yanzhang/Coding/News/backup/backup'
     ]
     timestamp = datetime.now().strftime("%y%m%d")
     file_name = f"NewLow500_{timestamp}.txt"
@@ -95,7 +95,7 @@ def update_json_data(config_path, updates, blacklist_newlow):
 
                     # # 将symbol和category写入文件
                     # timestamp = datetime.now().strftime("%y%m%d")
-                    # file_path = f"/Users/yanzhang/Documents/News/backup/site/NewLow500_{timestamp}.txt"
+                    # file_path = f"/Users/yanzhang/Coding/News/backup/site/NewLow500_{timestamp}.txt"
                     
                     # with open(file_path, 'a', encoding='utf-8') as f:
                     #     f.write(f"{category} {symbol}\n")
@@ -213,7 +213,7 @@ def update_color_json(color_config_path, updates_colors, blacklist_newlow, exist
 def log_and_print_error(error_message):
     formatted_error_message = log_error_with_timestamp(error_message)
     print(f"注意！ {error_message}")
-    with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+    with open('/Users/yanzhang/Coding/News/Today_error.txt', 'a') as error_file:
         error_file.write(formatted_error_message)
 
 def load_stock_splits(file_path):
@@ -229,20 +229,20 @@ def load_stock_splits(file_path):
         print(f"发生错误: {e}")
         # error_message = f"读取文件 {file_path} 时发生错误: {e}"
         # formatted_error_message = log_error_with_timestamp(error_message)
-        # with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+        # with open('/Users/yanzhang/Coding/News/Today_error.txt', 'a') as error_file:
         #     error_file.write(formatted_error_message)
     return stock_splits_symbols
 
 def main():
-    db_path = '/Users/yanzhang/Documents/Database/Finance.db'
-    blacklist_path = '/Users/yanzhang/Documents/Financial_System/Modules/blacklist.json'
+    db_path = '/Users/yanzhang/Coding/Database/Finance.db'
+    blacklist_path = '/Users/yanzhang/Coding/Financial_System/Modules/blacklist.json'
     blacklist_newlow = load_blacklist_newlow(blacklist_path)
     
     # 加载拆股文件的symbol列表
-    stock_splits_file = '/Users/yanzhang/Documents/News/Stock_Splits_next.txt'
+    stock_splits_file = '/Users/yanzhang/Coding/News/Stock_Splits_next.txt'
     stock_splits_symbols = load_stock_splits(stock_splits_file)
 
-    with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_500.json', 'r') as file:
+    with open('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_500.json', 'r') as file:
         data = json.load(file)
 
     output = []
@@ -267,7 +267,7 @@ def main():
                     else:
                         error_message = f"没有找到{name}的历史价格数据。"
                         formatted_error_message = log_error_with_timestamp(error_message)
-                        with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                        with open('/Users/yanzhang/Coding/News/Today_error.txt', 'a') as error_file:
                             error_file.write(formatted_error_message)
                         continue
 
@@ -283,7 +283,7 @@ def main():
                         except Exception as e:
                             formatted_error_message = log_error_with_timestamp(str(e))
                             # 将错误信息追加到文件中
-                            with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                            with open('/Users/yanzhang/Coding/News/Today_error.txt', 'a') as error_file:
                                 error_file.write(formatted_error_message)
                             continue  # 处理下一个时间间隔
 
@@ -296,7 +296,7 @@ def main():
                                 error_message = f"由于{table_name}的 {name} 存在于拆股文档中，所以不添加入output_500"
                                 print(error_message)
                                 formatted_error_message = log_error_with_timestamp(error_message)
-                                with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                                with open('/Users/yanzhang/Coding/News/Today_error.txt', 'a') as error_file:
                                     error_file.write(formatted_error_message)
                                 break  # 跳过此name的处理
                             
@@ -316,16 +316,16 @@ def main():
         final_output = "\n".join(output)
 
         # 在更新之前，先读取sectors_panel.json的内容
-        with open("/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json", 'r', encoding='utf-8') as file:
+        with open("/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json", 'r', encoding='utf-8') as file:
             existing_sectors_panel = json.load(file)
     
         updates = parse_output(final_output)
         updates_color = parse_output_color(final_output)
 
-        config_json = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json"
+        config_json = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json"
         update_json_data(config_json, updates, blacklist_newlow)
 
-        color_json_path = '/Users/yanzhang/Documents/Financial_System/Modules/Colors.json'
+        color_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Colors.json'
         update_color_json(color_json_path, updates_color, blacklist_newlow, existing_sectors_panel)
     else:
         error_message = "analyse_500，没有符合条件的股票被检索出来。"

@@ -17,7 +17,7 @@ def get_effective_date():
     return last_saturday.strftime("%Y-%m-%d")
 
 def add_to_loser():
-    filename = '/Users/yanzhang/Documents/Financial_System/Modules/Gainer_Loser.json'
+    filename = '/Users/yanzhang/Coding/Financial_System/Modules/Gainer_Loser.json'
     
     # 获取有效日期
     date = get_effective_date()

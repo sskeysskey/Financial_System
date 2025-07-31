@@ -92,7 +92,7 @@ def find_in_json(symbol, data):
     return None
 
 if __name__ == '__main__':
-    json_data = load_json_data('/Users/yanzhang/Documents/Financial_System/Modules/description.json')
+    json_data = load_json_data('/Users/yanzhang/Coding/Financial_System/Modules/description.json')
 
     # 解析命令行参数
     if len(sys.argv) > 1:

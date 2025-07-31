@@ -69,7 +69,7 @@ def display_dialog(message):
     subprocess.run(['osascript', '-e', applescript_code], check=True)
 
 def main():
-    db_path = '/Users/yanzhang/Documents/Database/Finance.db'
+    db_path = '/Users/yanzhang/Coding/Database/Finance.db'
     query = """
     SELECT date, price
     FROM Earning

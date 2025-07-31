@@ -88,8 +88,8 @@ def find_etfs_in_database(json_path, db_path):
 
 # --- 使用示例 ---
 # 请确保将下面的路径替换为您系统中实际的文件路径
-json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json"
-db_file_path = "/Users/yanzhang/Documents/Database/Finance.db"
+json_file_path = "/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json"
+db_file_path = "/Users/yanzhang/Coding/Database/Finance.db"
 
 # 调用函数
 results = find_etfs_in_database(json_file_path, db_file_path)

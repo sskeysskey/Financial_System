@@ -65,4 +65,4 @@ def analyze_sector_impacts(filename):
         print("{:<30} {:<10.2f} {:<10.2f}".format(sector, count, percentage))
 
 # 调用函数
-analyze_sector_impacts('/Users/yanzhang/Documents/News/CompareStock.txt')
+analyze_sector_impacts('/Users/yanzhang/Coding/News/CompareStock.txt')

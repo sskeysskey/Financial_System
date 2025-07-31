@@ -50,8 +50,8 @@ def clear_sectors(sectors_file_path):
     print(f"清除完成，empty的所有组内symbol已被清空。")  # 日志：清除完成
 
 # 主程序开始
-sectors_file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json'
-error_file_path = '/Users/yanzhang/Documents/News/Today_error1.txt'
+sectors_file_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json'
+error_file_path = '/Users/yanzhang/Coding/News/Today_error1.txt'
 
 # 检查错误文件是否存在
 if not os.path.exists(error_file_path):
@@ -67,7 +67,7 @@ with open(sectors_file_path, 'r') as file:
     stock_groups = json.load(file)
 
 # 读取symbol_mapping JSON文件
-with open('/Users/yanzhang/Documents/Financial_System/Modules/Symbol_mapping.json', 'r') as file:
+with open('/Users/yanzhang/Coding/Financial_System/Modules/Symbol_mapping.json', 'r') as file:
     symbol_mapping = json.load(file)
 
 today = now.date()
@@ -80,7 +80,7 @@ start_date = ex_yesterday.strftime('%Y-%m-%d')
 end_date = yesterday.strftime('%Y-%m-%d')
 
 # 连接到SQLite数据库
-conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
+conn = sqlite3.connect('/Users/yanzhang/Coding/Database/Finance.db')
 c = conn.cursor()
 
 # 定义需要特殊处理的group_name
@@ -126,7 +126,7 @@ for group_name, tickers in stock_groups.items():
         except Exception as e:
             formatted_error_message = log_error_with_timestamp(str(e))
             # 将错误信息追加到文件中
-            with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+            with open('/Users/yanzhang/Coding/News/Today_error.txt', 'a') as error_file:
                 error_file.write(formatted_error_message)
 
     # Only print if data_count > 0

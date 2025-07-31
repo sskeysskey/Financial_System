@@ -19,7 +19,7 @@ def load_symbols(path):
 
 def main():
     # ——— 在这里直接写死两个文件的路径 ———
-    file_a = '/Users/yanzhang/Documents/News/backup/marketcap_pe.txt'
+    file_a = '/Users/yanzhang/Coding/News/backup/marketcap_pe.txt'
     file_b = '/Users/yanzhang/Downloads/marketcap_pe.txt'
 
     syms_a = load_symbols(file_a)

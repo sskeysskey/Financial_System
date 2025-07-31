@@ -27,7 +27,7 @@ def load_blacklist_newlow(file_path):
 def create_output_files():
     """创建两个输出文件并返回文件路径"""
     output_dirs = [
-        '/Users/yanzhang/Documents/News/backup/backup'
+        '/Users/yanzhang/Coding/News/backup/backup'
     ]
     timestamp = datetime.now().strftime("%y%m%d")
     file_name = f"NewLow_{timestamp}.txt"
@@ -52,7 +52,7 @@ def write_output_to_file(output, file_path):
         error_message = f"写入文件时发生错误: {e}"
         print(error_message)
         formatted_error_message = log_error_with_timestamp(error_message)
-        with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+        with open('/Users/yanzhang/Coding/News/Today_error.txt', 'a') as error_file:
             error_file.write(formatted_error_message)
 
 def get_price_comparison(cursor, table_name, interval, name, validate):
@@ -111,7 +111,7 @@ def update_json_data(config_path, updates, blacklist_newlow):
                     
                     # 将symbol和category写入文件
                     # timestamp = datetime.now().strftime("%y%m%d")
-                    # file_path = f"/Users/yanzhang/Documents/News/backup/site/NewLow_{timestamp}.txt"
+                    # file_path = f"/Users/yanzhang/Coding/News/backup/site/NewLow_{timestamp}.txt"
                     # with open(file_path, 'a', encoding='utf-8') as f:
                     #     f.write(f"{category} {symbol}\n")
                         
@@ -210,7 +210,7 @@ def load_symbols_from_file(file_path):
         error_message = f"读取文件 {file_path} 时发生错误: {e}"
         print(error_message)
         formatted_error_message = log_error_with_timestamp(error_message)
-        with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+        with open('/Users/yanzhang/Coding/News/Today_error.txt', 'a') as error_file:
             error_file.write(formatted_error_message)
     return symbols
 
@@ -252,7 +252,7 @@ def load_stock_splits(file_path):
         print(f"发生错误: {e}")
         # error_message = f"读取文件 {file_path} 时发生错误: {e}"
         # formatted_error_message = log_error_with_timestamp(error_message)
-        # with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+        # with open('/Users/yanzhang/Coding/News/Today_error.txt', 'a') as error_file:
         #     error_file.write(formatted_error_message)
     return stock_splits_symbols
 
@@ -292,7 +292,7 @@ def process_high_data(input_lines, compare_data):
 def move_files_to_backup():
     # --- 配置路径 ---
     downloads_dir = "/Users/yanzhang/Downloads"
-    news_dir = "/Users/yanzhang/Documents/News"
+    news_dir = "/Users/yanzhang/Coding/News"
     backup_dir = os.path.join(news_dir, "backup") # 备份目录路径
 
     # --- 1. 确保备份目录存在 ---
@@ -348,7 +348,7 @@ def move_files_to_backup():
     except Exception as e:
         print(f"处理 'topetf_*.csv' 文件时发生意外错误: {e}")
 
-    # --- 4. 将 /Users/yanzhang/Documents/News/screener_sectors.txt 移动到 backup 目录 ---
+    # --- 4. 将 /Users/yanzhang/Coding/News/screener_sectors.txt 移动到 backup 目录 ---
     print(f"\n开始处理特定文件 'screener_sectors.txt'...")
     specific_source_file = os.path.join(news_dir, "screener_sectors.txt")
     # 从源文件路径中获取文件名，以确保目标文件名正确
@@ -367,16 +367,16 @@ def move_files_to_backup():
     print("\n所有文件操作已完成。")
 
 def main():    
-    db_path = '/Users/yanzhang/Documents/Database/Finance.db'
-    backup_directory = '/Users/yanzhang/Documents/News/backup/backup'
-    blacklist_path = '/Users/yanzhang/Documents/Financial_System/Modules/blacklist.json'
+    db_path = '/Users/yanzhang/Coding/Database/Finance.db'
+    backup_directory = '/Users/yanzhang/Coding/News/backup/backup'
+    blacklist_path = '/Users/yanzhang/Coding/Financial_System/Modules/blacklist.json'
     blacklist_newlow = load_blacklist_newlow(blacklist_path)
     
     # 加载拆股文件的symbol列表
-    stock_splits_file = '/Users/yanzhang/Documents/News/Stock_Splits_next.txt'
+    stock_splits_file = '/Users/yanzhang/Coding/News/Stock_Splits_next.txt'
     stock_splits_symbols = load_stock_splits(stock_splits_file)
     
-    with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as file:
+    with open('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json', 'r') as file:
         data = json.load(file)
 
     output = []
@@ -385,7 +385,7 @@ def main():
     highintervals = [120]
 
     # 读取10Y_newhigh.txt文件中的symbol列表
-    existing_symbols = load_symbols_from_file('/Users/yanzhang/Documents/News/backup/10Y_newhigh.txt')
+    existing_symbols = load_symbols_from_file('/Users/yanzhang/Coding/News/backup/10Y_newhigh.txt')
 
     # 遍历JSON中的每个表和股票代码
     for table_name, names in data.items():
@@ -406,7 +406,7 @@ def main():
                     else:
                         error_message = f"没有找到{name}的历史价格数据。"
                         formatted_error_message = log_error_with_timestamp(error_message)
-                        with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                        with open('/Users/yanzhang/Coding/News/Today_error.txt', 'a') as error_file:
                             error_file.write(formatted_error_message)
                         continue
 
@@ -422,7 +422,7 @@ def main():
                         except Exception as e:
                             formatted_error_message = log_error_with_timestamp(str(e))
                             # 将错误信息追加到文件中
-                            with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                            with open('/Users/yanzhang/Coding/News/Today_error.txt', 'a') as error_file:
                                 error_file.write(formatted_error_message)
                             continue  # 处理下一个时间间隔
 
@@ -445,7 +445,7 @@ def main():
                                     error_message = f"由于{table_name}的 {name} 存在于拆股文档中，所以不添加入output_50"
                                     print(error_message)
                                     formatted_error_message = log_error_with_timestamp(error_message)
-                                    with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                                    with open('/Users/yanzhang/Coding/News/Today_error.txt', 'a') as error_file:
                                         error_file.write(formatted_error_message)
                                     break  # 跳过此name的处理
                                 
@@ -468,21 +468,21 @@ def main():
         updates = parse_output(final_output)
         updates_color = parse_output_color(final_output)
 
-        config_json = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json"
+        config_json = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json"
         update_json_data(config_json, updates, blacklist_newlow)
 
-        color_json_path = '/Users/yanzhang/Documents/Financial_System/Modules/Colors.json'
+        color_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Colors.json'
         update_color_json(color_json_path, updates_color, blacklist_newlow)
     else:
         error_message = "analyse_50，没有符合条件的股票被检索出来。"
         formatted_error_message = log_error_with_timestamp(error_message)
         # 将错误信息追加到文件中
-        with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+        with open('/Users/yanzhang/Coding/News/Today_error.txt', 'a') as error_file:
             error_file.write(formatted_error_message)
 
     if output_high:
         # 读取Compare_All.txt
-        compare_data = read_compare_all('/Users/yanzhang/Documents/News/backup/Compare_All.txt')
+        compare_data = read_compare_all('/Users/yanzhang/Coding/News/backup/Compare_All.txt')
         
         # 过滤掉已经存在于10Y_newhigh.txt文件中的symbol
         filtered_output_high = [
@@ -495,7 +495,7 @@ def main():
             processed_output = process_high_data(filtered_output_high, compare_data)
             
             # 写入处理后的数据
-            output_high_file_path = '/Users/yanzhang/Documents/News/10Y_newhigh_new.txt'
+            output_high_file_path = '/Users/yanzhang/Coding/News/10Y_newhigh_new.txt'
             write_output_to_file(processed_output, output_high_file_path)
 
     move_files_to_backup()
@@ -519,7 +519,7 @@ def main():
     clean_old_backups(backup_directory, file_patterns)
 
     # 增加对新目录的清理
-    second_backup_directory = '/Users/yanzhang/Documents/News/backup'
+    second_backup_directory = '/Users/yanzhang/Coding/News/backup'
     second_file_patterns = [
         ("article_copier_", -1, 3),
         ("screener_above_", -1, 3),

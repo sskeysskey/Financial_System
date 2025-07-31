@@ -164,7 +164,7 @@ def main():
 
     # 加载 JSON 文件
     try:
-        with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as f:
+        with open('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json', 'r') as f:
             sectors_data = json.load(f)
     except Exception as e:
         QMessageBox.critical(None, "错误", f"无法加载JSON文件: {str(e)}")
@@ -191,7 +191,7 @@ def main():
         return
     
     try:
-        conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
+        conn = sqlite3.connect('/Users/yanzhang/Coding/Database/Finance.db')
         cursor = conn.cursor()
 
         # 获取最新日期

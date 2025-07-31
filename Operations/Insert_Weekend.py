@@ -1,7 +1,7 @@
 import json
 
 # 1. 读取原始 JSON
-with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json', 'r', encoding='utf-8') as f:
+with open('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json', 'r', encoding='utf-8') as f:
     data = json.load(f)
 
 # 2. 修改 Crypto 数组
@@ -14,7 +14,7 @@ existing_crypto = set(data.get('Crypto', []))
 data['Crypto'] = list(existing_crypto.union(to_add_crypto))
 
 # 4. 写回文件
-with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json', 'w', encoding='utf-8') as f:
+with open('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json', 'w', encoding='utf-8') as f:
     json.dump(data, f, ensure_ascii=False, indent=2)
 
 print("✅ 已将 Crypto 更新为：", data['Crypto'])

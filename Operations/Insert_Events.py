@@ -44,11 +44,11 @@ class App:
             self.main_window()  # 如果没有参数，按原流程执行
 
     def load_json(self):
-        with open('/Users/yanzhang/Documents/Financial_System/Modules/description.json', 'r', encoding='utf-8') as f:
+        with open('/Users/yanzhang/Coding/Financial_System/Modules/description.json', 'r', encoding='utf-8') as f:
             return json.load(f)
 
     def save_json(self):
-        with open('/Users/yanzhang/Documents/Financial_System/Modules/description.json', 'w', encoding='utf-8') as f:
+        with open('/Users/yanzhang/Coding/Financial_System/Modules/description.json', 'w', encoding='utf-8') as f:
             json.dump(self.data, f, ensure_ascii=False, indent=2)
 
     def set_window_to_front(self, window):

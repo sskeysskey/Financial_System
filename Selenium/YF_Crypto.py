@@ -104,8 +104,8 @@ def download_and_process_data(ticker_symbol, start_date, end_date, group_name, c
     return True, data_count
 
 # 主程序开始
-sectors_file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json'
-error_file_path = '/Users/yanzhang/Documents/News/Today_error1.txt'
+sectors_file_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json'
+error_file_path = '/Users/yanzhang/Coding/News/Today_error1.txt'
 
 # 检查错误文件是否存在
 if not os.path.exists(error_file_path):
@@ -135,10 +135,10 @@ date_ranges = [
 with open(sectors_file_path, 'r') as file:
     stock_groups = json.load(file)
 
-with open('/Users/yanzhang/Documents/Financial_System/Modules/Symbol_mapping.json', 'r') as file:
+with open('/Users/yanzhang/Coding/Financial_System/Modules/Symbol_mapping.json', 'r') as file:
     symbol_mapping = json.load(file)
 
-conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
+conn = sqlite3.connect('/Users/yanzhang/Coding/Database/Finance.db')
 c = conn.cursor()
 
 # 定义需要特殊处理的group_name
@@ -168,7 +168,7 @@ for group_name, tickers in stock_groups.items():
             except Exception as e:
                 if start_date == date_ranges[-1][0]:  # 如果是最后一次尝试
                     formatted_error_message = log_error_with_timestamp(f"{group_name} {ticker_symbol}: {str(e)}")
-                    with open('/Users/yanzhang/Documents/News/Today_error.txt', 'a') as error_file:
+                    with open('/Users/yanzhang/Coding/News/Today_error.txt', 'a') as error_file:
                         error_file.write(formatted_error_message)
                 continue  # 如果失败，继续尝试下一个日期范围
         

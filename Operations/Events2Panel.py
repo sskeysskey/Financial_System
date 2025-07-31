@@ -14,9 +14,9 @@ def is_monday():
 def update_sectors_panel():
     """更新sectors_panel的主要逻辑"""
     # 文件路径
-    event_file_path = '/Users/yanzhang/Documents/News/Economic_Events_new.txt'
-    sectors_panel_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json'
-    symbol_mapping_path = '/Users/yanzhang/Documents/Financial_System/Modules/Symbol_mapping.json'
+    event_file_path = '/Users/yanzhang/Coding/News/Economic_Events_new.txt'
+    sectors_panel_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
+    symbol_mapping_path = '/Users/yanzhang/Coding/Financial_System/Modules/Symbol_mapping.json'
 
     try:
         # 读取文件内容

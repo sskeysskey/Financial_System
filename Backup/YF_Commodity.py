@@ -12,7 +12,7 @@ if now.weekday() in (0, 6):
     print("Today is either Sunday or Monday. The script will not run.")
 else:
     # 初始化数据库连接
-    conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
+    conn = sqlite3.connect('/Users/yanzhang/Coding/Database/Finance.db')
     cursor = conn.cursor()
     # 创建表
     cursor.execute('''

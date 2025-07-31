@@ -16,7 +16,7 @@ VERSION_JSON_PATH = os.path.join(LOCAL_SERVER_DIR, 'version.json')
 # 定义需要进行简单覆盖备份的文件
 # 格式为: { "源文件路径": ["目标文件路径1", "目标文件路径2", ...] }
 SIMPLE_BACKUP_FILES = {
-    '/Users/yanzhang/Documents/Database/Finance.db': [
+    '/Users/yanzhang/Coding/Database/Finance.db': [
         os.path.join(LOCAL_DOWNLOAD_BACKUP, 'Finance.db'),
         os.path.join(LOCAL_SERVER_DIR,    'Finance.db')
     ],
@@ -24,15 +24,15 @@ SIMPLE_BACKUP_FILES = {
 
 # 定义需要进行时间戳备份的源文件列表
 TIMESTAMP_BACKUP_SOURCES = [
-    '/Users/yanzhang/Documents/News/backup/Compare_All.txt',
-    '/Users/yanzhang/Documents/News/Earnings_Release_new.txt',
-    '/Users/yanzhang/Documents/News/Earnings_Release_next.txt',
-    '/Users/yanzhang/Documents/News/HighLow.txt',
-    '/Users/yanzhang/Documents/Financial_System/Modules/tags_weight.json',
-    '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json',
-    '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json',
-    '/Users/yanzhang/Documents/Financial_System/Modules/description.json',
-    '/Users/yanzhang/Documents/News/CompareStock.txt',
+    '/Users/yanzhang/Coding/News/backup/Compare_All.txt',
+    '/Users/yanzhang/Coding/News/Earnings_Release_new.txt',
+    '/Users/yanzhang/Coding/News/Earnings_Release_next.txt',
+    '/Users/yanzhang/Coding/News/HighLow.txt',
+    '/Users/yanzhang/Coding/Financial_System/Modules/tags_weight.json',
+    '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json',
+    '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json',
+    '/Users/yanzhang/Coding/Financial_System/Modules/description.json',
+    '/Users/yanzhang/Coding/News/CompareStock.txt',
 ]
 
 def copy_and_overwrite(source_path, destination_path):

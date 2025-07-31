@@ -74,10 +74,10 @@ def process_stock_data(stock_groups: Dict[str, List[str]], start_date: str, end_
 def main():
     start_date = "2002-09-17"
     end_date = datetime.now().strftime('%Y-%m-%d')
-    sectors_file = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json'
-    symbol_mapping_file = '/Users/yanzhang/Documents/Financial_System/Modules/Symbol_mapping.json'
-    db_path = '/Users/yanzhang/Documents/Database/Finance.db'
-    error_file_path = '/Users/yanzhang/Documents/News/Today_error.txt'
+    sectors_file = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json'
+    symbol_mapping_file = '/Users/yanzhang/Coding/Financial_System/Modules/Symbol_mapping.json'
+    db_path = '/Users/yanzhang/Coding/Database/Finance.db'
+    error_file_path = '/Users/yanzhang/Coding/News/Today_error.txt'
 
     with open(sectors_file, 'r') as file:
         stock_groups = json.load(file)

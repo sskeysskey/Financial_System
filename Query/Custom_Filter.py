@@ -13,8 +13,8 @@ keywords = ["半导体", "赋能人工智能", "芯片", "AI"]
 blacklist = ["传统半导体", "模拟芯片"]
 
 # 输入文件路径（根据实际情况修改）
-next_txt_path  = "/Users/yanzhang/Documents/News/Earnings_Release_next.txt"
-desc_json_path = "/Users/yanzhang/Documents/Financial_System/Modules/description.json"
+next_txt_path  = "/Users/yanzhang/Coding/News/Earnings_Release_next.txt"
+desc_json_path = "/Users/yanzhang/Coding/Financial_System/Modules/description.json"
 # =============================
 
 def load_description(path):

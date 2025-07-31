@@ -281,7 +281,7 @@ if __name__ == '__main__':
 
     # 数据库配置信息
     db_info = {
-        'path': '/Users/yanzhang/Documents/Database/Finance.db',  # 数据库路径
+        'path': '/Users/yanzhang/Coding/Database/Finance.db',  # 数据库路径
         'table': 'Earning',  # 数据表名称
         'condition': f"name = '{clipboard_content}'" if clipboard_content else "",
         'fields': '*',  # 查询全部字段

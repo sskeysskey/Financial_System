@@ -45,7 +45,7 @@ def clean_duplicate_records(db_path, table_name):
     conn.close()
 
 # 调用函数，传入数据库路径和表名
-db_path = '/Users/yanzhang/Documents/Database/Finance.db'
+db_path = '/Users/yanzhang/Coding/Database/Finance.db'
 table_name = 'Commodities'
 
 clean_duplicate_records(db_path, table_name)

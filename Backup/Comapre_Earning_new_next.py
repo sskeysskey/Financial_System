@@ -3,9 +3,9 @@
 
 import os
 
-NEXT = "/Users/yanzhang/Documents/News/Earnings_Release_next.txt"
-NEW  = "/Users/yanzhang/Documents/News/Earnings_Release_new.txt"
-DIFF = "/Users/yanzhang/Documents/News/Earnings_Release_diff.txt"
+NEXT = "/Users/yanzhang/Coding/News/Earnings_Release_next.txt"
+NEW  = "/Users/yanzhang/Coding/News/Earnings_Release_new.txt"
+DIFF = "/Users/yanzhang/Coding/News/Earnings_Release_diff.txt"
 
 def load_symbols(path):
     syms = set()

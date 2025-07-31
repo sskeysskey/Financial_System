@@ -76,7 +76,7 @@ class TagInputWindow(QMainWindow):
         self.close()
 
 def main():
-    json_file = "/Users/yanzhang/Documents/Financial_System/Modules/description.json"
+    json_file = "/Users/yanzhang/Coding/Financial_System/Modules/description.json"
     data = load_data(json_file)
 
     # 检查是否有命令行参数

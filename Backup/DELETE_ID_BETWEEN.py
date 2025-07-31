@@ -28,7 +28,7 @@ def delete_records_between(db_file, table_name, start_id, end_id):
         conn.close()
 
 # 使用示例
-db_path = '/Users/yanzhang/Documents/Database/Finance.db'  # 配置数据库文件路径
+db_path = '/Users/yanzhang/Coding/Database/Finance.db'  # 配置数据库文件路径
 table = 'Bonds'                # 配置表名
 start_id = 23
 end_id = 35

@@ -24,7 +24,7 @@ service = Service(executable_path=chrome_driver_path)
 driver = webdriver.Chrome(service=service, options=chrome_options)
 
 # 初始化数据库连接
-conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
+conn = sqlite3.connect('/Users/yanzhang/Coding/Database/Finance.db')
 cursor = conn.cursor()
 
 # 创建表

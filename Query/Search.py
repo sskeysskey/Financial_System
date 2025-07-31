@@ -14,7 +14,7 @@ import sqlite3
 import pickle
 from enum import Enum
 
-json_path = "/Users/yanzhang/Documents/Financial_System/Modules/description.json"
+json_path = "/Users/yanzhang/Coding/Financial_System/Modules/description.json"
 
 # --- 1. 引入 MatchCategory 枚举 (模仿 Swift) ---
 class MatchCategory(Enum):
@@ -37,7 +37,7 @@ class MatchCategory(Enum):
 class SearchHistory:
     def __init__(self, max_size=20):
         self.max_size = max_size
-        self.history_file = "/Users/yanzhang/Documents/Financial_System/Modules/search_history.pkl"
+        self.history_file = "/Users/yanzhang/Coding/Financial_System/Modules/search_history.pkl"
         self.history = self.load_history()
 
     def add(self, query):
@@ -241,7 +241,7 @@ class CollapsibleWidget(QWidget):
 
 # 数据库和文件加载函数无变化
 def get_latest_etf_volume(etf_name):
-    db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+    db_path = "/Users/yanzhang/Coding/Database/Finance.db"
     if not os.path.exists(db_path): return "N/A"
     try:
         conn = sqlite3.connect(db_path)
@@ -259,7 +259,7 @@ def get_latest_etf_volume(etf_name):
 def load_compare_data():
     compare_data = {}
     try:
-        with open("/Users/yanzhang/Documents/News/backup/Compare_All.txt", "r") as f:
+        with open("/Users/yanzhang/Coding/News/backup/Compare_All.txt", "r") as f:
             for line in f:
                 if ":" in line:
                     symbol, value = line.strip().split(":", 1)
@@ -467,7 +467,7 @@ class MainWindow(QMainWindow):
     def open_symbol(self, symbol):
         if symbol:
             pyperclip.copy(symbol)
-            stock_chart_path = '/Users/yanzhang/Documents/Financial_System/Query/Stock_Chart.py'
+            stock_chart_path = '/Users/yanzhang/Coding/Financial_System/Query/Stock_Chart.py'
             try:
                 subprocess.Popen([sys.executable, stock_chart_path, 'paste'])
             except Exception as e:

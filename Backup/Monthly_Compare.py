@@ -44,7 +44,7 @@ def find_increasing_symbols(db_path, json_path):
                     print(f"Symbol '{symbol}' in table '{table_name}' has increasing monthly average prices with at most three decreases.")
 
 # 路径替换为实际路径
-db_path = '/Users/yanzhang/Documents/Database/Finance.db'
-json_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
+db_path = '/Users/yanzhang/Coding/Database/Finance.db'
+json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
 
 find_increasing_symbols(db_path, json_path)

@@ -59,9 +59,9 @@ def show_error_dialog(message):
 def main():
     Copy_Command_C()
 
-    json_file = "/Users/yanzhang/Documents/Financial_System/Modules/description.json"
+    json_file = "/Users/yanzhang/Coding/Financial_System/Modules/description.json"
     data = load_data(json_file)
-    symbol_name_file = "/Users/yanzhang/Documents/News/backup/ETFs.txt"
+    symbol_name_file = "/Users/yanzhang/Coding/News/backup/ETFs.txt"
     symbol_names = load_symbol_names(symbol_name_file)
 
     new_name = pyperclip.paste().replace('"', '').replace("'", "")

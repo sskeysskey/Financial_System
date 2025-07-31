@@ -1,7 +1,7 @@
 import json
 
 # 读取JSON文件
-input_file = '/Users/yanzhang/Documents/Financial_System/Test/temp.json'
+input_file = '/Users/yanzhang/Coding/Financial_System/Test/temp.json'
 output_file = '/Users/yanzhang/Downloads/a.txt'
 
 with open(input_file, 'r') as f:

@@ -228,17 +228,17 @@ def clean_old_backups(directory, prefix="CompareStock_", days=4):
             print(f"跳过文件：{filename}，原因：{e}")
 
 if __name__ == '__main__':
-    config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
-    description_path = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
+    config_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
+    description_path = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
     blacklist = []
     interested_sectors = [
         "Basic_Materials", "Communication_Services", "Consumer_Cyclical",
         "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare",
         "Industrials", "Real_Estate", "Technology", "Utilities"
     ]
-    file_path = '/Users/yanzhang/Documents/News/CompareStock.txt'
-    directory_backup = '/Users/yanzhang/Documents/News/backup/site/'
-    error_file_path = '/Users/yanzhang/Documents/News/Today_error.txt'
+    file_path = '/Users/yanzhang/Coding/News/CompareStock.txt'
+    directory_backup = '/Users/yanzhang/Coding/News/backup/site/'
+    error_file_path = '/Users/yanzhang/Coding/News/Today_error.txt'
 
     # 备份并重命名昨日的 CompareStock.txt
     if os.path.exists(file_path):
@@ -258,10 +258,10 @@ if __name__ == '__main__':
         description_path,
         blacklist,
         interested_sectors,
-        '/Users/yanzhang/Documents/Database/Finance.db',
-        '/Users/yanzhang/Documents/News/Earnings_Release_new.txt',
-        '/Users/yanzhang/Documents/News/Earnings_Release_next.txt',
-        '/Users/yanzhang/Documents/Financial_System/Modules/Gainer_Loser.json',
+        '/Users/yanzhang/Coding/Database/Finance.db',
+        '/Users/yanzhang/Coding/News/Earnings_Release_new.txt',
+        '/Users/yanzhang/Coding/News/Earnings_Release_next.txt',
+        '/Users/yanzhang/Coding/Financial_System/Modules/Gainer_Loser.json',
         file_path,
         error_file_path
     )

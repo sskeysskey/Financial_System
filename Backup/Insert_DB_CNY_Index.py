@@ -2,7 +2,7 @@ import sqlite3
 import sys
 from typing import Callable, Tuple
 
-db_path = '/Users/yanzhang/Documents/Database/Finance.db'
+db_path = '/Users/yanzhang/Coding/Database/Finance.db'
 
 def insert_ratio(
     cursor: sqlite3.Cursor,

@@ -56,7 +56,7 @@ def input_processing(root, sector_data, user_input):
     
     input_variants = {variant: user_input.strip() for variant in ['exact', 'capitalized', 'upper']}
     
-    db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+    db_path = "/Users/yanzhang/Coding/Database/Finance.db"
     found = False
     
     for variant, input_variant in input_variants.items():
@@ -133,7 +133,7 @@ if __name__ == '__main__':
     root.withdraw()
     root.bind('<Escape>', close_app)
     
-    sector_data = load_sector_data('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json')
+    sector_data = load_sector_data('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json')
     
     if len(sys.argv) > 1:
         arg = sys.argv[1]

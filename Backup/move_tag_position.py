@@ -17,12 +17,12 @@ def reorder_us_tag(data):
     return data
 
 # 读取文件
-with open('/Users/yanzhang/Documents/Financial_System/Modules/description.json', 'r', encoding='utf-8') as file:
+with open('/Users/yanzhang/Coding/Financial_System/Modules/description.json', 'r', encoding='utf-8') as file:
     data = json.loads(file.read())
 
 # 处理数据
 modified_data = reorder_us_tag(data)
 
 # 写回文件（使用格式化的JSON，便于阅读）
-with open('/Users/yanzhang/Documents/Financial_System/Modules/description.json', 'w', encoding='utf-8') as file:
+with open('/Users/yanzhang/Coding/Financial_System/Modules/description.json', 'w', encoding='utf-8') as file:
     json.dump(modified_data, file, ensure_ascii=False, indent=2)

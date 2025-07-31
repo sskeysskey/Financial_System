@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # 数据库文件路径
-db_path = '/Users/yanzhang/Documents/Database/Analysis.db'
+db_path = '/Users/yanzhang/Coding/Database/Analysis.db'
 
 # 创建数据库连接
 conn = sqlite3.connect(db_path)

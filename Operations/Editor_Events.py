@@ -6,7 +6,7 @@ import tkinter as tk
 from tkinter import messagebox, Text, Entry, Checkbutton, Button, Frame, Scrollbar, Canvas, BooleanVar, simpledialog
 
 # 请确保此路径是正确的，如果脚本和json文件不在同一目录，建议使用绝对路径。
-JSON_FILE_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
+JSON_FILE_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
 
 def load_data():
     """从JSON文件加载数据，如果文件不存在或为空则返回一个空模板。"""

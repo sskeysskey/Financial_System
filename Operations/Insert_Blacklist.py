@@ -19,7 +19,7 @@ def show_alert(message):
 
 def update_blacklist(symbol):
     """更新黑名单JSON文件"""
-    json_path = '/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json'
+    json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
     
     try:
         # 读取现有的JSON文件

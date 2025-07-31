@@ -10,20 +10,20 @@ import subprocess
 # ----------------------------------------------------------------------
 # Update sys.path so we can import from custom modules
 # ----------------------------------------------------------------------
-sys.path.append('/Users/yanzhang/Documents/Financial_System/Query')
+sys.path.append('/Users/yanzhang/Coding/Financial_System/Query')
 from Chart_input import plot_financial_data
 
 # ----------------------------------------------------------------------
 # Constants / Global Configurations
 # ----------------------------------------------------------------------
-CONFIG_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json'
-COLORS_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Colors.json'
-DESCRIPTION_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
-SECTORS_ALL_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
-COMPARE_DATA_PATH = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
-SHARES_PATH = '/Users/yanzhang/Documents/News/backup/Shares.txt'
-MARKETCAP_PATH = '/Users/yanzhang/Documents/News/backup/marketcap_pe.txt'
-DB_PATH = '/Users/yanzhang/Documents/Database/Finance.db'
+CONFIG_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
+COLORS_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Colors.json'
+DESCRIPTION_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
+SECTORS_ALL_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
+COMPARE_DATA_PATH = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
+SHARES_PATH = '/Users/yanzhang/Coding/News/backup/Shares.txt'
+MARKETCAP_PATH = '/Users/yanzhang/Coding/News/backup/marketcap_pe.txt'
+DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
 
 DISPLAY_LIMITS = {
     'default': 'all',  # 默认显示全部
@@ -214,7 +214,7 @@ def execute_external_script(script_type, keyword, group=None):
     """
     Unified handler for scripted external operations.
     """
-    base_path = '/Users/yanzhang/Documents/Financial_System'
+    base_path = '/Users/yanzhang/Coding/Financial_System'
     script_configs = {
         'blacklist': f'{base_path}/Operations/Insert_Blacklist.py',
         'similar': f'{base_path}/Query/Find_Similar_Tag.py',
@@ -222,8 +222,8 @@ def execute_external_script(script_type, keyword, group=None):
         'editor_earning': f'{base_path}/Operations/Editor_Earning_DB.py',
         'earning': f'{base_path}/Operations/Insert_Earning.py',
         'earning_force': f'{base_path}/Operations/Insert_Earning_Force.py',
-        'futu': '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt',
-        'kimi': '/Users/yanzhang/Documents/ScriptEditor/CheckKimi_Earning.scpt'
+        'futu': '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt',
+        'kimi': '/Users/yanzhang/Coding/ScriptEditor/CheckKimi_Earning.scpt'
     }
 
     try:

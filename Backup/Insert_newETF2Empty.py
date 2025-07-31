@@ -2,11 +2,11 @@ import json
 
 # 文件路径列表
 json_file_paths = [
-    '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json',
-    '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json',
-    '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json'
+    '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json',
+    '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json',
+    '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_today.json'
 ]
-etf_file_path = '/Users/yanzhang/Documents/News/ETFs_new.txt'
+etf_file_path = '/Users/yanzhang/Coding/News/ETFs_new.txt'
 
 # 读取ETF符号
 etf_symbols = []

@@ -6,7 +6,7 @@ def setup_logger():
     logger.setLevel(logging.INFO)
 
     # 创建 RotatingFileHandler
-    file_handler = RotatingFileHandler("/Users/yanzhang/Documents/News/today_error.log", maxBytes=1000000, backupCount=5)
+    file_handler = RotatingFileHandler("/Users/yanzhang/Coding/News/today_error.log", maxBytes=1000000, backupCount=5)
     file_handler.setLevel(logging.INFO)
 
     # 创建 StreamHandler

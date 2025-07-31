@@ -105,16 +105,16 @@ data_sets = {
 
 # 数据库文件和表名信息，同时指定每个表的列名
 databases = [
-    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Indices', 'columns': ['date', 'name', 'price', 'volume']},
-    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies', 'columns': ['date', 'name', 'price']},
-    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities', 'columns': ['date', 'name', 'price']},
-    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto', 'columns': ['date', 'name', 'price']},
-    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Earning', 'columns': ['date', 'name', 'price']},
-    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Bonds', 'columns': ['date', 'name', 'price']},
-    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Economics', 'columns': ['date', 'name', 'price']},
-    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'ETFs', 'columns': ['date', 'name', 'price', 'volume']},
-    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Basic_Materials', 'columns': ['date', 'name', 'price', 'volume']},
-    {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Industrials', 'columns': ['date', 'name', 'price', 'volume']},
+    {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Indices', 'columns': ['date', 'name', 'price', 'volume']},
+    {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Currencies', 'columns': ['date', 'name', 'price']},
+    {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Commodities', 'columns': ['date', 'name', 'price']},
+    {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Crypto', 'columns': ['date', 'name', 'price']},
+    {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Earning', 'columns': ['date', 'name', 'price']},
+    {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Bonds', 'columns': ['date', 'name', 'price']},
+    {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Economics', 'columns': ['date', 'name', 'price']},
+    {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'ETFs', 'columns': ['date', 'name', 'price', 'volume']},
+    {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Basic_Materials', 'columns': ['date', 'name', 'price', 'volume']},
+    {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Industrials', 'columns': ['date', 'name', 'price', 'volume']},
 ]
 
 # 对每个数据库执行数据插入操作

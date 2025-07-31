@@ -13,18 +13,18 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QCursor
 
-sys.path.append('/Users/yanzhang/Documents/Financial_System/Query')
+sys.path.append('/Users/yanzhang/Coding/Financial_System/Query')
 from Chart_input import plot_financial_data
 
 
-COLORS_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Colors.json'
-DESCRIPTION_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
-SECTORS_ALL_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
-COMPARE_DATA_PATH = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
-DB_PATH = '/Users/yanzhang/Documents/Database/Finance.db'
-EARNINGS_FILE_PATH = '/Users/yanzhang/Documents/News/Earnings_Release_new.txt'
-EARNINGS_FILE_NEXT_PATH = '/Users/yanzhang/Documents/News/Earnings_Release_next.txt'
-TAGS_WEIGHT_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/tags_weight.json'
+COLORS_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Colors.json'
+DESCRIPTION_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
+SECTORS_ALL_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
+COMPARE_DATA_PATH = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
+DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
+EARNINGS_FILE_PATH = '/Users/yanzhang/Coding/News/Earnings_Release_new.txt'
+EARNINGS_FILE_NEXT_PATH = '/Users/yanzhang/Coding/News/Earnings_Release_next.txt'
+TAGS_WEIGHT_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/tags_weight.json'
 
 RELATED_SYMBOLS_LIMIT = 10
 MAX_PER_COLUMN = 20
@@ -196,15 +196,15 @@ def get_tags_for_symbol(symbol):
 
 
 def execute_external_script(script_type, keyword):
-    base_path = '/Users/yanzhang/Documents/Financial_System'
+    base_path = '/Users/yanzhang/Coding/Financial_System'
     script_configs = {
         'blacklist': f'{base_path}/Operations/Insert_Blacklist.py',
         'similar':  f'{base_path}/Query/Find_Similar_Tag.py',
         'tags':     f'{base_path}/Operations/Editor_Symbol_Tags.py',
         'editor_earning': f'{base_path}/Operations/Editor_Earning_DB.py',
         'earning':  f'{base_path}/Operations/Insert_Earning.py',
-        'futu':     '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt',
-        'kimi':     '/Users/yanzhang/Documents/ScriptEditor/CheckKimi_Earning.scpt'
+        'futu':     '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt',
+        'kimi':     '/Users/yanzhang/Coding/ScriptEditor/CheckKimi_Earning.scpt'
     }
     try:
         if script_type in ['futu', 'kimi']:

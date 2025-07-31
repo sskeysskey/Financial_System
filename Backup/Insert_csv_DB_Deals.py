@@ -4,7 +4,7 @@ import os
 
 # --- 配置 ---
 csv_file_path = '/Users/yanzhang/Downloads/Deal_simulated_trend.csv' # 如果CSV文件不在当前目录，请修改为完整路径
-db_file_path = '/Users/yanzhang/Documents/Database/Firstrade.db' # 您的数据库文件路径
+db_file_path = '/Users/yanzhang/Coding/Database/Firstrade.db' # 您的数据库文件路径
 table_name = 'Deals'
 
 def import_csv_to_sqlite_alternative(csv_path, db_path, table):

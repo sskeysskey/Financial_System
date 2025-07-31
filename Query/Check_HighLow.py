@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QCursor, QColor, QFont
 
-sys.path.append('/Users/yanzhang/Documents/Financial_System/Query')
+sys.path.append('/Users/yanzhang/Coding/Financial_System/Query')
 from Chart_input import plot_financial_data
 
 # ----------------------------------------------------------------------
@@ -22,14 +22,14 @@ from Chart_input import plot_financial_data
 MAX_ITEMS_PER_COLUMN = 11
 
 # 文件路径
-HIGH_LOW_PATH = '/Users/yanzhang/Documents/News/HighLow.txt'
-CONFIG_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_panel.json'
-COLORS_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Colors.json'
-DESCRIPTION_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
-SECTORS_ALL_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
-COMPARE_DATA_PATH = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
+HIGH_LOW_PATH = '/Users/yanzhang/Coding/News/HighLow.txt'
+CONFIG_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
+COLORS_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Colors.json'
+DESCRIPTION_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
+SECTORS_ALL_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
+COMPARE_DATA_PATH = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
 # ### 删除 ###: 移除了 SHARES_PATH 和 MARKETCAP_PATH
-DB_PATH = '/Users/yanzhang/Documents/Database/Finance.db'
+DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
 # 按钮＋标签固定宽度（像素）
 SYMBOL_WIDGET_FIXED_WIDTH = 150
 
@@ -89,11 +89,11 @@ class SymbolManager:
 
 def execute_external_script(script_type, keyword):
     """以非阻塞方式执行外部脚本（Python 或 AppleScript）"""
-    base_path = '/Users/yanzhang/Documents/Financial_System'
+    base_path = '/Users/yanzhang/Coding/Financial_System'
     script_configs = {
         'similar':  f'{base_path}/Query/Find_Similar_Tag.py',
         'tags':     f'{base_path}/Operations/Editor_Symbol_Tags.py',
-        'futu':     '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt',
+        'futu':     '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt',
     }
     script_path = script_configs.get(script_type)
     if not script_path:

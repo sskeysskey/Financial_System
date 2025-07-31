@@ -85,8 +85,8 @@ def find_unmatched_names(json_path, db_path):
 # --- 主程序 ---
 if __name__ == "__main__":
     # 请将下面的路径替换成你的实际文件路径
-    json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json"
-    db_file_path = "/Users/yanzhang/Documents/Database/Finance.db"
+    json_file_path = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json"
+    db_file_path = "/Users/yanzhang/Coding/Database/Finance.db"
 
     print(f"正在从 JSON 文件 '{json_file_path}' 加载股票代码...")
     print(f"正在从数据库 '{db_file_path}' 的 Economics 表加载名称...")

@@ -98,7 +98,7 @@ def compare_today_yesterday(
         config = json.load(f)
 
     output = []
-    db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+    db_path = "/Users/yanzhang/Coding/Database/Finance.db"
 
     for table_name, keywords in config.items():
         for keyword in sorted(keywords):
@@ -224,13 +224,13 @@ def compare_today_yesterday(
             file.write(line + '\n')
 
 if __name__ == '__main__':
-    config_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
-    output_file = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
-    additional_output_file = '/Users/yanzhang/Documents/sskeysskey.github.io/economics/compare_all.txt'
-    gainer_loser_path = '/Users/yanzhang/Documents/Financial_System/Modules/Gainer_Loser.json'
-    earning_file_new = '/Users/yanzhang/Documents/News/Earnings_Release_new.txt'
-    earning_file_next = '/Users/yanzhang/Documents/News/Earnings_Release_next.txt'
-    error_file_path = '/Users/yanzhang/Documents/News/Today_error.txt'
+    config_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
+    output_file = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
+    additional_output_file = '/Users/yanzhang/Coding/sskeysskey.github.io/economics/compare_all.txt'
+    gainer_loser_path = '/Users/yanzhang/Coding/Financial_System/Modules/Gainer_Loser.json'
+    earning_file_new = '/Users/yanzhang/Coding/News/Earnings_Release_new.txt'
+    earning_file_next = '/Users/yanzhang/Coding/News/Earnings_Release_next.txt'
+    error_file_path = '/Users/yanzhang/Coding/News/Today_error.txt'
 
     try:
         compare_today_yesterday(

@@ -54,7 +54,7 @@ def get_stock_symbol(default_symbol=""):
 class TagEditor(QMainWindow):
     def __init__(self, init_symbol=None):
         super().__init__()        
-        self.json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/description.json"
+        self.json_file_path = "/Users/yanzhang/Coding/Financial_System/Modules/description.json"
         self.load_json_data()
         
         self.setWindowTitle("Tag Editor")

@@ -159,18 +159,18 @@ def main():
     
     # 根据命令行参数选择JSON文件路径
     if args.mode.lower() == 'empty':
-        json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json"
+        json_file_path = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json"
         if not check_empty_json_has_content(json_file_path):
             show_alert("Empty.json 文件中没有任何内容，程序将退出。")
             return
     elif args.mode.lower() == 'normal':
         # 参数为normal格式
-        json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_today.json"
+        json_file_path = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_today.json"
     else:
-        json_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_US_holiday.json"
+        json_file_path = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_US_holiday.json"
     
     # 加载symbol映射关系
-    mapping_file_path = "/Users/yanzhang/Documents/Financial_System/Modules/symbol_mapping.json"
+    mapping_file_path = "/Users/yanzhang/Coding/Financial_System/Modules/symbol_mapping.json"
     symbol_mapping = load_symbol_mapping(mapping_file_path)
 
     # 设置Chrome选项以提高性能
@@ -205,7 +205,7 @@ def main():
     driver.set_script_timeout(10)  # 脚本执行超时时间
 
     # 连接SQLite数据库
-    db_path = "/Users/yanzhang/Documents/Database/Finance.db"
+    db_path = "/Users/yanzhang/Coding/Database/Finance.db"
     conn = sqlite3.connect(db_path)
     
     # 从JSON文件获取股票符号和分组
@@ -366,7 +366,7 @@ def main():
                     # 抓取完成，所有分组已清空，现在调用另一个脚本
                     show_alert("所有分组已清空 ✅\n✅ Sectors_empty.json 中没有剩余 symbols。\n\n接下来将调用补充脚本...")
                     
-                    script_to_run = "/Users/yanzhang/Documents/Financial_System/Operations/Insert_Currencies_Index.py"
+                    script_to_run = "/Users/yanzhang/Coding/Financial_System/Operations/Insert_Currencies_Index.py"
                     
                     try:
                         print(f"正在调用脚本: {script_to_run}")

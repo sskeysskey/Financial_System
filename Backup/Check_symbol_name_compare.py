@@ -1,7 +1,7 @@
 import json
 
 # 定义文件路径
-file_path = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
+file_path = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
 
 # 从文件中读取并解析JSON数据
 try:

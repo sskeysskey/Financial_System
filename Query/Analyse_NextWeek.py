@@ -4,7 +4,7 @@ import os
 
 # --- 1. 定义文件和数据库路径 ---
 # 请确保这些路径在您的系统上是正确的
-base_path = "/Users/yanzhang/Documents/"
+base_path = "/Users/yanzhang/Coding/"
 news_path = os.path.join(base_path, "News")
 db_path = os.path.join(base_path, "Database")
 config_path = os.path.join(base_path, "Financial_System", "Modules")

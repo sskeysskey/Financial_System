@@ -49,8 +49,8 @@ def process_clipboard_content(error_file_path, sectors_file_path):
     print(f"在错误文件中未找到包含 {clipboard_content} 的相关信息。")
 
 # 主程序开始
-sectors_file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json'
-error_file_path = '/Users/yanzhang/Documents/News/Today_error.txt'
+sectors_file_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json'
+error_file_path = '/Users/yanzhang/Coding/News/Today_error.txt'
 
 # 检查文件是否存在
 if not os.path.exists(error_file_path):

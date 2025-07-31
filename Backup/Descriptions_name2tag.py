@@ -33,5 +33,5 @@ def process_json_file(file_path):
         json.dump(data, file, ensure_ascii=False, indent=2)
 
 # 指定文件路径
-file_path = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
+file_path = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
 process_json_file(file_path)

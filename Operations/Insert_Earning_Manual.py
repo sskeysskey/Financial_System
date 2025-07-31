@@ -132,7 +132,7 @@ class App:
         hint_label.pack(pady=10)
             
     def save_to_database(self, name, date, price):
-        conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
+        conn = sqlite3.connect('/Users/yanzhang/Coding/Database/Finance.db')
         cursor = conn.cursor()
         
         # 插入数据
@@ -156,7 +156,7 @@ class App:
         self.root.mainloop()
 
 def init_database():
-    conn = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
+    conn = sqlite3.connect('/Users/yanzhang/Coding/Database/Finance.db')
     cursor = conn.cursor()
     
     cursor.execute('''

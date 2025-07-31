@@ -37,9 +37,9 @@ def move_mouse_periodically():
 threading.Thread(target=move_mouse_periodically, daemon=True).start()
 
 # -------- 2. 路径 & 备份 --------------------------------------------------
-file_path              = '/Users/yanzhang/Documents/News/Earnings_Release_next.txt'
-backup_dir             = '/Users/yanzhang/Documents/News/backup/backup'
-earnings_release_path  = '/Users/yanzhang/Documents/News/backup/Earnings_Release.txt'
+file_path              = '/Users/yanzhang/Coding/News/Earnings_Release_next.txt'
+backup_dir             = '/Users/yanzhang/Coding/News/backup/backup'
+earnings_release_path  = '/Users/yanzhang/Coding/News/backup/Earnings_Release.txt'
 
 # （A）加载主发行日文件中的 (symbol, date) 去重集
 existing_release_entries = set()
@@ -149,10 +149,10 @@ chrome_options.page_load_strategy = 'eager'
 service = Service(executable_path="/Users/yanzhang/Downloads/backup/chromedriver")
 driver  = webdriver.Chrome(service=service, options=chrome_options)
 
-with open('/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json', 'r') as f:
+with open('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json', 'r') as f:
     sectors_data = json.load(f)
 
-conn   = sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db')
+conn   = sqlite3.connect('/Users/yanzhang/Coding/Database/Finance.db')
 cursor = conn.cursor()
 
 # -------- 5. 爬取主逻辑 --------------------------------------------------
@@ -234,7 +234,7 @@ for single_date in (start_date + i*delta for i in range((end_date - start_date).
 
 # -------- 5.1. 生成 next 与 diff 两份列表 -------------------------------
 # （A）读取 new.txt 中已有的 symbols
-new_txt_path = '/Users/yanzhang/Documents/News/Earnings_Release_new.txt'
+new_txt_path = '/Users/yanzhang/Coding/News/Earnings_Release_new.txt'
 new_symbols = set()
 if os.path.exists(new_txt_path):
     with open(new_txt_path, 'r') as f_new:
@@ -244,7 +244,7 @@ if os.path.exists(new_txt_path):
                 new_symbols.add(parts[0].strip())
 
 # （B）读取已有的 diff 文件内容以便排重
-diff_path = '/Users/yanzhang/Documents/News/Earnings_Release_diff.txt'
+diff_path = '/Users/yanzhang/Coding/News/Earnings_Release_diff.txt'
 existing_diff_lines = set()
 if os.path.exists(diff_path):
     with open(diff_path, 'r') as f_diff:

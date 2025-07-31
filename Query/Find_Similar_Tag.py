@@ -14,7 +14,7 @@ from PyQt5.QtGui import QCursor
 
 # --- 检查并添加必要的路径 ---
 # 确保可以找到 Chart_input 模块
-chart_input_path = '/Users/yanzhang/Documents/Financial_System/Query'
+chart_input_path = '/Users/yanzhang/Coding/Financial_System/Query'
 if chart_input_path not in sys.path:
     sys.path.append(chart_input_path)
 
@@ -25,11 +25,11 @@ except ImportError:
     sys.exit(1)
 
 # --- 文件路径 ---
-DESCRIPTION_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
-WEIGHT_CONFIG_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/tags_weight.json'
-COMPARE_DATA_PATH = '/Users/yanzhang/Documents/News/backup/Compare_All.txt'
-DB_PATH = '/Users/yanzhang/Documents/Database/Finance.db'
-SECTORS_ALL_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
+DESCRIPTION_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
+WEIGHT_CONFIG_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/tags_weight.json'
+COMPARE_DATA_PATH = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
+DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
+SECTORS_ALL_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
 
 # --- 默认权重 ---
 DEFAULT_WEIGHT = Decimal('1')
@@ -176,15 +176,15 @@ def get_clipboard_content():
 # ### 修改 1: 替换为功能更全的 execute_external_script 函数 ###
 def execute_external_script(script_type, keyword):
     """以非阻塞方式执行外部脚本（Python 或 AppleScript）"""
-    base_path = '/Users/yanzhang/Documents/Financial_System'
+    base_path = '/Users/yanzhang/Coding/Financial_System'
     script_configs = {
         'blacklist': f'{base_path}/Operations/Insert_Blacklist.py',
         'similar':  f'{base_path}/Query/Find_Similar_Tag.py',
         'tags':     f'{base_path}/Operations/Editor_Symbol_Tags.py',
         'editor_earning': f'{base_path}/Operations/Editor_Earning_DB.py',
         'earning':  f'{base_path}/Operations/Insert_Earning.py',
-        'futu':     '/Users/yanzhang/Documents/ScriptEditor/Stock_CheckFutu.scpt',
-        'kimi':     '/Users/yanzhang/Documents/ScriptEditor/CheckKimi_Earning.scpt'
+        'futu':     '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt',
+        'kimi':     '/Users/yanzhang/Coding/ScriptEditor/CheckKimi_Earning.scpt'
     }
     script_path = script_configs.get(script_type)
     if not script_path:

@@ -34,11 +34,11 @@ def main():
 
     # 两个 Earnings Release 文件路径
     earnings_release_paths = [
-        '/Users/yanzhang/Documents/News/Earnings_Release_new.txt',
-        '/Users/yanzhang/Documents/News/Earnings_Release_next.txt'
+        '/Users/yanzhang/Coding/News/Earnings_Release_new.txt',
+        '/Users/yanzhang/Coding/News/Earnings_Release_next.txt'
     ]
-    color_json_path = '/Users/yanzhang/Documents/Financial_System/Modules/Colors.json'
-    sectors_all_json_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json'
+    color_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Colors.json'
+    sectors_all_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
 
     # 合并两个文件中的 symbols
     earnings_symbols = set()

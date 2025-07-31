@@ -138,7 +138,7 @@ def main():
         navigate_to_section(driver, 'a[data-bs-target="#gdp"]', "GDP Constant Prices")
         data_to_insert = fetch_data(driver, Economics4, data_to_insert)
 
-    with sqlite3.connect('/Users/yanzhang/Documents/Database/Finance.db') as conn:
+    with sqlite3.connect('/Users/yanzhang/Coding/Database/Finance.db') as conn:
         setup_database(conn)
         insert_data(conn, data_to_insert)
 

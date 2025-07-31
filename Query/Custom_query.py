@@ -101,87 +101,87 @@ def create_window(content):
 
 if __name__ == '__main__':
     db_info = [
-        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Economics',
+        # {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Economics',
         #  'condition': "name = 'USInflation'", 'fields': '*',
         #  'include_condition': False},
 
-        # {'path': '/Users/yanzhang/Documents/Database/Analysis.db', 'table': 'High_low',
+        # {'path': '/Users/yanzhang/Coding/Database/Analysis.db', 'table': 'High_low',
         #   'condition': "name = 'Energy'", 'fields': '*',
         # 'include_condition': True},
 
-        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Indices',
+        # {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Indices',
         #   'condition': "name = 'Nikkei'", 'fields': '*',
         # 'include_condition': False},
 
-        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Currencies',
+        # {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Currencies',
         #   'condition': "name = 'EURUSD'", 'fields': '*',
         # 'include_condition': True},
 
-        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Commodities',
+        # {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Commodities',
         #     'condition': "name = 'Rice'", 'fields': '*',
         # 'include_condition': False},
 
-        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Crypto',
+        # {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Crypto',
         #   'condition': "name = 'Solana'", 'fields': '*',
         # 'include_condition': False},
 
-        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Bonds',
+        # {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Bonds',
         #   'condition': "name = 'US10Y'", 'fields': '*',
         # 'include_condition': False},
 
-        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'ETFs',
+        # {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'ETFs',
         #   'condition': "id = '2263847'", 'fields': '*',
         # 'include_condition': True},
 
-        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Basic_Materials',
+        # {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Basic_Materials',
         #     'condition': "name = 'CTA-PB'", 'fields': '*',
         # 'include_condition': False},
 
-        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Communication_Services',
+        # {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Communication_Services',
         #     'condition': "id = '284897'", 'fields': '*',
         # 'include_condition': False},
 
-        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Consumer_Cyclical',
+        # {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Consumer_Cyclical',
         #     'condition': "name = 'VVV'", 'fields': '*',
         # 'include_condition': True},
 
-        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Consumer_Defensive',
+        # {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Consumer_Defensive',
         #     'condition': "name = 'WMT'", 'fields': '*',
         # 'include_condition': True},
 
-        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Energy',
+        # {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Energy',
         #     'condition': "name = 'VVV'", 'fields': '*',
         # 'include_condition': True},
 
-        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Financial_Services',
+        # {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Financial_Services',
         #     'condition': "name = 'STEP'", 'fields': '*',
         # 'include_condition': True},
 
-        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Healthcare',
+        # {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Healthcare',
         #     'condition': "name = 'INSM'", 'fields': '*',
         # 'include_condition': True},
 
-        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Industrials',
+        # {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Industrials',
         #     'condition': "name = 'TRU'", 'fields': '*',
         # 'include_condition': True},
 
-        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Real_Estate',
+        # {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Real_Estate',
         #     'condition': "name = ''", 'fields': '*',
         # 'include_condition': True},
 
-        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Technology',
+        # {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Technology',
         #     'condition': "name = 'SATS'", 'fields': '*',
         # 'include_condition': True},
 
-        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Technology',
+        # {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Technology',
         #   'condition': "id = 779743", 'fields': '*',
         # 'include_condition': True},
 
-        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Utilities',
+        # {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Utilities',
         #     'condition': "name = ''", 'fields': '*',
         # 'include_condition': True},
 
-        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'Earning',
+        # {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Earning',
         #     'condition': "name = 'WAL'", 'fields': '*',
         # 'include_condition': True},
 
@@ -189,7 +189,7 @@ if __name__ == '__main__':
         #     'condition': "name = 'WAL'", 'fields': '*',
         # 'include_condition': True},
 
-        # {'path': '/Users/yanzhang/Documents/Database/Finance.db', 'table': 'sync_log',
+        # {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'sync_log',
         #     'condition': "table_name = 'Earning'", 'fields': '*',
         # 'include_condition': False},
 

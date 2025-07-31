@@ -249,11 +249,11 @@ if __name__ == "__main__":
         "https://finance.yahoo.com/markets/etfs/top/?start=400&count=100",
         "https://finance.yahoo.com/markets/etfs/top/?start=500&count=100"
     ]
-    existing_json    = "/Users/yanzhang/Documents/Financial_System/Modules/description.json"
-    new_file         = "/Users/yanzhang/Documents/News/ETFs_new.txt"
-    blacklist_file   = "/Users/yanzhang/Documents/Financial_System/Modules/Blacklist.json"
-    sectors_file     = "/Users/yanzhang/Documents/Financial_System/Modules/Sectors_All.json"
-    db_path          = "/Users/yanzhang/Documents/Database/Finance.db"
+    existing_json    = "/Users/yanzhang/Coding/Financial_System/Modules/description.json"
+    new_file         = "/Users/yanzhang/Coding/News/ETFs_new.txt"
+    blacklist_file   = "/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json"
+    sectors_file     = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json"
+    db_path          = "/Users/yanzhang/Coding/Database/Finance.db"
 
     try:
         save_data(urls, existing_json, new_file, blacklist_file, sectors_file, db_path)
@@ -264,8 +264,8 @@ if __name__ == "__main__":
     # ---------------------- 文件移动 ----------------------
     downloads_dir = "/Users/yanzhang/Downloads/"
     source_pattern = os.path.join(downloads_dir, "screener_*.txt")
-    source_file2   = "/Users/yanzhang/Documents/News/screener_sectors.txt"
-    target_dir     = "/Users/yanzhang/Documents/News/backup"
+    source_file2   = "/Users/yanzhang/Coding/News/screener_sectors.txt"
+    target_dir     = "/Users/yanzhang/Coding/News/backup"
     os.makedirs(target_dir, exist_ok=True)
 
     # 一次性移动所有匹配 screener_*.txt 的文件

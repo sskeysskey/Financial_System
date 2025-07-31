@@ -11,7 +11,7 @@ service = Service(executable_path=chrome_driver_path)
 driver = webdriver.Chrome(service=service)
 
 # 读取sectors.json文件
-with open("/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json", "r") as file:
+with open("/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json", "r") as file:
     data = json.load(file)
 
 stock_sectors = [
@@ -56,7 +56,7 @@ for sector in data:
 driver.quit()
 
 # 将结果写入shares.txt，避免重复写入
-with open("/Users/yanzhang/Documents/News/backup/symbol_names.txt", "a+") as file:
+with open("/Users/yanzhang/Coding/News/backup/symbol_names.txt", "a+") as file:
     file.seek(0)
     existing_data = file.read()
     for symbol, name in names_data.items():

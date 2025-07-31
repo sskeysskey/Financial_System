@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 import os
 
-OLD = '/Users/yanzhang/Documents'
+OLD = '/Users/yanzhang/Coding'
 NEW = '/Users/yanzhang/Coding'
 EXTS = ('.py',)
 
-for root, _, files in os.walk('.'):
+# ① 将这里的 '.' 改为目标搜索目录
+SEARCH_DIR = '/Users/yanzhang/Coding'
+
+for root, _, files in os.walk(SEARCH_DIR):
     for fname in files:
         if not fname.endswith(EXTS):
             continue

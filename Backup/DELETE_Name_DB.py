@@ -29,7 +29,7 @@ def delete_records_by_names(db_file, table_name, stock_names):
         conn.close()
 
 # 使用示例
-db_path = '/Users/yanzhang/Documents/Database/Finance.db'  # 配置数据库文件路径
+db_path = '/Users/yanzhang/Coding/Database/Finance.db'  # 配置数据库文件路径
 table = 'Technology'
 stock_names_to_delete = [
     "ZI"

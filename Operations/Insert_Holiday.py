@@ -4,8 +4,8 @@ import sys
 import shlex
 
 # 1. 定义文件路径
-empty_file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_empty.json'
-holiday_file_path = '/Users/yanzhang/Documents/Financial_System/Modules/Sectors_US_holiday.json'
+empty_file_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json'
+holiday_file_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_US_holiday.json'
 
 # 2. 读取原始 JSON (Sectors_empty.json)
 try:
@@ -83,7 +83,7 @@ else:
     try:
         # a. 定义要执行的命令的各个部分，与 AppleScript 中一致
         python_path = "/Library/Frameworks/Python.framework/Versions/Current/bin/python3"
-        script_path = "/Users/yanzhang/Documents/Financial_System/Selenium/YF_PriceVolume.py"
+        script_path = "/Users/yanzhang/Coding/Financial_System/Selenium/YF_PriceVolume.py"
         mode_arg = "--mode empty"
 
         # b. 使用 shlex.quote 来安全地处理路径，防止路径中包含空格或特殊字符导致命令执行失败

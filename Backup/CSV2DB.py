@@ -45,7 +45,7 @@ def insert_data_to_db(df, db_file, table_name, name, parent_id):
 
 if __name__ == "__main__":
     csv_file_path = '/Users/yanzhang/Downloads/sp500.csv'
-    database_file = '/Users/yanzhang/Documents/Database/Finance.db'
+    database_file = '/Users/yanzhang/Coding/Database/Finance.db'
     table_name = 'Stocks'  # 将表名定义为一个变量
     name = 'S&P 500'  # 将股票名称定义为一个变量
     parent_id = 10  # 将parent_id定义为一个变量
