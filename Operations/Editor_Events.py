@@ -5,9 +5,6 @@ import pyperclip
 import tkinter as tk
 from tkinter import messagebox, Text, Entry, Checkbutton, Button, Frame, Scrollbar, Canvas, BooleanVar, simpledialog
 
-# --- 核心功能函数 ---
-
-# JSON文件的固定路径
 # 请确保此路径是正确的，如果脚本和json文件不在同一目录，建议使用绝对路径。
 JSON_FILE_PATH = '/Users/yanzhang/Documents/Financial_System/Modules/description.json'
 
@@ -271,9 +268,19 @@ class DescriptionEditorApp:
                 if key in self.events_dict:
                     del self.events_dict[key]
             
+            # 如果删完了，连 description3 都清空
+            if not self.events_dict:
+                self.item_data.pop('description3', None)
+
+            # 立即保存
+            if save_data(self.full_data):
+                messagebox.showinfo("成功", "已删除选中条目，且更改已保存到 JSON。")
+            else:
+                messagebox.showerror("错误", "删除成功，但保存到文件时失败。")
+
             # 重建UI
             self._create_widgets()
-            messagebox.showinfo("成功", "选中的条目已从界面移除。\n请点击'保存所有更改'以更新JSON文件。")
+
 
     # --- 新增: "复制到..." 功能的实现 ---
     def _copy_to_symbols(self):

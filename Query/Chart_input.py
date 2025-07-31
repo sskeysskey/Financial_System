@@ -545,7 +545,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     pe_text = f"{pe}" if pe not in [None, "N/A"] else "--"
     # --- 修改结束 ---
 
-    clickable = False
+    # clickable = False
     tag_str = ""
     fullname = ""
     data_sources = ['stocks', 'etfs']
@@ -558,8 +558,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 tags = item.get('tag', [])
                 fullname = item.get('name', '')
                 tag_str = ','.join(tags)
-                if len(tag_str) > 25:
-                    tag_str = tag_str[:25] + '...'
+                if len(tag_str) > 45:
+                    tag_str = tag_str[:45] + '...'
                 clickable = True
                 found = True
                 break
@@ -580,14 +580,19 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             f'{marketcap_in_billion} {pe_text} {pb_text} "{table_name}" {fullname} {tag_str}'
         )
 
-    title_style = {
-        'color': 'orange' if clickable else 'lightgray',
-        'fontsize': 16 if clickable else 15,
-        'fontweight': 'bold',
-        'picker': clickable,
-    }
-    # 在设置标题的代码部分
-    title = ax1.set_title(title_text, **title_style, pad=70)  # 增加pad参数
+    # 移除原来的标题设置，改用可选择的文本
+    # 不再使用 ax1.set_title()，而是使用 text() 创建可选择文本
+    title_text_obj = fig.text(
+        0.5, 0.95,  # 位置坐标 (x=0.5居中, y=0.95在顶部)
+        title_text,
+        ha='center',  # 水平居中
+        va='top',     # 垂直顶部对齐
+        color='orange',  # 保持金黄色
+        fontsize=16,
+        fontweight='bold',
+        transform=fig.transFigure,  # 使用figure坐标系
+        picker=False  # 关闭picker功能，使其不可点击跳转
+    )
 
     def show_stock_etf_info(event=None):
         """
@@ -699,12 +704,11 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     
     def on_pick(event):
         """
-        当点击标题（可点击）或标记点时，展示对应信息窗口。
-        如果标记点不可见，则不会触发点击事件。
+        当点击标记点时，展示对应信息窗口。
+        移除了标题点击功能。
         """
-        if event.artist == title:
-            show_stock_etf_info()
-        elif event.artist in [point[0] for point in global_scatter_points + specific_scatter_points + earning_scatter_points]:
+        # 移除标题点击处理
+        if event.artist in [point[0] for point in global_scatter_points + specific_scatter_points + earning_scatter_points]:
             # 查找被点击的标记点
             for scatter, date, price, text in global_scatter_points + specific_scatter_points + earning_scatter_points:
                 if event.artist == scatter:
