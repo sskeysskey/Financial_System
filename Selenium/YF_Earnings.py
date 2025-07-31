@@ -232,19 +232,62 @@ for single_date in (start_date + i*delta for i in range((end_date - start_date).
 
         offset += 100
 
-# ———— 5. 把内存中的 existing_lines + new_entries 一起写回文件 —————————
-if new_entries:
+# -------- 5.1. 生成 next 与 diff 两份列表 -------------------------------
+# （A）读取 new.txt 中已有的 symbols
+new_txt_path = '/Users/yanzhang/Documents/News/Earnings_Release_new.txt'
+new_symbols = set()
+if os.path.exists(new_txt_path):
+    with open(new_txt_path, 'r') as f_new:
+        for line in f_new:
+            parts = line.strip().split(':')
+            if parts:
+                new_symbols.add(parts[0].strip())
+
+# （B）读取已有的 diff 文件内容以便排重
+diff_path = '/Users/yanzhang/Documents/News/Earnings_Release_diff.txt'
+existing_diff_lines = set()
+if os.path.exists(diff_path):
+    with open(diff_path, 'r') as f_diff:
+        for ln in f_diff:
+            existing_diff_lines.add(ln.rstrip('\n'))
+
+# （C）拆分 new_entries
+entries_for_next = []
+entries_for_diff = []
+for ln in new_entries:
+    sym = ln.split(':')[0].strip()
+    if sym in new_symbols:
+        # 写入 diff 前做排重
+        if ln not in existing_diff_lines:
+            entries_for_diff.append(ln)
+            existing_diff_lines.add(ln)
+    else:
+        entries_for_next.append(ln)
+
+# -------- 5.2. 写回 Earnings_Release_next.txt ------------------------------
+if entries_for_next:
     with open(file_path, 'w') as f:
         # 先写保留的旧行
         for ln in existing_lines:
-            f.write(ln + "\n")
-        # 再写所有新行（按发现顺序）
-        for ln in new_entries:
-            f.write(ln + "\n")
-    print(f"更新了 {len(new_entries)} 条记录到 {file_path}")
+            f.write(ln + '\n')
+        # 再写这次应该写回 next 的新行
+        for ln in entries_for_next:
+            f.write(ln + '\n')
+    print(f"更新了 {len(entries_for_next)} 条记录到 {file_path}")
 else:
-    print("没有发现可更新的新记录。")
+    print("没有发现可写入 next.txt 的新记录。")
 
-# ———— 6. 收尾 —————————————————————————————
+# -------- 5.3. 追加写入 Earnings_Release_diff.txt -------------------------
+if entries_for_diff:
+    # 确保目录存在
+    os.makedirs(os.path.dirname(diff_path), exist_ok=True)
+    with open(diff_path, 'a') as f:
+        for ln in entries_for_diff:
+            f.write(ln + '\n')
+    print(f"将 {len(entries_for_diff)} 条记录追加到 diff 文件：{diff_path}")
+else:
+    print("没有发现需要写入 diff.txt 的记录。")
+
+# -------- 6. 收尾 ----------------------------------------------------------
 conn.close()
 driver.quit()

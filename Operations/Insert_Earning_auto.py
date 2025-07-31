@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget,
     QVBoxLayout, QHBoxLayout, QGroupBox, QTableWidget, QTableWidgetItem,
     QPushButton, QMessageBox, QShortcut, QLabel,
-    QMenu, QAction, QHeaderView  # 1. 新增导入 QHeaderView 用于调整列宽
+    QMenu, QAction, QHeaderView
 )
 from PyQt5.QtGui import QCursor, QKeySequence, QFont, QBrush, QColor
 from PyQt5.QtCore import Qt
@@ -287,9 +287,6 @@ class MainWindow(QMainWindow):
             color: lightyellow; 
             font-size: 18pt;
             padding: 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         """)
         table.setCellWidget(row + 1, 0, lbl)
         for c in range(table.columnCount()):

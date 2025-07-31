@@ -11,13 +11,10 @@
     "Technology": {
         "IT": "",
         "ACN": "",
-        "ENPH": "",
         "WIX": ""
     },
     "Consumer_Cyclical": {
-        "LULU": "",
         "IBP": "",
-        "CMG": "",
         "LKQ": "",
         "KMX": ""
     },
@@ -25,26 +22,20 @@
     "Consumer_Defensive": {
         "GIS": "",
         "CL": "",
-        "TSN": "",
-        "HRL": ""
+        "TSN": ""
     },
     "Industrials": {
         "CPRT": "",
         "KBR": "政府服务",
-        "EXPO": "政府服务",
-        "OTIS": "",
-        "ODFL": ""
+        "EXPO": "政府服务"
     },
     "Communication_Services": {
-        "NFLX": "",
-        "CHTR": ""
+        "NFLX": ""
     },
     "Financial_Services": {
         "BRK-A": "",
-        "MMC": "",
         "AJG": "",
-        "AFL": "",
-        "RLI": ""
+        "AFL": ""
     },
     "Healthcare": {
         "HUM": "",
@@ -132,14 +123,7 @@
         "CHE": ""
     },
     "Earning_Filter": {
-        "CHKP": "",
-        "EXLS": "",
-        "GDDY": "",
-        "IOT": "",
-        "LUV": "",
-        "MEDP": "",
-        "UNM": "",
-        "VRSK": ""
+        "GDDY": ""
     },
     "Next_Week": {},
     "Currencies": {

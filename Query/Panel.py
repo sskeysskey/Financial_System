@@ -10,7 +10,7 @@ import subprocess
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QGroupBox, QScrollArea, QTextEdit, QDialog,
-    QInputDialog, QMenu, QAction
+    QInputDialog, QMenu
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QCursor
@@ -65,9 +65,32 @@ keyword_colors = {}
 sector_data = {}
 json_data = {}
 
-# ----------------------------------------------------------------------
-# Classes
-# ----------------------------------------------------------------------
+class SymbolButton(QPushButton):
+    """
+    支持：
+      - 普通左键点击：触发 button.clicked
+      - Alt(⌥)+左键：执行 find similar
+      - Shift+左键：在富途中搜索
+    """
+    def __init__(self, text, symbol, parent=None):
+        super().__init__(text, parent)
+        self._symbol = symbol
+
+    def mousePressEvent(self, event):
+        # 只处理左键
+        if event.button() == Qt.LeftButton:
+            mods = event.modifiers()
+            if mods & Qt.AltModifier:
+                # Option + 左键 → 找相似
+                execute_external_script('similar', self._symbol)
+                return
+            elif mods & Qt.ShiftModifier:
+                # Shift + 左键 → 富途搜索
+                execute_external_script('futu', self._symbol)
+                return
+        # 其他情况（普通左键、右键等）按默认行为走
+        super().mousePressEvent(event)
+
 class SymbolManager:
     def __init__(self, config_data, all_categories):
         self.symbols = []
@@ -378,7 +401,7 @@ class MainWindow(QMainWindow):
                         # 创建主按钮
                         button_text = translation if translation else keyword
                         button_text += f" {compare_data.get(keyword, '')}"
-                        button = QPushButton(button_text)
+                        button = SymbolButton(button_text, keyword)
                         button.setObjectName(self.get_button_style_name(keyword))
                         button.setCursor(QCursor(Qt.PointingHandCursor))
                         button.clicked.connect(lambda _, k=keyword: self.on_keyword_selected_chart(k))
@@ -408,22 +431,23 @@ class MainWindow(QMainWindow):
         menu = QMenu(self)
 
         actions = [
-            ("在富途中搜索", lambda: execute_external_script('futu', keyword)),
+            ("删除",          lambda: self.delete_item(keyword, group)),
+            ("编辑 Tags",      lambda: execute_external_script('tags', keyword, group, self)),
+            None,
+            ("改名",          lambda: self.rename_item(keyword, group)),
+            ("编辑 Earing DB", lambda: execute_external_script('editor_earning', keyword)),
             None,
             ("添加新事件",    lambda: execute_external_script('event_input', keyword, group, self)),
             ("编辑事件",      lambda: execute_external_script('event_editor', keyword, group, self)),
             None,
-            ("删除",          lambda: self.delete_item(keyword, group)),
-            ("改名",          lambda: self.rename_item(keyword, group)),
             ("移动到 Qualified",      lambda: self.move_item_to_Qualified(keyword, group)),
             ("移回到 Earning_Filter",       lambda: self.move_item_to_earning_filter(keyword, group)),
             None,
-            ("查询数据库...",  lambda: self.on_keyword_selected(keyword)),
+            ("在富途中搜索", lambda: execute_external_script('futu', keyword)),
+            ("查询 DB...",  lambda: self.on_keyword_selected(keyword)),
             ("Kimi检索财报",   lambda: execute_external_script('kimi', keyword)),
             ("添加到 Earning", lambda: execute_external_script('earning', keyword)),
-            ("编辑 Earing DB", lambda: execute_external_script('editor_earning', keyword)),
             None,
-            ("编辑 Tags",      lambda: execute_external_script('tags', keyword, group, self)),
             ("找相似",         lambda: execute_external_script('similar', keyword)),
             None,
             ("加入黑名单",     lambda: execute_external_script('blacklist', keyword, group, self)),
