@@ -27,6 +27,7 @@ panel_json_file     = os.path.join(config_path, "Sectors_panel.json")
 # --- 2. 可配置参数 ---
 NUM_EARNINGS_TO_CHECK = 2  # 查询近 N 次财报
 MIN_DROP_PERCENTAGE   = 0.04 # 最新收盘价必须至少比历史财报日价格低 4%
+MIN_TURNOVER          = 100_000_000  # 策略3：最新交易日的成交额（price * volume）最少 1 亿
 
 def create_symbol_to_sector_map(json_file_path):
     """
@@ -134,6 +135,8 @@ def process_stocks():
     
     # 过去N次财报都是上升，且收盘价比（N次财报中收盘价最高值）低4%
     filtered_2 = []
+
+    # 过去N次财报都是上升，且最近两次相差4%以上，且收盘价比（N次财报收盘价最低者）还低，且收盘价时间落在下次财报日期往前推20天和7天之间
     filtered_3 = []    # 新增：策略3
 
     conn = None
@@ -191,18 +194,24 @@ def process_stocks():
                 print(f"信息: 未能获取 {symbol} 全部 {NUM_EARNINGS_TO_CHECK} 次财报日的完整价格数据，已跳过。")
                 continue
 
-            # 查询最新收盘价
+            # 查询最新收盘价及成交量
             cursor.execute(
-                f'SELECT date, price FROM "{table_name}" WHERE name = ? ORDER BY date DESC LIMIT 1',
+                f'SELECT date, price, volume FROM "{table_name}" WHERE name = ? ORDER BY date DESC LIMIT 1',
                 (symbol,)
             )
             latest_row = cursor.fetchone()
             if not latest_row:
-                print(f"警告: 未能在 {table_name} 中找到 {symbol} 的任何价格数据，已跳过。")
+                print(f"警告: 未能在 {table_name} 中找到 {symbol} 的任何价格/成交量数据，已跳过。")
                 continue
-            latest_date_str, latest_price = latest_row
+            latest_date_str, latest_price, latest_volume = latest_row
             latest_date = datetime.datetime.strptime(latest_date_str, "%Y-%m-%d").date()
-            print(f"最新收盘价: {latest_price} （日期: {latest_date_str}）")
+            turnover = latest_price * latest_volume
+            turnover_ok = turnover >= MIN_TURNOVER
+            print(
+                f"最新收盘价: {latest_price} （{latest_date_str}），"
+                f"成交量: {latest_volume}，成交额: {turnover:.0f}"
+                + ("" if turnover_ok else f" ← 未达 {MIN_TURNOVER}")
+            )
 
             earnings_day_prices = [prices[d] for d in earnings_dates]
             print(f"财报日价格列表 (按日期降序): {earnings_day_prices}")
@@ -210,7 +219,8 @@ def process_stocks():
             threshold = 1 - MIN_DROP_PERCENTAGE
 
             # 策略 1: 最新价比所有 N 次财报日价格都低至少 4%
-            cond1 = all(latest_price < p * threshold for p in earnings_day_prices)
+            orig_cond1 = all(latest_price < p * threshold for p in earnings_day_prices)
+            cond1 = orig_cond1 and turnover_ok
             if cond1:
                 print(f"*** [filtered_1] 条件满足: {symbol} 的最新价 {latest_price} 比所有 {NUM_EARNINGS_TO_CHECK} 次财报日收盘价低 {MIN_DROP_PERCENTAGE*100:.0f}%。 ***")
                 filtered_1.append(symbol)
@@ -222,7 +232,8 @@ def process_stocks():
             asc_prices = list(reversed(earnings_day_prices))
             increasing = all(asc_prices[i] < asc_prices[i+1] for i in range(len(asc_prices)-1))
             most_recent_er_price = earnings_day_prices[0]  # 第一项是最近一次财报收盘价
-            cond2 = increasing and (latest_price < most_recent_er_price * threshold)
+            orig_cond2 = increasing and (latest_price < most_recent_er_price * threshold)
+            cond2 = orig_cond2 and turnover_ok
             if cond2:
                 print(f"*** [filtered_2] 条件满足: {symbol} 的过去 {NUM_EARNINGS_TO_CHECK} 次财报日收盘价递增，且最新价 {latest_price} 比最近一次财报价 {most_recent_er_price} 低 {MIN_DROP_PERCENTAGE*100:.0f}%。 ***")
                 filtered_2.append(symbol)
@@ -265,6 +276,7 @@ def process_stocks():
                 and gap_ok          # 新增：最近两次财报至少 MIN_DROP_PERCENTAGE 涨幅
                 and latest_price < min_er_price
                 and window_start <= latest_date <= window_end
+                and turnover_ok  # 新增：成交额至少 1 亿
             )
             if cond3:
                 print(
