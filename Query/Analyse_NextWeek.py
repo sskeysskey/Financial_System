@@ -231,9 +231,21 @@ def process_stocks():
 
             # --- 策略 3 ---
             # 1) 前 N 次财报日价格递增 (变量 increasing 已在策略2里计算过)
-            # 2) 最新价 < N 次财报日收盘价最低值
+            # 2) 最近两次财报价格涨幅至少 MIN_DROP_PERCENTAGE
+            last_er_price = earnings_day_prices[0]
+            prev_er_price = earnings_day_prices[1]
+            gap_ok = (last_er_price >= prev_er_price * (1 + MIN_DROP_PERCENTAGE))
+            if not gap_ok:
+                print(
+                    f"[filtered_3] 不满足涨幅要求: "
+                    f"最近两次财报从 {prev_er_price} 到 {last_er_price}，"
+                    f"涨幅 {(last_er_price/prev_er_price-1)*100:.2f}% < {MIN_DROP_PERCENTAGE*100:.0f}%"
+                )
+
+            # 3) 最新价 < N 次财报日收盘价最低值
             min_er_price = min(earnings_day_prices)
-            # 3) 时间窗口判断：上次财报日期 +3 个月，往前推20天
+
+            # 4) 时间窗口判断：上次财报日期 +3 个月，往前推20天 到 往前推7天
             last_er_date = datetime.datetime.strptime(earnings_dates[0], "%Y-%m-%d").date()
             # 简单加三个月
             m = last_er_date.month + 3
@@ -244,19 +256,21 @@ def process_stocks():
                 [31,29 if y%4==0 and (y%100!=0 or y%400==0) else 28,31,30,31,30,31,31,30,31,30,31][m-1]
             )
             next_er_date = datetime.date(y, m, day)
+
             window_start = next_er_date - datetime.timedelta(days=20)
             window_end   = next_er_date - datetime.timedelta(days=7)
-            # 改动结束 ◀
 
             cond3 = (
-                increasing
+                increasing          # 原本的“递增”条件
+                and gap_ok          # 新增：最近两次财报至少 MIN_DROP_PERCENTAGE 涨幅
                 and latest_price < min_er_price
                 and window_start <= latest_date <= window_end
             )
             if cond3:
                 print(
                     f"*** [filtered_3] 条件满足: {symbol} 最新价 {latest_price} "
-                    f"在窗口 {window_start}—{window_end} 内，且低于历史最低 {min_er_price}。 ***"
+                    f"在窗口 {window_start}—{window_end} 内，低于历史最低 {min_er_price}，"
+                    f"且最近两财报涨幅 {(last_er_price/prev_er_price-1)*100:.2f}% ≥ {MIN_DROP_PERCENTAGE*100:.0f}%。 ***"
                 )
                 filtered_3.append(symbol)
             else:
