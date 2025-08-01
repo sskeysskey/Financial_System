@@ -2,32 +2,49 @@
     "Basic_Materials": {
         "BCPC": "",
         "WFG": "",
-        "CBT": ""
+        "CBT": "",
+        "EMN": ""
     },
     "Real_Estate": {
-        "NSA": ""
+        "NSA": "",
+        "AVB": ""
     },
     "Energy": {},
     "Technology": {
         "IT": "",
         "ACN": "",
-        "WIX": ""
+        "WIX": "",
+        "FI": "",
+        "FICO": "",
+        "GIB": "",
+        "CFLT": "",
+        "SPSC": "",
+        "NSIT": "",
+        "ENPH": ""
     },
     "Consumer_Cyclical": {
         "IBP": "",
         "LKQ": "",
-        "KMX": ""
+        "KMX": "",
+        "CMG": "",
+        "LULU": "",
+        "MUSA": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
         "GIS": "",
         "CL": "",
-        "TSN": ""
+        "TSN": "",
+        "PG": "",
+        "KO": "",
+        "HRL": ""
     },
     "Industrials": {
         "CPRT": "",
         "KBR": "政府服务",
-        "EXPO": "政府服务"
+        "EXPO": "政府服务",
+        "OTIS": "",
+        "UHAL": ""
     },
     "Communication_Services": {
         "NFLX": ""
@@ -35,7 +52,9 @@
     "Financial_Services": {
         "BRK-A": "",
         "AJG": "",
-        "AFL": ""
+        "AFL": "",
+        "MMC": "",
+        "RLI": ""
     },
     "Healthcare": {
         "HUM": "",
@@ -47,7 +66,13 @@
         "CNC": "",
         "MMSI": "",
         "LLY": "",
-        "CHE": ""
+        "CHE": "",
+        "SNY": "",
+        "BMY": "",
+        "MOH": "",
+        "UTHR": "",
+        "INSP": "",
+        "PRCT": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -123,9 +148,39 @@
         "CHE": ""
     },
     "Earning_Filter": {
-        "GDDY": ""
+        "ASML": "",
+        "BJ": "",
+        "BROS": "",
+        "ICLR": "",
+        "LII": "",
+        "PNFP": "",
+        "STE": ""
     },
-    "Next_Week": {},
+    "Next_Week": {
+        "ADMA": "",
+        "AFL": "",
+        "BCC": "",
+        "BRKR": "",
+        "CQP": "",
+        "DOX": "",
+        "DUOL": "",
+        "HALO": "",
+        "LLY": "",
+        "LRN": "",
+        "MCD": "",
+        "NVO": "",
+        "OSCR": "",
+        "PAYC": "",
+        "PODD": "",
+        "POST": "",
+        "SARO": "",
+        "SBAC": "",
+        "STE": "",
+        "TM": "",
+        "VERX": "",
+        "WIX": "",
+        "YUM": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

@@ -62,8 +62,8 @@ def analyze_financial_data():
     # 请根据您的实际情况修改这些路径
     # 使用 os.path.expanduser('~') 来获取用户主目录，使得路径更具可移植性
     base_path = os.path.expanduser('~')
-    json_file_path = os.path.join(base_path, 'Documents/Financial_System/Modules/Sectors_All.json')
-    db_file_path = os.path.join(base_path, 'Documents/Database/Finance.db')
+    json_file_path = os.path.join(base_path, 'Coding/Financial_System/Modules/Sectors_All.json')
+    db_file_path = os.path.join(base_path, 'Coding/Database/Finance.db')
     
     # 将输出路径明确区分为 news 路径和 backup 路径
     news_file_path = '/Users/yanzhang/Coding/News/Filter_Earning.txt'

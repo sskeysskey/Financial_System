@@ -186,7 +186,8 @@
         "CVS",
         "MCK",
         "COR",
-        "BDX"
+        "BDX",
+        "ALNY"
     ],
     "Industrials": [
         "GE",
@@ -236,8 +237,7 @@
         "EQIX",
         "WELL",
         "SPG",
-        "DLR",
-        "PSA"
+        "DLR"
     ],
     "Technology": [
         "AAPL",
@@ -291,8 +291,6 @@
         "NXPI",
         "PAYX",
         "TEL",
-        "TEAM",
-        "DDOG",
         "GLW"
     ],
     "Utilities": [

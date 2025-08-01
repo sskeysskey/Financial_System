@@ -226,7 +226,7 @@ def compare_today_yesterday(
 if __name__ == '__main__':
     config_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
     output_file = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
-    additional_output_file = '/Users/yanzhang/Coding/sskeysskey.github.io/economics/compare_all.txt'
+    additional_output_file = '/Users/yanzhang/Coding/Website/economics/compare_all.txt'
     gainer_loser_path = '/Users/yanzhang/Coding/Financial_System/Modules/Gainer_Loser.json'
     earning_file_new = '/Users/yanzhang/Coding/News/Earnings_Release_new.txt'
     earning_file_next = '/Users/yanzhang/Coding/News/Earnings_Release_next.txt'

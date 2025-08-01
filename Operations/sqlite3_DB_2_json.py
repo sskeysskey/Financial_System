@@ -48,7 +48,7 @@ for table_name in tables:
 json_data = json.dumps(database_dict, indent=4, default=str)
 
 # 将 JSON 字符串写入文件
-with open('/Users/yanzhang/Coding/sskeysskey.github.io/economics/finance.json', 'w', encoding='utf-8') as json_file:
+with open('/Users/yanzhang/Coding/Website/economics/finance.json', 'w', encoding='utf-8') as json_file:
     json_file.write(json_data)
 
 # 关闭数据库连接

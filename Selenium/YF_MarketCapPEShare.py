@@ -152,11 +152,11 @@ def insert_stock_into_db(conn, symbol, shares, marketcap, pe, pb):
 
 def resolve_data_path(filename):
     """
-    优先返回 ~/Downloads/filename，如果不存在则返回 ~/Documents/News/backup/filename。
+    优先返回 ~/Downloads/filename，如果不存在则返回 ~/Coding/News/backup/filename。
     如果两处都不存在，则默认返回 ~/Downloads/filename（后面写文件会自动创建）。
     """
     downloads_dir = os.path.expanduser("~/Downloads")
-    backup_dir   = os.path.expanduser("~/Documents/News/backup")
+    backup_dir   = os.path.expanduser("~/Coding/News/backup")
     dl = os.path.join(downloads_dir, filename)
     bu = os.path.join(backup_dir, filename)
     if os.path.exists(dl):

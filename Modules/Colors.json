@@ -3,7 +3,6 @@
         "VRTX",
         "AZN",
         "CI",
-        "CL",
         "KO",
         "KDP",
         "AMT",
@@ -13,7 +12,6 @@
         "O",
         "UL",
         "ING",
-        "SNY",
         "HCA",
         "NEE",
         "AEP",
@@ -57,7 +55,6 @@
         "AJG",
         "AON",
         "PANW",
-        "FICO",
         "TMUS",
         "JD",
         "PM",
@@ -205,7 +202,6 @@
         "VLO",
         "ADBE",
         "BALL",
-        "NSIT",
         "KEP",
         "NEU",
         "KOF",
@@ -482,7 +478,14 @@
         "SEM",
         "CHTR",
         "MMSI",
-        "WIX"
+        "WIX",
+        "CL",
+        "SNY",
+        "UTHR",
+        "PRCT",
+        "AVB",
+        "FICO",
+        "CFLT"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -728,7 +731,8 @@
         "BCC",
         "INSP",
         "KMX",
-        "ELS"
+        "ELS",
+        "NSIT"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -818,7 +822,6 @@
         "PEP",
         "FTV",
         "LW",
-        "UPS",
         "EXPO"
     ],
     "black_keywords": [
@@ -903,7 +906,8 @@
         "DEO",
         "CAG",
         "WPP",
-        "HRL"
+        "HRL",
+        "UPS"
     ],
     "green_keywords": [
         "EURCNY",
