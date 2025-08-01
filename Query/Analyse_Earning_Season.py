@@ -123,20 +123,19 @@ def process_stocks():
     symbol_sector_map = create_symbol_to_sector_map(sectors_json_file)
 
     if not symbols_to_check or not symbol_sector_map:
-        print("错误: 无法加载初始数据（股票列表或板块映射），程序终止。")
+        print("错误: 无法加载初始数据，程序终止。")
         return
 
     print(f"待检查的股票列表: {symbols_to_check}")
     print(f"配置: 将检查最近 {NUM_EARNINGS_TO_CHECK} 次财报。")
     
-    # 用于存储各策略满足条件的股票
     # 最新收盘价被过去N次财报的最低值还低
     filtered_1 = []
     
     # 过去N次财报都是上升，且收盘价比（N次财报中收盘价最高值）低4%
     filtered_2 = []
 
-    # 过去N次财报都是上升，且最近两次相差4%以上，且收盘价比（N次财报收盘价最低者）还低，且收盘价时间落在下次财报日期往前推20天和7天之间
+    # 策略3：最新价 < 过去N次财报最低价，且交易日落在下次财报前7~20天窗口，且成交额足够
     filtered_3 = []    # 新增：策略3
 
     conn = None
@@ -145,7 +144,9 @@ def process_stocks():
         cursor = conn.cursor()
         print("数据库连接成功。")
 
-        # --- 4. 遍历每个待检查的股票 ---
+        # -----------------------------
+        # 第一遍: 只对 next.txt 中的 symbols 跑 策略1 和 策略2
+        # -----------------------------
         for symbol in symbols_to_check:
             print(f"\n--- 正在处理股票: {symbol} ---")
 
@@ -240,53 +241,88 @@ def process_stocks():
             else:
                 print(f"[filtered_2] 条件不满足: {symbol}")
 
-            # --- 策略 3 ---
-            # 1) 前 N 次财报日价格递增 (变量 increasing 已在策略2里计算过)
-            # 2) 最近两次财报价格涨幅至少 MIN_DROP_PERCENTAGE
-            last_er_price = earnings_day_prices[0]
-            prev_er_price = earnings_day_prices[1]
-            gap_ok = (last_er_price >= prev_er_price * (1 + MIN_DROP_PERCENTAGE))
-            if not gap_ok:
-                print(
-                    f"[filtered_3] 不满足涨幅要求: "
-                    f"最近两次财报从 {prev_er_price} 到 {last_er_price}，"
-                    f"涨幅 {(last_er_price/prev_er_price-1)*100:.2f}% < {MIN_DROP_PERCENTAGE*100:.0f}%"
-                )
+        # -----------------------------
+        # 第二遍: 全表扫描 Earning，跑 策略3
+        # -----------------------------
+        cursor.execute("SELECT DISTINCT name FROM Earning")
+        all_symbols = [row[0] for row in cursor.fetchall()]
+        print(f"策略3 全库扫描 {len(all_symbols)} 个 symbol…")
 
-            # 3) 最新价 < N 次财报日收盘价最低值
+        for symbol in all_symbols:
+            print(f"\n--- [S3] 处理 {symbol} ---")
+            # 1) 拿最近 N 次财报日期
+            cursor.execute(
+                "SELECT date FROM Earning WHERE name = ? ORDER BY date DESC LIMIT ?",
+                (symbol, NUM_EARNINGS_TO_CHECK)
+            )
+            dates = [r[0] for r in cursor.fetchall()]
+            if len(dates) < NUM_EARNINGS_TO_CHECK:
+                print("  跳过: 财报次数不足")
+                continue
+
+            # 2) 找板块表名
+            table_name = symbol_sector_map.get(symbol)
+            if not table_name:
+                print("  跳过: 无板块映射")
+                continue
+
+            # 3) 查询 N 次财报日价格
+            prices = {}
+            for d in dates:
+                cursor.execute(
+                    f'SELECT price FROM "{table_name}" WHERE name=? AND date=?',
+                    (symbol, d)
+                )
+                r = cursor.fetchone()
+                if r: prices[d] = r[0]
+            if len(prices) < NUM_EARNINGS_TO_CHECK:
+                print("  跳过: 财报价不全")
+                continue
+            earnings_day_prices = [prices[d] for d in dates]
+
+            # 4) 查询最新价+量
+            cursor.execute(
+                f'SELECT date, price, volume FROM "{table_name}" WHERE name = ? ORDER BY date DESC LIMIT 1',
+                (symbol,)
+            )
+            r = cursor.fetchone()
+            if not r:
+                print("  跳过: 无最新日数据")
+                continue
+            latest_date_str, latest_price, latest_volume = r
+            latest_date = datetime.datetime.strptime(latest_date_str, "%Y-%m-%d").date()
+            turnover = latest_price * latest_volume
+            turnover_ok = turnover >= MIN_TURNOVER
+
+            # 5) 计算历史 N 次财报的最低价
             min_er_price = min(earnings_day_prices)
 
-            # 4) 时间窗口判断：上次财报日期 +3 个月，往前推20天 到 往前推7天
-            last_er_date = datetime.datetime.strptime(earnings_dates[0], "%Y-%m-%d").date()
-            # 简单加三个月
+            # 6) 时间窗口
+            last_er_date = datetime.datetime.strptime(dates[0], "%Y-%m-%d").date()
+            # 简单 +3 个月（同你现有算法）
             m = last_er_date.month + 3
             y = last_er_date.year + (m-1)//12
             m = (m-1)%12 + 1
             day = min(
                 last_er_date.day,
-                [31,29 if y%4==0 and (y%100!=0 or y%400==0) else 28,31,30,31,30,31,31,30,31,30,31][m-1]
+                [31,29 if y%4==0 and (y%100!=0 or y%400==0) else 28,
+                31,30,31,30,31,31,30,31,30,31][m-1]
             )
-            next_er_date = datetime.date(y, m, day)
+            next_er = datetime.date(y, m, day)
+            window_start = next_er - datetime.timedelta(days=20)
+            window_end   = next_er - datetime.timedelta(days=7)
 
-            window_start = next_er_date - datetime.timedelta(days=20)
-            window_end   = next_er_date - datetime.timedelta(days=7)
-
+            # 7) 合成 cond3
             cond3 = (
-                increasing          # 原本的“递增”条件
-                and gap_ok          # 新增：最近两次财报至少 MIN_DROP_PERCENTAGE 涨幅
-                and latest_price < min_er_price
+                latest_price < min_er_price
                 and window_start <= latest_date <= window_end
-                and turnover_ok  # 新增：成交额至少 1 亿
+                and turnover_ok
             )
             if cond3:
-                print(
-                    f"*** [filtered_3] 条件满足: {symbol} 最新价 {latest_price} "
-                    f"在窗口 {window_start}—{window_end} 内，低于历史最低 {min_er_price}，"
-                    f"且最近两财报涨幅 {(last_er_price/prev_er_price-1)*100:.2f}% ≥ {MIN_DROP_PERCENTAGE*100:.0f}%。 ***"
-                )
                 filtered_3.append(symbol)
+                print("  [filtered_3] ✓")
             else:
-                print(f"[filtered_3] 条件不满足: {symbol}")
+                print("  [filtered_3] ×")
 
         print("\n数据库处理完成。")
     except sqlite3.Error as e:
