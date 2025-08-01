@@ -1,33 +1,22 @@
 {
     "Basic_Materials": {
-        "BCPC": "",
         "WFG": "",
         "CBT": "",
         "EMN": ""
     },
     "Real_Estate": {
-        "NSA": "",
-        "AVB": ""
+        "NSA": ""
     },
     "Energy": {},
     "Technology": {
         "IT": "",
         "ACN": "",
         "WIX": "",
-        "FI": "",
-        "FICO": "",
-        "GIB": "",
-        "CFLT": "",
-        "SPSC": "",
-        "NSIT": "",
         "ENPH": ""
     },
     "Consumer_Cyclical": {
         "IBP": "",
-        "LKQ": "",
         "KMX": "",
-        "CMG": "",
-        "LULU": "",
         "MUSA": ""
     },
     "Utilities": {},
@@ -144,32 +133,62 @@
         "XRP": ""
     },
     "Qualified": {
-        "CVS": "",
-        "CHE": ""
+        "CVS": ""
     },
     "Earning_Filter": {
         "ASML": "",
         "BJ": "",
+        "BRK-A": "",
         "BROS": "",
+        "CHWY": "",
+        "COST": "",
+        "DRI": "",
+        "DUOL": "",
+        "GDDY": "",
         "ICLR": "",
+        "JD": "",
         "LII": "",
+        "LUV": "",
+        "MEDP": "",
+        "ONON": "",
+        "OSCR": "",
         "PNFP": "",
-        "STE": ""
+        "QS": "",
+        "SNV": "",
+        "STE": "",
+        "VRSN": "",
+        "WST": ""
     },
     "Next_Week": {
+        "ACIW": "",
         "ADMA": "",
         "AFL": "",
         "BCC": "",
+        "BRBR": "",
         "BRKR": "",
+        "BROS": "",
         "CQP": "",
+        "CROX": "",
+        "CWAN": "",
         "DOX": "",
         "DUOL": "",
+        "EPAM": "",
+        "FRPT": "",
+        "GDDY": "",
         "HALO": "",
+        "INSP": "",
+        "IT": "",
+        "KNF": "",
+        "KTB": "",
+        "LB": "",
         "LLY": "",
+        "LNTH": "",
         "LRN": "",
+        "LTH": "",
         "MCD": "",
         "NVO": "",
         "OSCR": "",
+        "PAM": "",
         "PAYC": "",
         "PODD": "",
         "POST": "",
@@ -177,9 +196,17 @@
         "SBAC": "",
         "STE": "",
         "TM": "",
+        "TSN": "",
         "VERX": "",
         "WIX": "",
         "YUM": ""
+    },
+    "Notification": {
+        "OS": "",
+        "OSCR": "",
+        "PAM": "",
+        "TM": "",
+        "VERX": ""
     },
     "Currencies": {
         "DXY": "美元指数",

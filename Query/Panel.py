@@ -48,7 +48,7 @@ DISPLAY_LIMITS = {
 categories = [
     ['Basic_Materials', 'Consumer_Cyclical', 'Real_Estate', 'Next_Week'],
     ['Energy', 'Technology', 'Qualified', 'Earning_Filter'],
-    ['Utilities', 'Industrials', 'Consumer_Defensive'],
+    ['Utilities', 'Industrials', 'Consumer_Defensive', 'Notification'],
     ['Communication_Services', 'Financial_Services', 'Healthcare'],
     ['Bonds', 'Indices'],
     ['Commodities'],

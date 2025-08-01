@@ -1,6 +1,7 @@
 import sqlite3
 import json
 import os
+import datetime    # 新增
 
 # --- 1. 定义文件和数据库路径 ---
 # 请确保这些路径在您的系统上是正确的
@@ -9,6 +10,7 @@ news_path = os.path.join(base_path, "News")
 db_path = os.path.join(base_path, "Database")
 config_path = os.path.join(base_path, "Financial_System", "Modules")
 backup_file = os.path.join(news_path, "backup", "NextWeek_Earning.txt")
+notification_file = os.path.join(news_path, "notification_earning.txt")  # 新增
 
 # 输入文件
 earnings_release_file = os.path.join(news_path, "Earnings_Release_next.txt")
@@ -127,9 +129,12 @@ def process_stocks():
     print(f"配置: 将检查最近 {NUM_EARNINGS_TO_CHECK} 次财报。")
     
     # 用于存储各策略满足条件的股票
-    filtered_1 = []  # 原策略
-    filtered_2 = []  # 新增策略
-    # filtered_3 = []  # 预留将来使用
+    # 最新收盘价被过去N次财报的最低值还低
+    filtered_1 = []
+    
+    # 过去N次财报都是上升，且收盘价比（N次财报中收盘价最高值）低4%
+    filtered_2 = []
+    filtered_3 = []    # 新增：策略3
 
     conn = None
     try:
@@ -188,15 +193,16 @@ def process_stocks():
 
             # 查询最新收盘价
             cursor.execute(
-                f'SELECT price FROM "{table_name}" WHERE name = ? ORDER BY date DESC LIMIT 1',
+                f'SELECT date, price FROM "{table_name}" WHERE name = ? ORDER BY date DESC LIMIT 1',
                 (symbol,)
             )
-            latest_price_result = cursor.fetchone()
-            if not latest_price_result:
+            latest_row = cursor.fetchone()
+            if not latest_row:
                 print(f"警告: 未能在 {table_name} 中找到 {symbol} 的任何价格数据，已跳过。")
                 continue
-            latest_price = latest_price_result[0]
-            print(f"最新收盘价: {latest_price}")
+            latest_date_str, latest_price = latest_row
+            latest_date = datetime.datetime.strptime(latest_date_str, "%Y-%m-%d").date()
+            print(f"最新收盘价: {latest_price} （日期: {latest_date_str}）")
 
             earnings_day_prices = [prices[d] for d in earnings_dates]
             print(f"财报日价格列表 (按日期降序): {earnings_day_prices}")
@@ -223,6 +229,39 @@ def process_stocks():
             else:
                 print(f"[filtered_2] 条件不满足: {symbol}")
 
+            # --- 策略 3 ---
+            # 1) 前 N 次财报日价格递增 (变量 increasing 已在策略2里计算过)
+            # 2) 最新价 < N 次财报日收盘价最低值
+            min_er_price = min(earnings_day_prices)
+            # 3) 时间窗口判断：上次财报日期 +3 个月，往前推20天
+            last_er_date = datetime.datetime.strptime(earnings_dates[0], "%Y-%m-%d").date()
+            # 简单加三个月
+            m = last_er_date.month + 3
+            y = last_er_date.year + (m-1)//12
+            m = (m-1)%12 + 1
+            day = min(
+                last_er_date.day,
+                [31,29 if y%4==0 and (y%100!=0 or y%400==0) else 28,31,30,31,30,31,31,30,31,30,31][m-1]
+            )
+            next_er_date = datetime.date(y, m, day)
+            window_start = next_er_date - datetime.timedelta(days=20)
+            window_end   = next_er_date - datetime.timedelta(days=7)
+            # 改动结束 ◀
+
+            cond3 = (
+                increasing
+                and latest_price < min_er_price
+                and window_start <= latest_date <= window_end
+            )
+            if cond3:
+                print(
+                    f"*** [filtered_3] 条件满足: {symbol} 最新价 {latest_price} "
+                    f"在窗口 {window_start}—{window_end} 内，且低于历史最低 {min_er_price}。 ***"
+                )
+                filtered_3.append(symbol)
+            else:
+                print(f"[filtered_3] 条件不满足: {symbol}")
+
         print("\n数据库处理完成。")
     except sqlite3.Error as e:
         print(f"数据库错误: {e}")
@@ -237,6 +276,7 @@ def process_stocks():
     print(f"  filtered_1: {filtered_1}")
     print(f"  filtered_2: {filtered_2}")
     print(f"  合并去重后总计: {combined_filtered}")
+    print(f"  filtered_3: {filtered_3}")
 
     # --- 5. 应用黑名单过滤 & 更新 JSON 面板 ---
     print("\n--- 应用黑名单过滤 & 更新 JSON 面板 ---")
@@ -313,6 +353,50 @@ def process_stocks():
     except IOError as e:
         print(f"更新备份文件时错误: {e}")
 
+    # --- 写入 notification_earning.txt ---
+    # --- 额外：与 backup/notification_earning.txt 对比，只写新增，并更新 backup ---
+    backup_notification_file = os.path.join(news_path, "backup", "notification_earning.txt")
+    backup_dir = os.path.dirname(backup_notification_file)
+    if not os.path.exists(backup_dir):
+        os.makedirs(backup_dir, exist_ok=True)
+
+    # 读取旧的 notification backup
+    try:
+        with open(backup_notification_file, 'r', encoding='utf-8') as f:
+            old_notif = {line.strip() for line in f if line.strip()}
+        print(f"已从备份加载 {len(old_notif)} 个旧的通知 symbol。")
+    except FileNotFoundError:
+        old_notif = set()
+        print("未找到 notification 备份文件，视作首次运行。")
+
+    # 计算新增
+    new_notif = set(filtered_3) - old_notif
+    if new_notif:
+        # 只把新增写入 news 下的 txt（覆盖原 notification_file）
+        with open(notification_file, 'w', encoding='utf-8') as f:
+            for sym in sorted(new_notif):
+                f.write(sym + '\n')
+        print(f"本次通知新增 {len(new_notif)} 个 symbol: {sorted(new_notif)}")
+    else:
+        print("本次没有新增的通知 symbol。")
+        # 若旧的 news/notification_earning.txt 存在，则删掉它
+        if os.path.exists(notification_file):
+            os.remove(notification_file)
+            print(f"无新增，已删除旧的通知文件: {notification_file}")
+
+    # --- 更新 sectors_panel.json 中的 Notification 组 ---
+    update_json_group(new_notif, panel_json_file, "Notification")
+
+    # 最后，把本次完整的 filtered_3 覆盖写回 backup
+    try:
+        with open(backup_notification_file, 'w', encoding='utf-8') as f:
+            for sym in sorted(filtered_3):
+                f.write(sym + '\n')
+        print(f"通知备份已更新，共 {len(filtered_3)} 个 symbol: {backup_notification_file}")
+    except IOError as e:
+        print(f"更新通知备份文件时错误: {e}")
+
+    
 # --- 程序入口 ---
 if __name__ == "__main__":
     process_stocks()
