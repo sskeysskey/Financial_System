@@ -323,7 +323,7 @@ class MainWindow(QMainWindow):
             "Cyan": ("#008B8B", "white"), "Blue": ("#1E3A8A", "white"),
             "Purple": ("#9370DB", "black"), "Green": ("#276E47", "white"),
             "White": ("#E0E0E0", "black"), "Yellow": ("#BDB76B", "black"),
-            "Orange": ("#CD853F", "black"), "Red": ("#912F2F", "white"),
+            "Orange": ("#CD853F", "black"), "Red": ("#912F2F", "#F5F5DC"),
             "Black": ("#333333", "white"), "Default": ("#A9A9A9", "black")
         }
         
@@ -370,7 +370,7 @@ class MainWindow(QMainWindow):
             
             /* 3. 增加内边距，让内部的按钮不要紧贴边框 */
             /*    上内边距设置得大一些，为标题留出空间 */
-            padding: 25px 10px 10px 10px; /* 上(为标题留空)、右、下、左 */
+            padding: 10px 10px 10px 10px; /* 上(为标题留空)、右、下、左 */
         }
 
         QGroupBox::title {
