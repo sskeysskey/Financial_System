@@ -7,10 +7,6 @@ def display_dialog(message):
     applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
     subprocess.run(['osascript', '-e', applescript_code], check=True)
 
-def check_day():
-    """检查当前日期是否为周日或周一"""
-    return datetime.now().weekday() in [0, 1]  # 1 代表周一周二
-
 def parse_earnings_release(file_path):
     """解析 Earnings Release 文件，提取 symbol"""
     symbols = set()
@@ -27,11 +23,6 @@ def parse_earnings_release(file_path):
     return symbols
 
 def main():
-    if not check_day():
-        message = "今天不是周一或周二，不执行更新操作。"
-        display_dialog(message)
-        return
-
     # 两个 Earnings Release 文件路径
     earnings_release_paths = [
         '/Users/yanzhang/Coding/News/Earnings_Release_new.txt',

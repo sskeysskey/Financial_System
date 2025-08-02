@@ -75,7 +75,8 @@ class TagEditor(QMainWindow):
         self.load_json_data()
         
         self.setWindowTitle("标签编辑器 (支持拖拽排序)")
-        self.setGeometry(100, 100, 600, 700)
+        # 如果你只是想往右挪 200 像素：
+        self.setGeometry(100 + 400, 100, 600, 700)
         
         # 创建主窗口部件和布局
         self.central_widget = QWidget()
@@ -187,12 +188,13 @@ class TagEditor(QMainWindow):
             color: #ECEFF4;
             border: 1px solid #4C566A;
             border-radius: 5px;
-            font-size: 14px;
-            outline: 0px; /* 移除选中时的虚线框 */
+            font-size: 20px; /* 这条控制的是整个 widget 的基础字体 */
         }
-        
+
+        /* 在这里新增或修改 font-size */
         QListWidget::item {
             padding: 8px;
+            font-size: 18px;    /* ← 把字体调大 */
         }
         
         QListWidget::item:hover {

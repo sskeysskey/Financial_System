@@ -28,6 +28,7 @@ panel_json_file     = os.path.join(config_path, "Sectors_panel.json")
 NUM_EARNINGS_TO_CHECK = 2  # 查询近 N 次财报
 MIN_DROP_PERCENTAGE   = 0.04 # 最新收盘价必须至少比历史财报日价格低 4%
 MIN_TURNOVER          = 100_000_000  # 策略3：最新交易日的成交额（price * volume）最少 1 亿
+RISE_DROP_PERCENTAGE = 0.07  # 升序时，最新价要比最高 ER 价至少低 7%
 
 def create_symbol_to_sector_map(json_file_path):
     """
@@ -78,6 +79,7 @@ def load_blacklist(json_file_path):
     try:
         with open(json_file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
+        # 使用 .get() 安全地获取 'newlow' 键，如果不存在则返回空列表
         newlow = data.get('newlow', [])
         bl_set = set(newlow)
         print(f"成功加载黑名单 'newlow': 共 {len(bl_set)} 个 symbol。")
@@ -97,6 +99,7 @@ def update_json_group(symbols_list, target_json_path, group_name):
     """
     print(f"\n--- 更新 JSON 文件: {os.path.basename(target_json_path)} 下的组 '{group_name}' ---")
     try:
+        # 最好用 r+ 模式读取，但为保持健壮性，先读后写
         with open(target_json_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
     except FileNotFoundError:
@@ -116,6 +119,48 @@ def update_json_group(symbols_list, target_json_path, group_name):
         print(f"成功将 {len(symbols_list)} 个 symbol 写入组 '{group_name}'.")
     except Exception as e:
         print(f"错误: 写入 JSON 文件失败: {e}")
+
+### 新增点: 创建一个可重用的 PE Ratio 过滤函数 ###
+def filter_symbols_by_pe_ratio(symbols_to_filter, db_path):
+    """
+    通过检查 MNSPP 表中的 pe_ratio 来过滤股票列表。
+
+    Args:
+        symbols_to_filter (list): 需要过滤的股票代码列表。
+        db_path (str): 数据库文件路径。
+
+    Returns:
+        list: 一个只包含具有有效 pe_ratio 的股票的新列表。
+    """
+    if not symbols_to_filter:
+        return []
+
+    print(f"  - 开始对 {len(symbols_to_filter)} 个 symbol 进行 PE Ratio 过滤...")
+    valid_symbols = []
+    conn = None
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        for sym in symbols_to_filter:
+            cursor.execute("SELECT pe_ratio FROM MNSPP WHERE symbol = ?", (sym,))
+            row = cursor.fetchone()
+            pe = row[0] if row else None
+            # 过滤掉 "--", "null", "", None, 以及大小写不敏感的 "null"
+            if pe is not None and str(pe).strip().lower() not in ("--", "null", ""):
+                valid_symbols.append(sym)
+            else:
+                print(f"    - 过滤 (PE Ratio 无效): {sym} (PE: {pe})")
+    except sqlite3.Error as e:
+        print(f"    - MNSPP 查询数据库错误: {e}")
+        # 如果查询失败，返回目前已验证通过的列表，而不是空列表
+        return valid_symbols
+    finally:
+        if conn:
+            conn.close()
+    
+    print(f"  - PE Ratio 过滤后剩余 {len(valid_symbols)} 个 symbol。")
+    return valid_symbols
+
 
 def process_stocks():
     print("开始处理...")
@@ -172,13 +217,6 @@ def process_stocks():
             if not table_name:
                 print(f"警告: 在 Sectors_All.json 中未找到 {symbol} 的板块信息，已跳过。")
                 continue
-            
-            print(f"{symbol} 属于板块/表: {table_name}")
-
-            # 步骤C: 查询价格
-            # 为防止SQL注入，我们验证表名是否合法（虽然这里是从我们自己的JSON文件读取的，但这是个好习惯）
-            # 这里我们假设JSON文件是可信的，直接使用表名
-            
             prices = {}
             # 查询所有财报日的收盘价
             for date_str in earnings_dates:
@@ -246,10 +284,9 @@ def process_stocks():
         # -----------------------------
         cursor.execute("SELECT DISTINCT name FROM Earning")
         all_symbols = [row[0] for row in cursor.fetchall()]
-        print(f"策略3 全库扫描 {len(all_symbols)} 个 symbol…")
-
+        print(f"\n策略3 全库扫描 {len(all_symbols)} 个 symbol…")
         for symbol in all_symbols:
-            print(f"\n--- [S3] 处理 {symbol} ---")
+            # print(f"\n--- [S3] 处理 {symbol} ---") # 可以注释掉以减少输出
             # 1) 拿最近 N 次财报日期
             cursor.execute(
                 "SELECT date FROM Earning WHERE name = ? ORDER BY date DESC LIMIT ?",
@@ -312,17 +349,32 @@ def process_stocks():
             window_start = next_er - datetime.timedelta(days=20)
             window_end   = next_er - datetime.timedelta(days=7)
 
-            # 7) 合成 cond3
+            # earnings_day_prices 按日期“降序”排列 (最近一次在前)，先倒过来成升序
+            asc_prices = list(reversed(earnings_day_prices))  # [prev_er_price, last_er_price]
+            # 判断过去 2 次财报是否严格上升
+            if asc_prices[0] < asc_prices[1]:
+                # 上升：最新收盘价要比最高 ER 价低至少 7%
+                price_ok = latest_price < max(asc_prices) * (1 - RISE_DROP_PERCENTAGE)
+                debug = f"升序 → 要求 latest {latest_price:.2f} < max_ER({max(asc_prices):.2f})×(1-{RISE_DROP_PERCENTAGE:.2f})"
+            else:
+                # 非升序：两次 ER 收盘价差距至少 4%
+                diff = abs(asc_prices[1] - asc_prices[0])
+                price_ok = diff >= asc_prices[0] * MIN_DROP_PERCENTAGE
+                debug = f"非升序 → 要求 |{asc_prices[1]:.2f}-{asc_prices[0]:.2f}|={diff:.2f} ≥ {MIN_DROP_PERCENTAGE*100:.0f}%×{asc_prices[0]:.2f}"
+
+            print(f"  [filtered_3] 价格规则: {debug} → {'✓' if price_ok else '×'}")
+            # 最终合成 cond3：新价格规则 + 时间窗口 + 成交额
             cond3 = (
-                latest_price < min_er_price
+                price_ok
+                and latest_price < min_er_price
                 and window_start <= latest_date <= window_end
                 and turnover_ok
             )
             if cond3:
                 filtered_3.append(symbol)
-                print("  [filtered_3] ✓")
+                print("  [filtered_3] ✓ (最终通过)")
             else:
-                print("  [filtered_3] ×")
+                print("  [filtered_3] × (未通过)")
 
         print("\n数据库处理完成。")
     except sqlite3.Error as e:
@@ -332,45 +384,55 @@ def process_stocks():
             conn.close()
             print("数据库连接已关闭。")
 
-    # 合并所有策略的结果（去重）
-    combined_filtered = list(set(filtered_1 + filtered_2))
-    print(f"\n策略结果汇总:")
-    print(f"  filtered_1: {filtered_1}")
-    print(f"  filtered_2: {filtered_2}")
-    print(f"  合并去重后总计: {combined_filtered}")
-    print(f"  filtered_3: {filtered_3}")
+    # --- 结果汇总 ---
+    combined_filtered = sorted(list(set(filtered_1 + filtered_2)))
+    # 对 filtered_3 也进行排序和去重
+    filtered_3 = sorted(list(set(filtered_3)))
+    
+    print(f"\n策略结果汇总 (过滤前):")
+    print(f"  策略 1+2 (主列表) 找到: {len(combined_filtered)} 个 - {combined_filtered}")
+    print(f"  策略 3 (通知列表) 找到: {len(filtered_3)} 个 - {filtered_3}")
 
-    # --- 5. 应用黑名单过滤 & 更新 JSON 面板 ---
-    print("\n--- 应用黑名单过滤 & 更新 JSON 面板 ---")
+    # ### 修改/新增点: 移植 b.py 的黑名单过滤逻辑 ###
+    print("\n--- 5. 应用黑名单过滤 ---")
     blacklist_set = load_blacklist(blacklist_json_file)
-    final_symbols = [s for s in combined_filtered if s not in blacklist_set]
-    print(f"去除黑名单后: {final_symbols}")
 
-    # --- 5.1 过滤 MNSPP 表中的无效 pe_ratio ---
-    print("\n--- 过滤 MNSPP 表中的无效 pe_ratio ---")
-    valid_symbols = []
-    conn_m = None
-    try:
-        conn_m = sqlite3.connect(db_file)
-        cursor_m = conn_m.cursor()
-        for sym in final_symbols:
-            cursor_m.execute("SELECT pe_ratio FROM MNSPP WHERE symbol = ?", (sym,))
-            row = cursor_m.fetchone()
-            pe = row[0] if row else None
-            # 过滤掉 "--", "null", "" 或 None
-            if pe is not None and str(pe).strip() not in ("--", "null", ""):
-                valid_symbols.append(sym)
-            else:
-                print(f"过滤: {sym} 的 pe_ratio 无效: {pe}")
-    except sqlite3.Error as e:
-        print(f"MNSPP 查询数据库错误: {e}")
-    finally:
-        if conn_m:
-            conn_m.close()
-    final_symbols = valid_symbols
-    print(f"经过 pe_ratio 过滤后: {final_symbols}")
+    # 5.1 过滤主列表 (策略 1+2)
+    final_symbols_before_blacklist = combined_filtered
+    final_symbols = [s for s in final_symbols_before_blacklist if s not in blacklist_set]
+    removed_by_blacklist_main = set(final_symbols_before_blacklist) - set(final_symbols)
+    if removed_by_blacklist_main:
+        print(f"主列表: 根据黑名单过滤掉 {len(removed_by_blacklist_main)} 个 symbol: {sorted(list(removed_by_blacklist_main))}")
+    print(f"主列表: 黑名单过滤后剩余 {len(final_symbols)} 个 symbol。")
 
-    # --- 与 backup 比对，只写新增 ---
+    # 5.2 过滤通知列表 (策略 3)
+    final_filtered_3_before_blacklist = filtered_3
+    final_filtered_3 = [s for s in final_filtered_3_before_blacklist if s not in blacklist_set]
+    removed_by_blacklist_notif = set(final_filtered_3_before_blacklist) - set(final_filtered_3)
+    if removed_by_blacklist_notif:
+        print(f"通知列表: 根据黑名单过滤掉 {len(removed_by_blacklist_notif)} 个 symbol: {sorted(list(removed_by_blacklist_notif))}")
+    
+    print(f"\n黑名单过滤后结果:")
+    print(f"  主列表剩余: {len(final_symbols)} 个")
+    print(f"  通知列表剩余: {len(final_filtered_3)} 个")
+
+    ### 修改点: 重构 PE Ratio 过滤部分，使其对两个列表都生效 ###
+    print("\n--- 6. 过滤无效 PE Ratio ---")
+    
+    # 6.1 过滤主列表
+    print("正在处理主列表...")
+    final_symbols = filter_symbols_by_pe_ratio(final_symbols, db_file)
+    
+    # 6.2 过滤通知列表
+    print("\n正在处理通知列表...")
+    final_filtered_3 = filter_symbols_by_pe_ratio(final_filtered_3, db_file)
+
+    print("\n--- 所有过滤完成后的最终结果 ---")
+    print(f"主列表最终数量: {len(final_symbols)} - {final_symbols}")
+    print(f"通知列表最终数量: {len(final_filtered_3)} - {final_filtered_3}")
+    
+    # --- 7. 处理主列表的输出 (NextWeek_Earning.txt 和 panel 的 Next_Week) ---
+    print("\n--- 7. 处理主列表输出 ---")
     backup_dir = os.path.dirname(backup_file)
     if not os.path.exists(backup_dir):
         os.makedirs(backup_dir, exist_ok=True)
@@ -379,15 +441,15 @@ def process_stocks():
     try:
         with open(backup_file, 'r', encoding='utf-8') as f:
             old_set = {line.strip() for line in f if line.strip()}
-        print(f"已从备份加载 {len(old_set)} 个旧的 symbol。")
+        print(f"已从主列表备份加载 {len(old_set)} 个旧 symbol。")
     except FileNotFoundError:
         old_set = set()
-        print("未找到备份文件，视作首次运行。")
+        print("未找到主列表备份文件，视作首次运行。")
 
     # 计算“新增”符号
     new_set = set(final_symbols) - old_set
     if new_set:
-        print(f"本次新增 {len(new_set)} 个 symbol: {sorted(new_set)}")
+        print(f"主列表本次新增 {len(new_set)} 个 symbol: {sorted(new_set)}")
         try:
             with open(output_file, 'w', encoding='utf-8') as f:
                 for sym in sorted(new_set):
@@ -409,14 +471,15 @@ def process_stocks():
     # --- 最后，把本次完整 final_symbols 覆盖写回 备份文件 ---
     try:
         with open(backup_file, 'w', encoding='utf-8') as f:
+            # ### 修改点: 备份文件保存的是当前所有符合条件的 symbol (过滤后) ###
             for sym in sorted(final_symbols):
                 f.write(sym + '\n')
-        print(f"备份文件已更新，共 {len(final_symbols)} 个 symbol: {backup_file}")
+        print(f"主列表备份文件已更新，共 {len(final_symbols)} 个 symbol: {backup_file}")
     except IOError as e:
-        print(f"更新备份文件时错误: {e}")
+        print(f"更新主列表备份文件时错误: {e}")
 
-    # --- 写入 notification_earning.txt ---
-    # --- 额外：与 backup/notification_earning.txt 对比，只写新增，并更新 backup ---
+    # --- 8. 处理通知列表的输出 (notification_earning.txt 和 panel 的 Notification) ---
+    print("\n--- 8. 处理通知列表输出 ---")
     backup_notification_file = os.path.join(news_path, "backup", "notification_earning.txt")
     backup_dir = os.path.dirname(backup_notification_file)
     if not os.path.exists(backup_dir):
@@ -426,19 +489,18 @@ def process_stocks():
     try:
         with open(backup_notification_file, 'r', encoding='utf-8') as f:
             old_notif = {line.strip() for line in f if line.strip()}
-        print(f"已从备份加载 {len(old_notif)} 个旧的通知 symbol。")
+        print(f"已从通知备份加载 {len(old_notif)} 个旧 symbol。")
     except FileNotFoundError:
         old_notif = set()
-        print("未找到 notification 备份文件，视作首次运行。")
+        print("未找到通知备份文件，视作首次运行。")
 
-    # 计算新增
-    new_notif = set(filtered_3) - old_notif
+    # ### 修改点: 使用黑名单过滤后的 final_filtered_3 计算新增部分 ###
+    new_notif = set(final_filtered_3) - old_notif
     if new_notif:
-        # 只把新增写入 news 下的 txt（覆盖原 notification_file）
+        print(f"通知列表本次新增 {len(new_notif)} 个 symbol: {sorted(new_notif)}")
         with open(notification_file, 'w', encoding='utf-8') as f:
             for sym in sorted(new_notif):
                 f.write(sym + '\n')
-        print(f"本次通知新增 {len(new_notif)} 个 symbol: {sorted(new_notif)}")
     else:
         print("本次没有新增的通知 symbol。")
         # 若旧的 news/notification_earning.txt 存在，则删掉它
@@ -446,19 +508,19 @@ def process_stocks():
             os.remove(notification_file)
             print(f"无新增，已删除旧的通知文件: {notification_file}")
 
-    # --- 更新 sectors_panel.json 中的 Notification 组 ---
+    # ### 修改点: 使用 new_notif (仅新增部分) 更新 JSON 面板 ###
     update_json_group(new_notif, panel_json_file, "Notification")
 
     # 最后，把本次完整的 filtered_3 覆盖写回 backup
     try:
         with open(backup_notification_file, 'w', encoding='utf-8') as f:
-            for sym in sorted(filtered_3):
+            # ### 修改点: 备份文件保存的是当前所有符合条件的 symbol (过滤后) ###
+            for sym in sorted(final_filtered_3):
                 f.write(sym + '\n')
-        print(f"通知备份已更新，共 {len(filtered_3)} 个 symbol: {backup_notification_file}")
+        print(f"通知备份已更新，共 {len(final_filtered_3)} 个 symbol: {backup_notification_file}")
     except IOError as e:
         print(f"更新通知备份文件时错误: {e}")
 
-    
 # --- 程序入口 ---
 if __name__ == "__main__":
     process_stocks()

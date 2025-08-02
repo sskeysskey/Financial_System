@@ -46,7 +46,7 @@ DISPLAY_LIMITS = {
 
 # Define categories as a global variable
 categories = [
-    ['Basic_Materials', 'Consumer_Cyclical', 'Real_Estate', 'Next_Week'],
+    ['Basic_Materials', 'Consumer_Cyclical', 'Real_Estate', 'Next_Week', 'Watching'],
     ['Technology', 'Qualified', 'Earning_Filter', 'Energy'],
     ['Industrials', 'Consumer_Defensive', 'Notification', 'Utilities'],
     ['Communication_Services', 'Financial_Services', 'Healthcare'],
@@ -489,6 +489,8 @@ class MainWindow(QMainWindow):
 
         actions = [
             ("删除",          lambda: self.delete_item(keyword, group)),
+            ("移动到 Qualified",      lambda: self.move_item_to_Qualified(keyword, group)),
+            ("移动到 Watching",    lambda: self.move_item_to_Watching(keyword, group)),    # ← 新增
             ("编辑 Tags",      lambda: execute_external_script('tags', keyword, group, self)),
             None,
             ("改名",          lambda: self.rename_item(keyword, group)),
@@ -496,9 +498,6 @@ class MainWindow(QMainWindow):
             None,
             ("添加新事件",    lambda: execute_external_script('event_input', keyword, group, self)),
             ("编辑事件",      lambda: execute_external_script('event_editor', keyword, group, self)),
-            None,
-            ("移动到 Qualified",      lambda: self.move_item_to_Qualified(keyword, group)),
-            ("移回到 Earning_Filter",       lambda: self.move_item_to_earning_filter(keyword, group)),
             None,
             ("在富途中搜索", lambda: execute_external_script('futu', keyword)),
             ("查询 DB...",  lambda: self.on_keyword_selected(keyword)),
@@ -518,9 +517,9 @@ class MainWindow(QMainWindow):
                 act = menu.addAction(text)
                 act.triggered.connect(callback)
                 # 对“移动”菜单项做禁用判断
-                if text == "移动到 Qualified" and group == "Qualified":
+                if text == "移动到 Watching" and group == "Watching":
                     act.setEnabled(False)
-                if text == "移回到 Earning_Filter" and group == "Earning_Filter":
+                if text == "移动到 Qualified" and group == "Qualified":
                     act.setEnabled(False)
 
         # 在指定的 global_pos 显示菜单
@@ -684,65 +683,54 @@ class MainWindow(QMainWindow):
         else:
             print(f"错误: 在 {source_group} 中未找到 {keyword}，或该分组格式不正确。")
 
-    ### 新增开始 ###
-    def move_item_to_earning_filter(self, keyword, source_group):
-        """将一个项目从源分组移动到 Earning_Filter 分组"""
-        target_group = 'Earning_Filter'
-        
-        # 如果已经在目标分组，则不执行任何操作
+    def move_item_to_Watching(self, keyword, source_group):
+        """将项目从 source_group 移到 Watching 分组"""
+        target_group = 'Watching'
+
         if source_group == target_group:
-            print(f"{keyword} 已经存在于 {target_group} 中，无需移动。")
+            print(f"{keyword} 已经在 {target_group}，无需移动。")
             return
 
-        # 检查源分组是否存在
         if source_group not in self.config:
             print(f"错误: 源分组 '{source_group}' 不存在。")
             return
-            
-        # 准备目标分组，确保它存在且是字典类型
+
+        # 确保 Watching 是 dict
         if target_group not in self.config:
             self.config[target_group] = {}
         elif not isinstance(self.config[target_group], dict):
-            print(f"错误: 目标分组 '{target_group}' 的格式不是预期的字典。")
+            print(f"错误: 目标分组 '{target_group}' 格式不是字典。")
             return
 
-        item_value = ""  # 默认描述为空字符串
-
-        # 从源分组中移除项目，并获取其值（如果源是字典）
-        source_content = self.config[source_group]
-        if isinstance(source_content, dict):
-            if keyword in source_content:
-                item_value = source_content.pop(keyword)
+        item_value = ""
+        src = self.config[source_group]
+        if isinstance(src, dict):
+            if keyword in src:
+                item_value = src.pop(keyword)
             else:
-                print(f"错误: 在分组 {source_group} 中未找到 {keyword}。")
+                print(f"错误: 在 {source_group} 中未找到 {keyword}。")
                 return
-        elif isinstance(source_content, list):
-            if keyword in source_content:
-                source_content.remove(keyword)
-                # 对于列表类型的分组，没有描述，所以 item_value 保持为空字符串
+        elif isinstance(src, list):
+            if keyword in src:
+                src.remove(keyword)
             else:
-                print(f"错误: 在分组 {source_group} 中未找到 {keyword}。")
+                print(f"错误: 在 {source_group} 中未找到 {keyword}。")
                 return
         else:
-            print(f"错误: 源分组 '{source_group}' 是未知类型。")
+            print(f"错误: 源分组 '{source_group}' 类型未知。")
             return
 
-        # 将项目添加到目标分组
+        # 添加到 Watching
         self.config[target_group][keyword] = item_value
-        
-        # 保存更改并刷新UI
+
         try:
-            with open(CONFIG_PATH, 'w', encoding='utf-8') as file:
-                json.dump(self.config, file, ensure_ascii=False, indent=4)
-            print(f"已成功将 {keyword} 从 {source_group} 移动到 {target_group}")
+            with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
+                json.dump(self.config, f, ensure_ascii=False, indent=4)
+            print(f"已将 {keyword} 从 {source_group} 移动到 {target_group}")
             self.refresh_selection_window()
         except Exception as e:
-            print(f"保存文件时出错: {e}")
-    ### 新增结束 ###
+            print(f"保存配置时出错: {e}")
 
-# ----------------------------------------------------------------------
-# Main Execution
-# ----------------------------------------------------------------------
 if __name__ == '__main__':
     # Load data
     keyword_colors = load_json(COLORS_PATH)

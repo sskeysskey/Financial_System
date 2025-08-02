@@ -2,7 +2,8 @@ import os
 import re
 import sys
 import argparse
-from datetime import datetime
+# 修改：额外导入 timedelta 用于计算日期差
+from datetime import datetime, timedelta
 
 # 锁文件，用于记录上次执行日期
 LOCK_FILE = os.path.join(os.path.dirname(__file__), '.last_run_date')
@@ -30,21 +31,40 @@ next_files = {
 # 获取当前星期几，0是周一，6是周日
 current_day = datetime.now().weekday()
 
-def check_run_once_today():
+# 修改：函数重命名并更新逻辑
+def check_run_conditions():
     """
-    每天只能执行一次。利用 LOCK_FILE 存储上次执行日期（格式 YYYY-MM-DD）。
-    如果日期与今天相同，直接退出；否则更新为今天。
+    检查脚本是否可以运行。
+    规则：
+    1. 如果今天已经运行过，则退出。
+    2. 如果昨天运行过，则退出。
+    如果可以运行，则将上次运行日期更新为今天。
     """
     today_str = datetime.now().strftime('%Y-%m-%d')
+    
+    # 新增：计算昨天的日期字符串
+    yesterday = datetime.now() - timedelta(days=1)
+    yesterday_str = yesterday.strftime('%Y-%m-%d')
+
     if os.path.exists(LOCK_FILE):
         with open(LOCK_FILE, 'r') as lf:
-            last = lf.read().strip()
-        if last == today_str:
+            last_run_date = lf.read().strip()
+        
+        # 检查是否今天已执行
+        if last_run_date == today_str:
             print(f"脚本今天 ({today_str}) 已执行过，退出。")
             sys.exit(1)
-    # 更新为今天
+            
+        # 新增：检查是否昨天已执行
+        if last_run_date == yesterday_str:
+            print(f"脚本昨天 ({yesterday_str}) 已执行过，今天不能执行，退出。")
+            sys.exit(1)
+
+    # 如果检查通过，更新锁文件为今天
     with open(LOCK_FILE, 'w') as lf:
         lf.write(today_str)
+    print(f"脚本执行条件检查通过，最后运行日期已更新为 {today_str}。")
+
 
 def format_line(line):
     parts = re.split(r'\s*:\s*', line.strip(), 2)
@@ -185,8 +205,9 @@ def main(mode):
             print("Not right date. ETF 模式只在周二到周天运行。")
     elif mode == 'other':
         # 周日或周一允许运行
-        if current_day in (0):
-            check_run_once_today()
+        if current_day in (6, 0):
+            # 修改：调用更新后的函数
+            check_run_conditions()
             process_and_rename_files()
         else:
             print("Not right date. Other 模式只在周一运行。")

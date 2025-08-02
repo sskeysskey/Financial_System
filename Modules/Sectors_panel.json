@@ -21,22 +21,12 @@
     "Utilities": {},
     "Consumer_Defensive": {
         "GIS": "",
-        "CL": "",
         "TSN": "",
-        "PG": "",
-        "KO": "",
         "HRL": "",
         "FRPT": ""
     },
     "Industrials": {
-        "CPRT": "",
-        "KBR": "政府服务",
-        "EXPO": "政府服务",
-        "OTIS": "",
-        "UHAL": "",
-        "ODFL": "",
-        "IEX": "",
-        "LSTR": ""
+        "UHAL": ""
     },
     "Communication_Services": {
         "NFLX": ""
@@ -138,45 +128,35 @@
         "XRP": ""
     },
     "Qualified": {
-        "BROS": ""
-    },
-    "Earning_Filter": {
-        "COST": "",
+        "BROS": "",
         "DRI": "",
+        "COST": "",
         "DUOL": "",
-        "GDDY": "",
-        "ICLR": "",
-        "JD": "",
+        "IOT": "",
+        "KMX": "",
         "LII": "",
-        "LUV": "",
         "MEDP": "",
         "ONON": "",
         "OSCR": "",
-        "PNFP": "",
-        "QS": "",
-        "SNV": "",
+        "PODD": "",
+        "RBLX": "",
         "STE": "",
-        "VRSN": "",
-        "WST": ""
+        "WST": "",
+        "CPRT": "",
+        "MNDY": ""
+    },
+    "Earning_Filter": {},
+    "Watching": {
+        "CAVA": "",
+        "CROX": "",
+        "DT": "",
+        "FTNT": ""
     },
     "Next_Week": {
         "FRPT": "",
         "INSP": ""
     },
     "Notification": {
-        "BABA": "",
-        "BROS": "",
-        "CAVA": "",
-        "CROX": "",
-        "DT": "",
-        "EPAM": "",
-        "FTNT": "",
-        "GLOB": "",
-        "HUBS": "",
-        "JD": "",
-        "KEYS": "",
-        "LOW": "",
-        "MNDY": "",
         "NICE": "",
         "NVO": "",
         "ONON": "",

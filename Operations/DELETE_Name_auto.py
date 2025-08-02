@@ -145,6 +145,40 @@ def delete_from_description_json(description_file, symbol):
         print(f"处理description.json文件时出错: {e}")
         return False
 
+# ==============================================================================
+# 新增函数：用于处理 Compare_All.txt 文件
+# ==============================================================================
+def delete_from_compare_all(file_path, symbol_to_delete):
+    """
+    从 Compare_All.txt 文件中删除指定 symbol 所在的行。
+    匹配逻辑是检查行是否以 "symbol:" 开头。
+    """
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+
+        # 使用列表推导式筛选出所有不以 "symbol:" 开头的行
+        # line.strip() 用于去除每行首尾的空白字符，确保匹配的准确性
+        kept_lines = [line for line in lines if not line.strip().startswith(symbol_to_delete + ':')]
+
+        # 如果筛选后的行数少于原始行数，说明有内容被删除
+        if len(kept_lines) < len(lines):
+            # 将保留的行写回原文件，实现删除
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.writelines(kept_lines)
+            print(f"已从 {file_path} 中删除包含 {symbol_to_delete} 的行。")
+            return True
+        else:
+            print(f"在 {file_path} 中未找到以 {symbol_to_delete}: 开头的行。")
+            return False
+
+    except FileNotFoundError:
+        print(f"错误: 文件 {file_path} 未找到。")
+        return False
+    except Exception as e:
+        print(f"处理 {file_path} 时出错: {e}")
+        return False
+
 def main():
     # db_path = '/Users/yanzhang/Downloads/backup/DB_backup/Finance.db'
     db_path = '/Users/yanzhang/Coding/Database/Finance.db'
@@ -154,6 +188,9 @@ def main():
     sector_empty_file = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json'
     blacklist_file = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
     description_file = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
+    
+    # 新增：Compare_All.txt 文件路径
+    compare_all_file = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
     
     # 获取剪贴板内容
     symbol = get_clipboard_content()
@@ -200,18 +237,20 @@ def main():
     if exists_in_sectors and not is_etf:
         add_result = add_to_blacklist(blacklist_file, symbol)
     
-    # 6.输出总结
+    # 6. 新增：从 Compare_All.txt 中删除匹配行
+    delete_compare_result = delete_from_compare_all(compare_all_file, symbol)
+
+    # 7. 更新 description.json 中的 ETFs 列表
+    delete_desc = delete_from_description_json(description_file, symbol)
+    
+    # 8. 输出总结 (更新了总结部分)
     print("\n操作总结:")
     if delete_result1 or delete_result2 or delete_result3 or delete_result4:
         print("JSON文件更新情况:")
-        if delete_result1:
-            print("- Sectors_All.json 已更新")
-        if delete_result2:
-            print("- Sectors_today.json 已更新")
-        if delete_result3:
-            print("- Sectors_500.json 已更新")
-        if delete_result4:
-            print("- Sectors_empty.json 已更新")
+        if delete_result1: print("- Sectors_All.json 已更新")
+        if delete_result2: print("- Sectors_today.json 已更新")
+        if delete_result3: print("- Sectors_500.json 已更新")
+        if delete_result4: print("- Sectors_empty.json 已更新")
     else:
         print("- 在 sector 文件中未找到匹配项")
     
@@ -223,13 +262,19 @@ def main():
     else:
         print("- blacklist 更新未执行或未发生变化")
 
-    # 7. 更新 description.json 中的 ETFs 列表
-    delete_desc = delete_from_description_json(description_file, symbol)
-    print("\ndescription.json更新情况:")
+    print("description.json更新情况:")
     if delete_desc:
         print(f"- 已从 ETFs 列表中删除 {symbol}")
     else:
         print(f"- 在 ETFs 列表中未找到 {symbol}")
+
+    # 新增：Compare_All.txt 的总结输出
+    print("Compare_All.txt更新情况:")
+    if delete_compare_result:
+        print(f"- 已从文件中删除 {symbol} 相关的行")
+    else:
+        print(f"- 在文件中未找到 {symbol} 或文件未更新")
+
 
 if __name__ == "__main__":
     main()

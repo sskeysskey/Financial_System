@@ -8,8 +8,8 @@ def display_dialog(message):
     subprocess.run(['osascript', '-e', applescript_code], check=True)
 
 def is_monday():
-    """检查当前日期是否为周一"""
-    return datetime.now().weekday() in {0, 1} # 0 代表周一周二
+    """检查当前日期是否为周日或周一"""
+    return datetime.now().weekday() in {6, 0, 1} # 0 代表周天和周一
 
 def update_sectors_panel():
     """更新sectors_panel的主要逻辑"""
