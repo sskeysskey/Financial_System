@@ -5,8 +5,7 @@
         "BCC": "建材"
     },
     "Real_Estate": {
-        "NSA": "",
-        "AVB": ""
+        "NSA": "仓储"
     },
     "Energy": {},
     "Technology": {
@@ -23,7 +22,6 @@
     "Consumer_Cyclical": {
         "IBP": "建材",
         "KMX": "",
-        "CMG": "",
         "LULU": ""
     },
     "Utilities": {},

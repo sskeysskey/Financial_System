@@ -47,8 +47,8 @@ DISPLAY_LIMITS = {
 # Define categories as a global variable
 categories = [
     ['Basic_Materials', 'Consumer_Cyclical', 'Real_Estate', 'Next_Week'],
-    ['Energy', 'Technology', 'Qualified', 'Earning_Filter'],
-    ['Utilities', 'Industrials', 'Consumer_Defensive', 'Notification'],
+    ['Technology', 'Qualified', 'Earning_Filter', 'Energy'],
+    ['Industrials', 'Consumer_Defensive', 'Notification', 'Utilities'],
     ['Communication_Services', 'Financial_Services', 'Healthcare'],
     ['Bonds', 'Indices'],
     ['Commodities'],
@@ -281,6 +281,15 @@ class MainWindow(QMainWindow):
         global config, symbol_manager
         self.config = config
         self.symbol_manager = symbol_manager
+
+        # 创建一个从内部长名称到UI显示短名称的映射字典
+        self.display_name_map = {
+            'Communication_Services': 'Communication',
+            'Consumer_Defensive': 'Defensive',
+            'Consumer_Cyclical': 'Cyclical',
+            'Basic_Materials': 'Materials',
+            'Financial_Services': 'Financial'
+        }
         
         self.init_ui()
 
@@ -308,12 +317,12 @@ class MainWindow(QMainWindow):
         self.populate_widgets()
 
     def apply_stylesheet(self):
-        """创建并应用 QSS 样式表"""
+        """创建并应用 QSS 样式表 (增强了 GroupBox 的可见性)"""
         # 映射颜色到 QSS 样式
         button_styles = {
             "Cyan": ("#008B8B", "white"), "Blue": ("#1E3A8A", "white"),
             "Purple": ("#9370DB", "black"), "Green": ("#276E47", "white"),
-            "White": ("#F5F5F5", "black"), "Yellow": ("#BDB76B", "black"),
+            "White": ("#E0E0E0", "black"), "Yellow": ("#BDB76B", "black"),
             "Orange": ("#CD853F", "black"), "Red": ("#912F2F", "white"),
             "Black": ("#333333", "white"), "Default": ("#A9A9A9", "black")
         }
@@ -326,23 +335,65 @@ class MainWindow(QMainWindow):
                 color: {fg};
                 font-size: 16px;
                 padding: 5px;
-                border: 1px solid #333;
+                border: 1px solid #333; /* 通用边框，对黑色按钮无效 */
                 border-radius: 4px;
             }}
             QPushButton#{name}:hover {{
                 background-color: {self.lighten_color(bg)};
             }}
             """
+        
+        qss += """
+        /* 为白色按钮设置一个特殊的、更柔和的灰色边框 */
+        QPushButton#White {
+            border: 1px solid #B0B0B0;
+        }
+
+        /* 为黑色按钮专门设置一个可见的、中等亮度的灰色边框 */
+        QPushButton#Black {
+            border: 1px solid #888888;
+        }
+        """
+
         qss += """
         QGroupBox {
-            font-size: 14px;
+            /* --- 整体视觉增强 --- */
+            font-size: 20px;          /* 增大标题默认字体 */
             font-weight: bold;
-            margin-top: 10px;
+            
+            /* 1. 添加清晰的边框和圆角，形成“卡片”效果 */
+            border: 1px solid #A9A9A9; /* 使用一个中等强度的灰色边框 (DarkGray) */
+            border-radius: 8px;       /* 边角更圆润，看起来更柔和 */
+            
+            /* 2. 增加上边距，确保组与组之间有足够间距 */
+            margin-top: 15px; 
+            
+            /* 3. 增加内边距，让内部的按钮不要紧贴边框 */
+            /*    上内边距设置得大一些，为标题留出空间 */
+            padding: 25px 10px 10px 10px; /* 上(为标题留空)、右、下、左 */
         }
+
         QGroupBox::title {
+            /* --- 标题视觉增强 --- */
+            
+            /*
+             * ### 新增 ###
+             * 为标题设置一个明确的、高对比度的字体颜色。
+             * 黑色是最清晰的选择。
+            */
+            color: white;
+            
             subcontrol-origin: margin;
             subcontrol-position: top left;
-            padding: 0 3px;
+            
+            /* 5. 调整位置和内边距，使其看起来像一个标签 */
+            left: 15px;               /* 从左边框向内移动一点 */
+            padding: 2px 8px;         /* 上下和左右的内边距，让文字更舒展 */
+            
+            /* ### 移除 ###: 去掉背景色、边框和圆角，让文字直接显示在窗口背景上 */
+            /* background-color: #F0F0F0; */
+            /* border: 1px solid #A9A9A9; */
+            /* border-radius: 4px; */
         }
         """
         self.setStyleSheet(qss)
@@ -387,9 +438,15 @@ class MainWindow(QMainWindow):
 
                     items = limit_items(keywords.items() if isinstance(keywords, dict) else [(kw, kw) for kw in keywords], sector)
                     
+                    # ### 修改开始 ###
+                    # 1. 从映射字典中获取要显示的名称。
+                    #    使用 .get(key, default) 方法，如果字典里找不到，就用 sector 原始名称。
+                    display_sector_name = self.display_name_map.get(sector, sector)
+                    
+                    # 2. 使用获取到的显示名称来构建最终的标题文本。
                     total = len(keywords)
                     shown = len(items)
-                    sector_label = f"{sector} ({shown}/{total})" if shown != total else sector
+                    sector_label = f"{display_sector_name} ({shown}/{total})" if shown != total else display_sector_name
                     group_box.setTitle(sector_label)
 
                     for keyword, translation in items:
