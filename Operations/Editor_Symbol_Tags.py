@@ -4,9 +4,10 @@ import time
 import subprocess
 import pyperclip
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
-                            QHBoxLayout, QLabel, QLineEdit, QPushButton, 
-                            QListWidget, QMessageBox, QInputDialog, QAction)
-from PyQt5.QtCore import Qt, QTimer
+                            QHBoxLayout, QLabel, QTextEdit, QPushButton, 
+                            QListWidget, QMessageBox, QInputDialog, QAction,
+                            QLineEdit) # 导入 QLineEdit
+from PyQt5.QtCore import Qt, QTimer, QEvent
 from PyQt5.QtGui import QKeySequence
 
 def get_clipboard_content():
@@ -47,6 +48,22 @@ def get_stock_symbol(default_symbol=""):
     # 设置窗口标志，确保窗口始终在最前面
     input_dialog.setWindowFlags(input_dialog.windowFlags() | Qt.WindowStaysOnTopHint)
     
+    # 应用一些基本样式以匹配主窗口
+    input_dialog.setStyleSheet("""
+        QInputDialog {
+            background-color: #2E3440;
+            color: #D8DEE9;
+        }
+        QLineEdit, QLabel, QPushButton {
+            color: #D8DEE9;
+            background-color: #434C5E;
+            border: 1px solid #4C566A;
+        }
+        QPushButton:hover {
+            background-color: #5E81AC;
+        }
+    """)
+    
     if input_dialog.exec_() == QInputDialog.Accepted:
         return input_dialog.textValue().strip()
     return None # 用户点击了取消或关闭按钮
@@ -57,8 +74,8 @@ class TagEditor(QMainWindow):
         self.json_file_path = "/Users/yanzhang/Coding/Financial_System/Modules/description.json"
         self.load_json_data()
         
-        self.setWindowTitle("Tag Editor")
-        self.setGeometry(100, 100, 500, 600)
+        self.setWindowTitle("标签编辑器")
+        self.setGeometry(100, 100, 600, 700) # 稍微增大了窗口尺寸
         
         # 创建主窗口部件和布局
         self.central_widget = QWidget()
@@ -73,6 +90,7 @@ class TagEditor(QMainWindow):
         self.addAction(self.quit_action)
         
         self.init_ui()
+        self.apply_stylesheet() # ★ 新增：应用美化样式
         
         # 处理初始化数据
         # 如果init_symbol是None或空，process_symbol会处理并可能关闭窗口
@@ -84,6 +102,203 @@ class TagEditor(QMainWindow):
         # 确保tags_list可以接收键盘焦点
         self.tags_list.setFocusPolicy(Qt.StrongFocus)
     
+    # ★★★ BUG修复点 ★★★
+    # 使用 QTimer.singleShot 来安全地调用 add_tag，避免崩溃
+    def eventFilter(self, source, event):
+        if source is self.new_tag_input and event.type() == QEvent.KeyPress:
+            # 如果按下的是回车键 (且没有按下Shift键)
+            if event.key() in (Qt.Key_Return, Qt.Key_Enter) and not (event.modifiers() & Qt.ShiftModifier):
+                # 不直接调用 self.add_tag()
+                # 而是安排它在当前事件处理完成后立即执行
+                QTimer.singleShot(0, self.add_tag)
+                return True # 告诉Qt事件已处理，防止输入框换行
+        return super().eventFilter(source, event)
+
+    def init_ui(self):
+        self.symbol_label = QLabel("Symbol: ")
+        self.layout.addWidget(self.symbol_label)
+        
+        self.tags_list = QListWidget()
+        self.tags_list.itemDoubleClicked.connect(self.on_double_click)
+        
+        list_layout = QHBoxLayout()
+        
+        # --- 移动按钮 ---
+        move_buttons_layout = QVBoxLayout()
+        move_buttons_layout.addStretch()
+        up_button = QPushButton("↑")
+        down_button = QPushButton("↓")
+        up_button.setFixedSize(30, 30) # 给按钮一个固定大小
+        down_button.setFixedSize(30, 30)
+        up_button.clicked.connect(self.move_tag_up)
+        down_button.clicked.connect(self.move_tag_down)
+        move_buttons_layout.addWidget(up_button)
+        move_buttons_layout.addWidget(down_button)
+        move_buttons_layout.addStretch()
+
+        list_layout.addWidget(self.tags_list)
+        list_layout.addLayout(move_buttons_layout)
+        
+        self.layout.addLayout(list_layout)
+        
+        # --- 输入区域 ---
+        input_layout = QHBoxLayout()
+        
+        # ★ 修改：使用QTextEdit代替QLineEdit，并设置固定高度
+        self.new_tag_input = QTextEdit()
+        self.new_tag_input.setPlaceholderText("在此输入新标签，按 Enter 添加...")
+        self.new_tag_input.setFixedHeight(80) # 设置一个更舒适的高度
+        # ★ 新增：安装事件过滤器来捕获回车键
+        self.new_tag_input.installEventFilter(self)
+
+        add_button = QPushButton("添加标签")
+        add_button.clicked.connect(self.add_tag)
+        
+        input_layout.addWidget(self.new_tag_input)
+        input_layout.addWidget(add_button)
+        
+        self.layout.addLayout(input_layout)
+        
+        # --- 底部按钮 ---
+        buttons_layout = QHBoxLayout()
+        buttons_layout.addStretch(1)
+        delete_button = QPushButton("删除选中")
+        save_button = QPushButton("保存并退出")
+        
+        # 给功能性按钮添加objectName，以便在QSS中单独设置样式
+        delete_button.setObjectName("deleteButton")
+        save_button.setObjectName("saveButton")
+
+        delete_button.clicked.connect(self.delete_tag)
+        save_button.clicked.connect(self.save_changes)
+        
+        buttons_layout.addWidget(delete_button)
+        buttons_layout.addWidget(save_button)
+        
+        self.layout.addLayout(buttons_layout)
+
+    # ★ 新增：应用QSS样式表的方法
+    def apply_stylesheet(self):
+        """应用全局QSS样式，美化界面"""
+        qss = """
+        QMainWindow, QWidget {
+            background-color: #2E3440; /* Nord-like dark background */
+        }
+        
+        QLabel {
+            color: #D8DEE9; /* Light text color */
+            font-size: 16px;
+            font-weight: bold;
+            padding: 5px;
+        }
+        
+        QListWidget {
+            background-color: #3B4252;
+            color: #ECEFF4;
+            border: 1px solid #4C566A;
+            border-radius: 5px;
+            font-size: 14px;
+            outline: 0px; /* 移除选中时的虚线框 */
+        }
+        
+        QListWidget::item {
+            padding: 8px;
+        }
+        
+        QListWidget::item:hover {
+            background-color: #434C5E;
+        }
+        
+        QListWidget::item:selected {
+            background-color: #5E81AC; /* A nice blue for selection */
+            color: #ECEFF4;
+        }
+        
+        /* ★ 修改: QTextEdit样式 */
+        QTextEdit {
+            background-color: #3B4252;
+            color: #ECEFF4;
+            border: 1px solid #4C566A;
+            border-radius: 5px;
+            font-size: 14px;
+            padding: 5px;
+        }
+        
+        QTextEdit:focus {
+            border: 1px solid #5E81AC; /* Highlight when focused */
+        }
+        
+        QPushButton {
+            background-color: #4C566A;
+            color: #ECEFF4;
+            border: none;
+            padding: 10px 15px;
+            font-size: 14px;
+            border-radius: 5px;
+        }
+        
+        QPushButton:hover {
+            background-color: #5E81AC;
+        }
+        
+        QPushButton:pressed {
+            background-color: #81A1C1;
+        }
+        
+        /* 为特定按钮设置不同样式 */
+        QPushButton#saveButton {
+            background-color: #A3BE8C; /* Green for save/confirm */
+            font-weight: bold;
+        }
+        
+        QPushButton#saveButton:hover {
+            background-color: #B4D39C;
+        }
+        
+        QPushButton#deleteButton {
+            background-color: #BF616A; /* Red for delete/warning */
+        }
+        
+        QPushButton#deleteButton:hover {
+            background-color: #D08770;
+        }
+        
+        /* 美化滚动条 */
+        QScrollBar:vertical {
+            border: none;
+            background: #3B4252;
+            width: 10px;
+            margin: 0px 0px 0px 0px;
+        }
+        QScrollBar::handle:vertical {
+            background: #5E81AC;
+            min-height: 20px;
+            border-radius: 5px;
+        }
+        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+            height: 0px;
+        }
+        """
+        self.setStyleSheet(qss)
+
+    def add_tag(self):
+        if not hasattr(self, 'current_item'):
+            QMessageBox.warning(self, "警告", "没有加载任何项目，无法添加标签。")
+            return
+        
+        # ★ 修改：从QTextEdit获取文本
+        new_tag = self.new_tag_input.toPlainText().strip()
+        
+        if new_tag:
+            if new_tag not in self.current_item['tag']:
+                self.current_item['tag'].append(new_tag)
+                self.tags_list.addItem(new_tag)
+                self.new_tag_input.clear()
+            else:
+                QMessageBox.information(self, "提示", "该标签已存在。")
+        self.new_tag_input.setFocus()
+        
+    # --- 其他方法保持不变 ---
     def edit_current_tag(self):
         """编辑当前选中的标签"""
         current_item = self.tags_list.currentItem()
@@ -93,6 +308,8 @@ class TagEditor(QMainWindow):
         row = self.tags_list.row(current_item)
         old_tag = current_item.text()
         
+        # ★★★ BUG修复点 ★★★
+        # 使用正确的 QLineEdit.Normal
         new_tag, ok = QInputDialog.getText(
             self, "编辑标签", "请输入新标签:", QLineEdit.Normal, old_tag
         )
@@ -195,51 +412,6 @@ class TagEditor(QMainWindow):
             QMessageBox.critical(self, "Error", f"保存失败: {str(e)}")
             return False
 
-    def init_ui(self):
-        self.symbol_label = QLabel("Symbol: ")
-        self.layout.addWidget(self.symbol_label)
-        
-        self.tags_list = QListWidget()
-        self.tags_list.itemDoubleClicked.connect(self.on_double_click)
-        
-        move_buttons_layout = QHBoxLayout()
-        up_button = QPushButton("↑")
-        down_button = QPushButton("↓")
-        up_button.clicked.connect(self.move_tag_up)
-        down_button.clicked.connect(self.move_tag_down)
-        
-        v_button_layout = QVBoxLayout()
-        v_button_layout.addStretch()
-        v_button_layout.addWidget(up_button)
-        v_button_layout.addWidget(down_button)
-        v_button_layout.addStretch()
-
-        move_buttons_layout.addLayout(v_button_layout)
-        move_buttons_layout.addWidget(self.tags_list)
-        
-        self.layout.addLayout(move_buttons_layout)
-        
-        input_layout = QHBoxLayout()
-        self.new_tag_input = QLineEdit()
-        self.new_tag_input.setPlaceholderText("在此输入新标签后按Enter或点击按钮")
-        self.new_tag_input.returnPressed.connect(self.add_tag)
-        add_button = QPushButton("添加新标签")
-        add_button.clicked.connect(self.add_tag)
-        input_layout.addWidget(self.new_tag_input)
-        input_layout.addWidget(add_button)
-        
-        buttons_layout = QHBoxLayout()
-        buttons_layout.addStretch()
-        delete_button = QPushButton("删除选中标签")
-        save_button = QPushButton("保存并退出")
-        delete_button.clicked.connect(self.delete_tag)
-        save_button.clicked.connect(self.save_changes)
-        buttons_layout.addWidget(delete_button)
-        buttons_layout.addWidget(save_button)
-        
-        self.layout.addLayout(input_layout)
-        self.layout.addLayout(buttons_layout)
-
     def on_double_click(self, item):
         """处理双击编辑事件"""
         self.edit_current_tag()
@@ -275,20 +447,6 @@ class TagEditor(QMainWindow):
         self.tags_list.clear()
         if 'tag' in item and item['tag']:
             self.tags_list.addItems(item['tag'])
-
-    def add_tag(self):
-        if not hasattr(self, 'current_item'):
-            QMessageBox.warning(self, "警告", "没有加载任何项目，无法添加标签。")
-            return
-        new_tag = self.new_tag_input.text().strip()
-        if new_tag:
-            if new_tag not in self.current_item['tag']:
-                self.current_item['tag'].append(new_tag)
-                self.tags_list.addItem(new_tag)
-                self.new_tag_input.clear()
-            else:
-                QMessageBox.information(self, "提示", "该标签已存在。")
-        self.new_tag_input.setFocus()
 
     def delete_tag(self):
         self.delete_current_tag()

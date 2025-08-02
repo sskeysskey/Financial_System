@@ -11,13 +11,7 @@
     "Technology": {
         "IT": "",
         "ACN": "",
-        "WIX": "",
-        "ENPH": "",
-        "FI": "",
-        "FICO": "",
-        "WIT": "",
-        "GIB": "",
-        "SPSC": ""
+        "WIX": ""
     },
     "Consumer_Cyclical": {
         "IBP": "建材",
@@ -144,14 +138,9 @@
         "XRP": ""
     },
     "Qualified": {
-        "CVS": ""
+        "BROS": ""
     },
     "Earning_Filter": {
-        "ASML": "",
-        "BJ": "",
-        "BRK-A": "",
-        "BROS": "",
-        "CHWY": "",
         "COST": "",
         "DRI": "",
         "DUOL": "",
@@ -171,9 +160,6 @@
         "WST": ""
     },
     "Next_Week": {
-        "DT": "",
-        "EHC": "",
-        "EPAM": "",
         "FRPT": "",
         "INSP": ""
     },

@@ -322,9 +322,9 @@ class MainWindow(QMainWindow):
         button_styles = {
             "Cyan": ("#008B8B", "white"), "Blue": ("#1E3A8A", "white"),
             "Purple": ("#9370DB", "black"), "Green": ("#276E47", "white"),
-            "White": ("#E0E0E0", "black"), "Yellow": ("#BDB76B", "black"),
-            "Orange": ("#CD853F", "black"), "Red": ("#912F2F", "#F5F5DC"),
-            "Black": ("#333333", "white"), "Default": ("#A9A9A9", "black")
+            "White": ("#A9A9A9", "black"), "Yellow": ("#BDB76B", "black"),
+            "Orange": ("#CD853F", "black"), "Red": ("#912F2F", "#FFFFF0"),
+            "Black": ("#333333", "white"), "Default": ("#666666", "black")
         }
         
         qss = ""
