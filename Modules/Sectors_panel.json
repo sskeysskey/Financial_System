@@ -1,9 +1,8 @@
 {
     "Basic_Materials": {
         "WFG": "木材",
-        "CBT": "",
-        "EMN": "",
-        "BCC": ""
+        "CBT": "化学品",
+        "BCC": "建材"
     },
     "Real_Estate": {
         "NSA": "",
@@ -22,9 +21,8 @@
         "SPSC": ""
     },
     "Consumer_Cyclical": {
-        "IBP": "",
+        "IBP": "建材",
         "KMX": "",
-        "MUSA": "",
         "CMG": "",
         "LULU": ""
     },

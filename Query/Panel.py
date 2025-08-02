@@ -311,8 +311,8 @@ class MainWindow(QMainWindow):
         """创建并应用 QSS 样式表"""
         # 映射颜色到 QSS 样式
         button_styles = {
-            "Cyan": ("#008B8B", "black"), "Blue": ("#4682B4", "white"),
-            "Purple": ("#9370DB", "white"), "Green": ("#2E8B57", "white"),
+            "Cyan": ("#008B8B", "white"), "Blue": ("#1E3A8A", "white"),
+            "Purple": ("#9370DB", "black"), "Green": ("#276E47", "white"),
             "White": ("#F5F5F5", "black"), "Yellow": ("#BDB76B", "black"),
             "Orange": ("#CD853F", "black"), "Red": ("#912F2F", "white"),
             "Black": ("#333333", "white"), "Default": ("#A9A9A9", "black")
