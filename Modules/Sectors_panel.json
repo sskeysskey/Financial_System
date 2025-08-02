@@ -1,23 +1,32 @@
 {
     "Basic_Materials": {
-        "WFG": "",
+        "WFG": "木材",
         "CBT": "",
-        "EMN": ""
+        "EMN": "",
+        "BCC": ""
     },
     "Real_Estate": {
-        "NSA": ""
+        "NSA": "",
+        "AVB": ""
     },
     "Energy": {},
     "Technology": {
         "IT": "",
         "ACN": "",
         "WIX": "",
-        "ENPH": ""
+        "ENPH": "",
+        "FI": "",
+        "FICO": "",
+        "WIT": "",
+        "GIB": "",
+        "SPSC": ""
     },
     "Consumer_Cyclical": {
         "IBP": "",
         "KMX": "",
-        "MUSA": ""
+        "MUSA": "",
+        "CMG": "",
+        "LULU": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -26,14 +35,18 @@
         "TSN": "",
         "PG": "",
         "KO": "",
-        "HRL": ""
+        "HRL": "",
+        "FRPT": ""
     },
     "Industrials": {
         "CPRT": "",
         "KBR": "政府服务",
         "EXPO": "政府服务",
         "OTIS": "",
-        "UHAL": ""
+        "UHAL": "",
+        "ODFL": "",
+        "IEX": "",
+        "LSTR": ""
     },
     "Communication_Services": {
         "NFLX": ""
@@ -43,7 +56,8 @@
         "AJG": "",
         "AFL": "",
         "MMC": "",
-        "RLI": ""
+        "RLI": "",
+        "FDS": ""
     },
     "Healthcare": {
         "HUM": "",
@@ -61,7 +75,8 @@
         "MOH": "",
         "UTHR": "",
         "INSP": "",
-        "PRCT": ""
+        "PRCT": "",
+        "ELV": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -160,28 +175,34 @@
         "WST": ""
     },
     "Next_Week": {
-        "BRKR": "",
-        "BROS": "",
-        "CROX": "",
-        "DUOL": "",
-        "GDDY": "",
-        "HALO": "",
-        "IT": "",
-        "LLY": "",
-        "MCD": "",
-        "NVO": "",
-        "OSCR": "",
-        "PAYC": "",
-        "PODD": "",
-        "SBAC": "",
-        "STE": "",
-        "TM": "",
-        "TSN": "",
-        "WIX": "",
-        "YUM": ""
+        "DT": "",
+        "EHC": "",
+        "EPAM": "",
+        "FRPT": "",
+        "INSP": ""
     },
     "Notification": {
-        "OSCR": ""
+        "BABA": "",
+        "BROS": "",
+        "CAVA": "",
+        "CROX": "",
+        "DT": "",
+        "EPAM": "",
+        "FTNT": "",
+        "GLOB": "",
+        "HUBS": "",
+        "JD": "",
+        "KEYS": "",
+        "LOW": "",
+        "MNDY": "",
+        "NICE": "",
+        "NVO": "",
+        "ONON": "",
+        "PANW": "",
+        "PRMB": "",
+        "TAP": "",
+        "YMM": "",
+        "ZM": ""
     },
     "Currencies": {
         "DXY": "美元指数",

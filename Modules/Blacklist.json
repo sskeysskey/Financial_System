@@ -545,7 +545,8 @@
         "CHX",
         "ANSS",
         "HES",
-        "BPMC"
+        "BPMC",
+        "SKX"
     ],
     "etf": [
         "VDE",
@@ -758,6 +759,7 @@
         "RWR",
         "FGD",
         "QDF",
-        "JMTG"
+        "JMTG",
+        "OPPE"
     ]
 }

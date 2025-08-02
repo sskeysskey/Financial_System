@@ -170,6 +170,8 @@ class TagEditor(QMainWindow):
             list_widget = DroppableListWidget(weight)
             list_widget.itemDoubleClicked.connect(self.edit_item) # 双击编辑
             list_widget.item_moved.connect(self.handle_item_move) # 处理跨列表拖拽
+            # 在创建 DroppableListWidget 之后添加
+            list_widget.keyPressEvent = lambda event, lw=list_widget: self.list_key_press_event(event, lw)
             
             # 新增：为列表启用右键菜单
             list_widget.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -301,12 +303,33 @@ class TagEditor(QMainWindow):
         list_widget.itemChanged.connect(on_editing_finished)
 
     def keyPressEvent(self, event):
+        print(f"按键事件: {event.key()}, Delete键值: {Qt.Key_Delete}, Backspace键值: {Qt.Key_Backspace}")  # 调试用
         """处理键盘事件，主要是删除键"""
-        if event.key() == Qt.Key_Delete:
-            # 找到当前有焦点的列表
+        # 同时支持 Delete 和 Backspace 键
+        if event.key() in (Qt.Key_Delete, Qt.Key_Backspace):
+            # 方案1：检查当前有焦点的控件
             focused_widget = self.focusWidget()
-            if isinstance(focused_widget, QListWidget):
+            if isinstance(focused_widget, QListWidget) and focused_widget.selectedItems():
                 self.delete_selected_items(focused_widget)
+                return
+            
+            # 方案2：如果焦点控件没有选中项，则查找所有有选中项的列表
+            for list_widget in self.list_widgets.values():
+                if list_widget.selectedItems():
+                    self.delete_selected_items(list_widget)
+                    return
+        
+        # 如果没有处理这个按键事件，传递给父类
+        super().keyPressEvent(event)
+
+    def list_key_press_event(self, event, list_widget):
+        """处理列表控件的按键事件"""
+        # 同时支持 Delete 和 Backspace 键
+        if event.key() in (Qt.Key_Delete, Qt.Key_Backspace) and list_widget.selectedItems():
+            self.delete_selected_items(list_widget)
+        else:
+            # 调用原始的按键事件处理
+            QListWidget.keyPressEvent(list_widget, event)
 
     def on_delete_button_clicked(self):
         """处理顶部删除按钮的点击事件"""

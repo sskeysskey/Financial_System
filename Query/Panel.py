@@ -311,11 +311,11 @@ class MainWindow(QMainWindow):
         """创建并应用 QSS 样式表"""
         # 映射颜色到 QSS 样式
         button_styles = {
-            "Cyan": ("cyan", "black"), "Blue": ("blue", "white"),
-            "Purple": ("purple", "white"), "Green": ("green", "white"),
-            "White": ("white", "black"), "Yellow": ("yellow", "black"),
-            "Orange": ("orange", "black"), "Red": ("red", "black"),
-            "Black": ("black", "white"), "Default": ("gray", "black")
+            "Cyan": ("#008B8B", "black"), "Blue": ("#4682B4", "white"),
+            "Purple": ("#9370DB", "white"), "Green": ("#2E8B57", "white"),
+            "White": ("#F5F5F5", "black"), "Yellow": ("#BDB76B", "black"),
+            "Orange": ("#CD853F", "black"), "Red": ("#912F2F", "white"),
+            "Black": ("#333333", "white"), "Default": ("#A9A9A9", "black")
         }
         
         qss = ""
@@ -347,7 +347,7 @@ class MainWindow(QMainWindow):
         """
         self.setStyleSheet(qss)
 
-    def lighten_color(self, color_name, factor=1.2):
+    def lighten_color(self, color_name, factor=1.1):
         """一个简单的函数来让颜色变亮，用于:hover效果"""
         from PyQt5.QtGui import QColor
         color = QColor(color_name)

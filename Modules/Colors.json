@@ -2,7 +2,6 @@
     "cyan_keywords": [
         "VRTX",
         "AZN",
-        "CI",
         "KO",
         "KDP",
         "AMT",
@@ -277,7 +276,6 @@
         "KBH",
         "FG",
         "GPK",
-        "EMN",
         "SMG",
         "PAG",
         "NTAP",
@@ -485,7 +483,9 @@
         "PRCT",
         "AVB",
         "FICO",
-        "CFLT"
+        "CFLT",
+        "CI",
+        "WIT"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -622,7 +622,6 @@
         "AMKR",
         "SAIC",
         "PVH",
-        "IEX",
         "HXL",
         "MDB",
         "LFUS",
@@ -732,7 +731,8 @@
         "INSP",
         "KMX",
         "ELS",
-        "NSIT"
+        "NSIT",
+        "FDS"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -776,7 +776,6 @@
         "STM",
         "EPAM",
         "MKSI",
-        "DOW",
         "ASH",
         "SON",
         "SEE",
@@ -822,7 +821,9 @@
         "PEP",
         "FTV",
         "LW",
-        "EXPO"
+        "EXPO",
+        "EMN",
+        "IEX"
     ],
     "black_keywords": [
         "Cotton",
@@ -907,7 +908,8 @@
         "CAG",
         "WPP",
         "HRL",
-        "UPS"
+        "UPS",
+        "DOW"
     ],
     "green_keywords": [
         "EURCNY",

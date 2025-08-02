@@ -2,55 +2,8 @@ import json
 import sqlite3
 import os
 
-# --- 新增功能函数 ---
-def update_json_with_earning_filter(symbols_list, target_json_path):
-    """
-    将分析结果写入指定的 JSON 文件中的 'Earning_Filter' 组。
-
-    Args:
-        symbols_list (list or set): 符合条件的股票代码列表或集合。
-        target_json_path (str): 目标 JSON 文件的路径。
-    """
-    print(f"\n--- 开始更新 JSON 文件: {os.path.basename(target_json_path)} ---")
-    
-    # 1. 准备要写入的数据
-    # 根据需求，将股票列表转换为 {"symbol": "", ...} 格式的字典
-    earning_filter_group = {symbol: "" for symbol in sorted(symbols_list)}
-    
-    try:
-        # 2. 读取现有的 JSON 数据
-        # 使用 'r+' 模式，如果文件不存在会报错，这符合我们的逻辑，因为我们是更新一个现有结构的文件
-        with open(target_json_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        
-        # 3. 更新数据
-        # 直接对加载的 Python 字典进行操作，覆盖或创建 'Earning_Filter' 键
-        data['Earning_Filter'] = earning_filter_group
-        # ### 修改点：打印信息时使用 len(symbols_list) ###
-        print(f"已将 'Earning_Filter' 组更新为包含 {len(symbols_list)} 个 symbol。")
-
-        # 4. 将更新后的数据写回文件
-        # 使用 'w' 模式来完整覆盖旧文件内容
-        with open(target_json_path, 'w', encoding='utf-8') as f:
-            # indent=4 保持文件格式美观，易于阅读
-            # ensure_ascii=False 确保中文字符能被正确写入
-            json.dump(data, f, indent=4, ensure_ascii=False)
-        
-        print(f"成功将更新后的内容写入到: {target_json_path}")
-
-    except FileNotFoundError:
-        print(f"错误: 目标 JSON 文件未找到，请检查路径: {target_json_path}")
-    except json.JSONDecodeError:
-        print(f"错误: 目标 JSON 文件格式不正确，无法解析: {target_json_path}")
-    except IOError as e:
-        print(f"错误: 读写 JSON 文件时发生错误: {e}")
-    except Exception as e:
-        print(f"更新 JSON 文件时发生未知错误: {e}")
-
-
 def analyze_financial_data():
     """
-    根据指定规则分析金融数据，并筛选出符合条件的股票代码。
     新功能：
     - 将本次结果与备份文件比对，只将新增的 symbol 写入 news 文件。
     - 用本次的完整结果覆盖更新备份文件。
@@ -59,7 +12,6 @@ def analyze_financial_data():
     - (新) 在写入 panel.json 前，使用 Blacklist.json 进行过滤。
     """
     # --- 1. 配置路径 ---
-    # 请根据您的实际情况修改这些路径
     # 使用 os.path.expanduser('~') 来获取用户主目录，使得路径更具可移植性
     base_path = os.path.expanduser('~')
     json_file_path = os.path.join(base_path, 'Coding/Financial_System/Modules/Sectors_All.json')
@@ -70,13 +22,11 @@ def analyze_financial_data():
     backup_file_path = '/Users/yanzhang/Coding/News/backup/Filter_Earning.txt'
     
     target_json_for_filter_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
-
-    # ### 新增代码块 1: 定义黑名单文件路径 ###
     blacklist_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
 
-    # ### 新增/修改 1: 定义筛选常量 ###
     TURNOVER_THRESHOLD = 150_000_000  # 成交额阈值：一亿五千万
     PRICE_DROP_PERCENTAGE = 0.07     # 价格回撤阈值：7%
+    RECENT_EARNINGS_COUNT   = 2            # —— 可配置：取最近 N 次财报（原来写死 3，现在改为 2）
 
     # --- 1.1. 确保 backup 目录存在 ---
     # 这是一个好的编程习惯，确保在写入文件前，其所在的目录是存在的
@@ -186,7 +136,7 @@ def analyze_financial_data():
                     prices = [row[1] for row in price_data]
                     
                     # 条件1: 最新财报日价格 > 最近(<=3)财报日均价
-                    prices_to_check = prices[-3:]
+                    prices_to_check = prices[-RECENT_EARNINGS_COUNT:]
 
                     # 2. 必须至少有两个价格点才有比较的意义。
                     if len(prices_to_check) < 2:
@@ -198,7 +148,6 @@ def analyze_financial_data():
                     # 4. 获取最新一期的财报日价格（即列表中的最后一个价格）。
                     latest_earning_price = prices_to_check[-1]
 
-                    # ### 修改点：移除5%的浮动，直接与均价比较 ###
                     # 5. 如果最新一期的财报日价格不高于近期均价，则跳过
                     if latest_earning_price <= average_of_recent_earnings:
                         continue # 不满足条件，处理下一个 symbol
@@ -221,7 +170,6 @@ def analyze_financial_data():
 
                     # 条件2: 最新价 < 所有财报日中的最低价
                     # 条件3: 最新价 < 最新财报日价格 * (1 - 7%)
-                    # price_condition_1 = latest_price < min_price_on_earning_dates
                     price_condition_2 = latest_price <= latest_earning_price * (1 - PRICE_DROP_PERCENTAGE)
 
                     # if price_condition_1 and price_condition_2:
@@ -336,6 +284,50 @@ def analyze_financial_data():
         print(f"备份文件已成功更新: {backup_file_path}")
     except IOError as e:
         print(f"错误: 无法更新备份文件: {e}")
+
+def update_json_with_earning_filter(symbols_list, target_json_path):
+    """
+    将分析结果写入指定的 JSON 文件中的 'Earning_Filter' 组。
+
+    Args:
+        symbols_list (list or set): 符合条件的股票代码列表或集合。
+        target_json_path (str): 目标 JSON 文件的路径。
+    """
+    print(f"\n--- 开始更新 JSON 文件: {os.path.basename(target_json_path)} ---")
+    
+    # 1. 准备要写入的数据
+    # 根据需求，将股票列表转换为 {"symbol": "", ...} 格式的字典
+    earning_filter_group = {symbol: "" for symbol in sorted(symbols_list)}
+    
+    try:
+        # 2. 读取现有的 JSON 数据
+        # 使用 'r+' 模式，如果文件不存在会报错，这符合我们的逻辑，因为我们是更新一个现有结构的文件
+        with open(target_json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        # 3. 更新数据
+        # 直接对加载的 Python 字典进行操作，覆盖或创建 'Earning_Filter' 键
+        data['Earning_Filter'] = earning_filter_group
+        # ### 修改点：打印信息时使用 len(symbols_list) ###
+        print(f"已将 'Earning_Filter' 组更新为包含 {len(symbols_list)} 个 symbol。")
+
+        # 4. 将更新后的数据写回文件
+        # 使用 'w' 模式来完整覆盖旧文件内容
+        with open(target_json_path, 'w', encoding='utf-8') as f:
+            # indent=4 保持文件格式美观，易于阅读
+            # ensure_ascii=False 确保中文字符能被正确写入
+            json.dump(data, f, indent=4, ensure_ascii=False)
+        
+        print(f"成功将更新后的内容写入到: {target_json_path}")
+
+    except FileNotFoundError:
+        print(f"错误: 目标 JSON 文件未找到，请检查路径: {target_json_path}")
+    except json.JSONDecodeError:
+        print(f"错误: 目标 JSON 文件格式不正确，无法解析: {target_json_path}")
+    except IOError as e:
+        print(f"错误: 读写 JSON 文件时发生错误: {e}")
+    except Exception as e:
+        print(f"更新 JSON 文件时发生未知错误: {e}")
 
 
 if __name__ == '__main__':

@@ -51,8 +51,7 @@
         "HLT",
         "GM",
         "CPNG",
-        "DASH",
-        "JD"
+        "DASH"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -91,8 +90,8 @@
         "MPC",
         "MPLX",
         "E",
-        "PSX",
-        "LNG"
+        "LNG",
+        "TRP"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -152,7 +151,6 @@
         "COIN",
         "HOOD",
         "ARES",
-        "AMP",
         "NDAQ"
     ],
     "Healthcare": [
@@ -226,9 +224,7 @@
         "PWR",
         "URI",
         "PCAR",
-        "GWW",
         "LHX",
-        "CMI",
         "VRT"
     ],
     "Real_Estate": [
@@ -301,6 +297,7 @@
         "CEG",
         "AEP",
         "VST",
-        "SRE"
+        "SRE",
+        "D"
     ]
 }

@@ -15,8 +15,8 @@ def check_duplicates(filename):
     return duplicates
 
 # 使用示例
-# filename = '/Users/yanzhang/Coding/News/backup/ETFs.txt'
-filename = '/Users/yanzhang/Coding/News/backup/marketcap_pe.txt'
+filename = '/Users/yanzhang/Coding/News/Earnings_Release_next.txt'
+# filename = '/Users/yanzhang/Coding/News/backup/marketcap_pe.txt'
 result = check_duplicates(filename)
 
 if result:

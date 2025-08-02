@@ -251,8 +251,14 @@ class MainWindow(QMainWindow):
         }
         QPushButton#SymbolButton[period="BMO"] { background-color: #3498db; color: black; }
         QPushButton#SymbolButton[period="BMO"]:hover { background-color: #2980b9; }
-        QPushButton#SymbolButton[period="AMC"] { background-color: #8e44ad; color: white; }
-        QPushButton#SymbolButton[period="AMC"]:hover { background-color: #732d91; }
+        /* AMC 按钮改为淡绿色 */
+        QPushButton#SymbolButton[period="AMC"] {
+        background-color: #7C9B67;   /* 淡绿色 (lightgreen) */
+        color: black;                /* 字体白/黑随你喜好 */
+        }
+        QPushButton#SymbolButton[period="AMC"]:hover {
+        background-color: #6E8B3D;   /* 深一点的绿色 hover 效果 */
+        }
         QPushButton#SymbolButton[period="TNS"] { background-color: #2c3e50; color: white; }
         QPushButton#SymbolButton[period="TNS"]:hover { background-color: #1f2d3d; }
 
