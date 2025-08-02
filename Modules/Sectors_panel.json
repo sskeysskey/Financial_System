@@ -33,30 +33,13 @@
     },
     "Financial_Services": {
         "BRK-A": "",
-        "AJG": "",
-        "AFL": "",
-        "MMC": "",
-        "RLI": "",
-        "FDS": ""
+        "AFL": ""
     },
     "Healthcare": {
         "HUM": "",
-        "CI": "",
         "CVS": "",
-        "SEM": "医院",
-        "NVO": "",
-        "UNH": "",
-        "CNC": "",
-        "MMSI": "",
-        "LLY": "",
-        "CHE": "",
-        "SNY": "",
-        "BMY": "",
-        "MOH": "",
-        "UTHR": "",
         "INSP": "",
-        "PRCT": "",
-        "ELV": ""
+        "PRCT": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -143,29 +126,26 @@
         "STE": "",
         "WST": "",
         "CPRT": "",
-        "MNDY": ""
+        "MNDY": "",
+        "PANW": "",
+        "FDS": ""
     },
     "Earning_Filter": {},
     "Watching": {
         "CAVA": "",
         "CROX": "",
         "DT": "",
-        "FTNT": ""
+        "FTNT": "",
+        "NVO": "",
+        "PRMB": "",
+        "TAP": "",
+        "LLY": ""
     },
     "Next_Week": {
         "FRPT": "",
         "INSP": ""
     },
-    "Notification": {
-        "NICE": "",
-        "NVO": "",
-        "ONON": "",
-        "PANW": "",
-        "PRMB": "",
-        "TAP": "",
-        "YMM": "",
-        "ZM": ""
-    },
+    "Notification": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
