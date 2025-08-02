@@ -74,8 +74,8 @@ class TagEditor(QMainWindow):
         self.json_file_path = "/Users/yanzhang/Coding/Financial_System/Modules/description.json"
         self.load_json_data()
         
-        self.setWindowTitle("标签编辑器")
-        self.setGeometry(100, 100, 600, 700) # 稍微增大了窗口尺寸
+        self.setWindowTitle("标签编辑器 (支持拖拽排序)")
+        self.setGeometry(100, 100, 600, 700)
         
         # 创建主窗口部件和布局
         self.central_widget = QWidget()
@@ -114,6 +114,7 @@ class TagEditor(QMainWindow):
                 return True # 告诉Qt事件已处理，防止输入框换行
         return super().eventFilter(source, event)
 
+    # ★ 修改点: 简化UI初始化，移除按钮，开启拖拽
     def init_ui(self):
         self.symbol_label = QLabel("Symbol: ")
         self.layout.addWidget(self.symbol_label)
@@ -121,25 +122,14 @@ class TagEditor(QMainWindow):
         self.tags_list = QListWidget()
         self.tags_list.itemDoubleClicked.connect(self.on_double_click)
         
-        list_layout = QHBoxLayout()
+        # --- 开启拖拽排序功能 ---
+        self.tags_list.setSelectionMode(QListWidget.SingleSelection)
+        self.tags_list.setDragDropMode(QListWidget.InternalMove)
+        self.tags_list.setDefaultDropAction(Qt.MoveAction)
         
-        # --- 移动按钮 ---
-        move_buttons_layout = QVBoxLayout()
-        move_buttons_layout.addStretch()
-        up_button = QPushButton("↑")
-        down_button = QPushButton("↓")
-        up_button.setFixedSize(30, 30) # 给按钮一个固定大小
-        down_button.setFixedSize(30, 30)
-        up_button.clicked.connect(self.move_tag_up)
-        down_button.clicked.connect(self.move_tag_down)
-        move_buttons_layout.addWidget(up_button)
-        move_buttons_layout.addWidget(down_button)
-        move_buttons_layout.addStretch()
-
-        list_layout.addWidget(self.tags_list)
-        list_layout.addLayout(move_buttons_layout)
-        
-        self.layout.addLayout(list_layout)
+        # ★ 删除: 上下移动按钮和相关布局已被移除
+        # 直接将列表添加到主布局
+        self.layout.addWidget(self.tags_list)
         
         # --- 输入区域 ---
         input_layout = QHBoxLayout()
@@ -214,7 +204,8 @@ class TagEditor(QMainWindow):
             color: #ECEFF4;
         }
         
-        /* ★ 修改: QTextEdit样式 */
+        /* 添加一个指示器，显示可以拖拽的目标位置 */
+        QListWidget::drop-indicator { border: 2px dashed #A3BE8C; }
         QTextEdit {
             background-color: #3B4252;
             color: #ECEFF4;
@@ -281,6 +272,30 @@ class TagEditor(QMainWindow):
         """
         self.setStyleSheet(qss)
 
+    # ★ 修改点: 在保存前同步拖拽后的顺序
+    def save_json_data(self):
+        """保存数据到JSON文件。在保存前会先同步UI中的标签顺序。"""
+        # --- 数据同步逻辑 ---
+        # 检查当前是否有项目被加载
+        if hasattr(self, 'current_item') and self.current_item:
+            # 从 QListWidget 的当前可视顺序，重新构建 tag 列表
+            updated_tags = [self.tags_list.item(i).text() for i in range(self.tags_list.count())]
+            self.current_item['tag'] = updated_tags
+        
+        # --- 原有的保存逻辑 ---
+        try:
+            with open(self.json_file_path, 'w', encoding='utf-8') as file:
+                json.dump(self.data, file, ensure_ascii=False, indent=2)
+            return True
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"保存失败: {str(e)}")
+            return False
+
+    # ★ 删除: 这两个方法不再需要
+    # def move_tag_up(self): ...
+    # def move_tag_down(self): ...
+
+    # --- 其他方法保持不变 ---
     def add_tag(self):
         if not hasattr(self, 'current_item'):
             QMessageBox.warning(self, "警告", "没有加载任何项目，无法添加标签。")
@@ -324,6 +339,8 @@ class TagEditor(QMainWindow):
         if current_item and hasattr(self, 'current_item'):
             row = self.tags_list.row(current_item)
             self.tags_list.takeItem(row)
+            # 注意：因为保存时会整个重新同步，所以这里不操作 self.current_item['tag'] 也可以。
+            # 但为了逻辑严谨性，最好还是删除。
             del self.current_item['tag'][row]
 
     def keyPressEvent(self, event):
@@ -402,37 +419,9 @@ class TagEditor(QMainWindow):
             # 如果JSON加载失败，可能需要直接退出
             QTimer.singleShot(0, self.close)
 
-    def save_json_data(self):
-        """保存数据到JSON文件"""
-        try:
-            with open(self.json_file_path, 'w', encoding='utf-8') as file:
-                json.dump(self.data, file, ensure_ascii=False, indent=2)
-            return True
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"保存失败: {str(e)}")
-            return False
-
     def on_double_click(self, item):
         """处理双击编辑事件"""
         self.edit_current_tag()
-
-    def move_tag_up(self):
-        current_row = self.tags_list.currentRow()
-        if current_row > 0:
-            tag = self.current_item['tag'].pop(current_row)
-            self.current_item['tag'].insert(current_row - 1, tag)
-            item = self.tags_list.takeItem(current_row)
-            self.tags_list.insertItem(current_row - 1, item)
-            self.tags_list.setCurrentRow(current_row - 1)
-
-    def move_tag_down(self):
-        current_row = self.tags_list.currentRow()
-        if 0 <= current_row < self.tags_list.count() - 1:
-            tag = self.current_item['tag'].pop(current_row)
-            self.current_item['tag'].insert(current_row + 1, tag)
-            item = self.tags_list.takeItem(current_row)
-            self.tags_list.insertItem(current_row + 1, item)
-            self.tags_list.setCurrentRow(current_row + 1)
 
     def find_symbol(self, symbol):
         """在 'stocks' 和 'etfs' 中查找symbol对应的数据"""
@@ -460,7 +449,7 @@ class TagEditor(QMainWindow):
             self.close() # 没有更改也直接关闭
 
     def closeEvent(self, event):
-        reply = QMessageBox.Yes
+        # 这里的逻辑现在变得更健壮，因为它调用的save_json_data()会自动同步顺序
         if hasattr(self, 'current_item'):
             # 可以在这里比较当前状态和初始状态，判断是否有未保存的更改
             # 为简化，我们总是询问或自动保存
@@ -471,10 +460,12 @@ class TagEditor(QMainWindow):
                     self, '保存失败', "数据保存失败，是否仍要关闭程序？",
                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No
                 )
-        if reply == QMessageBox.Yes:
-            event.accept()
+                if reply == QMessageBox.Yes:
+                    event.accept()
+                else:
+                    event.ignore()
         else:
-            event.ignore()
+            event.accept()
 
 def main():
     app = QApplication(sys.argv)
