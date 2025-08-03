@@ -204,6 +204,57 @@ def analyze_financial_data():
     else:
         print(f"\n分析完成，共找到 {len(qualified_symbols)} 个符合条件的股票: {sorted(qualified_symbols)}")        
 
+    # --- 5.1.x 新增：剔除 “最新交易日 == 最新财报日” 的 symbol ---
+    print("\n--- 5.1.x 过滤：剔除最新交易日等于最新财报日的 symbol ---")
+    # 先构建一个 symbol->sector 映射，方便后面查行情表名
+    symbol_to_sector = {
+        sym: sector_name
+        for sector_name, syms in all_sectors_data.items()
+        for sym in syms
+    }
+
+    filtered_symbols = []
+    with sqlite3.connect(db_file_path) as conn:
+        cur = conn.cursor()
+        for sym in qualified_symbols:
+            # 1) 最新一条财报日
+            cur.execute(
+                "SELECT date FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 1",
+                (sym,)
+            )
+            row_er = cur.fetchone()
+            if not row_er:
+                # 没有财报记录，保留
+                filtered_symbols.append(sym)
+                continue
+            latest_er_date = row_er[0]
+
+            # 2) 最新一条交易日
+            sector = symbol_to_sector.get(sym)
+            if not sector:
+                # 表里找不到板块，就保留
+                filtered_symbols.append(sym)
+                continue
+            cur.execute(
+                f'SELECT date FROM "{sector}" WHERE name = ? ORDER BY date DESC LIMIT 1',
+                (sym,)
+            )
+            row_tr = cur.fetchone()
+            if not row_tr:
+                filtered_symbols.append(sym)
+                continue
+            latest_tr_date = row_tr[0]
+
+            # 3) 比较日期
+            if latest_tr_date == latest_er_date:
+                print(f"  跳过 {sym}：最新交易日({latest_tr_date}) == 最新财报日({latest_er_date})")
+            else:
+                filtered_symbols.append(sym)
+
+    # 用过滤后的列表替换 qualified_symbols
+    qualified_symbols = filtered_symbols
+    print(f"过滤后，剩余 {len(qualified_symbols)} 个 symbol: {qualified_symbols}")
+    
     # --- 5.2. 处理 news 和 backup 文本文件 ---
     print("\n--- 开始处理 news 和 backup 文本文件 ---")
     backup_symbols = set()

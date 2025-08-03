@@ -384,6 +384,51 @@ def process_stocks():
             conn.close()
             print("数据库连接已关闭。")
 
+    # --- 新增: 过滤最新交易日 == 最新财报日 的 symbol ---
+    def filter_by_date_mismatch(symbols_list):
+        """
+        去除掉那些“最新交易日日期”与“最新财报日日期”相同的 symbol
+        """
+        filtered = []
+        conn = sqlite3.connect(db_file)
+        cur = conn.cursor()
+        for sym in symbols_list:
+            # 1) 拿最新一条财报日期
+            cur.execute(
+                "SELECT date FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 1",
+                (sym,)
+            )
+            row_er = cur.fetchone()
+            if not row_er:
+                # 没有财报记录，保留（或按你需求也可以直接跳过）
+                filtered.append(sym)
+                continue
+            latest_er_date = row_er[0]
+
+            # 2) 拿最新一条交易日期
+            table_name = symbol_sector_map.get(sym)
+            if not table_name:
+                filtered.append(sym)
+                continue
+            cur.execute(
+                f'SELECT date FROM "{table_name}" WHERE name = ? ORDER BY date DESC LIMIT 1',
+                (sym,)
+            )
+            row_tr = cur.fetchone()
+            if not row_tr:
+                filtered.append(sym)
+                continue
+            latest_tr_date = row_tr[0]
+
+            # 3) 比较
+            if latest_tr_date == latest_er_date:
+                print(f"跳过 {sym}：最新交易日({latest_tr_date}) == 最新财报日({latest_er_date})")
+            else:
+                filtered.append(sym)
+
+        conn.close()
+        return filtered
+
     # --- 结果汇总 ---
     combined_filtered = sorted(list(set(filtered_1 + filtered_2)))
     # 对 filtered_3 也进行排序和去重
@@ -430,6 +475,14 @@ def process_stocks():
     print("\n--- 所有过滤完成后的最终结果 ---")
     print(f"主列表最终数量: {len(final_symbols)} - {final_symbols}")
     print(f"通知列表最终数量: {len(final_filtered_3)} - {final_filtered_3}")
+
+    # 对主列表和通知列表都做一次上述过滤
+    print("\n--- 7.x 过滤：剔除“最新交易日 == 最新财报日” 的股票 ---")
+    final_symbols    = filter_by_date_mismatch(final_symbols)
+    final_filtered_3 = filter_by_date_mismatch(final_filtered_3)
+
+    print(f"过滤后主列表数量: {len(final_symbols)} - {final_symbols}")
+    print(f"过滤后通知列表数量: {len(final_filtered_3)} - {final_filtered_3}")
     
     # --- 7. 处理主列表的输出 (NextWeek_Earning.txt 和 panel 的 Next_Week) ---
     print("\n--- 7. 处理主列表输出 ---")
