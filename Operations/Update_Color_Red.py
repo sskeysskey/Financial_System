@@ -1,6 +1,5 @@
 import json
 import subprocess
-from datetime import datetime
 
 def display_dialog(message):
     # AppleScript 代码模板

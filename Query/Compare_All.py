@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 import sqlite3
 import json
-import re
 import os
 
 def log_error_with_timestamp(error_message, file_path=None):

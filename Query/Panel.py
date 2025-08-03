@@ -4,9 +4,6 @@ import sqlite3
 from collections import OrderedDict
 import subprocess
 
-# ----------------------------------------------------------------------
-# PyQt5 Imports - Replacing Tkinter
-# ----------------------------------------------------------------------
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QGroupBox, QScrollArea, QTextEdit, QDialog,
@@ -47,9 +44,9 @@ DISPLAY_LIMITS = {
 # Define categories as a global variable
 categories = [
     ['Basic_Materials', 'Consumer_Cyclical', 'Real_Estate', 'Next_Week', 'Watching'],
-    ['Technology', 'Qualified', 'Earning_Filter', 'Energy'],
+    ['Technology', 'Qualified', 'Energy'],
     ['Industrials', 'Consumer_Defensive', 'Notification', 'Utilities'],
-    ['Communication_Services', 'Financial_Services', 'Healthcare'],
+    ['Communication_Services', 'Financial_Services', 'Healthcare', 'Earning_Filter'],
     ['Bonds', 'Indices'],
     ['Commodities'],
     ['Crypto', 'Currencies'],
@@ -217,7 +214,7 @@ def execute_external_script(script_type, keyword, group=None, main_window=None):
     script_configs = {
         'blacklist': f'{base_path}/Operations/Insert_Blacklist.py',
         'similar': f'{base_path}/Query/Find_Similar_Tag.py',
-        'tags': f'{base_path}/Operations/Editor_Symbol_Tags.py',
+        'tags': f'{base_path}/Operations/Editor_Tags.py',
         'editor_earning': f'{base_path}/Operations/Editor_Earning_DB.py',
         'earning': f'{base_path}/Operations/Insert_Earning.py',
         'event_input': f'{base_path}/Operations/Insert_Events.py',  # <--- 新增这一行

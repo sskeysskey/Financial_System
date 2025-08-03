@@ -180,7 +180,7 @@ def process_stocks():
     # 过去N次财报都是上升，且收盘价比（N次财报中收盘价最高值）低4%
     filtered_2 = []
 
-    # 策略3：最新价 < 过去N次财报最低价，且交易日落在下次财报前7~20天窗口，且成交额足够
+    # 策略3：最新价 < 过去N次财报最低价，且交易日落在下次财报前7~20天窗口
     filtered_3 = []    # 新增：策略3
 
     conn = None
@@ -438,7 +438,7 @@ def process_stocks():
     print(f"  策略 1+2 (主列表) 找到: {len(combined_filtered)} 个 - {combined_filtered}")
     print(f"  策略 3 (通知列表) 找到: {len(filtered_3)} 个 - {filtered_3}")
 
-    # ### 修改/新增点: 移植 b.py 的黑名单过滤逻辑 ###
+    # ### 修改/新增点: 移植黑名单过滤逻辑 ###
     print("\n--- 5. 应用黑名单过滤 ---")
     blacklist_set = load_blacklist(blacklist_json_file)
 

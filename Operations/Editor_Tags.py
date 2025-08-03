@@ -6,7 +6,7 @@ import pyperclip
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                             QHBoxLayout, QLabel, QTextEdit, QPushButton, 
                             QListWidget, QMessageBox, QInputDialog, QAction,
-                            QLineEdit) # 导入 QLineEdit
+                            QLineEdit)
 from PyQt5.QtCore import Qt, QTimer, QEvent
 from PyQt5.QtGui import QKeySequence
 
@@ -41,9 +41,14 @@ def get_stock_symbol(default_symbol=""):
     app = QApplication.instance() or QApplication(sys.argv)
     
     input_dialog = QInputDialog()
-    input_dialog.setWindowTitle("输入股票代码")
+    input_dialog.setWindowTitle("请输入股票代码")
     input_dialog.setLabelText("请输入股票代码:")
     input_dialog.setTextValue(default_symbol)
+
+    # 把默认的 QLabel 找出来并隐藏
+    label = input_dialog.findChild(QLabel)
+    if label:
+        label.hide()
     
     # 设置窗口标志，确保窗口始终在最前面
     input_dialog.setWindowFlags(input_dialog.windowFlags() | Qt.WindowStaysOnTopHint)

@@ -179,7 +179,7 @@ def execute_external_script(script_type, keyword):
     script_configs = {
         'earning_input': f'{base_path}/Operations/Insert_Earning_Manual.py',
         'earning_edit': f'{base_path}/Operations/Editor_Earning_DB.py',
-        'tags_edit': f'{base_path}/Operations/Editor_Symbol_Tags.py',
+        'tags_edit': f'{base_path}/Operations/Editor_Tags.py',
         'event_input': f'{base_path}/Operations/Insert_Events.py',
         'event_edit': f'{base_path}/Operations/Editor_Events.py',
         'symbol_compare': f'{base_path}/Query/Compare_Chart.py',

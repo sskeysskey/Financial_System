@@ -4,6 +4,7 @@ import sys
 import json
 import pyperclip
 import subprocess
+from datetime import datetime, date
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit,
     QLabel, QMainWindow, QAction, QScrollArea, QToolButton, QSizePolicy, QListWidget, QListWidgetItem
@@ -388,7 +389,25 @@ class MainWindow(QMainWindow):
             if child.widget():
                 child.widget().deleteLater()
 
-    # --- 3. 简化 show_results 方法 ---
+    # --- 新增：根据 symbol 查询 Earning 表里最新一条记录的日期 ---
+    def get_latest_earning_date(self, symbol: str) -> date | None:
+        db_path = "/Users/yanzhang/Coding/Database/Finance.db"
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT date FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 1",
+                (symbol,)
+            )
+            row = cursor.fetchone()
+            conn.close()
+            if row and row[0]:
+                # 假设 date 存储格式为 "YYYY-MM-DD"
+                return datetime.strptime(row[0], "%Y-%m-%d").date()
+        except Exception as e:
+            print(f"[Earning 查询错误] {symbol}: {e}")
+        return None
+    
     def show_results(self, sorted_groups):
         # 检查是否有完全匹配symbol的结果，并自动打开
         search_term = self.input_field.text().strip().upper()
@@ -412,6 +431,12 @@ class MainWindow(QMainWindow):
                 name = item.get('name', '')
                 tags = ' '.join(item.get('tag', []))
                 compare_info = self.compare_data.get(symbol, "")
+
+                # 计算 symbol 对应 Earning 表中最新盈利日期，与今天的差值
+                latest_date = self.get_latest_earning_date(symbol)
+                days_diff = (date.today() - latest_date).days if latest_date else 999
+                # 如果超过 30 天，就改用 #FFFF99，否则用 cyan
+                sym_color = 'white' if days_diff <= 30 else '#FFFF99'
                 
                 # 根据 item 类型（stock/etf）构建显示文本
                 if 'Stock' in category_name:
@@ -420,7 +445,7 @@ class MainWindow(QMainWindow):
                     if name: display_parts.append(name)
                     if tags: display_parts.append(tags)
                     display_text = "  ".join(display_parts)
-                    lbl = self.create_result_label(display_text, symbol, 'white', 20)
+                    lbl = self.create_result_label(display_text, symbol, sym_color, 20)
                 else: # ETF
                     latest_volume = get_latest_etf_volume(symbol)
                     display_parts = [symbol]
@@ -429,29 +454,29 @@ class MainWindow(QMainWindow):
                     if tags: display_parts.append(tags)
                     if latest_volume and latest_volume != "N/A": display_parts.append(latest_volume)
                     display_text = "  ".join(display_parts)
-                    lbl = self.create_result_label(display_text, symbol, 'white', 20)
+                    lbl = self.create_result_label(display_text, symbol, sym_color, 20)
                 
                 group_widget.addContentWidget(lbl)
             
             self.results_layout.addWidget(group_widget)
 
-    # 以下方法保持不变...
     def create_result_label(self, display_text, symbol, color, font_size):
         lbl = ClickableLabel()
         lbl.setTextFormat(Qt.RichText)
-        # 把“数字+前/后”这类子串渲染成淡黄色
+        # 拆出 symbol 之后的文字
         remainder = display_text[len(symbol):] if display_text.startswith(symbol) else display_text
-        # 高亮 “31前” “29后” 这类
-        # 匹配：一段数字后面跟 “前” 或 “后”
+        # 先给“数字+前/后”上高亮
         pattern = r"(\d+(?:前|后))"
-        # 替换成 <span style='color:#FFFF99'>…</span>
         remainder = re.sub(pattern,
-                           r"<span style='color:#FFFF99'>\1</span>",
-                           remainder)
+                            r"<span style='color:#CD853F'>\1</span>",
+                            remainder)
+        # symbol 用 color，剩余文字一律用白色
         label_html = (
             f"<span style='line-height: 2.2; letter-spacing: 1px;'>"
-            f"<span style='color: cyan; font-size: {font_size}px;'>{symbol}</span>"
-            f"<span style='color: {color}; font-size: {font_size}px;'>{remainder}</span>"
+            # ← symbol
+            f"<span style='color: {color}; font-size: {font_size}px;'>{symbol}</span>"
+            # ← remainder（固定白色）
+            f"<span style='color: white; font-size: {font_size}px;'>{remainder}</span>"
             f"</span>"
         )
         lbl.setText(label_html)

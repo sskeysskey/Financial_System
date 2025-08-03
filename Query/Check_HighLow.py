@@ -6,7 +6,7 @@ import subprocess
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QGroupBox, QScrollArea, QLabel, QFrame,
-    QMenu, QAction
+    QMenu
 )
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QCursor, QColor, QFont
@@ -92,7 +92,7 @@ def execute_external_script(script_type, keyword):
     base_path = '/Users/yanzhang/Coding/Financial_System'
     script_configs = {
         'similar':  f'{base_path}/Query/Find_Similar_Tag.py',
-        'tags':     f'{base_path}/Operations/Editor_Symbol_Tags.py',
+        'tags':     f'{base_path}/Operations/Editor_Tags.py',
         'futu':     '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt',
     }
     script_path = script_configs.get(script_type)
