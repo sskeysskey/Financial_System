@@ -7,7 +7,8 @@ import subprocess
 from datetime import datetime, date
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit,
-    QLabel, QMainWindow, QAction, QScrollArea, QToolButton, QSizePolicy, QListWidget, QListWidgetItem
+    QLabel, QMainWindow, QAction, QScrollArea, QToolButton, QSizePolicy,
+    QListWidget, QListWidgetItem, QCheckBox
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 from PyQt5.QtGui import QFont, QKeySequence
@@ -66,6 +67,7 @@ class ClickableLabel(QLabel):
         self.setCursor(Qt.IBeamCursor)
         self.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         self._mouse_pressed_pos = None
+
     def mousePressEvent(self, event):
         self._mouse_pressed_pos = event.pos()
         super().mousePressEvent(event)
@@ -78,10 +80,11 @@ class ClickableLabel(QLabel):
 class SearchWorker(QThread):
     results_ready = pyqtSignal(object)
 
-    def __init__(self, keywords, json_path):
+    def __init__(self, keywords, json_path, use_or=False):
         super().__init__()
         self.keywords_str = keywords
         self.json_path = json_path
+        self.use_or = use_or
 
     def run(self):
         # 耗时搜索操作
@@ -106,14 +109,13 @@ class SearchWorker(QThread):
             print(f"Error reading JSON file: {e}")
             return []
 
-        keywords = self.keywords_str.lower().split()
+        keywords = [k for k in self.keywords_str.lower().split() if k]
         if not keywords:
             return []
 
         # 初始化一个字典来存放每个类别的匹配结果
         # 格式: {MatchCategory: [(item, score), ...]}
         raw_results = {cat: [] for cat in MatchCategory}
-
         all_items = [('stock', item) for item in data.get('stocks', [])] + \
                     [('etf', item) for item in data.get('etfs', [])]
 
@@ -122,18 +124,27 @@ class SearchWorker(QThread):
                 if category.item_type != item_type:
                     continue
 
-                total_score = 0
-                all_keywords_match = True
-                for keyword in keywords:
-                    # 计算单个关键词的分数
-                    single_score = self.score_of_single_match(item, keyword, category)
-                    if single_score <= 0:
-                        all_keywords_match = False
-                        break # 如果有一个关键词不匹配，则该项目在该类别下不匹配
-                    total_score += single_score
-                
-                if all_keywords_match:
-                    raw_results[category].append((item, total_score))
+                if self.use_or:
+                    # OR 模式：只要任一关键词匹配，累加所有正分
+                    total_score = 0
+                    for kw in keywords:
+                        s = self.score_of_single_match(item, kw, category)
+                        if s > 0:
+                            total_score += s
+                    if total_score > 0:
+                        raw_results[category].append((item, total_score))
+                else:
+                    # AND 模式：所有关键词都必须匹配
+                    total_score = 0
+                    all_match = True
+                    for kw in keywords:
+                        s = self.score_of_single_match(item, kw, category)
+                        if s <= 0:
+                            all_match = False
+                            break
+                        total_score += s
+                    if all_match:
+                        raw_results[category].append((item, total_score))
 
         # 将原始结果打包成 Swift 风格的分组结构
         final_groups = []
@@ -141,8 +152,7 @@ class SearchWorker(QThread):
             if results_list:
                 # 按分数对组内结果进行排序
                 sorted_results = sorted(results_list, key=lambda x: x[1], reverse=True)
-                highest_score = sorted_results[0][1] if sorted_results else 0
-                
+                highest_score = sorted_results[0][1]
                 group = {
                     'category_name': category.display_name,
                     'priority': category.priority,
@@ -150,7 +160,6 @@ class SearchWorker(QThread):
                     'results': sorted_results # 包含 (item, score) 的元组列表
                 }
                 final_groups.append(group)
-        
         return final_groups
 
     def score_of_single_match(self, item, keyword, category):
@@ -232,10 +241,12 @@ class CollapsibleWidget(QWidget):
         main_layout.addWidget(self.content_area)
         main_layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(main_layout)
+
     def on_toggle(self):
         checked = self.toggle_button.isChecked()
         self.content_area.setVisible(checked)
         self.toggle_button.setArrowType(Qt.DownArrow if checked else Qt.RightArrow)
+
     def addContentWidget(self, widget: QWidget):
         self.content_layout.addWidget(widget)
         self.content_area.adjustSize()
@@ -275,22 +286,30 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("公司、股票和ETF搜索")
         self.setGeometry(300, 200, 1000, 600)
-        
+
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout(self.central_widget)
 
+        # --- 增加 OR/AND 勾选框 ---
         self.input_layout = QHBoxLayout()
+        self.mode_checkbox = QCheckBox("OR")
+        self.mode_checkbox.setToolTip("勾选后关键字空格为 OR，未勾选为 AND")
+        self.input_layout.addWidget(self.mode_checkbox)
+
         self.input_field = QLineEdit()
         self.input_field.textChanged.connect(self.on_text_changed)
         self.input_field.setFixedHeight(40)
         self.input_field.setFont(QFont("Arial", 18))
+
         self.search_button = QPushButton("搜索")
         self.search_button.setFixedHeight(45)
         self.search_button.setFixedWidth(80)
+
         self.input_layout.addWidget(self.input_field)
         self.input_layout.addWidget(self.search_button)
         self.layout.addLayout(self.input_layout)
+        # --------------------------------
 
         self.suppress_history = len(sys.argv) > 1 and sys.argv[1] == "paste"
         self.search_history = SearchHistory()
@@ -346,11 +365,11 @@ class MainWindow(QMainWindow):
         self.compare_data = {}
 
     def start_search(self):
-        keywords = self.input_field.text()
-        if not keywords.strip():
+        keywords = self.input_field.text().strip()
+        if not keywords:
             self.clear_results()
             return
-        self.search_history.add(keywords.strip())
+        self.search_history.add(keywords)
         self.hide_history()
         self.compare_data = load_compare_data()
         self.loading_label.show()
@@ -358,8 +377,8 @@ class MainWindow(QMainWindow):
         self.search_button.setEnabled(False)
         self.input_field.setEnabled(False)
 
-        # 创建并启动 Worker
-        self.worker = SearchWorker(keywords, json_path)
+        use_or = self.mode_checkbox.isChecked()
+        self.worker = SearchWorker(keywords, json_path, use_or)
         self.worker.results_ready.connect(self.show_results)
         # 改动：改为 on_search_finished
         self.worker.finished.connect(self.on_search_finished)
@@ -370,7 +389,7 @@ class MainWindow(QMainWindow):
              self.display_history()
          else:
              self.hide_history()
-             
+
     def on_search_finished(self):
         # 恢复按钮和输入框状态
         self.loading_label.hide()
@@ -409,7 +428,7 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f"[Earning 查询错误] {symbol}: {e}")
         return None, None
-    
+
     def show_results(self, sorted_groups):
         # 检查是否有完全匹配symbol的结果，并自动打开
         search_term = self.input_field.text().strip().upper()
@@ -417,7 +436,7 @@ class MainWindow(QMainWindow):
             first_group = sorted_groups[0]
             # 检查第一个组的第一个结果是否是 symbol 的完全匹配
             if "Symbol" in first_group['category_name']:
-                first_item, first_score = first_group['results'][0]
+                first_item, _ = first_group['results'][0]
                 if first_item.get('symbol', '').upper() == search_term:
                     self.open_symbol(first_item['symbol'])
 
@@ -447,8 +466,6 @@ class MainWindow(QMainWindow):
                     else:
                         sym_color = 'green'
                 else:
-                    # 超过 30 天，淡黄
-                    sym_color = '#FFFF99'
                     sym_color = 'white'
                 
                 # 根据 item 类型（stock/etf）构建显示文本
@@ -520,8 +537,9 @@ class MainWindow(QMainWindow):
             self.history_list.setVisible(True)
             self.history_list.setFixedWidth(self.input_field.width())
             self.history_list.setCurrentRow(-1)
-        else: self.history_list.setVisible(False)
-    
+        else:
+            self.history_list.setVisible(False)
+
     def _input_focus_in(self, event):
         self._orig_focus_in(event)
         if getattr(self, "suppress_history", False): return
@@ -562,10 +580,13 @@ class MainWindow(QMainWindow):
                  self.hide_history(); event.accept(); return
         self._orig_key_press(event)
 
-    def hide_history(self): self.history_list.setVisible(False)
+    def hide_history(self):
+        self.history_list.setVisible(False)
+
     def use_history_item(self, item):
         self.input_field.setText(item.text())
-        self.hide_history(); self.start_search()
+        self.hide_history()
+        self.start_search()
 
 if __name__ == "__main__":
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
@@ -573,11 +594,9 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
-    if len(sys.argv) > 1:
-        arg = sys.argv[1]
-        if arg == "paste":
-            clipboard_content = pyperclip.paste()
-            if clipboard_content:
-                window.input_field.setText(clipboard_content)
-                window.start_search()
+    if len(sys.argv) > 1 and sys.argv[1] == "paste":
+        clipboard_content = pyperclip.paste()
+        if clipboard_content:
+            window.input_field.setText(clipboard_content)
+            window.start_search()
     sys.exit(app.exec_())
