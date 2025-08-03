@@ -389,24 +389,26 @@ class MainWindow(QMainWindow):
             if child.widget():
                 child.widget().deleteLater()
 
-    # --- 新增：根据 symbol 查询 Earning 表里最新一条记录的日期 ---
-    def get_latest_earning_date(self, symbol: str) -> date | None:
+    # --- 修改：同时返回 最新盈利日期 和 price ---
+    def get_latest_earning_info(self, symbol: str) -> tuple[date|None, float|None]:
         db_path = "/Users/yanzhang/Coding/Database/Finance.db"
         try:
             conn = sqlite3.connect(db_path)
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT date FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 1",
+                "SELECT date, price FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 1",
                 (symbol,)
             )
             row = cursor.fetchone()
             conn.close()
-            if row and row[0]:
+            if row and row[0] is not None:
                 # 假设 date 存储格式为 "YYYY-MM-DD"
-                return datetime.strptime(row[0], "%Y-%m-%d").date()
+                d = datetime.strptime(row[0], "%Y-%m-%d").date()
+                p = float(row[1]) if row[1] is not None else 0.0
+                return d, p
         except Exception as e:
             print(f"[Earning 查询错误] {symbol}: {e}")
-        return None
+        return None, None
     
     def show_results(self, sorted_groups):
         # 检查是否有完全匹配symbol的结果，并自动打开
@@ -432,11 +434,22 @@ class MainWindow(QMainWindow):
                 tags = ' '.join(item.get('tag', []))
                 compare_info = self.compare_data.get(symbol, "")
 
-                # 计算 symbol 对应 Earning 表中最新盈利日期，与今天的差值
-                latest_date = self.get_latest_earning_date(symbol)
-                days_diff = (date.today() - latest_date).days if latest_date else 999
-                # 如果超过 30 天，就改用 #FFFF99，否则用 cyan
-                sym_color = 'white' if days_diff <= 30 else '#FFFF99'
+                # 取最新盈利日期 & price，再根据天数和正负设置颜色
+                latest_date, latest_price = self.get_latest_earning_info(symbol)
+                if latest_date:
+                    days_diff = (date.today() - latest_date).days
+                else:
+                    days_diff = 999
+                if days_diff <= 30:
+                    # 30天内，根据 price 正负来上色
+                    if latest_price is not None and latest_price > 0:
+                        sym_color = 'red'
+                    else:
+                        sym_color = 'green'
+                else:
+                    # 超过 30 天，淡黄
+                    sym_color = '#FFFF99'
+                    sym_color = 'white'
                 
                 # 根据 item 类型（stock/etf）构建显示文本
                 if 'Stock' in category_name:
@@ -468,7 +481,7 @@ class MainWindow(QMainWindow):
         # 先给“数字+前/后”上高亮
         pattern = r"(\d+(?:前|后))"
         remainder = re.sub(pattern,
-                            r"<span style='color:#CD853F'>\1</span>",
+                            r"<span style='color:#FFFF99'>\1</span>",
                             remainder)
         # symbol 用 color，剩余文字一律用白色
         label_html = (
@@ -476,7 +489,7 @@ class MainWindow(QMainWindow):
             # ← symbol
             f"<span style='color: {color}; font-size: {font_size}px;'>{symbol}</span>"
             # ← remainder（固定白色）
-            f"<span style='color: white; font-size: {font_size}px;'>{remainder}</span>"
+            f"<span style='color: #A9A9A9; font-size: {font_size}px;'>{remainder}</span>"
             f"</span>"
         )
         lbl.setText(label_html)
