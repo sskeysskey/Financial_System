@@ -1,6 +1,6 @@
 {
     "Basic_Materials": {
-        "WFG": "木材",
+        "WFG": "木业",
         "CBT": "化学品",
         "BCC": "建材"
     },
@@ -185,16 +185,9 @@
         "USDINR": "美元兑印度卢比"
     },
     "Economics": {
-        "USNonFarmA": "30 USNonFarmA",
-        "USGDP": "30 USGDP",
-        "USInterest": "30 USInterest",
-        "USInitial": "31 USInitial",
-        "CorePCEM": "31 CorePCEM",
-        "PCEY": "31 PCEY",
-        "CorePCEY": "31 CorePCEY",
-        "USNonFarm": "01 USNonFarm",
-        "USUnemploy": "01 USUnemploy",
-        "USConfidence": "01 USConfidence"
+        "USTrade": "05 USTrade",
+        "USNonPMI": "05 USNonPMI",
+        "USInitial": "07 USInitial"
     },
     "ETFs": {
         "TLT": "",
