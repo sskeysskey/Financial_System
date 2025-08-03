@@ -362,6 +362,11 @@ class MainWindow(QMainWindow):
         self.quit_action.triggered.connect(self.close)
         self.addAction(self.quit_action)
 
+        # 用来缓存 MNSPP 表里读取到的 marketcap
+        self._mnspp_cache = {}
+        # Finance.db 路径
+        self._finance_db = "/Users/yanzhang/Coding/Database/Finance.db"
+
         self.compare_data = {}
 
     def start_search(self):
@@ -429,6 +434,30 @@ class MainWindow(QMainWindow):
             print(f"[Earning 查询错误] {symbol}: {e}")
         return None, None
 
+    def get_mnspp_marketcap(self, symbol: str) -> float:
+        """
+        从 MNSPP 表中读取指定 symbol 的 marketcap，
+        并缓存在 self._mnspp_cache 里。读取失败或找不到返回 0.0。
+        """
+        if not symbol:
+            return 0.0
+        # 已缓存
+        if symbol in self._mnspp_cache:
+            return self._mnspp_cache[symbol]
+        mcap = 0.0
+        try:
+            conn = sqlite3.connect(self._finance_db)
+            cursor = conn.cursor()
+            cursor.execute("SELECT marketcap FROM MNSPP WHERE symbol = ?", (symbol,))
+            row = cursor.fetchone()
+            conn.close()
+            if row and row[0] is not None:
+                mcap = float(row[0])
+        except Exception as e:
+            print(f"[MNSPP 查询错误] {symbol}: {e}")
+        self._mnspp_cache[symbol] = mcap
+        return mcap
+    
     def show_results(self, sorted_groups):
         # 检查是否有完全匹配symbol的结果，并自动打开
         search_term = self.input_field.text().strip().upper()
@@ -443,7 +472,18 @@ class MainWindow(QMainWindow):
         # 这个循环现在总会执行，无论是否自动打开了图表
         for group_data in sorted_groups:
             category_name = group_data['category_name']
-            results = group_data['results']
+            # 原始按 score 排序的结果
+            results = group_data['results']  # list of (item, score)
+            # 在 score 相同时，用 MNSPP.marketcap 作为次级排序字段
+            # key = (score, marketcap)，reverse=True 表示两个字段都倒序
+            results = sorted(
+                results,
+                key=lambda x: (
+                    x[1],
+                    self.get_mnspp_marketcap(x[0].get("symbol", ""))
+                ),
+                reverse=True
+            )
             
             group_widget = CollapsibleWidget(title=category_name)
             
