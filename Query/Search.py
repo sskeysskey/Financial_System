@@ -285,29 +285,33 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("公司、股票和ETF搜索")
-        self.setGeometry(300, 200, 1000, 600)
+        self.setGeometry(300, 100, 1000, 800)
 
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout(self.central_widget)
 
-        # --- 增加 OR/AND 勾选框 ---
+        # --- 增加 OR/AND 勾选框，但放到输入框后面 ---
         self.input_layout = QHBoxLayout()
-        self.mode_checkbox = QCheckBox("OR")
-        self.mode_checkbox.setToolTip("勾选后关键字空格为 OR，未勾选为 AND")
-        self.input_layout.addWidget(self.mode_checkbox)
 
+        # 搜索输入框
         self.input_field = QLineEdit()
         self.input_field.textChanged.connect(self.on_text_changed)
         self.input_field.setFixedHeight(40)
         self.input_field.setFont(QFont("Arial", 18))
+        self.input_layout.addWidget(self.input_field)
 
+        # OR/AND 勾选框
+        self.mode_checkbox = QCheckBox("OR")
+        self.mode_checkbox.setToolTip("勾选后关键字空格为 OR，未勾选为 AND")
+        self.input_layout.addWidget(self.mode_checkbox)
+
+        # 搜索按钮
         self.search_button = QPushButton("搜索")
         self.search_button.setFixedHeight(45)
         self.search_button.setFixedWidth(80)
-
-        self.input_layout.addWidget(self.input_field)
         self.input_layout.addWidget(self.search_button)
+
         self.layout.addLayout(self.input_layout)
         # --------------------------------
 
