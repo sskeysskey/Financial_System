@@ -263,7 +263,7 @@ class SimilarityViewerWindow(QMainWindow):
             self.search_input.selectAll()
 
     def populate_ui(self, layout):
-        """动态创建和填充UI元素"""
+        """动态创建和填充UI元素，Stocks 列占 70%，ETFs 列占 30%"""
         # 1. 源 Symbol 信息
         source_group = QGroupBox("-")
         source_layout = QVBoxLayout()
@@ -281,6 +281,7 @@ class SimilarityViewerWindow(QMainWindow):
         categories_order = ['etfs', 'stocks'] if symbol_type == 'etf' else ['stocks', 'etfs']
 
         for category in categories_order:
+            # 标题
             category_title = "-" if category == 'etfs' else "-"
             symbols_list = self.related_symbols.get(category, [])
             
@@ -304,8 +305,12 @@ class SimilarityViewerWindow(QMainWindow):
                 widget = self.create_similar_symbol_widget(sym, matched_tags, all_tags)
                 group_layout.addWidget(widget)
             
-            related_layout.addWidget(group_box)
-        
+            # 按照 Stocks:ETFs = 70:30 设置 stretch
+            if category == 'stocks':
+                related_layout.addWidget(group_box, 7)
+            else:  # category == 'etfs'
+                related_layout.addWidget(group_box, 3)
+
         layout.addLayout(related_layout)
         layout.addStretch(1) # 添加一个伸缩项，让所有内容向上推
     
@@ -398,22 +403,27 @@ class SimilarityViewerWindow(QMainWindow):
         # 构建HTML格式的标签字符串
         html_tags_parts = []
         for tag, weight in self.source_tags:
-            html_tags_parts.append(f"{tag}  <font color='{highlight_color}'>{float(weight):.2f}</font>")
-        
+            w = float(weight)
+            if w > 0:
+                html_tags_parts.append(
+                    f"{tag} <font color='{highlight_color}'>{w:.1f}</font>"
+                )
+            else:
+                html_tags_parts.append(tag)
         html_tags_str = ", ".join(html_tags_parts)
         
         # 创建一个支持富文本的QLabel
-        label = QLabel(f"<div style='font-size: 20px;'><b>   </b> {html_tags_str}</div>")
+        label = QLabel(f"<div style='font-size: 24px;'><b>   </b> {html_tags_str}</div>")
         label.setWordWrap(True)
         label.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
         # 按钮、Compare、Tags 三部分并排
+        from PyQt5.QtWidgets import QLineEdit
         layout.addWidget(button,        1)
         layout.addWidget(compare_label, 1)
         layout.addWidget(label,         4)
 
         # --- 新增：搜索输入框，放到这一行最右侧 ---
-        from PyQt5.QtWidgets import QLineEdit
         layout.addStretch()
         self.search_input = QLineEdit()
         # 设置大小
@@ -443,23 +453,16 @@ class SimilarityViewerWindow(QMainWindow):
         return container
 
     def create_similar_symbol_widget(self, sym, matched_tags, all_tags):
-        """为每个相似的 Symbol 创建一个信息行控件"""
+        """为每个相似的 Symbol 创建一个信息行控件，标签仅在得分>0时附带分数（一位小数），字体18px"""
         container = QWidget()
         layout = QHBoxLayout(container)
-        layout.setContentsMargins(0, 2, 0, 2) # 紧凑的垂直边距
+        layout.setContentsMargins(0, 2, 0, 2)
 
         # 1. Symbol 按钮
         button = self.create_symbol_button(sym)
         button.setMinimumHeight(60)
-        
-        # 2. 总权重
-        total_weight = round(sum(float(w) for _, w in matched_tags), 2)
-        weight_label = QLabel(f"{total_weight:.2f}")
-        weight_label.setFixedWidth(45)
-        weight_label.setObjectName("WeightLabel")
-        weight_label.setAlignment(Qt.AlignCenter)
 
-        # 3. Compare 值
+        # 2. Compare 值
         compare_value = self.compare_data.get(sym, '')
         compare_label = QLabel(compare_value)
         compare_label.setFixedWidth(140)
@@ -467,25 +470,34 @@ class SimilarityViewerWindow(QMainWindow):
             compare_label.setStyleSheet("color: #CD853F;")
         compare_label.setAlignment(Qt.AlignCenter)
 
-        # 4. 所有 Tags
-        tags_str = ",   ".join(all_tags)
-        tags_label = QLabel(tags_str)
+        # 3. 总权重
+        total_weight = round(sum(float(w) for _, w in matched_tags), 1)
+        weight_label = QLabel(f"{total_weight:.1f}")
+        weight_label.setFixedWidth(45)
+        weight_label.setObjectName("WeightLabel")
+        weight_label.setAlignment(Qt.AlignCenter)
+
+        # 4. 所有 Tags 及其得分
+        highlight_color = "#F9A825"
+        html_parts = []
+        for tag in all_tags:
+            # 找到该 tag 的 weight，否则 0
+            w = next((float(w0) for t0, w0 in matched_tags if t0 == tag), 0.0)
+            if w > 0:
+                html_parts.append(f"{tag} <font color='{highlight_color}'>{w:.1f}</font>")
+            else:
+                html_parts.append(tag)
+        html_tags_str = ",   ".join(html_parts)
+        tags_label = QLabel(f"<div style='font-size:22px;'>{html_tags_str}</div>")
         tags_label.setObjectName("TagsLabel")
         tags_label.setWordWrap(True)
+        tags_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
-        # ...
-        # ### 修改：交换 compare 和 weight 的位置 ###
-        layout.addWidget(button)
-        layout.addWidget(compare_label) # 先添加 compare
-        layout.addWidget(weight_label)  # 再添加 weight
-        layout.addWidget(tags_label)
-
-        # ### 修改：对应交换 Stretch 的索引值 ###
-        layout.setStretch(0, 2) # button (索引 0)
-        layout.setStretch(1, 3) # compare (现在是索引 1)
-        layout.setStretch(2, 1) # weight (现在是索引 2)
-        layout.setStretch(3, 8) # tags (索引 3)
-        # ...
+        # 布局顺序：Symbol、Compare、Weight、Tags
+        layout.addWidget(button,        2)
+        layout.addWidget(compare_label, 3)
+        layout.addWidget(weight_label,  1)
+        layout.addWidget(tags_label,    8)
 
         return container
 

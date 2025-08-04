@@ -112,42 +112,50 @@
     },
     "Qualified": {
         "COST": "",
-        "OSCR": "",
         "PODD": "",
-        "RBLX": "",
         "STE": "",
-        "WST": "",
-        "CPRT": "",
-        "MNDY": "",
-        "PANW": "",
-        "FDS": ""
+        "AAON": "",
+        "SMCI": "",
+        "VCIT": "",
+        "ONON": "",
+        "CROX": "",
+        "DT": ""
     },
     "Earning_Filter": {},
     "Watching": {
-        "CAVA": "",
-        "CROX": "",
-        "DT": "",
-        "FTNT": "",
         "NVO": "",
-        "PRMB": "",
         "TAP": "",
         "LLY": "",
         "BROS": "",
         "DRI": "",
         "DUOL": "",
-        "LII": ""
-    },
-    "Next_Week": {
+        "LII": "",
+        "OSCR": "",
+        "RBLX": "",
+        "WST": "",
         "FRPT": "",
-        "INSP": ""
+        "INSP": "",
+        "TSEM": "",
+        "BRKR": "",
+        "W": "",
+        "EHC": "",
+        "AMZN": ""
     },
+    "Next_Week": {},
     "Next Week": {
-        "ONON": ""
+        "ONON": "",
+        "MNDY": ""
     },
-    "2 Weeks": {},
+    "2 Weeks": {
+        "CPRT": "",
+        "PANW": ""
+    },
     "3 Weeks": {
         "IOT": "",
-        "KMX": ""
+        "KMX": "",
+        "FDS": "",
+        "MRVL": "",
+        "PSTG": ""
     },
     "Notification": {},
     "Currencies": {
