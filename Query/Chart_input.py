@@ -369,7 +369,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                         diff_percent = 0
 
                     # 拼接提示文本，先显示最新价差，再显示昨日财报数据
-                    earning_markers[marker_date] = f"{date_str}\n昨日财报: {price_change}%\n最新价差: {diff_percent:.2f}%"
+                    earning_markers[marker_date] = f"昨日财报: {price_change}%\n最新价差: {diff_percent:.2f}%\n{date_str}"
                 except ValueError:
                     print(f"无法解析收益公告日期: {date_str}")
     except sqlite3.OperationalError as e:

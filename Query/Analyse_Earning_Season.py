@@ -14,6 +14,7 @@ notification_file = os.path.join(news_path, "notification_earning.txt")  # 新�
 
 # 输入文件
 earnings_release_file = os.path.join(news_path, "Earnings_Release_next.txt")
+earnings_release_new_file  = os.path.join(news_path, "Earnings_Release_new.txt")   # 新增
 sectors_json_file  = os.path.join(config_path, "Sectors_All.json")
 db_file            = os.path.join(db_path, "Finance.db")
 
@@ -164,7 +165,18 @@ def filter_symbols_by_pe_ratio(symbols_to_filter, db_path):
 
 def process_stocks():
     print("开始处理...")
-    symbols_to_check = get_symbols_from_release_file(earnings_release_file)
+    # 读取两个来源的 symbol
+    symbols_next = get_symbols_from_release_file(earnings_release_file)
+    symbols_new  = get_symbols_from_release_file(earnings_release_new_file)
+    
+    # symbols_to_check = sorted(set(symbols_next + symbols_new))
+    
+    # 合并，同时去重，但保留第一次出现的顺序
+    combined = symbols_next + symbols_new
+    symbols_to_check = list(dict.fromkeys(combined))
+    
+    # symbols_to_check = get_symbols_from_release_file(earnings_release_file)
+    
     symbol_sector_map = create_symbol_to_sector_map(sectors_json_file)
 
     if not symbols_to_check or not symbol_sector_map:
@@ -174,10 +186,10 @@ def process_stocks():
     print(f"待检查的股票列表: {symbols_to_check}")
     print(f"配置: 将检查最近 {NUM_EARNINGS_TO_CHECK} 次财报。")
     
-    # 最新收盘价被过去N次财报的最低值还低
+    # 策略1：最新收盘价被过去N次财报的最低值还低
     filtered_1 = []
     
-    # 过去N次财报都是上升，且收盘价比（N次财报中收盘价最高值）低4%
+    # 策略2：过去N次财报都是上升，且收盘价比（N次财报中收盘价最高值）低4%
     filtered_2 = []
 
     # 策略3：最新价 < 过去N次财报最低价，且交易日落在下次财报前7~20天窗口
