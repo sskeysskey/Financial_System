@@ -8,7 +8,7 @@ import subprocess
 from decimal import Decimal
 from datetime import datetime, date
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QEvent
 from PyQt5.QtWidgets import (QApplication, QInputDialog, QMessageBox, QMainWindow, QWidget,
                              QVBoxLayout, QHBoxLayout, QPushButton, QGroupBox,
                               QScrollArea, QLabel, QMenu, QAction)
@@ -203,6 +203,19 @@ def execute_external_script(script_type, keyword):
             subprocess.Popen([python_path, script_path, keyword])
     except Exception as e:
         print(f"执行脚本 '{script_path}' 时发生错误: {e}")
+
+# --- 新增：一个可整行点击的容器 ---
+class RowWidget(QWidget):
+    def __init__(self, symbol: str, click_callback, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.symbol = symbol
+        self.click_callback = click_callback
+
+    def eventFilter(self, watched, event):
+        # 仅捕获子控件上的左键释放事件
+        if event.type() == QEvent.MouseButtonRelease and event.button() == Qt.LeftButton:
+            self.click_callback(self.symbol)
+        return False  # 不拦截，让被点击的控件自己也能处理（如文本选中）
 
 class SymbolButton(QPushButton):
     def mousePressEvent(self, event):
@@ -453,12 +466,17 @@ class SimilarityViewerWindow(QMainWindow):
         return container
 
     def create_similar_symbol_widget(self, sym, matched_tags, all_tags):
-        """为每个相似的 Symbol 创建一个信息行控件，标签仅在得分>0时附带分数（一位小数），字体18px"""
-        container = QWidget()
+        """
+        为每个相似的 Symbol 创建一行：
+        - 总权重数字字体变小
+        - 点击整行（除 Symbol 按钮外）都能触发 on_symbol_click
+        """
+        # 改用 RowWidget 作容器
+        container = RowWidget(sym, self.on_symbol_click)
         layout = QHBoxLayout(container)
         layout.setContentsMargins(0, 2, 0, 2)
 
-        # 1. Symbol 按钮
+        # 1. Symbol 按钮（保留原有行为，包括 Alt/Shift/右键菜单）
         button = self.create_symbol_button(sym)
         button.setMinimumHeight(60)
 
@@ -470,18 +488,18 @@ class SimilarityViewerWindow(QMainWindow):
             compare_label.setStyleSheet("color: #CD853F;")
         compare_label.setAlignment(Qt.AlignCenter)
 
-        # 3. 总权重
+        # 3. 总权重（字体小一点，比如 14px）
         total_weight = round(sum(float(w) for _, w in matched_tags), 1)
         weight_label = QLabel(f"{total_weight:.1f}")
         weight_label.setFixedWidth(45)
         weight_label.setObjectName("WeightLabel")
         weight_label.setAlignment(Qt.AlignCenter)
+        weight_label.setStyleSheet("font-size:14px;")  # <<< 字体调小
 
-        # 4. 所有 Tags 及其得分
+        # 4. 所有 Tags 及其得分（一位小数，分数为0时只显示 tag）
         highlight_color = "#F9A825"
         html_parts = []
         for tag in all_tags:
-            # 找到该 tag 的 weight，否则 0
             w = next((float(w0) for t0, w0 in matched_tags if t0 == tag), 0.0)
             if w > 0:
                 html_parts.append(f"{tag} <font color='{highlight_color}'>{w:.1f}</font>")
@@ -493,7 +511,11 @@ class SimilarityViewerWindow(QMainWindow):
         tags_label.setWordWrap(True)
         tags_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
-        # 布局顺序：Symbol、Compare、Weight、Tags
+        # 把标签等子控件都装进 eventFilter，这样点击它们也能触发整行点击
+        for w in (compare_label, weight_label, tags_label):
+            w.installEventFilter(container)
+
+        # 布局：Symbol、Compare、Weight、Tags
         layout.addWidget(button,        2)
         layout.addWidget(compare_label, 3)
         layout.addWidget(weight_label,  1)
