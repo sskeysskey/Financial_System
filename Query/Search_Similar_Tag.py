@@ -252,22 +252,9 @@ class SimilarityViewerWindow(QMainWindow):
         # --- 主容器和布局 ---
         main_widget = QWidget()
         scroll_area.setWidget(main_widget)
-        # 以后需要刷新时清空的 layout
+        # 将 layout 绑定为实例属性，以便后面清空或重绘
         self.main_layout = QVBoxLayout(main_widget)
-
-        # --- 新增：在最上方加入一个搜索输入框（右对齐） ---
-        top_bar = QWidget()
-        top_h = QHBoxLayout(top_bar)
-        top_h.addStretch()
-        self.search_input = QLineEdit()
-        self.search_input.setFixedWidth(150)
-        self.search_input.setPlaceholderText("输入股票代码")
-        # 监听回车
-        self.search_input.returnPressed.connect(self.on_search)
-        top_h.addWidget(self.search_input)
-        self.main_layout.addWidget(top_bar)
- 
-        # --- 填充内容 ---
+        # 填充内容（包含源 Symbol 栏，第二级才是所有相似列表）
         self.populate_ui(self.main_layout)
 
     def populate_ui(self, layout):
@@ -329,9 +316,6 @@ class SimilarityViewerWindow(QMainWindow):
     def clear_content(self):
         """仅保留最上方的搜索栏，清空其它所有控件/布局"""
         for i in reversed(range(self.main_layout.count())):
-            if i == 0:
-                # index 0 是 top_bar，保留
-                continue
             item = self.main_layout.takeAt(i)
             if not item:
                 continue
@@ -419,9 +403,19 @@ class SimilarityViewerWindow(QMainWindow):
         label.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
         # 按钮、Compare、Tags 三部分并排
-        layout.addWidget(button,       1)  # Symbol 按钮
-        layout.addWidget(compare_label,1)  # Compare 值
-        layout.addWidget(label,        4)  # Tags 显示
+        layout.addWidget(button,        1)
+        layout.addWidget(compare_label, 1)
+        layout.addWidget(label,         4)
+
+        # --- 新增：搜索输入框，放到这一行最右侧 ---
+        # 用 stretch 推到最右
+        from PyQt5.QtWidgets import QLineEdit
+        layout.addStretch()
+        self.search_input = QLineEdit()
+        self.search_input.setFixedWidth(150)
+        self.search_input.setPlaceholderText("输入股票代码")
+        self.search_input.returnPressed.connect(self.on_search)
+        layout.addWidget(self.search_input)
 
         return container
 
