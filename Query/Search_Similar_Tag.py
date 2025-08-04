@@ -257,6 +257,11 @@ class SimilarityViewerWindow(QMainWindow):
         # 填充内容（包含源 Symbol 栏，第二级才是所有相似列表）
         self.populate_ui(self.main_layout)
 
+        # --- 界面创建完毕后，让搜索输入框自动获得焦点并全选 ---
+        if hasattr(self, 'search_input'):
+            self.search_input.setFocus()
+            self.search_input.selectAll()
+
     def populate_ui(self, layout):
         """动态创建和填充UI元素"""
         # 1. 源 Symbol 信息
@@ -581,13 +586,24 @@ class SimilarityViewerWindow(QMainWindow):
         
     # ### 修改 1: 增加键盘事件处理，实现ESC键关闭功能 ###
     def keyPressEvent(self, event):
-        """重写键盘事件处理器"""
+        """重写键盘事件：Esc 关窗，/ 快速聚焦搜索框"""
+        # Esc 关闭
         if event.key() == Qt.Key_Escape:
             print("ESC被按下，正在关闭窗口...")
             self.close()
-        else:
-            # 对于其他按键，调用父类的实现以保留默认行为
-            super().keyPressEvent(event)
+            return
+
+        # "/" 键激活搜索框
+        # event.text() 能准确反映用户输入的字符
+        if event.text() == '/':
+            if hasattr(self, 'search_input'):
+                self.search_input.setFocus()
+                # 全选已有内容，便于快速替换
+                self.search_input.selectAll()
+            return
+
+        # 其他按键交给父类处理
+        super().keyPressEvent(event)
 
     def get_tags_for_symbol(self, symbol):
         """辅助函数，为 Tooltip 获取 tags"""
