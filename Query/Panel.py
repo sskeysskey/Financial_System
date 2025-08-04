@@ -213,7 +213,7 @@ def execute_external_script(script_type, keyword, group=None, main_window=None):
     python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
     script_configs = {
         'blacklist': f'{base_path}/Operations/Insert_Blacklist.py',
-        'similar': f'{base_path}/Query/Find_Similar_Tag.py',
+        'similar': f'{base_path}/Query/Search_Similar_Tag.py',
         'tags': f'{base_path}/Operations/Editor_Tags.py',
         'editor_earning': f'{base_path}/Operations/Editor_Earning_DB.py',
         'earning': f'{base_path}/Operations/Insert_Earning.py',

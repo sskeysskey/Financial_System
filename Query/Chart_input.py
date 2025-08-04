@@ -183,7 +183,7 @@ def execute_external_script(script_type, keyword):
         'event_input': f'{base_path}/Operations/Insert_Events.py',
         'event_edit': f'{base_path}/Operations/Editor_Events.py',
         'symbol_compare': f'{base_path}/Query/Compare_Chart.py',
-        'similar_tags': f'{base_path}/Query/Find_Similar_Tag.py',
+        'similar_tags': f'{base_path}/Query/Search_Similar_Tag.py',
         'check_kimi': '/Users/yanzhang/Coding/ScriptEditor/CheckKimi_Earning.scpt',
         'check_futu': '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt'
     }

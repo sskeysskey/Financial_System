@@ -6,6 +6,7 @@ import subprocess
 import sys
 import time
 from decimal import Decimal
+from datetime import datetime, date
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (QApplication, QInputDialog, QMessageBox, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
@@ -297,7 +298,30 @@ class SimilarityViewerWindow(QMainWindow):
         
         layout.addLayout(related_layout)
         layout.addStretch(1) # 添加一个伸缩项，让所有内容向上推
-
+    
+    def get_latest_earning_info(self, symbol: str) -> tuple[date|None, float|None]:
+        """
+        从 Earning 表里拿 symbol 的最新财报日期和 price。
+        返回 (date, price)。找不到就 (None, None)。
+        """
+        db_path = "/Users/yanzhang/Coding/Database/Finance.db"
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT date, price FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 1",
+                (symbol,)
+            )
+            row = cursor.fetchone()
+            conn.close()
+            if row and row[0] is not None:
+                d = datetime.strptime(row[0], "%Y-%m-%d").date()
+                p = float(row[1]) if row[1] is not None else 0.0
+                return d, p
+        except Exception as e:
+            print(f"[Earning 查询错误] {symbol}: {e}")
+        return None, None
+    
     def create_source_symbol_widget(self):
         """为源 Symbol 创建一个专属的信息展示控件"""
         container = QWidget()
@@ -312,14 +336,11 @@ class SimilarityViewerWindow(QMainWindow):
         compare_value = self.compare_data.get(self.source_symbol, "")
         compare_label = QLabel(compare_value)
         compare_label.setFixedWidth(150)
-        if re.search(r'-\d+(\.\d+)?%', compare_value):
-            compare_label.setStyleSheet("color: #EF9A9A;")
-        else:
-            compare_label.setObjectName("CompareLabel")
+        if re.search(r'\d+(?:前|后)|未', compare_value):
+            compare_label.setStyleSheet("color: #CD853F;")
         compare_label.setAlignment(Qt.AlignCenter)
         
         # ### 修改 2: 使用富文本(HTML)格式化标签，放大字体并突出权重数字 ###
-        # 定义醒目的颜色
         highlight_color = "#F9A825" # 与下方权重标签一致的黄色
         
         # 构建HTML格式的标签字符串
@@ -362,11 +383,8 @@ class SimilarityViewerWindow(QMainWindow):
         compare_value = self.compare_data.get(sym, '')
         compare_label = QLabel(compare_value)
         compare_label.setFixedWidth(140)
-        # 如果是负数百分比，就整行显示淡红色，否则使用原有的绿色
-        if re.search(r'-\d+(\.\d+)?%', compare_value):
-            compare_label.setStyleSheet("color: #EF9A9A;")
-        else:
-            compare_label.setObjectName("CompareLabel")
+        if re.search(r'\d+(?:前|后)|未', compare_value):
+            compare_label.setStyleSheet("color: #CD853F;")
         compare_label.setAlignment(Qt.AlignCenter)
 
         # 4. 所有 Tags
@@ -405,6 +423,22 @@ class SimilarityViewerWindow(QMainWindow):
         # 右键菜单事件
         button.setContextMenuPolicy(Qt.CustomContextMenu)
         button.customContextMenuRequested.connect(lambda pos, s=symbol: self.show_context_menu(s))
+
+        # --- 新增：根据最新财报给符号着色 ---
+        latest_date, latest_price = self.get_latest_earning_info(symbol)
+        if latest_date:
+            days_diff = (date.today() - latest_date).days
+        else:
+            days_diff = 999
+        if days_diff <= 30:
+            # 30 天内：price>0 红，price<=0 绿
+            color = 'red' if (latest_price is not None and latest_price > 0) else 'green'
+        else:
+            color = 'white'
+
+        # 将这个 color 应用到按钮文字上（追加到已有 QSS）
+        base_ss = button.styleSheet() or ""
+        button.setStyleSheet(base_ss + f"; color: {color};")
         
         return button
 
@@ -511,16 +545,20 @@ class SimilarityViewerWindow(QMainWindow):
             border: none;
         }
         #SymbolButton {
-            background-color: #007ACC;
+            /* 背景色改成和主界面一致 */
+            background-color: #2E2E2E;
             color: white;
             font-size: 14px;
             font-weight: bold;
             padding: 5px;
             border-radius: 4px;
-            border: 1px solid #005C99;
+            /* 加一圈细白边 */
+            border: 1px solid #FFFFFF;
         }
         #SymbolButton:hover {
-            background-color: #0099FF;
+            /* hover 时稍微提亮一点，保持边框 */
+            background-color: #3A3A3A;
+            border: 1px solid #FFFFFF;
         }
         QLabel {
             font-size: 20px;

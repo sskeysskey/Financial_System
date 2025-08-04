@@ -199,7 +199,7 @@ def execute_external_script(script_type, keyword):
     base_path = '/Users/yanzhang/Coding/Financial_System'
     script_configs = {
         'blacklist': f'{base_path}/Operations/Insert_Blacklist.py',
-        'similar':  f'{base_path}/Query/Find_Similar_Tag.py',
+        'similar':  f'{base_path}/Query/Search_Similar_Tag.py',
         'tags':     f'{base_path}/Operations/Editor_Tags.py',
         'editor_earning': f'{base_path}/Operations/Editor_Earning_DB.py',
         'earning':  f'{base_path}/Operations/Insert_Earning.py',

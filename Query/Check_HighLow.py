@@ -91,7 +91,7 @@ def execute_external_script(script_type, keyword):
     """以非阻塞方式执行外部脚本（Python 或 AppleScript）"""
     base_path = '/Users/yanzhang/Coding/Financial_System'
     script_configs = {
-        'similar':  f'{base_path}/Query/Find_Similar_Tag.py',
+        'similar':  f'{base_path}/Query/Search_Similar_Tag.py',
         'tags':     f'{base_path}/Operations/Editor_Tags.py',
         'futu':     '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt',
     }
