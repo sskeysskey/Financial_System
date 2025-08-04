@@ -112,9 +112,6 @@
     },
     "Qualified": {
         "COST": "",
-        "IOT": "",
-        "KMX": "",
-        "LII": "",
         "MEDP": "",
         "ONON": "",
         "OSCR": "",
@@ -139,15 +136,19 @@
         "LLY": "",
         "BROS": "",
         "DRI": "",
-        "DUOL": ""
+        "DUOL": "",
+        "LII": ""
     },
     "Next_Week": {
         "FRPT": "",
         "INSP": ""
     },
-    "1 Week": {},
+    "Next Week": {},
     "2 Weeks": {},
-    "3 Weeks": {},
+    "3 Weeks": {
+        "IOT": "",
+        "KMX": ""
+    },
     "Notification": {},
     "Currencies": {
         "DXY": "美元指数",
