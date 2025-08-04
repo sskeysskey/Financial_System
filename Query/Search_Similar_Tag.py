@@ -393,14 +393,19 @@ class SimilarityViewerWindow(QMainWindow):
         tags_label.setObjectName("TagsLabel")
         tags_label.setWordWrap(True)
 
+        # ...
+        # ### 修改：交换 compare 和 weight 的位置 ###
         layout.addWidget(button)
-        layout.addWidget(weight_label)
-        layout.addWidget(compare_label)
+        layout.addWidget(compare_label) # 先添加 compare
+        layout.addWidget(weight_label)  # 再添加 weight
         layout.addWidget(tags_label)
-        layout.setStretch(0, 2) # button
-        layout.setStretch(1, 1) # weight
-        layout.setStretch(2, 3) # compare
-        layout.setStretch(3, 8) # tags
+
+        # ### 修改：对应交换 Stretch 的索引值 ###
+        layout.setStretch(0, 2) # button (索引 0)
+        layout.setStretch(1, 3) # compare (现在是索引 1)
+        layout.setStretch(2, 1) # weight (现在是索引 2)
+        layout.setStretch(3, 8) # tags (索引 3)
+        # ...
 
         return container
 
@@ -620,7 +625,6 @@ if __name__ == '__main__':
             symbol = get_stock_symbol()
 
     if not symbol:
-        QMessageBox.warning(None, "警告", "未提供有效的股票代码，程序将退出。")
         sys.exit()
 
     # --- 步骤 2: 加载所有数据 ---
