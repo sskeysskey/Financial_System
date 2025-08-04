@@ -9,8 +9,9 @@ from decimal import Decimal
 from datetime import datetime, date
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (QApplication, QInputDialog, QMessageBox, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-                             QPushButton, QGroupBox, QScrollArea, QLabel, QMenu, QAction)
+from PyQt5.QtWidgets import (QApplication, QInputDialog, QMessageBox, QMainWindow, QWidget,
+                             QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QGroupBox,
+                              QScrollArea, QLabel, QMenu, QAction)
 from PyQt5.QtGui import QCursor
 
 # --- 检查并添加必要的路径 ---
@@ -226,9 +227,13 @@ class SimilarityViewerWindow(QMainWindow):
         self.related_symbols = related_symbols
         
         # 将所有需要的数据存储为实例变量
-        self.json_data = all_data['description']
+        # 将所有需要的数据存储为实例变量
+        self.all_data = all_data
+        self.json_data    = all_data['description']
         self.compare_data = all_data['compare']
-        self.sector_data = all_data['sectors']
+        self.sector_data  = all_data['sectors']
+        # 从 all_data 拿到 tags_weight_config
+        self.tags_weight_config = all_data['tags_weight']
 
         self.init_ui()
 
@@ -247,10 +252,23 @@ class SimilarityViewerWindow(QMainWindow):
         # --- 主容器和布局 ---
         main_widget = QWidget()
         scroll_area.setWidget(main_widget)
-        main_layout = QVBoxLayout(main_widget)
+        # 以后需要刷新时清空的 layout
+        self.main_layout = QVBoxLayout(main_widget)
 
+        # --- 新增：在最上方加入一个搜索输入框（右对齐） ---
+        top_bar = QWidget()
+        top_h = QHBoxLayout(top_bar)
+        top_h.addStretch()
+        self.search_input = QLineEdit()
+        self.search_input.setFixedWidth(150)
+        self.search_input.setPlaceholderText("输入股票代码")
+        # 监听回车
+        self.search_input.returnPressed.connect(self.on_search)
+        top_h.addWidget(self.search_input)
+        self.main_layout.addWidget(top_bar)
+ 
         # --- 填充内容 ---
-        self.populate_ui(main_layout)
+        self.populate_ui(self.main_layout)
 
     def populate_ui(self, layout):
         """动态创建和填充UI元素"""
@@ -298,6 +316,51 @@ class SimilarityViewerWindow(QMainWindow):
         
         layout.addLayout(related_layout)
         layout.addStretch(1) # 添加一个伸缩项，让所有内容向上推
+    
+    def clear_layout(self, layout):
+        """递归删除一个 layout 下的所有 item"""
+        while layout.count():
+            item = layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+            elif item.layout():
+                self.clear_layout(item.layout())
+
+    def clear_content(self):
+        """仅保留最上方的搜索栏，清空其它所有控件/布局"""
+        for i in reversed(range(self.main_layout.count())):
+            if i == 0:
+                # index 0 是 top_bar，保留
+                continue
+            item = self.main_layout.takeAt(i)
+            if not item:
+                continue
+            if item.widget():
+                item.widget().deleteLater()
+            elif item.layout():
+                self.clear_layout(item.layout())
+
+    def on_search(self):
+        """回车时重新加载 symbol 并刷新界面"""
+        symbol = self.search_input.text().strip().upper()
+        if not symbol:
+            return
+        # 1) 找 tags
+        tags = find_tags_by_symbol(symbol,
+                                   self.all_data['description'],
+                                   self.tags_weight_config)
+        if not tags:
+            QMessageBox.information(self, "未找到", f"在数据库中找不到符号 '{symbol}' 的标签。")
+            return
+        # 2) 找相似
+        related = find_symbols_by_tags(tags, self.all_data['description'])
+        # 3) 更新实例变量
+        self.source_symbol   = symbol
+        self.source_tags     = tags
+        self.related_symbols = related
+        # 4) 清空旧内容并重绘
+        self.clear_content()
+        self.populate_ui(self.main_layout)
     
     def get_latest_earning_info(self, symbol: str) -> tuple[date|None, float|None]:
         """
@@ -638,8 +701,9 @@ if __name__ == '__main__':
         
         all_data_package = {
             "description": description_data,
-            "compare": compare_data,
-            "sectors": sector_data
+            "compare":    compare_data,
+            "sectors":    sector_data,
+            "tags_weight": tags_weight_config
         }
     except Exception as e:
         QMessageBox.critical(None, "错误", f"加载数据文件时出错: {e}")
@@ -657,7 +721,12 @@ if __name__ == '__main__':
     
     # --- 步骤 4: 创建并显示GUI窗口 ---
     print("分析完成，正在启动UI...")
-    main_window = SimilarityViewerWindow(symbol, target_tags, related_symbols, all_data_package)
+    main_window = SimilarityViewerWindow(
+        symbol,
+        target_tags,
+        related_symbols,
+        all_data_package
+    )
     main_window.show()
     
     sys.exit(app.exec_())

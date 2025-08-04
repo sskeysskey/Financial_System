@@ -248,7 +248,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     show_global_markers = False  # 红色点默认不显示
     show_specific_markers = True  # 橙色点默认显示
     show_earning_markers = True  # 默认不显示收益点
-    show_all_annotations = True  # 新增：浮窗默认显示
+    show_all_annotations = False  # 新增：浮窗默认显示
 
     try:
         data = fetch_data(db_path, table_name, name)
