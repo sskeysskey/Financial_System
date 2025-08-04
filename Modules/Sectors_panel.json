@@ -112,8 +112,6 @@
     },
     "Qualified": {
         "COST": "",
-        "MEDP": "",
-        "ONON": "",
         "OSCR": "",
         "PODD": "",
         "RBLX": "",
@@ -143,7 +141,9 @@
         "FRPT": "",
         "INSP": ""
     },
-    "Next Week": {},
+    "Next Week": {
+        "ONON": ""
+    },
     "2 Weeks": {},
     "3 Weeks": {
         "IOT": "",

@@ -423,24 +423,37 @@ class MainWindow(QMainWindow):
             for sector in category_group:
                 if sector in self.config:
                     keywords = self.config[sector]
-                    
-                    # 创建 QGroupBox
+
+                    # —— 在这里加一个空检查 —— 
+                    # 如果 keywords 是 dict 或 list，且长度为 0，就跳过
+                    if (isinstance(keywords, dict) and not keywords) or \
+                       (isinstance(keywords, list) and not keywords):
+                        continue
+
+                    # 下面才是原来的代码：
                     group_box = QGroupBox()
                     group_box.setLayout(QVBoxLayout())
                     column_layouts[index].addWidget(group_box)
 
-                    items = limit_items(keywords.items() if isinstance(keywords, dict) else [(kw, kw) for kw in keywords], sector)
-                    
-                    # ### 修改开始 ###
-                    # 1. 从映射字典中获取要显示的名称。
-                    #    使用 .get(key, default) 方法，如果字典里找不到，就用 sector 原始名称。
+                    items = limit_items(
+                        keywords.items() if isinstance(keywords, dict)
+                                         else [(kw, kw) for kw in keywords],
+                        sector
+                    )
+
+                    # 再一次防护：如果 limit 之后还是空，也直接跳过
+                    if not items:
+                        continue
+
+                    # 标题、按钮……一切照旧
                     display_sector_name = self.display_name_map.get(sector, sector)
                     
                     # 2. 使用获取到的显示名称来构建最终的标题文本。
                     total = len(keywords)
                     shown = len(items)
-                    sector_label = f"{display_sector_name} ({shown}/{total})" if shown != total else display_sector_name
-                    group_box.setTitle(sector_label)
+                    title = (f"{display_sector_name} ({shown}/{total})"
+                             if shown != total else display_sector_name)
+                    group_box.setTitle(title)
 
                     for keyword, translation in items:
                         button_container = QWidget()
