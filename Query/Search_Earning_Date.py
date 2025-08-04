@@ -3,8 +3,8 @@ import os
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, 
                              QLineEdit, QPushButton, QListWidget, QLabel, 
                              QMessageBox, QFrame)
-from PyQt5.QtGui import QIcon, QFont
-from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtGui import QFont
+from PyQt5.QtCore import Qt
 
 class EarningsSearchApp(QWidget):
     # 修改构造函数以接受一个可选参数

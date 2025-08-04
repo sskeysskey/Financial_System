@@ -111,10 +111,7 @@
         "XRP": ""
     },
     "Qualified": {
-        "BROS": "",
-        "DRI": "",
         "COST": "",
-        "DUOL": "",
         "IOT": "",
         "KMX": "",
         "LII": "",
@@ -139,12 +136,18 @@
         "NVO": "",
         "PRMB": "",
         "TAP": "",
-        "LLY": ""
+        "LLY": "",
+        "BROS": "",
+        "DRI": "",
+        "DUOL": ""
     },
     "Next_Week": {
         "FRPT": "",
         "INSP": ""
     },
+    "1 Week": {},
+    "2 Weeks": {},
+    "3 Weeks": {},
     "Notification": {},
     "Currencies": {
         "DXY": "美元指数",
@@ -188,22 +191,6 @@
         "USTrade": "05 USTrade",
         "USNonPMI": "05 USNonPMI",
         "USInitial": "07 USInitial"
-    },
-    "ETFs": {
-        "TLT": "",
-        "XLK": "科技",
-        "XLV": "医疗",
-        "XLI": "工业",
-        "XLF": "金融",
-        "XLP": "必需消费",
-        "XLY": "非必需消费",
-        "XLRE": "房地产",
-        "XAR": "国防航天",
-        "KIE": "保险",
-        "XLB": "原材料",
-        "PAVE": "基础设施",
-        "XLE": "能源",
-        "XLU": "公共事业"
     },
     "Economic_All": {
         "USGDP": "",

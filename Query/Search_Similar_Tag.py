@@ -1,10 +1,10 @@
-import json
 import re
+import sys
+import time
+import json
 import sqlite3
 import pyperclip
 import subprocess
-import sys
-import time
 from decimal import Decimal
 from datetime import datetime, date
 

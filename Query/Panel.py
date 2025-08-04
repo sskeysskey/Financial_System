@@ -32,7 +32,7 @@ DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
 DISPLAY_LIMITS = {
     'default': 'all',  # 默认显示全部
     'Indices': 'all',
-    "Bonds": 'all',
+    "Bonds": 3,
     'Commodities': 'all',
     'Currencies': 'all',
     'Economics': 'all',
@@ -43,14 +43,13 @@ DISPLAY_LIMITS = {
 
 # Define categories as a global variable
 categories = [
-    ['Basic_Materials', 'Consumer_Cyclical', 'Real_Estate', 'Next_Week', 'Watching'],
-    ['Technology', 'Qualified', 'Energy'],
-    ['Industrials', 'Consumer_Defensive', 'Notification', 'Utilities'],
-    ['Communication_Services', 'Financial_Services', 'Healthcare', 'Earning_Filter'],
-    ['Bonds', 'Indices'],
-    ['Commodities'],
-    ['Crypto', 'Currencies'],
-    ['Economics', 'ETFs']
+    ['Basic_Materials','Consumer_Cyclical','Real_Estate','Technology','Energy','Industrials','Consumer_Defensive','Communication_Services','Financial_Services', 'Healthcare','Utilities'],
+    ['Qualified','1 Week','2 Weeks','3 Weeks'],
+    ['Notification','Next_Week','Earning_Filter'],
+    ['Watching'],
+    ['Bonds','Indices'],
+    ['Economics','Commodities'],
+    ['Crypto','Currencies'],
 ]
 
 # Global variables initialized below; placeholders for IDE clarity
@@ -285,7 +284,10 @@ class MainWindow(QMainWindow):
             'Consumer_Defensive': 'Defensive',
             'Consumer_Cyclical': 'Cyclical',
             'Basic_Materials': 'Materials',
-            'Financial_Services': 'Financial'
+            'Financial_Services': 'Financial',
+            'Notification': '策略 3',
+            'Next_Week': '策略 1/2',
+            'Earning_Filter': '策略 4'
         }
         
         self.init_ui()
@@ -487,7 +489,7 @@ class MainWindow(QMainWindow):
         actions = [
             ("删除",          lambda: self.delete_item(keyword, group)),
             ("移动到 Qualified",      lambda: self.move_item_to_Qualified(keyword, group)),
-            ("移动到 Watching",    lambda: self.move_item_to_Watching(keyword, group)),    # ← 新增
+            ("移动到 Watching",    lambda: self.move_item_to_Watching(keyword, group)),
             ("编辑 Tags",      lambda: execute_external_script('tags', keyword, group, self)),
             None,
             ("改名",          lambda: self.rename_item(keyword, group)),
