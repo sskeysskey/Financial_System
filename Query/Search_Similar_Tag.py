@@ -10,7 +10,7 @@ from datetime import datetime, date
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (QApplication, QInputDialog, QMessageBox, QMainWindow, QWidget,
-                             QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QGroupBox,
+                             QVBoxLayout, QHBoxLayout, QPushButton, QGroupBox,
                               QScrollArea, QLabel, QMenu, QAction)
 from PyQt5.QtGui import QCursor
 
@@ -408,12 +408,30 @@ class SimilarityViewerWindow(QMainWindow):
         layout.addWidget(label,         4)
 
         # --- 新增：搜索输入框，放到这一行最右侧 ---
-        # 用 stretch 推到最右
         from PyQt5.QtWidgets import QLineEdit
         layout.addStretch()
         self.search_input = QLineEdit()
-        self.search_input.setFixedWidth(150)
-        self.search_input.setPlaceholderText("输入股票代码")
+        # 设置大小
+        self.search_input.setFixedWidth(200)
+        self.search_input.setFixedHeight(32)
+        # 放大输入字体
+        font = self.search_input.font()
+        font.setPointSize(14)
+        self.search_input.setFont(font)
+        # 美化边框、背景、文字颜色
+        self.search_input.setStyleSheet("""
+            QLineEdit {
+                padding: 4px 8px;
+                border: 1px solid #555;
+                border-radius: 4px;
+                background-color: #3A3A3A;
+                color: #E0E0E0;
+            }
+            QLineEdit:focus {
+                border: 1px solid #00AEEF;
+            }
+        """)
+        self.search_input.setPlaceholderText("输入股票代码…")
         self.search_input.returnPressed.connect(self.on_search)
         layout.addWidget(self.search_input)
 
