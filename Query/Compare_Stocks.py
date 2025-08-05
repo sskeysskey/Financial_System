@@ -2,8 +2,20 @@ from datetime import datetime, timedelta
 import sqlite3
 import json
 import os
+from wcwidth import wcswidth
 import re
 
+def pad_display(s: str, width: int, align: str = 'left') -> str:
+    """按照真实列宽（CJK=2，ASCII=1）来给 s 补空格到 width 列."""
+    cur = wcswidth(s)
+    if cur >= width:
+        return s
+    pad = width - cur
+    if align == 'left':
+        return s + ' ' * pad
+    else:
+        return ' ' * pad + s
+    
 def create_connection(db_file):
     return sqlite3.connect(db_file)
 
@@ -17,25 +29,38 @@ def read_earnings_release(filepath, error_file_path):
         log_error_with_timestamp(f"文件 {filepath} 不存在。", error_file_path)
         return {}
 
+    # BMO→前，AMC→后，TNS→未
+    period_map = {'BMO': '前', 'AMC': '后', 'TNS': '未'}
+
     earnings_companies = {}
 
     with open(filepath, 'r') as file:
-        for line_number, line in enumerate(file, 1):  # 添加行号
+        for line_number, line in enumerate(file, 1):
             line = line.strip()
-            if not line:  # 跳过空行
+            if not line:
                 continue
 
-            # 用冒号分段
             parts = [p.strip() for p in line.split(':')]
-            # 至少要有三段：公司名、（中间不关心）、日期
+            # 期望 parts = [symbol, period, date]
             if len(parts) >= 3:
                 company = parts[0]
+                period = parts[1]
                 date_str = parts[-1]
-                # 校验一下日期格式
+
                 m = re.match(r'(\d{4})-(\d{2})-(\d{2})$', date_str)
                 if m:
-                    day = m.group(3)  # 只取“天”
-                    earnings_companies[company] = day
+                    day = m.group(3)  # “dd”
+                    # 映射到“前/后/未”
+                    suffix = period_map.get(period)
+                    if suffix:
+                        earnings_companies[company] = f"{day}{suffix}"
+                    else:
+                        log_error_with_timestamp(
+                            f"第 {line_number} 行未知的 period: '{period}'",
+                            error_file_path
+                        )
+                        # 退而只取 day
+                        earnings_companies[company] = day
                 else:
                     log_error_with_timestamp(
                         f"第 {line_number} 行日期格式不对: '{date_str}'",
@@ -205,7 +230,10 @@ def compare_today_yesterday(config_path,
                 tags = symbol_to_tags.get(original, [])
                 tags_str = ', '.join(tags)
 
-                file.write(f"{sector:<25}{company:<15}: {pct_change:>6.2f}%  {tags_str}\n")
+                # 按「25 列」补齐 sector，按「15 列」补齐 company
+                sector_p = pad_display(sector, 25, 'left')
+                company_p = pad_display(company, 15, 'left')
+                file.write(f"{sector_p}{company_p}: {pct_change:>6.2f}%  {tags_str}\n")
 
         print(f"{output_path} 已生成。")
     else:

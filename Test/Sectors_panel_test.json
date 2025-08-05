@@ -22,6 +22,33 @@
     "Consumer_Defensive": {
         "MNST": ""
     },
+    "Earning_Filter": {
+        "HALO": ""
+    },
+    "Qualified": {
+        "DT": ""
+    },
+    "Watching": {
+        "NVO": ""
+    },
+    "Next_Week": {
+        "ONON": "",
+        "WIX": ""
+    },
+    "Next Week": {
+        "ONON": "",
+        "MNDY": ""
+    },
+    "2 Weeks": {
+        "CPRT": "",
+        "PANW": ""
+    },
+    "3 Weeks": {
+        "DRI": ""
+    },
+    "Notification": {
+        "WIX": ""
+    },
     "Industrials": {
         "BA": "波音"
     },
@@ -72,9 +99,6 @@
         "USCPI": ""
     },
     "Qualified_Symbol": {
-        "HALO": ""
-    },
-    "Earning_Filter": {
         "HALO": ""
     }
 }

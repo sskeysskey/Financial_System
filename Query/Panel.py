@@ -178,6 +178,24 @@ def fetch_mnspp_data_from_db(db_path, symbol):
     else:
         # 数据库没查到，返回默认值
         return "N/A", None, "N/A", "--"
+    
+def fetch_latest_earning_date(symbol):
+    """
+    从 earning 表里取 symbol 的最近一次财报日期，
+    如果没有记录就返回“无”。
+    """
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT date FROM earning WHERE name = ? ORDER BY date DESC LIMIT 1",
+                (symbol,)
+            )
+            row = cursor.fetchone()
+            return row[0] if row else "无"
+    except Exception as e:
+        print(f"查询最新财报日期出错: {e}")
+        return "无"
 
 def query_database(db_path, table_name, condition):
     with sqlite3.connect(db_path) as conn:
@@ -469,11 +487,19 @@ class MainWindow(QMainWindow):
                         button.setCursor(QCursor(Qt.PointingHandCursor))
                         button.clicked.connect(lambda _, k=keyword: self.on_keyword_selected_chart(k))
                         
-                        # 设置 Tooltip
+                        # 设置 Tooltip：先取 tags，再查最新财报日期，组合成一个 HTML
                         tags_info = get_tags_for_symbol(keyword)
                         if isinstance(tags_info, list):
                             tags_info = ", ".join(tags_info)
-                        button.setToolTip(f"<div style='font-size: 20px; background-color: lightyellow; color: black;'>{tags_info}</div>")
+                        latest_date = fetch_latest_earning_date(keyword)
+                        tip_html = (
+                            "<div style='font-size:20px;"
+                            "background-color:lightyellow; color:black;'>"
+                            f"{tags_info}"
+                            f"<br>最新财报: {latest_date}"
+                            "</div>"
+                        )
+                        button.setToolTip(tip_html)
 
                         # 设置右键菜单
                         button.setContextMenuPolicy(Qt.CustomContextMenu)

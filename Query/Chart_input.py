@@ -397,7 +397,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             closest_date_idx = (np.abs(np.array(dates) - marker_date)).argmin()
             closest_date = dates[closest_date_idx]
             price_at_date = prices[closest_date_idx]
-            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='orange', 
+            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='white', 
                                 #  alpha=0.7, zorder=4, picker=5) # 初始设为可见
                                  alpha=0.7, zorder=4, picker=5, visible=show_specific_markers)  # 初始设为不可见
             specific_scatter_points.append((scatter, closest_date, price_at_date, text))
@@ -408,7 +408,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             closest_date_idx = (np.abs(np.array(dates) - marker_date)).argmin()
             closest_date = dates[closest_date_idx]
             price_at_date = prices[closest_date_idx]
-            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='white', 
+            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='orange', 
                                  alpha=0.7, zorder=4, picker=5, visible=show_earning_markers)
             earning_scatter_points.append((scatter, closest_date, price_at_date, text))
 
@@ -429,11 +429,11 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         )
         all_annotations.append((annotation, 'global', date, price))
 
-    # 为每个特定股票标记点(橙色点)创建固定注释，左右交替偏移
     specific_offsets = [
         (-150, 50),    # 偶数（i=0,2,4…）向右下
         (20, -50)   # 奇数（i=1,3,5…）向左下
     ]
+    # 为每个特定股票标记点(橙色点)创建固定注释，左右交替偏移
     for i, (scatter, date, price, text) in enumerate(specific_scatter_points):
         offset = specific_offsets[i % 2]
         annotation = ax1.annotate(
@@ -442,8 +442,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             xytext=offset,
             textcoords="offset points",
             bbox=dict(boxstyle="round", fc="black", alpha=0.8),
-            arrowprops=dict(arrowstyle="->", color='orange'),
-            color='orange',
+            arrowprops=dict(arrowstyle="->", color='white'),
+            color='white',
             fontsize=12,
             visible=show_specific_markers and show_all_annotations
         )
@@ -458,7 +458,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             textcoords="offset points",
             bbox=dict(boxstyle="round", fc="black", alpha=0.8),
             arrowprops=dict(arrowstyle="->", color='cyan'),
-            color='white',
+            color='orange',
             fontsize=12,
             visible=show_earning_markers and show_all_annotations
         )
@@ -918,11 +918,11 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             
             # 设置颜色
             if has_earning_marker and not (global_marker_text or specific_marker_text):
-                annot.set_color('white')  # 收益公告标记使用黄色文字
+                annot.set_color('orange')  # 收益公告标记使用黄色文字
             elif global_marker_text and not (specific_marker_text or has_earning_marker):
                 annot.set_color('red')    # 全局标记使用红色文字
             elif specific_marker_text and not (global_marker_text or has_earning_marker):
-                annot.set_color('orange')    # 特殊标记使用橘色文字
+                annot.set_color('white')    # 特殊标记使用橘色文字
             elif global_marker_text and (specific_marker_text or has_earning_marker):
                 annot.set_color('purple')    # 全局标记使用红色文字
             else:

@@ -125,30 +125,13 @@
         "XRP": ""
     },
     "Qualified": {
-        "COST": "",
-        "PODD": "",
-        "STE": "",
-        "AAON": "",
-        "SMCI": "",
-        "VCIT": "",
-        "ONON": "",
-        "CROX": "",
-        "DT": ""
+        "ACHR": ""
     },
     "Earning_Filter": {},
     "Watching": {
-        "NVO": "",
-        "BROS": "",
-        "DUOL": "",
-        "INSP": ""
+        "SYM": ""
     },
-    "Next_Week": {
-        "BABA": "",
-        "JD": "",
-        "MNDY": "",
-        "ONON": "",
-        "WIX": ""
-    },
+    "Next_Week": {},
     "Next Week": {
         "ONON": "",
         "MNDY": ""
@@ -163,13 +146,12 @@
         "FDS": "",
         "MRVL": "",
         "PSTG": "",
-        "DRI": ""
-    },
-    "Notification": {
-        "BJ": "",
+        "DRI": "",
+        "COST": "",
         "WDAY": "",
-        "WIX": ""
+        "BJ": ""
     },
+    "Notification": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

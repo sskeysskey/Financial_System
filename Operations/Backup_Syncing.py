@@ -8,7 +8,7 @@ import os
 LOCAL_DOWNLOAD_BACKUP = '/Users/yanzhang/Downloads/backup/DB_backup'
 
 # 新增的带时间戳备份的目标目录
-LOCAL_SERVER_DIR = '/Users/yanzhang/LocalServer/Resources/Finance'
+LOCAL_SERVER_DIR = '/Users/yanzhang/Coding/LocalServer/Resources/Finance'
 # version.json 文件路径
 VERSION_JSON_PATH = os.path.join(LOCAL_SERVER_DIR, 'version.json')
 

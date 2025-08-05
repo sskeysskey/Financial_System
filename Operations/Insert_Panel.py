@@ -1,12 +1,15 @@
 import sys
 import json
 import os
+import re
+import pyperclip
 from PyQt5.QtWidgets import (
     QApplication, QDialog, QVBoxLayout,
     QLineEdit, QLabel, QCheckBox,
     QMessageBox, QDialogButtonBox
 )
 from PyQt5.QtCore import Qt
+import subprocess
 
 # --- 配置区 ---
 
@@ -22,7 +25,19 @@ TARGET_CATEGORIES = [
     "3 Weeks"
 ]
 
-# --- 界面类定义 ---
+def is_uppercase_letters(text: str) -> bool:
+    return bool(re.match(r'^[A-Z]+$', text))
+
+def copy2clipboard():
+    script = '''
+    set the clipboard to ""
+    delay 0.3
+    tell application "System Events"
+        keystroke "c" using {command down}
+        delay 0.5
+    end tell
+    '''
+    subprocess.run(['osascript', '-e', script], check=True)
 
 class SymbolInputDialog(QDialog):
     """
@@ -114,12 +129,7 @@ class CategorySelectionDialog(QDialog):
         else:
             super().keyPressEvent(event)
 
-# --- 主逻辑 ---
-
 def main():
-    """
-    程序主入口和执行流程
-    """
     app = QApplication(sys.argv)
 
     # 1. 检查 JSON 文件是否存在
@@ -134,18 +144,24 @@ def main():
         symbol = sys.argv[1]
         print(f"从命令行参数获取 Symbol: {symbol}")
     else:
-        # 如果没有参数，弹出第一个对话框
-        symbol_dialog = SymbolInputDialog()
-        # .exec_() 会阻塞程序，直到对话框关闭
-        if symbol_dialog.exec_() == QDialog.Accepted:
-            symbol = symbol_dialog.get_symbol()
-            if not symbol:
-                QMessageBox.warning(None, "输入无效", "Symbol 不能为空，程序已终止。")
-                sys.exit(1)
+        copy2clipboard()
+        clipboard_content = pyperclip.paste().strip()
+
+        if not clipboard_content or not is_uppercase_letters(clipboard_content):
+            # 如果剪贴内容不合格或为空，弹出第一个对话框
+            symbol_dialog = SymbolInputDialog()
+            # .exec_() 会阻塞程序，直到对话框关闭
+            if symbol_dialog.exec_() == QDialog.Accepted:
+                symbol = symbol_dialog.get_symbol()
+                if not symbol:
+                    QMessageBox.warning(None, "输入无效", "Symbol 不能为空，程序已终止。")
+                    sys.exit(1)
+            else:
+                # 用户点击了取消或按了 ESC
+                print("用户取消了操作。程序退出。")
+                sys.exit(0)
         else:
-            # 用户点击了取消或按了 ESC
-            print("用户取消了操作。程序退出。")
-            sys.exit(0)
+            symbol = clipboard_content
 
     # 统一将 Symbol 转为大写
     symbol = symbol.upper()
@@ -188,10 +204,10 @@ def main():
                 json.dump(panel_data, f, ensure_ascii=False, indent=4)
             
             # 显示成功信息
-            QMessageBox.information(None, "操作成功",
-                f"Symbol <b style='color:green;'>{symbol}</b> 已成功添加到以下分组：\n\n"
-                f"<b>{', '.join(selected_categories)}</b>"
-            )
+            # QMessageBox.information(None, "操作成功",
+            #     f"Symbol <b style='color:green;'>{symbol}</b> 已成功添加到以下分组：\n\n"
+            #     f"<b>{', '.join(selected_categories)}</b>"
+            # )
             print(f"成功将 '{symbol}' 添加到 {selected_categories}。")
         else:
             QMessageBox.warning(None, "无任何更改", "所有选定的分组在JSON文件中均不存在，文件未被修改。")
