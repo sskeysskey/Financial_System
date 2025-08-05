@@ -28,7 +28,7 @@ panel_json_file     = os.path.join(config_path, "Sectors_panel.json")
 # --- 2. 可配置参数 ---
 NUM_EARNINGS_TO_CHECK = 2  # 查询近 N 次财报
 MIN_DROP_PERCENTAGE   = 0.04 # 最新收盘价必须至少比历史财报日价格低 4%
-MIN_TURNOVER          = 100_000_000  # 策略3：最新交易日的成交额（price * volume）最少 1 亿
+MIN_TURNOVER          = 200_000_000  # 策略3：最新交易日的成交额（price * volume）最少 1 亿
 RISE_DROP_PERCENTAGE = 0.07  # 升序时，最新价要比最高 ER 价至少低 7%
 
 def create_symbol_to_sector_map(json_file_path):

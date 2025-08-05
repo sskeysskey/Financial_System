@@ -393,27 +393,26 @@ class SimilarityViewerWindow(QMainWindow):
         return None, None
     
     def create_source_symbol_widget(self):
-        """为源 Symbol 创建一个专属的信息展示控件"""
-        container = QWidget()
+        """为源 Symbol 创建一整行可点击的控件（除搜索框外）"""
+        # 使用 RowWidget 作为顶层容器
+        container = RowWidget(self.source_symbol, self.on_symbol_click)
         layout = QHBoxLayout(container)
         layout.setContentsMargins(5, 5, 5, 5)
 
-        # 左侧按钮
+        # 1. 左侧按钮
         button = self.create_symbol_button(self.source_symbol)
         button.setMinimumHeight(20)
 
-        # --- 新增：源 symbol 的 Compare 值 ---
+        # 2. 源 symbol 的 Compare 值
         compare_value = self.compare_data.get(self.source_symbol, "")
         compare_label = QLabel(compare_value)
         compare_label.setFixedWidth(150)
         if re.search(r'\d+(?:前|后)|未', compare_value):
             compare_label.setStyleSheet("color: #CD853F;")
         compare_label.setAlignment(Qt.AlignCenter)
-        
-        # ### 修改 2: 使用富文本(HTML)格式化标签，放大字体并突出权重数字 ###
-        highlight_color = "#F9A825" # 与下方权重标签一致的黄色
-        
-        # 构建HTML格式的标签字符串
+
+        # 3. 标签及权重（已在之前修改过：24px，只有非零分显示一位小数）
+        highlight_color = "#F9A825"
         html_tags_parts = []
         for tag, weight in self.source_tags:
             w = float(weight)
@@ -424,30 +423,19 @@ class SimilarityViewerWindow(QMainWindow):
             else:
                 html_tags_parts.append(tag)
         html_tags_str = ", ".join(html_tags_parts)
-        
-        # 创建一个支持富文本的QLabel
-        label = QLabel(f"<div style='font-size: 24px;'><b>   </b> {html_tags_str}</div>")
-        label.setWordWrap(True)
-        label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        tags_label = QLabel(f"<div style='font-size:24px;'>{html_tags_str}</div>")
+        tags_label.setWordWrap(True)
+        tags_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
-        # 按钮、Compare、Tags 三部分并排
+        # 4. 搜索框（不要让它触发 on_symbol_click）
         from PyQt5.QtWidgets import QLineEdit
-        layout.addWidget(button,        1)
-        layout.addWidget(compare_label, 1)
-        layout.addWidget(label,         4)
-
-        # --- 新增：搜索输入框，放到这一行最右侧 ---
-        layout.addStretch()
-        self.search_input = QLineEdit()
-        # 设置大小
-        self.search_input.setFixedWidth(200)
-        self.search_input.setFixedHeight(32)
-        # 放大输入字体
-        font = self.search_input.font()
+        search_input = QLineEdit()
+        search_input.setFixedWidth(200)
+        search_input.setFixedHeight(32)
+        font = search_input.font()
         font.setPointSize(14)
-        self.search_input.setFont(font)
-        # 美化边框、背景、文字颜色
-        self.search_input.setStyleSheet("""
+        search_input.setFont(font)
+        search_input.setStyleSheet("""
             QLineEdit {
                 padding: 4px 8px;
                 border: 1px solid #555;
@@ -459,9 +447,20 @@ class SimilarityViewerWindow(QMainWindow):
                 border: 1px solid #00AEEF;
             }
         """)
-        self.search_input.setPlaceholderText("输入股票代码…")
-        self.search_input.returnPressed.connect(self.on_search)
-        layout.addWidget(self.search_input)
+        search_input.setPlaceholderText("输入股票代码…")
+        search_input.returnPressed.connect(self.on_search)
+        self.search_input = search_input  # 保留原属性
+
+        # 将除 button、search_input 以外的控件都安装 eventFilter
+        for w in (compare_label, tags_label):
+            w.installEventFilter(container)
+
+        # 布局顺序：button、compare、tags、search
+        layout.addWidget(button,        1)
+        layout.addWidget(compare_label, 1)
+        layout.addWidget(tags_label,    4)
+        layout.addStretch()
+        layout.addWidget(search_input)
 
         return container
 

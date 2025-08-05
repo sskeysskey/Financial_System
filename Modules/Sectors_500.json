@@ -51,7 +51,8 @@
         "HLT",
         "GM",
         "CPNG",
-        "DASH"
+        "DASH",
+        "JD"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -91,7 +92,8 @@
         "MPLX",
         "E",
         "LNG",
-        "TRP"
+        "TRP",
+        "PSX"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -185,7 +187,8 @@
         "MCK",
         "COR",
         "BDX",
-        "ALNY"
+        "ALNY",
+        "IDXX"
     ],
     "Industrials": [
         "GE",
@@ -233,7 +236,8 @@
         "EQIX",
         "WELL",
         "SPG",
-        "DLR"
+        "DLR",
+        "O"
     ],
     "Technology": [
         "AAPL",

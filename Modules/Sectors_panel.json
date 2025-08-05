@@ -5,13 +5,19 @@
         "BCC": "建材"
     },
     "Real_Estate": {
-        "NSA": "仓储"
+        "NSA": "仓储",
+        "AVB": "",
+        "ESS": "",
+        "UDR": "",
+        "CPT": ""
     },
     "Energy": {},
     "Technology": {
         "IT": "",
         "ACN": "",
-        "WIX": ""
+        "WIX": "",
+        "FICO": "",
+        "WIT": ""
     },
     "Consumer_Cyclical": {
         "IBP": "建材",
@@ -23,23 +29,31 @@
         "GIS": "",
         "TSN": "",
         "HRL": "",
-        "FRPT": ""
+        "FRPT": "",
+        "MDLZ": "",
+        "CL": "",
+        "CHD": ""
     },
     "Industrials": {
-        "UHAL": ""
+        "UHAL": "",
+        "IEX": "",
+        "LSTR": ""
     },
     "Communication_Services": {
         "NFLX": ""
     },
     "Financial_Services": {
         "BRK-A": "",
-        "AFL": ""
+        "AFL": "",
+        "EG": ""
     },
     "Healthcare": {
         "HUM": "",
         "CVS": "",
         "INSP": "",
-        "PRCT": ""
+        "PRCT": "",
+        "BRKR": "",
+        "SEM": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -124,24 +138,17 @@
     "Earning_Filter": {},
     "Watching": {
         "NVO": "",
-        "TAP": "",
-        "LLY": "",
         "BROS": "",
-        "DRI": "",
         "DUOL": "",
-        "LII": "",
-        "OSCR": "",
-        "RBLX": "",
-        "WST": "",
-        "FRPT": "",
-        "INSP": "",
-        "TSEM": "",
-        "BRKR": "",
-        "W": "",
-        "EHC": "",
-        "AMZN": ""
+        "INSP": ""
     },
-    "Next_Week": {},
+    "Next_Week": {
+        "BABA": "",
+        "JD": "",
+        "MNDY": "",
+        "ONON": "",
+        "WIX": ""
+    },
     "Next Week": {
         "ONON": "",
         "MNDY": ""
@@ -155,9 +162,14 @@
         "KMX": "",
         "FDS": "",
         "MRVL": "",
-        "PSTG": ""
+        "PSTG": "",
+        "DRI": ""
     },
-    "Notification": {},
+    "Notification": {
+        "BJ": "",
+        "WDAY": "",
+        "WIX": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
