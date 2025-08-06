@@ -1,6 +1,5 @@
 {
     "cyan_keywords": [
-        "VRTX",
         "AZN",
         "KO",
         "KDP",
@@ -72,7 +71,6 @@
         "DLR",
         "PNC",
         "MFC",
-        "OKE",
         "BX",
         "ORCL",
         "NOW",
@@ -314,7 +312,6 @@
         "MRVL",
         "TEL",
         "MPWR",
-        "IT",
         "ASX",
         "STX",
         "ZBRA",
@@ -487,7 +484,10 @@
         "WIT",
         "ESS",
         "UDR",
-        "CPT"
+        "CPT",
+        "POST",
+        "OKE",
+        "VRTX"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -729,11 +729,12 @@
         "MOH",
         "ACN",
         "BCC",
-        "INSP",
         "ELS",
         "NSIT",
         "FDS",
-        "ADBE"
+        "ADBE",
+        "BRBR",
+        "IT"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -826,7 +827,8 @@
         "EMN",
         "IEX",
         "LYB",
-        "KMX"
+        "KMX",
+        "INSP"
     ],
     "black_keywords": [
         "Cotton",

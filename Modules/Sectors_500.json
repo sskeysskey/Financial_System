@@ -228,7 +228,8 @@
         "URI",
         "PCAR",
         "LHX",
-        "VRT"
+        "VRT",
+        "CMI"
     ],
     "Real_Estate": [
         "PLD",

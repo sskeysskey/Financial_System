@@ -30,7 +30,7 @@ def read_earnings_release(filepath, error_file_path):
         return {}
 
     # BMO→前，AMC→后，TNS→未
-    period_map = {'BMO': '前', 'AMC': '后', 'TNS': '未'}
+    period_map = {'BMO': '前', 'AMC': '后', 'TNS': '未', 'TAS': '未'}
 
     earnings_companies = {}
 

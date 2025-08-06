@@ -119,7 +119,14 @@ def find_symbols_by_tags(target_tags_with_weight, data):
                 related_symbols[category].append((item['symbol'], matched_tags, tags))
 
     for category in related_symbols:
-        related_symbols[category].sort(key=lambda x: sum(w for _, w in x[1]), reverse=True)
+        related_symbols[category].sort(
+            key=lambda item: (
+                sum(w for _, w in item[1]),              # 先按总分降序
+                fetch_mnspp_data_from_db(DB_PATH, item[0])[1] or 0
+                                                        # 再按 marketcap 降序（None 当做 0）
+            ),
+            reverse=True  # 对 tuple 的每个维度都倒序
+        )
 
     return related_symbols
 
@@ -523,7 +530,7 @@ class SimilarityViewerWindow(QMainWindow):
         return container
 
     def create_symbol_button(self, symbol):
-        """创建并配置一个标准的 Symbol 按钮"""
+        """创建并配置一个标准的 Symbol 按钮，Tooltip 改为最新财报日期"""
         button = SymbolButton(symbol)
         button.setCursor(QCursor(Qt.PointingHandCursor))
         button.setFixedWidth(90)
@@ -532,20 +539,26 @@ class SimilarityViewerWindow(QMainWindow):
         # 左键点击事件
         button.clicked.connect(lambda _, s=symbol: self.on_symbol_click(s))
         
-        # 设置 Tooltip
-        tags_info = self.get_tags_for_symbol(symbol)
-        if isinstance(tags_info, list):
-            tags_info = ", ".join(tags_info)
-        button.setToolTip(f"<div style='font-size: 16px; background-color: #FFFFE0; color: black; padding: 5px;'>{tags_info}</div>")
+        # --- 修改：用最新财报日期替换原来的 tags tooltip ---
+        latest_date, _ = self.get_latest_earning_info(symbol)
+        if latest_date:
+            tooltip_text = f"最新财报日期: {latest_date.isoformat()}"
+        else:
+            tooltip_text = "最新财报日期: 未知"
+        # 仍然用 HTML 格式美化一下
+        button.setToolTip(
+            f"<div style='font-size:16px; background-color:#FFFFE0; "
+            f"color:black; padding:5px;'>{tooltip_text}</div>"
+        )
         
         # 右键菜单事件
         button.setContextMenuPolicy(Qt.CustomContextMenu)
         button.customContextMenuRequested.connect(lambda pos, s=symbol: self.show_context_menu(s))
 
-        # --- 新增：根据最新财报给符号着色 ---
-        latest_date, latest_price = self.get_latest_earning_info(symbol)
-        if latest_date:
-            days_diff = (date.today() - latest_date).days
+        # --- 根据最新财报给符号着色（不改） ---
+        latest_date2, latest_price = self.get_latest_earning_info(symbol)
+        if latest_date2:
+            days_diff = (date.today() - latest_date2).days
         else:
             days_diff = 999
         if days_diff <= 30:
