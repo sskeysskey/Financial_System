@@ -1,70 +1,22 @@
 {
-    "Basic_Materials": {
-        "WFG": "木业",
-        "CBT": "化学品",
-        "BCC": "建材"
-    },
-    "Real_Estate": {
-        "NSA": "仓储",
-        "AVB": "",
-        "ESS": "",
-        "UDR": "",
-        "CPT": ""
-    },
-    "Energy": {
-        "OKE": ""
-    },
-    "Technology": {
-        "IT": "",
-        "ACN": "",
-        "WIX": "",
-        "FICO": "",
-        "WIT": "",
-        "FI": "",
-        "NSIT": ""
-    },
+    "Basic_Materials": {},
+    "Real_Estate": {},
+    "Energy": {},
+    "Technology": {},
     "Consumer_Cyclical": {
         "IBP": "建材",
-        "KMX": "",
-        "LULU": "",
-        "MUSA": ""
+        "LULU": ""
     },
     "Utilities": {},
-    "Consumer_Defensive": {
-        "GIS": "",
-        "TSN": "",
-        "HRL": "",
-        "FRPT": "",
-        "MDLZ": "",
-        "CL": "",
-        "CHD": "",
-        "BRBR": "",
-        "POST": ""
-    },
-    "Industrials": {
-        "UHAL": "",
-        "IEX": "",
-        "LSTR": ""
-    },
-    "Communication_Services": {
-        "NFLX": ""
-    },
+    "Consumer_Defensive": {},
+    "Industrials": {},
+    "Communication_Services": {},
     "Financial_Services": {
-        "BRK-A": "",
-        "AFL": "",
-        "EG": "",
-        "V": "",
-        "FDS": ""
+        "BRK-A": ""
     },
     "Healthcare": {
         "HUM": "",
-        "CVS": "",
-        "INSP": "",
-        "PRCT": "",
-        "BRKR": "",
-        "SEM": "",
-        "VRTX": "",
-        "WAT": ""
+        "CVS": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -140,23 +92,22 @@
     },
     "Earning_Filter": {},
     "Watching": {
-        "SYM": ""
-    },
-    "Next_Week": {
-        "CAVA": "",
+        "SYM": "",
         "CDW": "",
-        "IDXX": "",
         "MCD": "",
         "OSCR": "",
-        "PODD": ""
+        "PODD": "",
+        "WIX": "",
+        "UHAL": "",
+        "PRCT": ""
     },
+    "Next_Week": {},
     "Next Week": {
         "ONON": "",
         "MNDY": ""
     },
     "2 Weeks": {
-        "CPRT": "",
-        "PANW": ""
+        "CPRT": ""
     },
     "3 Weeks": {
         "IOT": "",
@@ -167,11 +118,12 @@
         "DRI": "",
         "COST": "",
         "WDAY": "",
-        "BJ": ""
+        "BJ": "",
+        "ACN": "",
+        "GIS": "",
+        "HRL": ""
     },
-    "Notification": {
-        "CPRT": ""
-    },
+    "Notification": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

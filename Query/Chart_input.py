@@ -973,27 +973,54 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 current_date = matplotlib.dates.num2date(event.xdata).replace(tzinfo=None)
                 vline.set_xdata(current_date)
                 vline.set_visible(True)
-                fig.canvas.draw_idle()
-                x_data, y_data = line1.get_data()
-                nearest_index = (np.abs(np.array(x_data) - current_date)).argmin()
 
-                # 判断鼠标位置是否接近数据点的容差（tolerance）值来提高敏感度，根据差值判断是否接近某个数据点
-                # 如果你将它调大，比如改为 0.1 或 0.2，那么即便鼠标离数据点稍远一些，仍然可以触发高亮蓝色价格点
+                x_data, y_data = line1.get_data()
+                # 找到最近的点
+                nearest_index = (np.abs(np.array(x_data) - current_date)).argmin()
+                selected_date = x_data[nearest_index]
+                selected_price = y_data[nearest_index]
+
+                # --- 新增：根据是否命中标记点来切换高亮点颜色 ---
+                highlight_color = 'cyan'  # 默认
+                # 红色全局标记
+                for _, date, _, _ in global_scatter_points:
+                    if date == selected_date:
+                        highlight_color = 'red'
+                        break
+                else:
+                    # 白色特定标记
+                    for _, date, _, _ in specific_scatter_points:
+                        if date == selected_date:
+                            highlight_color = 'white'
+                            break
+                    else:
+                        # 橙色收益公告标记
+                        for _, date, _, _ in earning_scatter_points:
+                            if date == selected_date:
+                                highlight_color = 'orange'
+                                break
+                # 应用到 highlight_point
+                highlight_point.set_color(highlight_color)
+                # --------------------------------------------------------
+
+                # 只有非常靠近数据点时才显示高亮和注释
                 date_distance = 0.2 * ((ax1.get_xlim()[1] - ax1.get_xlim()[0]) / 365)
                 if np.isclose(
-                    matplotlib.dates.date2num(x_data[nearest_index]),
+                    matplotlib.dates.date2num(selected_date),
                     matplotlib.dates.date2num(current_date),
                     atol=date_distance
                 ):
                     update_annot({"ind": [nearest_index]})
                     annot.set_visible(True)
-                    highlight_point.set_offsets([x_data[nearest_index], y_data[nearest_index]])
+                    highlight_point.set_offsets([[selected_date, selected_price]])
                     highlight_point.set_visible(True)
                 else:
                     annot.set_visible(False)
                     highlight_point.set_visible(False)
+
                 fig.canvas.draw_idle()
             else:
+                # 鼠标移出绘图区
                 vline.set_visible(False)
                 annot.set_visible(False)
                 highlight_point.set_visible(False)

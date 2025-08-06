@@ -28,7 +28,7 @@ panel_json_file     = os.path.join(config_path, "Sectors_panel.json")
 # --- 2. 可配置参数 ---
 NUM_EARNINGS_TO_CHECK = 2  # 查询近 N 次财报
 MIN_DROP_PERCENTAGE   = 0.04 # 最新收盘价必须至少比历史财报日价格低 4%
-MIN_TURNOVER          = 200_000_000  # 策略3：最新交易日的成交额（price * volume）最少 1 亿
+MIN_TURNOVER          = 100_000_000  # 策略3：最新交易日的成交额（price * volume）最少 1 亿
 RISE_DROP_PERCENTAGE = 0.07  # 升序时，最新价要比最高 ER 价至少低 7%
 
 def create_symbol_to_sector_map(json_file_path):
@@ -189,7 +189,7 @@ def process_stocks():
     # 策略1：最新收盘价被过去N次财报的最低值还低
     filtered_1 = []
     
-    # 策略2：过去N次财报都是上升，且收盘价比（N次财报中收盘价最高值）低4%
+    # 策略2：过去N次财报都是上升，且收盘价比（N次财报中收盘价最高值）低4%，且最近一次的财报日期要和最新收盘价日期间隔不少于7天
     filtered_2 = []
 
     # 策略3：最新价 < 过去N次财报最低价，且交易日落在下次财报前7~20天窗口
@@ -278,13 +278,21 @@ def process_stocks():
             else:
                 print(f"[filtered_1] 条件不满足: {symbol}")
 
-            # 策略 2: N 次财报日收盘价递增 && 最新价比最近一次财报价低至少 4%
+            # 策略 2: N 次财报日收盘价递增 && 最新价比最近一次财报价低至少 4%，且最近一次的财报日期要和最新收盘价日期间隔不少于7天
             # 将 prices 按时间升序排列
             asc_prices = list(reversed(earnings_day_prices))
             increasing = all(asc_prices[i] < asc_prices[i+1] for i in range(len(asc_prices)-1))
             most_recent_er_price = earnings_day_prices[0]  # 第一项是最近一次财报收盘价
+            # —— 新增：计算最近一次财报日到最新交易日的天数差 —— 
+            last_er_date = datetime.datetime.strptime(earnings_dates[0], "%Y-%m-%d").date()
+            days_since_er = (latest_date - last_er_date).days
+            date_ok = days_since_er >= 7
+            if not date_ok:
+                print(f"    - 跳过策略2: 最新交易日({latest_date_str})距最近财报日({earnings_dates[0]})仅 {days_since_er} 天 (<7天)")
+
             orig_cond2 = increasing and (latest_price < most_recent_er_price * threshold)
-            cond2 = orig_cond2 and turnover_ok
+            # 把 date_ok 并入最终判断
+            cond2 = orig_cond2 and turnover_ok and date_ok
             if cond2:
                 print(f"*** [filtered_2] 条件满足: {symbol} 的过去 {NUM_EARNINGS_TO_CHECK} 次财报日收盘价递增，且最新价 {latest_price} 比最近一次财报价 {most_recent_er_price} 低 {MIN_DROP_PERCENTAGE*100:.0f}%。 ***")
                 filtered_2.append(symbol)

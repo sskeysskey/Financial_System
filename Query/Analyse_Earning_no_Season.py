@@ -24,7 +24,7 @@ def analyze_financial_data():
     target_json_for_filter_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
     blacklist_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
 
-    TURNOVER_THRESHOLD = 200_000_000  # 成交额阈值：一亿五千万
+    TURNOVER_THRESHOLD = 100_000_000  # 成交额阈值：一亿五千万
     PRICE_DROP_PERCENTAGE = 0.07     # 价格回撤阈值：7%
     RECENT_EARNINGS_COUNT   = 2            # —— 可配置：取最近 N 次财报（原来写死 3，现在改为 2）
 
