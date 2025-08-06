@@ -147,8 +147,19 @@ class TagEditor(QMainWindow):
                 widget_to_remove.deleteLater()
         self.list_widgets.clear()
 
-        # 根据权重排序，确保栏目顺序稳定
+        # 1) 先按 float 正常排序
         sorted_weights = sorted(self.data.keys(), key=float)
+
+        # 2) 如果有 "2.0" 和 "1.3"，把 "2.0" 插到 "1.3" 后面
+        if "2.0" in sorted_weights and "1.3" in sorted_weights:
+            sorted_weights.remove("2.0")
+            idx = sorted_weights.index("1.3") + 1
+            sorted_weights.insert(idx, "2.0")
+
+        # 3) 如果有 "1.5"，永远移到最后
+        if "1.5" in sorted_weights:
+            sorted_weights.remove("1.5")
+            sorted_weights.append("1.5")
 
         for weight in sorted_weights:
             # 每个栏目是一个独立的垂直布局（标题+列表）

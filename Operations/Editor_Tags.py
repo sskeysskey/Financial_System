@@ -313,8 +313,12 @@ class TagEditor(QMainWindow):
         
         if new_tag:
             if new_tag not in self.current_item['tag']:
-                self.current_item['tag'].append(new_tag)
-                self.tags_list.addItem(new_tag)
+                # 插入到最前面
+                self.current_item['tag'].insert(0, new_tag)
+                self.tags_list.insertItem(0, new_tag)
+                # （可选）立即选中并滚动到最上面
+                self.tags_list.setCurrentRow(0)
+                self.tags_list.scrollToItem(self.tags_list.currentItem())
                 self.new_tag_input.clear()
             else:
                 QMessageBox.information(self, "提示", "该标签已存在。")
