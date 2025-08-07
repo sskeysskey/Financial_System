@@ -1,22 +1,52 @@
 {
     "Basic_Materials": {},
-    "Real_Estate": {},
-    "Energy": {},
-    "Technology": {},
+    "Real_Estate": {
+        "ESS": ""
+    },
+    "Energy": {
+        "OKE": ""
+    },
+    "Technology": {
+        "FI": "",
+        "IT": "",
+        "WIT": "",
+        "NSIT": "",
+        "ENPH": "",
+        "VERX": ""
+    },
     "Consumer_Cyclical": {
         "IBP": "建材",
         "LULU": ""
     },
     "Utilities": {},
-    "Consumer_Defensive": {},
-    "Industrials": {},
+    "Consumer_Defensive": {
+        "MDLZ": "",
+        "POST": "",
+        "MKC": "",
+        "FRPT": ""
+    },
+    "Industrials": {
+        "WSO": "",
+        "UHAL": "",
+        "MIDD": ""
+    },
     "Communication_Services": {},
     "Financial_Services": {
-        "BRK-A": ""
+        "BRK-A": "",
+        "MKTX": ""
     },
     "Healthcare": {
         "HUM": "",
-        "CVS": ""
+        "CVS": "",
+        "NVO": "",
+        "CNC": "",
+        "WAT": "",
+        "MOH": "",
+        "DVA": "",
+        "BRKR": "",
+        "LNTH": "",
+        "INSP": "",
+        "PRCT": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -101,7 +131,23 @@
         "UHAL": "",
         "PRCT": ""
     },
-    "Next_Week": {},
+    "Next_Week": {
+        "BEKE": "",
+        "BRKR": "",
+        "BROS": "",
+        "CROX": "",
+        "CWAN": "",
+        "EPAM": "",
+        "FOUR": "",
+        "INSP": "",
+        "JD": "",
+        "LLY": "",
+        "MNDY": "",
+        "ONON": "",
+        "PAYC": "",
+        "SE": "",
+        "STE": ""
+    },
     "Next Week": {
         "ONON": "",
         "MNDY": ""
@@ -123,7 +169,12 @@
         "GIS": "",
         "HRL": ""
     },
-    "Notification": {},
+    "Notification": {
+        "BEKE": "",
+        "JD": "",
+        "MNDY": "",
+        "ONON": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

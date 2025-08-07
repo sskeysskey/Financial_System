@@ -430,7 +430,6 @@
         "SLG",
         "MAC",
         "ARM",
-        "INFY",
         "GTLB",
         "MTSI",
         "S",
@@ -487,7 +486,11 @@
         "CPT",
         "POST",
         "OKE",
-        "VRTX"
+        "VRTX",
+        "MKC",
+        "DVA",
+        "MIDD",
+        "VERX"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -646,7 +649,6 @@
         "WYNN",
         "THO",
         "RH",
-        "FUN",
         "ASO",
         "WFRD",
         "TDW",
@@ -726,7 +728,6 @@
         "BAH",
         "TAP",
         "CHE",
-        "MOH",
         "ACN",
         "BCC",
         "ELS",
@@ -734,7 +735,8 @@
         "FDS",
         "ADBE",
         "BRBR",
-        "IT"
+        "IT",
+        "INFY"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -819,7 +821,6 @@
         "EIX",
         "STZ",
         "LULU",
-        "CNC",
         "PEP",
         "FTV",
         "LW",
@@ -828,7 +829,9 @@
         "IEX",
         "LYB",
         "KMX",
-        "INSP"
+        "INSP",
+        "FUN",
+        "MOH"
     ],
     "black_keywords": [
         "Cotton",
@@ -914,7 +917,8 @@
         "WPP",
         "HRL",
         "UPS",
-        "DOW"
+        "DOW",
+        "CNC"
     ],
     "green_keywords": [
         "EURCNY",

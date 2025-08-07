@@ -192,8 +192,12 @@ def process_stocks():
     # 策略2：过去N次财报都是上升，且收盘价比（N次财报中收盘价最高值）低4%，且最近一次的财报日期要和最新收盘价日期间隔不少于7天
     filtered_2 = []
 
+    filtered_2_5 = []     # 新增：策略2.5
+
     # 策略3：最新价 < 过去N次财报最低价，且交易日落在下次财报前7~20天窗口
     filtered_3 = []    # 新增：策略3
+
+    filtered_3_5 = []     # 新增：策略3.5
 
     conn = None
     try:
@@ -299,6 +303,34 @@ def process_stocks():
             else:
                 print(f"[filtered_2] 条件不满足: {symbol}")
 
+            # 策略 2.5 过去N次财报保持上升，且最近的4次财报里至少有一次财报的收盘价要比该symbol的最新收盘价高7%以上
+            # ① 取最近4次财报日期
+            cursor.execute(
+                "SELECT date FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 4",
+                (symbol,)
+            )
+            dates4 = [r[0] for r in cursor.fetchall()]
+            if len(dates4) == 4:
+                # ② 取这4次的收盘价
+                prices4 = []
+                for d in dates4:
+                    cursor.execute(
+                        f'SELECT price FROM "{table_name}" WHERE name = ? AND date = ?',
+                        (symbol, d)
+                    )
+                    r = cursor.fetchone()
+                    if r:
+                        prices4.append(r[0])
+                if len(prices4) == 4:
+                    # 检查前 N 次是否递增
+                    asc_N = list(reversed(prices4))[:NUM_EARNINGS_TO_CHECK]
+                    increasing_N = all(asc_N[i] < asc_N[i+1] for i in range(len(asc_N)-1))
+                    # 检查 4 次里是否有一次 > 最新价 × 1.07
+                    any_high = any(p > latest_price * 1.07 for p in prices4)
+                    if increasing_N and any_high and turnover_ok and date_ok:
+                        print(f"*** [filtered_2_5] {symbol} 通过：前{NUM_EARNINGS_TO_CHECK}次递增 + 4次中有价 > 最新价×1.07 ***")
+                        filtered_2_5.append(symbol)
+
         # -----------------------------
         # 第二遍: 全表扫描 Earning，跑 策略3
         # -----------------------------
@@ -396,6 +428,31 @@ def process_stocks():
             else:
                 print("  [filtered_3] × (未通过)")
 
+            # --- 策略3.5: 过去N次财报保持上升，且最近的4次财报里至少有一次财报的收盘价要比该symbol的最新收盘价高7%以上
+            if asc_prices[0] < asc_prices[1]:
+                # ① 取最近4次财报日期
+                cursor.execute(
+                    "SELECT date FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 4",
+                    (symbol,)
+                )
+                dates4 = [r[0] for r in cursor.fetchall()]
+                if len(dates4) == 4:
+                    # ② 取这4次的收盘价
+                    prices4 = []
+                    for d in dates4:
+                        cursor.execute(
+                            f'SELECT price FROM "{table_name}" WHERE name = ? AND date = ?',
+                            (symbol, d)
+                        )
+                        r = cursor.fetchone()
+                        if r: prices4.append(r[0])
+                    if len(prices4) == 4:
+                        any_high = any(p > latest_price * 1.07 for p in prices4)
+                        # 与策略3其余条件相同：turnover_ok, window_start ≤ latest_date ≤ window_end
+                        if any_high and turnover_ok and (window_start <= latest_date <= window_end):
+                            print(f"  [filtered_3_5] ✓ {symbol} 通过：前{NUM_EARNINGS_TO_CHECK}次递增 + 4次中有价 > 最新价×1.07")
+                            filtered_3_5.append(symbol)
+
         print("\n数据库处理完成。")
     except sqlite3.Error as e:
         print(f"数据库错误: {e}")
@@ -450,9 +507,9 @@ def process_stocks():
         return filtered
 
     # --- 结果汇总 ---
-    combined_filtered = sorted(list(set(filtered_1 + filtered_2)))
+    combined_filtered = sorted(set(filtered_1 + filtered_2 + filtered_2_5))
     # 对 filtered_3 也进行排序和去重
-    filtered_3 = sorted(list(set(filtered_3)))
+    filtered_3 = sorted(set(filtered_3 + filtered_3_5))
     
     print(f"\n策略结果汇总 (过滤前):")
     print(f"  策略 1+2 (主列表) 找到: {len(combined_filtered)} 个 - {combined_filtered}")
