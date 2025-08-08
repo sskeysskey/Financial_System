@@ -12,11 +12,16 @@
         "WIT": "",
         "NSIT": "",
         "ENPH": "",
-        "VERX": ""
+        "VERX": "",
+        "ACN": "",
+        "FTNT": "",
+        "FICO": "",
+        "GIB": ""
     },
     "Consumer_Cyclical": {
         "IBP": "建材",
-        "LULU": ""
+        "LULU": "",
+        "CROX": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -30,10 +35,14 @@
         "UHAL": "",
         "MIDD": ""
     },
-    "Communication_Services": {},
+    "Communication_Services": {
+        "SEAT": ""
+    },
     "Financial_Services": {
         "BRK-A": "",
-        "MKTX": ""
+        "MKTX": "",
+        "V": "",
+        "FDS": ""
     },
     "Healthcare": {
         "HUM": "",
@@ -46,7 +55,8 @@
         "BRKR": "",
         "LNTH": "",
         "INSP": "",
-        "PRCT": ""
+        "PRCT": "",
+        "LLY": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -122,41 +132,34 @@
     },
     "Earning_Filter": {},
     "Watching": {
-        "SYM": "",
         "CDW": "",
         "MCD": "",
         "OSCR": "",
         "PODD": "",
         "WIX": "",
         "UHAL": "",
-        "PRCT": ""
+        "PRCT": "",
+        "CROX": "",
+        "SE": ""
     },
     "Next_Week": {
-        "BEKE": "",
-        "BRKR": "",
-        "BROS": "",
-        "CROX": "",
-        "CWAN": "",
-        "EPAM": "",
-        "FOUR": "",
-        "INSP": "",
-        "JD": "",
-        "LLY": "",
-        "MNDY": "",
-        "ONON": "",
-        "PAYC": "",
-        "SE": "",
-        "STE": ""
+        "DT": "",
+        "IT": "",
+        "NICE": ""
     },
     "Next Week": {
         "ONON": "",
         "MNDY": ""
     },
     "2 Weeks": {
-        "CPRT": ""
+        "CPRT": "",
+        "HD": "",
+        "LOW": ""
     },
     "3 Weeks": {
+        "AVAV": "",
         "IOT": "",
+        "CHWY": "",
         "KMX": "",
         "FDS": "",
         "MRVL": "",
@@ -167,13 +170,12 @@
         "BJ": "",
         "ACN": "",
         "GIS": "",
-        "HRL": ""
+        "HRL": "",
+        "SAIC": ""
     },
     "Notification": {
-        "BEKE": "",
-        "JD": "",
-        "MNDY": "",
-        "ONON": ""
+        "NICE": "",
+        "YMM": ""
     },
     "Currencies": {
         "DXY": "美元指数",

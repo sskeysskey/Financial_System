@@ -474,7 +474,10 @@
         "ILS",
         "FCAL",
         "NULG",
-        "COLO"
+        "COLO",
+        "IDV",
+        "AOM",
+        "topetf_250808"
     ],
     "Basic_Materials": [
         "LIN",
@@ -1506,7 +1509,8 @@
         "MIR",
         "OMAB",
         "SMR",
-        "PRIM"
+        "PRIM",
+        "FLY"
     ],
     "Real_Estate": [
         "PLD",

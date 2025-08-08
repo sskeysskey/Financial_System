@@ -52,8 +52,7 @@
         "GM",
         "CPNG",
         "DASH",
-        "JD",
-        "HMC"
+        "JD"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -187,7 +186,8 @@
         "MCK",
         "COR",
         "ALNY",
-        "IDXX"
+        "IDXX",
+        "BDX"
     ],
     "Industrials": [
         "GE",
