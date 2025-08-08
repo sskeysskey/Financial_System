@@ -1,211 +1,77 @@
-import sys
-import json
-import os
-from PyQt5.QtWidgets import (
-    QApplication, QDialog, QVBoxLayout,
-    QLineEdit, QLabel, QCheckBox,
-    QMessageBox, QDialogButtonBox
-)
-from PyQt5.QtCore import Qt
+import sqlite3
+import pandas as pd
+import numpy as np
+from scipy import stats
 
-# --- 配置区 ---
-
-# 请将这里替换为您 JSON 文件的实际路径
-JSON_FILE_PATH = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json"
-
-# 您指定要显示在第二个界面中的分组
-TARGET_CATEGORIES = [
-    "Qualified",
-    "Watching",
-    "Next Week",
-    "2 Weeks",
-    "3 Weeks"
+# —— 参数区 —— 
+DB_PATH     = "/Users/yanzhang/Coding/Database/Finance.db"
+TABLES      = [
+    'Basic_Materials','Consumer_Cyclical','Real_Estate','Energy',
+    'Technology','Utilities','Industrials','Consumer_Defensive',
+    'Communication_Services','Financial_Services','Healthcare'
 ]
+WINDOW        = 30       # 滚动窗口大小（天）
+AMP_THRESH    = 0.04     # 振幅阈值，如 0.04 表示 4%
+SLOPE_THRESH  = 0.0005   # 斜率阈值
 
-# --- 界面类定义 ---
-
-class SymbolInputDialog(QDialog):
+# —— 算法函数 —— 
+def detect_sideways(price_series, window, amp_thresh, slope_thresh):
     """
-    第一个界面：用于输入 Symbol 的对话框。
+    给定一支股票的收盘价序列 price_series (pd.Series)，
+    返回一个布尔 pd.Series，标记每一天是否满足“横盘震荡”。
     """
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("第一步：输入 Symbol")
-        self.setMinimumWidth(300)
+    df = pd.DataFrame({'price': price_series})
+    # 1) 振幅 = (window 期内 max - min) / mean
+    df['high_max'] = df['price'].rolling(window).max()
+    df['low_min']  = df['price'].rolling(window).min()
+    df['mid_price']= df['price'].rolling(window).mean()
+    df['amplitude'] = (df['high_max'] - df['low_min']) / df['mid_price']
 
-        # 布局
-        layout = QVBoxLayout(self)
+    # 2) 线性回归斜率
+    def _slope(x):
+        y = x.values
+        t = np.arange(len(y))
+        return stats.linregress(t, y).slope
 
-        # 提示标签和输入框
-        self.label = QLabel("请输入 Symbol:", self)
-        self.symbol_input = QLineEdit(self)
-        self.symbol_input.setPlaceholderText("例如：AAPL")
+    df['slope'] = df['price'].rolling(window).apply(_slope, raw=False)
 
-        # 按钮
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
-        button_box.button(QDialogButtonBox.Ok).setText("确认")
-        button_box.button(QDialogButtonBox.Cancel).setText("取消")
+    # 3) 同时满足振幅和斜率阈值
+    return (df['amplitude'] < amp_thresh) & (df['slope'].abs() < slope_thresh)
 
-        # 添加到布局
-        layout.addWidget(self.label)
-        layout.addWidget(self.symbol_input)
-        layout.addWidget(button_box)
-
-        # --- 信号与槽连接 ---
-        # 1. 点击 "确认" 或 "取消" 按钮
-        button_box.accepted.connect(self.accept)
-        button_box.rejected.connect(self.reject)
-        # 2. 在输入框中按回车键
-        self.symbol_input.returnPressed.connect(self.accept)
-
-    def get_symbol(self):
-        """获取输入框中的文本"""
-        return self.symbol_input.text().strip()
-
-    def keyPressEvent(self, event):
-        """处理按键事件，实现 ESC 关闭"""
-        if event.key() == Qt.Key_Escape:
-            self.reject()
-        else:
-            super().keyPressEvent(event)
-
-
-class CategorySelectionDialog(QDialog):
-    """
-    第二个界面：用于选择分组的对话框。
-    """
-    def __init__(self, symbol, categories, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("第二步：选择分组")
-        self.setMinimumWidth(300)
-
-        # 布局
-        layout = QVBoxLayout(self)
-
-        # 提示标签
-        self.label = QLabel(f"为 Symbol <b style='color:blue;'>{symbol}</b> 选择一个或多个分组:", self)
-        layout.addWidget(self.label)
-
-        # 复选框
-        self.checkboxes = []
-        for category in categories:
-            checkbox = QCheckBox(category, self)
-            self.checkboxes.append(checkbox)
-            layout.addWidget(checkbox)
-
-        # 按钮
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
-        button_box.button(QDialogButtonBox.Ok).setText("确认")
-        button_box.button(QDialogButtonBox.Cancel).setText("取消")
-        layout.addWidget(button_box)
-
-        # --- 信号与槽连接 ---
-        button_box.accepted.connect(self.accept)
-        button_box.rejected.connect(self.reject)
-
-    def get_selected_categories(self):
-        """获取所有被选中的复选框的文本"""
-        return [cb.text() for cb in self.checkboxes if cb.isChecked()]
-
-    def keyPressEvent(self, event):
-        """处理按键事件，实现 ESC 关闭"""
-        if event.key() == Qt.Key_Escape:
-            self.reject()
-        else:
-            super().keyPressEvent(event)
-
-# --- 主逻辑 ---
-
+# —— 主流程 —— 
 def main():
-    """
-    程序主入口和执行流程
-    """
-    app = QApplication(sys.argv)
+    conn = sqlite3.connect(DB_PATH)
+    all_results = []
 
-    # 1. 检查 JSON 文件是否存在
-    if not os.path.exists(JSON_FILE_PATH):
-        QMessageBox.critical(None, "错误", f"关键文件未找到，请检查路径：\n{JSON_FILE_PATH}")
-        sys.exit(1)
+    for tbl in TABLES:
+        # 1) 读表
+        sql = f"SELECT date, name, price FROM {tbl}"
+        df = pd.read_sql_query(sql, conn, parse_dates=['date'])
+        df.sort_values(['name','date'], inplace=True)
 
-    # 2. 确定 Symbol (来自命令行参数或弹窗)
-    symbol = None
-    # 检查是否有命令行参数 (sys.argv[0] 是脚本名, sys.argv[1] 是第一个参数)
-    if len(sys.argv) > 1:
-        symbol = sys.argv[1]
-        print(f"从命令行参数获取 Symbol: {symbol}")
+        # 2) 按股票分组，逐支股票检测
+        for symbol, grp in df.groupby('name'):
+            grp = grp.reset_index(drop=True)
+            if len(grp) < WINDOW:
+                continue  # 数据不够
+            sideways_flags = detect_sideways(grp['price'], WINDOW, AMP_THRESH, SLOPE_THRESH)
+            # 如果最后一天为 True，就认为它“当前”处于横盘震荡
+            if sideways_flags.iloc[-1]:
+                all_results.append({
+                    'table': tbl,
+                    'symbol': symbol,
+                    'last_date': grp['date'].iloc[-1],
+                    'last_price': grp['price'].iloc[-1]
+                })
+
+    conn.close()
+
+    result_df = pd.DataFrame(all_results)
+    if result_df.empty:
+        print("当前没有股票满足横盘震荡条件。")
     else:
-        # 如果没有参数，弹出第一个对话框
-        symbol_dialog = SymbolInputDialog()
-        # .exec_() 会阻塞程序，直到对话框关闭
-        if symbol_dialog.exec_() == QDialog.Accepted:
-            symbol = symbol_dialog.get_symbol()
-            if not symbol:
-                QMessageBox.warning(None, "输入无效", "Symbol 不能为空，程序已终止。")
-                sys.exit(1)
-        else:
-            # 用户点击了取消或按了 ESC
-            print("用户取消了操作。程序退出。")
-            sys.exit(0)
+        print("当前处于横盘震荡的股票：")
+        print(result_df.sort_values(['table','symbol']).to_string(index=False))
 
-    # 统一将 Symbol 转为大写
-    symbol = symbol.upper()
-
-    # 3. 选择分组
-    category_dialog = CategorySelectionDialog(symbol, TARGET_CATEGORIES)
-    selected_categories = []
-    if category_dialog.exec_() == QDialog.Accepted:
-        selected_categories = category_dialog.get_selected_categories()
-        if not selected_categories:
-            QMessageBox.warning(None, "选择无效", "您没有选择任何分组，程序已终止。")
-            sys.exit(1)
-    else:
-        # 用户点击了取消或按了 ESC
-        print("用户取消了操作。程序退出。")
-        sys.exit(0)
-
-    # 4. 更新 JSON 文件
-    try:
-        # 读取现有数据
-        with open(JSON_FILE_PATH, 'r', encoding='utf-8') as f:
-            panel_data = json.load(f)
-
-        # 更新数据
-        update_count = 0
-        for category in selected_categories:
-            # 确保分组存在于 JSON 数据中
-            if category in panel_data:
-                panel_data[category][symbol] = ""
-                update_count += 1
-            else:
-                # 如果分组不存在，可以选择创建它或发出警告
-                print(f"警告：分组 '{category}' 在 JSON 文件中不存在，已跳过。")
-
-        # 如果有任何成功的更新，则写回文件
-        if update_count > 0:
-            with open(JSON_FILE_PATH, 'w', encoding='utf-8') as f:
-                # ensure_ascii=False 保证中文正常显示
-                # indent=4 保持漂亮的格式
-                json.dump(panel_data, f, ensure_ascii=False, indent=4)
-            
-            # 显示成功信息
-            QMessageBox.information(None, "操作成功",
-                f"Symbol <b style='color:green;'>{symbol}</b> 已成功添加到以下分组：\n\n"
-                f"<b>{', '.join(selected_categories)}</b>"
-            )
-            print(f"成功将 '{symbol}' 添加到 {selected_categories}。")
-        else:
-            QMessageBox.warning(None, "无任何更改", "所有选定的分组在JSON文件中均不存在，文件未被修改。")
-
-
-    except json.JSONDecodeError:
-        QMessageBox.critical(None, "文件错误", f"无法解析 JSON 文件，请检查文件格式：\n{JSON_FILE_PATH}")
-        sys.exit(1)
-    except Exception as e:
-        QMessageBox.critical(None, "未知错误", f"发生了一个意外错误：\n{e}")
-        sys.exit(1)
-
-    sys.exit(0)
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

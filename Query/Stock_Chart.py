@@ -145,7 +145,7 @@ def get_user_input_qt(prompt):
     - 如果用户点击 "OK"，返回输入的文本；如果点击 "Cancel" 或关闭窗口，返回 None。
     """
     # 获取剪贴板内容
-    clipboard_content = QApplication.clipboard().text()
+    clipboard_content = QApplication.clipboard().text().strip()
 
     # 显示输入对话框
     # QInputDialog.getText() 返回一个元组 (text, ok_pressed)
@@ -158,7 +158,7 @@ def get_user_input_qt(prompt):
     )
 
     if ok and user_input:
-        return user_input
+        return user_input.strip()   # 如果你也想去掉用户手动输入的空白
     else:
         # 如果用户取消或输入为空，则返回None
         return None
@@ -174,8 +174,8 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         arg = sys.argv[1]
         if arg == "paste":
-            # pyperclip.paste() 依然可用，或者使用Qt的剪贴板
-            clipboard_content = pyperclip.paste()
+            # pyperclip.paste() 依然可用，或者使用Qt的剪贴板，去掉两端空白
+            clipboard_content = pyperclip.paste().strip()
             # 调用更新后的 input_mapping
             input_mapping(data, db_path, clipboard_content)
         elif arg == "input":

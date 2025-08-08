@@ -1,39 +1,28 @@
 {
     "Basic_Materials": {},
-    "Real_Estate": {
-        "ESS": ""
-    },
+    "Real_Estate": {},
     "Energy": {
         "OKE": ""
     },
     "Technology": {
         "FI": "",
-        "IT": "",
         "WIT": "",
-        "NSIT": "",
         "ENPH": "",
-        "VERX": "",
         "ACN": "",
         "FTNT": "",
         "FICO": "",
         "GIB": ""
     },
     "Consumer_Cyclical": {
-        "IBP": "建材",
-        "LULU": "",
-        "CROX": ""
+        "LULU": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
-        "MDLZ": "",
-        "POST": "",
         "MKC": "",
         "FRPT": ""
     },
     "Industrials": {
-        "WSO": "",
-        "UHAL": "",
-        "MIDD": ""
+        "WSO": ""
     },
     "Communication_Services": {
         "SEAT": ""
@@ -128,7 +117,8 @@
         "XRP": ""
     },
     "Qualified": {
-        "ACHR": ""
+        "AAON": {},
+        "NICE": ""
     },
     "Earning_Filter": {},
     "Watching": {
@@ -140,21 +130,27 @@
         "UHAL": "",
         "PRCT": "",
         "CROX": "",
-        "SE": ""
+        "SE": "",
+        "TTD": {},
+        "FERG": {},
+        "ADI": {},
+        "SMTC": {},
+        "CAVA": {},
+        "URBN": {},
+        "ACHR": ""
     },
-    "Next_Week": {
-        "DT": "",
-        "IT": "",
-        "NICE": ""
-    },
+    "Next_Week": {},
     "Next Week": {
-        "ONON": "",
-        "MNDY": ""
+        "CIG": {},
+        "INTA": {},
+        "EAT": {},
+        "TPR": {}
     },
     "2 Weeks": {
         "CPRT": "",
         "HD": "",
-        "LOW": ""
+        "LOW": "",
+        "JHX": {}
     },
     "3 Weeks": {
         "AVAV": "",
@@ -171,12 +167,11 @@
         "ACN": "",
         "GIS": "",
         "HRL": "",
-        "SAIC": ""
+        "SAIC": "",
+        "ANF": {},
+        "PVH": {}
     },
-    "Notification": {
-        "NICE": "",
-        "YMM": ""
-    },
+    "Notification": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
@@ -218,7 +213,14 @@
     "Economics": {
         "USTrade": "05 USTrade",
         "USNonPMI": "05 USNonPMI",
-        "USInitial": "07 USInitial"
+        "USInitial": "07 USInitial",
+        "CoreCPI": "12 CoreCPI",
+        "USCPI": "12 USCPI",
+        "USPPI": "14 USPPI",
+        "CorePPI": "14 CorePPI",
+        "USRetailM": "15 USRetailM",
+        "ImportPriceM": "15 ImportPriceM",
+        "USConfidence": "15 USConfidence"
     },
     "Economic_All": {
         "USGDP": "",

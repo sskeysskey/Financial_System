@@ -546,7 +546,8 @@
         "ANSS",
         "HES",
         "BPMC",
-        "SKX"
+        "SKX",
+        "PARA"
     ],
     "etf": [
         "VDE",
@@ -762,6 +763,7 @@
         "JMTG",
         "OPPE",
         "FCOR",
-        "LKOR"
+        "LKOR",
+        "SPTL"
     ]
 }

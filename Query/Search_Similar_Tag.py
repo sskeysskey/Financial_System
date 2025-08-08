@@ -32,6 +32,8 @@ WEIGHT_CONFIG_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/tags_weigh
 COMPARE_DATA_PATH = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
 DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
 SECTORS_ALL_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
+# --- 新增：分组面板配置文件路径 ---
+PANEL_CONFIG_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
 
 # --- 默认权重 ---
 DEFAULT_WEIGHT = Decimal('1')
@@ -245,8 +247,10 @@ class SimilarityViewerWindow(QMainWindow):
         self.source_symbol = source_symbol
         self.source_tags = source_tags
         self.related_symbols = related_symbols
+
+        self.panel_config      = all_data.get('panel_config', {})
+        self.panel_config_path = all_data.get('panel_config_path')
         
-        # 将所有需要的数据存储为实例变量
         # 将所有需要的数据存储为实例变量
         self.all_data = all_data
         self.json_data    = all_data['description']
@@ -376,6 +380,37 @@ class SimilarityViewerWindow(QMainWindow):
         self.clear_content()
         self.populate_ui(self.main_layout)
     
+    def copy_symbol_to_group(self, symbol: str, group: str):
+        """
+        将 symbol “复制” 到 panel_config[group]，避免重复，
+        并写回 JSON 文件。
+        """
+        cfg = self.panel_config
+        if group not in cfg:
+            # 如果这个组本来不存在，就新建一个 list
+            cfg[group] = []
+
+        # 根据类型决定如何添加
+        if isinstance(cfg[group], dict):
+            if symbol in cfg[group]:
+                return  # 已有，不重复
+            cfg[group][symbol] = {}  # 或者根据需要写入一个空 dict
+        elif isinstance(cfg[group], list):
+            if symbol in cfg[group]:
+                return
+            cfg[group].append(symbol)
+        else:
+            QMessageBox.warning(self, "错误", f"组 {group} 类型不支持: {type(cfg[group])}")
+            return
+
+        # 写回 JSON
+        try:
+            with open(self.panel_config_path, 'w', encoding='utf-8') as f:
+                json.dump(cfg, f, ensure_ascii=False, indent=4)
+            QMessageBox.information(self, "复制成功", f"已将 {symbol} 复制到组「{group}」")
+        except Exception as e:
+            QMessageBox.critical(self, "保存失败", f"写入 {self.panel_config_path} 时出错: {e}")
+            
     def get_latest_earning_info(self, symbol: str) -> tuple[date|None, float|None]:
         """
         从 Earning 表里拿 symbol 的最新财报日期和 price。
@@ -601,24 +636,44 @@ class SimilarityViewerWindow(QMainWindow):
 
     # ### 修改 2: 扩展右键菜单的选项 ###
     def show_context_menu(self, symbol):
-        """创建并显示一个包含丰富选项的右键上下文菜单"""
+        """创建并显示一个包含丰富选项的右键上下文菜单（新增“移动”子菜单）"""
         menu = QMenu(self)
-        
-        # 定义菜单项：(文本, 回调函数)
+
+        # --- 新增：移动（复制到组）子菜单 ---
+        # --- 新增：移动（复制到组）子菜单，只显示指定的五个分组 ---
+        move_menu = menu.addMenu("移动")
+        allowed_groups = ["Qualified", "Watching", "Next Week", "2 Weeks", "3 Weeks"]
+        for group in allowed_groups:
+            # 如果 panel_config 里没有这个组，也让它显示（第一次复制时会新建）
+            in_cfg = False
+            if group in self.panel_config:
+                val = self.panel_config[group]
+                if isinstance(val, dict):
+                    in_cfg = (symbol in val)
+                elif isinstance(val, list):
+                    in_cfg = (symbol in val)
+            # 创建动作
+            act = QAction(group, self)
+            act.setEnabled(not in_cfg)
+            act.triggered.connect(lambda _,
+                                s=symbol,
+                                g=group: self.copy_symbol_to_group(s, g))
+            move_menu.addAction(act)
+        menu.addSeparator()
+
+        # --- 原有菜单项照搬 ---
         actions = [
             ("在富途中搜索", lambda: execute_external_script('futu', symbol)),
-            ("编辑 Tags", lambda: execute_external_script('tags', symbol)),
-            None,  # 分隔符
-            ("找相似", lambda: execute_external_script('similar', symbol)),
-            None,  # 分隔符
+            ("编辑 Tags",     lambda: execute_external_script('tags', symbol)),
+            None,
+            ("找相似",       lambda: execute_external_script('similar', symbol)),
+            None,
             ("添加到 Earning", lambda: execute_external_script('earning', symbol)),
             ("编辑 Earing DB", lambda: execute_external_script('editor_earning', symbol)),
             ("Kimi检索财报", lambda: execute_external_script('kimi', symbol)),
-            None,  # 分隔符
-            ("加入黑名单", lambda: execute_external_script('blacklist', symbol)),
+            None,
+            ("加入黑名单",   lambda: execute_external_script('blacklist', symbol)),
         ]
-
-        # 动态创建并添加菜单项
         for item in actions:
             if item is None:
                 menu.addSeparator()
@@ -627,7 +682,7 @@ class SimilarityViewerWindow(QMainWindow):
                 action = QAction(text, self)
                 action.triggered.connect(callback)
                 menu.addAction(action)
-        
+
         menu.exec_(QCursor.pos())
         
     # ### 修改 1: 增加键盘事件处理，实现ESC键关闭功能 ###
@@ -735,6 +790,10 @@ class SimilarityViewerWindow(QMainWindow):
         QMenu::item:selected {
             background-color: #007ACC;
         }
+        /* ——— 新增：禁用状态下文字变灰 ——— */
+        QMenu::item:disabled {
+            color: #777777;
+        }
         QMenu::separator {
             height: 1px;
             background: #555;
@@ -772,12 +831,17 @@ if __name__ == '__main__':
         tags_weight_config = {tag: weight for weight, tags in weight_groups.items() for tag in tags}
         compare_data = load_compare_data(COMPARE_DATA_PATH)
         sector_data = load_json_data(SECTORS_ALL_PATH)
+        # --- 新增：加载分组面板配置 ---
+        panel_config     = load_json_data(PANEL_CONFIG_PATH)
         
         all_data_package = {
             "description": description_data,
             "compare":    compare_data,
             "sectors":    sector_data,
-            "tags_weight": tags_weight_config
+            "tags_weight": tags_weight_config,
+            # --- 传入 panel 配置 和 路径 ---
+            "panel_config":      panel_config,
+            "panel_config_path": PANEL_CONFIG_PATH,
         }
     except Exception as e:
         QMessageBox.critical(None, "错误", f"加载数据文件时出错: {e}")

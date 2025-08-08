@@ -31,6 +31,25 @@ MIN_DROP_PERCENTAGE   = 0.04 # 最新收盘价必须至少比历史财报日价�
 MIN_TURNOVER          = 100_000_000  # 策略3：最新交易日的成交额（price * volume）最少 1 亿
 RISE_DROP_PERCENTAGE = 0.07  # 升序时，最新价要比最高 ER 价至少低 7%
 
+def filter_negative_earning_last_month(symbols, cursor):
+    """
+    剔除掉那些在最近 30 天内有 price < 0 财报的 symbols。
+    """
+    today = datetime.date.today()
+    one_month_ago = today - datetime.timedelta(days=30)
+    out = []
+    for sym in symbols:
+        cursor.execute(
+            "SELECT price FROM Earning WHERE name = ? AND date >= ?",
+            (sym, one_month_ago.isoformat())
+        )
+        rows = cursor.fetchall()
+        if any(r[0] is not None and r[0] < 0 for r in rows):
+            print(f"    - 剔除 {sym}：最近一个月有负值财报 → {[r[0] for r in rows if r[0]<0]}")
+        else:
+            out.append(sym)
+    return out
+
 def create_symbol_to_sector_map(json_file_path):
     """
     读取Sectors_All.json文件，并创建一个从股票代码到板块名称的映射。
@@ -273,7 +292,7 @@ def process_stocks():
 
             threshold = 1 - MIN_DROP_PERCENTAGE
 
-            # 策略 1: 最新价比所有 N 次财报日价格都低至少 4%
+            # 策略 1: 最新价比所有 N 次财报日价格都低至少 4%，自动剔除了那些在最近 30 天内有负值财报记录的股票
             orig_cond1 = all(latest_price < p * threshold for p in earnings_day_prices)
             cond1 = orig_cond1 and turnover_ok
             if cond1:
@@ -282,7 +301,7 @@ def process_stocks():
             else:
                 print(f"[filtered_1] 条件不满足: {symbol}")
 
-            # 策略 2: N 次财报日收盘价递增 && 最新价比最近一次财报价低至少 4%，且最近一次的财报日期要和最新收盘价日期间隔不少于7天
+            # 策略 2: N 次财报日收盘价递增 && 最新价比最近一次财报价低至少 4%，且最近一次的财报日期要和最新收盘价日期间隔不少于7天，自动剔除了那些在最近 30 天内有负值财报记录的股票
             # 将 prices 按时间升序排列
             asc_prices = list(reversed(earnings_day_prices))
             increasing = all(asc_prices[i] < asc_prices[i+1] for i in range(len(asc_prices)-1))
@@ -510,6 +529,10 @@ def process_stocks():
     combined_filtered = sorted(set(filtered_1 + filtered_2 + filtered_2_5))
     # 对 filtered_3 也进行排序和去重
     filtered_3 = sorted(set(filtered_3 + filtered_3_5))
+
+    # 额外过滤：剔除最近一个月内有负值财报的 symbol
+    print("\n--- 额外过滤：最近一个月有负值财报 → 剔除 ---")
+    combined_filtered = filter_negative_earning_last_month(combined_filtered, cursor)
     
     print(f"\n策略结果汇总 (过滤前):")
     print(f"  策略 1+2 (主列表) 找到: {len(combined_filtered)} 个 - {combined_filtered}")

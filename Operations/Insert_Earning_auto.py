@@ -25,6 +25,7 @@ SECTORS_JSON_PATH = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All
 DB_PATH = "/Users/yanzhang/Coding/Database/Finance.db"
 DESCRIPTION_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
 COMPARE_DATA_PATH = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
+PANEL_CONFIG_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
 
 PERIOD_DISPLAY = {
     "BMO": "↩︎",
@@ -179,6 +180,12 @@ class MainWindow(QMainWindow):
         self.conn = sqlite3.connect(self.db_path)
         self.conn.row_factory = sqlite3.Row
         self.cur = self.conn.cursor()
+
+        # --- 新增：加载移动分组配置 ---
+        from json import load
+        with open(PANEL_CONFIG_PATH, 'r', encoding='utf-8') as f:
+            self.panel_config = load(f, object_pairs_hook=OrderedDict)
+        self.panel_config_path = PANEL_CONFIG_PATH
 
         self._init_ui()
 
@@ -337,6 +344,22 @@ class MainWindow(QMainWindow):
 
         symbol = symbol_button.text()
 
+        menu = QMenu()
+
+        # --- 新增：移动（复制到组）子菜单 ---
+        move_menu = menu.addMenu("移动")
+        allowed_groups = ["Qualified", "Watching", "Next Week", "2 Weeks", "3 Weeks"]
+        for group in allowed_groups:
+            # 判断 symbol 是否已在该组中
+            cfg_val = self.panel_config.get(group, [])
+            in_cfg = symbol in (cfg_val if isinstance(cfg_val, list) else cfg_val.keys())
+            act = QAction(group, self)
+            act.setEnabled(not in_cfg)
+            act.triggered.connect(partial(self.copy_symbol_to_group, symbol, group))
+            move_menu.addAction(act)
+        menu.addSeparator()
+
+        # --- 原有脚本执行菜单项 ---
         menu_config = [
             ("新增事件", "event_input"), None,
             ("编辑 Tags", "tags"), None,
@@ -346,19 +369,49 @@ class MainWindow(QMainWindow):
             ("新增 财报", "input_earning"), ("编辑 Earing 数据", "editor_earning"), None,
             ("加入黑名单", "blacklist"),
         ]
-
-        menu = QMenu()
-        for item_config in menu_config:
-            if item_config is None:
+        for item in menu_config:
+            if item is None:
                 menu.addSeparator()
             else:
-                label, script_type = item_config
+                label, script_type = item
                 action = QAction(label, self)
                 action.triggered.connect(partial(execute_external_script, script_type, symbol))
                 menu.addAction(action)
 
         menu.exec_(QCursor.pos())
 
+    def copy_symbol_to_group(self, symbol: str, group: str):
+        """
+        将 symbol 复制到 panel_config[group]（避免重复），并写回 JSON 文件。
+        """
+        cfg = self.panel_config
+        val = cfg.get(group)
+        # 如果不存在，就新建 list
+        if val is None:
+            cfg[group] = []
+            val = cfg[group]
+
+        # 支持 list 或 dict 两种格式
+        if isinstance(val, list):
+            if symbol in val:
+                return
+            val.append(symbol)
+        elif isinstance(val, dict):
+            if symbol in val:
+                return
+            val[symbol] = {}
+        else:
+            QMessageBox.warning(self, "错误", f"组 {group} 类型不支持: {type(val)}")
+            return
+
+        # 写回 JSON 文件
+        try:
+            with open(self.panel_config_path, 'w', encoding='utf-8') as f:
+                json.dump(cfg, f, ensure_ascii=False, indent=4)
+            QMessageBox.information(self, "复制成功", f"已将 {symbol} 复制到组「{group}」")
+        except Exception as e:
+            QMessageBox.critical(self, "保存失败", f"写入 {self.panel_config_path} 时出错: {e}")
+    
     def on_symbol_button_clicked(self, symbol):
         """当 Symbol 按钮被点击时，从数据库获取数据并显示图表"""
         # ←—— 在这里重新加载你可能修改过的文件

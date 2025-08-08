@@ -25,8 +25,10 @@ def analyze_financial_data():
     blacklist_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
 
     TURNOVER_THRESHOLD = 100_000_000  # 成交额阈值：一亿五千万
-    PRICE_DROP_PERCENTAGE = 0.07     # 价格回撤阈值：7%
+    PRICE_DROP_PERCENTAGE_SMALL = 0.07   # 市值 < 阈值 时用 7%
     RECENT_EARNINGS_COUNT   = 2            # —— 可配置：取最近 N 次财报（原来写死 3，现在改为 2）
+    PRICE_DROP_PERCENTAGE_LARGE = 0.04   # 市值 >= 阈值 时用 4%
+    MARKETCAP_THRESHOLD     = 100_000_000_000  # 1000 亿
 
     # --- 1.1. 确保 backup 目录存在 ---
     # 这是一个好的编程习惯，确保在写入文件前，其所在的目录是存在的
@@ -167,14 +169,27 @@ def analyze_financial_data():
                     
                     # 从查询结果中解包得到价格和成交量
                     latest_price, latest_volume = latest_data_result
+                    # --- 新增：根据市值动态选择回撤阈值 ---
+                    cursor.execute("SELECT marketcap FROM MNSPP WHERE symbol = ?", (symbol,))
+                    row_mc = cursor.fetchone()
+                    if row_mc is None:
+                        # 如果在 MNSPP 表里查不到，默认用小市值的标准
+                        drop_pct = PRICE_DROP_PERCENTAGE_SMALL
+                    else:
+                        marketcap = row_mc[0]
+                        if marketcap < MARKETCAP_THRESHOLD:
+                            drop_pct = PRICE_DROP_PERCENTAGE_SMALL
+                        else:
+                            drop_pct = PRICE_DROP_PERCENTAGE_LARGE
 
-                    # 条件2: 最新价 < 所有财报日中的最低价
-                    # 条件3: 最新价 < 最新财报日价格 * (1 - 7%)
-                    price_condition_2 = latest_price <= latest_earning_price * (1 - PRICE_DROP_PERCENTAGE)
+                    print(f"    市值={marketcap:,.0f}, 使用回撤阈值={drop_pct:.0%}")
+
+                    # 条件2: 最新价 < 最新财报日价格 * (1 - X%)
+                    # 市值小于 1000 亿的股票依然按 7% 回撤筛选；市值 1000 亿及以上的则只需回撤 4%。
+                    price_condition_2 = latest_price <= latest_earning_price * (1 - drop_pct)
 
                     # if price_condition_1 and price_condition_2:
                     if price_condition_2:
-                        
                         # 计算最新成交额
                         latest_turnover = latest_price * latest_volume
                         
@@ -185,7 +200,7 @@ def analyze_financial_data():
                             print(f"    - 最近财报日均价: {average_of_recent_earnings:.2f}, 最新财报日价格: {latest_earning_price:.2f} (价格高于均价 ✅)")
                             print(f"    ---------------------------------")
                             print(f"    - 所有财报日最低价: {min_price_on_earning_dates:.2f}")
-                            print(f"    - 最新价比财报日价低至少 {PRICE_DROP_PERCENTAGE:.0%}: {latest_price:.2f} <= {latest_earning_price * (1 - PRICE_DROP_PERCENTAGE):.2f} (✅)")
+                            print(f"    - 最新价比财报日价低至少 {drop_pct:.0%}: {latest_price:.2f} <= {latest_earning_price * (1 - drop_pct):.2f} (✅)")
                             print(f"    - 股票当前最新价: {latest_price:.2f} (低于所有财报日最低价 ✅)")
                             print(f"    ---------------------------------")
                             print(f"    - 最新成交额: {latest_turnover:,.2f} (>= {TURNOVER_THRESHOLD:,.0f} ✅)")
