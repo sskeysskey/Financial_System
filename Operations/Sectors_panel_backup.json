@@ -30,7 +30,7 @@
     "Utilities": {},
     "Consumer_Defensive": {
         "MKC": "味好美",
-        "FRPT": "宠物食品",
+        "FRPT": "宠物",
         "MDLZ": "奥利奥",
         "CHD": "冲牙器"
     },
@@ -89,14 +89,14 @@
     },
     "Commodities": {
         "CrudeOil": "",
-        "Huangjin": "",
+        "Huangjin": "黄金",
         "Naturalgas": "",
         "BalticDry": "",
         "Silver": "",
         "Copper": "",
         "Uranium": "",
-        "Nickel": "",
-        "Aluminum": "",
+        "Nickel": "镍",
+        "Aluminum": "铝",
         "Steel": "",
         "IronOre": "",
         "Platinum": "",

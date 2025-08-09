@@ -686,21 +686,22 @@ class MainWindow(QMainWindow):
                         formatted_compare_html = ""
                         if raw_compare:
                             # 找百分号及前面的数字
-                            m = re.search(r"[-+]?\d+\.\d+%", raw_compare)
+                            m = re.search(r"([-+]?\d+(?:\.\d+)?)%", raw_compare)
                             if m:
-                                percent = m.group(0)
-                                idx = raw_compare.find(percent)
-                                prefix = raw_compare[:idx].strip()                 # “06后” 之类
-                                suffix = raw_compare[idx + len(percent):]          # “*-” 之类，原样保留
+                                # 1) 把捕获组里的数字转成 float，再格式化到一位小数
+                                num = float(m.group(1))
+                                percent_fmt = f"{num:.1f}%"
 
-                                # 橙色粗体前缀
+                                # 2) 找到原始字符串中百分号片段，用来切 prefix/suffix
+                                orig = m.group(0)
+                                idx  = raw_compare.find(orig)
+                                prefix, suffix = raw_compare[:idx].strip(), raw_compare[idx + len(orig):]
+
+                                # 3) 拼 HTML
                                 prefix_html = f"<span style='color:orange;'>{prefix}</span>"
-                                # 百分比：正红 负绿
-                                color = "red" if not percent.startswith('-') else "green"
-                                percent_html = f"<span style='color:{color};'>{percent}</span>"
-                                # 后缀无变色
-                                suffix_html = f"<span>{suffix}</span>"
-
+                                color       = "red" if num >= 0 else "green"
+                                percent_html = f"<span style='color:{color};'>{percent_fmt}</span>"
+                                suffix_html  = f"<span>{suffix}</span>"
                                 formatted_compare_html = prefix_html + percent_html + suffix_html
                             else:
                                 # 整段无 %，全橙色
