@@ -386,15 +386,16 @@ class SimilarityViewerWindow(QMainWindow):
         并写回 JSON 文件。
         """
         cfg = self.panel_config
-        if group not in cfg:
-            # 如果这个组本来不存在，就新建一个 list
-            cfg[group] = []
 
-        # 根据类型决定如何添加
+        # 如果这个组本来不存在，默认建成 dict，和现有 "Watching" 结构保持一致
+        if group not in cfg:
+            cfg[group] = {}
+
         if isinstance(cfg[group], dict):
             if symbol in cfg[group]:
                 return  # 已有，不重复
-            cfg[group][symbol] = {}  # 或者根据需要写入一个空 dict
+            # 原来是 {}，改为 ""，避免写成 "ADI": {}
+            cfg[group][symbol] = ""
         elif isinstance(cfg[group], list):
             if symbol in cfg[group]:
                 return

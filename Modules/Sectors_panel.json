@@ -135,7 +135,7 @@
         "XRP": ""
     },
     "Qualified": {
-        "AAON": {},
+        "AAON": "",
         "NICE": ""
     },
     "Earning_Filter": {},
@@ -149,26 +149,26 @@
         "PRCT": "",
         "CROX": "",
         "SE": "",
-        "TTD": {},
-        "FERG": {},
-        "ADI": {},
-        "SMTC": {},
-        "CAVA": {},
-        "URBN": {},
+        "TTD": "",
+        "FERG": "",
+        "ADI": "",
+        "SMTC": "",
+        "CAVA": "",
+        "URBN": "",
         "ACHR": ""
     },
     "Next_Week": {},
     "Next Week": {
-        "CIG": {},
-        "INTA": {},
-        "EAT": {},
-        "TPR": {}
+        "CIG": "",
+        "INTA": "",
+        "EAT": "",
+        "TPR": ""
     },
     "2 Weeks": {
         "CPRT": "",
         "HD": "",
         "LOW": "",
-        "JHX": {}
+        "JHX": ""
     },
     "3 Weeks": {
         "AVAV": "",
@@ -186,8 +186,8 @@
         "GIS": "",
         "HRL": "",
         "SAIC": "",
-        "ANF": {},
-        "PVH": {}
+        "ANF": "",
+        "PVH": ""
     },
     "Notification": {},
     "Currencies": {
@@ -231,7 +231,7 @@
     "Economics": {
         "USTrade": "05 USTrade",
         "USNonPMI": "05 USNonPMI",
-        "USInitial": "07 USInitial",
+        "USInitial": "14 USInitial",
         "CoreCPI": "12 CoreCPI",
         "USCPI": "12 USCPI",
         "USPPI": "14 USPPI",

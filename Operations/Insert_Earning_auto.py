@@ -382,29 +382,29 @@ class MainWindow(QMainWindow):
 
     def copy_symbol_to_group(self, symbol: str, group: str):
         """
-        将 symbol 复制到 panel_config[group]（避免重复），并写回 JSON 文件。
+        将 symbol “复制” 到 panel_config[group]，避免重复，
+        并写回 JSON 文件。
         """
         cfg = self.panel_config
-        val = cfg.get(group)
-        # 如果不存在，就新建 list
-        if val is None:
-            cfg[group] = []
-            val = cfg[group]
 
-        # 支持 list 或 dict 两种格式
-        if isinstance(val, list):
-            if symbol in val:
+        # 如果这个组本来不存在，默认建成 dict，和现有 "Watching" 结构保持一致
+        if group not in cfg:
+            cfg[group] = {}
+
+        if isinstance(cfg[group], dict):
+            if symbol in cfg[group]:
+                return  # 已有，不重复
+            # 原来是 {}，改为 ""，避免写成 "ADI": {}
+            cfg[group][symbol] = ""
+        elif isinstance(cfg[group], list):
+            if symbol in cfg[group]:
                 return
-            val.append(symbol)
-        elif isinstance(val, dict):
-            if symbol in val:
-                return
-            val[symbol] = {}
+            cfg[group].append(symbol)
         else:
-            QMessageBox.warning(self, "错误", f"组 {group} 类型不支持: {type(val)}")
+            QMessageBox.warning(self, "错误", f"组 {group} 类型不支持: {type(cfg[group])}")
             return
 
-        # 写回 JSON 文件
+        # 写回 JSON
         try:
             with open(self.panel_config_path, 'w', encoding='utf-8') as f:
                 json.dump(cfg, f, ensure_ascii=False, indent=4)
