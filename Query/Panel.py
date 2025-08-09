@@ -9,8 +9,8 @@ from PyQt5.QtWidgets import (
     QPushButton, QGroupBox, QScrollArea, QTextEdit, QDialog,
     QInputDialog, QMenu
 )
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont, QCursor
+from PyQt5.QtCore import Qt, QMimeData, QPoint
+from PyQt5.QtGui import QFont, QCursor, QDrag
 
 # ----------------------------------------------------------------------
 # Update sys.path so we can import from custom modules
@@ -55,31 +55,57 @@ keyword_colors = {}
 sector_data = {}
 json_data = {}
 
+class DraggableGroupBox(QGroupBox):
+    def __init__(self, title, group_name, parent=None):
+        super().__init__(title, parent)
+        self.group_name = group_name
+        self.setAcceptDrops(True)
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasFormat('application/x-symbol'):
+            event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        data = bytes(event.mimeData().data('application/x-symbol')).decode()
+        symbol, src_group = data.split('|')
+        # 计算目标索引：根据 y 坐标落在哪个子 widget 之前
+        layout = self.layout()
+        pos = event.pos().y()
+        dst_index = layout.count()
+        for i in range(layout.count()):
+            w = layout.itemAt(i).widget()
+            if w and pos < w.y() + w.height()//2:
+                dst_index = i
+                break
+        # 调用 MainWindow 的 reorder_item
+        mw: MainWindow = self.window()
+        mw.reorder_item(symbol, src_group, self.group_name, dst_index)
+        event.acceptProposedAction()
+
 class SymbolButton(QPushButton):
-    """
-    支持：
-      - 普通左键点击：触发 button.clicked
-      - Alt(⌥)+左键：执行 find similar
-      - Shift+左键：在富途中搜索
-    """
-    def __init__(self, text, symbol, parent=None):
+    def __init__(self, text, symbol, group, parent=None):
         super().__init__(text, parent)
         self._symbol = symbol
+        self._group = group
+        self._drag_start_pos = QPoint()
 
     def mousePressEvent(self, event):
-        # 只处理左键
         if event.button() == Qt.LeftButton:
-            mods = event.modifiers()
-            if mods & Qt.AltModifier:
-                # Option + 左键 → 找相似
-                execute_external_script('similar', self._symbol)
-                return
-            elif mods & Qt.ShiftModifier:
-                # Shift + 左键 → 富途搜索
-                execute_external_script('futu', self._symbol)
-                return
-        # 其他情况（普通左键、右键等）按默认行为走
+            self._drag_start_pos = event.pos()
         super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if not (event.buttons() & Qt.LeftButton):
+            return super().mouseMoveEvent(event)
+        if (event.pos() - self._drag_start_pos).manhattanLength() < QApplication.startDragDistance():
+            return
+        # 开始拖拽
+        drag = QDrag(self)
+        mime = QMimeData()
+        payload = f"{self._symbol}|{self._group}"
+        mime.setData('application/x-symbol', payload.encode('utf-8'))
+        drag.setMimeData(mime)
+        drag.exec_(Qt.MoveAction)
 
 class SymbolManager:
     def __init__(self, config_data, all_categories):
@@ -409,6 +435,35 @@ class MainWindow(QMainWindow):
         """
         self.setStyleSheet(qss)
 
+    def reorder_item(self, symbol, src_group, dst_group, dst_index):
+        cfg = self.config
+        # 跨组：复用 move_item
+        if src_group != dst_group:
+            self.move_item(symbol, src_group, dst_group)
+            return
+
+        # 同组内重排序
+        container = cfg.get(src_group)
+        if isinstance(container, list):
+            lst = container
+            old = lst.index(symbol)
+            lst.insert(dst_index, lst.pop(old))
+        elif isinstance(container, dict):
+            # dict 需要重建 OrderedDict
+            keys = list(container.keys())
+            vals = list(container.values())
+            old = keys.index(symbol)
+            key = keys.pop(old); val = vals.pop(old)
+            keys.insert(dst_index, key); vals.insert(dst_index, val)
+            cfg[src_group] = OrderedDict(zip(keys, vals))
+        else:
+            return  # 不支持的类型
+
+        # 写回并刷新
+        with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
+            json.dump(cfg, f, ensure_ascii=False, indent=4)
+        self.refresh_selection_window()
+    
     def lighten_color(self, color_name, factor=1.1):
         """一个简单的函数来让颜色变亮，用于:hover效果"""
         from PyQt5.QtGui import QColor
@@ -449,7 +504,8 @@ class MainWindow(QMainWindow):
                         continue
 
                     # 下面才是原来的代码：
-                    group_box = QGroupBox()
+                    display_sector_name = self.display_name_map.get(sector, sector)
+                    group_box = DraggableGroupBox(display_sector_name, sector)
                     group_box.setLayout(QVBoxLayout())
                     column_layouts[index].addWidget(group_box)
 
@@ -462,9 +518,6 @@ class MainWindow(QMainWindow):
                     # 再一次防护：如果 limit 之后还是空，也直接跳过
                     if not items:
                         continue
-
-                    # 标题、按钮……一切照旧
-                    display_sector_name = self.display_name_map.get(sector, sector)
                     
                     # 2. 使用获取到的显示名称来构建最终的标题文本。
                     total = len(keywords)
@@ -482,7 +535,7 @@ class MainWindow(QMainWindow):
                         # 创建主按钮
                         button_text = translation if translation else keyword
                         button_text += f" {compare_data.get(keyword, '')}"
-                        button = SymbolButton(button_text, keyword)
+                        button = SymbolButton(button_text, keyword, sector)
                         button.setObjectName(self.get_button_style_name(keyword))
                         button.setCursor(QCursor(Qt.PointingHandCursor))
                         button.clicked.connect(lambda _, k=keyword: self.on_keyword_selected_chart(k))

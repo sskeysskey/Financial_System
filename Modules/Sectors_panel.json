@@ -30,28 +30,23 @@
     },
     "Utilities": {},
     "Consumer_Defensive": {
-        "MKC": "",
-        "FRPT": "",
-        "MDLZ": "",
-        "CHD": ""
+        "MKC": "味好美",
+        "FRPT": "宠物食品",
+        "MDLZ": "奥利奥",
+        "CHD": "冲牙器"
     },
     "Industrials": {
         "WSO": "",
-        "LSTR": "",
-        "FLY": ""
+        "LSTR": "货运"
     },
-    "Communication_Services": {
-        "SEAT": ""
-    },
+    "Communication_Services": {},
     "Financial_Services": {
         "BRK-A": "",
         "MKTX": "",
         "V": "",
-        "FDS": "",
-        "FSK": ""
+        "FDS": ""
     },
     "Healthcare": {
-        "HUM": "",
         "CVS": "",
         "NVO": "",
         "CNC": "",
@@ -60,7 +55,6 @@
         "DVA": "",
         "BRKR": "",
         "LNTH": "",
-        "INSP": "",
         "PRCT": "",
         "LLY": "",
         "VRTX": ""
@@ -140,54 +134,42 @@
     },
     "Earning_Filter": {},
     "Watching": {
-        "CDW": "",
-        "MCD": "",
-        "OSCR": "",
-        "PODD": "",
-        "WIX": "",
-        "UHAL": "",
-        "PRCT": "",
-        "CROX": "",
-        "SE": "",
-        "TTD": "",
-        "FERG": "",
+        "BJ": "",
         "ADI": "",
         "SMTC": "",
-        "CAVA": "",
         "URBN": "",
-        "ACHR": ""
-    },
-    "Next_Week": {},
-    "Next Week": {
-        "CIG": "",
+        "ACHR": "",
         "INTA": "",
         "EAT": "",
-        "TPR": ""
-    },
-    "2 Weeks": {
+        "TPR": "",
         "CPRT": "",
         "HD": "",
         "LOW": "",
-        "JHX": ""
-    },
-    "3 Weeks": {
-        "AVAV": "",
+        "JHX": "",
         "IOT": "",
         "CHWY": "",
         "KMX": "",
         "FDS": "",
+        "DRI": ""
+    },
+    "Next_Week": {},
+    "Next Week": {
+        "CIG": ""
+    },
+    "2 Weeks": {},
+    "3 Weeks": {
+        "COST": "",
+        "AVAV": "",
         "MRVL": "",
         "PSTG": "",
-        "DRI": "",
-        "COST": "",
-        "WDAY": "",
-        "BJ": "",
         "ACN": "",
         "GIS": "",
         "HRL": "",
         "SAIC": "",
         "ANF": "",
-        "PVH": ""
+        "PVH": "",
+        "FERG": "",
+        "CAVA": ""
     },
     "Notification": {},
     "Currencies": {

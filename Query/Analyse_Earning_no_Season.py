@@ -219,8 +219,13 @@ def analyze_financial_data():
     else:
         print(f"\n分析完成，共找到 {len(qualified_symbols)} 个符合条件的股票: {sorted(qualified_symbols)}")        
 
-    # --- 5.1.x 新增：剔除 “最新交易日 == 最新财报日” 的 symbol ---
-    print("\n--- 5.1.x 过滤：剔除最新交易日等于最新财报日的 symbol ---")
+    # --- 5.1.1 新增：过滤无效 PE Ratio ---
+    print("\n--- 5.1.1 过滤：剔除无效 PE Ratio ---")
+    qualified_symbols = filter_symbols_by_pe_ratio(qualified_symbols, db_file_path)
+    print(f"PE Ratio 过滤后，剩余 {len(qualified_symbols)} 个 symbol: {qualified_symbols}")
+
+    # --- 5.1.2 新增：剔除 “最新交易日 == 最新财报日” 的 symbol ---
+    print("\n--- 5.1.2 过滤：剔除最新交易日等于最新财报日的 symbol ---")
     # 先构建一个 symbol->sector 映射，方便后面查行情表名
     symbol_to_sector = {
         sym: sector_name
@@ -394,6 +399,42 @@ def update_json_with_earning_filter(symbols_list, target_json_path):
         print(f"错误: 读写 JSON 文件时发生错误: {e}")
     except Exception as e:
         print(f"更新 JSON 文件时发生未知错误: {e}")
+
+def filter_symbols_by_pe_ratio(symbols_to_filter, db_path):
+    """
+    通过检查 MNSPP 表中的 pe_ratio 来过滤股票列表。
+    保留 pe_ratio 有效的股票，过滤掉 None, "", "--", "null"(大小写不敏感)。
+
+    Args:
+        symbols_to_filter (list): 需要过滤的股票代码列表。
+        db_path (str): 数据库文件路径。
+
+    Returns:
+        list: 只包含具有有效 pe_ratio 的股票的新列表。
+    """
+    if not symbols_to_filter:
+        return []
+
+    print(f"  - 开始对 {len(symbols_to_filter)} 个 symbol 进行 PE Ratio 过滤...")
+    valid_symbols = []
+    try:
+        with sqlite3.connect(db_path) as conn:
+            cursor = conn.cursor()
+            for sym in symbols_to_filter:
+                cursor.execute("SELECT pe_ratio FROM MNSPP WHERE symbol = ?", (sym,))
+                row = cursor.fetchone()
+                pe = row[0] if row else None
+                if pe is not None and str(pe).strip().lower() not in ("--", "null", ""):
+                    valid_symbols.append(sym)
+                else:
+                    print(f"    - 过滤 (PE Ratio 无效): {sym} (PE: {pe})")
+    except sqlite3.Error as e:
+        print(f"    - MNSPP 查询数据库错误: {e}")
+        # 查询失败时，保留目前已验证通过的列表
+        return valid_symbols
+
+    print(f"  - PE Ratio 过滤后剩余 {len(valid_symbols)} 个 symbol。")
+    return valid_symbols
 
 
 if __name__ == '__main__':

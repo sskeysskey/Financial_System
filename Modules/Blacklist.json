@@ -350,7 +350,10 @@
         "POR",
         "LYFT",
         "CHTR",
-        "CFLT"
+        "CFLT",
+        "INSP",
+        "FSK",
+        "SEAT"
     ],
     "screener": [
         "CTA-PA",
