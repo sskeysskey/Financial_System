@@ -58,108 +58,130 @@ json_data = {}
 class DraggableGroupBox(QGroupBox):
     def __init__(self, title, group_name, parent=None):
         super().__init__(title, parent)
-        self.group_name = group_name
+        self.group_name   = group_name
         self.setAcceptDrops(True)
-        self._placeholder = None
+        self._placeholder = None    # QFrame 线
+        self._last_index  = None    # 上次插入位置
 
-    def dragEnterEvent(self, event):
-        if event.mimeData().hasFormat('application/x-symbol'):
-            event.acceptProposedAction()
+    def dragEnterEvent(self, ev):
+        if ev.mimeData().hasFormat('application/x-symbol'):
+            ev.acceptProposedAction()
+            self._clear_placeholder()
+            self._last_index = None
 
-    def dragMoveEvent(self, event):
-        if not event.mimeData().hasFormat('application/x-symbol'):
+    def dragMoveEvent(self, ev):
+        if not ev.mimeData().hasFormat('application/x-symbol'):
             return
-        event.acceptProposedAction()
+        ev.acceptProposedAction()
 
-        # 计算当前鼠标下的插入索引
+        # 1) 先取出所有“真实” widget（排除 placeholder）
         layout = self.layout()
-        y = event.pos().y()
-        dst_index = layout.count()
-        for i in range(layout.count()):
-            w = layout.itemAt(i).widget()
-            if w and y < w.y() + w.height()//2:
-                dst_index = i
+        widgets = [layout.itemAt(i).widget()
+                   for i in range(layout.count())
+                   if layout.itemAt(i).widget() is not self._placeholder]
+
+        # 2) 计算应该插到哪个“真实控件”前面
+        y = ev.pos().y()
+        dst = len(widgets)
+        for i, w in enumerate(widgets):
+            mid = w.geometry().center().y()
+            if y < mid:
+                dst = i
                 break
 
-        # 显示插入指示线
-        self._show_placeholder(dst_index)
+        # 3) 只有位置变化时才更新 placeholder
+        if dst != self._last_index:
+            self._show_placeholder_at(widgets, dst)
 
-    def dropEvent(self, event):
-        data = bytes(event.mimeData().data('application/x-symbol')).decode()
-        symbol, src_group = data.split('|')
+    def dropEvent(self, ev):
+        data = ev.mimeData().data('application/x-symbol')
+        symbol, src = bytes(data).decode().split('|')
 
-        # 计算放下时的目标索引
+        # 用上次计算好的 _last_index，如果没有，就实时算一次
+        dst = self._last_index
+        if dst is None:
+            # 同 dragMoveEvent 里的逻辑
+            layout = self.layout()
+            widgets = [layout.itemAt(i).widget()
+                       for i in range(layout.count())
+                       if layout.itemAt(i).widget() is not self._placeholder]
+            y = ev.pos().y()
+            dst = len(widgets)
+            for i, w in enumerate(widgets):
+                if y < w.geometry().center().y():
+                    dst = i
+                    break
+
+        self._clear_placeholder()
+        ev.acceptProposedAction()
+
+        # 通知 MainWindow
+        mw = self.window()
+        mw.reorder_item(symbol, src, self.group_name, dst)
+
+    def dragLeaveEvent(self, ev):
+        self._clear_placeholder()
+
+    def _show_placeholder_at(self, widgets, dst):
+        self._clear_placeholder()
         layout = self.layout()
-        y = event.pos().y()
-        dst_index = layout.count()
+
+        # 计算在 layout 里的插入索引
+        full_idx = 0
         for i in range(layout.count()):
-            w = layout.itemAt(i).widget()
-            if w and y < w.y() + w.height()//2:
-                dst_index = i
+            w2 = layout.itemAt(i).widget()
+            if w2 is self._placeholder:
+                continue
+            if widgets and w2 is widgets[0] and dst == 0:
                 break
+            if w2 is widgets[dst] if dst < len(widgets) else None:
+                break
+            # 如果当前 w2 不是 placeholder，并且它不是我们要插入前的 widget，就++
+            if w2 is not self._placeholder:
+                full_idx += 1
 
-        # 清除指示线
-        self._clear_placeholder()
-
-        # 调用 MainWindow.reorder_item
-        mw: MainWindow = self.window()
-        mw.reorder_item(symbol, src_group, self.group_name, dst_index)
-        event.acceptProposedAction()
-
-    def dragLeaveEvent(self, event):
-        # 鼠标离开时清除指示线
-        self._clear_placeholder()
-
-    def _show_placeholder(self, index):
-        """在 layout 的 index 位置前插一条红线做指示"""
-        # 如果已有 placeholder，且位置没变，跳过
-        if self._placeholder and self.layout().indexOf(self._placeholder) == index:
-            return
-
-        self._clear_placeholder()
-
+        # 创建并插入那条红线
         line = QFrame(self)
         line.setFixedHeight(2)
-        line.setStyleSheet("background-color: red;")
-        # 在线条下方插入到 layout
-        self.layout().insertWidget(index, line)
+        line.setStyleSheet("background-color:red;")
+        layout.insertWidget(full_idx, line)
         self._placeholder = line
+        self._last_index = dst
 
     def _clear_placeholder(self):
         if self._placeholder:
             self.layout().removeWidget(self._placeholder)
             self._placeholder.deleteLater()
             self._placeholder = None
+            self._last_index  = None
 
 class SymbolButton(QPushButton):
     def __init__(self, text, symbol, group, parent=None):
         super().__init__(text, parent)
         self._symbol = symbol
-        self._group = group
-        self._drag_start_pos = QPoint()
+        self._group  = group
+        self._drag_start = QPoint()
 
-    def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            self._drag_start_pos = event.pos()
-        super().mousePressEvent(event)
+    def mousePressEvent(self, ev):
+        if ev.button() == Qt.LeftButton:
+            self._drag_start = ev.pos()
+        super().mousePressEvent(ev)
 
-    def mouseMoveEvent(self, event):
-        if not (event.buttons() & Qt.LeftButton):
-            return super().mouseMoveEvent(event)
-        if (event.pos() - self._drag_start_pos).manhattanLength() < QApplication.startDragDistance():
+    def mouseMoveEvent(self, ev):
+        if not (ev.buttons() & Qt.LeftButton):
+            return super().mouseMoveEvent(ev)
+        if (ev.pos() - self._drag_start).manhattanLength() < QApplication.startDragDistance():
             return
 
-        # 开始拖拽
         drag = QDrag(self)
         mime = QMimeData()
-        payload = f"{self._symbol}|{self._group}"
-        mime.setData('application/x-symbol', payload.encode('utf-8'))
+        mime.setData('application/x-symbol', f"{self._symbol}|{self._group}".encode())
         drag.setMimeData(mime)
 
-        # 带上控件截图作为拖拽图标
-        pix = self.grab()  # 抓取按钮本身的像素
-        drag.setPixmap(pix)
-        drag.setHotSpot(event.pos())  # 拖拽热点在鼠标位置
+        # 用控件截图作拖拽图标
+        pm = self.grab()
+        drag.setPixmap(pm)
+        drag.setHotSpot(ev.pos())
 
         drag.exec_(Qt.MoveAction)
 
@@ -491,32 +513,35 @@ class MainWindow(QMainWindow):
         """
         self.setStyleSheet(qss)
 
-    def reorder_item(self, symbol, src_group, dst_group, dst_index):
+    def reorder_item(self, symbol, src, dst, dst_index):
         cfg = self.config
-        # 跨组：复用 move_item
-        if src_group != dst_group:
-            self.move_item(symbol, src_group, dst_group)
-            return
-
-        # 同组内重排序
-        container = cfg.get(src_group)
-        if isinstance(container, list):
-            lst = container
-            old = lst.index(symbol)
-            lst.insert(dst_index, lst.pop(old))
-        elif isinstance(container, dict):
-            # dict 需要重建 OrderedDict
-            keys = list(container.keys())
-            vals = list(container.values())
-            old = keys.index(symbol)
-            key = keys.pop(old); val = vals.pop(old)
-            keys.insert(dst_index, key); vals.insert(dst_index, val)
-            cfg[src_group] = OrderedDict(zip(keys, vals))
+        # 1) 先从 src 拿出 item_value
+        if isinstance(cfg[src], dict):
+            item = cfg[src].pop(symbol)
         else:
-            return  # 不支持的类型
+            lst = cfg[src]
+            lst.remove(symbol)
+            item = symbol
 
-        # 写回并刷新
-        with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
+        # 2) 确保 dst 存在，并按容器类型插入
+        if dst not in cfg:
+            cfg[dst] = {} if isinstance(cfg.get(src), dict) else []
+        target = cfg[dst]
+        if isinstance(target, dict):
+            # dict 我们重建 OrderedDict 来保证顺序
+            od = OrderedDict()
+            keys = list(target.keys())
+            vals = list(target.values())
+            keys.insert(dst_index, symbol)
+            vals.insert(dst_index, item)
+            for k,v in zip(keys, vals):
+                od[k] = v
+            cfg[dst] = od
+        else:
+            target.insert(dst_index, symbol)
+
+        # 3) 写回并刷新
+        with open(CONFIG_PATH,'w',encoding='utf-8') as f:
             json.dump(cfg, f, ensure_ascii=False, indent=4)
         self.refresh_selection_window()
     
