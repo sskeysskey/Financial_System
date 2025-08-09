@@ -523,7 +523,7 @@ class MainWindow(QMainWindow):
             padding: 10px;
         }
         QGroupBox::title {
-            color: white;
+            color: gray;
             subcontrol-origin: margin;
             subcontrol-position: top left;
             left: 15px;
@@ -536,7 +536,17 @@ class MainWindow(QMainWindow):
 
     def reorder_item(self, symbol, src, dst, dst_index):
         cfg = self.config
-        # 1) 先从 src 拿出 item_value
+
+        # 如果是同一个组内部排序，先算出自己原来的位置
+        same_group = (src == dst)
+        if same_group:
+            if isinstance(cfg[src], dict):
+                orig_keys = list(cfg[src].keys())
+                orig_index = orig_keys.index(symbol)
+            else:
+                orig_list = cfg[src]
+                orig_index = orig_list.index(symbol)
+        # 1) 从 src 拿出 item_value
         if isinstance(cfg[src], dict):
             item = cfg[src].pop(symbol)
         else:
@@ -544,25 +554,28 @@ class MainWindow(QMainWindow):
             lst.remove(symbol)
             item = symbol
 
-        # 2) 确保 dst 存在，并按容器类型插入
+        # —— 新增：在同组内移动时，源位置在目标位置之前，要把索引减 1 —— 
+        if same_group and dst_index > orig_index:
+            dst_index -= 1
+
+        # 2) 确保 dst 存在，并插入
         if dst not in cfg:
             cfg[dst] = {} if isinstance(cfg.get(src), dict) else []
         target = cfg[dst]
         if isinstance(target, dict):
-            # dict 我们重建 OrderedDict 来保证顺序
             od = OrderedDict()
             keys = list(target.keys())
             vals = list(target.values())
             keys.insert(dst_index, symbol)
             vals.insert(dst_index, item)
-            for k,v in zip(keys, vals):
+            for k, v in zip(keys, vals):
                 od[k] = v
             cfg[dst] = od
         else:
             target.insert(dst_index, symbol)
 
         # 3) 写回并刷新
-        with open(CONFIG_PATH,'w',encoding='utf-8') as f:
+        with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
             json.dump(cfg, f, ensure_ascii=False, indent=4)
         self.refresh_selection_window()
     
