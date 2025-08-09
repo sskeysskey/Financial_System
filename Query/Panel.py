@@ -1,5 +1,8 @@
+import os
 import sys
 import json
+import shutil
+import datetime
 import sqlite3
 from collections import OrderedDict
 import subprocess
@@ -7,10 +10,10 @@ import subprocess
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QGroupBox, QScrollArea, QTextEdit, QDialog,
-    QInputDialog, QMenu, QFrame
+    QInputDialog, QMenu, QFrame, QLabel
 )
 from PyQt5.QtCore import Qt, QMimeData, QPoint
-from PyQt5.QtGui import QFont, QCursor, QDrag, QPixmap
+from PyQt5.QtGui import QFont, QCursor, QDrag
 
 # ----------------------------------------------------------------------
 # Update sys.path so we can import from custom modules
@@ -28,6 +31,8 @@ SECTORS_ALL_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.
 COMPARE_DATA_PATH = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
 # ### 删除 ###: 移除了 SHARES_PATH 和 MARKETCAP_PATH
 DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
+BACKUP_CONFIG_PATH = '/Users/yanzhang/Coding/Financial_System/Operations/Sectors_panel_backup.json'
+NEW_SYMBOLS_STATE = '/Users/yanzhang/Coding/Financial_System/Operations/New_Symbols_State.json'
 
 DISPLAY_LIMITS = {
     'default': 'all',  # 默认显示全部
@@ -54,6 +59,45 @@ config = {}
 keyword_colors = {}
 sector_data = {}
 json_data = {}
+
+# ----------------------------------------------------------------------
+# 启动时比较主文件和备份，生成当天的 new_symbols 列表
+# ----------------------------------------------------------------------
+def load_json_silent(path):
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except:
+        return {}
+
+def compute_new_symbols(today, current_cfg, backup_cfg):
+    """返回今天第一次启动时，比对 current_cfg 与 backup_cfg 后发现的新增 symbol 列表。"""
+    new_syms = []
+    for group, cur_val in current_cfg.items():
+        cur_set = set(cur_val.keys() if isinstance(cur_val, dict) else cur_val)
+        bak_set = set(backup_cfg.get(group, {}).keys() if isinstance(backup_cfg.get(group), dict)
+                      else backup_cfg.get(group, []))
+        for sym in cur_set - bak_set:
+            new_syms.append(sym)
+    return new_syms
+
+def load_or_refresh_new_symbols():
+    today = datetime.date.today().isoformat()
+    state = load_json_silent(NEW_SYMBOLS_STATE)
+    # 如果已有记录，且日期一致，直接返回
+    if state.get('date') == today:
+        return set(state.get('symbols', []))
+    # 否则重新计算
+    current = load_json_silent(CONFIG_PATH)
+    backup  = load_json_silent(BACKUP_CONFIG_PATH)
+    new_list = compute_new_symbols(today, current, backup)
+    # 写回 state
+    with open(NEW_SYMBOLS_STATE, 'w', encoding='utf-8') as f:
+        json.dump({'date': today, 'symbols': new_list}, f, ensure_ascii=False, indent=2)
+    return set(new_list)
+
+# 全局变量，保存当天需要高亮的 symbol
+new_symbols_today = load_or_refresh_new_symbols()
 
 class DraggableGroupBox(QGroupBox):
     def __init__(self, title, group_name, parent=None):
@@ -434,12 +478,19 @@ class MainWindow(QMainWindow):
     def apply_stylesheet(self):
         """创建并应用 QSS 样式表 (增强了 GroupBox 的可见性)"""
         # 映射颜色到 QSS 样式
+        # button_styles = {
+        #     "Cyan": ("#008B8B", "white"), "Blue": ("#1E3A8A", "white"),
+        #     "Purple": ("#9370DB", "black"), "Green": ("#276E47", "white"),
+        #     "White": ("#A9A9A9", "black"), "Yellow": ("#BDB76B", "black"),
+        #     "Orange": ("#CD853F", "black"), "Red": ("#912F2F", "#FFFFF0"),
+        #     "Black": ("#333333", "white"), "Default": ("#666666", "black")
+        # }
         button_styles = {
-            "Cyan": ("#008B8B", "white"), "Blue": ("#1E3A8A", "white"),
-            "Purple": ("#9370DB", "black"), "Green": ("#276E47", "white"),
-            "White": ("#A9A9A9", "black"), "Yellow": ("#BDB76B", "black"),
-            "Orange": ("#CD853F", "black"), "Red": ("#912F2F", "#FFFFF0"),
-            "Black": ("#333333", "white"), "Default": ("#666666", "black")
+            "Cyan": ("#333333", "white"), "Blue": ("#333333", "white"),
+            "Purple": ("#333333", "white"), "Green": ("#333333", "white"),
+            "White": ("#333333", "white"), "Yellow": ("#333333", "white"),
+            "Orange": ("#333333", "white"), "Red": ("#333333", "white"),
+            "Black": ("#333333", "white"), "Default": ("#333333", "white")
         }
         
         qss = ""
@@ -466,6 +517,30 @@ class MainWindow(QMainWindow):
 
         /* 为黑色按钮专门设置一个可见的、中等亮度的灰色边框 */
         QPushButton#Black {
+            border: 1px solid #888888;
+        }
+        QPushButton#Cyan {
+            border: 1px solid #888888;
+        }
+        QPushButton#Purple {
+            border: 1px solid #888888;
+        }
+        QPushButton#Orange {
+            border: 1px solid #888888;
+        }
+        QPushButton#Blue {
+            border: 1px solid #888888;
+        }
+        QPushButton#Green {
+            border: 1px solid #888888;
+        }
+        QPushButton#Yellow {
+            border: 1px solid #888888;
+        }
+        QPushButton#Red {
+            border: 1px solid #888888;
+        }
+        QPushButton#Default {
             border: 1px solid #888888;
         }
         """
@@ -616,7 +691,11 @@ class MainWindow(QMainWindow):
                         # 创建主按钮
                         button_text = translation if translation else keyword
                         button_text += f" {compare_data.get(keyword, '')}"
+                        if keyword in new_symbols_today:
+                            button_text += "🔥"
                         button = SymbolButton(button_text, keyword, sector)
+                        # if keyword in new_symbols_today:
+                        #     button.setStyleSheet("border:2px solid orange;")
                         button.setObjectName(self.get_button_style_name(keyword))
                         button.setCursor(QCursor(Qt.PointingHandCursor))
                         button.clicked.connect(lambda _, k=keyword: self.on_keyword_selected_chart(k))
@@ -784,8 +863,16 @@ class MainWindow(QMainWindow):
             # 对于其他按键，调用父类的实现，以保留默认行为（例如，如果需要的话）
             super().keyPressEvent(event)
 
+    # ------------------------------------------------------------------
+    # 退出时把最新的主配置 copy 到备份，保留主配置不变
+    # ------------------------------------------------------------------
     def closeEvent(self, event):
-        """关闭窗口时重置 symbol_manager"""
+        # 1) 先做备份
+        try:
+            shutil.copy(CONFIG_PATH, BACKUP_CONFIG_PATH)
+        except Exception as e:
+            print("备份 sectors_panel.json 失败:", e)
+        # 2) 重置 symbol_manager，退出
         self.symbol_manager.reset()
         QApplication.quit()
 
@@ -871,6 +958,10 @@ class MainWindow(QMainWindow):
             print(f"[错误] 保存配置失败：{e}")
 
 if __name__ == '__main__':
+    # 1) 先确保 backup 文件存在（第一次启动时）
+    if not os.path.exists(BACKUP_CONFIG_PATH):
+        shutil.copy(CONFIG_PATH, BACKUP_CONFIG_PATH)
+    
     # Load data
     keyword_colors = load_json(COLORS_PATH)
     config = load_json(CONFIG_PATH)
