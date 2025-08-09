@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import json
 import shutil
@@ -15,15 +16,9 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QMimeData, QPoint
 from PyQt5.QtGui import QFont, QCursor, QDrag
 
-# ----------------------------------------------------------------------
-# Update sys.path so we can import from custom modules
-# ----------------------------------------------------------------------
 sys.path.append('/Users/yanzhang/Coding/Financial_System/Query')
 from Chart_input import plot_financial_data
 
-# ----------------------------------------------------------------------
-# Constants / Global Configurations
-# ----------------------------------------------------------------------
 CONFIG_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
 COLORS_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Colors.json'
 DESCRIPTION_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
@@ -39,7 +34,6 @@ DISPLAY_LIMITS = {
     "Bonds": 3,
 }
 
-# Define categories as a global variable
 categories = [
     ['Basic_Materials','Consumer_Cyclical','Real_Estate','Technology','Energy','Industrials',
      'Consumer_Defensive','Communication_Services','Financial_Services', 'Healthcare','Utilities'],
@@ -51,10 +45,8 @@ categories = [
     ['Crypto','Currencies'],
 ]
 
-# Global variables initialized below; placeholders for IDE clarity
 symbol_manager = None
 compare_data = {}
-# ### 删除 ###: 移除了 shares 和 marketcap_pe_data 全局变量
 config = {}
 keyword_colors = {}
 sector_data = {}
@@ -305,9 +297,6 @@ def load_text_data(path):
                 data[cleaned_key] = value
     return data
 
-# ### 删除 ###: 移除了不再需要的 load_marketcap_pe_data 函数
-
-# ### 新增 ###: 从 b.py 借鉴的数据库查询函数
 def fetch_mnspp_data_from_db(db_path, symbol):
     """
     根据股票代码从MNSPP表中查询 shares, marketcap, pe_ratio, pb。
@@ -427,9 +416,6 @@ def get_tags_for_symbol(symbol):
             return item.get("tag", "无标签")
     return "无标签"
 
-# ----------------------------------------------------------------------
-# PyQt5 Main Application Window (已移除小按钮并更新右键菜单)
-# ----------------------------------------------------------------------
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -476,15 +462,26 @@ class MainWindow(QMainWindow):
         self.populate_widgets()
 
     def apply_stylesheet(self):
-        """创建并应用 QSS 样式表 (增强了 GroupBox 的可见性)"""
-        # 映射颜色到 QSS 样式
-        # button_styles = {
-        #     "Cyan": ("#008B8B", "white"), "Blue": ("#1E3A8A", "white"),
-        #     "Purple": ("#9370DB", "black"), "Green": ("#276E47", "white"),
-        #     "White": ("#A9A9A9", "black"), "Yellow": ("#BDB76B", "black"),
-        #     "Orange": ("#CD853F", "black"), "Red": ("#912F2F", "#FFFFF0"),
-        #     "Black": ("#333333", "white"), "Default": ("#666666", "black")
-        # }
+        """
+        创建并应用 QSS 样式表。
+        - 所有 QPushButton 统一了字体、内边距、圆角和边框
+        - 每个按钮根据 objectName 只需定义背景色和前景色，以及 hover 效果
+        - GroupBox 保持原有视觉增强
+        """
+        # 1. 定义各按钮的背景色和文字色（只在这里集中配置）
+    #     button_styles = {
+    #         "Cyan":   ("#008B8B", "white"),
+    #         "Blue":   ("#1E3A8A", "white"),
+    #         "Purple": ("#9370DB", "black"),
+    #         "Green":  ("#276E47", "white"),
+    #         "White":  ("#A9A9A9", "black"),
+    #         "Yellow": ("#BDB76B", "black"),
+    #         "Orange": ("#CD853F", "black"),
+    #         "Red":    ("#912F2F", "#FFFFF0"),
+    #         "Black":  ("#333333", "white"),
+    #         "Default":("#666666", "black"),
+    #     }
+
         button_styles = {
             "Cyan": ("#333333", "white"), "Blue": ("#333333", "white"),
             "Purple": ("#333333", "white"), "Green": ("#333333", "white"),
@@ -492,100 +489,49 @@ class MainWindow(QMainWindow):
             "Orange": ("#333333", "white"), "Red": ("#333333", "white"),
             "Black": ("#333333", "white"), "Default": ("#333333", "white")
         }
-        
-        qss = ""
+
+        # 2. 公共 QPushButton 样式
+        qss = """
+        QPushButton {
+            font-size: 22px;
+            padding: 6px;
+            border: 1px solid #333;    /* 通用边框 */
+            border-radius: 4px;        /* 圆角 */
+        }
+        """
+
+        # 3. 针对每个 ID（objectName）单独设置背景/文字色和 hover 效果
         for name, (bg, fg) in button_styles.items():
             qss += f"""
             QPushButton#{name} {{
                 background-color: {bg};
                 color: {fg};
-                font-size: 16px;
-                padding: 5px;
-                border: 1px solid #333; /* 通用边框，对黑色按钮无效 */
-                border-radius: 4px;
             }}
             QPushButton#{name}:hover {{
                 background-color: {self.lighten_color(bg)};
             }}
             """
-        
-        qss += """
-        /* 为白色按钮设置一个特殊的、更柔和的灰色边框 */
-        QPushButton#White {
-            border: 1px solid #B0B0B0;
-        }
 
-        /* 为黑色按钮专门设置一个可见的、中等亮度的灰色边框 */
-        QPushButton#Black {
-            border: 1px solid #888888;
-        }
-        QPushButton#Cyan {
-            border: 1px solid #888888;
-        }
-        QPushButton#Purple {
-            border: 1px solid #888888;
-        }
-        QPushButton#Orange {
-            border: 1px solid #888888;
-        }
-        QPushButton#Blue {
-            border: 1px solid #888888;
-        }
-        QPushButton#Green {
-            border: 1px solid #888888;
-        }
-        QPushButton#Yellow {
-            border: 1px solid #888888;
-        }
-        QPushButton#Red {
-            border: 1px solid #888888;
-        }
-        QPushButton#Default {
-            border: 1px solid #888888;
-        }
-        """
-
+        # 4. QGroupBox 的“卡片”效果 & 标题样式
         qss += """
         QGroupBox {
-            /* --- 整体视觉增强 --- */
-            font-size: 20px;          /* 增大标题默认字体 */
+            font-size: 20px;
             font-weight: bold;
-            
-            /* 1. 添加清晰的边框和圆角，形成“卡片”效果 */
-            border: 1px solid #A9A9A9; /* 使用一个中等强度的灰色边框 (DarkGray) */
-            border-radius: 8px;       /* 边角更圆润，看起来更柔和 */
-            
-            /* 2. 增加上边距，确保组与组之间有足够间距 */
-            margin-top: 15px; 
-            
-            /* 3. 增加内边距，让内部的按钮不要紧贴边框 */
-            /*    上内边距设置得大一些，为标题留出空间 */
-            padding: 10px 10px 10px 10px; /* 上(为标题留空)、右、下、左 */
+            border: 1px solid #A9A9A9;
+            border-radius: 8px;
+            margin-top: 15px;
+            padding: 10px;
         }
-
         QGroupBox::title {
-            /* --- 标题视觉增强 --- */
-            
-            /*
-             * ### 新增 ###
-             * 为标题设置一个明确的、高对比度的字体颜色。
-             * 黑色是最清晰的选择。
-            */
             color: white;
-            
             subcontrol-origin: margin;
             subcontrol-position: top left;
-            
-            /* 5. 调整位置和内边距，使其看起来像一个标签 */
-            left: 15px;               /* 从左边框向内移动一点 */
-            padding: 2px 8px;         /* 上下和左右的内边距，让文字更舒展 */
-            
-            /* ### 移除 ###: 去掉背景色、边框和圆角，让文字直接显示在窗口背景上 */
-            /* background-color: #F0F0F0; */
-            /* border: 1px solid #A9A9A9; */
-            /* border-radius: 4px; */
+            left: 15px;
+            padding: 2px 8px;
         }
         """
+
+        # 最后应用
         self.setStyleSheet(qss)
 
     def reorder_item(self, symbol, src, dst, dst_index):
@@ -688,14 +634,12 @@ class MainWindow(QMainWindow):
                         row_layout.setContentsMargins(0, 0, 0, 0)
                         row_layout.setSpacing(5)
 
-                        # 创建主按钮
-                        button_text = translation if translation else keyword
-                        button_text += f" {compare_data.get(keyword, '')}"
-                        if keyword in new_symbols_today:
-                            button_text += "🔥"
-                        button = SymbolButton(button_text, keyword, sector)
-                        # if keyword in new_symbols_today:
-                        #     button.setStyleSheet("border:2px solid orange;")
+                        # 1) 主按钮（只显示 translation 或 keyword）
+                        button = SymbolButton(
+                            translation if translation else keyword,
+                            keyword,
+                            sector
+                        )
                         button.setObjectName(self.get_button_style_name(keyword))
                         button.setCursor(QCursor(Qt.PointingHandCursor))
                         button.clicked.connect(lambda _, k=keyword: self.on_keyword_selected_chart(k))
@@ -721,8 +665,52 @@ class MainWindow(QMainWindow):
                             lambda local_pos, btn=button, k=keyword, g=sector:
                                 self.show_context_menu(btn.mapToGlobal(local_pos), k, g)
                         )
-                        
                         row_layout.addWidget(button)
+                        row_layout.addStretch()        # ← 这一行
+
+                        # 2) 解析 compare_data 并生成富文本
+                        raw_compare = compare_data.get(keyword, "").strip()
+                        formatted_compare_html = ""
+                        if raw_compare:
+                            # 找百分号及前面的数字
+                            m = re.search(r"[-+]?\d+\.\d+%", raw_compare)
+                            if m:
+                                percent = m.group(0)
+                                idx = raw_compare.find(percent)
+                                prefix = raw_compare[:idx].strip()                 # “06后” 之类
+                                suffix = raw_compare[idx + len(percent):]          # “*-” 之类，原样保留
+
+                                # 橙色粗体前缀
+                                prefix_html = f"<span style='color:orange;'>{prefix}</span>"
+                                # 百分比：正红 负绿
+                                color = "red" if not percent.startswith('-') else "green"
+                                percent_html = f"<span style='color:{color};'>{percent}</span>"
+                                # 后缀无变色
+                                suffix_html = f"<span>{suffix}</span>"
+
+                                formatted_compare_html = prefix_html + percent_html + suffix_html
+                            else:
+                                # 整段无 %，全橙色
+                                formatted_compare_html = (
+                                    f"<span style='color:orange;'>"
+                                    f"{raw_compare}</span>"
+                                )
+
+                        # 3) 用 QLabel 显示富文本
+                        compare_label = QLabel()
+                        compare_label.setTextFormat(Qt.RichText)
+                        compare_label.setText(formatted_compare_html)
+                        compare_label.setStyleSheet("font-size:22px;") 
+                        row_layout.addWidget(compare_label)  
+                        
+                        # 4) 如果是新符号，末尾再加一个“🔥”
+                        if keyword in new_symbols_today:
+                            fire_label = QLabel("🔥")
+                            # 可选：设个稍大的字体
+                            fire_label.setStyleSheet("font-size:16px;")
+                            row_layout.addWidget(fire_label)
+
+                        # 最后把 container 加到 groupbox
                         group_box.layout().addWidget(button_container)
 
     # --------------------------------------------------
@@ -968,7 +956,6 @@ if __name__ == '__main__':
     json_data = load_json(DESCRIPTION_PATH)
     sector_data = load_json(SECTORS_ALL_PATH)
     compare_data = load_text_data(COMPARE_DATA_PATH)
-    # ### 删除 ###: 移除了对 shares 和 marketcap_pe_data 的加载
     
     symbol_manager = SymbolManager(config, categories)
 
