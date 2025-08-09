@@ -7,10 +7,10 @@ import subprocess
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QGroupBox, QScrollArea, QTextEdit, QDialog,
-    QInputDialog, QMenu
+    QInputDialog, QMenu, QFrame
 )
 from PyQt5.QtCore import Qt, QMimeData, QPoint
-from PyQt5.QtGui import QFont, QCursor, QDrag
+from PyQt5.QtGui import QFont, QCursor, QDrag, QPixmap
 
 # ----------------------------------------------------------------------
 # Update sys.path so we can import from custom modules
@@ -60,27 +60,76 @@ class DraggableGroupBox(QGroupBox):
         super().__init__(title, parent)
         self.group_name = group_name
         self.setAcceptDrops(True)
+        self._placeholder = None
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasFormat('application/x-symbol'):
             event.acceptProposedAction()
 
-    def dropEvent(self, event):
-        data = bytes(event.mimeData().data('application/x-symbol')).decode()
-        symbol, src_group = data.split('|')
-        # 计算目标索引：根据 y 坐标落在哪个子 widget 之前
+    def dragMoveEvent(self, event):
+        if not event.mimeData().hasFormat('application/x-symbol'):
+            return
+        event.acceptProposedAction()
+
+        # 计算当前鼠标下的插入索引
         layout = self.layout()
-        pos = event.pos().y()
+        y = event.pos().y()
         dst_index = layout.count()
         for i in range(layout.count()):
             w = layout.itemAt(i).widget()
-            if w and pos < w.y() + w.height()//2:
+            if w and y < w.y() + w.height()//2:
                 dst_index = i
                 break
-        # 调用 MainWindow 的 reorder_item
+
+        # 显示插入指示线
+        self._show_placeholder(dst_index)
+
+    def dropEvent(self, event):
+        data = bytes(event.mimeData().data('application/x-symbol')).decode()
+        symbol, src_group = data.split('|')
+
+        # 计算放下时的目标索引
+        layout = self.layout()
+        y = event.pos().y()
+        dst_index = layout.count()
+        for i in range(layout.count()):
+            w = layout.itemAt(i).widget()
+            if w and y < w.y() + w.height()//2:
+                dst_index = i
+                break
+
+        # 清除指示线
+        self._clear_placeholder()
+
+        # 调用 MainWindow.reorder_item
         mw: MainWindow = self.window()
         mw.reorder_item(symbol, src_group, self.group_name, dst_index)
         event.acceptProposedAction()
+
+    def dragLeaveEvent(self, event):
+        # 鼠标离开时清除指示线
+        self._clear_placeholder()
+
+    def _show_placeholder(self, index):
+        """在 layout 的 index 位置前插一条红线做指示"""
+        # 如果已有 placeholder，且位置没变，跳过
+        if self._placeholder and self.layout().indexOf(self._placeholder) == index:
+            return
+
+        self._clear_placeholder()
+
+        line = QFrame(self)
+        line.setFixedHeight(2)
+        line.setStyleSheet("background-color: red;")
+        # 在线条下方插入到 layout
+        self.layout().insertWidget(index, line)
+        self._placeholder = line
+
+    def _clear_placeholder(self):
+        if self._placeholder:
+            self.layout().removeWidget(self._placeholder)
+            self._placeholder.deleteLater()
+            self._placeholder = None
 
 class SymbolButton(QPushButton):
     def __init__(self, text, symbol, group, parent=None):
@@ -99,12 +148,19 @@ class SymbolButton(QPushButton):
             return super().mouseMoveEvent(event)
         if (event.pos() - self._drag_start_pos).manhattanLength() < QApplication.startDragDistance():
             return
+
         # 开始拖拽
         drag = QDrag(self)
         mime = QMimeData()
         payload = f"{self._symbol}|{self._group}"
         mime.setData('application/x-symbol', payload.encode('utf-8'))
         drag.setMimeData(mime)
+
+        # 带上控件截图作为拖拽图标
+        pix = self.grab()  # 抓取按钮本身的像素
+        drag.setPixmap(pix)
+        drag.setHotSpot(event.pos())  # 拖拽热点在鼠标位置
+
         drag.exec_(Qt.MoveAction)
 
 class SymbolManager:
