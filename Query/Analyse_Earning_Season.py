@@ -31,23 +31,34 @@ MIN_DROP_PERCENTAGE   = 0.04 # 最新收盘价必须至少比历史财报日价�
 MIN_TURNOVER          = 100_000_000  # 策略3：最新交易日的成交额（price * volume）最少 1 亿
 RISE_DROP_PERCENTAGE = 0.07  # 升序时，最新价要比最高 ER 价至少低 7%
 
-def filter_negative_earning_last_month(symbols, cursor):
+def filter_negative_earning_last_month(symbols, db_path):
     """
     剔除掉那些在最近 30 天内有 price < 0 财报的 symbols。
+    由原来的 cursor 版改为自主 open/close。
     """
+    import datetime, sqlite3
+    if not symbols:
+        return []
+
     today = datetime.date.today()
     one_month_ago = today - datetime.timedelta(days=30)
     out = []
+
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
     for sym in symbols:
-        cursor.execute(
+        cur.execute(
             "SELECT price FROM Earning WHERE name = ? AND date >= ?",
             (sym, one_month_ago.isoformat())
         )
-        rows = cursor.fetchall()
+        rows = cur.fetchall()
+        # 如果近 30 天内有负值
         if any(r[0] is not None and r[0] < 0 for r in rows):
             print(f"    - 剔除 {sym}：最近一个月有负值财报 → {[r[0] for r in rows if r[0]<0]}")
         else:
             out.append(sym)
+
+    conn.close()
     return out
 
 def create_symbol_to_sector_map(json_file_path):
@@ -532,7 +543,7 @@ def process_stocks():
 
     # 额外过滤：剔除最近一个月内有负值财报的 symbol
     print("\n--- 额外过滤：最近一个月有负值财报 → 剔除 ---")
-    combined_filtered = filter_negative_earning_last_month(combined_filtered, cursor)
+    combined_filtered = filter_negative_earning_last_month(combined_filtered, db_file)
     
     print(f"\n策略结果汇总 (过滤前):")
     print(f"  策略 1+2 (主列表) 找到: {len(combined_filtered)} 个 - {combined_filtered}")

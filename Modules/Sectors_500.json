@@ -25,7 +25,8 @@
         "NTES",
         "AMX",
         "RBLX",
-        "APP"
+        "APP",
+        "GSAT"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -52,7 +53,9 @@
         "GM",
         "CPNG",
         "DASH",
-        "JD"
+        "JD",
+        "HMC",
+        "DHI"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -236,7 +239,8 @@
         "EQIX",
         "WELL",
         "SPG",
-        "DLR"
+        "DLR",
+        "O"
     ],
     "Technology": [
         "AAPL",

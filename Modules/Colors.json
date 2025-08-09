@@ -414,7 +414,6 @@
         "IX",
         "SHG",
         "KEY",
-        "FSK",
         "OZK",
         "MC",
         "HSIC",
@@ -430,7 +429,6 @@
         "SLG",
         "MAC",
         "ARM",
-        "GTLB",
         "MTSI",
         "S",
         "CRUS",
@@ -490,7 +488,9 @@
         "MKC",
         "DVA",
         "MIDD",
-        "VERX"
+        "VERX",
+        "HUBS",
+        "GDDY"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -662,7 +662,6 @@
         "HPE",
         "OLED",
         "NOVT",
-        "TENB",
         "WK",
         "FCX",
         "DD",
@@ -736,7 +735,9 @@
         "BRBR",
         "IT",
         "INFY",
-        "CROX"
+        "CROX",
+        "FSK",
+        "GTLB"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -832,7 +833,8 @@
         "INSP",
         "FUN",
         "MOH",
-        "CNI"
+        "CNI",
+        "TENB"
     ],
     "black_keywords": [
         "Cotton",
@@ -920,7 +922,8 @@
         "UPS",
         "DOW",
         "CNC",
-        "SEAT"
+        "SEAT",
+        "FLY"
     ],
     "green_keywords": [
         "EURCNY",

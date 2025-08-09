@@ -1,6 +1,10 @@
 {
-    "Basic_Materials": {},
-    "Real_Estate": {},
+    "Basic_Materials": {
+        "BCC": ""
+    },
+    "Real_Estate": {
+        "CPT": ""
+    },
     "Energy": {
         "OKE": ""
     },
@@ -11,18 +15,30 @@
         "ACN": "",
         "FTNT": "",
         "FICO": "",
-        "GIB": ""
+        "GIB": "",
+        "IT": "",
+        "HUBS": "",
+        "GDDY": "",
+        "WIX": "",
+        "S": "",
+        "VERX": ""
     },
     "Consumer_Cyclical": {
-        "LULU": ""
+        "LULU": "",
+        "CMG": "",
+        "LKQ": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
         "MKC": "",
-        "FRPT": ""
+        "FRPT": "",
+        "MDLZ": "",
+        "CHD": ""
     },
     "Industrials": {
-        "WSO": ""
+        "WSO": "",
+        "LSTR": "",
+        "FLY": ""
     },
     "Communication_Services": {
         "SEAT": ""
@@ -31,7 +47,8 @@
         "BRK-A": "",
         "MKTX": "",
         "V": "",
-        "FDS": ""
+        "FDS": "",
+        "FSK": ""
     },
     "Healthcare": {
         "HUM": "",
@@ -45,7 +62,8 @@
         "LNTH": "",
         "INSP": "",
         "PRCT": "",
-        "LLY": ""
+        "LLY": "",
+        "VRTX": ""
     },
     "Bonds": {
         "US10Y": "",
