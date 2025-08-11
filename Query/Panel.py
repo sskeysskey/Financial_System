@@ -11,7 +11,7 @@ import subprocess
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QGroupBox, QScrollArea, QTextEdit, QDialog,
-    QInputDialog, QMenu, QFrame, QLabel
+    QInputDialog, QMenu, QFrame, QLabel, QLineEdit
 )
 from PyQt5.QtCore import Qt, QMimeData, QPoint
 from PyQt5.QtGui import QFont, QCursor, QDrag
@@ -40,9 +40,8 @@ categories = [
     ['Qualified','Next Week','2 Weeks','3 Weeks'],
     ['Notification','Next_Week','Earning_Filter'],
     ['Watching'],
-    ['Bonds','Indices'],
-    ['Economics','Commodities'],
-    ['Crypto','Currencies'],
+    ['Bonds','Indices','Currencies'],
+    ['Economics','Crypto','Commodities'],
 ]
 
 symbol_manager = None
@@ -494,7 +493,7 @@ class MainWindow(QMainWindow):
         qss = """
         QPushButton {
             font-size: 22px;
-            padding: 6px;
+            padding: 2px;
             border: 1px solid #333;    /* 通用边框 */
             border-radius: 4px;        /* 圆角 */
         }
@@ -520,14 +519,14 @@ class MainWindow(QMainWindow):
             border: 1px solid #A9A9A9;
             border-radius: 8px;
             margin-top: 15px;
-            padding: 10px;
+            padding: 0px;
         }
         QGroupBox::title {
             color: gray;
             subcontrol-origin: margin;
             subcontrol-position: top left;
             left: 15px;
-            padding: 2px 8px;
+            padding: 0px 2px;
         }
         """
 
@@ -624,11 +623,18 @@ class MainWindow(QMainWindow):
                     group_box.setLayout(QVBoxLayout())
                     column_layouts[index].addWidget(group_box)
 
-                    items = limit_items(
-                        keywords.items() if isinstance(keywords, dict)
-                                         else [(kw, kw) for kw in keywords],
-                        sector
-                    )
+                    # ===== 在这里增加排序 =====
+                    import re
+                    if isinstance(keywords, dict):
+                        items_list = list(keywords.items())
+                        items_list.sort(key=lambda kv: (
+                            int(m.group(1)) if (m := re.match(r'\s*(\d+)', kv[1])) else float('inf')
+                        ))
+                    else:
+                        items_list = [(kw, kw) for kw in keywords]
+
+                    items = limit_items(items_list, sector)
+                    # ===== 排序+截断完成 =====
 
                     # 再一次防护：如果 limit 之后还是空，也直接跳过
                     if not items:
@@ -702,7 +708,12 @@ class MainWindow(QMainWindow):
                                 color       = "red" if num >= 0 else "green"
                                 percent_html = f"<span style='color:{color};'>{percent_fmt}</span>"
                                 suffix_html  = f"<span>{suffix}</span>"
-                                formatted_compare_html = prefix_html + percent_html + suffix_html
+                                display_html = prefix_html + percent_html + suffix_html
+                                formatted_compare_html = (
+                                    f'<a href="{keyword}" '
+                                    f'style="color:white; text-decoration:none;">'
+                                    f'{display_html}</a>'
+                                )
                             else:
                                 # 整段无 %，全橙色
                                 formatted_compare_html = (
@@ -715,6 +726,7 @@ class MainWindow(QMainWindow):
                         compare_label.setTextFormat(Qt.RichText)
                         compare_label.setText(formatted_compare_html)
                         compare_label.setStyleSheet("font-size:22px;") 
+                        compare_label.linkActivated.connect(self.on_keyword_selected_chart)
                         row_layout.addWidget(compare_label)  
                         
                         # 4) 如果是新符号，末尾再加一个“🔥”
@@ -893,20 +905,51 @@ class MainWindow(QMainWindow):
             print(f"{keyword} 不存在于 {group} 中")
 
     def rename_item(self, keyword, group):
-        new_name, ok = QInputDialog.getText(self, "重命名", f"请为 {keyword} 输入新名称：")
-        if ok and new_name.strip():
-            with open(CONFIG_PATH, 'r', encoding='utf-8') as file:
-                config_data = json.load(file)
-            if group in config_data and keyword in config_data[group]:
-                config_data[group][keyword] = new_name.strip()
-                with open(CONFIG_PATH, 'w', encoding='utf-8') as file:
-                    json.dump(config_data, file, ensure_ascii=False, indent=4)
-                print(f"已将 {keyword} 的描述更新为: {new_name}")
-                self.refresh_selection_window()
+        # 1) 先从 config 里拿到当前的“翻译”／描述
+        current_desc = ""
+        if group in self.config:
+            grp = self.config[group]
+            if isinstance(grp, dict) and keyword in grp:
+                current_desc = grp[keyword]
+            # 如果原来是 list 的结构，你可能没有“描述”，就留空
+
+        # 2) 创建一个 QInputDialog 实例
+        dialog = QInputDialog(self)
+        dialog.setWindowTitle("重命名")
+        dialog.setLabelText(f"请为 {keyword} 输入新名称：")
+        # 把旧名字塞进去
+        dialog.setTextValue(current_desc)
+        dialog.setOkButtonText("确定")
+        dialog.setCancelButtonText("取消")
+        dialog.setModal(True)
+
+        # 3) 全选默认文字
+        #    注意：findChild 要在 setTextValue 之后再调用才找得到 QLineEdit
+        lineedit = dialog.findChild(QLineEdit)
+        if lineedit:
+            # 如果 dialog 还没 show，这里调用也会生效，exec_ 时就已全选
+            lineedit.selectAll()
+
+        # 4) 显示对话框，拿结果
+        if dialog.exec_() == QDialog.Accepted:
+            new_name = dialog.textValue().strip()
+            if new_name:
+                # 5) 读旧的 config 文件，然后更新并写回
+                with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+                    config_data = json.load(f, object_pairs_hook=OrderedDict)
+
+                if group in config_data and keyword in config_data[group]:
+                    config_data[group][keyword] = new_name
+                    with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
+                        json.dump(config_data, f, ensure_ascii=False, indent=4)
+                    print(f"已将 {keyword} 的描述更新为: {new_name}")
+                    self.refresh_selection_window()
+                else:
+                    print(f"[重命名失败] 未在分组 {group} 中找到 {keyword}")
             else:
-                print(f"未找到 {keyword} 在 {group} 中")
+                print("重命名输入为空，操作取消。")
         else:
-            print("重命名被取消或输入为空。")
+            print("重命名已取消。")
 
     def move_item(self, keyword, source_group, target_group):
         """
