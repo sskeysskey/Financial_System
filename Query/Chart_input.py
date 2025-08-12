@@ -183,6 +183,7 @@ def execute_external_script(script_type, keyword):
         'event_input': f'{base_path}/Operations/Insert_Events.py',
         'event_edit': f'{base_path}/Operations/Editor_Events.py',
         'symbol_compare': f'{base_path}/Query/Compare_Chart.py',
+        'panel_input': f'{base_path}/Operations/Insert_Panel.py',
         'similar_tags': f'{base_path}/Query/Search_Similar_Tag.py',
         'check_kimi': '/Users/yanzhang/Coding/ScriptEditor/CheckKimi_Earning.scpt',
         'check_futu': '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt'
@@ -820,12 +821,13 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         "K： 查kimi\n"
         "U： 查富途\n"
         "P： 做比较\n"
+        "J： 加Panel\n"
         "L： 查相似"
     )
 
     # 在 radio 按钮的 axes 上方绘制说明文字
     rax.text(
-        0.5, 1.02,             # 相对坐标：(x=0.5 居中, y=1.02 在 axes 之上)
+        0.5, 0.99,             # 相对坐标：(x=0.5 居中, y=1.02 在 axes 之上)
         instructions,
         transform=rax.transAxes,
         ha="center",           # 水平居中
@@ -1100,6 +1102,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             'e': lambda: execute_external_script('earning_edit', name),
             't': lambda: execute_external_script('tags_edit', name),
             'w': lambda: execute_external_script('event_input', name),
+            'j': lambda: execute_external_script('panel_input', name),
             'q': lambda: execute_external_script('event_edit', name),
             'k': lambda: execute_external_script('check_kimi', name),
             'u': lambda: execute_external_script('check_futu', name),
