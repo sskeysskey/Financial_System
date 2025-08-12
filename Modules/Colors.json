@@ -79,7 +79,6 @@
         "BN",
         "APO",
         "EQIX",
-        "CRM",
         "AXP",
         "PH",
         "SPG",
@@ -319,7 +318,6 @@
         "SNX",
         "VNT",
         "AVT",
-        "AI",
         "SCCO",
         "IFF",
         "SUZ",
@@ -476,7 +474,6 @@
         "PRCT",
         "AVB",
         "FICO",
-        "CFLT",
         "CI",
         "WIT",
         "ESS",
@@ -490,7 +487,14 @@
         "MIDD",
         "VERX",
         "HUBS",
-        "GDDY"
+        "GDDY",
+        "MAA",
+        "GLPI",
+        "CRM",
+        "IOT",
+        "JKHY",
+        "MNDY",
+        "CWAN"
     ],
     "yellow_keywords": [
         "Nikkei",
@@ -737,7 +741,8 @@
         "INFY",
         "CROX",
         "FSK",
-        "GTLB"
+        "GTLB",
+        "AI"
     ],
     "orange_keywords": [
         "NASDAQ",
@@ -811,7 +816,6 @@
         "AES",
         "AVTR",
         "COLM",
-        "RHI",
         "GIS",
         "HUM",
         "UNH",
@@ -923,7 +927,9 @@
         "DOW",
         "CNC",
         "SEAT",
-        "FLY"
+        "FLY",
+        "RHI",
+        "CFLT"
     ],
     "green_keywords": [
         "EURCNY",

@@ -51,11 +51,9 @@
         "RCL",
         "HLT",
         "GM",
-        "CPNG",
         "DASH",
         "JD",
-        "HMC",
-        "DHI"
+        "HMC"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -292,7 +290,6 @@
         "MRVL",
         "NET",
         "NXPI",
-        "PAYX",
         "TEL",
         "GLW"
     ],
