@@ -52,6 +52,18 @@ if os.path.exists(earnings_release_path):
                 d = parts[1].strip()
                 existing_release_entries.add((s, d))
 
+# —— 新增：算出“最近一个月内”在备份文件里出现过的 symbols ——
+today = datetime.now().date()
+recent_backup_symbols = set()
+for s, d in existing_release_entries:
+    try:
+        dt = datetime.strptime(d, '%Y-%m-%d').date()
+        if 0 <= (today - dt).days <= 30:
+            recent_backup_symbols.add(s)
+    except ValueError:
+        # 如果日期格式有问题，就跳过
+        continue
+
 # （B）备份旧 next.txt（如果存在）
 if os.path.exists(file_path):
     ts = datetime.now().strftime('%y%m%d')
@@ -251,16 +263,28 @@ if os.path.exists(diff_path):
         for ln in f_diff:
             existing_diff_lines.add(ln.rstrip('\n'))
 
-# （C）拆分 new_entries
+# -------- 5.1. 生成 next 与 diff 两份列表 -------------------------------
 entries_for_next = []
 entries_for_diff = []
+
 for ln in new_entries:
     sym = ln.split(':')[0].strip()
+
+    # A) 如果在 new.txt 里见过，一律归 diff（不写 next）
     if sym in new_symbols:
-        # 写入 diff 前做排重
         if ln not in existing_diff_lines:
             entries_for_diff.append(ln)
             existing_diff_lines.add(ln)
+
+    # B) 如果在 backup/Earnings_Release.txt 最近一个月内出现过，也归 diff，
+    #    并在行尾加上特殊标识 “#BACKUP_DUP”
+    elif sym in recent_backup_symbols:
+        marked = f"{ln}  #BACKUP_DUP"
+        if marked not in existing_diff_lines:
+            entries_for_diff.append(marked)
+            existing_diff_lines.add(marked)
+
+    # C) 否则，才是真正要写进 next.txt 的新记录
     else:
         entries_for_next.append(ln)
 

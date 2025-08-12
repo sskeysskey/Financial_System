@@ -3,7 +3,11 @@
         "BCC": ""
     },
     "Real_Estate": {
-        "CPT": ""
+        "CPT": "",
+        "ESS": "",
+        "MAA": "",
+        "UDR": "",
+        "GLPI": ""
     },
     "Energy": {
         "OKE": ""
@@ -20,7 +24,13 @@
         "GDDY": "",
         "WIX": "",
         "S": "",
-        "VERX": ""
+        "VERX": "",
+        "CRM": "",
+        "FI": "",
+        "IOT": "",
+        "JKHY": "",
+        "MNDY": "",
+        "CWAN": ""
     },
     "Consumer_Cyclical": {
         "LULU": "",
@@ -36,14 +46,16 @@
     },
     "Industrials": {
         "WSO": "",
-        "LSTR": "货运"
+        "LSTR": "货运",
+        "IEX": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
         "BRK-A": "",
         "MKTX": "",
         "V": "",
-        "FDS": ""
+        "FDS": "",
+        "MORN": ""
     },
     "Healthcare": {
         "CVS": "",
@@ -151,7 +163,13 @@
         "FDS": "",
         "DRI": ""
     },
-    "Next_Week": {},
+    "Next_Week": {
+        "BABA": "",
+        "BJ": "",
+        "PANW": "",
+        "SE": "",
+        "WDAY": ""
+    },
     "Next Week": {
         "CIG": ""
     },
@@ -170,7 +188,10 @@
         "FERG": "",
         "CAVA": ""
     },
-    "Notification": {},
+    "Notification": {
+        "BJ": "",
+        "CRM": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

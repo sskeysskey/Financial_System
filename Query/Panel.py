@@ -72,23 +72,44 @@ def compute_new_symbols(today, current_cfg, backup_cfg):
             new_syms.append(sym)
     return new_syms
 
-def load_or_refresh_new_symbols():
+def load_or_refresh_new_symbols(force=False):
+    """
+    1) 如果当天已产生过 state 且 force=False，直接返回旧的 symbols。
+    2) 否则，重新对比 current_cfg 与 backup_cfg，
+       如果是同一天，只追加排重后的增量；
+       如果是新一天，则重置为全量 new_symbols。
+    """
     today = datetime.date.today().isoformat()
     state = load_json_silent(NEW_SYMBOLS_STATE)
-    # 如果已有记录，且日期一致，直接返回
-    if state.get('date') == today:
-        return set(state.get('symbols', []))
-    # 否则重新计算
+    state_date = state.get('date')
+    old_syms = state.get('symbols', [])
+
+    # 情况 A：非强制刷新且同一天，直接返回旧的
+    if not force and state_date == today:
+        return set(old_syms)
+
+    # 否则，需要重新对比
     current = load_json_silent(CONFIG_PATH)
     backup  = load_json_silent(BACKUP_CONFIG_PATH)
-    new_list = compute_new_symbols(today, current, backup)
-    # 写回 state
+    fresh_new = compute_new_symbols(today, current, backup)
+
+    if state_date == today:
+        # 同一天内，增量更新：只保留 fresh_new 中不在 old_syms 的部分
+        incremental = [s for s in fresh_new if s not in old_syms]
+        updated = old_syms + incremental
+    else:
+        # 新的一天，直接用 fresh_new
+        updated = fresh_new
+
+    # 写回文件
     with open(NEW_SYMBOLS_STATE, 'w', encoding='utf-8') as f:
-        json.dump({'date': today, 'symbols': new_list}, f, ensure_ascii=False, indent=2)
-    return set(new_list)
+        json.dump({'date': today, 'symbols': updated},
+                  f, ensure_ascii=False, indent=2)
+
+    return set(updated)
 
 # 全局变量，保存当天需要高亮的 symbol
-new_symbols_today = load_or_refresh_new_symbols()
+new_symbols_today = load_or_refresh_new_symbols(force=True)
 
 class DraggableGroupBox(QGroupBox):
     def __init__(self, title, group_name, parent=None):
