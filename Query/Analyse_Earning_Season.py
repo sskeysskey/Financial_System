@@ -2,7 +2,7 @@ import sqlite3
 import json
 import os
 # import sys
-import datetime    # 新增
+import datetime
 
 # --- 1. 定义文件和数据库路径 ---
 # 请确保这些路径在您的系统上是正确的
@@ -17,11 +17,11 @@ news_path = os.path.join(base_path, "News")
 db_path = os.path.join(base_path, "Database")
 config_path = os.path.join(base_path, "Financial_System", "Modules")
 backup_file = os.path.join(news_path, "backup", "NextWeek_Earning.txt")
-notification_file = os.path.join(news_path, "notification_earning.txt")  # 新增
+notification_file = os.path.join(news_path, "notification_earning.txt")
 
 # 输入文件
 earnings_release_file = os.path.join(news_path, "Earnings_Release_next.txt")
-earnings_release_new_file  = os.path.join(news_path, "Earnings_Release_new.txt")   # 新增
+earnings_release_new_file  = os.path.join(news_path, "Earnings_Release_new.txt")
 sectors_json_file  = os.path.join(config_path, "Sectors_All.json")
 db_file            = os.path.join(db_path, "Finance.db")
 
@@ -235,6 +235,9 @@ def process_stocks():
     filtered_3 = []    # 新增：策略3
 
     filtered_3_5 = []     # 新增：策略3.5
+    # 策略 4(1)： 最近N次财报的收盘价要递增，最近一次财报必须是从系统日期往前数一个月内
+    # 策略 4(1)： 且该symbol从earning表中读到的price值必须为正，且最新财报日一周后的收盘价比最新财报日前后(±2天内)的最高收盘价低超过4%
+    filtered_4 = []
 
     conn = None
     try:
@@ -368,14 +371,18 @@ def process_stocks():
                         print(f"*** [filtered_2_5] {symbol} 通过：前{NUM_EARNINGS_TO_CHECK}次递增 + 4次中有价 > 最新价×1.07 ***")
                         filtered_2_5.append(symbol)
 
-        # -----------------------------
-        # 第二遍: 全表扫描 Earning，跑 策略3
-        # -----------------------------
+        # --- 第二遍: 全表扫描 Earning，跑 策略3, 3.5 和 4 ---
         cursor.execute("SELECT DISTINCT name FROM Earning")
         all_symbols = [row[0] for row in cursor.fetchall()]
-        print(f"\n策略3 全库扫描 {len(all_symbols)} 个 symbol…")
+        print(f"\n策略3/3.5/4 全库扫描 {len(all_symbols)} 个 symbol…")
+        
+        # --- 新增：为策略4的日期检查预先计算好阈值 ---
+        today = datetime.date.today()
+        one_month_ago = today - datetime.timedelta(days=30)
+
         for symbol in all_symbols:
-            # print(f"\n--- [S3] 处理 {symbol} ---") # 可以注释掉以减少输出
+            # (为减少输出，可以注释掉下面的打印)
+            # print(f"\n--- [S3/S4] 处理 {symbol} ---")
             # 1) 拿最近 N 次财报日期
             cursor.execute(
                 "SELECT date FROM Earning WHERE name = ? ORDER BY date DESC LIMIT ?",
@@ -419,13 +426,12 @@ def process_stocks():
             latest_date = datetime.datetime.strptime(latest_date_str, "%Y-%m-%d").date()
             turnover = latest_price * latest_volume
             turnover_ok = turnover >= MIN_TURNOVER
-
-            # 5) 计算历史 N 次财报的最低价
-            min_er_price = min(earnings_day_prices)
-
-            # 6) 时间窗口
+            
             last_er_date = datetime.datetime.strptime(dates[0], "%Y-%m-%d").date()
-            # 简单 +3 个月（同你现有算法）
+            asc_prices = list(reversed(earnings_day_prices))
+
+            # --- 策略3 ---
+            min_er_price = min(earnings_day_prices)
             m = last_er_date.month + 3
             y = last_er_date.year + (m-1)//12
             m = (m-1)%12 + 1
@@ -437,21 +443,15 @@ def process_stocks():
             next_er = datetime.date(y, m, day)
             window_start = next_er - datetime.timedelta(days=20)
             window_end   = next_er - datetime.timedelta(days=7)
-
-            # earnings_day_prices 按日期“降序”排列 (最近一次在前)，先倒过来成升序
-            asc_prices = list(reversed(earnings_day_prices))  # [prev_er_price, last_er_price]
-            # 判断过去 2 次财报是否严格上升
+            
             if asc_prices[0] < asc_prices[1]:
                 # 上升：最新收盘价要比最高 ER 价低至少 7%
                 price_ok = latest_price < max(asc_prices) * (1 - RISE_DROP_PERCENTAGE)
-                debug = f"升序 → 要求 latest {latest_price:.2f} < max_ER({max(asc_prices):.2f})×(1-{RISE_DROP_PERCENTAGE:.2f})"
             else:
                 # 非升序：两次 ER 收盘价差距至少 4%
                 diff = abs(asc_prices[1] - asc_prices[0])
-                price_ok = diff >= asc_prices[0] * MIN_DROP_PERCENTAGE
-                debug = f"非升序 → 要求 |{asc_prices[1]:.2f}-{asc_prices[0]:.2f}|={diff:.2f} ≥ {MIN_DROP_PERCENTAGE*100:.0f}%×{asc_prices[0]:.2f}"
+                price_ok = diff >= asc_prices[0] * MIN_DROP_PERCENTAGE                
 
-            print(f"  [filtered_3] 价格规则: {debug} → {'✓' if price_ok else '×'}")
             # 最终合成 cond3：新价格规则 + 时间窗口 + 成交额
             cond3 = (
                 price_ok
@@ -489,6 +489,46 @@ def process_stocks():
                         if any_high and turnover_ok and (window_start <= latest_date <= window_end):
                             print(f"  [filtered_3_5] ✓ {symbol} 通过：前{NUM_EARNINGS_TO_CHECK}次递增 + 4次中有价 > 最新价×1.07")
                             filtered_3_5.append(symbol)
+            
+            # --- 新增：策略4 ---
+            # 规则1: 最近N次财报收盘价递增
+            s4_increasing = all(asc_prices[i] < asc_prices[i+1] for i in range(len(asc_prices)-1))
+            
+            # 规则2: 最近一次财报在过去一个月内
+            s4_recent_er = last_er_date >= one_month_ago
+            
+            # 规则3: Earning表中的price为正
+            cursor.execute("SELECT price FROM Earning WHERE name = ? AND date = ?", (symbol, dates[0]))
+            earning_record_price_row = cursor.fetchone()
+            s4_positive_earning = earning_record_price_row and earning_record_price_row[0] is not None and earning_record_price_row[0] > 0
+            
+            # 只有在满足以上基本条件和成交额条件时，才进行最复杂的价格查询
+            if s4_increasing and s4_recent_er and s4_positive_earning and turnover_ok:
+                # 规则4: 财报后一周价比财报前后最高价低4%
+                s4_price_drop = False # 默认不满足
+                
+                # a) 获取财报日一周后的日期和价格
+                date_one_week_after = last_er_date + datetime.timedelta(days=7)
+                cursor.execute(f'SELECT price FROM "{table_name}" WHERE name = ? AND date = ?', (symbol, date_one_week_after.isoformat()))
+                price_row_after_week = cursor.fetchone()
+
+                if price_row_after_week:
+                    price_after_week = price_row_after_week[0]
+                    
+                    # b) 获取财报日前后±2天内的最高价
+                    start_range = last_er_date - datetime.timedelta(days=2)
+                    end_range = last_er_date + datetime.timedelta(days=2)
+                    cursor.execute(f'SELECT MAX(price) FROM "{table_name}" WHERE name = ? AND date BETWEEN ? AND ?', (symbol, start_range.isoformat(), end_range.isoformat()))
+                    max_price_row = cursor.fetchone()
+
+                    if max_price_row and max_price_row[0] is not None:
+                        max_price_around_er = max_price_row[0]
+                        
+                        # c) 比较价格
+                        if price_after_week < max_price_around_er * (1 - MIN_DROP_PERCENTAGE):
+                            s4_price_drop = True
+                            print(f"*** [filtered_4] {symbol} 通过: 递增, 近期, 正值, 且财报后一周价({price_after_week:.2f}) < 财报前后最高价({max_price_around_er:.2f})*0.96 ***")
+                            filtered_4.append(symbol)
 
         print("\n数据库处理完成。")
     except sqlite3.Error as e:
@@ -545,16 +585,16 @@ def process_stocks():
 
     # --- 结果汇总 ---
     combined_filtered = sorted(set(filtered_1 + filtered_2 + filtered_2_5))
-    # 对 filtered_3 也进行排序和去重
-    filtered_3 = sorted(set(filtered_3 + filtered_3_5))
+    
+    # --- 修改：将策略3, 3.5, 4合并到通知列表，也进行排序和去重 ---
+    notification_list = sorted(set(filtered_3 + filtered_3_5 + filtered_4))
 
-    # 额外过滤：剔除最近一个月内有负值财报的 symbol
     print("\n--- 额外过滤：最近一个月有负值财报 → 剔除 ---")
     combined_filtered = filter_negative_earning_last_month(combined_filtered, db_file)
     
     print(f"\n策略结果汇总 (过滤前):")
     print(f"  策略 1+2 (主列表) 找到: {len(combined_filtered)} 个 - {combined_filtered}")
-    print(f"  策略 3 (通知列表) 找到: {len(filtered_3)} 个 - {filtered_3}")
+    print(f"  策略 3/3.5/4 (通知列表) 找到: {len(notification_list)} 个 - {notification_list}")
 
     # ### 修改/新增点: 移植黑名单过滤逻辑 ###
     print("\n--- 5. 应用黑名单过滤 ---")
@@ -568,16 +608,16 @@ def process_stocks():
         print(f"主列表: 根据黑名单过滤掉 {len(removed_by_blacklist_main)} 个 symbol: {sorted(list(removed_by_blacklist_main))}")
     print(f"主列表: 黑名单过滤后剩余 {len(final_symbols)} 个 symbol。")
 
-    # 5.2 过滤通知列表 (策略 3)
-    final_filtered_3_before_blacklist = filtered_3
-    final_filtered_3 = [s for s in final_filtered_3_before_blacklist if s not in blacklist_set]
-    removed_by_blacklist_notif = set(final_filtered_3_before_blacklist) - set(final_filtered_3)
+    # --- 修改：对合并后的通知列表进行黑名单过滤 ---
+    final_notification_before_blacklist = notification_list
+    final_notification_list = [s for s in final_notification_before_blacklist if s not in blacklist_set]
+    removed_by_blacklist_notif = set(final_notification_before_blacklist) - set(final_notification_list)
     if removed_by_blacklist_notif:
         print(f"通知列表: 根据黑名单过滤掉 {len(removed_by_blacklist_notif)} 个 symbol: {sorted(list(removed_by_blacklist_notif))}")
     
     print(f"\n黑名单过滤后结果:")
     print(f"  主列表剩余: {len(final_symbols)} 个")
-    print(f"  通知列表剩余: {len(final_filtered_3)} 个")
+    print(f"  通知列表剩余: {len(final_notification_list)} 个")
 
     ### 修改点: 重构 PE Ratio 过滤部分，使其对两个列表都生效 ###
     print("\n--- 6. 过滤无效 PE Ratio ---")
@@ -588,19 +628,21 @@ def process_stocks():
     
     # 6.2 过滤通知列表
     print("\n正在处理通知列表...")
-    final_filtered_3 = filter_symbols_by_pe_ratio(final_filtered_3, db_file)
+    # --- 修改：对合并后的通知列表进行PE过滤 ---
+    final_notification_list = filter_symbols_by_pe_ratio(final_notification_list, db_file)
 
     print("\n--- 所有过滤完成后的最终结果 ---")
     print(f"主列表最终数量: {len(final_symbols)} - {final_symbols}")
-    print(f"通知列表最终数量: {len(final_filtered_3)} - {final_filtered_3}")
+    print(f"通知列表最终数量: {len(final_notification_list)} - {final_notification_list}")
 
     # 对主列表和通知列表都做一次上述过滤
     print("\n--- 7.x 过滤：剔除“最新交易日 == 最新财报日” 的股票 ---")
     final_symbols    = filter_by_date_mismatch(final_symbols)
-    final_filtered_3 = filter_by_date_mismatch(final_filtered_3)
+    # --- 修改：对合并后的通知列表进行日期过滤 ---
+    final_notification_list = filter_by_date_mismatch(final_notification_list)
 
     print(f"过滤后主列表数量: {len(final_symbols)} - {final_symbols}")
-    print(f"过滤后通知列表数量: {len(final_filtered_3)} - {final_filtered_3}")
+    print(f"过滤后通知列表数量: {len(final_notification_list)} - {final_notification_list}")
     
     # --- 7. 处理主列表的输出 (NextWeek_Earning.txt 和 panel 的 Next_Week) ---
     print("\n--- 7. 处理主列表输出 ---")
@@ -665,8 +707,8 @@ def process_stocks():
         old_notif = set()
         print("未找到通知备份文件，视作首次运行。")
 
-    # ### 修改点: 使用黑名单过滤后的 final_filtered_3 计算新增部分 ###
-    new_notif = set(final_filtered_3) - old_notif
+    # --- 修改：使用最终的通知列表来计算新增部分 ---
+    new_notif = set(final_notification_list) - old_notif
     if new_notif:
         print(f"通知列表本次新增 {len(new_notif)} 个 symbol: {sorted(new_notif)}")
         with open(notification_file, 'w', encoding='utf-8') as f:
@@ -685,10 +727,10 @@ def process_stocks():
     # 最后，把本次完整的 filtered_3 覆盖写回 backup
     try:
         with open(backup_notification_file, 'w', encoding='utf-8') as f:
-            # ### 修改点: 备份文件保存的是当前所有符合条件的 symbol (过滤后) ###
-            for sym in sorted(final_filtered_3):
+            # --- 修改：备份最终的完整通知列表 ---
+            for sym in sorted(final_notification_list):
                 f.write(sym + '\n')
-        print(f"通知备份已更新，共 {len(final_filtered_3)} 个 symbol: {backup_notification_file}")
+        print(f"通知备份已更新，共 {len(final_notification_list)} 个 symbol: {backup_notification_file}")
     except IOError as e:
         print(f"更新通知备份文件时错误: {e}")
 
