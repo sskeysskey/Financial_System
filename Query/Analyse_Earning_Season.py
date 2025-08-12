@@ -1,12 +1,19 @@
 import sqlite3
 import json
 import os
+# import sys
 import datetime    # 新增
 
 # --- 1. 定义文件和数据库路径 ---
 # 请确保这些路径在您的系统上是正确的
 base_path = "/Users/yanzhang/Coding/"
 news_path = os.path.join(base_path, "News")
+# why_path = os.path.join(news_path, "why.txt")
+
+# # 把所有 print（stdout/stderr）都重定向到 why.txt
+# sys.stdout = open(why_path, "w", encoding="utf-8")
+# sys.stderr = sys.stdout
+
 db_path = os.path.join(base_path, "Database")
 config_path = os.path.join(base_path, "Financial_System", "Modules")
 backup_file = os.path.join(news_path, "backup", "NextWeek_Earning.txt")

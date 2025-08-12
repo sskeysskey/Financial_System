@@ -3,11 +3,7 @@
         "BCC": ""
     },
     "Real_Estate": {
-        "CPT": "",
-        "ESS": "",
-        "MAA": "",
-        "UDR": "",
-        "GLPI": ""
+        "CPT": ""
     },
     "Energy": {
         "OKE": ""
@@ -25,12 +21,7 @@
         "WIX": "",
         "S": "",
         "VERX": "",
-        "CRM": "",
-        "FI": "",
-        "IOT": "",
-        "JKHY": "",
-        "MNDY": "",
-        "CWAN": ""
+        "CRM": ""
     },
     "Consumer_Cyclical": {
         "LULU": "",
@@ -46,16 +37,14 @@
     },
     "Industrials": {
         "WSO": "",
-        "LSTR": "货运",
-        "IEX": ""
+        "LSTR": "货运"
     },
     "Communication_Services": {},
     "Financial_Services": {
         "BRK-A": "",
         "MKTX": "",
         "V": "",
-        "FDS": "",
-        "MORN": ""
+        "FDS": ""
     },
     "Healthcare": {
         "CVS": "",
@@ -140,59 +129,47 @@
         "XRP": ""
     },
     "Qualified": {
-        "AAON": "",
-        "NICE": ""
+        "JKHY": "",
+        "GLBE": "",
+        "EAT": "",
+        "INTA": "",
+        "CHWY": "",
+        "KMX": "",
+        "SMTC": ""
     },
     "Earning_Filter": {},
     "Watching": {
-        "BJ": "",
+        "INTU": "",
         "ADI": "",
-        "SMTC": "",
         "URBN": "",
-        "ACHR": "",
-        "INTA": "",
-        "EAT": "",
         "TPR": "",
         "CPRT": "",
         "HD": "",
         "LOW": "",
         "JHX": "",
-        "IOT": "",
-        "CHWY": "",
-        "KMX": "",
-        "FDS": "",
-        "DRI": "",
-        "INTU": ""
-    },
-    "Next_Week": {
-        "BABA": "",
-        "BJ": "",
-        "PANW": "",
-        "SE": "",
-        "WDAY": ""
-    },
-    "Next Week": {
+        "NICE": "",
         "CIG": ""
     },
-    "2 Weeks": {},
-    "3 Weeks": {
+    "Next_Week": {},
+    "Next Week": {
+        "BJ": "",
+        "PANW": "",
+        "WDAY": "",
+        "ACN": ""
+    },
+    "2 Weeks": {
+        "CRM": "",
         "COST": "",
-        "AVAV": "",
         "PSTG": "",
         "MRVL": "",
-        "ACN": "",
+        "HRL": ""
+    },
+    "3 Weeks": {
+        "AVAV": "",
         "GIS": "",
-        "HRL": "",
-        "SAIC": "",
-        "ANF": "",
-        "PVH": "",
-        "FERG": "",
-        "CAVA": ""
+        "IOT": ""
     },
-    "Notification": {
-        "BJ": "",
-        "CRM": ""
-    },
+    "Notification": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
