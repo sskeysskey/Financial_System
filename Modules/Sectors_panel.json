@@ -132,16 +132,16 @@
         "XRP": ""
     },
     "Qualified": {
-        "JKHY": "",
-        "GLBE": "",
-        "EAT": "",
-        "INTA": "",
+        "CVNA": "",
         "CHWY": "",
         "KMX": "",
-        "SMTC": ""
+        "DECK": ""
     },
     "Earning_Filter": {},
     "Watching": {
+        "GLBE": "",
+        "EAT": "",
+        "AXON": "",
         "INTU": "",
         "ADI": "",
         "URBN": "",
@@ -151,7 +151,8 @@
         "LOW": "",
         "JHX": "",
         "CIG": "",
-        "NICE": ""
+        "NICE": "",
+        "SMTC": ""
     },
     "Next_Week": {
         "HRB": "",
@@ -176,16 +177,6 @@
         "IOT": ""
     },
     "Notification": {
-        "AON": "",
-        "AVY": "",
-        "AXON": "",
-        "CHD": "",
-        "CVLT": "",
-        "CVNA": "",
-        "DECK": "",
-        "DGX": "",
-        "ESTC": "",
-        "FTAI": "",
         "ICLR": "",
         "IDXX": "",
         "LII": "",

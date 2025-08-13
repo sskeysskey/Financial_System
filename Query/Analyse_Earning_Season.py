@@ -18,6 +18,7 @@ db_path = os.path.join(base_path, "Database")
 config_path = os.path.join(base_path, "Financial_System", "Modules")
 backup_file = os.path.join(news_path, "backup", "NextWeek_Earning.txt")
 notification_file = os.path.join(news_path, "notification_earning.txt")
+backup_notification_file = os.path.join(news_path, "backup", "notification_earning.txt")
 
 # 输入文件
 earnings_release_file = os.path.join(news_path, "Earnings_Release_next.txt")
@@ -543,30 +544,51 @@ def process_stocks():
             
             # 只有在满足以上基本条件和成交额条件时，才进行最复杂的价格查询
             if s4_increasing and s4_recent_er and s4_positive_earning:
-                # 规则4: 财报后一周价比财报前后最高价低4%
-                s4_price_drop = False # 默认不满足
-                
-                # a) 获取财报日一周后的日期和价格
-                date_one_week_after = last_er_date + datetime.timedelta(days=7)
-                cursor.execute(f'SELECT price FROM "{table_name}" WHERE name = ? AND date = ?', (symbol, date_one_week_after.isoformat()))
-                price_row_after_week = cursor.fetchone()
-                if price_row_after_week:
-                    price_after_week = price_row_after_week[0]
-                    
-                    # b) 获取财报日前后±2天内的最高价
-                    start_range = last_er_date - datetime.timedelta(days=2)
-                    end_range = last_er_date + datetime.timedelta(days=2)
-                    cursor.execute(f'SELECT MAX(price) FROM "{table_name}" WHERE name = ? AND date BETWEEN ? AND ?', (symbol, start_range.isoformat(), end_range.isoformat()))
-                    max_price_row = cursor.fetchone()
+                # 1) 日期窗口：最近财报日后5~11天
+                window_start = last_er_date + datetime.timedelta(days=5)
+                window_end   = last_er_date + datetime.timedelta(days=11)
+                date_in_window = window_start <= latest_date <= window_end
 
-                    if max_price_row and max_price_row[0] is not None:
-                        max_price_around_er = max_price_row[0]
-                        
-                        # c) 比较价格
-                        if price_after_week < max_price_around_er * (1 - MIN_DROP_PERCENTAGE):
-                            s4_price_drop = True
-                            print(f"*** [filtered_4] {symbol} 通过: 递增, 近期, 正值, 且财报后一周价({price_after_week:.2f}) < 财报前后最高价({max_price_around_er:.2f})*0.96 ***")
-                            filtered_4.append(symbol)
+                # 2) 取财报日前后±2天的最高价
+                start_range = last_er_date - datetime.timedelta(days=2)
+                end_range   = last_er_date + datetime.timedelta(days=2)
+                cursor.execute(
+                    f'SELECT MAX(price) FROM "{table_name}" '
+                    "WHERE name = ? AND date BETWEEN ? AND ?",
+                    (symbol, start_range.isoformat(), end_range.isoformat())
+                )
+                max_row = cursor.fetchone()
+                max_price_around_er = max_row[0] if max_row and max_row[0] is not None else None
+
+                # 3) 取倒数第二次财报收盘价
+                second_er_price = None
+                if len(earnings_day_prices) >= 2:
+                    second_er_price = earnings_day_prices[1]
+
+                # 4) 根据市值选择跌幅阈值 X
+                cursor.execute("SELECT market_cap FROM MNSPP WHERE symbol = ?", (symbol,))
+                mcap_row = cursor.fetchone()
+                mcap = mcap_row[0] if mcap_row else None
+                MARKETCAP_THRESHOLD = 50_000_000_000  # 500亿
+                drop_large = 0.04  # ≥500亿 用4%
+                drop_small = 0.07  # <500亿 用7%
+                drop_pct = drop_large if mcap and mcap >= MARKETCAP_THRESHOLD else drop_small
+
+                # A 条件：在窗口内 且 最新价 < max_price_around_er * (1 - drop_pct)
+                cond_A = (
+                    date_in_window
+                    and max_price_around_er is not None
+                    and latest_price < max_price_around_er * (1 - drop_pct)
+                )
+                # B 条件：最新价 < 倒数第二次财报收盘价
+                cond_B = (second_er_price is not None and latest_price < second_er_price)
+
+                if cond_A or cond_B:
+                    print(f"*** [filtered_4] {symbol} 通过："
+                          f"日期窗{window_start}~{window_end}, 最新价{latest_price:.2f}, "
+                          f"X={drop_pct*100:.0f}%, max_ER_price={max_price_around_er}, "
+                          f"2nd_ER_price={second_er_price} ***")
+                    filtered_4.append(symbol)
 
         print("\n数据库处理完成。")
     except sqlite3.Error as e:
@@ -636,7 +658,6 @@ def process_stocks():
     # 只有主列表需要进行负值财报过滤
     final_symbols = filter_negative_earning_last_month(final_symbols, db_file)
     
-
     # 3. 应用黑名单过滤
     print("\n--- 3. 应用黑名单过滤 ---")
     blacklist_set = load_blacklist(blacklist_json_file)
@@ -663,39 +684,39 @@ def process_stocks():
     print(f"主列表最终数量: {len(final_symbols)} - {final_symbols}")
     print(f"通知列表最终数量: {len(final_notification_list)} - {final_notification_list}")
     
-    # --- 7. 处理主列表的输出 ---
-    print("\n--- 7. 处理主列表输出 ---")
-    backup_dir = os.path.dirname(backup_file)
-    if not os.path.exists(backup_dir): os.makedirs(backup_dir, exist_ok=True)
-    try:
-        with open(backup_file, 'r', encoding='utf-8') as f:
-            old_set = {line.strip() for line in f if line.strip()}
-        print(f"已从主列表备份加载 {len(old_set)} 个旧 symbol。")
-    except FileNotFoundError:
-        old_set = set()
-        print("未找到主列表备份文件，视作首次运行。")
+    # # --- 7. 处理主列表的输出 ---
+    # print("\n--- 7. 处理主列表输出 ---")
+    # backup_dir = os.path.dirname(backup_file)
+    # if not os.path.exists(backup_dir): os.makedirs(backup_dir, exist_ok=True)
+    # try:
+    #     with open(backup_file, 'r', encoding='utf-8') as f:
+    #         old_set = {line.strip() for line in f if line.strip()}
+    #     print(f"已从主列表备份加载 {len(old_set)} 个旧 symbol。")
+    # except FileNotFoundError:
+    #     old_set = set()
+    #     print("未找到主列表备份文件，视作首次运行。")
 
-    # 计算“新增”符号
-    new_set = set(final_symbols) - old_set
-    if new_set:
-        print(f"主列表本次新增 {len(new_set)} 个 symbol: {sorted(new_set)}")
-        try:
-            with open(output_file, 'w', encoding='utf-8') as f:
-                for sym in sorted(new_set):
-                    f.write(sym + '\n')
-            print(f"新增结果已写入: {output_file}")
-        except IOError as e:
-            print(f"写入 news 文件时错误: {e}")
-    else:
-        print("本次没有发现新的 symbol。")
-        # 如果没有新增且旧 news 文件存在，就删掉它
-        if os.path.exists(output_file):
-            os.remove(output_file)
-            print(f"无新增，已删除旧的 news 文件: {output_file}")
+    # # 计算“新增”符号
+    # new_set = set(final_symbols) - old_set
+    # if new_set:
+    #     print(f"主列表本次新增 {len(new_set)} 个 symbol: {sorted(new_set)}")
+    #     try:
+    #         with open(output_file, 'w', encoding='utf-8') as f:
+    #             for sym in sorted(new_set):
+    #                 f.write(sym + '\n')
+    #         print(f"新增结果已写入: {output_file}")
+    #     except IOError as e:
+    #         print(f"写入 news 文件时错误: {e}")
+    # else:
+    #     print("本次没有发现新的 symbol。")
+    #     # 如果没有新增且旧 news 文件存在，就删掉它
+    #     if os.path.exists(output_file):
+    #         os.remove(output_file)
+    #         print(f"无新增，已删除旧的 news 文件: {output_file}")
 
     # --- 3. 更新 JSON 面板（只写新增 new_set） ---
     # 如果 new_set 为空，update_json_group 会写一个空的 {} 过去
-    update_json_group(new_set, panel_json_file, "Next_Week")
+    update_json_group(final_symbols, panel_json_file, "Next_Week")
 
     # --- 最后，把本次完整 final_symbols 覆盖写回 备份文件 ---
     try:
@@ -707,39 +728,38 @@ def process_stocks():
     except IOError as e:
         print(f"更新主列表备份文件时错误: {e}")
 
-    # --- 8. 处理通知列表的输出 ---
-    # (这部分无变化, 除了变量名 final_notification_list)
-    print("\n--- 8. 处理通知列表输出 ---")
-    backup_notification_file = os.path.join(news_path, "backup", "notification_earning.txt")
-    backup_dir = os.path.dirname(backup_notification_file)
-    if not os.path.exists(backup_dir):
-        os.makedirs(backup_dir, exist_ok=True)
+    # # --- 8. 处理通知列表的输出 ---
+    # # (这部分无变化, 除了变量名 final_notification_list)
+    # print("\n--- 8. 处理通知列表输出 ---")
+    # backup_dir = os.path.dirname(backup_notification_file)
+    # if not os.path.exists(backup_dir):
+    #     os.makedirs(backup_dir, exist_ok=True)
 
-    # 读取旧的 notification backup
-    try:
-        with open(backup_notification_file, 'r', encoding='utf-8') as f:
-            old_notif = {line.strip() for line in f if line.strip()}
-        print(f"已从通知备份加载 {len(old_notif)} 个旧 symbol。")
-    except FileNotFoundError:
-        old_notif = set()
-        print("未找到通知备份文件，视作首次运行。")
+    # # 读取旧的 notification backup
+    # try:
+    #     with open(backup_notification_file, 'r', encoding='utf-8') as f:
+    #         old_notif = {line.strip() for line in f if line.strip()}
+    #     print(f"已从通知备份加载 {len(old_notif)} 个旧 symbol。")
+    # except FileNotFoundError:
+    #     old_notif = set()
+    #     print("未找到通知备份文件，视作首次运行。")
 
-    # --- 修改：使用最终的通知列表来计算新增部分 ---
-    new_notif = set(final_notification_list) - old_notif
-    if new_notif:
-        print(f"通知列表本次新增 {len(new_notif)} 个 symbol: {sorted(new_notif)}")
-        with open(notification_file, 'w', encoding='utf-8') as f:
-            for sym in sorted(new_notif):
-                f.write(sym + '\n')
-    else:
-        print("本次没有新增的通知 symbol。")
-        # 若旧的 news/notification_earning.txt 存在，则删掉它
-        if os.path.exists(notification_file):
-            os.remove(notification_file)
-            print(f"无新增，已删除旧的通知文件: {notification_file}")
+    # # --- 修改：使用最终的通知列表来计算新增部分 ---
+    # new_notif = set(final_notification_list) - old_notif
+    # if new_notif:
+    #     print(f"通知列表本次新增 {len(new_notif)} 个 symbol: {sorted(new_notif)}")
+    #     with open(notification_file, 'w', encoding='utf-8') as f:
+    #         for sym in sorted(new_notif):
+    #             f.write(sym + '\n')
+    # else:
+    #     print("本次没有新增的通知 symbol。")
+    #     # 若旧的 news/notification_earning.txt 存在，则删掉它
+    #     if os.path.exists(notification_file):
+    #         os.remove(notification_file)
+    #         print(f"无新增，已删除旧的通知文件: {notification_file}")
 
     # ### 修改点: 使用 new_notif (仅新增部分) 更新 JSON 面板 ###
-    update_json_group(new_notif, panel_json_file, "Notification")
+    update_json_group(final_notification_list, panel_json_file, "Notification")
 
     # 最后，把本次完整的 filtered_3 覆盖写回 backup
     try:

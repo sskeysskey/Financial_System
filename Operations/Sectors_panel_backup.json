@@ -132,16 +132,16 @@
         "XRP": ""
     },
     "Qualified": {
-        "JKHY": "",
-        "GLBE": "",
-        "EAT": "",
-        "INTA": "",
+        "CVNA": "",
         "CHWY": "",
         "KMX": "",
-        "SMTC": ""
+        "DECK": ""
     },
     "Earning_Filter": {},
     "Watching": {
+        "GLBE": "",
+        "EAT": "",
+        "AXON": "",
         "INTU": "",
         "ADI": "",
         "URBN": "",
@@ -151,9 +151,13 @@
         "LOW": "",
         "JHX": "",
         "CIG": "",
+        "NICE": "",
+        "SMTC": ""
+    },
+    "Next_Week": {
+        "HRB": "",
         "NICE": ""
     },
-    "Next_Week": {},
     "Next Week": {
         "BJ": "",
         "PANW": "",
@@ -172,7 +176,23 @@
         "GIS": "",
         "IOT": ""
     },
-    "Notification": {},
+    "Notification": {
+        "ICLR": "",
+        "IDXX": "",
+        "LII": "",
+        "MEDP": "",
+        "NCLH": "",
+        "NOW": "",
+        "SAIA": "",
+        "SOFI": "",
+        "STX": "",
+        "TRU": "",
+        "TW": "",
+        "VRSN": "",
+        "VRT": "",
+        "WH": "",
+        "WING": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

@@ -451,8 +451,8 @@ class MainWindow(QMainWindow):
             'Consumer_Cyclical': 'Cyclical',
             'Basic_Materials': 'Materials',
             'Financial_Services': 'Financial',
-            'Notification': '策略 3',
-            'Next_Week': '策略 1/2',
+            'Notification': '策略 3、3.5、4',
+            'Next_Week': '策略 1、2、2.5',
             'Earning_Filter': '策略 4'
         }
         
