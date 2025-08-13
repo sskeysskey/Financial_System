@@ -1,66 +1,29 @@
 {
-    "Basic_Materials": {
-        "BCC": ""
-    },
-    "Real_Estate": {
-        "CPT": "",
-        "MAA": ""
-    },
+    "Basic_Materials": {},
+    "Real_Estate": {},
     "Energy": {
         "OKE": ""
     },
     "Technology": {
         "WIT": "",
-        "ENPH": "",
-        "ACN": "",
-        "FTNT": "",
-        "FICO": "",
-        "GIB": "",
-        "IT": "",
-        "HUBS": "",
         "GDDY": "",
-        "WIX": "",
-        "S": "",
-        "VERX": "",
-        "CRM": "",
-        "MNDY": ""
+        "WIX": ""
     },
-    "Consumer_Cyclical": {
-        "LULU": "",
-        "CMG": "",
-        "LKQ": ""
-    },
+    "Consumer_Cyclical": {},
     "Utilities": {},
     "Consumer_Defensive": {
         "MKC": "味好美",
-        "FRPT": "宠物",
-        "MDLZ": "奥利奥",
-        "CHD": "冲牙器"
+        "FRPT": "宠物"
     },
-    "Industrials": {
-        "WSO": "",
-        "LSTR": "货运",
-        "VRSK": ""
-    },
+    "Industrials": {},
     "Communication_Services": {},
     "Financial_Services": {
-        "BRK-A": "",
-        "MKTX": "",
-        "V": "",
-        "FDS": ""
+        "BRK-A": ""
     },
     "Healthcare": {
-        "CVS": "",
         "NVO": "",
         "CNC": "",
-        "WAT": "",
-        "MOH": "",
-        "DVA": "",
-        "BRKR": "",
-        "LNTH": "",
-        "PRCT": "",
-        "LLY": "",
-        "VRTX": ""
+        "MOH": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -109,7 +72,7 @@
         "YuMi": "",
         "Soybean": "",
         "Cotton": "",
-        "OrangeJuice": "",
+        "OrangeJuice": "橘汁",
         "Sugar": "",
         "Wheat": "",
         "Rice": "",
@@ -134,68 +97,48 @@
     "Qualified": {
         "CVNA": "",
         "CHWY": "",
-        "KMX": "",
-        "DECK": ""
+        "LII": "",
+        "NCLH": "",
+        "TRU": "",
+        "TW": "",
+        "VRSN": "",
+        "AXON": ""
     },
     "Earning_Filter": {},
     "Watching": {
-        "GLBE": "",
-        "EAT": "",
-        "AXON": "",
+        "TGT": "",
         "INTU": "",
         "ADI": "",
         "URBN": "",
-        "TPR": "",
-        "CPRT": "",
-        "HD": "",
-        "LOW": "",
-        "JHX": "",
-        "CIG": "",
-        "NICE": "",
-        "SMTC": ""
-    },
-    "Next_Week": {
-        "HRB": "",
+        "TPR": "蔻驰",
+        "CPRT": "汽车拍卖",
         "NICE": ""
     },
+    "Next_Week": {},
     "Next Week": {
         "BJ": "",
-        "PANW": "",
         "WDAY": "",
-        "ACN": ""
+        "ACN": "",
+        "WMT": "",
+        "PANW": "",
+        "PSTG": "",
+        "KMX": ""
     },
     "2 Weeks": {
         "CRM": "",
-        "COST": "",
-        "PSTG": "",
         "MRVL": "",
         "HRL": ""
     },
     "3 Weeks": {
-        "AVAV": "",
         "GIS": "",
-        "IOT": ""
+        "IOT": "",
+        "FDS": ""
     },
-    "Notification": {
-        "ICLR": "",
-        "IDXX": "",
-        "LII": "",
-        "MEDP": "",
-        "NCLH": "",
-        "NOW": "",
-        "SAIA": "",
-        "SOFI": "",
-        "STX": "",
-        "TRU": "",
-        "TW": "",
-        "VRSN": "",
-        "VRT": "",
-        "WH": "",
-        "WING": ""
-    },
+    "Notification": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
+        "CNYUSD": "人兑美",
         "JPYI": "日元指数",
         "USDCNY": "",
         "USDJPY": "",
@@ -206,30 +149,29 @@
         "EURI": "欧元指数",
         "CNYARS": "阿根廷",
         "GBPUSD": "",
-        "CNYINR": "印度卢比",
+        "CNYINR": "人兑印卢比",
         "CNYKRW": "",
-        "CNYEGP": "埃及",
-        "CNYRUB": "俄罗斯卢布",
-        "CNYPHP": "菲律宾比索",
-        "CNYIDR": "印尼卢比",
-        "CNYTHB": "人民币兑泰铢",
-        "CNYIRR": "伊朗里亚尔",
+        "CNYEGP": "人兑埃镑",
+        "CNYRUB": "人兑俄卢布",
+        "CNYPHP": "人兑菲比索",
+        "CNYIDR": "人兑印尼卢比",
+        "CNYTHB": "人兑泰铢",
+        "CNYIRR": "人兑伊朗",
         "CNYCHF": "人兑瑞法郎",
-        "CNYUSD": "人兑美",
         "USDRUB": "美兑俄卢比",
         "USDCHF": "美兑瑞法",
         "USDKRW": "美元兑韩币",
         "USDTRY": "美兑土里拉",
         "USDSGD": "美兑新元",
         "USDTWD": "美元兑台币",
+        "USDINR": "美兑印卢比",
         "USDIDR": "美兑印尼卢比",
         "USDPHP": "美兑菲比索",
         "USDMYR": "美兑马来元",
         "USDMXN": "美兑墨比索",
         "USDARS": "美兑阿比索",
-        "USDEGP": "美元兑埃镑",
-        "USDBRL": "美兑巴雷亚尔",
-        "USDINR": "美兑印卢比"
+        "USDEGP": "美兑埃镑",
+        "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
         "CoreCPI": "12 CoreCPI",

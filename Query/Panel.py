@@ -732,7 +732,7 @@ class MainWindow(QMainWindow):
                                 display_html = prefix_html + percent_html + suffix_html
                                 formatted_compare_html = (
                                     f'<a href="{keyword}" '
-                                    f'style="color:white; text-decoration:none;">'
+                                    f'style="color:gray; text-decoration:none;">'
                                     f'{display_html}</a>'
                                 )
                             else:
@@ -779,8 +779,8 @@ class MainWindow(QMainWindow):
             )
 
         # 2) 其他顶层菜单项
-        menu.addSeparator()
         menu.addAction("删除",          lambda: self.delete_item(keyword, group))
+        menu.addSeparator()
         menu.addAction("编辑 Tags",    lambda: execute_external_script('tags', keyword, group, self))
         menu.addSeparator()
         menu.addAction("改名",          lambda: self.rename_item(keyword, group))

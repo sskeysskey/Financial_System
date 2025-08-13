@@ -1,11 +1,11 @@
 import sqlite3
 import json
 import os
-# import sys
 import datetime
 
+# import sys
+
 # --- 1. 定义文件和数据库路径 ---
-# 请确保这些路径在您的系统上是正确的
 base_path = "/Users/yanzhang/Coding/"
 news_path = os.path.join(base_path, "News")
 # why_path = os.path.join(news_path, "why.txt")
@@ -16,6 +16,9 @@ news_path = os.path.join(base_path, "News")
 
 db_path = os.path.join(base_path, "Database")
 config_path = os.path.join(base_path, "Financial_System", "Modules")
+
+# 输出文件
+output_file = os.path.join(news_path, "NextWeek_Earning.txt")
 backup_file = os.path.join(news_path, "backup", "NextWeek_Earning.txt")
 notification_file = os.path.join(news_path, "notification_earning.txt")
 backup_notification_file = os.path.join(news_path, "backup", "notification_earning.txt")
@@ -25,9 +28,6 @@ earnings_release_file = os.path.join(news_path, "Earnings_Release_next.txt")
 earnings_release_new_file  = os.path.join(news_path, "Earnings_Release_new.txt")
 sectors_json_file  = os.path.join(config_path, "Sectors_All.json")
 db_file            = os.path.join(db_path, "Finance.db")
-
-# 输出文件
-output_file        = os.path.join(news_path, "NextWeek_Earning.txt")
 
 # 黑名单和面板 JSON 路径
 blacklist_json_file = os.path.join(config_path, "Blacklist.json")
@@ -545,7 +545,7 @@ def process_stocks():
             # 只有在满足以上基本条件和成交额条件时，才进行最复杂的价格查询
             if s4_increasing and s4_recent_er and s4_positive_earning:
                 # 1) 日期窗口：最近财报日后5~11天
-                window_start = last_er_date + datetime.timedelta(days=5)
+                window_start = last_er_date + datetime.timedelta(days=4)
                 window_end   = last_er_date + datetime.timedelta(days=11)
                 date_in_window = window_start <= latest_date <= window_end
 
@@ -569,9 +569,9 @@ def process_stocks():
                 cursor.execute("SELECT market_cap FROM MNSPP WHERE symbol = ?", (symbol,))
                 mcap_row = cursor.fetchone()
                 mcap = mcap_row[0] if mcap_row else None
-                MARKETCAP_THRESHOLD = 50_000_000_000  # 500亿
-                drop_large = 0.04  # ≥500亿 用4%
-                drop_small = 0.07  # <500亿 用7%
+                MARKETCAP_THRESHOLD = 100_000_000_000  # 1000亿
+                drop_large = 0.04  # ≥1000亿 用4%
+                drop_small = 0.07  # <1000亿 用7%
                 drop_pct = drop_large if mcap and mcap >= MARKETCAP_THRESHOLD else drop_small
 
                 # A 条件：在窗口内 且 最新价 < max_price_around_er * (1 - drop_pct)
