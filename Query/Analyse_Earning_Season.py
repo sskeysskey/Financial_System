@@ -158,7 +158,50 @@ def update_json_group(symbols_list, target_json_path, group_name):
     except Exception as e:
         print(f"错误: 写入 JSON 文件失败: {e}")
 
-### 新增点: 创建一个可重用的 PE Ratio 过滤函数 ###
+# --- 新增：独立的成交额过滤函数 ---
+def filter_by_turnover(symbols_to_filter, db_path, symbol_sector_map, min_turnover):
+    """
+    通过检查最新交易日的成交额来过滤股票列表。
+    """
+    if not symbols_to_filter:
+        return []
+
+    print(f"  - 开始对 {len(symbols_to_filter)} 个 symbol 进行成交额过滤...")
+    valid_symbols = []
+    conn = None
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        for sym in symbols_to_filter:
+            table_name = symbol_sector_map.get(sym)
+            if not table_name:
+                print(f"    - 警告 (成交额过滤): 未找到 {sym} 的板块信息，已跳过。")
+                continue
+
+            cursor.execute(
+                f'SELECT price, volume FROM "{table_name}" WHERE name = ? ORDER BY date DESC LIMIT 1',
+                (sym,)
+            )
+            row = cursor.fetchone()
+            if row and row[0] is not None and row[1] is not None:
+                turnover = row[0] * row[1]
+                if turnover >= min_turnover:
+                    valid_symbols.append(sym)
+                else:
+                    print(f"    - 过滤 (成交额不足): {sym} (成交额: {turnover:.0f})")
+            else:
+                print(f"    - 警告 (成交额过滤): 未找到 {sym} 的最新价格/成交量数据，已跳过。")
+    except sqlite3.Error as e:
+        print(f"    - 成交额查询数据库错误: {e}")
+        return valid_symbols
+    finally:
+        if conn:
+            conn.close()
+    
+    print(f"  - 成交额过滤后剩余 {len(valid_symbols)} 个 symbol。")
+    return valid_symbols
+
+
 def filter_symbols_by_pe_ratio(symbols_to_filter, db_path):
     """
     通过检查 MNSPP 表中的 pe_ratio 来过滤股票列表。
@@ -300,22 +343,17 @@ def process_stocks():
                 continue
             latest_date_str, latest_price, latest_volume = latest_row
             latest_date = datetime.datetime.strptime(latest_date_str, "%Y-%m-%d").date()
-            turnover = latest_price * latest_volume
-            turnover_ok = turnover >= MIN_TURNOVER
-            print(
-                f"最新收盘价: {latest_price} （{latest_date_str}），"
-                f"成交量: {latest_volume}，成交额: {turnover:.0f}"
-                + ("" if turnover_ok else f" ← 未达 {MIN_TURNOVER}")
-            )
+            
+            # --- 修改点: 保留成交额计算和打印，但从条件判断中移除 ---
+            # turnover = latest_price * latest_volume if latest_price and latest_volume else 0
+            # turnover_ok = turnover >= MIN_TURNOVER
+            # print(f"最新收盘价: {latest_price} ({latest_date_str})，成交额: {turnover:.0f}" + ("" if turnover_ok else f" ← 注意: 未达 {MIN_TURNOVER}"))
 
             earnings_day_prices = [prices[d] for d in earnings_dates]
-            print(f"财报日价格列表 (按日期降序): {earnings_day_prices}")
-
             threshold = 1 - MIN_DROP_PERCENTAGE
 
             # 策略 1: 最新价比所有 N 次财报日价格都低至少 4%，自动剔除了那些在最近 30 天内有负值财报记录的股票
-            orig_cond1 = all(latest_price < p * threshold for p in earnings_day_prices)
-            cond1 = orig_cond1 and turnover_ok
+            cond1 = all(latest_price < p * threshold for p in earnings_day_prices)
             if cond1:
                 print(f"*** [filtered_1] 条件满足: {symbol} 的最新价 {latest_price} 比所有 {NUM_EARNINGS_TO_CHECK} 次财报日收盘价低 {MIN_DROP_PERCENTAGE*100:.0f}%。 ***")
                 filtered_1.append(symbol)
@@ -334,9 +372,8 @@ def process_stocks():
             if not date_ok:
                 print(f"    - 跳过策略2: 最新交易日({latest_date_str})距最近财报日({earnings_dates[0]})仅 {days_since_er} 天 (<7天)")
 
-            orig_cond2 = increasing and (latest_price < most_recent_er_price * threshold)
-            # 把 date_ok 并入最终判断
-            cond2 = orig_cond2 and turnover_ok and date_ok
+            # --- 修改点: 移除 turnover_ok ---
+            cond2 = increasing and (latest_price < most_recent_er_price * threshold) and date_ok
             if cond2:
                 print(f"*** [filtered_2] 条件满足: {symbol} 的过去 {NUM_EARNINGS_TO_CHECK} 次财报日收盘价递增，且最新价 {latest_price} 比最近一次财报价 {most_recent_er_price} 低 {MIN_DROP_PERCENTAGE*100:.0f}%。 ***")
                 filtered_2.append(symbol)
@@ -367,8 +404,9 @@ def process_stocks():
                     increasing_N = all(asc_N[i] < asc_N[i+1] for i in range(len(asc_N)-1))
                     # 检查 4 次里是否有一次 > 最新价 × 1.07
                     any_high = any(p > latest_price * 1.07 for p in prices4)
-                    if increasing_N and any_high and turnover_ok and date_ok:
-                        print(f"*** [filtered_2_5] {symbol} 通过：前{NUM_EARNINGS_TO_CHECK}次递增 + 4次中有价 > 最新价×1.07 ***")
+                    # --- 修改点: 移除 turnover_ok ---
+                    if increasing_N and any_high and date_ok:
+                        print(f"*** [filtered_2_5] 条件满足: {symbol} ***")
                         filtered_2_5.append(symbol)
 
         # --- 第二遍: 全表扫描 Earning，跑 策略3, 3.5 和 4 ---
@@ -424,9 +462,11 @@ def process_stocks():
                 continue
             latest_date_str, latest_price, latest_volume = r
             latest_date = datetime.datetime.strptime(latest_date_str, "%Y-%m-%d").date()
-            turnover = latest_price * latest_volume
-            turnover_ok = turnover >= MIN_TURNOVER
             
+            # --- 修改点: 保留成交额计算，但从条件判断中移除 ---
+            # turnover = latest_price * latest_volume if latest_price and latest_volume else 0
+            # turnover_ok = turnover >= MIN_TURNOVER # 这行不再是必须的，但保留也无妨
+
             last_er_date = datetime.datetime.strptime(dates[0], "%Y-%m-%d").date()
             asc_prices = list(reversed(earnings_day_prices))
 
@@ -452,12 +492,11 @@ def process_stocks():
                 diff = abs(asc_prices[1] - asc_prices[0])
                 price_ok = diff >= asc_prices[0] * MIN_DROP_PERCENTAGE                
 
-            # 最终合成 cond3：新价格规则 + 时间窗口 + 成交额
+            # 最终合成 cond3：新价格规则 + 时间窗口
             cond3 = (
                 price_ok
                 and latest_price < min_er_price
                 and window_start <= latest_date <= window_end
-                and turnover_ok
             )
             if cond3:
                 filtered_3.append(symbol)
@@ -486,7 +525,7 @@ def process_stocks():
                     if len(prices4) == 4:
                         any_high = any(p > latest_price * 1.07 for p in prices4)
                         # 与策略3其余条件相同：turnover_ok, window_start ≤ latest_date ≤ window_end
-                        if any_high and turnover_ok and (window_start <= latest_date <= window_end):
+                        if any_high and (window_start <= latest_date <= window_end):
                             print(f"  [filtered_3_5] ✓ {symbol} 通过：前{NUM_EARNINGS_TO_CHECK}次递增 + 4次中有价 > 最新价×1.07")
                             filtered_3_5.append(symbol)
             
@@ -503,7 +542,7 @@ def process_stocks():
             s4_positive_earning = earning_record_price_row and earning_record_price_row[0] is not None and earning_record_price_row[0] > 0
             
             # 只有在满足以上基本条件和成交额条件时，才进行最复杂的价格查询
-            if s4_increasing and s4_recent_er and s4_positive_earning and turnover_ok:
+            if s4_increasing and s4_recent_er and s4_positive_earning:
                 # 规则4: 财报后一周价比财报前后最高价低4%
                 s4_price_drop = False # 默认不满足
                 
@@ -511,7 +550,6 @@ def process_stocks():
                 date_one_week_after = last_er_date + datetime.timedelta(days=7)
                 cursor.execute(f'SELECT price FROM "{table_name}" WHERE name = ? AND date = ?', (symbol, date_one_week_after.isoformat()))
                 price_row_after_week = cursor.fetchone()
-
                 if price_row_after_week:
                     price_after_week = price_row_after_week[0]
                     
@@ -583,74 +621,52 @@ def process_stocks():
         conn.close()
         return filtered
 
-    # --- 结果汇总 ---
-    combined_filtered = sorted(set(filtered_1 + filtered_2 + filtered_2_5))
+    # --- 结果汇总与共享过滤流程 ---
     
-    # --- 修改：将策略3, 3.5, 4合并到通知列表，也进行排序和去重 ---
-    notification_list = sorted(set(filtered_3 + filtered_3_5 + filtered_4))
+    # 1. 汇总初步结果
+    final_symbols = sorted(set(filtered_1 + filtered_2 + filtered_2_5))
+    final_notification_list = sorted(set(filtered_3 + filtered_3_5 + filtered_4))
 
-    print("\n--- 额外过滤：最近一个月有负值财报 → 剔除 ---")
-    combined_filtered = filter_negative_earning_last_month(combined_filtered, db_file)
-    
     print(f"\n策略结果汇总 (过滤前):")
-    print(f"  策略 1+2 (主列表) 找到: {len(combined_filtered)} 个 - {combined_filtered}")
-    print(f"  策略 3/3.5/4 (通知列表) 找到: {len(notification_list)} 个 - {notification_list}")
+    print(f"  主列表找到: {len(final_symbols)} 个")
+    print(f"  通知列表找到: {len(final_notification_list)} 个")
 
-    # ### 修改/新增点: 移植黑名单过滤逻辑 ###
-    print("\n--- 5. 应用黑名单过滤 ---")
+    # 2. 过滤最近一个月有负值财报的
+    print("\n--- 2. 额外过滤：最近一个月有负值财报 → 剔除 ---")
+    # 只有主列表需要进行负值财报过滤
+    final_symbols = filter_negative_earning_last_month(final_symbols, db_file)
+    
+
+    # 3. 应用黑名单过滤
+    print("\n--- 3. 应用黑名单过滤 ---")
     blacklist_set = load_blacklist(blacklist_json_file)
+    final_symbols = [s for s in final_symbols if s not in blacklist_set]
+    final_notification_list = [s for s in final_notification_list if s not in blacklist_set]
+    print(f"黑名单过滤后，主列表剩余: {len(final_symbols)} 个, 通知列表剩余: {len(final_notification_list)} 个")
 
-    # 5.1 过滤主列表 (策略 1+2)
-    final_symbols_before_blacklist = combined_filtered
-    final_symbols = [s for s in final_symbols_before_blacklist if s not in blacklist_set]
-    removed_by_blacklist_main = set(final_symbols_before_blacklist) - set(final_symbols)
-    if removed_by_blacklist_main:
-        print(f"主列表: 根据黑名单过滤掉 {len(removed_by_blacklist_main)} 个 symbol: {sorted(list(removed_by_blacklist_main))}")
-    print(f"主列表: 黑名单过滤后剩余 {len(final_symbols)} 个 symbol。")
+    # --- 4. 新增：过滤低成交额股票 ---
+    print("\n--- 4. 过滤低成交额股票 ---")
+    final_symbols = filter_by_turnover(final_symbols, db_file, symbol_sector_map, MIN_TURNOVER)
+    final_notification_list = filter_by_turnover(final_notification_list, db_file, symbol_sector_map, MIN_TURNOVER)
 
-    # --- 修改：对合并后的通知列表进行黑名单过滤 ---
-    final_notification_before_blacklist = notification_list
-    final_notification_list = [s for s in final_notification_before_blacklist if s not in blacklist_set]
-    removed_by_blacklist_notif = set(final_notification_before_blacklist) - set(final_notification_list)
-    if removed_by_blacklist_notif:
-        print(f"通知列表: 根据黑名单过滤掉 {len(removed_by_blacklist_notif)} 个 symbol: {sorted(list(removed_by_blacklist_notif))}")
-    
-    print(f"\n黑名单过滤后结果:")
-    print(f"  主列表剩余: {len(final_symbols)} 个")
-    print(f"  通知列表剩余: {len(final_notification_list)} 个")
-
-    ### 修改点: 重构 PE Ratio 过滤部分，使其对两个列表都生效 ###
-    print("\n--- 6. 过滤无效 PE Ratio ---")
-    
-    # 6.1 过滤主列表
-    print("正在处理主列表...")
+    # 5. 过滤无效 PE Ratio
+    print("\n--- 5. 过滤无效 PE Ratio ---")
     final_symbols = filter_symbols_by_pe_ratio(final_symbols, db_file)
-    
-    # 6.2 过滤通知列表
-    print("\n正在处理通知列表...")
-    # --- 修改：对合并后的通知列表进行PE过滤 ---
     final_notification_list = filter_symbols_by_pe_ratio(final_notification_list, db_file)
+
+    # 6. 过滤“最新交易日 == 最新财报日”
+    print("\n--- 6. 过滤：剔除“最新交易日 == 最新财报日” 的股票 ---")
+    final_symbols = filter_by_date_mismatch(final_symbols)
+    final_notification_list = filter_by_date_mismatch(final_notification_list)
 
     print("\n--- 所有过滤完成后的最终结果 ---")
     print(f"主列表最终数量: {len(final_symbols)} - {final_symbols}")
     print(f"通知列表最终数量: {len(final_notification_list)} - {final_notification_list}")
-
-    # 对主列表和通知列表都做一次上述过滤
-    print("\n--- 7.x 过滤：剔除“最新交易日 == 最新财报日” 的股票 ---")
-    final_symbols    = filter_by_date_mismatch(final_symbols)
-    # --- 修改：对合并后的通知列表进行日期过滤 ---
-    final_notification_list = filter_by_date_mismatch(final_notification_list)
-
-    print(f"过滤后主列表数量: {len(final_symbols)} - {final_symbols}")
-    print(f"过滤后通知列表数量: {len(final_notification_list)} - {final_notification_list}")
     
-    # --- 7. 处理主列表的输出 (NextWeek_Earning.txt 和 panel 的 Next_Week) ---
+    # --- 7. 处理主列表的输出 ---
     print("\n--- 7. 处理主列表输出 ---")
     backup_dir = os.path.dirname(backup_file)
-    if not os.path.exists(backup_dir):
-        os.makedirs(backup_dir, exist_ok=True)
-
-    # 读取备份文件（旧的符号集合）
+    if not os.path.exists(backup_dir): os.makedirs(backup_dir, exist_ok=True)
     try:
         with open(backup_file, 'r', encoding='utf-8') as f:
             old_set = {line.strip() for line in f if line.strip()}
@@ -691,7 +707,8 @@ def process_stocks():
     except IOError as e:
         print(f"更新主列表备份文件时错误: {e}")
 
-    # --- 8. 处理通知列表的输出 (notification_earning.txt 和 panel 的 Notification) ---
+    # --- 8. 处理通知列表的输出 ---
+    # (这部分无变化, 除了变量名 final_notification_list)
     print("\n--- 8. 处理通知列表输出 ---")
     backup_notification_file = os.path.join(news_path, "backup", "notification_earning.txt")
     backup_dir = os.path.dirname(backup_notification_file)

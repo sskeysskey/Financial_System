@@ -3,7 +3,8 @@
         "BCC": ""
     },
     "Real_Estate": {
-        "CPT": ""
+        "CPT": "",
+        "MAA": ""
     },
     "Energy": {
         "OKE": ""
@@ -21,7 +22,8 @@
         "WIX": "",
         "S": "",
         "VERX": "",
-        "CRM": ""
+        "CRM": "",
+        "MNDY": ""
     },
     "Consumer_Cyclical": {
         "LULU": "",
@@ -37,7 +39,8 @@
     },
     "Industrials": {
         "WSO": "",
-        "LSTR": "货运"
+        "LSTR": "货运",
+        "VRSK": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
@@ -89,7 +92,7 @@
         "Brazil": ""
     },
     "Commodities": {
-        "CrudeOil": "",
+        "CrudeOil": "石油",
         "Huangjin": "黄金",
         "Naturalgas": "天然气",
         "BalticDry": "",
@@ -147,10 +150,13 @@
         "HD": "",
         "LOW": "",
         "JHX": "",
-        "NICE": "",
-        "CIG": ""
+        "CIG": "",
+        "NICE": ""
     },
-    "Next_Week": {},
+    "Next_Week": {
+        "HRB": "",
+        "NICE": ""
+    },
     "Next Week": {
         "BJ": "",
         "PANW": "",
@@ -169,7 +175,33 @@
         "GIS": "",
         "IOT": ""
     },
-    "Notification": {},
+    "Notification": {
+        "AON": "",
+        "AVY": "",
+        "AXON": "",
+        "CHD": "",
+        "CVLT": "",
+        "CVNA": "",
+        "DECK": "",
+        "DGX": "",
+        "ESTC": "",
+        "FTAI": "",
+        "ICLR": "",
+        "IDXX": "",
+        "LII": "",
+        "MEDP": "",
+        "NCLH": "",
+        "NOW": "",
+        "SAIA": "",
+        "SOFI": "",
+        "STX": "",
+        "TRU": "",
+        "TW": "",
+        "VRSN": "",
+        "VRT": "",
+        "WH": "",
+        "WING": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

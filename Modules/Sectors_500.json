@@ -53,7 +53,9 @@
         "GM",
         "DASH",
         "JD",
-        "HMC"
+        "HMC",
+        "DHI",
+        "CPNG"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -153,7 +155,8 @@
         "COIN",
         "HOOD",
         "ARES",
-        "NDAQ"
+        "NDAQ",
+        "AMP"
     ],
     "Healthcare": [
         "LLY",

@@ -195,7 +195,6 @@
     "XLE",
     "FENY",
     "VYMI",
-    "ICOW",
     "SDVY",
     "JMUB",
     "COWZ",
@@ -486,7 +485,8 @@
     "OR",
     "SBSW",
     "TFPM",
-    "MP"
+    "MP",
+    "SXT"
   ],
   "Communication_Services": [
     "GOOGL",
@@ -1089,7 +1089,8 @@
     "FLG",
     "MAIN",
     "BBAR",
-    "CRCL"
+    "CRCL",
+    "AX"
   ],
   "Healthcare": [
     "LLY",
@@ -1443,7 +1444,8 @@
     "OMAB",
     "SMR",
     "PRIM",
-    "FLY"
+    "FLY",
+    "CPA"
   ],
   "Real_Estate": [
     "PLD",
