@@ -42,11 +42,11 @@ def delete_records_by_name_and_date(db_file, table_name, names, date):
 
 # 使用示例
 db_path = '/Users/yanzhang/Coding/Database/Finance.db'  # 配置数据库文件路径
-table = 'Financial_Services'
+table = 'Consumer_Defensive'
 names_to_delete = [
-    "AIG"
+    "OTLY"
 ]
-date_to_delete = '2008-12-15'
+date_to_delete = '2025-02-19'
 
 # names_to_delete = [
 #     "Cocoa", "Coffee", "Cotton", "Orange Juice", "Sugar", "Lean Hogs", "Crude Oil", 

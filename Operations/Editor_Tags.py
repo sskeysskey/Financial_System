@@ -112,12 +112,14 @@ class TagEditor(QMainWindow):
     # 使用 QTimer.singleShot 来安全地调用 add_tag，避免崩溃
     def eventFilter(self, source, event):
         if source is self.new_tag_input and event.type() == QEvent.KeyPress:
-            # 如果按下的是回车键 (且没有按下Shift键)
-            if event.key() in (Qt.Key_Return, Qt.Key_Enter) and not (event.modifiers() & Qt.ShiftModifier):
-                # 不直接调用 self.add_tag()
-                # 而是安排它在当前事件处理完成后立即执行
-                QTimer.singleShot(0, self.add_tag)
-                return True # 告诉Qt事件已处理，防止输入框换行
+            if event.key() in (Qt.Key_Return, Qt.Key_Enter):
+                # Shift+Enter → 添加到底部
+                if event.modifiers() & Qt.ShiftModifier:
+                    QTimer.singleShot(0, lambda: self.add_tag(bottom=True))
+                else:
+                    # 普通 Enter → 添加到顶部
+                    QTimer.singleShot(0, lambda: self.add_tag(bottom=False))
+                return True  # 拦截，不让 QTextEdit 自己再处理
         return super().eventFilter(source, event)
 
     # ★ 修改点: 简化UI初始化，移除按钮，开启拖拽
@@ -298,30 +300,42 @@ class TagEditor(QMainWindow):
             QMessageBox.critical(self, "Error", f"保存失败: {str(e)}")
             return False
 
-    # ★ 删除: 这两个方法不再需要
-    # def move_tag_up(self): ...
-    # def move_tag_down(self): ...
-
-    # --- 其他方法保持不变 ---
-    def add_tag(self):
+    def add_tag(self, bottom=False):
+        """
+        bottom=False → 插入到最前面（旧行为）
+        bottom=True  → 追加到最后面
+        """
         if not hasattr(self, 'current_item'):
             QMessageBox.warning(self, "警告", "没有加载任何项目，无法添加标签。")
             return
-        
-        # ★ 修改：从QTextEdit获取文本
+
         new_tag = self.new_tag_input.toPlainText().strip()
-        
-        if new_tag:
-            if new_tag not in self.current_item['tag']:
-                # 插入到最前面
-                self.current_item['tag'].insert(0, new_tag)
-                self.tags_list.insertItem(0, new_tag)
-                # （可选）立即选中并滚动到最上面
-                self.tags_list.setCurrentRow(0)
-                self.tags_list.scrollToItem(self.tags_list.currentItem())
-                self.new_tag_input.clear()
-            else:
-                QMessageBox.information(self, "提示", "该标签已存在。")
+        if not new_tag:
+            self.new_tag_input.setFocus()
+            return
+
+        tags = self.current_item.setdefault('tag', [])
+        if new_tag in tags:
+            QMessageBox.information(self, "提示", "该标签已存在。")
+            self.new_tag_input.clear()
+            self.new_tag_input.setFocus()
+            return
+
+        if bottom:
+            # 追加到末尾
+            tags.append(new_tag)
+            self.tags_list.addItem(new_tag)
+            row = self.tags_list.count() - 1
+            self.tags_list.setCurrentRow(row)
+            self.tags_list.scrollToItem(self.tags_list.currentItem())
+        else:
+            # 插入到最前
+            tags.insert(0, new_tag)
+            self.tags_list.insertItem(0, new_tag)
+            self.tags_list.setCurrentRow(0)
+            self.tags_list.scrollToItem(self.tags_list.currentItem())
+
+        self.new_tag_input.clear()
         self.new_tag_input.setFocus()
         
     # --- 其他方法保持不变 ---

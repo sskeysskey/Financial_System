@@ -36,7 +36,7 @@ DISPLAY_LIMITS = {
 categories = [
     ['Basic_Materials','Consumer_Cyclical','Real_Estate','Technology','Energy','Industrials',
      'Consumer_Defensive','Communication_Services','Financial_Services', 'Healthcare','Utilities'],
-    ['Qualified','Next Week','2 Weeks','3 Weeks'],
+    ['Today','Next Week','2 Weeks','3 Weeks'],
     ['Notification','Next_Week','Earning_Filter'],
     ['Watching'],
     ['Bonds','Indices','Currencies'],
@@ -768,7 +768,7 @@ class MainWindow(QMainWindow):
 
         # --- 通用“移动”子菜单 ---
         move_menu = menu.addMenu("移动")
-        for tgt in ("Qualified", "Watching", "Next Week", "2 Weeks", "3 Weeks"):
+        for tgt in ("Today", "Watching", "Next Week", "2 Weeks", "3 Weeks"):
             act = move_menu.addAction(f"到 {tgt}")
             act.setEnabled(group != tgt)
             # 用 lambda 搭桥：三个参数 keyword, group (当前组), tgt (目标组)

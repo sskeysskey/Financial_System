@@ -94,35 +94,31 @@
         "Solana": "",
         "XRP": ""
     },
-    "Qualified": {
+    "Today": {
+        "CART": "",
         "CVNA": "",
         "LII": "",
-        "NCLH": "",
-        "TRU": "",
-        "TW": "",
         "VRSN": "",
-        "AXON": ""
+        "INTU": ""
     },
     "Earning_Filter": {},
     "Watching": {
         "TGT": "",
-        "INTU": "",
         "ADI": "",
         "URBN": "",
         "TPR": "蔻驰",
         "CPRT": "汽车拍卖",
-        "NICE": "",
-        "CHWY": ""
+        "AXON": ""
     },
     "Next_Week": {},
     "Next Week": {
         "BJ": "",
-        "WDAY": "",
         "ACN": "",
         "WMT": "",
         "PANW": "",
         "PSTG": "",
-        "KMX": ""
+        "KMX": "",
+        "WDAY": ""
     },
     "2 Weeks": {
         "CRM": "",

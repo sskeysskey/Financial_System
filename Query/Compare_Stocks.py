@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import sqlite3
 import json
 import os
+import csv
 from wcwidth import wcswidth
 import re
 
@@ -194,29 +195,28 @@ def compare_today_yesterday(config_path,
     # 生成输出文件
     if output:
         output.sort(key=lambda x: x[1], reverse=True)
-        with open(output_path, 'w') as file:
+
+        # —— 一、写 TXT —— 
+        with open(output_path, 'w', encoding='utf-8') as txtfile:
             for entry in output:
                 sector, company = entry[0].rsplit(' ', 1)
                 pct_change, vol, pct_vol_change, cr, cf = entry[1:]
                 original = company
 
-                # 来自 earnings_new 的标注
+                # earnings 新/下期 标注
                 if original in earnings_new:
                     company += f".{earnings_new[original]}"
-                # 来自 earnings_next 的标注
                 if original in earnings_next:
                     company += f".{earnings_next[original]}"
-
-                # 大成交量标记
+                # 大成交量
                 if vol > 5_000_000:
                     company += '.*'
-                # 涨跌家数标记
+                # gainer/loser
                 if original in gainers:
                     company += '.>'
                 elif original in losers:
                     company += '.<'
-
-                # 连续涨跌标记
+                # 连涨/连跌
                 if cr == 2:
                     company += '.+'
                 elif cr == 3:
@@ -226,28 +226,70 @@ def compare_today_yesterday(config_path,
                 elif cf == 3:
                     company += '.--'
 
-                # 标签
                 tags = symbol_to_tags.get(original, [])
                 tags_str = ', '.join(tags)
 
-                # 按「25 列」补齐 sector，按「15 列」补齐 company
                 sector_p = pad_display(sector, 25, 'left')
                 company_p = pad_display(company, 15, 'left')
-                file.write(f"{sector_p}{company_p}: {pct_change:>6.2f}%  {tags_str}\n")
-
+                txtfile.write(f"{sector_p}{company_p}: {pct_change:>6.2f}%  {tags_str}\n")
         print(f"{output_path} 已生成。")
+
+        # —— 二、写 CSV ——
+        csv_path = os.path.splitext(output_path)[0] + '.csv'
+        with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            # 如果不想要表头，这一行可以删
+            writer.writerow(['Sector', 'Company', 'Change(%)', 'Tags'])
+            for entry in output:
+                sector, company = entry[0].rsplit(' ', 1)
+                pct_change, vol, pct_vol_change, cr, cf = entry[1:]
+                original = company
+
+                # 与 TXT 同样的标注逻辑
+                if original in earnings_new:
+                    company += f".{earnings_new[original]}"
+                if original in earnings_next:
+                    company += f".{earnings_next[original]}"
+                if vol > 5_000_000:
+                    company += '.*'
+                if original in gainers:
+                    company += '.>'
+                elif original in losers:
+                    company += '.<'
+                if cr == 2:
+                    company += '.+'
+                elif cr == 3:
+                    company += '.++'
+                if cf == 2:
+                    company += '.-'
+                elif cf == 3:
+                    company += '.--'
+
+                tags = symbol_to_tags.get(original, [])
+                tags_str = ', '.join(tags)
+
+                writer.writerow([sector, company, f"{pct_change:.2f}", tags_str])
+        print(f"{csv_path} 已生成。")
+
     else:
         log_error_with_timestamp("输出为空，无法进行保存文件操作。", error_file_path)
 
-def clean_old_backups(directory, prefix="CompareStock_", days=4):
-    """删除备份目录中超过指定天数的文件"""
+def clean_old_backups(directory, prefix="CompareStock_", days=4, exts=None):
+    """
+    删除备份目录中超过指定天数的 CompareStock_*.txt/.csv
+    """
+    if exts is None:
+        exts = ['.txt', '.csv']
     now = datetime.now()
     cutoff = now - timedelta(days=days)
+
     for filename in os.listdir(directory):
-        if not filename.startswith(prefix):
+        name, ext = os.path.splitext(filename)
+        if not filename.startswith(prefix) or ext.lower() not in exts:
             continue
+        # filename 可能是 CompareStock_230814.txt 或 ...csv
         try:
-            date_str = filename.split('_')[-1].split('.')[0]
+            date_str = filename[len(prefix):].split('.')[0]  # "230814"
             file_date = datetime.strptime(date_str, '%y%m%d').replace(year=now.year)
             if file_date < cutoff:
                 os.remove(os.path.join(directory, filename))
@@ -264,23 +306,33 @@ if __name__ == '__main__':
         "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare",
         "Industrials", "Real_Estate", "Technology", "Utilities"
     ]
-    file_path = '/Users/yanzhang/Coding/News/CompareStock.txt'
+    file_path_txt = '/Users/yanzhang/Coding/News/CompareStock.txt'
+    file_path_csv = os.path.splitext(file_path_txt)[0] + '.csv'
     directory_backup = '/Users/yanzhang/Coding/News/backup/site/'
     error_file_path = '/Users/yanzhang/Coding/News/Today_error.txt'
 
-    # 备份并重命名昨日的 CompareStock.txt
-    if os.path.exists(file_path):
-        yesterday = datetime.now() - timedelta(days=1)
-        timestamp = yesterday.strftime('%y%m%d')
-        directory, filename = os.path.split(file_path)
-        name, ext = os.path.splitext(filename)
-        new_filename = f"{name}_{timestamp}{ext}"
-        new_file_path = os.path.join(directory_backup, new_filename)
-        os.rename(file_path, new_file_path)
-        print(f"文件已重命名为: {new_file_path}")
+    # 1) 备份昨日的 CompareStock.txt
+    if os.path.exists(file_path_txt):
+        ts = (datetime.now() - timedelta(days=1)).strftime('%y%m%d')
+        d, fn = os.path.split(file_path_txt)
+        name, ext = os.path.splitext(fn)  # ext=='.txt'
+        new_fn = f"{name}_{ts}{ext}"
+        os.rename(file_path_txt, os.path.join(directory_backup, new_fn))
+        print(f"TXT 已备份为: {new_fn}")
     else:
-        print("文件不存在")
+        print("TXT 文件不存在")
 
+    # 2) 备份昨日的 CompareStock.csv（如果有）
+    if os.path.exists(file_path_csv):
+        ts = (datetime.now() - timedelta(days=1)).strftime('%y%m%d')
+        d, fn = os.path.split(file_path_csv)
+        name, ext = os.path.splitext(fn)  # ext=='.csv'
+        new_fn = f"{name}_{ts}{ext}"
+        os.rename(file_path_csv, os.path.join(directory_backup, new_fn))
+        print(f"CSV 已备份为: {new_fn}")
+    # 不报“文件不存在”，因为今天可能还没生成
+
+    # 3) 调用对比函数，仍传入 TXT 路径，内部会同时写 TXT+CSV
     compare_today_yesterday(
         config_path,
         description_path,
@@ -290,7 +342,7 @@ if __name__ == '__main__':
         '/Users/yanzhang/Coding/News/Earnings_Release_new.txt',
         '/Users/yanzhang/Coding/News/Earnings_Release_next.txt',
         '/Users/yanzhang/Coding/Financial_System/Modules/Gainer_Loser.json',
-        file_path,
+        file_path_txt,      # 只做传参，函数里也会生成 CSV
         error_file_path
     )
 
