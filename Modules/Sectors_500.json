@@ -95,7 +95,8 @@
         "MPLX",
         "E",
         "LNG",
-        "TRP"
+        "TRP",
+        "PSX"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -155,8 +156,7 @@
         "COIN",
         "HOOD",
         "ARES",
-        "NDAQ",
-        "AMP"
+        "NDAQ"
     ],
     "Healthcare": [
         "LLY",

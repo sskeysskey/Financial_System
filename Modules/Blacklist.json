@@ -550,7 +550,8 @@
         "HES",
         "BPMC",
         "SKX",
-        "PARA"
+        "PARA",
+        "CHPT"
     ],
     "etf": [
         "VDE",

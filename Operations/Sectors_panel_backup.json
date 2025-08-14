@@ -96,7 +96,6 @@
     },
     "Qualified": {
         "CVNA": "",
-        "CHWY": "",
         "LII": "",
         "NCLH": "",
         "TRU": "",
@@ -112,7 +111,8 @@
         "URBN": "",
         "TPR": "蔻驰",
         "CPRT": "汽车拍卖",
-        "NICE": ""
+        "NICE": "",
+        "CHWY": ""
     },
     "Next_Week": {},
     "Next Week": {

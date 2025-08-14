@@ -9,7 +9,10 @@
         "GDDY": "",
         "WIX": ""
     },
-    "Consumer_Cyclical": {},
+    "Consumer_Cyclical": {
+        "CAVA": "",
+        "HRB": ""
+    },
     "Utilities": {},
     "Consumer_Defensive": {
         "MKC": "味好美",
@@ -96,7 +99,6 @@
     },
     "Qualified": {
         "CVNA": "",
-        "CHWY": "",
         "LII": "",
         "NCLH": "",
         "TRU": "",
@@ -112,9 +114,17 @@
         "URBN": "",
         "TPR": "蔻驰",
         "CPRT": "汽车拍卖",
-        "NICE": ""
+        "NICE": "",
+        "CHWY": ""
     },
-    "Next_Week": {},
+    "Next_Week": {
+        "BIRK": "",
+        "BJ": "",
+        "JD": "",
+        "NICE": "",
+        "WDAY": "",
+        "YMM": ""
+    },
     "Next Week": {
         "BJ": "",
         "WDAY": "",
