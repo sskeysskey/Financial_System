@@ -104,7 +104,9 @@
         "CVNA": "",
         "LII": "",
         "VRSN": "",
-        "INTU": ""
+        "INTU": "",
+        "AXON": "",
+        "PSTG": ""
     },
     "Earning_Filter": {},
     "Watching": {
@@ -112,8 +114,11 @@
         "ADI": "",
         "URBN": "",
         "TPR": "蔻驰",
-        "CPRT": "汽车拍卖",
-        "AXON": ""
+        "CPRT": "",
+        "AXON": "",
+        "BROS": "",
+        "DASH": "",
+        "ESTC": ""
     },
     "Next_Week": {},
     "Next Week": {
@@ -135,16 +140,7 @@
         "IOT": "",
         "FDS": ""
     },
-    "Notification": {
-        "AXON": "",
-        "BROS": "",
-        "CART": "",
-        "CPRT": "",
-        "CRM": "",
-        "DASH": "",
-        "ESTC": "",
-        "PSTG": ""
-    },
+    "Notification": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

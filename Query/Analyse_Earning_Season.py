@@ -42,8 +42,6 @@ CONFIG = {
     "RISE_DROP_PERCENTAGE": 0.07,
     "MIN_TURNOVER": 100_000_000,
     "MARKETCAP_THRESHOLD": 100_000_000_000,
-    "LARGE_CAP_DROP": 0.04,
-    "SMALL_CAP_DROP": 0.07,
 }
 
 # --- 3. 辅助与文件操作模块 ---
@@ -216,13 +214,13 @@ def build_stock_data_cache(symbols, db_path, symbol_sector_map):
 # --- 5. 策略模块 (每个策略都是独立的函数) ---
 
 def run_strategy_1(data):
-    """策略1: 最新收盘价比过去N次财报的最低值还低至少4%"""
+    """策略 1：最新收盘价比过去N次财报的最低值还低至少4%"""
     prices = data['all_er_prices'][:CONFIG["NUM_EARNINGS_TO_CHECK"]]
     threshold = 1 - CONFIG["MIN_DROP_PERCENTAGE"]
     return data['latest_price'] < min(prices) * threshold
 
 def run_strategy_2(data):
-    """策略2: 过去N次财报收盘价递增，最新价比最高财报价低，且财报后至少7天"""
+    """策略 2：过去N次财报收盘都是上升，且最新收盘价比（N次财报收盘价的最高值）低4%，且最近一次的财报日期要和最新收盘价日期间隔不少于7天"""
     prices = data['all_er_prices'][:CONFIG["NUM_EARNINGS_TO_CHECK"]]
     asc_prices = list(reversed(prices))
     is_increasing = all(asc_prices[i] < asc_prices[i+1] for i in range(len(asc_prices)-1))
@@ -236,7 +234,7 @@ def run_strategy_2(data):
     return is_increasing and is_date_ok and is_price_ok
 
 def run_strategy_2_5(data):
-    """策略2.5: N次递增，最近3次财报有一次价比最新价高7%，且财报后至少7天"""
+    """策略 2.5 过去N次财报保持上升，且最近的3次财报里至少有一次财报的收盘价要比该symbol的最新收盘价高7%以上，且最近一次的财报日期要和最新收盘价日期间隔不少于7天"""
     # 确保有足够的数据点
     if len(data['all_er_prices']) < 3 or any(p is None for p in data['all_er_prices'][:3]):
         return False
@@ -256,7 +254,9 @@ def run_strategy_2_5(data):
     return is_increasing and any_high and is_date_ok
 
 def run_strategy_3(data):
-    """策略3: 复杂的窗口期和价格波动策略"""
+    """ 策略 3（1）：如果最近2次财报是上升的，且最新收盘价比过去N次财报最高收盘价低7% """
+    """ 策略 3（2）：如果不是上升的，要求最近2次财报收盘价差额要大于等于4%，最新收盘价 < 过去N次财报最低收盘价 """
+    """ 策略 3（3）：以上两个结果还同时必须满足最新交易日落在下次理论(最近一次财报日期+93天)财报之前的7~20天窗口期内 """
     prices = data['all_er_prices'][:CONFIG["NUM_EARNINGS_TO_CHECK"]]
     asc_prices = list(reversed(prices))
     
@@ -279,7 +279,7 @@ def run_strategy_3(data):
     return price_ok
 
 def run_strategy_3_5(data):
-    """策略3.5: 递增+高价+窗口期"""
+    """策略 3.5: 过去2次财报保持上升，且最近的3次财报里至少有一次财报的收盘价要比该symbol的最新收盘价高7%以上，且最新交易日落在下次理论(最近一次财报日期+93天)财报之前的7~20天窗口期内"""
     if len(data['all_er_prices']) < 3 or any(p is None for p in data['all_er_prices'][:3]):
         return False
 
@@ -301,7 +301,8 @@ def run_strategy_3_5(data):
     return is_increasing and any_high
 
 def run_strategy_4(data, cursor, symbol_sector_map):
-    """策略4: 近期财报后的特定窗口和价格行为"""
+    """ 策略 4（1）：最近N次财报的收盘价要递增，最近一次财报必须是从系统日期往前数一个月内，且该symbol从earning表中读到的price值必须为正 """
+    """ 策略 4（2）：最新收盘价位于最近财报日后5-11天之间，且A：最新收盘价比最新财报日前后(±2天内)的最高收盘价低超过X%（如果股票symbol的marketcap是1000亿以上时X就是4%，如果股票symbol的marketcap是1000亿以下时X就是7%），B：或者不管marketcap是多少，只要最新收盘价低于倒数第二次财报的收盘价时也算符合要求，A、B是或的关系 """
     prices = data['all_er_prices'][:CONFIG["NUM_EARNINGS_TO_CHECK"]]
     asc_prices = list(reversed(prices))
     
@@ -315,7 +316,7 @@ def run_strategy_4(data, cursor, symbol_sector_map):
 
     # 日期窗口
     window_start = data['latest_er_date'] + datetime.timedelta(days=5)
-    window_end = data['latest_er_date'] + datetime.timedelta(days=11)
+    window_end = data['latest_er_date'] + datetime.timedelta(days=12)
     if not (window_start <= data['latest_date'] <= window_end):
         return False
         
@@ -341,7 +342,7 @@ def run_strategy_4(data, cursor, symbol_sector_map):
     if max_price_around_er is None: return False
 
     mcap = data['market_cap']
-    drop_pct = CONFIG["LARGE_CAP_DROP"] if mcap and mcap >= CONFIG["MARKETCAP_THRESHOLD"] else CONFIG["SMALL_CAP_DROP"]
+    drop_pct = CONFIG["MIN_DROP_PERCENTAGE"] if mcap and mcap >= CONFIG["MARKETCAP_THRESHOLD"] else CONFIG["RISE_DROP_PERCENTAGE"]
     cond_A = data['latest_price'] < max_price_around_er * (1 - drop_pct)
     
     return cond_A
