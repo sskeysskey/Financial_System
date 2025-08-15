@@ -9,8 +9,7 @@
         "GDDY": "",
         "WIX": "",
         "GIB": "",
-        "IOT": "",
-        "NICE": ""
+        "IOT": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
@@ -21,9 +20,7 @@
         "MKC": "味好美",
         "FRPT": "宠物"
     },
-    "Industrials": {
-        "FLY": ""
-    },
+    "Industrials": {},
     "Communication_Services": {},
     "Financial_Services": {
         "BRK-A": ""
@@ -118,13 +115,7 @@
         "CPRT": "汽车拍卖",
         "AXON": ""
     },
-    "Next_Week": {
-        "BJ": "",
-        "ONON": "",
-        "PANW": "",
-        "WDAY": "",
-        "YMM": ""
-    },
+    "Next_Week": {},
     "Next Week": {
         "BJ": "",
         "ACN": "",
@@ -144,7 +135,16 @@
         "IOT": "",
         "FDS": ""
     },
-    "Notification": {},
+    "Notification": {
+        "AXON": "",
+        "BROS": "",
+        "CART": "",
+        "CPRT": "",
+        "CRM": "",
+        "DASH": "",
+        "ESTC": "",
+        "PSTG": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
@@ -190,7 +190,7 @@
         "CorePPI": "14 CorePPI",
         "USRetailM": "15 USRetailM",
         "ImportPriceM": "15 ImportPriceM",
-        "USConfidence": "15 信心指数",
+        "USConfidence": "15 USConfidence",
         "USInitial": "14 USInitial"
     },
     "Economic_All": {

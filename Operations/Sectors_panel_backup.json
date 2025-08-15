@@ -7,9 +7,14 @@
     "Technology": {
         "WIT": "",
         "GDDY": "",
-        "WIX": ""
+        "WIX": "",
+        "GIB": "",
+        "IOT": ""
     },
-    "Consumer_Cyclical": {},
+    "Consumer_Cyclical": {
+        "CAVA": "",
+        "HRB": ""
+    },
     "Utilities": {},
     "Consumer_Defensive": {
         "MKC": "味好美",
@@ -176,7 +181,7 @@
         "CorePPI": "14 CorePPI",
         "USRetailM": "15 USRetailM",
         "ImportPriceM": "15 ImportPriceM",
-        "USConfidence": "15 信心指数",
+        "USConfidence": "15 USConfidence",
         "USInitial": "14 USInitial"
     },
     "Economic_All": {
