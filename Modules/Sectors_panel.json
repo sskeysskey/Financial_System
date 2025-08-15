@@ -7,15 +7,23 @@
     "Technology": {
         "WIT": "",
         "GDDY": "",
-        "WIX": ""
+        "WIX": "",
+        "GIB": "",
+        "IOT": "",
+        "NICE": ""
     },
-    "Consumer_Cyclical": {},
+    "Consumer_Cyclical": {
+        "CAVA": "",
+        "HRB": ""
+    },
     "Utilities": {},
     "Consumer_Defensive": {
         "MKC": "味好美",
         "FRPT": "宠物"
     },
-    "Industrials": {},
+    "Industrials": {
+        "FLY": ""
+    },
     "Communication_Services": {},
     "Financial_Services": {
         "BRK-A": ""
@@ -110,7 +118,13 @@
         "CPRT": "汽车拍卖",
         "AXON": ""
     },
-    "Next_Week": {},
+    "Next_Week": {
+        "BJ": "",
+        "ONON": "",
+        "PANW": "",
+        "WDAY": "",
+        "YMM": ""
+    },
     "Next Week": {
         "BJ": "",
         "ACN": "",

@@ -156,7 +156,8 @@
         "COIN",
         "HOOD",
         "ARES",
-        "NDAQ"
+        "NDAQ",
+        "AIG"
     ],
     "Healthcare": [
         "LLY",
@@ -231,7 +232,6 @@
         "URI",
         "PCAR",
         "LHX",
-        "VRT",
         "CMI"
     ],
     "Real_Estate": [
