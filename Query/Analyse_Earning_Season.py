@@ -302,7 +302,7 @@ def run_strategy_3_5(data):
 
 def run_strategy_4(data, cursor, symbol_sector_map):
     """ 策略 4（1）：最近N次财报的收盘价要递增，最近一次财报必须是从系统日期往前数一个月内，且该symbol从earning表中读到的price值必须为正 """
-    """ 策略 4（2）：最新收盘价位于最近财报日后5-11天之间，且A：最新收盘价比最新财报日前后(±2天内)的最高收盘价低超过X%（如果股票symbol的marketcap是1000亿以上时X就是4%，如果股票symbol的marketcap是1000亿以下时X就是7%），B：或者不管marketcap是多少，只要最新收盘价低于倒数第二次财报的收盘价时也算符合要求，A、B是或的关系 """
+    """ 策略 4（2）：最新收盘价位于最近财报日后9-25天之间，且A：最新收盘价比最新财报日前后(±2天内)的最高收盘价低超过X%（如果股票symbol的marketcap是1000亿以上时X就是4%，如果股票symbol的marketcap是1000亿以下时X就是7%），B：或者不管marketcap是多少，只要最新收盘价低于倒数第二次财报的收盘价时也算符合要求，A、B是或的关系 """
     prices = data['all_er_prices'][:CONFIG["NUM_EARNINGS_TO_CHECK"]]
     asc_prices = list(reversed(prices))
     
@@ -315,8 +315,8 @@ def run_strategy_4(data, cursor, symbol_sector_map):
         return False
 
     # 日期窗口
-    window_start = data['latest_er_date'] + datetime.timedelta(days=5)
-    window_end = data['latest_er_date'] + datetime.timedelta(days=12)
+    window_start = data['latest_er_date'] + datetime.timedelta(days=9)
+    window_end = data['latest_er_date'] + datetime.timedelta(days=25)
     if not (window_start <= data['latest_date'] <= window_end):
         return False
         
