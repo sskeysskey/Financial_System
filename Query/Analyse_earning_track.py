@@ -7,7 +7,7 @@ from collections import defaultdict
 # --- 0. 调试追踪配置 ---
 # ##############################################################################
 #  请在这里修改为你想要追踪的股票代码
-SYMBOL_TO_TRACE = "BKR" 
+SYMBOL_TO_TRACE = "HPE" 
 # ##############################################################################
 LOG_FILE_PATH = "/Users/yanzhang/Downloads/a.txt"
 
@@ -48,6 +48,7 @@ CONFIG = {
     "NUM_EARNINGS_TO_CHECK": 2,
     "MIN_DROP_PERCENTAGE": 0.04,
     "RISE_DROP_PERCENTAGE": 0.07,
+    "MAX_DROP_PERCENTAGE": 0.13,
     "MIN_TURNOVER": 100_000_000,
     "MARKETCAP_THRESHOLD": 100_000_000_000,
 }
@@ -340,7 +341,7 @@ def run_strategy_3_5(data, symbol_to_trace, log_detail):
     asc_prices_n = list(reversed(prices_n))
     is_increasing = asc_prices_n[-2] < asc_prices_n[-1]
     prices_3 = data['all_er_prices'][:3]
-    price_threshold = data['latest_price'] * (1 + CONFIG["RISE_DROP_PERCENTAGE"])
+    price_threshold = data['latest_price'] * (1 + CONFIG["MAX_DROP_PERCENTAGE"])
     any_high = any(p > price_threshold for p in prices_3)
 
     if data.get('symbol') == symbol_to_trace:
@@ -351,7 +352,7 @@ def run_strategy_3_5(data, symbol_to_trace, log_detail):
         log_detail(f"  - 最近两次财报价 (从远到近): {[asc_prices_n[-2], asc_prices_n[-1]]}")
         log_detail(f"  - 条件2 (最近两次财报上升): {is_increasing}")
         log_detail(f"  - 最近三次财报价: {prices_3}")
-        log_detail(f"  - 条件3 (任一价比最新价高7%): any(p > {data['latest_price']} * {1+CONFIG['RISE_DROP_PERCENTAGE']} = {price_threshold:.4f}) -> {any_high}")
+        log_detail(f"  - 条件3 (任一价比最新价高7%): any(p > {data['latest_price']} * {1+CONFIG['MAX_DROP_PERCENTAGE']} = {price_threshold:.4f}) -> {any_high}")
         log_detail(f"  - 最终结果: {is_in_window and is_increasing and any_high}")
 
     return is_in_window and is_increasing and any_high

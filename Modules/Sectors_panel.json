@@ -142,7 +142,9 @@
         "ESTC": "",
         "COST": ""
     },
-    "Next_Week": {},
+    "Next_Week": {
+        "BJ": ""
+    },
     "Next Week": {
         "BJ": "",
         "ACN": "",
@@ -163,28 +165,7 @@
         "IOT": "",
         "FDS": ""
     },
-    "Notification": {
-        "DECK": "",
-        "EXE": "",
-        "HPE": "",
-        "HRL": "",
-        "ICLR": "",
-        "KNSL": "",
-        "LII": "",
-        "NOW": "",
-        "PSTG": "",
-        "SHOP": "",
-        "SLM": "",
-        "STRL": "",
-        "TRU": "",
-        "TW": "",
-        "VRSN": "",
-        "VRT": "",
-        "WING": "",
-        "WM": "",
-        "WST": "",
-        "WWD": ""
-    },
+    "Notification": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

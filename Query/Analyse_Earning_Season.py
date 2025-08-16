@@ -39,6 +39,7 @@ CONFIG = {
     "MIN_DROP_PERCENTAGE": 0.04,
     "MIDDLE_DROP_PERCENTAGE": 0.07,
     "HIGH_DROP_PERCENTAGE": 0.09,
+    "MAX_DROP_PERCENTAGE": 0.15,
     "MIN_TURNOVER": 100_000_000,
     "MARKETCAP_THRESHOLD": 100_000_000_000,
     "MAX_RISE_FROM_7D_LOW": 0.03, # 新增参数：策略3中，允许从7日最低价上涨的最大幅度
@@ -295,7 +296,7 @@ def run_strategy_3(data, cursor, symbol_sector_map):
     return price_ok
 
 def run_strategy_3_5(data):
-    """策略 3.5: 过去2次财报保持上升，且最近的3次财报里至少有一次财报的收盘价要比该symbol的最新收盘价高7%以上，且最新交易日落在下次理论(最近一次财报日期+93天)财报之前的7~20天窗口期内"""
+    """策略 3.5: 过去2次财报保持上升，且最近的3次财报里至少有一次财报的收盘价要比该symbol的最新收盘价高15%以上，且最新交易日落在下次理论(最近一次财报日期+93天)财报之前的7~20天窗口期内"""
     if len(data['all_er_prices']) < 3 or any(p is None for p in data['all_er_prices'][:3]):
         return False
 
@@ -312,7 +313,7 @@ def run_strategy_3_5(data):
     is_increasing = asc_prices_n[-2] < asc_prices_n[-1] # 只比较最近两次
 
     prices_3 = data['all_er_prices'][:3]
-    any_high = any(p > data['latest_price'] * (1 + CONFIG["MIDDLE_DROP_PERCENTAGE"]) for p in prices_3)
+    any_high = any(p > data['latest_price'] * (1 + CONFIG["MAX_DROP_PERCENTAGE"]) for p in prices_3)
 
     return is_increasing and any_high
 
