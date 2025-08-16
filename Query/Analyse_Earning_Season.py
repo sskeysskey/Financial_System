@@ -214,7 +214,7 @@ def build_stock_data_cache(symbols, db_path, symbol_sector_map):
 def run_strategy_1(data):
     """策略 1：最新收盘价比过去N次财报的最低值还低至少4%"""
     prices = data['all_er_prices'][:CONFIG["NUM_EARNINGS_TO_CHECK"]]
-    threshold = 1 - CONFIG["MIN_DROP_PERCENTAGE"]
+    threshold = 1 - CONFIG["RISE_DROP_PERCENTAGE"]
     return data['latest_price'] < min(prices) * threshold
 
 def run_strategy_2(data):
@@ -466,6 +466,9 @@ def main():
     
     print("\n--- 开始对通知列表进行过滤 ---")
     final_notification_list = apply_filters(prelim_notification_list, stock_data_cache, blacklist, set())
+
+    # 在这里加一行：把出现在主列表里的剔除掉
+    final_notification_list = [s for s in final_notification_list if s not in final_symbols]
 
     print("\n--- 所有过滤完成后的最终结果 ---")
     print(f"主列表最终数量: {len(final_symbols)} - {final_symbols}")

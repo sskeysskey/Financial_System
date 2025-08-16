@@ -101,12 +101,16 @@ def update_json_panel(symbols_list, json_path, group_name):
 # --- 4. 核心数据获取模块 ---
 
 def build_stock_data_cache(symbols, symbol_to_sector_map, db_path):
-    """为所有给定的symbols一次性从数据库加载所有需要的数据。"""
+    """
+    为所有给定的symbols一次性从数据库加载所有需要的数据。
+    同时从 Earning 表里取出每次财报的涨跌幅（price 字段），
+    并记录最新一期的涨跌幅到 data['latest_er_pct']。
+    """
     print(f"\n--- 开始为 {len(symbols)} 个 symbol 构建数据缓存 ---")
     cache = {}
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-    market_cap_exists = True # 假设列存在，遇到错误时再修改
+    market_cap_exists = True  # 假设列存在，遇到错误时再修改
 
     for i, symbol in enumerate(symbols):
         data = {'is_valid': False}
@@ -114,26 +118,41 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path):
         if not sector_name:
             continue
 
-        # 1. 获取所有财报日
-        cursor.execute("SELECT date FROM Earning WHERE name = ? ORDER BY date ASC", (symbol,))
-        all_er_dates = [r[0] for r in cursor.fetchall()]
-        if len(all_er_dates) < 1:
+        # 1. 获取所有财报日及涨跌幅
+        cursor.execute(
+            "SELECT date, price FROM Earning WHERE name = ? ORDER BY date ASC",
+            (symbol,)
+        )
+        er_rows = cursor.fetchall()
+        if len(er_rows) < 1:
             continue
+
+        # 拆分日期和涨跌幅
+        all_er_dates = [r[0] for r in er_rows]
+        all_er_pcts  = [r[1] for r in er_rows]
+
         data['all_er_dates'] = all_er_dates
         data['latest_er_date_str'] = all_er_dates[-1]
+        data['latest_er_pct']      = all_er_pcts[-1]
 
-        # 2. 获取所有财报日的价格
+        # 2. 获取所有财报日的收盘价（从板块表里取）
         placeholders = ', '.join(['?'] * len(all_er_dates))
-        query = f'SELECT date, price FROM "{sector_name}" WHERE name = ? AND date IN ({placeholders}) ORDER BY date ASC'
+        query = (
+            f'SELECT date, price FROM "{sector_name}" '
+            f'WHERE name = ? AND date IN ({placeholders}) ORDER BY date ASC'
+        )
         cursor.execute(query, (symbol, *all_er_dates))
         price_data = cursor.fetchall()
-        
         if len(price_data) != len(all_er_dates):
-            continue # 数据不完整
+            continue  # 数据不完整
         data['all_er_prices'] = [p[1] for p in price_data]
 
-        # 3. 获取最新交易日数据
-        cursor.execute(f'SELECT date, price, volume FROM "{sector_name}" WHERE name = ? ORDER BY date DESC LIMIT 1', (symbol,))
+        # 3. 最新交易日的价格和成交量
+        cursor.execute(
+            f'SELECT date, price, volume FROM "{sector_name}" '
+            f'WHERE name = ? ORDER BY date DESC LIMIT 1',
+            (symbol,)
+        )
         latest_row = cursor.fetchone()
         if not latest_row or latest_row[1] is None or latest_row[2] is None:
             continue
@@ -143,21 +162,35 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path):
         data['pe_ratio'], data['market_cap'] = None, None
         if market_cap_exists:
             try:
-                cursor.execute("SELECT pe_ratio, market_cap FROM MNSPP WHERE symbol = ?", (symbol,))
+                cursor.execute(
+                    "SELECT pe_ratio, market_cap FROM MNSPP WHERE symbol = ?",
+                    (symbol,)
+                )
                 row = cursor.fetchone()
-                if row: data['pe_ratio'], data['market_cap'] = row
+                if row:
+                    data['pe_ratio'], data['market_cap'] = row
             except sqlite3.OperationalError as e:
                 if "no such column: market_cap" in str(e):
-                    if i == 0: print("警告: MNSPP表中无 'market_cap' 列，将回退查询。")
+                    if i == 0:
+                        print("警告: MNSPP表中无 'market_cap' 列，将回退查询。")
                     market_cap_exists = False
-                    cursor.execute("SELECT pe_ratio FROM MNSPP WHERE symbol = ?", (symbol,))
+                    cursor.execute(
+                        "SELECT pe_ratio FROM MNSPP WHERE symbol = ?",
+                        (symbol,)
+                    )
                     row = cursor.fetchone()
-                    if row: data['pe_ratio'] = row[0]
-                else: raise e
+                    if row:
+                        data['pe_ratio'] = row[0]
+                else:
+                    raise
         else:
-            cursor.execute("SELECT pe_ratio FROM MNSPP WHERE symbol = ?", (symbol,))
+            cursor.execute(
+                "SELECT pe_ratio FROM MNSPP WHERE symbol = ?",
+                (symbol,)
+            )
             row = cursor.fetchone()
-            if row: data['pe_ratio'] = row[0]
+            if row:
+                data['pe_ratio'] = row[0]
 
         data['is_valid'] = True
         cache[symbol] = data
@@ -170,25 +203,35 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path):
 
 def run_strategy(data):
     """
-    对单个股票的数据执行核心筛选策略。
-    返回 True 表示符合条件，False 表示不符合。
+    对单个股票的数据执行核心筛选策略：
+    条件1 (二选一)：
+      a) 最近一次财报的涨跌幅 latest_er_pct 为正
+      b) 最新财报收盘价 > 过去 N 次财报收盘价平均值
+    条件2：最新价 <= 最近一期财报收盘价 * (1 - X%)
+    条件3：最新成交额 >= TURNOVER_THRESHOLD
     """
-    # 条件1: 最新财报日价格 > 最近N次财报日均价
+    latest_er_pct = data.get('latest_er_pct', 0)
+
+    # 拿到最近 N 次财报收盘价
     prices_to_check = data['all_er_prices'][-CONFIG["RECENT_EARNINGS_COUNT"]:]
-    if len(prices_to_check) < 2:
-        return False
-    
-    avg_recent_price = sum(prices_to_check) / len(prices_to_check)
-    latest_er_price = prices_to_check[-1]
-    
-    if latest_er_price <= avg_recent_price:
+    if len(prices_to_check) < CONFIG["RECENT_EARNINGS_COUNT"]:
         return False
 
-    # 条件2: 最新价 < 最新财报日价格 * (1 - X%)
+    avg_recent_price = sum(prices_to_check) / len(prices_to_check)
+    latest_er_price = prices_to_check[-1]
+
+    # ---- 条件1：二选一 ----
+    if not (latest_er_pct > 0 or latest_er_price > avg_recent_price):
+        return False
+
+    # 原条件2: 最新价 < 最新财报收盘价 * (1 - X%)
     market_cap = data.get('market_cap')
-    drop_pct = CONFIG["PRICE_DROP_PERCENTAGE_SMALL"] if market_cap and market_cap >= CONFIG["MARKETCAP_THRESHOLD"] else CONFIG["PRICE_DROP_PERCENTAGE_LARGE"]
-    
-    if not (data['latest_price'] <= latest_er_price * (1 - drop_pct)):
+    drop_pct = (
+        CONFIG["PRICE_DROP_PERCENTAGE_SMALL"]
+        if (market_cap and market_cap >= CONFIG["MARKETCAP_THRESHOLD"])
+        else CONFIG["PRICE_DROP_PERCENTAGE_LARGE"]
+    )
+    if data['latest_price'] > latest_er_price * (1 - drop_pct):
         return False
 
     # 条件3: 最新成交额 >= 阈值
@@ -241,7 +284,7 @@ def main():
     preliminary_results = []
     for symbol, data in stock_data_cache.items():
         if data['is_valid']:
-            data['symbol'] = symbol # 方便调试
+            data['symbol'] = symbol  # 方便调试
             if run_strategy(data):
                 preliminary_results.append(symbol)
     print(f"\n策略筛选完成，初步找到 {len(preliminary_results)} 个符合条件的股票。")
@@ -252,35 +295,53 @@ def main():
 
     # 5. 处理文件输出
     final_qualified_symbols = set(final_qualified_symbols)
-    
-    # 加载黑名单并过滤新增 symbols
+
+    # 5.1 加载黑名单并过滤
     blacklist = load_blacklist(BLACKLIST_JSON_FILE)
     filtered_new_symbols = final_qualified_symbols - blacklist
-    
-    removed_count = len(final_qualified_symbols) - len(filtered_new_symbols)
-    if removed_count > 0:
-        print(f"根据黑名单，从新增列表中过滤掉 {removed_count} 个 symbol。")
+    removed_by_blacklist = len(final_qualified_symbols) - len(filtered_new_symbols)
+    if removed_by_blacklist > 0:
+        print(f"根据黑名单，从新增列表中过滤掉 {removed_by_blacklist} 个 symbol。")
 
-    # 根据是否有新增内容，决定如何操作文件
+    # 5.2 【新增】再加载 panel.json，排除已经在 Notification 或 Next_Week 分组的
+    try:
+        with open(PANEL_JSON_FILE, 'r', encoding='utf-8') as f:
+            panel_data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        panel_data = {}
+
+    exist_notify     = set(panel_data.get('Notification', {}).keys())
+    exist_next_week = set(panel_data.get('Next_Week',   {}).keys())
+
+    already_in_panels = exist_notify | exist_next_week
+    # 最终真正要写到 Earning_Filter 的新符号
+    new_for_earning = filtered_new_symbols - already_in_panels
+    skipped = filtered_new_symbols & already_in_panels
+
+    if skipped:
+        print(f"以下 {len(skipped)} 个 symbol 已存在 Notification/Next_Week 分组，将跳过不写入 Earning_Filter：\n  {sorted(skipped)}")
+    filtered_new_symbols = new_for_earning
+
+    # 5.3 根据是否有真正“新”内容，决定写 news 文件 & 更新 Earning_Filter
     if filtered_new_symbols:
-        print(f"发现 {len(filtered_new_symbols)} 个新的、且不在黑名单中的 symbol。")
+        print(f"\n发现 {len(filtered_new_symbols)} 个新的、且不在黑名单，且不在 Notification/Next_Week 的 symbol。")
         # 写入 news 文件
         try:
             with open(NEWS_FILE, 'w', encoding='utf-8') as f:
-                for symbol in sorted(list(filtered_new_symbols)):
-                    f.write(symbol + '\n')
+                for sym in sorted(filtered_new_symbols):
+                    f.write(sym + '\n')
             print(f"新增结果已写入到: {NEWS_FILE}")
         except IOError as e:
             print(f"错误: 写入 news 文件失败: {e}")
-        # 更新 JSON
+        # 更新 panel.json 的 Earning_Filter 分组
         update_json_panel(filtered_new_symbols, PANEL_JSON_FILE, 'Earning_Filter')
     else:
-        print("\n与上次相比，没有发现新的、符合条件的股票（或所有新增股票均在黑名单中）。")
+        print("\n没有新的符合条件的 symbol（或都被黑名单/其他分组拦截）。")
         # 删除旧的 news 文件
         if os.path.exists(NEWS_FILE):
             os.remove(NEWS_FILE)
             print(f"已删除旧的 news 文件: {NEWS_FILE}")
-        # 清空 JSON 中的对应组
+        # 清空 panel.json 中的 Earning_Filter 分组
         update_json_panel([], PANEL_JSON_FILE, 'Earning_Filter')
 
     # 无论如何，都用本次完整结果覆盖备份文件
@@ -289,8 +350,8 @@ def main():
     print(f"\n正在用本次扫描到的 {len(final_qualified_symbols)} 个完整结果更新备份文件...")
     try:
         with open(BACKUP_FILE, 'w', encoding='utf-8') as f:
-            for symbol in sorted(final_qualified_symbols):
-                f.write(symbol + '\n')
+            for sym in sorted(final_qualified_symbols):
+                f.write(sym + '\n')
         print(f"备份文件已成功更新: {BACKUP_FILE}")
     except IOError as e:
         print(f"错误: 无法更新备份文件: {e}")

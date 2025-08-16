@@ -112,40 +112,23 @@
         "PSTG": ""
     },
     "Earning_Filter": {
-        "AR": "",
         "AVAV": "",
-        "AXON": "",
-        "BJ": "",
         "BROS": "",
         "CARR": "",
         "CART": "",
         "CRWD": "",
-        "CVNA": "",
         "DASH": "",
-        "DECK": "",
         "DRI": "",
-        "EXE": "",
+        "DUOL": "",
         "FCNCA": "",
         "FDS": "",
         "GWRE": "",
         "HIMS": "",
         "IBM": "",
-        "ICLR": "",
         "KMX": "",
-        "KNSL": "",
-        "LII": "",
-        "NOW": "",
-        "SHOP": "",
-        "SLM": "",
+        "ONON": "",
         "SNV": "",
-        "STRL": "",
-        "STZ": "",
-        "TRU": "",
-        "TW": "",
-        "VRSN": "",
-        "VRT": "",
-        "WING": "",
-        "WST": ""
+        "STZ": ""
     },
     "Watching": {
         "TGT": "",
@@ -156,14 +139,10 @@
         "AXON": "",
         "BROS": "",
         "DASH": "",
-        "ESTC": ""
+        "ESTC": "",
+        "COST": ""
     },
-    "Next_Week": {
-        "ACHR": "",
-        "BJ": "",
-        "ONON": "",
-        "WDAY": ""
-    },
+    "Next_Week": {},
     "Next Week": {
         "BJ": "",
         "ACN": "",
@@ -171,7 +150,8 @@
         "PANW": "",
         "PSTG": "",
         "KMX": "",
-        "WDAY": ""
+        "WDAY": "",
+        "CPRT": ""
     },
     "2 Weeks": {
         "CRM": "",
@@ -184,12 +164,6 @@
         "FDS": ""
     },
     "Notification": {
-        "AR": "",
-        "AXON": "",
-        "BJ": "",
-        "BKR": "",
-        "COST": "",
-        "CPRT": "",
         "CRM": "",
         "CVNA": "",
         "DECK": "",

@@ -7,7 +7,7 @@ from collections import defaultdict
 # --- 0. 调试追踪配置 ---
 # ##############################################################################
 #  请在这里修改为你想要追踪的股票代码
-SYMBOL_TO_TRACE = "HLN" 
+SYMBOL_TO_TRACE = "BKR" 
 # ##############################################################################
 LOG_FILE_PATH = "/Users/yanzhang/Downloads/a.txt"
 
@@ -583,42 +583,42 @@ def main():
 
         # 6. 文件和JSON输出
         update_json_panel(final_symbols, PANEL_JSON_FILE, "Next_Week")
-        try:
-            output_path = PATHS["output_next_week"](news_path)
-            backup_path = PATHS["backup_next_week"](news_path)
-            os.makedirs(os.path.dirname(backup_path), exist_ok=True)
+        # try:
+        #     output_path = PATHS["output_next_week"](news_path)
+        #     backup_path = PATHS["backup_next_week"](news_path)
+        #     os.makedirs(os.path.dirname(backup_path), exist_ok=True)
             
-            with open(output_path, 'w', encoding='utf-8') as f:
-                for sym in sorted(final_symbols):
-                    f.write(sym + '\n')
-            print(f"主列表结果已写入: {output_path}")
+        #     with open(output_path, 'w', encoding='utf-8') as f:
+        #         for sym in sorted(final_symbols):
+        #             f.write(sym + '\n')
+        #     print(f"主列表结果已写入: {output_path}")
 
-            with open(backup_path, 'w', encoding='utf-8') as f:
-                for sym in sorted(final_symbols):
-                    f.write(sym + '\n')
-            print(f"主列表备份已更新: {backup_path}")
+        #     with open(backup_path, 'w', encoding='utf-8') as f:
+        #         for sym in sorted(final_symbols):
+        #             f.write(sym + '\n')
+        #     print(f"主列表备份已更新: {backup_path}")
 
-        except IOError as e:
-            print(f"写入主列表文件时出错: {e}")
+        # except IOError as e:
+        #     print(f"写入主列表文件时出错: {e}")
 
         update_json_panel(final_notification_list, PANEL_JSON_FILE, "Notification")
-        try:
-            output_path = PATHS["output_notification"](news_path)
-            backup_path = PATHS["backup_notification"](news_path)
-            os.makedirs(os.path.dirname(backup_path), exist_ok=True)
+        # try:
+        #     output_path = PATHS["output_notification"](news_path)
+        #     backup_path = PATHS["backup_notification"](news_path)
+        #     os.makedirs(os.path.dirname(backup_path), exist_ok=True)
 
-            with open(output_path, 'w', encoding='utf-8') as f:
-                for sym in sorted(final_notification_list):
-                    f.write(sym + '\n')
-            print(f"通知列表结果已写入: {output_path}")
+        #     with open(output_path, 'w', encoding='utf-8') as f:
+        #         for sym in sorted(final_notification_list):
+        #             f.write(sym + '\n')
+        #     print(f"通知列表结果已写入: {output_path}")
 
-            with open(backup_path, 'w', encoding='utf-8') as f:
-                for sym in sorted(final_notification_list):
-                    f.write(sym + '\n')
-            print(f"通知列表备份已更新: {backup_path}")
+        #     with open(backup_path, 'w', encoding='utf-8') as f:
+        #         for sym in sorted(final_notification_list):
+        #             f.write(sym + '\n')
+        #     print(f"通知列表备份已更新: {backup_path}")
 
-        except IOError as e:
-            print(f"写入通知列表文件时出错: {e}")
+        # except IOError as e:
+        #     print(f"写入通知列表文件时出错: {e}")
 
     print("\n程序运行结束。")
 
