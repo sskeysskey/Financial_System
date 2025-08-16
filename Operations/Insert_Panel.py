@@ -150,6 +150,9 @@ def main():
         if not clipboard_content or not is_uppercase_letters(clipboard_content):
             # 如果剪贴内容不合格或为空，弹出第一个对话框
             symbol_dialog = SymbolInputDialog()
+            symbol_dialog.show()  # 先显示
+            symbol_dialog.activateWindow()  # 然后激活
+            symbol_dialog.raise_()  # 提升到前台
             # .exec_() 会阻塞程序，直到对话框关闭
             if symbol_dialog.exec_() == QDialog.Accepted:
                 symbol = symbol_dialog.get_symbol()
@@ -168,6 +171,9 @@ def main():
 
     # 3. 选择分组
     category_dialog = CategorySelectionDialog(symbol, TARGET_CATEGORIES)
+    category_dialog.show()
+    category_dialog.activateWindow()
+    category_dialog.raise_()
     selected_categories = []
     if category_dialog.exec_() == QDialog.Accepted:
         selected_categories = category_dialog.get_selected_categories()
