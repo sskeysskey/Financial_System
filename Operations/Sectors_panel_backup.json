@@ -139,7 +139,8 @@
         "AXON": "",
         "BROS": "",
         "DASH": "",
-        "ESTC": ""
+        "ESTC": "",
+        "COST": ""
     },
     "Next_Week": {},
     "Next Week": {
@@ -149,7 +150,8 @@
         "PANW": "",
         "PSTG": "",
         "KMX": "",
-        "WDAY": ""
+        "WDAY": "",
+        "CPRT": ""
     },
     "2 Weeks": {
         "CRM": "",
@@ -161,7 +163,28 @@
         "IOT": "",
         "FDS": ""
     },
-    "Notification": {},
+    "Notification": {
+        "DECK": "",
+        "EXE": "",
+        "HPE": "",
+        "HRL": "",
+        "ICLR": "",
+        "KNSL": "",
+        "LII": "",
+        "NOW": "",
+        "PSTG": "",
+        "SHOP": "",
+        "SLM": "",
+        "STRL": "",
+        "TRU": "",
+        "TW": "",
+        "VRSN": "",
+        "VRT": "",
+        "WING": "",
+        "WM": "",
+        "WST": "",
+        "WWD": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

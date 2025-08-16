@@ -791,6 +791,7 @@ class MainWindow(QMainWindow):
         # 给 menu 指定 parent，防止被垃圾回收
         menu = QMenu(self)
 
+        menu.addAction("删除",          lambda: self.delete_item(keyword, group))
         # --- 通用“移动”子菜单 ---
         move_menu = menu.addMenu("移动")
         for tgt in ("Today", "Watching", "Next Week", "2 Weeks", "3 Weeks"):
@@ -803,7 +804,6 @@ class MainWindow(QMainWindow):
             )
 
         # 2) 其他顶层菜单项
-        menu.addAction("删除",          lambda: self.delete_item(keyword, group))
         menu.addSeparator()
         menu.addAction("编辑 Tags",    lambda: execute_external_script('tags', keyword, group, self))
         menu.addSeparator()

@@ -164,10 +164,7 @@
         "FDS": ""
     },
     "Notification": {
-        "CRM": "",
-        "CVNA": "",
         "DECK": "",
-        "ESTC": "",
         "EXE": "",
         "HPE": "",
         "HRL": "",
@@ -175,7 +172,6 @@
         "KNSL": "",
         "LII": "",
         "NOW": "",
-        "PANW": "",
         "PSTG": "",
         "SHOP": "",
         "SLM": "",
@@ -184,7 +180,6 @@
         "TW": "",
         "VRSN": "",
         "VRT": "",
-        "WDAY": "",
         "WING": "",
         "WM": "",
         "WST": "",

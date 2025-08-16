@@ -38,8 +38,10 @@ CONFIG = {
     "NUM_EARNINGS_TO_CHECK": 2,
     "MIN_DROP_PERCENTAGE": 0.04,
     "RISE_DROP_PERCENTAGE": 0.07,
+    "HIGH_DROP_PERCENTAGE": 0.09,
     "MIN_TURNOVER": 100_000_000,
     "MARKETCAP_THRESHOLD": 100_000_000_000,
+    "MAX_RISE_FROM_7D_LOW": 0.03, # 新增参数：策略3中，允许从7日最低价上涨的最大幅度
 }
 
 # --- 3. 辅助与文件操作模块 ---
@@ -163,9 +165,6 @@ def build_stock_data_cache(symbols, db_path, symbol_sector_map):
         data['latest_date'] = datetime.datetime.strptime(data['latest_date_str'], "%Y-%m-%d").date()
 
         # 4. 获取其他所需数据 (PE, MarketCap, Earning表price)
-        # ########################## MODIFICATION START ##########################
-        # 此处为核心修改，处理 market_cap 列不存在的错误
-        
         data['pe_ratio'] = None
         data['market_cap'] = None
 
@@ -194,8 +193,6 @@ def build_stock_data_cache(symbols, db_path, symbol_sector_map):
             row = cursor.fetchone()
             if row:
                 data['pe_ratio'] = row[0]
-
-        # ########################### MODIFICATION END ###########################
 
         cursor.execute("SELECT price FROM Earning WHERE name = ? AND date = ?", (symbol, data['latest_er_date_str']))
         row = cursor.fetchone()
@@ -251,9 +248,9 @@ def run_strategy_2_5(data):
 
     return is_increasing and any_high and is_date_ok
 
-def run_strategy_3(data):
+def run_strategy_3(data, cursor, symbol_sector_map):
     """ 策略 3（1）：如果最近2次财报是上升的，且最新收盘价比过去N次财报最高收盘价低7% """
-    """ 策略 3（2）：如果不是上升的，要求最近2次财报收盘价差额要大于等于4%，最新收盘价 < 过去N次财报最低收盘价 """
+    """ 策略 3（2）：如果不是上升的，要求最近2次财报收盘价差额要大于等于4%，最新收盘价 < 过去N次财报最低收盘价，且最新收盘价比前推10天收盘价的最低值高不超过2% """
     """ 策略 3（3）：以上两个结果还同时必须满足最新交易日落在下次理论(最近一次财报日期+93天)财报之前的7~20天窗口期内 """
     prices = data['all_er_prices'][:CONFIG["NUM_EARNINGS_TO_CHECK"]]
     asc_prices = list(reversed(prices))
@@ -268,11 +265,32 @@ def run_strategy_3(data):
     price_ok = False
     # 最新两次财报比较
     if asc_prices[-2] < asc_prices[-1]: # 上升
-        price_ok = data['latest_price'] < max(asc_prices) * (1 - CONFIG["RISE_DROP_PERCENTAGE"])
+        price_ok = data['latest_price'] < max(asc_prices) * (1 - CONFIG["HIGH_DROP_PERCENTAGE"])
     else: # 非升序
-        diff = abs(asc_prices[-1] - asc_prices[-2])
-        price_ok = (diff >= asc_prices[-2] * CONFIG["MIN_DROP_PERCENTAGE"] and 
-                    data['latest_price'] < min(prices))
+        # 检查原始的两个价格条件
+        initial_price_check = (abs(asc_prices[-1] - asc_prices[-2]) >= asc_prices[-2] * CONFIG["MIN_DROP_PERCENTAGE"] and 
+                               data['latest_price'] < min(prices))
+        
+        # 如果原始条件满足，则继续检查新增的第三个条件
+        if initial_price_check:
+            table_name = symbol_sector_map.get(data['symbol'])
+            if not table_name:
+                return False # 无法查询，直接返回False
+            
+            # 获取过去7天的最低价
+            seven_days_ago = data['latest_date'] - datetime.timedelta(days=10)
+            cursor.execute(
+                f'SELECT MIN(price) FROM "{table_name}" WHERE name = ? AND date BETWEEN ? AND ?',
+                (data['symbol'], seven_days_ago.isoformat(), data['latest_date_str'])
+            )
+            min_price_row = cursor.fetchone()
+            min_price_7d = min_price_row[0] if min_price_row and min_price_row[0] is not None else None
+
+            # 只有在成功获取7日最低价后才进行判断
+            if min_price_7d is not None:
+                # 检查新条件：最新收盘价比7日最低值高不超过2%
+                if data['latest_price'] <= min_price_7d * (1 + CONFIG["MAX_RISE_FROM_7D_LOW"]):
+                    price_ok = True
     
     return price_ok
 
@@ -429,14 +447,14 @@ def main():
 
     # 3. 运行策略
     results = defaultdict(list)
-    with sqlite3.connect(DB_FILE) as conn: # 策略4需要一个cursor
+    with sqlite3.connect(DB_FILE) as conn: # 策略3和4需要一个cursor
         cursor = conn.cursor()
 
         for symbol, data in stock_data_cache.items():
             if not data['is_valid']:
                 continue
             
-            data['symbol'] = symbol # 将symbol本身加入data，方便策略4使用
+            data['symbol'] = symbol # 将symbol本身加入data，方便策略3、4使用
 
             # 跑主列表策略 (仅针对初始文件里的symbols)
             if symbol in initial_symbols:
@@ -445,7 +463,8 @@ def main():
                 if run_strategy_2_5(data): results['s2_5'].append(symbol)
 
             # 跑通知列表策略 (针对所有有数据的symbols)
-            if run_strategy_3(data): results['s3'].append(symbol)
+            # 修改点：为 run_strategy_3 传递 cursor 和 symbol_sector_map
+            if run_strategy_3(data, cursor, symbol_sector_map): results['s3'].append(symbol)
             if run_strategy_3_5(data): results['s3_5'].append(symbol)
             if run_strategy_4(data, cursor, symbol_sector_map): results['s4'].append(symbol)
 
