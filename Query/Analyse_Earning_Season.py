@@ -37,7 +37,7 @@ PANEL_JSON_FILE = PATHS["panel_json"](config_path)
 CONFIG = {
     "NUM_EARNINGS_TO_CHECK": 2,
     "MIN_DROP_PERCENTAGE": 0.04,
-    "RISE_DROP_PERCENTAGE": 0.07,
+    "MIDDLE_DROP_PERCENTAGE": 0.07,
     "HIGH_DROP_PERCENTAGE": 0.09,
     "MIN_TURNOVER": 100_000_000,
     "MARKETCAP_THRESHOLD": 100_000_000_000,
@@ -211,7 +211,7 @@ def build_stock_data_cache(symbols, db_path, symbol_sector_map):
 def run_strategy_1(data):
     """策略 1：最新收盘价比过去N次财报的最低值还低至少4%"""
     prices = data['all_er_prices'][:CONFIG["NUM_EARNINGS_TO_CHECK"]]
-    threshold = 1 - CONFIG["RISE_DROP_PERCENTAGE"]
+    threshold = 1 - CONFIG["MIDDLE_DROP_PERCENTAGE"]
     return data['latest_price'] < min(prices) * threshold
 
 def run_strategy_2(data):
@@ -241,7 +241,7 @@ def run_strategy_2_5(data):
 
     # 检查3次财报价格
     prices_3 = data['all_er_prices'][:3]
-    any_high = any(p > data['latest_price'] * (1 + CONFIG["RISE_DROP_PERCENTAGE"]) for p in prices_3)
+    any_high = any(p > data['latest_price'] * (1 + CONFIG["MIDDLE_DROP_PERCENTAGE"]) for p in prices_3)
     
     days_since_er = (data['latest_date'] - data['latest_er_date']).days
     is_date_ok = days_since_er >= 7
@@ -312,7 +312,7 @@ def run_strategy_3_5(data):
     is_increasing = asc_prices_n[-2] < asc_prices_n[-1] # 只比较最近两次
 
     prices_3 = data['all_er_prices'][:3]
-    any_high = any(p > data['latest_price'] * (1 + CONFIG["RISE_DROP_PERCENTAGE"]) for p in prices_3)
+    any_high = any(p > data['latest_price'] * (1 + CONFIG["MIDDLE_DROP_PERCENTAGE"]) for p in prices_3)
 
     return is_increasing and any_high
 
@@ -358,7 +358,7 @@ def run_strategy_4(data, cursor, symbol_sector_map):
     if max_price_around_er is None: return False
 
     mcap = data['market_cap']
-    drop_pct = CONFIG["MIN_DROP_PERCENTAGE"] if mcap and mcap >= CONFIG["MARKETCAP_THRESHOLD"] else CONFIG["RISE_DROP_PERCENTAGE"]
+    drop_pct = CONFIG["MIN_DROP_PERCENTAGE"] if mcap and mcap >= CONFIG["MARKETCAP_THRESHOLD"] else CONFIG["MIDDLE_DROP_PERCENTAGE"]
     cond_A = data['latest_price'] < max_price_around_er * (1 - drop_pct)
     
     return cond_A
