@@ -41,6 +41,9 @@ def get_stock_symbol(default_symbol=""):
     app = QApplication.instance() or QApplication(sys.argv)
     
     input_dialog = QInputDialog()
+    input_dialog.show()  # 先显示
+    input_dialog.activateWindow()  # 然后激活
+    input_dialog.raise_()  # 提升到前台
     input_dialog.setWindowTitle("请输入股票代码")
     input_dialog.setLabelText("请输入股票代码:")
     input_dialog.setTextValue(default_symbol)

@@ -2,440 +2,301 @@ import json
 import sqlite3
 import os
 
-def analyze_financial_data():
-    """
-    新功能：
-    - 将本次结果与备份文件比对，只将新增的 symbol 写入 news 文件。
-    - 用本次的完整结果覆盖更新备份文件。
-    - 如果没有新增内容，则不生成 news 文件，并删除旧的 news 文件。
-    - (新) 将本次完整结果更新到指定的 JSON 文件中。
-    - (新) 在写入 panel.json 前，使用 Blacklist.json 进行过滤。
-    """
-    # --- 1. 配置路径 ---
-    # 使用 os.path.expanduser('~') 来获取用户主目录，使得路径更具可移植性
-    base_path = os.path.expanduser('~')
-    json_file_path = os.path.join(base_path, 'Coding/Financial_System/Modules/Sectors_All.json')
-    db_file_path = os.path.join(base_path, 'Coding/Database/Finance.db')
-    
-    # 将输出路径明确区分为 news 路径和 backup 路径
-    news_file_path = '/Users/yanzhang/Coding/News/Filter_Earning.txt'
-    backup_file_path = '/Users/yanzhang/Coding/News/backup/Filter_Earning.txt'
-    
-    target_json_for_filter_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
-    blacklist_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
+# --- 1. 配置文件和路径 ---
+# 使用 os.path.expanduser('~') 获取用户主目录，增强可移植性
+BASE_PATH = os.path.expanduser('~')
+PATHS = {
+    "config_dir": os.path.join(BASE_PATH, 'Coding/Financial_System/Modules'),
+    "db_dir": os.path.join(BASE_PATH, 'Coding/Database'),
+    "news_dir": os.path.join(BASE_PATH, 'Coding/News'),
+    "sectors_json": lambda config_dir: os.path.join(config_dir, 'Sectors_All.json'),
+    "panel_json": lambda config_dir: os.path.join(config_dir, 'Sectors_panel.json'),
+    "blacklist_json": lambda config_dir: os.path.join(config_dir, 'Blacklist.json'),
+    "db_file": lambda db_dir: os.path.join(db_dir, 'Finance.db'),
+    "output_news": lambda news_dir: os.path.join(news_dir, 'Filter_Earning.txt'),
+    "output_backup": lambda news_dir: os.path.join(news_dir, 'backup/Filter_Earning.txt'),
+}
 
-    TURNOVER_THRESHOLD = 100_000_000  # 成交额阈值：一亿五千万
-    PRICE_DROP_PERCENTAGE_SMALL = 0.07   # 市值 < 阈值 时用 7%
-    RECENT_EARNINGS_COUNT   = 2            # —— 可配置：取最近 N 次财报（原来写死 3，现在改为 2）
-    PRICE_DROP_PERCENTAGE_LARGE = 0.04   # 市值 >= 阈值 时用 4%
-    MARKETCAP_THRESHOLD     = 100_000_000_000  # 1000 亿
+# 动态生成完整路径
+CONFIG_DIR = PATHS["config_dir"]
+DB_DIR = PATHS["db_dir"]
+NEWS_DIR = PATHS["news_dir"]
 
-    # --- 1.1. 确保 backup 目录存在 ---
-    # 这是一个好的编程习惯，确保在写入文件前，其所在的目录是存在的
-    backup_dir = os.path.dirname(backup_file_path)
-    if not os.path.exists(backup_dir):
-        os.makedirs(backup_dir)
-        print(f"已创建备份目录: {backup_dir}")
+DB_FILE = PATHS["db_file"](DB_DIR)
+SECTORS_JSON_FILE = PATHS["sectors_json"](CONFIG_DIR)
+BLACKLIST_JSON_FILE = PATHS["blacklist_json"](CONFIG_DIR)
+PANEL_JSON_FILE = PATHS["panel_json"](CONFIG_DIR)
+NEWS_FILE = PATHS["output_news"](NEWS_DIR)
+BACKUP_FILE = PATHS["output_backup"](NEWS_DIR)
 
-    # --- 2. 定义目标板块 ---
-    target_sectors = {
+
+# --- 2. 可配置参数 ---
+CONFIG = {
+    "TARGET_SECTORS": {
         "Basic_Materials", "Communication_Services", "Consumer_Cyclical",
         "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare",
         "Industrials", "Real_Estate", "Technology", "Utilities"
-    }
+    },
+    "TURNOVER_THRESHOLD": 100_000_000,
+    "RECENT_EARNINGS_COUNT": 2,
+    "MARKETCAP_THRESHOLD": 100_000_000_000,
+    "PRICE_DROP_PERCENTAGE_LARGE": 0.07,
+    "PRICE_DROP_PERCENTAGE_SMALL": 0.04,
+}
 
-    # --- 3. 加载 JSON 数据 ---
+# --- 3. 辅助与文件操作模块 ---
+
+def load_all_symbols(json_path, target_sectors):
+    """从Sectors_All.json加载所有目标板块的symbols和symbol->sector映射。"""
     try:
-        with open(json_file_path, 'r', encoding='utf-8') as f:
+        with open(json_path, 'r', encoding='utf-8') as f:
             all_sectors_data = json.load(f)
-    except FileNotFoundError:
-        print(f"错误: JSON 文件未找到，请检查路径: {json_file_path}")
-        return
-    except json.JSONDecodeError:
-        print(f"错误: JSON 文件格式不正确: {json_file_path}")
-        return
-
-    # --- 加载黑名单数据 ---
-    print("\n--- 开始加载黑名单数据 ---")
-    blacklist_newlow_set = set()
-    try:
-        with open(blacklist_json_path, 'r', encoding='utf-8') as f:
-            blacklist_data = json.load(f)
-            # 使用 .get('newlow', []) 来安全地获取列表，如果 'newlow' 键不存在，则返回一个空列表
-            newlow_list = blacklist_data.get('newlow', [])
-            if newlow_list:
-                # 将列表转换为集合，以提高后续的查找效率
-                blacklist_newlow_set = set(newlow_list)
-                print(f"成功加载 {len(blacklist_newlow_set)} 个 symbol 到 'newlow' 黑名单。")
-            else:
-                print("'newlow' 黑名单为空或不存在。")
-    except FileNotFoundError:
-        print(f"警告: 黑名单文件未找到，将不进行任何过滤: {blacklist_json_path}")
-    except json.JSONDecodeError:
-        print(f"警告: 黑名单文件格式不正确，将不进行任何过滤: {blacklist_json_path}")
-    except Exception as e:
-        print(f"警告: 加载黑名单时发生未知错误，将不进行任何过滤: {e}")
-
-
-    qualified_symbols = [] # 用于存储所有满足条件的股票代码
-
-    # --- 4. 连接数据库并执行分析 ---
-    try:
-        # 使用 with 语句确保数据库连接在使用后能被安全关闭
-        with sqlite3.connect(db_file_path) as conn:
-            cursor = conn.cursor()
-            print("\n数据库连接成功，开始分析...")
-
-            # 遍历 JSON 文件中的每个板块
-            for sector_name, symbols in all_sectors_data.items():
-                # 如果当前板块不是我们关心的目标板块，则跳过
-                if sector_name not in target_sectors:
-                    continue
-                
-                print(f"\n正在处理板块: {sector_name}...")
-
-                if not symbols:
-                    print(f"板块 {sector_name} 中没有股票代码，已跳过。")
-                    continue
-
-                # 遍历板块中的每一个股票代码
+        
+        all_symbols = []
+        symbol_to_sector_map = {}
+        
+        for sector, symbols in all_sectors_data.items():
+            if sector in target_sectors:
+                all_symbols.extend(symbols)
                 for symbol in symbols:
-                    # a. 从 Earning 表中查找该 symbol 对应的所有日期
-                    # ORDER BY date ASC 确保日期按时间顺序排列
-                    cursor.execute(
-                        "SELECT date FROM Earning WHERE name = ? ORDER BY date ASC",
-                        (symbol,)
-                    )
-                    earning_dates_result = cursor.fetchall()
+                    symbol_to_sector_map[symbol] = sector
                     
-                    # 将查询结果 (元组列表) 转换为日期字符串列表
-                    earning_dates = [row[0] for row in earning_dates_result]
-
-                    # b. 条件1: 检查 Earning 表中记录是否至少有两条
-                    if len(earning_dates) < 2:
-                        continue # 不满足条件，处理下一个 symbol
-
-                    # c. 根据获取到的日期，去对应的板块表中查询价格
-                    # 构造 SQL 查询中的占位符，例如 '?, ?, ?'
-                    placeholders = ', '.join(['?'] * len(earning_dates))
-                    # SQL 查询语句，表名不能用 ? 参数化，但因为我们是从自己的JSON文件中获取的，所以是安全的
-                    query = f"""
-                        SELECT date, price 
-                        FROM "{sector_name}" 
-                        WHERE name = ? AND date IN ({placeholders})
-                        ORDER BY date ASC
-                    """
-                    # 参数包括 symbol 和所有的 earning_dates
-                    params = (symbol, *earning_dates)
-                    
-                    cursor.execute(query, params)
-                    price_data = cursor.fetchall()
-
-                    # 如果在板块表中找到的数据量和 Earning 表中的日期数量不匹配，说明数据不完整，跳过
-                    if len(price_data) != len(earning_dates):
-                        continue
-
-                    prices = [row[1] for row in price_data]
-                    
-                    # 条件1: 最新财报日价格 > 最近(<=3)财报日均价
-                    prices_to_check = prices[-RECENT_EARNINGS_COUNT:]
-
-                    # 2. 必须至少有两个价格点才有比较的意义。
-                    if len(prices_to_check) < 2:
-                        continue # 数据不足，处理下一个 symbol
-
-                    # 3. 计算这些价格的平均值。
-                    average_of_recent_earnings = sum(prices_to_check) / len(prices_to_check)
-                    
-                    # 4. 获取最新一期的财报日价格（即列表中的最后一个价格）。
-                    latest_earning_price = prices_to_check[-1]
-
-                    # 5. 如果最新一期的财报日价格不高于近期均价，则跳过
-                    if latest_earning_price <= average_of_recent_earnings:
-                        continue # 不满足条件，处理下一个 symbol
-                    
-                    # 如果代码能执行到这里，说明已满足“最新财报价 > 近期均价”的条件，可以继续下一步分析。
-
-                    # e. 条件满足后，获取财报日最低价和股票最新价，进行下一步判断
-                    min_price_on_earning_dates = min(prices)
-
-                    # 获取最新交易日的 价格 和 成交量
-                    latest_data_query = f'SELECT price, volume FROM "{sector_name}" WHERE name = ? ORDER BY date DESC LIMIT 1'
-                    cursor.execute(latest_data_query, (symbol,))
-                    latest_data_result = cursor.fetchone()
-
-                    if latest_data_result is None:
-                        continue
-                    
-                    # 从查询结果中解包得到价格和成交量
-                    latest_price, latest_volume = latest_data_result
-                    # --- 新增：根据市值动态选择回撤阈值 ---
-                    cursor.execute("SELECT marketcap FROM MNSPP WHERE symbol = ?", (symbol,))
-                    row_mc = cursor.fetchone()
-                    if row_mc is None:
-                        # 如果在 MNSPP 表里查不到，默认用小市值的标准
-                        drop_pct = PRICE_DROP_PERCENTAGE_SMALL
-                    else:
-                        marketcap = row_mc[0]
-                        if marketcap < MARKETCAP_THRESHOLD:
-                            drop_pct = PRICE_DROP_PERCENTAGE_SMALL
-                        else:
-                            drop_pct = PRICE_DROP_PERCENTAGE_LARGE
-
-                    print(f"    市值={marketcap:,.0f}, 使用回撤阈值={drop_pct:.0%}")
-
-                    # 条件2: 最新价 < 最新财报日价格 * (1 - X%)
-                    # 市值小于 1000 亿的股票依然按 7% 回撤筛选；市值 1000 亿及以上的则只需回撤 4%。
-                    price_condition_2 = latest_price <= latest_earning_price * (1 - drop_pct)
-
-                    # if price_condition_1 and price_condition_2:
-                    if price_condition_2:
-                        # 计算最新成交额
-                        latest_turnover = latest_price * latest_volume
-                        
-                        # 条件4: 最新成交额 >= 1.5亿
-                        if latest_turnover >= TURNOVER_THRESHOLD:
-                            # 所有条件都满足，才加入列表并打印信息
-                            print(f"  [符合所有条件!] Symbol: {symbol}")
-                            print(f"    - 最近财报日均价: {average_of_recent_earnings:.2f}, 最新财报日价格: {latest_earning_price:.2f} (价格高于均价 ✅)")
-                            print(f"    ---------------------------------")
-                            print(f"    - 所有财报日最低价: {min_price_on_earning_dates:.2f}")
-                            print(f"    - 最新价比财报日价低至少 {drop_pct:.0%}: {latest_price:.2f} <= {latest_earning_price * (1 - drop_pct):.2f} (✅)")
-                            print(f"    - 股票当前最新价: {latest_price:.2f} (低于所有财报日最低价 ✅)")
-                            print(f"    ---------------------------------")
-                            print(f"    - 最新成交额: {latest_turnover:,.2f} (>= {TURNOVER_THRESHOLD:,.0f} ✅)")
-                            qualified_symbols.append(symbol)
-
-    except sqlite3.Error as e:
-        print(f"数据库错误: {e}")
-        return
+        print(f"成功加载 {len(all_symbols)} 个 symbols 从 {len(target_sectors)} 个目标板块。")
+        return all_symbols, symbol_to_sector_map
     except Exception as e:
-        print(f"发生未知错误: {e}")
-        return
+        print(f"错误: 加载symbols失败: {e}")
+        return None, None
 
-    # --- 5. 处理和写入结果 ---
-    if not qualified_symbols:
-        print("\n分析完成，没有找到任何符合所有条件的股票。")
-    else:
-        print(f"\n分析完成，共找到 {len(qualified_symbols)} 个符合条件的股票: {sorted(qualified_symbols)}")        
-
-    # --- 5.1.1 新增：过滤无效 PE Ratio ---
-    print("\n--- 5.1.1 过滤：剔除无效 PE Ratio ---")
-    qualified_symbols = filter_symbols_by_pe_ratio(qualified_symbols, db_file_path)
-    print(f"PE Ratio 过滤后，剩余 {len(qualified_symbols)} 个 symbol: {qualified_symbols}")
-
-    # --- 5.1.2 新增：剔除 “最新交易日 == 最新财报日” 的 symbol ---
-    print("\n--- 5.1.2 过滤：剔除最新交易日等于最新财报日的 symbol ---")
-    # 先构建一个 symbol->sector 映射，方便后面查行情表名
-    symbol_to_sector = {
-        sym: sector_name
-        for sector_name, syms in all_sectors_data.items()
-        for sym in syms
-    }
-
-    filtered_symbols = []
-    with sqlite3.connect(db_file_path) as conn:
-        cur = conn.cursor()
-        for sym in qualified_symbols:
-            # 1) 最新一条财报日
-            cur.execute(
-                "SELECT date FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 1",
-                (sym,)
-            )
-            row_er = cur.fetchone()
-            if not row_er:
-                # 没有财报记录，保留
-                filtered_symbols.append(sym)
-                continue
-            latest_er_date = row_er[0]
-
-            # 2) 最新一条交易日
-            sector = symbol_to_sector.get(sym)
-            if not sector:
-                # 表里找不到板块，就保留
-                filtered_symbols.append(sym)
-                continue
-            cur.execute(
-                f'SELECT date FROM "{sector}" WHERE name = ? ORDER BY date DESC LIMIT 1',
-                (sym,)
-            )
-            row_tr = cur.fetchone()
-            if not row_tr:
-                filtered_symbols.append(sym)
-                continue
-            latest_tr_date = row_tr[0]
-
-            # 3) 比较日期
-            if latest_tr_date == latest_er_date:
-                print(f"  跳过 {sym}：最新交易日({latest_tr_date}) == 最新财报日({latest_er_date})")
-            else:
-                filtered_symbols.append(sym)
-
-    # 用过滤后的列表替换 qualified_symbols
-    qualified_symbols = filtered_symbols
-    print(f"过滤后，剩余 {len(qualified_symbols)} 个 symbol: {qualified_symbols}")
-    
-    # --- 5.2. 处理 news 和 backup 文本文件 ---
-    print("\n--- 开始处理 news 和 backup 文本文件 ---")
-    backup_symbols = set()
+def load_blacklist(json_path):
+    """从Blacklist.json加载'newlow'黑名单。"""
     try:
-        with open(backup_file_path, 'r', encoding='utf-8') as f:
-            # 使用集合推导式高效地读取所有旧的 symbol
-            # .strip() 用于移除每行末尾的换行符和可能的空白
-            backup_symbols = {line.strip() for line in f if line.strip()}
-        print(f"成功从备份文件加载了 {len(backup_symbols)} 个旧的 symbol。")
-    except FileNotFoundError:
-        print(f"未找到备份文件: {backup_file_path}。将视作首次运行。")
-    except IOError as e:
-        print(f"错误: 无法读取备份文件: {e}")
-        # 如果无法读取备份，则无法进行比对，直接退出以防数据错乱
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        blacklist = set(data.get('newlow', []))
+        print(f"成功加载 'newlow' 黑名单: {len(blacklist)} 个 symbol。")
+        return blacklist
+    except Exception as e:
+        print(f"警告: 加载黑名单失败: {e}，将不进行过滤。")
+        return set()
+
+def update_json_panel(symbols_list, json_path, group_name):
+    """更新JSON面板文件。"""
+    print(f"\n--- 更新 JSON 文件: {os.path.basename(json_path)} -> '{group_name}' ---")
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        print(f"信息: 目标JSON文件不存在或格式错误，将创建一个新的。")
+        data = {}
+
+    data[group_name] = {symbol: "" for symbol in sorted(symbols_list)}
+
+    try:
+        with open(json_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+        print(f"成功将 {len(symbols_list)} 个 symbol 写入组 '{group_name}'.")
+    except Exception as e:
+        print(f"错误: 写入JSON文件失败: {e}")
+
+# --- 4. 核心数据获取模块 ---
+
+def build_stock_data_cache(symbols, symbol_to_sector_map, db_path):
+    """为所有给定的symbols一次性从数据库加载所有需要的数据。"""
+    print(f"\n--- 开始为 {len(symbols)} 个 symbol 构建数据缓存 ---")
+    cache = {}
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    market_cap_exists = True # 假设列存在，遇到错误时再修改
+
+    for i, symbol in enumerate(symbols):
+        data = {'is_valid': False}
+        sector_name = symbol_to_sector_map.get(symbol)
+        if not sector_name:
+            continue
+
+        # 1. 获取所有财报日
+        cursor.execute("SELECT date FROM Earning WHERE name = ? ORDER BY date ASC", (symbol,))
+        all_er_dates = [r[0] for r in cursor.fetchall()]
+        if len(all_er_dates) < 1:
+            continue
+        data['all_er_dates'] = all_er_dates
+        data['latest_er_date_str'] = all_er_dates[-1]
+
+        # 2. 获取所有财报日的价格
+        placeholders = ', '.join(['?'] * len(all_er_dates))
+        query = f'SELECT date, price FROM "{sector_name}" WHERE name = ? AND date IN ({placeholders}) ORDER BY date ASC'
+        cursor.execute(query, (symbol, *all_er_dates))
+        price_data = cursor.fetchall()
+        
+        if len(price_data) != len(all_er_dates):
+            continue # 数据不完整
+        data['all_er_prices'] = [p[1] for p in price_data]
+
+        # 3. 获取最新交易日数据
+        cursor.execute(f'SELECT date, price, volume FROM "{sector_name}" WHERE name = ? ORDER BY date DESC LIMIT 1', (symbol,))
+        latest_row = cursor.fetchone()
+        if not latest_row or latest_row[1] is None or latest_row[2] is None:
+            continue
+        data['latest_date_str'], data['latest_price'], data['latest_volume'] = latest_row
+
+        # 4. 获取PE和市值
+        data['pe_ratio'], data['market_cap'] = None, None
+        if market_cap_exists:
+            try:
+                cursor.execute("SELECT pe_ratio, market_cap FROM MNSPP WHERE symbol = ?", (symbol,))
+                row = cursor.fetchone()
+                if row: data['pe_ratio'], data['market_cap'] = row
+            except sqlite3.OperationalError as e:
+                if "no such column: market_cap" in str(e):
+                    if i == 0: print("警告: MNSPP表中无 'market_cap' 列，将回退查询。")
+                    market_cap_exists = False
+                    cursor.execute("SELECT pe_ratio FROM MNSPP WHERE symbol = ?", (symbol,))
+                    row = cursor.fetchone()
+                    if row: data['pe_ratio'] = row[0]
+                else: raise e
+        else:
+            cursor.execute("SELECT pe_ratio FROM MNSPP WHERE symbol = ?", (symbol,))
+            row = cursor.fetchone()
+            if row: data['pe_ratio'] = row[0]
+
+        data['is_valid'] = True
+        cache[symbol] = data
+
+    conn.close()
+    print(f"--- 数据缓存构建完成，有效数据: {len(cache)} 个 ---")
+    return cache
+
+# --- 5. 策略与过滤模块 ---
+
+def run_strategy(data):
+    """
+    对单个股票的数据执行核心筛选策略。
+    返回 True 表示符合条件，False 表示不符合。
+    """
+    # 条件1: 最新财报日价格 > 最近N次财报日均价
+    prices_to_check = data['all_er_prices'][-CONFIG["RECENT_EARNINGS_COUNT"]:]
+    if len(prices_to_check) < 2:
+        return False
+    
+    avg_recent_price = sum(prices_to_check) / len(prices_to_check)
+    latest_er_price = prices_to_check[-1]
+    
+    if latest_er_price <= avg_recent_price:
+        return False
+
+    # 条件2: 最新价 < 最新财报日价格 * (1 - X%)
+    market_cap = data.get('market_cap')
+    drop_pct = CONFIG["PRICE_DROP_PERCENTAGE_SMALL"] if market_cap and market_cap >= CONFIG["MARKETCAP_THRESHOLD"] else CONFIG["PRICE_DROP_PERCENTAGE_LARGE"]
+    
+    if not (data['latest_price'] <= latest_er_price * (1 - drop_pct)):
+        return False
+
+    # 条件3: 最新成交额 >= 阈值
+    turnover = data['latest_price'] * data['latest_volume']
+    if turnover < CONFIG["TURNOVER_THRESHOLD"]:
+        return False
+        
+    # 所有条件均满足
+    # print(f"  [策略符合] {data['symbol']}: 最新价 {data['latest_price']:.2f}, 回撤要求 < {latest_er_price * (1 - drop_pct):.2f}, 成交额 {turnover:,.0f}")
+    return True
+
+def apply_post_filters(symbols, stock_data_cache):
+    """对初步筛选结果应用额外的过滤规则。"""
+    print("\n--- 开始应用后置过滤器 ---")
+    final_list = []
+    for symbol in symbols:
+        data = stock_data_cache[symbol]
+
+        # 过滤1: PE Ratio
+        pe = data['pe_ratio']
+        if pe is None or str(pe).strip().lower() in ("--", "null", ""):
+            # print(f"  - 过滤 (PE无效): {symbol}")
+            continue
+
+        # 过滤2: 最新交易日 == 最新财报日
+        if data['latest_date_str'] == data['latest_er_date_str']:
+            # print(f"  - 过滤 (日期相同): {symbol}")
+            continue
+            
+        final_list.append(symbol)
+    
+    print(f"后置过滤完成，剩余 {len(final_list)} 个 symbol。")
+    return final_list
+
+# --- 6. 主执行流程 ---
+
+def main():
+    """主程序入口"""
+    print("程序开始运行...")
+    
+    # 1. 加载初始数据和配置
+    all_symbols, symbol_to_sector_map = load_all_symbols(SECTORS_JSON_FILE, CONFIG["TARGET_SECTORS"])
+    if all_symbols is None:
         return
 
-    # 5.2 找出本次新增的 symbol
-    # 将本次结果也转换为集合，利用集合的差集运算，找出新 symbol
-    current_symbols_set = set(qualified_symbols)
-    new_symbols = current_symbols_set - backup_symbols
+    # 2. 构建数据缓存 (核心性能提升)
+    stock_data_cache = build_stock_data_cache(all_symbols, symbol_to_sector_map, DB_FILE)
 
-    # ### 新增代码块 3: 使用黑名单过滤新增的 symbol ###
-    if blacklist_newlow_set:
-        # 使用集合的差集运算来移除在黑名单中的 symbol
-        filtered_new_symbols = new_symbols - blacklist_newlow_set
-        
-        # 打印出被过滤掉的 symbol，方便追踪
-        removed_by_blacklist = new_symbols - filtered_new_symbols
-        if removed_by_blacklist:
-            print(f"\n根据 'newlow' 黑名单，已过滤掉 {len(removed_by_blacklist)} 个新增 symbol: {sorted(list(removed_by_blacklist))}")
-    else:
-        # 如果黑名单为空，则不过滤
-        filtered_new_symbols = new_symbols
+    # 3. 运行策略，得到初步结果
+    preliminary_results = []
+    for symbol, data in stock_data_cache.items():
+        if data['is_valid']:
+            data['symbol'] = symbol # 方便调试
+            if run_strategy(data):
+                preliminary_results.append(symbol)
+    print(f"\n策略筛选完成，初步找到 {len(preliminary_results)} 个符合条件的股票。")
 
+    # 4. 应用后置过滤器
+    final_qualified_symbols = apply_post_filters(preliminary_results, stock_data_cache)
+    print(f"\n最终符合所有条件的股票共 {len(final_qualified_symbols)} 个: {sorted(final_qualified_symbols)}")
 
-    # ### 修改点: 使用过滤后的 `filtered_new_symbols` 进行判断和写入 ###
+    # 5. 处理文件输出
+    final_qualified_symbols = set(final_qualified_symbols)
+    
+    # 加载黑名单并过滤新增 symbols
+    blacklist = load_blacklist(BLACKLIST_JSON_FILE)
+    filtered_new_symbols = final_qualified_symbols - blacklist
+    
+    removed_count = len(final_qualified_symbols) - len(filtered_new_symbols)
+    if removed_count > 0:
+        print(f"根据黑名单，从新增列表中过滤掉 {removed_count} 个 symbol。")
+
+    # 根据是否有新增内容，决定如何操作文件
     if filtered_new_symbols:
-        print(f"\n发现 {len(filtered_new_symbols)} 个新的、且不在黑名单中的 symbol，将更新 news 文件和 JSON 文件。")
-        
-        # (A) 更新 JSON 文件，只写入过滤后的新增 symbol
-        update_json_with_earning_filter(filtered_new_symbols, target_json_for_filter_path)
-        
-        # (B) 写入 news 文件，也只写入过滤后的新增 symbol
+        print(f"发现 {len(filtered_new_symbols)} 个新的、且不在黑名单中的 symbol。")
+        # 写入 news 文件
         try:
-            with open(news_file_path, 'w', encoding='utf-8') as f:
-                # 为了保持输出顺序一致，可以对 new_symbols 排序后写入
+            with open(NEWS_FILE, 'w', encoding='utf-8') as f:
                 for symbol in sorted(list(filtered_new_symbols)):
                     f.write(symbol + '\n')
-            print(f"新增结果已成功写入到文件: {news_file_path}")
+            print(f"新增结果已写入到: {NEWS_FILE}")
         except IOError as e:
-            print(f"错误: 无法写入 news 文件: {e}")
-            
+            print(f"错误: 写入 news 文件失败: {e}")
+        # 更新 JSON
+        update_json_panel(filtered_new_symbols, PANEL_JSON_FILE, 'Earning_Filter')
     else:
-        # 如果没有新的 symbol，或者所有新的 symbol 都在黑名单中
         print("\n与上次相比，没有发现新的、符合条件的股票（或所有新增股票均在黑名单中）。")
-        
-        # (A) 清空 JSON 文件中的 Earning_Filter 组
-        # 传递一个空列表给函数，它会自动写入一个空的 {}
-        update_json_with_earning_filter([], target_json_for_filter_path)
-        
-        # (B) 删除旧的 news 文件
-        try:
-            if os.path.exists(news_file_path):
-                os.remove(news_file_path)
-                print(f"已删除旧的 news 文件，因为本次没有新内容: {news_file_path}")
-        except OSError as e:
-            # 使用 OSError 捕获与文件系统操作相关的错误
-            print(f"错误: 无法删除旧的 news 文件: {e}")
+        # 删除旧的 news 文件
+        if os.path.exists(NEWS_FILE):
+            os.remove(NEWS_FILE)
+            print(f"已删除旧的 news 文件: {NEWS_FILE}")
+        # 清空 JSON 中的对应组
+        update_json_panel([], PANEL_JSON_FILE, 'Earning_Filter')
 
-    # 5.4 用本次的完整结果覆盖更新 backup 文件 (逻辑保持不变)
-    # 备份文件必须总是保存当前所有符合条件的 symbol (不过滤黑名单)，以便下一次运行时进行正确的比较
-    print(f"\n正在用本次扫描到的 {len(qualified_symbols)} 个完整结果更新备份文件...")
+    # 无论如何，都用本次完整结果覆盖备份文件
+    # 确保备份目录存在
+    os.makedirs(os.path.dirname(BACKUP_FILE), exist_ok=True)
+    print(f"\n正在用本次扫描到的 {len(final_qualified_symbols)} 个完整结果更新备份文件...")
     try:
-        with open(backup_file_path, 'w', encoding='utf-8') as f:
-            # 将本次所有符合条件的 symbol 写入备份文件，为下次比对做准备
-            for symbol in sorted(qualified_symbols):
+        with open(BACKUP_FILE, 'w', encoding='utf-8') as f:
+            for symbol in sorted(final_qualified_symbols):
                 f.write(symbol + '\n')
-        print(f"备份文件已成功更新: {backup_file_path}")
+        print(f"备份文件已成功更新: {BACKUP_FILE}")
     except IOError as e:
         print(f"错误: 无法更新备份文件: {e}")
 
-def update_json_with_earning_filter(symbols_list, target_json_path):
-    """
-    将分析结果写入指定的 JSON 文件中的 'Earning_Filter' 组。
-
-    Args:
-        symbols_list (list or set): 符合条件的股票代码列表或集合。
-        target_json_path (str): 目标 JSON 文件的路径。
-    """
-    print(f"\n--- 开始更新 JSON 文件: {os.path.basename(target_json_path)} ---")
-    
-    # 1. 准备要写入的数据
-    # 根据需求，将股票列表转换为 {"symbol": "", ...} 格式的字典
-    earning_filter_group = {symbol: "" for symbol in sorted(symbols_list)}
-    
-    try:
-        # 2. 读取现有的 JSON 数据
-        # 使用 'r+' 模式，如果文件不存在会报错，这符合我们的逻辑，因为我们是更新一个现有结构的文件
-        with open(target_json_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        
-        # 3. 更新数据
-        # 直接对加载的 Python 字典进行操作，覆盖或创建 'Earning_Filter' 键
-        data['Earning_Filter'] = earning_filter_group
-        # ### 修改点：打印信息时使用 len(symbols_list) ###
-        print(f"已将 'Earning_Filter' 组更新为包含 {len(symbols_list)} 个 symbol。")
-
-        # 4. 将更新后的数据写回文件
-        # 使用 'w' 模式来完整覆盖旧文件内容
-        with open(target_json_path, 'w', encoding='utf-8') as f:
-            # indent=4 保持文件格式美观，易于阅读
-            # ensure_ascii=False 确保中文字符能被正确写入
-            json.dump(data, f, indent=4, ensure_ascii=False)
-        
-        print(f"成功将更新后的内容写入到: {target_json_path}")
-
-    except FileNotFoundError:
-        print(f"错误: 目标 JSON 文件未找到，请检查路径: {target_json_path}")
-    except json.JSONDecodeError:
-        print(f"错误: 目标 JSON 文件格式不正确，无法解析: {target_json_path}")
-    except IOError as e:
-        print(f"错误: 读写 JSON 文件时发生错误: {e}")
-    except Exception as e:
-        print(f"更新 JSON 文件时发生未知错误: {e}")
-
-def filter_symbols_by_pe_ratio(symbols_to_filter, db_path):
-    """
-    通过检查 MNSPP 表中的 pe_ratio 来过滤股票列表。
-    保留 pe_ratio 有效的股票，过滤掉 None, "", "--", "null"(大小写不敏感)。
-
-    Args:
-        symbols_to_filter (list): 需要过滤的股票代码列表。
-        db_path (str): 数据库文件路径。
-
-    Returns:
-        list: 只包含具有有效 pe_ratio 的股票的新列表。
-    """
-    if not symbols_to_filter:
-        return []
-
-    print(f"  - 开始对 {len(symbols_to_filter)} 个 symbol 进行 PE Ratio 过滤...")
-    valid_symbols = []
-    try:
-        with sqlite3.connect(db_path) as conn:
-            cursor = conn.cursor()
-            for sym in symbols_to_filter:
-                cursor.execute("SELECT pe_ratio FROM MNSPP WHERE symbol = ?", (sym,))
-                row = cursor.fetchone()
-                pe = row[0] if row else None
-                if pe is not None and str(pe).strip().lower() not in ("--", "null", ""):
-                    valid_symbols.append(sym)
-                else:
-                    print(f"    - 过滤 (PE Ratio 无效): {sym} (PE: {pe})")
-    except sqlite3.Error as e:
-        print(f"    - MNSPP 查询数据库错误: {e}")
-        # 查询失败时，保留目前已验证通过的列表
-        return valid_symbols
-
-    print(f"  - PE Ratio 过滤后剩余 {len(valid_symbols)} 个 symbol。")
-    return valid_symbols
+    print("\n程序运行结束。")
 
 
 if __name__ == '__main__':
-    analyze_financial_data()
+    main()

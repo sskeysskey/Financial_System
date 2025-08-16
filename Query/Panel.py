@@ -37,8 +37,8 @@ categories = [
     ['Basic_Materials','Consumer_Cyclical','Real_Estate','Technology','Energy','Industrials',
      'Consumer_Defensive','Communication_Services','Financial_Services', 'Healthcare','Utilities'],
     ['Today','Next Week','2 Weeks','3 Weeks'],
-    ['Notification','Next_Week','Earning_Filter'],
-    ['Watching'],
+    ['Notification','Next_Week'],
+    ['Watching','Earning_Filter'],
     ['Bonds','Indices','Currencies'],
     ['Economics','Crypto','Commodities'],
 ]
@@ -452,7 +452,7 @@ class MainWindow(QMainWindow):
             'Financial_Services': 'Financial',
             'Notification': '策略 3、3.5、4',
             'Next_Week': '策略 1、2、2.5',
-            'Earning_Filter': '策略 4'
+            'Earning_Filter': 'No Season'
         }
         
         self.init_ui()
@@ -825,6 +825,7 @@ class MainWindow(QMainWindow):
         menu.addSeparator()
         menu.addAction("清空 Notification 分组", lambda: self.clear_group("Notification"))
         menu.addAction("清空 Next_Week 分组", lambda: self.clear_group("Next_Week"))
+        menu.addAction("清空 No Season 分组", lambda: self.clear_group("Earning_Filter"))
 
         # 3) 显示菜单
         menu.exec_(global_pos)
