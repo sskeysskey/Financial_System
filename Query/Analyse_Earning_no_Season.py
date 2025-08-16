@@ -3,14 +3,8 @@ import sqlite3
 import os
 import datetime # 引入datetime模块，虽然原脚本没直接用，但好习惯是保留
 
-# --- 新增：调试追踪配置 ---
-##############################################################################
-#  请在这里修改为你想要追踪的股票代码
-SYMBOL_TO_TRACE = ""  # 示例：将这里换成你想要追踪的股票代码
-#  请在这里修改日志文件的输出路径
+SYMBOL_TO_TRACE = ""
 LOG_FILE_PATH = "/Users/yanzhang/Downloads/No_Season_trace_log.txt"
-##############################################################################
-
 
 # --- 1. 配置文件和路径 ---
 # 使用 os.path.expanduser('~') 获取用户主目录，增强可移植性
@@ -50,6 +44,8 @@ CONFIG = {
     "TURNOVER_THRESHOLD": 100_000_000,
     "RECENT_EARNINGS_COUNT": 2,
     "MARKETCAP_THRESHOLD": 100_000_000_000,
+    "PRICE_DROP_PERCENTAGE_MIGHTY": 0.13,
+    "PRICE_DROP_PERCENTAGE_HUGE": 0.09,
     "PRICE_DROP_PERCENTAGE_LARGE": 0.07,
     "PRICE_DROP_PERCENTAGE_SMALL": 0.04,
 }
@@ -270,7 +266,7 @@ def run_strategy(data, symbol_to_trace, log_detail):
     drop_pct = (
         CONFIG["PRICE_DROP_PERCENTAGE_SMALL"]
         if (market_cap and market_cap >= CONFIG["MARKETCAP_THRESHOLD"])
-        else CONFIG["PRICE_DROP_PERCENTAGE_LARGE"]
+        else CONFIG["PRICE_DROP_PERCENTAGE_HUGE"]
     )
     threshold_price = latest_er_price * (1 - drop_pct)
     cond2_ok = data['latest_price'] <= threshold_price

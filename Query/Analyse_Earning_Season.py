@@ -4,14 +4,8 @@ import os
 import datetime
 from collections import defaultdict
 
-# --- 新增：调试追踪配置 ---
-##############################################################################
-#  请在这里修改为你想要追踪的股票代码
-SYMBOL_TO_TRACE = ""  # 示例：将这里换成你想要追踪的股票代码
-#  请在这里修改日志文件的输出路径
+SYMBOL_TO_TRACE = "WM"
 LOG_FILE_PATH = "/Users/yanzhang/Downloads/Season_trace_log.txt"
-##############################################################################
-
 
 # --- 1. 配置文件和路径 ---
 # 使用一个配置字典来管理所有路径，更清晰
@@ -46,6 +40,7 @@ PANEL_JSON_FILE = PATHS["panel_json"](config_path)
 CONFIG = {
     "NUM_EARNINGS_TO_CHECK": 2,
     "MIN_DROP_PERCENTAGE": 0.04,
+    "MINOR_DROP_PERCENTAGE": 0.05,
     "MIDDLE_DROP_PERCENTAGE": 0.07,
     "HIGH_DROP_PERCENTAGE": 0.09,
     "MAX_DROP_PERCENTAGE": 0.15,
@@ -514,7 +509,7 @@ def run_strategy_4(data, cursor, symbol_sector_map, symbol_to_trace, log_detail)
             return False
 
         mcap = data['market_cap']
-        drop_pct = CONFIG["MIN_DROP_PERCENTAGE"] if mcap and mcap >= CONFIG["MARKETCAP_THRESHOLD"] else CONFIG["MIDDLE_DROP_PERCENTAGE"]
+        drop_pct = CONFIG["MINOR_DROP_PERCENTAGE"] if mcap and mcap >= CONFIG["MARKETCAP_THRESHOLD"] else CONFIG["HIGH_DROP_PERCENTAGE"]
         threshold_price = max_price_around_er * (1 - drop_pct)
         cond_A = data['latest_price'] < threshold_price
         

@@ -112,23 +112,14 @@
         "PSTG": ""
     },
     "Earning_Filter": {
-        "AVAV": "",
-        "BROS": "",
-        "CARR": "",
-        "CART": "",
-        "CRWD": "",
-        "DASH": "",
-        "DRI": "",
-        "DUOL": "",
         "FCNCA": "",
         "FDS": "",
         "GWRE": "",
         "HIMS": "",
-        "IBM": "",
+        "ICLR": "",
         "KMX": "",
-        "ONON": "",
-        "SNV": "",
-        "STZ": ""
+        "TRU": "",
+        "WST": ""
     },
     "Watching": {
         "TGT": "",
@@ -140,11 +131,15 @@
         "BROS": "",
         "DASH": "",
         "ESTC": "",
-        "COST": ""
+        "COST": "",
+        "NOW": "",
+        "TW": "",
+        "VRSN": "",
+        "WM": "",
+        "AVAV": "",
+        "DUOL": ""
     },
-    "Next_Week": {
-        "BJ": ""
-    },
+    "Next_Week": {},
     "Next Week": {
         "BJ": "",
         "ACN": "",
@@ -165,25 +160,7 @@
         "IOT": "",
         "FDS": ""
     },
-    "Notification": {
-        "AR": "",
-        "AXON": "",
-        "BKR": "",
-        "CPRT": "",
-        "CVNA": "",
-        "DECK": "",
-        "EXE": "",
-        "KNSL": "",
-        "LII": "",
-        "NOW": "",
-        "SLM": "",
-        "STRL": "",
-        "TW": "",
-        "VRSN": "",
-        "VRT": "",
-        "WM": "",
-        "WWD": ""
-    },
+    "Notification": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

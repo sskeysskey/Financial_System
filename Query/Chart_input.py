@@ -847,33 +847,30 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         xval, yval = x_data[ind["ind"][0]], y_data[ind["ind"][0]]
         annot.xy = (xval, yval)
         
-        # 查找当前日期是否有标记信息
+        # 统一、不论散点可见性，一律去抓文本
         current_date = xval.replace(tzinfo=None)
         global_marker_text = None
         specific_marker_text = None
         earning_marker_text = None  # 新增：收益公告文本
         
-        # 只有当标记点可见时才显示对应的事件文本
-        # 查找全局标记
-        if show_global_markers:
-            for marker_date, text in global_markers.items():
-                if abs((marker_date - current_date).total_seconds()) < 86400:  # 两天内
-                    global_marker_text = text
-                    break
+        
+        # 1) 全局标记
+        for marker_date, text in global_markers.items():
+            if abs((marker_date - current_date).total_seconds()) < 86400:  # 两天内
+                global_marker_text = text
+                break
                 
-        if show_specific_markers:
-            for marker_date, text in specific_markers.items():
-                if abs((marker_date - current_date).total_seconds()) < 86400:  # 两天内
-                    specific_marker_text = text
-                    break
+        # 2) 特定股票标记
+        for marker_date, text in specific_markers.items():
+            if abs((marker_date - current_date).total_seconds()) < 86400:  # 两天内
+                specific_marker_text = text
+                break
     
-        # 只有当收益标记点可见时才显示收益事件文本
-        if show_earning_markers:
-            # 查找收益公告标记
-            for marker_date, text in earning_markers.items():
-                if abs((marker_date - current_date).total_seconds()) < 86400:  # 两天内
-                    earning_marker_text = text
-                    break
+        # 3) 收益公告标记
+        for marker_date, text in earning_markers.items():
+            if abs((marker_date - current_date).total_seconds()) < 86400:  # 两天内
+                earning_marker_text = text
+                break
                 
         # 如果鼠标按下，则显示与初始点的百分比变化，否则显示日期和数值
         if mouse_pressed and initial_price is not None:
