@@ -553,6 +553,31 @@ class MainWindow(QMainWindow):
         # 最后应用
         self.setStyleSheet(qss)
 
+    def clear_group(self, group_name):
+        """
+        清空 config 中指定分组的所有内容，
+        然后写回 CONFIG_PATH 并刷新 UI。
+        """
+        if group_name not in self.config:
+            print(f"[错误] 分组 '{group_name}' 不存在。")
+            return
+        # 根据原来的类型，清空 dict 或 list
+        if isinstance(self.config[group_name], dict):
+            self.config[group_name].clear()
+        elif isinstance(self.config[group_name], list):
+            self.config[group_name].clear()
+        else:
+            print(f"[错误] 分组 '{group_name}' 类型不支持：{type(self.config[group_name])}")
+            return
+        # 写回文件并刷新
+        try:
+            with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
+                json.dump(self.config, f, ensure_ascii=False, indent=4)
+            print(f"已清空分组 '{group_name}'")
+            self.refresh_selection_window()
+        except Exception as e:
+            print(f"[错误] 清空分组并保存失败: {e}")
+
     def reorder_item(self, symbol, src, dst, dst_index):
         cfg = self.config
 
@@ -796,6 +821,10 @@ class MainWindow(QMainWindow):
         menu.addAction("找相似",        lambda: execute_external_script('similar', keyword))
         menu.addSeparator()
         menu.addAction("加入黑名单",     lambda: execute_external_script('blacklist', keyword, group, self))
+        # ———— 新增两项：清空 Notification / Next_Week ————
+        menu.addSeparator()
+        menu.addAction("清空 Notification 分组", lambda: self.clear_group("Notification"))
+        menu.addAction("清空 Next_Week 分组", lambda: self.clear_group("Next_Week"))
 
         # 3) 显示菜单
         menu.exec_(global_pos)

@@ -17,9 +17,7 @@ PATHS = {
     "db_file": lambda db: os.path.join(db, "Finance.db"),
     "blacklist_json": lambda config: os.path.join(config, "Blacklist.json"),
     "panel_json": lambda config: os.path.join(config, "Sectors_panel.json"),
-    "output_next_week": lambda news: os.path.join(news, "NextWeek_Earning.txt"),
     "backup_next_week": lambda news: os.path.join(news, "backup", "NextWeek_Earning.txt"),
-    "output_notification": lambda news: os.path.join(news, "notification_earning.txt"),
     "backup_notification": lambda news: os.path.join(news, "backup", "notification_earning.txt"),
 }
 
@@ -477,14 +475,8 @@ def main():
     # 主列表 (NextWeek_Earning)
     update_json_panel(final_symbols, PANEL_JSON_FILE, "Next_Week")
     try:
-        output_path = PATHS["output_next_week"](news_path)
         backup_path = PATHS["backup_next_week"](news_path)
         os.makedirs(os.path.dirname(backup_path), exist_ok=True)
-        
-        with open(output_path, 'w', encoding='utf-8') as f:
-            for sym in sorted(final_symbols):
-                f.write(sym + '\n')
-        print(f"主列表结果已写入: {output_path}")
 
         with open(backup_path, 'w', encoding='utf-8') as f:
             for sym in sorted(final_symbols):
@@ -497,14 +489,8 @@ def main():
     # 通知列表 (Notification)
     update_json_panel(final_notification_list, PANEL_JSON_FILE, "Notification")
     try:
-        output_path = PATHS["output_notification"](news_path)
         backup_path = PATHS["backup_notification"](news_path)
         os.makedirs(os.path.dirname(backup_path), exist_ok=True)
-
-        with open(output_path, 'w', encoding='utf-8') as f:
-            for sym in sorted(final_notification_list):
-                f.write(sym + '\n')
-        print(f"通知列表结果已写入: {output_path}")
 
         with open(backup_path, 'w', encoding='utf-8') as f:
             for sym in sorted(final_notification_list):
