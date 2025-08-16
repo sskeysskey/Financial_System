@@ -7,7 +7,7 @@ from collections import defaultdict
 # --- 新增：调试追踪配置 ---
 ##############################################################################
 #  请在这里修改为你想要追踪的股票代码
-SYMBOL_TO_TRACE = "ICLR"  # 示例：将这里换成你想要追踪的股票代码
+SYMBOL_TO_TRACE = ""  # 示例：将这里换成你想要追踪的股票代码
 #  请在这里修改日志文件的输出路径
 LOG_FILE_PATH = "/Users/yanzhang/Downloads/Season_trace_log.txt"
 ##############################################################################
@@ -310,16 +310,18 @@ def run_strategy_2_5(data, symbol_to_trace, log_detail):
     return result
 
 def run_strategy_3(data, cursor, symbol_sector_map, symbol_to_trace, log_detail):
-    """ 策略 3（1）：如果最近2次财报是上升的，且最新收盘价比过去N次财报最高收盘价低9% """
-    """ 策略 3（2）：如果不是上升的，要求最近2次财报收盘价差额要大于等于4%，最新收盘价 < 过去N次财报最低收盘价，且最新收盘价比前推10天收盘价的最低值高不超过3% """
-    """ 策略 3（3）：以上两个结果还同时必须满足最新交易日落在下次理论(最近一次财报日期+93天)财报之前的7~20天窗口期内 """
+    """ 策略 3 (修改后):
+    (1) 如果最近2次财报上升，最新价 < 过去N次财报最高价 * (1-9%)
+    (2) 如果不上升，最近2次财报差额 >= 4%，且最新价 < 过去N次财报最低价
+    ---
+    (3) 必须满足(1)或(2)其中之一
+    (4) 必须满足：最新价比前10天最低价高不超过3%
+    (5) 必须满足：最新交易日落在下次理论财报前7-20天窗口期
+    """
     is_tracing = (data.get('symbol') == symbol_to_trace)
-    if is_tracing: log_detail(f"\n--- [{symbol_to_trace}] 策略 3 评估 ---")
+    if is_tracing: log_detail(f"\n--- [{symbol_to_trace}] 策略 3 评估 (已修改) ---")
 
-    prices = data['all_er_prices'][:CONFIG["NUM_EARNINGS_TO_CHECK"]]
-    asc_prices = list(reversed(prices))
-    
-    # 时间窗口检查
+    # 步骤1: 时间窗口检查 (最终条件)
     next_er = get_next_er_date(data['latest_er_date'])
     window_start = next_er - datetime.timedelta(days=20)
     window_end = next_er - datetime.timedelta(days=7)
@@ -328,69 +330,77 @@ def run_strategy_3(data, cursor, symbol_sector_map, symbol_to_trace, log_detail)
     if is_tracing:
         log_detail(f"  - 最新财报日: {data['latest_er_date']}, 理论下次财报日: {next_er}")
         log_detail(f"  - 时间窗口: {window_start} <= 最新交易日({data['latest_date']}) <= {window_end}")
-        log_detail(f"  - 条件1 (在时间窗口内): {is_in_window}")
+        log_detail(f"  - 条件 (时间窗口): {is_in_window}")
 
     if not is_in_window:
         if is_tracing: log_detail(f"  - 结果: False (未在时间窗口内)")
         return False
-        
+
+    # 步骤2: 价格条件检查 (上升/非上升分支)
+    prices = data['all_er_prices'][:CONFIG["NUM_EARNINGS_TO_CHECK"]]
+    asc_prices = list(reversed(prices))
+    
     price_ok = False
     is_increasing = asc_prices[-2] < asc_prices[-1]
     if is_tracing:
         log_detail(f"  - 最近两次财报价 (从远到近): {[asc_prices[-2], asc_prices[-1]]}")
-        log_detail(f"  - 条件2 (最近两次财报上升): {is_increasing}")
+        log_detail(f"  - 条件 (最近两次财报上升): {is_increasing}")
 
     if is_increasing:
-        # 注意：a.py 上升分支使用 HIGH_DROP_PERCENTAGE (0.09)
+        # 上升分支
         threshold = 1 - CONFIG["HIGH_DROP_PERCENTAGE"]
         max_p = max(asc_prices)
         price_ok = data['latest_price'] < max_p * threshold
         if is_tracing:
             log_detail(f"    - 分支(上升): latest_price({data['latest_price']}) < max({asc_prices})({max_p}) * {threshold:.2f} ({max_p * threshold:.4f}) -> {price_ok}")
     else:
+        # 非上升分支
         if is_tracing: log_detail(f"    - 分支(非上升):")
         
         diff_abs = abs(asc_prices[-1] - asc_prices[-2])
         min_diff = asc_prices[-2] * CONFIG["MIN_DROP_PERCENTAGE"]
         diff_ok = diff_abs >= min_diff
         price_low_ok = data['latest_price'] < min(prices)
-        initial_price_check = diff_ok and price_low_ok
+        price_ok = diff_ok and price_low_ok
         
         if is_tracing:
             log_detail(f"      - 差额检查: abs({asc_prices[-1]} - {asc_prices[-2]}) ({diff_abs:.4f}) >= {asc_prices[-2]} * {CONFIG['MIN_DROP_PERCENTAGE']} ({min_diff:.4f}) -> {diff_ok}")
             log_detail(f"      - 低价检查: latest_price({data['latest_price']}) < min({prices}) ({min(prices)}) -> {price_low_ok}")
-            log_detail(f"      - 原始价格条件结果: {initial_price_check}")
+            log_detail(f"      - 分支结果: {price_ok}")
 
-        if initial_price_check:
-            table_name = symbol_sector_map.get(data['symbol'])
-            if not table_name:
-                if is_tracing: log_detail(f"      - 无法查询10日最低价 (无table_name)，分支失败")
-                return False
-            
-            # 获取过去10天的最低价
-            ten_days_ago = data['latest_date'] - datetime.timedelta(days=10)
-            cursor.execute(
-                f'SELECT MIN(price) FROM "{table_name}" WHERE name = ? AND date BETWEEN ? AND ?',
-                (data['symbol'], ten_days_ago.isoformat(), data['latest_date_str'])
-            )
-            min_price_row = cursor.fetchone()
-            min_price_10d = min_price_row[0] if min_price_row and min_price_row[0] is not None else None
-            
-            if is_tracing: log_detail(f"      - 查询过去10天最低价 (从{ten_days_ago.isoformat()}到{data['latest_date_str']}) -> {min_price_10d}")
+    if not price_ok:
+        if is_tracing: log_detail(f"  - 结果: False (价格条件未满足)")
+        return False
 
-            if min_price_10d is not None:
-                threshold_10d = min_price_10d * (1 + CONFIG["MAX_RISE_FROM_7D_LOW"])
-                rise_ok = data['latest_price'] <= threshold_10d
-                if is_tracing:
-                    log_detail(f"      - 新增条件(10日低价上涨幅度): latest_price({data['latest_price']}) <= {min_price_10d} * {1 + CONFIG['MAX_RISE_FROM_7D_LOW']} ({threshold_10d:.4f}) -> {rise_ok}")
-                if rise_ok:
-                    price_ok = True
-            elif is_tracing:
-                log_detail(f"      - 未能获取10日最低价，分支失败")
+    # 步骤3: 10日最低价检查 (最终条件)
+    # 只有在通过了步骤2的价格检查后，才执行此检查
+    table_name = symbol_sector_map.get(data['symbol'])
+    if not table_name:
+        if is_tracing: log_detail(f"      - 无法查询10日最低价 (无table_name)，策略失败")
+        return False
     
-    result = price_ok
-    if is_tracing: log_detail(f"  - 最终结果: {result}")
-    return result
+    ten_days_ago = data['latest_date'] - datetime.timedelta(days=10)
+    cursor.execute(
+        f'SELECT MIN(price) FROM "{table_name}" WHERE name = ? AND date BETWEEN ? AND ?',
+        (data['symbol'], ten_days_ago.isoformat(), data['latest_date_str'])
+    )
+    min_price_row = cursor.fetchone()
+    min_price_10d = min_price_row[0] if min_price_row and min_price_row[0] is not None else None
+    
+    if is_tracing: log_detail(f"  - 查询过去10天最低价 (从{ten_days_ago.isoformat()}到{data['latest_date_str']}) -> {min_price_10d}")
+
+    if min_price_10d is None:
+        if is_tracing: log_detail(f"  - 结果: False (未能获取10日最低价)")
+        return False
+
+    threshold_10d = min_price_10d * (1 + CONFIG["MAX_RISE_FROM_7D_LOW"])
+    rise_ok = data['latest_price'] <= threshold_10d
+    
+    if is_tracing:
+        log_detail(f"  - 条件 (10日低价上涨幅度): latest_price({data['latest_price']}) <= {min_price_10d} * {1 + CONFIG['MAX_RISE_FROM_7D_LOW']} ({threshold_10d:.4f}) -> {rise_ok}")
+        log_detail(f"  - 最终结果: {rise_ok}")
+        
+    return rise_ok
 
 def run_strategy_3_5(data, symbol_to_trace, log_detail):
     """策略 3.5: 过去2次财报保持上升，且最近的3次财报里至少有一次财报的收盘价要比该symbol的最新收盘价高15%以上，且最新交易日落在下次理论(最近一次财报日期+93天)财报之前的7~20天窗口期内"""
@@ -431,15 +441,19 @@ def run_strategy_3_5(data, symbol_to_trace, log_detail):
     return result
 
 def run_strategy_4(data, cursor, symbol_sector_map, symbol_to_trace, log_detail):
-    """ 策略 4（1）：最近N次财报的收盘价要递增，最近一次财报必须是从系统日期往前数一个月内，且该symbol从earning表中读到的price值必须为正 """
-    """ 策略 4（2）：最新收盘价位于最近财报日后9-25天之间，且A：最新收盘价比最新财报日前后(±2天内)的最高收盘价低超过X%（如果股票symbol的marketcap是1000亿以上时X就是4%，如果股票symbol的marketcap是1000亿以下时X就是7%），B：或者不管marketcap是多少，只要最新收盘价低于倒数第二次财报的收盘价时也算符合要求，A、B是或的关系 """
+    """ 策略 4 (修改后):
+    (1) 最近N次财报递增，最近30天内财报，Earning表price>0
+    (2) 最新收盘价位于财报日后9-25天
+    (3) A：价比财报日前后最高价低X%；B：或价比倒数第二次财报低
+    (4) 必须满足：最新价比前10天最低价高不超过3%
+    """
     is_tracing = (data.get('symbol') == symbol_to_trace)
-    if is_tracing: log_detail(f"\n--- [{symbol_to_trace}] 策略 4 评估 ---")
+    if is_tracing: log_detail(f"\n--- [{symbol_to_trace}] 策略 4 评估 (已修改) ---")
 
     prices = data['all_er_prices'][:CONFIG["NUM_EARNINGS_TO_CHECK"]]
     asc_prices = list(reversed(prices))
     
-    # 基本条件
+    # 步骤1: 基本条件
     is_increasing = all(asc_prices[i] < asc_prices[i+1] for i in range(len(asc_prices)-1))
     is_recent_er = data['latest_er_date'] >= (datetime.date.today() - datetime.timedelta(days=30))
     is_positive_earning = data['earning_record_price'] is not None and data['earning_record_price'] > 0
@@ -454,7 +468,7 @@ def run_strategy_4(data, cursor, symbol_sector_map, symbol_to_trace, log_detail)
         if is_tracing: log_detail(f"  - 结果: False (基础条件未满足)")
         return False
 
-    # 日期窗口
+    # 步骤2: 日期窗口
     window_start = data['latest_er_date'] + datetime.timedelta(days=9)
     window_end = data['latest_er_date'] + datetime.timedelta(days=25)
     is_in_window = (window_start <= data['latest_date'] <= window_end)
@@ -466,7 +480,9 @@ def run_strategy_4(data, cursor, symbol_sector_map, symbol_to_trace, log_detail)
         if is_tracing: log_detail(f"  - 结果: False (未在时间窗口内)")
         return False
         
-    # A/B 条件判断
+    # 步骤3: A/B 条件判断
+    initial_price_ok = False
+    
     # B条件
     second_er_price = data['all_er_prices'][1]
     if second_er_price is None: 
@@ -474,39 +490,76 @@ def run_strategy_4(data, cursor, symbol_sector_map, symbol_to_trace, log_detail)
         return False
     
     cond_B = data['latest_price'] < second_er_price
-    if is_tracing: log_detail(f"  - 条件B: latest_price({data['latest_price']}) < 倒数第二次财报价({second_er_price}) -> {cond_B}")
+    if is_tracing: log_detail(f"  - 条件3.B: latest_price({data['latest_price']}) < 倒数第二次财报价({second_er_price}) -> {cond_B}")
     if cond_B: 
-        if is_tracing: log_detail(f"  - 结果: True (满足条件B)")
-        return True
+        initial_price_ok = True
+    else:
+        # A条件 (仅在B不满足时检查)
+        table_name = symbol_sector_map.get(data['symbol'])
+        if not table_name:
+            if is_tracing: log_detail(f"  - 结果: False (无法获取table_name以检查A条件)")
+            return False
+            
+        start_range = data['latest_er_date'] - datetime.timedelta(days=2)
+        end_range   = data['latest_er_date'] + datetime.timedelta(days=2)
+        cursor.execute(
+            f'SELECT MAX(price) FROM "{table_name}" WHERE name = ? AND date BETWEEN ? AND ?',
+            (data['symbol'], start_range.isoformat(), end_range.isoformat())
+        )
+        max_price_row = cursor.fetchone()
+        max_price_around_er = max_price_row[0] if max_price_row else None
+        
+        if max_price_around_er is None: 
+            if is_tracing: log_detail(f"  - 结果: False (无法获取财报日前后最高价)")
+            return False
 
-    # A条件
-    table_name = symbol_sector_map.get(data['symbol'])
-    start_range = data['latest_er_date'] - datetime.timedelta(days=2)
-    end_range   = data['latest_er_date'] + datetime.timedelta(days=2)
-    cursor.execute(
-        f'SELECT MAX(price) FROM "{table_name}" WHERE name = ? AND date BETWEEN ? AND ?',
-        (data['symbol'], start_range.isoformat(), end_range.isoformat())
-    )
-    max_price_row = cursor.fetchone()
-    max_price_around_er = max_price_row[0] if max_price_row else None
-    
-    if max_price_around_er is None: 
-        if is_tracing: log_detail(f"  - 结果: False (无法获取财报日前后最高价)")
+        mcap = data['market_cap']
+        drop_pct = CONFIG["MIN_DROP_PERCENTAGE"] if mcap and mcap >= CONFIG["MARKETCAP_THRESHOLD"] else CONFIG["MIDDLE_DROP_PERCENTAGE"]
+        threshold_price = max_price_around_er * (1 - drop_pct)
+        cond_A = data['latest_price'] < threshold_price
+        
+        if is_tracing:
+            log_detail(f"  - 条件3.A:")
+            log_detail(f"    - 市值: {mcap}, 阈值: {CONFIG['MARKETCAP_THRESHOLD']} -> 使用下跌百分比: {drop_pct}")
+            log_detail(f"    - 财报日前后(±2天)最高价: {max_price_around_er}")
+            log_detail(f"    - 判断: latest_price({data['latest_price']}) < {max_price_around_er} * (1-{drop_pct}) ({threshold_price:.4f}) -> {cond_A}")
+        
+        if cond_A:
+            initial_price_ok = True
+
+    if not initial_price_ok:
+        if is_tracing: log_detail(f"  - 结果: False (A/B价格条件均未满足)")
         return False
 
-    mcap = data['market_cap']
-    drop_pct = CONFIG["MIN_DROP_PERCENTAGE"] if mcap and mcap >= CONFIG["MARKETCAP_THRESHOLD"] else CONFIG["MIDDLE_DROP_PERCENTAGE"]
-    threshold_price = max_price_around_er * (1 - drop_pct)
-    cond_A = data['latest_price'] < threshold_price
-    
-    if is_tracing:
-        log_detail(f"  - 条件A:")
-        log_detail(f"    - 市值: {mcap}, 阈值: {CONFIG['MARKETCAP_THRESHOLD']} -> 使用下跌百分比: {drop_pct}")
-        log_detail(f"    - 财报日前后(±2天)最高价: {max_price_around_er}")
-        log_detail(f"    - 判断: latest_price({data['latest_price']}) < {max_price_around_er} * (1-{drop_pct}) ({threshold_price:.4f}) -> {cond_A}")
-        log_detail(f"  - 最终结果: {cond_A}")
+    # 步骤4: 10日最低价检查 (新增的最终条件)
+    table_name = symbol_sector_map.get(data['symbol']) # 重复获取以防万一，虽然前面已有
+    if not table_name:
+        if is_tracing: log_detail(f"      - 无法查询10日最低价 (无table_name)，策略失败")
+        return False
+        
+    ten_days_ago = data['latest_date'] - datetime.timedelta(days=10)
+    cursor.execute(
+        f'SELECT MIN(price) FROM "{table_name}" WHERE name = ? AND date BETWEEN ? AND ?',
+        (data['symbol'], ten_days_ago.isoformat(), data['latest_date_str'])
+    )
+    min_price_row = cursor.fetchone()
+    min_price_10d = min_price_row[0] if min_price_row and min_price_row[0] is not None else None
 
-    return cond_A
+    if is_tracing: log_detail(f"  - 查询过去10天最低价 (从{ten_days_ago.isoformat()}到{data['latest_date_str']}) -> {min_price_10d}")
+
+    if min_price_10d is None:
+        if is_tracing: log_detail(f"  - 结果: False (未能获取10日最低价)")
+        return False
+
+    threshold_10d = min_price_10d * (1 + CONFIG["MAX_RISE_FROM_7D_LOW"])
+    rise_ok = data['latest_price'] <= threshold_10d
+
+    if is_tracing:
+        log_detail(f"  - 条件4 (10日低价上涨幅度): latest_price({data['latest_price']}) <= {min_price_10d} * {1 + CONFIG['MAX_RISE_FROM_7D_LOW']} ({threshold_10d:.4f}) -> {rise_ok}")
+        log_detail(f"  - 最终结果: {rise_ok}")
+
+    return rise_ok
+
 
 # --- 6. 过滤模块 (已集成追踪系统) ---
 
@@ -572,137 +625,161 @@ def apply_filters(symbols_set, stock_data_cache, blacklist, negative_earnings_se
         
     return final_list
 
+def run_processing_logic(log_detail):
+    """
+    核心处理逻辑。
+    这个函数包含了所有的数据加载、策略执行、过滤和文件输出。
+    它接收一个 log_detail 函数作为参数，用于记录过程信息。
+    """
+    log_detail(f"程序开始运行...")
+    if SYMBOL_TO_TRACE:
+        log_detail(f"当前追踪的 SYMBOL: {SYMBOL_TO_TRACE}")
+    
+    # 1. 加载初始数据
+    symbol_sector_map = create_symbol_to_sector_map(SECTORS_JSON_FILE)
+    if not symbol_sector_map:
+        log_detail("错误: 无法加载板块映射，程序终止。")
+        return
+
+    symbols_next = get_symbols_from_file(PATHS["earnings_release_next"](news_path))
+    symbols_new = get_symbols_from_file(PATHS["earnings_release_new"](news_path))
+    initial_symbols = list(dict.fromkeys(symbols_next + symbols_new))
+
+    if SYMBOL_TO_TRACE and SYMBOL_TO_TRACE in initial_symbols:
+        log_detail(f"\n追踪信息: {SYMBOL_TO_TRACE} 在初始文件列表中。")
+    elif SYMBOL_TO_TRACE:
+        log_detail(f"\n追踪信息: {SYMBOL_TO_TRACE} 不在初始文件列表中 (next/new)。")
+
+    with sqlite3.connect(DB_FILE) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT DISTINCT name FROM Earning")
+        all_db_symbols = [row[0] for row in cursor.fetchall()]
+
+    symbols_to_process = sorted(list(set(initial_symbols + all_db_symbols)))
+    
+    # 2. 构建数据缓存 (核心性能提升)
+    stock_data_cache = build_stock_data_cache(symbols_to_process, DB_FILE, symbol_sector_map, SYMBOL_TO_TRACE, log_detail)
+
+    # 3. 运行策略
+    results = defaultdict(list)
+    with sqlite3.connect(DB_FILE) as conn: # 策略3和4需要一个cursor
+        cursor = conn.cursor()
+
+        for symbol, data in stock_data_cache.items():
+            if not data['is_valid']:
+                continue
+            
+            data['symbol'] = symbol # 将symbol本身加入data，方便策略3、4使用
+
+            # 跑主列表策略 (仅针对初始文件里的symbols)
+            if symbol in initial_symbols:
+                if run_strategy_1(data, SYMBOL_TO_TRACE, log_detail): results['s1'].append(symbol)
+                if run_strategy_2(data, SYMBOL_TO_TRACE, log_detail): results['s2'].append(symbol)
+                if run_strategy_2_5(data, SYMBOL_TO_TRACE, log_detail): results['s2_5'].append(symbol)
+
+            # 跑通知列表策略 (针对所有有数据的symbols)
+            if run_strategy_3(data, cursor, symbol_sector_map, SYMBOL_TO_TRACE, log_detail): results['s3'].append(symbol)
+            if run_strategy_3_5(data, SYMBOL_TO_TRACE, log_detail): results['s3_5'].append(symbol)
+            if run_strategy_4(data, cursor, symbol_sector_map, SYMBOL_TO_TRACE, log_detail): results['s4'].append(symbol)
+
+    # 4. 汇总初步结果
+    prelim_final_symbols = set(results['s1'] + results['s2'] + results['s2_5'])
+    prelim_notification_list = set(results['s3'] + results['s3_5'] + results['s4'])
+
+    log_detail("\n--- 策略运行初步结果 ---")
+    log_detail(f"主列表初步候选: {len(prelim_final_symbols)} 个")
+    log_detail(f"通知列表初步候选: {len(prelim_notification_list)} 个")
+    if SYMBOL_TO_TRACE and SYMBOL_TO_TRACE in prelim_final_symbols:
+        log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 在策略筛选后的 '主列表' 初步候选名单中。")
+    if SYMBOL_TO_TRACE and SYMBOL_TO_TRACE in prelim_notification_list:
+        log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 在策略筛选后的 '通知列表' 初步候选名单中。")
+
+    # 5. 应用通用过滤器
+    blacklist = load_blacklist(BLACKLIST_JSON_FILE)
+    negative_earnings_set = filter_recent_negative_earnings(DB_FILE)
+
+    log_detail("\n--- 开始对主列表进行过滤 ---")
+    final_symbols = apply_filters(prelim_final_symbols, stock_data_cache, blacklist, negative_earnings_set, True, SYMBOL_TO_TRACE, log_detail)
+    
+    log_detail("\n--- 开始对通知列表进行过滤 ---")
+    final_notification_list = apply_filters(prelim_notification_list, stock_data_cache, blacklist, set(), False, SYMBOL_TO_TRACE, log_detail)
+
+    # 在这里加一行：把出现在主列表里的剔除掉
+    final_notification_list = [s for s in final_notification_list if s not in final_symbols]
+
+    log_detail("\n--- 所有过滤完成后的最终结果 ---")
+    log_detail(f"主列表最终数量: {len(final_symbols)} - {final_symbols}")
+    log_detail(f"通知列表最终数量: {len(final_notification_list)} - {final_notification_list}")
+    if SYMBOL_TO_TRACE:
+        if SYMBOL_TO_TRACE in final_symbols:
+            log_detail(f"\n最终追踪结果: {SYMBOL_TO_TRACE} 成功进入了最终的 '主列表'。")
+        elif SYMBOL_TO_TRACE in final_notification_list:
+            log_detail(f"\n最终追踪结果: {SYMBOL_TO_TRACE} 成功进入了最终的 '通知列表'。")
+        else:
+            log_detail(f"\n最终追踪结果: {SYMBOL_TO_TRACE} 未进入任何最终列表。")
+
+
+    # 6. 文件和JSON输出
+    # 主列表 (NextWeek_Earning)
+    update_json_panel(final_symbols, PANEL_JSON_FILE, "Next_Week")
+    try:
+        backup_path = PATHS["backup_next_week"](news_path)
+        os.makedirs(os.path.dirname(backup_path), exist_ok=True)
+
+        with open(backup_path, 'w', encoding='utf-8') as f:
+            for sym in sorted(final_symbols):
+                f.write(sym + '\n')
+        print(f"主列表备份已更新: {backup_path}")
+
+    except IOError as e:
+        print(f"写入主列表文件时出错: {e}")
+
+    # 通知列表 (Notification)
+    update_json_panel(final_notification_list, PANEL_JSON_FILE, "Notification")
+    try:
+        backup_path = PATHS["backup_notification"](news_path)
+        os.makedirs(os.path.dirname(backup_path), exist_ok=True)
+
+        with open(backup_path, 'w', encoding='utf-8') as f:
+            for sym in sorted(final_notification_list):
+                f.write(sym + '\n')
+        print(f"通知列表备份已更新: {backup_path}")
+
+    except IOError as e:
+        print(f"写入通知列表文件时出错: {e}")
 
 # --- 7. 主执行流程 (已集成追踪系统) ---
 
 def main():
     """主程序入口"""
-    # 使用 with 语句确保日志文件被正确关闭
-    with open(LOG_FILE_PATH, 'w', encoding='utf-8') as log_file:
-        
-        def log_detail(message):
-            """一个辅助函数，用于将调试信息写入文件并打印到控制台"""
-            log_file.write(message + '\n')
-            print(message) # 也在控制台打印，方便实时查看
-
-        log_detail(f"程序开始运行... 日志将写入: {LOG_FILE_PATH}")
-        log_detail(f"当前追踪的 SYMBOL: {SYMBOL_TO_TRACE}")
-        
-        # 1. 加载初始数据
-        symbol_sector_map = create_symbol_to_sector_map(SECTORS_JSON_FILE)
-        if not symbol_sector_map:
-            log_detail("错误: 无法加载板块映射，程序终止。")
-            return
-
-        symbols_next = get_symbols_from_file(PATHS["earnings_release_next"](news_path))
-        symbols_new = get_symbols_from_file(PATHS["earnings_release_new"](news_path))
-        initial_symbols = list(dict.fromkeys(symbols_next + symbols_new))
-
-        if SYMBOL_TO_TRACE in initial_symbols:
-            log_detail(f"\n追踪信息: {SYMBOL_TO_TRACE} 在初始文件列表中。")
-        else:
-            log_detail(f"\n追踪信息: {SYMBOL_TO_TRACE} 不在初始文件列表中 (next/new)。")
-
-        with sqlite3.connect(DB_FILE) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT DISTINCT name FROM Earning")
-            all_db_symbols = [row[0] for row in cursor.fetchall()]
-
-        symbols_to_process = sorted(list(set(initial_symbols + all_db_symbols)))
-        
-        # 2. 构建数据缓存 (核心性能提升)
-        # 修正点：在这里添加了缺失的 SYMBOL_TO_TRACE 和 log_detail 参数
-        stock_data_cache = build_stock_data_cache(symbols_to_process, DB_FILE, symbol_sector_map, SYMBOL_TO_TRACE, log_detail)
-
-        # 3. 运行策略
-        results = defaultdict(list)
-        with sqlite3.connect(DB_FILE) as conn: # 策略3和4需要一个cursor
-            cursor = conn.cursor()
-
-            for symbol, data in stock_data_cache.items():
-                if not data['is_valid']:
-                    continue
+    # 检查是否设置了追踪符号
+    if SYMBOL_TO_TRACE:
+        # 如果设置了，则启用文件日志记录
+        print(f"追踪模式已启用，目标: {SYMBOL_TO_TRACE}。日志将写入: {LOG_FILE_PATH}")
+        try:
+            with open(LOG_FILE_PATH, 'w', encoding='utf-8') as log_file:
+                def log_detail_file(message):
+                    """一个辅助函数，用于将调试信息写入文件并打印到控制台"""
+                    log_file.write(message + '\n')
+                    print(message)
                 
-                data['symbol'] = symbol # 将symbol本身加入data，方便策略3、4使用
+                # 调用核心逻辑，并传入文件日志记录函数
+                run_processing_logic(log_detail_file)
 
-                # 跑主列表策略 (仅针对初始文件里的symbols)
-                if symbol in initial_symbols:
-                    if run_strategy_1(data, SYMBOL_TO_TRACE, log_detail): results['s1'].append(symbol)
-                    if run_strategy_2(data, SYMBOL_TO_TRACE, log_detail): results['s2'].append(symbol)
-                    if run_strategy_2_5(data, SYMBOL_TO_TRACE, log_detail): results['s2_5'].append(symbol)
-
-                # 跑通知列表策略 (针对所有有数据的symbols)
-                if run_strategy_3(data, cursor, symbol_sector_map, SYMBOL_TO_TRACE, log_detail): results['s3'].append(symbol)
-                if run_strategy_3_5(data, SYMBOL_TO_TRACE, log_detail): results['s3_5'].append(symbol)
-                if run_strategy_4(data, cursor, symbol_sector_map, SYMBOL_TO_TRACE, log_detail): results['s4'].append(symbol)
-
-        # 4. 汇总初步结果
-        prelim_final_symbols = set(results['s1'] + results['s2'] + results['s2_5'])
-        prelim_notification_list = set(results['s3'] + results['s3_5'] + results['s4'])
-
-        log_detail("\n--- 策略运行初步结果 ---")
-        log_detail(f"主列表初步候选: {len(prelim_final_symbols)} 个")
-        log_detail(f"通知列表初步候选: {len(prelim_notification_list)} 个")
-        if SYMBOL_TO_TRACE in prelim_final_symbols:
-            log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 在策略筛选后的 '主列表' 初步候选名单中。")
-        if SYMBOL_TO_TRACE in prelim_notification_list:
-            log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 在策略筛选后的 '通知列表' 初步候选名单中。")
-
-        # 5. 应用通用过滤器
-        blacklist = load_blacklist(BLACKLIST_JSON_FILE)
-        negative_earnings_set = filter_recent_negative_earnings(DB_FILE)
-
-        log_detail("\n--- 开始对主列表进行过滤 ---")
-        final_symbols = apply_filters(prelim_final_symbols, stock_data_cache, blacklist, negative_earnings_set, True, SYMBOL_TO_TRACE, log_detail)
+        except IOError as e:
+            print(f"错误：无法打开或写入日志文件 {LOG_FILE_PATH}: {e}")
+    
+    else:
+        # 如果没有设置，则只在控制台打印信息
+        print("追踪模式未启用 (SYMBOL_TO_TRACE 为空)。将不会生成日志文件。")
+        def log_detail_console(message):
+            """一个辅助函数，当不追踪时只打印到控制台"""
+            print(message)
         
-        log_detail("\n--- 开始对通知列表进行过滤 ---")
-        final_notification_list = apply_filters(prelim_notification_list, stock_data_cache, blacklist, set(), False, SYMBOL_TO_TRACE, log_detail)
-
-        # 在这里加一行：把出现在主列表里的剔除掉
-        final_notification_list = [s for s in final_notification_list if s not in final_symbols]
-
-        log_detail("\n--- 所有过滤完成后的最终结果 ---")
-        log_detail(f"主列表最终数量: {len(final_symbols)} - {final_symbols}")
-        log_detail(f"通知列表最终数量: {len(final_notification_list)} - {final_notification_list}")
-        if SYMBOL_TO_TRACE in final_symbols:
-            log_detail(f"\n最终追踪结果: {SYMBOL_TO_TRACE} 成功进入了最终的 '主列表'。")
-        if SYMBOL_TO_TRACE in final_notification_list:
-            log_detail(f"\n最终追踪结果: {SYMBOL_TO_TRACE} 成功进入了最终的 '通知列表'。")
-        if SYMBOL_TO_TRACE not in final_symbols and SYMBOL_TO_TRACE not in final_notification_list:
-            log_detail(f"\n最终追踪结果: {SYMBOL_TO_TRACE} 未进入任何最终列表。")
-
-
-        # 6. 文件和JSON输出
-        # 主列表 (NextWeek_Earning)
-        update_json_panel(final_symbols, PANEL_JSON_FILE, "Next_Week")
-        try:
-            backup_path = PATHS["backup_next_week"](news_path)
-            os.makedirs(os.path.dirname(backup_path), exist_ok=True)
-
-            with open(backup_path, 'w', encoding='utf-8') as f:
-                for sym in sorted(final_symbols):
-                    f.write(sym + '\n')
-            print(f"主列表备份已更新: {backup_path}")
-
-        except IOError as e:
-            print(f"写入主列表文件时出错: {e}")
-
-        # 通知列表 (Notification)
-        update_json_panel(final_notification_list, PANEL_JSON_FILE, "Notification")
-        try:
-            backup_path = PATHS["backup_notification"](news_path)
-            os.makedirs(os.path.dirname(backup_path), exist_ok=True)
-
-            with open(backup_path, 'w', encoding='utf-8') as f:
-                for sym in sorted(final_notification_list):
-                    f.write(sym + '\n')
-            print(f"通知列表备份已更新: {backup_path}")
-
-        except IOError as e:
-            print(f"写入通知列表文件时出错: {e}")
+        # 调用核心逻辑，并传入仅控制台打印的函数
+        run_processing_logic(log_detail_console)
 
     print("\n程序运行结束。")
-
 
 if __name__ == "__main__":
     main()

@@ -326,117 +326,151 @@ def apply_post_filters(symbols, stock_data_cache, symbol_to_trace, log_detail):
     log_detail(f"\n后置过滤完成，剩余 {len(final_list)} 个 symbol。")
     return final_list
 
-# --- 6. 主执行流程 (已集成追踪系统) ---
-
-def main():
-    """主程序入口"""
-    with open(LOG_FILE_PATH, 'w', encoding='utf-8') as log_file:
-        def log_detail(message):
-            log_file.write(message + '\n')
-            print(message)
-
-        log_detail(f"程序开始运行... 日志将写入: {LOG_FILE_PATH}")
+def run_processing_logic(log_detail):
+    """
+    核心处理逻辑。
+    包含了所有的数据加载、策略执行、过滤和文件输出。
+    它接收一个 log_detail 函数作为参数，用于记录过程信息。
+    """
+    log_detail("程序开始运行...")
+    if SYMBOL_TO_TRACE:
         log_detail(f"当前追踪的 SYMBOL: {SYMBOL_TO_TRACE}")
-        
-        # 1. 加载初始数据和配置
-        all_symbols, symbol_to_sector_map = load_all_symbols(SECTORS_JSON_FILE, CONFIG["TARGET_SECTORS"])
-        if all_symbols is None:
-            log_detail("错误: 无法加载symbols，程序终止。")
-            return
+    
+    # 1. 加载初始数据和配置
+    all_symbols, symbol_to_sector_map = load_all_symbols(SECTORS_JSON_FILE, CONFIG["TARGET_SECTORS"])
+    if all_symbols is None:
+        log_detail("错误: 无法加载symbols，程序终止。")
+        return
+    
+    if SYMBOL_TO_TRACE:
         if SYMBOL_TO_TRACE in all_symbols:
             log_detail(f"\n追踪信息: {SYMBOL_TO_TRACE} 在目标板块的初始加载列表中。")
         else:
             log_detail(f"\n追踪信息: {SYMBOL_TO_TRACE} 不在目标板块的初始加载列表中，后续将不会处理。")
 
-        # 2. 构建数据缓存
-        stock_data_cache = build_stock_data_cache(all_symbols, symbol_to_sector_map, DB_FILE, SYMBOL_TO_TRACE, log_detail)
+    # 2. 构建数据缓存
+    stock_data_cache = build_stock_data_cache(all_symbols, symbol_to_sector_map, DB_FILE, SYMBOL_TO_TRACE, log_detail)
 
-        # 3. 运行策略，得到初步结果
-        preliminary_results = []
-        for symbol, data in stock_data_cache.items():
-            if data['is_valid']:
-                data['symbol'] = symbol
-                if run_strategy(data, SYMBOL_TO_TRACE, log_detail):
-                    preliminary_results.append(symbol)
-        log_detail(f"\n策略筛选完成，初步找到 {len(preliminary_results)} 个符合条件的股票。")
+    # 3. 运行策略，得到初步结果
+    preliminary_results = []
+    for symbol, data in stock_data_cache.items():
+        if data['is_valid']:
+            data['symbol'] = symbol
+            if run_strategy(data, SYMBOL_TO_TRACE, log_detail):
+                preliminary_results.append(symbol)
+    log_detail(f"\n策略筛选完成，初步找到 {len(preliminary_results)} 个符合条件的股票。")
+    if SYMBOL_TO_TRACE:
         if SYMBOL_TO_TRACE in preliminary_results:
             log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 通过了策略筛选。")
         elif SYMBOL_TO_TRACE in stock_data_cache and stock_data_cache[SYMBOL_TO_TRACE]['is_valid']:
             log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 未通过策略筛选。")
 
-        # 4. 应用后置过滤器
-        final_qualified_symbols = apply_post_filters(preliminary_results, stock_data_cache, SYMBOL_TO_TRACE, log_detail)
-        log_detail(f"\n最终符合所有条件的股票共 {len(final_qualified_symbols)} 个: {sorted(final_qualified_symbols)}")
+    # 4. 应用后置过滤器
+    final_qualified_symbols = apply_post_filters(preliminary_results, stock_data_cache, SYMBOL_TO_TRACE, log_detail)
+    log_detail(f"\n最终符合所有条件的股票共 {len(final_qualified_symbols)} 个: {sorted(final_qualified_symbols)}")
+    if SYMBOL_TO_TRACE:
         if SYMBOL_TO_TRACE in final_qualified_symbols:
             log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 通过了后置过滤器。")
         elif SYMBOL_TO_TRACE in preliminary_results:
             log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 在后置过滤器中被移除。")
 
-        # 5. 处理文件输出
-        final_qualified_symbols_set = set(final_qualified_symbols)
+    # 5. 处理文件输出
+    final_qualified_symbols_set = set(final_qualified_symbols)
 
-        # 5.1 加载黑名单并过滤
-        blacklist = load_blacklist(BLACKLIST_JSON_FILE)
+    # 5.1 加载黑名单并过滤
+    blacklist = load_blacklist(BLACKLIST_JSON_FILE)
+    filtered_new_symbols = final_qualified_symbols_set - blacklist
+    removed_by_blacklist = len(final_qualified_symbols_set) - len(filtered_new_symbols)
+    if removed_by_blacklist > 0:
+        log_detail(f"\n根据黑名单，从列表中过滤掉 {removed_by_blacklist} 个 symbol。")
+    if SYMBOL_TO_TRACE:
         is_in_blacklist = SYMBOL_TO_TRACE in blacklist
-        filtered_new_symbols = final_qualified_symbols_set - blacklist
-        removed_by_blacklist = len(final_qualified_symbols_set) - len(filtered_new_symbols)
-        if removed_by_blacklist > 0:
-            log_detail(f"\n根据黑名单，从列表中过滤掉 {removed_by_blacklist} 个 symbol。")
         if SYMBOL_TO_TRACE in final_qualified_symbols_set and is_in_blacklist:
             log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 因在黑名单中被过滤。")
         elif SYMBOL_TO_TRACE in final_qualified_symbols_set:
              log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 不在黑名单中，通过此项检查。")
 
-        # 5.2 加载 panel.json，排除已存在分组
-        try:
-            with open(PANEL_JSON_FILE, 'r', encoding='utf-8') as f: panel_data = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError): panel_data = {}
-        exist_notify = set(panel_data.get('Notification', {}).keys())
-        exist_next_week = set(panel_data.get('Next_Week', {}).keys())
-        already_in_panels = exist_notify | exist_next_week
-        
-        new_for_earning = filtered_new_symbols - already_in_panels
-        skipped = filtered_new_symbols & already_in_panels
+    # 5.2 加载 panel.json，排除已存在分组
+    try:
+        with open(PANEL_JSON_FILE, 'r', encoding='utf-8') as f: panel_data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError): panel_data = {}
+    exist_notify = set(panel_data.get('Notification', {}).keys())
+    exist_next_week = set(panel_data.get('Next_Week', {}).keys())
+    already_in_panels = exist_notify | exist_next_week
+    
+    new_for_earning = filtered_new_symbols - already_in_panels
+    skipped = filtered_new_symbols & already_in_panels
 
+    if skipped:
+        log_detail(f"\n以下 {len(skipped)} 个 symbol 已存在 Notification/Next_Week 分组，将跳过不写入 Earning_Filter：\n  {sorted(list(skipped))}")
+    if SYMBOL_TO_TRACE:
         is_in_panels = SYMBOL_TO_TRACE in already_in_panels
-        if skipped:
-            log_detail(f"\n以下 {len(skipped)} 个 symbol 已存在 Notification/Next_Week 分组，将跳过不写入 Earning_Filter：\n  {sorted(skipped)}")
         if SYMBOL_TO_TRACE in filtered_new_symbols and is_in_panels:
             log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 因已存在于 Notification/Next_Week 分组中而被跳过。")
         elif SYMBOL_TO_TRACE in filtered_new_symbols:
             log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 不在现有分组中，通过此项检查。")
 
-        # 5.3 根据是否有真正“新”内容，决定写文件
-        if new_for_earning:
-            log_detail(f"\n发现 {len(new_for_earning)} 个新的、不在黑名单、且不在其他分组的 symbol。")
-            if SYMBOL_TO_TRACE in new_for_earning:
-                log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 最终被确定为新增symbol，将写入文件。")
-            try:
-                with open(NEWS_FILE, 'w', encoding='utf-8') as f:
-                    for sym in sorted(new_for_earning): f.write(sym + '\n')
-                log_detail(f"新增结果已写入到: {NEWS_FILE}")
-            except IOError as e:
-                log_detail(f"错误: 写入 news 文件失败: {e}")
-            update_json_panel(new_for_earning, PANEL_JSON_FILE, 'Earning_Filter')
-        else:
-            log_detail("\n没有新的符合条件的 symbol（或都被黑名单/其他分组拦截）。")
-            if os.path.exists(NEWS_FILE):
-                os.remove(NEWS_FILE)
-                log_detail(f"已删除旧的 news 文件: {NEWS_FILE}")
-            update_json_panel([], PANEL_JSON_FILE, 'Earning_Filter')
-
-        # 无论如何，都用本次完整结果覆盖备份文件
-        os.makedirs(os.path.dirname(BACKUP_FILE), exist_ok=True)
-        log_detail(f"\n正在用本次扫描到的 {len(final_qualified_symbols_set)} 个完整结果更新备份文件...")
+    # 5.3 根据是否有真正“新”内容，决定写文件
+    if new_for_earning:
+        log_detail(f"\n发现 {len(new_for_earning)} 个新的、不在黑名单、且不在其他分组的 symbol。")
+        if SYMBOL_TO_TRACE and SYMBOL_TO_TRACE in new_for_earning:
+            log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 最终被确定为新增symbol，将写入文件。")
         try:
-            with open(BACKUP_FILE, 'w', encoding='utf-8') as f:
-                for sym in sorted(final_qualified_symbols_set): f.write(sym + '\n')
-            log_detail(f"备份文件已成功更新: {BACKUP_FILE}")
+            with open(NEWS_FILE, 'w', encoding='utf-8') as f:
+                for sym in sorted(new_for_earning): f.write(sym + '\n')
+            log_detail(f"新增结果已写入到: {NEWS_FILE}")
         except IOError as e:
-            log_detail(f"错误: 无法更新备份文件: {e}")
+            log_detail(f"错误: 写入 news 文件失败: {e}")
+        update_json_panel(list(new_for_earning), PANEL_JSON_FILE, 'Earning_Filter')
+    else:
+        log_detail("\n没有新的符合条件的 symbol（或都被黑名单/其他分组拦截）。")
+        if os.path.exists(NEWS_FILE):
+            os.remove(NEWS_FILE)
+            log_detail(f"已删除旧的 news 文件: {NEWS_FILE}")
+        update_json_panel([], PANEL_JSON_FILE, 'Earning_Filter')
 
-        log_detail("\n程序运行结束。")
+    # 无论如何，都用本次完整结果覆盖备份文件
+    os.makedirs(os.path.dirname(BACKUP_FILE), exist_ok=True)
+    log_detail(f"\n正在用本次扫描到的 {len(final_qualified_symbols_set)} 个完整结果更新备份文件...")
+    try:
+        with open(BACKUP_FILE, 'w', encoding='utf-8') as f:
+            for sym in sorted(final_qualified_symbols_set): f.write(sym + '\n')
+        log_detail(f"备份文件已成功更新: {BACKUP_FILE}")
+    except IOError as e:
+        log_detail(f"错误: 无法更新备份文件: {e}")
 
+# --- 6. 主执行流程 (已集成追踪系统) ---
+
+def main():
+    """主程序入口"""
+    # 检查是否设置了追踪符号
+    if SYMBOL_TO_TRACE:
+        # 如果设置了，则启用文件日志记录
+        print(f"追踪模式已启用，目标: {SYMBOL_TO_TRACE}。日志将写入: {LOG_FILE_PATH}")
+        try:
+            with open(LOG_FILE_PATH, 'w', encoding='utf-8') as log_file:
+                def log_detail_file(message):
+                    """一个辅助函数，用于将调试信息写入文件并打印到控制台"""
+                    log_file.write(message + '\n')
+                    print(message)
+                
+                # 调用核心逻辑，并传入文件日志记录函数
+                run_processing_logic(log_detail_file)
+
+        except IOError as e:
+            print(f"错误：无法打开或写入日志文件 {LOG_FILE_PATH}: {e}")
+    
+    else:
+        # 如果没有设置，则只在控制台打印信息
+        print("追踪模式未启用 (SYMBOL_TO_TRACE 为空)。将不会生成日志文件。")
+        def log_detail_console(message):
+            """一个辅助函数，当不追踪时只打印到控制台"""
+            print(message)
+        
+        # 调用核心逻辑，并传入仅控制台打印的函数
+        run_processing_logic(log_detail_console)
+
+    print("\n程序运行结束。")
 
 if __name__ == '__main__':
     main()
