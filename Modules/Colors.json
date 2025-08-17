@@ -769,6 +769,8 @@
         "Oat",
         "DBA",
         "DBC",
+        "GDX",
+        "GDXJ",
         "Rice",
         "Soybean",
         "Silver",
@@ -977,6 +979,9 @@
     ],
     "purple_keywords": [
         "FXI",
+        "EPU",
+        "EWD",
+        "COLO",
         "HANGSENG",
         "NASDAQ",
         "Shanghai",

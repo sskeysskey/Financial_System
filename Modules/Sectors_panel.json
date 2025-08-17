@@ -111,16 +111,7 @@
         "AXON": "",
         "PSTG": ""
     },
-    "Earning_Filter": {
-        "FCNCA": "",
-        "FDS": "",
-        "GWRE": "",
-        "HIMS": "",
-        "ICLR": "",
-        "KMX": "",
-        "TRU": "",
-        "WST": ""
-    },
+    "Earning_Filter": {},
     "Watching": {
         "TGT": "",
         "ADI": "",
@@ -137,7 +128,9 @@
         "VRSN": "",
         "WM": "",
         "AVAV": "",
-        "DUOL": ""
+        "DUOL": "",
+        "FDS": "",
+        "HIMS": ""
     },
     "Next_Week": {},
     "Next Week": {
@@ -158,7 +151,8 @@
     "3 Weeks": {
         "GIS": "",
         "IOT": "",
-        "FDS": ""
+        "FDS": "",
+        "GWRE": ""
     },
     "Notification": {},
     "Currencies": {

@@ -1,6 +1,7 @@
 import json
 import glob
 import os
+import sys
 import time
 import random
 import pyautogui
@@ -8,6 +9,13 @@ import threading
 import sqlite3
 import subprocess
 from datetime import datetime, timedelta
+
+def show_alert(message):
+    # AppleScript代码模板
+    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+    
+    # 使用subprocess调用osascript
+    subprocess.run(['osascript', '-e', applescript_code], check=True)
 
 def insert_screener_records(db_file, screener_data, prices, volumes):
     """
@@ -481,6 +489,14 @@ def move_mouse_periodically():
             time.sleep(30)
 
 def main():
+    # —— 新增：在周日（6）和周一（0）不运行 —— 
+    today_weekday = datetime.now().weekday()  # Monday=0, …, Sunday=6
+    if today_weekday in (6, 0):
+        day_name = '周日' if today_weekday == 6 else '周一'
+        show_alert(f"⚠️ 当前是{day_name}，程序不运行，退出。")
+        sys.exit(0)
+    # —— 新增结束 —— 
+
     threading.Thread(target=move_mouse_periodically, daemon=True).start()
     
     extension_launch()

@@ -48,6 +48,8 @@ CONFIG = {
     "PRICE_DROP_PERCENTAGE_HUGE": 0.09,
     "PRICE_DROP_PERCENTAGE_LARGE": 0.07,
     "PRICE_DROP_PERCENTAGE_SMALL": 0.04,
+    # 新增：最新收盘价比最近交易日前10天最低收盘价高不超过2%
+    "MAX_INCREASE_PERCENTAGE_SINCE_LOW": 0.02,
 }
 
 # --- 3. 辅助与文件操作模块 ---
@@ -176,6 +178,19 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
         data['latest_date_str'], data['latest_price'], data['latest_volume'] = latest_row
         if is_tracing: log_detail(f"[{symbol}] 步骤3: 获取最新交易日数据。日期: {data['latest_date_str']}, 价格: {data['latest_price']}, 成交量: {data['latest_volume']}")
 
+        # 3.1 获取最新交易日前 10 个交易日的收盘价
+        cursor.execute(
+            f'SELECT price FROM "{sector_name}" '
+            f'WHERE name = ? AND date < ? '
+            f'ORDER BY date DESC LIMIT 10',
+            (symbol, data['latest_date_str'])
+        )
+        prev_rows = cursor.fetchall()
+        prices_last_10 = [r[0] for r in prev_rows]
+        data['prev_10_prices'] = prices_last_10
+        if is_tracing:
+            log_detail(f"[{symbol}] 步骤3.1: 获取最近10个交易日的收盘价，共 {len(prices_last_10)} 条: {prices_last_10}")
+
         # 4. 获取PE和市值
         data['pe_ratio'], data['market_cap'] = None, None
         if market_cap_exists:
@@ -236,15 +251,12 @@ def run_strategy(data, symbol_to_trace, log_detail):
     is_tracing = (symbol == symbol_to_trace)
     if is_tracing: log_detail(f"\n--- [{symbol}] 策略评估 ---")
 
-    latest_er_pct = data.get('latest_er_pct', 0)
-    if latest_er_pct is None: latest_er_pct = 0 # 处理None的情况
-
-    # 拿到最近 N 次财报收盘价
+    # 条件1（同原）
+    latest_er_pct = data.get('latest_er_pct') or 0
     prices_to_check = data['all_er_prices'][-CONFIG["RECENT_EARNINGS_COUNT"]:]
     if len(prices_to_check) < CONFIG["RECENT_EARNINGS_COUNT"]:
-        if is_tracing: log_detail(f"  - 结果: False (最近财报收盘价数量不足 {CONFIG['RECENT_EARNINGS_COUNT']})")
+        if is_tracing: log_detail(f"  - 结果: False (最近财报收盘价数量不足 {CONFIG['RECENT_EARNINGS_COUNT']} 次)")
         return False
-
     avg_recent_price = sum(prices_to_check) / len(prices_to_check)
     latest_er_price = prices_to_check[-1]
 
@@ -268,26 +280,40 @@ def run_strategy(data, symbol_to_trace, log_detail):
         if (market_cap and market_cap >= CONFIG["MARKETCAP_THRESHOLD"])
         else CONFIG["PRICE_DROP_PERCENTAGE_HUGE"]
     )
-    threshold_price = latest_er_price * (1 - drop_pct)
-    cond2_ok = data['latest_price'] <= threshold_price
+    threshold_price2 = latest_er_price * (1 - drop_pct)
+    cond2_ok = data['latest_price'] <= threshold_price2
     if is_tracing:
         log_detail("  - 条件2 (价格回撤):")
         log_detail(f"    - 市值: {market_cap} -> 使用下跌百分比: {drop_pct}")
-        log_detail(f"    - 判断: 最新价({data['latest_price']:.2f}) <= 最新财报收盘价({latest_er_price:.2f}) * (1 - {drop_pct}) ({threshold_price:.2f})")
+        log_detail(f"    - 判断: 最新价({data['latest_price']:.2f}) <= 最新财报收盘价({latest_er_price:.2f}) * (1 - {drop_pct}) ({threshold_price2:.2f})")
         log_detail(f"    - 条件2结果: {cond2_ok}")
     if not cond2_ok:
         if is_tracing: log_detail("  - 结果: False (条件2未满足)")
         return False
 
-    # 条件3: 最新成交额 >= 阈值
-    turnover = data['latest_price'] * data['latest_volume']
-    cond3_ok = turnover >= CONFIG["TURNOVER_THRESHOLD"]
+    # 条件3：最新价不高于最近10日最低收盘价的 1+2%
+    prev_prices = data.get('prev_10_prices', [])
+    if len(prev_prices) < 10:
+        if is_tracing: log_detail(f"  - 结果: False (可用历史交易日不足10日，只有{len(prev_prices)}日数据)")
+        return False
+    min_prev = min(prev_prices)
+    threshold_price3 = min_prev * (1 + CONFIG["MAX_INCREASE_PERCENTAGE_SINCE_LOW"])
+    cond3_ok = data['latest_price'] <= threshold_price3
     if is_tracing:
-        log_detail("  - 条件3 (成交额):")
-        log_detail(f"    - 判断: 最新成交额({turnover:,.0f}) >= 阈值({CONFIG['TURNOVER_THRESHOLD']:,})")
-        log_detail(f"    - 条件3结果: {cond3_ok}")
+        log_detail(f"  - 条件3 (相对10日最低+2%): 最新价 {data['latest_price']:.2f} <= 最低价 {min_prev:.2f}*1.02={threshold_price3:.2f} -> {cond3_ok}")
     if not cond3_ok:
         if is_tracing: log_detail("  - 结果: False (条件3未满足)")
+        return False
+    
+    # 条件4: 最新成交额 >= 阈值
+    turnover = data['latest_price'] * data['latest_volume']
+    cond4_ok = turnover >= CONFIG["TURNOVER_THRESHOLD"]
+    if is_tracing:
+        log_detail("  - 条件4 (成交额):")
+        log_detail(f"    - 判断: 最新成交额({turnover:,.0f}) >= 阈值({CONFIG['TURNOVER_THRESHOLD']:,})")
+        log_detail(f"    - 条件4结果: {cond4_ok}")
+    if not cond4_ok:
+        if is_tracing: log_detail("  - 结果: False (条件4未满足)")
         return False
         
     if is_tracing: log_detail("  - 结果: True (所有策略条件均满足)")
