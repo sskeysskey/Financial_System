@@ -5,36 +5,23 @@
         "OKE": ""
     },
     "Technology": {
-        "WIT": "",
-        "GDDY": "",
-        "WIX": "",
-        "GIB": "",
-        "IOT": "",
-        "BLSH": ""
+        "GIB": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
-        "HRB": "",
         "AMCR": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
-        "MKC": "味好美",
-        "FRPT": "宠物"
+        "MKC": "味好美"
     },
-    "Industrials": {
-        "FLY": ""
-    },
+    "Industrials": {},
     "Communication_Services": {},
     "Financial_Services": {
         "BRK-A": "",
         "FDS": ""
     },
-    "Healthcare": {
-        "NVO": "",
-        "CNC": "",
-        "MOH": ""
-    },
+    "Healthcare": {},
     "Bonds": {
         "US10Y": "",
         "US2Y": "",
@@ -105,79 +92,51 @@
         "XRP": ""
     },
     "Today": {
+        "CRWD": "",
+        "TW": "",
         "CART": "",
-        "CVNA": "",
-        "LII": "",
-        "VRSN": "",
-        "INTU": "",
-        "AXON": "",
-        "PSTG": "",
-        "DUOL": ""
-    },
-    "Earning_Filter": {
-        "AVAV": "",
-        "DRI": "",
-        "FDS": "",
+        "DUOL": "",
+        "WDAY": "",
+        "DASH": "",
+        "NOW": "",
+        "WM": "",
         "HIMS": "",
-        "STZ": ""
+        "FDS": "",
+        "IBM": ""
     },
+    "Earning_Filter": {},
     "Watching": {
+        "OKTA": "",
         "TGT": "",
         "ADI": "",
-        "URBN": "",
-        "TPR": "蔻驰",
-        "CPRT": "",
-        "AXON": "",
-        "BROS": "",
-        "DASH": "",
-        "ESTC": "",
+        "CPRT": "汽车拍卖",
         "COST": "",
-        "NOW": "",
-        "TW": "",
+        "DLR": "",
         "VRSN": "",
-        "WM": "",
-        "AVAV": "",
-        "FDS": "",
-        "HIMS": ""
+        "FDS": ""
     },
-    "Next_Week": {
-        "BJ": "",
-        "CRWD": "",
-        "OKTA": "",
-        "PSTG": ""
-    },
+    "Next_Week": {},
     "Next Week": {
         "BJ": "",
-        "ACN": "",
         "WMT": "",
-        "PANW": "",
         "PSTG": "",
-        "KMX": "",
-        "WDAY": "",
-        "CPRT": ""
+        "CPRT": "",
+        "MRVL": "",
+        "HRL": ""
     },
     "2 Weeks": {
         "CRM": "",
-        "MRVL": "",
-        "HRL": ""
+        "KMX": ""
     },
     "3 Weeks": {
         "GIS": "",
         "IOT": "",
         "FDS": "",
-        "GWRE": ""
-    },
-    "Notification": {
-        "AR": "",
-        "CMS": "",
-        "EXE": "",
         "GWRE": "",
-        "TRGP": "",
-        "TRU": "",
-        "VRSN": "",
-        "WM": "",
-        "WST": ""
+        "AVAV": "",
+        "DRI": ""
     },
+    "Notification": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

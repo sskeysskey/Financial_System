@@ -1,7 +1,6 @@
 import json
 import sqlite3
 import os
-import datetime # 引入datetime模块，虽然原脚本没直接用，但好习惯是保留
 
 SYMBOL_TO_TRACE = ""
 LOG_FILE_PATH = "/Users/yanzhang/Downloads/No_Season_trace_log.txt"
@@ -44,8 +43,8 @@ CONFIG = {
     "TURNOVER_THRESHOLD": 100_000_000,
     "RECENT_EARNINGS_COUNT": 2,
     "MARKETCAP_THRESHOLD": 100_000_000_000,
-    "PRICE_DROP_PERCENTAGE_HUGE": 0.09,
-    "PRICE_DROP_PERCENTAGE_SMALL": 0.04,
+    "PRICE_DROP_PERCENTAGE_LARGE": 0.10,
+    "PRICE_DROP_PERCENTAGE_SMALL": 0.06,
     # 新增：最新收盘价比最近交易日前10天最低收盘价高不超过2%
     "MAX_INCREASE_PERCENTAGE_SINCE_LOW": 0.02,
 }
@@ -143,6 +142,7 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
         # 拆分日期和涨跌幅
         all_er_dates = [r[0] for r in er_rows]
         all_er_pcts  = [r[1] for r in er_rows]
+        data['all_er_pcts'] = all_er_pcts
         data['all_er_dates'] = all_er_dates
         data['latest_er_date_str'] = all_er_dates[-1]
         data['latest_er_pct'] = all_er_pcts[-1]
@@ -250,7 +250,9 @@ def run_strategy(data, symbol_to_trace, log_detail):
     if is_tracing: log_detail(f"\n--- [{symbol}] 策略评估 ---")
 
     # 条件1（同原）
-    latest_er_pct = data.get('latest_er_pct') or 0
+    # latest_er_pct = data.get('latest_er_pct') or 0
+    # 新增：取最近 N 次财报涨跌幅
+    er_pcts_to_check = data.get('all_er_pcts', [])[-CONFIG["RECENT_EARNINGS_COUNT"]:]
     prices_to_check = data['all_er_prices'][-CONFIG["RECENT_EARNINGS_COUNT"]:]
     if len(prices_to_check) < CONFIG["RECENT_EARNINGS_COUNT"]:
         if is_tracing: log_detail(f"  - 结果: False (最近财报收盘价数量不足 {CONFIG['RECENT_EARNINGS_COUNT']} 次)")
@@ -259,12 +261,13 @@ def run_strategy(data, symbol_to_trace, log_detail):
     latest_er_price = prices_to_check[-1]
 
     # ---- 条件1：二选一 ----
-    cond1_a = latest_er_pct > 0
+    # 条件1a：最近 N 次涨跌幅都 > 0
+    cond1_a = all(pct > 0 for pct in er_pcts_to_check)
     cond1_b = latest_er_price > avg_recent_price
     cond1_ok = cond1_a or cond1_b
     if is_tracing:
         log_detail("  - 条件1 (二选一):")
-        log_detail(f"    - a) 最新财报涨跌幅 > 0: {latest_er_pct} > 0 -> {cond1_a}")
+        log_detail("    - a) 最近 " f"{CONFIG['RECENT_EARNINGS_COUNT']} 次财报涨跌幅都 > 0: " f"{er_pcts_to_check} -> {cond1_a}")
         log_detail(f"    - b) 最新财报收盘价 > 最近{CONFIG['RECENT_EARNINGS_COUNT']}次平均价: {latest_er_price:.2f} > {avg_recent_price:.2f} -> {cond1_b}")
         log_detail(f"    - 条件1结果: {cond1_ok}")
     if not cond1_ok:
@@ -276,7 +279,7 @@ def run_strategy(data, symbol_to_trace, log_detail):
     drop_pct = (
         CONFIG["PRICE_DROP_PERCENTAGE_SMALL"]
         if (market_cap and market_cap >= CONFIG["MARKETCAP_THRESHOLD"])
-        else CONFIG["PRICE_DROP_PERCENTAGE_HUGE"]
+        else CONFIG["PRICE_DROP_PERCENTAGE_LARGE"]
     )
     threshold_price2 = latest_er_price * (1 - drop_pct)
     cond2_ok = data['latest_price'] <= threshold_price2

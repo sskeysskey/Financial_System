@@ -4,7 +4,7 @@ import os
 import datetime
 from collections import defaultdict
 
-SYMBOL_TO_TRACE = ""
+SYMBOL_TO_TRACE = "TRGP"
 LOG_FILE_PATH = "/Users/yanzhang/Downloads/Season_trace_log.txt"
 
 # --- 1. 配置文件和路径 ---
