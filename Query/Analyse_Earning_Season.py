@@ -231,7 +231,7 @@ def build_stock_data_cache(symbols, db_path, symbol_sector_map, symbol_to_trace,
 # --- 5. 策略模块 (已集成追踪系统) ---
 
 def run_strategy_1(data, symbol_to_trace, log_detail):
-    """策略 1：最新收盘价比过去N次财报的最低值还低至少4%"""
+    """策略 1：最新收盘价比过去N次财报的最低值还低至少7%"""
     prices = data['all_er_prices'][:CONFIG["NUM_EARNINGS_TO_CHECK"]]
     threshold = 1 - CONFIG["MIDDLE_DROP_PERCENTAGE"]
     result = data['latest_price'] < min(prices) * threshold
@@ -678,7 +678,11 @@ def run_processing_logic(log_detail):
             if run_strategy_4(data, cursor, symbol_sector_map, SYMBOL_TO_TRACE, log_detail): results['s4'].append(symbol)
 
     # 4. 汇总初步结果
-    prelim_final_symbols = set(results['s1'] + results['s2'] + results['s2_5'])
+    # 分别拿到 s1 和 s2/s2.5
+    s1_set  = set(results['s1'])
+    s2_set  = set(results['s2'] + results['s2_5'])
+    prelim_final_symbols = s1_set.union(s2_set)
+
     prelim_notification_list = set(results['s3'] + results['s3_5'] + results['s4'])
 
     log_detail("\n--- 策略运行初步结果 ---")
@@ -694,7 +698,32 @@ def run_processing_logic(log_detail):
     negative_earnings_set = filter_recent_negative_earnings(DB_FILE)
 
     log_detail("\n--- 开始对主列表进行过滤 ---")
-    final_symbols = apply_filters(prelim_final_symbols, stock_data_cache, blacklist, negative_earnings_set, True, SYMBOL_TO_TRACE, log_detail)
+        # 对 s1 用负财报过滤
+    log_detail("\n--- 开始对 s1 列表进行过滤（包含负财报过滤） ---")
+    final_s1 = apply_filters(
+        s1_set,
+        stock_data_cache,
+        blacklist,
+        negative_earnings_set,  # 这里传入真实的负财报集合
+        True,
+        SYMBOL_TO_TRACE,
+        log_detail
+    )
+
+    # 对 s2 + s2.5 不用负财报过滤
+    log_detail("\n--- 开始对 s2/s2.5 列表进行过滤（不包含负财报过滤） ---")
+    final_s2 = apply_filters(
+        s2_set,
+        stock_data_cache,
+        blacklist,
+        set(),                  # 传入空集合，跳过负财报过滤
+        True,
+        SYMBOL_TO_TRACE,
+        log_detail
+    )
+
+    # 合并，并去重（s1 优先）
+    final_symbols = final_s1 + [sym for sym in final_s2 if sym not in final_s1]
     
     log_detail("\n--- 开始对通知列表进行过滤 ---")
     final_notification_list = apply_filters(prelim_notification_list, stock_data_cache, blacklist, set(), False, SYMBOL_TO_TRACE, log_detail)
