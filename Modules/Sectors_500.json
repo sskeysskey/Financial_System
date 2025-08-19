@@ -25,8 +25,7 @@
         "NTES",
         "AMX",
         "RBLX",
-        "APP",
-        "GSAT"
+        "APP"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -156,7 +155,8 @@
         "COIN",
         "HOOD",
         "ARES",
-        "NDAQ"
+        "NDAQ",
+        "AIG"
     ],
     "Healthcare": [
         "LLY",
@@ -231,7 +231,8 @@
         "URI",
         "PCAR",
         "LHX",
-        "CMI"
+        "CMI",
+        "VRT"
     ],
     "Real_Estate": [
         "PLD",

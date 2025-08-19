@@ -9,11 +9,13 @@
         "GDDY": "",
         "WIX": "",
         "GIB": "",
-        "IOT": ""
+        "IOT": "",
+        "BLSH": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
-        "HRB": ""
+        "HRB": "",
+        "AMCR": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -111,7 +113,13 @@
         "AXON": "",
         "PSTG": ""
     },
-    "Earning_Filter": {},
+    "Earning_Filter": {
+        "AVAV": "",
+        "DRI": "",
+        "FDS": "",
+        "HIMS": "",
+        "STZ": ""
+    },
     "Watching": {
         "TGT": "",
         "ADI": "",
@@ -132,7 +140,10 @@
         "FDS": "",
         "HIMS": ""
     },
-    "Next_Week": {},
+    "Next_Week": {
+        "BJ": "",
+        "OKTA": ""
+    },
     "Next Week": {
         "BJ": "",
         "ACN": "",
@@ -154,7 +165,17 @@
         "FDS": "",
         "GWRE": ""
     },
-    "Notification": {},
+    "Notification": {
+        "AR": "",
+        "CMS": "",
+        "EXE": "",
+        "GWRE": "",
+        "TRGP": "",
+        "TRU": "",
+        "VRSN": "",
+        "WM": "",
+        "WST": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
@@ -194,13 +215,6 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "CoreCPI": "12 CoreCPI",
-        "USCPI": "12 USCPI",
-        "USPPI": "14 USPPI",
-        "CorePPI": "14 CorePPI",
-        "USRetailM": "15 USRetailM",
-        "ImportPriceM": "15 ImportPriceM",
-        "USConfidence": "15 USConfidence",
         "USInitial": "21 USInitial"
     },
     "Economic_All": {
