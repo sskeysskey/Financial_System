@@ -438,12 +438,12 @@ def run_processing_logic(log_detail):
         log_detail(f"\n发现 {len(new_for_earning)} 个新的、不在黑名单、且不在其他分组的 symbol。")
         if SYMBOL_TO_TRACE and SYMBOL_TO_TRACE in new_for_earning:
             log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 最终被确定为新增symbol，将写入文件。")
-        try:
-            with open(NEWS_FILE, 'w', encoding='utf-8') as f:
-                for sym in sorted(new_for_earning): f.write(sym + '\n')
-            log_detail(f"新增结果已写入到: {NEWS_FILE}")
-        except IOError as e:
-            log_detail(f"错误: 写入 news 文件失败: {e}")
+        # try:
+        #     with open(NEWS_FILE, 'w', encoding='utf-8') as f:
+        #         for sym in sorted(new_for_earning): f.write(sym + '\n')
+        #     log_detail(f"新增结果已写入到: {NEWS_FILE}")
+        # except IOError as e:
+        #     log_detail(f"错误: 写入 news 文件失败: {e}")
         update_json_panel(list(new_for_earning), PANEL_JSON_FILE, 'Earning_Filter')
     else:
         log_detail("\n没有新的符合条件的 symbol（或都被黑名单/其他分组拦截）。")

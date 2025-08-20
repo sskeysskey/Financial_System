@@ -231,8 +231,7 @@
         "URI",
         "PCAR",
         "LHX",
-        "CMI",
-        "VRT"
+        "CMI"
     ],
     "Real_Estate": [
         "PLD",
@@ -241,7 +240,8 @@
         "WELL",
         "SPG",
         "DLR",
-        "O"
+        "O",
+        "PSA"
     ],
     "Technology": [
         "AAPL",
@@ -294,7 +294,8 @@
         "NET",
         "NXPI",
         "TEL",
-        "GLW"
+        "GLW",
+        "PAYX"
     ],
     "Utilities": [
         "NEE",

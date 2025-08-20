@@ -551,7 +551,8 @@
         "BPMC",
         "SKX",
         "PARA",
-        "CHPT"
+        "CHPT",
+        "USM"
     ],
     "etf": [
         "VDE",

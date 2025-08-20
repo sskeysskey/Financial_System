@@ -5,7 +5,8 @@
         "OKE": ""
     },
     "Technology": {
-        "GIB": ""
+        "GIB": "",
+        "BLSH": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
@@ -15,7 +16,9 @@
     "Consumer_Defensive": {
         "MKC": "味好美"
     },
-    "Industrials": {},
+    "Industrials": {
+        "FLY": ""
+    },
     "Communication_Services": {},
     "Financial_Services": {
         "BRK-A": "",
@@ -104,7 +107,11 @@
         "FDS": "",
         "IBM": ""
     },
-    "Earning_Filter": {},
+    "Earning_Filter": {
+        "AVAV": "",
+        "FDS": "",
+        "HIMS": ""
+    },
     "Watching": {
         "OKTA": "",
         "TGT": "",
@@ -115,7 +122,13 @@
         "VRSN": "",
         "FDS": ""
     },
-    "Next_Week": {},
+    "Next_Week": {
+        "BJ": "",
+        "CRWD": "",
+        "GAP": "",
+        "OKTA": "",
+        "YMM": ""
+    },
     "Next Week": {
         "BJ": "",
         "WMT": "",
@@ -136,7 +149,25 @@
         "AVAV": "",
         "DRI": ""
     },
-    "Notification": {},
+    "Notification": {
+        "APP": "",
+        "AR": "",
+        "AU": "",
+        "AXON": "",
+        "BROS": "",
+        "CVNA": "",
+        "EXE": "",
+        "GWRE": "",
+        "PLTR": "",
+        "SHOP": "",
+        "TRGP": "",
+        "TW": "",
+        "VRSN": "",
+        "VRT": "",
+        "WING": "",
+        "WM": "",
+        "WPM": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
