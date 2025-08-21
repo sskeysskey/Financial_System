@@ -218,8 +218,21 @@ class SymbolButton(QPushButton):
         self._drag_start = QPoint()
 
     def mousePressEvent(self, ev):
+        # 仅拦截左键：支持 Shift/Alt 组合键的快捷操作
         if ev.button() == Qt.LeftButton:
+            mods = ev.modifiers()
+            # Option(Alt) + 左键 → 打开“相似”程序
+            if mods & Qt.AltModifier:
+                execute_external_script('similar', self._symbol)
+                return  # 阻止后续默认点击/拖拽逻辑
+            # Shift + 左键 → 在富途中搜索
+            if mods & Qt.ShiftModifier:
+                execute_external_script('futu', self._symbol)
+                return  # 阻止后续默认点击/拖拽逻辑
+            # 否则保留原始拖拽起点记录逻辑
             self._drag_start = ev.pos()
+
+        # 其他按键或无修饰键左键，走原逻辑
         super().mousePressEvent(ev)
 
     def mouseMoveEvent(self, ev):

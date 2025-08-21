@@ -10,7 +10,8 @@
         "CRH",
         "NEM",
         "AEM",
-        "FCX"
+        "FCX",
+        "CTVA"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -294,8 +295,7 @@
         "NET",
         "NXPI",
         "TEL",
-        "GLW",
-        "PAYX"
+        "GLW"
     ],
     "Utilities": [
         "NEE",

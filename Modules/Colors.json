@@ -123,7 +123,6 @@
         "TSLA",
         "KMI",
         "AAPL",
-        "TSM",
         "MSTR",
         "META",
         "AMZN",
@@ -140,7 +139,8 @@
         "TUR10Y",
         "V",
         "WMT",
-        "NFLX"
+        "NFLX",
+        "TSM"
     ],
     "white_keywords": [
         "USGDP",
@@ -522,7 +522,8 @@
         "MNDY",
         "CWAN",
         "VRSK",
-        "HRB"
+        "HRB",
+        "ALC"
     ],
     "yellow_keywords": [
         "XLY",

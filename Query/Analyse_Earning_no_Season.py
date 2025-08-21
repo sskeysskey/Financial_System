@@ -249,32 +249,43 @@ def run_strategy(data, symbol_to_trace, log_detail):
     is_tracing = (symbol == symbol_to_trace)
     if is_tracing: log_detail(f"\n--- [{symbol}] 策略评估 ---")
 
-    # 条件1（同原）
-    # latest_er_pct = data.get('latest_er_pct') or 0
-    # 新增：取最近 N 次财报涨跌幅
-    er_pcts_to_check = data.get('all_er_pcts', [])[-CONFIG["RECENT_EARNINGS_COUNT"]:]
+    # 取最近 N 次财报涨跌幅
+    # er_pcts_to_check = data.get('all_er_pcts', [])[-CONFIG["RECENT_EARNINGS_COUNT"]:]
+    # 条件1a：最近 N 次涨跌幅都 > 0
+    # cond1_a = all(pct > 0 for pct in er_pcts_to_check)
+
+    # 条件1a：最新一次财报涨跌幅 > 0 (原为：最近N次都>0)
+    er_pcts = data.get('all_er_pcts', [])
+    if not er_pcts:
+        if is_tracing: log_detail("  - 结果: False (缺少财报涨跌幅数据)")
+        return False
+    latest_er_pct = er_pcts[-1]
+    cond1_a = latest_er_pct > 0
+
+    #条件1b： 最新财报收盘价 > 过去 N 次财报收盘价平均值
     prices_to_check = data['all_er_prices'][-CONFIG["RECENT_EARNINGS_COUNT"]:]
     if len(prices_to_check) < CONFIG["RECENT_EARNINGS_COUNT"]:
         if is_tracing: log_detail(f"  - 结果: False (最近财报收盘价数量不足 {CONFIG['RECENT_EARNINGS_COUNT']} 次)")
         return False
     avg_recent_price = sum(prices_to_check) / len(prices_to_check)
     latest_er_price = prices_to_check[-1]
+    cond1_b = latest_er_price > avg_recent_price
 
     # ---- 条件1：二选一 ----
-    # 条件1a：最近 N 次涨跌幅都 > 0
-    cond1_a = all(pct > 0 for pct in er_pcts_to_check)
-    cond1_b = latest_er_price > avg_recent_price
     cond1_ok = cond1_a or cond1_b
+
+    # 追踪日志
     if is_tracing:
         log_detail("  - 条件1 (二选一):")
-        log_detail("    - a) 最近 " f"{CONFIG['RECENT_EARNINGS_COUNT']} 次财报涨跌幅都 > 0: " f"{er_pcts_to_check} -> {cond1_a}")
+        # log_detail("    - a) 最近 " f"{CONFIG['RECENT_EARNINGS_COUNT']} 次财报涨跌幅都 > 0: " f"{er_pcts_to_check} -> {cond1_a}")
+        log_detail(f"    - a) 最新一次财报涨跌幅 > 0: {latest_er_pct:.4f} > 0 -> {cond1_a}")
         log_detail(f"    - b) 最新财报收盘价 > 最近{CONFIG['RECENT_EARNINGS_COUNT']}次平均价: {latest_er_price:.2f} > {avg_recent_price:.2f} -> {cond1_b}")
         log_detail(f"    - 条件1结果: {cond1_ok}")
     if not cond1_ok:
         if is_tracing: log_detail("  - 结果: False (条件1未满足)")
         return False
 
-    # 原条件2: 最新价 < 最新财报收盘价 * (1 - X%)
+    # 条件2: 最新价 < 最新财报收盘价 * (1 - X%)
     market_cap = data.get('market_cap')
     drop_pct = (
         CONFIG["PRICE_DROP_PERCENTAGE_SMALL"]
@@ -438,12 +449,6 @@ def run_processing_logic(log_detail):
         log_detail(f"\n发现 {len(new_for_earning)} 个新的、不在黑名单、且不在其他分组的 symbol。")
         if SYMBOL_TO_TRACE and SYMBOL_TO_TRACE in new_for_earning:
             log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 最终被确定为新增symbol，将写入文件。")
-        # try:
-        #     with open(NEWS_FILE, 'w', encoding='utf-8') as f:
-        #         for sym in sorted(new_for_earning): f.write(sym + '\n')
-        #     log_detail(f"新增结果已写入到: {NEWS_FILE}")
-        # except IOError as e:
-        #     log_detail(f"错误: 写入 news 文件失败: {e}")
         update_json_panel(list(new_for_earning), PANEL_JSON_FILE, 'Earning_Filter')
     else:
         log_detail("\n没有新的符合条件的 symbol（或都被黑名单/其他分组拦截）。")

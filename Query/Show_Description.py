@@ -86,8 +86,10 @@ def get_user_input_custom(prompt):
 
 def find_in_json(symbol, data):
     """在JSON数据中查找名称为symbol的股票或ETF"""
+    # 若想更健壮：大小写无关匹配
+    sym_upper = symbol.upper()
     for item in data:
-        if item['symbol'] == symbol:
+        if item.get('symbol', '').upper() == sym_upper:
             return item
     return None
 
@@ -98,8 +100,8 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         arg = sys.argv[1]
         if arg == "paste":
-            symbol = pyperclip.paste().replace('"', '').replace("'", "")
-            # 先在stocks中查找
+            # 将粘贴内容清洗后转大写
+            symbol = pyperclip.paste().replace('"', '').replace("'", "").upper()
             result = find_in_json(symbol, json_data.get('stocks', []))
             # 如果在stocks中没有找到，再在etfs中查找
             if not result:
@@ -109,11 +111,15 @@ if __name__ == '__main__':
                 show_description(symbol, result)
             else:
                 applescript_code = 'display dialog "未找到股票或ETF！" buttons {"OK"} default button "OK"'
-                process = subprocess.run(['osascript', '-e', applescript_code], check=True)
+                subprocess.run(['osascript', '-e', applescript_code], check=True)
+
         elif arg == "input":
             prompt = "请输入关键字查询数据库:"
-            user_input = get_user_input_custom(prompt)
-            # 先在stocks中查找
+            user_input = get_user_input_custom(prompt)  # 已在函数内 upper()
+            if not user_input:
+                sys.exit(0)
+            # 这里可再保险一次 upper()
+            user_input = user_input.upper()
             result = find_in_json(user_input, json_data.get('stocks', []))
             # 如果在stocks中没有找到，再在etfs中查找
             if not result:
@@ -123,7 +129,7 @@ if __name__ == '__main__':
                 show_description(user_input, result)
             else:
                 applescript_code = 'display dialog "未找到股票或ETF！" buttons {"OK"} default button "OK"'
-                process = subprocess.run(['osascript', '-e', applescript_code], check=True)
+                subprocess.run(['osascript', '-e', applescript_code], check=True)
     else:
         print("请提供参数 input 或 paste")
         sys.exit(1)

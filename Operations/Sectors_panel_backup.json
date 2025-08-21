@@ -1,11 +1,15 @@
 {
-    "Basic_Materials": {},
+    "Basic_Materials": {
+        "JHX": ""
+    },
     "Real_Estate": {},
     "Energy": {
         "OKE": ""
     },
     "Technology": {
-        "GIB": ""
+        "GIB": "",
+        "BLSH": "",
+        "TSM": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
@@ -13,15 +17,20 @@
     },
     "Utilities": {},
     "Consumer_Defensive": {
-        "MKC": "味好美"
+        "MKC": "味好美",
+        "FRPT": ""
     },
-    "Industrials": {},
+    "Industrials": {
+        "FLY": ""
+    },
     "Communication_Services": {},
     "Financial_Services": {
         "BRK-A": "",
         "FDS": ""
     },
-    "Healthcare": {},
+    "Healthcare": {
+        "ALC": ""
+    },
     "Bonds": {
         "US10Y": "",
         "US2Y": "",
@@ -92,30 +101,44 @@
         "XRP": ""
     },
     "Today": {
-        "CRWD": "",
-        "TW": "",
         "CART": "",
-        "DUOL": "",
         "WDAY": "",
         "DASH": "",
         "NOW": "",
         "WM": "",
         "HIMS": "",
         "FDS": "",
-        "IBM": ""
+        "IBM": "",
+        "APP": "",
+        "CVNA": "",
+        "PLTR": "",
+        "SHOP": "",
+        "VRT": "",
+        "AVAV": ""
     },
-    "Earning_Filter": {},
+    "Earning_Filter": {
+        "AVAV": "",
+        "CAR": "",
+        "LII": "",
+        "SHAK": ""
+    },
     "Watching": {
         "OKTA": "",
-        "TGT": "",
-        "ADI": "",
+        "CRWD": "",
         "CPRT": "汽车拍卖",
         "COST": "",
-        "DLR": "",
         "VRSN": "",
-        "FDS": ""
+        "BBAR": "",
+        "DUOL": ""
     },
-    "Next_Week": {},
+    "Next_Week": {
+        "BJ": "",
+        "CRWD": "",
+        "HRL": "",
+        "OKTA": "",
+        "PSTG": "",
+        "YMM": ""
+    },
     "Next Week": {
         "BJ": "",
         "WMT": "",
@@ -134,9 +157,27 @@
         "FDS": "",
         "GWRE": "",
         "AVAV": "",
-        "DRI": ""
+        "DRI": "",
+        "MKC": ""
     },
-    "Notification": {},
+    "Notification": {
+        "APO": "",
+        "APP": "",
+        "AR": "",
+        "AXON": "",
+        "BROS": "",
+        "BWXT": "",
+        "CLS": "",
+        "CVNA": "",
+        "DASH": "",
+        "EXE": "",
+        "GWRE": "",
+        "PLTR": "",
+        "SHOP": "",
+        "TW": "",
+        "VRT": "",
+        "WING": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

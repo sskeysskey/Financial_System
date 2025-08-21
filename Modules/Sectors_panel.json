@@ -1,12 +1,15 @@
 {
-    "Basic_Materials": {},
+    "Basic_Materials": {
+        "JHX": ""
+    },
     "Real_Estate": {},
     "Energy": {
         "OKE": ""
     },
     "Technology": {
         "GIB": "",
-        "BLSH": ""
+        "BLSH": "",
+        "TSM": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
@@ -14,7 +17,8 @@
     },
     "Utilities": {},
     "Consumer_Defensive": {
-        "MKC": "味好美"
+        "MKC": "味好美",
+        "FRPT": ""
     },
     "Industrials": {
         "FLY": ""
@@ -24,7 +28,9 @@
         "BRK-A": "",
         "FDS": ""
     },
-    "Healthcare": {},
+    "Healthcare": {
+        "ALC": ""
+    },
     "Bonds": {
         "US10Y": "",
         "US2Y": "",
@@ -95,38 +101,42 @@
         "XRP": ""
     },
     "Today": {
-        "CRWD": "",
-        "TW": "",
         "CART": "",
-        "DUOL": "",
         "WDAY": "",
         "DASH": "",
         "NOW": "",
         "WM": "",
         "HIMS": "",
         "FDS": "",
-        "IBM": ""
+        "IBM": "",
+        "APP": "",
+        "CVNA": "",
+        "PLTR": "",
+        "SHOP": "",
+        "VRT": "",
+        "AVAV": ""
     },
     "Earning_Filter": {
         "AVAV": "",
-        "FDS": "",
-        "HIMS": ""
+        "CAR": "",
+        "LII": "",
+        "SHAK": ""
     },
     "Watching": {
         "OKTA": "",
-        "TGT": "",
-        "ADI": "",
+        "CRWD": "",
         "CPRT": "汽车拍卖",
         "COST": "",
-        "DLR": "",
         "VRSN": "",
-        "FDS": ""
+        "BBAR": "",
+        "DUOL": ""
     },
     "Next_Week": {
         "BJ": "",
         "CRWD": "",
-        "GAP": "",
+        "HRL": "",
         "OKTA": "",
+        "PSTG": "",
         "YMM": ""
     },
     "Next Week": {
@@ -147,26 +157,26 @@
         "FDS": "",
         "GWRE": "",
         "AVAV": "",
-        "DRI": ""
+        "DRI": "",
+        "MKC": ""
     },
     "Notification": {
+        "APO": "",
         "APP": "",
         "AR": "",
-        "AU": "",
         "AXON": "",
         "BROS": "",
+        "BWXT": "",
+        "CLS": "",
         "CVNA": "",
+        "DASH": "",
         "EXE": "",
         "GWRE": "",
         "PLTR": "",
         "SHOP": "",
-        "TRGP": "",
         "TW": "",
-        "VRSN": "",
         "VRT": "",
-        "WING": "",
-        "WM": "",
-        "WPM": ""
+        "WING": ""
     },
     "Currencies": {
         "DXY": "美元指数",

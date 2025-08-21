@@ -194,6 +194,8 @@ def execute_external_script(script_type, keyword):
         'tags':     f'{base_path}/Operations/Editor_Tags.py',
         'editor_earning': f'{base_path}/Operations/Editor_Earning_DB.py',
         'earning':  f'{base_path}/Operations/Insert_Earning.py',
+        'event_input': f'{base_path}/Operations/Insert_Events.py', # 新增
+        'event_editor': f'{base_path}/Operations/Editor_Events.py', # 新增
         'futu':     '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt',
         'kimi':     '/Users/yanzhang/Coding/ScriptEditor/CheckKimi_Earning.scpt'
     }
@@ -668,6 +670,9 @@ class SimilarityViewerWindow(QMainWindow):
             ("编辑 Tags",     lambda: execute_external_script('tags', symbol)),
             None,
             ("找相似",       lambda: execute_external_script('similar', symbol)),
+            None,
+            ("添加新事件", lambda: execute_external_script('event_input', symbol)), # 新增
+            ("编辑事件", lambda: execute_external_script('event_editor', symbol)), # 新增
             None,
             ("添加到 Earning", lambda: execute_external_script('earning', symbol)),
             ("编辑 Earing DB", lambda: execute_external_script('editor_earning', symbol)),

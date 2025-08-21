@@ -113,14 +113,17 @@ def load_data_parallel():
 def input_mapping(data, db_path, user_input):
     """
     修改后的输入映射函数。
-    - 不再需要 root 参数，也不再调用 close_app。
+    - 统一将用户输入标准化为大写（并 strip）。
     """
     if not user_input:
         print("未输入任何内容，程序即将退出。")
         return
 
-    input_trimmed = user_input.strip()
-    if match_and_plot(input_trimmed, data['/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'],
+    # 标准化：去空白并转大写
+    input_trimmed = user_input.strip().upper()
+
+    if match_and_plot(input_trimmed,
+                      data['/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'],
                       data['/Users/yanzhang/Coding/News/backup/Compare_All.txt'],
                       data['/Users/yanzhang/Coding/Financial_System/Modules/description.json'],
                       db_path):
@@ -175,14 +178,14 @@ if __name__ == '__main__':
         arg = sys.argv[1]
         if arg == "paste":
             # pyperclip.paste() 依然可用，或者使用Qt的剪贴板，去掉两端空白
-            clipboard_content = pyperclip.paste().strip()
+            clipboard_content = pyperclip.paste().strip().upper()
             # 调用更新后的 input_mapping
             input_mapping(data, db_path, clipboard_content)
         elif arg == "input":
             # 调用新的Qt输入函数
             user_input = get_user_input_qt("请输入")
             # 调用更新后的 input_mapping
-            input_mapping(data, db_path, user_input)
+            input_mapping(data, db_path, user_input.upper() if user_input else None)
     else:
         print("请提供参数 input 或 paste")
         sys.exit(1)
