@@ -20,8 +20,8 @@ PATHS = {
     "db_file": lambda db: os.path.join(db, "Finance.db"),
     "blacklist_json": lambda config: os.path.join(config, "Blacklist.json"),
     "panel_json": lambda config: os.path.join(config, "Sectors_panel.json"),
-    "backup_next_week": lambda news: os.path.join(news, "backup", "NextWeek_Earning.txt"),
-    "backup_notification": lambda news: os.path.join(news, "backup", "notification_earning.txt"),
+    "backup_Strategy12": lambda news: os.path.join(news, "backup", "NextWeek_Earning.txt"),
+    "backup_Strategy34": lambda news: os.path.join(news, "backup", "Strategy34_earning.txt"),
 }
 
 # 动态生成完整路径
@@ -683,14 +683,14 @@ def run_processing_logic(log_detail):
     s2_set  = set(results['s2'] + results['s2_5'])
     prelim_final_symbols = s1_set.union(s2_set)
 
-    prelim_notification_list = set(results['s3'] + results['s3_5'] + results['s4'])
+    prelim_Strategy34_list = set(results['s3'] + results['s3_5'] + results['s4'])
 
     log_detail("\n--- 策略运行初步结果 ---")
     log_detail(f"主列表初步候选: {len(prelim_final_symbols)} 个")
-    log_detail(f"通知列表初步候选: {len(prelim_notification_list)} 个")
+    log_detail(f"通知列表初步候选: {len(prelim_Strategy34_list)} 个")
     if SYMBOL_TO_TRACE and SYMBOL_TO_TRACE in prelim_final_symbols:
         log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 在策略筛选后的 '主列表' 初步候选名单中。")
-    if SYMBOL_TO_TRACE and SYMBOL_TO_TRACE in prelim_notification_list:
+    if SYMBOL_TO_TRACE and SYMBOL_TO_TRACE in prelim_Strategy34_list:
         log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 在策略筛选后的 '通知列表' 初步候选名单中。")
 
     # 5. 应用通用过滤器
@@ -726,18 +726,18 @@ def run_processing_logic(log_detail):
     final_symbols = final_s1 + [sym for sym in final_s2 if sym not in final_s1]
     
     log_detail("\n--- 开始对通知列表进行过滤 ---")
-    final_notification_list = apply_filters(prelim_notification_list, stock_data_cache, blacklist, set(), False, SYMBOL_TO_TRACE, log_detail)
+    final_Strategy34_list = apply_filters(prelim_Strategy34_list, stock_data_cache, blacklist, set(), False, SYMBOL_TO_TRACE, log_detail)
 
     # 在这里加一行：把出现在主列表里的剔除掉
-    final_notification_list = [s for s in final_notification_list if s not in final_symbols]
+    final_Strategy34_list = [s for s in final_Strategy34_list if s not in final_symbols]
 
     log_detail("\n--- 所有过滤完成后的最终结果 ---")
     log_detail(f"主列表最终数量: {len(final_symbols)} - {final_symbols}")
-    log_detail(f"通知列表最终数量: {len(final_notification_list)} - {final_notification_list}")
+    log_detail(f"通知列表最终数量: {len(final_Strategy34_list)} - {final_Strategy34_list}")
     if SYMBOL_TO_TRACE:
         if SYMBOL_TO_TRACE in final_symbols:
             log_detail(f"\n最终追踪结果: {SYMBOL_TO_TRACE} 成功进入了最终的 '主列表'。")
-        elif SYMBOL_TO_TRACE in final_notification_list:
+        elif SYMBOL_TO_TRACE in final_Strategy34_list:
             log_detail(f"\n最终追踪结果: {SYMBOL_TO_TRACE} 成功进入了最终的 '通知列表'。")
         else:
             log_detail(f"\n最终追踪结果: {SYMBOL_TO_TRACE} 未进入任何最终列表。")
@@ -745,9 +745,9 @@ def run_processing_logic(log_detail):
 
     # 6. 文件和JSON输出
     # 主列表 (NextWeek_Earning)
-    update_json_panel(final_symbols, PANEL_JSON_FILE, "Next_Week")
+    update_json_panel(final_symbols, PANEL_JSON_FILE, "Strategy12")
     try:
-        backup_path = PATHS["backup_next_week"](news_path)
+        backup_path = PATHS["backup_Strategy12"](news_path)
         os.makedirs(os.path.dirname(backup_path), exist_ok=True)
 
         with open(backup_path, 'w', encoding='utf-8') as f:
@@ -758,14 +758,14 @@ def run_processing_logic(log_detail):
     except IOError as e:
         print(f"写入主列表文件时出错: {e}")
 
-    # 通知列表 (Notification)
-    update_json_panel(final_notification_list, PANEL_JSON_FILE, "Notification")
+    # 通知列表 (Strategy34)
+    update_json_panel(final_Strategy34_list, PANEL_JSON_FILE, "Strategy34")
     try:
-        backup_path = PATHS["backup_notification"](news_path)
+        backup_path = PATHS["backup_Strategy34"](news_path)
         os.makedirs(os.path.dirname(backup_path), exist_ok=True)
 
         with open(backup_path, 'w', encoding='utf-8') as f:
-            for sym in sorted(final_notification_list):
+            for sym in sorted(final_Strategy34_list):
                 f.write(sym + '\n')
         print(f"通知列表备份已更新: {backup_path}")
 

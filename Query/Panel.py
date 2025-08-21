@@ -37,7 +37,7 @@ categories = [
     ['Basic_Materials','Consumer_Cyclical','Real_Estate','Technology','Energy','Industrials',
      'Consumer_Defensive','Communication_Services','Financial_Services', 'Healthcare','Utilities'],
     ['Today','Next Week','2 Weeks','3 Weeks'],
-    ['Next_Week','Notification'],
+    ['Strategy12','Strategy34'],
     ['Watching','PE_valid','PE_invalid'],
     ['Bonds','Indices','Currencies'],
     ['Economics','Crypto','Commodities'],
@@ -463,8 +463,8 @@ class MainWindow(QMainWindow):
             'Consumer_Cyclical': 'Cyclical',
             'Basic_Materials': 'Materials',
             'Financial_Services': 'Financial',
-            'Notification': '策略 3、3.5、4',
-            'Next_Week': '策略 1、2、2.5'
+            'Strategy34': '策略 3、3.5、4',
+            'Strategy12': '策略 1、2、2.5'
         }
         
         self.init_ui()
@@ -833,10 +833,10 @@ class MainWindow(QMainWindow):
         menu.addAction("找相似",        lambda: execute_external_script('similar', keyword))
         menu.addSeparator()
         menu.addAction("加入黑名单",     lambda: execute_external_script('blacklist', keyword, group, self))
-        # ———— 新增两项：清空 Notification / Next_Week ————
+        # ———— 新增两项：清空 Strategy34 / Strategy12 ————
         menu.addSeparator()
-        menu.addAction("清空 Next_Week 分组", lambda: self.clear_group("Next_Week"))
-        menu.addAction("清空 Notification 分组", lambda: self.clear_group("Notification"))
+        menu.addAction("清空 Strategy12 分组", lambda: self.clear_group("Strategy12"))
+        menu.addAction("清空 Strategy34 分组", lambda: self.clear_group("Strategy34"))
         menu.addAction("清空 Valid_PE 分组", lambda: self.clear_group("PE_valid"))
         menu.addAction("清空 Invalid_PE 分组", lambda: self.clear_group("PE_invalid"))
 

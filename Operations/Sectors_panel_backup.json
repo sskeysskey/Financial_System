@@ -102,90 +102,45 @@
     },
     "Today": {
         "CART": "",
-        "WDAY": "",
         "DASH": "",
-        "NOW": "",
-        "WM": "",
-        "HIMS": "",
-        "FDS": "",
-        "IBM": "",
-        "APP": "",
         "CVNA": "",
-        "PLTR": "",
         "SHOP": "",
-        "VRT": "",
-        "AVAV": ""
-    },
-    "PE_valid": {
         "AVAV": "",
-        "CAR": "",
-        "LII": "",
-        "SHAK": ""
-    },
-    "PE_invalid": {
-        "JOBY": "",
-        "OKLO": "",
-        "QS": "",
-        "RBLX": "",
-        "SYM": ""
-    },
-    "Watching": {
-        "OKTA": "",
-        "CRWD": "",
-        "CPRT": "汽车拍卖",
-        "COST": "",
-        "VRSN": "",
-        "BBAR": "",
-        "DUOL": "",
-        "MNSO": ""
-    },
-    "Next_Week": {
-        "BJ": "",
-        "CRWD": "",
-        "HRL": "",
-        "OKTA": "",
-        "PSTG": "",
-        "YMM": ""
+        "APO": "",
+        "BWXT": "",
+        "SAIA": "",
+        "RH": "",
+        "SMR": ""
     },
     "Next Week": {
-        "BJ": "",
-        "WMT": "",
-        "PSTG": "",
-        "CPRT": "",
-        "MRVL": "",
-        "HRL": ""
+        "MRVL": ""
     },
     "2 Weeks": {
-        "CRM": "",
         "KMX": ""
     },
     "3 Weeks": {
         "GIS": "",
         "IOT": "",
         "FDS": "",
-        "GWRE": "",
-        "AVAV": "",
-        "DRI": "",
-        "MKC": ""
+        "AVAV": ""
     },
-    "Notification": {
-        "APO": "",
-        "APP": "",
-        "AR": "",
-        "AXON": "",
-        "BROS": "",
-        "BWXT": "",
-        "CLS": "",
-        "CVNA": "",
-        "DASH": "",
-        "EXE": "",
-        "GWRE": "",
-        "PLTR": "",
-        "SHOP": "",
-        "TW": "",
-        "VRT": "",
-        "WING": ""
+    "Watching": {
+        "BJ": "",
+        "OKTA": "",
+        "CRWD": "",
+        "CPRT": "",
+        "COST": "",
+        "VRSN": "",
+        "DUOL": "",
+        "MNSO": "",
+        "DELL": "",
+        "WDAY": "",
+        "PSTG": ""
     },
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {},
+    "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

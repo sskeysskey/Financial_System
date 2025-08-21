@@ -433,9 +433,9 @@ def run_processing_logic(log_detail):
     try:
         with open(PANEL_JSON_FILE, 'r', encoding='utf-8') as f: panel_data = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError): panel_data = {}
-    exist_notify = set(panel_data.get('Notification', {}).keys())
-    exist_next_week = set(panel_data.get('Next_Week', {}).keys())
-    already_in_panels = exist_notify | exist_next_week
+    exist_notify = set(panel_data.get('Strategy34', {}).keys())
+    exist_Strategy12 = set(panel_data.get('Strategy12', {}).keys())
+    already_in_panels = exist_notify | exist_Strategy12
 
     # 5.3 从两个组中分别过滤掉黑名单和已存在分组的symbol
     final_pe_valid = pe_valid_set - blacklist - already_in_panels

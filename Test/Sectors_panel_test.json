@@ -22,7 +22,10 @@
     "Consumer_Defensive": {
         "MNST": ""
     },
-    "Earning_Filter": {
+    "PE_valid": {
+        "HALO": ""
+    },
+    "PE_invalid": {
         "HALO": ""
     },
     "Today": {
@@ -31,7 +34,7 @@
     "Watching": {
         "NVO": ""
     },
-    "Next_Week": {
+    "Strategy12": {
         "ONON": "",
         "WIX": ""
     },
@@ -46,7 +49,7 @@
     "3 Weeks": {
         "DRI": ""
     },
-    "Notification": {
+    "Strategy34": {
         "WIX": ""
     },
     "Industrials": {
