@@ -116,11 +116,18 @@
         "VRT": "",
         "AVAV": ""
     },
-    "Earning_Filter": {
+    "PE_valid": {
         "AVAV": "",
         "CAR": "",
         "LII": "",
         "SHAK": ""
+    },
+    "PE_invalid": {
+        "JOBY": "",
+        "OKLO": "",
+        "QS": "",
+        "RBLX": "",
+        "SYM": ""
     },
     "Watching": {
         "OKTA": "",
@@ -129,7 +136,8 @@
         "COST": "",
         "VRSN": "",
         "BBAR": "",
-        "DUOL": ""
+        "DUOL": "",
+        "MNSO": ""
     },
     "Next_Week": {
         "BJ": "",

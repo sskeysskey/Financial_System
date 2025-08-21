@@ -45,8 +45,8 @@ CONFIG = {
     "MARKETCAP_THRESHOLD": 100_000_000_000,
     "PRICE_DROP_PERCENTAGE_LARGE": 0.10,
     "PRICE_DROP_PERCENTAGE_SMALL": 0.06,
-    # 新增：最新收盘价比最近交易日前10天最低收盘价高不超过2%
-    "MAX_INCREASE_PERCENTAGE_SINCE_LOW": 0.02,
+    # 新增：最新收盘价比最近交易日前10天最低收盘价高不超过3%
+    "MAX_INCREASE_PERCENTAGE_SINCE_LOW": 0.03,
 }
 
 # --- 3. 辅助与文件操作模块 ---
@@ -303,7 +303,7 @@ def run_strategy(data, symbol_to_trace, log_detail):
         if is_tracing: log_detail("  - 结果: False (条件2未满足)")
         return False
 
-    # 条件3：最新价不高于最近10日最低收盘价的 1+2%
+    # 条件3：最新价不高于最近10日最低收盘价的 1+3%
     prev_prices = data.get('prev_10_prices', [])
     if len(prev_prices) < 10:
         if is_tracing: log_detail(f"  - 结果: False (可用历史交易日不足10日，只有{len(prev_prices)}日数据)")
@@ -312,7 +312,7 @@ def run_strategy(data, symbol_to_trace, log_detail):
     threshold_price3 = min_prev * (1 + CONFIG["MAX_INCREASE_PERCENTAGE_SINCE_LOW"])
     cond3_ok = data['latest_price'] <= threshold_price3
     if is_tracing:
-        log_detail(f"  - 条件3 (相对10日最低+2%): 最新价 {data['latest_price']:.2f} <= 最低价 {min_prev:.2f}*1.02={threshold_price3:.2f} -> {cond3_ok}")
+        log_detail(f"  - 条件3 (相对10日最低+3%): 最新价 {data['latest_price']:.2f} <= 最低价 {min_prev:.2f}*1.02={threshold_price3:.2f} -> {cond3_ok}")
     if not cond3_ok:
         if is_tracing: log_detail("  - 结果: False (条件3未满足)")
         return False
@@ -331,35 +331,47 @@ def run_strategy(data, symbol_to_trace, log_detail):
     if is_tracing: log_detail("  - 结果: True (所有策略条件均满足)")
     return True
 
+# ========== 代码修改部分 1/2 ==========
+# 修改 apply_post_filters 函数，使其根据PE有效性返回两个独立的列表
 def apply_post_filters(symbols, stock_data_cache, symbol_to_trace, log_detail):
-    """对初步筛选结果应用额外的过滤规则。"""
+    """
+    对初步筛选结果应用额外的过滤规则。
+    此函数现在返回两个列表：
+    1. pe_valid_symbols: 通过所有后置过滤器，且PE值有效的股票。
+    2. pe_invalid_symbols: 通过所有后置过滤器，但PE值无效的股票。
+    """
     log_detail("\n--- 开始应用后置过滤器 ---")
-    final_list = []
+    pe_valid_symbols = []
+    pe_invalid_symbols = []
+    
     for symbol in symbols:
         is_tracing = (symbol == symbol_to_trace)
         if is_tracing: log_detail(f"\n--- [{symbol}] 后置过滤器评估 ---")
         
         data = stock_data_cache[symbol]
 
-        # 过滤1: PE Ratio
-        pe = data['pe_ratio']
-        if pe is None or str(pe).strip().lower() in ("--", "null", ""):
-            if is_tracing: log_detail(f"  - 过滤 (PE无效): PE值为 '{pe}'。")
-            continue
-        elif is_tracing: log_detail(f"  - 通过 (PE有效): PE值为 '{pe}'。")
-
-        # 过滤2: 最新交易日 == 最新财报日
+        # 过滤1: 最新交易日 == 最新财报日 (此过滤对两组都生效)
         if data['latest_date_str'] == data['latest_er_date_str']:
             if is_tracing: log_detail(f"  - 过滤 (日期相同): 最新交易日({data['latest_date_str']}) 与 最新财报日({data['latest_er_date_str']}) 相同。")
             continue
         elif is_tracing: log_detail(f"  - 通过 (日期不同)。")
-            
-        final_list.append(symbol)
-        if is_tracing: log_detail(f"  - 成功: 通过所有后置过滤器。")
-    
-    log_detail(f"\n后置过滤完成，剩余 {len(final_list)} 个 symbol。")
-    return final_list
 
+        # 过滤2: PE Ratio (根据此条件将symbol分到不同列表)
+        pe = data['pe_ratio']
+        is_pe_valid = pe is not None and str(pe).strip().lower() not in ("--", "null", "")
+
+        if is_pe_valid:
+            if is_tracing: log_detail(f"  - 分组 (PE有效): PE值为 '{pe}'。加入 PE_valid 组。")
+            pe_valid_symbols.append(symbol)
+        else:
+            if is_tracing: log_detail(f"  - 分组 (PE无效): PE值为 '{pe}'。加入 PE_invalid 组。")
+            pe_invalid_symbols.append(symbol)
+            
+    log_detail(f"\n后置过滤完成: PE有效 {len(pe_valid_symbols)} 个, PE无效 {len(pe_invalid_symbols)} 个。")
+    return pe_valid_symbols, pe_invalid_symbols
+
+# ========== 代码修改部分 2/2 ==========
+# 修改 run_processing_logic 函数，以处理两个分组并写入到 panel.json
 def run_processing_logic(log_detail):
     """
     核心处理逻辑。
@@ -399,70 +411,58 @@ def run_processing_logic(log_detail):
         elif SYMBOL_TO_TRACE in stock_data_cache and stock_data_cache[SYMBOL_TO_TRACE]['is_valid']:
             log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 未通过策略筛选。")
 
-    # 4. 应用后置过滤器
-    final_qualified_symbols = apply_post_filters(preliminary_results, stock_data_cache, SYMBOL_TO_TRACE, log_detail)
-    log_detail(f"\n最终符合所有条件的股票共 {len(final_qualified_symbols)} 个: {sorted(final_qualified_symbols)}")
+    # 4. 应用后置过滤器，得到PE有效和无效两个列表
+    pe_valid_symbols, pe_invalid_symbols = apply_post_filters(preliminary_results, stock_data_cache, SYMBOL_TO_TRACE, log_detail)
+    
+    all_qualified_symbols = pe_valid_symbols + pe_invalid_symbols # 用于备份文件的完整列表
+    log_detail(f"\n最终符合所有条件的股票共 {len(all_qualified_symbols)} 个: {sorted(all_qualified_symbols)}")
     if SYMBOL_TO_TRACE:
-        if SYMBOL_TO_TRACE in final_qualified_symbols:
+        if SYMBOL_TO_TRACE in all_qualified_symbols:
             log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 通过了后置过滤器。")
         elif SYMBOL_TO_TRACE in preliminary_results:
-            log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 在后置过滤器中被移除。")
+            log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 在后置过滤器中被移除（日期相同）。")
 
     # 5. 处理文件输出
-    final_qualified_symbols_set = set(final_qualified_symbols)
+    pe_valid_set = set(pe_valid_symbols)
+    pe_invalid_set = set(pe_invalid_symbols)
 
     # 5.1 加载黑名单并过滤
     blacklist = load_blacklist(BLACKLIST_JSON_FILE)
-    filtered_new_symbols = final_qualified_symbols_set - blacklist
-    removed_by_blacklist = len(final_qualified_symbols_set) - len(filtered_new_symbols)
-    if removed_by_blacklist > 0:
-        log_detail(f"\n根据黑名单，从列表中过滤掉 {removed_by_blacklist} 个 symbol。")
-    if SYMBOL_TO_TRACE:
-        is_in_blacklist = SYMBOL_TO_TRACE in blacklist
-        if SYMBOL_TO_TRACE in final_qualified_symbols_set and is_in_blacklist:
-            log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 因在黑名单中被过滤。")
-        elif SYMBOL_TO_TRACE in final_qualified_symbols_set:
-             log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 不在黑名单中，通过此项检查。")
-
-    # 5.2 加载 panel.json，排除已存在分组
+    
+    # 5.2 加载 panel.json，获取已存在分组的内容
     try:
         with open(PANEL_JSON_FILE, 'r', encoding='utf-8') as f: panel_data = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError): panel_data = {}
     exist_notify = set(panel_data.get('Notification', {}).keys())
     exist_next_week = set(panel_data.get('Next_Week', {}).keys())
     already_in_panels = exist_notify | exist_next_week
+
+    # 5.3 从两个组中分别过滤掉黑名单和已存在分组的symbol
+    final_pe_valid = pe_valid_set - blacklist - already_in_panels
+    final_pe_invalid = pe_invalid_set - blacklist - already_in_panels
+
+    # 5.4 打印被跳过的信息
+    skipped_valid = pe_valid_set & (blacklist | already_in_panels)
+    if skipped_valid:
+        log_detail(f"\nPE_valid 组中，有 {len(skipped_valid)} 个 symbol 因在黑名单或已有分组中被跳过: {sorted(list(skipped_valid))}")
+
+    skipped_invalid = pe_invalid_set & (blacklist | already_in_panels)
+    if skipped_invalid:
+        log_detail(f"\nPE_invalid 组中，有 {len(skipped_invalid)} 个 symbol 因在黑名单或已有分组中被跳过: {sorted(list(skipped_invalid))}")
+
+    # 5.5 更新 JSON 面板文件
+    log_detail(f"\n准备写入 {len(final_pe_valid)} 个 symbol 到 'PE_valid' 组。")
+    update_json_panel(list(final_pe_valid), PANEL_JSON_FILE, 'PE_valid')
     
-    new_for_earning = filtered_new_symbols - already_in_panels
-    skipped = filtered_new_symbols & already_in_panels
-
-    if skipped:
-        log_detail(f"\n以下 {len(skipped)} 个 symbol 已存在 Notification/Next_Week 分组，将跳过不写入 Earning_Filter：\n  {sorted(list(skipped))}")
-    if SYMBOL_TO_TRACE:
-        is_in_panels = SYMBOL_TO_TRACE in already_in_panels
-        if SYMBOL_TO_TRACE in filtered_new_symbols and is_in_panels:
-            log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 因已存在于 Notification/Next_Week 分组中而被跳过。")
-        elif SYMBOL_TO_TRACE in filtered_new_symbols:
-            log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 不在现有分组中，通过此项检查。")
-
-    # 5.3 根据是否有真正“新”内容，决定写文件
-    if new_for_earning:
-        log_detail(f"\n发现 {len(new_for_earning)} 个新的、不在黑名单、且不在其他分组的 symbol。")
-        if SYMBOL_TO_TRACE and SYMBOL_TO_TRACE in new_for_earning:
-            log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 最终被确定为新增symbol，将写入文件。")
-        update_json_panel(list(new_for_earning), PANEL_JSON_FILE, 'Earning_Filter')
-    else:
-        log_detail("\n没有新的符合条件的 symbol（或都被黑名单/其他分组拦截）。")
-        if os.path.exists(NEWS_FILE):
-            os.remove(NEWS_FILE)
-            log_detail(f"已删除旧的 news 文件: {NEWS_FILE}")
-        update_json_panel([], PANEL_JSON_FILE, 'Earning_Filter')
+    log_detail(f"\n准备写入 {len(final_pe_invalid)} 个 symbol 到 'PE_invalid' 组。")
+    update_json_panel(list(final_pe_invalid), PANEL_JSON_FILE, 'PE_invalid')
 
     # 无论如何，都用本次完整结果覆盖备份文件
     os.makedirs(os.path.dirname(BACKUP_FILE), exist_ok=True)
-    log_detail(f"\n正在用本次扫描到的 {len(final_qualified_symbols_set)} 个完整结果更新备份文件...")
+    log_detail(f"\n正在用本次扫描到的 {len(all_qualified_symbols)} 个完整结果更新备份文件...")
     try:
         with open(BACKUP_FILE, 'w', encoding='utf-8') as f:
-            for sym in sorted(final_qualified_symbols_set): f.write(sym + '\n')
+            for sym in sorted(all_qualified_symbols): f.write(sym + '\n')
         log_detail(f"备份文件已成功更新: {BACKUP_FILE}")
     except IOError as e:
         log_detail(f"错误: 无法更新备份文件: {e}")
