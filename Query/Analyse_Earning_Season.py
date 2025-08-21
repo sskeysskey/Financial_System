@@ -20,6 +20,8 @@ PATHS = {
     "db_file": lambda db: os.path.join(db, "Finance.db"),
     "blacklist_json": lambda config: os.path.join(config, "Blacklist.json"),
     "panel_json": lambda config: os.path.join(config, "Sectors_panel.json"),
+    # ========== 新增/修改部分 1/5 ==========
+    "description_json": lambda config: os.path.join(config, 'description.json'), # 新增 description.json 路径
     "backup_Strategy12": lambda news: os.path.join(news, "backup", "NextWeek_Earning.txt"),
     "backup_Strategy34": lambda news: os.path.join(news, "backup", "Strategy34_earning.txt"),
 }
@@ -34,6 +36,9 @@ DB_FILE = PATHS["db_file"](db_path)
 SECTORS_JSON_FILE = PATHS["sectors_json"](config_path)
 BLACKLIST_JSON_FILE = PATHS["blacklist_json"](config_path)
 PANEL_JSON_FILE = PATHS["panel_json"](config_path)
+# ========== 新增/修改部分 2/5 ==========
+DESCRIPTION_JSON_FILE = PATHS["description_json"](config_path) # 为新路径创建变量
+
 
 # --- 2. 可配置参数 ---
 # 使用一个配置字典来管理所有参数
@@ -46,7 +51,14 @@ CONFIG = {
     "MAX_DROP_PERCENTAGE": 0.15,
     "MIN_TURNOVER": 100_000_000,
     "MARKETCAP_THRESHOLD": 100_000_000_000,
-    "MAX_RISE_FROM_7D_LOW": 0.03, # 新增参数：策略3中，允许从7日最低价上涨的最大幅度
+    "MAX_RISE_FROM_7D_LOW": 0.03,
+    # ========== 新增/修改部分 3/5 ==========
+    # 新增：Tag 黑名单。所有包含以下任一 tag 的 symbol 将被过滤掉。
+    "TAG_BLACKLIST": {
+        "天然气",
+        "页岩气",
+        "个人安全防卫"
+    }
 }
 
 # --- 3. 辅助与文件操作模块 ---
@@ -83,6 +95,34 @@ def load_blacklist(json_file_path):
     except Exception as e:
         print(f"警告: 加载黑名单失败: {e}，将不进行过滤。")
         return set()
+
+# ========== 新增/修改部分 4/5 ==========
+def load_symbol_tags(json_path):
+    """从 description.json 加载 'stocks' 分组下所有 symbol 的 tags。"""
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        symbol_tag_map = {}
+        stock_list = data.get('stocks', [])
+        
+        for item in stock_list:
+            symbol = item.get('symbol')
+            tags = item.get('tag', [])
+            if symbol:
+                symbol_tag_map[symbol] = tags
+        
+        print(f"成功从 description.json 加载 {len(symbol_tag_map)} 个 symbol 的 tags。")
+        return symbol_tag_map
+    except FileNotFoundError:
+        print(f"警告: Tag 定义文件未找到: {json_path}。将不进行Tag过滤。")
+        return {}
+    except json.JSONDecodeError:
+        print(f"警告: Tag 定义文件格式错误: {json_path}。将不进行Tag过滤。")
+        return {}
+    except Exception as e:
+        print(f"警告: 加载 Tags 失败: {e}。将不进行Tag过滤。")
+        return {}
 
 def update_json_panel(symbols_list, target_json_path, group_name):
     """更新JSON面板文件。"""
@@ -620,11 +660,11 @@ def apply_filters(symbols_set, stock_data_cache, blacklist, negative_earnings_se
         
     return final_list
 
+# ========== 新增/修改部分 5/5 ==========
 def run_processing_logic(log_detail):
     """
     核心处理逻辑。
     这个函数包含了所有的数据加载、策略执行、过滤和文件输出。
-    它接收一个 log_detail 函数作为参数，用于记录过程信息。
     """
     log_detail(f"程序开始运行...")
     if SYMBOL_TO_TRACE:
@@ -635,6 +675,9 @@ def run_processing_logic(log_detail):
     if not symbol_sector_map:
         log_detail("错误: 无法加载板块映射，程序终止。")
         return
+
+    # 新增：加载 symbol->tags 映射
+    symbol_to_tags_map = load_symbol_tags(DESCRIPTION_JSON_FILE)
 
     symbols_next = get_symbols_from_file(PATHS["earnings_release_next"](news_path))
     symbols_new = get_symbols_from_file(PATHS["earnings_release_new"](news_path))
@@ -731,6 +774,32 @@ def run_processing_logic(log_detail):
     # 在这里加一行：把出现在主列表里的剔除掉
     final_Strategy34_list = [s for s in final_Strategy34_list if s not in final_symbols]
 
+    # 6. 新增：基于Tag的过滤 (在所有其他过滤之后)
+    log_detail("\n--- 开始基于Tag的过滤 ---")
+    tag_blacklist = CONFIG["TAG_BLACKLIST"]
+    log_detail(f"Tag黑名单: {tag_blacklist}")
+
+    # 过滤主列表
+    filtered_final_symbols = []
+    for symbol in final_symbols:
+        symbol_tags = set(symbol_to_tags_map.get(symbol, []))
+        if not symbol_tags.intersection(tag_blacklist):
+            filtered_final_symbols.append(symbol)
+        else:
+            log_detail(f"  - [主列表] 因Tag被过滤: {symbol} (Tags: {list(symbol_tags)})")
+    final_symbols = filtered_final_symbols
+
+    # 过滤通知列表
+    filtered_Strategy34_list = []
+    for symbol in final_Strategy34_list:
+        symbol_tags = set(symbol_to_tags_map.get(symbol, []))
+        if not symbol_tags.intersection(tag_blacklist):
+            filtered_Strategy34_list.append(symbol)
+        else:
+            log_detail(f"  - [通知列表] 因Tag被过滤: {symbol} (Tags: {list(symbol_tags)})")
+    final_Strategy34_list = filtered_Strategy34_list
+
+    # 7. 最终结果和文件输出
     log_detail("\n--- 所有过滤完成后的最终结果 ---")
     log_detail(f"主列表最终数量: {len(final_symbols)} - {final_symbols}")
     log_detail(f"通知列表最终数量: {len(final_Strategy34_list)} - {final_Strategy34_list}")

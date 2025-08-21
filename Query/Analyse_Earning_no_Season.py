@@ -15,6 +15,8 @@ PATHS = {
     "sectors_json": lambda config_dir: os.path.join(config_dir, 'Sectors_All.json'),
     "panel_json": lambda config_dir: os.path.join(config_dir, 'Sectors_panel.json'),
     "blacklist_json": lambda config_dir: os.path.join(config_dir, 'Blacklist.json'),
+    # ========== 新增/修改部分 1/5 ==========
+    "description_json": lambda config_dir: os.path.join(config_dir, 'description.json'), # 新增 description.json 路径
     "db_file": lambda db_dir: os.path.join(db_dir, 'Finance.db'),
     "output_news": lambda news_dir: os.path.join(news_dir, 'Filter_Earning.txt'),
     "output_backup": lambda news_dir: os.path.join(news_dir, 'backup/Filter_Earning.txt'),
@@ -31,6 +33,8 @@ BLACKLIST_JSON_FILE = PATHS["blacklist_json"](CONFIG_DIR)
 PANEL_JSON_FILE = PATHS["panel_json"](CONFIG_DIR)
 NEWS_FILE = PATHS["output_news"](NEWS_DIR)
 BACKUP_FILE = PATHS["output_backup"](NEWS_DIR)
+# ========== 新增/修改部分 2/5 ==========
+DESCRIPTION_JSON_FILE = PATHS["description_json"](CONFIG_DIR) # 为新路径创建变量
 
 
 # --- 2. 可配置参数 ---
@@ -47,6 +51,13 @@ CONFIG = {
     "PRICE_DROP_PERCENTAGE_SMALL": 0.06,
     # 新增：最新收盘价比最近交易日前10天最低收盘价高不超过3%
     "MAX_INCREASE_PERCENTAGE_SINCE_LOW": 0.03,
+    # ========== 新增/修改部分 3/5 ==========
+    # 新增：Tag 黑名单。所有包含以下任一 tag 的 symbol 将被过滤掉。
+    "TAG_BLACKLIST": {
+        "天然气",
+        "页岩气",
+        "个人安全防卫"
+    }
 }
 
 # --- 3. 辅助与文件操作模块 ---
@@ -83,6 +94,34 @@ def load_blacklist(json_path):
     except Exception as e:
         print(f"警告: 加载黑名单失败: {e}，将不进行过滤。")
         return set()
+
+# ========== 新增/修改部分 4/5 ==========
+def load_symbol_tags(json_path):
+    """从 description.json 加载 'stocks' 分组下所有 symbol 的 tags。"""
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        symbol_tag_map = {}
+        stock_list = data.get('stocks', [])
+        
+        for item in stock_list:
+            symbol = item.get('symbol')
+            tags = item.get('tag', [])
+            if symbol:
+                symbol_tag_map[symbol] = tags
+        
+        print(f"成功从 description.json 加载 {len(symbol_tag_map)} 个 symbol 的 tags。")
+        return symbol_tag_map
+    except FileNotFoundError:
+        print(f"警告: Tag 定义文件未找到: {json_path}。将不进行Tag过滤。")
+        return {}
+    except json.JSONDecodeError:
+        print(f"警告: Tag 定义文件格式错误: {json_path}。将不进行Tag过滤。")
+        return {}
+    except Exception as e:
+        print(f"警告: 加载 Tags 失败: {e}。将不进行Tag过滤。")
+        return {}
 
 def update_json_panel(symbols_list, json_path, group_name):
     """更新JSON面板文件。"""
@@ -312,7 +351,7 @@ def run_strategy(data, symbol_to_trace, log_detail):
     threshold_price3 = min_prev * (1 + CONFIG["MAX_INCREASE_PERCENTAGE_SINCE_LOW"])
     cond3_ok = data['latest_price'] <= threshold_price3
     if is_tracing:
-        log_detail(f"  - 条件3 (相对10日最低+3%): 最新价 {data['latest_price']:.2f} <= 最低价 {min_prev:.2f}*1.02={threshold_price3:.2f} -> {cond3_ok}")
+        log_detail(f"  - 条件3 (相对10日最低+3%): 最新价 {data['latest_price']:.2f} <= 最低价 {min_prev:.2f}*1.03={threshold_price3:.2f} -> {cond3_ok}")
     if not cond3_ok:
         if is_tracing: log_detail("  - 结果: False (条件3未满足)")
         return False
@@ -370,7 +409,7 @@ def apply_post_filters(symbols, stock_data_cache, symbol_to_trace, log_detail):
     log_detail(f"\n后置过滤完成: PE有效 {len(pe_valid_symbols)} 个, PE无效 {len(pe_invalid_symbols)} 个。")
     return pe_valid_symbols, pe_invalid_symbols
 
-# ========== 代码修改部分 2/2 ==========
+# ========== 新增/修改部分 5/5 ==========
 # 修改 run_processing_logic 函数，以处理两个分组并写入到 panel.json
 def run_processing_logic(log_detail):
     """
@@ -387,6 +426,9 @@ def run_processing_logic(log_detail):
     if all_symbols is None:
         log_detail("错误: 无法加载symbols，程序终止。")
         return
+    
+    # 新增：加载 symbol->tags 映射
+    symbol_to_tags_map = load_symbol_tags(DESCRIPTION_JSON_FILE)
     
     if SYMBOL_TO_TRACE:
         if SYMBOL_TO_TRACE in all_symbols:
@@ -414,22 +456,50 @@ def run_processing_logic(log_detail):
     # 4. 应用后置过滤器，得到PE有效和无效两个列表
     pe_valid_symbols, pe_invalid_symbols = apply_post_filters(preliminary_results, stock_data_cache, SYMBOL_TO_TRACE, log_detail)
     
-    all_qualified_symbols = pe_valid_symbols + pe_invalid_symbols # 用于备份文件的完整列表
-    log_detail(f"\n最终符合所有条件的股票共 {len(all_qualified_symbols)} 个: {sorted(all_qualified_symbols)}")
+    # 5. 新增：基于Tag的过滤
+    log_detail("\n--- 开始基于Tag的过滤 ---")
+    tag_blacklist = CONFIG["TAG_BLACKLIST"]
+    log_detail(f"Tag黑名单: {tag_blacklist}")
+    
+    final_pe_valid_symbols = []
+    skipped_tags_valid = []
+    for symbol in pe_valid_symbols:
+        symbol_tags = set(symbol_to_tags_map.get(symbol, []))
+        if not symbol_tags.intersection(tag_blacklist):
+            final_pe_valid_symbols.append(symbol)
+        else:
+            skipped_tags_valid.append(symbol)
+    if skipped_tags_valid:
+        log_detail(f"在 'PE_valid' 组中，因Tag被过滤的 symbol ({len(skipped_tags_valid)}个): {sorted(skipped_tags_valid)}")
+
+    final_pe_invalid_symbols = []
+    skipped_tags_invalid = []
+    for symbol in pe_invalid_symbols:
+        symbol_tags = set(symbol_to_tags_map.get(symbol, []))
+        if not symbol_tags.intersection(tag_blacklist):
+            final_pe_invalid_symbols.append(symbol)
+        else:
+            skipped_tags_invalid.append(symbol)
+    if skipped_tags_invalid:
+        log_detail(f"在 'PE_invalid' 组中，因Tag被过滤的 symbol ({len(skipped_tags_invalid)}个): {sorted(skipped_tags_invalid)}")
+
+    # 用于备份文件的完整列表 (经过Tag过滤)
+    all_qualified_symbols = final_pe_valid_symbols + final_pe_invalid_symbols
+    log_detail(f"\n经过Tag过滤后，最终符合条件的股票共 {len(all_qualified_symbols)} 个: {sorted(all_qualified_symbols)}")
     if SYMBOL_TO_TRACE:
         if SYMBOL_TO_TRACE in all_qualified_symbols:
-            log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 通过了后置过滤器。")
-        elif SYMBOL_TO_TRACE in preliminary_results:
-            log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 在后置过滤器中被移除（日期相同）。")
+            log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 通过了Tag过滤器。")
+        elif SYMBOL_TO_TRACE in pe_valid_symbols or SYMBOL_TO_TRACE in pe_invalid_symbols:
+            log_detail(f"追踪信息: {SYMBOL_TO_TRACE} 在Tag过滤器中被移除。")
 
-    # 5. 处理文件输出
-    pe_valid_set = set(pe_valid_symbols)
-    pe_invalid_set = set(pe_invalid_symbols)
+    # 6. 处理文件输出 (使用经过Tag过滤后的列表)
+    pe_valid_set = set(final_pe_valid_symbols)
+    pe_invalid_set = set(final_pe_invalid_symbols)
 
-    # 5.1 加载黑名单并过滤
+    # 6.1 加载黑名单并过滤
     blacklist = load_blacklist(BLACKLIST_JSON_FILE)
     
-    # 5.2 加载 panel.json，获取已存在分组的内容
+    # 6.2 加载 panel.json，获取已存在分组的内容
     try:
         with open(PANEL_JSON_FILE, 'r', encoding='utf-8') as f: panel_data = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError): panel_data = {}
@@ -437,11 +507,11 @@ def run_processing_logic(log_detail):
     exist_Strategy12 = set(panel_data.get('Strategy12', {}).keys())
     already_in_panels = exist_notify | exist_Strategy12
 
-    # 5.3 从两个组中分别过滤掉黑名单和已存在分组的symbol
+    # 6.3 从两个组中分别过滤掉黑名单和已存在分组的symbol
     final_pe_valid = pe_valid_set - blacklist - already_in_panels
     final_pe_invalid = pe_invalid_set - blacklist - already_in_panels
 
-    # 5.4 打印被跳过的信息
+    # 6.4 打印被跳过的信息
     skipped_valid = pe_valid_set & (blacklist | already_in_panels)
     if skipped_valid:
         log_detail(f"\nPE_valid 组中，有 {len(skipped_valid)} 个 symbol 因在黑名单或已有分组中被跳过: {sorted(list(skipped_valid))}")
@@ -450,14 +520,14 @@ def run_processing_logic(log_detail):
     if skipped_invalid:
         log_detail(f"\nPE_invalid 组中，有 {len(skipped_invalid)} 个 symbol 因在黑名单或已有分组中被跳过: {sorted(list(skipped_invalid))}")
 
-    # 5.5 更新 JSON 面板文件
+    # 6.5 更新 JSON 面板文件
     log_detail(f"\n准备写入 {len(final_pe_valid)} 个 symbol 到 'PE_valid' 组。")
     update_json_panel(list(final_pe_valid), PANEL_JSON_FILE, 'PE_valid')
     
     log_detail(f"\n准备写入 {len(final_pe_invalid)} 个 symbol 到 'PE_invalid' 组。")
     update_json_panel(list(final_pe_invalid), PANEL_JSON_FILE, 'PE_invalid')
 
-    # 无论如何，都用本次完整结果覆盖备份文件
+    # 无论如何，都用本次完整结果（已通过Tag过滤）覆盖备份文件
     os.makedirs(os.path.dirname(BACKUP_FILE), exist_ok=True)
     log_detail(f"\n正在用本次扫描到的 {len(all_qualified_symbols)} 个完整结果更新备份文件...")
     try:
