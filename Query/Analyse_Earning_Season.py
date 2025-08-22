@@ -20,8 +20,7 @@ PATHS = {
     "db_file": lambda db: os.path.join(db, "Finance.db"),
     "blacklist_json": lambda config: os.path.join(config, "Blacklist.json"),
     "panel_json": lambda config: os.path.join(config, "Sectors_panel.json"),
-    # ========== 新增/修改部分 1/5 ==========
-    "description_json": lambda config: os.path.join(config, 'description.json'), # 新增 description.json 路径
+    "description_json": lambda config: os.path.join(config, 'description.json'),
     "backup_Strategy12": lambda news: os.path.join(news, "backup", "NextWeek_Earning.txt"),
     "backup_Strategy34": lambda news: os.path.join(news, "backup", "Strategy34_earning.txt"),
 }
@@ -36,13 +35,20 @@ DB_FILE = PATHS["db_file"](db_path)
 SECTORS_JSON_FILE = PATHS["sectors_json"](config_path)
 BLACKLIST_JSON_FILE = PATHS["blacklist_json"](config_path)
 PANEL_JSON_FILE = PATHS["panel_json"](config_path)
-# ========== 新增/修改部分 2/5 ==========
-DESCRIPTION_JSON_FILE = PATHS["description_json"](config_path) # 为新路径创建变量
+DESCRIPTION_JSON_FILE = PATHS["description_json"](config_path)
 
 
 # --- 2. 可配置参数 ---
 # 使用一个配置字典来管理所有参数
 CONFIG = {
+    # ========== 新增/修改部分 1/2 ==========
+    # 新增：Symbol 黑名单。所有在此列表中的 symbol 将在处理开始前被直接过滤。
+    "SYMBOL_BLACKLIST": {
+        # 在这里添加不希望出现在任何结果中的 symbol，例如:
+        # "AAPL", 
+        # "GOOGL",
+    },
+    # ========================================
     "NUM_EARNINGS_TO_CHECK": 2,
     "MIN_DROP_PERCENTAGE": 0.04,
     "MINOR_DROP_PERCENTAGE": 0.05,
@@ -660,7 +666,7 @@ def apply_filters(symbols_set, stock_data_cache, blacklist, negative_earnings_se
         
     return final_list
 
-# ========== 新增/修改部分 5/5 ==========
+# ========== 新增/修改部分 2/2 ==========
 def run_processing_logic(log_detail):
     """
     核心处理逻辑。
@@ -694,6 +700,21 @@ def run_processing_logic(log_detail):
         all_db_symbols = [row[0] for row in cursor.fetchall()]
 
     symbols_to_process = sorted(list(set(initial_symbols + all_db_symbols)))
+
+    # 1.1 (新增) 应用 SYMBOL_BLACKLIST 进行初步过滤
+    symbol_blacklist = CONFIG.get("SYMBOL_BLACKLIST", set())
+    if symbol_blacklist:
+        original_count = len(symbols_to_process)
+        removed_symbols = set(symbols_to_process) & symbol_blacklist
+        
+        if removed_symbols:
+            log_detail(f"\n--- 应用 Symbol 黑名单 ---")
+            log_detail(f"从处理列表中移除了 {len(removed_symbols)} 个在黑名单中的 symbol: {sorted(list(removed_symbols))}")
+            if SYMBOL_TO_TRACE and SYMBOL_TO_TRACE in removed_symbols:
+                log_detail(f"追踪信息: 目标 symbol '{SYMBOL_TO_TRACE}' 在 Symbol 黑名单中，已被移除，将不会被处理。")
+
+        symbols_to_process = [s for s in symbols_to_process if s not in symbol_blacklist]
+        log_detail(f"Symbol 列表从 {original_count} 个缩减到 {len(symbols_to_process)} 个。")
     
     # 2. 构建数据缓存 (核心性能提升)
     stock_data_cache = build_stock_data_cache(symbols_to_process, DB_FILE, symbol_sector_map, SYMBOL_TO_TRACE, log_detail)

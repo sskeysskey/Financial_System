@@ -42,6 +42,12 @@ CONFIG = {
         "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare",
         "Industrials", "Real_Estate", "Technology", "Utilities"
     },
+    # ========== 新增/修改部分 1/2 ==========
+    # 新增：Symbol 黑名单。所有在此列表中的 symbol 将在处理开始前被直接过滤。
+    "SYMBOL_BLACKLIST": {
+        
+    },
+    # ========================================
     "TURNOVER_THRESHOLD": 100_000_000,
     "RECENT_EARNINGS_COUNT": 2,
     "MARKETCAP_THRESHOLD": 100_000_000_000,
@@ -433,7 +439,24 @@ def run_processing_logic(log_detail):
         log_detail("错误: 无法加载symbols，程序终止。")
         return
     
-    # 新增：加载 symbol->tags 映射
+    # 1.1 (新增) 应用 SYMBOL_BLACKLIST 进行初步过滤
+    symbol_blacklist = CONFIG.get("SYMBOL_BLACKLIST", set())
+    if symbol_blacklist:
+        original_count = len(all_symbols)
+        # 找出被移除的symbols，用于日志记录
+        removed_symbols = set(all_symbols) & symbol_blacklist
+        
+        if removed_symbols:
+            log_detail(f"\n--- 应用 Symbol 黑名单 ---")
+            log_detail(f"从处理列表中移除了 {len(removed_symbols)} 个在黑名单中的 symbol: {sorted(list(removed_symbols))}")
+            # 如果追踪的 symbol 被移除，特别提示
+            if SYMBOL_TO_TRACE and SYMBOL_TO_TRACE in removed_symbols:
+                log_detail(f"追踪信息: 目标 symbol '{SYMBOL_TO_TRACE}' 在 Symbol 黑名单中，已被移除，将不会被处理。")
+
+        # 创建新的、不包含黑名单成员的 symbol 列表
+        all_symbols = [s for s in all_symbols if s not in symbol_blacklist]
+        log_detail(f"Symbol 列表从 {original_count} 个缩减到 {len(all_symbols)} 个。")
+
     symbol_to_tags_map = load_symbol_tags(DESCRIPTION_JSON_FILE)
     
     # 2. 构建数据缓存 (一次性完成)
