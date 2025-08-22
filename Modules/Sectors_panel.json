@@ -9,7 +9,8 @@
     "Technology": {
         "GIB": "",
         "BLSH": "",
-        "TSM": ""
+        "TSM": "",
+        "MNDY": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
@@ -21,7 +22,8 @@
         "FRPT": ""
     },
     "Industrials": {
-        "FLY": ""
+        "FLY": "",
+        "WSO": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
@@ -137,10 +139,38 @@
         "WDAY": "",
         "PSTG": ""
     },
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
-    "PE_invalid": {},
+    "Strategy12": {
+        "BJ": "",
+        "CRWD": "",
+        "OKTA": ""
+    },
+    "Strategy34": {
+        "APO": "",
+        "BROS": "",
+        "BWXT": "",
+        "CART": "",
+        "CLS": "",
+        "CVNA": "",
+        "DASH": "",
+        "GWRE": "",
+        "PLTR": "",
+        "SHOP": "",
+        "VRT": "",
+        "WING": ""
+    },
+    "PE_valid": {
+        "AVAV": "",
+        "CAR": "",
+        "FDS": "",
+        "LII": "",
+        "ONON": ""
+    },
+    "PE_invalid": {
+        "JOBY": "",
+        "OKLO": "",
+        "RBLX": "",
+        "SMR": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
