@@ -110,9 +110,13 @@
         "AVAV": "",
         "APO": "",
         "BWXT": "",
-        "SAIA": "",
         "RH": "",
-        "SMR": ""
+        "SMR": "",
+        "CLS": "",
+        "VRT": "",
+        "LII": "",
+        "OKLO": "",
+        "RBLX": ""
     },
     "Next Week": {
         "MRVL": ""
@@ -132,52 +136,20 @@
         "CRWD": "",
         "CPRT": "",
         "COST": "",
-        "VRSN": "",
-        "DUOL": "",
-        "MNSO": "",
         "DELL": "",
-        "WDAY": "",
         "PSTG": ""
     },
-    "Strategy12": {
-        "BJ": "",
-        "CRWD": "",
-        "OKTA": ""
-    },
-    "Strategy34": {
-        "APO": "",
-        "BROS": "",
-        "BWXT": "",
-        "CART": "",
-        "CLS": "",
-        "CVNA": "",
-        "DASH": "",
-        "GWRE": "",
-        "PLTR": "",
-        "SHOP": "",
-        "VRT": "",
-        "WING": ""
-    },
-    "PE_valid": {
-        "AVAV": "",
-        "CAR": "",
-        "FDS": "",
-        "LII": "",
-        "ONON": ""
-    },
-    "PE_invalid": {
-        "JOBY": "",
-        "OKLO": "",
-        "RBLX": "",
-        "SMR": ""
-    },
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {},
+    "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
         "CNYUSD": "人兑美",
         "JPYI": "日元指数",
-        "USDCNY": "",
-        "USDJPY": "",
+        "USDCNY": "美兑人",
+        "USDJPY": "美兑日",
         "EURUSD": "",
         "CNYJPY": "",
         "GBPI": "英镑指数",
@@ -210,7 +182,13 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USInitial": "21 USInitial"
+        "USInitial": "21 USInitial",
+        "USGDP": "28 USGDP",
+        "USConspending": "28 USConspending",
+        "CorePCEM": "29 CorePCEM",
+        "CorePCEY": "29 CorePCEY",
+        "PCEY": "29 PCEY",
+        "USConfidence": "29 USConfidence"
     },
     "Economic_All": {
         "USGDP": "",

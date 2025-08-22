@@ -9,7 +9,8 @@
     "Technology": {
         "GIB": "",
         "BLSH": "",
-        "TSM": ""
+        "TSM": "",
+        "MNDY": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
@@ -21,7 +22,8 @@
         "FRPT": ""
     },
     "Industrials": {
-        "FLY": ""
+        "FLY": "",
+        "WSO": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
@@ -108,9 +110,13 @@
         "AVAV": "",
         "APO": "",
         "BWXT": "",
-        "SAIA": "",
         "RH": "",
-        "SMR": ""
+        "SMR": "",
+        "CLS": "",
+        "VRT": "",
+        "LII": "",
+        "OKLO": "",
+        "RBLX": ""
     },
     "Next Week": {
         "MRVL": ""
@@ -130,11 +136,7 @@
         "CRWD": "",
         "CPRT": "",
         "COST": "",
-        "VRSN": "",
-        "DUOL": "",
-        "MNSO": "",
         "DELL": "",
-        "WDAY": "",
         "PSTG": ""
     },
     "Strategy12": {},
@@ -146,8 +148,8 @@
         "CNYI": "人民币指数",
         "CNYUSD": "人兑美",
         "JPYI": "日元指数",
-        "USDCNY": "",
-        "USDJPY": "",
+        "USDCNY": "美兑人",
+        "USDJPY": "美兑日",
         "EURUSD": "",
         "CNYJPY": "",
         "GBPI": "英镑指数",
@@ -180,7 +182,13 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USInitial": "21 USInitial"
+        "USInitial": "21 USInitial",
+        "USGDP": "28 USGDP",
+        "USConspending": "28 USConspending",
+        "CorePCEM": "29 CorePCEM",
+        "CorePCEY": "29 CorePCEY",
+        "PCEY": "29 PCEY",
+        "USConfidence": "29 USConfidence"
     },
     "Economic_All": {
         "USGDP": "",
