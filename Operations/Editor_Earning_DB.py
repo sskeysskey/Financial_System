@@ -1,7 +1,7 @@
 import sys
 import sqlite3
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, simpledialog
 
 # 查询数据库，返回列名和记录数据
 def query_database_data(db_file, table_name, condition, fields, include_condition):
@@ -51,14 +51,8 @@ def refresh_treeview(tree, db_info):
                                           db_info['fields'],
                                           db_info['include_condition'])
     
-    if not rows:
-        # 显示提示框，用户点击“确定”后继续执行
-        messagebox.showinfo("提示", "没有数据可显示")
-        # 获取主窗口并销毁（这里使用 tree.winfo_toplevel() 获取主窗口）
-        root = tree.winfo_toplevel()
-        root.destroy()  # 销毁主窗口
-        import sys
-        sys.exit(0)     # 强制退出程序
+    # 注意：此处已移除原先在找不到数据时会退出程序的代码块。
+    # 新的逻辑可以更好地处理（例如删除最后一条记录后）列表为空的情况。
 
     # 设置列
     tree["columns"] = columns
@@ -208,84 +202,63 @@ def create_main_window(db_info):
         os._exit(0)  # 强制终止进程
 
 if __name__ == '__main__':
+    # 首先，确定要检查的初始 Symbol
     if len(sys.argv) > 1:
-        arg = sys.argv[1]
-        clipboard_content = arg.upper()  # 转为大写以保持一致性
+        current_symbol = sys.argv[1].upper()
     else:
-        # 使用tkinter创建简单的输入对话框而不是控制台输入
-        root = tk.Tk()
-        root.withdraw()  # 隐藏主窗口
-        
-        # 创建一个简单的输入对话框
-        def get_input():
-            dialog = tk.Toplevel(root)
-            # 先隐藏窗口，防止其在定位前显示
-            dialog.withdraw()  
-            dialog.title("编辑财报数据")
-            dialog.geometry("300x100")
-            dialog.update_idletasks()  # 刷新以获取正确窗口尺寸
+        # 如果没有命令行参数，则初始 Symbol 为空，将直接触发弹窗询问
+        current_symbol = None
 
-            # 固定对话框大小（也可以根据需求使用winfo_width/winfo_height）
-            width = 300
-            height = 100
-            # 居中计算
-            x = (dialog.winfo_screenwidth() // 2) - (width // 2)
-            y = (dialog.winfo_screenheight() // 2) - (height // 2) - 200
-            dialog.geometry(f"{width}x{height}+{x}+{y}")
+    # 数据库固定信息
+    db_path = '/Users/yanzhang/Coding/Database/Finance.db'
+    table_name = 'Earning'
 
-            # 定位完成后，再显示窗口
-            dialog.deiconify()  
-            
-            label = tk.Label(dialog, text="请输入Symbol")
-            label.pack(pady=5)
-            
-            entry = tk.Entry(dialog, width=30)
-            entry.pack(pady=5)
-            entry.focus_set()  # 自动聚焦到输入框
-            
-            result = [None]  # 使用列表存储结果，便于在内部函数中修改值
-            
-            def on_ok():
-                result[0] = entry.get().upper()  # 获取输入并转为大写
-                dialog.destroy()
-            
-            def on_cancel():
-                dialog.destroy()
-                # 确保程序在取消时完全退出
-                import os
-                os._exit(0)
-            
-            button_frame = tk.Frame(dialog)
-            button_frame.pack(pady=5)
-            
-            ok_button = tk.Button(button_frame, text="确定", command=on_ok)
-            ok_button.pack(side=tk.LEFT, padx=5)
-            
-            cancel_button = tk.Button(button_frame, text="取消", command=on_cancel)
-            cancel_button.pack(side=tk.LEFT, padx=5)
-            
-            # 绑定回车键和ESC键
-            dialog.bind("<Return>", lambda e: on_ok())
-            dialog.bind("<Escape>", lambda e: on_cancel())
-            
-            dialog.wait_window(dialog)
-            return result[0]
-        
-        clipboard_content = get_input()
-        # 如果用户取消了输入，退出程序
-        if clipboard_content is None:
-            import os
-            os._exit(0)  # 强制终止进程
-        
-        root.destroy()  # 销毁临时根窗口
+    # 循环直到找到一个有数据的 Symbol 或者用户取消操作
+    while True:
+        rows = []
+        # 只有在 current_symbol 有效时才查询数据库
+        if current_symbol:
+            condition = f"name = '{current_symbol}'"
+            _, rows = query_database_data(db_path, table_name, condition, '*', True)
 
-    # 数据库配置信息
+        if rows:
+            # 找到了数据，跳出循环，准备创建主窗口
+            break
+        else:
+            # 如果没有找到数据（或者初始就没有 Symbol），则弹窗让用户输入
+            # 创建一个临时的 Tk 根窗口以承载 simpledialog
+            prompt_root = tk.Tk()
+            prompt_root.withdraw()  # 隐藏这个临时窗口
+
+            prompt_text = "请输入 Symbol:"
+            # 如果是查询失败，提示用户上一个失败的 Symbol
+            if current_symbol:
+                prompt_text = f"在数据库中未找到 Symbol: '{current_symbol}'\n\n请输入新的 Symbol (或取消以退出):"
+
+            new_symbol = simpledialog.askstring(
+                "输入 Symbol",
+                prompt_text,
+                parent=prompt_root
+            )
+            
+            prompt_root.destroy() # 销毁临时窗口
+
+            if new_symbol:
+                # 用户输入了新的 Symbol，更新它并继续下一次循环
+                current_symbol = new_symbol.strip().upper()
+            else:
+                # 如果用户点击了“取消”或关闭了对话框，则退出整个程序
+                sys.exit(0)
+
+    # 当循环结束时，我们保证 current_symbol 是一个有效的、在数据库中有对应数据的 Symbol
+    # 现在，根据这个有效的 Symbol 创建 db_info
     db_info = {
-        'path': '/Users/yanzhang/Coding/Database/Finance.db',  # 数据库路径
-        'table': 'Earning',  # 数据表名称
-        'condition': f"name = '{clipboard_content}'" if clipboard_content else "",
-        'fields': '*',  # 查询全部字段
-        'include_condition': True if clipboard_content else False
+        'path': db_path,
+        'table': table_name,
+        'condition': f"name = '{current_symbol}'",
+        'fields': '*',
+        'include_condition': True
     }
     
+    # 使用包含有效数据的 db_info 创建并运行主应用窗口
     create_main_window(db_info)

@@ -773,6 +773,9 @@
         "JSMD",
         "IVOV",
         "EVMO",
-        "LMBS"
+        "LMBS",
+        "SMMU",
+        "IOO",
+        "FXO"
     ]
 }

@@ -413,7 +413,6 @@ def main():
         symbol = simpledialog.askstring("输入 Symbol", prompt, parent=hidden_root)
         if not symbol:
             # 用户按了 取消 或者输入空
-            messagebox.showinfo("已取消", "未指定合法的 Symbol，程序退出。", parent=hidden_root)
             hidden_root.destroy()
             return
         # 再次查找

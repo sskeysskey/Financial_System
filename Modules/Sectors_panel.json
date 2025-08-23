@@ -140,7 +140,6 @@
         "PSTG": ""
     },
     "Strategy12": {
-        "CRWD": "",
         "OKTA": "",
         "PSTG": ""
     },
@@ -201,7 +200,7 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USInitial": "21 USInitial",
+        "USInitial": "28 USInitial",
         "USGDP": "28 USGDP",
         "USConspending": "28 USConspending",
         "CorePCEM": "29 CorePCEM",

@@ -139,10 +139,29 @@
         "DELL": "",
         "PSTG": ""
     },
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
-    "PE_invalid": {},
+    "Strategy12": {
+        "CRWD": "",
+        "OKTA": "",
+        "PSTG": ""
+    },
+    "Strategy34": {
+        "APO": "",
+        "BWXT": "",
+        "CART": "",
+        "GWRE": "",
+        "PLTR": "",
+        "TW": "",
+        "VRT": "",
+        "WM": ""
+    },
+    "PE_valid": {
+        "DUOL": "",
+        "VRSN": ""
+    },
+    "PE_invalid": {
+        "RBLX": "",
+        "SOUN": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
@@ -182,7 +201,7 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USInitial": "21 USInitial",
+        "USInitial": "28 USInitial",
         "USGDP": "28 USGDP",
         "USConspending": "28 USConspending",
         "CorePCEM": "29 CorePCEM",
