@@ -4,11 +4,10 @@ import os
 import datetime
 from collections import defaultdict
 
-SYMBOL_TO_TRACE = ""
+SYMBOL_TO_TRACE = "OKTA"
 LOG_FILE_PATH = "/Users/yanzhang/Downloads/Season_trace_log.txt"
 
-# --- 1. 配置文件和路径 ---
-# 使用一个配置字典来管理所有路径，更清晰
+# --- 1. 配置文件和路径 --- 使用一个配置字典来管理所有路径，更清晰
 PATHS = {
     "base": "/Users/yanzhang/Coding/",
     "news": lambda base: os.path.join(base, "News"),
@@ -38,8 +37,7 @@ PANEL_JSON_FILE = PATHS["panel_json"](config_path)
 DESCRIPTION_JSON_FILE = PATHS["description_json"](config_path)
 
 
-# --- 2. 可配置参数 ---
-# 使用一个配置字典来管理所有参数
+# --- 2. 可配置参数 --- 使用一个配置字典来管理所有参数
 CONFIG = {
     # ========== 新增/修改部分 1/2 ==========
     # 新增：Symbol 黑名单。所有在此列表中的 symbol 将在处理开始前被直接过滤。
@@ -604,16 +602,39 @@ def run_strategy_4(data, cursor, symbol_sector_map, symbol_to_trace, log_detail)
 
 # --- 6. 过滤模块 (已集成追踪系统) ---
 
-def filter_recent_negative_earnings(db_path):
-    """高效获取最近30天内有负财报的symbols集合"""
-    one_month_ago = (datetime.date.today() - datetime.timedelta(days=30)).isoformat()
+# ========== 此处为核心修改：替换旧函数 ==========
+def get_symbols_with_latest_negative_earning(db_path):
+    """
+    获取最新一期财报为负 (price < 0) 的所有 symbol 集合。
+    这取代了原先的“最近30天”逻辑。
+    """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-    cursor.execute(
-        "SELECT DISTINCT name FROM Earning WHERE date >= ? AND price < 0",
-        (one_month_ago,)
+    
+    # 使用窗口函数 ROW_NUMBER 来为每个 symbol 的财报按日期降序排名。
+    # rn = 1 就代表是最新的一期财报。
+    # 然后我们只筛选出那些最新财报 price < 0 的 symbol。
+    query = """
+    SELECT name
+    FROM (
+        SELECT
+            name,
+            price,
+            ROW_NUMBER() OVER(PARTITION BY name ORDER BY date DESC) as rn
+        FROM Earning
     )
-    symbols = {row[0] for row in cursor.fetchall()}
+    WHERE rn = 1 AND price < 0;
+    """
+    
+    try:
+        cursor.execute(query)
+        symbols = {row[0] for row in cursor.fetchall()}
+        print(f"\n过滤条件: 找到 {len(symbols)} 个最新一期财报为负的 symbol。")
+    except sqlite3.OperationalError as e:
+        print(f"错误: 查询最新负财报时发生数据库错误: {e}")
+        print("这可能是因为您的 SQLite 版本不支持窗口函数。将返回空集合。")
+        symbols = set()
+        
     conn.close()
     print(f"\n过滤条件: 找到 {len(symbols)} 个最近有负财报的 symbol。")
     return symbols
@@ -637,10 +658,11 @@ def apply_filters(symbols_set, stock_data_cache, blacklist, negative_earnings_se
             continue
         elif is_tracing: log_detail(f"[{symbol}] 通过(黑名单): symbol不在黑名单中。")
 
+        # 核心修改点：此处的 negative_earnings_set 现在是“最新财报为负”的集合
         if is_main_list and symbol in negative_earnings_set:
-            if is_tracing: log_detail(f"[{symbol}] 过滤(主列表-负财报): symbol在最近负财报集合中。")
+            if is_tracing: log_detail(f"[{symbol}] 过滤(主列表-最新财报为负): symbol在最新负财报集合中。")
             continue
-        elif is_tracing and is_main_list: log_detail(f"[{symbol}] 通过(主列表-负财报): symbol不在最近负财报集合中。")
+        elif is_tracing and is_main_list: log_detail(f"[{symbol}] 通过(主列表-最新财报为负): symbol不在最新负财报集合中。")
 
         # 过滤3: 成交额
         turnover = data['latest_price'] * data['latest_volume']
@@ -759,7 +781,7 @@ def run_processing_logic(log_detail):
 
     # 5. 应用通用过滤器
     blacklist = load_blacklist(BLACKLIST_JSON_FILE)
-    negative_earnings_set = filter_recent_negative_earnings(DB_FILE)
+    negative_earnings_set = get_symbols_with_latest_negative_earning(DB_FILE)
 
     log_detail("\n--- 开始对主列表进行过滤 ---")
         # 对 s1 用负财报过滤
