@@ -550,7 +550,9 @@
         "SBSW",
         "TFPM",
         "MP",
-        "SXT"
+        "SXT",
+        "HL",
+        "IAG"
     ],
     "Communication_Services": [
         "GOOGL",

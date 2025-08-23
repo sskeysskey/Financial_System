@@ -26,7 +26,8 @@
         "NTES",
         "AMX",
         "RBLX",
-        "APP"
+        "APP",
+        "GSAT"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -96,7 +97,9 @@
         "E",
         "LNG",
         "TRP",
-        "PSX"
+        "PSX",
+        "SLB",
+        "SU"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -157,7 +160,8 @@
         "HOOD",
         "ARES",
         "NDAQ",
-        "AIG"
+        "AIG",
+        "AMP"
     ],
     "Healthcare": [
         "LLY",
@@ -242,7 +246,8 @@
         "SPG",
         "DLR",
         "O",
-        "PSA"
+        "PSA",
+        "CBRE"
     ],
     "Technology": [
         "AAPL",
@@ -295,7 +300,8 @@
         "NET",
         "NXPI",
         "TEL",
-        "GLW"
+        "GLW",
+        "PAYX"
     ],
     "Utilities": [
         "NEE",
