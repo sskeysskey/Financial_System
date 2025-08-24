@@ -42,10 +42,9 @@ CONFIG = {
         "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare",
         "Industrials", "Real_Estate", "Technology", "Utilities"
     },
-    # ========== 新增/修改部分 1/2 ==========
     # 新增：Symbol 黑名单。所有在此列表中的 symbol 将在处理开始前被直接过滤。
     "SYMBOL_BLACKLIST": {
-        
+        "TW"
     },
     # ========================================
     "TURNOVER_THRESHOLD": 100_000_000,
@@ -62,6 +61,10 @@ CONFIG = {
     "MIN_GROUP_SIZE_FOR_RELAXED_FILTER": 3,
     # ========================================
     "MAX_INCREASE_PERCENTAGE_SINCE_LOW": 0.03,
+    # ========== 在这里添加新参数 ==========
+    # 条件1c 的专属参数：最新价比最新财报收盘价低至少 X%
+    "PRICE_DROP_FOR_COND1C": 0.14,
+    # ========================================
     # 新增：Tag 黑名单。所有包含以下任一 tag 的 symbol 将被过滤掉。
     "TAG_BLACKLIST": {
         "天然气",
@@ -290,10 +293,11 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
 def run_strategy(data, symbol_to_trace, log_detail, drop_pct_large, drop_pct_small):
     """
     此函数现在接收下跌百分比作为参数，而不是从全局CONFIG读取。
-    条件1 (二选一)：
+    条件1 (三选一)：  # <--- 修改部分：更新注释
       a) 最近一次财报的涨跌幅 latest_er_pct 为正
       b) 最新财报收盘价 > 过去 N 次财报收盘价平均值
-    条件2：最新价 <= 最近一期财报收盘价 * (1 - X%)
+      c) 最新收盘价比最新一期财报收盘价低至少 X% (X 来自 CONFIG)
+    条件2：最新价 <= 最近一期财报收盘价 * (1 - Y%)
     条件3：最新成交额 >= TURNOVER_THRESHOLD
     """
     symbol = data.get('symbol')
@@ -322,21 +326,29 @@ def run_strategy(data, symbol_to_trace, log_detail, drop_pct_large, drop_pct_sma
     latest_er_price = prices_to_check[-1]
     cond1_b = latest_er_price > avg_recent_price
 
-    # ---- 条件1：二选一 ----
-    cond1_ok = cond1_a or cond1_b
+    # <--- 新增部分：开始 --->
+    # 条件1c: 最新收盘价比最新一期财报收盘价低至少 X%
+    drop_pct_for_cond1c = CONFIG["PRICE_DROP_FOR_COND1C"]
+    threshold_price1c = latest_er_price * (1 - drop_pct_for_cond1c)
+    cond1_c = data['latest_price'] <= threshold_price1c
+    # <--- 新增部分：结束 --->
+
+    # ---- 条件1：三选一 ---- # <--- 修改部分
+    cond1_ok = cond1_a or cond1_b or cond1_c
 
     # 追踪日志
     if is_tracing:
-        log_detail("  - 条件1 (二选一):")
+        log_detail("  - 条件1 (三选一):") # <--- 修改部分
         # log_detail("    - a) 最近 " f"{CONFIG['RECENT_EARNINGS_COUNT']} 次财报涨跌幅都 > 0: " f"{er_pcts_to_check} -> {cond1_a}")
         log_detail(f"    - a) 最新一次财报涨跌幅 > 0: {latest_er_pct:.4f} > 0 -> {cond1_a}")
         log_detail(f"    - b) 最新财报收盘价 > 最近{CONFIG['RECENT_EARNINGS_COUNT']}次平均价: {latest_er_price:.2f} > {avg_recent_price:.2f} -> {cond1_b}")
+        log_detail(f"    - c) 最新价比最新财报收盘价低至少 {drop_pct_for_cond1c*100}%: 最新价({data['latest_price']:.2f}) <= 阈值价({threshold_price1c:.2f}) -> {cond1_c}")
         log_detail(f"    - 条件1结果: {cond1_ok}")
     if not cond1_ok:
         if is_tracing: log_detail("  - 结果: False (条件1未满足)")
         return False
 
-    # 条件2: 最新价 < 最新财报收盘价 * (1 - X%)
+    # 条件2: 最新价 < 最新财报收盘价 * (1 - Y%)
     market_cap = data.get('market_cap')
     # 使用传入的参数
     drop_pct = (

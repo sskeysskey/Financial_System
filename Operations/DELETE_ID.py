@@ -32,7 +32,7 @@ def delete_records(db_file, table_name, ids):
 # 使用示例
 db_path = '/Users/yanzhang/Coding/Database/Finance.db'  # 配置数据库文件路径
 # db_path = '/Users/yanzhang/Coding/Database/Analysis.db'  # 配置数据库文件路径
-table = 'Basic_Materials'
-ids_to_delete = [333178]
+table = 'Currencies'
+ids_to_delete = [208482]
 
 delete_records(db_path, table, ids_to_delete)

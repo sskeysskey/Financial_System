@@ -11,7 +11,6 @@ JSON_PATH = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json"
 OUTPUT_PATH = "/Users/yanzhang/Coding/News/HighLow.txt"
 BACKUP_OUTPUT_PATH = "/Users/yanzhang/Coding/News/backup/HighLow.txt" # Path for the backup file
 
-# Categories to process as per your request
 TARGET_CATEGORIES = [
     "Bonds", "Currencies", "Crypto", "Indices",
     "Commodities", "ETFs", "Economics"

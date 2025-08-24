@@ -103,12 +103,10 @@
         "XRP": ""
     },
     "Today": {
-        "CART": "",
         "DASH": "",
         "CVNA": "",
         "SHOP": "",
         "AVAV": "",
-        "APO": "",
         "BWXT": "",
         "RH": "",
         "SMR": "",
@@ -116,7 +114,8 @@
         "VRT": "",
         "LII": "",
         "OKLO": "",
-        "RBLX": ""
+        "RBLX": "",
+        "COST": ""
     },
     "Next Week": {
         "MRVL": ""
@@ -127,41 +126,25 @@
     "3 Weeks": {
         "GIS": "",
         "IOT": "",
-        "FDS": "",
         "AVAV": ""
     },
     "Watching": {
-        "BJ": "",
         "OKTA": "",
         "CRWD": "",
         "CPRT": "",
-        "COST": "",
         "DELL": "",
-        "PSTG": ""
-    },
-    "Strategy12": {
-        "CRWD": "",
-        "OKTA": "",
-        "PSTG": ""
-    },
-    "Strategy34": {
+        "PSTG": "",
         "APO": "",
-        "BWXT": "",
         "CART": "",
-        "GWRE": "",
-        "PLTR": "",
-        "TW": "",
         "VRT": "",
-        "WM": ""
-    },
-    "PE_valid": {
         "DUOL": "",
-        "VRSN": ""
+        "VRSN": "",
+        "FDS": ""
     },
-    "PE_invalid": {
-        "RBLX": "",
-        "SOUN": ""
-    },
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {},
+    "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

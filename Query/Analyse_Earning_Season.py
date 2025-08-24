@@ -4,7 +4,7 @@ import os
 import datetime
 from collections import defaultdict
 
-SYMBOL_TO_TRACE = "OKTA"
+SYMBOL_TO_TRACE = ""
 LOG_FILE_PATH = "/Users/yanzhang/Downloads/Season_trace_log.txt"
 
 # --- 1. 配置文件和路径 --- 使用一个配置字典来管理所有路径，更清晰
@@ -39,12 +39,9 @@ DESCRIPTION_JSON_FILE = PATHS["description_json"](config_path)
 
 # --- 2. 可配置参数 --- 使用一个配置字典来管理所有参数
 CONFIG = {
-    # ========== 新增/修改部分 1/2 ==========
     # 新增：Symbol 黑名单。所有在此列表中的 symbol 将在处理开始前被直接过滤。
     "SYMBOL_BLACKLIST": {
-        # 在这里添加不希望出现在任何结果中的 symbol，例如:
-        # "AAPL", 
-        # "GOOGL",
+        "TW"
     },
     # ========================================
     "NUM_EARNINGS_TO_CHECK": 2,
@@ -56,7 +53,6 @@ CONFIG = {
     "MIN_TURNOVER": 100_000_000,
     "MARKETCAP_THRESHOLD": 100_000_000_000,
     "MAX_RISE_FROM_7D_LOW": 0.03,
-    # ========== 新增/修改部分 3/5 ==========
     # 新增：Tag 黑名单。所有包含以下任一 tag 的 symbol 将被过滤掉。
     "TAG_BLACKLIST": {
         "天然气",
@@ -66,7 +62,6 @@ CONFIG = {
 }
 
 # --- 3. 辅助与文件操作模块 ---
-
 def create_symbol_to_sector_map(json_file_path):
     """从Sectors_All.json创建 symbol -> sector 的映射。"""
     try:
@@ -351,7 +346,7 @@ def run_strategy_2_5(data, symbol_to_trace, log_detail):
 def run_strategy_3(data, cursor, symbol_sector_map, symbol_to_trace, log_detail):
     """ 策略 3 (修改后):
     (1) 如果最近2次财报上升，最新价 < 过去N次财报最高价 * (1-9%)
-    (2) 如果不上升，最近2次财报差额 >= 4%，且最新价 < 过去N次财报最低价
+    (2) 如果不上升，最近2次财报差额 >= 4%，最新财报非负，且最新价 < 过去N次财报最低价
     ---
     (3) 必须满足(1)或(2)其中之一
     (4) 必须满足：最新价比前10天最低价高不超过3%
@@ -396,14 +391,23 @@ def run_strategy_3(data, cursor, symbol_sector_map, symbol_to_trace, log_detail)
         # 非上升分支
         if is_tracing: log_detail(f"    - 分支(非上升):")
         
+        # 条件1: 差额检查
         diff_abs = abs(asc_prices[-1] - asc_prices[-2])
         min_diff = asc_prices[-2] * CONFIG["MIN_DROP_PERCENTAGE"]
         diff_ok = diff_abs >= min_diff
+        
+        # 新增条件2: 最新财报不能为负
+        latest_er_positive_ok = data['earning_record_price'] is not None and data['earning_record_price'] >= 0
+        
+        # 条件3: 低价检查
         price_low_ok = data['latest_price'] < min(prices)
-        price_ok = diff_ok and price_low_ok
+        
+        # 合并所有条件
+        price_ok = diff_ok and latest_er_positive_ok and price_low_ok
         
         if is_tracing:
             log_detail(f"      - 差额检查: abs({asc_prices[-1]} - {asc_prices[-2]}) ({diff_abs:.4f}) >= {asc_prices[-2]} * {CONFIG['MIN_DROP_PERCENTAGE']} ({min_diff:.4f}) -> {diff_ok}")
+            log_detail(f"      - 最新财报检查: Earning表price({data['earning_record_price']}) >= 0 -> {latest_er_positive_ok}")
             log_detail(f"      - 低价检查: latest_price({data['latest_price']}) < min({prices}) ({min(prices)}) -> {price_low_ok}")
             log_detail(f"      - 分支结果: {price_ok}")
 
