@@ -16,6 +16,19 @@ def remove_markdown_citations(text: str) -> str:
     pattern = re.compile(r'\[\[\d+\]\]\(https?://[^)\s]+[^)]*\)', flags=re.IGNORECASE)
     return pattern.sub('', text)
 
+def truncate_from_learn_more(text: str) -> str:
+    """
+    一旦发现 '--- Learn more:'，删除从该标记起直至文本末尾的所有内容。
+    匹配大小写严格一致，避免误删相似但非目标的文本。
+    """
+    # 使用非贪婪前缀匹配，捕获 '--- Learn more:' 之前的所有内容
+    # (?s) 等价于 DOTALL，使 '.' 跨行
+    pattern = re.compile(r'(?s)(.*?)--- Learn more:.*$')
+    m = pattern.match(text)
+    if m:
+        return m.group(1)
+    return text
+
 def process_file(file_path: str, make_backup: bool = True) -> None:
     p = Path(file_path)
     if not p.exists():
@@ -30,15 +43,18 @@ def process_file(file_path: str, make_backup: bool = True) -> None:
     # 读取原文本（保持换行）
     original = p.read_text(encoding='utf-8')
 
-    # 执行清理
-    cleaned = remove_markdown_citations(original)
+    # 步骤1：清理 [[数字]](http/https... )
+    step1 = remove_markdown_citations(original)
+
+    # 步骤2：从 '--- Learn more:' 起截断到末尾
+    cleaned = truncate_from_learn_more(step1)
 
     # 仅在有改动时写回
     if cleaned != original:
         p.write_text(cleaned, encoding='utf-8', newline='')
         print(f'已清理并写回：{p}')
     else:
-        print('未发现需要清理的匹配项，文件未改动。')
+        print('未发现需要清理或截断的内容，文件未改动。')
 
 if __name__ == '__main__':
     # 请修改为你的实际路径
