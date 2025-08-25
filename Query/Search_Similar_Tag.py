@@ -194,8 +194,8 @@ def execute_external_script(script_type, keyword):
         'tags':     f'{base_path}/Operations/Editor_Tags.py',
         'editor_earning': f'{base_path}/Operations/Editor_Earning_DB.py',
         'earning':  f'{base_path}/Operations/Insert_Earning.py',
-        'event_input': f'{base_path}/Operations/Insert_Events.py', # 新增
-        'event_editor': f'{base_path}/Operations/Editor_Events.py', # 新增
+        'event_input': f'{base_path}/Operations/Insert_Events.py',
+        'event_editor': f'{base_path}/Operations/Editor_Events.py',
         'futu':     '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt',
         'kimi':     '/Users/yanzhang/Coding/ScriptEditor/CheckKimi_Earning.scpt'
     }
@@ -413,30 +413,83 @@ class SimilarityViewerWindow(QMainWindow):
             QMessageBox.information(self, "复制成功", f"已将 {symbol} 复制到组「{group}」")
         except Exception as e:
             QMessageBox.critical(self, "保存失败", f"写入 {self.panel_config_path} 时出错: {e}")
-            
-    def get_latest_earning_info(self, symbol: str) -> tuple[date|None, float|None]:
+
+    # ### 修改 START: 新增的、用于复杂颜色逻辑的数据获取函数 ###
+    def get_color_decision_data(self, symbol: str) -> tuple[float | None, str | None, date | None]:
         """
-        从 Earning 表里拿 symbol 的最新财报日期和 price。
-        返回 (date, price)。找不到就 (None, None)。
+        获取决定按钮颜色所需的所有数据。
+        1. 从 Earning 表获取最近两次财报日期和最新的 price。
+        2. 从 sector 表获取这两天的收盘价。
+        3. 比较收盘价得出趋势。
+
+        返回: (latest_earning_price, stock_price_trend, latest_earning_date)
+              - stock_price_trend: 'rising', 'falling', 或 None
         """
-        db_path = "/Users/yanzhang/Coding/Database/Finance.db"
         try:
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT date, price FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 1",
-                (symbol,)
-            )
-            row = cursor.fetchone()
-            conn.close()
-            if row and row[0] is not None:
-                d = datetime.strptime(row[0], "%Y-%m-%d").date()
-                p = float(row[1]) if row[1] is not None else 0.0
-                return d, p
+            # 步骤 1: 获取最近两次财报信息
+            with sqlite3.connect(DB_PATH) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT date, price FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 2",
+                    (symbol,)
+                )
+                earning_rows = cursor.fetchall()
+
+            if not earning_rows:
+                return None, None, None # 没有财报记录
+
+            latest_earning_date_str, latest_earning_price_str = earning_rows[0]
+            latest_earning_date = datetime.strptime(latest_earning_date_str, "%Y-%m-%d").date()
+            latest_earning_price = float(latest_earning_price_str) if latest_earning_price_str is not None else 0.0
+
+            if len(earning_rows) < 2:
+                # 只有一次财报，无法比较趋势
+                return latest_earning_price, None, latest_earning_date
+
+            previous_earning_date_str, _ = earning_rows[1]
+            previous_earning_date = datetime.strptime(previous_earning_date_str, "%Y-%m-%d").date()
+
+            # 步骤 2: 查找 sector 表名
+            sector_table = next((s for s, names in self.sector_data.items() if symbol in names), None)
+            if not sector_table:
+                # 找不到板块，也无法比较
+                return latest_earning_price, None, latest_earning_date
+
+            # 步骤 3: 获取两个日期的收盘价
+            with sqlite3.connect(DB_PATH) as conn:
+                cursor = conn.cursor()
+                
+                # 获取最新财报日的收盘价
+                cursor.execute(
+                    f'SELECT price FROM "{sector_table}" WHERE name = ? AND date = ?',
+                    (symbol, latest_earning_date.isoformat())
+                )
+                latest_stock_price_row = cursor.fetchone()
+                
+                # 获取前一次财报日的收盘价
+                cursor.execute(
+                    f'SELECT price FROM "{sector_table}" WHERE name = ? AND date = ?',
+                    (symbol, previous_earning_date.isoformat())
+                )
+                previous_stock_price_row = cursor.fetchone()
+
+            if not latest_stock_price_row or not previous_stock_price_row:
+                # 缺少任一天的股价数据
+                return latest_earning_price, None, latest_earning_date
+
+            latest_stock_price = float(latest_stock_price_row[0])
+            previous_stock_price = float(previous_stock_price_row[0])
+            
+            # 步骤 4: 判断趋势
+            trend = 'rising' if latest_stock_price > previous_stock_price else 'falling'
+            
+            return latest_earning_price, trend, latest_earning_date
+
         except Exception as e:
-            print(f"[Earning 查询错误] {symbol}: {e}")
-        return None, None
-    
+            print(f"[颜色决策数据获取错误] {symbol}: {e}")
+            return None, None, None
+    # ### 修改 END ###
+
     def create_source_symbol_widget(self):
         """为源 Symbol 创建一整行可点击的控件（除搜索框外）"""
         # 使用 RowWidget 作为顶层容器
@@ -446,7 +499,8 @@ class SimilarityViewerWindow(QMainWindow):
 
         # 1. 左侧按钮
         button = self.create_symbol_button(self.source_symbol)
-        button.setMinimumHeight(20)
+        # <<< 修改：增加最小高度以适应更大的字体
+        button.setMinimumHeight(35) 
 
         # 2. 源 symbol 的 Compare 值
         compare_value = self.compare_data.get(self.source_symbol, "")
@@ -567,8 +621,9 @@ class SimilarityViewerWindow(QMainWindow):
 
         return container
 
+    # ### 修改 START: 重构 create_symbol_button 以使用新的颜色逻辑 ###
     def create_symbol_button(self, symbol):
-        """创建并配置一个标准的 Symbol 按钮，Tooltip 改为最新财报日期"""
+        """创建并配置一个标准的 Symbol 按钮，Tooltip 改为最新财报日期，颜色根据复杂逻辑决定"""
         button = SymbolButton(symbol)
         button.setCursor(QCursor(Qt.PointingHandCursor))
         button.setFixedWidth(90)
@@ -577,8 +632,10 @@ class SimilarityViewerWindow(QMainWindow):
         # 左键点击事件
         button.clicked.connect(lambda _, s=symbol: self.on_symbol_click(s))
         
-        # --- 修改：用最新财报日期替换原来的 tags tooltip ---
-        latest_date, _ = self.get_latest_earning_info(symbol)
+        # --- 核心修改：调用新函数并根据结果设置颜色 ---
+        earning_price, price_trend, latest_date = self.get_color_decision_data(symbol)
+
+        # 1. 设置 Tooltip
         if latest_date:
             tooltip_text = f"最新财报日期: {latest_date.isoformat()}"
         else:
@@ -593,23 +650,26 @@ class SimilarityViewerWindow(QMainWindow):
         button.setContextMenuPolicy(Qt.CustomContextMenu)
         button.customContextMenuRequested.connect(lambda pos, s=symbol: self.show_context_menu(s))
 
-        # --- 根据最新财报给符号着色（不改） ---
-        latest_date2, latest_price = self.get_latest_earning_info(symbol)
-        if latest_date2:
-            days_diff = (date.today() - latest_date2).days
-        else:
-            days_diff = 999
-        if days_diff <= 30:
-            # 30 天内：price>0 红，price<=0 绿
-            color = 'red' if (latest_price is not None and latest_price > 0) else 'green'
-        else:
-            color = 'white'
+        # 3. 根据新逻辑设置颜色
+        color = 'white' # 默认颜色
+        if earning_price is not None and price_trend is not None:
+            is_price_positive = earning_price > 0
+            is_trend_rising = price_trend == 'rising'
 
-        # 将这个 color 应用到按钮文字上（追加到已有 QSS）
+            if is_trend_rising and is_price_positive:
+                color = '#800080'  # 紫色
+            elif not is_trend_rising and is_price_positive:
+                color = 'blue'     # 蓝色
+            elif is_trend_rising and not is_price_positive:
+                color = 'red'      # 红色
+            elif not is_trend_rising and not is_price_positive:
+                color = 'green'    # 绿色
+        
         base_ss = button.styleSheet() or ""
         button.setStyleSheet(base_ss + f"; color: {color};")
         
         return button
+    # ### 修改 END ###
 
     def on_symbol_click(self, symbol):
         """处理 Symbol 按钮的左键点击事件"""
@@ -670,8 +730,8 @@ class SimilarityViewerWindow(QMainWindow):
             None,
             ("找相似",       lambda: execute_external_script('similar', symbol)),
             None,
-            ("添加新事件", lambda: execute_external_script('event_input', symbol)), # 新增
-            ("编辑事件", lambda: execute_external_script('event_editor', symbol)), # 新增
+            ("添加新事件", lambda: execute_external_script('event_input', symbol)),
+            ("编辑事件", lambda: execute_external_script('event_editor', symbol)),
             None,
             ("添加到 Earning", lambda: execute_external_script('earning', symbol)),
             ("编辑 Earing DB", lambda: execute_external_script('editor_earning', symbol)),
@@ -750,7 +810,7 @@ class SimilarityViewerWindow(QMainWindow):
             /* 背景色改成和主界面一致 */
             background-color: #2E2E2E;
             color: white;
-            font-size: 14px;
+            font-size: 18px; /* <<< 修改：将字体大小从 14px 增加到 18px */
             font-weight: bold;
             padding: 5px;
             border-radius: 4px;
@@ -795,7 +855,7 @@ class SimilarityViewerWindow(QMainWindow):
         QMenu::item:selected {
             background-color: #007ACC;
         }
-        /* ——— 新增：禁用状态下文字变灰 ——— */
+        /* ------ 新增：禁用状态下文字变灰 ------ */
         QMenu::item:disabled {
             color: #777777;
         }
