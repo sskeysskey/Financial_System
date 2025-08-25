@@ -1,49 +1,46 @@
-import sqlite3
+import re
+from pathlib import Path
+import shutil
 
-def search_qint_in_tables(db_path):
-    # 连接数据库
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    
-    # 获取所有表名
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-    tables = cursor.fetchall()
-    
-    found_tables = []
-    
-    # 遍历每个表
-    for table in tables:
-        table_name = table[0]
-        try:
-            # 检查表是否包含name列
-            cursor.execute(f"PRAGMA table_info({table_name})")
-            columns = cursor.fetchall()
-            has_name_column = any(col[1].lower() == 'name' for col in columns)
-            
-            if has_name_column:
-                # 查询包含QINT的记录
-                cursor.execute(f"SELECT * FROM {table_name} WHERE name = 'QINT'")
-                results = cursor.fetchall()
-                
-                if results:
-                    found_tables.append({
-                        'table': table_name,
-                        'records': results
-                    })
-                    print(f"\n在表 {table_name} 中找到QINT:")
-                    for row in results:
-                        print(row)
-        except sqlite3.Error as e:
-            print(f"查询表 {table_name} 时出错: {e}")
-    
-    # 关闭连接
-    conn.close()
-    
-    if not found_tables:
-        print("\n没有找到包含name为QINT的记录")
-    
-    return found_tables
+def remove_markdown_citations(text: str) -> str:
+    """
+    删除形如 [[数字]](http...一长串) 的 Markdown 链接式引用。
+    例：[[1]](https://example.com/abc) -> ''
+    """
+    # 说明：
+    # \[\[\d+\]\]    匹配 [[数字]]
+    # \(https?://    匹配以 http:// 或 https:// 开头的括号
+    # [^)\s]+        至少一个非右括号且非空白字符（避免立刻遇到 ) 或空格）
+    # [^)]*          其后任意非右括号字符，直到遇到右括号
+    # \)             右括号
+    pattern = re.compile(r'\[\[\d+\]\]\(https?://[^)\s]+[^)]*\)', flags=re.IGNORECASE)
+    return pattern.sub('', text)
 
-# 使用示例
-db_path = '/Users/yanzhang/Coding/Database/Finance.db'
-results = search_qint_in_tables(db_path)
+def process_file(file_path: str, make_backup: bool = True) -> None:
+    p = Path(file_path)
+    if not p.exists():
+        raise FileNotFoundError(f'文件不存在：{p}')
+
+    # 备份
+    if make_backup:
+        backup_path = p.with_suffix(p.suffix + '.bak')
+        shutil.copy2(p, backup_path)
+        print(f'已创建备份：{backup_path}')
+
+    # 读取原文本（保持换行）
+    original = p.read_text(encoding='utf-8')
+
+    # 执行清理
+    cleaned = remove_markdown_citations(original)
+
+    # 仅在有改动时写回
+    if cleaned != original:
+        p.write_text(cleaned, encoding='utf-8', newline='')
+        print(f'已清理并写回：{p}')
+    else:
+        print('未发现需要清理的匹配项，文件未改动。')
+
+if __name__ == '__main__':
+    # 请修改为你的实际路径
+    target = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
+    process_file(target, make_backup=True)
