@@ -421,6 +421,8 @@ class SimilarityViewerWindow(QMainWindow):
         1. 从 Earning 表获取最近两次财报日期和最新的 price。
         2. 从 sector 表获取这两天的收盘价。
         3. 比较收盘价得出趋势。
+        4. 如果最新一期财报的日期不是在当前系统日期往前推一个半月之内的话，则该symbol显示为白色
+        5. 如果某个symbol只有一个财报日期，那么即使他的财报日期是在1个半月之内的，也仍然显示为白色
 
         返回: (latest_earning_price, stock_price_trend, latest_earning_date)
               - stock_price_trend: 'rising', 'falling', 或 None
@@ -442,6 +444,14 @@ class SimilarityViewerWindow(QMainWindow):
             latest_earning_date = datetime.strptime(latest_earning_date_str, "%Y-%m-%d").date()
             latest_earning_price = float(latest_earning_price_str) if latest_earning_price_str is not None else 0.0
 
+            # --- 新规则 1: 如果最新财报在45天前，则强制为白色 ---
+            days_diff = (date.today() - latest_earning_date).days
+            if days_diff > 45:
+                # 返回None趋势，使调用处逻辑判定为白色
+                return latest_earning_price, None, latest_earning_date
+
+            # --- 新规则 2: 如果只有一个财报记录，则强制为白色 ---
+            # 这个逻辑已经存在，len < 2 会导致 price_trend 为 None，从而显示白色
             if len(earning_rows) < 2:
                 # 只有一次财报，无法比较趋势
                 return latest_earning_price, None, latest_earning_date
@@ -488,7 +498,7 @@ class SimilarityViewerWindow(QMainWindow):
         except Exception as e:
             print(f"[颜色决策数据获取错误] {symbol}: {e}")
             return None, None, None
-    # ### 修改 END ###
+    # <<< 修改 END >>>
 
     def create_source_symbol_widget(self):
         """为源 Symbol 创建一整行可点击的控件（除搜索框外）"""
@@ -650,7 +660,7 @@ class SimilarityViewerWindow(QMainWindow):
         button.setContextMenuPolicy(Qt.CustomContextMenu)
         button.customContextMenuRequested.connect(lambda pos, s=symbol: self.show_context_menu(s))
 
-        # 3. 根据新逻辑设置颜色
+        # 颜色逻辑部分无需修改，因为 get_color_decision_data 的返回值会处理好
         color = 'white' # 默认颜色
         if earning_price is not None and price_trend is not None:
             is_price_positive = earning_price > 0

@@ -17,6 +17,7 @@ import pickle
 from enum import Enum
 
 json_path = "/Users/yanzhang/Coding/Financial_System/Modules/description.json"
+SECTORS_ALL_PATH = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json"
 
 # --- 1. 引入 MatchCategory 枚举 (模仿 Swift) ---
 class MatchCategory(Enum):
@@ -280,7 +281,15 @@ def load_compare_data():
         print(f"读取Compare_All.txt出错: {e}")
     return compare_data
 
-# MainWindow 类大部分无变化，除了 show_results
+# <<< 新增：用于加载 sectors 数据的函数
+def load_sectors_data():
+    try:
+        with open(SECTORS_ALL_PATH, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"读取 {SECTORS_ALL_PATH} 出错: {e}")
+        return {}
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -372,6 +381,8 @@ class MainWindow(QMainWindow):
         self._finance_db = "/Users/yanzhang/Coding/Database/Finance.db"
 
         self.compare_data = {}
+        # <<< 新增：加载并缓存 sector 数据
+        self.sector_data = load_sectors_data()
 
     def start_search(self):
         keywords = self.input_field.text().strip()
@@ -417,26 +428,78 @@ class MainWindow(QMainWindow):
             if child.widget():
                 child.widget().deleteLater()
 
-    # --- 修改：同时返回 最新盈利日期 和 price ---
-    def get_latest_earning_info(self, symbol: str) -> tuple[date|None, float|None]:
-        db_path = "/Users/yanzhang/Coding/Database/Finance.db"
+    # <<< 删除：旧的 get_latest_earning_info 函数，因为新函数完全覆盖其功能
+    # def get_latest_earning_info(self, symbol: str) -> tuple[date|None, float|None]:
+    #     ...
+
+    # <<< 新增：从 a.py 移植过来的复杂颜色决策函数 >>>
+    def get_color_decision_data(self, symbol: str) -> tuple[float | None, str | None, date | None]:
+        """
+        获取决定按钮颜色所需的所有数据。
+        返回: (latest_earning_price, stock_price_trend, latest_earning_date)
+        """
         try:
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT date, price FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 1",
-                (symbol,)
-            )
-            row = cursor.fetchone()
-            conn.close()
-            if row and row[0] is not None:
-                # 假设 date 存储格式为 "YYYY-MM-DD"
-                d = datetime.strptime(row[0], "%Y-%m-%d").date()
-                p = float(row[1]) if row[1] is not None else 0.0
-                return d, p
+            # 步骤 1: 获取最近两次财报信息
+            with sqlite3.connect(self._finance_db) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT date, price FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 2",
+                    (symbol,)
+                )
+                earning_rows = cursor.fetchall()
+
+            if not earning_rows:
+                return None, None, None
+
+            latest_earning_date_str, latest_earning_price_str = earning_rows[0]
+            latest_earning_date = datetime.strptime(latest_earning_date_str, "%Y-%m-%d").date()
+            latest_earning_price = float(latest_earning_price_str) if latest_earning_price_str is not None else 0.0
+
+            # --- 新规则 1: 如果最新财报在45天前，则强制为白色 ---
+            days_diff = (date.today() - latest_earning_date).days
+            if days_diff > 45:
+                return latest_earning_price, None, latest_earning_date
+
+            # --- 新规则 2: 如果只有一个财报记录，则强制为白色 ---
+            if len(earning_rows) < 2:
+                return latest_earning_price, None, latest_earning_date
+
+            previous_earning_date_str, _ = earning_rows[1]
+            previous_earning_date = datetime.strptime(previous_earning_date_str, "%Y-%m-%d").date()
+
+            # 步骤 2: 查找 sector 表名 (使用已加载的 self.sector_data)
+            sector_table = next((s for s, names in self.sector_data.items() if symbol in names), None)
+            if not sector_table:
+                return latest_earning_price, None, latest_earning_date
+
+            # 步骤 3: 获取两个日期的收盘价
+            with sqlite3.connect(self._finance_db) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    f'SELECT price FROM "{sector_table}" WHERE name = ? AND date = ?',
+                    (symbol, latest_earning_date.isoformat())
+                )
+                latest_stock_price_row = cursor.fetchone()
+                cursor.execute(
+                    f'SELECT price FROM "{sector_table}" WHERE name = ? AND date = ?',
+                    (symbol, previous_earning_date.isoformat())
+                )
+                previous_stock_price_row = cursor.fetchone()
+
+            if not latest_stock_price_row or not previous_stock_price_row:
+                return latest_earning_price, None, latest_earning_date
+
+            latest_stock_price = float(latest_stock_price_row[0])
+            previous_stock_price = float(previous_stock_price_row[0])
+            
+            trend = 'rising' if latest_stock_price > previous_stock_price else 'falling'
+            
+            return latest_earning_price, trend, latest_earning_date
+
         except Exception as e:
-            print(f"[Earning 查询错误] {symbol}: {e}")
-        return None, None
+            print(f"[颜色决策数据获取错误] {symbol}: {e}")
+            return None, None, None
+    # <<< 修改 END >>>
 
     def get_mnspp_marketcap(self, symbol: str) -> float:
         """
@@ -497,22 +560,25 @@ class MainWindow(QMainWindow):
                 tags = ' '.join(item.get('tag', []))
                 compare_info = self.compare_data.get(symbol, "")
 
-                # 取最新盈利日期 & price，再根据天数和正负设置颜色
-                latest_date, latest_price = self.get_latest_earning_info(symbol)
-                if latest_date:
-                    days_diff = (date.today() - latest_date).days
-                else:
-                    days_diff = 999
-                if days_diff <= 30:
-                    # 30天内，根据 price 正负来上色
-                    if latest_price is not None and latest_price > 0:
-                        sym_color = 'red'
-                    else:
-                        sym_color = 'green'
-                else:
-                    sym_color = 'white'
+                # <<< 修改：替换为新的复杂颜色逻辑 >>>
+                earning_price, price_trend, _ = self.get_color_decision_data(symbol)
                 
-                # 根据 item 类型（stock/etf）构建显示文本
+                # 颜色逻辑部分无需修改，因为 get_color_decision_data 的返回值会处理好
+                sym_color = 'white'  # 默认颜色
+                if earning_price is not None and price_trend is not None:
+                    is_price_positive = earning_price > 0
+                    is_trend_rising = price_trend == 'rising'
+
+                    if is_trend_rising and is_price_positive:
+                        sym_color = '#800080'  # 紫色
+                    elif not is_trend_rising and is_price_positive:
+                        sym_color = 'blue'     # 蓝色
+                    elif is_trend_rising and not is_price_positive:
+                        sym_color = 'red'      # 红色
+                    elif not is_trend_rising and not is_price_positive:
+                        sym_color = 'green'    # 绿色
+                # <<< 修改结束 >>>
+                
                 if 'Stock' in category_name:
                     display_parts = [symbol]
                     if compare_info: display_parts.append(compare_info)
