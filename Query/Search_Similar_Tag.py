@@ -642,7 +642,6 @@ class SimilarityViewerWindow(QMainWindow):
         """创建并显示一个包含丰富选项的右键上下文菜单（新增“移动”子菜单）"""
         menu = QMenu(self)
 
-        # --- 新增：移动（复制到组）子菜单 ---
         # --- 新增：移动（复制到组）子菜单，只显示指定的五个分组 ---
         move_menu = menu.addMenu("移动")
         allowed_groups = ["Today", "Watching", "Next Week", "2 Weeks", "3 Weeks"]
