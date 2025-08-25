@@ -10,18 +10,37 @@ RE_CITATION = re.compile(r'\[\[\d+\]\]\(https?://[^)\s]+[^)]*\)', flags=re.IGNOR
 # 规则2：匹配中文字符（基本汉字区）。若需要也可扩展至更多区段。
 RE_FIRST_CJK = re.compile(r'[\u4e00-\u9fff]')
 
+# 规则3：删除圆括号包裹的 URL： (http://... 或 https://...)
+# 说明：允许括号内包含任意非右括号字符，跨空格与参数，尽量不跨越右括号
+RE_PAREN_URL = re.compile(r'\(\s*https?://[^)]+\)', flags=re.IGNORECASE)
+
+# 规则4：删除裸 URL：以 http(s):// 开始，直到遇到空白或分隔符（常见标点/括号等）
+# 采用较保守的终止符，避免吞掉后续自然语言字符
+RE_BARE_URL = re.compile(
+    r'https?://[^\s\)\]\}\>,\'"；；，，。、“”‘’（）()<>]+',
+    flags=re.IGNORECASE
+)
+
 def clean_string_value(s: str) -> str:
     """
-    清理单个字符串值：
+    清理单个字符串值（顺序有意安排以减少相互影响）：
     1) 删除形如 [[数字]](http/https...) 的引用片段；
-    2) 若出现 '*Thinking...*'，从其位置起删除到后续出现的第一个中文字符（该中文字符保留）；
-       - 如果 '*Thinking...*' 后没有中文字符，则从 '*Thinking...*' 起删到字符串末尾。
-    3) 若出现 '--- Learn more:'，从该短语起截断到字符串末尾。
+    2) 删除圆括号包裹的 URL，如：(https://example.com/...)；
+    3) 删除裸 URL，如：https://example.com/...
+    4) 若出现 '*Thinking...*'，从其位置起删除到后续出现的第一个中文字符（中文保留）；
+       - 若之后没有中文，则从 '*Thinking...*' 起删到字符串末尾。
+    5) 若出现 '--- Learn more:'，从该短语起截断到字符串末尾。
     """
-    # 1) 删除引用
+    # 1) 删除 [[数字]](http/https...)
     s = RE_CITATION.sub('', s)
 
-    # 2) 处理 '*Thinking...*' -> 删除至第一个中文字符（中文保留）
+    # 2) 删除形如 (https://...) 的整体（含括号）
+    s = RE_PAREN_URL.sub('', s)
+
+    # 3) 删除裸 URL
+    s = RE_BARE_URL.sub('', s)
+
+    # 4) 处理 '*Thinking...*' -> 删除至第一个中文字符（中文保留）
     thinking_idx = s.find('*Thinking...*')
     if thinking_idx != -1:
         # 从 thinking 段落之后寻找第一个中文字符
@@ -35,7 +54,7 @@ def clean_string_value(s: str) -> str:
             # 没有中文，安全删除从 '*Thinking...*' 到末尾
             s = s[:thinking_idx]
 
-    # 3) 截断 '--- Learn more:'（精确匹配）
+    # 5) 截断 '--- Learn more:'（精确匹配）
     lm_idx = s.find('--- Learn more:')
     if lm_idx != -1:
         s = s[:lm_idx]
