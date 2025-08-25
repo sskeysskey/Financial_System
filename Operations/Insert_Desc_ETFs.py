@@ -8,6 +8,64 @@ from PIL import ImageGrab
 import tkinter as tk
 import sys
 import subprocess
+import re
+
+# 规则1：删除 [[数字]](http/https…)
+RE_CITATION = re.compile(r'[[\d+]]\(https?://[^)\s]+[^)]*\)', flags=re.IGNORECASE)
+
+# 规则2：匹配中文字符（基本汉字区）。若需要也可扩展至更多区段。
+RE_FIRST_CJK = re.compile(r'[\u4e00-\u9fff]')
+
+# 规则3：删除圆括号包裹的 URL：
+# 说明：允许括号内包含任意非右括号字符，跨空格与参数，尽量不跨越右括号
+RE_PAREN_URL = re.compile(r'\(\s*https?://[^)]+\)', flags=re.IGNORECASE)
+
+# 规则4：删除裸 URL：以 http(s):// 开始，直到遇到空白或分隔符（常见标点/括号等）
+# 采用较保守的终止符，避免吞掉后续自然语言字符
+RE_BARE_URL = re.compile(
+    r'https?://[^\s\)]\}\>,\'"；；，，。、“”‘’（）()<>]+',
+    flags=re.IGNORECASE
+)
+
+def clean_string_value(s: str) -> str:
+    """
+    清理单个字符串值（顺序有意安排以减少相互影响）：
+    1) 删除形如 [[数字]](http/https...) 的引用片段；
+    2) 删除圆括号包裹的 URL，如：；
+    3) 删除裸 URL，如：https://example.com/...
+    4) 若出现 '*Thinking...*'，从其位置起删除到后续出现的第一个中文字符（中文保留）；
+       - 若之后没有中文，则从 '*Thinking...*' 起删到字符串末尾。
+    5) 若出现 '--- Learn more:'，从该短语起截断到字符串末尾。
+    """
+    # 1) 删除 [[数字]](http/https...)
+    s = RE_CITATION.sub('', s)
+
+    # 2) 删除形如  的整体（含括号）
+    s = RE_PAREN_URL.sub('', s)
+
+    # 3) 删除裸 URL
+    s = RE_BARE_URL.sub('', s)
+
+    # 4) 处理 '*Thinking...*' -> 删除至第一个中文字符（中文保留）
+    thinking_idx = s.find('*Thinking...*')
+    if thinking_idx != -1:
+        # 从 thinking 段落之后寻找第一个中文字符
+        after = s[thinking_idx + len('*Thinking...*'):]
+        m = RE_FIRST_CJK.search(after)
+        if m:
+            # 保留中文及其后内容，丢弃 '*Thinking...*' 到该中文之前
+            cut_pos = thinking_idx + len('*Thinking...*') + m.start()
+            s = s[:thinking_idx] + s[cut_pos:]
+        else:
+            # 没有中文，安全删除从 '*Thinking...*' 到末尾
+            s = s[:thinking_idx]
+
+    # 5) 截断 '--- Learn more:'（精确匹配）
+    lm_idx = s.find('--- Learn more:')
+    if lm_idx != -1:
+        s = s[:lm_idx]
+
+    return s.strip() # 返回时顺便去除首尾空白
 
 def capture_screen():
     screenshot = ImageGrab.grab()
@@ -154,7 +212,12 @@ def main():
             print("找到copy图了，准备点击copy...")
 
     sleep(1)
-    new_description1 = read_clipboard().replace('\n', ' ').replace('\r', ' ')
+    
+    # 读取并清理第一个描述
+    raw_description1 = read_clipboard().replace('\n', ' ').replace('\r', ' ')
+    new_description1 = clean_string_value(raw_description1) # <-- 应用清理规则
+    print(f"清理后的 Description 1: {new_description1}")
+    
     script_path = '/Users/yanzhang/Coding/ScriptEditor/Shift2Kimi.scpt' if found_poe else '/Users/yanzhang/Coding/ScriptEditor/Shift2Poe.scpt'
     execute_applescript(script_path)
     sleep(1)
@@ -169,14 +232,18 @@ def main():
     else:
         find_and_click("kimicopy")
 
-    new_description2 = read_clipboard().replace('\n', ' ').replace('\r', ' ')
+    # 读取并清理第二个描述
+    raw_description2 = read_clipboard().replace('\n', ' ').replace('\r', ' ')
+    new_description2 = clean_string_value(raw_description2) # <-- 应用清理规则
+    print(f"清理后的 Description 2: {new_description2}")
 
-    # **新增逻辑：比较new_description1和new_description2**
+
+    # **修改后的逻辑：在清理后的文本上进行比较**
     if new_description1 == new_description2:
-        print("new_description1 和 new_description2 一致，将 new_description2 置为空。")
+        print("清理后，new_description1 和 new_description2 一致，将 new_description2 置为空。")
         new_description2 = ""  # 如果一致，将new_description2置为空
     else:
-        print("new_description1 和 new_description2 不一致，继续执行原逻辑。")
+        print("清理后，new_description1 和 new_description2 不一致，继续执行原逻辑。")
     
     root = tk.Tk()
     root.title("Add ETF")
