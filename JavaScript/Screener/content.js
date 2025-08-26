@@ -2,96 +2,114 @@
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (request.action === "scrapeData") {
         scrapeFinanceData(request.category)
-            .then(results => sendResponse(results))
+            .then(response => sendResponse(response)) // 直接转发结构化响应
             .catch(err => {
-                console.error("Scraping failed:", err);
-                sendResponse([]);
+                console.error("Scraping failed with unexpected error:", err);
+                // 捕获意外错误，并发送一个结构化的错误响应
+                sendResponse({
+                    success: false,
+                    data: [],
+                    message: `An unexpected error occurred: ${err.message}`
+                });
             });
         return true; // 保持通道开放以进行异步响应
     }
 });
 
 /**
- * 从Yahoo Finance的screener页面抓取数据
+ * 从Yahoo Finance的screener页面抓取数据 (已更新以适应新版页面并返回详细结果)
  * @param {string} category - 股票分类
- * @returns {Promise<Array<object>>}
+ * @returns {Promise<object>} - 返回一个包含 {success, data, message} 的对象
  */
 async function scrapeFinanceData(category) {
-    const results = [];
-
-    // 1. 等待表格加载完成
-    const table = await waitForElement("table.yf-ao6als");
-    if (!table) {
-        console.error("Could not find the data table.");
-        return [];
+    // 1. 等待新版表格加载完成
+    // 我们等待包含 data-testid="screener-table" 的 div 出现，这比单纯等 table 元素更可靠
+    const tableContainer = await waitForElement("div[data-testid='screener-table']");
+    if (!tableContainer) {
+        const errorMsg = "抓取失败: 未在页面上找到数据表格容器。可能是页面未完全加载或结构已再次改变。";
+        console.error(errorMsg);
+        return { success: false, data: [], message: errorMsg };
     }
 
-    // 2. 获取表头并创建列索引映射
-    // 我们只关心 Volume 和 Market Cap 的位置
-    const headers = Array.from(table.querySelectorAll("thead th"));
-    const columnIndexMap = {};
-    const headerMapping = {
-        'Volume': 'volume',
-        'Market Cap': 'marketCap',
-    };
+    const table = tableContainer.querySelector('table');
+    if (!table) {
+        const errorMsg = "抓取失败: 在容器内未找到 <table> 元素。";
+        console.error(errorMsg);
+        return { success: false, data: [], message: errorMsg };
+    }
 
-    headers.forEach((header, index) => {
-        const headerText = header.textContent.trim();
-        for (const key in headerMapping) {
-            if (headerText.includes(key)) {
-                columnIndexMap[headerMapping[key]] = index;
-                break;
-            }
-        }
-    });
+    const results = [];
+    let skippedRowsCount = 0; // 记录因数据不完整而被跳过的行数
 
-    console.log("Column Index Map:", columnIndexMap); // 调试用
+    // 2. 遍历表格的每一行
+    // 新的行选择器使用 data-testid，更加稳定
+    const rows = table.querySelectorAll("tbody tr[data-testid='data-table-v2-row']");
+    if (rows.length === 0) {
+        const warnMsg = "警告: 找到了表格，但表格内没有数据行。";
+        console.warn(warnMsg);
+        return { success: true, data: [], message: warnMsg };
+    }
 
-    // 3. 遍历表格的每一行 (tbody tr)
-    const rows = table.querySelectorAll("tbody tr.row");
     for (const row of rows) {
         try {
-            const cells = row.querySelectorAll("td");
-            if (cells.length < 2) continue; // 至少要有几列
+            // 3. 使用 data-testid 直接从单元格中提取数据，不再依赖列的顺序
 
-            // 使用可靠的选择器抓取 Symbol
+            // 提取 Symbol (股票代码) - 旧的选择器仍然有效
             const symbolEl = row.querySelector('a[data-testid="table-cell-ticker"] span.symbol');
             const symbol = symbolEl ? symbolEl.textContent.trim() : null;
 
-            if (!symbol) continue; // 如果没有symbol，跳过此行
+            if (!symbol) {
+                skippedRowsCount++;
+                console.warn("跳过一行: 未找到股票代码(Symbol)。", row);
+                continue;
+            }
 
-            // 使用 fin-streamer 抓取价格
+            // 提取 Price (价格) - 旧的选择器仍然有效
             const priceEl = row.querySelector('fin-streamer[data-field="regularMarketPrice"]');
             const price = priceEl ? parseFloat(priceEl.getAttribute("data-value")) : "N/A";
 
-            // 使用动态索引从单元格中提取数据
-            const volumeText = columnIndexMap.volume !== undefined ? cells[columnIndexMap.volume].textContent.trim() : "--";
-            const marketCapText = columnIndexMap.marketCap !== undefined ? cells[columnIndexMap.marketCap].textContent.trim() : "--";
-
-            const volume = parseSuffixedNumber(volumeText);
+            // *** 修正点 1 ***
+            // 修正了属性名：从 data-testid 改为 data-testid-cell
+            const marketCapText = row.querySelector('td[data-testid-cell="intradaymarketcap"]')?.textContent.trim() || "--";
             const marketCap = parseSuffixedNumber(marketCapText);
 
-            // 只要有市值数据，就收集
-            if (typeof marketCap === "number" && !isNaN(marketCap)) {
-                results.push({
-                    symbol,
-                    marketCap, // MarketCap 在前
-                    category,
-                    price,
-                    volume
-                });
+            // *** 修正点 2 ***
+            // 修正了属性名：从 data-testid 改为 data-testid-cell
+            const volumeText = row.querySelector('td[data-testid-cell="dayvolume"]')?.textContent.trim() || "--";
+            const volume = parseSuffixedNumber(volumeText);
+
+            // 检查关键数据是否存在
+            if (typeof marketCap !== "number" || isNaN(marketCap)) {
+                skippedRowsCount++;
+                console.warn(`跳过股票 ${symbol}: 市值(MarketCap)数据缺失或无效。 值为: '${marketCapText}'`);
+                continue;
             }
+
+            results.push({
+                symbol,
+                marketCap, // MarketCap 在前
+                category,  // category 从 popup.js 传入，保持不变
+                price,
+                volume
+            });
+
         } catch (e) {
-            console.error("Error processing a row:", e, row);
+            skippedRowsCount++;
+            console.error("处理某一行时出错:", e, row);
         }
     }
 
-    return results;
+    let message = `成功抓取 ${results.length} 条记录。`;
+    if (skippedRowsCount > 0) {
+        message += ` 因数据不完整或错误跳过了 ${skippedRowsCount} 行。`;
+    }
+
+    return { success: true, data: results, message: message };
 }
 
 /**
  * 将带有后缀（如 K, M, B, T）的字符串转换为纯数字
- * @param {string} text - 输入的字符串，例如 "182.532M" 或 "3.794T"
+ * @param {string} text - 输入的字符串，例如 "182.532M" 或 "4.403T"
  * @returns {number|string} - 解析后的数字或 "N/A"
  */
 function parseSuffixedNumber(text) {
@@ -133,6 +151,7 @@ function waitForElement(selector, timeout = 15000) {
                 resolve(element);
             } else if (Date.now() - startTime > timeout) {
                 clearInterval(interval);
+                console.error(`Timeout waiting for element with selector: ${selector}`);
                 resolve(null);
             }
         }, 500);
