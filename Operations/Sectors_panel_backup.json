@@ -116,7 +116,8 @@
         "LII": "",
         "OKLO": "",
         "RBLX": "",
-        "COST": ""
+        "COST": "",
+        "APO": ""
     },
     "Next Week": {
         "MRVL": ""
@@ -140,25 +141,18 @@
         "VRT": "",
         "DUOL": "",
         "VRSN": "",
-        "FDS": ""
+        "FDS": "",
+        "PLTR": ""
     },
-    "Strategy12": {
-        "AVAV": "",
-        "CRWD": "",
-        "PSTG": ""
-    },
-    "Strategy34": {
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {
         "APO": "",
+        "BOX": "",
         "BWXT": "",
         "CART": "",
-        "DASH": "",
-        "PLTR": "",
-        "RH": "",
-        "SHOP": ""
-    },
-    "PE_valid": {
-        "BOX": "",
         "COST": "",
+        "DASH": "",
         "DRI": "",
         "DUOL": "",
         "FRPT": "",
@@ -167,7 +161,9 @@
         "IDXX": "",
         "LII": "",
         "NOW": "",
+        "PLTR": "",
         "RELX": "",
+        "SHOP": "",
         "VRSN": "",
         "VRT": "",
         "WING": ""

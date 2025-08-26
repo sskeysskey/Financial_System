@@ -116,7 +116,8 @@
         "LII": "",
         "OKLO": "",
         "RBLX": "",
-        "COST": ""
+        "COST": "",
+        "APO": ""
     },
     "Next Week": {
         "MRVL": ""
@@ -140,41 +141,26 @@
         "VRT": "",
         "DUOL": "",
         "VRSN": "",
-        "FDS": ""
+        "FDS": "",
+        "PLTR": ""
     },
-    "Strategy12": {
-        "AVAV": "",
-        "CRWD": "",
-        "PSTG": ""
-    },
-    "Strategy34": {
-        "APO": "",
-        "BWXT": "",
-        "CART": "",
-        "DASH": "",
-        "PLTR": "",
-        "RH": "",
-        "SHOP": ""
-    },
+    "Strategy12": {},
+    "Strategy34": {},
     "PE_valid": {
-        "BOX": "",
-        "COST": "",
-        "DRI": "",
         "DUOL": "",
         "FRPT": "",
         "HIMS": "",
         "ICLR": "",
         "IDXX": "",
         "LII": "",
-        "NOW": "",
-        "RELX": "",
+        "PLTR": "",
+        "SHOP": "",
         "VRSN": "",
         "VRT": "",
         "WING": ""
     },
     "PE_invalid": {
         "JOBY": "",
-        "KVYO": "",
         "SOUN": ""
     },
     "Currencies": {

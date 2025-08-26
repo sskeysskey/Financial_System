@@ -62,8 +62,9 @@ CONFIG = {
     "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.03,
     # 新增：触发“更宽松”标准的财报收盘价价差百分比
     "ER_PRICE_DIFF_THRESHOLD": 0.40,
-    # 触发宽松筛选的最小分组数量
-    "MIN_GROUP_SIZE_FOR_RELAXED_FILTER": 3,
+    # ========== 代码修改部分 (逻辑变更) ==========
+    # 触发宽松筛选的最小分组数量 (仅对 PE_valid 组生效)
+    "MIN_PE_VALID_SIZE_FOR_RELAXED_FILTER": 5,
     # ========================================
     "MAX_INCREASE_PERCENTAGE_SINCE_LOW": 0.03,
     # ========== 在这里添加新参数 ==========
@@ -281,7 +282,7 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
             row = cursor.fetchone()
             if row:
                 data['pe_ratio'] = row[0]
-            if is_tracing: log_detail(f"[{symbol}] 步骤4 (已知列不存在): 查询PE。结果: PE={data['pe_ratio']}")
+            if is_tracing: log_detail(f"[{symbol}] 步骤4: 查询PE。结果: PE={data['pe_ratio']}")
 
         data['is_valid'] = True
         cache[symbol] = data
@@ -444,7 +445,7 @@ def check_new_condition_3(data, config, log_detail, symbol_to_trace):
     if is_tracing: log_detail("  - 结果: True (新增条件3所有子条件均满足)")
     return True
 
-def run_strategy(data, symbol_to_trace, log_detail, drop_pct_large, drop_pct_small):
+def evaluate_stock_conditions(data, symbol_to_trace, log_detail, drop_pct_large, drop_pct_small):
     """
     此函数为原始筛选流程 (条件1 + 条件2的阈值应用)
     条件1 (三选一)：
@@ -460,89 +461,93 @@ def run_strategy(data, symbol_to_trace, log_detail, drop_pct_large, drop_pct_sma
     """
     symbol = data.get('symbol')
     is_tracing = (symbol == symbol_to_trace)
-    if is_tracing: log_detail(f"\n--- [{symbol}] 原始策略评估 (使用 large={drop_pct_large*100}%, small={drop_pct_small*100}%) ---")
+    if is_tracing: log_detail(f"\n--- [{symbol}] 统一策略评估 (使用 large={drop_pct_large*100}%, small={drop_pct_small*100}%) ---")
 
-    # 条件1a：最新一次财报涨跌幅 > 0
+    # --- 步骤1: 检查两个并列的入口条件 ---
+    
+    # 入口条件A: 原始条件1 (三选一)
     er_pcts = data.get('all_er_pcts', [])
-    if not er_pcts:
-        if is_tracing: log_detail("  - 结果: False (缺少财报涨跌幅数据)")
-        return False
-    latest_er_pct = er_pcts[-1]
-    cond1_a = latest_er_pct > 0
-
-    #条件1b： 最新财报收盘价 > 过去 N 次财报收盘价平均值
     prices_to_check = data['all_er_prices'][-CONFIG["RECENT_EARNINGS_COUNT"]:]
-    if len(prices_to_check) < CONFIG["RECENT_EARNINGS_COUNT"]:
-        if is_tracing: log_detail(f"  - 结果: False (最近财报收盘价数量不足 {CONFIG['RECENT_EARNINGS_COUNT']} 次)")
+    if not er_pcts or len(prices_to_check) < CONFIG["RECENT_EARNINGS_COUNT"]:
+        if is_tracing: log_detail("  - 预检失败: 缺少财报数据，无法评估入口条件。")
         return False
-    avg_recent_price = sum(prices_to_check) / len(prices_to_check)
+        
+    latest_er_pct = er_pcts[-1]
     latest_er_price = prices_to_check[-1]
-    cond1_b = latest_er_price > avg_recent_price
-
-    # 条件1c: 最新收盘价比最新一期财报收盘价低至少 X%
+    avg_recent_price = sum(prices_to_check) / len(prices_to_check)
     drop_pct_for_cond1c = CONFIG["PRICE_DROP_FOR_COND1C"]
     threshold_price1c = latest_er_price * (1 - drop_pct_for_cond1c)
+    
+    cond1_a = latest_er_pct > 0
+    cond1_b = latest_er_price > avg_recent_price
     cond1_c = data['latest_price'] <= threshold_price1c
+    passed_original_cond1 = cond1_a or cond1_b or cond1_c
 
-    # ---- 条件1：三选一 ----
-    cond1_ok = cond1_a or cond1_b or cond1_c
-
-    # 追踪日志
     if is_tracing:
-        log_detail("  - 条件1 (三选一):")
-        log_detail(f"    - a) 最新一次财报涨跌幅 > 0: {latest_er_pct:.4f} > 0 -> {cond1_a}")
-        log_detail(f"    - b) 最新财报收盘价 > 最近{CONFIG['RECENT_EARNINGS_COUNT']}次平均价: {latest_er_price:.2f} > {avg_recent_price:.2f} -> {cond1_b}")
-        log_detail(f"    - c) 最新价比最新财报收盘价低至少 {drop_pct_for_cond1c*100}%: 最新价({data['latest_price']:.2f}) <= 阈值价({threshold_price1c:.2f}) -> {cond1_c}")
-        log_detail(f"    - 条件1结果: {cond1_ok}")
-    if not cond1_ok:
-        if is_tracing: log_detail("  - 结果: False (条件1未满足)")
-        return False
+        log_detail("  - [入口条件A] 原始条件1评估:")
+        log_detail(f"    - a) 最新财报涨跌幅 > 0: {latest_er_pct:.4f} > 0 -> {cond1_a}")
+        log_detail(f"    - b) 最新财报收盘价 > 平均价: {latest_er_price:.2f} > {avg_recent_price:.2f} -> {cond1_b}")
+        log_detail(f"    - c) 最新价比最新财报收盘价低至少 {drop_pct_for_cond1c*100}%: {data['latest_price']:.2f} <= {threshold_price1c:.2f} -> {cond1_c}")
+        log_detail(f"    - 结果: {passed_original_cond1}")
 
-    # 条件2: 最新价 < 最新财报收盘价 * (1 - Y%)
+    # 入口条件B: 新增条件3
+    passed_new_cond3 = check_new_condition_3(data, CONFIG, log_detail, symbol_to_trace)
+
+    # 裁定入口条件是否满足
+    if not (passed_original_cond1 or passed_new_cond3):
+        if is_tracing: log_detail(f"  - 最终裁定: 失败。两个入口条件均未满足。")
+        return False
+    
+    if is_tracing:
+        reason = "原始条件1" if passed_original_cond1 else "新增条件3"
+        if passed_original_cond1 and passed_new_cond3: reason = "原始条件1 和 新增条件3"
+        log_detail(f"  - 入口条件通过 (原因: {reason})。开始执行通用过滤...")
+
+    # --- 步骤2: 执行所有通用过滤条件 ---
+
+    # 通用过滤1: 价格回撤条件
     market_cap = data.get('market_cap')
-    # 使用传入的参数
     drop_pct = (
         drop_pct_small
         if (market_cap and market_cap >= CONFIG["MARKETCAP_THRESHOLD"])
         else drop_pct_large
     )
-    threshold_price2 = latest_er_price * (1 - drop_pct)
-    cond2_ok = data['latest_price'] <= threshold_price2
+    threshold_price_drawdown = latest_er_price * (1 - drop_pct)
+    cond_drawdown_ok = data['latest_price'] <= threshold_price_drawdown
     if is_tracing:
-        log_detail("  - 价格回撤条件:")
-        log_detail(f"    - 市值: {market_cap} -> 使用下跌百分比: {drop_pct}")
-        log_detail(f"    - 判断: 最新价({data['latest_price']:.2f}) <= 最新财报收盘价({latest_er_price:.2f}) * (1 - {drop_pct}) ({threshold_price2:.2f})")
-        log_detail(f"    - 价格回撤结果: {cond2_ok}")
-    if not cond2_ok:
-        if is_tracing: log_detail("  - 结果: False (价格回撤条件未满足)")
+        log_detail("  - [通用过滤1] 价格回撤:")
+        log_detail(f"    - 市值: {market_cap} -> 使用下跌百分比: {drop_pct*100:.1f}%")
+        log_detail(f"    - 判断: 最新价({data['latest_price']:.2f}) <= 阈值价({threshold_price_drawdown:.2f}) -> {cond_drawdown_ok}")
+    if not cond_drawdown_ok:
+        if is_tracing: log_detail("  - 最终裁定: 失败 (价格回撤不满足)。")
         return False
 
-    # 条件4：最新价不高于最近10日最低收盘价的 1+3%
+    # 通用过滤2: 相对10日最低价条件 (条件4)
     prev_prices = data.get('prev_10_prices', [])
     if len(prev_prices) < 10:
-        if is_tracing: log_detail(f"  - 结果: False (可用历史交易日不足10日，只有{len(prev_prices)}日数据)")
+        if is_tracing: log_detail(f"  - 最终裁定: 失败 (可用历史交易日不足10日，只有{len(prev_prices)}日数据)。")
         return False
     min_prev = min(prev_prices)
-    threshold_price3 = min_prev * (1 + CONFIG["MAX_INCREASE_PERCENTAGE_SINCE_LOW"])
-    cond3_ok = data['latest_price'] <= threshold_price3
+    threshold_price_10day = min_prev * (1 + CONFIG["MAX_INCREASE_PERCENTAGE_SINCE_LOW"])
+    cond_10day_ok = data['latest_price'] <= threshold_price_10day
     if is_tracing:
-        log_detail(f"  - 条件4 (相对10日最低+3%): 最新价 {data['latest_price']:.2f} <= 最低价 {min_prev:.2f}*1.03={threshold_price3:.2f} -> {cond3_ok}")
-    if not cond3_ok:
-        if is_tracing: log_detail("  - 结果: False (条件4未满足)")
+        log_detail(f"  - [通用过滤2] 相对10日最低价:")
+        log_detail(f"    - 判断: 最新价 {data['latest_price']:.2f} <= 最低价*1.03 ({threshold_price_10day:.2f}) -> {cond_10day_ok}")
+    if not cond_10day_ok:
+        if is_tracing: log_detail("  - 最终裁定: 失败 (相对10日最低价条件不满足)。")
         return False
     
-    # 成交额条件
+    # 通用过滤3: 成交额条件
     turnover = data['latest_price'] * data['latest_volume']
-    cond4_ok = turnover >= CONFIG["TURNOVER_THRESHOLD"]
+    cond_turnover_ok = turnover >= CONFIG["TURNOVER_THRESHOLD"]
     if is_tracing:
-        log_detail("  - 成交额条件:")
-        log_detail(f"    - 判断: 最新成交额({turnover:,.0f}) >= 阈值({CONFIG['TURNOVER_THRESHOLD']:,})")
-        log_detail(f"    - 成交额结果: {cond4_ok}")
-    if not cond4_ok:
-        if is_tracing: log_detail("  - 结果: False (成交额条件未满足)")
+        log_detail("  - [通用过滤3] 成交额:")
+        log_detail(f"    - 判断: 最新成交额({turnover:,.0f}) >= 阈值({CONFIG['TURNOVER_THRESHOLD']:,}) -> {cond_turnover_ok}")
+    if not cond_turnover_ok:
+        if is_tracing: log_detail("  - 最终裁定: 失败 (成交额不满足)。")
         return False
         
-    if is_tracing: log_detail("  - 结果: True (原始策略所有条件均满足)")
+    if is_tracing: log_detail("  - 最终裁定: 成功! 所有入口和通用条件均满足。")
     return True
 
 # 修改 apply_post_filters 函数，使其根据PE有效性返回两个独立的列表
@@ -590,7 +595,7 @@ def run_processing_logic(log_detail):
     此函数被重构以支持多阶段筛选：
     1. 根据财报和价格条件区分股票为三组：严格、宽松、更宽松。
     2. 对每个组应用对应的回撤标准进行第一轮筛选。
-    3. 如果筛选后某分组数量依然过少，则对该组中原先使用严格标准的股票再次进行常规宽松筛选。
+    3. 如果筛选后 PE_valid 组数量依然过少，则对该组中原先使用严格标准的股票再次进行常规宽松筛选。
     """
     log_detail("程序开始运行...")
     if SYMBOL_TO_TRACE:
@@ -629,23 +634,18 @@ def run_processing_logic(log_detail):
     def perform_filter_pass(symbols_to_check, drop_large, drop_small, pass_name):
         log_detail(f"\n--- {pass_name}: 开始筛选 (下跌标准: >$100B {drop_small*100}%, <$100B {drop_large*100}%) ---")
         
-        # 步骤 A: 运行核心策略 (原始策略 或 新增条件3)
+        # 步骤 A: 对每个股票运行统一的筛选函数
         preliminary_results = []
         for symbol in symbols_to_check:
             data = stock_data_cache.get(symbol)
-            if data and data['is_valid']:
-                data['symbol'] = symbol
-                
-                # 检查原始策略
-                passed_original_strategy = run_strategy(data, SYMBOL_TO_TRACE, log_detail, drop_large, drop_small)
-                
-                # 检查新增的“或条件3”
-                passed_new_condition_3 = check_new_condition_3(data, CONFIG, log_detail, SYMBOL_TO_TRACE)
-
-                if passed_original_strategy or passed_new_condition_3:
-                    if SYMBOL_TO_TRACE == symbol and (not passed_original_strategy and passed_new_condition_3):
-                         log_detail(f"--- [{symbol}] 最终裁定: 通过。原因: 原始策略不满足，但新增的“或条件3”满足。")
-                    preliminary_results.append(symbol)
+            if not (data and data['is_valid']):
+                continue
+            
+            data['symbol'] = symbol
+            
+            # 只需调用一个函数，所有逻辑都在其中处理
+            if evaluate_stock_conditions(data, SYMBOL_TO_TRACE, log_detail, drop_large, drop_small):
+                preliminary_results.append(symbol)
 
         log_detail(f"{pass_name}: 策略筛选完成，初步找到 {len(preliminary_results)} 个符合条件的股票。")
 
@@ -719,19 +719,21 @@ def run_processing_logic(log_detail):
     log_detail(f"PE_valid 组: {len(pass1_valid)} 个 ({len(super_relaxed_valid)} 更宽松 + {len(relaxed_valid)} 宽松 + {len(strict_valid)} 严格)")
     log_detail(f"PE_invalid 组: {len(pass1_invalid)} 个 ({len(super_relaxed_invalid)} 更宽松 + {len(relaxed_invalid)} 宽松 + {len(strict_invalid)} 严格)")
 
-    # 默认使用第一轮的结果
-    final_pe_valid_symbols = pass1_valid
-    final_pe_invalid_symbols = pass1_invalid
-
-    # 条件6：如果任一组结果不超过三个，将针对严格组使用普通宽松阈值再扫一遍
-    log_detail("\n--- (条件6) 检查是否需要为数量不足的组进行第二轮宽松筛选 ---")
-    min_size = CONFIG["MIN_GROUP_SIZE_FOR_RELAXED_FILTER"]
+    # ========== 代码修改部分 (逻辑变更) ==========
+    # 条件6：如果 PE_valid 组结果少于5个，将针对严格组使用普通宽松阈值再扫一遍
+    log_detail("\n--- (条件6) 检查是否需要为 PE_valid 组进行第二轮宽松筛选 ---")
+    min_size_pe_valid = CONFIG["MIN_PE_VALID_SIZE_FOR_RELAXED_FILTER"]
     
-    # 检查 PE_valid 组
-    if len(pass1_valid) < min_size:
-        log_detail(f"\n'PE_valid' 组在第一轮筛选后数量 ({len(pass1_valid)}) 小于阈值 ({min_size})。")
+    # 默认最终结果为第一轮的结果
+    final_pe_valid_symbols = pass1_valid
+    final_pe_invalid_symbols = pass1_invalid # PE_invalid 组的结果在第一轮后就已确定
+
+    # 仅检查 PE_valid 组
+    if len(pass1_valid) < min_size_pe_valid:
+        log_detail(f"\n'PE_valid' 组在第一轮筛选后数量 ({len(pass1_valid)}) 小于阈值 ({min_size_pe_valid})。")
         log_detail(f"将对原先使用严格标准的 {len(strict_symbols)} 个股票，应用常规宽松标准重新筛选。")
         
+        # 仅为 PE_valid 组重跑
         rerun_valid, _ = perform_filter_pass(
             strict_symbols,
             CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_LARGE"],
@@ -742,24 +744,10 @@ def run_processing_logic(log_detail):
         final_pe_valid_symbols = sorted(list(set(super_relaxed_valid) | set(relaxed_valid) | set(rerun_valid)))
         log_detail(f"第二轮筛选后，'PE_valid' 组更新为 {len(final_pe_valid_symbols)} 个。")
     else:
-        log_detail(f"\n'PE_valid' 组在第一轮筛选后数量 ({len(pass1_valid)}) 已达标，无需宽松筛选。")
+        log_detail(f"\n'PE_valid' 组在第一轮筛选后数量 ({len(pass1_valid)}) 已达标，无需进行第二轮宽松筛选。")
 
-    # 检查 PE_invalid 组
-    if len(pass1_invalid) < min_size:
-        log_detail(f"\n'PE_invalid' 组在第一轮筛选后数量 ({len(pass1_invalid)}) 小于阈值 ({min_size})。")
-        log_detail(f"将对原先使用严格标准的 {len(strict_symbols)} 个股票，应用常规宽松标准重新筛选。")
-
-        _, rerun_invalid = perform_filter_pass(
-            strict_symbols,
-            CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_LARGE"],
-            CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_SMALL"],
-            "第二轮筛选 (常规宽松, for PE_invalid)"
-        )
-        # 最终结果是：第一轮中所有宽松/更宽松选出的 + 第二轮对严格部分重筛后选出的
-        final_pe_invalid_symbols = sorted(list(set(super_relaxed_invalid) | set(relaxed_invalid) | set(rerun_invalid)))
-        log_detail(f"第二轮筛选后，'PE_invalid' 组更新为 {len(final_pe_invalid_symbols)} 个。")
-    else:
-        log_detail(f"\n'PE_invalid' 组在第一轮筛选后数量 ({len(pass1_invalid)}) 已达标，无需宽松筛选。")
+    log_detail(f"\n'PE_invalid' 组数量为 {len(final_pe_invalid_symbols)}，根据新规则，不进行重扫。")
+    # =================================================
 
     # 6. 汇总最终结果并输出
     all_qualified_symbols = final_pe_valid_symbols + final_pe_invalid_symbols
