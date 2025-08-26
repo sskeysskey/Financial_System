@@ -157,6 +157,7 @@
         "SHOP": ""
     },
     "PE_valid": {
+        "BOX": "",
         "COST": "",
         "DRI": "",
         "DUOL": "",
@@ -165,12 +166,15 @@
         "ICLR": "",
         "IDXX": "",
         "LII": "",
+        "NOW": "",
+        "RELX": "",
         "VRSN": "",
         "VRT": "",
         "WING": ""
     },
     "PE_invalid": {
         "JOBY": "",
+        "KVYO": "",
         "SOUN": ""
     },
     "Currencies": {
