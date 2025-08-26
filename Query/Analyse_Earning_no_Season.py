@@ -293,7 +293,7 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
 
 # --- 5. 策略与过滤模块 (已集成追踪系统) ---
 
-# ========== 代码修改部分 2/6: check_special_condition 函数重构 ==========
+# ========== 代码修改部分: check_special_condition 函数重构 ==========
 def check_special_condition(data, config, log_detail, symbol_to_trace):
     """
     a) 最新财报涨跌幅 > 0
@@ -308,7 +308,7 @@ def check_special_condition(data, config, log_detail, symbol_to_trace):
     is_tracing = (symbol == symbol_to_trace)
     if is_tracing: log_detail(f"  - [特殊条件检查] for {symbol}:")
 
-    # 条件a: 最新一次财报涨跌幅 > 0
+    # 条件A: 最新一次财报涨跌幅 > 0
     er_pcts = data.get('all_er_pcts', [])
     if not er_pcts:
         if is_tracing: log_detail(f"    - 失败: 缺少财报涨跌幅数据。-> 返回 0 (严格)")
@@ -316,7 +316,7 @@ def check_special_condition(data, config, log_detail, symbol_to_trace):
     latest_er_pct = er_pcts[-1]
     cond_a = latest_er_pct > 0
 
-    # 条件b: 最新财报收盘价 > 过去 N 次财报收盘价平均值
+    # 条件B: 最新财报收盘价 > 过去 N 次财报收盘价平均值
     recent_earnings_count = config["RECENT_EARNINGS_COUNT"]
     all_er_prices = data.get('all_er_prices', [])
     prices_to_check = all_er_prices[-recent_earnings_count:]
@@ -332,22 +332,23 @@ def check_special_condition(data, config, log_detail, symbol_to_trace):
         log_detail(f"    - a) 最新财报涨跌幅 > 0: {latest_er_pct:.4f} > 0 -> {cond_a}")
         log_detail(f"    - b) 最新财报收盘价 > 平均价: {latest_er_price:.2f} > {avg_recent_price:.2f} -> {cond_b}")
 
-    # 如果基础条件 (a 和 b) 不满足，直接返回严格模式
-    if not (cond_a and cond_b):
-        if is_tracing: log_detail(f"    - 结果 (a AND b): False -> 返回 0 (严格)")
+    # 如果核心条件B不满足，则直接使用严格标准
+    if not cond_b:
+        if is_tracing: log_detail(f"    - 结果 (b为假): False -> 返回 0 (严格)")
         return 0
     
-    if is_tracing: log_detail(f"    - 结果 (a AND b): True. 继续检查价差...")
+    # 如果代码执行到这里，说明条件B为真。现在检查价差和条件A。
+    if is_tracing: log_detail(f"    - 结果 (b为真): True. 继续检查价差和条件a...")
 
-    # 条件c: 检查最新两次财报收盘价价差是否 > 40%
+    # 条件C: 检查最新两次财报收盘价价差是否 > 40%
     if len(all_er_prices) < 2:
-        if is_tracing: log_detail(f"    - 财报价格数据不足2条，无法计算价差。-> 返回 1 (宽松)")
-        return 1 # 数据不足，无法应用更宽松标准，退回普通宽松
+        if is_tracing: log_detail(f"    - 财报价格数据不足2条，无法计算价差。-> 返回 0 (严格)")
+        return 0 # 数据不足，无法应用任何宽松标准
 
     previous_er_price = all_er_prices[-2]
     if previous_er_price <= 0: # 防止除以零
-        if is_tracing: log_detail(f"    - 上次财报价格为0或负数，无法计算价差。-> 返回 1 (宽松)")
-        return 1
+        if is_tracing: log_detail(f"    - 上次财报价格为0或负数，无法计算价差。-> 返回 0 (严格)")
+        return 0
 
     price_diff_pct = (latest_er_price - previous_er_price) / previous_er_price
     cond_c = price_diff_pct > config["ER_PRICE_DIFF_THRESHOLD"]
@@ -355,12 +356,24 @@ def check_special_condition(data, config, log_detail, symbol_to_trace):
     if is_tracing:
         log_detail(f"    - c) 最新两次财报价差 > {config['ER_PRICE_DIFF_THRESHOLD']*100}%: {price_diff_pct:.2%} > {config['ER_PRICE_DIFF_THRESHOLD']:.2%} -> {cond_c}")
 
-    if cond_c:
-        if is_tracing: log_detail(f"    - 最终决策: 满足所有特殊条件 -> 返回 2 (更宽松)")
-        return 2  # 更宽松
+    # 最终决策树 (此时已知 cond_b 为真)
+    if cond_a:
+        # 情况1: cond_a为真, cond_b为真 (原始逻辑)
+        if cond_c:
+            if is_tracing: log_detail(f"    - 最终决策 (a=T, b=T, c=T): -> 返回 2 (更宽松)")
+            return 2  # 更宽松
+        else:
+            if is_tracing: log_detail(f"    - 最终决策 (a=T, b=T, c=F): -> 返回 1 (宽松)")
+            return 1  # 普通宽松
     else:
-        if is_tracing: log_detail(f"    - 最终决策: 满足a,b但价差不足 -> 返回 1 (宽松)")
-        return 1  # 普通宽松
+        # 情况2: cond_a为假, cond_b为真 (您的新逻辑)
+        if cond_c:
+            if is_tracing: log_detail(f"    - 最终决策 (a=F, b=T, c=T): -> 返回 1 (宽松) [新规则触发]")
+            return 1 # 普通宽松 (新规则)
+        else:
+            if is_tracing: log_detail(f"    - 最终决策 (a=F, b=T, c=F): -> 返回 0 (严格)")
+            return 0 # 严格
+# ====================================================================
 
 def run_strategy(data, symbol_to_trace, log_detail, drop_pct_large, drop_pct_small):
     """
