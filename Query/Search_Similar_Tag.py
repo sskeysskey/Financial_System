@@ -667,11 +667,11 @@ class SimilarityViewerWindow(QMainWindow):
             is_trend_rising = price_trend == 'rising'
 
             if is_trend_rising and is_price_positive:
-                color = '#800080'  # 紫色
-            elif not is_trend_rising and is_price_positive:
-                color = 'blue'     # 蓝色
-            elif is_trend_rising and not is_price_positive:
                 color = 'red'      # 红色
+            elif not is_trend_rising and is_price_positive:
+                color = '#276E47'     # 蓝色
+            elif is_trend_rising and not is_price_positive:
+                color = '#912F2F'  # 紫色
             elif not is_trend_rising and not is_price_positive:
                 color = 'green'    # 绿色
         

@@ -288,6 +288,45 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
 
 # --- 5. 策略与过滤模块 (已集成追踪系统) ---
 
+# ========== 代码修改部分: 新增辅助函数 ==========
+def check_special_condition(data, config, log_detail, symbol_to_trace):
+    """
+    检查是否满足同时启用宽松标准的特殊条件:
+    a) 最新财报涨跌幅 > 0
+    b) 最新财报收盘价 > 最近N次财报均价
+    """
+    symbol = data.get('symbol')
+    is_tracing = (symbol == symbol_to_trace)
+    
+    # 条件a: 最新一次财报涨跌幅 > 0
+    er_pcts = data.get('all_er_pcts', [])
+    if not er_pcts:
+        if is_tracing: log_detail(f"  - [特殊条件检查] 失败: 缺少财报涨跌幅数据。")
+        return False
+    latest_er_pct = er_pcts[-1]
+    cond_a = latest_er_pct > 0
+
+    # 条件b: 最新财报收盘价 > 过去 N 次财报收盘价平均值
+    recent_earnings_count = config["RECENT_EARNINGS_COUNT"]
+    prices_to_check = data.get('all_er_prices', [])[-recent_earnings_count:]
+    if len(prices_to_check) < recent_earnings_count:
+        if is_tracing: log_detail(f"  - [特殊条件检查] 失败: 最近财报收盘价数量不足 {recent_earnings_count} 次。")
+        return False
+    
+    avg_recent_price = sum(prices_to_check) / len(prices_to_check)
+    latest_er_price = prices_to_check[-1]
+    cond_b = latest_er_price > avg_recent_price
+    
+    result = cond_a and cond_b
+    
+    if is_tracing:
+        log_detail(f"  - [特殊条件检查] for {symbol}:")
+        log_detail(f"    - a) 最新财报涨跌幅 > 0: {latest_er_pct:.4f} > 0 -> {cond_a}")
+        log_detail(f"    - b) 最新财报收盘价 > 平均价: {latest_er_price:.2f} > {avg_recent_price:.2f} -> {cond_b}")
+        log_detail(f"    - 结果 (a AND b): {result}")
+        
+    return result
+
 # ========== 新增/修改部分 2/5 ==========
 # 函数增加了 drop_pct_large 和 drop_pct_small 参数，使其更灵活
 def run_strategy(data, symbol_to_trace, log_detail, drop_pct_large, drop_pct_small):
@@ -434,12 +473,14 @@ def apply_post_filters(symbols, stock_data_cache, symbol_to_trace, log_detail):
     log_detail(f"后置过滤完成: PE有效 {len(pe_valid_symbols)} 个, PE无效 {len(pe_invalid_symbols)} 个。")
     return pe_valid_symbols, pe_invalid_symbols
 
-# ========== 新增/修改部分 3/5 ==========
-# 重构了核心处理逻辑，以支持多轮、有条件的筛选
+# ========== 代码修改部分: 重构核心处理逻辑 ==========
 def run_processing_logic(log_detail):
     """
     核心处理逻辑。
-    此函数被重构以支持两阶段筛选：首先使用严格标准，如果结果太少，则对相应分组使用宽松标准重新筛选。
+    此函数被重构以支持多阶段筛选：
+    1. 首先根据特定财报条件（财报涨幅为正且价格高于均线）区分股票。
+    2. 对满足条件的股票直接使用宽松标准，其他使用严格标准。
+    3. 如果筛选后某分组数量依然过少，则对该组中原先使用严格标准的股票再次进行宽松筛选。
     """
     log_detail("程序开始运行...")
     if SYMBOL_TO_TRACE:
@@ -451,7 +492,7 @@ def run_processing_logic(log_detail):
         log_detail("错误: 无法加载symbols，程序终止。")
         return
     
-    # 1.1 (新增) 应用 SYMBOL_BLACKLIST 进行初步过滤
+    # 1.1 应用 SYMBOL_BLACKLIST 进行初步过滤
     symbol_blacklist = CONFIG.get("SYMBOL_BLACKLIST", set())
     if symbol_blacklist:
         original_count = len(all_symbols)
@@ -501,63 +542,106 @@ def run_processing_logic(log_detail):
         log_detail(f"{pass_name}: Tag过滤后 -> PE_valid: {len(final_pe_valid)} 个, PE_invalid: {len(final_pe_invalid)} 个。")
         return final_pe_valid, final_pe_invalid
 
-    # 3. 第一轮筛选 (Pass 1): 使用严格标准
+    # 3. 区分使用严格标准和特殊宽松标准的股票
+    log_detail("\n--- 步骤 3: 根据特殊条件区分股票组 ---")
+    strict_symbols = []
+    special_case_symbols = []
     initial_candidates = list(stock_data_cache.keys())
-    pass1_valid, pass1_invalid = perform_filter_pass(
-        initial_candidates,
-        CONFIG["PRICE_DROP_PERCENTAGE_LARGE"],
-        CONFIG["PRICE_DROP_PERCENTAGE_SMALL"],
-        "第一轮筛选 (严格)"
+
+    for symbol in initial_candidates:
+        data = stock_data_cache.get(symbol)
+        if not (data and data['is_valid']):
+            continue
+        data['symbol'] = symbol
+        
+        if check_special_condition(data, CONFIG, log_detail, SYMBOL_TO_TRACE):
+            special_case_symbols.append(symbol)
+        else:
+            strict_symbols.append(symbol)
+            
+    log_detail(f"完成区分: {len(special_case_symbols)} 个满足特殊条件 (将使用宽松标准), {len(strict_symbols)} 个不满足 (将使用严格标准)。")
+
+    # 4. 第一轮筛选: 对两个组分别应用不同标准
+    log_detail("\n--- 步骤 4: 执行第一轮筛选 ---")
+    
+    # 4a. 对满足特殊条件的股票使用宽松标准
+    special_valid, special_invalid = perform_filter_pass(
+        special_case_symbols,
+        CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_LARGE"],
+        CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_SMALL"],
+        "第一轮筛选 (特殊条件组 - 宽松)"
     )
     
+    # 4b. 对其他股票使用严格标准
+    strict_valid, strict_invalid = perform_filter_pass(
+        strict_symbols,
+        CONFIG["PRICE_DROP_PERCENTAGE_LARGE"],
+        CONFIG["PRICE_DROP_PERCENTAGE_SMALL"],
+        "第一轮筛选 (常规组 - 严格)"
+    )
+
+    # 4c. 合并第一轮的筛选结果
+    pass1_valid = special_valid + strict_valid
+    pass1_invalid = special_invalid + strict_invalid
+    log_detail("\n--- 第一轮筛选结果汇总 ---")
+    log_detail(f"PE_valid 组: {len(pass1_valid)} 个 ({len(special_valid)} from special, {len(strict_valid)} from strict)")
+    log_detail(f"PE_invalid 组: {len(pass1_invalid)} 个 ({len(special_invalid)} from special, {len(strict_invalid)} from invalid)")
+
     # 默认使用第一轮的结果
     final_pe_valid_symbols = pass1_valid
     final_pe_invalid_symbols = pass1_invalid
 
-    # 4. 第二轮筛选 (Pass 2): 根据第一轮结果，有条件地使用宽松标准
+    # 5. 第二轮筛选 (条件性放宽): 如果某组数量不足，则对该组中的“严格”部分应用宽松标准
+    log_detail("\n--- 步骤 5: 检查是否需要为数量不足的组进行第二轮宽松筛选 ---")
     min_size = CONFIG["MIN_GROUP_SIZE_FOR_RELAXED_FILTER"]
     
     # 检查 PE_valid 组
     if len(pass1_valid) < min_size:
-        log_detail(f"\n'PE_valid' 组在第一轮筛选后数量 ({len(pass1_valid)}) 小于阈值 ({min_size})，将使用宽松标准重新筛选。")
-        # 重新运行筛选，并只取 pe_valid 的结果
-        final_pe_valid_symbols, _ = perform_filter_pass(
-            initial_candidates,
+        log_detail(f"\n'PE_valid' 组在第一轮筛选后数量 ({len(pass1_valid)}) 小于阈值 ({min_size})。")
+        log_detail(f"将对原先使用严格标准的 {len(strict_symbols)} 个股票，应用宽松标准重新筛选。")
+        
+        rerun_valid, _ = perform_filter_pass(
+            strict_symbols,
             CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_LARGE"],
             CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_SMALL"],
             "第二轮筛选 (宽松, for PE_valid)"
         )
+        final_pe_valid_symbols = sorted(list(set(special_valid) | set(rerun_valid)))
+        log_detail(f"第二轮筛选后，'PE_valid' 组更新为 {len(final_pe_valid_symbols)} 个。")
     else:
         log_detail(f"\n'PE_valid' 组在第一轮筛选后数量 ({len(pass1_valid)}) 已达标，无需宽松筛选。")
 
     # 检查 PE_invalid 组
     if len(pass1_invalid) < min_size:
-        log_detail(f"\n'PE_invalid' 组在第一轮筛选后数量 ({len(pass1_invalid)}) 小于阈值 ({min_size})，将使用宽松标准重新筛选。")
-        # 重新运行筛选，并只取 pe_invalid 的结果
-        _, final_pe_invalid_symbols = perform_filter_pass(
-            initial_candidates,
+        log_detail(f"\n'PE_invalid' 组在第一轮筛选后数量 ({len(pass1_invalid)}) 小于阈值 ({min_size})。")
+        log_detail(f"将对原先使用严格标准的 {len(strict_symbols)} 个股票，应用宽松标准重新筛选。")
+
+        _, rerun_invalid = perform_filter_pass(
+            strict_symbols,
             CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_LARGE"],
             CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_SMALL"],
             "第二轮筛选 (宽松, for PE_invalid)"
         )
+        final_pe_invalid_symbols = sorted(list(set(special_invalid) | set(rerun_invalid)))
+        log_detail(f"第二轮筛选后，'PE_invalid' 组更新为 {len(final_pe_invalid_symbols)} 个。")
     else:
         log_detail(f"\n'PE_invalid' 组在第一轮筛选后数量 ({len(pass1_invalid)}) 已达标，无需宽松筛选。")
 
-    # 5. 汇总最终结果并输出
+    # 6. 汇总最终结果并输出
     all_qualified_symbols = final_pe_valid_symbols + final_pe_invalid_symbols
     log_detail(f"\n--- 最终结果汇总 ---")
     log_detail(f"最终 PE_valid 组: {len(final_pe_valid_symbols)} 个: {sorted(final_pe_valid_symbols)}")
     log_detail(f"最终 PE_invalid 组: {len(final_pe_invalid_symbols)} 个: {sorted(final_pe_invalid_symbols)}")
     log_detail(f"总计符合条件的股票共 {len(all_qualified_symbols)} 个。")
 
-    # 6. 处理文件输出 (使用经过Tag过滤后的列表)
+    # 7. 处理文件输出
     pe_valid_set = set(final_pe_valid_symbols)
     pe_invalid_set = set(final_pe_invalid_symbols)
 
-    # 6.1 加载黑名单和已存在分组
+    # 7.1 加载黑名单和已存在分组
     blacklist = load_blacklist(BLACKLIST_JSON_FILE)
     
-    # 6.2 加载 panel.json，获取已存在分组的内容
+    # 7.2 加载 panel.json，获取已存在分组的内容
     try:
         with open(PANEL_JSON_FILE, 'r', encoding='utf-8') as f: panel_data = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError): panel_data = {}
@@ -565,11 +649,11 @@ def run_processing_logic(log_detail):
     exist_Strategy12 = set(panel_data.get('Strategy12', {}).keys())
     already_in_panels = exist_notify | exist_Strategy12
 
-    # 6.2 从两个组中分别过滤掉黑名单和已存在分组的symbol
+    # 7.2 从两个组中分别过滤掉黑名单和已存在分组的symbol
     final_pe_valid_to_write = sorted(list(pe_valid_set - blacklist - already_in_panels))
     final_pe_invalid_to_write = sorted(list(pe_invalid_set - blacklist - already_in_panels))
 
-    # 6.3 打印被跳过的信息
+    # 7.3 打印被跳过的信息
     skipped_valid = pe_valid_set & (blacklist | already_in_panels)
     if skipped_valid:
         log_detail(f"\nPE_valid 组中，有 {len(skipped_valid)} 个 symbol 因在黑名单或已有分组中被跳过: {sorted(list(skipped_valid))}")
@@ -578,7 +662,7 @@ def run_processing_logic(log_detail):
     if skipped_invalid:
         log_detail(f"\nPE_invalid 组中，有 {len(skipped_invalid)} 个 symbol 因在黑名单或已有分组中被跳过: {sorted(list(skipped_invalid))}")
 
-    # 6.4 更新 JSON 面板文件
+    # 7.4 更新 JSON 面板文件
     log_detail(f"\n准备写入 {len(final_pe_valid_to_write)} 个 symbol 到 'PE_valid' 组。")
     update_json_panel(final_pe_valid_to_write, PANEL_JSON_FILE, 'PE_valid')
     

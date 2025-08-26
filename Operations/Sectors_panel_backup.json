@@ -19,7 +19,8 @@
     "Utilities": {},
     "Consumer_Defensive": {
         "MKC": "味好美",
-        "FRPT": ""
+        "FRPT": "",
+        "FLO": ""
     },
     "Industrials": {
         "FLY": "",
@@ -141,10 +142,36 @@
         "VRSN": "",
         "FDS": ""
     },
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
-    "PE_invalid": {},
+    "Strategy12": {
+        "AVAV": "",
+        "CRWD": "",
+        "PSTG": ""
+    },
+    "Strategy34": {
+        "APO": "",
+        "BWXT": "",
+        "CART": "",
+        "DASH": "",
+        "PLTR": "",
+        "RH": "",
+        "SHOP": ""
+    },
+    "PE_valid": {
+        "COST": "",
+        "DRI": "",
+        "DUOL": "",
+        "FRPT": "",
+        "HIMS": "",
+        "ICLR": "",
+        "LII": "",
+        "VRSN": "",
+        "VRT": "",
+        "WING": ""
+    },
+    "PE_invalid": {
+        "JOBY": "",
+        "SOUN": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

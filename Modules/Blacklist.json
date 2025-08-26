@@ -776,6 +776,7 @@
         "LMBS",
         "SMMU",
         "IOO",
-        "FXO"
+        "FXO",
+        "VFMO"
     ]
 }
