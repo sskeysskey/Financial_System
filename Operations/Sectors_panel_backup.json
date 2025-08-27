@@ -109,26 +109,23 @@
         "XRP": ""
     },
     "Today": {
+        "CDNS": "",
         "DASH": "",
-        "CVNA": "",
         "SHOP": "",
-        "AVAV": "",
         "BWXT": "",
         "RH": "",
-        "SMR": "",
-        "CLS": "",
+        "NOW": "",
+        "TYL": "",
+        "SOUN": "",
+        "ZS": "",
         "VRT": "",
         "LII": "",
-        "OKLO": "",
-        "RBLX": "",
-        "COST": "",
         "APO": "",
         "DUOL": "",
-        "FRPT": "",
         "HIMS": "",
-        "ICLR": "",
-        "IDXX": "",
-        "JOBY": ""
+        "JOBY": "",
+        "KDP": "",
+        "CPRT": ""
     },
     "Next Week": {
         "IOT": "",
@@ -141,52 +138,22 @@
         "GIS": ""
     },
     "Watching": {
-        "OKTA": "",
         "CRWD": "",
-        "CPRT": "",
         "DELL": "",
         "PSTG": "",
-        "CART": "",
-        "VRT": "",
         "DUOL": "",
         "VRSN": "",
         "FDS": "",
         "PLTR": "",
-        "MRVL": ""
-    },
-    "Strategy12": {
+        "MRVL": "",
+        "BF-B": "",
         "ADSK": "",
-        "AVAV": "",
-        "CRWD": "",
-        "PSTG": ""
+        "FRPT": ""
     },
-    "Strategy34": {
-        "APO": "",
-        "CART": "",
-        "RH": ""
-    },
-    "PE_valid": {
-        "BWXT": "",
-        "COST": "",
-        "DASH": "",
-        "DRI": "",
-        "DUOL": "",
-        "FDS": "",
-        "IDXX": "",
-        "KDP": "",
-        "LII": "",
-        "MP": "",
-        "MRNA": "",
-        "NOW": "",
-        "TRU": "",
-        "VRSN": "",
-        "VRT": "",
-        "WING": "",
-        "WST": ""
-    },
-    "PE_invalid": {
-        "SOUN": ""
-    },
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {},
+    "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

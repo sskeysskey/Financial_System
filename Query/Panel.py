@@ -37,8 +37,8 @@ categories = [
     ['Basic_Materials','Consumer_Cyclical','Real_Estate','Technology','Energy','Industrials',
      'Consumer_Defensive','Communication_Services','Financial_Services', 'Healthcare','Utilities'],
     ['Today','Next Week','2 Weeks','3 Weeks'],
-    ['Strategy12','Strategy34'],
-    ['Watching','PE_valid','PE_invalid'],
+    ['PE_valid','PE_invalid'],
+    ['Strategy12','Strategy34','Watching'],
     ['Bonds','Indices','Currencies'],
     ['Economics','Crypto','Commodities'],
 ]

@@ -669,11 +669,11 @@ class SimilarityViewerWindow(QMainWindow):
             if is_trend_rising and is_price_positive:
                 color = 'red'      # 红色
             elif not is_trend_rising and is_price_positive:
-                color = '#276E47'     # 蓝色
+                color = 'green'    # 绿色
             elif is_trend_rising and not is_price_positive:
                 color = '#912F2F'  # 紫色
             elif not is_trend_rising and not is_price_positive:
-                color = 'green'    # 绿色
+                color = '#276E47'     # 浅绿色
         
         base_ss = button.styleSheet() or ""
         button.setStyleSheet(base_ss + f"; color: {color};")

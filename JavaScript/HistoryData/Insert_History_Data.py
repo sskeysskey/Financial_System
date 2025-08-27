@@ -144,7 +144,7 @@ def alert_and_exit(msg):
 def extension_launch():
     script = '''
     tell application "System Events"
-        keystroke "r" using option down
+        keystroke "y" using option down
     end tell
     '''
     # 运行AppleScript

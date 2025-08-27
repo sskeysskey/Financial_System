@@ -62,6 +62,10 @@ CONFIG = {
     "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.03,
     # 新增：触发“更宽松”标准的财报收盘价价差百分比
     "ER_PRICE_DIFF_THRESHOLD": 0.40,
+    # ========== MODIFICATION START: Add new market cap threshold for Condition 2 ==========
+    # 新增：触发“最宽松”标准的市值门槛 (条件2D)
+    "MARKETCAP_THRESHOLD_FOR_SUPER_RELAXED": 500_000_000_000,
+    # ========================= MODIFICATION END =========================
     # ========== 代码修改部分 (逻辑变更) ==========
     # 触发宽松筛选的最小分组数量 (仅对 PE_valid 组生效)
     "MIN_PE_VALID_SIZE_FOR_RELAXED_FILTER": 5,
@@ -73,9 +77,7 @@ CONFIG = {
     # ========================================
     # 新增：Tag 黑名单。所有包含以下任一 tag 的 symbol 将被过滤掉。
     "TAG_BLACKLIST": {
-        "天然气",
-        "页岩气",
-        "个人安全防卫"
+        
     }
 }
 
@@ -247,6 +249,33 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
         if is_tracing:
             log_detail(f"[{symbol}] 步骤3.1: 获取最近10个交易日的收盘价，共 {len(prices_last_10)} 条: {prices_last_10}")
 
+        # 获取财报窗口期最高价 (财报日当天及后两个交易日)
+        latest_er_date = data['latest_er_date_str']
+        latest_er_price = data['all_er_prices'][-1]
+        
+        # 查询财报日后两个交易日的价格
+        cursor.execute(
+            f'SELECT price FROM "{sector_name}" '
+            f'WHERE name = ? AND date > ? '
+            f'ORDER BY date ASC LIMIT 2',
+            (symbol, latest_er_date)
+        )
+        next_days_rows = cursor.fetchall()
+        next_days_prices = [row[0] for row in next_days_rows]
+        
+        # 收集窗口期内的所有有效价格 (财报日 + 后两天)
+        er_window_prices = [latest_er_price]
+        er_window_prices.extend(next_days_prices)
+            
+        data['er_window_high_price'] = max(er_window_prices) if er_window_prices else None
+        
+        if is_tracing:
+            log_detail(f"[{symbol}] 步骤3.2: 查找财报窗口期最高价 (财报日当天及后两个交易日)。")
+            log_detail(f"[{symbol}]   - 财报日当天价格: {latest_er_price}")
+            log_detail(f"[{symbol}]   - 财报日后两个交易日价格: {next_days_prices}")
+            log_detail(f"[{symbol}]   - 窗口期内价格列表: {er_window_prices}")
+            log_detail(f"[{symbol}]   - 窗口期内最高价: {data['er_window_high_price']}")
+
         # 4. 获取PE和市值
         data['pe_ratio'], data['market_cap'] = None, None
         if market_cap_exists:
@@ -297,9 +326,11 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
 # ========== 代码修改部分: check_special_condition 函数重构 ==========
 def check_special_condition(data, config, log_detail, symbol_to_trace):
     """
-    a) 最新财报涨跌幅 > 0
-    b) 最新财报收盘价 > 最近N次财报均价
     检查股票应采用何种筛选标准 (条件2)。
+    新规则：
+    - 最宽松: (A & B & C) or (A & B & D)
+    - 宽松: (A & B) or (B & C)  (但不满足最宽松)
+    - 严格: 其他情况
     返回:
       - 0: 严格标准 (Strict)
       - 1: 宽松标准 (Relaxed)
@@ -309,73 +340,68 @@ def check_special_condition(data, config, log_detail, symbol_to_trace):
     is_tracing = (symbol == symbol_to_trace)
     if is_tracing: log_detail(f"  - [特殊条件检查(原条件2)] for {symbol}:")
 
-    # 条件A: 最新一次财报涨跌幅 > 0
+    # --- 数据准备 ---
     er_pcts = data.get('all_er_pcts', [])
-    if not er_pcts:
-        if is_tracing: log_detail(f"    - 失败: 缺少财报涨跌幅数据。-> 返回 0 (严格)")
+    all_er_prices = data.get('all_er_prices', [])
+    market_cap = data.get('market_cap')
+    recent_earnings_count = config["RECENT_EARNINGS_COUNT"]
+
+    # --- 数据有效性检查 ---
+    if not er_pcts or len(all_er_prices) < recent_earnings_count:
+        if is_tracing: log_detail(f"    - 失败: 财报数据不足。-> 返回 0 (严格)")
         return 0
+
+    # --- 评估四个子条件 A, B, C, D ---
+    
+    # 条件A: 最新一次财报涨跌幅 > 0
     latest_er_pct = er_pcts[-1]
     cond_a = latest_er_pct > 0
 
     # 条件B: 最新财报收盘价 > 过去 N 次财报收盘价平均值
-    recent_earnings_count = config["RECENT_EARNINGS_COUNT"]
-    all_er_prices = data.get('all_er_prices', [])
     prices_to_check = all_er_prices[-recent_earnings_count:]
-    if len(prices_to_check) < recent_earnings_count:
-        if is_tracing: log_detail(f"    - 失败: 最近财报收盘价数量不足 {recent_earnings_count} 次。-> 返回 0 (严格)")
-        return 0
-    
     avg_recent_price = sum(prices_to_check) / len(prices_to_check)
     latest_er_price = prices_to_check[-1]
     cond_b = latest_er_price > avg_recent_price
     
+    # 条件C: 最新两次财报收盘价价差 > 40%
+    previous_er_price = all_er_prices[-2]
+    price_diff_pct = ((latest_er_price - previous_er_price) / previous_er_price) if previous_er_price > 0 else 0
+    cond_c = price_diff_pct > config["ER_PRICE_DIFF_THRESHOLD"]
+
+    # 条件D: 市值 > 5000亿
+    market_cap_threshold = config["MARKETCAP_THRESHOLD_FOR_SUPER_RELAXED"]
+    cond_d = market_cap is not None and market_cap > market_cap_threshold
+
     if is_tracing:
         log_detail(f"    - a) 最新财报涨跌幅 > 0: {latest_er_pct:.4f} > 0 -> {cond_a}")
         log_detail(f"    - b) 最新财报收盘价 > 平均价: {latest_er_price:.2f} > {avg_recent_price:.2f} -> {cond_b}")
-
-    # 如果核心条件B不满足，则直接使用严格标准
-    if not cond_b:
-        if is_tracing: log_detail(f"    - 结果 (b为假): False -> 返回 0 (严格)")
-        return 0
-    
-    # 如果代码执行到这里，说明条件B为真。现在检查价差和条件A。
-    if is_tracing: log_detail(f"    - 结果 (b为真): True. 继续检查价差和条件a...")
-
-    # 条件C: 检查最新两次财报收盘价价差是否 > 40%
-    if len(all_er_prices) < 2:
-        if is_tracing: log_detail(f"    - 财报价格数据不足2条，无法计算价差。-> 返回 0 (严格)")
-        return 0 # 数据不足，无法应用任何宽松标准
-
-    previous_er_price = all_er_prices[-2]
-    if previous_er_price <= 0: # 防止除以零
-        if is_tracing: log_detail(f"    - 上次财报价格为0或负数，无法计算价差。-> 返回 0 (严格)")
-        return 0
-
-    price_diff_pct = (latest_er_price - previous_er_price) / previous_er_price
-    cond_c = price_diff_pct > config["ER_PRICE_DIFF_THRESHOLD"]
-    
-    if is_tracing:
         log_detail(f"    - c) 最新两次财报价差 > {config['ER_PRICE_DIFF_THRESHOLD']*100}%: {price_diff_pct:.2%} > {config['ER_PRICE_DIFF_THRESHOLD']:.2%} -> {cond_c}")
+        log_detail(f"    - d) 市值 > {market_cap_threshold:,}: {market_cap} > {market_cap_threshold:,} -> {cond_d}")
 
-    # 最终决策树 (此时已知 cond_b 为真)
-    if cond_a:
-        # 情况1: cond_a为真, cond_b为真 (原始逻辑)
-        if cond_c:
-            if is_tracing: log_detail(f"    - 最终决策 (a=T, b=T, c=T): -> 返回 2 (更宽松)")
-            return 2  # 更宽松
-        else:
-            if is_tracing: log_detail(f"    - 最终决策 (a=T, b=T, c=F): -> 返回 1 (宽松)")
-            return 1  # 普通宽松
-    else:
-        # 情况2: cond_a为假, cond_b为真 (您的新逻辑)
-        if cond_c:
-            if is_tracing: log_detail(f"    - 最终决策 (a=F, b=T, c=T): -> 返回 1 (宽松) [新规则触发]")
-            return 1 # 普通宽松 (新规则)
-        else:
-            if is_tracing: log_detail(f"    - 最终决策 (a=F, b=T, c=F): -> 返回 0 (严格)")
-            return 0
+    # --- 最终决策树 ---
+    
+    # 核心条件B是所有宽松标准的基础，如果不满足，直接返回严格
+    if not cond_b:
+        if is_tracing: log_detail(f"    - 最终决策 (B为假): -> 返回 0 (严格)")
+        return 0
+    
+    # 到这里，B为真。
+    # 检查最宽松标准: (A and B and C) or (A and B and D) => A and B and (C or D)
+    if cond_a and (cond_c or cond_d):
+        if is_tracing: log_detail(f"    - 最终决策 (A=T, B=T, C or D=T): -> 返回 2 (最宽松)")
+        return 2
+    
+    # 检查宽松标准: (A and B) or (B and C) => B and (A or C)
+    # 因为已经排除了最宽松的情况，所以这里直接检查 (A or C) 即可
+    if cond_a or cond_c:
+        if is_tracing: log_detail(f"    - 最终决策 (B=T, A or C=T, 但不满足最宽松): -> 返回 1 (宽松)")
+        return 1
+        
+    # 如果B为真，但A和C都为假，则应用严格标准
+    if is_tracing: log_detail(f"    - 最终决策 (B=T, 但A和C均为假): -> 返回 0 (严格)")
+    return 0
+# ========================= MODIFICATION END =========================
 
-# ========== 新增函数：检查新的“或条件3” ==========
 def check_new_condition_3(data, config, log_detail, symbol_to_trace):
     """
     检查新增的“或条件3”是否满足。
@@ -450,10 +476,10 @@ def evaluate_stock_conditions(data, symbol_to_trace, log_detail, drop_pct_large,
     此函数为原始筛选流程 (条件1 + 条件2的阈值应用)
     条件1 (三选一)：
       a) 最近一次财报的涨跌幅 latest_er_pct 为正
-      b) 最新财报收盘价 > 过去 N 次财报收盘价平均值
+      b) 最新财报收盘价 > 过去 N 次财报收盘价平均值，且最近2次财报收盘价差额 > 4%
       c) 最新收盘价比最新一期财报收盘价低至少 X% (X 来自 CONFIG)
     (AND)
-    价格回撤条件：最新价 <= 最近一期财报收盘价 * (1 - Y%)
+    价格回撤条件：最新价 <= 财报窗口期最高价 * (1 - Y%)
     (AND)
     条件4：最新价不高于最近10日最低收盘价的 1+3%
     (AND)
@@ -479,14 +505,32 @@ def evaluate_stock_conditions(data, symbol_to_trace, log_detail, drop_pct_large,
     threshold_price1c = latest_er_price * (1 - drop_pct_for_cond1c)
     
     cond1_a = latest_er_pct > 0
-    cond1_b = latest_er_price > avg_recent_price
+    
+    # <--- 修改开始: 更新条件1b的逻辑 ---
+    # 原条件b: cond1_b = latest_er_price > avg_recent_price
+    # 新条件b: 最新财报收盘价 > 平均价 AND 最近两次财报价差 > 4%
+    previous_er_price = prices_to_check[-2] # 获取倒数第二次的财报价格
+    price_diff_pct_cond1b = ((latest_er_price - previous_er_price) / previous_er_price) if previous_er_price > 0 else 0
+    
+    cond1_b_part1 = latest_er_price > avg_recent_price
+    cond1_b_part2 = price_diff_pct_cond1b > 0.04
+    cond1_b = cond1_b_part1 and cond1_b_part2
+    # <--- 修改结束 ---
+
     cond1_c = data['latest_price'] <= threshold_price1c
     passed_original_cond1 = cond1_a or cond1_b or cond1_c
 
     if is_tracing:
         log_detail("  - [入口条件A] 原始条件1评估:")
         log_detail(f"    - a) 最新财报涨跌幅 > 0: {latest_er_pct:.4f} > 0 -> {cond1_a}")
-        log_detail(f"    - b) 最新财报收盘价 > 平均价: {latest_er_price:.2f} > {avg_recent_price:.2f} -> {cond1_b}")
+        
+        # <--- 修改开始: 更新日志输出以匹配新逻辑 ---
+        log_detail(f"    - b) 最新财报收盘价 > 平均价 且 最近两次财报价差 > 4%:")
+        log_detail(f"      - Part 1 (价 > 平均价): {latest_er_price:.2f} > {avg_recent_price:.2f} -> {cond1_b_part1}")
+        log_detail(f"      - Part 2 (价差 > 4%): {price_diff_pct_cond1b:.2%} > 4.00% -> {cond1_b_part2}")
+        log_detail(f"      - 综合结果: {cond1_b}")
+        # <--- 修改结束 ---
+        
         log_detail(f"    - c) 最新价比最新财报收盘价低至少 {drop_pct_for_cond1c*100}%: {data['latest_price']:.2f} <= {threshold_price1c:.2f} -> {cond1_c}")
         log_detail(f"    - 结果: {passed_original_cond1}")
 
@@ -507,17 +551,28 @@ def evaluate_stock_conditions(data, symbol_to_trace, log_detail, drop_pct_large,
 
     # 通用过滤1: 价格回撤条件
     market_cap = data.get('market_cap')
+    er_window_high_price = data.get('er_window_high_price') # 获取新计算的窗口期最高价
+
+    # 确保窗口期最高价有效
+    if er_window_high_price is None or er_window_high_price <= 0:
+        if is_tracing: log_detail(f"  - 最终裁定: 失败 (无法获取有效的财报窗口期最高价: {er_window_high_price})。")
+        return False
+
     drop_pct = (
         drop_pct_small
         if (market_cap and market_cap >= CONFIG["MARKETCAP_THRESHOLD"])
         else drop_pct_large
     )
-    threshold_price_drawdown = latest_er_price * (1 - drop_pct)
+    # 使用 er_window_high_price 作为回撤基准
+    threshold_price_drawdown = er_window_high_price * (1 - drop_pct)
     cond_drawdown_ok = data['latest_price'] <= threshold_price_drawdown
+    
     if is_tracing:
         log_detail("  - [通用过滤1] 价格回撤:")
         log_detail(f"    - 市值: {market_cap} -> 使用下跌百分比: {drop_pct*100:.1f}%")
-        log_detail(f"    - 判断: 最新价({data['latest_price']:.2f}) <= 阈值价({threshold_price_drawdown:.2f}) -> {cond_drawdown_ok}")
+        # 更新日志以反映新逻辑
+        log_detail(f"    - 判断: 最新价({data['latest_price']:.2f}) <= 财报窗口期最高价({er_window_high_price:.2f}) * (1 - {drop_pct:.2f}) = 阈值价({threshold_price_drawdown:.2f}) -> {cond_drawdown_ok}")
+    
     if not cond_drawdown_ok:
         if is_tracing: log_detail("  - 最终裁定: 失败 (价格回撤不满足)。")
         return False
