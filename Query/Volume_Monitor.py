@@ -33,7 +33,7 @@ TOTAL_TRADING_MINUTES = 390
 UI_CONFIG = {
     "window_width": 1200,
     "window_height": 900,
-    "general_font_size": "14pt",  # 表格内容等通用字体大小
+    "general_font_size": "18pt",  # 表格内容等通用字体大小
     "header_font_size": "16pt",   # 表头字体大小
     "row_height": 50              # 表格每一行的高度
 }
@@ -114,7 +114,6 @@ STYLESHEET = f"""
         subcontrol-origin: margin;
     }}
 """
-# ==============================================================================
 
 
 # --- 辅助函数：用于创建虚拟文件和数据（如果真实文件不存在） ---
@@ -407,7 +406,7 @@ class MainWindow(QMainWindow):
             # --- 修改点 2 ---
             # 将计算出的值除以10000，格式化为带一位小数的字符串，并添加“万股”单位
             value_in_wan = display_value / 10000
-            live_item.setText(f"{value_in_wan:.1f}万股")
+            live_item.setText(f"{value_in_wan:.1f}")
     # --- 新增功能: 按下ESC键关闭窗口 ---
     def keyPressEvent(self, event):
         """
