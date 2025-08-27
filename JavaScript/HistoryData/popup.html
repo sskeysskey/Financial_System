@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>抓取进度</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            width: 300px;
+            padding: 10px;
+            font-size: 14px;
+            color: #333;
+        }
+
+        h3 {
+            margin-top: 0;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+        }
+
+        #statusList {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        #statusList li {
+            padding: 5px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        #statusList li:last-child {
+            border-bottom: none;
+        }
+
+        .status-success::before {
+            content: '✅ ';
+        }
+
+        .status-error::before {
+            content: '❌ ';
+        }
+
+        .status-info::before {
+            content: 'ℹ️ ';
+        }
+    </style>
+</head>
+
+<body>
+    <h3>历史数据抓取工具</h3>
+    <ul id="statusList"></ul>
+    <script src="popup.js"></script>
+</body>
+
+</html>
