@@ -10,7 +10,9 @@
         "GIB": "",
         "BLSH": "",
         "TSM": "",
-        "MNDY": ""
+        "MNDY": "",
+        "MSFT": "",
+        "VERX": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
@@ -20,7 +22,10 @@
     "Consumer_Defensive": {
         "MKC": "味好美",
         "FRPT": "",
-        "FLO": ""
+        "FLO": "",
+        "STZ": "",
+        "KDP": "",
+        "CLX": ""
     },
     "Industrials": {
         "FLY": "",
@@ -117,18 +122,23 @@
         "OKLO": "",
         "RBLX": "",
         "COST": "",
-        "APO": ""
+        "APO": "",
+        "DUOL": "",
+        "FRPT": "",
+        "HIMS": "",
+        "ICLR": "",
+        "IDXX": "",
+        "JOBY": ""
     },
     "Next Week": {
-        "MRVL": ""
+        "IOT": "",
+        "AVAV": ""
     },
     "2 Weeks": {
         "KMX": ""
     },
     "3 Weeks": {
-        "GIS": "",
-        "IOT": "",
-        "AVAV": ""
+        "GIS": ""
     },
     "Watching": {
         "OKTA": "",
@@ -136,41 +146,45 @@
         "CPRT": "",
         "DELL": "",
         "PSTG": "",
-        "APO": "",
         "CART": "",
         "VRT": "",
         "DUOL": "",
         "VRSN": "",
         "FDS": "",
-        "PLTR": ""
+        "PLTR": "",
+        "MRVL": ""
     },
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {
+    "Strategy12": {
+        "ADSK": "",
+        "AVAV": "",
+        "CRWD": "",
+        "PSTG": ""
+    },
+    "Strategy34": {
         "APO": "",
-        "BOX": "",
-        "BWXT": "",
         "CART": "",
+        "RH": ""
+    },
+    "PE_valid": {
+        "BWXT": "",
         "COST": "",
         "DASH": "",
         "DRI": "",
         "DUOL": "",
-        "FRPT": "",
-        "HIMS": "",
-        "ICLR": "",
+        "FDS": "",
         "IDXX": "",
+        "KDP": "",
         "LII": "",
+        "MP": "",
+        "MRNA": "",
         "NOW": "",
-        "PLTR": "",
-        "RELX": "",
-        "SHOP": "",
+        "TRU": "",
         "VRSN": "",
         "VRT": "",
-        "WING": ""
+        "WING": "",
+        "WST": ""
     },
     "PE_invalid": {
-        "JOBY": "",
-        "KVYO": "",
         "SOUN": ""
     },
     "Currencies": {

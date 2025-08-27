@@ -10,7 +10,6 @@
         "Binance",
         "AZN",
         "KO",
-        "KDP",
         "AMT",
         "AZO",
         "NEM",
@@ -427,7 +426,6 @@
         "LOW",
         "MAR",
         "TSCO",
-        "AMCR",
         "HAS",
         "KTB",
         "SYY",
@@ -523,7 +521,8 @@
         "CWAN",
         "VRSK",
         "HRB",
-        "ALC"
+        "ALC",
+        "KDP"
     ],
     "yellow_keywords": [
         "XLY",
@@ -888,7 +887,8 @@
         "MOH",
         "CNI",
         "TENB",
-        "NICE"
+        "NICE",
+        "AMCR"
     ],
     "black_keywords": [
         "VFC",

@@ -789,7 +789,8 @@
         "QS",
         "ATAT",
         "GOLF",
-        "HGV"
+        "HGV",
+        "DORM"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -1149,7 +1150,8 @@
         "MAIN",
         "BBAR",
         "CRCL",
-        "AX"
+        "AX",
+        "ABCB"
     ],
     "Healthcare": [
         "LLY",
@@ -1298,7 +1300,8 @@
         "AXSM",
         "VRNA",
         "RYTM",
-        "IRTC"
+        "IRTC",
+        "ABVX"
     ],
     "Industrials": [
         "GE",

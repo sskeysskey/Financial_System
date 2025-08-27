@@ -10,7 +10,9 @@
         "GIB": "",
         "BLSH": "",
         "TSM": "",
-        "MNDY": ""
+        "MNDY": "",
+        "MSFT": "",
+        "VERX": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
@@ -20,7 +22,10 @@
     "Consumer_Defensive": {
         "MKC": "味好美",
         "FRPT": "",
-        "FLO": ""
+        "FLO": "",
+        "STZ": "",
+        "KDP": "",
+        "CLX": ""
     },
     "Industrials": {
         "FLY": "",
@@ -117,18 +122,23 @@
         "OKLO": "",
         "RBLX": "",
         "COST": "",
-        "APO": ""
+        "APO": "",
+        "DUOL": "",
+        "FRPT": "",
+        "HIMS": "",
+        "ICLR": "",
+        "IDXX": "",
+        "JOBY": ""
     },
     "Next Week": {
-        "MRVL": ""
+        "IOT": "",
+        "AVAV": ""
     },
     "2 Weeks": {
         "KMX": ""
     },
     "3 Weeks": {
-        "GIS": "",
-        "IOT": "",
-        "AVAV": ""
+        "GIS": ""
     },
     "Watching": {
         "OKTA": "",
@@ -136,31 +146,45 @@
         "CPRT": "",
         "DELL": "",
         "PSTG": "",
-        "APO": "",
         "CART": "",
         "VRT": "",
         "DUOL": "",
         "VRSN": "",
         "FDS": "",
-        "PLTR": ""
-    },
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {
-        "DUOL": "",
-        "FRPT": "",
-        "HIMS": "",
-        "ICLR": "",
-        "IDXX": "",
-        "LII": "",
         "PLTR": "",
-        "SHOP": "",
+        "MRVL": ""
+    },
+    "Strategy12": {
+        "ADSK": "",
+        "AVAV": "",
+        "CRWD": "",
+        "PSTG": ""
+    },
+    "Strategy34": {
+        "APO": "",
+        "CART": "",
+        "RH": ""
+    },
+    "PE_valid": {
+        "BWXT": "",
+        "COST": "",
+        "DASH": "",
+        "DRI": "",
+        "DUOL": "",
+        "FDS": "",
+        "IDXX": "",
+        "KDP": "",
+        "LII": "",
+        "MP": "",
+        "MRNA": "",
+        "NOW": "",
+        "TRU": "",
         "VRSN": "",
         "VRT": "",
-        "WING": ""
+        "WING": "",
+        "WST": ""
     },
     "PE_invalid": {
-        "JOBY": "",
         "SOUN": ""
     },
     "Currencies": {

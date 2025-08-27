@@ -73,8 +73,7 @@
         "BTI",
         "CL",
         "DEO",
-        "MNST",
-        "KR"
+        "MNST"
     ],
     "Energy": [
         "XOM",
@@ -98,7 +97,6 @@
         "LNG",
         "TRP",
         "PSX",
-        "SLB",
         "SU"
     ],
     "Financial_Services": [
@@ -160,7 +158,8 @@
         "HOOD",
         "ARES",
         "NDAQ",
-        "AIG"
+        "AIG",
+        "AMP"
     ],
     "Healthcare": [
         "LLY",
