@@ -53,10 +53,8 @@
         "HLT",
         "GM",
         "DASH",
-        "JD",
-        "HMC",
-        "DHI",
-        "CPNG"
+        "CPNG",
+        "ORLY"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -65,7 +63,6 @@
         "KO",
         "PEP",
         "PM",
-        "FMX",
         "UL",
         "BUD",
         "MDLZ",
@@ -97,7 +94,7 @@
         "LNG",
         "TRP",
         "PSX",
-        "SU"
+        "SLB"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -158,8 +155,8 @@
         "HOOD",
         "ARES",
         "NDAQ",
-        "AIG",
-        "AMP"
+        "IBKR",
+        "BAM"
     ],
     "Healthcare": [
         "LLY",
@@ -234,7 +231,8 @@
         "URI",
         "PCAR",
         "LHX",
-        "CMI"
+        "CMI",
+        "FAST"
     ],
     "Real_Estate": [
         "PLD",
@@ -244,8 +242,7 @@
         "SPG",
         "DLR",
         "O",
-        "PSA",
-        "CBRE"
+        "PSA"
     ],
     "Technology": [
         "AAPL",

@@ -112,7 +112,6 @@
         "COST": "",
         "CART": "",
         "RH": "",
-        "ZS": "",
         "SOUN": "",
         "TYL": "",
         "NOW": "",
@@ -151,10 +150,43 @@
         "ADSK": "",
         "FRPT": ""
     },
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
-    "PE_invalid": {},
+    "Strategy12": {
+        "AVAV": "",
+        "CRWD": "",
+        "GWRE": "",
+        "PSTG": ""
+    },
+    "Strategy34": {
+        "BWXT": "",
+        "CART": "",
+        "DASH": "",
+        "PLTR": "",
+        "RH": "",
+        "SHOP": ""
+    },
+    "PE_valid": {
+        "ACHR": "",
+        "AXON": "",
+        "BNTX": "",
+        "COST": "",
+        "DRI": "",
+        "DUOL": "",
+        "EXE": "",
+        "FDS": "",
+        "IDXX": "",
+        "KDP": "",
+        "KR": "",
+        "LII": "",
+        "SMMT": "",
+        "SNV": "",
+        "VRSN": "",
+        "VST": ""
+    },
+    "PE_invalid": {
+        "JOBY": "",
+        "SOUN": "",
+        "ZS": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
