@@ -147,7 +147,7 @@
         "GIS": ""
     },
     "Watching": {
-        "CRWD": "",
+        "RELX": "",
         "KR": "",
         "BNTX": "",
         "AXON": "",
@@ -162,24 +162,10 @@
         "ADSK": "",
         "FRPT": ""
     },
-    "Strategy12": {
-        "GWRE": ""
-    },
-    "Strategy34": {
-        "CART": "",
-        "PLTR": "PLTR热",
-        "RH": ""
-    },
-    "PE_valid": {
-        "RELX": "",
-        "SAIA": "",
-        "TYL": "",
-        "VRSN": "",
-        "WST": ""
-    },
-    "PE_invalid": {
-        "JOBY": ""
-    },
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {},
+    "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
