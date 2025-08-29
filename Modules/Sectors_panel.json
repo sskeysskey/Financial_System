@@ -116,6 +116,7 @@
         "XRP": ""
     },
     "Today": {
+        "KR": "",
         "VST": "",
         "COST": "",
         "CART": "",
@@ -132,7 +133,8 @@
         "APO": "",
         "LII": "",
         "BWXT": "",
-        "DASH": ""
+        "DASH": "",
+        "FDS": ""
     },
     "Next Week": {
         "IOT": "",
@@ -169,18 +171,6 @@
         "RH": ""
     },
     "PE_valid": {
-        "ACHR": "",
-        "BWXT": "",
-        "COST": "",
-        "DASH": "",
-        "DRI": "",
-        "DUOL": "",
-        "FDS": "",
-        "IDXX": "",
-        "KDP": "",
-        "KR": "",
-        "LII": "",
-        "ONON": "",
         "RELX": "",
         "SAIA": "",
         "TYL": "",

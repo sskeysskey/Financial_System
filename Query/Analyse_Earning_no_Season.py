@@ -62,7 +62,7 @@ CONFIG = {
     # 新增：触发“更宽松”标准的财报收盘价价差百分比
     "ER_PRICE_DIFF_THRESHOLD": 0.40,
     
-    # 新增：触发“最宽松”标准的市值门槛 (条件2D)
+    # 新增：触发“最宽松”标准的市值门槛 (前提条件D)
     "MARKETCAP_THRESHOLD_FOR_SUPER_RELAXED": 500_000_000_000,
     
     # 触发宽松筛选的最小分组数量 (仅对 PE_valid 组生效)
@@ -72,7 +72,7 @@ CONFIG = {
     # ========== 在这里添加新参数 ==========
     # 条件1c 的专属参数：最新价比最新财报收盘价低至少 X%
     "PRICE_DROP_FOR_COND1C": 0.14,
-    # 条件4参数
+    # 条件3参数
     "COND4_MARKETCAP_THRESHOLD": 200_000_000_000,  # 2000亿
     "COND4_DROP_THRESHOLDS": [0.07, 0.15],         # 7% 与 15%
     "COND4_LOOKBACK_DAYS": 60,
@@ -334,7 +334,7 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
                 data['pe_ratio'] = row[0]
             if is_tracing: log_detail(f"[{symbol}] 步骤4: 查询PE。结果: PE={data['pe_ratio']}")
 
-        # 5. 条件4相关的缓存字段
+        # 5. 条件3相关的缓存字段
         # 标注是否热门Tag或市值≥2000亿
         tags = set(symbol_to_tags_map.get(symbol, []))
         is_hot = len(tags & set(CONFIG.get("HOT_TAGS", set()))) > 0
@@ -362,7 +362,7 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
                 data['cond4_drop_type'] = cond4_type
 
         if is_tracing:
-            log_detail(f"[{symbol}] 步骤5: 条件4缓存 -> is_hot={is_hot}, is_big={is_big}, last_N_high={data['last_N_high']}, cond4_drop_type={data['cond4_drop_type']}")
+            log_detail(f"[{symbol}] 步骤5: 条件3缓存 -> is_hot={is_hot}, is_big={is_big}, last_N_high={data['last_N_high']}, cond4_drop_type={data['cond4_drop_type']}")
 
         data['is_valid'] = True
         cache[symbol] = data
@@ -415,7 +415,7 @@ def get_high_price_last_n_days(cursor, sector_name, symbol, latest_date_str, loo
 # ========== 代码修改部分: check_special_condition 函数重构 ==========
 def check_special_condition(data, config, log_detail, symbol_to_trace):
     """
-    检查股票应采用何种筛选标准 (条件2)。
+    检查股票应采用何种筛选标准 (前提条件)。
     新规则：
     - 最宽松: (A & B & C) or (A & B & D)
     - 宽松: (A & B) or (B & C)  (但不满足最宽松)
@@ -427,7 +427,7 @@ def check_special_condition(data, config, log_detail, symbol_to_trace):
     """
     symbol = data.get('symbol')
     is_tracing = (symbol == symbol_to_trace)
-    if is_tracing: log_detail(f"  - [特殊条件检查(原条件2)] for {symbol}:")
+    if is_tracing: log_detail(f"  - [特殊条件检查(前提条件)] for {symbol}:")
 
     # --- 数据准备 ---
     er_pcts = data.get('all_er_pcts', [])
@@ -489,11 +489,10 @@ def check_special_condition(data, config, log_detail, symbol_to_trace):
     # 如果B为真，但A和C都为假，则应用严格标准
     if is_tracing: log_detail(f"    - 最终决策 (B=T, 但A和C均为假): -> 返回 0 (严格)")
     return 0
-# ========================= MODIFICATION END =========================
 
-def check_new_condition_3(data, config, log_detail, symbol_to_trace):
+def check_new_condition_2(data, config, log_detail, symbol_to_trace):
     """
-    检查新增的“或条件3”是否满足。
+    检查新增的“前提条件”是否满足。
     a) 最新财报收盘价 > 过去 N 次财报收盘价平均值
     b) 最近2次财报收盘价价差 >= 4%
     c) 最新财报涨跌幅 > 0
@@ -501,7 +500,7 @@ def check_new_condition_3(data, config, log_detail, symbol_to_trace):
     """
     symbol = data.get('symbol')
     is_tracing = (symbol == symbol_to_trace)
-    if is_tracing: log_detail(f"\n--- [{symbol}] 新增条件3评估 ---")
+    if is_tracing: log_detail(f"\n--- [{symbol}] 新增前提条件评估 ---")
 
     # --- 数据准备和有效性检查 ---
     recent_earnings_count = config["RECENT_EARNINGS_COUNT"]
@@ -557,18 +556,18 @@ def check_new_condition_3(data, config, log_detail, symbol_to_trace):
         if is_tracing: log_detail("  - 结果: False (条件d未满足)")
         return False
 
-    if is_tracing: log_detail("  - 结果: True (新增条件3所有子条件均满足)")
+    if is_tracing: log_detail("  - 结果: True (新增前提条件所有子条件均满足)")
     return True
 
 def check_new_condition_4(data, config, log_detail, symbol_to_trace):
     """
-    条件4：热门Tag或市值≥2000亿的symbol，若最新价较最近lookback_days天最高价回撤≥7%或≥15%，则满足条件。
+    条件3：热门Tag或市值≥2000亿的symbol，若最新价较最近lookback_days天最高价回撤≥7%或≥15%，则满足条件。
     命中的类型写入 data['cond4_drop_type'] 为 '7' 或 '15'（在构建缓存时已计算）。
     """
     symbol = data.get('symbol')
     is_tracing = (symbol == symbol_to_trace)
 
-    if is_tracing: log_detail(f"\n--- [{symbol}] 新增条件4评估 ---")
+    if is_tracing: log_detail(f"\n--- [{symbol}] 新增条件3评估 ---")
     if not data.get('is_hot_or_big_for_cond4'):
         if is_tracing: log_detail("  - 结果: False (既非热门也非大市值)")
         return False
@@ -593,7 +592,7 @@ def check_new_condition_4(data, config, log_detail, symbol_to_trace):
 
     # 以缓存计算为准（避免二次判定不一致），但加一层兜底
     if cond4_type in ('7', '15'):
-        if is_tracing: log_detail(f"  - 结果: True (命中条件4, 类型: {cond4_type})")
+        if is_tracing: log_detail(f"  - 结果: True (命中条件3, 类型: {cond4_type})")
         return True
 
     # 兜底：若未写入缓存但满足阈值，按最高档位赋值
@@ -606,12 +605,12 @@ def check_new_condition_4(data, config, log_detail, symbol_to_trace):
         if is_tracing: log_detail("  - 结果: True (兜底命中7%)")
         return True
 
-    if is_tracing: log_detail("  - 结果: False (不满足条件4)")
+    if is_tracing: log_detail("  - 结果: False (不满足条件3)")
     return False
 
 def evaluate_stock_conditions(data, symbol_to_trace, log_detail, drop_pct_large, drop_pct_small):
     """
-    此函数为原始筛选流程 (条件1 + 条件2的阈值应用)
+    此函数为原始筛选流程 (条件1 + 前提条件的阈值应用)
     条件1 (三选一)：
       a) 最近一次财报的涨跌幅 latest_er_pct 为正
       b) 最新财报收盘价 > 过去 N 次财报收盘价平均值，且最近2次财报收盘价差额 > 4%
@@ -619,7 +618,7 @@ def evaluate_stock_conditions(data, symbol_to_trace, log_detail, drop_pct_large,
     (AND)
     价格回撤条件：最新价 <= 财报窗口期最高价 * (1 - Y%)
     (AND)
-    条件4：最新价不高于最近10日最低收盘价的 1+3%
+    条件5：最新价不高于最近10日最低收盘价的 1+3%
     (AND)
     成交额条件：最新成交额 >= TURNOVER_THRESHOLD
     """
@@ -629,7 +628,7 @@ def evaluate_stock_conditions(data, symbol_to_trace, log_detail, drop_pct_large,
 
     # --- 步骤1: 检查两个并列的入口条件 ---
     
-    # 入口条件A: 原始条件1 (三选一)
+    # 入口条件A: 条件1 (三选一)
     er_pcts = data.get('all_er_pcts', [])
     prices_to_check = data['all_er_prices'][-CONFIG["RECENT_EARNINGS_COUNT"]:]
     if not er_pcts or len(prices_to_check) < CONFIG["RECENT_EARNINGS_COUNT"]:
@@ -645,7 +644,6 @@ def evaluate_stock_conditions(data, symbol_to_trace, log_detail, drop_pct_large,
     cond1_a = latest_er_pct > 0
     
     # <--- 修改开始: 更新条件1b的逻辑 ---
-    # 原条件b: cond1_b = latest_er_price > avg_recent_price
     # 新条件b: 最新财报收盘价 > 平均价 AND 最近两次财报价差 > 4%
     previous_er_price = prices_to_check[-2] # 获取倒数第二次的财报价格
     price_diff_pct_cond1b = ((latest_er_price - previous_er_price) / previous_er_price) if previous_er_price > 0 else 0
@@ -672,22 +670,22 @@ def evaluate_stock_conditions(data, symbol_to_trace, log_detail, drop_pct_large,
         log_detail(f"    - c) 最新价比最新财报收盘价低至少 {drop_pct_for_cond1c*100}%: {data['latest_price']:.2f} <= {threshold_price1c:.2f} -> {cond1_c}")
         log_detail(f"    - 结果: {passed_original_cond1}")
 
-    # 入口条件B: 新增条件3
-    passed_new_cond3 = check_new_condition_3(data, CONFIG, log_detail, symbol_to_trace)
+    # 入口条件B: 新增前提条件
+    passed_new_cond2 = check_new_condition_2(data, CONFIG, log_detail, symbol_to_trace)
 
-    # 新增：入口条件C: 条件4
-    passed_new_cond4 = check_new_condition_4(data, CONFIG, log_detail, symbol_to_trace)
+    # 新增：入口条件C: 条件3
+    passed_new_cond3 = check_new_condition_4(data, CONFIG, log_detail, symbol_to_trace)
 
     # 裁定入口条件是否满足
-    if not (passed_original_cond1 or passed_new_cond3 or passed_new_cond4):
+    if not (passed_original_cond1 or passed_new_cond2 or passed_new_cond3):
         if is_tracing: log_detail(f"  - 最终裁定: 失败。三个入口条件均未满足。")
         return False
     
     if is_tracing:
         reasons = []
         if passed_original_cond1: reasons.append("原始条件1")
+        if passed_new_cond2: reasons.append("新增前提条件")
         if passed_new_cond3: reasons.append("新增条件3")
-        if passed_new_cond4: reasons.append("新增条件4")
         log_detail(f"  - 入口条件通过 (原因: {' 和 '.join(reasons)})。开始执行通用过滤...")
 
     # --- 步骤2: 执行所有通用过滤条件 ---
@@ -720,7 +718,7 @@ def evaluate_stock_conditions(data, symbol_to_trace, log_detail, drop_pct_large,
         if is_tracing: log_detail("  - 最终裁定: 失败 (价格回撤不满足)。")
         return False
 
-    # 通用过滤2: 相对10日最低价条件 (条件4)
+    # 通用过滤2: 相对10日最低价条件 (条件3)
     prev_prices = data.get('prev_10_prices', [])
     if len(prev_prices) < 10:
         if is_tracing: log_detail(f"  - 最终裁定: 失败 (可用历史交易日不足10日，只有{len(prev_prices)}日数据)。")
@@ -861,7 +859,7 @@ def run_processing_logic(log_detail):
         return final_pe_valid, final_pe_invalid
 
     # ========== 代码修改部分 4/6: 区分股票为三组 ==========
-    log_detail("\n--- 步骤 3: 根据特殊条件(原条件2)区分股票组 (严格/宽松/更宽松) ---")
+    log_detail("\n--- 步骤 3: 根据特殊条件(前提条件)区分股票组 (严格/宽松/更宽松) ---")
     strict_symbols = []
     relaxed_symbols = []
     super_relaxed_symbols = []
