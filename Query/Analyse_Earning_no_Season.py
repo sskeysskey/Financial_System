@@ -78,7 +78,19 @@ CONFIG = {
     # 新增：Tag 黑名单。所有包含以下任一 tag 的 symbol 将被过滤掉。
     "TAG_BLACKLIST": {
         
-    }
+    },
+    # 新增：热门 Tag 集合——命中后在 JSON 中将 value 写成 “{symbol}热”
+    "HOT_TAGS": {
+        "AI软件",
+        "数据中心",
+        "赋能数据中心",
+        "光纤",
+        "激光设备",
+        "核能",
+        "核电",
+        "核电站",
+        "赋能人工智能"
+    },
 }
 
 # --- 3. 辅助与文件操作模块 ---
@@ -144,8 +156,12 @@ def load_symbol_tags(json_path):
         print(f"警告: 加载 Tags 失败: {e}。将不进行Tag过滤。")
         return {}
 
-def update_json_panel(symbols_list, json_path, group_name):
-    """更新JSON面板文件。"""
+def update_json_panel(symbols_list, json_path, group_name, symbol_to_note=None):
+    """更新JSON面板文件。
+    symbols_list: list[str]
+    group_name: str
+    symbol_to_note: Optional[dict[str, str]] 若提供则按映射写入 value，否则写空字符串
+    """
     print(f"\n--- 更新 JSON 文件: {os.path.basename(json_path)} -> '{group_name}' ---")
     try:
         with open(json_path, 'r', encoding='utf-8') as f:
@@ -154,7 +170,10 @@ def update_json_panel(symbols_list, json_path, group_name):
         print(f"信息: 目标JSON文件不存在或格式错误，将创建一个新的。")
         data = {}
 
-    data[group_name] = {symbol: "" for symbol in sorted(symbols_list)}
+    if symbol_to_note is None:
+        data[group_name] = {symbol: "" for symbol in sorted(symbols_list)}
+    else:
+        data[group_name] = {symbol: symbol_to_note.get(symbol, "") for symbol in sorted(symbols_list)}
 
     try:
         with open(json_path, 'w', encoding='utf-8') as f:
@@ -249,30 +268,30 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
         if is_tracing:
             log_detail(f"[{symbol}] 步骤3.1: 获取最近10个交易日的收盘价，共 {len(prices_last_10)} 条: {prices_last_10}")
 
-        # 获取财报窗口期最高价 (财报日当天及后两个交易日)
+        # 获取财报窗口期最高价 (财报日当天及后三个交易日)
         latest_er_date = data['latest_er_date_str']
         latest_er_price = data['all_er_prices'][-1]
         
-        # 查询财报日后两个交易日的价格
+        # 查询财报日后三个交易日的价格
         cursor.execute(
             f'SELECT price FROM "{sector_name}" '
             f'WHERE name = ? AND date > ? '
-            f'ORDER BY date ASC LIMIT 2',
+            f'ORDER BY date ASC LIMIT 3',
             (symbol, latest_er_date)
         )
         next_days_rows = cursor.fetchall()
         next_days_prices = [row[0] for row in next_days_rows]
         
-        # 收集窗口期内的所有有效价格 (财报日 + 后两天)
+        # 收集窗口期内的所有有效价格 (财报日 + 后三天)
         er_window_prices = [latest_er_price]
         er_window_prices.extend(next_days_prices)
             
         data['er_window_high_price'] = max(er_window_prices) if er_window_prices else None
         
         if is_tracing:
-            log_detail(f"[{symbol}] 步骤3.2: 查找财报窗口期最高价 (财报日当天及后两个交易日)。")
+            log_detail(f"[{symbol}] 步骤3.2: 查找财报窗口期最高价 (财报日当天及后三个交易日)。")
             log_detail(f"[{symbol}]   - 财报日当天价格: {latest_er_price}")
-            log_detail(f"[{symbol}]   - 财报日后两个交易日价格: {next_days_prices}")
+            log_detail(f"[{symbol}]   - 财报日后三个交易日价格: {next_days_prices}")
             log_detail(f"[{symbol}]   - 窗口期内价格列表: {er_window_prices}")
             log_detail(f"[{symbol}]   - 窗口期内最高价: {data['er_window_high_price']}")
 
@@ -839,14 +858,26 @@ def run_processing_logic(log_detail):
     if skipped_invalid:
         log_detail(f"\nPE_invalid 组中，有 {len(skipped_invalid)} 个 symbol 因在黑名单或已有分组中被跳过: {sorted(list(skipped_invalid))}")
 
-    # 7.4 更新 JSON 面板文件
+    # 7.4 新增：热门Tag命中 -> JSON中标注 “{symbol}热”
+    hot_tags = set(CONFIG.get("HOT_TAGS", set()))
+    def build_symbol_note_map(symbols):
+        note_map = {}
+        for sym in symbols:
+            tags = set(symbol_to_tags_map.get(sym, []))
+            note_map[sym] = f"{sym}热" if (tags & hot_tags) else ""
+        return note_map
+
+    pe_valid_notes = build_symbol_note_map(final_pe_valid_to_write)
+    pe_invalid_notes = build_symbol_note_map(final_pe_invalid_to_write)
+
+    # 7.5 更新 JSON 面板文件（带热门标注）
     log_detail(f"\n准备写入 {len(final_pe_valid_to_write)} 个 symbol 到 'PE_valid' 组。")
-    update_json_panel(final_pe_valid_to_write, PANEL_JSON_FILE, 'PE_valid')
+    update_json_panel(final_pe_valid_to_write, PANEL_JSON_FILE, 'PE_valid', symbol_to_note=pe_valid_notes)
     
     log_detail(f"\n准备写入 {len(final_pe_invalid_to_write)} 个 symbol 到 'PE_invalid' 组。")
-    update_json_panel(final_pe_invalid_to_write, PANEL_JSON_FILE, 'PE_invalid')
+    update_json_panel(final_pe_invalid_to_write, PANEL_JSON_FILE, 'PE_invalid', symbol_to_note=pe_invalid_notes)
 
-    # 无论如何，都用本次完整结果（已通过Tag过滤）覆盖备份文件
+    # 备份文件仅写 symbol，不带“热”标注
     os.makedirs(os.path.dirname(BACKUP_FILE), exist_ok=True)
     log_detail(f"\n正在用本次扫描到的 {len(all_qualified_symbols)} 个完整结果更新备份文件...")
     try:

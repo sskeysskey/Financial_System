@@ -165,7 +165,7 @@
     },
     "Strategy34": {
         "CART": "",
-        "PLTR": "",
+        "PLTR": "PLTR热",
         "RH": ""
     },
     "PE_valid": {
@@ -235,7 +235,12 @@
         "CorePCEY": "29 CorePCEY",
         "PCEY": "29 PCEY",
         "USConfidence": "29 USConfidence",
-        "USInitial": "28 USInitial"
+        "USInitial": "28 USInitial",
+        "USNonFarmA": "04 USNonFarmA",
+        "USTrade": "04 USTrade",
+        "USNonPMI": "04 USNonPMI",
+        "USNonFarm": "05 USNonFarm",
+        "USUnemploy": "05 USUnemploy"
     },
     "Economic_All": {
         "USGDP": "",

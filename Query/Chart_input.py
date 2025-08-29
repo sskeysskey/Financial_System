@@ -3,7 +3,7 @@ import sys
 import sqlite3
 import subprocess
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date # --- 新增 ---: 导入 date
 import matplotlib.pyplot as plt
 from matplotlib.widgets import RadioButtons
 import matplotlib
@@ -13,6 +13,86 @@ from scipy.interpolate import interp1d
 from PyQt5.QtWidgets import QApplication, QDialog, QVBoxLayout, QTextEdit
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt
+
+# --- 新增功能 START: 从 b.py 移植过来的颜色决策逻辑 ---
+def get_title_color_logic(db_path, symbol, table_name):
+    """
+    获取决定标题颜色所需的所有数据，并返回最终的颜色字符串。
+    逻辑完全移植自 b.py 的 get_color_decision_data 和 create_symbol_button。
+    如果任何步骤失败或不满足条件，则返回默认颜色 'white'。
+    """
+    try:
+        # 步骤 1: 获取最近两次财报信息
+        with sqlite3.connect(db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT date, price FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 2",
+                (symbol,)
+            )
+            earning_rows = cursor.fetchall()
+
+        if not earning_rows:
+            return 'white'  # 没有财报记录，返回默认颜色
+
+        latest_earning_date_str, latest_earning_price_str = earning_rows[0]
+        latest_earning_date = datetime.strptime(latest_earning_date_str, "%Y-%m-%d").date()
+        latest_earning_price = float(latest_earning_price_str) if latest_earning_price_str is not None else 0.0
+
+        # 规则 1: 如果最新财报在45天前，则强制为默认颜色
+        if (date.today() - latest_earning_date).days > 45:
+            return 'white'
+
+        # 规则 2: 如果只有一条财报记录，使用 'single' 模式
+        if len(earning_rows) < 2:
+            price_trend = 'single'
+        else:
+            # 存在至少两条财报记录，继续计算趋势
+            previous_earning_date_str, _ = earning_rows[1]
+            previous_earning_date = datetime.strptime(previous_earning_date_str, "%Y-%m-%d").date()
+
+            # 步骤 3: 获取两个日期的收盘价
+            with sqlite3.connect(db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(f'SELECT price FROM "{table_name}" WHERE name = ? AND date = ?', (symbol, latest_earning_date.isoformat()))
+                latest_stock_price_row = cursor.fetchone()
+                cursor.execute(f'SELECT price FROM "{table_name}" WHERE name = ? AND date = ?', (symbol, previous_earning_date.isoformat()))
+                previous_stock_price_row = cursor.fetchone()
+
+            if not latest_stock_price_row or not previous_stock_price_row:
+                return 'white'  # 缺少股价数据，返回默认颜色
+
+            latest_stock_price = float(latest_stock_price_row[0])
+            previous_stock_price = float(previous_stock_price_row[0])
+
+            # 步骤 4: 判断趋势
+            price_trend = 'rising' if latest_stock_price > previous_stock_price else 'falling'
+
+        # --- 颜色决策逻辑 ---
+        color = 'white'  # 默认颜色
+        if price_trend == 'single':
+            if latest_earning_price > 0:
+                color = 'red'
+            elif latest_earning_price < 0:
+                color = 'green'
+        else:
+            is_price_positive = latest_earning_price > 0
+            is_trend_rising = price_trend == 'rising'
+
+            if is_trend_rising and is_price_positive:
+                color = 'red'
+            elif not is_trend_rising and is_price_positive:
+                color = '#008B8B'  # Dark Cyan
+            elif is_trend_rising and not is_price_positive:
+                color = '#912F2F'  # Dark Red/Purple
+            elif not is_trend_rising and not is_price_positive:
+                color = 'green'
+
+        return color
+
+    except Exception as e:
+        print(f"[颜色决策逻辑错误] {symbol}: {e}")
+        return 'white'  # 出现任何异常都返回默认颜色
+# --- 新增功能 END ---
 
 @lru_cache(maxsize=None)
 def fetch_data(db_path, table_name, name):
@@ -576,6 +656,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         )
     else:
         # 对于其他类型（如股票），正常显示所有指标
+        title_color = get_title_color_logic(db_path, name, table_name)
         title_text = (
             f'{name}  {compare}  {turnover_str} {turnover_rate} '
             f'{marketcap_in_billion} {pe_text} {pb_text} "{table_name}" {fullname} {tag_str}'
@@ -588,7 +669,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         title_text,
         ha='center',  # 水平居中
         va='top',     # 垂直顶部对齐
-        color='orange',  # 保持金黄色
+        color=title_color,  # --- 修改 ---: 使用动态获取的颜色
         fontsize=16,
         fontweight='bold',
         transform=fig.transFigure,  # 使用figure坐标系
@@ -818,7 +899,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         "T： 新标签\n"
         "W： 新事件\n"
         "Q： 改事件\n"
-        "K： 查kimi\n"
+        "K： 查豆包\n"
         "U： 查富途\n"
         "P： 做比较\n"
         "J： 加Panel\n"

@@ -58,7 +58,19 @@ CONFIG = {
         "天然气",
         "页岩气",
         "个人安全防卫"
-    }
+    },
+    # 新增：热门 Tag 集合——命中后在 JSON 中将 value 写成 “{symbol}热”
+    "HOT_TAGS": {
+        "AI软件",
+        "数据中心",
+        "赋能数据中心",
+        "光纤",
+        "激光设备",
+        "核能",
+        "核电",
+        "核电站",
+        "赋能人工智能"
+    },
 }
 
 # --- 3. 辅助与文件操作模块 ---
@@ -123,8 +135,12 @@ def load_symbol_tags(json_path):
         print(f"警告: 加载 Tags 失败: {e}。将不进行Tag过滤。")
         return {}
 
-def update_json_panel(symbols_list, target_json_path, group_name):
-    """更新JSON面板文件。"""
+def update_json_panel(symbols_list, target_json_path, group_name, symbol_to_note=None):
+    """更新JSON面板文件。
+    symbols_list: list[str] 要写入的 symbol 列表
+    group_name: str JSON中的组名
+    symbol_to_note: Optional[dict[str, str]] 如果提供，按映射写入 value；否则写为 ""
+    """
     print(f"\n--- 更新 JSON 文件: {os.path.basename(target_json_path)} -> '{group_name}' ---")
     try:
         with open(target_json_path, 'r', encoding='utf-8') as f:
@@ -133,7 +149,11 @@ def update_json_panel(symbols_list, target_json_path, group_name):
         print(f"信息: 目标JSON文件不存在或格式错误，将创建一个新的。")
         data = {}
 
-    data[group_name] = {symbol: "" for symbol in sorted(symbols_list)}
+    if symbol_to_note is None:
+        data[group_name] = {symbol: "" for symbol in sorted(symbols_list)}
+    else:
+        # 对于列表中没有映射的 symbol，默认空字符串
+        data[group_name] = {symbol: symbol_to_note.get(symbol, "") for symbol in sorted(symbols_list)}
 
     try:
         with open(target_json_path, 'w', encoding='utf-8') as f:
@@ -821,7 +841,7 @@ def run_processing_logic(log_detail):
     # 在这里加一行：把出现在主列表里的剔除掉
     final_Strategy34_list = [s for s in final_Strategy34_list if s not in final_symbols]
 
-    # 6. 新增：基于Tag的过滤 (在所有其他过滤之后)
+    # 6. 基于Tag的过滤 (在所有其他过滤之后)
     log_detail("\n--- 开始基于Tag的过滤 ---")
     tag_blacklist = CONFIG["TAG_BLACKLIST"]
     log_detail(f"Tag黑名单: {tag_blacklist}")
@@ -846,6 +866,21 @@ def run_processing_logic(log_detail):
             log_detail(f"  - [通知列表] 因Tag被过滤: {symbol} (Tags: {list(symbol_tags)})")
     final_Strategy34_list = filtered_Strategy34_list
 
+    # 6.1 新增：热门Tag命中 -> JSON中标注 “{symbol}热”
+    hot_tags = set(CONFIG.get("HOT_TAGS", set()))
+    def build_symbol_note_map(symbols):
+        note_map = {}
+        for sym in symbols:
+            tags = set(symbol_to_tags_map.get(sym, []))
+            if tags & hot_tags:
+                note_map[sym] = f"{sym}热"
+            else:
+                note_map[sym] = ""
+        return note_map
+
+    strategy12_notes = build_symbol_note_map(final_symbols)
+    strategy34_notes = build_symbol_note_map(final_Strategy34_list)
+
     # 7. 最终结果和文件输出
     log_detail("\n--- 所有过滤完成后的最终结果 ---")
     log_detail(f"主列表最终数量: {len(final_symbols)} - {final_symbols}")
@@ -861,7 +896,7 @@ def run_processing_logic(log_detail):
 
     # 6. 文件和JSON输出
     # 主列表 (NextWeek_Earning)
-    update_json_panel(final_symbols, PANEL_JSON_FILE, "Strategy12")
+    update_json_panel(final_symbols, PANEL_JSON_FILE, "Strategy12", symbol_to_note=strategy12_notes)
     try:
         backup_path = PATHS["backup_Strategy12"](news_path)
         os.makedirs(os.path.dirname(backup_path), exist_ok=True)
@@ -875,7 +910,7 @@ def run_processing_logic(log_detail):
         print(f"写入主列表文件时出错: {e}")
 
     # 通知列表 (Strategy34)
-    update_json_panel(final_Strategy34_list, PANEL_JSON_FILE, "Strategy34")
+    update_json_panel(final_Strategy34_list, PANEL_JSON_FILE, "Strategy34", symbol_to_note=strategy34_notes)
     try:
         backup_path = PATHS["backup_Strategy34"](news_path)
         os.makedirs(os.path.dirname(backup_path), exist_ok=True)

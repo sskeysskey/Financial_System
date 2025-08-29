@@ -25,19 +25,26 @@
         "FLO": "",
         "STZ": "",
         "KDP": "",
-        "CLX": ""
+        "CLX": "",
+        "MDLZ": "",
+        "GIS": ""
     },
     "Industrials": {
         "FLY": "",
-        "WSO": ""
+        "WSO": "",
+        "UHAL": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
         "BRK-A": "",
-        "FDS": ""
+        "FDS": "",
+        "RYAN": "",
+        "MKTX": "",
+        "ARX": ""
     },
     "Healthcare": {
-        "ALC": ""
+        "ALC": "",
+        "COO": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -153,10 +160,36 @@
         "ADSK": "",
         "FRPT": ""
     },
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
-    "PE_invalid": {},
+    "Strategy12": {
+        "GWRE": ""
+    },
+    "Strategy34": {
+        "CART": "",
+        "PLTR": "PLTR热",
+        "RH": ""
+    },
+    "PE_valid": {
+        "ACHR": "",
+        "BWXT": "",
+        "COST": "",
+        "DASH": "",
+        "DRI": "",
+        "DUOL": "",
+        "FDS": "",
+        "IDXX": "",
+        "KDP": "",
+        "KR": "",
+        "LII": "LII热",
+        "ONON": "",
+        "RELX": "",
+        "SAIA": "",
+        "TYL": "",
+        "VRSN": "",
+        "WST": ""
+    },
+    "PE_invalid": {
+        "JOBY": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
@@ -202,7 +235,12 @@
         "CorePCEY": "29 CorePCEY",
         "PCEY": "29 PCEY",
         "USConfidence": "29 USConfidence",
-        "USInitial": "28 USInitial"
+        "USInitial": "28 USInitial",
+        "USNonFarmA": "04 USNonFarmA",
+        "USTrade": "04 USTrade",
+        "USNonPMI": "04 USNonPMI",
+        "USNonFarm": "05 USNonFarm",
+        "USUnemploy": "05 USUnemploy"
     },
     "Economic_All": {
         "USGDP": "",

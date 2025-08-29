@@ -572,11 +572,11 @@ class MainWindow(QMainWindow):
                     if is_trend_rising and is_price_positive:
                         sym_color = 'red'      # 红色
                     elif not is_trend_rising and is_price_positive:
-                        sym_color = 'green'     # 暗绿色
+                        sym_color = '#008B8B'     # 绿色
                     elif is_trend_rising and not is_price_positive:
                         sym_color = '#912F2F'  # 紫色
                     elif not is_trend_rising and not is_price_positive:
-                        sym_color = '#276E47'    # 绿色
+                        sym_color = 'green'     # 绿色
                 # <<< 修改结束 >>>
                 
                 if 'Stock' in category_name:

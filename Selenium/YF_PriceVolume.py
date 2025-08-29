@@ -120,7 +120,7 @@ def ensure_table_exists(conn, table_name, table_type="standard"):
     if table_type == "no_volume":
         # 不需要volume字段的表结构
         cursor.execute(f'''
-        CREATE TABLE IF NOT EXISTS {table_name} (
+        CREATE TABLE IF NOT EXISTS "{table_name}" (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             date TEXT,
             name TEXT,
@@ -130,7 +130,7 @@ def ensure_table_exists(conn, table_name, table_type="standard"):
     else:
         # 标准表结构，包含volume
         cursor.execute(f'''
-        CREATE TABLE IF NOT EXISTS {table_name} (
+        CREATE TABLE IF NOT EXISTS "{table_name}" (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             date TEXT,
             name TEXT,
@@ -238,7 +238,7 @@ def main():
                                unit="symbol",
                                leave=False):
                 try:
-                    url = f"https://finance.yahoo.com/quote/{symbol}/"
+                    url = f"https://finance.yahoo.com/quote/{symbol}/history/"
                     driver.get(url)
                     
                     # 查找Price数据 - 使用新的XPath
@@ -247,7 +247,11 @@ def main():
                     if price_element:
                         price_text = price_element.text
                         try:
-                            price = float(price_text.replace(',', ''))
+                            # 增加对'-'的判断
+                            if price_text == '-':
+                                price = 0.0
+                            else:
+                                price = float(price_text.replace(',', ''))
                         except ValueError:
                             print(f"无法转换价格: {price_text}")
                     
@@ -261,42 +265,43 @@ def main():
                         if price is not None:
                             cursor = conn.cursor()
                             cursor.execute(f'''
-                            INSERT INTO {sector} (date, name, price)
+                            INSERT OR REPLACE INTO "{sector}" (date, name, price)
                             VALUES (?, ?, ?)
                             ''', (current_date, display_name, price))
                             conn.commit()
                             
-                            print(f"已保存 {display_name} 至 {sector}：价格={price}")
+                            print(f"已保存/更新 {display_name} 至 {sector}：价格={price}")
                             
                             # 1) 清除 JSON 中的 symbol
                             if args.mode.lower() == 'empty':
                                 clear_symbols_from_json(json_file_path, sector, symbol)
                                 # 2) 比较“前天”价格
                                 cursor.execute(f'''
-                                    SELECT price FROM {sector}
+                                    SELECT price FROM "{sector}"
                                     WHERE date = ? AND name = ?
                                 ''', (prev_date, display_name))
                                 row = cursor.fetchone()
                                 if row:
                                     prev_price = row[0]
                                     if prev_price == price:
-                                        # show_alert(
-                                        #     f"{display_name} 在 {sector} 中：\n"
-                                        #     f"{prev_date} 价格 = {prev_price}\n"
-                                        #     f"{current_date} 价格 = {price}\n"
-                                        #     "价格未发生变化！"
-                                        # )
                                         print(f"抓取 {display_name} 成功，价格未发生变化")
                         else:
                             print(f"抓取 {symbol} 失败，未能获取到价格数据")
                     else:
                         # 需要抓取volume的分组
-                        volume_element = wait_for_element(driver, By.XPATH, "//fin-streamer[@data-field='regularMarketVolume']", timeout=7)
+                        # 使用更通用的XPath，不依赖于class名
+                        # 逻辑：在data-testid="history-table"的div中，找到表格的第一行(tr[1])的最后一个单元格(td[last()])
+                        volume_xpath = "//div[@data-testid='history-table']//table/tbody/tr[1]/td[last()]"
+                        volume_element = wait_for_element(driver, By.XPATH, volume_xpath, timeout=7)
                         volume = None
                         if volume_element:
                             volume_text = volume_element.text
                             try:
-                                volume = int(volume_text.replace(',', ''))
+                                # 'N/A' 是可能出现的值，需要处理
+                                if volume_text == 'N/A' or volume_text == '-':
+                                    volume = 0
+                                else:
+                                    volume = int(volume_text.replace(',', ''))
                             except ValueError:
                                 print(f"无法转换成交量: {volume_text}")
                         
@@ -304,12 +309,12 @@ def main():
                         if price is not None and volume is not None:
                             cursor = conn.cursor()
                             cursor.execute(f'''
-                            INSERT INTO {sector} (date, name, price, volume)
+                            INSERT OR REPLACE INTO "{sector}" (date, name, price, volume)
                             VALUES (?, ?, ?, ?)
                             ''', (current_date, display_name, price, volume))
                             conn.commit()
                             
-                            print(f"已保存 {display_name} 至 {sector}：价格={price}, 成交量={volume}")
+                            print(f"已保存/更新 {display_name} 至 {sector}：价格={price}, 成交量={volume}")
                             
                             # 如果是empty模式，则在成功保存后清除该symbol
                             if args.mode.lower() == 'empty':
@@ -317,22 +322,16 @@ def main():
                                 
                                 # 比较“前天”价格
                                 cursor.execute(f'''
-                                    SELECT price FROM {sector}
+                                    SELECT price FROM "{sector}"
                                     WHERE date = ? AND name = ?
                                 ''', (prev_date, display_name))
                                 row = cursor.fetchone()
                                 if row:
                                     prev_price = row[0]
                                     if prev_price == price:
-                                        # show_alert(
-                                        #     f"{display_name} 在 {sector} 中：\n"
-                                        #     f"{prev_date} 价格 = {prev_price}\n"
-                                        #     f"{current_date} 价格 = {price}\n"
-                                        #     "价格未发生变化！"
-                                        # )
                                         print(f"抓取 {display_name} 成功，价格未发生变化")
                         else:
-                            print(f"抓取 {symbol} 失败，未能获取到完整数据")
+                            print(f"抓取 {symbol} 失败，未能获取到完整数据 (Price: {price}, Volume: {volume})")
                 
                 # 在抓取失败的逻辑中添加
                 except Exception as e:
