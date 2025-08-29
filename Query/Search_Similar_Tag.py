@@ -197,7 +197,7 @@ def execute_external_script(script_type, keyword):
         'event_input': f'{base_path}/Operations/Insert_Events.py',
         'event_editor': f'{base_path}/Operations/Editor_Events.py',
         'futu':     '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt',
-        'kimi':     '/Users/yanzhang/Coding/ScriptEditor/CheckKimi_Earning.scpt'
+        'kimi':     '/Users/yanzhang/Coding/ScriptEditor/Check_Earning.scpt'
     }
     script_path = script_configs.get(script_type)
     if not script_path:
@@ -425,7 +425,8 @@ class SimilarityViewerWindow(QMainWindow):
         5. 如果某个symbol只有一个财报日期，那么即使他的财报日期是在1个半月之内的，也仍然显示为白色
 
         返回: (latest_earning_price, stock_price_trend, latest_earning_date)
-              - stock_price_trend: 'rising', 'falling', 或 None
+              - stock_price_trend: 'rising', 'falling', 'single', 或 None
+                'single' 表示只有一条财报记录，此时仅根据 earning price 正负着色。
         """
         try:
             # 步骤 1: 获取最近两次财报信息
@@ -450,12 +451,12 @@ class SimilarityViewerWindow(QMainWindow):
                 # 返回None趋势，使调用处逻辑判定为白色
                 return latest_earning_price, None, latest_earning_date
 
-            # --- 新规则 2: 如果只有一个财报记录，则强制为白色 ---
-            # 这个逻辑已经存在，len < 2 会导致 price_trend 为 None，从而显示白色
+            # --- 新规则：如果只有一条财报记录，使用 'single' 模式，仅按 earning price 正负着色 ---
             if len(earning_rows) < 2:
-                # 只有一次财报，无法比较趋势
-                return latest_earning_price, None, latest_earning_date
+                # 不再返回 None，而是标记为 'single'
+                return latest_earning_price, 'single', latest_earning_date
 
+            # 存在至少两条财报记录，继续计算趋势
             previous_earning_date_str, _ = earning_rows[1]
             previous_earning_date = datetime.strptime(previous_earning_date_str, "%Y-%m-%d").date()
 
@@ -638,7 +639,7 @@ class SimilarityViewerWindow(QMainWindow):
         button.setCursor(QCursor(Qt.PointingHandCursor))
         button.setFixedWidth(90)
         button.setObjectName("SymbolButton")
-        
+
         # 左键点击事件
         button.clicked.connect(lambda _, s=symbol: self.on_symbol_click(s))
         
@@ -663,21 +664,31 @@ class SimilarityViewerWindow(QMainWindow):
         # 颜色逻辑部分无需修改，因为 get_color_decision_data 的返回值会处理好
         color = 'white' # 默认颜色
         if earning_price is not None and price_trend is not None:
-            is_price_positive = earning_price > 0
-            is_trend_rising = price_trend == 'rising'
+            if price_trend == 'single':
+                # 新增：只有一条财报记录，按 earning price 正负着色
+                if earning_price > 0:
+                    color = 'red'
+                elif earning_price < 0:
+                    color = 'green'
+                else:
+                    color = 'white'
+            else:
+                # 原有：基于两次收盘价比较的趋势和 earning price 正负的组合
+                is_price_positive = earning_price > 0
+                is_trend_rising = price_trend == 'rising'
 
-            if is_trend_rising and is_price_positive:
-                color = 'red'      # 红色
-            elif not is_trend_rising and is_price_positive:
-                color = 'green'    # 绿色
-            elif is_trend_rising and not is_price_positive:
-                color = '#912F2F'  # 紫色
-            elif not is_trend_rising and not is_price_positive:
-                color = '#276E47'     # 浅绿色
-        
+                if is_trend_rising and is_price_positive:
+                    color = 'red'         # 红色
+                elif not is_trend_rising and is_price_positive:
+                    color = 'green'       # 绿色
+                elif is_trend_rising and not is_price_positive:
+                    color = '#912F2F'     # 紫色
+                elif not is_trend_rising and not is_price_positive:
+                    color = '#276E47'     # 浅绿色
+
         base_ss = button.styleSheet() or ""
         button.setStyleSheet(base_ss + f"; color: {color};")
-        
+
         return button
     # ### 修改 END ###
 

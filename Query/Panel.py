@@ -400,7 +400,7 @@ def execute_external_script(script_type, keyword, group=None, main_window=None):
         'event_input': f'{base_path}/Operations/Insert_Events.py',  # <--- 新增这一行
         'event_editor': f'{base_path}/Operations/Editor_Events.py',  # <--- 新增这一行
         'futu': '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt',
-        'kimi': '/Users/yanzhang/Coding/ScriptEditor/CheckKimi_Earning.scpt'
+        'kimi': '/Users/yanzhang/Coding/ScriptEditor/Check_Earning.scpt'
     }
 
     try:

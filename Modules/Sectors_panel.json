@@ -25,19 +25,26 @@
         "FLO": "",
         "STZ": "",
         "KDP": "",
-        "CLX": ""
+        "CLX": "",
+        "MDLZ": "",
+        "GIS": ""
     },
     "Industrials": {
         "FLY": "",
-        "WSO": ""
+        "WSO": "",
+        "UHAL": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
         "BRK-A": "",
-        "FDS": ""
+        "FDS": "",
+        "RYAN": "",
+        "MKTX": "",
+        "ARX": ""
     },
     "Healthcare": {
-        "ALC": ""
+        "ALC": "",
+        "COO": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -109,11 +116,11 @@
         "XRP": ""
     },
     "Today": {
+        "VST": "",
         "COST": "",
         "CART": "",
         "RH": "",
         "SOUN": "",
-        "TYL": "",
         "NOW": "",
         "KDP": "",
         "CDNS": "",
@@ -139,6 +146,9 @@
     },
     "Watching": {
         "CRWD": "",
+        "KR": "",
+        "BNTX": "",
+        "AXON": "",
         "DELL": "",
         "PSTG": "",
         "DUOL": "",
@@ -151,41 +161,34 @@
         "FRPT": ""
     },
     "Strategy12": {
-        "AVAV": "",
-        "CRWD": "",
-        "GWRE": "",
-        "PSTG": ""
+        "GWRE": ""
     },
     "Strategy34": {
-        "BWXT": "",
         "CART": "",
-        "DASH": "",
         "PLTR": "",
-        "RH": "",
-        "SHOP": ""
+        "RH": ""
     },
     "PE_valid": {
         "ACHR": "",
-        "AXON": "",
-        "BNTX": "",
+        "BWXT": "",
         "COST": "",
+        "DASH": "",
         "DRI": "",
         "DUOL": "",
-        "EXE": "",
         "FDS": "",
         "IDXX": "",
         "KDP": "",
         "KR": "",
         "LII": "",
-        "SMMT": "",
-        "SNV": "",
+        "ONON": "",
+        "RELX": "",
+        "SAIA": "",
+        "TYL": "",
         "VRSN": "",
-        "VST": ""
+        "WST": ""
     },
     "PE_invalid": {
-        "JOBY": "",
-        "SOUN": "",
-        "ZS": ""
+        "JOBY": ""
     },
     "Currencies": {
         "DXY": "美元指数",

@@ -60,7 +60,7 @@ def execute_external_script(script_type, keyword):
         'event_input': f'{base_path}/Operations/Insert_Events.py',
         'event_editor': f'{base_path}/Operations/Editor_Events.py',
         'futu': '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt',
-        'kimi': '/Users/yanzhang/Coding/ScriptEditor/CheckKimi_Earning.scpt'
+        'kimi': '/Users/yanzhang/Coding/ScriptEditor/Check_Earning.scpt'
     }
 
     try:

@@ -185,7 +185,7 @@ def execute_external_script(script_type, keyword):
         'symbol_compare': f'{base_path}/Query/Compare_Chart.py',
         'panel_input': f'{base_path}/Operations/Insert_Panel.py',
         'similar_tags': f'{base_path}/Query/Search_Similar_Tag.py',
-        'check_kimi': '/Users/yanzhang/Coding/ScriptEditor/CheckKimi_Earning.scpt',
+        'check_kimi': '/Users/yanzhang/Coding/ScriptEditor/Check_Earning.scpt',
         'check_futu': '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt'
     }
 

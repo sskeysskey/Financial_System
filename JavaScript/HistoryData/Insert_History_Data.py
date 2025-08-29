@@ -143,6 +143,7 @@ def alert_and_exit(msg):
 
 def extension_launch():
     script = '''
+    delay 0.5
     tell application "System Events"
         keystroke "y" using option down
     end tell

@@ -109,11 +109,11 @@
         "XRP": ""
     },
     "Today": {
+        "VST": "",
         "COST": "",
         "CART": "",
         "RH": "",
         "SOUN": "",
-        "TYL": "",
         "NOW": "",
         "KDP": "",
         "CDNS": "",
@@ -139,6 +139,9 @@
     },
     "Watching": {
         "CRWD": "",
+        "KR": "",
+        "BNTX": "",
+        "AXON": "",
         "DELL": "",
         "PSTG": "",
         "DUOL": "",

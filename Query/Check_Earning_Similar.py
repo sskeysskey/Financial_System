@@ -204,7 +204,7 @@ def execute_external_script(script_type, keyword):
         'editor_earning': f'{base_path}/Operations/Editor_Earning_DB.py',
         'earning':  f'{base_path}/Operations/Insert_Earning.py',
         'futu':     '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt',
-        'kimi':     '/Users/yanzhang/Coding/ScriptEditor/CheckKimi_Earning.scpt'
+        'kimi':     '/Users/yanzhang/Coding/ScriptEditor/Check_Earning.scpt'
     }
     try:
         if script_type in ['futu', 'kimi']:

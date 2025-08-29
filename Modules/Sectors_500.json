@@ -54,7 +54,8 @@
         "GM",
         "DASH",
         "CPNG",
-        "ORLY"
+        "ORLY",
+        "DHI"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -94,7 +95,8 @@
         "LNG",
         "TRP",
         "PSX",
-        "SLB"
+        "SLB",
+        "SU"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -156,7 +158,8 @@
         "ARES",
         "NDAQ",
         "IBKR",
-        "BAM"
+        "BAM",
+        "NWG"
     ],
     "Healthcare": [
         "LLY",
@@ -232,7 +235,8 @@
         "PCAR",
         "LHX",
         "CMI",
-        "FAST"
+        "FAST",
+        "VRT"
     ],
     "Real_Estate": [
         "PLD",
@@ -295,7 +299,8 @@
         "NET",
         "NXPI",
         "TEL",
-        "GLW"
+        "GLW",
+        "CRWV"
     ],
     "Utilities": [
         "NEE",

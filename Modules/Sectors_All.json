@@ -796,7 +796,8 @@
         "GOLF",
         "HGV",
         "DORM",
-        "SGI"
+        "SGI",
+        "RSI"
     ],
     "Consumer_Defensive": [
         "WMT",
