@@ -20,6 +20,8 @@ PATHS = {
     "blacklist_json": lambda config: os.path.join(config, "Blacklist.json"),
     "panel_json": lambda config: os.path.join(config, "Sectors_panel.json"),
     "description_json": lambda config: os.path.join(config, 'description.json'),
+    # 新增: 指向新的标签配置文件
+    "tags_setting_json": lambda config: os.path.join(config, 'tags_eanring.json'),
     "backup_Strategy12": lambda news: os.path.join(news, "backup", "NextWeek_Earning.txt"),
     "backup_Strategy34": lambda news: os.path.join(news, "backup", "Strategy34_earning.txt"),
 }
@@ -35,14 +37,11 @@ SECTORS_JSON_FILE = PATHS["sectors_json"](config_path)
 BLACKLIST_JSON_FILE = PATHS["blacklist_json"](config_path)
 PANEL_JSON_FILE = PATHS["panel_json"](config_path)
 DESCRIPTION_JSON_FILE = PATHS["description_json"](config_path)
+TAGS_SETTING_JSON_FILE = PATHS["tags_setting_json"](config_path)
 
 
 # --- 2. 可配置参数 --- 使用一个配置字典来管理所有参数
 CONFIG = {
-    # 新增：Symbol 黑名单。所有在此列表中的 symbol 将在处理开始前被直接过滤。
-    "SYMBOL_BLACKLIST": {
-        "TW"
-    },
     # ========================================
     "NUM_EARNINGS_TO_CHECK": 2,
     "MIN_DROP_PERCENTAGE": 0.04,
@@ -53,27 +52,36 @@ CONFIG = {
     "MIN_TURNOVER": 100_000_000,
     "MARKETCAP_THRESHOLD": 100_000_000_000,
     "MAX_RISE_FROM_7D_LOW": 0.03,
-    # 新增：Tag 黑名单。所有包含以下任一 tag 的 symbol 将被过滤掉。
-    "TAG_BLACKLIST": {
-        "天然气",
-        "页岩气",
-        "个人安全防卫"
-    },
-    # 新增：热门 Tag 集合——命中后在 JSON 中将 value 写成 “{symbol}热”
-    "HOT_TAGS": {
-        "AI软件",
-        "数据中心",
-        "赋能数据中心",
-        "光纤",
-        "激光设备",
-        "核能",
-        "核电",
-        "核电站",
-        "赋能人工智能"
-    },
 }
 
 # --- 3. 辅助与文件操作模块 ---
+
+# 新增: 用于加载外部标签配置的函数
+def load_tag_settings(json_path):
+    """从 Tags_Setting.json 加载 TAG_BLACKLIST 和 HOT_TAGS。"""
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            settings = json.load(f)
+        
+        # 从JSON加载列表，并转换成set，如果不存在则返回空set
+        tag_blacklist = set(settings.get('TAG_BLACKLIST', []))
+        hot_tags = set(settings.get('HOT_TAGS', []))
+        
+        print(f"成功从 {os.path.basename(json_path)} 加载设置。")
+        print(f"  - TAG_BLACKLIST: {len(tag_blacklist)} 个")
+        print(f"  - HOT_TAGS: {len(hot_tags)} 个")
+        
+        return tag_blacklist, hot_tags
+    except FileNotFoundError:
+        print(f"警告: 标签配置文件未找到: {json_path}。将使用空的黑名单和热门标签列表。")
+        return set(), set()
+    except json.JSONDecodeError:
+        print(f"警告: 标签配置文件格式错误: {json_path}。将使用空的黑名单和热门标签列表。")
+        return set(), set()
+    except Exception as e:
+        print(f"警告: 加载标签配置失败: {e}。将使用空的黑名单和热门标签列表。")
+        return set(), set()
+
 def create_symbol_to_sector_map(json_file_path):
     """从Sectors_All.json创建 symbol -> sector 的映射。"""
     try:
@@ -105,6 +113,19 @@ def load_blacklist(json_file_path):
         return blacklist
     except Exception as e:
         print(f"警告: 加载黑名单失败: {e}，将不进行过滤。")
+        return set()
+
+# 新增: 用于加载 'Earning' Symbol 黑名单的函数
+def load_earning_symbol_blacklist(json_path):
+    """从Blacklist.json加载'Earning'分组的symbol黑名单。"""
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        blacklist = set(data.get('Earning', []))
+        print(f"成功加载 'Earning' Symbol 黑名单: {len(blacklist)} 个 symbol。")
+        return blacklist
+    except Exception as e:
+        print(f"警告: 加载 'Earning' Symbol 黑名单失败: {e}，将不进行过滤。")
         return set()
 
 # ========== 新增/修改部分 4/5 ==========
@@ -623,10 +644,8 @@ def run_strategy_4(data, cursor, symbol_sector_map, symbol_to_trace, log_detail)
 
     return rise_ok
 
-
 # --- 6. 过滤模块 (已集成追踪系统) ---
 
-# ========== 此处为核心修改：替换旧函数 ==========
 def get_symbols_with_latest_negative_earning(db_path):
     """
     获取最新一期财报为负 (price < 0) 的所有 symbol 集合。
@@ -723,6 +742,14 @@ def run_processing_logic(log_detail):
         log_detail(f"当前追踪的 SYMBOL: {SYMBOL_TO_TRACE}")
     
     # 1. 加载初始数据
+    # 修改：加载外部标签配置并更新CONFIG
+    tag_blacklist_from_file, hot_tags_from_file = load_tag_settings(TAGS_SETTING_JSON_FILE)
+    CONFIG["TAG_BLACKLIST"] = tag_blacklist_from_file
+    CONFIG["HOT_TAGS"] = hot_tags_from_file
+    
+    # 新增: 从 Blacklist.json 加载 Earning Symbol 黑名单
+    CONFIG["SYMBOL_BLACKLIST"] = load_earning_symbol_blacklist(BLACKLIST_JSON_FILE)
+    
     symbol_sector_map = create_symbol_to_sector_map(SECTORS_JSON_FILE)
     if not symbol_sector_map:
         log_detail("错误: 无法加载板块映射，程序终止。")

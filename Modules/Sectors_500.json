@@ -235,8 +235,7 @@
         "PCAR",
         "LHX",
         "CMI",
-        "FAST",
-        "VRT"
+        "FAST"
     ],
     "Real_Estate": [
         "PLD",
@@ -300,7 +299,8 @@
         "NXPI",
         "TEL",
         "GLW",
-        "CRWV"
+        "CRWV",
+        "PAYX"
     ],
     "Utilities": [
         "NEE",

@@ -3,7 +3,7 @@ import sys
 import sqlite3
 import subprocess
 import numpy as np
-from datetime import datetime, timedelta, date # --- 新增 ---: 导入 date
+from datetime import datetime, timedelta, date
 import matplotlib.pyplot as plt
 from matplotlib.widgets import RadioButtons
 import matplotlib
@@ -650,6 +650,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     # 根据 table_name 动态组合标题
     if table_name == 'ETFs':
         # 如果是ETF，则不显示市值、PE和PB
+        title_color = 'orange'
         title_text = (
             f'{name}  {compare}  {turnover_str} '
             f'"{table_name}" {fullname} {tag_str}'

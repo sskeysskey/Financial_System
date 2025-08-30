@@ -79,7 +79,6 @@
         "PNC",
         "MFC",
         "BX",
-        "ORCL",
         "NOW",
         "APH",
         "ADSK",
@@ -139,7 +138,8 @@
         "V",
         "WMT",
         "NFLX",
-        "TSM"
+        "TSM",
+        "ORCL"
     ],
     "white_keywords": [
         "USGDP",

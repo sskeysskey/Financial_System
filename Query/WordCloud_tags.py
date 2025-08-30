@@ -9,17 +9,22 @@ import json
 import argparse
 
 # —— 黑名单标签，凡是这些标签都不会计入得分
+# BLACKLIST_TAGS = {
+#         "云计算",
+#         "房地产",
+#         "天然气",
+#         "赋能人工智能",
+#         "黄金",
+#         "贵金属",
+#         "数据中心",
+#         "电力",
+#         "借助人工智能",
+#         "房地产投资信托",
+        
+#     # … 你想排除的 tag 全都写在这里 …
+# }
 BLACKLIST_TAGS = {
-        "云计算",
-        "房地产",
-        "天然气",
-        "赋能人工智能",
-        "黄金",
-        "贵金属",
-        "数据中心",
-        "电力",
-        "借助人工智能",
-        "房地产投资信托",
+        
         
     # … 你想排除的 tag 全都写在这里 …
 }
@@ -130,7 +135,7 @@ def main():
                         help="description.json 路径")
     parser.add_argument("--tagsw", default="/Users/yanzhang/Coding/Financial_System/Modules/tags_weight.json",
                         help="tags_weight.json 路径")
-    parser.add_argument("--days", type=int, default=7,
+    parser.add_argument("--days", type=int, default=30,
                         help="向前对比的天数 (默认 7 天)")
     parser.add_argument("--font", default=None,
                         help="生成中文标签云时指定的字体路径 (如 SimHei.ttf)")

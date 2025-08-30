@@ -12,7 +12,8 @@
         "TSM": "",
         "MNDY": "",
         "MSFT": "",
-        "VERX": ""
+        "VERX": "",
+        "ORCL": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
@@ -162,10 +163,41 @@
         "ADSK": "",
         "FRPT": ""
     },
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
-    "PE_invalid": {},
+    "Strategy12": {
+        "AVAV": "",
+        "HQY": ""
+    },
+    "Strategy34": {
+        "AXON": "",
+        "BWXT": "BWXT热",
+        "CART": "",
+        "DASH": "",
+        "PLTR": "PLTR热",
+        "RH": ""
+    },
+    "PE_valid": {
+        "ACHR": "",
+        "COST": "",
+        "DUOL": "DUOL15热",
+        "FDS": "",
+        "GEV": "",
+        "GNRC": "",
+        "HIMS": "",
+        "KDP": "",
+        "KR": "",
+        "LII": "",
+        "LULU": "",
+        "SAIA": "",
+        "SMCI": "SMCI15热",
+        "TSM": "TSM热",
+        "VRT": "VRT7热",
+        "WING": "",
+        "WST": "",
+        "WWD": ""
+    },
+    "PE_invalid": {
+        "JOBY": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
