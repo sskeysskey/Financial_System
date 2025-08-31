@@ -897,7 +897,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     instructions = (
         "N： 新财报\n"
         "E： 改财报\n"
-        "T： 新标签\n"
+        "T： 改标签\n"
         "W： 新事件\n"
         "Q： 改事件\n"
         "K： 查豆包\n"

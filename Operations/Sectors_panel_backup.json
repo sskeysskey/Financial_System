@@ -8,11 +8,9 @@
     },
     "Technology": {
         "GIB": "",
-        "BLSH": "",
         "TSM": "",
-        "MNDY": "",
         "MSFT": "",
-        "VERX": ""
+        "ORCL": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
@@ -20,27 +18,17 @@
     },
     "Utilities": {},
     "Consumer_Defensive": {
-        "MKC": "味好美",
         "FRPT": "",
-        "FLO": "",
-        "STZ": "",
         "KDP": "",
-        "CLX": "",
-        "MDLZ": "",
         "GIS": ""
     },
     "Industrials": {
-        "FLY": "",
         "WSO": "",
         "UHAL": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
-        "BRK-A": "",
-        "FDS": "",
-        "RYAN": "",
-        "MKTX": "",
-        "ARX": ""
+        "FDS": ""
     },
     "Healthcare": {
         "ALC": "",
@@ -116,51 +104,39 @@
         "XRP": ""
     },
     "Today": {
-        "KR": "",
-        "VST": "",
         "COST": "",
+        "KR": "",
+        "AVAV": "",
+        "TSM": "TSM热",
         "CART": "",
+        "VST": "",
+        "CDNS": "",
+        "SHOP": "",
+        "LII": "",
+        "BWXT": "",
+        "DASH": ""
+    },
+    "Next Week": {},
+    "2 Weeks": {},
+    "3 Weeks": {
+        "RELX": ""
+    },
+    "Watching": {
+        "BNTX": "",
+        "DUOL": "DUOL15热",
+        "FRPT": "",
+        "LULU": "",
+        "HQY": "",
         "RH": "",
         "SOUN": "",
         "NOW": "",
-        "KDP": "",
-        "CDNS": "",
         "JOBY": "",
         "HIMS": "",
-        "DUOL": "",
-        "SHOP": "",
-        "VRT": "",
         "APO": "",
-        "LII": "",
-        "BWXT": "",
-        "DASH": "",
-        "FDS": ""
-    },
-    "Next Week": {
-        "IOT": "",
-        "AVAV": ""
-    },
-    "2 Weeks": {
-        "KMX": ""
-    },
-    "3 Weeks": {
-        "GIS": ""
-    },
-    "Watching": {
-        "RELX": "",
-        "KR": "",
-        "BNTX": "",
-        "AXON": "",
-        "DELL": "",
-        "PSTG": "",
-        "DUOL": "",
-        "VRSN": "",
         "FDS": "",
-        "PLTR": "",
-        "MRVL": "",
-        "BF-B": "",
-        "ADSK": "",
-        "FRPT": ""
+        "ACHR": "",
+        "IOT": "",
+        "KMX": ""
     },
     "Strategy12": {},
     "Strategy34": {},
