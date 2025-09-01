@@ -428,10 +428,6 @@ class MainWindow(QMainWindow):
             if child.widget():
                 child.widget().deleteLater()
 
-    # <<< 删除：旧的 get_latest_earning_info 函数，因为新函数完全覆盖其功能
-    # def get_latest_earning_info(self, symbol: str) -> tuple[date|None, float|None]:
-    #     ...
-
     # <<< 新增：从 a.py 移植过来的复杂颜色决策函数 >>>
     def get_color_decision_data(self, symbol: str) -> tuple[float | None, str | None, date | None]:
         """
@@ -499,7 +495,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f"[颜色决策数据获取错误] {symbol}: {e}")
             return None, None, None
-    # <<< 修改 END >>>
 
     def get_mnspp_marketcap(self, symbol: str) -> float:
         """

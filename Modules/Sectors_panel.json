@@ -181,13 +181,6 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USGDP": "28 USGDP",
-        "USConspending": "28 USConspending",
-        "CorePCEM": "29 CorePCEM",
-        "CorePCEY": "29 CorePCEY",
-        "PCEY": "29 PCEY",
-        "USConfidence": "29 USConfidence",
-        "USInitial": "28 USInitial",
         "USNonFarmA": "04 USNonFarmA",
         "USTrade": "04 USTrade",
         "USNonPMI": "04 USNonPMI",

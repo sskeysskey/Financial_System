@@ -22,21 +22,11 @@
     "Consumer_Defensive": {
         "MNST": ""
     },
-    "PE_valid": {
-        "HALO": ""
-    },
-    "PE_invalid": {
-        "HALO": ""
-    },
     "Today": {
         "DT": ""
     },
     "Watching": {
         "NVO": ""
-    },
-    "Strategy12": {
-        "ONON": "",
-        "WIX": ""
     },
     "Next Week": {
         "ONON": "",
@@ -49,8 +39,18 @@
     "3 Weeks": {
         "DRI": ""
     },
+    "Strategy12": {
+        "ONON": "",
+        "WIX": ""
+    },
     "Strategy34": {
         "WIX": ""
+    },
+    "PE_valid": {
+        "HALO": ""
+    },
+    "PE_invalid": {
+        "HALO": ""
     },
     "Industrials": {
         "BA": "波音"
