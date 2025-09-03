@@ -400,13 +400,13 @@ def execute_external_script(script_type, keyword, group=None, main_window=None):
         'event_input': f'{base_path}/Operations/Insert_Events.py',  # <--- 新增这一行
         'event_editor': f'{base_path}/Operations/Editor_Events.py',  # <--- 新增这一行
         'futu': '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt',
-        'kimi': '/Users/yanzhang/Coding/ScriptEditor/Check_Earning.scpt'
+        'doubao': '/Users/yanzhang/Coding/ScriptEditor/Check_Earning.scpt'
     }
 
     try:
         # 1) 对于 “编辑 Tags”、“新增事件”、“编辑事件” —— 阻塞调用，跑完后刷新 UI
         if script_type in ('tags', 'event_input', 'event_editor'):
-            if script_type in ('futu', 'kimi'):
+            if script_type in ('futu', 'doubao'):
                 cmd = ['osascript', script_configs[script_type], keyword]
             else:
                 cmd = [python_path, script_configs[script_type], keyword]
@@ -418,7 +418,7 @@ def execute_external_script(script_type, keyword, group=None, main_window=None):
                 json_data    = load_json(DESCRIPTION_PATH)
                 main_window.refresh_selection_window()
         else:
-            if script_type in ['futu', 'kimi']:
+            if script_type in ['futu', 'doubao']:
                 subprocess.Popen(['osascript', script_configs[script_type], keyword]) # <--- 修改为 Popen
             else:
                 python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
@@ -827,7 +827,7 @@ class MainWindow(QMainWindow):
         menu.addSeparator()
         menu.addAction("在富途中搜索",   lambda: execute_external_script('futu', keyword))
         menu.addAction("查询 DB...",    lambda: self.on_keyword_selected(keyword))
-        menu.addAction("Kimi检索财报",  lambda: execute_external_script('kimi', keyword))
+        menu.addAction("doubao检索财报",  lambda: execute_external_script('doubao', keyword))
         menu.addAction("添加到 Earning", lambda: execute_external_script('earning', keyword))
         menu.addSeparator()
         menu.addAction("找相似",        lambda: execute_external_script('similar', keyword))

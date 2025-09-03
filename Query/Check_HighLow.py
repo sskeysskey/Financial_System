@@ -277,9 +277,14 @@ class HighLowWindow(QMainWindow):
                 background-color: {bg};
                 color: {fg};
                 font-size: 16px;
-                padding: 5px;
+                padding: 5px; /* 保持上下右的内边距 */
                 border: 1px solid #333;
                 border-radius: 4px;
+
+                /* 新增：强制文本左对齐 */
+                text-align: left;
+                /* 新增：设置左侧内边距，让文本和边框有距离 */
+                padding-left: 8px;
             }}
             QPushButton#{name}:hover {{
                 background-color: {self.lighten_color(bg)};
@@ -446,7 +451,7 @@ class HighLowWindow(QMainWindow):
         actions = [
             ("查相似",  lambda: execute_external_script('similar', symbol)),
             ("富途查询",      lambda: execute_external_script('futu', symbol)),
-            ("——",            None),  # 分隔符
+            ("----",            None),  # 分隔符
             ("编辑 Tags",     lambda: execute_external_script('tags', symbol)),
         ]
 
@@ -603,11 +608,10 @@ class HighLowWindow(QMainWindow):
         # 点击 label 时也调用 on_symbol_click
         label.clicked.connect(lambda: self.on_symbol_click(symbol))
 
-        # —— 新增这两行 —— 
+        # ---- 新增这两行 ---- 
         # 让 label 响应右键，用同一个上下文菜单
         label.setContextMenuPolicy(Qt.CustomContextMenu)
         label.customContextMenuRequested.connect(lambda pos, s=symbol: self.show_context_menu(s))
-        # —— 结束 —— 
 
         # 把按钮 + 可点标签 装容器
         container = QWidget()

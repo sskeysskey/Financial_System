@@ -45,7 +45,7 @@ CONFIG = {
         "Industrials", "Real_Estate", "Technology", "Utilities"
     },
     # ========================================
-    "TURNOVER_THRESHOLD": 100_000_000,
+    "TURNOVER_THRESHOLD": 200_000_000,
     "RECENT_EARNINGS_COUNT": 2,
     "MARKETCAP_THRESHOLD": 200_000_000_000,      # 2000亿
     # ========== 代码修改开始 1/2: 增加新的市值阈值和回撤百分比 ==========

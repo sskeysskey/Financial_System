@@ -449,7 +449,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                                  alpha=0.7, zorder=4, picker=5, visible=show_earning_markers)
             earning_scatter_points.append((scatter, dates[idx], prices[idx], text))
 
-    red_offsets = [(-60, 50),(50, -60), (-70, 45), (-50, -45)]
+    red_offsets = [(-60, 30),(50, -30), (-70, 45), (-50, -35)]
     for i, (scatter, date, price, text) in enumerate(global_scatter_points):
         offset = red_offsets[i % len(red_offsets)]
         annotation = ax1.annotate(
@@ -460,7 +460,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         )
         all_annotations.append((annotation, 'global', date, price))
 
-    specific_offsets = [(-150, 50), (20, -50)]
+    specific_offsets = [(-50, -50), (20, -50)]
     for i, (scatter, date, price, text) in enumerate(specific_scatter_points):
         offset = specific_offsets[i % len(specific_offsets)]
         annotation = ax1.annotate(
@@ -473,9 +473,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         all_annotations.append((annotation, 'specific', date, price))
 
     # 新增：为 earning 定义偏移列表（可按需调整数值）
-    earning_offsets = [(50, -50), (-50, 55)]
-
-    # 修改 earning 的注释循环：加入 enumerate 与轮换偏移
+    earning_offsets = [(50, -50), (-150, 25)]
     for i, (scatter, date, price, text) in enumerate(earning_scatter_points):
         offset = earning_offsets[i % len(earning_offsets)]
         annotation = ax1.annotate(
@@ -665,72 +663,76 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     def update_annot(ind):
         x_data, y_data = line1.get_data()
         xval, yval = x_data[ind["ind"][0]], y_data[ind["ind"][0]]
-        annot.xy = (xval, yval)
+        # 只有位置真正改变时才更新
+        if annot.xy != (xval, yval):
+            annot.xy = (xval, yval)
         
-        current_date = xval.replace(tzinfo=None)
-        g_text, s_text, e_text = None, None, None
-        
-        for d, t in global_markers.items():
-            if abs((d - current_date).total_seconds()) < 86400: g_text = t; break
-        for d, t in specific_markers.items():
-            if abs((d - current_date).total_seconds()) < 86400: s_text = t; break
-        for d, t in earning_markers.items():
-            if abs((d - current_date).total_seconds()) < 86400: e_text = t; break
-        
-        # --- 修改 #2: 在这里根据条件设置边框颜色 ---
-        if mouse_pressed and initial_price is not None:
-            percent_change = ((yval - initial_price) / initial_price) * 100
-            text = f"{percent_change:.1f}%"
-            annot.set_color(NORD_THEME['text_bright'])
-            # 设置拖拽时浮窗的边框颜色为 cyan
-            annot.get_bbox_patch().set_edgecolor(NORD_THEME['accent_cyan'])
-        else:
-            parts = [f"{datetime.strftime(xval, '%Y-%m-%d')}", f"{yval:.2f}", ""]
-            marker_texts = []
-            if g_text: marker_texts.append(g_text)
-            if s_text: marker_texts.append(s_text + "\n")
+            current_date = xval.replace(tzinfo=None)
+            g_text, s_text, e_text = None, None, None
             
-            has_earning = False
-            if e_text:
-                for line in e_text.split('\n'):
-                    if "昨日财报" in line: marker_texts.append(line); break
-                has_earning = True
+            for d, t in global_markers.items():
+                if abs((d - current_date).total_seconds()) < 86400: g_text = t; break
+            for d, t in specific_markers.items():
+                if abs((d - current_date).total_seconds()) < 86400: s_text = t; break
+            for d, t in earning_markers.items():
+                if abs((d - current_date).total_seconds()) < 86400: e_text = t; break
             
-            if marker_texts: parts.extend(marker_texts)
-            parts.append(f"最新价差: {((prices[-1] - yval) / yval) * 100:.2f}%")
-            text = "\n".join(parts)
+            # --- 修改 #2: 在这里根据条件设置边框颜色 ---
+            if mouse_pressed and initial_price is not None:
+                percent_change = ((yval - initial_price) / initial_price) * 100
+                text = f"{percent_change:.1f}%"
+                annot.set_color(NORD_THEME['text_bright'])
+                # 设置拖拽时浮窗的边框颜色为 cyan
+                annot.get_bbox_patch().set_edgecolor(NORD_THEME['accent_cyan'])
+            else:
+                parts = [f"{datetime.strftime(xval, '%Y-%m-%d')}", f"{yval:.2f}", ""]
+                marker_texts = []
+                if g_text: marker_texts.append(g_text)
+                if s_text: marker_texts.append(s_text + "\n")
+                
+                has_earning = False
+                if e_text:
+                    for line in e_text.split('\n'):
+                        if "昨日财报" in line: marker_texts.append(line); break
+                    has_earning = True
+                
+                if marker_texts: parts.extend(marker_texts)
+                parts.append(f"最新价差: {((prices[-1] - yval) / yval) * 100:.2f}%")
+                text = "\n".join(parts)
+                
+                if has_earning and not (g_text or s_text): color = NORD_THEME['accent_yellow']
+                elif g_text and not (s_text or has_earning): color = NORD_THEME['accent_red']
+                elif s_text and not (g_text or has_earning): color = NORD_THEME['text_bright']
+                elif g_text and (s_text or has_earning): color = NORD_THEME['accent_purple']
+                else: color = NORD_THEME['accent_cyan']
+                annot.set_color(color)
+                # 设置悬浮时浮窗的边框颜色与文本颜色一致
+                annot.get_bbox_patch().set_edgecolor(color)
             
-            if has_earning and not (g_text or s_text): color = NORD_THEME['accent_yellow']
-            elif g_text and not (s_text or has_earning): color = NORD_THEME['accent_red']
-            elif s_text and not (g_text or has_earning): color = NORD_THEME['text_bright']
-            elif g_text and (s_text or has_earning): color = NORD_THEME['accent_purple']
-            else: color = NORD_THEME['accent_cyan']
+            annot.set_text(text)
             annot.set_color(color)
-            # 设置悬浮时浮窗的边框颜色与文本颜色一致
             annot.get_bbox_patch().set_edgecolor(color)
-        
-        annot.set_text(text)
-        annot.get_bbox_patch().set_alpha(0.8)
-        annot.set_fontsize(16)
-        
-        y_range = ax1.get_ylim()
-        y_ratio = (yval - y_range[0]) / (y_range[1] - y_range[0])
-        x_range = ax1.get_xlim()
-        x_ratio = (matplotlib.dates.date2num(xval) - x_range[0]) / (x_range[1] - x_range[0])
-        
-        y_offset = 60 if y_ratio < 0.2 else (-120 if y_ratio > 0.8 else -70)
-        
-        if x_ratio > 0.7:
-            x_offset = -20 - min(len(text) * 6, 300)
+            annot.get_bbox_patch().set_alpha(0.8)
+            annot.set_fontsize(16)
             annot.set_position((x_offset, y_offset))
-        elif x_ratio < 0.3: annot.set_position((50, y_offset))
-        else: annot.set_position((-200, y_offset if y_ratio < 0.2 else -70))
+            
+            y_range = ax1.get_ylim()
+            y_ratio = (yval - y_range[0]) / (y_range[1] - y_range[0])
+            x_range = ax1.get_xlim()
+            x_ratio = (matplotlib.dates.date2num(xval) - x_range[0]) / (x_range[1] - x_range[0])
+            
+            y_offset = 60 if y_ratio < 0.2 else (-120 if y_ratio > 0.8 else -70)
+            
+            if x_ratio > 0.7:
+                x_offset = -20 - min(len(text) * 6, 300)
+                annot.set_position((x_offset, y_offset))
+            elif x_ratio < 0.3: annot.set_position((50, y_offset))
+            else: annot.set_position((-200, y_offset if y_ratio < 0.2 else -70))
 
     # --- 修正：hover事件函数，使用当前显示的数据 ---
     def hover(event):
         if event.inaxes in [ax1, ax2] and event.xdata and current_filtered_dates:
-            current_date = matplotlib.dates.num2date(event.xdata).replace(tzinfo=None)
-            vline.set_xdata(current_date)
+            vline.set_xdata([event.xdata, event.xdata])  # 直接使用数值坐标
             vline.set_visible(True)
 
             # 使用当前筛选后的数据进行查找
@@ -761,11 +763,13 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 else:
                     annot.set_visible(False)
                     highlight_point.set_visible(False)
+            # 关键改动：使用 draw_idle() 而不是 draw()
             fig.canvas.draw_idle()
         elif event.inaxes != rax:
             vline.set_visible(False)
             annot.set_visible(False)
             highlight_point.set_visible(False)
+            # 这里也改为 draw_idle()
             fig.canvas.draw_idle()
 
     def update(val):
@@ -879,4 +883,5 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     update(default_time_range)
     print("图表绘制完成，等待用户操作...")
+    fig.canvas.toolbar_visible = False  # 隐藏工具栏以提升性能
     plt.show()
