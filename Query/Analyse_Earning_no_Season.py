@@ -213,7 +213,7 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
     cache = {}
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-    market_cap_exists = True  # 假设列存在，遇到错误时再修改
+    marketcap_exists = True  # 假设列存在，遇到错误时再修改
 
     for i, symbol in enumerate(symbols):
         is_tracing = (symbol == symbol_to_trace)
@@ -315,22 +315,22 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
             log_detail(f"[{symbol}]   - 窗口期内最高价: {data['er_window_high_price']}")
 
         # 4. 获取PE和市值
-        data['pe_ratio'], data['market_cap'] = None, None
-        if market_cap_exists:
+        data['pe_ratio'], data['marketcap'] = None, None
+        if marketcap_exists:
             try:
                 cursor.execute(
-                    "SELECT pe_ratio, market_cap FROM MNSPP WHERE symbol = ?",
+                    "SELECT pe_ratio, marketcap FROM MNSPP WHERE symbol = ?",
                     (symbol,)
                 )
                 row = cursor.fetchone()
                 if row:
-                    data['pe_ratio'], data['market_cap'] = row
-                if is_tracing: log_detail(f"[{symbol}] 步骤4: 尝试从MNSPP获取PE和市值。查询结果: PE={data['pe_ratio']}, 市值={data['market_cap']}")
+                    data['pe_ratio'], data['marketcap'] = row
+                if is_tracing: log_detail(f"[{symbol}] 步骤4: 尝试从MNSPP获取PE和市值。查询结果: PE={data['pe_ratio']}, 市值={data['marketcap']}")
             except sqlite3.OperationalError as e:
-                if "no such column: market_cap" in str(e):
+                if "no such column: marketcap" in str(e):
                     if i == 0:
-                        print("警告: MNSPP表中无 'market_cap' 列，将回退查询。")
-                    market_cap_exists = False
+                        print("警告: MNSPP表中无 'marketcap' 列，将回退查询。")
+                    marketcap_exists = False
                     cursor.execute(
                         "SELECT pe_ratio FROM MNSPP WHERE symbol = ?",
                         (symbol,)
@@ -338,7 +338,7 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
                     row = cursor.fetchone()
                     if row:
                         data['pe_ratio'] = row[0]
-                    if is_tracing: log_detail(f"[{symbol}] 步骤4 (回退): 'market_cap'列不存在。查询PE。结果: PE={data['pe_ratio']}")
+                    if is_tracing: log_detail(f"[{symbol}] 步骤4 (回退): 'marketcap'列不存在。查询PE。结果: PE={data['pe_ratio']}")
                 else:
                     raise
         else:
@@ -355,7 +355,7 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
         # 标注是否热门Tag或市值≥2000亿
         tags = set(symbol_to_tags_map.get(symbol, []))
         is_hot = len(tags & set(CONFIG.get("HOT_TAGS", set()))) > 0
-        is_big = (data['market_cap'] is not None) and (data['market_cap'] >= CONFIG["MARKETCAP_THRESHOLD"])
+        is_big = (data['marketcap'] is not None) and (data['marketcap'] >= CONFIG["MARKETCAP_THRESHOLD"])
 
         # 只有满足热门或大市值才去查最近lookback_days天最高价
         data['is_hot_or_big_for_cond3'] = bool(is_hot or is_big)
@@ -452,7 +452,7 @@ def check_special_condition(data, config, log_detail, symbol_to_trace):
     # --- 数据准备 ---
     er_pcts = data.get('all_er_pcts', [])
     all_er_prices = data.get('all_er_prices', [])
-    market_cap = data.get('market_cap')
+    marketcap = data.get('marketcap')
     recent_earnings_count = config["RECENT_EARNINGS_COUNT"]
 
     # --- 数据有效性检查 ---
@@ -478,13 +478,13 @@ def check_special_condition(data, config, log_detail, symbol_to_trace):
     cond_c = price_diff_pct > config["ER_PRICE_DIFF_THRESHOLD"]
 
     # 条件D: marketcap > 5000亿
-    cond_d = market_cap is not None and market_cap > config["MARKETCAP_THRESHOLD_FOR_D"]
+    cond_d = marketcap is not None and marketcap > config["MARKETCAP_THRESHOLD_FOR_D"]
 
     if is_tracing:
         log_detail(f"    - a) 最新财报涨跌幅 > 0: {latest_er_pct:.4f} > 0 -> {cond_a}")
         log_detail(f"    - b) 最新财报收盘价 > 平均价: {latest_er_price:.2f} > {avg_recent_price:.2f} -> {cond_b}")
         log_detail(f"    - c) 最新两次财报价差 > {config['ER_PRICE_DIFF_THRESHOLD']*100}%: {price_diff_pct:.2%} > {config['ER_PRICE_DIFF_THRESHOLD']:.2%} -> {cond_c}")
-        log_detail(f"    - d) 市值 > 5000亿: {market_cap} > {config['MARKETCAP_THRESHOLD_FOR_D']} -> {cond_d}")
+        log_detail(f"    - d) 市值 > 5000亿: {marketcap} > {config['MARKETCAP_THRESHOLD_FOR_D']} -> {cond_d}")
 
     # --- 最终决策树 ---
     
@@ -701,7 +701,7 @@ def evaluate_stock_conditions(data, symbol_to_trace, log_detail, drop_pct_large,
         log_detail(f"  - 入口条件通过 (原因: {' 和 '.join(reasons)})。开始执行通用过滤...")
 
     # 前提条件: 价格回撤条件
-    market_cap = data.get('market_cap')
+    marketcap = data.get('marketcap')
     er_window_high_price = data.get('er_window_high_price') # 获取新计算的窗口期最高价
 
     # 确保窗口期最高价有效
@@ -711,7 +711,7 @@ def evaluate_stock_conditions(data, symbol_to_trace, log_detail, drop_pct_large,
 
     drop_pct = (
         drop_pct_small
-        if (market_cap and market_cap >= CONFIG["MARKETCAP_THRESHOLD"])
+        if (marketcap and marketcap >= CONFIG["MARKETCAP_THRESHOLD"])
         else drop_pct_large
     )
     # 使用 er_window_high_price 作为回撤基准
@@ -720,7 +720,7 @@ def evaluate_stock_conditions(data, symbol_to_trace, log_detail, drop_pct_large,
     
     if is_tracing:
         log_detail("  - [前提条件] 价格回撤:")
-        log_detail(f"    - 市值: {market_cap} -> 使用下跌百分比: {drop_pct*100:.1f}%")
+        log_detail(f"    - 市值: {marketcap} -> 使用下跌百分比: {drop_pct*100:.1f}%")
         # 更新日志以反映新逻辑
         log_detail(f"    - 判断: 最新价({data['latest_price']:.2f}) <= 财报窗口期最高价({er_window_high_price:.2f}) * (1 - {drop_pct:.2f}) = 阈值价({threshold_price_drawdown:.2f}) -> {cond_drawdown_ok}")
     
