@@ -163,6 +163,7 @@
     "PE_valid": {
         "ACHR": "",
         "AXON": "",
+        "BWXT": "BWXT7热",
         "CARR": "CARR15热",
         "CDNS": "CDNS7热",
         "COST": "",
@@ -172,6 +173,7 @@
         "DRI": "",
         "DUOL": "DUOL15热",
         "FDS": "",
+        "FRPT": "",
         "GEV": "",
         "GNRC": "",
         "HDB": "",

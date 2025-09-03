@@ -27,12 +27,11 @@
 
     // ---- 辅助：提取表头列索引 ---- 
     function getColumnIndices(table) {
-        // ... (这部分函数代码保持不变) ...
         const headers = Array.from(table.querySelectorAll('thead th'))
             .map(th => th.textContent.trim());
         return {
             date: headers.indexOf('Date'),
-            close: headers.findIndex(h => /Close/i.test(h)),
+            close: headers.findIndex(h => /Adj Close/i.test(h)),  // 修改这里，改为匹配 Adj Close
             volume: headers.findIndex(h => /Volume/i.test(h))
         };
     }
@@ -76,7 +75,7 @@
         sendStatus('步骤 2: 正在解析表头列...');
         const cols = getColumnIndices(table);
         if (cols.date < 0 || cols.close < 0 || cols.volume < 0) {
-            sendStatus('表头列不符合预期 (Date, Close, Volume)，脚本可能需要更新。', 'error');
+            sendStatus('表头列不符合预期 (Date, Adj Close, Volume)，脚本可能需要更新。', 'error');
             console.error('表头列不符合预期', cols);
             return;
         }
