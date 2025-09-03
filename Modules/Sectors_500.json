@@ -55,7 +55,8 @@
         "DASH",
         "CPNG",
         "ORLY",
-        "DHI"
+        "DHI",
+        "LCID"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -298,9 +299,7 @@
         "NET",
         "NXPI",
         "TEL",
-        "GLW",
-        "CRWV",
-        "PAYX"
+        "GLW"
     ],
     "Utilities": [
         "NEE",

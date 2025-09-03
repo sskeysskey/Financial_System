@@ -279,7 +279,6 @@
         "VMC",
         "CMG",
         "VVV",
-        "FRPT",
         "OC",
         "FLR",
         "DDOG",
@@ -457,7 +456,6 @@
         "PDD",
         "MATX",
         "NLY",
-        "SG",
         "APPF",
         "ERIE",
         "DOC",
@@ -523,7 +521,9 @@
         "HRB",
         "ALC",
         "KDP",
-        "RYAN"
+        "RYAN",
+        "CHH",
+        "CWST"
     ],
     "yellow_keywords": [
         "XLY",
@@ -761,7 +761,9 @@
         "CROX",
         "FSK",
         "GTLB",
-        "AI"
+        "AI",
+        "SG",
+        "FRPT"
     ],
     "orange_keywords": [
         "Huangjin",
@@ -975,7 +977,9 @@
         "RHI",
         "CFLT",
         "BLSH",
-        "ARX"
+        "ARX",
+        "FIG",
+        "CHYM"
     ],
     "green_keywords": [
         "DXY",

@@ -109,9 +109,9 @@ if __name__ == '__main__':
             # 如果找到结果，显示信息
             if result:
                 show_description(symbol, result)
+                sys.exit(0)  # 成功显示，退出代码0
             else:
-                applescript_code = 'display dialog "未找到股票或ETF！" buttons {"OK"} default button "OK"'
-                subprocess.run(['osascript', '-e', applescript_code], check=True)
+                sys.exit(1)  # 没找到，退出代码1
 
         elif arg == "input":
             prompt = "请输入关键字查询数据库:"

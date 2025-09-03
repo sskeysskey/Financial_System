@@ -130,13 +130,21 @@ def input_mapping(data, db_path, user_input):
         # 任务完成，函数返回后程序将自动退出
         pass
     else:
-        # 把没找到的符号拷贝到剪贴板，然后用 show_description.py 的 paste 模式来弹 description 界面
+        # 把没找到的符号拷贝到剪贴板，然后尝试显示 description
         pyperclip.copy(input_trimmed)
-        subprocess.run([
-            sys.executable,
-            '/Users/yanzhang/Coding/Financial_System/Query/show_description.py',
-            'paste'
-        ], check=True)
+        try:
+            subprocess.run([
+                sys.executable,
+                '/Users/yanzhang/Coding/Financial_System/Query/show_description.py',
+                'paste'
+            ], check=True)
+            # 如果 show_description.py 成功显示了内容，这里就会正常结束
+        except subprocess.CalledProcessError:
+            # 如果 show_description.py 返回非0状态码，说明也没找到 description
+            # 重新调用输入框
+            user_input = get_user_input_qt("请输入")
+            if user_input:  # 如果用户输入了新的内容
+                input_mapping(data, db_path, user_input)
 
 # 使用PyQt5重写的用户输入对话框函数
 def get_user_input_qt(prompt):
