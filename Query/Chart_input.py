@@ -451,7 +451,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     red_offsets = [(-60, 50),(50, -60), (-70, 45), (-50, -45)]
     for i, (scatter, date, price, text) in enumerate(global_scatter_points):
-        offset = red_offsets[i % 4]
+        offset = red_offsets[i % len(red_offsets)]
         annotation = ax1.annotate(
             text, xy=(date, price), xytext=offset, textcoords="offset points",
             bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=NORD_THEME['accent_red'], alpha=0.8),
@@ -462,7 +462,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     specific_offsets = [(-150, 50), (20, -50)]
     for i, (scatter, date, price, text) in enumerate(specific_scatter_points):
-        offset = specific_offsets[i % 2]
+        offset = specific_offsets[i % len(specific_offsets)]
         annotation = ax1.annotate(
             text, xy=(date, price), xytext=offset, textcoords="offset points",
             bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=NORD_THEME['text_bright'], alpha=0.8),
@@ -472,9 +472,14 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         )
         all_annotations.append((annotation, 'specific', date, price))
 
-    for scatter, date, price, text in earning_scatter_points:
+    # 新增：为 earning 定义偏移列表（可按需调整数值）
+    earning_offsets = [(50, -50), (-50, 55)]
+
+    # 修改 earning 的注释循环：加入 enumerate 与轮换偏移
+    for i, (scatter, date, price, text) in enumerate(earning_scatter_points):
+        offset = earning_offsets[i % len(earning_offsets)]
         annotation = ax1.annotate(
-            text, xy=(date, price), xytext=(50, 50), textcoords="offset points",
+            text, xy=(date, price), xytext=offset, textcoords="offset points",
             bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=NORD_THEME['accent_yellow'], alpha=0.8),
             arrowprops=dict(arrowstyle="->", color=NORD_THEME['accent_cyan']),
             color=NORD_THEME['accent_yellow'], fontsize=12,
@@ -482,7 +487,6 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         )
         all_annotations.append((annotation, 'earning', date, price))
 
-    # ... (其余大部分函数保持不变，因为它们不直接与填充相关) ...
     def toggle_all_annotations():
         nonlocal show_all_annotations
         show_all_annotations = not show_all_annotations
