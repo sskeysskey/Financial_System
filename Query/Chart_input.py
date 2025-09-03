@@ -140,17 +140,12 @@ def display_dialog(message):
     applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
     subprocess.run(['osascript', '-e', applescript_code], check=True)
 
-# --- 修改: update_plot 函数彻底重写以支持渐变 ---
-def update_plot(line1, gradient_image, line2, dates, prices, volumes, ax1, ax2, show_volume, cmap):
+# --- 优化: 简化的update_plot函数，减少重复创建渐变 ---
+def update_plot(line1, gradient_image, line2, dates, prices, volumes, ax1, ax2, show_volume, cmap, force_recreate=False):
     """
     更新图表，使用 imshow 和 clip_path 实现渐变填充。
     """
-    # 1. 移除旧的渐变图像（如果存在）
-    if gradient_image:
-        gradient_image.remove()
-        gradient_image = None
-
-    # 2. 处理没有数据的情况
+    # 1. 处理没有数据的情况
     if not dates or not prices:
         line1.set_data([], [])
         if volumes: line2.set_data([], [])
@@ -159,16 +154,16 @@ def update_plot(line1, gradient_image, line2, dates, prices, volumes, ax1, ax2, 
         if show_volume: ax2.set_ylim(0, 1)
         line2.set_visible(show_volume and bool(volumes))
         plt.draw()
-        return None # 返回空的图像对象
+        return gradient_image
 
-    # 3. 更新主价格曲线和成交量曲线的数据
+    # 2. 更新主价格曲线和成交量曲线的数据
     line1.set_data(dates, prices)
     if volumes:
         line2.set_data(dates, volumes)
     else:
         line2.set_data([], [])
 
-    # 4. 动态调整坐标轴范围
+    # 3. 动态调整坐标轴范围
     date_min_val, date_max_val = np.min(dates), np.max(dates)
     if date_min_val == date_max_val:
         ax1.set_xlim(date_min_val - timedelta(days=1), date_max_val + timedelta(days=1))
@@ -192,35 +187,39 @@ def update_plot(line1, gradient_image, line2, dates, prices, volumes, ax1, ax2, 
         else:
             ax2.set_ylim(0, 1)
 
-    # --- 5. 核心：创建并应用渐变填充 ---
-    # 创建一个垂直的渐变数组 (256级, 从上到下由 1 -> 0)
-    gradient = np.linspace(1.0, 0.0, 256).reshape(-1, 1)
+    # --- 4. 优化：只在强制重建或渐变不存在时创建渐变 ---
+    if force_recreate or gradient_image is None:
+        # 移除旧的渐变图像（如果存在）
+        if gradient_image:
+            gradient_image.remove()
+            gradient_image = None
 
-    # 获取当前坐标轴的范围，用于放置渐变图像
-    xlim = ax1.get_xlim()
-    ylim = ax1.get_ylim()
+        # 创建一个垂直的渐变数组 (256级, 从上到下由 1 -> 0)
+        gradient = np.linspace(1.0, 0.0, 256).reshape(-1, 1)
 
-    # 使用 imshow 绘制渐变图像，使其填满整个绘图区域
-    gradient_image = ax1.imshow(gradient, aspect='auto', cmap=cmap,
-                                extent=[*xlim, *ylim], origin='lower', zorder=1)
+        # 获取当前坐标轴的范围，用于放置渐变图像
+        xlim = ax1.get_xlim()
+        ylim = ax1.get_ylim()
 
-    # 创建剪切路径
-    line_x_nums = matplotlib.dates.date2num(dates)
-    
-    # 路径顶点：从左下角开始，沿着曲线到右上角，然后到底部，闭合路径
-    verts = [(line_x_nums[0], ylim[0]), *zip(line_x_nums, prices), (line_x_nums[-1], ylim[0])]
-    clip_path = Path(verts)
-    clip_patch = PathPatch(clip_path, transform=ax1.transData, facecolor='none', edgecolor='none')
-    
-    # 将此路径添加为剪切蒙版
-    ax1.add_patch(clip_patch)
-    gradient_image.set_clip_path(clip_patch)
-    
-    # ------------------------------------
+        # 使用 imshow 绘制渐变图像，使其填满整个绘图区域
+        gradient_image = ax1.imshow(gradient, aspect='auto', cmap=cmap,
+                                    extent=[*xlim, *ylim], origin='lower', zorder=1)
+
+        # 创建剪切路径
+        line_x_nums = matplotlib.dates.date2num(dates)
+        
+        # 路径顶点：从左下角开始，沿着曲线到右上角，然后到底部，闭合路径
+        verts = [(line_x_nums[0], ylim[0]), *zip(line_x_nums, prices), (line_x_nums[-1], ylim[0])]
+        clip_path = Path(verts)
+        clip_patch = PathPatch(clip_path, transform=ax1.transData, facecolor='none', edgecolor='none')
+        
+        # 将此路径添加为剪切蒙版
+        ax1.add_patch(clip_patch)
+        gradient_image.set_clip_path(clip_patch)
 
     line2.set_visible(show_volume and bool(volumes))
     plt.draw()
-    return gradient_image # 返回新的渐变图像对象
+    return gradient_image
 
 class InfoDialog(QDialog):
     def __init__(self, title, content, font_family, font_size, width, height, parent=None):
@@ -315,6 +314,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     show_earning_markers = True
     show_all_annotations = False
 
+    # --- 新增：用于跟踪当前显示的数据 ---
+    current_filtered_dates = []
+    current_filtered_prices = []
+
     try:
         data = fetch_data(db_path, table_name, name)
         dates, prices, volumes = process_data(data)
@@ -327,6 +330,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         return
 
     smooth_dates, smooth_prices = smooth_curve(dates, prices)
+
+    # --- 优化：预计算date_nums避免重复转换 ---
+    date_nums = matplotlib.dates.date2num(dates)
 
     fig, ax1 = plt.subplots(figsize=(16, 8))
     fig.subplots_adjust(left=0.05, bottom=0.1, right=0.83, top=0.8)
@@ -646,6 +652,11 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     rax.text(0.5, 0.99, instructions, transform=rax.transAxes, ha="center", va="bottom",
              color=NORD_THEME['text_light'], fontsize=10, fontfamily="Arial Unicode MS")
     
+    # --- 优化：缓存查找结果，减少重复计算 ---
+    @lru_cache(maxsize=1000)
+    def find_closest_index(target_date_num):
+        return np.argmin(np.abs(date_nums - target_date_num))
+    
     def update_annot(ind):
         x_data, y_data = line1.get_data()
         xval, yval = x_data[ind["ind"][0]], y_data[ind["ind"][0]]
@@ -705,36 +716,41 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         elif x_ratio < 0.3: annot.set_position((50, y_offset))
         else: annot.set_position((-200, y_offset if y_ratio < 0.2 else -70))
 
+    # --- 修正：hover事件函数，使用当前显示的数据 ---
     def hover(event):
-        if event.inaxes in [ax1, ax2] and event.xdata:
+        if event.inaxes in [ax1, ax2] and event.xdata and current_filtered_dates:
             current_date = matplotlib.dates.num2date(event.xdata).replace(tzinfo=None)
             vline.set_xdata(current_date)
             vline.set_visible(True)
 
+            # 使用当前筛选后的数据进行查找
+            current_date_nums = matplotlib.dates.date2num(current_filtered_dates)
+            idx = np.argmin(np.abs(current_date_nums - event.xdata))
+            
             x_data, y_data = line1.get_data()
-            idx = (np.abs(np.array(x_data) - current_date)).argmin()
-            sel_date, sel_price = x_data[idx], y_data[idx]
+            if idx < len(x_data) and idx < len(y_data):
+                sel_date, sel_price = x_data[idx], y_data[idx]
 
-            color = NORD_THEME['accent_cyan']
-            for _, d, _, _ in global_scatter_points:
-                if d == sel_date: color = NORD_THEME['accent_red']; break
-            else:
-                for _, d, _, _ in specific_scatter_points:
-                    if d == sel_date: color = NORD_THEME['text_bright']; break
+                color = NORD_THEME['accent_cyan']
+                for _, d, _, _ in global_scatter_points:
+                    if d == sel_date: color = NORD_THEME['accent_red']; break
                 else:
-                    for _, d, _, _ in earning_scatter_points:
-                        if d == sel_date: color = NORD_THEME['accent_yellow']; break
-            highlight_point.set_color(color)
+                    for _, d, _, _ in specific_scatter_points:
+                        if d == sel_date: color = NORD_THEME['text_bright']; break
+                    else:
+                        for _, d, _, _ in earning_scatter_points:
+                            if d == sel_date: color = NORD_THEME['accent_yellow']; break
+                highlight_point.set_color(color)
 
-            dist = 0.2 * ((ax1.get_xlim()[1] - ax1.get_xlim()[0]) / 365)
-            if np.isclose(matplotlib.dates.date2num(sel_date), event.xdata, atol=dist):
-                update_annot({"ind": [idx]})
-                annot.set_visible(True)
-                highlight_point.set_offsets([[sel_date, sel_price]])
-                highlight_point.set_visible(True)
-            else:
-                annot.set_visible(False)
-                highlight_point.set_visible(False)
+                dist = 0.2 * ((ax1.get_xlim()[1] - ax1.get_xlim()[0]) / 365)
+                if np.isclose(matplotlib.dates.date2num(sel_date), event.xdata, atol=dist):
+                    update_annot({"ind": [idx]})
+                    annot.set_visible(True)
+                    highlight_point.set_offsets([[sel_date, sel_price]])
+                    highlight_point.set_visible(True)
+                else:
+                    annot.set_visible(False)
+                    highlight_point.set_visible(False)
             fig.canvas.draw_idle()
         elif event.inaxes != rax:
             vline.set_visible(False)
@@ -743,14 +759,14 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             fig.canvas.draw_idle()
 
     def update(val):
-        nonlocal gradient_image
+        nonlocal gradient_image, current_filtered_dates, current_filtered_prices
         years = time_options[val]
         if years == 0:
             f_dates, f_prices, f_volumes = dates, prices, volumes
         else:
             min_date = datetime.now() - timedelta(days=years * 365)
             indices = [i for i, d in enumerate(dates) if d >= min_date]
-            if not indices: # 如果筛选后为空，则取最后一条数据
+            if not indices:
                 f_dates, f_prices = [dates[-1]], [prices[-1]]
                 f_volumes = [volumes[-1]] if volumes else None
             else:
@@ -758,8 +774,12 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 f_prices = [prices[i] for i in indices]
                 f_volumes = [volumes[i] for i in indices] if volumes else None
 
-        # --- 修改: 调用新的update_plot并传入自定义的colormap ---
-        gradient_image = update_plot(line1, gradient_image, line2, f_dates, f_prices, f_volumes, ax1, ax2, show_volume, cyan_transparent_cmap)
+        # --- 更新当前显示的数据 ---
+        current_filtered_dates = f_dates
+        current_filtered_prices = f_prices
+
+        # --- 优化：只在时间范围改变时强制重建渐变 ---
+        gradient_image = update_plot(line1, gradient_image, line2, f_dates, f_prices, f_volumes, ax1, ax2, show_volume, cyan_transparent_cmap, force_recreate=True)
         
         for i, circle in enumerate(radio.circles):
             circle.set_facecolor(NORD_THEME['accent_red'] if list(time_options.keys())[i] == val else NORD_THEME['background'])
@@ -771,7 +791,22 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     def toggle_volume():
         nonlocal show_volume
         show_volume = not show_volume
-        update(radio.value_selected)
+        # --- 修正：使用当前筛选的数据重新绘制 ---
+        years = time_options[radio.value_selected]
+        if years == 0:
+            f_dates, f_prices, f_volumes = dates, prices, volumes
+        else:
+            min_date = datetime.now() - timedelta(days=years * 365)
+            indices = [i for i, d in enumerate(dates) if d >= min_date]
+            if not indices:
+                f_dates, f_prices = [dates[-1]], [prices[-1]]
+                f_volumes = [volumes[-1]] if volumes else None
+            else:
+                f_dates = [dates[i] for i in indices]
+                f_prices = [prices[i] for i in indices]
+                f_volumes = [volumes[i] for i in indices] if volumes else None
+        
+        update_plot(line1, gradient_image, line2, f_dates, f_prices, f_volumes, ax1, ax2, show_volume, cyan_transparent_cmap, force_recreate=False)
 
     def on_key(event):
         actions = {'v': toggle_volume, 'r': toggle_global_markers, 'x': toggle_all_annotations,
@@ -805,10 +840,12 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     def on_mouse_press(event):
         nonlocal mouse_pressed, initial_price, initial_date
-        if event.button == 1 and event.xdata is not None:
+        if event.button == 1 and event.xdata is not None and current_filtered_dates:
             mouse_pressed = True
-            idx = (np.abs(np.array(dates) - matplotlib.dates.num2date(event.xdata).replace(tzinfo=None))).argmin()
-            initial_price, initial_date = prices[idx], dates[idx]
+            current_date_nums = matplotlib.dates.date2num(current_filtered_dates)
+            idx = np.argmin(np.abs(current_date_nums - event.xdata))
+            if idx < len(current_filtered_prices):
+                initial_price, initial_date = current_filtered_prices[idx], current_filtered_dates[idx]
 
     def on_mouse_release(event):
         nonlocal mouse_pressed
