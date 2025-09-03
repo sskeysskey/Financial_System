@@ -2,7 +2,7 @@ import json
 import sqlite3
 import os
 
-SYMBOL_TO_TRACE = "NVDA"
+SYMBOL_TO_TRACE = ""
 LOG_FILE_PATH = "/Users/yanzhang/Downloads/No_Season_trace_log.txt"
 
 # --- 1. 配置文件和路径 ---
@@ -47,18 +47,22 @@ CONFIG = {
     # ========================================
     "TURNOVER_THRESHOLD": 100_000_000,
     "RECENT_EARNINGS_COUNT": 2,
-    "MARKETCAP_THRESHOLD": 200_000_000_000,  # 2000亿
-    # 新增：条件D的市值阈值
-    "MARKETCAP_THRESHOLD_FOR_D": 500_000_000_000, # 5000亿
+    "MARKETCAP_THRESHOLD": 200_000_000_000,      # 2000亿
+    # ========== 代码修改开始 1/2: 增加新的市值阈值和回撤百分比 ==========
+    "MARKETCAP_THRESHOLD_MEGA": 500_000_000_000, # 5000亿 (新增)
+    
     # 严格筛选标准 (第一轮)
     "PRICE_DROP_PERCENTAGE_LARGE": 0.10, # <2000亿=10%
-    "PRICE_DROP_PERCENTAGE_SMALL": 0.06, # ≥2000亿=6%
+    "PRICE_DROP_PERCENTAGE_SMALL": 0.06, # 2000亿 ≤ 市值 < 5000亿 = 6% (注释更新)
+    "PRICE_DROP_PERCENTAGE_MEGA": 0.05,  # ≥5000亿=5% (新增)
+    # ========== 代码修改结束 1/2 ==========
+    
     # 宽松筛选标准 (当第一轮结果数量不足时启用)
     "RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.07, # <2000亿=7%
     "RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.05, # ≥2000亿=5%
     # 新增：更宽松的筛选标准 (仅在满足特定条件时启用)
-    "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.06, # <2000亿, 从 5% 改为 6%
-    "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.05, # ≥2000亿, 从 3% 改为 5%
+    "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.05,
+    "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.03,
     # 新增：触发“更宽松”标准的财报收盘价价差百分比
     "ER_PRICE_DIFF_THRESHOLD": 0.40,
     
@@ -433,11 +437,10 @@ def check_special_condition(data, config, log_detail, symbol_to_trace):
     """
     检查股票应采用何种筛选标准 (前提条件)。
     新规则:
-    - 最宽松: ((A & B & C) or D)
+    - 最宽松: (A & B & C)
         - A: latest_er_pct > 0
         - B: 最新财报收盘价 > 过去N次平均价
         - C: 两次财报收盘价价差 > 40%
-        - D: marketcap > 5000亿
     - 宽松: (A & B) or (B & C)  (但不满足最宽松)
     - 严格: 其他情况
     返回:
@@ -452,7 +455,6 @@ def check_special_condition(data, config, log_detail, symbol_to_trace):
     # --- 数据准备 ---
     er_pcts = data.get('all_er_pcts', [])
     all_er_prices = data.get('all_er_prices', [])
-    marketcap = data.get('marketcap')
     recent_earnings_count = config["RECENT_EARNINGS_COUNT"]
 
     # --- 数据有效性检查 ---
@@ -460,7 +462,7 @@ def check_special_condition(data, config, log_detail, symbol_to_trace):
         if is_tracing: log_detail(f"    - 失败: 财报数据不足。-> 返回 0 (严格)")
         return 0
 
-    # --- 评估四个子条件 A, B, C, D ---
+    # --- 评估三个子条件 A, B, C ---
     
     # 条件A: 最新一次财报涨跌幅 > 0
     latest_er_pct = er_pcts[-1]
@@ -477,30 +479,33 @@ def check_special_condition(data, config, log_detail, symbol_to_trace):
     price_diff_pct = ((latest_er_price - previous_er_price) / previous_er_price) if previous_er_price > 0 else 0
     cond_c = price_diff_pct > config["ER_PRICE_DIFF_THRESHOLD"]
 
-    # 条件D: marketcap > 5000亿
-    cond_d = marketcap is not None and marketcap > config["MARKETCAP_THRESHOLD_FOR_D"]
-
     if is_tracing:
         log_detail(f"    - a) 最新财报涨跌幅 > 0: {latest_er_pct:.4f} > 0 -> {cond_a}")
         log_detail(f"    - b) 最新财报收盘价 > 平均价: {latest_er_price:.2f} > {avg_recent_price:.2f} -> {cond_b}")
         log_detail(f"    - c) 最新两次财报价差 > {config['ER_PRICE_DIFF_THRESHOLD']*100}%: {price_diff_pct:.2%} > {config['ER_PRICE_DIFF_THRESHOLD']:.2%} -> {cond_c}")
-        log_detail(f"    - d) 市值 > 5000亿: {marketcap} > {config['MARKETCAP_THRESHOLD_FOR_D']} -> {cond_d}")
 
     # --- 最终决策树 ---
     
-    # 检查最宽松标准: (A and B and C) or D
-    if (cond_a and cond_b and cond_c) or cond_d:
-        if is_tracing: log_detail(f"    - 最终决策 (满足 (A&B&C) 或 D): -> 返回 2 (最宽松)")
+    # 核心条件B是所有宽松标准的基础，如果不满足，直接返回严格
+    if not cond_b:
+        if is_tracing: log_detail(f"    - 最终决策 (B为假): -> 返回 0 (严格)")
+        return 0
+
+    # 到这里，B为真。
+    # 检查最宽松标准: A and B and C
+    # 因为B已为真，所以只需检查 A and C
+    if cond_a and cond_c:
+        if is_tracing: log_detail(f"    - 最终决策 (A=T, B=T, C=T): -> 返回 2 (最宽松)")
         return 2
     
     # 检查宽松标准: (A and B) or (B and C) => B and (A or C)
-    # 此处已排除了最宽松的情况，所以无需担心重叠
-    if cond_b and (cond_a or cond_c):
-        if is_tracing: log_detail(f"    - 最终决策 (满足 B&(A|C) 且不满足最宽松): -> 返回 1 (宽松)")
+    # 因为已经排除了最宽松的情况(A和C同时为真)，所以这里直接检查 (A or C) 即可
+    if cond_a or cond_c:
+        if is_tracing: log_detail(f"    - 最终决策 (B=T, A or C=T, 但不满足最宽松): -> 返回 1 (宽松)")
         return 1
         
-    # 其他所有情况均为严格
-    if is_tracing: log_detail(f"    - 最终决策 (不满足任何宽松条件): -> 返回 0 (严格)")
+    # 如果B为真，但A和C都为假，则应用严格标准
+    if is_tracing: log_detail(f"    - 最终决策 (B=T, 但A和C均为假): -> 返回 0 (严格)")
     return 0
 
 def check_condition_2(data, config, log_detail, symbol_to_trace):
@@ -709,11 +714,32 @@ def evaluate_stock_conditions(data, symbol_to_trace, log_detail, drop_pct_large,
         if is_tracing: log_detail(f"  - 最终裁定: 失败 (无法获取有效的财报窗口期最高价: {er_window_high_price})。")
         return False
 
-    drop_pct = (
-        drop_pct_small
-        if (marketcap and marketcap >= CONFIG["MARKETCAP_THRESHOLD"])
-        else drop_pct_large
+    # ========== 代码修改开始 2/2: 实现三层市值判断逻辑 ==========
+    # 确定使用的回撤百分比 (drop_pct)
+    # 检查是否为严格筛选模式，该模式有三层市值阈值
+    is_strict_mode = (
+        drop_pct_large == CONFIG["PRICE_DROP_PERCENTAGE_LARGE"] and
+        drop_pct_small == CONFIG["PRICE_DROP_PERCENTAGE_SMALL"]
     )
+
+    drop_pct = 0 # 初始化
+
+    if is_strict_mode:
+        # 严格模式：三层阈值判断
+        if marketcap and marketcap >= CONFIG["MARKETCAP_THRESHOLD_MEGA"]:
+            drop_pct = CONFIG["PRICE_DROP_PERCENTAGE_MEGA"] # ≥5000亿
+        elif marketcap and marketcap >= CONFIG["MARKETCAP_THRESHOLD"]:
+            drop_pct = CONFIG["PRICE_DROP_PERCENTAGE_SMALL"] # 2000亿 - 5000亿
+        else:
+            drop_pct = CONFIG["PRICE_DROP_PERCENTAGE_LARGE"] # <2000亿
+    else:
+        # 宽松/最宽松模式：保持原有的两层阈值判断
+        if marketcap and marketcap >= CONFIG["MARKETCAP_THRESHOLD"]:
+            drop_pct = drop_pct_small # ≥2000亿
+        else:
+            drop_pct = drop_pct_large # <2000亿
+    # ========== 代码修改结束 2/2 ==========
+
     # 使用 er_window_high_price 作为回撤基准
     threshold_price_drawdown = er_window_high_price * (1 - drop_pct)
     cond_drawdown_ok = data['latest_price'] <= threshold_price_drawdown

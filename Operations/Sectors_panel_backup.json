@@ -114,6 +114,8 @@
         "XRP": ""
     },
     "Today": {
+        "CTAS": "",
+        "NVMI": "NVMI15热",
         "COST": "",
         "KR": "",
         "AVAV": "",
@@ -146,7 +148,8 @@
         "FDS": "",
         "ACHR": "",
         "IOT": "",
-        "KMX": ""
+        "KMX": "",
+        "CARR": "CARR15热"
     },
     "Strategy12": {
         "AVAV": "",
@@ -157,18 +160,11 @@
     },
     "Strategy34": {
         "CART": "",
+        "GILD": "",
         "KMX": "",
         "MP": ""
     },
     "PE_valid": {
-        "ACHR": "",
-        "AMD": "AMD7热",
-        "AXON": "",
-        "BWXT": "BWXT7热",
-        "CARR": "CARR15热",
-        "CDNS": "CDNS7热",
-        "COST": "",
-        "CTAS": "",
         "CVLT": "",
         "DASH": "",
         "DRI": "",
@@ -191,7 +187,6 @@
         "MSFT": "",
         "NBIS": "NBIS7热",
         "NVDA": "NVDA热",
-        "NVMI": "NVMI15热",
         "ONON": "",
         "PLTR": "PLTR15热",
         "RELX": "",

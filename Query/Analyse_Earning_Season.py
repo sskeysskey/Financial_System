@@ -200,8 +200,8 @@ def build_stock_data_cache(symbols, db_path, symbol_sector_map, symbol_to_trace,
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    # 检查market_cap列是否存在的标志
-    market_cap_exists = True
+    # 检查marketcap列是否存在的标志
+    marketcap_exists = True
 
     for i, symbol in enumerate(symbols):
         is_tracing = (symbol == symbol_to_trace)
@@ -263,27 +263,27 @@ def build_stock_data_cache(symbols, db_path, symbol_sector_map, symbol_to_trace,
 
         # 4. 获取其他所需数据 (PE, MarketCap, Earning表price)
         data['pe_ratio'] = None
-        data['market_cap'] = None
+        data['marketcap'] = None
 
-        if market_cap_exists: # 如果列存在，尝试最优查询
+        if marketcap_exists: # 如果列存在，尝试最优查询
             try:
-                cursor.execute("SELECT pe_ratio, market_cap FROM MNSPP WHERE symbol = ?", (symbol,))
+                cursor.execute("SELECT pe_ratio, marketcap FROM MNSPP WHERE symbol = ?", (symbol,))
                 row = cursor.fetchone()
                 if row:
                     data['pe_ratio'] = row[0]
-                    data['market_cap'] = row[1]
-                if is_tracing: log_detail(f"[{symbol}] 步骤4: 尝试从MNSPP获取PE和市值。查询结果: PE={data['pe_ratio']}, 市值={data['market_cap']}")
+                    data['marketcap'] = row[1]
+                if is_tracing: log_detail(f"[{symbol}] 步骤4: 尝试从MNSPP获取PE和市值。查询结果: PE={data['pe_ratio']}, 市值={data['marketcap']}")
             except sqlite3.OperationalError as e:
-                if "no such column: market_cap" in str(e):
+                if "no such column: marketcap" in str(e):
                     if i == 0: # 只在第一次遇到错误时打印警告
-                        print(f"警告: MNSPP表中未找到 'market_cap' 列。将回退到仅查询 'pe_ratio'。")
-                    market_cap_exists = False # 标记列不存在，后续循环不再尝试
+                        print(f"警告: MNSPP表中未找到 'marketcap' 列。将回退到仅查询 'pe_ratio'。")
+                    marketcap_exists = False # 标记列不存在，后续循环不再尝试
                     # 执行回退查询
                     cursor.execute("SELECT pe_ratio FROM MNSPP WHERE symbol = ?", (symbol,))
                     row = cursor.fetchone()
                     if row:
                         data['pe_ratio'] = row[0]
-                    if is_tracing: log_detail(f"[{symbol}] 步骤4 (回退): 'market_cap'列不存在。查询PE。结果: PE={data['pe_ratio']}")
+                    if is_tracing: log_detail(f"[{symbol}] 步骤4 (回退): 'marketcap'列不存在。查询PE。结果: PE={data['pe_ratio']}")
                 else:
                     # 其他数据库错误
                     print(f"警告: 查询MNSPP表时发生意外错误 for {symbol}: {e}")
@@ -597,7 +597,7 @@ def run_strategy_4(data, cursor, symbol_sector_map, symbol_to_trace, log_detail)
             if is_tracing: log_detail(f"  - 结果: False (无法获取财报日前后最高价)")
             return False
 
-        mcap = data['market_cap']
+        mcap = data['marketcap']
         drop_pct = CONFIG["MINOR_DROP_PERCENTAGE"] if mcap and mcap >= CONFIG["MARKETCAP_THRESHOLD"] else CONFIG["HIGH_DROP_PERCENTAGE"]
         threshold_price = max_price_around_er * (1 - drop_pct)
         cond_A = data['latest_price'] < threshold_price
