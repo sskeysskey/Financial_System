@@ -14,7 +14,26 @@ from PyQt5.QtWidgets import QApplication, QDialog, QVBoxLayout, QTextEdit
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt
 
-# --- 新增功能 START: 从 b.py 移植过来的颜色决策逻辑 ---
+# --- 新增: 定义一个Nord主题的调色板 ---
+NORD_THEME = {
+    'background': '#2E3440',
+    'widget_bg': '#3B4252',
+    'border': '#4C566A',
+    'text_light': '#D8DEE9',
+    'text_bright': '#ECEFF4',
+    'accent_blue': '#5E81AC',
+    'accent_cyan': '#88C0D0',
+    'accent_red': '#BF616A',
+    'accent_orange': '#D08770',
+    # 'accent_yellow': '#EBCB8B',
+    'accent_yellow': 'yellow',
+    'accent_green': '#A3BE8C',
+    'accent_purple': '#B48EAD',
+}
+# --- 新增 END ---
+
+
+# --- 修改 START: 从 b.py 移植过来的颜色决策逻辑 (已适配新主题) ---
 def get_title_color_logic(db_path, symbol, table_name):
     """
     获取决定标题颜色所需的所有数据，并返回最终的颜色字符串。
@@ -32,7 +51,7 @@ def get_title_color_logic(db_path, symbol, table_name):
             earning_rows = cursor.fetchall()
 
         if not earning_rows:
-            return 'white'  # 没有财报记录，返回默认颜色
+            return NORD_THEME['text_bright']  # 没有财报记录，返回默认颜色
 
         latest_earning_date_str, latest_earning_price_str = earning_rows[0]
         latest_earning_date = datetime.strptime(latest_earning_date_str, "%Y-%m-%d").date()
@@ -40,7 +59,7 @@ def get_title_color_logic(db_path, symbol, table_name):
 
         # 规则 1: 如果最新财报在45天前，则强制为默认颜色
         if (date.today() - latest_earning_date).days > 45:
-            return 'white'
+            return NORD_THEME['text_bright']
 
         # 规则 2: 如果只有一条财报记录，使用 'single' 模式
         if len(earning_rows) < 2:
@@ -59,7 +78,7 @@ def get_title_color_logic(db_path, symbol, table_name):
                 previous_stock_price_row = cursor.fetchone()
 
             if not latest_stock_price_row or not previous_stock_price_row:
-                return 'white'  # 缺少股价数据，返回默认颜色
+                return NORD_THEME['text_bright']  # 缺少股价数据，返回默认颜色
 
             latest_stock_price = float(latest_stock_price_row[0])
             previous_stock_price = float(previous_stock_price_row[0])
@@ -67,32 +86,31 @@ def get_title_color_logic(db_path, symbol, table_name):
             # 步骤 4: 判断趋势
             price_trend = 'rising' if latest_stock_price > previous_stock_price else 'falling'
 
-        # --- 颜色决策逻辑 ---
-        color = 'white'  # 默认颜色
+        # --- 颜色决策逻辑 (使用Nord主题颜色) ---
+        color = NORD_THEME['text_bright']  # 默认颜色
         if price_trend == 'single':
             if latest_earning_price > 0:
-                color = 'red'
+                color = NORD_THEME['accent_red']
             elif latest_earning_price < 0:
-                color = 'green'
+                color = NORD_THEME['accent_green']
         else:
             is_price_positive = latest_earning_price > 0
             is_trend_rising = price_trend == 'rising'
 
             if is_trend_rising and is_price_positive:
-                color = 'red'
+                color = NORD_THEME['accent_red']      # 对应原 'red'
             elif not is_trend_rising and is_price_positive:
-                color = '#008B8B'  # Dark Cyan
+                color = NORD_THEME['accent_blue']     # 对应原 '#008B8B' (Dark Cyan)
             elif is_trend_rising and not is_price_positive:
-                color = '#912F2F'  # Dark Red/Purple
+                color = NORD_THEME['accent_purple']   # 对应原 '#912F2F' (Dark Red/Purple)
             elif not is_trend_rising and not is_price_positive:
-                color = 'green'
+                color = NORD_THEME['accent_green']    # 对应原 'green'
 
         return color
 
     except Exception as e:
         print(f"[颜色决策逻辑错误] {symbol}: {e}")
-        return 'white'  # 出现任何异常都返回默认颜色
-# --- 新增功能 END ---
+        return NORD_THEME['text_bright']  # 出现任何异常都返回默认颜色
 
 @lru_cache(maxsize=None)
 def fetch_data(db_path, table_name, name):
@@ -170,8 +188,8 @@ def update_plot(line1, fill, line2, dates, prices, volumes, ax1, ax2, show_volum
     if fill:
         fill.remove()
     
-    # 添加edgecolor='none'或linewidth=0参数来移除边缘线
-    fill = ax1.fill_between(dates, prices, color='lightblue', alpha=0.3, edgecolor='none')
+    # --- 修改: 使用新主题颜色 ---
+    fill = ax1.fill_between(dates, prices, color=NORD_THEME['accent_cyan'], alpha=0.2, edgecolor='none')
     
     if volumes: # 确保 volumes 列表不为空
         line2.set_data(dates, volumes) # 假设 dates 和 volumes 长度匹配
@@ -221,7 +239,7 @@ def update_plot(line1, fill, line2, dates, prices, volumes, ax1, ax2, show_volum
     plt.draw()
     return fill
 
-# --- PyQt5 替换实现 ---
+# --- 修改: 为PyQt5弹窗应用Nord样式 ---
 class InfoDialog(QDialog):
     """一个自定义的对话框，用于显示信息，并支持按ESC键关闭"""
     def __init__(self, title, content, font_family, font_size, width, height, parent=None):
@@ -234,11 +252,15 @@ class InfoDialog(QDialog):
         
         text_box = QTextEdit(self)
         text_box.setReadOnly(True)
-        text_box.setFont(QFont(font_family, font_size))
+        # --- 修改: 字体大小现在由QSS控制，这里可以简化 ---
+        text_box.setFont(QFont(font_family))
         text_box.setText(content)
         
         layout.addWidget(text_box)
         self.setLayout(layout)
+        
+        # --- 新增: 应用样式 ---
+        self.apply_nord_style(font_size)
 
     def keyPressEvent(self, event):
         """重写按键事件，当按下ESC时关闭窗口"""
@@ -251,6 +273,37 @@ class InfoDialog(QDialog):
         x = (screen_geometry.width() - self.width()) // 2
         y = (screen_geometry.height() - self.height()) // 2
         self.move(x, y)
+
+    # --- 新增: 从b.py移植并简化的样式表应用方法 ---
+    def apply_nord_style(self, font_size):
+        qss = f"""
+        QDialog {{
+            background-color: {NORD_THEME['background']};
+        }}
+        QTextEdit {{
+            background-color: {NORD_THEME['widget_bg']};
+            color: {NORD_THEME['text_bright']};
+            border: 1px solid {NORD_THEME['border']};
+            border-radius: 5px;
+            font-size: {font_size}px;
+            padding: 5px;
+        }}
+        QScrollBar:vertical {{
+            border: none;
+            background: {NORD_THEME['widget_bg']};
+            width: 10px;
+            margin: 0px 0px 0px 0px;
+        }}
+        QScrollBar::handle:vertical {{
+            background: {NORD_THEME['accent_blue']};
+            min-height: 20px;
+            border-radius: 5px;
+        }}
+        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+            height: 0px;
+        }}
+        """
+        self.setStyleSheet(qss)
 
 # ### 新增：统一的外部脚本执行函数 ###
 def execute_external_script(script_type, keyword):
@@ -360,13 +413,39 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     # 隐藏ax2的轴线和刻度
     ax2.axis('off')
 
-    fig.patch.set_facecolor('black')
-    ax1.set_facecolor('black')
-    ax1.tick_params(axis='x', colors='white')
-    ax1.tick_params(axis='y', colors='white')
-    ax2.tick_params(axis='y', colors='white')
+    # --- 修改: 应用新主题颜色 ---
+    fig.patch.set_facecolor(NORD_THEME['background'])
+    ax1.set_facecolor(NORD_THEME['background'])
 
-    highlight_point = ax1.scatter([], [], s=100, color='cyan', zorder=5)
+    # ax1.tick_params(axis='x', colors=NORD_THEME['text_light'])
+    # ax1.tick_params(axis='y', colors=NORD_THEME['text_light'])
+    # ax2.tick_params(axis='y', colors=NORD_THEME['text_light'])
+    # 只保留 X 轴：显示底部脊柱，隐藏其余脊柱
+    ax1.spines['bottom'].set_visible(True)
+    ax1.spines['top'].set_visible(False)
+    ax1.spines['right'].set_visible(False)
+    ax1.spines['left'].set_visible(False)
+
+    # 隐藏 Y 轴刻度与标签（左轴）
+    ax1.tick_params(axis='y', which='both', left=False, labelleft=False)
+
+    # 保留 X 轴刻度与标签
+    ax1.tick_params(axis='x', colors=NORD_THEME['text_light'])
+
+    # 如果还想让 X 轴线更明显一些（可选）
+    ax1.spines['bottom'].set_color(NORD_THEME['border'])
+    ax1.spines['bottom'].set_linewidth(1.0)
+
+    # 隐藏 ax2（成交量轴）的一切（你已有 ax2.axis('off')）
+    ax2.axis('off')
+
+    # 可选：弱化网格或仅保留纵向/横向
+    ax1.grid(True, axis='y', color=NORD_THEME['border'], alpha=0.06, linestyle='--')  # 或者关闭：ax1.grid(False)
+    # 设置坐标轴边框颜色
+    # for spine in ax1.spines.values():
+    #     spine.set_edgecolor(NORD_THEME['border'])
+    
+    highlight_point = ax1.scatter([], [], s=100, color=NORD_THEME['accent_cyan'], zorder=5)
     
     # 绘制插值后的平滑曲线
     line1, = ax1.plot(
@@ -375,12 +454,12 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         marker='',
         linestyle='-',
         linewidth=2,
-        color='cyan',
-        alpha=0.7,
+        color=NORD_THEME['accent_cyan'], # 修改
+        alpha=0.8, # 稍微调高一点不透明度
         label='Price'
     )
     # 在每个原始价格点处添加一个小小的白色散点，并保存散点对象引用
-    small_dot_scatter = ax1.scatter(dates, prices, s=5, color='white', zorder=1)
+    small_dot_scatter = ax1.scatter(dates, prices, s=5, color=NORD_THEME['text_bright'], zorder=1) # 修改
     
     line2, = ax2.plot(
         dates,
@@ -389,11 +468,11 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         markersize=2,
         linestyle='-',
         linewidth=2,
-        color='magenta',
+        color=NORD_THEME['accent_purple'], # 修改
         alpha=0.7,
         label='Volume'
     )
-    fill = ax1.fill_between(dates, prices, color='cyan', alpha=0.2)
+    fill = ax1.fill_between(dates, prices, color=NORD_THEME['accent_cyan'], alpha=0.2) # 修改
     line2.set_visible(show_volume)
 
     # 处理全局标记点和特定股票标记点
@@ -467,7 +546,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             closest_date_idx = (np.abs(np.array(dates) - marker_date)).argmin()
             closest_date = dates[closest_date_idx]
             price_at_date = prices[closest_date_idx]
-            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='red', 
+            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color=NORD_THEME['accent_red'], 
                                 #  alpha=0.7, zorder=4, picker=5) # 初始设为可见
                                  alpha=0.7, zorder=4, picker=5, visible=show_global_markers)  # 初始设为不可见
             global_scatter_points.append((scatter, closest_date, price_at_date, text))
@@ -478,7 +557,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             closest_date_idx = (np.abs(np.array(dates) - marker_date)).argmin()
             closest_date = dates[closest_date_idx]
             price_at_date = prices[closest_date_idx]
-            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='white', 
+            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color=NORD_THEME['text_bright'], 
                                 #  alpha=0.7, zorder=4, picker=5) # 初始设为可见
                                  alpha=0.7, zorder=4, picker=5, visible=show_specific_markers)  # 初始设为不可见
             specific_scatter_points.append((scatter, closest_date, price_at_date, text))
@@ -489,7 +568,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             closest_date_idx = (np.abs(np.array(dates) - marker_date)).argmin()
             closest_date = dates[closest_date_idx]
             price_at_date = prices[closest_date_idx]
-            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color='orange', 
+            scatter = ax1.scatter([closest_date], [price_at_date], s=100, color=NORD_THEME['accent_yellow'], 
                                  alpha=0.7, zorder=4, picker=5, visible=show_earning_markers)
             earning_scatter_points.append((scatter, closest_date, price_at_date, text))
 
@@ -498,15 +577,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     for i, (scatter, date, price, text) in enumerate(global_scatter_points):
         offset = red_offsets[i % 4]
         annotation = ax1.annotate(
-            text,
-            xy=(date, price),  # 箭头指向的位置
-            xytext=offset,     # 使用交替的偏移
-            textcoords="offset points",
-            bbox=dict(boxstyle="round", fc="black", alpha=0.8),
-            arrowprops=dict(arrowstyle="->", color='red'),
-            color='red',
-            fontsize=12,
-            visible=False  # 默认隐藏(因为红色点初始设定为不可见)
+            text, xy=(date, price), xytext=offset, textcoords="offset points",
+            bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=NORD_THEME['accent_red'], alpha=0.8),
+            arrowprops=dict(arrowstyle="->", color=NORD_THEME['accent_red']),
+            color=NORD_THEME['accent_red'], fontsize=12, visible=False
         )
         all_annotations.append((annotation, 'global', date, price))
 
@@ -522,10 +596,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             xy=(date, price),
             xytext=offset,
             textcoords="offset points",
-            bbox=dict(boxstyle="round", fc="black", alpha=0.8),
-            arrowprops=dict(arrowstyle="->", color='white'),
-            color='white',
-            fontsize=12,
+            bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=NORD_THEME['text_bright'], alpha=0.8),
+            arrowprops=dict(arrowstyle="->", color=NORD_THEME['text_bright']),
+            color=NORD_THEME['text_bright'], fontsize=12,
             visible=show_specific_markers and show_all_annotations
         )
         all_annotations.append((annotation, 'specific', date, price))
@@ -537,10 +610,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             xy=(date, price),
             xytext=(50, 50),  # 修改为右上偏移
             textcoords="offset points",
-            bbox=dict(boxstyle="round", fc="black", alpha=0.8),
-            arrowprops=dict(arrowstyle="->", color='cyan'),
-            color='orange',
-            fontsize=12,
+            bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=NORD_THEME['accent_yellow'], alpha=0.8),
+            arrowprops=dict(arrowstyle="->", color=NORD_THEME['accent_cyan']),
+            color=NORD_THEME['accent_yellow'], fontsize=12,
             visible=show_earning_markers and show_all_annotations
         )
         all_annotations.append((annotation, 'earning', date, price))
@@ -650,7 +722,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     # 根据 table_name 动态组合标题
     if table_name == 'ETFs':
         # 如果是ETF，则不显示市值、PE和PB
-        title_color = 'orange'
+        title_color = NORD_THEME['accent_orange']
         title_text = (
             f'{name}  {compare}  {turnover_str} '
             f'"{table_name}" {fullname} {tag_str}'
@@ -678,9 +750,6 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     )
 
     def show_stock_etf_info(event=None):
-        """
-        使用 PyQt5 展示当前name在JSON数据中的信息。
-        """
         for source in data_sources:
             for item in json_data.get(source, []):
                 if item['symbol'] == name:
@@ -692,8 +761,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                         f"{descriptions['description1']}\n\n"
                         f"{descriptions['description2']}"
                     )
-                    # 创建并显示对话框
-                    dialog = InfoDialog("Information", info, 'Arial', 22, 600, 750)
+                    # --- 修改: 弹窗字体大小调整以适应QSS ---
+                    dialog = InfoDialog("Information", info, 'Arial Unicode MS', 16, 600, 750)
                     dialog.exec_()
                     return
         display_dialog(f"未找到 {name} 的信息")
@@ -817,7 +886,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         """
         使用 PyQt5 创建新窗口显示查询数据库的结果。
         """
-        dialog = InfoDialog("数据库查询结果", content, "Courier", 20, 900, 600)
+        dialog = InfoDialog("数据库查询结果", content, "Courier", 14, 900, 600) # 字体调小以适应等宽字体
         dialog.exec_()
 
     def query_database(db_path, table_name, condition):
@@ -852,12 +921,13 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         """
         condition = f"name = '{name}'"
         result = query_database(db_path, table_name, condition)
-        create_window_qt(result) # 调用 PyQt5 版本的窗口
+        create_window_qt(result)
 
     if clickable:
         fig.canvas.mpl_connect('pick_event', on_pick)
 
-    ax1.grid(True, color='gray', alpha=0.1, linestyle='--')
+    # --- 修改: 网格线颜色 ---
+    ax1.grid(True, color=NORD_THEME['border'], alpha=0.1, linestyle='--')
     plt.xticks(rotation=45)
 
     annot = ax1.annotate(
@@ -865,9 +935,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         xy=(0, 0),
         xytext=(20, 20),
         textcoords="offset points",
-        bbox=dict(boxstyle="round", fc="black"),
+        bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg']), # 修改
         arrowprops=dict(arrowstyle="->"),
-        color='white'
+        color=NORD_THEME['text_bright'] # 修改
     )
     annot.set_visible(False)
 
@@ -886,12 +956,17 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     default_index = list(time_options.keys()).index(default_time_range)
 
     # 配置单选按钮
-    rax = plt.axes([0.95, 0.005, 0.05, 0.8], facecolor='black')
+    rax = plt.axes([0.95, 0.005, 0.05, 0.8], facecolor=NORD_THEME['background'])
     radio = RadioButtons(rax, list(time_options.keys()), active=default_index)
     for label in radio.labels:
-        label.set_color('white')
+        label.set_color(NORD_THEME['text_light'])
         label.set_fontsize(14)
-    radio.circles[default_index].set_facecolor('red')
+    # 设置所有圆圈的边框和非选中颜色
+    for circle in radio.circles:
+        circle.set_edgecolor(NORD_THEME['border'])
+        circle.set_facecolor(NORD_THEME['background'])
+    # 设置选中圆圈的颜色
+    radio.circles[default_index].set_facecolor(NORD_THEME['accent_red'])
 
     # ------ 添加快捷键说明 ------
     instructions = (
@@ -901,7 +976,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         "W： 新事件\n"
         "Q： 改事件\n"
         "K： 查豆包\n"
-        "U： 查富途\n"
+        "Z： 查富途\n"
         "P： 做比较\n"
         "J： 加Panel\n"
         "L： 查相似"
@@ -914,8 +989,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         transform=rax.transAxes,
         ha="center",           # 水平居中
         va="bottom",           # 从 bottom 开始向上排
-        color="white",
-        fontsize=10,
+        color=NORD_THEME['text_light'], fontsize=10,
         fontfamily="Arial Unicode MS"
     )
     
@@ -958,7 +1032,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         if mouse_pressed and initial_price is not None:
             percent_change = ((yval - initial_price) / initial_price) * 100
             text = f"{percent_change:.1f}%"
-            annot.set_color('white')  # 百分比变化使用白色
+            annot.set_color(NORD_THEME['text_bright'])
         else:
             # --- 这是修改的核心逻辑 ---
             text_parts = []
@@ -999,18 +1073,18 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             
             # 设置颜色
             if has_earning_marker and not (global_marker_text or specific_marker_text):
-                annot.set_color('orange')  # 收益公告标记使用黄色文字
+                annot.set_color(NORD_THEME['accent_yellow'])  # 收益公告标记使用黄色文字
             elif global_marker_text and not (specific_marker_text or has_earning_marker):
-                annot.set_color('red')    # 全局标记使用红色文字
+                annot.set_color(NORD_THEME['accent_red'])   # 全局标记使用红色文字
             elif specific_marker_text and not (global_marker_text or has_earning_marker):
-                annot.set_color('white')    # 特殊标记使用橘色文字
+                annot.set_color(NORD_THEME['text_bright'])    # 特殊标记使用橘色文字
             elif global_marker_text and (specific_marker_text or has_earning_marker):
-                annot.set_color('purple')    # 全局标记使用红色文字
+                annot.set_color(NORD_THEME['accent_purple'])   # 全局标记使用红色文字
             else:
-                annot.set_color('cyan')  # 其他标记使用白色文字
+                annot.set_color(NORD_THEME['accent_cyan'])  # 其他标记使用白色文字
         
         annot.set_text(text)
-        annot.get_bbox_patch().set_alpha(0.4)
+        annot.get_bbox_patch().set_alpha(0.8) # 调高一点透明度
         annot.set_fontsize(16)
         
         # 检查点的垂直位置
@@ -1062,24 +1136,21 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 selected_price = y_data[nearest_index]
 
                 # --- 新增：根据是否命中标记点来切换高亮点颜色 ---
-                highlight_color = 'cyan'  # 默认
+                highlight_color = NORD_THEME['accent_cyan']  # 默认
                 # 红色全局标记
                 for _, date, _, _ in global_scatter_points:
                     if date == selected_date:
-                        highlight_color = 'red'
-                        break
+                        highlight_color = NORD_THEME['accent_red']; break
                 else:
                     # 白色特定标记
                     for _, date, _, _ in specific_scatter_points:
                         if date == selected_date:
-                            highlight_color = 'white'
-                            break
+                            highlight_color = NORD_THEME['text_bright']; break
                     else:
                         # 橙色收益公告标记
                         for _, date, _, _ in earning_scatter_points:
                             if date == selected_date:
-                                highlight_color = 'orange'
-                                break
+                                highlight_color = NORD_THEME['accent_yellow']; break
                 # 应用到 highlight_point
                 highlight_point.set_color(highlight_color)
                 # --------------------------------------------------------
@@ -1134,9 +1205,14 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
         nonlocal fill
         fill = update_plot(line1, fill, line2, filtered_dates, filtered_prices, filtered_volumes, ax1, ax2, show_volume)
-        radio.circles[list(time_options.keys()).index(val)].set_facecolor('red')
         
-        # 根据所选时间区间控制原始价格点散点的显示
+        # --- 修改: 更新单选按钮选中样式 ---
+        for i, circle in enumerate(radio.circles):
+            if list(time_options.keys())[i] == val:
+                circle.set_facecolor(NORD_THEME['accent_red'])
+            else:
+                circle.set_facecolor(NORD_THEME['background'])
+
         if val in ["1m", "3m", "6m"]:
             small_dot_scatter.set_visible(True)
         else:
@@ -1184,7 +1260,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             'j': lambda: execute_external_script('panel_input', name),
             'q': lambda: execute_external_script('event_edit', name),
             'k': lambda: execute_external_script('check_kimi', name),
-            'u': lambda: execute_external_script('check_futu', name),
+            'z': lambda: execute_external_script('check_futu', name),
             'p': lambda: execute_external_script('symbol_compare', name),
             'l': lambda: execute_external_script('similar_tags', name),
             '1': lambda: radio.set_active(7),
@@ -1224,7 +1300,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         记录鼠标左键按下时的价格和日期，用于计算百分比变化。
         """
         nonlocal mouse_pressed, initial_price, initial_date
-        if event.button == 1:
+        if event.button == 1 and event.xdata is not None:
             mouse_pressed = True
             nearest_index = (np.abs(np.array(dates) -
                             matplotlib.dates.num2date(event.xdata).replace(tzinfo=None))).argmin()
@@ -1239,8 +1315,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         if event.button == 1:
             mouse_pressed = False
 
-    # 参考线
-    vline = ax1.axvline(x=dates[0], color='cyan', linestyle='--', linewidth=1, visible=False)
+    # --- 修改: 参考线颜色 ---
+    vline = ax1.axvline(x=dates[0], color=NORD_THEME['accent_cyan'], linestyle='--', linewidth=1, visible=False)
 
     # 连接事件
     plt.gcf().canvas.mpl_connect("motion_notify_event", hover)

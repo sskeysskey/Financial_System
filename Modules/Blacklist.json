@@ -770,7 +770,8 @@
         "SMMU",
         "IOO",
         "FXO",
-        "VFMO"
+        "VFMO",
+        "PEZ"
     ],
     "Earning": [
         "TW"

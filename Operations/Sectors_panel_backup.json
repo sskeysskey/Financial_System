@@ -10,25 +10,35 @@
         "GIB": "",
         "TSM": "",
         "MSFT": "",
-        "ORCL": ""
+        "ORCL": "",
+        "ROP": "",
+        "FIG": "",
+        "CHYM": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
-        "AMCR": ""
+        "AMCR": "",
+        "CHH": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
         "FRPT": "",
         "KDP": "",
-        "GIS": ""
+        "GIS": "",
+        "STZ": "",
+        "FLO": ""
     },
     "Industrials": {
         "WSO": "",
-        "UHAL": ""
+        "UHAL": "",
+        "CWST": "",
+        "FLY": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
-        "FDS": ""
+        "FDS": "",
+        "ERIE": "",
+        "RYAN": ""
     },
     "Healthcare": {
         "ALC": "",
@@ -138,10 +148,64 @@
         "IOT": "",
         "KMX": ""
     },
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
-    "PE_invalid": {},
+    "Strategy12": {
+        "AVAV": "",
+        "GWRE": "",
+        "HQY": "",
+        "KR": "",
+        "RH": ""
+    },
+    "Strategy34": {
+        "CART": "",
+        "KMX": "",
+        "MP": ""
+    },
+    "PE_valid": {
+        "ACHR": "",
+        "AXON": "",
+        "CARR": "CARR15热",
+        "CDNS": "CDNS7热",
+        "COST": "",
+        "CTAS": "",
+        "CVLT": "",
+        "DASH": "",
+        "DRI": "",
+        "DUOL": "DUOL15热",
+        "FDS": "",
+        "GEV": "",
+        "GNRC": "",
+        "HDB": "",
+        "HIMS": "",
+        "IBN": "",
+        "IDXX": "",
+        "KDP": "",
+        "KLAC": "",
+        "LII": "",
+        "LULU": "",
+        "MKC": "",
+        "NBIS": "NBIS7热",
+        "NVMI": "NVMI15热",
+        "ONON": "",
+        "PLTR": "PLTR15热",
+        "RELX": "",
+        "RMD": "",
+        "SAIA": "",
+        "SHOP": "SHOP7热",
+        "SMCI": "SMCI15热",
+        "STZ": "",
+        "TMDX": "",
+        "TRU": "",
+        "TSM": "TSM7热",
+        "TYL": "",
+        "VRSN": "",
+        "VRT": "VRT7热",
+        "WING": ""
+    },
+    "PE_invalid": {
+        "JOBY": "",
+        "ZETA": "",
+        "ZS": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
