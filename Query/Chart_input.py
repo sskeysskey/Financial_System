@@ -10,7 +10,6 @@ import matplotlib
 from functools import lru_cache
 from scipy.interpolate import interp1d
 
-# --- 新增: 渐变填充需要的模块 ---
 from matplotlib.patches import PathPatch
 from matplotlib.path import Path
 from matplotlib.colors import LinearSegmentedColormap
@@ -31,14 +30,15 @@ NORD_THEME = {
     'accent_red': '#BF616A',
     'accent_orange': '#D08770',
     'accent_yellow': '#EBCB8B',
+    'pure_yellow': 'yellow',
     'accent_green': '#A3BE8C',
+    'accent_deepgreen': '#607254',
     'accent_purple': '#B48EAD',
 }
 
 def get_title_color_logic(db_path, symbol, table_name):
     """
     获取决定标题颜色所需的所有数据，并返回最终的颜色字符串。
-    逻辑完全移植自 b.py 的 get_color_decision_data 和 create_symbol_button。
     如果任何步骤失败或不满足条件，则返回默认颜色 'white'。
     """
     try:
@@ -57,7 +57,7 @@ def get_title_color_logic(db_path, symbol, table_name):
         latest_earning_date = datetime.strptime(latest_earning_date_str, "%Y-%m-%d").date()
         latest_earning_price = float(latest_earning_price_str) if latest_earning_price_str is not None else 0.0
 
-        if (date.today() - latest_earning_date).days > 45:
+        if (date.today() - latest_earning_date).days > 75:
             return NORD_THEME['text_bright']
 
         if len(earning_rows) < 2:
@@ -88,9 +88,9 @@ def get_title_color_logic(db_path, symbol, table_name):
             is_price_positive = latest_earning_price > 0
             is_trend_rising = price_trend == 'rising'
             if is_trend_rising and is_price_positive: color = NORD_THEME['accent_red']
-            elif not is_trend_rising and is_price_positive: color = NORD_THEME['accent_blue']
+            elif not is_trend_rising and is_price_positive: color = NORD_THEME['accent_green']
             elif is_trend_rising and not is_price_positive: color = NORD_THEME['accent_purple']
-            elif not is_trend_rising and not is_price_positive: color = NORD_THEME['accent_green']
+            elif not is_trend_rising and not is_price_positive: color = NORD_THEME['accent_deepgreen']
         return color
     except Exception as e:
         print(f"[颜色决策逻辑错误] {symbol}: {e}")
@@ -439,7 +439,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     for marker_date, text in earning_markers.items():
         if min(dates) <= marker_date <= max(dates):
             idx = (np.abs(np.array(dates) - marker_date)).argmin()
-            scatter = ax1.scatter([dates[idx]], [prices[idx]], s=100, color=NORD_THEME['accent_yellow'], 
+            scatter = ax1.scatter([dates[idx]], [prices[idx]], s=100, color=NORD_THEME['pure_yellow'], 
                                  alpha=0.7, zorder=4, picker=5, visible=show_earning_markers)
             earning_scatter_points.append((scatter, dates[idx], prices[idx], text))
 
