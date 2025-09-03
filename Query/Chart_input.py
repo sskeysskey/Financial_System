@@ -631,8 +631,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     ax1.grid(True, color=NORD_THEME['border'], alpha=0.1, linestyle='--')
     plt.xticks(rotation=45)
 
+    # --- 修改 #1: 在这里为 bbox 添加默认的边框颜色 ec ---
     annot = ax1.annotate("", xy=(0,0), xytext=(20,20), textcoords="offset points",
-        bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg']),
+        bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=NORD_THEME['accent_cyan']),
         arrowprops=dict(arrowstyle="->"), color=NORD_THEME['text_bright'], visible=False)
 
     time_options = {"1m":0.08, "3m":0.25, "6m":0.5, "1Y":1, "2Y":2, "3Y":3, "5Y":5, "10Y":10, "All":0}
@@ -671,11 +672,14 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             if abs((d - current_date).total_seconds()) < 86400: s_text = t; break
         for d, t in earning_markers.items():
             if abs((d - current_date).total_seconds()) < 86400: e_text = t; break
-                
+        
+        # --- 修改 #2: 在这里根据条件设置边框颜色 ---
         if mouse_pressed and initial_price is not None:
             percent_change = ((yval - initial_price) / initial_price) * 100
             text = f"{percent_change:.1f}%"
             annot.set_color(NORD_THEME['text_bright'])
+            # 设置拖拽时浮窗的边框颜色为 cyan
+            annot.get_bbox_patch().set_edgecolor(NORD_THEME['accent_cyan'])
         else:
             parts = [f"{datetime.strftime(xval, '%Y-%m-%d')}", f"{yval:.2f}", ""]
             marker_texts = []
@@ -698,6 +702,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             elif g_text and (s_text or has_earning): color = NORD_THEME['accent_purple']
             else: color = NORD_THEME['accent_cyan']
             annot.set_color(color)
+            # 设置悬浮时浮窗的边框颜色与文本颜色一致
+            annot.get_bbox_patch().set_edgecolor(color)
         
         annot.set_text(text)
         annot.get_bbox_patch().set_alpha(0.8)
