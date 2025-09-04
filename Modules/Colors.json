@@ -111,7 +111,6 @@
         "MFG",
         "ISRG",
         "SYK",
-        "NVDA",
         "AVGO",
         "ADP",
         "SHOP",
@@ -139,7 +138,8 @@
         "WMT",
         "NFLX",
         "TSM",
-        "ORCL"
+        "ORCL",
+        "NVDA"
     ],
     "white_keywords": [
         "USGDP",
@@ -523,7 +523,8 @@
         "KDP",
         "RYAN",
         "CHH",
-        "CWST"
+        "CWST",
+        "SLGN"
     ],
     "yellow_keywords": [
         "XLY",

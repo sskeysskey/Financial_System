@@ -9,12 +9,17 @@
     "Technology": {
         "GIB": "",
         "MSFT": "",
-        "ORCL": ""
+        "ORCL": "",
+        "NVDA": "",
+        "BLSH": "",
+        "CHYM": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
         "AMCR": "",
-        "CHH": ""
+        "CHH": "",
+        "GPK": "",
+        "SLGN": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -29,7 +34,9 @@
         "UHAL": "",
         "CWST": ""
     },
-    "Communication_Services": {},
+    "Communication_Services": {
+        "SEAT": ""
+    },
     "Financial_Services": {
         "FDS": "",
         "ERIE": "",
@@ -37,7 +44,10 @@
     },
     "Healthcare": {
         "ALC": "",
-        "COO": ""
+        "COO": "",
+        "ISRG": "",
+        "BRKR": "",
+        "PRCT": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -121,7 +131,8 @@
         "AVAV": "",
         "CART": "",
         "VST": "",
-        "BWXT": ""
+        "BWXT": "",
+        "DASH": ""
     },
     "Next Week": {},
     "2 Weeks": {},
@@ -135,10 +146,53 @@
         "KMX": "",
         "FIG": ""
     },
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
-    "PE_invalid": {},
+    "Strategy12": {
+        "AVAV": "",
+        "GWRE": "",
+        "KR": "",
+        "RH": ""
+    },
+    "Strategy34": {
+        "KMX": ""
+    },
+    "PE_valid": {
+        "AMD": "AMD7热",
+        "APO": "",
+        "AXON": "",
+        "BRKR": "",
+        "CARR": "CARR15热",
+        "CCK": "",
+        "COST": "",
+        "CTAS": "",
+        "CVLT": "",
+        "DASH": "",
+        "DUOL": "DUOL15热",
+        "GEV": "",
+        "IBM": "IBM15",
+        "IDXX": "",
+        "ISRG": "",
+        "KDP": "",
+        "KLAC": "",
+        "LULU": "",
+        "META": "",
+        "MP": "",
+        "MSFT": "",
+        "NBIS": "NBIS7热",
+        "NVDA": "NVDA热",
+        "NVMI": "NVMI15热",
+        "PLTR": "PLTR15热",
+        "RMD": "",
+        "SAP": "SAP7",
+        "SHOP": "SHOP7热",
+        "SMCI": "SMCI15热",
+        "STZ": "",
+        "TSM": "TSM热",
+        "VRT": "VRT7热"
+    },
+    "PE_invalid": {
+        "ASTS": "",
+        "JOBY": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

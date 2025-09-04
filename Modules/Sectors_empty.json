@@ -8,13 +8,62 @@
     "Economics": [],
     "Basic_Materials": [],
     "Communication_Services": [],
-    "Consumer_Cyclical": [],
-    "Consumer_Defensive": [],
+    "Consumer_Cyclical": [
+        "RH",
+        "LULU",
+        "CART",
+        "DASH"
+    ],
+    "Consumer_Defensive": [
+        "HIMS",
+        "STZ",
+        "FRPT",
+        "KR",
+        "KDP",
+        "COST"
+    ],
     "Energy": [],
-    "Financial_Services": [],
-    "Healthcare": [],
-    "Industrials": [],
+    "Financial_Services": [
+        "APO"
+    ],
+    "Healthcare": [
+        "IDXX",
+        "BNTX",
+        "RMD",
+        "ISRG",
+        "BRKR"
+    ],
+    "Industrials": [
+        "AXON",
+        "VRT",
+        "JOBY",
+        "CTAS",
+        "BWXT",
+        "GEV",
+        "CARR",
+        "AVAV"
+    ],
     "Real_Estate": [],
-    "Technology": [],
-    "Utilities": []
+    "Technology": [
+        "MSFT",
+        "ASTS",
+        "NVDA",
+        "DUOL",
+        "KLAC",
+        "PLTR",
+        "CVLT",
+        "SAP",
+        "FIG",
+        "SHOP",
+        "SMCI",
+        "NVMI",
+        "IOT",
+        "GWRE",
+        "IBM",
+        "AMD",
+        "TSM"
+    ],
+    "Utilities": [
+        "VST"
+    ]
 }
