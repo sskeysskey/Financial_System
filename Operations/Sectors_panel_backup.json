@@ -8,25 +8,31 @@
     },
     "Technology": {
         "GIB": "",
-        "ORCL": ""
+        "ORCL": "",
+        "BLSH": "",
+        "FIG": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
         "AMCR": "",
         "CHH": "",
         "GPK": "",
-        "SLGN": ""
+        "SLGN": "",
+        "CMG": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
         "FRPT": "",
         "GIS": "",
-        "FLO": ""
+        "FLO": "",
+        "MDLZ": "",
+        "STZ": ""
     },
     "Industrials": {
         "WSO": "",
         "UHAL": "",
-        "CWST": ""
+        "CWST": "",
+        "FLY": ""
     },
     "Communication_Services": {
         "SEAT": ""
@@ -41,7 +47,8 @@
         "COO": "",
         "ISRG": "",
         "BRKR": "",
-        "PRCT": ""
+        "PRCT": "",
+        "SNY": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -138,10 +145,41 @@
         "FIG": "",
         "CCK": ""
     },
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
-    "PE_invalid": {},
+    "Strategy12": {
+        "AVAV": "",
+        "GWRE": "",
+        "KR": "",
+        "RH": ""
+    },
+    "Strategy34": {
+        "FDS": "",
+        "KMX": ""
+    },
+    "PE_valid": {
+        "AMD": "AMD7热",
+        "APO": "",
+        "AXON": "",
+        "CCK": "",
+        "COST": "",
+        "DASH": "",
+        "DUOL": "DUOL15热",
+        "ICLR": "",
+        "IDXX": "",
+        "KDP": "",
+        "MP": "",
+        "MSFT": "",
+        "NBIS": "NBIS7热",
+        "PLTR": "PLTR15热",
+        "SAP": "SAP7",
+        "SMCI": "SMCI15热",
+        "TYL": "",
+        "VRT": "VRT7热",
+        "WING": ""
+    },
+    "PE_invalid": {
+        "ASTS": "",
+        "JOBY": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
@@ -185,7 +223,12 @@
         "USTrade": "04 USTrade",
         "USNonPMI": "04 USNonPMI",
         "USNonFarm": "05 USNonFarm",
-        "USUnemploy": "05 USUnemploy"
+        "USUnemploy": "05 USUnemploy",
+        "USPPI": "10 USPPI",
+        "CorePPI": "10 CorePPI",
+        "USCPI": "11 USCPI",
+        "CoreCPI": "11 CoreCPI",
+        "USConfidence": "12 USConfidence"
     },
     "Economic_All": {
         "USGDP": "",

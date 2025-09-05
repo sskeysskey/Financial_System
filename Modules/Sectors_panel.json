@@ -223,7 +223,12 @@
         "USTrade": "04 USTrade",
         "USNonPMI": "04 USNonPMI",
         "USNonFarm": "05 USNonFarm",
-        "USUnemploy": "05 USUnemploy"
+        "USUnemploy": "05 USUnemploy",
+        "USPPI": "10 USPPI",
+        "CorePPI": "10 CorePPI",
+        "USCPI": "11 USCPI",
+        "CoreCPI": "11 CoreCPI",
+        "USConfidence": "12 USConfidence"
     },
     "Economic_All": {
         "USGDP": "",
