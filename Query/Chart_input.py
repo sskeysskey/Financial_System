@@ -141,7 +141,7 @@ def display_dialog(message):
     subprocess.run(['osascript', '-e', applescript_code], check=True)
 
 # --- 优化: 简化的update_plot函数，减少重复创建渐变 ---
-def update_plot(line1, gradient_image, line2, dates, prices, volumes, ax1, ax2, show_volume, cmap, force_recreate=False):
+def update_plot(line1, gradient_image, line2, dates, prices, volumes, ax1, ax2, show_volume, cmap, force_recreate=False, gradient_clip_patch=None):
     """
     更新图表，使用 imshow 和 clip_path 实现渐变填充。
     """
@@ -153,7 +153,7 @@ def update_plot(line1, gradient_image, line2, dates, prices, volumes, ax1, ax2, 
         ax1.set_ylim(0, 1)
         if show_volume: ax2.set_ylim(0, 1)
         line2.set_visible(show_volume and bool(volumes))
-        plt.draw()
+        plt.gcf().canvas.draw_idle()
         return gradient_image
 
     # 2. 更新主价格曲线和成交量曲线的数据
@@ -187,12 +187,22 @@ def update_plot(line1, gradient_image, line2, dates, prices, volumes, ax1, ax2, 
         else:
             ax2.set_ylim(0, 1)
 
-    # --- 4. 优化：只在强制重建或渐变不存在时创建渐变 ---
+    # --- 4. 仅在强制重建或不存在时创建渐变与剪切 ---
     if force_recreate or gradient_image is None:
-        # 移除旧的渐变图像（如果存在）
-        if gradient_image:
-            gradient_image.remove()
-            gradient_image = None
+        # 安全移除旧的图像和旧的剪切补丁
+        try:
+            if gradient_image is not None:
+                gradient_image.remove()
+        except Exception:
+            pass
+        try:
+            if gradient_clip_patch is not None and gradient_clip_patch[0] is not None:
+                gradient_clip_patch[0].remove()
+        except Exception:
+            pass
+        gradient_image = None
+        if gradient_clip_patch is not None:
+            gradient_clip_patch[0] = None
 
         # 创建一个垂直的渐变数组 (256级, 从上到下由 1 -> 0)
         gradient = np.linspace(1.0, 0.0, 256).reshape(-1, 1)
@@ -201,9 +211,15 @@ def update_plot(line1, gradient_image, line2, dates, prices, volumes, ax1, ax2, 
         xlim = ax1.get_xlim()
         ylim = ax1.get_ylim()
 
-        # 使用 imshow 绘制渐变图像，使其填满整个绘图区域
-        gradient_image = ax1.imshow(gradient, aspect='auto', cmap=cmap,
-                                    extent=[*xlim, *ylim], origin='lower', zorder=1)
+        gradient_image = ax1.imshow(
+            gradient,
+            aspect='auto',
+            cmap=cmap,
+            extent=[*xlim, *ylim],
+            origin='lower',
+            zorder=1,
+            interpolation='nearest'
+        )
 
         # 创建剪切路径
         line_x_nums = matplotlib.dates.date2num(dates)
@@ -217,8 +233,11 @@ def update_plot(line1, gradient_image, line2, dates, prices, volumes, ax1, ax2, 
         ax1.add_patch(clip_patch)
         gradient_image.set_clip_path(clip_patch)
 
+        if gradient_clip_patch is not None:
+            gradient_clip_patch[0] = clip_patch
+
     line2.set_visible(show_volume and bool(volumes))
-    plt.draw()
+    plt.gcf().canvas.draw_idle()
     return gradient_image
 
 class InfoDialog(QDialog):
@@ -314,9 +333,18 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     show_earning_markers = True
     show_all_annotations = False
 
-    # --- 新增：用于跟踪当前显示的数据 ---
+    # 新增：用于跟踪当前显示的数据及其 date2num 缓存
     current_filtered_dates = []
     current_filtered_prices = []
+    current_filtered_date_nums = []
+
+    # 事件节流与资源引用（列表包裹便于闭包内修改）
+    import time
+    last_hover_ts = [0.0]
+    last_rebuild_ts = [0.0]
+    HOVER_THROTTLE = 1 / 90.0  # 每秒最多触发 90 次 hover
+    REBUILD_THROTTLE = 0.15    # 渐变重建最小间隔 150ms
+    gradient_clip_patch = [None]  # 当前剪切补丁引用
 
     try:
         data = fetch_data(db_path, table_name, name)
@@ -331,7 +359,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     smooth_dates, smooth_prices = smooth_curve(dates, prices)
 
-    # --- 优化：预计算date_nums避免重复转换 ---
+    # 预计算原始完整数据的 date2num（仍保留，但 hover 使用 current_filtered_date_nums）
     date_nums = matplotlib.dates.date2num(dates)
 
     fig, ax1 = plt.subplots(figsize=(16, 8))
@@ -364,13 +392,13 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     ax1.grid(True, axis='y', color=NORD_THEME['border'], alpha=0.06, linestyle='--')  # 或者关闭：ax1.grid(False)
     
     highlight_point = ax1.scatter([], [], s=100, color=NORD_THEME['accent_cyan'], zorder=5)
-    
+
     line1, = ax1.plot(
         smooth_dates, smooth_prices, marker='', linestyle='-', linewidth=2,
-        color=NORD_THEME['accent_cyan'], alpha=0.8, label='Price', zorder=2 # 提高zorder
+        color=NORD_THEME['accent_cyan'], alpha=0.8, label='Price', zorder=2
     )
     small_dot_scatter = ax1.scatter(dates, prices, s=5, color=NORD_THEME['text_bright'], zorder=1.5)
-    
+
     line2, = ax2.plot(
         dates, volumes, marker='o', markersize=2, linestyle='-', linewidth=2,
         color=NORD_THEME['accent_purple'], alpha=0.7, label='Volume'
@@ -390,15 +418,17 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         ]
     )
 
-    # ... (标记点和注释的创建逻辑保持不变) ...
+    # 标记点和注释
     global_markers, specific_markers, earning_markers = {}, {}, {}
     all_annotations = []
-    
+
     if 'global' in json_data:
         for date_str, text in json_data['global'].items():
-            try: global_markers[datetime.strptime(date_str, "%Y-%m-%d")] = text
-            except ValueError: print(f"无法解析全局标记日期: {date_str}")
-    
+            try:
+                global_markers[datetime.strptime(date_str, "%Y-%m-%d")] = text
+            except ValueError:
+                print(f"无法解析全局标记日期: {date_str}")
+
     found_item = None
     for source in ['stocks', 'etfs']:
         for item in json_data.get(source, []):
@@ -406,11 +436,13 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 found_item = item
                 for date_obj in item.get('description3', []):
                     for date_str, text in date_obj.items():
-                        try: specific_markers[datetime.strptime(date_str, "%Y-%m-%d")] = text
-                        except ValueError: print(f"无法解析特定标记日期: {date_str}")
+                        try:
+                            specific_markers[datetime.strptime(date_str, "%Y-%m-%d")] = text
+                        except ValueError:
+                            print(f"无法解析特定标记日期: {date_str}")
                 break
         if found_item: break
-    
+
     try:
         with sqlite3.connect(db_path) as conn:
             cursor = conn.cursor()
@@ -423,67 +455,69 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     marker_price, latest_price = prices[index], prices[-1]
                     diff_percent = ((latest_price - marker_price) / marker_price) * 100 if marker_price else 0
                     earning_markers[marker_date] = f"昨日财报: {price_change}%\n最新价差: {diff_percent:.2f}%\n{date_str}"
-                except (ValueError, IndexError): print(f"无法解析或处理收益公告日期: {date_str}")
-    except sqlite3.OperationalError as e: print(f"获取收益数据失败: {e}")
-    
+                except (ValueError, IndexError):
+                    print(f"无法解析或处理收益公告日期: {date_str}")
+    except sqlite3.OperationalError as e:
+        print(f"获取收益数据失败: {e}")
+
     global_scatter_points, specific_scatter_points, earning_scatter_points = [], [], []
-    
+
     for marker_date, text in global_markers.items():
         if min(dates) <= marker_date <= max(dates):
             idx = (np.abs(np.array(dates) - marker_date)).argmin()
-            scatter = ax1.scatter([dates[idx]], [prices[idx]], s=100, color=NORD_THEME['accent_red'], 
-                                 alpha=0.7, zorder=4, picker=5, visible=show_global_markers)
+            scatter = ax1.scatter([dates[idx]], [prices[idx]], s=100, color=NORD_THEME['accent_red'],
+                                  alpha=0.7, zorder=4, picker=5, visible=show_global_markers)
             global_scatter_points.append((scatter, dates[idx], prices[idx], text))
-    
+
     for marker_date, text in specific_markers.items():
         if min(dates) <= marker_date <= max(dates):
             idx = (np.abs(np.array(dates) - marker_date)).argmin()
-            scatter = ax1.scatter([dates[idx]], [prices[idx]], s=100, color=NORD_THEME['text_bright'], 
-                                 alpha=0.7, zorder=4, picker=5, visible=show_specific_markers)
+            scatter = ax1.scatter([dates[idx]], [prices[idx]], s=100, color=NORD_THEME['text_bright'],
+                                  alpha=0.7, zorder=4, picker=5, visible=show_specific_markers)
             specific_scatter_points.append((scatter, dates[idx], prices[idx], text))
-    
+
     for marker_date, text in earning_markers.items():
         if min(dates) <= marker_date <= max(dates):
             idx = (np.abs(np.array(dates) - marker_date)).argmin()
-            scatter = ax1.scatter([dates[idx]], [prices[idx]], s=100, color=NORD_THEME['pure_yellow'], 
-                                 alpha=0.7, zorder=4, picker=5, visible=show_earning_markers)
+            scatter = ax1.scatter([dates[idx]], [prices[idx]], s=100, color=NORD_THEME['pure_yellow'],
+                                  alpha=0.7, zorder=4, picker=5, visible=show_earning_markers)
             earning_scatter_points.append((scatter, dates[idx], prices[idx], text))
 
     red_offsets = [(-60, 30),(50, -30), (-70, 45), (-50, -35)]
-    for i, (scatter, date, price, text) in enumerate(global_scatter_points):
+    for i, (scatter, date_v, price_v, text) in enumerate(global_scatter_points):
         offset = red_offsets[i % len(red_offsets)]
         annotation = ax1.annotate(
-            text, xy=(date, price), xytext=offset, textcoords="offset points",
+            text, xy=(date_v, price_v), xytext=offset, textcoords="offset points",
             bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=NORD_THEME['accent_red'], alpha=0.8),
             arrowprops=dict(arrowstyle="->", color=NORD_THEME['accent_red']),
             color=NORD_THEME['accent_red'], fontsize=12, visible=False
         )
-        all_annotations.append((annotation, 'global', date, price))
+        all_annotations.append((annotation, 'global', date_v, price_v))
 
     specific_offsets = [(-50, -50), (20, -50)]
-    for i, (scatter, date, price, text) in enumerate(specific_scatter_points):
+    for i, (scatter, date_v, price_v, text) in enumerate(specific_scatter_points):
         offset = specific_offsets[i % len(specific_offsets)]
         annotation = ax1.annotate(
-            text, xy=(date, price), xytext=offset, textcoords="offset points",
+            text, xy=(date_v, price_v), xytext=offset, textcoords="offset points",
             bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=NORD_THEME['text_bright'], alpha=0.8),
             arrowprops=dict(arrowstyle="->", color=NORD_THEME['text_bright']),
             color=NORD_THEME['text_bright'], fontsize=12,
             visible=show_specific_markers and show_all_annotations
         )
-        all_annotations.append((annotation, 'specific', date, price))
+        all_annotations.append((annotation, 'specific', date_v, price_v))
 
     # 新增：为 earning 定义偏移列表（可按需调整数值）
     earning_offsets = [(50, -50), (-150, 25)]
-    for i, (scatter, date, price, text) in enumerate(earning_scatter_points):
+    for i, (scatter, date_v, price_v, text) in enumerate(earning_scatter_points):
         offset = earning_offsets[i % len(earning_offsets)]
         annotation = ax1.annotate(
-            text, xy=(date, price), xytext=offset, textcoords="offset points",
+            text, xy=(date_v, price_v), xytext=offset, textcoords="offset points",
             bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=NORD_THEME['accent_yellow'], alpha=0.8),
             arrowprops=dict(arrowstyle="->", color=NORD_THEME['accent_cyan']),
             color=NORD_THEME['accent_yellow'], fontsize=12,
             visible=show_earning_markers and show_all_annotations
         )
-        all_annotations.append((annotation, 'earning', date, price))
+        all_annotations.append((annotation, 'earning', date_v, price_v))
 
     def toggle_all_annotations():
         nonlocal show_all_annotations
@@ -493,7 +527,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             elif anno_type == 'specific': annotation.set_visible(show_specific_markers and show_all_annotations)
             elif anno_type == 'earning': annotation.set_visible(show_earning_markers and show_all_annotations)
         fig.canvas.draw_idle()
-    
+
     def clean_percentage_string(s):
         try: return float(s.strip('%'))
         except (ValueError, AttributeError): return None
@@ -502,7 +536,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     turnover_str = ""
     if turnover is not None:
         turnover_str = f"{turnover / 1000:.1f}B" if turnover >= 1000 else f"{turnover:.1f}M"
-    
+
     compare_value = clean_percentage_string(re.sub(r'[\u4e00-\u9fff+]', '', compare))
     if turnover is not None and turnover < 100 and compare_value is not None and compare_value > 0:
         turnover_str = f"可疑{turnover_str}"
@@ -510,8 +544,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     try:
         share_int = int(share_val)
         turnover_rate = f"{(volumes[-1] / share_int) * 100:.2f}" if volumes and volumes[-1] is not None and share_int > 0 else "--"
-    except (ValueError, TypeError): turnover_rate = "--"
-        
+    except (ValueError, TypeError):
+        turnover_rate = "--"
+
     marketcap_in_billion = ""
     if marketcap not in [None, "N/A"]:
         mc_val = float(marketcap) / 1e9
@@ -537,7 +572,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         title_color = get_title_color_logic(db_path, name, table_name)
         title_text = f'{name}  {compare}  {turnover_str} {turnover_rate} {marketcap_in_billion} {pe_text} {pb_text} "{table_name}" {fullname} {tag_str}'
 
-    fig.text(0.5, 0.95, title_text, ha='center', va='top', color=title_color, 
+    fig.text(0.5, 0.95, title_text, ha='center', va='top', color=title_color,
              fontsize=16, fontweight='bold', transform=fig.transFigure, picker=False)
 
     def show_stock_etf_info(event=None):
@@ -577,34 +612,39 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     def update_marker_visibility():
         years = time_options[radio.value_selected]
         min_date = min(dates) if years == 0 else datetime.now() - timedelta(days=years * 365)
-        for scatter, date, _, _ in global_scatter_points: scatter.set_visible((min_date <= date) and show_global_markers)
-        for scatter, date, _, _ in specific_scatter_points: scatter.set_visible((min_date <= date) and show_specific_markers)
-        for scatter, date, _, _ in earning_scatter_points: scatter.set_visible((min_date <= date) and show_earning_markers)
-        for annotation, anno_type, date, _ in all_annotations:
+        for scatter, date_v, _, _ in global_scatter_points: scatter.set_visible((min_date <= date_v) and show_global_markers)
+        for scatter, date_v, _, _ in specific_scatter_points: scatter.set_visible((min_date <= date_v) and show_specific_markers)
+        for scatter, date_v, _, _ in earning_scatter_points: scatter.set_visible((min_date <= date_v) and show_earning_markers)
+        for annotation, anno_type, date_v, _ in all_annotations:
             visible = False
-            if min_date <= date:
+            if min_date <= date_v:
                 if anno_type == 'global': visible = show_global_markers and show_all_annotations
                 elif anno_type == 'specific': visible = show_specific_markers and show_all_annotations
                 elif anno_type == 'earning': visible = show_earning_markers and show_all_annotations
             annotation.set_visible(visible)
         fig.canvas.draw_idle()
-    
+
     def on_pick(event):
-        artists = [p[0] for p in global_scatter_points + specific_scatter_points + earning_scatter_points]
-        if event.artist in artists:
-            for scatter, date, price, text in global_scatter_points + specific_scatter_points + earning_scatter_points:
-                if event.artist == scatter:
-                    annot.xy = (date, price)
-                    annot.set_text(f"{datetime.strftime(date, '%Y-%m-%d')}\n{price}\n{text}")
-                    annot.get_bbox_patch().set_alpha(0.8)
-                    annot.set_fontsize(16)
-                    midpoint = max(dates) - (max(dates) - min(dates)) / 2
-                    annot.set_position((50, -20) if date < midpoint else (-150, -20))
-                    annot.set_visible(True)
-                    highlight_point.set_offsets([date, price])
-                    highlight_point.set_visible(True)
-                    fig.canvas.draw_idle()
-                    break
+        try:
+            artists = [p[0] for p in global_scatter_points + specific_scatter_points + earning_scatter_points]
+            if event.artist in artists:
+                for scatter, date_v, price_v, text in global_scatter_points + specific_scatter_points + earning_scatter_points:
+                    if event.artist == scatter:
+                        annot.xy = (date_v, price_v)
+                        annot.set_text(f"{datetime.strftime(date_v, '%Y-%m-%d')}\n{price_v}\n{text}")
+                        annot.get_bbox_patch().set_alpha(0.8)
+                        annot.set_fontsize(16)
+                        midpoint = max(dates) - (max(dates) - min(dates)) / 2
+                        annot.set_position((50, -20) if date_v < midpoint else (-150, -20))
+                        annot.set_visible(True)
+                        highlight_point.set_offsets([date_v, price_v])
+                        highlight_point.set_visible(True)
+                        fig.canvas.draw_idle()
+                        break
+        except Exception as e:
+            # 防护
+            # print(f"pick error: {e}")
+            pass
 
     def create_window_qt(content):
         dialog = InfoDialog("数据库查询结果", content, "Courier", 14, 900, 600)
@@ -659,193 +699,300 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     @lru_cache(maxsize=1000)
     def find_closest_index(target_date_num):
         return np.argmin(np.abs(date_nums - target_date_num))
-    
+
     def update_annot(ind):
-        x_data, y_data = line1.get_data()
-        xval, yval = x_data[ind["ind"][0]], y_data[ind["ind"][0]]
-        # 只有位置真正改变时才更新
-        if annot.xy != (xval, yval):
-            annot.xy = (xval, yval)
-        
-            current_date = xval.replace(tzinfo=None)
-            g_text, s_text, e_text = None, None, None
-            
-            for d, t in global_markers.items():
-                if abs((d - current_date).total_seconds()) < 86400: g_text = t; break
-            for d, t in specific_markers.items():
-                if abs((d - current_date).total_seconds()) < 86400: s_text = t; break
-            for d, t in earning_markers.items():
-                if abs((d - current_date).total_seconds()) < 86400: e_text = t; break
-            
-            # --- 修改 #2: 在这里根据条件设置边框颜色 ---
-            if mouse_pressed and initial_price is not None:
-                percent_change = ((yval - initial_price) / initial_price) * 100
-                text = f"{percent_change:.1f}%"
-                annot.set_color(NORD_THEME['text_bright'])
-                # 设置拖拽时浮窗的边框颜色为 cyan
-                annot.get_bbox_patch().set_edgecolor(NORD_THEME['accent_cyan'])
-            else:
-                parts = [f"{datetime.strftime(xval, '%Y-%m-%d')}", f"{yval:.2f}", ""]
-                marker_texts = []
-                if g_text: marker_texts.append(g_text)
-                if s_text: marker_texts.append(s_text + "\n")
-                
-                has_earning = False
-                if e_text:
-                    for line in e_text.split('\n'):
-                        if "昨日财报" in line: marker_texts.append(line); break
-                    has_earning = True
-                
-                if marker_texts: parts.extend(marker_texts)
-                parts.append(f"最新价差: {((prices[-1] - yval) / yval) * 100:.2f}%")
-                text = "\n".join(parts)
-                
-                if has_earning and not (g_text or s_text): color = NORD_THEME['accent_yellow']
-                elif g_text and not (s_text or has_earning): color = NORD_THEME['accent_red']
-                elif s_text and not (g_text or has_earning): color = NORD_THEME['text_bright']
-                elif g_text and (s_text or has_earning): color = NORD_THEME['accent_purple']
-                else: color = NORD_THEME['accent_cyan']
-                annot.set_color(color)
-                # 设置悬浮时浮窗的边框颜色与文本颜色一致
-                annot.get_bbox_patch().set_edgecolor(color)
-            
-            annot.set_text(text)
-            annot.set_color(color)
-            annot.get_bbox_patch().set_edgecolor(color)
-            annot.get_bbox_patch().set_alpha(0.8)
-            annot.set_fontsize(16)
-            annot.set_position((x_offset, y_offset))
-            
-            y_range = ax1.get_ylim()
-            y_ratio = (yval - y_range[0]) / (y_range[1] - y_range[0])
-            x_range = ax1.get_xlim()
-            x_ratio = (matplotlib.dates.date2num(xval) - x_range[0]) / (x_range[1] - x_range[0])
-            
-            y_offset = 60 if y_ratio < 0.2 else (-120 if y_ratio > 0.8 else -70)
-            
-            if x_ratio > 0.7:
-                x_offset = -20 - min(len(text) * 6, 300)
-                annot.set_position((x_offset, y_offset))
-            elif x_ratio < 0.3: annot.set_position((50, y_offset))
-            else: annot.set_position((-200, y_offset if y_ratio < 0.2 else -70))
-
-    # --- 修正：hover事件函数，使用当前显示的数据 ---
-    def hover(event):
-        if event.inaxes in [ax1, ax2] and event.xdata and current_filtered_dates:
-            vline.set_xdata([event.xdata, event.xdata])  # 直接使用数值坐标
-            vline.set_visible(True)
-
-            # 使用当前筛选后的数据进行查找
-            current_date_nums = matplotlib.dates.date2num(current_filtered_dates)
-            idx = np.argmin(np.abs(current_date_nums - event.xdata))
-            
+        try:
             x_data, y_data = line1.get_data()
-            if idx < len(x_data) and idx < len(y_data):
-                sel_date, sel_price = x_data[idx], y_data[idx]
+            xval, yval = x_data[ind["ind"][0]], y_data[ind["ind"][0]]
 
-                color = NORD_THEME['accent_cyan']
-                for _, d, _, _ in global_scatter_points:
-                    if d == sel_date: color = NORD_THEME['accent_red']; break
+            if annot.xy != (xval, yval):
+                annot.xy = (xval, yval)
+
+                current_date = xval.replace(tzinfo=None)
+                g_text, s_text, e_text = None, None, None
+
+                for d, t in global_markers.items():
+                    if abs((d - current_date).total_seconds()) < 86400:
+                        g_text = t; break
+                for d, t in specific_markers.items():
+                    if abs((d - current_date).total_seconds()) < 86400:
+                        s_text = t; break
+                for d, t in earning_markers.items():
+                    if abs((d - current_date).total_seconds()) < 86400:
+                        e_text = t; break
+
+                # 先构造文本和颜色
+                if mouse_pressed and initial_price is not None:
+                    percent_change = ((yval - initial_price) / initial_price) * 100
+                    text = f"{percent_change:.1f}%"
+                    color = NORD_THEME['accent_cyan']
+                    annot.get_bbox_patch().set_edgecolor(color)
                 else:
-                    for _, d, _, _ in specific_scatter_points:
-                        if d == sel_date: color = NORD_THEME['text_bright']; break
+                    parts = [f"{datetime.strftime(xval, '%Y-%m-%d')}", f"{yval:.2f}", ""]
+                    marker_texts = []
+                    if g_text: marker_texts.append(g_text)
+                    if s_text: marker_texts.append(s_text + "\n")
+
+                    has_earning = False
+                    if e_text:
+                        for line in e_text.split('\n'):
+                            if "昨日财报" in line:
+                                marker_texts.append(line); break
+                        has_earning = True
+
+                    if marker_texts: parts.extend(marker_texts)
+                    parts.append(f"最新价差: {((prices[-1] - yval) / yval) * 100:.2f}%")
+                    text = "\n".join(parts)
+
+                    if has_earning and not (g_text or s_text): color = NORD_THEME['accent_yellow']
+                    elif g_text and not (s_text or has_earning): color = NORD_THEME['accent_red']
+                    elif s_text and not (g_text or has_earning): color = NORD_THEME['text_bright']
+                    elif g_text and (s_text or has_earning): color = NORD_THEME['accent_purple']
+                    else: color = NORD_THEME['accent_cyan']
+                    annot.get_bbox_patch().set_edgecolor(color)
+
+                annot.set_text(text)
+                annot.set_color(color)
+                annot.get_bbox_patch().set_alpha(0.8)
+                annot.set_fontsize(16)
+
+                # 决定偏移后再设置位置
+                y_range = ax1.get_ylim()
+                y_ratio = (yval - y_range[0]) / (y_range[1] - y_range[0] + 1e-12)
+                x_range = ax1.get_xlim()
+                x_ratio = (matplotlib.dates.date2num(xval) - x_range[0]) / (x_range[1] - x_range[0] + 1e-12)
+
+                if y_ratio < 0.2:
+                    y_offset = 60
+                elif y_ratio > 0.8:
+                    y_offset = -120
+                else:
+                    y_offset = -70
+
+                if x_ratio > 0.7:
+                    x_offset = -min(20 + len(annot.get_text()) * 6, 320)
+                elif x_ratio < 0.3:
+                    x_offset = 50
+                else:
+                    x_offset = -200
+
+                annot.set_position((x_offset, y_offset))
+        except Exception as e:
+            # 避免更新异常卡死
+            # print(f"update_annot error: {e}")
+            pass
+
+    def hover(event):
+        try:
+            now = time.time()
+            if now - last_hover_ts[0] < HOVER_THROTTLE:
+                return
+            last_hover_ts[0] = now
+
+            if event.inaxes in [ax1, ax2] and event.xdata and current_filtered_dates:
+                vline.set_xdata([event.xdata, event.xdata])
+                vline.set_visible(True)
+
+                # 拖拽中降级：不更新注释内容，仅移动高亮
+                if mouse_pressed:
+                    idx = np.argmin(np.abs(current_filtered_date_nums - event.xdata)) if len(current_filtered_date_nums) else 0
+                    x_data, y_data = line1.get_data()
+                    if idx < len(x_data) and idx < len(y_data) and initial_price is not None:
+                        sel_date, sel_price = x_data[idx], y_data[idx]
+
+                        # 计算与按下点的百分比变化
+                        try:
+                            percent_change = ((sel_price - initial_price) / (initial_price + 1e-12)) * 100.0
+                        except Exception:
+                            percent_change = 0.0
+
+                        # 轻量注释：只显示百分比，避免昂贵排版
+                        annot.xy = (sel_date, sel_price)
+                        annot.set_text(f"{percent_change:.1f}%")
+                        drag_color = NORD_THEME['accent_red'] if percent_change > 0 else NORD_THEME['accent_green']
+                        annot.set_color(drag_color)
+                        annot.get_bbox_patch().set_edgecolor(drag_color)
+                        annot.get_bbox_patch().set_alpha(0.8)
+                        annot.set_fontsize(16)
+
+                        # 根据位置决定偏移，避免出界
+                        y_range = ax1.get_ylim()
+                        y_ratio = (sel_price - y_range[0]) / (y_range[1] - y_range[0] + 1e-12)
+                        x_range = ax1.get_xlim()
+                        x_ratio = (matplotlib.dates.date2num(sel_date) - x_range[0]) / (x_range[1] - x_range[0] + 1e-12)
+                        if y_ratio < 0.2:
+                            y_offset = 60
+                        elif y_ratio > 0.8:
+                            y_offset = -120
+                        else:
+                            y_offset = -70
+                        if x_ratio > 0.7:
+                            x_offset = -120
+                        elif x_ratio < 0.3:
+                            x_offset = 50
+                        else:
+                            x_offset = -100
+                        annot.set_position((x_offset, y_offset))
+                        annot.set_visible(True)
+
+                        # 高亮点跟随
+                        highlight_point.set_offsets([[sel_date, sel_price]])
+                        highlight_point.set_visible(True)
+
+                    fig.canvas.draw_idle()
+                    return
+
+                # 正常 hover
+                idx = np.argmin(np.abs(current_filtered_date_nums - event.xdata)) if len(current_filtered_date_nums) else 0
+                x_data, y_data = line1.get_data()
+                if idx < len(x_data) and idx < len(y_data):
+                    sel_date, sel_price = x_data[idx], y_data[idx]
+
+                    color = NORD_THEME['accent_cyan']
+                    for _, d, _, _ in global_scatter_points:
+                        if d == sel_date:
+                            color = NORD_THEME['accent_red']; break
                     else:
-                        for _, d, _, _ in earning_scatter_points:
-                            if d == sel_date: color = NORD_THEME['accent_yellow']; break
-                highlight_point.set_color(color)
+                        for _, d, _, _ in specific_scatter_points:
+                            if d == sel_date:
+                                color = NORD_THEME['text_bright']; break
+                        else:
+                            for _, d, _, _ in earning_scatter_points:
+                                if d == sel_date:
+                                    color = NORD_THEME['accent_yellow']; break
+                    highlight_point.set_color(color)
 
-                dist = 0.2 * ((ax1.get_xlim()[1] - ax1.get_xlim()[0]) / 365)
-                if np.isclose(matplotlib.dates.date2num(sel_date), event.xdata, atol=dist):
-                    update_annot({"ind": [idx]})
-                    annot.set_visible(True)
-                    highlight_point.set_offsets([[sel_date, sel_price]])
-                    highlight_point.set_visible(True)
-                else:
-                    annot.set_visible(False)
-                    highlight_point.set_visible(False)
-            # 关键改动：使用 draw_idle() 而不是 draw()
-            fig.canvas.draw_idle()
-        elif event.inaxes != rax:
-            vline.set_visible(False)
-            annot.set_visible(False)
-            highlight_point.set_visible(False)
-            # 这里也改为 draw_idle()
-            fig.canvas.draw_idle()
+                    dist = 0.2 * ((ax1.get_xlim()[1] - ax1.get_xlim()[0]) / 365)
+                    if np.isclose(matplotlib.dates.date2num(sel_date), event.xdata, atol=dist):
+                        update_annot({"ind": [idx]})
+                        annot.set_visible(True)
+                        highlight_point.set_offsets([[sel_date, sel_price]])
+                        highlight_point.set_visible(True)
+                    else:
+                        annot.set_visible(False)
+                        highlight_point.set_visible(False)
+
+                fig.canvas.draw_idle()
+            elif event.inaxes != rax:
+                vline.set_visible(False)
+                annot.set_visible(False)
+                highlight_point.set_visible(False)
+                fig.canvas.draw_idle()
+        except Exception as e:
+            # print(f"hover error: {e}")
+            pass
 
     def update(val):
-        nonlocal gradient_image, current_filtered_dates, current_filtered_prices
-        years = time_options[val]
-        if years == 0:
-            f_dates, f_prices, f_volumes = dates, prices, volumes
-        else:
-            min_date = datetime.now() - timedelta(days=years * 365)
-            indices = [i for i, d in enumerate(dates) if d >= min_date]
-            if not indices:
-                f_dates, f_prices = [dates[-1]], [prices[-1]]
-                f_volumes = [volumes[-1]] if volumes else None
+        nonlocal gradient_image, current_filtered_dates, current_filtered_prices, current_filtered_date_nums
+        try:
+            years = time_options[val]
+            if years == 0:
+                f_dates, f_prices, f_volumes = dates, prices, volumes
             else:
-                f_dates = [dates[i] for i in indices]
-                f_prices = [prices[i] for i in indices]
-                f_volumes = [volumes[i] for i in indices] if volumes else None
+                min_date = datetime.now() - timedelta(days=years * 365)
+                indices = [i for i, d in enumerate(dates) if d >= min_date]
+                if not indices:
+                    f_dates, f_prices = [dates[-1]], [prices[-1]]
+                    f_volumes = [volumes[-1]] if volumes else None
+                else:
+                    f_dates = [dates[i] for i in indices]
+                    f_prices = [prices[i] for i in indices]
+                    f_volumes = [volumes[i] for i in indices] if volumes else None
 
-        # --- 更新当前显示的数据 ---
-        current_filtered_dates = f_dates
-        current_filtered_prices = f_prices
+            # 更新当前筛选数据与缓存
+            current_filtered_dates = f_dates
+            current_filtered_prices = f_prices
+            current_filtered_date_nums = matplotlib.dates.date2num(current_filtered_dates) if current_filtered_dates else np.array([])
 
-        # --- 优化：只在时间范围改变时强制重建渐变 ---
-        gradient_image = update_plot(line1, gradient_image, line2, f_dates, f_prices, f_volumes, ax1, ax2, show_volume, cyan_transparent_cmap, force_recreate=True)
-        
-        for i, circle in enumerate(radio.circles):
-            circle.set_facecolor(NORD_THEME['accent_red'] if list(time_options.keys())[i] == val else NORD_THEME['background'])
+            # 渐变重建节流
+            now = time.time()
+            force_flag = False
+            if (now - last_rebuild_ts[0]) > REBUILD_THROTTLE:
+                force_flag = True
+                last_rebuild_ts[0] = now
 
-        small_dot_scatter.set_visible(val in ["1m", "3m", "6m"])
-        update_marker_visibility()
-        fig.canvas.draw_idle()
+            gradient_image = update_plot(
+                line1, gradient_image, line2,
+                f_dates, f_prices, f_volumes,
+                ax1, ax2, show_volume,
+                cyan_transparent_cmap,
+                force_recreate=force_flag,
+                gradient_clip_patch=gradient_clip_patch
+            )
+
+            for i, circle in enumerate(radio.circles):
+                circle.set_facecolor(NORD_THEME['accent_red'] if list(time_options.keys())[i] == val else NORD_THEME['background'])
+
+            small_dot_scatter.set_visible(val in ["1m", "3m", "6m"])
+            update_marker_visibility()
+            fig.canvas.draw_idle()
+        except Exception as e:
+            # print(f"update error: {e}")
+            pass
 
     def toggle_volume():
-        nonlocal show_volume
-        show_volume = not show_volume
-        # --- 修正：使用当前筛选的数据重新绘制 ---
-        years = time_options[radio.value_selected]
-        if years == 0:
-            f_dates, f_prices, f_volumes = dates, prices, volumes
-        else:
-            min_date = datetime.now() - timedelta(days=years * 365)
-            indices = [i for i, d in enumerate(dates) if d >= min_date]
-            if not indices:
-                f_dates, f_prices = [dates[-1]], [prices[-1]]
-                f_volumes = [volumes[-1]] if volumes else None
+        nonlocal show_volume, current_filtered_dates, current_filtered_prices, current_filtered_date_nums
+        try:
+            show_volume = not show_volume
+            years = time_options[radio.value_selected]
+            if years == 0:
+                f_dates, f_prices, f_volumes = dates, prices, volumes
             else:
-                f_dates = [dates[i] for i in indices]
-                f_prices = [prices[i] for i in indices]
-                f_volumes = [volumes[i] for i in indices] if volumes else None
-        
-        update_plot(line1, gradient_image, line2, f_dates, f_prices, f_volumes, ax1, ax2, show_volume, cyan_transparent_cmap, force_recreate=False)
+                min_date = datetime.now() - timedelta(days=years * 365)
+                indices = [i for i, d in enumerate(dates) if d >= min_date]
+                if not indices:
+                    f_dates, f_prices = [dates[-1]], [prices[-1]]
+                    f_volumes = [volumes[-1]] if volumes else None
+                else:
+                    f_dates = [dates[i] for i in indices]
+                    f_prices = [prices[i] for i in indices]
+                    f_volumes = [volumes[i] for i in indices] if volumes else None
+
+            current_filtered_dates = f_dates
+            current_filtered_prices = f_prices
+            current_filtered_date_nums = matplotlib.dates.date2num(current_filtered_dates) if current_filtered_dates else np.array([])
+
+            update_plot(
+                line1, gradient_image, line2,
+                f_dates, f_prices, f_volumes,
+                ax1, ax2, show_volume,
+                cyan_transparent_cmap,
+                force_recreate=False,
+                gradient_clip_patch=gradient_clip_patch
+            )
+            fig.canvas.draw_idle()
+        except Exception as e:
+            # print(f"toggle_volume error: {e}")
+            pass
 
     def on_key(event):
-        actions = {'v': toggle_volume, 'r': toggle_global_markers, 'x': toggle_all_annotations,
-                   'a': toggle_earning_markers, 'c': toggle_specific_markers,
-                   'n': lambda: execute_external_script('earning_input', name),
-                   'e': lambda: execute_external_script('earning_edit', name),
-                   't': lambda: execute_external_script('tags_edit', name),
-                   'w': lambda: execute_external_script('event_input', name),
-                   'j': lambda: execute_external_script('panel_input', name),
-                   'q': lambda: execute_external_script('event_edit', name),
-                   'k': lambda: execute_external_script('check_kimi', name),
-                   'z': lambda: execute_external_script('check_futu', name),
-                   'p': lambda: execute_external_script('symbol_compare', name),
-                   'l': lambda: execute_external_script('similar_tags', name),
-                   '1': lambda: radio.set_active(7), '2': lambda: radio.set_active(1),
-                   '3': lambda: radio.set_active(3), '4': lambda: radio.set_active(4),
-                   '5': lambda: radio.set_active(5), '6': lambda: radio.set_active(6),
-                   '7': lambda: radio.set_active(8), '8': lambda: radio.set_active(2),
-                   '9': lambda: radio.set_active(0), '`': show_stock_etf_info,
-                   'd': lambda: on_keyword_selected(db_path, table_name, name)}
-        if event.key in actions: actions[event.key]()
+        try:
+            actions = {'v': toggle_volume, 'r': toggle_global_markers, 'x': toggle_all_annotations,
+                       'a': toggle_earning_markers, 'c': toggle_specific_markers,
+                       'n': lambda: execute_external_script('earning_input', name),
+                       'e': lambda: execute_external_script('earning_edit', name),
+                       't': lambda: execute_external_script('tags_edit', name),
+                       'w': lambda: execute_external_script('event_input', name),
+                       'j': lambda: execute_external_script('panel_input', name),
+                       'q': lambda: execute_external_script('event_edit', name),
+                       'k': lambda: execute_external_script('check_kimi', name),
+                       'z': lambda: execute_external_script('check_futu', name),
+                       'p': lambda: execute_external_script('symbol_compare', name),
+                       'l': lambda: execute_external_script('similar_tags', name),
+                       '1': lambda: radio.set_active(7), '2': lambda: radio.set_active(1),
+                       '3': lambda: radio.set_active(3), '4': lambda: radio.set_active(4),
+                       '5': lambda: radio.set_active(5), '6': lambda: radio.set_active(6),
+                       '7': lambda: radio.set_active(8), '8': lambda: radio.set_active(2),
+                       '9': lambda: radio.set_active(0), '`': show_stock_etf_info,
+                       'd': lambda: on_keyword_selected(db_path, table_name, name)}
+            if event.key in actions: actions[event.key]()
 
-        current_index = list(time_options.keys()).index(radio.value_selected)
-        if event.key == 'up' and current_index > 0: radio.set_active(current_index - 1)
-        elif event.key == 'down' and current_index < len(time_options) - 1: radio.set_active(current_index + 1)
+            current_index = list(time_options.keys()).index(radio.value_selected)
+            if event.key == 'up' and current_index > 0: radio.set_active(current_index - 1)
+            elif event.key == 'down' and current_index < len(time_options) - 1: radio.set_active(current_index + 1)
+        except Exception as e:
+            # print(f"on_key error: {e}")
+            pass
 
     def close_everything(event, panel_flag):
         if event.key == 'escape':
@@ -854,16 +1001,23 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     def on_mouse_press(event):
         nonlocal mouse_pressed, initial_price, initial_date
-        if event.button == 1 and event.xdata is not None and current_filtered_dates:
-            mouse_pressed = True
-            current_date_nums = matplotlib.dates.date2num(current_filtered_dates)
-            idx = np.argmin(np.abs(current_date_nums - event.xdata))
-            if idx < len(current_filtered_prices):
-                initial_price, initial_date = current_filtered_prices[idx], current_filtered_dates[idx]
+        try:
+            if event.button == 1 and event.xdata is not None and current_filtered_dates:
+                mouse_pressed = True
+                idx = np.argmin(np.abs(current_filtered_date_nums - event.xdata)) if len(current_filtered_date_nums) else 0
+                if idx < len(current_filtered_prices):
+                    initial_price, initial_date = current_filtered_prices[idx], current_filtered_dates[idx]
+        except Exception as e:
+            # print(f"mouse_press error: {e}")
+            pass
 
     def on_mouse_release(event):
         nonlocal mouse_pressed
-        if event.button == 1: mouse_pressed = False
+        try:
+            if event.button == 1:
+                mouse_pressed = False
+        except Exception:
+            pass
 
     vline = ax1.axvline(x=dates[0], color=NORD_THEME['accent_cyan'], linestyle='--', linewidth=1, visible=False)
 
@@ -875,13 +1029,22 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     radio.on_clicked(update)
 
     def hide_annot_on_leave(event):
-        annot.set_visible(False)
-        highlight_point.set_visible(False)
-        vline.set_visible(False)
-        fig.canvas.draw_idle()
+        try:
+            annot.set_visible(False)
+            highlight_point.set_visible(False)
+            vline.set_visible(False)
+            fig.canvas.draw_idle()
+        except Exception:
+            pass
     plt.gcf().canvas.mpl_connect('figure_leave_event', hide_annot_on_leave)
 
+    # 首次更新，建立初始筛选与渐变
     update(default_time_range)
+
     print("图表绘制完成，等待用户操作...")
-    fig.canvas.toolbar_visible = False  # 隐藏工具栏以提升性能
+    # Matplotlib 3.8+ 支持
+    try:
+        fig.canvas.toolbar_visible = False
+    except Exception:
+        pass
     plt.show()
