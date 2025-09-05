@@ -8,11 +8,7 @@
     },
     "Technology": {
         "GIB": "",
-        "MSFT": "",
-        "ORCL": "",
-        "NVDA": "",
-        "BLSH": "",
-        "CHYM": ""
+        "ORCL": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
@@ -24,9 +20,7 @@
     "Utilities": {},
     "Consumer_Defensive": {
         "FRPT": "",
-        "KDP": "",
         "GIS": "",
-        "STZ": "",
         "FLO": ""
     },
     "Industrials": {
@@ -121,17 +115,14 @@
     "Today": {
         "COST": "",
         "BNTX": "",
-        "META": "",
         "HIMS": "",
         "GEV": "",
         "CTAS": "",
         "NVMI": "NVMI15热",
-        "TSM": "TSM热",
         "SHOP": "",
         "AVAV": "",
         "CART": "",
         "VST": "",
-        "BWXT": "",
         "DASH": ""
     },
     "Next Week": {},
@@ -144,55 +135,13 @@
         "RH": "",
         "IOT": "",
         "KMX": "",
-        "FIG": ""
+        "FIG": "",
+        "CCK": ""
     },
-    "Strategy12": {
-        "AVAV": "",
-        "GWRE": "",
-        "KR": "",
-        "RH": ""
-    },
-    "Strategy34": {
-        "KMX": ""
-    },
-    "PE_valid": {
-        "AMD": "AMD7热",
-        "APO": "",
-        "AXON": "",
-        "BRKR": "",
-        "CARR": "CARR15热",
-        "CCK": "",
-        "COST": "",
-        "CTAS": "",
-        "CVLT": "",
-        "DASH": "",
-        "DUOL": "DUOL15热",
-        "GEV": "",
-        "IBM": "IBM15",
-        "IDXX": "",
-        "ISRG": "",
-        "KDP": "",
-        "KLAC": "",
-        "LULU": "",
-        "META": "",
-        "MP": "",
-        "MSFT": "",
-        "NBIS": "NBIS7热",
-        "NVDA": "NVDA热",
-        "NVMI": "NVMI15热",
-        "PLTR": "PLTR15热",
-        "RMD": "",
-        "SAP": "SAP7",
-        "SHOP": "SHOP7热",
-        "SMCI": "SMCI15热",
-        "STZ": "",
-        "TSM": "TSM热",
-        "VRT": "VRT7热"
-    },
-    "PE_invalid": {
-        "ASTS": "",
-        "JOBY": ""
-    },
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {},
+    "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

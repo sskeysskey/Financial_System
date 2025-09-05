@@ -235,41 +235,41 @@ def compare_today_yesterday(config_path,
         print(f"{output_path} 已生成。")
 
         # —— 二、写 CSV ——
-        csv_path = os.path.splitext(output_path)[0] + '.csv'
-        with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:
-            writer = csv.writer(csvfile)
-            # 如果不想要表头，这一行可以删
-            writer.writerow(['Sector', 'Company', 'Change(%)', 'Tags'])
-            for entry in output:
-                sector, company = entry[0].rsplit(' ', 1)
-                pct_change, vol, pct_vol_change, cr, cf = entry[1:]
-                original = company
+        # csv_path = os.path.splitext(output_path)[0] + '.csv'
+        # with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:
+        #     writer = csv.writer(csvfile)
+        #     # 如果不想要表头，这一行可以删
+        #     writer.writerow(['Sector', 'Company', 'Change(%)', 'Tags'])
+        #     for entry in output:
+        #         sector, company = entry[0].rsplit(' ', 1)
+        #         pct_change, vol, pct_vol_change, cr, cf = entry[1:]
+        #         original = company
 
-                # 与 TXT 同样的标注逻辑
-                if original in earnings_new:
-                    company += f".{earnings_new[original]}"
-                if original in earnings_next:
-                    company += f".{earnings_next[original]}"
-                if vol > 5_000_000:
-                    company += '.*'
-                if original in gainers:
-                    company += '.>'
-                elif original in losers:
-                    company += '.<'
-                if cr == 2:
-                    company += '.+'
-                elif cr == 3:
-                    company += '.++'
-                if cf == 2:
-                    company += '.-'
-                elif cf == 3:
-                    company += '.--'
+        #         # 与 TXT 同样的标注逻辑
+        #         if original in earnings_new:
+        #             company += f".{earnings_new[original]}"
+        #         if original in earnings_next:
+        #             company += f".{earnings_next[original]}"
+        #         if vol > 5_000_000:
+        #             company += '.*'
+        #         if original in gainers:
+        #             company += '.>'
+        #         elif original in losers:
+        #             company += '.<'
+        #         if cr == 2:
+        #             company += '.+'
+        #         elif cr == 3:
+        #             company += '.++'
+        #         if cf == 2:
+        #             company += '.-'
+        #         elif cf == 3:
+        #             company += '.--'
 
-                tags = symbol_to_tags.get(original, [])
-                tags_str = ', '.join(tags)
+        #         tags = symbol_to_tags.get(original, [])
+        #         tags_str = ', '.join(tags)
 
-                writer.writerow([sector, company, f"{pct_change:.2f}", tags_str])
-        print(f"{csv_path} 已生成。")
+        #         writer.writerow([sector, company, f"{pct_change:.2f}", tags_str])
+        # print(f"{csv_path} 已生成。")
 
     else:
         log_error_with_timestamp("输出为空，无法进行保存文件操作。", error_file_path)

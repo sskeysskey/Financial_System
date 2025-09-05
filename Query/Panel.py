@@ -27,6 +27,9 @@ COMPARE_DATA_PATH = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
 DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
 BACKUP_CONFIG_PATH = '/Users/yanzhang/Coding/Financial_System/Operations/Sectors_panel_backup.json'
 NEW_SYMBOLS_STATE = '/Users/yanzhang/Coding/Financial_System/Operations/New_Symbols_State.json'
+### 新增 ###: 为黑名单功能定义一个清晰的路径
+BLACKLIST_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
+
 
 DISPLAY_LIMITS = {
     'default': 'all',  # 默认显示全部
@@ -387,12 +390,11 @@ def query_database(db_path, table_name, condition):
             output_lines.append(row_str + '\n')
         return ''.join(output_lines)
 
-# *** 函数已修改为非阻塞式调用 ***
+# ### 修改 ###: 移除了对 'blacklist' 的特殊处理，因为它现在由内部方法处理
 def execute_external_script(script_type, keyword, group=None, main_window=None):
     base_path = '/Users/yanzhang/Coding/Financial_System'
     python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
     script_configs = {
-        'blacklist': f'{base_path}/Operations/Insert_Blacklist.py',
         'similar': f'{base_path}/Query/Search_Similar_Tag.py',
         'tags': f'{base_path}/Operations/Editor_Tags.py',
         'editor_earning': f'{base_path}/Operations/Editor_Earning_DB.py',
@@ -404,7 +406,7 @@ def execute_external_script(script_type, keyword, group=None, main_window=None):
     }
 
     try:
-        # 1) 对于 “编辑 Tags”、“新增事件”、“编辑事件” —— 阻塞调用，跑完后刷新 UI
+        # 1) 对于 “编辑 Tags”、“新增事件”、“编辑事件” ---- 阻塞调用，跑完后刷新 UI
         if script_type in ('tags', 'event_input', 'event_editor'):
             if script_type in ('futu', 'doubao'):
                 cmd = ['osascript', script_configs[script_type], keyword]
@@ -422,13 +424,7 @@ def execute_external_script(script_type, keyword, group=None, main_window=None):
                 subprocess.Popen(['osascript', script_configs[script_type], keyword]) # <--- 修改为 Popen
             else:
                 python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
-                subprocess.Popen([python_path, script_configs[script_type], keyword]) # <--- 修改为 Popen
-
-        # 注意：因为 Popen 是非阻塞的，如果 'blacklist' 脚本也需要时间运行，
-        # delete_item 可能会在脚本完成前执行。
-        # 但对于黑名单这种操作，通常很快，所以这里暂时保持不变是可行的。
-        if script_type == 'blacklist' and group and main_window:
-            main_window.delete_item(keyword, group)
+                subprocess.Popen([python_path, script_configs[script_type], keyword])
 
     except subprocess.CalledProcessError as e:
         print(f"执行脚本时出错: {e}")
@@ -798,6 +794,7 @@ class MainWindow(QMainWindow):
 
     # --------------------------------------------------
     # 新：接收三个参数：global_pos、keyword、group
+    ### 修改 ###: 将“加入黑名单”改为一个带有“newlow”和“earning”选项的子菜单
     # --------------------------------------------------
     def show_context_menu(self, global_pos, keyword, group):
         # 给 menu 指定 parent，防止被垃圾回收
@@ -832,8 +829,12 @@ class MainWindow(QMainWindow):
         menu.addSeparator()
         menu.addAction("找相似",        lambda: execute_external_script('similar', keyword))
         menu.addSeparator()
-        menu.addAction("加入黑名单",     lambda: execute_external_script('blacklist', keyword, group, self))
-        # ———— 新增两项：清空 Strategy34 / Strategy12 ————
+        
+        # --- 新的黑名单子菜单 ---
+        blacklist_menu = menu.addMenu("加入黑名单")
+        blacklist_menu.addAction("newlow", lambda: self.add_to_blacklist(keyword, 'newlow', group))
+        blacklist_menu.addAction("Earning", lambda: self.add_to_blacklist(keyword, 'Earning', group))
+
         menu.addSeparator()
         menu.addAction("清空 Strategy12 分组", lambda: self.clear_group("Strategy12"))
         menu.addAction("清空 Strategy34 分组", lambda: self.clear_group("Strategy34"))
@@ -842,6 +843,44 @@ class MainWindow(QMainWindow):
 
         # 3) 显示菜单
         menu.exec_(global_pos)
+
+    ### 新增 ###: 直接在程序内处理黑名单逻辑的方法
+    def add_to_blacklist(self, keyword, blacklist_category, group):
+        """
+        将指定的 keyword 添加到 blacklist.json 文件的特定 category 中，并从当前UI移除。
+        """
+        try:
+            # 1. 读取现有的黑名单数据
+            if os.path.exists(BLACKLIST_PATH):
+                with open(BLACKLIST_PATH, 'r', encoding='utf-8') as f:
+                    blacklist_data = json.load(f)
+            else:
+                blacklist_data = {}
+        except (FileNotFoundError, json.JSONDecodeError):
+            blacklist_data = {} # 如果文件不存在或格式错误，则创建一个新的
+
+        # 2. 获取或创建对应的分类列表
+        if blacklist_category not in blacklist_data:
+            blacklist_data[blacklist_category] = []
+        
+        # 3. 如果 keyword 不在列表中，则添加
+        if keyword not in blacklist_data[blacklist_category]:
+            blacklist_data[blacklist_category].append(keyword)
+            
+            # 4. 写回 JSON 文件
+            try:
+                with open(BLACKLIST_PATH, 'w', encoding='utf-8') as f:
+                    json.dump(blacklist_data, f, ensure_ascii=False, indent=4)
+                print(f"已将 {keyword} 加入黑名单 '{blacklist_category}' 组。")
+                
+                # 5. 从当前界面删除该项（复用 delete_item 的刷新逻辑）
+                self.delete_item(keyword, group)
+            except Exception as e:
+                print(f"[错误] 写入黑名单文件失败: {e}")
+        else:
+            print(f"{keyword} 已存在于黑名单 '{blacklist_category}' 组中，无需重复添加。")
+            # 即使已存在，也从当前UI中删除
+            self.delete_item(keyword, group)
 
     def refresh_selection_window(self):
         """重新加载配置并刷新UI"""
