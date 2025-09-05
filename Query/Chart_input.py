@@ -144,6 +144,7 @@ def display_dialog(message):
 def update_plot(line1, gradient_image, line2, dates, prices, volumes, ax1, ax2, show_volume, cmap, force_recreate=False, gradient_clip_patch=None):
     """
     更新图表，使用 imshow 和 clip_path 实现渐变填充。
+    此版本修复了快速切换时渐变区域不同步的问题。
     """
     # 1. 处理没有数据的情况
     if not dates or not prices:
@@ -153,8 +154,15 @@ def update_plot(line1, gradient_image, line2, dates, prices, volumes, ax1, ax2, 
         ax1.set_ylim(0, 1)
         if show_volume: ax2.set_ylim(0, 1)
         line2.set_visible(show_volume and bool(volumes))
+        # 如果之前有渐变图，则隐藏它
+        if gradient_image:
+            gradient_image.set_visible(False)
         plt.gcf().canvas.draw_idle()
         return gradient_image
+
+    # 如果之前因无数据而隐藏，现在恢复显示
+    if gradient_image and not gradient_image.get_visible():
+        gradient_image.set_visible(True)
 
     # 2. 更新主价格曲线和成交量曲线的数据
     line1.set_data(dates, prices)
@@ -187,54 +195,60 @@ def update_plot(line1, gradient_image, line2, dates, prices, volumes, ax1, ax2, 
         else:
             ax2.set_ylim(0, 1)
 
-    # --- 4. 仅在强制重建或不存在时创建渐变与剪切 ---
-    if force_recreate or gradient_image is None:
-        # 安全移除旧的图像和旧的剪切补丁
-        try:
-            if gradient_image is not None:
-                gradient_image.remove()
-        except Exception:
-            pass
-        try:
-            if gradient_clip_patch is not None and gradient_clip_patch[0] is not None:
-                gradient_clip_patch[0].remove()
-        except Exception:
-            pass
-        gradient_image = None
-        if gradient_clip_patch is not None:
-            gradient_clip_patch[0] = None
+    # --- 4. 修改核心逻辑：创建或更新渐变与剪切 ---
+    
+    # 获取更新后的坐标轴范围
+    xlim = ax1.get_xlim()
+    ylim = ax1.get_ylim()
 
-        # 创建一个垂直的渐变数组 (256级, 从上到下由 1 -> 0)
+    # 创建剪切路径所需的顶点
+    line_x_nums = matplotlib.dates.date2num(dates)
+    verts = [(line_x_nums[0], ylim[0]), *zip(line_x_nums, prices), (line_x_nums[-1], ylim[0])]
+    clip_path = Path(verts)
+
+    if force_recreate or gradient_image is None:
+        # --- 场景A: 强制重建或首次创建 ---
+        # 安全移除旧的图像和旧的剪切补丁
+        if gradient_image is not None:
+            gradient_image.remove()
+        if gradient_clip_patch is not None and gradient_clip_patch[0] is not None:
+            gradient_clip_patch[0].remove()
+        
+        # 创建一个垂直的渐变数组
         gradient = np.linspace(1.0, 0.0, 256).reshape(-1, 1)
 
-        # 获取当前坐标轴的范围，用于放置渐变图像
-        xlim = ax1.get_xlim()
-        ylim = ax1.get_ylim()
-
+        # 创建新的渐变图像，范围直接使用新的 xlim, ylim
         gradient_image = ax1.imshow(
-            gradient,
-            aspect='auto',
-            cmap=cmap,
-            extent=[*xlim, *ylim],
-            origin='lower',
-            zorder=1,
-            interpolation='nearest'
+            gradient, aspect='auto', cmap=cmap, extent=[*xlim, *ylim],
+            origin='lower', zorder=1, interpolation='nearest'
         )
 
-        # 创建剪切路径
-        line_x_nums = matplotlib.dates.date2num(dates)
-        
-        # 路径顶点：从左下角开始，沿着曲线到右上角，然后到底部，闭合路径
-        verts = [(line_x_nums[0], ylim[0]), *zip(line_x_nums, prices), (line_x_nums[-1], ylim[0])]
-        clip_path = Path(verts)
-        clip_patch = PathPatch(clip_path, transform=ax1.transData, facecolor='none', edgecolor='none')
-        
-        # 将此路径添加为剪切蒙版
-        ax1.add_patch(clip_patch)
-        gradient_image.set_clip_path(clip_patch)
+        # 创建新的剪切补丁
+        new_clip_patch = PathPatch(clip_path, transform=ax1.transData, facecolor='none', edgecolor='none')
+        ax1.add_patch(new_clip_patch)
+        gradient_image.set_clip_path(new_clip_patch)
 
+        # 更新引用
         if gradient_clip_patch is not None:
-            gradient_clip_patch[0] = clip_patch
+            gradient_clip_patch[0] = new_clip_patch
+
+    else:
+        # --- 场景B: 节流生效，仅更新现有对象 ---
+        # 1. 更新现有渐变图像的范围
+        gradient_image.set_extent([*xlim, *ylim])
+
+        # 2. 移除旧的剪切补丁
+        if gradient_clip_patch is not None and gradient_clip_patch[0] is not None:
+            gradient_clip_patch[0].remove()
+
+        # 3. 创建并应用新的剪切补丁
+        new_clip_patch = PathPatch(clip_path, transform=ax1.transData, facecolor='none', edgecolor='none')
+        ax1.add_patch(new_clip_patch)
+        gradient_image.set_clip_path(new_clip_patch)
+        
+        # 4. 更新引用
+        if gradient_clip_patch is not None:
+            gradient_clip_patch[0] = new_clip_patch
 
     line2.set_visible(show_volume and bool(volumes))
     plt.gcf().canvas.draw_idle()

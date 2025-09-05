@@ -391,14 +391,14 @@ def run_strategy_3(data, cursor, symbol_sector_map, symbol_to_trace, log_detail)
     ---
     (3) 必须满足(1)或(2)其中之一
     (4) 必须满足：最新价比前10天最低价高不超过3%
-    (5) 必须满足：最新交易日落在下次理论财报前7-20天窗口期
+    (5) 必须满足：最新交易日落在下次理论财报前7-26天窗口期
     """
     is_tracing = (data.get('symbol') == symbol_to_trace)
     if is_tracing: log_detail(f"\n--- [{symbol_to_trace}] 策略 3 评估 (已修改) ---")
 
     # 步骤1: 时间窗口检查 (最终条件)
     next_er = get_next_er_date(data['latest_er_date'])
-    window_start = next_er - datetime.timedelta(days=20)
+    window_start = next_er - datetime.timedelta(days=26)
     window_end = next_er - datetime.timedelta(days=7)
     is_in_window = (window_start <= data['latest_date'] <= window_end)
 
@@ -487,7 +487,7 @@ def run_strategy_3(data, cursor, symbol_sector_map, symbol_to_trace, log_detail)
     return rise_ok
 
 def run_strategy_3_5(data, symbol_to_trace, log_detail):
-    """策略 3.5: 过去2次财报保持上升，且最近的3次财报里至少有一次财报的收盘价要比该symbol的最新收盘价高15%以上，且最新交易日落在下次理论(最近一次财报日期+93天)财报之前的7~20天窗口期内"""
+    """策略 3.5: 过去2次财报保持上升，且最近的3次财报里至少有一次财报的收盘价要比该symbol的最新收盘价高15%以上，且最新交易日落在下次理论(最近一次财报日期+93天)财报之前的7~26天窗口期内"""
     is_tracing = (data.get('symbol') == symbol_to_trace)
     if len(data['all_er_prices']) < 3 or any(p is None for p in data['all_er_prices'][:3]):
         if is_tracing: log_detail(f"\n--- [{symbol_to_trace}] 策略 3.5 评估 ---\n  - 结果: False (财报价格数据不足3次或有缺失)")
@@ -496,7 +496,7 @@ def run_strategy_3_5(data, symbol_to_trace, log_detail):
     if is_tracing: log_detail(f"\n--- [{symbol_to_trace}] 策略 3.5 评估 ---")
 
     next_er = get_next_er_date(data['latest_er_date'])
-    window_start = next_er - datetime.timedelta(days=20)
+    window_start = next_er - datetime.timedelta(days=26)
     window_end = next_er - datetime.timedelta(days=7)
     is_in_window = (window_start <= data['latest_date'] <= window_end)
     
@@ -527,7 +527,7 @@ def run_strategy_3_5(data, symbol_to_trace, log_detail):
 def run_strategy_4(data, cursor, symbol_sector_map, symbol_to_trace, log_detail):
     """ 策略 4 (修改后):
     (1) 最近N次财报递增，最近30天内财报，Earning表price>0
-    (2) 最新收盘价位于财报日后9-25天
+    (2) 最新收盘价位于财报日后9-26天
     (3) A：价比财报日前后最高价低X%；B：或价比倒数第二次财报低
     (4) 必须满足：最新价比前10天最低价高不超过3%
     """
@@ -554,7 +554,7 @@ def run_strategy_4(data, cursor, symbol_sector_map, symbol_to_trace, log_detail)
 
     # 步骤2: 日期窗口
     window_start = data['latest_er_date'] + datetime.timedelta(days=9)
-    window_end = data['latest_er_date'] + datetime.timedelta(days=25)
+    window_end = data['latest_er_date'] + datetime.timedelta(days=26)
     is_in_window = (window_start <= data['latest_date'] <= window_end)
     if is_tracing:
         log_detail(f"  - 时间窗口: {window_start} <= 最新交易日({data['latest_date']}) <= {window_end}")

@@ -311,7 +311,6 @@
         "PONY",
         "WRD",
         "ZBRA",
-        "PATH",
         "MSGS",
         "DDOG",
         "MTCH",
@@ -777,6 +776,9 @@
         "TW",
         "BRKR",
         "CARR",
-        "STZ"
+        "STZ",
+        "AI",
+        "APO",
+        "AXON"
     ]
 }

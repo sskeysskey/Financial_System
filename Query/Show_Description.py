@@ -1,135 +1,298 @@
 import sys
 import json
 import pyperclip
-import tkinter as tk
 import subprocess
-from tkinter import scrolledtext
+from functools import lru_cache
 
+# PyQt5 界面
+from PyQt5.QtWidgets import (
+    QApplication, QDialog, QVBoxLayout, QTextEdit, QLineEdit, QLabel,
+    QPushButton, QHBoxLayout
+)
+from PyQt5.QtGui import QFont
+from PyQt5.QtCore import Qt
+
+# --- Nord 主题（与 a.py 保持一致） ---
+NORD_THEME = {
+    'background': '#2E3440',
+    'widget_bg': '#3B4252',
+    'border': '#4C566A',
+    'text_light': '#88C0D0',
+    'text_bright': '#88C0D0',
+    'accent_blue': '#5E81AC',
+    'accent_cyan': '#88C0D0',
+    'accent_red': '#BF616A',
+    'accent_orange': '#D08770',
+    'accent_yellow': '#EBCB8B',
+    'pure_yellow': 'yellow',
+    'accent_green': '#A3BE8C',
+    'accent_deepgreen': '#607254',
+    'accent_purple': '#B48EAD',
+}
+
+# ---------------- 公共函数 ----------------
 def load_json_data(path):
     with open(path, 'r', encoding='utf-8') as file:
         return json.load(file)
 
-def show_description(symbol, descriptions):
-    root = tk.Tk()
-    root.withdraw()  # 隐藏主窗口
-    
-    # 创建一个新的顶级窗口
-    top = tk.Toplevel(root)
-    top.title("Descriptions")
-    
-    # 设置窗口尺寸
-    top.geometry("600x750")
-    
-    # 设置字体大小
-    font_size = ('Arial', 22)
-    
-    # 创建一个滚动文本框
-    text_box = scrolledtext.ScrolledText(top, wrap=tk.WORD, font=font_size)
-    text_box.pack(expand=True, fill='both')
-    
-    # 插入股票信息
-    info = f"{symbol}\n{descriptions['name']}\n\n{descriptions['tag']}\n\n{descriptions['description1']}\n\n{descriptions['description2']}"
-    text_box.insert(tk.END, info)
-    
-    # 设置文本框为只读
-    text_box.config(state=tk.DISABLED)
-    # 修改绑定事件，确保按下ESC键关闭整个程序
-    def close_all(event=None):
-        root.destroy()
-        sys.exit(0)
-    
-    top.bind('<Escape>', close_all)
-    top.mainloop()  # 对top进行mainloop
-
-def get_user_input_custom(prompt):
-    root = tk.Tk()
-    root.withdraw()
-    
-    # 创建一个新的顶层窗口
-    input_dialog = tk.Toplevel(root)
-    input_dialog.title(prompt)
-    # 设置窗口大小和位置
-    window_width = 280
-    window_height = 90
-    screen_width = root.winfo_screenwidth()
-    screen_height = root.winfo_screenheight()
-    center_x = int(screen_width / 2 - window_width / 2)
-    center_y = int(screen_height / 3 - window_height / 2)  # 将窗口位置提升到屏幕1/3高度处
-    input_dialog.geometry(f'{window_width}x{window_height}+{center_x}+{center_y}')
-
-    # 添加输入框，设置较大的字体和垂直填充
-    entry = tk.Entry(input_dialog, width=20, font=('Helvetica', 18))
-    entry.pack(pady=20, ipady=10)  # 增加内部垂直填充
-    entry.focus_set()
-
-    try:
-        clipboard_content = root.clipboard_get()
-    except tk.TclError:
-        clipboard_content = ''
-    entry.insert(0, clipboard_content)
-    entry.select_range(0, tk.END)  # 全选文本
-
-    # 设置确认按钮，点击后销毁窗口并返回输入内容
-    def on_submit():
-        nonlocal user_input
-        user_input = entry.get().upper()  # 将输入转换为大写
-        input_dialog.destroy()
-
-    # 绑定回车键和ESC键
-    entry.bind('<Return>', lambda event: on_submit())
-    input_dialog.bind('<Escape>', lambda event: input_dialog.destroy())
-
-    # 运行窗口，等待用户输入
-    user_input = None
-    input_dialog.wait_window(input_dialog)
-    return user_input
-
 def find_in_json(symbol, data):
     """在JSON数据中查找名称为symbol的股票或ETF"""
     # 若想更健壮：大小写无关匹配
-    sym_upper = symbol.upper()
+    sym_upper = symbol.upper() if symbol else ""
     for item in data:
         if item.get('symbol', '').upper() == sym_upper:
             return item
     return None
 
-if __name__ == '__main__':
-    json_data = load_json_data('/Users/yanzhang/Coding/Financial_System/Modules/description.json')
+def show_macos_dialog(message):
+    try:
+        applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+        subprocess.run(['osascript', '-e', applescript_code], check=True)
+    except Exception:
+        pass
 
-    # 解析命令行参数
+# ---------------- PyQt5 对话框 ----------------
+class InfoDialog(QDialog):
+    def __init__(self, title, content, font_family='Arial Unicode MS', font_size=16, width=600, height=750, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        self.resize(width, height)
+        self._center_on_screen()
+        layout = QVBoxLayout(self)
+
+        text_box = QTextEdit(self)
+        text_box.setReadOnly(True)
+        text_box.setFont(QFont(font_family))
+        text_box.setText(content)
+
+        layout.addWidget(text_box)
+        self.setLayout(layout)
+        self._apply_nord_style(font_size)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape:
+            self.close()
+        else:
+            super().keyPressEvent(event)
+
+    def _center_on_screen(self):
+        # 兼容老 API：使用 availableGeometry
+        screen = QApplication.primaryScreen()
+        if screen:
+            rect = screen.availableGeometry()
+            x = rect.x() + (rect.width() - self.width()) // 2
+            y = rect.y() + (rect.height() - self.height()) // 2
+            self.move(x, y)
+
+    def _apply_nord_style(self, font_size):
+        qss = f"""
+        QDialog {{
+            background-color: {NORD_THEME['background']};
+        }}
+        QTextEdit {{
+            background-color: {NORD_THEME['widget_bg']};
+            color: {NORD_THEME['text_bright']};
+            border: 1px solid {NORD_THEME['border']};
+            border-radius: 6px;
+            font-size: {font_size}px;
+            padding: 8px;
+        }}
+        QScrollBar:vertical {{
+            border: none;
+            background: {NORD_THEME['widget_bg']};
+            width: 10px;
+            margin: 0;
+        }}
+        QScrollBar::handle:vertical {{
+            background: {NORD_THEME['accent_blue']};
+            min-height: 20px;
+            border-radius: 5px;
+        }}
+        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+            height: 0px;
+        }}
+        """
+        self.setStyleSheet(qss)
+
+class InputDialog(QDialog):
+    def __init__(self, prompt="请输入关键字查询数据库:", width=320, height=120, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(prompt)
+        self.resize(width, height)
+        self._center_on_screen()
+
+        self.user_input = None
+
+        # UI
+        root_layout = QVBoxLayout(self)
+        label = QLabel(prompt, self)
+        label.setStyleSheet(f"color: {NORD_THEME['text_light']};")
+        label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+
+        self.entry = QLineEdit(self)
+        self.entry.setPlaceholderText("输入股票/ETF 代码，例如: AAPL")
+        self.entry.setFont(QFont('Helvetica', 16))
+        self.entry.setMaxLength(40)
+
+        # 从剪贴板填充
+        try:
+            clip = pyperclip.paste()
+            if isinstance(clip, str):
+                clip = clip.replace('"', '').replace("'", "")
+                self.entry.setText(clip)
+                self.entry.selectAll()
+        except Exception:
+            pass
+
+        # Buttons
+        btn_row = QHBoxLayout()
+        ok_btn = QPushButton("确定", self)
+        cancel_btn = QPushButton("取消", self)
+
+        ok_btn.clicked.connect(self._on_submit)
+        cancel_btn.clicked.connect(self.reject)
+
+        btn_row.addStretch(1)
+        btn_row.addWidget(ok_btn)
+        btn_row.addWidget(cancel_btn)
+
+        root_layout.addWidget(label)
+        root_layout.addWidget(self.entry)
+        root_layout.addLayout(btn_row)
+        self.setLayout(root_layout)
+
+        self._apply_nord_style()
+
+        # 交互
+        self.entry.returnPressed.connect(self._on_submit)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape:
+            self.reject()
+        else:
+            super().keyPressEvent(event)
+
+    def _on_submit(self):
+        text = self.entry.text().strip().upper()
+        self.user_input = text if text else None
+        self.accept()
+
+    def _center_on_screen(self):
+        screen = QApplication.primaryScreen()
+        if screen:
+            rect = screen.availableGeometry()
+            x = rect.x() + (rect.width() - self.width()) // 2
+            y = rect.y() + (rect.height() - self.height()) // 3  # 略靠上
+            self.move(x, y)
+
+    def _apply_nord_style(self):
+        qss = f"""
+        QDialog {{
+            background-color: {NORD_THEME['background']};
+        }}
+        QLabel {{
+            color: {NORD_THEME['text_bright']};
+            font-size: 16px;
+        }}
+        QLineEdit {{
+            background-color: {NORD_THEME['widget_bg']};
+            color: {NORD_THEME['text_bright']};
+            border: 1px solid {NORD_THEME['border']};
+            border-radius: 6px;
+            padding: 6px 10px;
+        }}
+        QPushButton {{
+            background-color: {NORD_THEME['accent_blue']};
+            color: {NORD_THEME['text_bright']};
+            border: none;
+            border-radius: 6px;
+            padding: 6px 14px;
+        }}
+        QPushButton:hover {{
+            background-color: {NORD_THEME['accent_cyan']};
+        }}
+        QPushButton:pressed {{
+            background-color: {NORD_THEME['accent_purple']};
+        }}
+        """
+        self.setStyleSheet(qss)
+
+# ---------------- 业务函数 ----------------
+def format_info_text(symbol, descriptions):
+    name = descriptions.get('name', '')
+    tag = descriptions.get('tag', '')
+    desc1 = descriptions.get('description1', '')
+    desc2 = descriptions.get('description2', '')
+    info = f"{symbol}\n{name}\n\n{tag}\n\n{desc1}\n\n{desc2}"
+    return info
+
+@lru_cache(maxsize=1)
+def get_app():
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+        # 统一默认字体
+        app.setFont(QFont('Arial Unicode MS', 12))
+    return app
+
+def show_description_qt(symbol, descriptions):
+    app = get_app()
+    info_text = format_info_text(symbol, descriptions)
+    dlg = InfoDialog("Descriptions", info_text, font_family='Arial Unicode MS', font_size=22, width=600, height=750)
+    dlg.exec_()
+
+def get_user_input_custom_qt(prompt):
+    app = get_app()
+    dlg = InputDialog(prompt=prompt, width=360, height=140)
+    result = dlg.exec_()
+    return dlg.user_input if result == QDialog.Accepted else None
+
+# ---------------- 主入口 ----------------
+if __name__ == '__main__':
+    # 路径保持与原脚本一致
+    json_path = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
+    json_data = load_json_data(json_path)
+
+    # 支持命令行参数：paste 或 input
     if len(sys.argv) > 1:
-        arg = sys.argv[1]
+        arg = sys.argv[1].lower()
+
         if arg == "paste":
-            # 将粘贴内容清洗后转大写
-            symbol = pyperclip.paste().replace('"', '').replace("'", "").upper()
+            # 从剪贴板读取、清洗并转大写
+            symbol = pyperclip.paste()
+            symbol = (symbol or "").replace('"', '').replace("'", "").upper()
+
             result = find_in_json(symbol, json_data.get('stocks', []))
             # 如果在stocks中没有找到，再在etfs中查找
             if not result:
                 result = find_in_json(symbol, json_data.get('etfs', []))
             # 如果找到结果，显示信息
             if result:
-                show_description(symbol, result)
-                sys.exit(0)  # 成功显示，退出代码0
+                show_description_qt(symbol, result)
+                sys.exit(0)  # 找到并显示
             else:
                 sys.exit(1)  # 没找到，退出代码1
 
         elif arg == "input":
             prompt = "请输入关键字查询数据库:"
-            user_input = get_user_input_custom(prompt)  # 已在函数内 upper()
+            user_input = get_user_input_custom_qt(prompt)
             if not user_input:
                 sys.exit(0)
-            # 这里可再保险一次 upper()
-            user_input = user_input.upper()
+
             result = find_in_json(user_input, json_data.get('stocks', []))
             # 如果在stocks中没有找到，再在etfs中查找
             if not result:
                 result = find_in_json(user_input, json_data.get('etfs', []))
             # 如果找到结果，显示信息
             if result:
-                show_description(user_input, result)
+                show_description_qt(user_input, result)
+                sys.exit(0)
             else:
-                applescript_code = 'display dialog "未找到股票或ETF！" buttons {"OK"} default button "OK"'
-                subprocess.run(['osascript', '-e', applescript_code], check=True)
+                show_macos_dialog("未找到股票或ETF！")
+                sys.exit(1)
+        else:
+            print("请提供参数 input 或 paste")
+            sys.exit(1)
     else:
         print("请提供参数 input 或 paste")
         sys.exit(1)
