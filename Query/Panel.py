@@ -42,8 +42,8 @@ categories = [
     ['Today','Next Week','2 Weeks','3 Weeks'],
     ['PE_valid','PE_invalid'],
     ['Strategy12','Strategy34','Watching'],
-    ['Bonds','Indices','Currencies'],
-    ['Economics','Crypto','Commodities'],
+    ['Bonds','Crypto','Indices','Currencies'],
+    ['Economics','Commodities'],
 ]
 
 symbol_manager = None

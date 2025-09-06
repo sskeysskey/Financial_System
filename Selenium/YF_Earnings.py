@@ -15,8 +15,6 @@ import pyautogui
 import random
 import time
 import threading
-
-# GUI 相关
 import tkinter as tk
 from tkinter import messagebox
 from tkcalendar import DateEntry

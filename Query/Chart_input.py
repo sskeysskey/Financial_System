@@ -308,7 +308,8 @@ def execute_external_script(script_type, keyword):
         'panel_input': f'{base_path}/Operations/Insert_Panel.py',
         'similar_tags': f'{base_path}/Query/Search_Similar_Tag.py',
         'check_kimi': '/Users/yanzhang/Coding/ScriptEditor/Check_Earning.scpt',
-        'check_futu': '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt'
+        'check_futu': '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt',
+        'stock_chart': '/Users/yanzhang/Coding/ScriptEditor/Stock_Chart.scpt'
     }
     script_path = script_configs.get(script_type)
     if not script_path:
@@ -508,7 +509,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         )
         all_annotations.append((annotation, 'global', date_v, price_v))
 
-    specific_offsets = [(-50, -50), (20, -50)]
+    specific_offsets = [(-50, -50), (-100, 20)]
     for i, (scatter, date_v, price_v, text) in enumerate(specific_scatter_points):
         offset = specific_offsets[i % len(specific_offsets)]
         annotation = ax1.annotate(
@@ -594,7 +595,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             for item in json_data.get(source, []):
                 if item['symbol'] == name:
                     info = f"{name}\n{item['name']}\n\n{item['tag']}\n\n{item['description1']}\n\n{item['description2']}"
-                    dialog = InfoDialog("Information", info, 'Arial Unicode MS', 16, 600, 750)
+                    dialog = InfoDialog("Information", info, 'Arial Unicode MS', 22, 700, 900)
                     dialog.exec_()
                     return
         display_dialog(f"未找到 {name} 的信息")
@@ -993,6 +994,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                        'z': lambda: execute_external_script('check_futu', name),
                        'p': lambda: execute_external_script('symbol_compare', name),
                        'l': lambda: execute_external_script('similar_tags', name),
+                       '/': lambda: execute_external_script('stock_chart', name),
                        '1': lambda: radio.set_active(7), '2': lambda: radio.set_active(1),
                        '3': lambda: radio.set_active(3), '4': lambda: radio.set_active(4),
                        '5': lambda: radio.set_active(5), '6': lambda: radio.set_active(6),

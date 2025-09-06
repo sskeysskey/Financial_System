@@ -15,13 +15,11 @@ import time
 import sys
 import threading
 
-# —— 插入开始 ——  
 # 判断今天是否为周五（4）或周六（5），否则直接退出
 today = datetime.now().weekday()  
 if today not in (4, 5):  
     print("今天不是周五或周六，程序退出。")  
     sys.exit(0)  
-# —— 插入结束 ——  
 
 # 添加鼠标移动功能的函数
 def move_mouse_periodically():

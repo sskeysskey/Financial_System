@@ -342,7 +342,8 @@
         "INSP",
         "FSK",
         "VERX",
-        "MKTX"
+        "MKTX",
+        "CRVL"
     ],
     "screener": [
         "CTA-PA",
@@ -770,7 +771,13 @@
         "IOO",
         "FXO",
         "VFMO",
-        "PEZ"
+        "PEZ",
+        "EMGF",
+        "VIGI",
+        "IVV",
+        "VOO",
+        "IUSV",
+        "FTGC"
     ],
     "Earning": [
         "TW",

@@ -207,10 +207,8 @@
     "ITOT",
     "IAU",
     "SPLG",
-    "IVV",
     "SPY",
     "BBAX",
-    "VOO",
     "ESGU",
     "PAVE",
     "VPL",
@@ -463,7 +461,8 @@
     "AOM",
     "FXF",
     "RING",
-    "ISCF"
+    "ISCF",
+    "FTHI"
   ],
   "Basic_Materials": [
     "LIN",

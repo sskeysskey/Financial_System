@@ -92,13 +92,13 @@ def delete_records_by_names(db_file, table_name, stock_names):
     if not stock_names:
         print("没有提供要删除的股票代码")
         return
-        
     conn = sqlite3.connect(db_file)
-    
     try:
         cur = conn.cursor()
+        cur.execute('PRAGMA foreign_keys = ON;')
         placeholders = ', '.join('?' for _ in stock_names)
-        sql = f"DELETE FROM {table_name} WHERE name IN ({placeholders});"
+        # 为表名加引号以避免特殊字符或保留字问题
+        sql = f'DELETE FROM "{table_name}" WHERE name IN ({placeholders});'
         cur.execute(sql, stock_names)
         conn.commit()
         print(f"成功从表 {table_name} 中删除 {stock_names} 的 {cur.rowcount} 条记录。")
@@ -178,6 +178,29 @@ def delete_from_compare_all(file_path, symbol_to_delete):
     except Exception as e:
         print(f"处理 {file_path} 时出错: {e}")
         return False
+    
+def add_to_blacklist_etf(blacklist_file, symbol):
+    try:
+        # 读取blacklist文件
+        with open(blacklist_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        data.setdefault('etf', [])
+        # 检查symbol是否已经在etf列表中
+        if symbol in data['etf']:
+            show_alert(f"{symbol} 已经在blacklist的etf列表中")
+            return False
+        
+        # 添加symbol到etf列表
+        data['etf'].append(symbol)
+        
+        # 写回文件
+        with open(blacklist_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+        print(f"成功！ 已将{symbol}写入黑名单的ETFs分组下。")
+        return True
+    except Exception as e:
+        show_alert(f"处理blacklist文件时出错: {e}")
+        return False
 
 def main():
     # db_path = '/Users/yanzhang/Downloads/backup/DB_backup/Finance.db'
@@ -210,10 +233,11 @@ def main():
         return
     
     # 2. 首先检查是否在ETFs分组中
+    add_result_etf = False
     sector_files = [sector_file, sector_today_file]
     is_etf = is_in_etfs_sector(symbol, sector_files)
     if is_etf:
-        print(f"{symbol} 属于ETFs分组，将只进行删除操作而不添加到blacklist")
+        add_result_etf = add_to_blacklist_etf(blacklist_file, symbol)
     
     # 3. 数据库删除
     sector = find_sector_for_symbol(sector_file, symbol)
@@ -256,9 +280,9 @@ def main():
     
     print("Blacklist更新情况:")
     if add_result:
-        print("- 已成功更新 blacklist")
-    elif is_etf:
-        print("- 由于属于 ETFs 分组，未添加到 blacklist")
+        print("- 已成功更新 blacklist的Screener分组")
+    elif add_result_etf:
+        print("- 已成功更新 blacklist的ETF分组")
     else:
         print("- blacklist 更新未执行或未发生变化")
 

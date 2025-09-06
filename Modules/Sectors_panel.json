@@ -7,9 +7,7 @@
     "Technology": {
         "GIB": "",
         "ORCL": "",
-        "MSFT": "",
-        "NVDA": "",
-        "ROP": ""
+        "MSFT": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
@@ -32,8 +30,7 @@
     "Industrials": {
         "WSO": "",
         "UHAL": "",
-        "CWST": "",
-        "FLY": ""
+        "CWST": ""
     },
     "Communication_Services": {
         "SEAT": ""
@@ -41,8 +38,7 @@
     "Financial_Services": {
         "FDS": "",
         "ERIE": "",
-        "RYAN": "",
-        "CRVL": ""
+        "RYAN": ""
     },
     "Healthcare": {
         "ALC": "",
@@ -122,59 +118,38 @@
         "XRP": ""
     },
     "Today": {
+        "DUOL": "DUOL15热",
+        "PLTR": "PLTR15热",
+        "MSFT": "MSFT7",
+        "CEG": "CEG15热",
+        "BWXT": "BWXT7热",
+        "AMD": "AMD15热",
+        "RH": "",
         "KDP": "",
         "CCK": "",
         "COST": "",
         "AVAV": "",
-        "CART": ""
+        "CART": "",
+        "GEV": "",
+        "DASH": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
-        "GWRE": "",
+        "KR": "",
+        "BAM": "",
+        "CCK": "",
+        "IBKR": "",
         "VRT": "VRT7热",
         "DUOL": "DUOL15热",
         "FRPT": "",
-        "LULU": "",
-        "RH": "",
-        "IOT": "",
-        "KMX": "",
-        "FIG": "",
-        "CCK": ""
-    },
-    "Strategy12": {
-        "AVAV": "",
-        "KR": "",
-        "RH": ""
-    },
-    "Strategy34": {
-        "FDS": "",
         "KMX": ""
     },
-    "PE_valid": {
-        "AMD": "AMD15热",
-        "BAM": "",
-        "BWXT": "BWXT7热",
-        "CEG": "CEG15热",
-        "DASH": "",
-        "DUOL": "DUOL15热",
-        "GEV": "",
-        "IBKR": "",
-        "ICLR": "",
-        "IDXX": "",
-        "MSFT": "MSFT7",
-        "NBIS": "NBIS7热",
-        "NVDA": "NVDA7热",
-        "PLTR": "PLTR15热",
-        "SAP": "SAP7",
-        "SMCI": "SMCI15热",
-        "VRT": "VRT7热"
-    },
-    "PE_invalid": {
-        "ASTS": "",
-        "CRWV": "CRWV15热"
-    },
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {},
+    "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
@@ -223,7 +198,8 @@
         "CorePPI": "10 CorePPI",
         "USCPI": "11 USCPI",
         "CoreCPI": "11 CoreCPI",
-        "USConfidence": "12 USConfidence"
+        "USConfidence": "12 USConfidence",
+        "USInitial": "11 USInitial"
     },
     "Economic_All": {
         "USGDP": "",

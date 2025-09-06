@@ -196,23 +196,16 @@ def update_color_json(color_config_path, updates_colors, blacklist_newlow):
     except Exception as e:
         print(f"写入文件时发生错误: {e}")
 
-def load_symbols_from_file(file_path):
-    """从文件中读取symbol列表"""
-    symbols = set()
+def load_existing_highs_json(file_path):
+    """读取/Users/yanzhang/Coding/Financial_System/Modules/10Y_newhigh.json，返回 {symbol: float_price}"""
     try:
-        with open(file_path, 'r', encoding='utf-8') as file:
-            for line in file:
-                parts = line.split()
-                if len(parts) == 3:  # 确保每行有三个字段
-                    symbol = parts[1]  # 提取symbol
-                    symbols.add(symbol)
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        # 转成 symbol -> float
+        return {k: float(v) for k, v in data.items()}
     except Exception as e:
-        error_message = f"读取文件 {file_path} 时发生错误: {e}"
-        print(error_message)
-        formatted_error_message = log_error_with_timestamp(error_message)
-        with open('/Users/yanzhang/Coding/News/Today_error.txt', 'a') as error_file:
-            error_file.write(formatted_error_message)
-    return symbols
+        print(f"读取10Y_newhigh.json时发生错误: {e}")
+        return {}
 
 def clean_old_backups(directory, file_patterns):
     now = datetime.now()
@@ -270,23 +263,34 @@ def read_compare_all(file_path):
     return compare_data
 
 def process_high_data(input_lines, compare_data):
-    """处理高点数据并添加Compare_All的信息"""
+    """处理高点数据并添加Compare_All的信息；保留末尾价格"""
     processed_lines = []
     for line in input_lines:
         parts = line.split()
-        if len(parts) >= 3:  # 确保行有足够的部分
+        # 现在期望最少有4段：Sector Symbol 10Y_newhigh Price
+        if len(parts) >= 4:
             sector = parts[0]
             symbol = parts[1]
+            price_str = parts[-1]  # 末尾是价格
             # 查找symbol在compare_data中的数据
             compare_info = compare_data.get(symbol, '')
             if compare_info:
-                # 组合新的行，不包含"10Y_newhigh"
-                new_line = f"{sector} {symbol} {compare_info}"
-                processed_lines.append(new_line)
+                # 不包含"10Y_newhigh"，在最后增加价格
+                new_line = f"{sector} {symbol} {compare_info} {price_str}"
             else:
-                # 如果在Compare_All中没找到对应数据，保持原样但去除"10Y_newhigh"
+                # 没有 compare_info，则输出 Sector Symbol Price
+                new_line = f"{sector} {symbol} {price_str}"
+            processed_lines.append(new_line)
+        elif len(parts) >= 3:
+            # 兜底：如果没有价格，尽量保持原逻辑（不推荐，但防御）
+            sector = parts[0]
+            symbol = parts[1]
+            compare_info = compare_data.get(symbol, '')
+            if compare_info:
+                new_line = f"{sector} {symbol} {compare_info}"
+            else:
                 new_line = f"{sector} {symbol}"
-                processed_lines.append(new_line)
+            processed_lines.append(new_line)
     return processed_lines
 
 def move_files_to_backup():
@@ -384,8 +388,8 @@ def main():
     intervals = [120, 60, 24, 13]  # 以月份表示的时间间隔列表
     highintervals = [120]
 
-    # 读取10Y_newhigh.txt文件中的symbol列表
-    existing_symbols = load_symbols_from_file('/Users/yanzhang/Coding/News/backup/10Y_newhigh.txt')
+    # 读取10Y_newhigh.json中的已有极值价格
+    existing_highs = load_existing_highs_json('/Users/yanzhang/Coding/Financial_System/Modules/10Y_newhigh.json')
 
     # 遍历JSON中的每个表和股票代码
     for table_name, names in data.items():
@@ -432,7 +436,8 @@ def main():
                         if max_price is not None and validate_price >= max_price:
                             if highinterval >= 12:
                                 years = highinterval // 12
-                                output_line = f"{table_name} {name} {years}Y_newhigh"
+                                # 注意：此处把价格一起放进来，先保留 10Y_newhigh 标签，后续会被处理函数替换/移除
+                                output_line = f"{table_name} {name} {years}Y_newhigh {validate_price}"
                                 output_high.append(output_line)
 
                     # 检查是否接近最低价格
@@ -484,11 +489,21 @@ def main():
         # 读取Compare_All.txt
         compare_data = read_compare_all('/Users/yanzhang/Coding/News/backup/Compare_All.txt')
         
-        # 过滤掉已经存在于10Y_newhigh.txt文件中的symbol
-        filtered_output_high = [
-            line for line in output_high
-            if line.split()[1] not in existing_symbols
-        ]
+        # 过滤掉已经存在于10Y_newhigh.json文件且价格低于现有标准的symbol
+        filtered_output_high = []
+        for line in output_high:
+            parts = line.split()
+            # 现在行格式是：Sector Symbol 10Y_newhigh Price
+            if len(parts) >= 4:
+                symbol = parts[1]
+                try:
+                    current_price = float(parts[3])
+                except ValueError:
+                    # 如果解析失败，谨慎起见仍然保留输出
+                    current_price = float('inf')
+                old_price = existing_highs.get(symbol)
+                if (old_price is None) or (current_price > old_price):
+                    filtered_output_high.append(line)
 
         if filtered_output_high:
             # 处理数据并添加Compare_All的信息
