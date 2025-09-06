@@ -54,7 +54,8 @@
         "DASH",
         "CPNG",
         "ORLY",
-        "DHI"
+        "DHI",
+        "LCID"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -306,7 +307,6 @@
         "CEG",
         "AEP",
         "VST",
-        "SRE",
-        "D"
+        "SRE"
     ]
 }

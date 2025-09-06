@@ -1005,11 +1005,15 @@ def run_processing_logic(log_detail):
     
     # 7.2 加载 panel.json，获取已存在分组的内容
     try:
-        with open(PANEL_JSON_FILE, 'r', encoding='utf-8') as f: panel_data = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError): panel_data = {}
+        with open(PANEL_JSON_FILE, 'r', encoding='utf-8') as f:
+            panel_data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        panel_data = {}
+
     exist_Strategy34 = set(panel_data.get('Strategy34', {}).keys())
     exist_Strategy12 = set(panel_data.get('Strategy12', {}).keys())
-    already_in_panels = exist_Strategy34 | exist_Strategy12
+    exist_today      = set(panel_data.get('Today', {}).keys())  # 新增：today 分组
+    already_in_panels = exist_Strategy34 | exist_Strategy12 | exist_today  # 新增：合并 today
 
     # 7.2 从两个组中分别过滤掉黑名单和已存在分组的symbol
     final_pe_valid_to_write = sorted(list(pe_valid_set - blacklist - already_in_panels))

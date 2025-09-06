@@ -1,7 +1,5 @@
 {
-    "Basic_Materials": {
-        "JHX": ""
-    },
+    "Basic_Materials": {},
     "Real_Estate": {},
     "Energy": {
         "OKE": ""
@@ -9,8 +7,9 @@
     "Technology": {
         "GIB": "",
         "ORCL": "",
-        "BLSH": "",
-        "FIG": ""
+        "MSFT": "",
+        "NVDA": "",
+        "ROP": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
@@ -18,7 +17,8 @@
         "CHH": "",
         "GPK": "",
         "SLGN": "",
-        "CMG": ""
+        "CMG": "",
+        "LULU": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -26,7 +26,8 @@
         "GIS": "",
         "FLO": "",
         "MDLZ": "",
-        "STZ": ""
+        "STZ": "",
+        "KDP": ""
     },
     "Industrials": {
         "WSO": "",
@@ -40,7 +41,8 @@
     "Financial_Services": {
         "FDS": "",
         "ERIE": "",
-        "RYAN": ""
+        "RYAN": "",
+        "CRVL": ""
     },
     "Healthcare": {
         "ALC": "",
@@ -120,22 +122,18 @@
         "XRP": ""
     },
     "Today": {
+        "KDP": "",
+        "CCK": "",
         "COST": "",
-        "BNTX": "",
-        "HIMS": "",
-        "GEV": "",
-        "CTAS": "",
-        "NVMI": "NVMI15热",
-        "SHOP": "",
         "AVAV": "",
-        "CART": "",
-        "VST": "",
-        "DASH": ""
+        "CART": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
+        "GWRE": "",
+        "VRT": "VRT7热",
         "DUOL": "DUOL15热",
         "FRPT": "",
         "LULU": "",
@@ -147,7 +145,6 @@
     },
     "Strategy12": {
         "AVAV": "",
-        "GWRE": "",
         "KR": "",
         "RH": ""
     },
@@ -156,26 +153,27 @@
         "KMX": ""
     },
     "PE_valid": {
-        "CCK": "",
-        "COST": "",
+        "AMD": "AMD15热",
+        "BAM": "",
+        "BWXT": "BWXT7热",
+        "CEG": "CEG15热",
         "DASH": "",
         "DUOL": "DUOL15热",
+        "GEV": "",
+        "IBKR": "",
         "ICLR": "",
         "IDXX": "",
-        "KDP": "",
-        "MP": "",
-        "MSFT": "",
+        "MSFT": "MSFT7",
         "NBIS": "NBIS7热",
+        "NVDA": "NVDA7热",
         "PLTR": "PLTR15热",
         "SAP": "SAP7",
         "SMCI": "SMCI15热",
-        "TYL": "",
-        "VRT": "VRT7热",
-        "WING": ""
+        "VRT": "VRT7热"
     },
     "PE_invalid": {
         "ASTS": "",
-        "JOBY": ""
+        "CRWV": "CRWV15热"
     },
     "Currencies": {
         "DXY": "美元指数",

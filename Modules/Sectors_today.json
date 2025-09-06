@@ -175,7 +175,6 @@
     "KIE",
     "FPE",
     "SPYV",
-    "IUSV",
     "FDL",
     "PICK",
     "JPST",
@@ -482,7 +481,8 @@
     "B",
     "AMRZ",
     "EGO",
-    "BVN"
+    "BVN",
+    "HBM"
   ],
   "Communication_Services": [
     "GOOGL",
