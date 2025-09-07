@@ -48,14 +48,12 @@ CONFIG = {
     "TURNOVER_THRESHOLD": 200_000_000,
     "RECENT_EARNINGS_COUNT": 2,
     "MARKETCAP_THRESHOLD": 200_000_000_000,      # 2000亿
-    # ========== 代码修改开始 1/2: 增加新的市值阈值和回撤百分比 ==========
-    "MARKETCAP_THRESHOLD_MEGA": 500_000_000_000, # 5000亿 (新增)
+    "MARKETCAP_THRESHOLD_MEGA": 500_000_000_000, # 5000亿
     
     # 严格筛选标准 (第一轮)
     "PRICE_DROP_PERCENTAGE_LARGE": 0.10, # <2000亿=10%
-    "PRICE_DROP_PERCENTAGE_SMALL": 0.06, # 2000亿 ≤ 市值 < 5000亿 = 6% (注释更新)
-    "PRICE_DROP_PERCENTAGE_MEGA": 0.05,  # ≥5000亿=5% (新增)
-    # ========== 代码修改结束 1/2 ==========
+    "PRICE_DROP_PERCENTAGE_SMALL": 0.06, # 2000亿 ≤ 市值 < 5000亿 = 6%
+    "PRICE_DROP_PERCENTAGE_MEGA": 0.05,  # ≥5000亿=5%
     
     # 宽松筛选标准 (当第一轮结果数量不足时启用)
     "RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.07, # <2000亿=7%
@@ -70,12 +68,15 @@ CONFIG = {
     "MIN_PE_VALID_SIZE_FOR_RELAXED_FILTER": 5,
     
     "MAX_INCREASE_PERCENTAGE_SINCE_LOW": 0.03,
-    # ========== 在这里添加新参数 ==========
+    
     # 条件1c 的专属参数：最新价比最新财报收盘价低至少 X%
     "PRICE_DROP_FOR_COND1C": 0.14,
     # 条件3参数
     "COND3_DROP_THRESHOLDS": [0.07, 0.15],         # 7% 与 15%
     "COND3_LOOKBACK_DAYS": 60,
+    
+    # 条件4参数: 财报日至今最高价相比最新价的涨幅阈值
+    "COND4_RISE_THRESHOLD": 0.07, # 7%
 }
 
 # --- 3. 辅助与文件操作模块 ---
@@ -180,11 +181,7 @@ def load_symbol_tags(json_path):
         return {}
 
 def update_json_panel(symbols_list, json_path, group_name, symbol_to_note=None):
-    """更新JSON面板文件。
-    symbols_list: list[str]
-    group_name: str
-    symbol_to_note: Optional[dict[str, str]] 若提供则按映射写入 value，否则写空字符串
-    """
+    """更新JSON面板文件。"""
     print(f"\n--- 更新 JSON 文件: {os.path.basename(json_path)} -> '{group_name}' ---")
     try:
         with open(json_path, 'r', encoding='utf-8') as f:
@@ -207,6 +204,7 @@ def update_json_panel(symbols_list, json_path, group_name, symbol_to_note=None):
 
 # --- 4. 核心数据获取模块 (已集成追踪系统) ---
 
+# ========== 代码修改开始 2/5: 修改 build_stock_data_cache 以缓存条件4所需数据 ==========
 def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_trace, log_detail, symbol_to_tags_map):
     """
     为所有给定的symbols一次性从数据库加载所有需要的数据。
@@ -236,7 +234,7 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
             (symbol,)
         )
         er_rows = cursor.fetchall()
-        if len(er_rows) < 1:
+        if not er_rows:
             if is_tracing: log_detail(f"[{symbol}] 失败: 在Earning表中未找到任何财报记录。")
             continue
         if is_tracing: log_detail(f"[{symbol}] 步骤1: 从Earning表获取了 {len(er_rows)} 条财报记录。")
@@ -291,7 +289,7 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
         if is_tracing:
             log_detail(f"[{symbol}] 步骤3.1: 获取最近10个交易日的收盘价，共 {len(prices_last_10)} 条: {prices_last_10}")
 
-        # 获取财报窗口期最高价 (财报日当天及后三个交易日)
+        # 3.2 获取财报窗口期最高价 (财报日当天及后三个交易日)
         latest_er_date = data['latest_er_date_str']
         latest_er_price = data['all_er_prices'][-1]
         
@@ -310,13 +308,15 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
         er_window_prices.extend(next_days_prices)
             
         data['er_window_high_price'] = max(er_window_prices) if er_window_prices else None
-        
         if is_tracing:
-            log_detail(f"[{symbol}] 步骤3.2: 查找财报窗口期最高价 (财报日当天及后三个交易日)。")
-            log_detail(f"[{symbol}]   - 财报日当天价格: {latest_er_price}")
-            log_detail(f"[{symbol}]   - 财报日后三个交易日价格: {next_days_prices}")
-            log_detail(f"[{symbol}]   - 窗口期内价格列表: {er_window_prices}")
-            log_detail(f"[{symbol}]   - 窗口期内最高价: {data['er_window_high_price']}")
+            log_detail(f"[{symbol}] 步骤3.2: 查找财报窗口期最高价。窗口期价格: {er_window_prices}, 最高价: {data['er_window_high_price']}")
+
+        # 3.3 (新增) 获取自最新财报日以来的最高价 (为条件4准备)
+        cursor.execute(f'SELECT MAX(price) FROM "{sector_name}" WHERE name = ? AND date >= ?', (symbol, data['latest_er_date_str']))
+        high_since_er_row = cursor.fetchone()
+        data['high_since_er'] = high_since_er_row[0] if high_since_er_row else None
+        if is_tracing:
+            log_detail(f"[{symbol}] 步骤3.3: 获取自最新财报日({data['latest_er_date_str']})以来的最高价: {data['high_since_er']}")
 
         # 4. 获取PE和市值
         data['pe_ratio'], data['marketcap'] = None, None
@@ -626,6 +626,43 @@ def check_new_condition_3(data, config, log_detail, symbol_to_trace):
     if is_tracing: log_detail("  - 结果: False (不满足条件3)")
     return False
 
+# ========== 代码修改开始 3/5: 新增 check_new_condition_4 函数 ==========
+def check_new_condition_4(data, config, log_detail, symbol_to_trace):
+    """
+    条件4：从最近一次财报日期开始到有数据的最近日期之间的最高收盘价比最新一天收盘价高不少于 X%。
+    """
+    symbol = data.get('symbol')
+    is_tracing = (symbol == symbol_to_trace)
+    if is_tracing: log_detail(f"\n--- [{symbol}] 新增条件4评估 ---")
+
+    high_since_er = data.get('high_since_er')
+    latest_price = data.get('latest_price')
+    rise_threshold = config.get('COND4_RISE_THRESHOLD', 0.07)
+
+    # 数据有效性检查
+    if high_since_er is None or latest_price is None or latest_price <= 0:
+        if is_tracing:
+            log_detail(f"  - 结果: False (数据不足: high_since_er={high_since_er}, latest_price={latest_price})")
+        return False
+
+    # 计算阈值价格
+    threshold_price = latest_price * (1 + rise_threshold)
+    
+    # 判断条件
+    passed = high_since_er >= threshold_price
+
+    if is_tracing:
+        rise_pct = (high_since_er - latest_price) / latest_price
+        log_detail(f"  - 财报日至今最高价: {high_since_er:.2f}")
+        log_detail(f"  - 最新收盘价: {latest_price:.2f}")
+        log_detail(f"  - 实际涨幅: {rise_pct:.2%}")
+        log_detail(f"  - 要求涨幅: {rise_threshold:.2%}")
+        log_detail(f"  - 判断: {high_since_er:.2f} >= {threshold_price:.2f} -> {passed}")
+        log_detail(f"  - 结果: {passed}")
+
+    return passed
+
+# ========== 代码修改开始 4/5: 修改 evaluate_stock_conditions 以包含条件4 ==========
 def evaluate_stock_conditions(data, symbol_to_trace, log_detail, drop_pct_large, drop_pct_small):
     """
     此函数为原始筛选流程 (条件1 OR 条件2 OR 条件3)
@@ -692,10 +729,13 @@ def evaluate_stock_conditions(data, symbol_to_trace, log_detail, drop_pct_large,
 
     # 入口条件: 条件3
     passed_new_cond3 = check_new_condition_3(data, CONFIG, log_detail, symbol_to_trace)
+    
+    # 入口条件: 条件4 (新增)
+    passed_new_cond4 = check_new_condition_4(data, CONFIG, log_detail, symbol_to_trace)
 
-    # 裁定入口条件是否满足
-    if not (passed_original_cond1 or passed_new_cond2 or passed_new_cond3):
-        if is_tracing: log_detail(f"  - 最终裁定: 失败。三个入口条件均未满足。")
+    # 裁定入口条件是否满足 (现在是四选一)
+    if not (passed_original_cond1 or passed_new_cond2 or passed_new_cond3 or passed_new_cond4):
+        if is_tracing: log_detail(f"  - 最终裁定: 失败。四个入口条件均未满足。")
         return False
     
     if is_tracing:
@@ -703,7 +743,8 @@ def evaluate_stock_conditions(data, symbol_to_trace, log_detail, drop_pct_large,
         if passed_original_cond1: reasons.append("条件1")
         if passed_new_cond2: reasons.append("条件2")
         if passed_new_cond3: reasons.append("条件3")
-        log_detail(f"  - 入口条件通过 (原因: {' 和 '.join(reasons)})。开始执行通用过滤...")
+        if passed_new_cond4: reasons.append("条件4") # 新增日志
+        log_detail(f"  - 入口条件通过 (原因: {'、'.join(reasons)})。开始执行通用过滤...")
 
     # 前提条件: 价格回撤条件
     marketcap = data.get('marketcap')
@@ -872,7 +913,7 @@ def run_processing_logic(log_detail):
     
     # 定义一个可重复使用的筛选流程函数
     def perform_filter_pass(symbols_to_check, drop_large, drop_small, pass_name):
-        log_detail(f"\n--- {pass_name}: 开始筛选 (下跌标准: >$100B {drop_small*100}%, <$100B {drop_large*100}%) ---")
+        log_detail(f"\n--- {pass_name}: 开始筛选 (下跌标准: >$200B {drop_small*100}%, <$200B {drop_large*100}%) ---")
         
         # 步骤 A: 对每个股票运行统一的筛选函数
         preliminary_results = []
