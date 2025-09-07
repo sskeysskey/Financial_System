@@ -135,7 +135,7 @@ def main():
                         help="description.json 路径")
     parser.add_argument("--tagsw", default="/Users/yanzhang/Coding/Financial_System/Modules/tags_weight.json",
                         help="tags_weight.json 路径")
-    parser.add_argument("--days", type=int, default=30,
+    parser.add_argument("--days", type=int, default=10,
                         help="向前对比的天数 (默认 7 天)")
     parser.add_argument("--font", default=None,
                         help="生成中文标签云时指定的字体路径 (如 SimHei.ttf)")

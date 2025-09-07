@@ -189,11 +189,6 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USNonFarmA": "04 USNonFarmA",
-        "USTrade": "04 USTrade",
-        "USNonPMI": "04 USNonPMI",
-        "USNonFarm": "05 USNonFarm",
-        "USUnemploy": "05 USUnemploy",
         "USPPI": "10 USPPI",
         "CorePPI": "10 CorePPI",
         "USCPI": "11 USCPI",
