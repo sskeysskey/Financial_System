@@ -156,10 +156,15 @@ class TagEditor(QMainWindow):
             idx = sorted_weights.index("1.3") + 1
             sorted_weights.insert(idx, "2.0")
 
-        # 3) 如果有 "1.5"，永远移到最后
+        # 3) 如果有 "1.5"，移到最后
         if "1.5" in sorted_weights:
             sorted_weights.remove("1.5")
             sorted_weights.append("1.5")
+
+        # 4) 新增：如果存在 "0.2"，则永远移到最右边（最后）
+        if "0.2" in sorted_weights:
+            sorted_weights.remove("0.2")
+            sorted_weights.append("0.2")
 
         for weight in sorted_weights:
             # 每个栏目是一个独立的垂直布局（标题+列表）

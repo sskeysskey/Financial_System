@@ -501,8 +501,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     red_offsets = [(-60, 30),(50, -30), (-70, 45), (-50, -35)]
     for i, (scatter, date_v, price_v, text) in enumerate(global_scatter_points):
         offset = red_offsets[i % len(red_offsets)]
+        # 在原始事件文本上方，增加一行格式化的日期
+        new_text = f"{text}\n{date_v.strftime('%Y-%m-%d')}"
         annotation = ax1.annotate(
-            text, xy=(date_v, price_v), xytext=offset, textcoords="offset points",
+            new_text, xy=(date_v, price_v), xytext=offset, textcoords="offset points",
             bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=NORD_THEME['accent_red'], alpha=0.8),
             arrowprops=dict(arrowstyle="->", color=NORD_THEME['accent_red']),
             color=NORD_THEME['accent_red'], fontsize=12, visible=False
@@ -512,8 +514,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     specific_offsets = [(-50, -50), (-100, 20)]
     for i, (scatter, date_v, price_v, text) in enumerate(specific_scatter_points):
         offset = specific_offsets[i % len(specific_offsets)]
+        # 在原始事件文本上方，增加一行格式化的日期
+        new_text = f"{text}\n{date_v.strftime('%Y-%m-%d')}"
         annotation = ax1.annotate(
-            text, xy=(date_v, price_v), xytext=offset, textcoords="offset points",
+            new_text, xy=(date_v, price_v), xytext=offset, textcoords="offset points",
             bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=NORD_THEME['text_bright'], alpha=0.8),
             arrowprops=dict(arrowstyle="->", color=NORD_THEME['text_bright']),
             color=NORD_THEME['text_bright'], fontsize=12,
