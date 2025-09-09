@@ -124,7 +124,8 @@
         "META",
         "AMZN",
         "BRK-A",
-        "FTNT"
+        "FTNT",
+        "RSG"
     ],
     "blue_keywords": [
         "US2Y",
@@ -520,13 +521,13 @@
         "VRSK",
         "HRB",
         "ALC",
-        "KDP",
         "RYAN",
         "CHH",
         "CWST",
         "SLGN",
         "KVUE",
-        "CRVL"
+        "CRVL",
+        "BMA"
     ],
     "yellow_keywords": [
         "XLY",
@@ -766,7 +767,8 @@
         "GTLB",
         "AI",
         "SG",
-        "FRPT"
+        "FRPT",
+        "KDP"
     ],
     "orange_keywords": [
         "Huangjin",

@@ -462,7 +462,8 @@
     "FXF",
     "RING",
     "ISCF",
-    "FTHI"
+    "FTHI",
+    "topetf_250909"
   ],
   "Basic_Materials": [
     "LIN",
@@ -607,7 +608,6 @@
     "GSAT",
     "TIGO",
     "ANGI",
-    "SNRE",
     "TTD",
     "APP",
     "SATS",
