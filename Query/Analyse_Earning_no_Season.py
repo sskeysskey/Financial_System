@@ -83,17 +83,17 @@ CONFIG = {
 
 # 新增: 用于加载外部标签配置的函数
 def load_tag_settings(json_path):
-    """从 Tags_Setting.json 加载 TAG_BLACKLIST 和 HOT_TAGS。"""
+    """从 Tags_Setting.json 加载 BLACKLIST_TAGS 和 HOT_TAGS。"""
     try:
         with open(json_path, 'r', encoding='utf-8') as f:
             settings = json.load(f)
         
         # 从JSON加载列表，并转换成set，如果不存在则返回空set
-        tag_blacklist = set(settings.get('TAG_BLACKLIST', []))
+        tag_blacklist = set(settings.get('BLACKLIST_TAGS', []))
         hot_tags = set(settings.get('HOT_TAGS', []))
         
         print(f"成功从 {os.path.basename(json_path)} 加载设置。")
-        print(f"  - TAG_BLACKLIST: {len(tag_blacklist)} 个")
+        print(f"  - BLACKLIST_TAGS: {len(tag_blacklist)} 个")
         print(f"  - HOT_TAGS: {len(hot_tags)} 个")
         
         return tag_blacklist, hot_tags
@@ -877,7 +877,7 @@ def run_processing_logic(log_detail):
     # 1. 加载初始数据和配置
     # 修改：加载外部标签配置并更新CONFIG
     tag_blacklist_from_file, hot_tags_from_file = load_tag_settings(TAGS_SETTING_JSON_FILE)
-    CONFIG["TAG_BLACKLIST"] = tag_blacklist_from_file
+    CONFIG["BLACKLIST_TAGS"] = tag_blacklist_from_file
     CONFIG["HOT_TAGS"] = hot_tags_from_file
     
     # 新增: 从 Blacklist.json 加载 Earning Symbol 黑名单
@@ -935,7 +935,7 @@ def run_processing_logic(log_detail):
 
         # 步骤 C: (属于通用过滤4) 基于Tag的过滤
         log_detail(f"\n--- {pass_name}: (通用过滤4) 开始基于Tag的过滤 ---")
-        tag_blacklist = CONFIG["TAG_BLACKLIST"]
+        tag_blacklist = CONFIG["BLACKLIST_TAGS"]
         
         final_pe_valid = [s for s in pe_valid if not set(symbol_to_tags_map.get(s, [])).intersection(tag_blacklist)]
         final_pe_invalid = [s for s in pe_invalid if not set(symbol_to_tags_map.get(s, [])).intersection(tag_blacklist)]

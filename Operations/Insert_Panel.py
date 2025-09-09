@@ -196,7 +196,9 @@ def main():
         for category in selected_categories:
             # 确保分组存在于 JSON 数据中
             if category in panel_data:
-                panel_data[category][symbol] = ""
+                # --- 这是修改的核心 ---
+                # 创建一个新字典，将新 symbol 放在最前面，然后解包（**）旧的字典内容
+                panel_data[category] = {symbol: "", **panel_data[category]}
                 update_count += 1
             else:
                 # 如果分组不存在，可以选择创建它或发出警告

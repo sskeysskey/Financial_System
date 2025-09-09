@@ -801,6 +801,10 @@ class MainWindow(QMainWindow):
         menu = QMenu(self)
 
         menu.addAction("删除",          lambda: self.delete_item(keyword, group))
+        
+        # 2) 其他顶层菜单项
+        menu.addSeparator()
+        menu.addAction("编辑 Tags",    lambda: execute_external_script('tags', keyword, group, self))
         # --- 通用“移动”子菜单 ---
         move_menu = menu.addMenu("移动")
         for tgt in ("Today", "Watching", "Next Week", "2 Weeks", "3 Weeks"):
@@ -811,10 +815,6 @@ class MainWindow(QMainWindow):
                 lambda _, k=keyword, src=group, dst=tgt: 
                     self.move_item(k, src, dst)
             )
-
-        # 2) 其他顶层菜单项
-        menu.addSeparator()
-        menu.addAction("编辑 Tags",    lambda: execute_external_script('tags', keyword, group, self))
         menu.addSeparator()
         menu.addAction("改名",          lambda: self.rename_item(keyword, group))
         menu.addAction("编辑 Earing DB", lambda: execute_external_script('editor_earning', keyword))

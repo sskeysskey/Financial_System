@@ -1,5 +1,5 @@
 {
-    "TAG_BLACKLIST": [
+    "BLACKLIST_TAGS": [
         "天然气",
         "页岩气"
     ],

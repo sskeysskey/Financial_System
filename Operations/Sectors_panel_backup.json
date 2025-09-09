@@ -8,10 +8,7 @@
         "VIST": ""
     },
     "Technology": {
-        "GIB": "",
-        "ORCL": "",
-        "MSFT": "",
-        "FIG": ""
+        "MSFT": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
@@ -25,37 +22,24 @@
     "Utilities": {},
     "Consumer_Defensive": {
         "FRPT": "",
-        "GIS": "",
-        "FLO": "",
-        "MDLZ": "",
         "STZ": "",
         "KDP": "",
-        "KO": "",
         "BRBR": ""
     },
     "Industrials": {
-        "WSO": "",
-        "UHAL": "",
         "CWST": "",
-        "WM": "",
-        "RSG": ""
+        "WM": ""
     },
     "Communication_Services": {
         "SEAT": ""
     },
     "Financial_Services": {
         "FDS": "",
-        "ERIE": "",
-        "RYAN": "",
-        "BMA": ""
+        "RYAN": ""
     },
     "Healthcare": {
-        "ALC": "",
-        "COO": "",
-        "ISRG": "",
         "BRKR": "",
-        "PRCT": "",
-        "SNY": ""
+        "PRCT": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -127,17 +111,15 @@
         "XRP": ""
     },
     "Today": {
+        "WM": "",
+        "TGS": "",
+        "SMMT": "",
         "QS": "",
-        "DUOL": "DUOL15热",
-        "PLTR": "PLTR15热",
-        "MSFT": "MSFT7",
+        "COST": "",
+        "FDS": "",
         "CEG": "CEG15热",
-        "BWXT": "BWXT7热",
-        "AMD": "AMD15热",
         "RH": "",
         "KDP": "",
-        "CCK": "",
-        "COST": "",
         "AVAV": "",
         "CART": "",
         "GEV": "",
@@ -147,49 +129,17 @@
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
+        "CTAS": "",
         "KR": "",
         "BAM": "",
         "CCK": "",
-        "IBKR": "",
-        "VRT": "VRT7热",
-        "DUOL": "DUOL15热",
         "FRPT": "",
         "KMX": ""
     },
-    "Strategy12": {
-        "AVAV": "",
-        "DRI": "",
-        "FDS": "",
-        "KR": "",
-        "RH": ""
-    },
-    "Strategy34": {
-        "KMX": ""
-    },
-    "PE_valid": {
-        "ACN": "",
-        "BAH": "",
-        "BNTX": "",
-        "BROS": "",
-        "CMG": "",
-        "CTAS": "",
-        "KEX": "",
-        "LPLA": "",
-        "MSTR": "",
-        "NBIS": "NBIS7热",
-        "NVDA": "NVDA7热",
-        "SAP": "SAP7",
-        "SBAC": "",
-        "SMCI": "SMCI15热",
-        "SMMT": "",
-        "VRT": "VRT15热",
-        "WM": ""
-    },
-    "PE_invalid": {
-        "ASTS": "",
-        "OKLO": "OKLO15热",
-        "SMR": "SMR15热"
-    },
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {},
+    "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

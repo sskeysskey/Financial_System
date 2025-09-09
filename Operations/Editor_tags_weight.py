@@ -13,77 +13,83 @@ from PyQt5.QtGui import QKeySequence
 class DroppableListWidget(QListWidget):
     """
     一个可接收拖拽项目的 QListWidget。
-    当一个项目从其他列表拖入时，会发出一个自定义信号。
+    当一个项目从其他列表拖入时，会发出一个包含源/目标文件和栏目信息的自定义信号。
     """
-    # 定义一个信号，参数分别为：源列表的权重, 目标列表的权重, 被移动的项目文本列表
-    item_moved = pyqtSignal(str, str, list)
+    # 定义一个信号，参数分别为：源文件类型, 源栏目键, 目标文件类型, 目标栏目键, 被移动的项目文本列表
+    item_moved = pyqtSignal(str, str, str, str, list)
 
-    def __init__(self, weight, parent=None):
+    # 修改：__init__ 接受 file_type 和 key，使其更通用
+    def __init__(self, file_type, key, parent=None):
         super().__init__(parent)
-        self.weight = weight  # 每个列表都知道自己的权重
+        self.file_type = file_type  # 'weight' 或 'earning'
+        self.key = key              # 栏目的键，如 "1.0", "BLACKLIST_TAGS"
         self.setAcceptDrops(True)
         self.setDragEnabled(True)
         self.setDragDropMode(QAbstractItemView.DragDrop)
         self.setDefaultDropAction(Qt.MoveAction)
-        # 允许多选，方便批量删除或移动
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
 
     def dropEvent(self, event):
         source_widget = event.source()
         
-        # 确保拖拽源是一个 QListWidget 且不是自己
-        if isinstance(source_widget, QListWidget) and source_widget is not self:
-            # 提取被拖拽的项目文本
+        # 确保拖拽源是一个 DroppableListWidget
+        if isinstance(source_widget, DroppableListWidget):
+            # 不允许在同一个列表内拖拽（除非是重新排序，由父类处理）
+            if source_widget is self:
+                super().dropEvent(event)
+                return
+
             texts = [item.text() for item in source_widget.selectedItems()]
             
-            # 发出信号，通知主窗口数据已移动
-            self.item_moved.emit(source_widget.weight, self.weight, texts)
+            # 发出包含文件类型和栏目键的信号
+            self.item_moved.emit(source_widget.file_type, source_widget.key, self.file_type, self.key, texts)
             
-            # 接受事件，这样源列表才知道可以删除项目
+            # 接受事件，这样源列表才知道可以删除项目（如果需要）
             event.accept()
         else:
-            # 如果是在同一个列表内拖拽（重新排序），则使用默认行为
-            super().dropEvent(event)
+            # 其他情况（如从外部拖入文件），忽略
+            event.ignore()
 
 
 # --- 主窗口类 ---
 class TagEditor(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.json_path = '/Users/yanzhang/Coding/Financial_System/Modules/tags_weight.json'  # 假设 JSON 文件在同目录下
-        self.data = {}
-        self.list_widgets = {}
-        self.base_window_title = "标签权重编辑器"
+        # --- 路径管理 ---
+        self.weight_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/tags_weight.json'
+        self.earning_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/tags_eanring.json'
         
-        # 新增：用于跟踪数据是否被修改的“脏标记”
+        # --- 数据模型 ---
+        self.weight_data = {}
+        self.earning_data = {}
+
+        self.list_widgets = {} # 使用唯一的 key (如 "1.0", "BLACKLIST_TAGS") 存储所有列表控件
+        self.base_window_title = "标签编辑器"
+        
+        # 使用统一的“脏标记”跟踪两个文件是否有未保存的修改
         self.is_dirty = False
 
         self.init_ui()
-        self.load_data_and_populate()
+        self.load_all_data_and_populate_ui()
 
     def init_ui(self):
         """初始化用户界面"""
         self.setWindowTitle(self.base_window_title)
-        self.setGeometry(100, 100, 1000, 600)
+        self.setGeometry(100, 100, 1200, 700) # 稍微增大窗口以容纳更多列
 
-        # --- 创建主布局 ---
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
 
-        # --- 顶部操作区 (搜索和按钮) ---
         top_layout = QHBoxLayout()
-        
-        # 搜索框
         top_layout.addWidget(QLabel("搜索标签:"))
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("输入关键词进行过滤...")
         self.search_input.textChanged.connect(self.search_tags)
         top_layout.addWidget(self.search_input)
         
-        top_layout.addStretch(1) # 添加伸缩，让按钮靠右
+        top_layout.addStretch(1)
 
-        # 功能按钮
         self.add_tag_btn = QPushButton("新增标签")
         self.add_tag_btn.clicked.connect(self.add_new_tag)
         top_layout.addWidget(self.add_tag_btn)
@@ -92,30 +98,25 @@ class TagEditor(QMainWindow):
         self.add_column_btn.clicked.connect(self.add_new_column)
         top_layout.addWidget(self.add_column_btn)
 
-        # 新增：删除按钮
         self.delete_btn = QPushButton("删除选中")
         self.delete_btn.setStyleSheet("background-color: #f44336; color: white;")
         self.delete_btn.clicked.connect(self.on_delete_button_clicked)
         top_layout.addWidget(self.delete_btn)
 
-        self.save_btn = QPushButton("保存更改")
-        self.save_btn.setStyleSheet("background-color: #4CAF50; color: white;") # 突出显示
-        self.save_btn.clicked.connect(self.save_data)
+        self.save_btn = QPushButton("保存全部更改")
+        self.save_btn.setStyleSheet("background-color: #4CAF50; color: white;")
+        self.save_btn.clicked.connect(self.save_all_data)
         top_layout.addWidget(self.save_btn)
         
         main_layout.addLayout(top_layout)
 
-        # --- 栏目显示区 ---
         self.columns_layout = QHBoxLayout()
         main_layout.addLayout(self.columns_layout)
 
-        # ↓—— 在 init_ui 的最后，添加：
         esc_shortcut = QShortcut(QKeySequence(Qt.Key_Escape), self)
         esc_shortcut.activated.connect(self.close)
 
-        # Cmd+N （Mac） 或 Ctrl+N（Windows/Linux），跨平台“新建”
         new_sc = QShortcut(QKeySequence.New, self)
-        # 关键：全应用生效
         new_sc.setContext(Qt.ApplicationShortcut)
         new_sc.activated.connect(self.add_new_tag)
 
@@ -125,21 +126,30 @@ class TagEditor(QMainWindow):
             self.is_dirty = True
             self.setWindowTitle(f"{self.base_window_title} *")
 
-    def load_data_and_populate(self):
-        """加载 JSON 数据并填充UI"""
+    def load_all_data_and_populate_ui(self):
+        """加载所有 JSON 数据并填充UI"""
+        # 加载 tags_weight.json
         try:
-            with open(self.json_path, 'r', encoding='utf-8') as f:
-                self.data = json.load(f)
+            with open(self.weight_json_path, 'r', encoding='utf-8') as f:
+                self.weight_data = json.load(f)
         except (FileNotFoundError, json.JSONDecodeError):
-            # 如果文件不存在或格式错误，创建一个默认的空结构
-            self.data = {"1.0": []}
-            QMessageBox.warning(self, "警告", f"未找到或无法解析 {self.json_path}。\n已创建一个新的空数据结构。")
-            self._mark_as_dirty() # 因为创建了新数据，所以也算“脏”状态
+            self.weight_data = {"1.0": []}
+            QMessageBox.warning(self, "警告", f"未找到或无法解析 {self.weight_json_path}。\n已为此文件创建新的空数据结构。")
+            self._mark_as_dirty()
+
+        # 加载 tags_earning.json
+        try:
+            with open(self.earning_json_path, 'r', encoding='utf-8') as f:
+                self.earning_data = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            self.earning_data = {"BLACKLIST_TAGS": [], "HOT_TAGS": []}
+            QMessageBox.warning(self, "警告", f"未找到或无法解析 {self.earning_json_path}。\n已为此文件创建新的默认数据结构。")
+            self._mark_as_dirty()
         
         self.populate_columns()
 
     def populate_columns(self):
-        """根据 self.data 动态创建和填充所有栏目"""
+        """根据 self.earning_data 和 self.weight_data 动态创建和填充所有栏目"""
         # 清空旧的布局和控件
         for i in reversed(range(self.columns_layout.count())): 
             widget_to_remove = self.columns_layout.itemAt(i).widget()
@@ -147,66 +157,87 @@ class TagEditor(QMainWindow):
                 widget_to_remove.deleteLater()
         self.list_widgets.clear()
 
-        # 1) 先按 float 正常排序
-        sorted_weights = sorted(self.data.keys(), key=float)
+        # --- 第一部分：填充 Earning 数据的栏目 (左侧固定) ---
+        earning_keys = ["BLACKLIST_TAGS", "HOT_TAGS"]
+        for key in earning_keys:
+            if key in self.earning_data: # 确保key存在
+                self._create_column_widget('earning', key, self.earning_data[key])
+        
+        # 添加一个视觉分隔符
+        separator = QWidget()
+        separator.setFixedWidth(20)
+        self.columns_layout.addWidget(separator)
 
-        # 2) 如果有 "2.0" 和 "1.3"，把 "2.0" 插到 "1.3" 后面
+        # --- 第二部分：填充 Weight 数据的栏目 (右侧，带特殊排序) ---
+        # 1) 按 float 正常排序
+        sorted_weights = sorted(self.weight_data.keys(), key=float)
+        # 2) 特殊排序规则
         if "2.0" in sorted_weights and "1.3" in sorted_weights:
             sorted_weights.remove("2.0")
             idx = sorted_weights.index("1.3") + 1
             sorted_weights.insert(idx, "2.0")
-
-        # 3) 如果有 "1.5"，移到最后
         if "1.5" in sorted_weights:
             sorted_weights.remove("1.5")
             sorted_weights.append("1.5")
-
-        # 4) 新增：如果存在 "0.2"，则永远移到最右边（最后）
         if "0.2" in sorted_weights:
             sorted_weights.remove("0.2")
             sorted_weights.append("0.2")
 
-        for weight in sorted_weights:
-            # 每个栏目是一个独立的垂直布局（标题+列表）
-            column_vbox = QVBoxLayout()
+        for key in sorted_weights:
+            self._create_column_widget('weight', key, self.weight_data[key])
+
+    def _create_column_widget(self, file_type, key, tags):
+        """辅助函数：创建一个栏目UI组件并添加到布局中"""
+        column_vbox = QVBoxLayout()
+        
+        # 定义标题
+        title_text = ""
+        if file_type == 'earning':
+            mapping = {"BLACKLIST_TAGS": "BLACKLIST_TAGS", "HOT_TAGS": "HOT_TAGS"}
+            title_text = mapping.get(key, key)
+        else: # weight
+            mapping = {"0.2": "（待定）", "1.3": "（普遍分类）", "2.0": "（专业术语）"}
+            suffix = mapping.get(key, "")
+            title_text = f"权重: {key}{suffix}"
             
-            # 栏目标题
-            # 栏目标题，针对不同权重加上后缀说明
-            mapping = {
-                "0.2": "（待定）",
-                "1.3": "（普遍分类）",
-                "2.0": "（专业术语）"
-            }
-            suffix = mapping.get(weight, "")
-            title_label = QLabel(f"权重: {weight}{suffix}")
-            title_label.setStyleSheet("font-weight: bold; font-size: 14px;")
-            column_vbox.addWidget(title_label)
-            
-            # 标签列表
-            list_widget = DroppableListWidget(weight)
-            list_widget.itemDoubleClicked.connect(self.edit_item) # 双击编辑
-            list_widget.item_moved.connect(self.handle_item_move) # 处理跨列表拖拽
-            # 在创建 DroppableListWidget 之后添加
-            list_widget.keyPressEvent = lambda event, lw=list_widget: self.list_key_press_event(event, lw)
-            
-            # 新增：为列表启用右键菜单
-            list_widget.setContextMenuPolicy(Qt.CustomContextMenu)
-            list_widget.customContextMenuRequested.connect(self.show_context_menu)
-            
-            for tag in self.data[weight]:
-                item = QListWidgetItem(tag)
-                item.setFlags(item.flags() | Qt.ItemIsEditable) # 设置为可编辑
-                list_widget.addItem(item)
-            
-            column_vbox.addWidget(list_widget)
-            
-            # 将此栏目添加到主水平布局中
-            container_widget = QWidget() # 需要一个容器Widget来承载VBoxLayout
-            container_widget.setLayout(column_vbox)
-            self.columns_layout.addWidget(container_widget)
-            
-            # 存储引用
-            self.list_widgets[weight] = list_widget
+        title_label = QLabel(title_text)
+        title_label.setStyleSheet("font-weight: bold; font-size: 14px;")
+        column_vbox.addWidget(title_label)
+        
+        # 创建列表
+        list_widget = DroppableListWidget(file_type, key)
+        list_widget.itemDoubleClicked.connect(self.edit_item)
+        list_widget.item_moved.connect(self.handle_item_move)
+        list_widget.keyPressEvent = lambda event, lw=list_widget: self.list_key_press_event(event, lw)
+        list_widget.setContextMenuPolicy(Qt.CustomContextMenu)
+        list_widget.customContextMenuRequested.connect(self.show_context_menu)
+        
+        for tag in tags:
+            item = QListWidgetItem(tag)
+            item.setFlags(item.flags() | Qt.ItemIsEditable)
+            list_widget.addItem(item)
+        
+        column_vbox.addWidget(list_widget)
+        
+        container_widget = QWidget()
+        container_widget.setLayout(column_vbox)
+        self.columns_layout.addWidget(container_widget)
+        
+        self.list_widgets[key] = list_widget
+
+    def _is_tag_duplicate(self, tag, excluding_item=None):
+        """全局检查标签是否重复"""
+        old_text = excluding_item.text() if excluding_item else None
+        
+        all_tags = [t for tags in self.weight_data.values() for t in tags] + \
+                   [t for tags in self.earning_data.values() for t in tags]
+
+        for existing_tag in all_tags:
+            if old_text and existing_tag == old_text:
+                continue # 跳过与自身（编辑前）的比较
+            if existing_tag == tag:
+                return True
+        return False
 
     def search_tags(self, text):
         """根据搜索框文本过滤所有列表中的项目"""
@@ -214,249 +245,233 @@ class TagEditor(QMainWindow):
         for list_widget in self.list_widgets.values():
             for i in range(list_widget.count()):
                 item = list_widget.item(i)
-                # 如果搜索文本为空，或项目文本包含搜索文本，则显示，否则隐藏
                 is_match = text in item.text().lower()
                 item.setHidden(not is_match)
 
     def add_new_tag(self):
-        """新增一个标签"""
-        if not self.data:
+        """新增一个标签到指定的栏目"""
+        all_keys = list(self.earning_data.keys()) + list(self.weight_data.keys())
+        if not all_keys:
             QMessageBox.warning(self, "操作失败", "请先至少创建一个栏目！")
             return
 
         # 让用户选择要添加到哪个栏目
-        weights = sorted(self.data.keys(), key=float)
-        # 先计算“2.0”在列表中的下标，如果不存在就退回到 0
-        default_index = weights.index("2.0") if "2.0" in weights else 0
-        weight, ok = QInputDialog.getItem(
-            self,
-            "选择栏目",
-            "请选择要添加标签的权重栏目:",
-            weights,
-            default_index,
-            False
-        )
+        default_key = "2.0" if "2.0" in all_keys else (all_keys[0] if all_keys else "")
+        default_index = all_keys.index(default_key) if default_key in all_keys else 0
         
-        if ok and weight:
-            # 获取新标签名
-            tag, ok = QInputDialog.getText(self, "新增标签", f"在权重 {weight} 下输入新标签名:")
+        key, ok = QInputDialog.getItem(self, "选择栏目", "请选择要添加标签的栏目:", all_keys, default_index, False)
+        
+        if ok and key:
+            tag, ok = QInputDialog.getText(self, "新增标签", f"在栏目 '{key}' 下输入新标签名:")
             if ok and tag:
                 tag = tag.strip()
-                # 修复：检查标签是否为空
                 if not tag:
                     QMessageBox.warning(self, "新增失败", "标签名不能为空！")
                     return
                 
-                if any(tag in tags for tags in self.data.values()):
-                    QMessageBox.warning(self, "错误", f"标签 '{tag}' 已存在于要添加的栏目中！")
+                if self._is_tag_duplicate(tag):
+                    QMessageBox.warning(self, "错误", f"标签 '{tag}' 已在其他地方存在！")
                     return
                 
                 # 更新数据和UI
-                self.data[weight].append(tag)
+                if key in self.weight_data:
+                    self.weight_data[key].append(tag)
+                else:
+                    self.earning_data[key].append(tag)
+                    
                 item = QListWidgetItem(tag)
                 item.setFlags(item.flags() | Qt.ItemIsEditable)
-                self.list_widgets[weight].addItem(item)
-                self._mark_as_dirty() # 标记更改
+                self.list_widgets[key].addItem(item)
+                self._mark_as_dirty()
 
     def add_new_column(self):
-        """新增一个栏目（权重）"""
-        weight, ok = QInputDialog.getText(self, "新增栏目", "请输入新的权重值 (例如: 1.5):")
-        if ok and weight:
-            weight = weight.strip()
-            try:
-                # 验证输入是否为数字
-                float(weight)
-                if weight in self.data:
-                    QMessageBox.warning(self, "错误", f"权重 '{weight}' 已存在！")
+        """新增一个栏目（权重或Earning类别）"""
+        file_choice, ok = QInputDialog.getItem(
+            self, "选择文件", "要为哪个文件新增栏目？", 
+            ["tags_weight.json", "tags_earning.json"], 0, False
+        )
+        if not ok:
+            return
+
+        if file_choice == "tags_weight.json":
+            new_key, ok = QInputDialog.getText(self, "新增权重栏目", "请输入新的权重值 (例如: 1.5):")
+            if ok and new_key:
+                new_key = new_key.strip()
+                try:
+                    float(new_key) # 验证是否为数字
+                    if new_key in self.weight_data:
+                        QMessageBox.warning(self, "错误", f"权重 '{new_key}' 已存在！")
+                    else:
+                        self.weight_data[new_key] = []
+                        self.populate_columns()
+                        self._mark_as_dirty()
+                except ValueError:
+                    QMessageBox.warning(self, "错误", "请输入有效的数字作为权重！")
+        
+        else: # tags_earning.json
+            new_key, ok = QInputDialog.getText(self, "新增Earning栏目", "请输入新的栏目名称:")
+            if ok and new_key:
+                new_key = new_key.strip()
+                if not new_key:
+                    QMessageBox.warning(self, "错误", "栏目名不能为空！")
+                    return
+                if new_key in self.earning_data:
+                    QMessageBox.warning(self, "错误", f"栏目 '{new_key}' 已存在！")
                 else:
-                    self.data[weight] = []
+                    self.earning_data[new_key] = []
                     self.populate_columns()
-                    self._mark_as_dirty() # 标记更改
-            except ValueError:
-                QMessageBox.warning(self, "错误", "请输入有效的数字作为权重！")
+                    self._mark_as_dirty()
 
     def edit_item(self, item):
         """当项目被双击时，进入编辑模式，并在编辑后进行验证"""
         list_widget = item.listWidget()
-        # 记录旧文本，以便在数据模型中找到并替换它
         old_text = item.text() 
         
-        # 使用一次性连接来处理编辑完成事件
         def on_editing_finished(changed_item):
-            # 确保是同一个项目触发的信号
-            if changed_item is not item:
-                return
+            if changed_item is not item: return
 
             new_text = item.text().strip()
-            weight = list_widget.weight
             
-            # 修复：验证新标签名是否为空
             if not new_text:
                 QMessageBox.warning(self, "编辑失败", "标签名不能为空！")
-                item.setText(old_text) # 恢复旧文本
+                item.setText(old_text)
+            elif self._is_tag_duplicate(new_text, excluding_item=item):
+                QMessageBox.warning(self, "编辑失败", f"标签 '{new_text}' 已存在！")
+                item.setText(old_text)
             else:
-                # 检查新标签是否与除自身外的其他标签重复
-                is_duplicate = any(new_text == t for w, tags in self.data.items() for t in tags if t != old_text)
-                
-                if is_duplicate:
-                    QMessageBox.warning(self, "编辑失败", f"标签 '{new_text}' 已存在！")
-                    item.setText(old_text) # 恢复旧文本
-                else:
-                    try:
-                        index = self.data[weight].index(old_text)
-                        self.data[weight][index] = new_text
-                        self._mark_as_dirty() # 标记更改
-                    except ValueError:
-                        pass # 如果旧文本找不到，忽略
+                file_type = list_widget.file_type
+                key = list_widget.key
+                data_dict = self.weight_data if file_type == 'weight' else self.earning_data
+                try:
+                    index = data_dict[key].index(old_text)
+                    data_dict[key][index] = new_text
+                    self._mark_as_dirty()
+                except ValueError:
+                    pass
             
-            # 断开连接，避免重复触发或内存泄漏
             try:
                 list_widget.itemChanged.disconnect(on_editing_finished)
             except TypeError:
                 pass
 
-        # 在编辑前连接信号
         list_widget.itemChanged.connect(on_editing_finished)
 
-    def keyPressEvent(self, event):
-        print(f"按键事件: {event.key()}, Delete键值: {Qt.Key_Delete}, Backspace键值: {Qt.Key_Backspace}")  # 调试用
-        """处理键盘事件，主要是删除键"""
-        # 同时支持 Delete 和 Backspace 键
-        if event.key() in (Qt.Key_Delete, Qt.Key_Backspace):
-            # 方案1：检查当前有焦点的控件
-            focused_widget = self.focusWidget()
-            if isinstance(focused_widget, QListWidget) and focused_widget.selectedItems():
-                self.delete_selected_items(focused_widget)
-                return
-            
-            # 方案2：如果焦点控件没有选中项，则查找所有有选中项的列表
-            for list_widget in self.list_widgets.values():
-                if list_widget.selectedItems():
-                    self.delete_selected_items(list_widget)
-                    return
-        
-        # 如果没有处理这个按键事件，传递给父类
-        super().keyPressEvent(event)
-
     def list_key_press_event(self, event, list_widget):
-        """处理列表控件的按键事件"""
-        # 同时支持 Delete 和 Backspace 键
+        """处理列表控件的按键事件（删除）"""
         if event.key() in (Qt.Key_Delete, Qt.Key_Backspace) and list_widget.selectedItems():
             self.delete_selected_items(list_widget)
         else:
-            # 调用原始的按键事件处理
             QListWidget.keyPressEvent(list_widget, event)
 
     def on_delete_button_clicked(self):
         """处理顶部删除按钮的点击事件"""
-        # 找出所有列表中被选中的项目
-        all_selected_items = []
-        for list_widget in self.list_widgets.values():
-            all_selected_items.extend(list_widget.selectedItems())
-
+        all_selected_items = [item for lw in self.list_widgets.values() for item in lw.selectedItems()]
         if not all_selected_items:
             QMessageBox.information(self, "提示", "请先在列表中选中要删除的项目。")
             return
-        
-        # 统一调用删除逻辑，只需确认一次
         self.delete_selected_items()
 
     def delete_selected_items(self, list_widget_context=None):
         """删除所有列表中的选中项"""
-        # 如果提供了特定列表的上下文（例如来自右键菜单），则只处理该列表
         widgets_to_process = [list_widget_context] if list_widget_context else self.list_widgets.values()
-        
-        items_to_delete = []
-        for lw in widgets_to_process:
-            items_to_delete.extend(lw.selectedItems())
+        items_to_delete = [item for lw in widgets_to_process for item in lw.selectedItems()]
+        if not items_to_delete: return
 
-        if not items_to_delete:
-            return
-
-        reply = QMessageBox.question(self, '确认删除', 
-                                     f"确定要删除选中的 {len(items_to_delete)} 个项目吗?",
+        reply = QMessageBox.question(self, '确认删除', f"确定要删除选中的 {len(items_to_delete)} 个项目吗?",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
         if reply == QMessageBox.Yes:
             for item in items_to_delete:
                 list_widget = item.listWidget()
-                weight = list_widget.weight
+                file_type = list_widget.file_type
+                key = list_widget.key
+                data_dict = self.weight_data if file_type == 'weight' else self.earning_data
+                
                 list_widget.takeItem(list_widget.row(item))
-                if item.text() in self.data[weight]:
-                    self.data[weight].remove(item.text())
-            self._mark_as_dirty() # 标记更改
+                if item.text() in data_dict[key]:
+                    data_dict[key].remove(item.text())
+            self._mark_as_dirty()
 
     def show_context_menu(self, position):
         """显示右键上下文菜单"""
         list_widget = self.sender()
-        if not list_widget.selectedItems():
-            return
+        if not list_widget.selectedItems(): return
 
         menu = QMenu()
         delete_action = menu.addAction("删除选中项")
-        
         action = menu.exec_(list_widget.mapToGlobal(position))
 
         if action == delete_action:
-            # 调用删除逻辑，并传入当前列表作为上下文
             self.delete_selected_items(list_widget)
 
-    def handle_item_move(self, source_weight, dest_weight, texts):
-        """处理项目在不同列表间移动的逻辑，添加重复检查"""
-        # 1) 先找出哪些标签在目标列表里已经存在
-        duplicates = [t for t in texts if t in self.data[dest_weight]]
-        if duplicates:
-            QMessageBox.warning(
-                self,
-                "重复标签",
-                f"以下标签已存在于权重 {dest_weight} 列表中，将被跳过：\n" +
-                "\n".join(duplicates)
-            )
-
-        # 2) 真正需要移动的标签
-        texts_to_move = [t for t in texts if t not in duplicates]
-        if not texts_to_move:
-            # 全部都是重复的，不做任何事
+    def handle_item_move(self, src_file, src_key, dest_file, dest_key, texts):
+        """处理项目在不同列表间移动的核心逻辑"""
+        # 规则 1: 从 earning 拖拽到 weight 是不允许的
+        if src_file == 'earning' and dest_file == 'weight':
+            QMessageBox.warning(self, "操作无效", "不能将标签从 Earning 栏目移动或复制到 Weight 栏目。")
+            # 重新填充源列表以撤销视觉上的拖拽效果
+            src_list_widget = self.list_widgets[src_key]
+            selected_rows = [item.listWidget().row(item) for item in src_list_widget.selectedItems()]
+            for row in sorted(selected_rows, reverse=True):
+                 src_list_widget.takeItem(row) # 移除
+            self.populate_columns() # 简单粗暴但有效的方式恢复UI
             return
 
-        # 3) 更新底层数据结构
-        for text in texts_to_move:
-            # 从源列表数据中移除
-            if text in self.data[source_weight]:
-                self.data[source_weight].remove(text)
-            # 添加到目标列表数据中
-            self.data[dest_weight].append(text)
+        src_data = self.weight_data if src_file == 'weight' else self.earning_data
+        dest_data = self.weight_data if dest_file == 'weight' else self.earning_data
+        
+        # 规则 2: 同一个文件内部拖拽是“移动”
+        is_move = (src_file == dest_file)
+        # 规则 3: 从 weight 到 earning 是“复制”
+        is_copy = (src_file == 'weight' and dest_file == 'earning')
 
-        # 4) 在对应的两个 QListWidget 上局部更新
-        src_list = self.list_widgets[source_weight]
-        dst_list = self.list_widgets[dest_weight]
+        duplicates = [t for t in texts if t in dest_data[dest_key]]
+        if duplicates:
+            QMessageBox.warning(self, "重复标签", f"以下标签已存在于目标栏目 '{dest_key}'，将被跳过：\n" + "\n".join(duplicates))
 
-        # 4.1 先移除源列表里的那些被移动的项
-        for text in texts_to_move:
-            for row in range(src_list.count()):
-                if src_list.item(row).text() == text:
+        texts_to_process = [t for t in texts if t not in duplicates]
+        if not texts_to_process:
+            return
+
+        # 更新数据模型
+        for text in texts_to_process:
+            if is_move:
+                if text in src_data[src_key]:
+                    src_data[src_key].remove(text)
+            # 无论是移动还是复制，都需要添加到目标
+            dest_data[dest_key].append(text)
+
+        # 更新UI
+        src_list = self.list_widgets[src_key]
+        dest_list = self.list_widgets[dest_key]
+
+        if is_move:
+            # 从源UI列表中移除
+            for row in range(src_list.count() - 1, -1, -1):
+                if src_list.item(row).text() in texts_to_process:
                     src_list.takeItem(row)
-                    break
-
-        # 4.2 再把它们加到目标列表里
-        for text in texts_to_move:
+        
+        # 向目标UI列表添加
+        for text in texts_to_process:
             item = QListWidgetItem(text)
             item.setFlags(item.flags() | Qt.ItemIsEditable)
-            dst_list.addItem(item)
-
-        # 5) 标记为脏
+            dest_list.addItem(item)
+            
         self._mark_as_dirty()
 
-    def save_data(self, notify=True):
-        """将当前数据写回 JSON 文件"""
+    def save_all_data(self, notify=True):
+        """将所有数据写回对应的 JSON 文件"""
         try:
-            with open(self.json_path, 'w', encoding='utf-8') as f:
-                json.dump(self.data, f, ensure_ascii=False, indent=4)
+            # 保存 weight 数据
+            with open(self.weight_json_path, 'w', encoding='utf-8') as f:
+                json.dump(self.weight_data, f, ensure_ascii=False, indent=4)
             
-            # 保存成功后，重置“脏标记”和窗口标题
+            # 保存 earning 数据
+            with open(self.earning_json_path, 'w', encoding='utf-8') as f:
+                json.dump(self.earning_data, f, ensure_ascii=False, indent=4)
+            
             self.is_dirty = False
             self.setWindowTitle(self.base_window_title)
-            # 根据 notify 决定是否弹提示
             if notify:
                 QMessageBox.information(self, "成功", "所有更改已成功保存！")
         except Exception as e:
@@ -464,7 +479,6 @@ class TagEditor(QMainWindow):
 
     def closeEvent(self, event):
         """关闭窗口前检查是否有未保存的更改"""
-        # 只有在 is_dirty 为 True 时才弹出提示
         if self.is_dirty:
             reply = QMessageBox.question(self, '退出确认',
                              "您有未保存的更改。是否在退出前保存？",
@@ -472,14 +486,13 @@ class TagEditor(QMainWindow):
                              QMessageBox.Save)
 
             if reply == QMessageBox.Save:
-                self.save_data(notify=False)
+                self.save_all_data(notify=False)
                 event.accept()
             elif reply == QMessageBox.Discard:
                 event.accept()
-            else: # Cancel
+            else:
                 event.ignore()
         else:
-            # 如果没有未保存的更改，直接接受退出事件
             event.accept()
 
 
