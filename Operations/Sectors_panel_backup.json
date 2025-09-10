@@ -8,7 +8,8 @@
         "VIST": ""
     },
     "Technology": {
-        "MSFT": ""
+        "MSFT": "",
+        "CHYM": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
@@ -111,29 +112,25 @@
         "XRP": ""
     },
     "Today": {
+        "ASTS": "ASTS15热",
+        "CTAS": "",
+        "DUOL": "",
+        "FCX": "",
         "WM": "",
         "TGS": "",
         "SMMT": "",
-        "QS": "",
         "COST": "",
-        "FDS": "",
         "CEG": "CEG15热",
-        "RH": "",
-        "KDP": "",
-        "AVAV": "",
-        "CART": "",
-        "GEV": "",
-        "DASH": ""
+        "RH": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
-        "CTAS": "",
+        "FDS": "",
         "KR": "",
         "BAM": "",
         "CCK": "",
-        "FRPT": "",
         "KMX": ""
     },
     "Strategy12": {},

@@ -36,9 +36,7 @@
     },
     "Financial_Services": {
         "FDS": "",
-        "RYAN": "",
-        "BMA": "",
-        "BBAR": ""
+        "RYAN": ""
     },
     "Healthcare": {
         "BRKR": "",
@@ -114,59 +112,31 @@
         "XRP": ""
     },
     "Today": {
+        "ASTS": "ASTS15热",
+        "CTAS": "",
         "DUOL": "",
+        "FCX": "",
         "WM": "",
         "TGS": "",
         "SMMT": "",
-        "QS": "",
         "COST": "",
-        "FDS": "",
         "CEG": "CEG15热",
-        "RH": "",
-        "KDP": "",
-        "AVAV": "",
-        "CART": "",
-        "GEV": "",
-        "DASH": ""
+        "RH": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
-        "CTAS": "",
+        "FDS": "",
         "KR": "",
         "BAM": "",
         "CCK": "",
-        "FRPT": "",
         "KMX": ""
     },
-    "Strategy12": {
-        "AVAV": "",
-        "DRI": "",
-        "FDS": "",
-        "KR": "",
-        "RH": ""
-    },
-    "Strategy34": {
-        "KMX": ""
-    },
-    "PE_valid": {
-        "ACN": "",
-        "CMG": "",
-        "CTAS": "",
-        "LII": "",
-        "LPLA": "",
-        "MRNA": "",
-        "MSFT": "",
-        "MSTR": "",
-        "NVDA": "NVDA热",
-        "SAP": "SAP7",
-        "SBAC": "",
-        "WSO": ""
-    },
-    "PE_invalid": {
-        "ASTS": "ASTS15热"
-    },
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {},
+    "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

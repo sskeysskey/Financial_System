@@ -515,7 +515,13 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     for i, (scatter, date_v, price_v, text) in enumerate(specific_scatter_points):
         offset = specific_offsets[i % len(specific_offsets)]
         # 在原始事件文本上方，增加一行格式化的日期
-        new_text = f"{text}\n{date_v.strftime('%Y-%m-%d')}"
+        try:
+            latest_price = prices[-1]
+            diff_percent = ((latest_price - price_v) / price_v) * 100 if price_v else 0
+            diff_line = f"{diff_percent:.2f}%"
+        except Exception:
+            diff_line = ""
+        new_text = f"{text}\n{diff_line}\n{date_v.strftime('%Y-%m-%d')}"
         annotation = ax1.annotate(
             new_text, xy=(date_v, price_v), xytext=offset, textcoords="offset points",
             bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=NORD_THEME['text_bright'], alpha=0.8),

@@ -15,6 +15,7 @@
     "SI=F": "Silver",
     "NG=F": "Naturalgas",
     "ZR=F": "Rice",
+    "LBR=F": "Lumber",
     "ZS=F": "Soybean",
     "^TNX": "US10Y",
     "DX-Y.NYB": "DXY",

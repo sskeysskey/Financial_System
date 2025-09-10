@@ -2,7 +2,7 @@ import json
 import sqlite3
 import os
 
-SYMBOL_TO_TRACE = ""
+SYMBOL_TO_TRACE = "IOT"
 LOG_FILE_PATH = "/Users/yanzhang/Downloads/No_Season_trace_log.txt"
 
 # --- 1. 配置文件和路径 ---

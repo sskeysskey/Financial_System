@@ -289,23 +289,24 @@ def process_csv_file(csv_filepath, symbol, group_name, db_path):
     cols = [col_info[1] for col_info in cursor.fetchall()]  # col_info[1] 是列名
     has_vol_in_db = 'volume' in cols
 
-    # --- 对比 CSV vs DB 列 状态，不匹配时报错退出 ---
-    if has_vol_in_db != has_vol_in_csv:
-        if has_vol_in_db and not has_vol_in_csv:
-            msg = f"表 {group_name} 有 volume 列，但 CSV {os.path.basename(csv_filepath)} 中缺少 volume 列头。"
-        else: # not has_vol_in_db and has_vol_in_csv
-            msg = f"表 {group_name} 无 volume 列，但 CSV {os.path.basename(csv_filepath)} 中包含 volume 列头。"
-        conn.close() # 关闭数据库连接前调用 alert_and_exit
-        alert_and_exit(msg) # 这个函数会退出脚本
-
-    # --- 根据是否含 volume 动态构建 UPSERT 语句 & 数据 ---
-    # 注意：现在 rows 中的数据元组结构是统一的（对于有volume的CSV，第四个元素是volume或None）
-    # 或者（对于没有volume列的CSV，元组只有3个元素）
-    # 我们需要确保传递给 executemany 的数据结构与 SQL 语句匹配
-
+    # #############################################################################
+    # ### --- 代码修改开始 --- ###
+    # #############################################################################
+    
+    # 新的逻辑：以数据库表结构为准，决定如何导入数据
+    
     final_rows_for_db = []
-    if has_vol_in_db and has_vol_in_csv:
-        # 四列 upsert
+    upsert_sql = ""
+
+    if has_vol_in_db:
+        # 情况1：数据库表有 'volume' 列
+        if not has_vol_in_csv:
+            # 如果CSV没有 'volume' 列，这是一个错误，因为数据库需要这个数据
+            msg = f"表 {group_name} 有 volume 列，但 CSV {os.path.basename(csv_filepath)} 中缺少 volume 列头。"
+            conn.close()
+            alert_and_exit(msg) # 报错并退出
+
+        # 如果CSV也有 'volume' 列，则准备4列插入
         upsert_sql = f"""
         INSERT INTO {safe_table} (date, name, price, volume)
         VALUES (?, ?, ?, ?)
@@ -313,22 +314,23 @@ def process_csv_file(csv_filepath, symbol, group_name, db_path):
             price = excluded.price,
             volume = excluded.volume;
         """
-        final_rows_for_db = rows # rows 已经是 (date, symbol, price, volume_val)
-    elif not has_vol_in_db and not has_vol_in_csv:
-        # 只有 date,name,price
+        final_rows_for_db = rows # rows 已经是 (date, symbol, price, volume) 的格式
+
+    else:
+        # 情况2：数据库表没有 'volume' 列
+        # 无论CSV文件是否有 'volume' 列，我们都只插入3列数据
         upsert_sql = f"""
         INSERT INTO {safe_table} (date, name, price)
         VALUES (?, ?, ?)
         ON CONFLICT(date, name) DO UPDATE SET
             price = excluded.price;
         """
-        final_rows_for_db = rows # rows 已经是 (date, symbol, price)
-    else:
-        # 这种情况理论上已经被前面的 alert_and_exit 覆盖了，但作为防御性编程可以保留
-        print(f"逻辑错误: CSV 和 DB 的 volume 列状态不匹配，但未被 alert_and_exit 捕获。CSV: {has_vol_in_csv}, DB: {has_vol_in_db}")
-        conn.close()
-        return False
+        # 从 'rows' 中只取前3个元素 (date, symbol, price)，忽略可能存在的第4个元素 (volume)
+        final_rows_for_db = [row[:3] for row in rows]
 
+    # #############################################################################
+    # ### --- 代码修改结束 --- ###
+    # #############################################################################
 
     # --- 执行批量写入 ---
     try:
