@@ -95,7 +95,8 @@
         "LNG",
         "TRP",
         "PSX",
-        "SLB"
+        "SLB",
+        "VLO"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -307,6 +308,7 @@
         "CEG",
         "AEP",
         "VST",
-        "SRE"
+        "SRE",
+        "D"
     ]
 }

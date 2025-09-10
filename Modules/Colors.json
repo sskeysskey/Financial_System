@@ -527,7 +527,8 @@
         "SLGN",
         "KVUE",
         "CRVL",
-        "BMA"
+        "BMA",
+        "BBAR"
     ],
     "yellow_keywords": [
         "XLY",
