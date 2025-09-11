@@ -445,7 +445,7 @@ class SimilarityViewerWindow(QMainWindow):
             latest_earning_date = datetime.strptime(latest_earning_date_str, "%Y-%m-%d").date()
             latest_earning_price = float(latest_earning_price_str) if latest_earning_price_str is not None else 0.0
 
-            # --- 新规则 1: 如果最新财报在45天前，则强制为白色 ---
+            # --- 新规则 1: 如果最新财报在75天前，则强制为白色 ---
             days_diff = (date.today() - latest_earning_date).days
             if days_diff > 75:
                 # 返回None趋势，使调用处逻辑判定为白色

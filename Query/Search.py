@@ -451,9 +451,9 @@ class MainWindow(QMainWindow):
             latest_earning_date = datetime.strptime(latest_earning_date_str, "%Y-%m-%d").date()
             latest_earning_price = float(latest_earning_price_str) if latest_earning_price_str is not None else 0.0
 
-            # --- 新规则 1: 如果最新财报在45天前，则强制为白色 ---
+            # --- 新规则 1: 如果最新财报在75天前，则强制为白色 ---
             days_diff = (date.today() - latest_earning_date).days
-            if days_diff > 45:
+            if days_diff > 75:
                 return latest_earning_price, None, latest_earning_date
 
             # --- 新规则 2: 如果只有一个财报记录，则强制为白色 ---

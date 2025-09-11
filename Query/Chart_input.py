@@ -707,7 +707,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     time_options = {"1m":0.08, "3m":0.25, "6m":0.5, "1Y":1, "2Y":2, "3Y":3, "5Y":5, "10Y":10, "All":0}
     default_index = list(time_options.keys()).index(default_time_range)
 
-    rax = plt.axes([0.95, 0.005, 0.05, 0.8], facecolor=NORD_THEME['background'])
+    rax = plt.axes([0.95, 0.005, 0.05, 0.75], facecolor=NORD_THEME['background'])
     radio = RadioButtons(rax, list(time_options.keys()), active=default_index)
     rax.set_facecolor(NORD_THEME['background'])
     rax.set_frame_on(False)

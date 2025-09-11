@@ -11,11 +11,8 @@
         "MSFT": "",
         "CHYM": "",
         "FI": "",
-        "SNPS": "",
         "ROP": "",
-        "FIS": "",
-        "GIB": "",
-        "FIG": ""
+        "GIB": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
@@ -31,8 +28,7 @@
         "FRPT": "",
         "STZ": "",
         "KDP": "",
-        "BRBR": "",
-        "FLO": ""
+        "BRBR": ""
     },
     "Industrials": {
         "CWST": "",
@@ -47,9 +43,7 @@
     "Financial_Services": {
         "FDS": "",
         "RYAN": "",
-        "CME": "",
-        "MORN": "",
-        "ARX": ""
+        "MORN": ""
     },
     "Healthcare": {
         "BRKR": "",
@@ -126,60 +120,28 @@
         "XRP": ""
     },
     "Today": {
+        "ROP": "",
+        "COST": "",
+        "ICLR": "",
+        "ACN": "",
         "SXT": "",
-        "ASTS": "ASTS15热",
         "CTAS": "",
         "DUOL": "",
-        "FCX": "",
         "WM": "",
-        "TGS": "",
-        "SMMT": "",
-        "COST": "",
-        "CEG": "CEG15热",
-        "RH": ""
+        "RH": "",
+        "CME": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
-        "FDS": "",
         "KR": "",
-        "BAM": "",
-        "CCK": "",
         "KMX": ""
     },
-    "Strategy12": {
-        "DRI": "",
-        "FDS": "",
-        "KR": "",
-        "RH": ""
-    },
-    "Strategy34": {
-        "KMX": ""
-    },
-    "PE_valid": {
-        "ACN": "",
-        "CDNS": "CDNS7热",
-        "CME": "",
-        "CMG": "",
-        "FUTU": "",
-        "IBN": "",
-        "ICLR": "",
-        "IDXX": "",
-        "ISRG": "",
-        "KDP": "",
-        "LII": "",
-        "MSFT": "",
-        "MSTR": "",
-        "ONON": "",
-        "RMD": "",
-        "SAP": "SAP15",
-        "SBAC": "",
-        "SHOP": ""
-    },
-    "PE_invalid": {
-        "SMR": "SMR15热"
-    },
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {},
+    "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
