@@ -45,7 +45,7 @@ def write_output_to_file(output, file_path):
         # 确保目标文件夹存在
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         # 写入文件
-        with open(file_path, 'w') as f:
+        with open(file_path, 'w', encoding='utf-8') as f:
             f.write('\n'.join(output))
         print(f"结果已保存到文件: {file_path}")
     except Exception as e:
@@ -262,11 +262,41 @@ def read_compare_all(file_path):
         print(f"读取Compare_All.txt时发生错误: {e}")
     return compare_data
 
-def process_high_data(input_lines, compare_data):
-    """处理高点数据并添加Compare_All的信息；保留末尾价格"""
+# --- 新增函数：加载 description.json 并创建 tag 映射 ---
+def load_descriptions_and_create_tag_map(file_path):
+    """读取 description.json 并创建一个从 symbol 到 tag 字符串的映射。"""
+    tag_map = {}
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        # 处理 stocks 列表
+        for item in data.get('stocks', []):
+            symbol = item.get('symbol')
+            tags = item.get('tag', [])
+            if symbol and tags:
+                tag_map[symbol] = ','.join(tags)
+                
+        # 处理 etfs 列表
+        for item in data.get('etfs', []):
+            symbol = item.get('symbol')
+            tags = item.get('tag', [])
+            if symbol and tags:
+                tag_map[symbol] = ','.join(tags)
+
+    except Exception as e:
+        print(f"读取或处理 description.json 时发生错误: {e}")
+    
+    return tag_map
+
+# --- 修改函数：增加 tag_map 参数以追加标签信息 ---
+def process_high_data(input_lines, compare_data, tag_map):
+    """处理高点数据，添加Compare_All的信息，并追加description.json中的tags。"""
     processed_lines = []
     for line in input_lines:
         parts = line.split()
+        new_line = ""
+        symbol = ""
         # 现在期望最少有4段：Sector Symbol 10Y_newhigh Price
         if len(parts) >= 4:
             sector = parts[0]
@@ -280,7 +310,6 @@ def process_high_data(input_lines, compare_data):
             else:
                 # 没有 compare_info，则输出 Sector Symbol Price
                 new_line = f"{sector} {symbol} {price_str}"
-            processed_lines.append(new_line)
         elif len(parts) >= 3:
             # 兜底：如果没有价格，尽量保持原逻辑（不推荐，但防御）
             sector = parts[0]
@@ -290,7 +319,16 @@ def process_high_data(input_lines, compare_data):
                 new_line = f"{sector} {symbol} {compare_info}"
             else:
                 new_line = f"{sector} {symbol}"
-            processed_lines.append(new_line)
+        
+        if new_line and symbol:
+            # 查找并追加 tags
+            tags_string = tag_map.get(symbol, '')
+            if tags_string:
+                final_line = f"{new_line} {tags_string}"
+            else:
+                final_line = new_line
+            processed_lines.append(final_line)
+            
     return processed_lines
 
 def move_files_to_backup():
@@ -489,7 +527,9 @@ def main():
         # 读取Compare_All.txt
         compare_data = read_compare_all('/Users/yanzhang/Coding/News/backup/Compare_All.txt')
         
-        # 过滤掉已经存在于10Y_newhigh.json文件且价格低于现有标准的symbol
+        # --- 新增步骤：加载 description.json 并创建 tag 映射 ---
+        tag_map = load_descriptions_and_create_tag_map('/Users/yanzhang/Coding/Financial_System/Modules/description.json')
+        
         filtered_output_high = []
         for line in output_high:
             parts = line.split()
@@ -506,8 +546,8 @@ def main():
                     filtered_output_high.append(line)
 
         if filtered_output_high:
-            # 处理数据并添加Compare_All的信息
-            processed_output = process_high_data(filtered_output_high, compare_data)
+            # --- 修改步骤：将 tag_map 传递给处理函数 ---
+            processed_output = process_high_data(filtered_output_high, compare_data, tag_map)
             
             # 写入处理后的数据
             output_high_file_path = '/Users/yanzhang/Coding/News/10Y_newhigh_new.txt'

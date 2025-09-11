@@ -201,7 +201,7 @@ def process_etf_file(new_file, existing_file):
 # 新增：10Y_newhigh 的 JSON 处理逻辑
 def process_10y_json(new_file, json_file):
     """
-    读取 new_file（每行4段：Sector Symbol Change Price），提取 Symbol 和 Price。
+    读取 new_file（至少 4 段，前 4 段为 Sector Symbol Change Price，后续为可选描述），提取 Symbol 和 Price。
     将其与 json_file 合并：
       - 不存在则新增
       - 存在则当且仅当 new_price > old_price 时更新
@@ -243,12 +243,12 @@ def process_10y_json(new_file, json_file):
                 continue
             # 期望格式：Sector Symbol Change Price
             # 使用 split(maxsplit=3) 可稳妥拿到四段；若不足四段则跳过
-            parts = line.split(maxsplit=3)
-            if len(parts) != 4:
+            parts = line.split()
+            if len(parts) < 4:
                 # 如果 Sector 中本身含下划线，split 不受影响；若出现多余空白也能兼容
-                print(f"跳过异常行（非4段）：{line}")
+                print(f"跳过异常行（少于4段）：{line}")
                 continue
-            sector, symbol, change, price_str = parts
+            sector, symbol, change, price_str = parts[:4]
 
             # 清洗 price：允许诸如 "235.0"、"55.97"；如带逗号则去逗号
             price_clean = price_str.replace(',', '')

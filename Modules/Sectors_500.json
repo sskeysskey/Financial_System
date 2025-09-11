@@ -10,7 +10,8 @@
         "CRH",
         "NEM",
         "AEM",
-        "FCX"
+        "FCX",
+        "B"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -96,7 +97,7 @@
         "TRP",
         "PSX",
         "SLB",
-        "VLO"
+        "SU"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -235,7 +236,8 @@
         "PCAR",
         "LHX",
         "CMI",
-        "FAST"
+        "FAST",
+        "VRT"
     ],
     "Real_Estate": [
         "PLD",
@@ -298,7 +300,8 @@
         "NET",
         "NXPI",
         "TEL",
-        "GLW"
+        "GLW",
+        "CRWV"
     ],
     "Utilities": [
         "NEE",

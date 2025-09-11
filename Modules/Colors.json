@@ -125,7 +125,8 @@
         "AMZN",
         "BRK-A",
         "FTNT",
-        "RSG"
+        "RSG",
+        "CME"
     ],
     "blue_keywords": [
         "US2Y",
@@ -387,7 +388,6 @@
         "TXN",
         "KLAC",
         "ANSS",
-        "GIB",
         "JNPR",
         "TSEM",
         "MSGS",
@@ -528,7 +528,9 @@
         "KVUE",
         "CRVL",
         "BMA",
-        "BBAR"
+        "BBAR",
+        "KEX",
+        "FIS"
     ],
     "yellow_keywords": [
         "XLY",
@@ -769,7 +771,8 @@
         "AI",
         "SG",
         "FRPT",
-        "KDP"
+        "KDP",
+        "GIB"
     ],
     "orange_keywords": [
         "Huangjin",
@@ -826,7 +829,6 @@
         "CGNX",
         "OTEX",
         "NKE",
-        "FLO",
         "CRSP",
         "MRNA",
         "APLS",
@@ -985,7 +987,8 @@
         "BLSH",
         "ARX",
         "FIG",
-        "CHYM"
+        "CHYM",
+        "FLO"
     ],
     "green_keywords": [
         "DXY",

@@ -306,6 +306,7 @@ def execute_external_script(script_type, keyword):
         'event_edit': f'{base_path}/Operations/Editor_Events.py',
         'symbol_compare': f'{base_path}/Query/Compare_Chart.py',
         'panel_input': f'{base_path}/Operations/Insert_Panel.py',
+        'empty_input': f'{base_path}/Operations/Insert_Sector.py',
         'similar_tags': f'{base_path}/Query/Search_Similar_Tag.py',
         'check_kimi': '/Users/yanzhang/Coding/ScriptEditor/Check_Earning.scpt',
         'check_futu': '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt',
@@ -708,6 +709,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     rax = plt.axes([0.95, 0.005, 0.05, 0.8], facecolor=NORD_THEME['background'])
     radio = RadioButtons(rax, list(time_options.keys()), active=default_index)
+    rax.set_facecolor(NORD_THEME['background'])
+    rax.set_frame_on(False)
+    for spine in rax.spines.values():
+        spine.set_visible(False)
     for label in radio.labels:
         label.set_color(NORD_THEME['text_light'])
         label.set_fontsize(14)
@@ -716,7 +721,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         circle.set_facecolor(NORD_THEME['background'])
     radio.circles[default_index].set_facecolor(NORD_THEME['accent_red'])
 
-    instructions = "N:新财报\nE:改财报\nT:改标签\nW:新事件\nQ:改事件\nK:查豆包\nZ:查富途\nP:做比较\nJ:加Panel\nL:查相似"
+    instructions = "N:新财报\nE:改财报\nT:改标签\nW:新事件\nQ:改事件\nK:查豆包\nZ:查富途\nP:做比较\nJ:加Panel\nH:加empty\nL:查相似"
     rax.text(0.5, 0.99, instructions, transform=rax.transAxes, ha="center", va="bottom",
              color=NORD_THEME['text_light'], fontsize=10, fontfamily="Arial Unicode MS")
     
@@ -999,6 +1004,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                        't': lambda: execute_external_script('tags_edit', name),
                        'w': lambda: execute_external_script('event_input', name),
                        'j': lambda: execute_external_script('panel_input', name),
+                       'h': lambda: execute_external_script('empty_input', name),
                        'q': lambda: execute_external_script('event_edit', name),
                        'k': lambda: execute_external_script('check_kimi', name),
                        'z': lambda: execute_external_script('check_futu', name),
