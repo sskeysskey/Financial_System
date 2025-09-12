@@ -28,7 +28,8 @@
         "FRPT": "",
         "STZ": "",
         "KDP": "",
-        "BRBR": ""
+        "BRBR": "",
+        "FLO": ""
     },
     "Industrials": {
         "CWST": "",
@@ -43,7 +44,8 @@
     "Financial_Services": {
         "FDS": "",
         "RYAN": "",
-        "MORN": ""
+        "MORN": "",
+        "ARX": ""
     },
     "Healthcare": {
         "BRKR": "",
@@ -138,10 +140,30 @@
         "KR": "",
         "KMX": ""
     },
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
-    "PE_invalid": {},
+    "Strategy12": {
+        "DRI": "",
+        "FDS": "",
+        "RH": ""
+    },
+    "Strategy34": {
+        "KMX": ""
+    },
+    "PE_valid": {
+        "ACHR": "",
+        "AMD": "AMD15热",
+        "CMG": "",
+        "CVNA": "",
+        "IDXX": "",
+        "KDP": "",
+        "MSFT": "",
+        "MSTR": "",
+        "ONON": "",
+        "SAP": "SAP15",
+        "WSO": ""
+    },
+    "PE_invalid": {
+        "RNA": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

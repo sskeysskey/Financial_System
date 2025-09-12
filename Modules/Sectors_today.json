@@ -480,7 +480,8 @@
     "AMRZ",
     "EGO",
     "BVN",
-    "HBM"
+    "HBM",
+    "AG"
   ],
   "Communication_Services": [
     "GOOGL",
@@ -540,11 +541,9 @@
     "NBIS",
     "GSAT",
     "TIGO",
-    "ANGI",
     "TTD",
     "APP",
     "SATS",
-    "SEAT",
     "PSKY"
   ],
   "Consumer_Cyclical": [
@@ -725,8 +724,7 @@
     "GOLF",
     "HGV",
     "DORM",
-    "SGI",
-    "RSI"
+    "SGI"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -798,11 +796,11 @@
     "PRMB",
     "CALM",
     "LRN",
-    "OTLY",
     "ATGE",
     "SFD",
     "MZTI",
-    "JBS"
+    "JBS",
+    "GHC"
   ],
   "Energy": [
     "XOM",
@@ -874,7 +872,6 @@
     "EXE",
     "SOBO",
     "CRC",
-    "LB",
     "TGS",
     "NXE",
     "CRK",
@@ -999,7 +996,6 @@
     "XP",
     "AEG",
     "BCH",
-    "UWMC",
     "AFG",
     "EWBC",
     "UNM",
@@ -1173,7 +1169,6 @@
     "NTRA",
     "TECH",
     "FMS",
-    "SRPT",
     "THC",
     "MEDP",
     "DVA",
@@ -1223,7 +1218,6 @@
     "KRYS",
     "TEM",
     "MMSI",
-    "SEM",
     "SMMT",
     "LNTH",
     "RNA",
@@ -1530,7 +1524,8 @@
     "MAC",
     "COMP",
     "AHR",
-    "MRP"
+    "MRP",
+    "OPEN"
   ],
   "Technology": [
     "MSFT",
