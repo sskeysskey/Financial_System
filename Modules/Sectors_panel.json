@@ -208,7 +208,10 @@
         "USCPI": "11 USCPI",
         "CoreCPI": "11 CoreCPI",
         "USConfidence": "12 USConfidence",
-        "USInitial": "11 USInitial"
+        "USInitial": "11 USInitial",
+        "ImportPriceM": "16 ImportPriceM",
+        "USRetailM": "16 USRetailM",
+        "USInterest": "17 USInterest"
     },
     "Economic_All": {
         "USGDP": "",
