@@ -35,17 +35,13 @@
         "CWST": "",
         "WM": "",
         "RELX": "",
-        "WSO": "",
         "KEX": ""
     },
-    "Communication_Services": {
-        "SEAT": ""
-    },
+    "Communication_Services": {},
     "Financial_Services": {
         "FDS": "",
         "RYAN": "",
-        "MORN": "",
-        "ARX": ""
+        "MORN": ""
     },
     "Healthcare": {
         "BRKR": "",
@@ -122,48 +118,28 @@
         "XRP": ""
     },
     "Today": {
-        "ROP": "",
+        "RNA": "",
         "COST": "",
         "ICLR": "",
-        "ACN": "",
-        "SXT": "",
         "CTAS": "",
         "DUOL": "",
         "WM": "",
-        "RH": "",
         "CME": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
-        "KR": "",
-        "KMX": ""
-    },
-    "Strategy12": {
-        "DRI": "",
+        "ACN": "",
         "FDS": "",
-        "RH": ""
-    },
-    "Strategy34": {
+        "KR": "",
+        "DRI": "",
         "KMX": ""
     },
-    "PE_valid": {
-        "ACHR": "",
-        "AMD": "AMD15热",
-        "CMG": "",
-        "CVNA": "",
-        "IDXX": "",
-        "KDP": "",
-        "MSFT": "",
-        "MSTR": "",
-        "ONON": "",
-        "SAP": "SAP15",
-        "WSO": ""
-    },
-    "PE_invalid": {
-        "RNA": ""
-    },
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {},
+    "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
