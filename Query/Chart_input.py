@@ -182,11 +182,17 @@ def update_plot(line1, gradient_image, line2, dates, prices, volumes, ax1, ax2, 
 
     min_p, max_p = np.min(prices), np.max(prices)
     if min_p == max_p:
+        # 当所有点相等时给一个对称 buffer
         buffer = abs(min_p * 0.1) if min_p != 0 else 0.1
         buffer = max(buffer, 1e-6)
         min_p -= buffer
         max_p += buffer
-    ax1.set_ylim(min_p, max_p)
+    # 在正常情况下，对上限加一点“呼吸空间”
+    y_range = max_p - min_p
+    # 比例式 padding（顶部多一点），可根据需要调整比例
+    top_pad = max(y_range * 0.03, 0.02 * max(1.0, abs(max_p)))   # 至少给一个相对最小值
+    bottom_pad = y_range * 0.01
+    ax1.set_ylim(min_p - bottom_pad, max_p + top_pad)
 
     if show_volume:
         if volumes and any(v is not None for v in volumes):

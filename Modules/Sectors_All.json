@@ -413,7 +413,6 @@
     "WTV",
     "ROBO",
     "HEZU",
-    "PRFZ",
     "EZU",
     "IXP",
     "PSP",
@@ -461,7 +460,8 @@
     "FXF",
     "RING",
     "ISCF",
-    "FTHI"
+    "FTHI",
+    "EZM"
   ],
   "Basic_Materials": [
     "LIN",

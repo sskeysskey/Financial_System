@@ -30,8 +30,7 @@
         "STZ": "",
         "KDP": "",
         "BRBR": "",
-        "FLO": "",
-        "KO": ""
+        "FLO": ""
     },
     "Industrials": {
         "CWST": "",
@@ -46,8 +45,7 @@
         "RYAN": "",
         "MORN": "",
         "BMA": "",
-        "BBAR": "",
-        "ARX": ""
+        "BBAR": ""
     },
     "Healthcare": {
         "BRKR": "",
@@ -125,51 +123,29 @@
         "XRP": ""
     },
     "Today": {
-        "RNA": "",
-        "COST": "",
-        "ICLR": "",
-        "CTAS": "",
+        "SNOW": "",
+        "BNTX": "",
+        "BURL": "",
+        "FERG": "",
         "DUOL": "",
-        "WM": "",
-        "CME": ""
+        "COST": "",
+        "CTAS": "",
+        "WM": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
+        "DRI": "",
         "ACN": "",
         "FDS": "",
         "KR": "",
-        "DRI": "",
         "KMX": ""
     },
-    "Strategy12": {
-        "DRI": "",
-        "FDS": ""
-    },
-    "Strategy34": {
-        "BURL": "",
-        "KMX": ""
-    },
-    "PE_valid": {
-        "ACN": "",
-        "BNTX": "",
-        "CDNS": "CDNS7热",
-        "CMG": "",
-        "CVNA": "",
-        "DHR": "",
-        "FIVE": "",
-        "ISRG": "",
-        "KDP": "",
-        "LII": "",
-        "MRNA": "",
-        "MSTR": "",
-        "RMD": "",
-        "SAP": "SAP15"
-    },
-    "PE_invalid": {
-        "SNOW": ""
-    },
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {},
+    "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
@@ -214,7 +190,7 @@
         "USCPI": "11 USCPI",
         "CoreCPI": "11 CoreCPI",
         "USConfidence": "12 USConfidence",
-        "USInitial": "11 USInitial",
+        "USInitial": "18 USInitial",
         "ImportPriceM": "16 ImportPriceM",
         "USRetailM": "16 USRetailM",
         "USInterest": "17 USInterest"

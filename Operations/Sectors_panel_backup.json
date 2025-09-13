@@ -5,7 +5,8 @@
     },
     "Energy": {
         "OKE": "",
-        "VIST": ""
+        "VIST": "",
+        "SUN": ""
     },
     "Technology": {
         "MSFT": "",
@@ -35,18 +36,22 @@
         "CWST": "",
         "WM": "",
         "RELX": "",
-        "KEX": ""
+        "KEX": "",
+        "WSO": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
         "FDS": "",
         "RYAN": "",
-        "MORN": ""
+        "MORN": "",
+        "BMA": "",
+        "BBAR": ""
     },
     "Healthcare": {
         "BRKR": "",
         "PRCT": "",
-        "ALC": ""
+        "ALC": "",
+        "MRNA": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -118,22 +123,23 @@
         "XRP": ""
     },
     "Today": {
-        "RNA": "",
-        "COST": "",
-        "ICLR": "",
-        "CTAS": "",
+        "SNOW": "",
+        "BNTX": "",
+        "BURL": "",
+        "FERG": "",
         "DUOL": "",
-        "WM": "",
-        "CME": ""
+        "COST": "",
+        "CTAS": "",
+        "WM": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
+        "DRI": "",
         "ACN": "",
         "FDS": "",
         "KR": "",
-        "DRI": "",
         "KMX": ""
     },
     "Strategy12": {},
@@ -184,7 +190,7 @@
         "USCPI": "11 USCPI",
         "CoreCPI": "11 CoreCPI",
         "USConfidence": "12 USConfidence",
-        "USInitial": "11 USInitial",
+        "USInitial": "18 USInitial",
         "ImportPriceM": "16 ImportPriceM",
         "USRetailM": "16 USRetailM",
         "USInterest": "17 USInterest"
