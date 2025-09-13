@@ -530,7 +530,8 @@
         "BMA",
         "BBAR",
         "KEX",
-        "FIS"
+        "FIS",
+        "SUN"
     ],
     "yellow_keywords": [
         "XLY",

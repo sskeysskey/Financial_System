@@ -5,7 +5,8 @@
     },
     "Energy": {
         "OKE": "",
-        "VIST": ""
+        "VIST": "",
+        "SUN": ""
     },
     "Technology": {
         "MSFT": "",
@@ -29,24 +30,30 @@
         "STZ": "",
         "KDP": "",
         "BRBR": "",
-        "FLO": ""
+        "FLO": "",
+        "KO": ""
     },
     "Industrials": {
         "CWST": "",
         "WM": "",
         "RELX": "",
-        "KEX": ""
+        "KEX": "",
+        "WSO": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
         "FDS": "",
         "RYAN": "",
-        "MORN": ""
+        "MORN": "",
+        "BMA": "",
+        "BBAR": "",
+        "ARX": ""
     },
     "Healthcare": {
         "BRKR": "",
         "PRCT": "",
-        "ALC": ""
+        "ALC": "",
+        "MRNA": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -136,10 +143,33 @@
         "DRI": "",
         "KMX": ""
     },
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
-    "PE_invalid": {},
+    "Strategy12": {
+        "DRI": "",
+        "FDS": ""
+    },
+    "Strategy34": {
+        "BURL": "",
+        "KMX": ""
+    },
+    "PE_valid": {
+        "ACN": "",
+        "BNTX": "",
+        "CDNS": "CDNS7热",
+        "CMG": "",
+        "CVNA": "",
+        "DHR": "",
+        "FIVE": "",
+        "ISRG": "",
+        "KDP": "",
+        "LII": "",
+        "MRNA": "",
+        "MSTR": "",
+        "RMD": "",
+        "SAP": "SAP15"
+    },
+    "PE_invalid": {
+        "SNOW": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
