@@ -109,7 +109,6 @@
         "COF",
         "BK",
         "MFG",
-        "ISRG",
         "SYK",
         "AVGO",
         "ADP",
@@ -531,7 +530,10 @@
         "BBAR",
         "KEX",
         "FIS",
-        "SUN"
+        "SUN",
+        "BRO",
+        "ISRG",
+        "ADMA"
     ],
     "yellow_keywords": [
         "XLY",
@@ -772,7 +774,6 @@
         "AI",
         "SG",
         "FRPT",
-        "KDP",
         "GIB"
     ],
     "orange_keywords": [
@@ -901,7 +902,8 @@
         "CNI",
         "TENB",
         "NICE",
-        "AMCR"
+        "AMCR",
+        "KDP"
     ],
     "black_keywords": [
         "VFC",
