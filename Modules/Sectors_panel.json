@@ -1,7 +1,7 @@
 {
     "Basic_Materials": {},
     "Real_Estate": {
-        "SBAC": ""
+        "UDR": ""
     },
     "Energy": {
         "OKE": "",
@@ -9,13 +9,11 @@
         "SUN": ""
     },
     "Technology": {
-        "MSFT": "",
         "CHYM": "",
         "FI": "",
-        "ROP": "",
         "GIB": "",
         "ACN": "",
-        "JKHY": ""
+        "ROP": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
@@ -41,12 +39,12 @@
     "Industrials": {
         "CWST": "",
         "WM": "",
-        "RELX": "",
         "KEX": "",
         "WSO": "",
         "CTAS": "",
-        "VRSK": "",
-        "UHAL": ""
+        "UHAL": "",
+        "RSG": "",
+        "VRSK": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
@@ -57,17 +55,20 @@
         "BBAR": "",
         "CME": "",
         "BRO": "",
-        "ERIE": ""
+        "ERIE": "",
+        "MMC": "",
+        "RLI": "",
+        "CNS": "",
+        "ARX": ""
     },
     "Healthcare": {
-        "BRKR": "",
         "PRCT": "",
         "ALC": "",
-        "MRNA": "",
         "ISRG": "",
         "GKOS": "",
         "LNTH": "",
-        "ADMA": ""
+        "ADMA": "",
+        "MMSI": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -139,58 +140,57 @@
         "XRP": ""
     },
     "Today": {
-        "SNOW": "",
+        "BSX": "",
+        "ACN": "",
         "BNTX": "",
         "BURL": "",
-        "FERG": "",
         "DUOL": "",
         "COST": "",
-        "CTAS": "",
-        "WM": ""
+        "CTAS": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
-        "DRI": "",
+        "AMTM": "",
         "ACN": "",
         "FDS": "",
-        "KR": "",
         "KMX": ""
     },
     "Strategy12": {
         "COST": "",
         "CTAS": "",
-        "DRI": "",
         "FDS": "",
         "KMX": ""
     },
     "Strategy34": {
+        "BURL": "",
         "GWRE": ""
     },
     "PE_valid": {
-        "ACN": "",
+        "ADP": "",
         "BROS": "",
-        "BSX": "",
         "CAVA": "",
         "CME": "",
         "CMG": "",
         "DHR": "",
+        "EAT": "",
+        "EW": "",
+        "FCNCA": "",
         "FUTU": "",
+        "GILD": "",
         "IDXX": "",
         "ISRG": "",
         "KDP": "",
         "LPLA": "",
         "LRN": "",
-        "MKC": "",
-        "MRNA": "",
         "MSTR": "",
         "ROP": "",
         "SAP": "SAP15",
-        "TYL": ""
+        "WM": ""
     },
     "PE_invalid": {
-        "RNA": ""
+        "SNOW": ""
     },
     "Currencies": {
         "DXY": "美元指数",

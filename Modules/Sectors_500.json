@@ -55,7 +55,9 @@
         "CPNG",
         "ORLY",
         "DHI",
-        "LCID"
+        "LCID",
+        "JD",
+        "TCOM"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -96,7 +98,8 @@
         "TRP",
         "PSX",
         "SLB",
-        "SU"
+        "SU",
+        "VLO"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -245,8 +248,7 @@
         "WELL",
         "SPG",
         "DLR",
-        "O",
-        "PSA"
+        "O"
     ],
     "Technology": [
         "AAPL",
