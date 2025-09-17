@@ -58,8 +58,7 @@
         "ERIE": "",
         "MMC": "",
         "RLI": "",
-        "CNS": "",
-        "ARX": ""
+        "CNS": ""
     },
     "Healthcare": {
         "PRCT": "",
@@ -140,6 +139,10 @@
         "XRP": ""
     },
     "Today": {
+        "GILD": "",
+        "ADP": "",
+        "SNOW": "",
+        "CALM": "",
         "BSX": "",
         "ACN": "",
         "BNTX": "",
@@ -152,46 +155,17 @@
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
+        "KDP": "",
         "AMTM": "",
         "ACN": "",
         "FDS": "",
-        "KMX": ""
+        "KMX": "",
+        "EW": ""
     },
-    "Strategy12": {
-        "COST": "",
-        "CTAS": "",
-        "FDS": "",
-        "KMX": ""
-    },
-    "Strategy34": {
-        "BURL": "",
-        "GWRE": ""
-    },
-    "PE_valid": {
-        "ADP": "",
-        "BROS": "",
-        "CAVA": "",
-        "CME": "",
-        "CMG": "",
-        "DHR": "",
-        "EAT": "",
-        "EW": "",
-        "FCNCA": "",
-        "FUTU": "",
-        "GILD": "",
-        "IDXX": "",
-        "ISRG": "",
-        "KDP": "",
-        "LPLA": "",
-        "LRN": "",
-        "MSTR": "",
-        "ROP": "",
-        "SAP": "SAP15",
-        "WM": ""
-    },
-    "PE_invalid": {
-        "SNOW": ""
-    },
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {},
+    "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

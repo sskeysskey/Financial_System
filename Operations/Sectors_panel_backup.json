@@ -1,6 +1,8 @@
 {
     "Basic_Materials": {},
-    "Real_Estate": {},
+    "Real_Estate": {
+        "UDR": ""
+    },
     "Energy": {
         "OKE": "",
         "VIST": "",
@@ -10,7 +12,8 @@
         "CHYM": "",
         "FI": "",
         "GIB": "",
-        "ACN": ""
+        "ACN": "",
+        "ROP": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
@@ -39,7 +42,9 @@
         "KEX": "",
         "WSO": "",
         "CTAS": "",
-        "UHAL": ""
+        "UHAL": "",
+        "RSG": "",
+        "VRSK": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
@@ -50,7 +55,10 @@
         "BBAR": "",
         "CME": "",
         "BRO": "",
-        "ERIE": ""
+        "ERIE": "",
+        "MMC": "",
+        "RLI": "",
+        "CNS": ""
     },
     "Healthcare": {
         "PRCT": "",
@@ -58,7 +66,8 @@
         "ISRG": "",
         "GKOS": "",
         "LNTH": "",
-        "ADMA": ""
+        "ADMA": "",
+        "MMSI": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -130,6 +139,10 @@
         "XRP": ""
     },
     "Today": {
+        "GILD": "",
+        "ADP": "",
+        "SNOW": "",
+        "CALM": "",
         "BSX": "",
         "ACN": "",
         "BNTX": "",
@@ -142,10 +155,12 @@
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
+        "KDP": "",
         "AMTM": "",
         "ACN": "",
         "FDS": "",
-        "KMX": ""
+        "KMX": "",
+        "EW": ""
     },
     "Strategy12": {},
     "Strategy34": {},
