@@ -64,8 +64,7 @@
         "ERIE": "",
         "MMC": "",
         "RLI": "",
-        "CNS": "",
-        "ARX": ""
+        "CNS": ""
     },
     "Healthcare": {
         "PRCT": "",
@@ -118,6 +117,7 @@
         "Aluminum": "铝",
         "Steel": "",
         "IronOre": "",
+        "Lumber": "",
         "Platinum": "",
         "Cocoa": "",
         "Coffee": "",
@@ -147,12 +147,12 @@
         "XRP": ""
     },
     "Today": {
+        "KDP": "",
+        "BR": "",
         "GILD": "",
         "ADP": "",
         "SNOW": "",
-        "CALM": "",
         "BSX": "",
-        "ACN": "",
         "BNTX": "",
         "BURL": "",
         "DUOL": "",
@@ -170,30 +170,9 @@
         "KMX": "",
         "EW": ""
     },
-    "Strategy12": {
-        "COST": "",
-        "CTAS": "",
-        "FDS": "",
-        "KMX": ""
-    },
-    "Strategy34": {
-        "BURL": "",
-        "GWRE": ""
-    },
-    "PE_valid": {
-        "BR": "",
-        "EW": "",
-        "FUTU": "",
-        "IDXX": "",
-        "ISRG": "",
-        "KDP": "",
-        "LII": "",
-        "LPLA": "",
-        "MSTR": "",
-        "NVDA": "NVDA7热",
-        "VRSK": "",
-        "WM": ""
-    },
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {},
     "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",

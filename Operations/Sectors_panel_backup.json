@@ -1,7 +1,10 @@
 {
-    "Basic_Materials": {},
+    "Basic_Materials": {
+        "BCC": ""
+    },
     "Real_Estate": {
-        "UDR": ""
+        "UDR": "",
+        "WY": ""
     },
     "Energy": {
         "OKE": "",
@@ -34,7 +37,8 @@
         "KO": "",
         "CL": "",
         "POST": "",
-        "MKC": ""
+        "MKC": "",
+        "TAP": ""
     },
     "Industrials": {
         "CWST": "",
@@ -44,7 +48,9 @@
         "CTAS": "",
         "UHAL": "",
         "RSG": "",
-        "VRSK": ""
+        "VRSK": "",
+        "ODFL": "",
+        "LSTR": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
@@ -67,7 +73,8 @@
         "GKOS": "",
         "LNTH": "",
         "ADMA": "",
-        "MMSI": ""
+        "MMSI": "",
+        "COO": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -110,6 +117,7 @@
         "Aluminum": "铝",
         "Steel": "",
         "IronOre": "",
+        "Lumber": "",
         "Platinum": "",
         "Cocoa": "",
         "Coffee": "",
@@ -139,12 +147,12 @@
         "XRP": ""
     },
     "Today": {
+        "KDP": "",
+        "BR": "",
         "GILD": "",
         "ADP": "",
         "SNOW": "",
-        "CALM": "",
         "BSX": "",
-        "ACN": "",
         "BNTX": "",
         "BURL": "",
         "DUOL": "",

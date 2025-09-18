@@ -556,7 +556,8 @@
         "SRPT",
         "SEM",
         "SEAT",
-        "RSI"
+        "RSI",
+        "DAY"
     ],
     "etf": [
         "VDE",
@@ -816,6 +817,8 @@
         "CAVA",
         "CMG",
         "EAT",
-        "FCNCA"
+        "FCNCA",
+        "LPLA",
+        "MSTR"
     ]
 }
