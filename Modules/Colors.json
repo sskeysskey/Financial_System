@@ -296,7 +296,6 @@
         "CSL",
         "KBH",
         "FG",
-        "GPK",
         "SMG",
         "PAG",
         "NTAP",
@@ -476,7 +475,6 @@
         "TSN",
         "CNA",
         "IRT",
-        "LNTH",
         "WAT",
         "GMED",
         "LMT",
@@ -546,7 +544,6 @@
         "ICL",
         "PCTY",
         "CNH",
-        "WY",
         "SQM",
         "ULTA",
         "VALE",
@@ -775,7 +772,9 @@
         "AI",
         "SG",
         "FRPT",
-        "GIB"
+        "GIB",
+        "GPK",
+        "LNTH"
     ],
     "orange_keywords": [
         "Huangjin",
@@ -906,7 +905,8 @@
         "TENB",
         "NICE",
         "AMCR",
-        "KDP"
+        "KDP",
+        "WY"
     ],
     "black_keywords": [
         "VFC",

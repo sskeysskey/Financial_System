@@ -12,9 +12,26 @@
     "Consumer_Defensive": [],
     "Energy": [],
     "Financial_Services": [],
-    "Healthcare": [],
-    "Industrials": [],
+    "Healthcare": [
+        "BSX"
+    ],
+    "Industrials": [
+        "CTAS",
+        "AMTM",
+        "WM",
+        "VRSK",
+        "LII"
+    ],
     "Real_Estate": [],
-    "Technology": [],
+    "Technology": [
+        "NVDA",
+        "MSTR",
+        "GWRE",
+        "ADP",
+        "DUOL",
+        "ACN",
+        "SNOW",
+        "BR"
+    ],
     "Utilities": []
 }

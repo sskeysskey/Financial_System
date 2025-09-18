@@ -1,7 +1,10 @@
 {
-    "Basic_Materials": {},
+    "Basic_Materials": {
+        "BCC": ""
+    },
     "Real_Estate": {
-        "UDR": ""
+        "UDR": "",
+        "WY": ""
     },
     "Energy": {
         "OKE": "",
@@ -34,7 +37,8 @@
         "KO": "",
         "CL": "",
         "POST": "",
-        "MKC": ""
+        "MKC": "",
+        "TAP": ""
     },
     "Industrials": {
         "CWST": "",
@@ -44,7 +48,9 @@
         "CTAS": "",
         "UHAL": "",
         "RSG": "",
-        "VRSK": ""
+        "VRSK": "",
+        "ODFL": "",
+        "LSTR": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
@@ -58,7 +64,8 @@
         "ERIE": "",
         "MMC": "",
         "RLI": "",
-        "CNS": ""
+        "CNS": "",
+        "ARX": ""
     },
     "Healthcare": {
         "PRCT": "",
@@ -67,7 +74,8 @@
         "GKOS": "",
         "LNTH": "",
         "ADMA": "",
-        "MMSI": ""
+        "MMSI": "",
+        "COO": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -162,9 +170,30 @@
         "KMX": "",
         "EW": ""
     },
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
+    "Strategy12": {
+        "COST": "",
+        "CTAS": "",
+        "FDS": "",
+        "KMX": ""
+    },
+    "Strategy34": {
+        "BURL": "",
+        "GWRE": ""
+    },
+    "PE_valid": {
+        "BR": "",
+        "EW": "",
+        "FUTU": "",
+        "IDXX": "",
+        "ISRG": "",
+        "KDP": "",
+        "LII": "",
+        "LPLA": "",
+        "MSTR": "",
+        "NVDA": "NVDA7热",
+        "VRSK": "",
+        "WM": ""
+    },
     "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
