@@ -16,7 +16,9 @@
         "FI": "",
         "GIB": "",
         "ACN": "",
-        "ROP": ""
+        "ROP": "",
+        "FIS": "",
+        "JKHY": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
@@ -50,7 +52,8 @@
         "RSG": "",
         "VRSK": "",
         "ODFL": "",
-        "LSTR": ""
+        "LSTR": "",
+        "TRI": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
@@ -147,27 +150,23 @@
         "XRP": ""
     },
     "Today": {
-        "KDP": "",
-        "BR": "",
-        "GILD": "",
-        "ADP": "",
-        "SNOW": "",
+        "SPGI": "",
+        "NDAQ": "",
+        "CTAS": "",
+        "EW": "",
         "BSX": "",
         "BNTX": "",
-        "BURL": "",
-        "DUOL": "",
-        "CTAS": ""
+        "BURL": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
+        "DUOL": "",
+        "EW": "",
         "KDP": "",
-        "AMTM": "",
         "ACN": "",
-        "FDS": "",
-        "KMX": "",
-        "EW": ""
+        "KMX": ""
     },
     "Strategy12": {},
     "Strategy34": {},

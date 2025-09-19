@@ -150,50 +150,27 @@
         "XRP": ""
     },
     "Today": {
-        "KDP": "",
-        "BR": "",
-        "GILD": "",
-        "ADP": "",
-        "SNOW": "",
+        "SPGI": "",
+        "NDAQ": "",
+        "CTAS": "",
+        "EW": "",
         "BSX": "",
         "BNTX": "",
-        "BURL": "",
-        "DUOL": "",
-        "CTAS": ""
+        "BURL": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
-        "KDP": "",
-        "AMTM": "",
-        "ACN": "",
-        "FDS": "",
-        "KMX": "",
-        "EW": ""
-    },
-    "Strategy12": {
-        "COST": "",
-        "CTAS": ""
-    },
-    "Strategy34": {
-        "BURL": "",
-        "NKE": ""
-    },
-    "PE_valid": {
-        "ACN": "",
-        "DPZ": "",
+        "DUOL": "",
         "EW": "",
-        "FUTU": "",
-        "ISRG": "",
-        "LII": "",
-        "MSFT": "",
-        "NDAQ": "",
-        "SPGI": "",
-        "TRI": "",
-        "VRSK": "",
-        "WM": ""
+        "KDP": "",
+        "ACN": "",
+        "KMX": ""
     },
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {},
     "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
