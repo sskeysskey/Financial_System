@@ -16,7 +16,9 @@
         "FI": "",
         "GIB": "",
         "ACN": "",
-        "ROP": ""
+        "ROP": "",
+        "FIS": "",
+        "JKHY": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
@@ -50,7 +52,8 @@
         "RSG": "",
         "VRSK": "",
         "ODFL": "",
-        "LSTR": ""
+        "LSTR": "",
+        "TRI": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
@@ -156,7 +159,6 @@
         "BNTX": "",
         "BURL": "",
         "DUOL": "",
-        "COST": "",
         "CTAS": ""
     },
     "Next Week": {},
@@ -170,9 +172,28 @@
         "KMX": "",
         "EW": ""
     },
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
+    "Strategy12": {
+        "COST": "",
+        "CTAS": ""
+    },
+    "Strategy34": {
+        "BURL": "",
+        "NKE": ""
+    },
+    "PE_valid": {
+        "ACN": "",
+        "DPZ": "",
+        "EW": "",
+        "FUTU": "",
+        "ISRG": "",
+        "LII": "",
+        "MSFT": "",
+        "NDAQ": "",
+        "SPGI": "",
+        "TRI": "",
+        "VRSK": "",
+        "WM": ""
+    },
     "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
