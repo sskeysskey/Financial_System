@@ -532,7 +532,9 @@
         "BRO",
         "ISRG",
         "ADMA",
-        "CNS"
+        "CNS",
+        "K",
+        "INGR"
     ],
     "yellow_keywords": [
         "XLY",
@@ -761,7 +763,6 @@
         "BCC",
         "ELS",
         "NSIT",
-        "FDS",
         "ADBE",
         "BRBR",
         "IT",
@@ -906,7 +907,8 @@
         "NICE",
         "AMCR",
         "KDP",
-        "WY"
+        "WY",
+        "FDS"
     ],
     "black_keywords": [
         "VFC",
