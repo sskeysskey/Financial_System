@@ -217,9 +217,6 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "ImportPriceM": "16 ImportPriceM",
-        "USRetailM": "16 USRetailM",
-        "USInterest": "17 USInterest",
         "USInitial": "25 USInitial",
         "CorePCEY": "26 CorePCEY",
         "CorePCEM": "26 CorePCEM",
