@@ -18,8 +18,7 @@
         "ACN": "",
         "ROP": "",
         "FIS": "",
-        "JKHY": "",
-        "CWAN": ""
+        "JKHY": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
@@ -155,8 +154,9 @@
         "XRP": ""
     },
     "Today": {
+        "CART": "",
+        "HESM": "",
         "SPGI": "",
-        "NDAQ": "",
         "CTAS": "",
         "BSX": "",
         "BNTX": "",
@@ -166,49 +166,17 @@
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
+        "CART": "",
         "DUOL": "",
         "EW": "",
         "KDP": "",
         "ACN": "",
-        "KMX": ""
+        "KMX": "",
+        "GWRE": ""
     },
-    "Strategy12": {
-        "COST": "",
-        "CTAS": ""
-    },
-    "Strategy34": {
-        "BURL": "",
-        "GWRE": "",
-        "NKE": ""
-    },
-    "PE_valid": {
-        "ACN": "",
-        "AVY": "",
-        "BALL": "",
-        "BR": "",
-        "CART": "",
-        "CNH": "",
-        "DPZ": "",
-        "EW": "",
-        "FUTU": "",
-        "G": "",
-        "GNRC": "",
-        "ISRG": "",
-        "KDP": "",
-        "LII": "",
-        "PAYX": "",
-        "ROP": "",
-        "SHAK": "",
-        "TRI": "",
-        "TRU": "",
-        "TXRH": "",
-        "TYL": "",
-        "VRSK": "",
-        "VRSN": "",
-        "WM": "",
-        "WST": "",
-        "WY": ""
-    },
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {},
     "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
@@ -249,10 +217,11 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "ImportPriceM": "16 ImportPriceM",
-        "USRetailM": "16 USRetailM",
-        "USInterest": "17 USInterest",
-        "USInitial": "18 USInitial"
+        "USInitial": "25 USInitial",
+        "CorePCEY": "26 CorePCEY",
+        "CorePCEM": "26 CorePCEM",
+        "PCEY": "26 PCEY",
+        "USConfidence": "26 USConfidence"
     },
     "Economic_All": {
         "USGDP": "",

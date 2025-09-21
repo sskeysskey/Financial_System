@@ -40,7 +40,10 @@
         "CL": "",
         "POST": "",
         "MKC": "",
-        "TAP": ""
+        "TAP": "",
+        "CHD": "",
+        "K": "",
+        "INGR": ""
     },
     "Industrials": {
         "CWST": "",
@@ -67,7 +70,8 @@
         "ERIE": "",
         "MMC": "",
         "RLI": "",
-        "CNS": ""
+        "CNS": "",
+        "ARX": ""
     },
     "Healthcare": {
         "PRCT": "",
@@ -150,8 +154,9 @@
         "XRP": ""
     },
     "Today": {
+        "CART": "",
+        "HESM": "",
         "SPGI": "",
-        "NDAQ": "",
         "CTAS": "",
         "BSX": "",
         "BNTX": "",
@@ -161,11 +166,13 @@
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
+        "CART": "",
         "DUOL": "",
         "EW": "",
         "KDP": "",
         "ACN": "",
-        "KMX": ""
+        "KMX": "",
+        "GWRE": ""
     },
     "Strategy12": {},
     "Strategy34": {},
@@ -213,7 +220,11 @@
         "ImportPriceM": "16 ImportPriceM",
         "USRetailM": "16 USRetailM",
         "USInterest": "17 USInterest",
-        "USInitial": "18 USInitial"
+        "USInitial": "25 USInitial",
+        "CorePCEY": "26 CorePCEY",
+        "CorePCEM": "26 CorePCEM",
+        "PCEY": "26 PCEY",
+        "USConfidence": "26 USConfidence"
     },
     "Economic_All": {
         "USGDP": "",

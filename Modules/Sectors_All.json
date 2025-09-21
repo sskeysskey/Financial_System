@@ -305,7 +305,6 @@
     "VWOB",
     "TMF",
     "CNYA",
-    "IPAC",
     "INDA",
     "URA",
     "USO",
@@ -462,7 +461,8 @@
     "FTHI",
     "EZM",
     "CRBN",
-    "SIXG"
+    "SIXG",
+    "DBEU"
   ],
   "Basic_Materials": [
     "LIN",

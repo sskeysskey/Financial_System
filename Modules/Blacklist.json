@@ -343,7 +343,8 @@
         "FSK",
         "VERX",
         "MKTX",
-        "CRVL"
+        "CRVL",
+        "CWAN"
     ],
     "screener": [
         "CTA-PA",
@@ -801,7 +802,8 @@
         "KBWP",
         "MFEM",
         "FTSD",
-        "GVAL"
+        "GVAL",
+        "IPAC"
     ],
     "Earning": [
         "TW",
