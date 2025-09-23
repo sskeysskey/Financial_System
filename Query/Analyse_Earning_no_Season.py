@@ -55,13 +55,19 @@ CONFIG = {
     "PRICE_DROP_PERCENTAGE_SMALL": 0.06, # 2000亿 ≤ 市值 < 5000亿 = 6%
     "PRICE_DROP_PERCENTAGE_MEGA": 0.05,  # ≥5000亿=5%
     
-    # 宽松筛选标准 (当第一轮结果数量不足时启用)
+    # 普通宽松筛选标准
     "RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.07, # <2000亿=7%
     "RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.05, # ≥2000亿=5%
-    # 新增：更宽松的筛选标准 (仅在满足特定条件时启用)
-    "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.05,
-    "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.03,
-    # 新增：触发“更宽松”标准的财报收盘价价差百分比
+    
+    # 新增：次宽松筛选标准
+    "SUB_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.06, # <2000亿=6%
+    "SUB_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.04, # ≥2000亿=4%
+    
+    # 最宽松筛选标准
+    "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.05, # <2000亿=5%
+    "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.03, # ≥2000亿=3%
+
+    # 触发“最宽松”标准的财报收盘价价差百分比 (条件C)
     "ER_PRICE_DIFF_THRESHOLD": 0.40,
     
     # 触发宽松筛选的最小分组数量 (仅对 PE_valid 组生效)
@@ -436,17 +442,23 @@ def get_high_price_last_n_days(cursor, sector_name, symbol, latest_date_str, loo
 def check_special_condition(data, config, log_detail, symbol_to_trace):
     """
     检查股票应采用何种筛选标准 (前提条件)。
-    新规则:
-    - 最宽松: (A & B & C)
-        - A: latest_er_pct > 0
-        - B: 最新财报收盘价 > 过去N次平均价
-        - C: 两次财报收盘价价差 > 40%
-    - 宽松: (A & B) or (B & C)  (但不满足最宽松)
+    新规则 (四级):
+    - A: latest_er_pct > 0
+    - B: 最新财报收盘价 > 过去N次平均价
+    - C: 两次财报收盘价价差 > 40%
+    - D: 最近三次财报收盘价都是逐次递增的
+
+    优先级:
+    - 最宽松: (A and B and C)
+    - 次宽松: (A and D)
+    - 普通宽松: (A and B) or (B and C)
     - 严格: 其他情况
+
     返回:
       - 0: 严格标准 (Strict)
-      - 1: 宽松标准 (Relaxed)
-      - 2: 更宽松标准 (Super-Relaxed)
+      - 1: 普通宽松标准 (Normal-Relaxed)
+      - 2: 次宽松标准 (Sub-Relaxed)
+      - 3: 最宽松标准 (Super-Relaxed)
     """
     symbol = data.get('symbol')
     is_tracing = (symbol == symbol_to_trace)
@@ -455,57 +467,71 @@ def check_special_condition(data, config, log_detail, symbol_to_trace):
     # --- 数据准备 ---
     er_pcts = data.get('all_er_pcts', [])
     all_er_prices = data.get('all_er_prices', [])
-    recent_earnings_count = config["RECENT_EARNINGS_COUNT"]
+    recent_earnings_count = config["RECENT_EARNINGS_COUNT"]  # 通常为 2
 
     # --- 数据有效性检查 ---
-    if not er_pcts or len(all_er_prices) < recent_earnings_count:
+    if not er_pcts or not all_er_prices:
         if is_tracing: log_detail(f"    - 失败: 财报数据不足。-> 返回 0 (严格)")
         return 0
 
-    # --- 评估三个子条件 A, B, C ---
+    # --- 初始化所有条件为 False ---
+    cond_a, cond_b, cond_c, cond_d = False, False, False, False
+
+    # --- 评估四个子条件 A, B, C, D ---
     
     # 条件A: 最新一次财报涨跌幅 > 0
     latest_er_pct = er_pcts[-1]
     cond_a = latest_er_pct > 0
 
-    # 条件B: 最新财报收盘价 > 过去 N 次财报收盘价平均值
-    prices_to_check = all_er_prices[-recent_earnings_count:]
-    avg_recent_price = sum(prices_to_check) / len(prices_to_check)
-    latest_er_price = prices_to_check[-1]
-    cond_b = latest_er_price > avg_recent_price
+    # 条件B 和 C 需要至少 recent_earnings_count 次财报价格
+    if len(all_er_prices) >= recent_earnings_count:
+        prices_to_check = all_er_prices[-recent_earnings_count:]
+        avg_recent_price = sum(prices_to_check) / len(prices_to_check)
+        latest_er_price = prices_to_check[-1]
+        
+        # 条件B: 最新财报收盘价 > 过去 N 次财报收盘价平均值
+        cond_b = latest_er_price > avg_recent_price
+        
+        # 条件C: 最新两次财报收盘价价差 > 40%
+        previous_er_price = all_er_prices[-2]
+        price_diff_pct = ((latest_er_price - previous_er_price) / previous_er_price) if previous_er_price > 0 else 0
+        cond_c = price_diff_pct > config["ER_PRICE_DIFF_THRESHOLD"]
     
-    # 条件C: 最新两次财报收盘价价差 > 40%
-    previous_er_price = all_er_prices[-2]
-    price_diff_pct = ((latest_er_price - previous_er_price) / previous_er_price) if previous_er_price > 0 else 0
-    cond_c = price_diff_pct > config["ER_PRICE_DIFF_THRESHOLD"]
+    # 条件D: 最近三次财报收盘价都是逐次递增的
+    if len(all_er_prices) >= 3:
+        cond_d = all_er_prices[-1] > all_er_prices[-2] > all_er_prices[-3]
 
     if is_tracing:
         log_detail(f"    - a) 最新财报涨跌幅 > 0: {latest_er_pct:.4f} > 0 -> {cond_a}")
-        log_detail(f"    - b) 最新财报收盘价 > 平均价: {latest_er_price:.2f} > {avg_recent_price:.2f} -> {cond_b}")
-        log_detail(f"    - c) 最新两次财报价差 > {config['ER_PRICE_DIFF_THRESHOLD']*100}%: {price_diff_pct:.2%} > {config['ER_PRICE_DIFF_THRESHOLD']:.2%} -> {cond_c}")
+        if len(all_er_prices) >= recent_earnings_count:
+            log_detail(f"    - b) 最新财报收盘价 > 平均价: {latest_er_price:.2f} > {avg_recent_price:.2f} -> {cond_b}")
+            log_detail(f"    - c) 最新两次财报价差 > {config['ER_PRICE_DIFF_THRESHOLD']*100}%: {price_diff_pct:.2%} > {config['ER_PRICE_DIFF_THRESHOLD']:.2%} -> {cond_c}")
+        else:
+            log_detail(f"    - b) & c) 跳过 (财报价格数量 < {recent_earnings_count})")
+        if len(all_er_prices) >= 3:
+            log_detail(f"    - d) 最近三次财报收盘价递增: {all_er_prices[-1]:.2f} > {all_er_prices[-2]:.2f} > {all_er_prices[-3]:.2f} -> {cond_d}")
+        else:
+            log_detail(f"    - d) 跳过 (财报价格数量 < 3)")
 
-    # --- 最终决策树 ---
+    # --- 最终决策树 (按优先级从高到低) ---
     
-    # 核心条件B是所有宽松标准的基础，如果不满足，直接返回严格
-    if not cond_b:
-        if is_tracing: log_detail(f"    - 最终决策 (B为假): -> 返回 0 (严格)")
-        return 0
-
-    # 到这里，B为真。
-    # 检查最宽松标准: A and B and C
-    # 因为B已为真，所以只需检查 A and C
-    if cond_a and cond_c:
-        if is_tracing: log_detail(f"    - 最终决策 (A=T, B=T, C=T): -> 返回 2 (最宽松)")
+    # 1. 最宽松: (A and B and C)
+    if cond_a and cond_b and cond_c:
+        if is_tracing: log_detail(f"    - 最终决策: 命中 (A & B & C) -> 返回 3 (最宽松)")
+        return 3
+    
+    # 2. 次宽松: (A and D)
+    if cond_a and cond_d:
+        if is_tracing: log_detail(f"    - 最终决策: 命中 (A & D) -> 返回 2 (次宽松)")
         return 2
-    
-    # 检查宽松标准: (A and B) or (B and C) => B and (A or C)
-    # 因为已经排除了最宽松的情况(A和C同时为真)，所以这里直接检查 (A or C) 即可
-    if cond_a or cond_c:
-        if is_tracing: log_detail(f"    - 最终决策 (B=T, A or C=T, 但不满足最宽松): -> 返回 1 (宽松)")
+        
+    # 3. 普通宽松: (A and B) or (B and C)
+    if (cond_a and cond_b) or (cond_b and cond_c):
+        if is_tracing: log_detail(f"    - 最终决策: 命中 ((A & B) or (B & C)) -> 返回 1 (普通宽松)")
         return 1
         
-    # 如果B为真，但A和C都为假，则应用严格标准
-    if is_tracing: log_detail(f"    - 最终决策 (B=T, 但A和C均为假): -> 返回 0 (严格)")
+    # 4. 严格: 其他情况
+    if is_tracing: log_detail(f"    - 最终决策: 未命中任何宽松条件 -> 返回 0 (严格)")
     return 0
 
 def check_condition_2(data, config, log_detail, symbol_to_trace):
@@ -866,7 +892,7 @@ def run_processing_logic(log_detail):
     """
     核心处理逻辑。
     此函数被重构以支持多阶段筛选：
-    1. 根据财报和价格条件区分股票为三组：严格、宽松、更宽松。
+    1. 根据财报和价格条件区分股票为四组：严格、普通宽松、次宽松、最宽松。
     2. 对每个组应用对应的回撤标准进行第一轮筛选。
     3. 如果筛选后 PE_valid 组数量依然过少，则对该组中原先使用严格标准的股票再次进行常规宽松筛选。
     """
@@ -943,11 +969,12 @@ def run_processing_logic(log_detail):
         log_detail(f"{pass_name}: Tag过滤后 -> PE_valid: {len(final_pe_valid)} 个, PE_invalid: {len(final_pe_invalid)} 个。")
         return final_pe_valid, final_pe_invalid
 
-    # ========== 代码修改部分 4/6: 区分股票为三组 ==========
-    log_detail("\n--- 步骤 3: 根据前提条件区分股票组 (严格/宽松/更宽松) ---")
+    # ========== 代码修改: 区分股票为四组 ==========
+    log_detail("\n--- 步骤 3: 根据前提条件区分股票组 (严格/普通宽松/次宽松/最宽松) ---")
     strict_symbols = []
-    relaxed_symbols = []
-    super_relaxed_symbols = []
+    relaxed_symbols = []        # 普通宽松
+    sub_relaxed_symbols = []    # 次宽松 (新增)
+    super_relaxed_symbols = []  # 最宽松
     initial_candidates = list(stock_data_cache.keys())
 
     for symbol in initial_candidates:
@@ -957,35 +984,45 @@ def run_processing_logic(log_detail):
         data['symbol'] = symbol
         
         filter_mode = check_special_condition(data, CONFIG, log_detail, SYMBOL_TO_TRACE)
-        if filter_mode == 2:
+        if filter_mode == 3:
             super_relaxed_symbols.append(symbol)
+        elif filter_mode == 2:
+            sub_relaxed_symbols.append(symbol)
         elif filter_mode == 1:
             relaxed_symbols.append(symbol)
         else:
             strict_symbols.append(symbol)
             
-    log_detail(f"完成区分: {len(strict_symbols)} 个(严格), {len(relaxed_symbols)} 个(宽松), {len(super_relaxed_symbols)} 个(更宽松)。")
+    log_detail(f"完成区分: {len(strict_symbols)} 个(严格), {len(relaxed_symbols)} 个(普通宽松), {len(sub_relaxed_symbols)} 个(次宽松), {len(super_relaxed_symbols)} 个(最宽松)。")
 
-    # ========== 代码修改部分 5/6: 执行三组独立的第一轮筛选 ==========
+    # ========== 代码修改: 执行四组独立的第一轮筛选 ==========
     log_detail("\n--- 步骤 4: 执行第一轮筛选 ---")
     
-    # 4a. 对“更宽松”组使用更宽松标准
+    # 4a. 对“最宽松”组使用最宽松标准
     super_relaxed_valid, super_relaxed_invalid = perform_filter_pass(
         super_relaxed_symbols,
         CONFIG["SUPER_RELAXED_PRICE_DROP_PERCENTAGE_LARGE"],
         CONFIG["SUPER_RELAXED_PRICE_DROP_PERCENTAGE_SMALL"],
-        "第一轮筛选 (更宽松组)"
+        "第一轮筛选 (最宽松组)"
     )
 
-    # 4b. 对“宽松”组使用常规宽松标准
+    # 4b. (新增) 对“次宽松”组使用次宽松标准
+    sub_relaxed_valid, sub_relaxed_invalid = perform_filter_pass(
+        sub_relaxed_symbols,
+        CONFIG["SUB_RELAXED_PRICE_DROP_PERCENTAGE_LARGE"],
+        CONFIG["SUB_RELAXED_PRICE_DROP_PERCENTAGE_SMALL"],
+        "第一轮筛选 (次宽松组)"
+    )
+
+    # 4c. 对“普通宽松”组使用常规宽松标准
     relaxed_valid, relaxed_invalid = perform_filter_pass(
         relaxed_symbols,
         CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_LARGE"],
         CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_SMALL"],
-        "第一轮筛选 (宽松组)"
+        "第一轮筛选 (普通宽松组)"
     )
     
-    # 4c. 对“严格”组使用严格标准
+    # 4d. 对“严格”组使用严格标准
     strict_valid, strict_invalid = perform_filter_pass(
         strict_symbols,
         CONFIG["PRICE_DROP_PERCENTAGE_LARGE"],
@@ -993,15 +1030,15 @@ def run_processing_logic(log_detail):
         "第一轮筛选 (严格组)"
     )
 
-    # 4d. 合并第一轮的筛选结果
-    pass1_valid = super_relaxed_valid + relaxed_valid + strict_valid
-    pass1_invalid = super_relaxed_invalid + relaxed_invalid + strict_invalid
+    # 4e. 合并第一轮的筛选结果
+    pass1_valid = super_relaxed_valid + sub_relaxed_valid + relaxed_valid + strict_valid
+    pass1_invalid = super_relaxed_invalid + sub_relaxed_invalid + relaxed_invalid + strict_invalid
     log_detail("\n--- 第一轮筛选结果汇总 ---")
-    log_detail(f"PE_valid 组: {len(pass1_valid)} 个 ({len(super_relaxed_valid)} 更宽松 + {len(relaxed_valid)} 宽松 + {len(strict_valid)} 严格)")
-    log_detail(f"PE_invalid 组: {len(pass1_invalid)} 个 ({len(super_relaxed_invalid)} 更宽松 + {len(relaxed_invalid)} 宽松 + {len(strict_invalid)} 严格)")
+    log_detail(f"PE_valid 组: {len(pass1_valid)} 个 ({len(super_relaxed_valid)} 最宽松 + {len(sub_relaxed_valid)} 次宽松 + {len(relaxed_valid)} 普通宽松 + {len(strict_valid)} 严格)")
+    log_detail(f"PE_invalid 组: {len(pass1_invalid)} 个 ({len(super_relaxed_invalid)} 最宽松 + {len(sub_relaxed_invalid)} 次宽松 + {len(relaxed_invalid)} 普通宽松 + {len(strict_invalid)} 严格)")
 
     # ========== 代码修改部分 (逻辑变更) ==========
-    # 通用过滤3：如果 PE_valid 组结果少于5个，将针对严格组使用普通宽松阈值再扫一遍
+    # 通用过滤3：如果 PE_valid 组结果少于阈值，将针对严格组使用普通宽松阈值再扫一遍
     log_detail("\n--- (通用过滤3) 检查是否需要为 PE_valid 组进行第二轮宽松筛选 ---")
     min_size_pe_valid = CONFIG["MIN_PE_VALID_SIZE_FOR_RELAXED_FILTER"]
     
@@ -1021,8 +1058,8 @@ def run_processing_logic(log_detail):
             CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_SMALL"],
             "第二轮筛选 (常规宽松, for PE_valid)"
         )
-        # 最终结果是：第一轮中所有宽松/更宽松选出的 + 第二轮对严格部分重筛后选出的
-        final_pe_valid_symbols = sorted(list(set(super_relaxed_valid) | set(relaxed_valid) | set(rerun_valid)))
+        # 最终结果是：第一轮中所有非严格组选出的 + 第二轮对严格部分重筛后选出的
+        final_pe_valid_symbols = sorted(list(set(super_relaxed_valid) | set(sub_relaxed_valid) | set(relaxed_valid) | set(rerun_valid)))
         log_detail(f"第二轮筛选后，'PE_valid' 组更新为 {len(final_pe_valid_symbols)} 个。")
     else:
         log_detail(f"\n'PE_valid' 组在第一轮筛选后数量 ({len(pass1_valid)}) 已达标，无需进行第二轮宽松筛选。")
