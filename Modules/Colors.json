@@ -125,7 +125,8 @@
         "BRK-A",
         "FTNT",
         "RSG",
-        "CME"
+        "CME",
+        "BSX"
     ],
     "blue_keywords": [
         "US2Y",
@@ -343,7 +344,6 @@
         "VNT",
         "AVT",
         "SCCO",
-        "IFF",
         "SUZ",
         "AXTA",
         "DIS",
@@ -519,10 +519,8 @@
         "HRB",
         "ALC",
         "RYAN",
-        "CHH",
         "CWST",
         "SLGN",
-        "KVUE",
         "CRVL",
         "BMA",
         "BBAR",
@@ -534,7 +532,9 @@
         "ADMA",
         "CNS",
         "K",
-        "INGR"
+        "INGR",
+        "KMB",
+        "HLN"
     ],
     "yellow_keywords": [
         "XLY",
@@ -638,7 +638,6 @@
         "QSR",
         "CMCSA",
         "PCG",
-        "LSTR",
         "WEX",
         "BWA",
         "HOLX",
@@ -775,7 +774,8 @@
         "FRPT",
         "GIB",
         "GPK",
-        "LNTH"
+        "LNTH",
+        "CHH"
     ],
     "orange_keywords": [
         "Huangjin",
@@ -908,7 +908,8 @@
         "AMCR",
         "KDP",
         "WY",
-        "FDS"
+        "FDS",
+        "LSTR"
     ],
     "black_keywords": [
         "VFC",
@@ -997,7 +998,10 @@
         "ARX",
         "FIG",
         "CHYM",
-        "FLO"
+        "FLO",
+        "IFF",
+        "KVUE",
+        "OTF"
     ],
     "green_keywords": [
         "DXY",

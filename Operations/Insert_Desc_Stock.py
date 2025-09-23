@@ -121,7 +121,6 @@ def input_with_dialog(title: str, prompt: str, initial_value: str = "") -> str:
     """
     root = tk.Tk()
     root.title(title)
-    root.attributes("-topmost", True)
     root.withdraw()
     # 使用简单输入对话框
     value = simpledialog.askstring(title, prompt, initialvalue=initial_value, parent=root)
@@ -137,7 +136,6 @@ def input_symbol_name():
     """
     root = tk.Tk()
     root.title("Input Stock Name")
-    root.attributes("-topmost", True)
     root.lift()
     root.focus_force()
 
@@ -342,7 +340,6 @@ def main():
 
     root = tk.Tk()
     root.title("Add Stock")
-    root.attributes("-topmost", True)
     root.lift()
     root.focus_force()
 

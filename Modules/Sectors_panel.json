@@ -43,7 +43,8 @@
         "TAP": "",
         "CHD": "",
         "K": "",
-        "INGR": ""
+        "INGR": "",
+        "KMB": ""
     },
     "Industrials": {
         "CWST": "",
@@ -56,7 +57,8 @@
         "VRSK": "",
         "ODFL": "",
         "LSTR": "",
-        "TRI": ""
+        "TRI": "",
+        "BAH": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
@@ -71,7 +73,8 @@
         "MMC": "",
         "RLI": "",
         "CNS": "",
-        "ARX": ""
+        "ARX": "",
+        "OTF": ""
     },
     "Healthcare": {
         "PRCT": "",
@@ -81,7 +84,11 @@
         "LNTH": "",
         "ADMA": "",
         "MMSI": "",
-        "COO": ""
+        "COO": "",
+        "BSX": "",
+        "ZTS": "",
+        "HLN": "",
+        "ATR": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -174,9 +181,37 @@
         "KMX": "",
         "GWRE": ""
     },
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
+    "Strategy12": {
+        "COST": "",
+        "CTAS": "",
+        "NKE": ""
+    },
+    "Strategy34": {
+        "BURL": "",
+        "PGR": ""
+    },
+    "PE_valid": {
+        "ACN": "",
+        "AVGO": "AVGO7热",
+        "BAH": "",
+        "BLDR": "BLDR15热",
+        "CHD": "",
+        "DHR": "",
+        "DPZ": "",
+        "EW": "",
+        "FIS": "",
+        "FUTU": "",
+        "GNRC": "",
+        "ISRG": "",
+        "KDP": "",
+        "LII": "",
+        "PAYX": "",
+        "TRI": "",
+        "TRU": "",
+        "VRSK": "",
+        "VRSN": "",
+        "WM": ""
+    },
     "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
