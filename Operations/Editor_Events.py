@@ -260,6 +260,8 @@ class DescriptionEditorApp:
 
         if not keys_to_delete:
             messagebox.showinfo("提示", "没有选中任何要删除的条目。")
+            self.master.lift()
+            self.master.focus_force()
             return
 
         if messagebox.askyesno("确认删除", f"确定要删除选中的 {len(keys_to_delete)} 个条目吗？此操作将直接修改内存中的数据。"):
@@ -280,6 +282,8 @@ class DescriptionEditorApp:
 
             # 重建UI
             self._create_widgets()
+            self.master.lift()
+            self.master.focus_force()
 
 
     # --- 新增: "复制到..." 功能的实现 ---
@@ -344,7 +348,9 @@ class DescriptionEditorApp:
         # 5. 构建并显示最终结果报告
         report_message = ""
         if successful_copies:
-            report_message += f"成功将 {len(items_to_copy)} 个条目复制到: \n" + ", ".join(successful_copies)
+            if report_message:
+                report_message += "\n\n"
+            report_message += "成功将 {len(items_to_copy)} 个条目复制到: \n" + ", ".join(successful_copies)
         
         if failed_symbols:
             if report_message:
@@ -352,6 +358,9 @@ class DescriptionEditorApp:
             report_message += "未在JSON文件中找到以下Symbol: \n" + ", ".join(failed_symbols)
 
         messagebox.showinfo("复制操作完成", report_message)
+        # 在消息框关闭后重新获得焦点
+        self.master.lift()
+        self.master.focus_force()
 
 
     def _save_changes(self):

@@ -183,12 +183,22 @@ class SearchWorker(QThread):
         if self.levenshtein_distance(symbol, keyword) <= 1: return 1
         return 0
 
+    # <--- 修改开始: 增强 match_name 的模糊匹配能力 --->
     def match_name(self, name, keyword):
         if name == keyword: return 4
+        
+        name_words = name.split()
         # 检查是否是完整的单词匹配
-        if f" {keyword} " in f" {name} " or name.startswith(f"{keyword} ") or name.endswith(f" {keyword}"): return 3
+        if keyword in name_words: return 3
+        
+        # 检查是否作为子字符串出现（比单词匹配优先级低）
         if keyword in name: return 2
-        if self.levenshtein_distance(name, keyword) <= 1: return 1
+        
+        # 检查与名称中某个单词的模糊匹配（莱文斯坦距离）
+        for word in name_words:
+            if self.levenshtein_distance(word, keyword) <= 1:
+                return 1 # 模糊匹配，得分最低
+                
         return 0
 
     def match_tags(self, tags, keyword):

@@ -560,7 +560,9 @@
         "RSI",
         "DAY",
         "RUSHB",
-        "INFA"
+        "INFA",
+        "BRFS",
+        "FUN"
     ],
     "etf": [
         "VDE",

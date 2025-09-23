@@ -48,16 +48,13 @@
     },
     "Industrials": {
         "CWST": "",
-        "WM": "",
         "KEX": "",
         "WSO": "",
-        "CTAS": "",
         "UHAL": "",
         "RSG": "",
         "VRSK": "",
         "ODFL": "",
         "LSTR": "",
-        "TRI": "",
         "BAH": ""
     },
     "Communication_Services": {},
@@ -73,13 +70,11 @@
         "MMC": "",
         "RLI": "",
         "CNS": "",
-        "ARX": "",
-        "OTF": ""
+        "ARX": ""
     },
     "Healthcare": {
         "PRCT": "",
         "ALC": "",
-        "ISRG": "",
         "GKOS": "",
         "LNTH": "",
         "ADMA": "",
@@ -161,57 +156,31 @@
         "XRP": ""
     },
     "Today": {
+        "COMP": "",
         "CART": "",
         "HESM": "",
         "SPGI": "",
         "CTAS": "",
         "BSX": "",
-        "BNTX": "",
-        "BURL": ""
+        "BNTX": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
-        "CART": "",
+        "BURL": "",
+        "AVGO": "AVGO7热",
+        "TRU": "",
+        "CHD": "",
         "DUOL": "",
         "EW": "",
         "KDP": "",
         "ACN": "",
-        "KMX": "",
-        "GWRE": ""
+        "KMX": ""
     },
-    "Strategy12": {
-        "COST": "",
-        "CTAS": "",
-        "NKE": ""
-    },
-    "Strategy34": {
-        "BURL": "",
-        "PGR": ""
-    },
-    "PE_valid": {
-        "ACN": "",
-        "AVGO": "AVGO7热",
-        "BAH": "",
-        "BLDR": "BLDR15热",
-        "CHD": "",
-        "DHR": "",
-        "DPZ": "",
-        "EW": "",
-        "FIS": "",
-        "FUTU": "",
-        "GNRC": "",
-        "ISRG": "",
-        "KDP": "",
-        "LII": "",
-        "PAYX": "",
-        "TRI": "",
-        "TRU": "",
-        "VRSK": "",
-        "VRSN": "",
-        "WM": ""
-    },
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {},
     "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
