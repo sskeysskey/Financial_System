@@ -1,5 +1,6 @@
 import json
 import sqlite3
+from wcwidth import wcswidth
 from collections import defaultdict
 
 # 定义tag黑名单
@@ -27,6 +28,17 @@ with open('/Users/yanzhang/Coding/News/backup/Compare_All.txt', 'r') as f:
                 symbol = parts[0].strip()
                 percent = parts[1].strip()
                 compare_data[symbol] = percent
+
+def pad_display(s: str, width: int, align: str = 'left') -> str:
+    """按照真实列宽（CJK=2，ASCII=1）来给 s 补空格到 width 列."""
+    cur = wcswidth(s)
+    if cur >= width:
+        return s
+    pad = width - cur
+    if align == 'left':
+        return s + ' ' * pad
+    else:
+        return ' ' * pad + s
 
 # 创建一个函数来获取symbol所属的sector
 def get_symbol_sector(symbol):
@@ -143,10 +155,16 @@ for symbol in price_data.keys():
         price_change = get_price_change_percent(cursor, symbol, sector)
         
         if price_change is not None:
+            # 新增过滤逻辑：财报日至最新收盘价的百分比变化若小于 20%，则跳过
+            if abs(price_change) < 30:
+                continue
+
             tags_str = ", ".join(symbol_info['tags']) if symbol_info['tags'] else "无标签"
             # 获取compare数据
             compare_str = compare_data.get(symbol, '')
-            
+            sector = pad_display(sector, 20, 'left')
+            symbol = pad_display(symbol, 5, 'left')
+
             output_line = {
                 'text': f"{sector} {symbol} {price_change:.2f}% {compare_str}: {tags_str}",
                 'change_percent': price_change
