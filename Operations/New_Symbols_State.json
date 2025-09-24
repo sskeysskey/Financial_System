@@ -46,6 +46,7 @@
     "GNRC",
     "TME",
     "TTAN",
-    "SPGI"
+    "SPGI",
+    "CIFR"
   ]
 }

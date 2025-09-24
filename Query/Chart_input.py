@@ -302,7 +302,7 @@ class InfoDialog(QDialog):
         """
         self.setStyleSheet(qss)
 
-def execute_external_script(script_type, keyword):
+def execute_external_script(script_type, keyword, on_done=None, block=False):
     base_path = '/Users/yanzhang/Coding/Financial_System'
     script_configs = {
         'earning_input': f'{base_path}/Operations/Insert_Earning_Manual.py',
@@ -323,12 +323,31 @@ def execute_external_script(script_type, keyword):
     if not script_path:
         display_dialog(f"未知的脚本类型: {script_type}")
         return
+
     try:
         if script_path.endswith('.scpt'):
-            subprocess.Popen(['osascript', script_path, keyword])
+            # AppleScript
+            if block:
+                # 阻塞等待，适用于需要等用户确认的流程
+                subprocess.run(['osascript', script_path, keyword], check=False)
+                if callable(on_done):
+                    on_done()
+            else:
+                p = subprocess.Popen(['osascript', script_path, keyword])
+                if callable(on_done):
+                    # 不阻塞：异步场景中直接回调
+                    on_done()
         else:
+            # Python 脚本
             python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
-            subprocess.Popen([python_path, script_path, keyword])
+            if block:
+                subprocess.run([python_path, script_path, keyword], check=False)
+                if callable(on_done):
+                    on_done()
+            else:
+                p = subprocess.Popen([python_path, script_path, keyword])
+                if callable(on_done):
+                    on_done()
     except Exception as e:
         display_dialog(f"启动程序失败: {e}")
 
@@ -728,7 +747,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         circle.set_facecolor(NORD_THEME['background'])
     radio.circles[default_index].set_facecolor(NORD_THEME['accent_red'])
 
-    instructions = "N:新财报\nE:改财报\nT:改标签\nW:新事件\nQ:改事件\nK:查豆包\nZ:查富途\nP:做比较\nJ:加Panel\nH:加empty\nL:查相似"
+    instructions = "N:新财报\nE:改财报\nT:改标签\nW:新事件\nQ:改事件\nK:查豆包\nZ:查富途\nP:做比较\nJ:加Panel\nH:加empty\nL:查相似\nY:删除"
     rax.text(0.5, 0.99, instructions, transform=rax.transAxes, ha="center", va="bottom",
              color=NORD_THEME['text_light'], fontsize=10, fontfamily="Arial Unicode MS")
     
@@ -1002,6 +1021,24 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             # print(f"toggle_volume error: {e}")
             pass
 
+    def launch_and_close_for_y():
+        # 定义确认后的收尾逻辑：关闭所有图形并退出（结束功能）
+        def on_done():
+            try:
+                plt.close('all')
+            except Exception:
+                pass
+            # 如果在 Panel 模式中，也一并退出进程；否则只关图
+            try:
+                if panel:
+                    sys.exit(0)
+            except Exception:
+                pass
+
+        # 若外部界面是阻塞式（如需要“确认”），把 block=True，这样确认后才会继续执行 on_done
+        # 如果外部界面是异步脚本，也会立即 on_done，从而马上关闭当前界面
+        execute_external_script('panel_delete', name, on_done=on_done, block=True)
+    
     def on_key(event):
         try:
             actions = {'v': toggle_volume, 'r': toggle_global_markers, 'x': toggle_all_annotations,
@@ -1011,7 +1048,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                        't': lambda: execute_external_script('tags_edit', name),
                        'w': lambda: execute_external_script('event_input', name),
                        'j': lambda: execute_external_script('panel_input', name),
-                       'y': lambda: execute_external_script('panel_delete', name),
+                       'y': launch_and_close_for_y,
                        'h': lambda: execute_external_script('empty_input', name),
                        'q': lambda: execute_external_script('event_edit', name),
                        'k': lambda: execute_external_script('check_kimi', name),

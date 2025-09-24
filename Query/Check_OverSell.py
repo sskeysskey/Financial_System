@@ -17,6 +17,17 @@ with open('/Users/yanzhang/Coding/Financial_System/Modules/description.json', 'r
 with open('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json', 'r') as f:
     sectors_data = json.load(f)
 
+# 读取Compare_All.txt文件并解析数据
+compare_data = {}
+with open('/Users/yanzhang/Coding/News/backup/Compare_All.txt', 'r') as f:
+    for line in f:
+        if line.strip():
+            parts = line.strip().split(':')
+            if len(parts) == 2:
+                symbol = parts[0].strip()
+                percent = parts[1].strip()
+                compare_data[symbol] = percent
+
 # 创建一个函数来获取symbol所属的sector
 def get_symbol_sector(symbol):
     for sector, symbols in sectors_data.items():
@@ -133,8 +144,11 @@ for symbol in price_data.keys():
         
         if price_change is not None:
             tags_str = ", ".join(symbol_info['tags']) if symbol_info['tags'] else "无标签"
+            # 获取compare数据
+            compare_str = compare_data.get(symbol, '')
+            
             output_line = {
-                'text': f"{sector} {symbol} {price_change:.2f}%: {tags_str}",
+                'text': f"{sector} {symbol} {price_change:.2f}% {compare_str}: {tags_str}",
                 'change_percent': price_change
             }
             sector_outputs[sector].append(output_line)

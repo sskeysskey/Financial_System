@@ -105,6 +105,7 @@ class CategorySelectionDialog(QDialog):
         self.checkboxes = []
         for category in categories_found:
             checkbox = QCheckBox(category, self)
+            checkbox.setChecked(True)  # 设置复选框默认为选中状态
             self.checkboxes.append(checkbox)
             layout.addWidget(checkbox)
 

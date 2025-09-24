@@ -4,17 +4,9 @@
         "UFPI": "",
         "WFG": ""
     },
-    "Real_Estate": {
-        "UDR": "",
-        "WY": ""
-    },
-    "Energy": {
-        "OKE": "",
-        "VIST": "",
-        "SUN": ""
-    },
+    "Real_Estate": {},
+    "Energy": {},
     "Technology": {
-        "CHYM": "",
         "FI": "",
         "GIB": "",
         "ACN": "",
@@ -28,21 +20,13 @@
         "AMCR": "",
         "CHH": "",
         "GPK": "",
-        "SLGN": "",
-        "CMG": "",
-        "LULU": "",
-        "AMZN": ""
+        "SLGN": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
         "FRPT": "",
         "STZ": "",
-        "KDP": "",
-        "BRBR": "",
         "FLO": "",
-        "KO": "",
-        "CL": "",
-        "POST": "",
         "MKC": "",
         "TAP": "",
         "CHD": "",
@@ -51,11 +35,6 @@
         "KMB": ""
     },
     "Industrials": {
-        "CWST": "",
-        "KEX": "",
-        "WSO": "",
-        "UHAL": "",
-        "RSG": "",
         "VRSK": "",
         "ODFL": "",
         "LSTR": "",
@@ -67,14 +46,8 @@
     "Communication_Services": {},
     "Financial_Services": {
         "FDS": "",
-        "RYAN": "",
         "MORN": "",
-        "BMA": "",
-        "BBAR": "",
-        "CME": "",
-        "BRO": "",
         "ERIE": "",
-        "MMC": "",
         "RLI": "",
         "CNS": "",
         "ARX": "",
@@ -84,13 +57,7 @@
         "TW": ""
     },
     "Healthcare": {
-        "PRCT": "",
         "ALC": "",
-        "GKOS": "",
-        "LNTH": "",
-        "ADMA": "",
-        "MMSI": "",
-        "COO": "",
         "BSX": "",
         "ZTS": "",
         "HLN": "",
@@ -177,7 +144,8 @@
         "CTAS": "",
         "BSX": "",
         "BNTX": "",
-        "BURL": ""
+        "BURL": "",
+        "CIFR": ""
     },
     "Next Week": {},
     "2 Weeks": {},
