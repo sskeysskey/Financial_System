@@ -1,6 +1,8 @@
 {
     "Basic_Materials": {
-        "BCC": ""
+        "BCC": "",
+        "UFPI": "",
+        "WFG": ""
     },
     "Real_Estate": {
         "UDR": "",
@@ -18,7 +20,9 @@
         "ACN": "",
         "ROP": "",
         "FIS": "",
-        "JKHY": ""
+        "JKHY": "",
+        "EEFT": "",
+        "PAYX": ""
     },
     "Consumer_Cyclical": {
         "CAVA": "",
@@ -27,7 +31,8 @@
         "GPK": "",
         "SLGN": "",
         "CMG": "",
-        "LULU": ""
+        "LULU": "",
+        "AMZN": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -55,7 +60,10 @@
         "VRSK": "",
         "ODFL": "",
         "LSTR": "",
-        "BAH": ""
+        "BAH": "",
+        "CARR": "",
+        "CPRT": "",
+        "FLY": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
@@ -70,7 +78,13 @@
         "MMC": "",
         "RLI": "",
         "CNS": "",
-        "ARX": ""
+        "ARX": "",
+        "MA": "",
+        "HDB": "",
+        "PGR": "",
+        "IBN": "",
+        "TW": "",
+        "OTF": ""
     },
     "Healthcare": {
         "PRCT": "",
@@ -156,6 +170,7 @@
         "XRP": ""
     },
     "Today": {
+        "COST": "",
         "COMP": "",
         "CART": "",
         "HESM": "",
@@ -178,10 +193,44 @@
         "ACN": "",
         "KMX": ""
     },
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
-    "PE_invalid": {},
+    "Strategy12": {
+        "COST": "",
+        "CTAS": "",
+        "NKE": ""
+    },
+    "Strategy34": {
+        "BURL": "",
+        "PGR": ""
+    },
+    "PE_valid": {
+        "ACN": "",
+        "AFRM": "",
+        "AVGO": "AVGO7热",
+        "BLDR": "BLDR15热",
+        "CHD": "",
+        "DHR": "",
+        "DPZ": "",
+        "EW": "",
+        "FIS": "",
+        "FUTU": "",
+        "GNRC": "",
+        "ICE": "",
+        "IDXX": "",
+        "KDP": "",
+        "MCO": "",
+        "MKC": "",
+        "MSFT": "",
+        "NDAQ": "",
+        "PAYX": "",
+        "ROP": "",
+        "TME": "",
+        "TRU": "",
+        "WCN": "",
+        "WM": ""
+    },
+    "PE_invalid": {
+        "TTAN": "TTAN7热"
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

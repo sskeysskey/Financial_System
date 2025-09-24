@@ -99,7 +99,6 @@
         "GS",
         "ET",
         "JPM",
-        "MA",
         "WFC",
         "C",
         "SCHW",
@@ -121,7 +120,6 @@
         "AAPL",
         "MSTR",
         "META",
-        "AMZN",
         "BRK-A",
         "FTNT",
         "RSG",
@@ -141,7 +139,9 @@
         "NFLX",
         "TSM",
         "ORCL",
-        "NVDA"
+        "NVDA",
+        "AMZN",
+        "MA"
     ],
     "white_keywords": [
         "USGDP",
@@ -534,7 +534,9 @@
         "K",
         "INGR",
         "KMB",
-        "HLN"
+        "HLN",
+        "TW",
+        "PAYX"
     ],
     "yellow_keywords": [
         "XLY",
