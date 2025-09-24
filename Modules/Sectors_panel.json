@@ -25,7 +25,6 @@
         "PAYX": ""
     },
     "Consumer_Cyclical": {
-        "CAVA": "",
         "AMCR": "",
         "CHH": "",
         "GPK": "",
@@ -79,12 +78,10 @@
         "RLI": "",
         "CNS": "",
         "ARX": "",
-        "MA": "",
         "HDB": "",
         "PGR": "",
         "IBN": "",
-        "TW": "",
-        "OTF": ""
+        "TW": ""
     },
     "Healthcare": {
         "PRCT": "",
@@ -170,67 +167,35 @@
         "XRP": ""
     },
     "Today": {
+        "CART": "",
+        "TRU": "",
+        "MCO": "",
+        "KDP": "",
+        "GNRC": "",
         "COST": "",
         "COMP": "",
-        "CART": "",
-        "HESM": "",
-        "SPGI": "",
         "CTAS": "",
         "BSX": "",
-        "BNTX": ""
+        "BNTX": "",
+        "BURL": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
-        "BURL": "",
+        "NDAQ": "",
+        "SPGI": "",
         "AVGO": "AVGO7热",
-        "TRU": "",
-        "CHD": "",
         "DUOL": "",
+        "HESM": "",
         "EW": "",
-        "KDP": "",
         "ACN": "",
         "KMX": ""
     },
-    "Strategy12": {
-        "COST": "",
-        "CTAS": "",
-        "NKE": ""
-    },
-    "Strategy34": {
-        "BURL": "",
-        "PGR": ""
-    },
-    "PE_valid": {
-        "ACN": "",
-        "AFRM": "",
-        "AVGO": "AVGO7热",
-        "BLDR": "BLDR15热",
-        "CHD": "",
-        "DHR": "",
-        "DPZ": "",
-        "EW": "",
-        "FIS": "",
-        "FUTU": "",
-        "GNRC": "",
-        "ICE": "",
-        "IDXX": "",
-        "KDP": "",
-        "MCO": "",
-        "MKC": "",
-        "MSFT": "",
-        "NDAQ": "",
-        "PAYX": "",
-        "ROP": "",
-        "TME": "",
-        "TRU": "",
-        "WCN": "",
-        "WM": ""
-    },
-    "PE_invalid": {
-        "TTAN": "TTAN7热"
-    },
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {},
+    "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

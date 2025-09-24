@@ -806,7 +806,9 @@
         "FTSD",
         "GVAL",
         "IPAC",
-        "DUSA"
+        "DUSA",
+        "SDCI",
+        "QLC"
     ],
     "Earning": [
         "TW",

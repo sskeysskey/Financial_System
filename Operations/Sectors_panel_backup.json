@@ -1,6 +1,8 @@
 {
     "Basic_Materials": {
-        "BCC": ""
+        "BCC": "",
+        "UFPI": "",
+        "WFG": ""
     },
     "Real_Estate": {
         "UDR": "",
@@ -18,16 +20,18 @@
         "ACN": "",
         "ROP": "",
         "FIS": "",
-        "JKHY": ""
+        "JKHY": "",
+        "EEFT": "",
+        "PAYX": ""
     },
     "Consumer_Cyclical": {
-        "CAVA": "",
         "AMCR": "",
         "CHH": "",
         "GPK": "",
         "SLGN": "",
         "CMG": "",
-        "LULU": ""
+        "LULU": "",
+        "AMZN": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -55,7 +59,10 @@
         "VRSK": "",
         "ODFL": "",
         "LSTR": "",
-        "BAH": ""
+        "BAH": "",
+        "CARR": "",
+        "CPRT": "",
+        "FLY": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
@@ -70,7 +77,11 @@
         "MMC": "",
         "RLI": "",
         "CNS": "",
-        "ARX": ""
+        "ARX": "",
+        "HDB": "",
+        "PGR": "",
+        "IBN": "",
+        "TW": ""
     },
     "Healthcare": {
         "PRCT": "",
@@ -156,25 +167,28 @@
         "XRP": ""
     },
     "Today": {
-        "COMP": "",
         "CART": "",
-        "HESM": "",
-        "SPGI": "",
+        "TRU": "",
+        "MCO": "",
+        "KDP": "",
+        "GNRC": "",
+        "COST": "",
+        "COMP": "",
         "CTAS": "",
         "BSX": "",
-        "BNTX": ""
+        "BNTX": "",
+        "BURL": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
-        "BURL": "",
+        "NDAQ": "",
+        "SPGI": "",
         "AVGO": "AVGO7热",
-        "TRU": "",
-        "CHD": "",
         "DUOL": "",
+        "HESM": "",
         "EW": "",
-        "KDP": "",
         "ACN": "",
         "KMX": ""
     },
