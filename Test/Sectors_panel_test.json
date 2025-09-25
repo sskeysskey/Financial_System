@@ -25,9 +25,6 @@
     "Today": {
         "DT": ""
     },
-    "Watching": {
-        "NVO": ""
-    },
     "Next Week": {
         "ONON": "",
         "MNDY": ""
@@ -39,6 +36,10 @@
     "3 Weeks": {
         "DRI": ""
     },
+    "Watching": {
+        "NVO": ""
+    },
+    "Short": {},
     "Strategy12": {
         "ONON": "",
         "WIX": ""

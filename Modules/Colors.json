@@ -213,7 +213,6 @@
         "TMDX",
         "MPC",
         "PSX",
-        "PHI",
         "AVY",
         "SHEL",
         "FCFS",
@@ -536,7 +535,8 @@
         "KMB",
         "HLN",
         "TW",
-        "PAYX"
+        "PAYX",
+        "KNF"
     ],
     "yellow_keywords": [
         "XLY",
@@ -777,7 +777,8 @@
         "GIB",
         "GPK",
         "LNTH",
-        "CHH"
+        "CHH",
+        "PHI"
     ],
     "orange_keywords": [
         "Huangjin",
@@ -1003,7 +1004,8 @@
         "FLO",
         "IFF",
         "KVUE",
-        "OTF"
+        "OTF",
+        "NIQ"
     ],
     "green_keywords": [
         "DXY",

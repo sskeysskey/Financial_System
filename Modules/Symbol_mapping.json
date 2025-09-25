@@ -37,6 +37,7 @@
     "RUB=X": "USDRUB",
     "KRW=X": "USDKRW",
     "THB=X": "USDTHB",
+    "AUD=X": "USDAUD",
     "TRY=X": "USDTRY",
     "SGD=X": "USDSGD",
     "TWD=X": "USDTWD",

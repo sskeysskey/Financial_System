@@ -39,7 +39,7 @@ DISPLAY_LIMITS = {
 categories = [
     ['Basic_Materials','Consumer_Cyclical','Real_Estate','Technology','Energy','Industrials',
      'Consumer_Defensive','Communication_Services','Financial_Services', 'Healthcare','Utilities'],
-    ['Today','Watching','Next Week','2 Weeks','3 Weeks'],
+    ['Today','Short','Watching','Next Week','2 Weeks','3 Weeks'],
     ['PE_valid','PE_invalid','Strategy12','Strategy34'],
     ['Bonds','Crypto','Indices','Currencies'],
     ['Economics','Commodities'],

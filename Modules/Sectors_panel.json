@@ -2,9 +2,14 @@
     "Basic_Materials": {
         "BCC": "",
         "UFPI": "",
-        "WFG": ""
+        "WFG": "",
+        "JHX": "",
+        "KNF": ""
     },
-    "Real_Estate": {},
+    "Real_Estate": {
+        "AMH": "",
+        "UDR": ""
+    },
     "Energy": {},
     "Technology": {
         "FI": "",
@@ -14,13 +19,17 @@
         "FIS": "",
         "JKHY": "",
         "EEFT": "",
-        "PAYX": ""
+        "PAYX": "",
+        "MSTR": "",
+        "NSIT": "",
+        "NIQ": ""
     },
     "Consumer_Cyclical": {
         "AMCR": "",
         "CHH": "",
         "GPK": "",
-        "SLGN": ""
+        "SLGN": "",
+        "AMZN": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -41,7 +50,8 @@
         "BAH": "",
         "CARR": "",
         "CPRT": "",
-        "FLY": ""
+        "FLY": "",
+        "TRI": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
@@ -54,7 +64,8 @@
         "HDB": "",
         "PGR": "",
         "IBN": "",
-        "TW": ""
+        "TW": "",
+        "MA": ""
     },
     "Healthcare": {
         "ALC": "",
@@ -160,9 +171,52 @@
         "ACN": "",
         "KMX": ""
     },
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
+    "Short": {
+        "BE": "",
+        "FN": "",
+        "LRCX": "",
+        "AGI": "",
+        "IAG": "",
+        "CIFR": "",
+        "KRMN": "",
+        "SNDK": "",
+        "ROIV": "",
+        "IONQ": "",
+        "WF": "",
+        "MTSR": "",
+        "HMY": ""
+    },
+    "Strategy12": {
+        "COST": "",
+        "KMX": "",
+        "NKE": ""
+    },
+    "Strategy34": {
+        "PGR": ""
+    },
+    "PE_valid": {
+        "ACN": "",
+        "AFRM": "",
+        "ARES": "",
+        "AVGO": "AVGO7热",
+        "BTI": "",
+        "DHR": "",
+        "EW": "",
+        "FIS": "",
+        "ICE": "",
+        "IDXX": "",
+        "ISRG": "",
+        "JHX": "JHX15热",
+        "MSFT": "",
+        "NDAQ": "",
+        "PAYX": "",
+        "ROP": "",
+        "SPGI": "",
+        "TME": "",
+        "TRI": "",
+        "VRSK": "",
+        "WM": ""
+    },
     "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
