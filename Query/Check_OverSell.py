@@ -150,8 +150,7 @@ def parse_compare_percent(compare_str: str):
         return None
 
 # 准备 Short 分组容器，确保结构存在且为 dict
-if 'Short' not in panel_data or not isinstance(panel_data['Short'], dict):
-    panel_data['Short'] = {}
+panel_data['Short'] = {}
 short_group = panel_data['Short']
 
 # 连接数据库

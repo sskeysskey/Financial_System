@@ -123,11 +123,11 @@
         "Silver": "",
         "Copper": "",
         "Uranium": "",
+        "Lumber": "木材",
         "Nickel": "镍",
         "Aluminum": "铝",
         "Steel": "",
         "IronOre": "",
-        "Lumber": "",
         "Platinum": "",
         "Cocoa": "",
         "Coffee": "",
@@ -185,13 +185,12 @@
         "ICE": ""
     },
     "Short": {
-        "LRCX": "",
-        "CIFR": "",
-        "KRMN": "",
-        "SNDK": "",
-        "IONQ": "",
         "AGI": "",
+        "CIFR": "",
         "BE": "",
+        "SNDK": "",
+        "LRCX": "",
+        "IONQ": "",
         "WF": "",
         "QBTS": "",
         "UTHR": "",
@@ -288,7 +287,11 @@
         "CorePCEY": "26 CorePCEY",
         "CorePCEM": "26 CorePCEM",
         "PCEY": "26 PCEY",
-        "USConfidence": "26 USConfidence"
+        "USConfidence": "26 USConfidence",
+        "USNonFarmA": "01 USNonFarmA",
+        "USNonFarm": "03 USNonFarm",
+        "USUnemploy": "03 USUnemploy",
+        "USNonPMI": "03 USNonPMI"
     },
     "Economic_All": {
         "USGDP": "",
