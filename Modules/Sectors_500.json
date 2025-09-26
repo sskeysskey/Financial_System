@@ -56,7 +56,6 @@
         "CPNG",
         "ORLY",
         "LCID",
-        "TCOM",
         "JD"
     ],
     "Consumer_Defensive": [
@@ -159,7 +158,6 @@
         "COIN",
         "HOOD",
         "ARES",
-        "NDAQ",
         "IBKR",
         "BAM",
         "NWG"
@@ -196,7 +194,6 @@
         "MCK",
         "COR",
         "ALNY",
-        "IDXX",
         "BDX"
     ],
     "Industrials": [
@@ -226,7 +223,6 @@
         "CSX",
         "RSG",
         "EMR",
-        "CARR",
         "FDX",
         "JCI",
         "HWM",

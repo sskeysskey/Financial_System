@@ -57,10 +57,59 @@
         }
         return 'data';
     }
+    // 新增：提取公司名称（例如 "LG Display Co., Ltd."）
+    function getCompanyName() {
+        // 优先：页面头部 quote-hdr 区域内的 h1
+        const h1a = document.querySelector('[data-testid="quote-hdr"] h1');
+        if (h1a && h1a.textContent) {
+            // h1 通常为两行："Company Name" 和 "(TICKER)"
+            // 取第一行的公司名部分
+            const lines = h1a.textContent.split('\n').map(s => s.trim()).filter(Boolean);
+            if (lines.length > 0) {
+                // 如果第一行是带引号的字符串，去掉包裹引号
+                return lines[0].replace(/^"+|"+$/g, '').trim();
+            }
+            // 兜底：从整段文本里提取括号前的部分
+            const txt = h1a.textContent.trim();
+            const idx = txt.indexOf('(');
+            if (idx > 0) return txt.slice(0, idx).replace(/^"+|"+$/g, '').trim();
+        }
+        // 备选：有些页面会把名称和代码分离在不同元素里
+        const nameNode = document.querySelector('[data-testid="quote-hdr"] .left h1, [data-testid="quote-hdr"] .container h1');
+        if (nameNode && nameNode.textContent) {
+            const txt = nameNode.textContent.trim();
+            const idx = txt.indexOf('(');
+            if (idx > 0) return txt.slice(0, idx).replace(/^"+|"+$/g, '').trim();
+            return txt.replace(/^"+|"+$/g, '').trim();
+        }
+        // 进一步兜底：查找包含括号 TICKER 的 h1，然后取括号前文本
+        const anyH1 = document.querySelector('h1');
+        if (anyH1 && anyH1.textContent) {
+            const txt = anyH1.textContent.trim();
+            const idx = txt.indexOf('(');
+            if (idx > 0) return txt.slice(0, idx).replace(/^"+|"+$/g, '').trim();
+            return txt.replace(/^"+|"+$/g, '').trim();
+        }
+        return 'Unknown Company';
+    }
 
     // ---- 主流程 ---- 
     function main() {
         sendStatus('内容脚本已注入，开始执行...');
+        // 新增步骤：提取公司名称并请求下载 TXT
+        sendStatus('新增步骤: 正在提取公司名称...');
+        const companyName = getCompanyName();
+        if (!companyName || companyName === 'Unknown Company') {
+            sendStatus('公司名称未能可靠提取，使用默认值。', 'info');
+        } else {
+            sendStatus(`提取到公司名称: ${companyName}`, 'success');
+        }
+        // 发送下载 name.txt 的请求
+        chrome.runtime.sendMessage({
+            action: 'downloadTXT',
+            text: companyName + '\n',
+            filename: 'name.txt'
+        });
 
         // 步骤 1: 查找数据表格
         sendStatus('步骤 1: 正在查找历史数据表格...');

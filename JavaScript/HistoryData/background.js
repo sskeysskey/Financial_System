@@ -46,6 +46,29 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             }
         });
     }
+    // 新增：监听来自 content.js 的下载请求，下载公司名 TXT
+    if (request.action === "downloadTXT") {
+        const text = request.text || "";
+        const filename = request.filename || "companyname.txt";
+        const url = "data:text/plain;charset=utf-8," + encodeURIComponent(text);
+        chrome.downloads.download({
+            url,
+            filename,
+            saveAs: false
+        }, (downloadId) => {
+            if (chrome.runtime.lastError) {
+                chrome.runtime.sendMessage({
+                    action: "updateStatus",
+                    data: { message: `公司名文件下载失败: ${chrome.runtime.lastError.message}`, type: 'error' }
+                });
+            } else {
+                chrome.runtime.sendMessage({
+                    action: "updateStatus",
+                    data: { message: `公司名已保存为 ${filename}`, type: 'success' }
+                });
+            }
+        });
+    }
 
     // 3) 监听来自 content.js 的状态更新，并将其转发给 popup.js
     if (request.action === "updateStatus") {

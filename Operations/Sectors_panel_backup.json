@@ -2,9 +2,14 @@
     "Basic_Materials": {
         "BCC": "",
         "UFPI": "",
-        "WFG": ""
+        "WFG": "",
+        "JHX": "",
+        "KNF": ""
     },
-    "Real_Estate": {},
+    "Real_Estate": {
+        "AMH": "",
+        "UDR": ""
+    },
     "Energy": {},
     "Technology": {
         "FI": "",
@@ -14,7 +19,10 @@
         "FIS": "",
         "JKHY": "",
         "EEFT": "",
-        "PAYX": ""
+        "PAYX": "",
+        "MSTR": "",
+        "NSIT": "",
+        "NIQ": ""
     },
     "Consumer_Cyclical": {
         "AMCR": "",
@@ -41,7 +49,8 @@
         "BAH": "",
         "CARR": "",
         "CPRT": "",
-        "FLY": ""
+        "FLY": "",
+        "TRI": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
@@ -54,7 +63,8 @@
         "HDB": "",
         "PGR": "",
         "IBN": "",
-        "TW": ""
+        "TW": "",
+        "MA": ""
     },
     "Healthcare": {
         "ALC": "",
@@ -134,6 +144,9 @@
         "XRP": ""
     },
     "Today": {
+        "NDAQ": "",
+        "SPGI": "",
+        "AXON": "",
         "CART": "",
         "TRU": "",
         "MCO": "",
@@ -141,29 +154,29 @@
         "GNRC": "",
         "COST": "",
         "COMP": "",
-        "CTAS": "",
         "BSX": "",
         "BNTX": "",
-        "BURL": "",
-        "CIFR": ""
+        "BURL": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
-        "NDAQ": "",
-        "SPGI": "",
-        "AVGO": "AVGO7热",
+        "AMZN": "",
+        "FCX": "",
         "DUOL": "",
         "HESM": "",
         "EW": "",
         "ACN": "",
-        "KMX": ""
+        "KMX": "",
+        "ICE": ""
     },
     "Short": {
-        "BE": "",
-        "FN": "",
-        "LRCX": ""
+        "LRCX": "",
+        "CIFR": "",
+        "KRMN": "",
+        "SNDK": "",
+        "IONQ": ""
     },
     "Strategy12": {},
     "Strategy34": {},
