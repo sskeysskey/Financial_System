@@ -169,7 +169,7 @@ for symbol in price_data.keys():
     if symbol_info['has_blacklist']:
         continue
         
-    # 查询该symbol最新的price
+    # 查询该symbol最新的财报涨跌幅
     cursor.execute("""
         SELECT price 
         FROM Earning 
