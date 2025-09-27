@@ -124,7 +124,8 @@
         "FTNT",
         "RSG",
         "CME",
-        "BSX"
+        "BSX",
+        "COST"
     ],
     "blue_keywords": [
         "US2Y",
@@ -692,7 +693,6 @@
         "HPQ",
         "HPE",
         "OLED",
-        "NOVT",
         "WK",
         "FCX",
         "DD",
@@ -913,7 +913,8 @@
         "WY",
         "FDS",
         "LSTR",
-        "PHI"
+        "PHI",
+        "NOVT"
     ],
     "black_keywords": [
         "VFC",

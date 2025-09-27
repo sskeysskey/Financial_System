@@ -3,6 +3,7 @@ import sqlite3
 import re
 from wcwidth import wcswidth
 from collections import defaultdict
+from datetime import datetime, timedelta
 
 # 文件路径
 PRICE_FILE = '/Users/yanzhang/Coding/Financial_System/Modules/10Y_newhigh.json'
@@ -14,7 +15,7 @@ OUTPUT_FILE = '/Users/yanzhang/Coding/News/OverSold.txt'
 PANEL_FILE = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
 
 # 定义tag黑名单
-BLACKLIST_TAGS = []
+BLACKLIST_TAGS = ["联合医疗"]
 
 # 读取JSON文件
 with open(PRICE_FILE, 'r') as f:
@@ -83,6 +84,48 @@ def get_symbol_info(symbol):
         'has_blacklist': False,
         'tags': []
     }
+
+def get_price_peak_date(cursor, symbol, sector):
+    """检查最近一个月内的最高价是否在最新交易日的前一天"""
+    # 获取最新交易日
+    cursor.execute(f"""
+        SELECT date, price 
+        FROM {sector}
+        WHERE name = ? 
+        ORDER BY date DESC 
+        LIMIT 1
+    """, (symbol,))
+    
+    latest_result = cursor.fetchone()
+    if not latest_result:
+        return False
+        
+    latest_date = latest_result[0]
+    
+    # 将日期字符串转换为datetime对象
+    latest_date = datetime.strptime(latest_date, '%Y-%m-%d')
+    one_month_ago = latest_date - timedelta(days=30)
+    
+    # 获取最近一个月内的所有价格数据
+    cursor.execute(f"""
+        SELECT date, price 
+        FROM {sector}
+        WHERE name = ? 
+        AND date >= ? 
+        AND date <= ?
+        ORDER BY price DESC, date DESC
+    """, (symbol, one_month_ago.strftime('%Y-%m-%d'), latest_date.strftime('%Y-%m-%d')))
+    
+    price_data = cursor.fetchall()
+    if not price_data:
+        return False
+    
+    # 获取最高价的日期
+    peak_date = datetime.strptime(price_data[0][0], '%Y-%m-%d')
+    
+    # 检查最高价是否出现在最新交易日的前一天
+    expected_peak_date = latest_date - timedelta(days=1)
+    return peak_date.date() == expected_peak_date.date()
 
 def get_price_change_percent(cursor, symbol, sector):
     # 获取最新财报日期
@@ -187,8 +230,12 @@ for symbol in price_data.keys():
         price_change = get_price_change_percent(cursor, symbol, sector)
         
         if price_change is not None:
-            # 新增过滤逻辑：财报日至最新收盘价的百分比变化若小于 30%，则跳过
+            # 过滤掉财报日至最新收盘价变化小于30%的
             if abs(price_change) < 30:
+                continue
+                
+            # 新增：检查最高价是否在最新交易日的前一天
+            if not get_price_peak_date(cursor, symbol, sector):
                 continue
 
             tags_str = ", ".join(symbol_info['tags']) if symbol_info['tags'] else "无标签"

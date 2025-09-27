@@ -160,7 +160,8 @@
         "ARES",
         "IBKR",
         "BAM",
-        "NWG"
+        "NWG",
+        "NDAQ"
     ],
     "Healthcare": [
         "LLY",
@@ -194,7 +195,8 @@
         "MCK",
         "COR",
         "ALNY",
-        "BDX"
+        "BDX",
+        "IDXX"
     ],
     "Industrials": [
         "GE",
@@ -235,7 +237,8 @@
         "LHX",
         "CMI",
         "FAST",
-        "VRT"
+        "VRT",
+        "CARR"
     ],
     "Real_Estate": [
         "PLD",
@@ -244,7 +247,8 @@
         "WELL",
         "SPG",
         "DLR",
-        "O"
+        "O",
+        "PSA"
     ],
     "Technology": [
         "AAPL",
