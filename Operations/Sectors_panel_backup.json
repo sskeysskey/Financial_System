@@ -15,15 +15,12 @@
         "FI": "",
         "GIB": "",
         "ACN": "",
-        "ROP": "",
-        "FIS": "",
         "JKHY": "",
         "EEFT": "",
-        "PAYX": "",
-        "MSTR": "",
         "NSIT": "",
         "NIQ": "",
-        "CHYM": ""
+        "CHYM": "",
+        "NOVT": ""
     },
     "Consumer_Cyclical": {
         "AMCR": "",
@@ -44,12 +41,11 @@
         "CHD": "",
         "K": "",
         "INGR": "",
-        "KMB": "",
         "KO": "",
-        "KDP": ""
+        "KDP": "",
+        "COST": ""
     },
     "Industrials": {
-        "VRSK": "",
         "ODFL": "",
         "LSTR": "",
         "BAH": "",
@@ -74,14 +70,11 @@
     },
     "Healthcare": {
         "ALC": "",
-        "BSX": "",
-        "ZTS": "",
-        "HLN": "",
         "ATR": "",
-        "DHR": "",
         "SNY": "",
         "MMSI": "",
-        "PRCT": ""
+        "PRCT": "",
+        "GKOS": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -154,9 +147,10 @@
         "XRP": ""
     },
     "Today": {
+        "SHOP": "",
+        "AFRM": "",
         "AMZN": "",
         "GILD": "",
-        "NDAQ": "",
         "SPGI": "",
         "FCX": "",
         "AXON": "",
@@ -172,7 +166,6 @@
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
-        "ADP": "",
         "DUOL": "",
         "ICE": "",
         "KNSL": ""
@@ -221,7 +214,7 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USInitial": "25 USInitial",
+        "USInitial": "02 USInitial",
         "CorePCEY": "26 CorePCEY",
         "CorePCEM": "26 CorePCEM",
         "PCEY": "26 PCEY",

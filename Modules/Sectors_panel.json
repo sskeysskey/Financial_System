@@ -15,12 +15,8 @@
         "FI": "",
         "GIB": "",
         "ACN": "",
-        "ROP": "",
-        "FIS": "",
         "JKHY": "",
         "EEFT": "",
-        "PAYX": "",
-        "MSTR": "",
         "NSIT": "",
         "NIQ": "",
         "CHYM": "",
@@ -45,13 +41,11 @@
         "CHD": "",
         "K": "",
         "INGR": "",
-        "KMB": "",
         "KO": "",
         "KDP": "",
         "COST": ""
     },
     "Industrials": {
-        "VRSK": "",
         "ODFL": "",
         "LSTR": "",
         "BAH": "",
@@ -76,11 +70,7 @@
     },
     "Healthcare": {
         "ALC": "",
-        "BSX": "",
-        "ZTS": "",
-        "HLN": "",
         "ATR": "",
-        "DHR": "",
         "SNY": "",
         "MMSI": "",
         "PRCT": "",
@@ -157,9 +147,10 @@
         "XRP": ""
     },
     "Today": {
+        "SHOP": "",
+        "AFRM": "",
         "AMZN": "",
         "GILD": "",
-        "NDAQ": "",
         "SPGI": "",
         "FCX": "",
         "AXON": "",
@@ -175,41 +166,14 @@
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
-        "ADP": "",
         "DUOL": "",
         "ICE": "",
         "KNSL": ""
     },
     "Short": {},
-    "Strategy12": {
-        "NKE": ""
-    },
-    "Strategy34": {
-        "JBHT": "",
-        "ORCL": "ORCL热",
-        "PGR": ""
-    },
-    "PE_valid": {
-        "AFRM": "",
-        "AMD": "AMD7热",
-        "ARES": "",
-        "AVGO": "AVGO7热",
-        "BSX": "",
-        "DECK": "",
-        "DHR": "",
-        "FIS": "",
-        "GEV": "",
-        "ICE": "",
-        "ISRG": "",
-        "KMB": "",
-        "MSFT": "",
-        "PAYX": "",
-        "ROP": "",
-        "SBAC": "",
-        "SHOP": "",
-        "VRSK": "",
-        "WM": ""
-    },
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {},
     "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
@@ -250,12 +214,8 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USInitial": "25 USInitial",
-        "CorePCEY": "26 CorePCEY",
-        "CorePCEM": "26 CorePCEM",
-        "PCEY": "26 PCEY",
-        "USConfidence": "26 USConfidence",
         "USNonFarmA": "01 USNonFarmA",
+        "USInitial": "02 USInitial",
         "USNonFarm": "03 USNonFarm",
         "USUnemploy": "03 USUnemploy",
         "USNonPMI": "03 USNonPMI"

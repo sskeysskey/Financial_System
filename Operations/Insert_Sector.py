@@ -11,7 +11,7 @@ def copy2clipboard():
     """
     script = '''
     set the clipboard to ""
-    delay 0.3
+    delay 0.5
     tell application "System Events"
         keystroke "c" using {command down}
         delay 0.5

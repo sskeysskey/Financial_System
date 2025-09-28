@@ -562,7 +562,8 @@
         "RUSHB",
         "INFA",
         "BRFS",
-        "FUN"
+        "FUN",
+        "MTSR"
     ],
     "etf": [
         "VDE",
@@ -809,7 +810,8 @@
         "DUSA",
         "SDCI",
         "QLC",
-        "EEMS"
+        "EEMS",
+        "REGL"
     ],
     "Earning": [
         "TW",
