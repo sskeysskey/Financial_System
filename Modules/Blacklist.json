@@ -563,7 +563,8 @@
         "INFA",
         "BRFS",
         "FUN",
-        "MTSR"
+        "MTSR",
+        "TXNM"
     ],
     "etf": [
         "VDE",

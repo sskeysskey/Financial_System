@@ -534,7 +534,9 @@
         "TW",
         "PAYX",
         "KNF",
-        "KNSL"
+        "KNSL",
+        "PPC",
+        "WTM"
     ],
     "yellow_keywords": [
         "XLY",

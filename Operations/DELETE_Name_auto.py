@@ -11,10 +11,10 @@ def show_alert(message):
     subprocess.run(['osascript', '-e', applescript_code], check=True)
 
 def get_clipboard_content():
-    """获取剪贴板内容，包含错误处理"""
+    """获取剪贴板内容，包含错误处理，并转换为大写"""
     try:
         content = pyperclip.paste()
-        return content.strip() if content else ""
+        return content.strip().upper() if content else ""
     except Exception:
         return ""
 

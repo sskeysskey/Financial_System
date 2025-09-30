@@ -1242,7 +1242,8 @@
     "ONC",
     "MRUS",
     "CAI",
-    "HIMS"
+    "HIMS",
+    "VOR"
   ],
   "Industrials": [
     "GE",
@@ -1834,7 +1835,6 @@
     "PAM",
     "OKLO",
     "ENIC",
-    "TXNM",
     "EMA"
   ]
 }
