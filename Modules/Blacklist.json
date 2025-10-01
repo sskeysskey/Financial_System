@@ -564,7 +564,8 @@
         "BRFS",
         "FUN",
         "MTSR",
-        "TXNM"
+        "TXNM",
+        "VOR"
     ],
     "etf": [
         "VDE",

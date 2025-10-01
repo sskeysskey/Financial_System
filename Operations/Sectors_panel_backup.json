@@ -29,7 +29,8 @@
         "SLGN": "",
         "AVY": "",
         "KMX": "",
-        "HRB": ""
+        "HRB": "",
+        "CAVA": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -43,7 +44,8 @@
         "INGR": "",
         "KO": "",
         "KDP": "",
-        "COST": ""
+        "COST": "",
+        "PPC": ""
     },
     "Industrials": {
         "ODFL": "",
@@ -66,7 +68,10 @@
         "IBN": "",
         "TW": "",
         "MA": "",
-        "V": ""
+        "V": "",
+        "BXSL": "",
+        "WTM": "",
+        "OTF": ""
     },
     "Healthcare": {
         "ALC": "",
@@ -74,7 +79,8 @@
         "SNY": "",
         "MMSI": "",
         "PRCT": "",
-        "GKOS": ""
+        "GKOS": "",
+        "ADMA": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -147,10 +153,11 @@
         "XRP": ""
     },
     "Today": {
-        "SHOP": "",
+        "GILD": "",
+        "CART": "",
+        "BSX": "",
         "AFRM": "",
         "AMZN": "",
-        "GILD": "",
         "SPGI": "",
         "FCX": "",
         "AXON": "",
@@ -166,6 +173,9 @@
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
+        "NKE": "",
+        "PAYX": "",
+        "CDNS": "CDNS热",
         "DUOL": "",
         "ICE": "",
         "KNSL": ""
@@ -214,12 +224,8 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USInitial": "02 USInitial",
-        "CorePCEY": "26 CorePCEY",
-        "CorePCEM": "26 CorePCEM",
-        "PCEY": "26 PCEY",
-        "USConfidence": "26 USConfidence",
         "USNonFarmA": "01 USNonFarmA",
+        "USInitial": "02 USInitial",
         "USNonFarm": "03 USNonFarm",
         "USUnemploy": "03 USUnemploy",
         "USNonPMI": "03 USNonPMI"

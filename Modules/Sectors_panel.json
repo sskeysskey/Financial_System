@@ -20,7 +20,8 @@
         "NSIT": "",
         "NIQ": "",
         "CHYM": "",
-        "NOVT": ""
+        "NOVT": "",
+        "WIT": ""
     },
     "Consumer_Cyclical": {
         "AMCR": "",
@@ -54,9 +55,12 @@
         "CARR": "",
         "CPRT": "",
         "FLY": "",
-        "TRI": ""
+        "TRI": "",
+        "DE": ""
     },
-    "Communication_Services": {},
+    "Communication_Services": {
+        "META": ""
+    },
     "Financial_Services": {
         "FDS": "",
         "MORN": "",
@@ -153,10 +157,11 @@
         "XRP": ""
     },
     "Today": {
-        "SHOP": "",
+        "GILD": "",
+        "CART": "",
+        "BSX": "",
         "AFRM": "",
         "AMZN": "",
-        "GILD": "",
         "SPGI": "",
         "FCX": "",
         "AXON": "",
@@ -172,42 +177,54 @@
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
+        "NKE": "",
+        "PAYX": "",
+        "CDNS": "CDNS热",
         "DUOL": "",
         "ICE": "",
         "KNSL": ""
     },
-    "Short": {},
+    "Short": {
+        "SNDK": "",
+        "HMY": ""
+    },
     "Strategy12": {
-        "NKE": ""
+        "NKE": "",
+        "RPM": "RPM热"
     },
     "Strategy34": {
         "AAL": "",
         "BSX": "",
-        "DHR": "",
+        "DECK": "",
+        "DOCU": "DOCU热",
         "ISRG": "",
+        "LII": "",
         "ORCL": "ORCL热",
-        "PGR": "",
-        "SAP": "",
-        "TMO": ""
+        "TMO": "",
+        "TRU": ""
     },
     "PE_valid": {
         "AMD": "AMD7热",
         "ARES": "",
         "AVGO": "AVGO7热",
-        "CART": "",
-        "CDNS": "CDNS热",
-        "CHD": "",
-        "DECK": "",
+        "CRM": "CRM7",
+        "FOUR": "",
         "GEV": "",
         "ICE": "",
+        "KKR": "",
+        "META": "META7",
         "NDAQ": "",
-        "PAYX": "",
+        "NOW": "",
         "ROP": "",
-        "TRI": "",
-        "VRSK": "",
+        "SN": "",
         "VRSN": ""
     },
-    "PE_invalid": {},
+    "PE_invalid": {
+        "DKNG": "",
+        "IOT": "IOT7热",
+        "KVYO": "",
+        "SMR": "SMR15热"
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
