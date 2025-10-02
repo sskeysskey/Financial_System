@@ -63,6 +63,11 @@ class TagEditor(QMainWindow):
         self.weight_data = {}
         self.earning_data = {}
 
+        # --- 新增：定义互斥组 ---
+        # 这些分组内的标签是互斥的，一个标签只能存在于其中一个分组。
+        self.WEIGHT_EXCLUSIVE_GROUP = {"2.0", "1.5", "1.3", "0.2"}
+        self.EARNING_EXCLUSIVE_GROUP = {"HOT_TAGS", "BLACKLIST_TAGS"}
+
         self.list_widgets = {} # 使用唯一的 key (如 "1.0", "BLACKLIST_TAGS") 存储所有列表控件
         self.base_window_title = "标签编辑器"
         
@@ -225,19 +230,39 @@ class TagEditor(QMainWindow):
         
         self.list_widgets[key] = list_widget
 
-    def _is_tag_duplicate(self, tag, excluding_item=None):
-        """全局检查标签是否重复"""
-        old_text = excluding_item.text() if excluding_item else None
+    def _check_for_conflict(self, tag, target_key, excluding_text=None):
+        """
+        检查标签是否与互斥组中的其他标签冲突。
+        - tag: 要检查的标签名。
+        - target_key: 标签将要被添加到的目标栏目键。
+        - excluding_text: (可选) 编辑时，要忽略的原始标签文本。
+        返回: 如果有冲突，返回冲突所在的栏目键(str)；否则返回 None。
+        """
+        tag_to_check = tag.strip()
         
-        all_tags = [t for tags in self.weight_data.values() for t in tags] + \
-                   [t for tags in self.earning_data.values() for t in tags]
+        # 确定要检查哪个互斥组和哪个数据源
+        if target_key in self.WEIGHT_EXCLUSIVE_GROUP:
+            exclusive_group = self.WEIGHT_EXCLUSIVE_GROUP
+            data_source = self.weight_data
+        elif target_key in self.EARNING_EXCLUSIVE_GROUP:
+            exclusive_group = self.EARNING_EXCLUSIVE_GROUP
+            data_source = self.earning_data
+        else:
+            # 如果目标不属于任何互斥组，则不进行互斥检查
+            # 也可以在这里添加其他规则，例如检查同一文件内的所有标签
+            return None
 
-        for existing_tag in all_tags:
-            if old_text and existing_tag == old_text:
-                continue # 跳过与自身（编辑前）的比较
-            if existing_tag == tag:
-                return True
-        return False
+        for key, tags in data_source.items():
+            # 只检查在互斥组中，但不是目标栏目自身的其他栏目
+            if key in exclusive_group and key != target_key:
+                for existing_tag in tags:
+                    # 如果是编辑操作，跳过与原始文本的比较
+                    if excluding_text and existing_tag == excluding_text:
+                        continue
+                    if existing_tag == tag_to_check:
+                        return key  # 发现冲突，返回冲突所在的栏目键
+        
+        return None # 未发现冲突
 
     def search_tags(self, text):
         """根据搜索框文本过滤所有列表中的项目"""
@@ -269,10 +294,18 @@ class TagEditor(QMainWindow):
                     QMessageBox.warning(self, "新增失败", "标签名不能为空！")
                     return
                 
-                if self._is_tag_duplicate(tag):
-                    QMessageBox.warning(self, "错误", f"标签 '{tag}' 已在其他地方存在！")
+                # 新的冲突检查逻辑
+                conflict_key = self._check_for_conflict(tag, key)
+                if conflict_key:
+                    QMessageBox.warning(self, "新增失败", f"标签 '{tag}' 已存在于互斥的栏目 '{conflict_key}' 中！")
                     return
                 
+                # 检查是否在当前列表中重复
+                current_list = self.weight_data.get(key) or self.earning_data.get(key, [])
+                if tag in current_list:
+                    QMessageBox.warning(self, "新增失败", f"标签 '{tag}' 已存在于当前栏目中！")
+                    return
+
                 # 更新数据和UI
                 if key in self.weight_data:
                     self.weight_data[key].append(tag)
@@ -335,19 +368,29 @@ class TagEditor(QMainWindow):
             if not new_text:
                 QMessageBox.warning(self, "编辑失败", "标签名不能为空！")
                 item.setText(old_text)
-            elif self._is_tag_duplicate(new_text, excluding_item=item):
-                QMessageBox.warning(self, "编辑失败", f"标签 '{new_text}' 已存在！")
+                return
+            
+            # 如果文本没有改变，则不执行任何操作
+            if new_text == old_text:
+                return
+
+            # 新的冲突检查逻辑
+            key = list_widget.key
+            conflict_key = self._check_for_conflict(new_text, key, excluding_text=old_text)
+            if conflict_key:
+                QMessageBox.warning(self, "编辑失败", f"标签 '{new_text}' 已存在于互斥的栏目 '{conflict_key}' 中！")
                 item.setText(old_text)
             else:
+                # 更新数据模型
                 file_type = list_widget.file_type
-                key = list_widget.key
                 data_dict = self.weight_data if file_type == 'weight' else self.earning_data
                 try:
                     index = data_dict[key].index(old_text)
                     data_dict[key][index] = new_text
                     self._mark_as_dirty()
                 except ValueError:
-                    pass
+                    # 如果旧文本在数据模型中找不到，可能是一个UI错误，恢复旧文本
+                    item.setText(old_text)
             
             try:
                 list_widget.itemChanged.disconnect(on_editing_finished)
@@ -355,6 +398,7 @@ class TagEditor(QMainWindow):
                 pass
 
         list_widget.itemChanged.connect(on_editing_finished)
+
 
     def list_key_press_event(self, event, list_widget):
         """处理列表控件的按键事件（删除）"""
@@ -404,17 +448,33 @@ class TagEditor(QMainWindow):
         if action == delete_action:
             self.delete_selected_items(list_widget)
 
+    def _enforce_exclusivity_and_remove(self, tag, target_key):
+        """检查并从冲突的互斥组中移除标签"""
+        conflict_key = self._check_for_conflict(tag, target_key)
+        if conflict_key:
+            # 从冲突组的数据模型中移除
+            conflict_data = self.weight_data if conflict_key in self.weight_data else self.earning_data
+            if tag in conflict_data[conflict_key]:
+                conflict_data[conflict_key].remove(tag)
+
+            # 从冲突组的UI列表中移除
+            conflict_list_widget = self.list_widgets.get(conflict_key)
+            if conflict_list_widget:
+                for i in range(conflict_list_widget.count() - 1, -1, -1):
+                    if conflict_list_widget.item(i).text() == tag:
+                        conflict_list_widget.takeItem(i)
+                        break
+            return True
+        return False
+
     def handle_item_move(self, src_file, src_key, dest_file, dest_key, texts):
         """处理项目在不同列表间移动的核心逻辑"""
         # 规则 1: 从 earning 拖拽到 weight 是不允许的
         if src_file == 'earning' and dest_file == 'weight':
             QMessageBox.warning(self, "操作无效", "不能将标签从 Earning 栏目移动或复制到 Weight 栏目。")
-            # 重新填充源列表以撤销视觉上的拖拽效果
-            src_list_widget = self.list_widgets[src_key]
-            selected_rows = [item.listWidget().row(item) for item in src_list_widget.selectedItems()]
-            for row in sorted(selected_rows, reverse=True):
-                 src_list_widget.takeItem(row) # 移除
-            self.populate_columns() # 简单粗暴但有效的方式恢复UI
+            # 拖拽失败后，源列表的项目会被Qt自动移除，我们需要手动加回去恢复UI
+            # 一个简单的方法是重新加载所有列
+            self.populate_columns()
             return
 
         src_data = self.weight_data if src_file == 'weight' else self.earning_data
@@ -422,34 +482,41 @@ class TagEditor(QMainWindow):
         
         # 规则 2: 同一个文件内部拖拽是“移动”
         is_move = (src_file == dest_file)
-        # 规则 3: 从 weight 到 earning 是“复制”
-        is_copy = (src_file == 'weight' and dest_file == 'earning')
-
+        
         duplicates = [t for t in texts if t in dest_data[dest_key]]
         if duplicates:
             QMessageBox.warning(self, "重复标签", f"以下标签已存在于目标栏目 '{dest_key}'，将被跳过：\n" + "\n".join(duplicates))
 
         texts_to_process = [t for t in texts if t not in duplicates]
         if not texts_to_process:
+             # 如果没有可处理的标签，但源和目标不同，可能需要恢复UI
+            if src_key != dest_key:
+                self.populate_columns()
             return
 
-        # 更新数据模型
-        for text in texts_to_process:
-            if is_move:
-                if text in src_data[src_key]:
-                    src_data[src_key].remove(text)
-            # 无论是移动还是复制，都需要添加到目标
-            dest_data[dest_key].append(text)
+        # --- 核心逻辑：处理数据模型 ---
+        for tag in texts_to_process:
+            # 1. 自动解决互斥冲突：如果标签存在于目标的互斥组中，先从那里移除
+            self._enforce_exclusivity_and_remove(tag, dest_key)
 
-        # 更新UI
+            # 2. 从源数据中移除 (如果是移动)
+            # 注意：如果源和冲突目标是同一个，_enforce_exclusivity_and_remove 已经处理了移除
+            if is_move and tag in src_data.get(src_key, []):
+                src_data[src_key].remove(tag)
+
+            # 3. 添加到目标数据
+            dest_data[dest_key].append(tag)
+
+        # --- 更新UI ---
         src_list = self.list_widgets[src_key]
         dest_list = self.list_widgets[dest_key]
 
         if is_move:
             # 从源UI列表中移除
-            for row in range(src_list.count() - 1, -1, -1):
-                if src_list.item(row).text() in texts_to_process:
-                    src_list.takeItem(row)
+            # Qt的默认行为会移除，但为了确保数据和UI同步，我们再次手动操作
+            selected_items = [item for item in src_list.selectedItems() if item.text() in texts_to_process]
+            for item in selected_items:
+                 src_list.takeItem(src_list.row(item))
         
         # 向目标UI列表添加
         for text in texts_to_process:
@@ -458,6 +525,7 @@ class TagEditor(QMainWindow):
             dest_list.addItem(item)
             
         self._mark_as_dirty()
+
 
     def save_all_data(self, notify=True):
         """将所有数据写回对应的 JSON 文件"""

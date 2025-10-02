@@ -40,6 +40,7 @@ cursor = conn.cursor()
 # 将所有name为'Russian'的记录改为'Russia'
 # cursor.execute("UPDATE Commodities SET name = 'Huangjin' WHERE name = 'HuangJin'")
 # cursor.execute("UPDATE Commodities SET name = 'YuMi' WHERE name = 'Corn'")
+# cursor.execute("UPDATE ETFs SET name = 'GOEX260417C00058000' WHERE name = 'GOEX'")
 
 # 更新数据库表中所有记录的price字段，保留2位小数
 # cursor.execute("UPDATE Indices SET price = ROUND(price, 2)")

@@ -815,7 +815,10 @@
         "QLC",
         "EEMS",
         "REGL",
-        "INEQ"
+        "INEQ",
+        "VIDI",
+        "AGGY",
+        "PHO"
     ],
     "Earning": [
         "TW",
