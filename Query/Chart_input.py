@@ -141,7 +141,7 @@ def display_dialog(message):
     subprocess.run(['osascript', '-e', applescript_code], check=True)
 
 # --- 优化: 简化的update_plot函数，减少重复创建渐变 ---
-def update_plot(line1, gradient_image, line2, dates, prices, volumes, ax1, ax2, show_volume, cmap, force_recreate=False, gradient_clip_patch=None):
+def update_plot(line1, gradient_image, line2, dates, prices, volumes, ax1, ax2, show_volume, cmap, force_recreate=False, gradient_clip_patch=None, zero_line=None):
     """
     更新图表，使用 imshow 和 clip_path 实现渐变填充。
     此版本修复了快速切换时渐变区域不同步的问题。
@@ -154,6 +154,9 @@ def update_plot(line1, gradient_image, line2, dates, prices, volumes, ax1, ax2, 
         ax1.set_ylim(0, 1)
         if show_volume: ax2.set_ylim(0, 1)
         line2.set_visible(show_volume and bool(volumes))
+        # 隐藏零线
+        if zero_line is not None:
+            zero_line.set_visible(False)
         # 如果之前有渐变图，则隐藏它
         if gradient_image:
             gradient_image.set_visible(False)
@@ -193,6 +196,20 @@ def update_plot(line1, gradient_image, line2, dates, prices, volumes, ax1, ax2, 
     top_pad = max(y_range * 0.03, 0.02 * max(1.0, abs(max_p)))   # 至少给一个相对最小值
     bottom_pad = y_range * 0.01
     ax1.set_ylim(min_p - bottom_pad, max_p + top_pad)
+
+    # 新增：零线显隐与范围保障
+    if zero_line is not None:
+        # 使用原始价格数据判断是否存在负值
+        if np.min(prices) < 0.0:
+            zero_line.set_visible(True)
+            y0, y1 = ax1.get_ylim()
+            # 如果 0 不在当前 Y 轴范围内，则扩展范围以包含 0
+            if y1 < 0:  # 所有数据都为负
+                ax1.set_ylim(y0, 0 + top_pad)
+            elif y0 > 0: # 所有数据都为正，但由于某种原因（例如，极小的负值被padding覆盖），0 不可见
+                ax1.set_ylim(0 - bottom_pad, y1)
+        else: # 所有数据均为正或零
+            zero_line.set_visible(False)
 
     if show_volume:
         if volumes and any(v is not None for v in volumes):
@@ -445,9 +462,12 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         dates, volumes, marker='o', markersize=2, linestyle='-', linewidth=2,
         color=NORD_THEME['accent_purple'], alpha=0.7, label='Volume'
     )
-    # --- 删除: 不再使用简单的fill_between ---
-    # fill = ax1.fill_between(dates, prices, color=NORD_THEME['accent_cyan'], alpha=0.2)
     line2.set_visible(show_volume)
+
+    # 新增：零值参考线（默认隐藏，由 update_plot 控制显示）
+    zero_line = ax1.axhline(
+        y=0, color=NORD_THEME['border'], linestyle='--', linewidth=1.0, alpha=0.6, zorder=0, visible=False
+    )
 
     # --- 新增: 创建自定义的渐变色图 (Colormap) ---
     # 效果：顶部为半透明的青色(alpha=0.5)，底部为完全透明的青色(alpha=0.0)
@@ -973,7 +993,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 ax1, ax2, show_volume,
                 cyan_transparent_cmap,
                 force_recreate=force_flag,
-                gradient_clip_patch=gradient_clip_patch
+                gradient_clip_patch=gradient_clip_patch,
+                zero_line=zero_line
             )
 
             for i, circle in enumerate(radio.circles):
@@ -1014,7 +1035,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 ax1, ax2, show_volume,
                 cyan_transparent_cmap,
                 force_recreate=False,
-                gradient_clip_patch=gradient_clip_patch
+                gradient_clip_patch=gradient_clip_patch,
+                zero_line=zero_line
             )
             fig.canvas.draw_idle()
         except Exception as e:

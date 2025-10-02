@@ -42,8 +42,7 @@
         "AVY": "",
         "KMX": "",
         "HRB": "",
-        "CAVA": "",
-        "MELI": ""
+        "CAVA": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -64,7 +63,6 @@
     "Industrials": {
         "ODFL": "",
         "LSTR": "",
-        "BAH": "",
         "CARR": "",
         "CPRT": "",
         "FLY": "",
@@ -177,78 +175,30 @@
         "XRP": ""
     },
     "Today": {
-        "DUOL": "",
-        "DKNG": "",
+        "VRSN": "",
+        "BSX": "",
+        "Z": "",
+        "COMP": "",
         "SN": "",
-        "DOCU": "",
-        "IXJ": "",
-        "GILD": "",
-        "AFRM": "",
-        "AMZN": "",
         "SPGI": "",
-        "TRU": "",
-        "MCO": "",
         "KDP": "",
-        "BNTX": "",
         "BURL": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
-        "CDNS": "CDNS热",
-        "ICE": "",
-        "KNSL": "",
-        "LII": ""
-    },
-    "Short": {
-        "HOOD": ""
-    },
-    "Strategy12": {},
-    "Strategy34": {
-        "AAL": "",
-        "BAH": "",
-        "BSX": "",
-        "DECK": "",
-        "DOCU": "DOCU热",
         "GWRE": "",
-        "ISRG": "",
+        "DUOL": "",
         "LII": "",
-        "ORCL": "ORCL热",
-        "TRU": "",
-        "VRSN": ""
+        "HESM": "",
+        "MELI": ""
     },
-    "PE_valid": {
-        "ARES": "",
-        "AVGO": "AVGO7热",
-        "CART": "",
-        "CRM": "CRM7",
-        "CTVA": "",
-        "DPZ": "",
-        "FI": "",
-        "FND": "",
-        "GEV": "",
-        "HPQ": "HPQ7热",
-        "ICE": "",
-        "IDXX": "",
-        "KKR": "",
-        "META": "META7",
-        "NCLH": "",
-        "NDAQ": "",
-        "NFLX": "NFLX7",
-        "NOW": "",
-        "PAYC": "",
-        "RMD": "",
-        "ROP": "",
-        "TMUS": "TMUS7",
-        "TYL": "",
-        "VRSK": "",
-        "WM": ""
-    },
-    "PE_invalid": {
-        "KVYO": "",
-        "Z": ""
-    },
+    "Short": {},
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {},
+    "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

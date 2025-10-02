@@ -419,19 +419,15 @@ def main():
 
         # --- 如果 group_name 未找到，则设置为 "ETFs" 并更新 JSON 及内存映射 ---
         if group_name is None:
+            group_name = "ETFs" # 先将 group_name 设为 "ETFs"
             # 将 symbol 添加到 Sectors_All.json 的 ETFs 组
             if add_symbol_to_etfs_group_in_json(symbol, SECTORS_JSON_PATH):
                 # 如果成功添加到 JSON 文件，也更新内存中的 symbol_to_group_map
-                # 这样，如果在同一次运行中（理论上不太可能处理同一个 symbol 两次）再次查找，
-                # 或者如果 load_symbol_to_group_map 在开始时未能加载 "ETFs" 组（例如JSON文件最初没有ETFs组）
-                # 这能确保内存映射是最新的。
-                group_name = "ETFs"
+                symbol_to_group_map[symbol] = "ETFs"
                 print(f"内存中的 symbol_to_group_map 已更新：'{symbol}' -> '{group_name}'")
             else:
-                # 如果添加到 JSON 失败，可以选择是否继续处理，或者标记为跳过
-                # 这里我们选择继续处理，但 group_name 仍然是 "ETFs"
-                # 但 Sectors_All.json 可能没有被更新
-                print(f"注意: Symbol '{symbol}' 未能成功添加到 {SECTORS_JSON_PATH}。仍将尝试使用 Group '{group_name}' 处理。")
+                # 如果添加到 JSON 失败，打印警告
+                print(f"警告: Symbol '{symbol}' 未能成功添加到 {SECTORS_JSON_PATH}。仍将按 ETFs 分组处理。")
 
         # 现在 group_name 一定有值 (要么是找到的，要么是 "ETFs")
         print(f"Symbol: {symbol}, 对应 Group (表名): {group_name}")
@@ -441,15 +437,41 @@ def main():
         success = process_csv_file(csv_filepath, symbol, group_name, DB_PATH)
         
         if success:
-            # 调用新函数移除 symbol
+            # 调用函数从 Sectors_empty.json 移除 symbol
             remove_symbol_from_empty_json(symbol, group_name, SECTORS_EMPTY_JSON_PATH)
+
+            # #############################################################################
+            # ### --- 新增代码开始：根据您的需求添加 --- ###
+            # #############################################################################
+            # 检查 symbol 是否属于 "ETFs" 组，如果是，则尝试删除对应的 .txt 文件
+            if group_name == "ETFs":
+                # 构建要删除的 .txt 文件的完整路径
+                txt_filename_to_delete = f"{symbol}.txt"
+                txt_filepath_to_delete = os.path.join(DOWNLOADS_DIR, txt_filename_to_delete)
+                
+                print(f"  -> Symbol '{symbol}' 属于 ETFs 组，尝试删除关联文件: {txt_filename_to_delete}")
+                
+                try:
+                    # 尝试删除文件
+                    os.remove(txt_filepath_to_delete)
+                    print(f"    - 成功删除关联的 .txt 文件。")
+                except FileNotFoundError:
+                    # 如果文件不存在，则打印信息并继续，不报错
+                    print(f"    - 关联的 .txt 文件不存在，无需删除。")
+                except OSError as e:
+                    # 捕获其他可能的删除错误，例如权限问题
+                    print(f"    - 错误: 删除关联的 .txt 文件失败: {e}")
+            # #############################################################################
+            # ### --- 新增代码结束 --- ###
+            # #############################################################################
+
             try:
                 # h. 如果成功，删除 CSV 文件
                 os.remove(csv_filepath)
-                print(f"成功处理并删除了文件: {csv_filepath}")
+                print(f"成功处理并删除了 CSV 文件: {filename}")
                 processed_count += 1
             except OSError as e:
-                print(f"错误: 删除文件 {csv_filepath} 失败: {e}")
+                print(f"错误: 删除 CSV 文件 {csv_filepath} 失败: {e}")
                 # 如果删除失败，也算作未完全成功，可以归入 skipped_count 或新增一个计数
                 skipped_count += 1 # 视情况调整，这里暂时将删除失败也计入skipped
         else:
