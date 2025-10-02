@@ -59,7 +59,8 @@
         "ORLY",
         "LCID",
         "JD",
-        "DHI"
+        "DHI",
+        "ROST"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -163,8 +164,7 @@
         "ARES",
         "IBKR",
         "BAM",
-        "NWG",
-        "NDAQ"
+        "NWG"
     ],
     "Healthcare": [
         "LLY",
@@ -198,8 +198,7 @@
         "MCK",
         "COR",
         "ALNY",
-        "BDX",
-        "IDXX"
+        "BDX"
     ],
     "Industrials": [
         "GE",

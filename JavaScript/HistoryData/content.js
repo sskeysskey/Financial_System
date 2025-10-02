@@ -96,23 +96,29 @@
     // ---- 主流程 ---- 
     function main() {
         sendStatus('内容脚本已注入，开始执行...');
-        // 新增步骤：提取公司名称并请求下载 TXT
-        sendStatus('新增步骤: 正在提取公司名称...');
+
+        // 步骤 1: 提取 Ticker
+        sendStatus('步骤 1: 正在提取 Ticker 名称...');
+        const ticker = getTicker();
+        sendStatus(`提取到 Ticker: ${ticker}`, 'success');
+
+        // 步骤 2: 提取公司名称并请求下载 TXT
+        sendStatus('步骤 2: 正在提取公司名称...');
         const companyName = getCompanyName();
         if (!companyName || companyName === 'Unknown Company') {
             sendStatus('公司名称未能可靠提取，使用默认值。', 'info');
         } else {
             sendStatus(`提取到公司名称: ${companyName}`, 'success');
         }
-        // 发送下载 name.txt 的请求
+        // 发送下载 <ticker>.txt 的请求
         chrome.runtime.sendMessage({
             action: 'downloadTXT',
             text: companyName + '\n',
-            filename: 'name.txt'
+            filename: `${ticker}.txt` // <-- 修改点：使用 ticker 动态生成文件名
         });
 
-        // 步骤 1: 查找数据表格
-        sendStatus('步骤 1: 正在查找历史数据表格...');
+        // 步骤 3: 查找数据表格
+        sendStatus('步骤 3: 正在查找历史数据表格...');
         const table = findHistoryTable();
         if (!table) {
             sendStatus('未找到历史数据表格，请确认页面正确。', 'error');
@@ -120,8 +126,8 @@
         }
         sendStatus('成功找到数据表格。', 'success');
 
-        // 步骤 2: 解析表头
-        sendStatus('步骤 2: 正在解析表头列...');
+        // 步骤 4: 解析表头
+        sendStatus('步骤 4: 正在解析表头列...');
         const cols = getColumnIndices(table);
         if (cols.date < 0 || cols.close < 0 || cols.volume < 0) {
             sendStatus('表头列不符合预期 (Date, Adj Close, Volume)，脚本可能需要更新。', 'error');
@@ -130,13 +136,8 @@
         }
         sendStatus('成功解析表头列。', 'success');
 
-        // 步骤 3: 提取 Ticker
-        sendStatus('步骤 3: 正在提取 Ticker 名称...');
-        const ticker = getTicker();
-        sendStatus(`提取到 Ticker: ${ticker}`, 'success');
-
-        // 步骤 4: 提取并解析数据行
-        sendStatus('步骤 4: 正在提取并解析表格数据...');
+        // 步骤 5: 提取并解析数据行
+        sendStatus('步骤 5: 正在提取并解析表格数据...');
         const rows = Array.from(table.querySelectorAll('tbody tr'));
         if (rows.length === 0) {
             sendStatus('表格中没有数据行。', 'error');
@@ -170,8 +171,8 @@
         }
         sendStatus(`成功解析 ${scraped.length} 条有效数据。`, 'success');
 
-        // 步骤 5: 生成 CSV 内容
-        sendStatus('步骤 5: 正在生成 CSV 文件内容...');
+        // 步骤 6: 生成 CSV 内容
+        sendStatus('步骤 6: 正在生成 CSV 文件内容...');
         const includeVolume = scraped.some(e => e.volume !== null);
         let csv = includeVolume ? 'date,price,volume\n' : 'date,price\n';
         scraped.forEach(e => {
@@ -183,12 +184,12 @@
         });
         sendStatus('CSV 内容生成完毕。', 'success');
 
-        // 步骤 6: 发送下载请求
-        sendStatus('步骤 6: 发送下载指令到后台...');
+        // 步骤 7: 发送下载 CSV 请求
+        sendStatus('步骤 7: 发送下载指令到后台...');
         chrome.runtime.sendMessage({
             action: 'downloadCSV',
             csv,
-            filename: `${ticker}.csv`
+            filename: `${ticker}.csv` // 这里继续使用之前提取的 ticker
         });
     }
 

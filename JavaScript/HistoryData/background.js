@@ -49,7 +49,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // 新增：监听来自 content.js 的下载请求，下载公司名 TXT
     if (request.action === "downloadTXT") {
         const text = request.text || "";
-        const filename = request.filename || "companyname.txt";
+        const filename = request.filename || "name.txt"; // <-- 修改点：更新备用文件名
         const url = "data:text/plain;charset=utf-8," + encodeURIComponent(text);
         chrome.downloads.download({
             url,

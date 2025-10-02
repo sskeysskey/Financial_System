@@ -98,9 +98,9 @@ def load_tag_settings(json_path):
         tag_blacklist = set(settings.get('BLACKLIST_TAGS', []))
         hot_tags = set(settings.get('HOT_TAGS', []))
         
-        print(f"成功从 {os.path.basename(json_path)} 加载设置。")
-        print(f"  - BLACKLIST_TAGS: {len(tag_blacklist)} 个")
-        print(f"  - HOT_TAGS: {len(hot_tags)} 个")
+        # print(f"成功从 {os.path.basename(json_path)} 加载设置。")
+        # print(f"  - BLACKLIST_TAGS: {len(tag_blacklist)} 个")
+        # print(f"  - HOT_TAGS: {len(hot_tags)} 个")
         
         return tag_blacklist, hot_tags
     except FileNotFoundError:
@@ -128,7 +128,7 @@ def load_all_symbols(json_path, target_sectors):
                 for symbol in symbols:
                     symbol_to_sector_map[symbol] = sector
                     
-        print(f"成功加载 {len(all_symbols)} 个 symbols 从 {len(target_sectors)} 个目标板块。")
+        # print(f"成功加载 {len(all_symbols)} 个 symbols 从 {len(target_sectors)} 个目标板块。")
         return all_symbols, symbol_to_sector_map
     except Exception as e:
         print(f"错误: 加载symbols失败: {e}")
@@ -140,7 +140,7 @@ def load_blacklist(json_path):
         with open(json_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
         blacklist = set(data.get('newlow', []))
-        print(f"成功加载 'newlow' 黑名单: {len(blacklist)} 个 symbol。")
+        # print(f"成功加载 'newlow' 黑名单: {len(blacklist)} 个 symbol。")
         return blacklist
     except Exception as e:
         print(f"警告: 加载黑名单失败: {e}，将不进行过滤。")
@@ -153,7 +153,7 @@ def load_earning_symbol_blacklist(json_path):
         with open(json_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
         blacklist = set(data.get('Earning', []))
-        print(f"成功加载 'Earning' Symbol 黑名单: {len(blacklist)} 个 symbol。")
+        # print(f"成功加载 'Earning' Symbol 黑名单: {len(blacklist)} 个 symbol。")
         return blacklist
     except Exception as e:
         print(f"警告: 加载 'Earning' Symbol 黑名单失败: {e}，将不进行过滤。")
@@ -174,7 +174,7 @@ def load_symbol_tags(json_path):
             if symbol:
                 symbol_tag_map[symbol] = tags
         
-        print(f"成功从 description.json 加载 {len(symbol_tag_map)} 个 symbol 的 tags。")
+        # print(f"成功从 description.json 加载 {len(symbol_tag_map)} 个 symbol 的 tags。")
         return symbol_tag_map
     except FileNotFoundError:
         print(f"警告: Tag 定义文件未找到: {json_path}。将不进行Tag过滤。")
@@ -188,12 +188,12 @@ def load_symbol_tags(json_path):
 
 def update_json_panel(symbols_list, json_path, group_name, symbol_to_note=None):
     """更新JSON面板文件。"""
-    print(f"\n--- 更新 JSON 文件: {os.path.basename(json_path)} -> '{group_name}' ---")
+    # print(f"\n--- 更新 JSON 文件: {os.path.basename(json_path)} -> '{group_name}' ---")
     try:
         with open(json_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
-        print(f"信息: 目标JSON文件不存在或格式错误，将创建一个新的。")
+        # print(f"信息: 目标JSON文件不存在或格式错误，将创建一个新的。")
         data = {}
 
     if symbol_to_note is None:
@@ -204,7 +204,7 @@ def update_json_panel(symbols_list, json_path, group_name, symbol_to_note=None):
     try:
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
-        print(f"成功将 {len(symbols_list)} 个 symbol 写入组 '{group_name}'.")
+        # print(f"成功将 {len(symbols_list)} 个 symbol 写入组 '{group_name}'.")
     except Exception as e:
         print(f"错误: 写入JSON文件失败: {e}")
 
@@ -217,7 +217,7 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
     同时从 Earning 表里取出每次财报的涨跌幅（price 字段），
     并记录最新一期的涨跌幅到 data['latest_er_pct']。
     """
-    print(f"\n--- 开始为 {len(symbols)} 个 symbol 构建数据缓存 ---")
+    # print(f"\n--- 开始为 {len(symbols)} 个 symbol 构建数据缓存 ---")
     cache = {}
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -225,14 +225,14 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
 
     for i, symbol in enumerate(symbols):
         is_tracing = (symbol == symbol_to_trace)
-        if is_tracing: log_detail(f"\n{'='*20} 开始为目标 {symbol} 构建数据缓存 {'='*20}")
+        # if is_tracing: log_detail(f"\n{'='*20} 开始为目标 {symbol} 构建数据缓存 {'='*20}")
         
         data = {'is_valid': False}
         sector_name = symbol_to_sector_map.get(symbol)
         if not sector_name:
             if is_tracing: log_detail(f"[{symbol}] 失败: 在板块映射中未找到该symbol。")
             continue
-        if is_tracing: log_detail(f"[{symbol}] 信息: 找到板块为 '{sector_name}'。")
+        # if is_tracing: log_detail(f"[{symbol}] 信息: 找到板块为 '{sector_name}'。")
 
         # 1. 获取所有财报日及涨跌幅
         cursor.execute(
@@ -396,7 +396,7 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
         if is_tracing: log_detail(f"[{symbol}] 成功: 数据缓存构建完成，标记为有效。")
 
     conn.close()
-    print(f"--- 数据缓存构建完成，有效数据: {len(cache)} 个 ---")
+    # print(f"--- 数据缓存构建完成，有效数据: {len(cache)} 个 ---")
     return cache
 
 def get_high_price_last_n_days(cursor, sector_name, symbol, latest_date_str, lookback_days):
@@ -770,7 +770,7 @@ def evaluate_stock_conditions(data, symbol_to_trace, log_detail, drop_pct_large,
         if passed_new_cond2: reasons.append("条件2")
         if passed_new_cond3: reasons.append("条件3")
         if passed_new_cond4: reasons.append("条件4") # 新增日志
-        log_detail(f"  - 入口条件通过 (原因: {'、'.join(reasons)})。开始执行通用过滤...")
+        log_detail(f"\n--- [{symbol}] 入口条件通过 (原因: {'、'.join(reasons)})。开始执行通用过滤...")
 
     # 前提条件: 价格回撤条件
     marketcap = data.get('marketcap')
@@ -857,7 +857,7 @@ def apply_post_filters(symbols, stock_data_cache, symbol_to_trace, log_detail):
     1. pe_valid_symbols: 通过所有后置过滤器，且PE值有效的股票 (通用过滤2)。
     2. pe_invalid_symbols: 通过所有后置过滤器，但PE值无效的股票 (通用过滤2)。
     """
-    log_detail("\n--- 开始应用后置过滤器 (含通用过滤2: PE分组) ---")
+    # log_detail("\n--- 开始应用后置过滤器 (含通用过滤2: PE分组) ---")
     pe_valid_symbols = []
     pe_invalid_symbols = []
     
@@ -884,7 +884,7 @@ def apply_post_filters(symbols, stock_data_cache, symbol_to_trace, log_detail):
             if is_tracing: log_detail(f"  - 分组 (PE无效): PE值为 '{pe}'。加入 PE_invalid 组。")
             pe_invalid_symbols.append(symbol)
             
-    log_detail(f"后置过滤完成: PE有效 {len(pe_valid_symbols)} 个, PE无效 {len(pe_invalid_symbols)} 个。")
+    # log_detail(f"后置过滤完成: PE有效 {len(pe_valid_symbols)} 个, PE无效 {len(pe_invalid_symbols)} 个。")
     return pe_valid_symbols, pe_invalid_symbols
 
 # ========== 代码修改部分 3/6: 重构核心处理逻辑 ==========
@@ -922,15 +922,15 @@ def run_processing_logic(log_detail):
         removed_symbols = set(all_symbols) & symbol_blacklist
         
         if removed_symbols:
-            log_detail(f"\n--- (通用过滤4) 应用 Symbol 黑名单 ---")
-            log_detail(f"从处理列表中移除了 {len(removed_symbols)} 个在黑名单中的 symbol: {sorted(list(removed_symbols))}")
+            # log_detail(f"\n--- (通用过滤4) 应用 Symbol 黑名单 ---")
+            # log_detail(f"从处理列表中移除了 {len(removed_symbols)} 个在黑名单中的 symbol: {sorted(list(removed_symbols))}")
             # 如果追踪的 symbol 被移除，特别提示
             if SYMBOL_TO_TRACE and SYMBOL_TO_TRACE in removed_symbols:
                 log_detail(f"追踪信息: 目标 symbol '{SYMBOL_TO_TRACE}' 在 Symbol 黑名单中，已被移除，将不会被处理。")
 
         # 创建新的、不包含黑名单成员的 symbol 列表
         all_symbols = [s for s in all_symbols if s not in symbol_blacklist]
-        log_detail(f"Symbol 列表从 {original_count} 个缩减到 {len(all_symbols)} 个。")
+        # log_detail(f"Symbol 列表从 {original_count} 个缩减到 {len(all_symbols)} 个。")
 
     symbol_to_tags_map = load_symbol_tags(DESCRIPTION_JSON_FILE)
     
@@ -939,7 +939,7 @@ def run_processing_logic(log_detail):
     
     # 定义一个可重复使用的筛选流程函数
     def perform_filter_pass(symbols_to_check, drop_large, drop_small, pass_name):
-        log_detail(f"\n--- {pass_name}: 开始筛选 (下跌标准: >$200B {drop_small*100}%, <$200B {drop_large*100}%) ---")
+        # log_detail(f"\n--- {pass_name}: 开始筛选 (下跌标准: >$200B {drop_small*100}%, <$200B {drop_large*100}%) ---")
         
         # 步骤 A: 对每个股票运行统一的筛选函数
         preliminary_results = []
@@ -954,23 +954,23 @@ def run_processing_logic(log_detail):
             if evaluate_stock_conditions(data, SYMBOL_TO_TRACE, log_detail, drop_large, drop_small):
                 preliminary_results.append(symbol)
 
-        log_detail(f"{pass_name}: 策略筛选完成，初步找到 {len(preliminary_results)} 个符合条件的股票。")
+        # log_detail(f"{pass_name}: 策略筛选完成，初步找到 {len(preliminary_results)} 个符合条件的股票。")
 
         # 步骤 B: 应用后置过滤器 (通用过滤2: PE 分组)
         pe_valid, pe_invalid = apply_post_filters(preliminary_results, stock_data_cache, SYMBOL_TO_TRACE, log_detail)
 
         # 步骤 C: (属于通用过滤4) 基于Tag的过滤
-        log_detail(f"\n--- {pass_name}: (通用过滤4) 开始基于Tag的过滤 ---")
+        # log_detail(f"\n--- {pass_name}: (通用过滤4) 开始基于Tag的过滤 ---")
         tag_blacklist = CONFIG["BLACKLIST_TAGS"]
         
         final_pe_valid = [s for s in pe_valid if not set(symbol_to_tags_map.get(s, [])).intersection(tag_blacklist)]
         final_pe_invalid = [s for s in pe_invalid if not set(symbol_to_tags_map.get(s, [])).intersection(tag_blacklist)]
 
-        log_detail(f"{pass_name}: Tag过滤后 -> PE_valid: {len(final_pe_valid)} 个, PE_invalid: {len(final_pe_invalid)} 个。")
+        # log_detail(f"{pass_name}: Tag过滤后 -> PE_valid: {len(final_pe_valid)} 个, PE_invalid: {len(final_pe_invalid)} 个。")
         return final_pe_valid, final_pe_invalid
 
     # ========== 代码修改: 区分股票为四组 ==========
-    log_detail("\n--- 步骤 3: 根据前提条件区分股票组 (严格/普通宽松/次宽松/最宽松) ---")
+    # log_detail("\n--- 步骤 3: 根据前提条件区分股票组 (严格/普通宽松/次宽松/最宽松) ---")
     strict_symbols = []
     relaxed_symbols = []        # 普通宽松
     sub_relaxed_symbols = []    # 次宽松 (新增)
@@ -993,10 +993,10 @@ def run_processing_logic(log_detail):
         else:
             strict_symbols.append(symbol)
             
-    log_detail(f"完成区分: {len(strict_symbols)} 个(严格), {len(relaxed_symbols)} 个(普通宽松), {len(sub_relaxed_symbols)} 个(次宽松), {len(super_relaxed_symbols)} 个(最宽松)。")
+    # log_detail(f"完成区分: {len(strict_symbols)} 个(严格), {len(relaxed_symbols)} 个(普通宽松), {len(sub_relaxed_symbols)} 个(次宽松), {len(super_relaxed_symbols)} 个(最宽松)。")
 
     # ========== 代码修改: 执行四组独立的第一轮筛选 ==========
-    log_detail("\n--- 步骤 4: 执行第一轮筛选 ---")
+    # log_detail("\n--- 步骤 4: 执行第一轮筛选 ---")
     
     # 4a. 对“最宽松”组使用最宽松标准
     super_relaxed_valid, super_relaxed_invalid = perform_filter_pass(
@@ -1033,13 +1033,13 @@ def run_processing_logic(log_detail):
     # 4e. 合并第一轮的筛选结果
     pass1_valid = super_relaxed_valid + sub_relaxed_valid + relaxed_valid + strict_valid
     pass1_invalid = super_relaxed_invalid + sub_relaxed_invalid + relaxed_invalid + strict_invalid
-    log_detail("\n--- 第一轮筛选结果汇总 ---")
-    log_detail(f"PE_valid 组: {len(pass1_valid)} 个 ({len(super_relaxed_valid)} 最宽松 + {len(sub_relaxed_valid)} 次宽松 + {len(relaxed_valid)} 普通宽松 + {len(strict_valid)} 严格)")
-    log_detail(f"PE_invalid 组: {len(pass1_invalid)} 个 ({len(super_relaxed_invalid)} 最宽松 + {len(sub_relaxed_invalid)} 次宽松 + {len(relaxed_invalid)} 普通宽松 + {len(strict_invalid)} 严格)")
+    # log_detail("\n--- 第一轮筛选结果汇总 ---")
+    # log_detail(f"PE_valid 组: {len(pass1_valid)} 个 ({len(super_relaxed_valid)} 最宽松 + {len(sub_relaxed_valid)} 次宽松 + {len(relaxed_valid)} 普通宽松 + {len(strict_valid)} 严格)")
+    # log_detail(f"PE_invalid 组: {len(pass1_invalid)} 个 ({len(super_relaxed_invalid)} 最宽松 + {len(sub_relaxed_invalid)} 次宽松 + {len(relaxed_invalid)} 普通宽松 + {len(strict_invalid)} 严格)")
 
     # ========== 代码修改部分 (逻辑变更) ==========
     # 通用过滤3：如果 PE_valid 组结果少于阈值，将针对严格组使用普通宽松阈值再扫一遍
-    log_detail("\n--- (通用过滤3) 检查是否需要为 PE_valid 组进行第二轮宽松筛选 ---")
+    # log_detail("\n--- (通用过滤3) 检查是否需要为 PE_valid 组进行第二轮宽松筛选 ---")
     min_size_pe_valid = CONFIG["MIN_PE_VALID_SIZE_FOR_RELAXED_FILTER"]
     
     # 默认最终结果为第一轮的结果
@@ -1048,8 +1048,8 @@ def run_processing_logic(log_detail):
 
     # 仅检查 PE_valid 组
     if len(pass1_valid) < min_size_pe_valid:
-        log_detail(f"\n'PE_valid' 组在第一轮筛选后数量 ({len(pass1_valid)}) 小于阈值 ({min_size_pe_valid})。")
-        log_detail(f"将对原先使用严格标准的 {len(strict_symbols)} 个股票，应用常规宽松标准重新筛选。")
+        # log_detail(f"\n'PE_valid' 组在第一轮筛选后数量 ({len(pass1_valid)}) 小于阈值 ({min_size_pe_valid})。")
+        # log_detail(f"将对原先使用严格标准的 {len(strict_symbols)} 个股票，应用常规宽松标准重新筛选。")
         
         # 仅为 PE_valid 组重跑
         rerun_valid, _ = perform_filter_pass(
@@ -1060,25 +1060,25 @@ def run_processing_logic(log_detail):
         )
         # 最终结果是：第一轮中所有非严格组选出的 + 第二轮对严格部分重筛后选出的
         final_pe_valid_symbols = sorted(list(set(super_relaxed_valid) | set(sub_relaxed_valid) | set(relaxed_valid) | set(rerun_valid)))
-        log_detail(f"第二轮筛选后，'PE_valid' 组更新为 {len(final_pe_valid_symbols)} 个。")
-    else:
-        log_detail(f"\n'PE_valid' 组在第一轮筛选后数量 ({len(pass1_valid)}) 已达标，无需进行第二轮宽松筛选。")
+        # log_detail(f"第二轮筛选后，'PE_valid' 组更新为 {len(final_pe_valid_symbols)} 个。")
+    # else:
+        # log_detail(f"\n'PE_valid' 组在第一轮筛选后数量 ({len(pass1_valid)}) 已达标，无需进行第二轮宽松筛选。")
 
-    log_detail(f"\n'PE_invalid' 组数量为 {len(final_pe_invalid_symbols)}，根据新规则，不进行重扫。")
+    # log_detail(f"\n'PE_invalid' 组数量为 {len(final_pe_invalid_symbols)}，根据新规则，不进行重扫。")
     # =================================================
 
     # 6. 汇总最终结果并输出
     all_qualified_symbols = final_pe_valid_symbols + final_pe_invalid_symbols
-    log_detail(f"\n--- 最终结果汇总 ---")
-    log_detail(f"最终 PE_valid 组: {len(final_pe_valid_symbols)} 个: {sorted(final_pe_valid_symbols)}")
-    log_detail(f"最终 PE_invalid 组: {len(final_pe_invalid_symbols)} 个: {sorted(final_pe_invalid_symbols)}")
-    log_detail(f"总计符合条件的股票共 {len(all_qualified_symbols)} 个。")
+    # log_detail(f"\n--- 最终结果汇总 ---")
+    # log_detail(f"最终 PE_valid 组: {len(final_pe_valid_symbols)} 个: {sorted(final_pe_valid_symbols)}")
+    # log_detail(f"最终 PE_invalid 组: {len(final_pe_invalid_symbols)} 个: {sorted(final_pe_invalid_symbols)}")
+    # log_detail(f"总计符合条件的股票共 {len(all_qualified_symbols)} 个。")
 
     # (通用过滤2) 处理文件输出和最终过滤
     pe_valid_set = set(final_pe_valid_symbols)
     pe_invalid_set = set(final_pe_invalid_symbols)
 
-    log_detail("\n--- (通用过滤4) 应用最终文件过滤 ---")
+    # log_detail("\n--- (通用过滤4) 应用最终文件过滤 ---")
     blacklist = load_blacklist(BLACKLIST_JSON_FILE)
     
     # 7.2 加载 panel.json，获取已存在分组的内容
@@ -1099,12 +1099,18 @@ def run_processing_logic(log_detail):
 
     # 7.3 打印被跳过的信息
     skipped_valid = pe_valid_set & (blacklist | already_in_panels)
-    if skipped_valid:
-        log_detail(f"\nPE_valid 组中，有 {len(skipped_valid)} 个 symbol 因在黑名单或已有分组中被跳过: {sorted(list(skipped_valid))}")
+    # if skipped_valid:
+    #     log_detail(f"\nPE_valid 组中，有 {len(skipped_valid)} 个 symbol 因在黑名单或已有分组中被跳过: {sorted(list(skipped_valid))}")
+    if SYMBOL_TO_TRACE and SYMBOL_TO_TRACE in skipped_valid:
+        reason = "在 'newlow' 黑名单中" if SYMBOL_TO_TRACE in blacklist else "已存在于 'Strategy34', 'Strategy12' 或 'Today' 分组中"
+        log_detail(f"\n追踪信息: 目标 symbol '{SYMBOL_TO_TRACE}' 虽然通过了筛选，但最终因 ({reason}) 而被跳过，不会写入 panel 文件。")
 
     skipped_invalid = pe_invalid_set & (blacklist | already_in_panels)
-    if skipped_invalid:
-        log_detail(f"\nPE_invalid 组中，有 {len(skipped_invalid)} 个 symbol 因在黑名单或已有分组中被跳过: {sorted(list(skipped_invalid))}")
+    # if skipped_invalid:
+    #     log_detail(f"\nPE_invalid 组中，有 {len(skipped_invalid)} 个 symbol 因在黑名单或已有分组中被跳过: {sorted(list(skipped_invalid))}")
+    if SYMBOL_TO_TRACE and SYMBOL_TO_TRACE in skipped_invalid:
+        reason = "在 'newlow' 黑名单中" if SYMBOL_TO_TRACE in blacklist else "已存在于 'Strategy34', 'Strategy12' 或 'Today' 分组中"
+        log_detail(f"\n追踪信息: 目标 symbol '{SYMBOL_TO_TRACE}' 虽然通过了筛选，但最终因 ({reason}) 而被跳过，不会写入 panel 文件。")
 
     # 7.4 新增：热门Tag命中 -> JSON中标注 “{symbol}热”
     hot_tags = set(CONFIG.get("HOT_TAGS", set()))
@@ -1137,19 +1143,19 @@ def run_processing_logic(log_detail):
     pe_invalid_notes = build_symbol_note_map(final_pe_invalid_to_write)
 
     # 7.5 更新 JSON 面板文件（带热门标注）
-    log_detail(f"\n准备写入 {len(final_pe_valid_to_write)} 个 symbol 到 'PE_valid' 组。")
+    # log_detail(f"\n准备写入 {len(final_pe_valid_to_write)} 个 symbol 到 'PE_valid' 组。")
     update_json_panel(final_pe_valid_to_write, PANEL_JSON_FILE, 'PE_valid', symbol_to_note=pe_valid_notes)
     
-    log_detail(f"\n准备写入 {len(final_pe_invalid_to_write)} 个 symbol 到 'PE_invalid' 组。")
+    # log_detail(f"\n准备写入 {len(final_pe_invalid_to_write)} 个 symbol 到 'PE_invalid' 组。")
     update_json_panel(final_pe_invalid_to_write, PANEL_JSON_FILE, 'PE_invalid', symbol_to_note=pe_invalid_notes)
 
     # 备份文件仅写 symbol，不带“热”标注
     os.makedirs(os.path.dirname(BACKUP_FILE), exist_ok=True)
-    log_detail(f"\n正在用本次扫描到的 {len(all_qualified_symbols)} 个完整结果更新备份文件...")
+    # log_detail(f"\n正在用本次扫描到的 {len(all_qualified_symbols)} 个完整结果更新备份文件...")
     try:
         with open(BACKUP_FILE, 'w', encoding='utf-8') as f:
             for sym in sorted(all_qualified_symbols): f.write(sym + '\n')
-        log_detail(f"备份文件已成功更新: {BACKUP_FILE}")
+        # log_detail(f"备份文件已成功更新: {BACKUP_FILE}")
     except IOError as e:
         log_detail(f"错误: 无法更新备份文件: {e}")
 

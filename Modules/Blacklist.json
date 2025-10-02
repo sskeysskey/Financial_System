@@ -565,7 +565,8 @@
         "FUN",
         "MTSR",
         "TXNM",
-        "VOR"
+        "VOR",
+        "MRUS"
     ],
     "etf": [
         "VDE",
@@ -813,7 +814,8 @@
         "SDCI",
         "QLC",
         "EEMS",
-        "REGL"
+        "REGL",
+        "INEQ"
     ],
     "Earning": [
         "TW",
