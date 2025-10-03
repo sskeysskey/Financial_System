@@ -466,7 +466,13 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     # 新增：零值参考线（默认隐藏，由 update_plot 控制显示）
     zero_line = ax1.axhline(
-        y=0, color=NORD_THEME['border'], linestyle='--', linewidth=1.0, alpha=0.6, zorder=0, visible=False
+        y=0,
+        color=NORD_THEME['text_bright'],   # 从 border 改为更亮的颜色
+        linestyle=(0, (6, 3)),             # 更明显的虚线样式（dash pattern）
+        linewidth=1.8,                     # 加粗
+        alpha=0.95,                        # 提高不透明度
+        zorder=3,                          # 置于曲线之上更显眼
+        visible=False
     )
 
     # --- 新增: 创建自定义的渐变色图 (Colormap) ---

@@ -11,8 +11,7 @@
         "NEM",
         "AEM",
         "FCX",
-        "B",
-        "WPM"
+        "B"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -28,7 +27,6 @@
         "AMX",
         "RBLX",
         "APP",
-        "GSAT",
         "EA"
     ],
     "Consumer_Cyclical": [
@@ -101,7 +99,6 @@
         "TRP",
         "PSX",
         "SLB",
-        "SU",
         "VLO"
     ],
     "Financial_Services": [
@@ -161,10 +158,10 @@
         "TFC",
         "COIN",
         "HOOD",
-        "ARES",
         "IBKR",
         "BAM",
-        "NWG"
+        "NWG",
+        "NDAQ"
     ],
     "Healthcare": [
         "LLY",
@@ -198,7 +195,8 @@
         "MCK",
         "COR",
         "ALNY",
-        "BDX"
+        "BDX",
+        "IDXX"
     ],
     "Industrials": [
         "GE",
@@ -305,7 +303,8 @@
         "TEL",
         "GLW",
         "CRWV",
-        "STX"
+        "STX",
+        "DDOG"
     ],
     "Utilities": [
         "NEE",

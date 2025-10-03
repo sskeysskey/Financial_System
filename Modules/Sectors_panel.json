@@ -68,7 +68,9 @@
         "FLY": "",
         "TRI": "",
         "DE": "",
-        "SNDR": ""
+        "SNDR": "",
+        "RSG": "",
+        "EXPO": ""
     },
     "Communication_Services": {
         "META": ""
@@ -91,7 +93,9 @@
         "SPGI": "",
         "ICE": "",
         "ARES": "",
-        "BBAR": ""
+        "BBAR": "",
+        "APO": "",
+        "HLNE": ""
     },
     "Healthcare": {
         "ALC": "",
@@ -181,24 +185,63 @@
         "COMP": "",
         "SN": "",
         "SPGI": "",
-        "KDP": "",
         "BURL": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
+        "KDP": "",
         "GWRE": "",
         "DUOL": "",
         "LII": "",
         "HESM": "",
         "MELI": ""
     },
-    "Short": {},
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
-    "PE_invalid": {},
+    "Short": {
+        "AGI": "",
+        "BE": "",
+        "KRMN": "",
+        "HMY": ""
+    },
+    "Strategy12": {
+        "MKC": ""
+    },
+    "Strategy34": {
+        "AAL": "",
+        "BSX": "",
+        "DECK": "",
+        "ISRG": "",
+        "LII": "",
+        "ORCL": "ORCL热",
+        "PGR": "",
+        "TMO": "",
+        "TRU": ""
+    },
+    "PE_valid": {
+        "ARES": "",
+        "CDNS": "CDNS热",
+        "FI": "",
+        "FUTU": "",
+        "GEV": "",
+        "GILD": "",
+        "HPQ": "HPQ7热",
+        "ICE": "",
+        "IDXX": "",
+        "KDP": "",
+        "KKR": "",
+        "META": "META7",
+        "NDAQ": "",
+        "NFLX": "NFLX7",
+        "RDDT": "",
+        "TMUS": "TMUS7",
+        "TRI": "",
+        "VRSK": "",
+        "WM": ""
+    },
+    "PE_invalid": {
+        "DKNG": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
