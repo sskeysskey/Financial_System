@@ -57,7 +57,7 @@ class TagEditor(QMainWindow):
         super().__init__()
         # --- 路径管理 ---
         self.weight_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/tags_weight.json'
-        self.earning_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/tags_eanring.json'
+        self.earning_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/tags_filter.json'
         
         # --- 数据模型 ---
         self.weight_data = {}

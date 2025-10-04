@@ -42,14 +42,14 @@
         "AVY": "",
         "KMX": "",
         "HRB": "",
-        "CAVA": ""
+        "CAVA": "",
+        "MELI": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
         "FRPT": "",
         "STZ": "",
         "FLO": "",
-        "MKC": "",
         "TAP": "",
         "CHD": "",
         "K": "",
@@ -58,7 +58,9 @@
         "KDP": "",
         "COST": "",
         "PPC": "",
-        "CL": ""
+        "CL": "",
+        "PM": "",
+        "BRBR": ""
     },
     "Industrials": {
         "ODFL": "",
@@ -68,7 +70,9 @@
         "FLY": "",
         "TRI": "",
         "DE": "",
-        "SNDR": ""
+        "SNDR": "",
+        "RSG": "",
+        "EXPO": ""
     },
     "Communication_Services": {
         "META": ""
@@ -91,7 +95,9 @@
         "SPGI": "",
         "ICE": "",
         "ARES": "",
-        "BBAR": ""
+        "BBAR": "",
+        "APO": "",
+        "HLNE": ""
     },
     "Healthcare": {
         "ALC": "",
@@ -175,30 +181,70 @@
         "XRP": ""
     },
     "Today": {
-        "VRSN": "",
+        "TRU": "",
+        "GILD": "",
+        "HPQ": "HPQ7热",
         "BSX": "",
+        "LII": "",
+        "KDP": "",
         "Z": "",
-        "COMP": "",
-        "SN": "",
         "SPGI": "",
+        "TMUS": "TMUS7",
         "BURL": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
-        "KDP": "",
         "GWRE": "",
         "DUOL": "",
-        "LII": "",
         "HESM": "",
-        "MELI": ""
+        "MELI": "",
+        "ARES": "",
+        "ICE": ""
     },
-    "Short": {},
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
-    "PE_invalid": {},
+    "Short": {
+        "THC": "",
+        "NXT": "",
+        "LRCX": "",
+        "GLXY": "",
+        "PONY": ""
+    },
+    "Strategy12": {
+        "MKC": ""
+    },
+    "Strategy34": {
+        "AAL": "",
+        "BSX": "",
+        "DECK": "",
+        "ISRG": "",
+        "KNX": "",
+        "LII": "",
+        "ORCL": "ORCL热",
+        "PGR": "",
+        "TRU": ""
+    },
+    "PE_valid": {
+        "AFRM": "",
+        "ARES": "",
+        "BTI": "",
+        "CDNS": "CDNS热",
+        "FI": "",
+        "FUTU": "",
+        "GEV": "",
+        "ICE": "",
+        "KKR": "",
+        "KMB": "",
+        "META": "META7",
+        "NDAQ": "",
+        "NFLX": "NFLX7",
+        "PM": "PM7",
+        "WM": ""
+    },
+    "PE_invalid": {
+        "DKNG": "",
+        "RBLX": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
@@ -239,10 +285,12 @@
     },
     "Economics": {
         "USNonFarmA": "01 USNonFarmA",
-        "USInitial": "02 USInitial",
-        "USNonFarm": "03 USNonFarm",
-        "USUnemploy": "03 USUnemploy",
-        "USNonPMI": "03 USNonPMI"
+        "USInitial": "07 USInitial",
+        "USNonFarm": "09 USNonFarm",
+        "USUnemploy": "09 USUnemploy",
+        "USNonPMI": "03 USNonPMI",
+        "USTrade": "07 USTrade",
+        "USConfidence": "10 USConfidence"
     },
     "Economic_All": {
         "USGDP": "",

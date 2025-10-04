@@ -16,7 +16,7 @@ PATHS = {
     "panel_json": lambda config_dir: os.path.join(config_dir, 'Sectors_panel.json'),
     "blacklist_json": lambda config_dir: os.path.join(config_dir, 'Blacklist.json'),
     "description_json": lambda config_dir: os.path.join(config_dir, 'description.json'),
-    "tags_setting_json": lambda config_dir: os.path.join(config_dir, 'tags_eanring.json'),
+    "tags_setting_json": lambda config_dir: os.path.join(config_dir, 'tags_filter.json'),
     "db_file": lambda db_dir: os.path.join(db_dir, 'Finance.db'),
     "output_news": lambda news_dir: os.path.join(news_dir, 'Filter_Earning.txt'),
     "output_backup": lambda news_dir: os.path.join(news_dir, 'backup/Filter_Earning.txt'),

@@ -727,7 +727,8 @@
         "GOLF",
         "HGV",
         "DORM",
-        "SGI"
+        "SGI",
+        "FTDR"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -1454,7 +1455,8 @@
         "REZI",
         "QXO",
         "JBTM",
-        "KRMN"
+        "KRMN",
+        "MRCY"
     ],
     "Real_Estate": [
         "PLD",

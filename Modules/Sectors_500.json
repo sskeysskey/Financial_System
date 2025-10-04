@@ -58,7 +58,7 @@
         "LCID",
         "JD",
         "DHI",
-        "ROST"
+        "F"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -99,7 +99,7 @@
         "TRP",
         "PSX",
         "SLB",
-        "VLO"
+        "SU"
     ],
     "Financial_Services": [
         "BRK-A",

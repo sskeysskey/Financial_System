@@ -21,7 +21,7 @@ PATHS = {
     "panel_json": lambda config: os.path.join(config, "Sectors_panel.json"),
     "description_json": lambda config: os.path.join(config, 'description.json'),
     # 新增: 指向新的标签配置文件
-    "tags_setting_json": lambda config: os.path.join(config, 'tags_eanring.json'),
+    "tags_setting_json": lambda config: os.path.join(config, 'tags_filter.json'),
     "backup_Strategy12": lambda news: os.path.join(news, "backup", "NextWeek_Earning.txt"),
     "backup_Strategy34": lambda news: os.path.join(news, "backup", "Strategy34_earning.txt"),
 }
