@@ -97,7 +97,7 @@ class DescriptionEditorApp:
         self.events_dict = self.item_data.get('description3', [{}])[0]
 
         self.master.title(f"编辑 {self.item_data.get('symbol', '')} 的 Description3")
-        self.master.geometry("800x600")
+        self.master.geometry("500x600")
 
         # --- 新增: 为“全选”复选框创建变量 ---
         self.select_all_var = BooleanVar()
@@ -129,18 +129,20 @@ class DescriptionEditorApp:
         button_frame = Frame(master)
         button_frame.pack(fill=tk.X, pady=10)
 
+        # 左侧：先“复制到...”，再“添加新条目”
+        self.copy_button = Button(button_frame, text="复制到...", command=self._copy_to_symbols)
+        self.copy_button.pack(side=tk.LEFT, padx=10)
+
+        self.add_button = Button(button_frame, text="添加新条目", command=self._add_new_row)
+        self.add_button.pack(side=tk.LEFT, padx=10)
+
+        # 右侧：删除选中项、保存所有更改
+        # 调换 pack 顺序，让删除按钮更靠右，保存按钮在其左侧
         self.save_button = Button(button_frame, text="保存所有更改", command=self._save_changes)
         self.save_button.pack(side=tk.RIGHT, padx=10)
 
-        # --- 新增: "复制到..." 按钮 ---
-        self.copy_button = Button(button_frame, text="复制到...", command=self._copy_to_symbols)
-        self.copy_button.pack(side=tk.RIGHT, padx=10)
-
         self.delete_button = Button(button_frame, text="删除选中项", command=self._delete_selected)
         self.delete_button.pack(side=tk.RIGHT, padx=10)
-        
-        self.add_button = Button(button_frame, text="添加新条目", command=self._add_new_row)
-        self.add_button.pack(side=tk.LEFT, padx=10)
 
     # --- 新增: 全选/全不选 功能函数 ---
     def _toggle_select_all(self):
