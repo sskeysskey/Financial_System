@@ -22,15 +22,16 @@ def parse_earnings_release(file_path):
     return symbols
 
 def main():
-    # 两个 Earnings Release 文件路径
+    # 三个 Earnings Release 文件路径
     earnings_release_paths = [
         '/Users/yanzhang/Coding/News/Earnings_Release_new.txt',
-        '/Users/yanzhang/Coding/News/Earnings_Release_next.txt'
+        '/Users/yanzhang/Coding/News/Earnings_Release_next.txt',
+        '/Users/yanzhang/Coding/News/Earnings_Release_third.txt'
     ]
     color_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Colors.json'
     sectors_all_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
 
-    # 合并两个文件中的 symbols
+    # 合并三个文件中的 symbols
     earnings_symbols = set()
     for path in earnings_release_paths:
         earnings_symbols |= parse_earnings_release(path)
@@ -63,6 +64,10 @@ def main():
     except Exception as e:
         print(f"读取文件时发生错误 ({color_json_path}): {e}")
         colors = {}
+
+    # 确保 'red_keywords' 键存在且为列表
+    if 'red_keywords' not in colors:
+        colors['red_keywords'] = []
 
     # 先保留 colors 中已有的、又在 economics_symbols 中的 red_keywords
     colors['red_keywords'] = list(

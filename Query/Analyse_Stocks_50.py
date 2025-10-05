@@ -558,6 +558,7 @@ def main():
     # 定义要清理的文件模式，每个模式现在包含三个元素：(前缀, 日期位置, 保留天数)
     file_patterns = [
         ("Earnings_Release_next_", -1, 13),    # 保留13天
+        ("Earnings_Release_third_", -1, 13),    # 保留13天
         ("Economic_Events_next_", -1, 13),     # 保留13天
         ("ETFs_diff_", -1, 3),                 # 保留3天
         ("NewLow_", -1, 3),

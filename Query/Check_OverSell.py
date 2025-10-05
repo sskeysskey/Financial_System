@@ -191,8 +191,10 @@ def parse_compare_percent(compare_str: str, symbol: str):
         return None
 
 # 准备 Short 分组容器，确保结构存在且为 dict
-panel_data['Short'] = {}
-short_group = panel_data['Short']
+short_group = panel_data.get('Short')
+if not isinstance(short_group, dict):
+    short_group = {}
+panel_data['Short'] = short_group
 
 # 连接数据库
 conn = sqlite3.connect(DB_FILE)

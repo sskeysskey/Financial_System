@@ -117,6 +117,7 @@ def get_prices_available_days(cursor, table_name, name, dates):
     cursor.execute(query, (name, *dates))
     return cursor.fetchall()
 
+# 修改：增加 earnings_third_path 参数
 def compare_today_yesterday(config_path,
                             description_path,
                             blacklist,
@@ -124,6 +125,7 @@ def compare_today_yesterday(config_path,
                             db_path,
                             earnings_new_path,
                             earnings_next_path,
+                            earnings_third_path, # 新增参数
                             gainers_losers_path,
                             output_path,
                             error_file_path):
@@ -133,9 +135,10 @@ def compare_today_yesterday(config_path,
     with open(description_path, 'r') as file:
         description_data = json.load(file)
 
-    # 读取两份财报文件
+    # 修改：读取三份财报文件
     earnings_new = read_earnings_release(earnings_new_path, error_file_path)
     earnings_next = read_earnings_release(earnings_next_path, error_file_path)
+    earnings_third = read_earnings_release(earnings_third_path, error_file_path) # 新增读取第三个文件
 
     gainers, losers = read_gainers_losers(gainers_losers_path)
 
@@ -203,11 +206,14 @@ def compare_today_yesterday(config_path,
                 pct_change, vol, pct_vol_change, cr, cf = entry[1:]
                 original = company
 
-                # earnings 新/下期 标注
+                # 修改：增加对第三个财报文件的标注
                 if original in earnings_new:
                     company += f".{earnings_new[original]}"
                 if original in earnings_next:
                     company += f".{earnings_next[original]}"
+                if original in earnings_third: # 新增标注逻辑
+                    company += f".{earnings_third[original]}"
+                
                 # 大成交量
                 if vol > 5_000_000:
                     company += '.*'
@@ -245,11 +251,13 @@ def compare_today_yesterday(config_path,
         #         pct_change, vol, pct_vol_change, cr, cf = entry[1:]
         #         original = company
 
-        #         # 与 TXT 同样的标注逻辑
+        #         # 修改：与 TXT 同样的标注逻辑
         #         if original in earnings_new:
         #             company += f".{earnings_new[original]}"
         #         if original in earnings_next:
         #             company += f".{earnings_next[original]}"
+        #         if original in earnings_third: # 新增标注逻辑
+        #             company += f".{earnings_third[original]}"
         #         if vol > 5_000_000:
         #             company += '.*'
         #         if original in gainers:
@@ -341,6 +349,7 @@ if __name__ == '__main__':
         '/Users/yanzhang/Coding/Database/Finance.db',
         '/Users/yanzhang/Coding/News/Earnings_Release_new.txt',
         '/Users/yanzhang/Coding/News/Earnings_Release_next.txt',
+        '/Users/yanzhang/Coding/News/Earnings_Release_third.txt', # 新增文件路径
         '/Users/yanzhang/Coding/Financial_System/Modules/Gainer_Loser.json',
         file_path_txt,      # 只做传参，函数里也会生成 CSV
         error_file_path

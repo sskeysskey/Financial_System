@@ -28,6 +28,13 @@ next_files = {
     'Economic_Events': '/Users/yanzhang/Coding/News/Economic_Events_next.txt'
 }
 
+# 新增：定义 third_files 字典，为未来扩展（如 fourth_files）做好准备
+third_files = {
+    'Earnings_Release': '/Users/yanzhang/Coding/News/Earnings_Release_third.txt',
+    # 如果 Economic_Events 将来也有 third 文件，可在此处添加
+}
+
+
 # 新的 10Y_newhigh JSON 目标文件路径
 TENY_JSON = '/Users/yanzhang/Coding/Financial_System/Modules/10Y_newhigh.json'
 
@@ -80,6 +87,7 @@ def format_line(line):
     else:
         return line.strip()
 
+# 修改：更新 process_and_rename_files 函数以包含 third -> next 的重命名逻辑
 def process_and_rename_files():
     # 检查 Earnings_Release 的 new 和 next 文件是否存在
     earnings_files_exist = all(os.path.exists(f) for f in [
@@ -93,24 +101,41 @@ def process_and_rename_files():
     ])
 
     if earnings_files_exist:
-        # 处理 Earnings_Release 的 new 文件
+        # 1. 处理 Earnings_Release 的 new 文件，并将其内容追加到主文件中
+        print(f"处理文件: {new_files['Earnings_Release']}")
         process_earnings(new_files['Earnings_Release'], files['Earnings_Release'])
 
-        # 重命名 Earnings_Release 的 next 文件为 new 文件
+        # 2. 重命名 Earnings_Release 的 next 文件为 new 文件
+        print(f"重命名: {next_files['Earnings_Release']} -> {new_files['Earnings_Release']}")
         os.rename(next_files['Earnings_Release'], new_files['Earnings_Release'])
+        
+        # 3. 新增：检查 third 文件是否存在，如果存在则将其重命名为 next 文件
+        # 使用 .get() 方法安全地获取路径，即使 'Earnings_Release' 不在 third_files 中也不会报错
+        third_earnings_file = third_files.get('Earnings_Release')
+        if third_earnings_file and os.path.exists(third_earnings_file):
+            print(f"重命名: {third_earnings_file} -> {next_files['Earnings_Release']}")
+            os.rename(third_earnings_file, next_files['Earnings_Release'])
+        else:
+            print(f"未找到 {third_earnings_file}，跳过 third -> next 的重命名步骤。")
+
     else:
-        print("Earnings_Release 相关文件缺失，未执行任何操作。")
+        print("Earnings_Release 相关文件（new/next）缺失，未执行任何操作。")
 
     if events_files_exist:    
         # 如果 Economic_Events 的 new 文件存在，则处理它
         if os.path.exists(new_files['Economic_Events']):
+            print(f"处理文件: {new_files['Economic_Events']}")
             process_file(new_files['Economic_Events'], files['Economic_Events'])
 
         # 如果 Economic_Events 的 next 文件存在，则重命名它
         if os.path.exists(next_files['Economic_Events']):
+            print(f"重命名: {next_files['Economic_Events']} -> {new_files['Economic_Events']}")
             os.rename(next_files['Economic_Events'], new_files['Economic_Events'])
+        
+        # 将来如果 Economic_Events 也有 third 文件，可以在此添加类似上面的重命名逻辑
+        
     else:
-        print("Economic_Events 相关文件缺失，未执行任何操作。")
+        print("Economic_Events 相关文件（new/next）缺失，未执行任何操作。")
 
 def process_earnings(new_file, backup_file):
     if not os.path.exists(new_file):

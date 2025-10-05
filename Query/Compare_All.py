@@ -56,12 +56,14 @@ def read_earnings_release(filepath, error_file_path):
 
     return earnings_companies
 
+# --- 修改点 1：函数定义增加一个参数 earning_file_third ---
 def compare_today_yesterday(
     config_path,
     output_file,
     gainer_loser_path,
     earning_file_new,
     earning_file_next,
+    earning_file_third, # 新增参数
     error_file_path,
     additional_output_file
 ):
@@ -77,11 +79,15 @@ def compare_today_yesterday(
     gainers = latest_info.get("gainer", [])
     losers = latest_info.get("loser", [])
 
-    # 读取新发布的业绩
-    earnings_data = read_earnings_release(earning_file_new, error_file_path)
-    # 读取下次发布的业绩，并合并
-    earnings_data_next = read_earnings_release(earning_file_next, error_file_path)
-    earnings_data.update(earnings_data_next)
+    # --- 修改点 2：合并处理三个业绩文件 ---
+    # 将所有业绩文件路径放入一个列表
+    earning_files = [earning_file_new, earning_file_next, earning_file_third]
+    earnings_data = {} # 初始化一个空字典用于存储所有业绩数据
+
+    # 循环读取并合并数据
+    for file_path in earning_files:
+        data_from_file = read_earnings_release(file_path, error_file_path)
+        earnings_data.update(data_from_file)
 
     # 检查 gainer_loser.json 中的日期是否为今天或昨天
     today = datetime.now().date()
@@ -229,15 +235,19 @@ if __name__ == '__main__':
     gainer_loser_path = '/Users/yanzhang/Coding/Financial_System/Modules/Gainer_Loser.json'
     earning_file_new = '/Users/yanzhang/Coding/News/Earnings_Release_new.txt'
     earning_file_next = '/Users/yanzhang/Coding/News/Earnings_Release_next.txt'
+    # --- 修改点 3：定义第三个业绩文件的路径 ---
+    earning_file_third = '/Users/yanzhang/Coding/News/Earnings_Release_third.txt' # 新增文件路径
     error_file_path = '/Users/yanzhang/Coding/News/Today_error.txt'
 
     try:
+        # --- 修改点 4：在函数调用时传入新的文件路径 ---
         compare_today_yesterday(
             config_path,
             output_file,
             gainer_loser_path,
             earning_file_new,
             earning_file_next,
+            earning_file_third, # 新增参数
             error_file_path,
             additional_output_file
         )

@@ -26,6 +26,7 @@ TIMESTAMP_BACKUP_SOURCES = [
     '/Users/yanzhang/Coding/News/backup/Compare_All.txt',
     '/Users/yanzhang/Coding/News/Earnings_Release_new.txt',
     '/Users/yanzhang/Coding/News/Earnings_Release_next.txt',
+    '/Users/yanzhang/Coding/News/Earnings_Release_third.txt',
     '/Users/yanzhang/Coding/News/HighLow.txt',
     '/Users/yanzhang/Coding/Financial_System/Modules/tags_weight.json',
     '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json',

@@ -15,6 +15,8 @@ PATHS = {
     "config": lambda base: os.path.join(base, "Financial_System", "Modules"),
     "earnings_release_next": lambda news: os.path.join(news, "Earnings_Release_next.txt"),
     "earnings_release_new": lambda news: os.path.join(news, "Earnings_Release_new.txt"),
+    # 新增: 添加第三个财报文件路径
+    "earnings_release_third": lambda news: os.path.join(news, "Earnings_Release_third.txt"),
     "sectors_json": lambda config: os.path.join(config, "Sectors_All.json"),
     "db_file": lambda db: os.path.join(db, "Finance.db"),
     "blacklist_json": lambda config: os.path.join(config, "Blacklist.json"),
@@ -44,7 +46,7 @@ TAGS_SETTING_JSON_FILE = PATHS["tags_setting_json"](config_path)
 CONFIG = {
     # ========================================
     "NUM_EARNINGS_TO_CHECK": 2,
-    "MIN_DROP_PERCENTAGE": 0.04,
+    "MIN_DROP_PERCENTAGE": 0.03,
     "MINOR_DROP_PERCENTAGE": 0.05,
     "MIDDLE_DROP_PERCENTAGE": 0.07,
     "HIGH_DROP_PERCENTAGE": 0.09,
@@ -184,8 +186,8 @@ def update_json_panel(symbols_list, target_json_path, group_name, symbol_to_note
         print(f"错误: 写入JSON文件失败: {e}")
         
 def get_next_er_date(last_er_date):
-    """计算理论上的下一次财报日期 (+93天)"""
-    return last_er_date + datetime.timedelta(days=93)
+    """计算理论上的下一次财报日期 (+94天)"""
+    return last_er_date + datetime.timedelta(days=94)
 
 
 # --- 4. 核心数据获取模块 (已集成追踪系统) ---
@@ -387,11 +389,11 @@ def run_strategy_2_5(data, symbol_to_trace, log_detail):
 def run_strategy_3(data, cursor, symbol_sector_map, symbol_to_trace, log_detail):
     """ 策略 3 (修改后):
     (1) 如果最近2次财报上升，最新价 < 过去N次财报最高价 * (1-9%)
-    (2) 如果不上升，最近2次财报差额 >= 4%，最新财报非负，且最新价 < 过去N次财报最低价
+    (2) 如果不上升，最近2次财报差额 >= 3%，最新财报非负，且最新价 < 过去N次财报最低价
     ---
     (3) 必须满足(1)或(2)其中之一
     (4) 必须满足：最新价比前10天最低价高不超过3%
-    (5) 必须满足：最新交易日落在下次理论财报前7-26天窗口期
+    (5) 必须满足：最新交易日落在下次理论财报前6-26天窗口期
     """
     is_tracing = (data.get('symbol') == symbol_to_trace)
     if is_tracing: log_detail(f"\n--- [{symbol_to_trace}] 策略 3 评估 (已修改) ---")
@@ -399,7 +401,7 @@ def run_strategy_3(data, cursor, symbol_sector_map, symbol_to_trace, log_detail)
     # 步骤1: 时间窗口检查 (最终条件)
     next_er = get_next_er_date(data['latest_er_date'])
     window_start = next_er - datetime.timedelta(days=26)
-    window_end = next_er - datetime.timedelta(days=7)
+    window_end = next_er - datetime.timedelta(days=6)
     is_in_window = (window_start <= data['latest_date'] <= window_end)
 
     if is_tracing:
@@ -487,7 +489,7 @@ def run_strategy_3(data, cursor, symbol_sector_map, symbol_to_trace, log_detail)
     return rise_ok
 
 def run_strategy_3_5(data, symbol_to_trace, log_detail):
-    """策略 3.5: 过去2次财报保持上升，且最近的3次财报里至少有一次财报的收盘价要比该symbol的最新收盘价高15%以上，且最新交易日落在下次理论(最近一次财报日期+93天)财报之前的7~26天窗口期内"""
+    """策略 3.5: 过去2次财报保持上升，且最近的3次财报里至少有一次财报的收盘价要比该symbol的最新收盘价高15%以上，且最新交易日落在下次理论(最近一次财报日期+94天)财报之前的7~26天窗口期内"""
     is_tracing = (data.get('symbol') == symbol_to_trace)
     if len(data['all_er_prices']) < 3 or any(p is None for p in data['all_er_prices'][:3]):
         if is_tracing: log_detail(f"\n--- [{symbol_to_trace}] 策略 3.5 评估 ---\n  - 结果: False (财报价格数据不足3次或有缺失)")
@@ -497,7 +499,7 @@ def run_strategy_3_5(data, symbol_to_trace, log_detail):
 
     next_er = get_next_er_date(data['latest_er_date'])
     window_start = next_er - datetime.timedelta(days=26)
-    window_end = next_er - datetime.timedelta(days=7)
+    window_end = next_er - datetime.timedelta(days=6)
     is_in_window = (window_start <= data['latest_date'] <= window_end)
     
     if is_tracing:
@@ -758,14 +760,16 @@ def run_processing_logic(log_detail):
     # 新增：加载 symbol->tags 映射
     symbol_to_tags_map = load_symbol_tags(DESCRIPTION_JSON_FILE)
 
+    # 修改: 加载所有三个财报文件
     symbols_next = get_symbols_from_file(PATHS["earnings_release_next"](news_path))
     symbols_new = get_symbols_from_file(PATHS["earnings_release_new"](news_path))
-    initial_symbols = list(dict.fromkeys(symbols_next + symbols_new))
+    symbols_third = get_symbols_from_file(PATHS["earnings_release_third"](news_path))
+    initial_symbols = list(dict.fromkeys(symbols_next + symbols_new + symbols_third))
 
     if SYMBOL_TO_TRACE and SYMBOL_TO_TRACE in initial_symbols:
         log_detail(f"\n追踪信息: {SYMBOL_TO_TRACE} 在初始文件列表中。")
     elif SYMBOL_TO_TRACE:
-        log_detail(f"\n追踪信息: {SYMBOL_TO_TRACE} 不在初始文件列表中 (next/new)。")
+        log_detail(f"\n追踪信息: {SYMBOL_TO_TRACE} 不在初始文件列表中 (next/new/third)。")
 
     with sqlite3.connect(DB_FILE) as conn:
         cursor = conn.cursor()
