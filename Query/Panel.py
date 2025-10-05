@@ -389,7 +389,92 @@ def query_database(db_path, table_name, condition):
             output_lines.append(row_str + '\n')
         return ''.join(output_lines)
 
-# ### 修改 ###: 移除了对 'blacklist' 的特殊处理，因为它现在由内部方法处理
+# ### 新增函数 START ###: 从 b.py 移植过来的颜色决策逻辑
+def get_color_decision_data(db_path, sector_data, symbol):
+    """
+    获取决定按钮颜色所需的所有数据，逻辑完全移植自 b.py。
+    1. 从 Earning 表获取最近两次财报日期和最新的 price。
+    2. 从 sector 表获取这两天的收盘价。
+    3. 比较收盘价得出趋势。
+    4. 如果最新一期财报的日期不是在当前系统日期往前推一个半月之内的话，则该symbol显示为白色。
+    5. 如果某个symbol只有一个财报日期，那么即使他的财报日期是在1个半月之内的，也仍然显示为白色。
+
+    返回: (latest_earning_price, stock_price_trend, latest_earning_date)
+          - stock_price_trend: 'rising', 'falling', 'single', 或 None
+            'single' 表示只有一条财报记录，此时仅根据 earning price 正负着色。
+    """
+    try:
+        # 步骤 1: 获取最近两次财报信息
+        with sqlite3.connect(db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT date, price FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 2",
+                (symbol,)
+            )
+            earning_rows = cursor.fetchall()
+
+        if not earning_rows:
+            return None, None, None # 没有财报记录
+
+        latest_earning_date_str, latest_earning_price_str = earning_rows[0]
+        latest_earning_date = datetime.datetime.strptime(latest_earning_date_str, "%Y-%m-%d").date()
+        latest_earning_price = float(latest_earning_price_str) if latest_earning_price_str is not None else 0.0
+
+        # --- 规则：如果最新财报在75天前，则强制为白色 ---
+        days_diff = (datetime.date.today() - latest_earning_date).days
+        if days_diff > 75:
+            # 返回None趋势，使调用处逻辑判定为白色
+            return latest_earning_price, None, latest_earning_date
+
+        # --- 规则：如果只有一条财报记录，使用 'single' 模式 ---
+        if len(earning_rows) < 2:
+            return latest_earning_price, 'single', latest_earning_date
+
+        # 存在至少两条财报记录，继续计算趋势
+        previous_earning_date_str, _ = earning_rows[1]
+        previous_earning_date = datetime.datetime.strptime(previous_earning_date_str, "%Y-%m-%d").date()
+
+        # 步骤 2: 查找 sector 表名
+        sector_table = next((s for s, names in sector_data.items() if symbol in names), None)
+        if not sector_table:
+            # 找不到板块，也无法比较
+            return latest_earning_price, None, latest_earning_date
+
+        # 步骤 3: 获取两个日期的收盘价
+        with sqlite3.connect(db_path) as conn:
+            cursor = conn.cursor()
+            
+            # 获取最新财报日的收盘价
+            cursor.execute(
+                f'SELECT price FROM "{sector_table}" WHERE name = ? AND date = ?',
+                (symbol, latest_earning_date.isoformat())
+            )
+            latest_stock_price_row = cursor.fetchone()
+            
+            # 获取前一次财报日的收盘价
+            cursor.execute(
+                f'SELECT price FROM "{sector_table}" WHERE name = ? AND date = ?',
+                (symbol, previous_earning_date.isoformat())
+            )
+            previous_stock_price_row = cursor.fetchone()
+
+        if not latest_stock_price_row or not previous_stock_price_row:
+            # 缺少任一天的股价数据
+            return latest_earning_price, None, latest_earning_date
+
+        latest_stock_price = float(latest_stock_price_row[0])
+        previous_stock_price = float(previous_stock_price_row[0])
+        
+        # 步骤 4: 判断趋势
+        trend = 'rising' if latest_stock_price > previous_stock_price else 'falling'
+        
+        return latest_earning_price, trend, latest_earning_date
+
+    except Exception as e:
+        print(f"[颜色决策数据获取错误] {symbol}: {e}")
+        return None, None, None
+# ### 新增函数 END ###
+
 def execute_external_script(script_type, keyword, group=None, main_window=None):
     base_path = '/Users/yanzhang/Coding/Financial_System'
     python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
@@ -398,8 +483,8 @@ def execute_external_script(script_type, keyword, group=None, main_window=None):
         'tags': f'{base_path}/Operations/Editor_Tags.py',
         'editor_earning': f'{base_path}/Operations/Editor_Earning_DB.py',
         'earning': f'{base_path}/Operations/Insert_Earning.py',
-        'event_input': f'{base_path}/Operations/Insert_Events.py',  # <--- 新增这一行
-        'event_editor': f'{base_path}/Operations/Editor_Events.py',  # <--- 新增这一行
+        'event_input': f'{base_path}/Operations/Insert_Events.py',
+        'event_editor': f'{base_path}/Operations/Editor_Events.py',
         'futu': '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt',
         'doubao': '/Users/yanzhang/Coding/ScriptEditor/Check_Earning.scpt'
     }
@@ -420,7 +505,7 @@ def execute_external_script(script_type, keyword, group=None, main_window=None):
                 main_window.refresh_selection_window()
         else:
             if script_type in ['futu', 'doubao']:
-                subprocess.Popen(['osascript', script_configs[script_type], keyword]) # <--- 修改为 Popen
+                subprocess.Popen(['osascript', script_configs[script_type], keyword])
             else:
                 python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
                 subprocess.Popen([python_path, script_configs[script_type], keyword])
@@ -715,7 +800,37 @@ class MainWindow(QMainWindow):
                         button.setCursor(QCursor(Qt.PointingHandCursor))
                         button.clicked.connect(lambda _, k=keyword: self.on_keyword_selected_chart(k))
                         
-                        # 设置 Tooltip：先取 tags，再查最新财报日期，组合成一个 HTML
+                        # ### 修改 START: 应用从 b.py 移植的颜色逻辑 ###
+                        # 1. 获取颜色决策数据
+                        earning_price, price_trend, _ = get_color_decision_data(DB_PATH, sector_data, keyword)
+
+                        # 2. 根据 b.py 的规则确定颜色
+                        color = 'white'  # 默认颜色
+                        if earning_price is not None and price_trend is not None:
+                            if price_trend == 'single':
+                                if earning_price > 0:
+                                    color = 'red'
+                                elif earning_price < 0:
+                                    color = 'green'
+                            else:
+                                is_price_positive = earning_price > 0
+                                is_trend_rising = price_trend == 'rising'
+                                if is_trend_rising and is_price_positive:
+                                    color = 'red'
+                                elif not is_trend_rising and is_price_positive:
+                                    color = '#008B8B'  # Dark Cyan
+                                elif is_trend_rising and not is_price_positive:
+                                    color = '#912F2F'  # Dark Red
+                                elif not is_trend_rising and not is_price_positive:
+                                    color = 'green'
+                        
+                        # 3. 应用字体颜色
+                        # 注意：这里会覆盖 QSS 中通过 objectName 设置的 color 属性，但保留 background-color
+                        # 这正是我们想要的效果。
+                        current_style = button.styleSheet()
+                        button.setStyleSheet(f"{current_style}; color: {color};")
+                        # ### 修改 END ###
+
                         tags_info = get_tags_for_symbol(keyword)
                         if isinstance(tags_info, list):
                             tags_info = ", ".join(tags_info)
@@ -757,8 +872,8 @@ class MainWindow(QMainWindow):
 
                                 # 3) 拼 HTML
                                 prefix_html = f"<span style='color:orange;'>{prefix}</span>"
-                                color       = "red" if num >= 0 else "green"
-                                percent_html = f"<span style='color:{color};'>{percent_fmt}</span>"
+                                color_val   = "gray" if num >= 0 else "gray"
+                                percent_html = f"<span style='color:{color_val};'>{percent_fmt}</span>"
                                 suffix_html  = f"<span>{suffix}</span>"
                                 display_html = prefix_html + percent_html + suffix_html
                                 formatted_compare_html = (
