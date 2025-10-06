@@ -24,6 +24,7 @@ COMPARE_DATA_PATH = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
 DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
 EARNINGS_FILE_PATH = '/Users/yanzhang/Coding/News/Earnings_Release_new.txt'
 EARNINGS_FILE_NEXT_PATH = '/Users/yanzhang/Coding/News/Earnings_Release_next.txt'
+EARNINGS_FILE_THIRD_PATH = '/Users/yanzhang/Coding/News/Earnings_Release_third.txt'
 TAGS_WEIGHT_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/tags_weight.json'
 
 RELATED_SYMBOLS_LIMIT = 10
@@ -283,6 +284,61 @@ def find_symbols_by_tags_b(target_tags_with_weight, data, original_symbol):
         combined.extend(related[cat])
     return combined
 
+# --- 新增的辅助函数 ---
+def calculate_earnings_price_change(symbol, db_path, sector_data):
+    """
+    计算自上次财报日以来的股价变化百分比。
+    """
+    fallback_text = "..."
+    try:
+        with sqlite3.connect(db_path) as conn:
+            cursor = conn.cursor()
+
+            # 1. 获取最新财报日期
+            cursor.execute("SELECT date FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 1", (symbol,))
+            result = cursor.fetchone()
+            if not result:
+                return fallback_text
+            earnings_date = result[0]
+
+            # 2. 获取symbol所属的表名 (sector)
+            table_name = None
+            for sector, symbols_list in sector_data.items():
+                if symbol in symbols_list:
+                    table_name = sector
+                    break
+            if not table_name:
+                return fallback_text
+            
+            # 3. 获取财报日收盘价
+            # 注意：表名不能用 '?' 参数化，但由于表名来自受控的json文件，这里是安全的
+            query_earnings_price = f'SELECT price FROM "{table_name}" WHERE name = ? AND date = ?'
+            cursor.execute(query_earnings_price, (symbol, earnings_date))
+            result = cursor.fetchone()
+            if not result:
+                return fallback_text
+            earnings_price = result[0]
+
+            # 4. 获取最新收盘价
+            query_latest_price = f'SELECT price FROM "{table_name}" WHERE name = ? ORDER BY date DESC LIMIT 1'
+            cursor.execute(query_latest_price, (symbol,))
+            result = cursor.fetchone()
+            if not result:
+                return fallback_text
+            latest_price = result[0]
+
+            # 5. 计算百分比
+            if earnings_price is None or latest_price is None or earnings_price == 0:
+                return fallback_text
+            
+            percentage_change = ((latest_price - earnings_price) / earnings_price) * 100
+            
+            return f"{percentage_change:+.1f}%"
+
+    except Exception as e:
+        print(f"Error calculating price change for {symbol}: {e}")
+        return fallback_text
+
 
 class EarningsWindow(QMainWindow):
     def __init__(self):
@@ -339,6 +395,30 @@ class EarningsWindow(QMainWindow):
                 f"QPushButton#{name}:hover {{ background-color:{self.lighten_color(bg)}; }} "
             )
         qss += "QGroupBox { font-size:16px; font-weight:bold; margin-top:10px; }"
+        # 为百分比按钮添加样式
+        qss += """
+        QPushButton { 
+            font-size: 14px; 
+            padding: 5px; 
+            border: 1px solid #aaa; 
+            border-radius: 4px;
+            background-color: #f0f0f0;
+        }
+        QPushButton:hover {
+            background-color: #e0e0e0;
+        }
+        QPushButton#PercentBadge {
+            background-color: #333333;
+            color: #FFFFFF;
+            font-weight: 600;
+            border: 1px solid #000;
+            border-radius: 4px;
+            padding: 4px 6px;
+        }
+        QPushButton#PercentBadge:hover {
+            background-color: #3d3d3d;
+        }
+        """
         self.setStyleSheet(qss)
 
     def lighten_color(self, color_name, factor=1.2):
@@ -374,7 +454,8 @@ class EarningsWindow(QMainWindow):
     def populate_ui(self):
         earnings_schedule, _ = parse_multiple_earnings_files([
             EARNINGS_FILE_PATH,
-            EARNINGS_FILE_NEXT_PATH
+            EARNINGS_FILE_NEXT_PATH,
+            EARNINGS_FILE_THIRD_PATH
         ])
 
         valid_symbols = set()
@@ -413,8 +494,14 @@ class EarningsWindow(QMainWindow):
                     btn.setObjectName(self.get_button_style_name(sym))
                     btn.clicked.connect(lambda _, s=sym: self.on_keyword_selected_chart(s))
 
-                    related = QPushButton("...")
-                    related.setFixedWidth(50)
+                    # --- 修改部分开始 ---
+                    # 调用新函数计算百分比
+                    price_change_text = calculate_earnings_price_change(sym, DB_PATH, sector_data)
+                    # 使用计算结果创建按钮
+                    related = QPushButton(price_change_text)
+                    related.setObjectName("PercentBadge")
+                    related.setFixedWidth(80) # 适当加宽以容纳百分比文本
+                    # --- 修改部分结束 ---
 
                     tags = get_tags_for_symbol(sym)
                     tags_str = ", ".join(tags) if isinstance(tags, list) else tags
@@ -530,7 +617,7 @@ if __name__ == '__main__':
     compare_data = load_text_data(COMPARE_DATA_PATH)
     wg = load_weight_groups()
     tags_weight_config = {tag: w for w, tags in wg.items() for tag in tags}
-    _, syms = parse_multiple_earnings_files([EARNINGS_FILE_PATH, EARNINGS_FILE_NEXT_PATH])
+    _, syms = parse_multiple_earnings_files([EARNINGS_FILE_PATH, EARNINGS_FILE_NEXT_PATH, EARNINGS_FILE_THIRD_PATH])
     symbol_manager = SymbolManager(syms)
 
     app = QApplication(sys.argv)

@@ -82,7 +82,6 @@
         "RLI": "",
         "CNS": "",
         "ARX": "",
-        "IBN": "",
         "TW": "",
         "MA": "",
         "V": "",
@@ -99,7 +98,6 @@
     "Healthcare": {
         "ALC": "",
         "ATR": "",
-        "SNY": "",
         "MMSI": "",
         "PRCT": "",
         "GKOS": "",
@@ -177,6 +175,8 @@
         "XRP": ""
     },
     "Today": {
+        "TRU": "",
+        "AVY": "",
         "BSX": "",
         "RBLX": "",
         "BTI": "",
@@ -184,7 +184,8 @@
         "AFRM": "",
         "SPGI": "",
         "TMUS": "TMUS7",
-        "HDB": ""
+        "HDB": "",
+        "IBN": ""
     },
     "Next Week": {},
     "2 Weeks": {},
@@ -193,7 +194,6 @@
         "HPQ": "HPQ7热",
         "STZ": "",
         "KDP": "",
-        "TRU": "",
         "LII": "",
         "DKNG": "",
         "GWRE": "",
@@ -207,8 +207,8 @@
     "Short": {
         "THC": "",
         "NXT": "",
-        "LRCX": "",
-        "PONY": ""
+        "ASML": "",
+        "GLXY": ""
     },
     "Strategy12": {},
     "Strategy34": {},
