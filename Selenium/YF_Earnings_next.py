@@ -38,6 +38,52 @@ threading.Thread(target=move_mouse_periodically, daemon=True).start()
 file_path              = '/Users/yanzhang/Coding/News/Earnings_Release_next.txt'
 backup_dir             = '/Users/yanzhang/Coding/News/backup/backup'
 earnings_release_path  = '/Users/yanzhang/Coding/News/backup/Earnings_Release.txt'
+# -------- 配置文件：记忆日期范围（共用 next/third 分组） ----------------
+config_path = '/Users/yanzhang/Coding/Financial_System/Selenium/earnings_config.json'
+
+def load_last_range_by_group(group_name: str):
+    """
+    从 earnings_config.json 中读取指定分组（next/third）的日期范围。
+    若读取失败或没有该组，返回默认范围（今天 ~ 今天+6天）。
+    """
+    try:
+        if os.path.exists(config_path):
+            with open(config_path, 'r') as f:
+                data = json.load(f)
+            grp = data.get(group_name, {})
+            sd_s = grp.get('start_date')
+            ed_s = grp.get('end_date')
+            if sd_s and ed_s:
+                sd = datetime.strptime(sd_s, '%Y-%m-%d').date()
+                ed = datetime.strptime(ed_s, '%Y-%m-%d').date()
+                return sd, ed
+    except Exception as e:
+        print(f"[{group_name}] 读取配置失败，将使用默认日期：{e}")
+    today = datetime.now().date()
+    return today, today + timedelta(days=6)
+
+def save_last_range_by_group(group_name: str, sd: datetime.date, ed: datetime.date):
+    """
+    将日期范围写入 earnings_config.json 指定分组（next/third），
+    其他分组内容保留。
+    """
+    try:
+        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        data = {}
+        if os.path.exists(config_path):
+            with open(config_path, 'r') as f:
+                try:
+                    data = json.load(f) or {}
+                except Exception:
+                    data = {}
+        if group_name not in data:
+            data[group_name] = {}
+        data[group_name]['start_date'] = sd.strftime('%Y-%m-%d')
+        data[group_name]['end_date']   = ed.strftime('%Y-%m-%d')
+        with open(config_path, 'w') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"[{group_name}] 写入配置失败：{e}")
 
 # （A）加载主发行日文件中的 (symbol, date) 去重集
 existing_release_entries = set()
@@ -88,6 +134,8 @@ new_entries = []
 
 # -------- 3. 弹出日期选择界面 ----------------------------------------
 def pick_date_range():
+    group_name = "next"
+
     def on_ok():
         nonlocal start_dt, end_dt
         sd = start_cal.get_date()
@@ -97,18 +145,21 @@ def pick_date_range():
             return
         start_dt = datetime(sd.year, sd.month, sd.day)
         end_dt   = datetime(ed.year, ed.month, ed.day)
+        # 保存到配置（next 分组）
+        save_last_range_by_group(group_name, sd, ed)
         root.destroy()
 
     def on_cancel(event=None):
         root.destroy()
         sys.exit()
 
+    # 读取 next 分组上次日期范围
+    last_sd, last_ed = load_last_range_by_group(group_name)
+
     root = tk.Tk()
-    # MODIFIED: 修改窗口标题栏文本
     root.title("NEXT - 选择爬取日期范围")
     
-    # MODIFIED: 增加窗口高度以容纳新标题，并将所有控件下移
-    w, h = 350, 210 # 原高度为 150
+    w, h = 350, 210
     ws = root.winfo_screenwidth()
     hs = root.winfo_screenheight()
     x = (ws//2) - (w//2)
@@ -116,35 +167,30 @@ def pick_date_range():
     root.geometry(f"{w}x{h}+{x}+{y}")
     root.resizable(False, False)
 
-    # 置顶
     root.lift()
     root.focus_force()
-
-    # 绑定 ESC
     root.bind("<Escape>", on_cancel)
 
-    # ADDED: 新增一个大的红色 "NEXT" 标题
     title_label = tk.Label(root, text="NEXT", fg="red", font=("Helvetica", 36, "bold"))
-    # 将其放置在窗口顶部中央
     title_label.place(relx=0.5, y=35, anchor='center')
 
-    # MODIFIED: 调整以下所有控件的 y 坐标，为新标题腾出空间
-    tk.Label(root, text="开始日期：").place(x=20, y=80) # 原 y=20
+    tk.Label(root, text="开始日期：").place(x=20, y=80)
     start_cal = DateEntry(root, width=12, background='darkblue',
-                          foreground='white', borderwidth=2, year=datetime.now().year)
-    start_cal.place(x=100, y=80) # 原 y=20
+                          foreground='white', borderwidth=2,
+                          year=last_sd.year, month=last_sd.month, day=last_sd.day)
+    start_cal.place(x=100, y=80)
 
-    tk.Label(root, text="结束日期：").place(x=20, y=120) # 原 y=60
+    tk.Label(root, text="结束日期：").place(x=20, y=120)
     end_cal = DateEntry(root, width=12, background='darkblue',
-                        foreground='white', borderwidth=2, year=datetime.now().year)
-    end_cal.place(x=100, y=120) # 原 y=60
+                        foreground='white', borderwidth=2,
+                        year=last_ed.year, month=last_ed.month, day=last_ed.day)
+    end_cal.place(x=100, y=120)
 
     btn_ok = tk.Button(root, text="确定", width=10, command=on_ok)
-    btn_ok.place(x=60, y=160) # 原 y=100
+    btn_ok.place(x=60, y=160)
     btn_cancel = tk.Button(root, text="取消", width=10, command=on_cancel)
-    btn_cancel.place(x=180, y=160) # 原 y=100
+    btn_cancel.place(x=180, y=160)
 
-    # 等待用户操作
     start_dt = None
     end_dt   = None
     root.mainloop()

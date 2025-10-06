@@ -863,7 +863,7 @@ class MainWindow(QMainWindow):
                             if m:
                                 # 1) 把捕获组里的数字转成 float，再格式化到一位小数
                                 num = float(m.group(1))
-                                percent_fmt = f"{num:.1f}%"
+                                percent_fmt = f"{num:.2f}%"
 
                                 # 2) 找到原始字符串中百分号片段，用来切 prefix/suffix
                                 orig = m.group(0)
@@ -872,7 +872,23 @@ class MainWindow(QMainWindow):
 
                                 # 3) 拼 HTML
                                 prefix_html = f"<span style='color:orange;'>{prefix}</span>"
-                                color_val   = "gray" if num >= 0 else "gray"
+                                
+                                # 定义需要特殊颜色处理的分组
+                                special_color_groups = {"Bonds", "Crypto", "Indices", "Economics", "Commodities", "Currencies"}
+                                
+                                # 根据当前分组 (sector) 决定百分比的颜色
+                                if sector in special_color_groups:
+                                    # 特殊分组：正红、零灰、负绿
+                                    if num > 0:
+                                        color_val = "red"
+                                    elif num == 0:
+                                        color_val = "gray"
+                                    else:
+                                        color_val = "green"
+                                else:
+                                    # 其他分组：保持灰色
+                                    color_val = "gray"
+
                                 percent_html = f"<span style='color:{color_val};'>{percent_fmt}</span>"
                                 suffix_html  = f"<span>{suffix}</span>"
                                 display_html = prefix_html + percent_html + suffix_html
