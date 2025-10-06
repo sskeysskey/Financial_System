@@ -177,23 +177,21 @@
         "XRP": ""
     },
     "Today": {
-        "TRU": "",
-        "LII": "",
         "BSX": "",
         "RBLX": "",
         "BTI": "",
+        "LII": "",
         "AFRM": "",
-        "HPQ": "HPQ7热",
         "SPGI": "",
         "TMUS": "TMUS7",
-        "WIT": "",
-        "STZ": "",
         "HDB": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
+        "HPQ": "HPQ7热",
+        "STZ": "",
         "KDP": "",
         "TRU": "",
         "LII": "",
