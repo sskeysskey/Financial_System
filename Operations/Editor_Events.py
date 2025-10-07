@@ -224,11 +224,12 @@ class DescriptionEditorApp:
         self.scrollable_frame.grid_columnconfigure(2, weight=1)
 
         for i, (date_key, description) in enumerate(sorted_events, start=1):
-            self._create_row_widgets(i, date_key, description)
+            # is_latest=True 仅用于第一条（最新一条）
+            self._create_row_widgets(i, date_key, description, is_new=False, is_latest=(i == 1))
         
         self._update_select_all_state()
 
-    def _create_row_widgets(self, row_index, date_key, description, is_new=False):
+    def _create_row_widgets(self, row_index, date_key, description, is_new=False, is_latest=False):
         """辅助函数，用于创建一行控件并应用样式"""
         row_frame = Frame(self.scrollable_frame, bg=self.COLORS['bg_dark'])
         row_frame.grid(row=row_index, column=0, sticky="ew", padx=5, pady=4)
@@ -240,6 +241,10 @@ class DescriptionEditorApp:
                                   bg=self.COLORS['bg_dark'], activebackground=self.COLORS['bg_dark'],
                                   highlightthickness=0, selectcolor=self.COLORS['bg_medium'])
         checkbutton.grid(row=0, column=0, padx=5, sticky='ns')
+
+        # 若为最新一条，默认勾选
+        if is_latest:
+            check_var.set(True)
 
         # 样式定义
         entry_style = {
@@ -271,10 +276,13 @@ class DescriptionEditorApp:
             'original_date': None if is_new else date_key
         })
 
+        # 设置完当前行后更新一次全选状态（避免仅有一条时全选框不一致）
+        self._update_select_all_state()
+
     def _add_new_row(self):
         i = len(self.rows) + 1
         # 使用辅助函数创建新行
-        self._create_row_widgets(i, "YYYY-MM-DD", "请在此输入内容...", is_new=True)
+        self._create_row_widgets(i, "YYYY-MM-DD", "请在此输入内容...", is_new=True, is_latest=False)
         self._update_select_all_state()
 
     def _delete_selected(self):

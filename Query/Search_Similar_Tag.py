@@ -13,14 +13,6 @@ from PyQt5.QtWidgets import (QApplication, QInputDialog, QMessageBox, QMainWindo
                              QVBoxLayout, QHBoxLayout, QPushButton, QGroupBox,
                               QScrollArea, QLabel, QMenu, QAction)
 from PyQt5.QtGui import QCursor
-import traceback
-
-DEBUG_LOG = True  # 日志开关：调试时 True，正常使用时可改为 False
-
-def dlog(msg: str):
-    if DEBUG_LOG:
-        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        print(f"[DBG {ts}] {msg}")
 
 # --- 检查并添加必要的路径 ---
 chart_input_path = '/Users/yanzhang/Coding/Financial_System/Query'
@@ -424,13 +416,19 @@ class SimilarityViewerWindow(QMainWindow):
     # ### 修改 START: 新增的、用于复杂颜色逻辑的数据获取函数 ###
     def get_color_decision_data(self, symbol: str) -> tuple[float | None, str | None, date | None]:
         """
+        获取决定按钮颜色所需的所有数据。
+        1. 从 Earning 表获取最近两次财报日期和最新的 price。
+        2. 从 sector 表获取这两天的收盘价。
+        3. 比较收盘价得出趋势。
+        4. 如果最新一期财报的日期不是在当前系统日期往前推一个半月之内的话，则该symbol显示为白色
+        5. 如果某个symbol只有一个财报日期，那么即使他的财报日期是在1个半月之内的，也仍然显示为白色
+
         返回: (latest_earning_price, stock_price_trend, latest_earning_date)
-        stock_price_trend: 'rising' | 'falling' | 'single' | None
+              - stock_price_trend: 'rising', 'falling', 'single', 或 None
+                'single' 表示只有一条财报记录，此时仅根据 earning price 正负着色。
         """
         try:
-            dlog(f"color_decision/start symbol={symbol}")
-
-            # 1) 最近两次财报
+            # 步骤 1: 获取最近两次财报信息
             with sqlite3.connect(DB_PATH) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
@@ -439,71 +437,68 @@ class SimilarityViewerWindow(QMainWindow):
                 )
                 earning_rows = cursor.fetchall()
 
-            dlog(f"color_decision/earning_rows symbol={symbol} rows={earning_rows}")
-
             if not earning_rows:
-                dlog(f"color_decision/no_earning_rows symbol={symbol} -> WHITE (no record)")
-                return None, None, None
+                return None, None, None # 没有财报记录
 
             latest_earning_date_str, latest_earning_price_str = earning_rows[0]
             latest_earning_date = datetime.strptime(latest_earning_date_str, "%Y-%m-%d").date()
             latest_earning_price = float(latest_earning_price_str) if latest_earning_price_str is not None else 0.0
-            dlog(f"color_decision/latest symbol={symbol} date={latest_earning_date} earning_price={latest_earning_price}")
 
-            # 2) 超过 75 天
+            # --- 新规则 1: 如果最新财报在75天前，则强制为白色 ---
             days_diff = (date.today() - latest_earning_date).days
-            dlog(f"color_decision/days_diff symbol={symbol} days={days_diff}")
             if days_diff > 75:
-                dlog(f"color_decision/over_75_days symbol={symbol} -> WHITE")
+                # 返回None趋势，使调用处逻辑判定为白色
                 return latest_earning_price, None, latest_earning_date
 
-            # 3) 只有一条财报
+            # --- 新规则：如果只有一条财报记录，使用 'single' 模式，仅按 earning price 正负着色 ---
             if len(earning_rows) < 2:
-                dlog(f"color_decision/single_record symbol={symbol} earning_price={latest_earning_price} -> mode=single")
+                # 不再返回 None，而是标记为 'single'
                 return latest_earning_price, 'single', latest_earning_date
 
+            # 存在至少两条财报记录，继续计算趋势
             previous_earning_date_str, _ = earning_rows[1]
             previous_earning_date = datetime.strptime(previous_earning_date_str, "%Y-%m-%d").date()
-            dlog(f"color_decision/prev symbol={symbol} prev_date={previous_earning_date}")
 
-            # 4) sector 表
+            # 步骤 2: 查找 sector 表名
             sector_table = next((s for s, names in self.sector_data.items() if symbol in names), None)
-            dlog(f"color_decision/sector_lookup symbol={symbol} sector_table={sector_table}")
             if not sector_table:
-                dlog(f"color_decision/no_sector symbol={symbol} -> trend=None -> WHITE")
+                # 找不到板块，也无法比较
                 return latest_earning_price, None, latest_earning_date
 
-            # 5) 两日收盘价
+            # 步骤 3: 获取两个日期的收盘价
             with sqlite3.connect(DB_PATH) as conn:
                 cursor = conn.cursor()
+                
+                # 获取最新财报日的收盘价
                 cursor.execute(
                     f'SELECT price FROM "{sector_table}" WHERE name = ? AND date = ?',
                     (symbol, latest_earning_date.isoformat())
                 )
                 latest_stock_price_row = cursor.fetchone()
-
+                
+                # 获取前一次财报日的收盘价
                 cursor.execute(
                     f'SELECT price FROM "{sector_table}" WHERE name = ? AND date = ?',
                     (symbol, previous_earning_date.isoformat())
                 )
                 previous_stock_price_row = cursor.fetchone()
 
-            dlog(f"color_decision/stock_prices symbol={symbol} latest_row={latest_stock_price_row} prev_row={previous_stock_price_row}")
-
             if not latest_stock_price_row or not previous_stock_price_row:
-                dlog(f"color_decision/missing_stock_price symbol={symbol} -> trend=None -> WHITE")
+                # 缺少任一天的股价数据
                 return latest_earning_price, None, latest_earning_date
 
             latest_stock_price = float(latest_stock_price_row[0])
             previous_stock_price = float(previous_stock_price_row[0])
+            
+            # 步骤 4: 判断趋势
             trend = 'rising' if latest_stock_price > previous_stock_price else 'falling'
-            dlog(f"color_decision/trend symbol={symbol} latest={latest_stock_price} prev={previous_stock_price} trend={trend}")
-
+            
             return latest_earning_price, trend, latest_earning_date
 
         except Exception as e:
-            dlog(f"color_decision/EXCEPTION symbol={symbol} err={e}\n{traceback.format_exc()}")
+            print(f"[颜色决策数据获取错误] {symbol}: {e}")
             return None, None, None
+    # <<< 修改 END >>>
 
     def create_source_symbol_widget(self):
         """为源 Symbol 创建一整行可点击的控件（除搜索框外）"""
@@ -638,63 +633,63 @@ class SimilarityViewerWindow(QMainWindow):
 
     # ### 修改 START: 重构 create_symbol_button 以使用新的颜色逻辑 ###
     def create_symbol_button(self, symbol):
-        dlog(f"button_color/compare symbol={symbol} compare={self.compare_data.get(symbol)}")
+        """创建并配置一个标准的 Symbol 按钮，Tooltip 改为最新财报日期，颜色根据复杂逻辑决定"""
         button = SymbolButton(symbol)
         button.setCursor(QCursor(Qt.PointingHandCursor))
         button.setFixedWidth(90)
         button.setObjectName("SymbolButton")
 
+        # 左键点击事件
         button.clicked.connect(lambda _, s=symbol: self.on_symbol_click(s))
-
+        
+        # --- 核心修改：调用新函数并根据结果设置颜色 ---
         earning_price, price_trend, latest_date = self.get_color_decision_data(symbol)
-        dlog(f"button_color/input symbol={symbol} earning_price={earning_price} trend={price_trend} latest_date={latest_date}")
 
+        # 1. 设置 Tooltip
         if latest_date:
             tooltip_text = f"最新财报日期: {latest_date.isoformat()}"
         else:
             tooltip_text = "最新财报日期: 未知"
+        # 仍然用 HTML 格式美化一下
         button.setToolTip(
-            f"<div style='font-size:16px; background-color:#FFFFE0; color:black; padding:5px;'>{tooltip_text}</div>"
+            f"<div style='font-size:16px; background-color:#FFFFE0; "
+            f"color:black; padding:5px;'>{tooltip_text}</div>"
         )
-
+        
+        # 右键菜单事件
         button.setContextMenuPolicy(Qt.CustomContextMenu)
         button.customContextMenuRequested.connect(lambda pos, s=symbol: self.show_context_menu(s))
 
-        color = 'white'  # 默认
-        reason = "default"
-
+        # 颜色逻辑部分无需修改，因为 get_color_decision_data 的返回值会处理好
+        color = 'white' # 默认颜色
         if earning_price is not None and price_trend is not None:
             if price_trend == 'single':
+                # 新增：只有一条财报记录，按 earning price 正负着色
                 if earning_price > 0:
-                    color, reason = 'red', "single & earning>0"
+                    color = 'red'
                 elif earning_price < 0:
-                    color, reason = 'green', "single & earning<0"
+                    color = 'green'
                 else:
-                    color, reason = 'white', "single & earning==0"
+                    color = 'white'
             else:
+                # 原有：基于两次收盘价比较的趋势和 earning price 正负的组合
                 is_price_positive = earning_price > 0
-                is_trend_rising = (price_trend == 'rising')
+                is_trend_rising = price_trend == 'rising'
 
                 if is_trend_rising and is_price_positive:
-                    color, reason = 'red', "rising & earning>0"
-                elif (not is_trend_rising) and is_price_positive:
-                    color, reason = '#008B8B', "falling & earning>0"
-                elif is_trend_rising and (not is_price_positive):
-                    color, reason = '#912F2F', "rising & earning<0"
-                elif (not is_trend_rising) and (not is_price_positive):
-                    color, reason = 'green', "falling & earning<0"
-                else:
-                    color, reason = 'white', "unmatched_combo"
-        else:
-            # 进入这里的路径全部记日志
-            color, reason = 'white', f"trend_or_price_none trend={price_trend} earning_price={earning_price}"
+                    color = 'red'         # 红色
+                elif not is_trend_rising and is_price_positive:
+                    color = '#008B8B'       # 蓝绿色
+                elif is_trend_rising and not is_price_positive:
+                    color = '#912F2F'     # 紫色
+                elif not is_trend_rising and not is_price_positive:
+                    color = 'green'       # 绿色
 
         base_ss = button.styleSheet() or ""
         button.setStyleSheet(base_ss + f"; color: {color};")
 
-        dlog(f"button_color/result symbol={symbol} color={color} reason={reason}")
-
         return button
+    # ### 修改 END ###
 
     def on_symbol_click(self, symbol):
         """处理 Symbol 按钮的左键点击事件"""

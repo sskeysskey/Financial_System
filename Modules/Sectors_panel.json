@@ -186,6 +186,9 @@
         "XRP": ""
     },
     "Today": {
+        "HPQ": "HPQ7热",
+        "CART": "",
+        "ARES": "",
         "TRU": "",
         "AVY": "",
         "BSX": "",
@@ -202,7 +205,6 @@
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
-        "HPQ": "HPQ7热",
         "STZ": "",
         "KDP": "",
         "LII": "",
@@ -213,13 +215,15 @@
         "MELI": "",
         "ARES": "",
         "ICE": "",
-        "MKC": ""
+        "MKC": "",
+        "FI": ""
     },
     "Short": {
         "THC": "",
-        "NXT": "",
-        "ASML": "",
-        "GLXY": ""
+        "SGHC": "",
+        "BE": "",
+        "SNDK": "",
+        "HOOD": ""
     },
     "Strategy12": {
         "AAL": "",
@@ -250,17 +254,6 @@
         "PGR": ""
     },
     "PE_valid": {
-        "ALK": "",
-        "ANF": "",
-        "ARES": "",
-        "AVGO": "AVGO7热",
-        "CART": "",
-        "FI": "",
-        "GAP": "",
-        "HD": "HD7",
-        "HPQ": "HPQ7热",
-        "ICE": "",
-        "KDP": "",
         "KKR": "",
         "LOW": "",
         "MELI": "",

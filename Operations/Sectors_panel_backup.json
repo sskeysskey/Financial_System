@@ -10,9 +10,14 @@
     "Real_Estate": {
         "AMH": "",
         "UDR": "",
-        "MAA": ""
+        "MAA": "",
+        "SBAC": "",
+        "CPT": ""
     },
-    "Energy": {},
+    "Energy": {
+        "ET": "",
+        "HESM": ""
+    },
     "Technology": {
         "FI": "",
         "GIB": "",
@@ -42,7 +47,8 @@
         "KMX": "",
         "HRB": "",
         "CAVA": "",
-        "MELI": ""
+        "MELI": "",
+        "BFAM": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -58,7 +64,10 @@
         "PPC": "",
         "CL": "",
         "PM": "",
-        "BRBR": ""
+        "BRBR": "",
+        "PG": "",
+        "KMB": "",
+        "PRMB": ""
     },
     "Industrials": {
         "ODFL": "",
@@ -70,10 +79,12 @@
         "DE": "",
         "SNDR": "",
         "RSG": "",
-        "EXPO": ""
+        "EXPO": "",
+        "CTAS": ""
     },
     "Communication_Services": {
-        "META": ""
+        "META": "",
+        "T": ""
     },
     "Financial_Services": {
         "FDS": "",
@@ -175,6 +186,9 @@
         "XRP": ""
     },
     "Today": {
+        "HPQ": "HPQ7热",
+        "CART": "",
+        "ARES": "",
         "TRU": "",
         "AVY": "",
         "BSX": "",
@@ -202,18 +216,59 @@
         "MELI": "",
         "ARES": "",
         "ICE": "",
-        "MKC": ""
+        "MKC": "",
+        "FI": ""
     },
     "Short": {
         "THC": "",
-        "NXT": "",
-        "ASML": "",
-        "GLXY": ""
+        "SGHC": "",
+        "BE": "",
+        "SNDK": "",
+        "HOOD": ""
     },
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
-    "PE_invalid": {},
+    "Strategy12": {
+        "AAL": "",
+        "BSX": "",
+        "BX": "",
+        "CME": "",
+        "DECK": "",
+        "GEV": "",
+        "HON": "",
+        "ISRG": "",
+        "KMB": "",
+        "KNX": "",
+        "LII": "",
+        "MCO": "",
+        "MKC": "",
+        "NDAQ": "",
+        "NFLX": "",
+        "OMC": "",
+        "PCAR": "",
+        "PEP": "",
+        "T": "",
+        "TMO": "",
+        "TMUS": "",
+        "TRU": "",
+        "UAL": ""
+    },
+    "Strategy34": {
+        "PGR": ""
+    },
+    "PE_valid": {
+        "ICE": "",
+        "KDP": "",
+        "KKR": "",
+        "LOW": "",
+        "MELI": "",
+        "META": "META7",
+        "NCLH": "",
+        "PM": "PM7",
+        "SN": ""
+    },
+    "PE_invalid": {
+        "DKNG": "",
+        "Z": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

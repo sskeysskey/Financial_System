@@ -107,8 +107,12 @@ def get_symbol_info(symbol):
     return {'has_blacklist': False, 'tags': []}
 
 def get_price_peak_date(cursor, symbol, sector):
-    """检查最近一个月内的最高价是否在最新交易日的前一天"""
+    """
+    检查最近一个月内的最高价是否出现在最新交易日的前一个交易日。
+    此版本通过数据库查询来确定前一个交易日，以正确处理周末和节假日。
+    """
     try:
+        # 1. 获取最新交易日
         cursor.execute(f"""
             SELECT date, price 
             FROM {sector}
@@ -133,8 +137,29 @@ def get_price_peak_date(cursor, symbol, sector):
         logger.error(f'[{symbol}] get_price_peak_date: invalid latest date "{latest_date_str}": {e}')
         return False
 
-    one_month_ago = latest_date - timedelta(days=30)
+    # 2. 【核心修改】查询上一个实际的交易日，而不是通过日期计算
+    try:
+        cursor.execute(f"""
+            SELECT date
+            FROM {sector}
+            WHERE name = ? AND date < ?
+            ORDER BY date DESC
+            LIMIT 1
+        """, (symbol, latest_date_str))
+        previous_trading_day_result = cursor.fetchone()
+    except Exception as e:
+        logger.error(f'[{symbol}] get_price_peak_date: failed to query previous trading day from table {sector}: {e}')
+        logger.debug(traceback.format_exc())
+        return False
 
+    if not previous_trading_day_result:
+        logger.warning(f'[{symbol}] get_price_peak_date: no trading day found before {latest_date_str}')
+        return False
+    
+    previous_trading_day_str = previous_trading_day_result[0]
+
+    # 3. 获取最近一个月的价格窗口，找到期间的最高价及其日期
+    one_month_ago = latest_date - timedelta(days=30)
     try:
         cursor.execute(f"""
             SELECT date, price 
@@ -155,20 +180,16 @@ def get_price_peak_date(cursor, symbol, sector):
         return False
 
     peak_date_str, peak_price = prices[0][0], prices[0][1]
-    try:
-        peak_date = datetime.strptime(peak_date_str, '%Y-%m-%d')
-    except Exception as e:
-        logger.error(f'[{symbol}] get_price_peak_date: invalid peak date "{peak_date_str}": {e}')
-        return False
 
-    expected_peak_date = latest_date - timedelta(days=1)
-    ok = peak_date.date() == expected_peak_date.date()
+    # 4. 【核心修改】比较峰值日期是否等于我们查询到的上一个交易日
+    ok = peak_date_str == previous_trading_day_str
 
+    # 5. 【核心修改】更新日志，使其反映新的逻辑
     logger.info(
         f'[{symbol}] Peak check: latest_date={latest_date_str}, latest_price={latest_price}; '
-        f'window>={one_month_ago.strftime("%Y-%m-%d")}<= {latest_date_str}; '
+        f'window>={one_month_ago.strftime("%Y-%m-%d")} <= {latest_date_str}; '
         f'peak_date={peak_date_str}, peak_price={peak_price}; '
-        f'expected_peak_date={expected_peak_date.strftime("%Y-%m-%d")}; result={ok}'
+        f'expected_peak_date (previous trading day)={previous_trading_day_str}; result={ok}'
     )
     return ok
 
