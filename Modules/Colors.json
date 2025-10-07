@@ -123,7 +123,8 @@
         "RSG",
         "CME",
         "BSX",
-        "COST"
+        "COST",
+        "T"
     ],
     "blue_keywords": [
         "US2Y",
@@ -541,7 +542,10 @@
         "PCTY",
         "DSGX",
         "QTWO",
-        "HLNE"
+        "HLNE",
+        "BFAM",
+        "PRMB",
+        "HESM"
     ],
     "yellow_keywords": [
         "XLY",

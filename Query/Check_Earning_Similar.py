@@ -4,6 +4,7 @@ import sqlite3
 from collections import OrderedDict
 import subprocess
 from decimal import Decimal
+from datetime import datetime, date
 
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
@@ -16,8 +17,6 @@ from PyQt5.QtGui import QCursor
 sys.path.append('/Users/yanzhang/Coding/Financial_System/Query')
 from Chart_input import plot_financial_data
 
-
-COLORS_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Colors.json'
 DESCRIPTION_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
 SECTORS_ALL_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
 COMPARE_DATA_PATH = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
@@ -32,7 +31,6 @@ MAX_PER_COLUMN = 20
 
 symbol_manager = None
 compare_data = {}
-keyword_colors = {}
 sector_data = {}
 json_data = {}
 tags_weight_config = {}
@@ -339,6 +337,117 @@ def calculate_earnings_price_change(symbol, db_path, sector_data):
         print(f"Error calculating price change for {symbol}: {e}")
         return fallback_text
 
+# --- 新增：从 b.py 移植的核心颜色决策函数 ---
+def get_color_decision_data(symbol: str, db_path: str, sector_data: dict) -> tuple[float | None, str | None, date | None]:
+    """
+    获取决定按钮颜色所需的所有数据。
+    返回: (latest_earning_price, stock_price_trend, latest_earning_date)
+          - stock_price_trend: 'rising', 'falling', 'single', 或 None
+    """
+    try:
+        # 步骤 1: 获取最近两次财报信息
+        with sqlite3.connect(db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT date, price FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 2",
+                (symbol,)
+            )
+            earning_rows = cursor.fetchall()
+
+        if not earning_rows:
+            return None, None, None
+
+        latest_earning_date_str, latest_earning_price_str = earning_rows[0]
+        latest_earning_date = datetime.strptime(latest_earning_date_str, "%Y-%m-%d").date()
+        latest_earning_price = float(latest_earning_price_str) if latest_earning_price_str is not None else 0.0
+
+        days_diff = (date.today() - latest_earning_date).days
+        if days_diff > 75:
+            return latest_earning_price, None, latest_earning_date
+
+        if len(earning_rows) < 2:
+            return latest_earning_price, 'single', latest_earning_date
+
+        previous_earning_date_str, _ = earning_rows[1]
+        previous_earning_date = datetime.strptime(previous_earning_date_str, "%Y-%m-%d").date()
+
+        # 步骤 2: 查找 sector 表名
+        sector_table = next((s for s, names in sector_data.items() if symbol in names), None)
+        if not sector_table:
+            return latest_earning_price, None, latest_earning_date
+
+        # 步骤 3: 获取两个日期的收盘价
+        with sqlite3.connect(db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                f'SELECT price FROM "{sector_table}" WHERE name = ? AND date = ?',
+                (symbol, latest_earning_date.isoformat())
+            )
+            latest_stock_price_row = cursor.fetchone()
+            cursor.execute(
+                f'SELECT price FROM "{sector_table}" WHERE name = ? AND date = ?',
+                (symbol, previous_earning_date.isoformat())
+            )
+            previous_stock_price_row = cursor.fetchone()
+
+        if not latest_stock_price_row or not previous_stock_price_row:
+            return latest_earning_price, None, latest_earning_date
+
+        latest_stock_price = float(latest_stock_price_row[0])
+        previous_stock_price = float(previous_stock_price_row[0])
+        
+        # 步骤 4: 判断趋势
+        trend = 'rising' if latest_stock_price > previous_stock_price else 'falling'
+        
+        return latest_earning_price, trend, latest_earning_date
+
+    except Exception as e:
+        print(f"[颜色决策数据获取错误] {symbol}: {e}")
+        return None, None, None
+
+# --- 新增：将颜色决策逻辑封装为独立函数 ---
+def determine_button_colors(symbol):
+    """
+    根据复杂的财报和股价逻辑，决定按钮的背景色和前景色。
+    返回 (background_color, text_color) 元组。
+    """
+    earning_price, price_trend, _ = get_color_decision_data(symbol, DB_PATH, sector_data)
+
+    # 定义颜色映射 (背景色, 前景色)
+    color_map = {
+        'red': ('red', 'white'),
+        'dark_cyan': ('#008B8B', 'white'),
+        'purple': ('#912F2F', 'white'),
+        'green': ('green', 'white'),
+        'white': ('white', 'black'),
+        'default': ('#ddd', 'black')
+    }
+
+    if earning_price is None or price_trend is None:
+        return color_map['default']
+
+    if price_trend == 'single':
+        if earning_price > 0:
+            return color_map['red']
+        elif earning_price < 0:
+            return color_map['green']
+        else:
+            return color_map['white']
+    else:
+        is_price_positive = earning_price > 0
+        is_trend_rising = price_trend == 'rising'
+
+        if is_trend_rising and is_price_positive:
+            return color_map['red']
+        elif not is_trend_rising and is_price_positive:
+            return color_map['dark_cyan']
+        elif is_trend_rising and not is_price_positive:
+            return color_map['purple']
+        elif not is_trend_rising and not is_price_positive:
+            return color_map['green']
+    
+    return color_map['default'] # 备用
+
 
 class EarningsWindow(QMainWindow):
     def __init__(self):
@@ -347,7 +456,7 @@ class EarningsWindow(QMainWindow):
         self.init_ui()
 
     def init_ui(self):
-        self.setWindowTitle("财报日历查看器 (延迟计算相关)")
+        self.setWindowTitle("财报日历查看器 (新颜色方案)")
         self.setFocusPolicy(Qt.StrongFocus)
 
         # 搜索栏
@@ -355,6 +464,7 @@ class EarningsWindow(QMainWindow):
         top_lay = QHBoxLayout(top_widget)
         self.search_line = QLineEdit()
         self.search_button = QPushButton("搜索 Symbol")
+        self.search_button.setObjectName("SearchButton")  # 新增：为搜索按钮设置独立的对象名
         top_lay.addWidget(self.search_line)
         top_lay.addWidget(self.search_button)
         self.search_line.setPlaceholderText("输入要搜索的 Symbol，然后按回车或点击“搜索 Symbol”")
@@ -380,23 +490,22 @@ class EarningsWindow(QMainWindow):
         self.populate_ui()
 
     def apply_stylesheet(self):
-        button_styles = {
-            "Cyan": ("cyan", "black"), "Blue": ("blue", "white"),
-            "Purple": ("purple", "white"), "Green": ("green", "white"),
-            "White": ("white", "black"), "Yellow": ("yellow", "black"),
-            "Orange": ("orange", "black"), "Red": ("red", "black"),
-            "Black": ("black", "white"), "Default": ("#ddd", "black")
+        # --- 修改：移除旧的基于ID的颜色样式，改为通用的按钮样式 ---
+        qss = """
+        SymbolButton {
+            font-size: 16px;
+            padding: 5px;
+            border: 1px solid #333;
+            border-radius: 4px;
         }
-        qss = ""
-        for name, (bg, fg) in button_styles.items():
-            qss += (
-                f"QPushButton#{name} {{ background-color: {bg}; color: {fg}; "
-                f"font-size:16px; padding:5px; border:1px solid #333; border-radius:4px; }} "
-                f"QPushButton#{name}:hover {{ background-color:{self.lighten_color(bg)}; }} "
-            )
-        qss += "QGroupBox { font-size:16px; font-weight:bold; margin-top:10px; }"
-        # 为百分比按钮添加样式
-        qss += """
+        SymbolButton:hover {
+            border: 1px solid #0078d7;
+        }
+        QGroupBox { 
+            font-size: 16px; 
+            font-weight: bold; 
+            margin-top: 10px; 
+        }
         QPushButton { 
             font-size: 14px; 
             padding: 5px; 
@@ -418,27 +527,19 @@ class EarningsWindow(QMainWindow):
         QPushButton#PercentBadge:hover {
             background-color: #3d3d3d;
         }
+        /* 新增：搜索按钮使用深色主题 */
+        QPushButton#SearchButton {
+            background-color: #222831;      /* 深色背景 */
+            color: #FFFFFF;                  /* 字体白色 */
+            border: 1px solid #0E1116;       /* 深色边框 */
+        }
+        QPushButton#SearchButton:hover {
+            background-color: #31363F;       /* 悬停时稍亮 */
+        }
         """
         self.setStyleSheet(qss)
 
-    def lighten_color(self, color_name, factor=1.2):
-        from PyQt5.QtGui import QColor
-        color = QColor(color_name)
-        h, s, l, a = color.getHslF()
-        l = min(1.0, l * factor)
-        color.setHslF(h, s, l, a)
-        return color.name()
-
-    def get_button_style_name(self, keyword):
-        color_map = {
-            "cyan": "Cyan", "blue": "Blue", "purple": "Purple",
-            "yellow": "Yellow", "orange": "Orange", "black": "Black",
-            "white": "White", "green": "Green", "red": "Red",
-        }
-        for color, style_name in color_map.items():
-            if keyword in keyword_colors.get(f"{color}_keywords", []):
-                return style_name
-        return "Default"
+    # --- 移除了 lighten_color 和 get_button_style_name 函数 ---
 
     def on_search(self):
         key = self.search_line.text().strip().upper()
@@ -491,7 +592,12 @@ class EarningsWindow(QMainWindow):
 
                     txt = f"{sym}"
                     btn = SymbolButton(txt)
-                    btn.setObjectName(self.get_button_style_name(sym))
+                    
+                    # --- 修改部分：应用新的颜色逻辑 ---
+                    bg_color, fg_color = determine_button_colors(sym)
+                    btn.setStyleSheet(f"background-color: {bg_color}; color: {fg_color};")
+                    # --- 修改结束 ---
+                    
                     btn.clicked.connect(lambda _, s=sym: self.on_keyword_selected_chart(s))
 
                     # --- 修改部分开始 ---
@@ -541,7 +647,12 @@ class EarningsWindow(QMainWindow):
                     if r_sym not in valid_symbols or cnt >= RELATED_SYMBOLS_LIMIT:
                         continue
                     rb = SymbolButton(f"{r_sym}")
-                    rb.setObjectName(self.get_button_style_name(r_sym))
+                    
+                    # --- 修改部分：为相关Symbol按钮也应用新的颜色逻辑 ---
+                    bg_color, fg_color = determine_button_colors(r_sym)
+                    rb.setStyleSheet(f"background-color: {bg_color}; color: {fg_color};")
+                    # --- 修改结束 ---
+                    
                     rb.clicked.connect(lambda _, s=r_sym: self.on_keyword_selected_chart(s))
                     rt = get_tags_for_symbol(r_sym)
                     rt_str = ", ".join(rt) if isinstance(rt, list) else rt
@@ -611,7 +722,7 @@ class EarningsWindow(QMainWindow):
 
 
 if __name__ == '__main__':
-    keyword_colors = load_json(COLORS_PATH)
+    # --- 移除了 keyword_colors 的加载 ---
     json_data = load_json(DESCRIPTION_PATH)
     sector_data = load_json(SECTORS_ALL_PATH)
     compare_data = load_text_data(COMPARE_DATA_PATH)
