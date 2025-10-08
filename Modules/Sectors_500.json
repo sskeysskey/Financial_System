@@ -56,9 +56,7 @@
         "CPNG",
         "ORLY",
         "LCID",
-        "JD",
-        "DHI",
-        "F"
+        "JD"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -197,7 +195,8 @@
         "COR",
         "ALNY",
         "BDX",
-        "IDXX"
+        "IDXX",
+        "VEEV"
     ],
     "Industrials": [
         "GE",
@@ -304,7 +303,6 @@
         "TEL",
         "GLW",
         "CRWV",
-        "STX",
         "DDOG"
     ],
     "Utilities": [

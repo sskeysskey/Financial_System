@@ -145,8 +145,10 @@ class DescriptionEditorApp:
         
         # --- 新增: 绑定触摸板滚动事件 ---
         self.master.bind_all("<MouseWheel>", self._on_mousewheel)
-        
-        # --- 创建控件 ---
+
+        # --- 新增: 绑定快捷键 C/c 触发“复制到...” ---
+        self.master.bind_all("<Key>", self._on_keypress)
+
         self.rows = []
         self._create_widgets()
 
@@ -181,6 +183,25 @@ class DescriptionEditorApp:
                                     bg=self.COLORS['delete_bg'], activebackground='#D08770', **btn_style)
         self.delete_button.pack(side=tk.RIGHT, padx=(0, 10))
 
+    # --- 新增: 判断是否为文本输入类控件 ---
+    def _is_text_input_widget(self, widget):
+        # 在 Entry 或 Text 聚焦时，认为处于输入状态
+        import tkinter as tk
+        return isinstance(widget, (tk.Entry, tk.Text))
+
+    # --- 新增: 处理全局按键，按 C/c 触发复制 ---
+    def _on_keypress(self, event):
+        # 仅当不在输入状态时生效
+        focused = self.master.focus_get()
+        if self._is_text_input_widget(focused):
+            return
+        # 过滤组合键，确保是单独的字母键
+        if event.state & (0x0004 | 0x0001 | 0x0008 | 0x0002):
+            # 有 Ctrl/Shift/Alt/Meta 修饰则忽略（按需调整）
+            return
+        if event.char in ('c', 'C'):
+            # 执行与点击“复制到...”按钮相同的逻辑
+            self._copy_to_symbols()
     # --- 新增: 触摸板滚动处理函数 ---
     def _on_mousewheel(self, event):
         """处理鼠标滚轮和触摸板滚动事件。"""

@@ -897,7 +897,36 @@ def run_processing_logic(log_detail):
             log_detail(f"  - [通知列表] 因Tag被过滤: {symbol} (Tags: {list(symbol_tags)})")
     final_Strategy34_list = filtered_Strategy34_list
 
-    # 6.1 新增：热门Tag命中 -> JSON中标注 “{symbol}热”
+    # 7. 新增：根据 panel.json 中已存在的分组进行最终过滤 (移植自 b.py)
+    log_detail("\n--- 开始根据 panel.json 已有分组进行最终过滤 ---")
+    try:
+        with open(PANEL_JSON_FILE, 'r', encoding='utf-8') as f:
+            panel_data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        log_detail(f"警告: panel 文件 ({PANEL_JSON_FILE}) 未找到或格式错误，将不进行分组过滤。")
+        panel_data = {}
+
+    exist_today = set(panel_data.get('Today', {}).keys())
+    log_detail(f"从 panel.json 加载了 {len(exist_today)} 个 'Today' symbol。")
+
+    # 过滤 Strategy12 列表 (final_symbols)
+    # 规则: 如果 symbol 在 'Today' 组中，则移除
+    final_symbols_before_panel_filter = final_symbols
+    final_symbols = [s for s in final_symbols if s not in exist_today]
+    removed_from_s12 = set(final_symbols_before_panel_filter) - set(final_symbols)
+    if removed_from_s12:
+        log_detail(f"  - [Strategy12 过滤]: 移除了 {len(removed_from_s12)} 个已存在于 'Today' 组的 symbol: {sorted(list(removed_from_s12))}")
+
+    # 过滤 Strategy34 列表 (final_Strategy34_list)
+    # 规则: 如果 symbol 在 'Today' 组中，则移除
+    final_Strategy34_list_before_panel_filter = final_Strategy34_list
+    final_Strategy34_list = [s for s in final_Strategy34_list if s not in exist_today]
+    removed_from_s34 = set(final_Strategy34_list_before_panel_filter) - set(final_Strategy34_list)
+    if removed_from_s34:
+        log_detail(f"  - [Strategy34 过滤]: 移除了 {len(removed_from_s34)} 个已存在于 'Today' 组的 symbol: {sorted(list(removed_from_s34))}")
+
+    # 8. 生成标注并输出最终结果
+    # 8.1 热门Tag命中 -> JSON中标注 “{symbol}热”
     hot_tags = set(CONFIG.get("HOT_TAGS", set()))
     def build_symbol_note_map(symbols):
         note_map = {}
@@ -912,21 +941,24 @@ def run_processing_logic(log_detail):
     strategy12_notes = build_symbol_note_map(final_symbols)
     strategy34_notes = build_symbol_note_map(final_Strategy34_list)
 
-    # 7. 最终结果和文件输出
+    # 8.2 打印最终结果
     log_detail("\n--- 所有过滤完成后的最终结果 ---")
-    log_detail(f"主列表最终数量: {len(final_symbols)} - {final_symbols}")
-    log_detail(f"通知列表最终数量: {len(final_Strategy34_list)} - {final_Strategy34_list}")
+    log_detail(f"主列表(Strategy12)最终数量: {len(final_symbols)} - {final_symbols}")
+    log_detail(f"通知列表(Strategy34)最终数量: {len(final_Strategy34_list)} - {final_Strategy34_list}")
     if SYMBOL_TO_TRACE:
-        if SYMBOL_TO_TRACE in final_symbols:
-            log_detail(f"\n最终追踪结果: {SYMBOL_TO_TRACE} 成功进入了最终的 '主列表'。")
+        if SYMBOL_TO_TRACE in removed_from_s12:
+            log_detail(f"\n最终追踪结果: {SYMBOL_TO_TRACE} 通过了策略筛选，但因已存在于 'Today' 组而未被加入 'Strategy12'。")
+        elif SYMBOL_TO_TRACE in removed_from_s34:
+            log_detail(f"\n最终追踪结果: {SYMBOL_TO_TRACE} 通过了策略筛选，但因已存在于 'Today' 组而未被加入 'Strategy34'。")
+        elif SYMBOL_TO_TRACE in final_symbols:
+            log_detail(f"\n最终追踪结果: {SYMBOL_TO_TRACE} 成功进入了最终的 'Strategy12' 列表。")
         elif SYMBOL_TO_TRACE in final_Strategy34_list:
-            log_detail(f"\n最终追踪结果: {SYMBOL_TO_TRACE} 成功进入了最终的 '通知列表'。")
+            log_detail(f"\n最终追踪结果: {SYMBOL_TO_TRACE} 成功进入了最终的 'Strategy34' 列表。")
         else:
             log_detail(f"\n最终追踪结果: {SYMBOL_TO_TRACE} 未进入任何最终列表。")
 
-
-    # 6. 文件和JSON输出
-    # 主列表 (NextWeek_Earning)
+    # 8.3 文件和JSON输出
+    # 主列表 (Strategy12)
     update_json_panel(final_symbols, PANEL_JSON_FILE, "Strategy12", symbol_to_note=strategy12_notes)
     try:
         backup_path = PATHS["backup_Strategy12"](news_path)

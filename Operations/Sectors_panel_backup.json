@@ -15,7 +15,6 @@
         "CPT": ""
     },
     "Energy": {
-        "ET": "",
         "HESM": ""
     },
     "Technology": {
@@ -47,8 +46,7 @@
         "KMX": "",
         "HRB": "",
         "CAVA": "",
-        "MELI": "",
-        "BFAM": ""
+        "MELI": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -100,8 +98,6 @@
         "WTM": "",
         "OTF": "",
         "SPGI": "",
-        "ICE": "",
-        "ARES": "",
         "BBAR": "",
         "APO": "",
         "HLNE": ""
@@ -186,89 +182,49 @@
         "XRP": ""
     },
     "Today": {
+        "T": "",
+        "Z": "",
+        "SN": "",
         "HPQ": "HPQ7热",
         "CART": "",
         "ARES": "",
         "TRU": "",
-        "AVY": "",
         "BSX": "",
         "RBLX": "",
         "BTI": "",
-        "LII": "",
         "AFRM": "",
         "SPGI": "",
         "TMUS": "TMUS7",
         "HDB": "",
-        "IBN": ""
+        "BFAM": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
-        "HPQ": "HPQ7热",
         "STZ": "",
         "KDP": "",
         "LII": "",
-        "DKNG": "",
         "GWRE": "",
         "DUOL": "",
         "HESM": "",
         "MELI": "",
-        "ARES": "",
         "ICE": "",
-        "MKC": "",
-        "FI": ""
+        "CME": ""
     },
     "Short": {
+        "NXT": "",
+        "ASML": "",
         "THC": "",
         "SGHC": "",
         "BE": "",
         "SNDK": "",
         "HOOD": ""
     },
-    "Strategy12": {
-        "AAL": "",
-        "BSX": "",
-        "BX": "",
-        "CME": "",
-        "DECK": "",
-        "GEV": "",
-        "HON": "",
-        "ISRG": "",
-        "KMB": "",
-        "KNX": "",
-        "LII": "",
-        "MCO": "",
-        "MKC": "",
-        "NDAQ": "",
-        "NFLX": "",
-        "OMC": "",
-        "PCAR": "",
-        "PEP": "",
-        "T": "",
-        "TMO": "",
-        "TMUS": "",
-        "TRU": "",
-        "UAL": ""
-    },
-    "Strategy34": {
-        "PGR": ""
-    },
-    "PE_valid": {
-        "ICE": "",
-        "KDP": "",
-        "KKR": "",
-        "LOW": "",
-        "MELI": "",
-        "META": "META7",
-        "NCLH": "",
-        "PM": "PM7",
-        "SN": ""
-    },
-    "PE_invalid": {
-        "DKNG": "",
-        "Z": ""
-    },
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {},
+    "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
