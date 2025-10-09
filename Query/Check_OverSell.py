@@ -39,12 +39,27 @@ else:
     logger.disabled = True
 
 # 定义tag黑名单
-BLACKLIST_TAGS = ["联合医疗","黄金","金矿"]
+BLACKLIST_TAGS = ["联合医疗","黄金","金矿","白银","光纤","赋能半导体","赋能芯片制造","数据中心"]
 
 # 读取JSON文件
 with open(PRICE_FILE, 'r') as f:
-    price_data = json.load(f)
-logger.info(f'Loaded PRICE_FILE with {len(price_data)} symbols')
+    # 1. 先将整个新的JSON结构加载到一个临时变量中
+    raw_price_data = json.load(f)
+
+# 2. 从新的结构中提取我们需要的股票字典
+#    使用 .get() 方法以防止 'stocks' 键不存在时报错
+stocks_list = raw_price_data.get('stocks', [])
+
+# 3. 检查列表是否非空，然后获取第一个元素
+if stocks_list and isinstance(stocks_list, list) and len(stocks_list) > 0:
+    price_data = stocks_list[0]
+else:
+    # 如果结构不符合预期，给 price_data 一个空字典，以防后续代码出错
+    price_data = {}
+    logger.warning(f"PRICE_FILE ({PRICE_FILE}) did not contain the expected 'stocks' list or the list was empty.")
+
+logger.info(f'Loaded PRICE_FILE with {len(price_data)} symbols from the "stocks" key')
+
 
 # 读取description文件
 with open(DESC_FILE, 'r') as f:
@@ -237,7 +252,7 @@ for symbol in symbols:
             logger.info(f'[{symbol}] Skip due to blacklist tag')
             continue
 
-        # 查询最新财报涨跌幅记录是否为负（你的原逻辑）
+        # 查询最新财报涨跌幅记录（不再根据正负进行过滤）
         cursor.execute("""
             SELECT price 
             FROM Earning 
@@ -253,9 +268,8 @@ for symbol in symbols:
         earning_last_change = float(earning_price_row[0])
         logger.info(f'[{symbol}] Latest Earning change record price={earning_last_change}')
 
-        if not (earning_last_change < 0):
-            logger.info(f'[{symbol}] Skip: latest Earning change not negative')
-            continue
+        # 原先这里有: if not (earning_last_change < 0): continue
+        # 已移除这条基于正负的过滤规则
 
         # 计算财报日至最新收盘价变化百分比
         price_change = None

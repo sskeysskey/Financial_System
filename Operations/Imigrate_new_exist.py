@@ -18,7 +18,7 @@ files = {
 
 new_files = {
     'ETFs': '/Users/yanzhang/Coding/News/ETFs_new.txt',
-    '10Y_newhigh': '/Users/yanzhang/Coding/News/10Y_newhigh_new.txt',
+    '10Y_newhigh': '/Users/yanzhang/Coding/News/10Y_newhigh_stock.txt',
     'Earnings_Release': '/Users/yanzhang/Coding/News/Earnings_Release_new.txt',
     'Economic_Events': '/Users/yanzhang/Coding/News/Economic_Events_new.txt'
 }
@@ -223,14 +223,14 @@ def process_etf_file(new_file, existing_file):
     
     os.remove(new_file)
 
-# 新增：10Y_newhigh 的 JSON 处理逻辑
+# 新增：10Y_newhigh 的 JSON 处理逻辑（已更新以适应新的JSON结构）
 def process_10y_json(new_file, json_file):
     """
-    读取 new_file（至少 4 段，前 4 段为 Sector Symbol Change Price，后续为可选描述），提取 Symbol 和 Price。
-    将其与 json_file 合并：
+    读取 new_file，提取 Symbol 和 Price。
+    将其与 json_file 中的 "stocks" 部分合并：
       - 不存在则新增
       - 存在则当且仅当 new_price > old_price 时更新
-    最终保存为 { "SYMBOL": "price_as_string", ... } 格式的 JSON。
+    最终将更新后的 "stocks" 和原有的 "others" 一起写回 JSON 文件。
     处理完删除 new_file。
     """
     if not os.path.exists(new_file):
@@ -241,24 +241,45 @@ def process_10y_json(new_file, json_file):
     if target_dir and not os.path.exists(target_dir):
         os.makedirs(target_dir, exist_ok=True)
 
-    # 加载已有 JSON（若不存在或损坏则按空字典处理）
-    data = {}
+    # --- 修改开始：调整JSON加载逻辑 ---
+    
+    # 初始化用于存储 "stocks" 和 "others" 的变量
+    stock_data = {}
+    other_data = []
+    full_json_data = {}
+
     if os.path.exists(json_file):
         try:
             with open(json_file, 'r') as jf:
                 content = jf.read().strip()
                 if content:
-                    loaded = json.loads(content)
-                    if isinstance(loaded, dict):
-                        # 将所有值转为字符串，保障一致性
-                        data = {str(k): str(v) for k, v in loaded.items()}
-                    else:
-                        print("警告：JSON 结构不是字典，已重置为空字典。")
-                # 若 content 为空，data 保持 {}
-        except Exception as e:
-            print(f"警告：读取或解析 JSON 时出错，将以空字典继续。错误：{e}")
+                    # 加载整个JSON对象
+                    full_json_data = json.loads(content)
+                    if not isinstance(full_json_data, dict):
+                        print("警告：JSON 顶层结构不是字典，将重置。")
+                        full_json_data = {}
 
-    # 解析 new 文件并合并
+                    # 提取 "stocks" 数据
+                    # 假设 "stocks" 是一个列表，且我们只关心列表中的第一个字典
+                    if 'stocks' in full_json_data and isinstance(full_json_data['stocks'], list) and full_json_data['stocks']:
+                        # 为了稳健性，合并 "stocks" 列表中的所有字典
+                        for item in full_json_data['stocks']:
+                            if isinstance(item, dict):
+                                stock_data.update({str(k): str(v) for k, v in item.items()})
+
+                    # 提取 "others" 数据，用于后续写回
+                    if 'others' in full_json_data and isinstance(full_json_data['others'], list):
+                        other_data = full_json_data['others']
+                
+        except Exception as e:
+            print(f"警告：读取或解析 JSON 时出错，将以空数据结构继续。错误：{e}")
+            # 如果解析失败，重置所有数据结构
+            stock_data = {}
+            other_data = []
+
+    # --- 修改结束：调整JSON加载逻辑 ---
+
+    # 解析 new 文件并合并到 stock_data 中 (这部分逻辑不变)
     updates = 0
     inserts = 0
     with open(new_file, 'r') as fin:
@@ -266,16 +287,12 @@ def process_10y_json(new_file, json_file):
             line = raw.strip()
             if not line:
                 continue
-            # 期望格式：Sector Symbol Change Price
-            # 使用 split(maxsplit=3) 可稳妥拿到四段；若不足四段则跳过
             parts = line.split()
             if len(parts) < 4:
-                # 如果 Sector 中本身含下划线，split 不受影响；若出现多余空白也能兼容
                 print(f"跳过异常行（少于4段）：{line}")
                 continue
             sector, symbol, change, price_str = parts[:4]
 
-            # 清洗 price：允许诸如 "235.0"、"55.97"；如带逗号则去逗号
             price_clean = price_str.replace(',', '')
             try:
                 new_price = float(price_clean)
@@ -288,29 +305,36 @@ def process_10y_json(new_file, json_file):
                 print(f"跳过空 symbol 的行：{line}")
                 continue
 
-            if sym not in data:
-                data[sym] = f"{new_price}"
+            if sym not in stock_data:
+                stock_data[sym] = f"{new_price}"
                 inserts += 1
             else:
-                # 旧值也尝试按 float 比较；若旧值异常则直接覆盖为新值
-                old_str = str(data[sym]).replace(',', '')
+                old_str = str(stock_data[sym]).replace(',', '')
                 try:
                     old_price = float(old_str)
                 except ValueError:
                     old_price = float('-inf')
                 if new_price > old_price:
-                    data[sym] = f"{new_price}"
+                    stock_data[sym] = f"{new_price}"
                     updates += 1
-                # 若新价不高于旧价则不变
 
-    # 保存回 JSON（紧凑或缩进均可；这里使用缩进便于可读）
+    # --- 修改开始：调整JSON保存逻辑 ---
+    
+    # 重构要写回的完整JSON结构
+    final_json_to_write = {
+        "stocks": [stock_data],  # 将更新后的 stock_data 放入 "stocks" 列表
+        "others": other_data     # 将之前保存的 "others" 数据加回去
+    }
+
     try:
         with open(json_file, 'w') as jf:
-            json.dump(data, jf, ensure_ascii=False, indent=4)
+            # 将重构后的完整对象写入文件
+            json.dump(final_json_to_write, jf, ensure_ascii=False, indent=4)
     except Exception as e:
         print(f"错误：写入 JSON 失败：{e}")
-        # 若写失败，不删除 new_file 以便重试
         return
+
+    # --- 修改结束：调整JSON保存逻辑 ---
 
     # 删除 new 文件
     try:

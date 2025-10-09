@@ -146,7 +146,7 @@ class DescriptionEditorApp:
         # --- 新增: 绑定触摸板滚动事件 ---
         self.master.bind_all("<MouseWheel>", self._on_mousewheel)
 
-        # --- 新增: 绑定快捷键 C/c 触发“复制到...” ---
+        # --- 新增: 绑定快捷键 C/c 触发“复制到...”，D/d 触发“删除选中项” ---
         self.master.bind_all("<Key>", self._on_keypress)
 
         self.rows = []
@@ -189,7 +189,7 @@ class DescriptionEditorApp:
         import tkinter as tk
         return isinstance(widget, (tk.Entry, tk.Text))
 
-    # --- 新增: 处理全局按键，按 C/c 触发复制 ---
+    # --- 修改: 处理全局按键，按 C/c 触发复制，按 D/d 触发删除 ---
     def _on_keypress(self, event):
         # 仅当不在输入状态时生效
         focused = self.master.focus_get()
@@ -202,6 +202,10 @@ class DescriptionEditorApp:
         if event.char in ('c', 'C'):
             # 执行与点击“复制到...”按钮相同的逻辑
             self._copy_to_symbols()
+        elif event.char in ('d', 'D'):
+            # 执行与点击“删除选中项”按钮相同的逻辑
+            self._delete_selected()
+
     # --- 新增: 触摸板滚动处理函数 ---
     def _on_mousewheel(self, event):
         """处理鼠标滚轮和触摸板滚动事件。"""

@@ -28,8 +28,11 @@ COLORS_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Colors.json'
 DESCRIPTION_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
 SECTORS_ALL_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
 COMPARE_DATA_PATH = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
-# ### 删除 ###: 移除了 SHARES_PATH 和 MARKETCAP_PATH
 DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
+
+# ### 新增 ###: 为 5Y High/Low 数据文件添加新的路径常量
+HIGH_LOW_5Y_PATH = '/Users/yanzhang/Coding/News/backup/HighLow.txt'
+
 # 按钮＋标签固定宽度（像素）
 SYMBOL_WIDGET_FIXED_WIDTH = 150
 
@@ -159,14 +162,12 @@ def load_text_data(path):
                 data[cleaned_key] = value
     return data
 
-# ### 删除 ###: 彻底移除了 fetch_mnspp_data_from_db 函数
-
 # ----------------------------------------------------------------------
 # PyQt5 主应用窗口
 # ----------------------------------------------------------------------
 class HighLowWindow(QMainWindow):
-    # ### 修改 ###: 构造函数完全不接收 shares 和 marketcap 数据
-    def __init__(self, high_low_data, keyword_colors, sector_data, compare_data, json_data):
+    # ### 修改 ###: 构造函数增加 high_low_5y_data 参数
+    def __init__(self, high_low_data, keyword_colors, sector_data, compare_data, json_data, high_low_5y_data):
         super().__init__()
         
         # 将加载的数据存储为实例变量
@@ -175,20 +176,24 @@ class HighLowWindow(QMainWindow):
         self.sector_data = sector_data
         self.compare_data = compare_data
         self.json_data = json_data
-        # ### 删除 ###: 移除了 self.shares 和 self.marketcap_pe_data 的赋值
+        # ### 新增 ###: 存储 5Y 数据
+        self.high_low_5y_data = high_low_5y_data
         
-        # --- 2. 创建并初始化 SymbolManager ---
-        # 从 high_low_data 构建一个扁平的、有序的 symbol 列表
+        # --- 创建并初始化 SymbolManager ---
         all_symbols = []
         
-        # 第一步：先添加所有 Low 的 symbols
+        # 1. 添加所有 Low 的 symbols
         for period_data in high_low_data.values():
             all_symbols.extend(period_data.get('Low', []))
             
-        # 第二步：再添加所有 High 的 symbols
+        # 2. 添加所有 High 的 symbols
         for period_data in high_low_data.values():
             all_symbols.extend(period_data.get('High', []))
         
+        # ### 新增 ###: 3. 将 5Y High 的 symbols 添加到列表末尾
+        five_y_high_symbols = self.high_low_5y_data.get('5Y', {}).get('High', [])
+        all_symbols.extend(five_y_high_symbols)
+
         # 将构建好的、具有正确顺序的列表传递给 SymbolManager
         self.symbol_manager = SymbolManager(all_symbols)
         # --- 【修改结束】 ---
@@ -218,7 +223,7 @@ class HighLowWindow(QMainWindow):
         low_main_container = QWidget()
         low_main_layout = QVBoxLayout(low_main_container)
         low_main_layout.setContentsMargins(10, 0, 10, 0)
-        low_title = QLabel("LOW")
+        low_title = QLabel("新低")
         low_title.setFont(QFont("Arial", 20, QFont.Bold))
         low_title.setAlignment(Qt.AlignCenter)
         
@@ -233,7 +238,7 @@ class HighLowWindow(QMainWindow):
         high_main_container = QWidget()
         high_main_layout = QVBoxLayout(high_main_container)
         high_main_layout.setContentsMargins(10, 0, 10, 0)
-        high_title = QLabel("HIGH")
+        high_title = QLabel("新高")
         high_title.setFont(QFont("Arial", 20, QFont.Bold))
         high_title.setAlignment(Qt.AlignCenter)
         
@@ -242,20 +247,38 @@ class HighLowWindow(QMainWindow):
 
         high_main_layout.addWidget(high_title)
         high_main_layout.addLayout(self.high_columns_layout)
-        high_main_layout.addStretch(1) # 保证内容向上对齐
+        high_main_layout.addStretch(1)
 
-        # --- 【关键改动 1】: 移除 addWidget 中的拉伸因子 ---
-        # 之前是 addWidget(..., 1)，现在不带 '1'，让宽度自适应内容
+        # ### 新增 ###: 创建右侧 (5Y HIGH) 的主容器
+        high_5y_main_container = QWidget()
+        high_5y_main_layout = QVBoxLayout(high_5y_main_container)
+        high_5y_main_layout.setContentsMargins(10, 0, 10, 0)
+        high_5y_title = QLabel("5Y HIGH")
+        high_5y_title.setFont(QFont("Arial", 20, QFont.Bold))
+        high_5y_title.setAlignment(Qt.AlignCenter)
+        self.high_5y_columns_layout = QHBoxLayout() # 用于容纳 symbol 列
+        high_5y_main_layout.addWidget(high_5y_title)
+        high_5y_main_layout.addLayout(self.high_5y_columns_layout)
+        high_5y_main_layout.addStretch(1) # 保证内容向上对齐
+
+        # --- 将所有部分添加到主布局 ---
         main_layout.addWidget(low_main_container)
         
-        separator = QFrame()
-        separator.setFrameShape(QFrame.VLine)
-        separator.setFrameShadow(QFrame.Sunken)
-        main_layout.addWidget(separator)
+        separator1 = QFrame()
+        separator1.setFrameShape(QFrame.VLine)
+        separator1.setFrameShadow(QFrame.Sunken)
+        main_layout.addWidget(separator1)
 
         main_layout.addWidget(high_main_container)
+
+        # ### 新增 ###: 添加第二个分隔符和 5Y High 容器
+        separator2 = QFrame()
+        separator2.setFrameShape(QFrame.VLine)
+        separator2.setFrameShadow(QFrame.Sunken)
+        main_layout.addWidget(separator2)
         
-        # 在末尾添加一个拉伸，这样所有内容会靠左对齐，而不是被拉伸以填满窗口
+        main_layout.addWidget(high_5y_main_container)
+        
         main_layout.addStretch(1)
 
         self.apply_stylesheet()
@@ -352,9 +375,12 @@ class HighLowWindow(QMainWindow):
         """
         根据数据动态创建界面。超过阈值的项目将独立成列。
         """
-        # 分别填充 Low 和 High 两大区域
+        # 填充 Low 和 High 两大区域
         self._populate_category_columns(self.low_columns_layout, 'Low')
         self._populate_category_columns(self.high_columns_layout, 'High')
+        # ### 新增 ###: 调用新方法填充 5Y High 区域
+        self._populate_5y_high_section()
+
 
     def _populate_category_columns(self, parent_layout, category_name):
         """
@@ -411,6 +437,61 @@ class HighLowWindow(QMainWindow):
         # 循环结束后，不要忘记添加最后一个正在构建的列
         if current_column_layout is not None:
             parent_layout.addLayout(current_column_layout)
+
+    # ### 新增 ###: 专门用于填充 5Y High 列的方法
+    def _populate_5y_high_section(self):
+        """
+        填充 '5Y High' 区域。此逻辑更简单，因为它只处理一个 symbol 列表。
+        """
+        symbols = self.high_low_5y_data.get('5Y', {}).get('High', [])
+        if not symbols:
+            return
+        
+        parent_layout = self.high_5y_columns_layout
+        
+        # 创建一个 GroupBox 来容纳所有的 symbol
+        group_box = QGroupBox("Symbols") # 标题可以为空或设为 "Symbols"
+        group_layout = QVBoxLayout()
+        group_box.setLayout(group_layout)
+
+        for symbol in symbols:
+            widget = self.create_symbol_widget(symbol)
+            group_layout.addWidget(widget)
+            
+        # 由于 5Y High 区域本身就是一个大列，我们直接把这个 GroupBox 添加进去
+        # 如果未来 5Y High 的 symbol 数量也可能非常多，可以复用 _populate_category_columns 的分列逻辑
+        # 但目前根据需求，一个 GroupBox 就足够了。
+        # 为了视觉统一，我们还是模拟分列逻辑
+        
+        num_symbols = len(symbols)
+        if num_symbols > MAX_ITEMS_PER_COLUMN:
+            # 如果项目太多，则创建多个列
+            current_column_layout = None
+            for i, symbol in enumerate(symbols):
+                # 每 MAX_ITEMS_PER_COLUMN 个项目创建一个新列
+                if i % MAX_ITEMS_PER_COLUMN == 0:
+                    if current_column_layout is not None:
+                        current_column_layout.addStretch(1) # 列内向上对齐
+                        parent_layout.addLayout(current_column_layout)
+                    current_column_layout = QVBoxLayout()
+                    current_column_layout.setAlignment(Qt.AlignTop)
+                
+                widget = self.create_symbol_widget(symbol)
+                current_column_layout.addWidget(widget)
+            
+            # 添加最后一列
+            if current_column_layout is not None:
+                current_column_layout.addStretch(1)
+                parent_layout.addLayout(current_column_layout)
+        else:
+            # 如果项目不多，则只创建一列
+            column_layout = QVBoxLayout()
+            column_layout.setAlignment(Qt.AlignTop)
+            for symbol in symbols:
+                widget = self.create_symbol_widget(symbol)
+                column_layout.addWidget(widget)
+            column_layout.addStretch(1)
+            parent_layout.addLayout(column_layout)
 
 
     def _create_period_groupbox(self, title, symbols):
@@ -636,7 +717,9 @@ if __name__ == '__main__':
         json_data = load_json(DESCRIPTION_PATH)
         sector_data = load_json(SECTORS_ALL_PATH)
         compare_data = load_text_data(COMPARE_DATA_PATH)
-        # ### 删除 ###: 此处不再加载 shares 和 marketcap_pe 数据
+        # ### 新增 ###: 加载 5Y High/Low 数据
+        high_low_5y_data = parse_high_low_file(HIGH_LOW_5Y_PATH)
+        
         print("数据加载完成。")
     except FileNotFoundError as e:
         print(f"错误: 找不到文件 {e.filename}。请检查路径是否正确。")
@@ -647,13 +730,14 @@ if __name__ == '__main__':
 
     # 2. 创建并运行 PyQt5 应用
     app = QApplication(sys.argv)
-    # ### 修改 ###: 构造函数调用中不再传递 shares 和 marketcap_pe_data
+    # ### 修改 ###: 将新加载的 high_low_5y_data 传递给主窗口
     main_window = HighLowWindow(
         high_low_data,
         keyword_colors,
         sector_data,
         compare_data,
-        json_data
+        json_data,
+        high_low_5y_data
     )
     main_window.show()
     sys.exit(app.exec_())

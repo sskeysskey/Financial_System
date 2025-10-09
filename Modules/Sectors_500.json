@@ -91,13 +91,11 @@
         "ET",
         "KMI",
         "MPC",
-        "MPLX",
         "E",
         "LNG",
         "TRP",
         "PSX",
         "SLB",
-        "SU",
         "VLO"
     ],
     "Financial_Services": [
@@ -195,8 +193,7 @@
         "COR",
         "ALNY",
         "BDX",
-        "IDXX",
-        "VEEV"
+        "IDXX"
     ],
     "Industrials": [
         "GE",
@@ -303,7 +300,8 @@
         "TEL",
         "GLW",
         "CRWV",
-        "DDOG"
+        "DDOG",
+        "GRMN"
     ],
     "Utilities": [
         "NEE",

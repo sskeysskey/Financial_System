@@ -465,7 +465,8 @@
         "GOEX",
         "CGW",
         "TPYP",
-        "USSG"
+        "USSG",
+        "FV"
     ],
     "Basic_Materials": [
         "LIN",
@@ -942,7 +943,8 @@
         "NXE",
         "CRK",
         "AROC",
-        "VG"
+        "VG",
+        "CNR"
     ],
     "Financial_Services": [
         "BRK-A",

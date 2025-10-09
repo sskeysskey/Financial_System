@@ -197,15 +197,42 @@ def update_color_json(color_config_path, updates_colors, blacklist_newlow):
         print(f"写入文件时发生错误: {e}")
 
 def load_existing_highs_json(file_path):
-    """读取/Users/yanzhang/Coding/Financial_System/Modules/10Y_newhigh.json，返回 {symbol: float_price}"""
+    """
+    读取 /Users/yanzhang/Coding/Financial_System/Modules/10Y_newhigh.json，
+    并从新的 'stocks' 键中提取数据，返回 {symbol: float_price} 的字典。
+    """
+    highs_map = {}
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        # 转成 symbol -> float
-        return {k: float(v) for k, v in data.items()}
-    except Exception as e:
-        print(f"读取10Y_newhigh.json时发生错误: {e}")
+
+        # 检查 'stocks' 键是否存在且是一个列表
+        if 'stocks' in data and isinstance(data.get('stocks'), list):
+            # 遍历 'stocks' 列表中的每一个字典元素
+            for stock_group in data['stocks']:
+                # stock_group 是一个字典，如 {"MLM": "631.12", "AEM": "161.19", ...}
+                if isinstance(stock_group, dict):
+                    # 将每个字典中的键值对添加到 highs_map 中
+                    for symbol, price_str in stock_group.items():
+                        try:
+                            highs_map[symbol] = float(price_str)
+                        except (ValueError, TypeError) as e:
+                            # 如果价格转换失败，打印警告信息
+                            print(f"警告: 无法将 symbol '{symbol}' 的价格 '{price_str}' 转换为浮点数。错误: {e}")
+        else:
+            print(f"警告: 在文件 {file_path} 中未找到 'stocks' 键，或者其值不是一个列表。")
+
+    except FileNotFoundError:
+        print(f"错误: 文件 {file_path} 未找到。")
         return {}
+    except json.JSONDecodeError:
+        print(f"错误: 解析 JSON 文件 {file_path} 失败。")
+        return {}
+    except Exception as e:
+        print(f"读取或处理 10Y_newhigh.json 时发生未知错误: {e}")
+        return {} # 发生任何错误都返回空字典以保证程序健壮性
+
+    return highs_map
 
 def clean_old_backups(directory, file_patterns):
     now = datetime.now()
@@ -550,7 +577,7 @@ def main():
             processed_output = process_high_data(filtered_output_high, compare_data, tag_map)
             
             # 写入处理后的数据
-            output_high_file_path = '/Users/yanzhang/Coding/News/10Y_newhigh_new.txt'
+            output_high_file_path = '/Users/yanzhang/Coding/News/10Y_newhigh_stock.txt'
             write_output_to_file(processed_output, output_high_file_path)
 
     move_files_to_backup()

@@ -46,7 +46,9 @@
         "KMX": "",
         "HRB": "",
         "CAVA": "",
-        "MELI": ""
+        "MELI": "",
+        "ALSN": "",
+        "BFAM": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -78,7 +80,9 @@
         "SNDR": "",
         "RSG": "",
         "EXPO": "",
-        "CTAS": ""
+        "CTAS": "",
+        "UHAL": "",
+        "KEX": ""
     },
     "Communication_Services": {
         "META": "",
@@ -182,6 +186,10 @@
         "XRP": ""
     },
     "Today": {
+        "TSCO": "",
+        "BSX": "",
+        "LII": "",
+        "BKNG": "",
         "T": "",
         "Z": "",
         "SN": "",
@@ -189,10 +197,7 @@
         "CART": "",
         "ARES": "",
         "TRU": "",
-        "BSX": "",
         "RBLX": "",
-        "BTI": "",
-        "AFRM": "",
         "SPGI": "",
         "TMUS": "TMUS7",
         "HDB": "",
@@ -202,24 +207,20 @@
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
-        "STZ": "",
+        "SATS": "",
+        "GSAT": "",
         "KDP": "",
-        "LII": "",
         "GWRE": "",
-        "DUOL": "",
         "HESM": "",
-        "MELI": "",
         "ICE": "",
-        "CME": ""
+        "DKNG": ""
     },
     "Short": {
+        "REZI": "",
         "NXT": "",
-        "ASML": "",
         "THC": "",
-        "SGHC": "",
         "BE": "",
-        "SNDK": "",
-        "HOOD": ""
+        "TEM": ""
     },
     "Strategy12": {},
     "Strategy34": {},
