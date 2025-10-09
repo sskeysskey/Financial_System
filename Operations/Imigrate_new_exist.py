@@ -3,6 +3,7 @@ import re
 import sys
 import json
 import argparse
+import subprocess
 # 修改：额外导入 timedelta 用于计算日期差
 from datetime import datetime, timedelta
 
@@ -28,18 +29,33 @@ next_files = {
     'Economic_Events': '/Users/yanzhang/Coding/News/Economic_Events_next.txt'
 }
 
-# 新增：定义 third_files 字典，为未来扩展（如 fourth_files）做好准备
 third_files = {
     'Earnings_Release': '/Users/yanzhang/Coding/News/Earnings_Release_third.txt',
     # 如果 Economic_Events 将来也有 third 文件，可在此处添加
 }
 
+fourth_files = {
+    'Earnings_Release': '/Users/yanzhang/Coding/News/Earnings_Release_fourth.txt',
+    # 如果将来有其他类型的文件也需要第四级，可在此处添加
+}
+
+fifth_files = {
+    'Earnings_Release': '/Users/yanzhang/Coding/News/Earnings_Release_fifth.txt',
+    # 如果将来有其他类型的文件也需要第五级，可在此处添加
+}
 
 # 新的 10Y_newhigh JSON 目标文件路径
 TENY_JSON = '/Users/yanzhang/Coding/Financial_System/Modules/10Y_newhigh.json'
 
 # 获取当前星期几，0是周一，6是周日
 current_day = datetime.now().weekday()
+
+def show_alert(message):
+    # AppleScript代码模板
+    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+    
+    # 使用subprocess调用osascript
+    subprocess.run(['osascript', '-e', applescript_code], check=True)
 
 # 修改：函数重命名并更新逻辑
 def check_run_conditions():
@@ -109,14 +125,41 @@ def process_and_rename_files():
         print(f"重命名: {next_files['Earnings_Release']} -> {new_files['Earnings_Release']}")
         os.rename(next_files['Earnings_Release'], new_files['Earnings_Release'])
         
-        # 3. 新增：检查 third 文件是否存在，如果存在则将其重命名为 next 文件
-        # 使用 .get() 方法安全地获取路径，即使 'Earnings_Release' 不在 third_files 中也不会报错
+        # 3. 检查 third 文件是否存在，如果存在则将其重命名为 next 文件
         third_earnings_file = third_files.get('Earnings_Release')
         if third_earnings_file and os.path.exists(third_earnings_file):
             print(f"重命名: {third_earnings_file} -> {next_files['Earnings_Release']}")
             os.rename(third_earnings_file, next_files['Earnings_Release'])
         else:
             print(f"未找到 {third_earnings_file}，跳过 third -> next 的重命名步骤。")
+
+        # 4. 新增：检查 fourth 文件是否存在，如果存在则将其重命名为 third 文件
+        fourth_earnings_file = fourth_files.get('Earnings_Release')
+        # 目标路径是 third_files 中定义的路径
+        third_earnings_file_target = third_files.get('Earnings_Release')
+        if fourth_earnings_file and os.path.exists(fourth_earnings_file):
+            if third_earnings_file_target:
+                print(f"重命名: {fourth_earnings_file} -> {third_earnings_file_target}")
+                os.rename(fourth_earnings_file, third_earnings_file_target)
+            else:
+                # 这是一个安全检查，以防 third_files 中没有配置 'Earnings_Release'
+                print(f"错误：找到了 {fourth_earnings_file} 但未在 third_files 中为其配置目标路径。")
+        else:
+            print(f"未找到 {fourth_earnings_file}，跳过 fourth -> third 的重命名步骤。")
+
+        # 5. 新增：检查 fifth 文件是否存在，如果存在则将其重命名为 fourth 文件
+        fifth_earnings_file = fifth_files.get('Earnings_Release')
+        # 目标路径是 fourth_files 中定义的路径
+        fourth_earnings_file_target = fourth_files.get('Earnings_Release')
+        if fifth_earnings_file and os.path.exists(fifth_earnings_file):
+            if fourth_earnings_file_target:
+                print(f"重命名: {fifth_earnings_file} -> {fourth_earnings_file_target}")
+                os.rename(fifth_earnings_file, fourth_earnings_file_target)
+            else:
+                # 这是一个安全检查，以防 fourth_files 中没有配置 'Earnings_Release'
+                print(f"错误：找到了 {fifth_earnings_file} 但未在 fourth_files 中为其配置目标路径。")
+        else:
+            print(f"未找到 {fifth_earnings_file}，跳过 fifth -> fourth 的重命名步骤。")
 
     else:
         print("Earnings_Release 相关文件（new/next）缺失，未执行任何操作。")
@@ -132,7 +175,7 @@ def process_and_rename_files():
             print(f"重命名: {next_files['Economic_Events']} -> {new_files['Economic_Events']}")
             os.rename(next_files['Economic_Events'], new_files['Economic_Events'])
         
-        # 将来如果 Economic_Events 也有 third 文件，可以在此添加类似上面的重命名逻辑
+        # 将来如果 Economic_Events 也有 third/fourth/fifth 文件，可以在此添加类似上面的重命名逻辑
         
     else:
         print("Economic_Events 相关文件（new/next）缺失，未执行任何操作。")
@@ -361,6 +404,7 @@ def main(mode):
             # 修改：调用更新后的函数
             check_run_conditions()
             process_and_rename_files()
+            show_alert(f"今天是周日或周一，所有爬取日期都需要重新手动设定。")
         else:
             print("Not right date. Other 模式只在周一运行。")
 

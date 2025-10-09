@@ -63,7 +63,9 @@ def compare_today_yesterday(
     gainer_loser_path,
     earning_file_new,
     earning_file_next,
-    earning_file_third, # 新增参数
+    earning_file_third,
+    earning_file_fourth,
+    earning_file_fifth,
     error_file_path,
     additional_output_file
 ):
@@ -81,7 +83,7 @@ def compare_today_yesterday(
 
     # --- 修改点 2：合并处理三个业绩文件 ---
     # 将所有业绩文件路径放入一个列表
-    earning_files = [earning_file_new, earning_file_next, earning_file_third]
+    earning_files = [earning_file_new, earning_file_next, earning_file_third, earning_file_fourth, earning_file_fifth]
     earnings_data = {} # 初始化一个空字典用于存储所有业绩数据
 
     # 循环读取并合并数据
@@ -235,8 +237,9 @@ if __name__ == '__main__':
     gainer_loser_path = '/Users/yanzhang/Coding/Financial_System/Modules/Gainer_Loser.json'
     earning_file_new = '/Users/yanzhang/Coding/News/Earnings_Release_new.txt'
     earning_file_next = '/Users/yanzhang/Coding/News/Earnings_Release_next.txt'
-    # --- 修改点 3：定义第三个业绩文件的路径 ---
-    earning_file_third = '/Users/yanzhang/Coding/News/Earnings_Release_third.txt' # 新增文件路径
+    earning_file_third = '/Users/yanzhang/Coding/News/Earnings_Release_third.txt'
+    earning_file_fourth = '/Users/yanzhang/Coding/News/Earnings_Release_fourth.txt'
+    earning_file_fifth = '/Users/yanzhang/Coding/News/Earnings_Release_fifth.txt'
     error_file_path = '/Users/yanzhang/Coding/News/Today_error.txt'
 
     try:
@@ -247,7 +250,9 @@ if __name__ == '__main__':
             gainer_loser_path,
             earning_file_new,
             earning_file_next,
-            earning_file_third, # 新增参数
+            earning_file_third,
+            earning_file_fourth,
+            earning_file_fifth,
             error_file_path,
             additional_output_file
         )

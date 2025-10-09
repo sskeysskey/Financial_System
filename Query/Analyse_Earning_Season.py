@@ -15,14 +15,14 @@ PATHS = {
     "config": lambda base: os.path.join(base, "Financial_System", "Modules"),
     "earnings_release_next": lambda news: os.path.join(news, "Earnings_Release_next.txt"),
     "earnings_release_new": lambda news: os.path.join(news, "Earnings_Release_new.txt"),
-    # 新增: 添加第三个财报文件路径
     "earnings_release_third": lambda news: os.path.join(news, "Earnings_Release_third.txt"),
+    "earnings_release_fourth": lambda news: os.path.join(news, "Earnings_Release_fourth.txt"),
+    "earnings_release_fifth": lambda news: os.path.join(news, "Earnings_Release_fifth.txt"),
     "sectors_json": lambda config: os.path.join(config, "Sectors_All.json"),
     "db_file": lambda db: os.path.join(db, "Finance.db"),
     "blacklist_json": lambda config: os.path.join(config, "Blacklist.json"),
     "panel_json": lambda config: os.path.join(config, "Sectors_panel.json"),
     "description_json": lambda config: os.path.join(config, 'description.json'),
-    # 新增: 指向新的标签配置文件
     "tags_setting_json": lambda config: os.path.join(config, 'tags_filter.json'),
     "backup_Strategy12": lambda news: os.path.join(news, "backup", "NextWeek_Earning.txt"),
     "backup_Strategy34": lambda news: os.path.join(news, "backup", "Strategy34_earning.txt"),
@@ -760,11 +760,13 @@ def run_processing_logic(log_detail):
     # 新增：加载 symbol->tags 映射
     symbol_to_tags_map = load_symbol_tags(DESCRIPTION_JSON_FILE)
 
-    # 修改: 加载所有三个财报文件
-    symbols_next = get_symbols_from_file(PATHS["earnings_release_next"](news_path))
+    # 修改: 加载所有财报文件
     symbols_new = get_symbols_from_file(PATHS["earnings_release_new"](news_path))
+    symbols_next = get_symbols_from_file(PATHS["earnings_release_next"](news_path))
     symbols_third = get_symbols_from_file(PATHS["earnings_release_third"](news_path))
-    initial_symbols = list(dict.fromkeys(symbols_next + symbols_new + symbols_third))
+    symbols_fourth = get_symbols_from_file(PATHS["earnings_release_fourth"](news_path))
+    symbols_fifth = get_symbols_from_file(PATHS["earnings_release_fifth"](news_path))
+    initial_symbols = list(dict.fromkeys(symbols_new + symbols_next + symbols_third + symbols_fourth + symbols_fifth))
 
     if SYMBOL_TO_TRACE and SYMBOL_TO_TRACE in initial_symbols:
         log_detail(f"\n追踪信息: {SYMBOL_TO_TRACE} 在初始文件列表中。")

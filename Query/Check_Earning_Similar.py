@@ -24,6 +24,8 @@ DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
 EARNINGS_FILE_PATH = '/Users/yanzhang/Coding/News/Earnings_Release_new.txt'
 EARNINGS_FILE_NEXT_PATH = '/Users/yanzhang/Coding/News/Earnings_Release_next.txt'
 EARNINGS_FILE_THIRD_PATH = '/Users/yanzhang/Coding/News/Earnings_Release_third.txt'
+EARNINGS_FILE_FOURTH_PATH = '/Users/yanzhang/Coding/News/Earnings_Release_fourth.txt'
+EARNINGS_FILE_FIFTH_PATH = '/Users/yanzhang/Coding/News/Earnings_Release_fifth.txt'
 TAGS_WEIGHT_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/tags_weight.json'
 
 RELATED_SYMBOLS_LIMIT = 10
@@ -556,7 +558,9 @@ class EarningsWindow(QMainWindow):
         earnings_schedule, _ = parse_multiple_earnings_files([
             EARNINGS_FILE_PATH,
             EARNINGS_FILE_NEXT_PATH,
-            EARNINGS_FILE_THIRD_PATH
+            EARNINGS_FILE_THIRD_PATH,
+            EARNINGS_FILE_FOURTH_PATH,
+            EARNINGS_FILE_FIFTH_PATH
         ])
 
         valid_symbols = set()
@@ -728,7 +732,7 @@ if __name__ == '__main__':
     compare_data = load_text_data(COMPARE_DATA_PATH)
     wg = load_weight_groups()
     tags_weight_config = {tag: w for w, tags in wg.items() for tag in tags}
-    _, syms = parse_multiple_earnings_files([EARNINGS_FILE_PATH, EARNINGS_FILE_NEXT_PATH, EARNINGS_FILE_THIRD_PATH])
+    _, syms = parse_multiple_earnings_files([EARNINGS_FILE_PATH, EARNINGS_FILE_NEXT_PATH, EARNINGS_FILE_THIRD_PATH, EARNINGS_FILE_FOURTH_PATH, EARNINGS_FILE_FIFTH_PATH])
     symbol_manager = SymbolManager(syms)
 
     app = QApplication(sys.argv)

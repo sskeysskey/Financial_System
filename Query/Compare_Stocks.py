@@ -117,7 +117,6 @@ def get_prices_available_days(cursor, table_name, name, dates):
     cursor.execute(query, (name, *dates))
     return cursor.fetchall()
 
-# 修改：增加 earnings_third_path 参数
 def compare_today_yesterday(config_path,
                             description_path,
                             blacklist,
@@ -125,7 +124,9 @@ def compare_today_yesterday(config_path,
                             db_path,
                             earnings_new_path,
                             earnings_next_path,
-                            earnings_third_path, # 新增参数
+                            earnings_third_path,
+                            earnings_fourth_path,
+                            earnings_fifth_path,
                             gainers_losers_path,
                             output_path,
                             error_file_path):
@@ -138,7 +139,9 @@ def compare_today_yesterday(config_path,
     # 修改：读取三份财报文件
     earnings_new = read_earnings_release(earnings_new_path, error_file_path)
     earnings_next = read_earnings_release(earnings_next_path, error_file_path)
-    earnings_third = read_earnings_release(earnings_third_path, error_file_path) # 新增读取第三个文件
+    earnings_third = read_earnings_release(earnings_third_path, error_file_path)
+    earnings_fourth = read_earnings_release(earnings_fourth_path, error_file_path)
+    earnings_fifth = read_earnings_release(earnings_fifth_path, error_file_path)
 
     gainers, losers = read_gainers_losers(gainers_losers_path)
 
@@ -211,9 +214,12 @@ def compare_today_yesterday(config_path,
                     company += f".{earnings_new[original]}"
                 if original in earnings_next:
                     company += f".{earnings_next[original]}"
-                if original in earnings_third: # 新增标注逻辑
+                if original in earnings_third:
                     company += f".{earnings_third[original]}"
-                
+                if original in earnings_fourth:
+                    company += f".{earnings_fourth[original]}"
+                if original in earnings_fifth:
+                    company += f".{earnings_fifth[original]}"
                 # 大成交量
                 if vol > 5_000_000:
                     company += '.*'
@@ -256,8 +262,12 @@ def compare_today_yesterday(config_path,
         #             company += f".{earnings_new[original]}"
         #         if original in earnings_next:
         #             company += f".{earnings_next[original]}"
-        #         if original in earnings_third: # 新增标注逻辑
+        #         if original in earnings_third:
         #             company += f".{earnings_third[original]}"
+        #         if original in earnings_fourth:
+        #             company += f".{earnings_fourth[original]}"
+        #         if original in earnings_fifth:
+        #             company += f".{earnings_fifth[original]}"
         #         if vol > 5_000_000:
         #             company += '.*'
         #         if original in gainers:
@@ -349,7 +359,9 @@ if __name__ == '__main__':
         '/Users/yanzhang/Coding/Database/Finance.db',
         '/Users/yanzhang/Coding/News/Earnings_Release_new.txt',
         '/Users/yanzhang/Coding/News/Earnings_Release_next.txt',
-        '/Users/yanzhang/Coding/News/Earnings_Release_third.txt', # 新增文件路径
+        '/Users/yanzhang/Coding/News/Earnings_Release_third.txt',
+        '/Users/yanzhang/Coding/News/Earnings_Release_fourth.txt',
+        '/Users/yanzhang/Coding/News/Earnings_Release_fifth.txt',
         '/Users/yanzhang/Coding/Financial_System/Modules/Gainer_Loser.json',
         file_path_txt,      # 只做传参，函数里也会生成 CSV
         error_file_path

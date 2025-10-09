@@ -22,11 +22,12 @@ def parse_earnings_release(file_path):
     return symbols
 
 def main():
-    # 三个 Earnings Release 文件路径
     earnings_release_paths = [
         '/Users/yanzhang/Coding/News/Earnings_Release_new.txt',
         '/Users/yanzhang/Coding/News/Earnings_Release_next.txt',
-        '/Users/yanzhang/Coding/News/Earnings_Release_third.txt'
+        '/Users/yanzhang/Coding/News/Earnings_Release_third.txt',
+        '/Users/yanzhang/Coding/News/Earnings_Release_fourth.txt',
+        '/Users/yanzhang/Coding/News/Earnings_Release_fifth.txt'
     ]
     color_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Colors.json'
     sectors_all_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'

@@ -12,7 +12,8 @@
         "UDR": "",
         "MAA": "",
         "SBAC": "",
-        "CPT": ""
+        "CPT": "",
+        "GLPI": ""
     },
     "Energy": {
         "HESM": ""
@@ -67,7 +68,8 @@
         "BRBR": "",
         "PG": "",
         "KMB": "",
-        "PRMB": ""
+        "PRMB": "",
+        "JBS": ""
     },
     "Industrials": {
         "ODFL": "",
@@ -92,8 +94,6 @@
         "FDS": "",
         "MORN": "",
         "ERIE": "",
-        "RLI": "",
-        "CNS": "",
         "ARX": "",
         "TW": "",
         "MA": "",
@@ -188,39 +188,36 @@
     "Today": {
         "TSCO": "",
         "BSX": "",
-        "LII": "",
         "BKNG": "",
-        "T": "",
         "Z": "",
         "SN": "",
         "HPQ": "HPQ7热",
         "CART": "",
-        "ARES": "",
-        "TRU": "",
-        "RBLX": "",
-        "SPGI": "",
         "TMUS": "TMUS7",
         "HDB": "",
-        "BFAM": ""
+        "BFAM": "",
+        "AFRM": "",
+        "LOW": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
-        "SATS": "",
-        "GSAT": "",
         "KDP": "",
         "GWRE": "",
         "HESM": "",
         "ICE": "",
-        "DKNG": ""
+        "DKNG": "",
+        "CTVA": "",
+        "BX": "",
+        "OWL": "",
+        "ARES": ""
     },
     "Short": {
-        "REZI": "",
         "NXT": "",
-        "THC": "",
         "BE": "",
-        "TEM": ""
+        "TEM": "",
+        "INSM": ""
     },
     "Strategy12": {},
     "Strategy34": {},

@@ -586,6 +586,8 @@ def main():
     file_patterns = [
         ("Earnings_Release_next_", -1, 13),    # 保留13天
         ("Earnings_Release_third_", -1, 13),    # 保留13天
+        ("Earnings_Release_fourth_", -1, 13),    # 保留13天
+        ("Earnings_Release_fifth_", -1, 13),    # 保留13天
         ("Economic_Events_next_", -1, 13),     # 保留13天
         ("ETFs_diff_", -1, 3),                 # 保留3天
         ("NewLow_", -1, 3),

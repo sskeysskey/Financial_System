@@ -39,7 +39,7 @@ else:
     logger.disabled = True
 
 # 定义tag黑名单
-BLACKLIST_TAGS = ["联合医疗","黄金","金矿","白银","光纤","赋能半导体","赋能芯片制造","数据中心"]
+BLACKLIST_TAGS = ["联合医疗","黄金","金矿","白银","光纤","赋能半导体","赋能芯片制造","数据中心","贵金属"]
 
 # 读取JSON文件
 with open(PRICE_FILE, 'r') as f:

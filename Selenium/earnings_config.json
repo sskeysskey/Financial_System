@@ -4,7 +4,15 @@
     "end_date": "2025-10-18"
   },
   "third": {
-    "start_date": "2025-10-21",
+    "start_date": "2025-10-20",
     "end_date": "2025-10-25"
+  },
+  "fourth": {
+    "start_date": "2025-10-27",
+    "end_date": "2025-11-01"
+  },
+  "fifth": {
+    "start_date": "2025-11-03",
+    "end_date": "2025-11-08"
   }
 }
