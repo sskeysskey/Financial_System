@@ -386,34 +386,20 @@ def run_strategy_2_5(data, symbol_to_trace, log_detail):
 
     return result
 
-def run_strategy_3(data, cursor, symbol_sector_map, symbol_to_trace, log_detail):
+# 策略 3
+def run_strategy_3(data, cursor, symbol_sector_map, initial_symbols, symbol_to_trace, log_detail):
     """ 策略 3 (修改后):
     (1) 如果最近2次财报上升，最新价 < 过去N次财报最高价 * (1-9%)
     (2) 如果不上升，最近2次财报差额 >= 3%，最新财报非负，且最新价 < 过去N次财报最低价
     ---
     (3) 必须满足(1)或(2)其中之一
     (4) 必须满足：最新价比前10天最低价高不超过3%
-    (5) 必须满足：最新交易日落在下次理论财报前6-26天窗口期
+    (5) 必须满足：(在初始财报文件列表中) 或 (最新交易日落在下次理论财报前6-26天窗口期)
     """
     is_tracing = (data.get('symbol') == symbol_to_trace)
     if is_tracing: log_detail(f"\n--- [{symbol_to_trace}] 策略 3 评估 (已修改) ---")
 
-    # 步骤1: 时间窗口检查 (最终条件)
-    next_er = get_next_er_date(data['latest_er_date'])
-    window_start = next_er - datetime.timedelta(days=26)
-    window_end = next_er - datetime.timedelta(days=6)
-    is_in_window = (window_start <= data['latest_date'] <= window_end)
-
-    if is_tracing:
-        log_detail(f"  - 最新财报日: {data['latest_er_date']}, 理论下次财报日: {next_er}")
-        log_detail(f"  - 时间窗口: {window_start} <= 最新交易日({data['latest_date']}) <= {window_end}")
-        log_detail(f"  - 条件 (时间窗口): {is_in_window}")
-
-    if not is_in_window:
-        if is_tracing: log_detail(f"  - 结果: False (未在时间窗口内)")
-        return False
-
-    # 步骤2: 价格条件检查 (上升/非上升分支)
+    # 步骤1: 价格条件检查 (上升/非上升分支)
     prices = data['all_er_prices'][:CONFIG["NUM_EARNINGS_TO_CHECK"]]
     asc_prices = list(reversed(prices))
     
@@ -440,7 +426,7 @@ def run_strategy_3(data, cursor, symbol_sector_map, symbol_to_trace, log_detail)
         diff_ok = diff_abs >= min_diff
         
         # 新增条件2: 最新财报不能为负
-        latest_er_positive_ok = data['earning_record_price'] is not None and data['earning_record_price'] >= 0
+        latest_er_positive_ok = data['earning_record_price'] is not None and data['earning_record_price'] > 0
         
         # 条件3: 低价检查
         price_low_ok = data['latest_price'] < min(prices)
@@ -450,7 +436,7 @@ def run_strategy_3(data, cursor, symbol_sector_map, symbol_to_trace, log_detail)
         
         if is_tracing:
             log_detail(f"      - 差额检查: abs({asc_prices[-1]} - {asc_prices[-2]}) ({diff_abs:.4f}) >= {asc_prices[-2]} * {CONFIG['MIN_DROP_PERCENTAGE']} ({min_diff:.4f}) -> {diff_ok}")
-            log_detail(f"      - 最新财报检查: Earning表price({data['earning_record_price']}) >= 0 -> {latest_er_positive_ok}")
+            log_detail(f"      - 最新财报检查: Earning表price({data['earning_record_price']}) > 0 -> {latest_er_positive_ok}")
             log_detail(f"      - 低价检查: latest_price({data['latest_price']}) < min({prices}) ({min(prices)}) -> {price_low_ok}")
             log_detail(f"      - 分支结果: {price_ok}")
 
@@ -458,8 +444,7 @@ def run_strategy_3(data, cursor, symbol_sector_map, symbol_to_trace, log_detail)
         if is_tracing: log_detail(f"  - 结果: False (价格条件未满足)")
         return False
 
-    # 步骤3: 10日最低价检查 (最终条件)
-    # 只有在通过了步骤2的价格检查后，才执行此检查
+    # 步骤2: 10日最低价检查
     table_name = symbol_sector_map.get(data['symbol'])
     if not table_name:
         if is_tracing: log_detail(f"      - 无法查询10日最低价 (无table_name)，策略失败")
@@ -484,12 +469,43 @@ def run_strategy_3(data, cursor, symbol_sector_map, symbol_to_trace, log_detail)
     
     if is_tracing:
         log_detail(f"  - 条件 (10日低价上涨幅度): latest_price({data['latest_price']}) <= {min_price_10d} * {1 + CONFIG['MAX_RISE_FROM_7D_LOW']} ({threshold_10d:.4f}) -> {rise_ok}")
-        log_detail(f"  - 最终结果: {rise_ok}")
-        
-    return rise_ok
 
-def run_strategy_3_5(data, symbol_to_trace, log_detail):
-    """策略 3.5: 过去2次财报保持上升，且最近的3次财报里至少有一次财报的收盘价要比该symbol的最新收盘价高15%以上，且最新交易日落在下次理论(最近一次财报日期+94天)财报之前的7~26天窗口期内"""
+    if not rise_ok:
+        if is_tracing: log_detail(f"  - 结果: False (10日低价上涨幅度条件未满足)")
+        return False
+
+    # 步骤3: 新增的条件性时间窗口检查
+    symbol = data['symbol']
+    is_in_initial_list = symbol in initial_symbols
+    
+    next_er = get_next_er_date(data['latest_er_date'])
+    window_start = next_er - datetime.timedelta(days=26)
+    window_end = next_er - datetime.timedelta(days=6)
+    is_in_window = (window_start <= data['latest_date'] <= window_end)
+
+    time_condition_met = is_in_initial_list or is_in_window
+    
+    if is_tracing:
+        log_detail(f"  - 条件 (时间窗口):")
+        log_detail(f"    - 检查1: 是否在初始财报文件列表? -> {is_in_initial_list}")
+        log_detail(f"    - 检查2: 是否在 {window_start} 到 {window_end} 的时间窗口内? -> {is_in_window}")
+        log_detail(f"    - 综合时间条件 (满足其一即可): {time_condition_met}")
+
+    # 最终结果：必须满足价格条件、10日低价条件，以及新的综合时间条件
+    final_result = price_ok and rise_ok and time_condition_met
+    
+    if is_tracing:
+        log_detail(f"  - 最终结果 (price_ok AND rise_ok AND time_condition_met): {final_result}")
+        
+    return final_result
+
+# 策略 3.5
+def run_strategy_3_5(data, initial_symbols, symbol_to_trace, log_detail):
+    """策略 3.5:
+    (1) 过去2次财报保持上升
+    (2) 最近的3次财报里至少有一次财报的收盘价要比该symbol的最新收盘价高15%以上
+    (3) (在初始财报文件列表中) 或 (最新交易日落在下次理论财报前6-26天窗口期)
+    """
     is_tracing = (data.get('symbol') == symbol_to_trace)
     if len(data['all_er_prices']) < 3 or any(p is None for p in data['all_er_prices'][:3]):
         if is_tracing: log_detail(f"\n--- [{symbol_to_trace}] 策略 3.5 评估 ---\n  - 结果: False (财报价格数据不足3次或有缺失)")
@@ -497,35 +513,44 @@ def run_strategy_3_5(data, symbol_to_trace, log_detail):
     
     if is_tracing: log_detail(f"\n--- [{symbol_to_trace}] 策略 3.5 评估 ---")
 
-    next_er = get_next_er_date(data['latest_er_date'])
-    window_start = next_er - datetime.timedelta(days=26)
-    window_end = next_er - datetime.timedelta(days=6)
-    is_in_window = (window_start <= data['latest_date'] <= window_end)
-    
-    if is_tracing:
-        log_detail(f"  - 最新财报日: {data['latest_er_date']}, 理论下次财报日: {next_er}")
-        log_detail(f"  - 时间窗口: {window_start} <= 最新交易日({data['latest_date']}) <= {window_end}")
-        log_detail(f"  - 条件1 (在时间窗口内): {is_in_window}")
-        
+    # 条件1: 过去2次财报上升
     prices_n = data['all_er_prices'][:CONFIG["NUM_EARNINGS_TO_CHECK"]]
     asc_prices_n = list(reversed(prices_n))
     is_increasing = asc_prices_n[-2] < asc_prices_n[-1] # 只比较最近两次
 
+    # 条件2: 价格高于阈值
     prices_3 = data['all_er_prices'][:3]
     price_threshold = data['latest_price'] * (1 + CONFIG["MAX_DROP_PERCENTAGE"])
     any_high = any(p > price_threshold for p in prices_3 if p is not None)
 
-    result = is_in_window and is_increasing and any_high
+    # 条件3: 新增的条件性时间窗口检查
+    symbol = data['symbol']
+    is_in_initial_list = symbol in initial_symbols
+
+    next_er = get_next_er_date(data['latest_er_date'])
+    window_start = next_er - datetime.timedelta(days=26)
+    window_end = next_er - datetime.timedelta(days=6)
+    is_in_window = (window_start <= data['latest_date'] <= window_end)
+
+    time_condition_met = is_in_initial_list or is_in_window
+
+    # 最终结果
+    result = is_increasing and any_high and time_condition_met
 
     if is_tracing:
         log_detail(f"  - 最近两次财报价 (从远到近): {[asc_prices_n[-2], asc_prices_n[-1]]}")
-        log_detail(f"  - 条件2 (最近两次财报上升): {is_increasing}")
+        log_detail(f"  - 条件1 (最近两次财报上升): {is_increasing}")
         log_detail(f"  - 最近三次财报价: {prices_3}")
-        log_detail(f"  - 条件3 (任一价比最新价高{CONFIG['MAX_DROP_PERCENTAGE']*100}%): any(p > {data['latest_price']} * {1+CONFIG['MAX_DROP_PERCENTAGE']} = {price_threshold:.4f}) -> {any_high}")
-        log_detail(f"  - 最终结果: {result}")
+        log_detail(f"  - 条件2 (任一价比最新价高{CONFIG['MAX_DROP_PERCENTAGE']*100}%): any(p > {data['latest_price']} * {1+CONFIG['MAX_DROP_PERCENTAGE']} = {price_threshold:.4f}) -> {any_high}")
+        log_detail(f"  - 条件3 (时间窗口):")
+        log_detail(f"    - 检查1: 是否在初始财报文件列表? -> {is_in_initial_list}")
+        log_detail(f"    - 检查2: 是否在 {window_start} 到 {window_end} 的时间窗口内? -> {is_in_window}")
+        log_detail(f"    - 综合时间条件 (满足其一即可): {time_condition_met}")
+        log_detail(f"  - 最终结果 (is_increasing AND any_high AND time_condition_met): {result}")
 
     return result
 
+# 策略 4
 def run_strategy_4(data, cursor, symbol_sector_map, symbol_to_trace, log_detail):
     """ 策略 4 (修改后):
     (1) 最近N次财报递增，最近30天内财报，Earning表price>0
@@ -681,7 +706,6 @@ def get_symbols_with_latest_negative_earning(db_path):
         symbols = set()
         
     conn.close()
-    print(f"\n过滤条件: 找到 {len(symbols)} 个最近有负财报的 symbol。")
     return symbols
 
 def apply_filters(symbols_set, stock_data_cache, blacklist, negative_earnings_set, is_main_list, symbol_to_trace, log_detail):
@@ -814,10 +838,9 @@ def run_processing_logic(log_detail):
                 if run_strategy_1(data, SYMBOL_TO_TRACE, log_detail): results['s1'].append(symbol)
                 if run_strategy_2(data, SYMBOL_TO_TRACE, log_detail): results['s2'].append(symbol)
                 if run_strategy_2_5(data, SYMBOL_TO_TRACE, log_detail): results['s2_5'].append(symbol)
-
             # 跑通知列表策略 (针对所有有数据的symbols)
-            if run_strategy_3(data, cursor, symbol_sector_map, SYMBOL_TO_TRACE, log_detail): results['s3'].append(symbol)
-            if run_strategy_3_5(data, SYMBOL_TO_TRACE, log_detail): results['s3_5'].append(symbol)
+            if run_strategy_3(data, cursor, symbol_sector_map, initial_symbols, SYMBOL_TO_TRACE, log_detail): results['s3'].append(symbol)
+            if run_strategy_3_5(data, initial_symbols, SYMBOL_TO_TRACE, log_detail): results['s3_5'].append(symbol)
             if run_strategy_4(data, cursor, symbol_sector_map, SYMBOL_TO_TRACE, log_detail): results['s4'].append(symbol)
 
     # 4. 汇总初步结果
@@ -841,7 +864,7 @@ def run_processing_logic(log_detail):
     negative_earnings_set = get_symbols_with_latest_negative_earning(DB_FILE)
 
     log_detail("\n--- 开始对主列表进行过滤 ---")
-        # 对 s1 用负财报过滤
+    # 对 s1 用负财报过滤
     log_detail("\n--- 开始对 s1 列表进行过滤（包含负财报过滤） ---")
     final_s1 = apply_filters(
         s1_set,
