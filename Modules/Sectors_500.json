@@ -55,8 +55,7 @@
         "DASH",
         "CPNG",
         "ORLY",
-        "LCID",
-        "JD"
+        "LCID"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -95,7 +94,6 @@
         "LNG",
         "TRP",
         "PSX",
-        "SLB",
         "VLO"
     ],
     "Financial_Services": [
@@ -234,8 +232,7 @@
         "LHX",
         "CMI",
         "FAST",
-        "VRT",
-        "CARR"
+        "VRT"
     ],
     "Real_Estate": [
         "PLD",
@@ -300,8 +297,7 @@
         "TEL",
         "GLW",
         "CRWV",
-        "DDOG",
-        "GRMN"
+        "DDOG"
     ],
     "Utilities": [
         "NEE",

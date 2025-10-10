@@ -1851,7 +1851,8 @@
         "STNE",
         "RAL",
         "LPL",
-        "CAMT"
+        "CAMT",
+        "WOLF"
     ],
     "Utilities": [
         "NEE",

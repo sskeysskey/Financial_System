@@ -5,7 +5,9 @@
         "WFG": "",
         "JHX": "",
         "KNF": "",
-        "BCPC": ""
+        "BCPC": "",
+        "APD": "",
+        "CBT": ""
     },
     "Real_Estate": {
         "AMH": "",
@@ -13,10 +15,13 @@
         "MAA": "",
         "SBAC": "",
         "CPT": "",
-        "GLPI": ""
+        "GLPI": "",
+        "GMRE": ""
     },
     "Energy": {
-        "HESM": ""
+        "HESM": "",
+        "ET": "",
+        "OKE": ""
     },
     "Technology": {
         "FI": "",
@@ -36,7 +41,9 @@
         "SPSC": "",
         "PAYX": "",
         "QTWO": "",
-        "FIG": ""
+        "FIG": "",
+        "INTU": "",
+        "ADP": ""
     },
     "Consumer_Cyclical": {
         "AMCR": "",
@@ -49,7 +56,8 @@
         "CAVA": "",
         "MELI": "",
         "ALSN": "",
-        "BFAM": ""
+        "BFAM": "",
+        "RACE": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -69,7 +77,8 @@
         "PG": "",
         "KMB": "",
         "PRMB": "",
-        "JBS": ""
+        "JBS": "",
+        "TSN": ""
     },
     "Industrials": {
         "ODFL": "",
@@ -84,7 +93,11 @@
         "EXPO": "",
         "CTAS": "",
         "UHAL": "",
-        "KEX": ""
+        "KEX": "",
+        "HON": "",
+        "VRSK": "",
+        "WSO": "",
+        "KBR": ""
     },
     "Communication_Services": {
         "META": "",
@@ -113,7 +126,8 @@
         "PRCT": "",
         "GKOS": "",
         "ADMA": "",
-        "SYK": ""
+        "SYK": "",
+        "DVA": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -221,31 +235,48 @@
     },
     "Strategy12": {
         "DUOL": "",
-        "KDP": "",
-        "MELI": ""
+        "KDP": ""
     },
     "Strategy34": {
         "AAL": "",
         "APD": "",
+        "ARCC": "",
         "ARES": "",
         "BDX": "",
-        "CTVA": "",
+        "BLDR": "",
+        "BX": "",
         "DECK": "",
-        "ENTG": "",
+        "HON": "",
         "ICE": "",
         "ISRG": "",
         "JBHT": "",
         "KKR": "",
         "KNX": "",
         "LII": "",
-        "MRNA": "",
+        "OC": "",
         "OWL": "",
         "PGR": "",
-        "SAIA": "",
         "SPGI": "",
         "TRU": ""
     },
-    "PE_valid": {},
+    "PE_valid": {
+        "ALK": "",
+        "AZO": "",
+        "BTI": "",
+        "CDNS": "CDNS热",
+        "CPRT": "",
+        "CVNA": "",
+        "DPZ": "",
+        "EW": "",
+        "FI": "",
+        "HD": "HD7",
+        "JEF": "",
+        "NCLH": "",
+        "NKE": "",
+        "RCL": "",
+        "T": "T7",
+        "WM": ""
+    },
     "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",

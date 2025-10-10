@@ -219,32 +219,8 @@
         "TEM": "",
         "INSM": ""
     },
-    "Strategy12": {
-        "DUOL": "",
-        "KDP": "",
-        "MELI": ""
-    },
-    "Strategy34": {
-        "AAL": "",
-        "APD": "",
-        "ARES": "",
-        "BDX": "",
-        "CTVA": "",
-        "DECK": "",
-        "ENTG": "",
-        "ICE": "",
-        "ISRG": "",
-        "JBHT": "",
-        "KKR": "",
-        "KNX": "",
-        "LII": "",
-        "MRNA": "",
-        "OWL": "",
-        "PGR": "",
-        "SAIA": "",
-        "SPGI": "",
-        "TRU": ""
-    },
+    "Strategy12": {},
+    "Strategy34": {},
     "PE_valid": {},
     "PE_invalid": {},
     "Currencies": {
