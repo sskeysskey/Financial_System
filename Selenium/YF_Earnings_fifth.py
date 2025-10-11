@@ -289,15 +289,27 @@ for single_date in (start_date + i*delta for i in range((end_date - start_date).
         offset += 100
 
 # -------- 5.1. 生成 next 与 diff 两份列表 -------------------------------
-# （A）读取 new.txt 中已有的 symbols
-new_txt_path = '/Users/yanzhang/Coding/News/Earnings_Release_new.txt'
+# （A）读取 new.txt 和 next.txt 中已有的 symbols
 new_symbols = set()
-if os.path.exists(new_txt_path):
-    with open(new_txt_path, 'r') as f_new:
-        for line in f_new:
-            parts = line.strip().split(':')
-            if parts:
-                new_symbols.add(parts[0].strip())
+files_to_read_symbols_from = [
+    '/Users/yanzhang/Coding/News/Earnings_Release_new.txt',
+    '/Users/yanzhang/Coding/News/Earnings_Release_next.txt',
+    '/Users/yanzhang/Coding/News/Earnings_Release_third.txt',
+    '/Users/yanzhang/Coding/News/Earnings_Release_fourth.txt'
+]
+
+def read_symbols_into_set(file_path, symbol_set):
+    """一个辅助函数，用于从文件中读取 symbol 并添加到集合中"""
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as f:
+            for line in f:
+                parts = line.strip().split(':')
+                if parts:
+                    symbol_set.add(parts[0].strip())
+
+# 遍历文件列表，将所有 symbols 读入 new_symbols 集合
+for file in files_to_read_symbols_from:
+    read_symbols_into_set(file, new_symbols)
 
 # （B）读取已有的 diff 文件内容以便排重
 diff_path = '/Users/yanzhang/Coding/News/Earnings_Release_diff_fifth.txt'
@@ -314,7 +326,7 @@ entries_for_diff = []
 for ln in new_entries:
     sym = ln.split(':')[0].strip()
 
-    # A) 如果在 new.txt 里见过，一律归 diff（不写 next）
+    # A) 如果在 new.txt 或 next.txt 或 third 或 fourth 里见过，一律归 diff（不写 next）
     if sym in new_symbols:
         if ln not in existing_diff_lines:
             entries_for_diff.append(ln)

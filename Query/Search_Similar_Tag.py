@@ -512,13 +512,52 @@ class SimilarityViewerWindow(QMainWindow):
         # <<< 修改：增加最小高度以适应更大的字体
         button.setMinimumHeight(35) 
 
-        # 2. 源 symbol 的 Compare 值
+        # 2. 源 symbol 的 Compare 值（提取数值并按正负上色：正红，负绿，零橙）
         compare_value = self.compare_data.get(self.source_symbol, "")
         compare_label = QLabel(compare_value)
         compare_label.setFixedWidth(150)
-        if re.search(r'\d+(?:前|后)|未', compare_value):
-            compare_label.setStyleSheet("color: #CD853F;")
         compare_label.setAlignment(Qt.AlignCenter)
+        compare_label.setTextFormat(Qt.RichText)  # 允许 HTML
+
+        raw_text = compare_value or ""
+
+        # 将“前/后/未”以及其紧邻的最多两位数字整体着橙
+        # 例：09前、12后、3未、前、后、未
+        def orange_keywords_with_digits(s: str) -> str:
+            return re.sub(r'(\d{0,2})(前|后|未)',
+                          lambda m: f"<span style='color:#CD853F;'>{m.group(1)}{m.group(2)}</span>",
+                          s)
+
+        # 找到第一个百分数，仅给百分数着色
+        m = re.search(r'(-?\d+(?:\.\d+)?)\s*%', raw_text)
+        if m:
+            try:
+                val = float(m.group(1))
+                if val > 0:
+                    val_color = "#FF5555"   # 正红
+                elif val < 0:
+                    val_color = "#2ECC71"   # 负绿
+                else:
+                    val_color = "#CD853F"   # 零橙
+
+                start, end = m.span()
+                number_text = raw_text[start:end]
+                colored_number = f"<span style='color:{val_color};'>{number_text}</span>"
+
+                left = raw_text[:start]
+                right = raw_text[end:]
+
+                left_html = orange_keywords_with_digits(left)
+                right_html = orange_keywords_with_digits(right)
+
+                compare_label.setText(left_html + colored_number + right_html)
+            except ValueError:
+                safe_html = orange_keywords_with_digits(raw_text)
+                compare_label.setText(safe_html)
+        else:
+            # 没有百分数，仅对“前/后/未”及其前导数字着橙
+            safe_html = orange_keywords_with_digits(raw_text)
+            compare_label.setText(safe_html)
 
         # 3. 标签及权重（已在之前修改过：24px，只有非零分显示一位小数）
         highlight_color = "#F9A825"
@@ -588,13 +627,44 @@ class SimilarityViewerWindow(QMainWindow):
         button = self.create_symbol_button(sym)
         button.setMinimumHeight(60)
 
-        # 2. Compare 值
+        # 2. Compare 值（提取数值并按正负上色：正红，负绿，零橙）
         compare_value = self.compare_data.get(sym, '')
         compare_label = QLabel(compare_value)
         compare_label.setFixedWidth(140)
-        if re.search(r'\d+(?:前|后)|未', compare_value):
-            compare_label.setStyleSheet("color: #CD853F;")
         compare_label.setAlignment(Qt.AlignCenter)
+        compare_label.setTextFormat(Qt.RichText)
+
+        raw_text = compare_value or ""
+
+        def orange_keywords_with_digits(s: str) -> str:
+            return re.sub(r'(\d{0,2})(前|后|未)',
+                          lambda m: f"<span style='color:#CD853F;'>{m.group(1)}{m.group(2)}</span>",
+                          s)
+
+        m = re.search(r'(-?\d+(?:\.\d+)?)\s*%', raw_text)
+        if m:
+            try:
+                val = float(m.group(1))
+                if val > 0:
+                    val_color = "#FF5555"
+                elif val < 0:
+                    val_color = "#2ECC71"
+                else:
+                    val_color = "#CD853F"
+
+                start, end = m.span()
+                number_text = raw_text[start:end]
+                colored_number = f"<span style='color:{val_color};'>{number_text}</span>"
+
+                left_html = orange_keywords_with_digits(raw_text[:start])
+                right_html = orange_keywords_with_digits(raw_text[end:])
+                compare_label.setText(left_html + colored_number + right_html)
+            except ValueError:
+                safe_html = orange_keywords_with_digits(raw_text)
+                compare_label.setText(safe_html)
+        else:
+            safe_html = orange_keywords_with_digits(raw_text)
+            compare_label.setText(safe_html)
 
         # 3. 总权重（字体小一点，比如 14px）
         total_weight = round(sum(float(w) for _, w in matched_tags), 1)
@@ -724,7 +794,7 @@ class SimilarityViewerWindow(QMainWindow):
 
         # --- 新增：移动（复制到组）子菜单，只显示指定的五个分组 ---
         move_menu = menu.addMenu("移动")
-        allowed_groups = ["Today", "Watching", "Next Week", "2 Weeks", "3 Weeks"]
+        allowed_groups = ["Today", "Watching", "Short", "Next Week", "2 Weeks", "3 Weeks"]
         for group in allowed_groups:
             # 如果 panel_config 里没有这个组，也让它显示（第一次复制时会新建）
             in_cfg = False

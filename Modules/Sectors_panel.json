@@ -192,7 +192,7 @@
         "Huangjin": "黄金",
         "Naturalgas": "天然气",
         "BalticDry": "",
-        "Silver": "",
+        "Silver": "白银",
         "Copper": "",
         "Uranium": "",
         "Lumber": "木材",
@@ -229,6 +229,12 @@
         "XRP": ""
     },
     "Today": {
+        "MOD": "",
+        "SPXC": "",
+        "NVT": "",
+        "VRT": "",
+        "CLS": "",
+        "CORZ": "",
         "APD": "",
         "KDP": "",
         "AZO": "",
@@ -239,7 +245,10 @@
         "SN": "",
         "HPQ": "HPQ7热",
         "TMUS": "TMUS7",
-        "ADP": ""
+        "ADP": "",
+        "IREN": "",
+        "HPE": "",
+        "ANET": ""
     },
     "Next Week": {},
     "2 Weeks": {},
@@ -257,8 +266,11 @@
         "ARCC": ""
     },
     "Short": {
+        "RL": "",
+        "KTB": "",
         "TEM": "",
-        "KRMN": ""
+        "KRMN": "",
+        "GIL": ""
     },
     "Strategy12": {
         "CDW": "",
@@ -382,9 +394,9 @@
     },
     "Economics": {
         "USInitial": "05 USInitial",
-        "USNonFarm": "05 USNonFarm",
-        "USUnemploy": "05 USUnemploy",
-        "USTrade": "12 USTrade",
+        "USNonFarm": "18 USNonFarm",
+        "USUnemploy": "18 USUnemploy",
+        "USTrade": "13 USTrade",
         "USConfidence": "10 USConfidence",
         "USRetailM": "16 USRetailM",
         "USPPI": "16 USPPI",
