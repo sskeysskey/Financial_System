@@ -225,9 +225,15 @@ def update_plot(line1, gradient_image, line2, dates, prices, volumes, ax1, ax2, 
     xlim = ax1.get_xlim()
     ylim = ax1.get_ylim()
 
+    # ==================== 这是核心修改 ====================
+    # 动态确定填充区域的基线
+    # 如果所有价格都小于0，则基线为0。否则，基线为Y轴的底部。
+    fill_base = 0 if np.max(prices) < 0 else ylim[0]
+
     # 创建剪切路径所需的顶点
     line_x_nums = matplotlib.dates.date2num(dates)
-    verts = [(line_x_nums[0], ylim[0]), *zip(line_x_nums, prices), (line_x_nums[-1], ylim[0])]
+    # 使用动态确定的 fill_base 作为填充区域的底部
+    verts = [(line_x_nums[0], fill_base), *zip(line_x_nums, prices), (line_x_nums[-1], fill_base)]
     clip_path = Path(verts)
 
     if force_recreate or gradient_image is None:

@@ -6,6 +6,7 @@ import datetime
 import sqlite3
 from collections import OrderedDict
 import subprocess
+import re  # ### 修改 ###: 确保 re 模块已导入
 
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
@@ -37,7 +38,7 @@ DISPLAY_LIMITS = {
 }
 
 categories = [
-    ['Today','Short','Watching','Next Week','2 Weeks','3 Weeks'],
+    ['Today','Watching','Short','Next Week','2 Weeks','3 Weeks'],
     ['PE_valid','PE_invalid','Strategy12','Strategy34'],
     ['Basic_Materials','Consumer_Cyclical','Real_Estate','Technology','Energy','Industrials',
      'Consumer_Defensive','Communication_Services','Financial_Services', 'Healthcare','Utilities'],
@@ -389,7 +390,6 @@ def query_database(db_path, table_name, condition):
             output_lines.append(row_str + '\n')
         return ''.join(output_lines)
 
-# ### 新增函数 START ###: 从 b.py 移植过来的颜色决策逻辑
 def get_color_decision_data(db_path, sector_data, symbol):
     """
     获取决定按钮颜色所需的所有数据，逻辑完全移植自 b.py。
@@ -473,7 +473,6 @@ def get_color_decision_data(db_path, sector_data, symbol):
     except Exception as e:
         print(f"[颜色决策数据获取错误] {symbol}: {e}")
         return None, None, None
-# ### 新增函数 END ###
 
 def execute_external_script(script_type, keyword, group=None, main_window=None):
     base_path = '/Users/yanzhang/Coding/Financial_System'
@@ -736,12 +735,44 @@ class MainWindow(QMainWindow):
                 return style_name
         return "Default"
 
+    # ### 新增方法 START ###: 用于为自定义排序生成排序键
+    def get_custom_sort_key(self, keyword, original_index):
+        """
+        根据 compare_data 中的字符串为 symbol 生成一个排序键。
+        排序规则: 1. 数字 (小->大), 2. 标志 ('前'->'后'->'未'), 3. 原始顺序。
+        """
+        compare_str = compare_data.get(keyword, "")
+        
+        # 匹配 "数字" + "前/后/未" 的模式
+        match = re.search(r'(\d+)(前|后|未)', compare_str)
+        
+        if match:
+            number = int(match.group(1))
+            suffix = match.group(2)
+            
+            # 将 "前", "后", "未" 映射为整数以便排序
+            suffix_map = {'前': 0, '后': 1, '未': 2}
+            suffix_val = suffix_map.get(suffix, 3) # 默认值 3
+            
+            return (number, suffix_val, original_index)
+        else:
+            # 如果没有匹配到 "数字+标志" 模式，则将它们排在最后，并保持原始顺序
+            return (float('inf'), float('inf'), original_index)
+    # ### 新增方法 END ###
+
     def populate_widgets(self):
-        """动态创建界面上的所有控件 (已移除小按钮)"""
+        """动态创建界面上的所有控件"""
         column_layouts = [QVBoxLayout() for _ in categories]
         for layout in column_layouts:
             layout.setAlignment(Qt.AlignTop) # 让内容从顶部开始排列
             self.main_layout.addLayout(layout)
+
+        # ### 修改 ###: 定义需要特殊排序的组
+        target_sort_groups = {
+            'Today', 'Watching', 'Short', 'Basic_Materials', 'Consumer_Cyclical',
+            'Real_Estate', 'Technology', 'Energy', 'Industrials', 'Consumer_Defensive',
+            'Communication_Services','Financial_Services', 'Healthcare','Utilities'
+        }
 
         for index, category_group in enumerate(categories):
             for sector in category_group:
@@ -761,19 +792,36 @@ class MainWindow(QMainWindow):
                     column_layouts[index].addWidget(group_box)
 
                     # ===== 在这里增加排序 =====
-                    import re
+                    items_list = []
                     if isinstance(keywords, dict):
                         items_list = list(keywords.items())
-                        items_list.sort(key=lambda kv: (
-                            int(m.group(1)) if (m := re.match(r'\s*(\d+)', kv[1])) else float('inf')
-                        ))
                     else:
                         items_list = [(kw, kw) for kw in keywords]
 
-                    items = limit_items(items_list, sector)
-                    # ===== 排序+截断完成 =====
+                    # ### 修改 START ###: 根据分组应用不同的排序逻辑
+                    if sector in target_sort_groups:
+                        # 对需要特殊排序的组应用新逻辑
+                        # 1. 使用 enumerate 获取原始索引
+                        indexed_items = list(enumerate(items_list))
+                        
+                        # 2. 使用新的排序键进行排序
+                        #    lambda item: self.get_custom_sort_key(keyword, original_index)
+                        #    item[0] is original_index, item[1] is (keyword, translation)
+                        #    item[1][0] is keyword
+                        indexed_items.sort(key=lambda item: self.get_custom_sort_key(item[1][0], item[0]))
+                        
+                        # 3. 去掉索引，得到排好序的列表
+                        items_list = [item[1] for item in indexed_items]
+                    else:
+                        # 对其他组，使用旧的排序逻辑
+                        if isinstance(keywords, dict):
+                            items_list.sort(key=lambda kv: (
+                                int(m.group(1)) if (m := re.match(r'\s*(\d+)', kv[1])) else float('inf')
+                            ))
+                    # ### 修改 END ###
 
-                    # 再一次防护：如果 limit 之后还是空，也直接跳过
+                    items = limit_items(items_list, sector)
+                    
                     if not items:
                         continue
                     
@@ -826,10 +874,8 @@ class MainWindow(QMainWindow):
                         
                         # 3. 应用字体颜色
                         # 注意：这里会覆盖 QSS 中通过 objectName 设置的 color 属性，但保留 background-color
-                        # 这正是我们想要的效果。
                         current_style = button.styleSheet()
                         button.setStyleSheet(f"{current_style}; color: {color};")
-                        # ### 修改 END ###
 
                         tags_info = get_tags_for_symbol(keyword)
                         if isinstance(tags_info, list):

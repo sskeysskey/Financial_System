@@ -27,9 +27,11 @@ TARGET_CATEGORIES = [
 ]
 
 def is_uppercase_letters(text: str) -> bool:
+    """检查字符串是否只包含大写字母"""
     return bool(re.match(r'^[A-Z]+$', text))
 
 def copy2clipboard():
+    """使用 AppleScript 模拟 Command+C 复制，并等待剪贴板更新"""
     script = '''
     set the clipboard to ""
     delay 0.5
@@ -38,7 +40,13 @@ def copy2clipboard():
         delay 0.5
     end tell
     '''
-    subprocess.run(['osascript', '-e', script], check=True)
+    try:
+        subprocess.run(['osascript', '-e', script], check=True)
+    except (subprocess.CalledProcessError, FileNotFoundError) as e:
+        print(f"执行 AppleScript 失败: {e}")
+        # 在非 macOS 系统或 AppleScript 执行失败时，这是一个备用方案
+        # 但通常我们期望它能工作。这里只是为了程序健壮性。
+        pass
 
 class SymbolInputDialog(QDialog):
     """
@@ -90,12 +98,17 @@ class CategorySelectionDialog(QDialog):
     """
     第二个界面：用于选择分组的对话框。
     """
-    def __init__(self, symbol, categories, parent=None):
+    # --- 修改点 1: __init__ 方法增加了一个参数 ---
+    # 增加 pre_selected_categories 参数，用于接收一个包含应被预先勾选的分组名的集合
+    def __init__(self, symbol, categories, pre_selected_categories=None, parent=None):
         super().__init__(parent)
         self.setWindowTitle("第二步：选择分组")
         self.setMinimumWidth(300)
 
-        # 布局
+        # 如果 pre_selected_categories 未提供，则初始化为空集合，防止出错
+        if pre_selected_categories is None:
+            pre_selected_categories = set()
+
         layout = QVBoxLayout(self)
 
         # 提示标签
@@ -106,6 +119,13 @@ class CategorySelectionDialog(QDialog):
         self.checkboxes = []
         for category in categories:
             checkbox = QCheckBox(category, self)
+            
+            # --- 修改点 2: 设置复选框的初始状态 ---
+            # 在创建复选框时，检查当前分组名是否在 pre_selected_categories 集合中
+            # 如果在，就将这个复选框的初始状态设置为勾选 (Checked)
+            if category in pre_selected_categories:
+                checkbox.setChecked(True)
+            
             self.checkboxes.append(checkbox)
             layout.addWidget(checkbox)
 
@@ -138,7 +158,20 @@ def main():
         QMessageBox.critical(None, "错误", f"关键文件未找到，请检查路径：\n{JSON_FILE_PATH}")
         sys.exit(1)
 
-    # 2. 确定 Symbol (来自命令行参数或弹窗)
+    # --- 修改点 3: 提前读取和解析 JSON 文件 ---
+    # 为了检查 symbol 是否已存在，我们需要先加载 JSON 数据。
+    # 将文件读取操作提前，并用 try-except 包裹以处理可能的错误。
+    try:
+        with open(JSON_FILE_PATH, 'r', encoding='utf-8') as f:
+            panel_data = json.load(f)
+    except json.JSONDecodeError:
+        QMessageBox.critical(None, "文件错误", f"无法解析 JSON 文件，请检查文件格式：\n{JSON_FILE_PATH}")
+        sys.exit(1)
+    except Exception as e:
+        QMessageBox.critical(None, "文件读取错误", f"读取文件时发生错误：\n{e}")
+        sys.exit(1)
+
+
     symbol = None
     # 检查是否有命令行参数 (sys.argv[0] 是脚本名, sys.argv[1] 是第一个参数)
     if len(sys.argv) > 1:
@@ -170,63 +203,80 @@ def main():
     # 统一将 Symbol 转为大写
     symbol = symbol.upper()
 
-    # 3. 选择分组
-    category_dialog = CategorySelectionDialog(symbol, TARGET_CATEGORIES)
+    # --- 修改点 4: 查找 Symbol 已存在的分组 ---
+    # 遍历所有目标分组，检查 symbol 是否已经是其中一员。
+    # 使用集合 (set) 来存储结果，查询效率更高。
+    existing_categories = set()
+    for category in TARGET_CATEGORIES:
+        # 确保分组在 JSON 数据中存在，并且 symbol 是该分组下的一个键
+        if category in panel_data and symbol in panel_data[category]:
+            existing_categories.add(category)
+
+    # --- 修改点 5: 将预选中的分组传递给对话框 ---
+    # 实例化 CategorySelectionDialog 时，将我们刚刚找到的 existing_categories 传递进去。
+    category_dialog = CategorySelectionDialog(symbol, TARGET_CATEGORIES, existing_categories)
     category_dialog.show()
     category_dialog.activateWindow()
     category_dialog.raise_()
+    
     selected_categories = []
     if category_dialog.exec_() == QDialog.Accepted:
         selected_categories = category_dialog.get_selected_categories()
-        if not selected_categories:
-            QMessageBox.warning(None, "选择无效", "您没有选择任何分组，程序已终止。")
-            sys.exit(1)
+        # 即使用户取消了所有勾选，也认为是有效操作（即从所有分组中移除），所以不再检查是否为空
     else:
         # 用户点击了取消或按了 ESC
         print("用户取消了操作。程序退出。")
         sys.exit(0)
 
-    # 4. 更新 JSON 文件
+    # --- 修改点 6: 优化 JSON 更新逻辑 ---
+    # 新的逻辑会处理添加、移除和排序，使 JSON 文件状态与复选框的最终状态完全同步。
     try:
-        # 读取现有数据
-        with open(JSON_FILE_PATH, 'r', encoding='utf-8') as f:
-            panel_data = json.load(f)
-
-        # 更新数据
-        update_count = 0
-        for category in selected_categories:
-            # 确保分组存在于 JSON 数据中
-            if category in panel_data:
-                # --- 这是修改的核心 ---
-                # 创建一个新字典，将新 symbol 放在最前面，然后解包（**）旧的字典内容
-                panel_data[category] = {symbol: "", **panel_data[category]}
-                update_count += 1
-            else:
-                # 如果分组不存在，可以选择创建它或发出警告
+        something_changed = False
+        # 遍历所有可能的分组
+        for category in TARGET_CATEGORIES:
+            # 检查分组是否在 JSON 数据中
+            if category not in panel_data:
                 print(f"警告：分组 '{category}' 在 JSON 文件中不存在，已跳过。")
+                continue
 
-        # 如果有任何成功的更新，则写回文件
-        if update_count > 0:
+            symbol_exists = symbol in panel_data[category]
+            category_is_selected = category in selected_categories
+
+            # 情况1: 复选框被勾选，但 symbol 不在分组里 -> 添加
+            if category_is_selected and not symbol_exists:
+                # 使用您原来的方法，将新 symbol 放在最前面
+                panel_data[category] = {symbol: "", **panel_data[category]}
+                print(f"已将 '{symbol}' 添加到分组 '{category}'。")
+                something_changed = True
+            
+            # 情况2: 复选框被勾选，且 symbol 已经在分组里 -> 移动到最前
+            elif category_is_selected and symbol_exists:
+                # 先删除，再添加，即可实现移动到最前
+                # 如果已经是第一个，这个操作也没影响
+                del panel_data[category][symbol]
+                panel_data[category] = {symbol: "", **panel_data[category]}
+                # 这种情况也可以视为一种更改，但为了简化输出，我们只在添加/删除时打印
+                something_changed = True # 即使只是顺序改变，也标记为已更改
+
+            # 情况3: 复选框未被勾选，但 symbol 存在于分组里 -> 移除
+            elif not category_is_selected and symbol_exists:
+                del panel_data[category][symbol]
+                print(f"已从分组 '{category}' 中移除 '{symbol}'。")
+                something_changed = True
+
+        # 只有在数据确实发生变动时，才写回文件
+        if something_changed:
             with open(JSON_FILE_PATH, 'w', encoding='utf-8') as f:
-                # ensure_ascii=False 保证中文正常显示
-                # indent=4 保持漂亮的格式
                 json.dump(panel_data, f, ensure_ascii=False, indent=4)
             
-            # 显示成功信息
-            # QMessageBox.information(None, "操作成功",
-            #     f"Symbol <b style='color:green;'>{symbol}</b> 已成功添加到以下分组：\n\n"
-            #     f"<b>{', '.join(selected_categories)}</b>"
-            # )
-            print(f"成功将 '{symbol}' 添加到 {selected_categories}。")
+            print(f"文件 '{JSON_FILE_PATH}' 已成功更新。")
+            # 可以选择性地显示一个成功的消息框
+            # QMessageBox.information(None, "操作成功", f"针对 Symbol '{symbol}' 的分组更新已完成。")
         else:
-            QMessageBox.warning(None, "无任何更改", "所有选定的分组在JSON文件中均不存在，文件未被修改。")
+            print("数据未发生任何变化，无需更新文件。")
 
-
-    except json.JSONDecodeError:
-        QMessageBox.critical(None, "文件错误", f"无法解析 JSON 文件，请检查文件格式：\n{JSON_FILE_PATH}")
-        sys.exit(1)
     except Exception as e:
-        QMessageBox.critical(None, "未知错误", f"发生了一个意外错误：\n{e}")
+        QMessageBox.critical(None, "未知错误", f"更新 JSON 文件时发生了一个意外错误：\n{e}")
         sys.exit(1)
 
     sys.exit(0)
