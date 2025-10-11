@@ -91,10 +91,8 @@
         "KMI",
         "MPC",
         "E",
-        "LNG",
         "TRP",
-        "PSX",
-        "VLO"
+        "PSX"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -190,8 +188,7 @@
         "MCK",
         "COR",
         "ALNY",
-        "BDX",
-        "IDXX"
+        "BDX"
     ],
     "Industrials": [
         "GE",
@@ -228,7 +225,6 @@
         "NSC",
         "PWR",
         "URI",
-        "PCAR",
         "LHX",
         "CMI",
         "FAST",

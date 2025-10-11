@@ -37,10 +37,10 @@ DISPLAY_LIMITS = {
 }
 
 categories = [
-    ['Basic_Materials','Consumer_Cyclical','Real_Estate','Technology','Energy','Industrials',
-     'Consumer_Defensive','Communication_Services','Financial_Services', 'Healthcare','Utilities'],
     ['Today','Short','Watching','Next Week','2 Weeks','3 Weeks'],
     ['PE_valid','PE_invalid','Strategy12','Strategy34'],
+    ['Basic_Materials','Consumer_Cyclical','Real_Estate','Technology','Energy','Industrials',
+     'Consumer_Defensive','Communication_Services','Financial_Services', 'Healthcare','Utilities'],
     ['Bonds','Crypto','Indices','Currencies'],
     ['Economics','Commodities'],
 ]
@@ -1105,6 +1105,11 @@ class MainWindow(QMainWindow):
             self.handle_arrow_key('down')
         elif key == Qt.Key_Up:
             self.handle_arrow_key('up')
+        ### 新增：按下 'g' 键刷新界面 ###
+        elif key == Qt.Key_G:
+            print("快捷键 'g' 按下：正在重新加载配置并刷新界面...")
+            self.refresh_selection_window()
+        ### 新增结束 ###
         else:
             # 对于其他按键，调用父类的实现，以保留默认行为（例如，如果需要的话）
             super().keyPressEvent(event)

@@ -9,6 +9,7 @@ from matplotlib.widgets import RadioButtons
 import matplotlib
 from functools import lru_cache
 from scipy.interpolate import interp1d
+import json # 新增：为了加载JSON文件
 
 from matplotlib.patches import PathPatch
 from matplotlib.path import Path
@@ -375,6 +376,11 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
     matplotlib.rcParams['toolbar'] = 'none'
 
+    # --- 新增修改 1: 将传入的json_data存入可变容器，并定义文件路径 ---
+    # 使用字典包装，以便在内部函数中修改其内容
+    current_json_data = {'data': json_data}
+    DESCRIPTION_JSON_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
+
     if isinstance(share, tuple):
         share_val, pb = share
         pb_text = f"{pb}" if pb not in [None, ""] else "--"
@@ -385,19 +391,16 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     mouse_pressed = False
     initial_price = None
     initial_date = None
-    # --- 修改: 变量名从 fill 改为 gradient_image 以反映其新作用 ---
     gradient_image = None
     show_global_markers = False
     show_specific_markers = True
     show_earning_markers = True
     show_all_annotations = False
 
-    # 新增：用于跟踪当前显示的数据及其 date2num 缓存
     current_filtered_dates = []
     current_filtered_prices = []
     current_filtered_date_nums = []
 
-    # 事件节流与资源引用（列表包裹便于闭包内修改）
     import time
     last_hover_ts = [0.0]
     last_rebuild_ts = [0.0]
@@ -417,8 +420,6 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         return
 
     smooth_dates, smooth_prices = smooth_curve(dates, prices)
-
-    # 预计算原始完整数据的 date2num（仍保留，但 hover 使用 current_filtered_date_nums）
     date_nums = matplotlib.dates.date2num(dates)
 
     fig, ax1 = plt.subplots(figsize=(16, 8))
@@ -489,28 +490,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     # 标记点和注释
     global_markers, specific_markers, earning_markers = {}, {}, {}
     all_annotations = []
-
-    if 'global' in json_data:
-        for date_str, text in json_data['global'].items():
-            try:
-                global_markers[datetime.strptime(date_str, "%Y-%m-%d")] = text
-            except ValueError:
-                print(f"无法解析全局标记日期: {date_str}")
-
-    found_item = None
-    for source in ['stocks', 'etfs']:
-        for item in json_data.get(source, []):
-            if item['symbol'] == name and 'description3' in item:
-                found_item = item
-                for date_obj in item.get('description3', []):
-                    for date_str, text in date_obj.items():
-                        try:
-                            specific_markers[datetime.strptime(date_str, "%Y-%m-%d")] = text
-                        except ValueError:
-                            print(f"无法解析特定标记日期: {date_str}")
-                break
-        if found_item: break
-
+    
     try:
         with sqlite3.connect(db_path) as conn:
             cursor = conn.cursor()
@@ -528,22 +508,109 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     except sqlite3.OperationalError as e:
         print(f"获取收益数据失败: {e}")
 
+    # 这三个列表将存储matplotlib的scatter对象，以便后续可以移除它们
     global_scatter_points, specific_scatter_points, earning_scatter_points = [], [], []
 
-    for marker_date, text in global_markers.items():
-        if min(dates) <= marker_date <= max(dates):
-            idx = (np.abs(np.array(dates) - marker_date)).argmin()
-            scatter = ax1.scatter([dates[idx]], [prices[idx]], s=100, color=NORD_THEME['accent_red'],
-                                  alpha=0.7, zorder=4, picker=5, visible=show_global_markers)
-            global_scatter_points.append((scatter, dates[idx], prices[idx], text))
+    # --- 新增修改 2: 将标记和注释的创建逻辑封装成一个函数 ---
+    # 这个函数将在初始化和刷新时被调用
+    def create_markers_and_annotations():
+        # 清理旧的标记和注释
+        for scatter, _, _, _ in global_scatter_points + specific_scatter_points:
+            scatter.remove()
+        for annotation, _, _, _ in all_annotations:
+            annotation.remove()
+        
+        global_markers.clear()
+        specific_markers.clear()
+        global_scatter_points.clear()
+        specific_scatter_points.clear()
+        all_annotations.clear()
 
-    for marker_date, text in specific_markers.items():
-        if min(dates) <= marker_date <= max(dates):
-            idx = (np.abs(np.array(dates) - marker_date)).argmin()
-            scatter = ax1.scatter([dates[idx]], [prices[idx]], s=100, color=NORD_THEME['text_bright'],
-                                  alpha=0.7, zorder=4, picker=5, visible=show_specific_markers)
-            specific_scatter_points.append((scatter, dates[idx], prices[idx], text))
+        # 重新从 current_json_data['data'] 加载 global 和 specific 标记
+        if 'global' in current_json_data['data']:
+            for date_str, text in current_json_data['data']['global'].items():
+                try:
+                    global_markers[datetime.strptime(date_str, "%Y-%m-%d")] = text
+                except ValueError:
+                    print(f"无法解析全局标记日期: {date_str}")
 
+        found_item = None
+        for source in ['stocks', 'etfs']:
+            for item in current_json_data['data'].get(source, []):
+                if item['symbol'] == name and 'description3' in item:
+                    found_item = item
+                    for date_obj in item.get('description3', []):
+                        for date_str, text in date_obj.items():
+                            try:
+                                specific_markers[datetime.strptime(date_str, "%Y-%m-%d")] = text
+                            except ValueError:
+                                print(f"无法解析特定标记日期: {date_str}")
+                    break
+            if found_item: break
+
+        # 重新创建 Scatter 对象
+        for marker_date, text in global_markers.items():
+            if min(dates) <= marker_date <= max(dates):
+                idx = (np.abs(np.array(dates) - marker_date)).argmin()
+                scatter = ax1.scatter([dates[idx]], [prices[idx]], s=100, color=NORD_THEME['accent_red'],
+                                      alpha=0.7, zorder=4, picker=5, visible=show_global_markers)
+                global_scatter_points.append((scatter, dates[idx], prices[idx], text))
+
+        for marker_date, text in specific_markers.items():
+            if min(dates) <= marker_date <= max(dates):
+                idx = (np.abs(np.array(dates) - marker_date)).argmin()
+                scatter = ax1.scatter([dates[idx]], [prices[idx]], s=100, color=NORD_THEME['text_bright'],
+                                      alpha=0.7, zorder=4, picker=5, visible=show_specific_markers)
+                specific_scatter_points.append((scatter, dates[idx], prices[idx], text))
+        
+        # 注意：Earning scatter points 不在这里重新创建，因为它们的数据源是固定的。
+        # 我们只在第一次绘制时创建它们。
+
+        # 重新创建 Annotations (包括earning的，因为all_annotations被清空了)
+        red_offsets = [(-60, 30),(50, -30), (-70, 45), (-50, -35)]
+        for i, (scatter, date_v, price_v, text) in enumerate(global_scatter_points):
+            offset = red_offsets[i % len(red_offsets)]
+            new_text = f"{text}\n{date_v.strftime('%Y-%m-%d')}"
+            annotation = ax1.annotate(
+                new_text, xy=(date_v, price_v), xytext=offset, textcoords="offset points",
+                bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=NORD_THEME['accent_red'], alpha=0.8),
+                arrowprops=dict(arrowstyle="->", color=NORD_THEME['accent_red']),
+                color=NORD_THEME['accent_red'], fontsize=12, visible=False
+            )
+            all_annotations.append((annotation, 'global', date_v, price_v))
+
+        specific_offsets = [(-50, -50), (-100, 20)]
+        for i, (scatter, date_v, price_v, text) in enumerate(specific_scatter_points):
+            offset = specific_offsets[i % len(specific_offsets)]
+            try:
+                latest_price = prices[-1]
+                diff_percent = ((latest_price - price_v) / price_v) * 100 if price_v else 0
+                diff_line = f"{diff_percent:.2f}%"
+            except Exception:
+                diff_line = ""
+            new_text = f"{text}\n{diff_line}\n{date_v.strftime('%Y-%m-%d')}"
+            annotation = ax1.annotate(
+                new_text, xy=(date_v, price_v), xytext=offset, textcoords="offset points",
+                bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=NORD_THEME['text_bright'], alpha=0.8),
+                arrowprops=dict(arrowstyle="->", color=NORD_THEME['text_bright']),
+                color=NORD_THEME['text_bright'], fontsize=12,
+                visible=show_specific_markers and show_all_annotations
+            )
+            all_annotations.append((annotation, 'specific', date_v, price_v))
+
+        earning_offsets = [(50, -50), (-150, 25)]
+        for i, (scatter, date_v, price_v, text) in enumerate(earning_scatter_points):
+            offset = earning_offsets[i % len(earning_offsets)]
+            annotation = ax1.annotate(
+                text, xy=(date_v, price_v), xytext=offset, textcoords="offset points",
+                bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=NORD_THEME['accent_yellow'], alpha=0.8),
+                arrowprops=dict(arrowstyle="->", color=NORD_THEME['accent_cyan']),
+                color=NORD_THEME['accent_yellow'], fontsize=12,
+                visible=show_earning_markers and show_all_annotations
+            )
+            all_annotations.append((annotation, 'earning', date_v, price_v))
+
+    # 在主流程中，首次创建earning的scatter points (这部分只执行一次)
     for marker_date, text in earning_markers.items():
         if min(dates) <= marker_date <= max(dates):
             idx = (np.abs(np.array(dates) - marker_date)).argmin()
@@ -551,51 +618,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                                   alpha=0.7, zorder=4, picker=5, visible=show_earning_markers)
             earning_scatter_points.append((scatter, dates[idx], prices[idx], text))
 
-    red_offsets = [(-60, 30),(50, -30), (-70, 45), (-50, -35)]
-    for i, (scatter, date_v, price_v, text) in enumerate(global_scatter_points):
-        offset = red_offsets[i % len(red_offsets)]
-        # 在原始事件文本上方，增加一行格式化的日期
-        new_text = f"{text}\n{date_v.strftime('%Y-%m-%d')}"
-        annotation = ax1.annotate(
-            new_text, xy=(date_v, price_v), xytext=offset, textcoords="offset points",
-            bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=NORD_THEME['accent_red'], alpha=0.8),
-            arrowprops=dict(arrowstyle="->", color=NORD_THEME['accent_red']),
-            color=NORD_THEME['accent_red'], fontsize=12, visible=False
-        )
-        all_annotations.append((annotation, 'global', date_v, price_v))
-
-    specific_offsets = [(-50, -50), (-100, 20)]
-    for i, (scatter, date_v, price_v, text) in enumerate(specific_scatter_points):
-        offset = specific_offsets[i % len(specific_offsets)]
-        # 在原始事件文本上方，增加一行格式化的日期
-        try:
-            latest_price = prices[-1]
-            diff_percent = ((latest_price - price_v) / price_v) * 100 if price_v else 0
-            diff_line = f"{diff_percent:.2f}%"
-        except Exception:
-            diff_line = ""
-        new_text = f"{text}\n{diff_line}\n{date_v.strftime('%Y-%m-%d')}"
-        annotation = ax1.annotate(
-            new_text, xy=(date_v, price_v), xytext=offset, textcoords="offset points",
-            bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=NORD_THEME['text_bright'], alpha=0.8),
-            arrowprops=dict(arrowstyle="->", color=NORD_THEME['text_bright']),
-            color=NORD_THEME['text_bright'], fontsize=12,
-            visible=show_specific_markers and show_all_annotations
-        )
-        all_annotations.append((annotation, 'specific', date_v, price_v))
-
-    # 新增：为 earning 定义偏移列表（可按需调整数值）
-    earning_offsets = [(50, -50), (-150, 25)]
-    for i, (scatter, date_v, price_v, text) in enumerate(earning_scatter_points):
-        offset = earning_offsets[i % len(earning_offsets)]
-        annotation = ax1.annotate(
-            text, xy=(date_v, price_v), xytext=offset, textcoords="offset points",
-            bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=NORD_THEME['accent_yellow'], alpha=0.8),
-            arrowprops=dict(arrowstyle="->", color=NORD_THEME['accent_cyan']),
-            color=NORD_THEME['accent_yellow'], fontsize=12,
-            visible=show_earning_markers and show_all_annotations
-        )
-        all_annotations.append((annotation, 'earning', date_v, price_v))
+    # 首次调用创建函数
+    create_markers_and_annotations()
 
     def toggle_all_annotations():
         nonlocal show_all_annotations
@@ -610,52 +634,60 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         try: return float(s.strip('%'))
         except (ValueError, AttributeError): return None
 
-    turnover = (volumes[-1] * prices[-1]) / 1e6 if volumes and volumes[-1] is not None and prices[-1] is not None else None
-    turnover_str = ""
-    if turnover is not None:
-        turnover_str = f"{turnover / 1000:.1f}B" if turnover >= 1000 else f"{turnover:.1f}M"
+    # --- 新增修改 3: 将标题创建逻辑也封装成一个函数 ---
+    def create_or_update_title():
+        turnover = (volumes[-1] * prices[-1]) / 1e6 if volumes and volumes[-1] is not None and prices[-1] is not None else None
+        turnover_str = ""
+        if turnover is not None:
+            turnover_str = f"{turnover / 1000:.1f}B" if turnover >= 1000 else f"{turnover:.1f}M"
 
-    compare_value = clean_percentage_string(re.sub(r'[\u4e00-\u9fff+]', '', compare))
-    if turnover is not None and turnover < 100 and compare_value is not None and compare_value > 0:
-        turnover_str = f"可疑{turnover_str}"
+        compare_value = clean_percentage_string(re.sub(r'[\u4e00-\u9fff+]', '', compare))
+        if turnover is not None and turnover < 100 and compare_value is not None and compare_value > 0:
+            turnover_str = f"可疑{turnover_str}"
 
-    try:
-        share_int = int(share_val)
-        turnover_rate = f"{(volumes[-1] / share_int) * 100:.2f}" if volumes and volumes[-1] is not None and share_int > 0 else "--"
-    except (ValueError, TypeError):
-        turnover_rate = "--"
+        try:
+            share_int = int(share_val)
+            turnover_rate = f"{(volumes[-1] / share_int) * 100:.2f}" if volumes and volumes[-1] is not None and share_int > 0 else "--"
+        except (ValueError, TypeError):
+            turnover_rate = "--"
 
-    marketcap_in_billion = ""
-    if marketcap not in [None, "N/A"]:
-        mc_val = float(marketcap) / 1e9
-        marketcap_in_billion = f"{int(mc_val)}B" if mc_val == int(mc_val) else f"{mc_val:.1f}B"
+        marketcap_in_billion = ""
+        if marketcap not in [None, "N/A"]:
+            mc_val = float(marketcap) / 1e9
+            marketcap_in_billion = f"{int(mc_val)}B" if mc_val == int(mc_val) else f"{mc_val:.1f}B"
 
-    pe_text = f"{pe}" if pe not in [None, "N/A"] else "--"
+        pe_text = f"{pe}" if pe not in [None, "N/A"] else "--"
 
-    tag_str, fullname, clickable = "", "", False
-    for source in ['stocks', 'etfs']:
-        for item in json_data.get(source, []):
-            if item['symbol'] == name:
-                fullname = item.get('name', '')
-                tag_str = ','.join(item.get('tag', []))
-                if len(tag_str) > 45: tag_str = tag_str[:45] + '...'
-                clickable = True
-                break
-        if clickable: break
+        tag_str, fullname, clickable = "", "", False
+        # 使用 current_json_data['data']
+        for source in ['stocks', 'etfs']:
+            for item in current_json_data['data'].get(source, []):
+                if item['symbol'] == name:
+                    fullname = item.get('name', '')
+                    tag_str = ','.join(item.get('tag', []))
+                    if len(tag_str) > 45: tag_str = tag_str[:45] + '...'
+                    clickable = True
+                    break
+            if clickable: break
 
-    if table_name == 'ETFs':
-        title_color = NORD_THEME['accent_orange']
-        title_text = f'{name}  {compare}  {turnover_str} "{table_name}" {fullname} {tag_str}'
-    else:
-        title_color = get_title_color_logic(db_path, name, table_name)
-        title_text = f'{name}  {compare}  {turnover_str} {turnover_rate} {marketcap_in_billion} {pe_text} {pb_text} "{table_name}" {fullname} {tag_str}'
+        if table_name == 'ETFs':
+            title_color = NORD_THEME['accent_orange']
+            title_text = f'{name}  {compare}  {turnover_str} "{table_name}" {fullname} {tag_str}'
+        else:
+            title_color = get_title_color_logic(db_path, name, table_name)
+            title_text = f'{name}  {compare}  {turnover_str} {turnover_rate} {marketcap_in_billion} {pe_text} {pb_text} "{table_name}" {fullname} {tag_str}'
+        
+        return title_text, title_color, clickable
 
-    fig.text(0.5, 0.95, title_text, ha='center', va='top', color=title_color,
-             fontsize=16, fontweight='bold', transform=fig.transFigure, picker=False)
+    # 首次创建标题，并保存对标题对象的引用
+    initial_title_text, initial_title_color, clickable = create_or_update_title()
+    title_artist = fig.text(0.5, 0.95, initial_title_text, ha='center', va='top', color=initial_title_color,
+                            fontsize=16, fontweight='bold', transform=fig.transFigure, picker=False)
 
     def show_stock_etf_info(event=None):
+        # 使用 current_json_data['data']
         for source in ['stocks', 'etfs']:
-            for item in json_data.get(source, []):
+            for item in current_json_data['data'].get(source, []):
                 if item['symbol'] == name:
                     info = f"{name}\n{item['name']}\n\n{item['tag']}\n\n{item['description1']}\n\n{item['description2']}"
                     dialog = InfoDialog("Information", info, 'Arial Unicode MS', 22, 700, 900)
@@ -773,7 +805,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         circle.set_facecolor(NORD_THEME['background'])
     radio.circles[default_index].set_facecolor(NORD_THEME['accent_red'])
 
-    instructions = "N:新财报\nE:改财报\nT:改标签\nW:新事件\nQ:改事件\nK:查豆包\nZ:查富途\nP:做比较\nJ:加Panel\nH:加empty\nL:查相似\nY:删除"
+    instructions = "N:新财报\nE:改财报\nT:改标签\nW:新事件\nQ:改事件\nK:查豆包\nZ:查富途\nP:做比较\nJ:加Panel\nH:加empty\nL:查相似\nY:删除\nG:刷新" # 新增 G
     rax.text(0.5, 0.99, instructions, transform=rax.transAxes, ha="center", va="bottom",
              color=NORD_THEME['text_light'], fontsize=10, fontfamily="Arial Unicode MS")
     
@@ -896,24 +928,11 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                         annot.get_bbox_patch().set_edgecolor(drag_color)
                         annot.get_bbox_patch().set_alpha(0.8)
                         annot.set_fontsize(16)
-
-                        # 根据位置决定偏移，避免出界
-                        y_range = ax1.get_ylim()
+                        y_range, x_range = ax1.get_ylim(), ax1.get_xlim()
                         y_ratio = (sel_price - y_range[0]) / (y_range[1] - y_range[0] + 1e-12)
-                        x_range = ax1.get_xlim()
                         x_ratio = (matplotlib.dates.date2num(sel_date) - x_range[0]) / (x_range[1] - x_range[0] + 1e-12)
-                        if y_ratio < 0.2:
-                            y_offset = 60
-                        elif y_ratio > 0.8:
-                            y_offset = -120
-                        else:
-                            y_offset = -70
-                        if x_ratio > 0.7:
-                            x_offset = -120
-                        elif x_ratio < 0.3:
-                            x_offset = 50
-                        else:
-                            x_offset = -100
+                        y_offset = 60 if y_ratio < 0.2 else -120 if y_ratio > 0.8 else -70
+                        x_offset = -120 if x_ratio > 0.7 else 50 if x_ratio < 0.3 else -100
                         annot.set_position((x_offset, y_offset))
                         annot.set_visible(True)
 
@@ -1023,13 +1042,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             else:
                 min_date = datetime.now() - timedelta(days=years * 365)
                 indices = [i for i, d in enumerate(dates) if d >= min_date]
-                if not indices:
-                    f_dates, f_prices = [dates[-1]], [prices[-1]]
-                    f_volumes = [volumes[-1]] if volumes else None
-                else:
-                    f_dates = [dates[i] for i in indices]
-                    f_prices = [prices[i] for i in indices]
-                    f_volumes = [volumes[i] for i in indices] if volumes else None
+                f_dates = [dates[i] for i in indices] if indices else [dates[-1]]
+                f_prices = [prices[i] for i in indices] if indices else [prices[-1]]
+                f_volumes = [volumes[i] for i in indices] if volumes and indices else ([volumes[-1]] if volumes else None)
 
             current_filtered_dates = f_dates
             current_filtered_prices = f_prices
@@ -1052,25 +1067,56 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     def launch_and_close_for_y():
         # 定义确认后的收尾逻辑：关闭所有图形并退出（结束功能）
         def on_done():
+            try: plt.close('all')
+            except: pass
             try:
-                plt.close('all')
-            except Exception:
-                pass
-            # 如果在 Panel 模式中，也一并退出进程；否则只关图
-            try:
-                if panel:
-                    sys.exit(0)
-            except Exception:
-                pass
-
-        # 若外部界面是阻塞式（如需要“确认”），把 block=True，这样确认后才会继续执行 on_done
-        # 如果外部界面是异步脚本，也会立即 on_done，从而马上关闭当前界面
+                if panel: sys.exit(0)
+            except: pass
         execute_external_script('panel_delete', name, on_done=on_done, block=True)
     
+    # --- 新增修改 4: 创建刷新函数，并将其绑定到 'g' 键 ---
+    def refresh_description_data_and_redraw():
+        """
+        重新加载 description.json 文件并更新图表的相关部分。
+        """
+        nonlocal title_artist, clickable
+        print("正在重新加载 description.json...")
+        try:
+            with open(DESCRIPTION_JSON_PATH, 'r', encoding='utf-8') as f:
+                new_data = json.load(f)
+            current_json_data['data'] = new_data
+            print("description.json 加载成功。正在刷新图表...")
+
+            # 1. 更新标题
+            new_title_text, new_title_color, clickable = create_or_update_title()
+            title_artist.set_text(new_title_text)
+            # 标题颜色逻辑与description无关，所以不用更新颜色
+            
+            # 2. 重新创建标记和注释
+            create_markers_and_annotations()
+
+            # 3. 更新标记的可见性以匹配当前的时间范围
+            update_marker_visibility()
+            
+            # 4. 重绘画布
+            fig.canvas.draw_idle()
+            print("图表刷新完成。")
+
+        except FileNotFoundError:
+            print(f"错误: 未找到文件 {DESCRIPTION_JSON_PATH}")
+            display_dialog(f"错误: 未找到文件\n{DESCRIPTION_JSON_PATH}")
+        except json.JSONDecodeError as e:
+            print(f"错误: 解析JSON文件失败: {e}")
+            display_dialog(f"错误: 解析JSON文件失败\n{e}")
+        except Exception as e:
+            print(f"刷新时发生未知错误: {e}")
+            display_dialog(f"刷新时发生未知错误:\n{e}")
+
     def on_key(event):
         try:
             actions = {'v': toggle_volume, 'r': toggle_global_markers, 'x': toggle_all_annotations,
                        'a': toggle_earning_markers, 'c': toggle_specific_markers,
+                       'g': refresh_description_data_and_redraw, # 新增 'g' 快捷键
                        'n': lambda: execute_external_script('earning_input', name),
                        'e': lambda: execute_external_script('earning_edit', name),
                        't': lambda: execute_external_script('tags_edit', name),
