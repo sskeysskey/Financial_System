@@ -163,6 +163,18 @@ def pick_date_range():
     root.focus_force()
     root.bind("<Escape>", on_cancel)
 
+    # 增加协议处理器，让点击'X'关闭按钮的行为和点击“取消”一致
+    # 这是一个很好的实践，但即使没有它，我们后面的检查也能捕获问题
+    # 如果on_cancel不包含sys.exit()，则需要此行来确保返回None
+    # 在当前逻辑下，我们可以在on_cancel中只保留root.destroy()，然后主程序检查None
+    def handle_close():
+        nonlocal start_dt, end_dt
+        start_dt = None
+        end_dt = None
+        root.destroy()
+
+    root.protocol("WM_DELETE_WINDOW", handle_close)
+
     title_label = tk.Label(root, text="FIFTH", fg="red", font=("Helvetica", 36, "bold"))
     title_label.place(relx=0.5, y=35, anchor='center')
 
@@ -188,9 +200,6 @@ def pick_date_range():
     root.mainloop()
     return start_dt, end_dt
 
-start_date, end_date = pick_date_range()
-delta = timedelta(days=1)
-
 # -------- 4. Selenium & DB 初始化 ------------------------------------
 chrome_options = Options()
 for arg in [
@@ -211,7 +220,22 @@ with open('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json', 'r
 conn   = sqlite3.connect('/Users/yanzhang/Coding/Database/Finance.db')
 cursor = conn.cursor()
 
+# -------- 在这里获取日期并进行检查 ------------------------------------
+start_date, end_date = pick_date_range()
+
+# *** 新增的关键修复代码块 ***
+# 检查从日期选择窗口返回的值。如果为 None，说明用户关闭了窗口。
+if start_date is None or end_date is None:
+    print("未选择有效的日期范围，程序已退出。")
+    # 在退出前，清理已创建的资源
+    conn.close()
+    driver.quit()
+    sys.exit() # 正常退出程序
+
+delta = timedelta(days=1)
+
 # -------- 5. 爬取主逻辑 --------------------------------------------------
+# 由于上面的检查，程序执行到这里时，start_date 和 end_date 一定是有效的日期对象
 for single_date in (start_date + i*delta for i in range((end_date - start_date).days + 1)):
     ds = single_date.strftime('%Y-%m-%d')
     offset = 0

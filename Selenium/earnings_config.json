@@ -1,18 +1,18 @@
 {
   "next": {
-    "start_date": "2025-10-13",
-    "end_date": "2025-10-18"
-  },
-  "third": {
     "start_date": "2025-10-20",
     "end_date": "2025-10-25"
   },
-  "fourth": {
-    "start_date": "2025-10-27",
+  "third": {
+    "start_date": "2025-10-28",
     "end_date": "2025-11-01"
   },
-  "fifth": {
+  "fourth": {
     "start_date": "2025-11-03",
     "end_date": "2025-11-08"
+  },
+  "fifth": {
+    "start_date": "2025-11-10",
+    "end_date": "2025-11-15"
   }
 }
