@@ -55,7 +55,8 @@
         "DASH",
         "CPNG",
         "ORLY",
-        "LCID"
+        "LCID",
+        "ROST"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -92,7 +93,8 @@
         "MPC",
         "E",
         "TRP",
-        "PSX"
+        "PSX",
+        "VLO"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -188,7 +190,8 @@
         "MCK",
         "COR",
         "ALNY",
-        "BDX"
+        "BDX",
+        "IDXX"
     ],
     "Industrials": [
         "GE",
@@ -227,7 +230,6 @@
         "URI",
         "LHX",
         "CMI",
-        "FAST",
         "VRT"
     ],
     "Real_Estate": [

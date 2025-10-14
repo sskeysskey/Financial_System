@@ -300,7 +300,6 @@
         "FSS",
         "CSL",
         "KBH",
-        "FG",
         "SMG",
         "PAG",
         "NTAP",
@@ -803,7 +802,8 @@
         "RLI",
         "BXSL",
         "INVH",
-        "OBDC"
+        "OBDC",
+        "FG"
     ],
     "orange_keywords": [
         "Huangjin",
