@@ -771,7 +771,8 @@ class MainWindow(QMainWindow):
         target_sort_groups = {
             'Today', 'Watching', 'Short', 'Basic_Materials', 'Consumer_Cyclical',
             'Real_Estate', 'Technology', 'Energy', 'Industrials', 'Consumer_Defensive',
-            'Communication_Services','Financial_Services', 'Healthcare','Utilities'
+            'Communication_Services','Financial_Services', 'Healthcare','Utilities',
+            'PE_valid','PE_invalid','Strategy12','Strategy34'
         }
 
         for index, category_group in enumerate(categories):
