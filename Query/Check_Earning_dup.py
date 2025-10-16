@@ -3,8 +3,8 @@ import glob
 import subprocess
 import sys
 from collections import defaultdict, Counter
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QFrame, QSizePolicy
-from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QFrame, QSizePolicy, QTextEdit
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont
 
 # --- 辅助函数 ---
@@ -114,15 +114,87 @@ def insert_line_into_main_file(line_to_insert: str, all_main_files: list[str]):
 class DuplicateResolverApp(QWidget):
     def __init__(self, duplicates, symbol_sources, directory):
         super().__init__()
-        self.duplicates = sorted(duplicates, key=lambda x: (-x[1], x[0])) # (symbol, count)
+        self.all_duplicates = sorted(duplicates, key=lambda x: (-x[1], x[0])) # (symbol, count)
         self.symbol_sources = symbol_sources
         self.directory = directory
         self.current_duplicate_index = 0
         
         self.main_files, self.aux_files = get_file_paths(self.directory)
+        
+        # 预处理，自动解决new.txt并分离出手动的任务
+        self.manual_duplicates = self._preprocess_and_auto_resolve()
+
+        if not self.manual_duplicates:
+            print("\n所有重复项均已自动处理或无需处理。")
+            # 使用QTimer延迟关闭，确保日志能被看到
+            QTimer.singleShot(100, self.close)
+            return
 
         self.init_ui()
         self.display_current_duplicate()
+
+    def _preprocess_and_auto_resolve(self):
+        """
+        预处理所有重复项。如果包含new.txt，则自动解决。
+        返回需要手动处理的列表。
+        """
+        manual_tasks = []
+        auto_resolved_log = []
+
+        for symbol, count in self.all_duplicates:
+            occurrences = self.symbol_sources[symbol]
+            new_txt_item = None
+            for item in occurrences:
+                if item[0] == "Earnings_Release_new.txt":
+                    new_txt_item = item
+                    break
+            
+            if new_txt_item:
+                # 需求3: 自动处理
+                self._perform_resolution(new_txt_item)
+                auto_resolved_log.append(f"  - Symbol '{symbol}' 已根据 'Earnings_Release_new.txt' 的条目自动处理。")
+            else:
+                # 需要手动处理
+                manual_tasks.append((symbol, count))
+
+        if auto_resolved_log:
+            print("\n--- 自动处理日志 ---")
+            for log_entry in auto_resolved_log:
+                print(log_entry)
+            print("----------------------\n")
+            
+        return manual_tasks
+
+    def _perform_resolution(self, selected_item):
+        """
+        执行解决冲突的核心文件操作。
+        """
+        selected_filename, _, selected_line_content = selected_item
+        symbol = parse_symbol(selected_line_content)
+        
+        print(f"\n处理 Symbol '{symbol}'，选择的条目: '{selected_line_content.strip()}' (来自: {selected_filename})")
+
+        if is_main_file(selected_filename):
+            # 情况1: 选择的是主文件中的行
+            # -> 删除所有辅助文件中的该symbol
+            print(f"  操作: 从所有辅助文件中删除 '{symbol}'。")
+            for aux_file_path in self.aux_files:
+                modify_file_content(aux_file_path, symbol)
+        else:
+            # 情况2: 选择的是辅助文件中的行
+            # -> 删除所有主文件中的该symbol
+            print(f"  操作: 从所有主文件中删除 '{symbol}'。")
+            for main_file_path in self.main_files:
+                modify_file_content(main_file_path, symbol)
+            
+            # -> 将选择的行插入到日期匹配的主文件中
+            print(f"  操作: 将所选行插入到匹配日期的一个主文件中。")
+            insert_line_into_main_file(selected_line_content, self.main_files)
+
+            # 需求1: 从原始辅助文件中删除该行 (实现"剪切")
+            print(f"  操作: 从源辅助文件 '{selected_filename}' 中删除 '{symbol}'。")
+            original_aux_path = os.path.join(self.directory, selected_filename)
+            modify_file_content(original_aux_path, symbol)
 
     def init_ui(self):
         self.setWindowTitle('重复Symbol处理器')
@@ -169,16 +241,14 @@ class DuplicateResolverApp(QWidget):
                 child.widget().deleteLater()
 
     def display_current_duplicate(self):
-        """显示当前索引指向的重复Symbol信息"""
-        if self.current_duplicate_index >= len(self.duplicates):
+        if self.current_duplicate_index >= len(self.manual_duplicates):
             self.close()
             return
 
         # 清空旧内容
         self.clear_layout(self.scroll_layout)
-
-        symbol, count = self.duplicates[self.current_duplicate_index]
-        self.title_label.setText(f"处理中 ({self.current_duplicate_index + 1}/{len(self.duplicates)}): {symbol} ({count} 次)")
+        symbol, count = self.manual_duplicates[self.current_duplicate_index]
+        self.title_label.setText(f"手动处理 ({self.current_duplicate_index + 1}/{len(self.manual_duplicates)}): {symbol} ({count} 次)")
 
         occurrences = self.symbol_sources[symbol]
         
@@ -189,10 +259,20 @@ class DuplicateResolverApp(QWidget):
             line_frame = QFrame()
             line_layout = QHBoxLayout(line_frame)
 
-            # 标签显示内容
-            item_label = QLabel(f"{line_content}\n(来源: {filename}, 第 {lineno} 行)")
-            item_label.setWordWrap(True)
-            item_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+            # 需求2: 使用QTextEdit替换QLabel以支持文本选择和双击
+            item_display = QTextEdit()
+            item_display.setReadOnly(True)
+            item_display.setText(f"{line_content}\n(来源: {filename}, 第 {lineno} 行)")
+            # 设置样式使其看起来像标签，并设置固定高度
+            item_display.setStyleSheet("""
+                QTextEdit {
+                    border: none;
+                    background-color: transparent;
+                    font-size: 13px;
+                }
+            """)
+            item_display.setFixedHeight(50)
+            item_display.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             
             # 选择按钮
             select_button = QPushButton('选择')
@@ -200,54 +280,28 @@ class DuplicateResolverApp(QWidget):
             # 使用lambda捕获当前循环的item变量
             select_button.clicked.connect(lambda checked, item_to_process=item: self.resolve_selection(item_to_process))
 
-            line_layout.addWidget(item_label)
+            line_layout.addWidget(item_display)
             line_layout.addWidget(select_button)
             
             self.scroll_layout.addWidget(line_frame)
 
     def resolve_selection(self, selected_item):
-        """核心处理逻辑，当用户点击'选择'按钮时调用"""
-        selected_filename, _, selected_line_content = selected_item
-        symbol = parse_symbol(selected_line_content)
-        
-        print(f"\n用户选择了: '{selected_line_content.strip()}' 来自文件 '{selected_filename}'")
-
-        if is_main_file(selected_filename):
-            # 情况1: 选择的是主文件中的行
-            # -> 删除所有辅助文件中的该symbol
-            print(f"检测到选择的是主文件。将在所有辅助文件中删除 symbol '{symbol}'...")
-            for aux_file_path in self.aux_files:
-                modify_file_content(aux_file_path, symbol)
-                print(f"  - 已检查并处理文件: {os.path.basename(aux_file_path)}")
-
-        else:
-            # 情况2: 选择的是辅助文件中的行
-            # -> 删除所有主文件中的该symbol
-            print(f"检测到选择的是辅助文件。将在所有主文件中删除 symbol '{symbol}'...")
-            for main_file_path in self.main_files:
-                modify_file_content(main_file_path, symbol)
-                print(f"  - 已检查并处理文件: {os.path.basename(main_file_path)}")
-            
-            # -> 将选择的行插入到日期匹配的主文件中
-            print(f"准备将行 '{selected_line_content.strip()}' 插入到对应的主文件中...")
-            insert_line_into_main_file(selected_line_content, self.main_files)
-
-        # 移动到下一个重复项
+        """GUI事件：当用户点击'选择'按钮时调用"""
+        self._perform_resolution(selected_item)
         self.next_duplicate()
 
     def skip_duplicate(self):
-        """跳过当前symbol，处理下一个"""
-        symbol, _ = self.duplicates[self.current_duplicate_index]
+        symbol, _ = self.manual_duplicates[self.current_duplicate_index]
         print(f"\n用户跳过了对 symbol '{symbol}' 的处理。")
         self.next_duplicate()
 
     def next_duplicate(self):
         """递增索引并刷新界面"""
         self.current_duplicate_index += 1
-        if self.current_duplicate_index < len(self.duplicates):
+        if self.current_duplicate_index < len(self.manual_duplicates):
             self.display_current_duplicate()
         else:
-            print("\n所有重复项已处理完毕。")
+            print("\n所有手动重复项已处理完毕。")
             self.close()
 
 # --- 主程序入口 ---
@@ -286,7 +340,7 @@ def main():
             try:
                 process_file(path, "latin-1")
             except Exception as e:
-                print(f"无法读取文件 {path}: {e}")
+                print(f"读取文件 {path} 时出错: {e}")
 
     duplicates_dict = {s: c for s, c in symbol_counts.items() if c > 1}
 
@@ -297,8 +351,15 @@ def main():
         # 将字典转换为元组列表
         duplicates_list = list(duplicates_dict.items())
         resolver_app = DuplicateResolverApp(duplicates_list, symbol_sources, directory)
-        resolver_app.show()
-        app.exec_()
+        
+        # 只有当有手动任务时才显示窗口
+        if resolver_app.manual_duplicates:
+            resolver_app.show()
+            app.exec_()
+        else:
+            # 如果没有手动任务，直接退出app循环
+            app.quit()
+        
         print("交互式处理已结束。")
     
     # --- GUI结束后，重新分析文件并生成最终报告 ---
@@ -341,7 +402,7 @@ def main():
     # 如果仍有重复，生成duplication.txt并弹窗
     lines_out = []
     lines_out.append(f"共解析 symbol 数量：{len(final_symbol_counts)}，总出现次数：{sum(final_symbol_counts.values())}")
-    lines_out.append("发现的剩余重复 symbol：")
+    lines_out.append("发现的剩余重复 symbol (手动跳过项):")
     for sym, count in sorted(final_duplicates.items(), key=lambda x: (-x[1], x[0])):
         lines_out.append(f"- {sym}: {count} 次")
         for src_file, lineno in final_symbol_sources[sym]:
@@ -351,7 +412,7 @@ def main():
     with open(output_path, "w", encoding="utf-8") as fw:
         fw.write("\n".join(lines_out) + "\n")
 
-    show_alert("处理完毕，但仍有重复内容，已生成 duplication.txt 报告。")
+    show_alert("处理完毕，但仍有手动跳过的重复内容，已生成 duplication.txt 报告。")
 
 
 if __name__ == "__main__":
