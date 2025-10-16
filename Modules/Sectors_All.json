@@ -553,7 +553,8 @@
         "BVN",
         "HBM",
         "AG",
-        "TMC"
+        "TMC",
+        "SSRM"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -1913,6 +1914,7 @@
         "OKLO",
         "ENIC",
         "EMA",
-        "TAC"
+        "TAC",
+        "SR"
     ]
 }

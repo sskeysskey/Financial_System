@@ -24,6 +24,9 @@ PATHS = {
     "panel_json": lambda config: os.path.join(config, "Sectors_panel.json"),
     "description_json": lambda config: os.path.join(config, 'description.json'),
     "tags_setting_json": lambda config: os.path.join(config, 'tags_filter.json'),
+    # ========== 新增路径定义 ==========
+    "earnings_history_json": lambda config: os.path.join(config, 'Earning_History.json'),
+    # ================================
     "backup_Strategy12": lambda news: os.path.join(news, "backup", "NextWeek_Earning.txt"),
     "backup_Strategy34": lambda news: os.path.join(news, "backup", "Strategy34_earning.txt"),
 }
@@ -40,6 +43,9 @@ BLACKLIST_JSON_FILE = PATHS["blacklist_json"](config_path)
 PANEL_JSON_FILE = PATHS["panel_json"](config_path)
 DESCRIPTION_JSON_FILE = PATHS["description_json"](config_path)
 TAGS_SETTING_JSON_FILE = PATHS["tags_setting_json"](config_path)
+# ========== 新增路径变量 ==========
+EARNING_HISTORY_JSON_FILE = PATHS["earnings_history_json"](config_path)
+# ================================
 
 
 # --- 2. 可配置参数 --- 使用一个配置字典来管理所有参数
@@ -184,6 +190,51 @@ def update_json_panel(symbols_list, target_json_path, group_name, symbol_to_note
         print(f"成功将 {len(symbols_list)} 个 symbol 写入组 '{group_name}'.")
     except Exception as e:
         print(f"错误: 写入JSON文件失败: {e}")
+
+# ========== 新增通用函数：更新历史记录文件 ==========
+def update_earning_history_json(file_path, group_name, symbols_to_add, log_detail):
+    """
+    更新 Earning_History.json 文件。
+    - file_path: Earning_History.json 的完整路径。
+    - group_name: 'season' 或 'no_season'。
+    - symbols_to_add: 本次要添加的 symbol 列表。
+    - log_detail: 日志记录函数。
+    """
+    log_detail(f"\n--- 更新历史记录文件: {os.path.basename(file_path)} -> '{group_name}' ---")
+    today_str = datetime.date.today().isoformat()  # 获取 'YYYY-MM-DD' 格式的当天日期
+
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        log_detail("信息: 历史记录文件不存在或格式错误，将创建新的。")
+        data = {}
+
+    # 确保顶层分组存在 (e.g., 'season')
+    if group_name not in data:
+        data[group_name] = {}
+
+    # 获取当天已有的 symbol 列表，如果不存在则为空列表
+    existing_symbols = data[group_name].get(today_str, [])
+    
+    # 合并新旧列表，通过集合去重，然后排序
+    combined_symbols = set(existing_symbols) | set(symbols_to_add)
+    updated_symbols = sorted(list(combined_symbols))
+
+    # 更新数据结构
+    data[group_name][today_str] = updated_symbols
+    
+    num_added = len(updated_symbols) - len(existing_symbols)
+
+    try:
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+        log_detail(f"成功更新历史记录。日期: {today_str}, 分组: '{group_name}'.")
+        log_detail(f"  - 本次新增 {num_added} 个不重复的 symbol。")
+        log_detail(f"  - 当天总计 {len(updated_symbols)} 个 symbol。")
+    except Exception as e:
+        log_detail(f"错误: 写入历史记录文件失败: {e}")
+# =======================================================
         
 def get_next_er_date(last_er_date):
     """计算理论上的下一次财报日期 (+94天)"""
@@ -939,6 +990,21 @@ def run_processing_logic(log_detail):
 
     except IOError as e:
         print(f"写入通知列表文件时出错: {e}")
+
+    # ========== 新增步骤 9: 更新 Earning_History.json ==========
+    # 合并所有最终符合条件的 symbol (主列表 + 通知列表)
+    all_final_symbols = sorted(list(set(final_symbols + final_Strategy34_list)))
+    
+    if all_final_symbols:
+        update_earning_history_json(
+            EARNING_HISTORY_JSON_FILE,
+            "season",  # a.py 写入 'season' 分组
+            all_final_symbols,
+            log_detail
+        )
+    else:
+        log_detail("\n--- 无符合条件的 symbol 可写入 Earning_History.json ---")
+    # ==========================================================
 
 # --- 7. 主执行流程 (已集成追踪系统) ---
 

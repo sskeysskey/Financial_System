@@ -11,7 +11,8 @@
         "NEM",
         "AEM",
         "FCX",
-        "B"
+        "B",
+        "WPM"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -94,7 +95,8 @@
         "E",
         "TRP",
         "PSX",
-        "VLO"
+        "VLO",
+        "MPLX"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -230,7 +232,8 @@
         "URI",
         "LHX",
         "CMI",
-        "VRT"
+        "VRT",
+        "PCAR"
     ],
     "Real_Estate": [
         "PLD",

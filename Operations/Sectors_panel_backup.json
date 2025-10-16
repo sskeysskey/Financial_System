@@ -53,7 +53,8 @@
         "EPAM": "",
         "KVYO": "",
         "CPAY": "",
-        "OS": ""
+        "OS": "",
+        "MSTR": ""
     },
     "Consumer_Cyclical": {
         "AMCR": "",
@@ -231,21 +232,26 @@
         "XRP": ""
     },
     "Today": {
+        "ALAB": "",
         "FIX": "",
         "CDNS": "CDNS热",
         "TEL": "",
         "CRDO": "CRDO15热",
         "SPXC": "",
         "HPE": "",
-        "ANET": ""
+        "ANET": "",
+        "WM": "",
+        "RMD": "",
+        "KKR": "",
+        "BSX": "",
+        "CTVA": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
-        "TMUS": "",
+        "TMUS": "TMUS7",
         "Z": "",
-        "BSX": "",
         "BKNG": "",
         "SN": "",
         "ADP": "",
@@ -253,22 +259,31 @@
         "SPGI": "",
         "OWL": "",
         "DOV": "",
-        "ARES": "",
         "ARCC": "",
         "DKNG": "",
-        "WM": "",
         "CART": "",
         "HESM": "",
         "ICE": "",
-        "CTVA": "",
         "EW": "",
-        "RACE": "",
         "T": "T7",
-        "KKR": ""
+        "ODFL": "",
+        "VRSK": "",
+        "DUOL": "",
+        "KDP": "",
+        "APD": "",
+        "AFRM": "",
+        "OXY": "",
+        "TRU": "",
+        "ARES": ""
     },
     "Short": {
         "GIL": "",
-        "GSAT": ""
+        "KRMN": "",
+        "NXT": "",
+        "SNDK": "",
+        "IONQ": "",
+        "AVAV": "",
+        "SCCO": ""
     },
     "Strategy12": {},
     "Strategy34": {},
