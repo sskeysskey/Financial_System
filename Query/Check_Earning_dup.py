@@ -6,8 +6,7 @@ from collections import defaultdict, Counter
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QFrame, QSizePolicy, QTextEdit
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont
-
-# --- 辅助函数 ---
+import send2trash  # 新增导入：用于安全删除到回收站
 
 def show_alert(message):
     """使用AppleScript显示一个系统对话框"""
@@ -76,6 +75,7 @@ def insert_line_into_main_file(line_to_insert: str, all_main_files: list[str]):
     """将指定行插入到日期匹配的第一个主文件中"""
     try:
         # 从待插入行中提取日期
+        # 即使行中包含 #BACKUP_DUP，此逻辑也能正常工作，因为它会取第三部分并分割
         parts = line_to_insert.split(':')
         if len(parts) < 3:
             print(f"警告: 无法从 '{line_to_insert}' 中解析日期，跳过插入操作。")
@@ -116,7 +116,7 @@ def insert_line_into_main_file(line_to_insert: str, all_main_files: list[str]):
         print(f"插入行时出错: {e}")
 
 
-# --- PyQt5 GUI部分 ---
+# --- PyQt5 GUI部分 (常规重复项) ---
 
 class DuplicateResolverApp(QWidget):
     def __init__(self, duplicates, symbol_sources, directory):
@@ -132,7 +132,7 @@ class DuplicateResolverApp(QWidget):
         self.manual_duplicates = self._preprocess_and_auto_resolve()
 
         if not self.manual_duplicates:
-            print("\n所有重复项均已自动处理或无需处理。")
+            print("\n所有常规重复项均已自动处理或无需处理。")
             # 使用QTimer延迟关闭，确保日志能被看到
             QTimer.singleShot(100, self.close)
             return
@@ -210,7 +210,7 @@ class DuplicateResolverApp(QWidget):
             insert_line_into_main_file(selected_line_content, self.main_files)
 
     def init_ui(self):
-        self.setWindowTitle('重复Symbol处理器')
+        self.setWindowTitle('常规重复Symbol处理器')
         self.setGeometry(300, 300, 800, 400)
 
         # 主布局
@@ -314,8 +314,256 @@ class DuplicateResolverApp(QWidget):
         if self.current_duplicate_index < len(self.manual_duplicates):
             self.display_current_duplicate()
         else:
-            print("\n所有手动重复项已处理完毕。")
+            print("\n所有手动常规重复项已处理完毕。")
             self.close()
+
+# --- 新增：PyQt5 GUI部分 (#BACKUP_DUP) ---
+
+class BackupDupResolverApp(QWidget):
+    def __init__(self, tasks, directory):
+        super().__init__()
+        self.tasks = tasks # list of (symbol, line_content, filename, lineno)
+        self.directory = directory
+        self.current_task_index = 0
+        
+        self.main_files, self.aux_files = get_file_paths(self.directory)
+        self.all_files = self.main_files + self.aux_files
+
+        self.init_ui()
+        self.display_current_task()
+
+    def init_ui(self):
+        self.setWindowTitle('#BACKUP_DUP 处理器')
+        self.setGeometry(300, 300, 800, 400)
+
+        self.main_layout = QVBoxLayout(self)
+        self.title_label = QLabel()
+        self.title_label.setFont(QFont('Arial', 16, QFont.Bold))
+        self.title_label.setAlignment(Qt.AlignCenter)
+        self.main_layout.addWidget(self.title_label)
+
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_content_widget = QWidget()
+        self.scroll_layout = QVBoxLayout(self.scroll_content_widget)
+        self.scroll_layout.setAlignment(Qt.AlignTop)
+        self.scroll_area.setWidget(self.scroll_content_widget)
+        self.main_layout.addWidget(self.scroll_area)
+
+        button_layout = QHBoxLayout()
+        self.skip_button = QPushButton('跳过 (Skip)')
+        self.cancel_button = QPushButton('取消 (Cancel All)')
+        
+        self.skip_button.clicked.connect(self.skip_task)
+        self.cancel_button.clicked.connect(self.close)
+
+        button_layout.addStretch(1)
+        button_layout.addWidget(self.skip_button)
+        button_layout.addWidget(self.cancel_button)
+        button_layout.addStretch(1)
+
+        self.main_layout.addLayout(button_layout)
+
+    def clear_layout(self, layout):
+        while layout.count():
+            child = layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+
+    def display_current_task(self):
+        if self.current_task_index >= len(self.tasks):
+            self.close()
+            return
+
+        self.clear_layout(self.scroll_layout)
+        symbol, _, _, _ = self.tasks[self.current_task_index]
+        
+        # 重新扫描所有文件，查找当前symbol的所有出现位置
+        occurrences = []
+        for path in self.all_files:
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+            except UnicodeDecodeError:
+                with open(path, 'r', encoding='latin-1') as f:
+                    lines = f.readlines()
+            
+            for i, line in enumerate(lines):
+                line_content = line.strip()
+                if parse_symbol(line_content) == symbol:
+                    occurrences.append((os.path.basename(path), i + 1, line_content))
+
+        self.title_label.setText(f"处理 #BACKUP_DUP ({self.current_task_index + 1}/{len(self.tasks)}): {symbol} ({len(occurrences)} 次)")
+
+        for item in occurrences:
+            filename, lineno, line_content = item
+            line_frame = QFrame()
+            line_layout = QHBoxLayout(line_frame)
+            item_display = QTextEdit()
+            item_display.setReadOnly(True)
+            item_display.setText(f"{line_content}\n(来源: {filename}, 第 {lineno} 行)")
+            item_display.setStyleSheet("QTextEdit { border: none; background-color: transparent; font-size: 13px; }")
+            item_display.setFixedHeight(50)
+            item_display.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            
+            select_button = QPushButton('选择并迁移')
+            select_button.setFixedWidth(120)
+            # 只有带 #BACKUP_DUP 标记的行才能被选择
+            if '#BACKUP_DUP' in line_content:
+                select_button.clicked.connect(lambda checked, item_to_process=item, all_occs=occurrences: self.resolve_selection(item_to_process, all_occs))
+            else:
+                select_button.setEnabled(False)
+                select_button.setToolTip("只有带 #BACKUP_DUP 标记的行才能被选择用于迁移。")
+
+
+            line_layout.addWidget(item_display)
+            line_layout.addWidget(select_button)
+            self.scroll_layout.addWidget(line_frame)
+
+    def resolve_selection(self, selected_item, all_occurrences):
+        """当用户点击'选择并迁移'按钮时调用"""
+        _, _, selected_line_content = selected_item
+        symbol = parse_symbol(selected_line_content)
+        
+        print(f"\n处理 #BACKUP_DUP Symbol '{symbol}'...")
+
+        # 1. 清理待插入的行，移除 #BACKUP_DUP 注释
+        line_to_insert = selected_line_content.split('#')[0].strip()
+        print(f"  - 准备插入的行: '{line_to_insert}'")
+
+        # 2. 确定要删除的所有行（包括原始行和所有其他出现）
+        lines_to_delete_by_file = defaultdict(list)
+        for occ_filename, _, occ_line_content in all_occurrences:
+            lines_to_delete_by_file[occ_filename].append(occ_line_content)
+        
+        # 3. 执行删除操作
+        print(f"  - 清理 '{symbol}' 的所有相关条目...")
+        for filename, contents in lines_to_delete_by_file.items():
+            full_path = os.path.join(self.directory, filename)
+            remove_specific_lines_from_file(full_path, contents)
+            print(f"    - 已从 {filename} 清理 {len(contents)} 个条目。")
+
+        # 4. 执行插入操作
+        print(f"  - 将清理后的行插入主文件...")
+        insert_line_into_main_file(line_to_insert, self.main_files)
+
+        self.next_task()
+
+    def skip_task(self):
+        symbol, _, _, _ = self.tasks[self.current_task_index]
+        print(f"\n用户跳过了对 #BACKUP_DUP symbol '{symbol}' 的处理。")
+        self.next_task()
+
+    def next_task(self):
+        self.current_task_index += 1
+        if self.current_task_index < len(self.tasks):
+            self.display_current_task()
+        else:
+            print("\n所有 #BACKUP_DUP 任务已处理完毕。")
+            self.close()
+
+# --- 新增：处理 #BACKUP_DUP 的主函数 ---
+
+def handle_backup_duplicates(directory: str):
+    """扫描并处理所有文件中带有 #BACKUP_DUP 标记的行"""
+    print("\n--- 阶段 3: 检查 #BACKUP_DUP 标记 ---")
+    
+    _, aux_files = get_file_paths(directory)
+    backup_dup_tasks = []
+
+    for path in aux_files:
+        try:
+            # 尝试用utf-8解码，失败则用latin-1
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+            except UnicodeDecodeError:
+                with open(path, 'r', encoding='latin-1') as f:
+                    lines = f.readlines()
+
+            for lineno, line in enumerate(lines, start=1):
+                if '#BACKUP_DUP' in line:
+                    line = line.strip()
+                    sym = parse_symbol(line)
+                    if sym:
+                        # 存储任务信息: (symbol, 行内容, 文件名, 行号)
+                        backup_dup_tasks.append((sym, line, os.path.basename(path), lineno))
+
+        except Exception as e:
+            print(f"扫描 #BACKUP_DUP 时无法读取文件 {path}: {e}")
+
+    if backup_dup_tasks:
+        print(f"发现 {len(backup_dup_tasks)} 个带有 #BACKUP_DUP 标记的条目，正在启动专用处理器...")
+        
+        # 确保QApplication实例存在
+        app = QApplication.instance()
+        if app is None:
+            app = QApplication(sys.argv)
+            
+        resolver = BackupDupResolverApp(backup_dup_tasks, directory)
+        resolver.show()
+        app.exec_()
+        print("专用处理器已关闭。")
+    else:
+        print("未在辅助文件中发现 #BACKUP_DUP 标记的条目。")
+
+
+# --- 新增：清理辅助文件的函数 ---
+def cleanup_empty_or_backup_only_diff_files(directory: str):
+    """
+    清理所有空的或仅包含 #BACKUP_DUP 行的 _diff_ 辅助文件。
+    文件将被移动到回收站，而不是永久删除。
+    """
+    print("\n--- 阶段 4: 清理空的或仅含 #BACKUP_DUP 的辅助文件 ---")
+    
+    _, aux_files = get_file_paths(directory)
+    
+    if not aux_files:
+        print("未找到带 '_diff_' 的辅助文件，跳过清理。")
+        return
+
+    deleted_files_count = 0
+    for file_path in aux_files:
+        try:
+            # 使用正确的编码读取文件内容
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+            except UnicodeDecodeError:
+                with open(file_path, 'r', encoding='latin-1') as f:
+                    lines = f.readlines()
+
+            # 过滤掉空行或只包含空白的行
+            content_lines = [line.strip() for line in lines if line.strip()]
+
+            # 检查是否满足删除条件：
+            # 1. 文件中没有任何有内容的行（即文件为空或只含空行）。
+            # 2. 或者，所有有内容的行都包含 '#BACKUP_DUP'。
+            should_delete = False
+            if not content_lines:
+                should_delete = True
+            elif all('#BACKUP_DUP' in line for line in content_lines):
+                should_delete = True
+
+            if should_delete:
+                try:
+                    send2trash.send2trash(file_path)
+                    print(f"  - 已将文件 '{os.path.basename(file_path)}' 移动到回收站。")
+                    deleted_files_count += 1
+                except Exception as e:
+                    print(f"  - 移动文件 '{os.path.basename(file_path)}' 到回收站时出错: {e}")
+        
+        except FileNotFoundError:
+            # 文件可能在之前的步骤中被重命名或删除，这很正常
+            print(f"  - 检查文件 '{os.path.basename(file_path)}' 时未找到，可能已被处理。")
+        except Exception as e:
+            print(f"  - 检查文件 '{os.path.basename(file_path)}' 时出错: {e}")
+
+    if deleted_files_count > 0:
+        print(f"清理完成，共移动 {deleted_files_count} 个文件到回收站。")
+    else:
+        print("没有需要清理的辅助文件。")
+
 
 # --- 主程序入口 ---
 
@@ -324,6 +572,8 @@ def main():
     pattern = os.path.join(directory, "Earnings_Release_*.txt")
     output_path = os.path.join(directory, "duplication.txt")
 
+    # --- 阶段 1: 初始扫描和处理常规重复项 ---
+    print("--- 阶段 1: 扫描并处理常规重复项 ---")
     files = glob.glob(pattern)
 
     if not files:
@@ -338,6 +588,9 @@ def main():
             for lineno, line in enumerate(f, start=1):
                 line = line.strip()
                 if not line:
+                    continue
+                # 忽略带 #BACKUP_DUP 的行，它们将在后续步骤中专门处理
+                if '#BACKUP_DUP' in line:
                     continue
                 sym = parse_symbol(line)
                 if not sym:
@@ -359,7 +612,7 @@ def main():
 
     # 如果有重复项，启动GUI进行交互式处理
     if duplicates_dict:
-        print("发现重复的 symbols，正在启动交互式处理器...")
+        print("发现常规重复 symbols，正在启动交互式处理器...")
         app = QApplication(sys.argv)
         # 将字典转换为元组列表
         duplicates_list = list(duplicates_dict.items())
@@ -373,10 +626,12 @@ def main():
             # 如果没有手动任务，直接退出app循环
             app.quit()
         
-        print("交互式处理已结束。")
+        print("常规重复项处理已结束。")
+    else:
+        print("未发现常规重复项。")
     
-    # --- GUI结束后，重新分析文件并生成最终报告 ---
-    print("重新分析文件以生成最终报告...")
+    # --- 阶段 2: GUI结束后，重新分析文件并生成最终报告 ---
+    print("\n--- 阶段 2: 重新分析文件以生成最终报告 ---")
     final_symbol_counts = Counter()
     final_symbol_sources = defaultdict(list)
 
@@ -387,7 +642,7 @@ def main():
             with open(path, "r", encoding="utf-8") as f:
                 for lineno, line in enumerate(f, start=1):
                     line = line.strip()
-                    if not line: continue
+                    if not line or '#BACKUP_DUP' in line: continue
                     sym = parse_symbol(line)
                     if not sym: continue
                     final_symbol_counts[sym] += 1
@@ -396,7 +651,7 @@ def main():
             with open(path, "r", encoding="latin-1") as f:
                 for lineno, line in enumerate(f, start=1):
                     line = line.strip()
-                    if not line: continue
+                    if not line or '#BACKUP_DUP' in line: continue
                     sym = parse_symbol(line)
                     if not sym: continue
                     final_symbol_sources[sym].append((os.path.basename(path), lineno))
@@ -405,27 +660,35 @@ def main():
 
     final_duplicates = {s: c for s, c in final_symbol_counts.items() if c > 1}
 
+    report_generated = False
     if not final_duplicates:
-        show_alert("所有重复内容已解决。")
-        # 如果旧的duplication.txt存在，可以考虑删除或清空
         if os.path.exists(output_path):
             os.remove(output_path)
-        return
+    else:
+        lines_out = []
+        lines_out.append(f"共解析 symbol 数量：{len(final_symbol_counts)}，总出现次数：{sum(final_symbol_counts.values())}")
+        lines_out.append("发现的剩余重复 symbol (手动跳过项):")
+        for sym, count in sorted(final_duplicates.items(), key=lambda x: (-x[1], x[0])):
+            lines_out.append(f"- {sym}: {count} 次")
+            for src_file, lineno in final_symbol_sources[sym]:
+                lines_out.append(f"  · {src_file}: 第 {lineno} 行")
 
-    # 如果仍有重复，生成duplication.txt并弹窗
-    lines_out = []
-    lines_out.append(f"共解析 symbol 数量：{len(final_symbol_counts)}，总出现次数：{sum(final_symbol_counts.values())}")
-    lines_out.append("发现的剩余重复 symbol (手动跳过项):")
-    for sym, count in sorted(final_duplicates.items(), key=lambda x: (-x[1], x[0])):
-        lines_out.append(f"- {sym}: {count} 次")
-        for src_file, lineno in final_symbol_sources[sym]:
-            lines_out.append(f"  · {src_file}: 第 {lineno} 行")
+        with open(output_path, "w", encoding="utf-8") as fw:
+            fw.write("\n".join(lines_out) + "\n")
+        report_generated = True
 
-    # 将结果写入文件
-    with open(output_path, "w", encoding="utf-8") as fw:
-        fw.write("\n".join(lines_out) + "\n")
+    # --- 阶段 3: 处理 #BACKUP_DUP ---
+    handle_backup_duplicates(directory)
 
-    show_alert("处理完毕，但仍有手动跳过的重复内容，已生成 duplication.txt 报告。")
+    # --- 阶段 4: 清理空的或仅含 #BACKUP_DUP 的辅助文件 ---
+    cleanup_empty_or_backup_only_diff_files(directory)
+    
+    # --- 最终总结 ---
+    print("\n所有处理流程已完成。")
+    if report_generated:
+        show_alert("处理完毕，但仍有手动跳过的常规重复内容，已生成 duplication.txt 报告。")
+    else:
+        show_alert("所有重复内容已解决，且无需清理的文件也已处理完毕。")
 
 
 if __name__ == "__main__":

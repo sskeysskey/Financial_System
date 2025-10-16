@@ -7,7 +7,8 @@
         "KNF": "",
         "BCPC": "",
         "APD": "",
-        "CBT": ""
+        "CBT": "",
+        "LIN": ""
     },
     "Real_Estate": {
         "AMH": "",
@@ -25,7 +26,8 @@
         "ET": "",
         "OKE": "",
         "EOG": "",
-        "PAA": ""
+        "PAA": "",
+        "EPD": ""
     },
     "Technology": {
         "FI": "",
@@ -74,7 +76,9 @@
         "DECK": "",
         "FND": "",
         "LKQ": "",
-        "WH": ""
+        "WH": "",
+        "BKNG": "",
+        "CHDN": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -119,7 +123,12 @@
         "DLB": "",
         "BAH": "",
         "MATX": "",
-        "OC": ""
+        "OC": "",
+        "WM": "",
+        "TDG": "",
+        "AXON": "",
+        "WCN": "",
+        "FCN": ""
     },
     "Communication_Services": {
         "META": "",
@@ -285,9 +294,47 @@
         "AVAV": "",
         "SCCO": ""
     },
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
+    "Strategy12": {
+        "DUOL": "",
+        "KDP": "",
+        "KMB": "",
+        "MELI": "",
+        "WCN": ""
+    },
+    "Strategy34": {
+        "AAL": "",
+        "AFRM": "",
+        "APD": "",
+        "ARES": "",
+        "BKNG": "",
+        "DECK": "",
+        "DPZ": "",
+        "GEHC": "",
+        "HON": "",
+        "ICE": "",
+        "ILMN": "",
+        "ISRG": "",
+        "JBHT": "",
+        "MRNA": "",
+        "OXY": "",
+        "SN": "",
+        "SPGI": ""
+    },
+    "PE_valid": {
+        "ALC": "",
+        "EW": "",
+        "FI": "",
+        "FUTU": "",
+        "META": "META7",
+        "MSFT": "",
+        "ODFL": "",
+        "RACE": "",
+        "RDDT": "",
+        "SE": "",
+        "T": "T7",
+        "TMUS": "TMUS7",
+        "VRSK": ""
+    },
     "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
