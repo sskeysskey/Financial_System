@@ -41,9 +41,17 @@ def get_file_paths(directory: str):
 
 # --- 文件修改核心逻辑 ---
 
-def modify_file_content(filepath: str, symbol_to_remove: str):
-    """读取文件，删除包含指定symbol的行，然后写回"""
+def remove_specific_lines_from_file(filepath: str, lines_content_to_remove: list[str]):
+    """
+    从一个文件中精确删除一个或多个指定的行（通过内容匹配）。
+    """
+    if not lines_content_to_remove:
+        return
+
     try:
+        # 使用strip()来匹配，以忽略行尾的空白符差异
+        content_set_to_remove = {line.strip() for line in lines_content_to_remove}
+        
         lines_to_keep = []
         # 尝试用utf-8解码，失败则用latin-1
         try:
@@ -54,16 +62,15 @@ def modify_file_content(filepath: str, symbol_to_remove: str):
                 lines = f.readlines()
 
         for line in lines:
-            line_symbol = parse_symbol(line)
-            if line_symbol != symbol_to_remove:
+            if line.strip() not in content_set_to_remove:
                 lines_to_keep.append(line)
 
         # 写回文件，确保行与行之间只有一个换行符
         with open(filepath, 'w', encoding='utf-8') as f:
             f.writelines(lines_to_keep)
-            
     except Exception as e:
-        print(f"修改文件 {filepath} 时出错: {e}")
+        print(f"从文件 {os.path.basename(filepath)} 中删除特定行时出错: {e}")
+
 
 def insert_line_into_main_file(line_to_insert: str, all_main_files: list[str]):
     """将指定行插入到日期匹配的第一个主文件中"""
@@ -168,33 +175,39 @@ class DuplicateResolverApp(QWidget):
     def _perform_resolution(self, selected_item):
         """
         执行解决冲突的核心文件操作。
+        新规则: 无论选择哪一项，所有其他包含该symbol的条目都将被删除。
+        特殊规则: 如果选择的是辅助文件项，则执行“剪切-粘贴”操作。
         """
         selected_filename, _, selected_line_content = selected_item
         symbol = parse_symbol(selected_line_content)
         
         print(f"\n处理 Symbol '{symbol}'，选择的条目: '{selected_line_content.strip()}' (来自: {selected_filename})")
 
-        if is_main_file(selected_filename):
-            # 情况1: 选择的是主文件中的行
-            # -> 删除所有辅助文件中的该symbol
-            print(f"  操作: 从所有辅助文件中删除 '{symbol}'。")
-            for aux_file_path in self.aux_files:
-                modify_file_content(aux_file_path, symbol)
-        else:
-            # 情况2: 选择的是辅助文件中的行
-            # -> 删除所有主文件中的该symbol
-            print(f"  操作: 从所有主文件中删除 '{symbol}'。")
-            for main_file_path in self.main_files:
-                modify_file_content(main_file_path, symbol)
-            
-            # -> 将选择的行插入到日期匹配的主文件中
+        all_occurrences = self.symbol_sources.get(symbol, [])
+        
+        # 1. 确定要删除的行
+        lines_to_delete_by_file = defaultdict(list)
+        for occurrence in all_occurrences:
+            # 如果当前项不是被选中的项，则标记为删除
+            if occurrence != selected_item:
+                occ_filename, _, occ_line_content = occurrence
+                lines_to_delete_by_file[occ_filename].append(occ_line_content)
+
+        # 2. 如果选择的是辅助文件项（剪切操作），则原始项本身也需要被删除
+        if not is_main_file(selected_filename):
+            lines_to_delete_by_file[selected_filename].append(selected_line_content)
+
+        # 3. 执行删除操作
+        print(f"  操作: 清理 '{symbol}' 的其他重复项。")
+        for filename, contents in lines_to_delete_by_file.items():
+            full_path = os.path.join(self.directory, filename)
+            remove_specific_lines_from_file(full_path, contents)
+            print(f"    - 已从 {filename} 清理 {len(contents)} 个条目。")
+
+        # 4. 如果选择的是辅助文件项，执行“粘贴”操作
+        if not is_main_file(selected_filename):
             print(f"  操作: 将所选行插入到匹配日期的一个主文件中。")
             insert_line_into_main_file(selected_line_content, self.main_files)
-
-            # 需求1: 从原始辅助文件中删除该行 (实现"剪切")
-            print(f"  操作: 从源辅助文件 '{selected_filename}' 中删除 '{symbol}'。")
-            original_aux_path = os.path.join(self.directory, selected_filename)
-            modify_file_content(original_aux_path, symbol)
 
     def init_ui(self):
         self.setWindowTitle('重复Symbol处理器')
