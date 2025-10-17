@@ -1013,6 +1013,7 @@ class MainWindow(QMainWindow):
         blacklist_menu.addAction("Earning", lambda: self.add_to_blacklist(keyword, 'Earning', group))
 
         menu.addSeparator()
+        menu.addAction("清空 Short 分组", lambda: self.clear_group("Short"))
         menu.addAction("清空 Strategy12 分组", lambda: self.clear_group("Strategy12"))
         menu.addAction("清空 Strategy34 分组", lambda: self.clear_group("Strategy34"))
         menu.addAction("清空 Valid_PE 分组", lambda: self.clear_group("PE_valid"))
@@ -1240,6 +1241,16 @@ class MainWindow(QMainWindow):
         通用：将 keyword 从 source_group 移到 target_group。
         config 中允许 list<str> 或 dict<str,any> 两种类型。
         """
+        # --- 新增逻辑开始 ---
+        # 如果目标是 'Watching' 且该 symbol 已存在于 'Today' 分组
+        if source_group != 'Today' and target_group == 'Watching' and keyword in self.config.get('Today', {}):
+            print(f"'{keyword}' 已存在于 'Today' 分组中。将仅从源分组 '{source_group}' 删除，而不添加到 'Watching'。")
+            # 直接调用删除方法，该方法会处理删除、保存和刷新UI
+            self.delete_item(keyword, source_group)
+            # 操作完成，直接返回，不再执行后续的移动逻辑
+            return
+        # --- 新增逻辑结束 ---
+
         cfg = self.config
 
         # 1) 检查源分组

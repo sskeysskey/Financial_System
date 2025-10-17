@@ -137,6 +137,7 @@
         "PPA",
         "IGF",
         "XLI",
+        "XBI",
         "SMH",
         "SOXX",
         "XAR",
@@ -560,7 +561,10 @@
         "KVYO",
         "CPAY",
         "PGR",
-        "WCN"
+        "WCN",
+        "TRGP",
+        "VNOM",
+        "PNFP"
     ],
     "yellow_keywords": [
         "XLY",
@@ -817,6 +821,8 @@
         "PPLT",
         "YuMi",
         "Oat",
+        "WEAT",
+        "CANE",
         "DBA",
         "DBC",
         "GDX",

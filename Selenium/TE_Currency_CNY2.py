@@ -47,7 +47,7 @@ else:
         # 访问网页
         driver.get('https://tradingeconomics.com/currencies?base=cny')
         Currencies = [
-            "CNYARS", "CNYMXN", "CNYRUB", "CNYSGD",
+            "CNYARS", "CNYRUB", "CNYSGD",
             "CNYPHP", "CNYIDR", "CNYTHB",
         ]
 

@@ -7,6 +7,7 @@
         "KNF": "",
         "BCPC": "",
         "APD": "",
+        "LIN": "",
         "CBT": ""
     },
     "Real_Estate": {
@@ -71,10 +72,10 @@
         "BFAM": "",
         "RACE": "",
         "AMZN": "",
-        "DECK": "",
         "FND": "",
         "LKQ": "",
-        "WH": ""
+        "WH": "",
+        "BKNG": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -91,7 +92,6 @@
         "PM": "",
         "BRBR": "",
         "PG": "",
-        "KMB": "",
         "PRMB": "",
         "JBS": "",
         "TSN": "",
@@ -119,7 +119,12 @@
         "DLB": "",
         "BAH": "",
         "MATX": "",
-        "OC": ""
+        "OC": "",
+        "WM": "",
+        "TDG": "",
+        "AXON": "",
+        "WCN": "",
+        "FCN": ""
     },
     "Communication_Services": {
         "META": "",
@@ -149,7 +154,6 @@
         "PGR": ""
     },
     "Healthcare": {
-        "ALC": "",
         "ATR": "",
         "MMSI": "",
         "PRCT": "",
@@ -157,7 +161,6 @@
         "ADMA": "",
         "SYK": "",
         "DVA": "",
-        "ISRG": "",
         "ZTS": "",
         "BSX": ""
     },
@@ -232,24 +235,25 @@
         "XRP": ""
     },
     "Today": {
+        "KTOS": "",
+        "LHX": "",
+        "RTX": "",
+        "AXON": "",
+        "SE": "",
         "ALAB": "",
         "FIX": "",
-        "CDNS": "CDNS热",
         "TEL": "",
         "CRDO": "CRDO15热",
-        "SPXC": "",
-        "HPE": "",
         "ANET": "",
-        "WM": "",
-        "RMD": "",
-        "KKR": "",
-        "BSX": "",
-        "CTVA": ""
+        "MELI": "",
+        "BKNG": "",
+        "CHDN": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
+        "CDNS": "",
         "TMUS": "TMUS7",
         "Z": "",
         "BKNG": "",
@@ -259,8 +263,6 @@
         "SPGI": "",
         "OWL": "",
         "DOV": "",
-        "ARCC": "",
-        "DKNG": "",
         "CART": "",
         "HESM": "",
         "ICE": "",
@@ -269,22 +271,16 @@
         "ODFL": "",
         "VRSK": "",
         "DUOL": "",
-        "KDP": "",
         "APD": "",
         "AFRM": "",
-        "OXY": "",
         "TRU": "",
-        "ARES": ""
+        "ARES": "",
+        "WCN": "",
+        "BSX": "",
+        "WM": "",
+        "SPXC": ""
     },
-    "Short": {
-        "GIL": "",
-        "KRMN": "",
-        "NXT": "",
-        "SNDK": "",
-        "IONQ": "",
-        "AVAV": "",
-        "SCCO": ""
-    },
+    "Short": {},
     "Strategy12": {},
     "Strategy34": {},
     "PE_valid": {},
