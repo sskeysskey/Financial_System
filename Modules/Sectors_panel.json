@@ -250,6 +250,7 @@
         "XRP": ""
     },
     "Today": {
+        "JBHT": "",
         "KTOS": "",
         "LHX": "",
         "RTX": "",
@@ -295,7 +296,16 @@
         "WM": "",
         "SPXC": ""
     },
-    "Short": {},
+    "Short": {
+        "BE": "",
+        "NXT": "",
+        "SNDK": "",
+        "QBTS": "",
+        "BTSG": "",
+        "SYM": "",
+        "ASTS": "",
+        "AMD": ""
+    },
     "Strategy12": {
         "DUOL": "",
         "KDP": "",
