@@ -11,7 +11,7 @@ import re  # ### 修改 ###: 确保 re 模块已导入
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QGroupBox, QScrollArea, QTextEdit, QDialog,
-    QInputDialog, QMenu, QFrame, QLabel, QLineEdit
+    QInputDialog, QMenu, QFrame, QLabel, QLineEdit, QMessageBox
 )
 from PyQt5.QtCore import Qt, QMimeData, QPoint
 from PyQt5.QtGui import QFont, QCursor, QDrag
@@ -24,11 +24,9 @@ COLORS_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Colors.json'
 DESCRIPTION_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
 SECTORS_ALL_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
 COMPARE_DATA_PATH = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
-# ### 删除 ###: 移除了 SHARES_PATH 和 MARKETCAP_PATH
 DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
 BACKUP_CONFIG_PATH = '/Users/yanzhang/Coding/Financial_System/Operations/Sectors_panel_backup.json'
 NEW_SYMBOLS_STATE = '/Users/yanzhang/Coding/Financial_System/Operations/New_Symbols_State.json'
-### 新增 ###: 为黑名单功能定义一个清晰的路径
 BLACKLIST_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
 
 
@@ -534,6 +532,9 @@ class MainWindow(QMainWindow):
         global config, symbol_manager
         self.config = config
         self.symbol_manager = symbol_manager
+        
+        ### <<< 修改: 将 highlighted_info 改为 highlighted_buttons 列表
+        self.highlighted_buttons = []
 
         # 创建一个从内部长名称到UI显示短名称的映射字典
         self.display_name_map = {
@@ -1074,7 +1075,10 @@ class MainWindow(QMainWindow):
             elif layout_item.layout():
                 # 递归清空子布局
                 self.clear_layout(layout_item.layout())
-
+        
+        ### <<< 修改: 刷新时清空高亮按钮列表
+        self.highlighted_buttons = []
+        
         self.populate_widgets()
 
     def clear_layout(self, layout):
@@ -1144,6 +1148,65 @@ class MainWindow(QMainWindow):
         if symbol:
             self.on_keyword_selected_chart(symbol)
 
+    ### 新增 START ###
+    def open_search_dialog(self):
+        """
+        打开一个输入对话框让用户输入 symbol，然后触发查找和高亮。
+        """
+        text, ok = QInputDialog.getText(self, "搜索 Symbol", "请输入 Symbol:")
+        if ok and text:
+            # 清理输入，并转换为大写以便不区分大小写匹配
+            symbol_to_find = text.strip().upper()
+            if symbol_to_find:
+                self.find_and_highlight_symbol(symbol_to_find)
+
+    ### <<< 修改: 完全重写 find_and_highlight_symbol 方法以支持多重高亮
+    def find_and_highlight_symbol(self, symbol):
+        """
+        查找所有具有指定 symbol 的按钮，高亮它们，并滚动到第一个按钮的视图中。
+        """
+        # 1. 恢复上一次搜索中所有高亮的按钮
+        for button, original_style in self.highlighted_buttons:
+            # 检查按钮是否仍然有效（可能在UI刷新后被删除）
+            if button:
+                try:
+                    button.setStyleSheet(original_style)
+                except RuntimeError:
+                    # 如果按钮已经被删除，会抛出 RuntimeError，忽略即可
+                    pass
+        self.highlighted_buttons = []
+
+        # 2. 查找所有 SymbolButton 并收集所有匹配项
+        found_buttons = []
+        all_buttons = self.findChildren(SymbolButton)
+        for button in all_buttons:
+            if button._symbol.upper() == symbol:
+                found_buttons.append(button)
+
+        # 3. 如果找到按钮，则高亮所有匹配项并滚动到第一个
+        if found_buttons:
+            highlight_style = "border: 3px solid #FFD700;" # 金色粗边框
+            
+            # 遍历所有找到的按钮
+            for button in found_buttons:
+                # 存储当前按钮和它的原始样式
+                original_style = button.styleSheet()
+                self.highlighted_buttons.append((button, original_style))
+                
+                # 应用高亮样式（在原有样式上追加一个醒目的边框）
+                button.setStyleSheet(f"{original_style}; {highlight_style}")
+            
+            # 确保第一个按钮在滚动区域内可见
+            self.scroll_area.ensureWidgetVisible(found_buttons[0])
+            
+            # 更新提示信息
+            QMessageBox.information(self, "已找到", f"已找到并高亮显示 {len(found_buttons)} 个 '{symbol}'。")
+            print(f"已找到并高亮显示 {len(found_buttons)} 个 {symbol}。")
+        else:
+            # 4. 如果未找到，给用户一个提示
+            QMessageBox.information(self, "未找到", f"在列表中未找到 Symbol: {symbol}")
+            print(f"在列表中未找到 Symbol: {symbol}")
+
     def keyPressEvent(self, event):
         """重写键盘事件处理器"""
         key = event.key()
@@ -1157,7 +1220,9 @@ class MainWindow(QMainWindow):
         elif key == Qt.Key_G:
             print("快捷键 'g' 按下：正在重新加载配置并刷新界面...")
             self.refresh_selection_window()
-        ### 新增结束 ###
+        ### 新增 ###: 响应 'F' 键，打开搜索对话框
+        elif key == Qt.Key_F:
+            self.open_search_dialog()
         else:
             # 对于其他按键，调用父类的实现，以保留默认行为（例如，如果需要的话）
             super().keyPressEvent(event)
