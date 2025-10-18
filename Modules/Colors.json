@@ -485,7 +485,6 @@
         "MMC",
         "UHS",
         "SEM",
-        "CHTR",
         "MMSI",
         "WIX",
         "CL",
@@ -564,7 +563,8 @@
         "WCN",
         "TRGP",
         "VNOM",
-        "PNFP"
+        "PNFP",
+        "BIRK"
     ],
     "yellow_keywords": [
         "XLY",
@@ -955,7 +955,8 @@
         "GMRE",
         "LKQ",
         "BBWI",
-        "TNET"
+        "TNET",
+        "CHTR"
     ],
     "black_keywords": [
         "VFC",
@@ -1050,7 +1051,8 @@
         "OTF",
         "NIQ",
         "JBS",
-        "FMC"
+        "FMC",
+        "FRSH"
     ],
     "green_keywords": [
         "DXY",
