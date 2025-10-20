@@ -3,6 +3,8 @@ import glob
 import subprocess
 import sys
 from collections import defaultdict, Counter
+# 新增导入：用于处理日期和时间
+from datetime import datetime, timedelta
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QFrame, QSizePolicy, QTextEdit
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont
@@ -80,6 +82,7 @@ def insert_line_into_main_file(line_to_insert: str, all_main_files: list[str]):
         if len(parts) < 3:
             print(f"警告: 无法从 '{line_to_insert}' 中解析日期，跳过插入操作。")
             return
+        # 确保我们正确提取日期，即使有其他信息
         date_to_match = parts[2].strip().split(' ')[0]
 
         found_insertion_spot = False
@@ -317,7 +320,7 @@ class DuplicateResolverApp(QWidget):
             print("\n所有手动常规重复项已处理完毕。")
             self.close()
 
-# --- 新增：PyQt5 GUI部分 (#BACKUP_DUP) ---
+# --- PyQt5 GUI部分 (#BACKUP_DUP) ---
 
 class BackupDupResolverApp(QWidget):
     def __init__(self, tasks, directory):
@@ -462,7 +465,7 @@ class BackupDupResolverApp(QWidget):
             print("\n所有 #BACKUP_DUP 任务已处理完毕。")
             self.close()
 
-# --- 新增：处理 #BACKUP_DUP 的主函数 ---
+# --- 处理 #BACKUP_DUP 的主函数 ---
 
 def handle_backup_duplicates(directory: str):
     """扫描并处理所有文件中带有 #BACKUP_DUP 标记的行"""
@@ -563,6 +566,196 @@ def cleanup_empty_or_backup_only_diff_files(directory: str):
         print(f"清理完成，共移动 {deleted_files_count} 个文件到回收站。")
     else:
         print("没有需要清理的辅助文件。")
+
+# --- 新增：PyQt5 GUI部分 (周末日期修正) ---
+
+class WeekendDatePickerApp(QWidget):
+    def __init__(self, tasks, directory):
+        super().__init__()
+        self.tasks = tasks  # list of (line_content, filename, lineno)
+        self.directory = directory
+        self.current_task_index = 0
+        
+        # 只需要主文件列表用于插入操作
+        self.main_files, _ = get_file_paths(self.directory)
+
+        self.init_ui()
+        self.display_current_task()
+
+    def init_ui(self):
+        self.setWindowTitle('周末日期修正器')
+        self.setGeometry(300, 300, 800, 300)
+
+        self.main_layout = QVBoxLayout(self)
+        self.title_label = QLabel()
+        self.title_label.setFont(QFont('Arial', 16, QFont.Bold))
+        self.title_label.setAlignment(Qt.AlignCenter)
+        self.main_layout.addWidget(self.title_label)
+
+        # 这个界面一次只显示一个任务，不需要滚动区域
+        self.task_frame = QFrame()
+        self.task_layout = QVBoxLayout(self.task_frame)
+        self.main_layout.addWidget(self.task_frame)
+
+        button_layout = QHBoxLayout()
+        self.modify_button = QPushButton('修改日期 (Modify Date)')
+        self.skip_button = QPushButton('跳过 (Skip)')
+        self.cancel_button = QPushButton('取消 (Cancel All)')
+        
+        self.modify_button.clicked.connect(self.resolve_selection)
+        self.skip_button.clicked.connect(self.skip_task)
+        self.cancel_button.clicked.connect(self.close)
+
+        button_layout.addStretch(1)
+        button_layout.addWidget(self.modify_button)
+        button_layout.addWidget(self.skip_button)
+        button_layout.addWidget(self.cancel_button)
+        button_layout.addStretch(1)
+
+        self.main_layout.addLayout(button_layout)
+        self.main_layout.addStretch(1) # 增加弹性空间
+
+    def clear_layout(self, layout):
+        while layout.count():
+            child = layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+
+    def display_current_task(self):
+        if self.current_task_index >= len(self.tasks):
+            self.close()
+            return
+
+        self.clear_layout(self.task_layout)
+        line_content, filename, lineno = self.tasks[self.current_task_index]
+        
+        self.title_label.setText(f"修正周末日期 ({self.current_task_index + 1}/{len(self.tasks)})")
+
+        item_display = QTextEdit()
+        item_display.setReadOnly(True)
+        item_display.setText(f"{line_content}\n(来源: {filename}, 第 {lineno} 行)")
+        item_display.setStyleSheet("QTextEdit { border: none; background-color: transparent; font-size: 14px; }")
+        item_display.setFixedHeight(60)
+        item_display.setAlignment(Qt.AlignCenter)
+        
+        self.task_layout.addWidget(item_display)
+
+    def resolve_selection(self):
+        """当用户点击'修改日期'按钮时调用"""
+        original_line, original_filename, _ = self.tasks[self.current_task_index]
+        original_filepath = os.path.join(self.directory, original_filename)
+        
+        print(f"\n修正周末日期: '{original_line}' from {original_filename}")
+
+        try:
+            # 1. 解析原始行，计算新日期和新行内容
+            parts = original_line.split(':')
+            symbol_part = parts[0]
+            date_part_full = parts[2]
+            
+            original_date_str = date_part_full.strip().split(' ')[0]
+            original_dt = datetime.strptime(original_date_str, '%Y-%m-%d')
+            
+            # 计算到下一个周一的日期
+            weekday = original_dt.weekday() # Monday is 0 and Sunday is 6
+            if weekday == 5: # Saturday
+                new_dt = original_dt + timedelta(days=2)
+            elif weekday == 6: # Sunday
+                new_dt = original_dt + timedelta(days=1)
+            else:
+                # 理论上不会进入这里，因为我们只处理周末
+                print(f"警告: '{original_line}' 的日期不是周末，跳过修改。")
+                self.next_task()
+                return
+            
+            new_date_str = new_dt.strftime('%Y-%m-%d')
+            
+            # 2. 构建新行，保持原有格式，将 BMO/TNS 替换为 AMC
+            # 这种方法可以保留 symbol 部分的尾部空格和 date 部分的头部空格
+            new_date_part = date_part_full.replace(original_date_str, new_date_str)
+            new_line = f"{symbol_part}: AMC :{new_date_part}"
+            
+            print(f"  - 原行: {original_line}")
+            print(f"  - 新行: {new_line.strip()}")
+
+            # 3. 从原文件删除旧行
+            print(f"  - 从 {original_filename} 删除旧行...")
+            remove_specific_lines_from_file(original_filepath, [original_line])
+
+            # 4. 将新行插入到对应日期的主文件中
+            print(f"  - 将新行插入到主文件...")
+            insert_line_into_main_file(new_line, self.main_files)
+
+        except Exception as e:
+            print(f"处理周末日期时发生错误: {e}")
+
+        self.next_task()
+
+    def skip_task(self):
+        line_content, _, _ = self.tasks[self.current_task_index]
+        print(f"\n用户跳过了对周末日期条目 '{line_content}' 的处理。")
+        self.next_task()
+
+    def next_task(self):
+        self.current_task_index += 1
+        if self.current_task_index < len(self.tasks):
+            self.display_current_task()
+        else:
+            print("\n所有周末日期任务已处理完毕。")
+            self.close()
+
+# --- 新增：处理周末日期的主函数 ---
+
+def handle_weekend_dates(directory: str):
+    """扫描主文件并处理日期为周末的行"""
+    print("\n--- 阶段 5: 检查主文件中的周末日期 ---")
+    
+    main_files, _ = get_file_paths(directory)
+    weekend_tasks = []
+
+    for path in main_files:
+        try:
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+            except UnicodeDecodeError:
+                with open(path, 'r', encoding='latin-1') as f:
+                    lines = f.readlines()
+
+            for lineno, line in enumerate(lines, start=1):
+                line_content = line.strip()
+                if not line_content or ':' not in line_content:
+                    continue
+
+                try:
+                    parts = line_content.split(':')
+                    if len(parts) < 3:
+                        continue
+                    
+                    date_str = parts[2].strip().split(' ')[0]
+                    dt_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                    
+                    # Monday is 0 and Sunday is 6. Saturday is 5.
+                    if dt_obj.weekday() >= 5:
+                        weekend_tasks.append((line_content, os.path.basename(path), lineno))
+
+                except (ValueError, IndexError):
+                    # 忽略无法解析日期或格式不正确的行
+                    continue
+        
+        except Exception as e:
+            print(f"扫描周末日期时无法读取文件 {path}: {e}")
+
+    if weekend_tasks:
+        print(f"发现 {len(weekend_tasks)} 个日期为周末的条目，正在启动专用处理器...")
+        
+        app = QApplication.instance() or QApplication(sys.argv)
+        resolver = WeekendDatePickerApp(weekend_tasks, directory)
+        resolver.show()
+        app.exec_()
+        print("周末日期处理器已关闭。")
+    else:
+        print("在主文件中未发现日期为周末的条目。")
 
 
 # --- 主程序入口 ---
@@ -672,7 +865,6 @@ def main():
             lines_out.append(f"- {sym}: {count} 次")
             for src_file, lineno in final_symbol_sources[sym]:
                 lines_out.append(f"  · {src_file}: 第 {lineno} 行")
-
         with open(output_path, "w", encoding="utf-8") as fw:
             fw.write("\n".join(lines_out) + "\n")
         report_generated = True
@@ -682,13 +874,17 @@ def main():
 
     # --- 阶段 4: 清理空的或仅含 #BACKUP_DUP 的辅助文件 ---
     cleanup_empty_or_backup_only_diff_files(directory)
+
+    # --- 新增：阶段 5: 检查并修正周末日期 ---
+    handle_weekend_dates(directory)
     
     # --- 最终总结 ---
     print("\n所有处理流程已完成。")
     if report_generated:
         show_alert("处理完毕，但仍有手动跳过的常规重复内容，已生成 duplication.txt 报告。")
     else:
-        show_alert("所有重复内容已解决，且无需清理的文件也已处理完毕。")
+        # 修改最终提示信息
+        show_alert("所有重复内容已解决，周末日期已修正，且无需清理的文件也已处理完毕。")
 
 
 if __name__ == "__main__":
