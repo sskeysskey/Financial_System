@@ -6,7 +6,7 @@ import datetime
 import sqlite3
 from collections import OrderedDict
 import subprocess
-import re  # ### 修改 ###: 确保 re 模块已导入
+import re
 
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
@@ -44,7 +44,7 @@ categories = [
     ['Economics','Commodities'],
 ]
 
-symbol_manager = None
+# <--- 修改: 全局变量中不再需要 symbol_manager
 compare_data = {}
 config = {}
 keyword_colors = {}
@@ -254,41 +254,9 @@ class SymbolButton(QPushButton):
 
         drag.exec_(Qt.MoveAction)
 
-class SymbolManager:
-    def __init__(self, config_data, all_categories):
-        self.symbols = []
-        self.current_index = -1
-        for category_group in all_categories:
-            for sector in category_group:
-                if sector in config_data:
-                    sector_content = config_data[sector]
-                    if isinstance(sector_content, dict):
-                        self.symbols.extend(sector_content.keys())
-                    else:
-                        self.symbols.extend(sector_content)
-        if not self.symbols:
-            print("Warning: No symbols found based on the provided categories and config.")
-
-    def next_symbol(self):
-        if not self.symbols:
-            return None
-        self.current_index = (self.current_index + 1) % len(self.symbols)
-        return self.symbols[self.current_index]
-
-    def previous_symbol(self):
-        if not self.symbols:
-            return None
-        self.current_index = (self.current_index - 1) % len(self.symbols)
-        return self.symbols[self.current_index]
-
-    def set_current_symbol(self, symbol):
-        if symbol in self.symbols:
-            self.current_index = self.symbols.index(symbol)
-        else:
-            print(f"Warning: Symbol {symbol} not found in the list.")
-
-    def reset(self):
-        self.current_index = -1
+# <--- 修改: 移除不再需要的 SymbolManager 类
+# class SymbolManager:
+#     ... (整个类被删除)
 
 # ----------------------------------------------------------------------
 # Utility / Helper Functions
@@ -529,12 +497,17 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         # 将全局变量作为实例变量
-        global config, symbol_manager
+        global config
         self.config = config
-        self.symbol_manager = symbol_manager
+        
+        # <--- 修改: 移除 self.symbol_manager
         
         ### <<< 修改: 将 highlighted_info 改为 highlighted_buttons 列表
         self.highlighted_buttons = []
+
+        # <--- 新增: 用于方向键导航的变量
+        self.ordered_symbols_on_screen = []
+        self.current_symbol_index = -1
 
         # 创建一个从内部长名称到UI显示短名称的映射字典
         self.display_name_map = {
@@ -763,6 +736,9 @@ class MainWindow(QMainWindow):
 
     def populate_widgets(self):
         """动态创建界面上的所有控件"""
+        # <--- 新增: 在填充控件前，清空屏幕符号列表
+        self.ordered_symbols_on_screen.clear()
+
         column_layouts = [QVBoxLayout() for _ in categories]
         for layout in column_layouts:
             layout.setAlignment(Qt.AlignTop) # 让内容从顶部开始排列
@@ -835,6 +811,9 @@ class MainWindow(QMainWindow):
                     group_box.setTitle(title)
 
                     for keyword, translation in items:
+                        # <--- 新增: 将排序后的 keyword 添加到新列表中
+                        self.ordered_symbols_on_screen.append(keyword)
+
                         button_container = QWidget()
                         row_layout = QHBoxLayout(button_container)
                         row_layout.setContentsMargins(0, 0, 0, 0)
@@ -979,6 +958,8 @@ class MainWindow(QMainWindow):
         menu = QMenu(self)
 
         menu.addAction("删除",          lambda: self.delete_item(keyword, group))
+        # ### 新增：添加“查重”选项 ###
+        menu.addAction("查重", lambda: self.find_and_highlight_symbol(keyword.upper()))
         
         # 2) 其他顶层菜单项
         menu.addSeparator()
@@ -1006,6 +987,7 @@ class MainWindow(QMainWindow):
         menu.addAction("添加到 Earning", lambda: execute_external_script('earning', keyword))
         menu.addSeparator()
         menu.addAction("找相似",        lambda: execute_external_script('similar', keyword))
+        
         menu.addSeparator()
         
         # --- 新的黑名单子菜单 ---
@@ -1079,6 +1061,9 @@ class MainWindow(QMainWindow):
         ### <<< 修改: 刷新时清空高亮按钮列表
         self.highlighted_buttons = []
         
+        # <--- 新增: 刷新时重置导航索引
+        self.current_symbol_index = -1
+        
         self.populate_widgets()
 
     def clear_layout(self, layout):
@@ -1102,7 +1087,10 @@ class MainWindow(QMainWindow):
             print("重新加载 description/compare 数据出错:", e)
         sector = next((s for s, names in sector_data.items() if value in names), None)
         if sector:
-            self.symbol_manager.set_current_symbol(value)
+            # <--- 修改: 更新当前符号索引，而不是调用 symbol_manager
+            if value in self.ordered_symbols_on_screen:
+                self.current_symbol_index = self.ordered_symbols_on_screen.index(value)
+
             compare_value = compare_data.get(value, "N/A")
             
             # 从数据库获取 shares, marketcap, pe, pb
@@ -1140,13 +1128,20 @@ class MainWindow(QMainWindow):
         dialog.setLayout(layout)
         dialog.exec_() # 使用 exec_() 以模态方式显示
 
+    # <--- 修改: 重写 handle_arrow_key 方法以使用新的导航逻辑
     def handle_arrow_key(self, direction):
+        """根据屏幕视觉顺序处理上/下箭头键导航"""
+        num_symbols = len(self.ordered_symbols_on_screen)
+        if num_symbols == 0:
+            return
+
         if direction == 'down':
-            symbol = self.symbol_manager.next_symbol()
-        else:
-            symbol = self.symbol_manager.previous_symbol()
-        if symbol:
-            self.on_keyword_selected_chart(symbol)
+            self.current_symbol_index = (self.current_symbol_index + 1) % num_symbols
+        else: # 'up'
+            self.current_symbol_index = (self.current_symbol_index - 1 + num_symbols) % num_symbols
+        
+        symbol = self.ordered_symbols_on_screen[self.current_symbol_index]
+        self.on_keyword_selected_chart(symbol)
 
     ### 新增 START ###
     def open_search_dialog(self):
@@ -1236,8 +1231,7 @@ class MainWindow(QMainWindow):
             shutil.copy(CONFIG_PATH, BACKUP_CONFIG_PATH)
         except Exception as e:
             print("备份 sectors_panel.json 失败:", e)
-        # 2) 重置 symbol_manager，退出
-        self.symbol_manager.reset()
+        # <--- 修改: 不再需要重置 symbol_manager
         QApplication.quit()
 
     # --- 功能函数，现在是类的方法 ---
@@ -1374,7 +1368,8 @@ if __name__ == '__main__':
     sector_data = load_json(SECTORS_ALL_PATH)
     compare_data = load_text_data(COMPARE_DATA_PATH)
     
-    symbol_manager = SymbolManager(config, categories)
+    # <--- 修改: 不再创建 SymbolManager 实例
+    # symbol_manager = SymbolManager(config, categories)
 
     # Create and run PyQt5 application
     app = QApplication(sys.argv)
