@@ -201,7 +201,7 @@ class MainWindow(QMainWindow):
         self.apply_stylesheet()
         
         # --- 前天栏目 (左) ---
-        gb2 = QGroupBox(f"日期 {self.date2} 符合条件的 Symbols （点击 Symbol 显示图表，可替换旧百分比）")
+        gb2 = QGroupBox(f"日期 {self.date2} 财报已发布 （可替换旧百分比）")
         lay2 = QVBoxLayout()
         self.table2 = QTableWidget(0, 6)
         self.table2.setHorizontalHeaderLabels(["Symbol股票代码", "时段", "新百分比(%)", "旧百分比(%)", "操作", "————————————"])
@@ -212,7 +212,7 @@ class MainWindow(QMainWindow):
         gb2.setLayout(lay2)
 
         # --- 昨天栏目 (中) ---
-        gb1 = QGroupBox(f"日期 {self.date1} 符合条件的 Symbols（点击“替换”写入/覆盖）")
+        gb1 = QGroupBox(f"日期 {self.date1} （盘后 AMC）（点击“替换”写入/覆盖）")
         lay1 = QVBoxLayout()
         self.table1 = QTableWidget(0, 5)
         self.table1.setHorizontalHeaderLabels(["Symbol股票代码", "时段", "百分比(%)", "操作", "———————————"])

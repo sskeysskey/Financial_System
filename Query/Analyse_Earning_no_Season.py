@@ -52,7 +52,10 @@ CONFIG = {
         "Industrials", "Real_Estate", "Technology", "Utilities"
     },
     # ========================================
+    # ========== 代码修改开始 1/3：新增中国概念股成交额阈值 ==========
     "TURNOVER_THRESHOLD": 200_000_000,
+    "TURNOVER_THRESHOLD_CHINA": 40_000_000, # 新增：中国概念股的成交额阈值
+    
     "RECENT_EARNINGS_COUNT": 2,
     "MARKETCAP_THRESHOLD": 200_000_000_000,      # 2000亿
     "MARKETCAP_THRESHOLD_MEGA": 500_000_000_000, # 5000亿
@@ -262,7 +265,7 @@ def update_earning_history_json(file_path, group_name, symbols_to_add, log_detai
 
 # --- 4. 核心数据获取模块 (已集成追踪系统) ---
 
-# ========== 代码修改开始 2/5: 修改 build_stock_data_cache 以缓存条件4所需数据 ==========
+# ========== 代码修改开始 2/3: 在数据缓存中存储tags ==========
 def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_trace, log_detail, symbol_to_tags_map):
     """
     为所有给定的symbols一次性从数据库加载所有需要的数据。
@@ -416,6 +419,7 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
         # 5. 条件3相关的缓存字段
         # 标注是否热门Tag或市值≥2000亿
         tags = set(symbol_to_tags_map.get(symbol, []))
+        data['tags'] = tags  # 将标签集合存入缓存以备后用
         is_hot = len(tags & set(CONFIG.get("HOT_TAGS", set()))) > 0
         is_big = (data['marketcap'] is not None) and (data['marketcap'] >= CONFIG["MARKETCAP_THRESHOLD"])
 
@@ -740,10 +744,10 @@ def check_new_condition_4(data, config, log_detail, symbol_to_trace):
 
     return passed
 
-# ========== 代码修改开始 4/5: 修改 evaluate_stock_conditions 以包含条件4 ==========
+# ========== 代码修改开始 3/3: 修改 evaluate_stock_conditions 以应用动态成交额阈值 ==========
 def evaluate_stock_conditions(data, symbol_to_trace, log_detail, drop_pct_large, drop_pct_small):
     """
-    此函数为原始筛选流程 (条件1 OR 条件2 OR 条件3)
+    此函数为原始筛选流程 (条件1 OR 条件2 OR 条件3 OR 条件4)
     条件1 (三选一)：
       a) 最近一次财报的涨跌幅 latest_er_pct 为正
       b) 最新财报收盘价 > 过去 N 次财报收盘价平均值，且最近2次财报收盘价差额 >= 4%
@@ -753,7 +757,7 @@ def evaluate_stock_conditions(data, symbol_to_trace, log_detail, drop_pct_large,
     (AND)
     通用过滤1：最新价不高于最近10日最低收盘价的 1+3%
     (AND)
-    成交额条件：最新成交额 >= TURNOVER_THRESHOLD
+    成交额条件：最新成交额 >= TURNOVER_THRESHOLD (或中国概念股的特殊阈值)
     """
     symbol = data.get('symbol')
     is_tracing = (symbol == symbol_to_trace)
@@ -890,10 +894,27 @@ def evaluate_stock_conditions(data, symbol_to_trace, log_detail, drop_pct_large,
     
     # 通用过滤4: 成交额条件
     turnover = data['latest_price'] * data['latest_volume']
-    cond_turnover_ok = turnover > CONFIG["TURNOVER_THRESHOLD"]
+    
+    # 检查是否存在包含“中国”的标签
+    tags = data.get('tags', set())
+    is_china_stock = any("中国" in tag for tag in tags)
+
+    # 根据是否为中国概念股，选择不同的阈值
+    if is_china_stock:
+        current_threshold = CONFIG["TURNOVER_THRESHOLD_CHINA"]
+    else:
+        current_threshold = CONFIG["TURNOVER_THRESHOLD"]
+
+    cond_turnover_ok = turnover > current_threshold
+
     if is_tracing:
         log_detail("  - [通用过滤4] 成交额:")
-        log_detail(f"    - 判断: 最新成交额({turnover:,.0f}) >= 阈值({CONFIG['TURNOVER_THRESHOLD']:,}) -> {cond_turnover_ok}")
+        if is_china_stock:
+            log_detail(f"    - 检测到'中国'标签，使用特殊阈值: {current_threshold:,}")
+        else:
+            log_detail(f"    - 使用通用阈值: {current_threshold:,}")
+        log_detail(f"    - 判断: 最新成交额({turnover:,.0f}) >= 阈值({current_threshold:,}) -> {cond_turnover_ok}")
+
     if not cond_turnover_ok:
         if is_tracing: log_detail("  - 最终裁定: 失败 (成交额不满足)。")
         return False

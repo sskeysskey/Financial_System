@@ -18,6 +18,8 @@ from matplotlib.colors import LinearSegmentedColormap
 from PyQt5.QtWidgets import QApplication, QDialog, QVBoxLayout, QTextEdit
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt
+import glob
+import os
 
 # --- 定义Nord主题的调色板 ---
 NORD_THEME = {
@@ -36,6 +38,63 @@ NORD_THEME = {
     'accent_deepgreen': '#607254',
     'accent_purple': '#B48EAD',
 }
+
+# 在文件开头添加这个函数
+def find_earning_release_date(symbol, txt_dir='/Users/yanzhang/Coding/News/'):
+    """
+    在 Earnings_Release_*.txt 文件中查找 symbol 对应的日期
+    返回找到的第一个日期，如果没找到返回 None
+    """
+    try:
+        # 查找所有匹配的文件
+        pattern = os.path.join(txt_dir, 'Earnings_Release_*.txt')
+        files = glob.glob(pattern)
+        
+        for file_path in files:
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        # 解析格式: "SYMBOL : TIME : DATE"
+                        parts = [p.strip() for p in line.split(':')]
+                        if len(parts) >= 3:
+                            file_symbol = parts[0]
+                            date_str = parts[2]
+                            if file_symbol == symbol:
+                                # 解析日期
+                                try:
+                                    return datetime.strptime(date_str, "%Y-%m-%d").date()
+                                except ValueError:
+                                    print(f"日期格式错误: {date_str}")
+                                    continue
+            except Exception as e:
+                print(f"读取文件 {file_path} 时出错: {e}")
+                continue
+        
+        return None
+    except Exception as e:
+        print(f"查找 earning release 日期时出错: {e}")
+        return None
+
+
+def calculate_three_weeks_before_range(target_date):
+    """
+    计算目标日期往前推三周的那一周的区间范围
+    返回 (start_date, end_date) 元组
+    """
+    # 往前推 3 周 = 21 天
+    three_weeks_before = target_date - timedelta(days=21)
+    
+    # 找到这一天所在周的周一（weekday: 0=周一, 6=周日）
+    weekday = three_weeks_before.weekday()
+    week_start = three_weeks_before - timedelta(days=weekday)
+    
+    # 周五是本周的结束
+    week_end = week_start + timedelta(days=4)
+    
+    return week_start, week_end
 
 def get_title_color_logic(db_path, symbol, table_name):
     """
@@ -434,6 +493,27 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     ax2.axis('off')
 
     fig.patch.set_facecolor(NORD_THEME['background'])
+    # === 添加 Earning Release 紫色遮罩背板 ===
+    earning_release_date = find_earning_release_date(name)
+    purple_shade = None  # 用于存储紫色遮罩的引用
+    
+    if earning_release_date:
+        week_start, week_end = calculate_three_weeks_before_range(earning_release_date)
+        print(f"找到 {name} 的 earning release 日期: {earning_release_date}")
+        print(f"三周前的周区间: {week_start} 到 {week_end}")
+        
+        # 创建紫色遮罩（初始时可能不可见，由 update 函数控制）
+        purple_shade = ax1.axvspan(
+            week_start, 
+            week_end,
+            facecolor=NORD_THEME['accent_purple'],
+            alpha=0.15,
+            zorder=0.5,  # 在网格之上，曲线之下
+            visible=False  # 初始隐藏，等 update 函数判断是否显示
+        )
+    else:
+        print(f"未找到 {name} 的 earning release 日期")
+
     ax1.set_facecolor(NORD_THEME['background'])
     # 只保留 X 轴：显示底部脊柱，隐藏其余脊柱
     ax1.spines['bottom'].set_visible(True)
@@ -1010,6 +1090,20 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             current_filtered_dates = f_dates
             current_filtered_prices = f_prices
             current_filtered_date_nums = matplotlib.dates.date2num(current_filtered_dates) if current_filtered_dates else np.array([])
+
+            # === 新增：控制紫色遮罩的显示 ===
+            if purple_shade and earning_release_date:
+                week_start, week_end = calculate_three_weeks_before_range(earning_release_date)
+                # 检查当前显示的日期范围是否与紫色区间有交集
+                if f_dates:
+                    display_start = min(f_dates).date() if isinstance(min(f_dates), datetime) else min(f_dates)
+                    display_end = max(f_dates).date() if isinstance(max(f_dates), datetime) else max(f_dates)
+                    
+                    # 判断是否有交集
+                    has_overlap = not (week_end < display_start or week_start > display_end)
+                    purple_shade.set_visible(has_overlap)
+                else:
+                    purple_shade.set_visible(False)
 
             # 渐变重建节流
             now = time.time()

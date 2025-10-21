@@ -565,7 +565,8 @@
         "MTSR",
         "TXNM",
         "VOR",
-        "MRUS"
+        "MRUS",
+        "PDI"
     ],
     "etf": [
         "VDE",
