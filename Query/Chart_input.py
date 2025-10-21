@@ -9,7 +9,7 @@ from matplotlib.widgets import RadioButtons
 import matplotlib
 from functools import lru_cache
 from scipy.interpolate import interp1d
-import json # 新增：为了加载JSON文件
+import json
 
 from matplotlib.patches import PathPatch
 from matplotlib.path import Path
@@ -90,6 +90,23 @@ def calculate_three_weeks_before_range(target_date):
     # 找到这一天所在周的周一（weekday: 0=周一, 6=周日）
     weekday = three_weeks_before.weekday()
     week_start = three_weeks_before - timedelta(days=weekday)
+    
+    # 周五是本周的结束
+    week_end = week_start + timedelta(days=4)
+    
+    return week_start, week_end
+
+def calculate_one_week_before_range(target_date):
+    """
+    计算目标日期往前推一周的那一周的区间范围
+    返回 (start_date, end_date) 元组
+    """
+    # 往前推 1 周 = 7 天
+    one_week_before = target_date - timedelta(days=7)
+    
+    # 找到这一天所在周的周一（weekday: 0=周一, 6=周日）
+    weekday = one_week_before.weekday()
+    week_start = one_week_before - timedelta(days=weekday)
     
     # 周五是本周的结束
     week_end = week_start + timedelta(days=4)
@@ -493,23 +510,37 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     ax2.axis('off')
 
     fig.patch.set_facecolor(NORD_THEME['background'])
-    # === 添加 Earning Release 紫色遮罩背板 ===
+    # === 添加 Earning Release 紫色和蓝色遮罩背板 ===
     earning_release_date = find_earning_release_date(name)
-    purple_shade = None  # 用于存储紫色遮罩的引用
+    purple_shade = None  # 三周前的紫色遮罩
+    blue_shade = None    # 一周前的蓝色遮罩
     
     if earning_release_date:
-        week_start, week_end = calculate_three_weeks_before_range(earning_release_date)
+        # 三周前的周区间（紫色）
+        week_start_3w, week_end_3w = calculate_three_weeks_before_range(earning_release_date)
         print(f"找到 {name} 的 earning release 日期: {earning_release_date}")
-        print(f"三周前的周区间: {week_start} 到 {week_end}")
+        print(f"三周前的周区间: {week_start_3w} 到 {week_end_3w}")
         
-        # 创建紫色遮罩（初始时可能不可见，由 update 函数控制）
         purple_shade = ax1.axvspan(
-            week_start, 
-            week_end,
+            week_start_3w, 
+            week_end_3w,
             facecolor=NORD_THEME['accent_purple'],
             alpha=0.15,
-            zorder=0.5,  # 在网格之上，曲线之下
-            visible=False  # 初始隐藏，等 update 函数判断是否显示
+            zorder=0.5,
+            visible=False
+        )
+        
+        # 一周前的周区间（蓝色）
+        week_start_1w, week_end_1w = calculate_one_week_before_range(earning_release_date)
+        print(f"一周前的周区间: {week_start_1w} 到 {week_end_1w}")
+        
+        blue_shade = ax1.axvspan(
+            week_start_1w,
+            week_end_1w,
+            facecolor=NORD_THEME['accent_blue'],
+            alpha=0.15,
+            zorder=0.5,
+            visible=False
         )
     else:
         print(f"未找到 {name} 的 earning release 日期")
@@ -1091,19 +1122,27 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             current_filtered_prices = f_prices
             current_filtered_date_nums = matplotlib.dates.date2num(current_filtered_dates) if current_filtered_dates else np.array([])
 
-            # === 新增：控制紫色遮罩的显示 ===
-            if purple_shade and earning_release_date:
-                week_start, week_end = calculate_three_weeks_before_range(earning_release_date)
-                # 检查当前显示的日期范围是否与紫色区间有交集
-                if f_dates:
-                    display_start = min(f_dates).date() if isinstance(min(f_dates), datetime) else min(f_dates)
-                    display_end = max(f_dates).date() if isinstance(max(f_dates), datetime) else max(f_dates)
-                    
-                    # 判断是否有交集
-                    has_overlap = not (week_end < display_start or week_start > display_end)
-                    purple_shade.set_visible(has_overlap)
-                else:
+            # === 修改：控制紫色和蓝色遮罩的显示 ===
+            if earning_release_date and f_dates:
+                display_start = min(f_dates).date() if isinstance(min(f_dates), datetime) else min(f_dates)
+                display_end = max(f_dates).date() if isinstance(max(f_dates), datetime) else max(f_dates)
+                
+                # 控制紫色遮罩（三周前）
+                if purple_shade:
+                    week_start_3w, week_end_3w = calculate_three_weeks_before_range(earning_release_date)
+                    has_overlap_3w = not (week_end_3w < display_start or week_start_3w > display_end)
+                    purple_shade.set_visible(has_overlap_3w)
+                
+                # 控制蓝色遮罩（一周前）
+                if blue_shade:
+                    week_start_1w, week_end_1w = calculate_one_week_before_range(earning_release_date)
+                    has_overlap_1w = not (week_end_1w < display_start or week_start_1w > display_end)
+                    blue_shade.set_visible(has_overlap_1w)
+            else:
+                if purple_shade:
                     purple_shade.set_visible(False)
+                if blue_shade:
+                    blue_shade.set_visible(False)
 
             # 渐变重建节流
             now = time.time()
