@@ -55,6 +55,7 @@ CONFIG = {
     "MIN_DROP_PERCENTAGE": 0.03,
     "MINOR_DROP_PERCENTAGE": 0.05,
     "MIDDLE_DROP_PERCENTAGE": 0.07,
+    "MIDDLE_PLUS_DROP_PERCENTAGE": 0.08,
     "HIGH_DROP_PERCENTAGE": 0.09,
     "MAX_DROP_PERCENTAGE": 0.15,
     "MIN_TURNOVER": 200_000_000,
@@ -605,7 +606,7 @@ def run_strategy_4(data, cursor, symbol_sector_map, symbol_to_trace, log_detail)
             return False
             
         start_range = data['latest_er_date'] - datetime.timedelta(days=2)
-        end_range   = data['latest_er_date'] + datetime.timedelta(days=2)
+        end_range   = data['latest_er_date'] + datetime.timedelta(days=5)
         cursor.execute(
             f'SELECT MAX(price) FROM "{table_name}" WHERE name = ? AND date BETWEEN ? AND ?',
             (data['symbol'], start_range.isoformat(), end_range.isoformat())
@@ -618,14 +619,14 @@ def run_strategy_4(data, cursor, symbol_sector_map, symbol_to_trace, log_detail)
             return False
 
         mcap = data['marketcap']
-        drop_pct = CONFIG["MINOR_DROP_PERCENTAGE"] if mcap and mcap >= CONFIG["MARKETCAP_THRESHOLD"] else CONFIG["HIGH_DROP_PERCENTAGE"]
+        drop_pct = CONFIG["MINOR_DROP_PERCENTAGE"] if mcap and mcap >= CONFIG["MARKETCAP_THRESHOLD"] else CONFIG["MIDDLE_PLUS_DROP_PERCENTAGE"]
         threshold_price = max_price_around_er * (1 - drop_pct)
         cond_A = data['latest_price'] < threshold_price
         
         if is_tracing:
             log_detail(f"  - 条件3.A:")
             log_detail(f"    - 市值: {mcap}, 阈值: {CONFIG['MARKETCAP_THRESHOLD']} -> 使用下跌百分比: {drop_pct}")
-            log_detail(f"    - 财报日前后(±2天)最高价: {max_price_around_er}")
+            log_detail(f"    - 财报日前后(-2+5天)最高价: {max_price_around_er}")
             log_detail(f"    - 判断: latest_price({data['latest_price']}) < {max_price_around_er} * (1-{drop_pct}) ({threshold_price:.4f}) -> {cond_A}")
         
         if cond_A:
