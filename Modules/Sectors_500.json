@@ -93,7 +93,8 @@
         "MPC",
         "E",
         "TRP",
-        "PSX"
+        "PSX",
+        "MPLX"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -230,7 +231,8 @@
         "URI",
         "LHX",
         "CMI",
-        "VRT"
+        "VRT",
+        "PCAR"
     ],
     "Real_Estate": [
         "PLD",

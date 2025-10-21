@@ -120,6 +120,21 @@
             "SPGI",
             "TRU",
             "WAL"
+        ],
+        "2025-10-21": [
+            "AAL",
+            "BDX",
+            "CTVA",
+            "CVNA",
+            "DECK",
+            "IBN",
+            "ICE",
+            "ISRG",
+            "KDP",
+            "MRNA",
+            "OXY",
+            "RCL",
+            "SPGI"
         ]
     },
     "no_season": {
@@ -301,6 +316,34 @@
             "TRU",
             "VRSK",
             "WM"
+        ],
+        "2025-10-21": [
+            "ALAB",
+            "AMP",
+            "AON",
+            "APD",
+            "AZO",
+            "CDNS",
+            "CMCSA",
+            "CTVA",
+            "CVNA",
+            "DKNG",
+            "DUOL",
+            "FFIV",
+            "GEV",
+            "IBN",
+            "ICE",
+            "KHC",
+            "KKR",
+            "MCO",
+            "NDAQ",
+            "ORCL",
+            "OXY",
+            "RCL",
+            "SPGI",
+            "T",
+            "TMUS",
+            "TSCO"
         ]
     }
 }

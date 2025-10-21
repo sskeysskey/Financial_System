@@ -51,7 +51,8 @@
         "BKNG": "",
         "CHDN": "",
         "LNW": "",
-        "BIRK": ""
+        "BIRK": "",
+        "ANF": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -268,10 +269,37 @@
         "KDP": ""
     },
     "Short": {},
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
-    "PE_invalid": {},
+    "Strategy12": {
+        "IBN": "",
+        "KDP": ""
+    },
+    "Strategy34": {
+        "AAL": "",
+        "BDX": "",
+        "CTVA": "",
+        "CVNA": "",
+        "DECK": "",
+        "ICE": "",
+        "ISRG": "",
+        "MRNA": "",
+        "OXY": "",
+        "RCL": "",
+        "SPGI": ""
+    },
+    "PE_valid": {
+        "AON": "",
+        "AZO": "",
+        "FFIV": "FFIV7热",
+        "GEV": "",
+        "NDAQ": "",
+        "ORCL": "ORCL15热",
+        "T": "",
+        "TMUS": "TMUS7",
+        "TSCO": ""
+    },
+    "PE_invalid": {
+        "DKNG": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
@@ -311,13 +339,13 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USRetailM": "23 USRetailM",
-        "USPPI": "23 USPPI",
-        "CorePPI": "22 CorePPI",
-        "ImportPriceM": "23 ImportPriceM",
-        "USTrade": "23 USTrade",
-        "USUnemploy": "23 USUnemploy",
-        "USNonFarm": "23 USNonFarm",
+        "USRetailM": "19 USRetailM",
+        "CorePPI": "19 CorePPI",
+        "USPPI": "19 USPPI",
+        "USTrade": "19 USTrade",
+        "USUnemploy": "19 USUnemploy",
+        "USNonFarm": "19 USNonFarm",
+        "ImportPriceM": "19 ImportPriceM",
         "CoreCPI": "24 CoreCPI",
         "USConfidence": "24 USConfidence"
     },
