@@ -127,10 +127,10 @@
         "PGR": "",
         "SPGI": "",
         "MMC": "",
-        "AON": "",
         "AJG": "",
         "BRO": "",
-        "PNFP": ""
+        "PNFP": "",
+        "JPM": ""
     },
     "Healthcare": {
         "ATR": "",
@@ -228,29 +228,54 @@
         "CRDO": "CRDO15热",
         "ANET": "",
         "CART": "",
+        "WM": "",
+        "ICE": "",
+        "SPGI": "",
         "DKNG": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
-        "Z": "",
-        "WY": "",
-        "SPGI": "",
-        "OWL": "",
-        "ICE": "",
-        "ODFL": "",
-        "VRSK": "",
         "TRU": "",
-        "WM": "",
-        "SPXC": "",
-        "KDP": "",
-        "TSCO": ""
+        "AON": ""
     },
     "Short": {},
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
+    "Strategy12": {
+        "KDP": "",
+        "MELI": ""
+    },
+    "Strategy34": {
+        "AAL": "",
+        "AFRM": "",
+        "APD": "",
+        "ARES": "",
+        "BDX": "",
+        "CTVA": "",
+        "DECK": "",
+        "DOV": "",
+        "HIMS": "",
+        "ISRG": "",
+        "KKR": "",
+        "NKE": "",
+        "OC": "",
+        "OXY": "",
+        "POOL": "",
+        "TRU": ""
+    },
+    "PE_valid": {
+        "AON": "",
+        "BLK": "",
+        "BTI": "",
+        "CDNS": "CDNS7热",
+        "GEV": "",
+        "ORCL": "ORCL15热",
+        "RMD": "",
+        "SE": "",
+        "T": "",
+        "TME": "",
+        "TMUS": "TMUS7"
+    },
     "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",

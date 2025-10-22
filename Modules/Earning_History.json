@@ -135,6 +135,26 @@
             "OXY",
             "RCL",
             "SPGI"
+        ],
+        "2025-10-22": [
+            "AAL",
+            "AFRM",
+            "APD",
+            "ARES",
+            "BDX",
+            "CTVA",
+            "DECK",
+            "DOV",
+            "HIMS",
+            "ISRG",
+            "KDP",
+            "KKR",
+            "MELI",
+            "NKE",
+            "OC",
+            "OXY",
+            "POOL",
+            "TRU"
         ]
     },
     "no_season": {
@@ -344,6 +364,33 @@
             "T",
             "TMUS",
             "TSCO"
+        ],
+        "2025-10-22": [
+            "ALAB",
+            "AON",
+            "APD",
+            "BLK",
+            "BTI",
+            "CDNS",
+            "CMCSA",
+            "CTVA",
+            "DKNG",
+            "DUOL",
+            "GEV",
+            "HIMS",
+            "ICE",
+            "KHC",
+            "LI",
+            "ORCL",
+            "OXY",
+            "RMD",
+            "SE",
+            "SPGI",
+            "T",
+            "TME",
+            "TMUS",
+            "WM",
+            "XPEV"
         ]
     }
 }

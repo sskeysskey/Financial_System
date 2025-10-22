@@ -27,7 +27,8 @@
         "AMX",
         "RBLX",
         "APP",
-        "EA"
+        "EA",
+        "WBD"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -94,7 +95,8 @@
         "E",
         "TRP",
         "PSX",
-        "MPLX"
+        "MPLX",
+        "SLB"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -232,7 +234,8 @@
         "LHX",
         "CMI",
         "VRT",
-        "PCAR"
+        "PCAR",
+        "CARR"
     ],
     "Real_Estate": [
         "PLD",

@@ -127,7 +127,6 @@
         "PGR": "",
         "SPGI": "",
         "MMC": "",
-        "AON": "",
         "AJG": "",
         "BRO": "",
         "PNFP": ""
@@ -228,24 +227,17 @@
         "CRDO": "CRDO15热",
         "ANET": "",
         "CART": "",
+        "WM": "",
+        "ICE": "",
+        "SPGI": "",
         "DKNG": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
-        "Z": "",
-        "WY": "",
-        "SPGI": "",
-        "OWL": "",
-        "ICE": "",
-        "ODFL": "",
-        "VRSK": "",
         "TRU": "",
-        "WM": "",
-        "SPXC": "",
-        "KDP": "",
-        "TSCO": ""
+        "AON": ""
     },
     "Short": {},
     "Strategy12": {},
