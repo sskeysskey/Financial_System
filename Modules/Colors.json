@@ -122,7 +122,9 @@
         "BSX",
         "COST",
         "T",
-        "AXON"
+        "AXON",
+        "NFLX",
+        "BAM"
     ],
     "blue_keywords": [
         "US2Y",
@@ -146,7 +148,6 @@
         "AIQ",
         "V",
         "WMT",
-        "NFLX",
         "TSM",
         "ORCL",
         "NVDA",
@@ -566,7 +567,9 @@
         "TRGP",
         "VNOM",
         "PNFP",
-        "BIRK"
+        "BIRK",
+        "LII",
+        "AUR"
     ],
     "yellow_keywords": [
         "XLY",
@@ -1083,6 +1086,7 @@
         "FEZ",
         "COLO",
         "EZA",
+        "QQQE",
         "ECH",
         "EWL",
         "EWJ",

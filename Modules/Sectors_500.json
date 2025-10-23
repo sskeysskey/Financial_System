@@ -96,7 +96,8 @@
         "TRP",
         "PSX",
         "MPLX",
-        "SLB"
+        "SLB",
+        "VLO"
     ],
     "Financial_Services": [
         "BRK-A",
@@ -193,8 +194,7 @@
         "COR",
         "ALNY",
         "BDX",
-        "IDXX",
-        "ARGX"
+        "IDXX"
     ],
     "Industrials": [
         "GE",
@@ -234,8 +234,7 @@
         "LHX",
         "CMI",
         "VRT",
-        "PCAR",
-        "CARR"
+        "PCAR"
     ],
     "Real_Estate": [
         "PLD",
