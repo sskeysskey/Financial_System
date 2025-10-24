@@ -348,7 +348,7 @@ class MainWindow(QMainWindow):
 
         # --- 新增：移动（复制到组）子菜单 ---
         move_menu = menu.addMenu("移动")
-        allowed_groups = ["Today", "Watching", "Next Week", "2 Weeks", "3 Weeks"]
+        allowed_groups = ["Must", "Today", "Watching", "Next Week", "2 Weeks", "3 Weeks"]
         for group in allowed_groups:
             # 判断 symbol 是否已在该组中
             cfg_val = self.panel_config.get(group, [])

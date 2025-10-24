@@ -5,6 +5,7 @@ enum ArticleFilterMode: String, CaseIterable {
     case read = "Read"
 }
 
+
 // ==================== 单一来源列表 ====================
 struct ArticleListView: View {
     let source: NewsSource
@@ -137,6 +138,7 @@ struct ArticleListView: View {
                 )
             }
 
+            // `listContent` 包含唯一的 List 容器，这是关键
             listContent
                 .listStyle(PlainListStyle())
                 .onAppear {
@@ -226,13 +228,18 @@ struct ArticleListView: View {
         })
     }
     
+    // 修复点: 确保 listContent 是一个清晰的结构，包含一个 List 容器
     @ViewBuilder
     private var listContent: some View {
         ScrollViewReader { proxy in
+            // 唯一的 List 容器
             List {
+                // 在 List 内部根据状态切换内容
                 if isSearchActive {
+                    // searchResultsList 只提供列表内容（Sections, ForEach, etc.）
                     searchResultsList
                 } else {
+                    // articlesList 也只提供列表内容
                     articlesList
                 }
             }
@@ -248,6 +255,7 @@ struct ArticleListView: View {
         }
     }
     
+    // 修复点: 这是一个提供列表“内容”的辅助视图，它本身不包含 List
     @ViewBuilder
     private var searchResultsList: some View {
         let grouped = groupedSearchByTimestamp()
@@ -311,6 +319,7 @@ struct ArticleListView: View {
         }
     }
     
+    // 修复点: 这也是一个提供列表“内容”的辅助视图
     @ViewBuilder
     private var articlesList: some View {
         let timestamps = sortedTimestamps(for: groupedArticles)
@@ -378,11 +387,13 @@ struct ArticleListView: View {
                 .contentShape(Rectangle())
                 .onTapGesture {
                     withAnimation(.easeInOut(duration: 0.2)) {
-                        if expandedTimestamps.contains(timestamp) {
-                            expandedTimestamps.remove(timestamp)
+                        var mutableSet = self.expandedTimestamps
+                        if mutableSet.contains(timestamp) {
+                            mutableSet.remove(timestamp)
                         } else {
-                            expandedTimestamps.insert(timestamp)
+                            mutableSet.insert(timestamp)
                         }
+                        self.expandedTimestamps = mutableSet
                     }
                 }
             }

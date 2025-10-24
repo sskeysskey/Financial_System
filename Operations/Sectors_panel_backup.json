@@ -22,13 +22,15 @@
         "MSTR": "",
         "ORCL": "",
         "TXN": "",
-        "AUR": ""
+        "AUR": "",
+        "ROP": ""
     },
     "Consumer_Cyclical": {
         "KMX": "",
         "LNW": "",
         "BIRK": "",
-        "ANF": ""
+        "ANF": "",
+        "CHH": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -40,7 +42,8 @@
         "JBS": "",
         "TSN": "",
         "GIS": "",
-        "CLX": ""
+        "CLX": "",
+        "KMB": ""
     },
     "Industrials": {
         "FLY": "",
@@ -55,7 +58,8 @@
     "Communication_Services": {
         "DIS": "",
         "NFLX": "",
-        "T": ""
+        "T": "",
+        "TMUS": ""
     },
     "Financial_Services": {
         "ARX": "",
@@ -64,7 +68,8 @@
         "AJG": "",
         "BRO": "",
         "JPM": "",
-        "AON": ""
+        "AON": "",
+        "BAM": ""
     },
     "Healthcare": {
         "GKOS": ""
@@ -140,6 +145,8 @@
         "XRP": ""
     },
     "Must": {
+        "TFPM": "",
+        "WPM": "",
         "ICE": "",
         "CVNA": "",
         "HIMS": "",
@@ -171,9 +178,20 @@
     "3 Weeks": {},
     "Watching": {
         "RBLX": "",
-        "RDDT": ""
+        "RDDT": "",
+        "WST": "",
+        "VRSK": ""
     },
     "Short": {
+        "HL": "",
+        "KGC": "",
+        "SSRM": "",
+        "CDE": "",
+        "AGI": "",
+        "AEM": "",
+        "B": "",
+        "IAG": "",
+        "EGO": "",
         "STM": ""
     },
     "Strategy12": {},
@@ -219,15 +237,20 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USRetailM": "19 USRetailM",
-        "CorePPI": "19 CorePPI",
-        "USPPI": "19 USPPI",
-        "USTrade": "19 USTrade",
-        "USUnemploy": "19 USUnemploy",
-        "USNonFarm": "19 USNonFarm",
+        "USRetailM": "28 USRetailM",
+        "CorePPI": "29 CorePPI",
+        "USPPI": "29 USPPI",
+        "USTrade": "28 USTrade",
+        "USUnemploy": "27 USUnemploy",
+        "USNonFarm": "27 USNonFarm",
         "ImportPriceM": "19 ImportPriceM",
         "CoreCPI": "24 CoreCPI",
-        "USConfidence": "24 USConfidence"
+        "USConfidence": "24 USConfidence",
+        "USInterest": "29 USInterest",
+        "USGDP": "30 USGDP",
+        "CorePCEY": "31 CorePCEY",
+        "CorePCEM": "31 CorePCEM",
+        "PCEY": "31 PCEY"
     },
     "Economic_All": {
         "USGDP": "",

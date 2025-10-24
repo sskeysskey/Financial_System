@@ -1163,8 +1163,9 @@ def run_processing_logic(log_detail):
 
     exist_Strategy34 = set(panel_data.get('Strategy34', {}).keys())
     exist_Strategy12 = set(panel_data.get('Strategy12', {}).keys())
-    exist_today      = set(panel_data.get('Today', {}).keys())  # 新增：today 分组
-    already_in_panels = exist_Strategy34 | exist_Strategy12 | exist_today  # 新增：合并 today
+    exist_today      = set(panel_data.get('Today', {}).keys())
+    exist_must       = set(panel_data.get('Must', {}).keys())  # ========== 新增：获取 Must 分组 ==========
+    already_in_panels = exist_Strategy34 | exist_Strategy12 | exist_today | exist_must # ========== 修改：合并 Must 分组 ==========
 
     # 7.2 从两个组中分别过滤掉黑名单和已存在分组的symbol
     final_pe_valid_to_write = sorted(list(pe_valid_set - blacklist - already_in_panels))
@@ -1175,14 +1176,16 @@ def run_processing_logic(log_detail):
     # if skipped_valid:
     #     log_detail(f"\nPE_valid 组中，有 {len(skipped_valid)} 个 symbol 因在黑名单或已有分组中被跳过: {sorted(list(skipped_valid))}")
     if SYMBOL_TO_TRACE and SYMBOL_TO_TRACE in skipped_valid:
-        reason = "在 'newlow' 黑名单中" if SYMBOL_TO_TRACE in blacklist else "已存在于 'Strategy34', 'Strategy12' 或 'Today' 分组中"
+        # ========== 修改：更新日志信息 ==========
+        reason = "在 'newlow' 黑名单中" if SYMBOL_TO_TRACE in blacklist else "已存在于 'Strategy34', 'Strategy12', 'Today' 或 'Must' 分组中"
         log_detail(f"\n追踪信息: 目标 symbol '{SYMBOL_TO_TRACE}' 虽然通过了筛选，但最终因 ({reason}) 而被跳过，不会写入 panel 文件。")
 
     skipped_invalid = pe_invalid_set & (blacklist | already_in_panels)
     # if skipped_invalid:
     #     log_detail(f"\nPE_invalid 组中，有 {len(skipped_invalid)} 个 symbol 因在黑名单或已有分组中被跳过: {sorted(list(skipped_invalid))}")
     if SYMBOL_TO_TRACE and SYMBOL_TO_TRACE in skipped_invalid:
-        reason = "在 'newlow' 黑名单中" if SYMBOL_TO_TRACE in blacklist else "已存在于 'Strategy34', 'Strategy12' 或 'Today' 分组中"
+        # ========== 修改：更新日志信息 ==========
+        reason = "在 'newlow' 黑名单中" if SYMBOL_TO_TRACE in blacklist else "已存在于 'Strategy34', 'Strategy12', 'Today' 或 'Must' 分组中"
         log_detail(f"\n追踪信息: 目标 symbol '{SYMBOL_TO_TRACE}' 虽然通过了筛选，但最终因 ({reason}) 而被跳过，不会写入 panel 文件。")
 
     # 7.4 新增：热门Tag命中 -> JSON中标注 “{symbol}热”

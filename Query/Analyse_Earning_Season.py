@@ -380,15 +380,15 @@ def run_strategy_1(data, symbol_to_trace, log_detail):
         
     return result
 
-# 策略 3
-def run_strategy_3(data, cursor, symbol_sector_map, initial_symbols, symbol_to_trace, log_detail):
+# <<< 修改开始: 修改策略3的函数签名和内部逻辑 >>>
+def run_strategy_3(data, cursor, symbol_sector_map, symbols_for_time_condition, symbol_to_trace, log_detail):
     """ 策略 3 (修改后):
     (1) 如果最近2次财报上升，最新价 < 过去N次财报最高价 * (1-9%)
     (2) 如果不上升，最近2次财报差额 >= 3%，最新财报非负，且最新价 < 过去N次财报最低价
     ---
     (3) 必须满足(1)或(2)其中之一
     (4) 必须满足：最新价比前10天最低价高不超过3%
-    (5) 必须满足：(在初始财报文件列表中) 或 (最新交易日落在下次理论财报前6-26天窗口期)
+    (5) 必须满足：(在指定的财报文件列表中) 或 (最新交易日落在下次理论财报前6-26天窗口期)
     """
     is_tracing = (data.get('symbol') == symbol_to_trace)
     if is_tracing: log_detail(f"\n--- [{symbol_to_trace}] 策略 3 评估 (已修改) ---")
@@ -470,18 +470,19 @@ def run_strategy_3(data, cursor, symbol_sector_map, initial_symbols, symbol_to_t
 
     # 步骤3: 新增的条件性时间窗口检查
     symbol = data['symbol']
-    is_in_initial_list = symbol in initial_symbols
+    # 使用传入的、不包含 'new' 文件 symbol 的列表进行判断
+    is_in_time_condition_list = symbol in symbols_for_time_condition
     
     next_er = get_next_er_date(data['latest_er_date'])
     window_start = next_er - datetime.timedelta(days=26)
     window_end = next_er - datetime.timedelta(days=6)
     is_in_window = (window_start <= data['latest_date'] <= window_end)
 
-    time_condition_met = is_in_initial_list or is_in_window
+    time_condition_met = is_in_time_condition_list or is_in_window
     
     if is_tracing:
         log_detail(f"  - 条件 (时间窗口):")
-        log_detail(f"    - 检查1: 是否在初始财报文件列表? -> {is_in_initial_list}")
+        log_detail(f"    - 检查1: 是否在指定的财报文件列表(不含new.txt)? -> {is_in_time_condition_list}")
         log_detail(f"    - 检查2: 是否在 {window_start} 到 {window_end} 的时间窗口内? -> {is_in_window}")
         log_detail(f"    - 综合时间条件 (满足其一即可): {time_condition_met}")
 
@@ -493,12 +494,12 @@ def run_strategy_3(data, cursor, symbol_sector_map, initial_symbols, symbol_to_t
         
     return final_result
 
-# 策略 3.5
-def run_strategy_3_5(data, initial_symbols, symbol_to_trace, log_detail):
+# <<< 修改开始: 修改策略3.5的函数签名和内部逻辑 >>>
+def run_strategy_3_5(data, symbols_for_time_condition, symbol_to_trace, log_detail):
     """策略 3.5:
     (1) 过去2次财报保持上升
     (2) 最近的3次财报里至少有一次财报的收盘价要比该symbol的最新收盘价高15%以上
-    (3) (在初始财报文件列表中) 或 (最新交易日落在下次理论财报前6-26天窗口期)
+    (3) (在指定的财报文件列表中) 或 (最新交易日落在下次理论财报前6-26天窗口期)
     """
     is_tracing = (data.get('symbol') == symbol_to_trace)
     if len(data['all_er_prices']) < 3 or any(p is None for p in data['all_er_prices'][:3]):
@@ -519,14 +520,15 @@ def run_strategy_3_5(data, initial_symbols, symbol_to_trace, log_detail):
 
     # 条件3: 新增的条件性时间窗口检查
     symbol = data['symbol']
-    is_in_initial_list = symbol in initial_symbols
+    # 使用传入的、不包含 'new' 文件 symbol 的列表进行判断
+    is_in_time_condition_list = symbol in symbols_for_time_condition
 
     next_er = get_next_er_date(data['latest_er_date'])
     window_start = next_er - datetime.timedelta(days=26)
     window_end = next_er - datetime.timedelta(days=6)
     is_in_window = (window_start <= data['latest_date'] <= window_end)
 
-    time_condition_met = is_in_initial_list or is_in_window
+    time_condition_met = is_in_time_condition_list or is_in_window
 
     # 最终结果
     result = is_increasing and any_high and time_condition_met
@@ -537,7 +539,7 @@ def run_strategy_3_5(data, initial_symbols, symbol_to_trace, log_detail):
         log_detail(f"  - 最近三次财报价: {prices_3}")
         log_detail(f"  - 条件2 (任一价比最新价高{CONFIG['MAX_DROP_PERCENTAGE']*100}%): any(p > {data['latest_price']} * {1+CONFIG['MAX_DROP_PERCENTAGE']} = {price_threshold:.4f}) -> {any_high}")
         log_detail(f"  - 条件3 (时间窗口):")
-        log_detail(f"    - 检查1: 是否在初始财报文件列表? -> {is_in_initial_list}")
+        log_detail(f"    - 检查1: 是否在指定的财报文件列表(不含new.txt)? -> {is_in_time_condition_list}")
         log_detail(f"    - 检查2: 是否在 {window_start} 到 {window_end} 的时间窗口内? -> {is_in_window}")
         log_detail(f"    - 综合时间条件 (满足其一即可): {time_condition_met}")
         log_detail(f"  - 最终结果 (is_increasing AND any_high AND time_condition_met): {result}")
@@ -778,25 +780,41 @@ def run_processing_logic(log_detail):
     # 新增：加载 symbol->tags 映射
     symbol_to_tags_map = load_symbol_tags(DESCRIPTION_JSON_FILE)
 
-    # 修改: 加载所有财报文件
-    symbols_new = get_symbols_from_file(PATHS["earnings_release_new"](news_path))
+    # <<< 修改开始: 分离处理 'new' 文件和其他财报文件 >>>
+    # 加载 'new' 文件中的 symbols
+    symbols_from_new_file = set(get_symbols_from_file(PATHS["earnings_release_new"](news_path)))
+    log_detail(f"从 earnings_release_new.txt 加载了 {len(symbols_from_new_file)} 个 symbol。")
+
+    # 加载其他文件中的 symbols，这些将用于满足策略中的“时间条件”
     symbols_next = get_symbols_from_file(PATHS["earnings_release_next"](news_path))
     symbols_third = get_symbols_from_file(PATHS["earnings_release_third"](news_path))
     symbols_fourth = get_symbols_from_file(PATHS["earnings_release_fourth"](news_path))
     symbols_fifth = get_symbols_from_file(PATHS["earnings_release_fifth"](news_path))
-    initial_symbols = list(dict.fromkeys(symbols_new + symbols_next + symbols_third + symbols_fourth + symbols_fifth))
+    # 使用集合去重
+    symbols_for_time_condition = set(symbols_next + symbols_third + symbols_fourth + symbols_fifth)
+    log_detail(f"从其他财报文件 (next, third, fourth, fifth) 加载了 {len(symbols_for_time_condition)} 个不重复的 symbol。")
 
-    if SYMBOL_TO_TRACE and SYMBOL_TO_TRACE in initial_symbols:
+    # 初始文件中的所有 symbol (用于决定总共要处理哪些从文件来的 symbol)
+    # 使用集合的并集操作 `|`
+    initial_symbols_all = list(symbols_from_new_file | symbols_for_time_condition)
+
+    if SYMBOL_TO_TRACE and SYMBOL_TO_TRACE in initial_symbols_all:
         log_detail(f"\n追踪信息: {SYMBOL_TO_TRACE} 在初始文件列表中。")
+        if SYMBOL_TO_TRACE in symbols_from_new_file:
+             log_detail(f"  - 具体来源: {SYMBOL_TO_TRACE} 在 'new' 文件中，将不满足策略3/3.5的时间条件。")
+        if SYMBOL_TO_TRACE in symbols_for_time_condition:
+             log_detail(f"  - 具体来源: {SYMBOL_TO_TRACE} 在其他财报文件中，将满足策略3/3.5的时间条件。")
     elif SYMBOL_TO_TRACE:
-        log_detail(f"\n追踪信息: {SYMBOL_TO_TRACE} 不在初始文件列表中 (next/new/third)。")
+        log_detail(f"\n追踪信息: {SYMBOL_TO_TRACE} 不在任何初始财报文件中。")
 
     with sqlite3.connect(DB_FILE) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT DISTINCT name FROM Earning")
         all_db_symbols = [row[0] for row in cursor.fetchall()]
 
-    symbols_to_process = sorted(list(set(initial_symbols + all_db_symbols)))
+    # symbols_to_process 现在包含所有来自财报文件和数据库的 symbol
+    symbols_to_process = sorted(list(set(initial_symbols_all + all_db_symbols)))
+    # <<< 修改结束 >>>
 
     # 1.1 (新增) 应用 SYMBOL_BLACKLIST 进行初步过滤
     symbol_blacklist = CONFIG.get("SYMBOL_BLACKLIST", set())
@@ -827,14 +845,17 @@ def run_processing_logic(log_detail):
             
             data['symbol'] = symbol # 将symbol本身加入data，方便策略3、4使用
 
-            # 跑主列表策略 (仅针对初始文件里的symbols)
-            if symbol in initial_symbols:
+            # <<< 修改开始: 使用 'symbols_for_time_condition' 来决定是否运行策略1 >>>
+            # 跑主列表策略 (仅针对在 'next', 'third' 等文件里的symbols)
+            if symbol in symbols_for_time_condition:
                 if run_strategy_1(data, SYMBOL_TO_TRACE, log_detail): results['s1'].append(symbol)
-                # 策略 2 和 2.5 的调用已被移除
+            # <<< 修改结束 >>>
                 
+            # <<< 修改开始: 将 'symbols_for_time_condition' 传递给策略3和3.5 >>>
             # 跑通知列表策略 (针对所有有数据的symbols)
-            if run_strategy_3(data, cursor, symbol_sector_map, initial_symbols, SYMBOL_TO_TRACE, log_detail): results['s3'].append(symbol)
-            if run_strategy_3_5(data, initial_symbols, SYMBOL_TO_TRACE, log_detail): results['s3_5'].append(symbol)
+            if run_strategy_3(data, cursor, symbol_sector_map, symbols_for_time_condition, SYMBOL_TO_TRACE, log_detail): results['s3'].append(symbol)
+            if run_strategy_3_5(data, symbols_for_time_condition, SYMBOL_TO_TRACE, log_detail): results['s3_5'].append(symbol)
+            # <<< 修改结束 >>>
             if run_strategy_4(data, cursor, symbol_sector_map, SYMBOL_TO_TRACE, log_detail): results['s4'].append(symbol)
 
     # 4. 汇总初步结果
@@ -904,7 +925,7 @@ def run_processing_logic(log_detail):
     final_Strategy34_list = filtered_Strategy34_list
 
     # 7. 新增：根据 panel.json 中已存在的分组进行最终过滤 (移植自 b.py)
-    log_detail("\n--- 开始根据 panel.json 已有分组进行最终过滤 ---")
+    log_detail("\n--- 开始根据 panel.json 已有分组 ('Today', 'Must') 进行最终过滤 ---")
     try:
         with open(PANEL_JSON_FILE, 'r', encoding='utf-8') as f:
             panel_data = json.load(f)
@@ -912,24 +933,34 @@ def run_processing_logic(log_detail):
         log_detail(f"警告: panel 文件 ({PANEL_JSON_FILE}) 未找到或格式错误，将不进行分组过滤。")
         panel_data = {}
 
-    exist_today = set(panel_data.get('Today', {}).keys())
-    log_detail(f"从 panel.json 加载了 {len(exist_today)} 个 'Today' symbol。")
+    # 获取 'Today' 和 'Must' 分组中的所有 symbol，并合并成一个集合用于过滤
+    # .get(key, {}) 是一种安全的方式，如果分组不存在，会返回一个空字典，避免出错
+    symbols_in_today = set(panel_data.get('Today', {}).keys())
+    symbols_in_must = set(panel_data.get('Must', {}).keys())
+    
+    # 使用集合的并集操作 `|` 来合并两个集合
+    exclusion_symbols = symbols_in_today | symbols_in_must
+
+    log_detail(f"从 panel.json 加载了 {len(symbols_in_today)} 个 'Today' symbol。")
+    log_detail(f"从 panel.json 加载了 {len(symbols_in_must)} 个 'Must' symbol。")
+    log_detail(f"合并后的排除列表包含 {len(exclusion_symbols)} 个不重复的 symbol。")
 
     # 过滤 Strategy12 列表 (final_symbols)
-    # 规则: 如果 symbol 在 'Today' 组中，则移除
+    # 规则: 如果 symbol 在 'Today' 或 'Must' 组中，则移除
     final_symbols_before_panel_filter = final_symbols
-    final_symbols = [s for s in final_symbols if s not in exist_today]
+    final_symbols = [s for s in final_symbols if s not in exclusion_symbols]
     removed_from_s12 = set(final_symbols_before_panel_filter) - set(final_symbols)
     if removed_from_s12:
-        log_detail(f"  - [Strategy12 过滤]: 移除了 {len(removed_from_s12)} 个已存在于 'Today' 组的 symbol: {sorted(list(removed_from_s12))}")
+        log_detail(f"  - [Strategy12 过滤]: 移除了 {len(removed_from_s12)} 个已存在于 'Today' 或 'Must' 组的 symbol: {sorted(list(removed_from_s12))}")
 
     # 过滤 Strategy34 列表 (final_Strategy34_list)
-    # 规则: 如果 symbol 在 'Today' 组中，则移除
+    # 规则: 如果 symbol 在 'Today' 或 'Must' 组中，则移除
     final_Strategy34_list_before_panel_filter = final_Strategy34_list
-    final_Strategy34_list = [s for s in final_Strategy34_list if s not in exist_today]
+    final_Strategy34_list = [s for s in final_Strategy34_list if s not in exclusion_symbols]
     removed_from_s34 = set(final_Strategy34_list_before_panel_filter) - set(final_Strategy34_list)
     if removed_from_s34:
-        log_detail(f"  - [Strategy34 过滤]: 移除了 {len(removed_from_s34)} 个已存在于 'Today' 组的 symbol: {sorted(list(removed_from_s34))}")
+        log_detail(f"  - [Strategy34 过滤]: 移除了 {len(removed_from_s34)} 个已存在于 'Today' 或 'Must' 组的 symbol: {sorted(list(removed_from_s34))}")
+    # ==================== 代码修改结束 ====================
 
     # 8. 生成标注并输出最终结果
     # 8.1 热门Tag命中 -> JSON中标注 “{symbol}热”
@@ -953,9 +984,9 @@ def run_processing_logic(log_detail):
     log_detail(f"通知列表(Strategy34)最终数量: {len(final_Strategy34_list)} - {final_Strategy34_list}")
     if SYMBOL_TO_TRACE:
         if SYMBOL_TO_TRACE in removed_from_s12:
-            log_detail(f"\n最终追踪结果: {SYMBOL_TO_TRACE} 通过了策略筛选，但因已存在于 'Today' 组而未被加入 'Strategy12'。")
+            log_detail(f"\n最终追踪结果: {SYMBOL_TO_TRACE} 通过了策略筛选，但因已存在于 'Today' 或 'Must' 组而未被加入 'Strategy12'。")
         elif SYMBOL_TO_TRACE in removed_from_s34:
-            log_detail(f"\n最终追踪结果: {SYMBOL_TO_TRACE} 通过了策略筛选，但因已存在于 'Today' 组而未被加入 'Strategy34'。")
+            log_detail(f"\n最终追踪结果: {SYMBOL_TO_TRACE} 通过了策略筛选，但因已存在于 'Today' 或 'Must' 组而未被加入 'Strategy34'。")
         elif SYMBOL_TO_TRACE in final_symbols:
             log_detail(f"\n最终追踪结果: {SYMBOL_TO_TRACE} 成功进入了最终的 'Strategy12' 列表。")
         elif SYMBOL_TO_TRACE in final_Strategy34_list:

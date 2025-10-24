@@ -145,6 +145,8 @@
         "XRP": ""
     },
     "Must": {
+        "TFPM": "",
+        "WPM": "",
         "ICE": "",
         "CVNA": "",
         "HIMS": "",
@@ -176,52 +178,26 @@
     "3 Weeks": {},
     "Watching": {
         "RBLX": "",
-        "RDDT": ""
+        "RDDT": "",
+        "WST": "",
+        "VRSK": ""
     },
     "Short": {
+        "HL": "",
+        "KGC": "",
+        "SSRM": "",
+        "CDE": "",
+        "AGI": "",
+        "AEM": "",
+        "B": "",
+        "IAG": "",
+        "EGO": "",
         "STM": ""
     },
-    "Strategy12": {
-        "KDP": "",
-        "KMB": "",
-        "MELI": "",
-        "VRSN": ""
-    },
-    "Strategy34": {
-        "AFRM": "",
-        "APD": "",
-        "ARES": "",
-        "AXON": "AXON热",
-        "BAH": "",
-        "BDX": "",
-        "BKNG": "",
-        "BLK": "",
-        "DECK": "",
-        "ELV": "",
-        "HIMS": "",
-        "ICE": "",
-        "KKR": "",
-        "MRNA": "",
-        "NDAQ": "",
-        "OWL": "",
-        "OXY": "",
-        "SN": "",
-        "SPGI": ""
-    },
-    "PE_valid": {
-        "ALK": "",
-        "AON": "",
-        "AZO": "",
-        "BTI": "",
-        "DASH": "",
-        "HD": "HD7",
-        "ORCL": "ORCL7热",
-        "VRSK": "",
-        "WM": ""
-    },
-    "PE_invalid": {
-        "RBLX": ""
-    },
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {},
+    "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
