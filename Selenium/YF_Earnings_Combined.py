@@ -164,13 +164,24 @@ def run_scraper_task(driver, sectors_data, task_config):
     print(f"开始执行任务: {group_name.upper()}")
     print("="*80)
 
-    # -------- 步骤 1: 弹出日期选择界面 --------------------------------
-    start_date, end_date = pick_date_range(group_name)
-    if start_date is None or end_date is None:
-        print(f"任务 [{group_name.upper()}] 因未选择有效日期范围而被跳过。")
-        return # 直接返回，让主程序继续下一个任务
+    # -------- 步骤 1: 根据星期决定是否弹出日期选择界面 --------------------------------
+    # 获取当前是星期几 (0=Monday, 6=Sunday)
+    today_weekday = datetime.now().weekday()
+    
+    # 周日(6)和周一(0)需要弹窗，其他日期(周二到周六: 1-5)直接读取配置
+    if today_weekday == 6 or today_weekday == 0:  # Sunday or Monday
+        print(f"今天是{'周日' if today_weekday == 6 else '周一'}，弹出日期选择窗口...")
+        start_date, end_date = pick_date_range(group_name)
+        if start_date is None or end_date is None:
+            print(f"任务 [{group_name.upper()}] 因未选择有效日期范围而被跳过。")
+            return # 直接返回，让主程序继续下一个任务
+    else:  # Tuesday to Saturday (1-5)
+        print(f"今天是工作日(周二至周六)，直接读取配置文件中的日期范围...")
+        last_sd, last_ed = load_last_range_by_group(group_name)
+        start_date = datetime(last_sd.year, last_sd.month, last_sd.day)
+        end_date = datetime(last_ed.year, last_ed.month, last_ed.day)
 
-    print(f"已为任务 [{group_name.upper()}] 选择日期范围: {start_date.date()} 到 {end_date.date()}")
+    print(f"已为任务 [{group_name.upper()}] 确定日期范围: {start_date.date()} 到 {end_date.date()}")
 
     # -------- 步骤 2: 数据准备和备份 --------------------------------
     # (A) 加载主发行日文件中的 (symbol, date) 去重集

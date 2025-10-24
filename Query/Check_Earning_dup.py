@@ -10,6 +10,117 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont
 import send2trash  # 新增导入：用于安全删除到回收站
 
+# 在文件开头添加新的函数来处理确认记录
+
+def load_confirmed_symbols(directory: str) -> dict:
+    """
+    加载已确认的 symbol 记录
+    返回格式: {symbol: (选中的完整行内容, 来源文件名)}
+    """
+    confirm_file = os.path.join(directory, "Earning_Confirm.txt")
+    confirmed = {}
+    
+    if not os.path.exists(confirm_file):
+        return confirmed
+    
+    try:
+        with open(confirm_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                
+                # 解析格式: symbol|line_content|source_filename
+                parts = line.split('|')
+                if len(parts) >= 3:
+                    symbol = parts[0].strip()
+                    line_content = parts[1].strip()
+                    source_filename = parts[2].strip()
+                    confirmed[symbol] = (line_content, source_filename)
+    except Exception as e:
+        print(f"读取确认文件时出错: {e}")
+    
+    return confirmed
+
+
+def save_confirmed_symbol(directory: str, symbol: str, line_content: str, source_filename: str):
+    """
+    保存一个已确认的 symbol 记录
+    """
+    confirm_file = os.path.join(directory, "Earning_Confirm.txt")
+    
+    try:
+        # 读取现有记录
+        existing_symbols = set()
+        if os.path.exists(confirm_file):
+            with open(confirm_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    if '|' in line:
+                        existing_symbols.add(line.split('|')[0].strip())
+        
+        # 如果该 symbol 不存在，则追加
+        if symbol not in existing_symbols:
+            with open(confirm_file, 'a', encoding='utf-8') as f:
+                if os.path.getsize(confirm_file) == 0:
+                    f.write("# 已确认的 Symbol 记录\n")
+                    f.write("# 格式: symbol|line_content|source_filename\n")
+                f.write(f"{symbol}|{line_content}|{source_filename}\n")
+            print(f"  - 已将 '{symbol}' 的确认记录保存到 Earning_Confirm.txt")
+        else:
+            # 更新现有记录
+            lines = []
+            with open(confirm_file, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+            
+            with open(confirm_file, 'w', encoding='utf-8') as f:
+                for line in lines:
+                    if line.strip() and '|' in line:
+                        if line.split('|')[0].strip() == symbol:
+                            f.write(f"{symbol}|{line_content}|{source_filename}\n")
+                        else:
+                            f.write(line)
+                    else:
+                        f.write(line)
+            print(f"  - 已更新 '{symbol}' 的确认记录")
+            
+    except Exception as e:
+        print(f"保存确认记录时出错: {e}")
+
+
+def auto_resolve_confirmed_symbol(symbol: str, confirmed_line: str, confirmed_filename: str, 
+                                   all_occurrences: list, directory: str, main_files: list):
+    """
+    自动解决已确认的 symbol 冲突
+    """
+    print(f"  - Symbol '{symbol}' 已有确认记录，自动处理中...")
+    
+    # 构造选中项 (filename, lineno, line_content)
+    # 由于我们只有文件名和行内容，lineno 设为 0（不重要）
+    selected_item = (confirmed_filename, 0, confirmed_line)
+    
+    # 1. 确定要删除的行
+    lines_to_delete_by_file = defaultdict(list)
+    for occurrence in all_occurrences:
+        occ_filename, _, occ_line_content = occurrence
+        # 删除所有不是选中项的行
+        if occ_line_content.strip() != confirmed_line.strip():
+            lines_to_delete_by_file[occ_filename].append(occ_line_content)
+    
+    # 2. 如果选择的是辅助文件项，原始项也需要被删除
+    if not is_main_file(confirmed_filename):
+        lines_to_delete_by_file[confirmed_filename].append(confirmed_line)
+    
+    # 3. 执行删除操作
+    for filename, contents in lines_to_delete_by_file.items():
+        full_path = os.path.join(directory, filename)
+        remove_specific_lines_from_file(full_path, contents)
+        print(f"    - 已从 {filename} 清理 {len(contents)} 个条目。")
+    
+    # 4. 如果是辅助文件项，执行插入操作
+    if not is_main_file(confirmed_filename):
+        print(f"    - 将确认的行插入到匹配日期的主文件中。")
+        insert_line_into_main_file(confirmed_line, main_files)
+
 def show_alert(message):
     """使用AppleScript显示一个系统对话框"""
     try:
@@ -121,22 +232,26 @@ def insert_line_into_main_file(line_to_insert: str, all_main_files: list[str]):
 
 # --- PyQt5 GUI部分 (常规重复项) ---
 
+# 修改 DuplicateResolverApp 类
+
 class DuplicateResolverApp(QWidget):
     def __init__(self, duplicates, symbol_sources, directory):
         super().__init__()
-        self.all_duplicates = sorted(duplicates, key=lambda x: (-x[1], x[0])) # (symbol, count)
+        self.all_duplicates = sorted(duplicates, key=lambda x: (-x[1], x[0]))
         self.symbol_sources = symbol_sources
         self.directory = directory
         self.current_duplicate_index = 0
         
         self.main_files, self.aux_files = get_file_paths(self.directory)
         
-        # 预处理，自动解决new.txt并分离出手动的任务
+        # 加载已确认的 symbol 记录
+        self.confirmed_symbols = load_confirmed_symbols(self.directory)
+        
+        # 预处理
         self.manual_duplicates = self._preprocess_and_auto_resolve()
 
         if not self.manual_duplicates:
             print("\n所有常规重复项均已自动处理或无需处理。")
-            # 使用QTimer延迟关闭，确保日志能被看到
             QTimer.singleShot(100, self.close)
             return
 
@@ -144,15 +259,22 @@ class DuplicateResolverApp(QWidget):
         self.display_current_duplicate()
 
     def _preprocess_and_auto_resolve(self):
-        """
-        预处理所有重复项。如果包含new.txt，则自动解决。
-        返回需要手动处理的列表。
-        """
+        """预处理所有重复项"""
         manual_tasks = []
         auto_resolved_log = []
 
         for symbol, count in self.all_duplicates:
             occurrences = self.symbol_sources[symbol]
+            
+            # 优先检查是否已有确认记录
+            if symbol in self.confirmed_symbols:
+                confirmed_line, confirmed_filename = self.confirmed_symbols[symbol]
+                auto_resolve_confirmed_symbol(symbol, confirmed_line, confirmed_filename, 
+                                             occurrences, self.directory, self.main_files)
+                auto_resolved_log.append(f"  - Symbol '{symbol}' 已根据确认记录自动处理。")
+                continue
+            
+            # 检查是否包含 new.txt
             new_txt_item = None
             for item in occurrences:
                 if item[0] == "Earnings_Release_new.txt":
@@ -160,11 +282,9 @@ class DuplicateResolverApp(QWidget):
                     break
             
             if new_txt_item:
-                # 需求3: 自动处理
-                self._perform_resolution(new_txt_item)
+                self._perform_resolution(new_txt_item, save_confirm=False)
                 auto_resolved_log.append(f"  - Symbol '{symbol}' 已根据 'Earnings_Release_new.txt' 的条目自动处理。")
             else:
-                # 需要手动处理
                 manual_tasks.append((symbol, count))
 
         if auto_resolved_log:
@@ -175,57 +295,49 @@ class DuplicateResolverApp(QWidget):
             
         return manual_tasks
 
-    def _perform_resolution(self, selected_item):
-        """
-        执行解决冲突的核心文件操作。
-        新规则: 无论选择哪一项，所有其他包含该symbol的条目都将被删除。
-        特殊规则: 如果选择的是辅助文件项，则执行“剪切-粘贴”操作。
-        """
+    def _perform_resolution(self, selected_item, save_confirm=False):
+        """执行解决冲突的核心文件操作"""
         selected_filename, _, selected_line_content = selected_item
         symbol = parse_symbol(selected_line_content)
         
         print(f"\n处理 Symbol '{symbol}'，选择的条目: '{selected_line_content.strip()}' (来自: {selected_filename})")
 
+        # 如果需要保存确认记录
+        if save_confirm:
+            save_confirmed_symbol(self.directory, symbol, selected_line_content, selected_filename)
+
         all_occurrences = self.symbol_sources.get(symbol, [])
         
-        # 1. 确定要删除的行
         lines_to_delete_by_file = defaultdict(list)
         for occurrence in all_occurrences:
-            # 如果当前项不是被选中的项，则标记为删除
             if occurrence != selected_item:
                 occ_filename, _, occ_line_content = occurrence
                 lines_to_delete_by_file[occ_filename].append(occ_line_content)
 
-        # 2. 如果选择的是辅助文件项（剪切操作），则原始项本身也需要被删除
         if not is_main_file(selected_filename):
             lines_to_delete_by_file[selected_filename].append(selected_line_content)
 
-        # 3. 执行删除操作
         print(f"  操作: 清理 '{symbol}' 的其他重复项。")
         for filename, contents in lines_to_delete_by_file.items():
             full_path = os.path.join(self.directory, filename)
             remove_specific_lines_from_file(full_path, contents)
             print(f"    - 已从 {filename} 清理 {len(contents)} 个条目。")
 
-        # 4. 如果选择的是辅助文件项，执行“粘贴”操作
         if not is_main_file(selected_filename):
             print(f"  操作: 将所选行插入到匹配日期的一个主文件中。")
             insert_line_into_main_file(selected_line_content, self.main_files)
 
     def init_ui(self):
         self.setWindowTitle('常规重复Symbol处理器')
-        self.setGeometry(300, 300, 800, 400)
+        self.setGeometry(300, 300, 800, 450)  # 增加高度以容纳确认选项
 
-        # 主布局
         self.main_layout = QVBoxLayout(self)
 
-        # 标题标签
         self.title_label = QLabel()
         self.title_label.setFont(QFont('Arial', 16, QFont.Bold))
         self.title_label.setAlignment(Qt.AlignCenter)
         self.main_layout.addWidget(self.title_label)
 
-        # 用于显示重复项的滚动区域
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_content_widget = QWidget()
@@ -234,7 +346,6 @@ class DuplicateResolverApp(QWidget):
         self.scroll_area.setWidget(self.scroll_content_widget)
         self.main_layout.addWidget(self.scroll_area)
 
-        # 底部按钮布局
         button_layout = QHBoxLayout()
         self.skip_button = QPushButton('跳过 (Skip)')
         self.cancel_button = QPushButton('取消 (Cancel)')
@@ -250,7 +361,6 @@ class DuplicateResolverApp(QWidget):
         self.main_layout.addLayout(button_layout)
 
     def clear_layout(self, layout):
-        """清空布局中的所有小部件"""
         while layout.count():
             child = layout.takeAt(0)
             if child.widget():
@@ -261,25 +371,24 @@ class DuplicateResolverApp(QWidget):
             self.close()
             return
 
-        # 清空旧内容
         self.clear_layout(self.scroll_layout)
         symbol, count = self.manual_duplicates[self.current_duplicate_index]
         self.title_label.setText(f"手动处理 ({self.current_duplicate_index + 1}/{len(self.manual_duplicates)}): {symbol} ({count} 次)")
 
         occurrences = self.symbol_sources[symbol]
         
+        # 用于存储每个条目的确认复选框
+        self.confirm_checkboxes = {}
+        
         for item in occurrences:
             filename, lineno, line_content = item
 
-            # 容器行
             line_frame = QFrame()
             line_layout = QHBoxLayout(line_frame)
 
-            # 需求2: 使用QTextEdit替换QLabel以支持文本选择和双击
             item_display = QTextEdit()
             item_display.setReadOnly(True)
             item_display.setText(f"{line_content}\n(来源: {filename}, 第 {lineno} 行)")
-            # 设置样式使其看起来像标签，并设置固定高度
             item_display.setStyleSheet("""
                 QTextEdit {
                     border: none;
@@ -290,20 +399,27 @@ class DuplicateResolverApp(QWidget):
             item_display.setFixedHeight(50)
             item_display.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             
-            # 选择按钮
+            # 添加确认复选框
+            from PyQt5.QtWidgets import QCheckBox
+            confirm_checkbox = QCheckBox('确认')
+            confirm_checkbox.setToolTip('勾选后，下次遇到相同 symbol 冲突时将自动使用此选择')
+            
             select_button = QPushButton('选择')
             select_button.setFixedWidth(100)
-            # 使用lambda捕获当前循环的item变量
-            select_button.clicked.connect(lambda checked, item_to_process=item: self.resolve_selection(item_to_process))
+            select_button.clicked.connect(
+                lambda checked, item_to_process=item, checkbox=confirm_checkbox: 
+                self.resolve_selection(item_to_process, checkbox.isChecked())
+            )
 
             line_layout.addWidget(item_display)
+            line_layout.addWidget(confirm_checkbox)
             line_layout.addWidget(select_button)
             
             self.scroll_layout.addWidget(line_frame)
 
-    def resolve_selection(self, selected_item):
+    def resolve_selection(self, selected_item, save_confirm):
         """GUI事件：当用户点击'选择'按钮时调用"""
-        self._perform_resolution(selected_item)
+        self._perform_resolution(selected_item, save_confirm=save_confirm)
         self.next_duplicate()
 
     def skip_duplicate(self):
@@ -312,7 +428,6 @@ class DuplicateResolverApp(QWidget):
         self.next_duplicate()
 
     def next_duplicate(self):
-        """递增索引并刷新界面"""
         self.current_duplicate_index += 1
         if self.current_duplicate_index < len(self.manual_duplicates):
             self.display_current_duplicate()
@@ -322,22 +437,67 @@ class DuplicateResolverApp(QWidget):
 
 # --- PyQt5 GUI部分 (#BACKUP_DUP) ---
 
+# 同样需要在 BackupDupResolverApp 中添加确认功能
+
 class BackupDupResolverApp(QWidget):
     def __init__(self, tasks, directory):
         super().__init__()
-        self.tasks = tasks # list of (symbol, line_content, filename, lineno)
+        self.tasks = tasks
         self.directory = directory
         self.current_task_index = 0
         
         self.main_files, self.aux_files = get_file_paths(self.directory)
         self.all_files = self.main_files + self.aux_files
+        
+        # 加载已确认的 symbol 记录
+        self.confirmed_symbols = load_confirmed_symbols(self.directory)
+
+        # 预处理：自动解决已确认的 symbols
+        self.manual_tasks = self._preprocess_confirmed_tasks()
+
+        if not self.manual_tasks:
+            print("\n所有 #BACKUP_DUP 任务均已自动处理。")
+            QTimer.singleShot(100, self.close)
+            return
 
         self.init_ui()
         self.display_current_task()
 
+    def _preprocess_confirmed_tasks(self):
+        """预处理任务，自动解决已确认的 symbols"""
+        manual_tasks = []
+        
+        for symbol, line_content, filename, lineno in self.tasks:
+            if symbol in self.confirmed_symbols:
+                # 自动处理
+                print(f"\n自动处理 #BACKUP_DUP Symbol '{symbol}' (已有确认记录)...")
+                
+                # 重新扫描该 symbol 的所有出现
+                occurrences = []
+                for path in self.all_files:
+                    try:
+                        with open(path, 'r', encoding='utf-8') as f:
+                            lines = f.readlines()
+                    except UnicodeDecodeError:
+                        with open(path, 'r', encoding='latin-1') as f:
+                            lines = f.readlines()
+                    
+                    for i, line in enumerate(lines):
+                        line_stripped = line.strip()
+                        if parse_symbol(line_stripped) == symbol:
+                            occurrences.append((os.path.basename(path), i + 1, line_stripped))
+                
+                confirmed_line, confirmed_filename = self.confirmed_symbols[symbol]
+                auto_resolve_confirmed_symbol(symbol, confirmed_line, confirmed_filename,
+                                             occurrences, self.directory, self.main_files)
+            else:
+                manual_tasks.append((symbol, line_content, filename, lineno))
+        
+        return manual_tasks
+
     def init_ui(self):
         self.setWindowTitle('#BACKUP_DUP 处理器')
-        self.setGeometry(300, 300, 800, 400)
+        self.setGeometry(300, 300, 800, 450)
 
         self.main_layout = QVBoxLayout(self)
         self.title_label = QLabel()
@@ -374,14 +534,13 @@ class BackupDupResolverApp(QWidget):
                 child.widget().deleteLater()
 
     def display_current_task(self):
-        if self.current_task_index >= len(self.tasks):
+        if self.current_task_index >= len(self.manual_tasks):
             self.close()
             return
 
         self.clear_layout(self.scroll_layout)
-        symbol, _, _, _ = self.tasks[self.current_task_index]
+        symbol, _, _, _ = self.manual_tasks[self.current_task_index]
         
-        # 重新扫描所有文件，查找当前symbol的所有出现位置
         occurrences = []
         for path in self.all_files:
             try:
@@ -396,12 +555,13 @@ class BackupDupResolverApp(QWidget):
                 if parse_symbol(line_content) == symbol:
                     occurrences.append((os.path.basename(path), i + 1, line_content))
 
-        self.title_label.setText(f"处理 #BACKUP_DUP ({self.current_task_index + 1}/{len(self.tasks)}): {symbol} ({len(occurrences)} 次)")
+        self.title_label.setText(f"处理 #BACKUP_DUP ({self.current_task_index + 1}/{len(self.manual_tasks)}): {symbol} ({len(occurrences)} 次)")
 
         for item in occurrences:
             filename, lineno, line_content = item
             line_frame = QFrame()
             line_layout = QHBoxLayout(line_frame)
+            
             item_display = QTextEdit()
             item_display.setReadOnly(True)
             item_display.setText(f"{line_content}\n(来源: {filename}, 第 {lineno} 行)")
@@ -409,57 +569,68 @@ class BackupDupResolverApp(QWidget):
             item_display.setFixedHeight(50)
             item_display.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             
+            from PyQt5.QtWidgets import QCheckBox
+            confirm_checkbox = QCheckBox('确认')
+            confirm_checkbox.setToolTip('勾选后，下次遇到相同 symbol 冲突时将自动使用此选择')
+            
             select_button = QPushButton('选择并迁移')
             select_button.setFixedWidth(120)
-            # 只有带 #BACKUP_DUP 标记的行才能被选择
+            
             if '#BACKUP_DUP' in line_content:
-                select_button.clicked.connect(lambda checked, item_to_process=item, all_occs=occurrences: self.resolve_selection(item_to_process, all_occs))
+                select_button.clicked.connect(
+                    lambda checked, item_to_process=item, all_occs=occurrences, checkbox=confirm_checkbox: 
+                    self.resolve_selection(item_to_process, all_occs, checkbox.isChecked())
+                )
             else:
                 select_button.setEnabled(False)
+                confirm_checkbox.setEnabled(False)
                 select_button.setToolTip("只有带 #BACKUP_DUP 标记的行才能被选择用于迁移。")
 
-
             line_layout.addWidget(item_display)
+            line_layout.addWidget(confirm_checkbox)
             line_layout.addWidget(select_button)
             self.scroll_layout.addWidget(line_frame)
 
-    def resolve_selection(self, selected_item, all_occurrences):
+    def resolve_selection(self, selected_item, all_occurrences, save_confirm):
         """当用户点击'选择并迁移'按钮时调用"""
         _, _, selected_line_content = selected_item
         symbol = parse_symbol(selected_line_content)
         
         print(f"\n处理 #BACKUP_DUP Symbol '{symbol}'...")
 
-        # 1. 清理待插入的行，移除 #BACKUP_DUP 注释
         line_to_insert = selected_line_content.split('#')[0].strip()
         print(f"  - 准备插入的行: '{line_to_insert}'")
+        
+        # 如果需要保存确认记录（使用清理后的行）
+        if save_confirm:
+            # 从 line_to_insert 中提取文件名信息（如果可能）
+            # 因为我们清理了 #BACKUP_DUP，所以使用原始 selected_item 的文件名
+            selected_filename = selected_item[0]
+            save_confirmed_symbol(self.directory, symbol, line_to_insert, selected_filename)
 
-        # 2. 确定要删除的所有行（包括原始行和所有其他出现）
         lines_to_delete_by_file = defaultdict(list)
         for occ_filename, _, occ_line_content in all_occurrences:
             lines_to_delete_by_file[occ_filename].append(occ_line_content)
         
-        # 3. 执行删除操作
         print(f"  - 清理 '{symbol}' 的所有相关条目...")
         for filename, contents in lines_to_delete_by_file.items():
             full_path = os.path.join(self.directory, filename)
             remove_specific_lines_from_file(full_path, contents)
             print(f"    - 已从 {filename} 清理 {len(contents)} 个条目。")
 
-        # 4. 执行插入操作
         print(f"  - 将清理后的行插入主文件...")
         insert_line_into_main_file(line_to_insert, self.main_files)
 
         self.next_task()
 
     def skip_task(self):
-        symbol, _, _, _ = self.tasks[self.current_task_index]
+        symbol, _, _, _ = self.manual_tasks[self.current_task_index]
         print(f"\n用户跳过了对 #BACKUP_DUP symbol '{symbol}' 的处理。")
         self.next_task()
 
     def next_task(self):
         self.current_task_index += 1
-        if self.current_task_index < len(self.tasks):
+        if self.current_task_index < len(self.manual_tasks):
             self.display_current_task()
         else:
             print("\n所有 #BACKUP_DUP 任务已处理完毕。")

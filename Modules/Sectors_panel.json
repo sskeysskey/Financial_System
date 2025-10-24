@@ -22,14 +22,15 @@
         "MSTR": "",
         "ORCL": "",
         "TXN": "",
-        "AUR": ""
+        "AUR": "",
+        "ROP": ""
     },
     "Consumer_Cyclical": {
-        "AVY": "",
         "KMX": "",
         "LNW": "",
         "BIRK": "",
-        "ANF": ""
+        "ANF": "",
+        "CHH": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -41,13 +42,13 @@
         "JBS": "",
         "TSN": "",
         "GIS": "",
-        "CLX": ""
+        "CLX": "",
+        "KMB": ""
     },
     "Industrials": {
         "FLY": "",
         "RSG": "",
         "KBR": "",
-        "WM": "",
         "FCN": "",
         "CWST": "",
         "WSO": "",
@@ -57,7 +58,8 @@
     "Communication_Services": {
         "DIS": "",
         "NFLX": "",
-        "T": ""
+        "T": "",
+        "TMUS": ""
     },
     "Financial_Services": {
         "ARX": "",
@@ -142,81 +144,83 @@
         "Solana": "",
         "XRP": ""
     },
-    "Today": {
-        "TMUS": "",
-        "SE": "",
-        "APD": "",
-        "CTVA": "",
-        "CHH": "",
-        "AIQ": "",
-        "AVGO": "",
-        "DUOL": "",
+    "Must": {
+        "ICE": "",
+        "CVNA": "",
+        "HIMS": "",
+        "VRSN": "",
+        "ANET": "",
         "AXON": "",
         "ALAB": "",
+        "CHH": "",
+        "AVY": "",
+        "DASH": "",
+        "DKNG": "",
+        "APD": "",
         "TEL": "",
-        "CRDO": "CRDO15热",
-        "ANET": "",
-        "CART": "",
-        "ICE": "",
         "SPGI": "",
-        "DKNG": ""
+        "AIQ": "",
+        "CRDO": "CRDO15热"
+    },
+    "Today": {
+        "IESC": "",
+        "TME": "",
+        "IDXX": "",
+        "SE": "",
+        "DUOL": "",
+        "CART": "",
+        "BAM": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
-        "TRU": "",
-        "GPK": ""
+        "RBLX": "",
+        "RDDT": ""
     },
     "Short": {
-        "STM": "",
-        "MCHP": "",
-        "CRUS": "",
-        "TSEM": "",
-        "ON": ""
+        "STM": ""
     },
     "Strategy12": {
         "KDP": "",
+        "KMB": "",
         "MELI": "",
         "VRSN": ""
     },
     "Strategy34": {
-        "AAL": "",
         "AFRM": "",
-        "AMP": "",
+        "APD": "",
         "ARES": "",
+        "AXON": "AXON热",
+        "BAH": "",
         "BDX": "",
-        "CDNS": "CDNS热",
-        "CVNA": "",
+        "BKNG": "",
+        "BLK": "",
         "DECK": "",
-        "DOV": "",
         "ELV": "",
-        "GLXY": "GLXY热",
         "HIMS": "",
+        "ICE": "",
         "KKR": "",
-        "KNX": "",
+        "MRNA": "",
         "NDAQ": "",
         "OWL": "",
         "OXY": "",
-        "POOL": "",
-        "TRU": ""
+        "SN": "",
+        "SPGI": ""
     },
     "PE_valid": {
+        "ALK": "",
         "AON": "",
-        "BLK": "",
+        "AZO": "",
         "BTI": "",
         "DASH": "",
-        "IDXX": "",
-        "ORCL": "ORCL15热",
-        "RDDT": "",
-        "RMD": "",
-        "TME": "",
-        "TSCO": "",
+        "HD": "HD7",
+        "ORCL": "ORCL7热",
+        "VRSK": "",
         "WM": ""
     },
     "PE_invalid": {
-        "RBLX": "",
-        "SMR": "SMR15热"
+        "RBLX": ""
     },
     "Currencies": {
         "DXY": "美元指数",
@@ -257,15 +261,20 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USRetailM": "19 USRetailM",
-        "CorePPI": "19 CorePPI",
-        "USPPI": "19 USPPI",
-        "USTrade": "19 USTrade",
-        "USUnemploy": "19 USUnemploy",
-        "USNonFarm": "19 USNonFarm",
+        "USRetailM": "28 USRetailM",
+        "CorePPI": "29 CorePPI",
+        "USPPI": "29 USPPI",
+        "USTrade": "28 USTrade",
+        "USUnemploy": "27 USUnemploy",
+        "USNonFarm": "27 USNonFarm",
         "ImportPriceM": "19 ImportPriceM",
         "CoreCPI": "24 CoreCPI",
-        "USConfidence": "24 USConfidence"
+        "USConfidence": "24 USConfidence",
+        "USInterest": "29 USInterest",
+        "USGDP": "30 USGDP",
+        "CorePCEY": "31 CorePCEY",
+        "CorePCEM": "31 CorePCEM",
+        "PCEY": "31 PCEY"
     },
     "Economic_All": {
         "USGDP": "",

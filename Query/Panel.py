@@ -36,7 +36,7 @@ DISPLAY_LIMITS = {
 }
 
 categories = [
-    ['Today','Watching','Short','Next Week','2 Weeks','3 Weeks'],
+    ['Must','Today','Watching','Short','Next Week','2 Weeks','3 Weeks'],
     ['PE_valid','PE_invalid','Strategy12','Strategy34'],
     ['Basic_Materials','Consumer_Cyclical','Real_Estate','Technology','Energy','Industrials',
      'Consumer_Defensive','Communication_Services','Financial_Services', 'Healthcare','Utilities'],
@@ -746,7 +746,7 @@ class MainWindow(QMainWindow):
 
         # ### 修改 ###: 定义需要特殊排序的组
         target_sort_groups = {
-            'Today', 'Watching', 'Short', 'Basic_Materials', 'Consumer_Cyclical',
+            'Must', 'Today', 'Watching', 'Short', 'Basic_Materials', 'Consumer_Cyclical',
             'Real_Estate', 'Technology', 'Energy', 'Industrials', 'Consumer_Defensive',
             'Communication_Services','Financial_Services', 'Healthcare','Utilities',
             'PE_valid','PE_invalid','Strategy12','Strategy34'
@@ -966,7 +966,7 @@ class MainWindow(QMainWindow):
         menu.addAction("编辑 Tags",    lambda: execute_external_script('tags', keyword, group, self))
         # --- 通用“移动”子菜单 ---
         move_menu = menu.addMenu("移动")
-        for tgt in ("Today", "Watching", "Next Week", "2 Weeks", "3 Weeks"):
+        for tgt in ("Must", "Today", "Watching", "Next Week", "2 Weeks", "3 Weeks"):
             act = move_menu.addAction(f"到 {tgt}")
             act.setEnabled(group != tgt)
             # 用 lambda 搭桥：三个参数 keyword, group (当前组), tgt (目标组)

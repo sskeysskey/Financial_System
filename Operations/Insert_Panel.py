@@ -18,6 +18,7 @@ JSON_FILE_PATH = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.
 
 # 您指定要显示在第二个界面中的分组
 TARGET_CATEGORIES = [
+    "Must",
     "Today",
     "Watching",
     "Short",

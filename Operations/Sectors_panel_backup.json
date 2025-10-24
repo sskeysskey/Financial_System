@@ -19,10 +19,12 @@
         "NIQ": "",
         "CHYM": "",
         "FIG": "",
-        "MSTR": ""
+        "MSTR": "",
+        "ORCL": "",
+        "TXN": "",
+        "AUR": ""
     },
     "Consumer_Cyclical": {
-        "AVY": "",
         "KMX": "",
         "LNW": "",
         "BIRK": "",
@@ -44,19 +46,25 @@
         "FLY": "",
         "RSG": "",
         "KBR": "",
-        "WM": "",
         "FCN": "",
-        "CWST": ""
+        "CWST": "",
+        "WSO": "",
+        "LII": "",
+        "DLB": ""
     },
     "Communication_Services": {
-        "DIS": ""
+        "DIS": "",
+        "NFLX": "",
+        "T": ""
     },
     "Financial_Services": {
         "ARX": "",
         "HLNE": "",
         "PGR": "",
         "AJG": "",
-        "BRO": ""
+        "BRO": "",
+        "JPM": "",
+        "AON": ""
     },
     "Healthcare": {
         "GKOS": ""
@@ -131,37 +139,42 @@
         "Solana": "",
         "XRP": ""
     },
-    "Today": {
-        "SE": "",
-        "APD": "",
-        "CTVA": "",
-        "CHH": "",
-        "AIQ": "",
-        "AVGO": "",
-        "DUOL": "",
+    "Must": {
+        "ICE": "",
+        "CVNA": "",
+        "HIMS": "",
+        "VRSN": "",
+        "ANET": "",
         "AXON": "",
         "ALAB": "",
+        "CHH": "",
+        "AVY": "",
+        "DASH": "",
+        "DKNG": "",
+        "APD": "",
         "TEL": "",
-        "CRDO": "CRDO15热",
-        "ANET": "",
-        "CART": "",
-        "ICE": "",
         "SPGI": "",
-        "DKNG": ""
+        "AIQ": "",
+        "CRDO": "CRDO15热"
+    },
+    "Today": {
+        "IESC": "",
+        "TME": "",
+        "IDXX": "",
+        "SE": "",
+        "DUOL": "",
+        "CART": "",
+        "BAM": ""
     },
     "Next Week": {},
     "2 Weeks": {},
     "3 Weeks": {},
     "Watching": {
-        "TRU": "",
-        "GPK": ""
+        "RBLX": "",
+        "RDDT": ""
     },
     "Short": {
-        "STM": "",
-        "MCHP": "",
-        "CRUS": "",
-        "TSEM": "",
-        "ON": ""
+        "STM": ""
     },
     "Strategy12": {},
     "Strategy34": {},

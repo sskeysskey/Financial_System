@@ -406,7 +406,8 @@
     "CGW",
     "CHIQ",
     "EMCR",
-    "ESPO"
+    "ESPO",
+    "RAAX"
   ],
   "Basic_Materials": [
     "LIN",
@@ -1795,7 +1796,8 @@
     "RAL",
     "LPL",
     "CAMT",
-    "WOLF"
+    "WOLF",
+    "VSAT"
   ],
   "Utilities": [
     "NEE",
