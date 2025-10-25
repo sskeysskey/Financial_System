@@ -11,7 +11,8 @@
     "Energy": {
         "OKE": "",
         "EOG": "",
-        "VNOM": ""
+        "VNOM": "",
+        "KMI": ""
     },
     "Technology": {
         "FI": "",
@@ -23,14 +24,17 @@
         "ORCL": "",
         "TXN": "",
         "AUR": "",
-        "ROP": ""
+        "ROP": "",
+        "EEFT": ""
     },
     "Consumer_Cyclical": {
         "KMX": "",
         "LNW": "",
         "BIRK": "",
         "ANF": "",
-        "CHH": ""
+        "CHH": "",
+        "DECK": "",
+        "WH": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -43,7 +47,8 @@
         "TSN": "",
         "GIS": "",
         "CLX": "",
-        "KMB": ""
+        "KMB": "",
+        "MDLZ": ""
     },
     "Industrials": {
         "FLY": "",
@@ -53,7 +58,8 @@
         "CWST": "",
         "WSO": "",
         "LII": "",
-        "DLB": ""
+        "DLB": "",
+        "BAH": ""
     },
     "Communication_Services": {
         "DIS": "",
@@ -69,7 +75,8 @@
         "BRO": "",
         "JPM": "",
         "AON": "",
-        "BAM": ""
+        "BAM": "",
+        "FFIN": ""
     },
     "Healthcare": {
         "GKOS": ""
@@ -194,10 +201,30 @@
         "EGO": "",
         "STM": ""
     },
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
-    "PE_invalid": {},
+    "Strategy12": {
+        "KDP": "",
+        "KMB": "",
+        "MELI": ""
+    },
+    "Strategy34": {
+        "AFRM": "",
+        "AON": "",
+        "ARES": "",
+        "BDX": "",
+        "BLK": "",
+        "KKR": "",
+        "OXY": ""
+    },
+    "PE_valid": {
+        "AZO": "",
+        "HD": "HD7",
+        "RMD": "",
+        "VRSK": "",
+        "WM": ""
+    },
+    "PE_invalid": {
+        "RBLX": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

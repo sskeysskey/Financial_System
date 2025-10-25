@@ -204,6 +204,18 @@
             "SN",
             "SPGI",
             "VRSN"
+        ],
+        "2025-10-25": [
+            "AFRM",
+            "AON",
+            "ARES",
+            "BDX",
+            "BLK",
+            "KDP",
+            "KKR",
+            "KMB",
+            "MELI",
+            "OXY"
         ]
     },
     "no_season": {
@@ -504,6 +516,29 @@
             "VZ",
             "WM",
             "XPEV"
+        ],
+        "2025-10-25": [
+            "AON",
+            "APD",
+            "AZO",
+            "CLF",
+            "CMCSA",
+            "DKNG",
+            "DUOL",
+            "HD",
+            "HIMS",
+            "ICE",
+            "KHC",
+            "KMB",
+            "LEGN",
+            "LI",
+            "RBLX",
+            "RMD",
+            "SE",
+            "TME",
+            "VRSK",
+            "VZ",
+            "WM"
         ]
     }
 }
