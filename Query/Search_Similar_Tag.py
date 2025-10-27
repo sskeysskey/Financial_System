@@ -794,7 +794,7 @@ class SimilarityViewerWindow(QMainWindow):
 
         # --- 新增：移动（复制到组）子菜单，只显示指定的五个分组 ---
         move_menu = menu.addMenu("移动")
-        allowed_groups = ["Today", "Watching", "Short", "Next Week", "2 Weeks", "3 Weeks"]
+        allowed_groups = ["Must", "Today", "Short"]
         for group in allowed_groups:
             # 如果 panel_config 里没有这个组，也让它显示（第一次复制时会新建）
             in_cfg = False

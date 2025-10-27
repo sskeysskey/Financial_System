@@ -385,6 +385,13 @@ class MainWindow(QMainWindow):
         self.quit_action.triggered.connect(self.close)
         self.addAction(self.quit_action)
 
+        # <<< 新增：为 "/" 键创建快捷键，使其聚焦到搜索框 >>>
+        self.focus_search_action = QAction("Focus Search", self)
+        self.focus_search_action.setShortcut(QKeySequence("/"))
+        self.focus_search_action.triggered.connect(self.focus_search_input)
+        self.addAction(self.focus_search_action)
+        # <<< 新增结束 >>>
+
         # 用来缓存 MNSPP 表里读取到的 marketcap
         self._mnspp_cache = {}
         # Finance.db 路径
@@ -393,6 +400,13 @@ class MainWindow(QMainWindow):
         self.compare_data = {}
         # <<< 新增：加载并缓存 sector 数据
         self.sector_data = load_sectors_data()
+
+    # <<< 新增：快捷键 "/" 的处理函数 >>>
+    def focus_search_input(self):
+        """快捷键'/'触发此函数，将焦点设置到搜索框。"""
+        self.input_field.setFocus()
+        # 您已经重写了 focusInEvent，它会自动调用 display_history 和 selectAll
+        # 所以这里只需要 setFocus() 即可达到目的。
 
     def start_search(self):
         keywords = self.input_field.text().strip()

@@ -31,7 +31,7 @@ class StockComparisonApp(QWidget):
         self.start_date_edit = QDateEdit(self)
         self.start_date_edit.setFont(QFont('Arial', 12))
         self.start_date_edit.setCalendarPopup(True)
-        self.start_date_edit.setDate(QDate(2019, 1, 1))  # 默认开始日期
+        self.start_date_edit.setDate(QDate(2024, 1, 1))  # 默认开始日期
         # self.layout.addWidget(QLabel('选择开始日期:', self))
         self.layout.addWidget(self.start_date_edit)
 

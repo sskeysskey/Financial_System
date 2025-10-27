@@ -406,13 +406,13 @@ def main(mode):
             process_and_rename_files()
 
             # 新增：删除 Earning_Confirm.txt 文件
-            confirm_file = '/Users/yanzhang/Coding/News/Earning_Confirm.txt'
-            if os.path.exists(confirm_file):
-                try:
-                    os.remove(confirm_file)
-                    print(f"成功删除文件: {confirm_file}")
-                except Exception as e:
-                    print(f"删除文件 {confirm_file} 时出错: {e}")
+            # confirm_file = '/Users/yanzhang/Coding/News/Earning_Confirm.txt'
+            # if os.path.exists(confirm_file):
+            #     try:
+            #         os.remove(confirm_file)
+            #         print(f"成功删除文件: {confirm_file}")
+            #     except Exception as e:
+            #         print(f"删除文件 {confirm_file} 时出错: {e}")
 
             show_alert(f"今天是周日或周一，所有爬取日期都需要重新手动设定。")
         else:

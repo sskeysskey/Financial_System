@@ -16,7 +16,10 @@ class App:
         self.selected_symbols = []  # 新增：用于保存多个符合标签的symbols
         self.event_text = None
         
-        if symbol:  # 如果传入了symbol参数
+        # 新增：用于保存 'and' 勾选项的状态
+        self.and_var = None
+
+        if symbol:
             self.selected_type = "特定"
             self.selected_symbol = symbol.upper()  # 转换为大写
             self.selected_symbols = [self.selected_symbol]
@@ -163,13 +166,13 @@ class App:
         method_root.mainloop()
 
     def tag_window(self):
-        """新增窗口，用于通过标签筛选symbols"""
+        """新增窗口，用于通过标签筛选symbols，并增加了AND/OR逻辑切换"""
         tag_root = tk.Tk()
         tag_root.title("输入标签")
         
         # 设置窗口位置在屏幕中央
         window_width = 400
-        window_height = 200
+        window_height = 250  # 增加窗口高度以容纳新控件
         screen_width = tag_root.winfo_screenwidth()
         screen_height = tag_root.winfo_screenheight()
         x = (screen_width - window_width) // 2
@@ -178,19 +181,31 @@ class App:
         
         frame = ttk.Frame(tag_root, padding="10")
         frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+
+        # --- 新增代码 ---
+        # 创建一个布尔变量来存储复选框的状态，默认不勾选 (False)
+        self.and_var = tk.BooleanVar(value=False)
+        # --- 结束新增 ---
         
         ttk.Label(frame, text="请输入标签（用空格分隔多个标签）:").grid(row=0, column=0, pady=5, sticky=tk.W)
         tag_entry = ttk.Entry(frame, width=40)
         tag_entry.grid(row=1, column=0, pady=5, sticky=tk.W)
+
+        # --- 新增代码 ---
+        # 创建复选框
+        and_checkbutton = ttk.Checkbutton(frame, text="使用 'and' 规则查找 (必须包含所有标签)", variable=self.and_var)
+        and_checkbutton.grid(row=2, column=0, pady=5, sticky=tk.W)
+        # --- 结束新增 ---
         
-        info_label = ttk.Label(frame, text="符合条件的每个标签将被分别查找。", wraplength=380)
-        info_label.grid(row=2, column=0, pady=5, sticky=tk.W)
+        # 调整下方控件的行号
+        info_label = ttk.Label(frame, text="默认使用 'or' 规则查找 (包含任一标签即可)。", wraplength=380)
+        info_label.grid(row=3, column=0, pady=5, sticky=tk.W)
         
         result_label = ttk.Label(frame, text="", foreground="blue", wraplength=380)
-        result_label.grid(row=3, column=0, pady=5, sticky=tk.W)
+        result_label.grid(row=4, column=0, pady=5, sticky=tk.W)
         
         error_label = ttk.Label(frame, text="", foreground="red", wraplength=380)
-        error_label.grid(row=4, column=0, pady=5, sticky=tk.W)
+        error_label.grid(row=5, column=0, pady=5, sticky=tk.W)
         
         def handle_tag_search():
             tags = tag_entry.get().strip().split()
@@ -198,7 +213,11 @@ class App:
                 error_label.config(text="请至少输入一个标签！")
                 return
             
-            # 清空之前的选择
+            # --- 新增代码 ---
+            # 获取复选框的状态
+            use_and_logic = self.and_var.get()
+            # --- 结束新增 ---
+
             self.selected_symbols = []
             
             # 查找匹配标签的所有symbol
@@ -216,8 +235,19 @@ class App:
                     elif isinstance(tag_value, list):
                         item_tags = tag_value
                     
-                    # 检查是否有任何标签完全匹配
-                    if any(tag in item_tags for tag in tags):
+                    # --- 逻辑修改 ---
+                    # 根据复选框状态选择匹配逻辑
+                    match = False
+                    if use_and_logic:
+                        # AND 逻辑：所有输入的标签都必须存在于item的标签中
+                        if all(tag in item_tags for tag in tags):
+                            match = True
+                    else:
+                        # OR 逻辑：任何一个输入的标签存在于item的标签中即可
+                        if any(tag in item_tags for tag in tags):
+                            match = True
+                    
+                    if match:
                         found_symbols.add(item['symbol'])
             
             # 将结果转换为列表

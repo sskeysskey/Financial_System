@@ -152,79 +152,40 @@
         "XRP": ""
     },
     "Must": {
-        "TFPM": "",
-        "WPM": "",
-        "ICE": "",
-        "CVNA": "",
+        "RMD": "",
+        "YOU": "",
         "HIMS": "",
-        "VRSN": "",
-        "ANET": "",
         "AXON": "",
         "ALAB": "",
-        "CHH": "",
-        "AVY": "",
-        "DASH": "",
         "DKNG": "",
-        "APD": "",
-        "TEL": "",
-        "SPGI": "",
         "AIQ": "",
-        "CRDO": "CRDO15热"
+        "SE": ""
     },
     "Today": {
-        "IESC": "",
-        "TME": "",
-        "IDXX": "",
-        "SE": "",
+        "SPGI": "",
+        "CVNA": "",
+        "CHH": "",
         "DUOL": "",
         "CART": "",
-        "BAM": ""
-    },
-    "Next Week": {},
-    "2 Weeks": {},
-    "3 Weeks": {},
-    "Watching": {
-        "RBLX": "",
-        "RDDT": "",
-        "WST": "",
-        "VRSK": ""
+        "BAM": "",
+        "APD": "",
+        "BR": ""
     },
     "Short": {
+        "STX": "",
+        "WDC": "",
+        "SNDK": "",
+        "MU": "",
         "HL": "",
         "KGC": "",
         "SSRM": "",
-        "CDE": "",
-        "AGI": "",
         "AEM": "",
-        "B": "",
-        "IAG": "",
-        "EGO": "",
-        "STM": ""
+        "B": ""
     },
-    "Strategy12": {
-        "KDP": "",
-        "KMB": "",
-        "MELI": ""
-    },
-    "Strategy34": {
-        "AFRM": "",
-        "AON": "",
-        "ARES": "",
-        "BDX": "",
-        "BLK": "",
-        "KKR": "",
-        "OXY": ""
-    },
-    "PE_valid": {
-        "AZO": "",
-        "HD": "HD7",
-        "RMD": "",
-        "VRSK": "",
-        "WM": ""
-    },
-    "PE_invalid": {
-        "RBLX": ""
-    },
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {},
+    "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
@@ -264,15 +225,12 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USRetailM": "28 USRetailM",
-        "CorePPI": "29 CorePPI",
-        "USPPI": "29 USPPI",
-        "USTrade": "28 USTrade",
-        "USUnemploy": "27 USUnemploy",
-        "USNonFarm": "27 USNonFarm",
-        "ImportPriceM": "19 ImportPriceM",
-        "CoreCPI": "24 CoreCPI",
-        "USConfidence": "24 USConfidence",
+        "USNonFarm": "26 USNonFarm",
+        "USUnemploy": "26 USUnemploy",
+        "USRetailM": "26 USRetailM",
+        "CorePPI": "26 CorePPI",
+        "USPPI": "26 USPPI",
+        "USTrade": "26 USTrade",
         "USInterest": "29 USInterest",
         "USGDP": "30 USGDP",
         "CorePCEY": "31 CorePCEY",
