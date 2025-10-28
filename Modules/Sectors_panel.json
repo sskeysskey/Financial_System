@@ -48,7 +48,8 @@
         "GIS": "",
         "CLX": "",
         "KMB": "",
-        "MDLZ": ""
+        "MDLZ": "",
+        "CHD": ""
     },
     "Industrials": {
         "FLY": "",
@@ -76,7 +77,9 @@
         "JPM": "",
         "AON": "",
         "BAM": "",
-        "FFIN": ""
+        "FFIN": "",
+        "BRK-A": "",
+        "QFIN": ""
     },
     "Healthcare": {
         "GKOS": ""
@@ -183,9 +186,43 @@
         "B": ""
     },
     "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
-    "PE_invalid": {},
+    "Strategy34": {
+        "AFRM": "",
+        "ARES": "",
+        "AWK": "",
+        "BDX": "",
+        "BLK": "",
+        "ICE": "",
+        "KKR": "",
+        "NKE": "",
+        "OXY": ""
+    },
+    "PE_valid": {
+        "ALL": "",
+        "AON": "",
+        "AZO": "",
+        "BLDR": "",
+        "BRBR": "",
+        "BURL": "",
+        "CG": "",
+        "CHD": "",
+        "CPRT": "",
+        "FFIV": "FFIV15热",
+        "HD": "HD7",
+        "IDXX": "",
+        "KMB": "",
+        "NCLH": "",
+        "QFIN": "",
+        "RBA": "",
+        "SAIA": "",
+        "SHAK": "",
+        "VRSK": "",
+        "WM": "",
+        "WPM": "WPM15热"
+    },
+    "PE_invalid": {
+        "RBLX": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

@@ -216,6 +216,17 @@
             "KMB",
             "MELI",
             "OXY"
+        ],
+        "2025-10-28": [
+            "AFRM",
+            "ARES",
+            "AWK",
+            "BDX",
+            "BLK",
+            "ICE",
+            "KKR",
+            "NKE",
+            "OXY"
         ]
     },
     "no_season": {
@@ -549,6 +560,48 @@
             "VRSK",
             "VZ",
             "WM"
+        ],
+        "2025-10-28": [
+            "ALL",
+            "AON",
+            "AOS",
+            "APD",
+            "AZO",
+            "BBWI",
+            "BLDR",
+            "BMRN",
+            "BRBR",
+            "BURL",
+            "CART",
+            "CG",
+            "CHD",
+            "CMCSA",
+            "CPRT",
+            "DEO",
+            "DKNG",
+            "DUOL",
+            "FFIV",
+            "HD",
+            "HIMS",
+            "IDXX",
+            "KHC",
+            "KMB",
+            "LCID",
+            "LEGN",
+            "LI",
+            "MOS",
+            "NCLH",
+            "NKE",
+            "QFIN",
+            "RBA",
+            "RBLX",
+            "RMD",
+            "SAIA",
+            "SHAK",
+            "VRSK",
+            "WHR",
+            "WM",
+            "WPM"
         ]
     }
 }
