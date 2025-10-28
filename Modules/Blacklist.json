@@ -829,7 +829,10 @@
         "SPYX",
         "CWI",
         "ROAM",
-        "UDIV"
+        "UDIV",
+        "MEAR",
+        "MMIT",
+        "HTAB"
     ],
     "Earning": [
         "TW",
