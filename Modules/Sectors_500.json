@@ -11,7 +11,8 @@
         "NEM",
         "AEM",
         "FCX",
-        "B"
+        "B",
+        "VALE"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -159,8 +160,7 @@
         "HOOD",
         "IBKR",
         "BAM",
-        "NWG",
-        "NDAQ"
+        "NWG"
     ],
     "Healthcare": [
         "LLY",
@@ -237,7 +237,7 @@
         "CMI",
         "VRT",
         "PCAR",
-        "FERG"
+        "CARR"
     ],
     "Real_Estate": [
         "PLD",
@@ -276,7 +276,6 @@
         "PANW",
         "SONY",
         "ADI",
-        "FI",
         "KLAC",
         "LRCX",
         "MU",
@@ -303,7 +302,7 @@
         "CRWV",
         "DDOG",
         "MPWR",
-        "ZS"
+        "STX"
     ],
     "Utilities": [
         "NEE",

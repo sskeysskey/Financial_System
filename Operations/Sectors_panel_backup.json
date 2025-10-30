@@ -3,10 +3,15 @@
         "BCC": "",
         "WFG": "",
         "KNF": "",
-        "APD": ""
+        "APD": "",
+        "LIN": ""
     },
     "Real_Estate": {
-        "WY": ""
+        "WY": "",
+        "EQR": "",
+        "MAA": "",
+        "UDR": "",
+        "CPT": ""
     },
     "Energy": {
         "OKE": "",
@@ -21,11 +26,12 @@
         "CHYM": "",
         "FIG": "",
         "MSTR": "",
-        "ORCL": "",
         "TXN": "",
         "AUR": "",
         "ROP": "",
-        "EEFT": ""
+        "EEFT": "",
+        "ADP": "",
+        "NSIT": ""
     },
     "Consumer_Cyclical": {
         "KMX": "",
@@ -34,7 +40,9 @@
         "ANF": "",
         "CHH": "",
         "DECK": "",
-        "WH": ""
+        "WH": "",
+        "DKNG": "",
+        "MMYT": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -48,7 +56,8 @@
         "GIS": "",
         "CLX": "",
         "KMB": "",
-        "MDLZ": ""
+        "MDLZ": "",
+        "CHD": ""
     },
     "Industrials": {
         "FLY": "",
@@ -59,7 +68,8 @@
         "WSO": "",
         "LII": "",
         "DLB": "",
-        "BAH": ""
+        "BAH": "",
+        "WM": ""
     },
     "Communication_Services": {
         "DIS": "",
@@ -76,10 +86,18 @@
         "JPM": "",
         "AON": "",
         "BAM": "",
-        "FFIN": ""
+        "FFIN": "",
+        "BRK-A": "",
+        "QFIN": "",
+        "MMC": "",
+        "ALL": "",
+        "ACGL": "",
+        "EG": ""
     },
     "Healthcare": {
-        "GKOS": ""
+        "GKOS": "",
+        "BMY": "",
+        "ATR": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -152,35 +170,28 @@
         "XRP": ""
     },
     "Must": {
-        "RMD": "",
-        "YOU": "",
+        "ICE": "",
         "HIMS": "",
         "AXON": "",
         "ALAB": "",
-        "DKNG": "",
         "AIQ": "",
-        "SE": ""
+        "BAM": "",
+        "SE": "",
+        "DUOL": "",
+        "CHD": ""
     },
     "Today": {
         "SPGI": "",
-        "CVNA": "",
-        "CHH": "",
-        "DUOL": "",
         "CART": "",
-        "BAM": "",
-        "APD": "",
-        "BR": ""
+        "APD": ""
     },
     "Short": {
-        "STX": "",
-        "WDC": "",
+        "MRVL": "",
         "SNDK": "",
-        "MU": "",
-        "HL": "",
-        "KGC": "",
-        "SSRM": "",
-        "AEM": "",
-        "B": ""
+        "GOOGL": "",
+        "IDCC": "",
+        "ROIV": "",
+        "MPWR": ""
     },
     "Strategy12": {},
     "Strategy34": {},

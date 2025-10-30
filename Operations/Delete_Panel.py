@@ -119,6 +119,21 @@ class CategorySelectionDialog(QDialog):
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
 
+    def accept(self):
+        """重写accept方法，在确认后执行额外的按键操作"""
+        super().accept()
+        # 执行AppleScript
+        script = '''
+        --模拟ESC 取消 功能
+        tell application "System Events"
+            key code 53
+        end tell
+        '''
+        try:
+            subprocess.run(['osascript', '-e', script], check=True, capture_output=True)
+        except (subprocess.CalledProcessError, FileNotFoundError) as e:
+            print(f"执行 AppleScript 失败: {e}")
+
     def get_selected_categories(self):
         """获取所有被选中的复选框的文本"""
         return [cb.text() for cb in self.checkboxes if cb.isChecked()]

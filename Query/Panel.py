@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import (
     QPushButton, QGroupBox, QScrollArea, QTextEdit, QDialog,
     QInputDialog, QMenu, QFrame, QLabel, QLineEdit, QMessageBox
 )
-from PyQt5.QtCore import Qt, QMimeData, QPoint
+from PyQt5.QtCore import Qt, QMimeData, QPoint, QEvent
 from PyQt5.QtGui import QFont, QCursor, QDrag
 
 sys.path.append('/Users/yanzhang/Coding/Financial_System/Query')
@@ -521,6 +521,13 @@ class MainWindow(QMainWindow):
         }
         
         self.init_ui()
+
+    def changeEvent(self, event):
+        super().changeEvent(event)
+        if event.type() == QEvent.ActivationChange:
+            if self.isActiveWindow():
+                # 从后台回到前台（窗口被激活）
+                self.refresh_selection_window()
 
     def init_ui(self):
         self.setWindowTitle("选择查询关键字")
