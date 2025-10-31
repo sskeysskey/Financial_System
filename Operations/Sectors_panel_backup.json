@@ -4,14 +4,20 @@
         "WFG": "",
         "KNF": "",
         "APD": "",
-        "LIN": ""
+        "LIN": "",
+        "ECL": ""
     },
     "Real_Estate": {
         "WY": "",
         "EQR": "",
         "MAA": "",
         "UDR": "",
-        "CPT": ""
+        "CPT": "",
+        "AVB": "",
+        "ESS": "",
+        "AMH": "",
+        "GLPI": "",
+        "FSV": ""
     },
     "Energy": {
         "OKE": "",
@@ -31,7 +37,16 @@
         "ROP": "",
         "EEFT": "",
         "ADP": "",
-        "NSIT": ""
+        "NSIT": "",
+        "FIS": "",
+        "TYL": "",
+        "GDDY": "",
+        "PCTY": "",
+        "DSGX": "",
+        "G": "",
+        "FOUR": "",
+        "CPAY": "",
+        "PAYX": ""
     },
     "Consumer_Cyclical": {
         "KMX": "",
@@ -42,13 +57,14 @@
         "DECK": "",
         "WH": "",
         "DKNG": "",
-        "MMYT": ""
+        "MMYT": "",
+        "GPK": "",
+        "SLGN": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
         "FLO": "",
         "INGR": "",
-        "PPC": "",
         "PM": "",
         "BRBR": "",
         "JBS": "",
@@ -57,7 +73,12 @@
         "CLX": "",
         "KMB": "",
         "MDLZ": "",
-        "CHD": ""
+        "CHD": "",
+        "CL": "",
+        "STZ": "",
+        "TAP": "",
+        "MKC": "",
+        "PRMB": ""
     },
     "Industrials": {
         "FLY": "",
@@ -69,7 +90,15 @@
         "LII": "",
         "DLB": "",
         "BAH": "",
-        "WM": ""
+        "WM": "",
+        "RELX": "",
+        "CTAS": "",
+        "CPRT": "",
+        "WCN": "",
+        "VRSK": "",
+        "OC": "",
+        "POOL": "",
+        "UHAL": ""
     },
     "Communication_Services": {
         "DIS": "",
@@ -88,11 +117,19 @@
         "BAM": "",
         "FFIN": "",
         "BRK-A": "",
-        "QFIN": "",
         "MMC": "",
         "ALL": "",
         "ACGL": "",
-        "EG": ""
+        "EG": "",
+        "ICE": "",
+        "ERIE": "",
+        "FDS": "",
+        "RYAN": "",
+        "MORN": "",
+        "KNSL": "",
+        "RLI": "",
+        "PNFP": "",
+        "SIGI": ""
     },
     "Healthcare": {
         "GKOS": "",
@@ -170,18 +207,19 @@
         "XRP": ""
     },
     "Must": {
-        "ICE": "",
         "HIMS": "",
         "AXON": "",
         "ALAB": "",
         "AIQ": "",
-        "BAM": "",
         "SE": "",
         "DUOL": "",
-        "CHD": ""
+        "BFAM": ""
     },
     "Today": {
+        "DSGX": "",
         "SPGI": "",
+        "BR": "",
+        "CHD": "",
         "CART": "",
         "APD": ""
     },
@@ -191,7 +229,8 @@
         "GOOGL": "",
         "IDCC": "",
         "ROIV": "",
-        "MPWR": ""
+        "MPWR": "",
+        "CCJ": ""
     },
     "Strategy12": {},
     "Strategy34": {},

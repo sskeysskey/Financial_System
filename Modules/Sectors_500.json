@@ -46,7 +46,6 @@
         "SBUX",
         "MELI",
         "RACE",
-        "CMG",
         "ABNB",
         "MAR",
         "AZO",
@@ -246,8 +245,7 @@
         "WELL",
         "SPG",
         "DLR",
-        "O",
-        "PSA"
+        "O"
     ],
     "Technology": [
         "AAPL",
@@ -302,7 +300,8 @@
         "CRWV",
         "DDOG",
         "MPWR",
-        "STX"
+        "STX",
+        "ZS"
     ],
     "Utilities": [
         "NEE",
