@@ -417,6 +417,7 @@ def execute_external_script(script_type, keyword, on_done=None, block=False):
         'similar_tags': f'{base_path}/Query/Search_Similar_Tag.py',
         'check_kimi': '/Users/yanzhang/Coding/ScriptEditor/Check_Earning.scpt',
         'check_futu': '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt',
+        'check_seekingalpha': '/Users/yanzhang/Coding/ScriptEditor/Stock_seekingalpha.scpt',
         'stock_chart': '/Users/yanzhang/Coding/ScriptEditor/Stock_Chart.scpt'
     }
     script_path = script_configs.get(script_type)
@@ -908,7 +909,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     time_options = {"1m":0.08, "3m":0.25, "6m":0.5, "1Y":1, "2Y":2, "3Y":3, "5Y":5, "10Y":10, "All":0}
     default_index = list(time_options.keys()).index(default_time_range)
 
-    rax = plt.axes([0.95, 0.005, 0.05, 0.75], facecolor=NORD_THEME['background'])
+    rax = plt.axes([0.95, 0.0, 0.05, 0.65], facecolor=NORD_THEME['background'])
     radio = RadioButtons(rax, list(time_options.keys()), active=default_index)
     rax.set_facecolor(NORD_THEME['background'])
     rax.set_frame_on(False)
@@ -922,8 +923,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         circle.set_facecolor(NORD_THEME['background'])
     radio.circles[default_index].set_facecolor(NORD_THEME['accent_red'])
 
-    instructions = "N:新财报\nE:改财报\nT:改标签\nW:新事件\nQ:改事件\nK:查豆包\nZ:查富途\nP:做比较\nJ:加Panel\nH:加empty\nL:查相似\nY:删除\nG:刷新" # 新增 G
-    rax.text(0.5, 0.99, instructions, transform=rax.transAxes, ha="center", va="bottom",
+    instructions = "N:新财报\nE:改财报\nT:改标签\nW:新事件\nQ:改事件\nK:查豆包\nZ:查富途\nP:做比较\nJ:加Panel\nH:加empty\nL:查相似\nY:删除\nG:刷新\nO:查α" # 新增 G
+    rax.text(0.5, 0.98, instructions, transform=rax.transAxes, ha="center", va="bottom",
              color=NORD_THEME['text_light'], fontsize=10, fontfamily="Arial Unicode MS")
     
     # --- 优化：缓存查找结果，减少重复计算 ---
@@ -1266,6 +1267,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                        'q': lambda: execute_external_script('event_edit', name),
                        'k': lambda: execute_external_script('check_kimi', name),
                        'z': lambda: execute_external_script('check_futu', name),
+                       'o': lambda: execute_external_script('check_seekingalpha', name),
                        'p': lambda: execute_external_script('symbol_compare', name),
                        'l': lambda: execute_external_script('similar_tags', name),
                        '/': lambda: execute_external_script('stock_chart', name),

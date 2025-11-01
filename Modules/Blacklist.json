@@ -540,6 +540,7 @@
         "HES",
         "BPMC",
         "SKX",
+        "TEO",
         "PARA",
         "CHPT",
         "USM",
@@ -566,7 +567,8 @@
         "TXNM",
         "VOR",
         "MRUS",
-        "PDI"
+        "PDI",
+        "K"
     ],
     "etf": [
         "VDE",

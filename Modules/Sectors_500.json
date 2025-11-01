@@ -28,7 +28,6 @@
         "AMX",
         "RBLX",
         "APP",
-        "EA",
         "WBD"
     ],
     "Consumer_Cyclical": [
@@ -56,7 +55,6 @@
         "DASH",
         "CPNG",
         "ORLY",
-        "LCID",
         "ROST",
         "F"
     ],
@@ -299,9 +297,9 @@
         "GLW",
         "CRWV",
         "DDOG",
-        "MPWR",
         "STX",
-        "ZS"
+        "ZS",
+        "WDC"
     ],
     "Utilities": [
         "NEE",

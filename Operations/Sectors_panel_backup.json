@@ -5,10 +5,10 @@
         "KNF": "",
         "APD": "",
         "LIN": "",
-        "ECL": ""
+        "ECL": "",
+        "CBT": ""
     },
     "Real_Estate": {
-        "WY": "",
         "EQR": "",
         "MAA": "",
         "UDR": "",
@@ -17,7 +17,8 @@
         "ESS": "",
         "AMH": "",
         "GLPI": "",
-        "FSV": ""
+        "FSV": "",
+        "NSA": ""
     },
     "Energy": {
         "OKE": "",
@@ -38,7 +39,6 @@
         "EEFT": "",
         "ADP": "",
         "NSIT": "",
-        "FIS": "",
         "TYL": "",
         "GDDY": "",
         "PCTY": "",
@@ -46,7 +46,8 @@
         "G": "",
         "FOUR": "",
         "CPAY": "",
-        "PAYX": ""
+        "PAYX": "",
+        "DUOL": ""
     },
     "Consumer_Cyclical": {
         "KMX": "",
@@ -59,13 +60,17 @@
         "DKNG": "",
         "MMYT": "",
         "GPK": "",
-        "SLGN": ""
+        "SLGN": "",
+        "CMG": "",
+        "IP": "",
+        "FND": "",
+        "CART": "",
+        "CAVA": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
         "FLO": "",
         "INGR": "",
-        "PM": "",
         "BRBR": "",
         "JBS": "",
         "TSN": "",
@@ -74,11 +79,14 @@
         "KMB": "",
         "MDLZ": "",
         "CHD": "",
-        "CL": "",
         "STZ": "",
         "TAP": "",
         "MKC": "",
-        "PRMB": ""
+        "PRMB": "",
+        "MO": "",
+        "SFM": "",
+        "POST": "",
+        "MZTI": ""
     },
     "Industrials": {
         "FLY": "",
@@ -98,13 +106,17 @@
         "VRSK": "",
         "OC": "",
         "POOL": "",
-        "UHAL": ""
+        "UHAL": "",
+        "HON": "",
+        "ALK": "",
+        "SNDR": ""
     },
     "Communication_Services": {
         "DIS": "",
         "NFLX": "",
         "T": "",
-        "TMUS": ""
+        "TMUS": "",
+        "DJT": ""
     },
     "Financial_Services": {
         "ARX": "",
@@ -113,17 +125,14 @@
         "AJG": "",
         "BRO": "",
         "JPM": "",
-        "AON": "",
         "BAM": "",
         "FFIN": "",
         "BRK-A": "",
         "MMC": "",
-        "ALL": "",
         "ACGL": "",
         "EG": "",
         "ICE": "",
         "ERIE": "",
-        "FDS": "",
         "RYAN": "",
         "MORN": "",
         "KNSL": "",
@@ -134,7 +143,9 @@
     "Healthcare": {
         "GKOS": "",
         "BMY": "",
-        "ATR": ""
+        "ATR": "",
+        "MOH": "",
+        "DVA": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -207,31 +218,24 @@
         "XRP": ""
     },
     "Must": {
+        "CART": "",
+        "HON": "",
         "HIMS": "",
-        "AXON": "",
-        "ALAB": "",
-        "AIQ": "",
+        "AFRM": "",
+        "SN": "",
+        "CTVA": "",
         "SE": "",
-        "DUOL": "",
-        "BFAM": ""
+        "DUOL": ""
     },
     "Today": {
+        "CNH": "",
+        "MZTI": "",
         "DSGX": "",
-        "SPGI": "",
+        "AXON": "",
         "BR": "",
-        "CHD": "",
-        "CART": "",
         "APD": ""
     },
-    "Short": {
-        "MRVL": "",
-        "SNDK": "",
-        "GOOGL": "",
-        "IDCC": "",
-        "ROIV": "",
-        "MPWR": "",
-        "CCJ": ""
-    },
+    "Short": {},
     "Strategy12": {},
     "Strategy34": {},
     "PE_valid": {},
@@ -275,17 +279,21 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USNonFarm": "26 USNonFarm",
-        "USUnemploy": "26 USUnemploy",
-        "USRetailM": "26 USRetailM",
-        "CorePPI": "26 CorePPI",
-        "USPPI": "26 USPPI",
+        "USNonFarm": "04 USNonFarm",
+        "USUnemploy": "04 USUnemploy",
+        "USRetailM": "02 USRetailM",
+        "CorePPI": "02 CorePPI",
+        "USPPI": "02 USPPI",
         "USTrade": "26 USTrade",
         "USInterest": "29 USInterest",
-        "USGDP": "30 USGDP",
-        "CorePCEY": "31 CorePCEY",
-        "CorePCEM": "31 CorePCEM",
-        "PCEY": "31 PCEY"
+        "USGDP": "05 USGDP",
+        "CorePCEY": "06 CorePCEY",
+        "CorePCEM": "06 CorePCEM",
+        "PCEY": "06 PCEY",
+        "ImportPriceM": "04 ImportPriceM",
+        "USInitial": "04 USInitial",
+        "USNonFarmA": "05 USNonFarmA",
+        "USNonPMI": "05 USNonPMI"
     },
     "Economic_All": {
         "USGDP": "",
