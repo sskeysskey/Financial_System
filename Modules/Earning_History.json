@@ -269,14 +269,26 @@
             "ARES",
             "BDX",
             "BLK",
+            "CBRE",
+            "CDW",
+            "DLR",
+            "FRPT",
             "GLXY",
+            "GPK",
+            "HAS",
             "HLT",
             "KKR",
             "KO",
             "MRNA",
             "NCLH",
+            "OC",
             "OXY",
-            "PCAR"
+            "PCAR",
+            "PEN",
+            "PKG",
+            "STE",
+            "TECH",
+            "WST"
         ]
     },
     "no_season": {

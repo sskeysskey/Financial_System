@@ -78,7 +78,48 @@ def save_last_range_by_group(group_name: str, sd: datetime.date, ed: datetime.da
     except Exception as e:
         print(f"[{group_name}] 写入配置失败：{e}")
 
-# -------- 日期选择界面 (Tkinter) ------------------------------------
+def advance_all_dates_by_one_week():
+    """将配置文件中所有分组的日期向后顺延一周（7天）。"""
+    try:
+        if not os.path.exists(config_path):
+            print("配置文件不存在，无法顺延日期。")
+            return False
+        
+        with open(config_path, 'r') as f:
+            data = json.load(f)
+        
+        modified = False
+        for group_name in data:
+            if 'start_date' in data[group_name] and 'end_date' in data[group_name]:
+                try:
+                    old_start = datetime.strptime(data[group_name]['start_date'], '%Y-%m-%d').date()
+                    old_end = datetime.strptime(data[group_name]['end_date'], '%Y-%m-%d').date()
+                    
+                    new_start = old_start + timedelta(days=7)
+                    new_end = old_end + timedelta(days=7)
+                    
+                    data[group_name]['start_date'] = new_start.strftime('%Y-%m-%d')
+                    data[group_name]['end_date'] = new_end.strftime('%Y-%m-%d')
+                    
+                    print(f"[{group_name}] 日期已顺延: {old_start} ~ {old_end} => {new_start} ~ {new_end}")
+                    modified = True
+                except Exception as e:
+                    print(f"[{group_name}] 日期顺延失败：{e}")
+        
+        if modified:
+            with open(config_path, 'w') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            print("所有日期已成功顺延一周并保存到配置文件。")
+            return True
+        else:
+            print("没有需要顺延的日期。")
+            return False
+            
+    except Exception as e:
+        print(f"顺延日期过程中发生错误：{e}")
+        return False
+
+# -------- 日期选择界面 (Tkinter) - 保留但不再使用 ------------------------------------
 def pick_date_range(group_name: str):
     """弹出一个 Tkinter 窗口让用户选择日期范围，并与指定分组关联。"""
     
@@ -164,22 +205,10 @@ def run_scraper_task(driver, sectors_data, task_config):
     print(f"开始执行任务: {group_name.upper()}")
     print("="*80)
 
-    # -------- 步骤 1: 根据星期决定是否弹出日期选择界面 --------------------------------
-    # 获取当前是星期几 (0=Monday, 6=Sunday)
-    today_weekday = datetime.now().weekday()
-    
-    # 周日(6)和周一(0)需要弹窗，其他日期(周二到周六: 1-5)直接读取配置
-    if today_weekday == 6 or today_weekday == 0:  # Sunday or Monday
-        print(f"今天是{'周日' if today_weekday == 6 else '周一'}，弹出日期选择窗口...")
-        start_date, end_date = pick_date_range(group_name)
-        if start_date is None or end_date is None:
-            print(f"任务 [{group_name.upper()}] 因未选择有效日期范围而被跳过。")
-            return # 直接返回，让主程序继续下一个任务
-    else:  # Tuesday to Saturday (1-5)
-        print(f"今天是工作日(周二至周六)，直接读取配置文件中的日期范围...")
-        last_sd, last_ed = load_last_range_by_group(group_name)
-        start_date = datetime(last_sd.year, last_sd.month, last_sd.day)
-        end_date = datetime(last_ed.year, last_ed.month, last_ed.day)
+    # -------- 步骤 1: 直接从配置文件读取日期范围（已在主程序中完成顺延） --------
+    last_sd, last_ed = load_last_range_by_group(group_name)
+    start_date = datetime(last_sd.year, last_sd.month, last_sd.day)
+    end_date = datetime(last_ed.year, last_ed.month, last_ed.day)
 
     print(f"已为任务 [{group_name.upper()}] 确定日期范围: {start_date.date()} 到 {end_date.date()}")
 
@@ -349,6 +378,16 @@ def run_scraper_task(driver, sectors_data, task_config):
 if __name__ == "__main__":
     # -------- 启动唯一的防 AFK 线程 ------------------------------------
     threading.Thread(target=move_mouse_periodically, daemon=True).start()
+
+    # -------- 检查是否需要自动顺延日期 ---------------------------------
+    today_weekday = datetime.now().weekday()
+    
+    # 周日(6)和周一(0)自动顺延配置文件中的所有日期
+    if today_weekday == 6 or today_weekday == 0:
+        print(f"\n今天是{'周日' if today_weekday == 6 else '周一'}，自动将所有日期顺延一周...")
+        advance_all_dates_by_one_week()
+    else:
+        print(f"\n今天是工作日(周二至周六)，使用配置文件中的现有日期...")
 
     # -------- 定义所有任务的配置 ---------------------------------------
     base_news_path = '/Users/yanzhang/Coding/News/'

@@ -928,6 +928,73 @@ def handle_weekend_dates(directory: str):
     else:
         print("在主文件中未发现日期为周末的条目。")
 
+# --- 新增：阶段 6: 整理主文件按日期排序 ---
+
+def sort_file_by_date(filepath: str):
+    """
+    读取文件内容，按日期排序后重新写入
+    """
+    try:
+        # 读取文件
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+        except UnicodeDecodeError:
+            with open(filepath, 'r', encoding='latin-1') as f:
+                lines = f.readlines()
+        
+        # 解析每一行，提取日期用于排序
+        parsed_lines = []
+        for line in lines:
+            line_stripped = line.strip()
+            if not line_stripped or ':' not in line_stripped:
+                # 跳过空行或格式不正确的行
+                continue
+            
+            try:
+                parts = line_stripped.split(':')
+                if len(parts) >= 3:
+                    date_str = parts[2].strip().split(' ')[0]
+                    # 尝试解析日期
+                    dt_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                    parsed_lines.append((dt_obj, line_stripped))
+                else:
+                    # 格式不正确，保留原行但不参与排序（放到最后）
+                    parsed_lines.append((datetime.max, line_stripped))
+            except (ValueError, IndexError):
+                # 无法解析日期，保留原行但不参与排序（放到最后）
+                parsed_lines.append((datetime.max, line_stripped))
+        
+        # 按日期排序
+        parsed_lines.sort(key=lambda x: x[0])
+        
+        # 写回文件
+        with open(filepath, 'w', encoding='utf-8') as f:
+            for _, line_content in parsed_lines:
+                f.write(line_content + '\n')
+        
+        print(f"  - 已整理 {os.path.basename(filepath)}")
+        
+    except Exception as e:
+        print(f"整理文件 {os.path.basename(filepath)} 时出错: {e}")
+
+
+def sort_all_main_files(directory: str):
+    """
+    整理所有主文件，按日期排序
+    """
+    print("\n--- 阶段 6: 整理主文件按日期排序 ---")
+    
+    main_files, _ = get_file_paths(directory)
+    
+    if not main_files:
+        print("未找到主文件，跳过整理。")
+        return
+    
+    for filepath in main_files:
+        sort_file_by_date(filepath)
+    
+    print(f"已完成 {len(main_files)} 个主文件的整理。")
 
 # --- 主程序入口 ---
 
@@ -1048,6 +1115,9 @@ def main():
 
     # --- 新增：阶段 5: 检查并修正周末日期 ---
     handle_weekend_dates(directory)
+
+    # --- 新增：阶段 6: 整理主文件按日期排序 ---
+    sort_all_main_files(directory)
     
     # --- 最终总结 ---
     print("\n所有处理流程已完成。")

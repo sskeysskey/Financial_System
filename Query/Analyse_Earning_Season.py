@@ -58,7 +58,7 @@ CONFIG = {
     "MIDDLE_PLUS_DROP_PERCENTAGE": 0.08,
     "HIGH_DROP_PERCENTAGE": 0.09,
     "MAX_DROP_PERCENTAGE": 0.15,
-    "MIN_TURNOVER": 200_000_000,
+    "MIN_TURNOVER": 100_000_000,
     "MARKETCAP_THRESHOLD": 100_000_000_000,
     "MAX_RISE_FROM_7D_LOW": 0.03,
 }
@@ -550,7 +550,7 @@ def run_strategy_3_5(data, symbols_for_time_condition, symbol_to_trace, log_deta
 def run_strategy_4(data, cursor, symbol_sector_map, symbol_to_trace, log_detail):
     """ 策略 4 (修改后):
     (1) 最近N次财报递增，最近30天内财报，Earning表price>0
-    (2) 最新收盘价位于财报日后9-26天
+    (2) 最新收盘价位于财报日后6-26天
     (3) A：价比财报日前后最高价低X%；B：或价比倒数第二次财报低
     (4) 必须满足：最新价比前10天最低价高不超过3%
     """
@@ -576,7 +576,7 @@ def run_strategy_4(data, cursor, symbol_sector_map, symbol_to_trace, log_detail)
         return False
 
     # 步骤2: 日期窗口
-    window_start = data['latest_er_date'] + datetime.timedelta(days=9)
+    window_start = data['latest_er_date'] + datetime.timedelta(days=6)
     window_end = data['latest_er_date'] + datetime.timedelta(days=26)
     is_in_window = (window_start <= data['latest_date'] <= window_end)
     if is_tracing:
