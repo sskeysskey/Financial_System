@@ -78,18 +78,55 @@ def save_last_range_by_group(group_name: str, sd: datetime.date, ed: datetime.da
     except Exception as e:
         print(f"[{group_name}] 写入配置失败：{e}")
 
-def advance_all_dates_by_one_week():
-    """将配置文件中所有分组的日期向后顺延一周（7天）。"""
+def get_week_start(date):
+    """获取给定日期所在周的周一日期"""
+    return date - timedelta(days=date.weekday())
+
+def check_and_advance_dates_if_needed():
+    """
+    检查是否需要顺延日期。
+    规则：只在周日或周一，且本周尚未顺延过的情况下才执行顺延。
+    返回：True 表示执行了顺延，False 表示未执行
+    """
+    today = datetime.now().date()
+    today_weekday = today.weekday()
+    
+    # 只在周日(6)或周一(0)时才可能顺延
+    if today_weekday not in [6, 0]:
+        print(f"\n今天是工作日(周{'二三四五六'[today_weekday-1]})，使用配置文件中的现有日期...")
+        return False
+    
     try:
+        # 读取配置文件
         if not os.path.exists(config_path):
-            print("配置文件不存在，无法顺延日期。")
+            print("配置文件不存在，无法检查顺延状态。")
             return False
         
         with open(config_path, 'r') as f:
             data = json.load(f)
         
+        # 检查上次顺延日期
+        last_advance_str = data.get('_last_advance_date')
+        current_week_start = get_week_start(today)
+        
+        if last_advance_str:
+            last_advance_date = datetime.strptime(last_advance_str, '%Y-%m-%d').date()
+            last_advance_week_start = get_week_start(last_advance_date)
+            
+            # 如果上次顺延和本次在同一周（周一相同），则不再顺延
+            if current_week_start == last_advance_week_start:
+                print(f"\n本周已在 {last_advance_str} 执行过日期顺延，跳过本次顺延操作。")
+                return False
+        
+        # 执行顺延
+        print(f"\n今天是{'周日' if today_weekday == 6 else '周一'}，且本周尚未顺延，开始将所有日期顺延一周...")
+        
         modified = False
         for group_name in data:
+            # 跳过特殊键
+            if group_name.startswith('_'):
+                continue
+                
             if 'start_date' in data[group_name] and 'end_date' in data[group_name]:
                 try:
                     old_start = datetime.strptime(data[group_name]['start_date'], '%Y-%m-%d').date()
@@ -107,9 +144,12 @@ def advance_all_dates_by_one_week():
                     print(f"[{group_name}] 日期顺延失败：{e}")
         
         if modified:
+            # 记录本次顺延日期
+            data['_last_advance_date'] = today.strftime('%Y-%m-%d')
+            
             with open(config_path, 'w') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
-            print("所有日期已成功顺延一周并保存到配置文件。")
+            print(f"所有日期已成功顺延一周，并记录顺延日期为 {today}")
             return True
         else:
             print("没有需要顺延的日期。")
@@ -380,14 +420,7 @@ if __name__ == "__main__":
     threading.Thread(target=move_mouse_periodically, daemon=True).start()
 
     # -------- 检查是否需要自动顺延日期 ---------------------------------
-    today_weekday = datetime.now().weekday()
-    
-    # 周日(6)和周一(0)自动顺延配置文件中的所有日期
-    if today_weekday == 6 or today_weekday == 0:
-        print(f"\n今天是{'周日' if today_weekday == 6 else '周一'}，自动将所有日期顺延一周...")
-        advance_all_dates_by_one_week()
-    else:
-        print(f"\n今天是工作日(周二至周六)，使用配置文件中的现有日期...")
+    check_and_advance_dates_if_needed()
 
     # -------- 定义所有任务的配置 ---------------------------------------
     base_news_path = '/Users/yanzhang/Coding/News/'
@@ -437,7 +470,6 @@ if __name__ == "__main__":
     # -------- 全局初始化 Selenium 和其他资源 -----------------------------
     print("正在初始化 Selenium WebDriver...")
     driver = None
-    conn = None
     try:
         chrome_options = Options()
         for arg in ["--disable-extensions", "--disable-gpu", "--disable-dev-shm-usage", "--no-sandbox", "--blink-settings=imagesEnabled=false"]:
@@ -449,9 +481,6 @@ if __name__ == "__main__":
         with open('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json', 'r') as f:
             sectors_data = json.load(f)
         
-        # 您的代码中初始化了数据库但未使用，这里保持该逻辑
-        conn = sqlite3.connect('/Users/yanzhang/Coding/Database/Finance.db')
-        
         # -------- 按顺序执行所有任务 -------------------------------------
         for config in TASK_CONFIGS:
             run_scraper_task(driver, sectors_data, config)
@@ -462,9 +491,6 @@ if __name__ == "__main__":
         print(f"\n程序执行过程中发生严重错误: {e}")
     finally:
         # -------- 统一清理资源 -----------------------------------------
-        if conn:
-            conn.close()
-            print("数据库连接已关闭。")
         if driver:
             driver.quit()
             print("WebDriver 已关闭。")
