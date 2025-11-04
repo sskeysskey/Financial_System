@@ -24,7 +24,8 @@
         "PCTY": "",
         "DSGX": "",
         "PAYX": "",
-        "SPSC": ""
+        "SPSC": "",
+        "MSI": ""
     },
     "Consumer_Cyclical": {
         "KMX": "",
@@ -49,7 +50,8 @@
         "TAP": "",
         "MO": "",
         "SFM": "",
-        "MZTI": ""
+        "MZTI": "",
+        "CL": ""
     },
     "Industrials": {
         "FLY": "",
@@ -57,11 +59,15 @@
         "RELX": "",
         "CTAS": "",
         "WCN": "",
-        "POOL": ""
+        "POOL": "",
+        "HON": "",
+        "WM": ""
     },
     "Communication_Services": {
         "TMUS": "",
-        "DJT": ""
+        "DJT": "",
+        "META": "",
+        "T": ""
     },
     "Financial_Services": {
         "ARX": "",
@@ -73,7 +79,8 @@
         "ICE": "",
         "ERIE": "",
         "KNSL": "",
-        "FDS": ""
+        "FDS": "",
+        "BRK-A": ""
     },
     "Healthcare": {
         "ATR": "",

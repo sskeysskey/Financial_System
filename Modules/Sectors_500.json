@@ -157,7 +157,8 @@
         "HOOD",
         "IBKR",
         "BAM",
-        "NWG"
+        "NWG",
+        "ARES"
     ],
     "Healthcare": [
         "LLY",
@@ -233,8 +234,7 @@
         "LHX",
         "CMI",
         "VRT",
-        "PCAR",
-        "CARR"
+        "PCAR"
     ],
     "Real_Estate": [
         "PLD",
@@ -309,7 +309,6 @@
         "CEG",
         "AEP",
         "VST",
-        "SRE",
-        "D"
+        "SRE"
     ]
 }
