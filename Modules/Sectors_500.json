@@ -28,7 +28,8 @@
         "AMX",
         "RBLX",
         "APP",
-        "WBD"
+        "WBD",
+        "EA"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -157,8 +158,7 @@
         "HOOD",
         "IBKR",
         "BAM",
-        "NWG",
-        "ARES"
+        "NWG"
     ],
     "Healthcare": [
         "LLY",
@@ -309,6 +309,7 @@
         "CEG",
         "AEP",
         "VST",
-        "SRE"
+        "SRE",
+        "D"
     ]
 }

@@ -442,13 +442,17 @@ def execute_external_script(script_type, keyword, on_done=None, block=False):
             # Python 脚本
             python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
             if block:
-                subprocess.run([python_path, script_path, keyword], check=False)
-                if callable(on_done):
-                    on_done()
+                result = subprocess.run([python_path, script_path, keyword], check=False)
+                return_code = result.returncode
+                if on_done:
+                    if callable(on_done):
+                        on_done(return_code)
             else:
-                p = subprocess.Popen([python_path, script_path, keyword])
-                if callable(on_done):
-                    on_done()
+                result = subprocess.Popen([python_path, script_path, keyword])
+                return_code = result.returncode
+                if on_done:
+                    if callable(on_done):
+                        on_done(return_code)
     except Exception as e:
         display_dialog(f"启动程序失败: {e}")
 
@@ -1206,12 +1210,22 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     def launch_and_close_for_y():
         # 定义确认后的收尾逻辑：关闭所有图形并退出（结束功能）
-        def on_done():
-            try: plt.close('all')
-            except: pass
-            try:
-                if panel: sys.exit(0)
-            except: pass
+        def on_done(return_code):
+            # 只有在成功删除（返回码为0）时才关闭图形并退出
+            if return_code == 0:
+                try: 
+                    plt.close('all')
+                except: 
+                    pass
+                try:
+                    if panel: 
+                        sys.exit(0)
+                except: 
+                    pass
+            else:
+                # 返回码非0表示用户取消，不做任何操作
+                print(f"用户取消了删除操作（返回码: {return_code}）")
+        
         execute_external_script('panel_delete', name, on_done=on_done, block=True)
     
     # --- 新增修改 4: 创建刷新函数，并将其绑定到 'g' 键 ---

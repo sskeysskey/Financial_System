@@ -40,7 +40,7 @@ categories = [
     ['PE_valid','PE_invalid','Strategy12','Strategy34'],
     ['Basic_Materials','Consumer_Cyclical','Real_Estate','Technology','Energy','Industrials',
      'Consumer_Defensive','Communication_Services','Financial_Services', 'Healthcare','Utilities'],
-    ['Bonds','Crypto','Indices','Currencies'],
+    ['ETFs','Bonds','Crypto','Indices','Currencies'],
     ['Economics','Commodities'],
 ]
 

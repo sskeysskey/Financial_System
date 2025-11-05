@@ -53,7 +53,7 @@ CONFIG = {
     },
     # ========================================
     # ========== 代码修改开始 1/3：新增中国概念股成交额阈值 ==========
-    "TURNOVER_THRESHOLD": 100_000_000,
+    "TURNOVER_THRESHOLD": 200_000_000,
     "TURNOVER_THRESHOLD_CHINA": 40_000_000, # 新增：中国概念股的成交额阈值
     
     "RECENT_EARNINGS_COUNT": 2,

@@ -174,11 +174,11 @@ def main():
                 symbol = symbol_dialog.get_symbol()
                 if not symbol:
                     QMessageBox.warning(None, "输入无效", "Symbol 不能为空，程序已终止。")
-                    sys.exit(1)
+                    sys.exit(2)  # 修改：返回退出码 2 表示用户取消
             else:
                 # 用户点击了取消或按了 ESC
                 print("用户取消了操作。程序退出。")
-                sys.exit(0)
+                sys.exit(2)  # 修改：返回退出码 2 表示用户取消
         else:
             symbol = clipboard_content
 
@@ -207,7 +207,7 @@ def main():
     # 如果任何分组中都未找到该 symbol，则提示并退出
     if not found_in_categories:
         QMessageBox.information(None, "未找到", f"在所有分组中均未找到 Symbol <b style='color:blue;'>{symbol}</b>，程序已终止。")
-        sys.exit(0)
+        sys.exit(2)  # 修改：返回退出码 2 表示未找到（相当于取消操作）
 
     # 4. 弹出选择对话框，让用户选择要从哪些分组中删除
     category_dialog = CategorySelectionDialog(symbol, found_in_categories)
@@ -220,11 +220,11 @@ def main():
         categories_to_delete_from = category_dialog.get_selected_categories()
         if not categories_to_delete_from:
             QMessageBox.warning(None, "选择无效", "您没有选择任何分组进行删除，程序已终止。")
-            sys.exit(1)
+            sys.exit(2)  # 修改：返回退出码 2 表示用户取消
     else:
         # 用户点击了取消或按了 ESC
         print("用户取消了操作。程序退出。")
-        sys.exit(0)
+        sys.exit(2)  # 修改：返回退出码 2 表示用户取消
 
     # 5. 执行删除操作并更新 JSON 文件
     try:
@@ -242,9 +242,11 @@ def main():
             
             # 使用 print 替代 QMessageBox 以快速退出
             print(f"成功从分组 {categories_to_delete_from} 中删除了 '{symbol}'。")
+            sys.exit(0)  # 修改：明确返回退出码 0 表示成功删除
         else:
             # 这个分支理论上不会进入，因为前面的逻辑保证了至少有一个可选项
             QMessageBox.warning(None, "无任何更改", "未能执行任何删除操作。")
+            sys.exit(2)  # 修改：返回退出码 2 表示未执行删除
 
     except Exception as e:
         QMessageBox.critical(None, "未知错误", f"写入文件或删除数据时发生意外错误：\n{e}")

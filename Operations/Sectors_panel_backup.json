@@ -1,18 +1,25 @@
 {
     "Basic_Materials": {
         "WFG": "",
-        "APD": "",
         "LIN": "",
-        "CBT": ""
+        "CBT": "",
+        "EMN": "",
+        "BCC": ""
     },
     "Real_Estate": {
         "AVB": "",
         "AMH": "",
         "NSA": "",
-        "WY": ""
+        "WY": "",
+        "GMRE": "",
+        "BEKE": "",
+        "FSV": ""
     },
     "Energy": {
-        "OKE": ""
+        "OKE": "",
+        "EOG": "",
+        "WMB": "",
+        "KMI": ""
     },
     "Technology": {
         "FI": "",
@@ -24,10 +31,24 @@
         "PCTY": "",
         "DSGX": "",
         "PAYX": "",
-        "SPSC": ""
+        "SPSC": "",
+        "MSI": "",
+        "WIT": "",
+        "ENPH": "",
+        "FIG": "",
+        "ORCL": "",
+        "TXN": "",
+        "MSTR": "",
+        "NXPI": "",
+        "CDW": "",
+        "GIB": "",
+        "DUOL": "",
+        "EEFT": "",
+        "AUR": "",
+        "BLSH": "",
+        "WOLF": ""
     },
     "Consumer_Cyclical": {
-        "KMX": "",
         "BIRK": "",
         "CHH": "",
         "GPK": "",
@@ -37,49 +58,65 @@
         "CART": "",
         "CAVA": "",
         "ONON": "",
-        "MUSA": ""
+        "MUSA": "",
+        "RCL": "",
+        "DECK": "",
+        "DKNG": "",
+        "KMX": "",
+        "ALSN": ""
     },
-    "Utilities": {},
+    "Utilities": {
+        "NJR": ""
+    },
     "Consumer_Defensive": {
         "FLO": "",
-        "INGR": "",
-        "BRBR": "",
         "GIS": "",
         "MDLZ": "",
-        "TAP": "",
         "MO": "",
         "SFM": "",
-        "MZTI": ""
+        "MZTI": "",
+        "CL": "",
+        "PG": "",
+        "KMB": "",
+        "PPC": "",
+        "INGR": ""
     },
     "Industrials": {
         "FLY": "",
         "RSG": "",
         "RELX": "",
-        "CTAS": "",
         "WCN": "",
-        "POOL": ""
+        "HON": "",
+        "TRI": "",
+        "OC": "",
+        "POOL": "",
+        "ALK": ""
     },
     "Communication_Services": {
-        "TMUS": "",
+        "META": "",
+        "T": "",
+        "SKM": "",
         "DJT": ""
     },
     "Financial_Services": {
         "ARX": "",
         "HLNE": "",
-        "PGR": "",
         "AJG": "",
         "BRO": "",
         "MMC": "",
         "ICE": "",
         "ERIE": "",
         "KNSL": "",
-        "FDS": ""
+        "SIGI": ""
     },
     "Healthcare": {
         "ATR": "",
-        "MOH": "",
         "DVA": "",
-        "CI": ""
+        "CI": "",
+        "ZTS": ""
+    },
+    "ETFs": {
+        "HYG": ""
     },
     "Bonds": {
         "US10Y": "",
@@ -152,32 +189,103 @@
         "XRP": ""
     },
     "Must": {
-        "HON": "",
+        "HIMS": "",
+        "RBA": "",
+        "CNH": "",
         "DUOL": "",
         "AXON": "",
         "WST": "",
         "DKNG": "",
         "CBRE": "",
-        "TME": "",
-        "CART": "",
-        "HIMS": "",
         "AFRM": "",
-        "SN": "",
         "SE": ""
     },
     "Today": {
-        "AZO": "",
+        "PKG": "",
+        "CART": "",
+        "SN": "",
+        "PLNT": "",
         "CTVA": "",
-        "QS": "",
+        "OMC": "",
+        "ANF": "",
+        "G": "",
+        "DASH": "",
+        "TAL": "",
+        "ALC": "",
+        "GPC": "",
+        "HON": "",
+        "AZO": "",
         "PTC": "",
-        "MZTI": "",
-        "BR": ""
+        "MZTI": ""
     },
-    "Short": {},
+    "Short": {
+        "UI": "",
+        "TSEM": "",
+        "ROIV": "",
+        "NTRA": "",
+        "GSAT": ""
+    },
     "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
-    "PE_invalid": {},
+    "Strategy34": {
+        "AAL": "",
+        "ACHR": "",
+        "BLK": "",
+        "DAL": "",
+        "GLXY": "GLXY热",
+        "HLT": "",
+        "HPQ": "HPQ热",
+        "INTC": "",
+        "KO": "",
+        "KR": "",
+        "OXY": "",
+        "PCAR": "",
+        "PEP": "",
+        "SCCO": ""
+    },
+    "PE_valid": {
+        "ADI": "",
+        "APD": "",
+        "BDX": "",
+        "BEKE": "",
+        "CCL": "",
+        "CDE": "",
+        "COIN": "",
+        "CPRT": "",
+        "CTAS": "",
+        "DECK": "",
+        "EFX": "",
+        "ELV": "",
+        "FFIV": "",
+        "FIS": "",
+        "FLEX": "FLEX热",
+        "GNRC": "",
+        "HD": "HD7",
+        "KDP": "",
+        "KKR": "",
+        "KMB": "",
+        "LNW": "",
+        "LOW": "",
+        "MCHP": "",
+        "META": "META15",
+        "MMM": "",
+        "MRNA": "",
+        "NKE": "",
+        "ORCL": "ORCL15热",
+        "PM": "PM7",
+        "RCL": "",
+        "RDDT": "",
+        "SMMT": "",
+        "TCOM": "",
+        "TME": "",
+        "TMUS": "TMUS15",
+        "TSLA": "",
+        "UAL": "",
+        "UNH": "UNH7"
+    },
+    "PE_invalid": {
+        "APLD": "APLD15热",
+        "SMR": "SMR15热"
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
