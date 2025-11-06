@@ -34,6 +34,7 @@ cursor = conn.cursor()
 # cursor.execute("UPDATE Commodities SET price = 14.20 WHERE id = 105273")
 # cursor.execute("UPDATE Currencies SET date = '2025-01-06' WHERE id = 144913")
 # cursor.execute("UPDATE Currencies SET price = 6.6807 WHERE id = 215496")
+# cursor.execute("UPDATE Technology SET price = 55.405 WHERE id = 1037700")
 
 # 保留两位小数
 # cursor.execute("UPDATE Currencies SET price = ROUND(price, 2) WHERE name = 'GBPI'")
