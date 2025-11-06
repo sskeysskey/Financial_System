@@ -3,7 +3,7 @@ import sqlite3
 import os
 import datetime
 
-SYMBOL_TO_TRACE = "IONQ"
+SYMBOL_TO_TRACE = ""
 LOG_FILE_PATH = "/Users/yanzhang/Downloads/No_Season_trace_log.txt"
 
 # --- 1. 配置文件和路径 ---
@@ -89,8 +89,8 @@ CONFIG = {
     # 条件4参数: 财报日至今最高价相比最新价的涨幅阈值
     "COND4_RISE_THRESHOLD": 0.07, # 7%
     # ========== 新增：条件5的参数 ==========
-    "COND5_ER_TO_HIGH_THRESHOLD": 0.2,  # 财报日到最高价的涨幅阈值 20%
-    "COND5_HIGH_TO_LATEST_THRESHOLD": 0.15,  # 最高价到最新价的跌幅阈值 15%
+    "COND5_ER_TO_HIGH_THRESHOLD": 0.3,  # 财报日到最高价的涨幅阈值 30%
+    "COND5_HIGH_TO_LATEST_THRESHOLD": 0.79,  # 最高价到最新价的跌幅阈值 7.9%
 }
 
 # --- 3. 辅助与文件操作模块 ---
