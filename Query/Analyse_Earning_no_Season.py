@@ -90,7 +90,7 @@ CONFIG = {
     "COND4_RISE_THRESHOLD": 0.07, # 7%
     # ========== 新增：条件5的参数 ==========
     "COND5_ER_TO_HIGH_THRESHOLD": 0.3,  # 财报日到最高价的涨幅阈值 30%
-    "COND5_HIGH_TO_LATEST_THRESHOLD": 0.79,  # 最高价到最新价的跌幅阈值 7.9%
+    "COND5_HIGH_TO_LATEST_THRESHOLD": 0.079,  # 最高价到最新价的跌幅阈值 7.9%
 }
 
 # --- 3. 辅助与文件操作模块 ---
@@ -259,6 +259,17 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
         high_between_er_and_latest_row = cursor.fetchone()
         data['high_between_er_and_latest'] = high_between_er_and_latest_row[0] if high_between_er_and_latest_row else None
         if is_tracing: log_detail(f"[{symbol}] 步骤3.4: 获取从财报日({latest_er_date})到最新日({data['latest_date_str']})之间的最高价: {data['high_between_er_and_latest']}")
+        
+        # ========== 代码修改开始 2/3：新增逻辑以获取条件5所需的数据 ==========
+        # 为条件5获取财报日及之后5个交易日（共6天）的收盘价，并计算最低价
+        cursor.execute(f'SELECT price FROM "{sector_name}" WHERE name = ? AND date >= ? ORDER BY date ASC LIMIT 6', (symbol, data['latest_er_date_str']))
+        er_6_day_prices_rows = cursor.fetchall()
+        er_6_day_prices = [row[0] for row in er_6_day_prices_rows if row[0] is not None]
+        data['er_6_day_window_low'] = min(er_6_day_prices) if er_6_day_prices else None
+        if is_tracing: 
+            log_detail(f"[{symbol}] 步骤3.5: 为条件5获取财报窗口期(6天)最低价。价格: {er_6_day_prices}, 最低价: {data['er_6_day_window_low']}")
+        # ========== 代码修改结束 2/3 ==========
+
         data['pe_ratio'], data['marketcap'] = None, None
         if marketcap_exists:
             try:
@@ -479,35 +490,52 @@ def check_new_condition_4(data, config, log_detail, symbol_to_trace):
         log_detail(f"  - 结果: {passed}")
     return passed
 
+# ========== 代码修改开始 3/3：更新 check_new_condition_5 函数以实现新规则 ==========
 def check_new_condition_5(data, config, log_detail, symbol_to_trace):
     symbol = data.get('symbol')
     is_tracing = (symbol == symbol_to_trace)
-    if is_tracing: log_detail(f"\n--- [{symbol}] 新增条件5评估 ---")
+    if is_tracing: log_detail(f"\n--- [{symbol}] 新增条件5评估 (新规则) ---")
+
+    # 从缓存中获取所需数据
     high_between = data.get('high_between_er_and_latest')
-    latest_er_price = data.get('all_er_prices', [])[-1] if data.get('all_er_prices') else None
+    # 使用新获取的“财报日及之后6天窗口期”的最低价
+    er_window_low_price = data.get('er_6_day_window_low')
     latest_price = data.get('latest_price')
-    er_to_high_threshold = config.get('COND5_ER_TO_HIGH_THRESHOLD', 0.09)
-    high_to_latest_threshold = config.get('COND5_HIGH_TO_LATEST_THRESHOLD', 0.07)
-    if high_between is None or latest_er_price is None or latest_price is None:
-        if is_tracing: log_detail(f"  - 结果: False (数据不足: high_between={high_between}, latest_er_price={latest_er_price}, latest_price={latest_price})")
+    
+    # 从配置中获取阈值
+    er_to_high_threshold = config.get('COND5_ER_TO_HIGH_THRESHOLD', 0.3)
+    high_to_latest_threshold = config.get('COND5_HIGH_TO_LATEST_THRESHOLD', 0.079)
+
+    # 数据有效性检查
+    if high_between is None or er_window_low_price is None or latest_price is None:
+        if is_tracing: log_detail(f"  - 结果: False (数据不足: high_between={high_between}, er_window_low_price={er_window_low_price}, latest_price={latest_price})")
         return False
-    if latest_er_price <= 0 or latest_price <= 0:
-        if is_tracing: log_detail(f"  - 结果: False (价格数据无效: latest_er_price={latest_er_price}, latest_price={latest_price})")
+    
+    if er_window_low_price <= 0 or latest_price <= 0:
+        if is_tracing: log_detail(f"  - 结果: False (价格数据无效: er_window_low_price={er_window_low_price}, latest_price={latest_price})")
         return False
-    er_price_threshold = latest_er_price * (1 + er_to_high_threshold)
+
+    # 条件A：最高价比“财报窗口期最低价”高至少30%
+    er_price_threshold = er_window_low_price * (1 + er_to_high_threshold)
     cond_a = high_between >= er_price_threshold
+
+    # 条件B：最高价比“最新收盘价”高至少7.9%
     latest_price_threshold = latest_price * (1 + high_to_latest_threshold)
     cond_b = high_between >= latest_price_threshold
+
     passed = cond_a and cond_b
+
+    # 详细日志记录
     if is_tracing:
-        er_rise_pct = (high_between - latest_er_price) / latest_er_price if latest_er_price > 0 else 0
+        er_rise_pct = (high_between - er_window_low_price) / er_window_low_price if er_window_low_price > 0 else 0
         latest_rise_pct = (high_between - latest_price) / latest_price if latest_price > 0 else 0
-        log_detail(f"  - 最新财报日收盘价: {latest_er_price:.2f}")
+        log_detail(f"  - 财报窗口期(6天)最低价: {er_window_low_price:.2f}")
         log_detail(f"  - 财报日到最新日之间最高价: {high_between:.2f}")
         log_detail(f"  - 最新收盘价: {latest_price:.2f}")
-        log_detail(f"  - 条件A: 最高价相对财报价涨幅 {er_rise_pct:.2%} >= {er_to_high_threshold:.2%} -> {cond_a}")
+        log_detail(f"  - 条件A (新): 最高价相对财报窗口期最低价涨幅 {er_rise_pct:.2%} >= {er_to_high_threshold:.2%} -> {cond_a}")
         log_detail(f"  - 条件B: 最高价相对最新价涨幅 {latest_rise_pct:.2%} >= {high_to_latest_threshold:.2%} -> {cond_b}")
         log_detail(f"  - 结果: {passed}")
+        
     return passed
 
 # ========== 代码修改点 1/3: 重构 evaluate_stock_conditions 函数 ==========

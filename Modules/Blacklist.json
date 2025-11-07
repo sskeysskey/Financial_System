@@ -569,7 +569,8 @@
         "VOR",
         "MRUS",
         "PDI",
-        "K"
+        "K",
+        "EMBJ"
     ],
     "etf": [
         "VDE",

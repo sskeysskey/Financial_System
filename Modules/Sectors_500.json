@@ -28,8 +28,7 @@
         "AMX",
         "RBLX",
         "APP",
-        "WBD",
-        "EA"
+        "WBD"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -72,7 +71,6 @@
         "MO",
         "BTI",
         "CL",
-        "DEO",
         "MNST"
     ],
     "Energy": [
@@ -159,8 +157,7 @@
         "HOOD",
         "IBKR",
         "BAM",
-        "NWG",
-        "ARES"
+        "NWG"
     ],
     "Healthcare": [
         "LLY",
@@ -229,7 +226,6 @@
         "JCI",
         "HWM",
         "GEV",
-        "AXON",
         "NSC",
         "PWR",
         "URI",
