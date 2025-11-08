@@ -4,7 +4,9 @@
         "LIN": "",
         "CBT": "",
         "EMN": "",
-        "BCC": ""
+        "BCC": "",
+        "ECL": "",
+        "JHX": ""
     },
     "Real_Estate": {
         "AVB": "",
@@ -12,7 +14,9 @@
         "NSA": "",
         "WY": "",
         "GMRE": "",
-        "FSV": ""
+        "FSV": "",
+        "EQR": "",
+        "BEKE": ""
     },
     "Energy": {
         "OKE": "",
@@ -41,8 +45,13 @@
         "AUR": "",
         "BLSH": "",
         "WOLF": "",
-        "MSFT": "",
-        "CVLT": ""
+        "CVLT": "",
+        "FI": "",
+        "HUBS": "",
+        "NICE": "",
+        "FRSH": "",
+        "RELY": "",
+        "KLAR": ""
     },
     "Consumer_Cyclical": {
         "BIRK": "",
@@ -55,10 +64,12 @@
         "CAVA": "",
         "ONON": "",
         "MUSA": "",
-        "DKNG": "",
         "KMX": "",
         "ALSN": "",
-        "BKNG": ""
+        "BKNG": "",
+        "WH": "",
+        "SLGN": "",
+        "VVV": ""
     },
     "Utilities": {
         "NJR": ""
@@ -69,12 +80,14 @@
         "MDLZ": "",
         "MO": "",
         "SFM": "",
-        "MZTI": "",
         "CL": "",
         "PG": "",
         "PPC": "",
         "INGR": "",
-        "CLX": ""
+        "CLX": "",
+        "STZ": "",
+        "BRBR": "",
+        "PRMB": ""
     },
     "Industrials": {
         "FLY": "",
@@ -86,12 +99,19 @@
         "OC": "",
         "ALK": "",
         "BA": "",
-        "AXON": "",
-        "LPX": ""
+        "LPX": "",
+        "CPRT": "",
+        "EFX": "",
+        "WSO": "",
+        "POOL": "",
+        "CSL": ""
     },
     "Communication_Services": {
         "SKM": "",
-        "SPOT": ""
+        "SPOT": "",
+        "META": "",
+        "TMUS": "",
+        "PSO": ""
     },
     "Financial_Services": {
         "ARX": "",
@@ -103,14 +123,20 @@
         "ERIE": "",
         "KNSL": "",
         "SIGI": "",
-        "FDS": ""
+        "FDS": "",
+        "IBN": "",
+        "BAM": "",
+        "OWL": "",
+        "CACC": ""
     },
     "Healthcare": {
         "ATR": "",
         "DVA": "",
         "CI": "",
         "ZTS": "",
-        "PRCT": ""
+        "PRCT": "",
+        "SYK": "",
+        "CAI": ""
     },
     "ETFs": {
         "HYG": ""
@@ -186,48 +212,26 @@
         "XRP": ""
     },
     "Must": {
+        "HON": "",
+        "APLD": "",
+        "META": "",
+        "PLTR": "",
+        "MTSI": "",
+        "CMI": "",
+        "PH": "",
+        "COHR": "",
         "CDE": "",
-        "AVAV": "",
-        "PATH": "",
-        "RBA": "",
-        "CNH": "",
-        "DUOL": "",
-        "AXON": "",
         "WST": "",
-        "DKNG": "",
-        "CBRE": "",
-        "AFRM": "",
-        "SE": ""
+        "CBRE": ""
     },
     "Today": {
-        "PKG": "",
         "CART": "",
-        "SN": "",
-        "PLNT": "",
-        "CTVA": "",
-        "OMC": "",
-        "ANF": "",
-        "G": "",
-        "DASH": "",
-        "TAL": "",
-        "ALC": "",
-        "GPC": "",
-        "HON": "",
-        "AZO": "",
-        "PTC": "",
-        "MZTI": "",
-        "CPAY": ""
+        "ALC": ""
     },
     "Short": {
         "UI": "",
         "TSEM": "",
-        "ROIV": "",
-        "NTRA": "",
-        "GSAT": "",
-        "KRMN": "",
-        "SNDK": "",
-        "MU": "",
-        "SYM": ""
+        "ROIV": ""
     },
     "Strategy12": {},
     "Strategy34": {},

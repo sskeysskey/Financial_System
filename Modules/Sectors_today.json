@@ -1467,7 +1467,8 @@
     "JBTM",
     "KRMN",
     "MRCY",
-    "ECG"
+    "ECG",
+    "BETA"
   ],
   "Real_Estate": [
     "PLD",
@@ -1704,7 +1705,6 @@
     "ARW",
     "NSIT",
     "S",
-    "CCCS",
     "ST",
     "LFUS",
     "KD",
@@ -1800,7 +1800,9 @@
     "WOLF",
     "VSAT",
     "NTSK",
-    "KLAR"
+    "KLAR",
+    "Q",
+    "SOLS"
   ],
   "Utilities": [
     "NEE",
@@ -1858,6 +1860,7 @@
     "ENIC",
     "EMA",
     "TAC",
-    "SR"
+    "SR",
+    "BKH"
   ]
 }
