@@ -414,7 +414,7 @@ def main(mode):
             #     except Exception as e:
             #         print(f"删除文件 {confirm_file} 时出错: {e}")
 
-            show_alert(f"今天是周日或周一，所有爬取日期都需要重新手动设定。")
+            # show_alert(f"今天是周日或周一，所有爬取日期都需要重新手动设定。")
         else:
             print("Not right date. Other 模式只在周一运行。")
 

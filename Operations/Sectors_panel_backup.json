@@ -1,142 +1,56 @@
 {
     "Basic_Materials": {
-        "WFG": "",
-        "LIN": "",
-        "CBT": "",
-        "EMN": "",
-        "BCC": "",
-        "ECL": "",
         "JHX": ""
     },
     "Real_Estate": {
-        "AVB": "",
-        "AMH": "",
-        "NSA": "",
-        "WY": "",
-        "GMRE": "",
         "FSV": "",
-        "EQR": "",
         "BEKE": ""
     },
-    "Energy": {
-        "OKE": "",
-        "EOG": ""
-    },
+    "Energy": {},
     "Technology": {
-        "NIQ": "",
-        "CHYM": "",
-        "ADP": "",
         "NSIT": "",
-        "TYL": "",
-        "PCTY": "",
         "DSGX": "",
         "PAYX": "",
-        "SPSC": "",
-        "MSI": "",
-        "WIT": "",
-        "ENPH": "",
         "FIG": "",
-        "TXN": "",
-        "MSTR": "",
         "CDW": "",
-        "GIB": "",
-        "DUOL": "",
         "EEFT": "",
-        "AUR": "",
-        "BLSH": "",
-        "WOLF": "",
-        "CVLT": "",
         "FI": "",
         "HUBS": "",
-        "NICE": "",
-        "FRSH": "",
-        "RELY": "",
-        "KLAR": ""
+        "NICE": ""
     },
     "Consumer_Cyclical": {
         "BIRK": "",
-        "CHH": "",
-        "GPK": "",
         "CMG": "",
-        "IP": "",
         "FND": "",
-        "CART": "",
-        "CAVA": "",
         "ONON": "",
-        "MUSA": "",
-        "KMX": "",
-        "ALSN": "",
-        "BKNG": "",
-        "WH": "",
-        "SLGN": "",
-        "VVV": ""
+        "SLGN": ""
     },
-    "Utilities": {
-        "NJR": ""
-    },
+    "Utilities": {},
     "Consumer_Defensive": {
-        "FLO": "",
-        "GIS": "",
-        "MDLZ": "",
-        "MO": "",
-        "SFM": "",
-        "CL": "",
-        "PG": "",
         "PPC": "",
-        "INGR": "",
         "CLX": "",
         "STZ": "",
         "BRBR": "",
         "PRMB": ""
     },
     "Industrials": {
-        "FLY": "",
-        "RSG": "",
         "RELX": "",
-        "WCN": "",
         "HON": "",
         "TRI": "",
         "OC": "",
-        "ALK": "",
-        "BA": "",
         "LPX": "",
-        "CPRT": "",
-        "EFX": "",
         "WSO": "",
-        "POOL": "",
-        "CSL": ""
+        "CNH": "",
+        "RXO": ""
     },
     "Communication_Services": {
-        "SKM": "",
-        "SPOT": "",
         "META": "",
-        "TMUS": "",
         "PSO": ""
     },
-    "Financial_Services": {
-        "ARX": "",
-        "HLNE": "",
-        "AJG": "",
-        "BRO": "",
-        "MMC": "",
-        "ICE": "",
-        "ERIE": "",
-        "KNSL": "",
-        "SIGI": "",
-        "FDS": "",
-        "IBN": "",
-        "BAM": "",
-        "OWL": "",
-        "CACC": ""
-    },
+    "Financial_Services": {},
     "Healthcare": {
-        "ATR": "",
-        "DVA": "",
-        "CI": "",
         "ZTS": "",
-        "PRCT": "",
-        "SYK": "",
-        "CAI": ""
+        "PRCT": ""
     },
     "ETFs": {
         "HYG": ""
@@ -212,6 +126,12 @@
         "XRP": ""
     },
     "Must": {
+        "NOK": "",
+        "SE": "",
+        "MELI": "",
+        "ADSK": "",
+        "TME": "",
+        "NOVT": "",
         "HON": "",
         "APLD": "",
         "META": "",
@@ -225,13 +145,13 @@
         "CBRE": ""
     },
     "Today": {
-        "CART": "",
         "ALC": ""
     },
     "Short": {
         "UI": "",
         "TSEM": "",
-        "ROIV": ""
+        "ROIV": "",
+        "MU": ""
     },
     "Strategy12": {},
     "Strategy34": {},
@@ -276,23 +196,14 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USRetailM": "10 USRetailM",
+        "USUnemploy": "09 USUnemploy",
+        "USNonFarm": "09 USNonFarm",
+        "USRetailM": "09 USRetailM",
         "USPPI": "09 USPPI",
         "CorePPI": "09 CorePPI",
-        "USNonFarm": "13 USNonFarm",
-        "USUnemploy": "13 USUnemploy",
-        "USGDP": "02 USGDP",
-        "CorePCEM": "02 CorePCEM",
-        "CorePCEY": "02 CorePCEY",
-        "PCEY": "02 PCEY",
-        "ImportPriceM": "02 ImportPriceM",
-        "USInitial": "02 USInitial",
-        "USNonFarmA": "05 USNonFarmA",
-        "USNonPMI": "05 USNonPMI",
-        "USTrade": "02 USTrade",
-        "USConfidence": "07 USConfidence",
-        "USCPI": "15 USCPI",
-        "CoreCPI": "15 CoreCPI"
+        "USCPI": "12 USCPI",
+        "CoreCPI": "12 CoreCPI",
+        "USInitial": "13 USInitial"
     },
     "Economic_All": {
         "USGDP": "",
