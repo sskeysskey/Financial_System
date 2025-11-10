@@ -126,29 +126,26 @@
         "XRP": ""
     },
     "Must": {
+        "XLV": "",
+        "XLU": "",
         "NOK": "",
         "SE": "",
-        "MELI": "",
-        "ADSK": "",
-        "TME": "",
         "NOVT": "",
-        "HON": "",
-        "APLD": "",
         "META": "",
         "PLTR": "",
         "MTSI": "",
         "CMI": "",
         "PH": "",
-        "COHR": "",
         "CDE": "",
         "WST": "",
         "CBRE": ""
     },
     "Today": {
-        "ALC": ""
+        "ALC": "",
+        "ADSK": "",
+        "TME": ""
     },
     "Short": {
-        "UI": "",
         "TSEM": "",
         "ROIV": "",
         "MU": ""
