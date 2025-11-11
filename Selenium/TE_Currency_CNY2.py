@@ -49,7 +49,9 @@ else:
         Currencies = [
             "CNYARS",
             "CNYIDR",
-            "CNYIRR"
+            "CNYIRR",
+            "CNYEGP",
+            "CNYMXN"
         ]
 
         all_data = []

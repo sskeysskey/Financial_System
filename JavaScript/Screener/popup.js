@@ -32,10 +32,11 @@ document.addEventListener('DOMContentLoaded', function () {
     { url: 'https://finance.yahoo.com/research-hub/screener/360b16ee-2692-4617-bd1a-a6c715dd0c29/?start=0&count=100', category: 'Communication_Services' }
   ];
 
+  // 重试配置
+  const MAX_RETRIES = 3; // 每个页面最多重试3次
+
   /**
-   * 新增：向日志容器中添加一条消息
-   * @param {string} text - 要显示的消息文本
-   * @param {string} type - 消息类型 ('info', 'success', 'error', 'warning', 'final')
+   * 向日志容器中添加一条消息
    */
   function logMessage(text, type = 'info') {
     const p = document.createElement('p');
@@ -65,43 +66,16 @@ document.addEventListener('DOMContentLoaded', function () {
         // 更新主状态和进度条
         statusDiv.textContent = `Processing ${progress}/${urls.length}: ${category}`;
         progressBar.style.width = `${(progress / urls.length) * 100}%`;
-        logMessage(`[${progress}/${urls.length}] 正在打开页面: ${category}...`);
+        logMessage(`[${progress}/${urls.length}] 正在处理: ${category}...`);
 
-        const tab = await chrome.tabs.create({ url, active: false });
+        // 使用重试机制抓取单个页面
+        const pageResults = await scrapePageWithRetry(url, category, MAX_RETRIES);
 
-        try {
-          // 等待页面加载完成 - 使用更可靠的方法
-          await waitForPageLoad(tab.id);
-          logMessage(`页面加载完成，开始提取数据...`);
-
-          // 发送消息到 content.js 并等待详细的响应
-          const response = await new Promise((resolve, reject) => {
-            chrome.tabs.sendMessage(tab.id, { action: "scrapeData", category }, res => {
-              if (chrome.runtime.lastError) {
-                reject(new Error(chrome.runtime.lastError.message));
-              } else if (res) {
-                resolve(res);
-              } else {
-                reject(new Error("Content script did not send a response."));
-              }
-            });
-            // 设置60秒超时
-            setTimeout(() => reject(new Error("抓取超时 (60秒)")), 60000);
-          });
-
-          // 根据响应的 success 标志处理结果
-          if (response.success) {
-            allResults = allResults.concat(response.data);
-            logMessage(`[${category}] ${response.message}`, 'success');
-          } else {
-            logMessage(`[${category}] ${response.message}`, 'error');
-          }
-
-        } catch (err) {
-          logMessage(`处理页面 ${url} 时发生错误: ${err.message}`, 'error');
-        } finally {
-          // 确保标签页被关闭
-          await chrome.tabs.remove(tab.id).catch(e => console.warn("Could not remove tab:", e));
+        if (pageResults && pageResults.length > 0) {
+          allResults = allResults.concat(pageResults);
+          logMessage(`[${category}] 成功获取 ${pageResults.length} 条数据`, 'success');
+        } else {
+          logMessage(`[${category}] 重试 ${MAX_RETRIES} 次后仍未获取到数据`, 'warning');
         }
       }
 
@@ -139,6 +113,89 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
+  /**
+   * 带重试机制的页面抓取函数
+   */
+  async function scrapePageWithRetry(url, category, maxRetries) {
+    let attempt = 0;
+
+    while (attempt < maxRetries) {
+      attempt++;
+
+      if (attempt > 1) {
+        logMessage(`[${category}] 第 ${attempt} 次尝试 (共 ${maxRetries} 次)`, 'warning');
+      }
+
+      let tab = null;
+
+      try {
+        // 打开页面
+        logMessage(`[${category}] 正在打开页面...`);
+        tab = await chrome.tabs.create({ url, active: false });
+
+        // 等待页面加载
+        await waitForPageLoad(tab.id);
+        logMessage(`[${category}] 页面加载完成，开始提取数据...`);
+
+        // 发送消息到 content.js 抓取数据
+        const response = await new Promise((resolve, reject) => {
+          chrome.tabs.sendMessage(tab.id, { action: "scrapeData", category }, res => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+            } else if (res) {
+              resolve(res);
+            } else {
+              reject(new Error("Content script did not send a response."));
+            }
+          });
+          // 设置60秒超时
+          setTimeout(() => reject(new Error("抓取超时 (60秒)")), 60000);
+        });
+
+        // 检查响应结果
+        if (response.success && response.data && response.data.length > 0) {
+          // 成功获取到数据
+          logMessage(`[${category}] ${response.message}`, 'success');
+          return response.data;
+        } else {
+          // 没有获取到有效数据
+          const errorMsg = response.message || "未获取到有效数据";
+          logMessage(`[${category}] ${errorMsg}`, 'warning');
+
+          if (attempt < maxRetries) {
+            logMessage(`[${category}] 将在2秒后重试...`, 'warning');
+            await sleep(2000); // 等待2秒后重试
+          }
+        }
+
+      } catch (err) {
+        logMessage(`[${category}] 尝试 ${attempt} 失败: ${err.message}`, 'error');
+
+        if (attempt < maxRetries) {
+          logMessage(`[${category}] 将在2秒后重试...`, 'warning');
+          await sleep(2000);
+        }
+
+      } finally {
+        // 确保标签页被关闭
+        if (tab && tab.id) {
+          await chrome.tabs.remove(tab.id).catch(e => console.warn("Could not remove tab:", e));
+        }
+      }
+    }
+
+    // 所有重试都失败
+    logMessage(`[${category}] 达到最大重试次数 (${maxRetries})，放弃该页面`, 'error');
+    return [];
+  }
+
+  /**
+   * 睡眠函数
+   */
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
   function getDateStr() {
     const now = new Date();
     const yy = String(now.getFullYear() % 100).padStart(2, "0");
@@ -167,7 +224,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // waitForPageLoad 保持原样
   async function waitForPageLoad(tabId) {
     return new Promise((resolve, reject) => {
-      let checks = 0, maxChecks = 60; // 最多检查60次 (60秒)
+      let checks = 0, maxChecks = 30; // 最多检查60次 (60秒)
       function check() {
         // 检查标签页是否还存在
         chrome.tabs.get(tabId, (tab) => {

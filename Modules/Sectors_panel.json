@@ -4,7 +4,8 @@
     },
     "Real_Estate": {
         "FSV": "",
-        "BEKE": ""
+        "BEKE": "",
+        "AMH": ""
     },
     "Energy": {},
     "Technology": {
@@ -16,14 +17,21 @@
         "EEFT": "",
         "FI": "",
         "HUBS": "",
-        "NICE": ""
+        "NICE": "",
+        "SAP": "",
+        "MNDY": "",
+        "DUOL": "",
+        "WOLF": ""
     },
     "Consumer_Cyclical": {
         "BIRK": "",
         "CMG": "",
         "FND": "",
         "ONON": "",
-        "SLGN": ""
+        "SLGN": "",
+        "CROX": "",
+        "MMYT": "",
+        "HRB": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -31,7 +39,9 @@
         "CLX": "",
         "STZ": "",
         "BRBR": "",
-        "PRMB": ""
+        "PRMB": "",
+        "PG": "",
+        "FLO": ""
     },
     "Industrials": {
         "RELX": "",
@@ -41,16 +51,24 @@
         "LPX": "",
         "WSO": "",
         "CNH": "",
-        "RXO": ""
+        "RXO": "",
+        "RSG": "",
+        "UHAL": "",
+        "FLY": ""
     },
     "Communication_Services": {
         "META": "",
         "PSO": ""
     },
-    "Financial_Services": {},
+    "Financial_Services": {
+        "V": "",
+        "OWL": "",
+        "ERIE": ""
+    },
     "Healthcare": {
         "ZTS": "",
-        "PRCT": ""
+        "PRCT": "",
+        "MOH": ""
     },
     "ETFs": {
         "HYG": ""
@@ -152,9 +170,49 @@
         "MU": ""
     },
     "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
-    "PE_invalid": {},
+    "Strategy34": {
+        "CNC": "",
+        "DHR": "",
+        "DLR": "DLR热",
+        "GILD": "",
+        "HD": "",
+        "HPQ": "HPQ热",
+        "KR": "",
+        "LOW": "",
+        "OMC": "",
+        "ORCL": "ORCL热",
+        "SO": "SO热"
+    },
+    "PE_valid": {
+        "ADI": "",
+        "AVAV": "",
+        "BABA": "BABA7",
+        "BILI": "",
+        "BLK": "",
+        "CROX": "",
+        "CTAS": "",
+        "DECK": "",
+        "DELL": "DELL7热",
+        "ELV": "",
+        "GNRC": "",
+        "HON": "",
+        "HUM": "",
+        "KDP": "",
+        "LRN": "",
+        "MELI": "",
+        "MOH": "",
+        "NKE": "",
+        "NVO": "NVO15",
+        "OSCR": "",
+        "SNPS": "",
+        "TEM": "",
+        "TMUS": "TMUS7",
+        "UNH": "UNH7"
+    },
+    "PE_invalid": {
+        "APLD": "APLD15热",
+        "CRWV": "CRWV15热"
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

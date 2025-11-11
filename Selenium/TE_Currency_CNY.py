@@ -49,7 +49,7 @@ else:
 
     try:
         # 定义要抓取的目标货币符号
-        symbols = ["CNYIRR", "CNYEGP", "CNYMXN"]
+        symbols = ["CNYIRR"]
 
         all_data = []
         # 获取当前时间
