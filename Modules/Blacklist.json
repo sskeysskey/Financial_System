@@ -571,7 +571,8 @@
         "PDI",
         "K",
         "EMBJ",
-        "CCCS"
+        "CCCS",
+        "ERJ"
     ],
     "etf": [
         "VDE",
@@ -844,7 +845,15 @@
         "VNLA",
         "KNG",
         "DFNL",
-        "VFH"
+        "VFH",
+        "IWB",
+        "VTWO",
+        "GOEX",
+        "FLTW",
+        "XCEM",
+        "NANR",
+        "BJUL",
+        "BJAN"
     ],
     "Earning": [
         "TW",

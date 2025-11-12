@@ -161,7 +161,8 @@
         "BAM",
         "NWG",
         "ARES",
-        "NDAQ"
+        "NDAQ",
+        "RKT"
     ],
     "Healthcare": [
         "LLY",
@@ -297,7 +298,6 @@
         "NXPI",
         "TEL",
         "GLW",
-        "CRWV",
         "DDOG",
         "STX",
         "ZS",

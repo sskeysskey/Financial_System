@@ -171,7 +171,6 @@
     "PFFD",
     "CQQQ",
     "LIT",
-    "FLTW",
     "TUR",
     "FIW",
     "EZA",
@@ -215,7 +214,6 @@
     "SPSM",
     "IJH",
     "HEDJ",
-    "XCEM",
     "HYG",
     "SOXL",
     "IWM",
@@ -338,7 +336,6 @@
     "SPMD",
     "LVHI",
     "DEM",
-    "IWB",
     "SCHO",
     "JMST",
     "IGIB",
@@ -359,13 +356,11 @@
     "HEWJ",
     "EWJ",
     "IXJ",
-    "BJUL",
     "EFA",
     "PJUL",
     "BOCT",
     "AIQ",
     "GDXJ",
-    "NANR",
     "TMV",
     "FLMI",
     "GOVI",
@@ -373,7 +368,6 @@
     "DXJ",
     "FDD",
     "EUFN",
-    "BJAN",
     "IPKW",
     "EUAD",
     "FMAT",
@@ -394,14 +388,15 @@
     "EPHE",
     "ASEA",
     "EQL",
-    "GOEX",
     "CGW",
     "CHIQ",
     "EMCR",
     "ESPO",
     "RAAX",
     "EWX",
-    "ARKQ"
+    "ARKQ",
+    "NLR",
+    "VEU"
   ],
   "Basic_Materials": [
     "LIN",
@@ -1424,7 +1419,6 @@
     "MDU",
     "CRS",
     "MMS",
-    "ERJ",
     "BAH",
     "CSL",
     "AWI",
@@ -1468,7 +1462,8 @@
     "KRMN",
     "MRCY",
     "ECG",
-    "BETA"
+    "BETA",
+    "ENS"
   ],
   "Real_Estate": [
     "PLD",
@@ -1546,7 +1541,8 @@
     "OPEN",
     "GMRE",
     "HHH",
-    "FRMI"
+    "FRMI",
+    "LXP"
   ],
   "Technology": [
     "MSFT",
