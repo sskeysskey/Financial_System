@@ -5,7 +5,8 @@
     "Real_Estate": {
         "FSV": "",
         "BEKE": "",
-        "AMH": ""
+        "AMH": "",
+        "WY": ""
     },
     "Energy": {},
     "Technology": {
@@ -22,10 +23,14 @@
         "MNDY": "",
         "DUOL": "",
         "WOLF": "",
-        "ORCL": "",
         "MSTR": "",
-        "NXPI": "",
-        "ROP": ""
+        "ROP": "",
+        "ORCL": "",
+        "DOX": "",
+        "AUR": "",
+        "RELY": "",
+        "NTSK": "",
+        "Q": ""
     },
     "Consumer_Cyclical": {
         "BIRK": "",
@@ -35,8 +40,7 @@
         "SLGN": "",
         "CROX": "",
         "MMYT": "",
-        "HRB": "",
-        "SE": ""
+        "HRB": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -149,67 +153,59 @@
         "XRP": ""
     },
     "Must": {
-        "OMC": "",
-        "TEM": "",
-        "KDP": "",
         "HON": "",
-        "CNC": "",
         "XLV": "",
-        "NOVT": "",
         "META": "",
         "WST": "",
-        "CBRE": ""
+        "HPQ": ""
     },
-    "Today": {
-        "HPQ": "",
-        "ADSK": "",
-        "TME": ""
-    },
+    "Today": {},
     "Short": {},
     "Strategy12": {},
     "Strategy34": {
         "ALAB": "ALAB热",
-        "AMD": "AMD热",
+        "APP": "",
         "BE": "BE热",
         "CIFR": "CIFR热",
         "COIN": "",
+        "DLR": "DLR热",
         "INTC": "",
-        "KR": "",
-        "NOK": "",
         "ORCL": "ORCL热",
-        "PCAR": "",
         "SO": "SO热",
+        "TSLA": "",
         "TT": "TT热"
     },
     "PE_valid": {
-        "ADI": "",
-        "APP": "APP15",
-        "AVGO": "AVGO7热",
         "AXON": "",
         "BABA": "BABA15",
         "BILI": "",
-        "BLK": "",
+        "CHWY": "",
         "CORZ": "CORZ15热",
-        "CRDO": "CRDO15热",
-        "DELL": "DELL15热",
-        "FFIV": "",
-        "FN": "FN7热",
+        "CRDO": "CRDO7热",
+        "CTAS": "",
+        "DELL": "DELL7热",
+        "GRMN": "",
         "HD": "HD7",
         "HIMS": "",
+        "HUM": "",
         "HUT": "HUT15热",
         "IREN": "IREN15热",
-        "KMB": "",
         "LOW": "",
+        "LUMN": "",
         "MELI": "",
-        "OSCR": "",
+        "NXT": "",
+        "PATH": "",
+        "SMCI": "SMCI15热",
         "SNPS": "",
-        "TSLA": "",
-        "UNH": "UNH7"
+        "TEM": "",
+        "VRT": "VRT7热"
     },
     "PE_invalid": {
         "APLD": "APLD15热",
         "IONQ": "",
-        "OKLO": "OKLO15热",
+        "NET": "NET7热",
+        "QBTS": "",
+        "QS": "",
         "SMR": "SMR15热"
     },
     "Currencies": {

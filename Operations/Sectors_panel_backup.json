@@ -22,9 +22,7 @@
         "MNDY": "",
         "DUOL": "",
         "WOLF": "",
-        "ORCL": "",
         "MSTR": "",
-        "NXPI": "",
         "ROP": ""
     },
     "Consumer_Cyclical": {
@@ -35,8 +33,7 @@
         "SLGN": "",
         "CROX": "",
         "MMYT": "",
-        "HRB": "",
-        "SE": ""
+        "HRB": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -149,69 +146,18 @@
         "XRP": ""
     },
     "Must": {
-        "OMC": "",
-        "TEM": "",
-        "KDP": "",
         "HON": "",
-        "CNC": "",
         "XLV": "",
-        "NOVT": "",
         "META": "",
         "WST": "",
-        "CBRE": ""
+        "HPQ": ""
     },
-    "Today": {
-        "HPQ": "",
-        "ADSK": "",
-        "TME": ""
-    },
+    "Today": {},
     "Short": {},
     "Strategy12": {},
-    "Strategy34": {
-        "ALAB": "ALAB热",
-        "AMD": "AMD热",
-        "BE": "BE热",
-        "CIFR": "CIFR热",
-        "COIN": "",
-        "INTC": "",
-        "KR": "",
-        "NOK": "",
-        "ORCL": "ORCL热",
-        "PCAR": "",
-        "SO": "SO热",
-        "TT": "TT热"
-    },
-    "PE_valid": {
-        "ADI": "",
-        "APP": "APP15",
-        "AVGO": "AVGO7热",
-        "AXON": "",
-        "BABA": "BABA15",
-        "BILI": "",
-        "BLK": "",
-        "CORZ": "CORZ15热",
-        "CRDO": "CRDO15热",
-        "DELL": "DELL15热",
-        "FFIV": "",
-        "FN": "FN7热",
-        "HD": "HD7",
-        "HIMS": "",
-        "HUT": "HUT15热",
-        "IREN": "IREN15热",
-        "KMB": "",
-        "LOW": "",
-        "MELI": "",
-        "OSCR": "",
-        "SNPS": "",
-        "TSLA": "",
-        "UNH": "UNH7"
-    },
-    "PE_invalid": {
-        "APLD": "APLD15热",
-        "IONQ": "",
-        "OKLO": "OKLO15热",
-        "SMR": "SMR15热"
-    },
+    "Strategy34": {},
+    "PE_valid": {},
+    "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

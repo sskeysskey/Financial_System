@@ -170,24 +170,36 @@ def update_json_panel(symbols_list, json_path, group_name, symbol_to_note=None):
 
 def update_earning_history_json(file_path, group_name, symbols_to_add, log_detail):
     log_detail(f"\n--- 更新历史记录文件: {os.path.basename(file_path)} -> '{group_name}' ---")
-    today_str = datetime.date.today().isoformat()
+    yesterday = datetime.date.today() - datetime.timedelta(days=1)  # 获取昨天的日期
+    yesterday_str = yesterday.isoformat()  # 获取 'YYYY-MM-DD' 格式的昨天日期
+
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         log_detail("信息: 历史记录文件不存在或格式错误，将创建新的。")
         data = {}
+
+    # 确保顶层分组存在 (e.g., 'season')
     if group_name not in data:
         data[group_name] = {}
-    existing_symbols = data[group_name].get(today_str, [])
+
+    # 获取昨天已有的 symbol 列表，如果不存在则为空列表
+    existing_symbols = data[group_name].get(yesterday_str, [])
+    
+    # 合并新旧列表，通过集合去重，然后排序
     combined_symbols = set(existing_symbols) | set(symbols_to_add)
     updated_symbols = sorted(list(combined_symbols))
-    data[group_name][today_str] = updated_symbols
+
+    # 更新数据结构
+    data[group_name][yesterday_str] = updated_symbols
+    
     num_added = len(updated_symbols) - len(existing_symbols)
+
     try:
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
-        log_detail(f"成功更新历史记录。日期: {today_str}, 分组: '{group_name}'.")
+        log_detail(f"成功更新历史记录。日期: {yesterday_str}, 分组: '{group_name}'.")
         log_detail(f"  - 本次新增 {num_added} 个不重复的 symbol。")
         log_detail(f"  - 当天总计 {len(updated_symbols)} 个 symbol。")
     except Exception as e:
