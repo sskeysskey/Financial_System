@@ -5,7 +5,8 @@
     "Real_Estate": {
         "FSV": "",
         "BEKE": "",
-        "AMH": ""
+        "AMH": "",
+        "WY": ""
     },
     "Energy": {},
     "Technology": {
@@ -23,7 +24,12 @@
         "DUOL": "",
         "WOLF": "",
         "MSTR": "",
-        "ROP": ""
+        "ROP": "",
+        "DOX": "",
+        "AUR": "",
+        "RELY": "",
+        "NTSK": "",
+        "Q": ""
     },
     "Consumer_Cyclical": {
         "BIRK": "",
@@ -146,6 +152,7 @@
         "XRP": ""
     },
     "Must": {
+        "NET": "",
         "HON": "",
         "XLV": "",
         "META": "",
@@ -153,7 +160,9 @@
         "HPQ": ""
     },
     "Today": {},
-    "Short": {},
+    "Short": {
+        "ABVX": ""
+    },
     "Strategy12": {},
     "Strategy34": {},
     "PE_valid": {},

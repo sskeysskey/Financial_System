@@ -159,10 +159,7 @@
         "HOOD",
         "IBKR",
         "BAM",
-        "NWG",
-        "ARES",
-        "NDAQ",
-        "RKT"
+        "NWG"
     ],
     "Healthcare": [
         "LLY",
@@ -300,7 +297,6 @@
         "GLW",
         "DDOG",
         "STX",
-        "ZS",
         "WDC"
     ],
     "Utilities": [

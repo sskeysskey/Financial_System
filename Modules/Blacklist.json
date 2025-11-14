@@ -120,7 +120,6 @@
         "ST",
         "CHRD",
         "IBRX",
-        "CLF",
         "ARE",
         "BHP",
         "SHEL",
@@ -572,7 +571,8 @@
         "K",
         "EMBJ",
         "CCCS",
-        "ERJ"
+        "ERJ",
+        "WOLF"
     ],
     "etf": [
         "VDE",
@@ -853,7 +853,8 @@
         "XCEM",
         "NANR",
         "BJUL",
-        "BJAN"
+        "BJAN",
+        "FTXL"
     ],
     "Earning": [
         "TW",

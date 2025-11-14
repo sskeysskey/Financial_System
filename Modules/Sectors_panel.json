@@ -6,7 +6,9 @@
         "FSV": "",
         "BEKE": "",
         "AMH": "",
-        "WY": ""
+        "WY": "",
+        "DLR": "",
+        "FRMI": ""
     },
     "Energy": {},
     "Technology": {
@@ -25,12 +27,19 @@
         "WOLF": "",
         "MSTR": "",
         "ROP": "",
-        "ORCL": "",
         "DOX": "",
         "AUR": "",
         "RELY": "",
         "NTSK": "",
-        "Q": ""
+        "Q": "",
+        "ORCL": "",
+        "NOW": "",
+        "MSI": "",
+        "NXPI": "",
+        "DOCU": "",
+        "ENPH": "",
+        "BLSH": "",
+        "KLAR": ""
     },
     "Consumer_Cyclical": {
         "BIRK": "",
@@ -40,9 +49,14 @@
         "SLGN": "",
         "CROX": "",
         "MMYT": "",
-        "HRB": ""
+        "HRB": "",
+        "TSLA": "",
+        "SE": "",
+        "DASH": ""
     },
-    "Utilities": {},
+    "Utilities": {
+        "VST": ""
+    },
     "Consumer_Defensive": {
         "PPC": "",
         "CLX": "",
@@ -63,21 +77,31 @@
         "RSG": "",
         "UHAL": "",
         "FLY": "",
-        "LII": ""
+        "LII": "",
+        "BA": "",
+        "CARR": "",
+        "BLDR": "",
+        "POOL": "",
+        "CSL": ""
     },
     "Communication_Services": {
         "META": "",
-        "PSO": ""
+        "PSO": "",
+        "DIS": ""
     },
     "Financial_Services": {
         "V": "",
         "OWL": "",
-        "ERIE": ""
+        "ERIE": "",
+        "BAM": "",
+        "CRCL": "",
+        "OTF": ""
     },
     "Healthcare": {
         "ZTS": "",
         "PRCT": "",
-        "MOH": ""
+        "MOH": "",
+        "CAI": ""
     },
     "ETFs": {
         "HYG": ""
@@ -153,6 +177,7 @@
         "XRP": ""
     },
     "Must": {
+        "NET": "",
         "HON": "",
         "XLV": "",
         "META": "",
@@ -160,53 +185,98 @@
         "HPQ": ""
     },
     "Today": {},
-    "Short": {},
+    "Short": {
+        "ABVX": ""
+    },
     "Strategy12": {},
     "Strategy34": {
         "ALAB": "ALAB热",
+        "AMZN": "AMZN热",
         "APP": "",
         "BE": "BE热",
+        "CAT": "",
+        "CEG": "CEG热",
         "CIFR": "CIFR热",
+        "CLS": "CLS热",
+        "COF": "",
         "COIN": "",
         "DLR": "DLR热",
+        "FIX": "FIX热",
+        "FN": "FN热",
+        "GLXY": "GLXY热",
+        "HD": "",
         "INTC": "",
+        "LOW": "",
+        "NOK": "",
+        "NXT": "",
         "ORCL": "ORCL热",
+        "PCAR": "",
+        "SHW": "",
         "SO": "SO热",
         "TSLA": "",
         "TT": "TT热"
     },
     "PE_valid": {
+        "ACHR": "",
+        "ADSK": "",
+        "AVAV": "",
+        "AVGO": "AVGO7热",
         "AXON": "",
         "BABA": "BABA15",
-        "BILI": "",
+        "BLK": "",
+        "BWXT": "BWXT15热",
+        "BX": "",
+        "CCJ": "",
+        "CCL": "",
         "CHWY": "",
         "CORZ": "CORZ15热",
-        "CRDO": "CRDO7热",
-        "CTAS": "",
-        "DELL": "DELL7热",
+        "CRDO": "CRDO15热",
+        "DELL": "DELL15热",
+        "ENTG": "",
+        "EQIX": "",
+        "FFIV": "",
+        "FUTU": "",
+        "GDS": "GDS15热",
         "GRMN": "",
-        "HD": "HD7",
         "HIMS": "",
+        "HOOD": "",
         "HUM": "",
         "HUT": "HUT15热",
         "IREN": "IREN15热",
-        "LOW": "",
-        "LUMN": "",
+        "IRM": "IRM7热",
+        "KTOS": "KTOS15热",
         "MELI": "",
-        "NXT": "",
+        "MOD": "MOD15热",
+        "MOH": "",
+        "OSCR": "",
         "PATH": "",
+        "PLTR": "PLTR15",
+        "POOL": "",
+        "RCL": "",
+        "RMBS": "RMBS15热",
+        "SHOP": "",
         "SMCI": "SMCI15热",
         "SNPS": "",
+        "STRL": "STRL15热",
         "TEM": "",
-        "VRT": "VRT7热"
+        "TER": "",
+        "TLN": "TLN15热",
+        "TSM": "TSM7热",
+        "VRT": "VRT15热"
     },
     "PE_invalid": {
         "APLD": "APLD15热",
+        "ASTS": "ASTS15热",
+        "CRWV": "CRWV15热",
         "IONQ": "",
-        "NET": "NET7热",
+        "OKLO": "OKLO15热",
         "QBTS": "",
         "QS": "",
-        "SMR": "SMR15热"
+        "RBLX": "",
+        "ROKU": "",
+        "SMR": "SMR15热",
+        "SOUN": "",
+        "SYM": ""
     },
     "Currencies": {
         "DXY": "美元指数",
@@ -252,9 +322,10 @@
         "USRetailM": "09 USRetailM",
         "USPPI": "09 USPPI",
         "CorePPI": "09 CorePPI",
-        "USCPI": "12 USCPI",
-        "CoreCPI": "12 CoreCPI",
-        "USInitial": "13 USInitial"
+        "USCPI": "19 USCPI",
+        "CoreCPI": "19 CoreCPI",
+        "USInitial": "13 USInitial",
+        "USConfidence": "21 USConfidence"
     },
     "Economic_All": {
         "USGDP": "",

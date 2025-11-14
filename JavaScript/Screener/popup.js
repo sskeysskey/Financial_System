@@ -224,7 +224,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // waitForPageLoad 保持原样
   async function waitForPageLoad(tabId) {
     return new Promise((resolve, reject) => {
-      let checks = 0, maxChecks = 30; // 最多检查60次 (60秒)
+      let checks = 0, maxChecks = 30; // 最多检查30次 (60秒)
       function check() {
         // 检查标签页是否还存在
         chrome.tabs.get(tabId, (tab) => {
@@ -253,7 +253,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             if (++checks >= maxChecks) {
-              reject(new Error("页面加载或数据出现超时 (60秒)"));
+              reject(new Error("页面加载或数据出现超时 (30秒)"));
             } else {
               setTimeout(check, 1000);
             }
