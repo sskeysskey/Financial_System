@@ -29,7 +29,14 @@
         "AUR": "",
         "RELY": "",
         "NTSK": "",
-        "Q": ""
+        "Q": "",
+        "DOCU": "",
+        "TXN": "",
+        "MSI": "",
+        "ENPH": "",
+        "BLSH": "",
+        "KLAR": "",
+        "SOLS": ""
     },
     "Consumer_Cyclical": {
         "BIRK": "",
@@ -39,7 +46,10 @@
         "SLGN": "",
         "CROX": "",
         "MMYT": "",
-        "HRB": ""
+        "HRB": "",
+        "RCL": "",
+        "JD": "",
+        "MUSA": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -62,21 +72,35 @@
         "RSG": "",
         "UHAL": "",
         "FLY": "",
-        "LII": ""
+        "LII": "",
+        "CARR": "",
+        "BLDR": "",
+        "POOL": "",
+        "CSL": "",
+        "BA": "",
+        "ODFL": "",
+        "MIDD": "",
+        "BETA": ""
     },
     "Communication_Services": {
         "META": "",
-        "PSO": ""
+        "PSO": "",
+        "DIS": "",
+        "STUB": ""
     },
     "Financial_Services": {
         "V": "",
         "OWL": "",
-        "ERIE": ""
+        "ERIE": "",
+        "CRCL": "",
+        "OTF": "",
+        "BAM": ""
     },
     "Healthcare": {
         "ZTS": "",
         "PRCT": "",
-        "MOH": ""
+        "MOH": "",
+        "CAI": ""
     },
     "ETFs": {
         "HYG": ""
@@ -152,21 +176,105 @@
         "XRP": ""
     },
     "Must": {
+        "CIFR": "",
+        "ORCL": "",
+        "APLD": "",
+        "CLBT": "",
         "NET": "",
-        "HON": "",
         "XLV": "",
         "META": "",
-        "WST": "",
-        "HPQ": ""
+        "WST": ""
     },
     "Today": {},
     "Short": {
-        "ABVX": ""
+        "ABVX": "",
+        "HPQ": "",
+        "ADSK": "",
+        "OPEN": "",
+        "AGX": ""
     },
     "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
-    "PE_invalid": {},
+    "Strategy34": {
+        "ALAB": "ALAB热",
+        "AMZN": "AMZN热",
+        "APP": "",
+        "CAT": "",
+        "CEG": "CEG热",
+        "COF": "",
+        "COIN": "",
+        "FIX": "FIX热",
+        "FN": "FN热",
+        "FSLR": "",
+        "GLXY": "GLXY热",
+        "HD": "",
+        "INTC": "",
+        "LOW": "",
+        "LRCX": "",
+        "NOK": "",
+        "PCAR": "",
+        "SHW": "",
+        "SO": "SO热",
+        "SOFI": "",
+        "TSLA": "",
+        "TT": "TT热",
+        "XYL": ""
+    },
+    "PE_valid": {
+        "AAL": "",
+        "ACHR": "",
+        "ADI": "",
+        "ADSK": "",
+        "AVAV": "",
+        "AVGO": "AVGO7热",
+        "AXON": "",
+        "BLK": "",
+        "BWXT": "BWXT15热",
+        "CCJ": "",
+        "CCL": "",
+        "CORZ": "CORZ15热",
+        "CPRT": "",
+        "CRDO": "CRDO15热",
+        "CTAS": "",
+        "DELL": "DELL15热",
+        "EFX": "",
+        "EQIX": "",
+        "FUTU": "",
+        "GDS": "GDS15热",
+        "GLW": "GLW7热",
+        "GRMN": "",
+        "HIMS": "",
+        "HON": "",
+        "HOOD": "",
+        "HUM": "",
+        "HUT": "HUT15热",
+        "IREN": "IREN15热",
+        "MELI": "",
+        "MOD": "MOD15热",
+        "MRVL": "MRVL7热",
+        "PLTR": "PLTR15",
+        "QFIN": "",
+        "RCL": "",
+        "SHOP": "",
+        "SNPS": "",
+        "TEM": "",
+        "TER": "",
+        "TSM": "TSM热",
+        "UNH": "UNH7",
+        "XYZ": ""
+    },
+    "PE_invalid": {
+        "ASTS": "ASTS15热",
+        "CRWV": "CRWV15热",
+        "OKLO": "OKLO15热",
+        "QBTS": "",
+        "QS": "",
+        "RBLX": "",
+        "ROKU": "",
+        "SATS": "SATS15热",
+        "SMR": "SMR15热",
+        "SOUN": "",
+        "U": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
@@ -211,9 +319,10 @@
         "USRetailM": "09 USRetailM",
         "USPPI": "09 USPPI",
         "CorePPI": "09 CorePPI",
-        "USCPI": "12 USCPI",
-        "CoreCPI": "12 CoreCPI",
-        "USInitial": "13 USInitial"
+        "USCPI": "19 USCPI",
+        "CoreCPI": "20 CoreCPI",
+        "USInitial": "13 USInitial",
+        "USConfidence": "21 USConfidence"
     },
     "Economic_All": {
         "USGDP": "",
