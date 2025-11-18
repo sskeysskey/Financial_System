@@ -57,7 +57,8 @@
         "CPNG",
         "ORLY",
         "ROST",
-        "F"
+        "F",
+        "CVNA"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -195,8 +196,7 @@
         "ALNY",
         "BDX",
         "IDXX",
-        "ARGX",
-        "EW"
+        "ARGX"
     ],
     "Industrials": [
         "GE",
@@ -234,8 +234,7 @@
         "URI",
         "LHX",
         "CMI",
-        "VRT",
-        "PCAR"
+        "VRT"
     ],
     "Real_Estate": [
         "PLD",

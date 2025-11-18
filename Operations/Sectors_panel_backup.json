@@ -3,9 +3,6 @@
         "JHX": ""
     },
     "Real_Estate": {
-        "FSV": "",
-        "BEKE": "",
-        "AMH": "",
         "WY": ""
     },
     "Energy": {},
@@ -14,21 +11,16 @@
         "DSGX": "",
         "PAYX": "",
         "FIG": "",
-        "CDW": "",
         "EEFT": "",
         "FI": "",
         "HUBS": "",
-        "NICE": "",
         "SAP": "",
         "MNDY": "",
         "DUOL": "",
-        "WOLF": "",
         "MSTR": "",
-        "ROP": "",
         "DOX": "",
         "AUR": "",
         "RELY": "",
-        "NTSK": "",
         "Q": "",
         "DOCU": "",
         "MSI": "",
@@ -37,10 +29,6 @@
         "KLAR": ""
     },
     "Consumer_Cyclical": {
-        "BIRK": "",
-        "CMG": "",
-        "FND": "",
-        "ONON": "",
         "SLGN": "",
         "CROX": "",
         "MMYT": "",
@@ -50,25 +38,18 @@
     },
     "Utilities": {},
     "Consumer_Defensive": {
-        "PPC": "",
         "CLX": "",
         "STZ": "",
         "BRBR": "",
-        "PRMB": "",
-        "PG": "",
         "FLO": ""
     },
     "Industrials": {
         "RELX": "",
-        "TRI": "",
         "OC": "",
         "LPX": "",
         "WSO": "",
-        "CNH": "",
         "RXO": "",
-        "RSG": "",
         "UHAL": "",
-        "FLY": "",
         "LII": "",
         "CARR": "",
         "BLDR": "",
@@ -77,19 +58,13 @@
         "ODFL": "",
         "MIDD": ""
     },
-    "Communication_Services": {
-        "META": "",
-        "PSO": ""
-    },
+    "Communication_Services": {},
     "Financial_Services": {
-        "V": "",
         "OWL": "",
-        "ERIE": "",
         "CRCL": "",
         "OTF": ""
     },
     "Healthcare": {
-        "ZTS": "",
         "PRCT": "",
         "MOH": "",
         "CAI": ""
@@ -227,14 +202,8 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USUnemploy": "09 USUnemploy",
-        "USNonFarm": "09 USNonFarm",
-        "USRetailM": "09 USRetailM",
-        "USPPI": "09 USPPI",
-        "CorePPI": "09 CorePPI",
-        "USCPI": "19 USCPI",
-        "CoreCPI": "20 CoreCPI",
-        "USInitial": "13 USInitial",
+        "CoreCPI": "16 CoreCPI",
+        "USCPI": "16 USCPI",
         "USConfidence": "21 USConfidence"
     },
     "Economic_All": {
