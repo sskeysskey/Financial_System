@@ -632,10 +632,15 @@ def apply_common_filters(data, symbol_to_trace, log_detail, drop_pct_large, drop
     # 1. 价格回撤条件 (可跳过)
     if not skip_drawdown:
         marketcap = data.get('marketcap')
-        er_window_high_price = data.get('er_window_high_price')
+        
+        # [修改] 原来使用的是 er_window_high_price (仅财报后3天)，现在改为 high_since_er (财报后至今最高价)
+        # 如果 high_since_er 不存在(极少数情况)，回退使用 er_window_high_price
+        high_price_reference = data.get('high_since_er')
+        if high_price_reference is None:
+            high_price_reference = data.get('er_window_high_price')
 
-        if er_window_high_price is None or er_window_high_price <= 0:
-            if is_tracing: log_detail(f"  - 最终裁定: 失败 (通用过滤1: 无法获取有效的财报窗口期最高价: {er_window_high_price})。")
+        if high_price_reference is None or high_price_reference <= 0:
+            if is_tracing: log_detail(f"  - 最终裁定: 失败 (通用过滤1: 无法获取有效的最高价数据: {high_price_reference})。")
             return False
 
         is_strict_mode = (
@@ -651,13 +656,15 @@ def apply_common_filters(data, symbol_to_trace, log_detail, drop_pct_large, drop
             if marketcap and marketcap >= CONFIG["MARKETCAP_THRESHOLD"]: drop_pct = drop_pct_small
             else: drop_pct = drop_pct_large
 
-        threshold_price_drawdown = er_window_high_price * (1 - drop_pct)
+        # 使用修正后的 high_price_reference 计算阈值
+        threshold_price_drawdown = high_price_reference * (1 - drop_pct)
         cond_drawdown_ok = data['latest_price'] <= threshold_price_drawdown
         
         if is_tracing:
             log_detail("  - [通用过滤1] 价格回撤:")
             log_detail(f"    - 市值: {marketcap} -> 使用下跌百分比: {drop_pct*100:.1f}%")
-            log_detail(f"    - 判断: 最新价({data['latest_price']:.2f}) <= 财报窗口期最高价({er_window_high_price:.2f}) * (1 - {drop_pct:.2f}) = 阈值价({threshold_price_drawdown:.2f}) -> {cond_drawdown_ok}")
+            # [修改] 日志文案更新，明确显示使用的是“财报日至今最高价”
+            log_detail(f"    - 判断: 最新价({data['latest_price']:.2f}) <= 财报日至今最高价({high_price_reference:.2f}) * (1 - {drop_pct:.2f}) = 阈值价({threshold_price_drawdown:.2f}) -> {cond_drawdown_ok}")
         
         if not cond_drawdown_ok:
             if is_tracing: log_detail("  - 最终裁定: 失败 (通用过滤1: 价格回撤不满足)。")

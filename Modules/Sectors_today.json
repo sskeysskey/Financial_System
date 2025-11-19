@@ -396,7 +396,8 @@
     "EWX",
     "ARKQ",
     "NLR",
-    "VEU"
+    "VEU",
+    "LQDI"
   ],
   "Basic_Materials": [
     "LIN",
@@ -1465,7 +1466,8 @@
     "ECG",
     "BETA",
     "ENS",
-    "AGX"
+    "AGX",
+    "LGN"
   ],
   "Real_Estate": [
     "PLD",
@@ -1576,7 +1578,6 @@
     "PANW",
     "DELL",
     "SONY",
-    "FI",
     "SNPS",
     "CDNS",
     "CRWD",

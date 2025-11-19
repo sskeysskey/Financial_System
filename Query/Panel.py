@@ -1202,7 +1202,7 @@ class MainWindow(QMainWindow):
             self.scroll_area.ensureWidgetVisible(found_buttons[0])
             
             # 更新提示信息
-            QMessageBox.information(self, "已找到", f"已找到并高亮显示 {len(found_buttons)} 个 '{symbol}'。")
+            # QMessageBox.information(self, "已找到", f"已找到并高亮显示 {len(found_buttons)} 个 '{symbol}'。")
             print(f"已找到并高亮显示 {len(found_buttons)} 个 {symbol}。")
         else:
             # 4. 如果未找到，给用户一个提示
