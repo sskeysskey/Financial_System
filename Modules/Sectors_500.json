@@ -73,8 +73,7 @@
         "MO",
         "BTI",
         "CL",
-        "MNST",
-        "DEO"
+        "MNST"
     ],
     "Energy": [
         "XOM",
@@ -153,7 +152,6 @@
         "BCS",
         "ALL",
         "MFC",
-        "MET",
         "DB",
         "TFC",
         "COIN",
@@ -196,7 +194,8 @@
         "ALNY",
         "BDX",
         "IDXX",
-        "ARGX"
+        "ARGX",
+        "EW"
     ],
     "Industrials": [
         "GE",
