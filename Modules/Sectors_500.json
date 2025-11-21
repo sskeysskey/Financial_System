@@ -54,10 +54,8 @@
         "HLT",
         "GM",
         "DASH",
-        "CPNG",
         "ORLY",
         "ROST",
-        "F",
         "CVNA"
     ],
     "Consumer_Defensive": [
@@ -194,8 +192,7 @@
         "ALNY",
         "BDX",
         "IDXX",
-        "ARGX",
-        "EW"
+        "ARGX"
     ],
     "Industrials": [
         "GE",
@@ -230,7 +227,6 @@
         "GEV",
         "NSC",
         "PWR",
-        "URI",
         "LHX",
         "CMI",
         "VRT",
@@ -295,8 +291,7 @@
         "TEL",
         "GLW",
         "DDOG",
-        "STX",
-        "WDC"
+        "STX"
     ],
     "Utilities": [
         "NEE",
