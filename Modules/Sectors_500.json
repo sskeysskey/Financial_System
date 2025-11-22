@@ -56,7 +56,8 @@
         "DASH",
         "ORLY",
         "ROST",
-        "CVNA"
+        "CVNA",
+        "F"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -71,7 +72,8 @@
         "MO",
         "BTI",
         "CL",
-        "MNST"
+        "MNST",
+        "DEO"
     ],
     "Energy": [
         "XOM",
@@ -156,7 +158,8 @@
         "HOOD",
         "IBKR",
         "BAM",
-        "NWG"
+        "NWG",
+        "NDAQ"
     ],
     "Healthcare": [
         "LLY",
@@ -230,7 +233,8 @@
         "LHX",
         "CMI",
         "VRT",
-        "PCAR"
+        "PCAR",
+        "URI"
     ],
     "Real_Estate": [
         "PLD",
@@ -284,7 +288,6 @@
         "CRWD",
         "FTNT",
         "ADSK",
-        "MSTR",
         "SNOW",
         "MRVL",
         "NET",

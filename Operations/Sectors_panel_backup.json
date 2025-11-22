@@ -3,7 +3,9 @@
         "JHX": "",
         "EMN": "",
         "UFPI": "",
-        "BCC": ""
+        "BCC": "",
+        "LIN": "",
+        "CBT": ""
     },
     "Real_Estate": {
         "WY": "",
@@ -14,7 +16,9 @@
         "CUBE": "",
         "FRMI": ""
     },
-    "Energy": {},
+    "Energy": {
+        "VNOM": ""
+    },
     "Technology": {
         "NSIT": "",
         "DSGX": "",
@@ -31,7 +35,6 @@
         "RELY": "",
         "Q": "",
         "DOCU": "",
-        "MSI": "",
         "ENPH": "",
         "KLAR": "",
         "NOW": "",
@@ -50,7 +53,11 @@
         "IT": "",
         "WIX": "",
         "BMI": "",
-        "BLSH": ""
+        "BLSH": "",
+        "ROP": "",
+        "TEAM": "",
+        "DUOL": "",
+        "S": ""
     },
     "Consumer_Cyclical": {
         "SLGN": "",
@@ -68,8 +75,9 @@
         "MBLY": "",
         "CHH": "",
         "HD": "",
-        "CPNG": "",
-        "VVV": ""
+        "VVV": "",
+        "DPZ": "",
+        "IP": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
@@ -95,17 +103,22 @@
         "ALK": "",
         "BAH": "",
         "BETA": "",
-        "GWW": "",
         "CNH": "",
         "TRI": "",
-        "BLDR": ""
+        "BLDR": "",
+        "EMR": "",
+        "ODFL": "",
+        "POOL": "",
+        "ESAB": "",
+        "FLY": ""
     },
     "Communication_Services": {
         "META": "",
         "DIS": "",
         "STUB": "",
         "SKM": "",
-        "PSO": ""
+        "PSO": "",
+        "NFLX": ""
     },
     "Financial_Services": {
         "OWL": "",
@@ -117,14 +130,14 @@
         "SFBS": "",
         "MA": "",
         "KNSL": "",
-        "QFIN": ""
+        "QFIN": "",
+        "CACC": ""
     },
     "Healthcare": {
         "PRCT": "",
         "CAI": "",
         "ZTS": "",
-        "DVA": "",
-        "SMMT": ""
+        "DVA": ""
     },
     "ETFs": {
         "HYG": ""
@@ -200,28 +213,25 @@
         "XRP": ""
     },
     "Must": {
-        "SOFI": "",
-        "AMD": "",
+        "FN": "",
+        "BE": "",
+        "SNDK": "",
         "NOK": "",
-        "DUOL": "",
         "FLEX": "",
-        "EXPE": "",
-        "CLS": "",
         "AXP": "",
         "SMH": "",
-        "COHR": "",
-        "CIFR": "",
-        "HPE": "",
-        "ORCL": "",
         "APLD": "",
+        "STX": "",
+        "LITE": "",
+        "META": "",
+        "KMB": "",
+        "HSBC": "",
+        "BAC": "",
+        "APH": "",
         "NET": "",
-        "XLV": "",
-        "META": ""
+        "WFC": ""
     },
-    "Today": {
-        "WST": "",
-        "GLXY": ""
-    },
+    "Today": {},
     "Short": {},
     "Strategy12": {},
     "Strategy34": {},
@@ -268,7 +278,15 @@
     "Economics": {
         "CoreCPI": "16 CoreCPI",
         "USCPI": "16 USCPI",
-        "USConfidence": "21 USConfidence"
+        "USConfidence": "29 USConfidence",
+        "USGDP": "29 USGDP",
+        "CorePCEY": "23 CorePCEY",
+        "CorePCEM": "23 CorePCEM",
+        "PCEY": "23 PCEY",
+        "USPPI": "25 USPPI",
+        "CorePPI": "25 CorePPI",
+        "USRetailM": "25 USRetailM",
+        "USConspending": "29 USConspending"
     },
     "Economic_All": {
         "USGDP": "",
