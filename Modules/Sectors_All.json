@@ -52,6 +52,7 @@
         "USDKRW",
         "USDTRY",
         "USDSGD",
+        "USDNZD",
         "USDTWD",
         "USDIDR",
         "USDPHP",
@@ -1316,7 +1317,8 @@
         "PTCT",
         "ARWR",
         "PTGX",
-        "COGT"
+        "COGT",
+        "BLLN"
     ],
     "Industrials": [
         "GE",

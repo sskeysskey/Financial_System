@@ -254,10 +254,6 @@ class SymbolButton(QPushButton):
 
         drag.exec_(Qt.MoveAction)
 
-# <--- 修改: 移除不再需要的 SymbolManager 类
-# class SymbolManager:
-#     ... (整个类被删除)
-
 # ----------------------------------------------------------------------
 # Utility / Helper Functions
 # ----------------------------------------------------------------------
@@ -493,14 +489,78 @@ def get_tags_for_symbol(symbol):
             return item.get("tag", "无标签")
     return "无标签"
 
+# ### 新增函数 ###: 用于过滤正收益的Symbol并保存配置
+def filter_positive_symbols(config_dict, compare_dict, config_file_path):
+    """
+    遍历指定的板块，检查 Compare_All.txt 中的数据。
+    如果百分比为正数，则从配置中删除该 Symbol，并更新文件。
+    """
+    target_sectors = [
+        'Real_Estate', 'Technology', 'Energy', 'Industrials',
+        'Consumer_Defensive', 'Communication_Services',
+        'Financial_Services', 'Healthcare', 'Utilities'
+    ]
+    
+    modified = False
+    
+    for sector in target_sectors:
+        if sector not in config_dict:
+            continue
+            
+        # 获取当前板块的 Symbol 列表（支持 dict 或 list）
+        current_group = config_dict[sector]
+        symbols_to_remove = []
+        
+        # 确定迭代对象
+        iterable_symbols = list(current_group.keys()) if isinstance(current_group, dict) else list(current_group)
+        
+        for symbol in iterable_symbols:
+            # 检查 Symbol 是否在 compare_data 中
+            if symbol in compare_dict:
+                # 获取 compare 文本 (例如: "3.90%*+" 或 "-0.94%")
+                # 注意：如果 load_text_data 返回的是 tuple，取第一个元素或转为字符串
+                raw_value = compare_dict[symbol]
+                if isinstance(raw_value, tuple):
+                    raw_value = str(raw_value[0])
+                else:
+                    raw_value = str(raw_value)
+                
+                # 使用正则提取百分比数值
+                match = re.search(r"([-+]?\d+(?:\.\d+)?)%", raw_value)
+                if match:
+                    try:
+                        percentage = float(match.group(1))
+                        # 如果百分比大于 0，标记为删除
+                        if percentage > 0:
+                            symbols_to_remove.append(symbol)
+                            print(f"[自动清理] {symbol} ({sector}) 涨幅 {percentage}% > 0，已移除。")
+                    except ValueError:
+                        pass
+        
+        # 执行删除操作
+        if symbols_to_remove:
+            modified = True
+            for s in symbols_to_remove:
+                if isinstance(current_group, dict):
+                    del current_group[s]
+                else:
+                    current_group.remove(s)
+    
+    # 如果有修改，写回文件
+    if modified:
+        try:
+            with open(config_file_path, 'w', encoding='utf-8') as f:
+                json.dump(config_dict, f, ensure_ascii=False, indent=4)
+            print("Sectors_panel.json 已更新：移除了正收益的 Symbol。")
+        except Exception as e:
+            print(f"[错误] 更新配置文件失败: {e}")
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         # 将全局变量作为实例变量
         global config
         self.config = config
-        
-        # <--- 修改: 移除 self.symbol_manager
         
         ### <<< 修改: 将 highlighted_info 改为 highlighted_buttons 列表
         self.highlighted_buttons = []
@@ -946,7 +1006,7 @@ class MainWindow(QMainWindow):
                         compare_label.linkActivated.connect(self.on_keyword_selected_chart)
                         row_layout.addWidget(compare_label)  
                         
-                        # 4) 如果是新符号，末尾再加一个“🔥”
+                        # 4) 如果是新符号，末尾再加一个“🔥”火
                         if keyword in new_symbols_today:
                             fire_label = QLabel("🔥")
                             # 可选：设个稍大的字体
@@ -1375,6 +1435,9 @@ if __name__ == '__main__':
     sector_data = load_json(SECTORS_ALL_PATH)
     compare_data = load_text_data(COMPARE_DATA_PATH)
     
+    # <--- 新增: 在启动界面前，先执行过滤逻辑
+    filter_positive_symbols(config, compare_data, CONFIG_PATH)
+
     # <--- 修改: 不再创建 SymbolManager 实例
     # symbol_manager = SymbolManager(config, categories)
 

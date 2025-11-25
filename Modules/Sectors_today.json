@@ -31,6 +31,7 @@
         "KRW=X",
         "TRY=X",
         "SGD=X",
+        "NZD=X",
         "THB=X",
         "TWD=X",
         "IDR=X",
@@ -1252,7 +1253,8 @@
         "PTCT",
         "ARWR",
         "PTGX",
-        "COGT"
+        "COGT",
+        "BLLN"
     ],
     "Industrials": [
         "GE",

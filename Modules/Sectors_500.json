@@ -57,7 +57,8 @@
         "ORLY",
         "ROST",
         "CVNA",
-        "F"
+        "F",
+        "CPNG"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -159,7 +160,9 @@
         "IBKR",
         "BAM",
         "NWG",
-        "NDAQ"
+        "NDAQ",
+        "RKT",
+        "MET"
     ],
     "Healthcare": [
         "LLY",
@@ -195,7 +198,8 @@
         "ALNY",
         "BDX",
         "IDXX",
-        "ARGX"
+        "ARGX",
+        "CAH"
     ],
     "Industrials": [
         "GE",
@@ -294,7 +298,9 @@
         "TEL",
         "GLW",
         "DDOG",
-        "STX"
+        "STX",
+        "WDC",
+        "MSTR"
     ],
     "Utilities": [
         "NEE",
