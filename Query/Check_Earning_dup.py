@@ -282,9 +282,37 @@ class DuplicateResolverApp(QWidget):
                 
                 # 检查是否所有行都相同
                 if all(normalize_line(c) == first_normalized for c in all_contents):
-                    print(f"  - Symbol '{symbol}' 在所有来源中内容实质一致，跳过处理（保持原状）。")
+                    # print(f"  - Symbol '{symbol}' 在所有来源中内容实质一致，跳过处理（保持原状）。") <--- 原来的代码，导致diff文件删不掉
+                    
+                    # --- 新逻辑：虽然内容一致，但必须清理掉 diff 文件里的冗余副本 ---
+                    print(f"  - Symbol '{symbol}' 内容实质一致，正在自动保留主副本并清理冗余项...")
+                    
+                    target_item = None
+                    
+                    # 策略：选择一个“最佳”保留项
+                    # 优先级 1: Earnings_Release_new.txt (通常是最新的)
+                    for item in occurrences:
+                        if item[0] == "Earnings_Release_new.txt":
+                            target_item = item
+                            break
+                    
+                    # 优先级 2: 任何主文件 (非 _diff_ 文件)
+                    if target_item is None:
+                        for item in occurrences:
+                            if is_main_file(item[0]):
+                                target_item = item
+                                break
+                    
+                    # 优先级 3: 如果都没有(都在diff文件里)，就选第一个
+                    if target_item is None:
+                        target_item = occurrences[0]
+                    
+                    # 调用核心处理函数：这会保留 target_item，删除其他所有 occurrences
+                    # 如果 target_item 在 diff 文件里，它还会自动把它移动到主文件
+                    self._perform_resolution(target_item, save_confirm=False)
+                    
+                    auto_resolved_log.append(f"  - Symbol '{symbol}' 内容一致，已保留 '{target_item[0]}' 版本并清理其他副本。")
                     continue
-            # -----------------------------------
 
             # 优先检查是否已有确认记录
             if symbol in self.confirmed_symbols:
