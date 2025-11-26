@@ -644,6 +644,15 @@
             "SO",
             "TEL",
             "TT"
+        ],
+        "2025-11-25": [
+            "AMD",
+            "CTAS",
+            "EQIX",
+            "KR",
+            "NKE",
+            "ORCL",
+            "SO"
         ]
     },
     "no_season": {
@@ -2858,6 +2867,46 @@
             "XYL",
             "ZM",
             "ZS"
+        ],
+        "2025-11-25": [
+            "ADBE",
+            "ADSK",
+            "AMD",
+            "ARM",
+            "AXON",
+            "BA",
+            "CCI",
+            "CDNS",
+            "CTAS",
+            "DLR",
+            "EDU",
+            "EQIX",
+            "ETN",
+            "GE",
+            "GTLB",
+            "HON",
+            "JCI",
+            "JPM",
+            "LHX",
+            "LYFT",
+            "MSFT",
+            "MSI",
+            "NFLX",
+            "OKLO",
+            "OMC",
+            "ORCL",
+            "RBLX",
+            "RTX",
+            "SMCI",
+            "SMR",
+            "SNAP",
+            "SO",
+            "SPOT",
+            "TMUS",
+            "TTD",
+            "UBER",
+            "VLO",
+            "XYL"
         ]
     }
 }

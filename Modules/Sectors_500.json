@@ -162,7 +162,8 @@
         "NWG",
         "NDAQ",
         "RKT",
-        "MET"
+        "MET",
+        "ARES"
     ],
     "Healthcare": [
         "LLY",
@@ -199,7 +200,8 @@
         "BDX",
         "IDXX",
         "ARGX",
-        "CAH"
+        "CAH",
+        "EW"
     ],
     "Industrials": [
         "GE",
@@ -299,8 +301,7 @@
         "GLW",
         "DDOG",
         "STX",
-        "WDC",
-        "MSTR"
+        "WDC"
     ],
     "Utilities": [
         "NEE",

@@ -5,7 +5,7 @@ import sys
 from collections import defaultdict, Counter
 # 新增导入：用于处理日期和时间
 from datetime import datetime, timedelta
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QFrame, QSizePolicy, QTextEdit
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QFrame, QSizePolicy, QTextEdit, QCheckBox
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont
 import send2trash  # 新增导入：用于安全删除到回收站
@@ -266,6 +266,26 @@ class DuplicateResolverApp(QWidget):
         for symbol, count in self.all_duplicates:
             occurrences = self.symbol_sources[symbol]
             
+            # --- 新增逻辑：检查内容是否完全一致 ---
+            # 提取所有出现的行内容
+            all_contents = [item[2] for item in occurrences]
+            
+            # 定义一个标准化函数，用于忽略空格差异进行比较
+            # 例如: "ACN : BMO : 2025-12-18" 和 "ACN: BMO: 2025-12-18" 应该被视为相同
+            def normalize_line(line):
+                # 按冒号分割，去除每部分的空格，重新组合
+                return "|".join([part.strip() for part in line.split(':')])
+            
+            # 获取第一个标准化后的内容
+            if all_contents:
+                first_normalized = normalize_line(all_contents[0])
+                
+                # 检查是否所有行都相同
+                if all(normalize_line(c) == first_normalized for c in all_contents):
+                    print(f"  - Symbol '{symbol}' 在所有来源中内容实质一致，跳过处理（保持原状）。")
+                    continue
+            # -----------------------------------
+
             # 优先检查是否已有确认记录
             if symbol in self.confirmed_symbols:
                 confirmed_line, confirmed_filename = self.confirmed_symbols[symbol]
@@ -1098,7 +1118,7 @@ def main():
     else:
         lines_out = []
         lines_out.append(f"共解析 symbol 数量：{len(final_symbol_counts)}，总出现次数：{sum(final_symbol_counts.values())}")
-        lines_out.append("发现的剩余重复 symbol (手动跳过项):")
+        lines_out.append("发现的剩余重复 symbol (手动跳过或内容一致项):")
         for sym, count in sorted(final_duplicates.items(), key=lambda x: (-x[1], x[0])):
             lines_out.append(f"- {sym}: {count} 次")
             for src_file, lineno in final_symbol_sources[sym]:
@@ -1122,7 +1142,7 @@ def main():
     # --- 最终总结 ---
     print("\n所有处理流程已完成。")
     if report_generated:
-        show_alert("处理完毕，但仍有手动跳过的常规重复内容，已生成 duplication.txt 报告。")
+        show_alert("处理完毕，但仍有手动跳过或内容一致的重复内容，已生成 duplication.txt 报告。")
     else:
         # 修改最终提示信息
         show_alert("所有重复内容已解决，周末日期已修正，且无需清理的文件也已处理完毕。")
