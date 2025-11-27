@@ -497,8 +497,8 @@ def filter_positive_symbols(config_dict, compare_dict, config_file_path):
     """
     target_sectors = [
         'Real_Estate', 'Technology', 'Energy', 'Industrials',
-        'Consumer_Defensive', 'Communication_Services',
-        'Financial_Services', 'Healthcare', 'Utilities'
+        'Consumer_Defensive', 'Communication_Services', 'Basic_Materials',
+        'Financial_Services', 'Healthcare', 'Utilities', 'Consumer_Cyclical'
     ]
     
     modified = False

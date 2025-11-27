@@ -240,7 +240,9 @@
         "CMI",
         "VRT",
         "PCAR",
-        "URI"
+        "URI",
+        "SYM",
+        "FERG"
     ],
     "Real_Estate": [
         "PLD",
@@ -301,7 +303,8 @@
         "GLW",
         "DDOG",
         "STX",
-        "WDC"
+        "WDC",
+        "MSTR"
     ],
     "Utilities": [
         "NEE",

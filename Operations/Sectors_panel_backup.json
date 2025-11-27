@@ -1,22 +1,15 @@
 {
-    "Basic_Materials": {
-        "LIN": ""
-    },
+    "Basic_Materials": {},
     "Real_Estate": {
         "FRMI": ""
     },
     "Energy": {
-        "ET": "",
         "VG": ""
     },
     "Technology": {
-        "NVDA": "",
-        "ORCL": ""
+        "NVDA": ""
     },
-    "Consumer_Cyclical": {
-        "MMYT": "",
-        "HRB": ""
-    },
+    "Consumer_Cyclical": {},
     "Utilities": {},
     "Consumer_Defensive": {},
     "Industrials": {},
@@ -97,68 +90,26 @@
         "XRP": ""
     },
     "Must": {
-        "FN": "",
-        "BE": "",
-        "SNDK": "",
-        "NOK": "",
+        "EQIX": "",
+        "ORCL": "",
+        "OKLO": "",
+        "HON": "",
+        "DLR": "",
+        "KOLD": "",
         "FLEX": "",
-        "AXP": "",
-        "SMH": "",
-        "APLD": "",
-        "STX": "",
-        "LITE": "",
-        "KMB": "",
-        "HSBC": "",
-        "BAC": "",
-        "APH": "",
-        "NET": "",
-        "WFC": ""
+        "NET": ""
     },
     "Today": {
+        "DASH": "",
+        "AXON": "",
+        "BE": "",
         "DUOL": ""
     },
     "Short": {},
-    "Strategy12": {
-        "CTAS": "",
-        "NKE": ""
-    },
-    "Strategy34": {
-        "AMD": "AMD热",
-        "EQIX": "",
-        "KR": "",
-        "ORCL": "ORCL热",
-        "SO": "SO热"
-    },
-    "PE_valid": {
-        "ADSK": "",
-        "AXON": "",
-        "CDNS": "",
-        "DLR": "DLR7热",
-        "EDU": "",
-        "ETN": "ETN7热",
-        "GE": "",
-        "HON": "",
-        "JCI": "JCI热",
-        "JPM": "",
-        "LHX": "LHX7热",
-        "MSFT": "MSFT7",
-        "MSI": "",
-        "NFLX": "NFLX15",
-        "OMC": "",
-        "RTX": "",
-        "SMCI": "SMCI15热",
-        "SPOT": "",
-        "TMUS": "TMUS7",
-        "UBER": "",
-        "VLO": "",
-        "XYL": ""
-    },
-    "PE_invalid": {
-        "BA": "",
-        "OKLO": "OKLO15热",
-        "RBLX": "",
-        "SMR": "SMR15热"
-    },
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {},
+    "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
