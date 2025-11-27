@@ -1,18 +1,19 @@
 {
     "Basic_Materials": {},
-    "Real_Estate": {
-        "FRMI": ""
-    },
-    "Energy": {
-        "VG": ""
-    },
+    "Real_Estate": {},
+    "Energy": {},
     "Technology": {
-        "NVDA": ""
+        "NTNX": "",
+        "MNDY": ""
     },
-    "Consumer_Cyclical": {},
+    "Consumer_Cyclical": {
+        "MMYT": ""
+    },
     "Utilities": {},
     "Consumer_Defensive": {},
-    "Industrials": {},
+    "Industrials": {
+        "CPRT": ""
+    },
     "Communication_Services": {},
     "Financial_Services": {},
     "Healthcare": {},
@@ -90,13 +91,10 @@
         "XRP": ""
     },
     "Must": {
-        "EQIX": "",
         "ORCL": "",
         "OKLO": "",
         "HON": "",
         "DLR": "",
-        "KOLD": "",
-        "FLEX": "",
         "NET": ""
     },
     "Today": {

@@ -1,14 +1,8 @@
 {
     "Basic_Materials": {},
-    "Real_Estate": {
-        "FRMI": ""
-    },
-    "Energy": {
-        "VG": ""
-    },
+    "Real_Estate": {},
+    "Energy": {},
     "Technology": {
-        "NVDA": "",
-        "INTU": "",
         "NTNX": "",
         "MNDY": ""
     },
@@ -18,8 +12,7 @@
     "Utilities": {},
     "Consumer_Defensive": {},
     "Industrials": {
-        "CPRT": "",
-        "CNH": ""
+        "CPRT": ""
     },
     "Communication_Services": {},
     "Financial_Services": {},
@@ -98,13 +91,10 @@
         "XRP": ""
     },
     "Must": {
-        "EQIX": "",
         "ORCL": "",
         "OKLO": "",
         "HON": "",
         "DLR": "",
-        "KOLD": "",
-        "FLEX": "",
         "NET": ""
     },
     "Today": {
@@ -114,27 +104,10 @@
         "DUOL": ""
     },
     "Short": {},
-    "Strategy12": {
-        "CTAS": "",
-        "NKE": ""
-    },
-    "Strategy34": {
-        "CCL": ""
-    },
-    "PE_valid": {
-        "CDNS": "",
-        "CNH": "",
-        "CRWD": "",
-        "MSFT": "MSFT7",
-        "MSI": "",
-        "NFLX": "NFLX7",
-        "OMC": "",
-        "TMUS": "TMUS7",
-        "UBER": ""
-    },
-    "PE_invalid": {
-        "SMR": "SMR15热"
-    },
+    "Strategy12": {},
+    "Strategy34": {},
+    "PE_valid": {},
+    "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
