@@ -39,7 +39,14 @@ else:
     logger.disabled = True
 
 # 定义tag黑名单
-BLACKLIST_TAGS = ["联合医疗","黄金","金矿","白银","光纤","赋能半导体","赋能芯片制造","数据中心","贵金属"]
+# BLACKLIST_TAGS = ["联合医疗","黄金","金矿","白银","光纤","赋能半导体","赋能芯片制造","数据中心","贵金属"]
+BLACKLIST_TAGS = []
+
+# 【修改点 1】定义tag白名单
+# 如果这里填入了内容（例如 ["SaaS", "半导体"]），程序将只筛选包含这些tag的股票，且无视黑名单。
+# 如果这里为空 []，程序将执行原有的黑名单过滤逻辑。
+WHITELIST_TAGS = [] 
+
 
 # 读取JSON文件
 with open(PRICE_FILE, 'r') as f:
@@ -152,7 +159,7 @@ def get_price_peak_date(cursor, symbol, sector):
         logger.error(f'[{symbol}] get_price_peak_date: invalid latest date "{latest_date_str}": {e}')
         return False
 
-    # 2. 【核心修改】查询上一个实际的交易日，而不是通过日期计算
+    # 2. 查询上一个实际的交易日，而不是通过日期计算
     try:
         cursor.execute(f"""
             SELECT date
@@ -196,10 +203,10 @@ def get_price_peak_date(cursor, symbol, sector):
 
     peak_date_str, peak_price = prices[0][0], prices[0][1]
 
-    # 4. 【核心修改】比较峰值日期是否等于我们查询到的上一个交易日
+    # 4. 比较峰值日期是否等于我们查询到的上一个交易日
     ok = peak_date_str == previous_trading_day_str
 
-    # 5. 【核心修改】更新日志，使其反映新的逻辑
+    # 5. 更新日志，使其反映新的逻辑
     logger.info(
         f'[{symbol}] Peak check: latest_date={latest_date_str}, latest_price={latest_price}; '
         f'window>={one_month_ago.strftime("%Y-%m-%d")} <= {latest_date_str}; '
@@ -226,11 +233,20 @@ def parse_compare_percent(compare_str: str, symbol: str):
         logger.info(f'[{symbol}] Compare parse: failed to parse "{compare_str}"')
         return None
 
-# 准备 Short 分组容器，确保结构存在且为 dict
+# -----------------------------------------------------------------------------
+# 【修改点 4】 准备 Short 和 Short_Shift 分组容器
+# -----------------------------------------------------------------------------
+# 1. Short 分组
 short_group = panel_data.get('Short')
 if not isinstance(short_group, dict):
     short_group = {}
 panel_data['Short'] = short_group
+
+# 2. Short_Shift 分组
+short_shift_group = panel_data.get('Short_Shift')
+if not isinstance(short_shift_group, dict):
+    short_shift_group = {}
+panel_data['Short_Shift'] = short_shift_group
 
 # 连接数据库
 conn = sqlite3.connect(DB_FILE)
@@ -248,9 +264,18 @@ for symbol in symbols:
         tags_str = ", ".join(symbol_info['tags']) if symbol_info['tags'] else "无标签"
         logger.info(f'[{symbol}] Start: sector="{sector}", tags="{tags_str}", blacklist={symbol_info["has_blacklist"]}')
 
-        if symbol_info['has_blacklist']:
-            logger.info(f'[{symbol}] Skip due to blacklist tag')
-            continue
+        # 【修改点 2】白名单/黑名单 逻辑控制
+        if len(WHITELIST_TAGS) > 0:
+            # 如果白名单有内容，只检查白名单 (忽略黑名单)
+            has_whitelist_tag = any(tag in WHITELIST_TAGS for tag in symbol_info['tags'])
+            if not has_whitelist_tag:
+                logger.info(f'[{symbol}] Skip: Not in whitelist tags')
+                continue
+        else:
+            # 如果白名单为空，执行原有的黑名单逻辑
+            if symbol_info['has_blacklist']:
+                logger.info(f'[{symbol}] Skip due to blacklist tag')
+                continue
 
         # 查询最新财报涨跌幅记录（不再根据正负进行过滤）
         cursor.execute("""
@@ -267,9 +292,6 @@ for symbol in symbols:
 
         earning_last_change = float(earning_price_row[0])
         logger.info(f'[{symbol}] Latest Earning change record price={earning_last_change}')
-
-        # 原先这里有: if not (earning_last_change < 0): continue
-        # 已移除这条基于正负的过滤规则
 
         # 计算财报日至最新收盘价变化百分比
         price_change = None
@@ -327,9 +349,10 @@ for symbol in symbols:
             logger.debug(traceback.format_exc())
             continue
 
-        # 过滤小于30%
-        if price_change is None or abs(price_change) < 30:
-            logger.info(f'[{symbol}] Skip: abs(price_change) < 30 ({price_change})')
+        # 【修改点 3】过滤小于30% (原先是 abs(price_change) < 30，现在改为 price_change < 30)
+        # 这样只保留正向涨幅超过30%的，负数（如-35%）将被过滤
+        if price_change is None or price_change < 30:
+            logger.info(f'[{symbol}] Skip: price_change < 30 (actual: {price_change})')
             continue
 
         compare_str = compare_data.get(symbol, '')
@@ -345,23 +368,34 @@ for symbol in symbols:
         sector_outputs[sector_disp].append(output_line)
         logger.info(f'[{symbol}] Added to txt candidates')
 
-        # Short 分组逻辑：compare < 0 且 peak 在最新交易日前一天
-        if cmp_pct is None:
-            logger.info(f'[{symbol}] Not added to Short: compare percent is None (raw="{compare_str}")')
-            continue
-        if cmp_pct >= 0:
-            logger.info(f'[{symbol}] Not added to Short: compare percent >= 0 ({cmp_pct})')
-            continue
+        # -----------------------------------------------------------------------------
+        # 【修改点 5】 分组逻辑重构：Short vs Short_Shift
+        # -----------------------------------------------------------------------------
+        # 条件 A: Compare < 0
+        condition_a = (cmp_pct is not None and cmp_pct < 0)
 
-        # 检查峰值日期为最新交易日前一天
-        if get_price_peak_date(cursor, symbol, sector):
-            if symbol not in short_group:
-                short_group[symbol] = ""
-                logger.info(f'[{symbol}] Added to Short group')
+        # 条件 B: Peak 在最新交易日前一天
+        condition_b = get_price_peak_date(cursor, symbol, sector)
+
+        if condition_b:
+            # 只要满足条件 B (昨日新高)，就一定会进入某个 Short 组
+            if condition_a:
+                # A + B -> Short_Shift
+                if symbol not in short_shift_group:
+                    short_shift_group[symbol] = ""
+                    logger.info(f'[{symbol}] Added to Short_Shift group (Peak + Neg Compare)')
+                else:
+                    logger.info(f'[{symbol}] Already in Short_Shift group')
             else:
-                logger.info(f'[{symbol}] Already in Short group (no change)')
+                # 仅 B (不满足 A) -> Short
+                if symbol not in short_group:
+                    short_group[symbol] = ""
+                    logger.info(f'[{symbol}] Added to Short group (Peak only)')
+                else:
+                    logger.info(f'[{symbol}] Already in Short group')
         else:
-            logger.info(f'[{symbol}] Not added to Short: peak check failed')
+            # 不满足条件 B，不进行 Short 分组
+            logger.info(f'[{symbol}] Not added to Short/Short_Shift: peak check failed')
 
     except Exception as e:
         logger.error(f'[{symbol}] Unexpected error: {e}')

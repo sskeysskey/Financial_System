@@ -7,14 +7,10 @@
         "MNDY": "",
         "NVDA": ""
     },
-    "Consumer_Cyclical": {
-        "MMYT": ""
-    },
+    "Consumer_Cyclical": {},
     "Utilities": {},
     "Consumer_Defensive": {},
-    "Industrials": {
-        "CPRT": ""
-    },
+    "Industrials": {},
     "Communication_Services": {},
     "Financial_Services": {},
     "Healthcare": {},
@@ -105,6 +101,9 @@
         "DUOL": ""
     },
     "Short": {},
+    "Short_Shift": {
+        "MDGL": ""
+    },
     "Strategy12": {
         "NKE": ""
     },

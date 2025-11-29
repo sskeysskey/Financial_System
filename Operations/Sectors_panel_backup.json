@@ -4,16 +4,13 @@
     "Energy": {},
     "Technology": {
         "NTNX": "",
-        "MNDY": ""
+        "MNDY": "",
+        "NVDA": ""
     },
-    "Consumer_Cyclical": {
-        "MMYT": ""
-    },
+    "Consumer_Cyclical": {},
     "Utilities": {},
     "Consumer_Defensive": {},
-    "Industrials": {
-        "CPRT": ""
-    },
+    "Industrials": {},
     "Communication_Services": {},
     "Financial_Services": {},
     "Healthcare": {},
@@ -103,10 +100,20 @@
         "BE": "",
         "DUOL": ""
     },
-    "Short": {},
-    "Strategy12": {},
-    "Strategy34": {},
-    "PE_valid": {},
+    "Short": {
+        "MDGL": ""
+    },
+    "Strategy12": {
+        "NKE": ""
+    },
+    "Strategy34": {
+        "INTU": ""
+    },
+    "PE_valid": {
+        "MSI": "",
+        "OMC": "",
+        "XYL": ""
+    },
     "PE_invalid": {},
     "Currencies": {
         "DXY": "美元指数",
@@ -147,18 +154,20 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "CoreCPI": "16 CoreCPI",
-        "USCPI": "16 USCPI",
-        "USConfidence": "29 USConfidence",
-        "USGDP": "26 USGDP",
-        "CorePCEY": "23 CorePCEY",
-        "CorePCEM": "23 CorePCEM",
-        "PCEY": "23 PCEY",
+        "USGDP": "23 USGDP",
+        "CorePCEY": "05 CorePCEY",
+        "CorePCEM": "05 CorePCEM",
+        "PCEY": "05 PCEY",
         "USPPI": "25 USPPI",
         "CorePPI": "25 CorePPI",
         "USRetailM": "25 USRetailM",
-        "USConspending": "26 USConspending",
-        "USInitial": "26 USInitial"
+        "USConspending": "25 USConspending",
+        "USConfidence": "05 USConfidence",
+        "USInitial": "04 USInitial",
+        "USNonFarmA": "03 USNonFarmA",
+        "ImportPriceM": "03 ImportPriceM",
+        "USNonPMI": "03 USNonPMI",
+        "USTrade": "06 USTrade"
     },
     "Economic_All": {
         "USGDP": "",

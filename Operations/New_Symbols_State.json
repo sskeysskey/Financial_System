@@ -1,26 +1,16 @@
 {
-  "date": "2025-11-27",
+  "date": "2025-11-29",
   "symbols": [
-    "INTU",
-    "NTNX",
-    "MNDY",
-    "MMYT",
-    "CPRT",
-    "CNH",
-    "CTAS",
+    "NVDA",
+    "MDGL",
     "NKE",
-    "CCL",
-    "TMUS",
-    "OMC",
-    "UBER",
-    "CRWD",
-    "NFLX",
-    "MSFT",
-    "CDNS",
-    "CNH",
+    "INTU",
     "MSI",
-    "SMR",
-    "ABVX",
-    "LLY"
+    "XYL",
+    "OMC",
+    "USNonFarmA",
+    "ImportPriceM",
+    "USNonPMI",
+    "USTrade"
   ]
 }
