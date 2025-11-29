@@ -658,6 +658,10 @@
             "CCL",
             "CTAS",
             "NKE"
+        ],
+        "2025-11-28": [
+            "INTU",
+            "NKE"
         ]
     },
     "no_season": {
@@ -2934,6 +2938,15 @@
             "TMUS",
             "TTD",
             "UBER"
+        ],
+        "2025-11-28": [
+            "ADBE",
+            "HON",
+            "MSI",
+            "OMC",
+            "ORCL",
+            "SNAP",
+            "XYL"
         ]
     }
 }
