@@ -1,16 +1,26 @@
 {
-    "Basic_Materials": {},
-    "Real_Estate": {},
-    "Energy": {},
+    "Basic_Materials": {
+        "LIN": ""
+    },
+    "Real_Estate": {
+        "DLR": ""
+    },
+    "Energy": {
+        "TPL": "",
+        "VG": ""
+    },
     "Technology": {
         "NTNX": "",
-        "MNDY": "",
-        "NVDA": ""
+        "WDAY": ""
     },
     "Consumer_Cyclical": {},
     "Utilities": {},
-    "Consumer_Defensive": {},
-    "Industrials": {},
+    "Consumer_Defensive": {
+        "LRN": ""
+    },
+    "Industrials": {
+        "CNH": ""
+    },
     "Communication_Services": {},
     "Financial_Services": {},
     "Healthcare": {},
@@ -88,21 +98,25 @@
         "XRP": ""
     },
     "Must": {
+        "LHX": "",
+        "SNDK": "",
+        "SHOP": "",
         "ORCL": "",
         "OKLO": "",
         "HON": "",
-        "DLR": "",
         "NET": ""
     },
     "Today": {
-        "DASH": "",
         "AXON": "",
         "BE": "",
         "DUOL": ""
     },
     "Short": {},
     "Short_Shift": {
-        "MDGL": ""
+        "MDGL": "",
+        "LITE": "",
+        "HMY": "",
+        "AGX": ""
     },
     "Strategy12": {},
     "Strategy34": {},
