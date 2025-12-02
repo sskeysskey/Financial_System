@@ -12,8 +12,7 @@
         "AEM",
         "FCX",
         "B",
-        "VALE",
-        "WPM"
+        "VALE"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -58,8 +57,7 @@
         "ORLY",
         "ROST",
         "CVNA",
-        "F",
-        "CPNG"
+        "F"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -201,7 +199,6 @@
         "BDX",
         "IDXX",
         "ARGX",
-        "CAH",
         "EW"
     ],
     "Industrials": [
@@ -242,7 +239,8 @@
         "VRT",
         "PCAR",
         "URI",
-        "FERG"
+        "FERG",
+        "SYM"
     ],
     "Real_Estate": [
         "PLD",
@@ -304,7 +302,7 @@
         "DDOG",
         "STX",
         "WDC",
-        "MSTR"
+        "NXPI"
     ],
     "Utilities": [
         "NEE",

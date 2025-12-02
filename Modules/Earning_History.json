@@ -662,6 +662,10 @@
         "2025-11-28": [
             "INTU",
             "NKE"
+        ],
+        "2025-12-01": [
+            "INTU",
+            "NKE"
         ]
     },
     "no_season": {
@@ -2947,6 +2951,38 @@
             "ORCL",
             "SNAP",
             "XYL"
+        ],
+        "2025-12-01": [
+            "ARM",
+            "AVAV",
+            "AXON",
+            "CCI",
+            "CPNG",
+            "CRWD",
+            "CYBR",
+            "EFX",
+            "EQIX",
+            "GD",
+            "GE",
+            "HON",
+            "JCI",
+            "LHX",
+            "LI",
+            "LMT",
+            "MDB",
+            "NOC",
+            "OKLO",
+            "OMC",
+            "ORCL",
+            "PODD",
+            "RTX",
+            "SMR",
+            "SNAP",
+            "SO",
+            "SOUN",
+            "SPOT",
+            "TMUS",
+            "TT"
         ]
     }
 }

@@ -1,6 +1,7 @@
 import json
 import subprocess
-import os # 新增导入 os 模块
+import os
+import shutil  # 新增导入 shutil 模块，用于移动文件
 
 def show_alert(message):
     # AppleScript 代码模板
@@ -145,10 +146,50 @@ except IOError as e:
     show_alert(error_message)
     exit()
 
-# --- 9. 最后一条弹窗提示 ---
+# --- 9. 最后一条弹窗提示及文件备份逻辑 ---
 if missing_all:
     show_alert(f"检测到 {len(missing_all)} 个缺失符号，已写入：{sector_empty_json_path}")
 else:
-    show_alert("未检测到缺失符号，无需更新。")
+    # 先弹窗提示
+    show_alert("未检测到缺失符号，无需更新。即将备份文件。")
+    
+    print("--- 开始备份文件 ---")
+    # 定义需要移动的文件列表
+    files_to_backup = [marketcap_filename, shares_filename]
+    
+    # 确保备份目录存在，如果不存在则创建
+    if not os.path.exists(fallback_txt_dir):
+        try:
+            os.makedirs(fallback_txt_dir)
+            print(f"Created backup directory: {fallback_txt_dir}")
+        except OSError as e:
+            print(f"Error creating backup directory: {e}")
+
+    for filename in files_to_backup:
+        # 源文件路径 (强制从 Downloads 目录找，因为你的需求是将 Downloads 下的文件移动走)
+        src_path = os.path.join(primary_txt_dir, filename)
+        # 目标文件路径
+        dst_path = os.path.join(fallback_txt_dir, filename)
+        
+        # 检查源文件是否存在
+        if os.path.exists(src_path):
+            try:
+                # 如果目标文件已存在，先删除，以实现“覆盖”效果
+                if os.path.exists(dst_path):
+                    os.remove(dst_path)
+                    print(f"Removed existing backup: {dst_path}")
+                
+                # 移动文件
+                shutil.move(src_path, dst_path)
+                print(f"Successfully moved: {filename} -> {fallback_txt_dir}")
+            except Exception as e:
+                error_msg = f"Failed to move {filename}: {e}"
+                print(error_msg)
+                # 可选：如果移动失败也弹窗提醒
+                # show_alert(error_msg)
+        else:
+            print(f"Source file not found in Downloads, skipping backup: {filename}")
+
+        show_alert("移动文件成功完成！")
 
 print("脚本执行完毕。")
