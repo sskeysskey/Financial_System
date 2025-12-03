@@ -266,7 +266,7 @@ class DuplicateResolverApp(QWidget):
         for symbol, count in self.all_duplicates:
             occurrences = self.symbol_sources[symbol]
             
-            # --- 新增逻辑：检查内容是否完全一致 ---
+            # --- 检查内容是否完全一致 ---
             # 提取所有出现的行内容
             all_contents = [item[2] for item in occurrences]
             
@@ -282,10 +282,20 @@ class DuplicateResolverApp(QWidget):
                 
                 # 检查是否所有行都相同
                 if all(normalize_line(c) == first_normalized for c in all_contents):
-                    # print(f"  - Symbol '{symbol}' 在所有来源中内容实质一致，跳过处理（保持原状）。") <--- 原来的代码，导致diff文件删不掉
                     
-                    # --- 新逻辑：虽然内容一致，但必须清理掉 diff 文件里的冗余副本 ---
-                    print(f"  - Symbol '{symbol}' 内容实质一致，正在自动保留主副本并清理冗余项...")
+                    # 【关键修改】：即使内容一致，也要检查是否涉及多个主文件
+                    main_file_occurrences = [item for item in occurrences if is_main_file(item[0])]
+                    
+                    # 如果有两个或以上的主文件（例如 new.txt 和 next.txt）内容一致
+                    # 必须弹窗让用户决定保留哪个（因为这涉及到删除另一个主文件中的条目）
+                    if len(main_file_occurrences) > 1:
+                        print(f"  - Symbol '{symbol}' 内容一致，但存在于多个主文件中 ({len(main_file_occurrences)}个)，需手动选择。")
+                        manual_tasks.append((symbol, count))
+                        continue
+                    
+                    # 如果只有一个主文件（例如 next.txt 和 _diff_third.txt），或者没有主文件（都是diff）
+                    # 则可以安全地自动清理冗余项
+                    print(f"  - Symbol '{symbol}' 内容实质一致且无主文件冲突，正在自动保留主副本并清理冗余项...")
                     
                     target_item = None
                     
@@ -314,6 +324,8 @@ class DuplicateResolverApp(QWidget):
                     auto_resolved_log.append(f"  - Symbol '{symbol}' 内容一致，已保留 '{target_item[0]}' 版本并清理其他副本。")
                     continue
 
+            # --- 内容不一致的处理逻辑 ---
+
             # 优先检查是否已有确认记录
             if symbol in self.confirmed_symbols:
                 confirmed_line, confirmed_filename = self.confirmed_symbols[symbol]
@@ -323,6 +335,7 @@ class DuplicateResolverApp(QWidget):
                 continue
             
             # 检查是否包含 new.txt
+            # 规则：如果 new.txt 与其他文件（Diff 或 Main）内容不一致，以 new.txt 为准，不弹窗
             new_txt_item = None
             for item in occurrences:
                 if item[0] == "Earnings_Release_new.txt":
@@ -333,6 +346,7 @@ class DuplicateResolverApp(QWidget):
                 self._perform_resolution(new_txt_item, save_confirm=False)
                 auto_resolved_log.append(f"  - Symbol '{symbol}' 已根据 'Earnings_Release_new.txt' 的条目自动处理。")
             else:
+                # 如果没有 new.txt，且内容不一致，或者是多个主文件冲突，则需要手动处理
                 manual_tasks.append((symbol, count))
 
         if auto_resolved_log:

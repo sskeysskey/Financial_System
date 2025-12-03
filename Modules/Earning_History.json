@@ -666,6 +666,11 @@
         "2025-12-01": [
             "INTU",
             "NKE"
+        ],
+        "2025-12-02": [
+            "CTAS",
+            "INTU",
+            "NKE"
         ]
     },
     "no_season": {
@@ -2983,6 +2988,50 @@
             "SPOT",
             "TMUS",
             "TT"
+        ],
+        "2025-12-02": [
+            "ALAB",
+            "ASND",
+            "AVAV",
+            "AZO",
+            "BBY",
+            "BNTX",
+            "CCI",
+            "CHWY",
+            "COR",
+            "CPNG",
+            "CRS",
+            "CTAS",
+            "DLR",
+            "EFX",
+            "EQIX",
+            "ETN",
+            "GE",
+            "GIS",
+            "HON",
+            "IREN",
+            "JAZZ",
+            "JCI",
+            "LEGN",
+            "LHX",
+            "LI",
+            "LLY",
+            "LMT",
+            "LYV",
+            "MSCI",
+            "NOC",
+            "OMC",
+            "ORCL",
+            "PBR",
+            "PKG",
+            "PODD",
+            "RTX",
+            "SNAP",
+            "SO",
+            "SOUN",
+            "SPOT",
+            "TT",
+            "XPEV"
         ]
     }
 }

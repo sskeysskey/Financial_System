@@ -198,8 +198,7 @@
         "ALNY",
         "BDX",
         "IDXX",
-        "ARGX",
-        "EW"
+        "ARGX"
     ],
     "Industrials": [
         "GE",
@@ -239,8 +238,7 @@
         "VRT",
         "PCAR",
         "URI",
-        "FERG",
-        "SYM"
+        "FERG"
     ],
     "Real_Estate": [
         "PLD",
@@ -302,7 +300,8 @@
         "DDOG",
         "STX",
         "WDC",
-        "NXPI"
+        "NXPI",
+        "MSTR"
     ],
     "Utilities": [
         "NEE",
