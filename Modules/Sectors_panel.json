@@ -1,16 +1,10 @@
 {
-    "Basic_Materials": {
-        "LIN": ""
-    },
+    "Basic_Materials": {},
     "Real_Estate": {
-        "DLR": "",
         "EQIX": "",
         "SBAC": ""
     },
-    "Energy": {
-        "TPL": "",
-        "VG": ""
-    },
+    "Energy": {},
     "Technology": {
         "NTNX": "",
         "WDAY": "",
@@ -20,15 +14,17 @@
         "VVV": "",
         "ALH": ""
     },
-    "Utilities": {},
+    "Utilities": {
+        "SO": ""
+    },
     "Consumer_Defensive": {
-        "LRN": "",
-        "GIS": ""
+        "LRN": ""
     },
     "Industrials": {
         "CNH": ""
     },
     "Communication_Services": {
+        "NFLX": "",
         "SPOT": ""
     },
     "Financial_Services": {},
@@ -107,11 +103,14 @@
         "XRP": ""
     },
     "Must": {
+        "NXT": "",
+        "NOC": "",
+        "LDOS": "",
+        "ITT": "",
         "LHX": "",
         "SNDK": "",
         "SHOP": "",
         "ORCL": "",
-        "OKLO": "",
         "HON": "",
         "NET": ""
     },
@@ -132,15 +131,16 @@
         "NKE": ""
     },
     "Strategy34": {
-        "INTU": ""
+        "BBY": "",
+        "INTU": "",
+        "KR": "",
+        "OLLI": "",
+        "PSKY": ""
     },
     "PE_valid": {
-        "ALAB": "ALAB15热",
-        "AVAV": "",
         "AZO": "",
-        "BBY": "",
         "BNTX": "",
-        "CHWY": "",
+        "BWXT": "BWXT15热",
         "COR": "",
         "CPNG": "",
         "CRS": "",
@@ -150,24 +150,32 @@
         "ETN": "ETN7热",
         "GE": "GE7",
         "GIS": "",
-        "IREN": "IREN15热",
+        "HALO": "",
         "JCI": "JCI热",
         "LLY": "",
         "LMT": "",
-        "LYV": "",
+        "MASI": "",
+        "MCK": "",
+        "MEDP": "",
         "MSCI": "",
-        "NOC": "",
+        "MSFT": "MSFT7",
+        "NFLX": "NFLX15",
         "OMC": "",
-        "PKG": "",
         "PODD": "",
+        "PTCT": "",
+        "REGN": "",
         "RTX": "",
+        "SHAK": "",
         "SO": "SO7热",
         "SPOT": "",
-        "TT": "TT7热"
+        "STRL": "STRL15热",
+        "TT": "TT7热",
+        "ULS": "",
+        "WRB": "",
+        "XYL": ""
     },
     "PE_invalid": {
-        "ASND": "",
-        "SOUN": ""
+        "ROKU": ""
     },
     "Currencies": {
         "DXY": "美元指数",

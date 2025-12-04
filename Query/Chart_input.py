@@ -113,6 +113,23 @@ def calculate_one_week_before_range(target_date):
     
     return week_start, week_end
 
+def calculate_five_weeks_after_range(target_date):
+    """
+    计算目标日期往后推5周的那一周的区间范围 (周一到周五)
+    逻辑：找到目标日期所在周的周一，加5周(35天)，即为目标周的周一。
+    """
+    # 找到目标日期所在周的周一
+    weekday = target_date.weekday()
+    current_week_start = target_date - timedelta(days=weekday)
+    
+    # 往后推 5 周 = 35 天
+    target_week_start = current_week_start + timedelta(weeks=5)
+    
+    # 周五是该周的结束
+    target_week_end = target_week_start + timedelta(days=4)
+    
+    return target_week_start, target_week_end
+
 def get_title_color_logic(db_path, symbol, table_name):
     """
     获取决定标题颜色所需的所有数据，并返回最终的颜色字符串。
@@ -515,7 +532,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     ax2.axis('off')
 
     fig.patch.set_facecolor(NORD_THEME['background'])
-    # === 添加 Earning Release 紫色和蓝色遮罩背板 ===
+    
+    # === 1. 处理基于文本文件的 Earning Release 遮罩 ===
     earning_release_date = find_earning_release_date(name)
     purple_shade = None  # 三周前的紫色遮罩
     blue_shade = None    # 一周前的蓝色遮罩
@@ -549,6 +567,35 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         )
     else:
         print(f"未找到 {name} 的 earning release 日期")
+
+    # === 2. 处理基于数据库的最新财报后5周遮罩 ===
+    post_earning_shade = None # 财报后5周的蓝色遮罩
+    latest_db_earning_date = None
+    try:
+        with sqlite3.connect(db_path) as conn:
+            cursor = conn.cursor()
+            # 查询最新一期的财报日期
+            cursor.execute("SELECT date FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 1", (name,))
+            row = cursor.fetchone()
+            if row:
+                latest_db_earning_date = datetime.strptime(row[0], "%Y-%m-%d").date()
+                print(f"数据库中最新财报日期: {latest_db_earning_date}")
+    except Exception as e:
+        print(f"查询最新财报日期失败: {e}")
+
+    if latest_db_earning_date:
+        # 计算往后推5周的周一到周五区间
+        pe_start, pe_end = calculate_five_weeks_after_range(latest_db_earning_date)
+        print(f"财报后第5周区间: {pe_start} 到 {pe_end}")
+
+        post_earning_shade = ax1.axvspan(
+            pe_start,
+            pe_end,
+            facecolor=NORD_THEME['accent_blue'], # 使用蓝色
+            alpha=0.15,
+            zorder=0.5,
+            visible=False # 默认隐藏，在update中控制
+        )
 
     ax1.set_facecolor(NORD_THEME['background'])
     # 只保留 X 轴：显示底部脊柱，隐藏其余脊柱
@@ -1128,26 +1175,38 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             current_filtered_date_nums = matplotlib.dates.date2num(current_filtered_dates) if current_filtered_dates else np.array([])
 
             # === 修改：控制紫色和蓝色遮罩的显示 ===
-            if earning_release_date and f_dates:
+            if f_dates:
                 display_start = min(f_dates).date() if isinstance(min(f_dates), datetime) else min(f_dates)
                 display_end = max(f_dates).date() if isinstance(max(f_dates), datetime) else max(f_dates)
                 
-                # 控制紫色遮罩（三周前）
-                if purple_shade:
-                    week_start_3w, week_end_3w = calculate_three_weeks_before_range(earning_release_date)
-                    has_overlap_3w = not (week_end_3w < display_start or week_start_3w > display_end)
-                    purple_shade.set_visible(has_overlap_3w)
-                
-                # 控制蓝色遮罩（一周前）
-                if blue_shade:
-                    week_start_1w, week_end_1w = calculate_one_week_before_range(earning_release_date)
-                    has_overlap_1w = not (week_end_1w < display_start or week_start_1w > display_end)
-                    blue_shade.set_visible(has_overlap_1w)
+                # 1. 基于文本文件的 Earning Release 遮罩
+                if earning_release_date:
+                    # 控制紫色遮罩（三周前）
+                    if purple_shade:
+                        week_start_3w, week_end_3w = calculate_three_weeks_before_range(earning_release_date)
+                        has_overlap_3w = not (week_end_3w < display_start or week_start_3w > display_end)
+                        purple_shade.set_visible(has_overlap_3w)
+                    
+                    # 控制蓝色遮罩（一周前）
+                    if blue_shade:
+                        week_start_1w, week_end_1w = calculate_one_week_before_range(earning_release_date)
+                        has_overlap_1w = not (week_end_1w < display_start or week_start_1w > display_end)
+                        blue_shade.set_visible(has_overlap_1w)
+                else:
+                    if purple_shade: purple_shade.set_visible(False)
+                    if blue_shade: blue_shade.set_visible(False)
+
+                # 2. 基于数据库的最新财报后5周遮罩
+                if latest_db_earning_date and post_earning_shade:
+                    pe_start, pe_end = calculate_five_weeks_after_range(latest_db_earning_date)
+                    has_overlap_pe = not (pe_end < display_start or pe_start > display_end)
+                    post_earning_shade.set_visible(has_overlap_pe)
+                elif post_earning_shade:
+                    post_earning_shade.set_visible(False)
             else:
-                if purple_shade:
-                    purple_shade.set_visible(False)
-                if blue_shade:
-                    blue_shade.set_visible(False)
+                if purple_shade: purple_shade.set_visible(False)
+                if blue_shade: blue_shade.set_visible(False)
+                if post_earning_shade: post_earning_shade.set_visible(False)
 
             # 渐变重建节流
             now = time.time()

@@ -1,19 +1,19 @@
 {
-    "Basic_Materials": {
-        "LIN": ""
-    },
+    "Basic_Materials": {},
     "Real_Estate": {
-        "DLR": ""
+        "EQIX": "",
+        "SBAC": ""
     },
-    "Energy": {
-        "TPL": "",
-        "VG": ""
-    },
+    "Energy": {},
     "Technology": {
         "NTNX": "",
-        "WDAY": ""
+        "WDAY": "",
+        "DOX": ""
     },
-    "Consumer_Cyclical": {},
+    "Consumer_Cyclical": {
+        "VVV": "",
+        "ALH": ""
+    },
     "Utilities": {},
     "Consumer_Defensive": {
         "LRN": ""
@@ -98,11 +98,14 @@
         "XRP": ""
     },
     "Must": {
+        "NXT": "",
+        "NOC": "",
+        "LDOS": "",
+        "ITT": "",
         "LHX": "",
         "SNDK": "",
         "SHOP": "",
         "ORCL": "",
-        "OKLO": "",
         "HON": "",
         "NET": ""
     },
