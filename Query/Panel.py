@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import (
     QPushButton, QGroupBox, QScrollArea, QTextEdit, QDialog,
     QInputDialog, QMenu, QFrame, QLabel, QLineEdit, QMessageBox
 )
-from PyQt5.QtCore import Qt, QMimeData, QPoint, QEvent
+from PyQt5.QtCore import Qt, QMimeData, QPoint, QEvent, QTimer
 from PyQt5.QtGui import QFont, QCursor, QDrag
 
 sys.path.append('/Users/yanzhang/Coding/Financial_System/Query')
@@ -1225,7 +1225,10 @@ class MainWindow(QMainWindow):
     ### <<< 修改: 完全重写 find_and_highlight_symbol 方法以支持多重高亮
     def find_and_highlight_symbol(self, symbol):
         """
-        查找所有具有指定 symbol 的按钮，高亮它们，并滚动到第一个按钮的视图中。
+        查找所有具有指定 symbol 的按钮，高亮它们。
+        1. 如果找到 1 个：直接跳转，不弹窗（视觉对焦即可）。
+        2. 如果找到 > 1 个：跳转到第 1 个，并弹窗提示数量。
+        3. 如果没找到：弹窗提示未找到。
         """
         # 1. 恢复上一次搜索中所有高亮的按钮
         for button, original_style in self.highlighted_buttons:
@@ -1241,15 +1244,19 @@ class MainWindow(QMainWindow):
         # 2. 查找所有 SymbolButton 并收集所有匹配项
         found_buttons = []
         all_buttons = self.findChildren(SymbolButton)
+        
+        # 清理输入字符串
+        target_symbol = symbol.strip().upper()
+        
         for button in all_buttons:
-            if button._symbol.upper() == symbol:
+            if button._symbol.strip().upper() == target_symbol:
                 found_buttons.append(button)
 
         # 3. 如果找到按钮，则高亮所有匹配项并滚动到第一个
         if found_buttons:
             highlight_style = "border: 3px solid #FFD700;" # 金色粗边框
             
-            # 遍历所有找到的按钮
+            # 遍历并高亮
             for button in found_buttons:
                 # 存储当前按钮和它的原始样式
                 original_style = button.styleSheet()
@@ -1258,16 +1265,41 @@ class MainWindow(QMainWindow):
                 # 应用高亮样式（在原有样式上追加一个醒目的边框）
                 button.setStyleSheet(f"{original_style}; {highlight_style}")
             
-            # 确保第一个按钮在滚动区域内可见
-            self.scroll_area.ensureWidgetVisible(found_buttons[0])
+            # --- 关键修复 ---
+            # 定义一个内部函数，将“滚动”和“弹窗”都放在这里面
+            def perform_jump_and_notify():
+                try:
+                    # 再次检查按钮是否还存在（防止极端情况下的崩溃）
+                    if not found_buttons or not found_buttons[0].isVisible():
+                        return
+
+                    # A. 执行滚动
+                    self.scroll_area.ensureWidgetVisible(found_buttons[0], 50, 50)
+                    found_buttons[0].setFocus()
+
+                    # B. 执行弹窗 (只有在滚动完成后，且需要弹窗时才执行)
+                    if len(found_buttons) > 1:
+                        QMessageBox.information(
+                            self, 
+                            "搜索结果", 
+                            f"共找到 {len(found_buttons)} 个 '{target_symbol}'。\n已自动跳转至第一个结果。"
+                        )
+                except Exception as e:
+                    print(f"跳转或弹窗时出错: {e}")
+
+            # 使用 QTimer 延迟 200 毫秒执行
+            # 增加延时是为了给 QInputDialog 足够的关闭和销毁时间
+            QTimer.singleShot(200, perform_jump_and_notify)
             
-            # 更新提示信息
-            # QMessageBox.information(self, "已找到", f"已找到并高亮显示 {len(found_buttons)} 个 '{symbol}'。")
-            print(f"已找到并高亮显示 {len(found_buttons)} 个 {symbol}。")
+            print(f"已找到并高亮显示 {len(found_buttons)} 个 {target_symbol}。")
+
         else:
-            # 4. 如果未找到，给用户一个提示
-            QMessageBox.information(self, "未找到", f"在列表中未找到 Symbol: {symbol}")
-            print(f"在列表中未找到 Symbol: {symbol}")
+            # 未找到的情况，也建议稍微延迟一点弹窗，避免焦点冲突
+            def show_not_found():
+                QMessageBox.warning(self, "未找到", f"在列表中未找到 Symbol: {target_symbol}")
+            
+            QTimer.singleShot(100, show_not_found)
+            print(f"在列表中未找到 Symbol: {target_symbol}")
 
     def keyPressEvent(self, event):
         """重写键盘事件处理器"""

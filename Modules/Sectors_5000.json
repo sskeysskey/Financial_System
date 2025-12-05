@@ -11,15 +11,12 @@
     "Consumer_Defensive": [
         "WMT"
     ],
-    "Energy": [
-        "XOM"
-    ],
+    "Energy": [],
     "Financial_Services": [
         "BRK-A",
         "JPM",
         "V",
-        "BAC",
-        "MA"
+        "BAC"
     ],
     "Healthcare": [
         "LLY"

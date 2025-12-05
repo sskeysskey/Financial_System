@@ -139,8 +139,7 @@ async function startYahooScrapingProcess() {
             "https://finance.yahoo.com/markets/etfs/top/?start=100&count=100",
             "https://finance.yahoo.com/markets/etfs/top/?start=200&count=100",
             "https://finance.yahoo.com/markets/etfs/top/?start=300&count=100",
-            "https://finance.yahoo.com/markets/etfs/top/?start=400&count=100",
-            "https://finance.yahoo.com/markets/etfs/top/?start=500&count=100"
+            "https://finance.yahoo.com/markets/etfs/top/?start=400&count=100"
         ];
 
         for (const url of urls) {

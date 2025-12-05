@@ -72,8 +72,7 @@
         "MO",
         "BTI",
         "CL",
-        "MNST",
-        "DEO"
+        "MNST"
     ],
     "Energy": [
         "XOM",
@@ -198,7 +197,8 @@
         "ALNY",
         "BDX",
         "IDXX",
-        "ARGX"
+        "ARGX",
+        "EW"
     ],
     "Industrials": [
         "GE",
