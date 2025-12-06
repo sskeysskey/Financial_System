@@ -576,7 +576,8 @@
         "EBR",
         "FI",
         "LNW",
-        "HPP"
+        "HPP",
+        "IPG"
     ],
     "etf": [
         "VDE",
@@ -862,7 +863,10 @@
         "NUAG",
         "DNL",
         "FLMX",
-        "NLR"
+        "NLR",
+        "FDL",
+        "VYM",
+        "EYLD"
     ],
     "Earning": [
         "TW",

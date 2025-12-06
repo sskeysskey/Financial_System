@@ -237,8 +237,7 @@
         "CMI",
         "VRT",
         "PCAR",
-        "URI",
-        "FERG"
+        "URI"
     ],
     "Real_Estate": [
         "PLD",
@@ -311,7 +310,6 @@
         "CEG",
         "AEP",
         "VST",
-        "SRE",
-        "D"
+        "SRE"
     ]
 }

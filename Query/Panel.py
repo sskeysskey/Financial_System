@@ -36,7 +36,7 @@ DISPLAY_LIMITS = {
 }
 
 categories = [
-    ['Must','Today','Short'],
+    ['Must','Today','Short', 'Short_Shift'],
     ['PE_valid','PE_invalid','Strategy12','Strategy34'],
     ['Basic_Materials','Consumer_Cyclical','Real_Estate','Technology','Energy','Industrials',
      'Consumer_Defensive','Communication_Services','Financial_Services', 'Healthcare','Utilities'],

@@ -56,7 +56,7 @@ CONFIG = {
     "MARKETCAP_THRESHOLD_MEGA": 500_000_000_000, # 5000亿
     
     # 严格筛选标准 (第一轮)
-    "PRICE_DROP_PERCENTAGE_LARGE": 0.09, # <2000亿=9%
+    "PRICE_DROP_PERCENTAGE_LARGE": 0.079, # <2000亿=7.9%
     "PRICE_DROP_PERCENTAGE_SMALL": 0.06, # 2000亿 ≤ 市值 < 5000亿 = 6%
     "PRICE_DROP_PERCENTAGE_MEGA": 0.05,  # ≥5000亿=5%
     
@@ -249,11 +249,16 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
             continue
         data['latest_date_str'], data['latest_price'], data['latest_volume'] = latest_row
         if is_tracing: log_detail(f"[{symbol}] 步骤3: 获取最新交易日数据。日期: {data['latest_date_str']}, 价格: {data['latest_price']}, 成交量: {data['latest_volume']}")
-        cursor.execute(f'SELECT price FROM "{sector_name}" WHERE name = ? AND date < ? ORDER BY date DESC LIMIT 10', (symbol, data['latest_date_str']))
+        
+        # ========== 修改开始：同时获取日期和价格 ==========
+        cursor.execute(f'SELECT date, price FROM "{sector_name}" WHERE name = ? AND date < ? ORDER BY date DESC LIMIT 10', (symbol, data['latest_date_str']))
         prev_rows = cursor.fetchall()
-        prices_last_10 = [r[0] for r in prev_rows]
-        data['prev_10_prices'] = prices_last_10
-        if is_tracing: log_detail(f"[{symbol}] 步骤3.1: 获取最近10个交易日的收盘价，共 {len(prices_last_10)} 条: {prices_last_10}")
+        # 分离日期和价格
+        data['prev_10_dates'] = [r[0] for r in prev_rows]
+        data['prev_10_prices'] = [r[1] for r in prev_rows]
+        
+        if is_tracing: log_detail(f"[{symbol}] 步骤3.1: 获取最近10个交易日数据。日期: {data['prev_10_dates']}, 价格: {data['prev_10_prices']}")
+
         latest_er_date = data['latest_er_date_str']
         latest_er_price = data['all_er_prices'][-1]
         cursor.execute(f'SELECT price FROM "{sector_name}" WHERE name = ? AND date > ? ORDER BY date ASC LIMIT 3', (symbol, latest_er_date))
@@ -672,19 +677,47 @@ def apply_common_filters(data, symbol_to_trace, log_detail, drop_pct_large, drop
     else:
         if is_tracing: log_detail("  - [通用过滤1] 价格回撤: 已跳过 (条件5模式)。")
 
-    # 2. 相对10日最低价条件
+    # 2. 相对10日最低价条件 (逻辑更新：如果10天内含财报日，则使用财报日收盘价作为基准)
     prev_prices = data.get('prev_10_prices', [])
+    prev_dates = data.get('prev_10_dates', [])
+    latest_er_date = data.get('latest_er_date_str')
+
     if len(prev_prices) < 10:
         if is_tracing: log_detail(f"  - 最终裁定: 失败 (通用过滤2: 可用历史交易日不足10日，只有{len(prev_prices)}日数据)。")
         return False
-    min_prev = min(prev_prices)
-    threshold_price_10day = min_prev * (1 + CONFIG["MAX_INCREASE_PERCENTAGE_SINCE_LOW"])
+    
+    # ========== 修改开始：判断基准价格 ==========
+    baseline_price = None
+    using_er_price_logic = False
+
+    if latest_er_date and latest_er_date in prev_dates:
+        # 如果财报日在最近10天内
+        try:
+            er_index = prev_dates.index(latest_er_date)
+            baseline_price = prev_prices[er_index]
+            using_er_price_logic = True
+        except ValueError:
+            # 理论上不会发生，因为前面check了 in prev_dates
+            baseline_price = min(prev_prices)
+    else:
+        # 如果财报日不在10天内，使用原来的逻辑（最低价）
+        baseline_price = min(prev_prices)
+    
+    threshold_price_10day = baseline_price * (1 + CONFIG["MAX_INCREASE_PERCENTAGE_SINCE_LOW"])
     cond_10day_ok = data['latest_price'] <= threshold_price_10day
+    
     if is_tracing:
-        log_detail(f"  - [通用过滤2] 相对10日最低价:")
-        log_detail(f"    - 判断: 最新价 {data['latest_price']:.2f} <= 最低价*1.03 ({threshold_price_10day:.2f}) -> {cond_10day_ok}")
+        log_detail(f"  - [通用过滤2] 相对10日基准价:")
+        if using_er_price_logic:
+            log_detail(f"    - 策略: 财报日({latest_er_date})在10天内，使用财报日收盘价作为基准。")
+        else:
+            log_detail(f"    - 策略: 财报日不在10天内，使用10日最低价作为基准。")
+        log_detail(f"    - 基准价: {baseline_price:.2f}")
+        log_detail(f"    - 判断: 最新价 {data['latest_price']:.2f} <= 基准价*1.03 ({threshold_price_10day:.2f}) -> {cond_10day_ok}")
+    # ========== 修改结束 ==========
+
     if not cond_10day_ok:
-        if is_tracing: log_detail("  - 最终裁定: 失败 (通用过滤2: 相对10日最低价条件不满足)。")
+        if is_tracing: log_detail("  - 最终裁定: 失败 (通用过滤2: 相对10日基准价条件不满足)。")
         return False
     
     # 3. 成交额条件
