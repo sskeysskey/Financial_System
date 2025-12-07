@@ -395,7 +395,8 @@
     "ARKQ",
     "VEU",
     "LQDI",
-    "IXUS"
+    "IXUS",
+    "FLCH"
   ],
   "Basic_Materials": [
     "LIN",
@@ -1403,7 +1404,6 @@
     "LSTR",
     "FLS",
     "SPXC",
-    "GTLS",
     "TKR",
     "GXO",
     "ADT",

@@ -577,7 +577,8 @@
         "FI",
         "LNW",
         "HPP",
-        "IPG"
+        "IPG",
+        "GTLS"
     ],
     "etf": [
         "VDE",
@@ -866,7 +867,8 @@
         "NLR",
         "FDL",
         "VYM",
-        "EYLD"
+        "EYLD",
+        "DVY"
     ],
     "Earning": [
         "TW",

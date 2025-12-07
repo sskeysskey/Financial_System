@@ -3,22 +3,33 @@
         "LIN": ""
     },
     "Real_Estate": {
-        "EQIX": "",
         "VICI": "",
-        "AMH": ""
+        "AMH": "",
+        "GLPI": "",
+        "CUZ": ""
     },
     "Energy": {},
-    "Technology": {},
-    "Consumer_Cyclical": {},
-    "Utilities": {},
+    "Technology": {
+        "S": ""
+    },
+    "Consumer_Cyclical": {
+        "ALH": ""
+    },
+    "Utilities": {
+        "VST": ""
+    },
     "Consumer_Defensive": {
-        "LRN": "",
-        "PG": "",
-        "MKC": ""
+        "MKC": "",
+        "MDLZ": "",
+        "POST": "",
+        "LOPE": ""
     },
     "Industrials": {},
     "Communication_Services": {},
-    "Financial_Services": {},
+    "Financial_Services": {
+        "AJG": "",
+        "KNSL": ""
+    },
     "Healthcare": {},
     "ETFs": {
         "HYG": ""
@@ -94,16 +105,15 @@
         "XRP": ""
     },
     "Must": {
-        "OLLI": "",
+        "WRB": "",
+        "TT": "",
+        "PSN": "",
+        "OTIS": "",
         "ULS": "",
         "ROBO": "",
-        "SYM": "",
-        "ORCL": ""
+        "SYM": ""
     },
-    "Today": {
-        "AXON": "",
-        "DUOL": ""
-    },
+    "Today": {},
     "Short": {},
     "Short_Shift": {},
     "Strategy12": {},
@@ -150,16 +160,9 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USNonFarmA": "03 USNonFarmA",
-        "ImportPriceM": "03 ImportPriceM",
-        "USNonPMI": "03 USNonPMI",
+        "USInterest": "10 USInterest",
         "USTrade": "11 USTrade",
-        "USInitial": "04 USInitial",
-        "USConfidence": "05 USConfidence",
-        "PCEY": "05 PCEY",
-        "CorePCEY": "05 CorePCEY",
-        "CorePCEM": "05 CorePCEM",
-        "USInterest": "10 USInterest"
+        "USInitial": "11 USInitial"
     },
     "Economic_All": {
         "USGDP": "",
