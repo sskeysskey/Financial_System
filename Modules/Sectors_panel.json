@@ -1,59 +1,59 @@
 {
     "Basic_Materials": {
-        "LIN": "",
-        "APD": ""
+        "SHW": "",
+        "APD": "",
+        "UFPI": ""
     },
     "Real_Estate": {
-        "VICI": "",
         "AMH": "",
-        "GLPI": "",
         "CUZ": "",
-        "SLG": ""
+        "GLPI": "",
+        "CUBE": "",
+        "FSV": ""
     },
     "Energy": {
         "VG": ""
     },
-    "Technology": {
-        "S": ""
-    },
+    "Technology": {},
     "Consumer_Cyclical": {
         "ALH": "",
-        "SE": "",
         "MMYT": "",
         "HRB": "",
-        "CHH": ""
+        "CHH": "",
+        "RACE": "",
+        "AZO": "",
+        "LKQ": "",
+        "GPK": "",
+        "VVV": ""
     },
     "Utilities": {
         "VST": "",
-        "SO": "",
-        "DUK": ""
+        "DUK": "",
+        "SO": ""
     },
     "Consumer_Defensive": {
-        "MKC": "",
         "MDLZ": "",
-        "POST": "",
         "LOPE": "",
-        "PG": "",
-        "UL": "",
-        "CHD": ""
+        "CHD": "",
+        "GIS": ""
     },
     "Industrials": {
         "RELX": "",
         "TT": "",
-        "TRI": "",
         "CPRT": "",
-        "CNH": ""
+        "TRI": ""
     },
     "Communication_Services": {
         "NFLX": ""
     },
     "Financial_Services": {
-        "AJG": "",
-        "KNSL": ""
+        "KNSL": "",
+        "ERIE": ""
     },
     "Healthcare": {
         "SYK": "",
         "BSX": "",
+        "ZTS": "",
         "DOCS": ""
     },
     "ETFs": {
@@ -130,12 +130,16 @@
         "XRP": ""
     },
     "Must": {
-        "WRB": "",
+        "BSX": "",
+        "XYL": "",
+        "WST": "",
+        "SO": "",
+        "MCK": "",
+        "ITT": "",
+        "EXC": "",
         "TT": "",
         "PSN": "",
         "OTIS": "",
-        "ULS": "",
-        "ROBO": "",
         "SYM": ""
     },
     "Today": {},
@@ -147,64 +151,64 @@
     },
     "Strategy34": {
         "A": "",
-        "AZO": "",
         "BBY": "",
         "CCL": "",
-        "JEF": "",
+        "CRDO": "CRDO热",
+        "MRVL": "MRVL热",
         "RH": ""
     },
     "PE_valid": {
+        "AAON": "AAON15热",
         "ABT": "ABT7",
-        "AJG": "",
+        "ACM": "",
+        "AFRM": "",
+        "ALLE": "",
         "AMGN": "",
         "AMZN": "AMZN7热",
         "APD": "",
         "AU": "",
+        "BLD": "",
         "BNTX": "",
-        "BSX": "",
         "CF": "",
         "CLX": "",
         "CNH": "",
         "COR": "",
-        "COST": "COST7",
+        "COST": "",
         "CPNG": "",
-        "CRDO": "CRDO热",
         "CRS": "",
+        "CVLT": "",
         "DOCS": "",
+        "ECL": "",
         "EFX": "",
         "EQIX": "EQIX7热",
-        "EXC": "EXC7热",
-        "FOUR": "",
-        "GAP": "",
         "GE": "GE7",
+        "GILD": "",
         "GIS": "",
-        "GLPI": "",
-        "HALO": "",
+        "GPK": "",
+        "GRAB": "",
+        "HEI": "",
         "HON": "",
+        "HWM": "",
         "IDXX": "",
         "INCY": "",
-        "IRM": "IRM15热",
-        "ITT": "",
-        "JCI": "JCI热",
+        "JPM": "",
         "KMB": "",
-        "LDOS": "",
         "LEN": "",
+        "LHX": "LHX7热",
         "LIN": "",
         "LKQ": "",
         "LLY": "LLY7",
         "MAR": "",
-        "MCK": "",
-        "MEDP": "",
-        "MRK": "",
-        "MRVL": "MRVL7热",
+        "MASI": "",
+        "MRK": "MRK7",
         "MSCI": "",
         "MSI": "",
         "MTD": "",
         "NFLX": "NFLX15",
         "NOC": "",
-        "OLLI": "",
+        "NXT": "",
         "PG": "PG7",
-        "PKG": "",
+        "PNR": "",
         "PODD": "",
         "POOL": "",
         "RACE": "",
@@ -212,30 +216,29 @@
         "REGN": "",
         "RTX": "",
         "SE": "",
+        "SHAK": "",
         "SHW": "",
+        "SLM": "",
+        "SMMT": "",
         "SNY": "",
-        "SO": "SO7热",
-        "SPOT": "",
-        "SPXC": "SPXC7热",
+        "SOFI": "",
+        "STRL": "STRL15热",
         "TLN": "TLN15热",
         "TMO": "",
         "TMUS": "TMUS7",
-        "TRI": "",
-        "UHS": "UHS7热",
-        "UL": "",
+        "ULS": "",
         "UNH": "UNH7",
         "URI": "",
-        "VLO": "",
-        "WST": "",
-        "XYL": "",
-        "XYZ": "",
-        "YUM": ""
+        "WRB": "",
+        "YUM": "",
+        "ZTS": ""
     },
     "PE_invalid": {
         "ALNY": "",
+        "ASND": "",
         "GH": "",
         "INSM": "",
-        "SLG": ""
+        "MDGL": ""
     },
     "Currencies": {
         "DXY": "美元指数",

@@ -317,8 +317,8 @@ def visualize_sqlite_db(db_path, output_dir, content_limit=100):
 if __name__ == "__main__":
     # 请将这里的路径修改为您自己的数据库文件路径
     # 对于Windows用户，路径可能像这样: r"C:\Users\YourUser\Documents\Database\Finance.db"
-    # database_file_path = "/Users/yanzhang/Coding/Database/Finance.db"
-    database_file_path = "/Users/yanzhang/Downloads/user_data.db"
+    database_file_path = "/Users/yanzhang/Coding/Database/Finance.db"
+    # database_file_path = "/Users/yanzhang/Downloads/user_data.db"
     
     # --- 修改部分 4: 指定HTML报告的输出目录 ---
     # 这是您希望保存HTML文件的目录
