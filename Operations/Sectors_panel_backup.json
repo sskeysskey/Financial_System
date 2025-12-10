@@ -1,36 +1,34 @@
 {
-    "Basic_Materials": {},
+    "Basic_Materials": {
+        "UFPI": ""
+    },
     "Real_Estate": {
         "AMH": "",
-        "CUZ": ""
+        "GLPI": "",
+        "CUBE": "",
+        "FSV": ""
     },
-    "Energy": {
-        "VG": ""
-    },
+    "Energy": {},
     "Technology": {},
     "Consumer_Cyclical": {
-        "ALH": "",
-        "MMYT": "",
-        "HRB": "",
-        "CHH": ""
+        "CHH": "",
+        "AZO": "",
+        "GPK": "",
+        "VVV": ""
     },
     "Utilities": {
         "VST": "",
-        "DUK": ""
+        "SO": ""
     },
     "Consumer_Defensive": {
-        "MDLZ": "",
-        "LOPE": "",
-        "CHD": ""
+        "MDLZ": ""
     },
     "Industrials": {
-        "RELX": "",
-        "TT": "",
-        "CPRT": ""
+        "TRI": ""
     },
     "Communication_Services": {},
     "Financial_Services": {
-        "KNSL": ""
+        "ERIE": ""
     },
     "Healthcare": {
         "SYK": "",
@@ -110,19 +108,21 @@
         "XRP": ""
     },
     "Must": {
+        "AU": "",
+        "SHW": "",
+        "AAON": "",
         "BSX": "",
         "XYL": "",
-        "WST": "",
-        "SO": "",
-        "MCK": "",
         "ITT": "",
-        "EXC": "",
         "TT": "",
         "PSN": "",
         "OTIS": "",
         "SYM": ""
     },
-    "Today": {},
+    "Today": {
+        "LLY": "",
+        "HEI": ""
+    },
     "Short": {},
     "Short_Shift": {},
     "Strategy12": {},

@@ -176,17 +176,28 @@ class StockComparisonApp(QWidget):
             df.sort_index(inplace=True)
             dfs[symbol] = (df, colors[i % len(colors)])
 
-        # 找出共同的日期范围
-        start_date = max(df[0].index.min() for df in dfs.values())
-        end_date = min(df[0].index.max() for df in dfs.values())
+        # 转换用户输入的日期格式
+        start_dt = pd.to_datetime(custom_start_date)
+        end_dt = pd.to_datetime(custom_end_date)
 
-        # 确定最终的日期范围
-        final_start_date = max(pd.to_datetime(custom_start_date), start_date)
-        final_end_date = min(pd.to_datetime(custom_end_date), end_date) if pd.to_datetime(custom_end_date) <= end_date else pd.to_datetime(custom_end_date)
-
-        # 筛选共同日期范围内的数据
-        for name in dfs:
-            dfs[name] = (dfs[name][0].reindex(pd.date_range(final_start_date, final_end_date)).ffill(), dfs[name][1])
+        # ---------------- 修改开始 ----------------
+        # 这里的逻辑改了：不再使用 reindex 和 ffill
+        # 而是直接筛选在 [start_dt, end_dt] 范围内的实际存在的数据
+        
+        for name in list(dfs.keys()): # 使用 list(keys) 避免在迭代中修改字典大小时报错
+            df_original, color = dfs[name]
+            
+            # 使用布尔索引进行切片，只保留用户选定范围内的数据
+            # 这样如果数据库没有今天的数据，就不会强行生成今天的数据
+            df_sliced = df_original[(df_original.index >= start_dt) & (df_original.index <= end_dt)]
+            
+            # 如果切片后为空（比如选的日期太早或太晚），需要处理一下防止报错
+            if df_sliced.empty:
+                print(f"Warning: {name} 在选定范围内没有数据")
+                # 可以选择跳过或者保留空df，这里保留空df，绘图时会自动忽略
+            
+            dfs[name] = (df_sliced, color)
+        # ---------------- 修改结束 ----------------
 
         # 创建图表
         fig, ax1 = plt.subplots(figsize=(16, 6))
@@ -194,16 +205,29 @@ class StockComparisonApp(QWidget):
         # 设置中文字体
         zh_font = fm.FontProperties(fname='/Users/yanzhang/Library/Fonts/FangZhengHeiTiJianTi-1.ttf')
 
+        # 如果没有数据可画（防止全空报错）
+        if not dfs or all(df[0].empty for df in dfs.values()):
+            self.label.setText('选定范围内没有数据')
+            return
+
         # 如果只有一个股票，绘制单一曲线
         if len(symbols) == 1:
             symbol = symbols[0]
             df, color = dfs[symbol]
-            ax1.plot(df.index, df['price'], label=symbol, color=color, linewidth=2)
-            ax1.legend([symbol], loc='upper left', prop=zh_font)
-            ax1.set_title(f'{symbol} 价格曲线', fontproperties=zh_font)
+            if not df.empty:
+                ax1.plot(df.index, df['price'], label=symbol, color=color, linewidth=2)
+                ax1.legend([symbol], loc='upper left', prop=zh_font)
+                ax1.set_title(f'{symbol} 价格曲线', fontproperties=zh_font)
         else:
             # 绘制第一个股票价格曲线
-            first_name, (first_df, first_color) = next(iter(dfs.items()))
+            # 注意：这里需要找到第一个非空的df来建立坐标轴
+            valid_items = [(n, d, c) for n, (d, c) in dfs.items() if not d.empty]
+            
+            if not valid_items:
+                 self.label.setText('选定范围内没有数据')
+                 return
+
+            first_name, first_df, first_color = valid_items[0]
 
             line1, = ax1.plot(first_df.index, first_df['price'], label=first_name, color=first_color, linewidth=2)
             ax1.tick_params(axis='y', labelcolor=first_color)
@@ -211,7 +235,9 @@ class StockComparisonApp(QWidget):
             # 绘制其他股票价格曲线
             second_axes = [ax1]
             lines = [line1]
-            for i, (name, (df, color)) in enumerate(list(dfs.items())[1:], 1):
+            
+            # 从第二个有效数据开始遍历
+            for i, (name, df, color) in enumerate(valid_items[1:], 1):
                 ax = ax1.twinx()
                 if i > 1:
                     ax.spines['right'].set_position(('outward', 60 * (i - 1)))
@@ -229,8 +255,9 @@ class StockComparisonApp(QWidget):
         # 设置图表标题
         plt.grid(True)
 
-        # 添加竖直虚线
-        vline = ax1.axvline(x=final_start_date, color='gray', linestyle='--', linewidth=1)
+        # 添加竖直虚线 (初始位置设在开始日期，如果没有数据则不显示)
+        vline_x = start_dt
+        vline = ax1.axvline(x=vline_x, color='gray', linestyle='--', linewidth=1)
 
         # 添加显示日期的文本注释，并初始化位置
         date_text = fig.text(0.5, 0.005, '', ha='center', va='bottom', fontproperties=zh_font)
