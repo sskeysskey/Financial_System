@@ -460,7 +460,8 @@
         "VEU",
         "LQDI",
         "IXUS",
-        "FLCH"
+        "FLCH",
+        "RSPU"
     ],
     "Basic_Materials": [
         "LIN",
@@ -1538,7 +1539,9 @@
         "ENS",
         "AGX",
         "LGN",
-        "CSW"
+        "CSW",
+        "PL",
+        "GVA"
     ],
     "Real_Estate": [
         "PLD",
