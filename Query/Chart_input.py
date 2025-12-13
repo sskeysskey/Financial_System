@@ -130,6 +130,24 @@ def calculate_five_weeks_after_range(target_date):
     
     return target_week_start, target_week_end
 
+# --- 新增: 计算财报后第3周的函数 ---
+def calculate_three_weeks_after_range(target_date):
+    """
+    计算目标日期往后推3周的那一周的区间范围 (周一到周五)
+    逻辑：找到目标日期所在周的周一，加3周(21天)，即为目标周的周一。
+    """
+    # 找到目标日期所在周的周一
+    weekday = target_date.weekday()
+    current_week_start = target_date - timedelta(days=weekday)
+    
+    # 往后推 3 周 = 21 天
+    target_week_start = current_week_start + timedelta(weeks=3)
+    
+    # 周五是该周的结束
+    target_week_end = target_week_start + timedelta(days=4)
+    
+    return target_week_start, target_week_end
+
 def get_title_color_logic(db_path, symbol, table_name):
     """
     获取决定标题颜色所需的所有数据，并返回最终的颜色字符串。
@@ -568,8 +586,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     else:
         print(f"未找到 {name} 的 earning release 日期")
 
-    # === 2. 处理基于数据库的最新财报后5周遮罩 ===
+    # === 2. 处理基于数据库的最新财报后3/5周遮罩 ===
     post_earning_shade = None # 财报后5周的蓝色遮罩
+    post_earning_shade_3w = None # 财报后3周的紫色遮罩
     latest_db_earning_date = None
     try:
         with sqlite3.connect(db_path) as conn:
@@ -584,7 +603,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         print(f"查询最新财报日期失败: {e}")
 
     if latest_db_earning_date:
-        # 计算往后推5周的周一到周五区间
+        # 计算往后推5周的周一到周五区间 (蓝色)
         pe_start, pe_end = calculate_five_weeks_after_range(latest_db_earning_date)
         print(f"财报后第5周区间: {pe_start} 到 {pe_end}")
 
@@ -592,6 +611,19 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             pe_start,
             pe_end,
             facecolor=NORD_THEME['accent_blue'], # 使用蓝色
+            alpha=0.15,
+            zorder=0.5,
+            visible=False # 默认隐藏，在update中控制
+        )
+
+        # 计算往后推3周的周一到周五区间 (紫色)
+        pe_start_3w, pe_end_3w = calculate_three_weeks_after_range(latest_db_earning_date)
+        print(f"财报后第3周区间: {pe_start_3w} 到 {pe_end_3w}")
+
+        post_earning_shade_3w = ax1.axvspan(
+            pe_start_3w,
+            pe_end_3w,
+            facecolor=NORD_THEME['accent_purple'], # 使用紫色
             alpha=0.15,
             zorder=0.5,
             visible=False # 默认隐藏，在update中控制
@@ -1196,17 +1228,27 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     if purple_shade: purple_shade.set_visible(False)
                     if blue_shade: blue_shade.set_visible(False)
 
-                # 2. 基于数据库的最新财报后5周遮罩
-                if latest_db_earning_date and post_earning_shade:
-                    pe_start, pe_end = calculate_five_weeks_after_range(latest_db_earning_date)
-                    has_overlap_pe = not (pe_end < display_start or pe_start > display_end)
-                    post_earning_shade.set_visible(has_overlap_pe)
-                elif post_earning_shade:
-                    post_earning_shade.set_visible(False)
+                # 2. 基于数据库的最新财报后3/5周遮罩
+                if latest_db_earning_date:
+                    if post_earning_shade:
+                        pe_start, pe_end = calculate_five_weeks_after_range(latest_db_earning_date)
+                        has_overlap_pe = not (pe_end < display_start or pe_start > display_end)
+                        post_earning_shade.set_visible(has_overlap_pe)
+                    
+                    # 新增：控制财报后第3周紫色遮罩
+                    if post_earning_shade_3w:
+                        pe_start_3w, pe_end_3w = calculate_three_weeks_after_range(latest_db_earning_date)
+                        has_overlap_pe_3w = not (pe_end_3w < display_start or pe_start_3w > display_end)
+                        post_earning_shade_3w.set_visible(has_overlap_pe_3w)
+
+                else:
+                    if post_earning_shade: post_earning_shade.set_visible(False)
+                    if post_earning_shade_3w: post_earning_shade_3w.set_visible(False)
             else:
                 if purple_shade: purple_shade.set_visible(False)
                 if blue_shade: blue_shade.set_visible(False)
                 if post_earning_shade: post_earning_shade.set_visible(False)
+                if post_earning_shade_3w: post_earning_shade_3w.set_visible(False)
 
             # 渐变重建节流
             now = time.time()
