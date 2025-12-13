@@ -112,7 +112,18 @@
     "Today": {},
     "Short": {},
     "Short_Shift": {
-        "MU": ""
+        "MU": "",
+        "IAG": "",
+        "EGO": "",
+        "PSLV": "",
+        "ABVX": "",
+        "LITE": "",
+        "GFI": "",
+        "HL": "",
+        "CVNA": "",
+        "HMY": "",
+        "GSAT": "",
+        "AMKR": ""
     },
     "Strategy12": {
         "CTAS": ""
