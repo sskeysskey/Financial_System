@@ -881,8 +881,17 @@ def run_processing_logic(log_detail):
         return note_map
     pe_valid_notes = build_symbol_note_map(final_pe_valid_to_write)
     pe_invalid_notes = build_symbol_note_map(final_pe_invalid_to_write)
+    
+    # 写入 PE_valid
     update_json_panel(final_pe_valid_to_write, PANEL_JSON_FILE, 'PE_valid', symbol_to_note=pe_valid_notes)
+    # 同步写入 PE_valid_backup
+    update_json_panel(final_pe_valid_to_write, PANEL_JSON_FILE, 'PE_valid_backup', symbol_to_note=pe_valid_notes)
+
+    # 写入 PE_invalid
     update_json_panel(final_pe_invalid_to_write, PANEL_JSON_FILE, 'PE_invalid', symbol_to_note=pe_invalid_notes)
+    # 同步写入 PE_invalid_backup
+    update_json_panel(final_pe_invalid_to_write, PANEL_JSON_FILE, 'PE_invalid_backup', symbol_to_note=pe_invalid_notes)
+
     os.makedirs(os.path.dirname(BACKUP_FILE), exist_ok=True)
     try:
         with open(BACKUP_FILE, 'w', encoding='utf-8') as f:

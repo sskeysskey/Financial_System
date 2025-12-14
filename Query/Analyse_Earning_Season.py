@@ -24,9 +24,7 @@ PATHS = {
     "panel_json": lambda config: os.path.join(config, "Sectors_panel.json"),
     "description_json": lambda config: os.path.join(config, 'description.json'),
     "tags_setting_json": lambda config: os.path.join(config, 'tags_filter.json'),
-    # ========== 新增路径定义 ==========
     "earnings_history_json": lambda config: os.path.join(config, 'Earning_History.json'),
-    # ================================
     "backup_Strategy12": lambda news: os.path.join(news, "backup", "NextWeek_Earning.txt"),
     "backup_Strategy34": lambda news: os.path.join(news, "backup", "Strategy34_earning.txt"),
 }
@@ -996,6 +994,9 @@ def run_processing_logic(log_detail):
     # 8.3 文件和JSON输出
     # 主列表 (Strategy12)
     update_json_panel(final_symbols, PANEL_JSON_FILE, "Strategy12", symbol_to_note=strategy12_notes)
+    # >>> 修改点 1: 同步写入 Strategy12_backup <<<
+    update_json_panel(final_symbols, PANEL_JSON_FILE, "Strategy12_backup", symbol_to_note=strategy12_notes)
+    
     try:
         backup_path = PATHS["backup_Strategy12"](news_path)
         os.makedirs(os.path.dirname(backup_path), exist_ok=True)
@@ -1010,6 +1011,9 @@ def run_processing_logic(log_detail):
 
     # 通知列表 (Strategy34)
     update_json_panel(final_Strategy34_list, PANEL_JSON_FILE, "Strategy34", symbol_to_note=strategy34_notes)
+    # >>> 修改点 2: 同步写入 Strategy34_backup <<<
+    update_json_panel(final_Strategy34_list, PANEL_JSON_FILE, "Strategy34_backup", symbol_to_note=strategy34_notes)
+    
     try:
         backup_path = PATHS["backup_Strategy34"](news_path)
         os.makedirs(os.path.dirname(backup_path), exist_ok=True)

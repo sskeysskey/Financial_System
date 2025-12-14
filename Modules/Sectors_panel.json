@@ -1,7 +1,6 @@
 {
     "Basic_Materials": {},
     "Real_Estate": {
-        "DLR": "",
         "FRMI": ""
     },
     "Energy": {
@@ -9,24 +8,15 @@
         "TPL": ""
     },
     "Technology": {
-        "NVDA": "",
-        "ORCL": "",
-        "MSI": ""
+        "ORCL": ""
     },
     "Consumer_Cyclical": {},
     "Utilities": {},
     "Consumer_Defensive": {},
-    "Industrials": {
-        "TT": ""
-    },
-    "Communication_Services": {
-        "TMUS": "",
-        "RBLX": ""
-    },
+    "Industrials": {},
+    "Communication_Services": {},
     "Financial_Services": {},
-    "Healthcare": {
-        "DOCS": ""
-    },
+    "Healthcare": {},
     "ETFs": {
         "HYG": ""
     },
@@ -101,13 +91,22 @@
         "XRP": ""
     },
     "Must": {
-        "HALO": "",
+        "MRVL": "",
+        "CRDO": "",
+        "A": "",
+        "SYM": "",
+        "WCC": "",
+        "ISRG": "",
+        "CIFR": "",
+        "APH": "",
+        "AMD": "",
+        "APLD": "",
+        "FN": "",
+        "CLS": "",
+        "SNDK": "",
+        "BE": "",
         "GOOGL": "",
-        "SONY": "",
-        "CPNG": "",
-        "BSX": "",
-        "ITT": "",
-        "PSN": ""
+        "SONY": ""
     },
     "Today": {},
     "Short": {},
@@ -125,111 +124,14 @@
         "GSAT": "",
         "AMKR": ""
     },
-    "Strategy12": {
-        "CTAS": ""
-    },
-    "Strategy34": {
-        "A": "",
-        "BBY": "",
-        "CRDO": "CRDO热",
-        "JEF": "",
-        "MRVL": "MRVL热"
-    },
-    "PE_valid": {
-        "AFRM": "",
-        "AMAT": "",
-        "AMD": "AMD15热",
-        "AMGN": "",
-        "AMZN": "AMZN7热",
-        "ANET": "ANET15热",
-        "APH": "APH7热",
-        "ASML": "",
-        "BE": "BE15热",
-        "BILI": "",
-        "BWXT": "BWXT15热",
-        "CEG": "CEG7热",
-        "CHWY": "",
-        "CIEN": "CIEN7热",
-        "CIFR": "CIFR15热",
-        "CLS": "CLS7热",
-        "COIN": "",
-        "DELL": "DELL15热",
-        "DLR": "DLR7热",
-        "DOCS": "",
-        "ETN": "ETN7热",
-        "EXC": "EXC7热",
-        "GIS": "",
-        "GRAB": "",
-        "HIMS": "",
-        "HON": "",
-        "HOOD": "",
-        "IBKR": "",
-        "IDXX": "",
-        "INCY": "",
-        "INTC": "",
-        "IREN": "IREN15热",
-        "IRM": "IRM15热",
-        "ISRG": "",
-        "JCI": "JCI热",
-        "KMB": "",
-        "LEN": "",
-        "LOGI": "",
-        "MCK": "",
-        "MELI": "",
-        "MOD": "MOD15热",
-        "MSCI": "",
-        "MSFT": "MSFT7",
-        "MSI": "",
-        "MTSI": "MTSI热",
-        "NFLX": "NFLX15",
-        "NVDA": "NVDA15热",
-        "NXT": "",
-        "PATH": "",
-        "PODD": "",
-        "PSKY": "",
-        "PWR": "PWR热",
-        "RACE": "",
-        "RGEN": "",
-        "RMBS": "RMBS15热",
-        "SE": "",
-        "SHW": "",
-        "SMCI": "SMCI15热",
-        "SMTC": "SMTC7热",
-        "SNX": "SNX热",
-        "SO": "SO15热",
-        "SOFI": "",
-        "STRL": "STRL15热",
-        "TEL": "TEL7热",
-        "TEM": "",
-        "TLN": "TLN15热",
-        "TMO": "",
-        "TMUS": "TMUS15",
-        "TRI": "",
-        "TSM": "TSM热",
-        "TT": "TT7热",
-        "UBER": "",
-        "UHS": "UHS7热",
-        "VLO": "",
-        "VRT": "VRT15热",
-        "WCC": "WCC热",
-        "WELL": "WELL7热",
-        "WST": "",
-        "XYL": ""
-    },
-    "PE_invalid": {
-        "ALNY": "",
-        "APLD": "APLD15热",
-        "CYBR": "",
-        "GH": "",
-        "IOT": "",
-        "NET": "NET15热",
-        "OKLO": "OKLO15热",
-        "OPEN": "",
-        "QS": "",
-        "RBLX": "",
-        "SMR": "SMR15热",
-        "SYM": ""
-    },
+    "Strategy12": {},
+    "Strategy12_backup": {},
+    "Strategy34": {},
+    "Strategy34_backup": {},
+    "PE_valid": {},
+    "PE_valid_backup": {},
+    "PE_invalid": {},
+    "PE_invalid_backup": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
@@ -269,9 +171,6 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USInterest": "10 USInterest",
-        "USTrade": "11 USTrade",
-        "USInitial": "18 USInitial",
         "USRetailM": "16 USRetailM",
         "USNonFarm": "16 USNonFarm",
         "USUnemploy": "16 USUnemploy",
@@ -280,7 +179,8 @@
         "CorePCEY": "19 CorePCEY",
         "CorePCEM": "19 CorePCEM",
         "PCEY": "19 PCEY",
-        "USConfidence": "19 USConfidence"
+        "USConfidence": "19 USConfidence",
+        "USInitial": "18 USInitial"
     },
     "Economic_All": {
         "USGDP": "",
