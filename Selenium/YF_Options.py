@@ -2,13 +2,14 @@ import sqlite3
 import csv
 import time
 import os
-from datetime import datetime, timedelta  # 修改：引入 timedelta 用于计算时间差
+from datetime import datetime, timedelta
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
+from selenium.common.exceptions import TimeoutException, WebDriverException
 
 # ================= 配置区域 =================
 # 数据库路径
@@ -99,6 +100,7 @@ def scrape_options():
             base_url = f"https://finance.yahoo.com/quote/{symbol}/options/"
             
             try:
+                # 初始加载页面以获取日期列表
                 driver.get(base_url)
                 # 等待页面加载
                 wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
@@ -136,7 +138,7 @@ def scrape_options():
                     # 如果获取失败，尝试直接抓取当前页面（默认日期）
                     date_map = [] 
 
-                # --- 新增逻辑：按6个月时间窗口过滤日期 ---
+                # --- 按6个月时间窗口过滤日期 ---
                 if date_map:
                     filtered_date_map = []
                     start_dt = None
@@ -173,7 +175,6 @@ def scrape_options():
                         
                         print(f"过滤后剩余 {len(filtered_date_map)} 个到期日 (6个月内)。")
                         date_map = filtered_date_map
-                # ---------------------------------------------
 
                 # --- 第二步：遍历每个日期 ---
                 # 如果没找到下拉菜单，可能只有默认的一个日期，尝试抓取当前页
@@ -187,75 +188,89 @@ def scrape_options():
                         print(f"无法确定 {symbol} 的日期，跳过。")
                         continue
 
+                # --- 第二步：遍历每个日期 (包含重试机制) ---
                 for ts, date_text in date_map:
                     formatted_date = format_date(date_text)
-                    print(f"  -> 处理日期: {formatted_date} (TS: {ts})")
                     
-                    # 如果有 timestamp，构造 URL 跳转；如果是空字符串（默认页），不跳转
+                    # 构造目标 URL
+                    target_url = base_url
                     if ts:
                         target_url = f"{base_url}?date={ts}"
-                        driver.get(target_url)
-                        time.sleep(2) # 等待表格加载
+
+                    # === 新增重试机制 ===
+                    MAX_RETRIES = 3  # 最大重试次数
+                    success = False
                     
-                    # --- 第三步：抓取表格数据 ---
-                    # 页面通常有两个表格：Calls 和 Puts
-                    # 根据你的 HTML，表格在 <section data-testid="options-list-table"> 下
-                    # 里面有两个 table，第一个是 Calls，第二个是 Puts (通常如此，但也可能通过 header 判断)
-                    
-                    try:
-                        tables = driver.find_elements(By.CSS_SELECTOR, "section[data-testid='options-list-table'] table")
-                        
-                        # 我们需要确认哪个是 Calls 哪个是 Puts
-                        # 你的 HTML 显示 <h3 class="...">Calls</h3> 紧接着是表格
-                        
-                        option_types = ['Calls', 'Puts']
-                        
-                        # 遍历找到的表格 (通常就是两个)
-                        for i, table in enumerate(tables):
-                            if i >= len(option_types): break
+                    for attempt in range(MAX_RETRIES):
+                        try:
+                            print(f"  -> [尝试 {attempt + 1}/{MAX_RETRIES}] 处理日期: {formatted_date} (TS: {ts})")
                             
-                            opt_type = option_types[i]
+                            # 只有当不是默认页面或者不是第一次加载时才跳转
+                            # 为了保证稳定性，即使是默认页，如果重试了也重新 get 一下
+                            driver.get(target_url)
                             
-                            # 获取所有行
-                            rows = table.find_elements(By.TAG_NAME, "tr")
+                            # 稍微增加等待时间，确保表格渲染
+                            # 如果是重试，等待时间可以稍微加长一点
+                            sleep_time = 2 if attempt == 0 else 4
+                            time.sleep(sleep_time) 
                             
+                            # 检查页面是否真的加载了表格，如果找不到表格，抛出异常触发重试
+                            # 使用 WebDriverWait 确保表格出现
+                            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "section[data-testid='options-list-table'] table")))
+
+                            # --- 第三步：抓取表格数据 ---
+                            tables = driver.find_elements(By.CSS_SELECTOR, "section[data-testid='options-list-table'] table")
+                            
+                            if not tables:
+                                raise Exception("页面已加载但未找到表格元素")
+
+                            option_types = ['Calls', 'Puts']
                             data_buffer = []
+
+                            for i, table in enumerate(tables):
+                                if i >= len(option_types): break
+                                opt_type = option_types[i]
+                                rows = table.find_elements(By.TAG_NAME, "tr")
+                                
+                                for row in rows:
+                                    cols = row.find_elements(By.TAG_NAME, "td")
+                                    if not cols: continue
+                                    
+                                    if len(cols) >= 10:
+                                        strike_raw = cols[2].text
+                                        oi_raw = cols[9].text
+                                        strike_clean = strike_raw.replace(',', '').strip()
+                                        oi_clean = clean_number(oi_raw)
+                                        data_buffer.append([symbol, formatted_date, opt_type, strike_clean, oi_clean])
                             
-                            for row in rows:
-                                # 跳过表头 (th)
-                                cols = row.find_elements(By.TAG_NAME, "td")
-                                if not cols:
-                                    continue
-                                
-                                # 根据你的描述：
-                                # Strike 是第 3 列 (索引 2)
-                                # Open Interest 是第 10 列 (索引 9)
-                                # 你的 HTML 表头: Contract Name, Last Trade Date, Strike, Last Price, Bid, Ask, Change, % Change, Volume, Open Interest
-                                
-                                if len(cols) >= 10:
-                                    strike_raw = cols[2].text
-                                    oi_raw = cols[9].text
-                                    
-                                    strike_val = clean_number(strike_raw) # Strike 也可能是带逗号的数字，虽然通常是小数
-                                    # Strike 实际上通常保留原样或者转 float，这里为了保险按 float 处理再转 string
-                                    # 但你的 CSV 样例里 Strike 是 40, 66 等。
-                                    # 简单处理：去除逗号即可
-                                    strike_clean = strike_raw.replace(',', '').strip()
-                                    
-                                    oi_clean = clean_number(oi_raw)
-                                    
-                                    data_buffer.append([symbol, formatted_date, opt_type, strike_clean, oi_clean])
-                            
-                            # --- 第四步：写入文件 (追加模式) ---
-                            with open(OUTPUT_FILE, 'a', newline='', encoding='utf-8') as f:
-                                writer = csv.writer(f)
-                                writer.writerows(data_buffer)
-                                
-                    except Exception as e:
-                        print(f"  抓取表格数据出错: {e}")
+                            # --- 第四步：写入文件 ---
+                            if data_buffer:
+                                with open(OUTPUT_FILE, 'a', newline='', encoding='utf-8') as f:
+                                    writer = csv.writer(f)
+                                    writer.writerows(data_buffer)
+                                print(f"     成功抓取 {len(data_buffer)} 条数据。")
+                            else:
+                                print("     页面加载成功但无数据行。")
+
+                            # 如果代码运行到这里没有报错，说明成功，跳出重试循环
+                            success = True
+                            break 
+
+                        except Exception as e:
+                            print(f"     [警告] 第 {attempt + 1} 次尝试失败: {e}")
+                            if attempt < MAX_RETRIES - 1:
+                                print("     等待 3 秒后重试...")
+                                time.sleep(3)
+                            else:
+                                print(f"     [错误] 已达到最大重试次数，跳过日期 {formatted_date}。")
+                    
+                    if not success:
+                        # 这里可以选择记录日志，或者只是简单跳过
+                        pass
+                    # =====================
 
             except Exception as e:
-                print(f"处理 Symbol {symbol} 时发生错误: {e}")
+                print(f"处理 Symbol {symbol} 时发生严重错误: {e}")
 
     finally:
         driver.quit()
