@@ -2,6 +2,9 @@ import sqlite3
 import csv
 import time
 import os
+import pyautogui
+import random
+import threading
 from datetime import datetime, timedelta
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -9,19 +12,56 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
-from selenium.common.exceptions import TimeoutException, WebDriverException
 
 # ================= 配置区域 =================
+
+# --- 1. 基础路径配置 ---
 # 数据库路径
 DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
 # 输出文件保存目录
 OUTPUT_DIR = '/Users/yanzhang/Coding/News/backup/'
-# 市值阈值 (10000亿)
+# 市值阈值 (10000亿) - 仅在数据库模式下生效
 MARKET_CAP_THRESHOLD = 4000000000000
 
+# --- 2. 数据源开关配置 (新增功能) ---
+# 设置为 True: 使用下方的 CUSTOM_SYMBOLS_DATA 列表 (默认)
+# 设置为 False: 使用数据库 MNSPP 表进行筛选
+USE_CUSTOM_LIST = True 
+
+# True 改成 False 用于切换从哪里获取Symbol
+# USE_CUSTOM_LIST = False 
+
+# 自定义 Symbol 列表
+CUSTOM_SYMBOLS_DATA = [
+    "NVDA", "AAPL", "GOOGL", "MSFT", "AMZN", "AVGO", "META",
+    "TSM", "WMT", "HYG", "SVIX", "QQQ", "SPXL"
+]
+
+# --- 3. 文件名生成 ---
 # 生成当天的文件名 Options_YYMMDD.csv
 today_str = datetime.now().strftime('%y%m%d')
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, f'Options_{today_str}.csv')
+
+# 添加鼠标移动功能的函数
+def move_mouse_periodically():
+    while True:
+        try:
+            # 获取屏幕尺寸
+            screen_width, screen_height = pyautogui.size()
+            
+            # 随机生成目标位置，避免移动到屏幕边缘
+            x = random.randint(100, screen_width - 100)
+            y = random.randint(100, screen_height - 100)
+            
+            # 缓慢移动鼠标到随机位置
+            pyautogui.moveTo(x, y, duration=1)
+            
+            # 等待30-60秒再次移动
+            time.sleep(random.randint(30, 60))
+            
+        except Exception as e:
+            print(f"鼠标移动出错: {str(e)}")
+            time.sleep(30)
 
 # ================= 1. 数据库操作 =================
 def get_target_symbols(db_path, threshold):
@@ -69,9 +109,22 @@ def clean_number(num_str):
 
 # ================= 3. 爬虫核心逻辑 =================
 def scrape_options():
-    # 1. 获取目标 Symbols
-    symbols = get_target_symbols(DB_PATH, MARKET_CAP_THRESHOLD)
+    # 在主程序开始前启动鼠标移动线程
+    mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
+    mouse_thread.start()
+    
+    # --- 1. 获取目标 Symbols (根据开关决定来源) ---
+    symbols = []
+    if USE_CUSTOM_LIST:
+        print(f"【模式】使用自定义列表模式")
+        symbols = CUSTOM_SYMBOLS_DATA
+        print(f"加载了 {len(symbols)} 个目标代码: {symbols}")
+    else:
+        print(f"【模式】使用数据库筛选模式 (阈值: {MARKET_CAP_THRESHOLD})")
+        symbols = get_target_symbols(DB_PATH, MARKET_CAP_THRESHOLD)
+
     if not symbols:
+        print("未找到任何 Symbol，程序结束。")
         return
 
     # 2. 初始化 CSV 文件 (写入表头)
@@ -97,6 +150,11 @@ def scrape_options():
     try:
         for symbol in symbols:
             print(f"---------- 开始抓取: {symbol} ----------")
+            # 注意：对于指数（如 VIX, SPX），Yahoo Finance 的 URL 通常需要加 ^ (例如 ^VIX)
+            # 如果你的列表里不带 ^ 但 Yahoo 需要，可能需要在这里做一个简单的处理
+            # 例如: url_symbol = symbol if symbol in ['NVDA', 'AAPL'] else f"^{symbol}" 
+            # 目前保持原样使用
+            
             base_url = f"https://finance.yahoo.com/quote/{symbol}/options/"
             
             try:
@@ -198,7 +256,7 @@ def scrape_options():
                         target_url = f"{base_url}?date={ts}"
 
                     # === 新增重试机制 ===
-                    MAX_RETRIES = 3  # 最大重试次数
+                    MAX_RETRIES = 5  # 最大重试次数
                     success = False
                     
                     for attempt in range(MAX_RETRIES):

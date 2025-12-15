@@ -125,9 +125,13 @@
         "AMKR": ""
     },
     "Strategy12": {},
+    "Strategy12_backup": {},
     "Strategy34": {},
+    "Strategy34_backup": {},
     "PE_valid": {},
+    "PE_valid_backup": {},
     "PE_invalid": {},
+    "PE_invalid_backup": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

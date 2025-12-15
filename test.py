@@ -1,103 +1,284 @@
-import pandas as pd
+import sqlite3
+import csv
+import time
 import os
+from datetime import datetime, timedelta
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.common.exceptions import TimeoutException, WebDriverException
 
-def compare_csv_files(file_path1, file_path2):
-    # 检查文件是否存在
-    if not os.path.exists(file_path1):
-        print(f"错误: 找不到文件 {file_path1}")
-        return
-    if not os.path.exists(file_path2):
-        print(f"错误: 找不到文件 {file_path2}")
-        return
+# ================= 配置区域 =================
 
-    print(f"正在比较:\n文件 A: {file_path1}\n文件 B: {file_path2}\n" + "-"*50)
+# --- 1. 基础路径配置 ---
+# 数据库路径
+DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
+# 输出文件保存目录
+OUTPUT_DIR = '/Users/yanzhang/Coding/News/backup/'
+# 市值阈值 (10000亿) - 仅在数据库模式下生效
+MARKET_CAP_THRESHOLD = 4000000000000
 
-    # 读取 CSV 文件
-    # dtype=str 确保所有数据作为字符串读取，避免因为浮点数精度问题导致的误报
+# --- 2. 数据源开关配置 (新增功能) ---
+# 设置为 True: 使用下方的 CUSTOM_SYMBOLS_DATA 列表 (默认)
+# 设置为 False: 使用数据库 MNSPP 表进行筛选
+USE_CUSTOM_LIST = True 
+
+# 自定义 Symbol 列表
+CUSTOM_SYMBOLS_DATA = [
+    "NVDA", "AAPL", "GOOGL", "MSFT", "AMZN", "AVGO", "META",
+    "TSM", "WMT", "VIX", "DJI", "IXIC", "SPX", "HYG"
+]
+
+# --- 3. 文件名生成 ---
+# 生成当天的文件名 Options_YYMMDD.csv
+today_str = datetime.now().strftime('%y%m%d')
+OUTPUT_FILE = os.path.join(OUTPUT_DIR, f'Options_{today_str}.csv')
+
+# ================= 1. 数据库操作 =================
+def get_target_symbols(db_path, threshold):
+    """从数据库中获取符合市值要求的 Symbol"""
+    print(f"正在连接数据库: {db_path}...")
     try:
-        df1 = pd.read_csv(file_path1, dtype=str)
-        df2 = pd.read_csv(file_path2, dtype=str)
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # 查询 marketcap 大于阈值的 symbol
+        query = "SELECT symbol, marketcap FROM MNSPP WHERE marketcap > ?"
+        cursor.execute(query, (threshold,))
+        results = cursor.fetchall()
+        
+        symbols = [row[0] for row in results]
+        print(f"共找到 {len(symbols)} 个市值大于 {threshold} 的代码。")
+        return symbols
     except Exception as e:
-        print(f"读取文件时发生错误: {e}")
+        print(f"数据库读取错误: {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+# ================= 2. 数据处理工具函数 =================
+def format_date(date_str):
+    """将 'Dec 19, 2025' 转换为 '2025/12/19'"""
+    try:
+        # Yahoo 的日期格式通常是 "%b %d, %Y"
+        dt = datetime.strptime(date_str, "%b %d, %Y")
+        return dt.strftime("%Y/%m/%d")
+    except ValueError:
+        return date_str
+
+def clean_number(num_str):
+    """处理数字字符串：去除逗号，将 '-' 转为 0"""
+    if not num_str or num_str.strip() == '-' or num_str.strip() == '':
+        return 0
+    try:
+        # 去除逗号
+        clean_str = num_str.replace(',', '').strip()
+        return int(clean_str) # Open Interest 应该是整数
+    except ValueError:
+        return 0
+
+# ================= 3. 爬虫核心逻辑 =================
+def scrape_options():
+    # --- 1. 获取目标 Symbols (根据开关决定来源) ---
+    symbols = []
+    if USE_CUSTOM_LIST:
+        print(f"【模式】使用自定义列表模式")
+        symbols = CUSTOM_SYMBOLS_DATA
+        print(f"加载了 {len(symbols)} 个目标代码: {symbols}")
+    else:
+        print(f"【模式】使用数据库筛选模式 (阈值: {MARKET_CAP_THRESHOLD})")
+        symbols = get_target_symbols(DB_PATH, MARKET_CAP_THRESHOLD)
+
+    if not symbols:
+        print("未找到任何 Symbol，程序结束。")
         return
 
-    # 1. 比较基本形状 (行数和列数)
-    if df1.shape != df2.shape:
-        print(f"差异: 文件形状不同。")
-        print(f"文件 A: {df1.shape[0]} 行, {df1.shape[1]} 列")
-        print(f"文件 B: {df2.shape[0]} 行, {df2.shape[1]} 列")
-    else:
-        print("基本形状: 相同 (行数和列数一致)")
-
-    # 2. 比较列名
-    if list(df1.columns) != list(df2.columns):
-        print("\n差异: 列名不同。")
-        print(f"文件 A 列名: {list(df1.columns)}")
-        print(f"文件 B 列名: {list(df2.columns)}")
-        # 如果列名不同，后续内容比较可能会出错，建议停止或仅比较共有列
-        common_cols = list(set(df1.columns) & set(df2.columns))
-        print(f"将仅比较共有列: {common_cols}")
-        df1 = df1[common_cols]
-        df2 = df2[common_cols]
-    else:
-        print("列名: 相同")
-
-    # 3. 比较内容
-    # 填充 NaN 为空字符串以避免 NaN != NaN 的问题
-    df1 = df1.fillna('')
-    df2 = df2.fillna('')
-
-    # 如果行数不同，无法直接进行逐单元格比较，先尝试找出仅仅存在于某一个文件中的行
-    if df1.shape[0] != df2.shape[0]:
-        print("\n由于行数不同，无法进行逐行对齐比较。正在查找完全独特的行...")
-        # 这种方法适合找出哪些行是新增的或删除的
-        # 注意：这对于大数据集可能会比较慢
-        merged = df1.merge(df2, indicator=True, how='outer')
-        unique_to_file1 = merged[merged['_merge'] == 'left_only']
-        unique_to_file2 = merged[merged['_merge'] == 'right_only']
+    # 2. 初始化 CSV 文件 (写入表头)
+    # 确保目录存在
+    if not os.path.exists(OUTPUT_DIR):
+        os.makedirs(OUTPUT_DIR)
         
-        if not unique_to_file1.empty:
-            print(f"\n仅在文件 A 中存在的行数: {len(unique_to_file1)}")
-            print(unique_to_file1.drop(columns=['_merge']).head().to_string())
-        
-        if not unique_to_file2.empty:
-            print(f"\n仅在文件 B 中存在的行数: {len(unique_to_file2)}")
-            print(unique_to_file2.drop(columns=['_merge']).head().to_string())
+    with open(OUTPUT_FILE, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(['Symbol', 'Expiry Date', 'Type', 'Strike', 'Open Interest'])
+
+    # 3. 初始化 Selenium
+    options = webdriver.ChromeOptions()
+    # options.add_argument('--headless')  # 如果想后台运行，取消注释这一行
+    options.add_argument('--disable-gpu')
+    options.add_argument('--no-sandbox')
+    # 伪装 User-Agent 防止被轻易拦截
+    options.add_argument('user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    wait = WebDriverWait(driver, 10)
+
+    try:
+        for symbol in symbols:
+            print(f"---------- 开始抓取: {symbol} ----------")
+            # 注意：对于指数（如 VIX, SPX），Yahoo Finance 的 URL 通常需要加 ^ (例如 ^VIX)
+            # 如果你的列表里不带 ^ 但 Yahoo 需要，可能需要在这里做一个简单的处理
+            # 例如: url_symbol = symbol if symbol in ['NVDA', 'AAPL'] else f"^{symbol}" 
+            # 目前保持原样使用
             
-    else:
-        # 如果行数相同，进行精确的逐单元格比较
-        comparison_values = df1.values == df2.values
-        
-        if comparison_values.all():
-            print("\n结论: 两个文件内容完全一致！")
-        else:
-            # 找出不匹配的位置
-            rows, cols = np.where(comparison_values == False)
+            base_url = f"https://finance.yahoo.com/quote/{symbol}/options/"
             
-            print(f"\n结论: 发现内容差异！共有 {len(rows)} 处不同。")
-            print("\n详细差异列表 (前 20 个):")
-            print(f"{'行号':<10} | {'列名':<20} | {'文件 A 内容':<30} | {'文件 B 内容':<30}")
-            print("-" * 100)
-            
-            count = 0
-            for row, col in zip(rows, cols):
-                col_name = df1.columns[col]
-                val1 = df1.iloc[row, col]
-                val2 = df2.iloc[row, col]
-                print(f"{row:<10} | {col_name:<20} | {str(val1):<30} | {str(val2):<30}")
+            try:
+                # 初始加载页面以获取日期列表
+                driver.get(base_url)
+                # 等待页面加载
+                wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
                 
-                count += 1
-                if count >= 20:
-                    print(f"... 还有 {len(rows) - 20} 处差异未显示")
-                    break
+                # --- 第一步：获取所有日期选项 ---
+                date_map = [] # 存储 (timestamp, date_text)
+                
+                # 点击下拉菜单以加载选项
+                try:
+                    # 使用 CSS Selector 定位下拉按钮
+                    date_button = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button[data-ylk*='slk:date-select']")))
+                    date_button.click()
+                    time.sleep(1) # 稍等下拉菜单动画
+                    
+                    # 获取下拉菜单里的所有选项
+                    options_elements = driver.find_elements(By.CSS_SELECTOR, "div.dialog-content div.itm")
+                    
+                    for opt in options_elements:
+                        ts = opt.get_attribute("data-value")
+                        raw_text = opt.text.split('\n')[0] 
+                        if ts and raw_text:
+                            date_map.append((ts, raw_text))
+                            
+                    print(f"原始找到 {len(date_map)} 个到期日。")
+                    
+                except Exception as e:
+                    print(f"获取日期列表失败 (可能只有一个日期或页面结构改变): {e}")
+                    date_map = [] 
 
-# 引入 numpy 用于位置查找
-import numpy as np
+                # --- 按6个月时间窗口过滤日期 ---
+                if date_map:
+                    filtered_date_map = []
+                    start_dt = None
+                    cutoff_dt = None
 
-# 定义文件路径
-file_a = '/Users/yanzhang/Coding/News/backup/Options_251214.csv'
-file_b = '/Users/yanzhang/Coding/News/backup/Options_251214 copy.csv'
+                    # 1. 确定基准日期 (第一条有效日期)
+                    try:
+                        first_date_str = date_map[0][1]
+                        start_dt = datetime.strptime(first_date_str, "%b %d, %Y")
+                        # 往后推 180 天 (约6个月)
+                        cutoff_dt = start_dt + timedelta(days=180)
+                        print(f"时间过滤启动: 基准日期 {start_dt.strftime('%Y-%m-%d')}, 截止日期 {cutoff_dt.strftime('%Y-%m-%d')}")
+                    except ValueError:
+                        print("无法解析第一条日期格式，将不进行时间过滤，抓取所有日期。")
+                        cutoff_dt = None
 
-# 执行比较
+                    # 2. 遍历过滤
+                    if cutoff_dt:
+                        for ts, date_text in date_map:
+                            try:
+                                curr_dt = datetime.strptime(date_text, "%b %d, %Y")
+                                if curr_dt <= cutoff_dt:
+                                    filtered_date_map.append((ts, date_text))
+                                else:
+                                    pass 
+                            except ValueError:
+                                continue
+                        
+                        print(f"过滤后剩余 {len(filtered_date_map)} 个到期日 (6个月内)。")
+                        date_map = filtered_date_map
+
+                # --- 第二步：遍历每个日期 ---
+                if not date_map:
+                    # 尝试从当前按钮读取日期
+                    try:
+                        current_date_text = driver.find_element(By.CSS_SELECTOR, "button[data-ylk*='slk:date-select'] span").text
+                        date_map.append(("", current_date_text))
+                    except:
+                        print(f"无法确定 {symbol} 的日期，跳过。")
+                        continue
+
+                # --- 第二步：遍历每个日期 (包含重试机制) ---
+                for ts, date_text in date_map:
+                    formatted_date = format_date(date_text)
+                    
+                    # 构造目标 URL
+                    target_url = base_url
+                    if ts:
+                        target_url = f"{base_url}?date={ts}"
+
+                    # === 新增重试机制 ===
+                    MAX_RETRIES = 3  # 最大重试次数
+                    success = False
+                    
+                    for attempt in range(MAX_RETRIES):
+                        try:
+                            print(f"  -> [尝试 {attempt + 1}/{MAX_RETRIES}] 处理日期: {formatted_date} (TS: {ts})")
+                            
+                            driver.get(target_url)
+                            
+                            sleep_time = 2 if attempt == 0 else 4
+                            time.sleep(sleep_time) 
+                            
+                            # 检查页面是否真的加载了表格
+                            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "section[data-testid='options-list-table'] table")))
+
+                            # --- 第三步：抓取表格数据 ---
+                            tables = driver.find_elements(By.CSS_SELECTOR, "section[data-testid='options-list-table'] table")
+                            
+                            if not tables:
+                                raise Exception("页面已加载但未找到表格元素")
+
+                            option_types = ['Calls', 'Puts']
+                            data_buffer = []
+
+                            for i, table in enumerate(tables):
+                                if i >= len(option_types): break
+                                opt_type = option_types[i]
+                                rows = table.find_elements(By.TAG_NAME, "tr")
+                                
+                                for row in rows:
+                                    cols = row.find_elements(By.TAG_NAME, "td")
+                                    if not cols: continue
+                                    
+                                    if len(cols) >= 10:
+                                        strike_raw = cols[2].text
+                                        oi_raw = cols[9].text
+                                        strike_clean = strike_raw.replace(',', '').strip()
+                                        oi_clean = clean_number(oi_raw)
+                                        data_buffer.append([symbol, formatted_date, opt_type, strike_clean, oi_clean])
+                            
+                            # --- 第四步：写入文件 ---
+                            if data_buffer:
+                                with open(OUTPUT_FILE, 'a', newline='', encoding='utf-8') as f:
+                                    writer = csv.writer(f)
+                                    writer.writerows(data_buffer)
+                                print(f"     成功抓取 {len(data_buffer)} 条数据。")
+                            else:
+                                print("     页面加载成功但无数据行。")
+
+                            success = True
+                            break 
+
+                        except Exception as e:
+                            print(f"     [警告] 第 {attempt + 1} 次尝试失败: {e}")
+                            if attempt < MAX_RETRIES - 1:
+                                print("     等待 3 秒后重试...")
+                                time.sleep(3)
+                            else:
+                                print(f"     [错误] 已达到最大重试次数，跳过日期 {formatted_date}。")
+                    
+                    if not success:
+                        pass
+
+            except Exception as e:
+                print(f"处理 Symbol {symbol} 时发生严重错误: {e}")
+
+    finally:
+        driver.quit()
+        print(f"所有任务完成。数据已保存至: {OUTPUT_FILE}")
+
 if __name__ == "__main__":
-    compare_csv_files(file_a, file_b)
+    scrape_options()

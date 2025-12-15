@@ -95,8 +95,8 @@ def compare_csv_files(file_path1, file_path2):
 import numpy as np
 
 # 定义文件路径
-file_a = '/Users/yanzhang/Coding/News/backup/Options_251214.csv'
-file_b = '/Users/yanzhang/Coding/News/backup/Options_251214 copy.csv'
+file_a = '/Users/yanzhang/Coding/News/backup/Options_251215.csv'
+file_b = '/Users/yanzhang/Coding/News/backup/Options_251215 copy.csv'
 
 # 执行比较
 if __name__ == "__main__":
