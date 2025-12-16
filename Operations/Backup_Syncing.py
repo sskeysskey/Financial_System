@@ -37,6 +37,7 @@ TIMESTAMP_BACKUP_SOURCES = [
     '/Users/yanzhang/Coding/News/CompareStock.txt',
     '/Users/yanzhang/Coding/News/CompareETFs.txt',
     '/Users/yanzhang/Coding/News/10Y_newhigh_stock.txt',
+    '/Users/yanzhang/Coding/News/Options_Change.csv',
 ]
 
 def copy_and_overwrite(source_path, destination_path):

@@ -20,7 +20,7 @@ TOP_N = 50
 # 开关：是否考虑新增的数据 (B有A无)
 # True:  考虑新增数据 (计算 Change, 参与排序, 并标记 new)
 # False: 不考虑新增数据 (只计算 A和B都有的行)
-INCLUDE_NEW_ROWS = False 
+INCLUDE_NEW_ROWS = True
 
 # ==========================================
 # 核心处理函数
