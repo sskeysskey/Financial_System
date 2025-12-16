@@ -1063,11 +1063,11 @@ class MainWindow(QMainWindow):
         blacklist_menu.addAction("Earning", lambda: self.add_to_blacklist(keyword, 'Earning', group))
 
         menu.addSeparator()
-        menu.addAction("清空 Short 分组", lambda: self.clear_group("Short"))
-        menu.addAction("清空 Strategy12 分组", lambda: self.clear_group("Strategy12"))
-        menu.addAction("清空 Strategy34 分组", lambda: self.clear_group("Strategy34"))
-        menu.addAction("清空 Valid_PE 分组", lambda: self.clear_group("PE_valid"))
-        menu.addAction("清空 Invalid_PE 分组", lambda: self.clear_group("PE_invalid"))
+        menu.addAction("清空 Short_Shift 分组", lambda: self.clear_group("Short_Shift"))
+        menu.addAction("清空 Strategy12_backup 分组", lambda: self.clear_group("Strategy12_backup"))
+        menu.addAction("清空 Strategy34_backup 分组", lambda: self.clear_group("Strategy34_backup"))
+        menu.addAction("清空 PE_valid_backup 分组", lambda: self.clear_group("PE_valid_backup"))
+        menu.addAction("清空 PE_invalid_backup 分组", lambda: self.clear_group("PE_invalid_backup"))
 
         # 3) 显示菜单
         menu.exec_(global_pos)
