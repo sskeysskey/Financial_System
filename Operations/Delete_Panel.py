@@ -197,17 +197,35 @@ def main():
         QMessageBox.critical(None, "文件读取错误", f"读取文件时发生意外错误：\n{e}")
         sys.exit(1)
 
+    # --- 修改开始：定义要隐藏的分组 ---
+    # 这些分组即使包含该 Symbol，也不会出现在删除列表中
+    IGNORED_CATEGORIES = {
+        "Strategy12", "Strategy34", "PE_invalid", "PE_valid",
+        "Basic_Materials", "Real_Estate", "Energy", "Technology", "Consumer_Cyclical",
+        "Utilities", "Consumer_Defensive", "Industrials", "Communication_Services",
+        "Financial_Services", "Healthcare",
+        ""
+                          }
+    # --------------------------------
+
     # 查找包含该 symbol 的所有分组
     found_in_categories = []
     for category, symbols_dict in panel_data.items():
+        # --- 修改开始：过滤逻辑 ---
+        # 如果当前分组在忽略列表中，直接跳过
+        if category in IGNORED_CATEGORIES:
+            continue
+        # ------------------------
+
         # 确保分组的值是一个字典
         if isinstance(symbols_dict, dict) and symbol in symbols_dict:
             found_in_categories.append(category)
 
-    # 如果任何分组中都未找到该 symbol，则提示并退出
+    # 如果任何分组中都未找到该 symbol (或者 symbol 仅存在于被隐藏的分组中)，则提示并退出
     if not found_in_categories:
-        QMessageBox.information(None, "未找到", f"在所有分组中均未找到 Symbol <b style='color:blue;'>{symbol}</b>，程序已终止。")
-        sys.exit(2)  # 修改：返回退出码 2 表示未找到（相当于取消操作）
+        # 这里的提示语逻辑上也是通顺的：在所有(可操作的)分组中均未找到
+        QMessageBox.information(None, "未找到", f"在所有可操作分组中均未找到 Symbol <b style='color:blue;'>{symbol}</b>，程序已终止。")
+        sys.exit(2)
 
     # 4. 弹出选择对话框，让用户选择要从哪些分组中删除
     category_dialog = CategorySelectionDialog(symbol, found_in_categories)

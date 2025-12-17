@@ -20,7 +20,8 @@ JSON_FILE_PATH = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.
 TARGET_CATEGORIES = [
     "Must",
     "Today",
-    "Short"
+    "Short",
+    "Short_Shift"
 ]
 
 def is_uppercase_letters(text: str) -> bool:

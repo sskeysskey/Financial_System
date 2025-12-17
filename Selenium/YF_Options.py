@@ -144,8 +144,16 @@ def scrape_options():
     # 伪装 User-Agent 防止被轻易拦截
     options.add_argument('user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
 
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-    wait = WebDriverWait(driver, 10)
+    driver_path = '/Users/yanzhang/Downloads/backup/chromedriver' 
+
+    # 检查路径是否存在，避免报错
+    if not os.path.exists(driver_path):
+        print(f"错误：未找到驱动文件，请确认路径是否正确: {driver_path}")
+        # 这里可以保留旧代码作为 fallback，或者直接退出
+        exit()
+
+    driver = webdriver.Chrome(service=Service(driver_path), options=options)
+    wait = WebDriverWait(driver, 1)
 
     try:
         for symbol in symbols:
