@@ -578,7 +578,8 @@
         "LNW",
         "HPP",
         "IPG",
-        "GTLS"
+        "GTLS",
+        "DOOO"
     ],
     "etf": [
         "VDE",
@@ -895,6 +896,8 @@
         "FCNCA",
         "LPLA",
         "MSTR",
-        "QFIN"
+        "QFIN",
+        "DTE",
+        "TMUS"
     ]
 }
