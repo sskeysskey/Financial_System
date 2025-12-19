@@ -579,95 +579,129 @@ def check_new_condition_5(data, config, log_detail, symbol_to_trace):
         
     return passed
 
-# ========== 代码修改开始 3/4：新增 check_new_condition_6 函数 ==========
+# ========== 代码修改开始 3/4：修正 check_new_condition_6 函数 (对标B代码逻辑) ==========
+
 def check_new_condition_6(data, config, log_detail, symbol_to_trace):
+    # 锁定了昨天（index -2）必须是第二个峰值，且今天（index -1）必须下跌。这意味着它捕捉的是形态确认的第一天。
+    # 有“颈线深度”（Valley Depth）检查（中间必须跌下去至少2.5%），且双峰高度差卡在3.8%。
+    
     symbol = data.get('symbol')
     is_tracing = (symbol == symbol_to_trace)
-    if is_tracing: log_detail(f"\n--- [{symbol}] 新增条件6评估 (抄底W底策略) ---")
+    if is_tracing: log_detail(f"\n--- [{symbol}] 新增条件6评估 (抄底W底策略 - 严格反转版) ---")
 
     # 1. 数据准备
     all_er_prices = data.get('all_er_prices', [])
+    # 注意：这里我们使用 since_er_series，确保包含从财报日到今天的序列
     prices_series = data.get('prices_since_er_series', [])
-    
+    dates_series = data.get('dates_since_er_series', [])
+
     if len(all_er_prices) < 2:
         if is_tracing: log_detail("  - 结果: False (财报历史数据不足2次)")
         return False
-    if not prices_series or len(prices_series) < config["COND6_W_BOTTOM_MIN_DAYS_GAP"] + 2:
-        if is_tracing: log_detail(f"  - 结果: False (财报后交易天数太少: {len(prices_series)}天，不足以形成W底)")
+    
+    # B代码逻辑需要至少10天数据来判断形态
+    if not prices_series or len(prices_series) < 10:
+        if is_tracing: log_detail(f"  - 结果: False (数据不足: {len(prices_series)}天)")
         return False
 
+    # --- 保持你原有的财报跌幅前置过滤 (Context) ---
+    # 这部分逻辑是你策略的基石（只做财报大跌后的票），建议保留
     latest_er_price = all_er_prices[-1]
     prev_er_price = all_er_prices[-2]
     
     if prev_er_price <= 0: return False
-
-    # 2. 规则(1): 最新财报比前一次财报低 A%
-    # 计算跌幅 (注意：这里是跌幅，所以用 (前-后)/前)
+    
     er_drop_pct = (prev_er_price - latest_er_price) / prev_er_price
     threshold_a = config["COND6_ER_DROP_A_THRESHOLD"] # 0.25
     
-    cond_a = er_drop_pct > 0 # 首先必须是跌的
+    cond_a = er_drop_pct > 0 
     
-    # 3. 规则(2): 区间最低点比最新财报价低 B%
-    # 动态决定 B 的阈值
+    # 动态阈值 B
     threshold_b = config["COND6_LOW_DROP_B_LARGE"] if er_drop_pct > threshold_a else config["COND6_LOW_DROP_B_SMALL"]
     
-    # 寻找区间最低价 (Global Low)
+    # 检查区间最低价是否足够深
     global_min_price = min(prices_series)
-    # 计算最低点相对于最新财报价的跌幅
     post_er_drop_pct = (latest_er_price - global_min_price) / latest_er_price
     
     cond_b = post_er_drop_pct > threshold_b
 
     if is_tracing:
-        log_detail(f"  - 上次财报价: {prev_er_price:.2f}, 本次财报价: {latest_er_price:.2f}")
-        log_detail(f"  - 财报间跌幅: {er_drop_pct:.2%} (阈值A: {threshold_a:.0%})")
-        log_detail(f"  - 动态阈值B: {threshold_b:.0%}")
-        log_detail(f"  - 区间最低价: {global_min_price:.2f}, 相对本次财报跌幅: {post_er_drop_pct:.2%}")
-        log_detail(f"  - 条件(1)&(2)初步判断: {cond_a and cond_b}")
-
+        log_detail(f"  - [前置条件] 财报间跌幅: {er_drop_pct:.2%} (要求>0)")
+        log_detail(f"  - [前置条件] 财报后最大跌幅: {post_er_drop_pct:.2%} (阈值: {threshold_b:.0%})")
+    
     if not (cond_a and cond_b):
+        if is_tracing: log_detail("  - 结果: False (前置跌幅条件不满足)")
         return False
 
-    # 4. 规则(3): W底 (双谷底) 形态检测
-    # 算法：
-    # a. 找到全局最低点的索引
-    # b. 在该索引的左侧或右侧寻找是否存在另一个点，满足：
-    #    i. 价格在 global_min * (1 + tolerance) 以内
-    #    ii. 索引距离 >= min_days_gap
+    # --- 核心修改：双底形态识别 (完全镜像 B.py 的 Double Top 逻辑) ---
+    # B.py 逻辑: 昨天(idx -2)是峰值，今天下跌
+    # A.py 镜像: 昨天(idx -2)是谷底，今天上涨
     
-    min_idx = prices_series.index(global_min_price)
-    tolerance = config["COND6_W_BOTTOM_PRICE_TOLERANCE"]
-    min_days = config["COND6_W_BOTTOM_MIN_DAYS_GAP"]
-    
-    upper_bound_price = global_min_price * (1 + tolerance)
-    found_double_bottom = False
-    second_low_price = None
-    second_low_idx = -1
+    curr_price = prices_series[-1]      # 今天
+    prev_price = prices_series[-2]      # 昨天 (潜在的右底 V2)
+    prev2_price = prices_series[-3]     # 前天
 
-    # 遍历整个序列寻找第二个底
-    for idx, p in enumerate(prices_series):
-        # 跳过全局最低点附近的点 (时间间隔要求)
-        if abs(idx - min_idx) < min_days:
-            continue
+    # 1. 锁定右底 (Valley 2) 必须是昨天
+    # 昨天必须比前天低，且昨天必须比今天低 (即今天反弹了)
+    if not (prev_price < prev2_price and prev_price < curr_price):
+        if is_tracing: log_detail(f"  - [形态失败] 未形成拐点: 前天{prev2_price} -> 昨天{prev_price} -> 今天{curr_price}")
+        return False
+
+    v2 = prev_price
+    idx2 = len(prices_series) - 2
+    
+    # 2. 寻找左底 (Valley 1)
+    found_pattern = False
+    
+    # 向前回溯寻找左底，范围参考 B.py
+    # idx2 - 3 意味着中间至少隔了2天
+    for i in range(idx2 - 3, 0, -1):
+        v1 = prices_series[i]
         
-        # 检查价格是否足够低 (在容忍度范围内)
-        if p <= upper_bound_price:
-            found_double_bottom = True
-            second_low_price = p
-            second_low_idx = idx
-            break # 只要找到一个符合的即可
+        # A. 必须是局部低点 (比前后都低)
+        if not (v1 < prices_series[i-1] and v1 < prices_series[i+1]):
+            continue
+            
+        # B. 高度差检查 (镜像 B.py 的 3.8% 阈值)
+        # B.py: abs(p1 - p2) / max(p1, p2)
+        # A.py: abs(v1 - v2) / min(v1, v2) (用 min 做分母更保守，或者直接用 v1 也可以)
+        diff_pct = abs(v1 - v2) / min(v1, v2)
+        
+        if diff_pct > 0.038: # 严格对其 B.py 参数
+            continue
+            
+        # C. 颈线高度 (Peak Height) 检查
+        # M头要求中间跌得深，W底要求中间涨得高
+        peak_prices = prices_series[i+1 : idx2]
+        if not peak_prices: continue
+        
+        max_peak = max(peak_prices)
+        avg_valley = (v1 + v2) / 2
+        
+        # B.py 用的是 (avg_peak - min_valley) / avg_peak > 0.025
+        # A.py 镜像: (max_peak - avg_valley) / avg_valley
+        peak_rise = (max_peak - avg_valley) / avg_valley
+        
+        if peak_rise < 0.025: # 中间必须至少反弹 2.5%
+            continue
+            
+        # 找到满足条件的双底
+        found_pattern = True
+        
+        if is_tracing:
+            log_detail(f"  - [W底检测] 成功! 锁定双底形态:")
+            log_detail(f"    左底(V1): {v1:.2f} (索引{i}), 右底(V2): {v2:.2f} (昨天)")
+            log_detail(f"    底差: {diff_pct:.2%} (阈值 3.8%), 中间反弹: {peak_rise:.2%} (阈值 2.5%)")
+            log_detail(f"    日期: {dates_series[i]} -> {dates_series[idx2]}")
+        
+        break # 找到最近的一个即可
 
-    if is_tracing:
-        log_detail(f"  - [W底检测] 全局最低点索引: {min_idx}, 价格: {global_min_price:.2f}")
-        log_detail(f"  - [W底检测] 寻找第二低点要求: 价格 <= {upper_bound_price:.2f}, 距离 >= {min_days}天")
-        if found_double_bottom:
-            log_detail(f"  - [W底检测] 成功! 找到第二低点: 索引 {second_low_idx}, 价格 {second_low_price:.2f}")
-        else:
-            log_detail(f"  - [W底检测] 失败。未找到符合条件的第二低点。")
+    if not found_pattern:
+        if is_tracing: log_detail("  - [形态失败] 未找到符合严格定义的左底 (V1)")
+        return False
+        
+    return True
 
-    return found_double_bottom
-# ========== 代码修改结束 3/4 ==========
 
 # ========== 代码修改点 1/3: 重构 evaluate_stock_conditions 函数 ==========
 # 1. 重命名为 check_entry_conditions，使其只负责检查入口条件

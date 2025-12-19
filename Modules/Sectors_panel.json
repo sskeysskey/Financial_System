@@ -138,9 +138,10 @@
         "DLR": "",
         "ACM": ""
     },
-    "Short": {},
+    "Short": {
+        "PSLV": ""
+    },
     "Short_Shift": {
-        "PSLV": "",
         "GFI": "",
         "HL": "",
         "HMY": ""
@@ -212,6 +213,7 @@
         "KMB": "",
         "LDOS": "",
         "LHX": "LHX热",
+        "LII": "",
         "MCK": "",
         "MEDP": "",
         "MELI": "",
@@ -315,6 +317,7 @@
         "KMB": "",
         "LDOS": "",
         "LHX": "LHX热",
+        "LII": "",
         "MCK": "",
         "MEDP": "",
         "MELI": "",

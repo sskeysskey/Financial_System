@@ -52,31 +52,29 @@ WHITELIST_TAGS = []
 with open(PRICE_FILE, 'r') as f:
     # 1. 先将整个新的JSON结构加载到一个临时变量中
     raw_price_data = json.load(f)
+    # 2. 从新的结构中提取我们需要的股票字典
+    #    使用 .get() 方法以防止 'stocks' 键不存在时报错
+    stocks_list = raw_price_data.get('stocks', [])
+    
+    # 3. 检查列表是否非空，然后获取第一个元素
+    if stocks_list and isinstance(stocks_list, list) and len(stocks_list) > 0:
+        price_data = stocks_list[0]
+    else:
+        # 如果结构不符合预期，给 price_data 一个空字典，以防后续代码出错
+        price_data = {}
+        logger.warning(f"PRICE_FILE ({PRICE_FILE}) did not contain the expected 'stocks' list or the list was empty.")
 
-# 2. 从新的结构中提取我们需要的股票字典
-#    使用 .get() 方法以防止 'stocks' 键不存在时报错
-stocks_list = raw_price_data.get('stocks', [])
-
-# 3. 检查列表是否非空，然后获取第一个元素
-if stocks_list and isinstance(stocks_list, list) and len(stocks_list) > 0:
-    price_data = stocks_list[0]
-else:
-    # 如果结构不符合预期，给 price_data 一个空字典，以防后续代码出错
-    price_data = {}
-    logger.warning(f"PRICE_FILE ({PRICE_FILE}) did not contain the expected 'stocks' list or the list was empty.")
-
-logger.info(f'Loaded PRICE_FILE with {len(price_data)} symbols from the "stocks" key')
-
+    logger.info(f'Loaded PRICE_FILE with {len(price_data)} symbols from the "stocks" key')
 
 # 读取description文件
 with open(DESC_FILE, 'r') as f:
     desc_data = json.load(f)
-logger.info('Loaded DESC_FILE')
+    logger.info('Loaded DESC_FILE')
 
 # 读取sectors文件
 with open(SECTORS_FILE, 'r') as f:
     sectors_data = json.load(f)
-logger.info(f'Loaded SECTORS_FILE with {len(sectors_data)} sectors')
+    logger.info(f'Loaded SECTORS_FILE with {len(sectors_data)} sectors')
 
 # 读取 Compare_All.txt 文件并解析数据
 compare_data = {}
@@ -88,12 +86,13 @@ with open(COMPARE_FILE, 'r') as f:
                 symbol = parts[0].strip()
                 percent = parts[1].strip()
                 compare_data[symbol] = percent
-logger.info(f'Loaded COMPARE_FILE with {len(compare_data)} entries')
+    logger.info(f'Loaded COMPARE_FILE with {len(compare_data)} entries')
 
 # 读取并载入 panel.json
 with open(PANEL_FILE, 'r') as f:
     panel_data = json.load(f)
-logger.info('Loaded PANEL_FILE')
+    logger.info('Loaded PANEL_FILE')
+
 
 def pad_display(s: str, width: int, align: str = 'left') -> str:
     """按照真实列宽（CJK=2，ASCII=1）来给 s 补空格到 width 列."""
@@ -121,11 +120,13 @@ def get_symbol_info(symbol):
             tags = stock.get('tag', [])
             has_blacklist = any(tag in BLACKLIST_TAGS for tag in tags)
             return {'has_blacklist': has_blacklist, 'tags': tags}
+            
     for etf in desc_data.get('etfs', []):
         if etf['symbol'] == symbol:
             tags = etf.get('tag', [])
             has_blacklist = any(tag in BLACKLIST_TAGS for tag in tags)
             return {'has_blacklist': has_blacklist, 'tags': tags}
+            
     return {'has_blacklist': False, 'tags': []}
 
 def get_price_peak_date(cursor, symbol, sector):
@@ -149,9 +150,9 @@ def get_price_peak_date(cursor, symbol, sector):
 
     if not latest_result:
         return False
-
-    latest_date_str, latest_price = latest_result[0], latest_result[1]
     
+    latest_date_str, latest_price = latest_result[0], latest_result[1]
+
     # 2. 查询上一个实际的交易日，而不是通过日期计算
     try:
         cursor.execute(f"""
@@ -174,6 +175,7 @@ def get_price_peak_date(cursor, symbol, sector):
     try:
         latest_date = datetime.strptime(latest_date_str, '%Y-%m-%d')
         one_month_ago = latest_date - timedelta(days=30)
+        
         cursor.execute(f"""
             SELECT date, price 
             FROM {sector}
@@ -188,16 +190,18 @@ def get_price_peak_date(cursor, symbol, sector):
 
     if not prices:
         return False
-
+    
     peak_date_str = prices[0][0]
+    
     return peak_date_str == previous_trading_day_str
 
 # 【新增功能】检查是否为 M 形态（双峰）
 def check_double_top(cursor, symbol, sector):
     """
     检查是否【刚刚】形成了双峰（M形态）。
-    时效性约束：第二个高峰必须出现在【上一个交易日】。
-    如果今天是12.12，只有当12.11是高峰时才触发。如果是12.13，则不再触发。
+    修正点：
+    1. 严格限制双峰高度差 (从 5% 降至 3.8%)，过滤掉 PSLV 这种右峰过高的情况。
+    2. 增加颈线深度要求，防止微小震荡被误判为双峰。
     """
     try:
         # 1. 获取过去60个交易日的数据 (按日期倒序取，然后反转为正序)
@@ -213,7 +217,7 @@ def check_double_top(cursor, symbol, sector):
         # 数据太少无法判断
         if len(rows) < 10: 
             return False
-            
+
         # 转为正序：index 0 是最旧的，index -1 是最新的（今天），index -2 是上一个交易日
         rows = rows[::-1]
         prices = [float(r[1]) for r in rows]
@@ -226,77 +230,84 @@ def check_double_top(cursor, symbol, sector):
         prev_price = prices[-2]      # 昨天 (12.11) - 候选 Peak 2
         prev2_price = prices[-3]     # 前天 (12.10)
 
-        # 判定 A: 昨天必须是局部高点 (比前天高，且比今天高)
-        # 如果今天还在涨 (curr > prev)，说明高点还没确定，不是M头右侧，排除
+        # 昨天必须是高点，且今天下跌
         if not (prev_price > prev2_price and prev_price > curr_price):
             return False
 
         # 此时，我们锁定了 p2 就是 prices[-2]
         idx2 = len(prices) - 2
         p2 = prev_price
-        
-        # -------------------------------------------------------------------------
-        # 寻找左峰 (Peak 1)
-        # -------------------------------------------------------------------------
-        # 我们从昨天往前找，至少隔 3 天 (根据之前的优化)，搜索范围直到开头
-        # range参数: start=idx2-3, stop=0, step=-1
-        
+
+        # 3. 寻找左峰 (Peak 1)
         found_pattern = False
         
+        # 向前回溯寻找左峰
         for i in range(idx2 - 3, 0, -1):
             p1 = prices[i]
             idx1 = i
             
-            # 1. 判断 p1 是否是局部高点 (比左右都高)
+            # A. 必须是局部高点
             if not (p1 > prices[i-1] and p1 > prices[i+1]):
                 continue
-
-            # 2. 判断高度差 (Peak 1 和 Peak 2 差距不能太大)
-            # ABVX 案例: 128.23 vs 133.09，差距约 3.7%。
-            # 这里的阈值设为 5% (0.05) 以兼容 ABVX
+            
+            # ---------------------------------------------------------
+            # 【修改点 1】收紧高度差阈值
+            # ABVX 差距约 3.65%，PSLV 差距约 4.15%。
+            # 设为 0.038 (3.8%) 可以保留 ABVX 并过滤 PSLV。
+            # ---------------------------------------------------------
             diff_pct = abs(p1 - p2) / max(p1, p2)
-            if diff_pct > 0.05:
+            if diff_pct > 0.038: 
                 continue
-                
-            # 3. 判断中间是否有低谷 (颈线)
-            # 获取两个峰值中间的数据
+
+            # 获取中间的低谷数据
             valley_prices = prices[idx1+1 : idx2]
             if not valley_prices: continue
             
             min_valley = min(valley_prices)
             avg_peak = (p1 + p2) / 2
             
-            # 4. 颈线深度判定
-            # ABVX 案例: Valley 110.64, Peaks ~130. 跌幅很大。
-            # 只要跌破峰值均值的 2.5% (0.975) 就算有效回调
-            if min_valley > avg_peak * 0.975:
+            # ---------------------------------------------------------
+            # 【修改点 2】增加颈线深度 (Valley Depth) 检查
+            # M头中间必须有一个明显的 "V" 字下跌。
+            # 如果中间只跌了 0.5% (如 PSLV 12.15-12.17 的情况)，那不是M头。
+            # 这里要求中间至少回撤 2.5%
+            # ---------------------------------------------------------
+            valley_depth = (avg_peak - min_valley) / avg_peak
+            if valley_depth < 0.025:
                 continue
-            
-            # 如果所有条件满足，说明找到了对应的左峰
-            # 且因为 p2 被强制锁定为 "昨天"，所以这一定是【刚刚】形成的形态
-            logger.info(f"[{symbol}] Immediate Double Top Detected: "
-                        f"Peak1@{p1:.2f}({dates[idx1]}), "
-                        f"Peak2@{p2:.2f}({dates[idx2]} - Yesterday), "
-                        f"Valley@{min_valley:.2f}")
+
+            # ---------------------------------------------------------
+            # 【修改点 3】颈线位置检查 (保持之前的逻辑，防止跌得太深变成别的形态)
+            # 但通常只要有深度即可，这里主要防止 min_valley 比 avg_peak 还高(不可能)
+            # 之前的逻辑是 min_valley > avg_peak * 0.975 (即深度小于2.5%)，
+            # 上面的 valley_depth < 0.025 已经覆盖了这个逻辑。
+            # ---------------------------------------------------------
+
+            # 如果通过所有测试
+            logger.info(f"[{symbol}] Strict Double Top: "
+                        f"P1@{p1:.2f}({dates[idx1]}), "
+                        f"P2@{p2:.2f}({dates[idx2]}), "
+                        f"Diff:{diff_pct*100:.2f}%, Depth:{valley_depth*100:.2f}%")
             found_pattern = True
-            break # 找到最近的一个匹配即可
-            
+            break 
+
         return found_pattern
-        
+
     except Exception as e:
         logger.error(f'[{symbol}] check_double_top error: {e}')
         return False
 
 _percent_pattern = re.compile(r'([-+]?\d+(?:\.\d+)?)%')
-
 def parse_compare_percent(compare_str: str, symbol: str):
     if not compare_str:
         logger.info(f'[{symbol}] Compare parse: empty string')
         return None
+    
     m = _percent_pattern.search(compare_str)
     if not m:
         logger.info(f'[{symbol}] Compare parse: no percent found in "{compare_str}"')
         return None
+    
     try:
         return float(m.group(1))
     except ValueError:
@@ -306,17 +317,14 @@ def parse_compare_percent(compare_str: str, symbol: str):
 # -----------------------------------------------------------------------------
 # 【修改点 4】 准备 Short 和 Short_Shift 分组容器
 # -----------------------------------------------------------------------------
-# 1. Short 分组
-short_group = panel_data.get('Short')
-if not isinstance(short_group, dict):
-    short_group = {}
-panel_data['Short'] = short_group
+# 1. Short 分组 (强制清空，实现“先清除再写入”)
+panel_data['Short'] = {}
+short_group = panel_data['Short']
 
-# 2. Short_Shift 分组
-short_shift_group = panel_data.get('Short_Shift')
-if not isinstance(short_shift_group, dict):
-    short_shift_group = {}
-panel_data['Short_Shift'] = short_shift_group
+# 2. Short_Shift 分组 (强制清空，实现“先清除再写入”)
+panel_data['Short_Shift'] = {}
+short_shift_group = panel_data['Short_Shift']
+
 
 # 连接数据库
 conn = sqlite3.connect(DB_FILE)
@@ -332,6 +340,7 @@ for symbol in symbols:
     try:
         symbol_info = get_symbol_info(symbol)
         sector = get_symbol_sector(symbol)
+        
         tags_str = ", ".join(symbol_info['tags']) if symbol_info['tags'] else "无标签"
         
         # 白名单/黑名单 逻辑
@@ -346,7 +355,7 @@ for symbol in symbols:
             if symbol_info['has_blacklist']:
                 logger.info(f'[{symbol}] Skip due to blacklist tag')
                 continue
-
+        
         # 查询最新财报涨跌幅记录（不再根据正负进行过滤）
         cursor.execute("""
             SELECT price 
@@ -356,9 +365,10 @@ for symbol in symbols:
             LIMIT 1
         """, (symbol,))
         earning_price_row = cursor.fetchone()
+        
         if earning_price_row is None or earning_price_row[0] is None:
             continue
-
+            
         # 计算财报日至最新收盘价变化百分比
         price_change = None
         try:
@@ -375,9 +385,10 @@ for symbol in symbols:
             if not earning_result:
                 logger.info(f'[{symbol}] Skip: Earning query returned empty')
                 continue
+                
             earning_date = earning_result[0]
-
-            # 最新收盘价
+            
+            # 获取最新收盘价
             cursor.execute(f"""
                 SELECT price 
                 FROM {sector}
@@ -390,8 +401,8 @@ for symbol in symbols:
                 logger.info(f'[{symbol}] Skip: no latest price in table {sector}')
                 continue
             latest_price = float(latest_price_result[0])
-
-            # 财报日收盘价
+            
+            # 获取财报日收盘价
             cursor.execute(f"""
                 SELECT price 
                 FROM {sector}
@@ -402,14 +413,14 @@ for symbol in symbols:
                 logger.info(f'[{symbol}] Skip: no price on earning date {earning_date} in table {sector}')
                 continue
             earning_price = float(earning_price_result[0])
-
+            
             if earning_price == 0:
                 logger.info(f'[{symbol}] Skip: earning day price is 0 (division by zero)')
                 continue
-
+                
             price_change = (latest_price - earning_price) / earning_price * 100
             logger.info(f'[{symbol}] Price change from earning_date={earning_date}: earning_price={earning_price}, latest_price={latest_price}, change={price_change:.2f}%')
-
+            
         except Exception as e:
             logger.error(f'[{symbol}] Error computing price change: {e}')
             logger.debug(traceback.format_exc())
@@ -420,7 +431,7 @@ for symbol in symbols:
         if price_change is None or price_change < 30:
             logger.info(f'[{symbol}] Skip: price_change < 30 (actual: {price_change})')
             continue
-
+            
         compare_str = compare_data.get(symbol, '')
         cmp_pct = parse_compare_percent(compare_str, symbol)
 
@@ -478,9 +489,9 @@ with open(OUTPUT_FILE, 'w', encoding='utf-8') as output_file:
         sorted_outputs = sorted(sector_outputs[sector], key=lambda x: x['change_percent'], reverse=True)
         for output in sorted_outputs:
             output_file.write(output['text'] + '\n')
-logger.info(f'Wrote txt output to {OUTPUT_FILE}')
+    logger.info(f'Wrote txt output to {OUTPUT_FILE}')
 
 # 写回 panel JSON
 with open(PANEL_FILE, 'w', encoding='utf-8') as f:
     json.dump(panel_data, f, ensure_ascii=False, indent=4)
-logger.info(f'Updated panel file {PANEL_FILE}')
+    logger.info(f'Updated panel file {PANEL_FILE}')
