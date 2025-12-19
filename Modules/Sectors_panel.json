@@ -162,6 +162,16 @@
         "CHWY": "",
         "CRWD": ""
     },
+    "OverSell": {
+        "LII": "",
+        "MELI": "",
+        "POOL": ""
+    },
+    "OverSell_backup": {
+        "LII": "",
+        "MELI": "",
+        "POOL": ""
+    },
     "PE_valid": {
         "AMAT": "AMAT7",
         "AMZN": "AMZN7热",
@@ -213,10 +223,8 @@
         "KMB": "",
         "LDOS": "",
         "LHX": "LHX热",
-        "LII": "",
         "MCK": "",
         "MEDP": "",
-        "MELI": "",
         "MMM": "",
         "MP": "",
         "MPC": "",
@@ -235,7 +243,6 @@
         "OSCR": "",
         "PDD": "",
         "PODD": "",
-        "POOL": "",
         "PRIM": "",
         "PSTG": "PSTG15热",
         "PTGX": "",
@@ -317,10 +324,8 @@
         "KMB": "",
         "LDOS": "",
         "LHX": "LHX热",
-        "LII": "",
         "MCK": "",
         "MEDP": "",
-        "MELI": "",
         "MMM": "",
         "MP": "",
         "MPC": "",
@@ -339,7 +344,6 @@
         "OSCR": "",
         "PDD": "",
         "PODD": "",
-        "POOL": "",
         "PRIM": "",
         "PSTG": "PSTG15热",
         "PTGX": "",

@@ -37,7 +37,7 @@ DISPLAY_LIMITS = {
 
 categories = [
     ['Must','Today','Short', 'Short_Shift'],
-    ['PE_valid_backup','PE_invalid_backup','Strategy12_backup','Strategy34_backup'],
+    ['PE_valid_backup','PE_invalid_backup','Strategy12_backup','Strategy34_backup','Over_Sell_backup'],
     ['Basic_Materials','Consumer_Cyclical','Real_Estate','Technology','Energy','Industrials',
      'Consumer_Defensive','Communication_Services','Financial_Services', 'Healthcare','Utilities'],
     ['ETFs','Bonds','Crypto','Indices','Currencies'],
@@ -1065,6 +1065,7 @@ class MainWindow(QMainWindow):
         menu.addSeparator()
         menu.addAction("清空 Short_Shift 分组", lambda: self.clear_group("Short_Shift"))
         menu.addAction("清空 Short 分组", lambda: self.clear_group("Short"))
+        menu.addAction("清空 Over_Sell_bakcup 分组", lambda: self.clear_group("Over_Sell_bakcup"))
         menu.addAction("清空 Strategy12_backup 分组", lambda: self.clear_group("Strategy12_backup"))
         menu.addAction("清空 Strategy34_backup 分组", lambda: self.clear_group("Strategy34_backup"))
         menu.addAction("清空 PE_valid_backup 分组", lambda: self.clear_group("PE_valid_backup"))

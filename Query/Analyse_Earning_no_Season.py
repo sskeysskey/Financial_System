@@ -9,6 +9,7 @@ LOG_FILE_PATH = "/Users/yanzhang/Downloads/No_Season_trace_log.txt"
 # --- 1. 配置文件和路径 ---
 # 使用 os.path.expanduser('~') 获取用户主目录，增强可移植性
 BASE_PATH = os.path.expanduser('~')
+
 PATHS = {
     "config_dir": os.path.join(BASE_PATH, 'Coding/Financial_System/Modules'),
     "db_dir": os.path.join(BASE_PATH, 'Coding/Database'),
@@ -28,7 +29,6 @@ PATHS = {
 CONFIG_DIR = PATHS["config_dir"]
 DB_DIR = PATHS["db_dir"]
 NEWS_DIR = PATHS["news_dir"]
-
 DB_FILE = PATHS["db_file"](DB_DIR)
 SECTORS_JSON_FILE = PATHS["sectors_json"](CONFIG_DIR)
 BLACKLIST_JSON_FILE = PATHS["blacklist_json"](CONFIG_DIR)
@@ -39,7 +39,6 @@ DESCRIPTION_JSON_FILE = PATHS["description_json"](CONFIG_DIR)
 TAGS_SETTING_JSON_FILE = PATHS["tags_setting_json"](CONFIG_DIR)
 EARNING_HISTORY_JSON_FILE = PATHS["earnings_history_json"](CONFIG_DIR)
 
-
 # --- 2. 可配置参数 ---
 CONFIG = {
     "TARGET_SECTORS": {
@@ -49,62 +48,64 @@ CONFIG = {
     },
     # ========== 代码修改开始 1/3：新增中国概念股成交额阈值 ==========
     "TURNOVER_THRESHOLD": 100_000_000,
-    "TURNOVER_THRESHOLD_CHINA": 40_000_000, # 新增：中国概念股的成交额阈值
-    
+    "TURNOVER_THRESHOLD_CHINA": 40_000_000,  # 新增：中国概念股的成交额阈值
+
     "RECENT_EARNINGS_COUNT": 2,
-    "MARKETCAP_THRESHOLD": 200_000_000_000,      # 2000亿
-    "MARKETCAP_THRESHOLD_MEGA": 500_000_000_000, # 5000亿
-    
+    "MARKETCAP_THRESHOLD": 200_000_000_000,  # 2000亿
+    "MARKETCAP_THRESHOLD_MEGA": 500_000_000_000,  # 5000亿
+
     # 严格筛选标准 (第一轮)
-    "PRICE_DROP_PERCENTAGE_LARGE": 0.079, # <2000亿=7.9%
-    "PRICE_DROP_PERCENTAGE_SMALL": 0.06, # 2000亿 ≤ 市值 < 5000亿 = 6%
-    "PRICE_DROP_PERCENTAGE_MEGA": 0.05,  # ≥5000亿=5%
-    
+    "PRICE_DROP_PERCENTAGE_LARGE": 0.079,  # <2000亿=7.9%
+    "PRICE_DROP_PERCENTAGE_SMALL": 0.06,   # 2000亿 ≤ 市值 < 5000亿 = 6%
+    "PRICE_DROP_PERCENTAGE_MEGA": 0.05,    # ≥5000亿=5%
+
     # 普通宽松筛选标准
-    "RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.07, # <2000亿=7%
-    "RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.05, # ≥2000亿=5%
-    
+    "RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.07,  # <2000亿=7%
+    "RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.05,  # ≥2000亿=5%
+
     # 新增：次宽松筛选标准
-    "SUB_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.06, # <2000亿=6%
-    "SUB_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.04, # ≥2000亿=4%
-    
+    "SUB_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.06,  # <2000亿=6%
+    "SUB_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.04,  # ≥2000亿=4%
+
     # 最宽松筛选标准
-    "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.05, # <2000亿=5%
-    "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.03, # ≥2000亿=3%
+    "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.05,  # <2000亿=5%
+    "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.03,  # ≥2000亿=3%
 
     # 触发“最宽松”标准的财报收盘价价差百分比 (条件C)
     "ER_PRICE_DIFF_THRESHOLD": 0.40,
-    
+
     # 触发宽松筛选的最小分组数量 (仅对 PE_valid 组生效)
     "MIN_PE_VALID_SIZE_FOR_RELAXED_FILTER": 5,
-    
+
     "MAX_INCREASE_PERCENTAGE_SINCE_LOW": 0.03,
-    
+
     # 条件1c 的专属参数：最新价比最新财报收盘价低至少 X%
     "PRICE_DROP_FOR_COND1C": 0.14,
+
     # 条件3参数
-    "COND3_DROP_THRESHOLDS": [0.07, 0.15],         # 7% 与 15%
+    "COND3_DROP_THRESHOLDS": [0.07, 0.15],  # 7% 与 15%
     "COND3_LOOKBACK_DAYS": 60,
-    
+
     # 条件4参数: 财报日至今最高价相比最新价的涨幅阈值
-    "COND4_RISE_THRESHOLD": 0.07, # 7%
+    "COND4_RISE_THRESHOLD": 0.07,  # 7%
+
     # ========== 新增：条件5的参数 ==========
     "COND5_ER_TO_HIGH_THRESHOLD": 0.3,  # 财报日到最高价的涨幅阈值 30%
     "COND5_HIGH_TO_LATEST_THRESHOLD": 0.079,  # 最高价到最新价的跌幅阈值 7.9%
 
     # ========== 代码修改开始 1/4：新增条件6（抄底W底）参数 ==========
-    "COND6_ER_DROP_A_THRESHOLD": 0.25,      # 财报跌幅分界线 25%
-    "COND6_LOW_DROP_B_LARGE": 0.09,         # 如果A > 25%，则B需 > 9%
-    "COND6_LOW_DROP_B_SMALL": 0.15,         # 如果A <= 25%，则B需 > 15%
-    
+    "COND6_ER_DROP_A_THRESHOLD": 0.25,  # 财报跌幅分界线 25%
+    "COND6_LOW_DROP_B_LARGE": 0.09,     # 如果A > 25%，则B需 > 9%
+    "COND6_LOW_DROP_B_SMALL": 0.15,     # 如果A <= 25%，则B需 > 15%
+
     # W底形态参数
-    "COND6_W_BOTTOM_PRICE_TOLERANCE": 0.05, # 两个谷底的价格差容忍度 (5%)
-    "COND6_W_BOTTOM_MIN_DAYS_GAP": 5,       # 两个谷底之间的最小间隔天数
+    "COND6_W_BOTTOM_PRICE_TOLERANCE": 0.05,  # 两个谷底的价格差容忍度 (5%)
+    "COND6_W_BOTTOM_MIN_DAYS_GAP": 5,        # 两个谷底之间的最小间隔天数
     # ========== 代码修改结束 1/4 ==========
 }
 
-# --- 3. 辅助与文件操作模块 ---
 
+# --- 3. 辅助与文件操作模块 ---
 def load_tag_settings(json_path):
     try:
         with open(json_path, 'r', encoding='utf-8') as f:
@@ -168,10 +169,12 @@ def update_json_panel(symbols_list, json_path, group_name, symbol_to_note=None):
             data = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         data = {}
+
     if symbol_to_note is None:
         data[group_name] = {symbol: "" for symbol in sorted(symbols_list)}
     else:
         data[group_name] = {symbol: symbol_to_note.get(symbol, "") for symbol in sorted(symbols_list)}
+
     try:
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
@@ -196,105 +199,125 @@ def update_earning_history_json(file_path, group_name, symbols_to_add, log_detai
 
     # 获取昨天已有的 symbol 列表，如果不存在则为空列表
     existing_symbols = data[group_name].get(yesterday_str, [])
-    
+
     # 合并新旧列表，通过集合去重，然后排序
     combined_symbols = set(existing_symbols) | set(symbols_to_add)
     updated_symbols = sorted(list(combined_symbols))
 
     # 更新数据结构
     data[group_name][yesterday_str] = updated_symbols
-    
     num_added = len(updated_symbols) - len(existing_symbols)
 
     try:
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
         log_detail(f"成功更新历史记录。日期: {yesterday_str}, 分组: '{group_name}'.")
-        log_detail(f"  - 本次新增 {num_added} 个不重复的 symbol。")
-        log_detail(f"  - 当天总计 {len(updated_symbols)} 个 symbol。")
+        log_detail(f" - 本次新增 {num_added} 个不重复的 symbol。")
+        log_detail(f" - 当天总计 {len(updated_symbols)} 个 symbol。")
     except Exception as e:
         log_detail(f"错误: 写入历史记录文件失败: {e}")
 
-# --- 4. 核心数据获取模块 ---
 
+# --- 4. 核心数据获取模块 ---
 def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_trace, log_detail, symbol_to_tags_map):
     cache = {}
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     marketcap_exists = True
+
     for i, symbol in enumerate(symbols):
         is_tracing = (symbol == symbol_to_trace)
         data = {'is_valid': False}
         sector_name = symbol_to_sector_map.get(symbol)
+        
         if not sector_name:
             if is_tracing: log_detail(f"[{symbol}] 失败: 在板块映射中未找到该symbol。")
             continue
+
         cursor.execute("SELECT date, price FROM Earning WHERE name = ? ORDER BY date ASC", (symbol,))
         er_rows = cursor.fetchall()
         if not er_rows:
             if is_tracing: log_detail(f"[{symbol}] 失败: 在Earning表中未找到任何财报记录。")
             continue
+
         if is_tracing: log_detail(f"[{symbol}] 步骤1: 从Earning表获取了 {len(er_rows)} 条财报记录。")
+        
         all_er_dates = [r[0] for r in er_rows]
-        all_er_pcts  = [r[1] for r in er_rows]
+        all_er_pcts = [r[1] for r in er_rows]
         data['all_er_pcts'] = all_er_pcts
         data['all_er_dates'] = all_er_dates
         data['latest_er_date_str'] = all_er_dates[-1]
         data['latest_er_pct'] = all_er_pcts[-1]
-        if is_tracing: log_detail(f"[{symbol}]   - 最新财报日: {data['latest_er_date_str']}, 最新财报涨跌幅: {data['latest_er_pct']}")
+
+        if is_tracing: log_detail(f"[{symbol}] - 最新财报日: {data['latest_er_date_str']}, 最新财报涨跌幅: {data['latest_er_pct']}")
+
         placeholders = ', '.join(['?'] * len(all_er_dates))
         query = (f'SELECT date, price FROM "{sector_name}" WHERE name = ? AND date IN ({placeholders}) ORDER BY date ASC')
         cursor.execute(query, (symbol, *all_er_dates))
         price_data = cursor.fetchall()
+
         if is_tracing: log_detail(f"[{symbol}] 步骤2: 查询财报日收盘价。要求 {len(all_er_dates)} 条，实际查到 {len(price_data)} 条。")
+        
         if len(price_data) != len(all_er_dates):
             if is_tracing: log_detail(f"[{symbol}] 失败: 财报日收盘价数据不完整。")
             continue
+
         data['all_er_prices'] = [p[1] for p in price_data]
-        if is_tracing: log_detail(f"[{symbol}]   - 财报日收盘价列表: {data['all_er_prices']}")
+        if is_tracing: log_detail(f"[{symbol}] - 财报日收盘价列表: {data['all_er_prices']}")
+
         cursor.execute(f'SELECT date, price, volume FROM "{sector_name}" WHERE name = ? ORDER BY date DESC LIMIT 1', (symbol,))
         latest_row = cursor.fetchone()
+        
         if not latest_row or latest_row[1] is None or latest_row[2] is None:
             if is_tracing: log_detail(f"[{symbol}] 失败: 未能获取有效的最新交易日数据。查询结果: {latest_row}")
             continue
+
         data['latest_date_str'], data['latest_price'], data['latest_volume'] = latest_row
         if is_tracing: log_detail(f"[{symbol}] 步骤3: 获取最新交易日数据。日期: {data['latest_date_str']}, 价格: {data['latest_price']}, 成交量: {data['latest_volume']}")
-        
+
         # ========== 修改开始：同时获取日期和价格 ==========
         cursor.execute(f'SELECT date, price FROM "{sector_name}" WHERE name = ? AND date < ? ORDER BY date DESC LIMIT 10', (symbol, data['latest_date_str']))
         prev_rows = cursor.fetchall()
+        
         # 分离日期和价格
         data['prev_10_dates'] = [r[0] for r in prev_rows]
         data['prev_10_prices'] = [r[1] for r in prev_rows]
-        
+
         if is_tracing: log_detail(f"[{symbol}] 步骤3.1: 获取最近10个交易日数据。日期: {data['prev_10_dates']}, 价格: {data['prev_10_prices']}")
 
         latest_er_date = data['latest_er_date_str']
         latest_er_price = data['all_er_prices'][-1]
+        
         cursor.execute(f'SELECT price FROM "{sector_name}" WHERE name = ? AND date > ? ORDER BY date ASC LIMIT 3', (symbol, latest_er_date))
         next_days_rows = cursor.fetchall()
         next_days_prices = [row[0] for row in next_days_rows]
         er_window_prices = [latest_er_price]
         er_window_prices.extend(next_days_prices)
         data['er_window_high_price'] = max(er_window_prices) if er_window_prices else None
+        
         if is_tracing: log_detail(f"[{symbol}] 步骤3.2: 查找财报窗口期最高价。窗口期价格: {er_window_prices}, 最高价: {data['er_window_high_price']}")
+
         cursor.execute(f'SELECT MAX(price) FROM "{sector_name}" WHERE name = ? AND date >= ?', (symbol, data['latest_er_date_str']))
         high_since_er_row = cursor.fetchone()
         data['high_since_er'] = high_since_er_row[0] if high_since_er_row else None
+
         if is_tracing: log_detail(f"[{symbol}] 步骤3.3: 获取自最新财报日({data['latest_er_date_str']})以来的最高价: {data['high_since_er']}")
+
         cursor.execute(f'SELECT MAX(price) FROM "{sector_name}" WHERE name = ? AND date > ? AND date <= ?', (symbol, latest_er_date, data['latest_date_str']))
         high_between_er_and_latest_row = cursor.fetchone()
         data['high_between_er_and_latest'] = high_between_er_and_latest_row[0] if high_between_er_and_latest_row else None
-        if is_tracing: log_detail(f"[{symbol}] 步骤3.4: 获取从财报日({latest_er_date})到最新日({data['latest_date_str']})之间的最高价: {data['high_between_er_and_latest']}")
         
+        if is_tracing: log_detail(f"[{symbol}] 步骤3.4: 获取从财报日({latest_er_date})到最新日({data['latest_date_str']})之间的最高价: {data['high_between_er_and_latest']}")
+
         # ========== 代码修改开始 2/3：新增逻辑以获取条件5所需的数据 ==========
         # 为条件5获取财报日及之后5个交易日（共6天）的收盘价，并计算最低价
         cursor.execute(f'SELECT price FROM "{sector_name}" WHERE name = ? AND date >= ? ORDER BY date ASC LIMIT 6', (symbol, data['latest_er_date_str']))
         er_6_day_prices_rows = cursor.fetchall()
         er_6_day_prices = [row[0] for row in er_6_day_prices_rows if row[0] is not None]
         data['er_6_day_window_low'] = min(er_6_day_prices) if er_6_day_prices else None
-        if is_tracing: 
-            log_detail(f"[{symbol}] 步骤3.5: 为条件5获取财报窗口期(6天)最低价。价格: {er_6_day_prices}, 最低价: {data['er_6_day_window_low']}")
+
+        if is_tracing:
+             log_detail(f"[{symbol}] 步骤3.5: 为条件5获取财报窗口期(6天)最低价。价格: {er_6_day_prices}, 最低价: {data['er_6_day_window_low']}")
         # ========== 代码修改结束 2/3 ==========
 
         # ========== 代码修改开始 2/4：获取条件6所需的完整价格序列 ==========
@@ -308,7 +331,7 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
         data['dates_since_er_series'] = [r[0] for r in since_er_rows if r[0] is not None]
         
         if is_tracing:
-            log_detail(f"[{symbol}] 步骤3.6: 获取财报日至今的价格序列，共 {len(data['prices_since_er_series'])} 天。")
+             log_detail(f"[{symbol}] 步骤3.6: 获取财报日至今的价格序列，共 {len(data['prices_since_er_series'])} 天。")
         # ========== 代码修改结束 2/4 ==========
 
         data['pe_ratio'], data['marketcap'] = None, None
@@ -332,17 +355,21 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
             row = cursor.fetchone()
             if row: data['pe_ratio'] = row[0]
             if is_tracing: log_detail(f"[{symbol}] 步骤4: 查询PE。结果: PE={data['pe_ratio']}")
+
         tags = set(symbol_to_tags_map.get(symbol, []))
         data['tags'] = tags
         is_hot = len(tags & set(CONFIG.get("HOT_TAGS", set()))) > 0
         is_big = (data['marketcap'] is not None) and (data['marketcap'] >= CONFIG["MARKETCAP_THRESHOLD"])
+        
         data['is_hot_or_big_for_cond3'] = bool(is_hot or is_big)
         data['last_N_high'] = None
         data['cond3_drop_type'] = None
+        
         if data['is_hot_or_big_for_cond3']:
             lookback_days = CONFIG.get("COND3_LOOKBACK_DAYS", 60)
             last_N_high = get_high_price_last_n_days(cursor, sector_name, symbol, data['latest_date_str'], lookback_days)
             data['last_N_high'] = last_N_high
+            
             if last_N_high and last_N_high > 0:
                 drop_pct_vs_N_high = (last_N_high - data['latest_price']) / last_N_high
                 cond3_type = None
@@ -350,10 +377,13 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
                 if drop_pct_vs_N_high >= max(thresholds): cond3_type = '15'
                 elif drop_pct_vs_N_high >= min(thresholds): cond3_type = '7'
                 data['cond3_drop_type'] = cond3_type
+
         if is_tracing: log_detail(f"[{symbol}] 步骤5: 条件3缓存 -> is_hot={is_hot}, is_big={is_big}, last_N_high={data['last_N_high']}, cond3_drop_type={data['cond3_drop_type']}")
+        
         data['is_valid'] = True
         cache[symbol] = data
         if is_tracing: log_detail(f"[{symbol}] 成功: 数据缓存构建完成，标记为有效。")
+
     conn.close()
     return cache
 
@@ -384,26 +414,34 @@ def get_high_price_last_n_days(cursor, sector_name, symbol, latest_date_str, loo
 def check_special_condition(data, config, log_detail, symbol_to_trace):
     symbol = data.get('symbol')
     is_tracing = (symbol == symbol_to_trace)
-    if is_tracing: log_detail(f"  - [特殊条件检查(前提条件)] for {symbol}:")
+    if is_tracing: log_detail(f" - [特殊条件检查(前提条件)] for {symbol}:")
+
     er_pcts = data.get('all_er_pcts', [])
     all_er_prices = data.get('all_er_prices', [])
     recent_earnings_count = config["RECENT_EARNINGS_COUNT"]
+
     if not er_pcts or not all_er_prices:
-        if is_tracing: log_detail(f"    - 失败: 财报数据不足。-> 返回 0 (严格)")
+        if is_tracing: log_detail(f" - 失败: 财报数据不足。-> 返回 0 (严格)")
         return 0
+
     cond_a, cond_b, cond_c, cond_d = False, False, False, False
+    
     latest_er_pct = er_pcts[-1]
     cond_a = latest_er_pct > 0
+
     if len(all_er_prices) >= recent_earnings_count:
         prices_to_check = all_er_prices[-recent_earnings_count:]
         avg_recent_price = sum(prices_to_check) / len(prices_to_check)
         latest_er_price = prices_to_check[-1]
         cond_b = latest_er_price > avg_recent_price
+        
         previous_er_price = all_er_prices[-2]
         price_diff_pct = ((latest_er_price - previous_er_price) / previous_er_price) if previous_er_price > 0 else 0
         cond_c = price_diff_pct > config["ER_PRICE_DIFF_THRESHOLD"]
+    
     if len(all_er_prices) >= 3:
         cond_d = all_er_prices[-1] > all_er_prices[-2] > all_er_prices[-3]
+
     if is_tracing:
         log_detail(f"    - a) 最新财报涨跌幅 > 0: {latest_er_pct:.4f} > 0 -> {cond_a}")
         if len(all_er_prices) >= recent_earnings_count:
@@ -580,7 +618,6 @@ def check_new_condition_5(data, config, log_detail, symbol_to_trace):
     return passed
 
 # ========== 代码修改开始 3/4：修正 check_new_condition_6 函数 (对标B代码逻辑) ==========
-
 def check_new_condition_6(data, config, log_detail, symbol_to_trace):
     # 锁定了昨天（index -2）必须是第二个峰值，且今天（index -1）必须下跌。这意味着它捕捉的是形态确认的第一天。
     # 有“颈线深度”（Valley Depth）检查（中间必须跌下去至少2.5%），且双峰高度差卡在3.8%。
@@ -646,10 +683,10 @@ def check_new_condition_6(data, config, log_detail, symbol_to_trace):
     if not (prev_price < prev2_price and prev_price < curr_price):
         if is_tracing: log_detail(f"  - [形态失败] 未形成拐点: 前天{prev2_price} -> 昨天{prev_price} -> 今天{curr_price}")
         return False
-
+    
     v2 = prev_price
     idx2 = len(prices_series) - 2
-    
+
     # 2. 寻找左底 (Valley 1)
     found_pattern = False
     
@@ -666,7 +703,6 @@ def check_new_condition_6(data, config, log_detail, symbol_to_trace):
         # B.py: abs(p1 - p2) / max(p1, p2)
         # A.py: abs(v1 - v2) / min(v1, v2) (用 min 做分母更保守，或者直接用 v1 也可以)
         diff_pct = abs(v1 - v2) / min(v1, v2)
-        
         if diff_pct > 0.038: # 严格对其 B.py 参数
             continue
             
@@ -674,10 +710,9 @@ def check_new_condition_6(data, config, log_detail, symbol_to_trace):
         # M头要求中间跌得深，W底要求中间涨得高
         peak_prices = prices_series[i+1 : idx2]
         if not peak_prices: continue
-        
         max_peak = max(peak_prices)
-        avg_valley = (v1 + v2) / 2
         
+        avg_valley = (v1 + v2) / 2
         # B.py 用的是 (avg_peak - min_valley) / avg_peak > 0.025
         # A.py 镜像: (max_peak - avg_valley) / avg_valley
         peak_rise = (max_peak - avg_valley) / avg_valley
@@ -687,49 +722,47 @@ def check_new_condition_6(data, config, log_detail, symbol_to_trace):
             
         # 找到满足条件的双底
         found_pattern = True
-        
         if is_tracing:
-            log_detail(f"  - [W底检测] 成功! 锁定双底形态:")
-            log_detail(f"    左底(V1): {v1:.2f} (索引{i}), 右底(V2): {v2:.2f} (昨天)")
-            log_detail(f"    底差: {diff_pct:.2%} (阈值 3.8%), 中间反弹: {peak_rise:.2%} (阈值 2.5%)")
-            log_detail(f"    日期: {dates_series[i]} -> {dates_series[idx2]}")
-        
+            log_detail(f" - [W底检测] 成功! 锁定双底形态:")
+            log_detail(f"   左底(V1): {v1:.2f} (索引{i}), 右底(V2): {v2:.2f} (昨天)")
+            log_detail(f"   底差: {diff_pct:.2%} (阈值 3.8%), 中间反弹: {peak_rise:.2%} (阈值 2.5%)")
+            log_detail(f"   日期: {dates_series[i]} -> {dates_series[idx2]}")
         break # 找到最近的一个即可
 
     if not found_pattern:
-        if is_tracing: log_detail("  - [形态失败] 未找到符合严格定义的左底 (V1)")
+        if is_tracing: log_detail(" - [形态失败] 未找到符合严格定义的左底 (V1)")
         return False
-        
-    return True
 
+    return True
 
 # ========== 代码修改点 1/3: 重构 evaluate_stock_conditions 函数 ==========
 # 1. 重命名为 check_entry_conditions，使其只负责检查入口条件
-# 2. 修改返回值为元组 (passed_any, passed_cond5)，以便后续逻辑判断
+# 2. 修改返回值为元组 (passed_any, passed_cond5, passed_cond6)，以便后续逻辑判断
 # 3. 移除所有通用过滤逻辑（价格回撤、10日最低价、成交额）
+
 def check_entry_conditions(data, symbol_to_trace, log_detail):
     """
-    此函数现在只检查入口条件 (条件1 OR 条件2 OR 条件3 OR 条件4)。
+    此函数现在只检查入口条件 (条件1 OR 条件2 OR 条件3 OR 条件4 OR 条件5 OR 条件6)。
     返回: (passed_any, passed_cond5, passed_cond6)
     """
     symbol = data.get('symbol')
     is_tracing = (symbol == symbol_to_trace)
-    if is_tracing: 
+    if is_tracing:
         log_detail(f"\n--- [{symbol}] 入口条件评估 ---")
-
+        
     # --- 数据预检 ---
     er_pcts = data.get('all_er_pcts', [])
     if not er_pcts or len(data.get('all_er_prices', [])) < CONFIG["RECENT_EARNINGS_COUNT"]:
-        if is_tracing: log_detail("  - 预检失败: 缺少财报数据，无法评估入口条件。")
+        if is_tracing: log_detail(" - 预检失败: 缺少财报数据，无法评估入口条件。")
         return (False, False, False) # 修改返回值格式
-        
-    # --- 评估各个入口条件 ---
 
+    # --- 评估各个入口条件 ---
     # 入口条件A: 条件1 (三选一)
     prices_to_check = data['all_er_prices'][-CONFIG["RECENT_EARNINGS_COUNT"]:]
     latest_er_pct = er_pcts[-1]
     latest_er_price = prices_to_check[-1]
     avg_recent_price = sum(prices_to_check) / len(prices_to_check)
+    
     drop_pct_for_cond1c = CONFIG["PRICE_DROP_FOR_COND1C"]
     threshold_price1c = latest_er_price * (1 - drop_pct_for_cond1c)
     
@@ -738,14 +771,15 @@ def check_entry_conditions(data, symbol_to_trace, log_detail):
     price_diff_pct_cond1b = ((latest_er_price - previous_er_price) / previous_er_price) if previous_er_price > 0 else 0
     cond1_b = (latest_er_price > avg_recent_price) and (price_diff_pct_cond1b >= 0.04)
     cond1_c = data['latest_price'] <= threshold_price1c
+    
     passed_original_cond1 = cond1_a or cond1_b or cond1_c
-
+    
     if is_tracing:
-        log_detail("  - [入口条件A] 条件1评估:")
-        log_detail(f"    - a) 最新财报涨跌幅 > 0 -> {cond1_a}")
-        log_detail(f"    - b) 最新财报收盘价 > 平均价 且 最近两次财报价差 > 4% -> {cond1_b}")
-        log_detail(f"    - c) 最新价比最新财报收盘价低至少 {drop_pct_for_cond1c*100}% -> {cond1_c}")
-        log_detail(f"    - 结果: {passed_original_cond1}")
+        log_detail(" - [入口条件A] 条件1评估:")
+        log_detail(f" - a) 最新财报涨跌幅 > 0 -> {cond1_a}")
+        log_detail(f" - b) 最新财报收盘价 > 平均价 且 最近两次财报价差 > 4% -> {cond1_b}")
+        log_detail(f" - c) 最新价比最新财报收盘价低至少 {drop_pct_for_cond1c*100}% -> {cond1_c}")
+        log_detail(f" - 结果: {passed_original_cond1}")
 
     # 入口条件：条件2, 3, 4, 5
     passed_new_cond2 = check_condition_2(data, CONFIG, log_detail, symbol_to_trace)
@@ -776,19 +810,20 @@ def check_entry_conditions(data, symbol_to_trace, log_detail):
 
 # ========== 代码修改点 2/3: 新增 apply_common_filters 函数 ==========
 # 这个函数包含了从原 evaluate_stock_conditions 中移出的通用过滤逻辑
+
 def apply_common_filters(data, symbol_to_trace, log_detail, drop_pct_large, drop_pct_small, skip_drawdown=False):
     """
     应用通用的过滤条件：价格回撤、10日最低价、成交额。
     """
     symbol = data.get('symbol')
     is_tracing = (symbol == symbol_to_trace)
+    
     if is_tracing:
         log_detail(f"\n--- [{symbol}] 开始执行通用过滤 (使用 large={drop_pct_large*100}%, small={drop_pct_small*100}%) ---")
 
     # 1. 价格回撤条件 (可跳过)
     if not skip_drawdown:
         marketcap = data.get('marketcap')
-        
         # [修改] 原来使用的是 er_window_high_price (仅财报后3天)，现在改为 high_since_er (财报后至今最高价)
         # 如果 high_since_er 不存在(极少数情况)，回退使用 er_window_high_price
         high_price_reference = data.get('high_since_er')
@@ -796,13 +831,14 @@ def apply_common_filters(data, symbol_to_trace, log_detail, drop_pct_large, drop
             high_price_reference = data.get('er_window_high_price')
 
         if high_price_reference is None or high_price_reference <= 0:
-            if is_tracing: log_detail(f"  - 最终裁定: 失败 (通用过滤1: 无法获取有效的最高价数据: {high_price_reference})。")
+            if is_tracing: log_detail(f" - 最终裁定: 失败 (通用过滤1: 无法获取有效的最高价数据: {high_price_reference})。")
             return False
 
         is_strict_mode = (
-            drop_pct_large == CONFIG["PRICE_DROP_PERCENTAGE_LARGE"] and
+            drop_pct_large == CONFIG["PRICE_DROP_PERCENTAGE_LARGE" ] and
             drop_pct_small == CONFIG["PRICE_DROP_PERCENTAGE_SMALL"]
         )
+        
         drop_pct = 0
         if is_strict_mode:
             if marketcap and marketcap >= CONFIG["MARKETCAP_THRESHOLD_MEGA"]: drop_pct = CONFIG["PRICE_DROP_PERCENTAGE_MEGA"]
@@ -817,16 +853,16 @@ def apply_common_filters(data, symbol_to_trace, log_detail, drop_pct_large, drop
         cond_drawdown_ok = data['latest_price'] <= threshold_price_drawdown
         
         if is_tracing:
-            log_detail("  - [通用过滤1] 价格回撤:")
-            log_detail(f"    - 市值: {marketcap} -> 使用下跌百分比: {drop_pct*100:.1f}%")
+            log_detail(" - [通用过滤1] 价格回撤:")
+            log_detail(f"   - 市值: {marketcap} -> 使用下跌百分比: {drop_pct*100:.1f}%")
             # [修改] 日志文案更新，明确显示使用的是“财报日至今最高价”
-            log_detail(f"    - 判断: 最新价({data['latest_price']:.2f}) <= 财报日至今最高价({high_price_reference:.2f}) * (1 - {drop_pct:.2f}) = 阈值价({threshold_price_drawdown:.2f}) -> {cond_drawdown_ok}")
-        
+            log_detail(f"   - 判断: 最新价({data['latest_price']:.2f}) <= 财报日至今最高价({high_price_reference:.2f}) * (1 - {drop_pct:.2f}) = 阈值价({threshold_price_drawdown:.2f}) -> {cond_drawdown_ok}")
+
         if not cond_drawdown_ok:
-            if is_tracing: log_detail("  - 最终裁定: 失败 (通用过滤1: 价格回撤不满足)。")
+            if is_tracing: log_detail(" - 最终裁定: 失败 (通用过滤1: 价格回撤不满足)。")
             return False
     else:
-        if is_tracing: log_detail("  - [通用过滤1] 价格回撤: 已跳过 (条件5模式)。")
+        if is_tracing: log_detail(" - [通用过滤1] 价格回撤: 已跳过 (条件5/6模式)。")
 
     # 2. 相对10日最低价条件 (逻辑更新：如果10天内含财报日，则使用财报日收盘价作为基准)
     prev_prices = data.get('prev_10_prices', [])
@@ -834,13 +870,13 @@ def apply_common_filters(data, symbol_to_trace, log_detail, drop_pct_large, drop
     latest_er_date = data.get('latest_er_date_str')
 
     if len(prev_prices) < 10:
-        if is_tracing: log_detail(f"  - 最终裁定: 失败 (通用过滤2: 可用历史交易日不足10日，只有{len(prev_prices)}日数据)。")
+        if is_tracing: log_detail(f" - 最终裁定: 失败 (通用过滤2: 可用历史交易日不足10日，只有{len(prev_prices)}日数据)。")
         return False
-    
+        
     # ========== 修改开始：判断基准价格 ==========
     baseline_price = None
     using_er_price_logic = False
-
+    
     if latest_er_date and latest_er_date in prev_dates:
         # 如果财报日在最近10天内
         try:
@@ -853,68 +889,75 @@ def apply_common_filters(data, symbol_to_trace, log_detail, drop_pct_large, drop
     else:
         # 如果财报日不在10天内，使用原来的逻辑（最低价）
         baseline_price = min(prev_prices)
-    
+
     threshold_price_10day = baseline_price * (1 + CONFIG["MAX_INCREASE_PERCENTAGE_SINCE_LOW"])
     cond_10day_ok = data['latest_price'] <= threshold_price_10day
-    
+
     if is_tracing:
-        log_detail(f"  - [通用过滤2] 相对10日基准价:")
+        log_detail(f" - [通用过滤2] 相对10日基准价:")
         if using_er_price_logic:
-            log_detail(f"    - 策略: 财报日({latest_er_date})在10天内，使用财报日收盘价作为基准。")
+            log_detail(f"   - 策略: 财报日({latest_er_date})在10天内，使用财报日收盘价作为基准。")
         else:
-            log_detail(f"    - 策略: 财报日不在10天内，使用10日最低价作为基准。")
-        log_detail(f"    - 基准价: {baseline_price:.2f}")
-        log_detail(f"    - 判断: 最新价 {data['latest_price']:.2f} <= 基准价*1.03 ({threshold_price_10day:.2f}) -> {cond_10day_ok}")
+            log_detail(f"   - 策略: 财报日不在10天内，使用10日最低价作为基准。")
+        log_detail(f"   - 基准价: {baseline_price:.2f}")
+        log_detail(f"   - 判断: 最新价 {data['latest_price']:.2f} <= 基准价*1.03 ({threshold_price_10day:.2f}) -> {cond_10day_ok}")
     # ========== 修改结束 ==========
 
     if not cond_10day_ok:
-        if is_tracing: log_detail("  - 最终裁定: 失败 (通用过滤2: 相对10日基准价条件不满足)。")
+        if is_tracing: log_detail(" - 最终裁定: 失败 (通用过滤2: 相对10日基准价条件不满足)。")
         return False
-    
+
     # 3. 成交额条件
     turnover = data['latest_price'] * data['latest_volume']
     tags = data.get('tags', set())
     is_china_stock = any("中国" in tag for tag in tags)
     current_threshold = CONFIG["TURNOVER_THRESHOLD_CHINA"] if is_china_stock else CONFIG["TURNOVER_THRESHOLD"]
-    cond_turnover_ok = turnover > current_threshold
 
+    cond_turnover_ok = turnover > current_threshold
+    
     if is_tracing:
-        log_detail("  - [通用过滤3] 成交额:")
-        log_detail(f"    - {'使用中国概念股阈值' if is_china_stock else '使用通用阈值'}: {current_threshold:,}")
-        log_detail(f"    - 判断: 最新成交额({turnover:,.0f}) >= 阈值({current_threshold:,}) -> {cond_turnover_ok}")
+        log_detail(" - [通用过滤3] 成交额:")
+        log_detail(f"   - {'使用中国概念股阈值' if is_china_stock else '使用通用阈值'}: {current_threshold:,}")
+        log_detail(f"   - 判断: 最新成交额({turnover:,.0f}) >= 阈值({current_threshold:,}) -> {cond_turnover_ok}")
 
     if not cond_turnover_ok:
-        if is_tracing: log_detail("  - 最终裁定: 失败 (通用过滤3: 成交额不满足)。")
+        if is_tracing: log_detail(" - 最终裁定: 失败 (通用过滤3: 成交额不满足)。")
         return False
-        
-    if is_tracing: log_detail("  - 最终裁定: 成功! 所有通用过滤条件均满足。")
+
+    if is_tracing: log_detail(" - 最终裁定: 成功! 所有通用过滤条件均满足。")
     return True
 
 def apply_post_filters(symbols, stock_data_cache, symbol_to_trace, log_detail):
     pe_valid_symbols = []
     pe_invalid_symbols = []
+    
     for symbol in symbols:
         is_tracing = (symbol == symbol_to_trace)
         if is_tracing: log_detail(f"\n--- [{symbol}] 后置过滤器评估 ---")
+        
         data = stock_data_cache[symbol]
+        
         if data['latest_date_str'] == data['latest_er_date_str']:
-            if is_tracing: log_detail(f"  - 过滤 (日期相同): 最新交易日({data['latest_date_str']}) 与 最新财报日({data['latest_er_date_str']}) 相同。")
+            if is_tracing: log_detail(f" - 过滤 (日期相同): 最新交易日({data['latest_date_str']}) 与 最新财报日({data['latest_er_date_str']}) 相同。")
             continue
-        elif is_tracing: log_detail(f"  - 通过 (日期不同)。")
+        elif is_tracing: log_detail(f" - 通过 (日期不同)。")
+
         pe = data['pe_ratio']
         is_pe_valid = pe is not None and str(pe).strip().lower() not in ("--", "null", "")
+        
         if is_pe_valid:
-            if is_tracing: log_detail(f"  - 分组 (PE有效): PE值为 '{pe}'。加入 PE_valid 组。")
+            if is_tracing: log_detail(f" - 分组 (PE有效): PE值为 '{pe}'。加入 PE_valid 组。")
             pe_valid_symbols.append(symbol)
         else:
-            if is_tracing: log_detail(f"  - 分组 (PE无效): PE值为 '{pe}'。加入 PE_invalid 组。")
+            if is_tracing: log_detail(f" - 分组 (PE无效): PE值为 '{pe}'。加入 PE_invalid 组。")
             pe_invalid_symbols.append(symbol)
+            
     return pe_valid_symbols, pe_invalid_symbols
 
 def run_processing_logic(log_detail):
     log_detail("程序开始运行...")
     if SYMBOL_TO_TRACE: log_detail(f"当前追踪的 SYMBOL: {SYMBOL_TO_TRACE}")
-    
+
     tag_blacklist_from_file, hot_tags_from_file = load_tag_settings(TAGS_SETTING_JSON_FILE)
     CONFIG["BLACKLIST_TAGS"] = tag_blacklist_from_file
     CONFIG["HOT_TAGS"] = hot_tags_from_file
@@ -924,7 +967,7 @@ def run_processing_logic(log_detail):
     if all_symbols is None:
         log_detail("错误: 无法加载symbols，程序终止。")
         return
-    
+
     symbol_blacklist = CONFIG.get("SYMBOL_BLACKLIST", set())
     if symbol_blacklist:
         all_symbols = [s for s in all_symbols if s not in symbol_blacklist]
@@ -932,24 +975,25 @@ def run_processing_logic(log_detail):
     symbol_to_tags_map = load_symbol_tags(DESCRIPTION_JSON_FILE)
     stock_data_cache = build_stock_data_cache(all_symbols, symbol_to_sector_map, DB_FILE, SYMBOL_TO_TRACE, log_detail, symbol_to_tags_map)
     
-    # ========== 代码修改点 3/3: 修改 perform_filter_pass 函数的内部逻辑 ==========
+    # ========== 代码修改点 1/3：在筛选通过时标记是否为 Condition 6 ==========
     def perform_filter_pass(symbols_to_check, drop_large, drop_small, pass_name):
         preliminary_results = []
+        oversell_candidates = [] # 用于存储通过条件6的股票
+
         for symbol in symbols_to_check:
             data = stock_data_cache.get(symbol)
             if not (data and data['is_valid']):
                 continue
-            
             data['symbol'] = symbol
-            
+
             # 步骤A: 检查入口条件
             # 获取三个返回值
             passed_any, passed_cond5, passed_cond6 = check_entry_conditions(data, SYMBOL_TO_TRACE, log_detail)
-            
+
             # 如果任何入口条件都没通过，则跳过
             if not passed_any:
                 continue
-                
+
             # 步骤B: 应用通用过滤器
             # 如果通过了条件5 OR 条件6，则跳过价格回撤检查 (skip_drawdown=True)
             # 条件5是因为它有自己的高点逻辑
@@ -957,72 +1001,109 @@ def run_processing_logic(log_detail):
             should_skip_drawdown = passed_cond5 or passed_cond6
             
             if apply_common_filters(data, SYMBOL_TO_TRACE, log_detail, drop_large, drop_small, skip_drawdown=should_skip_drawdown):
-                preliminary_results.append(symbol)
+                # 策略分离逻辑：
+                # 如果通过了条件6（W底），将其放入 oversell_candidates，优先于其他逻辑
+                if passed_cond6:
+                    oversell_candidates.append(symbol)
+                else:
+                    preliminary_results.append(symbol)
 
-        # 步骤 C: 应用后置过滤器 (PE 分组)
+        # 步骤 C: 应用后置过滤器 (PE 分组)，仅针对非Oversell的股票
         pe_valid, pe_invalid = apply_post_filters(preliminary_results, stock_data_cache, SYMBOL_TO_TRACE, log_detail)
 
-        # 步骤 D: 基于Tag的过滤
+        # 步骤 D: 基于Tag的过滤 (对三个组都执行)
         tag_blacklist = CONFIG["BLACKLIST_TAGS"]
+        
         final_pe_valid = [s for s in pe_valid if not set(symbol_to_tags_map.get(s, [])).intersection(tag_blacklist)]
         final_pe_invalid = [s for s in pe_invalid if not set(symbol_to_tags_map.get(s, [])).intersection(tag_blacklist)]
+        final_oversell = [s for s in oversell_candidates if not set(symbol_to_tags_map.get(s, [])).intersection(tag_blacklist)]
 
-        return final_pe_valid, final_pe_invalid
+        return final_pe_valid, final_pe_invalid, final_oversell
     # ========== 代码修改结束 4/4 ==========
 
     strict_symbols, relaxed_symbols, sub_relaxed_symbols, super_relaxed_symbols = [], [], [], []
     initial_candidates = list(stock_data_cache.keys())
+
     for symbol in initial_candidates:
         data = stock_data_cache.get(symbol)
         if not (data and data['is_valid']): continue
         data['symbol'] = symbol
+        
         filter_mode = check_special_condition(data, CONFIG, log_detail, SYMBOL_TO_TRACE)
         if filter_mode == 3: super_relaxed_symbols.append(symbol)
         elif filter_mode == 2: sub_relaxed_symbols.append(symbol)
         elif filter_mode == 1: relaxed_symbols.append(symbol)
         else: strict_symbols.append(symbol)
 
-    super_relaxed_valid, super_relaxed_invalid = perform_filter_pass(super_relaxed_symbols, CONFIG["SUPER_RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["SUPER_RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "第一轮筛选 (最宽松组)")
-    sub_relaxed_valid, sub_relaxed_invalid = perform_filter_pass(sub_relaxed_symbols, CONFIG["SUB_RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["SUB_RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "第一轮筛选 (次宽松组)")
-    relaxed_valid, relaxed_invalid = perform_filter_pass(relaxed_symbols, CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "第一轮筛选 (普通宽松组)")
-    strict_valid, strict_invalid = perform_filter_pass(strict_symbols, CONFIG["PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["PRICE_DROP_PERCENTAGE_SMALL"], "第一轮筛选 (严格组)")
+    # 修改调用，接收第三个返回值
+    super_relaxed_valid, super_relaxed_invalid, super_relaxed_oversell = perform_filter_pass(super_relaxed_symbols, CONFIG["SUPER_RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["SUPER_RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "第一轮筛选 (最宽松组)")
+    sub_relaxed_valid, sub_relaxed_invalid, sub_relaxed_oversell = perform_filter_pass(sub_relaxed_symbols, CONFIG["SUB_RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["SUB_RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "第一轮筛选 (次宽松组)")
+    relaxed_valid, relaxed_invalid, relaxed_oversell = perform_filter_pass(relaxed_symbols, CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "第一轮筛选 (普通宽松组)")
+    strict_valid, strict_invalid, strict_oversell = perform_filter_pass(strict_symbols, CONFIG["PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["PRICE_DROP_PERCENTAGE_SMALL"], "第一轮筛选 (严格组)")
 
+    # 汇总各组结果
     pass1_valid = super_relaxed_valid + sub_relaxed_valid + relaxed_valid + strict_valid
     pass1_invalid = super_relaxed_invalid + sub_relaxed_invalid + relaxed_invalid + strict_invalid
     
+    # 汇总所有 Oversell 结果
+    total_oversell_symbols = super_relaxed_oversell + sub_relaxed_oversell + relaxed_oversell + strict_oversell
+
     final_pe_valid_symbols = pass1_valid
     final_pe_invalid_symbols = pass1_invalid
-    min_size_pe_valid = CONFIG["MIN_PE_VALID_SIZE_FOR_RELAXED_FILTER"]
-    if len(pass1_valid) < min_size_pe_valid:
-        rerun_valid, _ = perform_filter_pass(strict_symbols, CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "第二轮筛选 (常规宽松, for PE_valid)")
-        final_pe_valid_symbols = sorted(list(set(super_relaxed_valid) | set(sub_relaxed_valid) | set(relaxed_valid) | set(rerun_valid)))
 
-    all_qualified_symbols = final_pe_valid_symbols + final_pe_invalid_symbols
+    min_size_pe_valid = CONFIG["MIN_PE_VALID_SIZE_FOR_RELAXED_FILTER"]
+    
+    # 第二轮筛选 (仅针对PE_valid数量不足的情况，且只影响 PE_valid)
+    if len(pass1_valid) < min_size_pe_valid:
+        rerun_valid, _, rerun_oversell = perform_filter_pass(strict_symbols, CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "第二轮筛选 (常规宽松, for PE_valid)")
+        
+        # 合并第一轮和第二轮的有效结果
+        final_pe_valid_symbols = sorted(list(set(super_relaxed_valid) | set(sub_relaxed_valid) | set(relaxed_valid) | set(rerun_valid)))
+        
+        # 如果第二轮也产出了 Oversell，也加上 (虽然理论上 strict_symbols 已经在第一轮跑过了，但参数不同可能导致结果不同)
+        total_oversell_symbols = sorted(list(set(total_oversell_symbols) | set(rerun_oversell)))
+
+    # 将所有符合资格的 symbol 用于写历史记录
+    all_qualified_symbols = final_pe_valid_symbols + final_pe_invalid_symbols + total_oversell_symbols
+    
     pe_valid_set = set(final_pe_valid_symbols)
     pe_invalid_set = set(final_pe_invalid_symbols)
+    oversell_set = set(total_oversell_symbols)
+
     blacklist = load_blacklist(BLACKLIST_JSON_FILE)
+    
     try:
         with open(PANEL_JSON_FILE, 'r', encoding='utf-8') as f: panel_data = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError): panel_data = {}
+
     exist_Strategy34 = set(panel_data.get('Strategy34', {}).keys())
     exist_Strategy12 = set(panel_data.get('Strategy12', {}).keys())
     exist_today = set(panel_data.get('Today', {}).keys())
     exist_must = set(panel_data.get('Must', {}).keys())
+    
     already_in_panels = exist_Strategy34 | exist_Strategy12 | exist_today | exist_must
+
+    # 过滤黑名单和已存在面板的股票
     final_pe_valid_to_write = sorted(list(pe_valid_set - blacklist - already_in_panels))
     final_pe_invalid_to_write = sorted(list(pe_invalid_set - blacklist - already_in_panels))
+    final_oversell_to_write = sorted(list(oversell_set - blacklist - already_in_panels))
 
     if SYMBOL_TO_TRACE:
-        skipped_valid = pe_valid_set & (blacklist | already_in_panels)
-        if SYMBOL_TO_TRACE in skipped_valid:
-            reason = "在 'newlow' 黑名单中" if SYMBOL_TO_TRACE in blacklist else "已存在于 'Strategy34', 'Strategy12', 'Today' 或 'Must' 分组中"
-            log_detail(f"\n追踪信息: 目标 symbol '{SYMBOL_TO_TRACE}' 虽然通过了筛选，但最终因 ({reason}) 而被跳过，不会写入 panel 文件。")
-        skipped_invalid = pe_invalid_set & (blacklist | already_in_panels)
-        if SYMBOL_TO_TRACE in skipped_invalid:
-            reason = "在 'newlow' 黑名单中" if SYMBOL_TO_TRACE in blacklist else "已存在于 'Strategy34', 'Strategy12', 'Today' 或 'Must' 分组中"
-            log_detail(f"\n追踪信息: 目标 symbol '{SYMBOL_TO_TRACE}' 虽然通过了筛选，但最终因 ({reason}) 而被跳过，不会写入 panel 文件。")
+        # 追踪日志逻辑更新，包含 Oversell
+        combined_sets = [
+            (pe_valid_set, "PE_valid"), 
+            (pe_invalid_set, "PE_invalid"), 
+            (oversell_set, "OverSell")
+        ]
+        
+        for s_set, name in combined_sets:
+            skipped = s_set & (blacklist | already_in_panels)
+            if SYMBOL_TO_TRACE in skipped:
+                reason = "在 'newlow' 黑名单中" if SYMBOL_TO_TRACE in blacklist else "已存在于 'Strategy34', 'Strategy12', 'Today' 或 'Must' 分组中"
+                log_detail(f"\n追踪信息: 目标 symbol '{SYMBOL_TO_TRACE}' ({name}) 虽然通过了筛选，但最终因 ({reason}) 而被跳过，不会写入 panel 文件。")
 
     hot_tags = set(CONFIG.get("HOT_TAGS", set()))
+
     def build_symbol_note_map(symbols):
         note_map = {}
         for sym in symbols:
@@ -1030,24 +1111,33 @@ def run_processing_logic(log_detail):
             cond3_type = d.get('cond3_drop_type')
             tags = set(symbol_to_tags_map.get(sym, []))
             is_hot = bool(tags & hot_tags)
+            
             base = ""
             if cond3_type == '15': base = f"{sym}15"
             elif cond3_type == '7': base = f"{sym}7"
+            
             if base: note_map[sym] = base + ("热" if is_hot else "")
             else: note_map[sym] = f"{sym}热" if is_hot else ""
         return note_map
+
     pe_valid_notes = build_symbol_note_map(final_pe_valid_to_write)
     pe_invalid_notes = build_symbol_note_map(final_pe_invalid_to_write)
-    
+    oversell_notes = build_symbol_note_map(final_oversell_to_write)
+
     # 写入 PE_valid
     update_json_panel(final_pe_valid_to_write, PANEL_JSON_FILE, 'PE_valid', symbol_to_note=pe_valid_notes)
     # 同步写入 PE_valid_backup
     update_json_panel(final_pe_valid_to_write, PANEL_JSON_FILE, 'PE_valid_backup', symbol_to_note=pe_valid_notes)
-
+    
     # 写入 PE_invalid
     update_json_panel(final_pe_invalid_to_write, PANEL_JSON_FILE, 'PE_invalid', symbol_to_note=pe_invalid_notes)
     # 同步写入 PE_invalid_backup
     update_json_panel(final_pe_invalid_to_write, PANEL_JSON_FILE, 'PE_invalid_backup', symbol_to_note=pe_invalid_notes)
+
+    # 写入 OverSell (新增)
+    update_json_panel(final_oversell_to_write, PANEL_JSON_FILE, 'OverSell', symbol_to_note=oversell_notes)
+    # 同步写入 OverSell_backup (新增)
+    update_json_panel(final_oversell_to_write, PANEL_JSON_FILE, 'OverSell_backup', symbol_to_note=oversell_notes)
 
     os.makedirs(os.path.dirname(BACKUP_FILE), exist_ok=True)
     try:
@@ -1055,13 +1145,13 @@ def run_processing_logic(log_detail):
             for sym in sorted(all_qualified_symbols): f.write(sym + '\n')
     except IOError as e:
         log_detail(f"错误: 无法更新备份文件: {e}")
+
     if all_qualified_symbols:
-        update_earning_history_json(EARNING_HISTORY_JSON_FILE, "no_season", all_qualified_symbols, log_detail)
+        update_earning_history_json(EARNING_HISTORY_JSON_FILE, "no_season", sorted(list(set(all_qualified_symbols))), log_detail)
     else:
         log_detail("\n--- 无符合条件的 symbol 可写入 Earning_History.json ---")
 
 # --- 6. 主执行流程 ---
-
 def main():
     if SYMBOL_TO_TRACE:
         print(f"追踪模式已启用，目标: {SYMBOL_TO_TRACE}。日志将写入: {LOG_FILE_PATH}")
@@ -1078,6 +1168,7 @@ def main():
         def log_detail_console(message):
             print(message)
         run_processing_logic(log_detail_console)
+    
     print("\n程序运行结束。")
 
 if __name__ == '__main__':
