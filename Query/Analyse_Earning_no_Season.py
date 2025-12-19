@@ -47,7 +47,8 @@ CONFIG = {
         "Industrials", "Real_Estate", "Technology", "Utilities"
     },
     # ========== 代码修改开始 1/3：新增中国概念股成交额阈值 ==========
-    "TURNOVER_THRESHOLD": 100_000_000,
+    # "TURNOVER_THRESHOLD": 100_000_000,
+    "TURNOVER_THRESHOLD": 200_000_000,
     "TURNOVER_THRESHOLD_CHINA": 40_000_000,  # 新增：中国概念股的成交额阈值
 
     "RECENT_EARNINGS_COUNT": 2,
@@ -55,43 +56,58 @@ CONFIG = {
     "MARKETCAP_THRESHOLD_MEGA": 500_000_000_000,  # 5000亿
 
     # 严格筛选标准 (第一轮)
-    "PRICE_DROP_PERCENTAGE_LARGE": 0.079,  # <2000亿=7.9%
-    "PRICE_DROP_PERCENTAGE_SMALL": 0.06,   # 2000亿 ≤ 市值 < 5000亿 = 6%
-    "PRICE_DROP_PERCENTAGE_MEGA": 0.05,    # ≥5000亿=5%
+    # "PRICE_DROP_PERCENTAGE_LARGE": 0.079,  # <2000亿=7.9%
+    # "PRICE_DROP_PERCENTAGE_SMALL": 0.06,   # 2000亿 ≤ 市值 < 5000亿 = 6%
+    # "PRICE_DROP_PERCENTAGE_MEGA": 0.05,    # ≥5000亿=5%
+    "PRICE_DROP_PERCENTAGE_LARGE": 0.1,  # <2000亿=10%
+    "PRICE_DROP_PERCENTAGE_SMALL": 0.09,   # 2000亿 ≤ 市值 < 5000亿 = 9%
+    "PRICE_DROP_PERCENTAGE_MEGA": 0.07,    # ≥5000亿=7%
 
     # 普通宽松筛选标准
-    "RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.07,  # <2000亿=7%
-    "RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.05,  # ≥2000亿=5%
+    # "RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.07,  # <2000亿=7%
+    # "RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.05,  # ≥2000亿=5%
+    "RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.1,  # <2000亿=10%
+    "RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.08,  # ≥2000亿=8%
 
     # 新增：次宽松筛选标准
-    "SUB_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.06,  # <2000亿=6%
-    "SUB_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.04,  # ≥2000亿=4%
+    # "SUB_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.06,  # <2000亿=6%
+    # "SUB_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.04,  # ≥2000亿=4%
+    "SUB_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.09,  # <2000亿=9%
+    "SUB_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.07,  # ≥2000亿=7%
 
     # 最宽松筛选标准
-    "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.05,  # <2000亿=5%
-    "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.03,  # ≥2000亿=3%
+    # "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.05,  # <2000亿=5%
+    # "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.03,  # ≥2000亿=3%
+    "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.07,  # <2000亿=7%
+    "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.05,  # ≥2000亿=5%
 
     # 触发“最宽松”标准的财报收盘价价差百分比 (条件C)
-    "ER_PRICE_DIFF_THRESHOLD": 0.40,
+    # "ER_PRICE_DIFF_THRESHOLD": 0.40,
+    "ER_PRICE_DIFF_THRESHOLD": 0.60,
 
     # 触发宽松筛选的最小分组数量 (仅对 PE_valid 组生效)
     "MIN_PE_VALID_SIZE_FOR_RELAXED_FILTER": 5,
 
+    # 回撤阀值 3%
     "MAX_INCREASE_PERCENTAGE_SINCE_LOW": 0.03,
 
     # 条件1c 的专属参数：最新价比最新财报收盘价低至少 X%
-    "PRICE_DROP_FOR_COND1C": 0.14,
+    # "PRICE_DROP_FOR_COND1C": 0.14,
+    "PRICE_DROP_FOR_COND1C": 0.17,
 
     # 条件3参数
-    "COND3_DROP_THRESHOLDS": [0.07, 0.15],  # 7% 与 15%
+    # "COND3_DROP_THRESHOLDS": [0.07, 0.15],  # 7% 与 15%
+    "COND3_DROP_THRESHOLDS": [0.09, 0.15],  # 9% 与 15%
     "COND3_LOOKBACK_DAYS": 60,
 
     # 条件4参数: 财报日至今最高价相比最新价的涨幅阈值
-    "COND4_RISE_THRESHOLD": 0.07,  # 7%
+    # "COND4_RISE_THRESHOLD": 0.07,  # 7%
+    "COND4_RISE_THRESHOLD": 0.09,  # 9%
 
     # ========== 新增：条件5的参数 ==========
     "COND5_ER_TO_HIGH_THRESHOLD": 0.3,  # 财报日到最高价的涨幅阈值 30%
-    "COND5_HIGH_TO_LATEST_THRESHOLD": 0.079,  # 最高价到最新价的跌幅阈值 7.9%
+    # "COND5_HIGH_TO_LATEST_THRESHOLD": 0.079,  # 最高价到最新价的跌幅阈值 7.9%
+    "COND5_HIGH_TO_LATEST_THRESHOLD": 0.09,  # 最高价到最新价的跌幅阈值 9%
 
     # ========== 代码修改开始 1/4：新增条件6（抄底W底）参数 ==========
     "COND6_ER_DROP_A_THRESHOLD": 0.25,  # 财报跌幅分界线 25%
@@ -99,9 +115,8 @@ CONFIG = {
     "COND6_LOW_DROP_B_SMALL": 0.15,     # 如果A <= 25%，则B需 > 15%
 
     # W底形态参数
-    "COND6_W_BOTTOM_PRICE_TOLERANCE": 0.05,  # 两个谷底的价格差容忍度 (5%)
+    "COND6_W_BOTTOM_PRICE_TOLERANCE": 0.038,  # 两个谷底的价格差容忍度 (5%)
     "COND6_W_BOTTOM_MIN_DAYS_GAP": 5,        # 两个谷底之间的最小间隔天数
-    # ========== 代码修改结束 1/4 ==========
 }
 
 
@@ -617,10 +632,10 @@ def check_new_condition_5(data, config, log_detail, symbol_to_trace):
         
     return passed
 
-# ========== 代码修改开始 3/4：修正 check_new_condition_6 函数 (对标B代码逻辑) ==========
 def check_new_condition_6(data, config, log_detail, symbol_to_trace):
-    # 锁定了昨天（index -2）必须是第二个峰值，且今天（index -1）必须下跌。这意味着它捕捉的是形态确认的第一天。
-    # 有“颈线深度”（Valley Depth）检查（中间必须跌下去至少2.5%），且双峰高度差卡在3.8%。
+    # 锁定了昨天（index -2）必须是第二个峰值，且今天（index -1）必须下跌或企稳。
+    # 严格遵循用户规则：条件B的最低价必须取自双谷中的最低点。
+    # [修正] 严格控制双底之间的价格差异 (Symmetry)
     
     symbol = data.get('symbol')
     is_tracing = (symbol == symbol_to_trace)
@@ -628,109 +643,121 @@ def check_new_condition_6(data, config, log_detail, symbol_to_trace):
 
     # 1. 数据准备
     all_er_prices = data.get('all_er_prices', [])
-    # 注意：这里我们使用 since_er_series，确保包含从财报日到今天的序列
+    # prices_series 包含从财报日到今天的序列
     prices_series = data.get('prices_since_er_series', [])
     dates_series = data.get('dates_since_er_series', [])
-
+    
     if len(all_er_prices) < 2:
-        if is_tracing: log_detail("  - 结果: False (财报历史数据不足2次)")
+        if is_tracing: log_detail(" - 结果: False (财报历史数据不足2次)")
         return False
     
-    # B代码逻辑需要至少10天数据来判断形态
     if not prices_series or len(prices_series) < 10:
-        if is_tracing: log_detail(f"  - 结果: False (数据不足: {len(prices_series)}天)")
+        if is_tracing: log_detail(f" - 结果: False (数据不足: {len(prices_series)}天)")
         return False
 
-    # --- 保持你原有的财报跌幅前置过滤 (Context) ---
-    # 这部分逻辑是你策略的基石（只做财报大跌后的票），建议保留
+    # --- 步骤 1: 计算条件A (财报间跌幅) 并确定 条件B 的阈值 ---
+
     latest_er_price = all_er_prices[-1]
     prev_er_price = all_er_prices[-2]
-    
     if prev_er_price <= 0: return False
-    
-    er_drop_pct = (prev_er_price - latest_er_price) / prev_er_price
-    threshold_a = config["COND6_ER_DROP_A_THRESHOLD"] # 0.25
-    
-    cond_a = er_drop_pct > 0 
-    
-    # 动态阈值 B
-    threshold_b = config["COND6_LOW_DROP_B_LARGE"] if er_drop_pct > threshold_a else config["COND6_LOW_DROP_B_SMALL"]
-    
-    # 检查区间最低价是否足够深
-    global_min_price = min(prices_series)
-    post_er_drop_pct = (latest_er_price - global_min_price) / latest_er_price
-    
-    cond_b = post_er_drop_pct > threshold_b
 
-    if is_tracing:
-        log_detail(f"  - [前置条件] 财报间跌幅: {er_drop_pct:.2%} (要求>0)")
-        log_detail(f"  - [前置条件] 财报后最大跌幅: {post_er_drop_pct:.2%} (阈值: {threshold_b:.0%})")
-    
-    if not (cond_a and cond_b):
-        if is_tracing: log_detail("  - 结果: False (前置跌幅条件不满足)")
+    # 条件A: 最新财报收盘价 vs 上次财报收盘价 的跌幅
+    er_drop_a_val = (prev_er_price - latest_er_price) / prev_er_price
+
+    # 确定条件B的阈值
+    threshold_a = config["COND6_ER_DROP_A_THRESHOLD"] # 0.25
+    if er_drop_a_val > threshold_a:
+        # 情况1: A > 25%，则 B 需 > 9%
+        threshold_b = config["COND6_LOW_DROP_B_LARGE"] 
+        threshold_desc = "9% (因 A > 25%)"
+    elif er_drop_a_val > 0.10:
+        # 情况2: 10% < A <= 25%，则 B 需 > 15%
+        threshold_b = config["COND6_LOW_DROP_B_SMALL"]
+        threshold_desc = "15% (因 10% < A <= 25%)"
+    else:
+        # 情况3: A <= 10%，不满足条件6的前提，直接返回False
+        if is_tracing: 
+            log_detail(f" - [条件A失败] 财报间跌幅 {er_drop_a_val:.2%} <= 10%，不满足抄底前提")
         return False
 
-    # --- 核心修改：双底形态识别 (完全镜像 B.py 的 Double Top 逻辑) ---
-    # B.py 逻辑: 昨天(idx -2)是峰值，今天下跌
-    # A.py 镜像: 昨天(idx -2)是谷底，今天上涨
+    if is_tracing:
+        log_detail(f" - [条件A检查] 财报间跌幅: {er_drop_a_val:.2%} (阈值线 25%)")
+        log_detail(f" - [条件B阈值] 根据条件A，条件B要求跌幅需 > {threshold_desc}")
+
+    # --- 步骤 2: 寻找 W 底形态 ---
     
-    curr_price = prices_series[-1]      # 今天
-    prev_price = prices_series[-2]      # 昨天 (潜在的右底 V2)
-    prev2_price = prices_series[-3]     # 前天
+    curr_price = prices_series[-1] # 今天
+    prev_price = prices_series[-2] # 昨天 (潜在的右底 V2)
+    prev2_price = prices_series[-3] # 前天
 
     # 1. 锁定右底 (Valley 2) 必须是昨天
     # 昨天必须比前天低，且昨天必须比今天低 (即今天反弹了)
     if not (prev_price < prev2_price and prev_price < curr_price):
-        if is_tracing: log_detail(f"  - [形态失败] 未形成拐点: 前天{prev2_price} -> 昨天{prev_price} -> 今天{curr_price}")
+        if is_tracing: log_detail(f" - [形态失败] 未形成拐点: 前天{prev2_price} -> 昨天{prev_price} -> 今天{curr_price}")
         return False
     
     v2 = prev_price
     idx2 = len(prices_series) - 2
+    
+    # 获取价格容忍度参数
+    price_tolerance = CONFIG["COND6_W_BOTTOM_PRICE_TOLERANCE"]
 
     # 2. 寻找左底 (Valley 1)
     found_pattern = False
     
-    # 向前回溯寻找左底，范围参考 B.py
-    # idx2 - 3 意味着中间至少隔了2天
+    # 向前回溯寻找左底
     for i in range(idx2 - 3, 0, -1):
         v1 = prices_series[i]
         
-        # A. 必须是局部低点 (比前后都低)
+        # [几何形态检查 1] 必须是局部低点 (比前后都低)
         if not (v1 < prices_series[i-1] and v1 < prices_series[i+1]):
             continue
             
-        # B. 高度差检查 (镜像 B.py 的 3.8% 阈值)
-        # B.py: abs(p1 - p2) / max(p1, p2)
-        # A.py: abs(v1 - v2) / min(v1, v2) (用 min 做分母更保守，或者直接用 v1 也可以)
+        # [几何形态检查 2] 高度差检查 (3.8% 容忍度)
         diff_pct = abs(v1 - v2) / min(v1, v2)
-        if diff_pct > 0.038: # 严格对其 B.py 参数
+        if diff_pct > price_tolerance: 
+            if is_tracing: log_detail(f" - [形态跳过] 找到潜在V1={v1:.2f}，但与V2={v2:.2f} 差幅 {diff_pct:.2%} > 容忍度 {price_tolerance:.1%}")
             continue
             
-        # C. 颈线高度 (Peak Height) 检查
-        # M头要求中间跌得深，W底要求中间涨得高
+        # [几何形态检查 3] 颈线高度 (Peak Height) 检查 (2.5% 反弹)
         peak_prices = prices_series[i+1 : idx2]
         if not peak_prices: continue
         max_peak = max(peak_prices)
         
         avg_valley = (v1 + v2) / 2
-        # B.py 用的是 (avg_peak - min_valley) / avg_peak > 0.025
-        # A.py 镜像: (max_peak - avg_valley) / avg_valley
         peak_rise = (max_peak - avg_valley) / avg_valley
         
-        if peak_rise < 0.025: # 中间必须至少反弹 2.5%
+        if peak_rise < 0.025: 
+            if is_tracing: log_detail(f" - [形态跳过] 找到潜在V1={v1:.2f}，但中间反弹仅 {peak_rise:.2%} (<2.5%)")
             continue
             
-        # 找到满足条件的双底
-        found_pattern = True
-        if is_tracing:
-            log_detail(f" - [W底检测] 成功! 锁定双底形态:")
-            log_detail(f"   左底(V1): {v1:.2f} (索引{i}), 右底(V2): {v2:.2f} (昨天)")
-            log_detail(f"   底差: {diff_pct:.2%} (阈值 3.8%), 中间反弹: {peak_rise:.2%} (阈值 2.5%)")
-            log_detail(f"   日期: {dates_series[i]} -> {dates_series[idx2]}")
-        break # 找到最近的一个即可
+        # --- 步骤 3: 在找到合格形态后，应用条件B (用户修正规则) ---
+        # 规则：前面提到的“价格最低点”必须是双谷中最低的那个点
+        valley_min_price = min(v1, v2)
+        
+        # 计算跌幅 B: (最新财报价 - 双底最低价) / 最新财报价
+        drop_b_val = (latest_er_price - valley_min_price) / latest_er_price
+        
+        if drop_b_val > threshold_b:
+            found_pattern = True
+            if is_tracing:
+                log_detail(f" - [W底检测] 成功! 锁定双底形态且满足跌幅条件:")
+                log_detail(f"   左底(V1): {v1:.2f} (日期: {dates_series[i]})")
+                log_detail(f"   右底(V2): {v2:.2f} (日期: {dates_series[idx2]})")
+                log_detail(f"   底差: {diff_pct:.2%} (阈值 {price_tolerance:.1%})")
+                log_detail(f"   双谷最低价: {valley_min_price:.2f}")
+                log_detail(f"   条件B实测跌幅: {drop_b_val:.2%} (要求 > {threshold_b:.0%}) -> 通过")
+                log_detail(f"   形态参数: 底差 {diff_pct:.2%}, 中间反弹 {peak_rise:.2%}")
+            break # 找到最近的一个符合所有条件的即可
+        else:
+            # 形态符合，但跌幅不够深，继续向前找（也许前面有个更深的底能配对？）
+            # 或者直接 fail，取决于你是否认为同一天只能有一个有效的左底。
+            # 这里我们选择继续找，万一前面有个更低的点也构成了W底呢。
+            if is_tracing:
+                log_detail(f" - [形态跳过] 找到几何双底(V1={v1:.2f}, V2={v2:.2f})，但跌幅B {drop_b_val:.2%} 不满足 > {threshold_b:.0%}")
 
     if not found_pattern:
-        if is_tracing: log_detail(" - [形态失败] 未找到符合严格定义的左底 (V1)")
+        if is_tracing: log_detail(" - 结果: False (未找到同时满足几何形态、价格对称性与跌幅条件的双底)")
         return False
 
     return True
