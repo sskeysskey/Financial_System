@@ -1,13 +1,14 @@
 import pandas as pd
 import os
 import datetime
-import glob  # 新增：用于查找文件
+import glob
+import subprocess
 
 # ==========================================
 # 配置区域 (Configuration)
 # ==========================================
 
-# 备份文件所在的文件夹路径
+# 备份文件所在的文件夹路径 (自动模式用)
 BACKUP_DIR = '/Users/yanzhang/Coding/News/backup'
 
 # 输出文件的配置
@@ -22,6 +23,19 @@ TOP_N = 50
 # False: 不考虑新增数据 (只计算 A和B都有的行)
 INCLUDE_NEW_ROWS = True
 
+# ------------------------------------------
+# 新增：模式切换配置
+# ------------------------------------------
+
+# 模式开关
+# True:  手动模式 (使用下方指定的两个具体文件)
+# False: 自动模式 (自动寻找 BACKUP_DIR 下最新的两个文件)
+USE_MANUAL_MODE = False
+
+# 手动模式下的文件路径 (仅当 USE_MANUAL_MODE = True 时生效)
+MANUAL_FILE_OLD = '/Users/yanzhang/Coding/News/backup/Options_251215.csv'
+MANUAL_FILE_NEW = '/Users/yanzhang/Coding/News/backup/Options_251216.csv'
+
 # ==========================================
 # 核心处理函数
 # ==========================================
@@ -34,7 +48,7 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
 
     # 1. 读取文件
     if not os.path.exists(file_old) or not os.path.exists(file_new):
-        print("错误: 找不到文件。")
+        print("错误: 找不到文件，请检查路径是否正确。")
         return
 
     try:
@@ -66,7 +80,10 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
     def clean_oi(val):
         if pd.isna(val): return 0
         if isinstance(val, (int, float)): return val
-        return float(str(val).replace(',', ''))
+        try:
+            return float(str(val).replace(',', ''))
+        except:
+            return 0.0
 
     if 'Open Interest' in df_old.columns:
         df_old['Open Interest'] = df_old['Open Interest'].apply(clean_oi)
@@ -217,19 +234,52 @@ def get_latest_two_files(directory, pattern='Options_*.csv'):
     # files[1] 是次新的 (Old)
     return files[0], files[1]
 
+def show_alert(message):
+    try:
+        applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+        subprocess.run(['osascript', '-e', applescript_code], check=True)
+    except Exception as e:
+        print(f"弹窗提示失败 (可能是非macOS环境): {e}")
+
 if __name__ == "__main__":
-    print(f"正在扫描目录: {BACKUP_DIR} ...")
-    
-    # 自动获取最新和次新的文件
-    file_new, file_old = get_latest_two_files(BACKUP_DIR)
-    
+    file_new = None
+    file_old = None
+
+    # ----------------------------------------------------
+    # 根据配置决定使用 手动模式 还是 自动模式
+    # ----------------------------------------------------
+    if USE_MANUAL_MODE:
+        print(">>> 当前模式: 手动指定文件 (Manual Mode)")
+        file_old = MANUAL_FILE_OLD
+        file_new = MANUAL_FILE_NEW
+        
+        # 简单检查文件是否存在
+        if not os.path.exists(file_old):
+            print(f"❌ 错误: 找不到旧文件: {file_old}")
+            file_old = None # 标记为无效
+        if not os.path.exists(file_new):
+            print(f"❌ 错误: 找不到新文件: {file_new}")
+            file_new = None # 标记为无效
+
+    else:
+        print(">>> 当前模式: 自动扫描最新文件 (Auto Mode)")
+        print(f"正在扫描目录: {BACKUP_DIR} ...")
+        file_new, file_old = get_latest_two_files(BACKUP_DIR)
+        
+        if not file_new or not file_old:
+             print("❌ 错误: 在备份目录下未找到至少两个以 'Options_' 开头的 CSV 文件。")
+
+    # ----------------------------------------------------
+    # 如果文件都准备好了，开始执行处理
+    # ----------------------------------------------------
     if file_new and file_old:
-        print(f"检测到最新文件: {os.path.basename(file_new)}")
-        print(f"检测到次新文件: {os.path.basename(file_old)}")
+        print("-" * 40)
+        print(f"检测到最新文件 (New): {os.path.basename(file_new)}")
+        print(f"检测到次新文件 (Old): {os.path.basename(file_old)}")
         print("-" * 40)
         
         # 调用处理函数
         process_options_change(file_old, file_new, TOP_N, INCLUDE_NEW_ROWS)
+        show_alert("已生成比对结果")
     else:
-        print("❌ 错误: 在备份目录下未找到至少两个以 'Options_' 开头的 CSV 文件。")
-        print(f"请检查路径: {BACKUP_DIR}")
+        print("\n程序终止: 未能获取有效的对比文件。")

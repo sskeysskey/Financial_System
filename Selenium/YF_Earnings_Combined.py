@@ -1,6 +1,5 @@
 import os
 import json
-import sqlite3
 import shutil
 from selenium import webdriver
 from datetime import datetime, timedelta
@@ -14,8 +13,8 @@ import pyautogui
 import random
 import time
 import threading
+import subprocess
 import tkinter as tk
-from tkinter import messagebox
 from tkcalendar import DateEntry
 
 # ==============================================================================
@@ -168,7 +167,7 @@ def pick_date_range(group_name: str):
         sd = start_cal.get_date()
         ed = end_cal.get_date()
         if sd > ed:
-            messagebox.showwarning("日期错误", "开始日期不能晚于结束日期！")
+            show_alert("开始日期不能晚于结束日期！")
             return
         start_dt = datetime(sd.year, sd.month, sd.day)
         end_dt = datetime(ed.year, ed.month, ed.day)
@@ -412,6 +411,13 @@ def run_scraper_task(driver, sectors_data, task_config):
     print(f"任务 [{group_name.upper()}] 执行完毕。")
 
 
+def show_alert(message):
+    # AppleScript代码模板
+    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+    
+    # 使用subprocess调用osascript
+    subprocess.run(['osascript', '-e', applescript_code], check=True)
+
 # ==============================================================================
 # 3. 主执行逻辑
 # ==============================================================================
@@ -497,5 +503,5 @@ if __name__ == "__main__":
         
         final_root = tk.Tk()
         final_root.withdraw() 
-        messagebox.showinfo("任务完成", "所有抓取任务已执行完毕！")
+        show_alert("所有抓取任务已执行完毕！")
         final_root.destroy()
