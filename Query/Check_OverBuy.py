@@ -14,9 +14,9 @@ DESC_FILE = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
 SECTORS_FILE = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
 COMPARE_FILE = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
 DB_FILE = '/Users/yanzhang/Coding/Database/Finance.db'
-OUTPUT_FILE = '/Users/yanzhang/Coding/News/OverSell.txt'
+OUTPUT_FILE = '/Users/yanzhang/Coding/News/OverBuy.txt'
 PANEL_FILE = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
-DEBUG_LOG_FILE = '/Users/yanzhang/Downloads/OverSell_debug.log'
+DEBUG_LOG_FILE = '/Users/yanzhang/Downloads/OverBuy_debug.log'
 
 LOG_ENABLED = False  # True 或 False
 

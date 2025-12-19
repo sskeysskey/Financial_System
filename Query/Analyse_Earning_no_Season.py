@@ -49,7 +49,7 @@ CONFIG = {
     # ========== 代码修改开始 1/3：新增中国概念股成交额阈值 ==========
     # "TURNOVER_THRESHOLD": 100_000_000,
     "TURNOVER_THRESHOLD": 200_000_000,
-    "TURNOVER_THRESHOLD_CHINA": 40_000_000,  # 新增：中国概念股的成交额阈值
+    "TURNOVER_THRESHOLD_CHINA": 400_000_000,  # 新增：中国概念股的成交额阈值
 
     "RECENT_EARNINGS_COUNT": 2,
     "MARKETCAP_THRESHOLD": 200_000_000_000,  # 2000亿
@@ -674,6 +674,10 @@ def check_new_condition_6(data, config, log_detail, symbol_to_trace):
         # 情况2: 10% < A <= 25%，则 B 需 > 15%
         threshold_b = config["COND6_LOW_DROP_B_SMALL"]
         threshold_desc = "15% (因 10% < A <= 25%)"
+    elif er_drop_a_val > -0.5:
+        # 情况2: 10% < A <= 25%，则 B 需 > 15%
+        threshold_b = config["COND6_LOW_DROP_B_SMALL"]
+        threshold_desc = "15% (因 10% < A <= 25%)"
     else:
         # 情况3: A <= 10%，不满足条件6的前提，直接返回False
         if is_tracing: 
@@ -1028,6 +1032,13 @@ def run_processing_logic(log_detail):
             should_skip_drawdown = passed_cond5 or passed_cond6
             
             if apply_common_filters(data, SYMBOL_TO_TRACE, log_detail, drop_large, drop_small, skip_drawdown=should_skip_drawdown):
+                # ========== [修改] 开始：此处新增日期重合检查，修复条件6漏检问题 ==========
+                # 检查最新交易日是否等于财报日
+                # 这一步现在对 条件6 和 条件1-5 同时生效
+                if data['latest_date_str'] == data['latest_er_date_str']:
+                    if symbol == SYMBOL_TO_TRACE:
+                        log_detail(f" - [通用过滤] 失败 (日期重合): 最新交易日({data['latest_date_str']}) 与 最新财报日相同。")
+                    continue # 直接跳过，不放入任何列表
                 # 策略分离逻辑：
                 # 如果通过了条件6（W底），将其放入 oversell_candidates，优先于其他逻辑
                 if passed_cond6:
@@ -1036,6 +1047,7 @@ def run_processing_logic(log_detail):
                     preliminary_results.append(symbol)
 
         # 步骤 C: 应用后置过滤器 (PE 分组)，仅针对非Oversell的股票
+        # 注意：虽然 apply_post_filters 内部也有日期检查，但因为上面已经拦截了，那里将不会再触发，不影响逻辑。
         pe_valid, pe_invalid = apply_post_filters(preliminary_results, stock_data_cache, SYMBOL_TO_TRACE, log_detail)
 
         # 步骤 D: 基于Tag的过滤 (对三个组都执行)

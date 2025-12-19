@@ -162,8 +162,16 @@
         "CHWY": "",
         "CRWD": ""
     },
-    "OverSell": {},
-    "OverSell_backup": {},
+    "OverSell": {
+        "IONQ": "",
+        "MELI": "",
+        "URI": ""
+    },
+    "OverSell_backup": {
+        "IONQ": "",
+        "MELI": "",
+        "URI": ""
+    },
     "PE_valid": {
         "AMZN": "AMZN7热",
         "ANET": "ANET15热",
@@ -184,7 +192,6 @@
         "IDXX": "",
         "INTC": "",
         "KMB": "",
-        "MELI": "",
         "MP": "",
         "MPC": "",
         "MSFT": "MSFT7",
@@ -200,7 +207,6 @@
         "TSM": "TSM热",
         "TT": "TT7热",
         "UBER": "",
-        "URI": "",
         "VLO": ""
     },
     "PE_valid_backup": {
@@ -223,7 +229,6 @@
         "IDXX": "",
         "INTC": "",
         "KMB": "",
-        "MELI": "",
         "MP": "",
         "MPC": "",
         "MSFT": "MSFT7",
@@ -239,14 +244,12 @@
         "TSM": "TSM热",
         "TT": "TT7热",
         "UBER": "",
-        "URI": "",
         "VLO": ""
     },
     "PE_invalid": {
         "ALNY": "",
         "GH": "",
         "INSM": "",
-        "IONQ": "",
         "OKLO": "OKLO15热",
         "OPEN": "",
         "RBLX": "",
@@ -259,7 +262,6 @@
         "ALNY": "",
         "GH": "",
         "INSM": "",
-        "IONQ": "",
         "OKLO": "OKLO15热",
         "OPEN": "",
         "RBLX": "",
