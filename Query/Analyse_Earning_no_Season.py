@@ -91,6 +91,16 @@ CONFIG = {
     # ========== 新增：条件5的参数 ==========
     "COND5_ER_TO_HIGH_THRESHOLD": 0.3,  # 财报日到最高价的涨幅阈值 30%
     "COND5_HIGH_TO_LATEST_THRESHOLD": 0.079,  # 最高价到最新价的跌幅阈值 7.9%
+
+    # ========== 代码修改开始 1/4：新增条件6（抄底W底）参数 ==========
+    "COND6_ER_DROP_A_THRESHOLD": 0.25,      # 财报跌幅分界线 25%
+    "COND6_LOW_DROP_B_LARGE": 0.09,         # 如果A > 25%，则B需 > 9%
+    "COND6_LOW_DROP_B_SMALL": 0.15,         # 如果A <= 25%，则B需 > 15%
+    
+    # W底形态参数
+    "COND6_W_BOTTOM_PRICE_TOLERANCE": 0.05, # 两个谷底的价格差容忍度 (5%)
+    "COND6_W_BOTTOM_MIN_DAYS_GAP": 5,       # 两个谷底之间的最小间隔天数
+    # ========== 代码修改结束 1/4 ==========
 }
 
 # --- 3. 辅助与文件操作模块 ---
@@ -286,6 +296,20 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
         if is_tracing: 
             log_detail(f"[{symbol}] 步骤3.5: 为条件5获取财报窗口期(6天)最低价。价格: {er_6_day_prices}, 最低价: {data['er_6_day_window_low']}")
         # ========== 代码修改结束 2/3 ==========
+
+        # ========== 代码修改开始 2/4：获取条件6所需的完整价格序列 ==========
+        # 原有的逻辑获取了 prev_10_prices 和 er_6_day_window_low，但为了算W底，我们需要
+        # 从最新财报日(含)到最新交易日(含)的所有收盘价
+        cursor.execute(f'SELECT date, price FROM "{sector_name}" WHERE name = ? AND date >= ? ORDER BY date ASC', (symbol, data['latest_er_date_str']))
+        since_er_rows = cursor.fetchall()
+        
+        # 存储序列，用于条件6的形态分析
+        data['prices_since_er_series'] = [r[1] for r in since_er_rows if r[1] is not None]
+        data['dates_since_er_series'] = [r[0] for r in since_er_rows if r[0] is not None]
+        
+        if is_tracing:
+            log_detail(f"[{symbol}] 步骤3.6: 获取财报日至今的价格序列，共 {len(data['prices_since_er_series'])} 天。")
+        # ========== 代码修改结束 2/4 ==========
 
         data['pe_ratio'], data['marketcap'] = None, None
         if marketcap_exists:
@@ -555,15 +579,104 @@ def check_new_condition_5(data, config, log_detail, symbol_to_trace):
         
     return passed
 
+# ========== 代码修改开始 3/4：新增 check_new_condition_6 函数 ==========
+def check_new_condition_6(data, config, log_detail, symbol_to_trace):
+    symbol = data.get('symbol')
+    is_tracing = (symbol == symbol_to_trace)
+    if is_tracing: log_detail(f"\n--- [{symbol}] 新增条件6评估 (抄底W底策略) ---")
+
+    # 1. 数据准备
+    all_er_prices = data.get('all_er_prices', [])
+    prices_series = data.get('prices_since_er_series', [])
+    
+    if len(all_er_prices) < 2:
+        if is_tracing: log_detail("  - 结果: False (财报历史数据不足2次)")
+        return False
+    if not prices_series or len(prices_series) < config["COND6_W_BOTTOM_MIN_DAYS_GAP"] + 2:
+        if is_tracing: log_detail(f"  - 结果: False (财报后交易天数太少: {len(prices_series)}天，不足以形成W底)")
+        return False
+
+    latest_er_price = all_er_prices[-1]
+    prev_er_price = all_er_prices[-2]
+    
+    if prev_er_price <= 0: return False
+
+    # 2. 规则(1): 最新财报比前一次财报低 A%
+    # 计算跌幅 (注意：这里是跌幅，所以用 (前-后)/前)
+    er_drop_pct = (prev_er_price - latest_er_price) / prev_er_price
+    threshold_a = config["COND6_ER_DROP_A_THRESHOLD"] # 0.25
+    
+    cond_a = er_drop_pct > 0 # 首先必须是跌的
+    
+    # 3. 规则(2): 区间最低点比最新财报价低 B%
+    # 动态决定 B 的阈值
+    threshold_b = config["COND6_LOW_DROP_B_LARGE"] if er_drop_pct > threshold_a else config["COND6_LOW_DROP_B_SMALL"]
+    
+    # 寻找区间最低价 (Global Low)
+    global_min_price = min(prices_series)
+    # 计算最低点相对于最新财报价的跌幅
+    post_er_drop_pct = (latest_er_price - global_min_price) / latest_er_price
+    
+    cond_b = post_er_drop_pct > threshold_b
+
+    if is_tracing:
+        log_detail(f"  - 上次财报价: {prev_er_price:.2f}, 本次财报价: {latest_er_price:.2f}")
+        log_detail(f"  - 财报间跌幅: {er_drop_pct:.2%} (阈值A: {threshold_a:.0%})")
+        log_detail(f"  - 动态阈值B: {threshold_b:.0%}")
+        log_detail(f"  - 区间最低价: {global_min_price:.2f}, 相对本次财报跌幅: {post_er_drop_pct:.2%}")
+        log_detail(f"  - 条件(1)&(2)初步判断: {cond_a and cond_b}")
+
+    if not (cond_a and cond_b):
+        return False
+
+    # 4. 规则(3): W底 (双谷底) 形态检测
+    # 算法：
+    # a. 找到全局最低点的索引
+    # b. 在该索引的左侧或右侧寻找是否存在另一个点，满足：
+    #    i. 价格在 global_min * (1 + tolerance) 以内
+    #    ii. 索引距离 >= min_days_gap
+    
+    min_idx = prices_series.index(global_min_price)
+    tolerance = config["COND6_W_BOTTOM_PRICE_TOLERANCE"]
+    min_days = config["COND6_W_BOTTOM_MIN_DAYS_GAP"]
+    
+    upper_bound_price = global_min_price * (1 + tolerance)
+    found_double_bottom = False
+    second_low_price = None
+    second_low_idx = -1
+
+    # 遍历整个序列寻找第二个底
+    for idx, p in enumerate(prices_series):
+        # 跳过全局最低点附近的点 (时间间隔要求)
+        if abs(idx - min_idx) < min_days:
+            continue
+        
+        # 检查价格是否足够低 (在容忍度范围内)
+        if p <= upper_bound_price:
+            found_double_bottom = True
+            second_low_price = p
+            second_low_idx = idx
+            break # 只要找到一个符合的即可
+
+    if is_tracing:
+        log_detail(f"  - [W底检测] 全局最低点索引: {min_idx}, 价格: {global_min_price:.2f}")
+        log_detail(f"  - [W底检测] 寻找第二低点要求: 价格 <= {upper_bound_price:.2f}, 距离 >= {min_days}天")
+        if found_double_bottom:
+            log_detail(f"  - [W底检测] 成功! 找到第二低点: 索引 {second_low_idx}, 价格 {second_low_price:.2f}")
+        else:
+            log_detail(f"  - [W底检测] 失败。未找到符合条件的第二低点。")
+
+    return found_double_bottom
+# ========== 代码修改结束 3/4 ==========
+
 # ========== 代码修改点 1/3: 重构 evaluate_stock_conditions 函数 ==========
 # 1. 重命名为 check_entry_conditions，使其只负责检查入口条件
 # 2. 修改返回值为元组 (passed_any, passed_cond5)，以便后续逻辑判断
 # 3. 移除所有通用过滤逻辑（价格回撤、10日最低价、成交额）
 def check_entry_conditions(data, symbol_to_trace, log_detail):
     """
-    此函数现在只检查入口条件 (条件1 OR 条件2 OR 条件3 OR 条件4 OR 条件5)。
-    返回:
-        (bool, bool): 一个元组 (passed_any_condition, passed_condition_5)
+    此函数现在只检查入口条件 (条件1 OR 条件2 OR 条件3 OR 条件4)。
+    返回: (passed_any, passed_cond5, passed_cond6)
     """
     symbol = data.get('symbol')
     is_tracing = (symbol == symbol_to_trace)
@@ -574,7 +687,7 @@ def check_entry_conditions(data, symbol_to_trace, log_detail):
     er_pcts = data.get('all_er_pcts', [])
     if not er_pcts or len(data.get('all_er_prices', [])) < CONFIG["RECENT_EARNINGS_COUNT"]:
         if is_tracing: log_detail("  - 预检失败: 缺少财报数据，无法评估入口条件。")
-        return (False, False)
+        return (False, False, False) # 修改返回值格式
         
     # --- 评估各个入口条件 ---
 
@@ -605,9 +718,12 @@ def check_entry_conditions(data, symbol_to_trace, log_detail):
     passed_new_cond3 = check_new_condition_3(data, CONFIG, log_detail, symbol_to_trace)
     passed_new_cond4 = check_new_condition_4(data, CONFIG, log_detail, symbol_to_trace)
     passed_new_cond5 = check_new_condition_5(data, CONFIG, log_detail, symbol_to_trace)
+    
+    # 新增：条件6
+    passed_new_cond6 = check_new_condition_6(data, CONFIG, log_detail, symbol_to_trace)
 
-    # --- 汇总结果 ---
-    passed_any = passed_original_cond1 or passed_new_cond2 or passed_new_cond3 or passed_new_cond4 or passed_new_cond5
+    # 汇总
+    passed_any = passed_original_cond1 or passed_new_cond2 or passed_new_cond3 or passed_new_cond4 or passed_new_cond5 or passed_new_cond6
     
     if is_tracing:
         if passed_any:
@@ -617,11 +733,12 @@ def check_entry_conditions(data, symbol_to_trace, log_detail):
             if passed_new_cond3: reasons.append("条件3")
             if passed_new_cond4: reasons.append("条件4")
             if passed_new_cond5: reasons.append("条件5")
+            if passed_new_cond6: reasons.append("条件6(W底)")
             log_detail(f"\n--- [{symbol}] 入口条件通过 (原因: {'、'.join(reasons)})。")
         else:
-            log_detail(f"\n--- [{symbol}] 入口条件失败。五个入口条件均未满足。")
+            log_detail(f"\n--- [{symbol}] 入口条件失败。六个入口条件均未满足。")
 
-    return (passed_any, passed_new_cond5)
+    return (passed_any, passed_new_cond5, passed_new_cond6)
 
 # ========== 代码修改点 2/3: 新增 apply_common_filters 函数 ==========
 # 这个函数包含了从原 evaluate_stock_conditions 中移出的通用过滤逻辑
@@ -792,15 +909,20 @@ def run_processing_logic(log_detail):
             data['symbol'] = symbol
             
             # 步骤A: 检查入口条件
-            passed_any, passed_cond5 = check_entry_conditions(data, SYMBOL_TO_TRACE, log_detail)
+            # 获取三个返回值
+            passed_any, passed_cond5, passed_cond6 = check_entry_conditions(data, SYMBOL_TO_TRACE, log_detail)
             
             # 如果任何入口条件都没通过，则跳过
             if not passed_any:
                 continue
                 
-            # 步骤B: 应用通用过滤器。
-            # 关键逻辑：如果通过了条件5，则将 skip_drawdown 设为 True
-            if apply_common_filters(data, SYMBOL_TO_TRACE, log_detail, drop_large, drop_small, skip_drawdown=passed_cond5):
+            # 步骤B: 应用通用过滤器
+            # 如果通过了条件5 OR 条件6，则跳过价格回撤检查 (skip_drawdown=True)
+            # 条件5是因为它有自己的高点逻辑
+            # 条件6是因为它是抄底逻辑，不需要检查"距离最高点跌幅"
+            should_skip_drawdown = passed_cond5 or passed_cond6
+            
+            if apply_common_filters(data, SYMBOL_TO_TRACE, log_detail, drop_large, drop_small, skip_drawdown=should_skip_drawdown):
                 preliminary_results.append(symbol)
 
         # 步骤 C: 应用后置过滤器 (PE 分组)
@@ -812,6 +934,7 @@ def run_processing_logic(log_detail):
         final_pe_invalid = [s for s in pe_invalid if not set(symbol_to_tags_map.get(s, [])).intersection(tag_blacklist)]
 
         return final_pe_valid, final_pe_invalid
+    # ========== 代码修改结束 4/4 ==========
 
     strict_symbols, relaxed_symbols, sub_relaxed_symbols, super_relaxed_symbols = [], [], [], []
     initial_candidates = list(stock_data_cache.keys())

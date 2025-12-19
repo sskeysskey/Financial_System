@@ -131,7 +131,7 @@ def get_symbol_info(symbol):
 def get_price_peak_date(cursor, symbol, sector):
     """
     检查最近一个月内的最高价是否出现在最新交易日的前一个交易日。
-    此版本通过数据库查询来确定前一个交易日，以正确处理周末和节假日。
+    (单峰判断逻辑)
     """
     try:
         # 1. 获取最新交易日
@@ -144,21 +144,14 @@ def get_price_peak_date(cursor, symbol, sector):
         """, (symbol,))
         latest_result = cursor.fetchone()
     except Exception as e:
-        logger.error(f'[{symbol}] get_price_peak_date: failed to query latest from table {sector}: {e}')
-        logger.debug(traceback.format_exc())
+        logger.error(f'[{symbol}] get_price_peak_date: failed to query latest: {e}')
         return False
 
     if not latest_result:
-        logger.warning(f'[{symbol}] get_price_peak_date: no latest record found in {sector}')
         return False
 
     latest_date_str, latest_price = latest_result[0], latest_result[1]
-    try:
-        latest_date = datetime.strptime(latest_date_str, '%Y-%m-%d')
-    except Exception as e:
-        logger.error(f'[{symbol}] get_price_peak_date: invalid latest date "{latest_date_str}": {e}')
-        return False
-
+    
     # 2. 查询上一个实际的交易日，而不是通过日期计算
     try:
         cursor.execute(f"""
@@ -170,19 +163,17 @@ def get_price_peak_date(cursor, symbol, sector):
         """, (symbol, latest_date_str))
         previous_trading_day_result = cursor.fetchone()
     except Exception as e:
-        logger.error(f'[{symbol}] get_price_peak_date: failed to query previous trading day from table {sector}: {e}')
-        logger.debug(traceback.format_exc())
         return False
 
     if not previous_trading_day_result:
-        logger.warning(f'[{symbol}] get_price_peak_date: no trading day found before {latest_date_str}')
         return False
     
     previous_trading_day_str = previous_trading_day_result[0]
 
     # 3. 获取最近一个月的价格窗口，找到期间的最高价及其日期
-    one_month_ago = latest_date - timedelta(days=30)
     try:
+        latest_date = datetime.strptime(latest_date_str, '%Y-%m-%d')
+        one_month_ago = latest_date - timedelta(days=30)
         cursor.execute(f"""
             SELECT date, price 
             FROM {sector}
@@ -193,27 +184,108 @@ def get_price_peak_date(cursor, symbol, sector):
         """, (symbol, one_month_ago.strftime('%Y-%m-%d'), latest_date.strftime('%Y-%m-%d')))
         prices = cursor.fetchall()
     except Exception as e:
-        logger.error(f'[{symbol}] get_price_peak_date: failed to query 1M window from {sector}: {e}')
-        logger.debug(traceback.format_exc())
         return False
 
     if not prices:
-        logger.warning(f'[{symbol}] get_price_peak_date: no price rows in last 30d window')
         return False
 
-    peak_date_str, peak_price = prices[0][0], prices[0][1]
+    peak_date_str = prices[0][0]
+    return peak_date_str == previous_trading_day_str
 
-    # 4. 比较峰值日期是否等于我们查询到的上一个交易日
-    ok = peak_date_str == previous_trading_day_str
+# 【新增功能】检查是否为 M 形态（双峰）
+def check_double_top(cursor, symbol, sector):
+    """
+    检查是否【刚刚】形成了双峰（M形态）。
+    时效性约束：第二个高峰必须出现在【上一个交易日】。
+    如果今天是12.12，只有当12.11是高峰时才触发。如果是12.13，则不再触发。
+    """
+    try:
+        # 1. 获取过去60个交易日的数据 (按日期倒序取，然后反转为正序)
+        cursor.execute(f"""
+            SELECT date, price 
+            FROM {sector}
+            WHERE name = ? 
+            ORDER BY date DESC 
+            LIMIT 60
+        """, (symbol,))
+        rows = cursor.fetchall()
+        
+        # 数据太少无法判断
+        if len(rows) < 10: 
+            return False
+            
+        # 转为正序：index 0 是最旧的，index -1 是最新的（今天），index -2 是上一个交易日
+        rows = rows[::-1]
+        prices = [float(r[1]) for r in rows]
+        dates = [r[0] for r in rows]
 
-    # 5. 更新日志，使其反映新的逻辑
-    logger.info(
-        f'[{symbol}] Peak check: latest_date={latest_date_str}, latest_price={latest_price}; '
-        f'window>={one_month_ago.strftime("%Y-%m-%d")} <= {latest_date_str}; '
-        f'peak_date={peak_date_str}, peak_price={peak_price}; '
-        f'expected_peak_date (previous trading day)={previous_trading_day_str}; result={ok}'
-    )
-    return ok
+        # -------------------------------------------------------------------------
+        # 【核心修改】锁定右峰 (Peak 2) 必须是 "昨天" (index -2)
+        # -------------------------------------------------------------------------
+        curr_price = prices[-1]      # 今天 (12.12)
+        prev_price = prices[-2]      # 昨天 (12.11) - 候选 Peak 2
+        prev2_price = prices[-3]     # 前天 (12.10)
+
+        # 判定 A: 昨天必须是局部高点 (比前天高，且比今天高)
+        # 如果今天还在涨 (curr > prev)，说明高点还没确定，不是M头右侧，排除
+        if not (prev_price > prev2_price and prev_price > curr_price):
+            return False
+
+        # 此时，我们锁定了 p2 就是 prices[-2]
+        idx2 = len(prices) - 2
+        p2 = prev_price
+        
+        # -------------------------------------------------------------------------
+        # 寻找左峰 (Peak 1)
+        # -------------------------------------------------------------------------
+        # 我们从昨天往前找，至少隔 3 天 (根据之前的优化)，搜索范围直到开头
+        # range参数: start=idx2-3, stop=0, step=-1
+        
+        found_pattern = False
+        
+        for i in range(idx2 - 3, 0, -1):
+            p1 = prices[i]
+            idx1 = i
+            
+            # 1. 判断 p1 是否是局部高点 (比左右都高)
+            if not (p1 > prices[i-1] and p1 > prices[i+1]):
+                continue
+
+            # 2. 判断高度差 (Peak 1 和 Peak 2 差距不能太大)
+            # ABVX 案例: 128.23 vs 133.09，差距约 3.7%。
+            # 这里的阈值设为 5% (0.05) 以兼容 ABVX
+            diff_pct = abs(p1 - p2) / max(p1, p2)
+            if diff_pct > 0.05:
+                continue
+                
+            # 3. 判断中间是否有低谷 (颈线)
+            # 获取两个峰值中间的数据
+            valley_prices = prices[idx1+1 : idx2]
+            if not valley_prices: continue
+            
+            min_valley = min(valley_prices)
+            avg_peak = (p1 + p2) / 2
+            
+            # 4. 颈线深度判定
+            # ABVX 案例: Valley 110.64, Peaks ~130. 跌幅很大。
+            # 只要跌破峰值均值的 2.5% (0.975) 就算有效回调
+            if min_valley > avg_peak * 0.975:
+                continue
+            
+            # 如果所有条件满足，说明找到了对应的左峰
+            # 且因为 p2 被强制锁定为 "昨天"，所以这一定是【刚刚】形成的形态
+            logger.info(f"[{symbol}] Immediate Double Top Detected: "
+                        f"Peak1@{p1:.2f}({dates[idx1]}), "
+                        f"Peak2@{p2:.2f}({dates[idx2]} - Yesterday), "
+                        f"Valley@{min_valley:.2f}")
+            found_pattern = True
+            break # 找到最近的一个匹配即可
+            
+        return found_pattern
+        
+    except Exception as e:
+        logger.error(f'[{symbol}] check_double_top error: {e}')
+        return False
 
 _percent_pattern = re.compile(r'([-+]?\d+(?:\.\d+)?)%')
 
@@ -226,9 +298,7 @@ def parse_compare_percent(compare_str: str, symbol: str):
         logger.info(f'[{symbol}] Compare parse: no percent found in "{compare_str}"')
         return None
     try:
-        val = float(m.group(1))
-        logger.info(f'[{symbol}] Compare parse: "{compare_str}" -> {val}%')
-        return val
+        return float(m.group(1))
     except ValueError:
         logger.info(f'[{symbol}] Compare parse: failed to parse "{compare_str}"')
         return None
@@ -257,14 +327,14 @@ sector_outputs = defaultdict(list)
 
 symbols = list(price_data.keys())
 logger.info(f'Start processing {len(symbols)} symbols')
+
 for symbol in symbols:
     try:
         symbol_info = get_symbol_info(symbol)
         sector = get_symbol_sector(symbol)
         tags_str = ", ".join(symbol_info['tags']) if symbol_info['tags'] else "无标签"
-        logger.info(f'[{symbol}] Start: sector="{sector}", tags="{tags_str}", blacklist={symbol_info["has_blacklist"]}')
-
-        # 【修改点 2】白名单/黑名单 逻辑控制
+        
+        # 白名单/黑名单 逻辑
         if len(WHITELIST_TAGS) > 0:
             # 如果白名单有内容，只检查白名单 (忽略黑名单)
             has_whitelist_tag = any(tag in WHITELIST_TAGS for tag in symbol_info['tags'])
@@ -287,11 +357,7 @@ for symbol in symbols:
         """, (symbol,))
         earning_price_row = cursor.fetchone()
         if earning_price_row is None or earning_price_row[0] is None:
-            logger.info(f'[{symbol}] Skip: no latest Earning record')
             continue
-
-        earning_last_change = float(earning_price_row[0])
-        logger.info(f'[{symbol}] Latest Earning change record price={earning_last_change}')
 
         # 计算财报日至最新收盘价变化百分比
         price_change = None
@@ -371,31 +437,31 @@ for symbol in symbols:
         # -----------------------------------------------------------------------------
         # 【修改点 5】 分组逻辑重构：Short vs Short_Shift
         # -----------------------------------------------------------------------------
-        # 条件 A: Compare < 0
-        condition_a = (cmp_pct is not None and cmp_pct < 0)
+        
+        # 1. 检查 M 形态 (双峰) -> 对应 Short_Shift
+        is_double_top = check_double_top(cursor, symbol, sector)
+        
+        # 2. 检查 单日新高转折 -> 对应 Short
+        is_single_peak = get_price_peak_date(cursor, symbol, sector)
 
-        # 条件 B: Peak 在最新交易日前一天
-        condition_b = get_price_peak_date(cursor, symbol, sector)
-
-        if condition_b:
-            # 只要满足条件 B (昨日新高)，就一定会进入某个 Short 组
-            if condition_a:
-                # A + B -> Short_Shift
-                if symbol not in short_shift_group:
-                    short_shift_group[symbol] = ""
-                    logger.info(f'[{symbol}] Added to Short_Shift group (Peak + Neg Compare)')
-                else:
-                    logger.info(f'[{symbol}] Already in Short_Shift group')
+        # 优先判断 M 形态
+        if is_double_top:
+            if symbol not in short_shift_group:
+                short_shift_group[symbol] = ""
+                logger.info(f'[{symbol}] Added to Short_Shift group (M-Pattern Detected)')
             else:
-                # 仅 B (不满足 A) -> Short
-                if symbol not in short_group:
-                    short_group[symbol] = ""
-                    logger.info(f'[{symbol}] Added to Short group (Peak only)')
-                else:
-                    logger.info(f'[{symbol}] Already in Short group')
+                logger.info(f'[{symbol}] Already in Short_Shift group')
+        
+        # 如果不是 M 形态，再看是否是单日新高 (Fallback)
+        elif is_single_peak:
+            if symbol not in short_group:
+                short_group[symbol] = ""
+                logger.info(f'[{symbol}] Added to Short group (Single Peak only)')
+            else:
+                logger.info(f'[{symbol}] Already in Short group')
+        
         else:
-            # 不满足条件 B，不进行 Short 分组
-            logger.info(f'[{symbol}] Not added to Short/Short_Shift: peak check failed')
+            logger.info(f'[{symbol}] Not added to Short/Short_Shift')
 
     except Exception as e:
         logger.error(f'[{symbol}] Unexpected error: {e}')

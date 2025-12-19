@@ -1064,6 +1064,7 @@ class MainWindow(QMainWindow):
 
         menu.addSeparator()
         menu.addAction("清空 Short_Shift 分组", lambda: self.clear_group("Short_Shift"))
+        menu.addAction("清空 Short 分组", lambda: self.clear_group("Short"))
         menu.addAction("清空 Strategy12_backup 分组", lambda: self.clear_group("Strategy12_backup"))
         menu.addAction("清空 Strategy34_backup 分组", lambda: self.clear_group("Strategy34_backup"))
         menu.addAction("清空 PE_valid_backup 分组", lambda: self.clear_group("PE_valid_backup"))
