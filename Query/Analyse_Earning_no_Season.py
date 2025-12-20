@@ -82,8 +82,8 @@ CONFIG = {
     "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.05,  # ≥2000亿=5%
 
     # 触发“最宽松”标准的财报收盘价价差百分比 (条件C)
-    # "ER_PRICE_DIFF_THRESHOLD": 0.40,
-    "ER_PRICE_DIFF_THRESHOLD": 0.60,
+    # "ER_PRICE_DIFF_THRESHOLD": 0.04,
+    "ER_PRICE_DIFF_THRESHOLD": 0.06,
 
     # 触发宽松筛选的最小分组数量 (仅对 PE_valid 组生效)
     "MIN_PE_VALID_SIZE_FOR_RELAXED_FILTER": 5,
@@ -634,6 +634,97 @@ def check_new_condition_5(data, config, log_detail, symbol_to_trace):
         
     return passed
 
+# ==============================================================================
+# 提取的独立通用函数：W底（双底）形态检测算法
+# ==============================================================================
+def check_w_bottom_pattern(data, config, log_detail, symbol_to_trace, check_strict_er_drop=True):
+    """
+    check_strict_er_drop: 
+       - True (用于条件6): 必须满足财报间大幅下跌(Drop A)的前提。
+       - False (用于条件1-5): 忽略财报间的下跌前提，仅检测W底几何形态和深度(Drop B)。
+    """
+    symbol = data.get('symbol')
+    is_tracing = (symbol == symbol_to_trace)
+    
+    # 1. 数据准备
+    all_er_prices = data.get('all_er_prices', [])
+    prices_series = data.get('prices_since_er_series', [])
+    dates_series = data.get('dates_since_er_series', [])
+
+    if len(all_er_prices) < 2: return False
+    if not prices_series or len(prices_series) < 10: return False
+
+    # --- 步骤 1: 计算条件A (财报间跌幅) 并确定 条件B 的阈值 ---
+    latest_er_price = all_er_prices[-1]
+    prev_er_price = all_er_prices[-2]
+    
+    if prev_er_price <= 0: return False
+
+    er_drop_a_val = (prev_er_price - latest_er_price) / prev_er_price
+    threshold_a = config["COND6_ER_DROP_A_THRESHOLD"] # 0.25
+    
+    # 动态设定 条件B 的阈值
+    if er_drop_a_val > threshold_a:
+        threshold_b = config["COND6_LOW_DROP_B_LARGE"] # > 9%
+    elif er_drop_a_val > 0.10:
+        threshold_b = config["COND6_LOW_DROP_B_SMALL"] # > 12%
+    else:
+        # 如果财报间跌幅 <= 10%
+        if check_strict_er_drop:
+            # 条件6严格模式：直接失败
+            if is_tracing: 
+                log_detail(f"   - [W底检测-严格] 失败: 财报间跌幅 {er_drop_a_val:.2%} <= 10%，不满足抄底前提")
+            return False
+        else:
+            # 条件1-5宽松模式：虽然没有深跌，但依然检查形态，强制使用较严格的 B 阈值(12%)作为基准
+            threshold_b = config["COND6_LOW_DROP_B_SMALL"] 
+
+    # --- 步骤 2: 寻找 W 底形态 ---
+    curr_price = prices_series[-1] # 今天
+    prev_price = prices_series[-2] # 昨天 (右底 V2)
+    prev2_price = prices_series[-3] # 前天
+
+    # 锁定右底 (Valley 2) 必须是昨天
+    if not (prev_price < prev2_price and prev_price < curr_price):
+        return False
+
+    v2 = prev_price
+    idx2 = len(prices_series) - 2
+    price_tolerance = config["COND6_W_BOTTOM_PRICE_TOLERANCE"]
+
+    # 向前回溯寻找左底 (V1)
+    for i in range(idx2 - 3, 0, -1):
+        v1 = prices_series[i]
+        
+        # [几何形态检查 1] 局部低点
+        if not (v1 < prices_series[i-1] and v1 < prices_series[i+1]):
+            continue
+
+        # [几何形态检查 2] 高度差检查
+        diff_pct = abs(v1 - v2) / min(v1, v2)
+        if diff_pct > price_tolerance: 
+            continue
+
+        # [几何形态检查 3] 颈线反弹力度
+        peak_prices = prices_series[i+1 : idx2]
+        if not peak_prices: continue
+        max_peak = max(peak_prices)
+        avg_valley = (v1 + v2) / 2
+        peak_rise = (max_peak - avg_valley) / avg_valley
+        if peak_rise < 0.025: 
+            continue
+
+        # --- 步骤 3: 深度验证 (条件B) ---
+        valley_min_price = min(v1, v2)
+        drop_b_val = (latest_er_price - valley_min_price) / latest_er_price
+
+        if drop_b_val > threshold_b:
+            if is_tracing:
+                log_detail(f"   - [W底检测] 成功! V1:{v1:.2f}, V2:{v2:.2f}, 深度B:{drop_b_val:.2%} (要求 > {threshold_b:.0%})")
+            return True
+    
+    return False
+
 def check_new_condition_6(data, config, log_detail, symbol_to_trace):
     # 锁定了昨天（index -2）必须是第二个峰值，且今天（index -1）必须下跌或企稳。
     # 严格遵循用户规则：条件B的最低价必须取自双谷中的最低点。
@@ -641,128 +732,13 @@ def check_new_condition_6(data, config, log_detail, symbol_to_trace):
     
     symbol = data.get('symbol')
     is_tracing = (symbol == symbol_to_trace)
-    if is_tracing: log_detail(f"\n--- [{symbol}] 新增条件6评估 (抄底W底策略 - 严格反转版) ---")
-
-    # 1. 数据准备
-    all_er_prices = data.get('all_er_prices', [])
-    # prices_series 包含从财报日到今天的序列
-    prices_series = data.get('prices_since_er_series', [])
-    dates_series = data.get('dates_since_er_series', [])
+    if is_tracing: log_detail(f"\n--- [{symbol}] 新增条件6评估 (W底 - 抄底模式) ---")
     
-    if len(all_er_prices) < 2:
-        if is_tracing: log_detail(" - 结果: False (财报历史数据不足2次)")
-        return False
+    # 抄底模式：必须检查财报跌幅前提 (check_strict_er_drop=True)
+    passed = check_w_bottom_pattern(data, config, log_detail, symbol_to_trace, check_strict_er_drop=True)
     
-    if not prices_series or len(prices_series) < 10:
-        if is_tracing: log_detail(f" - 结果: False (数据不足: {len(prices_series)}天)")
-        return False
-
-    # --- 步骤 1: 计算条件A (财报间跌幅) 并确定 条件B 的阈值 ---
-
-    latest_er_price = all_er_prices[-1]
-    prev_er_price = all_er_prices[-2]
-    if prev_er_price <= 0: return False
-
-    # 条件A: 最新财报收盘价 vs 上次财报收盘价 的跌幅
-    er_drop_a_val = (prev_er_price - latest_er_price) / prev_er_price
-
-    # 确定条件B的阈值
-    threshold_a = config["COND6_ER_DROP_A_THRESHOLD"] # 0.25
-    if er_drop_a_val > threshold_a:
-        # 情况1: A > 25%，则 B 需 > 9%
-        threshold_b = config["COND6_LOW_DROP_B_LARGE"] 
-        threshold_desc = "9% (因 A > 25%)"
-    elif er_drop_a_val > 0.10:
-        # 情况2: 10% < A <= 25%，则 B 需 > 15%
-        threshold_b = config["COND6_LOW_DROP_B_SMALL"]
-        threshold_desc = "15% (因 10% < A <= 25%)"
-    else:
-        # 情况3: A <= 10%，不满足条件6的前提，直接返回False
-        if is_tracing: 
-            log_detail(f" - [条件A失败] 财报间跌幅 {er_drop_a_val:.2%} <= 10%，不满足抄底前提")
-        return False
-
-    if is_tracing:
-        log_detail(f" - [条件A检查] 财报间跌幅: {er_drop_a_val:.2%} (阈值线 25%)")
-        log_detail(f" - [条件B阈值] 根据条件A，条件B要求跌幅需 > {threshold_desc}")
-
-    # --- 步骤 2: 寻找 W 底形态 ---
-    
-    curr_price = prices_series[-1] # 今天
-    prev_price = prices_series[-2] # 昨天 (潜在的右底 V2)
-    prev2_price = prices_series[-3] # 前天
-
-    # 1. 锁定右底 (Valley 2) 必须是昨天
-    # 昨天必须比前天低，且昨天必须比今天低 (即今天反弹了)
-    if not (prev_price < prev2_price and prev_price < curr_price):
-        if is_tracing: log_detail(f" - [形态失败] 未形成拐点: 前天{prev2_price} -> 昨天{prev_price} -> 今天{curr_price}")
-        return False
-    
-    v2 = prev_price
-    idx2 = len(prices_series) - 2
-    
-    # 获取价格容忍度参数
-    price_tolerance = CONFIG["COND6_W_BOTTOM_PRICE_TOLERANCE"]
-
-    # 2. 寻找左底 (Valley 1)
-    found_pattern = False
-    
-    # 向前回溯寻找左底
-    for i in range(idx2 - 3, 0, -1):
-        v1 = prices_series[i]
-        
-        # [几何形态检查 1] 必须是局部低点 (比前后都低)
-        if not (v1 < prices_series[i-1] and v1 < prices_series[i+1]):
-            continue
-            
-        # [几何形态检查 2] 高度差检查 (3.8% 容忍度)
-        diff_pct = abs(v1 - v2) / min(v1, v2)
-        if diff_pct > price_tolerance: 
-            if is_tracing: log_detail(f" - [形态跳过] 找到潜在V1={v1:.2f}，但与V2={v2:.2f} 差幅 {diff_pct:.2%} > 容忍度 {price_tolerance:.1%}")
-            continue
-            
-        # [几何形态检查 3] 颈线高度 (Peak Height) 检查 (2.5% 反弹)
-        peak_prices = prices_series[i+1 : idx2]
-        if not peak_prices: continue
-        max_peak = max(peak_prices)
-        
-        avg_valley = (v1 + v2) / 2
-        peak_rise = (max_peak - avg_valley) / avg_valley
-        
-        if peak_rise < 0.025: 
-            if is_tracing: log_detail(f" - [形态跳过] 找到潜在V1={v1:.2f}，但中间反弹仅 {peak_rise:.2%} (<2.5%)")
-            continue
-            
-        # --- 步骤 3: 在找到合格形态后，应用条件B (用户修正规则) ---
-        # 规则：前面提到的“价格最低点”必须是双谷中最低的那个点
-        valley_min_price = min(v1, v2)
-        
-        # 计算跌幅 B: (最新财报价 - 双底最低价) / 最新财报价
-        drop_b_val = (latest_er_price - valley_min_price) / latest_er_price
-        
-        if drop_b_val > threshold_b:
-            found_pattern = True
-            if is_tracing:
-                log_detail(f" - [W底检测] 成功! 锁定双底形态且满足跌幅条件:")
-                log_detail(f"   左底(V1): {v1:.2f} (日期: {dates_series[i]})")
-                log_detail(f"   右底(V2): {v2:.2f} (日期: {dates_series[idx2]})")
-                log_detail(f"   底差: {diff_pct:.2%} (阈值 {price_tolerance:.1%})")
-                log_detail(f"   双谷最低价: {valley_min_price:.2f}")
-                log_detail(f"   条件B实测跌幅: {drop_b_val:.2%} (要求 > {threshold_b:.0%}) -> 通过")
-                log_detail(f"   形态参数: 底差 {diff_pct:.2%}, 中间反弹 {peak_rise:.2%}")
-            break # 找到最近的一个符合所有条件的即可
-        else:
-            # 形态符合，但跌幅不够深，继续向前找（也许前面有个更深的底能配对？）
-            # 或者直接 fail，取决于你是否认为同一天只能有一个有效的左底。
-            # 这里我们选择继续找，万一前面有个更低的点也构成了W底呢。
-            if is_tracing:
-                log_detail(f" - [形态跳过] 找到几何双底(V1={v1:.2f}, V2={v2:.2f})，但跌幅B {drop_b_val:.2%} 不满足 > {threshold_b:.0%}")
-
-    if not found_pattern:
-        if is_tracing: log_detail(" - 结果: False (未找到同时满足几何形态、价格对称性与跌幅条件的双底)")
-        return False
-
-    return True
+    if is_tracing: log_detail(f" - 结果: {passed}")
+    return passed
 
 # ========== 代码修改点 1/3: 重构 evaluate_stock_conditions 函数 ==========
 # 1. 重命名为 check_entry_conditions，使其只负责检查入口条件
@@ -970,10 +946,11 @@ def apply_post_filters(symbols, stock_data_cache, symbol_to_trace, log_detail):
         
         data = stock_data_cache[symbol]
         
-        if data['latest_date_str'] == data['latest_er_date_str']:
-            if is_tracing: log_detail(f" - 过滤 (日期相同): 最新交易日({data['latest_date_str']}) 与 最新财报日({data['latest_er_date_str']}) 相同。")
-            continue
-        elif is_tracing: log_detail(f" - 通过 (日期不同)。")
+        # 注意：日期检查已在主循环执行，这里不再重复拦截
+        # if data['latest_date_str'] == data['latest_er_date_str']:
+        #     if is_tracing: log_detail(f" - 过滤 (日期相同): 最新交易日({data['latest_date_str']}) 与 最新财报日({data['latest_er_date_str']}) 相同。")
+        #     continue
+        # elif is_tracing: log_detail(f" - 通过 (日期不同)。")
 
         pe = data['pe_ratio']
         is_pe_valid = pe is not None and str(pe).strip().lower() not in ("--", "null", "")
@@ -987,6 +964,9 @@ def apply_post_filters(symbols, stock_data_cache, symbol_to_trace, log_detail):
             
     return pe_valid_symbols, pe_invalid_symbols
 
+
+# --- 6. 主逻辑 ---
+
 def run_processing_logic(log_detail):
     log_detail("程序开始运行...")
     if SYMBOL_TO_TRACE: log_detail(f"当前追踪的 SYMBOL: {SYMBOL_TO_TRACE}")
@@ -995,7 +975,7 @@ def run_processing_logic(log_detail):
     CONFIG["BLACKLIST_TAGS"] = tag_blacklist_from_file
     CONFIG["HOT_TAGS"] = hot_tags_from_file
     CONFIG["SYMBOL_BLACKLIST"] = load_earning_symbol_blacklist(BLACKLIST_JSON_FILE)
-
+    
     all_symbols, symbol_to_sector_map = load_all_symbols(SECTORS_JSON_FILE, CONFIG["TARGET_SECTORS"])
     if all_symbols is None:
         log_detail("错误: 无法加载symbols，程序终止。")
@@ -1004,14 +984,15 @@ def run_processing_logic(log_detail):
     symbol_blacklist = CONFIG.get("SYMBOL_BLACKLIST", set())
     if symbol_blacklist:
         all_symbols = [s for s in all_symbols if s not in symbol_blacklist]
-
+    
     symbol_to_tags_map = load_symbol_tags(DESCRIPTION_JSON_FILE)
     stock_data_cache = build_stock_data_cache(all_symbols, symbol_to_sector_map, DB_FILE, SYMBOL_TO_TRACE, log_detail, symbol_to_tags_map)
     
-    # ========== 代码修改点 1/3：在筛选通过时标记是否为 Condition 6 ==========
+    # ========== 筛选核心逻辑函数：在筛选通过时标记是否为 Condition 6 ==========
     def perform_filter_pass(symbols_to_check, drop_large, drop_small, pass_name):
-        preliminary_results = []
-        oversell_candidates = [] # 用于存储通过条件6的股票
+        preliminary_results = [] # 非W底的普通股
+        oversell_candidates = [] # 条件6触发的股 -> OverSell
+        double_candidates = []   # 条件1-5触发W底的股 -> PE_Double
 
         for symbol in symbols_to_check:
             data = stock_data_cache.get(symbol)
@@ -1041,27 +1022,35 @@ def run_processing_logic(log_detail):
                     if symbol == SYMBOL_TO_TRACE:
                         log_detail(f" - [通用过滤] 失败 (日期重合): 最新交易日({data['latest_date_str']}) 与 最新财报日相同。")
                     continue # 直接跳过，不放入任何列表
-                # 策略分离逻辑：
+                # --- 分流逻辑 ---
                 # 如果通过了条件6（W底），将其放入 oversell_candidates，优先于其他逻辑
                 if passed_cond6:
+                    # 优先级最高：如果满足条件6（OverSell策略），直接进入 OverSell 组
                     oversell_candidates.append(symbol)
                 else:
-                    preliminary_results.append(symbol)
+                    # 如果不满足条件6，说明是 条件1-5 进来的
+                    # 此时检查是否具备 W底形态 (使用宽松模式，忽略财报跌幅前提)
+                    is_w_bottom = check_w_bottom_pattern(data, CONFIG, log_detail, SYMBOL_TO_TRACE, check_strict_er_drop=False)
+                    
+                    if is_w_bottom:
+                        double_candidates.append(symbol) # 进入 PE_Double 组
+                    else:
+                        preliminary_results.append(symbol) # 进入普通 PE_valid/invalid 组
 
-        # 步骤 C: 应用后置过滤器 (PE 分组)，仅针对非Oversell的股票
-        # 注意：虽然 apply_post_filters 内部也有日期检查，但因为上面已经拦截了，那里将不会再触发，不影响逻辑。
+        # 对普通组进行 PE 分组
         pe_valid, pe_invalid = apply_post_filters(preliminary_results, stock_data_cache, SYMBOL_TO_TRACE, log_detail)
 
         # 步骤 D: 基于Tag的过滤 (对三个组都执行)
         tag_blacklist = CONFIG["BLACKLIST_TAGS"]
-        
         final_pe_valid = [s for s in pe_valid if not set(symbol_to_tags_map.get(s, [])).intersection(tag_blacklist)]
         final_pe_invalid = [s for s in pe_invalid if not set(symbol_to_tags_map.get(s, [])).intersection(tag_blacklist)]
         final_oversell = [s for s in oversell_candidates if not set(symbol_to_tags_map.get(s, [])).intersection(tag_blacklist)]
+        final_double = [s for s in double_candidates if not set(symbol_to_tags_map.get(s, [])).intersection(tag_blacklist)]
 
-        return final_pe_valid, final_pe_invalid, final_oversell
-    # ========== 代码修改结束 4/4 ==========
+        # 返回4个列表
+        return final_pe_valid, final_pe_invalid, final_oversell, final_double
 
+    # --- 执行筛选 ---
     strict_symbols, relaxed_symbols, sub_relaxed_symbols, super_relaxed_symbols = [], [], [], []
     initial_candidates = list(stock_data_cache.keys())
 
@@ -1069,18 +1058,17 @@ def run_processing_logic(log_detail):
         data = stock_data_cache.get(symbol)
         if not (data and data['is_valid']): continue
         data['symbol'] = symbol
-        
         filter_mode = check_special_condition(data, CONFIG, log_detail, SYMBOL_TO_TRACE)
         if filter_mode == 3: super_relaxed_symbols.append(symbol)
         elif filter_mode == 2: sub_relaxed_symbols.append(symbol)
         elif filter_mode == 1: relaxed_symbols.append(symbol)
         else: strict_symbols.append(symbol)
 
-    # 修改调用，接收第三个返回值
-    super_relaxed_valid, super_relaxed_invalid, super_relaxed_oversell = perform_filter_pass(super_relaxed_symbols, CONFIG["SUPER_RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["SUPER_RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "第一轮筛选 (最宽松组)")
-    sub_relaxed_valid, sub_relaxed_invalid, sub_relaxed_oversell = perform_filter_pass(sub_relaxed_symbols, CONFIG["SUB_RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["SUB_RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "第一轮筛选 (次宽松组)")
-    relaxed_valid, relaxed_invalid, relaxed_oversell = perform_filter_pass(relaxed_symbols, CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "第一轮筛选 (普通宽松组)")
-    strict_valid, strict_invalid, strict_oversell = perform_filter_pass(strict_symbols, CONFIG["PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["PRICE_DROP_PERCENTAGE_SMALL"], "第一轮筛选 (严格组)")
+    # 接收4个返回值
+    super_relaxed_valid, super_relaxed_invalid, super_relaxed_oversell, super_relaxed_double = perform_filter_pass(super_relaxed_symbols, CONFIG["SUPER_RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["SUPER_RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "第一轮(最宽松)")
+    sub_relaxed_valid, sub_relaxed_invalid, sub_relaxed_oversell, sub_relaxed_double = perform_filter_pass(sub_relaxed_symbols, CONFIG["SUB_RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["SUB_RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "第一轮(次宽松)")
+    relaxed_valid, relaxed_invalid, relaxed_oversell, relaxed_double = perform_filter_pass(relaxed_symbols, CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "第一轮(普通宽松)")
+    strict_valid, strict_invalid, strict_oversell, strict_double = perform_filter_pass(strict_symbols, CONFIG["PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["PRICE_DROP_PERCENTAGE_SMALL"], "第一轮(严格)")
 
     # 汇总各组结果
     pass1_valid = super_relaxed_valid + sub_relaxed_valid + relaxed_valid + strict_valid
@@ -1088,31 +1076,30 @@ def run_processing_logic(log_detail):
     
     # 汇总所有 Oversell 结果
     total_oversell_symbols = super_relaxed_oversell + sub_relaxed_oversell + relaxed_oversell + strict_oversell
+    total_double_symbols = super_relaxed_double + sub_relaxed_double + relaxed_double + strict_double
 
     final_pe_valid_symbols = pass1_valid
     final_pe_invalid_symbols = pass1_invalid
 
+    # 第二轮筛选 (仅针对 PE_valid 补缺)
     min_size_pe_valid = CONFIG["MIN_PE_VALID_SIZE_FOR_RELAXED_FILTER"]
     
     # 第二轮筛选 (仅针对PE_valid数量不足的情况，且只影响 PE_valid)
     if len(pass1_valid) < min_size_pe_valid:
-        rerun_valid, _, rerun_oversell = perform_filter_pass(strict_symbols, CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "第二轮筛选 (常规宽松, for PE_valid)")
-        
-        # 合并第一轮和第二轮的有效结果
-        final_pe_valid_symbols = sorted(list(set(super_relaxed_valid) | set(sub_relaxed_valid) | set(relaxed_valid) | set(rerun_valid)))
-        
-        # 如果第二轮也产出了 Oversell，也加上 (虽然理论上 strict_symbols 已经在第一轮跑过了，但参数不同可能导致结果不同)
+        rerun_valid, _, rerun_oversell, rerun_double = perform_filter_pass(strict_symbols, CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "第二轮(常规宽松补缺)")
+        final_pe_valid_symbols = sorted(list(set(final_pe_valid_symbols) | set(rerun_valid)))
         total_oversell_symbols = sorted(list(set(total_oversell_symbols) | set(rerun_oversell)))
+        total_double_symbols = sorted(list(set(total_double_symbols) | set(rerun_double)))
 
     # 将所有符合资格的 symbol 用于写历史记录
-    all_qualified_symbols = final_pe_valid_symbols + final_pe_invalid_symbols + total_oversell_symbols
+    all_qualified_symbols = final_pe_valid_symbols + final_pe_invalid_symbols + total_oversell_symbols + total_double_symbols
     
     pe_valid_set = set(final_pe_valid_symbols)
     pe_invalid_set = set(final_pe_invalid_symbols)
     oversell_set = set(total_oversell_symbols)
+    double_set = set(total_double_symbols)
 
     blacklist = load_blacklist(BLACKLIST_JSON_FILE)
-    
     try:
         with open(PANEL_JSON_FILE, 'r', encoding='utf-8') as f: panel_data = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError): panel_data = {}
@@ -1124,19 +1111,18 @@ def run_processing_logic(log_detail):
     
     already_in_panels = exist_Strategy34 | exist_Strategy12 | exist_today | exist_must
 
-    # 过滤黑名单和已存在面板的股票
+    # 过滤黑名单和已存在面板的股票，准备写入列表
     final_pe_valid_to_write = sorted(list(pe_valid_set - blacklist - already_in_panels))
     final_pe_invalid_to_write = sorted(list(pe_invalid_set - blacklist - already_in_panels))
     final_oversell_to_write = sorted(list(oversell_set - blacklist - already_in_panels))
+    final_double_to_write = sorted(list(double_set - blacklist - already_in_panels))
 
     if SYMBOL_TO_TRACE:
         # 追踪日志逻辑更新，包含 Oversell
         combined_sets = [
-            (pe_valid_set, "PE_valid"), 
-            (pe_invalid_set, "PE_invalid"), 
-            (oversell_set, "OverSell")
+            (pe_valid_set, "PE_valid"), (pe_invalid_set, "PE_invalid"),
+            (oversell_set, "OverSell"), (double_set, "PE_Double")
         ]
-        
         for s_set, name in combined_sets:
             skipped = s_set & (blacklist | already_in_panels)
             if SYMBOL_TO_TRACE in skipped:
@@ -1144,7 +1130,6 @@ def run_processing_logic(log_detail):
                 log_detail(f"\n追踪信息: 目标 symbol '{SYMBOL_TO_TRACE}' ({name}) 虽然通过了筛选，但最终因 ({reason}) 而被跳过，不会写入 panel 文件。")
 
     hot_tags = set(CONFIG.get("HOT_TAGS", set()))
-
     def build_symbol_note_map(symbols):
         note_map = {}
         for sym in symbols:
@@ -1152,11 +1137,9 @@ def run_processing_logic(log_detail):
             cond3_type = d.get('cond3_drop_type')
             tags = set(symbol_to_tags_map.get(sym, []))
             is_hot = bool(tags & hot_tags)
-            
             base = ""
             if cond3_type == '15': base = f"{sym}15"
             elif cond3_type == '7': base = f"{sym}7"
-            
             if base: note_map[sym] = base + ("热" if is_hot else "")
             else: note_map[sym] = f"{sym}热" if is_hot else ""
         return note_map
@@ -1164,6 +1147,7 @@ def run_processing_logic(log_detail):
     pe_valid_notes = build_symbol_note_map(final_pe_valid_to_write)
     pe_invalid_notes = build_symbol_note_map(final_pe_invalid_to_write)
     oversell_notes = build_symbol_note_map(final_oversell_to_write)
+    double_notes = build_symbol_note_map(final_double_to_write)
 
     # 写入 PE_valid
     update_json_panel(final_pe_valid_to_write, PANEL_JSON_FILE, 'PE_valid', symbol_to_note=pe_valid_notes)
@@ -1174,11 +1158,15 @@ def run_processing_logic(log_detail):
     update_json_panel(final_pe_invalid_to_write, PANEL_JSON_FILE, 'PE_invalid', symbol_to_note=pe_invalid_notes)
     # 同步写入 PE_invalid_backup
     update_json_panel(final_pe_invalid_to_write, PANEL_JSON_FILE, 'PE_invalid_backup', symbol_to_note=pe_invalid_notes)
-
-    # 写入 OverSell (新增)
+    
+    # 写入 OverSell (条件6)
     update_json_panel(final_oversell_to_write, PANEL_JSON_FILE, 'OverSell', symbol_to_note=oversell_notes)
     # 同步写入 OverSell_backup (新增)
     update_json_panel(final_oversell_to_write, PANEL_JSON_FILE, 'OverSell_backup', symbol_to_note=oversell_notes)
+
+    # 写入 PE_Double (条件1-5且形态良好)
+    update_json_panel(final_double_to_write, PANEL_JSON_FILE, 'PE_Double', symbol_to_note=double_notes)
+    update_json_panel(final_double_to_write, PANEL_JSON_FILE, 'PE_Double_backup', symbol_to_note=double_notes)
 
     os.makedirs(os.path.dirname(BACKUP_FILE), exist_ok=True)
     try:

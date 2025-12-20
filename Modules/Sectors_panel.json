@@ -1,8 +1,12 @@
 {
-    "Basic_Materials": {},
+    "Basic_Materials": {
+        "SHW": ""
+    },
     "Real_Estate": {
         "DLR": "",
-        "FRMI": ""
+        "FRMI": "",
+        "VICI": "",
+        "NSA": ""
     },
     "Energy": {
         "ET": ""
@@ -14,11 +18,16 @@
     },
     "Consumer_Cyclical": {
         "MBLY": "",
-        "ALH": ""
+        "ALH": "",
+        "NKE": "",
+        "AZO": "",
+        "ORLY": "",
+        "VVV": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
-        "COST": ""
+        "COST": "",
+        "CLX": ""
     },
     "Industrials": {},
     "Communication_Services": {
@@ -29,7 +38,9 @@
         "TW": ""
     },
     "Healthcare": {
-        "DOCS": ""
+        "DOCS": "",
+        "DVA": "",
+        "MASI": ""
     },
     "ETFs": {
         "HYG": ""
@@ -147,67 +158,103 @@
         "BBY": "",
         "BLK": "",
         "CHWY": "",
-        "CRWD": ""
+        "CRWD": "",
+        "MRVL": "MRVL热",
+        "STZ": ""
     },
-    "Strategy34_backup": {},
-    "OverSell": {},
-    "OverSell_backup": {},
-    "PE_Double": {},
-    "PE_Double_backup": {},
+    "Strategy34_backup": {
+        "A": "",
+        "BBY": "",
+        "BLK": "",
+        "CHWY": "",
+        "CRWD": "",
+        "MRVL": "MRVL热",
+        "STZ": ""
+    },
+    "OverSell": {
+        "HIMS": ""
+    },
+    "OverSell_backup": {
+        "HIMS": ""
+    },
+    "PE_Double": {
+        "COIN": "",
+        "SOUN": ""
+    },
+    "PE_Double_backup": {
+        "COIN": "",
+        "SOUN": ""
+    },
     "PE_valid": {
         "AMZN": "AMZN7热",
-        "ANET": "ANET15热",
-        "ASML": "ASML7",
-        "AVGO": "AVGO15热",
         "BABA": "BABA15",
         "BKR": "",
-        "CAT": "CAT7",
-        "COIN": "",
+        "BNTX": "",
+        "CLX": "",
         "COR": "",
         "DELL": "DELL15热",
         "DUOL": "",
         "ENTG": "",
-        "EQIX": "EQIX7热",
-        "HCA": "HCA7热",
-        "HIMS": "",
-        "HOOD": "",
-        "IDXX": "",
+        "FLEX": "FLEX7热",
+        "HCA": "HCA热",
+        "HPQ": "HPQ15热",
         "INTC": "",
         "KMB": "",
-        "MELI": "",
-        "MP": "",
         "MPC": "",
         "MSFT": "MSFT7",
-        "MSTR": "",
-        "ORCL": "ORCL15热",
-        "PDD": "",
-        "PWR": "PWR7热",
-        "RACE": "",
+        "ORLY": "",
+        "PODD": "",
+        "POOL": "",
+        "PWR": "PWR热",
         "SE": "",
-        "SMCI": "SMCI15热",
-        "SPOT": "",
-        "TEM": "",
-        "TSM": "TSM热",
+        "SO": "SO7热",
         "TT": "TT7热",
         "UBER": "",
-        "URI": "",
-        "VLO": ""
+        "VLO": "",
+        "WELL": "WELL7热"
     },
-    "PE_valid_backup": {},
+    "PE_valid_backup": {
+        "AMZN": "AMZN7热",
+        "BABA": "BABA15",
+        "BKR": "",
+        "BNTX": "",
+        "CLX": "",
+        "COR": "",
+        "DELL": "DELL15热",
+        "DUOL": "",
+        "ENTG": "",
+        "FLEX": "FLEX7热",
+        "HCA": "HCA热",
+        "HPQ": "HPQ15热",
+        "INTC": "",
+        "KMB": "",
+        "MPC": "",
+        "MSFT": "MSFT7",
+        "ORLY": "",
+        "PODD": "",
+        "POOL": "",
+        "PWR": "PWR热",
+        "SE": "",
+        "SO": "SO7热",
+        "TT": "TT7热",
+        "UBER": "",
+        "VLO": "",
+        "WELL": "WELL7热"
+    },
     "PE_invalid": {
         "ALNY": "",
+        "ASND": "",
         "GH": "",
-        "INSM": "",
-        "IONQ": "",
-        "OKLO": "OKLO15热",
-        "OPEN": "",
         "RBLX": "",
-        "SMR": "SMR15热",
-        "SOUN": "",
-        "U": "",
-        "Z": ""
+        "SMR": "SMR15热"
     },
-    "PE_invalid_backup": {},
+    "PE_invalid_backup": {
+        "ALNY": "",
+        "ASND": "",
+        "GH": "",
+        "RBLX": "",
+        "SMR": "SMR15热"
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
@@ -256,7 +303,7 @@
         "CorePCEM": "25 CorePCEM",
         "PCEY": "25 PCEY",
         "USConfidence": "19 USConfidence",
-        "USInitial": "18 USInitial",
+        "USInitial": "24 USInitial",
         "USGDP": "23 USGDP"
     },
     "Economic_All": {
