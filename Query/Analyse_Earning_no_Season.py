@@ -112,9 +112,11 @@ CONFIG = {
     # ========== 代码修改开始 1/4：新增条件6（抄底W底）参数 ==========
     "COND6_ER_DROP_A_THRESHOLD": 0.25,  # 财报跌幅分界线 25%
     "COND6_LOW_DROP_B_LARGE": 0.09,     # 如果A > 25%，则B需 > 9%
-    "COND6_LOW_DROP_B_SMALL": 0.15,     # 如果A <= 25%，则B需 > 15%
+    "COND6_LOW_DROP_B_SMALL": 0.12,     # 如果A <= 25%，则B需 > 12%
 
     # W底形态参数
+    # "COND6_W_BOTTOM_PRICE_TOLERANCE": 0.042,  # 两个谷底的价格差容忍度 (5%)
+    # "COND6_W_BOTTOM_MIN_DAYS_GAP": 3,        # 两个谷底之间的最小间隔天数
     "COND6_W_BOTTOM_PRICE_TOLERANCE": 0.038,  # 两个谷底的价格差容忍度 (5%)
     "COND6_W_BOTTOM_MIN_DAYS_GAP": 5,        # 两个谷底之间的最小间隔天数
 }
@@ -674,10 +676,6 @@ def check_new_condition_6(data, config, log_detail, symbol_to_trace):
         # 情况2: 10% < A <= 25%，则 B 需 > 15%
         threshold_b = config["COND6_LOW_DROP_B_SMALL"]
         threshold_desc = "15% (因 10% < A <= 25%)"
-    elif er_drop_a_val > -0.5:
-        # 情况2: 10% < A <= 25%，则 B 需 > 15%
-        threshold_b = config["COND6_LOW_DROP_B_SMALL"]
-        threshold_desc = "15% (因 10% < A <= 25%)"
     else:
         # 情况3: A <= 10%，不满足条件6的前提，直接返回False
         if is_tracing: 
@@ -775,6 +773,7 @@ def check_entry_conditions(data, symbol_to_trace, log_detail):
     """
     此函数现在只检查入口条件 (条件1 OR 条件2 OR 条件3 OR 条件4 OR 条件5 OR 条件6)。
     返回: (passed_any, passed_cond5, passed_cond6)
+    条件1修改为：a AND b AND c 必须同时满足。
     """
     symbol = data.get('symbol')
     is_tracing = (symbol == symbol_to_trace)
@@ -788,29 +787,32 @@ def check_entry_conditions(data, symbol_to_trace, log_detail):
         return (False, False, False) # 修改返回值格式
 
     # --- 评估各个入口条件 ---
-    # 入口条件A: 条件1 (三选一)
+    
+    # 准备条件1所需数据
     prices_to_check = data['all_er_prices'][-CONFIG["RECENT_EARNINGS_COUNT"]:]
     latest_er_pct = er_pcts[-1]
     latest_er_price = prices_to_check[-1]
     avg_recent_price = sum(prices_to_check) / len(prices_to_check)
+    previous_er_price = prices_to_check[-2]
+    price_diff_pct_cond1b = ((latest_er_price - previous_er_price) / previous_er_price) if previous_er_price > 0 else 0
     
+    # 获取阈值
     drop_pct_for_cond1c = CONFIG["PRICE_DROP_FOR_COND1C"]
     threshold_price1c = latest_er_price * (1 - drop_pct_for_cond1c)
     
+    # 子条件计算
     cond1_a = latest_er_pct > 0
-    previous_er_price = prices_to_check[-2]
-    price_diff_pct_cond1b = ((latest_er_price - previous_er_price) / previous_er_price) if previous_er_price > 0 else 0
     cond1_b = (latest_er_price > avg_recent_price) and (price_diff_pct_cond1b >= 0.04)
     cond1_c = data['latest_price'] <= threshold_price1c
     
-    passed_original_cond1 = cond1_a or cond1_b or cond1_c
+    passed_original_cond1 = cond1_a and cond1_b and cond1_c
     
     if is_tracing:
-        log_detail(" - [入口条件A] 条件1评估:")
-        log_detail(f" - a) 最新财报涨跌幅 > 0 -> {cond1_a}")
-        log_detail(f" - b) 最新财报收盘价 > 平均价 且 最近两次财报价差 > 4% -> {cond1_b}")
-        log_detail(f" - c) 最新价比最新财报收盘价低至少 {drop_pct_for_cond1c*100}% -> {cond1_c}")
-        log_detail(f" - 结果: {passed_original_cond1}")
+        log_detail(" - [入口条件A] 条件1评估 (需同时满足 a, b, c):")
+        log_detail(f"   - a) 最新财报涨跌幅 > 0 ({latest_er_pct:.4f}) -> {cond1_a}")
+        log_detail(f"   - b) 最新财报价 > 平均价 且 较上次财报涨幅 >= 4% -> {cond1_b}")
+        log_detail(f"   - c) 最新价({data['latest_price']:.2f}) <= 财报价({latest_er_price:.2f}) * (1 - {drop_pct_for_cond1c}) = {threshold_price1c:.2f} -> {cond1_c}")
+        log_detail(f"   - 条件1最终结果: {passed_original_cond1}")
 
     # 入口条件：条件2, 3, 4, 5
     passed_new_cond2 = check_condition_2(data, CONFIG, log_detail, symbol_to_trace)
