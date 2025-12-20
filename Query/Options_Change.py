@@ -75,6 +75,39 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
     df_old = clean_str_cols(df_old)
     df_new = clean_str_cols(df_new)
 
+    # ============================================================
+    # [新增逻辑 START] 过滤掉新文件中出现的“全新日期”
+    # ============================================================
+    print("正在过滤全新出现的 Expiry Date ...")
+    
+    # 1. 获取旧文件中存在的 (Symbol, Expiry Date) 组合
+    # 使用 zip 将两列组合成 tuple，放入 set 中以提高查找速度
+    valid_old_dates = set(zip(df_old['Symbol'], df_old['Expiry Date']))
+
+    # 2. 给新文件创建一个临时列，用于存放 (Symbol, Expiry Date) 组合
+    # 注意：这里假设 Symbol 和 Expiry Date 列一定存在，因为前面已经读取并 clean 过了
+    df_new['_date_key'] = list(zip(df_new['Symbol'], df_new['Expiry Date']))
+
+    # 3. 记录过滤前的行数
+    rows_before = len(df_new)
+
+    # 4. 执行过滤：只保留那些 key 存在于 valid_old_dates 中的行
+    df_new = df_new[df_new['_date_key'].isin(valid_old_dates)].copy()
+
+    # 5. 记录过滤后的行数并打印
+    rows_after = len(df_new)
+    dropped_count = rows_before - rows_after
+    if dropped_count > 0:
+        print(f"已剔除 {dropped_count} 行数据 (因为这些 Expiry Date 在旧文件中不存在)。")
+    else:
+        print("未发现全新的 Expiry Date，无需剔除。")
+
+    # 6. 删除临时列，保持 DataFrame 干净
+    df_new.drop(columns=['_date_key'], inplace=True)
+    # ============================================================
+    # [新增逻辑 END]
+    # ============================================================
+
     # 数值化 Open Interest (处理逗号, 比如 "1,000" -> 1000)
     # coerce 将无法转换的变为 NaN，fillna(0) 将 NaN 变为 0
     def clean_oi(val):
@@ -97,6 +130,9 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
 
     # 3. 准备辅助数据：旧文件中存在的 (Symbol, Expiry) 组合
     # 用于判断是 "新日期" 还是 "新Strike"
+    # (注意：虽然上面过滤了全新的日期，但这里依然需要这个 set 来判断逻辑，
+    #  不过理论上经过上面的过滤，情况 A "Expiry 时间没有" 应该不会再发生了，
+    #  只会剩下情况 B "Expiry 有但 Strike 没有")
     old_expiry_set = set(zip(df_old['Symbol'], df_old['Expiry Date']))
 
     # 4. 合并数据 (Merge)
@@ -122,6 +158,12 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
     # 计算 1-Day Chg
     merged['1-Day Chg'] = merged['Open Interest_new'] - merged['Open Interest_old']
 
+    # ============================================================
+    # [新增逻辑] 剔除负值
+    # ============================================================
+    # 过滤掉 1-Day Chg 小于 0 的行 (即只保留增加或持平的)
+    merged = merged[merged['1-Day Chg'] >= 0].copy()
+
     # 6. 标记 "new" (仅当 include_new=True 且行是 right_only 时)
     if include_new:
         # 定义一个函数来应用标记逻辑
@@ -130,6 +172,7 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
                 # 检查 (Symbol, Expiry) 是否在旧文件中存在
                 if (row['Symbol'], row['Expiry Date']) not in old_expiry_set:
                     # 情况 A: Expiry 时间没有 -> 在时间后面加 new
+                    # (由于我们在前面已经过滤了全新的日期，这行代码理论上很少触发，除非逻辑有漏网之鱼，保留无害)
                     row['Expiry Date'] = str(row['Expiry Date']) + " new"
                 else:
                     # 情况 B: Expiry 有但 Strike 没有 -> 在 Strike 后面加 new
@@ -137,7 +180,9 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
             return row
 
         # axis=1 表示逐行应用
-        merged = merged.apply(mark_new_rows, axis=1)
+        # 注意：如果过滤后 merged 为空，apply 可能会报错或不做任何事，加个判断更稳健
+        if not merged.empty:
+            merged = merged.apply(mark_new_rows, axis=1)
 
     # 7. 排序逻辑
     # 规则: 按照绝对值从大到小排序
@@ -153,25 +198,26 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
     
     final_rows = []
     
-    # 获取所有 Symbol
-    all_symbols = merged['Symbol'].unique()
-    
-    for symbol in all_symbols:
-        symbol_df = merged[merged['Symbol'] == symbol]
+    if not merged.empty:
+        # 获取所有 Symbol
+        all_symbols = merged['Symbol'].unique()
         
-        # 分别处理 Call 和 Put
-        for type_val in symbol_df['Type'].unique():
-            sub_df = symbol_df[symbol_df['Type'] == type_val]
+        for symbol in all_symbols:
+            symbol_df = merged[merged['Symbol'] == symbol]
             
-            # 按绝对值降序排序
-            sub_df_sorted = sub_df.sort_values(by='Abs_Chg', ascending=False)
-            
-            # 取前 N 名
-            top_records = sub_df_sorted.head(top_n)
-            final_rows.append(top_records)
+            # 分别处理 Call 和 Put
+            for type_val in symbol_df['Type'].unique():
+                sub_df = symbol_df[symbol_df['Type'] == type_val]
+                
+                # 按绝对值降序排序
+                sub_df_sorted = sub_df.sort_values(by='Abs_Chg', ascending=False)
+                
+                # 取前 N 名
+                top_records = sub_df_sorted.head(top_n)
+                final_rows.append(top_records)
 
     if not final_rows:
-        print("没有符合条件的数据。")
+        print("没有符合条件的数据 (可能所有变动均为负值或无数据)。")
         return
 
     result_df = pd.concat(final_rows)

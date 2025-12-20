@@ -1,35 +1,35 @@
 {
-    "Basic_Materials": {},
+    "Basic_Materials": {
+        "SHW": ""
+    },
     "Real_Estate": {
-        "DLR": "",
-        "FRMI": ""
+        "VICI": "",
+        "NSA": ""
     },
-    "Energy": {
-        "ET": ""
-    },
+    "Energy": {},
     "Technology": {
-        "MSTR": "",
-        "FOUR": "",
-        "NSIT": ""
+        "FOUR": ""
     },
     "Consumer_Cyclical": {
-        "MBLY": "",
-        "ALH": ""
+        "ALH": "",
+        "NKE": "",
+        "AZO": "",
+        "ORLY": "",
+        "VVV": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
-        "COST": ""
+        "COST": "",
+        "CLX": ""
     },
     "Industrials": {},
     "Communication_Services": {
-        "RBLX": "",
-        "SKM": ""
+        "RBLX": ""
     },
-    "Financial_Services": {
-        "TW": ""
-    },
+    "Financial_Services": {},
     "Healthcare": {
-        "DOCS": ""
+        "DVA": "",
+        "MASI": ""
     },
     "ETFs": {
         "HYG": ""
@@ -132,13 +132,9 @@
         "DLR": "",
         "ACM": ""
     },
-    "Short": {
-        "PSLV": ""
-    },
+    "Short": {},
     "Short_Shift": {
-        "GFI": "",
-        "HL": "",
-        "HMY": ""
+        "CVNA": ""
     },
     "Strategy12": {},
     "Strategy12_backup": {},
@@ -147,9 +143,19 @@
         "BBY": "",
         "BLK": "",
         "CHWY": "",
-        "CRWD": ""
+        "CRWD": "",
+        "MRVL": "MRVL热",
+        "STZ": ""
     },
-    "Strategy34_backup": {},
+    "Strategy34_backup": {
+        "A": "",
+        "BBY": "",
+        "BLK": "",
+        "CHWY": "",
+        "CRWD": "",
+        "MRVL": "MRVL热",
+        "STZ": ""
+    },
     "OverSell": {
         "HIMS": ""
     },
@@ -157,73 +163,85 @@
         "HIMS": ""
     },
     "PE_Double": {
+        "BNTX": "",
         "COIN": "",
+        "EQIX": "EQIX7热",
         "SOUN": ""
     },
     "PE_Double_backup": {
+        "BNTX": "",
         "COIN": "",
+        "EQIX": "EQIX7热",
         "SOUN": ""
     },
     "PE_valid": {
         "AMZN": "AMZN7热",
+        "BABA": "BABA15",
         "BKR": "",
-        "BNTX": "",
+        "BWXT": "BWXT15热",
         "CLX": "",
         "COR": "",
         "DELL": "DELL15热",
         "DUOL": "",
         "ENTG": "",
         "FLEX": "FLEX7热",
+        "HCA": "HCA热",
         "HPQ": "HPQ15热",
         "INTC": "",
-        "KBH": "",
         "KMB": "",
+        "MELI": "",
+        "MP": "",
         "MPC": "",
-        "MRVL": "MRVL15热",
         "MSFT": "MSFT7",
-        "NKE": "",
+        "MSTR": "",
         "ORLY": "",
         "PODD": "",
         "POOL": "",
+        "PWR": "PWR热",
+        "RACE": "",
         "SE": "",
         "SO": "SO7热",
+        "SPOT": "",
+        "TEM": "",
         "TT": "TT7热",
         "UBER": "",
+        "URI": "",
         "VLO": "",
-        "WELL": "WELL7热"
+        "WELL": "WELL7热",
+        "WRB": ""
     },
     "PE_valid_backup": {
-        "AMZN": "AMZN7热",
-        "BKR": "",
-        "BNTX": "",
-        "CLX": "",
-        "COR": "",
-        "DELL": "DELL15热",
-        "DUOL": "",
-        "ENTG": "",
-        "FLEX": "FLEX7热",
+        "HCA": "HCA热",
         "HPQ": "HPQ15热",
         "INTC": "",
-        "KBH": "",
         "KMB": "",
+        "MELI": "",
+        "MP": "",
         "MPC": "",
-        "MRVL": "MRVL15热",
         "MSFT": "MSFT7",
-        "NKE": "",
+        "MSTR": "",
         "ORLY": "",
         "PODD": "",
         "POOL": "",
+        "PWR": "PWR热",
+        "RACE": "",
         "SE": "",
         "SO": "SO7热",
+        "SPOT": "",
+        "TEM": "",
         "TT": "TT7热",
         "UBER": "",
+        "URI": "",
         "VLO": "",
-        "WELL": "WELL7热"
+        "WELL": "WELL7热",
+        "WRB": ""
     },
     "PE_invalid": {
         "ALNY": "",
         "ASND": "",
         "GH": "",
+        "INSM": "",
+        "OPEN": "",
         "RBLX": "",
         "SMR": "SMR15热"
     },
@@ -231,6 +249,8 @@
         "ALNY": "",
         "ASND": "",
         "GH": "",
+        "INSM": "",
+        "OPEN": "",
         "RBLX": "",
         "SMR": "SMR15热"
     },
@@ -282,7 +302,7 @@
         "CorePCEM": "25 CorePCEM",
         "PCEY": "25 PCEY",
         "USConfidence": "19 USConfidence",
-        "USInitial": "18 USInitial",
+        "USInitial": "24 USInitial",
         "USGDP": "23 USGDP"
     },
     "Economic_All": {

@@ -37,8 +37,8 @@ USE_CUSTOM_LIST = True
 
 # 自定义 Symbol 列表
 CUSTOM_SYMBOLS_DATA = [
-    "NVDA", "AAPL", "GOOGL", "MSFT", "AMZN", "AVGO", "META",
-    "TSM", "WMT", "HYG", "SVIX", "QQQ", "SPXL"
+    "^VIX", "NVDA", "AAPL", "GOOGL", "MSFT", "META",
+    "TSM", "WMT", "HYG", "QQQ", "SPY"
 ]
 
 # --- 3. 文件名生成 ---

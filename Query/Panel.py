@@ -36,7 +36,7 @@ DISPLAY_LIMITS = {
 }
 
 categories = [
-    ['Must','Today','Short', 'Short_Shift','OverSell_backup'],
+    ['Must','Today','Short', 'Short_Shift','OverSell_backup','PE_Double_backup'],
     ['PE_valid_backup','PE_invalid_backup','Strategy12_backup','Strategy34_backup'],
     ['Basic_Materials','Consumer_Cyclical','Real_Estate','Technology','Energy','Industrials',
      'Consumer_Defensive','Communication_Services','Financial_Services', 'Healthcare','Utilities'],

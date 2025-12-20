@@ -3,7 +3,7 @@ import sqlite3
 import os
 import datetime
 
-SYMBOL_TO_TRACE = ""
+SYMBOL_TO_TRACE = "HCA"
 LOG_FILE_PATH = "/Users/yanzhang/Downloads/No_Season_trace_log.txt"
 
 # --- 1. 配置文件和路径 ---
@@ -55,6 +55,8 @@ CONFIG = {
     "MARKETCAP_THRESHOLD": 200_000_000_000,  # 2000亿
     "MARKETCAP_THRESHOLD_MEGA": 500_000_000_000,  # 5000亿
 
+    "COND5_WINDOW_DAYS": 6,
+
     # 严格筛选标准 (第一轮)
     # "PRICE_DROP_PERCENTAGE_LARGE": 0.079,  # <2000亿=7.9%
     # "PRICE_DROP_PERCENTAGE_SMALL": 0.06,   # 2000亿 ≤ 市值 < 5000亿 = 6%
@@ -88,8 +90,8 @@ CONFIG = {
     # 触发宽松筛选的最小分组数量 (仅对 PE_valid 组生效)
     "MIN_PE_VALID_SIZE_FOR_RELAXED_FILTER": 5,
 
-    # 回撤阀值 3%
-    "MAX_INCREASE_PERCENTAGE_SINCE_LOW": 0.03,
+    # 回撤阀值 5%：最新收盘价比最新交易日前10天收盘价的最低值高不超过5%（如果10天内有财报，则将财报日收盘价作为最低值）
+    "MAX_INCREASE_PERCENTAGE_SINCE_LOW": 0.05,
 
     # 条件1c 的专属参数：最新价比最新财报收盘价低至少 X%
     # "PRICE_DROP_FOR_COND1C": 0.14,
@@ -115,9 +117,9 @@ CONFIG = {
     "COND6_LOW_DROP_B_SMALL": 0.12,     # 如果A <= 25%，则B需 > 12%
 
     # W底形态参数
-    # "COND6_W_BOTTOM_PRICE_TOLERANCE": 0.042,  # 两个谷底的价格差容忍度 (5%)
+    # "COND6_W_BOTTOM_PRICE_TOLERANCE": 0.038,  # 两个谷底的价格差容忍度 (3.8%)
     # "COND6_W_BOTTOM_MIN_DAYS_GAP": 3,        # 两个谷底之间的最小间隔天数
-    "COND6_W_BOTTOM_PRICE_TOLERANCE": 0.038,  # 两个谷底的价格差容忍度 (5%)
+    "COND6_W_BOTTOM_PRICE_TOLERANCE": 0.048,  # 两个谷底的价格差容忍度 (4.8%)
     "COND6_W_BOTTOM_MIN_DAYS_GAP": 5,        # 两个谷底之间的最小间隔天数
 }
 
@@ -328,7 +330,8 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
 
         # ========== 代码修改开始 2/3：新增逻辑以获取条件5所需的数据 ==========
         # 为条件5获取财报日及之后5个交易日（共6天）的收盘价，并计算最低价
-        cursor.execute(f'SELECT price FROM "{sector_name}" WHERE name = ? AND date >= ? ORDER BY date ASC LIMIT 6', (symbol, data['latest_er_date_str']))
+        limit_days = CONFIG.get("COND5_WINDOW_DAYS", 6)
+        cursor.execute(f'SELECT price FROM "{sector_name}" WHERE name = ? AND date >= ? ORDER BY date ASC LIMIT {limit_days}', (symbol, data['latest_er_date_str']))
         er_6_day_prices_rows = cursor.fetchall()
         er_6_day_prices = [row[0] for row in er_6_day_prices_rows if row[0] is not None]
         data['er_6_day_window_low'] = min(er_6_day_prices) if er_6_day_prices else None
@@ -509,8 +512,13 @@ def check_condition_2(data, config, log_detail, symbol_to_trace):
         if is_tracing: log_detail(f"  - 结果: False (上次财报价格为 {previous_er_price}，无法计算价差)")
         return False
     price_diff_pct = (latest_er_price - previous_er_price) / previous_er_price
-    cond_b = price_diff_pct >= 0.04
-    if is_tracing: log_detail(f"  - b) 最近两次财报价差 >= 4%: {price_diff_pct:.2%} >= 4.00% -> {cond_b}")
+    # 同样建议关联到配置
+    # 1. 先获取阈值变量 (默认为 0.04)
+    er_threshold = config.get("ER_PRICE_DIFF_THRESHOLD", 0.04)
+    # 2. 使用该变量进行判断
+    cond_b = price_diff_pct >= er_threshold
+    if is_tracing: 
+        log_detail(f"  - b) 最近两次财报价差 >= {er_threshold:.0%}: {price_diff_pct:.2%} >= {er_threshold:.2%} -> {cond_b}")
     if not cond_b:
         if is_tracing: log_detail("  - 结果: False (条件b未满足)")
         return False
@@ -691,9 +699,20 @@ def check_w_bottom_pattern(data, config, log_detail, symbol_to_trace, check_stri
     v2 = prev_price
     idx2 = len(prices_series) - 2
     price_tolerance = config["COND6_W_BOTTOM_PRICE_TOLERANCE"]
+    
+    # ========== 修复点：获取配置中的最小间隔天数 ==========
+    min_days_gap = config["COND6_W_BOTTOM_MIN_DAYS_GAP"]
 
     # 向前回溯寻找左底 (V1)
-    for i in range(idx2 - 3, 0, -1):
+    # ========== 修复点：使用 min_days_gap 替代写死的 3 ==========
+    # 只有当索引距离 >= min_days_gap 时，才开始检查是否为左底
+    start_search_index = idx2 - min_days_gap
+    
+    # 边界检查，防止索引为负
+    if start_search_index < 1:
+        return False
+
+    for i in range(start_search_index, 0, -1):
         v1 = prices_series[i]
         
         # [几何形态检查 1] 局部低点
@@ -720,7 +739,9 @@ def check_w_bottom_pattern(data, config, log_detail, symbol_to_trace, check_stri
 
         if drop_b_val > threshold_b:
             if is_tracing:
-                log_detail(f"   - [W底检测] 成功! V1:{v1:.2f}, V2:{v2:.2f}, 深度B:{drop_b_val:.2%} (要求 > {threshold_b:.0%})")
+                # 计算实际间隔天数用于日志显示
+                actual_gap = idx2 - i
+                log_detail(f"   - [W底检测] 成功! V1:{v1:.2f}, V2:{v2:.2f}, 间隔:{actual_gap}天, 深度B:{drop_b_val:.2%} (要求 > {threshold_b:.0%})")
             return True
     
     return False
@@ -778,7 +799,12 @@ def check_entry_conditions(data, symbol_to_trace, log_detail):
     
     # 子条件计算
     cond1_a = latest_er_pct > 0
-    cond1_b = (latest_er_price > avg_recent_price) and (price_diff_pct_cond1b >= 0.04)
+    
+    # 1. 获取配置
+    er_diff_threshold = CONFIG["ER_PRICE_DIFF_THRESHOLD"]
+
+    # 2. 使用变量计算
+    cond1_b = (latest_er_price > avg_recent_price) and (price_diff_pct_cond1b >= er_diff_threshold)
     cond1_c = data['latest_price'] <= threshold_price1c
     
     passed_original_cond1 = cond1_a and cond1_b and cond1_c
@@ -786,7 +812,7 @@ def check_entry_conditions(data, symbol_to_trace, log_detail):
     if is_tracing:
         log_detail(" - [入口条件A] 条件1评估 (需同时满足 a, b, c):")
         log_detail(f"   - a) 最新财报涨跌幅 > 0 ({latest_er_pct:.4f}) -> {cond1_a}")
-        log_detail(f"   - b) 最新财报价 > 平均价 且 较上次财报涨幅 >= 4% -> {cond1_b}")
+        log_detail(f"   - b) 最新财报价 > 平均价 且 较上次财报涨幅 >= {er_diff_threshold:.0%} -> {cond1_b}")
         log_detail(f"   - c) 最新价({data['latest_price']:.2f}) <= 财报价({latest_er_price:.2f}) * (1 - {drop_pct_for_cond1c}) = {threshold_price1c:.2f} -> {cond1_c}")
         log_detail(f"   - 条件1最终结果: {passed_original_cond1}")
 
@@ -899,7 +925,9 @@ def apply_common_filters(data, symbol_to_trace, log_detail, drop_pct_large, drop
         # 如果财报日不在10天内，使用原来的逻辑（最低价）
         baseline_price = min(prev_prices)
 
-    threshold_price_10day = baseline_price * (1 + CONFIG["MAX_INCREASE_PERCENTAGE_SINCE_LOW"])
+    # 1. 提取变量
+    max_increase_pct = CONFIG["MAX_INCREASE_PERCENTAGE_SINCE_LOW"]
+    threshold_price_10day = baseline_price * (1 + max_increase_pct)
     cond_10day_ok = data['latest_price'] <= threshold_price_10day
 
     if is_tracing:
@@ -909,7 +937,7 @@ def apply_common_filters(data, symbol_to_trace, log_detail, drop_pct_large, drop
         else:
             log_detail(f"   - 策略: 财报日不在10天内，使用10日最低价作为基准。")
         log_detail(f"   - 基准价: {baseline_price:.2f}")
-        log_detail(f"   - 判断: 最新价 {data['latest_price']:.2f} <= 基准价*1.03 ({threshold_price_10day:.2f}) -> {cond_10day_ok}")
+        log_detail(f"   - 判断: 最新价 {data['latest_price']:.2f} <= 基准价*{1+max_increase_pct:.2f} ({threshold_price_10day:.2f}) -> {cond_10day_ok}")
     # ========== 修改结束 ==========
 
     if not cond_10day_ok:
