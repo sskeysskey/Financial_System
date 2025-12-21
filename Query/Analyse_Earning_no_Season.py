@@ -3,7 +3,7 @@ import sqlite3
 import os
 import datetime
 
-SYMBOL_TO_TRACE = "HCA"
+SYMBOL_TO_TRACE = "VLO"
 LOG_FILE_PATH = "/Users/yanzhang/Downloads/No_Season_trace_log.txt"
 
 # --- 1. 配置文件和路径 ---
@@ -643,108 +643,156 @@ def check_new_condition_5(data, config, log_detail, symbol_to_trace):
     return passed
 
 # ==============================================================================
-# 提取的独立通用函数：W底（双底）形态检测算法
+# 提取的独立通用函数：W底（双底）形态检测算法 (增强日志版)
 # ==============================================================================
 def check_w_bottom_pattern(data, config, log_detail, symbol_to_trace, check_strict_er_drop=True):
     """
     check_strict_er_drop: 
-       - True (用于条件6): 必须满足财报间大幅下跌(Drop A)的前提。
-       - False (用于条件1-5): 忽略财报间的下跌前提，仅检测W底几何形态和深度(Drop B)。
+       - True (用于条件6): 必须满足财报间大幅下跌(Drop A) 且 现价深跌(Drop B) 的前提。
+       - False (用于条件1-5): 纯形态检测。忽略与财报价的相对位置，只要几何形态满足W底即可。
     """
     symbol = data.get('symbol')
     is_tracing = (symbol == symbol_to_trace)
     
+    mode_str = "严格抄底模式(Cond6)" if check_strict_er_drop else "形态确认模式(Cond1-5)"
+    if is_tracing: log_detail(f"   - [W底检测启动] 模式: {mode_str}")
+
     # 1. 数据准备
     all_er_prices = data.get('all_er_prices', [])
     prices_series = data.get('prices_since_er_series', [])
     dates_series = data.get('dates_since_er_series', [])
 
-    if len(all_er_prices) < 2: return False
-    if not prices_series or len(prices_series) < 10: return False
+    if len(all_er_prices) < 2: 
+        if is_tracing: log_detail(f"   - [失败] 财报数据不足 2 条。")
+        return False
+    if not prices_series or len(prices_series) < 10: 
+        if is_tracing: log_detail(f"   - [失败] 财报后交易日数据不足 10 天。")
+        return False
 
-    # --- 步骤 1: 计算条件A (财报间跌幅) 并确定 条件B 的阈值 ---
     latest_er_price = all_er_prices[-1]
-    prev_er_price = all_er_prices[-2]
     
-    if prev_er_price <= 0: return False
+    # --- 步骤 1: 仅在严格模式下检查 Drop A 和设定 Drop B 阈值 ---
+    threshold_b = 0.12 # 默认值
+    
+    if check_strict_er_drop:
+        prev_er_price = all_er_prices[-2]
+        if prev_er_price <= 0: return False
+        
+        er_drop_a_val = (prev_er_price - latest_er_price) / prev_er_price
+        threshold_a = config["COND6_ER_DROP_A_THRESHOLD"] # 0.25
 
-    er_drop_a_val = (prev_er_price - latest_er_price) / prev_er_price
-    threshold_a = config["COND6_ER_DROP_A_THRESHOLD"] # 0.25
-    
-    # 动态设定 条件B 的阈值
-    if er_drop_a_val > threshold_a:
-        threshold_b = config["COND6_LOW_DROP_B_LARGE"] # > 9%
-    elif er_drop_a_val > 0.10:
-        threshold_b = config["COND6_LOW_DROP_B_SMALL"] # > 12%
-    else:
-        # 如果财报间跌幅 <= 10%
-        if check_strict_er_drop:
-            # 条件6严格模式：直接失败
-            if is_tracing: 
-                log_detail(f"   - [W底检测-严格] 失败: 财报间跌幅 {er_drop_a_val:.2%} <= 10%，不满足抄底前提")
-            return False
+        # 动态设定 条件B 的阈值
+        if er_drop_a_val > threshold_a:
+            threshold_b = config["COND6_LOW_DROP_B_LARGE"] # > 9%
+        elif er_drop_a_val > 0.10: # 至少跌 10%
+            threshold_b = config["COND6_LOW_DROP_B_SMALL"] # > 12%
         else:
-            # 条件1-5宽松模式：虽然没有深跌，但依然检查形态，强制使用较严格的 B 阈值(12%)作为基准
-            threshold_b = config["COND6_LOW_DROP_B_SMALL"] 
+            if is_tracing: 
+                log_detail(f"   - [失败-Drop A] 财报间跌幅 {er_drop_a_val:.2%} <= 10%，不满足抄底前提。")
+            return False
+        
+        if is_tracing:
+            log_detail(f"   - [通过-Drop A] 财报间跌幅 {er_drop_a_val:.2%}，设置深度阈值 B > {threshold_b:.1%}")
 
-    # --- 步骤 2: 寻找 W 底形态 ---
-    curr_price = prices_series[-1] # 今天
-    prev_price = prices_series[-2] # 昨天 (右底 V2)
-    prev2_price = prices_series[-3] # 前天
+    # --- 步骤 2: 寻找 W 底几何形态 ---
+    
+    # 锁定 V2 (右底): 必须是昨天 (index -2)
+    # 今天 (index -1), 昨天 (index -2), 前天 (index -3)
+    curr_price = prices_series[-1] 
+    prev_price = prices_series[-2] 
+    prev2_price = prices_series[-3]
 
-    # 锁定右底 (Valley 2) 必须是昨天
+    # [几何检查] 右底必须是局部低点 (比前天低，且比今天低，意味着今天开始反弹或企稳)
     if not (prev_price < prev2_price and prev_price < curr_price):
+        if is_tracing:
+            log_detail(f"   - [失败-V2定位] 昨天({prev_price})不是局部低点(需小于{prev2_price}且小于{curr_price})，无法构成右底。")
         return False
 
     v2 = prev_price
     idx2 = len(prices_series) - 2
-    price_tolerance = config["COND6_W_BOTTOM_PRICE_TOLERANCE"]
-    
-    # ========== 修复点：获取配置中的最小间隔天数 ==========
-    min_days_gap = config["COND6_W_BOTTOM_MIN_DAYS_GAP"]
+    v2_date = dates_series[idx2]
+
+    price_tolerance = config["COND6_W_BOTTOM_PRICE_TOLERANCE"] # 0.048
+    min_days_gap = config["COND6_W_BOTTOM_MIN_DAYS_GAP"]      # 5
 
     # 向前回溯寻找左底 (V1)
-    # ========== 修复点：使用 min_days_gap 替代写死的 3 ==========
-    # 只有当索引距离 >= min_days_gap 时，才开始检查是否为左底
     start_search_index = idx2 - min_days_gap
     
-    # 边界检查，防止索引为负
     if start_search_index < 1:
+        if is_tracing: log_detail(f"   - [失败-间隔] 距离财报日过近，无法满足最小间隔 {min_days_gap} 天。")
         return False
+
+    if is_tracing: log_detail(f"   - [V2已锁定] 日期: {v2_date}, 价格: {v2}, 开始寻找V1...")
+
+    found_valid_pattern = False
 
     for i in range(start_search_index, 0, -1):
         v1 = prices_series[i]
-        
+        v1_date = dates_series[i]
+
         # [几何形态检查 1] 局部低点
+        # 必须比它前一天低，且比它后一天低
         if not (v1 < prices_series[i-1] and v1 < prices_series[i+1]):
+            # 不是局部低点，静默跳过，不需要日志
             continue
 
-        # [几何形态检查 2] 高度差检查
+        # 找到一个潜在的 V1
+        if is_tracing: log_detail(f"     > 发现潜在V1: {v1_date} (价格:{v1})")
+
+        # [几何形态检查 2] 高度差检查 (Symmetry)
         diff_pct = abs(v1 - v2) / min(v1, v2)
         if diff_pct > price_tolerance: 
+            if is_tracing: log_detail(f"       x [失败] 左右底高低差 {diff_pct:.2%} > 容忍度 {price_tolerance:.1%}")
             continue
 
         # [几何形态检查 3] 颈线反弹力度
+        # 检查 V1 和 V2 之间的最高价 (Peak)
         peak_prices = prices_series[i+1 : idx2]
-        if not peak_prices: continue
+        if not peak_prices: 
+            continue
+            
         max_peak = max(peak_prices)
         avg_valley = (v1 + v2) / 2
         peak_rise = (max_peak - avg_valley) / avg_valley
-        if peak_rise < 0.025: 
+
+        # 这里的 0.025 是硬编码的颈线反弹力度，可以考虑放入配置，但目前暂且保留
+        min_peak_rise = 0.025
+        if peak_rise < min_peak_rise: 
+            if is_tracing: log_detail(f"       x [失败] 中间反弹力度 {peak_rise:.2%} < {min_peak_rise:.1%}, 形态不显著")
             continue
 
-        # --- 步骤 3: 深度验证 (条件B) ---
-        valley_min_price = min(v1, v2)
-        drop_b_val = (latest_er_price - valley_min_price) / latest_er_price
-
-        if drop_b_val > threshold_b:
-            if is_tracing:
-                # 计算实际间隔天数用于日志显示
+        # --- 步骤 3: 最终裁决 (分模式) ---
+        
+        # 1. 严格模式 (Condition 6): 必须检查深度
+        if check_strict_er_drop:
+            valley_min_price = min(v1, v2)
+            drop_b_val = (latest_er_price - valley_min_price) / latest_er_price
+            
+            if drop_b_val > threshold_b:
                 actual_gap = idx2 - i
-                log_detail(f"   - [W底检测] 成功! V1:{v1:.2f}, V2:{v2:.2f}, 间隔:{actual_gap}天, 深度B:{drop_b_val:.2%} (要求 > {threshold_b:.0%})")
+                if is_tracing:
+                    log_detail(f"   - [成功!] V1:{v1:.2f}, V2:{v2:.2f}, 间隔:{actual_gap}天")
+                    log_detail(f"   - [深度检查] 深度 {drop_b_val:.2%} > 阈值 {threshold_b:.1%} -> 通过")
+                return True
+            else:
+                if is_tracing:
+                    log_detail(f"       x [失败-Drop B] 虽然形态满足，但深度 {drop_b_val:.2%} 不足 (需 > {threshold_b:.1%})")
+                # 这里不 continue，因为可能前面还有更深的 V1? 
+                # 通常W底找最近的匹配即可，但如果为了严谨可以继续找。
+                # 但根据HCA的例子，如果不满足深度，找更远的也没用，先continue看有没有别的组合
+                continue
+
+        # 2. 宽松模式 (Condition 1-5): 只要几何形态满足，无视与财报价的关系
+        else:
+            actual_gap = idx2 - i
+            if is_tracing:
+                log_detail(f"   - [成功!] V1:{v1:.2f}, V2:{v2:.2f}, 间隔:{actual_gap}天")
+                log_detail(f"   - [宽松模式] 跳过深度检查 (Drop B)。")
             return True
-    
+
+    if is_tracing: log_detail(f"   - [结果] 遍历结束，未找到满足所有条件的 V1。")
     return False
+
 
 def check_new_condition_6(data, config, log_detail, symbol_to_trace):
     # 锁定了昨天（index -2）必须是第二个峰值，且今天（index -1）必须下跌或企稳。

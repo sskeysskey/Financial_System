@@ -148,6 +148,7 @@ def calculate_three_weeks_after_range(target_date):
     
     return target_week_start, target_week_end
 
+@lru_cache(maxsize=32) # 添加缓存
 def get_title_color_logic(db_path, symbol, table_name):
     """
     获取决定标题颜色所需的所有数据，并返回最终的颜色字符串。
@@ -256,7 +257,7 @@ def display_dialog(message):
 def update_plot(line1, gradient_image, line2, dates, prices, volumes, ax1, ax2, show_volume, cmap, force_recreate=False, gradient_clip_patch=None, zero_line=None):
     """
     更新图表，使用 imshow 和 clip_path 实现渐变填充。
-    此版本修复了快速切换时渐变区域不同步的问题。
+    此版本包含针对高价股的视觉比例优化。
     """
     # 1. 处理没有数据的情况
     if not dates or not prices:
@@ -272,7 +273,7 @@ def update_plot(line1, gradient_image, line2, dates, prices, volumes, ax1, ax2, 
         # 如果之前有渐变图，则隐藏它
         if gradient_image:
             gradient_image.set_visible(False)
-        plt.gcf().canvas.draw_idle()
+            plt.gcf().canvas.draw_idle()
         return gradient_image
 
     # 如果之前因无数据而隐藏，现在恢复显示
@@ -295,19 +296,43 @@ def update_plot(line1, gradient_image, line2, dates, prices, volumes, ax1, ax2, 
         right_margin = date_range * 0.01
         ax1.set_xlim(date_min_val, date_max_val + right_margin)
 
+    # === 核心优化开始: 智能 Y 轴缩放 ===
     min_p, max_p = np.min(prices), np.max(prices)
+    
+    # 设定最小视觉幅度比例 (建议 0.15 即 15%)
+    # 这意味着 Y 轴的高度至少是当前最高价的 15%
+    # 这样 4% 的波动就只会占据屏幕高度的约 1/4，看起来就很自然
+    MIN_DISPLAY_PCT = 0.15 
+    
+    actual_span = max_p - min_p
+    min_required_span = abs(max_p) * MIN_DISPLAY_PCT
+
     if min_p == max_p:
-        # 当所有点相等时给一个对称 buffer
+        # 数据是一条直线的情况
         buffer = abs(min_p * 0.1) if min_p != 0 else 0.1
-        buffer = max(buffer, 1e-6)
-        min_p -= buffer
-        max_p += buffer
-    # 在正常情况下，对上限加一点“呼吸空间”
-    y_range = max_p - min_p
-    # 比例式 padding（顶部多一点），可根据需要调整比例
-    top_pad = max(y_range * 0.03, 0.02 * max(1.0, abs(max_p)))   # 至少给一个相对最小值
-    bottom_pad = y_range * 0.01
-    ax1.set_ylim(min_p - bottom_pad, max_p + top_pad)
+        ax1.set_ylim(min_p - buffer, max_p + buffer)
+    
+    elif actual_span < min_required_span:
+        # 情况 A: 波动太小 (例如高价股微幅震荡) -> 强制撑大 Y 轴
+        center_price = (max_p + min_p) / 2
+        half_span = min_required_span / 2
+        
+        # 计算强制扩展后的上下限
+        new_min = center_price - half_span
+        new_max = center_price + half_span
+        
+        # 依然保留一点顶部空间给标题 (2%)
+        top_pad = abs(max_p) * 0.02
+        ax1.set_ylim(new_min, new_max + top_pad)
+        
+    else:
+        # 情况 B: 波动足够大 (暴涨暴跌) -> 使用紧凑显示，保留原有的 Padding 逻辑
+        y_range = actual_span
+        # 顶部多留点空间给文字
+        top_pad = max(y_range * 0.03, 0.02 * max(1.0, abs(max_p)))
+        bottom_pad = y_range * 0.01
+        ax1.set_ylim(min_p - bottom_pad, max_p + top_pad)
+    # === 核心优化结束 ===
 
     # 新增：零线显隐与范围保障
     if zero_line is not None:
@@ -316,17 +341,24 @@ def update_plot(line1, gradient_image, line2, dates, prices, volumes, ax1, ax2, 
             zero_line.set_visible(True)
             y0, y1 = ax1.get_ylim()
             # 如果 0 不在当前 Y 轴范围内，则扩展范围以包含 0
-            if y1 < 0:  # 所有数据都为负
-                ax1.set_ylim(y0, 0 + top_pad)
-            elif y0 > 0: # 所有数据都为正，但由于某种原因（例如，极小的负值被padding覆盖），0 不可见
-                ax1.set_ylim(0 - bottom_pad, y1)
-        else: # 所有数据均为正或零
+            if y1 < 0: 
+                ax1.set_ylim(y0, 0 + top_pad if 'top_pad' in locals() else 0.1)
+            elif y0 > 0: 
+                # 这种情况下通常是被 padding 挤出去了，拉回来
+                # 使用当前 range 的一小部分作为 bottom pad
+                current_range = y1 - y0
+                ax1.set_ylim(0 - (current_range * 0.05), y1)
+        else:
             zero_line.set_visible(False)
 
     if show_volume:
         if volumes and any(v is not None for v in volumes):
-            max_v = np.max([v for v in volumes if v is not None])
-            ax2.set_ylim(0, max_v)
+            valid_v = [v for v in volumes if v is not None]
+            if valid_v:
+                max_v = np.max(valid_v)
+                ax2.set_ylim(0, max_v)
+            else:
+                ax2.set_ylim(0, 1)
         else:
             ax2.set_ylim(0, 1)
 
@@ -1110,7 +1142,22 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
                 # 拖拽中降级：不更新注释内容，仅移动高亮
                 if mouse_pressed:
-                    idx = np.argmin(np.abs(current_filtered_date_nums - event.xdata)) if len(current_filtered_date_nums) else 0
+                    # --- 优化后的写法 (极快) ---
+                    if len(current_filtered_date_nums) > 0:
+                        # 使用二分查找找到插入位置
+                        idx = np.searchsorted(current_filtered_date_nums, event.xdata)
+                        
+                        # searchsorted 返回的是插入位置，需要判断是取左边还是右边的点
+                        if idx >= len(current_filtered_date_nums):
+                            idx = len(current_filtered_date_nums) - 1
+                        elif idx > 0:
+                            # 比较 index 和 index-1 哪个离鼠标更近
+                            left_dist = abs(current_filtered_date_nums[idx-1] - event.xdata)
+                            right_dist = abs(current_filtered_date_nums[idx] - event.xdata)
+                            if left_dist < right_dist:
+                                idx = idx - 1
+                    else:
+                        idx = 0
                     x_data, y_data = line1.get_data()
                     if idx < len(x_data) and idx < len(y_data) and initial_price is not None:
                         sel_date, sel_price = x_data[idx], y_data[idx]
@@ -1145,7 +1192,22 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     return
 
                 # 正常 hover
-                idx = np.argmin(np.abs(current_filtered_date_nums - event.xdata)) if len(current_filtered_date_nums) else 0
+                # --- 优化后的写法 (极快) ---
+                if len(current_filtered_date_nums) > 0:
+                    # 使用二分查找找到插入位置
+                    idx = np.searchsorted(current_filtered_date_nums, event.xdata)
+                    
+                    # searchsorted 返回的是插入位置，需要判断是取左边还是右边的点
+                    if idx >= len(current_filtered_date_nums):
+                        idx = len(current_filtered_date_nums) - 1
+                    elif idx > 0:
+                        # 比较 index 和 index-1 哪个离鼠标更近
+                        left_dist = abs(current_filtered_date_nums[idx-1] - event.xdata)
+                        right_dist = abs(current_filtered_date_nums[idx] - event.xdata)
+                        if left_dist < right_dist:
+                            idx = idx - 1
+                else:
+                    idx = 0
                 x_data, y_data = line1.get_data()
                 if idx < len(x_data) and idx < len(y_data):
                     sel_date, sel_price = x_data[idx], y_data[idx]
@@ -1411,7 +1473,22 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         try:
             if event.button == 1 and event.xdata is not None and current_filtered_dates:
                 mouse_pressed = True
-                idx = np.argmin(np.abs(current_filtered_date_nums - event.xdata)) if len(current_filtered_date_nums) else 0
+                # --- 优化后的写法 (极快) ---
+                if len(current_filtered_date_nums) > 0:
+                    # 使用二分查找找到插入位置
+                    idx = np.searchsorted(current_filtered_date_nums, event.xdata)
+                    
+                    # searchsorted 返回的是插入位置，需要判断是取左边还是右边的点
+                    if idx >= len(current_filtered_date_nums):
+                        idx = len(current_filtered_date_nums) - 1
+                    elif idx > 0:
+                        # 比较 index 和 index-1 哪个离鼠标更近
+                        left_dist = abs(current_filtered_date_nums[idx-1] - event.xdata)
+                        right_dist = abs(current_filtered_date_nums[idx] - event.xdata)
+                        if left_dist < right_dist:
+                            idx = idx - 1
+                else:
+                    idx = 0
                 if idx < len(current_filtered_prices):
                     initial_price, initial_date = current_filtered_prices[idx], current_filtered_dates[idx]
         except Exception as e:

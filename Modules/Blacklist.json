@@ -894,6 +894,7 @@
         "QFIN",
         "DTE",
         "TMUS",
-        "BKR"
+        "BKR",
+        "MPC"
     ]
 }
