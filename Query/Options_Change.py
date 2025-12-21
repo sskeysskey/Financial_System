@@ -3,6 +3,8 @@ import os
 import datetime
 import glob
 import subprocess
+import json
+import sqlite3
 
 # ==========================================
 # 配置区域 (Configuration)
@@ -14,6 +16,12 @@ BACKUP_DIR = '/Users/yanzhang/Coding/News/backup'
 # 输出文件的配置
 OUTPUT_DIR = '/Users/yanzhang/Coding/News'
 OUTPUT_FILENAME = 'Options_Change.csv'
+
+# JSON 映射文件路径
+SECTORS_JSON_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
+
+# SQLite 数据库路径
+DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
 
 # 每个 Symbol 的 Calls 和 Puts 各保留前多少名
 TOP_N = 50 
@@ -35,6 +43,124 @@ USE_MANUAL_MODE = False
 # 手动模式下的文件路径 (仅当 USE_MANUAL_MODE = True 时生效)
 MANUAL_FILE_OLD = '/Users/yanzhang/Coding/News/backup/Options_251215.csv'
 MANUAL_FILE_NEW = '/Users/yanzhang/Coding/News/backup/Options_251216.csv'
+
+# ==========================================
+# 辅助函数：获取 Symbol 对应的最新价格
+# ==========================================
+
+def load_symbol_sector_map(json_path):
+    """加载 JSON 并反转为 Symbol -> Sector 的字典"""
+    if not os.path.exists(json_path):
+        print(f"⚠️ 警告: 找不到 JSON 映射文件: {json_path}")
+        return {}
+    
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        symbol_map = {}
+        for sector, symbols in data.items():
+            for sym in symbols:
+                # 统一转大写，防止大小写不一致
+                symbol_map[sym.upper()] = sector
+        return symbol_map
+    except Exception as e:
+        print(f"⚠️ 读取 JSON 失败: {e}")
+        return {}
+
+def get_latest_prices(symbols, symbol_sector_map, db_path):
+    """
+    批量获取 Symbol 的最新价格。
+    返回字典: { 'AAPL': 150.23, 'TSLA': 200.50, ... }
+    """
+    if not os.path.exists(db_path):
+        print(f"⚠️ 警告: 找不到数据库文件: {db_path}")
+        return {}
+
+    price_dict = {}
+    conn = None
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # 为了减少查询次数，我们按 Sector 分组查询
+        # 结构: { 'Technology': ['AAPL', 'MSFT'], 'Bonds': ['US2Y'] }
+        sector_groups = {}
+        
+        for sym in symbols:
+            sym_upper = sym.upper()
+            
+            # ======================================================
+            # [修改点 1] 特例处理：如果是 ^VIX，映射为 VIX 去找 Sector
+            # ======================================================
+            lookup_sym = 'VIX' if sym_upper == '^VIX' else sym_upper
+            
+            sector = symbol_sector_map.get(lookup_sym)
+            if sector:
+                if sector not in sector_groups:
+                    sector_groups[sector] = []
+                # 注意：这里我们把 lookup_sym (例如 VIX) 加入列表去查库
+                # 假设数据库里存的也是 VIX
+                sector_groups[sector].append(lookup_sym)
+            else:
+                # 如果 JSON 里没找到这个 Symbol，就没法查表，跳过或记录
+                pass
+
+        print(f"正在从数据库获取 {len(symbols)} 个 Symbol 的最新价格...")
+
+        for sector, sym_list in sector_groups.items():
+            if not sym_list:
+                continue
+            
+            # 构造 SQL: 
+            # SELECT name, price FROM SectorTable 
+            # WHERE name IN (...) AND date = (SELECT MAX(date) FROM SectorTable WHERE name = T.name)
+            # 这种逐行子查询可能较慢，改为直接取每个 name 的最新一条
+            
+            # 优化策略：由于 SQLite 对窗口函数支持较好，或者简单的 group by
+            # 这里假设数据量较大，使用 Group By 获取最新日期可能比较快
+            
+            placeholders = ','.join(['?'] * len(sym_list))
+            
+            # 方法：先找到每个 Symbol 的最大日期，再 Join 取价格
+            # 注意：表名不能参数化，必须字符串拼接，要注意安全性(这里来源是内部JSON，相对安全)
+            query = f"""
+                SELECT t1.name, t1.price
+                FROM "{sector}" t1
+                JOIN (
+                    SELECT name, MAX(date) as max_date
+                    FROM "{sector}"
+                    WHERE name IN ({placeholders})
+                    GROUP BY name
+                ) t2 ON t1.name = t2.name AND t1.date = t2.max_date
+            """
+            
+            try:
+                cursor.execute(query, sym_list)
+                rows = cursor.fetchall()
+                for name, price in rows:
+                    name_upper = name.upper()
+                    price_dict[name_upper] = price
+                    
+                    # ======================================================
+                    # [修改点 2] 结果回填：如果查到的是 VIX，也要赋值给 ^VIX
+                    # ======================================================
+                    # 这样主程序里用 ^VIX 也能查到价格
+                    if name_upper == 'VIX':
+                        price_dict['^VIX'] = price
+
+            except sqlite3.OperationalError as e:
+                print(f"   ⚠️ 查询表 '{sector}' 失败 (可能表不存在): {e}")
+            except Exception as e:
+                print(f"   ⚠️ 查询出错: {e}")
+
+    except Exception as e:
+        print(f"数据库连接或查询总错误: {e}")
+    finally:
+        if conn:
+            conn.close()
+            
+    return price_dict
 
 # ==========================================
 # 核心处理函数
@@ -222,6 +348,51 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
 
     result_df = pd.concat(final_rows)
 
+    # ============================================================
+    # [新增逻辑] 计算 Distance
+    # ============================================================
+    print("正在计算 Distance ...")
+    
+    # 1. 准备 Symbol 列表
+    unique_symbols = result_df['Symbol'].unique().tolist()
+    
+    # 2. 加载映射并获取价格
+    symbol_map = load_symbol_sector_map(SECTORS_JSON_PATH)
+    price_map = get_latest_prices(unique_symbols, symbol_map, DB_PATH)
+    
+    # 3. 定义计算函数
+    def calculate_distance(row):
+        sym = row['Symbol'].upper()
+        strike_str = str(row['Strike']).replace(' new', '').strip() # 去掉可能存在的 " new" 标记
+        
+        # 获取 Strike 数值
+        try:
+            strike_val = float(strike_str.replace(',', ''))
+        except:
+            return "N/A" # Strike 无法转为数字
+            
+        # 获取 Price 数值
+        price_val = price_map.get(sym)
+        
+        if price_val is None:
+            return "N/A" # 数据库没查到价格
+            
+        if price_val == 0:
+            return "Err" # 价格为0无法做除数
+            
+        # 计算公式: (Strike - Price) / Price
+        dist = (strike_val - price_val) / price_val
+        
+        # 格式化为百分比字符串，保留2位小数，例如 "5.23%" 或 "-10.05%"
+        return f"{dist * 100:.2f}%"
+
+    # 4. 应用计算
+    result_df['Distance'] = result_df.apply(calculate_distance, axis=1)
+
+    # ============================================================
+    # 最终整理输出
+    # ============================================================
+
     # 8. 最终整理输出格式
     # 排序：Symbol (A-Z) -> Type (Calls first) -> Abs Chg (Desc)
     result_df = result_df.sort_values(
@@ -229,8 +400,8 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
         ascending=[True, True, False]
     )
 
-    # 选取需要的列
-    output_cols = ['Symbol', 'Type', 'Expiry Date', 'Strike', 'Open Interest_new', '1-Day Chg']
+    # 选取需要的列，把 Distance 放在 Strike 后面
+    output_cols = ['Symbol', 'Type', 'Expiry Date', 'Strike', 'Distance', 'Open Interest_new', '1-Day Chg']
     final_output = result_df[output_cols].rename(columns={'Open Interest_new': 'Open Interest'})
 
     # 9. 保存文件 (修改部分)
@@ -315,9 +486,6 @@ if __name__ == "__main__":
         if not file_new or not file_old:
              print("❌ 错误: 在备份目录下未找到至少两个以 'Options_' 开头的 CSV 文件。")
 
-    # ----------------------------------------------------
-    # 如果文件都准备好了，开始执行处理
-    # ----------------------------------------------------
     if file_new and file_old:
         print("-" * 40)
         print(f"检测到最新文件 (New): {os.path.basename(file_new)}")
