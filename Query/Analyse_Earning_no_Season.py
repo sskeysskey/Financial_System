@@ -119,7 +119,7 @@ CONFIG = {
     # W底形态参数
     # "COND6_W_BOTTOM_PRICE_TOLERANCE": 0.038,  # 两个谷底的价格差容忍度 (3.8%)
     # "COND6_W_BOTTOM_MIN_DAYS_GAP": 3,        # 两个谷底之间的最小间隔天数
-    "COND6_W_BOTTOM_PRICE_TOLERANCE": 0.048,  # 两个谷底的价格差容忍度 (4.8%)
+    "COND6_W_BOTTOM_PRICE_TOLERANCE": 0.045,  # 两个谷底的价格差容忍度 (4.8%)
     "COND6_W_BOTTOM_MIN_DAYS_GAP": 5,        # 两个谷底之间的最小间隔天数
 }
 

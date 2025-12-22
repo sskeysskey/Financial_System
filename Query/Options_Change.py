@@ -404,6 +404,12 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
     output_cols = ['Symbol', 'Type', 'Expiry Date', 'Strike', 'Distance', 'Open Interest_new', '1-Day Chg']
     final_output = result_df[output_cols].rename(columns={'Open Interest_new': 'Open Interest'})
 
+    # ============================================================
+    # [新增修改] 特殊处理：将 ^VIX 显示为 VIX
+    # ============================================================
+    # 将 Symbol 列中完全等于 '^VIX' 的值替换为 'VIX'
+    final_output['Symbol'] = final_output['Symbol'].replace('^VIX', 'VIX')
+
     # 9. 保存文件 (修改部分)
     # 确保输出目录存在，如果不存在则创建
     if not os.path.exists(OUTPUT_DIR):

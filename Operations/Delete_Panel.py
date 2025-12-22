@@ -200,7 +200,7 @@ def main():
     # --- 修改开始：定义要隐藏的分组 ---
     # 这些分组即使包含该 Symbol，也不会出现在删除列表中
     IGNORED_CATEGORIES = {
-        "Strategy12", "Strategy34", "PE_invalid", "PE_valid",
+        "Strategy12", "Strategy34", "PE_invalid", "PE_valid", "PE_Double", "OverSell"
         "Basic_Materials", "Real_Estate", "Energy", "Technology", "Consumer_Cyclical",
         "Utilities", "Consumer_Defensive", "Industrials", "Communication_Services",
         "Financial_Services", "Healthcare",

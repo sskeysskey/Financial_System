@@ -298,41 +298,141 @@ def run_scraper_task(driver, sectors_data, task_config):
     
     # 注意：雅虎财经的URL参数中 from 和 to 似乎没有实际作用于分页，day参数才是关键。
     # 为了简化和确保正确性，我们只使用 day 参数。
+    # for single_date in (start_date + i * delta for i in range((end_date - start_date).days + 1)):
+    #     ds = single_date.strftime('%Y-%m-%d')
+    #     offset = 0
+    #     while True:
+    #         url = f"https://finance.yahoo.com/calendar/earnings?day={ds}&offset={offset}&size=100"
+    #         driver.get(url)
+    #         try:
+    #             tbl = WebDriverWait(driver, 4).until(
+    #                 EC.presence_of_element_located((By.CSS_SELECTOR, "table"))
+    #             )
+    #             rows = tbl.find_elements(By.CSS_SELECTOR, "tbody > tr")
+    #         except TimeoutException:
+    #             break
+
+    #         if not rows:
+    #             break
+
+    #         for row in rows:
+    #             try:
+    #                 symbol = row.find_element(By.CSS_SELECTOR, 'a[title][href*="/quote/"]').get_attribute('title')
+    #                 cells = row.find_elements(By.TAG_NAME, 'td')
+    #                 if len(cells) < 4: continue
+
+    #                 event_name = cells[2].text.strip()
+    #                 call_time = cells[3].text.strip() or "N/A"
+
+    #                 if not any(k in event_name for k in ["Earnings Release", "Shareholders Meeting", "Earnings Announcement"]):
+    #                     continue
+    #                 if (symbol, ds) in existing_release_entries:
+    #                     continue
+    #                 if not any(symbol in lst for lst in sectors_data.values()):
+    #                     continue
+
+    #                 new_line = f"{symbol:<7}: {call_time:<4}: {ds}"
+
+    #                 if symbol in existing_map:
+    #                     old_ct, old_dt = existing_map[symbol]
+    #                     if old_ct == call_time and old_dt == ds: continue
+                        
+    #                     existing_lines = [ln for ln in existing_lines if ln.split(':')[0].strip() != symbol]
+    #                     existing_map[symbol] = (call_time, ds)
+    #                     new_entries.append(new_line)
+    #                 else:
+    #                     existing_map[symbol] = (call_time, ds)
+    #                     new_entries.append(new_line)
+
+    #             except Exception:
+    #                 continue
+    #         offset += 100
+
+    
+    # 修改后的核心分页循环逻辑 (替换原有的 while True 块)
     for single_date in (start_date + i * delta for i in range((end_date - start_date).days + 1)):
         ds = single_date.strftime('%Y-%m-%d')
         offset = 0
+        
         while True:
             url = f"https://finance.yahoo.com/calendar/earnings?day={ds}&offset={offset}&size=100"
-            driver.get(url)
-            try:
-                tbl = WebDriverWait(driver, 4).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "table"))
-                )
-                rows = tbl.find_elements(By.CSS_SELECTOR, "tbody > tr")
-            except TimeoutException:
-                break
+            
+            rows = []
+            found_end_of_results = False # 标记是否明确找到了"无结果"的结束语
+            page_load_success = False    # 标记页面是否有效加载（要么有数据，要么明确结束）
 
+            # --- 重试机制：最多尝试 3 次 ---
+            for attempt in range(3):
+                try:
+                    driver.get(url)
+                    
+                    # 1. 优先尝试寻找数据表格 (Wait 5s)
+                    try:
+                        tbl = WebDriverWait(driver, 5).until(
+                            EC.presence_of_element_located((By.CSS_SELECTOR, "table"))
+                        )
+                        current_rows = tbl.find_elements(By.CSS_SELECTOR, "tbody > tr")
+                        if current_rows:
+                            rows = current_rows
+                            page_load_success = True
+                            break # 成功拿到数据，跳出重试循环
+                    except TimeoutException:
+                        pass # 表格没加载出来，不代表出错，可能是到了末尾页
+                    
+                    # 2. 如果没有数据，精准检查是否有 "We couldn't find any results." 字样
+                    # 使用 normalize-space 忽略 HTML 中的换行符和多余空格
+                    # 只要页面包含这段文字，就认为是正常的结束页
+                    end_msg_elements = driver.find_elements(By.XPATH, "//*[contains(normalize-space(.), \"We couldn't find any results\")]")
+                    
+                    if end_msg_elements:
+                        print(f"[{ds}] Offset {offset}: 发现结束标记 'We couldn't find any results.'")
+                        found_end_of_results = True
+                        page_load_success = True
+                        break # 确认结束，跳出重试循环
+                    
+                    # 3. 既没数据，也没找到结束语，说明页面加载异常（空白或报错），进行重试
+                    print(f"[{ds}] Offset {offset}: 未发现数据也未发现结束标记，正在进行第 {attempt + 1}/3 次重试...")
+                    time.sleep(random.randint(3, 5)) # 稍作等待后重试
+                    
+                except Exception as e:
+                    print(f"[{ds}] 页面加载发生异常: {e}。正在进行第 {attempt + 1}/3 次重试...")
+                    time.sleep(random.randint(3, 5))
+            
+            # --- 重试循环结束后的判断逻辑 ---
+            
+            # 情况 A: 明确找到了结束语 -> 停止当前日期的抓取 (break while True)
+            if found_end_of_results:
+                break
+            
+            # 情况 B: 3次重试后依然没有成功加载 (既无数据也无结束语) -> 可能是严重网络问题，跳过该页防止死循环
+            if not page_load_success:
+                print(f"[{ds}] Offset {offset}: 3次重试均失败，跳过此页。")
+                break
+            
+            # 情况 C: 虽然 loaded_success 为 True，但 rows 为空且没 flag (理论上不应发生，作为兜底)
             if not rows:
                 break
 
+            # --- 以下是原有的数据处理代码 (保持不变) ---
             for row in rows:
                 try:
                     symbol = row.find_element(By.CSS_SELECTOR, 'a[title][href*="/quote/"]').get_attribute('title')
                     cells = row.find_elements(By.TAG_NAME, 'td')
                     if len(cells) < 4: continue
-
                     event_name = cells[2].text.strip()
                     call_time = cells[3].text.strip() or "N/A"
-
+                    
                     if not any(k in event_name for k in ["Earnings Release", "Shareholders Meeting", "Earnings Announcement"]):
                         continue
+                    
                     if (symbol, ds) in existing_release_entries:
                         continue
+                    
                     if not any(symbol in lst for lst in sectors_data.values()):
                         continue
-
+                    
                     new_line = f"{symbol:<7}: {call_time:<4}: {ds}"
-
+                    
                     if symbol in existing_map:
                         old_ct, old_dt = existing_map[symbol]
                         if old_ct == call_time and old_dt == ds: continue
@@ -343,9 +443,9 @@ def run_scraper_task(driver, sectors_data, task_config):
                     else:
                         existing_map[symbol] = (call_time, ds)
                         new_entries.append(new_line)
-
                 except Exception:
                     continue
+            
             offset += 100
     print(f"在 {start_date.date()} 到 {end_date.date()} 范围内共发现 {len(new_entries)} 个潜在新条目。")
 
