@@ -1,36 +1,21 @@
 {
-    "Basic_Materials": {
-        "SHW": ""
-    },
-    "Real_Estate": {
-        "VICI": "",
-        "NSA": ""
-    },
+    "Basic_Materials": {},
+    "Real_Estate": {},
     "Energy": {},
-    "Technology": {
-        "FOUR": ""
-    },
+    "Technology": {},
     "Consumer_Cyclical": {
-        "ALH": "",
-        "NKE": "",
-        "AZO": "",
-        "ORLY": "",
-        "VVV": ""
+        "NKE": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
         "COST": "",
-        "CLX": ""
+        "CLX": "",
+        "KMB": ""
     },
     "Industrials": {},
-    "Communication_Services": {
-        "RBLX": ""
-    },
+    "Communication_Services": {},
     "Financial_Services": {},
-    "Healthcare": {
-        "DVA": "",
-        "MASI": ""
-    },
+    "Healthcare": {},
     "ETFs": {
         "HYG": ""
     },
@@ -105,98 +90,98 @@
         "XRP": ""
     },
     "Must": {
-        "MSTR": "",
-        "URA": "",
-        "AMD": "",
-        "BE": "",
-        "WGMI": "",
-        "NET": "",
-        "CRDO": "",
-        "CIFR": "",
-        "APH": "",
-        "ETN": "",
-        "GOOGL": "",
-        "COIN": ""
+        "SO": "",
+        "POOL": "",
+        "SONY": ""
     },
-    "Today": {
-        "CYBR": "",
-        "XYL": "",
-        "IREN": "",
-        "DLR": "",
-        "ACM": "",
-        "CVNA": ""
-    },
+    "Today": {},
     "Short": {},
     "Short_Shift": {},
     "Strategy12": {},
     "Strategy12_backup": {},
     "Strategy34": {
-        "A": "",
-        "BBY": "",
-        "BLK": "",
         "CHWY": "",
         "CRWD": "",
-        "MRVL": "MRVL热",
-        "STZ": ""
+        "ELV": "",
+        "TLRY": ""
     },
     "Strategy34_backup": {},
+    "OverSell_W": {},
+    "OverSell_W_backup": {},
     "OverSell": {
-        "HIMS": ""
-    },
-    "OverSell_backup": {
-        "HIMS": ""
-    },
-    "PE_Double": {
-        "ASND": "",
-        "BNTX": "",
+        "ARM": "",
         "COIN": "",
-        "COR": "",
-        "DUOL": "",
-        "EQIX": "EQIX7热",
-        "GH": "",
-        "HCA": "HCA热",
-        "SOUN": "",
-        "SPOT": "",
-        "VLO": ""
-    },
-    "PE_Double_backup": {},
-    "PE_valid": {
-        "AMZN": "AMZN7热",
-        "BABA": "BABA15",
-        "BWXT": "BWXT15热",
-        "CLX": "",
-        "DELL": "DELL15热",
-        "ENTG": "",
-        "FLEX": "FLEX7热",
-        "HPQ": "HPQ15热",
-        "INTC": "",
+        "CPNG": "",
+        "DOCS": "",
+        "ETN": "ETN15热",
+        "GNRC": "",
+        "HIMS": "",
+        "IOT": "",
+        "IRM": "IRM15热",
         "KMB": "",
         "MELI": "",
-        "MP": "",
-        "MPC": "",
-        "MSFT": "MSFT7",
+        "MRVL": "MRVL15热",
         "MSTR": "",
-        "ORLY": "",
-        "PODD": "",
+        "NFLX": "NFLX15",
+        "PYPL": "",
+        "RBLX": "",
+        "SMR": "SMR15热",
+        "SOUN": ""
+    },
+    "OverSell_backup": {},
+    "PE_W": {
+        "BLK": "",
+        "DOC": "DOC15热",
         "POOL": "",
-        "PWR": "PWR热",
+        "SO": "SO7热",
+        "ULS": "",
+        "WELL": "WELL7热"
+    },
+    "PE_W_backup": {},
+    "PE_valid": {
+        "A": "",
+        "ACM": "",
+        "AMZN": "AMZN7热",
+        "BABA": "BABA15",
+        "BBY": "",
+        "BLDR": "",
+        "BNTX": "",
+        "CACI": "",
+        "CLX": "",
+        "COR": "",
+        "CVNA": "",
+        "DDS": "",
+        "DELL": "DELL15热",
+        "DLR": "DLR7热",
+        "DUOL": "",
+        "ENTG": "",
+        "EQIX": "EQIX7热",
+        "FLEX": "FLEX7热",
+        "HCA": "HCA热",
+        "HON": "",
+        "HPQ": "HPQ15热",
+        "INTC": "",
+        "MP": "",
+        "MSFT": "MSFT7",
+        "PATH": "",
+        "PODD": "",
+        "PSTG": "PSTG15热",
         "RACE": "",
         "SE": "",
-        "SO": "SO7热",
-        "TEM": "",
+        "SPOT": "",
         "TT": "TT7热",
         "UBER": "",
+        "UNH": "UNH7",
         "URI": "",
-        "WELL": "WELL7热",
-        "WRB": ""
+        "VLO": "",
+        "WCC": "WCC热",
+        "WST": ""
     },
     "PE_valid_backup": {},
     "PE_invalid": {
         "ALNY": "",
-        "INSM": "",
-        "OPEN": "",
-        "RBLX": "",
-        "SMR": "SMR15热"
+        "CYBR": "",
+        "GH": ""
     },
     "PE_invalid_backup": {},
     "Currencies": {

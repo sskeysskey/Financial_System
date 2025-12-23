@@ -200,7 +200,8 @@
         "BDX",
         "IDXX",
         "ARGX",
-        "EW"
+        "EW",
+        "TAK"
     ],
     "Industrials": [
         "GE",
@@ -310,7 +311,6 @@
         "CEG",
         "AEP",
         "VST",
-        "SRE",
-        "D"
+        "SRE"
     ]
 }

@@ -5,9 +5,9 @@ import os
 import pyautogui
 import random
 import threading
-import sys  # 新增：用于终止程序
-import tkinter as tk # 新增：用于弹窗
-from tkinter import messagebox # 新增：用于弹窗
+import sys
+import tkinter as tk
+from tkinter import messagebox
 from datetime import datetime, timedelta
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -38,7 +38,7 @@ USE_CUSTOM_LIST = True
 # 自定义 Symbol 列表
 CUSTOM_SYMBOLS_DATA = [
     "^VIX", "NVDA", "AAPL", "GOOGL", "MSFT", "META",
-    "TSM", "WMT", "HYG", "QQQ", "SPY"
+    "TSM", "WMT", "HYG", "QQQ", "SPY", "UVXY"
 ]
 
 # --- 3. 文件名生成 ---

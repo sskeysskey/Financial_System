@@ -500,6 +500,6 @@ if __name__ == "__main__":
         
         # 调用处理函数
         process_options_change(file_old, file_new, TOP_N, INCLUDE_NEW_ROWS)
-        show_alert("已生成比对结果")
+        show_alert("已生成Option_Change期权的比对结果")
     else:
         print("\n程序终止: 未能获取有效的对比文件。")

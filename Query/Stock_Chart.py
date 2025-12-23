@@ -71,7 +71,7 @@ def match_and_plot(input_trimmed, sector_data, compare_data, json_data, db_path)
                     (shares_val, pb),  # 将 shares 和 pb 组合成元组传入
                     marketcap,
                     pe,
-                    json_data, '10Y', True)
+                    json_data, '1Y', True)
                 return True
     input_lower = input_trimmed.lower()
     for sector, names in sector_data.items():

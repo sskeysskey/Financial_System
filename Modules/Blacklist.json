@@ -897,6 +897,8 @@
         "DTE",
         "TMUS",
         "BKR",
-        "MPC"
+        "MPC",
+        "OPEN",
+        "PSKY"
     ]
 }
