@@ -22,29 +22,31 @@ from tqdm import tqdm
 # --- 1. 基础路径配置 ---
 # 数据库路径
 DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
+
 # 输出文件保存目录
 OUTPUT_DIR = '/Users/yanzhang/Coding/News/backup/'
+
 # 市值阈值 (10000亿) - 仅在数据库模式下生效
-MARKET_CAP_THRESHOLD = 4000000000000
+MARKET_CAP_THRESHOLD = 100000000000
 
 # --- 2. 数据源开关配置 ---
-# 设置为 True: 使用下方的 CUSTOM_SYMBOLS_DATA 列表 (默认)
 # 设置为 False: 使用数据库 MNSPP 表进行筛选
-USE_CUSTOM_LIST = True 
+USE_CUSTOM_LIST = False 
 
-# True 改成 False 用于切换从哪里获取Symbol
-# USE_CUSTOM_LIST = False 
+# 设置为 True: 使用下方的 CUSTOM_SYMBOLS_DATA 列表 (默认)
+# USE_CUSTOM_LIST = True 
 
 # 自定义 Symbol 列表
 CUSTOM_SYMBOLS_DATA = [
     "^VIX", "NVDA", "AAPL", "GOOGL", "MSFT", "META",
-    "TSM", "WMT", "HYG", "QQQ", "SPY", "UVXY"
+    "TSM", "WMT", "HYG", "QQQ", "SPY", "UVXY", "POOL", "SONY", "UUP"
 ]
 
 # --- 3. 文件名生成 ---
 # 生成当天的文件名 Options_YYMMDD.csv
 today_str = datetime.now().strftime('%y%m%d')
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, f'Options_{today_str}.csv')
+
 
 # 添加鼠标移动功能的函数
 def move_mouse_periodically():
@@ -68,6 +70,7 @@ def move_mouse_periodically():
             pass
 
 # ================= 1. 数据库操作 =================
+
 def get_target_symbols(db_path, threshold):
     """从数据库中获取符合市值要求的 Symbol"""
     tqdm.write(f"正在连接数据库: {db_path}...")
@@ -91,6 +94,7 @@ def get_target_symbols(db_path, threshold):
             conn.close()
 
 # ================= 2. 数据处理工具函数 =================
+
 def format_date(date_str):
     """将 'Dec 19, 2025' 转换为 '2025/12/19'"""
     try:
@@ -129,6 +133,7 @@ def show_error_popup(symbol):
         print(f"弹窗显示失败: {e}")
 
 # ================= 3. 爬虫核心逻辑 =================
+
 def scrape_options():
     # 在主程序开始前启动鼠标移动线程
     # mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
@@ -148,14 +153,54 @@ def scrape_options():
         tqdm.write("未找到任何 Symbol，程序结束。")
         return
 
+    # ================= 修改开始：检查已存在的 Symbol 并过滤 =================
+    
+    # 获取已经抓取过的 symbol 列表
+    existing_symbols = set()
+    if os.path.exists(OUTPUT_FILE):
+        try:
+            with open(OUTPUT_FILE, 'r', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                header = next(reader, None) # 跳过表头
+                if header:
+                    for row in reader:
+                        if row and len(row) > 0:
+                            # 假设第一列是 Symbol
+                            existing_symbols.add(row[0])
+            tqdm.write(f"🔍 检测到现有文件，已包含 {len(existing_symbols)} 个 Symbol 的数据。")
+        except Exception as e:
+            tqdm.write(f"⚠️ 读取现有文件检查 Symbol 时出错: {e}，将重新抓取所有。")
+
+    # 过滤列表：只保留不在 existing_symbols 中的代码
+    original_count = len(symbols)
+    symbols = [s for s in symbols if s not in existing_symbols]
+    skipped_count = original_count - len(symbols)
+
+    if skipped_count > 0:
+        tqdm.write(f"⏭️  根据文件记录，已跳过 {skipped_count} 个已完成的 Symbol。")
+        tqdm.write(f"📋 剩余待抓取: {len(symbols)} 个。")
+
+    # 如果所有都抓完了，直接退出，不启动浏览器
+    if not symbols:
+        tqdm.write("✅ 所有目标 Symbol 均已存在于 CSV 中，无需执行任务。")
+        return
+
     # 2. 初始化 CSV 文件 (写入表头)
     # 确保目录存在
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
-        
-    with open(OUTPUT_FILE, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerow(['Symbol', 'Expiry Date', 'Type', 'Strike', 'Open Interest'])
+
+    # --- 修改开始：改为追加模式检测 ---
+    # 检查文件是否存在
+    file_exists = os.path.exists(OUTPUT_FILE)
+    # 只有当文件不存在时，才以 'w' 模式创建并写入表头
+    if not file_exists:
+        with open(OUTPUT_FILE, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(['Symbol', 'Expiry Date', 'Type', 'Strike', 'Open Interest'])
+        tqdm.write(f"创建新文件: {OUTPUT_FILE}")
+    else:
+        tqdm.write(f"文件已存在，将以追加模式运行: {OUTPUT_FILE}")
 
     # 3. 初始化 Selenium
     options = webdriver.ChromeOptions()
@@ -338,7 +383,7 @@ def scrape_options():
                         has_data = False
                         data_buffer = []
                         option_types = ['Calls', 'Puts']
-
+                        
                         for i, table in enumerate(tables):
                             if i >= len(option_types): break
                             opt_type = option_types[i]

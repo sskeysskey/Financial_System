@@ -1,8 +1,13 @@
 {
     "Basic_Materials": {},
-    "Real_Estate": {},
+    "Real_Estate": {
+        "CUBE": "",
+        "NSA": ""
+    },
     "Energy": {},
-    "Technology": {},
+    "Technology": {
+        "MSTR": ""
+    },
     "Consumer_Cyclical": {
         "NKE": ""
     },
@@ -13,9 +18,15 @@
         "KMB": ""
     },
     "Industrials": {},
-    "Communication_Services": {},
+    "Communication_Services": {
+        "RBLX": ""
+    },
     "Financial_Services": {},
-    "Healthcare": {},
+    "Healthcare": {
+        "DVA": "",
+        "MASI": "",
+        "BLLN": ""
+    },
     "ETFs": {
         "HYG": ""
     },
@@ -95,95 +106,173 @@
         "SONY": ""
     },
     "Today": {},
-    "Short": {},
-    "Short_Shift": {},
+    "Short": {
+        "ABVX": "",
+        "LITE": "",
+        "HL": ""
+    },
+    "Short_Shift": {
+        "SATS": "",
+        "GFI": "",
+        "MDGL": "",
+        "RVMD": ""
+    },
     "Strategy12": {},
     "Strategy12_backup": {},
     "Strategy34": {
+        "BLK": "",
         "CHWY": "",
         "CRWD": "",
         "ELV": "",
+        "PATH": "",
         "TLRY": ""
     },
-    "Strategy34_backup": {},
+    "Strategy34_backup": {
+        "BLK": "",
+        "CHWY": "",
+        "CRWD": "",
+        "ELV": "",
+        "PATH": "",
+        "TLRY": ""
+    },
     "OverSell_W": {},
     "OverSell_W_backup": {},
     "OverSell": {
         "ARM": "",
         "COIN": "",
         "CPNG": "",
+        "DEO": "",
+        "DOC": "DOC15热",
         "DOCS": "",
-        "ETN": "ETN15热",
+        "ETSY": "",
         "GNRC": "",
         "HIMS": "",
         "IOT": "",
-        "IRM": "IRM15热",
-        "KMB": "",
         "MELI": "",
-        "MRVL": "MRVL15热",
         "MSTR": "",
         "NFLX": "NFLX15",
+        "POOL": "",
         "PYPL": "",
         "RBLX": "",
+        "SMCI": "SMCI15热",
         "SMR": "SMR15热",
-        "SOUN": ""
+        "SOUN": "",
+        "TEM": ""
     },
-    "OverSell_backup": {},
-    "PE_W": {
-        "BLK": "",
+    "OverSell_backup": {
+        "ARM": "",
+        "COIN": "",
+        "CPNG": "",
+        "DEO": "",
         "DOC": "DOC15热",
+        "DOCS": "",
+        "ETSY": "",
+        "GNRC": "",
+        "HIMS": "",
+        "IOT": "",
+        "MELI": "",
+        "MSTR": "",
+        "NFLX": "NFLX15",
         "POOL": "",
-        "SO": "SO7热",
-        "ULS": "",
-        "WELL": "WELL7热"
+        "PYPL": "",
+        "RBLX": "",
+        "SMCI": "SMCI15热",
+        "SMR": "SMR15热",
+        "SOUN": "",
+        "TEM": ""
     },
-    "PE_W_backup": {},
+    "PE_W": {
+        "COR": "",
+        "DDS": "",
+        "KMB": ""
+    },
+    "PE_W_backup": {
+        "COR": "",
+        "DDS": "",
+        "KMB": ""
+    },
     "PE_valid": {
         "A": "",
-        "ACM": "",
-        "AMZN": "AMZN7热",
-        "BABA": "BABA15",
+        "AMZN": "AMZN热",
+        "BAH": "",
         "BBY": "",
-        "BLDR": "",
         "BNTX": "",
-        "CACI": "",
         "CLX": "",
-        "COR": "",
-        "CVNA": "",
-        "DDS": "",
         "DELL": "DELL15热",
+        "DKS": "",
         "DLR": "DLR7热",
+        "DLTR": "",
         "DUOL": "",
-        "ENTG": "",
         "EQIX": "EQIX7热",
+        "ETN": "ETN15热",
         "FLEX": "FLEX7热",
-        "HCA": "HCA热",
+        "GRAB": "",
         "HON": "",
+        "HOOD": "",
         "HPQ": "HPQ15热",
+        "IDXX": "",
         "INTC": "",
         "MP": "",
         "MSFT": "MSFT7",
-        "PATH": "",
         "PODD": "",
         "PSTG": "PSTG15热",
         "RACE": "",
-        "SE": "",
         "SPOT": "",
         "TT": "TT7热",
         "UBER": "",
         "UNH": "UNH7",
         "URI": "",
         "VLO": "",
-        "WCC": "WCC热",
+        "WELL": "WELL7热",
+        "WRB": "",
         "WST": ""
     },
-    "PE_valid_backup": {},
+    "PE_valid_backup": {
+        "A": "",
+        "AMZN": "AMZN热",
+        "BAH": "",
+        "BBY": "",
+        "BNTX": "",
+        "CLX": "",
+        "DELL": "DELL15热",
+        "DKS": "",
+        "DLR": "DLR7热",
+        "DLTR": "",
+        "DUOL": "",
+        "EQIX": "EQIX7热",
+        "ETN": "ETN15热",
+        "FLEX": "FLEX7热",
+        "GRAB": "",
+        "HON": "",
+        "HOOD": "",
+        "HPQ": "HPQ15热",
+        "IDXX": "",
+        "INTC": "",
+        "MP": "",
+        "MSFT": "MSFT7",
+        "PODD": "",
+        "PSTG": "PSTG15热",
+        "RACE": "",
+        "SPOT": "",
+        "TT": "TT7热",
+        "UBER": "",
+        "UNH": "UNH7",
+        "URI": "",
+        "VLO": "",
+        "WELL": "WELL7热",
+        "WRB": "",
+        "WST": ""
+    },
     "PE_invalid": {
         "ALNY": "",
         "CYBR": "",
-        "GH": ""
+        "U": ""
     },
-    "PE_invalid_backup": {},
+    "PE_invalid_backup": {
+        "ALNY": "",
+        "CYBR": "",
+        "U": ""
+    },
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
