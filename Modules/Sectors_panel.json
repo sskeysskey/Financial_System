@@ -8,14 +8,10 @@
     "Technology": {
         "MSTR": ""
     },
-    "Consumer_Cyclical": {
-        "NKE": ""
-    },
+    "Consumer_Cyclical": {},
     "Utilities": {},
     "Consumer_Defensive": {
-        "COST": "",
-        "CLX": "",
-        "KMB": ""
+        "CLX": ""
     },
     "Industrials": {},
     "Communication_Services": {
@@ -228,9 +224,6 @@
         "WST": ""
     },
     "PE_valid_backup": {
-        "A": "",
-        "AMZN": "AMZN热",
-        "BAH": "",
         "BBY": "",
         "BNTX": "",
         "CLX": "",

@@ -38,11 +38,11 @@ INCLUDE_NEW_ROWS = True
 # 模式开关
 # True:  手动模式 (使用下方指定的两个具体文件)
 # False: 自动模式 (自动寻找 BACKUP_DIR 下最新的两个文件)
-USE_MANUAL_MODE = False
+USE_MANUAL_MODE = True
 
 # 手动模式下的文件路径 (仅当 USE_MANUAL_MODE = True 时生效)
-MANUAL_FILE_OLD = '/Users/yanzhang/Coding/News/backup/Options_251215.csv'
-MANUAL_FILE_NEW = '/Users/yanzhang/Coding/News/backup/Options_251216.csv'
+MANUAL_FILE_OLD = '/Users/yanzhang/Coding/News/backup/Options_251219.csv'
+MANUAL_FILE_NEW = '/Users/yanzhang/Coding/News/backup/Options_251220.csv'
 
 # ==========================================
 # 辅助函数：获取 Symbol 对应的最新价格

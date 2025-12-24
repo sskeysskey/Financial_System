@@ -39,7 +39,8 @@ USE_CUSTOM_LIST = False
 # 自定义 Symbol 列表
 CUSTOM_SYMBOLS_DATA = [
     "^VIX", "NVDA", "AAPL", "GOOGL", "MSFT", "META",
-    "TSM", "WMT", "HYG", "QQQ", "SPY", "UVXY", "POOL", "SONY", "UUP"
+    "TSM", "WMT", "HYG", "QQQ", "SPY", "UVXY", "POOL", 
+    "SONY", "UUP", "SVIX"
 ]
 
 # --- 3. 文件名生成 ---
@@ -65,25 +66,27 @@ def move_mouse_periodically():
             # 等待30-60秒再次移动
             time.sleep(random.randint(30, 60))
         except Exception as e:
-            # 使用 tqdm.write 防止打断主线程进度条，但这里是在子线程，直接 print 也可以，
-            # 为了安全起见，尽量少输出
+            # 使用 tqdm.write 防止打断主线程进度条
             pass
 
 # ================= 1. 数据库操作 =================
 
 def get_target_symbols(db_path, threshold):
-    """从数据库中获取符合市值要求的 Symbol"""
+    """从数据库中获取符合市值要求的 Symbol，并按市值降序排列"""
     tqdm.write(f"正在连接数据库: {db_path}...")
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
-        # 查询 marketcap 大于阈值的 symbol
-        query = "SELECT symbol, marketcap FROM MNSPP WHERE marketcap > ?"
+        # --- 修改点 1: 增加 ORDER BY marketcap DESC ---
+        query = "SELECT symbol, marketcap FROM MNSPP WHERE marketcap > ? ORDER BY marketcap DESC"
         cursor.execute(query, (threshold,))
         results = cursor.fetchall()
         
-        symbols = [row[0] for row in results]
+        # --- 修改点 2: 直接返回结果列表 [(symbol, cap), (symbol, cap)...] ---
+        # 以前是: symbols = [row[0] for row in results]
+        symbols = results 
+        
         tqdm.write(f"共找到 {len(symbols)} 个市值大于 {threshold} 的代码。")
         return symbols
     except Exception as e:
@@ -140,21 +143,23 @@ def scrape_options():
     # mouse_thread.start()
     
     # --- 1. 获取目标 Symbols (根据开关决定来源) ---
-    symbols = []
+    symbols = [] # 结构统一为 list of tuples: [(symbol, market_cap), ...]
+    
     if USE_CUSTOM_LIST:
         tqdm.write(f"【模式】使用自定义列表模式")
-        symbols = CUSTOM_SYMBOLS_DATA
+        # 为了保持结构一致，给自定义列表填充市值 0
+        symbols = [(s, 0) for s in CUSTOM_SYMBOLS_DATA]
         tqdm.write(f"加载了 {len(symbols)} 个目标代码")
     else:
         tqdm.write(f"【模式】使用数据库筛选模式 (阈值: {MARKET_CAP_THRESHOLD})")
+        # 这里返回的已经是 [(symbol, cap), ...] 且按市值降序排列
         symbols = get_target_symbols(DB_PATH, MARKET_CAP_THRESHOLD)
-
+    
     if not symbols:
         tqdm.write("未找到任何 Symbol，程序结束。")
         return
 
-    # ================= 修改开始：检查已存在的 Symbol 并过滤 =================
-    
+    # ================= 检查已存在的 Symbol 并过滤 =================
     # 获取已经抓取过的 symbol 列表
     existing_symbols = set()
     if os.path.exists(OUTPUT_FILE):
@@ -166,19 +171,20 @@ def scrape_options():
                     for row in reader:
                         if row and len(row) > 0:
                             # 假设第一列是 Symbol
-                            existing_symbols.add(row[0])
+                            existing_symbols.add(row[0]) # CSV里存的还是纯 Symbol
             tqdm.write(f"🔍 检测到现有文件，已包含 {len(existing_symbols)} 个 Symbol 的数据。")
         except Exception as e:
             tqdm.write(f"⚠️ 读取现有文件检查 Symbol 时出错: {e}，将重新抓取所有。")
 
     # 过滤列表：只保留不在 existing_symbols 中的代码
+    # s 是 (symbol, market_cap)，所以判断 s[0]
     original_count = len(symbols)
-    symbols = [s for s in symbols if s not in existing_symbols]
+    symbols = [s for s in symbols if s[0] not in existing_symbols]
+    
     skipped_count = original_count - len(symbols)
-
     if skipped_count > 0:
         tqdm.write(f"⏭️  根据文件记录，已跳过 {skipped_count} 个已完成的 Symbol。")
-        tqdm.write(f"📋 剩余待抓取: {len(symbols)} 个。")
+    tqdm.write(f"📋 剩余待抓取: {len(symbols)} 个 (按市值从大到小)。")
 
     # 如果所有都抓完了，直接退出，不启动浏览器
     if not symbols:
@@ -243,9 +249,23 @@ def scrape_options():
         # position=0 表示这是最顶层的进度条
         symbol_pbar = tqdm(symbols, desc="总体进度", position=0)
         
-        for symbol in symbol_pbar:
-            # 更新进度条描述，显示当前正在处理谁
-            symbol_pbar.set_description(f"处理中: {symbol}")
+        # --- 修改点 4: 循环解包 ---
+        for symbol_data in symbol_pbar:
+            # 解包 Symbol 和 市值
+            symbol, market_cap = symbol_data
+            
+            # 格式化市值显示 (例如: 2.3T, 500B)
+            if market_cap >= 1000000000000:
+                cap_str = f"{market_cap/1000000000000:.2f}T" # 万亿
+            elif market_cap >= 1000000000:
+                cap_str = f"{market_cap/1000000000:.2f}B"    # 十亿
+            elif market_cap > 0:
+                cap_str = f"{market_cap/1000000:.1f}M"       # 百万
+            else:
+                cap_str = "N/A"
+
+            # 更新进度条描述，增加显示市值
+            symbol_pbar.set_description(f"处理中: {symbol} [市值: {cap_str}]")
             
             base_url = f"https://finance.yahoo.com/quote/{symbol}/options/"
             
@@ -352,6 +372,10 @@ def scrape_options():
             except Exception as e:
                 tqdm.write(f"[{symbol}] 日期过滤出错: {e}，将使用所有获取到的日期")
 
+            # ================= [核心修改] =================
+            # 1. 暂存当前 symbol 所有日期的数据，不直接写入
+            symbol_all_data = [] 
+            
             # === 内层进度条：遍历日期 ===
             date_pbar = tqdm(date_map, desc=f"  {symbol} 日期", position=1, leave=False)
             
@@ -381,7 +405,7 @@ def scrape_options():
                         
                         # 检查是否真的有数据行
                         has_data = False
-                        data_buffer = []
+                        data_buffer = [] # 单个页面的缓存
                         option_types = ['Calls', 'Puts']
                         
                         for i, table in enumerate(tables):
@@ -404,6 +428,7 @@ def scrape_options():
                                     if strike_text:
                                         strike = strike_text.replace(',', '')
                                         oi = clean_number(oi_text)
+                                        # 将数据存入 buffer
                                         data_buffer.append([symbol, formatted_date, opt_type, strike, oi])
                                         has_data = True
                         
@@ -411,11 +436,10 @@ def scrape_options():
                             time.sleep(2)
                             continue
 
-                        # --- 写入文件 ---
+                        # [核心修改]
+                        # 成功抓取后，追加到 symbol 总表，而不是写入 CSV
                         if data_buffer:
-                            with open(OUTPUT_FILE, 'a', newline='', encoding='utf-8') as f:
-                                writer = csv.writer(f)
-                                writer.writerows(data_buffer)
+                            symbol_all_data.extend(data_buffer)
                         
                         break # 成功则跳出重试循环
 
@@ -424,6 +448,20 @@ def scrape_options():
                             time.sleep(2)
                         else:
                             pass
+            
+            # [核心修改]
+            # 当该 Symbol 的所有日期循环结束后，一次性写入文件
+            if symbol_all_data:
+                try:
+                    with open(OUTPUT_FILE, 'a', newline='', encoding='utf-8') as f:
+                        writer = csv.writer(f)
+                        writer.writerows(symbol_all_data)
+                    # tqdm.write(f"[{symbol}] 数据保存完毕。")
+                except Exception as e:
+                    tqdm.write(f"[{symbol}] 写入文件失败: {e}")
+            else:
+                # 如果完全没抓到数据（或日期列表为空），这里可以选择不处理，保证没有空数据写入
+                pass
 
     finally:
         # 防止重复 quit

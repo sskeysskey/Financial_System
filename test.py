@@ -1,561 +1,570 @@
+import sqlite3
+import csv
+import time
 import os
-import json
-import shutil
-from selenium import webdriver
+import pyautogui
+import random
+import threading
+import sys
+import tkinter as tk
+from tkinter import messagebox
 from datetime import datetime, timedelta
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-import pyautogui
-import random
-import time
-import threading
-import subprocess
-import tkinter as tk
-from tkcalendar import DateEntry
 from tqdm import tqdm
 
-# ==============================================================================
-# 1. 通用模块和函数 (所有任务共用)
-# ==============================================================================
+# ================= 配置区域 =================
 
-# -------- 鼠标防 AFK 线程 (全局唯一) --------------------------------
-def move_mouse_periodically():
-    """在后台周期性地移动鼠标以防止系统休眠或 AFK 检测。"""
-    # 使用 tqdm.write 避免打断主进度条
-    tqdm.write("启动防 AFK 鼠标移动线程...")
-    while True:
-        try:
-            w, h = pyautogui.size()
-            x = random.randint(100, w - 100)
-            y = random.randint(100, h - 100)
-            pyautogui.moveTo(x, y, duration=1)
-            time.sleep(random.randint(30, 60))
-        except Exception as e:
-            # 这里的 print 改为 tqdm.write 比较安全，虽然是在线程中
-            pass 
-            time.sleep(30)
+# --- 1. 基础路径配置 ---
+# 数据库路径
+DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
 
-# -------- 配置文件读写：记忆日期范围 --------------------------------
-config_path = '/Users/yanzhang/Coding/Financial_System/Selenium/earnings_config.json'
+# 输出文件保存目录
+OUTPUT_DIR = '/Users/yanzhang/Coding/News/backup/'
 
-def load_last_range_by_group(group_name: str):
-    """从配置文件中读取指定分组的日期范围，失败则返回默认值。"""
-    try:
-        if os.path.exists(config_path):
-            with open(config_path, 'r') as f:
-                data = json.load(f)
-                grp = data.get(group_name, {})
-                sd_s = grp.get('start_date')
-                ed_s = grp.get('end_date')
-                if sd_s and ed_s:
-                    sd = datetime.strptime(sd_s, '%Y-%m-%d').date()
-                    ed = datetime.strptime(ed_s, '%Y-%m-%d').date()
-                    return sd, ed
-    except Exception as e:
-        tqdm.write(f"[{group_name}] 读取配置失败，将使用默认日期：{e}")
-    
-    today = datetime.now().date()
-    return today, today + timedelta(days=6)
+# 市值阈值 (10000亿) - 仅在数据库模式下生效
+MARKET_CAP_THRESHOLD = 100000000000
 
-def save_last_range_by_group(group_name: str, sd: datetime.date, ed: datetime.date):
-    """将日期范围写入配置文件的指定分组。"""
-    try:
-        os.makedirs(os.path.dirname(config_path), exist_ok=True)
-        data = {}
-        if os.path.exists(config_path):
-            with open(config_path, 'r') as f:
-                try:
-                    data = json.load(f) or {}
-                except Exception:
-                    data = {}
-        
-        if group_name not in data:
-            data[group_name] = {}
-            
-        data[group_name]['start_date'] = sd.strftime('%Y-%m-%d')
-        data[group_name]['end_date'] = ed.strftime('%Y-%m-%d')
-        
-        with open(config_path, 'w') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-            
-    except Exception as e:
-        tqdm.write(f"[{group_name}] 写入配置失败：{e}")
+# --- 2. 数据源开关配置 ---
+# 默认值设为 True，实际运行会由弹窗决定
+USE_CUSTOM_LIST = True 
 
-def get_week_start(date):
-    """获取给定日期所在周的周一日期"""
-    return date - timedelta(days=date.weekday())
+# 自定义 Symbol 列表
+CUSTOM_SYMBOLS_DATA = [
+    "^VIX", "NVDA", "AAPL", "GOOGL", "MSFT", "META",
+    "TSM", "WMT", "HYG", "QQQ", "SPY", "UVXY", "POOL", 
+    "SONY", "UUP", "SVIX"
+]
 
-def check_and_advance_dates_if_needed():
+# --- 3. 文件名生成 ---
+# 生成当天的文件名 Options_YYMMDD.csv
+today_str = datetime.now().strftime('%y%m%d')
+OUTPUT_FILE = os.path.join(OUTPUT_DIR, f'Options_{today_str}.csv')
+
+# ================= 新增：模式选择弹窗函数 =================
+def ask_user_mode():
     """
-    检查是否需要顺延日期。
-    规则：只在周日或周一，且本周尚未顺延过的情况下才执行顺延。
-    返回：True 表示执行了顺延，False 表示未执行
+    弹出窗口让用户选择运行模式
+    返回: True (自定义列表) 或 False (数据库模式)
+    如果用户按 ESC 或关闭窗口，则直接终止程序。
     """
-    today = datetime.now().date()
-    today_weekday = today.weekday()
-
-    # 只在周日(6)或周一(0)时才可能顺延
-    if today_weekday not in [6, 0]:
-        print(f"\n今天是工作日(周{'二三四五六'[today_weekday-1]})，使用配置文件中的现有日期...")
-        return False
-
-    try:
-        # 读取配置文件
-        if not os.path.exists(config_path):
-            print("配置文件不存在，无法检查顺延状态。")
-            return False
-
-        with open(config_path, 'r') as f:
-            data = json.load(f)
-
-        # 检查上次顺延日期
-        last_advance_str = data.get('_last_advance_date')
-        current_week_start = get_week_start(today)
-
-        if last_advance_str:
-            last_advance_date = datetime.strptime(last_advance_str, '%Y-%m-%d').date()
-            last_advance_week_start = get_week_start(last_advance_date)
-
-            # 如果上次顺延和本次在同一周（周一相同），则不再顺延
-            if current_week_start == last_advance_week_start:
-                print(f"\n本周已在 {last_advance_str} 执行过日期顺延，跳过本次顺延操作。")
-                return False
-
-        # 执行顺延
-        print(f"\n今天是{'周日' if today_weekday == 6 else '周一'}，且本周尚未顺延，开始将所有日期顺延一周...")
-        
-        modified = False
-        for group_name in data:
-            # 跳过特殊键
-            if group_name.startswith('_'):
-                continue
-            
-            if 'start_date' in data[group_name] and 'end_date' in data[group_name]:
-                try:
-                    old_start = datetime.strptime(data[group_name]['start_date'], '%Y-%m-%d').date()
-                    old_end = datetime.strptime(data[group_name]['end_date'], '%Y-%m-%d').date()
-                    
-                    new_start = old_start + timedelta(days=7)
-                    new_end = old_end + timedelta(days=7)
-                    
-                    data[group_name]['start_date'] = new_start.strftime('%Y-%m-%d')
-                    data[group_name]['end_date'] = new_end.strftime('%Y-%m-%d')
-                    
-                    print(f"[{group_name}] 日期已顺延: {old_start} ~ {old_end} => {new_start} ~ {new_end}")
-                    modified = True
-                except Exception as e:
-                    print(f"[{group_name}] 日期顺延失败：{e}")
-
-        if modified:
-            # 记录本次顺延日期
-            data['_last_advance_date'] = today.strftime('%Y-%m-%d')
-            with open(config_path, 'w') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            print(f"所有日期已成功顺延一周，并记录顺延日期为 {today}")
-            return True
-        else:
-            print("没有需要顺延的日期。")
-            return False
-
-    except Exception as e:
-        print(f"顺延日期过程中发生错误：{e}")
-        return False
-
-# -------- 日期选择界面 (Tkinter) - 保留但不再使用 ------------------------------------
-def pick_date_range(group_name: str):
-    """弹出一个 Tkinter 窗口让用户选择日期范围，并与指定分组关联。"""
+    # 创建临时窗口
+    win = tk.Tk()
+    win.title("启动模式选择")
     
-    def on_ok():
-        nonlocal start_dt, end_dt
-        sd = start_cal.get_date()
-        ed = end_cal.get_date()
-        if sd > ed:
-            show_alert("开始日期不能晚于结束日期！")
-            return
-        start_dt = datetime(sd.year, sd.month, sd.day)
-        end_dt = datetime(ed.year, ed.month, ed.day)
-        save_last_range_by_group(group_name, sd, ed)
-        root.destroy()
+    # 计算屏幕中心位置
+    window_width = 400
+    window_height = 220
+    screen_width = win.winfo_screenwidth()
+    screen_height = win.winfo_screenheight()
+    x_c = int((screen_width/2) - (window_width/2))
+    y_c = int((screen_height/2) - (window_height/2))
+    win.geometry(f"{window_width}x{window_height}+{x_c}+{y_c}")
+    
+    # 确保窗口在最上层
+    win.attributes("-topmost", True)
+    
+    # 定义变量，默认值为 True (自定义列表)
+    mode_var = tk.BooleanVar(value=True)
+    
+    # 标记是否点击了开始按钮
+    user_confirmed = False
+
+    # UI 布局
+    tk.Label(win, text="请选择数据抓取来源:", font=("Arial", 14, "bold")).pack(pady=15)
+    
+    frame = tk.Frame(win)
+    frame.pack(pady=5, padx=20, anchor="w")
+    
+    # 选项 1
+    rb1 = tk.Radiobutton(frame, text="使用自定义 Symbol 列表 (默认)", 
+                         variable=mode_var, value=True, font=("Arial", 12))
+    rb1.pack(anchor='w', pady=5)
+    
+    # 选项 2
+    # 计算显示的千亿数值
+    cap_display = MARKET_CAP_THRESHOLD / 100000000000
+    rb2 = tk.Radiobutton(frame, text=f"使用数据库市值筛选 (> {cap_display:.0f}千亿)", 
+                         variable=mode_var, value=False, font=("Arial", 12))
+    rb2.pack(anchor='w', pady=5)
+    
+    # --- 事件处理函数 ---
+    
+    def on_confirm():
+        """用户点击开始运行"""
+        nonlocal user_confirmed
+        user_confirmed = True
+        win.quit()
+        win.destroy()
 
     def on_cancel(event=None):
-        nonlocal start_dt, end_dt
-        start_dt, end_dt = None, None
-        root.destroy()
+        """用户点击关闭或按ESC"""
+        win.destroy()
+        # 打印提示并直接终止程序
+        print("\n用户取消操作，程序已终止。")
+        sys.exit(0) 
 
-    last_sd, last_ed = load_last_range_by_group(group_name)
-
-    root = tk.Tk()
-    title = f"{group_name.upper()} - 选择爬取日期范围"
-    root.title(title)
+    # 确认按钮
+    btn = tk.Button(win, text="开始运行", command=on_confirm, 
+                    bg="#4CAF50", width=15, pady=5)
+    btn.pack(pady=15)
     
-    w, h = 350, 210
-    ws = root.winfo_screenwidth()
-    hs = root.winfo_screenheight()
-    x = (ws // 2) - (w // 2)
-    y = (hs // 2) - (h // 2)
-    root.geometry(f"{w}x{h}+{x}+{y}")
-    root.resizable(False, False)
-
-    root.lift()
-    root.focus_force()
-    root.bind("<Escape>", on_cancel)
-    root.protocol("WM_DELETE_WINDOW", on_cancel)
-
-    title_label = tk.Label(root, text=group_name.upper(), fg="red", font=("Helvetica", 36, "bold"))
-    title_label.place(relx=0.5, y=35, anchor='center')
-
-    tk.Label(root, text="开始日期：").place(x=20, y=80)
-    start_cal = DateEntry(root, width=12, background='darkblue',
-                          foreground='white', borderwidth=2,
-                          year=last_sd.year, month=last_sd.month, day=last_sd.day)
-    start_cal.place(x=100, y=80)
-
-    tk.Label(root, text="结束日期：").place(x=20, y=120)
-    end_cal = DateEntry(root, width=12, background='darkblue',
-                        foreground='white', borderwidth=2,
-                        year=last_ed.year, month=last_ed.month, day=last_ed.day)
-    end_cal.place(x=100, y=120)
-
-    btn_ok = tk.Button(root, text="确定", width=10, command=on_ok)
-    btn_ok.place(x=60, y=160)
-    btn_cancel = tk.Button(root, text="取消", width=10, command=on_cancel)
-    btn_cancel.place(x=180, y=160)
-
-    start_dt, end_dt = None, None
-    root.mainloop()
-    return start_dt, end_dt
-
-# ==============================================================================
-# 2. 核心抓取与处理函数 (引入 tqdm)
-# ==============================================================================
-
-def run_scraper_task(driver, sectors_data, task_config):
-    """
-    执行一次完整的抓取、处理和写入任务。
+    # --- 绑定退出事件 ---
+    # 1. 绑定 ESC 键
+    win.bind('<Escape>', on_cancel)
+    # 2. 绑定窗口右上角 X 关闭按钮
+    win.protocol("WM_DELETE_WINDOW", on_cancel)
     
-    :param driver: Selenium WebDriver 实例。
-    :param sectors_data: 包含所有行业 symbol 的数据。
-    :param task_config: 一个包含此任务所有特定配置的字典。
-    """
-    group_name = task_config["group_name"]
-    file_path = task_config["file_path"]
-    diff_path = task_config["diff_path"]
-    backup_dir = task_config["backup_dir"]
-    earnings_release_path = task_config["earnings_release_path"]
-
-    # 使用 tqdm.write 替代 print，保证不打断外部进度条
-    tqdm.write(f"\n>> 正在初始化任务: {group_name.upper()}")
-
-    # -------- 步骤 1: 直接从配置文件读取日期范围（已在主程序中完成顺延） --------
-    last_sd, last_ed = load_last_range_by_group(group_name)
-    start_date = datetime(last_sd.year, last_sd.month, last_sd.day)
-    end_date = datetime(last_ed.year, last_ed.month, last_ed.day)
+    # 运行窗口循环
+    win.mainloop()
     
-    tqdm.write(f"   日期范围: {start_date.date()} -> {end_date.date()}")
+    # 只有当点击了按钮，代码才会走到这里，否则已经在 on_cancel 里退出了
+    return mode_var.get()
 
-    # -------- 步骤 2: 数据准备和备份 --------------------------------
-    # (A) 加载主发行日文件中的 (symbol, date) 去重集
-    existing_release_entries = set()
-    if os.path.exists(earnings_release_path):
-        with open(earnings_release_path, 'r') as f:
-            for line in f:
-                parts = line.strip().split(':')
-                if len(parts) >= 2:
-                    existing_release_entries.add((parts[0].strip(), parts[1].strip()))
-
-    # (B) 计算最近一个月内已发布的 symbols
-    today = datetime.now().date()
-    recent_backup_symbols = set()
-    for s, d in existing_release_entries:
+# 添加鼠标移动功能的函数
+def move_mouse_periodically():
+    while True:
         try:
-            dt = datetime.strptime(d, '%Y-%m-%d').date()
-            if 0 <= (today - dt).days <= 30:
-                recent_backup_symbols.add(s)
-        except ValueError:
-            continue
-
-    # (C) 备份旧的目标文件
-    if os.path.exists(file_path):
-        ts = datetime.now().strftime('%y%m%d')
-        os.makedirs(backup_dir, exist_ok=True)
-        backup_filename = f'Earnings_Release_{group_name}_{ts}.txt'
-        shutil.copy2(file_path, os.path.join(backup_dir, backup_filename))
-        # tqdm.write(f"   已备份旧文件到: {backup_filename}")
-
-    # (D) 读取目标文件内容到内存
-    existing_lines = []
-    existing_map = {}
-    if os.path.exists(file_path):
-        with open(file_path, 'r') as f:
-            for line in f:
-                ln = line.rstrip('\n')
-                existing_lines.append(ln)
-                parts = ln.split(':')
-                if len(parts) >= 3:
-                    existing_map[parts[0].strip()] = (parts[1].strip(), parts[2].strip())
-
-    # -------- 步骤 3: 爬取主逻辑 (引入进度条) ------------------------------------
-    new_entries = []
-    delta = timedelta(days=1)
-
-    
-    # 修改后的核心分页循环逻辑 (替换原有的 while True 块)
-    for single_date in (start_date + i * delta for i in range((end_date - start_date).days + 1)):
-        ds = single_date.strftime('%Y-%m-%d')
-        offset = 0
-        
-        while True:
-            url = f"https://finance.yahoo.com/calendar/earnings?day={ds}&offset={offset}&size=100"
+            # 获取屏幕尺寸
+            screen_width, screen_height = pyautogui.size()
             
-            rows = []
-            found_end_of_results = False # 标记是否明确找到了"无结果"的结束语
-            page_load_success = False    # 标记页面是否有效加载（要么有数据，要么明确结束）
-
-            # --- 重试机制：最多尝试 3 次 ---
-            for attempt in range(3):
-                try:
-                    driver.get(url)
-                    
-                    # 1. 优先尝试寻找数据表格 (Wait 5s)
-                    try:
-                        tbl = WebDriverWait(driver, 5).until(
-                            EC.presence_of_element_located((By.CSS_SELECTOR, "table"))
-                        )
-                        current_rows = tbl.find_elements(By.CSS_SELECTOR, "tbody > tr")
-                        if current_rows:
-                            rows = current_rows
-                            page_load_success = True
-                            break # 成功拿到数据，跳出重试循环
-                    except TimeoutException:
-                        pass # 表格没加载出来，不代表出错，可能是到了末尾页
-                    
-                    # 2. 如果没有数据，精准检查是否有 "We couldn't find any results." 字样
-                    # 使用 normalize-space 忽略 HTML 中的换行符和多余空格
-                    # 只要页面包含这段文字，就认为是正常的结束页
-                    end_msg_elements = driver.find_elements(By.XPATH, "//*[contains(normalize-space(.), \"We couldn't find any results\")]")
-                    
-                    if end_msg_elements:
-                        print(f"[{ds}] Offset {offset}: 发现结束标记 'We couldn't find any results.'")
-                        found_end_of_results = True
-                        page_load_success = True
-                        break # 确认结束，跳出重试循环
-                    
-                    # 3. 既没数据，也没找到结束语，说明页面加载异常（空白或报错），进行重试
-                    print(f"[{ds}] Offset {offset}: 未发现数据也未发现结束标记，正在进行第 {attempt + 1}/3 次重试...")
-                    time.sleep(random.randint(3, 5)) # 稍作等待后重试
-                    
-                except Exception as e:
-                    print(f"[{ds}] 页面加载发生异常: {e}。正在进行第 {attempt + 1}/3 次重试...")
-                    time.sleep(random.randint(3, 5))
+            # 随机生成目标位置，避免移动到屏幕边缘
+            x = random.randint(100, screen_width - 100)
+            y = random.randint(100, screen_height - 100)
             
-            # --- 重试循环结束后的判断逻辑 ---
+            # 缓慢移动鼠标到随机位置
+            pyautogui.moveTo(x, y, duration=1)
             
-            # 情况 A: 明确找到了结束语 -> 停止当前日期的抓取 (break while True)
-            if found_end_of_results:
-                break
-            
-            # 情况 B: 3次重试后依然没有成功加载 (既无数据也无结束语) -> 可能是严重网络问题，跳过该页防止死循环
-            if not page_load_success:
-                print(f"[{ds}] Offset {offset}: 3次重试均失败，跳过此页。")
-                break
-            
-            # 情况 C: 虽然 loaded_success 为 True，但 rows 为空且没 flag (理论上不应发生，作为兜底)
-            if not rows:
-                break
+            # 等待30-60秒再次移动
+            time.sleep(random.randint(30, 60))
+        except Exception as e:
+            # 使用 tqdm.write 防止打断主线程进度条
+            pass
 
-            # --- 以下是原有的数据处理代码 (保持不变) ---
-            for row in rows:
-                try:
-                    symbol = row.find_element(By.CSS_SELECTOR, 'a[title][href*="/quote/"]').get_attribute('title')
-                    cells = row.find_elements(By.TAG_NAME, 'td')
-                    if len(cells) < 4: continue
-                    event_name = cells[2].text.strip()
-                    call_time = cells[3].text.strip() or "N/A"
-                    
-                    if not any(k in event_name for k in ["Earnings Release", "Shareholders Meeting", "Earnings Announcement"]):
-                        continue
-                    
-                    if (symbol, ds) in existing_release_entries:
-                        continue
-                    
-                    if not any(symbol in lst for lst in sectors_data.values()):
-                        continue
-                    
-                    new_line = f"{symbol:<7}: {call_time:<4}: {ds}"
-                    
-                    if symbol in existing_map:
-                        old_ct, old_dt = existing_map[symbol]
-                        if old_ct == call_time and old_dt == ds: continue
-                        
-                        existing_lines = [ln for ln in existing_lines if ln.split(':')[0].strip() != symbol]
-                        existing_map[symbol] = (call_time, ds)
-                        new_entries.append(new_line)
-                    else:
-                        existing_map[symbol] = (call_time, ds)
-                        new_entries.append(new_line)
-                except Exception:
-                    continue
-            
-            offset += 100
-    print(f"在 {start_date.date()} 到 {end_date.date()} 范围内共发现 {len(new_entries)} 个潜在新条目。")
+# ================= 1. 数据库操作 =================
 
-    # -------- 步骤 4: 分类与写入 ------------------------------------
-    # (A) 加载用于去重的 symbol 集合
-    symbols_to_avoid = set()
-    def read_symbols_into_set(f_path, symbol_set):
-        if os.path.exists(f_path):
-            with open(f_path, 'r') as f:
-                for line in f:
-                    parts = line.strip().split(':')
-                    if parts: symbol_set.add(parts[0].strip())
-
-    for f in task_config["duplicate_check_files"]:
-        read_symbols_into_set(f, symbols_to_avoid)
-
-    # (B) 读取已有的 diff 文件内容以便排重
-    existing_diff_lines = set()
-    if os.path.exists(diff_path):
-        with open(diff_path, 'r') as f_diff:
-            existing_diff_lines.update(ln.rstrip('\n') for ln in f_diff)
-
-    # (C) 将新条目分类到 target 文件或 diff 文件
-    entries_for_target = []
-    entries_for_diff = []
-
-    for ln in new_entries:
-        sym = ln.split(':')[0].strip()
-        if sym in symbols_to_avoid:
-            if ln not in existing_diff_lines:
-                entries_for_diff.append(ln)
-                existing_diff_lines.add(ln)
-        elif sym in recent_backup_symbols:
-            marked = f"{ln}  #BACKUP_DUP"
-            if marked not in existing_diff_lines:
-                entries_for_diff.append(marked)
-                existing_diff_lines.add(marked)
-        else:
-            entries_for_target.append(ln)
-
-    # (D) 写入目标文件
-    # 逻辑调整：总是以 'w' 模式写入，先写旧行再写新行
-    all_lines_to_write = existing_lines + entries_for_target
-    with open(file_path, 'w') as f:
-        if all_lines_to_write:
-            f.write('\n'.join(all_lines_to_write) + '\n')
-    
-    if entries_for_target:
-        print(f"更新了 {len(entries_for_target)} 条记录到 {os.path.basename(file_path)}")
-    else:
-        print(f"没有发现可写入 {os.path.basename(file_path)} 的新记录。")
-
-
-    # (E) 追加写入 diff 文件
-    if entries_for_diff:
-        os.makedirs(os.path.dirname(diff_path), exist_ok=True)
-        with open(diff_path, 'a') as f:
-            for ln in entries_for_diff: f.write(ln + '\n')
-        print(f"将 {len(entries_for_diff)} 条记录追加到 diff 文件：{os.path.basename(diff_path)}")
-    else:
-        print(f"没有发现需要写入 diff 文件的记录。")
-    
-    print(f"任务 [{group_name.upper()}] 执行完毕。")
-
-
-def show_alert(message):
-    # AppleScript代码模板
-    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
-    
-    # 使用subprocess调用osascript
-    subprocess.run(['osascript', '-e', applescript_code], check=True)
-
-# ==============================================================================
-# 3. 主执行逻辑
-# ==============================================================================
-if __name__ == "__main__":
-    # -------- 启动唯一的防 AFK 线程 ------------------------------------
-    threading.Thread(target=move_mouse_periodically, daemon=True).start()
-
-    # -------- 检查是否需要自动顺延日期 ---------------------------------
-    check_and_advance_dates_if_needed()
-
-    # -------- 定义所有任务的配置 ---------------------------------------
-    base_news_path = '/Users/yanzhang/Coding/News/'
-    
-    # 定义各个文件的路径
-    new_file = os.path.join(base_news_path, 'Earnings_Release_new.txt')
-    next_file = os.path.join(base_news_path, 'Earnings_Release_next.txt')
-    third_file = os.path.join(base_news_path, 'Earnings_Release_third.txt')
-    fourth_file = os.path.join(base_news_path, 'Earnings_Release_fourth.txt')
-    fifth_file = os.path.join(base_news_path, 'Earnings_Release_fifth.txt')
-
-    TASK_CONFIGS = [
-        {
-            "group_name": "next",
-            "file_path": next_file,
-            "diff_path": os.path.join(base_news_path, 'Earnings_Release_diff_next.txt'),
-            "backup_dir": os.path.join(base_news_path, 'backup/backup'),
-            "earnings_release_path": os.path.join(base_news_path, 'backup/Earnings_Release.txt'),
-            "duplicate_check_files": [new_file]
-        },
-        {
-            "group_name": "third",
-            "file_path": third_file,
-            "diff_path": os.path.join(base_news_path, 'Earnings_Release_diff_third.txt'),
-            "backup_dir": os.path.join(base_news_path, 'backup/backup'),
-            "earnings_release_path": os.path.join(base_news_path, 'backup/Earnings_Release.txt'),
-            "duplicate_check_files": [new_file, next_file]
-        },
-        {
-            "group_name": "fourth",
-            "file_path": fourth_file,
-            "diff_path": os.path.join(base_news_path, 'Earnings_Release_diff_fourth.txt'),
-            "backup_dir": os.path.join(base_news_path, 'backup/backup'),
-            "earnings_release_path": os.path.join(base_news_path, 'backup/Earnings_Release.txt'),
-            "duplicate_check_files": [new_file, next_file, third_file]
-        },
-        {
-            "group_name": "fifth",
-            "file_path": fifth_file,
-            "diff_path": os.path.join(base_news_path, 'Earnings_Release_diff_fifth.txt'),
-            "backup_dir": os.path.join(base_news_path, 'backup/backup'),
-            "earnings_release_path": os.path.join(base_news_path, 'backup/Earnings_Release.txt'),
-            "duplicate_check_files": [new_file, next_file, third_file, fourth_file]
-        }
-    ]
-
-    # -------- 全局初始化 Selenium 和其他资源 -----------------------------
-    print("正在初始化 Selenium WebDriver...")
-    driver = None
+def get_target_symbols(db_path, threshold):
+    """从数据库中获取符合市值要求的 Symbol，并按市值降序排列"""
+    tqdm.write(f"正在连接数据库: {db_path}...")
     try:
-        chrome_options = Options()
-        for arg in ["--disable-extensions", "--disable-gpu", "--disable-dev-shm-usage", "--no-sandbox", "--blink-settings=imagesEnabled=false"]:
-            chrome_options.add_argument(arg)
-        chrome_options.page_load_strategy = 'eager'
-        service = Service(executable_path="/Users/yanzhang/Downloads/backup/chromedriver")
-        driver = webdriver.Chrome(service=service, options=chrome_options)
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
         
-        with open('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json', 'r') as f:
-            sectors_data = json.load(f)
+        # --- 修改点 1: 增加 ORDER BY marketcap DESC ---
+        query = "SELECT symbol, marketcap FROM MNSPP WHERE marketcap > ? ORDER BY marketcap DESC"
+        cursor.execute(query, (threshold,))
+        results = cursor.fetchall()
         
-        # -------- 按顺序执行所有任务 -------------------------------------
-        for config in TASK_CONFIGS:
-            run_scraper_task(driver, sectors_data, config)
-            
-        print("\n所有任务已执行完毕。")
-
+        # --- 修改点 2: 直接返回结果列表 [(symbol, cap), (symbol, cap)...] ---
+        # 以前是: symbols = [row[0] for row in results]
+        symbols = results 
+        
+        tqdm.write(f"共找到 {len(symbols)} 个市值大于 {threshold} 的代码。")
+        return symbols
     except Exception as e:
-        print(f"\n程序执行过程中发生严重错误: {e}")
+        tqdm.write(f"数据库读取错误: {e}")
+        return []
     finally:
-        # -------- 统一清理资源 -----------------------------------------
-        if driver:
-            driver.quit()
-            print("WebDriver 已关闭。")
+        if conn:
+            conn.close()
+
+# ================= 2. 数据处理工具函数 =================
+
+def format_date(date_str):
+    """将 'Dec 19, 2025' 转换为 '2025/12/19'"""
+    try:
+        # 移除可能存在的额外空格
+        date_str = date_str.strip()
+        dt = datetime.strptime(date_str, "%b %d, %Y")
+        return dt.strftime("%Y/%m/%d")
+    except ValueError:
+        return date_str
+
+def clean_number(num_str):
+    """处理数字字符串：去除逗号，将 '-' 转为 0"""
+    if not num_str or num_str.strip() == '-' or num_str.strip() == '':
+        return 0
+    try:
+        # 去除逗号
+        clean_str = num_str.replace(',', '').strip()
+        return int(clean_str) # Open Interest 应该是整数
+    except ValueError:
+        return 0
+
+def show_error_popup(symbol):
+    """显示错误弹窗"""
+    try:
+        # 创建一个隐藏的主窗口
+        root = tk.Tk()
+        root.withdraw() 
+        # 保持窗口在最上层
+        root.attributes("-topmost", True)
+        messagebox.showerror(
+            "严重错误 - 程序终止", 
+            f"无法获取代码 [{symbol}] 的期权日期列表！\n\n已尝试重试 5 次均失败。\n程序将停止运行以避免数据缺失。"
+        )
+        root.destroy()
+    except Exception as e:
+        print(f"弹窗显示失败: {e}")
+
+# ================= 3. 爬虫核心逻辑 =================
+
+def scrape_options():
+    # 在主程序开始前启动鼠标移动线程
+    # mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
+    # mouse_thread.start()
+    
+    # --- 1. 获取目标 Symbols (根据开关决定来源) ---
+    symbols = [] # 结构统一为 list of tuples: [(symbol, market_cap), ...]
+    
+    if USE_CUSTOM_LIST:
+        tqdm.write(f"【模式】使用自定义列表模式")
+        # 为了保持结构一致，给自定义列表填充市值 0
+        symbols = [(s, 0) for s in CUSTOM_SYMBOLS_DATA]
+        tqdm.write(f"加载了 {len(symbols)} 个目标代码")
+    else:
+        tqdm.write(f"【模式】使用数据库筛选模式 (阈值: {MARKET_CAP_THRESHOLD})")
+        # 这里返回的已经是 [(symbol, cap), ...] 且按市值降序排列
+        symbols = get_target_symbols(DB_PATH, MARKET_CAP_THRESHOLD)
+    
+    if not symbols:
+        tqdm.write("未找到任何 Symbol，程序结束。")
+        return
+
+    # ================= 检查已存在的 Symbol 并过滤 =================
+    # 获取已经抓取过的 symbol 列表
+    existing_symbols = set()
+    if os.path.exists(OUTPUT_FILE):
+        try:
+            with open(OUTPUT_FILE, 'r', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                header = next(reader, None) # 跳过表头
+                if header:
+                    for row in reader:
+                        if row and len(row) > 0:
+                            # 假设第一列是 Symbol
+                            existing_symbols.add(row[0]) # CSV里存的还是纯 Symbol
+            tqdm.write(f"🔍 检测到现有文件，已包含 {len(existing_symbols)} 个 Symbol 的数据。")
+        except Exception as e:
+            tqdm.write(f"⚠️ 读取现有文件检查 Symbol 时出错: {e}，将重新抓取所有。")
+
+    # 过滤列表：只保留不在 existing_symbols 中的代码
+    # s 是 (symbol, market_cap)，所以判断 s[0]
+    original_count = len(symbols)
+    symbols = [s for s in symbols if s[0] not in existing_symbols]
+    
+    skipped_count = original_count - len(symbols)
+    if skipped_count > 0:
+        tqdm.write(f"⏭️  根据文件记录，已跳过 {skipped_count} 个已完成的 Symbol。")
+    tqdm.write(f"📋 剩余待抓取: {len(symbols)} 个 (按市值从大到小)。")
+
+    # 如果所有都抓完了，直接退出，不启动浏览器
+    if not symbols:
+        tqdm.write("✅ 所有目标 Symbol 均已存在于 CSV 中，无需执行任务。")
+        return
+
+    # 2. 初始化 CSV 文件 (写入表头)
+    # 确保目录存在
+    if not os.path.exists(OUTPUT_DIR):
+        os.makedirs(OUTPUT_DIR)
+
+    # --- 修改开始：改为追加模式检测 ---
+    # 检查文件是否存在
+    file_exists = os.path.exists(OUTPUT_FILE)
+    # 只有当文件不存在时，才以 'w' 模式创建并写入表头
+    if not file_exists:
+        with open(OUTPUT_FILE, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(['Symbol', 'Expiry Date', 'Type', 'Strike', 'Open Interest'])
+        tqdm.write(f"创建新文件: {OUTPUT_FILE}")
+    else:
+        tqdm.write(f"文件已存在，将以追加模式运行: {OUTPUT_FILE}")
+
+    # 3. 初始化 Selenium
+    options = webdriver.ChromeOptions()
+    
+    # --- Headless模式相关设置 ---
+    options.add_argument('--headless=new') # 推荐使用新的 headless 模式
+    options.add_argument('--window-size=1920,1080')
+
+    # --- 伪装设置 ---
+    user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    options.add_argument(f'user-agent={user_agent}')
+    options.add_argument('--disable-blink-features=AutomationControlled')
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option('useAutomationExtension', False)
+    
+    # --- 性能优化 ---
+    options.add_argument("--disable-extensions")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--blink-settings=imagesEnabled=false")  # 禁用图片加载
+    options.page_load_strategy = 'eager'  # 使用eager策略，DOM准备好就开始
+
+    driver_path = '/Users/yanzhang/Downloads/backup/chromedriver' 
+
+    # 检查路径是否存在，避免报错
+    if not os.path.exists(driver_path):
+        tqdm.write(f"错误：未找到驱动文件: {driver_path}")
+        exit()
+
+    driver = webdriver.Chrome(service=Service(driver_path), options=options)
+    
+    # 设置页面加载超时，防止卡死
+    driver.set_page_load_timeout(30) 
+    
+    wait = WebDriverWait(driver, 5) # 稍微增加默认等待时间
+
+    try:
+        # === 外层进度条：遍历 Symbols ===
+        # position=0 表示这是最顶层的进度条
+        symbol_pbar = tqdm(symbols, desc="总体进度", position=0)
         
-        final_root = tk.Tk()
-        final_root.withdraw() 
-        show_alert("所有抓取任务已执行完毕！")
-        final_root.destroy()
+        # --- 修改点 4: 循环解包 ---
+        for symbol_data in symbol_pbar:
+            # 解包 Symbol 和 市值
+            symbol, market_cap = symbol_data
+            
+            # 格式化市值显示 (例如: 2.3T, 500B)
+            if market_cap >= 1000000000000:
+                cap_str = f"{market_cap/1000000000000:.2f}T" # 万亿
+            elif market_cap >= 1000000000:
+                cap_str = f"{market_cap/1000000000:.2f}B"    # 十亿
+            elif market_cap > 0:
+                cap_str = f"{market_cap/1000000:.1f}M"       # 百万
+            else:
+                cap_str = "N/A"
+
+            # 更新进度条描述，增加显示市值
+            symbol_pbar.set_description(f"处理中: {symbol} [市值: {cap_str}]")
+            
+            base_url = f"https://finance.yahoo.com/quote/{symbol}/options/"
+            
+            # --- 阶段一：获取日期列表 (包含重试机制) ---
+            date_map = []
+            max_date_retries = 5
+            
+            for date_attempt in range(max_date_retries):
+                try:
+                    # 每次尝试都重新加载页面
+                    try:
+                        driver.get(base_url)
+                    except TimeoutException:
+                        tqdm.write(f"[{symbol}] 页面加载超时，停止加载并尝试操作...")
+                        driver.execute_script("window.stop();")
+                    
+                    # 确保页面基本结构加载
+                    wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+                    
+                    # 尝试点击日期下拉菜单
+                    date_button = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button[data-ylk*='slk:date-select']")))
+                    
+                    # 滚动到元素可见，防止被广告遮挡
+                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", date_button)
+                    time.sleep(1) # 稍微多等待一点时间让JS执行
+                    date_button.click()
+                    
+                    # 显式等待下拉菜单出现 (查找带有 data-value 的 div 或 option)
+                    # Yahoo 新版下拉菜单通常在 div 中，且带有 data-value 属性
+                    wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-value]")))
+                    time.sleep(0.5) # 动画缓冲
+                    
+                    # 提取所有日期选项
+                    # 策略：查找所有带有 data-value 属性且看起来像时间戳的元素
+                    # 这里的选择器不再局限于 .dialog-content，而是更宽泛地查找菜单项
+                    options_elements = driver.find_elements(By.CSS_SELECTOR, "div[role='menu'] div[data-value], div.itm[data-value]")
+                    
+                    # 如果上面没找到，尝试更暴力的查找所有带 data-value 的 div，然后过滤
+                    if not options_elements:
+                         options_elements = driver.find_elements(By.CSS_SELECTOR, "div[data-value]")
+
+                    temp_date_map = []
+                    for opt in options_elements:
+                        ts = opt.get_attribute("data-value")
+                        raw_text = opt.text.split('\n')[0].strip()
+                        
+                        # 验证 ts 是否为数字（时间戳）
+                        if ts and ts.isdigit() and raw_text:
+                            if (ts, raw_text) not in temp_date_map:
+                                temp_date_map.append((ts, raw_text))
+                    
+                    if temp_date_map:
+                        date_map = temp_date_map
+                        # 成功获取，关闭菜单并跳出重试循环
+                        try:
+                            webdriver.ActionChains(driver).send_keys(u'\ue00c').perform() # ESC
+                        except:
+                            pass
+                        break # 成功，退出重试循环
+                    else:
+                        raise Exception("找到菜单元素但未提取到有效日期")
+
+                except Exception as e:
+                    tqdm.write(f"[{symbol}] 获取日期列表失败 (尝试 {date_attempt + 1}/{max_date_retries}): {str(e)[:100]}")
+                    time.sleep(random.uniform(2, 4)) # 失败后等待几秒再重试
+
+            # --- 检查是否获取到日期 ---
+            if not date_map:
+                tqdm.write(f"[{symbol}] ❌ 严重错误：经过 {max_date_retries} 次尝试仍无法获取日期列表！")
+                
+                # 1. 关闭浏览器
+                driver.quit()
+                
+                # 2. 弹窗提示
+                show_error_popup(symbol)
+                
+                # 3. 终止程序
+                sys.exit(1)
+
+            # --- 过滤日期 (6个月) ---
+            filtered_date_map = []
+            try:
+                temp_list = []
+                for ts, d_text in date_map:
+                    try:
+                        d_obj = datetime.strptime(d_text, "%b %d, %Y")
+                        temp_list.append((ts, d_text, d_obj))
+                    except:
+                        continue
+                
+                temp_list.sort(key=lambda x: x[2])
+                
+                if temp_list:
+                    start_dt = temp_list[0][2]
+                    cutoff_dt = start_dt + timedelta(days=180)
+                    
+                    for ts, d_text, d_obj in temp_list:
+                        if d_obj <= cutoff_dt:
+                            filtered_date_map.append((ts, d_text))
+                
+                date_map = filtered_date_map
+                tqdm.write(f"[{symbol}] 成功获取 {len(date_map)} 个日期 (6个月内)")
+                
+            except Exception as e:
+                tqdm.write(f"[{symbol}] 日期过滤出错: {e}，将使用所有获取到的日期")
+
+            # ================= [核心修改] =================
+            # 1. 暂存当前 symbol 所有日期的数据，不直接写入
+            symbol_all_data = [] 
+            
+            # === 内层进度条：遍历日期 ===
+            date_pbar = tqdm(date_map, desc=f"  {symbol} 日期", position=1, leave=False)
+            
+            for ts, date_text in date_pbar:
+                formatted_date = format_date(date_text)
+                target_url = f"{base_url}?date={ts}" if ts else base_url
+
+                # === 重试机制 (针对具体日期的数据抓取) ===
+                MAX_PAGE_RETRIES = 3
+                for attempt in range(MAX_PAGE_RETRIES):
+                    try:
+                        # 如果不是第一次循环且有 timestamp，需要跳转
+                        # 如果是默认页且是第一次，其实已经在页面上了，但为了稳妥还是 get 一下
+                        try:
+                            driver.get(target_url)
+                        except TimeoutException:
+                            driver.execute_script("window.stop();")
+                        
+                        # 等待表格出现
+                        # 增加等待时间，因为切换日期是 AJAX 加载
+                        time.sleep(random.uniform(1.5, 2.5)) 
+                        
+                        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "section[data-testid='options-list-table'] table")))
+
+                        # --- 抓取表格 ---
+                        tables = driver.find_elements(By.CSS_SELECTOR, "section[data-testid='options-list-table'] table")
+                        
+                        # 检查是否真的有数据行
+                        has_data = False
+                        data_buffer = [] # 单个页面的缓存
+                        option_types = ['Calls', 'Puts']
+                        
+                        for i, table in enumerate(tables):
+                            if i >= len(option_types): break
+                            opt_type = option_types[i]
+                            
+                            # 优化：直接获取 tbody 下的 tr，避开表头
+                            rows = table.find_elements(By.CSS_SELECTOR, "tbody tr")
+                            
+                            for row in rows:
+                                cols = row.find_elements(By.TAG_NAME, "td")
+                                if not cols: continue
+                                # 确保列数足够 (Yahoo Options 表格通常有很多列)
+                                if len(cols) >= 10:
+                                    # 针对不同分辨率，列索引可能微调，但通常 Strike 在 2 (index 2), OI 在 9 (index 9)
+                                    # 检查列内容是否有效
+                                    strike_text = cols[2].text.strip()
+                                    oi_text = cols[9].text.strip()
+                                    
+                                    if strike_text:
+                                        strike = strike_text.replace(',', '')
+                                        oi = clean_number(oi_text)
+                                        # 将数据存入 buffer
+                                        data_buffer.append([symbol, formatted_date, opt_type, strike, oi])
+                                        has_data = True
+                        
+                        if not has_data and attempt < MAX_PAGE_RETRIES - 1:
+                            time.sleep(2)
+                            continue
+
+                        # [核心修改]
+                        # 成功抓取后，追加到 symbol 总表，而不是写入 CSV
+                        if data_buffer:
+                            symbol_all_data.extend(data_buffer)
+                        
+                        break # 成功则跳出重试循环
+
+                    except Exception as e:
+                        if attempt < MAX_PAGE_RETRIES - 1:
+                            time.sleep(2)
+                        else:
+                            pass
+            
+            # [核心修改]
+            # 当该 Symbol 的所有日期循环结束后，一次性写入文件
+            if symbol_all_data:
+                try:
+                    with open(OUTPUT_FILE, 'a', newline='', encoding='utf-8') as f:
+                        writer = csv.writer(f)
+                        writer.writerows(symbol_all_data)
+                    # tqdm.write(f"[{symbol}] 数据保存完毕。")
+                except Exception as e:
+                    tqdm.write(f"[{symbol}] 写入文件失败: {e}")
+            else:
+                # 如果完全没抓到数据（或日期列表为空），这里可以选择不处理，保证没有空数据写入
+                pass
+
+    finally:
+        # 防止重复 quit
+        try:
+            driver.quit()
+        except:
+            pass
+        tqdm.write(f"任务结束。数据已保存至: {OUTPUT_FILE}")
+
+if __name__ == "__main__":
+    try:
+        # 1. 启动前先询问模式 (修改全局变量)
+        # 如果用户按ESC或关闭窗口，程序会在 ask_user_mode 内部直接退出，不会执行下面的代码
+        USE_CUSTOM_LIST = ask_user_mode()
+        
+        # 2. 打印确认信息
+        mode_str = "自定义列表" if USE_CUSTOM_LIST else "数据库市值筛选"
+        print(f"\n{'='*40}")
+        print(f"用户已选择模式: 【{mode_str}】")
+        print(f"{'='*40}\n")
+        
+        # 3. 开始运行
+        scrape_options()
+        
+    except KeyboardInterrupt:
+        print("\n程序被手动中断。")
+    except SystemExit:
+        pass # 正常退出不报错
+    except Exception as e:
+        print(f"发生未预期的错误: {e}")
