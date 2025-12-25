@@ -801,6 +801,10 @@
             "ELV",
             "PATH",
             "TLRY"
+        ],
+        "2025-12-24": [
+            "CRWD",
+            "ELV"
         ]
     },
     "no_season": {
@@ -4968,6 +4972,43 @@
             "WRB",
             "WST",
             "ZBRA"
+        ],
+        "2025-12-24": [
+            "ALNY",
+            "ARM",
+            "BABA",
+            "BBY",
+            "BLK",
+            "COIN",
+            "COR",
+            "CPNG",
+            "CRWD",
+            "DELL",
+            "DHI",
+            "ETN",
+            "HIMS",
+            "HON",
+            "HOOD",
+            "IDXX",
+            "INTC",
+            "KMB",
+            "MELI",
+            "MP",
+            "MSFT",
+            "MSTR",
+            "NFLX",
+            "PSTG",
+            "PSX",
+            "PYPL",
+            "RBLX",
+            "SMCI",
+            "SMR",
+            "SOUN",
+            "TEM",
+            "TT",
+            "UBER",
+            "VLO",
+            "WRB"
         ]
     }
 }

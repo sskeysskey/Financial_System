@@ -797,7 +797,8 @@
     "SFD",
     "MZTI",
     "JBS",
-    "GHC"
+    "GHC",
+    "MICC"
   ],
   "Energy": [
     "XOM",
@@ -1258,7 +1259,8 @@
     "PRAX",
     "KYMR",
     "IMVT",
-    "GPCR"
+    "GPCR",
+    "SHC"
   ],
   "Industrials": [
     "GE",
@@ -1869,6 +1871,7 @@
     "SR",
     "BKH",
     "ENLT",
-    "OGS"
+    "OGS",
+    "AXIA"
   ]
 }
