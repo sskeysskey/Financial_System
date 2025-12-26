@@ -1147,14 +1147,26 @@ def run_processing_logic(log_detail):
                         double_candidates.append(symbol)
                     else:
                         # 优先级 3：条件 1-5 且不符合 W 底，检查是否深跌
-                        latest_er_price = data['all_er_prices'][-1]
+                        # ========== 修改开始：基准价改为财报窗口期(4天)最高价 ==========
+                        
+                        # 获取财报日及后三天（共4天）的最高价
+                        ref_high_price = data.get('er_window_high_price')
+                        
+                        # 兜底：如果该数据意外为None，回退使用财报日当天收盘价
+                        if ref_high_price is None:
+                             ref_high_price = data['all_er_prices'][-1]
+
                         latest_price = data['latest_price']
-                        drop_limit = CONFIG["OVERSELL_DROP_THRESHOLD"] # 14%
-                        if latest_price <= latest_er_price * (1 - drop_limit):
+                        drop_limit = CONFIG["OVERSELL_DROP_THRESHOLD"] 
+
+                        # 新逻辑：和财报窗口期最高价比较
+                        if latest_price <= ref_high_price * (1 - drop_limit):
                             oversell_deep_candidates.append(symbol) # 进 OverSell
+                        # ========== 修改结束 ==========
                         else:
                             # 优先级 4：普通股
                             preliminary_results.append(symbol)
+
 
         # 对普通组进行 PE 分组
         pe_valid, pe_invalid = apply_post_filters(preliminary_results, stock_data_cache, SYMBOL_TO_TRACE, log_detail)
@@ -1211,8 +1223,8 @@ def run_processing_logic(log_detail):
         total_double_symbols = sorted(list(set(total_double_symbols) | set(rerun_double)))
 
     # 将所有符合资格的 symbol 用于写历史记录
-    all_qualified_symbols = final_pe_valid_symbols + final_pe_invalid_symbols + total_oversell_deep_symbols + total_double_symbols
-    
+    all_qualified_symbols = final_pe_valid_symbols + final_pe_invalid_symbols + total_oversell_deep_symbols + total_double_symbols + total_oversell_w_symbols
+
     pe_valid_set = set(final_pe_valid_symbols)
     pe_invalid_set = set(final_pe_invalid_symbols)
     oversell_set = set(total_oversell_deep_symbols)

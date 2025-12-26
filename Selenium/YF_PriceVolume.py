@@ -233,117 +233,117 @@ def main():
             ensure_table_exists(conn, sector, table_type)
             
             # 内层进度：每个分组里的 symbol
-            for symbol in tqdm(symbols,
-                               desc=f"{sector}",
-                               unit="symbol",
-                               leave=False):
-                try:
-                    url = f"https://finance.yahoo.com/quote/{symbol}/history/"
-                    driver.get(url)
-                    
-                    # 查找Price数据 - 使用新的XPath
-                    price_element = wait_for_element(driver, By.XPATH, "//span[@data-testid='qsp-price']", timeout=7)
-                    price = None
-                    if price_element:
-                        price_text = price_element.text
-                        try:
-                            # 增加对'-'的判断
-                            if price_text == '-':
-                                price = 0.0
-                            else:
-                                price = float(price_text.replace(',', ''))
-                        except ValueError:
-                            print(f"无法转换价格: {price_text}")
-                    
-                    # 决定要存储的name
-                    display_name = symbol
-                    if use_mapping and symbol in symbol_mapping:
-                        display_name = symbol_mapping[symbol]
-                    
-                    if is_no_volume:
-                        # 不需要volume的分组，只存储价格
-                        if price is not None:
-                            cursor = conn.cursor()
-                            cursor.execute(f'''
-                            INSERT OR REPLACE INTO "{sector}" (date, name, price)
-                            VALUES (?, ?, ?)
-                            ''', (current_date, display_name, price))
-                            conn.commit()
-                            
-                            print(f"已保存/更新 {display_name} 至 {sector}：价格={price}")
-                            
-                            # 1) 清除 JSON 中的 symbol
-                            if args.mode.lower() == 'empty':
-                                clear_symbols_from_json(json_file_path, sector, symbol)
-                                # 2) 比较“前天”价格
-                                cursor.execute(f'''
-                                    SELECT price FROM "{sector}"
-                                    WHERE date = ? AND name = ?
-                                ''', (prev_date, display_name))
-                                row = cursor.fetchone()
-                                if row:
-                                    prev_price = row[0]
-                                    if prev_price == price:
-                                        print(f"抓取 {display_name} 成功，价格未发生变化")
-                        else:
-                            print(f"抓取 {symbol} 失败，未能获取到价格数据")
-                    else:
-                        # 需要抓取volume的分组
-                        # 使用更通用的XPath，不依赖于class名
-                        # 逻辑：在data-testid="history-table"的div中，找到表格的第一行(tr[1])的最后一个单元格(td[last()])
-                        volume_xpath = "//div[@data-testid='history-table']//table/tbody/tr[1]/td[last()]"
-                        volume_element = wait_for_element(driver, By.XPATH, volume_xpath, timeout=7)
-                        volume = None
-                        if volume_element:
-                            volume_text = volume_element.text
-                            try:
-                                # 'N/A' 是可能出现的值，需要处理
-                                if volume_text == 'N/A' or volume_text == '-':
-                                    volume = 0
-                                else:
-                                    volume = int(volume_text.replace(',', ''))
-                            except ValueError:
-                                print(f"无法转换成交量: {volume_text}")
-                        
-                        # 如果成功获取到数据，写入数据库
-                        if price is not None and volume is not None:
-                            cursor = conn.cursor()
-                            cursor.execute(f'''
-                            INSERT OR REPLACE INTO "{sector}" (date, name, price, volume)
-                            VALUES (?, ?, ?, ?)
-                            ''', (current_date, display_name, price, volume))
-                            conn.commit()
-                            
-                            print(f"已保存/更新 {display_name} 至 {sector}：价格={price}, 成交量={volume}")
-                            
-                            # 如果是empty模式，则在成功保存后清除该symbol
-                            if args.mode.lower() == 'empty':
-                                clear_symbols_from_json(json_file_path, sector, symbol)
-                                
-                                # 比较“前天”价格
-                                cursor.execute(f'''
-                                    SELECT price FROM "{sector}"
-                                    WHERE date = ? AND name = ?
-                                ''', (prev_date, display_name))
-                                row = cursor.fetchone()
-                                if row:
-                                    prev_price = row[0]
-                                    if prev_price == price:
-                                        print(f"抓取 {display_name} 成功，价格未发生变化")
-                        else:
-                            print(f"抓取 {symbol} 失败，未能获取到完整数据 (Price: {price}, Volume: {volume})")
+            for symbol in tqdm(symbols, desc=f"{sector}", unit="symbol", leave=False):
                 
-                # 在抓取失败的逻辑中添加
-                except Exception as e:
-                    print(f"抓取 {symbol} 时发生错误: {e}")
-                    # # 添加调试代码
-                    # try:
-                    #     driver.save_screenshot(f'debug_screenshot_{symbol}.png')
-                    #     with open(f'debug_page_source_{symbol}.html', 'w', encoding='utf-8') as f:
-                    #         f.write(driver.page_source)
-                    #     print(f"已保存 {symbol} 的调试截图和页面源码。")
-                    # except Exception as debug_e:
-                    #     print(f"保存调试信息时出错: {debug_e}")
+                # --- [修改开始] 重试机制 ---
+                max_retries = 3
+                success = False # 标记是否成功
+                
+                for attempt in range(max_retries):
+                    try:
+                        url = f"https://finance.yahoo.com/quote/{symbol}/history/"
+                        
+                        # 每次尝试都重新加载页面
+                        if attempt > 0:
+                            # 如果是重试，稍微多等一下再请求
+                            time.sleep(random.uniform(2, 4))
+                            print(f"\n正在重试 {symbol} (第 {attempt+1}/{max_retries} 次)...")
+                        
+                        driver.get(url)
+                        
+                        # 查找 Price
+                        price_element = wait_for_element(driver, By.XPATH, "//span[@data-testid='qsp-price']", timeout=7)
+                        price = None
+                        if price_element:
+                            price_text = price_element.text
+                            try:
+                                if price_text == '-':
+                                    price = 0.0
+                                else:
+                                    price = float(price_text.replace(',', ''))
+                            except ValueError:
+                                print(f"无法转换价格: {price_text}")
+
+                        # 决定 display_name
+                        display_name = symbol
+                        if use_mapping and symbol in symbol_mapping:
+                            display_name = symbol_mapping[symbol]
+                        
+                        # --- 核心逻辑分支 ---
+                        
+                        if is_no_volume:
+                            # 1. 不需要 Volume 的情况
+                            if price is not None:
+                                cursor = conn.cursor()
+                                cursor.execute(f'''
+                                INSERT OR REPLACE INTO "{sector}" (date, name, price)
+                                VALUES (?, ?, ?)
+                                ''', (current_date, display_name, price))
+                                conn.commit()
+                                
+                                print(f"已保存/更新 {display_name} 至 {sector}：价格={price}")
+                                
+                                # 处理 empty 模式的清除和对比
+                                if args.mode.lower() == 'empty':
+                                    clear_symbols_from_json(json_file_path, sector, symbol)
+                                    cursor.execute(f'SELECT price FROM "{sector}" WHERE date = ? AND name = ?', (prev_date, display_name))
+                                    row = cursor.fetchone()
+                                    if row and row[0] == price:
+                                        print(f"抓取 {display_name} 成功，价格未发生变化")
+                                
+                                success = True # 标记成功
+                                break # 跳出重试循环
+                            else:
+                                # 如果 price 是 None，抛出异常或继续循环以触发重试
+                                print(f"尝试 {attempt+1}: 抓取 {symbol} 失败，未能获取到价格。")
+                        
+                        else:
+                            # 2. 需要 Volume 的情况
+                            volume_xpath = "//div[@data-testid='history-table']//table/tbody/tr[1]/td[last()]"
+                            volume_element = wait_for_element(driver, By.XPATH, volume_xpath, timeout=7)
+                            volume = None
+                            if volume_element:
+                                volume_text = volume_element.text
+                                try:
+                                    if volume_text == 'N/A' or volume_text == '-':
+                                        volume = 0
+                                    else:
+                                        volume = int(volume_text.replace(',', ''))
+                                except ValueError:
+                                    print(f"无法转换成交量: {volume_text}")
+                            
+                            if price is not None and volume is not None:
+                                cursor = conn.cursor()
+                                cursor.execute(f'''
+                                INSERT OR REPLACE INTO "{sector}" (date, name, price, volume)
+                                VALUES (?, ?, ?, ?)
+                                ''', (current_date, display_name, price, volume))
+                                conn.commit()
+                                
+                                print(f"已保存/更新 {display_name} 至 {sector}：价格={price}, 成交量={volume}")
+                                
+                                if args.mode.lower() == 'empty':
+                                    clear_symbols_from_json(json_file_path, sector, symbol)
+                                    cursor.execute(f'SELECT price FROM "{sector}" WHERE date = ? AND name = ?', (prev_date, display_name))
+                                    row = cursor.fetchone()
+                                    if row and row[0] == price:
+                                        print(f"抓取 {display_name} 成功，价格未发生变化")
+                                
+                                success = True # 标记成功
+                                break # 跳出重试循环
+                            else:
+                                print(f"尝试 {attempt+1}: 抓取 {symbol} 失败 (Price: {price}, Volume: {volume})。")
+
+                    except Exception as e:
+                        print(f"尝试 {attempt+1} 发生错误: {str(e)}")
+                        # 继续下一次循环重试
+
+                # --- 循环结束后的判断 ---
+                if not success:
+                    print(f"❌ 最终失败: {symbol} 在尝试 {max_retries} 次后仍未获取到数据，跳转下一个。")
+                    # 可选：这里可以记录失败的 symbol 到一个列表，或者保存截图
+                    
+                # [修改结束]
                 
                 # 添加短暂延迟，避免请求过于频繁
                 time.sleep(random.uniform(1, 2))
@@ -364,35 +364,19 @@ def main():
                 else:
                     # 抓取完成，所有分组已清空，现在调用另一个脚本
                     show_alert("所有分组已清空 ✅\n✅ Sectors_empty.json 中没有剩余 symbols。\n\n接下来将调用补充脚本...")
-                    
                     script_to_run = "/Users/yanzhang/Coding/Financial_System/Operations/Insert_Currencies_Index.py"
-                    
                     try:
                         print(f"正在调用脚本: {script_to_run}")
                         # 使用 subprocess.run 执行脚本
                         # sys.executable 确保使用当前 Python 解释器
                         # check=True 会在脚本执行失败时抛出异常
                         subprocess.run([sys.executable, script_to_run], check=True)
-                        
                         print(f"脚本 {script_to_run} 执行成功。")
                         show_alert(f"补充脚本执行成功！\n\n路径:\n{script_to_run}")
-
-                    except FileNotFoundError:
-                        error_message = f"错误：找不到要调用的脚本。\n请检查路径是否正确：\n{script_to_run}"
-                        print(error_message)
-                        show_alert(error_message)
-                    except subprocess.CalledProcessError as e:
-                        error_message = f"执行脚本 {script_to_run} 时发生错误。\n\n错误信息: {e}"
-                        print(error_message)
-                        show_alert(error_message)
                     except Exception as e:
-                        error_message = f"调用脚本时发生未知错误: {e}"
-                        print(error_message)
-                        show_alert(error_message)
-                    # --- 代码修改结束 ---
+                        print(f"调用脚本出错: {e}")
             else:
                 show_alert("⚠️ 有分组仍有 symbols 未清空\n⚠️ 请检查 Sectors_empty.json 。")
-
         print("数据抓取和保存完成！")
 
 if __name__ == "__main__":

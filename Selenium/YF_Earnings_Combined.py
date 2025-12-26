@@ -1,6 +1,6 @@
 import os
-import json
 import shutil
+import json
 import time
 import random
 import threading
@@ -13,51 +13,438 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import TimeoutException
 
 # 第三方辅助模块
 import pyautogui
 from tqdm import tqdm
 
 # ==============================================================================
-# 1. 通用模块和函数 (所有任务共用)
+# 0. 全局配置与通用工具
 # ==============================================================================
 
-# -------- 鼠标防 AFK 线程 (全局唯一) --------------------------------
+# 全局使用的 ChromeDriver 路径
+CHROME_DRIVER_PATH = "/Users/yanzhang/Downloads/backup/chromedriver"
+
+def create_unified_driver():
+    """
+    统一的 Selenium Driver 工厂函数。
+    包含：Headless New 模式、反爬虫伪装、性能优化配置。
+    """
+    options = Options()
+    
+    # --- 1. Headless 与 窗口设置 ---
+    options.add_argument('--headless=new') 
+    options.add_argument('--window-size=1920,1080')
+    
+    # --- 2. 伪装设置 (反爬虫) ---
+    user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    options.add_argument(f'user-agent={user_agent}')
+    options.add_argument('--disable-blink-features=AutomationControlled')
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option('useAutomationExtension', False)
+    
+    # --- 3. 性能优化 ---
+    options.add_argument("--disable-extensions")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--no-sandbox")
+    # 禁止加载图片以加快速度
+    options.add_argument("--blink-settings=imagesEnabled=false") 
+    options.page_load_strategy = 'eager'
+
+    try:
+        if not os.path.exists(CHROME_DRIVER_PATH):
+            raise FileNotFoundError(f"未找到驱动文件: {CHROME_DRIVER_PATH}")
+            
+        service = Service(executable_path=CHROME_DRIVER_PATH)
+        driver = webdriver.Chrome(service=service, options=options)
+        
+        # --- 4. CDP 命令：彻底屏蔽 navigator.webdriver ---
+        driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+            "source": """
+            Object.defineProperty(navigator, 'webdriver', {
+            get: () => undefined
+            })
+            """
+        })
+        
+        return driver
+    except Exception as e:
+        tqdm.write(f"创建 Driver 失败: {e}")
+        return None
+
 def move_mouse_periodically():
-    """在后台周期性地移动鼠标以防止系统休眠或 AFK 检测。"""
-    # tqdm.write("启动防 AFK 鼠标移动线程...")
+    """后台周期性移动鼠标，防止系统休眠。"""
     while True:
         try:
-            w, h = pyautogui.size()
-            x = random.randint(100, w - 100)
-            y = random.randint(100, h - 100)
+            screen_width, screen_height = pyautogui.size()
+            # 随机生成目标位置，避免移动到屏幕边缘
+            x = random.randint(100, screen_width - 100)
+            y = random.randint(100, screen_height - 100)
             pyautogui.moveTo(x, y, duration=1)
-            # 随机休眠
+            # 等待30-60秒再次移动
             time.sleep(random.randint(30, 60))
         except Exception:
-            # 这里的 print 使用 tqdm.write 比较安全
-            pass 
+            # 静默处理异常，以免打断主线程日志
             time.sleep(30)
 
-# -------- 配置文件读写：记忆日期范围 --------------------------------
-config_path = '/Users/yanzhang/Coding/Financial_System/Selenium/earnings_config.json'
+def show_alert(message):
+    """Mac 系统弹窗提示。"""
+    try:
+        # AppleScript 代码模板
+        applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+        subprocess.run(['osascript', '-e', applescript_code], check=True)
+    except Exception as e:
+        tqdm.write(f"弹窗提示失败: {e}")
+
+# ==============================================================================
+# 1. 任务模块: Economic Events
+# ==============================================================================
+
+def update_sectors_panel():
+    """更新 sectors_panel 的主要逻辑"""
+    path_new = '/Users/yanzhang/Coding/News/Economic_Events_new.txt'
+    path_next = '/Users/yanzhang/Coding/News/Economic_Events_next.txt'
+    sectors_panel_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
+    symbol_mapping_path = '/Users/yanzhang/Coding/Financial_System/Modules/Symbol_mapping.json'
+
+    # 按顺序收集存在的事件文件
+    event_files = []
+    if os.path.exists(path_new):
+        event_files.append(('new', path_new))
+    if os.path.exists(path_next):
+        event_files.append(('next', path_next))
+
+    if not event_files:
+        tqdm.write("未找到 Economic_Events 文件，未执行更新。")
+        show_alert("未找到 Economic_Events 文件，未执行更新。")
+        return
+
+    try:
+        # 读取 symbol_mapping 和 原 sectors_panel
+        with open(symbol_mapping_path, 'r', encoding='utf-8') as f:
+            symbol_mapping = json.load(f)
+        
+        with open(sectors_panel_path, 'r', encoding='utf-8') as f:
+            sectors_panel = json.load(f)
+
+        # 清空 Economics 分组
+        sectors_panel['Economics'] = {}
+
+        # 依次处理 new、next
+        for tag, filepath in event_files:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                for line in f:
+                    event = line.strip()
+                    if ' : ' not in event:
+                        tqdm.write(f"Warning: 跳过格式不对的行：{event}")
+                        continue
+                    
+                    # 拆分 "YYYY-MM-DD : 描述 [区域]" -> day_field, description
+                    date_part, desc_part = event.split(' : ', 1)
+                    day_field = date_part.split('-')[-1].strip()
+                    description = desc_part.split(' [')[0].strip()
+
+                    if description not in symbol_mapping:
+                        continue # 如果描述不在映射表中，跳过
+
+                    economics_key = symbol_mapping[description]
+                    combined_value = f"{day_field} {economics_key}"
+
+                    existing = sectors_panel['Economics'].get(economics_key)
+                    
+                    if existing is None:
+                        # 之前未写入过，直接写
+                        sectors_panel['Economics'][economics_key] = combined_value
+                    else:
+                        if existing == combined_value:
+                            continue # 完全重复，跳过
+                        else:
+                            if tag == 'next':
+                                # 如果是 next 文件，优先覆盖 new 的值
+                                sectors_panel['Economics'][economics_key] = combined_value
+        
+        # 写回 sectors_panel.json
+        with open(sectors_panel_path, 'w', encoding='utf-8') as f:
+            json.dump(sectors_panel, f, ensure_ascii=False, indent=4)
+        
+        tqdm.write("Economic Events JSON 更新已完成！")
+
+    except Exception as e:
+        error_message = f"更新 Economic Events JSON 错误: {e}"
+        tqdm.write(error_message)
+        show_alert(error_message)
+
+def run_economic_events_task():
+    tqdm.write("\n" + "="*50)
+    tqdm.write(">>> 开始执行任务: Economic Events")
+    tqdm.write("="*50)
+
+    # ==== 1) 星期判断，设置 do_crawl / do_update ====
+    today_weekday = datetime.now().weekday()
+    do_crawl = False
+    do_update = False
+
+    if today_weekday in (4, 5): # 周五(4)、周六(5)
+        do_crawl, do_update = True, True
+    elif today_weekday in (0, 6): # 周一(0)、周日(6)
+        do_crawl, do_update = False, True
+    else: 
+        tqdm.write("今天不是周五/周六/周一/周日，跳过 Economic Events 任务。")
+        return 
+
+    # ==== 2) 如果需要爬虫，启动 Selenium 爬虫 + 写文件 ====
+    if do_crawl:
+        # 文件路径
+        file_path = '/Users/yanzhang/Coding/News/Economic_Events_next.txt'
+        backup_dir = '/Users/yanzhang/Coding/News/backup/backup'
+
+        # 检查原始文件是否存在并备份
+        if os.path.exists(file_path):
+            timestamp = datetime.now().strftime('%y%m%d')
+            backup_filename = f'Economic_Events_next_{timestamp}.txt'
+            backup_path = os.path.join(backup_dir, backup_filename)
+            os.makedirs(backup_dir, exist_ok=True)
+            shutil.copy2(file_path, backup_path)
+            
+            with open(file_path, 'r') as file:
+                existing_content = set(file.read().splitlines())
+        else:
+            existing_content = set()
+
+        # === 使用统一的 Driver 工厂 ===
+        tqdm.write("正在启动浏览器 (Economic Events)...")
+        driver = create_unified_driver()
+        
+        if driver:
+            try:
+                current_date = datetime.now()
+                start_date = current_date + timedelta(days=(6 - current_date.weekday()))
+                end_date = start_date + timedelta(days=6)
+                
+                # 事件过滤器
+                Event_Filter_Bases = {
+                    "GDP 2nd Estimate", "GDP Advance", "GDP Final", "GDP Cons Spending Prelim",
+                    "GDP Cons Spending Final", "Non-Farm Payrolls", "ISM N-Mfg PMI", "ISM Manufacturing PMI",
+                    "ADP National Employment", "Unemployment Rate", "International Trade", "Import Prices MM",
+                    "Import Prices YY", "CPI MM, SA", "CPI YY, NSA", "Core CPI MM, SA", "Core CPI YY, NSA",
+                    "Fed Funds Tgt Rate", "PPI Final Demand YY", "PPI exFood/Energy MM", "PPI exFood/Energy YY",
+                    "PPI ex Food/Energy/Tr MM", "PPI Final Demand MM", "PCE Prices Final", "PCE Price Index MM",
+                    "PCE Price Index YY", "Core PCE Prices Final", "Core PCE Prices Prelim", "Core PCE Price Index MM",
+                    "Core PCE Price Index YY", "U Mich Sentiment Prelim", "Retail Sales MM", "Initial Jobless Clm",
+                    "U Mich Sentiment Final", "New Home Sales Chg MM", "New Home Sales-Units",
+                }
+                target_countries = {"US"}
+
+                days_count = (end_date - start_date).days + 1
+                date_list = [start_date + timedelta(days=i) for i in range(days_count)]
+
+                with open(file_path, 'a') as output_file:
+                    pbar = tqdm(date_list, desc="Eco Events", unit="day")
+                    
+                    for change_date in pbar:
+                        formatted_change_date = change_date.strftime('%Y-%m-%d')
+                        pbar.set_description(f"正在抓取: {formatted_change_date}")
+                        
+                        offset = 0
+                        has_data = True
+                        
+                        while has_data:
+                            pbar.set_postfix(offset=offset)
+                            url = f"https://finance.yahoo.com/calendar/economic?from={start_date.strftime('%Y-%m-%d')}&to={end_date.strftime('%Y-%m-%d')}&day={formatted_change_date}&offset={offset}&size=100"
+                            driver.get(url)
+                            wait = WebDriverWait(driver, 4)
+                            try:
+                                table_container = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.table-container")))
+                                rows = table_container.find_elements(By.TAG_NAME, "tr")
+                            except TimeoutException:
+                                rows = []
+
+                            if not rows:
+                                has_data = False
+                            else:
+                                for row in rows:
+                                    if row.get_attribute("role") == "columnheader": continue
+                                    cells = row.find_elements(By.TAG_NAME, "td")
+                                    if len(cells) < 2: continue
+                                    try:
+                                        event = cells[0].text.strip()
+                                        country = cells[1].text.strip()
+                                        
+                                        if event and country and country in target_countries:
+                                            matched_base_event = None
+                                            for base_event in Event_Filter_Bases:
+                                                if event.startswith(base_event):
+                                                    matched_base_event = base_event
+                                                    break
+                                            
+                                            if matched_base_event:
+                                                entry = f"{formatted_change_date} : {matched_base_event} [{country}]"
+                                                if entry not in existing_content:
+                                                    output_file.write(entry + "\n")
+                                                    existing_content.add(entry)
+                                    except Exception:
+                                        continue
+                                offset += 100
+            except Exception as e:
+                tqdm.write(f"Economic Events 爬虫出错: {e}")
+            finally:
+                driver.quit()
+                tqdm.write("Economic Events 浏览器已关闭。")
+        else:
+            tqdm.write("无法启动浏览器，跳过爬取。")
+    else:
+        tqdm.write("今天是周一或周日，跳过 Economic Events 爬虫部分。")
+
+    if do_update:
+        update_sectors_panel()
+    else:
+        tqdm.write("今天不更新 Economic Events JSON。")
+
+# ==============================================================================
+# 2. 任务模块: Stock Splits
+# ==============================================================================
+
+def run_stock_splits_task():
+    tqdm.write("\n" + "="*50)
+    tqdm.write(">>> 开始执行任务: Stock Splits")
+    tqdm.write("="*50)
+
+    # 判断今天是否为周五（4）或周六（5），否则跳过
+    today_weekday = datetime.now().weekday()
+    if today_weekday not in (4, 5):
+        tqdm.write(f"今天不是周五或周六，跳过 Stock Splits 任务。")
+        return
+
+    # 文件路径
+    file_path = '/Users/yanzhang/Coding/News/Stock_Splits_next.txt'
+    backup_dir = '/Users/yanzhang/Coding/News/backup/backup'
+    sectors_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
+
+    # 检查文件是否已经存在并备份
+    if os.path.exists(file_path):
+        timestamp = datetime.now().strftime('%y%m%d')
+        backup_filename = f'Stock_Splits_next_{timestamp}.txt'
+        backup_path = os.path.join(backup_dir, backup_filename)
+        os.makedirs(backup_dir, exist_ok=True)
+        shutil.copy2(file_path, backup_path)
+        tqdm.write(f"已备份原文件至: {backup_path}")
+
+    # 读取原有内容
+    existing_content = set()
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as file:
+            existing_content = set(file.read().splitlines())
+
+    # === 使用统一的 Driver 工厂 ===
+    tqdm.write("正在启动浏览器 (Stock Splits)...")
+    driver = create_unified_driver()
+    
+    if driver:
+        try:
+            with open(sectors_json_path, 'r') as file:
+                data = json.load(file)
+            current_date = datetime.now()
+            start_date = current_date + timedelta(days=(6 - current_date.weekday())) 
+            end_date = start_date + timedelta(days=6)
+            
+            tqdm.write(f"抓取日期范围: {start_date.strftime('%Y-%m-%d')} 至 {end_date.strftime('%Y-%m-%d')}")
+            
+            results = []
+            days_count = (end_date - start_date).days + 1
+            date_list = [start_date + timedelta(days=i) for i in range(days_count)]
+            
+            pbar = tqdm(date_list, desc="Stock Splits", unit="day")
+            
+            for change_date in pbar:
+                formatted_change_date = change_date.strftime('%Y-%m-%d')
+                pbar.set_description(f"正在处理: {formatted_change_date}")
+                
+                offset = 0
+                has_data = True
+                
+                while has_data:
+                    pbar.set_postfix(offset=offset, found=len(results))
+                    url = f"https://finance.yahoo.com/calendar/splits?from={start_date.strftime('%Y-%m-%d')}&to={end_date.strftime('%Y-%m-%d')}&day={formatted_change_date}&offset={offset}&size=100"
+                    driver.get(url)
+                    try:
+                        rows = WebDriverWait(driver, 4).until(EC.presence_of_all_elements_located((By.XPATH, "//table//tbody/tr")))
+                    except TimeoutException:
+                        has_data = False
+                        continue
+                    
+                    if not rows:
+                        has_data = False
+                        continue
+
+                    for row in rows:
+                        try:
+                            symbol = row.find_element(By.CSS_SELECTOR, 'a.loud-link.fin-size-small').text
+                            company = row.find_element(By.CSS_SELECTOR, 'td.tw-text-left.tw-max-w-xs.tw-whitespace-normal').text
+                        except Exception:
+                            continue
+                            
+                        for category, symbols in data.items():
+                            if symbol in symbols:
+                                entry = f"{symbol}: {formatted_change_date} - {company}"
+                                if entry not in existing_content:
+                                    results.append(entry)
+                                    tqdm.write(f"   [+] 发现新数据: {entry}")
+                                break
+                    
+                    if len(rows) < 100:
+                        has_data = False
+                    else:
+                        offset += 100
+
+            if results:
+                with open(file_path, 'a') as output_file:
+                    if os.path.getsize(file_path) > 0:
+                        output_file.write('\n')
+                    for result in results:
+                        output_file.write(result + "\n")
+                tqdm.write(f"成功写入 {len(results)} 条新数据。")
+                
+                # 清理空行
+                if os.path.exists(file_path):
+                    with open(file_path, 'r') as file:
+                        lines = file.readlines()
+                    lines = [line for line in lines if line.strip() or any(lines[i].strip() for i in range(len(lines)) if i != lines.index(line))]
+                    with open(file_path, 'w') as file:
+                        file.writelines(lines)
+            else:
+                tqdm.write("没有新内容添加，文件保持不变。")
+
+        except Exception as e:
+            tqdm.write(f"Stock Splits 任务执行出错: {e}")
+        finally:
+            driver.quit()
+            tqdm.write("Stock Splits 浏览器已关闭。")
+    else:
+        tqdm.write("无法启动浏览器，跳过 Stock Splits。")
+
+# ==============================================================================
+# 3. 任务模块: Earnings Release 
+# ==============================================================================
+
+EARNINGS_CONFIG_PATH = '/Users/yanzhang/Coding/Financial_System/Selenium/earnings_config.json'
 
 def load_last_range_by_group(group_name: str):
     """从配置文件中读取指定分组的日期范围，失败则返回默认值。"""
     try:
-        if os.path.exists(config_path):
-            with open(config_path, 'r') as f:
+        if os.path.exists(EARNINGS_CONFIG_PATH):
+            with open(EARNINGS_CONFIG_PATH, 'r') as f:
                 data = json.load(f)
-                grp = data.get(group_name, {})
-                sd_s = grp.get('start_date')
-                ed_s = grp.get('end_date')
-                if sd_s and ed_s:
-                    sd = datetime.strptime(sd_s, '%Y-%m-%d').date()
-                    ed = datetime.strptime(ed_s, '%Y-%m-%d').date()
-                    return sd, ed
+            grp = data.get(group_name, {})
+            sd_s = grp.get('start_date')
+            ed_s = grp.get('end_date')
+            if sd_s and ed_s:
+                sd = datetime.strptime(sd_s, '%Y-%m-%d').date()
+                ed = datetime.strptime(ed_s, '%Y-%m-%d').date()
+                return sd, ed
     except Exception as e:
         tqdm.write(f"[{group_name}] 读取配置失败，将使用默认日期：{e}")
     
@@ -75,15 +462,13 @@ def check_and_advance_dates_if_needed():
 
     # 只在周日(6)或周一(0)时才可能顺延
     if today_weekday not in [6, 0]:
-        tqdm.write(f"今天是工作日(周{'二三四五六'[today_weekday-1]})，保持现有日期配置...")
+        tqdm.write(f"今天是工作日，保持现有日期配置...")
         return False
 
     try:
-        # 读取配置文件
-        if not os.path.exists(config_path):
+        if not os.path.exists(EARNINGS_CONFIG_PATH):
             return False
-
-        with open(config_path, 'r') as f:
+        with open(EARNINGS_CONFIG_PATH, 'r') as f:
             data = json.load(f)
 
         # 检查上次顺延日期
@@ -92,13 +477,13 @@ def check_and_advance_dates_if_needed():
         # 简单的周判断逻辑
         def get_week_start(d): return d - timedelta(days=d.weekday())
         current_week_start = get_week_start(today)
-
+        
         if last_advance_str:
             last_advance_date = datetime.strptime(last_advance_str, '%Y-%m-%d').date()
             if current_week_start == get_week_start(last_advance_date):
                 tqdm.write(f"本周已在 {last_advance_str} 执行过日期顺延，跳过。")
                 return False
-
+        
         tqdm.write(f"今天是{'周日' if today_weekday == 6 else '周一'}，开始执行日期顺延...")
         
         modified = False
@@ -111,49 +496,27 @@ def check_and_advance_dates_if_needed():
                 try:
                     old_start = datetime.strptime(data[group_name]['start_date'], '%Y-%m-%d').date()
                     old_end = datetime.strptime(data[group_name]['end_date'], '%Y-%m-%d').date()
-                    
                     new_start = old_start + timedelta(days=7)
                     new_end = old_end + timedelta(days=7)
-                    
                     data[group_name]['start_date'] = new_start.strftime('%Y-%m-%d')
                     data[group_name]['end_date'] = new_end.strftime('%Y-%m-%d')
                     modified = True
                 except Exception:
                     pass
-
+        
         if modified:
             # 记录本次顺延日期
             data['_last_advance_date'] = today.strftime('%Y-%m-%d')
-            with open(config_path, 'w') as f:
+            with open(EARNINGS_CONFIG_PATH, 'w') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
             tqdm.write(f"所有日期已顺延一周。")
             return True
         return False
-
     except Exception as e:
         tqdm.write(f"顺延日期出错：{e}")
         return False
 
-def show_alert(message):
-    """Mac 系统弹窗"""
-    try:
-        applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
-        subprocess.run(['osascript', '-e', applescript_code], check=True)
-    except:
-        pass
-
-# ==============================================================================
-# 2. 核心抓取与处理函数 (引入 tqdm)
-# ==============================================================================
-
-def run_scraper_task(driver, sectors_data, task_config):
-    """
-    执行一次完整的抓取、处理和写入任务。
-    
-    :param driver: Selenium WebDriver 实例。
-    :param sectors_data: 包含所有行业 symbol 的数据。
-    :param task_config: 一个包含此任务所有特定配置的字典。
-    """
+def run_single_scraper_task(driver, sectors_data, task_config):
     group_name = task_config["group_name"]
     file_path = task_config["file_path"]
     diff_path = task_config["diff_path"]
@@ -162,16 +525,14 @@ def run_scraper_task(driver, sectors_data, task_config):
 
     # 使用 tqdm.write 输出初始化信息，避免打断进度条
     tqdm.write(f">> 正在初始化任务: {group_name.upper()}")
-
+    
     # -------- 步骤 1: 直接从配置文件读取日期范围（已在主程序中完成顺延） --------
     last_sd, last_ed = load_last_range_by_group(group_name)
     start_date = datetime(last_sd.year, last_sd.month, last_sd.day)
     end_date = datetime(last_ed.year, last_ed.month, last_ed.day)
-    
     tqdm.write(f"   日期范围: {start_date.date()} -> {end_date.date()}")
 
-    # -------- 步骤 2: 数据准备和备份 --------------------------------
-    # (A) 加载主发行日文件中的 (symbol, date) 去重集
+    # 数据准备
     existing_release_entries = set()
     if os.path.exists(earnings_release_path):
         with open(earnings_release_path, 'r') as f:
@@ -214,22 +575,17 @@ def run_scraper_task(driver, sectors_data, task_config):
     new_entries = []
     delta = timedelta(days=1)
     date_list = [start_date + i * delta for i in range((end_date - start_date).days + 1)]
-
-    # --- 内层进度条：遍历日期 ---
-    # position=1, leave=False 表示这个条跑完一天就消失或刷新
-    date_pbar = tqdm(date_list, desc=f"  [{group_name}] 日期进度", position=1, leave=False)
-
+    
+    date_pbar = tqdm(date_list, desc=f"   [{group_name}] 日期进度", position=1, leave=False)
+    
     for single_date in date_pbar:
         ds = single_date.strftime('%Y-%m-%d')
         offset = 0
-        
-        # 更新内层进度条描述
-        date_pbar.set_description(f"  [{group_name}] {ds}")
+        date_pbar.set_description(f"   [{group_name}] {ds}")
         
         while True:
             # 实时更新后缀：当前 offset 和已发现条数
             date_pbar.set_postfix(offset=offset, new=len(new_entries))
-            
             url = f"https://finance.yahoo.com/calendar/earnings?day={ds}&offset={offset}&size=100"
             rows = []
             found_end = False
@@ -246,8 +602,7 @@ def run_scraper_task(driver, sectors_data, task_config):
                         found_end = True
                         page_load_success = True
                         break
-
-                    # 其次检测表格
+                    
                     try:
                         tbl = WebDriverWait(driver, 5).until(
                             EC.presence_of_element_located((By.CSS_SELECTOR, "table"))
@@ -258,11 +613,10 @@ def run_scraper_task(driver, sectors_data, task_config):
                             page_load_success = True
                             break 
                     except TimeoutException:
-                        pass # 可能超时，或者确实没表格但也没出 No results 提示
-
+                        pass 
+                    
                     # 既无数据也无结束语，稍作等待重试
                     time.sleep(random.randint(2, 4))
-
                 except Exception:
                     time.sleep(random.randint(2, 4))
 
@@ -304,13 +658,11 @@ def run_scraper_task(driver, sectors_data, task_config):
                             continue # 完全一致跳过
                         # 有变化，先移除旧的
                         existing_lines = [ln for ln in existing_lines if ln.split(':')[0].strip() != symbol]
-                        
+                    
                     existing_map[symbol] = (call_time, ds)
                     new_entries.append(new_line)
-
                 except Exception:
                     continue
-            
             offset += 100
             # 简单防封限速
             # time.sleep(0.5) 
@@ -324,7 +676,7 @@ def run_scraper_task(driver, sectors_data, task_config):
                 for line in f:
                     parts = line.strip().split(':')
                     if parts: symbols_to_avoid.add(parts[0].strip())
-
+    
     existing_diff_lines = set()
     if os.path.exists(diff_path):
         with open(diff_path, 'r') as f_diff:
@@ -333,7 +685,6 @@ def run_scraper_task(driver, sectors_data, task_config):
     # (C) 将新条目分类到 target 文件或 diff 文件
     entries_for_target = []
     entries_for_diff = []
-
     for ln in new_entries:
         sym = ln.split(':')[0].strip()
         # 已经在其他组里的 -> 放入 Diff
@@ -388,18 +739,14 @@ def run_scraper_task(driver, sectors_data, task_config):
     # 打印一个空行分隔任务
     tqdm.write("")
 
-# ==============================================================================
-# 3. 主执行逻辑
-# ==============================================================================
-
-if __name__ == "__main__":
-    # 1. 启动防 AFK
-    threading.Thread(target=move_mouse_periodically, daemon=True).start()
-
-    # 2. 检查自动顺延
+def run_earnings_task():
+    tqdm.write("\n" + "="*50)
+    tqdm.write(">>> 开始执行任务: Earnings Release")
+    tqdm.write("="*50)
+    
     check_and_advance_dates_if_needed()
-
-    # 3. 任务配置
+    
+    # 2. 任务配置
     base_news_path = '/Users/yanzhang/Coding/News/'
     
     # 定义各个文件的路径
@@ -444,77 +791,66 @@ if __name__ == "__main__":
         }
     ]
 
-    # 4. 初始化 Selenium (Headless New 模式)
-    tqdm.write("正在初始化浏览器 (Headless Mode)...")
-    
-    options = webdriver.ChromeOptions()
-    # --- Headless 核心设置 ---
-    options.add_argument('--headless=new') 
-    options.add_argument('--window-size=1920,1080')
-    # --- 伪装设置 ---
-    user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    options.add_argument(f'user-agent={user_agent}')
-    options.add_argument('--disable-blink-features=AutomationControlled')
-    options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    options.add_experimental_option('useAutomationExtension', False)
-    # --- 性能优化 ---
-    options.add_argument("--disable-extensions")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--blink-settings=imagesEnabled=false") 
-    options.page_load_strategy = 'eager'
+    # === 使用统一的 Driver 工厂 ===
+    tqdm.write("正在启动浏览器 (Earnings)...")
+    driver = create_unified_driver()
 
-    driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
-    driver = None
-
-    try:
-        if not os.path.exists(driver_path):
-            tqdm.write(f"错误：未找到驱动文件: {driver_path}")
-            exit(1)
-            
-        service = Service(executable_path=driver_path)
-        driver = webdriver.Chrome(service=service, options=options)
-        
-        # 额外：屏蔽 navigator.webdriver 特征
-        driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
-            "source": """
-            Object.defineProperty(navigator, 'webdriver', {
-              get: () => undefined
-            })
-            """
-        })
-
-        # 加载基础数据
-        with open('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json', 'r') as f:
-            sectors_data = json.load(f)
-
-        # 5. 执行任务循环 (外层进度条)
-        # position=0 表示最顶层
-        task_pbar = tqdm(TASK_CONFIGS, desc="总任务进度", position=0)
-        
-        for config in task_pbar:
-            task_pbar.set_description(f"执行任务: {config['group_name'].upper()}")
-            run_scraper_task(driver, sectors_data, config)
-
-        tqdm.write("\n所有任务执行完毕。")
-
-    except Exception as e:
-        tqdm.write(f"程序执行出错: {e}")
-    finally:
-        # -------- 统一清理资源 -----------------------------------------
-        if driver:
-            try:
-                driver.quit()
-                tqdm.write("浏览器已关闭。")
-            except:
-                pass
-        
-        # 最终弹窗
+    if driver:
         try:
-            final_root = tk.Tk()
-            final_root.withdraw()
+            # 加载基础数据
+            with open('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json', 'r') as f:
+                sectors_data = json.load(f)
+
+            # 5. 执行任务循环 (外层进度条)
+            # position=0 表示最顶层
+            task_pbar = tqdm(TASK_CONFIGS, desc="总任务进度", position=0)
+            
+            for config in task_pbar:
+                task_pbar.set_description(f"执行任务: {config['group_name'].upper()}")
+                run_single_scraper_task(driver, sectors_data, config)
+            
+            tqdm.write("\n所有 Earnings 任务执行完毕。")
+        except Exception as e:
+            tqdm.write(f"Earnings 任务执行出错: {e}")
+        finally:
+            driver.quit()
+            tqdm.write("Earnings 浏览器已关闭。")
+            
+        try:
+            final_root = tk.Tk(); final_root.withdraw()
             show_alert("Earnings 抓取任务已完成！")
             final_root.destroy()
-        except:
-            pass
+        except: pass
+    else:
+        tqdm.write("无法启动浏览器，跳过 Earnings 任务。")
+
+# ==============================================================================
+# 4. 主程序入口
+# ==============================================================================
+
+if __name__ == "__main__":
+    # 启动全局防 AFK 线程
+    mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
+    mouse_thread.start()
+    tqdm.write("后台鼠标防休眠线程已启动...")
+
+    try:
+        # 1. 运行 Economic Events 任务
+        run_economic_events_task()
+        
+        # 缓冲
+        time.sleep(2)
+        
+        # 2. 运行 Stock Splits 任务
+        run_stock_splits_task()
+        
+        # 缓冲
+        time.sleep(2)
+        
+        # 3. 运行 Earnings Release 任务
+        run_earnings_task()
+    
+    except KeyboardInterrupt:
+        tqdm.write("\n程序被用户手动终止。")
+    except Exception as e:
+        tqdm.write(f"\n主程序发生未知错误: {e}")

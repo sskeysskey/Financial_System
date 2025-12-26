@@ -15,6 +15,7 @@ import tkinter as tk
 from tkinter import ttk
 import argparse
 import sqlite3  # 新增：导入sqlite3库
+import random # 确保头部导入了 random
 
 # --- 数据库操作函数 ---
 def create_db_connection(db_file):
@@ -564,13 +565,15 @@ def main():
                        desc="Processing symbols",
                        unit="sym"):
             
-            # -------------------- 新增的重置逻辑 (核心修复) --------------------
+            # --- 初始化/重置变量 (在重试循环外) ---
             # 在每次循环开始时，重置所有相关变量，防止数据污染
             shares_outstanding = "N/A"
             shares_outstanding_converted = 0
             price_book_value = "--"
             market_cap_converted = 0
             pe_str = "--"
+            
+            # 状态标志位
             got_shares = False
             got_price_book = False
             got_marketcap = False
@@ -582,164 +585,158 @@ def main():
                 show_alert(f"{symbol} 已经在三个文件中都存在了！")
                 continue
             
-            try:
-                url = f"https://finance.yahoo.com/quote/{symbol}/key-statistics/"
-                driver.get(url)
-                
-                # 查找Shares Outstanding数据
-                shares_outstanding_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Shares Outstanding')]/following-sibling::td[1]", timeout=5)
-                if shares_outstanding_element and shares_outstanding_element.text not in ("N/A", "-"):
-                    shares_outstanding = shares_outstanding_element.text
-                    got_shares = True
-                    print(f"通过XPath获取到 {symbol} 的股票数量: {shares_outstanding}")
-                else:
-                    # 尝试其他XPath
-                    alternative_xpaths = [
-                        "//span[contains(text(), 'Shares Outstanding')]/../../following-sibling::td",
-                        "//th[contains(text(), 'Shares Outstanding')]/following-sibling::td"
-                    ]
-                    for xpath in alternative_xpaths:
-                        alt_element = wait_for_element(driver, By.XPATH, xpath, timeout=3)
-                        if alt_element and alt_element.text not in ("N/A", "-"):
-                            shares_outstanding = alt_element.text
-                            got_shares = True
-                            print(f"通过备选XPath获取到 {symbol} 的股票数量: {shares_outstanding}")
-                            break
-                    
-                    # 如果XPath方法都失败，尝试JavaScript方法
-                    if not got_shares:
-                        try:
-                            js_result = driver.execute_script("""
-                                const elements = document.querySelectorAll('td');
-                                for (let i = 0; i < elements.length; i++) {
-                                    if (elements[i].textContent.includes('Shares Outstanding')) {
-                                        return elements[i].nextElementSibling ? elements[i].nextElementSibling.textContent : 'Not found';
-                                    }
-                                }
-                                return 'Not found';
-                            """)
-                            if js_result and js_result != 'Not found':
-                                shares_outstanding = js_result
-                                got_shares = True
-                                print(f"通过JavaScript获取到 {symbol} 的股票数量: {shares_outstanding}")
-                        except Exception as js_error:
-                            print(f"JavaScript获取 {symbol} 的股票数量失败: {str(js_error)}")
-                
-                if not got_shares:
-                     print(f"无法获取 {symbol} 的股票数量，使用默认值0")
-
-                # 转换股票数量格式
-                if got_shares: # 只在成功获取到时才转换
-                    shares_outstanding_converted = convert_shares_format(shares_outstanding)
-                    if shares_outstanding_converted == 0:
-                        print(f"警告: {symbol} 的股票数量转换为0，原始值: {shares_outstanding}")
-                
-                # 查找Price/Book数据
-                price_book_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Price/Book')]/following-sibling::td[1]", timeout=3)
-                if price_book_element:
-                    text = price_book_element.text.strip()
-                    if text not in ('N/A', '-', '--', ''):
-                        try:
-                            # 确保转换后有意义
-                            pb_float = float(text)
-                            price_book_value = str(pb_float)
-                            got_price_book = True # 只有在成功转换为数字后才标记为True
-                        except ValueError:
-                            price_book_value = "--"
-                    if got_price_book:
-                        print(f"已获取 {symbol} 的Price/Book: {price_book_value}")
-                
-                if not got_price_book:
-                    print(f"无法获取 {symbol} 的Price/Book")
-                
-                # 保存股票数量和Price/Book到Shares.txt
-                # 修改判断条件：只有在明确抓取到有效数据时才写入
-                if symbol not in existing_shares and (got_shares or got_price_book):
-                    with open(shares_file_path, 'a', encoding='utf-8') as file:
-                        file.write(f"{symbol}: {int(shares_outstanding_converted)}, {price_book_value}\n")
-                    print(f"已保存 {symbol} 的Shares和Price/Book 进txt文件中: {int(shares_outstanding_converted)}, {price_book_value}")
-                    existing_shares.add(symbol)
-                else:
-                    print(f"{symbol} 的股票数量和Price/Book已存在或未抓取到，跳过写入")
-                
-                # 查找Market Cap数据
-                market_cap_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Market Cap')]/following-sibling::td[1]", timeout=3)
-                if market_cap_element:
-                    text = market_cap_element.text.strip()
-                    if text not in ('N/A', '-', '', '--'):
-                        market_cap_converted = convert_shares_format(text)
-                        if market_cap_converted > 0: # 确保转换后的市值有效
-                            got_marketcap = True
-                
-                # 查找Trailing P/E数据
-                pe_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Trailing P/E')]/following-sibling::td[1]", timeout=3)
-                if pe_element:
-                    pe_ratio_text = pe_element.text.strip()
-                    if pe_ratio_text not in ('N/A', '-', '', '--'):
-                        try:
-                            pe_ratio = float(pe_ratio_text)
-                            pe_str = str(pe_ratio)
-                        except ValueError:
-                            pe_str = "--"
-
-                # --- 核心修改 2: 根据抓取结果更新总标志位 ---
-                any_data_scraped = got_shares or got_price_book or got_marketcap
-                
-                # 保存市值和PE到marketcap_pe.txt
-                # 修改判断条件：只有在明确抓取到有效市值时才写入
-                if symbol not in existing_marketcap_pe and got_marketcap:
-                    with open(marketcap_pe_file_path, 'a', encoding='utf-8') as file:
-                        # 注意：这里写入的 price_book_value 是本次循环抓取到的最新值
-                        file.write(f"{symbol}: {market_cap_converted}, {pe_str}, {price_book_value}\n")
-                    print(f"已保存 {symbol} 的市值和PE: {market_cap_converted}, {pe_str}, {price_book_value}")
-                    existing_marketcap_pe.add(symbol)
-                else:
-                    # 这个日志现在在抓取失败时也会打印，是合理的
-                    print(f"{symbol} 的市值和PE已在文件中存在或页面未抓取到，跳过写入")
-
-                # --- 核心修改 3: 条件化处理和日志记录 ---
-                if any_data_scraped:
-                    # 只有在成功抓取到至少一项数据时，才执行以下操作
-                    print(f"成功抓取到 {symbol} 的部分或全部新数据。") # <--- 修改：更准确的成功日志
-
-                    # --- 数据库操作逻辑 ---
-                    print(f"--- 开始处理 {symbol} 的数据库操作 ---")
-                    db_record = get_stock_from_db(db_conn, symbol)
-                    
-                    scraped_data = {
-                        "shares": shares_outstanding_converted,
-                        "marketcap": market_cap_converted,
-                        "pe": pe_str,
-                        "pb": price_book_value
-                    }
-
-                    if db_record:
-                        # 在这里，调用update_stock_in_db是合理的。
-                        # 如果它打印“无需更新”，那是因为抓取到的新数据与数据库中的旧数据相同，
-                        # 或者抓取到的部分数据无效（例如PE是'--'），这是正确的行为。
-                        update_stock_in_db(db_conn, symbol, scraped_data, db_record)
-                    else:
-                        show_alert(f"注意：新Symbol '{symbol}' 在数据库中未找到，将添加新记录。")
-                        insert_stock_into_db(
-                            db_conn, symbol, 
-                            scraped_data['shares'], 
-                            scraped_data['marketcap'], 
-                            scraped_data['pe'], 
-                            scraped_data['pb']
-                        )
-                    
-                    print(f"--- 完成 {symbol} 的数据库操作 ---") # <--- 修改：此日志现在只在成功时出现
-
-                else:
-                    # 如果任何数据都未抓取到
-                    print(f"未能为 {symbol} 抓取到任何有效的新数据，跳过数据库操作。") # <--- 新增：清晰的失败日志
-
-            except Exception as e:
-                print(f"处理 {symbol} 时发生主循环错误: {str(e)}")
+            # --- [修改开始] 重试机制 ---
+            max_retries = 3
             
+            for attempt in range(max_retries):
+                try:
+                    url = f"https://finance.yahoo.com/quote/{symbol}/key-statistics/"
+                    
+                    # 如果是重试，等待一下再加载
+                    if attempt > 0:
+                        print(f"\n正在重试 {symbol} (第 {attempt+1}/{max_retries} 次)...")
+                        time.sleep(random.uniform(2, 4))
+                    
+                    driver.get(url)
+                    
+                    # 1. 查找Shares Outstanding数据
+                    shares_outstanding_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Shares Outstanding')]/following-sibling::td[1]", timeout=5)
+                    if shares_outstanding_element and shares_outstanding_element.text not in ("N/A", "-"):
+                        shares_outstanding = shares_outstanding_element.text
+                        got_shares = True
+                        print(f"通过XPath获取到 {symbol} 的股票数量: {shares_outstanding}")
+                    else:
+                        # 尝试其他XPath
+                        alternative_xpaths = [
+                            "//span[contains(text(), 'Shares Outstanding')]/../../following-sibling::td",
+                            "//th[contains(text(), 'Shares Outstanding')]/following-sibling::td"
+                        ]
+                        for xpath in alternative_xpaths:
+                            alt_element = wait_for_element(driver, By.XPATH, xpath, timeout=3)
+                            if alt_element and alt_element.text not in ("N/A", "-"):
+                                shares_outstanding = alt_element.text
+                                got_shares = True
+                                print(f"通过备选XPath获取到 {symbol} 的股票数量: {shares_outstanding}")
+                                break
+                        
+                        # JS 兜底
+                        if not got_shares:
+                            try:
+                                js_result = driver.execute_script("""
+                                    const elements = document.querySelectorAll('td');
+                                    for (let i = 0; i < elements.length; i++) {
+                                        if (elements[i].textContent.includes('Shares Outstanding')) {
+                                            return elements[i].nextElementSibling ? elements[i].nextElementSibling.textContent : 'Not found';
+                                        }
+                                    }
+                                    return 'Not found';
+                                """)
+                                if js_result and js_result != 'Not found':
+                                    shares_outstanding = js_result
+                                    got_shares = True
+                                    print(f"通过JavaScript获取到 {symbol} 的股票数量: {shares_outstanding}")
+                            except Exception as js_error:
+                                pass # JS错误忽略，继续后面逻辑
+
+                    if got_shares:
+                        shares_outstanding_converted = convert_shares_format(shares_outstanding)
+
+                    # 2. 查找Price/Book数据
+                    price_book_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Price/Book')]/following-sibling::td[1]", timeout=3)
+                    if price_book_element:
+                        text = price_book_element.text.strip()
+                        if text not in ('N/A', '-', '--', ''):
+                            try:
+                                pb_float = float(text)
+                                price_book_value = str(pb_float)
+                                got_price_book = True
+                            except ValueError:
+                                price_book_value = "--"
+                    
+                    # 3. 查找Market Cap数据
+                    market_cap_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Market Cap')]/following-sibling::td[1]", timeout=3)
+                    if market_cap_element:
+                        text = market_cap_element.text.strip()
+                        if text not in ('N/A', '-', '', '--'):
+                            market_cap_converted = convert_shares_format(text)
+                            if market_cap_converted > 0:
+                                got_marketcap = True
+
+                    # 4. 查找Trailing P/E数据
+                    pe_element = wait_for_element(driver, By.XPATH, "//td[contains(text(), 'Trailing P/E')]/following-sibling::td[1]", timeout=3)
+                    if pe_element:
+                        pe_ratio_text = pe_element.text.strip()
+                        if pe_ratio_text not in ('N/A', '-', '', '--'):
+                            try:
+                                pe_ratio = float(pe_ratio_text)
+                                pe_str = str(pe_ratio)
+                            except ValueError:
+                                pe_str = "--"
+
+                    # --- 检查本次尝试的结果 ---
+                    any_data_scraped = got_shares or got_price_book or got_marketcap
+                    
+                    if any_data_scraped:
+                        # 成功抓取到数据，跳出重试循环
+                        break 
+                    else:
+                        print(f"尝试 {attempt+1}: {symbol} 页面加载完成但未找到有效数据。")
+                
+                except Exception as e:
+                    print(f"尝试 {attempt+1} 抓取 {symbol} 时发生错误: {str(e)}")
+                    # 继续下一次循环
+
+            # --- [重试循环结束] ---
+            
+            # --- 后续处理逻辑（文件写入和数据库更新） ---
+            # 这里的逻辑放在重试循环外面，确保只执行一次写入
+            
+            # 1. 保存到 Shares.txt
+            if symbol not in existing_shares and (got_shares or got_price_book):
+                with open(shares_file_path, 'a', encoding='utf-8') as file:
+                    file.write(f"{symbol}: {int(shares_outstanding_converted)}, {price_book_value}\n")
+                print(f"已保存 {symbol} 的Shares和Price/Book 进txt文件中")
+                existing_shares.add(symbol)
+
+            # 2. 保存到 marketcap_pe.txt
+            if symbol not in existing_marketcap_pe and got_marketcap:
+                with open(marketcap_pe_file_path, 'a', encoding='utf-8') as file:
+                    file.write(f"{symbol}: {market_cap_converted}, {pe_str}, {price_book_value}\n")
+                print(f"已保存 {symbol} 的市值和PE")
+                existing_marketcap_pe.add(symbol)
+
+            # 3. 数据库操作
+            if any_data_scraped:
+                print(f"成功抓取到 {symbol} 的部分或全部新数据。")
+                print(f"--- 开始处理 {symbol} 的数据库操作 ---")
+                
+                db_record = get_stock_from_db(db_conn, symbol)
+                scraped_data = {
+                    "shares": shares_outstanding_converted,
+                    "marketcap": market_cap_converted,
+                    "pe": pe_str,
+                    "pb": price_book_value
+                }
+                
+                if db_record:
+                    update_stock_in_db(db_conn, symbol, scraped_data, db_record)
+                else:
+                    show_alert(f"注意：新Symbol '{symbol}' 在数据库中未找到，将添加新记录。")
+                    insert_stock_into_db(
+                        db_conn, symbol, 
+                        scraped_data['shares'], 
+                        scraped_data['marketcap'], 
+                        scraped_data['pe'], 
+                        scraped_data['pb']
+                    )
+                print(f"--- 完成 {symbol} 的数据库操作 ---")
+            else:
+                # 3次尝试都失败后
+                print(f"❌ 最终失败: 未能为 {symbol} 抓取到任何有效的新数据，跳过。")
+
             # 添加短暂延迟，避免请求过于频繁
-            time.sleep(1)
-    
+            time.sleep(random.uniform(1, 2))
+
     finally:
         # 关闭浏览器
         if 'driver' in locals() and driver:
@@ -749,18 +746,14 @@ def main():
         if db_conn:
             db_conn.close()
             print("数据库连接已关闭。")
-
         print("数据抓取完成！")
-
-        # 检查sectors_empty.json是否有内容
+        
+        # 检查sectors_empty.json
         empty_json_path = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json"
         has_content = check_empty_json_has_content(empty_json_path)
         
-        # 如果有内容，询问是否清空
-        if has_content:
-            if args.clear:
-                # if show_yes_no_dialog("抓取结束，是否清空 Sectors_empty.json 中的股票符号？"):
-                    clear_empty_json()
-                    
+        if has_content and args.clear:
+             clear_empty_json()
+
 if __name__ == "__main__":
     main()

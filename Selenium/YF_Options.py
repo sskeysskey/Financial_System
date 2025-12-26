@@ -31,10 +31,10 @@ MARKET_CAP_THRESHOLD = 100000000000
 
 # --- 2. 数据源开关配置 ---
 # 设置为 False: 使用数据库 MNSPP 表进行筛选
-# USE_CUSTOM_LIST = False 
+USE_CUSTOM_LIST = False 
 
 # 设置为 True: 使用下方的 CUSTOM_SYMBOLS_DATA 列表 (默认)
-USE_CUSTOM_LIST = True 
+# USE_CUSTOM_LIST = True 
 
 # 自定义 Symbol 列表
 CUSTOM_SYMBOLS_DATA = [

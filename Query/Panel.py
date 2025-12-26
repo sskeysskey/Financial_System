@@ -1,34 +1,34 @@
 import os
 import sys
 import json
-import shutil
 import datetime
 import sqlite3
 from collections import OrderedDict
 import subprocess
 import re
+import holidays
 
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QGroupBox, QScrollArea, QTextEdit, QDialog,
     QInputDialog, QMenu, QFrame, QLabel, QLineEdit, QMessageBox
 )
-from PyQt5.QtCore import Qt, QMimeData, QPoint, QEvent, QTimer
-from PyQt5.QtGui import QFont, QCursor, QDrag
+
+from PyQt5.QtCore import Qt, QMimeData, QPoint, QEvent, QTimer, QSize
+from PyQt5.QtGui import QFont, QCursor, QDrag, QPainter, QColor, QPen
 
 sys.path.append('/Users/yanzhang/Coding/Financial_System/Query')
 from Chart_input import plot_financial_data
 
+# --- 新增: Earning History 文件路径 ---
 CONFIG_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
 COLORS_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Colors.json'
 DESCRIPTION_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
 SECTORS_ALL_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
 COMPARE_DATA_PATH = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
 DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
-BACKUP_CONFIG_PATH = '/Users/yanzhang/Coding/Financial_System/Operations/Sectors_panel_backup.json'
-NEW_SYMBOLS_STATE = '/Users/yanzhang/Coding/Financial_System/Operations/New_Symbols_State.json'
 BLACKLIST_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
-
+EARNING_HISTORY_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Earning_History.json'
 
 DISPLAY_LIMITS = {
     'default': 'all',  # 默认显示全部
@@ -44,72 +44,67 @@ categories = [
     ['Economics','Commodities'],
 ]
 
-# <--- 修改: 全局变量中不再需要 symbol_manager
 compare_data = {}
 config = {}
 keyword_colors = {}
 sector_data = {}
 json_data = {}
+# --- 新增: 全局变量用于存储 Earning History 数据 ---
+earning_history = {}
 
-# ----------------------------------------------------------------------
-# 启动时比较主文件和备份，生成当天的 new_symbols 列表
-# ----------------------------------------------------------------------
-def load_json_silent(path):
-    try:
-        with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except:
-        return {}
 
-def compute_new_symbols(today, current_cfg, backup_cfg):
-    """返回今天第一次启动时，比对 current_cfg 与 backup_cfg 后发现的新增 symbol 列表。"""
-    new_syms = []
-    for group, cur_val in current_cfg.items():
-        cur_set = set(cur_val.keys() if isinstance(cur_val, dict) else cur_val)
-        bak_set = set(backup_cfg.get(group, {}).keys() if isinstance(backup_cfg.get(group), dict)
-                      else backup_cfg.get(group, []))
-        for sym in cur_set - bak_set:
-            new_syms.append(sym)
-    return new_syms
+# --- 新增: 用于绘制左侧竖排横杠的控件 ---
+class BarIndicatorWidget(QWidget):
+    def __init__(self, count=0, parent=None):
+        super().__init__(parent)
+        self._count = count
+        # 设置一个固定的宽度，让所有指示器对齐
+        self.setFixedWidth(12)
 
-def load_or_refresh_new_symbols(force=False):
-    """
-    1) 如果当天已产生过 state 且 force=False，直接返回旧的 symbols。
-    2) 否则，重新对比 current_cfg 与 backup_cfg，
-       如果是同一天，只追加排重后的增量；
-       如果是新一天，则重置为全量 new_symbols。
-    """
-    today = datetime.date.today().isoformat()
-    state = load_json_silent(NEW_SYMBOLS_STATE)
-    state_date = state.get('date')
-    old_syms = state.get('symbols', [])
+    def setCount(self, count):
+        self._count = count
+        self.update() # 触发重绘
 
-    # 情况 A：非强制刷新且同一天，直接返回旧的
-    if not force and state_date == today:
-        return set(old_syms)
+    def paintEvent(self, event):
+        if self._count <= 0:
+            return  # 如果计数为0，则不绘制任何内容
 
-    # 否则，需要重新对比
-    current = load_json_silent(CONFIG_PATH)
-    backup  = load_json_silent(BACKUP_CONFIG_PATH)
-    fresh_new = compute_new_symbols(today, current, backup)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
 
-    if state_date == today:
-        # 同一天内，增量更新：只保留 fresh_new 中不在 old_syms 的部分
-        incremental = [s for s in fresh_new if s not in old_syms]
-        updated = old_syms + incremental
-    else:
-        # 新的一天，直接用 fresh_new
-        updated = fresh_new
+        # --- 横杠属性 ---
+        bar_color = QColor("#FFA500")  # 橙色，比较醒目
+        bar_height = 2                 # 每根横杠的高度 (即画笔粗细)
+        bar_width = 8                  # 每根横杠的宽度
+        spacing = 2                    # 横杠之间的垂直间距
+        
+        # 水平居中绘制
+        start_x = (self.width() - bar_width) // 2
 
-    # 写回文件
-    with open(NEW_SYMBOLS_STATE, 'w', encoding='utf-8') as f:
-        json.dump({'date': today, 'symbols': updated},
-                  f, ensure_ascii=False, indent=2)
+        # 计算所有横杠加间距的总高度，以便在控件内垂直居中
+        total_content_height = self._count * bar_height + (self._count - 1) * spacing
+        if total_content_height < 0: total_content_height = 0
+        
+        start_y = (self.height() - total_content_height) // 2
+        
+        pen = QPen(bar_color, bar_height)
+        pen.setCapStyle(Qt.FlatCap)  # 设置末端为平头
+        painter.setPen(pen)
 
-    return set(updated)
+        # 循环绘制每一根横杠
+        for i in range(self._count):
+            # 计算当前横杠的Y轴位置
+            y_pos = start_y + i * (bar_height + spacing)
+            # 我们画一条线，线的粗细由画笔宽度决定
+            painter.drawLine(start_x, y_pos, start_x + bar_width, y_pos)
 
-# 全局变量，保存当天需要高亮的 symbol
-new_symbols_today = load_or_refresh_new_symbols(force=True)
+    def sizeHint(self):
+        # 为布局管理器提供一个合适的尺寸建议
+        bar_height = 2
+        spacing = 2
+        height = self._count * (bar_height + spacing)
+        return QSize(12, height)
+
 
 class DraggableGroupBox(QGroupBox):
     def __init__(self, title, group_name, parent=None):
@@ -211,7 +206,10 @@ class DraggableGroupBox(QGroupBox):
             self._placeholder = None
             self._last_index  = None
 
+
+# --- 修改: 移除 SymbolButton 的角标逻辑，回归简单按钮 ---
 class SymbolButton(QPushButton):
+    # 移除 __init__ 中的 badge_count 参数
     def __init__(self, text, symbol, group, parent=None):
         super().__init__(text, parent)
         self._symbol = symbol
@@ -254,9 +252,6 @@ class SymbolButton(QPushButton):
 
         drag.exec_(Qt.MoveAction)
 
-# ----------------------------------------------------------------------
-# Utility / Helper Functions
-# ----------------------------------------------------------------------
 def limit_items(items, sector):
     """
     根据配置限制显示数量
@@ -269,7 +264,6 @@ def limit_items(items, sector):
 def load_json(path):
     with open(path, 'r', encoding='utf-8') as file:
         return json.load(file, object_pairs_hook=OrderedDict)
-
 
 def load_text_data(path):
     """
@@ -556,11 +550,14 @@ def filter_positive_symbols(config_dict, compare_dict, config_file_path):
             print(f"[错误] 更新配置文件失败: {e}")
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    # --- 修改: __init__ 接受 Earning History 数据 ---
+    def __init__(self, earning_history_data):
         super().__init__()
         # 将全局变量作为实例变量
         global config
         self.config = config
+        # --- 新增: 存储 Earning History 数据 ---
+        self.earning_history = earning_history_data
         
         ### <<< 修改: 将 highlighted_info 改为 highlighted_buttons 列表
         self.highlighted_buttons = []
@@ -582,13 +579,88 @@ class MainWindow(QMainWindow):
         
         self.init_ui()
 
+    # --- 新增: 计算角标数字的核心逻辑 ---
+    def get_consecutive_day_count(self, symbol, group):
+        """ 
+        根据规则计算symbol连续出现的天数。
+        修改: 此版本会跳过周末以及美股节假日进行连续计数。
+        """
+        # 规则1的分组
+        no_season_groups = {
+            "PE_valid_backup", "PE_invalid_backup", "PE_W_backup",
+            "OverSell_backup", "OverSell_W_backup"
+        }
+        # 规则2的分组
+        season_groups = {"Strategy12_backup", "Strategy34_backup"}
+        # 规则3的分组
+        combined_groups = {"Must", "Today"}
+
+        if group in no_season_groups:
+            sections_to_check = ['no_season']
+        elif group in season_groups:
+            sections_to_check = ['season']
+        elif group in combined_groups:
+            sections_to_check = ['season', 'no_season']
+        else:
+            return 0 # 如果分组不匹配任何规则，则返回0
+
+        count = 0
+        day_offset = 1
+        today = datetime.date.today()
+        
+        season_data = self.earning_history.get('season', {})
+        no_season_data = self.earning_history.get('no_season', {})
+        
+        # --- 新增: 初始化美股节假日 ---
+        # holidays 库会自动处理年份，不用担心跨年问题
+        market_holidays = holidays.NYSE() 
+
+        # 增加一个循环上限(一年)，防止意外的无限循环
+        while day_offset <= 365:
+            current_date = today - datetime.timedelta(days=day_offset)
+            date_str = current_date.strftime('%Y-%m-%d')
+            
+            found_on_this_date = False
+            
+            # 检查 'season' 部分
+            if 'season' in sections_to_check:
+                if symbol in season_data.get(date_str, []):
+                    found_on_this_date = True
+            
+            # 如果在 'season' 没找到，再检查 'no_season'
+            if not found_on_this_date and 'no_season' in sections_to_check:
+                if symbol in no_season_data.get(date_str, []):
+                    found_on_this_date = True
+                    
+            if found_on_this_date:
+                # 如果找到了，计数器加一，继续检查前一天
+                count += 1
+                day_offset += 1
+            else:
+                # --- 修改核心逻辑 ---
+                
+                # 1. 判断是否是周末 (5=周六, 6=周日)
+                is_weekend = current_date.weekday() >= 5
+                
+                # 2. 判断是否是美股节假日
+                is_holiday = current_date in market_holidays
+
+                # 如果是周末 或者 是节假日，则算作“非交易日”，不应中断连续性
+                if is_weekend or is_holiday:
+                    day_offset += 1
+                else:
+                    # 是工作日 且 不是节假日，但没有数据 -> 连续性中断
+                    break
+                    
+        return count
+
     def changeEvent(self, event):
         super().changeEvent(event)
         if event.type() == QEvent.ActivationChange:
             if self.isActiveWindow():
                 # 从后台回到前台（窗口被激活）
                 self.refresh_selection_window()
-
+                
     def init_ui(self):
         self.setWindowTitle("选择查询关键字")
         # self.setGeometry(100, 100, 1480, 900)
@@ -801,6 +873,7 @@ class MainWindow(QMainWindow):
             return (float('inf'), float('inf'), original_index)
     # ### 新增方法 END ###
 
+    # --- 修改: populate_widgets 方法以添加 BarIndicatorWidget ---
     def populate_widgets(self):
         """动态创建界面上的所有控件"""
         # <--- 新增: 在填充控件前，清空屏幕符号列表
@@ -863,10 +936,8 @@ class MainWindow(QMainWindow):
                             items_list.sort(key=lambda kv: (
                                 int(m.group(1)) if (m := re.match(r'\s*(\d+)', kv[1])) else float('inf')
                             ))
-                    # ### 修改 END ###
-
-                    items = limit_items(items_list, sector)
                     
+                    items = limit_items(items_list, sector)
                     if not items:
                         continue
                     
@@ -880,24 +951,31 @@ class MainWindow(QMainWindow):
                     for keyword, translation in items:
                         # <--- 新增: 将排序后的 keyword 添加到新列表中
                         self.ordered_symbols_on_screen.append(keyword)
+                        
+                        # --- 1. 获取横杠数量 ---
+                        bar_count = self.get_consecutive_day_count(keyword, sector)
 
                         button_container = QWidget()
                         row_layout = QHBoxLayout(button_container)
                         row_layout.setContentsMargins(0, 0, 0, 0)
                         row_layout.setSpacing(5)
 
-                        # 1) 主按钮（只显示 translation 或 keyword）
+                        # --- 2. 创建并添加横杠指示器 ---
+                        bar_widget = BarIndicatorWidget(count=bar_count)
+                        row_layout.addWidget(bar_widget)
+
+                        # --- 3. 创建普通按钮 (不再需要角标) ---
                         button = SymbolButton(
                             translation if translation else keyword,
                             keyword,
                             sector
                         )
+                        
                         button.setObjectName(self.get_button_style_name(keyword))
                         button.setCursor(QCursor(Qt.PointingHandCursor))
                         button.clicked.connect(lambda _, k=keyword: self.on_keyword_selected_chart(k))
-                        
-                        # ### 修改 START: 应用从 b.py 移植的颜色逻辑 ###
-                        # 1. 获取颜色决策数据
+
+                        # (设置按钮颜色、Tooltip、右键菜单的代码保持不变)
                         earning_price, price_trend, _ = get_color_decision_data(DB_PATH, sector_data, keyword)
 
                         # 2. 根据 b.py 的规则确定颜色
@@ -924,7 +1002,7 @@ class MainWindow(QMainWindow):
                         # 注意：这里会覆盖 QSS 中通过 objectName 设置的 color 属性，但保留 background-color
                         current_style = button.styleSheet()
                         button.setStyleSheet(f"{current_style}; color: {color};")
-
+                        
                         tags_info = get_tags_for_symbol(keyword)
                         if isinstance(tags_info, list):
                             tags_info = ", ".join(tags_info)
@@ -969,20 +1047,12 @@ class MainWindow(QMainWindow):
                                 
                                 # 定义需要特殊颜色处理的分组
                                 special_color_groups = {"Bonds", "Crypto", "Indices", "Economics", "Commodities", "Currencies"}
-                                
-                                # 根据当前分组 (sector) 决定百分比的颜色
+                                color_val = "gray"
                                 if sector in special_color_groups:
-                                    # 特殊分组：正红、零灰、负绿
-                                    if num > 0:
-                                        color_val = "red"
-                                    elif num == 0:
-                                        color_val = "gray"
-                                    else:
-                                        color_val = "green"
-                                else:
-                                    # 其他分组：保持灰色
-                                    color_val = "gray"
-
+                                    if num > 0: color_val = "red"
+                                    elif num == 0: color_val = "gray"
+                                    else: color_val = "green"
+                                
                                 percent_html = f"<span style='color:{color_val};'>{percent_fmt}</span>"
                                 suffix_html  = f"<span>{suffix}</span>"
                                 display_html = prefix_html + percent_html + suffix_html
@@ -1005,13 +1075,6 @@ class MainWindow(QMainWindow):
                         compare_label.setStyleSheet("font-size:22px;") 
                         compare_label.linkActivated.connect(self.on_keyword_selected_chart)
                         row_layout.addWidget(compare_label)  
-                        
-                        # 4) 如果是新符号，末尾再加一个“🔥”火
-                        if keyword in new_symbols_today:
-                            fire_label = QLabel("🔥")
-                            # 可选：设个稍大的字体
-                            fire_label.setStyleSheet("font-size:16px;")
-                            row_layout.addWidget(fire_label)
 
                         # 最后把 container 加到 groupbox
                         group_box.layout().addWidget(button_container)
@@ -1199,7 +1262,6 @@ class MainWindow(QMainWindow):
         dialog.setLayout(layout)
         dialog.exec_() # 使用 exec_() 以模态方式显示
 
-    # <--- 修改: 重写 handle_arrow_key 方法以使用新的导航逻辑
     def handle_arrow_key(self, direction):
         """根据屏幕视觉顺序处理上/下箭头键导航"""
         num_symbols = len(self.ordered_symbols_on_screen)
@@ -1214,7 +1276,6 @@ class MainWindow(QMainWindow):
         symbol = self.ordered_symbols_on_screen[self.current_symbol_index]
         self.on_keyword_selected_chart(symbol)
 
-    ### 新增 START ###
     def open_search_dialog(self):
         """
         打开一个输入对话框让用户输入 symbol，然后触发查找和高亮。
@@ -1329,12 +1390,6 @@ class MainWindow(QMainWindow):
     # 退出时把最新的主配置 copy 到备份，保留主配置不变
     # ------------------------------------------------------------------
     def closeEvent(self, event):
-        # 1) 先做备份
-        try:
-            shutil.copy(CONFIG_PATH, BACKUP_CONFIG_PATH)
-        except Exception as e:
-            print("备份 sectors_panel.json 失败:", e)
-        # <--- 修改: 不再需要重置 symbol_manager
         QApplication.quit()
 
     # --- 功能函数，现在是类的方法 ---
@@ -1411,8 +1466,7 @@ class MainWindow(QMainWindow):
             self.delete_item(keyword, source_group)
             # 操作完成，直接返回，不再执行后续的移动逻辑
             return
-        # --- 新增逻辑结束 ---
-
+        
         cfg = self.config
 
         # 1) 检查源分组
@@ -1459,26 +1513,21 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f"[错误] 保存配置失败：{e}")
 
+# --- 主程序入口修改 ---
 if __name__ == '__main__':
-    # 1) 先确保 backup 文件存在（第一次启动时）
-    if not os.path.exists(BACKUP_CONFIG_PATH):
-        shutil.copy(CONFIG_PATH, BACKUP_CONFIG_PATH)
-    
     # Load data
     keyword_colors = load_json(COLORS_PATH)
     config = load_json(CONFIG_PATH)
     json_data = load_json(DESCRIPTION_PATH)
     sector_data = load_json(SECTORS_ALL_PATH)
     compare_data = load_text_data(COMPARE_DATA_PATH)
+    # --- 新增: 加载 Earning History 数据 ---
+    earning_history = load_json(EARNING_HISTORY_PATH)
     
-    # <--- 新增: 在启动界面前，先执行过滤逻辑
     filter_positive_symbols(config, compare_data, CONFIG_PATH)
-
-    # <--- 修改: 不再创建 SymbolManager 实例
-    # symbol_manager = SymbolManager(config, categories)
-
-    # Create and run PyQt5 application
+    
     app = QApplication(sys.argv)
-    main_window = MainWindow()
+    # --- 修改: 将 Earning History 数据传入主窗口 ---
+    main_window = MainWindow(earning_history)
     main_window.showMaximized()
     sys.exit(app.exec_())
