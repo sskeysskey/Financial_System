@@ -4,6 +4,7 @@ import time
 import os
 import pyautogui
 import random
+import json
 import threading
 import sys
 import tkinter as tk
@@ -29,18 +30,14 @@ OUTPUT_DIR = '/Users/yanzhang/Coding/News/backup/'
 # 市值阈值 (10000亿) - 仅在数据库模式下生效
 MARKET_CAP_THRESHOLD = 100000000000
 
-# --- 2. 数据源开关配置 ---
-# 设置为 False: 使用数据库 MNSPP 表进行筛选
-USE_CUSTOM_LIST = False 
-
-# 设置为 True: 使用下方的 CUSTOM_SYMBOLS_DATA 列表 (默认)
-# USE_CUSTOM_LIST = True 
+# --- 新增配置 ---
+SECTORS_JSON_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
 
 # 自定义 Symbol 列表
 CUSTOM_SYMBOLS_DATA = [
     "^VIX", "NVDA", "AAPL", "GOOGL", "MSFT", "META",
-    "TSM", "WMT", "HYG", "QQQ", "SPY", "UVXY", 
-    "SONY", "UUP", "SVIX"
+    "TSM", "WMT", "HYG", "QQQ", "SPY",
+    "SONY"
 ]
 
 # --- 3. 文件名生成 ---
@@ -142,19 +139,59 @@ def scrape_options():
     # mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
     # mouse_thread.start()
     
-    # --- 1. 获取目标 Symbols (根据开关决定来源) ---
-    symbols = [] # 结构统一为 list of tuples: [(symbol, market_cap), ...]
+    # --- 1. 获取目标 Symbols (修改为：合并模式) ---
+    # 目标：先加入自定义列表，再加入数据库筛选列表，并去重
+    symbols = [] 
     
-    if USE_CUSTOM_LIST:
-        tqdm.write(f"【模式】使用自定义列表模式")
-        # 为了保持结构一致，给自定义列表填充市值 0
-        symbols = [(s, 0) for s in CUSTOM_SYMBOLS_DATA]
-        tqdm.write(f"加载了 {len(symbols)} 个目标代码")
-    else:
-        tqdm.write(f"【模式】使用数据库筛选模式 (阈值: {MARKET_CAP_THRESHOLD})")
-        # 这里返回的已经是 [(symbol, cap), ...] 且按市值降序排列
-        symbols = get_target_symbols(DB_PATH, MARKET_CAP_THRESHOLD)
+    # === 步骤 A: 获取自定义列表 + JSON Must 分组 ===
+    tqdm.write(f"【阶段1】正在加载自定义列表与 JSON 配置...")
     
+    # 1. 合并 JSON 中的 Must 分组
+    merged_symbols_set = set(CUSTOM_SYMBOLS_DATA)
+    try:
+        if os.path.exists(SECTORS_JSON_PATH):
+            with open(SECTORS_JSON_PATH, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            # 提取 Must 分组的 key
+            must_symbols = data.get("Must", {}).keys()
+            
+            # 合并去重
+            old_len = len(merged_symbols_set)
+            merged_symbols_set.update(must_symbols)
+            new_len = len(merged_symbols_set)
+            
+            tqdm.write(f"已合并 JSON [Must] 分组，新增 {new_len - old_len} 个 Symbol。")
+        else:
+            tqdm.write(f"未找到路径: {SECTORS_JSON_PATH}，跳过 JSON 读取。")
+    except Exception as e:
+        tqdm.write(f"读取 JSON 出错: {e}，跳过。")
+        
+    # 构造列表 [(symbol, 0), ...] 
+    # 自定义列表的市值默认为 0，方便后续处理
+    custom_symbols_list = [(s, 0) for s in merged_symbols_set]
+    tqdm.write(f"自定义列表准备完毕，共 {len(custom_symbols_list)} 个。")
+
+    # === 步骤 B: 获取数据库筛选列表 ===
+    tqdm.write(f"【阶段2】正在加载数据库筛选列表 (阈值: {MARKET_CAP_THRESHOLD})...")
+    # 这里返回的已经是 [(symbol, cap), ...] 且按市值降序排列
+    db_symbols_list = get_target_symbols(DB_PATH, MARKET_CAP_THRESHOLD)
+    
+    # === 步骤 C: 合并列表与去重 ===
+    # 逻辑：优先保留自定义列表中的顺序和项，数据库列表中若有重复则跳过
+    
+    # 1. 建立自定义 Symbol 的快速查询集合
+    custom_names_set = {s[0] for s in custom_symbols_list}
+    
+    # 2. 筛选数据库列表：只保留不在自定义列表中的
+    db_unique_list = [s for s in db_symbols_list if s[0] not in custom_names_set]
+    
+    tqdm.write(f"数据库列表去重后新增: {len(db_unique_list)} 个。")
+    
+    # 3. 最终合并
+    symbols = custom_symbols_list + db_unique_list
+    tqdm.write(f"【汇总】总任务数: {len(symbols)} (自定义优先 + 数据库补充)")
+
     if not symbols:
         tqdm.write("未找到任何 Symbol，程序结束。")
         return

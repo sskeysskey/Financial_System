@@ -3,13 +3,14 @@ import json
 from collections import OrderedDict
 import subprocess
 
-from PyQt5.QtWidgets import (
+# --- 修改: 切换到 PyQt6 ---
+from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QGroupBox, QScrollArea, QLabel, QFrame,
     QMenu
 )
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QCursor, QColor, QFont
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QCursor, QColor, QFont, QAction
 
 sys.path.append('/Users/yanzhang/Coding/Financial_System/Query')
 from Chart_input import plot_financial_data
@@ -41,10 +42,12 @@ class ClickableLabel(QLabel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # 鼠标变手型
-        self.setCursor(QCursor(Qt.PointingHandCursor))
+        # PyQt6: 使用 Qt.CursorShape.PointingHandCursor
+        self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        # PyQt6: 使用 Qt.MouseButton.LeftButton
+        if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit()
         super().mousePressEvent(event)
 
@@ -163,8 +166,9 @@ def load_text_data(path):
     return data
 
 # ----------------------------------------------------------------------
-# PyQt5 主应用窗口
+# PyQt6 主应用窗口
 # ----------------------------------------------------------------------
+
 class HighLowWindow(QMainWindow):
     # ### 修改 ###: 构造函数增加 high_low_5y_data 参数
     def __init__(self, high_low_data, keyword_colors, sector_data, compare_data, json_data, high_low_5y_data):
@@ -206,7 +210,8 @@ class HighLowWindow(QMainWindow):
         self.setGeometry(100, 100, 1600, 1000)
 
         # --- 【关键改动 1】: 设置焦点策略，让窗口能接收键盘事件 ---
-        self.setFocusPolicy(Qt.StrongFocus)
+        # PyQt6: 使用 Qt.FocusPolicy.StrongFocus
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         
         scroll_area = QScrollArea(self)
         scroll_area.setWidgetResizable(True)
@@ -224,8 +229,9 @@ class HighLowWindow(QMainWindow):
         low_main_layout = QVBoxLayout(low_main_container)
         low_main_layout.setContentsMargins(10, 0, 10, 0)
         low_title = QLabel("新低")
-        low_title.setFont(QFont("Arial", 20, QFont.Bold))
-        low_title.setAlignment(Qt.AlignCenter)
+        low_title.setFont(QFont("Arial", 20, QFont.Weight.Bold))
+        # PyQt6: 使用 Qt.AlignmentFlag.AlignCenter
+        low_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         # low_columns_layout 将水平容纳多个列
         self.low_columns_layout = QHBoxLayout()
@@ -239,8 +245,8 @@ class HighLowWindow(QMainWindow):
         high_main_layout = QVBoxLayout(high_main_container)
         high_main_layout.setContentsMargins(10, 0, 10, 0)
         high_title = QLabel("新高")
-        high_title.setFont(QFont("Arial", 20, QFont.Bold))
-        high_title.setAlignment(Qt.AlignCenter)
+        high_title.setFont(QFont("Arial", 20, QFont.Weight.Bold))
+        high_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         # high_columns_layout 将水平容纳多个列
         self.high_columns_layout = QHBoxLayout()
@@ -254,8 +260,9 @@ class HighLowWindow(QMainWindow):
         high_5y_main_layout = QVBoxLayout(high_5y_main_container)
         high_5y_main_layout.setContentsMargins(10, 0, 10, 0)
         high_5y_title = QLabel("5Y HIGH")
-        high_5y_title.setFont(QFont("Arial", 20, QFont.Bold))
-        high_5y_title.setAlignment(Qt.AlignCenter)
+        high_5y_title.setFont(QFont("Arial", 20, QFont.Weight.Bold))
+        high_5y_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
         self.high_5y_columns_layout = QHBoxLayout() # 用于容纳 symbol 列
         high_5y_main_layout.addWidget(high_5y_title)
         high_5y_main_layout.addLayout(self.high_5y_columns_layout)
@@ -265,16 +272,17 @@ class HighLowWindow(QMainWindow):
         main_layout.addWidget(low_main_container)
         
         separator1 = QFrame()
-        separator1.setFrameShape(QFrame.VLine)
-        separator1.setFrameShadow(QFrame.Sunken)
+        # PyQt6: 使用 QFrame.Shape.VLine 和 QFrame.Shadow.Sunken
+        separator1.setFrameShape(QFrame.Shape.VLine)
+        separator1.setFrameShadow(QFrame.Shadow.Sunken)
         main_layout.addWidget(separator1)
 
         main_layout.addWidget(high_main_container)
 
         # ### 新增 ###: 添加第二个分隔符和 5Y High 容器
         separator2 = QFrame()
-        separator2.setFrameShape(QFrame.VLine)
-        separator2.setFrameShadow(QFrame.Sunken)
+        separator2.setFrameShape(QFrame.Shape.VLine)
+        separator2.setFrameShadow(QFrame.Shadow.Sunken)
         main_layout.addWidget(separator2)
         
         main_layout.addWidget(high_5y_main_container)
@@ -426,7 +434,8 @@ class HighLowWindow(QMainWindow):
 
                 # 创建一个新列
                 current_column_layout = QVBoxLayout()
-                current_column_layout.setAlignment(Qt.AlignTop)
+                # PyQt6: Qt.AlignmentFlag.AlignTop
+                current_column_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
                 current_column_count = 0  # 重置计数器
 
             # 将当前的 groupbox 添加到当前列中
@@ -474,7 +483,7 @@ class HighLowWindow(QMainWindow):
                         current_column_layout.addStretch(1) # 列内向上对齐
                         parent_layout.addLayout(current_column_layout)
                     current_column_layout = QVBoxLayout()
-                    current_column_layout.setAlignment(Qt.AlignTop)
+                    current_column_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
                 
                 widget = self.create_symbol_widget(symbol)
                 current_column_layout.addWidget(widget)
@@ -486,7 +495,7 @@ class HighLowWindow(QMainWindow):
         else:
             # 如果项目不多，则只创建一列
             column_layout = QVBoxLayout()
-            column_layout.setAlignment(Qt.AlignTop)
+            column_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
             for symbol in symbols:
                 widget = self.create_symbol_widget(symbol)
                 column_layout.addWidget(widget)
@@ -544,14 +553,16 @@ class HighLowWindow(QMainWindow):
                 act.triggered.connect(callback)
 
         # 在光标位置弹出菜单
-        menu.exec_(QCursor.pos())
+        menu.exec(QCursor.pos())
 
     def create_symbol_button(self, symbol):
         """辅助函数，用于创建一个配置好的 symbol 按钮。"""
         button_text = f"{symbol} {self.compare_data.get(symbol, '')}"
         button = QPushButton(button_text)
         button.setObjectName(self.get_button_style_name(symbol))
-        button.setCursor(QCursor(Qt.PointingHandCursor))
+        # PyQt6: 使用 Qt.CursorShape.PointingHandCursor
+        button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        
         # 使用 lambda 捕获当前的 symbol 值
         button.clicked.connect(lambda _, s=symbol: self.on_symbol_click(s))
 
@@ -566,7 +577,8 @@ class HighLowWindow(QMainWindow):
         button.setToolTip(f"<div style='font-size: 20px; background-color: lightyellow; color: black;'>{tags_info}</div>")
 
         # --- 4. 启用并连接右键菜单 ---
-        button.setContextMenuPolicy(Qt.CustomContextMenu)
+        # PyQt6: 使用 Qt.ContextMenuPolicy.CustomContextMenu
+        button.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         button.customContextMenuRequested.connect(
             # 使用 lambda 忽略 pos 参数，只传递 symbol
             lambda pos, s=symbol: self.show_context_menu(s)
@@ -632,12 +644,13 @@ class HighLowWindow(QMainWindow):
         key = event.key()
         
         # --- 5. 在键盘事件中添加对上下键的处理 ---
-        if key == Qt.Key_Escape:
+        # PyQt6: Qt.Key.Key_Escape, Qt.Key.Key_Down, Qt.Key.Key_Up
+        if key == Qt.Key.Key_Escape:
             print("Escape key pressed. Closing application...")
             self.close()
-        elif key == Qt.Key_Down:
+        elif key == Qt.Key.Key_Down:
             self.handle_arrow_key('down')
-        elif key == Qt.Key_Up:
+        elif key == Qt.Key.Key_Up:
             self.handle_arrow_key('up')
         else:
             # 对于其他按键，调用父类的实现以保留默认行为
@@ -671,7 +684,8 @@ class HighLowWindow(QMainWindow):
         # 用 ClickableLabel 替代普通 QLabel
         label = ClickableLabel(tags_info)
         # 左对齐 + 垂直居中
-        label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        # PyQt6: 使用 Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         label.setFixedWidth(SYMBOL_WIDGET_FIXED_WIDTH)
 
         # 用实例的 fontMetrics 拿高度
@@ -685,15 +699,15 @@ class HighLowWindow(QMainWindow):
             font-size: 16px;
             padding-left: 4px;
         """)
-
+        
         # 点击 label 时也调用 on_symbol_click
         label.clicked.connect(lambda: self.on_symbol_click(symbol))
-
+        
         # ---- 新增这两行 ---- 
         # 让 label 响应右键，用同一个上下文菜单
-        label.setContextMenuPolicy(Qt.CustomContextMenu)
+        label.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         label.customContextMenuRequested.connect(lambda pos, s=symbol: self.show_context_menu(s))
-
+        
         # 把按钮 + 可点标签 装容器
         container = QWidget()
         vlay = QVBoxLayout(container)
@@ -702,12 +716,12 @@ class HighLowWindow(QMainWindow):
         vlay.addWidget(button)
         vlay.addWidget(label)
         container.setFixedWidth(SYMBOL_WIDGET_FIXED_WIDTH)
-
         return container
 
 # ----------------------------------------------------------------------
 # 主执行入口
 # ----------------------------------------------------------------------
+
 if __name__ == '__main__':
     # 1. 加载所有需要的数据
     print("正在加载数据...")
@@ -717,6 +731,7 @@ if __name__ == '__main__':
         json_data = load_json(DESCRIPTION_PATH)
         sector_data = load_json(SECTORS_ALL_PATH)
         compare_data = load_text_data(COMPARE_DATA_PATH)
+        
         # ### 新增 ###: 加载 5Y High/Low 数据
         high_low_5y_data = parse_high_low_file(HIGH_LOW_5Y_PATH)
         
@@ -728,8 +743,9 @@ if __name__ == '__main__':
         print(f"加载数据时发生未知错误: {e}")
         sys.exit(1)
 
-    # 2. 创建并运行 PyQt5 应用
+    # 2. 创建并运行 PyQt6 应用
     app = QApplication(sys.argv)
+    
     # ### 修改 ###: 将新加载的 high_low_5y_data 传递给主窗口
     main_window = HighLowWindow(
         high_low_data,
@@ -740,4 +756,5 @@ if __name__ == '__main__':
         high_low_5y_data
     )
     main_window.show()
-    sys.exit(app.exec_())
+    # PyQt6: exec 替代 exec_
+    sys.exit(app.exec())

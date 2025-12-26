@@ -3,24 +3,25 @@ import sys
 import json
 import datetime
 import sqlite3
-from collections import OrderedDict
 import subprocess
 import re
+from collections import OrderedDict
 import holidays
 
-from PyQt5.QtWidgets import (
+# --- 修改: 切换到 PyQt6 ---
+from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QGroupBox, QScrollArea, QTextEdit, QDialog,
     QInputDialog, QMenu, QFrame, QLabel, QLineEdit, QMessageBox
 )
-
-from PyQt5.QtCore import Qt, QMimeData, QPoint, QEvent, QTimer, QSize
-from PyQt5.QtGui import QFont, QCursor, QDrag, QPainter, QColor, QPen
+# 注意: PyQt6 的枚举通常需要全限定名 (Scoped Enums)
+from PyQt6.QtCore import Qt, QMimeData, QPoint, QEvent, QTimer, QSize
+from PyQt6.QtGui import QFont, QCursor, QDrag, QPainter, QColor, QPen
 
 sys.path.append('/Users/yanzhang/Coding/Financial_System/Query')
 from Chart_input import plot_financial_data
 
-# --- 新增: Earning History 文件路径 ---
+# --- 文件路径配置 ---
 CONFIG_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
 COLORS_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Colors.json'
 DESCRIPTION_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
@@ -36,12 +37,12 @@ DISPLAY_LIMITS = {
 }
 
 categories = [
-    ['Must','Today','Short', 'Short_Shift','OverSell_backup','PE_W_backup','OverSell_W_backup'],
-    ['PE_valid_backup','PE_invalid_backup','Strategy12_backup','Strategy34_backup'],
-    ['Basic_Materials','Consumer_Cyclical','Real_Estate','Technology','Energy','Industrials',
-     'Consumer_Defensive','Communication_Services','Financial_Services', 'Healthcare','Utilities'],
-    ['ETFs','Bonds','Crypto','Indices','Currencies'],
-    ['Economics','Commodities'],
+    ['Must', 'Today', 'Short', 'Short_Shift', 'PE_Deep_backup', 'PE_W_backup', 'OverSell_W_backup'],
+    ['PE_valid_backup', 'PE_invalid_backup', 'Strategy12_backup', 'Strategy34_backup'],
+    ['Basic_Materials', 'Consumer_Cyclical', 'Real_Estate', 'Technology', 'Energy', 'Industrials',
+     'Consumer_Defensive', 'Communication_Services', 'Financial_Services', 'Healthcare', 'Utilities'],
+    ['ETFs', 'Bonds', 'Crypto', 'Indices', 'Currencies'],
+    ['Economics', 'Commodities'],
 ]
 
 compare_data = {}
@@ -52,6 +53,7 @@ json_data = {}
 # --- 新增: 全局变量用于存储 Earning History 数据 ---
 earning_history = {}
 
+# --- 控件类定义 ---
 
 # --- 新增: 用于绘制左侧竖排横杠的控件 ---
 class BarIndicatorWidget(QWidget):
@@ -70,7 +72,8 @@ class BarIndicatorWidget(QWidget):
             return  # 如果计数为0，则不绘制任何内容
 
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
+        # PyQt6: 枚举变化 QPainter.RenderHint.Antialiasing
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         # --- 横杠属性 ---
         bar_color = QColor("#FFA500")  # 橙色，比较醒目
@@ -86,9 +89,10 @@ class BarIndicatorWidget(QWidget):
         if total_content_height < 0: total_content_height = 0
         
         start_y = (self.height() - total_content_height) // 2
-        
+
         pen = QPen(bar_color, bar_height)
-        pen.setCapStyle(Qt.FlatCap)  # 设置末端为平头
+        # PyQt6: Qt.PenCapStyle.FlatCap
+        pen.setCapStyle(Qt.PenCapStyle.FlatCap)
         painter.setPen(pen)
 
         # 循环绘制每一根横杠
@@ -131,8 +135,8 @@ class DraggableGroupBox(QGroupBox):
                    for i in range(layout.count())
                    if layout.itemAt(i).widget() is not self._placeholder]
 
-        # 2) 计算应该插到哪个“真实控件”前面
-        y = ev.pos().y()
+        # PyQt6: ev.pos() 依然可用，但建议用 ev.position().toPoint()
+        y = ev.position().toPoint().y()
         dst = len(widgets)
         for i, w in enumerate(widgets):
             mid = w.geometry().center().y()
@@ -156,7 +160,8 @@ class DraggableGroupBox(QGroupBox):
             widgets = [layout.itemAt(i).widget()
                        for i in range(layout.count())
                        if layout.itemAt(i).widget() is not self._placeholder]
-            y = ev.pos().y()
+            
+            y = ev.position().toPoint().y()
             dst = len(widgets)
             for i, w in enumerate(widgets):
                 if y < w.geometry().center().y():
@@ -168,7 +173,9 @@ class DraggableGroupBox(QGroupBox):
 
         # 通知 MainWindow
         mw = self.window()
-        mw.reorder_item(symbol, src, self.group_name, dst)
+        # 注意: self.window() 在 PyQt6 返回可能是 None，虽然通常都有
+        if mw:
+            mw.reorder_item(symbol, src, self.group_name, dst)
 
     def dragLeaveEvent(self, ev):
         self._clear_placeholder()
@@ -217,27 +224,27 @@ class SymbolButton(QPushButton):
         self._drag_start = QPoint()
 
     def mousePressEvent(self, ev):
-        # 仅拦截左键：支持 Shift/Alt 组合键的快捷操作
-        if ev.button() == Qt.LeftButton:
+        # PyQt6: Qt.MouseButton.LeftButton
+        if ev.button() == Qt.MouseButton.LeftButton:
             mods = ev.modifiers()
-            # Option(Alt) + 左键 → 打开“相似”程序
-            if mods & Qt.AltModifier:
+            # PyQt6: Qt.KeyboardModifier.AltModifier
+            if mods & Qt.KeyboardModifier.AltModifier:
                 execute_external_script('similar', self._symbol)
-                return  # 阻止后续默认点击/拖拽逻辑
-            # Shift + 左键 → 在富途中搜索
-            if mods & Qt.ShiftModifier:
+                return
+            # PyQt6: Qt.KeyboardModifier.ShiftModifier
+            if mods & Qt.KeyboardModifier.ShiftModifier:
                 execute_external_script('futu', self._symbol)
-                return  # 阻止后续默认点击/拖拽逻辑
-            # 否则保留原始拖拽起点记录逻辑
-            self._drag_start = ev.pos()
-
-        # 其他按键或无修饰键左键，走原逻辑
+                return
+            self._drag_start = ev.position().toPoint()
+        
         super().mousePressEvent(ev)
 
     def mouseMoveEvent(self, ev):
-        if not (ev.buttons() & Qt.LeftButton):
+        # PyQt6: ev.buttons() & Qt.MouseButton.LeftButton
+        if not (ev.buttons() & Qt.MouseButton.LeftButton):
             return super().mouseMoveEvent(ev)
-        if (ev.pos() - self._drag_start).manhattanLength() < QApplication.startDragDistance():
+
+        if (ev.position().toPoint() - self._drag_start).manhattanLength() < QApplication.startDragDistance():
             return
 
         drag = QDrag(self)
@@ -248,9 +255,14 @@ class SymbolButton(QPushButton):
         # 用控件截图作拖拽图标
         pm = self.grab()
         drag.setPixmap(pm)
-        drag.setHotSpot(ev.pos())
+        # hotSpot 
+        drag.setHotSpot(ev.position().toPoint() - self.rect().topLeft()) 
 
-        drag.exec_(Qt.MoveAction)
+        # PyQt6: exec 替代 exec_, 且使用 DropAction 枚举
+        drag.exec(Qt.DropAction.MoveAction)
+
+
+# --- 辅助函数 ---
 
 def limit_items(items, sector):
     """
@@ -306,7 +318,7 @@ def fetch_mnspp_data_from_db(db_path, symbol):
     else:
         # 数据库没查到，返回默认值
         return "N/A", None, "N/A", "--"
-    
+
 def fetch_latest_earning_date(symbol):
     """
     从 earning 表里取 symbol 的最近一次财报日期，
@@ -368,7 +380,7 @@ def get_color_decision_data(db_path, sector_data, symbol):
                 (symbol,)
             )
             earning_rows = cursor.fetchall()
-
+        
         if not earning_rows:
             return None, None, None # 没有财报记录
 
@@ -549,6 +561,8 @@ def filter_positive_symbols(config_dict, compare_dict, config_file_path):
         except Exception as e:
             print(f"[错误] 更新配置文件失败: {e}")
 
+# --- 主窗口 ---
+
 class MainWindow(QMainWindow):
     # --- 修改: __init__ 接受 Earning History 数据 ---
     def __init__(self, earning_history_data):
@@ -588,7 +602,7 @@ class MainWindow(QMainWindow):
         # 规则1的分组
         no_season_groups = {
             "PE_valid_backup", "PE_invalid_backup", "PE_W_backup",
-            "OverSell_backup", "OverSell_W_backup"
+            "PE_Deep_backup", "OverSell_W_backup"
         }
         # 规则2的分组
         season_groups = {"Strategy12_backup", "Strategy34_backup"}
@@ -611,7 +625,7 @@ class MainWindow(QMainWindow):
         season_data = self.earning_history.get('season', {})
         no_season_data = self.earning_history.get('no_season', {})
         
-        # --- 新增: 初始化美股节假日 ---
+        # 使用 holidays.NYSE() 获取美股假期
         # holidays 库会自动处理年份，不用担心跨年问题
         market_holidays = holidays.NYSE() 
 
@@ -637,9 +651,7 @@ class MainWindow(QMainWindow):
                 count += 1
                 day_offset += 1
             else:
-                # --- 修改核心逻辑 ---
-                
-                # 1. 判断是否是周末 (5=周六, 6=周日)
+                # 判断周末 (5=周六, 6=周日) 或 节假日
                 is_weekend = current_date.weekday() >= 5
                 
                 # 2. 判断是否是美股节假日
@@ -651,22 +663,20 @@ class MainWindow(QMainWindow):
                 else:
                     # 是工作日 且 不是节假日，但没有数据 -> 连续性中断
                     break
-                    
         return count
 
     def changeEvent(self, event):
         super().changeEvent(event)
-        if event.type() == QEvent.ActivationChange:
+        if event.type() == QEvent.Type.ActivationChange:
             if self.isActiveWindow():
                 # 从后台回到前台（窗口被激活）
                 self.refresh_selection_window()
                 
     def init_ui(self):
         self.setWindowTitle("选择查询关键字")
-        # self.setGeometry(100, 100, 1480, 900)
         
         # <--- 第1处修改：设置主窗口的焦点策略，使其能接收键盘事件 ---
-        self.setFocusPolicy(Qt.StrongFocus)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         # 创建 QScrollArea 作为主滚动区域
         self.scroll_area = QScrollArea(self)
@@ -680,7 +690,7 @@ class MainWindow(QMainWindow):
         # 创建水平布局来容纳垂直的列
         self.main_layout = QHBoxLayout(self.scroll_content)
         self.scroll_content.setLayout(self.main_layout)
-
+        
         self.apply_stylesheet()
         self.populate_widgets()
 
@@ -809,6 +819,7 @@ class MainWindow(QMainWindow):
         # 2) 确保 dst 存在，并插入
         if dst not in cfg:
             cfg[dst] = {} if isinstance(cfg.get(src), dict) else []
+            
         target = cfg[dst]
         if isinstance(target, dict):
             od = OrderedDict()
@@ -826,10 +837,8 @@ class MainWindow(QMainWindow):
         with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
             json.dump(cfg, f, ensure_ascii=False, indent=4)
         self.refresh_selection_window()
-    
+
     def lighten_color(self, color_name, factor=1.1):
-        """一个简单的函数来让颜色变亮，用于:hover效果"""
-        from PyQt5.QtGui import QColor
         color = QColor(color_name)
         h, s, l, a = color.getHslF()
         l = min(1.0, l * factor)
@@ -858,7 +867,6 @@ class MainWindow(QMainWindow):
         
         # 匹配 "数字" + "前/后/未" 的模式
         match = re.search(r'(\d+)(前|后|未)', compare_str)
-        
         if match:
             number = int(match.group(1))
             suffix = match.group(2)
@@ -871,7 +879,6 @@ class MainWindow(QMainWindow):
         else:
             # 如果没有匹配到 "数字+标志" 模式，则将它们排在最后，并保持原始顺序
             return (float('inf'), float('inf'), original_index)
-    # ### 新增方法 END ###
 
     # --- 修改: populate_widgets 方法以添加 BarIndicatorWidget ---
     def populate_widgets(self):
@@ -881,7 +888,8 @@ class MainWindow(QMainWindow):
 
         column_layouts = [QVBoxLayout() for _ in categories]
         for layout in column_layouts:
-            layout.setAlignment(Qt.AlignTop) # 让内容从顶部开始排列
+            # PyQt6: Qt.AlignmentFlag.AlignTop
+            layout.setAlignment(Qt.AlignmentFlag.AlignTop)
             self.main_layout.addLayout(layout)
 
         # ### 修改 ###: 定义需要特殊排序的组
@@ -889,7 +897,20 @@ class MainWindow(QMainWindow):
             'Must','Today','Short','Short_Shift','Basic_Materials','Consumer_Cyclical',
             'Real_Estate','Technology','Energy','Industrials','Consumer_Defensive',
             'Communication_Services','Financial_Services','Healthcare','Utilities',
-            'PE_valid','PE_invalid','Strategy12','Strategy34','OverSell','OverSell_W','PE_W'
+            'PE_valid','PE_invalid','Strategy12','Strategy34','PE_Deep','OverSell_W','PE_W'
+        }
+
+        # ==========================================================
+        # 1. 定义哪些组需要显示左侧的计数条 (把 get_consecutive_day_count 里的组搬过来)
+        # ==========================================================
+        groups_with_indicators = {
+            # no_season_groups
+            "PE_valid_backup", "PE_invalid_backup", "PE_W_backup",
+            "PE_Deep_backup", "OverSell_W_backup",
+            # season_groups
+            "Strategy12_backup", "Strategy34_backup",
+            # combined_groups
+            "Must", "Today"
         }
 
         for index, category_group in enumerate(categories):
@@ -936,7 +957,7 @@ class MainWindow(QMainWindow):
                             items_list.sort(key=lambda kv: (
                                 int(m.group(1)) if (m := re.match(r'\s*(\d+)', kv[1])) else float('inf')
                             ))
-                    
+
                     items = limit_items(items_list, sector)
                     if not items:
                         continue
@@ -960,11 +981,16 @@ class MainWindow(QMainWindow):
                         row_layout.setContentsMargins(0, 0, 0, 0)
                         row_layout.setSpacing(5)
 
-                        # --- 2. 创建并添加横杠指示器 ---
-                        bar_widget = BarIndicatorWidget(count=bar_count)
-                        row_layout.addWidget(bar_widget)
+                        # ==========================================================
+                        # 2. 修改这里：只有当 sector 属于指定组时，才添加指示器控件
+                        # ==========================================================
+                        if sector in groups_with_indicators:
+                            bar_widget = BarIndicatorWidget(count=bar_count)
+                            row_layout.addWidget(bar_widget)
+                        
+                        # 如果不属于这些组，就不添加 bar_widget，这样就没有那 12px 的空档了
 
-                        # --- 3. 创建普通按钮 (不再需要角标) ---
+                        # --- 3. 创建普通按钮 ---
                         button = SymbolButton(
                             translation if translation else keyword,
                             keyword,
@@ -972,7 +998,8 @@ class MainWindow(QMainWindow):
                         )
                         
                         button.setObjectName(self.get_button_style_name(keyword))
-                        button.setCursor(QCursor(Qt.PointingHandCursor))
+                        # PyQt6: Qt.CursorShape.PointingHandCursor
+                        button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                         button.clicked.connect(lambda _, k=keyword: self.on_keyword_selected_chart(k))
 
                         # (设置按钮颜色、Tooltip、右键菜单的代码保持不变)
@@ -1015,9 +1042,9 @@ class MainWindow(QMainWindow):
                             "</div>"
                         )
                         button.setToolTip(tip_html)
-
-                        # 设置右键菜单
-                        button.setContextMenuPolicy(Qt.CustomContextMenu)
+                        
+                        # PyQt6: Qt.ContextMenuPolicy.CustomContextMenu
+                        button.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
                         button.customContextMenuRequested.connect(
                             # 收到局部坐标 pos，把它映射为全局坐标，再连同 keyword, group 一并传给 show_context_menu
                             lambda local_pos, btn=button, k=keyword, g=sector:
@@ -1070,7 +1097,8 @@ class MainWindow(QMainWindow):
 
                         # 3) 用 QLabel 显示富文本
                         compare_label = QLabel()
-                        compare_label.setTextFormat(Qt.RichText)
+                        # PyQt6: Qt.TextFormat.RichText
+                        compare_label.setTextFormat(Qt.TextFormat.RichText)
                         compare_label.setText(formatted_compare_html)
                         compare_label.setStyleSheet("font-size:22px;") 
                         compare_label.linkActivated.connect(self.on_keyword_selected_chart)
@@ -1124,20 +1152,20 @@ class MainWindow(QMainWindow):
         blacklist_menu = menu.addMenu("加入黑名单")
         blacklist_menu.addAction("newlow", lambda: self.add_to_blacklist(keyword, 'newlow', group))
         blacklist_menu.addAction("Earning", lambda: self.add_to_blacklist(keyword, 'Earning', group))
-
+        
         menu.addSeparator()
         menu.addAction("清空 Short_Shift 分组", lambda: self.clear_group("Short_Shift"))
         menu.addAction("清空 Short 分组", lambda: self.clear_group("Short"))
-        menu.addAction("清空 OverSell_backup 分组", lambda: self.clear_group("OverSell_backup"))
+        menu.addAction("清空 PE_Deep_backup 分组", lambda: self.clear_group("PE_Deep_backup"))
         menu.addAction("清空 OverSell_W_backup 分组", lambda: self.clear_group("OverSell_W_backup"))
         menu.addAction("清空 Strategy12_backup 分组", lambda: self.clear_group("Strategy12_backup"))
         menu.addAction("清空 Strategy34_backup 分组", lambda: self.clear_group("Strategy34_backup"))
         menu.addAction("清空 PE_valid_backup 分组", lambda: self.clear_group("PE_valid_backup"))
         menu.addAction("清空 PE_invalid_backup 分组", lambda: self.clear_group("PE_invalid_backup"))
         menu.addAction("清空 PE_W_backup 分组", lambda: self.clear_group("PE_W_backup"))
-
-        # 3) 显示菜单
-        menu.exec_(global_pos)
+        
+        # PyQt6: exec 替代 exec_
+        menu.exec(global_pos)
 
     ### 新增 ###: 直接在程序内处理黑名单逻辑的方法
     def add_to_blacklist(self, keyword, blacklist_category, group):
@@ -1219,12 +1247,13 @@ class MainWindow(QMainWindow):
             json_data    = load_json(DESCRIPTION_PATH)
         except Exception as e:
             print("重新加载 description/compare 数据出错:", e)
+        
         sector = next((s for s, names in sector_data.items() if value in names), None)
         if sector:
             # <--- 修改: 更新当前符号索引，而不是调用 symbol_manager
             if value in self.ordered_symbols_on_screen:
                 self.current_symbol_index = self.ordered_symbols_on_screen.index(value)
-
+            
             compare_value = compare_data.get(value, "N/A")
             
             # 从数据库获取 shares, marketcap, pe, pb
@@ -1260,7 +1289,8 @@ class MainWindow(QMainWindow):
         
         layout.addWidget(text_area)
         dialog.setLayout(layout)
-        dialog.exec_() # 使用 exec_() 以模态方式显示
+        # PyQt6: exec 替代 exec_
+        dialog.exec()
 
     def handle_arrow_key(self, direction):
         """根据屏幕视觉顺序处理上/下箭头键导航"""
@@ -1369,18 +1399,17 @@ class MainWindow(QMainWindow):
     def keyPressEvent(self, event):
         """重写键盘事件处理器"""
         key = event.key()
-        if key == Qt.Key_Escape:
+        # PyQt6: 使用 Qt.Key 枚举
+        if key == Qt.Key.Key_Escape:
             self.close()
-        elif key == Qt.Key_Down:
+        elif key == Qt.Key.Key_Down:
             self.handle_arrow_key('down')
-        elif key == Qt.Key_Up:
+        elif key == Qt.Key.Key_Up:
             self.handle_arrow_key('up')
-        ### 新增：按下 'g' 键刷新界面 ###
-        elif key == Qt.Key_G:
+        elif key == Qt.Key.Key_G:
             print("快捷键 'g' 按下：正在重新加载配置并刷新界面...")
             self.refresh_selection_window()
-        ### 新增 ###: 响应 'F' 键，打开搜索对话框
-        elif key == Qt.Key_F:
+        elif key == Qt.Key.Key_F:
             self.open_search_dialog()
         else:
             # 对于其他按键，调用父类的实现，以保留默认行为（例如，如果需要的话）
@@ -1431,15 +1460,14 @@ class MainWindow(QMainWindow):
         if lineedit:
             # 如果 dialog 还没 show，这里调用也会生效，exec_ 时就已全选
             lineedit.selectAll()
-
-        # 4) 显示对话框，拿结果
-        if dialog.exec_() == QDialog.Accepted:
+        
+        # PyQt6: exec 替代 exec_
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             new_name = dialog.textValue().strip()
             if new_name:
                 # 5) 读旧的 config 文件，然后更新并写回
                 with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
                     config_data = json.load(f, object_pairs_hook=OrderedDict)
-
                 if group in config_data and keyword in config_data[group]:
                     config_data[group][keyword] = new_name
                     with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
@@ -1530,4 +1558,5 @@ if __name__ == '__main__':
     # --- 修改: 将 Earning History 数据传入主窗口 ---
     main_window = MainWindow(earning_history)
     main_window.showMaximized()
-    sys.exit(app.exec_())
+    # PyQt6: exec 替代 exec_
+    sys.exit(app.exec())

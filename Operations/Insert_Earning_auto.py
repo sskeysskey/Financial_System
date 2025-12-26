@@ -6,14 +6,15 @@ from datetime import date, timedelta
 from functools import partial
 from collections import OrderedDict
 
-from PyQt5.QtWidgets import (
+# --- 修改: 切换到 PyQt6 ---
+from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget,
     QVBoxLayout, QHBoxLayout, QGroupBox, QTableWidget, QTableWidgetItem,
-    QPushButton, QMessageBox, QShortcut, QLabel,
-    QMenu, QAction, QHeaderView
+    QPushButton, QMessageBox, QLabel,
+    QMenu, QHeaderView
 )
-from PyQt5.QtGui import QCursor, QKeySequence, QFont, QBrush, QColor
-from PyQt5.QtCore import Qt
+from PyQt6.QtGui import QCursor, QKeySequence, QFont, QBrush, QColor, QShortcut, QAction
+from PyQt6.QtCore import Qt
 
 # 添加自定义模块的路径，以便可以导入 Chart_input
 sys.path.append('/Users/yanzhang/Coding/Financial_System/Query')
@@ -114,14 +115,17 @@ def fetch_mnspp_data_from_db(db_path, symbol):
 
 class SymbolButton(QPushButton):
     def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        # PyQt6: 使用 Qt.MouseButton.LeftButton
+        if event.button() == Qt.MouseButton.LeftButton:
             mods = event.modifiers()
+            # PyQt6: 使用 Qt.KeyboardModifier.AltModifier
             # Option(⌥) + 左键 → 找相似
-            if mods & Qt.AltModifier:
+            if mods & Qt.KeyboardModifier.AltModifier:
                 execute_external_script('similar', self.text())
                 return
+            # PyQt6: 使用 Qt.KeyboardModifier.ShiftModifier
             # Shift + 左键 → 在富途中搜索
-            elif mods & Qt.ShiftModifier:
+            elif mods & Qt.KeyboardModifier.ShiftModifier:
                 execute_external_script('futu', self.text())
                 return
         # 其他情况走原有行为（例如普通左键点击会触发 on_symbol_button_clicked）
@@ -131,7 +135,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Earnings 百分比处理")
-
+        
         # --- 1. 数据处理更新：增加今天的日期 ---
         today = date.today()
         self.today_str = today.strftime("%Y-%m-%d") # 今天
@@ -142,12 +146,14 @@ class MainWindow(QMainWindow):
         # --- 2. 数据处理更新：初始化字典以包含今天 ---
         self.symbols_by_date = {self.today_str: [], self.date1: [], self.date2: []}
         self.symbol_to_period = {}
+
         with open(TXT_PATH, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if not line: continue
                 parts = [p.strip() for p in line.split(":")]
                 symbol, period, dt = parts[0], parts[1], parts[2]
+                
                 # 现在如果dt是今天，也能被正确添加到字典中
                 if dt in self.symbols_by_date:
                     self.symbols_by_date[dt].append((symbol, period))
@@ -160,6 +166,7 @@ class MainWindow(QMainWindow):
                 return (desired_order.index(per), "")
             else:
                 return (len(desired_order), per)
+
         for dt in self.symbols_by_date:
             self.symbols_by_date[dt].sort(key=order_key)
 
@@ -173,7 +180,8 @@ class MainWindow(QMainWindow):
         self.description_data = load_json(DESCRIPTION_PATH)
         self.compare_data = load_text_data(COMPARE_DATA_PATH)
 
-        esc_shortcut = QShortcut(QKeySequence(Qt.Key_Escape), self)
+        # PyQt6: 使用 Qt.Key.Key_Escape
+        esc_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Escape), self)
         esc_shortcut.activated.connect(self.close)
 
         self.db_path = DB_PATH
@@ -188,7 +196,7 @@ class MainWindow(QMainWindow):
         self.panel_config_path = PANEL_CONFIG_PATH
 
         self._init_ui()
-
+        
         # --- 3. 数据处理更新：调用所有处理函数 ---
         self.process_today() # 处理今天
         self.process_date1() # 处理昨天
@@ -206,7 +214,8 @@ class MainWindow(QMainWindow):
         self.table2 = QTableWidget(0, 6)
         self.table2.setHorizontalHeaderLabels(["Symbol股票代码", "时段", "新百分比(%)", "旧百分比(%)", "操作", "————————————"])
         self.table2.verticalHeader().setVisible(False)
-        self.table2.setContextMenuPolicy(Qt.CustomContextMenu)
+        # PyQt6: 使用 Qt.ContextMenuPolicy.CustomContextMenu
+        self.table2.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.table2.customContextMenuRequested.connect(self.show_table_context_menu)
         lay2.addWidget(self.table2)
         gb2.setLayout(lay2)
@@ -217,7 +226,7 @@ class MainWindow(QMainWindow):
         self.table1 = QTableWidget(0, 5)
         self.table1.setHorizontalHeaderLabels(["Symbol股票代码", "时段", "百分比(%)", "操作", "———————————"])
         self.table1.verticalHeader().setVisible(False)
-        self.table1.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.table1.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.table1.customContextMenuRequested.connect(self.show_table_context_menu)
         lay1.addWidget(self.table1)
         gb1.setLayout(lay1)
@@ -228,7 +237,7 @@ class MainWindow(QMainWindow):
         self.table_today = QTableWidget(0, 3) # 只有两列
         self.table_today.setHorizontalHeaderLabels(["Symbol", "时段", "————————————————————————"])
         self.table_today.verticalHeader().setVisible(False)
-        self.table_today.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.table_today.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.table_today.customContextMenuRequested.connect(self.show_table_context_menu)
         lay_today.addWidget(self.table_today)
         gb_today.setLayout(lay_today)
@@ -295,19 +304,21 @@ class MainWindow(QMainWindow):
         table.insertRow(insert_row)
         table.setSpan(insert_row, 0, 1, table.columnCount())
         lbl = QLabel(tag_str)
-        ### 修改 4：为Tags标签应用文本溢出截断样式 ###
+        # 修改 4：为Tags标签应用文本溢出截断样式
         lbl.setStyleSheet("""
             color: lightyellow; 
             font-size: 18pt;
             padding: 4px;
         """)
         table.setCellWidget(row + 1, 0, lbl)
+        
         for c in range(table.columnCount()):
             item = table.item(row + 1, c)
             if item:
-                item.setFlags(Qt.NoItemFlags)
-
-        table.setRowHeight(insert_row, 45)  # 比如 30px
+                # PyQt6: 使用 Qt.ItemFlag.NoItemFlags
+                item.setFlags(Qt.ItemFlag.NoItemFlags)
+        
+        table.setRowHeight(insert_row, 45)
 
     def show_table_context_menu(self, pos):
         """当在表格上右键点击时，创建并显示上下文菜单"""
@@ -377,8 +388,9 @@ class MainWindow(QMainWindow):
                 action = QAction(label, self)
                 action.triggered.connect(partial(execute_external_script, script_type, symbol))
                 menu.addAction(action)
-
-        menu.exec_(QCursor.pos())
+        
+        # PyQt6: exec 替代 exec_
+        menu.exec(QCursor.pos())
 
     def copy_symbol_to_group(self, symbol: str, group: str):
         """
@@ -390,7 +402,7 @@ class MainWindow(QMainWindow):
         # 如果这个组本来不存在，默认建成 dict，和现有 "Watching" 结构保持一致
         if group not in cfg:
             cfg[group] = {}
-
+        
         if isinstance(cfg[group], dict):
             if symbol in cfg[group]:
                 return  # 已有，不重复
@@ -438,11 +450,13 @@ class MainWindow(QMainWindow):
     def center_window(self):
         """将窗口移动到屏幕中央"""
         try:
+            # PyQt6: 使用 QScreen 获取几何信息
             screen = QApplication.primaryScreen()
             if not screen:
                 screens = QApplication.screens()
                 if not screens: return
                 screen = screens[0]
+            
             screen_geometry = screen.availableGeometry()
             window_geometry = self.frameGeometry()
             center_point = screen_geometry.center()
@@ -482,10 +496,12 @@ class MainWindow(QMainWindow):
             table.insertRow(row)
 
             table.setItem(row, 0, QTableWidgetItem())
+            
             btn = SymbolButton(symbol)
             btn.setObjectName("SymbolButton")
             btn.setProperty("period", period)
-            btn.setCursor(QCursor(Qt.PointingHandCursor))
+            # PyQt6: 使用 Qt.CursorShape.PointingHandCursor
+            btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             btn.clicked.connect(partial(self.on_symbol_button_clicked, symbol))
             table.setCellWidget(row, 0, btn)
             
@@ -498,11 +514,9 @@ class MainWindow(QMainWindow):
 
         # 步骤 2: 根据已添加的数据行计算并设置列宽
         table.resizeColumnsToContents()
+        # PyQt6: QHeaderView.ResizeMode.Interactive
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         
-        # 步骤 3: 锁定列宽，防止后续添加的tags行影响它
-        table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
-
-        # 步骤 4: 倒序遍历，插入tag行 (倒序是为了防止插入操作影响后续行的索引)
         for i in range(len(tags_to_add) - 1, -1, -1):
             self._add_tag_row(table, i, tags_to_add[i])
 
@@ -530,7 +544,7 @@ class MainWindow(QMainWindow):
             btn = SymbolButton(symbol)
             btn.setObjectName("SymbolButton")
             btn.setProperty("period", period)
-            btn.setCursor(QCursor(Qt.PointingHandCursor))
+            btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             btn.clicked.connect(partial(self.on_symbol_button_clicked, symbol))
             table.setCellWidget(row, 0, btn)
             
@@ -541,7 +555,7 @@ class MainWindow(QMainWindow):
 
             # 百分比
             item_pct = QTableWidgetItem(f"{pct}")
-            font = QFont("Arial", 14, QFont.Bold)
+            font = QFont("Arial", 14, QFont.Weight.Bold)
             item_pct.setFont(font)
             color = QColor(255, 0, 0) if pct < 0 else QColor(255, 215, 0)
             item_pct.setForeground(QBrush(color))
@@ -550,12 +564,13 @@ class MainWindow(QMainWindow):
             # “写入” 按钮
             replace_btn = QPushButton("写入")
             replace_btn.setObjectName("ReplaceButton")
-            replace_btn.setCursor(QCursor(Qt.PointingHandCursor))
+            replace_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             replace_btn.clicked.connect(partial(self.on_replace_date1, symbol, pct, replace_btn))
             container = QWidget()
             hl = QHBoxLayout(container)
             hl.addWidget(replace_btn)
-            hl.setAlignment(Qt.AlignCenter)
+            # PyQt6: Qt.AlignmentFlag.AlignCenter
+            hl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             hl.setContentsMargins(0, 0, 0, 0)
             table.setCellWidget(row, 3, container)
             
@@ -564,7 +579,7 @@ class MainWindow(QMainWindow):
 
         # 步骤 2, 3, 4
         table.resizeColumnsToContents()
-        table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         for i in range(len(tags_to_add) - 1, -1, -1):
             self._add_tag_row(table, i, tags_to_add[i])
 
@@ -582,8 +597,9 @@ class MainWindow(QMainWindow):
         exists = self.cur.fetchone() is not None
 
         if exists:
-            reply = QMessageBox.question(self, "确认覆盖", f"Earning 表中已存在 {symbol} 在 {self.date1} 的记录，是否覆盖？", QMessageBox.Yes | QMessageBox.No)
-            if reply != QMessageBox.Yes: return
+            reply = QMessageBox.question(self, "确认覆盖", f"Earning 表中已存在 {symbol} 在 {self.date1} 的记录，是否覆盖？", 
+                                         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            if reply != QMessageBox.StandardButton.Yes: return
             self.cur.execute("UPDATE Earning SET price=? WHERE date=? AND name=?", (pct, self.date1, symbol))
             action = "已覆盖"
         else:
@@ -630,7 +646,7 @@ class MainWindow(QMainWindow):
             btn_sym = SymbolButton(symbol)
             btn_sym.setObjectName("SymbolButton")
             btn_sym.setProperty("period", period)
-            btn_sym.setCursor(QCursor(Qt.PointingHandCursor))
+            btn_sym.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             btn_sym.clicked.connect(partial(self.on_symbol_button_clicked, symbol))
             table.setCellWidget(row, 0, btn_sym)
 
@@ -638,9 +654,8 @@ class MainWindow(QMainWindow):
             tags_to_add.append(tags)
 
             table.setItem(row, 1, QTableWidgetItem(PERIOD_DISPLAY.get(period, period)))
-
-            font = QFont("Arial", 14, QFont.Bold)
-            # 修改为判断正负：
+            
+            font = QFont("Arial", 14, QFont.Weight.Bold)
             item_new = QTableWidgetItem(f"{pct_new}")
             item_new.setFont(font)
             color_new = QColor(255, 0, 0) if pct_new < 0 else QColor(255, 215, 0)
@@ -655,8 +670,7 @@ class MainWindow(QMainWindow):
 
             op_btn = QPushButton()
             op_btn.setObjectName("ReplaceButton")
-            op_btn.setCursor(QCursor(Qt.PointingHandCursor))
-
+            op_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             if auto_written or pct_new == old_pct:
                 op_btn.setText("已写入" if auto_written else "已写入")
                 op_btn.setEnabled(False)
@@ -667,13 +681,13 @@ class MainWindow(QMainWindow):
             container = QWidget()
             hl = QHBoxLayout(container)
             hl.addWidget(op_btn)
-            hl.setAlignment(Qt.AlignCenter)
+            hl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             hl.setContentsMargins(0, 0, 0, 0)
             table.setCellWidget(row, 4, container)
 
         # 步骤 2, 3, 4
         table.resizeColumnsToContents()
-        table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         for i in range(len(tags_to_add) - 1, -1, -1):
             self._add_tag_row(table, i, tags_to_add[i])
 
@@ -683,13 +697,11 @@ class MainWindow(QMainWindow):
             self,
             "确认替换",
             f"真的要把 {symbol} 最近一次 ({self.three_days_ago} 之后) 的旧百分比替换成 {new_pct}% 吗？",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.Yes
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes
         )
-        if reply != QMessageBox.Yes:
-            return
-
-        # 1. 更新数据库
+        if reply != QMessageBox.StandardButton.Yes: return
+        
         self.cur.execute(
             "UPDATE Earning SET price=?, date=? WHERE id=?",
             (new_pct, self.date1, record_id)
@@ -728,7 +740,8 @@ def main():
     app = QApplication(sys.argv)
     w = MainWindow()
     w.show()
-    sys.exit(app.exec_())
+    # PyQt6: exec 替代 exec_
+    sys.exit(app.exec())
 
 if __name__ == "__main__":
     main()

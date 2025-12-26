@@ -96,7 +96,7 @@ EARNING_HISTORY_JSON_FILE = PATHS["earnings_history_json"](CONFIG_DIR)
 #     # ========== 新增：条件5的参数 ==========
 #     "COND5_ER_TO_HIGH_THRESHOLD": 0.3,  # 财报日到最高价的涨幅阈值 30%
 #     "COND5_HIGH_TO_LATEST_THRESHOLD": 0.079,  # 最高价到最新价的跌幅阈值 7.9%
-#     "OVERSELL_DROP_THRESHOLD": 0.14,
+#     "PE_DEEP_DROP_THRESHOLD": 0.14,
 
 #     # ========== 代码修改开始 1/4：新增条件6（抄底W底）参数 ==========
 #     "COND6_ER_DROP_A_THRESHOLD": 0.25,  # 财报跌幅分界线 25%
@@ -163,7 +163,7 @@ CONFIG = {
     # ========== 新增：条件5的参数 ==========
     "COND5_ER_TO_HIGH_THRESHOLD": 0.3,  # 财报日到最高价的涨幅阈值 30%
     "COND5_HIGH_TO_LATEST_THRESHOLD": 0.09,  # 最高价到最新价的跌幅阈值 9%
-    "OVERSELL_DROP_THRESHOLD": 0.15, # 条件1-5后的深跌判断
+    "PE_DEEP_DROP_THRESHOLD": 0.15, # 条件1-5后的深跌判断
 
     # ========== 代码修改开始 1/4：新增条件6（抄底W底）参数 ==========
     "COND6_ER_DROP_A_THRESHOLD": 0.25,  # 财报跌幅分界线 25%
@@ -389,7 +389,6 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
 
         if is_tracing:
              log_detail(f"[{symbol}] 步骤3.5: 为条件5获取财报窗口期(6天)最低价。价格: {er_6_day_prices}, 最低价: {data['er_6_day_window_low']}")
-        # ========== 代码修改结束 2/3 ==========
 
         # ========== 代码修改开始 2/4：获取条件6所需的完整价格序列 ==========
         # 原有的逻辑获取了 prev_10_prices 和 er_6_day_window_low，但为了算W底，我们需要
@@ -1104,7 +1103,7 @@ def run_processing_logic(log_detail):
     def perform_filter_pass(symbols_to_check, drop_large, drop_small, pass_name):
         preliminary_results = []       # 普通股 (PE 分组)
         oversell_w_candidates = []     # 仅限条件 6 (OverSell_W)
-        oversell_deep_candidates = []  # 条件 1-5 触发深跌 (OverSell)
+        pe_deep_candidates = []  # 条件 1-5 触发深跌
         double_candidates = []         # 条件 1-5 触发 W 底 (PE_W)
 
         for symbol in symbols_to_check:
@@ -1155,13 +1154,13 @@ def run_processing_logic(log_detail):
                         # 兜底：如果该数据意外为None，回退使用财报日当天收盘价
                         if ref_high_price is None:
                              ref_high_price = data['all_er_prices'][-1]
-
+                        
                         latest_price = data['latest_price']
-                        drop_limit = CONFIG["OVERSELL_DROP_THRESHOLD"] 
+                        drop_limit = CONFIG["PE_DEEP_DROP_THRESHOLD"] 
 
                         # 新逻辑：和财报窗口期最高价比较
                         if latest_price <= ref_high_price * (1 - drop_limit):
-                            oversell_deep_candidates.append(symbol) # 进 OverSell
+                            pe_deep_candidates.append(symbol) # 进 PE_Deep
                         # ========== 修改结束 ==========
                         else:
                             # 优先级 4：普通股
@@ -1181,7 +1180,7 @@ def run_processing_logic(log_detail):
             filter_tags(pe_valid), 
             filter_tags(pe_invalid), 
             filter_tags(oversell_w_candidates), 
-            filter_tags(oversell_deep_candidates), 
+            filter_tags(pe_deep_candidates), 
             filter_tags(double_candidates)
         )
 
@@ -1209,7 +1208,7 @@ def run_processing_logic(log_detail):
     final_pe_valid_symbols = res_super[0] + res_sub[0] + res_relaxed[0] + res_strict[0]
     final_pe_invalid_symbols = res_super[1] + res_sub[1] + res_relaxed[1] + res_strict[1]
     total_oversell_w_symbols = res_super[2] + res_sub[2] + res_relaxed[2] + res_strict[2]
-    total_oversell_deep_symbols = res_super[3] + res_sub[3] + res_relaxed[3] + res_strict[3]
+    total_pe_deep_symbols = res_super[3] + res_sub[3] + res_relaxed[3] + res_strict[3]
     total_double_symbols = res_super[4] + res_sub[4] + res_relaxed[4] + res_strict[4]
 
     # 第二轮筛选 (仅针对 PE_valid 补缺)
@@ -1217,17 +1216,24 @@ def run_processing_logic(log_detail):
     
     # 第二轮筛选 (仅针对PE_valid数量不足的情况，且只影响 PE_valid)
     if len(final_pe_valid_symbols) < min_size_pe_valid:
-        rerun_valid, _, rerun_oversell, rerun_double = perform_filter_pass(strict_symbols, CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "第二轮(常规宽松补缺)")
+        # ========== 修改点 7：接收变量改名 ==========
+        rerun_valid, _, _, rerun_pe_deep, rerun_double = perform_filter_pass(strict_symbols, CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "第二轮(常规宽松补缺)")
+        
         final_pe_valid_symbols = sorted(list(set(final_pe_valid_symbols) | set(rerun_valid)))
-        total_oversell_deep_symbols = sorted(list(set(total_oversell_deep_symbols) | set(rerun_oversell)))
+        
+        # ========== 修改点 8：合并变量改名 ==========
+        total_pe_deep_symbols = sorted(list(set(total_pe_deep_symbols) | set(rerun_pe_deep)))
+        
         total_double_symbols = sorted(list(set(total_double_symbols) | set(rerun_double)))
 
     # 将所有符合资格的 symbol 用于写历史记录
-    all_qualified_symbols = final_pe_valid_symbols + final_pe_invalid_symbols + total_oversell_deep_symbols + total_double_symbols + total_oversell_w_symbols
+    all_qualified_symbols = final_pe_valid_symbols + final_pe_invalid_symbols + total_pe_deep_symbols + total_double_symbols + total_oversell_w_symbols
 
     pe_valid_set = set(final_pe_valid_symbols)
     pe_invalid_set = set(final_pe_invalid_symbols)
-    oversell_set = set(total_oversell_deep_symbols)
+    
+    pe_deep_set = set(total_pe_deep_symbols)
+    
     double_set = set(total_double_symbols)
 
     blacklist = load_blacklist(BLACKLIST_JSON_FILE)
@@ -1245,9 +1251,11 @@ def run_processing_logic(log_detail):
     # 过滤黑名单和已存在面板的股票，准备写入列表
     final_pe_valid_to_write = sorted(list(pe_valid_set - blacklist - already_in_panels))
     final_pe_invalid_to_write = sorted(list(pe_invalid_set - blacklist - already_in_panels))
+
+    # 2. PE_Deep 和 PE_W：黑名单 和 already_in_panels 都不再过滤
+    # ========== 修改点 11：待写入列表变量改名 ==========
+    final_pe_deep_to_write = sorted(list(pe_deep_set))
     
-    # 2. OverSell 和 PE_W：黑名单 和 already_in_panels 都不再过滤
-    final_oversell_to_write = sorted(list(oversell_set))
     final_double_to_write = sorted(list(double_set))
 
     # final_oversell_to_write = sorted(list(oversell_set - blacklist - already_in_panels))
@@ -1257,7 +1265,7 @@ def run_processing_logic(log_detail):
         # 追踪日志逻辑更新，包含 OverSell_W
         combined_sets = [
             (pe_valid_set, "PE_valid"), (pe_invalid_set, "PE_invalid"),
-            (oversell_set, "OverSell_W"), (double_set, "PE_W")
+            (pe_deep_set, "PE_Deep"), (double_set, "PE_W") 
         ]
         for s_set, name in combined_sets:
             skipped = s_set & (blacklist | already_in_panels)
@@ -1282,8 +1290,11 @@ def run_processing_logic(log_detail):
 
     pe_valid_notes = build_symbol_note_map(final_pe_valid_to_write)
     pe_invalid_notes = build_symbol_note_map(final_pe_invalid_to_write)
-    oversell_w_notes = build_symbol_note_map(final_oversell_to_write)
-    oversell_deep_notes = build_symbol_note_map(total_oversell_deep_symbols)
+    oversell_w_notes = build_symbol_note_map(total_oversell_w_symbols)
+    
+    # ========== 修改点 13：Notes变量改名 ==========
+    pe_deep_notes = build_symbol_note_map(total_pe_deep_symbols)
+    
     double_notes = build_symbol_note_map(final_double_to_write)
 
     # 写入 PE_valid
@@ -1300,9 +1311,10 @@ def run_processing_logic(log_detail):
     update_json_panel(total_oversell_w_symbols, PANEL_JSON_FILE, 'OverSell_W', symbol_to_note=oversell_w_notes)
     update_json_panel(total_oversell_w_symbols, PANEL_JSON_FILE, 'OverSell_W_backup', symbol_to_note=oversell_w_notes)
 
-    # 2. 写入 OverSell (条件 1-5 的深跌)
-    update_json_panel(total_oversell_deep_symbols, PANEL_JSON_FILE, 'OverSell', symbol_to_note=oversell_deep_notes)
-    update_json_panel(total_oversell_deep_symbols, PANEL_JSON_FILE, 'OverSell_backup', symbol_to_note=oversell_deep_notes)
+    # 2. 写入 PE_Deep (条件 1-5 的深跌)
+    update_json_panel(total_pe_deep_symbols, PANEL_JSON_FILE, 'PE_Deep', symbol_to_note=pe_deep_notes)
+    update_json_panel(total_pe_deep_symbols, PANEL_JSON_FILE, 'PE_Deep_backup', symbol_to_note=pe_deep_notes)
+
 
     # 写入 PE_W (条件1-5且形态良好)
     update_json_panel(final_double_to_write, PANEL_JSON_FILE, 'PE_W', symbol_to_note=double_notes)

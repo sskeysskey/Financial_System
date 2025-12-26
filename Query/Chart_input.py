@@ -10,16 +10,17 @@ import matplotlib
 from functools import lru_cache
 from scipy.interpolate import interp1d
 import json
-
 from matplotlib.patches import PathPatch
 from matplotlib.path import Path
 from matplotlib.colors import LinearSegmentedColormap
-
-from PyQt5.QtWidgets import QApplication, QDialog, QVBoxLayout, QTextEdit
-from PyQt5.QtGui import QFont
-from PyQt5.QtCore import Qt
 import glob
 import os
+import time
+
+# --- 修改: 切换到 PyQt6 ---
+from PyQt6.QtWidgets import QApplication, QDialog, QVBoxLayout, QTextEdit
+from PyQt6.QtGui import QFont
+from PyQt6.QtCore import Qt
 
 # --- 定义Nord主题的调色板 ---
 NORD_THEME = {
@@ -77,7 +78,6 @@ def find_earning_release_date(symbol, txt_dir='/Users/yanzhang/Coding/News/'):
     except Exception as e:
         print(f"查找 earning release 日期时出错: {e}")
         return None
-
 
 def calculate_three_weeks_before_range(target_date):
     """
@@ -162,37 +162,29 @@ def get_title_color_logic(db_path, symbol, table_name):
                 (symbol,)
             )
             earning_rows = cursor.fetchall()
-
         if not earning_rows:
             return NORD_THEME['text_bright']
-
         latest_earning_date_str, latest_earning_price_str = earning_rows[0]
         latest_earning_date = datetime.strptime(latest_earning_date_str, "%Y-%m-%d").date()
         latest_earning_price = float(latest_earning_price_str) if latest_earning_price_str is not None else 0.0
-
         if (date.today() - latest_earning_date).days > 75:
             return NORD_THEME['text_bright']
-
         if len(earning_rows) < 2:
             price_trend = 'single'
         else:
             previous_earning_date_str, _ = earning_rows[1]
             previous_earning_date = datetime.strptime(previous_earning_date_str, "%Y-%m-%d").date()
-
             with sqlite3.connect(db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute(f'SELECT price FROM "{table_name}" WHERE name = ? AND date = ?', (symbol, latest_earning_date.isoformat()))
                 latest_stock_price_row = cursor.fetchone()
                 cursor.execute(f'SELECT price FROM "{table_name}" WHERE name = ? AND date = ?', (symbol, previous_earning_date.isoformat()))
                 previous_stock_price_row = cursor.fetchone()
-
             if not latest_stock_price_row or not previous_stock_price_row:
                 return NORD_THEME['text_bright']
-
             latest_stock_price = float(latest_stock_price_row[0])
             previous_stock_price = float(previous_stock_price_row[0])
             price_trend = 'rising' if latest_stock_price > previous_stock_price else 'falling'
-
         color = NORD_THEME['text_bright']
         if price_trend == 'single':
             if latest_earning_price > 0: color = NORD_THEME['accent_red']
@@ -389,31 +381,29 @@ def update_plot(line1, gradient_image, line2, dates, prices, volumes, ax1, ax2, 
         
         # 创建一个垂直的渐变数组
         gradient = np.linspace(1.0, 0.0, 256).reshape(-1, 1)
-
         # 创建新的渐变图像，范围直接使用新的 xlim, ylim
         gradient_image = ax1.imshow(
             gradient, aspect='auto', cmap=cmap, extent=[*xlim, *ylim],
             origin='lower', zorder=1, interpolation='nearest'
         )
-
+        
         # 创建新的剪切补丁
         new_clip_patch = PathPatch(clip_path, transform=ax1.transData, facecolor='none', edgecolor='none')
         ax1.add_patch(new_clip_patch)
         gradient_image.set_clip_path(new_clip_patch)
-
+        
         # 更新引用
         if gradient_clip_patch is not None:
             gradient_clip_patch[0] = new_clip_patch
-
     else:
         # --- 场景B: 节流生效，仅更新现有对象 ---
         # 1. 更新现有渐变图像的范围
         gradient_image.set_extent([*xlim, *ylim])
-
+        
         # 2. 移除旧的剪切补丁
         if gradient_clip_patch is not None and gradient_clip_patch[0] is not None:
             gradient_clip_patch[0].remove()
-
+            
         # 3. 创建并应用新的剪切补丁
         new_clip_patch = PathPatch(clip_path, transform=ax1.transData, facecolor='none', edgecolor='none')
         ax1.add_patch(new_clip_patch)
@@ -433,6 +423,7 @@ class InfoDialog(QDialog):
         self.setWindowTitle(title)
         self.setGeometry(0, 0, width, height)
         self.center_on_screen()
+        
         layout = QVBoxLayout(self)
         text_box = QTextEdit(self)
         text_box.setReadOnly(True)
@@ -443,10 +434,13 @@ class InfoDialog(QDialog):
         self.apply_nord_style(font_size)
 
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Escape: self.close()
+        # PyQt6: 使用 Qt.Key.Key_Escape
+        if event.key() == Qt.Key.Key_Escape: self.close()
 
     def center_on_screen(self):
-        screen_geometry = QApplication.desktop().screenGeometry()
+        # PyQt6: QDesktopWidget 被废弃，使用 QScreen
+        screen = QApplication.primaryScreen()
+        screen_geometry = screen.geometry()
         x = (screen_geometry.width() - self.width()) // 2
         y = (screen_geometry.height() - self.height()) // 2
         self.move(x, y)
@@ -550,12 +544,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     show_specific_markers = True
     show_earning_markers = True
     show_all_annotations = False
-
     current_filtered_dates = []
     current_filtered_prices = []
     current_filtered_date_nums = []
-
-    import time
+    
     last_hover_ts = [0.0]
     last_rebuild_ts = [0.0]
     HOVER_THROTTLE = 1 / 90.0  # 每秒最多触发 90 次 hover
@@ -580,7 +572,6 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     fig.subplots_adjust(left=0.05, bottom=0.1, right=0.83, top=0.8)
     ax2 = ax1.twinx()
     ax2.axis('off')
-
     fig.patch.set_facecolor(NORD_THEME['background'])
     
     # === 1. 处理基于文本文件的 Earning Release 遮罩 ===
@@ -622,6 +613,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     post_earning_shade = None # 财报后5周的蓝色遮罩
     post_earning_shade_3w = None # 财报后3周的紫色遮罩
     latest_db_earning_date = None
+
     try:
         with sqlite3.connect(db_path) as conn:
             cursor = conn.cursor()
@@ -638,7 +630,6 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         # 计算往后推5周的周一到周五区间 (蓝色)
         pe_start, pe_end = calculate_five_weeks_after_range(latest_db_earning_date)
         print(f"财报后第5周区间: {pe_start} 到 {pe_end}")
-
         post_earning_shade = ax1.axvspan(
             pe_start,
             pe_end,
@@ -647,11 +638,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             zorder=0.5,
             visible=False # 默认隐藏，在update中控制
         )
-
+        
         # 计算往后推3周的周一到周五区间 (紫色)
         pe_start_3w, pe_end_3w = calculate_three_weeks_after_range(latest_db_earning_date)
         print(f"财报后第3周区间: {pe_start_3w} 到 {pe_end_3w}")
-
         post_earning_shade_3w = ax1.axvspan(
             pe_start_3w,
             pe_end_3w,
@@ -667,31 +657,24 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     ax1.spines['top'].set_visible(False)
     ax1.spines['right'].set_visible(False)
     ax1.spines['left'].set_visible(False)
-
     # 隐藏 Y 轴刻度与标签（左轴）
     ax1.tick_params(axis='y', which='both', left=False, labelleft=False)
-
     # 保留 X 轴刻度与标签
     ax1.tick_params(axis='x', colors=NORD_THEME['text_light'])
-
     # 如果还想让 X 轴线更明显一些（可选）
     ax1.spines['bottom'].set_color(NORD_THEME['border'])
     ax1.spines['bottom'].set_linewidth(1.0)
-
     # 隐藏 ax2（成交量轴）的一切（你已有 ax2.axis('off')）
     ax2.axis('off')
-
     # 可选：弱化网格或仅保留纵向/横向
     ax1.grid(True, axis='y', color=NORD_THEME['border'], alpha=0.06, linestyle='--')  # 或者关闭：ax1.grid(False)
     
     highlight_point = ax1.scatter([], [], s=100, color=NORD_THEME['accent_cyan'], zorder=5)
-
     line1, = ax1.plot(
         smooth_dates, smooth_prices, marker='', linestyle='-', linewidth=2,
         color=NORD_THEME['accent_cyan'], alpha=0.8, label='Price', zorder=2
     )
     small_dot_scatter = ax1.scatter(dates, prices, s=5, color=NORD_THEME['text_bright'], zorder=1.5)
-
     line2, = ax2.plot(
         dates, volumes, marker='o', markersize=2, linestyle='-', linewidth=2,
         color=NORD_THEME['accent_purple'], alpha=0.7, label='Volume'
@@ -766,7 +749,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     global_markers[datetime.strptime(date_str, "%Y-%m-%d")] = text
                 except ValueError:
                     print(f"无法解析全局标记日期: {date_str}")
-
+        
         found_item = None
         for source in ['stocks', 'etfs']:
             for item in current_json_data['data'].get(source, []):
@@ -788,7 +771,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 scatter = ax1.scatter([dates[idx]], [prices[idx]], s=100, color=NORD_THEME['accent_red'],
                                       alpha=0.7, zorder=4, picker=5, visible=show_global_markers)
                 global_scatter_points.append((scatter, dates[idx], prices[idx], text))
-
+        
         for marker_date, text in specific_markers.items():
             if min(dates) <= marker_date <= max(dates):
                 idx = (np.abs(np.array(dates) - marker_date)).argmin()
@@ -924,7 +907,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 if item['symbol'] == name:
                     info = f"{name}\n{item['name']}\n\n{item['tag']}\n\n{item['description1']}\n\n{item['description2']}"
                     dialog = InfoDialog("Information", info, 'Arial Unicode MS', 22, 700, 900)
-                    dialog.exec_()
+                    # PyQt6: exec 替代 exec_
+                    dialog.exec()
                     return
         display_dialog(f"未找到 {name} 的信息")
 
@@ -955,9 +939,11 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     def update_marker_visibility():
         years = time_options[radio.value_selected]
         min_date = min(dates) if years == 0 else datetime.now() - timedelta(days=years * 365)
+
         for scatter, date_v, _, _ in global_scatter_points: scatter.set_visible((min_date <= date_v) and show_global_markers)
         for scatter, date_v, _, _ in specific_scatter_points: scatter.set_visible((min_date <= date_v) and show_specific_markers)
         for scatter, date_v, _, _ in earning_scatter_points: scatter.set_visible((min_date <= date_v) and show_earning_markers)
+
         for annotation, anno_type, date_v, _ in all_annotations:
             visible = False
             if min_date <= date_v:
@@ -985,13 +971,12 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                         fig.canvas.draw_idle()
                         break
         except Exception as e:
-            # 防护
-            # print(f"pick error: {e}")
             pass
 
     def create_window_qt(content):
         dialog = InfoDialog("数据库查询结果", content, "Courier", 14, 900, 600)
-        dialog.exec_()
+        # PyQt6: exec 替代 exec_
+        dialog.exec()
 
     def query_database(db_path, table_name, condition):
         with sqlite3.connect(db_path) as conn:
@@ -1030,6 +1015,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     rax.set_frame_on(False)
     for spine in rax.spines.values():
         spine.set_visible(False)
+    
     for label in radio.labels:
         label.set_color(NORD_THEME['text_light'])
         label.set_fontsize(14)
@@ -1051,13 +1037,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         try:
             x_data, y_data = line1.get_data()
             xval, yval = x_data[ind["ind"][0]], y_data[ind["ind"][0]]
-
             if annot.xy != (xval, yval):
                 annot.xy = (xval, yval)
-
                 current_date = xval.replace(tzinfo=None)
                 g_text, s_text, e_text = None, None, None
-
                 for d, t in global_markers.items():
                     if abs((d - current_date).total_seconds()) < 86400:
                         g_text = t; break
@@ -1067,7 +1050,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 for d, t in earning_markers.items():
                     if abs((d - current_date).total_seconds()) < 86400:
                         e_text = t; break
-
+                
                 # 先构造文本和颜色
                 if mouse_pressed and initial_price is not None:
                     percent_change = ((yval - initial_price) / initial_price) * 100
@@ -1079,54 +1062,49 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     marker_texts = []
                     if g_text: marker_texts.append(g_text)
                     if s_text: marker_texts.append(s_text + "\n")
-
                     has_earning = False
                     if e_text:
                         for line in e_text.split('\n'):
                             if "昨日财报" in line:
                                 marker_texts.append(line); break
                         has_earning = True
-
                     if marker_texts: parts.extend(marker_texts)
                     parts.append(f"最新价差: {((prices[-1] - yval) / yval) * 100:.2f}%")
                     text = "\n".join(parts)
-
+                    
                     if has_earning and not (g_text or s_text): color = NORD_THEME['accent_yellow']
                     elif g_text and not (s_text or has_earning): color = NORD_THEME['accent_red']
                     elif s_text and not (g_text or has_earning): color = NORD_THEME['text_bright']
                     elif g_text and (s_text or has_earning): color = NORD_THEME['accent_purple']
                     else: color = NORD_THEME['accent_cyan']
                     annot.get_bbox_patch().set_edgecolor(color)
-
+                
                 annot.set_text(text)
                 annot.set_color(color)
                 annot.get_bbox_patch().set_alpha(0.8)
                 annot.set_fontsize(16)
-
+                
                 # 决定偏移后再设置位置
                 y_range = ax1.get_ylim()
                 y_ratio = (yval - y_range[0]) / (y_range[1] - y_range[0] + 1e-12)
                 x_range = ax1.get_xlim()
                 x_ratio = (matplotlib.dates.date2num(xval) - x_range[0]) / (x_range[1] - x_range[0] + 1e-12)
-
+                
                 if y_ratio < 0.2:
                     y_offset = 60
                 elif y_ratio > 0.8:
                     y_offset = -120
                 else:
                     y_offset = -70
-
+                
                 if x_ratio > 0.7:
                     x_offset = -min(20 + len(annot.get_text()) * 6, 320)
                 elif x_ratio < 0.3:
                     x_offset = 50
                 else:
                     x_offset = -200
-
                 annot.set_position((x_offset, y_offset))
         except Exception as e:
-            # 避免更新异常卡死
-            # print(f"update_annot error: {e}")
             pass
 
     def hover(event):
@@ -1135,11 +1113,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             if now - last_hover_ts[0] < HOVER_THROTTLE:
                 return
             last_hover_ts[0] = now
-
             if event.inaxes in [ax1, ax2] and event.xdata and current_filtered_dates:
                 vline.set_xdata([event.xdata, event.xdata])
                 vline.set_visible(True)
-
+                
                 # 拖拽中降级：不更新注释内容，仅移动高亮
                 if mouse_pressed:
                     # --- 优化后的写法 (极快) ---
@@ -1158,16 +1135,17 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                                 idx = idx - 1
                     else:
                         idx = 0
+
                     x_data, y_data = line1.get_data()
                     if idx < len(x_data) and idx < len(y_data) and initial_price is not None:
                         sel_date, sel_price = x_data[idx], y_data[idx]
-
+                        
                         # 计算与按下点的百分比变化
                         try:
                             percent_change = ((sel_price - initial_price) / (initial_price + 1e-12)) * 100.0
                         except Exception:
                             percent_change = 0.0
-
+                            
                         # 轻量注释：只显示百分比，避免昂贵排版
                         annot.xy = (sel_date, sel_price)
                         annot.set_text(f"{percent_change:.1f}%")
@@ -1176,18 +1154,19 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                         annot.get_bbox_patch().set_edgecolor(drag_color)
                         annot.get_bbox_patch().set_alpha(0.8)
                         annot.set_fontsize(16)
+                        
                         y_range, x_range = ax1.get_ylim(), ax1.get_xlim()
                         y_ratio = (sel_price - y_range[0]) / (y_range[1] - y_range[0] + 1e-12)
                         x_ratio = (matplotlib.dates.date2num(sel_date) - x_range[0]) / (x_range[1] - x_range[0] + 1e-12)
+                        
                         y_offset = 60 if y_ratio < 0.2 else -120 if y_ratio > 0.8 else -70
                         x_offset = -120 if x_ratio > 0.7 else 50 if x_ratio < 0.3 else -100
                         annot.set_position((x_offset, y_offset))
+                        
                         annot.set_visible(True)
-
                         # 高亮点跟随
                         highlight_point.set_offsets([[sel_date, sel_price]])
                         highlight_point.set_visible(True)
-
                     fig.canvas.draw_idle()
                     return
 
@@ -1208,10 +1187,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                             idx = idx - 1
                 else:
                     idx = 0
+
                 x_data, y_data = line1.get_data()
                 if idx < len(x_data) and idx < len(y_data):
                     sel_date, sel_price = x_data[idx], y_data[idx]
-
                     color = NORD_THEME['accent_cyan']
                     for _, d, _, _ in global_scatter_points:
                         if d == sel_date:
@@ -1224,8 +1203,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                             for _, d, _, _ in earning_scatter_points:
                                 if d == sel_date:
                                     color = NORD_THEME['accent_yellow']; break
+                    
                     highlight_point.set_color(color)
-
                     dist = 0.2 * ((ax1.get_xlim()[1] - ax1.get_xlim()[0]) / 365)
                     if np.isclose(matplotlib.dates.date2num(sel_date), event.xdata, atol=dist):
                         update_annot({"ind": [idx]})
@@ -1235,15 +1214,14 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     else:
                         annot.set_visible(False)
                         highlight_point.set_visible(False)
-
                 fig.canvas.draw_idle()
+
             elif event.inaxes != rax:
                 vline.set_visible(False)
                 annot.set_visible(False)
                 highlight_point.set_visible(False)
                 fig.canvas.draw_idle()
         except Exception as e:
-            # print(f"hover error: {e}")
             pass
 
     def update(val):
@@ -1267,7 +1245,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             current_filtered_dates = f_dates
             current_filtered_prices = f_prices
             current_filtered_date_nums = matplotlib.dates.date2num(current_filtered_dates) if current_filtered_dates else np.array([])
-
+            
             # === 修改：控制紫色和蓝色遮罩的显示 ===
             if f_dates:
                 display_start = min(f_dates).date() if isinstance(min(f_dates), datetime) else min(f_dates)
@@ -1302,7 +1280,6 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                         pe_start_3w, pe_end_3w = calculate_three_weeks_after_range(latest_db_earning_date)
                         has_overlap_pe_3w = not (pe_end_3w < display_start or pe_start_3w > display_end)
                         post_earning_shade_3w.set_visible(has_overlap_pe_3w)
-
                 else:
                     if post_earning_shade: post_earning_shade.set_visible(False)
                     if post_earning_shade_3w: post_earning_shade_3w.set_visible(False)
@@ -1328,15 +1305,13 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 gradient_clip_patch=gradient_clip_patch,
                 zero_line=zero_line
             )
-
+            
             for i, circle in enumerate(radio.circles):
                 circle.set_facecolor(NORD_THEME['accent_red'] if list(time_options.keys())[i] == val else NORD_THEME['background'])
-
             small_dot_scatter.set_visible(val in ["1m", "3m", "6m"])
             update_marker_visibility()
             fig.canvas.draw_idle()
         except Exception as e:
-            # print(f"update error: {e}")
             pass
 
     def toggle_volume():
@@ -1352,7 +1327,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 f_dates = [dates[i] for i in indices] if indices else [dates[-1]]
                 f_prices = [prices[i] for i in indices] if indices else [prices[-1]]
                 f_volumes = [volumes[i] for i in indices] if volumes and indices else ([volumes[-1]] if volumes else None)
-
+            
             current_filtered_dates = f_dates
             current_filtered_prices = f_prices
             current_filtered_date_nums = matplotlib.dates.date2num(current_filtered_dates) if current_filtered_dates else np.array([])
@@ -1368,7 +1343,6 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             )
             fig.canvas.draw_idle()
         except Exception as e:
-            # print(f"toggle_volume error: {e}")
             pass
 
     def launch_and_close_for_y():
@@ -1402,8 +1376,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             with open(DESCRIPTION_JSON_PATH, 'r', encoding='utf-8') as f:
                 new_data = json.load(f)
             current_json_data['data'] = new_data
+            
             print("description.json 加载成功。正在刷新图表...")
-
             # 1. 更新标题
             new_title_text, new_title_color, clickable = create_or_update_title()
             title_artist.set_text(new_title_text)
@@ -1411,14 +1385,12 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             
             # 2. 重新创建标记和注释
             create_markers_and_annotations()
-
             # 3. 更新标记的可见性以匹配当前的时间范围
             update_marker_visibility()
             
             # 4. 重绘画布
             fig.canvas.draw_idle()
             print("图表刷新完成。")
-
         except FileNotFoundError:
             print(f"错误: 未找到文件 {DESCRIPTION_JSON_PATH}")
             display_dialog(f"错误: 未找到文件\n{DESCRIPTION_JSON_PATH}")
@@ -1455,12 +1427,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                        '9': lambda: radio.set_active(0), '`': show_stock_etf_info,
                        'd': lambda: on_keyword_selected(db_path, table_name, name)}
             if event.key in actions: actions[event.key]()
-
             current_index = list(time_options.keys()).index(radio.value_selected)
             if event.key == 'up' and current_index > 0: radio.set_active(current_index - 1)
             elif event.key == 'down' and current_index < len(time_options) - 1: radio.set_active(current_index + 1)
         except Exception as e:
-            # print(f"on_key error: {e}")
             pass
 
     def close_everything(event, panel_flag):
@@ -1492,7 +1462,6 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 if idx < len(current_filtered_prices):
                     initial_price, initial_date = current_filtered_prices[idx], current_filtered_dates[idx]
         except Exception as e:
-            # print(f"mouse_press error: {e}")
             pass
 
     def on_mouse_release(event):
@@ -1504,7 +1473,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             pass
 
     vline = ax1.axvline(x=dates[0], color=NORD_THEME['accent_cyan'], linestyle='--', linewidth=1, visible=False)
-
+    
     plt.gcf().canvas.mpl_connect("motion_notify_event", hover)
     plt.gcf().canvas.mpl_connect('key_press_event', on_key)
     plt.gcf().canvas.mpl_connect('key_press_event', lambda e: close_everything(e, panel))
@@ -1520,15 +1489,17 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             fig.canvas.draw_idle()
         except Exception:
             pass
+
     plt.gcf().canvas.mpl_connect('figure_leave_event', hide_annot_on_leave)
 
     # 首次更新，建立初始筛选与渐变
     update(default_time_range)
-
     print("图表绘制完成，等待用户操作...")
+
     # Matplotlib 3.8+ 支持
     try:
         fig.canvas.toolbar_visible = False
     except Exception:
         pass
+
     plt.show()

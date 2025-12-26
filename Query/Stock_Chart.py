@@ -6,7 +6,9 @@ import pyperclip
 from functools import lru_cache
 import concurrent.futures
 import sqlite3
-from PyQt5.QtWidgets import QApplication, QInputDialog, QLineEdit
+
+# --- 修改: 切换到 PyQt6 ---
+from PyQt6.QtWidgets import QApplication, QInputDialog, QLineEdit
 
 sys.path.append('/Users/yanzhang/Coding/Financial_System/Query')
 from Chart_input import plot_financial_data
@@ -73,13 +75,13 @@ def match_and_plot(input_trimmed, sector_data, compare_data, json_data, db_path)
                     pe,
                     json_data, '1Y', True)
                 return True
+
     input_lower = input_trimmed.lower()
     for sector, names in sector_data.items():
         for name in names:
             if re.search(input_lower, name.lower()):
                 # 找到匹配项，从数据库获取数据
                 shares_val, marketcap, pe, pb = fetch_mnspp_data_from_db(db_path, name)
-
                 plot_financial_data(
                     db_path, sector, name,
                     compare_data.get(name, "N/A"),
@@ -121,7 +123,6 @@ def input_mapping(data, db_path, user_input):
 
     # 标准化：去空白并转大写
     input_trimmed = user_input.strip().upper()
-
     if match_and_plot(input_trimmed,
                       data['/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'],
                       data['/Users/yanzhang/Coding/News/backup/Compare_All.txt'],
@@ -146,10 +147,10 @@ def input_mapping(data, db_path, user_input):
             if user_input:  # 如果用户输入了新的内容
                 input_mapping(data, db_path, user_input)
 
-# 使用PyQt5重写的用户输入对话框函数
+# 使用PyQt6重写的用户输入对话框函数
 def get_user_input_qt(prompt):
     """
-    使用 PyQt5 QInputDialog 显示一个输入对话框。
+    使用 PyQt6 QInputDialog 显示一个输入对话框。
     - 自动从剪贴板获取内容并填充输入框。
     - QInputDialog 默认就会选中预填充的文本。
     - 窗口会根据操作系统风格自动居中。
@@ -157,17 +158,17 @@ def get_user_input_qt(prompt):
     """
     # 获取剪贴板内容
     clipboard_content = QApplication.clipboard().text().strip()
-
+    
     # 显示输入对话框
     # QInputDialog.getText() 返回一个元组 (text, ok_pressed)
     user_input, ok = QInputDialog.getText(
         None,           # 父窗口 (无)
         prompt,         # 对话框标题
         f"{prompt}:",   # 对话框内的标签文本
-        QLineEdit.Normal, # 输入模式 (正常文本)
+        QLineEdit.EchoMode.Normal, # PyQt6: 使用 Scoped Enum
         clipboard_content # 默认填充文本
     )
-
+    
     if ok and user_input:
         return user_input.strip()   # 如果你也想去掉用户手动输入的空白
     else:
@@ -175,10 +176,10 @@ def get_user_input_qt(prompt):
         return None
 
 if __name__ == '__main__':
-    # 任何PyQt5应用都必须创建一个QApplication实例
+    # 任何PyQt6应用都必须创建一个QApplication实例
     # sys.argv 允许Qt处理命令行参数
     app = QApplication(sys.argv)
-
+    
     data = load_data_parallel()
     db_path = '/Users/yanzhang/Coding/Database/Finance.db'
 
