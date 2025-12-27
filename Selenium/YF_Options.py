@@ -68,14 +68,15 @@ def move_mouse_periodically():
 
 # ================= 1. 数据库操作 =================
 
-def get_target_symbols(db_path, threshold):
+def get_target_symbols(db_path, threshold, silent=False):
     """从数据库中获取符合市值要求的 Symbol，并按市值降序排列"""
-    tqdm.write(f"正在连接数据库: {db_path}...")
+    if not silent:
+        tqdm.write(f"正在连接数据库: {db_path}...")
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
-        # --- 修改点 1: 增加 ORDER BY marketcap DESC ---
+        # 增加 ORDER BY marketcap DESC
         query = "SELECT symbol, marketcap FROM MNSPP WHERE marketcap > ? ORDER BY marketcap DESC"
         cursor.execute(query, (threshold,))
         results = cursor.fetchall()
@@ -84,7 +85,8 @@ def get_target_symbols(db_path, threshold):
         # 以前是: symbols = [row[0] for row in results]
         symbols = results 
         
-        tqdm.write(f"共找到 {len(symbols)} 个市值大于 {threshold} 的代码。")
+        if not silent:
+            tqdm.write(f"共找到 {len(symbols)} 个市值大于 {threshold} 的代码。")
         return symbols
     except Exception as e:
         tqdm.write(f"数据库读取错误: {e}")
@@ -139,43 +141,31 @@ def scrape_options():
     # mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
     # mouse_thread.start()
     
-    # --- 1. 获取目标 Symbols (修改为：合并模式) ---
-    # 目标：先加入自定义列表，再加入数据库筛选列表，并去重
+    # --- 1. 获取目标 Symbols (合并模式) ---
+    # 目标：静默加载，只在最后输出汇总
+    
     symbols = [] 
     
     # === 步骤 A: 获取自定义列表 + JSON Must 分组 ===
-    tqdm.write(f"【阶段1】正在加载自定义列表与 JSON 配置...")
-    
-    # 1. 合并 JSON 中的 Must 分组
     merged_symbols_set = set(CUSTOM_SYMBOLS_DATA)
     try:
         if os.path.exists(SECTORS_JSON_PATH):
             with open(SECTORS_JSON_PATH, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-            
             # 提取 Must 分组的 key
             must_symbols = data.get("Must", {}).keys()
-            
             # 合并去重
-            old_len = len(merged_symbols_set)
             merged_symbols_set.update(must_symbols)
-            new_len = len(merged_symbols_set)
-            
-            tqdm.write(f"已合并 JSON [Must] 分组，新增 {new_len - old_len} 个 Symbol。")
-        else:
-            tqdm.write(f"未找到路径: {SECTORS_JSON_PATH}，跳过 JSON 读取。")
     except Exception as e:
         tqdm.write(f"读取 JSON 出错: {e}，跳过。")
         
     # 构造列表 [(symbol, 0), ...] 
     # 自定义列表的市值默认为 0，方便后续处理
     custom_symbols_list = [(s, 0) for s in merged_symbols_set]
-    tqdm.write(f"自定义列表准备完毕，共 {len(custom_symbols_list)} 个。")
 
-    # === 步骤 B: 获取数据库筛选列表 ===
-    tqdm.write(f"【阶段2】正在加载数据库筛选列表 (阈值: {MARKET_CAP_THRESHOLD})...")
-    # 这里返回的已经是 [(symbol, cap), ...] 且按市值降序排列
-    db_symbols_list = get_target_symbols(DB_PATH, MARKET_CAP_THRESHOLD)
+    # === 步骤 B: 获取数据库筛选列表 (静默模式) ===
+    # 这里开启 silent=True，防止打印 redundant logs
+    db_symbols_list = get_target_symbols(DB_PATH, MARKET_CAP_THRESHOLD, silent=True)
     
     # === 步骤 C: 合并列表与去重 ===
     # 逻辑：优先保留自定义列表中的顺序和项，数据库列表中若有重复则跳过
@@ -186,12 +176,9 @@ def scrape_options():
     # 2. 筛选数据库列表：只保留不在自定义列表中的
     db_unique_list = [s for s in db_symbols_list if s[0] not in custom_names_set]
     
-    tqdm.write(f"数据库列表去重后新增: {len(db_unique_list)} 个。")
-    
     # 3. 最终合并
     symbols = custom_symbols_list + db_unique_list
-    tqdm.write(f"【汇总】总任务数: {len(symbols)} (自定义优先 + 数据库补充)")
-
+    
     if not symbols:
         tqdm.write("未找到任何 Symbol，程序结束。")
         return
@@ -207,9 +194,8 @@ def scrape_options():
                 if header:
                     for row in reader:
                         if row and len(row) > 0:
-                            # 假设第一列是 Symbol
-                            existing_symbols.add(row[0]) # CSV里存的还是纯 Symbol
-            tqdm.write(f"🔍 检测到现有文件，已包含 {len(existing_symbols)} 个 Symbol 的数据。")
+                            existing_symbols.add(row[0]) 
+            # tqdm.write(f"🔍 检测到现有文件，已包含 {len(existing_symbols)} 个 Symbol 的数据。")
         except Exception as e:
             tqdm.write(f"⚠️ 读取现有文件检查 Symbol 时出错: {e}，将重新抓取所有。")
 
@@ -219,9 +205,12 @@ def scrape_options():
     symbols = [s for s in symbols if s[0] not in existing_symbols]
     
     skipped_count = original_count - len(symbols)
-    if skipped_count > 0:
-        tqdm.write(f"⏭️  根据文件记录，已跳过 {skipped_count} 个已完成的 Symbol。")
-    tqdm.write(f"📋 剩余待抓取: {len(symbols)} 个 (按市值从大到小)。")
+    
+    # --- 统一的日志输出 ---
+    # 这里只输出一次汇总信息，保持清爽
+    log_msg = f"任务列表加载完成: 自定义({len(custom_symbols_list)}) + 数据库({len(db_symbols_list)}) | "
+    log_msg += f"去重合并后: {original_count} | 已完成: {skipped_count} | 待抓取: {len(symbols)}"
+    tqdm.write(log_msg)
 
     # 如果所有都抓完了，直接退出，不启动浏览器
     if not symbols:
@@ -251,7 +240,6 @@ def scrape_options():
     # --- Headless模式相关设置 ---
     options.add_argument('--headless=new') # 推荐使用新的 headless 模式
     options.add_argument('--window-size=1920,1080')
-
     # --- 伪装设置 ---
     user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     options.add_argument(f'user-agent={user_agent}')
@@ -299,7 +287,7 @@ def scrape_options():
             elif market_cap > 0:
                 cap_str = f"{market_cap/1000000:.1f}M"       # 百万
             else:
-                cap_str = "N/A"
+                cap_str = "N/A" # 自定义列表显示 N/A
 
             # 更新进度条描述，增加显示市值
             symbol_pbar.set_description(f"处理中: {symbol} [市值: {cap_str}]")
@@ -364,7 +352,6 @@ def scrape_options():
                         break # 成功，退出重试循环
                     else:
                         raise Exception("找到菜单元素但未提取到有效日期")
-
                 except Exception as e:
                     tqdm.write(f"[{symbol}] 获取日期列表失败 (尝试 {date_attempt + 1}/{max_date_retries}): {str(e)[:100]}")
                     time.sleep(random.uniform(2, 4)) # 失败后等待几秒再重试
@@ -409,8 +396,7 @@ def scrape_options():
             except Exception as e:
                 tqdm.write(f"[{symbol}] 日期过滤出错: {e}，将使用所有获取到的日期")
 
-            # ================= [核心修改] =================
-            # 1. 暂存当前 symbol 所有日期的数据，不直接写入
+            # 1. 暂存当前 symbol 所有日期的数据
             symbol_all_data = [] 
             
             # === 内层进度条：遍历日期 ===
