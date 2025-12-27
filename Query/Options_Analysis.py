@@ -1,31 +1,42 @@
 import pandas as pd
 import numpy as np
 from pandas.tseries.holiday import USFederalHolidayCalendar
-import os
 
 # ================= 配置区域 =================
+
 # 1. 输入和输出路径
 INPUT_CSV_PATH = '/Users/yanzhang/Coding/News/Options_Change.csv' 
 OUTPUT_RESULT_PATH = '/Users/yanzhang/Downloads/1.txt' # 最终结果存放
 OUTPUT_DEBUG_PATH  = '/Users/yanzhang/Downloads/2.txt' # 验证过程存放
 
 # 2. 算法参数
-TOP_N = 5
+TOP_N = 20
 
-# 3. 【新功能】调试配置
+# 【新功能】权重幂次配置
+# 1 = 线性 (原版逻辑)
+# 2 = 平方 (Square)
+# 3 = 立方 (Cubic)
+# 依次类推...
+WEIGHT_POWER = 3
+
+# 3. 调试配置
 # 输入你想追踪的Symbol名字 (区分大小写，如 "NVDA" 或 "AAPL")
 # 如果留空字符串 ""，则不生成调试文件
 DEBUG_SYMBOL = "NVDA" 
+
 # ===========================================
 
-def calculate_d_score(df_path, res_path, debug_path, n_config, target_symbol):
+# 【修改】函数增加 power_config 参数
+def calculate_d_score(df_path, res_path, debug_path, n_config, power_config, target_symbol):
     print(f"正在读取文件: {df_path} ...")
+    print(f"当前配置: Top N = {n_config}, 权重幂次 = {power_config}")
     
     # 清空旧的调试文件
     if target_symbol:
         with open(debug_path, 'w') as f:
             f.write(f"=== {target_symbol} 计算过程追踪日志 ===\n")
-            f.write(f"运行时间: {pd.Timestamp.now()}\n\n")
+            f.write(f"运行时间: {pd.Timestamp.now()}\n")
+            f.write(f"权重幂次 (Power): {power_config}\n\n")
 
     try:
         df = pd.read_csv(df_path)
@@ -68,7 +79,7 @@ def calculate_d_score(df_path, res_path, debug_path, n_config, target_symbol):
     # 按 Symbol 和 Type 分组计算
     results = []
     grouped = df.groupby(['Symbol', 'Type'])
-
+    
     print(f"开始计算... (调试目标: {target_symbol})")
 
     for (symbol, type_), group in grouped:
@@ -108,8 +119,12 @@ def calculate_d_score(df_path, res_path, debug_path, n_config, target_symbol):
         # 6. 计算差值 (diff_i = A - days_i)
         diff_i = a_days - days_i
         
-        # 7. 加总 B
-        B = np.sum(diff_i)
+        # 【修改重点】计算差值的 N 次方
+        # 使用配置项 power_config
+        diff_pow = diff_i ** power_config
+        
+        # 7. 加总 B (所有 diff_pow 的和)
+        B = np.sum(diff_pow)
         
         # 计算 D 的逻辑
         total_oi = top_items['Open Interest'].sum()
@@ -118,16 +133,19 @@ def calculate_d_score(df_path, res_path, debug_path, n_config, target_symbol):
         
         # 临时存储该组的详细行数据用于调试
         row_details = []
-
+        
         if B != 0 and total_oi != 0:
-            # 权重 w_i
-            w_i = diff_i / B
+            # 权重 w_i = (diff_i ^ n) / B
+            w_i = diff_pow / B
+            
             # 质量分数 Score
             scores = w_i * top_items['Distance'].values * top_items['Open Interest'].values
+            
             # C
             C = np.sum(scores)
+            
             # D
-            D = C * n_config / total_oi
+            D = C * (n_config - 1) / total_oi
             
             # 收集每一行的数据方便调试打印
             for idx in range(len(top_items)):
@@ -138,6 +156,7 @@ def calculate_d_score(df_path, res_path, debug_path, n_config, target_symbol):
                     'OI': top_items.iloc[idx]['Open Interest'],
                     'Days_i': days_i[idx],
                     'Diff_i': diff_i[idx],
+                    'Diff_Pow': diff_pow[idx], # 记录计算出的幂次值
                     'Weight': w_i[idx],
                     'Score': scores[idx]
                 })
@@ -148,32 +167,33 @@ def calculate_d_score(df_path, res_path, debug_path, n_config, target_symbol):
         # ================= 调试日志核心逻辑 =================
         if symbol == target_symbol:
             log_lines = []
-            log_lines.append("-" * 60)
+            log_lines.append("-" * 80)
             log_lines.append(f"正在计算: {symbol} - {type_}")
-            log_lines.append(f"当前参考日期 (Today): {today.strftime('%Y-%m-%d')}")
-            log_lines.append(f"筛选行数: {len(top_items)} 行 (配置 Top {n_config})")
-            log_lines.append("-" * 60)
+            log_lines.append(f"当前参考日期: {today.strftime('%Y-%m-%d')}")
+            log_lines.append(f"权重计算规则: Diff_i 的 {power_config} 次方 (Power={power_config})")
+            log_lines.append("-" * 80)
             
-            log_lines.append(f"步骤 1: 找到最远过期日 (Max Expiry) -> {max_expiry.strftime('%Y-%m-%d')}")
-            log_lines.append(f"步骤 2: 计算参数 A (Today到最远日的工作日天数) -> {a_days} 天")
-            log_lines.append(f"步骤 3: 逐行计算差值、权重与分数:\n")
+            log_lines.append(f"步骤 1: Max Expiry -> {max_expiry.strftime('%Y-%m-%d')}")
+            log_lines.append(f"步骤 2: 参数 A -> {a_days} 天")
+            log_lines.append(f"步骤 3: 逐行计算:\n")
             
-            # 打印表头
-            header = f"{'Expiry':<12} | {'Days_i':<6} | {'Diff_i':<6} | {'Weight (w_i)':<12} | {'Dist':<8} | {'OI':<8} | {'Score'}"
+            # 动态调整表头，显示 Diff^2, Diff^3 等
+            pow_header = f"Diff^{power_config}"
+            header = f"{'Expiry':<12} | {'Diff_i':<6} | {pow_header:<10} | {'Weight':<10} | {'Dist':<8} | {'OI':<8} | {'Score'}"
             log_lines.append(header)
             log_lines.append("-" * len(header))
             
             for row in row_details:
-                line = (f"{row['Expiry']:<12} | {row['Days_i']:<6} | {row['Diff_i']:<6} | "
-                        f"{row['Weight']:.6f}     | {row['Dist']:.4f}   | {row['OI']:<8} | {row['Score']:.6f}")
+                line = (f"{row['Expiry']:<12} | {row['Diff_i']:<6} | {row['Diff_Pow']:<10} | "
+                        f"{row['Weight']:.6f}   | {row['Dist']:.4f}   | {row['OI']:<8} | {row['Score']:.6f}")
                 log_lines.append(line)
             
             log_lines.append("-" * len(header))
-            log_lines.append(f"步骤 4: 计算 B (Diff_i 之和) -> {B}")
+            log_lines.append(f"步骤 4: 计算 B (Diff^{power_config} 之和) -> {B}")
             log_lines.append(f"步骤 5: 计算 C (Score 之和)  -> {C:.6f}")
-            log_lines.append(f"步骤 6: 计算 Total Open Interest -> {total_oi}")
-            log_lines.append(f"步骤 7: 计算最终 D 值 = (C * {n_config}) / Total_OI")
-            log_lines.append(f"       D = ({C:.6f} * {n_config}) / {total_oi}")
+            log_lines.append(f"步骤 6: Total Open Interest -> {total_oi}")
+            log_lines.append(f"步骤 7: 计算最终 D 值")
+            log_lines.append(f"       D = ({C:.6f} * {n_config - 1}) / {total_oi}")
             log_lines.append(f"       D = {D:.6f}")
             log_lines.append("\n\n")
 
@@ -181,7 +201,8 @@ def calculate_d_score(df_path, res_path, debug_path, n_config, target_symbol):
             with open(debug_path, 'a') as f:
                 f.write('\n'.join(log_lines))
             
-            print(f"  -> 已将 {symbol} {type_} 的详细计算过程写入 {debug_path}")
+            print(f"  -> {symbol} {type_} 调试日志已更新")
+
         # ==================================================
 
     # 输出最终结果文件
@@ -193,4 +214,5 @@ def calculate_d_score(df_path, res_path, debug_path, n_config, target_symbol):
         print(f"保存文件出错: {e}")
 
 if __name__ == "__main__":
-    calculate_d_score(INPUT_CSV_PATH, OUTPUT_RESULT_PATH, OUTPUT_DEBUG_PATH, TOP_N, DEBUG_SYMBOL)
+    # 【修改】这里将 WEIGHT_POWER 传入函数
+    calculate_d_score(INPUT_CSV_PATH, OUTPUT_RESULT_PATH, OUTPUT_DEBUG_PATH, TOP_N, WEIGHT_POWER, DEBUG_SYMBOL)

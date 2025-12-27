@@ -147,17 +147,29 @@ def scrape_options():
     symbols = [] 
     
     # === 步骤 A: 获取自定义列表 + JSON Must 分组 ===
-    merged_symbols_set = set(CUSTOM_SYMBOLS_DATA)
+    
+    # 1. 基础自定义列表
+    base_custom_set = set(CUSTOM_SYMBOLS_DATA)
+    count_base_custom = len(base_custom_set)
+    
+    # 2. JSON Must 分组
+    json_must_set = set()
     try:
         if os.path.exists(SECTORS_JSON_PATH):
             with open(SECTORS_JSON_PATH, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             # 提取 Must 分组的 key
-            must_symbols = data.get("Must", {}).keys()
-            # 合并去重
-            merged_symbols_set.update(must_symbols)
+            must_keys = data.get("Must", {}).keys()
+            json_must_set = set(must_keys)
     except Exception as e:
-        tqdm.write(f"读取 JSON 出错: {e}，跳过。")
+        # 出错时不打印中间日志，保持清爽，仅在最后的总数体现差异
+        pass
+        
+    count_json_must = len(json_must_set)
+
+    # 3. 合并去重 (两个集合取并集)
+    merged_symbols_set = base_custom_set.union(json_must_set)
+    count_merged_custom = len(merged_symbols_set)
         
     # 构造列表 [(symbol, 0), ...] 
     # 自定义列表的市值默认为 0，方便后续处理
@@ -206,10 +218,13 @@ def scrape_options():
     
     skipped_count = original_count - len(symbols)
     
-    # --- 统一的日志输出 ---
-    # 这里只输出一次汇总信息，保持清爽
-    log_msg = f"任务列表加载完成: 自定义({len(custom_symbols_list)}) + 数据库({len(db_symbols_list)}) | "
-    log_msg += f"去重合并后: {original_count} | 已完成: {skipped_count} | 待抓取: {len(symbols)}"
+    # --- 统一的日志输出 (修改部分) ---
+    # 格式示例: 自定义列表(13) + JSON(5) -> 去重合并(17) ...
+    
+    log_msg = (
+        f"任务列表加载完成: [自定义({count_base_custom}) + Must({count_json_must}) + 数据库({len(db_symbols_list)}) | "
+        f"总去重: {original_count} | 已完成: {skipped_count} | 待抓取: {len(symbols)}"
+    )
     tqdm.write(log_msg)
 
     # 如果所有都抓完了，直接退出，不启动浏览器

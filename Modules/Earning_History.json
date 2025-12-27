@@ -805,6 +805,11 @@
         "2025-12-24": [
             "CRWD",
             "ELV"
+        ],
+        "2025-12-26": [
+            "CHWY",
+            "CRWD",
+            "ELV"
         ]
     },
     "no_season": {
@@ -5009,6 +5014,52 @@
             "UBER",
             "VLO",
             "WRB"
+        ],
+        "2025-12-26": [
+            "ACHR",
+            "ALNY",
+            "ARM",
+            "BBY",
+            "BLK",
+            "CCI",
+            "CLX",
+            "COIN",
+            "COR",
+            "DHI",
+            "DUOL",
+            "ENTG",
+            "EQIX",
+            "ETN",
+            "HIMS",
+            "HON",
+            "HOOD",
+            "HPQ",
+            "IDXX",
+            "INTC",
+            "IONQ",
+            "KMB",
+            "LYB",
+            "MDT",
+            "MELI",
+            "MP",
+            "MSFT",
+            "MSTR",
+            "MTN",
+            "NFLX",
+            "OKLO",
+            "PBR",
+            "PSX",
+            "PYPL",
+            "RBLX",
+            "SMCI",
+            "SMR",
+            "SOUN",
+            "TEM",
+            "TT",
+            "U",
+            "UBER",
+            "VLO",
+            "ZBRA"
         ]
     }
 }

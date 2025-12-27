@@ -94,7 +94,7 @@ def main():
         commodities = [
             "Coal", "Uranium", "Steel", "Lithium", "Wheat", "Palm Oil", "Aluminum",
             "Nickel", "Tin", "Zinc", "Palladium", "Poultry", "Salmon", "Iron Ore",
-            "Orange Juice", "Cotton"
+            "Orange Juice", "Cotton", "Coffee", "Sugar", "Cocoa"
         ]
 
         for commodity in commodities:

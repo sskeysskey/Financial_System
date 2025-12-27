@@ -24,7 +24,7 @@ SECTORS_JSON_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All
 DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
 
 # 每个 Symbol 的 Calls 和 Puts 各保留前多少名
-TOP_N = 50 
+TOP_N = 20 
 
 # 开关：是否考虑新增的数据 (B有A无)
 # True:  考虑新增数据 (计算 Change, 参与排序, 并标记 new)
