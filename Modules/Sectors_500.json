@@ -92,7 +92,6 @@
         "WMB",
         "ET",
         "KMI",
-        "MPC",
         "E",
         "TRP",
         "PSX",
@@ -162,7 +161,8 @@
         "NDAQ",
         "RKT",
         "MET",
-        "ARES"
+        "ARES",
+        "BRK-B"
     ],
     "Healthcare": [
         "LLY",

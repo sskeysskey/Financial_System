@@ -36,7 +36,7 @@ SECTORS_JSON_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_pan
 # 自定义 Symbol 列表
 CUSTOM_SYMBOLS_DATA = [
     "^VIX", "NVDA", "AAPL", "GOOGL", "MSFT", "META",
-    "TSM", "WMT", "HYG", "QQQ", "SPY",
+    "TSM", "WMT", "HYG", "QQQ", "SPY", "SLV",
     "SONY"
 ]
 
@@ -255,7 +255,7 @@ def scrape_options():
     # --- 伪装设置 ---
     user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     options.add_argument(f'user-agent={user_agent}')
-    options.add_argument('--disable-blink-features=AutomationControlled')
+    options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
     

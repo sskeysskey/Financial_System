@@ -275,14 +275,21 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
     if not include_new:
         merged = merged[merged['_merge'] == 'both'].copy()
 
-    # 填充数值：
+        # 填充数值：
     # 如果是 right_only (新增)，old OI 为 NaN，需要填 0 方便计算
     merged['Open Interest_old'] = merged['Open Interest_old'].fillna(0)
     # new OI 理论上不应该有 NaN (因为剔除了 left_only)，但以防万一
     merged['Open Interest_new'] = merged['Open Interest_new'].fillna(0)
 
+    # ============================================================
+    # [修改逻辑] 若减数 (旧持仓量) 为 0，则跳过不参与计算
+    # 注意：这也会顺带过滤掉所有“新增”的数据(因为新增数据旧值为0)
+    # ============================================================
+    merged = merged[merged['Open Interest_old'] != 0].copy()
+
     # 计算 1-Day Chg
     merged['1-Day Chg'] = merged['Open Interest_new'] - merged['Open Interest_old']
+
 
     # ============================================================
     # [新增逻辑] 剔除负值
