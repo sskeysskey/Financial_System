@@ -135,8 +135,8 @@ def main(db1_path, db2_path):
     conn2.close()
 
 if __name__ == '__main__':
-    db1 = '/Users/yanzhang/LocalServer/Resources/Finance/Finance.db'
-    db2 = '/Users/yanzhang/Coding/Books/Finance.db'
+    db1 = '/Users/yanzhang/Coding/Database/Finance copy.db'
+    db2 = '/Users/yanzhang/Coding/Database/Finance.db'
     out_file = '/Users/yanzhang/Downloads/a.txt'
 
     # 重定向所有 print 到文件

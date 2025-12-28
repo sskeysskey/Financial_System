@@ -258,10 +258,6 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "PCEY": "21 PCEY",
-        "CorePCEM": "21 CorePCEM",
-        "CorePCEY": "21 CorePCEY",
-        "USGDP": "23 USGDP",
         "USInitial": "31 USInitial"
     },
     "Economic_All": {

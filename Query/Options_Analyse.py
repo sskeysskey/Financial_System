@@ -26,7 +26,7 @@ SECTORS_JSON_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All
 
 # SQLite 数据库路径 (共用)
 DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
-TABLE_NAME = 'Options' # b.py 写入的表名
+TABLE_NAME = 'Options'
 
 # 调试输出路径 (b.py逻辑用)
 OUTPUT_DEBUG_PATH = '/Users/yanzhang/Downloads/3.txt'

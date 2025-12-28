@@ -14,8 +14,8 @@ import subprocess
 import tkinter as tk
 from tkinter import ttk
 import argparse
-import sqlite3  # 新增：导入sqlite3库
-import random # 确保头部导入了 random
+import sqlite3
+import random
 
 # --- 数据库操作函数 ---
 def create_db_connection(db_file):

@@ -129,8 +129,8 @@ def compare_all_symbols(file_path1, file_path2):
     print("="*60)
 
 # 定义文件路径
-file_a = '/Users/yanzhang/Coding/News/backup/Options_251224 copy.csv'
-file_b = '/Users/yanzhang/Coding/News/backup/Options_251224.csv'
+file_a = '/Users/yanzhang/Coding/News/Options_Change copy.csv'
+file_b = '/Users/yanzhang/Coding/News/Options_Change.csv'
 
 if __name__ == "__main__":
     compare_all_symbols(file_a, file_b)

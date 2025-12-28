@@ -41,8 +41,8 @@ INCLUDE_NEW_ROWS = True
 USE_MANUAL_MODE = False
 
 # 手动模式下的文件路径 (仅当 USE_MANUAL_MODE = True 时生效)
-MANUAL_FILE_OLD = '/Users/yanzhang/Coding/News/backup/Options_251219.csv'
-MANUAL_FILE_NEW = '/Users/yanzhang/Coding/News/backup/Options_251220.csv'
+MANUAL_FILE_OLD = '/Users/yanzhang/Coding/News/backup/Options_251224.csv'
+MANUAL_FILE_NEW = '/Users/yanzhang/Coding/News/backup/Options_251227.csv'
 
 # ==========================================
 # 辅助函数：获取 Symbol 对应的最新价格
@@ -417,8 +417,12 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
     # 将 Symbol 列中完全等于 '^VIX' 的值替换为 'VIX'
     final_output['Symbol'] = final_output['Symbol'].replace('^VIX', 'VIX')
 
-    # 9. 保存文件 (修改部分)
-    # 确保输出目录存在，如果不存在则创建
+    # ============================================================
+    # 9. 保存文件 (修改部分 - 增加备份输出)
+    # ============================================================
+    
+    # --- 1. 保存主文件 (原逻辑) ---
+    # 确保输出目录存在
     if not os.path.exists(OUTPUT_DIR):
         try:
             os.makedirs(OUTPUT_DIR)
@@ -428,14 +432,32 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
             return
 
     output_path = os.path.join(OUTPUT_DIR, OUTPUT_FILENAME)
-
+    
     try:
         final_output.to_csv(output_path, index=False)
-        print(f"\n✅ 成功生成文件: {output_path}")
+        print(f"\n✅ 成功生成主文件: {output_path}")
+        
+        # --- 2. 保存备份文件 (新增需求) ---
+        # 获取当前日期，格式 YYMMDD (例如 251227)
+        date_str = datetime.datetime.now().strftime('%y%m%d')
+        backup_filename = f"Options_Change_{date_str}.csv"
+        
+        # 使用全局配置的 BACKUP_DIR
+        backup_path = os.path.join(BACKUP_DIR, backup_filename)
+        
+        # 确保备份目录存在 (虽然通常已存在)
+        if not os.path.exists(BACKUP_DIR):
+            os.makedirs(BACKUP_DIR)
+            
+        final_output.to_csv(backup_path, index=False)
+        print(f"✅ 成功生成备份文件: {backup_path}")
+
         print(f"   共包含 {len(final_output)} 行数据。")
+
         # 打印前几行预览
         print("\n数据预览:")
         print(final_output.head(10).to_string(index=False))
+
     except Exception as e:
         print(f"保存文件失败: {e}")
 
@@ -446,22 +468,25 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
 def get_latest_two_files(directory, pattern='Options_*.csv'):
     """
     在指定目录下查找符合 pattern 的文件，
-    按修改时间倒序排列，返回 (最新文件, 次新文件)
+    按文件名（日期）倒序排列，返回 (最新文件, 次新文件)
     """
     # 拼接搜索路径
     search_path = os.path.join(directory, pattern)
     # 获取所有匹配的文件列表
     files = glob.glob(search_path)
     
-    # 按最后修改时间排序 (reverse=True 表示最新的在前面)
-    # os.path.getmtime 获取文件的时间戳
-    files.sort(key=os.path.getmtime, reverse=True)
+    # ---------------------------------------------------------
+    # [修改点] 改为按文件名排序，不再依赖文件的修改时间
+    # ---------------------------------------------------------
+    # 直接 sort() 默认就是按字符串顺序（A-Z）。
+    # reverse=True 会让大的数字（最新的日期）排在前面。
+    files.sort(reverse=True)
     
     if len(files) < 2:
         return None, None
     
-    # files[0] 是最新的 (New)
-    # files[1] 是次新的 (Old)
+    # files[0] 现在是文件名日期最大的（最新的）
+    # files[1] 是次新的
     return files[0], files[1]
 
 def show_alert(message):
