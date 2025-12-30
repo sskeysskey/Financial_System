@@ -434,35 +434,39 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_con
     """
     cursor.execute(create_table_sql)
     
-    insert_sql = f"INSERT INTO {TABLE_NAME} (date, name, call, put, price) VALUES (?, ?, ?, ?, ?)"
-    
+    # 修改 SQL 语句，支持“冲突时更新 (Upsert)”
+    # 语法含义：尝试插入，如果 (date, name) 冲突，则更新 call, put, price 字段
+    insert_sql = f"""
+    INSERT INTO {TABLE_NAME} (date, name, call, put, price) 
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(date, name) 
+    DO UPDATE SET 
+        call=excluded.call,
+        put=excluded.put,
+        price=excluded.price
+    """
+
     count_success = 0
-    count_skip = 0
-    
+
     for symbol, values in processed_data.items():
         raw_call_d = values['Call']
         raw_put_d = values['Put']
-        
-        # 检查重复
-        cursor.execute(f"SELECT 1 FROM {TABLE_NAME} WHERE date=? AND name=?", (target_date, symbol))
-        if cursor.fetchone():
-            count_skip += 1
-            continue
-            
+
         call_str = f"{raw_call_d * 100:.2f}%"
         put_str = f"{raw_put_d * 100:.2f}%"
         final_price = round((raw_call_d + raw_put_d) * 100, 2)
-        
+
         try:
+            # 执行 Upsert
             cursor.execute(insert_sql, (target_date, symbol, call_str, put_str, final_price))
             count_success += 1
         except Exception as e:
-            print(f"错误: 写入 {symbol} 失败: {e}")
-            
+            print(f"错误: 写入/更新 {symbol} 失败: {e}")
+
     conn.commit()
     conn.close()
     
-    print(f"入库完成！成功: {count_success}, 跳过: {count_skip}")
+    print(f"入库完成！已处理（插入或更新）: {count_success} 条数据")
 
 # ==========================================
 # 工具函数 & Main
@@ -472,7 +476,17 @@ def get_latest_two_files(directory, pattern='Options_*.csv'):
     """自动获取最新的两个文件"""
     search_path = os.path.join(directory, pattern)
     files = glob.glob(search_path)
+    
+    # [新增] 过滤掉文件名中包含 'Change' 的备份文件，防止读入上次的运行结果
+    files = [f for f in files if 'Change' not in os.path.basename(f)]
+    
     files.sort(reverse=True)
+    
+    # 调试打印，方便确认读到了哪两个文件
+    if len(files) >= 2:
+        print(f"DEBUG: 自动选中最新文件 (New): {os.path.basename(files[0])}")
+        print(f"DEBUG: 自动选中次新文件 (Old): {os.path.basename(files[1])}")
+        
     if len(files) < 2: return None, None
     return files[0], files[1]
 
