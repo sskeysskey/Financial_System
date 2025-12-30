@@ -8,11 +8,12 @@ import subprocess
 from decimal import Decimal
 from datetime import datetime, date
 
-from PyQt5.QtCore import Qt, QEvent
-from PyQt5.QtWidgets import (QApplication, QInputDialog, QMessageBox, QMainWindow, QWidget,
+# --- 修改: 切换到 PyQt6 ---
+from PyQt6.QtCore import Qt, QEvent
+from PyQt6.QtWidgets import (QApplication, QInputDialog, QMessageBox, QMainWindow, QWidget,
                              QVBoxLayout, QHBoxLayout, QPushButton, QGroupBox,
-                              QScrollArea, QLabel, QMenu, QAction)
-from PyQt5.QtGui import QCursor
+                             QScrollArea, QLabel, QMenu, QLineEdit)
+from PyQt6.QtGui import QCursor, QAction
 
 # --- 检查并添加必要的路径 ---
 chart_input_path = '/Users/yanzhang/Coding/Financial_System/Query'
@@ -31,14 +32,12 @@ WEIGHT_CONFIG_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/tags_weigh
 COMPARE_DATA_PATH = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
 DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
 SECTORS_ALL_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
-# --- 新增：分组面板配置文件路径 ---
 PANEL_CONFIG_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
 
 # --- 默认权重 ---
 DEFAULT_WEIGHT = Decimal('1')
 
-# --- 核心逻辑函数 (来自 a.py) ---
-
+# --- 核心逻辑函数 ---
 def fetch_mnspp_data_from_db(db_path, symbol):
     with sqlite3.connect(db_path, timeout=60.0) as conn:
         cur = conn.cursor()
@@ -89,20 +88,17 @@ def find_symbols_by_tags(target_tags_with_weight, data):
     """根据目标 tags 查找所有相关的 symbols"""
     related_symbols = {'stocks': [], 'etfs': []}
     target_tags_dict = {tag.lower(): weight for tag, weight in target_tags_with_weight}
-
     for category in ['stocks', 'etfs']:
         for item in data.get(category, []):
             tags = item.get('tag', [])
             matched_tags = []
             used_tags = set()
-
             # 完全匹配
             for tag in tags:
                 tag_lower = tag.lower()
                 if tag_lower in target_tags_dict and tag_lower not in used_tags:
                     matched_tags.append((tag, target_tags_dict[tag_lower]))
                     used_tags.add(tag_lower)
-
             # 部分匹配
             for tag in tags:
                 tag_lower = tag.lower()
@@ -154,14 +150,17 @@ def load_json_data(file_path):
         return {}
 
 def get_stock_symbol(default_symbol=""):
-    """使用 PyQt 对话框获取股票代码"""
+    """使用 PyQt6 对话框获取股票代码"""
     app = QApplication.instance() or QApplication(sys.argv)
     input_dialog = QInputDialog()
     input_dialog.setWindowTitle("输入股票代码")
     input_dialog.setLabelText("请输入股票代码:")
     input_dialog.setTextValue(default_symbol)
-    input_dialog.setWindowFlags(input_dialog.windowFlags() | Qt.WindowStaysOnTopHint)
-    if input_dialog.exec_() == QInputDialog.Accepted:
+    # PyQt6: 使用 WindowType
+    input_dialog.setWindowFlags(input_dialog.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
+    
+    # PyQt6: exec_() -> exec()
+    if input_dialog.exec() == QInputDialog.DialogCode.Accepted:
         return input_dialog.textValue().strip().upper()
     return None
 
@@ -214,7 +213,7 @@ def execute_external_script(script_type, keyword):
     except Exception as e:
         print(f"执行脚本 '{script_path}' 时发生错误: {e}")
 
-# --- 新增：一个可整行点击的容器 ---
+# --- PyQt6: 更新 RowWidget ---
 class RowWidget(QWidget):
     def __init__(self, symbol: str, click_callback, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -222,21 +221,20 @@ class RowWidget(QWidget):
         self.click_callback = click_callback
 
     def eventFilter(self, watched, event):
-        # 仅捕获子控件上的左键释放事件
-        if event.type() == QEvent.MouseButtonRelease and event.button() == Qt.LeftButton:
+        # PyQt6: 使用 QEvent.Type 和 Qt.MouseButton
+        if event.type() == QEvent.Type.MouseButtonRelease and event.button() == Qt.MouseButton.LeftButton:
             self.click_callback(self.symbol)
         return False  # 不拦截，让被点击的控件自己也能处理（如文本选中）
 
 class SymbolButton(QPushButton):
     def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             mods = event.modifiers()
-            # Option(⌥) + 左键 → 找相似
-            if mods & Qt.AltModifier:
+            # PyQt6: 使用 Qt.KeyboardModifier
+            if mods & Qt.KeyboardModifier.AltModifier:
                 execute_external_script('similar', self.text())
                 return
-            # Shift + 左键 → 在富途中搜索
-            elif mods & Qt.ShiftModifier:
+            elif mods & Qt.KeyboardModifier.ShiftModifier:
                 execute_external_script('futu', self.text())
                 return
         # 其他情况走原有行为（例如普通左键点击会触发 on_symbol_button_clicked）
@@ -248,7 +246,6 @@ class SimilarityViewerWindow(QMainWindow):
         self.source_symbol = source_symbol
         self.source_tags = source_tags
         self.related_symbols = related_symbols
-
         self.panel_config      = all_data.get('panel_config', {})
         self.panel_config_path = all_data.get('panel_config_path')
         
@@ -259,7 +256,6 @@ class SimilarityViewerWindow(QMainWindow):
         self.sector_data  = all_data['sectors']
         # 从 all_data 拿到 tags_weight_config
         self.tags_weight_config = all_data['tags_weight']
-
         self.init_ui()
 
     def init_ui(self):
@@ -293,7 +289,6 @@ class SimilarityViewerWindow(QMainWindow):
         source_group = QGroupBox("-")
         source_layout = QVBoxLayout()
         source_group.setLayout(source_layout)
-        
         source_widget = self.create_source_symbol_widget()
         source_layout.addWidget(source_widget)
         layout.addWidget(source_group)
@@ -316,8 +311,8 @@ class SimilarityViewerWindow(QMainWindow):
             group_box = QGroupBox(category_title)
             group_layout = QVBoxLayout()
             group_box.setLayout(group_layout)
-            group_layout.setAlignment(Qt.AlignTop) # 内容顶部对齐
-
+            group_layout.setAlignment(Qt.AlignmentFlag.AlignTop) # PyQt6 Enum
+            
             for sym, matched_tags, all_tags in symbols_list:
                 # 排除源 symbol 自身
                 if sym == self.source_symbol:
@@ -380,7 +375,7 @@ class SimilarityViewerWindow(QMainWindow):
         # 4) 清空旧内容并重绘
         self.clear_content()
         self.populate_ui(self.main_layout)
-    
+
     def copy_symbol_to_group(self, symbol: str, group: str):
         """
         将 symbol “复制” 到 panel_config[group]，避免重复，
@@ -413,22 +408,8 @@ class SimilarityViewerWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "保存失败", f"写入 {self.panel_config_path} 时出错: {e}")
 
-    # ### 修改 START: 新增的、用于复杂颜色逻辑的数据获取函数 ###
-    def get_color_decision_data(self, symbol: str) -> tuple[float | None, str | None, date | None]:
-        """
-        获取决定按钮颜色所需的所有数据。
-        1. 从 Earning 表获取最近两次财报日期和最新的 price。
-        2. 从 sector 表获取这两天的收盘价。
-        3. 比较收盘价得出趋势。
-        4. 如果最新一期财报的日期不是在当前系统日期往前推一个半月之内的话，则该symbol显示为白色
-        5. 如果某个symbol只有一个财报日期，那么即使他的财报日期是在1个半月之内的，也仍然显示为白色
-
-        返回: (latest_earning_price, stock_price_trend, latest_earning_date)
-              - stock_price_trend: 'rising', 'falling', 'single', 或 None
-                'single' 表示只有一条财报记录，此时仅根据 earning price 正负着色。
-        """
+    def get_color_decision_data(self, symbol: str):
         try:
-            # 步骤 1: 获取最近两次财报信息
             with sqlite3.connect(DB_PATH, timeout=60.0) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
@@ -482,11 +463,11 @@ class SimilarityViewerWindow(QMainWindow):
                     (symbol, previous_earning_date.isoformat())
                 )
                 previous_stock_price_row = cursor.fetchone()
-
+                
             if not latest_stock_price_row or not previous_stock_price_row:
                 # 缺少任一天的股价数据
                 return latest_earning_price, None, latest_earning_date
-
+            
             latest_stock_price = float(latest_stock_price_row[0])
             previous_stock_price = float(previous_stock_price_row[0])
             
@@ -516,10 +497,8 @@ class SimilarityViewerWindow(QMainWindow):
         compare_value = self.compare_data.get(self.source_symbol, "")
         compare_label = QLabel(compare_value)
         compare_label.setFixedWidth(150)
-        compare_label.setAlignment(Qt.AlignCenter)
-        compare_label.setTextFormat(Qt.RichText)  # 允许 HTML
-
-        raw_text = compare_value or ""
+        compare_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        compare_label.setTextFormat(Qt.TextFormat.RichText)
 
         # 将“前/后/未”以及其紧邻的最多两位数字整体着橙
         # 例：09前、12后、3未、前、后、未
@@ -528,88 +507,39 @@ class SimilarityViewerWindow(QMainWindow):
                           lambda m: f"<span style='color:#CD853F;'>{m.group(1)}{m.group(2)}</span>",
                           s)
 
-        # 找到第一个百分数，仅给百分数着色
-        m = re.search(r'(-?\d+(?:\.\d+)?)\s*%', raw_text)
+        m = re.search(r'(-?\d+(?:\.\d+)?)\s*%', compare_value)
         if m:
-            try:
-                val = float(m.group(1))
-                if val > 0:
-                    val_color = "#FF5555"   # 正红
-                elif val < 0:
-                    val_color = "#2ECC71"   # 负绿
-                else:
-                    val_color = "#CD853F"   # 零橙
-
-                start, end = m.span()
-                number_text = raw_text[start:end]
-                colored_number = f"<span style='color:{val_color};'>{number_text}</span>"
-
-                left = raw_text[:start]
-                right = raw_text[end:]
-
-                left_html = orange_keywords_with_digits(left)
-                right_html = orange_keywords_with_digits(right)
-
-                compare_label.setText(left_html + colored_number + right_html)
-            except ValueError:
-                safe_html = orange_keywords_with_digits(raw_text)
-                compare_label.setText(safe_html)
+            val = float(m.group(1))
+            val_color = "#FF5555" if val > 0 else "#2ECC71" if val < 0 else "#CD853F"
+            start, end = m.span()
+            compare_label.setText(orange_keywords_with_digits(compare_value[:start]) + 
+                                  f"<span style='color:{val_color};'>{compare_value[start:end]}</span>" + 
+                                  orange_keywords_with_digits(compare_value[end:]))
         else:
-            # 没有百分数，仅对“前/后/未”及其前导数字着橙
-            safe_html = orange_keywords_with_digits(raw_text)
-            compare_label.setText(safe_html)
+            compare_label.setText(orange_keywords_with_digits(compare_value))
 
         # 3. 标签及权重（已在之前修改过：24px，只有非零分显示一位小数）
         highlight_color = "#F9A825"
-        html_tags_parts = []
-        for tag, weight in self.source_tags:
-            w = float(weight)
-            if w > 0:
-                html_tags_parts.append(
-                    f"{tag} <font color='{highlight_color}'>{w:.1f}</font>"
-                )
-            else:
-                html_tags_parts.append(tag)
-        html_tags_str = ", ".join(html_tags_parts)
+        html_tags_str = ", ".join([f"{tag} <font color='{highlight_color}'>{float(weight):.1f}</font>" if float(weight) > 0 else tag for tag, weight in self.source_tags])
         tags_label = QLabel(f"<div style='font-size:24px;'>{html_tags_str}</div>")
         tags_label.setWordWrap(True)
-        tags_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
-
-        # 4. 搜索框（不要让它触发 on_symbol_click）
-        from PyQt5.QtWidgets import QLineEdit
+        tags_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        
         search_input = QLineEdit()
         search_input.setFixedWidth(200)
         search_input.setFixedHeight(32)
-        font = search_input.font()
-        font.setPointSize(14)
-        search_input.setFont(font)
-        search_input.setStyleSheet("""
-            QLineEdit {
-                padding: 4px 8px;
-                border: 1px solid #555;
-                border-radius: 4px;
-                background-color: #3A3A3A;
-                color: #E0E0E0;
-            }
-            QLineEdit:focus {
-                border: 1px solid #00AEEF;
-            }
-        """)
+        font = search_input.font(); font.setPointSize(14); search_input.setFont(font)
+        search_input.setStyleSheet("QLineEdit { padding: 4px; border: 1px solid #555; border-radius: 4px; background-color: #3A3A3A; color: #E0E0E0; } QLineEdit:focus { border: 1px solid #00AEEF; }")
         search_input.setPlaceholderText("输入股票代码…")
         search_input.returnPressed.connect(self.on_search)
-        self.search_input = search_input  # 保留原属性
-
-        # 将除 button、search_input 以外的控件都安装 eventFilter
-        for w in (compare_label, tags_label):
-            w.installEventFilter(container)
-
-        # 布局顺序：button、compare、tags、search
-        layout.addWidget(button,        1)
+        self.search_input = search_input
+        
+        for w in (compare_label, tags_label): w.installEventFilter(container)
+        layout.addWidget(button, 1)
         layout.addWidget(compare_label, 1)
-        layout.addWidget(tags_label,    4)
+        layout.addWidget(tags_label, 4)
         layout.addStretch()
         layout.addWidget(search_input)
-
         return container
 
     def create_similar_symbol_widget(self, sym, matched_tags, all_tags):
@@ -631,81 +561,53 @@ class SimilarityViewerWindow(QMainWindow):
         compare_value = self.compare_data.get(sym, '')
         compare_label = QLabel(compare_value)
         compare_label.setFixedWidth(140)
-        compare_label.setAlignment(Qt.AlignCenter)
-        compare_label.setTextFormat(Qt.RichText)
-
-        raw_text = compare_value or ""
-
+        compare_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        compare_label.setTextFormat(Qt.TextFormat.RichText)
+        
+        # 简化版逻辑复制
         def orange_keywords_with_digits(s: str) -> str:
-            return re.sub(r'(\d{0,2})(前|后|未)',
-                          lambda m: f"<span style='color:#CD853F;'>{m.group(1)}{m.group(2)}</span>",
-                          s)
-
-        m = re.search(r'(-?\d+(?:\.\d+)?)\s*%', raw_text)
+            return re.sub(r'(\d{0,2})(前|后|未)', lambda m: f"<span style='color:#CD853F;'>{m.group(1)}{m.group(2)}</span>", s)
+        m = re.search(r'(-?\d+(?:\.\d+)?)\s*%', compare_value)
         if m:
-            try:
-                val = float(m.group(1))
-                if val > 0:
-                    val_color = "#FF5555"
-                elif val < 0:
-                    val_color = "#2ECC71"
-                else:
-                    val_color = "#CD853F"
-
-                start, end = m.span()
-                number_text = raw_text[start:end]
-                colored_number = f"<span style='color:{val_color};'>{number_text}</span>"
-
-                left_html = orange_keywords_with_digits(raw_text[:start])
-                right_html = orange_keywords_with_digits(raw_text[end:])
-                compare_label.setText(left_html + colored_number + right_html)
-            except ValueError:
-                safe_html = orange_keywords_with_digits(raw_text)
-                compare_label.setText(safe_html)
+            val = float(m.group(1))
+            val_color = "#FF5555" if val > 0 else "#2ECC71" if val < 0 else "#CD853F"
+            start, end = m.span()
+            compare_label.setText(orange_keywords_with_digits(compare_value[:start]) + 
+                                  f"<span style='color:{val_color};'>{compare_value[start:end]}</span>" + 
+                                  orange_keywords_with_digits(compare_value[end:]))
         else:
-            safe_html = orange_keywords_with_digits(raw_text)
-            compare_label.setText(safe_html)
+            compare_label.setText(orange_keywords_with_digits(compare_value))
 
         # 3. 总权重（字体小一点，比如 14px）
         total_weight = round(sum(float(w) for _, w in matched_tags), 1)
         weight_label = QLabel(f"{total_weight:.1f}")
         weight_label.setFixedWidth(45)
         weight_label.setObjectName("WeightLabel")
-        weight_label.setAlignment(Qt.AlignCenter)
-        weight_label.setStyleSheet("font-size:14px;")  # <<< 字体调小
+        weight_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        weight_label.setStyleSheet("font-size:14px;")
 
         # 4. 所有 Tags 及其得分（一位小数，分数为0时只显示 tag）
         highlight_color = "#F9A825"
-        html_parts = []
-        for tag in all_tags:
-            w = next((float(w0) for t0, w0 in matched_tags if t0 == tag), 0.0)
-            if w > 0:
-                html_parts.append(f"{tag} <font color='{highlight_color}'>{w:.1f}</font>")
-            else:
-                html_parts.append(tag)
-        html_tags_str = ",   ".join(html_parts)
+        html_tags_str = ",   ".join([f"{tag} <font color='{highlight_color}'>{w:.1f}</font>" if (w:=next((float(w0) for t0, w0 in matched_tags if t0 == tag), 0.0)) > 0 else tag for tag in all_tags])
         tags_label = QLabel(f"<div style='font-size:22px;'>{html_tags_str}</div>")
         tags_label.setObjectName("TagsLabel")
         tags_label.setWordWrap(True)
-        tags_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
-
-        # 把标签等子控件都装进 eventFilter，这样点击它们也能触发整行点击
-        for w in (compare_label, weight_label, tags_label):
-            w.installEventFilter(container)
-
-        # 布局：Symbol、Compare、Weight、Tags
-        layout.addWidget(button,        2)
+        tags_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        
+        for w in (compare_label, weight_label, tags_label): w.installEventFilter(container)
+        
+        layout.addWidget(button, 2)
         layout.addWidget(compare_label, 3)
-        layout.addWidget(weight_label,  1)
-        layout.addWidget(tags_label,    8)
-
+        layout.addWidget(weight_label, 1)
+        layout.addWidget(tags_label, 8)
         return container
 
     # ### 修改 START: 重构 create_symbol_button 以使用新的颜色逻辑 ###
     def create_symbol_button(self, symbol):
         """创建并配置一个标准的 Symbol 按钮，Tooltip 改为最新财报日期，颜色根据复杂逻辑决定"""
         button = SymbolButton(symbol)
-        button.setCursor(QCursor(Qt.PointingHandCursor))
+        # PyQt6: CursorShape
+        button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         button.setFixedWidth(90)
         button.setObjectName("SymbolButton")
 
@@ -714,52 +616,28 @@ class SimilarityViewerWindow(QMainWindow):
         
         # --- 核心修改：调用新函数并根据结果设置颜色 ---
         earning_price, price_trend, latest_date = self.get_color_decision_data(symbol)
-
-        # 1. 设置 Tooltip
-        if latest_date:
-            tooltip_text = f"最新财报日期: {latest_date.isoformat()}"
-        else:
-            tooltip_text = "最新财报日期: 未知"
-        # 仍然用 HTML 格式美化一下
-        button.setToolTip(
-            f"<div style='font-size:16px; background-color:#FFFFE0; "
-            f"color:black; padding:5px;'>{tooltip_text}</div>"
-        )
+        tooltip_text = f"最新财报日期: {latest_date.isoformat()}" if latest_date else "最新财报日期: 未知"
+        button.setToolTip(f"<div style='font-size:16px; background-color:#FFFFE0; color:black; padding:5px;'>{tooltip_text}</div>")
         
-        # 右键菜单事件
-        button.setContextMenuPolicy(Qt.CustomContextMenu)
+        # PyQt6: ContextMenuPolicy
+        button.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         button.customContextMenuRequested.connect(lambda pos, s=symbol: self.show_context_menu(s))
-
-        # 颜色逻辑部分无需修改，因为 get_color_decision_data 的返回值会处理好
-        color = 'white' # 默认颜色
+        
+        color = 'white'
         if earning_price is not None and price_trend is not None:
             if price_trend == 'single':
-                # 新增：只有一条财报记录，按 earning price 正负着色
-                if earning_price > 0:
-                    color = 'red'
-                elif earning_price < 0:
-                    color = 'green'
-                else:
-                    color = 'white'
+                color = 'red' if earning_price > 0 else 'green' if earning_price < 0 else 'white'
             else:
                 # 原有：基于两次收盘价比较的趋势和 earning price 正负的组合
                 is_price_positive = earning_price > 0
                 is_trend_rising = price_trend == 'rising'
-
-                if is_trend_rising and is_price_positive:
-                    color = 'red'         # 红色
-                elif not is_trend_rising and is_price_positive:
-                    color = '#008B8B'       # 蓝绿色
-                elif is_trend_rising and not is_price_positive:
-                    color = '#912F2F'     # 紫色
-                elif not is_trend_rising and not is_price_positive:
-                    color = 'green'       # 绿色
-
-        base_ss = button.styleSheet() or ""
-        button.setStyleSheet(base_ss + f"; color: {color};")
-
+                if is_trend_rising and is_price_positive: color = 'red'
+                elif not is_trend_rising and is_price_positive: color = '#008B8B'
+                elif is_trend_rising and not is_price_positive: color = '#912F2F'
+                elif not is_trend_rising and not is_price_positive: color = 'green'
+        
+        button.setStyleSheet((button.styleSheet() or "") + f"; color: {color};")
         return button
-    # ### 修改 END ###
 
     def on_symbol_click(self, symbol):
         """处理 Symbol 按钮的左键点击事件"""
@@ -829,6 +707,7 @@ class SimilarityViewerWindow(QMainWindow):
             None,
             ("加入黑名单",   lambda: execute_external_script('blacklist', symbol)),
         ]
+        
         for item in actions:
             if item is None:
                 menu.addSeparator()
@@ -837,14 +716,12 @@ class SimilarityViewerWindow(QMainWindow):
                 action = QAction(text, self)
                 action.triggered.connect(callback)
                 menu.addAction(action)
+        # PyQt6: exec()
+        menu.exec(QCursor.pos())
 
-        menu.exec_(QCursor.pos())
-        
-    # ### 修改 1: 增加键盘事件处理，实现ESC键关闭功能 ###
     def keyPressEvent(self, event):
-        """重写键盘事件：Esc 关窗，/ 快速聚焦搜索框"""
-        # Esc 关闭
-        if event.key() == Qt.Key_Escape:
+        # PyQt6: Qt.Key.Key_Escape
+        if event.key() == Qt.Key.Key_Escape:
             print("ESC被按下，正在关闭窗口...")
             self.close()
             return
@@ -860,16 +737,6 @@ class SimilarityViewerWindow(QMainWindow):
 
         # 其他按键交给父类处理
         super().keyPressEvent(event)
-
-    def get_tags_for_symbol(self, symbol):
-        """辅助函数，为 Tooltip 获取 tags"""
-        for item in self.json_data.get("stocks", []):
-            if item.get("symbol") == symbol:
-                return item.get("tag", ["无标签"])
-        for item in self.json_data.get("etfs", []):
-            if item.get("symbol") == symbol:
-                return item.get("tag", ["无标签"])
-        return ["未找到"]
 
     def get_stylesheet(self):
         """返回整个应用的 QSS 样式表"""
@@ -1005,7 +872,6 @@ if __name__ == '__main__':
     # --- 步骤 3: 执行核心分析逻辑 (来自 a.py 的 main 函数) ---
     print(f"正在为 '{symbol}' 分析相似度...")
     target_tags = find_tags_by_symbol(symbol, description_data, tags_weight_config)
-
     if not target_tags:
         QMessageBox.information(None, "未找到", f"在数据库中找不到符号 '{symbol}' 的标签。")
         sys.exit()
@@ -1022,4 +888,5 @@ if __name__ == '__main__':
     )
     main_window.show()
     
-    sys.exit(app.exec_())
+    # PyQt6: exec()
+    sys.exit(app.exec())
