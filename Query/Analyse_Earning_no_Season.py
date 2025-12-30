@@ -1104,7 +1104,7 @@ def run_processing_logic(log_detail):
         preliminary_results = []       # 普通股 (PE 分组)
         oversell_w_candidates = []     # 仅限条件 6 (OverSell_W)
         pe_deep_candidates = []  # 条件 1-5 触发深跌
-        double_candidates = []         # 条件 1-5 触发 W 底 (PE_W)
+        pe_w_candidates = []         # 条件 1-5 触发 W 底 (PE_W)
 
         for symbol in symbols_to_check:
             data = stock_data_cache.get(symbol)
@@ -1135,7 +1135,7 @@ def run_processing_logic(log_detail):
                         log_detail(f" - [通用过滤] 失败 (日期重合): 最新交易日({data['latest_date_str']}) 与 最新财报日相同。")
                     continue # 直接跳过，不放入任何列表
                 # --- 分流逻辑 ---
-                # 如果通过了条件6（W底），将其放入 oversell_candidates，优先于其他逻辑
+                # 如果通过了条件6（W底），将其放入 oversell_w_candidates，优先于其他逻辑
                 if passed_cond6:
                     # 优先级 1：条件 6 进 OverSell_W
                     oversell_w_candidates.append(symbol)
@@ -1143,7 +1143,7 @@ def run_processing_logic(log_detail):
                     # 优先级 2：条件 1-5 进来的，检查是否符合 W 底形态
                     is_w_bottom = check_w_bottom_pattern(data, CONFIG, log_detail, SYMBOL_TO_TRACE, check_strict_er_drop=False)
                     if is_w_bottom:
-                        double_candidates.append(symbol)
+                        pe_w_candidates.append(symbol)
                     else:
                         # 优先级 3：条件 1-5 且不符合 W 底，检查是否深跌
                         # ========== 修改开始：基准价改为财报窗口期(4天)最高价 ==========
@@ -1181,7 +1181,7 @@ def run_processing_logic(log_detail):
             filter_tags(pe_invalid), 
             filter_tags(oversell_w_candidates), 
             filter_tags(pe_deep_candidates), 
-            filter_tags(double_candidates)
+            filter_tags(pe_w_candidates)
         )
 
     # --- 执行筛选 ---
@@ -1209,7 +1209,7 @@ def run_processing_logic(log_detail):
     final_pe_invalid_symbols = res_super[1] + res_sub[1] + res_relaxed[1] + res_strict[1]
     total_oversell_w_symbols = res_super[2] + res_sub[2] + res_relaxed[2] + res_strict[2]
     total_pe_deep_symbols = res_super[3] + res_sub[3] + res_relaxed[3] + res_strict[3]
-    total_double_symbols = res_super[4] + res_sub[4] + res_relaxed[4] + res_strict[4]
+    total_pe_w_symbols = res_super[4] + res_sub[4] + res_relaxed[4] + res_strict[4]
 
     # 第二轮筛选 (仅针对 PE_valid 补缺)
     min_size_pe_valid = CONFIG["MIN_PE_VALID_SIZE_FOR_RELAXED_FILTER"]
@@ -1217,24 +1217,25 @@ def run_processing_logic(log_detail):
     # 第二轮筛选 (仅针对PE_valid数量不足的情况，且只影响 PE_valid)
     if len(final_pe_valid_symbols) < min_size_pe_valid:
         # ========== 修改点 7：接收变量改名 ==========
-        rerun_valid, _, _, rerun_pe_deep, rerun_double = perform_filter_pass(strict_symbols, CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "第二轮(常规宽松补缺)")
+        rerun_valid, _, _, rerun_pe_deep, rerun_pe_w = perform_filter_pass(strict_symbols, CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "第二轮(常规宽松补缺)")
         
         final_pe_valid_symbols = sorted(list(set(final_pe_valid_symbols) | set(rerun_valid)))
         
         # ========== 修改点 8：合并变量改名 ==========
         total_pe_deep_symbols = sorted(list(set(total_pe_deep_symbols) | set(rerun_pe_deep)))
         
-        total_double_symbols = sorted(list(set(total_double_symbols) | set(rerun_double)))
+        total_pe_w_symbols = sorted(list(set(total_pe_w_symbols) | set(rerun_pe_w)))
 
+    final_oversell_w_to_write = sorted(list(set(total_oversell_w_symbols)))
+    
     # 将所有符合资格的 symbol 用于写历史记录
-    all_qualified_symbols = final_pe_valid_symbols + final_pe_invalid_symbols + total_pe_deep_symbols + total_double_symbols + total_oversell_w_symbols
+    all_qualified_symbols = final_pe_valid_symbols + final_pe_invalid_symbols + total_pe_deep_symbols + total_pe_w_symbols + total_oversell_w_symbols
 
     pe_valid_set = set(final_pe_valid_symbols)
     pe_invalid_set = set(final_pe_invalid_symbols)
-    
     pe_deep_set = set(total_pe_deep_symbols)
-    
-    double_set = set(total_double_symbols)
+    pe_w_set = set(total_pe_w_symbols)
+    oversell_w_set = set(final_oversell_w_to_write)
 
     blacklist = load_blacklist(BLACKLIST_JSON_FILE)
     try:
@@ -1253,19 +1254,19 @@ def run_processing_logic(log_detail):
     final_pe_invalid_to_write = sorted(list(pe_invalid_set - blacklist - already_in_panels))
 
     # 2. PE_Deep 和 PE_W：黑名单 和 already_in_panels 都不再过滤
-    # ========== 修改点 11：待写入列表变量改名 ==========
     final_pe_deep_to_write = sorted(list(pe_deep_set))
-    
-    final_double_to_write = sorted(list(double_set))
+    final_pe_w_to_write = sorted(list(pe_w_set))
+    final_oversell_w_to_write = sorted(list(oversell_w_set))
 
-    # final_oversell_to_write = sorted(list(oversell_set - blacklist - already_in_panels))
-    # final_double_to_write = sorted(list(double_set - blacklist - already_in_panels))
+    # final_pe_deep_to_write = sorted(list(pe_deep_set - blacklist - already_in_panels))
+    # final_pe_w_to_write = sorted(list(pe_w_set - blacklist - already_in_panels))
+    # final_oversell_w_to_write = sorted(list(oversell_w_set - blacklist - already_in_panels))
 
     if SYMBOL_TO_TRACE:
         # 追踪日志逻辑更新，包含 OverSell_W
         combined_sets = [
             (pe_valid_set, "PE_valid"), (pe_invalid_set, "PE_invalid"),
-            (pe_deep_set, "PE_Deep"), (double_set, "PE_W") 
+            (pe_deep_set, "PE_Deep"), (pe_w_set, "PE_W"), (oversell_w_set, "OverSell_W") 
         ]
         for s_set, name in combined_sets:
             skipped = s_set & (blacklist | already_in_panels)
@@ -1290,12 +1291,9 @@ def run_processing_logic(log_detail):
 
     pe_valid_notes = build_symbol_note_map(final_pe_valid_to_write)
     pe_invalid_notes = build_symbol_note_map(final_pe_invalid_to_write)
-    oversell_w_notes = build_symbol_note_map(total_oversell_w_symbols)
-    
-    # ========== 修改点 13：Notes变量改名 ==========
-    pe_deep_notes = build_symbol_note_map(total_pe_deep_symbols)
-    
-    double_notes = build_symbol_note_map(final_double_to_write)
+    oversell_w_notes = build_symbol_note_map(final_oversell_w_to_write)
+    pe_deep_notes = build_symbol_note_map(final_pe_deep_to_write)
+    pe_w_notes = build_symbol_note_map(final_pe_w_to_write)
 
     # 写入 PE_valid
     update_json_panel(final_pe_valid_to_write, PANEL_JSON_FILE, 'PE_valid', symbol_to_note=pe_valid_notes)
@@ -1308,17 +1306,17 @@ def run_processing_logic(log_detail):
     update_json_panel(final_pe_invalid_to_write, PANEL_JSON_FILE, 'PE_invalid_backup', symbol_to_note=pe_invalid_notes)
     
     # 1. 写入 OverSell_W (仅条件 6)
-    update_json_panel(total_oversell_w_symbols, PANEL_JSON_FILE, 'OverSell_W', symbol_to_note=oversell_w_notes)
-    update_json_panel(total_oversell_w_symbols, PANEL_JSON_FILE, 'OverSell_W_backup', symbol_to_note=oversell_w_notes)
+    update_json_panel(final_oversell_w_to_write, PANEL_JSON_FILE, 'OverSell_W', symbol_to_note=oversell_w_notes)
+    update_json_panel(final_oversell_w_to_write, PANEL_JSON_FILE, 'OverSell_W_backup', symbol_to_note=oversell_w_notes)
 
     # 2. 写入 PE_Deep (条件 1-5 的深跌)
-    update_json_panel(total_pe_deep_symbols, PANEL_JSON_FILE, 'PE_Deep', symbol_to_note=pe_deep_notes)
-    update_json_panel(total_pe_deep_symbols, PANEL_JSON_FILE, 'PE_Deep_backup', symbol_to_note=pe_deep_notes)
+    update_json_panel(final_pe_deep_to_write, PANEL_JSON_FILE, 'PE_Deep', symbol_to_note=pe_deep_notes)
+    update_json_panel(final_pe_deep_to_write, PANEL_JSON_FILE, 'PE_Deep_backup', symbol_to_note=pe_deep_notes)
 
 
     # 写入 PE_W (条件1-5且形态良好)
-    update_json_panel(final_double_to_write, PANEL_JSON_FILE, 'PE_W', symbol_to_note=double_notes)
-    update_json_panel(final_double_to_write, PANEL_JSON_FILE, 'PE_W_backup', symbol_to_note=double_notes)
+    update_json_panel(final_pe_w_to_write, PANEL_JSON_FILE, 'PE_W', symbol_to_note=pe_w_notes)
+    update_json_panel(final_pe_w_to_write, PANEL_JSON_FILE, 'PE_W_backup', symbol_to_note=pe_w_notes)
 
     os.makedirs(os.path.dirname(BACKUP_FILE), exist_ok=True)
     try:

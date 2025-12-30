@@ -42,7 +42,7 @@ INCLUDE_NEW_ROWS = True
 WEIGHT_POWER = 1
 
 # b.py 调试 Symbol
-DEBUG_SYMBOL = "WELL"
+DEBUG_SYMBOL = ""
 
 # --- 模式切换配置 ---
 # True:  手动模式 (使用下方指定的两个具体文件)
