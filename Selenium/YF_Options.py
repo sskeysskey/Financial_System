@@ -5,7 +5,7 @@ import os
 import pyautogui
 import random
 import json
-import threading
+# import threading
 import sys
 import tkinter as tk
 from tkinter import messagebox
@@ -27,7 +27,7 @@ DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
 # 输出文件保存目录
 OUTPUT_DIR = '/Users/yanzhang/Coding/News/backup/'
 
-# 市值阈值 (10000亿) - 仅在数据库模式下生效
+# 市值阈值 (1000亿) - 仅在数据库模式下生效
 MARKET_CAP_THRESHOLD = 100000000000
 
 # --- 新增配置 ---
@@ -36,8 +36,7 @@ SECTORS_JSON_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_pan
 # 自定义 Symbol 列表
 CUSTOM_SYMBOLS_DATA = [
     "^VIX", "NVDA", "AAPL", "GOOGL", "MSFT", "META",
-    "TSM", "WMT", "HYG", "QQQ", "SPY", "SLV",
-    "SONY"
+    "TSM", "WMT", "HYG", "QQQ", "SPY", "SLV"
 ]
 
 # --- 3. 文件名生成 ---
@@ -73,7 +72,7 @@ def get_target_symbols(db_path, threshold, silent=False):
     if not silent:
         tqdm.write(f"正在连接数据库: {db_path}...")
     try:
-        conn = sqlite3.connect(db_path)
+        conn = sqlite3.connect(db_path, timeout=60.0)
         cursor = conn.cursor()
         
         # 增加 ORDER BY marketcap DESC
@@ -251,12 +250,13 @@ def scrape_options():
 
     # 3. 初始化 Selenium
     options = webdriver.ChromeOptions()
+    options.binary_location = "/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta"
     
     # --- Headless模式相关设置 ---
     options.add_argument('--headless=new') # 推荐使用新的 headless 模式
     options.add_argument('--window-size=1920,1080')
     # --- 伪装设置 ---
-    user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
     options.add_argument(f'user-agent={user_agent}')
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
@@ -270,7 +270,7 @@ def scrape_options():
     options.add_argument("--blink-settings=imagesEnabled=false")  # 禁用图片加载
     options.page_load_strategy = 'eager'  # 使用eager策略，DOM准备好就开始
 
-    driver_path = '/Users/yanzhang/Downloads/backup/chromedriver' 
+    driver_path = '/Users/yanzhang/Downloads/backup/chromedriver_beta' 
 
     # 检查路径是否存在，避免报错
     if not os.path.exists(driver_path):

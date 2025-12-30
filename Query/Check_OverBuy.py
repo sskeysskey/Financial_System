@@ -16,9 +16,13 @@ COMPARE_FILE = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
 DB_FILE = '/Users/yanzhang/Coding/Database/Finance.db'
 OUTPUT_FILE = '/Users/yanzhang/Coding/News/OverBuy.txt'
 PANEL_FILE = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
+EARNING_HISTORY_FILE = '/Users/yanzhang/Coding/Financial_System/Modules/Earning_History.json'
 DEBUG_LOG_FILE = '/Users/yanzhang/Downloads/OverBuy_debug.log'
 
 LOG_ENABLED = False  # True 或 False
+
+# 【配置项】涨幅过滤阈值 (百分比)
+MIN_PRICE_CHANGE_THRESHOLD = 27  # 这里可以随意修改，例如改为 20 或 50
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +96,46 @@ with open(COMPARE_FILE, 'r') as f:
 with open(PANEL_FILE, 'r') as f:
     panel_data = json.load(f)
     logger.info('Loaded PANEL_FILE')
+
+def update_earning_history_json_b(file_path, group_name, symbols_to_add):
+    """
+    同步 a.py 的逻辑：更新 Earning_History.json 文件。
+    """
+    if not symbols_to_add:
+        return
+
+    # 获取昨天日期 (同步 a.py 逻辑)
+    yesterday_str = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+    
+    logger.info(f"--- 更新历史记录文件: {os.path.basename(file_path)} -> '{group_name}' ---")
+    
+    try:
+        if os.path.exists(file_path):
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        else:
+            data = {}
+    except (FileNotFoundError, json.JSONDecodeError):
+        logger.warning("信息: 历史记录文件不存在或格式错误，将创建新的。")
+        data = {}
+
+    # 确保顶层分组存在
+    if group_name not in data:
+        data[group_name] = {}
+
+    # 获取该日期已有的 symbols
+    existing_symbols = data[group_name].get(yesterday_str, [])
+    
+    # 合并、去重、排序
+    combined_symbols = sorted(list(set(existing_symbols) | set(symbols_to_add)))
+    data[group_name][yesterday_str] = combined_symbols
+    
+    try:
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+        logger.info(f"成功更新历史记录 '{group_name}'。日期: {yesterday_str}, 总计 {len(combined_symbols)} 个。")
+    except Exception as e:
+        logger.error(f"错误: 写入历史记录文件失败: {e}")
 
 
 def pad_display(s: str, width: int, align: str = 'left') -> str:
@@ -315,19 +359,19 @@ def parse_compare_percent(compare_str: str, symbol: str):
         return None
 
 # -----------------------------------------------------------------------------
-# 【修改点 4】 准备 Short 和 Short_Shift 分组容器
+# 【修改点 4】 准备 Short 和 Short_W 分组容器
 # -----------------------------------------------------------------------------
 # 1. Short 分组 (强制清空，实现“先清除再写入”)
 panel_data['Short'] = {}
 short_group = panel_data['Short']
 
-# 2. Short_Shift 分组 (强制清空，实现“先清除再写入”)
-panel_data['Short_Shift'] = {}
-short_shift_group = panel_data['Short_Shift']
+# 2. Short_W 分组 (强制清空，实现“先清除再写入”)
+panel_data['Short_W'] = {}
+short_w_group = panel_data['Short_W']
 
 
 # 连接数据库
-conn = sqlite3.connect(DB_FILE)
+conn = sqlite3.connect(DB_FILE, timeout=60.0)
 cursor = conn.cursor()
 
 # 创建一个字典来存储按sector分组的输出内容
@@ -335,6 +379,9 @@ sector_outputs = defaultdict(list)
 
 symbols = list(price_data.keys())
 logger.info(f'Start processing {len(symbols)} symbols')
+
+final_short_symbols = []
+final_short_w_symbols = []
 
 for symbol in symbols:
     try:
@@ -426,10 +473,10 @@ for symbol in symbols:
             logger.debug(traceback.format_exc())
             continue
 
-        # 【修改点 3】过滤小于30% (原先是 abs(price_change) < 30，现在改为 price_change < 30)
-        # 这样只保留正向涨幅超过30%的，负数（如-35%）将被过滤
-        if price_change is None or price_change < 30:
-            logger.info(f'[{symbol}] Skip: price_change < 30 (actual: {price_change})')
+        # 【修改点 3】过滤小于MIN_PRICE_CHANGE_THRESHOLD
+        # 这样只保留正向涨幅超过MIN_PRICE_CHANGE_THRESHOLD的，负数（如-35%）将被过滤
+        if price_change is None or price_change < MIN_PRICE_CHANGE_THRESHOLD:
+            logger.info(f'[{symbol}] Skip: price_change < {MIN_PRICE_CHANGE_THRESHOLD} (actual: {price_change})')
             continue
             
         compare_str = compare_data.get(symbol, '')
@@ -446,10 +493,10 @@ for symbol in symbols:
         logger.info(f'[{symbol}] Added to txt candidates')
 
         # -----------------------------------------------------------------------------
-        # 【修改点 5】 分组逻辑重构：Short vs Short_Shift
+        # 【修改点 5】 分组逻辑重构：Short vs Short_W
         # -----------------------------------------------------------------------------
         
-        # 1. 检查 M 形态 (双峰) -> 对应 Short_Shift
+        # 1. 检查 M 形态 (双峰) -> 对应 Short_W
         is_double_top = check_double_top(cursor, symbol, sector)
         
         # 2. 检查 单日新高转折 -> 对应 Short
@@ -457,22 +504,24 @@ for symbol in symbols:
 
         # 优先判断 M 形态
         if is_double_top:
-            if symbol not in short_shift_group:
-                short_shift_group[symbol] = ""
-                logger.info(f'[{symbol}] Added to Short_Shift group (M-Pattern Detected)')
+            if symbol not in short_w_group:
+                short_w_group[symbol] = ""
+                final_short_w_symbols.append(symbol)
+                logger.info(f'[{symbol}] Added to Short_W group (M-Pattern Detected)')
             else:
-                logger.info(f'[{symbol}] Already in Short_Shift group')
+                logger.info(f'[{symbol}] Already in Short_W group')
         
         # 如果不是 M 形态，再看是否是单日新高 (Fallback)
         elif is_single_peak:
             if symbol not in short_group:
                 short_group[symbol] = ""
+                final_short_symbols.append(symbol)
                 logger.info(f'[{symbol}] Added to Short group (Single Peak only)')
             else:
                 logger.info(f'[{symbol}] Already in Short group')
         
         else:
-            logger.info(f'[{symbol}] Not added to Short/Short_Shift')
+            logger.info(f'[{symbol}] Not added to Short/Short_W')
 
     except Exception as e:
         logger.error(f'[{symbol}] Unexpected error: {e}')
@@ -491,7 +540,15 @@ with open(OUTPUT_FILE, 'w', encoding='utf-8') as output_file:
             output_file.write(output['text'] + '\n')
     logger.info(f'Wrote txt output to {OUTPUT_FILE}')
 
-# 写回 panel JSON
+# --- 新增：同步写入 Earning_History.json ---
+if final_short_symbols:
+    update_earning_history_json_b(EARNING_HISTORY_FILE, "Short", final_short_symbols)
+
+if final_short_w_symbols:
+    update_earning_history_json_b(EARNING_HISTORY_FILE, "Short_W", final_short_w_symbols)
+# ------------------------------------------
+
+# 原有的写回 panel JSON 代码
 with open(PANEL_FILE, 'w', encoding='utf-8') as f:
     json.dump(panel_data, f, ensure_ascii=False, indent=4)
     logger.info(f'Updated panel file {PANEL_FILE}')

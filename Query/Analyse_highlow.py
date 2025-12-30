@@ -30,7 +30,7 @@ TIME_INTERVALS_CONFIG = {
 def get_db_connection(db_file):
     """Establishes a connection to the SQLite database."""
     try:
-        conn = sqlite3.connect(db_file)
+        conn = sqlite3.connect(db_file, timeout=60.0)
         conn.row_factory = sqlite3.Row
         return conn
     except sqlite3.Error as e:

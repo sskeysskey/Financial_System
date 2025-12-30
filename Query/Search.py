@@ -267,7 +267,7 @@ def get_latest_etf_volume(etf_name):
     db_path = "/Users/yanzhang/Coding/Database/Finance.db"
     if not os.path.exists(db_path): return "N/A"
     try:
-        conn = sqlite3.connect(db_path)
+        conn = sqlite3.connect(db_path, timeout=60.0)
         cursor = conn.cursor()
         cursor.execute("SELECT volume FROM ETFs WHERE name = ? ORDER BY date DESC LIMIT 1", (etf_name,))
         result = cursor.fetchone()
@@ -460,7 +460,7 @@ class MainWindow(QMainWindow):
         """
         try:
             # 步骤 1: 获取最近两次财报信息
-            with sqlite3.connect(self._finance_db) as conn:
+            with sqlite3.connect(self._finance_db, timeout=60.0) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
                     "SELECT date, price FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 2",
@@ -493,7 +493,7 @@ class MainWindow(QMainWindow):
                 return latest_earning_price, None, latest_earning_date
 
             # 步骤 3: 获取两个日期的收盘价
-            with sqlite3.connect(self._finance_db) as conn:
+            with sqlite3.connect(self._finance_db, timeout=60.0) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
                     f'SELECT price FROM "{sector_table}" WHERE name = ? AND date = ?',
@@ -532,7 +532,7 @@ class MainWindow(QMainWindow):
             return self._mnspp_cache[symbol]
         mcap = 0.0
         try:
-            conn = sqlite3.connect(self._finance_db)
+            conn = sqlite3.connect(self._finance_db, timeout=60.0)
             cursor = conn.cursor()
             cursor.execute("SELECT marketcap FROM MNSPP WHERE symbol = ?", (symbol,))
             row = cursor.fetchone()

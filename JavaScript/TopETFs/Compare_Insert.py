@@ -145,7 +145,7 @@ except Exception as e:
 if etfs_to_db:
     conn = None # 初始化conn
     try:
-        conn = sqlite3.connect(db_file_path)
+        conn = sqlite3.connect(db_file_path, timeout=60.0)
         cursor = conn.cursor()
         # 注意：假设 ETFs 表已经存在，并且有 date, name, price, volume 列
         # id 列通常是 PRIMARY KEY AUTOINCREMENT，不需要显式插入

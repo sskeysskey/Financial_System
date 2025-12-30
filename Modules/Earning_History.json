@@ -810,6 +810,23 @@
             "CHWY",
             "CRWD",
             "ELV"
+        ],
+        "2025-12-29": [
+            "BSX",
+            "CHD",
+            "CLF",
+            "CRWD",
+            "DPZ",
+            "ELV",
+            "ETN",
+            "KMB",
+            "MRVL",
+            "SOFI",
+            "STZ",
+            "TSCO",
+            "TT",
+            "UNH",
+            "URI"
         ]
     },
     "no_season": {
@@ -5060,6 +5077,103 @@
             "UBER",
             "VLO",
             "ZBRA"
+        ],
+        "2025-12-29": [
+            "A",
+            "ACHR",
+            "ALNY",
+            "AMZN",
+            "ARM",
+            "BABA",
+            "BBY",
+            "BLK",
+            "BOOT",
+            "BRBR",
+            "CIFR",
+            "CLX",
+            "COIN",
+            "COR",
+            "CRWD",
+            "CVNA",
+            "DDS",
+            "DELL",
+            "DEO",
+            "DHI",
+            "DKS",
+            "DUOL",
+            "EQIX",
+            "ETN",
+            "FLR",
+            "FOUR",
+            "GME",
+            "GRAB",
+            "HIMS",
+            "HON",
+            "HOOD",
+            "HPQ",
+            "IBKR",
+            "IDXX",
+            "INTC",
+            "IONQ",
+            "JOBY",
+            "KMB",
+            "LYB",
+            "LYFT",
+            "MDT",
+            "MP",
+            "MRVL",
+            "MSTR",
+            "MTN",
+            "NET",
+            "NFLX",
+            "OKLO",
+            "PBR",
+            "PODD",
+            "POOL",
+            "PSX",
+            "PYPL",
+            "RACE",
+            "RBLX",
+            "SMCI",
+            "SMR",
+            "SOUN",
+            "SPOT",
+            "STX",
+            "SWKS",
+            "TEM",
+            "TT",
+            "U",
+            "UBER",
+            "URI",
+            "VLO",
+            "W",
+            "ZBRA"
+        ]
+    },
+    "Short": {
+        "2025-12-26": [
+            "ABVX",
+            "LITE"
+        ],
+        "2025-12-29": [
+            "PAAS",
+            "PSLV",
+            "RGLD",
+            "TPR"
+        ]
+    },
+    "Short_W": {
+        "2025-12-26": [
+            "CVNA",
+            "MDGL",
+            "RVMD",
+            "SATS"
+        ],
+        "2025-12-29": [
+            "CMC",
+            "GFI",
+            "HL",
+            "HMY"
         ]
     }
 }

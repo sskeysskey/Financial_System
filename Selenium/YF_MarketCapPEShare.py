@@ -22,7 +22,7 @@ def create_db_connection(db_file):
     """ 创建一个到SQLite数据库的连接 """
     conn = None
     try:
-        conn = sqlite3.connect(db_file)
+        conn = sqlite3.connect(db_file, timeout=60.0)
         # 让查询结果可以像字典一样通过列名访问
         conn.row_factory = sqlite3.Row
         print("成功连接到数据库。")
@@ -530,11 +530,19 @@ def main():
     # 设置Chrome选项
     chrome_options = Options()
 
-    # 无头模式：后台运行
-    chrome_options.add_argument('--headless')
+    # --- Headless模式相关设置 ---
+    chrome_options.add_argument('--headless=new') # 推荐使用新的 headless 模式
     chrome_options.add_argument('--window-size=1920,1080')
-
-    # 增强性能
+    
+    # --- 伪装设置 ---
+    # 更新 User-Agent 为较新的版本，匹配 Beta
+    user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    chrome_options.add_argument(f'user-agent={user_agent}')
+    chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    chrome_options.add_experimental_option('useAutomationExtension', False)
+    
+    # --- 性能相关设置 ---
     chrome_options.add_argument("--disable-extensions")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--disable-dev-shm-usage")

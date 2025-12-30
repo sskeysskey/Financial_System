@@ -144,6 +144,10 @@ def alert_and_exit(msg):
 def extension_launch():
     script = '''
     delay 0.5
+    tell application "Google Chrome"
+	    activate
+    end tell
+    delay 0.5
     tell application "System Events"
         keystroke "y" using option down
     end tell
@@ -272,7 +276,7 @@ def process_csv_file(csv_filepath, symbol, group_name, db_path):
 
 
     # --- 打开数据库 & 确保表存在 ---
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=60.0)
     cursor = conn.cursor()
     safe_table = f'"{group_name}"'
     # 确保表存在（原 create_table_if_not_exists 会创建带 volume 的表）

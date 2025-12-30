@@ -291,7 +291,7 @@ def update_earning_history_json(file_path, group_name, symbols_to_add, log_detai
 # --- 4. 核心数据获取模块 ---
 def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_trace, log_detail, symbol_to_tags_map):
     cache = {}
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=60.0)
     cursor = conn.cursor()
     marketcap_exists = True
 

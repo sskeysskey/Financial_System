@@ -10,7 +10,7 @@ def is_blacklisted(name):
     return name in blacklist_glob
 
 def create_connection(db_file):
-    return sqlite3.connect(db_file)
+    return sqlite3.connect(db_file, timeout=60.0)
 
 def log_error_with_timestamp(error_message):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")

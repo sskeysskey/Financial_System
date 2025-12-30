@@ -4,7 +4,7 @@ import shutil
 import json
 import time
 import random
-import threading
+# import threading
 import subprocess
 import tkinter as tk
 from datetime import datetime, timedelta
@@ -242,23 +242,27 @@ class PartA_FileProcessor:
 # PART B: 原 b.py 的逻辑
 # ==============================================================================
 
-# 全局配置
-CHROME_DRIVER_PATH = "/Users/yanzhang/Downloads/backup/chromedriver"
+# 全局配置 (修改点 1: 指向 Beta 版驱动)
+CHROME_DRIVER_PATH = "/Users/yanzhang/Downloads/backup/chromedriver_beta"
 EARNINGS_CONFIG_PATH = '/Users/yanzhang/Coding/Financial_System/Selenium/earnings_config.json'
 
 def create_unified_driver():
     """
-    统一的 Selenium Driver 工厂函数。
+    统一的 Selenium Driver 工厂函数 (已修改为使用 Chrome Beta)。
     包含：Headless New 模式、反爬虫伪装、性能优化配置。
     """
     options = Options()
+    
+    # --- 修改点 2: 指定 Chrome Beta 的程序位置 ---
+    options.binary_location = "/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta"
     
     # --- 1. Headless 与 窗口设置 ---
     options.add_argument('--headless=new') 
     options.add_argument('--window-size=1920,1080')
     
     # --- 2. 伪装设置 (反爬虫) ---
-    user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    # 建议顺便把 User-Agent 版本号也稍微改高一点，匹配 Beta 版
+    user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
     options.add_argument(f'user-agent={user_agent}')
     options.add_argument('--disable-blink-features=AutomationControlled')
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
@@ -291,7 +295,7 @@ def create_unified_driver():
         
         return driver
     except Exception as e:
-        tqdm.write(f"创建 Driver 失败: {e}")
+        tqdm.write(f"创建 Driver (Beta) 失败: {e}")
         return None
 
 def move_mouse_periodically():
@@ -998,9 +1002,9 @@ def run_part_b():
     tqdm.write("="*50)
     
     # 启动全局防 AFK 线程
-    mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
-    mouse_thread.start()
-    tqdm.write("后台鼠标防休眠线程已启动...")
+    # mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
+    # mouse_thread.start()
+    # tqdm.write("后台鼠标防休眠线程已启动...")
 
     try:
         # 1. 运行 Economic Events 任务

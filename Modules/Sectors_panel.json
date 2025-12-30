@@ -4,18 +4,25 @@
         "FRMI": ""
     },
     "Energy": {},
-    "Technology": {},
-    "Consumer_Cyclical": {},
+    "Technology": {
+        "MSTR": ""
+    },
+    "Consumer_Cyclical": {
+        "VVV": ""
+    },
     "Utilities": {},
     "Consumer_Defensive": {},
-    "Industrials": {},
+    "Industrials": {
+        "POOL": ""
+    },
     "Communication_Services": {},
     "Financial_Services": {
         "COIN": ""
     },
     "Healthcare": {
         "DVA": "",
-        "MASI": ""
+        "MASI": "",
+        "BLLN": ""
     },
     "ETFs": {
         "HYG": ""
@@ -91,58 +98,88 @@
         "XRP": ""
     },
     "Must": {
+        "RBLX": "",
+        "NFLX": "",
         "PYPL": "",
         "CPNG": "",
         "IOT": "",
-        "SONY": "",
-        "NFLX": "NFLX15"
+        "SONY": ""
     },
     "Today": {
-        "DOC": "",
-        "HON": "",
-        "BBY": "",
-        "RBLX": "",
-        "MELI": "",
-        "KMB": "",
-        "ETN": "",
+        "ARM": "",
         "COIN": ""
     },
     "Short": {
-        "ABVX": "",
-        "LITE": ""
+        "PSLV": "",
+        "RGLD": "",
+        "TPR": "",
+        "PAAS": ""
     },
-    "Short_Shift": {
-        "SATS": "",
-        "MDGL": "",
-        "CVNA": "",
-        "RVMD": ""
+    "Short_W": {
+        "GFI": "",
+        "HL": "",
+        "HMY": "",
+        "CMC": ""
     },
-    "Strategy12": {},
-    "Strategy12_backup": {},
+    "Strategy12": {
+        "KMB": "",
+        "TSCO": "",
+        "TT": "TT热"
+    },
+    "Strategy12_backup": {
+        "KMB": "",
+        "TSCO": "",
+        "TT": "TT热"
+    },
     "Strategy34": {
-        "CHWY": "",
+        "BSX": "",
+        "CHD": "",
+        "CLF": "",
         "CRWD": "",
-        "ELV": ""
+        "DPZ": "",
+        "ELV": "",
+        "ETN": "ETN热",
+        "MRVL": "MRVL热",
+        "SOFI": "",
+        "STZ": "",
+        "UNH": "",
+        "URI": ""
     },
     "Strategy34_backup": {
-        "CHWY": "",
+        "BSX": "",
+        "CHD": "",
+        "CLF": "",
         "CRWD": "",
-        "ELV": ""
+        "DPZ": "",
+        "ELV": "",
+        "ETN": "ETN热",
+        "MRVL": "MRVL热",
+        "SOFI": "",
+        "STZ": "",
+        "UNH": "",
+        "URI": ""
     },
     "OverSell_W": {},
     "OverSell_W_backup": {},
     "PE_Deep": {
         "ARM": "",
+        "BBY": "",
+        "CIFR": "CIFR15热",
         "COIN": "",
+        "DEO": "",
         "ETN": "ETN15热",
         "HIMS": "",
         "IONQ": "",
+        "JOBY": "",
         "KMB": "",
-        "MELI": "",
+        "LYFT": "",
         "MP": "",
         "MSTR": "",
+        "MTN": "",
+        "NET": "NET15热",
         "NFLX": "NFLX15",
         "OKLO": "OKLO15热",
+        "POOL": "",
         "PYPL": "",
         "RBLX": "",
         "SMCI": "SMCI15热",
@@ -152,16 +189,23 @@
     },
     "PE_Deep_backup": {
         "ARM": "",
+        "BBY": "",
+        "CIFR": "CIFR15热",
         "COIN": "",
+        "DEO": "",
         "ETN": "ETN15热",
         "HIMS": "",
         "IONQ": "",
+        "JOBY": "",
         "KMB": "",
-        "MELI": "",
+        "LYFT": "",
         "MP": "",
         "MSTR": "",
+        "MTN": "",
+        "NET": "NET15热",
         "NFLX": "NFLX15",
         "OKLO": "OKLO15热",
+        "POOL": "",
         "PYPL": "",
         "RBLX": "",
         "SMCI": "SMCI15热",
@@ -169,45 +213,67 @@
         "SOUN": "",
         "TEM": ""
     },
-    "PE_W": {
-        "COR": ""
-    },
-    "PE_W_backup": {
-        "COR": ""
-    },
+    "PE_W": {},
+    "PE_W_backup": {},
     "PE_valid": {
+        "A": "",
         "ACHR": "",
-        "BBY": "",
+        "AMZN": "AMZN热",
+        "BABA": "BABA7",
         "BLK": "",
+        "BOOT": "",
+        "BRBR": "",
         "CLX": "",
+        "COR": "",
+        "CVNA": "",
+        "DDS": "",
+        "DELL": "DELL15热",
+        "DKS": "",
         "DUOL": "",
-        "ENTG": "",
         "EQIX": "EQIX7热",
+        "FOUR": "",
+        "GRAB": "",
         "HON": "",
         "HOOD": "",
         "HPQ": "HPQ15热",
+        "IBKR": "",
         "IDXX": "",
         "INTC": "",
-        "MSFT": "MSFT7",
-        "TT": "TT7热",
+        "PODD": "",
+        "RACE": "",
+        "SPOT": "",
+        "STX": "STX热",
         "UBER": "",
         "VLO": ""
     },
     "PE_valid_backup": {
+        "A": "",
         "ACHR": "",
-        "BBY": "",
+        "AMZN": "AMZN热",
+        "BABA": "BABA7",
         "BLK": "",
+        "BOOT": "",
+        "BRBR": "",
         "CLX": "",
+        "COR": "",
+        "CVNA": "",
+        "DDS": "",
+        "DELL": "DELL15热",
+        "DKS": "",
         "DUOL": "",
-        "ENTG": "",
         "EQIX": "EQIX7热",
+        "FOUR": "",
+        "GRAB": "",
         "HON": "",
         "HOOD": "",
         "HPQ": "HPQ15热",
+        "IBKR": "",
         "IDXX": "",
         "INTC": "",
-        "MSFT": "MSFT7",
-        "TT": "TT7热",
+        "PODD": "",
+        "RACE": "",
+        "SPOT": "",
+        "STX": "STX热",
         "UBER": "",
         "VLO": ""
     },

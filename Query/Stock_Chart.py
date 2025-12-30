@@ -40,7 +40,7 @@ def fetch_mnspp_data_from_db(db_path, symbol):
     """
     根据股票代码从MNSPP表中查询 shares, marketcap, pe_ratio, pb。
     """
-    with sqlite3.connect(db_path) as conn:
+    with sqlite3.connect(db_path, timeout=60.0) as conn:
         cursor = conn.cursor()
         query = "SELECT shares, marketcap, pe_ratio, pb FROM MNSPP WHERE symbol = ?"
         cursor.execute(query, (symbol,))

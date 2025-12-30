@@ -173,20 +173,26 @@ def main():
     mapping_file_path = "/Users/yanzhang/Coding/Financial_System/Modules/symbol_mapping.json"
     symbol_mapping = load_symbol_mapping(mapping_file_path)
 
-    # 设置Chrome选项以提高性能
+    # ==========================================
+    # [修改点] Selenium 配置区域
+    # ==========================================
     chrome_options = Options()
     
+    # 1. 指定使用 Chrome Beta 浏览器应用
+    chrome_options.binary_location = "/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta"
+
     # --- Headless模式相关设置 ---
     chrome_options.add_argument('--headless=new') # 推荐使用新的 headless 模式
     chrome_options.add_argument('--window-size=1920,1080')
-
+    
     # --- 伪装设置 ---
-    user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.7049.115" # 你可以更新为一个最新的Chrome User-Agent
+    # 更新 User-Agent 为较新的版本，匹配 Beta
+    user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
     chrome_options.add_argument(f'user-agent={user_agent}')
     chrome_options.add_argument('--disable-blink-features=AutomationControlled')
     chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
     chrome_options.add_experimental_option('useAutomationExtension', False)
-
+    
     # --- 性能相关设置 ---
     chrome_options.add_argument("--disable-extensions")
     chrome_options.add_argument("--disable-gpu")
@@ -195,18 +201,27 @@ def main():
     chrome_options.add_argument("--blink-settings=imagesEnabled=false")  # 禁用图片加载
     chrome_options.page_load_strategy = 'eager'  # 使用eager策略，DOM准备好就开始
 
-    # 设置ChromeDriver路径
-    chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
+    # 2. 设置 ChromeDriver 路径 (指向 Beta 版驱动)
+    # 确保这个文件存在于你的文件夹中
+    chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver_beta"
+    
+    # 检查驱动是否存在，防止报错
+    import os
+    if not os.path.exists(chrome_driver_path):
+        print(f"错误: 未找到驱动文件 {chrome_driver_path}")
+        return
+
     service = Service(executable_path=chrome_driver_path)
     driver = webdriver.Chrome(service=service, options=chrome_options)
+    
+    # 设置超时
+    driver.set_page_load_timeout(30) # 稍微增加一点容错
+    driver.set_script_timeout(10)  
 
-    # 设置更短的超时时间
-    driver.set_page_load_timeout(20)  # 页面加载超时时间
-    driver.set_script_timeout(10)  # 脚本执行超时时间
-
+    # ==========================================
     # 连接SQLite数据库
     db_path = "/Users/yanzhang/Coding/Database/Finance.db"
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=60.0)
     
     # 从JSON文件获取股票符号和分组
     symbols_by_sector = get_stock_symbols_from_json(json_file_path)

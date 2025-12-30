@@ -92,7 +92,7 @@ def delete_records_by_names(db_file, table_name, stock_names):
     if not stock_names:
         print("没有提供要删除的股票代码")
         return
-    conn = sqlite3.connect(db_file)
+    conn = sqlite3.connect(db_file, timeout=60.0)
     try:
         cur = conn.cursor()
         cur.execute('PRAGMA foreign_keys = ON;')

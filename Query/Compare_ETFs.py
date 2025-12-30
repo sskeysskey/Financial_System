@@ -4,7 +4,7 @@ import json
 import os
 
 def create_connection(db_file):
-    return sqlite3.connect(db_file)
+    return sqlite3.connect(db_file, timeout=60.0)
 
 def log_error_with_timestamp(error_message, error_file_path):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")

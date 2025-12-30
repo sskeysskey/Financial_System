@@ -101,7 +101,7 @@ def fetch_mnspp_data_from_db(db_path, symbol):
     根据股票代码从MNSPP表中查询 shares, marketcap, pe_ratio, pb。
     如果未找到，则返回默认值。
     """
-    with sqlite3.connect(db_path) as conn:
+    with sqlite3.connect(db_path, timeout=60.0) as conn:
         cursor = conn.cursor()
         query = "SELECT shares, marketcap, pe_ratio, pb FROM MNSPP WHERE symbol = ?"
         cursor.execute(query, (symbol,))
@@ -185,7 +185,7 @@ class MainWindow(QMainWindow):
         esc_shortcut.activated.connect(self.close)
 
         self.db_path = DB_PATH
-        self.conn = sqlite3.connect(self.db_path)
+        self.conn = sqlite3.connect(self.db_path, timeout=60.0)
         self.conn.row_factory = sqlite3.Row
         self.cur = self.conn.cursor()
 

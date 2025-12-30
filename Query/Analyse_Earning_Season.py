@@ -248,7 +248,7 @@ def build_stock_data_cache(symbols, db_path, symbol_sector_map, symbol_to_trace,
     """
     print(f"\n--- 开始为 {len(symbols)} 个 symbol 构建数据缓存 ---")
     cache = {}
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=60.0)
     cursor = conn.cursor()
 
     # 检查marketcap列是否存在的标志
@@ -671,7 +671,7 @@ def get_symbols_with_latest_negative_earning(db_path):
     获取最新一期财报为负 (price < 0) 的所有 symbol 集合。
     这取代了原先的“最近30天”逻辑。
     """
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=60.0)
     cursor = conn.cursor()
     
     # 使用窗口函数 ROW_NUMBER 来为每个 symbol 的财报按日期降序排名。
@@ -804,7 +804,7 @@ def run_processing_logic(log_detail):
     elif SYMBOL_TO_TRACE:
         log_detail(f"\n追踪信息: {SYMBOL_TO_TRACE} 不在任何初始财报文件中。")
 
-    with sqlite3.connect(DB_FILE) as conn:
+    with sqlite3.connect(DB_FILE, timeout=60.0) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT DISTINCT name FROM Earning")
         all_db_symbols = [row[0] for row in cursor.fetchall()]
@@ -833,7 +833,7 @@ def run_processing_logic(log_detail):
 
     # 3. 运行策略
     results = defaultdict(list)
-    with sqlite3.connect(DB_FILE) as conn: # 策略3和4需要一个cursor
+    with sqlite3.connect(DB_FILE, timeout=60.0) as conn: # 策略3和4需要一个cursor
         cursor = conn.cursor()
 
         for symbol, data in stock_data_cache.items():

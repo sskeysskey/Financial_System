@@ -12,7 +12,7 @@ def is_blacklisted(name):
     return name in blacklist_glob
 
 def create_connection(db_file):
-    conn = sqlite3.connect(db_file)
+    conn = sqlite3.connect(db_file, timeout=60.0)
     return conn
 
 def log_error_with_timestamp(error_message):

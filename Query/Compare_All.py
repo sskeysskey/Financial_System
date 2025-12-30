@@ -110,7 +110,7 @@ def compare_today_yesterday(
     for table_name, keywords in config.items():
         for keyword in sorted(keywords):
             try:
-                with sqlite3.connect(db_path) as conn:
+                with sqlite3.connect(db_path, timeout=60.0) as conn:
                     cursor = conn.cursor()
 
                     # 检查表结构

@@ -86,7 +86,7 @@ def get_latest_prices(symbols, symbol_sector_map, db_path):
     price_dict = {}
     conn = None
     try:
-        conn = sqlite3.connect(db_path)
+        conn = sqlite3.connect(db_path, timeout=60.0)
         cursor = conn.cursor()
         sector_groups = {}
         
@@ -418,7 +418,7 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_con
     target_date = (pd.Timestamp.now() - timedelta(days=1)).strftime('%Y-%m-%d')
     print(f"写入日期设定为: {target_date}")
     
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=60.0)
     cursor = conn.cursor()
     
     create_table_sql = f"""

@@ -155,7 +155,7 @@ def get_title_color_logic(db_path, symbol, table_name):
     如果任何步骤失败或不满足条件，则返回默认颜色 'white'。
     """
     try:
-        with sqlite3.connect(db_path) as conn:
+        with sqlite3.connect(db_path, timeout=60.0) as conn:
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT date, price FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 2",
@@ -174,7 +174,7 @@ def get_title_color_logic(db_path, symbol, table_name):
         else:
             previous_earning_date_str, _ = earning_rows[1]
             previous_earning_date = datetime.strptime(previous_earning_date_str, "%Y-%m-%d").date()
-            with sqlite3.connect(db_path) as conn:
+            with sqlite3.connect(db_path, timeout=60.0) as conn:
                 cursor = conn.cursor()
                 cursor.execute(f'SELECT price FROM "{table_name}" WHERE name = ? AND date = ?', (symbol, latest_earning_date.isoformat()))
                 latest_stock_price_row = cursor.fetchone()
@@ -203,7 +203,7 @@ def get_title_color_logic(db_path, symbol, table_name):
 
 @lru_cache(maxsize=None)
 def fetch_data(db_path, table_name, name):
-    with sqlite3.connect(db_path) as conn:
+    with sqlite3.connect(db_path, timeout=60.0) as conn:
         cursor = conn.cursor()
         try:
             cursor.execute(f"CREATE INDEX IF NOT EXISTS idx_name ON {table_name} (name);")
@@ -615,7 +615,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     latest_db_earning_date = None
 
     try:
-        with sqlite3.connect(db_path) as conn:
+        with sqlite3.connect(db_path, timeout=60.0) as conn:
             cursor = conn.cursor()
             # 查询最新一期的财报日期
             cursor.execute("SELECT date FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 1", (name,))
@@ -708,7 +708,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     all_annotations = []
     
     try:
-        with sqlite3.connect(db_path) as conn:
+        with sqlite3.connect(db_path, timeout=60.0) as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT date, price FROM Earning WHERE name = ? ORDER BY date", (name,))
             for date_str, price_change in cursor.fetchall():
@@ -979,7 +979,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         dialog.exec()
 
     def query_database(db_path, table_name, condition):
-        with sqlite3.connect(db_path) as conn:
+        with sqlite3.connect(db_path, timeout=60.0) as conn:
             cursor = conn.cursor()
             cursor.execute(f"SELECT * FROM {table_name} WHERE {condition} ORDER BY date DESC;")
             rows = cursor.fetchall()

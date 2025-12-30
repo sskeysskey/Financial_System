@@ -191,7 +191,7 @@ def main():
         return
     
     try:
-        conn = sqlite3.connect('/Users/yanzhang/Coding/Database/Finance.db')
+        conn = sqlite3.connect('/Users/yanzhang/Coding/Database/Finance.db', timeout=60.0)
         cursor = conn.cursor()
 
         # 获取最新日期

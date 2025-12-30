@@ -181,7 +181,7 @@ def load_text_data(path):
 
 
 def fetch_mnspp_data_from_db(db_path, symbol):
-    with sqlite3.connect(db_path) as conn:
+    with sqlite3.connect(db_path, timeout=60.0) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT shares, marketcap, pe_ratio, pb FROM MNSPP WHERE symbol = ?", (symbol,))
         result = cursor.fetchone()
@@ -291,7 +291,7 @@ def calculate_earnings_price_change(symbol, db_path, sector_data):
     """
     fallback_text = "..."
     try:
-        with sqlite3.connect(db_path) as conn:
+        with sqlite3.connect(db_path, timeout=60.0) as conn:
             cursor = conn.cursor()
 
             # 1. 获取最新财报日期
@@ -348,7 +348,7 @@ def get_color_decision_data(symbol: str, db_path: str, sector_data: dict) -> tup
     """
     try:
         # 步骤 1: 获取最近两次财报信息
-        with sqlite3.connect(db_path) as conn:
+        with sqlite3.connect(db_path, timeout=60.0) as conn:
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT date, price FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 2",
@@ -379,7 +379,7 @@ def get_color_decision_data(symbol: str, db_path: str, sector_data: dict) -> tup
             return latest_earning_price, None, latest_earning_date
 
         # 步骤 3: 获取两个日期的收盘价
-        with sqlite3.connect(db_path) as conn:
+        with sqlite3.connect(db_path, timeout=60.0) as conn:
             cursor = conn.cursor()
             cursor.execute(
                 f'SELECT price FROM "{sector_table}" WHERE name = ? AND date = ?',

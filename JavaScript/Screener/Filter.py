@@ -26,7 +26,7 @@ def insert_screener_records(db_file, screener_data, prices, volumes):
     # 计算“昨天”的日期字符串
     yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
 
-    conn = sqlite3.connect(db_file)
+    conn = sqlite3.connect(db_file, timeout=60.0)
     cur = conn.cursor()
 
     # 取出数据库中已有的表名，避免 typo 或 SQL 注入
@@ -176,7 +176,7 @@ def move_stock_data_in_db(db_file, source_sector, dest_sector, symbol):
     这是一个事务性操作，确保数据要么完全移动，要么在出错时保持原样。
     """
     log_message = ""
-    conn = sqlite3.connect(db_file)
+    conn = sqlite3.connect(db_file, timeout=60.0)
     try:
         cur = conn.cursor()
 
@@ -293,6 +293,11 @@ def count_files(prefix):
 
 def extension_launch():
     script = '''
+    delay 0.5
+    tell application "Google Chrome"
+	    activate
+    end tell
+    delay 1
     tell application "System Events"
         keystroke "d" using option down
     end tell

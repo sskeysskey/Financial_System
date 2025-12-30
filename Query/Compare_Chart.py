@@ -157,7 +157,7 @@ class StockComparisonApp(QWidget):
 
         # 查询数据库
         db_path = '/Users/yanzhang/Coding/Database/Finance.db'
-        conn = sqlite3.connect(db_path)
+        conn = sqlite3.connect(db_path, timeout=60.0)
 
         # 创建字典来存储每个symbol的数据
         dfs = {}

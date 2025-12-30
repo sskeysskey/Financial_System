@@ -215,7 +215,7 @@ def visualize_sqlite_db(db_path, output_dir, content_limit=100):
     conn = None  # 在 try 外部初始化 conn
     try:
         # 连接数据库
-        conn = sqlite3.connect(db_path)
+        conn = sqlite3.connect(db_path, timeout=60.0)
         cursor = conn.cursor()
 
         # 1. 获取所有用户表名（过滤掉 sqlite_ 开头的系统表）

@@ -40,7 +40,7 @@ DEFAULT_WEIGHT = Decimal('1')
 # --- 核心逻辑函数 (来自 a.py) ---
 
 def fetch_mnspp_data_from_db(db_path, symbol):
-    with sqlite3.connect(db_path) as conn:
+    with sqlite3.connect(db_path, timeout=60.0) as conn:
         cur = conn.cursor()
         cur.execute(
             "SELECT shares, marketcap, pe_ratio, pb FROM MNSPP WHERE symbol = ?",
@@ -429,7 +429,7 @@ class SimilarityViewerWindow(QMainWindow):
         """
         try:
             # 步骤 1: 获取最近两次财报信息
-            with sqlite3.connect(DB_PATH) as conn:
+            with sqlite3.connect(DB_PATH, timeout=60.0) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
                     "SELECT date, price FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 2",
@@ -466,7 +466,7 @@ class SimilarityViewerWindow(QMainWindow):
                 return latest_earning_price, None, latest_earning_date
 
             # 步骤 3: 获取两个日期的收盘价
-            with sqlite3.connect(DB_PATH) as conn:
+            with sqlite3.connect(DB_PATH, timeout=60.0) as conn:
                 cursor = conn.cursor()
                 
                 # 获取最新财报日的收盘价

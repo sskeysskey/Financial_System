@@ -1,523 +1,585 @@
-import pandas as pd
-import numpy as np
-import os
-import datetime
-import glob
-import subprocess
-import json
 import sqlite3
-from datetime import timedelta
-from pandas.tseries.holiday import USFederalHolidayCalendar
+import subprocess
+import logging
+import time
+import os
+import glob
+import csv
+import json
+from datetime import datetime, date, timedelta
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import TimeoutException
 
-# ==========================================
-# 全局配置区域 (Configuration)
-# ==========================================
+# ================= 全局配置区域 =================
 
-# --- 路径配置 ---
-# 备份文件所在的文件夹路径 (自动模式用)
-BACKUP_DIR = '/Users/yanzhang/Coding/News/backup'
-
-# 输出文件的配置 (a.py 输出)
-OUTPUT_DIR = '/Users/yanzhang/Coding/News'
-OUTPUT_FILENAME = 'Options_Change.csv'
-
-# JSON 映射文件路径
-SECTORS_JSON_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
-
-# SQLite 数据库路径 (共用)
+# --- 路径配置 (来自两个脚本) ---
+CHROME_DRIVER_PATH = "/Users/yanzhang/Downloads/backup/chromedriver_beta"
 DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
-TABLE_NAME = 'Options' # b.py 写入的表名
 
-# 调试输出路径 (b.py逻辑用)
-OUTPUT_DEBUG_PATH = '/Users/yanzhang/Downloads/3.txt'
+# ETF 处理相关路径
+JSON_FILE_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
+BLACKLIST_JSON_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
+OUTPUT_DIR = '/Users/yanzhang/Coding/News'
+OUTPUT_TXT_FILE = os.path.join(OUTPUT_DIR, 'ETFs_new.txt')
+DOWNLOAD_DIR = "/Users/yanzhang/Downloads/"
+CHECK_YESTERDAY_SCRIPT_PATH = '/Users/yanzhang/Coding/Financial_System/Query/Check_yesterday.py'
 
-# --- 算法参数配置 ---
-# 每个 Symbol 的 Calls 和 Puts 各保留前多少名 (共用)
-TOP_N = 20 
+# 设置日志
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# a.py 逻辑参数: 是否考虑新增的数据 (B有A无)
-INCLUDE_NEW_ROWS = True
+# ================= 通用辅助函数 (来自 TE_Merged) =================
 
-# b.py 逻辑参数: 权重幂次配置 (1=线性, 2=平方...)
-WEIGHT_POWER = 1
-
-# b.py 调试 Symbol
-DEBUG_SYMBOL = "WELL"
-
-# --- 模式切换配置 ---
-# True:  手动模式 (使用下方指定的两个具体文件)
-# False: 自动模式 (自动寻找 BACKUP_DIR 下最新的两个文件)
-USE_MANUAL_MODE = False
-
-# 手动模式下的文件路径
-MANUAL_FILE_OLD = '/Users/yanzhang/Coding/News/backup/Options_251224.csv'
-MANUAL_FILE_NEW = '/Users/yanzhang/Coding/News/backup/Options_251227.csv'
-
-
-# ==========================================
-# [Part A] 辅助函数与核心处理 (原 a.py)
-# ==========================================
-
-def load_symbol_sector_map(json_path):
-    """加载 JSON 并反转为 Symbol -> Sector 的字典"""
-    if not os.path.exists(json_path):
-        print(f"⚠️ 警告: 找不到 JSON 映射文件: {json_path}")
-        return {}
+def get_driver():
+    """创建并返回配置好的 Chrome Driver (Beta版)"""
+    chrome_options = Options()
+    # 指定使用 Chrome Beta
+    chrome_options.binary_location = "/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta"
     
-    try:
-        with open(json_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        
-        symbol_map = {}
-        for sector, symbols in data.items():
-            for sym in symbols:
-                symbol_map[sym.upper()] = sector
-        return symbol_map
-    except Exception as e:
-        print(f"⚠️ 读取 JSON 失败: {e}")
-        return {}
-
-def get_latest_prices(symbols, symbol_sector_map, db_path):
-    """批量获取 Symbol 的最新价格"""
-    if not os.path.exists(db_path):
-        print(f"⚠️ 警告: 找不到数据库文件: {db_path}")
-        return {}
-
-    price_dict = {}
-    conn = None
-    try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        sector_groups = {}
-        
-        for sym in symbols:
-            sym_upper = sym.upper()
-            lookup_sym = 'VIX' if sym_upper == '^VIX' else sym_upper
-            
-            sector = symbol_sector_map.get(lookup_sym)
-            if sector:
-                if sector not in sector_groups:
-                    sector_groups[sector] = []
-                sector_groups[sector].append(lookup_sym)
-
-        print(f"正在从数据库获取 {len(symbols)} 个 Symbol 的最新价格...")
-        for sector, sym_list in sector_groups.items():
-            if not sym_list: continue
-            
-            placeholders = ','.join(['?'] * len(sym_list))
-            query = f"""
-                SELECT t1.name, t1.price
-                FROM "{sector}" t1
-                JOIN (
-                    SELECT name, MAX(date) as max_date
-                    FROM "{sector}"
-                    WHERE name IN ({placeholders})
-                    GROUP BY name
-                ) t2 ON t1.name = t2.name AND t1.date = t2.max_date
-            """
-            try:
-                cursor.execute(query, sym_list)
-                rows = cursor.fetchall()
-                for name, price in rows:
-                    name_upper = name.upper()
-                    price_dict[name_upper] = price
-                    if name_upper == 'VIX':
-                        price_dict['^VIX'] = price
-            except Exception as e:
-                print(f"   ⚠️ 查询表 '{sector}' 出错: {e}")
-    except Exception as e:
-        print(f"数据库连接或查询总错误: {e}")
-    finally:
-        if conn: conn.close()
-            
-    return price_dict
-
-def process_options_change(file_old, file_new, top_n=50, include_new=True):
-    """
-    处理期权变化逻辑。
-    返回: 处理后的 DataFrame (如果不成功返回 None)
-    """
-    print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] 开始处理文件比对...")
-    print(f"旧文件: {os.path.basename(file_old)}")
-    print(f"新文件: {os.path.basename(file_new)}")
-
-    if not os.path.exists(file_old) or not os.path.exists(file_new):
-        print("错误: 找不到文件。")
-        return None
-
-    try:
-        dtype_dict = {'Symbol': str, 'Expiry Date': str, 'Type': str, 'Strike': str}
-        df_old = pd.read_csv(file_old, dtype=dtype_dict)
-        df_new = pd.read_csv(file_new, dtype=dtype_dict)
-    except Exception as e:
-        print(f"读取错误: {e}")
-        return None
-
-    # 数据清洗
-    df_old.columns = df_old.columns.str.strip()
-    df_new.columns = df_new.columns.str.strip()
+    # --- Headless模式相关设置 ---
+    chrome_options.add_argument('--headless=new') 
+    chrome_options.add_argument('--window-size=1920,1080')
     
-    def clean_str_cols(df):
-        for col in ['Symbol', 'Expiry Date', 'Type', 'Strike']:
-            if col in df.columns:
-                df[col] = df[col].str.strip()
-        return df
+    # --- 伪装设置 ---
+    user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    chrome_options.add_argument(f'user-agent={user_agent}')
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    chrome_options.add_experimental_option('useAutomationExtension', False)
     
-    df_old = clean_str_cols(df_old)
-    df_new = clean_str_cols(df_new)
-
-    # 过滤全新日期
-    print("正在过滤全新出现的 Expiry Date ...")
-    valid_old_dates = set(zip(df_old['Symbol'], df_old['Expiry Date']))
-    df_new['_date_key'] = list(zip(df_new['Symbol'], df_new['Expiry Date']))
-    rows_before = len(df_new)
-    df_new = df_new[df_new['_date_key'].isin(valid_old_dates)].copy()
-    print(f"已剔除 {rows_before - len(df_new)} 行全新日期数据。")
-    df_new.drop(columns=['_date_key'], inplace=True)
-
-    # 处理 Open Interest
-    def clean_oi(val):
-        if pd.isna(val): return 0
-        if isinstance(val, (int, float)): return val
-        try: return float(str(val).replace(',', ''))
-        except: return 0.0
-
-    df_old['Open Interest'] = df_old.get('Open Interest', pd.Series(0)).apply(clean_oi)
-    df_new['Open Interest'] = df_new.get('Open Interest', pd.Series(0)).apply(clean_oi)
-
-    old_expiry_set = set(zip(df_old['Symbol'], df_old['Expiry Date']))
+    # --- 性能优化 ---
+    chrome_options.add_argument("--disable-extensions")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--blink-settings=imagesEnabled=false")
+    chrome_options.page_load_strategy = 'eager'
     
-    # 合并
-    key_columns = ['Symbol', 'Expiry Date', 'Type', 'Strike']
-    merged = pd.merge(df_old, df_new, on=key_columns, how='outer', suffixes=('_old', '_new'), indicator=True)
-    
-    # 过滤逻辑
-    merged = merged[merged['_merge'] != 'left_only'].copy()
-    if not include_new:
-        merged = merged[merged['_merge'] == 'both'].copy()
-        
-    merged['Open Interest_old'] = merged['Open Interest_old'].fillna(0)
-    merged['Open Interest_new'] = merged['Open Interest_new'].fillna(0)
-    
-    # 剔除旧持仓为0的
-    merged = merged[merged['Open Interest_old'] != 0].copy()
-    
-    # 计算变化
-    merged['1-Day Chg'] = merged['Open Interest_new'] - merged['Open Interest_old']
-    merged = merged[merged['1-Day Chg'] >= 0].copy()
+    service = Service(executable_path=CHROME_DRIVER_PATH)
+    return webdriver.Chrome(service=service, options=chrome_options)
 
-    # 标记 new
-    if include_new and not merged.empty:
-        def mark_new_rows(row):
-            if row['_merge'] == 'right_only':
-                if (row['Symbol'], row['Expiry Date']) not in old_expiry_set:
-                    row['Expiry Date'] = str(row['Expiry Date']) + " new"
-                else:
-                    row['Strike'] = str(row['Strike']) + " new"
-            return row
-        merged = merged.apply(mark_new_rows, axis=1)
+def get_db_connection():
+    """获取数据库连接 (增加超时设置)"""
+    return sqlite3.connect(DB_PATH, timeout=60.0)
 
-    # 排序取 Top N
-    merged['Abs_Chg'] = merged['1-Day Chg'].abs()
-    merged['Type_Rank'] = merged['Type'].str.lower().apply(lambda x: 0 if 'call' in x else 1)
-    
-    final_rows = []
-    if not merged.empty:
-        all_symbols = merged['Symbol'].unique()
-        for symbol in all_symbols:
-            symbol_df = merged[merged['Symbol'] == symbol]
-            for type_val in symbol_df['Type'].unique():
-                sub_df = symbol_df[symbol_df['Type'] == type_val]
-                sub_df_sorted = sub_df.sort_values(by='Abs_Chg', ascending=False)
-                final_rows.append(sub_df_sorted.head(top_n))
+def check_is_workday():
+    """检查当前日期是否为周日或周一。返回: True (可执行), False (不执行)"""
+    # 0=Monday, 6=Sunday. 
+    return datetime.now().weekday() not in [0, 6]
 
-    if not final_rows:
-        print("没有符合条件的数据。")
-        return None
-
-    result_df = pd.concat(final_rows)
-
-    # 计算 Distance
-    print("正在计算 Distance ...")
-    unique_symbols = result_df['Symbol'].unique().tolist()
-    symbol_map = load_symbol_sector_map(SECTORS_JSON_PATH)
-    price_map = get_latest_prices(unique_symbols, symbol_map, DB_PATH)
-
-    def calculate_distance(row):
-        sym = row['Symbol'].upper()
-        strike_str = str(row['Strike']).replace(' new', '').strip()
-        try: strike_val = float(strike_str.replace(',', ''))
-        except: return "N/A"
-        price_val = price_map.get(sym)
-        if price_val is None: return "N/A"
-        if price_val == 0: return "Err"
-        dist = (strike_val - price_val) / price_val
-        return f"{dist * 100:.2f}%"
-
-    result_df['Distance'] = result_df.apply(calculate_distance, axis=1)
-
-    # 最终整理
-    result_df = result_df.sort_values(by=['Symbol', 'Type_Rank', 'Abs_Chg'], ascending=[True, True, False])
-    output_cols = ['Symbol', 'Type', 'Expiry Date', 'Strike', 'Distance', 'Open Interest_new', '1-Day Chg']
-    final_output = result_df[output_cols].rename(columns={'Open Interest_new': 'Open Interest'})
-    final_output['Symbol'] = final_output['Symbol'].replace('^VIX', 'VIX')
-
-    # 保存文件 (原功能)
-    if not os.path.exists(OUTPUT_DIR):
-        os.makedirs(OUTPUT_DIR)
-    
-    output_path = os.path.join(OUTPUT_DIR, OUTPUT_FILENAME)
-    final_output.to_csv(output_path, index=False)
-    print(f"\n✅ 主文件已保存: {output_path}")
-
-    # 保存备份
-    date_str = datetime.datetime.now().strftime('%y%m%d')
-    backup_path = os.path.join(BACKUP_DIR, f"Options_Change_{date_str}.csv")
-    if not os.path.exists(BACKUP_DIR): os.makedirs(BACKUP_DIR)
-    final_output.to_csv(backup_path, index=False)
-    print(f"✅ 备份文件已保存: {backup_path}")
-
-    # 返回 DataFrame 供后续步骤使用
-    return final_output
-
-# ==========================================
-# [Part B] 计算 D-Score 并入库 (原 b.py)
-# ==========================================
-
-def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_config, target_symbol):
-    """
-    直接从 DataFrame 计算 Score 并写入数据库 (替代原 read_csv 方式)
-    """
-    print(f"\n[{datetime.datetime.now().strftime('%H:%M:%S')}] 开始执行 Score 计算与入库...")
-    print(f"当前配置: Top N = {n_config}, 权重幂次 = {power_config}")
-    
-    # 这里的 df_input 已经是内存中的 DataFrame，我们需要防止修改原数据
-    df = df_input.copy()
-
-    # 初始化调试文件
-    if target_symbol:
-        try:
-            with open(debug_path, 'w') as f:
-                f.write(f"=== {target_symbol} 计算过程追踪日志 ===\n")
-                f.write(f"运行时间: {pd.Timestamp.now()}\n")
-                f.write(f"权重幂次 (Power): {power_config}\n\n")
-        except Exception as e:
-            print(f"无法创建调试文件: {e}")
-
-    # --- 数据预处理 (兼容 a.py 生成的格式) ---
-    # 1. Distance 去百分号 (因为 a.py 输出了 5.23% 这样的字符串)
-    try:
-        df['Distance'] = df['Distance'].astype(str).str.rstrip('%').astype(float) / 100
-    except:
-        pass 
-
-    # 2. 确保数值列格式正确
-    for col in ['Open Interest', '1-Day Chg']:
-        if df[col].dtype == object:
-             df[col] = df[col].astype(str).str.replace(',', '').str.replace('%', '')
-        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-
-    # 3. 解析日期 (重要)
-    df['Expiry Date'] = pd.to_datetime(df['Expiry Date'], errors='coerce')
-    if df['Expiry Date'].isnull().any():
-        print("警告: 有部分日期无法解析，将被忽略。")
-        df = df.dropna(subset=['Expiry Date'])
-
-    # 准备工作日
-    us_cal = USFederalHolidayCalendar()
-    holidays = us_cal.holidays(start='2024-01-01', end='2030-12-31')
-    today = pd.Timestamp.now().normalize()
-
-    processed_data = {}
-    grouped = df.groupby(['Symbol', 'Type'])
-    
-    print(f"开始计算分数... (调试目标: {target_symbol})")
-
-    for (symbol, type_), group in grouped:
-        # 按数值降序
-        group = group.sort_values(by='1-Day Chg', ascending=False)
-        top_items = group.head(n_config).copy()
-        
-        if top_items.empty: continue
-            
-        actual_n = len(top_items)
-        max_expiry = top_items['Expiry Date'].max()
-        
-        # 计算 A (今天到最远日期的工作日天数)
-        a_days = np.busday_count(
-            np.array([today], dtype='datetime64[D]'),
-            np.array([max_expiry], dtype='datetime64[D]'),
-            holidays=holidays.values.astype('datetime64[D]')
-        )[0]
-        
-        # 计算差值
-        expiry_dates = top_items['Expiry Date'].values.astype('datetime64[D]')
-        today_arr = np.full(expiry_dates.shape, today).astype('datetime64[D]')
-        days_i = np.busday_count(today_arr, expiry_dates, holidays=holidays.values.astype('datetime64[D]'))
-        diff_i = a_days - days_i
-        
-        zero_diff_count = np.sum(diff_i == 0)
-        diff_pow = diff_i ** power_config
-        B = np.sum(diff_pow)
-        
-        total_oi = top_items['Open Interest'].sum()
-        C = 0
-        D = 0
-        row_details = []
-
-        if B != 0 and total_oi != 0:
-            w_i = diff_pow / B
-            scores = w_i * top_items['Distance'].values * top_items['Open Interest'].values
-            C = np.sum(scores)
-            
-            if actual_n > zero_diff_count:
-                D = C * (actual_n - zero_diff_count) / total_oi
-            
-            if symbol == target_symbol:
-                for idx in range(len(top_items)):
-                    row_details.append({
-                        'Expiry': top_items.iloc[idx]['Expiry Date'].strftime('%Y-%m-%d'),
-                        '1-Day Chg': top_items.iloc[idx]['1-Day Chg'],
-                        'Dist': top_items.iloc[idx]['Distance'],
-                        'OI': top_items.iloc[idx]['Open Interest'],
-                        'Days_i': days_i[idx],
-                        'Diff_i': diff_i[idx],
-                        'Diff_Pow': diff_pow[idx],
-                        'Weight': w_i[idx],
-                        'Score': scores[idx]
-                    })
-
-        if symbol not in processed_data:
-            processed_data[symbol] = {'Call': 0.0, 'Put': 0.0}
-        
-        type_str = str(type_).lower()
-        if 'call' in type_str:
-            processed_data[symbol]['Call'] = D
-        elif 'put' in type_str:
-            processed_data[symbol]['Put'] = D
-
-        # 写入调试日志
-        if symbol == target_symbol:
-            log_lines = []
-            log_lines.append("-" * 80)
-            log_lines.append(f"正在计算: {symbol} - {type_}")
-            log_lines.append(f"实际条目数: {actual_n}, Diff=0数: {zero_diff_count}")
-            log_lines.append(f"A={a_days}, B={B}, C={C:.6f}, D={D:.6f}")
-            if row_details:
-                header = f"{'Expiry':<12} | {'Diff_i':<6} | {'Weight':<10} | {'Dist':<8} | {'OI':<8} | {'Score'}"
-                log_lines.append(header)
-                log_lines.append("-" * len(header))
-                for row in row_details:
-                    log_lines.append(f"{row['Expiry']:<12} | {row['Diff_i']:<6} | {row['Weight']:.6f}   | {row['Dist']:.4f}   | {row['OI']:<8} | {row['Score']:.6f}")
-            log_lines.append("\n")
-            with open(debug_path, 'a') as f:
-                f.write('\n'.join(log_lines))
-
-    # --- 数据库写入逻辑 ---
-    print(f"正在连接数据库: {db_path} ...")
-    target_date = (pd.Timestamp.now() - timedelta(days=1)).strftime('%Y-%m-%d')
-    print(f"写入日期设定为: {target_date}")
-    
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    
-    create_table_sql = f"""
-    CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        date TEXT,
-        name TEXT,
-        call TEXT,
-        put TEXT,
-        price REAL,
-        UNIQUE(date, name)
-    )
-    """
-    cursor.execute(create_table_sql)
-    
-    insert_sql = f"INSERT INTO {TABLE_NAME} (date, name, call, put, price) VALUES (?, ?, ?, ?, ?)"
-    
-    count_success = 0
-    count_skip = 0
-    
-    for symbol, values in processed_data.items():
-        raw_call_d = values['Call']
-        raw_put_d = values['Put']
-        
-        # 检查重复
-        cursor.execute(f"SELECT 1 FROM {TABLE_NAME} WHERE date=? AND name=?", (target_date, symbol))
-        if cursor.fetchone():
-            count_skip += 1
-            continue
-            
-        call_str = f"{raw_call_d * 100:.2f}%"
-        put_str = f"{raw_put_d * 100:.2f}%"
-        final_price = round((raw_call_d + raw_put_d) * 100, 2)
-        
-        try:
-            cursor.execute(insert_sql, (target_date, symbol, call_str, put_str, final_price))
-            count_success += 1
-        except Exception as e:
-            print(f"错误: 写入 {symbol} 失败: {e}")
-            
-    conn.commit()
-    conn.close()
-    
-    print(f"入库完成！成功: {count_success}, 跳过: {count_skip}")
-
-# ==========================================
-# 工具函数 & Main
-# ==========================================
-
-def get_latest_two_files(directory, pattern='Options_*.csv'):
-    """自动获取最新的两个文件"""
-    search_path = os.path.join(directory, pattern)
-    files = glob.glob(search_path)
-    files.sort(reverse=True)
-    if len(files) < 2: return None, None
-    return files[0], files[1]
-
-def show_alert(message):
+def display_dialog(message):
+    """Mac系统弹窗提示"""
     try:
         applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
         subprocess.run(['osascript', '-e', applescript_code], check=True)
-    except Exception:
-        pass
+    except Exception as e:
+        logging.error(f"弹窗失败: {e}")
+
+def fetch_with_retry(driver, url, extraction_func, max_retries=3, task_name="Task"):
+    """通用重试封装函数"""
+    for attempt in range(1, max_retries + 1):
+        try:
+            if url:
+                logging.info(f"[{task_name}] 加载页面 (第 {attempt}/{max_retries} 次): {url}")
+                driver.get(url)
+            
+            data = extraction_func(driver)
+            
+            if attempt > 1:
+                logging.info(f"[{task_name}] 重试成功！")
+            return data
+            
+        except Exception as e:
+            try:
+                current_url = driver.current_url
+                page_title = driver.title
+                context_msg = f" | URL: {current_url} | Title: {page_title}"
+            except:
+                context_msg = " | (无法获取页面上下文)"
+            logging.warning(f"[{task_name}] 第 {attempt} 次尝试失败: {e}{context_msg}")
+            
+            if attempt == max_retries:
+                logging.error(f"[{task_name}] 最终失败，已达最大重试次数。")
+                return []
+            time.sleep(3)
+    return []
+
+# ================= 任务模块 1-6 (来自 TE_Merged) =================
+
+def run_commodities():
+    logging.info(">>> 开始执行: Commodities")
+    driver = get_driver()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS Commodities (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT,
+            name TEXT,
+            price REAL,
+            UNIQUE(date, name)
+        );
+        ''')
+        conn.commit()
+        yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        all_data = []
+
+        def extract_baltic(d):
+            WebDriverWait(d, 10).until(EC.presence_of_element_located((By.CLASS_NAME, "table-responsive")))
+            price_element = d.find_element(By.XPATH, "//div[@class='table-responsive']//table//tr/td[position()=2]")
+            price = float(price_element.text.strip().replace(',', ''))
+            return [(yesterday, "BalticDry", price)]
+
+        baltic_data = fetch_with_retry(driver, 'https://tradingeconomics.com/commodity/baltic', extract_baltic, task_name="Commodities-Baltic")
+        all_data.extend(baltic_data)
+
+        commodities_list = [
+            "Coal", "Uranium", "Steel", "Lithium", "Wheat", "Palm Oil", "Aluminum",
+            "Nickel", "Tin", "Zinc", "Palladium", "Poultry", "Salmon", "Iron Ore",
+            "Orange Juice", "Cotton", "Coffee", "Sugar", "Cocoa"
+        ]
+
+        def extract_commodities(d):
+            temp_data = []
+            WebDriverWait(d, 10).until(EC.presence_of_element_located((By.LINK_TEXT, "Coal"))) 
+            for commodity in commodities_list:
+                try:
+                    element = d.find_element(By.LINK_TEXT, commodity)
+                    row = element.find_element(By.XPATH, './ancestor::tr')
+                    price_str = row.find_element(By.ID, 'p').text.strip()
+                    price = float(price_str.replace(',', ''))
+                    temp_data.append((yesterday, commodity.replace(" ", ""), price))
+                except Exception as inner_e:
+                    logging.warning(f"Skipped {commodity}: {inner_e}")
+            if not temp_data: raise Exception("页面已加载但未提取到任何商品数据")
+            return temp_data
+
+        others_data = fetch_with_retry(driver, 'https://tradingeconomics.com/commodities', extract_commodities, task_name="Commodities-List")
+        all_data.extend(others_data)
+
+        if all_data:
+            cursor.executemany('INSERT OR REPLACE INTO Commodities (date, name, price) VALUES (?, ?, ?)', all_data)
+            conn.commit()
+            logging.info(f"Commodities: 插入了 {len(all_data)} 条数据")
+    except Exception as e:
+        logging.error(f"Commodities 模块出错: {e}")
+        conn.rollback()
+    finally:
+        driver.quit()
+        conn.close()
+
+def run_currency_cny2():
+    logging.info(">>> 开始执行: Currency CNY 2")
+    driver = get_driver()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''CREATE TABLE IF NOT EXISTS Currencies (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, name TEXT, price REAL);''')
+        conn.commit()
+        target_currencies = ["CNYARS", "CNYIDR", "CNYIRR", "CNYEGP", "CNYMXN"]
+        yesterday_date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        def extract_currency_list(d):
+            WebDriverWait(d, 10).until(EC.presence_of_element_located((By.LINK_TEXT, "CNYARS")))
+            temp_data = []
+            for curr in target_currencies:
+                try:
+                    element = d.find_element(By.LINK_TEXT, curr)
+                    row = element.find_element(By.XPATH, './ancestor::tr')
+                    price = float(row.find_element(By.ID, 'p').text.strip().replace(',', ''))
+                    temp_data.append((yesterday_date, curr, price))
+                except Exception as inner_e:
+                    logging.warning(f"Skipped {curr}: {inner_e}")
+            if not temp_data: raise Exception("未提取到任何货币数据")
+            return temp_data
+        all_data = fetch_with_retry(driver, 'https://tradingeconomics.com/currencies?base=cny', extract_currency_list, task_name="Currency-CNY2")
+        if all_data:
+            cursor.executemany('INSERT INTO Currencies (date, name, price) VALUES (?, ?, ?)', all_data)
+            conn.commit()
+            logging.info(f"Currency CNY2: 插入了 {len(all_data)} 条数据")
+    except Exception as e:
+        logging.error(f"Currency CNY2 模块出错: {e}")
+        conn.rollback()
+    finally:
+        driver.quit()
+        conn.close()
+
+def run_currency_cny():
+    logging.info(">>> 开始执行: Currency CNY (Specific Pairs)")
+    driver = get_driver()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''CREATE TABLE IF NOT EXISTS Currencies (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, name TEXT, price REAL);''')
+        conn.commit()
+        symbols = ["CNYIRR", "USDRUB"]
+        yesterday_date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        all_data = []
+        for symbol in symbols:
+            url = f"https://tradingeconomics.com/{symbol}:cur"
+            def extract_single_currency(d):
+                price_text = None
+                try:
+                    wait = WebDriverWait(d, 5)
+                    price_element = wait.until(EC.presence_of_element_located((By.ID, "market_last")))
+                    price_text = price_element.text.strip()
+                except TimeoutException:
+                    wait = WebDriverWait(d, 5)
+                    price_element = wait.until(EC.presence_of_element_located((By.CLASS_NAME, "closeLabel")))
+                    price_text = price_element.text.strip()
+                if price_text:
+                    price = round(float(price_text.replace(',', '')), 4)
+                    return [(yesterday_date, symbol, price)]
+                else: raise Exception(f"未能找到 {symbol} 的价格元素")
+            result = fetch_with_retry(driver, url, extract_single_currency, task_name=f"Currency-{symbol}")
+            all_data.extend(result)
+        if all_data:
+            cursor.executemany('INSERT INTO Currencies (date, name, price) VALUES (?, ?, ?)', all_data)
+            conn.commit()
+            logging.info(f"Currency CNY: 插入了 {len(all_data)} 条数据")
+    except Exception as e:
+        logging.error(f"Currency CNY 模块出错: {e}")
+        conn.rollback()
+    finally:
+        driver.quit()
+        conn.close()
+
+def run_bonds():
+    logging.info(">>> 开始执行: Bonds")
+    driver = get_driver()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''CREATE TABLE IF NOT EXISTS Bonds (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, name TEXT, price REAL, UNIQUE(date, name));''')
+        conn.commit()
+        yesterday_date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        all_data = []
+        
+        def extract_us_bond(d):
+            element = WebDriverWait(d, 10).until(EC.presence_of_element_located((By.LINK_TEXT, "US 2Y")))
+            row = element.find_element(By.XPATH, './ancestor::tr')
+            price = float(row.find_element(By.ID, 'p').text.strip().replace(',', ''))
+            return [(yesterday_date, "US2Y", price)]
+        
+        all_data.extend(fetch_with_retry(driver, 'https://tradingeconomics.com/united-states/government-bond-yield', extract_us_bond, task_name="Bonds-US"))
+        
+        other_bonds = {"United Kingdom": "UK10Y", "Japan": "JP10Y", "Brazil": "BR10Y", "India": "IND10Y", "Turkey": "TUR10Y"}
+        def extract_other_bonds(d):
+            temp = []
+            WebDriverWait(d, 10).until(EC.presence_of_element_located((By.LINK_TEXT, "United Kingdom")))
+            for bond, mapped_name in other_bonds.items():
+                try:
+                    element = d.find_element(By.LINK_TEXT, bond)
+                    row = element.find_element(By.XPATH, './ancestor::tr')
+                    price = float(row.find_element(By.ID, 'p').text.strip().replace(',', ''))
+                    temp.append((yesterday_date, mapped_name, price))
+                except Exception as e: logging.warning(f"Failed {mapped_name}: {e}")
+            if not temp: raise Exception("未提取到任何其他国家债券数据")
+            return temp
+            
+        all_data.extend(fetch_with_retry(driver, 'https://tradingeconomics.com/bonds', extract_other_bonds, task_name="Bonds-Others"))
+        if all_data:
+            cursor.executemany('INSERT OR REPLACE INTO Bonds (date, name, price) VALUES (?, ?, ?)', all_data)
+            conn.commit()
+            logging.info(f"Bonds: 插入了 {len(all_data)} 条数据")
+    except Exception as e:
+        logging.error(f"Bonds 模块出错: {e}")
+        conn.rollback()
+    finally:
+        driver.quit()
+        conn.close()
+
+def run_indices():
+    logging.info(">>> 开始执行: Indices")
+    driver = get_driver()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''CREATE TABLE IF NOT EXISTS Indices (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, name TEXT, price REAL, volume REAL, UNIQUE(date, name));''')
+        conn.commit()
+        name_mapping = {"MOEX": "Russia"}
+        yesterday_date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        def extract_indices(d):
+            temp = []
+            WebDriverWait(d, 10).until(EC.presence_of_element_located((By.CLASS_NAME, "table-responsive")))
+            for Indice, mapped_name in name_mapping.items():
+                try:
+                    element = d.find_element(By.LINK_TEXT, Indice)
+                    row = element.find_element(By.XPATH, './ancestor::tr')
+                    price = float(row.find_element(By.ID, 'p').text.strip().replace(',', ''))
+                    temp.append((yesterday_date, mapped_name, price, 0))
+                except Exception as e: logging.warning(f"Failed Indices {mapped_name}: {e}")
+            return temp
+        all_data = fetch_with_retry(driver, 'https://tradingeconomics.com/stocks', extract_indices, task_name="Indices")
+        if all_data:
+            cursor.executemany('INSERT INTO Indices (date, name, price, volume) VALUES (?, ?, ?, ?)', all_data)
+            conn.commit()
+            logging.info(f"Indices: 插入了 {len(all_data)} 条数据")
+    except Exception as e:
+        logging.error(f"Indices 模块出错: {e}")
+        conn.rollback()
+    finally:
+        driver.quit()
+        conn.close()
+
+def run_economics():
+    logging.info(">>> 开始执行: Economics")
+    driver = get_driver()
+    conn = get_db_connection()
+    
+    def fetch_data_logic(driver, indicators):
+        yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        result = []
+        for key, value in indicators.items():
+            try:
+                element = driver.find_element(By.XPATH, f"//td[normalize-space(.)=\"{key}\"]/following-sibling::td")
+                price_str = element.text.strip()
+                if not price_str: continue
+                price = float(price_str.replace(',', ''))
+                result.append((yesterday, value, price))
+            except Exception: pass
+        return result
+
+    def navigate_and_fetch_retry(driver, section_css, link_text, indicators, max_retries=3):
+        for i in range(max_retries):
+            try:
+                if section_css:
+                    section_link = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, section_css)))
+                    section_link.click()
+                    WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.LINK_TEXT, link_text)))
+                data = fetch_data_logic(driver, indicators)
+                if not data: raise Exception("No data extracted")
+                return data
+            except Exception as e:
+                logging.warning(f"Economics 导航/抓取重试 {i+1}/{max_retries} ({link_text}): {e}")
+                time.sleep(2)
+        return []
+
+    try:
+        c = conn.cursor()
+        c.execute('''CREATE TABLE IF NOT EXISTS Economics (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, name TEXT, price REAL, UNIQUE(date, name));''')
+        conn.commit()
+        Economics1 = {"GDP Growth Rate": "USGDP", "Non Farm Payrolls": "USNonFarm", "Inflation Rate": "USCPI", "Interest Rate": "USInterest", "Balance of Trade": "USTrade", "Consumer Confidence": "USConfidence", "Retail Sales MoM": "USRetailM", "Unemployment Rate": "USUnemploy", "Non Manufacturing PMI": "USNonPMI"}
+        Economics2 = {"Initial Jobless Claims": "USInitial", "ADP Employment Change": "USNonFarmA"}
+        Economics3 = {"Core PCE Price Index Annual Change": "CorePCEY", "Core PCE Price Index MoM": "CorePCEM", "Core Inflation Rate": "CoreCPI", "Producer Prices Change": "USPPI", "Core Producer Prices YoY": "CorePPI", "PCE Price Index Annual Change": "PCEY", "Import Prices MoM": "ImportPriceM", "Import Prices YoY": "ImportPriceY"}
+        Economics4 = {"Real Consumer Spending": "USConspending"}
+        
+        data_to_insert = []
+        data_to_insert.extend(fetch_with_retry(driver, 'https://tradingeconomics.com/united-states/indicators', lambda d: fetch_data_logic(d, Economics1), task_name="Economics-Main"))
+        data_to_insert.extend(navigate_and_fetch_retry(driver, 'a[data-bs-target="#labour"]', "Manufacturing Payrolls", Economics2))
+        data_to_insert.extend(navigate_and_fetch_retry(driver, 'a[data-bs-target="#prices"]', "Core Consumer Prices", Economics3))
+        data_to_insert.extend(navigate_and_fetch_retry(driver, 'a[data-bs-target="#gdp"]', "GDP Constant Prices", Economics4))
+        
+        for entry in data_to_insert:
+            c = conn.cursor()
+            c.execute('''SELECT price FROM Economics WHERE name = ? AND date < ? ORDER BY ABS(julianday(date) - julianday(?)) LIMIT 1''', (entry[1], entry[0], entry[0]))
+            result = c.fetchone()
+            if result and float(result[0]) == float(entry[2]):
+                logging.info(f"Skipping {entry[1]} on {entry[0]}: Price same as recent entry.")
+            else:
+                try:
+                    c.execute('INSERT INTO Economics (date, name, price) VALUES (?, ?, ?)', entry)
+                    conn.commit()
+                    logging.info(f"Economics: 插入 {entry[1]} = {entry[2]}")
+                except sqlite3.IntegrityError: pass
+    except Exception as e:
+        logging.error(f"Economics 模块出错: {e}")
+    finally:
+        driver.quit()
+        conn.close()
+
+# ================= 任务模块 7: ETF 处理 (来自 Compare_Insert.py) =================
+
+def count_files(prefix):
+    """计算Downloads目录中指定前缀开头的文件数量"""
+    files = glob.glob(os.path.join(DOWNLOAD_DIR, f"{prefix}_*.csv"))
+    return len(files)
+
+def run_etf_processing():
+    logging.info(">>> 开始执行: ETF CSV Processing (Compare_Insert)")
+    
+    # 1. 计算昨天日期
+    yesterday = date.today() - timedelta(days=1)
+    yesterday_str = yesterday.strftime('%Y-%m-%d')
+    
+    # 2. 触发 AppleScript (Chrome操作)
+    script = '''
+    delay 1
+    tell application "Google Chrome"
+        activate
+    end tell
+    delay 1
+    tell application "System Events"
+        keystroke "c" using option down
+    end tell
+    '''
+    try:
+        subprocess.run(['osascript', '-e', script], check=True)
+        logging.info("AppleScript 触发成功")
+    except Exception as e:
+        logging.error(f"AppleScript 执行失败: {e}")
+
+    # 3. 等待文件下载
+    print("正在等待 topetf_*.csv 文件下载...", end="")
+    waited = 0
+    while count_files("topetf") < 1:
+        time.sleep(2)
+        waited += 2
+        print(".", end="", flush=True)
+        # 防止死循环，可选设置最大等待时间，例如120秒
+        if waited > 120:
+             logging.error("\n等待 CSV 文件超时。")
+             return
+    print("\n文件已找到。")
+
+    # 4. 获取最新文件
+    topetf_files = glob.glob(os.path.join(DOWNLOAD_DIR, 'topetf_*.csv'))
+    if not topetf_files:
+        logging.error("未找到 topetf 文件")
+        return
+    topetf_file = max(topetf_files, key=os.path.getmtime)
+    logging.info(f"使用 topetf 文件: {topetf_file}")
+
+    # 5. 读取 JSON 配置
+    known_etfs = set()
+    try:
+        with open(JSON_FILE_PATH, 'r', encoding='utf-8') as f:
+            sectors_data = json.load(f)
+        known_etfs = set(sectors_data.get('ETFs', []))
+        if not known_etfs: logging.warning("JSON ETFs 列表为空")
+    except Exception as e:
+        logging.error(f"读取 JSON 失败: {e}")
+        return # 关键配置缺失，终止
+
+    etf_blacklist = set()
+    try:
+        with open(BLACKLIST_JSON_PATH, 'r', encoding='utf-8') as f_bl:
+            bl_data = json.load(f_bl)
+        etf_blacklist = set(bl_data.get('etf', []))
+    except Exception as e:
+        logging.warning(f"Blacklist 读取失败或不存在，将不使用过滤: {e}")
+
+    # 6. 处理 CSV
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    etfs_to_db = []
+    new_etfs_to_file = []
+
+    try:
+        with open(topetf_file, mode='r', encoding='utf-8-sig') as csvfile:
+            reader = csv.DictReader(csvfile)
+            if not reader.fieldnames or not all(col in reader.fieldnames for col in ['Symbol', 'Name', 'Price', 'Volume']):
+                logging.error("CSV 缺少必要列")
+                return
+
+            for row in reader:
+                symbol = row.get('Symbol')
+                name = row.get('Name')
+                price_str = row.get('Price')
+                volume_str = row.get('Volume')
+
+                if not all([symbol, name, price_str, volume_str]): continue
+                try:
+                    price_val = float(price_str)
+                    volume_val = int(volume_str)
+                except ValueError: continue
+
+                if symbol in known_etfs:
+                    etfs_to_db.append((yesterday_str, symbol, round(price_val, 2), volume_val))
+                else:
+                    if volume_val > 200000 and symbol not in etf_blacklist:
+                        new_etfs_to_file.append(f"{symbol}: {name}, {volume_val}")
+    except Exception as e:
+        logging.error(f"处理 CSV 出错: {e}")
+        return
+
+    # 7. 写入数据库
+    if etfs_to_db:
+        conn = None
+        try:
+            conn = sqlite3.connect(DB_PATH, timeout=60.0)
+            cursor = conn.cursor()
+            cursor.executemany("INSERT INTO ETFs (date, name, price, volume) VALUES (?, ?, ?, ?)", etfs_to_db)
+            conn.commit()
+            logging.info(f"成功写入 {len(etfs_to_db)} 条 ETF 数据")
+        except Exception as e:
+            logging.error(f"数据库写入错误: {e}")
+            if conn: conn.rollback()
+        finally:
+            if conn: conn.close()
+    else:
+        logging.info("无匹配 ETF 数据写入数据库")
+
+    # 8. 写入新文件
+    if new_etfs_to_file:
+        try:
+            with open(OUTPUT_TXT_FILE, 'a', encoding='utf-8') as txtfile:
+                for line in new_etfs_to_file:
+                    txtfile.write(line + '\n')
+            logging.info(f"写入 {len(new_etfs_to_file)} 条新 ETF 数据到文件")
+        except Exception as e:
+            logging.error(f"写入文件失败: {e}")
+
+    # 9. 调用子脚本 Check_yesterday
+    logging.info("--- 开始执行 Check_yesterday.py ---")
+    try:
+        result = subprocess.run(
+            ['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', CHECK_YESTERDAY_SCRIPT_PATH],
+            check=True, capture_output=True, text=True, encoding='utf-8'
+        )
+        logging.info("Check_yesterday 执行成功")
+        print("--- Subprocess Output ---\n" + result.stdout)
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Check_yesterday 执行失败 code={e.returncode}")
+        print(e.stderr)
+    except Exception as e:
+        logging.error(f"调用 Check_yesterday 失败: {e}")
+
+# ================= 主程序入口 =================
+
+def main():
+    # 1. 检查日期 (全局控制)
+    if not check_is_workday():
+        msg = "今天是周日或周一，不执行更新操作。" 
+        logging.info(msg)
+        display_dialog(msg)
+        return
+
+    # 2. 顺次执行爬虫任务
+    try: run_commodities()
+    except Exception as e: logging.error(f"Main Loop - Commodities Error: {e}")
+    
+    try: run_currency_cny2()
+    except Exception as e: logging.error(f"Main Loop - Currency CNY2 Error: {e}")
+    
+    try: run_currency_cny()
+    except Exception as e: logging.error(f"Main Loop - Currency CNY Error: {e}")
+    
+    try: run_bonds()
+    except Exception as e: logging.error(f"Main Loop - Bonds Error: {e}")
+    
+    try: run_indices()
+    except Exception as e: logging.error(f"Main Loop - Indices Error: {e}")
+        
+    try: run_economics()
+    except Exception as e: logging.error(f"Main Loop - Economics Error: {e}")
+
+    # 3. 执行 ETF 处理任务 (原 Compare_Insert 逻辑)
+    try:
+        run_etf_processing()
+    except Exception as e:
+        logging.error(f"Main Loop - ETF Processing Error: {e}")
+
+    logging.info(">>> 所有任务执行完毕")
 
 if __name__ == "__main__":
-    file_new = None
-    file_old = None
-
-    # 1. 确定文件路径
-    if USE_MANUAL_MODE:
-        print(">>> 模式: 手动指定 (Manual Mode)")
-        file_old = MANUAL_FILE_OLD
-        file_new = MANUAL_FILE_NEW
-        if not (os.path.exists(file_old) and os.path.exists(file_new)):
-            print("❌ 错误: 找不到指定的手动文件。")
-            file_new = None
-    else:
-        print(">>> 模式: 自动扫描 (Auto Mode)")
-        file_new, file_old = get_latest_two_files(BACKUP_DIR)
-        if not file_new:
-            print("❌ 错误: 备份目录下文件不足两个。")
-
-    # 2. 开始执行流程
-    if file_new and file_old:
-        # 第一步：处理并生成 Change 数据
-        generated_df = process_options_change(file_old, file_new, TOP_N, INCLUDE_NEW_ROWS)
-        
-        # 第二步：如果生成成功，直接在内存中传递数据进行入库计算
-        if generated_df is not None and not generated_df.empty:
-            calculate_d_score_from_df(
-                generated_df, 
-                DB_PATH, 
-                OUTPUT_DEBUG_PATH, 
-                TOP_N, 
-                WEIGHT_POWER, 
-                DEBUG_SYMBOL
-            )
-            show_alert("流程完成：CSV已生成，数据库已更新")
-        else:
-            print("\n⚠️ 未生成有效数据，跳过数据库计算步骤。")
-    else:
-        print("\n程序终止: 未能获取有效的对比文件。")
+    main()

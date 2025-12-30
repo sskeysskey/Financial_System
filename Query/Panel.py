@@ -37,7 +37,7 @@ DISPLAY_LIMITS = {
 }
 
 categories = [
-    ['Must', 'Today', 'Short', 'Short_Shift', 'PE_Deep_backup', 'PE_W_backup', 'OverSell_W_backup'],
+    ['Must', 'Today', 'Short', 'Short_W', 'PE_Deep_backup', 'PE_W_backup', 'OverSell_W_backup'],
     ['PE_valid_backup', 'PE_invalid_backup', 'Strategy12_backup', 'Strategy34_backup'],
     ['Basic_Materials', 'Consumer_Cyclical', 'Real_Estate', 'Technology', 'Energy', 'Industrials',
      'Consumer_Defensive', 'Communication_Services', 'Financial_Services', 'Healthcare', 'Utilities'],
@@ -305,7 +305,7 @@ def fetch_mnspp_data_from_db(db_path, symbol):
     根据股票代码从MNSPP表中查询 shares, marketcap, pe_ratio, pb。
     如果未找到，则返回默认值。
     """
-    with sqlite3.connect(db_path) as conn:
+    with sqlite3.connect(db_path, timeout=60.0) as conn:
         cursor = conn.cursor()
         query = "SELECT shares, marketcap, pe_ratio, pb FROM MNSPP WHERE symbol = ?"
         cursor.execute(query, (symbol,))
@@ -325,7 +325,7 @@ def fetch_latest_earning_date(symbol):
     如果没有记录就返回“无”。
     """
     try:
-        with sqlite3.connect(DB_PATH) as conn:
+        with sqlite3.connect(DB_PATH, timeout=60.0) as conn:
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT date FROM earning WHERE name = ? ORDER BY date DESC LIMIT 1",
@@ -338,7 +338,7 @@ def fetch_latest_earning_date(symbol):
         return "无"
 
 def query_database(db_path, table_name, condition):
-    with sqlite3.connect(db_path) as conn:
+    with sqlite3.connect(db_path, timeout=60.0) as conn:
         cursor = conn.cursor()
         query = f"SELECT * FROM {table_name} WHERE {condition} ORDER BY date DESC;"
         cursor.execute(query)
@@ -373,7 +373,7 @@ def get_color_decision_data(db_path, sector_data, symbol):
     """
     try:
         # 步骤 1: 获取最近两次财报信息
-        with sqlite3.connect(db_path) as conn:
+        with sqlite3.connect(db_path, timeout=60.0) as conn:
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT date, price FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 2",
@@ -409,7 +409,7 @@ def get_color_decision_data(db_path, sector_data, symbol):
             return latest_earning_price, None, latest_earning_date
 
         # 步骤 3: 获取两个日期的收盘价
-        with sqlite3.connect(db_path) as conn:
+        with sqlite3.connect(db_path, timeout=60.0) as conn:
             cursor = conn.cursor()
             
             # 获取最新财报日的收盘价
@@ -894,7 +894,7 @@ class MainWindow(QMainWindow):
 
         # ### 修改 ###: 定义需要特殊排序的组
         target_sort_groups = {
-            'Must','Today','Short','Short_Shift','Basic_Materials','Consumer_Cyclical',
+            'Must','Today','Short','Short_W','Basic_Materials','Consumer_Cyclical',
             'Real_Estate','Technology','Energy','Industrials','Consumer_Defensive',
             'Communication_Services','Financial_Services','Healthcare','Utilities',
             'PE_valid','PE_invalid','Strategy12','Strategy34','PE_Deep','OverSell_W','PE_W'
@@ -1154,7 +1154,7 @@ class MainWindow(QMainWindow):
         blacklist_menu.addAction("Earning", lambda: self.add_to_blacklist(keyword, 'Earning', group))
         
         menu.addSeparator()
-        menu.addAction("清空 Short_Shift 分组", lambda: self.clear_group("Short_Shift"))
+        menu.addAction("清空 Short_W 分组", lambda: self.clear_group("Short_W"))
         menu.addAction("清空 Short 分组", lambda: self.clear_group("Short"))
         menu.addAction("清空 PE_Deep_backup 分组", lambda: self.clear_group("PE_Deep_backup"))
         menu.addAction("清空 OverSell_W_backup 分组", lambda: self.clear_group("OverSell_W_backup"))

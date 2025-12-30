@@ -21,7 +21,7 @@ TARGET_CATEGORIES = [
     "Must",
     "Today",
     "Short",
-    "Short_Shift"
+    "Short_W"
 ]
 
 def is_uppercase_letters(text: str) -> bool:

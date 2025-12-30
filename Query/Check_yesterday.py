@@ -92,7 +92,7 @@ def insert_ratio(
     return cursor.rowcount, cursor.lastrowid
 
 def Insert_DB():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=60.0)
     cursor = conn.cursor()
 
     try:
@@ -196,7 +196,7 @@ def write_json(path, data):
 
 def query_data(table, name):
     """查询 SQLite，看表 table 中 name 和昨天日期的数据是否存在"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=60.0)
     cur = conn.cursor()
     try:
         cur.execute(f"SELECT 1 FROM {table} WHERE name = ? AND date = ?", (name, yesterday))
