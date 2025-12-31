@@ -274,15 +274,34 @@ def run_bonds():
         other_bonds = {"United Kingdom": "UK10Y", "Japan": "JP10Y", "Brazil": "BR10Y", "India": "IND10Y", "Turkey": "TUR10Y"}
         def extract_other_bonds(d):
             temp = []
-            WebDriverWait(d, 10).until(EC.presence_of_element_located((By.LINK_TEXT, "United Kingdom")))
+            # 1. 确保表格加载 (增加等待时间)
+            WebDriverWait(d, 15).until(EC.presence_of_element_located((By.LINK_TEXT, "United Kingdom")))
+            
+            # 收集本次尝试中失败的项目
+            missing_items = []
+            
             for bond, mapped_name in other_bonds.items():
                 try:
-                    element = d.find_element(By.LINK_TEXT, bond)
+                    # 优化定位：只查找位于 td (表格单元格) 内的链接，避免抓到页眉/页脚的同名链接
+                    # 原代码: element = d.find_element(By.LINK_TEXT, bond)
+                    # 新代码: 使用 XPath 确保在表格中
+                    element = d.find_element(By.XPATH, f"//td/a[normalize-space(.)='{bond}']")
+                    
                     row = element.find_element(By.XPATH, './ancestor::tr')
                     price = float(row.find_element(By.ID, 'p').text.strip().replace(',', ''))
                     temp.append((yesterday_date, mapped_name, price))
-                except Exception as e: logging.warning(f"Failed {mapped_name}: {e}")
-            if not temp: raise Exception("未提取到任何其他国家债券数据")
+                except Exception as e:
+                    # 记录具体的错误，但不立即中断循环，看看其他的是否能成功
+                    logging.warning(f"临时抓取失败 {mapped_name}: {e}")
+                    missing_items.append(mapped_name)
+
+            # 2. 关键修改：检查数据完整性
+            # 如果 temp 的数量少于应抓取的数量，说明有数据没抓到
+            if len(temp) < len(other_bonds):
+                # 抛出异常！这会触发 fetch_with_retry 的 except 块
+                # 从而导致：记录警告 -> 等待3秒 -> 重新 reload 页面 -> 重试
+                raise Exception(f"数据抓取不完整，缺失: {missing_items}。触发重试机制。")
+            
             return temp
             
         all_data.extend(fetch_with_retry(driver, 'https://tradingeconomics.com/bonds', extract_other_bonds, task_name="Bonds-Others"))
@@ -357,14 +376,34 @@ def run_economics():
     def fetch_data_logic(driver, indicators):
         yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
         result = []
+        missing_items = []
+
+        # 增加一个通用等待，确保表格内容至少开始渲染
+        try:
+            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "td")))
+        except:
+            pass # 如果超时，下面的循环会处理并抛出异常
+
         for key, value in indicators.items():
             try:
+                # 使用 normalize-space 容错空格
+                # 只有当不仅找到元素，且内容有效时才算成功
                 element = driver.find_element(By.XPATH, f"//td[normalize-space(.)=\"{key}\"]/following-sibling::td")
                 price_str = element.text.strip()
-                if not price_str: continue
+                
+                if not price_str: 
+                    missing_items.append(key)
+                    continue
+
                 price = float(price_str.replace(',', ''))
                 result.append((yesterday, value, price))
-            except Exception: pass
+            except Exception:
+                missing_items.append(key)
+
+        # 【关键修改】如果抓取到的数量少于预期数量，抛出异常以触发重试
+        if len(result) < len(indicators):
+            raise Exception(f"数据抓取不完整 (成功 {len(result)}/{len(indicators)})。缺失指标: {missing_items}")
+
         return result
 
     def navigate_and_fetch_retry(driver, section_css, link_text, indicators, max_retries=3):
@@ -572,24 +611,57 @@ def main():
         display_dialog(msg)
         return
 
+    # --- 配置等待时间 (秒) ---
+    TASK_INTERVAL = 3  # 这里设置你想要的等待秒数
+
+    def wait_between_tasks(task_name):
+        """辅助函数：打印日志并等待"""
+        logging.info(f"[{task_name}] 完成，休息 {TASK_INTERVAL} 秒准备下一项任务...")
+        time.sleep(TASK_INTERVAL)
+
     # 2. 顺次执行爬虫任务
-    try: run_commodities()
-    except Exception as e: logging.error(f"Main Loop - Commodities Error: {e}")
+
+    try: 
+        run_commodities()
+    except Exception as e: 
+        logging.error(f"Main Loop - Commodities Error: {e}")
     
-    try: run_currency_cny2()
-    except Exception as e: logging.error(f"Main Loop - Currency CNY2 Error: {e}")
+    wait_between_tasks("Commodities") # 等待
+
+    try: 
+        run_currency_cny2()
+    except Exception as e: 
+        logging.error(f"Main Loop - Currency CNY2 Error: {e}")
     
-    try: run_currency_cny()
-    except Exception as e: logging.error(f"Main Loop - Currency CNY Error: {e}")
+    wait_between_tasks("Currency CNY2") # 等待
+
+    try: 
+        run_currency_cny()
+    except Exception as e: 
+        logging.error(f"Main Loop - Currency CNY Error: {e}")
     
-    try: run_bonds()
-    except Exception as e: logging.error(f"Main Loop - Bonds Error: {e}")
+    wait_between_tasks("Currency CNY") # 等待
+
+    try: 
+        run_bonds()
+    except Exception as e: 
+        logging.error(f"Main Loop - Bonds Error: {e}")
     
-    try: run_indices()
-    except Exception as e: logging.error(f"Main Loop - Indices Error: {e}")
+    wait_between_tasks("Bonds") # 等待
+
+    try: 
+        run_indices()
+    except Exception as e: 
+        logging.error(f"Main Loop - Indices Error: {e}")
         
-    try: run_economics()
-    except Exception as e: logging.error(f"Main Loop - Economics Error: {e}")
+    wait_between_tasks("Indices") # 等待
+
+    try: 
+        run_economics()
+    except Exception as e: 
+        logging.error(f"Main Loop - Economics Error: {e}")
+
+    wait_between_tasks("Economics") # 等待
 
     # 3. 执行 ETF 处理任务 (原 Compare_Insert 逻辑)
     try:
