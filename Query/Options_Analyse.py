@@ -287,13 +287,14 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
 def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_config, target_symbol):
     """
     直接从 DataFrame 计算 Score 并写入数据库 (替代原 read_csv 方式)
+    已更新: 增加 change 字段计算 (Current Price - Previous Price)
     """
     print(f"\n[{datetime.datetime.now().strftime('%H:%M:%S')}] 开始执行 Score 计算与入库...")
     print(f"当前配置: Top N = {n_config}, 权重幂次 = {power_config}")
     
     # 这里的 df_input 已经是内存中的 DataFrame，我们需要防止修改原数据
     df = df_input.copy()
-
+    
     # 初始化调试文件
     if target_symbol:
         try:
@@ -305,19 +306,19 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_con
             print(f"无法创建调试文件: {e}")
 
     # --- 数据预处理 (兼容 a.py 生成的格式) ---
-    # 1. Distance 去百分号 (因为 a.py 输出了 5.23% 这样的字符串)
+    # 1. Distance 去百分号
     try:
         df['Distance'] = df['Distance'].astype(str).str.rstrip('%').astype(float) / 100
     except:
         pass 
-
+    
     # 2. 确保数值列格式正确
     for col in ['Open Interest', '1-Day Chg']:
         if df[col].dtype == object:
              df[col] = df[col].astype(str).str.replace(',', '').str.replace('%', '')
         df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
-    # 3. 解析日期 (重要)
+    # 3. 解析日期
     df['Expiry Date'] = pd.to_datetime(df['Expiry Date'], errors='coerce')
     if df['Expiry Date'].isnull().any():
         print("警告: 有部分日期无法解析，将被忽略。")
@@ -327,12 +328,12 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_con
     us_cal = USFederalHolidayCalendar()
     holidays = us_cal.holidays(start='2024-01-01', end='2030-12-31')
     today = pd.Timestamp.now().normalize()
-
+    
     processed_data = {}
     grouped = df.groupby(['Symbol', 'Type'])
     
     print(f"开始计算分数... (调试目标: {target_symbol})")
-
+    
     for (symbol, type_), group in grouped:
         # 按数值降序
         group = group.sort_values(by='1-Day Chg', ascending=False)
@@ -354,6 +355,7 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_con
         expiry_dates = top_items['Expiry Date'].values.astype('datetime64[D]')
         today_arr = np.full(expiry_dates.shape, today).astype('datetime64[D]')
         days_i = np.busday_count(today_arr, expiry_dates, holidays=holidays.values.astype('datetime64[D]'))
+        
         diff_i = a_days - days_i
         
         zero_diff_count = np.sum(diff_i == 0)
@@ -363,8 +365,9 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_con
         total_oi = top_items['Open Interest'].sum()
         C = 0
         D = 0
+        
         row_details = []
-
+        
         if B != 0 and total_oi != 0:
             w_i = diff_pow / B
             scores = w_i * top_items['Distance'].values * top_items['Open Interest'].values
@@ -386,7 +389,7 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_con
                         'Weight': w_i[idx],
                         'Score': scores[idx]
                     })
-
+        
         if symbol not in processed_data:
             processed_data[symbol] = {'Call': 0.0, 'Put': 0.0}
         
@@ -415,12 +418,17 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_con
 
     # --- 数据库写入逻辑 ---
     print(f"正在连接数据库: {db_path} ...")
+    
+    # 设定写入日期
     target_date = (pd.Timestamp.now() - timedelta(days=1)).strftime('%Y-%m-%d')
     print(f"写入日期设定为: {target_date}")
     
     conn = sqlite3.connect(db_path, timeout=60.0)
     cursor = conn.cursor()
     
+    # 1. 更新建表语句，增加 change 字段
+    # 注意：如果表已存在且无 change 字段，此语句不会自动添加列。
+    # 假设用户已处理好数据库结构，或者这是一个新数据库。
     create_table_sql = f"""
     CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -429,40 +437,72 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_con
         call TEXT,
         put TEXT,
         price REAL,
+        change REAL,
         UNIQUE(date, name)
     )
     """
     cursor.execute(create_table_sql)
     
-    # 修改 SQL 语句，支持“冲突时更新 (Upsert)”
-    # 语法含义：尝试插入，如果 (date, name) 冲突，则更新 call, put, price 字段
+    # 2. 准备 SQL 语句
+    # 查询前一个交易日价格的 SQL
+    query_prev_price_sql = f"""
+        SELECT price 
+        FROM {TABLE_NAME} 
+        WHERE name = ? AND date < ? 
+        ORDER BY date DESC 
+        LIMIT 1
+    """
+
+    # 插入或更新的 SQL (包含 change)
     insert_sql = f"""
-    INSERT INTO {TABLE_NAME} (date, name, call, put, price) 
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO {TABLE_NAME} (date, name, call, put, price, change) 
+    VALUES (?, ?, ?, ?, ?, ?)
     ON CONFLICT(date, name) 
     DO UPDATE SET 
         call=excluded.call,
         put=excluded.put,
-        price=excluded.price
+        price=excluded.price,
+        change=excluded.change
     """
-
+    
     count_success = 0
-
+    
     for symbol, values in processed_data.items():
         raw_call_d = values['Call']
         raw_put_d = values['Put']
-
+        
         call_str = f"{raw_call_d * 100:.2f}%"
         put_str = f"{raw_put_d * 100:.2f}%"
         final_price = round((raw_call_d + raw_put_d) * 100, 2)
+        
+        # --- 新增逻辑: 计算 Change ---
+        change_val = None
+        try:
+            cursor.execute(query_prev_price_sql, (symbol, target_date))
+            row = cursor.fetchone()
+            if row and row[0] is not None:
+                prev_price = row[0]
+                change_val = round(final_price - prev_price, 2)
+            else:
+                # 之前没有记录，change 设为 None (数据库中为 NULL)
+                change_val = None
+        except Exception as e:
+            print(f"查询 {symbol} 前值失败: {e}")
+            change_val = None
+        # ---------------------------
 
         try:
-            # 执行 Upsert
-            cursor.execute(insert_sql, (target_date, symbol, call_str, put_str, final_price))
+            # 执行 Upsert，传入 change_val
+            cursor.execute(insert_sql, (target_date, symbol, call_str, put_str, final_price, change_val))
             count_success += 1
         except Exception as e:
+            # 兼容性处理：如果表结构还没改，INSERT 可能会报错缺少列
+            # 这里尝试捕获并提示用户
+            if "has no column named change" in str(e):
+                print(f"❌ 严重错误: 数据库表 '{TABLE_NAME}' 缺少 'change' 列。请先手动修改数据库结构或删除旧表。")
+                break
             print(f"错误: 写入/更新 {symbol} 失败: {e}")
-
+            
     conn.commit()
     conn.close()
     

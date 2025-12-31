@@ -325,4 +325,4 @@ if __name__ == "__main__":
     report_save_directory = "/Users/yanzhang/Downloads"
     
     # 调用主函数开始执行，并传入输出目录
-    visualize_sqlite_db(database_file_path, output_dir=report_save_directory, content_limit=200)
+    visualize_sqlite_db(database_file_path, output_dir=report_save_directory, content_limit=500)
