@@ -32,13 +32,16 @@ TABLE_NAME = 'Options'
 OUTPUT_DEBUG_PATH = '/Users/yanzhang/Downloads/3.txt'
 
 # --- 算法参数配置 ---
-# 每个 Symbol 的 Calls 和 Puts 各保留前多少名 (共用)
+# 每个 Symbol 的 Calls 和 Puts 各保留前多少名 (用于 Part A 过滤和 Part B 策略1)
 TOP_N = 20
+
+# [新增配置] 策略 2 (IV 计算) 取排名前多少名
+IV_TOP_N = 10
 
 # a.py 逻辑参数: 是否考虑新增的数据 (B有A无)
 INCLUDE_NEW_ROWS = True
 
-# b.py 逻辑参数: 权重幂次配置 (1=线性, 2=平方...)
+# 策略1： 逻辑参数: 权重幂次配置 (1=线性, 2=平方...)
 WEIGHT_POWER = 1
 
 # b.py 调试 Symbol
@@ -281,17 +284,17 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
     return final_output
 
 # ==========================================
-# [Part B] 计算 D-Score 及 IV 并入库 (原 b.py)
+# [Part B] 计算 D-Score 及 IV 并入库
 # ==========================================
 
-def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_config, target_symbol):
+# 修改点：函数签名增加了 iv_n_config 参数
+def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_config, power_config, target_symbol):
     """
     直接从 DataFrame 计算 Score 并写入数据库
-    已更新 (策略2): 增加 iv 字段计算 (基于 Top 4 Distance 加权)
-    * 修改: 增加详细的 Strategy 2 调试日志
+    iv_n_config: 策略2取排名的数量
     """
     print(f"\n[{datetime.datetime.now().strftime('%H:%M:%S')}] 开始执行 Score 与 IV 计算与入库...")
-    print(f"当前配置: Top N = {n_config}, 权重幂次 = {power_config}")
+    print(f"当前配置: D-Score Top N = {n_config}, IV Top N = {iv_n_config}, 权重幂次 = {power_config}")
 
     # 这里的 df_input 已经是内存中的 DataFrame，防止修改原数据
     df = df_input.copy()
@@ -303,8 +306,7 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_con
                 f.write(f"=== {target_symbol} 计算过程追踪日志 ===\n")
                 f.write(f"运行时间: {pd.Timestamp.now()}\n")
                 f.write(f"权重幂次 (Power): {power_config}\n\n")
-        except Exception as e:
-            print(f"无法创建调试文件: {e}")
+        except: pass
 
     # --- 数据预处理 (兼容 a.py 生成的格式) ---
     # 1. Distance 去百分号，转为小数
@@ -420,30 +422,19 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_con
             processed_data[symbol]['Put'] = D
 
         # ===========================
-        # 策略 2: 新 IV 逻辑 (Top 10 & 动态权重)
+        # 策略 2: 新 IV 逻辑 (使用 iv_n_config)
         # ===========================
-        # [修改点 1] 改为取前 10
-        top_10_items = group.head(10).copy()
+        # 修改点：使用 iv_n_config 替换硬编码的 10
+        top_iv_items = group.head(iv_n_config).copy()
         iv_weighted_sum = 0.0
-        
-        # [修改点 2] 计算 Top 10 的 1-Day Chg 总和作为分母
-        total_chg_top10 = top_10_items['1-Day Chg'].sum()
-
-        # 策略2 调试列表
+        total_chg_iv = top_iv_items['1-Day Chg'].sum()
         strat2_debug_rows = []
         
-        for i in range(len(top_10_items)):
-            row_data = top_10_items.iloc[i]
-            
-            # 还原为百分比数值 (0.137 -> 13.7)
-            raw_dist_decimal = row_data['Distance']
-            dist_val = raw_dist_decimal * 100 
-            
-            # [修改点 3] 动态计算基础权重: 当前项 Chg / Top10 总 Chg
+        for i in range(len(top_iv_items)):
+            row_data = top_iv_items.iloc[i]
+            dist_val = row_data['Distance'] * 100 
             chg_val = row_data['1-Day Chg']
-            base_weight = 0.0
-            if total_chg_top10 != 0:
-                base_weight = chg_val / total_chg_top10
+            base_weight = chg_val / total_chg_iv if total_chg_iv != 0 else 0.0
             
             # [修改点 4] 保持原有规则: 绝对值 >= 20% 时，系数除以 3
             final_weight = base_weight
@@ -499,7 +490,7 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_con
                 log_lines.append("无数据用于策略1计算")
 
             # --- 打印 策略 2 ---
-            log_lines.append(f"\n[Strategy 2 - IV Calculation] (Top 10)")
+            log_lines.append(f"\n[Strategy 2 - IV Calculation] (Top {iv_n_config})")
             log_lines.append(f"IV Weighted Sum = {iv_weighted_sum:.4f}")
             log_lines.append("(注: 最终 IV = (Call_Sum + Put_Sum) / 7)")
             
@@ -669,11 +660,13 @@ if __name__ == "__main__":
         
         # 第二步：如果生成成功，直接在内存中传递数据进行入库计算
         if generated_df is not None and not generated_df.empty:
+            # 修改点：在调用时传入了 IV_TOP_N
             calculate_d_score_from_df(
                 generated_df, 
                 DB_PATH, 
                 OUTPUT_DEBUG_PATH, 
                 TOP_N, 
+                IV_TOP_N, 
                 WEIGHT_POWER, 
                 DEBUG_SYMBOL
             )
