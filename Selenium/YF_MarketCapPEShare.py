@@ -529,15 +529,20 @@ def main():
 
     # 设置Chrome选项
     chrome_options = Options()
+    
+    # --- [移植修改 1] 指定 Chrome Beta 应用程序路径 ---
+    chrome_options.binary_location = "/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta"
 
     # --- Headless模式相关设置 ---
     chrome_options.add_argument('--headless=new') # 推荐使用新的 headless 模式
     chrome_options.add_argument('--window-size=1920,1080')
-    
+
     # --- 伪装设置 ---
     # 更新 User-Agent 为较新的版本，匹配 Beta
     user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
     chrome_options.add_argument(f'user-agent={user_agent}')
+    
+    # 自动化特征屏蔽
     chrome_options.add_argument('--disable-blink-features=AutomationControlled')
     chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
     chrome_options.add_experimental_option('useAutomationExtension', False)
@@ -551,13 +556,19 @@ def main():
     chrome_options.page_load_strategy = 'eager'  # 使用eager策略，DOM准备好就开始
 
     # 设置ChromeDriver路径
-    chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver"
+    chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver_beta"
+    
+    # 检查驱动是否存在 (可选，增强稳定性)
+    if not os.path.exists(chrome_driver_path):
+        print(f"错误：未找到驱动文件: {chrome_driver_path}")
+        return
+
     service = Service(executable_path=chrome_driver_path)
     driver = webdriver.Chrome(service=service, options=chrome_options)
 
     # 设置更短的超时时间
     driver.set_page_load_timeout(20)  # 页面加载超时时间
-    driver.set_script_timeout(10)  # 脚本执行超时时间
+    driver.set_script_timeout(20)  # 脚本执行超时时间
 
     # 从JSON文件获取股票符号（只提取指定分组）
     stock_symbols = get_stock_symbols_from_json(json_file_path)
