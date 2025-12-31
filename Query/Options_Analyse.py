@@ -102,7 +102,6 @@ def get_latest_prices(symbols, symbol_sector_map, db_path):
         print(f"正在从数据库获取 {len(symbols)} 个 Symbol 的最新价格...")
         for sector, sym_list in sector_groups.items():
             if not sym_list: continue
-            
             placeholders = ','.join(['?'] * len(sym_list))
             query = f"""
                 SELECT t1.name, t1.price
@@ -234,7 +233,6 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
     if not final_rows:
         print("没有符合条件的数据。")
         return None
-
     result_df = pd.concat(final_rows)
 
     # 计算 Distance
@@ -422,25 +420,32 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_con
             processed_data[symbol]['Put'] = D
 
         # ===========================
-        # 策略 2: 新 IV 逻辑 (Top 4)
+        # 策略 2: 新 IV 逻辑 (Top 10 & 动态权重)
         # ===========================
-        # 从同一个已排序的 group 中取前 4
-        top_4_items = group.head(4).copy()
+        # [修改点 1] 改为取前 10
+        top_10_items = group.head(10).copy()
         iv_weighted_sum = 0.0
         
-        # 基础权重系数
-        base_weights = [0.4, 0.3, 0.2, 0.1]
-        
+        # [修改点 2] 计算 Top 10 的 1-Day Chg 总和作为分母
+        total_chg_top10 = top_10_items['1-Day Chg'].sum()
+
         # 策略2 调试列表
         strat2_debug_rows = []
-
-        for i in range(len(top_4_items)):
+        
+        for i in range(len(top_10_items)):
+            row_data = top_10_items.iloc[i]
+            
             # 还原为百分比数值 (0.137 -> 13.7)
-            raw_dist_decimal = top_4_items.iloc[i]['Distance']
+            raw_dist_decimal = row_data['Distance']
             dist_val = raw_dist_decimal * 100 
-
-            # 获取对应排名的权重
-            base_weight = base_weights[i]
+            
+            # [修改点 3] 动态计算基础权重: 当前项 Chg / Top10 总 Chg
+            chg_val = row_data['1-Day Chg']
+            base_weight = 0.0
+            if total_chg_top10 != 0:
+                base_weight = chg_val / total_chg_top10
+            
+            # [修改点 4] 保持原有规则: 绝对值 >= 20% 时，系数除以 3
             final_weight = base_weight
             is_adjusted = False
 
@@ -448,7 +453,7 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_con
             if abs(dist_val) >= 20.0:
                 final_weight = base_weight / 3.0
                 is_adjusted = True
-
+            
             contribution = dist_val * final_weight
             iv_weighted_sum += contribution
             
@@ -456,9 +461,10 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_con
             if symbol == target_symbol:
                 strat2_debug_rows.append({
                     'Rank': i + 1,
-                    'Expiry': top_4_items.iloc[i]['Expiry Date'].strftime('%Y-%m-%d'),
-                    'Strike': top_4_items.iloc[i]['Strike'],
+                    'Expiry': row_data['Expiry Date'].strftime('%Y-%m-%d'),
+                    'Strike': row_data['Strike'],
                     'Dist_Pct': dist_val,
+                    '1-Day Chg': chg_val, # 增加 Chg 显示方便调试权重来源
                     'Base_Wt': base_weight,
                     'Adj?': "YES" if is_adjusted else "No",
                     'Final_Wt': final_weight,
@@ -493,18 +499,20 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_con
                 log_lines.append("无数据用于策略1计算")
 
             # --- 打印 策略 2 ---
-            log_lines.append(f"\n[Strategy 2 - IV Calculation] (Top 4)")
+            log_lines.append(f"\n[Strategy 2 - IV Calculation] (Top 10)")
             log_lines.append(f"IV Weighted Sum = {iv_weighted_sum:.4f}")
-            log_lines.append("(注: 最终 IV = (Call_Sum + Put_Sum) / 10)")
+            log_lines.append("(注: 最终 IV = (Call_Sum + Put_Sum) / 7)")
             
             if strat2_debug_rows:
-                header2 = f"{'Rank':<4} | {'Expiry':<12} | {'Strike':<8} | {'Dist(%)':<8} | {'BaseWt':<6} | {'Adj?':<4} | {'FinalWt':<8} | {'Contrib'}"
+                # 更新了表头，增加了 Chg 列
+                header2 = f"{'Rank':<4} | {'Expiry':<12} | {'Strike':<8} | {'Dist(%)':<8} | {'Chg':<8} | {'BaseWt':<8} | {'Adj?':<4} | {'FinalWt':<8} | {'Contrib'}"
                 log_lines.append(header2)
                 log_lines.append("-" * len(header2))
                 for row in strat2_debug_rows:
                     log_lines.append(
                         f"{row['Rank']:<4} | {row['Expiry']:<12} | {row['Strike']:<8} | "
-                        f"{row['Dist_Pct']:.2f}%{'':<3} | {row['Base_Wt']:<6} | {row['Adj?']:<4} | "
+                        f"{row['Dist_Pct']:.2f}%{'':<3} | {row['1-Day Chg']:<8.0f} | "  # 显示 Chg
+                        f"{row['Base_Wt']:.4f}   | {row['Adj?']:<4} | "
                         f"{row['Final_Wt']:.4f}   | {row['Contrib']:.4f}"
                     )
             else:
@@ -589,10 +597,10 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_con
             change_val = None
             
         # --- 策略 2 结果 ---
-        # C = (A + B) / 10
+        # C = (A + B) / 7
         sum_a = values['Call_IV_Sum']
         sum_b = values['Put_IV_Sum']
-        raw_iv_val = (sum_a + sum_b) / 10.0
+        raw_iv_val = (sum_a + sum_b) / 7.0
         
         # [修改] 格式化为百分比字符串，保留2位小数
         final_iv = f"{raw_iv_val:.2f}%"
