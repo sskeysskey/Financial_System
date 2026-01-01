@@ -10,7 +10,6 @@
         "Binance",
         "AZN",
         "KO",
-        "AZO",
         "NEM",
         "ESGU",
         "NVS",
@@ -111,14 +110,15 @@
         "SAP",
         "SE",
         "VST",
-        "COIN",
         "CPNG",
         "V",
         "MA",
         "RBLX",
         "META",
         "ORCL",
-        "ORLY"
+        "ORLY",
+        "AZO",
+        "COIN"
     ],
     "blue_keywords": [
         "US2Y",

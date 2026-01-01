@@ -19,6 +19,7 @@ PANEL_FILE = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json
 EARNING_HISTORY_FILE = '/Users/yanzhang/Coding/Financial_System/Modules/Earning_History.json'
 DEBUG_LOG_FILE = '/Users/yanzhang/Downloads/OverBuy_debug.log'
 
+# 决定debug.log日志是否输出的开关
 LOG_ENABLED = False  # True 或 False
 
 # 【配置项】涨幅过滤阈值 (百分比)
@@ -26,21 +27,25 @@ MIN_PRICE_CHANGE_THRESHOLD = 27  # 这里可以随意修改，例如改为 20 �
 
 logger = logging.getLogger(__name__)
 
+# 1. 定义基础的 Handlers 列表，默认始终包含终端输出 (StreamHandler)
+handlers_list = [logging.StreamHandler()]
+
+# 2. 只有当 LOG_ENABLED 为 True 时，才添加文件输出 (FileHandler)
 if LOG_ENABLED:
     os.makedirs(os.path.dirname(DEBUG_LOG_FILE), exist_ok=True)
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format='%(asctime)s [%(levelname)s] %(message)s',
-        handlers=[
-            logging.FileHandler(DEBUG_LOG_FILE, encoding='utf-8'),
-            logging.StreamHandler()
-        ]
-    )
-else:
-    logging.basicConfig(handlers=[])
-    logging.getLogger().handlers.clear()
-    logging.getLogger().setLevel(logging.CRITICAL + 1)
-    logger.disabled = True
+    handlers_list.append(logging.FileHandler(DEBUG_LOG_FILE, encoding='utf-8'))
+
+# 3. 统一配置 logging
+# force=True 确保覆盖可能存在的旧配置，Python 3.8+ 支持
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=handlers_list,
+    force=True 
+)
+
+# 确保 logger 处于开启状态
+logger.disabled = False
 
 # 定义tag黑名单
 # BLACKLIST_TAGS = ["联合医疗","黄金","金矿","白银","光纤","赋能半导体","赋能芯片制造","数据中心","贵金属"]
