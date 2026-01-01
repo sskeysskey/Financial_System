@@ -35,8 +35,11 @@ OUTPUT_DEBUG_PATH = '/Users/yanzhang/Downloads/3.txt'
 # 每个 Symbol 的 Calls 和 Puts 各保留前多少名 (用于 Part A 过滤和 Part B 策略1)
 TOP_N = 20
 
-# [新增配置] 策略 2 (IV 计算) 取排名前多少名
-IV_TOP_N = 10
+# [策略 2 (IV 计算) 参数配置]
+IV_TOP_N = 20           # 取排名前多少名
+IV_DIVISOR = 7.0        # 最终汇总时的除数 (原为 7)
+IV_THRESHOLD = 20.0     # 距离阈值百分比 (原为 20，即 20%)
+IV_ADJUSTMENT = 3.0     # 超过阈值后的权重除数 (原为 3)
 
 # a.py 逻辑参数: 是否考虑新增的数据 (B有A无)
 INCLUDE_NEW_ROWS = True
@@ -287,14 +290,19 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
 # [Part B] 计算 D-Score 及 IV 并入库
 # ==========================================
 
-# 修改点：函数签名增加了 iv_n_config 参数
-def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_config, power_config, target_symbol):
+# 修改点：增加 iv_divisor, iv_threshold, iv_adj_factor 参数
+def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_config, power_config, target_symbol, 
+                              iv_divisor, iv_threshold, iv_adj_factor):
     """
     直接从 DataFrame 计算 Score 并写入数据库
     iv_n_config: 策略2取排名的数量
+    iv_divisor: 策略2最终除数
+    iv_threshold: 策略2距离阈值
+    iv_adj_factor: 策略2权重调节系数
     """
     print(f"\n[{datetime.datetime.now().strftime('%H:%M:%S')}] 开始执行 Score 与 IV 计算与入库...")
     print(f"当前配置: D-Score Top N = {n_config}, IV Top N = {iv_n_config}, 权重幂次 = {power_config}")
+    print(f"IV配置: 除数={iv_divisor}, 阈值={iv_threshold}%, 调节系数={iv_adj_factor}")
 
     # 这里的 df_input 已经是内存中的 DataFrame，防止修改原数据
     df = df_input.copy()
@@ -305,7 +313,8 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
             with open(debug_path, 'w') as f:
                 f.write(f"=== {target_symbol} 计算过程追踪日志 ===\n")
                 f.write(f"运行时间: {pd.Timestamp.now()}\n")
-                f.write(f"权重幂次 (Power): {power_config}\n\n")
+                f.write(f"权重幂次 (Power): {power_config}\n")
+                f.write(f"IV参数: Divisor={iv_divisor}, Threshold={iv_threshold}%, Adj={iv_adj_factor}\n\n")
         except: pass
 
     # --- 数据预处理 (兼容 a.py 生成的格式) ---
@@ -393,7 +402,6 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
                 # 原来: ... * top_items['Open Interest'].values
                 # 现在: ... * top_items['1-Day Chg'].values
                 scores = w_i * top_items['Distance'].values * top_items['1-Day Chg'].values
-                
                 C_val = np.sum(scores)
                 
                 if actual_n > zero_diff_count:
@@ -440,9 +448,9 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
             final_weight = base_weight
             is_adjusted = False
 
-            # 权重规则: 绝对值 >= 20% 时，系数除以 3
-            if abs(dist_val) >= 20.0:
-                final_weight = base_weight / 3.0
+            # [修改点] 权重规则: 绝对值 >= iv_threshold 时，系数除以 iv_adj_factor
+            if abs(dist_val) >= iv_threshold:
+                final_weight = base_weight / iv_adj_factor
                 is_adjusted = True
             
             contribution = dist_val * final_weight
@@ -492,7 +500,9 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
             # --- 打印 策略 2 ---
             log_lines.append(f"\n[Strategy 2 - IV Calculation] (Top {iv_n_config})")
             log_lines.append(f"IV Weighted Sum = {iv_weighted_sum:.4f}")
-            log_lines.append("(注: 最终 IV = (Call_Sum + Put_Sum) / 7)")
+            # [修改点] 动态显示日志
+            log_lines.append(f"(注: 最终 IV = (Call_Sum + Put_Sum) / {iv_divisor})")
+            log_lines.append(f"(阈值: {iv_threshold}%, 调节系数: /{iv_adj_factor})")
             
             if strat2_debug_rows:
                 # 更新了表头，增加了 Chg 列
@@ -588,10 +598,10 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
             change_val = None
             
         # --- 策略 2 结果 ---
-        # C = (A + B) / 7
+        # [修改点] 使用配置的 iv_divisor
         sum_a = values['Call_IV_Sum']
         sum_b = values['Put_IV_Sum']
-        raw_iv_val = (sum_a + sum_b) / 7.0
+        raw_iv_val = (sum_a + sum_b) / iv_divisor
         
         # [修改] 格式化为百分比字符串，保留2位小数
         final_iv = f"{raw_iv_val:.2f}%"
@@ -615,7 +625,7 @@ def get_latest_two_files(directory, pattern='Options_*.csv'):
     search_path = os.path.join(directory, pattern)
     files = glob.glob(search_path)
     
-    # [新增] 过滤掉文件名中包含 'Change' 的备份文件，防止读入上次的运行结果
+    # 过滤掉文件名中包含 'Change' 的备份文件，防止读入上次的运行结果
     files = [f for f in files if 'Change' not in os.path.basename(f)]
     
     files.sort(reverse=True)
@@ -660,7 +670,7 @@ if __name__ == "__main__":
         
         # 第二步：如果生成成功，直接在内存中传递数据进行入库计算
         if generated_df is not None and not generated_df.empty:
-            # 修改点：在调用时传入了 IV_TOP_N
+            # 修改点：在调用时传入了新增的 IV 参数
             calculate_d_score_from_df(
                 generated_df, 
                 DB_PATH, 
@@ -668,7 +678,10 @@ if __name__ == "__main__":
                 TOP_N, 
                 IV_TOP_N, 
                 WEIGHT_POWER, 
-                DEBUG_SYMBOL
+                DEBUG_SYMBOL,
+                IV_DIVISOR,     # 新增
+                IV_THRESHOLD,   # 新增
+                IV_ADJUSTMENT   # 新增
             )
             show_alert("流程完成：CSV已生成，数据库已更新")
         else:
