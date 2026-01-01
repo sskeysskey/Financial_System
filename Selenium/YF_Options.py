@@ -36,7 +36,7 @@ SECTORS_JSON_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_pan
 # 自定义 Symbol 列表
 CUSTOM_SYMBOLS_DATA = [
     "^VIX", "NVDA", "AAPL", "GOOGL", "MSFT", "META",
-    "TSM", "WMT", "HYG", "QQQ", "SPY", "SLV"
+    "TSM", "WMT", "HYG", "QQQ", "SPY", "SLV", "UVXY", "VXX"
 ]
 
 # --- 3. 文件名生成 ---

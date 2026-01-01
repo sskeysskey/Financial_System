@@ -33,7 +33,7 @@ OUTPUT_DEBUG_PATH = '/Users/yanzhang/Downloads/3.txt'
 
 # --- 算法参数配置 ---
 # 每个 Symbol 的 Calls 和 Puts 各保留前多少名 (共用)
-TOP_N = 20 
+TOP_N = 20
 
 # a.py 逻辑参数: 是否考虑新增的数据 (B有A无)
 INCLUDE_NEW_ROWS = True
@@ -45,14 +45,13 @@ WEIGHT_POWER = 1
 DEBUG_SYMBOL = ""
 
 # --- 模式切换配置 ---
-# True:  手动模式 (使用下方指定的两个具体文件)
+# True: 手动模式 (使用下方指定的两个具体文件)
 # False: 自动模式 (自动寻找 BACKUP_DIR 下最新的两个文件)
 USE_MANUAL_MODE = False
 
 # 手动模式下的文件路径
 MANUAL_FILE_OLD = '/Users/yanzhang/Coding/News/backup/Options_251224.csv'
 MANUAL_FILE_NEW = '/Users/yanzhang/Coding/News/backup/Options_251227.csv'
-
 
 # ==========================================
 # [Part A] 辅助函数与核心处理 (原 a.py)
@@ -124,7 +123,8 @@ def get_latest_prices(symbols, symbol_sector_map, db_path):
                     if name_upper == 'VIX':
                         price_dict['^VIX'] = price
             except Exception as e:
-                print(f"   ⚠️ 查询表 '{sector}' 出错: {e}")
+                print(f" ⚠️ 查询表 '{sector}' 出错: {e}")
+
     except Exception as e:
         print(f"数据库连接或查询总错误: {e}")
     finally:
@@ -248,9 +248,11 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
         strike_str = str(row['Strike']).replace(' new', '').strip()
         try: strike_val = float(strike_str.replace(',', ''))
         except: return "N/A"
+        
         price_val = price_map.get(sym)
         if price_val is None: return "N/A"
         if price_val == 0: return "Err"
+        
         dist = (strike_val - price_val) / price_val
         return f"{dist * 100:.2f}%"
 
@@ -281,20 +283,21 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
     return final_output
 
 # ==========================================
-# [Part B] 计算 D-Score 并入库 (原 b.py)
+# [Part B] 计算 D-Score 及 IV 并入库 (原 b.py)
 # ==========================================
 
 def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_config, target_symbol):
     """
-    直接从 DataFrame 计算 Score 并写入数据库 (替代原 read_csv 方式)
-    已更新: 增加 change 字段计算 (Current Price - Previous Price)
+    直接从 DataFrame 计算 Score 并写入数据库
+    已更新 (策略2): 增加 iv 字段计算 (基于 Top 4 Distance 加权)
+    * 修改: 增加详细的 Strategy 2 调试日志
     """
-    print(f"\n[{datetime.datetime.now().strftime('%H:%M:%S')}] 开始执行 Score 计算与入库...")
+    print(f"\n[{datetime.datetime.now().strftime('%H:%M:%S')}] 开始执行 Score 与 IV 计算与入库...")
     print(f"当前配置: Top N = {n_config}, 权重幂次 = {power_config}")
-    
-    # 这里的 df_input 已经是内存中的 DataFrame，我们需要防止修改原数据
+
+    # 这里的 df_input 已经是内存中的 DataFrame，防止修改原数据
     df = df_input.copy()
-    
+
     # 初始化调试文件
     if target_symbol:
         try:
@@ -306,16 +309,16 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_con
             print(f"无法创建调试文件: {e}")
 
     # --- 数据预处理 (兼容 a.py 生成的格式) ---
-    # 1. Distance 去百分号
+    # 1. Distance 去百分号，转为小数
     try:
         df['Distance'] = df['Distance'].astype(str).str.rstrip('%').astype(float) / 100
     except:
-        pass 
-    
+        pass
+
     # 2. 确保数值列格式正确
     for col in ['Open Interest', '1-Day Chg']:
         if df[col].dtype == object:
-             df[col] = df[col].astype(str).str.replace(',', '').str.replace('%', '')
+            df[col] = df[col].astype(str).str.replace(',', '').str.replace('%', '')
         df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
     # 3. 解析日期
@@ -328,91 +331,187 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_con
     us_cal = USFederalHolidayCalendar()
     holidays = us_cal.holidays(start='2024-01-01', end='2030-12-31')
     today = pd.Timestamp.now().normalize()
-    
+
+    # 存储处理结果
     processed_data = {}
     grouped = df.groupby(['Symbol', 'Type'])
-    
+
     print(f"开始计算分数... (调试目标: {target_symbol})")
-    
+
     for (symbol, type_), group in grouped:
-        # 按数值降序
-        group = group.sort_values(by='1-Day Chg', ascending=False)
-        top_items = group.head(n_config).copy()
-        
-        if top_items.empty: continue
-            
-        actual_n = len(top_items)
-        max_expiry = top_items['Expiry Date'].max()
-        
-        # 计算 A (今天到最远日期的工作日天数)
-        a_days = np.busday_count(
-            np.array([today], dtype='datetime64[D]'),
-            np.array([max_expiry], dtype='datetime64[D]'),
-            holidays=holidays.values.astype('datetime64[D]')
-        )[0]
-        
-        # 计算差值
-        expiry_dates = top_items['Expiry Date'].values.astype('datetime64[D]')
-        today_arr = np.full(expiry_dates.shape, today).astype('datetime64[D]')
-        days_i = np.busday_count(today_arr, expiry_dates, holidays=holidays.values.astype('datetime64[D]'))
-        
-        diff_i = a_days - days_i
-        
-        zero_diff_count = np.sum(diff_i == 0)
-        diff_pow = diff_i ** power_config
-        B = np.sum(diff_pow)
-        
-        total_oi = top_items['Open Interest'].sum()
-        C = 0
-        D = 0
-        
-        row_details = []
-        
-        if B != 0 and total_oi != 0:
-            w_i = diff_pow / B
-            scores = w_i * top_items['Distance'].values * top_items['Open Interest'].values
-            C = np.sum(scores)
-            
-            if actual_n > zero_diff_count:
-                D = C * (actual_n - zero_diff_count) / total_oi
-            
-            if symbol == target_symbol:
-                for idx in range(len(top_items)):
-                    row_details.append({
-                        'Expiry': top_items.iloc[idx]['Expiry Date'].strftime('%Y-%m-%d'),
-                        '1-Day Chg': top_items.iloc[idx]['1-Day Chg'],
-                        'Dist': top_items.iloc[idx]['Distance'],
-                        'OI': top_items.iloc[idx]['Open Interest'],
-                        'Days_i': days_i[idx],
-                        'Diff_i': diff_i[idx],
-                        'Diff_Pow': diff_pow[idx],
-                        'Weight': w_i[idx],
-                        'Score': scores[idx]
-                    })
-        
+        # 确保该 Symbol 在字典中初始化
         if symbol not in processed_data:
-            processed_data[symbol] = {'Call': 0.0, 'Put': 0.0}
+            processed_data[symbol] = {'Call': 0.0, 'Put': 0.0, 'Call_IV_Sum': 0.0, 'Put_IV_Sum': 0.0}
+
+        # 按数值降序排列
+        group = group.sort_values(by='1-Day Chg', ascending=False)
+
+        # ---------------------------
+        # 策略 1: D-Score 逻辑 (已修改: 基于 1-Day Chg 加权)
+        # ---------------------------
+        top_items = group.head(n_config).copy()
+        D = 0 
         
+        # 调试数据容器
+        strat1_debug_rows = []
+        actual_n = 0
+        zero_diff_count = 0
+        a_days = 0
+        B_val = 0
+        C_val = 0
+        
+        if not top_items.empty:
+            actual_n = len(top_items)
+            max_expiry = top_items['Expiry Date'].max()
+            
+            # 计算 A (日期距离)
+            a_days = np.busday_count(
+                np.array([today], dtype='datetime64[D]'),
+                np.array([max_expiry], dtype='datetime64[D]'),
+                holidays=holidays.values.astype('datetime64[D]')
+            )[0]
+            
+            # 计算差值
+            expiry_dates = top_items['Expiry Date'].values.astype('datetime64[D]')
+            today_arr = np.full(expiry_dates.shape, today).astype('datetime64[D]')
+            days_i = np.busday_count(today_arr, expiry_dates, holidays=holidays.values.astype('datetime64[D]'))
+            
+            diff_i = a_days - days_i
+            zero_diff_count = np.sum(diff_i == 0)
+            diff_pow = diff_i ** power_config
+            B_val = np.sum(diff_pow) # 改名防止变量混淆
+            
+            # [修改点 1] 计算总的 1-Day Chg 作为分母，而非 Total Open Interest
+            total_chg = top_items['1-Day Chg'].sum()
+            C_val = 0
+            
+            # [修改点 2] 判断条件改为 total_chg != 0
+            if B_val != 0 and total_chg != 0:
+                w_i = diff_pow / B_val
+                
+                # [修改点 3] 核心公式修改：
+                # 原来: ... * top_items['Open Interest'].values
+                # 现在: ... * top_items['1-Day Chg'].values
+                scores = w_i * top_items['Distance'].values * top_items['1-Day Chg'].values
+                
+                C_val = np.sum(scores)
+                
+                if actual_n > zero_diff_count:
+                    # [修改点 4] 分母除以 total_chg
+                    D = C_val * (actual_n - zero_diff_count) / total_chg
+                
+                # 收集策略1调试信息
+                if symbol == target_symbol:
+                    for idx in range(len(top_items)):
+                        strat1_debug_rows.append({
+                            'Expiry': top_items.iloc[idx]['Expiry Date'].strftime('%Y-%m-%d'),
+                            '1-Day Chg': top_items.iloc[idx]['1-Day Chg'],
+                            'Dist': top_items.iloc[idx]['Distance'],
+                            'OI': top_items.iloc[idx]['Open Interest'],
+                            'Days_i': days_i[idx],
+                            'Diff_i': diff_i[idx],
+                            'Weight': w_i[idx],
+                            'Score': scores[idx]
+                        })
+
+        # 存入 D-Score
         type_str = str(type_).lower()
         if 'call' in type_str:
             processed_data[symbol]['Call'] = D
         elif 'put' in type_str:
             processed_data[symbol]['Put'] = D
 
-        # 写入调试日志
+        # ===========================
+        # 策略 2: 新 IV 逻辑 (Top 4)
+        # ===========================
+        # 从同一个已排序的 group 中取前 4
+        top_4_items = group.head(4).copy()
+        iv_weighted_sum = 0.0
+        
+        # 基础权重系数
+        base_weights = [0.4, 0.3, 0.2, 0.1]
+        
+        # 策略2 调试列表
+        strat2_debug_rows = []
+
+        for i in range(len(top_4_items)):
+            # 还原为百分比数值 (0.137 -> 13.7)
+            raw_dist_decimal = top_4_items.iloc[i]['Distance']
+            dist_val = raw_dist_decimal * 100 
+
+            # 获取对应排名的权重
+            base_weight = base_weights[i]
+            final_weight = base_weight
+            is_adjusted = False
+
+            # 权重规则: 绝对值 >= 20% 时，系数除以 3
+            if abs(dist_val) >= 20.0:
+                final_weight = base_weight / 3.0
+                is_adjusted = True
+
+            contribution = dist_val * final_weight
+            iv_weighted_sum += contribution
+            
+            # 收集策略2调试信息
+            if symbol == target_symbol:
+                strat2_debug_rows.append({
+                    'Rank': i + 1,
+                    'Expiry': top_4_items.iloc[i]['Expiry Date'].strftime('%Y-%m-%d'),
+                    'Strike': top_4_items.iloc[i]['Strike'],
+                    'Dist_Pct': dist_val,
+                    'Base_Wt': base_weight,
+                    'Adj?': "YES" if is_adjusted else "No",
+                    'Final_Wt': final_weight,
+                    'Contrib': contribution
+                })
+
+        # 存入 IV 中间值
+        if 'call' in type_str:
+            processed_data[symbol]['Call_IV_Sum'] = iv_weighted_sum
+        elif 'put' in type_str:
+            processed_data[symbol]['Put_IV_Sum'] = iv_weighted_sum
+
+        # ---------------------------
+        # 统一写入调试文件 (策略1 + 策略2)
+        # ---------------------------
         if symbol == target_symbol:
             log_lines = []
-            log_lines.append("-" * 80)
+            log_lines.append("=" * 80)
             log_lines.append(f"正在计算: {symbol} - {type_}")
-            log_lines.append(f"实际条目数: {actual_n}, Diff=0数: {zero_diff_count}")
-            log_lines.append(f"A={a_days}, B={B}, C={C:.6f}, D={D:.6f}")
-            if row_details:
-                header = f"{'Expiry':<12} | {'Diff_i':<6} | {'Weight':<10} | {'Dist':<8} | {'OI':<8} | {'Score'}"
-                log_lines.append(header)
-                log_lines.append("-" * len(header))
-                for row in row_details:
-                    log_lines.append(f"{row['Expiry']:<12} | {row['Diff_i']:<6} | {row['Weight']:.6f}   | {row['Dist']:.4f}   | {row['OI']:<8} | {row['Score']:.6f}")
+            
+            # --- 打印 策略 1 ---
+            log_lines.append(f"\n[Strategy 1 - D-Score] (Top {n_config})")
+            log_lines.append(f"A={a_days}, B={B_val:.4f}, C={C_val:.6f}, Final D={D:.6f}")
+            
+            if strat1_debug_rows:
+                header1 = f"{'Expiry':<12} | {'Diff_i':<6} | {'Weight':<10} | {'Dist':<8} | {'OI':<8} | {'Score'}"
+                log_lines.append(header1)
+                log_lines.append("-" * len(header1))
+                for row in strat1_debug_rows:
+                    log_lines.append(f"{row['Expiry']:<12} | {row['Diff_i']:<6} | {row['Weight']:.6f} | {row['Dist']:.4f} | {row['OI']:<8} | {row['Score']:.6f}")
+            else:
+                log_lines.append("无数据用于策略1计算")
+
+            # --- 打印 策略 2 ---
+            log_lines.append(f"\n[Strategy 2 - IV Calculation] (Top 4)")
+            log_lines.append(f"IV Weighted Sum = {iv_weighted_sum:.4f}")
+            log_lines.append("(注: 最终 IV = (Call_Sum + Put_Sum) / 10)")
+            
+            if strat2_debug_rows:
+                header2 = f"{'Rank':<4} | {'Expiry':<12} | {'Strike':<8} | {'Dist(%)':<8} | {'BaseWt':<6} | {'Adj?':<4} | {'FinalWt':<8} | {'Contrib'}"
+                log_lines.append(header2)
+                log_lines.append("-" * len(header2))
+                for row in strat2_debug_rows:
+                    log_lines.append(
+                        f"{row['Rank']:<4} | {row['Expiry']:<12} | {row['Strike']:<8} | "
+                        f"{row['Dist_Pct']:.2f}%{'':<3} | {row['Base_Wt']:<6} | {row['Adj?']:<4} | "
+                        f"{row['Final_Wt']:.4f}   | {row['Contrib']:.4f}"
+                    )
+            else:
+                log_lines.append("无数据用于策略2计算")
+
             log_lines.append("\n")
+            
             with open(debug_path, 'a') as f:
                 f.write('\n'.join(log_lines))
 
@@ -422,13 +521,12 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_con
     # 设定写入日期
     target_date = (pd.Timestamp.now() - timedelta(days=1)).strftime('%Y-%m-%d')
     print(f"写入日期设定为: {target_date}")
-    
+
     conn = sqlite3.connect(db_path, timeout=60.0)
     cursor = conn.cursor()
-    
-    # 1. 更新建表语句，增加 change 字段
-    # 注意：如果表已存在且无 change 字段，此语句不会自动添加列。
-    # 假设用户已处理好数据库结构，或者这是一个新数据库。
+
+    # 1. 建表
+    # 注意: IV 字段类型现在建议为 TEXT 以存储百分比字符串
     create_table_sql = f"""
     CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -438,44 +536,48 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_con
         put TEXT,
         price REAL,
         change REAL,
+        iv TEXT,
         UNIQUE(date, name)
     )
     """
     cursor.execute(create_table_sql)
-    
-    # 2. 准备 SQL 语句
-    # 查询前一个交易日价格的 SQL
-    query_prev_price_sql = f"""
-        SELECT price 
-        FROM {TABLE_NAME} 
-        WHERE name = ? AND date < ? 
-        ORDER BY date DESC 
-        LIMIT 1
-    """
 
-    # 插入或更新的 SQL (包含 change)
+    # 2. 检查并自动添加列
+    # 如果列已存在 (即使是 REAL 类型)，SQLite 也允许存入字符串，所以这里逻辑兼容性很高
+    for col_name, col_type in [('change', 'REAL'), ('iv', 'TEXT')]:
+        try:
+            cursor.execute(f"SELECT {col_name} FROM {TABLE_NAME} LIMIT 1")
+        except:
+            print(f"检测到缺少 '{col_name}' 列，正在添加...")
+            try:
+                cursor.execute(f"ALTER TABLE {TABLE_NAME} ADD COLUMN {col_name} {col_type}")
+            except Exception as e:
+                print(f"添加 {col_name} 列失败: {e}")
+
+    query_prev_price_sql = f"SELECT price FROM {TABLE_NAME} WHERE name = ? AND date < ? ORDER BY date DESC LIMIT 1"
+    
     insert_sql = f"""
-    INSERT INTO {TABLE_NAME} (date, name, call, put, price, change) 
-    VALUES (?, ?, ?, ?, ?, ?)
-    ON CONFLICT(date, name) 
-    DO UPDATE SET 
+    INSERT INTO {TABLE_NAME} (date, name, call, put, price, change, iv)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(date, name) DO UPDATE SET
         call=excluded.call,
         put=excluded.put,
         price=excluded.price,
-        change=excluded.change
+        change=excluded.change,
+        iv=excluded.iv
     """
-    
+
     count_success = 0
     
     for symbol, values in processed_data.items():
+        # --- 策略 1 结果 ---
         raw_call_d = values['Call']
         raw_put_d = values['Put']
-        
         call_str = f"{raw_call_d * 100:.2f}%"
         put_str = f"{raw_put_d * 100:.2f}%"
         final_price = round((raw_call_d + raw_put_d) * 100, 2)
-        
-        # --- 新增逻辑: 计算 Change ---
+
+        # 计算 Change
         change_val = None
         try:
             cursor.execute(query_prev_price_sql, (symbol, target_date))
@@ -483,29 +585,26 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, power_con
             if row and row[0] is not None:
                 prev_price = row[0]
                 change_val = round(final_price - prev_price, 2)
-            else:
-                # 之前没有记录，change 设为 None (数据库中为 NULL)
-                change_val = None
-        except Exception as e:
-            print(f"查询 {symbol} 前值失败: {e}")
+        except:
             change_val = None
-        # ---------------------------
+            
+        # --- 策略 2 结果 ---
+        # C = (A + B) / 10
+        sum_a = values['Call_IV_Sum']
+        sum_b = values['Put_IV_Sum']
+        raw_iv_val = (sum_a + sum_b) / 10.0
+        
+        # [修改] 格式化为百分比字符串，保留2位小数
+        final_iv = f"{raw_iv_val:.2f}%"
 
         try:
-            # 执行 Upsert，传入 change_val
-            cursor.execute(insert_sql, (target_date, symbol, call_str, put_str, final_price, change_val))
+            cursor.execute(insert_sql, (target_date, symbol, call_str, put_str, final_price, change_val, final_iv))
             count_success += 1
         except Exception as e:
-            # 兼容性处理：如果表结构还没改，INSERT 可能会报错缺少列
-            # 这里尝试捕获并提示用户
-            if "has no column named change" in str(e):
-                print(f"❌ 严重错误: 数据库表 '{TABLE_NAME}' 缺少 'change' 列。请先手动修改数据库结构或删除旧表。")
-                break
             print(f"错误: 写入/更新 {symbol} 失败: {e}")
-            
+
     conn.commit()
     conn.close()
-    
     print(f"入库完成！已处理（插入或更新）: {count_success} 条数据")
 
 # ==========================================
