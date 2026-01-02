@@ -26,7 +26,13 @@
     "EGP=X",
     "ARS=X"
   ],
-  "Crypto": [],
+  "Crypto": [
+    "Bitcoin",
+    "Ether",
+    "Solana",
+    "Binance",
+    "XRP"
+  ],
   "Indices": [
     "^HSI",
     "000001.SS",

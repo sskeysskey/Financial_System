@@ -103,7 +103,26 @@
         "Solana": "",
         "XRP": ""
     },
+    "Options": {
+        "^VIX": "",
+        "HYG": "",
+        "QQQ": "",
+        "SPY": "",
+        "SLV": "",
+        "UVXY": "",
+        "VXX": "",
+        "XBI": "",
+        "XLU": "",
+        "APLD": ""
+    },
     "Must": {
+        "HCA": "",
+        "FLEX": "",
+        "FICO": "",
+        "CRWD": "",
+        "A": "",
+        "AAON": "",
+        "UHS": "",
         "MSTR": "",
         "PYPL": "",
         "MTN": "",
@@ -114,6 +133,8 @@
         "IOT": ""
     },
     "Today": {
+        "IDXX": "",
+        "HON": "",
         "ARM": "",
         "COIN": ""
     },
@@ -277,27 +298,6 @@
         "WELL": "WELL7热"
     },
     "PE_valid_backup": {
-        "A": "",
-        "AMZN": "AMZN7热",
-        "AXON": "",
-        "BABA": "BABA7",
-        "BLDR": "",
-        "BWXT": "BWXT15热",
-        "CAT": "",
-        "COR": "",
-        "CRWD": "",
-        "CVNA": "",
-        "DELL": "DELL15热",
-        "DKS": "",
-        "DUOL": "",
-        "ENTG": "",
-        "EQIX": "EQIX热",
-        "FICO": "",
-        "FLEX": "FLEX15热",
-        "HCA": "HCA7热",
-        "HON": "",
-        "HPQ": "HPQ15热",
-        "IBKR": "",
         "IDXX": "",
         "INTC": "",
         "KKR": "",

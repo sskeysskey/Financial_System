@@ -870,8 +870,6 @@ def run_logic_5000(blacklist_newlow, stock_splits_symbols):
         update_sectors_panel_json(SECTORS_PANEL_PATH, updates, blacklist_newlow)
         updates_color = parse_output_color_5000(final_output)
         update_color_json_5000(COLORS_JSON_PATH_ANALYSE, updates_color)
-    else:
-        log_and_print_error("[5000] 未检索到符合条件的股票。")
 
 # 2. Analyse 500 (Monthly)
 PATH_SECTORS_500 = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_500.json'

@@ -6,13 +6,15 @@ import subprocess
 from decimal import Decimal
 from datetime import datetime, date
 
-from PyQt5.QtWidgets import (
+# --- 修改 1: 导入调整 ---
+# QAction 移动到了 QtGui
+from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QGroupBox, QScrollArea, QMenu, QAction,
+    QPushButton, QGroupBox, QScrollArea, QMenu,
     QGridLayout, QLineEdit, QMessageBox
 )
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QCursor
+from PyQt6.QtGui import QCursor, QAction
+from PyQt6.QtCore import Qt, QTimer
 
 sys.path.append('/Users/yanzhang/Coding/Financial_System/Query')
 from Chart_input import plot_financial_data
@@ -41,14 +43,14 @@ DEFAULT_WEIGHT = Decimal('1')
 # 新增：SymbolButton 子类
 class SymbolButton(QPushButton):
     def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        # --- 修改 2: 枚举使用全名 (Qt.MouseButton.LeftButton) ---
+        if event.button() == Qt.MouseButton.LeftButton:
             mods = event.modifiers()
-            # Option(⌥) + 左键 → 找相似
-            if mods & Qt.AltModifier:
+            # --- 修改 3: 修饰键枚举 (Qt.KeyboardModifier) ---
+            if mods & Qt.KeyboardModifier.AltModifier:
                 execute_external_script('similar', self.text())
                 return
-            # Shift + 左键 → 在富途中搜索
-            elif mods & Qt.ShiftModifier:
+            elif mods & Qt.KeyboardModifier.ShiftModifier:
                 execute_external_script('futu', self.text())
                 return
         # 其他情况走原有行为（例如普通左键点击会触发 on_symbol_button_clicked）
@@ -82,11 +84,10 @@ class SymbolManager:
     def reset(self):
         self.current_index = -1
 
-
 def parse_multiple_earnings_files(paths):
     merged = OrderedDict()
     all_symbols = []
-
+    
     for p in paths:
         sched, syms = parse_earnings_file(p)
         for date_str, times in sched.items():
@@ -99,7 +100,7 @@ def parse_multiple_earnings_files(paths):
         for s in syms:
             if s not in all_symbols:
                 all_symbols.append(s)
-
+                
     for date_str, times in merged.items():
         ordered = OrderedDict()
         if 'BMO' in times: ordered['BMO'] = times['BMO']
@@ -108,10 +109,9 @@ def parse_multiple_earnings_files(paths):
             if tc not in ordered:
                 ordered[tc] = slist
         merged[date_str] = ordered
-
+        
     merged = OrderedDict(sorted(merged.items()))
     return merged, all_symbols
-
 
 def parse_earnings_file(path):
     earnings_schedule = OrderedDict()
@@ -459,7 +459,8 @@ class EarningsWindow(QMainWindow):
 
     def init_ui(self):
         self.setWindowTitle("财报日历查看器 (新颜色方案)")
-        self.setFocusPolicy(Qt.StrongFocus)
+        # --- 修改 4: FocusPolicy 枚举 ---
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         # 搜索栏
         top_widget = QWidget()
@@ -479,7 +480,8 @@ class EarningsWindow(QMainWindow):
         self.scroll_content = QWidget()
         self.scroll_area.setWidget(self.scroll_content)
         self.main_layout = QHBoxLayout(self.scroll_content)
-        self.main_layout.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+        # --- 修改 5: AlignmentFlag 枚举 ---
+        self.main_layout.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
 
         container = QWidget()
         container_l = QVBoxLayout(container)
@@ -547,12 +549,41 @@ class EarningsWindow(QMainWindow):
         key = self.search_line.text().strip().upper()
         if not key:
             return
+        
         if key not in self.button_mapping:
             QMessageBox.information(self, "未找到", f"Symbol “{key}” 不在当前列表中。")
             return
-        btn, _, _ = self.button_mapping[key]
+        
+        # 解包获取两个按钮
+        btn, _, _, related_btn = self.button_mapping[key]
+        
+        # 确保可见
         QTimer.singleShot(100, lambda: self.scroll_area.ensureWidgetVisible(btn))
+        
+        # 2. 聚焦
         btn.setFocus()
+
+        # === 高亮效果 ===
+        # 使用亮青色(Cyan)或金色(Gold)边框模拟发光
+        glow_border = "border: 3px solid #00FFFF; border-radius: 4px;" 
+
+        old_btn_style = btn.styleSheet()
+        old_rel_style = related_btn.styleSheet()
+
+        # 叠加样式
+        btn.setStyleSheet(old_btn_style + glow_border)
+        related_btn.setStyleSheet(old_rel_style + glow_border)
+
+        # 1.5秒后自动还原
+        QTimer.singleShot(15000, lambda: self._restore_search_style(btn, related_btn, old_btn_style, old_rel_style))
+
+    # 辅助函数，用于还原样式，避免lambda过长
+    def _restore_search_style(self, btn, related_btn, old_btn_style, old_rel_style):
+        try:
+            btn.setStyleSheet(old_btn_style)
+            related_btn.setStyleSheet(old_rel_style)
+        except RuntimeError:
+            pass
 
     def populate_ui(self):
         earnings_schedule, _ = parse_multiple_earnings_files([
@@ -576,7 +607,9 @@ class EarningsWindow(QMainWindow):
             date_layout.setContentsMargins(10, 25, 10, 10)   # ← 留出标题高度
             date_layout.setSpacing(10)
             date_group.setLayout(date_layout)
-            self.main_layout.addWidget(date_group, 0, Qt.AlignLeft | Qt.AlignTop)
+            
+            # --- 修改 6: AlignmentFlag 枚举 ---
+            self.main_layout.addWidget(date_group, 0, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
 
             for tc, symbols in times.items():
                 if not symbols:
@@ -615,11 +648,14 @@ class EarningsWindow(QMainWindow):
 
                     tags = get_tags_for_symbol(sym)
                     tags_str = ", ".join(tags) if isinstance(tags, list) else tags
-                    self.button_mapping[sym] = (btn, date_group, time_group)
 
+                    self.button_mapping[sym] = (btn, date_group, time_group, related)
+                    
                     btn.setToolTip(
                         f"<div style='font-size:20px;background-color:lightyellow;color:black;'>{tags_str}</div>")
-                    btn.setContextMenuPolicy(Qt.CustomContextMenu)
+                    
+                    # --- 修改 7: ContextMenuPolicy 枚举 ---
+                    btn.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
                     btn.customContextMenuRequested.connect(lambda pos, s=sym: self.show_context_menu(s))
 
                     # 相关容器
@@ -627,7 +663,8 @@ class EarningsWindow(QMainWindow):
                     hl = QHBoxLayout(container)
                     hl.setContentsMargins(2, 2, 2, 2)
                     hl.setSpacing(5)
-                    hl.setAlignment(Qt.AlignLeft)
+                    # --- 修改 8: AlignmentFlag 枚举 ---
+                    hl.setAlignment(Qt.AlignmentFlag.AlignLeft)
                     container.setVisible(False)
 
                     # 点击“相关”才动态计算并展开
@@ -662,7 +699,9 @@ class EarningsWindow(QMainWindow):
                     rt_str = ", ".join(rt) if isinstance(rt, list) else rt
                     rb.setToolTip(
                         f"<div style='font-size:20px;background-color:lightyellow;color:black;'>{rt_str}</div>")
-                    rb.setContextMenuPolicy(Qt.CustomContextMenu)
+                    
+                    # --- 修改 9: ContextMenuPolicy 枚举 ---
+                    rb.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
                     rb.customContextMenuRequested.connect(lambda pos, s=r_sym: self.show_context_menu(s))
                     layout.addWidget(rb)
                     cnt += 1
@@ -690,7 +729,9 @@ class EarningsWindow(QMainWindow):
             else:
                 text, cb = item
                 menu.addAction(QAction(text, self, triggered=cb))
-        menu.exec_(QCursor.pos())
+        
+        # --- 修改 10: exec_() -> exec() ---
+        menu.exec(QCursor.pos())
 
     def on_keyword_selected_chart(self, sym):
         global symbol_manager
@@ -704,12 +745,24 @@ class EarningsWindow(QMainWindow):
 
     def keyPressEvent(self, ev):
         k = ev.key()
-        if k == Qt.Key_Escape:
+        
+        # 退出
+        if k == Qt.Key.Key_Escape:
             self.close()
-        elif k == Qt.Key_Down:
+            
+        # 向下切换 Symbol
+        elif k == Qt.Key.Key_Down:
             self.on_arrow('down')
-        elif k == Qt.Key_Up:
+            
+        # 向上切换 Symbol
+        elif k == Qt.Key.Key_Up:
             self.on_arrow('up')
+            
+        # --- 新增功能：按 "/" 键聚焦搜索框 ---
+        elif k == Qt.Key.Key_Slash:
+            self.search_line.setFocus()   # 让光标跳到输入框
+            self.search_line.selectAll()  # (可选) 选中框内已有文字，方便直接打字覆盖
+            
         else:
             super().keyPressEvent(ev)
 
@@ -738,4 +791,5 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     win = EarningsWindow()
     win.showMaximized()
-    sys.exit(app.exec_())
+    # --- 修改 12: exec_() -> exec() ---
+    sys.exit(app.exec())

@@ -465,6 +465,7 @@ class InfoDialog(QDialog):
 
 def execute_external_script(script_type, keyword, on_done=None, block=False):
     base_path = '/Users/yanzhang/Coding/Financial_System'
+    
     script_configs = {
         'earning_input': f'{base_path}/Operations/Insert_Earning_Manual.py',
         'earning_edit': f'{base_path}/Operations/Editor_Earning_DB.py',
@@ -476,6 +477,7 @@ def execute_external_script(script_type, keyword, on_done=None, block=False):
         'panel_delete': f'{base_path}/Operations/Delete_Panel.py',
         'empty_input': f'{base_path}/Operations/Insert_Sector.py',
         'similar_tags': f'{base_path}/Query/Search_Similar_Tag.py',
+        'check_history': f'{base_path}/Query/Check_Earning_history.py', 
         'check_kimi': '/Users/yanzhang/Coding/ScriptEditor/Check_Earning.scpt',
         'check_futu': '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt',
         'check_seekingalpha': '/Users/yanzhang/Coding/ScriptEditor/Stock_seekingalpha.scpt',
@@ -1024,7 +1026,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         circle.set_facecolor(NORD_THEME['background'])
     radio.circles[default_index].set_facecolor(NORD_THEME['accent_red'])
 
-    instructions = "N:新财报\nE:改财报\nT:改标签\nW:新事件\nQ:改事件\nK:查豆包\nZ:查富途\nP:做比较\nJ:加Panel\nH:加empty\nL:查相似\nY:删除\nG:刷新\nO:查α" # 新增 G
+    instructions = "N:新财报\nE:改财报\nT:改标签\nW:新事件\nQ:改事件\nK:查豆包\nZ:查富途\nP:做比较\nJ:加Panel\nH:加empty\nL:查相似\nY:删除\nG:刷新\nO:查α\nB:存在" # 新增 G
     rax.text(0.5, 0.98, instructions, transform=rax.transAxes, ha="center", va="bottom",
              color=NORD_THEME['text_light'], fontsize=10, fontfamily="Arial Unicode MS")
     
@@ -1419,6 +1421,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                        'o': lambda: execute_external_script('check_seekingalpha', name),
                        'p': lambda: execute_external_script('symbol_compare', name),
                        'l': lambda: execute_external_script('similar_tags', name),
+                       'b': lambda: execute_external_script('check_history', name),
                        '/': lambda: execute_external_script('stock_chart', name),
                        '1': lambda: radio.set_active(7), '2': lambda: radio.set_active(1),
                        '3': lambda: radio.set_active(3), '4': lambda: radio.set_active(4),

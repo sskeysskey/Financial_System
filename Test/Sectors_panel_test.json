@@ -25,6 +25,18 @@
     "Must": {
         "IDT": ""
     },
+    "Options": {
+        "^VIX": "",
+        "HYG": "",
+        "QQQ": "",
+        "SPY": "",
+        "SLV": "",
+        "UVXY": "",
+        "VXX": "",
+        "XBI": "",
+        "XLU": "",
+        "APLD": ""
+    },
     "Today": {
         "DT": ""
     },

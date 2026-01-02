@@ -105,7 +105,14 @@ class CategorySelectionDialog(QDialog):
         self.checkboxes = []
         for category in categories_found:
             checkbox = QCheckBox(category, self)
-            checkbox.setChecked(True)  # 设置复选框默认为选中状态
+            
+            # --- 修改开始：自定义默认选中逻辑 ---
+            if category in ["Must", "Today"]:
+                checkbox.setChecked(False)  # 如果是 Must 或 Today，默认不选中
+            else:
+                checkbox.setChecked(True)   # 其他情况默认选中
+            # --- 修改结束 ---
+
             self.checkboxes.append(checkbox)
             layout.addWidget(checkbox)
 

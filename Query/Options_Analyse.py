@@ -83,44 +83,62 @@ def load_symbol_sector_map(json_path):
         return {}
 
 def get_latest_prices(symbols, symbol_sector_map, db_path):
-    """批量获取 Symbol 的最新价格"""
+    """
+    批量获取 Symbol 在系统日期之前（不含今天）的最新价格。
+    如果昨天没数据，自动向前追溯。
+    """
     if not os.path.exists(db_path):
         print(f"⚠️ 警告: 找不到数据库文件: {db_path}")
         return {}
 
     price_dict = {}
     conn = None
+    
+    # 获取系统今天的日期字符串 (格式: YYYY-MM-DD)
+    today_str = datetime.datetime.now().strftime('%Y-%m-%d')
+    
     try:
         conn = sqlite3.connect(db_path, timeout=60.0)
         cursor = conn.cursor()
+
+        # 按板块分组查询，提高效率
         sector_groups = {}
-        
         for sym in symbols:
             sym_upper = sym.upper()
             lookup_sym = 'VIX' if sym_upper == '^VIX' else sym_upper
-            
             sector = symbol_sector_map.get(lookup_sym)
             if sector:
                 if sector not in sector_groups:
                     sector_groups[sector] = []
                 sector_groups[sector].append(lookup_sym)
 
-        print(f"正在从数据库获取 {len(symbols)} 个 Symbol 的最新价格...")
+        print(f"正在从数据库获取 {len(symbols)} 个 Symbol 在 {today_str} 之前的最新价格...")
+
         for sector, sym_list in sector_groups.items():
-            if not sym_list: continue
+            if not sym_list:
+                continue
+
+            # 构建占位符
             placeholders = ','.join(['?'] * len(sym_list))
+            
+            # 修改后的 SQL 逻辑：
+            # 1. 增加 WHERE date < ? 确保不取今天的数据
+            # 2. 通过 MAX(date) 自动获取距离今天最近的那个历史日期
             query = f"""
                 SELECT t1.name, t1.price
                 FROM "{sector}" t1
                 JOIN (
                     SELECT name, MAX(date) as max_date
                     FROM "{sector}"
-                    WHERE name IN ({placeholders})
+                    WHERE name IN ({placeholders}) AND date < ?
                     GROUP BY name
                 ) t2 ON t1.name = t2.name AND t1.date = t2.max_date
             """
+            
             try:
-                cursor.execute(query, sym_list)
+                # 将 sym_list 和 today_str 传入执行
+                params = sym_list + [today_str]
+                cursor.execute(query, params)
                 rows = cursor.fetchall()
                 for name, price in rows:
                     name_upper = name.upper()
@@ -133,7 +151,8 @@ def get_latest_prices(symbols, symbol_sector_map, db_path):
     except Exception as e:
         print(f"数据库连接或查询总错误: {e}")
     finally:
-        if conn: conn.close()
+        if conn:
+            conn.close()
             
     return price_dict
 
@@ -363,14 +382,8 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
         
         # 调试数据容器
         strat1_debug_rows = []
-        actual_n = 0
-        zero_diff_count = 0
-        a_days = 0
-        B_val = 0
-        C_val = 0
         
         if not top_items.empty:
-            actual_n = len(top_items)
             max_expiry = top_items['Expiry Date'].max()
             
             # 计算 A (日期距离)
@@ -380,13 +393,12 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
                 holidays=holidays.values.astype('datetime64[D]')
             )[0]
             
-            # 计算差值
+            # 计算每行差值
             expiry_dates = top_items['Expiry Date'].values.astype('datetime64[D]')
             today_arr = np.full(expiry_dates.shape, today).astype('datetime64[D]')
             days_i = np.busday_count(today_arr, expiry_dates, holidays=holidays.values.astype('datetime64[D]'))
             
             diff_i = a_days - days_i
-            zero_diff_count = np.sum(diff_i == 0)
             diff_pow = diff_i ** power_config
             B_val = np.sum(diff_pow) # 改名防止变量混淆
             
@@ -404,22 +416,28 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
                 scores = w_i * top_items['Distance'].values * top_items['1-Day Chg'].values
                 C_val = np.sum(scores)
                 
-                if actual_n > zero_diff_count:
-                    # [修改点 4] 分母除以 total_chg
-                    D = C_val * (actual_n - zero_diff_count) / total_chg
+                # --- 【核心修改点】 ---
+                # 统计真正对 C 有贡献的行数：
+                # 1. 1-Day Chg 必须大于 0
+                # 2. diff_i 必须大于 0 (即不是最远的那一天，因为最远那一天的权重是0)
+                valid_mask = (top_items['1-Day Chg'] > 0) & (diff_i > 0)
+                valid_count = np.sum(valid_mask)
                 
-                # 收集策略1调试信息
+                if total_chg > 0:
+                    # 使用有效行数作为乘数，而不是固定的 n_config(20)
+                    D = C_val * valid_count / total_chg
+                # ----------------------
+                
                 if symbol == target_symbol:
                     for idx in range(len(top_items)):
                         strat1_debug_rows.append({
                             'Expiry': top_items.iloc[idx]['Expiry Date'].strftime('%Y-%m-%d'),
                             '1-Day Chg': top_items.iloc[idx]['1-Day Chg'],
                             'Dist': top_items.iloc[idx]['Distance'],
-                            'OI': top_items.iloc[idx]['Open Interest'],
-                            'Days_i': days_i[idx],
                             'Diff_i': diff_i[idx],
                             'Weight': w_i[idx],
-                            'Score': scores[idx]
+                            'Score': scores[idx],
+                            'IsValid': "Yes" if valid_mask[idx] else "No"
                         })
 
         # 存入 D-Score
@@ -480,49 +498,23 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
         # 统一写入调试文件 (策略1 + 策略2)
         # ---------------------------
         if symbol == target_symbol:
-            log_lines = []
-            log_lines.append("=" * 80)
-            log_lines.append(f"正在计算: {symbol} - {type_}")
-            
-            # --- 打印 策略 1 ---
+            log_lines = [f"\n{'='*80}\n正在计算: {symbol} - {type_}"]
             log_lines.append(f"\n[Strategy 1 - D-Score] (Top {n_config})")
-            log_lines.append(f"A={a_days}, B={B_val:.4f}, C={C_val:.6f}, Final D={D:.6f}")
+            log_lines.append(f"A={a_days}, B={B_val:.4f}, C={C_val:.6f}")
+            log_lines.append(f"有效行数(Chg>0且Diff>0)={valid_count}, Final D={D:.6f}")
             
-            if strat1_debug_rows:
-                header1 = f"{'Expiry':<12} | {'Diff_i':<6} | {'Weight':<10} | {'Dist':<8} | {'OI':<8} | {'Score'}"
-                log_lines.append(header1)
-                log_lines.append("-" * len(header1))
-                for row in strat1_debug_rows:
-                    log_lines.append(f"{row['Expiry']:<12} | {row['Diff_i']:<6} | {row['Weight']:.6f} | {row['Dist']:.4f} | {row['OI']:<8} | {row['Score']:.6f}")
-            else:
-                log_lines.append("无数据用于策略1计算")
+            header1 = f"{'Expiry':<12} | {'Diff_i':<6} | {'Weight':<10} | {'Dist':<8} | {'Chg':<8} | {'Valid?':<6} | {'Score'}"
+            log_lines.append(header1 + "\n" + "-"*len(header1))
+            for r in strat1_debug_rows:
+                log_lines.append(f"{r['Expiry']:<12} | {r['Diff_i']:<6} | {r['Weight']:.6f} | {r['Dist']:.4f} | {r['1-Day Chg']:<8.0f} | {r['IsValid']:<6} | {r['Score']:.6f}")
 
-            # --- 打印 策略 2 ---
-            log_lines.append(f"\n[Strategy 2 - IV Calculation] (Top {iv_n_config})")
-            log_lines.append(f"IV Weighted Sum = {iv_weighted_sum:.4f}")
-            # [修改点] 动态显示日志
-            log_lines.append(f"(注: 最终 IV = (Call_Sum + Put_Sum) / {iv_divisor})")
-            log_lines.append(f"(阈值: {iv_threshold}%, 调节系数: /{iv_adj_factor})")
+            log_lines.append(f"\n[Strategy 2 - IV] (Top {iv_n_config})")
+            header2 = f"{'Rank':<4} | {'Expiry':<12} | {'Dist(%)':<8} | {'Chg':<8} | {'FinalWt':<8} | {'Contrib'}"
+            log_lines.append(header2 + "\n" + "-"*len(header2))
+            for r in strat2_debug_rows:
+                log_lines.append(f"{r['Rank']:<4} | {r['Expiry']:<12} | {r['Dist_Pct']:>7.2f}% | {r['1-Day Chg']:<8.0f} | {r['Final_Wt']:.4f} | {r['Contrib']:.4f}")
             
-            if strat2_debug_rows:
-                # 更新了表头，增加了 Chg 列
-                header2 = f"{'Rank':<4} | {'Expiry':<12} | {'Strike':<8} | {'Dist(%)':<8} | {'Chg':<8} | {'BaseWt':<8} | {'Adj?':<4} | {'FinalWt':<8} | {'Contrib'}"
-                log_lines.append(header2)
-                log_lines.append("-" * len(header2))
-                for row in strat2_debug_rows:
-                    log_lines.append(
-                        f"{row['Rank']:<4} | {row['Expiry']:<12} | {row['Strike']:<8} | "
-                        f"{row['Dist_Pct']:.2f}%{'':<3} | {row['1-Day Chg']:<8.0f} | "  # 显示 Chg
-                        f"{row['Base_Wt']:.4f}   | {row['Adj?']:<4} | "
-                        f"{row['Final_Wt']:.4f}   | {row['Contrib']:.4f}"
-                    )
-            else:
-                log_lines.append("无数据用于策略2计算")
-
-            log_lines.append("\n")
-            
-            with open(debug_path, 'a') as f:
-                f.write('\n'.join(log_lines))
+            with open(debug_path, 'a') as f: f.write('\n'.join(log_lines) + '\n')
 
     # --- 数据库写入逻辑 ---
     print(f"正在连接数据库: {db_path} ...")

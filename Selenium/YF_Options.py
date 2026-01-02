@@ -33,17 +33,10 @@ MARKET_CAP_THRESHOLD = 100000000000
 # --- 新增配置 ---
 SECTORS_JSON_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
 
-# 自定义 Symbol 列表
-CUSTOM_SYMBOLS_DATA = [
-    "^VIX", "NVDA", "AAPL", "GOOGL", "MSFT", "META",
-    "TSM", "WMT", "HYG", "QQQ", "SPY", "SLV", "UVXY", "VXX"
-]
-
 # --- 3. 文件名生成 ---
 # 生成当天的文件名 Options_YYMMDD.csv
 today_str = datetime.now().strftime('%y%m%d')
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, f'Options_{today_str}.csv')
-
 
 # 添加鼠标移动功能的函数
 def move_mouse_periodically():
@@ -142,35 +135,43 @@ def scrape_options():
     
     # --- 1. 获取目标 Symbols (合并模式) ---
     # 目标：静默加载，只在最后输出汇总
-    
-    symbols = [] 
-    
-    # === 步骤 A: 获取自定义列表 + JSON Must 分组 ===
-    
-    # 1. 基础自定义列表
-    base_custom_set = set(CUSTOM_SYMBOLS_DATA)
-    count_base_custom = len(base_custom_set)
-    
-    # 2. JSON Must 分组
+    symbols = []
+
+    # === 步骤 A: 从 JSON 文件加载 "Options" 和 "Must" 分组 ===
+    json_options_set = set() # 替代原有的 base_custom_set
     json_must_set = set()
+    
+    # 用于日志显示的计数
+    count_json_options = 0
+    count_json_must = 0
+
     try:
         if os.path.exists(SECTORS_JSON_PATH):
             with open(SECTORS_JSON_PATH, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-            # 提取 Must 分组的 key
+            
+            # 1. 提取 Options 分组 (对应原本的 CUSTOM_SYMBOLS_DATA)
+            # data.get("Options", {}) 确保如果 key 不存在不会报错
+            options_keys = data.get("Options", {}).keys()
+            json_options_set = set(options_keys)
+            count_json_options = len(json_options_set)
+
+            # 2. 提取 Must 分组
             must_keys = data.get("Must", {}).keys()
             json_must_set = set(must_keys)
+            count_json_must = len(json_must_set)
+            
+        else:
+            tqdm.write(f"⚠️ 警告: 未找到 JSON 文件: {SECTORS_JSON_PATH}")
+            
     except Exception as e:
-        # 出错时不打印中间日志，保持清爽，仅在最后的总数体现差异
-        pass
-        
-    count_json_must = len(json_must_set)
+        tqdm.write(f"⚠️ 读取 JSON 配置文件出错: {e}")
 
     # 3. 合并去重 (两个集合取并集)
-    merged_symbols_set = base_custom_set.union(json_must_set)
+    merged_symbols_set = json_options_set.union(json_must_set)
     count_merged_custom = len(merged_symbols_set)
-        
-    # 构造列表 [(symbol, 0), ...] 
+
+    # 构造列表 [(symbol, 0), ...]
     # 自定义列表的市值默认为 0，方便后续处理
     custom_symbols_list = [(s, 0) for s in merged_symbols_set]
 
@@ -221,7 +222,7 @@ def scrape_options():
     # 格式示例: 自定义列表(13) + JSON(5) -> 去重合并(17) ...
     
     log_msg = (
-        f"任务列表加载完成: [自定义({count_base_custom}) + Must({count_json_must}) + 数据库({len(db_symbols_list)}) | "
+        f"任务列表加载完成: [JSON-Options({count_json_options}) + JSON-Must({count_json_must}) + 数据库({len(db_symbols_list)}) | "
         f"总去重: {original_count} | 已完成: {skipped_count} | 待抓取: {len(symbols)}"
     )
     tqdm.write(log_msg)
