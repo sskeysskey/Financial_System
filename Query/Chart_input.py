@@ -729,6 +729,46 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     # 这三个列表将存储matplotlib的scatter对象，以便后续可以移除它们
     global_scatter_points, specific_scatter_points, earning_scatter_points = [], [], []
 
+    # --- 新增: J 和 Y 的连锁逻辑 (修正版：包含关闭窗口功能) ---
+    def launch_insert_then_delete_chain():
+        """
+        1. 执行 panel_input (J)
+        2. 如果成功 (Code 0)，自动执行 panel_delete (Y)
+        3. 如果删除也成功 (Code 0)，关闭当前图表窗口 (sys.exit)
+        """
+        
+        # 这是当【删除】脚本(Y)执行完后的回调
+        def on_delete_done(delete_return_code):
+            if delete_return_code == 0:
+                print(f"删除操作完成 (Code 0)，正在关闭窗口...")
+                # --- 这里复用 launch_and_close_for_y 的关闭逻辑 ---
+                try: 
+                    plt.close('all')
+                except: 
+                    pass
+                try:
+                    # 如果需要返回 Panel 主界面，通常意味着结束当前图表进程
+                    if panel: 
+                        sys.exit(0)
+                except: 
+                    pass
+            else:
+                print(f"删除操作取消或失败 (Code {delete_return_code})，保持窗口开启。")
+
+        # 这是当【输入】脚本(J)执行完后的回调
+        def on_insert_done(insert_return_code):
+            # 如果 J 脚本返回 0，说明用户点击了确定并且数据有变更
+            if insert_return_code == 0:
+                print(f"Panel 输入成功 (Code 0)，正在自动启动删除流程...")
+                
+                # 关键点：这里启动删除脚本时，传入 on_delete_done 作为回调
+                execute_external_script('panel_delete', name, on_done=on_delete_done, block=True)
+            else:
+                print(f"Panel 输入取消或未变更 (Code {insert_return_code})，停止连锁流程。")
+
+        # 启动 J 脚本
+        execute_external_script('panel_input', name, on_done=on_insert_done, block=True)
+    
     # --- 新增修改 2: 将标记和注释的创建逻辑封装成一个函数 ---
     # 这个函数将在初始化和刷新时被调用
     def create_markers_and_annotations():
@@ -1412,7 +1452,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                        'e': lambda: execute_external_script('earning_edit', name),
                        't': lambda: execute_external_script('tags_edit', name),
                        'w': lambda: execute_external_script('event_input', name),
-                       'j': lambda: execute_external_script('panel_input', name),
+                       'j': launch_insert_then_delete_chain, 
                        'y': launch_and_close_for_y,
                        'h': lambda: execute_external_script('empty_input', name),
                        'q': lambda: execute_external_script('event_edit', name),

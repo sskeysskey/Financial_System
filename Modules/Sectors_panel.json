@@ -116,47 +116,43 @@
         "APLD": ""
     },
     "Must": {
+        "CLS": "",
+        "TT": "",
+        "TEL": "",
+        "CIFR": "",
+        "SOFI": "",
+        "PATH": "",
+        "NET": "",
+        "ETN": "",
         "HCA": "",
         "FLEX": "",
-        "FICO": "",
         "CRWD": "",
-        "A": "",
         "AAON": "",
         "UHS": "",
         "MSTR": "",
-        "PYPL": "",
-        "MTN": "",
-        "BBY": "",
         "RBLX": "",
         "NFLX": "",
         "CPNG": "",
         "IOT": ""
     },
     "Today": {
-        "IDXX": "",
-        "HON": "",
+        "PYPL": "",
+        "MTN": "",
+        "BBY": "",
+        "Z": "",
+        "SMR": "",
         "ARM": "",
+        "HON": "",
         "COIN": ""
     },
     "Short": {},
-    "Short_W": {
-        "EGO": "",
-        "SATS": "",
-        "GFI": "",
-        "HL": "",
-        "HMY": "",
-        "LLY": ""
-    },
+    "Short_W": {},
     "Strategy12": {
         "KMB": "",
         "TSCO": "",
         "TT": "TT热"
     },
-    "Strategy12_backup": {
-        "KMB": "",
-        "TSCO": "",
-        "TT": "TT热"
-    },
+    "Strategy12_backup": {},
     "Strategy34": {
         "BLK": "",
         "BSX": "",
@@ -173,30 +169,12 @@
         "URI": "",
         "WCN": ""
     },
-    "Strategy34_backup": {
-        "BLK": "",
-        "BSX": "",
-        "CLF": "",
-        "CLS": "CLS热",
-        "DLR": "DLR热",
-        "DPZ": "",
-        "ELV": "",
-        "ETN": "ETN热",
-        "MOH": "",
-        "SOFI": "",
-        "STZ": "",
-        "UNH": "",
-        "URI": "",
-        "WCN": ""
-    },
+    "Strategy34_backup": {},
     "OverSell_W": {
         "MP": "",
         "SHAK": ""
     },
-    "OverSell_W_backup": {
-        "MP": "",
-        "SHAK": ""
-    },
+    "OverSell_W_backup": {},
     "PE_Deep": {
         "ACHR": "",
         "ARM": "",
@@ -224,41 +202,12 @@
         "SOUN": "",
         "TEM": ""
     },
-    "PE_Deep_backup": {
-        "ACHR": "",
-        "ARM": "",
-        "BBY": "",
-        "CLF": "",
-        "COIN": "",
-        "ETN": "ETN15热",
-        "HIMS": "",
-        "HOOD": "",
-        "IONQ": "",
-        "IOT": "",
-        "JOBY": "",
-        "KMB": "",
-        "MRVL": "MRVL15热",
-        "MSTR": "",
-        "NET": "NET15热",
-        "NFLX": "NFLX15",
-        "OKLO": "OKLO15热",
-        "PATH": "",
-        "PYPL": "",
-        "RBLX": "",
-        "SMCI": "SMCI15热",
-        "SMR": "SMR15热",
-        "SOFI": "",
-        "SOUN": "",
-        "TEM": ""
-    },
+    "PE_Deep_backup": {},
     "PE_W": {
         "CIFR": "CIFR15热",
         "SPOT": ""
     },
-    "PE_W_backup": {
-        "CIFR": "CIFR15热",
-        "SPOT": ""
-    },
+    "PE_W_backup": {},
     "PE_valid": {
         "A": "",
         "AMZN": "AMZN7热",
@@ -297,23 +246,7 @@
         "VLO": "",
         "WELL": "WELL7热"
     },
-    "PE_valid_backup": {
-        "IDXX": "",
-        "INTC": "",
-        "KKR": "",
-        "MRNA": "",
-        "MTSI": "MTSI7热",
-        "ORLY": "",
-        "PLTR": "PLTR7",
-        "PWR": "PWR7热",
-        "STX": "STX7热",
-        "TEL": "TEL热",
-        "TSEM": "TSEM热",
-        "UBER": "",
-        "UHS": "UHS7热",
-        "VLO": "",
-        "WELL": "WELL7热"
-    },
+    "PE_valid_backup": {},
     "PE_invalid": {
         "ALNY": "",
         "CHYM": "",
@@ -324,16 +257,7 @@
         "Z": "",
         "ZS": ""
     },
-    "PE_invalid_backup": {
-        "ALNY": "",
-        "CHYM": "",
-        "CRCL": "",
-        "FROG": "",
-        "INSM": "",
-        "U": "",
-        "Z": "",
-        "ZS": ""
-    },
+    "PE_invalid_backup": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",

@@ -195,7 +195,7 @@ def main():
             else:
                 # 用户点击了取消或按了 ESC
                 print("用户取消了操作。程序退出。")
-                sys.exit(0)
+                sys.exit(2)  # <--- 【修改】: 这里从 0 改为 2，表示取消
         else:
             symbol = clipboard_content
 
@@ -225,7 +225,7 @@ def main():
     else:
         # 用户点击了取消或按了 ESC
         print("用户取消了操作。程序退出。")
-        sys.exit(0)
+        sys.exit(2)  # <--- 【修改】: 这里从 0 改为 2，表示取消
 
     # --- 修改点 6: 优化 JSON 更新逻辑 ---
     # 新的逻辑会处理添加、移除和排序，使 JSON 文件状态与复选框的最终状态完全同步。
@@ -269,10 +269,10 @@ def main():
                 json.dump(panel_data, f, ensure_ascii=False, indent=4)
             
             print(f"文件 '{JSON_FILE_PATH}' 已成功更新。")
-            # 可以选择性地显示一个成功的消息框
-            # QMessageBox.information(None, "操作成功", f"针对 Symbol '{symbol}' 的分组更新已完成。")
+            sys.exit(0) # <--- 【保持】: 成功修改，返回 0
         else:
             print("数据未发生任何变化，无需更新文件。")
+            sys.exit(2) # <--- 【修改】: 虽然程序没报错，但没改动数据，返回 2
 
     except Exception as e:
         QMessageBox.critical(None, "未知错误", f"更新 JSON 文件时发生了一个意外错误：\n{e}")
