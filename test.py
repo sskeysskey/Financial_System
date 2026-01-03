@@ -219,7 +219,13 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Market Analyzer Pro")
-        self.resize(1000, 700)
+        
+        # >>> 修改1: 增加初始高度到 1000px <<<
+        self.resize(1000, 1000) 
+        
+        # >>> 修改: 调用居中方法 <<<
+        self.center()
+        
         self.data_manager = DataManager()
         
         main_widget = QWidget()
@@ -245,6 +251,23 @@ class MainWindow(QMainWindow):
         
         self.load_and_render()
         self.apply_styles()
+
+    # >>> 新增: 屏幕居中逻辑 <<<
+    def center(self):
+        # 获取窗口当前的几何形状
+        qr = self.frameGeometry()
+        # 获取屏幕中心点 (处理多显示器情况，默认 primary)
+        cp = self.screen().availableGeometry().center()
+        # 将窗口矩形的中心移动到屏幕中心
+        qr.moveCenter(cp)
+        # 移动窗口左上角到新计算的位置
+        self.move(qr.topLeft())
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Escape:
+            self.close()
+        else:
+            super().keyPressEvent(event)
 
     def load_and_render(self):
         data_list = self.data_manager.load_data()
