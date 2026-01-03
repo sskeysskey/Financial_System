@@ -13,12 +13,38 @@ import argparse
 import sqlite3
 import datetime
 import subprocess
+import os
+
+# 新增：定义 Check_yesterday 脚本的路径
+CHECK_YESTERDAY_SCRIPT_PATH = '/Users/yanzhang/Coding/Financial_System/Query/Check_yesterday.py'
+# 新增：定义 Python 解释器路径（参考你第二个程序中的路径）
+PYTHON_INTERPRETER = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
 
 def show_alert(message):
     # AppleScript 代码模板
     applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
     # 使用 subprocess 调用 osascript
     subprocess.run(['osascript', '-e', applescript_code], check=True)
+
+def run_check_yesterday():
+    """执行 Check_yesterday.py 脚本"""
+    try:
+        print(f"\n[系统信息] 正在调用补充脚本: {CHECK_YESTERDAY_SCRIPT_PATH}")
+        # 使用指定的 Python 解释器运行
+        result = subprocess.run(
+            [PYTHON_INTERPRETER, CHECK_YESTERDAY_SCRIPT_PATH],
+            check=True, 
+            capture_output=True, 
+            text=True, 
+            encoding='utf-8'
+        )
+        print("--- Check_yesterday 输出 ---")
+        print(result.stdout)
+        print("---------------------------")
+        return True
+    except Exception as e:
+        print(f"❌ 执行 Check_yesterday 失败: {e}")
+        return False
 
 def clear_symbols_from_json(json_file_path, sector, symbol):
     """从指定的JSON文件中清除特定分组中的特定符号"""
@@ -34,21 +60,6 @@ def clear_symbols_from_json(json_file_path, sector, symbol):
             
     except Exception as e:
         print(f"清除symbol时发生错误: {str(e)}")
-
-def clear_empty_json(json_file_path):
-    """
-    清空 Sectors_empty.json 中所有分组的 symbol 列表，保留分组结构
-    """
-    try:
-        with open(json_file_path, 'r') as f:
-            data = json.load(f)
-        for sector in data:
-            data[sector] = []
-        with open(json_file_path, 'w') as f:
-            json.dump(data, f, indent=4)
-        print(f"已清空 {json_file_path} 中的所有 symbol")
-    except Exception as e:
-        print(f"清空整个 JSON 时出错: {e}")
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='股票数据抓取工具')
@@ -157,12 +168,17 @@ def main():
     # 解析命令行参数
     args = parse_arguments()
     
-    # 根据命令行参数选择JSON文件路径
+    # 1. 根据命令行参数选择JSON文件路径
     if args.mode.lower() == 'empty':
         json_file_path = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json"
+        
+        # --- [修改点 1]：如果一开始就是空的，执行脚本并退出 ---
         if not check_empty_json_has_content(json_file_path):
-            show_alert("Empty.json 文件中没有任何内容，程序将退出。")
+            print("\n[通知] Sectors_empty.json 为空，准备执行 Check_yesterday...")
+            run_check_yesterday() # 执行你的查询脚本
+            show_alert("Sectors_empty.json 为空。\nCheck_yesterday 脚本已执行完毕，程序将退出。")
             return
+            
     elif args.mode.lower() == 'normal':
         # 参数为normal格式
         json_file_path = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_today.json"
@@ -372,6 +388,7 @@ def main():
 
         # 只有在 empty 模式下才做下面的判断
         if args.mode.lower() == 'empty':
+            # 检查是否所有 symbol 都抓取完并清空了
             if not check_empty_json_has_content(json_file_path):
                 if args.weekend:
                     # 带了 --weekend，执行简单指令即可

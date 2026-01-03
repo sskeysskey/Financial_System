@@ -30,8 +30,10 @@ OUTPUT_DIR = '/Users/yanzhang/Coding/News/backup/'
 # 市值阈值 (1000亿) - 仅在数据库模式下生效
 MARKET_CAP_THRESHOLD = 100000000000
 
-# --- 新增配置 ---
+# --- 2. 配置文件路径 ---
 SECTORS_JSON_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
+# 新增：黑名单路径
+BLACKLIST_JSON_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
 
 # --- 3. 文件名生成 ---
 # 生成当天的文件名 Options_YYMMDD.csv
@@ -134,17 +136,30 @@ def scrape_options():
     # mouse_thread.start()
     
     # --- 1. 获取目标 Symbols (合并模式) ---
-    # 目标：静默加载，只在最后输出汇总
-    symbols = []
 
     # === 步骤 A: 从 JSON 文件加载 "Options" 和 "Must" 分组 ===
     json_options_set = set() # 替代原有的 base_custom_set
     json_must_set = set()
+    blacklist_options_set = set() # 存储黑名单
     
     # 用于日志显示的计数
     count_json_options = 0
     count_json_must = 0
 
+    # === 步骤 A: 加载黑名单 (新增逻辑) ===
+    try:
+        if os.path.exists(BLACKLIST_JSON_PATH):
+            with open(BLACKLIST_JSON_PATH, 'r', encoding='utf-8') as f:
+                bl_data = json.load(f)
+                # 获取 Blacklist.json 中 Options 分组下的列表
+                # 建议修改为（更健壮）：
+                blacklist_options_set = {str(s).strip() for s in bl_data.get("Options", [])}
+        else:
+            tqdm.write(f"⚠️ 提示: 未找到黑名单文件: {BLACKLIST_JSON_PATH}")
+    except Exception as e:
+        tqdm.write(f"⚠️ 读取黑名单出错: {e}")
+
+    # === 步骤 B: 从 Sectors_panel 加载基础列表 ===
     try:
         if os.path.exists(SECTORS_JSON_PATH):
             with open(SECTORS_JSON_PATH, 'r', encoding='utf-8') as f:
@@ -169,10 +184,6 @@ def scrape_options():
 
     # 3. 合并去重 (两个集合取并集)
     merged_symbols_set = json_options_set.union(json_must_set)
-    count_merged_custom = len(merged_symbols_set)
-
-    # 构造列表 [(symbol, 0), ...]
-    # 自定义列表的市值默认为 0，方便后续处理
     custom_symbols_list = [(s, 0) for s in merged_symbols_set]
 
     # === 步骤 B: 获取数据库筛选列表 (静默模式) ===
@@ -187,12 +198,16 @@ def scrape_options():
     
     # 2. 筛选数据库列表：只保留不在自定义列表中的
     db_unique_list = [s for s in db_symbols_list if s[0] not in custom_names_set]
+    all_symbols_before_blacklist = custom_symbols_list + db_unique_list
     
-    # 3. 最终合并
-    symbols = custom_symbols_list + db_unique_list
+    # === 步骤 E: 执行黑名单过滤 (核心修改) ===
+    # 过滤掉存在于 blacklist_options_set 中的 symbol
+    symbols = [s for s in all_symbols_before_blacklist if s[0] not in blacklist_options_set]
     
+    blacklisted_count = len(all_symbols_before_blacklist) - len(symbols)
+
     if not symbols:
-        tqdm.write("未找到任何 Symbol，程序结束。")
+        tqdm.write("未找到任何 Symbol 或全部被黑名单过滤，程序结束。")
         return
 
     # ================= 检查已存在的 Symbol 并过滤 =================
@@ -219,11 +234,12 @@ def scrape_options():
     skipped_count = original_count - len(symbols)
     
     # --- 统一的日志输出 (修改部分) ---
-    # 格式示例: 自定义列表(13) + JSON(5) -> 去重合并(17) ...
+    # 格式示例: 自定义列表(13) + JSON(5) -> 去重合并(17)-->增加黑名单统计 ...
     
     log_msg = (
-        f"任务列表加载完成: [JSON-Options({count_json_options}) + JSON-Must({count_json_must}) + 数据库({len(db_symbols_list)}) | "
-        f"总去重: {original_count} | 已完成: {skipped_count} | 待抓取: {len(symbols)}"
+        f"任务列表加载完成: [JSON({count_json_options + count_json_must}) + 数据库({len(db_symbols_list)})] | "
+        f"黑名单过滤: {blacklisted_count} | 总去重: {len(symbols) + skipped_count} | "
+        f"已完成: {skipped_count} | 待抓取: {len(symbols)}"
     )
     tqdm.write(log_msg)
 

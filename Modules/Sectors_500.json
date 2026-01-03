@@ -30,7 +30,8 @@
         "RBLX",
         "APP",
         "WBD",
-        "EA"
+        "EA",
+        "BIDU"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -58,7 +59,8 @@
         "ORLY",
         "ROST",
         "CVNA",
-        "F"
+        "F",
+        "CMG"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -97,7 +99,8 @@
         "MPLX",
         "SLB",
         "VLO",
-        "SU"
+        "SU",
+        "MPC"
     ],
     "Financial_Services": [
         "JPM",

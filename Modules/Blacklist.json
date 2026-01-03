@@ -581,7 +581,8 @@
         "DOOO",
         "BRK-A",
         "ZK",
-        "PSNY"
+        "PSNY",
+        "ELP"
     ],
     "etf": [
         "VDE",
@@ -879,7 +880,43 @@
         "SPLG",
         "FLOT",
         "CEFS",
-        "FIVA"
+        "FIVA",
+        "CWB",
+        "FLIN",
+        "CALF",
+        "BBJP",
+        "FLBL",
+        "QQQE",
+        "ITOT",
+        "BBAX",
+        "IQLT",
+        "STIP",
+        "VGSH",
+        "FENY",
+        "BIZD",
+        "VMBS",
+        "JMBS",
+        "SPMB",
+        "HEDJ",
+        "QQQM",
+        "FBTC",
+        "REZ",
+        "JNK",
+        "SCHH",
+        "TWM",
+        "SHYG",
+        "VWOB",
+        "HYEM",
+        "DGS",
+        "FNDE",
+        "XOP",
+        "ERY",
+        "SHV",
+        "CEMB",
+        "DSTL",
+        "FV",
+        "CHIQ",
+        "FCAL"
     ],
     "Earning": [
         "TW",
@@ -904,5 +941,14 @@
         "OPEN",
         "PSKY",
         "TEM"
+    ],
+    "Options": [
+        "BBVA",
+        "HDB",
+        "TD",
+        "UBS",
+        "SMFG",
+        "PH",
+        "ENB"
     ]
 }
