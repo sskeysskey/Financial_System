@@ -894,10 +894,20 @@ class MainWindow(QMainWindow):
 
         # ### 修改 ###: 定义需要特殊排序的组
         target_sort_groups = {
-            'Must','Today','Short','Short_W','Basic_Materials','Consumer_Cyclical',
-            'Real_Estate','Technology','Energy','Industrials','Consumer_Defensive',
-            'Communication_Services','Financial_Services','Healthcare','Utilities',
-            'PE_valid','PE_invalid','Strategy12','Strategy34','PE_Deep','OverSell_W','PE_W'
+            # 原有的板块
+            'Basic_Materials','Consumer_Cyclical','Real_Estate','Technology','Energy',
+            'Industrials','Consumer_Defensive','Communication_Services','Financial_Services',
+            'Healthcare','Utilities',
+            
+            # 策略分组 (原名)
+            'Must','Today','Short','Short_W',
+            'PE_valid','PE_invalid','Strategy12','Strategy34','PE_Deep','OverSell_W','PE_W',
+            
+            # 策略分组 (Backup 版本 - 实际上 UI 中正在使用的 key)
+            'PE_valid_backup', 'PE_invalid_backup', 
+            'Strategy12_backup', 'Strategy34_backup',
+            'PE_Deep_backup', 'PE_W_backup', 
+            'OverSell_W_backup', 'PE_W_backup',
         }
 
         # ==========================================================

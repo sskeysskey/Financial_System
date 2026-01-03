@@ -23,7 +23,7 @@ DEBUG_LOG_FILE = '/Users/yanzhang/Downloads/OverBuy_debug.log'
 LOG_ENABLED = False  # True 或 False
 
 # 【配置项】涨幅过滤阈值 (百分比)
-MIN_PRICE_CHANGE_THRESHOLD = 27  # 这里可以随意修改，例如改为 20 或 50
+MIN_PRICE_CHANGE_THRESHOLD = 27
 
 logger = logging.getLogger(__name__)
 

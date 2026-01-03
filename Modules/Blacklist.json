@@ -916,7 +916,8 @@
         "DSTL",
         "FV",
         "CHIQ",
-        "FCAL"
+        "FCAL",
+        "KCE"
     ],
     "Earning": [
         "TW",
@@ -949,6 +950,13 @@
         "UBS",
         "SMFG",
         "PH",
-        "ENB"
+        "ENB",
+        "AZN",
+        "SAP",
+        "RY",
+        "UL",
+        "PLD",
+        "SNY",
+        "IBN"
     ]
 }

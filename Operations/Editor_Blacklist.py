@@ -171,13 +171,14 @@ class BlacklistEditor(QMainWindow):
         
         self.list_widgets[key] = list_widget
 
-    def _is_item_duplicate(self, text, excluding_item=None):
-        """全局检查项目是否重复"""
+    def _is_item_duplicate(self, text, key, excluding_item=None):
+        """仅在指定分组内检查项目是否重复"""
         old_text = excluding_item.text() if excluding_item else None
         
-        all_items = [item for sublist in self.blacklist_data.values() for item in sublist]
+        # 只获取当前分组的列表
+        target_group_items = self.blacklist_data.get(key, [])
 
-        for existing_item in all_items:
+        for existing_item in target_group_items:
             if old_text and existing_item == old_text:
                 continue
             if existing_item == text:
@@ -210,8 +211,8 @@ class BlacklistEditor(QMainWindow):
                     QMessageBox.warning(self, "新增失败", "项目名不能为空！")
                     return
                 
-                if self._is_item_duplicate(text):
-                    QMessageBox.warning(self, "错误", f"项目 '{text}' 已在其他地方存在！")
+                if self._is_item_duplicate(text, key): # 传入当前的 key
+                    QMessageBox.warning(self, "错误", f"项目 '{text}' 已在分组 '{key}' 中存在！")
                     return
                 
                 self.blacklist_data[key].append(text)

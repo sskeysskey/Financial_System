@@ -274,7 +274,6 @@
     "PCEF",
     "IFRA",
     "QLD",
-    "KCE",
     "FXY",
     "EMB",
     "TMF",
@@ -423,7 +422,8 @@
     "LQDI",
     "IXUS",
     "FLCH",
-    "RSPU"
+    "RSPU",
+    "BDRY"
   ],
   "Basic_Materials": [
     "LIN",
