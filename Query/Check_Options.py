@@ -188,25 +188,57 @@ class StockCard(QFrame):
         row1 = QHBoxLayout()
         row1.setSpacing(15)
         
-        def create_value_label(val, is_percent=False, is_compare=False):
+        # >>> 修改: 增强后的标签创建函数 <<<
+        def create_value_label(val, role='primary', is_percent=False):
+            # role: 'primary' (1,4), 'secondary' (2,5), 'compare' (3)
             txt = f"{val:.2f}%" if is_percent else f"{val:.2f}"
             lbl = QLabel(txt)
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            color = "#FF4500" if val > 0 else "#00FA9A" if val < 0 else "#DDDDDD"
-            style = f"color: {color}; font-weight: bold; font-size: 14px;"
-            if is_compare:
-                style += "background-color: #2c3e50; border-radius: 4px; padding: 4px;"
+            
+            # --- 颜色逻辑 ---
+            color = "#DDDDDD" # 默认灰
+            if val > 0:
+                if role == 'secondary':
+                    color = "#E57373"  # 淡红 (Muted Red)
+                else:
+                    color = "#FF4500"  # 鲜红 (OrangeRed)
+            elif val < 0:
+                if role == 'secondary':
+                    color = "#81C784"  # 淡绿 (Muted Green)
+                else:
+                    color = "#00FA9A"  # 鲜绿 (SpringGreen)
+            
+            # --- 样式逻辑 ---
+            font_size = "14px"
+            font_weight = "bold"
+            extra_style = ""
+            
+            if role == 'primary':
+                font_size = "20px"     # 变大
+                font_weight = "900"    # 特粗
+            elif role == 'compare':
+                # Compare 保持原样 + 蓝色背景
+                extra_style = "background-color: #2c3e50; border-radius: 4px; padding: 4px;"
+            
+            style = f"color: {color}; font-weight: {font_weight}; font-size: {font_size}; {extra_style}"
             lbl.setStyleSheet(style)
             return lbl
 
-        row1.addWidget(create_value_label(self.data['iv1'], is_percent=True))
-        row1.addWidget(create_value_label(self.data['iv2'], is_percent=True))
-        row1.addWidget(create_value_label(self.data['compare'], is_percent=True, is_compare=True))
-        row1.addWidget(create_value_label(self.data['sum1']))
-        row1.addWidget(create_value_label(self.data['sum2']))
+        # 1. Latest IV -> Primary (大)
+        row1.addWidget(create_value_label(self.data['iv1'], role='primary', is_percent=True))
+        # 2. 2nd Latest IV -> Secondary (小且淡)
+        row1.addWidget(create_value_label(self.data['iv2'], role='secondary', is_percent=True))
+        # 3. Compare -> Compare (特殊背景)
+        row1.addWidget(create_value_label(self.data['compare'], role='compare', is_percent=True))
+        # 4. Latest Sum -> Primary (大)
+        row1.addWidget(create_value_label(self.data['sum1'], role='primary'))
+        # 5. 2nd Latest Sum -> Secondary (小且淡)
+        row1.addWidget(create_value_label(self.data['sum2'], role='secondary'))
+        
         row1.addStretch()
         right_layout.addLayout(row1)
         
+        # Tags (去掉 #)
         tags_text = "  ".join([str(t) for t in self.data['tags']])
         lbl_tags = QLabel(tags_text if tags_text else "No Tags")
         lbl_tags.setObjectName("TagsLabel")

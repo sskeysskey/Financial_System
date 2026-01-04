@@ -404,10 +404,10 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USInitial": "08 USInitial",
         "USNonFarmA": "07 USNonFarmA",
         "USNonPMI": "07 USNonPMI",
         "USTrade": "08 USTrade",
+        "USInitial": "08 USInitial",
         "USNonFarm": "09 USNonFarm",
         "USUnemploy": "09 USUnemploy",
         "USConfidence": "09 USConfidence"
