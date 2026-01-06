@@ -920,7 +920,9 @@
         "FV",
         "CHIQ",
         "FCAL",
-        "KCE"
+        "KCE",
+        "SPYM",
+        "CORB"
     ],
     "Earning": [
         "TW",

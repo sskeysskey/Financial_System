@@ -97,6 +97,7 @@ EARNING_HISTORY_JSON_FILE = PATHS["earnings_history_json"](CONFIG_DIR)
 #     "COND6_ER_DROP_A_THRESHOLD": 0.25,  # 财报跌幅分界线 25%
 #     "COND6_LOW_DROP_B_LARGE": 0.09,     # 如果A > 25%，则B需 > 9%
 #     "COND6_LOW_DROP_B_SMALL": 0.12,     # 如果A <= 25%，则B需 > 12%
+#     "COND6_W_BOTTOM_MIN_PEAK_RISE": 0.015, # 例如改为 1.5%
 
 #     # W底形态参数
 #     "COND6_W_BOTTOM_PRICE_TOLERANCE": 0.038,  # 两个谷底的价格差容忍度 (3.8%)
@@ -158,13 +159,14 @@ CONFIG = {
     # ========== 新增：条件5的参数 ==========
     "COND5_ER_TO_HIGH_THRESHOLD": 0.3,  # 财报日到最高价的涨幅阈值 30%
     "COND5_HIGH_TO_LATEST_THRESHOLD": 0.09,  # 最高价到最新价的跌幅阈值 9%
-    "PE_DEEP_DROP_THRESHOLD": 0.14, # 条件1-5后的深跌判断1
-    "PE_DEEP_MAX_DROP_THRESHOLD": 0.15, # 条件1-5后的深跌判断2
+    "PE_DEEP_DROP_THRESHOLD": 0.15, # 条件1-5后的深跌判断1
+    "PE_DEEP_MAX_DROP_THRESHOLD": 0.16, # 条件1-5后的深跌判断2
 
     # ========== 代码修改开始 1/4：新增条件6（抄底W底）参数 ==========
     "COND6_ER_DROP_A_THRESHOLD": 0.25,  # 财报跌幅分界线 25%
     "COND6_LOW_DROP_B_LARGE": 0.09,     # 如果A > 25%，则B需 > 9%
     "COND6_LOW_DROP_B_SMALL": 0.12,     # 如果A <= 25%，则B需 > 12%
+    "COND6_W_BOTTOM_MIN_PEAK_RISE": 0.015, # 例如改为 1.5%
 
     # W底形态参数
     "COND6_W_BOTTOM_PRICE_TOLERANCE": 0.045,  # 两个谷底的价格差容忍度 (4.8%)
@@ -791,7 +793,7 @@ def check_w_bottom_pattern(data, config, log_detail, symbol_to_trace, check_stri
         # 原有检查：确保颈线有足够的反弹力度
         max_peak = max(neckline_prices)
         peak_rise = (max_peak - avg_valley) / avg_valley
-        min_peak_rise = 0.025 # 可以考虑放入配置
+        min_peak_rise = config.get("COND6_W_BOTTOM_MIN_PEAK_RISE", 0.015) # 使用配置
         if peak_rise < min_peak_rise:
             if is_tracing:
                 log_detail(f"   x \[几何-力度失败\] 中间反弹力度 {peak_rise:.2%} < {min_peak_rise:.1%}, 形态不显著")
@@ -1095,19 +1097,19 @@ def run_processing_logic(log_detail):
     symbol_to_tags_map = load_symbol_tags(DESCRIPTION_JSON_FILE)
     stock_data_cache = build_stock_data_cache(all_symbols, symbol_to_sector_map, DB_FILE, SYMBOL_TO_TRACE, log_detail, symbol_to_tags_map)
     
-    # ========== 筛选核心逻辑函数：在筛选通过时标记是否为 Condition 6 ==========
+    # ========== 修改点 1：perform_filter_pass 不再进行 Tag 过滤 ==========
     def perform_filter_pass(symbols_to_check, drop_large, drop_small, pass_name):
         preliminary_results = []       # 普通股 (PE 分组)
         oversell_w_candidates = []     # 仅限条件 6 (OverSell_W)
-        pe_deep_candidates = []  # 条件 1-5 触发深跌
-        pe_w_candidates = []         # 条件 1-5 触发 W 底 (PE_W)
+        pe_deep_candidates = []        # 条件 1-5 触发深跌
+        pe_w_candidates = []           # 条件 1-5 触发 W 底 (PE_W)
 
         for symbol in symbols_to_check:
             data = stock_data_cache.get(symbol)
             if not (data and data['is_valid']):
                 continue
             data['symbol'] = symbol
-
+            
             # 步骤A: 检查入口条件
             # 获取三个返回值
             passed_any, passed_cond5, passed_cond6 = check_entry_conditions(data, SYMBOL_TO_TRACE, log_detail)
@@ -1177,33 +1179,25 @@ def run_processing_logic(log_detail):
                                 log_detail(f"   * 窗口高点: {er_window_high:.2f} (需跌破 {er_window_high*(1-limit_window_base):.2f})")
                             
                             pe_deep_candidates.append(symbol) # 进 PE_Deep
-                        # ========== 修改结束 ==========
                         else:
                             # 优先级 4：普通股
                             preliminary_results.append(symbol)
 
-
         # 对普通组进行 PE 分组
         pe_valid, pe_invalid = apply_post_filters(preliminary_results, stock_data_cache, SYMBOL_TO_TRACE, log_detail)
 
-        # 步骤 D: 基于Tag的过滤 (对四个组都执行)
-        tag_blacklist = CONFIG["BLACKLIST_TAGS"]
-        def filter_tags(syms):
-            return [s for s in syms if not set(symbol_to_tags_map.get(s, [])).intersection(tag_blacklist)]
-
-        # 返回 5 个经过过滤的列表
+        # [修改] 直接返回原始列表，不做 Tag 过滤
         return (
-            filter_tags(pe_valid), 
-            filter_tags(pe_invalid), 
-            filter_tags(oversell_w_candidates), 
-            filter_tags(pe_deep_candidates), 
-            filter_tags(pe_w_candidates)
+            pe_valid, 
+            pe_invalid, 
+            oversell_w_candidates, 
+            pe_deep_candidates, 
+            pe_w_candidates
         )
 
     # --- 执行筛选 ---
     strict_symbols, relaxed_symbols, sub_relaxed_symbols, super_relaxed_symbols = [], [], [], []
     initial_candidates = list(stock_data_cache.keys())
-
     for symbol in initial_candidates:
         data = stock_data_cache.get(symbol)
         if not (data and data['is_valid']): continue
@@ -1214,27 +1208,24 @@ def run_processing_logic(log_detail):
         elif filter_mode == 1: relaxed_symbols.append(symbol)
         else: strict_symbols.append(symbol)
 
-    # 接收 5 个返回值
+    # 接收 5 个返回值 (Raw Data: 包含可能被 Tag 黑名单命中的 Symbol)
     res_super = perform_filter_pass(super_relaxed_symbols, CONFIG["SUPER_RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["SUPER_RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "最宽松")
     res_sub = perform_filter_pass(sub_relaxed_symbols, CONFIG["SUB_RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["SUB_RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "次宽松")
     res_relaxed = perform_filter_pass(relaxed_symbols, CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "普通宽松")
     res_strict = perform_filter_pass(strict_symbols, CONFIG["PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["PRICE_DROP_PERCENTAGE_SMALL"], "严格")
 
-    # 汇总
-    final_pe_valid_symbols = res_super[0] + res_sub[0] + res_relaxed[0] + res_strict[0]
-    final_pe_invalid_symbols = res_super[1] + res_sub[1] + res_relaxed[1] + res_strict[1]
-    total_oversell_w_symbols = res_super[2] + res_sub[2] + res_relaxed[2] + res_strict[2]
-    total_pe_deep_symbols = res_super[3] + res_sub[3] + res_relaxed[3] + res_strict[3]
-    total_pe_w_symbols = res_super[4] + res_sub[4] + res_relaxed[4] + res_strict[4]
-    
-    # 将所有符合资格的 symbol 用于写历史记录
-    all_qualified_symbols = final_pe_valid_symbols + final_pe_invalid_symbols + total_pe_deep_symbols + total_pe_w_symbols + total_oversell_w_symbols
+    # ========== 修改点 2: 汇总 Raw 数据 (包含 Tag 黑名单，用于 History) ==========
+    raw_pe_valid = res_super[0] + res_sub[0] + res_relaxed[0] + res_strict[0]
+    raw_pe_invalid = res_super[1] + res_sub[1] + res_relaxed[1] + res_strict[1]
+    raw_oversell_w = res_super[2] + res_sub[2] + res_relaxed[2] + res_strict[2]
+    raw_pe_deep = res_super[3] + res_sub[3] + res_relaxed[3] + res_strict[3]
+    raw_pe_w = res_super[4] + res_sub[4] + res_relaxed[4] + res_strict[4]
 
-    pe_valid_set = set(final_pe_valid_symbols)
-    pe_invalid_set = set(final_pe_invalid_symbols)
-    pe_deep_set = set(total_pe_deep_symbols)
-    pe_w_set = set(total_pe_w_symbols)
-    oversell_w_set = set(total_oversell_w_symbols)
+    # ========== 修改点 3: 准备写入 Panel 的数据 (需进行 Tag 过滤) ==========
+    tag_blacklist = CONFIG["BLACKLIST_TAGS"]
+    def filter_tags(syms):
+        # 仅保留没有命中黑名单 Tag 的 symbol
+        return [s for s in syms if not set(symbol_to_tags_map.get(s, [])).intersection(tag_blacklist)]
 
     blacklist = load_blacklist(BLACKLIST_JSON_FILE)
     try:
@@ -1245,33 +1236,46 @@ def run_processing_logic(log_detail):
     exist_Strategy12 = set(panel_data.get('Strategy12', {}).keys())
     # exist_today = set(panel_data.get('Today', {}).keys())
     exist_must = set(panel_data.get('Must', {}).keys())
-    
     already_in_panels = exist_Strategy34 | exist_Strategy12 | exist_must
 
-    # 过滤黑名单和已存在面板的股票，准备写入列表
-    final_pe_valid_to_write = sorted(list(pe_valid_set - blacklist - already_in_panels))
-    final_pe_invalid_to_write = sorted(list(pe_invalid_set - blacklist - already_in_panels))
+    # [逻辑] PE_valid/invalid: 过滤 Tags + 黑名单 + 已存在
+    # [逻辑] Deep/W/OverSell: 过滤 Tags (根据你原代码逻辑，这几组不剔除黑名单和已存在)
+    final_pe_valid_to_write = sorted(list(set(filter_tags(raw_pe_valid)) - blacklist - already_in_panels))
+    final_pe_invalid_to_write = sorted(list(set(filter_tags(raw_pe_invalid)) - blacklist - already_in_panels))
+    
+    final_oversell_w_to_write = sorted(list(set(filter_tags(raw_oversell_w))))
+    final_pe_deep_to_write = sorted(list(set(filter_tags(raw_pe_deep))))
+    final_pe_w_to_write = sorted(list(set(filter_tags(raw_pe_w))))
 
-    # 2. PE_Deep 和 PE_W：黑名单 和 already_in_panels 都不再过滤
-    final_pe_deep_to_write = sorted(list(pe_deep_set))
-    final_pe_w_to_write = sorted(list(pe_w_set))
-    final_oversell_w_to_write = sorted(list(oversell_w_set))
+    # final_pe_deep_to_write = sorted(list(set(filter_tags(raw_pe_deep)) - blacklist - already_in_panels))
+    # final_pe_w_to_write = sorted(list(set(filter_tags(raw_pe_w)) - blacklist - already_in_panels))
+    # final_oversell_w_to_write = sorted(list(set(filter_tags(raw_oversell_w)) - blacklist - already_in_panels))
 
-    # final_pe_deep_to_write = sorted(list(pe_deep_set - blacklist - already_in_panels))
-    # final_pe_w_to_write = sorted(list(pe_w_set - blacklist - already_in_panels))
-    # final_oversell_w_to_write = sorted(list(oversell_w_set - blacklist - already_in_panels))
-
+    # 追踪日志 (增强版：显示拦截原因)
     if SYMBOL_TO_TRACE:
-        # 追踪日志逻辑更新，包含 OverSell_W
-        combined_sets = [
-            (pe_valid_set, "PE_valid"), (pe_invalid_set, "PE_invalid"),
-            (pe_deep_set, "PE_Deep"), (pe_w_set, "PE_W"), (oversell_w_set, "OverSell_W") 
+        raw_sets = [
+            (set(raw_pe_valid), "PE_valid"), (set(raw_pe_invalid), "PE_invalid"),
+            (set(raw_pe_deep), "PE_Deep"), (set(raw_pe_w), "PE_W"), (set(raw_oversell_w), "OverSell_W") 
         ]
-        for s_set, name in combined_sets:
-            skipped = s_set & (blacklist | already_in_panels)
-            if SYMBOL_TO_TRACE in skipped:
-                reason = "在 'newlow' 黑名单中" if SYMBOL_TO_TRACE in blacklist else "已存在于 'Strategy34', 'Strategy12', 'Today' 或 'Must' 分组中"
-                log_detail(f"\n追踪信息: 目标 symbol '{SYMBOL_TO_TRACE}' ({name}) 虽然通过了筛选，但最终因 ({reason}) 而被跳过，不会写入 panel 文件。")
+        for s_set, name in raw_sets:
+            if SYMBOL_TO_TRACE in s_set:
+                is_tag_blocked = bool(set(symbol_to_tags_map.get(SYMBOL_TO_TRACE, [])).intersection(tag_blacklist))
+                # PE_valid/invalid 还会检查 blacklist 和 existing
+                if name in ["PE_valid", "PE_invalid"]:
+                    if SYMBOL_TO_TRACE in blacklist:
+                        log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' ({name}) 算法通过，但在 'newlow' 黑名单中 -> 不写Panel。")
+                    elif SYMBOL_TO_TRACE in already_in_panels:
+                        log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' ({name}) 算法通过，但已在其他 Panel 中 -> 不写Panel。")
+                    elif is_tag_blocked:
+                        log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' ({name}) 算法通过，但命中 Tag 黑名单 -> 不写Panel。")
+                    else:
+                        log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' ({name}) 将写入 Panel。")
+                else:
+                    # 其他组只检查 Tag
+                    if is_tag_blocked:
+                         log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' ({name}) 算法通过，但命中 Tag 黑名单 -> 不写Panel。")
+                    else:
+                         log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' ({name}) 将写入 Panel。")
 
     hot_tags = set(CONFIG.get("HOT_TAGS", set()))
     def build_symbol_note_map(symbols):
@@ -1288,6 +1292,7 @@ def run_processing_logic(log_detail):
             else: note_map[sym] = f"{sym}热" if is_hot else ""
         return note_map
 
+    # 写入 Panel (Filtered Data)
     pe_valid_notes = build_symbol_note_map(final_pe_valid_to_write)
     pe_invalid_notes = build_symbol_note_map(final_pe_invalid_to_write)
     oversell_w_notes = build_symbol_note_map(final_oversell_w_to_write)
@@ -1316,8 +1321,19 @@ def run_processing_logic(log_detail):
     update_json_panel(final_pe_w_to_write, PANEL_JSON_FILE, 'PE_W', symbol_to_note=pe_w_notes)
     update_json_panel(final_pe_w_to_write, PANEL_JSON_FILE, 'PE_W_backup', symbol_to_note=pe_w_notes)
 
-    if all_qualified_symbols:
-        update_earning_history_json(EARNING_HISTORY_JSON_FILE, "no_season", sorted(list(set(all_qualified_symbols))), log_detail)
+    # ========== 修改点 4: 写入 History (Raw Data, 包含 Tag 黑名单) ==========
+    # 合并所有 Raw 列表
+    all_qualified_symbols_raw = (
+        raw_pe_valid + 
+        raw_pe_invalid + 
+        raw_pe_deep + 
+        raw_pe_w + 
+        raw_oversell_w
+    )
+
+    # 写入 History
+    if all_qualified_symbols_raw:
+        update_earning_history_json(EARNING_HISTORY_JSON_FILE, "no_season", sorted(list(set(all_qualified_symbols_raw))), log_detail)
     else:
         log_detail("\n--- 无符合条件的 symbol 可写入 Earning_History.json ---")
 

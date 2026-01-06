@@ -230,10 +230,10 @@ class StockCard(QFrame):
         row1.addWidget(create_value_label(self.data['iv2'], role='secondary', is_percent=True))
         # 3. Compare -> Compare (特殊背景)
         row1.addWidget(create_value_label(self.data['compare'], role='compare', is_percent=True))
-        # 4. Latest Sum -> Primary (大)
-        row1.addWidget(create_value_label(self.data['sum1'], role='primary'))
-        # 5. 2nd Latest Sum -> Secondary (小且淡)
+        # 4. 2nd Latest Sum -> Secondary (小且淡)
         row1.addWidget(create_value_label(self.data['sum2'], role='secondary'))
+        # 5. Latest Sum -> Primary (大)
+        row1.addWidget(create_value_label(self.data['sum1'], role='primary'))
         
         row1.addStretch()
         right_layout.addLayout(row1)

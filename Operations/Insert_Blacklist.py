@@ -3,6 +3,7 @@ import json
 import subprocess
 import sys
 import os
+import re  # <--- 1. 引入 re 模块
 
 # 统一的配置文件路径
 JSON_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
@@ -10,6 +11,7 @@ JSON_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
 def Copy_Command_C():
     """模拟 Command + C 复制操作"""
     script = '''
+    delay 0.5
     tell application "System Events"
         keystroke "c" using command down
     end tell
@@ -70,6 +72,18 @@ def get_symbol_from_clipboard():
         return content.strip()
     return None
 
+def is_valid_symbol(symbol):
+    """
+    校验代码格式
+    规则：仅包含大写英文字母(A-Z)和横杠(-)
+    """
+    if not symbol:
+        return False
+    # <--- 2. 新增校验函数
+    # ^ 表示开头，$ 表示结尾，[A-Z\-] 表示允许字符集合
+    pattern = r'^[A-Z\-]+$' 
+    return bool(re.match(pattern, symbol))
+
 def main():
     # 逻辑判断
     # 场景 1: python script.py etf  -> 执行 ETF 逻辑 (从剪贴板获取，存入 'etf')
@@ -96,9 +110,14 @@ def main():
         mode = 'newlow'
         symbol = get_symbol_from_clipboard()
 
-    # 验证股票代码
+    # 验证是否存在内容
     if not symbol:
-        show_alert("没有有效的股票代码")
+        show_alert("剪贴板为空或未获取到内容")
+        return
+
+    # <--- 3. 执行格式校验
+    if not is_valid_symbol(symbol):
+        show_alert(f"无效的代码格式: {symbol}\n请确保只包含大写字母和横杠(-)")
         return
 
     # 执行更新
