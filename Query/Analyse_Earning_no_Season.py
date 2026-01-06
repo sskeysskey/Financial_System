@@ -57,7 +57,7 @@ EARNING_HISTORY_JSON_FILE = PATHS["earnings_history_json"](CONFIG_DIR)
 
 #     "COND5_WINDOW_DAYS": 6,
 
-#     # 严格筛选标准 (第一轮)
+#     # 严格筛选标准
 #     "PRICE_DROP_PERCENTAGE_LARGE": 0.079,  # <2000亿=7.9%
 #     "PRICE_DROP_PERCENTAGE_SMALL": 0.06,   # 2000亿 ≤ 市值 < 5000亿 = 6%
 #     "PRICE_DROP_PERCENTAGE_MEGA": 0.05,    # ≥5000亿=5%
@@ -125,7 +125,7 @@ CONFIG = {
 
     "COND5_WINDOW_DAYS": 6,
 
-    # 严格筛选标准 (第一轮)
+    # 严格筛选标准
     "PRICE_DROP_PERCENTAGE_LARGE": 0.1,  # <2000亿=10%
     "PRICE_DROP_PERCENTAGE_SMALL": 0.09,   # 2000亿 ≤ 市值 < 5000亿 = 9%
     "PRICE_DROP_PERCENTAGE_MEGA": 0.07,    # ≥5000亿=7%
@@ -1232,23 +1232,6 @@ def run_processing_logic(log_detail):
     total_oversell_w_symbols = res_super[2] + res_sub[2] + res_relaxed[2] + res_strict[2]
     total_pe_deep_symbols = res_super[3] + res_sub[3] + res_relaxed[3] + res_strict[3]
     total_pe_w_symbols = res_super[4] + res_sub[4] + res_relaxed[4] + res_strict[4]
-
-    # 第二轮筛选 (仅针对 PE_valid 补缺)
-    min_size_pe_valid = CONFIG["MIN_PE_VALID_SIZE_FOR_RELAXED_FILTER"]
-    
-    # 第二轮筛选 (仅针对PE_valid数量不足的情况，且只影响 PE_valid)
-    if len(final_pe_valid_symbols) < min_size_pe_valid:
-        # ========== 修改点 7：接收变量改名 ==========
-        rerun_valid, _, _, rerun_pe_deep, rerun_pe_w = perform_filter_pass(strict_symbols, CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "第二轮(常规宽松补缺)")
-        
-        final_pe_valid_symbols = sorted(list(set(final_pe_valid_symbols) | set(rerun_valid)))
-        
-        # ========== 修改点 8：合并变量改名 ==========
-        total_pe_deep_symbols = sorted(list(set(total_pe_deep_symbols) | set(rerun_pe_deep)))
-        
-        total_pe_w_symbols = sorted(list(set(total_pe_w_symbols) | set(rerun_pe_w)))
-
-    final_oversell_w_to_write = sorted(list(set(total_oversell_w_symbols)))
     
     # 将所有符合资格的 symbol 用于写历史记录
     all_qualified_symbols = final_pe_valid_symbols + final_pe_invalid_symbols + total_pe_deep_symbols + total_pe_w_symbols + total_oversell_w_symbols
@@ -1257,7 +1240,7 @@ def run_processing_logic(log_detail):
     pe_invalid_set = set(final_pe_invalid_symbols)
     pe_deep_set = set(total_pe_deep_symbols)
     pe_w_set = set(total_pe_w_symbols)
-    oversell_w_set = set(final_oversell_w_to_write)
+    oversell_w_set = set(total_pe_w_symbols)
 
     blacklist = load_blacklist(BLACKLIST_JSON_FILE)
     try:

@@ -33,7 +33,10 @@ class InfoDialog(QDialog):
         text_box = QTextEdit(self)
         text_box.setReadOnly(True)
         text_box.setFont(QFont(font_family))
-        text_box.setText(content)
+        
+        # [修改点] 这里改成 setHtml，这样才能渲染颜色和字体样式
+        text_box.setHtml(content) 
+        
         layout.addWidget(text_box)
         self.setLayout(layout)
         self.apply_nord_style(font_size)
@@ -62,11 +65,24 @@ class InfoDialog(QDialog):
 # --- 3. 核心逻辑 (已修改) ---
 
 def search_history(symbol):
-    output_lines = []
-    output_lines.append(f"查询对象: {symbol}\n")
+    # 用列表存储 HTML 片段
+    html_parts = []
     
+    # 辅助函数：生成美化的标题 HTML
+    def make_header(text, color):
+        # style: 颜色, 粗体, 字体稍大(1.2倍), 上下外边距
+        return f"""
+        <div style='margin-top: 10px; margin-bottom: 5px;'>
+            <span style='color: {color}; font-weight: bold; font-size: 18px;'>
+                 {text} 
+            </span>
+        </div>
+        """
+
+    has_data = False # 标记是否找到了任何数据
+
     # ==============================
-    # 任务 1: 检索 Sector Panel (新增功能)
+    # 任务 1: 检索 Sector Panel
     # ==============================
     if os.path.exists(SECTOR_PATH):
         try:
@@ -82,32 +98,30 @@ def search_history(symbol):
                     # 如果有备注（value不为空），也可以加上
                     note = content_dict[symbol]
                     if note:
-                        found_sectors.append(f"{category} ({note})")
+                        found_sectors.append(f"{category} <span style='color:#88C0D0'>({note})</span>") # 备注也可以稍微变色
                     else:
                         found_sectors.append(category)
             
             if found_sectors:
-                output_lines.append("【 所属板块/分组 】")
+                has_data = True
+                # 使用 success_green 颜色作为板块标题
+                html_parts.append(make_header("所属板块/分组", NORD_THEME['success_green']))
                 for s in found_sectors:
-                    output_lines.append(f"  ★ {s}")
-                output_lines.append("") # 空行分隔
-            else:
-                # 如果没找到，也可以选择不显示，或者显示未归类
-                # output_lines.append("【 所属板块/分组 】\n  (未在 Panel 中找到)\n")
-                pass
+                    # 使用 &nbsp; 做缩进，<br> 换行
+                    html_parts.append(f"&nbsp;&nbsp;★ {s}<br>")
+                html_parts.append("<br>") 
 
         except Exception as e:
-            output_lines.append(f"读取 Sector JSON 出错: {e}\n")
+            html_parts.append(f"<p style='color:red'>读取 Sector JSON 出错: {e}</p>")
     else:
-        output_lines.append(f"警告: 找不到 Sector 文件\n{SECTOR_PATH}\n")
+        html_parts.append(f"<p style='color:orange'>警告: 找不到 Sector 文件<br>{SECTOR_PATH}</p>")
 
     # ==============================
-    # 任务 2: 检索 Earning History (原有功能)
+    # 任务 2: 检索 Earning History
     # ==============================
     if not os.path.exists(JSON_PATH):
-        return "\n".join(output_lines) + f"\n错误：找不到 Earning 文件\n{JSON_PATH}"
+        return "".join(html_parts) + f"<br><p style='color:red'>错误：找不到 Earning 文件<br>{JSON_PATH}</p>"
 
-    found_history = False
     try:
         with open(JSON_PATH, 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -122,22 +136,23 @@ def search_history(symbol):
                     found_dates.append(date_str)
             
             if found_dates:
-                found_history = True
+                has_data = True
                 found_dates.sort(reverse=True)
                 
-                output_lines.append(f"【 {category} 】")
+                # [核心修改] 使用 accent_blue 颜色作为 Earning 标题，并应用 HTML 样式
+                html_parts.append(make_header(category, NORD_THEME['success_green']))
+                
                 for d in found_dates:
-                    output_lines.append(f"  • {d}")
-                output_lines.append("") # 空行分隔
+                    html_parts.append(f"&nbsp;&nbsp;• {d}<br>")
+                html_parts.append("<br>")
 
     except Exception as e:
-        return f"读取 Earning JSON 出错: {e}"
+        return f"<p style='color:red'>读取 Earning JSON 出错: {e}</p>"
 
-    if not found_history and len(output_lines) <= 2: 
-        # 如果既没找到 Sector 也没找到 History (output_lines 只有标题)
-        return f"在所有文件中中\n未找到 {symbol} 的任何记录。"
+    if not has_data: 
+        return f"<div style='text-align:center; margin-top:20px; color:{NORD_THEME['text_light']}'>在所有文件中<br>未找到 <b>{symbol}</b> 的任何记录。</div>"
     
-    return "\n".join(output_lines)
+    return "".join(html_parts)
 
 # --- 4. 程序入口 ---
 

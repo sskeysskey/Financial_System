@@ -582,7 +582,10 @@
         "BRK-A",
         "ZK",
         "PSNY",
-        "ELP"
+        "ELP",
+        "AXIA-P",
+        "AXIA-PC",
+        "DOO"
     ],
     "etf": [
         "VDE",

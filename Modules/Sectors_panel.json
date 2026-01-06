@@ -115,6 +115,8 @@
         "XRP": ""
     },
     "Options": {
+        "SMR": "",
+        "WGMI": "",
         "HYG": "",
         "QQQ": "",
         "SPY": "",
@@ -126,23 +128,22 @@
         "APLD": ""
     },
     "Must": {
+        "COIN": "",
+        "MDB": "",
+        "PLTR": "",
+        "BE": "",
         "AAPL": "",
         "SHOP": "",
         "META": "",
         "APP": "",
         "CLS": "",
         "TT": "",
-        "TEL": "",
         "CIFR": "",
         "SOFI": "",
         "PATH": "",
         "NET": "",
-        "ETN": "",
-        "HCA": "",
-        "FLEX": "",
         "CRWD": "",
         "AAON": "",
-        "UHS": "",
         "MSTR": "",
         "RBLX": "",
         "NFLX": "",
@@ -150,29 +151,21 @@
         "IOT": ""
     },
     "Today": {
+        "NOK": "",
+        "SMR": "",
         "PYPL": "",
         "MTN": "",
-        "BBY": "",
-        "Z": "",
-        "SMR": "",
         "ARM": "",
-        "HON": "",
-        "COIN": ""
+        "HON": ""
     },
-    "Short": {
-        "AXSM": ""
-    },
+    "Short": {},
     "Short_W": {},
     "Strategy12": {
         "KMB": "",
         "PG": "",
         "TSCO": ""
     },
-    "Strategy12_backup": {
-        "KMB": "",
-        "PG": "",
-        "TSCO": ""
-    },
+    "Strategy12_backup": {},
     "Strategy34": {
         "BLK": "",
         "BSX": "",
@@ -186,29 +179,13 @@
         "UNH": "",
         "WST": ""
     },
-    "Strategy34_backup": {
-        "BLK": "",
-        "BSX": "",
-        "CHWY": "",
-        "CLF": "",
-        "DLR": "DLR热",
-        "ELV": "",
-        "MOH": "",
-        "POOL": "",
-        "TRU": "",
-        "UNH": "",
-        "WST": ""
-    },
+    "Strategy34_backup": {},
     "OverSell_W": {
         "DUOL": "",
         "MSTR": "",
         "SMCI": "SMCI15热"
     },
-    "OverSell_W_backup": {
-        "DUOL": "",
-        "MSTR": "",
-        "SMCI": "SMCI15热"
-    },
+    "OverSell_W_backup": {},
     "PE_Deep": {
         "ARM": "",
         "CLF": "",
@@ -229,26 +206,7 @@
         "PYPL": "",
         "RBLX": ""
     },
-    "PE_Deep_backup": {
-        "ARM": "",
-        "CLF": "",
-        "COIN": "",
-        "CPNG": "",
-        "DEO": "",
-        "ETN": "ETN15热",
-        "HIMS": "",
-        "IONQ": "",
-        "IRM": "IRM15热",
-        "KMB": "",
-        "LYFT": "",
-        "MELI": "",
-        "MTN": "",
-        "NFLX": "NFLX15",
-        "PATH": "",
-        "POOL": "",
-        "PYPL": "",
-        "RBLX": ""
-    },
+    "PE_Deep_backup": {},
     "PE_W": {
         "BLK": "",
         "BOOT": "",
@@ -268,25 +226,7 @@
         "WCC": "WCC7热",
         "WELL": "WELL7热"
     },
-    "PE_W_backup": {
-        "BLK": "",
-        "BOOT": "",
-        "COR": "",
-        "DELL": "DELL15热",
-        "FLEX": "FLEX7热",
-        "HON": "",
-        "HOOD": "",
-        "INFY": "",
-        "ITT": "",
-        "MRNA": "",
-        "NOK": "",
-        "RACE": "",
-        "SIRI": "SIRI热",
-        "UHS": "UHS7热",
-        "ULS": "",
-        "WCC": "WCC7热",
-        "WELL": "WELL7热"
-    },
+    "PE_W_backup": {},
     "PE_valid": {
         "A": "",
         "AG": "",
@@ -322,50 +262,13 @@
         "VLO": "",
         "WRB": ""
     },
-    "PE_valid_backup": {
-        "A": "",
-        "AG": "",
-        "AMZN": "AMZN7热",
-        "AXON": "",
-        "BAH": "",
-        "BBY": "",
-        "CDE": "",
-        "CDW": "",
-        "CVNA": "",
-        "DKS": "",
-        "EQIX": "EQIX热",
-        "FICO": "",
-        "FOUR": "",
-        "FTNT": "",
-        "GAP": "",
-        "GDDY": "",
-        "GRAB": "",
-        "HPQ": "HPQ15热",
-        "IAG": "",
-        "IDXX": "",
-        "MSFT": "",
-        "NTAP": "",
-        "ORLY": "",
-        "PFGC": "",
-        "PGR": "",
-        "PODD": "",
-        "RPM": "",
-        "TRI": "",
-        "TSLA": "TSLA7",
-        "UBER": "",
-        "VLO": "",
-        "WRB": ""
-    },
+    "PE_valid_backup": {},
     "PE_invalid": {
         "ALNY": "",
         "Z": "",
         "ZS": ""
     },
-    "PE_invalid_backup": {
-        "ALNY": "",
-        "Z": "",
-        "ZS": ""
-    },
+    "PE_invalid_backup": {},
     "Currencies": {
         "DXY": "美元指数",
         "CNYI": "人民币指数",
