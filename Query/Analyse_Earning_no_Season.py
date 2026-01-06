@@ -13,7 +13,6 @@ BASE_PATH = os.path.expanduser('~')
 PATHS = {
     "config_dir": os.path.join(BASE_PATH, 'Coding/Financial_System/Modules'),
     "db_dir": os.path.join(BASE_PATH, 'Coding/Database'),
-    "news_dir": os.path.join(BASE_PATH, 'Coding/News'),
     "sectors_json": lambda config_dir: os.path.join(config_dir, 'Sectors_All.json'),
     "panel_json": lambda config_dir: os.path.join(config_dir, 'Sectors_panel.json'),
     "blacklist_json": lambda config_dir: os.path.join(config_dir, 'Blacklist.json'),
@@ -21,20 +20,15 @@ PATHS = {
     "tags_setting_json": lambda config_dir: os.path.join(config_dir, 'tags_filter.json'),
     "earnings_history_json": lambda config_dir: os.path.join(config_dir, 'Earning_History.json'),
     "db_file": lambda db_dir: os.path.join(db_dir, 'Finance.db'),
-    "output_news": lambda news_dir: os.path.join(news_dir, 'Filter_Earning.txt'),
-    "output_backup": lambda news_dir: os.path.join(news_dir, 'backup/Filter_Earning.txt'),
 }
 
 # 动态生成完整路径
 CONFIG_DIR = PATHS["config_dir"]
 DB_DIR = PATHS["db_dir"]
-NEWS_DIR = PATHS["news_dir"]
 DB_FILE = PATHS["db_file"](DB_DIR)
 SECTORS_JSON_FILE = PATHS["sectors_json"](CONFIG_DIR)
 BLACKLIST_JSON_FILE = PATHS["blacklist_json"](CONFIG_DIR)
 PANEL_JSON_FILE = PATHS["panel_json"](CONFIG_DIR)
-NEWS_FILE = PATHS["output_news"](NEWS_DIR)
-BACKUP_FILE = PATHS["output_backup"](NEWS_DIR)
 DESCRIPTION_JSON_FILE = PATHS["description_json"](CONFIG_DIR)
 TAGS_SETTING_JSON_FILE = PATHS["tags_setting_json"](CONFIG_DIR)
 EARNING_HISTORY_JSON_FILE = PATHS["earnings_history_json"](CONFIG_DIR)
@@ -1240,7 +1234,7 @@ def run_processing_logic(log_detail):
     pe_invalid_set = set(final_pe_invalid_symbols)
     pe_deep_set = set(total_pe_deep_symbols)
     pe_w_set = set(total_pe_w_symbols)
-    oversell_w_set = set(total_pe_w_symbols)
+    oversell_w_set = set(total_oversell_w_symbols)
 
     blacklist = load_blacklist(BLACKLIST_JSON_FILE)
     try:
@@ -1318,17 +1312,9 @@ def run_processing_logic(log_detail):
     update_json_panel(final_pe_deep_to_write, PANEL_JSON_FILE, 'PE_Deep', symbol_to_note=pe_deep_notes)
     update_json_panel(final_pe_deep_to_write, PANEL_JSON_FILE, 'PE_Deep_backup', symbol_to_note=pe_deep_notes)
 
-
     # 写入 PE_W (条件1-5且形态良好)
     update_json_panel(final_pe_w_to_write, PANEL_JSON_FILE, 'PE_W', symbol_to_note=pe_w_notes)
     update_json_panel(final_pe_w_to_write, PANEL_JSON_FILE, 'PE_W_backup', symbol_to_note=pe_w_notes)
-
-    os.makedirs(os.path.dirname(BACKUP_FILE), exist_ok=True)
-    try:
-        with open(BACKUP_FILE, 'w', encoding='utf-8') as f:
-            for sym in sorted(all_qualified_symbols): f.write(sym + '\n')
-    except IOError as e:
-        log_detail(f"错误: 无法更新备份文件: {e}")
 
     if all_qualified_symbols:
         update_earning_history_json(EARNING_HISTORY_JSON_FILE, "no_season", sorted(list(set(all_qualified_symbols))), log_detail)
