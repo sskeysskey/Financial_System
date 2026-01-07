@@ -702,7 +702,8 @@ def check_w_bottom_pattern(data, config, log_detail, symbol_to_trace, check_stri
     symbol = data.get('symbol')
     is_tracing = (symbol == symbol_to_trace)
     mode_str = "严格抄底模式(Cond6)" if check_strict_er_drop else "形态确认模式(Cond1-5)"
-    if is_tracing: log_detail(f" - \[W底检测启动\] 模式: {mode_str}")
+    
+    if is_tracing: log_detail(f" - [W底检测启动] 模式: {mode_str}")
 
     # 1. 数据准备
     all_er_prices = data.get('all_er_prices', [])
@@ -710,11 +711,18 @@ def check_w_bottom_pattern(data, config, log_detail, symbol_to_trace, check_stri
     dates_series = data.get('dates_since_er_series', [])
 
     if len(all_er_prices) < 2:
-        if is_tracing: log_detail(f" - \[失败\] 财报数据不足 2 条。")
+        if is_tracing: log_detail(f" - [失败] 财报数据不足 2 条。")
         return False
+    
     if not prices_series or len(prices_series) < 10:
-        if is_tracing: log_detail(f" - \[失败\] 财报后交易日数据不足 10 天。")
+        if is_tracing: log_detail(f" - [失败] 财报后交易日数据不足 10 天。")
         return False
+
+    # ========== 修改 1/2：计算区间最低价 ==========
+    # 获取从财报日(含)到最新交易日(含)的绝对最低收盘价
+    period_lowest_price = min(prices_series)
+    if is_tracing: log_detail(f" - [区间统计] 财报后最低价: {period_lowest_price:.2f}")
+    # ==========================================
 
     latest_er_price = all_er_prices[-1]
 
@@ -723,19 +731,21 @@ def check_w_bottom_pattern(data, config, log_detail, symbol_to_trace, check_stri
     if check_strict_er_drop:
         prev_er_price = all_er_prices[-2]
         if prev_er_price <= 0: return False
+        
         er_drop_a_val = (prev_er_price - latest_er_price) / prev_er_price
         threshold_a = config["COND6_ER_DROP_A_THRESHOLD"] # 0.25
-
+        
         if er_drop_a_val > threshold_a:
             threshold_b = config["COND6_LOW_DROP_B_LARGE"] # > 9%
         elif er_drop_a_val > 0.10: # 至少跌 10%
             threshold_b = config["COND6_LOW_DROP_B_SMALL"] # > 12%
         else:
             if is_tracing:
-                log_detail(f" - \[失败-Drop A\] 财报间跌幅 {er_drop_a_val:.2%} <= 10%，不满足抄底前提。")
+                log_detail(f" - [失败-Drop A] 财报间跌幅 {er_drop_a_val:.2%} <= 10%，不满足抄底前提。")
             return False
+            
         if is_tracing:
-            log_detail(f" - \[通过-Drop A\] 财报间跌幅 {er_drop_a_val:.2%}，设置深度阈值 B > {threshold_b:.1%}")
+            log_detail(f" - [通过-Drop A] 财报间跌幅 {er_drop_a_val:.2%}，设置深度阈值 B > {threshold_b:.1%}")
 
     # --- 步骤 2: 寻找 W 底几何形态 ---
     curr_price = prices_series[-1]
@@ -744,21 +754,23 @@ def check_w_bottom_pattern(data, config, log_detail, symbol_to_trace, check_stri
 
     if not (prev_price < prev2_price and prev_price < curr_price):
         if is_tracing:
-            log_detail(f" - \[失败-V2定位\] 昨天({prev_price:.2f})不是局部低点(需小于{prev2_price:.2f}且小于{curr_price:.2f})，无法构成右底。")
+            log_detail(f" - [失败-V2定位] 昨天({prev_price:.2f})不是局部低点(需小于{prev2_price:.2f}且小于{curr_price:.2f})，无法构成右底。")
         return False
 
     v2 = prev_price
     idx2 = len(prices_series) - 2
     v2_date = dates_series[idx2]
+    
     price_tolerance = config["COND6_W_BOTTOM_PRICE_TOLERANCE"]
     min_days_gap = config["COND6_W_BOTTOM_MIN_DAYS_GAP"]
     
     start_search_index = idx2 - min_days_gap
+
     if start_search_index < 1:
-        if is_tracing: log_detail(f" - \[失败-间隔\] 距离财报日过近，无法满足最小间隔 {min_days_gap} 天。")
+        if is_tracing: log_detail(f" - [失败-间隔] 距离财报日过近，无法满足最小间隔 {min_days_gap} 天。")
         return False
 
-    if is_tracing: log_detail(f" - \[V2已锁定\] 日期: {v2_date}, 价格: {v2:.2f}, 开始寻找V1...")
+    if is_tracing: log_detail(f" - [V2已锁定] 日期: {v2_date}, 价格: {v2:.2f}, 开始寻找V1...")
 
     for i in range(start_search_index, 0, -1):
         v1 = prices_series[i]
@@ -771,57 +783,64 @@ def check_w_bottom_pattern(data, config, log_detail, symbol_to_trace, check_stri
 
         diff_pct = abs(v1 - v2) / min(v1, v2)
         if diff_pct > price_tolerance:
-            if is_tracing: log_detail(f"   x \[几何-对称性失败\] 左右底高低差 {diff_pct:.2%} > 容忍度 {price_tolerance:.1%}")
+            if is_tracing: log_detail(f"   x [几何-对称性失败] 左右底高低差 {diff_pct:.2%} > 容忍度 {price_tolerance:.1%}")
             continue
 
-        # ========== ⭐代码修正点⭐ ==========
-        # [几何形态检查 3] 颈线检查 (Peak and Trough between valleys)
+        # [几何形态检查 3] 颈线检查
         neckline_prices = prices_series[i+1 : idx2]
-        if not neckline_prices:
-            continue
-
+        if not neckline_prices: continue
+            
         min_trough_between = min(neckline_prices)
         avg_valley = (v1 + v2) / 2
         
-        # 新增检查：确保两个谷底之间没有更低的点。
-        # 如果中间存在更低的点，则当前找到的 V1-V2 组合不是一个有效的 W 形态。
+        # 确保两个谷底之间没有更低的点
         if min_trough_between < avg_valley:
             if is_tracing:
-                log_detail(f"   x \[几何-形态失败\] V1-V2之间存在更低的谷底({min_trough_between:.2f})，低于平均谷底({avg_valley:.2f})")
-            continue # 继续寻找下一个可能的 V1
+                log_detail(f"   x [几何-形态失败] V1-V2之间存在更低的谷底({min_trough_between:.2f})，低于平均谷底({avg_valley:.2f})")
+            continue 
 
-        # 原有检查：确保颈线有足够的反弹力度
+        # 颈线反弹力度检查
         max_peak = max(neckline_prices)
         peak_rise = (max_peak - avg_valley) / avg_valley
-        min_peak_rise = config.get("COND6_W_BOTTOM_MIN_PEAK_RISE", 0.015) # 使用配置
+        min_peak_rise = config.get("COND6_W_BOTTOM_MIN_PEAK_RISE", 0.015) 
+        
         if peak_rise < min_peak_rise:
             if is_tracing:
-                log_detail(f"   x \[几何-力度失败\] 中间反弹力度 {peak_rise:.2%} < {min_peak_rise:.1%}, 形态不显著")
+                log_detail(f"   x [几何-力度失败] 中间反弹力度 {peak_rise:.2%} < {min_peak_rise:.1%}, 形态不显著")
             continue
-        # ========== ⭐修正结束⭐ ==========
+
+        # ========== 修改 2/2：新增位置校验（关键修改） ==========
+        # 规则：W底的两个低点中，必须有一个是该时间段内的绝对最低点（允许极小误差）
+        valley_min = min(v1, v2)
+        # 使用 0.001 的容错是为了处理浮点数精度，或者你可以直接用 valley_min > period_lowest_price
+        if valley_min > period_lowest_price + 0.001:
+            if is_tracing:
+                log_detail(f"   x [位置失败] 当前W底最低点({valley_min:.2f}) 高于区间绝对最低价({period_lowest_price:.2f})。非底部反转。")
+            continue
+        # ====================================================
 
         # --- 步骤 3: 最终裁决 (分模式) ---
         if check_strict_er_drop:
             valley_min_price = min(v1, v2)
             drop_b_val = (latest_er_price - valley_min_price) / latest_er_price
+
             if drop_b_val > threshold_b:
                 actual_gap = idx2 - i
                 if is_tracing:
-                    log_detail(f"   - ✅ \[成功! (严格模式)\] V1:{v1:.2f}, V2:{v2:.2f}, 间隔:{actual_gap}天")
-                    log_detail(f"   - \[深度检查\] 深度 {drop_b_val:.2%} > 阈值 {threshold_b:.1%} -> 通过")
+                    log_detail(f"   - ✅ [成功! (严格模式)] V1:{v1:.2f}, V2:{v2:.2f}, 间隔:{actual_gap}天")
+                    log_detail(f"   - [深度检查] 深度 {drop_b_val:.2%} > 阈值 {threshold_b:.1%} -> 通过")
                 return True
             else:
                 if is_tracing:
-                    log_detail(f"   x \[失败-Drop B\] 形态满足，但深度 {drop_b_val:.2%} 不足 (需 > {threshold_b:.1%})")
+                    log_detail(f"   x [失败-Drop B] 形态满足，但深度 {drop_b_val:.2%} 不足 (需 > {threshold_b:.1%})")
                 continue
-        else: # 宽松模式 (Condition 1-5): 只要几何形态满足
+        else: # 宽松模式
             actual_gap = idx2 - i
             if is_tracing:
-                log_detail(f"   - ✅ \[成功! (宽松模式)\] V1:{v1:.2f}, V2:{v2:.2f}, 间隔:{actual_gap}天")
-                log_detail(f"   - \[宽松模式\] 跳过深度检查 (Drop B)。")
+                log_detail(f"   - ✅ [成功! (宽松模式)] V1:{v1:.2f}, V2:{v2:.2f}, 间隔:{actual_gap}天")
             return True
 
-    if is_tracing: log_detail(f" - \[结果\] 遍历结束，未找到满足所有条件的 W 底形态。")
+    if is_tracing: log_detail(f" - [结果] 遍历结束，未找到满足所有条件的 W 底形态。")
     return False
 
 

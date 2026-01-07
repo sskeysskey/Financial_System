@@ -293,7 +293,7 @@ def count_files(prefix):
 
 def extension_launch():
     script = '''
-    delay 0.5
+    delay 1
     tell application "Google Chrome"
 	    activate
     end tell
@@ -507,10 +507,21 @@ def main():
     extension_launch()
 
     # ---- 原有等待 screener_above_*.txt 的逻辑，直到文件出现 ---- 
+    print("正在等待 screener_above 文件...", end="", flush=True)
+    
+    max_retries = 1  # 150 * 2秒 = 300秒 (5分钟)
+    retry_count = 0
+    
     while count_files("screener_above") < 1:
         time.sleep(2)
         print(".", end="", flush=True)
-    print() # 换行
+        retry_count += 1
+        if retry_count > max_retries:
+            print("\n❌ 错误：等待超时！未在 Downloads 目录找到 screener_above 文件。")
+            show_alert("脚本超时：未找到 screener_above 文件") # 弹窗提醒
+            sys.exit(1)
+            
+    print("\n✅ 检测到文件，开始处理...") # 换行并提示
     
     # # 查找Downloads目录下最新的screener_above_开头的txt文件
     downloads_path = '/Users/yanzhang/Downloads/'

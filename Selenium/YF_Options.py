@@ -140,11 +140,13 @@ def scrape_options():
     # === 步骤 A: 从 JSON 文件加载 "Options" 和 "Must" 分组 ===
     json_options_set = set() # 替代原有的 base_custom_set
     json_must_set = set()
+    json_today_set = set()  # <--- 新增: Today 集合
     blacklist_options_set = set() # 存储黑名单
     
     # 用于日志显示的计数
     count_json_options = 0
     count_json_must = 0
+    count_json_today = 0    # <--- 新增: Today 计数
 
     # === 步骤 A: 加载黑名单 (新增逻辑) ===
     try:
@@ -164,26 +166,30 @@ def scrape_options():
         if os.path.exists(SECTORS_JSON_PATH):
             with open(SECTORS_JSON_PATH, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-            
-            # 1. 提取 Options 分组 (对应原本的 CUSTOM_SYMBOLS_DATA)
-            # data.get("Options", {}) 确保如果 key 不存在不会报错
-            options_keys = data.get("Options", {}).keys()
-            json_options_set = set(options_keys)
-            count_json_options = len(json_options_set)
 
-            # 2. 提取 Must 分组
-            must_keys = data.get("Must", {}).keys()
-            json_must_set = set(must_keys)
-            count_json_must = len(json_must_set)
-            
+                # 1. 提取 Options 分组
+                options_keys = data.get("Options", {}).keys()
+                json_options_set = set(options_keys)
+                count_json_options = len(json_options_set)
+
+                # 2. 提取 Must 分组
+                must_keys = data.get("Must", {}).keys()
+                json_must_set = set(must_keys)
+                count_json_must = len(json_must_set)
+
+                # 3. 提取 Today 分组  <--- 新增部分
+                today_keys = data.get("Today", {}).keys()
+                json_today_set = set(today_keys)
+                count_json_today = len(json_today_set)
+
         else:
             tqdm.write(f"⚠️ 警告: 未找到 JSON 文件: {SECTORS_JSON_PATH}")
-            
     except Exception as e:
         tqdm.write(f"⚠️ 读取 JSON 配置文件出错: {e}")
 
-    # 3. 合并去重 (两个集合取并集)
-    merged_symbols_set = json_options_set.union(json_must_set)
+    # 4. 合并去重 (三个集合取并集) <--- 修改: 增加 .union(json_today_set)
+    merged_symbols_set = json_options_set.union(json_must_set).union(json_today_set)
+    
     custom_symbols_list = [(s, 0) for s in merged_symbols_set]
 
     # === 步骤 B: 获取数据库筛选列表 (静默模式) ===
@@ -237,7 +243,8 @@ def scrape_options():
     # 格式示例: 自定义列表(13) + JSON(5) -> 去重合并(17)-->增加黑名单统计 ...
     
     log_msg = (
-        f"任务列表加载完成: [JSON({count_json_options + count_json_must}) + 数据库({len(db_symbols_list)})] | "
+        # 修改: 计数加入 count_json_today
+        f"任务列表加载完成: [JSON({count_json_options + count_json_must + count_json_today}) + 数据库({len(db_symbols_list)})] | "
         f"黑名单过滤: {blacklisted_count} | 总去重: {len(symbols) + skipped_count} | "
         f"已完成: {skipped_count} | 待抓取: {len(symbols)}"
     )
