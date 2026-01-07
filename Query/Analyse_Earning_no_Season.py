@@ -90,8 +90,9 @@ EARNING_HISTORY_JSON_FILE = PATHS["earnings_history_json"](CONFIG_DIR)
 #     # ========== 新增：条件5的参数 ==========
 #     "COND5_ER_TO_HIGH_THRESHOLD": 0.3,  # 财报日到最高价的涨幅阈值 30%
 #     "COND5_HIGH_TO_LATEST_THRESHOLD": 0.079,  # 最高价到最新价的跌幅阈值 7.9%
-#     "PE_DEEP_DROP_THRESHOLD": 0.14,
-#     "PE_DEEP_MAX_DROP_THRESHOLD": 0.15,
+#     "PE_DEEP_DROP_THRESHOLD": 0.14, # 条件1-5后的深跌判断1
+#     "PE_DEEP_MAX_DROP_THRESHOLD": 0.15, # 条件1-5后的深跌判断2
+#     "PE_DEEP_HIGH_SINCE_ER_THRESHOLD": 0.18, # 条件1-5后的深跌判断3
 
 #     # ========== 代码修改开始 1/4：新增条件6（抄底W底）参数 ==========
 #     "COND6_ER_DROP_A_THRESHOLD": 0.25,  # 财报跌幅分界线 25%
@@ -161,6 +162,7 @@ CONFIG = {
     "COND5_HIGH_TO_LATEST_THRESHOLD": 0.09,  # 最高价到最新价的跌幅阈值 9%
     "PE_DEEP_DROP_THRESHOLD": 0.15, # 条件1-5后的深跌判断1
     "PE_DEEP_MAX_DROP_THRESHOLD": 0.16, # 条件1-5后的深跌判断2
+    "PE_DEEP_HIGH_SINCE_ER_THRESHOLD": 0.18, # 条件1-5后的深跌判断3
 
     # ========== 代码修改开始 1/4：新增条件6（抄底W底）参数 ==========
     "COND6_ER_DROP_A_THRESHOLD": 0.25,  # 财报跌幅分界线 25%
@@ -1163,39 +1165,49 @@ def run_processing_logic(log_detail):
                         pe_w_candidates.append(symbol)
                     else:
                         # 优先级 3：条件 1-5 且不符合 W 底，检查是否深跌
-                        # ========== 修改开始：深跌逻辑更新 (双重标准) ==========
+                        # ========== 修改开始：深跌逻辑更新 (三重标准) ==========
                         
                         latest_price = data['latest_price']
                         
                         # 1. 获取基准价格
                         er_close_price = data['all_er_prices'][-1]       # 财报日当天收盘价
                         er_window_high = data.get('er_window_high_price') # 财报窗口期(含财报日及后3天)最高价
+                        high_since_er = data.get('high_since_er')         # 财报日至今(含今天)的最高收盘价
                         
-                        # 兜底：如果窗口最高价意外为空，则使用财报日价格
+                        # 兜底：防止 None 导致计算报错
                         if er_window_high is None: 
                             er_window_high = er_close_price
+                        if high_since_er is None:
+                            high_since_er = er_window_high
 
                         # 2. 设定阈值
                         # 标准1：基于财报日当天的跌幅阈值 (15%)
                         limit_er_base = CONFIG["PE_DEEP_DROP_THRESHOLD"]
                         
-                        # 标准2：基于窗口期最高价的跌幅阈值 (17%)
+                        # 标准2：基于窗口期最高价的跌幅阈值 (16%)
                         limit_window_base = CONFIG["PE_DEEP_MAX_DROP_THRESHOLD"]
+                        
+                        # 标准3 (新增)：基于财报日至今最高价的跌幅阈值 (18%)
+                        limit_high_since_er_base = CONFIG.get("PE_DEEP_HIGH_SINCE_ER_THRESHOLD", 0.18)
 
                         # 3. 计算判断条件
-                        # 条件A: (财报日价 - 最新价) / 财报日价 > 15%  =>  最新价 < 财报日价 * 0.85
+                        # 条件A: (财报日价 - 最新价) / 财报日价 > 15%
                         pass_er_base = latest_price <= er_close_price * (1 - limit_er_base)
                         
-                        # 条件B: (窗口最高价 - 最新价) / 窗口最高价 > 17%  =>  最新价 < 窗口最高价 * 0.83
+                        # 条件B: (窗口最高价 - 最新价) / 窗口最高价 > 16%
                         pass_window_base = latest_price <= er_window_high * (1 - limit_window_base)
+                        
+                        # 条件C (新增): (财报日至今最高价 - 最新价) / 财报日至今最高价 > 18%
+                        pass_high_since_base = latest_price <= high_since_er * (1 - limit_high_since_er_base)
 
                         # 4. 综合判定 (满足任一即可)
-                        if pass_er_base or pass_window_base:
+                        if pass_er_base or pass_window_base or pass_high_since_base:
                             if symbol == SYMBOL_TO_TRACE:
-                                log_detail(f" - [深跌判定] 命中: 基于财报日跌幅({pass_er_base}) 或 基于窗口高点跌幅({pass_window_base})")
+                                log_detail(f" - [深跌判定] 命中: 财报日跌幅({pass_er_base}) OR 窗口高点跌幅({pass_window_base}) OR 至今高点跌幅({pass_high_since_base})")
                                 log_detail(f"   * 最新价: {latest_price:.2f}")
                                 log_detail(f"   * 财报日价: {er_close_price:.2f} (需跌破 {er_close_price*(1-limit_er_base):.2f})")
                                 log_detail(f"   * 窗口高点: {er_window_high:.2f} (需跌破 {er_window_high*(1-limit_window_base):.2f})")
+                                log_detail(f"   * 至今高点: {high_since_er:.2f} (需跌破 {high_since_er*(1-limit_high_since_er_base):.2f})")
                             
                             pe_deep_candidates.append(symbol) # 进 PE_Deep
                         else:

@@ -522,8 +522,8 @@ def execute_external_script(script_type, keyword, on_done=None, block=False):
 def get_options_metrics(symbol):
     """
     从 Finance.db 的 Options 表中读取数据
-    返回: (数据列表, 颜色列表)
-    数据顺序: [最新IV, 次新IV, 最新Price+Change, 次新Price+Change]
+    返回原始数值字典以便在 UI 层进行样式处理
+    结构: {'iv1': (val, str), 'iv2': ..., 'sum1': val, 'sum2': val}
     """
     db_path = '/Users/yanzhang/Coding/Database/Finance.db'
     
@@ -538,55 +538,45 @@ def get_options_metrics(symbol):
             rows = cursor.fetchall()
             
         if len(rows) < 2:
-            return None, None # 数据不足
+            return None # 数据不足
 
-        metrics = []
-        colors = []
-
-        # 辅助函数：处理字符串转浮点
-        def parse_val(v):
-            if v is None or v == 'NULL' or v == '': return 0.0
-            if isinstance(v, str):
-                v = v.replace('%', '')
-            return float(v)
-
-        # 辅助函数：决定颜色
-        def get_color(val):
-            if val > 0: return NORD_THEME['accent_red']
-            if val < 0: return NORD_THEME['accent_green']
-            return NORD_THEME['text_light'] # 0值使用淡色
+        # 辅助函数：处理数据行
+        def parse_row(row):
+            # row: (iv_str, price, change)
+            iv_s = row[0] if row[0] else "--"
+            
+            # 解析 IV 数值
+            try:
+                if isinstance(iv_s, str) and '%' in iv_s:
+                    iv_v = float(iv_s.replace('%', '').replace(' ', ''))
+                else:
+                    iv_v = 0.0
+            except:
+                iv_v = 0.0
+            
+            # 解析 Price + Change
+            p = float(row[1]) if row[1] is not None else 0.0
+            c = float(row[2]) if row[2] is not None else 0.0
+            sum_v = p + c
+            
+            return iv_v, iv_s, sum_v
 
         # --- 处理最新日期 (Row 0) ---
-        iv_0_str = rows[0][0]
-        iv_0_val = parse_val(iv_0_str)
-        sum_0_val = parse_val(rows[0][1]) + parse_val(rows[0][2]) # price + change
+        iv1_val, iv1_str, sum1_val = parse_row(rows[0])
         
         # --- 处理次新日期 (Row 1) ---
-        iv_1_str = rows[1][0]
-        iv_1_val = parse_val(iv_1_str)
-        sum_1_val = parse_val(rows[1][1]) + parse_val(rows[1][2]) # price + change
+        iv2_val, iv2_str, sum2_val = parse_row(rows[1])
 
-        # --- 组装显示文本 ---
-        # IV 保持原样字符串显示 (带%)，但颜色由数值决定
-        # Sum 保留2位小数
-        
-        metrics.append(str(iv_0_str) if iv_0_str else "--")
-        colors.append(get_color(iv_0_val))
-
-        metrics.append(str(iv_1_str) if iv_1_str else "--")
-        colors.append(get_color(iv_1_val))
-
-        metrics.append(f"{sum_0_val:.2f}")
-        colors.append(get_color(sum_0_val))
-
-        metrics.append(f"{sum_1_val:.2f}")
-        colors.append(get_color(sum_1_val))
-
-        return metrics, colors
+        return {
+            'iv1': (iv1_val, iv1_str),
+            'iv2': (iv2_val, iv2_str),
+            'sum1': sum1_val,
+            'sum2': sum2_val
+        }
 
     except Exception as e:
         print(f"读取 Options 表出错: {e}")
-        return None, None
+        return None
 
 
 def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe, json_data,
@@ -1015,47 +1005,100 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             artist.remove()
         subtitle_artists.clear()
 
-        metrics, colors = get_options_metrics(name)
-        
-        if not metrics:
+        # 1. 获取数据
+        metrics_data = get_options_metrics(name)
+        if not metrics_data:
             return
 
-        # 布局配置
-        y_pos = 0.915  # 主标题在 0.95，这个放在下方
+        # 2. 准备 Compare 数据
+        # 处理 compare可能是tuple的情况 (来自 Check_Options 的逻辑)
+        compare_str = str(compare[0]) if isinstance(compare, tuple) else str(compare)
+        if compare_str == "nan": compare_str = "--"
+        
+        # 解析 Compare 数值用于可能的颜色判断（虽然 Check_Options 中 Badge 主要是蓝底白字）
+        try:
+            # 提取百分比数值，例如 "NVDA: -2.5%" -> -2.5
+            clean_s = re.sub(r'[^\d\.\-]', '', compare_str.split(':')[-1])
+            compare_val = float(clean_s)
+        except:
+            compare_val = 0.0
+
+        # 3. 定义样式常量 (复刻 Check_Options 的 Hex 颜色)
+        COLOR_PRI_UP = "#FF4500"  # 鲜红 (Primary)
+        COLOR_PRI_DN = "#00FA9A"  # 鲜绿 (Primary)
+        COLOR_SEC_UP = "#E57373"  # 淡红 (Secondary)
+        COLOR_SEC_DN = "#81C784"  # 淡绿 (Secondary)
+        COLOR_NULL   = "#DDDDDD"  # 灰色
+        COLOR_BADGE_BG = "#2c3e50" # Compare 背景色
+
+        def get_style(val, role):
+            if val == 0 or val is None:
+                return COLOR_NULL, 'normal', 13
+            
+            is_up = val > 0
+            if role == 'primary':
+                color = COLOR_PRI_UP if is_up else COLOR_PRI_DN
+                weight = 'bold'
+                size = 18 # 对应 Check_Options 的 "20px"
+            elif role == 'secondary':
+                color = COLOR_SEC_UP if is_up else COLOR_SEC_DN
+                weight = 'normal'
+                size = 12 # 对应 Check_Options 的 "14px"
+            else:
+                color = COLOR_NULL
+                weight = 'normal'
+                size = 13
+            return color, weight, size
+
+        # 4. 布局配置
+        y_pos = 0.915
         center_x = 0.5
-        spacing = 0.08 # 元素之间的间距
         
-        # 定义四个数据点的相对位置偏移 (居中对称)
-        # 顺序: 最新IV, 次新IV, 最新Sum, 次新Sum
-        offsets = [-1.5, -0.5, 0.5, 1.5] 
+        # 定义距离中心的偏移量 (Figure Coordinates 0-1)
+        spacing_inner = 0.08  # Secondary 元素距离中心的距离
+        spacing_outer = 0.16  # Primary 元素距离中心的距离
+
+        # --- 绘制元素 ---
         
-        # 标签 (可选，为了时尚感，可以用淡色小字，或者完全不加)
-        # 这里为了符合"依次是四个数字"的要求，我们只显示数字，但用分隔符隔开
-        
-        separator_color = NORD_THEME['border']
-        
-        for i, (text, color) in enumerate(zip(metrics, colors)):
-            # 计算 x 坐标
-            x = center_x + (offsets[i] * spacing)
-            
-            # 绘制数值
-            t = fig.text(x, y_pos, text, 
-                        color=color, 
-                        fontsize=13, 
-                        fontname='Arial Unicode MS',
-                        fontweight='bold',
-                        ha='center', va='top')
-            subtitle_artists.append(t)
-            
-            # 绘制分隔符 (除了最后一个)
-            if i < 3:
-                sep_x = center_x + ((offsets[i] + 0.5) * spacing)
-                s = fig.text(sep_x, y_pos, "|", 
-                            color=separator_color, 
-                            fontsize=13, 
-                            alpha=0.4,
-                            ha='center', va='top')
-                subtitle_artists.append(s)
+        # [Element 3: Compare Badge] (正中间)
+        t_comp = fig.text(center_x, y_pos, compare_str,
+                 color='white', fontsize=13, fontweight='bold', fontname='Arial Unicode MS',
+                 ha='center', va='top',
+                 bbox=dict(boxstyle="round,pad=0.3", fc=COLOR_BADGE_BG, ec="none", alpha=0.9))
+        subtitle_artists.append(t_comp)
+
+        # [Element 2: IV2 Prev] (左内侧 - Secondary)
+        iv2_v, iv2_s = metrics_data['iv2']
+        c, w, s = get_style(iv2_v, 'secondary')
+        t_iv2 = fig.text(center_x - spacing_inner, y_pos + 0.003, iv2_s, # y微调以对齐基线
+                 color=c, fontsize=s, fontweight=w, fontname='Arial Unicode MS',
+                 ha='right', va='top')
+        subtitle_artists.append(t_iv2)
+
+        # [Element 4: Sum2 Prev] (右内侧 - Secondary)
+        sum2_v = metrics_data['sum2']
+        c, w, s = get_style(sum2_v, 'secondary')
+        t_sum2 = fig.text(center_x + spacing_inner, y_pos + 0.003, f"{sum2_v:.2f}",
+                 color=c, fontsize=s, fontweight=w, fontname='Arial Unicode MS',
+                 ha='left', va='top')
+        subtitle_artists.append(t_sum2)
+
+        # [Element 1: IV1 Latest] (左外侧 - Primary)
+        iv1_v, iv1_s = metrics_data['iv1']
+        c, w, s = get_style(iv1_v, 'primary')
+        t_iv1 = fig.text(center_x - spacing_outer, y_pos, iv1_s,
+                 color=c, fontsize=s, fontweight=w, fontname='Arial Unicode MS',
+                 ha='right', va='top')
+        subtitle_artists.append(t_iv1)
+
+        # [Element 5: Sum1 Latest] (右外侧 - Primary)
+        sum1_v = metrics_data['sum1']
+        c, w, s = get_style(sum1_v, 'primary')
+        t_sum1 = fig.text(center_x + spacing_outer, y_pos, f"{sum1_v:.2f}",
+                 color=c, fontsize=s, fontweight=w, fontname='Arial Unicode MS',
+                 ha='left', va='top')
+        subtitle_artists.append(t_sum1)
+
 
 
     # 首次创建标题，并保存对标题对象的引用

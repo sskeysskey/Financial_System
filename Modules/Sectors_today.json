@@ -687,8 +687,7 @@
     "DORM",
     "SGI",
     "FTDR",
-    "ALH",
-    "DOO"
+    "ALH"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -1840,8 +1839,6 @@
     "BKH",
     "ENLT",
     "OGS",
-    "AXIA",
-    "AXIA-PC",
-    "AXIA-P"
+    "AXIA"
   ]
 }

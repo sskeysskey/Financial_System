@@ -19,7 +19,9 @@ from PyQt6.QtCore import Qt, QMimeData, QPoint, QEvent, QTimer, QSize
 from PyQt6.QtGui import QFont, QCursor, QDrag, QPainter, QColor, QPen
 
 sys.path.append('/Users/yanzhang/Coding/Financial_System/Query')
-from Chart_input import plot_financial_data
+
+# --- 修改: 增加导入 get_options_metrics ---
+from Chart_input import plot_financial_data, get_options_metrics
 
 # --- 文件路径配置 ---
 CONFIG_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
@@ -1034,7 +1036,7 @@ class MainWindow(QMainWindow):
                                     color = '#912F2F'  # Dark Red
                                 elif not is_trend_rising and not is_price_positive:
                                     color = 'green'
-                        
+
                         # 3. 应用字体颜色
                         # 注意：这里会覆盖 QSS 中通过 objectName 设置的 color 属性，但保留 background-color
                         current_style = button.styleSheet()
@@ -1060,50 +1062,116 @@ class MainWindow(QMainWindow):
                             lambda local_pos, btn=button, k=keyword, g=sector:
                                 self.show_context_menu(btn.mapToGlobal(local_pos), k, g)
                         )
+
                         row_layout.addWidget(button)
                         row_layout.addStretch()        # ← 这一行
 
                         # 2) 解析 compare_data 并生成富文本
                         raw_compare = compare_data.get(keyword, "").strip()
                         formatted_compare_html = ""
-                        if raw_compare:
-                            # 找百分号及前面的数字
-                            m = re.search(r"([-+]?\d+(?:\.\d+)?)%", raw_compare)
-                            if m:
-                                # 1) 把捕获组里的数字转成 float，再格式化到一位小数
-                                num = float(m.group(1))
-                                percent_fmt = f"{num:.2f}%"
 
-                                # 2) 找到原始字符串中百分号片段，用来切 prefix/suffix
-                                orig = m.group(0)
-                                idx  = raw_compare.find(orig)
-                                prefix, suffix = raw_compare[:idx].strip(), raw_compare[idx + len(orig):]
+                        # --- 修改开始: 针对 target_sort_groups 使用新的显示逻辑 ---
+                        if sector in target_sort_groups:
+                            parts = []
+                            
+                            # 1. 处理前缀 (只保留 03后, 02前, 未 等字样)
+                            # 如果没有匹配到，前缀部分为空
+                            match_prefix = re.search(r"(\d+(?:前|后|未))", raw_compare)
+                            if match_prefix:
+                                prefix = match_prefix.group(1)
+                                parts.append(f"<span style='color:orange;'>{prefix}</span>")
+                            
+                            # 2. 获取 Options Metrics (IV 和 Price+Change)
+                            # 注意：get_options_metrics 在循环中调用可能会有轻微性能影响，
+                            # 但对于本地应用通常是可接受的。
+                            metrics = get_options_metrics(keyword)
+                            if metrics:
+                                # --- 处理 IV ---
+                                iv_val, iv_str = metrics['iv1']
+                                
+                                # 需求: 如果是 "--" 则不显示
+                                if iv_str != "--":
+                                    # 需求: 正红负绿 (虽然IV通常为正)
+                                    if iv_val > 0:
+                                        iv_color = "red"
+                                    elif iv_val < 0:
+                                        iv_color = "green"
+                                    else:
+                                        iv_color = "gray"
+                                    
+                                    parts.append(f"<span style='color:{iv_color};'>{iv_str}</span>")
+                                
+                                # --- 处理 Change+Price (Sum) ---
+                                sum_val = metrics['sum1']
+                                
+                                # 需求: 正红负绿
+                                if sum_val > 0:
+                                    sum_color = "red"
+                                elif sum_val < 0:
+                                    sum_color = "green"
+                                else:
+                                    sum_color = "gray"
+                                
+                                # 格式化并添加
+                                parts.append(f"<span style='color:{sum_color};'>{sum_val:.2f}</span>")
 
-                                # 3) 拼 HTML
-                                prefix_html = f"<span style='color:orange;'>{prefix}</span>"
-                                
-                                # 定义需要特殊颜色处理的分组
-                                special_color_groups = {"Bonds", "Crypto", "Indices", "Economics", "Commodities", "Currencies"}
-                                color_val = "gray"
-                                if sector in special_color_groups:
-                                    if num > 0: color_val = "red"
-                                    elif num == 0: color_val = "gray"
-                                    else: color_val = "green"
-                                
-                                percent_html = f"<span style='color:{color_val};'>{percent_fmt}</span>"
-                                suffix_html  = f"<span>{suffix}</span>"
-                                display_html = prefix_html + percent_html + suffix_html
+                            # 只有当有内容时才组合 HTML
+                            if parts:
+                                # 使用两个空格作为分隔符
+                                display_html = "&nbsp;&nbsp;".join(parts)
                                 formatted_compare_html = (
                                     f'<a href="{keyword}" '
                                     f'style="color:gray; text-decoration:none;">'
                                     f'{display_html}</a>'
                                 )
                             else:
-                                # 整段无 %，全橙色
-                                formatted_compare_html = (
-                                    f"<span style='color:orange;'>"
-                                    f"{raw_compare}</span>"
-                                )
+                                # 如果 parts 为空 (既没有前缀，数据也是 --)，则显示空字符串
+                                formatted_compare_html = ""
+
+                        else:
+                            # --- 原有逻辑: 其他组保持不变 ---
+                            if raw_compare:
+                                # 找百分号及前面的数字
+                                m = re.search(r"([-+]?\d+(?:\.\d+)?)%", raw_compare)
+                                if m:
+                                    # 1) 把捕获组里的数字转成 float，再格式化到一位小数
+                                    num = float(m.group(1))
+                                    percent_fmt = f"{num:.2f}%"
+
+                                    # 2) 找到原始字符串中百分号片段，用来切 prefix/suffix
+                                    orig = m.group(0)
+                                    idx  = raw_compare.find(orig)
+                                    prefix, suffix = raw_compare[:idx].strip(), raw_compare[idx + len(orig):]
+
+                                    # 3) 拼 HTML
+                                    prefix_html = f"<span style='color:orange;'>{prefix}</span>"
+                                    
+                                    # 定义需要特殊颜色处理的分组
+                                    special_color_groups = {"Bonds", "Crypto", "Indices", "Economics", "Commodities", "Currencies"}
+                                    color_val = "gray"
+                                    
+                                    if sector in special_color_groups:
+                                        if num > 0: color_val = "red"
+                                        elif num == 0: color_val = "gray"
+                                        else: color_val = "green"
+                                    
+                                    percent_html = f"<span style='color:{color_val};'>{percent_fmt}</span>"
+                                    suffix_html  = f"<span>{suffix}</span>"
+                                    
+                                    display_html = prefix_html + percent_html + suffix_html
+                                    
+                                    formatted_compare_html = (
+                                        f'<a href="{keyword}" '
+                                        f'style="color:gray; text-decoration:none;">'
+                                        f'{display_html}</a>'
+                                    )
+                                else:
+                                    # 整段无 %，全橙色
+                                    formatted_compare_html = (
+                                        f"<span style='color:orange;'>"
+                                        f"{raw_compare}</span>"
+                                    )
+                        # --- 修改结束 ---
 
                         # 3) 用 QLabel 显示富文本
                         compare_label = QLabel()

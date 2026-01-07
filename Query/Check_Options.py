@@ -9,9 +9,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QCursor
 
-# ==========================================
 # 0. 引入外部绘图模块
-# ==========================================
 sys.path.append('/Users/yanzhang/Coding/Financial_System/Query')
 try:
     from Chart_input import plot_financial_data
@@ -20,9 +18,7 @@ except ImportError:
     def plot_financial_data(*args, **kwargs):
         print("Mock: Plotting data...", args)
 
-# ==========================================
 # 1. 数据处理层 (Data Handler)
-# ==========================================
 
 class DataManager:
     def __init__(self):
