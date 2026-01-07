@@ -191,22 +191,35 @@ class StockCard(QFrame):
         # >>> 修改: 增强后的标签创建函数 <<<
         def create_value_label(val, role='primary', is_percent=False):
             # role: 'primary' (1,4), 'secondary' (2,5), 'compare' (3)
-            txt = f"{val:.2f}%" if is_percent else f"{val:.2f}"
+            
+            # =========== 修改开始 ===========
+            # 检查值是否为 NaN (pd.isna 可以同时检测 float('nan'), np.nan 和 None)
+            if pd.isna(val):
+                txt = "--"
+            else:
+                txt = f"{val:.2f}%" if is_percent else f"{val:.2f}"
+            # =========== 修改结束 ===========
+
             lbl = QLabel(txt)
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             
             # --- 颜色逻辑 ---
             color = "#DDDDDD" # 默认灰
-            if val > 0:
-                if role == 'secondary':
-                    color = "#E57373"  # 淡红 (Muted Red)
-                else:
-                    color = "#FF4500"  # 鲜红 (OrangeRed)
-            elif val < 0:
-                if role == 'secondary':
-                    color = "#81C784"  # 淡绿 (Muted Green)
-                else:
-                    color = "#00FA9A"  # 鲜绿 (SpringGreen)
+            
+            # 注意：NaN 与数字比较通常返回 False，所以如果不处理，
+            # 它会自动落入这里的默认灰色 (#DDDDDD)，这正是我们想要的。
+            # 只有当 val 是有效数字时才进行颜色判断。
+            if not pd.isna(val): 
+                if val > 0:
+                    if role == 'secondary':
+                        color = "#E57373"  # 淡红 (Muted Red)
+                    else:
+                        color = "#FF4500"  # 鲜红 (OrangeRed)
+                elif val < 0:
+                    if role == 'secondary':
+                        color = "#81C784"  # 淡绿 (Muted Green)
+                    else:
+                        color = "#00FA9A"  # 鲜绿 (SpringGreen)
             
             # --- 样式逻辑 ---
             font_size = "14px"
