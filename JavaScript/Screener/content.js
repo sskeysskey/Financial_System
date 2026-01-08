@@ -52,9 +52,9 @@ async function scrapeFinanceData(category) {
 
     for (const row of rows) {
         try {
-            // 3. 使用 data-testid 直接从单元格中提取数据，不再依赖列的顺序
+            // 3. 使用 data-testid 直接从单元格中提取数据
 
-            // 提取 Symbol (股票代码) - 旧的选择器仍然有效
+            // 提取 Symbol (股票代码)
             const symbolEl = row.querySelector('a[data-testid="table-cell-ticker"] span.symbol');
             const symbol = symbolEl ? symbolEl.textContent.trim() : null;
 
@@ -64,17 +64,21 @@ async function scrapeFinanceData(category) {
                 continue;
             }
 
-            // 提取 Price (价格) - 旧的选择器仍然有效
-            const priceEl = row.querySelector('fin-streamer[data-field="regularMarketPrice"]');
-            const price = priceEl ? parseFloat(priceEl.getAttribute("data-value")) : "N/A";
+            // ---------------------------------------------------------
+            // 提取 Price (价格) - [这里是修改的地方]
+            // ---------------------------------------------------------
+            const priceText = row.querySelector('td[data-testid-cell="intradayprice"]')?.textContent.trim();
+            // 如果取到的文本是 "--" 或空，则设为 "N/A"，否则去除逗号后转浮点数
+            const price = (priceText && priceText !== "--")
+                ? parseFloat(priceText.replace(/,/g, ''))
+                : "N/A";
 
-            // *** 修正点 1 ***
-            // 修正了属性名：从 data-testid 改为 data-testid-cell
+
+            // 提取 Market Cap (市值)
             const marketCapText = row.querySelector('td[data-testid-cell="intradaymarketcap"]')?.textContent.trim() || "--";
             const marketCap = parseSuffixedNumber(marketCapText);
 
-            // *** 修正点 2 ***
-            // 修正了属性名：从 data-testid 改为 data-testid-cell
+            // 提取 Volume (成交量)
             const volumeText = row.querySelector('td[data-testid-cell="dayvolume"]')?.textContent.trim() || "--";
             const volume = parseSuffixedNumber(volumeText);
 
@@ -87,8 +91,8 @@ async function scrapeFinanceData(category) {
 
             results.push({
                 symbol,
-                marketCap, // MarketCap 在前
-                category,  // category 从 popup.js 传入，保持不变
+                marketCap,
+                category,
                 price,
                 volume
             });

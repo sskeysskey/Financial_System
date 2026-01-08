@@ -200,7 +200,8 @@
         "ALNY",
         "BDX",
         "IDXX",
-        "TAK"
+        "TAK",
+        "ARGX"
     ],
     "Industrials": [
         "GE",
@@ -300,7 +301,8 @@
         "GLW",
         "STX",
         "WDC",
-        "NXPI"
+        "NXPI",
+        "SNDK"
     ],
     "Utilities": [
         "NEE",
@@ -310,7 +312,6 @@
         "CEG",
         "AEP",
         "VST",
-        "SRE",
-        "D"
+        "SRE"
     ]
 }

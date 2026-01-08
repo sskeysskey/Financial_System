@@ -1081,39 +1081,43 @@ class MainWindow(QMainWindow):
                                 prefix = match_prefix.group(1)
                                 parts.append(f"<span style='color:orange;'>{prefix}</span>")
                             
-                            # 2. 获取 Options Metrics (IV 和 Price+Change)
-                            # 注意：get_options_metrics 在循环中调用可能会有轻微性能影响，
-                            # 但对于本地应用通常是可接受的。
+                            # 2. 获取 Options Metrics
                             metrics = get_options_metrics(keyword)
                             if metrics:
-                                # --- 处理 IV ---
-                                iv_val, iv_str = metrics['iv1']
+                                # --- 核心修改: 日期校验逻辑 ---
+                                # 目标日期: 今天系统日期的前一天
+                                target_date = datetime.date.today() - datetime.timedelta(days=1)
+                                data_date = metrics.get('date1') # 获取最新数据的日期对象
                                 
-                                # 需求: 如果是 "--" 则不显示
-                                if iv_str != "--":
-                                    # 需求: 正红负绿 (虽然IV通常为正)
-                                    if iv_val > 0:
-                                        iv_color = "red"
-                                    elif iv_val < 0:
-                                        iv_color = "green"
-                                    else:
-                                        iv_color = "gray"
+                                # 判断日期是否有效
+                                is_valid_date = (data_date == target_date)
+                                
+                                if is_valid_date:
+                                    # --- 日期正确，才处理数据显示 ---
                                     
-                                    parts.append(f"<span style='color:{iv_color};'>{iv_str}</span>")
+                                    # A. 处理 IV
+                                    iv_val, iv_str = metrics['iv1']
+                                    if iv_str != "--":
+                                        if iv_val > 0: iv_color = "red"
+                                        elif iv_val < 0: iv_color = "green"
+                                        else: iv_color = "gray"
+                                        parts.append(f"<span style='color:{iv_color};'>{iv_str}</span>")
+                                    
+                                    # B. 处理 Change+Price (Sum)
+                                    sum_val = metrics['sum1']
+                                    # sum_val 通常是 float，直接判断是否显示
+                                    # 这里假设只要日期对，sum_val 就是有效的数值
+                                    if sum_val > 0: sum_color = "red"
+                                    elif sum_val < 0: sum_color = "green"
+                                    else: sum_color = "gray"
+                                    parts.append(f"<span style='color:{sum_color};'>{sum_val:.2f}</span>")
                                 
-                                # --- 处理 Change+Price (Sum) ---
-                                sum_val = metrics['sum1']
-                                
-                                # 需求: 正红负绿
-                                if sum_val > 0:
-                                    sum_color = "red"
-                                elif sum_val < 0:
-                                    sum_color = "green"
                                 else:
-                                    sum_color = "gray"
-                                
-                                # 格式化并添加
-                                parts.append(f"<span style='color:{sum_color};'>{sum_val:.2f}</span>")
+                                    # --- 日期不对 ---
+                                    # 根据需求："如果日期都不对，则正行不显示" (指数值部分)
+                                    # 同时也满足 "不是的显示为--...如果是--则不显示"
+                                    # 所以这里什么都不做，parts 里只有可能存在的 prefix
+                                    pass
 
                             # 只有当有内容时才组合 HTML
                             if parts:

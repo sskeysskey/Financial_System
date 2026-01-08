@@ -1,123 +1,142 @@
 {
-    "Basic_Materials": {
-        "MOS": "美盛化肥"
+    "Basic_Materials": {},
+    "Real_Estate": {},
+    "Energy": {
+        "ENB": ""
     },
-    "Communication_Services": {
-        "ROKU": "",
-        "NTES": ""
+    "Technology": {
+        "AAPL": ""
     },
     "Consumer_Cyclical": {
-        "LULU": ""
-    },
-    "Energy": {
-        "MTDR": "",
-        "CHRD": ""
-    },
-    "Real_Estate": {},
-    "Technology": {
-        "U": "Unity",
-        "GTLB": ""
+        "AZO": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
-        "MNST": ""
+        "MO": "",
+        "SFM": ""
     },
-    "Must": {
-        "IDT": ""
+    "Industrials": {
+        "TT": ""
+    },
+    "Communication_Services": {
+        "NFLX": "",
+        "RBLX": ""
+    },
+    "Financial_Services": {
+        "HDB": ""
+    },
+    "Healthcare": {},
+    "ETFs": {
+        "HYG": ""
+    },
+    "Bonds": {
+        "US10Y": "",
+        "US2Y": "",
+        "TUR10Y": ""
+    },
+    "Indices": {
+        "VIX": "",
+        "Australia": "",
+        "Brazil": ""
+    },
+    "Commodities": {
+        "CrudeOil": "石油",
+        "Huangjin": "黄金",
+        "Zinc": "",
+        "Palladium": "",
+        "Poultry": "",
+        "Salmon": ""
+    },
+    "Crypto": {
+        "Bitcoin": "",
+        "Ether": "",
+        "Binance": "",
+        "Solana": "",
+        "XRP": ""
     },
     "Options": {
-        "^VIX": "",
-        "HYG": "",
-        "QQQ": "",
-        "SPY": "",
-        "SLV": "",
-        "UVXY": "",
-        "VXX": "",
-        "XBI": "",
+        "SOXS": "",
+        "SOXL": "",
         "XLU": "",
         "APLD": ""
     },
+    "Must": {
+        "LOGI": "",
+        "CPNG": ""
+    },
     "Today": {
-        "DT": ""
+        "POOL": "",
+        "NFLX": "",
+        "ETN": ""
     },
-    "Next Week": {
-        "ONON": "",
-        "MNDY": ""
+    "Short": {
+        "BCS": ""
     },
-    "2 Weeks": {
-        "CPRT": "",
-        "PANW": ""
+    "Short_W": {
+        "LTM": ""
     },
-    "3 Weeks": {
-        "DRI": ""
-    },
-    "Watching": {
-        "NVO": ""
-    },
-    "Short": {},
     "Strategy12": {
-        "ONON": "",
-        "WIX": ""
+        "DLR": "DLR热",
+        "KMB": "",
+        "TSCO": ""
     },
+    "Strategy12_backup": {},
     "Strategy34": {
-        "WIX": ""
+        "AMD": "AMD热",
+        "APD": "",
+        "UBER": "",
+        "UNH": "",
+        "WCN": ""
     },
+    "Strategy34_backup": {},
+    "OverSell_W": {},
+    "OverSell_W_backup": {},
+    "PE_Deep": {
+        "AMD": "AMD15热",
+        "ARM": "",
+        "RBLX": "",
+        "SMCI": "SMCI15热",
+        "STRL": "STRL15热"
+    },
+    "PE_Deep_backup": {},
+    "PE_W": {
+        "ARGX": "",
+        "LYFT": "",
+        "MSFT": "",
+        "NBIX": "",
+        "WELL": "WELL7热",
+        "WYNN": ""
+    },
+    "PE_W_backup": {},
     "PE_valid": {
-        "HALO": ""
+        "ACM": "",
+        "ALAB": "ALAB7热",
+        "UHS": "UHS7热",
+        "WST": ""
     },
+    "PE_valid_backup": {},
     "PE_invalid": {
-        "HALO": ""
+        "ALNY": "",
+        "INSM": "",
+        "RIVN": "",
+        "SITM": "SITM7热"
     },
-    "Industrials": {
-        "BA": "波音"
-    },
-    "Financial_Services": {
-        "LPLA": "金融顾问",
-        "SOFI": ""
-    },
-    "Healthcare": {
-        "CVS": "",
-        "DXCM": "德康血糖"
-    },
-    "Crypto": {
-        "Bitcoin": ""
-    },
-    "Indices": {
-        "VIX": "恐慌指数",
-        "Brazil": ""
-    },
-    "Bonds": {
-        "US2Y": "",
-        "IND10Y": ""
-    },
-    "Commodities": {
-        "CrudeOil": "",
-        "HuangJin": "",
-        "LiveCattle": "牛肉"
-    },
+    "PE_invalid_backup": {},
     "Currencies": {
         "DXY": "美元指数",
-        "EURUSD": ""
+        "USDMXN": "美兑墨比索",
+        "USDARS": "美兑阿比索",
+        "USDEGP": "美兑埃镑",
+        "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "CoreCPI": "12 CoreCPI",
-        "USCPI": "12 USCPI",
-        "CorePPI": "13 CorePPI",
-        "USPPI": "13 USPPI",
-        "USInitial": "13 USInitial",
-        "USConfidence": "14 USConfidence"
-    },
-    "ETFs_US": {
-        "SPTI": "中期国债",
-        "USHY": "高收益债",
-        "DVY": "高股息",
-        "TDTF": "通胀保护"
+        "USNonFarmA": "07 USNonFarmA",
+        "USConfidence": "09 USConfidence"
     },
     "Economic_All": {
         "USGDP": "",
-        "USCPI": ""
-    },
-    "Qualified_Symbol": {
-        "HALO": ""
+        "USInitial": "",
+        "ImportPriceM": "",
+        "ImportPriceY": ""
     }
 }

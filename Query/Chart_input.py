@@ -523,16 +523,16 @@ def get_options_metrics(symbol):
     """
     从 Finance.db 的 Options 表中读取数据
     返回原始数值字典以便在 UI 层进行样式处理
-    结构: {'iv1': (val, str), 'iv2': ..., 'sum1': val, 'sum2': val}
+    结构: {'iv1': (val, str), 'iv2': ..., 'sum1': val, 'sum2': val, 'date1': date_obj, 'date2': date_obj}
     """
     db_path = '/Users/yanzhang/Coding/Database/Finance.db'
     
     try:
         with sqlite3.connect(db_path, timeout=10.0) as conn:
             cursor = conn.cursor()
-            # 只需要 iv, price, change，按日期降序取前2条
+            # --- 修改: 增加读取 date 字段 ---
             cursor.execute(
-                "SELECT iv, price, change FROM Options WHERE name = ? ORDER BY date DESC LIMIT 2", 
+                "SELECT iv, price, change, date FROM Options WHERE name = ? ORDER BY date DESC LIMIT 2", 
                 (symbol,)
             )
             rows = cursor.fetchall()
@@ -542,7 +542,7 @@ def get_options_metrics(symbol):
 
         # 辅助函数：处理数据行
         def parse_row(row):
-            # row: (iv_str, price, change)
+            # row: (iv_str, price, change, date_str)
             iv_s = row[0] if row[0] else "--"
             
             # 解析 IV 数值
@@ -559,21 +559,29 @@ def get_options_metrics(symbol):
             c = float(row[2]) if row[2] is not None else 0.0
             sum_v = p + c
             
-            return iv_v, iv_s, sum_v
+            # --- 修改: 解析日期 ---
+            try:
+                d_str = row[3]
+                d_obj = datetime.strptime(d_str, "%Y-%m-%d").date()
+            except:
+                d_obj = None
+
+            return iv_v, iv_s, sum_v, d_obj
 
         # --- 处理最新日期 (Row 0) ---
-        iv1_val, iv1_str, sum1_val = parse_row(rows[0])
+        iv1_val, iv1_str, sum1_val, date1 = parse_row(rows[0])
         
         # --- 处理次新日期 (Row 1) ---
-        iv2_val, iv2_str, sum2_val = parse_row(rows[1])
+        iv2_val, iv2_str, sum2_val, date2 = parse_row(rows[1])
 
         return {
             'iv1': (iv1_val, iv1_str),
             'iv2': (iv2_val, iv2_str),
             'sum1': sum1_val,
-            'sum2': sum2_val
+            'sum2': sum2_val,
+            'date1': date1, # 返回日期对象
+            'date2': date2
         }
-
     except Exception as e:
         print(f"读取 Options 表出错: {e}")
         return None
@@ -1010,8 +1018,31 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         if not metrics_data:
             return
 
+        # --- 新增逻辑: 日期校验 ---
+        # 目标日期: 系统日期的前一天
+        target_date = date.today() - timedelta(days=1)
+        
+        # 检查最新数据 (Row 0) 的日期
+        # 如果日期不对，显示为 "--"
+        row0_date = metrics_data.get('date1')
+        iv1_data = metrics_data['iv1']
+        sum1_data = metrics_data['sum1']
+
+        is_row0_valid = (row0_date == target_date)
+        
+        if not is_row0_valid:
+            # 如果日期不是昨天，覆盖数据为 "--"
+            iv1_data = (0.0, "--")
+            sum1_data = "--"
+        
+        # 检查逻辑: "如果日期都不对(neither date is correct)，整行不显示"
+        # 既然 row0 包含了 IV 和 Price，如果 row0 无效，则 IV 和 Price 都无效。
+        # 这里只要 Row 0 (最新数据) 无效，就隐藏整行
+        if not is_row0_valid:
+            return
+
         # 2. 准备 Compare 数据
-        # 处理 compare可能是tuple的情况 (来自 Check_Options 的逻辑)
+        # 处理 compare可能是tuple的情况
         compare_str = str(compare[0]) if isinstance(compare, tuple) else str(compare)
         if compare_str == "nan": compare_str = "--"
         
@@ -1032,7 +1063,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         COLOR_BADGE_BG = "#2c3e50" # Compare 背景色
 
         def get_style(val, role):
-            if val == 0 or val is None:
+            # 增加对字符串(如 "--")的判断，防止比较出错
+            if val == 0 or val is None or isinstance(val, str):
                 return COLOR_NULL, 'normal', 13
             
             is_up = val > 0
@@ -1067,10 +1099,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                  bbox=dict(boxstyle="round,pad=0.3", fc=COLOR_BADGE_BG, ec="none", alpha=0.9))
         subtitle_artists.append(t_comp)
 
-        # [Element 2: IV2 Prev] (左内侧 - Secondary)
+        # [Element 2: IV2 Prev] (左内侧 - Secondary, 保持原样或也进行校验? 目前逻辑只校验了 Latest)
         iv2_v, iv2_s = metrics_data['iv2']
         c, w, s = get_style(iv2_v, 'secondary')
-        t_iv2 = fig.text(center_x - spacing_inner, y_pos + 0.003, iv2_s, # y微调以对齐基线
+        t_iv2 = fig.text(center_x - spacing_inner, y_pos + 0.003, iv2_s,
                  color=c, fontsize=s, fontweight=w, fontname='Arial Unicode MS',
                  ha='right', va='top')
         subtitle_artists.append(t_iv2)
@@ -1078,23 +1110,26 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         # [Element 4: Sum2 Prev] (右内侧 - Secondary)
         sum2_v = metrics_data['sum2']
         c, w, s = get_style(sum2_v, 'secondary')
-        t_sum2 = fig.text(center_x + spacing_inner, y_pos + 0.003, f"{sum2_v:.2f}",
+        # 处理 sum2 可能为字符串的情况 (虽然目前逻辑没动它，但为了稳健)
+        sum2_text = f"{sum2_v:.2f}" if isinstance(sum2_v, (int, float)) else str(sum2_v)
+        t_sum2 = fig.text(center_x + spacing_inner, y_pos + 0.003, sum2_text,
                  color=c, fontsize=s, fontweight=w, fontname='Arial Unicode MS',
                  ha='left', va='top')
         subtitle_artists.append(t_sum2)
 
-        # [Element 1: IV1 Latest] (左外侧 - Primary)
-        iv1_v, iv1_s = metrics_data['iv1']
+        # [Element 1: IV1 Latest] (左外侧 - Primary, 使用校验后的数据)
+        iv1_v, iv1_s = iv1_data
         c, w, s = get_style(iv1_v, 'primary')
         t_iv1 = fig.text(center_x - spacing_outer, y_pos, iv1_s,
                  color=c, fontsize=s, fontweight=w, fontname='Arial Unicode MS',
                  ha='right', va='top')
         subtitle_artists.append(t_iv1)
 
-        # [Element 5: Sum1 Latest] (右外侧 - Primary)
-        sum1_v = metrics_data['sum1']
+        # [Element 5: Sum1 Latest] (右外侧 - Primary, 使用校验后的数据)
+        sum1_v = sum1_data
         c, w, s = get_style(sum1_v, 'primary')
-        t_sum1 = fig.text(center_x + spacing_outer, y_pos, f"{sum1_v:.2f}",
+        sum1_text = f"{sum1_v:.2f}" if isinstance(sum1_v, (int, float)) else str(sum1_v)
+        t_sum1 = fig.text(center_x + spacing_outer, y_pos, sum1_text,
                  color=c, fontsize=s, fontweight=w, fontname='Arial Unicode MS',
                  ha='left', va='top')
         subtitle_artists.append(t_sum1)
