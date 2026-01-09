@@ -128,6 +128,77 @@ def show_error_popup(symbol):
     except Exception as e:
         print(f"弹窗显示失败: {e}")
 
+def update_sectors_json(symbol, json_path):
+    """将 Open Interest 异常的 Symbol 更新到 JSON 文件的 Options_zero 分组"""
+    try:
+        if not os.path.exists(json_path):
+            tqdm.write(f"⚠️ JSON 文件不存在，无法更新: {json_path}")
+            return
+
+        # 1. 读取现有 JSON
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        # 2. 确保 Options_zero 分组存在
+        if "Options_zero" not in data:
+            data["Options_zero"] = {}
+
+        # 3. 更新/覆盖写入 Symbol (保留原有内容，追加新 Symbol)
+        # 如果需要彻底清空 Options_zero 只保留当前这一个，请改为 data["Options_zero"] = {symbol: ""}
+        data["Options_zero"][symbol] = ""
+
+        # 4. 写回文件
+        with open(json_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+            
+        tqdm.write(f"📝JSON已更新: [{symbol}] -> Options_zero")
+
+    except Exception as e:
+        tqdm.write(f"⚠️ 更新 JSON 失败: {e}")
+
+def show_final_summary_popup_from_json(json_path):
+    """任务结束后，从 JSON 读取 Options_zero 分组并显示汇总弹窗"""
+    try:
+        if not os.path.exists(json_path):
+            return
+
+        # 1. 读取 JSON
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        # 2. 获取 Options_zero 列表
+        zero_group = data.get("Options_zero", {})
+        zero_list = list(zero_group.keys())
+        
+        if not zero_list:
+            # 如果列表为空，不需要弹窗
+            return
+
+        count = len(zero_list)
+        
+        # 创建临时窗口
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+        
+        # 如果列表太长，只显示前20个，后面用...代替
+        if count > 20:
+            details = "\n".join(zero_list[:20]) + f"\n...以及其他 {count - 20} 个"
+        else:
+            details = "\n".join(zero_list)
+
+        messagebox.showinfo(
+            "数据质量监控报告 (Options_zero)", 
+            f"任务结束。\n\n"
+            f"目前【Options_zero】分组中共有 {count} 个 Symbol。\n"
+            f"这些 Symbol 因 Open Interest 数据无效已被记录，\n"
+            f"并在下次运行时自动跳过。\n\n"
+            f"列表如下：\n{details}"
+        )
+        root.destroy()
+    except Exception as e:
+        print(f"弹窗显示失败: {e}")
+
 # ================= 3. 爬虫核心逻辑 =================
 
 def scrape_options():
@@ -141,12 +212,14 @@ def scrape_options():
     json_options_set = set() # 替代原有的 base_custom_set
     json_must_set = set()
     json_today_set = set()  # <--- 新增: Today 集合
+    json_zero_set = set()   # <--- [新增]: Options_zero 集合 (用于过滤)
     blacklist_options_set = set() # 存储黑名单
     
     # 用于日志显示的计数
     count_json_options = 0
     count_json_must = 0
-    count_json_today = 0    # <--- 新增: Today 计数
+    count_json_today = 0    
+    count_json_zero = 0     # <--- [新增]
 
     # === 步骤 A: 加载黑名单 (新增逻辑) ===
     try:
@@ -154,7 +227,6 @@ def scrape_options():
             with open(BLACKLIST_JSON_PATH, 'r', encoding='utf-8') as f:
                 bl_data = json.load(f)
                 # 获取 Blacklist.json 中 Options 分组下的列表
-                # 建议修改为（更健壮）：
                 blacklist_options_set = {str(s).strip() for s in bl_data.get("Options", [])}
         else:
             tqdm.write(f"⚠️ 提示: 未找到黑名单文件: {BLACKLIST_JSON_PATH}")
@@ -166,28 +238,33 @@ def scrape_options():
         if os.path.exists(SECTORS_JSON_PATH):
             with open(SECTORS_JSON_PATH, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-
+                
                 # 1. 提取 Options 分组
                 options_keys = data.get("Options", {}).keys()
                 json_options_set = set(options_keys)
                 count_json_options = len(json_options_set)
-
+                
                 # 2. 提取 Must 分组
                 must_keys = data.get("Must", {}).keys()
                 json_must_set = set(must_keys)
                 count_json_must = len(json_must_set)
-
-                # 3. 提取 Today 分组  <--- 新增部分
+                
+                # 3. 提取 Today 分组
                 today_keys = data.get("Today", {}).keys()
                 json_today_set = set(today_keys)
                 count_json_today = len(json_today_set)
+
+                # 4. [核心修改] 提取 Options_zero 分组 (用于过滤)
+                zero_keys = data.get("Options_zero", {}).keys()
+                json_zero_set = set(zero_keys)
+                count_json_zero = len(json_zero_set)
 
         else:
             tqdm.write(f"⚠️ 警告: 未找到 JSON 文件: {SECTORS_JSON_PATH}")
     except Exception as e:
         tqdm.write(f"⚠️ 读取 JSON 配置文件出错: {e}")
 
-    # 4. 合并去重 (三个集合取并集) <--- 修改: 增加 .union(json_today_set)
+    # 4. 合并去重 (三个集合取并集)
     merged_symbols_set = json_options_set.union(json_must_set).union(json_today_set)
     
     custom_symbols_list = [(s, 0) for s in merged_symbols_set]
@@ -206,14 +283,18 @@ def scrape_options():
     db_unique_list = [s for s in db_symbols_list if s[0] not in custom_names_set]
     all_symbols_before_blacklist = custom_symbols_list + db_unique_list
     
-    # === 步骤 E: 执行黑名单过滤 (核心修改) ===
-    # 过滤掉存在于 blacklist_options_set 中的 symbol
-    symbols = [s for s in all_symbols_before_blacklist if s[0] not in blacklist_options_set]
-    
-    blacklisted_count = len(all_symbols_before_blacklist) - len(symbols)
+    # === 步骤 E: 执行黑名单及 Options_zero 过滤 (核心修改) ===
+    # 过滤掉存在于 blacklist_options_set 和 json_zero_set 中的 symbol
+    # 构造总的排除集合
+    total_exclusion_set = blacklist_options_set.union(json_zero_set)
 
+    symbols = [s for s in all_symbols_before_blacklist if s[0] not in total_exclusion_set]
+    
+    # 统计被过滤的数量
+    blacklisted_count = len(all_symbols_before_blacklist) - len(symbols)
+    
     if not symbols:
-        tqdm.write("未找到任何 Symbol 或全部被黑名单过滤，程序结束。")
+        tqdm.write("未找到任何 Symbol 或全部被黑名单/Options_zero 过滤，程序结束。")
         return
 
     # ================= 检查已存在的 Symbol 并过滤 =================
@@ -245,7 +326,8 @@ def scrape_options():
     log_msg = (
         # 修改: 计数加入 count_json_today
         f"任务列表加载完成: [JSON({count_json_options + count_json_must + count_json_today}) + 数据库({len(db_symbols_list)})] | "
-        f"黑名单过滤: {blacklisted_count} | 总去重: {len(symbols) + skipped_count} | "
+        f"排除列表(Blacklist+Zero): {blacklisted_count} (其中Zero:{count_json_zero}) | "
+        f"总去重: {len(symbols) + skipped_count} | "
         f"已完成: {skipped_count} | 待抓取: {len(symbols)}"
     )
     tqdm.write(log_msg)
@@ -253,6 +335,8 @@ def scrape_options():
     # 如果所有都抓完了，直接退出，不启动浏览器
     if not symbols:
         tqdm.write("✅ 所有目标 Symbol 均已存在于 CSV 中，无需执行任务。")
+        # [修改] 即便这里退出了，也展示一下当前的 Zero 列表状态，防止用户遗忘
+        show_final_summary_popup_from_json(SECTORS_JSON_PATH)
         return
 
     # 2. 初始化 CSV 文件 (写入表头)
@@ -309,9 +393,12 @@ def scrape_options():
     wait = WebDriverWait(driver, 5) # 稍微增加默认等待时间
 
     try:
+        # === 注意：不再初始化内存列表 skipped_zero_symbols，完全依赖 JSON ===
+        
         # === 外层进度条：遍历 Symbols ===
-        # position=0 表示这是最顶层的进度条
         symbol_pbar = tqdm(symbols, desc="总体进度", position=0)
+
+        
         
         # --- 修改点 4: 循环解包 ---
         for symbol_data in symbol_pbar:
@@ -370,7 +457,7 @@ def scrape_options():
                     # 如果上面没找到，尝试更暴力的查找所有带 data-value 的 div，然后过滤
                     if not options_elements:
                          options_elements = driver.find_elements(By.CSS_SELECTOR, "div[data-value]")
-
+                    
                     temp_date_map = []
                     for opt in options_elements:
                         ts = opt.get_attribute("data-value")
@@ -418,20 +505,16 @@ def scrape_options():
                         temp_list.append((ts, d_text, d_obj))
                     except:
                         continue
-                
                 temp_list.sort(key=lambda x: x[2])
                 
                 if temp_list:
                     start_dt = temp_list[0][2]
                     cutoff_dt = start_dt + timedelta(days=180)
-                    
                     for ts, d_text, d_obj in temp_list:
                         if d_obj <= cutoff_dt:
                             filtered_date_map.append((ts, d_text))
-                
                 date_map = filtered_date_map
                 tqdm.write(f"[{symbol}] 成功获取 {len(date_map)} 个日期 (6个月内)")
-                
             except Exception as e:
                 tqdm.write(f"[{symbol}] 日期过滤出错: {e}，将使用所有获取到的日期")
 
@@ -512,18 +595,43 @@ def scrape_options():
                             pass
             
             # [核心修改]
-            # 当该 Symbol 的所有日期循环结束后，一次性写入文件
+            # 当该 Symbol 的所有日期循环结束后，进行数据检查和写入
             if symbol_all_data:
+                # ================= 新增：检查 Open Interest 0 值比例 =================
                 try:
-                    with open(OUTPUT_FILE, 'a', newline='', encoding='utf-8') as f:
-                        writer = csv.writer(f)
-                        writer.writerows(symbol_all_data)
-                    # tqdm.write(f"[{symbol}] 数据保存完毕。")
+                    total_rows = len(symbol_all_data)
+                    # 统计 Open Interest (index 4) 为 0 的行数
+                    zero_count = sum(1 for row in symbol_all_data if row[4] == 0)
+                    zero_ratio = zero_count / total_rows if total_rows > 0 else 0
+                    
+                    # === 判断逻辑 ===
+                    if zero_ratio > 0.95:
+                        # 场景 A: 数据质量太差
+                        tqdm.write(f"⚠️ [{symbol}] 数据无效 (0值率: {zero_ratio:.1%}) -> 跳过写入，更新JSON。")
+                        
+                        # 1. 立即更新 JSON (持久化存储)
+                        update_sectors_json(symbol, SECTORS_JSON_PATH)
+                        
+                        # 2. [修改] 不再写入内存列表，也不弹窗，直接 pass
+                    else:
+                        # 场景 B: 数据正常，写入 CSV
+                        try:
+                            with open(OUTPUT_FILE, 'a', newline='', encoding='utf-8') as f:
+                                writer = csv.writer(f)
+                                writer.writerows(symbol_all_data)
+                            # tqdm.write(f"[{symbol}] 数据保存完毕。")
+                        except Exception as e:
+                            tqdm.write(f"[{symbol}] 写入文件失败: {e}")
+                            
                 except Exception as e:
-                    tqdm.write(f"[{symbol}] 写入文件失败: {e}")
+                    tqdm.write(f"⚠️ 处理 [{symbol}] 数据逻辑时出错: {e}")
             else:
-                # 如果完全没抓到数据（或日期列表为空），这里可以选择不处理，保证没有空数据写入
                 pass
+        
+        # === [核心修改] 循环结束后，从 JSON 文件读取并弹窗 ===
+        # 无论中间是否中断，最后这一步只读文件，确保数据源可靠
+        tqdm.write("正在生成最终报告...")
+        show_final_summary_popup_from_json(SECTORS_JSON_PATH)
 
     finally:
         # 防止重复 quit

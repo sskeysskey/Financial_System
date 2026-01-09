@@ -3,7 +3,17 @@ import pyperclip
 import re
 import subprocess
 from typing import Optional
-import sys  # 导入 sys 模块以访问命令行参数
+import sys
+
+def show_alert(message):
+    """显示 Mac 弹窗提醒"""
+    # 注意：为了防止消息中包含双引号导致 AppleScript 语法错误，可以简单替换一下
+    safe_message = message.replace('"', "'")
+    applescript_code = f'display dialog "{safe_message}" buttons {{"OK"}} default button "OK"'
+    try:
+        subprocess.run(['osascript', '-e', applescript_code], check=True)
+    except subprocess.CalledProcessError:
+        pass # 用户点击取消或其他情况忽略
 
 def copy2clipboard():
     """
@@ -25,15 +35,11 @@ def copy2clipboard():
         pass
 
 def is_uppercase_letters(text: str) -> bool:
-    """
-    检查字符串是否完全由大写英文字母组成。
-    """
+    """检查字符串是否完全由大写英文字母组成。"""
     return bool(re.match(r'^[A-Z]+$', text))
 
 def remove_from_blacklist(symbol: str) -> None:
-    """
-    从blacklist.json的etf组中移除指定的symbol
-    """
+    """从blacklist.json的etf组中移除指定的symbol"""
     blacklist_file = '/Users/yanzhang/Coding/Financial_System/Modules/blacklist.json'
     try:
         with open(blacklist_file, 'r+') as file:
@@ -48,10 +54,7 @@ def remove_from_blacklist(symbol: str) -> None:
         print(f"更新blacklist文件时出错: {str(e)}")
 
 def check_blacklist(symbol: str) -> bool:
-    """
-    检查symbol是否在blacklist.json的etf组中
-    返回True表示在黑名单中，False表示不在
-    """
+    """检查symbol是否在blacklist.json的etf组中"""
     try:
         with open('/Users/yanzhang/Coding/Financial_System/Modules/blacklist.json', 'r') as file:
             data = json.load(file)
@@ -61,10 +64,7 @@ def check_blacklist(symbol: str) -> bool:
         return False
 
 def find_symbol_group(filename: str, symbol: str) -> Optional[str]:
-    """
-    在指定文件中查找symbol所属的组名
-    返回组名或None（如果未找到）
-    """
+    """在指定文件中查找symbol所属的组名"""
     try:
         with open(filename, 'r') as file:
             data = json.load(file)
@@ -76,9 +76,7 @@ def find_symbol_group(filename: str, symbol: str) -> Optional[str]:
     return None
 
 def update_json_file(filename: str, group_name: str, symbol: str) -> None:
-    """
-    更新指定文件中指定组的内容，如果symbol不存在则添加。
-    """
+    """更新指定文件中指定组的内容，如果symbol不存在则添加。"""
     with open(filename, 'r+') as file:
         data = json.load(file)
         if group_name not in data:
@@ -93,11 +91,8 @@ def update_json_file(filename: str, group_name: str, symbol: str) -> None:
         else:
             print(f"{symbol} 已存在于 {filename} 的 {group_name} 组中，无需操作")
 
-
 def check_and_update_files(symbol: str) -> None:
-    """
-    检查并更新所有相关的JSON文件。
-    """
+    """检查并更新所有相关的JSON文件。"""
     # 如果在黑名单中，先移除
     if check_blacklist(symbol):
         remove_from_blacklist(symbol)
@@ -120,8 +115,7 @@ def check_and_update_files(symbol: str) -> None:
             print(f"更新 {EMPTY_FILE} 时出错: {str(e)}")
         return
     
-    # 如果不满足上述条件（例如，不在任何组中，或在不同的组中），
-    # 则默认将其作为ETF处理，添加到所有三个文件的'ETFs'组中。
+    # 如果不满足上述条件，默认处理为ETF
     try:
         for filename in [ALL_FILE, TODAY_FILE, EMPTY_FILE]:
             update_json_file(filename, 'ETFs', symbol)
@@ -138,6 +132,8 @@ def main():
     4. 执行检查和更新文件的操作。
     """
     symbol_to_process = ""
+    # 引入一个变量来标记是否处于“剪贴板模式”
+    is_clipboard_mode = False
     
     # 检查命令行参数
     # sys.argv 是一个列表，第一个元素(sys.argv[0])是脚本名，
@@ -147,7 +143,8 @@ def main():
         symbol_to_process = sys.argv[1].strip()
         print(f"接收到命令行参数: {symbol_to_process}")
     else:
-        # 没有命令行参数，执行原有的剪贴板逻辑
+        # 没有命令行参数，执行原有的剪贴板逻辑，并将模式标记为 True
+        is_clipboard_mode = True
         print("未提供命令行参数，尝试从剪贴板获取内容...")
         copy2clipboard()
         symbol_to_process = pyperclip.paste().strip()
@@ -168,6 +165,9 @@ def main():
     print("-" * 20)
     print("处理完成。")
 
+    # 在程序最后，只有当处于剪贴板模式时才弹窗
+    if is_clipboard_mode:
+        show_alert(f"处理完成: {symbol_to_process}")
 
 if __name__ == "__main__":
     main()

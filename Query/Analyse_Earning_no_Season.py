@@ -845,9 +845,6 @@ def check_w_bottom_pattern(data, config, log_detail, symbol_to_trace, check_stri
     if is_tracing: log_detail(f" - [结果] 遍历结束，未找到满足所有条件的 W 底形态。")
     return False
 
-
-
-
 def check_new_condition_6(data, config, log_detail, symbol_to_trace):
     # 锁定了昨天（index -2）必须是第二个峰值，且今天（index -1）必须下跌或企稳。
     # 严格遵循用户规则：条件B的最低价必须取自双谷中的最低点。
@@ -862,6 +859,54 @@ def check_new_condition_6(data, config, log_detail, symbol_to_trace):
     
     if is_tracing: log_detail(f" - 结果: {passed}")
     return passed
+
+def check_new_condition_7(data, config, log_detail, symbol_to_trace):
+    symbol = data.get('symbol')
+    is_tracing = (symbol == symbol_to_trace)
+    if is_tracing: log_detail(f"\\n--- [{symbol}] 新增条件7评估 (强财报深跌) ---")
+
+    # 1. 数据获取与预检
+    all_er_pcts = data.get('all_er_pcts', [])
+    all_er_prices = data.get('all_er_prices', [])
+    latest_price = data.get('latest_price')
+
+    # 硬性要求：至少有4次财报记录
+    if len(all_er_pcts) < 4 or len(all_er_prices) < 4:
+        if is_tracing: log_detail(f" - 结果: False (财报数据不足4次)")
+        return False
+    
+    # 2. 前提条件检查
+    # A. 最近两次财报的 price值 (涨跌幅) 都是正的
+    # all_er_pcts[-1] 是最新，[-2] 是次新
+    cond_a = (all_er_pcts[-1] > 0) and (all_er_pcts[-2] > 0)
+    
+    # B. 最新一期财报收盘价 > 次新一期财报收盘价
+    cond_b = all_er_prices[-1] > all_er_prices[-2]
+
+    if is_tracing:
+        log_detail(f" - 条件A (最近两次财报为正): {all_er_pcts[-1]:.2f} > 0 AND {all_er_pcts[-2]:.2f} > 0 -> {cond_a}")
+        log_detail(f" - 条件B (财报价格上移): {all_er_prices[-1]:.2f} > {all_er_prices[-2]:.2f} -> {cond_b}")
+
+    if not (cond_a and cond_b):
+        if is_tracing: log_detail(" - 结果: False (前提条件未满足)")
+        return False
+
+    # 3. 核心触发条件检查
+    # 最新价 < 最近四次财报日收盘价的最低值
+    recent_4_er_prices = all_er_prices[-4:]
+    min_er_price_4 = min(recent_4_er_prices)
+    
+    cond_c = latest_price < min_er_price_4
+
+    if is_tracing:
+        log_detail(f" - 最近4次财报价: {recent_4_er_prices}")
+        log_detail(f" - 最低值: {min_er_price_4:.2f}")
+        log_detail(f" - 最新价: {latest_price:.2f}")
+        log_detail(f" - 条件C (破位深跌): {latest_price:.2f} < {min_er_price_4:.2f} -> {cond_c}")
+        log_detail(f" - 结果: {cond_c}")
+
+    return cond_c
+
 
 # ========== 代码修改点 1/3: 重构 evaluate_stock_conditions 函数 ==========
 # 1. 重命名为 check_entry_conditions，使其只负责检查入口条件
@@ -883,7 +928,7 @@ def check_entry_conditions(data, symbol_to_trace, log_detail):
     er_pcts = data.get('all_er_pcts', [])
     if not er_pcts or len(data.get('all_er_prices', [])) < CONFIG["RECENT_EARNINGS_COUNT"]:
         if is_tracing: log_detail(" - 预检失败: 缺少财报数据，无法评估入口条件。")
-        return (False, False, False) # 修改返回值格式
+        return (False, False, False, False) # <--- 补齐为4个值
 
     # --- 评估各个入口条件 ---
     
@@ -927,9 +972,12 @@ def check_entry_conditions(data, symbol_to_trace, log_detail):
     # 新增：条件6
     passed_new_cond6 = check_new_condition_6(data, CONFIG, log_detail, symbol_to_trace)
 
+    # ========== 修改点：新增条件7调用 ==========
+    passed_new_cond7 = check_new_condition_7(data, CONFIG, log_detail, symbol_to_trace)
+
     # 汇总
-    passed_any = passed_original_cond1 or passed_new_cond2 or passed_new_cond3 or passed_new_cond4 or passed_new_cond5 or passed_new_cond6
-    
+    passed_any = passed_original_cond1 or passed_new_cond2 or passed_new_cond3 or passed_new_cond4 or passed_new_cond5 or passed_new_cond6 or passed_new_cond7
+
     if is_tracing:
         if passed_any:
             reasons = []
@@ -939,11 +987,13 @@ def check_entry_conditions(data, symbol_to_trace, log_detail):
             if passed_new_cond4: reasons.append("条件4")
             if passed_new_cond5: reasons.append("条件5")
             if passed_new_cond6: reasons.append("条件6(W底)")
-            log_detail(f"\n--- [{symbol}] 入口条件通过 (原因: {'、'.join(reasons)})。")
+            if passed_new_cond7: reasons.append("条件7(强财报深跌)") # 日志添加
+            log_detail(f"\\n--- [{symbol}] 入口条件通过 (原因: {'、'.join(reasons)})。")
         else:
-            log_detail(f"\n--- [{symbol}] 入口条件失败。六个入口条件均未满足。")
+            log_detail(f"\\n--- [{symbol}] 入口条件失败。七个入口条件均未满足。")
 
-    return (passed_any, passed_new_cond5, passed_new_cond6)
+    # ========== 修改点：返回值增加 passed_new_cond7 ==========
+    return (passed_any, passed_new_cond5, passed_new_cond6, passed_new_cond7)
 
 # ========== 代码修改点 2/3: 新增 apply_common_filters 函数 ==========
 # 这个函数包含了从原 evaluate_stock_conditions 中移出的通用过滤逻辑
@@ -1132,18 +1182,15 @@ def run_processing_logic(log_detail):
             data['symbol'] = symbol
             
             # 步骤A: 检查入口条件
-            # 获取三个返回值
-            passed_any, passed_cond5, passed_cond6 = check_entry_conditions(data, SYMBOL_TO_TRACE, log_detail)
-
-            # 如果任何入口条件都没通过，则跳过
+            # ========== 修改点：接收4个返回值 ==========
+            passed_any, passed_cond5, passed_cond6, passed_cond7 = check_entry_conditions(data, SYMBOL_TO_TRACE, log_detail)
+            
             if not passed_any:
                 continue
 
             # 步骤B: 应用通用过滤器
-            # 如果通过了条件5 OR 条件6，则跳过价格回撤检查 (skip_drawdown=True)
-            # 条件5是因为它有自己的高点逻辑
-            # 条件6是因为它是抄底逻辑，不需要检查"距离最高点跌幅"
-            should_skip_drawdown = passed_cond5 or passed_cond6
+            # 逻辑：如果是条件5、6、7触发，跳过价格回撤过滤 (因为这些策略自带价格位置判断)
+            should_skip_drawdown = passed_cond5 or passed_cond6 or passed_cond7
             
             if apply_common_filters(data, SYMBOL_TO_TRACE, log_detail, drop_large, drop_small, skip_drawdown=should_skip_drawdown):
                 # ========== [修改] 开始：此处新增日期重合检查，修复条件6漏检问题 ==========
@@ -1154,10 +1201,12 @@ def run_processing_logic(log_detail):
                         log_detail(f" - [通用过滤] 失败 (日期重合): 最新交易日({data['latest_date_str']}) 与 最新财报日相同。")
                     continue # 直接跳过，不放入任何列表
                 # --- 分流逻辑 ---
-                # 如果通过了条件6（W底），将其放入 oversell_w_candidates，优先于其他逻辑
-                if passed_cond6:
-                    # 优先级 1：条件 6 进 OverSell_W
+                
+                # ========== 修改点：条件6 OR 条件7 都进入 OverSell_W ==========
+                if passed_cond6 or passed_cond7:
+                    # 优先级 1：W底 (Cond6) 或 强财报深跌 (Cond7) 进 OverSell_W
                     oversell_w_candidates.append(symbol)
+                
                 else:
                     # 优先级 2：条件 1-5 进来的，检查是否符合 W 底形态
                     is_w_bottom = check_w_bottom_pattern(data, CONFIG, log_detail, SYMBOL_TO_TRACE, check_strict_er_drop=False)

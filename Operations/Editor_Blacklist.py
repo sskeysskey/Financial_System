@@ -47,15 +47,17 @@ class BlacklistEditor(QMainWindow):
         # --- 路径管理 ---
         # 唯一的JSON文件路径
         self.blacklist_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
+        # [新增] 第二个文件路径
+        self.sectors_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
         
         # --- 数据模型 ---
-        self.blacklist_data = {}
-
-        self.list_widgets = {} # 使用栏目键存储所有列表控件
+        self.blacklist_data = {} 
+        self.sectors_full_data = {} # [新增] 用于存储 Sectors_panel 的完整原始数据
+        
+        self.list_widgets = {} 
         self.base_window_title = "黑名单编辑器"
         
-        self.is_dirty = False # 跟踪文件是否有未保存的修改
-
+        self.is_dirty = False 
         self.init_ui()
         self.load_data_and_populate_ui()
 
@@ -112,16 +114,37 @@ class BlacklistEditor(QMainWindow):
 
     def load_data_and_populate_ui(self):
         """加载 JSON 数据并填充UI"""
+        # 1. 加载主黑名单数据
         try:
             with open(self.blacklist_json_path, 'r', encoding='utf-8') as f:
                 self.blacklist_data = json.load(f)
         except (FileNotFoundError, json.JSONDecodeError):
-            # 如果文件不存在或格式错误，创建一个默认结构
             self.blacklist_data = {"newlow": [], "screener": [], "etf": [], "Earning": []}
-            QMessageBox.warning(self, "警告", f"未找到或无法解析 {self.blacklist_json_path}。\n已创建新的默认数据结构。")
-            self._mark_as_dirty()
-        
+            
+        # 2. [新增] 加载 Sectors 数据
+        try:
+            with open(self.sectors_json_path, 'r', encoding='utf-8') as f:
+                self.sectors_full_data = json.load(f)
+                
+            # 提取 Options_zero 并转换为列表 (因为 UI 只处理列表)
+            # 注意：Sectors 文件是字典结构 {"Key": "Value"}，我们只需要 Key
+            if "Options_zero" in self.sectors_full_data:
+                options_zero_dict = self.sectors_full_data["Options_zero"]
+                # 将字典的键提取出来作为列表
+                self.blacklist_data["Options_zero"] = list(options_zero_dict.keys())
+            else:
+                # 如果文件中没有这个键，初始化为空列表
+                self.blacklist_data["Options_zero"] = []
+                # 同时确保原始数据里也有这个键，防止保存时报错
+                self.sectors_full_data["Options_zero"] = {}
+
+        except (FileNotFoundError, json.JSONDecodeError):
+            QMessageBox.warning(self, "警告", f"无法加载 {self.sectors_json_path}")
+            self.sectors_full_data = {}
+            self.blacklist_data["Options_zero"] = []
+
         self.populate_columns()
+
 
     def populate_columns(self):
         """根据 self.blacklist_data 动态创建和填充所有栏目"""
@@ -132,13 +155,12 @@ class BlacklistEditor(QMainWindow):
                 widget_to_remove.deleteLater()
         self.list_widgets.clear()
 
-        # 定义固定的栏目顺序，以确保UI一致性
-        column_order = ["newlow", "screener", "etf", "Earning"]
-        # 将文件中存在但不在预定顺序里的其他栏目也添加进来
+        # [修改] 定义固定的栏目顺序，把 Options_zero 加入进去
+        column_order = ["newlow", "screener", "etf", "Earning", "Options", "Options_zero"]
+
         for key in self.blacklist_data:
             if key not in column_order:
                 column_order.append(key)
-
         for key in column_order:
             if key in self.blacklist_data:
                 self._create_column_widget(key, self.blacklist_data[key])
@@ -348,17 +370,45 @@ class BlacklistEditor(QMainWindow):
         self._mark_as_dirty()
 
     def save_data(self, notify=True):
-        """将数据写回 JSON 文件"""
+        """将数据拆分并写回两个 JSON 文件"""
         try:
+            # --- 处理 Options_zero (Sectors_panel.json) ---
+            # 1. 从当前编辑的数据中取出 Options_zero 的列表
+            options_zero_list = self.blacklist_data.get("Options_zero", [])
+            
+            # 2. 获取旧的字典数据 (为了保留原本可能存在的注释值，虽然 Options_zero 示例是空的)
+            old_options_dict = self.sectors_full_data.get("Options_zero", {})
+            new_options_dict = {}
+            
+            # 3. 重建字典：如果 Key 以前存在，保留 Value；如果是新的，Value 为空字符串
+            for item in options_zero_list:
+                new_options_dict[item] = old_options_dict.get(item, "")
+            
+            # 4. 更新完整数据对象
+            self.sectors_full_data["Options_zero"] = new_options_dict
+            
+            # 5. 保存 Sectors_panel.json
+            with open(self.sectors_json_path, 'w', encoding='utf-8') as f:
+                json.dump(self.sectors_full_data, f, ensure_ascii=False, indent=4)
+
+            # --- 处理 Blacklist.json ---
+            # 1. 创建一个不包含 Options_zero 的副本用于保存到 Blacklist.json
+            blacklist_to_save = self.blacklist_data.copy()
+            if "Options_zero" in blacklist_to_save:
+                del blacklist_to_save["Options_zero"]
+
+            # 2. 保存 Blacklist.json
             with open(self.blacklist_json_path, 'w', encoding='utf-8') as f:
-                json.dump(self.blacklist_data, f, ensure_ascii=False, indent=4)
+                json.dump(blacklist_to_save, f, ensure_ascii=False, indent=4)
             
             self.is_dirty = False
             self.setWindowTitle(self.base_window_title)
             if notify:
-                QMessageBox.information(self, "成功", "所有更改已成功保存！")
+                QMessageBox.information(self, "成功", "所有更改已分别保存到两个文件中！")
+                
         except Exception as e:
              QMessageBox.critical(self, "错误", f"保存文件时发生错误: {e}")
+
 
     def closeEvent(self, event):
         """关闭窗口前检查是否有未保存的更改"""

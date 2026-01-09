@@ -922,7 +922,9 @@
         "FCAL",
         "KCE",
         "SPYM",
-        "CORB"
+        "CORB",
+        "HEWJ",
+        "DBJP"
     ],
     "Earning": [
         "TW",
@@ -973,6 +975,12 @@
         "QCOM",
         "GEV",
         "MUFG",
-        "BLK"
+        "BLK",
+        "LIN",
+        "SYK",
+        "RIO",
+        "WELL",
+        "HCA",
+        "BN"
     ]
 }
