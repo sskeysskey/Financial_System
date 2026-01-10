@@ -601,20 +601,63 @@ class MainWindow(QMainWindow):
         # >>> 修改后的 handle_chart_callback >>>
     def handle_chart_callback(self, deleted_symbol, action):
         """
-        当 b.py 发生特定动作（如删除）时被调用
+        当 b.py 发生特定动作（如删除、上一页、下一页）时被调用
         """
+        # --- 情况 1: 删除操作 (保持原有逻辑不变) ---
         if action == 'deleted':
             # 关键修复：在窗口焦点切换导致 refresh 清空索引之前，
             # 立即保存当前的索引！
             saved_index = self.current_symbol_index
-            
             print(f"检测到 {deleted_symbol} 已被删除，锁定索引: {saved_index}，准备跳转...")
             
             # 将保存好的 saved_index 传给 open_next_symbol
             # 这样即使 100ms 后 self.current_symbol_index 变成了 -1，我们手里还有正确的索引
             QTimer.singleShot(100, lambda: self.open_next_symbol(deleted_symbol, saved_index))
+        
+        # --- 情况 2: 导航操作 (新增) ---
+        elif action in ('next', 'prev'):
+            # 立即保存当前索引，防止窗口切换时的干扰
+            current_idx = self.current_symbol_index
+            
+            # 使用 QTimer 稍微延迟，确保旧窗口完全关闭，避免视觉冲突
+            QTimer.singleShot(50, lambda: self.navigate_to_adjacent_symbol(action, current_idx))
 
+    # >>> 新增方法: 处理左右跳转 >>>
+    def navigate_to_adjacent_symbol(self, direction, current_idx):
+        """
+        根据方向打开上一个或下一个 Symbol。
+        因为 ordered_symbols_on_screen 包含所有分组，所以跨组跳转会自动完成。
+        """
+        total_count = len(self.ordered_symbols_on_screen)
+        if total_count == 0:
+            return
 
+        new_index = current_idx
+        
+        if direction == 'next':
+            new_index += 1
+        elif direction == 'prev':
+            new_index -= 1
+            
+        # 边界检查
+        # 如果到了最后一个，按右键是否要循环回第一个？通常为了防呆，停在最后即可，或者循环。
+        # 这里写成循环模式 (Cycle)，如果你不想循环，可以用 if 0 <= new_index < total_count: 判断
+        
+        # 循环模式逻辑：
+        if new_index >= total_count:
+            new_index = 0 # 到底了，回到第一个
+            print("已到达列表末尾，循环回到开头。")
+        elif new_index < 0:
+            new_index = total_count - 1 # 到头了，去最后一个
+            print("已到达列表开头，循环跳到末尾。")
+            
+        # 取出新的 Symbol
+        next_symbol = self.ordered_symbols_on_screen[new_index]
+        print(f"导航跳转: {next_symbol} (Index: {new_index})")
+        
+        # 打开图表 (传入新的精确索引)
+        self.on_keyword_selected_chart(next_symbol, btn_index=new_index)
+    
     # >>> 修改后的 open_next_symbol >>>
     def open_next_symbol(self, deleted_symbol, target_index):
         """

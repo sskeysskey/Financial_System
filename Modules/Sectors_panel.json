@@ -103,6 +103,7 @@
         "XRP": ""
     },
     "Options": {
+        "LRCX": "",
         "PLTR": "",
         "HYG": "",
         "QQQ": "",
@@ -115,29 +116,21 @@
     "Options_zero": {},
     "Must": {
         "JCI": "",
-        "STRL": "",
         "CPNG": "",
         "RBLX": "",
         "NFLX": "",
         "TT": "",
-        "DEO": "",
-        "BF-B": "",
-        "NRG": "",
-        "LLY": "",
-        "AMKR": "",
-        "CEG": "",
-        "XLP": "",
-        "PKG": "",
-        "LRCX": ""
+        "XLP": ""
     },
     "Today": {
+        "PKG": "",
+        "STRL": "",
+        "BF-B": "",
         "NET": "",
         "MOD": "",
         "GEV": "",
         "SWKS": "",
-        "QS": "",
         "LOGI": "",
-        "ERIC": "",
         "TPR": "",
         "DJT": ""
     },

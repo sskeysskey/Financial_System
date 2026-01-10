@@ -1697,6 +1697,20 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             current_index = list(time_options.keys()).index(radio.value_selected)
             if event.key == 'up' and current_index > 0: radio.set_active(current_index - 1)
             elif event.key == 'down' and current_index < len(time_options) - 1: radio.set_active(current_index + 1)
+            # >>>>>>>>> 新增: 左右键切换 Symbol >>>>>>>>>
+            elif event.key == 'right':
+                # 1. 关闭当前窗口
+                plt.close('all')
+                # 2. 触发回调，告诉 a.py 打开下一个
+                if callback:
+                    callback('next')
+                    
+            elif event.key == 'left':
+                # 1. 关闭当前窗口
+                plt.close('all')
+                # 2. 触发回调，告诉 a.py 打开上一个
+                if callback:
+                    callback('prev')
         except Exception as e:
             pass
 
