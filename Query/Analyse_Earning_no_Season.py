@@ -1402,19 +1402,29 @@ def run_processing_logic(log_detail):
     update_json_panel(final_pe_w_to_write, PANEL_JSON_FILE, 'PE_W_backup', symbol_to_note=pe_w_notes)
 
     # ========== 修改点 4: 写入 History (Raw Data, 包含 Tag 黑名单) ==========
-    # 合并所有 Raw 列表
-    all_qualified_symbols_raw = (
-        raw_pe_valid + 
-        raw_pe_invalid + 
-        raw_pe_deep + 
-        raw_pe_w + 
-        raw_oversell_w
-    )
+    # 原逻辑：合并所有 Raw 列表写入 "no_season"
+    # 新逻辑：分别写入各自的组名
 
-    # 写入 History
-    if all_qualified_symbols_raw:
-        update_earning_history_json(EARNING_HISTORY_JSON_FILE, "no_season", sorted(list(set(all_qualified_symbols_raw))), log_detail)
-    else:
+    # 定义组名和对应的原始数据列表 (使用 Raw 数据以保持和原逻辑一致，包含 Tag 黑名单)
+    groups_to_log = {
+        "PE_valid": raw_pe_valid,
+        "PE_invalid": raw_pe_invalid,
+        "PE_Deep": raw_pe_deep,
+        "PE_W": raw_pe_w,
+        "OverSell_W": raw_oversell_w
+    }
+
+    has_written_any = False
+
+    for group_name, symbols in groups_to_log.items():
+        if symbols:
+            # 去重并排序
+            unique_symbols = sorted(list(set(symbols)))
+            # 分别调用更新函数，传入对应的 group_name
+            update_earning_history_json(EARNING_HISTORY_JSON_FILE, group_name, unique_symbols, log_detail)
+            has_written_any = True
+
+    if not has_written_any:
         log_detail("\n--- 无符合条件的 symbol 可写入 Earning_History.json ---")
 
 # --- 6. 主执行流程 ---

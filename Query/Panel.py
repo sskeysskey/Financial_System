@@ -39,7 +39,8 @@ DISPLAY_LIMITS = {
 }
 
 categories = [
-    ['Must', 'Today', 'Short', 'Short_W', 'PE_Deep_backup', 'PE_W_backup', 'OverSell_W_backup'],
+    ['Must', 'Today', 'Short_backup', 'Short_W_backup',
+     'PE_Deep_backup', 'PE_W_backup', 'OverSell_W_backup'],
     ['PE_valid_backup', 'PE_invalid_backup', 'Strategy12_backup', 'Strategy34_backup'],
     ['Basic_Materials', 'Consumer_Cyclical', 'Real_Estate', 'Technology', 'Energy', 'Industrials',
      'Consumer_Defensive', 'Communication_Services', 'Financial_Services', 'Healthcare', 'Utilities'],
@@ -599,55 +600,78 @@ class MainWindow(QMainWindow):
     def get_consecutive_day_count(self, symbol, group):
         """ 
         根据规则计算symbol连续出现的天数。
-        修改: 此版本会跳过周末以及美股节假日进行连续计数。
+        修改版: 
+        1. 建立了 UI分组名 到 History键名 的映射。
+        2. 兼容模式: 同时查找对应的精确分组(如 PE_W) 和 旧的通用分组(no_season)。
         """
-        # 规则1的分组
-        no_season_groups = {
-            "PE_valid_backup", "PE_invalid_backup", "PE_W_backup",
-            "PE_Deep_backup", "OverSell_W_backup"
+        
+        # --- 1. 定义映射关系: UI上的组名 -> Earning_History.json 中的 Key ---
+        # 只要你在第一个脚本里生成了新的 Key，这里就需要对应上
+        # 左边是 UI 上的 group 参数，右边是 History json 里的 key
+        group_mapping = {
+            # UI 分组名 : JSON 键名
+            "PE_valid_backup": "PE_valid",
+            "PE_invalid_backup": "PE_invalid",
+            "PE_W_backup": "PE_W",
+            "Short_backup": "Short",
+            "Short_W_backup": "Short_W",
+            "PE_Deep_backup": "PE_Deep",
+            "OverSell_W_backup": "OverSell_W",
+            
+            # 兼容不带 _backup 后缀的情况 (如果有)
+            "PE_valid": "PE_valid",
+            "PE_invalid": "PE_invalid",
+            "PE_W": "PE_W",
+            "PE_Deep": "PE_Deep",
+            "OverSell_W": "OverSell_W"
         }
-        # 规则2的分组
-        season_groups = {"Strategy12_backup", "Strategy34_backup"}
-        # 规则3的分组
-        combined_groups = {"Must", "Today"}
 
-        if group in no_season_groups:
-            sections_to_check = ['no_season']
-        elif group in season_groups:
-            sections_to_check = ['season']
-        elif group in combined_groups:
-            sections_to_check = ['season', 'no_season']
+        # --- 2. 确定需要检查的历史数据 Key 列表 ---
+        keys_to_check = []
+
+        if group in group_mapping:
+            # 逻辑: 优先查具体的分组(如 PE_W)，但也查 no_season (为了兼容以前的历史数据)
+            target_key = group_mapping[group]
+            keys_to_check = [target_key, 'no_season']
+        
+        elif group in {"Strategy12_backup", "Strategy34_backup", "Strategy12", "Strategy34"}:
+            # 情况 B: 是 Season 策略组 -> 查 'season'
+            keys_to_check = ['season']
+        
+        elif group in {"Must", "Today"}:
+            # 情况 C: 是汇总组 -> 查所有已知的具体 Key (不再查 no_season)
+            keys_to_check = [
+                'season', 'no_season',
+                'PE_valid', 'PE_invalid', 
+                'PE_W', 'PE_Deep', 'OverSell_W'
+            ]
         else:
-            return 0 # 如果分组不匹配任何规则，则返回0
+            # 默认情况 (比如其他没在映射里的组)
+            keys_to_check = ['no_season']
 
+        # --- 3. 开始回溯计数 ---
         count = 0
         day_offset = 1
         today = datetime.date.today()
         
-        season_data = self.earning_history.get('season', {})
-        no_season_data = self.earning_history.get('no_season', {})
-        
         # 使用 holidays.NYSE() 获取美股假期
-        # holidays 库会自动处理年份，不用担心跨年问题
         market_holidays = holidays.NYSE() 
-
-        # 增加一个循环上限(一年)，防止意外的无限循环
+        
         while day_offset <= 365:
             current_date = today - datetime.timedelta(days=day_offset)
             date_str = current_date.strftime('%Y-%m-%d')
             
             found_on_this_date = False
             
-            # 检查 'season' 部分
-            if 'season' in sections_to_check:
-                if symbol in season_data.get(date_str, []):
+            # 遍历所有相关的 Key 查找 symbol
+            for key in keys_to_check:
+                # 获取该 Key 下的历史数据
+                hist_data = self.earning_history.get(key, {})
+                # 检查 symbol 是否存在于当天的列表中
+                if symbol in hist_data.get(date_str, []):
                     found_on_this_date = True
+                    break # 只要在任意一个相关组里找到了，就视为当天存在，跳出内层循环
             
-            # 如果在 'season' 没找到，再检查 'no_season'
-            if not found_on_this_date and 'no_season' in sections_to_check:
-                if symbol in no_season_data.get(date_str, []):
-                    found_on_this_date = True
-                    
             if found_on_this_date:
                 # 如果找到了，计数器加一，继续检查前一天
                 count += 1
@@ -655,16 +679,15 @@ class MainWindow(QMainWindow):
             else:
                 # 判断周末 (5=周六, 6=周日) 或 节假日
                 is_weekend = current_date.weekday() >= 5
-                
-                # 2. 判断是否是美股节假日
                 is_holiday = current_date in market_holidays
-
+                
                 # 如果是周末 或者 是节假日，则算作“非交易日”，不应中断连续性
                 if is_weekend or is_holiday:
                     day_offset += 1
                 else:
                     # 是工作日 且 不是节假日，但没有数据 -> 连续性中断
                     break
+                    
         return count
 
     def changeEvent(self, event):
@@ -910,6 +933,7 @@ class MainWindow(QMainWindow):
             'Strategy12_backup', 'Strategy34_backup',
             'PE_Deep_backup', 'PE_W_backup', 
             'OverSell_W_backup', 'PE_W_backup',
+            'Short_backup', 'Short_W_backup'
         }
 
         # ==========================================================
@@ -922,7 +946,7 @@ class MainWindow(QMainWindow):
             # season_groups
             "Strategy12_backup", "Strategy34_backup",
             # combined_groups
-            "Must", "Today"
+            "Must", "Today", "Short_backup", "Short_W_backup"
         }
 
         for index, category_group in enumerate(categories):
@@ -1206,7 +1230,7 @@ class MainWindow(QMainWindow):
         menu.addAction("编辑 Tags",    lambda: execute_external_script('tags', keyword, group, self))
         # --- 通用“移动”子菜单 ---
         move_menu = menu.addMenu("移动")
-        for tgt in ("Must", "Today", "Short"):
+        for tgt in ("Must", "Today"):
             act = move_menu.addAction(f"到 {tgt}")
             act.setEnabled(group != tgt)
             # 用 lambda 搭桥：三个参数 keyword, group (当前组), tgt (目标组)
@@ -1237,7 +1261,9 @@ class MainWindow(QMainWindow):
         
         menu.addSeparator()
         menu.addAction("清空 Short_W 分组", lambda: self.clear_group("Short_W"))
+        menu.addAction("清空 Short_W_backup 分组", lambda: self.clear_group("Short_W_backup"))
         menu.addAction("清空 Short 分组", lambda: self.clear_group("Short"))
+        menu.addAction("清空 Short_backup 分组", lambda: self.clear_group("Short_backup"))
         menu.addAction("清空 PE_Deep_backup 分组", lambda: self.clear_group("PE_Deep_backup"))
         menu.addAction("清空 OverSell_W_backup 分组", lambda: self.clear_group("OverSell_W_backup"))
         menu.addAction("清空 Strategy12_backup 分组", lambda: self.clear_group("Strategy12_backup"))

@@ -139,7 +139,7 @@ def search_history(symbol):
                 has_data = True
                 found_dates.sort(reverse=True)
                 
-                # [核心修改] 使用 accent_blue 颜色作为 Earning 标题，并应用 HTML 样式
+                # [核心修改] 使用 success_green 颜色作为 Earning 标题，并应用 HTML 样式
                 html_parts.append(make_header(category, NORD_THEME['success_green']))
                 
                 for d in found_dates:

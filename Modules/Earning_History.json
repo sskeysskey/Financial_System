@@ -996,6 +996,33 @@
             "VICI",
             "WCN",
             "WST"
+        ],
+        "2026-01-09": [
+            "AMD",
+            "AMH",
+            "BLK",
+            "BSX",
+            "CLF",
+            "CNC",
+            "COIN",
+            "DPZ",
+            "ETN",
+            "FSLR",
+            "KDP",
+            "KMB",
+            "MOD",
+            "MOH",
+            "MSTR",
+            "RACE",
+            "RMBS",
+            "SOFI",
+            "SONY",
+            "TSCO",
+            "UBER",
+            "UNH",
+            "VICI",
+            "WCN",
+            "WST"
         ]
     },
     "no_season": {
@@ -6101,6 +6128,11 @@
             "NXE",
             "PL",
             "SNDK"
+        ],
+        "2026-01-09": [
+            "FIGR",
+            "LTM",
+            "SN"
         ]
     },
     "Short_W": {
@@ -6147,6 +6179,141 @@
             "CVNA",
             "EGO",
             "LLY"
+        ],
+        "2026-01-09": [
+            "PAC"
+        ]
+    },
+    "PE_valid": {
+        "2026-01-09": [
+            "AAPL",
+            "ADSK",
+            "AIG",
+            "ALAB",
+            "ANET",
+            "APP",
+            "AR",
+            "ARGX",
+            "ARWR",
+            "BBY",
+            "BLK",
+            "CART",
+            "CCI",
+            "CDW",
+            "CIEN",
+            "CLS",
+            "COHR",
+            "COR",
+            "CRWD",
+            "DELL",
+            "DLR",
+            "DOC",
+            "DT",
+            "EHC",
+            "EQT",
+            "ERIC",
+            "ETN",
+            "EXE",
+            "FICO",
+            "FLEX",
+            "FN",
+            "GEV",
+            "GLW",
+            "GTLB",
+            "HCA",
+            "HDB",
+            "HOOD",
+            "HPE",
+            "HPQ",
+            "ICLR",
+            "JAZZ",
+            "JCI",
+            "LITE",
+            "LVS",
+            "MSFT",
+            "NTAP",
+            "PATH",
+            "PBR",
+            "PLTR",
+            "PODD",
+            "RACE",
+            "RRC",
+            "SAP",
+            "SBAC",
+            "SOFI",
+            "SPOT",
+            "STLA",
+            "TFX",
+            "TRI",
+            "TSLA",
+            "TT",
+            "TTD",
+            "TWLO",
+            "UHS",
+            "VRT",
+            "WELL",
+            "WRB",
+            "WST",
+            "WYNN",
+            "XEL"
+        ]
+    },
+    "PE_invalid": {
+        "2026-01-09": [
+            "ALNY",
+            "CYBR",
+            "MDGL",
+            "RIVN",
+            "U",
+            "ZS"
+        ]
+    },
+    "PE_Deep": {
+        "2026-01-09": [
+            "AMD",
+            "ARM",
+            "CLF",
+            "CPNG",
+            "CSGP",
+            "DDOG",
+            "DEO",
+            "FIG",
+            "GRAB",
+            "HIMS",
+            "KMB",
+            "LOGI",
+            "LYFT",
+            "MOD",
+            "MRVL",
+            "MSTR",
+            "NET",
+            "NFLX",
+            "NOK",
+            "NOW",
+            "PYPL",
+            "QS",
+            "RBLX",
+            "RMBS",
+            "SONY",
+            "STRL",
+            "SWKS"
+        ]
+    },
+    "PE_W": {
+        "2026-01-09": [
+            "INSM",
+            "NBIX",
+            "NRG",
+            "PSTG",
+            "PWR"
+        ]
+    },
+    "OverSell_W": {
+        "2026-01-09": [
+            "DUOL",
+            "GWRE",
+            "IOT",
+            "SMCI"
         ]
     }
 }

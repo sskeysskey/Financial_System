@@ -6,10 +6,6 @@ import webbrowser
 def generate_html_report(db_name, tables_data, output_file='db_visualization.html'):
     """
     根据提取的数据库信息生成HTML报告。
-
-    :param db_name: 数据库的名称
-    :param tables_data: 一个字典，包含每个表的结构和内容
-    :param output_file: 输出的HTML文件名 (现在是包含完整路径的文件名)
     """
     # HTML模板的开始部分，包含CSS样式
     html_content = f"""
@@ -139,6 +135,7 @@ def generate_html_report(db_name, tables_data, output_file='db_visualization.htm
         schema = data['schema']
         content_preview = data['content']
         content_headers = data['content_headers']
+        is_all = data['is_all']
         
         # 使用<details>和<summary>创建可折叠部分
         html_content += f"""
@@ -158,8 +155,10 @@ def generate_html_report(db_name, tables_data, output_file='db_visualization.htm
         else:
             html_content += "<p>无法获取表结构信息。</p>"
 
-        # 表内容预览
-        html_content += f"<h3>内容预览 (前 {len(content_preview)} 行)</h3>"
+        # 表内容预览标题动态化
+        display_title = "全部数据内容" if is_all else f"内容预览 (前 {len(content_preview)} 行)"
+        html_content += f"<h3>{display_title}</h3>"
+        
         if content_preview:
             html_content += '<div class="table-container"><table><thead><tr>'
             for header in content_headers:
@@ -197,19 +196,19 @@ def generate_html_report(db_name, tables_data, output_file='db_visualization.htm
     print(f"报告已生成: {output_file}")
     return os.path.abspath(output_file)
 
-# --- 修改部分 1: 增加 output_dir 参数 ---
-def visualize_sqlite_db(db_path, output_dir, content_limit=100):
+# --- 修改部分：增加 target_tables 参数 ---
+def visualize_sqlite_db(db_path, output_dir, content_limit=100, target_tables=None):
     """
-    连接到SQLite数据库，提取信息，并生成可视化报告。
-    (此版本已更新，可自动格式化 changed_at 并智能排序)
-
-    :param db_path: SQLite数据库文件的路径
-    :param output_dir: 生成的HTML报告的输出目录
-    :param content_limit: 每个表预览内容的行数限制
+    :param content_limit: 可以是整数(如 500)，也可以是字符串 'all' 表示显示全部。
     """
     if not os.path.exists(db_path):
         print(f"错误: 数据库文件不存在于 '{db_path}'")
         return
+
+    # 判断是否显示全部
+    show_all = False
+    if isinstance(content_limit, str) and content_limit.lower() == 'all':
+        show_all = True
 
     tables_data = {}
     conn = None  # 在 try 外部初始化 conn
@@ -225,13 +224,24 @@ def visualize_sqlite_db(db_path, output_dir, content_limit=100):
             WHERE type='table'
             AND name NOT LIKE 'sqlite_%';
         """)
-        tables = [row[0] for row in cursor.fetchall()]
-        print(f"在数据库中找到 {len(tables)} 个表: {', '.join(tables)}")
+        all_tables = [row[0] for row in cursor.fetchall()]
 
-        # 2. 遍历每个表，获取结构和内容
+        # --- 核心逻辑修改：过滤表名 ---
+        if target_tables:
+            # 只保留在 target_tables 列表中的表，并忽略大小写差异（可选）
+            tables = [t for t in all_tables if t in target_tables]
+            if not tables:
+                print(f"警告: 在数据库中未找到指定的表 {target_tables}。")
+                return
+        else:
+            tables = all_tables
+
+        print(f"正在处理以下表: {', '.join(tables)}")
+
+        # 2. 遍历确定的表
         for table_name in tables:
             print(f"正在处理表: {table_name}...")
-            tables_data[table_name] = {}
+            tables_data[table_name] = {'is_all': show_all}
 
             # a. 获取表结构和所有列名
             cursor.execute(f'PRAGMA table_info("{table_name}");')
@@ -239,9 +249,7 @@ def visualize_sqlite_db(db_path, output_dir, content_limit=100):
             tables_data[table_name]['schema'] = schema
             col_names = [s[1] for s in schema]
 
-            # ==================== 新增/修改部分开始 ====================
-
-            # b. 智能决定用于排序的列，使查询更健壮
+            # 智能排序
             if 'id' in col_names:
                 order_col = 'id'
             elif 'date' in col_names:
@@ -266,24 +274,26 @@ def visualize_sqlite_db(db_path, output_dir, content_limit=100):
                 # 如果没有 changed_at 列，就查询所有字段
                 select_clause = "*"
 
-            # d. 构建最终的、更强大的SQL查询语句
-            #    注意：列名和表名都用双引号括起来，以支持包含特殊字符的名称
-            sql_query = f"""
-            SELECT {select_clause}
-            FROM (
-                SELECT * FROM "{table_name}"
-                ORDER BY "{order_col}" DESC
-                LIMIT {content_limit}
-            ) AS sub
-            ORDER BY "{order_col}" DESC;
-            """
-            print(f"为表 '{table_name}' 执行的SQL: {sql_query.strip()}")
+            # --- 修改部分：根据 show_all 构建不同的 SQL ---
+            if show_all:
+                # 全部显示：直接查询并排序
+                sql_query = f'SELECT {select_clause} FROM "{table_name}" ORDER BY "{order_col}" DESC;'
+            else:
+                # 确保 content_limit 是整数，防止字符串格式化进 SQL 时出错
+                content_limit = int(content_limit) 
+                # 限制显示：使用子查询获取最新的 N 行
+                sql_query = f"""
+                SELECT {select_clause}
+                FROM (
+                    SELECT * FROM "{table_name}"
+                    ORDER BY "{order_col}" DESC
+                    LIMIT {content_limit}
+                ) AS sub
+                ORDER BY "{order_col}" DESC;
+                """
             
             # 执行查询
             cursor.execute(sql_query)
-            
-            # ==================== 新增/修改部分结束 ====================
-            
             content_preview = cursor.fetchall()
             # 获取列名
             content_headers = [description[0] for description in cursor.description] if cursor.description else []
@@ -324,5 +334,27 @@ if __name__ == "__main__":
     # 这是您希望保存HTML文件的目录
     report_save_directory = "/Users/yanzhang/Downloads"
     
-    # 调用主函数开始执行，并传入输出目录
-    visualize_sqlite_db(database_file_path, output_dir=report_save_directory, content_limit=500)
+    # --- 配置项 1: 指定要显示的表 (None 表示全部) ---
+    # 场景1：只看 Options
+    my_target_tables = ["Options"]
+    
+    # 场景2：看 Options 和 Bonds
+    # my_target_tables = ["Options", "Bonds"]
+    
+    # 场景3：看所有表（设为 None 或空列表 []）
+    # my_target_tables = None 
+
+    # --- 配置项 2: 数据显示量 ---
+    # 选项 A: 显示固定行数，例如 500
+    # my_content_limit = 500
+    
+    # 选项 B: 显示全部数据，设置为 'all'
+    my_content_limit = 'all'
+    
+    # 调用时传入 target_tables 参数
+    visualize_sqlite_db(
+        database_file_path, 
+        output_dir=report_save_directory, 
+        content_limit=my_content_limit,
+        target_tables=my_target_tables
+    )

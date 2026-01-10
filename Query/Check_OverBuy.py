@@ -370,10 +370,17 @@ def parse_compare_percent(compare_str: str, symbol: str):
 panel_data['Short'] = {}
 short_group = panel_data['Short']
 
+# 【新增】Short_backup 分组 (同步初始化)
+panel_data['Short_backup'] = {}
+short_backup_group = panel_data['Short_backup']
+
 # 2. Short_W 分组 (强制清空，实现“先清除再写入”)
 panel_data['Short_W'] = {}
 short_w_group = panel_data['Short_W']
 
+# 【新增】Short_W_backup 分组 (同步初始化)
+panel_data['Short_W_backup'] = {}
+short_w_backup_group = panel_data['Short_W_backup']
 
 # 连接数据库
 conn = sqlite3.connect(DB_FILE, timeout=60.0)

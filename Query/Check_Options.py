@@ -5,8 +5,8 @@ import json
 import re
 import pandas as pd
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
-                             QHBoxLayout, QLabel, QScrollArea, QFrame)
-from PyQt6.QtCore import Qt, pyqtSignal
+                             QHBoxLayout, QLabel, QScrollArea, QFrame, QLineEdit, QPushButton)
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QCursor
 
 # 0. 引入外部绘图模块
@@ -150,6 +150,16 @@ class StockCard(QFrame):
         # 但是 SymbolLabel 上会覆盖这个光标变成 I-Beam
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         
+    def set_highlight(self, active: bool):
+        """设置高亮状态"""
+        if active:
+            self.setProperty("highlighted", "true")
+        else:
+            self.setProperty("highlighted", "false")
+        # 必须刷新样式以应用属性选择器
+        self.style().unpolish(self)
+        self.style().polish(self)
+
     def mousePressEvent(self, event):
         # 只有点击没有被子控件（如 SymbolLabel）消费的区域时，才触发绘图
         if event.button() == Qt.MouseButton.LeftButton:
@@ -158,6 +168,9 @@ class StockCard(QFrame):
 
     def init_ui(self):
         self.setObjectName("Card")
+        # 初始化属性
+        self.setProperty("highlighted", "false")
+        
         layout = QHBoxLayout(self)
         layout.setContentsMargins(15, 15, 15, 15)
         layout.setSpacing(20)
@@ -268,27 +281,47 @@ class MainWindow(QMainWindow):
         self.center()
         
         self.data_manager = DataManager()
-        
+        self.cards_map = {}  # 用于存储 Symbol -> CardWidget 的映射
+        self.last_highlighted_card = None # 记录上一个高亮的卡片
+
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
         main_layout = QVBoxLayout(main_widget)
         main_layout.setContentsMargins(10, 10, 10, 10)
         
+        # --- 顶部标题 ---
         header = QLabel("Stock Options Monitor")
         header.setObjectName("Header")
         header.setAlignment(Qt.AlignmentFlag.AlignCenter)
         main_layout.addWidget(header)
+
+        # --- 新增：搜索区域 ---
+        search_layout = QHBoxLayout()
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Search Symbol (e.g. AAPL)...")
+        self.search_input.setObjectName("SearchInput")
+        self.search_input.returnPressed.connect(self.perform_search) # 回车搜索
         
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        search_btn = QPushButton("Search")
+        search_btn.setObjectName("SearchButton")
+        search_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        search_btn.clicked.connect(self.perform_search)
+        
+        search_layout.addWidget(self.search_input)
+        search_layout.addWidget(search_btn)
+        main_layout.addLayout(search_layout)
+        
+        # --- 滚动区域 ---
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setFrameShape(QFrame.Shape.NoFrame)
         self.list_container = QWidget()
         self.list_layout = QVBoxLayout(self.list_container)
         self.list_layout.setSpacing(10)
         self.list_layout.setContentsMargins(0, 0, 0, 0)
         self.list_layout.addStretch()
-        scroll.setWidget(self.list_container)
-        main_layout.addWidget(scroll)
+        self.scroll.setWidget(self.list_container)
+        main_layout.addWidget(self.scroll)
         
         self.load_and_render()
         self.apply_styles()
@@ -307,11 +340,18 @@ class MainWindow(QMainWindow):
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Escape:
             self.close()
+        # 快捷键 Ctrl+F 定位到搜索框
+        elif event.modifiers() == Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_F:
+            self.search_input.setFocus()
+            self.search_input.selectAll()
         else:
             super().keyPressEvent(event)
 
     def load_and_render(self):
         data_list = self.data_manager.load_data()
+        
+        # 清除旧数据
+        self.cards_map.clear()
         while self.list_layout.count() > 1:
             item = self.list_layout.takeAt(0)
             if item.widget(): item.widget().deleteLater()
@@ -319,7 +359,35 @@ class MainWindow(QMainWindow):
         for item_data in data_list:
             card = StockCard(item_data)
             card.clicked.connect(self.on_card_clicked)
+            # 存入映射表
+            self.cards_map[item_data['symbol'].upper()] = card
             self.list_layout.insertWidget(self.list_layout.count()-1, card)
+
+    def perform_search(self):
+        """搜索并跳转逻辑"""
+        search_text = self.search_input.text().strip().upper()
+        if not search_text:
+            return
+
+        if search_text in self.cards_map:
+            target_card = self.cards_map[search_text]
+            
+            # 1. 取消之前的搜索高亮
+            if self.last_highlighted_card:
+                self.last_highlighted_card.set_highlight(False)
+            
+            # 2. 自动滚动到目标位置
+            # ensureWidgetVisible 会调整滚动条使该 widget 可见
+            self.scroll.ensureWidgetVisible(target_card, 50, 50)
+            
+            # 3. 设置当前高亮
+            target_card.set_highlight(True)
+            self.last_highlighted_card = target_card
+            
+            # 4. (可选) 3秒后自动取消高亮，或者保留直到下次搜索
+            # QTimer.singleShot(3000, lambda: target_card.set_highlight(False))
+        else:
+            print(f"Symbol {search_text} not found.")
 
     def on_card_clicked(self, data):
         symbol = data['symbol']
@@ -345,11 +413,45 @@ class MainWindow(QMainWindow):
             QMainWindow { background-color: #1e1e1e; }
             QScrollArea { background-color: transparent; }
             QWidget { background-color: transparent; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; }
-            #Header { font-size: 24px; font-weight: bold; color: #ffffff; margin-bottom: 15px; }
+            
+            #Header { font-size: 24px; font-weight: bold; color: #ffffff; margin-bottom: 5px; }
+            
+            /* 搜索框样式 */
+            #SearchInput { 
+                background-color: #2d2d2d; 
+                border: 1px solid #555; 
+                border-radius: 5px; 
+                padding: 8px; 
+                font-size: 14px; 
+                color: white; 
+                margin-bottom: 10px;
+            }
+            #SearchInput:focus { border: 1px solid #0078d7; }
+            
+            #SearchButton {
+                background-color: #3d3d3d;
+                border: 1px solid #555;
+                border-radius: 5px;
+                padding: 8px 15px;
+                margin-bottom: 10px;
+                font-weight: bold;
+            }
+            #SearchButton:hover { background-color: #505050; }
+            #SearchButton:pressed { background-color: #0078d7; }
+
+            /* 卡片基础样式 */
             #Card { background-color: #2d2d2d; border-radius: 10px; border: 1px solid #3d3d3d; }
             #Card:hover { background-color: #353535; border: 1px solid #505050; }
+            
+            /* >>> 关键：搜索高亮样式 <<< */
+            #Card[highlighted="true"] { 
+                background-color: #3d3d3d; 
+                border: 2px solid #0078d7; 
+            }
+            
             #SymbolLabel { font-size: 22px; font-weight: 900; color: #ffffff; selection-background-color: #0078d7; selection-color: #ffffff; }
             #TagsLabel { font-size: 12px; color: #aaaaaa; font-style: italic; }
+            
             QScrollBar:vertical { border: none; background: #1e1e1e; width: 10px; }
             QScrollBar::handle:vertical { background: #555; min-height: 20px; border-radius: 5px; }
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }

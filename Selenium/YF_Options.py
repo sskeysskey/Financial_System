@@ -28,7 +28,7 @@ DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
 OUTPUT_DIR = '/Users/yanzhang/Coding/News/backup/'
 
 # 市值阈值 (1000亿) - 仅在数据库模式下生效
-MARKET_CAP_THRESHOLD = 100000000000
+MARKET_CAP_THRESHOLD = 800000000000
 
 # --- 2. 配置文件路径 ---
 SECTORS_JSON_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'

@@ -30,7 +30,8 @@
         "RBLX",
         "APP",
         "WBD",
-        "EA"
+        "EA",
+        "BIDU"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -59,8 +60,7 @@
         "ROST",
         "CVNA",
         "F",
-        "CMG",
-        "TCOM"
+        "CMG"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -239,7 +239,8 @@
         "CMI",
         "VRT",
         "PCAR",
-        "URI"
+        "URI",
+        "AXON"
     ],
     "Real_Estate": [
         "PLD",
@@ -300,7 +301,8 @@
         "GLW",
         "STX",
         "WDC",
-        "NXPI"
+        "NXPI",
+        "SNDK"
     ],
     "Utilities": [
         "NEE",
