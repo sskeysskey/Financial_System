@@ -114,15 +114,17 @@
     },
     "Options_zero": {},
     "Must": {
+        "JCI": "",
+        "STRL": "",
+        "CPNG": "",
+        "RBLX": "",
         "NFLX": "",
         "TT": "",
-        "JCI": "",
         "DEO": "",
         "BF-B": "",
         "NRG": "",
         "LLY": "",
         "AMKR": "",
-        "PWR": "",
         "CEG": "",
         "XLP": "",
         "PKG": "",
@@ -132,17 +134,13 @@
         "NET": "",
         "MOD": "",
         "GEV": "",
-        "PLTR": "",
         "SWKS": "",
         "QS": "",
         "LOGI": "",
         "NEU": "",
         "ERIC": "",
         "TPR": "",
-        "DJT": "",
-        "CPNG": "",
-        "RBLX": "",
-        "SATS": ""
+        "DJT": ""
     },
     "Short": {
         "LTM": "",
@@ -188,9 +186,7 @@
     "OverSell_W": {
         "SMCI": "SMCI15热"
     },
-    "OverSell_W_backup": {
-        "SMCI": "SMCI15热"
-    },
+    "OverSell_W_backup": {},
     "PE_Deep": {
         "AMD": "AMD15热",
         "ARM": "",
@@ -215,19 +211,7 @@
         "STRL": "STRL15热",
         "SWKS": ""
     },
-    "PE_Deep_backup": {
-        "CPNG": "",
-        "DEO": "",
-        "GRAB": "",
-        "HIMS": "",
-        "LOGI": "",
-        "LYFT": "",
-        "MRVL": "MRVL15热",
-        "NOK": "",
-        "QS": "",
-        "RBLX": "",
-        "STRL": "STRL15热"
-    },
+    "PE_Deep_backup": {},
     "PE_W": {
         "INSM": "",
         "NBIX": "",
@@ -235,13 +219,7 @@
         "PSTG": "PSTG15热",
         "PWR": "PWR7热"
     },
-    "PE_W_backup": {
-        "INSM": "",
-        "NBIX": "",
-        "NRG": "NRG7热",
-        "PSTG": "PSTG15热",
-        "PWR": "PWR7热"
-    },
+    "PE_W_backup": {},
     "PE_valid": {
         "AAPL": "AAPL7",
         "ALAB": "ALAB7热",

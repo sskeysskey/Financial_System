@@ -596,43 +596,57 @@ class MainWindow(QMainWindow):
         
         self.init_ui()
 
-    # >>> 新增方法 1: 处理来自 b.py 的回调 >>>
+        # >>> 修改后的 handle_chart_callback >>>
     def handle_chart_callback(self, deleted_symbol, action):
         """
         当 b.py 发生特定动作（如删除）时被调用
         """
         if action == 'deleted':
-            print(f"检测到 {deleted_symbol} 已被删除，准备跳转下一个...")
-            # 使用 QTimer 稍微延迟执行，确保当前图表窗口有时间关闭，且 UI 线程空闲
-            QTimer.singleShot(100, lambda: self.open_next_symbol(deleted_symbol))
+            # 关键修复：在窗口焦点切换导致 refresh 清空索引之前，
+            # 立即保存当前的索引！
+            saved_index = self.current_symbol_index
+            
+            print(f"检测到 {deleted_symbol} 已被删除，锁定索引: {saved_index}，准备跳转...")
+            
+            # 将保存好的 saved_index 传给 open_next_symbol
+            # 这样即使 100ms 后 self.current_symbol_index 变成了 -1，我们手里还有正确的索引
+            QTimer.singleShot(100, lambda: self.open_next_symbol(deleted_symbol, saved_index))
 
-    # >>> 新增方法 2: 计算并打开下一个 Symbol >>>
-    def open_next_symbol(self, deleted_symbol):
-        """
-        找到被删除 Symbol 的位置，并打开列表中的下一个 Symbol
-        """
-        # 1. 在当前的屏幕列表中找到被删除 Symbol 的索引
-        # 注意：此时 refresh_selection_window 还没运行，所以 deleted_symbol 应该还在 ordered_symbols_on_screen 里
-        if deleted_symbol in self.ordered_symbols_on_screen:
-            current_index = self.ordered_symbols_on_screen.index(deleted_symbol)
-            next_index = current_index + 1
 
-            # 2. 检查是否有下一个 Symbol
-            if next_index < len(self.ordered_symbols_on_screen):
-                next_symbol = self.ordered_symbols_on_screen[next_index]
-                
-                # 3. 先刷新 UI，把刚才删除的那个从列表里去掉
-                self.refresh_selection_window()
-                
-                # 4. 打开下一个 Symbol 的图表
-                print(f"自动打开下一个: {next_symbol}")
-                self.on_keyword_selected_chart(next_symbol)
-            else:
-                print("已到达列表末尾，停止自动跳转。")
-                self.refresh_selection_window()
+    # >>> 修改后的 open_next_symbol >>>
+    def open_next_symbol(self, deleted_symbol, target_index):
+        """
+        根据传入的 target_index (被删除元素的位置)，打开新列表中的该位置元素。
+        """
+        # 注意：这里我们不再读取 self.current_symbol_index，因为由于窗口激活，它可能已经被重置为 -1 了
+        # 我们直接使用传进来的 target_index，这是最准确的“座次”
+        
+        # 1. 再次刷新界面，确保 ordered_symbols_on_screen 是最新的（去掉了被删除的元素）
+        # 虽然 changeEvent 可能已经刷过一次，但再刷一次确保数据绝对同步
+        self.refresh_selection_window()
+        
+        # 2. 检查索引是否依然有效
+        # 此时的 ordered_symbols_on_screen 已经比刚才少了一个元素
+        # 如果刚才删的是第 50 个，现在第 50 个就是原来的第 51 个（自动补位）
+        if 0 <= target_index < len(self.ordered_symbols_on_screen):
+            # 取出这个位置上的新 Symbol
+            next_symbol = self.ordered_symbols_on_screen[target_index]
+            
+            print(f"自动打开下一个: {next_symbol} (Target Index: {target_index})")
+            
+            # 3. 打开它，并把这个索引再次绑定回去，保持“座次”不乱
+            self.on_keyword_selected_chart(next_symbol, btn_index=target_index)
+            
         else:
-            # 如果找不到（可能状态已经刷新），直接刷新一下界面
-            self.refresh_selection_window()
+            # 处理边界情况：如果你删的是列表里最后一个元素
+            if self.ordered_symbols_on_screen:
+                print("已删除最后一个元素，选中新的列表末尾。")
+                new_last_index = len(self.ordered_symbols_on_screen) - 1
+                next_symbol = self.ordered_symbols_on_screen[new_last_index]
+                self.on_keyword_selected_chart(next_symbol, btn_index=new_last_index)
+            else:
+                print("列表已空。")
+
     
     # --- 新增: 计算角标数字的核心逻辑 ---
     def get_consecutive_day_count(self, symbol, group):
@@ -1046,6 +1060,8 @@ class MainWindow(QMainWindow):
                     for keyword, translation in items:
                         # <--- 新增: 将排序后的 keyword 添加到新列表中
                         self.ordered_symbols_on_screen.append(keyword)
+                        # <--- 新增: 获取刚才添加进去的这个 keyword 的确切索引
+                        current_btn_index = len(self.ordered_symbols_on_screen) - 1 
                         
                         # --- 1. 获取横杠数量 ---
                         bar_count = self.get_consecutive_day_count(keyword, sector)
@@ -1074,7 +1090,8 @@ class MainWindow(QMainWindow):
                         button.setObjectName(self.get_button_style_name(keyword))
                         # PyQt6: Qt.CursorShape.PointingHandCursor
                         button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-                        button.clicked.connect(lambda _, k=keyword: self.on_keyword_selected_chart(k))
+                        # <--- 关键修改: lambda 中增加 idx 参数，并将 current_btn_index 传进去
+                        button.clicked.connect(lambda _, k=keyword, idx=current_btn_index: self.on_keyword_selected_chart(k, idx))
 
                         # (设置按钮颜色、Tooltip、右键菜单的代码保持不变)
                         earning_price, price_trend, _ = get_color_decision_data(DB_PATH, sector_data, keyword)
@@ -1366,13 +1383,29 @@ class MainWindow(QMainWindow):
                 # 递归清空子布局
                 self.clear_layout(layout_item.layout())
         
-        ### <<< 修改: 刷新时清空高亮按钮列表
+        # self.highlighted_buttons = [] # 根据需要，如果你想保留高亮可以注释掉这行，或者保留
         self.highlighted_buttons = []
-        
-        # <--- 新增: 刷新时重置导航索引
-        self.current_symbol_index = -1
+
+        # >>>>>>>>> 关键修改 START >>>>>>>>>
+        # 绝对不要在这里把索引重置为 -1！
+        # 这就是导致“连续操作后丢失位置”的罪魁祸首。
+        # 删除或注释掉下面这行：
+        # self.current_symbol_index = -1 
+        # <<<<<<<<< 关键修改 END <<<<<<<<<
         
         self.populate_widgets()
+
+        # >>>>>>>>> 新增安全检查 >>>>>>>>>
+        # 刷新后，如果列表变短了（比如删除了最后一个），我们需要把索引修正回来，
+        # 防止它指向一个不存在的空位。
+        total_symbols = len(self.ordered_symbols_on_screen)
+        if total_symbols > 0:
+            if self.current_symbol_index >= total_symbols:
+                self.current_symbol_index = total_symbols - 1
+        else:
+            self.current_symbol_index = -1
+        # <<<<<<<<< 新增安全检查 END <<<<<<<<<
+
 
     def clear_layout(self, layout):
         """辅助函数，用于递归删除布局中的所有控件"""
@@ -1386,7 +1419,7 @@ class MainWindow(QMainWindow):
                     self.clear_layout(item.layout())
 
     # ### 修改 ###: 更新此方法以使用新的数据库查询函数
-    def on_keyword_selected_chart(self, value):
+    def on_keyword_selected_chart(self, value, btn_index=None):
         # —— 在真正 plot 之前，先 reload 一下外部可能改动过的文件 —— 
         global json_data, compare_data
         try:
@@ -1396,22 +1429,28 @@ class MainWindow(QMainWindow):
             
         sector = next((s for s, names in sector_data.items() if value in names), None)
         if sector:
-            # <--- 修改: 更新当前符号索引，而不是调用 symbol_manager
-            if value in self.ordered_symbols_on_screen:
-                self.current_symbol_index = self.ordered_symbols_on_screen.index(value)
-            
+            # <--- 关键修改 START: 优先使用传入的精确索引 --->
+            if btn_index is not None:
+                # 如果传了精确索引，直接信赖它（解决了重复 Symbol 定位错误的问题）
+                self.current_symbol_index = btn_index
+            elif value in self.ordered_symbols_on_screen:
+                # 只有在没传索引（比如通过键盘按键触发）时，才使用模糊查找
+                # 为了防止键盘导航时跳回第一个重复项，加一个判断：
+                # 如果当前索引所指的正好就是 value，保持不动；否则才搜索
+                if not (0 <= self.current_symbol_index < len(self.ordered_symbols_on_screen) and \
+                        self.ordered_symbols_on_screen[self.current_symbol_index] == value):
+                    self.current_symbol_index = self.ordered_symbols_on_screen.index(value)
+            # <--- 关键修改 END --->
+
             compare_value = compare_data.get(value, "N/A")
-            
-            # 从数据库获取 shares, marketcap, pe, pb
             shares_val, marketcap_val, pe_val, pb_val = fetch_mnspp_data_from_db(DB_PATH, value)
             
-            # --- 修改处：添加 callback 参数 ---
+            # 调用绘图 (确保这里像上一次回答一样传入了 callback)
             plot_financial_data(
                 DB_PATH, sector, value, compare_value, (shares_val, pb_val),
                 marketcap_val, pe_val, json_data, '1Y', False,
                 callback=lambda action: self.handle_chart_callback(value, action)
             )
-            # <--- 第2处修改：在绘图后让主窗口重新获得焦点，以便响应键盘事件 ---
             self.setFocus()
 
     def on_keyword_selected(self, value):

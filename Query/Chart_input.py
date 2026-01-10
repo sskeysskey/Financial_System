@@ -810,6 +810,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         # 这是当【删除】脚本(Y)执行完后的回调
         def on_delete_done(delete_return_code):
             if delete_return_code == 0:
+                # ---> 在这里也可以加上 callback('deleted')
+                if callback:
+                    callback('deleted')
+                
                 print(f"删除操作完成 (Code 0)，正在关闭窗口...")
                 try: 
                     plt.close('all')
