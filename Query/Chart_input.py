@@ -588,7 +588,8 @@ def get_options_metrics(symbol):
 
 
 def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe, json_data,
-                        default_time_range="1Y", panel="False", callback=None):
+                        default_time_range="1Y", panel="False", callback=None, 
+                        window_title_text=None): # <--- 新增参数
     app = QApplication.instance() or QApplication(sys.argv)
     plt.close('all')
     matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
@@ -645,6 +646,15 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     ax2 = ax1.twinx()
     ax2.axis('off')
     fig.patch.set_facecolor(NORD_THEME['background'])
+
+    # <--- 新增: 设置窗口标题 --->
+    # 放在创建 fig 之后
+    if window_title_text:
+        # 设置窗口顶部标题栏的文字
+        fig.canvas.manager.set_window_title(window_title_text)
+    else:
+        # 如果没传（比如搜索打开），默认显示 symbol 名字
+        fig.canvas.manager.set_window_title(name)
     
     # === 1. 处理基于文本文件的 Earning Release 遮罩 ===
     earning_release_date = find_earning_release_date(name)

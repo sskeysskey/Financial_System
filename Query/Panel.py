@@ -582,6 +582,8 @@ class MainWindow(QMainWindow):
         # <--- 新增: 用于方向键导航的变量
         self.ordered_symbols_on_screen = []
         self.current_symbol_index = -1
+        # <--- 新增: 用于存储每个 Symbol 对应的分组显示名称
+        self.ordered_groups_on_screen = [] 
 
         # 创建一个从内部长名称到UI显示短名称的映射字典
         self.display_name_map = {
@@ -1056,10 +1058,14 @@ class MainWindow(QMainWindow):
                     title = (f"{display_sector_name} ({shown}/{total})"
                              if shown != total else display_sector_name)
                     group_box.setTitle(title)
-
+                    
                     for keyword, translation in items:
                         # <--- 新增: 将排序后的 keyword 添加到新列表中
                         self.ordered_symbols_on_screen.append(keyword)
+                        
+                        # <--- 新增: 同步添加当前的分组显示名称 (display_sector_name)
+                        self.ordered_groups_on_screen.append(display_sector_name)
+                        
                         # <--- 新增: 获取刚才添加进去的这个 keyword 的确切索引
                         current_btn_index = len(self.ordered_symbols_on_screen) - 1 
                         
@@ -1385,6 +1391,8 @@ class MainWindow(QMainWindow):
         
         # self.highlighted_buttons = [] # 根据需要，如果你想保留高亮可以注释掉这行，或者保留
         self.highlighted_buttons = []
+        # <--- 新增: 刷新时清空分组列表
+        self.ordered_groups_on_screen = []
 
         # >>>>>>>>> 关键修改 START >>>>>>>>>
         # 绝对不要在这里把索引重置为 -1！
@@ -1440,17 +1448,23 @@ class MainWindow(QMainWindow):
                 if not (0 <= self.current_symbol_index < len(self.ordered_symbols_on_screen) and \
                         self.ordered_symbols_on_screen[self.current_symbol_index] == value):
                     self.current_symbol_index = self.ordered_symbols_on_screen.index(value)
-            # <--- 关键修改 END --->
-
+            # <--- 新增: 准备窗口标题 --->
+            # 默认为 sector (DB表名)，如果能找到对应的 UI 分组名，则使用 UI 分组名
+            window_title = sector
+            if 0 <= self.current_symbol_index < len(self.ordered_groups_on_screen):
+                window_title = self.ordered_groups_on_screen[self.current_symbol_index]
+            
             compare_value = compare_data.get(value, "N/A")
             shares_val, marketcap_val, pe_val, pb_val = fetch_mnspp_data_from_db(DB_PATH, value)
             
-            # 调用绘图 (确保这里像上一次回答一样传入了 callback)
+            # <--- 修改: 将 window_title 传入 plot_financial_data
             plot_financial_data(
                 DB_PATH, sector, value, compare_value, (shares_val, pb_val),
                 marketcap_val, pe_val, json_data, '1Y', False,
-                callback=lambda action: self.handle_chart_callback(value, action)
+                callback=lambda action: self.handle_chart_callback(value, action),
+                window_title_text=window_title  # <--- 传参
             )
+            
             self.setFocus()
 
     def on_keyword_selected(self, value):
