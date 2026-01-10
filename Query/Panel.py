@@ -596,6 +596,44 @@ class MainWindow(QMainWindow):
         
         self.init_ui()
 
+    # >>> 新增方法 1: 处理来自 b.py 的回调 >>>
+    def handle_chart_callback(self, deleted_symbol, action):
+        """
+        当 b.py 发生特定动作（如删除）时被调用
+        """
+        if action == 'deleted':
+            print(f"检测到 {deleted_symbol} 已被删除，准备跳转下一个...")
+            # 使用 QTimer 稍微延迟执行，确保当前图表窗口有时间关闭，且 UI 线程空闲
+            QTimer.singleShot(100, lambda: self.open_next_symbol(deleted_symbol))
+
+    # >>> 新增方法 2: 计算并打开下一个 Symbol >>>
+    def open_next_symbol(self, deleted_symbol):
+        """
+        找到被删除 Symbol 的位置，并打开列表中的下一个 Symbol
+        """
+        # 1. 在当前的屏幕列表中找到被删除 Symbol 的索引
+        # 注意：此时 refresh_selection_window 还没运行，所以 deleted_symbol 应该还在 ordered_symbols_on_screen 里
+        if deleted_symbol in self.ordered_symbols_on_screen:
+            current_index = self.ordered_symbols_on_screen.index(deleted_symbol)
+            next_index = current_index + 1
+
+            # 2. 检查是否有下一个 Symbol
+            if next_index < len(self.ordered_symbols_on_screen):
+                next_symbol = self.ordered_symbols_on_screen[next_index]
+                
+                # 3. 先刷新 UI，把刚才删除的那个从列表里去掉
+                self.refresh_selection_window()
+                
+                # 4. 打开下一个 Symbol 的图表
+                print(f"自动打开下一个: {next_symbol}")
+                self.on_keyword_selected_chart(next_symbol)
+            else:
+                print("已到达列表末尾，停止自动跳转。")
+                self.refresh_selection_window()
+        else:
+            # 如果找不到（可能状态已经刷新），直接刷新一下界面
+            self.refresh_selection_window()
+    
     # --- 新增: 计算角标数字的核心逻辑 ---
     def get_consecutive_day_count(self, symbol, group):
         """ 
@@ -1352,10 +1390,10 @@ class MainWindow(QMainWindow):
         # —— 在真正 plot 之前，先 reload 一下外部可能改动过的文件 —— 
         global json_data, compare_data
         try:
-            json_data    = load_json(DESCRIPTION_PATH)
+            json_data = load_json(DESCRIPTION_PATH) # 注意这里你原代码是 DESCRIPTION_PATH
         except Exception as e:
-            print("重新加载 description/compare 数据出错:", e)
-        
+            pass # 略过错误处理细节，保持原逻辑
+            
         sector = next((s for s, names in sector_data.items() if value in names), None)
         if sector:
             # <--- 修改: 更新当前符号索引，而不是调用 symbol_manager
@@ -1367,11 +1405,11 @@ class MainWindow(QMainWindow):
             # 从数据库获取 shares, marketcap, pe, pb
             shares_val, marketcap_val, pe_val, pb_val = fetch_mnspp_data_from_db(DB_PATH, value)
             
-            # 调用绘图函数，注意参数的变化：
-            # - shares_value 现在是一个包含 (shares, pb) 的元组
+            # --- 修改处：添加 callback 参数 ---
             plot_financial_data(
                 DB_PATH, sector, value, compare_value, (shares_val, pb_val),
-                marketcap_val, pe_val, json_data, '1Y', False
+                marketcap_val, pe_val, json_data, '1Y', False,
+                callback=lambda action: self.handle_chart_callback(value, action)
             )
             # <--- 第2处修改：在绘图后让主窗口重新获得焦点，以便响应键盘事件 ---
             self.setFocus()

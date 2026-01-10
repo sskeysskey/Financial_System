@@ -588,7 +588,7 @@ def get_options_metrics(symbol):
 
 
 def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe, json_data,
-                        default_time_range="1Y", panel="False"):
+                        default_time_range="1Y", panel="False", callback=None):
     app = QApplication.instance() or QApplication(sys.argv)
     plt.close('all')
     matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
@@ -1591,6 +1591,13 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         def on_done(return_code):
             # 只有在成功删除（返回码为0）时才关闭图形并退出
             if return_code == 0:
+                # >>> 新增代码 START >>>
+                if callback:
+                    # 通知调用者发生了 'deleted' 动作
+                    callback('deleted')
+                # <<< 新增代码 END <<<
+                
+                print(f"删除操作完成 (Code 0)，正在关闭窗口...")
                 try: 
                     plt.close('all')
                 except: 
@@ -1603,7 +1610,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             else:
                 # 返回码非0表示用户取消，不做任何操作
                 print(f"用户取消了删除操作（返回码: {return_code}）")
-        
+
         execute_external_script('panel_delete', name, on_done=on_done, block=True)
     
     # --- 新增修改 4: 创建刷新函数，并将其绑定到 'g' 键 ---
