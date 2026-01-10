@@ -16,6 +16,24 @@ import subprocess
 # 请将这里替换为您 JSON 文件的实际路径
 JSON_FILE_PATH = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json"
 
+# --- 新增：原生 macOS 弹窗函数 ---
+def display_dialog(message):
+    """
+    使用 AppleScript 显示原生 macOS 弹窗。
+    注意：AppleScript 不支持 HTML 格式，且需要处理消息中的双引号。
+    """
+    # 转义双引号，防止 AppleScript 语法错误
+    safe_message = message.replace('"', '\\"')
+    
+    # 构造 AppleScript 命令
+    # with icon caution/stop/note 可以改变图标，这里默认不加，或者你可以加上 "with icon 1"
+    applescript_code = f'display dialog "{safe_message}" buttons {{"OK"}} default button "OK"'
+    
+    try:
+        subprocess.run(['osascript', '-e', applescript_code], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"弹窗显示失败: {e}")
+
 # --- 以下函数未做修改 ---
 
 def is_uppercase_letters(text: str) -> bool:
@@ -35,9 +53,8 @@ def copy2clipboard():
         subprocess.run(['osascript', '-e', script], check=True, capture_output=True)
     except (subprocess.CalledProcessError, FileNotFoundError) as e:
         print(f"执行 AppleScript 失败: {e}")
-        # 在GUI程序中，最好用弹窗提示
-        # QMessageBox.warning(None, "剪贴板操作失败", "无法自动复制内容，请手动输入。")
-
+        # 这里原来的 QMessageBox 是注释掉的，如果需要也可以换成 display_dialog
+        # display_dialog("无法自动复制内容，请手动输入。")
 
 class SymbolInputDialog(QDialog):
     """
@@ -97,7 +114,8 @@ class CategorySelectionDialog(QDialog):
 
         # 布局
         layout = QVBoxLayout(self)
-        # 修改提示语，使用红色突出显示要删除的 Symbol
+
+        # 提示语 (保留 HTML 样式，因为这里是 PyQt 窗口内部的 Label，不是弹窗)
         self.label = QLabel(f"Symbol <b style='color:red;'>{symbol}</b> 存在于以下分组，<br>请选择要将其删除的位置:", self)
         layout.addWidget(self.label)
 
@@ -110,9 +128,8 @@ class CategorySelectionDialog(QDialog):
             if category in ["Must", "Today"]:
                 checkbox.setChecked(False)  # 如果是 Must 或 Today，默认不选中
             else:
-                checkbox.setChecked(True)   # 其他情况默认选中
-            # --- 修改结束 ---
-
+                checkbox.setChecked(True)
+            
             self.checkboxes.append(checkbox)
             layout.addWidget(checkbox)
 
@@ -157,7 +174,8 @@ def main():
 
     # 1. 检查 JSON 文件是否存在
     if not os.path.exists(JSON_FILE_PATH):
-        QMessageBox.critical(None, "错误", f"关键文件未找到，请检查路径：\n{JSON_FILE_PATH}")
+        # [修改] 使用原生弹窗
+        display_dialog(f"错误: 关键文件未找到，请检查路径：\n{JSON_FILE_PATH}")
         sys.exit(1)
 
     # 2. 确定 Symbol (逻辑不变，但对话框标题已修改)
@@ -180,8 +198,9 @@ def main():
             if symbol_dialog.exec_() == QDialog.Accepted:
                 symbol = symbol_dialog.get_symbol()
                 if not symbol:
-                    QMessageBox.warning(None, "输入无效", "Symbol 不能为空，程序已终止。")
-                    sys.exit(2)  # 修改：返回退出码 2 表示用户取消
+                    # [修改] 使用原生弹窗
+                    display_dialog("Symbol 不能为空，程序已终止。")
+                    sys.exit(2)
             else:
                 # 用户点击了取消或按了 ESC
                 print("用户取消了操作。程序退出。")
@@ -198,10 +217,12 @@ def main():
         with open(JSON_FILE_PATH, 'r', encoding='utf-8') as f:
             panel_data = json.load(f)
     except json.JSONDecodeError:
-        QMessageBox.critical(None, "文件错误", f"无法解析 JSON 文件，请检查文件格式：\n{JSON_FILE_PATH}")
+        # [修改] 使用原生弹窗
+        display_dialog(f"无法解析 JSON 文件，请检查文件格式：\n{JSON_FILE_PATH}")
         sys.exit(1)
     except Exception as e:
-        QMessageBox.critical(None, "文件读取错误", f"读取文件时发生意外错误：\n{e}")
+        # [修改] 使用原生弹窗
+        display_dialog(f"读取文件时发生意外错误：\n{e}")
         sys.exit(1)
 
     # --- 修改开始：定义要隐藏的分组 ---
@@ -229,10 +250,10 @@ def main():
         if isinstance(symbols_dict, dict) and symbol in symbols_dict:
             found_in_categories.append(category)
 
-    # 如果任何分组中都未找到该 symbol (或者 symbol 仅存在于被隐藏的分组中)，则提示并退出
+    # [修改] 重点：如果未找到，替换原来的 information 弹窗
     if not found_in_categories:
-        # 这里的提示语逻辑上也是通顺的：在所有(可操作的)分组中均未找到
-        QMessageBox.information(None, "未找到", f"在所有可操作分组中均未找到 Symbol <b style='color:blue;'>{symbol}</b>，程序已终止。")
+        # 注意：这里去掉了 <b style...> 等 HTML 标签，因为 display dialog 不支持
+        display_dialog(f"在所有可操作分组中均未找到 Symbol {symbol}，程序已终止。")
         sys.exit(2)
 
     # 4. 弹出选择对话框，让用户选择要从哪些分组中删除
@@ -240,13 +261,14 @@ def main():
     category_dialog.show()
     category_dialog.activateWindow()
     category_dialog.raise_()
-    
+
     categories_to_delete_from = []
     if category_dialog.exec_() == QDialog.Accepted:
         categories_to_delete_from = category_dialog.get_selected_categories()
         if not categories_to_delete_from:
-            QMessageBox.warning(None, "选择无效", "您没有选择任何分组进行删除，程序已终止。")
-            sys.exit(2)  # 修改：返回退出码 2 表示用户取消
+            # [修改] 使用原生弹窗
+            display_dialog("您没有选择任何分组进行删除，程序已终止。")
+            sys.exit(2)
     else:
         # 用户点击了取消或按了 ESC
         print("用户取消了操作。程序退出。")
@@ -266,20 +288,21 @@ def main():
             with open(JSON_FILE_PATH, 'w', encoding='utf-8') as f:
                 json.dump(panel_data, f, ensure_ascii=False, indent=4)
             
-            # 使用 print 替代 QMessageBox 以快速退出
+            # 成功也可以用原生弹窗提示，或者保持 print
+            # display_dialog(f"成功从分组 {categories_to_delete_from} 中删除了 '{symbol}'。")
             print(f"成功从分组 {categories_to_delete_from} 中删除了 '{symbol}'。")
-            sys.exit(0)  # 修改：明确返回退出码 0 表示成功删除
+            sys.exit(0)
         else:
-            # 这个分支理论上不会进入，因为前面的逻辑保证了至少有一个可选项
-            QMessageBox.warning(None, "无任何更改", "未能执行任何删除操作。")
-            sys.exit(2)  # 修改：返回退出码 2 表示未执行删除
+            # [修改] 使用原生弹窗
+            display_dialog("未能执行任何删除操作。")
+            sys.exit(2)
 
     except Exception as e:
-        QMessageBox.critical(None, "未知错误", f"写入文件或删除数据时发生意外错误：\n{e}")
+        # [修改] 使用原生弹窗
+        display_dialog(f"写入文件或删除数据时发生意外错误：\n{e}")
         sys.exit(1)
 
     sys.exit(0)
-
 
 if __name__ == '__main__':
     main()

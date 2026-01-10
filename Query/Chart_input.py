@@ -811,7 +811,6 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         def on_delete_done(delete_return_code):
             if delete_return_code == 0:
                 print(f"删除操作完成 (Code 0)，正在关闭窗口...")
-                # --- 这里复用 launch_and_close_for_y 的关闭逻辑 ---
                 try: 
                     plt.close('all')
                 except: 
