@@ -4,6 +4,15 @@ import sqlite3
 import json
 import re
 import pandas as pd
+import datetime
+
+# --- 0. 关键修改: 引入 holidays 库 ---
+try:
+    import holidays
+except ImportError:
+    print("错误：未找到 holidays 模块。请运行: pip install holidays")
+    sys.exit(1)
+
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QLabel, QScrollArea, QFrame, QLineEdit, QPushButton)
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
@@ -18,8 +27,40 @@ except ImportError:
     def plot_financial_data(*args, **kwargs):
         print("Mock: Plotting data...", args)
 
-# 1. 数据处理层 (Data Handler)
+# --- 新增: 交易日计算工具类 ---
+class TradingDateHelper:
+    """
+    使用 holidays 库自动计算美股(NYSE)交易日。
+    """
+    @staticmethod
+    def get_last_trading_date(base_date=None):
+        """
+        获取相对于 base_date (默认今天) 的最近一个有效交易日字符串 (YYYY-MM-DD)。
+        """
+        if base_date is None:
+            base_date = datetime.date.today()
+        
+        # 获取 NYSE 专属日历 (自动处理周末补休规则)
+        nyse_holidays = holidays.NYSE()
+        
+        # 从"昨天"开始找 (因为今天是盘中或还没开盘，通常看的是昨收)
+        target_date = base_date - datetime.timedelta(days=1)
+        
+        while True:
+            # 1. 检查周末 (5=Sat, 6=Sun)
+            if target_date.weekday() >= 5:
+                target_date -= datetime.timedelta(days=1)
+                continue
+            
+            # 2. 检查 NYSE 节假日
+            if target_date in nyse_holidays:
+                target_date -= datetime.timedelta(days=1)
+                continue
+                
+            # 找到交易日
+            return target_date.strftime("%Y-%m-%d")
 
+# 1. 数据处理层 (Data Handler)
 class DataManager:
     def __init__(self):
         self.path_csv = r"/Users/yanzhang/Coding/News/Options_Change.csv"
@@ -53,6 +94,7 @@ class DataManager:
                 conn = sqlite3.connect(self.path_db)
                 cursor = conn.cursor()
                 placeholders = ','.join('?' for _ in symbols)
+                
                 sql_mnspp = f"SELECT symbol, marketcap, shares, pe_ratio, pb FROM MNSPP WHERE symbol IN ({placeholders})"
                 cursor.execute(sql_mnspp, symbols)
                 for row in cursor.fetchall():
@@ -65,10 +107,12 @@ class DataManager:
 
                 sql_options = f"SELECT name, date, iv, price, change FROM Options WHERE name IN ({placeholders}) ORDER BY date DESC"
                 df_opts = pd.read_sql_query(sql_options, conn, params=symbols)
+                
                 for sym in symbols:
                     sym_opts = df_opts[df_opts['name'] == sym]
                     top2 = sym_opts.head(2).to_dict('records')
                     options_data[sym] = top2
+                    
                 conn.close()
             except Exception: pass
         
@@ -81,6 +125,7 @@ class DataManager:
                     pattern = re.compile(r"^([A-Z0-9\-\.]+):\s*.*?([+\-]?\d+(?:\.\d+)?)%", re.MULTILINE)
                     for sym, val in pattern.findall(content):
                         compare_parsed[sym] = float(val)
+                    
                     f.seek(0)
                     for line in f:
                         line = line.strip()
@@ -105,11 +150,36 @@ class DataManager:
                             tags_data[item.get('symbol')] = item.get('tag', [])
             except Exception: pass
 
+        # --- 核心修改：计算理论上的最近交易日 ---
+        target_date_str = TradingDateHelper.get_last_trading_date()
+        # print(f"理论最近交易日: {target_date_str}") # Debug用
+
         final_list = []
         for sym in symbols:
             m_info = mnspp_data.get(sym, {'marketcap': None, 'shares': "N/A", 'pe': "N/A", 'pb': "--"})
-            opts = options_data.get(sym, [])
-            while len(opts) < 2: opts.append({'iv': None, 'price': 0, 'change': 0})
+            
+            # 获取数据库里的原始数据
+            raw_opts = options_data.get(sym, [])
+            
+            # --- 核心修改：日期校验与过滤 ---
+            valid_opts = []
+            
+            # 1. 检查第一条数据（最新数据）是否匹配理论日期
+            if len(raw_opts) > 0:
+                latest_data = raw_opts[0]
+                db_date = latest_data['date'] # 假设格式为 YYYY-MM-DD
+                
+                if db_date == target_date_str:
+                    # 日期匹配，视为有效数据
+                    valid_opts = raw_opts
+                else:
+                    # 日期不匹配（数据过期或缺失），视为无数据
+                    # 你也可以选择保留 valid_opts = []，或者填充空值
+                    valid_opts = [] 
+            
+            # 填充空数据以防列表越界 (保持原有的 while 逻辑，但针对 valid_opts)
+            while len(valid_opts) < 2: 
+                valid_opts.append({'iv': None, 'price': 0, 'change': 0})
             
             def parse_iv(val):
                 return float(val.replace('%', '').replace(' ', '')) if (val and isinstance(val, str)) else 0.0
@@ -120,10 +190,11 @@ class DataManager:
                 'shares': m_info['shares'],
                 'pe': m_info['pe'],
                 'pb': m_info['pb'],
-                'iv1': parse_iv(opts[0]['iv']),
-                'iv2': parse_iv(opts[1]['iv']),
-                'sum1': (opts[0]['price'] or 0) + (opts[0]['change'] or 0),
-                'sum2': (opts[1]['price'] or 0) + (opts[1]['change'] or 0),
+                # 使用经过校验的 valid_opts
+                'iv1': parse_iv(valid_opts[0]['iv']),
+                'iv2': parse_iv(valid_opts[1]['iv']),
+                'sum1': (valid_opts[0]['price'] or 0) + (valid_opts[0]['change'] or 0),
+                'sum2': (valid_opts[1]['price'] or 0) + (valid_opts[1]['change'] or 0),
                 'compare': compare_parsed.get(sym, 0.0),
                 'raw_compare': compare_raw.get(sym, "N/A"),
                 'tags': tags_data.get(sym, [])
@@ -141,55 +212,45 @@ class DataManager:
 
 class StockCard(QFrame):
     clicked = pyqtSignal(dict)
-
+    
     def __init__(self, data):
         super().__init__()
         self.data = data
         self.init_ui()
-        # 默认整个 Frame 都是手型光标（提示可点击）
-        # 但是 SymbolLabel 上会覆盖这个光标变成 I-Beam
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         
     def set_highlight(self, active: bool):
-        """设置高亮状态"""
         if active:
             self.setProperty("highlighted", "true")
         else:
             self.setProperty("highlighted", "false")
-        # 必须刷新样式以应用属性选择器
         self.style().unpolish(self)
         self.style().polish(self)
 
     def mousePressEvent(self, event):
-        # 只有点击没有被子控件（如 SymbolLabel）消费的区域时，才触发绘图
         if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit(self.data)
         super().mousePressEvent(event)
 
     def init_ui(self):
         self.setObjectName("Card")
-        # 初始化属性
         self.setProperty("highlighted", "false")
         
         layout = QHBoxLayout(self)
         layout.setContentsMargins(15, 15, 15, 15)
         layout.setSpacing(20)
         
-        # --- 左侧：Symbol (可选中) ---
+        # --- 左侧：Symbol ---
         lbl_symbol = QLabel(self.data['symbol'])
         lbl_symbol.setObjectName("SymbolLabel")
         lbl_symbol.setFixedWidth(80)
-        
-        # >>>>> 关键修改：开启鼠标选中 <<<<<
         lbl_symbol.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        # 显式设置光标为 IBeam，提示用户这里是选文字的
         lbl_symbol.setCursor(QCursor(Qt.CursorShape.IBeamCursor))
-        
         layout.addWidget(lbl_symbol)
         
         # --- 右侧：数据区域 ---
         right_widget = QWidget()
-        right_widget.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True) # 让右侧点击穿透到 Frame
+        right_widget.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         right_layout = QVBoxLayout(right_widget)
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(8)
@@ -197,70 +258,68 @@ class StockCard(QFrame):
         row1 = QHBoxLayout()
         row1.setSpacing(15)
         
-        # >>> 修改: 增强后的标签创建函数 <<<
         def create_value_label(val, role='primary', is_percent=False):
-            # role: 'primary' (1,4), 'secondary' (2,5), 'compare' (3)
+            # 处理 NaN: 无论是 None 还是 0.0 (如果被解析失败)
+            # 在 load_data 里的逻辑是：如果 valid_opts 为空，iv 解析为 0.0
+            # 我们可以简单判断：如果 val 为 0.0 且 role 是 primary (iv1)，则可能表示无数据
+            # 或者更严谨地，利用 pandas isna
             
-            # =========== 修改开始 ===========
-            # 检查值是否为 NaN (pd.isna 可以同时检测 float('nan'), np.nan 和 None)
-            if pd.isna(val):
-                txt = "--"
-            else:
-                txt = f"{val:.2f}%" if is_percent else f"{val:.2f}"
-            # =========== 修改结束 ===========
-
-            lbl = QLabel(txt)
+            display_txt = "--"
+            has_data = False
+            
+            if not pd.isna(val):
+                # 这里有个小技巧：如果数据无效，我们在 load_data 里填的是 0 或 None
+                # 对于 IV 来说，0.0 也是可能的，但极少。为了界面整洁，如果完全校验失败，
+                # load_data 里的 iv1 会是 0.0 (parse_iv 默认值)
+                # 我们可以根据 iv1 是否为 0.0 来决定是否显示颜色
+                
+                # 如果是百分比模式且值为 0，有可能是无数据，也有可能是真的0
+                # 暂时按正常数值处理
+                display_txt = f"{val:.2f}%" if is_percent else f"{val:.2f}"
+                has_data = True
+            
+            lbl = QLabel(display_txt)
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             
-            # --- 颜色逻辑 ---
-            color = "#DDDDDD" # 默认灰
+            color = "#DDDDDD" 
+            if has_data:
+                # 简单的 0 值判断可能不够完美，但够用了
+                if val > 0.001: # 稍微给个阈值
+                    if role == 'secondary': color = "#E57373"
+                    else: color = "#FF4500"
+                elif val < -0.001:
+                    if role == 'secondary': color = "#81C784"
+                    else: color = "#00FA9A"
             
-            # 注意：NaN 与数字比较通常返回 False，所以如果不处理，
-            # 它会自动落入这里的默认灰色 (#DDDDDD)，这正是我们想要的。
-            # 只有当 val 是有效数字时才进行颜色判断。
-            if not pd.isna(val): 
-                if val > 0:
-                    if role == 'secondary':
-                        color = "#E57373"  # 淡红 (Muted Red)
-                    else:
-                        color = "#FF4500"  # 鲜红 (OrangeRed)
-                elif val < 0:
-                    if role == 'secondary':
-                        color = "#81C784"  # 淡绿 (Muted Green)
-                    else:
-                        color = "#00FA9A"  # 鲜绿 (SpringGreen)
-            
-            # --- 样式逻辑 ---
             font_size = "14px"
             font_weight = "bold"
             extra_style = ""
             
             if role == 'primary':
-                font_size = "20px"     # 变大
-                font_weight = "900"    # 特粗
+                font_size = "20px"
+                font_weight = "900"
             elif role == 'compare':
-                # Compare 保持原样 + 蓝色背景
                 extra_style = "background-color: #2c3e50; border-radius: 4px; padding: 4px;"
             
             style = f"color: {color}; font-weight: {font_weight}; font-size: {font_size}; {extra_style}"
             lbl.setStyleSheet(style)
             return lbl
 
-        # 1. Latest IV -> Primary (大)
+        # 1. Latest IV
         row1.addWidget(create_value_label(self.data['iv1'], role='primary', is_percent=True))
-        # 2. 2nd Latest IV -> Secondary (小且淡)
+        # 2. 2nd Latest IV
         row1.addWidget(create_value_label(self.data['iv2'], role='secondary', is_percent=True))
-        # 3. Compare -> Compare (特殊背景)
+        # 3. Compare
         row1.addWidget(create_value_label(self.data['compare'], role='compare', is_percent=True))
-        # 4. 2nd Latest Sum -> Secondary (小且淡)
+        # 4. 2nd Latest Sum
         row1.addWidget(create_value_label(self.data['sum2'], role='secondary'))
-        # 5. Latest Sum -> Primary (大)
+        # 5. Latest Sum
         row1.addWidget(create_value_label(self.data['sum1'], role='primary'))
         
         row1.addStretch()
         right_layout.addLayout(row1)
         
-        # Tags (去掉 #)
+        # Tags
         tags_text = "  ".join([str(t) for t in self.data['tags']])
         lbl_tags = QLabel(tags_text if tags_text else "No Tags")
         lbl_tags.setObjectName("TagsLabel")
@@ -273,34 +332,28 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Market Analyzer Pro")
-        
-        # >>> 修改1: 增加初始高度到 1000px <<<
         self.resize(1000, 1000) 
-        
-        # >>> 修改: 调用居中方法 <<<
         self.center()
         
         self.data_manager = DataManager()
-        self.cards_map = {}  # 用于存储 Symbol -> CardWidget 的映射
-        self.last_highlighted_card = None # 记录上一个高亮的卡片
+        self.cards_map = {}
+        self.last_highlighted_card = None
 
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
         main_layout = QVBoxLayout(main_widget)
         main_layout.setContentsMargins(10, 10, 10, 10)
         
-        # --- 顶部标题 ---
         header = QLabel("Stock Options Monitor")
         header.setObjectName("Header")
         header.setAlignment(Qt.AlignmentFlag.AlignCenter)
         main_layout.addWidget(header)
 
-        # --- 新增：搜索区域 ---
         search_layout = QHBoxLayout()
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Search Symbol (e.g. AAPL)...")
         self.search_input.setObjectName("SearchInput")
-        self.search_input.returnPressed.connect(self.perform_search) # 回车搜索
+        self.search_input.returnPressed.connect(self.perform_search)
         
         search_btn = QPushButton("Search")
         search_btn.setObjectName("SearchButton")
@@ -311,7 +364,6 @@ class MainWindow(QMainWindow):
         search_layout.addWidget(search_btn)
         main_layout.addLayout(search_layout)
         
-        # --- 滚动区域 ---
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.scroll.setFrameShape(QFrame.Shape.NoFrame)
@@ -326,21 +378,15 @@ class MainWindow(QMainWindow):
         self.load_and_render()
         self.apply_styles()
 
-    # >>> 新增: 屏幕居中逻辑 <<<
     def center(self):
-        # 获取窗口当前的几何形状
         qr = self.frameGeometry()
-        # 获取屏幕中心点 (处理多显示器情况，默认 primary)
         cp = self.screen().availableGeometry().center()
-        # 将窗口矩形的中心移动到屏幕中心
         qr.moveCenter(cp)
-        # 移动窗口左上角到新计算的位置
         self.move(qr.topLeft())
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Escape:
             self.close()
-        # 快捷键 Ctrl+F 定位到搜索框
         elif event.modifiers() == Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_F:
             self.search_input.setFocus()
             self.search_input.selectAll()
@@ -349,43 +395,28 @@ class MainWindow(QMainWindow):
 
     def load_and_render(self):
         data_list = self.data_manager.load_data()
-        
-        # 清除旧数据
         self.cards_map.clear()
         while self.list_layout.count() > 1:
             item = self.list_layout.takeAt(0)
             if item.widget(): item.widget().deleteLater()
-
+            
         for item_data in data_list:
             card = StockCard(item_data)
             card.clicked.connect(self.on_card_clicked)
-            # 存入映射表
             self.cards_map[item_data['symbol'].upper()] = card
             self.list_layout.insertWidget(self.list_layout.count()-1, card)
 
     def perform_search(self):
-        """搜索并跳转逻辑"""
         search_text = self.search_input.text().strip().upper()
-        if not search_text:
-            return
-
+        if not search_text: return
+        
         if search_text in self.cards_map:
             target_card = self.cards_map[search_text]
-            
-            # 1. 取消之前的搜索高亮
             if self.last_highlighted_card:
                 self.last_highlighted_card.set_highlight(False)
-            
-            # 2. 自动滚动到目标位置
-            # ensureWidgetVisible 会调整滚动条使该 widget 可见
             self.scroll.ensureWidgetVisible(target_card, 50, 50)
-            
-            # 3. 设置当前高亮
             target_card.set_highlight(True)
             self.last_highlighted_card = target_card
-            
-            # 4. (可选) 3秒后自动取消高亮，或者保留直到下次搜索
-            # QTimer.singleShot(3000, lambda: target_card.set_highlight(False))
         else:
             print(f"Symbol {search_text} not found.")
 
@@ -413,10 +444,7 @@ class MainWindow(QMainWindow):
             QMainWindow { background-color: #1e1e1e; }
             QScrollArea { background-color: transparent; }
             QWidget { background-color: transparent; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; }
-            
             #Header { font-size: 24px; font-weight: bold; color: #ffffff; margin-bottom: 5px; }
-            
-            /* 搜索框样式 */
             #SearchInput { 
                 background-color: #2d2d2d; 
                 border: 1px solid #555; 
@@ -427,7 +455,6 @@ class MainWindow(QMainWindow):
                 margin-bottom: 10px;
             }
             #SearchInput:focus { border: 1px solid #0078d7; }
-            
             #SearchButton {
                 background-color: #3d3d3d;
                 border: 1px solid #555;
@@ -438,20 +465,14 @@ class MainWindow(QMainWindow):
             }
             #SearchButton:hover { background-color: #505050; }
             #SearchButton:pressed { background-color: #0078d7; }
-
-            /* 卡片基础样式 */
             #Card { background-color: #2d2d2d; border-radius: 10px; border: 1px solid #3d3d3d; }
             #Card:hover { background-color: #353535; border: 1px solid #505050; }
-            
-            /* >>> 关键：搜索高亮样式 <<< */
             #Card[highlighted="true"] { 
                 background-color: #3d3d3d; 
                 border: 2px solid #0078d7; 
             }
-            
             #SymbolLabel { font-size: 22px; font-weight: 900; color: #ffffff; selection-background-color: #0078d7; selection-color: #ffffff; }
             #TagsLabel { font-size: 12px; color: #aaaaaa; font-style: italic; }
-            
             QScrollBar:vertical { border: none; background: #1e1e1e; width: 10px; }
             QScrollBar::handle:vertical { background: #555; min-height: 20px; border-radius: 5px; }
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }

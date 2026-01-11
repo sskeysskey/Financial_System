@@ -292,19 +292,13 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USNonFarmA": "07 USNonFarmA",
-        "USNonPMI": "07 USNonPMI",
-        "USTrade": "08 USTrade",
-        "USInitial": "15 USInitial",
-        "USNonFarm": "09 USNonFarm",
-        "USUnemploy": "09 USUnemploy",
-        "USConfidence": "09 USConfidence",
         "USCPI": "13 USCPI",
         "CoreCPI": "13 CoreCPI",
         "CorePPI": "14 CorePPI",
         "USPPI": "14 USPPI",
         "USRetailM": "14 USRetailM",
-        "ImportPriceM": "15 ImportPriceM"
+        "ImportPriceM": "15 ImportPriceM",
+        "USInitial": "15 USInitial"
     },
     "Economic_All": {
         "USGDP": "",

@@ -8,7 +8,7 @@ import re
 from collections import OrderedDict
 import holidays
 
-# --- 修改: 切换到 PyQt6 ---
+# --- PyQt6 导入 ---
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QGroupBox, QScrollArea, QTextEdit, QDialog,
@@ -55,6 +55,41 @@ sector_data = {}
 json_data = {}
 # --- 新增: 全局变量用于存储 Earning History 数据 ---
 earning_history = {}
+
+# --- 新增: 交易日计算工具类 ---
+class TradingDateHelper:
+    """
+    使用 holidays 库自动计算美股(NYSE)交易日。
+    """
+    @staticmethod
+    def get_last_trading_date(base_date=None):
+        """
+        获取相对于 base_date (默认今天) 的最近一个有效交易日。
+        返回类型: datetime.date 对象
+        """
+        if base_date is None:
+            base_date = datetime.date.today()
+        
+        # 获取 NYSE 专属日历 (自动处理周末补休规则)
+        nyse_holidays = holidays.NYSE()
+        
+        # 从"昨天"开始找 (因为今天是盘中或还没开盘，通常看的是昨收)
+        target_date = base_date - datetime.timedelta(days=1)
+        
+        while True:
+            # 1. 检查周末 (5=Sat, 6=Sun)
+            if target_date.weekday() >= 5:
+                target_date -= datetime.timedelta(days=1)
+                continue
+            
+            # 2. 检查 NYSE 节假日 (库会自动处理观察日规则)
+            # 例如：如果独立日是周六，库会自动把周五标记为 Holiday
+            if target_date in nyse_holidays:
+                target_date -= datetime.timedelta(days=1)
+                continue
+                
+            # 既不是周末也不是节假日，就是它了
+            return target_date
 
 # --- 控件类定义 ---
 
@@ -1212,12 +1247,12 @@ class MainWindow(QMainWindow):
                             # 2. 获取 Options Metrics
                             metrics = get_options_metrics(keyword)
                             if metrics:
-                                # --- 核心修改: 日期校验逻辑 ---
-                                # 目标日期: 今天系统日期的前一天
-                                target_date = datetime.date.today() - datetime.timedelta(days=1)
+                                # --- 核心修改: 日期校验逻辑 使用 holidays 库 ---
+                                # 目标日期: 最近的一个有效交易日
+                                target_date = TradingDateHelper.get_last_trading_date()
                                 data_date = metrics.get('date1') # 获取最新数据的日期对象
                                 
-                                # 判断日期是否有效
+                                # 判断日期是否有效 (注意: data_date 通常是 datetime.date 类型)
                                 is_valid_date = (data_date == target_date)
                                 
                                 if is_valid_date:
@@ -1241,10 +1276,7 @@ class MainWindow(QMainWindow):
                                     parts.append(f"<span style='color:{sum_color};'>{sum_val:.2f}</span>")
                                 
                                 else:
-                                    # --- 日期不对 ---
-                                    # 根据需求："如果日期都不对，则正行不显示" (指数值部分)
-                                    # 同时也满足 "不是的显示为--...如果是--则不显示"
-                                    # 所以这里什么都不做，parts 里只有可能存在的 prefix
+                                    # 日期不对，不显示数据，只显示可能的前缀
                                     pass
 
                             # 只有当有内容时才组合 HTML
