@@ -12,12 +12,47 @@ import time
 import pyperclip
 import subprocess
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 import argparse
 import sqlite3
 import random
+import platform  # <--- 新增
 
-# --- 数据库操作函数 ---
+# ================= 配置区域 (跨平台修改) =================
+
+# 1. 动态获取主目录
+USER_HOME = os.path.expanduser("~")
+
+# 2. 定义基础路径
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
+DOWNLOADS_DIR = os.path.join(USER_HOME, "Downloads")
+FINANCIAL_SYSTEM_DIR = os.path.join(BASE_CODING_DIR, "Financial_System")
+DATABASE_DIR = os.path.join(BASE_CODING_DIR, "Database")
+NEWS_BACKUP_DIR = os.path.join(BASE_CODING_DIR, "News", "backup")
+
+# 3. 具体业务文件路径
+SECTORS_EMPTY_JSON = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Sectors_empty.json")
+SECTORS_ALL_JSON = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Sectors_All.json")
+SECTORS_TODAY_JSON = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Sectors_today.json")
+SECTORS_HOLIDAY_JSON = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Sectors_US_holiday.json")
+DB_PATH = os.path.join(DATABASE_DIR, "Finance.db")
+
+# 4. 浏览器与驱动路径 (跨平台适配)
+if platform.system() == 'Darwin':
+    CHROME_BINARY_PATH = "/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta"
+    CHROME_DRIVER_PATH = os.path.join(DOWNLOADS_DIR, "backup", "chromedriver_beta")
+elif platform.system() == 'Windows':
+    # Windows 路径优化
+    CHROME_BINARY_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+    if not os.path.exists(CHROME_BINARY_PATH):
+        CHROME_BINARY_PATH = r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+    CHROME_DRIVER_PATH = os.path.join(DOWNLOADS_DIR, "backup", "chromedriver.exe")
+else:
+    CHROME_BINARY_PATH = "/usr/bin/google-chrome"
+    CHROME_DRIVER_PATH = "/usr/bin/chromedriver"
+
+# ========================================================
+
 def create_db_connection(db_file):
     """ 创建一个到SQLite数据库的连接 """
     conn = None
@@ -89,9 +124,7 @@ def update_stock_in_db(conn, symbol, scraped_data, db_record):
     """
     updates = []
     params = []
-
-    # 移除了对 'name' 字段的检查和更新逻辑
-
+    
     # 检查 'shares' 字段
     update_shares, new_shares = should_update_field(db_record['shares'], scraped_data['shares'])
     if update_shares:
@@ -154,50 +187,69 @@ def insert_stock_into_db(conn, symbol, shares, marketcap, pe, pb):
 def resolve_data_path(filename):
     """
     优先返回 ~/Downloads/filename，如果不存在则返回 ~/Coding/News/backup/filename。
-    如果两处都不存在，则默认返回 ~/Downloads/filename（后面写文件会自动创建）。
     """
-    downloads_dir = os.path.expanduser("~/Downloads")
-    backup_dir   = os.path.expanduser("~/Coding/News/backup")
-    dl = os.path.join(downloads_dir, filename)
-    bu = os.path.join(backup_dir, filename)
+    dl = os.path.join(DOWNLOADS_DIR, filename)
+    bu = os.path.join(NEWS_BACKUP_DIR, filename)
     if os.path.exists(dl):
         return dl
     elif os.path.exists(bu):
         return bu
     else:
         # 两处都不存在，默认写到 Downloads
-        os.makedirs(downloads_dir, exist_ok=True)
+        os.makedirs(DOWNLOADS_DIR, exist_ok=True)
         return dl
 
 def Copy_Command_C():
-    script = '''
-    tell application "System Events"
-        keystroke "c" using command down
-    end tell
-    '''
-    # 运行AppleScript
-    subprocess.run(['osascript', '-e', script])
+    """
+    跨平台模拟复制快捷键
+    """
+    if platform.system() == 'Darwin':
+        # Mac
+        script = '''
+        tell application "System Events"
+            keystroke "c" using command down
+        end tell
+        '''
+        subprocess.run(['osascript', '-e', script])
+    else:
+        # Windows/Linux (使用 pyautogui 模拟 Ctrl+C)
+        # 注意：这需要确保焦点在正确的窗口上
+        import pyautogui
+        pyautogui.hotkey('ctrl', 'c')
+        time.sleep(0.1) # 等待剪贴板更新
 
 def show_alert(message):
-    # AppleScript代码模板
-    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
-    
-    # 使用subprocess调用osascript
-    subprocess.run(['osascript', '-e', applescript_code], check=True)
+    """
+    跨平台弹窗提示
+    """
+    if platform.system() == 'Darwin':
+        # Mac 原生 AppleScript
+        try:
+            applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+            subprocess.run(['osascript', '-e', applescript_code], check=True)
+        except Exception:
+            pass
+    else:
+        # Windows Tkinter
+        root = tk.Tk()
+        root.withdraw()
+        messagebox.showinfo("提示", message)
+        root.destroy()
 
 def show_yes_no_dialog(message):
     """显示是/否对话框并返回用户选择结果"""
-    # AppleScript代码模板
-    applescript_code = f'display dialog "{message}" buttons {{"否", "是"}} default button "是"'
-    
-    # 使用subprocess调用osascript并获取返回结果
-    result = subprocess.run(['osascript', '-e', applescript_code], 
-                            capture_output=True, text=True, check=False)
-    
-    # 检查返回结果是否包含"是"按钮被点击的信息
-    return "button returned:是" in result.stdout
+    if platform.system() == 'Darwin':
+        applescript_code = f'display dialog "{message}" buttons {{"否", "是"}} default button "是"'
+        result = subprocess.run(['osascript', '-e', applescript_code], 
+                                capture_output=True, text=True, check=False)
+        return "button returned:是" in result.stdout
+    else:
+        root = tk.Tk()
+        root.withdraw()
+        result = messagebox.askyesno("确认", message)
+        root.destroy()
+        return result
 
-# 新增：命令行参数处理
 def parse_arguments():
     parser = argparse.ArgumentParser(description='股票数据抓取工具')
     parser.add_argument('--mode', type=str, default='normal', 
@@ -207,26 +259,24 @@ def parse_arguments():
     return parser.parse_args()
 
 def check_empty_json_has_content(json_file_path):
-    """检查empty.json中是否有任何分组包含内容"""
+    if not os.path.exists(json_file_path):
+        return False
     with open(json_file_path, 'r') as file:
         data = json.load(file)
-    
     for group, items in data.items():
         if items:  # 如果该分组有任何项目
             return True
-    
     return False
 
 def add_symbol_to_json_files(symbol, group):
     """将symbol添加到指定的JSON文件的对应分组中"""
-    base_dir = "/Users/yanzhang/Coding/Financial_System/Modules/"
-    json_files = ["Sectors_empty.json", "Sectors_All.json", "Sectors_today.json"]
+    # 动态路径
+    json_files = [SECTORS_EMPTY_JSON, SECTORS_ALL_JSON, SECTORS_TODAY_JSON]
     
-    for json_file in json_files:
-        file_path = os.path.join(base_dir, json_file)
-        
-        # 如果文件不存在，创建一个空的JSON结构
+    for file_path in json_files:
         if not os.path.exists(file_path):
+            # 确保父目录存在
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
             with open(file_path, 'w') as f:
                 json.dump({}, f)
         
@@ -289,14 +339,12 @@ def show_input_dialog(default_symbol=""):
     tk.Button(button_frame, text="取消", command=on_cancel).pack(side=tk.LEFT, padx=10)
     
     root.mainloop()
-    
     return symbol
 
 def convert_shares_format(shares_str):
     # 转换股票数量的表示方式，例如 "15.33B" 转换为 15330000000
     if shares_str == 'N/A' or shares_str == '-':
         return 0
-    
     if 'T' in shares_str:
         return float(shares_str.replace('T', '')) * 10**12
     elif 'B' in shares_str:
@@ -383,7 +431,7 @@ def wait_for_element(driver, by, value, timeout=10):
 
 def clear_empty_json():
     """清空 Sectors_empty.json 文件中的所有股票符号，但保留分组结构"""
-    empty_json_path = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json"
+    empty_json_path = SECTORS_EMPTY_JSON
     with open(empty_json_path, 'r') as file:
         data = json.load(file)
     
@@ -394,18 +442,14 @@ def clear_empty_json():
     # 写回文件
     with open(empty_json_path, 'w') as file:
         json.dump(data, file, indent=2)
-    
     print("已清空 Sectors_empty.json 文件中的所有股票符号")
 
 def get_group_for_symbol(symbol):
     """
     从 Sectors_All.json 中自动匹配symbol所属的分组（忽略大小写）
     """
-    base_dir = "/Users/yanzhang/Coding/Financial_System/Modules/"
-    sectors_all_path = os.path.join(base_dir, "Sectors_All.json")
-    with open(sectors_all_path, 'r') as f:
+    with open(SECTORS_ALL_JSON, 'r') as f:
         data = json.load(f)
-    
     for group, symbols in data.items():
         # 将比对双方都转换为大写
         symbols_upper = [s.upper() for s in symbols]
@@ -415,12 +459,7 @@ def get_group_for_symbol(symbol):
 
 # ---- 1. 新增：从 Sectors_All.json 提取所有分组名 ---- #
 def extract_group_names():
-    """
-    读取 Sectors_All.json，将所有顶层 key（即分组名）提取为列表返回
-    """
-    base_dir = "/Users/yanzhang/Coding/Financial_System/Modules/"
-    sectors_all_path = os.path.join(base_dir, "Sectors_All.json")
-    with open(sectors_all_path, 'r', encoding='utf-8') as f:
+    with open(SECTORS_ALL_JSON, 'r', encoding='utf-8') as f:
         data = json.load(f)
     return list(data.keys())
 
@@ -431,35 +470,33 @@ def show_group_selection_dialog(groups):
     取消或关闭窗口返回空字符串。
     """
     selected = {'group': ''}
-
     def on_ok():
         selected['group'] = combo.get().strip()
         root.destroy()
-
     def on_cancel():
         root.destroy()
-
+    
     root = tk.Tk()
     root.title("请选择分组")
     root.geometry("300x120")
     root.resizable(False, False)
     # 确保窗口置顶
     root.attributes('-topmost', True)
-
+    
     tk.Label(root, text="在下拉列表中选择一个分组：").pack(pady=(10, 5))
 
     combo = ttk.Combobox(root, values=groups, state='readonly')
     combo.pack(pady=5, padx=10, fill='x')
-    combo.current(0)
-
+    if groups:
+        combo.current(0)
+    
     btn_frame = tk.Frame(root)
     btn_frame.pack(pady=(10, 5))
     tk.Button(btn_frame, text="确定", width=10, command=on_ok).pack(side='left', padx=5)
     tk.Button(btn_frame, text="取消", width=10, command=on_cancel).pack(side='left', padx=5)
-
+    
     root.mainloop()
     return selected['group']
-
 
 def main():
     # 解析命令行参数
@@ -467,18 +504,15 @@ def main():
     
     # 根据命令行参数选择JSON文件路径和输出目录
     if args.mode.lower() == 'empty':
-        empty_json_path = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json"
-        
-        # 检查empty.json是否有内容
+        empty_json_path = SECTORS_EMPTY_JSON
         has_content = check_empty_json_has_content(empty_json_path)
         
         # 根据检查结果决定使用哪种模式
         if has_content:
             # empty.json有内容，使用测试模式
             json_file_path = empty_json_path
-            shares_file_path        = resolve_data_path("Shares.txt")
-            # symbol_names_file_path  = resolve_data_path("symbol_names.txt")
-            marketcap_pe_file_path  = resolve_data_path("marketcap_pe.txt")
+            shares_file_path = resolve_data_path("Shares.txt")
+            marketcap_pe_file_path = resolve_data_path("marketcap_pe.txt")
             print("使用空测试文件模式和backup目录...")
         else:
             # 首先尝试从剪贴板获取内容
@@ -509,32 +543,31 @@ def main():
                 print(f"已将 {symbol} 自动匹配到 {group} 分组并写入 Sectors_empty.json")
             
             json_file_path = empty_json_path
-            shares_file_path = "/Users/yanzhang/Coding/News/backup/Shares.txt"
-            # symbol_names_file_path = "/Users/yanzhang/Coding/News/backup/symbol_names.txt"
-            marketcap_pe_file_path = "/Users/yanzhang/Coding/News/backup/marketcap_pe.txt"
+            shares_file_path = os.path.join(NEWS_BACKUP_DIR, "Shares.txt")
+            marketcap_pe_file_path = os.path.join(NEWS_BACKUP_DIR, "marketcap_pe.txt")
             print("使用空测试文件模式和backup目录...")
     else:
-        json_file_path = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json"
-        shares_file_path = "/Users/yanzhang/Downloads/Shares.txt"
-        # symbol_names_file_path = "/Users/yanzhang/Downloads/symbol_names.txt"
-        marketcap_pe_file_path = "/Users/yanzhang/Downloads/marketcap_pe.txt"
+        json_file_path = SECTORS_ALL_JSON
+        shares_file_path = os.path.join(DOWNLOADS_DIR, "Shares.txt")
+        marketcap_pe_file_path = os.path.join(DOWNLOADS_DIR, "marketcap_pe.txt")
         print("使用正常模式和Downloads目录...")
 
     # --- 数据库连接 ---
-    db_path = "/Users/yanzhang/Coding/Database/Finance.db"
-    db_conn = create_db_connection(db_path)
+    # 确保数据库目录存在
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    db_conn = create_db_connection(DB_PATH)
     if not db_conn:
         print("无法连接到数据库，程序退出。")
         return
 
     # 设置Chrome选项
     chrome_options = Options()
-    
-    # --- [移植修改 1] 指定 Chrome Beta 应用程序路径 ---
-    chrome_options.binary_location = "/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta"
+    if os.path.exists(CHROME_BINARY_PATH):
+        chrome_options.binary_location = CHROME_BINARY_PATH
+    else:
+        print(f"警告：未找到指定 Chrome 路径 {CHROME_BINARY_PATH}，尝试使用系统默认...")
 
-    # --- Headless模式相关设置 ---
-    chrome_options.add_argument('--headless=new') # 推荐使用新的 headless 模式
+    chrome_options.add_argument('--headless=new')
     chrome_options.add_argument('--window-size=1920,1080')
 
     # --- 伪装设置 ---
@@ -552,19 +585,19 @@ def main():
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--blink-settings=imagesEnabled=false")  # 禁用图片加载
-    chrome_options.page_load_strategy = 'eager'  # 使用eager策略，DOM准备好就开始
+    chrome_options.add_argument("--blink-settings=imagesEnabled=false")
+    chrome_options.page_load_strategy = 'eager'
 
-    # 设置ChromeDriver路径
-    chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver_beta"
-    
-    # 检查驱动是否存在 (可选，增强稳定性)
-    if not os.path.exists(chrome_driver_path):
-        print(f"错误：未找到驱动文件: {chrome_driver_path}")
+    if not os.path.exists(CHROME_DRIVER_PATH):
+        print(f"错误：未找到驱动文件: {CHROME_DRIVER_PATH}")
         return
 
-    service = Service(executable_path=chrome_driver_path)
-    driver = webdriver.Chrome(service=service, options=chrome_options)
+    service = Service(executable_path=CHROME_DRIVER_PATH)
+    try:
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+    except Exception as e:
+        print(f"Selenium 启动失败: {e}")
+        return
 
     # 设置更短的超时时间
     driver.set_page_load_timeout(20)  # 页面加载超时时间
@@ -703,14 +736,8 @@ def main():
                 
                 except Exception as e:
                     print(f"尝试 {attempt+1} 抓取 {symbol} 时发生错误: {str(e)}")
-                    # 继续下一次循环
 
-            # --- [重试循环结束] ---
-            
-            # --- 后续处理逻辑（文件写入和数据库更新） ---
-            # 这里的逻辑放在重试循环外面，确保只执行一次写入
-            
-            # 1. 保存到 Shares.txt
+            # --- 后续处理逻辑 ---
             if symbol not in existing_shares and (got_shares or got_price_book):
                 with open(shares_file_path, 'a', encoding='utf-8') as file:
                     file.write(f"{symbol}: {int(shares_outstanding_converted)}, {price_book_value}\n")
@@ -767,10 +794,7 @@ def main():
             print("数据库连接已关闭。")
         print("数据抓取完成！")
         
-        # 检查sectors_empty.json
-        empty_json_path = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json"
-        has_content = check_empty_json_has_content(empty_json_path)
-        
+        has_content = check_empty_json_has_content(SECTORS_EMPTY_JSON)
         if has_content and args.clear:
              clear_empty_json()
 

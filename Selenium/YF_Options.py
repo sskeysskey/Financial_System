@@ -17,26 +17,44 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 from tqdm import tqdm
+import platform  # <--- 新增
 
-# ================= 配置区域 =================
+# ================= 配置区域 (跨平台修改) =================
 
-# --- 1. 基础路径配置 ---
-# 数据库路径
-DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
+# 1. 动态获取主目录
+USER_HOME = os.path.expanduser("~")
 
-# 输出文件保存目录
-OUTPUT_DIR = '/Users/yanzhang/Coding/News/backup/'
+# 2. 定义基础路径
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
+DOWNLOADS_DIR = os.path.join(USER_HOME, "Downloads")
+FINANCIAL_SYSTEM_DIR = os.path.join(BASE_CODING_DIR, "Financial_System")
+DATABASE_DIR = os.path.join(BASE_CODING_DIR, "Database")
+NEWS_BACKUP_DIR = os.path.join(BASE_CODING_DIR, "News", "backup")
+
+# 3. 具体业务文件路径
+DB_PATH = os.path.join(DATABASE_DIR, "Finance.db")
+OUTPUT_DIR = NEWS_BACKUP_DIR
+SECTORS_JSON_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Sectors_panel.json")
+BLACKLIST_JSON_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Blacklist.json")
+
+# 4. 浏览器与驱动路径 (跨平台适配)
+if platform.system() == 'Darwin':
+    CHROME_BINARY_PATH = "/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta"
+    CHROME_DRIVER_PATH = os.path.join(DOWNLOADS_DIR, "backup", "chromedriver_beta")
+elif platform.system() == 'Windows':
+    # Windows 路径优化
+    CHROME_BINARY_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+    if not os.path.exists(CHROME_BINARY_PATH):
+        CHROME_BINARY_PATH = r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+    CHROME_DRIVER_PATH = os.path.join(DOWNLOADS_DIR, "backup", "chromedriver.exe")
+else:
+    CHROME_BINARY_PATH = "/usr/bin/google-chrome"
+    CHROME_DRIVER_PATH = "/usr/bin/chromedriver"
 
 # 市值阈值 (1000亿) - 仅在数据库模式下生效
-MARKET_CAP_THRESHOLD = 800000000000
+MARKET_CAP_THRESHOLD = 400000000000
 
-# --- 2. 配置文件路径 ---
-SECTORS_JSON_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
-# 新增：黑名单路径
-BLACKLIST_JSON_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
-
-# --- 3. 文件名生成 ---
-# 生成当天的文件名 Options_YYMMDD.csv
+# 文件名生成
 today_str = datetime.now().strftime('%y%m%d')
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, f'Options_{today_str}.csv')
 
@@ -67,6 +85,10 @@ def get_target_symbols(db_path, threshold, silent=False):
     if not silent:
         tqdm.write(f"正在连接数据库: {db_path}...")
     try:
+        if not os.path.exists(db_path):
+            tqdm.write(f"❌ 数据库文件不存在: {db_path}")
+            return []
+            
         conn = sqlite3.connect(db_path, timeout=60.0)
         cursor = conn.cursor()
         
@@ -75,8 +97,6 @@ def get_target_symbols(db_path, threshold, silent=False):
         cursor.execute(query, (threshold,))
         results = cursor.fetchall()
         
-        # --- 修改点 2: 直接返回结果列表 [(symbol, cap), (symbol, cap)...] ---
-        # 以前是: symbols = [row[0] for row in results]
         symbols = results 
         
         if not silent:
@@ -86,7 +106,7 @@ def get_target_symbols(db_path, threshold, silent=False):
         tqdm.write(f"数据库读取错误: {e}")
         return []
     finally:
-        if conn:
+        if 'conn' in locals() and conn:
             conn.close()
 
 # ================= 2. 数据处理工具函数 =================
@@ -281,13 +301,13 @@ def scrape_options():
     
     # 2. 筛选数据库列表：只保留不在自定义列表中的
     db_unique_list = [s for s in db_symbols_list if s[0] not in custom_names_set]
+    
     all_symbols_before_blacklist = custom_symbols_list + db_unique_list
     
     # === 步骤 E: 执行黑名单及 Options_zero 过滤 (核心修改) ===
     # 过滤掉存在于 blacklist_options_set 和 json_zero_set 中的 symbol
     # 构造总的排除集合
     total_exclusion_set = blacklist_options_set.union(json_zero_set)
-
     symbols = [s for s in all_symbols_before_blacklist if s[0] not in total_exclusion_set]
     
     # 统计被过滤的数量
@@ -358,11 +378,15 @@ def scrape_options():
 
     # 3. 初始化 Selenium
     options = webdriver.ChromeOptions()
-    options.binary_location = "/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta"
-    
+    if os.path.exists(CHROME_BINARY_PATH):
+        options.binary_location = CHROME_BINARY_PATH
+    else:
+        tqdm.write(f"警告：未找到指定 Chrome 路径 {CHROME_BINARY_PATH}，尝试使用系统默认...")
+
     # --- Headless模式相关设置 ---
     options.add_argument('--headless=new') # 推荐使用新的 headless 模式
     options.add_argument('--window-size=1920,1080')
+
     # --- 伪装设置 ---
     user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
     options.add_argument(f'user-agent={user_agent}')
@@ -378,15 +402,18 @@ def scrape_options():
     options.add_argument("--blink-settings=imagesEnabled=false")  # 禁用图片加载
     options.page_load_strategy = 'eager'  # 使用eager策略，DOM准备好就开始
 
-    driver_path = '/Users/yanzhang/Downloads/backup/chromedriver_beta' 
-
-    # 检查路径是否存在，避免报错
-    if not os.path.exists(driver_path):
-        tqdm.write(f"错误：未找到驱动文件: {driver_path}")
+    # 检查驱动是否存在
+    if not os.path.exists(CHROME_DRIVER_PATH):
+        tqdm.write(f"错误：未找到驱动文件: {CHROME_DRIVER_PATH}")
         exit()
 
-    driver = webdriver.Chrome(service=Service(driver_path), options=options)
-    
+    service = Service(executable_path=CHROME_DRIVER_PATH)
+    try:
+        driver = webdriver.Chrome(service=service, options=options)
+    except Exception as e:
+        tqdm.write(f"Selenium 启动失败: {e}")
+        return
+
     # 设置页面加载超时，防止卡死
     driver.set_page_load_timeout(30) 
     
@@ -397,8 +424,6 @@ def scrape_options():
         
         # === 外层进度条：遍历 Symbols ===
         symbol_pbar = tqdm(symbols, desc="总体进度", position=0)
-
-        
         
         # --- 修改点 4: 循环解包 ---
         for symbol_data in symbol_pbar:
@@ -544,7 +569,6 @@ def scrape_options():
                         time.sleep(random.uniform(1.5, 2.5)) 
                         
                         wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "section[data-testid='options-list-table'] table")))
-
                         # --- 抓取表格 ---
                         tables = driver.find_elements(By.CSS_SELECTOR, "section[data-testid='options-list-table'] table")
                         
@@ -587,7 +611,6 @@ def scrape_options():
                             symbol_all_data.extend(data_buffer)
                         
                         break # 成功则跳出重试循环
-
                     except Exception as e:
                         if attempt < MAX_PAGE_RETRIES - 1:
                             time.sleep(2)
@@ -636,7 +659,8 @@ def scrape_options():
     finally:
         # 防止重复 quit
         try:
-            driver.quit()
+            if 'driver' in locals():
+                driver.quit()
         except:
             pass
         tqdm.write(f"任务结束。数据已保存至: {OUTPUT_FILE}")

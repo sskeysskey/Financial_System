@@ -7,7 +7,9 @@ import random
 # import threading
 import subprocess
 import tkinter as tk
+from tkinter import messagebox
 from datetime import datetime, timedelta
+import platform  # <--- 新增
 
 # 第三方模块
 import pyautogui
@@ -20,19 +22,53 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException
 
+# ================= 配置区域 (跨平台修改) =================
+
+# 1. 动态获取主目录
+USER_HOME = os.path.expanduser("~")
+
+# 2. 定义基础路径
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
+DOWNLOADS_DIR = os.path.join(USER_HOME, "Downloads")
+NEWS_DIR = os.path.join(BASE_CODING_DIR, "News")
+FINANCIAL_SYSTEM_DIR = os.path.join(BASE_CODING_DIR, "Financial_System")
+
+# 3. 浏览器与驱动路径 (跨平台适配)
+if platform.system() == 'Darwin':
+    CHROME_BINARY_PATH = "/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta"
+    CHROME_DRIVER_PATH = os.path.join(DOWNLOADS_DIR, "backup", "chromedriver_beta")
+elif platform.system() == 'Windows':
+    CHROME_BINARY_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+    if not os.path.exists(CHROME_BINARY_PATH):
+        CHROME_BINARY_PATH = r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+    CHROME_DRIVER_PATH = os.path.join(DOWNLOADS_DIR, "backup", "chromedriver.exe")
+else:
+    CHROME_BINARY_PATH = "/usr/bin/google-chrome"
+    CHROME_DRIVER_PATH = "/usr/bin/chromedriver"
+
+# 4. 其他配置路径
+EARNINGS_CONFIG_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, 'Selenium', 'earnings_config.json')
+SECTORS_ALL_JSON_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, 'Modules', 'Sectors_All.json')
+SECTORS_PANEL_JSON_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, 'Modules', 'Sectors_panel.json')
+SYMBOL_MAPPING_JSON_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, 'Modules', 'Symbol_mapping.json')
+
 # ==============================================================================
-# 通用工具函数 (两个脚本公用的部分)
+# 通用工具函数
 # ==============================================================================
 
-def show_alert_mac(message):
-    """Mac 系统弹窗提示 (合并了原有的 show_alert)"""
-    try:
-        # AppleScript代码模板
-        applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
-        # 使用subprocess调用osascript
-        subprocess.run(['osascript', '-e', applescript_code], check=True)
-    except Exception as e:
-        print(f"弹窗提示失败: {e}")
+def show_alert(message):
+    """跨平台弹窗提示"""
+    if platform.system() == 'Darwin':
+        try:
+            applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+            subprocess.run(['osascript', '-e', applescript_code], check=True)
+        except Exception as e:
+            print(f"弹窗提示失败: {e}")
+    else:
+        root = tk.Tk()
+        root.withdraw()
+        messagebox.showinfo("提示", message)
+        root.destroy()
 
 # ==============================================================================
 # PART A: 原 a.py 的逻辑
@@ -42,27 +78,27 @@ class PartA_FileProcessor:
     def __init__(self):
         self.LOCK_FILE = os.path.join(os.path.dirname(__file__), '.last_run_date')
         
-        # 文件路径配置
+        # 文件路径配置 (动态化)
         self.files = {
-            'Earnings_Release': '/Users/yanzhang/Coding/News/backup/Earnings_Release.txt',
-            'Economic_Events': '/Users/yanzhang/Coding/News/backup/Economic_Events.txt'
+            'Earnings_Release': os.path.join(NEWS_DIR, 'backup', 'Earnings_Release.txt'),
+            'Economic_Events': os.path.join(NEWS_DIR, 'backup', 'Economic_Events.txt')
         }
         self.new_files = {
-            'Earnings_Release': '/Users/yanzhang/Coding/News/Earnings_Release_new.txt',
-            'Economic_Events': '/Users/yanzhang/Coding/News/Economic_Events_new.txt'
+            'Earnings_Release': os.path.join(NEWS_DIR, 'Earnings_Release_new.txt'),
+            'Economic_Events': os.path.join(NEWS_DIR, 'Economic_Events_new.txt')
         }
         self.next_files = {
-            'Earnings_Release': '/Users/yanzhang/Coding/News/Earnings_Release_next.txt',
-            'Economic_Events': '/Users/yanzhang/Coding/News/Economic_Events_next.txt'
+            'Earnings_Release': os.path.join(NEWS_DIR, 'Earnings_Release_next.txt'),
+            'Economic_Events': os.path.join(NEWS_DIR, 'Economic_Events_next.txt')
         }
         self.third_files = {
-            'Earnings_Release': '/Users/yanzhang/Coding/News/Earnings_Release_third.txt',
+            'Earnings_Release': os.path.join(NEWS_DIR, 'Earnings_Release_third.txt'),
         }
         self.fourth_files = {
-            'Earnings_Release': '/Users/yanzhang/Coding/News/Earnings_Release_fourth.txt',
+            'Earnings_Release': os.path.join(NEWS_DIR, 'Earnings_Release_fourth.txt'),
         }
         self.fifth_files = {
-            'Earnings_Release': '/Users/yanzhang/Coding/News/Earnings_Release_fifth.txt',
+            'Earnings_Release': os.path.join(NEWS_DIR, 'Earnings_Release_fifth.txt'),
         }
 
     def check_run_conditions(self):
@@ -110,6 +146,10 @@ class PartA_FileProcessor:
     def process_earnings(self, new_file, backup_file):
         if not os.path.exists(new_file):
             return
+        
+        # 确保备份文件所在目录存在
+        os.makedirs(os.path.dirname(backup_file), exist_ok=True)
+        
         with open(new_file, 'r') as fin, open(backup_file, 'a') as fout:
             fout.write('\n')
             lines = [L.rstrip('\n') for L in fin]
@@ -132,6 +172,9 @@ class PartA_FileProcessor:
 
     def process_file(self, new_file, existing_file):
         if os.path.exists(new_file):
+            # 确保目标文件所在目录存在
+            os.makedirs(os.path.dirname(existing_file), exist_ok=True)
+            
             with open(new_file, 'r') as file_a, open(existing_file, 'a') as file_b:
                 file_b.write('\n')  # 在迁移内容前首先输入一个回车
                 lines = file_a.readlines()
@@ -170,12 +213,18 @@ class PartA_FileProcessor:
             
             # 2. 重命名 Earnings_Release 的 next 文件为 new 文件
             print(f"重命名: {self.next_files['Earnings_Release']} -> {self.new_files['Earnings_Release']}")
+            
+            # Windows 下重命名如果目标存在会报错，先删除目标
+            if os.path.exists(self.new_files['Earnings_Release']):
+                os.remove(self.new_files['Earnings_Release'])
             os.rename(self.next_files['Earnings_Release'], self.new_files['Earnings_Release'])
             
             # 3. 检查 third 文件是否存在，如果存在则将其重命名为 next 文件
             third_earnings_file = self.third_files.get('Earnings_Release')
             if third_earnings_file and os.path.exists(third_earnings_file):
                 print(f"重命名: {third_earnings_file} -> {self.next_files['Earnings_Release']}")
+                if os.path.exists(self.next_files['Earnings_Release']):
+                    os.remove(self.next_files['Earnings_Release'])
                 os.rename(third_earnings_file, self.next_files['Earnings_Release'])
             else:
                 print(f"未找到 {third_earnings_file}，跳过 third -> next 的重命名步骤。")
@@ -187,6 +236,8 @@ class PartA_FileProcessor:
             if fourth_earnings_file and os.path.exists(fourth_earnings_file):
                 if third_earnings_file_target:
                     print(f"重命名: {fourth_earnings_file} -> {third_earnings_file_target}")
+                    if os.path.exists(third_earnings_file_target):
+                        os.remove(third_earnings_file_target)
                     os.rename(fourth_earnings_file, third_earnings_file_target)
                 else:
                     print(f"错误：找到了 {fourth_earnings_file} 但未在 third_files 中为其配置目标路径。")
@@ -200,6 +251,8 @@ class PartA_FileProcessor:
             if fifth_earnings_file and os.path.exists(fifth_earnings_file):
                 if fourth_earnings_file_target:
                     print(f"重命名: {fifth_earnings_file} -> {fourth_earnings_file_target}")
+                    if os.path.exists(fourth_earnings_file_target):
+                        os.remove(fourth_earnings_file_target)
                     os.rename(fifth_earnings_file, fourth_earnings_file_target)
                 else:
                     print(f"错误：找到了 {fifth_earnings_file} 但未在 fourth_files 中为其配置目标路径。")
@@ -217,6 +270,8 @@ class PartA_FileProcessor:
             # 如果 Economic_Events 的 next 文件存在，则重命名它
             if os.path.exists(self.next_files['Economic_Events']):
                 print(f"重命名: {self.next_files['Economic_Events']} -> {self.new_files['Economic_Events']}")
+                if os.path.exists(self.new_files['Economic_Events']):
+                    os.remove(self.new_files['Economic_Events'])
                 os.rename(self.next_files['Economic_Events'], self.new_files['Economic_Events'])
         else:
             print("Economic_Events 相关文件（new/next）缺失，未执行任何操作。")
@@ -235,27 +290,23 @@ class PartA_FileProcessor:
                 self.process_and_rename_files()
         else:
             print("Not right date. Part A 只在周一（或周日）运行。")
-        print("Part A 执行结束。\n")
-
+        print("Part A 执行结束.\n")
 
 # ==============================================================================
 # PART B: 原 b.py 的逻辑
 # ==============================================================================
 
-# 全局配置 (修改点 1: 指向 Beta 版驱动)
-CHROME_DRIVER_PATH = "/Users/yanzhang/Downloads/backup/chromedriver_beta"
-EARNINGS_CONFIG_PATH = '/Users/yanzhang/Coding/Financial_System/Selenium/earnings_config.json'
-
 def create_unified_driver():
     """
-    统一的 Selenium Driver 工厂函数 (已修改为使用 Chrome Beta)。
-    包含：Headless New 模式、反爬虫伪装、性能优化配置。
+    统一的 Selenium Driver 工厂函数 (已修改为跨平台)。
     """
     options = Options()
     
-    # --- 修改点 2: 指定 Chrome Beta 的程序位置 ---
-    options.binary_location = "/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta"
-    
+    if os.path.exists(CHROME_BINARY_PATH):
+        options.binary_location = CHROME_BINARY_PATH
+    else:
+        tqdm.write(f"警告：未找到 Chrome 路径 {CHROME_BINARY_PATH}，使用系统默认。")
+
     # --- 1. Headless 与 窗口设置 ---
     options.add_argument('--headless=new') 
     options.add_argument('--window-size=1920,1080')
@@ -292,10 +343,9 @@ def create_unified_driver():
             })
             """
         })
-        
         return driver
     except Exception as e:
-        tqdm.write(f"创建 Driver (Beta) 失败: {e}")
+        tqdm.write(f"创建 Driver 失败: {e}")
         return None
 
 def move_mouse_periodically():
@@ -317,11 +367,9 @@ def move_mouse_periodically():
 
 def update_sectors_panel():
     """更新 sectors_panel 的主要逻辑"""
-    path_new = '/Users/yanzhang/Coding/News/Economic_Events_new.txt'
-    path_next = '/Users/yanzhang/Coding/News/Economic_Events_next.txt'
-    sectors_panel_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
-    symbol_mapping_path = '/Users/yanzhang/Coding/Financial_System/Modules/Symbol_mapping.json'
-
+    path_new = os.path.join(NEWS_DIR, 'Economic_Events_new.txt')
+    path_next = os.path.join(NEWS_DIR, 'Economic_Events_next.txt')
+    
     # 按顺序收集存在的事件文件
     event_files = []
     if os.path.exists(path_new):
@@ -331,15 +379,15 @@ def update_sectors_panel():
 
     if not event_files:
         tqdm.write("未找到 Economic_Events 文件，未执行更新。")
-        show_alert_mac("未找到 Economic_Events 文件，未执行更新。")
+        show_alert("未找到 Economic_Events 文件，未执行更新。")
         return
 
     try:
         # 读取 symbol_mapping 和 原 sectors_panel
-        with open(symbol_mapping_path, 'r', encoding='utf-8') as f:
+        with open(SYMBOL_MAPPING_JSON_PATH, 'r', encoding='utf-8') as f:
             symbol_mapping = json.load(f)
         
-        with open(sectors_panel_path, 'r', encoding='utf-8') as f:
+        with open(SECTORS_PANEL_JSON_PATH, 'r', encoding='utf-8') as f:
             sectors_panel = json.load(f)
 
         # 清空 Economics 分组
@@ -379,7 +427,7 @@ def update_sectors_panel():
                                 sectors_panel['Economics'][economics_key] = combined_value
         
         # 写回 sectors_panel.json
-        with open(sectors_panel_path, 'w', encoding='utf-8') as f:
+        with open(SECTORS_PANEL_JSON_PATH, 'w', encoding='utf-8') as f:
             json.dump(sectors_panel, f, ensure_ascii=False, indent=4)
         
         tqdm.write("Economic Events JSON 更新已完成！")
@@ -387,7 +435,7 @@ def update_sectors_panel():
     except Exception as e:
         error_message = f"更新 Economic Events JSON 错误: {e}"
         tqdm.write(error_message)
-        show_alert_mac(error_message)
+        show_alert(error_message)
 
 def run_economic_events_task():
     tqdm.write("\n" + "="*50)
@@ -410,8 +458,8 @@ def run_economic_events_task():
     # ==== 2) 如果需要爬虫，启动 Selenium 爬虫 + 写文件 ====
     if do_crawl:
         # 文件路径
-        file_path = '/Users/yanzhang/Coding/News/Economic_Events_next.txt'
-        backup_dir = '/Users/yanzhang/Coding/News/backup/backup'
+        file_path = os.path.join(NEWS_DIR, 'Economic_Events_next.txt')
+        backup_dir = os.path.join(NEWS_DIR, 'backup', 'backup')
         
         # 检查原始文件是否存在并备份
         if os.path.exists(file_path):
@@ -451,6 +499,9 @@ def run_economic_events_task():
                 target_countries = {"US"}
                 days_count = (end_date - start_date).days + 1
                 date_list = [start_date + timedelta(days=i) for i in range(days_count)]
+
+                # 确保输出目录存在
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
                 with open(file_path, 'a') as output_file:
                     pbar = tqdm(date_list, desc="Eco Events", unit="day")
@@ -528,10 +579,9 @@ def run_stock_splits_task():
         return
 
     # 文件路径
-    file_path = '/Users/yanzhang/Coding/News/Stock_Splits_next.txt'
-    backup_dir = '/Users/yanzhang/Coding/News/backup/backup'
-    sectors_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
-
+    file_path = os.path.join(NEWS_DIR, 'Stock_Splits_next.txt')
+    backup_dir = os.path.join(NEWS_DIR, 'backup', 'backup')
+    
     # 检查文件是否已经存在并备份
     if os.path.exists(file_path):
         timestamp = datetime.now().strftime('%y%m%d')
@@ -553,7 +603,7 @@ def run_stock_splits_task():
     
     if driver:
         try:
-            with open(sectors_json_path, 'r') as file:
+            with open(SECTORS_ALL_JSON_PATH, 'r') as file:
                 data = json.load(file)
             
             current_date = datetime.now()
@@ -608,6 +658,9 @@ def run_stock_splits_task():
                         has_data = False
                     else:
                         offset += 100
+
+            # 确保目录存在
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
             if results:
                 with open(file_path, 'a') as output_file:
@@ -728,7 +781,7 @@ def run_single_scraper_task(driver, sectors_data, task_config):
     diff_path = task_config["diff_path"]
     backup_dir = task_config["backup_dir"]
     earnings_release_path = task_config["earnings_release_path"]
-
+    
     tqdm.write(f">> 正在初始化任务: {group_name.upper()}")
     
     # -------- 步骤 1: 直接从配置文件读取日期范围 --------
@@ -795,7 +848,7 @@ def run_single_scraper_task(driver, sectors_data, task_config):
             rows = []
             found_end = False
             page_load_success = False
-
+            
             # --- 页面加载重试循环 ---
             for attempt in range(3):
                 try:
@@ -823,13 +876,13 @@ def run_single_scraper_task(driver, sectors_data, task_config):
                     time.sleep(random.randint(2, 4))
                 except Exception:
                     time.sleep(random.randint(2, 4))
-
+            
             if found_end: break 
             if not page_load_success: 
                 tqdm.write(f"    [{ds}] Offset {offset} 加载失败，跳过。")
                 break
             if not rows: break 
-
+            
             # --- 解析表格行 ---
             for row in rows:
                 try:
@@ -894,6 +947,9 @@ def run_single_scraper_task(driver, sectors_data, task_config):
         else:
             entries_for_target.append(ln)
 
+    # 确保目标目录存在
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
     all_lines_to_write = existing_lines + entries_for_target
     with open(file_path, 'w') as f:
         if all_lines_to_write:
@@ -925,45 +981,47 @@ def run_earnings_task():
     
     check_and_advance_dates_if_needed()
     
-    base_news_path = '/Users/yanzhang/Coding/News/'
+    # 动态路径
+    new_file = os.path.join(NEWS_DIR, 'Earnings_Release_new.txt')
+    next_file = os.path.join(NEWS_DIR, 'Earnings_Release_next.txt')
+    third_file = os.path.join(NEWS_DIR, 'Earnings_Release_third.txt')
+    fourth_file = os.path.join(NEWS_DIR, 'Earnings_Release_fourth.txt')
+    fifth_file = os.path.join(NEWS_DIR, 'Earnings_Release_fifth.txt')
     
-    new_file = os.path.join(base_news_path, 'Earnings_Release_new.txt')
-    next_file = os.path.join(base_news_path, 'Earnings_Release_next.txt')
-    third_file = os.path.join(base_news_path, 'Earnings_Release_third.txt')
-    fourth_file = os.path.join(base_news_path, 'Earnings_Release_fourth.txt')
-    fifth_file = os.path.join(base_news_path, 'Earnings_Release_fifth.txt')
-    
+    backup_dir = os.path.join(NEWS_DIR, 'backup', 'backup')
+    backup_earnings = os.path.join(NEWS_DIR, 'backup', 'Earnings_Release.txt')
+
     TASK_CONFIGS = [
         {
             "group_name": "next",
             "file_path": next_file,
-            "diff_path": os.path.join(base_news_path, 'Earnings_Release_diff_next.txt'),
-            "backup_dir": os.path.join(base_news_path, 'backup/backup'),
-            "earnings_release_path": os.path.join(base_news_path, 'backup/Earnings_Release.txt'),
+            "diff_path": os.path.join(NEWS_DIR, 'Earnings_Release_diff_next.txt'),
+            "backup_dir": backup_dir,
+            "earnings_release_path": backup_earnings,
             "duplicate_check_files": [new_file]
         },
         {
             "group_name": "third",
             "file_path": third_file,
-            "diff_path": os.path.join(base_news_path, 'Earnings_Release_diff_third.txt'),
-            "backup_dir": os.path.join(base_news_path, 'backup/backup'),
-            "earnings_release_path": os.path.join(base_news_path, 'backup/Earnings_Release.txt'),
+            "diff_path": os.path.join(NEWS_DIR, 'Earnings_Release_diff_third.txt'),
+            "backup_dir": backup_dir,
+            "earnings_release_path": backup_earnings,
             "duplicate_check_files": [new_file, next_file]
         },
         {
             "group_name": "fourth",
             "file_path": fourth_file,
-            "diff_path": os.path.join(base_news_path, 'Earnings_Release_diff_fourth.txt'),
-            "backup_dir": os.path.join(base_news_path, 'backup/backup'),
-            "earnings_release_path": os.path.join(base_news_path, 'backup/Earnings_Release.txt'),
+            "diff_path": os.path.join(NEWS_DIR, 'Earnings_Release_diff_fourth.txt'),
+            "backup_dir": backup_dir,
+            "earnings_release_path": backup_earnings,
             "duplicate_check_files": [new_file, next_file, third_file]
         },
         {
             "group_name": "fifth",
             "file_path": fifth_file,
-            "diff_path": os.path.join(base_news_path, 'Earnings_Release_diff_fifth.txt'),
-            "backup_dir": os.path.join(base_news_path, 'backup/backup'),
-            "earnings_release_path": os.path.join(base_news_path, 'backup/Earnings_Release.txt'),
+            "diff_path": os.path.join(NEWS_DIR, 'Earnings_Release_diff_fifth.txt'),
+            "backup_dir": backup_dir,
+            "earnings_release_path": backup_earnings,
             "duplicate_check_files": [new_file, next_file, third_file, fourth_file]
         }
     ]
@@ -972,9 +1030,9 @@ def run_earnings_task():
     driver = create_unified_driver()
     if driver:
         try:
-            with open('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json', 'r') as f:
+            # 修正：使用动态路径 SECTORS_ALL_JSON_PATH
+            with open(SECTORS_ALL_JSON_PATH, 'r') as f:
                 sectors_data = json.load(f)
-
             task_pbar = tqdm(TASK_CONFIGS, desc="总任务进度", position=0)
             
             for config in task_pbar:
@@ -989,9 +1047,7 @@ def run_earnings_task():
             tqdm.write("Earnings 浏览器已关闭。")
             
         try:
-            final_root = tk.Tk(); final_root.withdraw()
-            show_alert_mac("Earnings 抓取任务已完成！")
-            final_root.destroy()
+            show_alert("Earnings 抓取任务已完成！")
         except: pass
     else:
         tqdm.write("无法启动浏览器，跳过 Earnings 任务。")
@@ -1005,7 +1061,6 @@ def run_part_b():
     # mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
     # mouse_thread.start()
     # tqdm.write("后台鼠标防休眠线程已启动...")
-
     try:
         # 1. 运行 Economic Events 任务
         run_economic_events_task()

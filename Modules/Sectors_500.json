@@ -75,7 +75,8 @@
         "MO",
         "BTI",
         "CL",
-        "MNST"
+        "MNST",
+        "TGT"
     ],
     "Energy": [
         "XOM",
@@ -100,7 +101,9 @@
         "SLB",
         "VLO",
         "SU",
-        "MPC"
+        "MPC",
+        "BKR",
+        "CCJ"
     ],
     "Financial_Services": [
         "JPM",
@@ -164,7 +167,8 @@
         "RKT",
         "MET",
         "ARES",
-        "BRK-B"
+        "BRK-B",
+        "MRSH"
     ],
     "Healthcare": [
         "LLY",
@@ -197,10 +201,10 @@
         "CVS",
         "MCK",
         "COR",
-        "ALNY",
         "BDX",
         "IDXX",
-        "TAK"
+        "TAK",
+        "CAH"
     ],
     "Industrials": [
         "GE",
@@ -240,7 +244,9 @@
         "VRT",
         "PCAR",
         "URI",
-        "AXON"
+        "GWW",
+        "AXON",
+        "FAST"
     ],
     "Real_Estate": [
         "PLD",
@@ -249,7 +255,9 @@
         "WELL",
         "SPG",
         "DLR",
-        "O"
+        "O",
+        "PSA",
+        "CBRE"
     ],
     "Technology": [
         "AAPL",
@@ -290,7 +298,6 @@
         "APH",
         "CDNS",
         "MSI",
-        "WDAY",
         "CRWD",
         "FTNT",
         "ADSK",
@@ -302,7 +309,9 @@
         "STX",
         "WDC",
         "NXPI",
-        "SNDK"
+        "SNDK",
+        "CRWV",
+        "MSTR"
     ],
     "Utilities": [
         "NEE",
@@ -312,6 +321,7 @@
         "CEG",
         "AEP",
         "VST",
-        "SRE"
+        "SRE",
+        "D"
     ]
 }

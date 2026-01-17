@@ -18,11 +18,11 @@
         "BRK-B",
         "JPM",
         "V",
-        "BAC",
-        "MA"
+        "BAC"
     ],
     "Healthcare": [
-        "LLY"
+        "LLY",
+        "JNJ"
     ],
     "Industrials": [],
     "Real_Estate": [],
@@ -32,7 +32,8 @@
         "NVDA",
         "TSM",
         "AVGO",
-        "ORCL"
+        "ORCL",
+        "ASML"
     ],
     "Utilities": []
 }

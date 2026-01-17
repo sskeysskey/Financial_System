@@ -14,32 +14,59 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException
+import platform  # <--- 新增
+import sys       # <--- 新增
+import tkinter as tk
+from tkinter import messagebox
 
-# ================= 全局配置区域 =================
+# ================= 全局配置区域 (跨平台修改) =================
 
-# --- 路径配置 (来自两个脚本) ---
-CHROME_DRIVER_PATH = "/Users/yanzhang/Downloads/backup/chromedriver_beta"
-DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
+# 1. 动态获取主目录
+USER_HOME = os.path.expanduser("~")
 
-# ETF 处理相关路径
-JSON_FILE_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
-BLACKLIST_JSON_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
-OUTPUT_DIR = '/Users/yanzhang/Coding/News'
+# 2. 定义基础路径
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
+DOWNLOAD_DIR = os.path.join(USER_HOME, "Downloads")
+FINANCIAL_SYSTEM_DIR = os.path.join(BASE_CODING_DIR, "Financial_System")
+DATABASE_DIR = os.path.join(BASE_CODING_DIR, "Database")
+NEWS_DIR = os.path.join(BASE_CODING_DIR, "News")
+
+# 3. 具体业务文件路径
+DB_PATH = os.path.join(DATABASE_DIR, "Finance.db")
+JSON_FILE_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Sectors_All.json")
+BLACKLIST_JSON_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Blacklist.json")
+OUTPUT_DIR = NEWS_DIR
 OUTPUT_TXT_FILE = os.path.join(OUTPUT_DIR, 'ETFs_new.txt')
-DOWNLOAD_DIR = "/Users/yanzhang/Downloads/"
-CHECK_YESTERDAY_SCRIPT_PATH = '/Users/yanzhang/Coding/Financial_System/Query/Check_yesterday.py'
+CHECK_YESTERDAY_SCRIPT_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Query", "Check_yesterday.py")
+
+# 4. 浏览器与驱动路径 (跨平台适配)
+if platform.system() == 'Darwin':
+    CHROME_BINARY_PATH = "/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta"
+    CHROME_DRIVER_PATH = os.path.join(DOWNLOAD_DIR, "backup", "chromedriver_beta")
+elif platform.system() == 'Windows':
+    # Windows 路径优化
+    CHROME_BINARY_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+    if not os.path.exists(CHROME_BINARY_PATH):
+        CHROME_BINARY_PATH = r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+    CHROME_DRIVER_PATH = os.path.join(DOWNLOAD_DIR, "backup", "chromedriver.exe")
+else:
+    CHROME_BINARY_PATH = "/usr/bin/google-chrome"
+    CHROME_DRIVER_PATH = "/usr/bin/chromedriver"
 
 # 设置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# ================= 通用辅助函数 (来自 TE_Merged) =================
+# ================= 通用辅助函数 =================
 
 def get_driver():
-    """创建并返回配置好的 Chrome Driver (Beta版)"""
+    """创建并返回配置好的 Chrome Driver"""
     chrome_options = Options()
-    # 指定使用 Chrome Beta
-    chrome_options.binary_location = "/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta"
     
+    if os.path.exists(CHROME_BINARY_PATH):
+        chrome_options.binary_location = CHROME_BINARY_PATH
+    else:
+        logging.warning(f"Chrome binary not found at {CHROME_BINARY_PATH}, using system default.")
+
     # --- Headless模式相关设置 ---
     chrome_options.add_argument('--headless=new') 
     chrome_options.add_argument('--window-size=1920,1080')
@@ -59,11 +86,17 @@ def get_driver():
     chrome_options.add_argument("--blink-settings=imagesEnabled=false")
     chrome_options.page_load_strategy = 'eager'
     
+    if not os.path.exists(CHROME_DRIVER_PATH):
+        logging.error(f"Driver not found: {CHROME_DRIVER_PATH}")
+        return None
+
     service = Service(executable_path=CHROME_DRIVER_PATH)
     return webdriver.Chrome(service=service, options=chrome_options)
 
 def get_db_connection():
     """获取数据库连接 (增加超时设置)"""
+    # 确保数据库目录存在
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     return sqlite3.connect(DB_PATH, timeout=60.0)
 
 def check_is_workday():
@@ -72,12 +105,18 @@ def check_is_workday():
     return datetime.now().weekday() not in [0, 6]
 
 def display_dialog(message):
-    """Mac系统弹窗提示"""
-    try:
-        applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
-        subprocess.run(['osascript', '-e', applescript_code], check=True)
-    except Exception as e:
-        logging.error(f"弹窗失败: {e}")
+    """跨平台弹窗提示"""
+    if platform.system() == 'Darwin':
+        try:
+            applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+            subprocess.run(['osascript', '-e', applescript_code], check=True)
+        except Exception as e:
+            logging.error(f"弹窗失败: {e}")
+    else:
+        root = tk.Tk()
+        root.withdraw()
+        messagebox.showinfo("提示", message)
+        root.destroy()
 
 def fetch_with_retry(driver, url, extraction_func, max_retries=3, task_name="Task"):
     """通用重试封装函数"""
@@ -108,11 +147,12 @@ def fetch_with_retry(driver, url, extraction_func, max_retries=3, task_name="Tas
             time.sleep(3)
     return []
 
-# ================= 任务模块 1-6 (来自 TE_Merged) =================
+# ================= 任务模块 1-6 =================
 
 def run_commodities():
     logging.info(">>> 开始执行: Commodities")
     driver = get_driver()
+    if not driver: return
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -129,22 +169,18 @@ def run_commodities():
         conn.commit()
         yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
         all_data = []
-
         def extract_baltic(d):
             WebDriverWait(d, 10).until(EC.presence_of_element_located((By.CLASS_NAME, "table-responsive")))
             price_element = d.find_element(By.XPATH, "//div[@class='table-responsive']//table//tr/td[position()=2]")
             price = float(price_element.text.strip().replace(',', ''))
             return [(yesterday, "BalticDry", price)]
-
         baltic_data = fetch_with_retry(driver, 'https://tradingeconomics.com/commodity/baltic', extract_baltic, task_name="Commodities-Baltic")
         all_data.extend(baltic_data)
-
         commodities_list = [
             "Coal", "Uranium", "Steel", "Lithium", "Wheat", "Palm Oil", "Aluminum",
             "Nickel", "Tin", "Zinc", "Palladium", "Poultry", "Salmon", "Iron Ore",
-            "Orange Juice", "Cotton", "Coffee", "Sugar", "Cocoa"
+            "Orange Juice", "Cotton", "Coffee", "Sugar", "Cocoa", "Lumber"
         ]
-
         def extract_commodities(d):
             temp_data = []
             WebDriverWait(d, 10).until(EC.presence_of_element_located((By.LINK_TEXT, "Coal"))) 
@@ -159,10 +195,8 @@ def run_commodities():
                     logging.warning(f"Skipped {commodity}: {inner_e}")
             if not temp_data: raise Exception("页面已加载但未提取到任何商品数据")
             return temp_data
-
         others_data = fetch_with_retry(driver, 'https://tradingeconomics.com/commodities', extract_commodities, task_name="Commodities-List")
         all_data.extend(others_data)
-
         if all_data:
             cursor.executemany('INSERT OR REPLACE INTO Commodities (date, name, price) VALUES (?, ?, ?)', all_data)
             conn.commit()
@@ -177,6 +211,7 @@ def run_commodities():
 def run_currency_cny2():
     logging.info(">>> 开始执行: Currency CNY 2")
     driver = get_driver()
+    if not driver: return
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -213,6 +248,7 @@ def run_currency_cny2():
 def run_currency_cny():
     logging.info(">>> 开始执行: Currency CNY (Specific Pairs)")
     driver = get_driver()
+    if not driver: return
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -254,6 +290,7 @@ def run_currency_cny():
 def run_bonds():
     logging.info(">>> 开始执行: Bonds")
     driver = get_driver()
+    if not driver: return
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -301,7 +338,6 @@ def run_bonds():
                 # 抛出异常！这会触发 fetch_with_retry 的 except 块
                 # 从而导致：记录警告 -> 等待3秒 -> 重新 reload 页面 -> 重试
                 raise Exception(f"数据抓取不完整，缺失: {missing_items}。触发重试机制。")
-            
             return temp
             
         all_data.extend(fetch_with_retry(driver, 'https://tradingeconomics.com/bonds', extract_other_bonds, task_name="Bonds-Others"))
@@ -319,6 +355,7 @@ def run_bonds():
 def run_indices():
     logging.info(">>> 开始执行: Indices")
     driver = get_driver()
+    if not driver: return
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -328,7 +365,6 @@ def run_indices():
         
         name_mapping = {"MOEX": "Russia"}
         yesterday_date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
-
         def extract_indices(d):
             temp = []
             # 关键修改：直接等待具体的 MOEX 链接出现，而不是等待容器
@@ -340,19 +376,15 @@ def run_indices():
                     )
                     # 滚动到该元素，防止在 headless 模式下因为不在视口内而无法点击/读取
                     d.execute_script("arguments[0].scrollIntoView();", element)
-                    
                     row = element.find_element(By.XPATH, './ancestor::tr')
                     price_text = row.find_element(By.ID, 'p').text.strip()
                     price = float(price_text.replace(',', ''))
-                    
                     temp.append((yesterday_date, mapped_name, price, 0))
                 except Exception as e: 
                     logging.warning(f"Failed Indices {mapped_name}: {e}")
-            
             if not temp:
                 raise Exception("未能提取到任何指数数据，可能是页面结构改变或被拦截")
             return temp
-
         all_data = fetch_with_retry(driver, 'https://tradingeconomics.com/stocks', extract_indices, task_name="Indices")
         
         if all_data:
@@ -360,7 +392,6 @@ def run_indices():
             cursor.executemany('INSERT OR REPLACE INTO Indices (date, name, price, volume) VALUES (?, ?, ?, ?)', all_data)
             conn.commit()
             logging.info(f"Indices: 成功插入 {len(all_data)} 条数据")
-            
     except Exception as e:
         logging.error(f"Indices 模块最终出错: {e}")
         conn.rollback()
@@ -371,6 +402,7 @@ def run_indices():
 def run_economics():
     logging.info(">>> 开始执行: Economics")
     driver = get_driver()
+    if not driver: return
     conn = get_db_connection()
     
     def fetch_data_logic(driver, indicators):
@@ -390,11 +422,9 @@ def run_economics():
                 # 只有当不仅找到元素，且内容有效时才算成功
                 element = driver.find_element(By.XPATH, f"//td[normalize-space(.)=\"{key}\"]/following-sibling::td")
                 price_str = element.text.strip()
-                
                 if not price_str: 
                     missing_items.append(key)
                     continue
-
                 price = float(price_str.replace(',', ''))
                 result.append((yesterday, value, price))
             except Exception:
@@ -403,7 +433,6 @@ def run_economics():
         # 【关键修改】如果抓取到的数量少于预期数量，抛出异常以触发重试
         if len(result) < len(indicators):
             raise Exception(f"数据抓取不完整 (成功 {len(result)}/{len(indicators)})。缺失指标: {missing_items}")
-
         return result
 
     def navigate_and_fetch_retry(driver, section_css, link_text, indicators, max_retries=3):
@@ -455,7 +484,7 @@ def run_economics():
         driver.quit()
         conn.close()
 
-# ================= 任务模块 7: ETF 处理 (来自 Compare_Insert.py) =================
+# ================= 任务模块 7: ETF 处理 =================
 
 def count_files(prefix):
     """计算Downloads目录中指定前缀开头的文件数量"""
@@ -469,22 +498,36 @@ def run_etf_processing():
     yesterday = date.today() - timedelta(days=1)
     yesterday_str = yesterday.strftime('%Y-%m-%d')
     
-    # 2. 触发 AppleScript (Chrome操作)
-    script = '''
-    delay 1
-    tell application "Google Chrome"
-        activate
-    end tell
-    delay 1
-    tell application "System Events"
-        keystroke "c" using option down
-    end tell
-    '''
-    try:
-        subprocess.run(['osascript', '-e', script], check=True)
-        logging.info("AppleScript 触发成功")
-    except Exception as e:
-        logging.error(f"AppleScript 执行失败: {e}")
+    # 2. 跨平台交互: Mac (AppleScript) / Windows (pyautogui)
+    if platform.system() == 'Darwin':
+        # Mac 原生逻辑
+        script = '''
+        delay 1
+        tell application "Google Chrome"
+            activate
+        end tell
+        delay 1
+        tell application "System Events"
+            keystroke "c" using option down
+        end tell
+        '''
+        try:
+            subprocess.run(['osascript', '-e', script], check=True)
+            logging.info("AppleScript 触发成功")
+        except Exception as e:
+            logging.error(f"AppleScript 执行失败: {e}")
+    else:
+        # Windows/Linux 逻辑
+        # 假设你已经安装了类似 Tampermonkey 脚本监听快捷键，且快捷键是 Alt+C
+        try:
+            import pyautogui
+            # 尝试切换到 Chrome 窗口 (这一步很难自动化完美，假设用户已经把 Chrome 放在前台)
+            logging.info("请确保 Chrome 浏览器在前台...")
+            time.sleep(2)
+            pyautogui.hotkey('alt', 'c') 
+            logging.info("发送 Alt+C 快捷键成功")
+        except Exception as e:
+            logging.error(f"发送快捷键失败: {e}")
 
     # 3. 等待文件下载
     print("正在等待 topetf_*.csv 文件下载...", end="")
@@ -516,40 +559,37 @@ def run_etf_processing():
         if not known_etfs: logging.warning("JSON ETFs 列表为空")
     except Exception as e:
         logging.error(f"读取 JSON 失败: {e}")
-        return # 关键配置缺失，终止
+        return 
 
     etf_blacklist = set()
     try:
-        with open(BLACKLIST_JSON_PATH, 'r', encoding='utf-8') as f_bl:
-            bl_data = json.load(f_bl)
-        etf_blacklist = set(bl_data.get('etf', []))
+        if os.path.exists(BLACKLIST_JSON_PATH):
+            with open(BLACKLIST_JSON_PATH, 'r', encoding='utf-8') as f_bl:
+                bl_data = json.load(f_bl)
+            etf_blacklist = set(bl_data.get('etf', []))
     except Exception as e:
-        logging.warning(f"Blacklist 读取失败或不存在，将不使用过滤: {e}")
+        logging.warning(f"Blacklist 读取失败，将不使用过滤: {e}")
 
     # 6. 处理 CSV
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     etfs_to_db = []
     new_etfs_to_file = []
-
     try:
         with open(topetf_file, mode='r', encoding='utf-8-sig') as csvfile:
             reader = csv.DictReader(csvfile)
             if not reader.fieldnames or not all(col in reader.fieldnames for col in ['Symbol', 'Name', 'Price', 'Volume']):
                 logging.error("CSV 缺少必要列")
                 return
-
             for row in reader:
                 symbol = row.get('Symbol')
                 name = row.get('Name')
                 price_str = row.get('Price')
                 volume_str = row.get('Volume')
-
                 if not all([symbol, name, price_str, volume_str]): continue
                 try:
                     price_val = float(price_str)
                     volume_val = int(volume_str)
                 except ValueError: continue
-
                 if symbol in known_etfs:
                     etfs_to_db.append((yesterday_str, symbol, round(price_val, 2), volume_val))
                 else:
@@ -589,8 +629,9 @@ def run_etf_processing():
     # 9. 调用子脚本 Check_yesterday
     logging.info("--- 开始执行 Check_yesterday.py ---")
     try:
+        # 使用 sys.executable 动态获取 python 路径
         result = subprocess.run(
-            ['/Library/Frameworks/Python.framework/Versions/Current/bin/python3', CHECK_YESTERDAY_SCRIPT_PATH],
+            [sys.executable, CHECK_YESTERDAY_SCRIPT_PATH],
             check=True, capture_output=True, text=True, encoding='utf-8'
         )
         logging.info("Check_yesterday 执行成功")
@@ -612,7 +653,7 @@ def main():
         return
 
     # --- 配置等待时间 (秒) ---
-    TASK_INTERVAL = 3  # 这里设置你想要的等待秒数
+    TASK_INTERVAL = 3  
 
     def wait_between_tasks(task_name):
         """辅助函数：打印日志并等待"""
@@ -620,47 +661,40 @@ def main():
         time.sleep(TASK_INTERVAL)
 
     # 2. 顺次执行爬虫任务
-
     try: 
         run_commodities()
     except Exception as e: 
         logging.error(f"Main Loop - Commodities Error: {e}")
     
     wait_between_tasks("Commodities") # 等待
-
     try: 
         run_currency_cny2()
     except Exception as e: 
         logging.error(f"Main Loop - Currency CNY2 Error: {e}")
     
     wait_between_tasks("Currency CNY2") # 等待
-
     try: 
         run_currency_cny()
     except Exception as e: 
         logging.error(f"Main Loop - Currency CNY Error: {e}")
     
     wait_between_tasks("Currency CNY") # 等待
-
     try: 
         run_bonds()
     except Exception as e: 
         logging.error(f"Main Loop - Bonds Error: {e}")
     
     wait_between_tasks("Bonds") # 等待
-
     try: 
         run_indices()
     except Exception as e: 
         logging.error(f"Main Loop - Indices Error: {e}")
         
     wait_between_tasks("Indices") # 等待
-
     try: 
         run_economics()
     except Exception as e: 
         logging.error(f"Main Loop - Economics Error: {e}")
-
     wait_between_tasks("Economics") # 等待
 
     # 3. 执行 ETF 处理任务 (原 Compare_Insert 逻辑)

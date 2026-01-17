@@ -513,7 +513,9 @@
         "TMC",
         "SSRM",
         "SOLS",
-        "HCC"
+        "HCC",
+        "EMAT",
+        "AUGO"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -578,7 +580,8 @@
         "PSKY",
         "STUB",
         "FUBO",
-        "VSNTV"
+        "VSNTV",
+        "TDS"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -1071,7 +1074,6 @@
         "PB",
         "AXS",
         "SIGI",
-        "SNV",
         "FAF",
         "JXN",
         "MTG",
@@ -1133,7 +1135,8 @@
         "MCY",
         "NNI",
         "CBC",
-        "IFS"
+        "IFS",
+        "MRSH"
     ],
     "Healthcare": [
         "LLY",
@@ -1515,7 +1518,11 @@
         "CSW",
         "PL",
         "GVA",
-        "FER"
+        "FER",
+        "CMPO",
+        "NPO",
+        "VSEC",
+        "POWL"
     ],
     "Real_Estate": [
         "PLD",
@@ -1723,7 +1730,6 @@
         "LSCC",
         "CACI",
         "QRVO",
-        "CFLT",
         "PCTY",
         "YMM",
         "MNDY",
@@ -1851,7 +1857,8 @@
         "CCC",
         "VICR",
         "FISV",
-        "FORM"
+        "FORM",
+        "DOCN"
     ],
     "Utilities": [
         "NEE",

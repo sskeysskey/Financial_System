@@ -41,9 +41,7 @@ BLACKLIST_JSON_FILE = PATHS["blacklist_json"](config_path)
 PANEL_JSON_FILE = PATHS["panel_json"](config_path)
 DESCRIPTION_JSON_FILE = PATHS["description_json"](config_path)
 TAGS_SETTING_JSON_FILE = PATHS["tags_setting_json"](config_path)
-# ========== 新增路径变量 ==========
 EARNING_HISTORY_JSON_FILE = PATHS["earnings_history_json"](config_path)
-# ================================
 
 
 # --- 2. 可配置参数 --- 使用一个配置字典来管理所有参数

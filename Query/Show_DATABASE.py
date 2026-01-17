@@ -2,6 +2,25 @@ import sqlite3
 import os
 import html
 import webbrowser
+import platform  # <--- 新增
+
+# ================= 配置区域 (跨平台修改) =================
+
+# 1. 动态获取主目录
+USER_HOME = os.path.expanduser("~")
+
+# 2. 定义基础路径
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
+DATABASE_DIR = os.path.join(BASE_CODING_DIR, "Database")
+DOWNLOADS_DIR = os.path.join(USER_HOME, "Downloads")
+
+# 3. 默认数据库路径
+DEFAULT_DB_PATH = os.path.join(DATABASE_DIR, "Finance.db")
+
+# 4. 默认报告输出目录
+DEFAULT_REPORT_DIR = DOWNLOADS_DIR
+
+# ========================================================
 
 def generate_html_report(db_name, tables_data, output_file='db_visualization.html'):
     """
@@ -123,7 +142,6 @@ def generate_html_report(db_name, tables_data, output_file='db_visualization.htm
     <div class="container">
         <h1>数据库报告: {html.escape(db_name)}</h1>
     """
-
     # 添加目录 (Table of Contents)
     html_content += '<div class="toc"><h3>数据库表索引</h3><ul>'
     for table_name in tables_data:
@@ -143,7 +161,7 @@ def generate_html_report(db_name, tables_data, output_file='db_visualization.htm
             <summary>{html.escape(table_name)}</summary>
             <div style="padding: 15px;">
         """
-
+        
         # 表结构
         html_content += "<h3>表结构 (Schema)</h3>"
         if schema:
@@ -164,6 +182,7 @@ def generate_html_report(db_name, tables_data, output_file='db_visualization.htm
             for header in content_headers:
                 html_content += f"<th>{html.escape(header)}</th>"
             html_content += "</tr></thead><tbody>"
+            
             for row in content_preview:
                 html_content += "<tr>"
                 for cell in row:
@@ -193,6 +212,7 @@ def generate_html_report(db_name, tables_data, output_file='db_visualization.htm
     # 写入文件
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write(html_content)
+    
     print(f"报告已生成: {output_file}")
     return os.path.abspath(output_file)
 
@@ -212,6 +232,7 @@ def visualize_sqlite_db(db_path, output_dir, content_limit=100, target_tables=No
 
     tables_data = {}
     conn = None  # 在 try 外部初始化 conn
+
     try:
         # 连接数据库
         conn = sqlite3.connect(db_path, timeout=60.0)
@@ -242,7 +263,7 @@ def visualize_sqlite_db(db_path, output_dir, content_limit=100, target_tables=No
         for table_name in tables:
             print(f"正在处理表: {table_name}...")
             tables_data[table_name] = {'is_all': show_all}
-
+            
             # a. 获取表结构和所有列名
             cursor.execute(f'PRAGMA table_info("{table_name}");')
             schema = cursor.fetchall()
@@ -281,6 +302,7 @@ def visualize_sqlite_db(db_path, output_dir, content_limit=100, target_tables=No
             else:
                 # 确保 content_limit 是整数，防止字符串格式化进 SQL 时出错
                 content_limit = int(content_limit) 
+                
                 # 限制显示：使用子查询获取最新的 N 行
                 sql_query = f"""
                 SELECT {select_clause}
@@ -295,6 +317,7 @@ def visualize_sqlite_db(db_path, output_dir, content_limit=100, target_tables=No
             # 执行查询
             cursor.execute(sql_query)
             content_preview = cursor.fetchall()
+            
             # 获取列名
             content_headers = [description[0] for description in cursor.description] if cursor.description else []
             
@@ -312,6 +335,7 @@ def visualize_sqlite_db(db_path, output_dir, content_limit=100, target_tables=No
     db_name = os.path.basename(db_path)
     # 为了避免文件名冲突，可以基于数据库名来命名HTML文件
     output_filename = f"{os.path.splitext(db_name)[0]}_visualization.html"
+    
     # 使用 os.path.join 来创建完整、跨平台的输出路径
     report_output_path = os.path.join(output_dir, output_filename)
 
@@ -321,18 +345,20 @@ def visualize_sqlite_db(db_path, output_dir, content_limit=100, target_tables=No
     
     # 4. 在浏览器中打开报告
     if report_path:
-        webbrowser.open_new_tab(f'file://{report_path}')
+        # <--- 跨平台修改：处理 Windows 路径反斜杠和 file:// 格式 --->
+        real_path = os.path.realpath(report_path)
+        if os.name == 'nt':
+            url = 'file:///' + real_path.replace('\\', '/')
+        else:
+            url = 'file://' + real_path
+            
+        webbrowser.open_new_tab(url)
 
 # --- 主程序入口 ---
 if __name__ == "__main__":
-    # 请将这里的路径修改为您自己的数据库文件路径
-    # 对于Windows用户，路径可能像这样: r"C:\Users\YourUser\Documents\Database\Finance.db"
-    database_file_path = "/Users/yanzhang/Coding/Database/Finance.db"
-    # database_file_path = "/Users/yanzhang/Downloads/user_data.db"
-    
-    # --- 修改部分 4: 指定HTML报告的输出目录 ---
-    # 这是您希望保存HTML文件的目录
-    report_save_directory = "/Users/yanzhang/Downloads"
+    # --- 修改部分 4: 使用跨平台配置路径 ---
+    database_file_path = DEFAULT_DB_PATH
+    report_save_directory = DEFAULT_REPORT_DIR
     
     # --- 配置项 1: 指定要显示的表 (None 表示全部) ---
     # 场景1：只看 Options

@@ -247,7 +247,6 @@
         "TREX",
         "DOOO",
         "FUN",
-        "INFY",
         "VRNS",
         "FDX",
         "FLR",
@@ -585,7 +584,9 @@
         "ELP",
         "AXIA-P",
         "AXIA-PC",
-        "DOO"
+        "DOO",
+        "SNV",
+        "CFLT"
     ],
     "etf": [
         "VDE",
@@ -927,7 +928,11 @@
         "DBJP",
         "DEUS",
         "WTPI",
-        "XAGG"
+        "XAGG",
+        "XMPT",
+        "QINT",
+        "RPV",
+        "IYC"
     ],
     "Earning": [
         "TW",
@@ -993,6 +998,17 @@
         "NEU",
         "SAN",
         "STRL",
-        "MOD"
+        "MOD",
+        "WCN",
+        "XYL",
+        "CG",
+        "HLNE",
+        "EAT",
+        "IRTC",
+        "NIQ",
+        "JKHY",
+        "CBT",
+        "PAC",
+        "PEGA"
     ]
 }

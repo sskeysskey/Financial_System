@@ -40,7 +40,7 @@ DISPLAY_LIMITS = {
 
 categories = [
     ['Must', 'Today', 'Short_backup', 'Short_W_backup',
-     'PE_Deep_backup', 'PE_W_backup', 'OverSell_W_backup'],
+     'PE_Deep_backup', 'PE_Deeper_backup', 'PE_W_backup', 'OverSell_W_backup'],
     ['PE_valid_backup', 'PE_invalid_backup', 'Strategy12_backup', 'Strategy34_backup'],
     ['Basic_Materials', 'Consumer_Cyclical', 'Real_Estate', 'Technology', 'Energy', 'Industrials',
      'Consumer_Defensive', 'Communication_Services', 'Financial_Services', 'Healthcare', 'Utilities'],
@@ -1396,9 +1396,7 @@ class MainWindow(QMainWindow):
         blacklist_menu.addAction("Earning", lambda: self.add_to_blacklist(keyword, 'Earning', group))
         
         menu.addSeparator()
-        menu.addAction("清空 Short_W 分组", lambda: self.clear_group("Short_W"))
         menu.addAction("清空 Short_W_backup 分组", lambda: self.clear_group("Short_W_backup"))
-        menu.addAction("清空 Short 分组", lambda: self.clear_group("Short"))
         menu.addAction("清空 Short_backup 分组", lambda: self.clear_group("Short_backup"))
         menu.addAction("清空 PE_Deep_backup 分组", lambda: self.clear_group("PE_Deep_backup"))
         menu.addAction("清空 OverSell_W_backup 分组", lambda: self.clear_group("OverSell_W_backup"))

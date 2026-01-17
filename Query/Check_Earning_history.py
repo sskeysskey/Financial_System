@@ -8,7 +8,7 @@ from PyQt6.QtCore import Qt
 # --- 1. 配置部分 ---
 
 JSON_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Earning_History.json'
-SECTOR_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'  # <--- 新增路径
+SECTOR_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
 
 # 复用你的 NORD 主题，保持视觉一致性
 NORD_THEME = {

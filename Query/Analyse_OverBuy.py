@@ -6,24 +6,45 @@ from wcwidth import wcswidth
 from collections import defaultdict
 from datetime import datetime, timedelta
 import os
-import traceback
 
-# 文件路径
-PRICE_FILE = '/Users/yanzhang/Coding/Financial_System/Modules/10Y_newhigh.json'
-DESC_FILE = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
-SECTORS_FILE = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
-COMPARE_FILE = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
-DB_FILE = '/Users/yanzhang/Coding/Database/Finance.db'
-OUTPUT_FILE = '/Users/yanzhang/Coding/News/OverBuy.txt'
-PANEL_FILE = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
-EARNING_HISTORY_FILE = '/Users/yanzhang/Coding/Financial_System/Modules/Earning_History.json'
-DEBUG_LOG_FILE = '/Users/yanzhang/Downloads/OverBuy_debug.log'
+# ==========================================
+# 1. 配置文件和路径管理 (已优化)
+# ==========================================
 
-# 决定debug.log日志是否输出的开关
+# 算法参数配置
+CONFIG = {
+    "MIN_PRICE_CHANGE_THRESHOLD": 27,      # 财报后涨幅阈值
+    "CONDITIONAL_THRESHOLD": 16.9,           # 【新增】特定条件下（如前次财报更高）的涨幅阈值
+    "M_TOP_HEIGHT_TOLERANCE": 0.038,       # 双峰高度差容忍度 (3.8%)
+    "M_TOP_NECK_DEPTH": 0.025,             # 颈线深度 (2.5%)
+    "M_TOP_MIN_DAYS_GAP": 3,               # 双峰之间的最小间隔天数
+    "M_TOP_NOISE_TOLERANCE": 0.01          # 噪音容忍度
+}
+
+# 动态路径生成
+BASE_PATH = os.path.expanduser('~')
+
+# 定义基础目录
+CODING_DIR = os.path.join(BASE_PATH, 'Coding')
+MODULES_DIR = os.path.join(CODING_DIR, 'Financial_System', 'Modules')
+NEWS_DIR = os.path.join(CODING_DIR, 'News')
+DB_DIR = os.path.join(CODING_DIR, 'Database')
+DOWNLOADS_DIR = os.path.join(BASE_PATH, 'Downloads')
+
+# 定义文件具体路径
+DESC_FILE = os.path.join(MODULES_DIR, 'description.json')
+SECTORS_FILE = os.path.join(MODULES_DIR, 'Sectors_All.json')
+PANEL_FILE = os.path.join(MODULES_DIR, 'Sectors_panel.json')
+EARNING_HISTORY_FILE = os.path.join(MODULES_DIR, 'Earning_History.json')
+COMPARE_FILE = os.path.join(NEWS_DIR, 'backup', 'Compare_All.txt')
+OUTPUT_FILE = os.path.join(NEWS_DIR, 'OverBuy.txt')
+DB_FILE = os.path.join(DB_DIR, 'Finance.db')
+DEBUG_LOG_FILE = os.path.join(DOWNLOADS_DIR, 'OverBuy_debug.log')
+
+# ==========================================
+# 2. 日志配置
+# ==========================================
 LOG_ENABLED = False  # True 或 False
-
-# 【配置项】涨幅过滤阈值 (百分比)
-MIN_PRICE_CHANGE_THRESHOLD = 27
 
 logger = logging.getLogger(__name__)
 
@@ -47,33 +68,22 @@ logging.basicConfig(
 # 确保 logger 处于开启状态
 logger.disabled = False
 
-# 定义tag黑名单
-# BLACKLIST_TAGS = ["联合医疗","黄金","金矿","白银","光纤","赋能半导体","赋能芯片制造","数据中心","贵金属"]
-BLACKLIST_TAGS = []
+# ==========================================
+# 3. 标签过滤配置
+# ==========================================
+BLACKLIST_TAGS = [
+    "赋能半导体", "黄金", "白银", "贵金属", "卫星",
+    "国防", "军工", "生物制药", "铝", "铜", "仿制药", "卡车运输"
+    ]
 
 # 【修改点 1】定义tag白名单
 # 如果这里填入了内容（例如 ["SaaS", "半导体"]），程序将只筛选包含这些tag的股票，且无视黑名单。
 # 如果这里为空 []，程序将执行原有的黑名单过滤逻辑。
 WHITELIST_TAGS = [] 
 
-
-# 读取JSON文件
-with open(PRICE_FILE, 'r') as f:
-    # 1. 先将整个新的JSON结构加载到一个临时变量中
-    raw_price_data = json.load(f)
-    # 2. 从新的结构中提取我们需要的股票字典
-    #    使用 .get() 方法以防止 'stocks' 键不存在时报错
-    stocks_list = raw_price_data.get('stocks', [])
-    
-    # 3. 检查列表是否非空，然后获取第一个元素
-    if stocks_list and isinstance(stocks_list, list) and len(stocks_list) > 0:
-        price_data = stocks_list[0]
-    else:
-        # 如果结构不符合预期，给 price_data 一个空字典，以防后续代码出错
-        price_data = {}
-        logger.warning(f"PRICE_FILE ({PRICE_FILE}) did not contain the expected 'stocks' list or the list was empty.")
-
-    logger.info(f'Loaded PRICE_FILE with {len(price_data)} symbols from the "stocks" key')
+# ==========================================
+# 4. 数据加载函数与预处理
+# ==========================================
 
 # 读取description文件
 with open(DESC_FILE, 'r') as f:
@@ -87,20 +97,31 @@ with open(SECTORS_FILE, 'r') as f:
 
 # 读取 Compare_All.txt 文件并解析数据
 compare_data = {}
-with open(COMPARE_FILE, 'r') as f:
-    for line in f:
-        if line.strip():
-            parts = line.strip().split(':')
-            if len(parts) == 2:
-                symbol = parts[0].strip()
-                percent = parts[1].strip()
-                compare_data[symbol] = percent
+try:
+    with open(COMPARE_FILE, 'r') as f:
+        for line in f:
+            if line.strip():
+                parts = line.strip().split(':')
+                if len(parts) == 2:
+                    symbol = parts[0].strip()
+                    percent = parts[1].strip()
+                    compare_data[symbol] = percent
     logger.info(f'Loaded COMPARE_FILE with {len(compare_data)} entries')
+except FileNotFoundError:
+    logger.warning(f"Compare file not found at {COMPARE_FILE}")
 
-# 读取并载入 panel.json
-with open(PANEL_FILE, 'r') as f:
-    panel_data = json.load(f)
+# 读取 panel.json
+try:
+    with open(PANEL_FILE, 'r') as f:
+        panel_data = json.load(f)
     logger.info('Loaded PANEL_FILE')
+except FileNotFoundError:
+    panel_data = {}
+    logger.warning("PANEL_FILE not found, initializing empty.")
+
+# ==========================================
+# 5. 辅助函数
+# ==========================================
 
 def update_earning_history_json_b(file_path, group_name, symbols_to_add):
     """
@@ -108,8 +129,7 @@ def update_earning_history_json_b(file_path, group_name, symbols_to_add):
     """
     if not symbols_to_add:
         return
-
-    # 获取昨天日期 (同步 a.py 逻辑)
+    # 获取昨天日期
     yesterday_str = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
     
     logger.info(f"--- 更新历史记录文件: {os.path.basename(file_path)} -> '{group_name}' ---")
@@ -178,6 +198,22 @@ def get_symbol_info(symbol):
             
     return {'has_blacklist': False, 'tags': []}
 
+_percent_pattern = re.compile(r'([-+]?\d+(?:\.\d+)?)%')
+def parse_compare_percent(compare_str: str, symbol: str):
+    if not compare_str:
+        return None
+    m = _percent_pattern.search(compare_str)
+    if not m:
+        return None
+    try:
+        return float(m.group(1))
+    except ValueError:
+        return None
+
+# ==========================================
+# 6. 核心策略函数
+# ==========================================
+
 def get_price_peak_date(cursor, symbol, sector):
     """
     检查最近一个月内的最高价是否出现在最新交易日的前一个交易日。
@@ -193,17 +229,11 @@ def get_price_peak_date(cursor, symbol, sector):
             LIMIT 1
         """, (symbol,))
         latest_result = cursor.fetchone()
-    except Exception as e:
-        logger.error(f'[{symbol}] get_price_peak_date: failed to query latest: {e}')
-        return False
-
-    if not latest_result:
-        return False
+        if not latest_result: return False
     
-    latest_date_str, latest_price = latest_result[0], latest_result[1]
+        latest_date_str, latest_price = latest_result[0], latest_result[1]
 
-    # 2. 查询上一个实际的交易日，而不是通过日期计算
-    try:
+        # 2. 查询上一个实际的交易日
         cursor.execute(f"""
             SELECT date
             FROM {sector}
@@ -212,16 +242,11 @@ def get_price_peak_date(cursor, symbol, sector):
             LIMIT 1
         """, (symbol, latest_date_str))
         previous_trading_day_result = cursor.fetchone()
-    except Exception as e:
-        return False
+        if not previous_trading_day_result: return False
+        
+        previous_trading_day_str = previous_trading_day_result[0]
 
-    if not previous_trading_day_result:
-        return False
-    
-    previous_trading_day_str = previous_trading_day_result[0]
-
-    # 3. 获取最近一个月的价格窗口，找到期间的最高价及其日期
-    try:
+        # 3. 获取最近一个月的价格窗口
         latest_date = datetime.strptime(latest_date_str, '%Y-%m-%d')
         one_month_ago = latest_date - timedelta(days=30)
         
@@ -234,26 +259,29 @@ def get_price_peak_date(cursor, symbol, sector):
             ORDER BY price DESC, date DESC
         """, (symbol, one_month_ago.strftime('%Y-%m-%d'), latest_date.strftime('%Y-%m-%d')))
         prices = cursor.fetchall()
+        if not prices: return False
+        
+        peak_date_str = prices[0][0]
+        return peak_date_str == previous_trading_day_str
     except Exception as e:
+        logger.error(f'[{symbol}] get_price_peak_date error: {e}')
         return False
 
-    if not prices:
-        return False
-    
-    peak_date_str = prices[0][0]
-    
-    return peak_date_str == previous_trading_day_str
-
-# 【新增功能】检查是否为 M 形态（双峰）
 def check_double_top(cursor, symbol, sector):
     """
-    检查是否【刚刚】形成了双峰（M形态）。
-    修正点：
-    1. 严格限制双峰高度差 (从 5% 降至 3.8%)，过滤掉 PSLV 这种右峰过高的情况。
-    2. 增加颈线深度要求，防止微小震荡被误判为双峰。
+    检查是否形成 M 形态（双峰）。
+    借鉴了 Script A (W底) 的严谨逻辑：
+    1. 严格的高度差 (CONFIG控制)
+    2. 颈线深度 (CONFIG控制)
+    3. 最小间隔 (CONFIG控制)
+    4. 【新增】区间绝对高点检查 (防止中间有更高峰)
     """
     try:
-        # 1. 获取过去60个交易日的数据 (按日期倒序取，然后反转为正序)
+        # 获取配置 (假设你已经添加了 CONFIG 字典)
+        price_tolerance = CONFIG.get("M_TOP_HEIGHT_TOLERANCE", 0.038)
+        min_depth = CONFIG.get("M_TOP_NECK_DEPTH", 0.025)
+        min_days_gap = CONFIG.get("M_TOP_MIN_DAYS_GAP", 3)
+
         cursor.execute(f"""
             SELECT date, price 
             FROM {sector}
@@ -263,52 +291,54 @@ def check_double_top(cursor, symbol, sector):
         """, (symbol,))
         rows = cursor.fetchall()
         
-        # 数据太少无法判断
-        if len(rows) < 10: 
-            return False
-
-        # 转为正序：index 0 是最旧的，index -1 是最新的（今天），index -2 是上一个交易日
-        rows = rows[::-1]
+        if len(rows) < 15: return False # 数据太少
+        
+        rows = rows[::-1] # 转正序
         prices = [float(r[1]) for r in rows]
         dates = [r[0] for r in rows]
-
-        # -------------------------------------------------------------------------
-        # 【核心修改】锁定右峰 (Peak 2) 必须是 "昨天" (index -2)
-        # -------------------------------------------------------------------------
-        curr_price = prices[-1]      # 今天 (12.12)
-        prev_price = prices[-2]      # 昨天 (12.11) - 候选 Peak 2
-        prev2_price = prices[-3]     # 前天 (12.10)
-
-        # 昨天必须是高点，且今天下跌
-        if not (prev_price > prev2_price and prev_price > curr_price):
+        
+        # 锁定 P2 (右峰) 必须是昨天 (index -2)
+        curr_price = prices[-1]      # 今天
+        p2 = prices[-2]              # 昨天 (潜在 P2)
+        prev2_price = prices[-3]     # 前天
+        
+        # 昨天必须是局部高点
+        if not (p2 > prev2_price and p2 > curr_price):
             return False
-
-        # 此时，我们锁定了 p2 就是 prices[-2]
+            
         idx2 = len(prices) - 2
-        p2 = prev_price
-
-        # 3. 寻找左峰 (Peak 1)
+        
+        # 向前寻找 P1 (左峰)
+        # start_search_index 确保了最小间隔
+        start_search_index = idx2 - min_days_gap
+        
         found_pattern = False
         
-        # 向前回溯寻找左峰
-        for i in range(idx2 - 3, 0, -1):
+        for i in range(start_search_index, 0, -1):
             p1 = prices[i]
             idx1 = i
             
-            # A. 必须是局部高点
+            # A. P1 必须是局部高点
             if not (p1 > prices[i-1] and p1 > prices[i+1]):
                 continue
-            
-            # ---------------------------------------------------------
-            # 【修改点 1】收紧高度差阈值
-            # ABVX 差距约 3.65%，PSLV 差距约 4.15%。
-            # 设为 0.038 (3.8%) 可以保留 ABVX 并过滤 PSLV。
-            # ---------------------------------------------------------
+                
+            # B. 高度对称性检查
             diff_pct = abs(p1 - p2) / max(p1, p2)
-            if diff_pct > 0.038: 
+            if diff_pct > price_tolerance: 
                 continue
 
-            # 获取中间的低谷数据
+            # C. 区间极值检查 (核心移植逻辑)
+            # 确保 P1 和 P2 是这段时间内的天花板
+            period_prices = prices[idx1 : idx2 + 1]
+            period_high = max(period_prices)
+            peak_max = max(p1, p2)
+            
+            # 允许 0.1% 的误差
+            if period_high > peak_max * 1.001:
+                # logger.debug(f"[{symbol}] 失败: 区间内存在更高价 {period_high} > Peak {peak_max}")
+                continue
+
+            # D. 颈线深度检查 (中间必须跌得够深)
             valley_prices = prices[idx1+1 : idx2]
             if not valley_prices: continue
             
@@ -322,63 +352,41 @@ def check_double_top(cursor, symbol, sector):
             # 这里要求中间至少回撤 2.5%
             # ---------------------------------------------------------
             valley_depth = (avg_peak - min_valley) / avg_peak
-            if valley_depth < 0.025:
+            if valley_depth < min_depth:
                 continue
+                
+            # E. 颈线不能破位太深 (可选，防止变成 huge V shape)
+            # 脚本 A 中防止了 min_trough 过低，这里 M 头通常不用太担心跌太深，
+            # 因为跌得深代表 M 头确立的概率更大，但如果跌破了启动点可能就不是顶部构造了。
+            # 暂时不加，保持策略B的原意。
 
-            # ---------------------------------------------------------
-            # 【修改点 3】颈线位置检查 (保持之前的逻辑，防止跌得太深变成别的形态)
-            # 但通常只要有深度即可，这里主要防止 min_valley 比 avg_peak 还高(不可能)
-            # 之前的逻辑是 min_valley > avg_peak * 0.975 (即深度小于2.5%)，
-            # 上面的 valley_depth < 0.025 已经覆盖了这个逻辑。
-            # ---------------------------------------------------------
-
-            # 如果通过所有测试
-            logger.info(f"[{symbol}] Strict Double Top: "
+            # 通过所有检查
+            logger.info(f"[{symbol}] M-Top Confirmed: "
                         f"P1@{p1:.2f}({dates[idx1]}), "
                         f"P2@{p2:.2f}({dates[idx2]}), "
                         f"Diff:{diff_pct*100:.2f}%, Depth:{valley_depth*100:.2f}%")
             found_pattern = True
             break 
-
+            
         return found_pattern
 
     except Exception as e:
         logger.error(f'[{symbol}] check_double_top error: {e}')
         return False
 
-_percent_pattern = re.compile(r'([-+]?\d+(?:\.\d+)?)%')
-def parse_compare_percent(compare_str: str, symbol: str):
-    if not compare_str:
-        logger.info(f'[{symbol}] Compare parse: empty string')
-        return None
-    
-    m = _percent_pattern.search(compare_str)
-    if not m:
-        logger.info(f'[{symbol}] Compare parse: no percent found in "{compare_str}"')
-        return None
-    
-    try:
-        return float(m.group(1))
-    except ValueError:
-        logger.info(f'[{symbol}] Compare parse: failed to parse "{compare_str}"')
-        return None
+# ==========================================
+# 7. 主执行逻辑
+# ==========================================
 
-# -----------------------------------------------------------------------------
-# 【修改点 4】 准备 Short 和 Short_W 分组容器
-# -----------------------------------------------------------------------------
-# 1. Short 分组 (强制清空，实现“先清除再写入”)
+# 1. 初始化 Short 和 Short_backup
 panel_data['Short'] = {}
 short_group = panel_data['Short']
-
-# 【新增】Short_backup 分组 (同步初始化)
 panel_data['Short_backup'] = {}
 short_backup_group = panel_data['Short_backup']
 
-# 2. Short_W 分组 (强制清空，实现“先清除再写入”)
+# 2. 初始化 Short_W 和 Short_W_backup
 panel_data['Short_W'] = {}
 short_w_group = panel_data['Short_W']
-
-# 【新增】Short_W_backup 分组 (同步初始化)
 panel_data['Short_W_backup'] = {}
 short_w_backup_group = panel_data['Short_W_backup']
 
@@ -389,8 +397,32 @@ cursor = conn.cursor()
 # 创建一个字典来存储按sector分组的输出内容
 sector_outputs = defaultdict(list)
 
-symbols = list(price_data.keys())
-logger.info(f'Start processing {len(symbols)} symbols')
+# --- 【修改开始】更改 symbols 来源 ---
+
+# 定义你需要提取的目标板块
+TARGET_SECTORS = [
+    'Basic_Materials', 'Consumer_Cyclical', 'Real_Estate', 'Technology', 'Energy', 
+    'Industrials', 'Consumer_Defensive', 'Communication_Services', 
+    'Financial_Services', 'Healthcare', 'Utilities'
+]
+
+symbols = []
+# 遍历目标板块，从 sectors_data 中收集所有 symbol
+for sec_name in TARGET_SECTORS:
+    # sectors_data 在第4部分已经加载，直接使用
+    if sec_name in sectors_data:
+        # 提取该板块下的所有 symbol 并加入列表
+        sec_symbols = sectors_data[sec_name]
+        symbols.extend(sec_symbols)
+    else:
+        logger.warning(f"Sector '{sec_name}' not found in SECTORS_FILE.")
+
+# 去重 (防止同一个 symbol 出现在不同板块导致的重复计算)
+symbols = list(set(symbols))
+
+# --- 【修改结束】 ---
+
+logger.info(f'Start processing {len(symbols)} symbols from Sectors_All.json')
 
 final_short_symbols = []
 final_short_w_symbols = []
@@ -399,7 +431,6 @@ for symbol in symbols:
     try:
         symbol_info = get_symbol_info(symbol)
         sector = get_symbol_sector(symbol)
-        
         tags_str = ", ".join(symbol_info['tags']) if symbol_info['tags'] else "无标签"
         
         # 白名单/黑名单 逻辑
@@ -415,85 +446,66 @@ for symbol in symbols:
                 logger.info(f'[{symbol}] Skip due to blacklist tag')
                 continue
         
-        # 查询最新财报涨跌幅记录（不再根据正负进行过滤）
-        cursor.execute("""
-            SELECT price 
-            FROM Earning 
-            WHERE name = ? 
-            ORDER BY date DESC 
-            LIMIT 1
-        """, (symbol,))
-        earning_price_row = cursor.fetchone()
-        
-        if earning_price_row is None or earning_price_row[0] is None:
-            continue
-            
-        # 计算财报日至最新收盘价变化百分比
-        price_change = None
-        try:
-            price_change = None
-            # 获取最新财报日期
-            cursor.execute("""
-                SELECT date, price 
-                FROM Earning 
-                WHERE name = ? 
-                ORDER BY date DESC 
-                LIMIT 1
-            """, (symbol,))
-            earning_result = cursor.fetchone()
-            if not earning_result:
-                logger.info(f'[{symbol}] Skip: Earning query returned empty')
-                continue
-                
-            earning_date = earning_result[0]
-            
-            # 获取最新收盘价
-            cursor.execute(f"""
-                SELECT price 
-                FROM {sector}
-                WHERE name = ? 
-                ORDER BY date DESC 
-                LIMIT 1
-            """, (symbol,))
-            latest_price_result = cursor.fetchone()
-            if not latest_price_result:
-                logger.info(f'[{symbol}] Skip: no latest price in table {sector}')
-                continue
-            latest_price = float(latest_price_result[0])
-            
-            # 获取财报日收盘价
-            cursor.execute(f"""
-                SELECT price 
-                FROM {sector}
-                WHERE name = ? AND date = ?
-            """, (symbol, earning_date))
-            earning_price_result = cursor.fetchone()
-            if not earning_price_result:
-                logger.info(f'[{symbol}] Skip: no price on earning date {earning_date} in table {sector}')
-                continue
-            earning_price = float(earning_price_result[0])
-            
-            if earning_price == 0:
-                logger.info(f'[{symbol}] Skip: earning day price is 0 (division by zero)')
-                continue
-                
-            price_change = (latest_price - earning_price) / earning_price * 100
-            logger.info(f'[{symbol}] Price change from earning_date={earning_date}: earning_price={earning_price}, latest_price={latest_price}, change={price_change:.2f}%')
-            
-        except Exception as e:
-            logger.error(f'[{symbol}] Error computing price change: {e}')
-            logger.debug(traceback.format_exc())
+        # --- 修改部分开始：动态确定涨幅阈值 ---
+        # 1. 查询最近 2 次财报日期 (只取日期)
+        cursor.execute("SELECT date FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 2", (symbol,))
+        earning_rows = cursor.fetchall()
+        if not earning_rows:
             continue
 
-        # 【修改点 3】过滤小于MIN_PRICE_CHANGE_THRESHOLD
-        # 这样只保留正向涨幅超过MIN_PRICE_CHANGE_THRESHOLD的，负数（如-35%）将被过滤
-        if price_change is None or price_change < MIN_PRICE_CHANGE_THRESHOLD:
-            logger.info(f'[{symbol}] Skip: price_change < {MIN_PRICE_CHANGE_THRESHOLD} (actual: {price_change})')
+        # 获取最新一次财报日期
+        earning_date = earning_rows[0][0]
+        
+        # --- 核心修复：从板块表(Sector)获取真实收盘价，而不是依赖 Earning 表 ---
+        cursor.execute(f"SELECT price FROM {sector} WHERE name = ? AND date = ?", (symbol, earning_date))
+        earning_res = cursor.fetchone()
+        
+        # 如果板块数据里找不到这天（比如停牌或数据缺失），跳过
+        if not earning_res:
+            logger.warning(f"[{symbol}] Missing price in sector table for earning date: {earning_date}")
+            continue
+            
+        earning_price = float(earning_res[0]) # 这是最新的财报日价格
+        if earning_price == 0:
+            continue
+
+        # 确定动态阈值：默认值
+        current_threshold = CONFIG["MIN_PRICE_CHANGE_THRESHOLD"]
+
+        # 如果有两次财报数据，计算前一次的真实价格并比较
+        if len(earning_rows) == 2:
+            prev_earning_date = earning_rows[1][0]
+            
+            # 去板块表查上一次财报日的收盘价
+            cursor.execute(f"SELECT price FROM {sector} WHERE name = ? AND date = ?", (symbol, prev_earning_date))
+            prev_res = cursor.fetchone()
+            
+            if prev_res:
+                prev_earning_price = float(prev_res[0])
+                
+                # 只有当：上一次真实收盘价 > 这一次真实收盘价，才降低阈值
+                if prev_earning_price > earning_price:
+                    current_threshold = CONFIG["CONDITIONAL_THRESHOLD"]
+
+        # 获取当前最新价格 (用于计算涨幅)
+        cursor.execute(f"SELECT price FROM {sector} WHERE name = ? ORDER BY date DESC LIMIT 1", (symbol,))
+        latest_res = cursor.fetchone()
+        if not latest_res:
+            continue
+        latest_price = float(latest_res[0])
+
+        # 计算涨幅
+        price_change = (latest_price - earning_price) / earning_price * 100
+        
+        # 记录日志方便调试
+        # logger.info(f'[{symbol}] Date:{earning_date}, Price:{earning_price:.2f} | Latest:{latest_price:.2f} | Change:{price_change:.2f}% | Threshold:{current_threshold}%')
+
+        # 过滤涨幅
+        if price_change < current_threshold:
             continue
             
         compare_str = compare_data.get(symbol, '')
-        cmp_pct = parse_compare_percent(compare_str, symbol)
-
+        
         # 写入 txt 候选
         sector_disp = pad_display(sector, 20, 'left')
         symbol_disp = pad_display(symbol, 5, 'left')
@@ -505,7 +517,7 @@ for symbol in symbols:
         logger.info(f'[{symbol}] Added to txt candidates')
 
         # -----------------------------------------------------------------------------
-        # 【修改点 5】 分组逻辑重构：Short vs Short_W
+        # 分组逻辑：同步写入 backup 分组
         # -----------------------------------------------------------------------------
         
         # 1. 检查 M 形态 (双峰) -> 对应 Short_W
@@ -518,26 +530,22 @@ for symbol in symbols:
         if is_double_top:
             if symbol not in short_w_group:
                 short_w_group[symbol] = ""
+                # --- 修改点：同步写入 backup ---
+                short_w_backup_group[symbol] = "" 
                 final_short_w_symbols.append(symbol)
-                logger.info(f'[{symbol}] Added to Short_W group (M-Pattern Detected)')
-            else:
-                logger.info(f'[{symbol}] Already in Short_W group')
+                logger.info(f'[{symbol}] Added to Short_W and Short_W_backup')
         
         # 如果不是 M 形态，再看是否是单日新高 (Fallback)
         elif is_single_peak:
             if symbol not in short_group:
                 short_group[symbol] = ""
+                # --- 修改点：同步写入 backup ---
+                short_backup_group[symbol] = ""
                 final_short_symbols.append(symbol)
-                logger.info(f'[{symbol}] Added to Short group (Single Peak only)')
-            else:
-                logger.info(f'[{symbol}] Already in Short group')
-        
-        else:
-            logger.info(f'[{symbol}] Not added to Short/Short_W')
+                logger.info(f'[{symbol}] Added to Short and Short_backup')
 
     except Exception as e:
         logger.error(f'[{symbol}] Unexpected error: {e}')
-        logger.debug(traceback.format_exc())
         continue
 
 # 关闭数据库连接
@@ -555,10 +563,8 @@ with open(OUTPUT_FILE, 'w', encoding='utf-8') as output_file:
 # --- 新增：同步写入 Earning_History.json ---
 if final_short_symbols:
     update_earning_history_json_b(EARNING_HISTORY_FILE, "Short", final_short_symbols)
-
 if final_short_w_symbols:
     update_earning_history_json_b(EARNING_HISTORY_FILE, "Short_W", final_short_w_symbols)
-# ------------------------------------------
 
 # 原有的写回 panel JSON 代码
 with open(PANEL_FILE, 'w', encoding='utf-8') as f:

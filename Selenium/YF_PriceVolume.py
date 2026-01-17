@@ -14,25 +14,70 @@ import sqlite3
 import datetime
 import subprocess
 import os
+import platform
+import tkinter as tk
+from tkinter import messagebox
 
-# 新增：定义 Check_yesterday 脚本的路径
-CHECK_YESTERDAY_SCRIPT_PATH = '/Users/yanzhang/Coding/Financial_System/Query/Check_yesterday.py'
-# 新增：定义 Python 解释器路径（参考你第二个程序中的路径）
-PYTHON_INTERPRETER = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
+# ================= 配置区域 (跨平台修改) =================
+
+# 1. 动态获取主目录
+USER_HOME = os.path.expanduser("~")
+
+# 2. 定义基础路径
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
+DOWNLOADS_DIR = os.path.join(USER_HOME, "Downloads")
+FINANCIAL_SYSTEM_DIR = os.path.join(BASE_CODING_DIR, "Financial_System")
+
+# 3. 具体业务文件路径
+CHECK_YESTERDAY_SCRIPT_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Query", "Check_yesterday.py")
+SECTORS_EMPTY_JSON = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Sectors_empty.json")
+SECTORS_TODAY_JSON = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Sectors_today.json")
+SECTORS_HOLIDAY_JSON = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Sectors_US_holiday.json")
+SYMBOL_MAPPING_JSON = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "symbol_mapping.json")
+DB_PATH = os.path.join(BASE_CODING_DIR, "Database", "Finance.db")
+INSERT_SCRIPT_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Operations", "Insert_Currencies_Index.py")
+
+# 4. 浏览器与驱动路径 (跨平台适配)
+if platform.system() == 'Darwin':
+    CHROME_BINARY_PATH = "/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta"
+    CHROME_DRIVER_PATH = os.path.join(DOWNLOADS_DIR, "backup", "chromedriver_beta")
+elif platform.system() == 'Windows':
+    # Windows 路径优化：使用 raw string (r"...") 时，单斜杠即可
+    CHROME_BINARY_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+    if not os.path.exists(CHROME_BINARY_PATH):
+        CHROME_BINARY_PATH = r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+    CHROME_DRIVER_PATH = os.path.join(DOWNLOADS_DIR, "backup", "chromedriver.exe")
+else:
+    CHROME_BINARY_PATH = "/usr/bin/google-chrome"
+    CHROME_DRIVER_PATH = "/usr/bin/chromedriver"
+
+# ========================================================
 
 def show_alert(message):
-    # AppleScript 代码模板
-    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
-    # 使用 subprocess 调用 osascript
-    subprocess.run(['osascript', '-e', applescript_code], check=True)
+    """
+    跨平台弹窗提示
+    """
+    if platform.system() == 'Darwin':
+        # Mac 原生 AppleScript
+        try:
+            applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+            subprocess.run(['osascript', '-e', applescript_code], check=True)
+        except Exception:
+            pass
+    else:
+        # Windows Tkinter
+        root = tk.Tk()
+        root.withdraw()
+        messagebox.showinfo("提示", message)
+        root.destroy()
 
 def run_check_yesterday():
     """执行 Check_yesterday.py 脚本"""
     try:
         print(f"\n[系统信息] 正在调用补充脚本: {CHECK_YESTERDAY_SCRIPT_PATH}")
-        # 使用指定的 Python 解释器运行
+        # 使用当前运行环境的 Python 解释器，无需硬编码路径
         result = subprocess.run(
-            [PYTHON_INTERPRETER, CHECK_YESTERDAY_SCRIPT_PATH],
+            [sys.executable, CHECK_YESTERDAY_SCRIPT_PATH],
             check=True, 
             capture_output=True, 
             text=True, 
@@ -73,18 +118,21 @@ def parse_arguments():
 
 def check_empty_json_has_content(json_file_path):
     """检查empty.json中是否有任何分组包含内容"""
+    if not os.path.exists(json_file_path):
+        return False
     with open(json_file_path, 'r') as file:
         data = json.load(file)
     
     for group, items in data.items():
         if items:  # 如果该分组有任何项目
             return True
-    
     return False
 
 # 新增：读取symbol_mapping.json
 def load_symbol_mapping(mapping_file_path):
     try:
+        if not os.path.exists(mapping_file_path):
+            return {}
         with open(mapping_file_path, 'r') as file:
             return json.load(file)
     except Exception as e:
@@ -102,6 +150,10 @@ def get_stock_symbols_from_json(json_file_path):
         'Bonds', 'Currencies', 'Crypto', 'Commodities', 'Economics', 'Indices'
     ]
     
+    if not os.path.exists(json_file_path):
+        print(f"错误：找不到配置文件 {json_file_path}")
+        return {}
+
     with open(json_file_path, 'r') as file:
         sectors_data = json.load(file)
     
@@ -170,9 +222,9 @@ def main():
     
     # 1. 根据命令行参数选择JSON文件路径
     if args.mode.lower() == 'empty':
-        json_file_path = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json"
+        json_file_path = SECTORS_EMPTY_JSON
         
-        # --- [修改点 1]：如果一开始就是空的，执行脚本并退出 ---
+        # 如果一开始就是空的，执行脚本并退出
         if not check_empty_json_has_content(json_file_path):
             print("\n[通知] Sectors_empty.json 为空，准备执行 Check_yesterday...")
             run_check_yesterday() # 执行你的查询脚本
@@ -180,25 +232,23 @@ def main():
             return
             
     elif args.mode.lower() == 'normal':
-        # 参数为normal格式
-        json_file_path = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_today.json"
+        json_file_path = SECTORS_TODAY_JSON
     else:
-        json_file_path = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_US_holiday.json"
+        json_file_path = SECTORS_HOLIDAY_JSON
     
-    # 加载symbol映射关系
-    mapping_file_path = "/Users/yanzhang/Coding/Financial_System/Modules/symbol_mapping.json"
-    symbol_mapping = load_symbol_mapping(mapping_file_path)
+    symbol_mapping = load_symbol_mapping(SYMBOL_MAPPING_JSON)
 
     # ==========================================
     # [修改点] Selenium 配置区域
     # ==========================================
     chrome_options = Options()
     
-    # 1. 指定使用 Chrome Beta 浏览器应用
-    chrome_options.binary_location = "/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta"
+    if os.path.exists(CHROME_BINARY_PATH):
+        chrome_options.binary_location = CHROME_BINARY_PATH
+    else:
+        print(f"警告：未找到指定 Chrome 路径 {CHROME_BINARY_PATH}，尝试使用系统默认...")
 
-    # --- Headless模式相关设置 ---
-    chrome_options.add_argument('--headless=new') # 推荐使用新的 headless 模式
+    chrome_options.add_argument('--headless=new')
     chrome_options.add_argument('--window-size=1920,1080')
     
     # --- 伪装设置 ---
@@ -214,30 +264,29 @@ def main():
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--blink-settings=imagesEnabled=false")  # 禁用图片加载
-    chrome_options.page_load_strategy = 'eager'  # 使用eager策略，DOM准备好就开始
+    chrome_options.add_argument("--blink-settings=imagesEnabled=false")
+    chrome_options.page_load_strategy = 'eager'
 
-    # 2. 设置 ChromeDriver 路径 (指向 Beta 版驱动)
-    # 确保这个文件存在于你的文件夹中
-    chrome_driver_path = "/Users/yanzhang/Downloads/backup/chromedriver_beta"
-    
-    # 检查驱动是否存在，防止报错
-    import os
-    if not os.path.exists(chrome_driver_path):
-        print(f"错误: 未找到驱动文件 {chrome_driver_path}")
+    if not os.path.exists(CHROME_DRIVER_PATH):
+        print(f"错误: 未找到驱动文件 {CHROME_DRIVER_PATH}")
         return
 
-    service = Service(executable_path=chrome_driver_path)
-    driver = webdriver.Chrome(service=service, options=chrome_options)
-    
-    # 设置超时
-    driver.set_page_load_timeout(30) # 稍微增加一点容错
+    service = Service(executable_path=CHROME_DRIVER_PATH)
+    try:
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+    except Exception as e:
+        print(f"Selenium 启动失败: {e}")
+        return
+        
+    driver.set_page_load_timeout(30)
     driver.set_script_timeout(10)  
 
     # ==========================================
     # 连接SQLite数据库
-    db_path = "/Users/yanzhang/Coding/Database/Finance.db"
-    conn = sqlite3.connect(db_path, timeout=60.0)
+    # [新增] 确保数据库目录存在，防止新机器报错
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    
+    conn = sqlite3.connect(DB_PATH, timeout=60.0)
     
     # 从JSON文件获取股票符号和分组
     symbols_by_sector = get_stock_symbols_from_json(json_file_path)
@@ -372,9 +421,6 @@ def main():
                 # --- 循环结束后的判断 ---
                 if not success:
                     print(f"❌ 最终失败: {symbol} 在尝试 {max_retries} 次后仍未获取到数据，跳转下一个。")
-                    # 可选：这里可以记录失败的 symbol 到一个列表，或者保存截图
-                    
-                # [修改结束]
                 
                 # 添加短暂延迟，避免请求过于频繁
                 time.sleep(random.uniform(1, 2))
@@ -396,12 +442,9 @@ def main():
                 else:
                     # 抓取完成，所有分组已清空，现在调用另一个脚本
                     show_alert("所有分组已清空 ✅\n✅ Sectors_empty.json 中没有剩余 symbols。\n\n接下来将调用补充脚本...")
-                    script_to_run = "/Users/yanzhang/Coding/Financial_System/Operations/Insert_Currencies_Index.py"
+                    script_to_run = INSERT_SCRIPT_PATH
                     try:
                         print(f"正在调用脚本: {script_to_run}")
-                        # 使用 subprocess.run 执行脚本
-                        # sys.executable 确保使用当前 Python 解释器
-                        # check=True 会在脚本执行失败时抛出异常
                         subprocess.run([sys.executable, script_to_run], check=True)
                         print(f"脚本 {script_to_run} 执行成功。")
                         show_alert(f"补充脚本执行成功！\n\n路径:\n{script_to_run}")
