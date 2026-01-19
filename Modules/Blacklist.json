@@ -932,7 +932,8 @@
         "XMPT",
         "QINT",
         "RPV",
-        "IYC"
+        "IYC",
+        "NYM"
     ],
     "Earning": [
         "TW",
@@ -956,7 +957,10 @@
         "MPC",
         "OPEN",
         "PSKY",
-        "TEM"
+        "TEM",
+        "RIVN",
+        "INSM",
+        "ICLR"
     ],
     "Options": [
         "BBVA",
