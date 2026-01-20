@@ -1,12 +1,7 @@
 import tkinter as tk
 import sqlite3
-import os  # 新增：用于路径处理
-import sys
 from datetime import datetime, timedelta
-
-# --- 路径动态化处理 ---
-HOME = os.path.expanduser("~")
-DB_PATH = os.path.join(HOME, "Coding/Database/Finance.db")
+import sys  # 添加导入
 
 class App:
     def __init__(self, init_symbol=None):  # 修改初始化函数接受参数
@@ -19,7 +14,7 @@ class App:
         
         # 设置窗口大小和位置
         window_width = 400
-        window_height = 250 # 稍微增加高度以适应显示
+        window_height = 200
         x = (screen_width - window_width) // 2
         y = (screen_height - window_height) // 2
         self.root.geometry(f"{window_width}x{window_height}+{x}+{y}")
@@ -64,14 +59,12 @@ class App:
         
     def handle_first_screen(self, event):
         self.stock_name = self.entry.get().upper()
-        if not self.stock_name:
-            return
         self.create_second_screen()
         
     def create_second_screen(self):
         self.clear_window()
         
-        label = tk.Label(self.root, text=f"股票: {self.stock_name}\n请输入日期 (格式: YYYY-MM-DD)：")
+        label = tk.Label(self.root, text="请输入日期 (格式: YYYY-MM-DD)：")
         label.pack(pady=20)
         
         self.date_entry = tk.Entry(self.root)
@@ -103,7 +96,7 @@ class App:
     def create_third_screen(self):
         self.clear_window()
         
-        label = tk.Label(self.root, text=f"股票: {self.stock_name} | 日期: {self.selected_date}\n请输入价格：")
+        label = tk.Label(self.root, text="请输入价格：")
         label.pack(pady=20)
         
         self.price_entry = tk.Entry(self.root)
@@ -130,8 +123,7 @@ class App:
         success_label = tk.Label(
             self.root, 
             text=f"保存成功！\n\n股票代码: {self.stock_name}\n日期: {self.selected_date}\n价格: {self.price}",
-            justify=tk.LEFT,
-            fg="green"
+            justify=tk.LEFT
         )
         success_label.pack(pady=20)
         
@@ -140,8 +132,7 @@ class App:
         hint_label.pack(pady=10)
             
     def save_to_database(self, name, date, price):
-        # 使用动态定义的 DB_PATH
-        conn = sqlite3.connect(DB_PATH, timeout=60.0)
+        conn = sqlite3.connect('/Users/yanzhang/Coding/Database/Finance.db', timeout=60.0)
         cursor = conn.cursor()
         
         # 插入数据
@@ -152,13 +143,6 @@ class App:
         
         conn.commit()
         conn.close()
-
-    def show_error_message(self, message):
-        # 简单的错误提示，不破坏当前输入状态
-        err_win = tk.Toplevel(self.root)
-        err_win.title("错误")
-        tk.Label(err_win, text=message, padx=20, pady=20).pack()
-        tk.Button(err_win, text="确定", command=err_win.destroy).pack(pady=10)
         
     def clear_window(self):
         # 清除窗口中的所有部件
@@ -167,22 +151,12 @@ class App:
             
     def close_app(self, event=None):
         self.root.quit()
-
-    # def close_app(self, event=None):
-    #     self.root.destroy()  # 销毁窗口
-    #     sys.exit()           # 确保彻底退出进程
             
     def run(self):
         self.root.mainloop()
 
 def init_database():
-    # 使用动态定义的 DB_PATH
-    # 确保目录存在
-    db_dir = os.path.dirname(DB_PATH)
-    if not os.path.exists(db_dir):
-        os.makedirs(db_dir)
-
-    conn = sqlite3.connect(DB_PATH, timeout=60.0)
+    conn = sqlite3.connect('/Users/yanzhang/Coding/Database/Finance.db', timeout=60.0)
     cursor = conn.cursor()
     
     cursor.execute('''

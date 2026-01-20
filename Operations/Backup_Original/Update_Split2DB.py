@@ -4,7 +4,6 @@ import pyperclip
 import sys
 import subprocess
 import time
-import os  # 新增导入 os 模块
 from PyQt5.QtWidgets import (QApplication, QInputDialog, QLineEdit, 
                            QMessageBox, QDialog, QVBoxLayout, QRadioButton, 
                            QDateEdit, QDialogButtonBox)
@@ -56,7 +55,7 @@ class DateSelectionDialog(QDialog):
         if self.latest_radio.isChecked():
             # 返回显示的最新日期文本,而不是None
             latest_date = self.latest_radio.text()
-            return latest_date[latest_date.find("(")+1:latest_date.find(")")]
+        return latest_date[latest_date.find("(")+1:latest_date.find(")")]
         return self.date_edit.date().toString("yyyy-MM-dd")
 
 def get_adjustment_date(latest_date):
@@ -138,9 +137,6 @@ def get_price_divisor():
 def main():
     app = QApplication.instance() or QApplication(sys.argv)
     
-    # 动态获取用户家目录
-    home_path = os.path.expanduser("~")
-    
     # 保存初始剪贴板内容
     initial_content = get_clipboard_content()
     
@@ -166,10 +162,9 @@ def main():
         QMessageBox.warning(None, "警告", "股票代码不能为空")
         return
 
-    # 加载 JSON 文件 (动态路径)
-    json_path = os.path.join(home_path, 'Coding/Financial_System/Modules/Sectors_All.json')
+    # 加载 JSON 文件
     try:
-        with open(json_path, 'r') as f:
+        with open('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json', 'r') as f:
             sectors_data = json.load(f)
     except Exception as e:
         QMessageBox.critical(None, "错误", f"无法加载JSON文件: {str(e)}")
@@ -195,10 +190,8 @@ def main():
         QMessageBox.warning(None, "警告", "拆股比例必须大于0")
         return
     
-    # 数据库动态路径
-    db_path = os.path.join(home_path, 'Coding/Database/Finance.db')
     try:
-        conn = sqlite3.connect(db_path, timeout=60.0)
+        conn = sqlite3.connect('/Users/yanzhang/Coding/Database/Finance.db', timeout=60.0)
         cursor = conn.cursor()
 
         # 获取最新日期

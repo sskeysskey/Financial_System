@@ -1,26 +1,17 @@
 import json
 import pyperclip
 import tkinter as tk
-from tkinter import messagebox
 import subprocess
 import re
-import os
-import platform
-
-USER_HOME = os.path.expanduser("~")
 
 def copy2clipboard():
-    if platform.system() == "Darwin":
-        script = '''
-        tell application "System Events"
-            keystroke "c" using {command down}
-            delay 0.5
-        end tell
-        '''
-        subprocess.run(['osascript', '-e', script], check=True)
-    else:
-        import pyautogui
-        pyautogui.hotkey('ctrl', 'c')
+    script = '''
+    tell application "System Events"
+	    keystroke "c" using {command down}
+        delay 0.5
+    end tell
+    '''
+    subprocess.run(['osascript', '-e', script], check=True)
 
 def show_input_dialog(title, prompt, initial_value=None):
     """通用的输入对话框函数，支持预填充值"""
@@ -135,14 +126,8 @@ def show_tags_dialog():
 
 def show_message(message):
     """显示消息对话框"""
-    if platform.system() == "Darwin":
-        applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
-        subprocess.run(['osascript', '-e', applescript_code], check=True)
-    else:
-        root = tk.Tk()
-        root.withdraw()
-        messagebox.showinfo("提示", message)
-        root.destroy()
+    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+    subprocess.run(['osascript', '-e', applescript_code], check=True)
 
 def validate_symbol(symbol):
     """验证股票代码格式"""
@@ -162,7 +147,7 @@ def get_clipboard_content():
         return ""
 
 def main():
-    json_file = os.path.join(USER_HOME, "Coding/Financial_System/Modules/description.json")
+    json_file = "/Users/yanzhang/Coding/Financial_System/Modules/description.json"
     
     try:
         with open(json_file, 'r', encoding='utf-8') as file:

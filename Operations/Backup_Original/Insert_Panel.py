@@ -11,13 +11,12 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt
 import subprocess
 
-# --- 1. 路径动态化处理 ---
-HOME = os.path.expanduser("~")
-BASE_DIR = os.path.join(HOME, "Coding/Financial_System")
-# 自动定位到 Modules 文件夹下的 JSON 文件
-JSON_FILE_PATH = os.path.join(BASE_DIR, "Modules/Sectors_panel.json")
+# --- 配置区 ---
 
-# --- 2. 配置区 ---
+# 请将这里替换为您 JSON 文件的实际路径
+JSON_FILE_PATH = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json"
+
+# 您指定要显示在第二个界面中的分组
 TARGET_CATEGORIES = [
     "Must",
     "Today",
@@ -29,10 +28,7 @@ def is_uppercase_letters(text: str) -> bool:
     return bool(re.match(r'^[A-Z]+$', text))
 
 def copy2clipboard():
-    """使用 AppleScript 模拟 Command+C 复制，并等待剪贴板更新 (仅限 macOS)"""
-    if sys.platform != "darwin":
-        return
-
+    """使用 AppleScript 模拟 Command+C 复制，并等待剪贴板更新"""
     script = '''
     set the clipboard to ""
     delay 0.5
@@ -172,7 +168,7 @@ def main():
         QMessageBox.critical(None, "文件读取错误", f"读取文件时发生错误：\n{e}")
         sys.exit(1)
 
-    # 2. 获取 Symbol
+
     symbol = None
     # 检查是否有命令行参数 (sys.argv[0] 是脚本名, sys.argv[1] 是第一个参数)
     if len(sys.argv) > 1:
@@ -201,10 +197,7 @@ def main():
         else:
             symbol = clipboard_content
 
-    if not symbol:
-        QMessageBox.warning(None, "无效输入", "Symbol 不能为空。")
-        sys.exit(1)
-
+    # 统一将 Symbol 转为大写
     symbol = symbol.upper()
 
     # --- 修改点 4: 查找 Symbol 已存在的分组 ---
@@ -270,8 +263,6 @@ def main():
 
         # 只有在数据确实发生变动时，才写回文件
         if something_changed:
-            # 确保目录存在并写入
-            os.makedirs(os.path.dirname(JSON_FILE_PATH), exist_ok=True)
             with open(JSON_FILE_PATH, 'w', encoding='utf-8') as f:
                 json.dump(panel_data, f, ensure_ascii=False, indent=4)
             
@@ -282,7 +273,7 @@ def main():
             sys.exit(2) # <--- 【修改】: 虽然程序没报错，但没改动数据，返回 2
 
     except Exception as e:
-        QMessageBox.critical(None, "更新失败", f"保存 JSON 时出错：\n{e}")
+        QMessageBox.critical(None, "未知错误", f"更新 JSON 文件时发生了一个意外错误：\n{e}")
         sys.exit(1)
 
     sys.exit(0)

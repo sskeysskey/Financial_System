@@ -4,23 +4,21 @@ import json
 import pyperclip
 import pyautogui
 import numpy as np
-import time
+from time import sleep
 from PIL import ImageGrab
 import tkinter as tk
-from tkinter import messagebox, simpledialog
 import sys
 import subprocess
-import os
-import platform
+from tkinter import simpledialog
 
-# --- 配置部分 ---
-USER_HOME = os.path.expanduser("~")
+# -----------------------
+# 正则表达式（修复了警告与健壮性）
+# -----------------------
 
-# 统一路径定义
-JSON_FILE_PATH = os.path.join(USER_HOME, "Coding/Financial_System/Modules/description.json")
-RESOURCE_DIR = os.path.join(USER_HOME, "Coding/python_code/Resource")
-
-# --- 正则表达式 ---
+# 规则1：删除 [[数字]](http/https…)
+# 修复“Possible nested set”警告，并更严谨地匹配：
+# - [[ 数字 ]] 之间允许1个或多个数字
+# - 紧随其后是 (http(s)://... ) 的一对圆括号
 RE_CITATION = re.compile(
     r'\[\[\d+\]\]\(\s*https?://[^)\s]+[^)]*\)',
     flags=re.IGNORECASE
@@ -38,17 +36,6 @@ RE_BARE_URL = re.compile(
     r'https?://[^\s\)\}\>,\'"；，。、“”‘’（）()<>\[\]]+',
     flags=re.IGNORECASE
 )
-
-def show_alert(message):
-    """跨平台弹窗函数"""
-    if platform.system() == "Darwin":
-        applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
-        subprocess.run(['osascript', '-e', applescript_code])
-    else:
-        root = tk.Tk()
-        root.withdraw()
-        messagebox.showinfo("提示", message)
-        root.destroy()
 
 def clean_string_value(s: str) -> str:
     """
@@ -106,11 +93,26 @@ def find_image_on_screen(template, threshold=0.9):
     return None, None
 
 def activate_chrome():
-    """仅在 Mac 上激活 Chrome"""
-    if platform.system() == "Darwin":
-        script = 'tell application "Google Chrome" to activate'
-        subprocess.run(['osascript', '-e', script])
+    """使用AppleScript激活Google Chrome浏览器"""
+    script = '''
+    tell application "Google Chrome"
+        activate
+        delay 0.5
+    end tell
+    '''
+    subprocess.run(['osascript', '-e', script])
 
+def show_applescript_dialog(message: str):
+    """显示简单的 AppleScript 对话框"""
+    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+    try:
+        subprocess.run(['osascript', '-e', applescript_code], check=True)
+    except Exception:
+        # 兜底用 Tkinter
+        root = tk.Tk()
+        root.withdraw()
+        simpledialog.messagebox.showinfo("提示", message)
+        root.destroy()
 
 def input_with_dialog(title: str, prompt: str, initial_value: str = "") -> str:
     """
@@ -215,12 +217,16 @@ def validate_new_name(new_name):
 def check_stock_exists(data, new_name):
     """检查股票代码是否已存在于JSON文件中"""
     if any(stock.get('symbol') == new_name for stock in data.get('stocks', [])):
-        show_alert(f"错误：股票代码 {new_name} 已存在！")
+        show_applescript_dialog("股票代码已存在！")
         sys.exit()
 
 def execute_applescript(script_path):
-    if platform.system() == "Darwin" and os.path.exists(script_path):
-        subprocess.run(['osascript', script_path])
+    """执行指定的AppleScript文件"""
+    try:
+        process = subprocess.run(['osascript', script_path], check=True, text=True, stdout=subprocess.PIPE)
+        print(process.stdout.strip())
+    except subprocess.CalledProcessError as e:
+        print(f"Error running AppleScript: {e}")
 
 def safe_read_clipboard_or_prompt_symbol():
     """
@@ -234,19 +240,19 @@ def safe_read_clipboard_or_prompt_symbol():
         while True:
             user_input = input_with_dialog("输入股票代码", "请输入股票代码（仅大写字母和-）：", candidate)
             if not user_input:
-                show_alert("操作已取消。")
+                show_applescript_dialog("操作已取消，未输入股票代码。")
                 sys.exit()
             candidate = user_input.strip().upper()
-            if validate_new_name(candidate): break
-            show_alert("格式不正确，请重新输入。")
+            if validate_new_name(candidate):
+                break
+            else:
+                show_applescript_dialog("不是股票代码！请重新输入（仅大写字母和-）。")
     return candidate
 
 def main():
-    if not os.path.exists(JSON_FILE_PATH):
-        show_alert(f"找不到配置文件: {JSON_FILE_PATH}")
-        return
+    json_file = "/Users/yanzhang/Coding/Financial_System/Modules/description.json"
 
-    with open(JSON_FILE_PATH, 'r', encoding='utf-8') as file:
+    with open(json_file, 'r', encoding='utf-8') as file:
         data = json.load(file)
 
     # 安全地获取股票代码：剪贴板异常或不合规时转为手工输入
@@ -256,27 +262,23 @@ def main():
     # 让用户输入股票名称（保留原有对话框交互）
     stock_name = input_symbol_name()
     if not stock_name:
-        show_alert("操作已取消，未输入股票名称。")
+        show_applescript_dialog("操作已取消，未输入股票名称。")
         sys.exit()
 
     activate_chrome()
-    
-    # --- 修正：使用动态路径引用模板 ---
     template_paths = {
         # "poesuccess": "/Users/yanzhang/Coding/python_code/Resource/poe_copy_success.png",
         # "poethumb": "/Users/yanzhang/Coding/python_code/Resource/poe_thumb.png",
-        "doubaocopy": os.path.join(RESOURCE_DIR, "doubao_copy.png"),
+        "doubaocopy": "/Users/yanzhang/Coding/python_code/Resource/doubao_copy.png",
         # "poecopy": "/Users/yanzhang/Coding/python_code/Resource/poe_copy.png",
     }
     templates = {key: cv2.imread(path, cv2.IMREAD_COLOR) for key, path in template_paths.items()}
 
     def find_and_click(template_key, offset_y=0):
         if templates[template_key] is None:
-            print(f"警告：无法加载图片 {template_paths[template_key]}")
             return False
         location, shape = find_image_on_screen(templates[template_key])
         if location:
-            # 注意：pyautogui 在 Retina 屏上可能需要坐标减半，这里保留你的逻辑
             center_x = (location[0] + shape[1] // 2) // 2
             center_y = (location[1] + shape[0] // 2) // 2 - offset_y
             pyautogui.click(center_x, center_y)
@@ -303,7 +305,7 @@ def main():
         print("找到copy图了，准备点击copy...")
     found_poe = False
 
-    time.sleep(1)
+    sleep(1)
 
     # 读取并清理第一个描述（增加健壮性）
     raw_description1 = read_clipboard().replace('\n', ' ').replace('\r', ' ')
@@ -338,9 +340,8 @@ def main():
     
     new_description2 = ""
 
-    # --- 修正：ETF 判断逻辑 ---
-    if "ETF" in new_description1:
-        show_alert("警告：检测到 ETF 关键词，请确认是否应归入 Stock 类别。")
+    if "ETF" in new_description1 and "ETF" in new_description2:
+        show_applescript_dialog("要添加的好像是ETF而不是Stock")
         sys.exit()
 
     root = tk.Tk()
@@ -356,20 +357,20 @@ def main():
     button = tk.Button(
         root,
         text="添加 Tags",
-        command=lambda: add_stock(new_name, stock_name, entry, data, JSON_FILE_PATH, new_description1, new_description2, root, success_flag)
+        command=lambda: add_stock(new_name, stock_name, entry, data, json_file, new_description1, new_description2, root, success_flag)
     )
     button.pack(pady=5)
 
     root.bind(
         '<Key>',
-        lambda event: on_key_press(event, new_name, stock_name, entry, data, JSON_FILE_PATH, new_description1, new_description2, root, success_flag)
+        lambda event: on_key_press(event, new_name, stock_name, entry, data, json_file, new_description1, new_description2, root, success_flag)
     )
     root.mainloop()
 
     if success_flag[0]:
-        show_alert("股票信息已成功写入！")
+        show_applescript_dialog("股票已成功写入！")
     else:
-        show_alert("操作已取消，未进行任何写入。")
+        show_applescript_dialog("操作已取消，未进行任何写入。")
 
 if __name__ == "__main__":
     main()

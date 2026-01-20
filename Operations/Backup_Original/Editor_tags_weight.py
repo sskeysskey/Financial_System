@@ -1,6 +1,5 @@
 import sys
 import json
-import os
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QLineEdit, QListWidget, QListWidgetItem,
@@ -9,9 +8,8 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QKeySequence
 
-USER_HOME = os.path.expanduser("~")
-BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
-
+# --- 自定义 QListWidget 以支持拖拽事件 ---
+# 我们需要创建一个自定义类来更好地处理从一个列表拖拽到另一个列表的逻辑
 class DroppableListWidget(QListWidget):
     """
     一个可接收拖拽项目的 QListWidget。
@@ -20,6 +18,7 @@ class DroppableListWidget(QListWidget):
     # 定义一个信号，参数分别为：源文件类型, 源栏目键, 目标文件类型, 目标栏目键, 被移动的项目文本列表
     item_moved = pyqtSignal(str, str, str, str, list)
 
+    # 修改：__init__ 接受 file_type 和 key，使其更通用
     def __init__(self, file_type, key, parent=None):
         super().__init__(parent)
         self.file_type = file_type  # 'weight' 或 'earning'
@@ -33,17 +32,22 @@ class DroppableListWidget(QListWidget):
     def dropEvent(self, event):
         source_widget = event.source()
         
+        # 确保拖拽源是一个 DroppableListWidget
         if isinstance(source_widget, DroppableListWidget):
+            # 不允许在同一个列表内拖拽（除非是重新排序，由父类处理）
             if source_widget is self:
                 super().dropEvent(event)
                 return
 
             texts = [item.text() for item in source_widget.selectedItems()]
             
+            # 发出包含文件类型和栏目键的信号
             self.item_moved.emit(source_widget.file_type, source_widget.key, self.file_type, self.key, texts)
             
+            # 接受事件，这样源列表才知道可以删除项目（如果需要）
             event.accept()
         else:
+            # 其他情况（如从外部拖入文件），忽略
             event.ignore()
 
 
@@ -51,8 +55,9 @@ class DroppableListWidget(QListWidget):
 class TagEditor(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.weight_json_path = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "tags_weight.json")
-        self.earning_json_path = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "tags_filter.json")
+        # --- 路径管理 ---
+        self.weight_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/tags_weight.json'
+        self.earning_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/tags_filter.json'
         
         # --- 数据模型 ---
         self.weight_data = {}

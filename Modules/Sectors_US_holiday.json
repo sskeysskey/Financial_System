@@ -27,11 +27,11 @@
     "ARS=X"
   ],
   "Crypto": [
-    "Bitcoin",
-    "Ether",
-    "Solana",
-    "Binance",
-    "XRP"
+    "BTC-USD",
+    "ETH-USD",
+    "SOL-USD",
+    "BNB-USD",
+    "XRP-USD"
   ],
   "Indices": [
     "^HSI",

@@ -3,17 +3,12 @@ import sys
 import time
 import subprocess
 import pyperclip
-import os
-import platform
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                             QHBoxLayout, QLabel, QTextEdit, QPushButton, 
                             QListWidget, QMessageBox, QInputDialog, QAction,
                             QLineEdit)
 from PyQt5.QtCore import Qt, QTimer, QEvent
 from PyQt5.QtGui import QKeySequence
-
-USER_HOME = os.path.expanduser("~")
-BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 def get_clipboard_content():
     """获取剪贴板内容，包含错误处理"""
@@ -26,22 +21,18 @@ def get_clipboard_content():
 def copy2clipboard():
     """执行复制操作并等待复制完成"""
     try:
-        if sys.platform == 'darwin':
-            script = '''
-            tell application "System Events"
-                keystroke "c" using {command down}
-            end tell
-            '''
-            subprocess.run(['osascript', '-e', script], check=True)
-        elif sys.platform == 'win32':
-            import pyautogui
-            pyautogui.hotkey('ctrl', 'c')
-        else:
-            return False
-            
+        # 此脚本适用于macOS
+        script = '''
+        tell application "System Events"
+            keystroke "c" using {command down}
+        end tell
+        '''
+        subprocess.run(['osascript', '-e', script], check=True)
+        # 给系统一点时间来完成复制操作
         time.sleep(0.5)
         return True
-    except Exception:
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        # FileNotFoundError on non-macOS systems
         return False
 
 def get_stock_symbol(default_symbol=""):
@@ -88,7 +79,7 @@ def get_stock_symbol(default_symbol=""):
 class TagEditor(QMainWindow):
     def __init__(self, init_symbol=None):
         super().__init__()        
-        self.json_file_path = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "description.json")
+        self.json_file_path = "/Users/yanzhang/Coding/Financial_System/Modules/description.json"
         self.load_json_data()
         
         self.setWindowTitle("标签编辑器 (支持拖拽排序)")

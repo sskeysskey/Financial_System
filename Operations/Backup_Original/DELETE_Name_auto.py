@@ -2,24 +2,13 @@ import sqlite3
 import json
 import pyperclip
 import subprocess
-import os
-import platform
-import tkinter as tk
-from tkinter import messagebox
-
-USER_HOME = os.path.expanduser("~")
 
 def show_alert(message):
-    if platform.system() == "Darwin":
-        # AppleScript代码模板
-        applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
-        # 使用subprocess调用osascript
-        subprocess.run(['osascript', '-e', applescript_code], check=True)
-    else:
-        root = tk.Tk()
-        root.withdraw()
-        messagebox.showinfo("提示", message)
-        root.destroy()
+    # AppleScript代码模板
+    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+    
+    # 使用subprocess调用osascript
+    subprocess.run(['osascript', '-e', applescript_code], check=True)
 
 def get_clipboard_content():
     """获取剪贴板内容，包含错误处理，并转换为大写"""
@@ -214,16 +203,17 @@ def add_to_blacklist_etf(blacklist_file, symbol):
         return False
 
 def main():
-    db_path = os.path.join(USER_HOME, 'Coding/Database/Finance.db')
-    sector_file = os.path.join(USER_HOME, 'Coding/Financial_System/Modules/Sectors_All.json')
-    sector_today_file = os.path.join(USER_HOME, 'Coding/Financial_System/Modules/Sectors_today.json')
-    sector_500_file = os.path.join(USER_HOME, 'Coding/Financial_System/Modules/Sectors_500.json')
-    sector_empty_file = os.path.join(USER_HOME, 'Coding/Financial_System/Modules/Sectors_empty.json')
-    blacklist_file = os.path.join(USER_HOME, 'Coding/Financial_System/Modules/Blacklist.json')
-    description_file = os.path.join(USER_HOME, 'Coding/Financial_System/Modules/description.json')
+    # db_path = '/Users/yanzhang/Downloads/backup/DB_backup/Finance.db'
+    db_path = '/Users/yanzhang/Coding/Database/Finance.db'
+    sector_file = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
+    sector_today_file = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_today.json'
+    sector_500_file = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_500.json'
+    sector_empty_file = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json'
+    blacklist_file = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
+    description_file = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
     
     # 新增：Compare_All.txt 文件路径
-    compare_all_file = os.path.join(USER_HOME, 'Coding/News/backup/Compare_All.txt')
+    compare_all_file = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
     
     # 获取剪贴板内容
     symbol = get_clipboard_content()

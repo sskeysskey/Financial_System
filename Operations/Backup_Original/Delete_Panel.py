@@ -3,53 +3,56 @@ import json
 import os
 import re
 import pyperclip
-import platform
-import subprocess
 from PyQt5.QtWidgets import (
     QApplication, QDialog, QVBoxLayout,
     QLineEdit, QLabel, QCheckBox,
     QMessageBox, QDialogButtonBox
 )
 from PyQt5.QtCore import Qt
+import subprocess
 
-USER_HOME = os.path.expanduser("~")
+# --- 配置区 ---
 
-JSON_FILE_PATH = os.path.join(USER_HOME, "Coding/Financial_System/Modules/Sectors_panel.json")
+# 请将这里替换为您 JSON 文件的实际路径
+JSON_FILE_PATH = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json"
 
-def display_dialog(message, title="提示"):
-    if platform.system() == "Darwin":
-        safe_message = message.replace('"', '\\"')
-        applescript_code = f'display dialog "{safe_message}" with title "{title}" buttons {{"OK"}} default button "OK"'
-        try:
-            subprocess.run(['osascript', '-e', applescript_code], check=True)
-        except subprocess.CalledProcessError as e:
-            print(f"弹窗显示失败: {e}")
-    else:
-        msg_box = QMessageBox()
-        msg_box.setWindowTitle(title)
-        msg_box.setText(message)
-        msg_box.exec_()
+# --- 新增：原生 macOS 弹窗函数 ---
+def display_dialog(message):
+    """
+    使用 AppleScript 显示原生 macOS 弹窗。
+    注意：AppleScript 不支持 HTML 格式，且需要处理消息中的双引号。
+    """
+    # 转义双引号，防止 AppleScript 语法错误
+    safe_message = message.replace('"', '\\"')
+    
+    # 构造 AppleScript 命令
+    # with icon caution/stop/note 可以改变图标，这里默认不加，或者你可以加上 "with icon 1"
+    applescript_code = f'display dialog "{safe_message}" buttons {{"OK"}} default button "OK"'
+    
+    try:
+        subprocess.run(['osascript', '-e', applescript_code], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"弹窗显示失败: {e}")
+
+# --- 以下函数未做修改 ---
 
 def is_uppercase_letters(text: str) -> bool:
     return bool(re.match(r'^[A-Z]+$', text))
 
 def copy2clipboard():
-    if platform.system() == "Darwin":
-        script = '''
-        set the clipboard to ""
+    script = '''
+    set the clipboard to ""
+    delay 0.5
+    tell application "System Events"
+        keystroke "c" using {command down}
         delay 0.5
-        tell application "System Events"
-            keystroke "c" using {command down}
-            delay 0.5
-        end tell
-        '''
-        try:
-            subprocess.run(['osascript', '-e', script], check=True, capture_output=True)
-        except (subprocess.CalledProcessError, FileNotFoundError) as e:
-            print(f"执行 AppleScript 失败: {e}")
-    else:
-        import pyautogui
-        pyautogui.hotkey('ctrl', 'c')
+    end tell
+    '''
+    # 增加一个 try-except 块以防止 osascript 出错时程序崩溃
+    try:
+        subprocess.run(['osascript', '-e', script], check=True, capture_output=True)
+    except (subprocess.CalledProcessError, FileNotFoundError) as e:
+        print(f"执行 AppleScript 失败: {e}")
         # 这里原来的 QMessageBox 是注释掉的，如果需要也可以换成 display_dialog
         # display_dialog("无法自动复制内容，请手动输入。")
 

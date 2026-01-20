@@ -1,11 +1,8 @@
 import sqlite3
 import sys
-import os
 from typing import Callable, Tuple, Dict, Set
 
-USER_HOME = os.path.expanduser("~")
-
-db_path = os.path.join(USER_HOME, 'Coding/Database/Finance.db')
+db_path = '/Users/yanzhang/Coding/Database/Finance.db'
 
 def fill_missing_ratio_data(
     cursor: sqlite3.Cursor,

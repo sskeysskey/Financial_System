@@ -1,10 +1,7 @@
 import sys
 import sqlite3
-import os
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
-
-USER_HOME = os.path.expanduser("~")
 
 # 查询数据库，返回列名和记录数据
 def query_database_data(db_file, table_name, condition, fields, include_condition):
@@ -213,7 +210,7 @@ if __name__ == '__main__':
         current_symbol = None
 
     # 数据库固定信息
-    db_path = os.path.join(USER_HOME, 'Coding/Database/Finance.db')
+    db_path = '/Users/yanzhang/Coding/Database/Finance.db'
     table_name = 'Earning'
 
     # 循环直到找到一个有数据的 Symbol 或者用户取消操作

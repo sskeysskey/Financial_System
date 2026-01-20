@@ -2,20 +2,8 @@ import json
 import pyperclip
 import re
 import subprocess
-import os
 from typing import Optional
 import sys
-
-# --- 1. 路径动态化配置 ---
-HOME = os.path.expanduser("~")
-BASE_DIR = os.path.join(HOME, "Coding/Financial_System")
-MODULES_DIR = os.path.join(BASE_DIR, "Modules")
-
-# 定义所有相关的 JSON 文件路径
-BLACKLIST_FILE = os.path.join(MODULES_DIR, "blacklist.json")
-ALL_FILE = os.path.join(MODULES_DIR, "Sectors_All.json")
-TODAY_FILE = os.path.join(MODULES_DIR, "Sectors_today.json")
-EMPTY_FILE = os.path.join(MODULES_DIR, "Sectors_empty.json")
 
 def show_alert(message):
     """显示 Mac 弹窗提醒"""
@@ -51,12 +39,10 @@ def is_uppercase_letters(text: str) -> bool:
     return bool(re.match(r'^[A-Z]+$', text))
 
 def remove_from_blacklist(symbol: str) -> None:
-    """从 blacklist.json 的 etf 组中移除指定的 symbol"""
+    """从blacklist.json的etf组中移除指定的symbol"""
+    blacklist_file = '/Users/yanzhang/Coding/Financial_System/Modules/blacklist.json'
     try:
-        if not os.path.exists(BLACKLIST_FILE):
-            return
-
-        with open(BLACKLIST_FILE, 'r+') as file:
+        with open(blacklist_file, 'r+') as file:
             data = json.load(file)
             if 'etf' in data and symbol in data['etf']:
                 data['etf'].remove(symbol)
@@ -70,9 +56,7 @@ def remove_from_blacklist(symbol: str) -> None:
 def check_blacklist(symbol: str) -> bool:
     """检查symbol是否在blacklist.json的etf组中"""
     try:
-        if not os.path.exists(BLACKLIST_FILE):
-            return False
-        with open(BLACKLIST_FILE, 'r') as file:
+        with open('/Users/yanzhang/Coding/Financial_System/Modules/blacklist.json', 'r') as file:
             data = json.load(file)
             return symbol in data.get('etf', [])
     except Exception as e:
@@ -82,8 +66,6 @@ def check_blacklist(symbol: str) -> bool:
 def find_symbol_group(filename: str, symbol: str) -> Optional[str]:
     """在指定文件中查找symbol所属的组名"""
     try:
-        if not os.path.exists(filename):
-            return None
         with open(filename, 'r') as file:
             data = json.load(file)
             for group_name, symbols in data.items():
@@ -116,12 +98,15 @@ def check_and_update_files(symbol: str) -> None:
         remove_from_blacklist(symbol)
         print(f"检测到 {symbol} 在blacklist的etf组中，已移除")
 
-    # 2. 检查 symbol 在 all 和 today 文件中的位置
+    ALL_FILE = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
+    TODAY_FILE = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_today.json'
+    EMPTY_FILE = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json'
+    
+    # 检查symbol在all和today文件中的位置
     group_in_all = find_symbol_group(ALL_FILE, symbol)
     group_in_today = find_symbol_group(TODAY_FILE, symbol)
     
-    # 3. 逻辑判断
-    # 如果 symbol 在 all 和 today 的同一个组中存在
+    # 如果symbol在all和today的同一个组中存在
     if group_in_all and group_in_today and group_in_all == group_in_today:
         try:
             update_json_file(EMPTY_FILE, group_in_all, symbol)

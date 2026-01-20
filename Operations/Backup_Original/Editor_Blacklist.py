@@ -1,6 +1,5 @@
 import sys
 import json
-import os
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QLineEdit, QListWidget, QListWidgetItem,
@@ -8,8 +7,6 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QKeySequence
-
-USER_HOME = os.path.expanduser("~")
 
 # --- 自定义 QListWidget 以支持拖拽事件 ---
 # 简化了 DroppableListWidget，因为它现在只处理单个文件内部的移动
@@ -49,9 +46,9 @@ class BlacklistEditor(QMainWindow):
         super().__init__()
         # --- 路径管理 ---
         # 唯一的JSON文件路径
-        self.blacklist_json_path = os.path.join(USER_HOME, 'Coding/Financial_System/Modules/Blacklist.json')
+        self.blacklist_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
         # [新增] 第二个文件路径
-        self.sectors_json_path = os.path.join(USER_HOME, 'Coding/Financial_System/Modules/Sectors_panel.json')
+        self.sectors_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
         
         # --- 数据模型 ---
         self.blacklist_data = {} 

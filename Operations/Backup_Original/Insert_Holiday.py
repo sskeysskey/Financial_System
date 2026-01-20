@@ -2,18 +2,12 @@ import json
 import subprocess
 import sys
 import shlex
-import os
 
-# --- 1. 路径动态化处理 ---
-HOME = os.path.expanduser("~")
-# 定义基础项目路径
-BASE_DIR = os.path.join(HOME, "Coding/Financial_System")
+# 1. 定义文件路径
+empty_file_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json'
+holiday_file_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_US_holiday.json'
 
-# 定义文件路径
-empty_file_path = os.path.join(BASE_DIR, "Modules/Sectors_empty.json")
-holiday_file_path = os.path.join(BASE_DIR, "Modules/Sectors_US_holiday.json")
-
-# --- 2. 读取原始 JSON (Sectors_empty.json) ---
+# 2. 读取原始 JSON (Sectors_empty.json)
 try:
     with open(empty_file_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
@@ -55,9 +49,7 @@ for category, items_from_holiday in data_holiday.items():
     # 更新 data 中该类别的内容
     data[category] = sorted(list(set_current_items.union(set_items_from_holiday))) # 使用 sorted() 排序使结果更可预测
 
-# --- 5. 写回文件 ---
-# 确保目录存在
-os.makedirs(os.path.dirname(empty_file_path), exist_ok=True)
+# 6. 写回文件
 with open(empty_file_path, 'w', encoding='utf-8') as f:
     json.dump(data, f, ensure_ascii=False, indent=2)
 
@@ -89,11 +81,9 @@ if sys.platform != "darwin":
     print("🟡 警告: 自动调用脚本功能仅在 macOS 上受支持。已跳过此步骤。")
 else:
     try:
-        # --- 修改点：使用 sys.executable 获取当前 Python 路径，更具通用性 ---
-        python_path = sys.executable 
         # a. 定义要执行的命令的各个部分，与 AppleScript 中一致
-        # python_path = "/Library/Frameworks/Python.framework/Versions/Current/bin/python3"
-        script_path = os.path.join(BASE_DIR, "Selenium/YF_PriceVolume.py")
+        python_path = "/Library/Frameworks/Python.framework/Versions/Current/bin/python3"
+        script_path = "/Users/yanzhang/Coding/Financial_System/Selenium/YF_PriceVolume.py"
         mode_arg = "--mode empty"
 
         # b. 使用 shlex.quote 来安全地处理路径，防止路径中包含空格或特殊字符导致命令执行失败

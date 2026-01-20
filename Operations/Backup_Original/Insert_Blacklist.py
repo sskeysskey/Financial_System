@@ -3,42 +3,29 @@ import json
 import subprocess
 import sys
 import os
-import re
-import tkinter as tk
-from tkinter import messagebox
+import re  # <--- 1. 引入 re 模块
 
-USER_HOME = os.path.expanduser("~")
-BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
-JSON_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Blacklist.json")
+# 统一的配置文件路径
+JSON_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
 
 def Copy_Command_C():
-    try:
-        if sys.platform == 'darwin':
-            script = '''
-            delay 0.5
-            tell application "System Events"
-                keystroke "c" using command down
-            end tell
-            '''
-            subprocess.run(['osascript', '-e', script])
-        elif sys.platform == 'win32':
-            import pyautogui
-            pyautogui.hotkey('ctrl', 'c')
-    except Exception:
-        pass
+    """模拟 Command + C 复制操作"""
+    script = '''
+    delay 0.5
+    tell application "System Events"
+        keystroke "c" using command down
+    end tell
+    '''
+    # 运行AppleScript
+    subprocess.run(['osascript', '-e', script])
 
 def show_alert(message):
-    if sys.platform == 'darwin':
-        applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
-        try:
-            subprocess.run(['osascript', '-e', applescript_code], check=True)
-        except subprocess.CalledProcessError:
-            pass
-    else:
-        root = tk.Tk()
-        root.withdraw()
-        messagebox.showinfo("提醒", message)
-        root.destroy()
+    """显示 Mac 弹窗提醒"""
+    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+    try:
+        subprocess.run(['osascript', '-e', applescript_code], check=True)
+    except subprocess.CalledProcessError:
+        pass # 用户点击取消或其他情况忽略
 
 def update_blacklist(symbol, list_key):
     """

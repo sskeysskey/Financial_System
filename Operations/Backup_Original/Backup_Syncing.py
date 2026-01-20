@@ -1,17 +1,15 @@
 import json
-import os
 from datetime import datetime, timedelta
 import shutil
+import os
 
 # --- 配置部分 ---
 
-USER_HOME = os.path.expanduser("~")
-
 # 定义源文件和目标目录的路径
-LOCAL_DOWNLOAD_BACKUP = os.path.join(USER_HOME, 'Downloads/backup/DB_backup')
+LOCAL_DOWNLOAD_BACKUP = '/Users/yanzhang/Downloads/backup/DB_backup'
 
 # 新增的带时间戳备份的目标目录
-LOCAL_SERVER_DIR = os.path.join(USER_HOME, 'Coding/LocalServer/Resources/Finance')
+LOCAL_SERVER_DIR = '/Users/yanzhang/Coding/LocalServer/Resources/Finance'
 
 # version.json 文件路径
 VERSION_JSON_PATH = os.path.join(LOCAL_SERVER_DIR, 'version.json')
@@ -19,7 +17,7 @@ VERSION_JSON_PATH = os.path.join(LOCAL_SERVER_DIR, 'version.json')
 # 定义需要进行简单覆盖备份的文件
 # 格式为: { "源文件路径": ["目标文件路径1", "目标文件路径2", ...] }
 SIMPLE_BACKUP_FILES = {
-    os.path.join(USER_HOME, 'Coding/Database/Finance.db'): [
+    '/Users/yanzhang/Coding/Database/Finance.db': [
         os.path.join(LOCAL_DOWNLOAD_BACKUP, 'Finance.db'),
         os.path.join(LOCAL_SERVER_DIR,    'Finance.db')
     ],
@@ -27,27 +25,27 @@ SIMPLE_BACKUP_FILES = {
 
 # 定义需要进行时间戳备份的源文件列表
 TIMESTAMP_BACKUP_SOURCES = [
-    os.path.join(USER_HOME, 'Coding/News/backup/Compare_All.txt'),
-    os.path.join(USER_HOME, 'Coding/News/Earnings_Release_new.txt'),
-    os.path.join(USER_HOME, 'Coding/News/Earnings_Release_next.txt'),
-    os.path.join(USER_HOME, 'Coding/News/Earnings_Release_third.txt'),
-    os.path.join(USER_HOME, 'Coding/News/Earnings_Release_fourth.txt'),
-    os.path.join(USER_HOME, 'Coding/News/Earnings_Release_fifth.txt'),
-    os.path.join(USER_HOME, 'Coding/News/HighLow.txt'),
-    os.path.join(USER_HOME, 'Coding/Financial_System/Modules/tags_weight.json'),
-    os.path.join(USER_HOME, 'Coding/Financial_System/Modules/Sectors_panel.json'), # 触发 Intro_Symbol
-    os.path.join(USER_HOME, 'Coding/Financial_System/Modules/Sectors_All.json'),
-    os.path.join(USER_HOME, 'Coding/Financial_System/Modules/description.json'),
-    os.path.join(USER_HOME, 'Coding/News/CompareStock.txt'),
-    os.path.join(USER_HOME, 'Coding/News/CompareETFs.txt'),
-    os.path.join(USER_HOME, 'Coding/News/10Y_newhigh_stock.txt'), # 触发 Intro_Symbol
-    os.path.join(USER_HOME, 'Coding/News/Options_Change.csv'),
+    '/Users/yanzhang/Coding/News/backup/Compare_All.txt',
+    '/Users/yanzhang/Coding/News/Earnings_Release_new.txt',
+    '/Users/yanzhang/Coding/News/Earnings_Release_next.txt',
+    '/Users/yanzhang/Coding/News/Earnings_Release_third.txt',
+    '/Users/yanzhang/Coding/News/Earnings_Release_fourth.txt',
+    '/Users/yanzhang/Coding/News/Earnings_Release_fifth.txt',
+    '/Users/yanzhang/Coding/News/HighLow.txt',
+    '/Users/yanzhang/Coding/Financial_System/Modules/tags_weight.json',
+    '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json', # 触发 Intro_Symbol
+    '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json',
+    '/Users/yanzhang/Coding/Financial_System/Modules/description.json',
+    '/Users/yanzhang/Coding/News/CompareStock.txt',
+    '/Users/yanzhang/Coding/News/CompareETFs.txt',
+    '/Users/yanzhang/Coding/News/10Y_newhigh_stock.txt', # 触发 Intro_Symbol
+    '/Users/yanzhang/Coding/News/Options_Change.csv',
 ]
 
 # 定义触发 Intro_Symbol 更新的特定文件集合
 INTRO_SYMBOL_TRIGGERS = {
-    os.path.join(USER_HOME, 'Coding/Financial_System/Modules/Sectors_panel.json'),
-    os.path.join(USER_HOME, 'Coding/News/10Y_newhigh_stock.txt')
+    '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json',
+    '/Users/yanzhang/Coding/News/10Y_newhigh_stock.txt'
 }
 
 def is_file_modified(source_path, destination_path):

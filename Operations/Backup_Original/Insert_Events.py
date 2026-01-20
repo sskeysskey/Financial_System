@@ -1,21 +1,14 @@
 import tkinter as tk
 from tkinter import ttk
-from tkinter import messagebox
+from tkinter import messagebox  # 添加这一行导入messagebox
 import json
 from datetime import datetime, timedelta
 import platform
 import os
 import sys
 
-# --- 路径动态化处理 ---
-HOME = os.path.expanduser("~")
-# 动态定义 JSON 路径
-JSON_PATH = os.path.join(HOME, "Coding/Financial_System/Modules/description.json")
-
 class App:
-    def __init__(self, symbol=None):
-        # 确保目录存在
-        self.ensure_dir_exists()
+    def __init__(self, symbol=None):  # 添加参数
         self.data = self.load_json()
         self.selected_type = None
         self.selected_date = None
@@ -51,28 +44,14 @@ class App:
                 root.destroy()
                 return
         else:
-            self.main_window()
-
-    def ensure_dir_exists(self):
-        """确保存储 JSON 的文件夹存在"""
-        db_dir = os.path.dirname(JSON_PATH)
-        if not os.path.exists(db_dir):
-            os.makedirs(db_dir)
+            self.main_window()  # 如果没有参数，按原流程执行
 
     def load_json(self):
-        """从动态路径加载 JSON"""
-        if not os.path.exists(JSON_PATH):
-            # 如果文件不存在，返回一个基础结构
-            return {"global": {}, "stocks": [], "etfs": []}
-        try:
-            with open(JSON_PATH, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except (json.JSONDecodeError, FileNotFoundError):
-            return {"global": {}, "stocks": [], "etfs": []}
+        with open('/Users/yanzhang/Coding/Financial_System/Modules/description.json', 'r', encoding='utf-8') as f:
+            return json.load(f)
 
     def save_json(self):
-        """保存到动态路径"""
-        with open(JSON_PATH, 'w', encoding='utf-8') as f:
+        with open('/Users/yanzhang/Coding/Financial_System/Modules/description.json', 'w', encoding='utf-8') as f:
             json.dump(self.data, f, ensure_ascii=False, indent=2)
 
     def set_window_to_front(self, window):

@@ -7,19 +7,8 @@ import numpy as np
 import time
 from PIL import ImageGrab
 import tkinter as tk
-from tkinter import messagebox  # 新增：用于 Windows 弹窗
 import sys
 import subprocess
-import os
-import platform  # 新增：用于判断平台
-
-# --- 配置部分 ---
-USER_HOME = os.path.expanduser("~")
-
-# 统一路径定义
-JSON_FILE_PATH = os.path.join(USER_HOME, "Coding/Financial_System/Modules/description.json")
-RESOURCE_DIR = os.path.join(USER_HOME, "Coding/python_code/Resource")
-SCRIPT_EDITOR_DIR = os.path.join(USER_HOME, "Coding/ScriptEditor")
 
 # 规则1：删除 [[数字]](http/https…)
 RE_CITATION = re.compile(r'[[\d+]]\(https?://[^)\s]+[^)]*\)', flags=re.IGNORECASE)
@@ -37,21 +26,6 @@ RE_BARE_URL = re.compile(
     r'https?://[^\s\)]\}\>,\'"；；，，。、“”‘’（）()<>]+',
     flags=re.IGNORECASE
 )
-
-def show_alert(message):
-    """
-    跨平台弹窗函数
-    """
-    if platform.system() == "Darwin":
-        # Mac 使用 AppleScript
-        applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
-        subprocess.run(['osascript', '-e', applescript_code])
-    else:
-        # Windows/其他 使用 Tkinter
-        root = tk.Tk()
-        root.withdraw()
-        messagebox.showinfo("提示", message)
-        root.destroy()
 
 def clean_string_value(s: str) -> str:
     """
@@ -106,17 +80,13 @@ def find_image_on_screen(template, threshold=0.9):
     return None, None
 
 def activate_chrome():
-    """仅在 Mac 上激活 Chrome"""
-    if platform.system() == "Darwin":
-        script = '''
-        tell application "Google Chrome"
-            activate
-            delay 0.5
-        end tell
-        '''
-        subprocess.run(['osascript', '-e', script])
-    else:
-        print("当前平台不是 macOS，跳过 Chrome 自动激活。")
+    script = '''
+    tell application "Google Chrome"
+        activate
+        delay 0.5
+    end tell
+    '''
+    subprocess.run(['osascript', '-e', script])
 
 def input_symbol_name():
     root = tk.Tk()
@@ -188,59 +158,47 @@ def read_clipboard():
 
 def validate_new_name(new_name):
     if not re.match("^[A-Z\-]+$", new_name):
-        show_alert("错误：不是有效的股票代码！")
+        # AppleScript代码
+        applescript_code = 'display dialog "不是股票代码！" buttons {"OK"} default button "OK"'
+        # 使用subprocess调用osascript
+        process = subprocess.run(['osascript', '-e', applescript_code], check=True)
         sys.exit()
     return new_name
 
 def check_stock_exists(data, new_name):
     if any(stock['symbol'] == new_name for stock in data.get('stocks', [])):
-        show_alert("错误：股票代码已存在！")
+        # AppleScript代码
+        applescript_code = 'display dialog "股票代码已存在！" buttons {"OK"} default button "OK"'
+        # 使用subprocess调用osascript
+        process = subprocess.run(['osascript', '-e', applescript_code], check=True)
         sys.exit()
 
 def execute_applescript(script_path):
-    """仅在 Mac 上执行 .scpt 文件"""
-    if platform.system() == "Darwin":
-        try:
-            subprocess.run(['osascript', script_path], check=True, text=True, stdout=subprocess.PIPE)
-        except subprocess.CalledProcessError as e:
-            print(f"Error running AppleScript: {e}")
-    else:
-        print(f"非 macOS 环境，跳过脚本执行: {script_path}")
+    try:
+        process = subprocess.run(['osascript', script_path], check=True, text=True, stdout=subprocess.PIPE)
+        print(process.stdout.strip())
+    except subprocess.CalledProcessError as e:
+        print(f"Error running AppleScript: {e}")
 
 def main():
-    # 1. 读取数据
-    if not os.path.exists(JSON_FILE_PATH):
-        show_alert(f"找不到配置文件: {JSON_FILE_PATH}")
-        return
+    json_file = "/Users/yanzhang/Coding/Financial_System/Modules/description.json"
 
-    with open(JSON_FILE_PATH, 'r', encoding='utf-8') as file:
+    with open(json_file, 'r', encoding='utf-8') as file:
         data = json.load(file)
 
-    # 2. 验证剪贴板代码
     new_name = validate_new_name(read_clipboard())
     check_stock_exists(data, new_name)
 
-    # 3. 激活浏览器并查找 UI 元素
     activate_chrome()
-    
     template_paths = {
-        "poesuccess": os.path.join(RESOURCE_DIR, "poe_copy_success.png"),
-        "poethumb":   os.path.join(RESOURCE_DIR, "poe_thumb.png"),
-        "kimicopy":   os.path.join(RESOURCE_DIR, "doubao_copy.png"),
-        "poecopy":    os.path.join(RESOURCE_DIR, "poe_copy.png"),
+        "poesuccess": "/Users/yanzhang/Coding/python_code/Resource/poe_copy_success.png",
+        "poethumb": "/Users/yanzhang/Coding/python_code/Resource/poe_thumb.png",
+        "kimicopy": "/Users/yanzhang/Coding/python_code/Resource/doubao_copy.png",
+        "poecopy": "/Users/yanzhang/Coding/python_code/Resource/poe_copy.png",
     }
-    
-    # 载入模板，增加文件存在检查
-    templates = {}
-    for key, path in template_paths.items():
-        if os.path.exists(path):
-            templates[key] = cv2.imread(path, cv2.IMREAD_COLOR)
-        else:
-            print(f"警告：找不到模板图片 {path}")
-            templates[key] = None
+    templates = {key: cv2.imread(path, cv2.IMREAD_COLOR) for key, path in template_paths.items()}
 
     def find_and_click(template_key, offset_y=0):
-        if templates.get(template_key) is None: return False
         location, shape = find_image_on_screen(templates[template_key])
         if location:
             center_x = (location[0] + shape[1] // 2) // 2
@@ -250,11 +208,11 @@ def main():
         return False
 
     def find_image(template_key):
-        if templates.get(template_key) is None: return False
-        location, _ = find_image_on_screen(templates[template_key])
-        return location is not None
+        location, shape = find_image_on_screen(templates[template_key])
+        if location:
+            return True
+        return False
 
-    # 4. 自动化操作流程
     found_poe = find_and_click("poethumb", 40)
     if found_poe:
         pyautogui.click(button='right')
@@ -267,15 +225,13 @@ def main():
 
     time.sleep(1)
     
-    # 读取并清理第一个描述
+    # <-- 修改点：读取并清理第一个描述 -->
     raw_description1 = read_clipboard().replace('\n', ' ').replace('\r', ' ')
     new_description1 = clean_string_value(raw_description1)
     print(f"清理后的 Description 1: {new_description1}")
     
-    # 执行切换脚本 (仅限 Mac)
-    shift_script = 'Shift2Doubao.scpt' if found_poe else 'Shift2Poe.scpt'
-    execute_applescript(os.path.join(SCRIPT_EDITOR_DIR, shift_script))
-    
+    script_path = '/Users/yanzhang/Coding/ScriptEditor/Shift2Doubao.scpt' if found_poe else '/Users/yanzhang/Coding/ScriptEditor/Shift2Poe.scpt'
+    execute_applescript(script_path)
     time.sleep(1)
     if not found_poe:
         found_poe = find_and_click("poethumb", 40)
@@ -288,22 +244,28 @@ def main():
     else:
         find_and_click("kimicopy")
 
-    # 读取并清理第二个描述
+    # <-- 修改点：读取并清理第二个描述 -->
     raw_description2 = read_clipboard().replace('\n', ' ').replace('\r', ' ')
     new_description2 = clean_string_value(raw_description2)
     print(f"清理后的 Description 2: {new_description2}")
     
     # 弹出输入 symbol_name 的窗口
     stock_name = input_symbol_name()
-    if stock_name == "":
-        show_alert("操作已取消，股票名称将被设置为空字符串。")
 
-    success = input_tags(new_name, stock_name, data, JSON_FILE_PATH, new_description1, new_description2)
+    if stock_name == "":
+        applescript_code = 'display dialog "操作已取消，股票名称将被设置为空字符串。" buttons {"OK"} default button "OK"'
+        subprocess.run(['osascript', '-e', applescript_code], check=True)
+        # 不再提前退出函数，而是继续执行，使用空字符串作为 stock_name
+
+    # 弹出输入 tags 的窗口，传入的是清理后的 description
+    success = input_tags(new_name, stock_name, data, json_file, new_description1, new_description2)
 
     if success:
-        show_alert("股票已成功写入！")
+        applescript_code = 'display dialog "股票已成功写入！" buttons {"OK"} default button "OK"'
     else:
-        show_alert("操作已取消，未进行任何写入。")
+        applescript_code = 'display dialog "操作已取消，未进行任何写入。" buttons {"OK"} default button "OK"'
+    
+    subprocess.run(['osascript', '-e', applescript_code], check=True)
 
 if __name__ == "__main__":
     main()

@@ -2,20 +2,18 @@ import os
 import json
 from datetime import datetime
 
-USER_HOME = os.path.expanduser("~")
-
 # 文件路径配置
 files = {
-    'ETFs': os.path.join(USER_HOME, 'Coding/News/backup/ETFs.txt'),
+    'ETFs': '/Users/yanzhang/Coding/News/backup/ETFs.txt',
 }
 
 new_files = {
-    'ETFs': os.path.join(USER_HOME, 'Coding/News/ETFs_new.txt'),
-    '10Y_newhigh': os.path.join(USER_HOME, 'Coding/News/10Y_newhigh_stock.txt'),
+    'ETFs': '/Users/yanzhang/Coding/News/ETFs_new.txt',
+    '10Y_newhigh': '/Users/yanzhang/Coding/News/10Y_newhigh_stock.txt',
 }
 
 # 新的 10Y_newhigh JSON 目标文件路径
-TENY_JSON = os.path.join(USER_HOME, 'Coding/Financial_System/Modules/10Y_newhigh.json')
+TENY_JSON = '/Users/yanzhang/Coding/Financial_System/Modules/10Y_newhigh.json'
 
 # 获取当前星期几，0是周一，6是周日
 current_day = datetime.now().weekday()

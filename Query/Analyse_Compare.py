@@ -15,15 +15,18 @@ except ImportError as e:
     print("请确保已安装: pip install wcwidth python-dateutil")
     exit(1)
 
+# 获取当前用户的家目录 (例如 /Users/yanzhang)
+HOME = os.path.expanduser("~")
+
 # ==============================================================================
 # PART 1: Compare_Combined 逻辑
 # ==============================================================================
 
 class ConfigCompare:
-    # 基础路径
-    BASE_NEWS_DIR = '/Users/yanzhang/Coding/News'
-    BASE_MODULES_DIR = '/Users/yanzhang/Coding/Financial_System/Modules'
-    BASE_DB_DIR = '/Users/yanzhang/Coding/Database'
+    # 基础路径动态化
+    BASE_NEWS_DIR = os.path.join(HOME, 'Coding/News')
+    BASE_MODULES_DIR = os.path.join(HOME, 'Coding/Financial_System/Modules')
+    BASE_DB_DIR = os.path.join(HOME, 'Coding/Database')
     
     # 财报文件路径列表
     EARNINGS_FILES = [
@@ -49,7 +52,7 @@ class ConfigCompare:
     
     # Compare_All 输出
     OUTPUT_FILE_ALL = os.path.join(BASE_NEWS_DIR, 'backup/Compare_All.txt')
-    ADDITIONAL_OUTPUT_FILE_ALL = '/Users/yanzhang/Coding/Website/economics/compare_all.txt'
+    ADDITIONAL_OUTPUT_FILE_ALL = os.path.join(HOME, 'Coding/Website/economics/compare_all.txt')
     
     # Compare_Stocks 输出
     FILE_PATH_TXT_STOCKS = os.path.join(BASE_NEWS_DIR, 'CompareStock.txt')
@@ -57,7 +60,7 @@ class ConfigCompare:
     # Compare_ETFs 输出
     FILE_PATH_ETFS = os.path.join(BASE_NEWS_DIR, 'CompareETFs.txt')
 
-# --- Compare 模块辅助函数 (已重命名以避免冲突) ---
+# --- Compare 模块辅助函数 ---
 
 def create_connection_compare(db_file):
     return sqlite3.connect(db_file, timeout=60.0)
@@ -631,23 +634,23 @@ def execute_compare_process():
 # PART 2: Analyse_Combined 逻辑
 # ==============================================================================
 
-# --- 全局路径配置 (Analyse) ---
-DB_PATH_ANALYSE = '/Users/yanzhang/Coding/Database/Finance.db'
-BLACKLIST_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/blacklist.json'
-STOCK_SPLITS_FILE = '/Users/yanzhang/Coding/News/Stock_Splits_next.txt'
-ERROR_LOG_FILE_ANALYSE = '/Users/yanzhang/Coding/News/Today_error.txt'
+# --- 全局路径配置 (Analyse) 动态化 ---
+DB_PATH_ANALYSE = os.path.join(HOME, 'Coding/Database/Finance.db')
+BLACKLIST_PATH = os.path.join(HOME, 'Coding/Financial_System/Modules/blacklist.json')
+STOCK_SPLITS_FILE = os.path.join(HOME, 'Coding/News/Stock_Splits_next.txt')
+ERROR_LOG_FILE_ANALYSE = os.path.join(HOME, 'Coding/News/Today_error.txt')
 
-SECTORS_PANEL_PATH = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json"
-COLORS_JSON_PATH_ANALYSE = '/Users/yanzhang/Coding/Financial_System/Modules/Colors.json'
+SECTORS_PANEL_PATH = os.path.join(HOME, "Coding/Financial_System/Modules/Sectors_panel.json")
+COLORS_JSON_PATH_ANALYSE = os.path.join(HOME, 'Coding/Financial_System/Modules/Colors.json')
 
-BACKUP_DIR_MAIN = '/Users/yanzhang/Coding/News/backup/backup'
-BACKUP_DIR_ROOT = '/Users/yanzhang/Coding/News/backup'
-DOWNLOADS_DIR = "/Users/yanzhang/Downloads"
-NEWS_DIR = "/Users/yanzhang/Coding/News"
+BACKUP_DIR_MAIN = os.path.join(HOME, 'Coding/News/backup/backup')
+BACKUP_DIR_ROOT = os.path.join(HOME, 'Coding/News/backup')
+DOWNLOADS_DIR = os.path.join(HOME, "Downloads")
+NEWS_DIR = os.path.join(HOME, "Coding/News")
 
 BLACKLIST_GLOB = set(["YNDX"])
 
-# --- Analyse 模块辅助函数 (已重命名以避免冲突) ---
+# --- Analyse 模块辅助函数 ---
 
 def is_blacklisted(name):
     return name in BLACKLIST_GLOB
@@ -778,7 +781,7 @@ def clean_backups_analyse(directory, file_patterns):
 # --- Analyse 核心逻辑模块 ---
 
 # 1. Analyse 5000 (Weekly)
-PATH_SECTORS_5000 = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_5000.json'
+PATH_SECTORS_5000 = os.path.join(HOME, 'Coding/Financial_System/Modules/Sectors_5000.json')
 
 def get_price_comparison_5000(cursor, table_name, interval_weeks, name, validate):
     ex_validate = validate - timedelta(days=1)
@@ -872,7 +875,7 @@ def run_logic_5000(blacklist_newlow, stock_splits_symbols):
         update_color_json_5000(COLORS_JSON_PATH_ANALYSE, updates_color)
 
 # 2. Analyse 500 (Monthly)
-PATH_SECTORS_500 = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_500.json'
+PATH_SECTORS_500 = os.path.join(HOME, 'Coding/Financial_System/Modules/Sectors_500.json')
 
 def get_price_comparison_500(cursor, table_name, interval_months, name, validate):
     ex_validate = validate - timedelta(days=1)
@@ -967,11 +970,11 @@ def run_logic_500(blacklist_newlow, stock_splits_symbols):
         log_and_print_error("[500] 未检索到符合条件的股票。")
 
 # 3. Analyse 50 (Yearly & Highs)
-PATH_SECTORS_ALL = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
-PATH_NEWHIGH_10Y = '/Users/yanzhang/Coding/Financial_System/Modules/10Y_newhigh.json'
-PATH_NEWHIGH_OUTPUT = '/Users/yanzhang/Coding/News/10Y_newhigh_stock.txt'
-PATH_COMPARE_ALL = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
-PATH_DESCRIPTION = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
+PATH_SECTORS_ALL = os.path.join(HOME, 'Coding/Financial_System/Modules/Sectors_All.json')
+PATH_NEWHIGH_10Y = os.path.join(HOME, 'Coding/Financial_System/Modules/10Y_newhigh.json')
+PATH_NEWHIGH_OUTPUT = os.path.join(HOME, 'Coding/News/10Y_newhigh_stock.txt')
+PATH_COMPARE_ALL = os.path.join(HOME, 'Coding/News/backup/Compare_All.txt')
+PATH_DESCRIPTION = os.path.join(HOME, 'Coding/Financial_System/Modules/description.json')
 
 def get_price_comparison_50(cursor, table_name, interval, name, validate):
     today = datetime.now()
@@ -1199,9 +1202,9 @@ def run_logic_50(blacklist_newlow, stock_splits_symbols):
                 print(f"[50] 写入新高文件错误: {e}")
 
 # 4. Analyse HighLow
-HL_OUTPUT_PATH = "/Users/yanzhang/Coding/News/HighLow.txt"
-HL_BACKUP_OUTPUT_PATH = "/Users/yanzhang/Coding/News/backup/HighLow.txt"
-HL_JSON_PATH = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json"
+HL_OUTPUT_PATH = os.path.join(HOME, "Coding/News/HighLow.txt")
+HL_BACKUP_OUTPUT_PATH = os.path.join(HOME, "Coding/News/backup/HighLow.txt")
+HL_JSON_PATH = os.path.join(HOME, "Coding/Financial_System/Modules/Sectors_All.json")
 HL_TIME_INTERVALS = {
     "[0.5 months]": relativedelta(days=-15),
     "[1 months]":   relativedelta(months=-1),

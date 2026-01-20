@@ -2,7 +2,6 @@ import sys
 import json
 import sqlite3
 import subprocess
-import os  # 新增：用于路径处理
 from datetime import date, timedelta
 from functools import partial
 from collections import OrderedDict
@@ -17,20 +16,17 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QCursor, QKeySequence, QFont, QBrush, QColor, QShortcut, QAction
 from PyQt6.QtCore import Qt
 
-# --- 路径动态化处理 ---
-HOME = os.path.expanduser("~") # 获取当前用户主目录，例如 /Users/yanzhang
-
-# 添加自定义模块的路径
-sys.path.append(os.path.join(HOME, 'Coding/Financial_System/Query'))
+# 添加自定义模块的路径，以便可以导入 Chart_input
+sys.path.append('/Users/yanzhang/Coding/Financial_System/Query')
 from Chart_input import plot_financial_data
 
-# 定义所有需要用到的文件路径
-TXT_PATH = os.path.join(HOME, "Coding/News/Earnings_Release_new.txt")
-SECTORS_JSON_PATH = os.path.join(HOME, "Coding/Financial_System/Modules/Sectors_All.json")
-DB_PATH = os.path.join(HOME, "Coding/Database/Finance.db")
-DESCRIPTION_PATH = os.path.join(HOME, 'Coding/Financial_System/Modules/description.json')
-COMPARE_DATA_PATH = os.path.join(HOME, 'Coding/News/backup/Compare_All.txt')
-PANEL_CONFIG_PATH = os.path.join(HOME, 'Coding/Financial_System/Modules/Sectors_panel.json')
+# 定义所有需要用到的文件路径，方便管理
+TXT_PATH = "/Users/yanzhang/Coding/News/Earnings_Release_new.txt"
+SECTORS_JSON_PATH = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json"
+DB_PATH = "/Users/yanzhang/Coding/Database/Finance.db"
+DESCRIPTION_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
+COMPARE_DATA_PATH = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
+PANEL_CONFIG_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
 
 PERIOD_DISPLAY = {
     "BMO": "↩︎",
@@ -55,8 +51,7 @@ def execute_external_script(script_type, keyword):
     """
     执行外部脚本（AppleScript 或 Python）。
     """
-    # 路径动态化
-    base_path = os.path.join(HOME, 'Coding/Financial_System')
+    base_path = '/Users/yanzhang/Coding/Financial_System'
     script_configs = {
         'blacklist': f'{base_path}/Operations/Insert_Blacklist.py',
         'similar': f'{base_path}/Query/Search_Similar_Tag.py',
@@ -65,8 +60,8 @@ def execute_external_script(script_type, keyword):
         'editor_earning': f'{base_path}/Operations/Editor_Earning_DB.py',
         'event_input': f'{base_path}/Operations/Insert_Events.py',
         'event_editor': f'{base_path}/Operations/Editor_Events.py',
-        'futu': os.path.join(HOME, 'Coding/ScriptEditor/Stock_CheckFutu.scpt'),
-        'kimi': os.path.join(HOME, 'Coding/ScriptEditor/Check_Earning.scpt')
+        'futu': '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt',
+        'kimi': '/Users/yanzhang/Coding/ScriptEditor/Check_Earning.scpt'
     }
 
     try:

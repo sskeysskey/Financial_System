@@ -3,17 +3,12 @@ import json
 import pyperclip
 import pyautogui
 import numpy as np
-import os
-import platform
 from time import sleep
 from PIL import ImageGrab
 import tkinter as tk
-from tkinter import messagebox
 import sys
 import subprocess
 import re
-
-USER_HOME = os.path.expanduser("~")
 
 # 规则1：删除 [[数字]](http/https…)
 RE_CITATION = re.compile(r'[[\d+]]\(https?://[^)\s]+[^)]*\)', flags=re.IGNORECASE)
@@ -85,31 +80,13 @@ def find_image_on_screen(template, threshold=0.9):
     return None, None
 
 def activate_chrome():
-    if platform.system() == "Darwin":
-        script = '''
-        tell application "Google Chrome"
-            activate
-            delay 0.5
-        end tell
-        '''
-        subprocess.run(['osascript', '-e', script], check=True)
-    else:
-        try:
-            import pygetwindow as gw
-            win = gw.getWindowsWithTitle('Google Chrome')[0]
-            win.activate()
-        except Exception:
-            pass
-
-def show_alert(message):
-    if platform.system() == "Darwin":
-        applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
-        subprocess.run(['osascript', '-e', applescript_code], check=True)
-    else:
-        root = tk.Tk()
-        root.withdraw()
-        messagebox.showinfo("提示", message)
-        root.destroy()
+    script = '''
+    tell application "Google Chrome"
+        activate
+        delay 0.5
+    end tell
+    '''
+    subprocess.run(['osascript', '-e', script], check=True)
 
 def load_symbol_names(file_paths):
     symbol_names = {}
@@ -191,9 +168,9 @@ def execute_applescript(script_path):
         print(f"Error running AppleScript: {e}")
 
 def main():
-    json_file = os.path.join(USER_HOME, "Coding/Financial_System/Modules/description.json")
-    symbol_name_file1 = os.path.join(USER_HOME, "Coding/News/backup/ETFs.txt")
-    symbol_name_file2 = os.path.join(USER_HOME, "Coding/News/ETFs_new.txt")
+    json_file = "/Users/yanzhang/Coding/Financial_System/Modules/description.json"
+    symbol_name_file1 = "/Users/yanzhang/Coding/News/backup/ETFs.txt"
+    symbol_name_file2 = "/Users/yanzhang/Coding/News/ETFs_new.txt"
     symbol_names = load_symbol_names([symbol_name_file1, symbol_name_file2])
 
     with open(json_file, 'r', encoding='utf-8') as file:
@@ -290,9 +267,11 @@ def main():
     root.mainloop()
 
     if success_flag[0]:
-        show_alert("ETF信息已成功写入！")
+        applescript_code = 'display dialog "ETF信息已成功写入！" buttons {"OK"} default button "OK"'
+        process = subprocess.run(['osascript', '-e', applescript_code], check=True)
     else:
-        show_alert("操作已取消，未进行任何写入。")
+        applescript_code = 'display dialog "操作已取消，未进行任何写入。" buttons {"OK"} default button "OK"'
+        process = subprocess.run(['osascript', '-e', applescript_code], check=True)
 
 if __name__ == "__main__":
     main()
