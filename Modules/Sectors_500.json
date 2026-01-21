@@ -13,7 +13,8 @@
         "FCX",
         "B",
         "VALE",
-        "WPM"
+        "WPM",
+        "AU"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -75,8 +76,7 @@
         "MO",
         "BTI",
         "CL",
-        "MNST",
-        "TGT"
+        "MNST"
     ],
     "Energy": [
         "XOM",
@@ -204,7 +204,7 @@
         "BDX",
         "IDXX",
         "TAK",
-        "CAH"
+        "ARGX"
     ],
     "Industrials": [
         "GE",
@@ -243,10 +243,7 @@
         "CMI",
         "VRT",
         "PCAR",
-        "URI",
-        "GWW",
-        "AXON",
-        "FAST"
+        "URI"
     ],
     "Real_Estate": [
         "PLD",
@@ -256,8 +253,7 @@
         "SPG",
         "DLR",
         "O",
-        "PSA",
-        "CBRE"
+        "PSA"
     ],
     "Technology": [
         "AAPL",
@@ -309,9 +305,7 @@
         "STX",
         "WDC",
         "NXPI",
-        "SNDK",
-        "CRWV",
-        "MSTR"
+        "SNDK"
     ],
     "Utilities": [
         "NEE",
