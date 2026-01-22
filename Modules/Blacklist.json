@@ -586,7 +586,8 @@
         "AXIA-PC",
         "DOO",
         "SNV",
-        "CFLT"
+        "CFLT",
+        "MMC"
     ],
     "etf": [
         "VDE",
@@ -933,7 +934,8 @@
         "QINT",
         "RPV",
         "IYC",
-        "NYM"
+        "NYM",
+        "SYSB"
     ],
     "Earning": [
         "TW",
@@ -960,7 +962,9 @@
         "TEM",
         "RIVN",
         "INSM",
-        "ICLR"
+        "ICLR",
+        "A",
+        "MDGL"
     ],
     "Options": [
         "BBVA",
@@ -1015,6 +1019,8 @@
         "PAC",
         "PEGA",
         "WST",
-        "ALSN"
+        "ALSN",
+        "TXT",
+        "CWST"
     ]
 }
