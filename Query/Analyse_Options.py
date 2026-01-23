@@ -6,6 +6,7 @@ import glob
 import subprocess
 import json
 import sqlite3
+import sys
 from datetime import timedelta
 from pandas.tseries.holiday import USFederalHolidayCalendar
 
@@ -13,23 +14,26 @@ from pandas.tseries.holiday import USFederalHolidayCalendar
 # 全局配置区域 (Configuration)
 # ==========================================
 
+USER_HOME = os.path.expanduser("~")
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
+
 # --- 路径配置 ---
 # 备份文件所在的文件夹路径 (自动模式用)
-BACKUP_DIR = '/Users/yanzhang/Coding/News/backup'
+BACKUP_DIR = os.path.join(BASE_CODING_DIR, "News", "backup")
 
 # 输出文件的配置 (a.py 输出)
-OUTPUT_DIR = '/Users/yanzhang/Coding/News'
+OUTPUT_DIR = os.path.join(BASE_CODING_DIR, "News")
 OUTPUT_FILENAME = 'Options_Change.csv'
 
 # JSON 映射文件路径
-SECTORS_JSON_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
+SECTORS_JSON_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_All.json")
 
 # SQLite 数据库路径 (共用)
-DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
+DB_PATH = os.path.join(BASE_CODING_DIR, "Database", "Finance.db")
 TABLE_NAME = 'Options'
 
 # 调试输出路径 (b.py逻辑用)
-OUTPUT_DEBUG_PATH = '/Users/yanzhang/Downloads/3.txt'
+OUTPUT_DEBUG_PATH = os.path.join(USER_HOME, "Downloads", "3.txt")
 
 # --- 算法参数配置 ---
 # 每个 Symbol 的 Calls 和 Puts 各保留前多少名 (用于 Part A 过滤和 Part B 策略1)
@@ -56,8 +60,8 @@ DEBUG_SYMBOL = ""
 USE_MANUAL_MODE = False
 
 # 手动模式下的文件路径
-MANUAL_FILE_OLD = '/Users/yanzhang/Coding/News/backup/Options_251224.csv'
-MANUAL_FILE_NEW = '/Users/yanzhang/Coding/News/backup/Options_251227.csv'
+MANUAL_FILE_OLD = os.path.join(BACKUP_DIR, 'Options_251224.csv')
+MANUAL_FILE_NEW = os.path.join(BACKUP_DIR, 'Options_251227.csv')
 
 # ==========================================
 # [Part A] 辅助函数与核心处理 (原 a.py)
@@ -632,8 +636,12 @@ def get_latest_two_files(directory, pattern='Options_*.csv'):
 
 def show_alert(message):
     try:
-        applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
-        subprocess.run(['osascript', '-e', applescript_code], check=True)
+        if sys.platform == 'darwin':
+            applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+            subprocess.run(['osascript', '-e', applescript_code], check=True)
+        elif sys.platform == 'win32':
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(0, message, "提示", 0)
     except Exception:
         pass
 

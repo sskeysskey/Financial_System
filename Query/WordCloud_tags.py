@@ -127,27 +127,38 @@ def compute_pct_change(conn, table, symbol, days):
     return (latest_price - past_price) / past_price
 
 
+import os
+import sys
+
+USER_HOME = os.path.expanduser("~")
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
+
 def main():
     parser = argparse.ArgumentParser(description="生成最近 N 天股价变动标签云")
-    parser.add_argument("--db", default="/Users/yanzhang/Coding/Database/Finance.db",
+    parser.add_argument("--db", default=os.path.join(BASE_CODING_DIR, "Database", "Finance.db"),
                         help="SQLite 数据库文件路径")
-    parser.add_argument("--desc", default="/Users/yanzhang/Coding/Financial_System/Modules/description.json",
+    parser.add_argument("--desc", default=os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "description.json"),
                         help="description.json 路径")
-    parser.add_argument("--tagsw", default="/Users/yanzhang/Coding/Financial_System/Modules/tags_weight.json",
+    parser.add_argument("--tagsw", default=os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "tags_weight.json"),
                         help="tags_weight.json 路径")
     parser.add_argument("--days", type=int, default=10,
                         help="向前对比的天数 (默认 7 天)")
     parser.add_argument("--font", default=None,
                         help="生成中文标签云时指定的字体路径 (如 SimHei.ttf)")
-    parser.add_argument("--out-up",   default="/Users/yanzhang/Downloads/tagcloud_up.png",
+    parser.add_argument("--out-up",   default=os.path.join(USER_HOME, "Downloads", "tagcloud_up.png"),
                         help="输出的“涨幅榜”标签云图片文件名")
-    parser.add_argument("--out-down", default="/Users/yanzhang/Downloads/tagcloud_down.png",
+    parser.add_argument("--out-down", default=os.path.join(USER_HOME, "Downloads", "tagcloud_down.png"),
                         help="输出的“跌幅榜”标签云图片文件名")
     args = parser.parse_args()
 
     # —— 新增：如果用户没指定，就用系统里 macOS 的黑体
     if args.font is None:
-        args.font = "/Users/yanzhang/Library/Fonts/FangZhengHeiTiJianTi-1.ttf"  # Windows 下改成 "C:\\Windows\\Fonts\\msyh.ttc"
+        if sys.platform == 'darwin':
+            args.font = os.path.join(USER_HOME, "Library", "Fonts", "FangZhengHeiTiJianTi-1.ttf")
+        elif sys.platform == 'win32':
+            args.font = "C:\\Windows\\Fonts\\msyh.ttc"
+        else:
+            args.font = "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
 
     if not os.path.isfile(args.db):
         print("找不到数据库文件:", args.db, file=sys.stderr)

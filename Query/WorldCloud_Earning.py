@@ -78,29 +78,40 @@ def load_sectors(path):
             sym2sector[s] = sector
     return sym2sector
 
+import os
+import sys
+
+USER_HOME = os.path.expanduser("~")
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
+
 def main():
     parser = argparse.ArgumentParser(description="根据 Earning 表生成财报涨跌幅标签云")
-    parser.add_argument("--db",      default="/Users/yanzhang/Coding/Database/Finance.db",
+    parser.add_argument("--db",      default=os.path.join(BASE_CODING_DIR, "Database", "Finance.db"),
                         help="SQLite 数据库文件路径")
-    parser.add_argument("--desc",    default="/Users/yanzhang/Coding/Financial_System/Modules/description.json",
+    parser.add_argument("--desc",    default=os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "description.json"),
                         help="description.json 路径")
-    parser.add_argument("--tagsw",   default="/Users/yanzhang/Coding/Financial_System/Modules/tags_weight.json",
+    parser.add_argument("--tagsw",   default=os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "tags_weight.json"),
                         help="tags_weight.json 路径")
-    parser.add_argument("--sectors", default="/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json",
+    parser.add_argument("--sectors", default=os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_All.json"),
                         help="Sectors_All.json 路径，用来找 sector 对应的因子")
     parser.add_argument("--months",  type=int, default=2,
                         help="向前扫描多少个月（取最近一次财报），默认 2 个月")
     parser.add_argument("--font",    default=None,
                         help="中文标签云字体文件路径，如 SimHei.ttf")
-    parser.add_argument("--out-up",   default="/Users/yanzhang/Downloads/tagcloud_up_earning.png",
+    parser.add_argument("--out-up",   default=os.path.join(USER_HOME, "Downloads", "tagcloud_up_earning.png"),
                         help="输出的“财报涨幅榜”标签云图片文件名")
-    parser.add_argument("--out-down", default="/Users/yanzhang/Downloads/tagcloud_down_earing.png",
+    parser.add_argument("--out-down", default=os.path.join(USER_HOME, "Downloads", "tagcloud_down_earing.png"),
                         help="输出的“财报跌幅榜”标签云图片文件名")
     args = parser.parse_args()
 
     # 默认字体
     if args.font is None:
-        args.font = "/Users/yanzhang/Library/Fonts/FangZhengHeiTiJianTi-1.ttf"
+        if sys.platform == 'darwin':
+            args.font = os.path.join(USER_HOME, "Library", "Fonts", "FangZhengHeiTiJianTi-1.ttf")
+        elif sys.platform == 'win32':
+            args.font = "C:\\Windows\\Fonts\\msyh.ttc"
+        else:
+            args.font = "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
 
     # 校验文件
     for p in (args.db, args.desc, args.tagsw, args.sectors):

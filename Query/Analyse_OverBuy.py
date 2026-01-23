@@ -2,10 +2,14 @@ import json
 import sqlite3
 import re
 import logging
+import os
+import sys
 from wcwidth import wcswidth
 from collections import defaultdict
 from datetime import datetime, timedelta
-import os
+
+USER_HOME = os.path.expanduser("~")
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 # ==========================================
 # 1. 配置文件和路径管理 (已优化)
@@ -22,10 +26,10 @@ CONFIG = {
 }
 
 # 动态路径生成
-BASE_PATH = os.path.expanduser('~')
+BASE_PATH = USER_HOME
 
 # 定义基础目录
-CODING_DIR = os.path.join(BASE_PATH, 'Coding')
+CODING_DIR = BASE_CODING_DIR
 MODULES_DIR = os.path.join(CODING_DIR, 'Financial_System', 'Modules')
 NEWS_DIR = os.path.join(CODING_DIR, 'News')
 DB_DIR = os.path.join(CODING_DIR, 'Database')

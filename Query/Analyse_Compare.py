@@ -3,8 +3,12 @@ import json
 import sqlite3
 import re
 import shutil
+import sys
 from datetime import datetime, timedelta, date
 from collections import OrderedDict
+
+USER_HOME = os.path.expanduser("~")
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 # 第三方库依赖
 try:
@@ -16,7 +20,7 @@ except ImportError as e:
     exit(1)
 
 # 获取当前用户的家目录 (例如 /Users/yanzhang)
-HOME = os.path.expanduser("~")
+HOME = USER_HOME
 
 # ==============================================================================
 # PART 1: Compare_Combined 逻辑
@@ -24,9 +28,9 @@ HOME = os.path.expanduser("~")
 
 class ConfigCompare:
     # 基础路径动态化
-    BASE_NEWS_DIR = os.path.join(HOME, 'Coding/News')
-    BASE_MODULES_DIR = os.path.join(HOME, 'Coding/Financial_System/Modules')
-    BASE_DB_DIR = os.path.join(HOME, 'Coding/Database')
+    BASE_NEWS_DIR = os.path.join(BASE_CODING_DIR, 'News')
+    BASE_MODULES_DIR = os.path.join(BASE_CODING_DIR, 'Financial_System/Modules')
+    BASE_DB_DIR = os.path.join(BASE_CODING_DIR, 'Database')
     
     # 财报文件路径列表
     EARNINGS_FILES = [
@@ -52,7 +56,7 @@ class ConfigCompare:
     
     # Compare_All 输出
     OUTPUT_FILE_ALL = os.path.join(BASE_NEWS_DIR, 'backup/Compare_All.txt')
-    ADDITIONAL_OUTPUT_FILE_ALL = os.path.join(HOME, 'Coding/Website/economics/compare_all.txt')
+    ADDITIONAL_OUTPUT_FILE_ALL = os.path.join(BASE_CODING_DIR, 'Website/economics/compare_all.txt')
     
     # Compare_Stocks 输出
     FILE_PATH_TXT_STOCKS = os.path.join(BASE_NEWS_DIR, 'CompareStock.txt')
@@ -183,9 +187,11 @@ def run_update_colors():
 
 def read_latest_date_info_all(gainer_loser_path):
     if not os.path.exists(gainer_loser_path):
-        return {"gainer": [], "loser": []}
+        return None, {"gainer": [], "loser": []}
     with open(gainer_loser_path, 'r') as f:
         data = json.load(f)
+    if not data:
+        return None, {"gainer": [], "loser": []}
     latest_date = max(data.keys())
     return latest_date, data[latest_date]
 
@@ -214,8 +220,8 @@ def run_compare_all():
     type_map = {'BMO': '前', 'AMC': '后', 'TNS': '未'}
     
     latest_date, latest_info = read_latest_date_info_all(ConfigCompare.GAINER_LOSER_PATH)
-    gainers = latest_info.get("gainer", [])
-    losers = latest_info.get("loser", [])
+    gainers = latest_info.get("gainer", []) if isinstance(latest_info, dict) else []
+    losers = latest_info.get("loser", []) if isinstance(latest_info, dict) else []
     
     earnings_data = {}
     for file_path in ConfigCompare.EARNINGS_FILES:
@@ -224,11 +230,13 @@ def run_compare_all():
 
     today = datetime.now().date()
     yesterday = today - timedelta(days=1)
-    try:
-        latest_date_date = datetime.strptime(latest_date, "%Y-%m-%d").date()
-        is_recent = latest_date_date in (today, yesterday)
-    except:
-        is_recent = False
+    is_recent = False
+    if latest_date:
+        try:
+            latest_date_date = datetime.strptime(latest_date, "%Y-%m-%d").date()
+            is_recent = latest_date_date in (today, yesterday)
+        except:
+            is_recent = False
 
     if not os.path.exists(ConfigCompare.SECTORS_ALL_JSON_PATH):
         return
@@ -635,18 +643,18 @@ def execute_compare_process():
 # ==============================================================================
 
 # --- 全局路径配置 (Analyse) 动态化 ---
-DB_PATH_ANALYSE = os.path.join(HOME, 'Coding/Database/Finance.db')
-BLACKLIST_PATH = os.path.join(HOME, 'Coding/Financial_System/Modules/blacklist.json')
-STOCK_SPLITS_FILE = os.path.join(HOME, 'Coding/News/Stock_Splits_next.txt')
-ERROR_LOG_FILE_ANALYSE = os.path.join(HOME, 'Coding/News/Today_error.txt')
+DB_PATH_ANALYSE = os.path.join(BASE_CODING_DIR, 'Database/Finance.db')
+BLACKLIST_PATH = os.path.join(BASE_CODING_DIR, 'Financial_System/Modules/blacklist.json')
+STOCK_SPLITS_FILE = os.path.join(BASE_CODING_DIR, 'News/Stock_Splits_next.txt')
+ERROR_LOG_FILE_ANALYSE = os.path.join(BASE_CODING_DIR, 'News/Today_error.txt')
 
-SECTORS_PANEL_PATH = os.path.join(HOME, "Coding/Financial_System/Modules/Sectors_panel.json")
-COLORS_JSON_PATH_ANALYSE = os.path.join(HOME, 'Coding/Financial_System/Modules/Colors.json')
+SECTORS_PANEL_PATH = os.path.join(BASE_CODING_DIR, "Financial_System/Modules/Sectors_panel.json")
+COLORS_JSON_PATH_ANALYSE = os.path.join(BASE_CODING_DIR, 'Financial_System/Modules/Colors.json')
 
-BACKUP_DIR_MAIN = os.path.join(HOME, 'Coding/News/backup/backup')
-BACKUP_DIR_ROOT = os.path.join(HOME, 'Coding/News/backup')
-DOWNLOADS_DIR = os.path.join(HOME, "Downloads")
-NEWS_DIR = os.path.join(HOME, "Coding/News")
+BACKUP_DIR_MAIN = os.path.join(BASE_CODING_DIR, 'News/backup/backup')
+BACKUP_DIR_ROOT = os.path.join(BASE_CODING_DIR, 'News/backup')
+DOWNLOADS_DIR = os.path.join(USER_HOME, "Downloads")
+NEWS_DIR = os.path.join(BASE_CODING_DIR, "News")
 
 BLACKLIST_GLOB = set(["YNDX"])
 
@@ -1202,9 +1210,9 @@ def run_logic_50(blacklist_newlow, stock_splits_symbols):
                 print(f"[50] 写入新高文件错误: {e}")
 
 # 4. Analyse HighLow
-HL_OUTPUT_PATH = os.path.join(HOME, "Coding/News/HighLow.txt")
-HL_BACKUP_OUTPUT_PATH = os.path.join(HOME, "Coding/News/backup/HighLow.txt")
-HL_JSON_PATH = os.path.join(HOME, "Coding/Financial_System/Modules/Sectors_All.json")
+HL_OUTPUT_PATH = os.path.join(BASE_CODING_DIR, "News/HighLow.txt")
+HL_BACKUP_OUTPUT_PATH = os.path.join(BASE_CODING_DIR, "News/backup/HighLow.txt")
+HL_JSON_PATH = os.path.join(BASE_CODING_DIR, "Financial_System/Modules/Sectors_All.json")
 HL_TIME_INTERVALS = {
     "[0.5 months]": relativedelta(days=-15),
     "[1 months]":   relativedelta(months=-1),

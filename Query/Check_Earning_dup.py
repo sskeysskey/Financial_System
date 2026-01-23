@@ -10,6 +10,9 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont
 import send2trash  # 新增导入：用于安全删除到回收站
 
+USER_HOME = os.path.expanduser("~")
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
+
 # 在文件开头添加新的函数来处理确认记录
 
 def load_confirmed_symbols(directory: str) -> dict:
@@ -1061,7 +1064,7 @@ def sort_all_main_files(directory: str):
 # --- 主程序入口 ---
 
 def main():
-    directory = "/Users/yanzhang/Coding/News"
+    directory = os.path.join(BASE_CODING_DIR, "News")
     pattern = os.path.join(directory, "Earnings_Release_*.txt")
     output_path = os.path.join(directory, "duplication.txt")
 

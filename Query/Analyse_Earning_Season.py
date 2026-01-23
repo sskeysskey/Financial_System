@@ -2,14 +2,18 @@ import sqlite3
 import json
 import os
 import datetime
+import sys
 from collections import defaultdict
 
+USER_HOME = os.path.expanduser("~")
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
+
 SYMBOL_TO_TRACE = ""
-LOG_FILE_PATH = "/Users/yanzhang/Downloads/Season_trace_log.txt"
+LOG_FILE_PATH = os.path.join(USER_HOME, "Downloads", "Season_trace_log.txt")
 
 # --- 1. 配置文件和路径 --- 使用一个配置字典来管理所有路径，更清晰
 PATHS = {
-    "base": "/Users/yanzhang/Coding/",
+    "base": BASE_CODING_DIR,
     "news": lambda base: os.path.join(base, "News"),
     "db": lambda base: os.path.join(base, "Database"),
     "config": lambda base: os.path.join(base, "Financial_System", "Modules"),
@@ -256,7 +260,7 @@ def build_stock_data_cache(symbols, db_path, symbol_sector_map, symbol_to_trace,
         is_tracing = (symbol == symbol_to_trace)
         if is_tracing: log_detail(f"\n{'='*20} 开始为目标 {symbol} 构建数据缓存 {'='*20}")
 
-        data = {'is_valid': False}
+        data = {'is_valid': False, 'all_er_dates': [], 'latest_er_date_str': '', 'latest_er_date': None, 'all_er_prices': [], 'latest_date_str': '', 'latest_price': 0.0, 'latest_volume': 0.0, 'pe_ratio': None, 'marketcap': None, 'earning_record_price': None}
         table_name = symbol_sector_map.get(symbol)
         if not table_name:
             if is_tracing: log_detail(f"[{symbol}] 失败: 在板块映射中未找到该symbol，无法确定数据表。")

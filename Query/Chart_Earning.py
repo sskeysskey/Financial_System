@@ -4,19 +4,34 @@ import matplotlib.pyplot as plt
 import pyperclip
 import matplotlib
 import subprocess
+import os
+import sys
+
+USER_HOME = os.path.expanduser("~")
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 # 设置中文字体
-matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
+if sys.platform == 'darwin':
+    matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
+elif sys.platform == 'win32':
+    matplotlib.rcParams['font.sans-serif'] = ['SimHei']
 plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
 
 def Copy_Command_C():
-    script = '''
-    tell application "System Events"
-        keystroke "c" using command down
-    end tell
-    '''
-    # 运行AppleScript
-    subprocess.run(['osascript', '-e', script])
+    if sys.platform == 'darwin':
+        script = '''
+        tell application "System Events"
+            keystroke "c" using command down
+        end tell
+        '''
+        # 运行AppleScript
+        subprocess.run(['osascript', '-e', script])
+    elif sys.platform == 'win32':
+        import ctypes
+        ctypes.windll.user32.keybd_event(0x11, 0, 0, 0)
+        ctypes.windll.user32.keybd_event(0x43, 0, 0, 0)
+        ctypes.windll.user32.keybd_event(0x43, 0, 2, 0)
+        ctypes.windll.user32.keybd_event(0x11, 0, 2, 0)
 
 def get_db_connection(db_path):
     """创建数据库连接"""
@@ -61,15 +76,17 @@ def plot_price_trend(df, title):
     plt.show()
 
 def display_dialog(message):
-    """使用AppleScript显示弹窗提示"""
-    # AppleScript代码模板
-    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
-    
-    # 使用subprocess调用osascript
-    subprocess.run(['osascript', '-e', applescript_code], check=True)
+    if sys.platform == 'darwin':
+        # AppleScript代码模板
+        applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+        # 使用subprocess调用osascript
+        subprocess.run(['osascript', '-e', applescript_code], check=True)
+    elif sys.platform == 'win32':
+        import ctypes
+        ctypes.windll.user32.MessageBoxW(0, message, "提示", 0)
 
 def main():
-    db_path = '/Users/yanzhang/Coding/Database/Finance.db'
+    db_path = os.path.join(BASE_CODING_DIR, "Database", "Finance.db")
     query = """
     SELECT date, price
     FROM Earning

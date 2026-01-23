@@ -5,10 +5,13 @@ from PyQt6.QtWidgets import QApplication, QDialog, QVBoxLayout, QTextEdit
 from PyQt6.QtGui import QFont
 from PyQt6.QtCore import Qt
 
+USER_HOME = os.path.expanduser("~")
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
+
 # --- 1. 配置部分 ---
 
-JSON_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Earning_History.json'
-SECTOR_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
+JSON_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Earning_History.json")
+SECTOR_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_panel.json")
 
 # 复用你的 NORD 主题，保持视觉一致性
 NORD_THEME = {

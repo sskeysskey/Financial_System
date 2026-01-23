@@ -2,10 +2,14 @@ import json
 import sqlite3
 import os
 import datetime
+import sys
+
+USER_HOME = os.path.expanduser("~")
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 # --- 1. 配置文件和路径 ---
 # 使用 os.path.expanduser('~') 获取用户主目录，增强可移植性
-BASE_PATH = os.path.expanduser('~')
+BASE_PATH = USER_HOME
 
 SYMBOL_TO_TRACE = ""
 TARGET_DATE = ""
@@ -17,8 +21,8 @@ TARGET_DATE = ""
 LOG_FILE_PATH = os.path.join(BASE_PATH, "Downloads", "No_Season_trace_log.txt")
 
 PATHS = {
-    "config_dir": os.path.join(BASE_PATH, 'Coding/Financial_System/Modules'),
-    "db_dir": os.path.join(BASE_PATH, 'Coding/Database'),
+    "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),
+    "db_dir": os.path.join(BASE_CODING_DIR, 'Database'),
     "sectors_json": lambda config_dir: os.path.join(config_dir, 'Sectors_All.json'),
     "panel_json": lambda config_dir: os.path.join(config_dir, 'Sectors_panel.json'),
     "blacklist_json": lambda config_dir: os.path.join(config_dir, 'Blacklist.json'),

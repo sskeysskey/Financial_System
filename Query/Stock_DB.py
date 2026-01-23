@@ -7,6 +7,10 @@ from tkinter import scrolledtext
 from tkinter.font import Font
 import pyperclip
 import subprocess
+import os
+
+USER_HOME = os.path.expanduser("~")
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 def load_sector_data(file_path):
     with open(file_path, 'r') as file:
@@ -56,7 +60,7 @@ def input_processing(root, sector_data, user_input):
     
     input_variants = {variant: user_input.strip() for variant in ['exact', 'capitalized', 'upper']}
     
-    db_path = "/Users/yanzhang/Coding/Database/Finance.db"
+    db_path = os.path.join(BASE_CODING_DIR, "Database", "Finance.db")
     found = False
     
     for variant, input_variant in input_variants.items():
@@ -80,8 +84,12 @@ def input_processing(root, sector_data, user_input):
                 create_window(None, result)
                 return
     
-    applescript_code = 'display dialog "未找到匹配的数据项。" buttons {"OK"} default button "OK"'
-    process = subprocess.run(['osascript', '-e', applescript_code], check=True)
+    if sys.platform == 'darwin':
+        applescript_code = 'display dialog "未找到匹配的数据项。" buttons {"OK"} default button "OK"'
+        process = subprocess.run(['osascript', '-e', applescript_code], check=True)
+    elif sys.platform == 'win32':
+        import ctypes
+        ctypes.windll.user32.MessageBoxW(0, "未找到匹配的数据项。", "提示", 0)
     close_app()
 
 def get_user_input_custom(root, prompt):
@@ -133,7 +141,7 @@ if __name__ == '__main__':
     root.withdraw()
     root.bind('<Escape>', close_app)
     
-    sector_data = load_sector_data('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json')
+    sector_data = load_sector_data(os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules', 'Sectors_All.json'))
     
     if len(sys.argv) > 1:
         arg = sys.argv[1]

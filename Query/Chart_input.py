@@ -3,10 +3,11 @@ import sys
 import sqlite3
 import subprocess
 import numpy as np
-from datetime import datetime, timedelta, date
-import matplotlib.pyplot as plt
-from matplotlib.widgets import RadioButtons
+import os
 import matplotlib
+import matplotlib.pyplot as plt
+from datetime import datetime, timedelta, date
+from matplotlib.widgets import RadioButtons
 from functools import lru_cache
 from scipy.interpolate import interp1d
 import json
@@ -14,8 +15,10 @@ from matplotlib.patches import PathPatch
 from matplotlib.path import Path
 from matplotlib.colors import LinearSegmentedColormap
 import glob
-import os
 import time
+
+USER_HOME = os.path.expanduser("~")
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 # --- 修改: 切换到 PyQt6 ---
 from PyQt6.QtWidgets import QApplication, QDialog, QVBoxLayout, QTextEdit
@@ -41,11 +44,13 @@ NORD_THEME = {
 }
 
 # 在文件开头添加这个函数
-def find_earning_release_date(symbol, txt_dir='/Users/yanzhang/Coding/News/'):
+def find_earning_release_date(symbol, txt_dir=None):
     """
     在 Earnings_Release_*.txt 文件中查找 symbol 对应的日期
     返回找到的第一个日期，如果没找到返回 None
     """
+    if txt_dir is None:
+        txt_dir = os.path.join(BASE_CODING_DIR, "News")
     try:
         # 查找所有匹配的文件
         pattern = os.path.join(txt_dir, 'Earnings_Release_*.txt')
@@ -464,24 +469,22 @@ class InfoDialog(QDialog):
         self.setStyleSheet(qss)
 
 def execute_external_script(script_type, keyword, on_done=None, block=False):
-    base_path = '/Users/yanzhang/Coding/Financial_System'
-    
     script_configs = {
-        'earning_input': f'{base_path}/Operations/Insert_Earning_Manual.py',
-        'earning_edit': f'{base_path}/Operations/Editor_Earning_DB.py',
-        'tags_edit': f'{base_path}/Operations/Editor_Tags.py',
-        'event_input': f'{base_path}/Operations/Insert_Events.py',
-        'event_edit': f'{base_path}/Operations/Editor_Events.py',
-        'symbol_compare': f'{base_path}/Query/Compare_Chart.py',
-        'panel_input': f'{base_path}/Operations/Insert_Panel.py',
-        'panel_delete': f'{base_path}/Operations/Delete_Panel.py',
-        'empty_input': f'{base_path}/Operations/Insert_Sector.py',
-        'similar_tags': f'{base_path}/Query/Search_Similar_Tag.py',
-        'check_history': f'{base_path}/Query/Check_Earning_history.py', 
-        'check_kimi': '/Users/yanzhang/Coding/ScriptEditor/Check_Earning.scpt',
-        'check_futu': '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt',
-        'check_seekingalpha': '/Users/yanzhang/Coding/ScriptEditor/Stock_seekingalpha.scpt',
-        'stock_chart': '/Users/yanzhang/Coding/ScriptEditor/Stock_Chart.scpt'
+        'earning_input': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Insert_Earning_Manual.py'),
+        'earning_edit': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Editor_Earning_DB.py'),
+        'tags_edit': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Editor_Tags.py'),
+        'event_input': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Insert_Events.py'),
+        'event_edit': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Editor_Events.py'),
+        'symbol_compare': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Query', 'Compare_Chart.py'),
+        'panel_input': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Insert_Panel.py'),
+        'panel_delete': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Delete_Panel.py'),
+        'empty_input': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Insert_Sector.py'),
+        'similar_tags': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Query', 'Search_Similar_Tag.py'),
+        'check_history': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Query', 'Check_Earning_history.py'), 
+        'check_kimi': os.path.join(BASE_CODING_DIR, 'ScriptEditor', 'Check_Earning.scpt'),
+        'check_futu': os.path.join(BASE_CODING_DIR, 'ScriptEditor', 'Stock_CheckFutu.scpt'),
+        'check_seekingalpha': os.path.join(BASE_CODING_DIR, 'ScriptEditor', 'Stock_seekingalpha.scpt'),
+        'stock_chart': os.path.join(BASE_CODING_DIR, 'ScriptEditor', 'Stock_Chart.scpt')
     }
     script_path = script_configs.get(script_type)
     if not script_path:
@@ -503,7 +506,7 @@ def execute_external_script(script_type, keyword, on_done=None, block=False):
                     on_done()
         else:
             # Python 脚本
-            python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
+            python_path = sys.executable
             if block:
                 result = subprocess.run([python_path, script_path, keyword], check=False)
                 return_code = result.returncode
@@ -525,7 +528,7 @@ def get_options_metrics(symbol):
     返回原始数值字典以便在 UI 层进行样式处理
     结构: {'iv1': (val, str), 'iv2': ..., 'sum1': val, 'sum2': val, 'date1': date_obj, 'date2': date_obj}
     """
-    db_path = '/Users/yanzhang/Coding/Database/Finance.db'
+    db_path = os.path.join(BASE_CODING_DIR, "Database", "Finance.db")
     
     try:
         with sqlite3.connect(db_path, timeout=10.0) as conn:
@@ -598,7 +601,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     # --- 新增修改 1: 将传入的json_data存入可变容器，并定义文件路径 ---
     # 使用字典包装，以便在内部函数中修改其内容
     current_json_data = {'data': json_data}
-    DESCRIPTION_JSON_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
+    DESCRIPTION_JSON_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "description.json")
 
     if isinstance(share, tuple):
         share_val, pb = share

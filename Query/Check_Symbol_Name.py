@@ -1,5 +1,6 @@
 import pyperclip
 import json
+import os
 
 def match_symbol_name():
     """
@@ -18,7 +19,9 @@ def match_symbol_name():
         return
         
     # 2. 定义 JSON 文件路径
-    file_path = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
+    USER_HOME = os.path.expanduser("~")
+    BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
+    file_path = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "description.json")
     
     # 3. 读取并解析JSON文件
     try:

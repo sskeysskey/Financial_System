@@ -134,10 +134,14 @@ def main(db1_path, db2_path):
     conn1.close()
     conn2.close()
 
+import os
+
 if __name__ == '__main__':
-    db1 = '/Users/yanzhang/Coding/Database/Finance copy.db'
-    db2 = '/Users/yanzhang/Coding/Database/Finance.db'
-    out_file = '/Users/yanzhang/Downloads/a.txt'
+    USER_HOME = os.path.expanduser("~")
+    BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
+    db1 = os.path.join(BASE_CODING_DIR, "Database", "Finance copy.db")
+    db2 = os.path.join(BASE_CODING_DIR, "Database", "Finance.db")
+    out_file = os.path.join(USER_HOME, "Downloads", "a.txt")
 
     # 重定向所有 print 到文件
     with open(out_file, 'w', encoding='utf-8') as f:

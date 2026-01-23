@@ -6,6 +6,9 @@ import re
 import pandas as pd
 import datetime
 
+USER_HOME = os.path.expanduser("~")
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
+
 # --- 0. 关键修改: 引入 holidays 库 ---
 try:
     import holidays
@@ -19,7 +22,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QCursor
 
 # 0. 引入外部绘图模块
-sys.path.append('/Users/yanzhang/Coding/Financial_System/Query')
+sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Query"))
 try:
     from Chart_input import plot_financial_data
 except ImportError:
@@ -63,11 +66,11 @@ class TradingDateHelper:
 # 1. 数据处理层 (Data Handler)
 class DataManager:
     def __init__(self):
-        self.path_csv = r"/Users/yanzhang/Coding/News/Options_Change.csv"
-        self.path_db = r"/Users/yanzhang/Coding/Database/Finance.db"
-        self.path_txt = r"/Users/yanzhang/Coding/News/backup/Compare_All.txt"
-        self.path_json = r"/Users/yanzhang/Coding/Financial_System/Modules/description.json"
-        self.path_sectors = r"/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json"
+        self.path_csv = os.path.join(BASE_CODING_DIR, "News", "Options_Change.csv")
+        self.path_db = os.path.join(BASE_CODING_DIR, "Database", "Finance.db")
+        self.path_txt = os.path.join(BASE_CODING_DIR, "News", "backup", "Compare_All.txt")
+        self.path_json = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "description.json")
+        self.path_sectors = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_All.json")
         
         self.full_json_data = {} 
         self.sectors_data = {}

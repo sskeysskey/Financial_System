@@ -5,8 +5,12 @@ import json
 import sqlite3
 import pyperclip
 import subprocess
+import os
 from decimal import Decimal
 from datetime import datetime, date
+
+USER_HOME = os.path.expanduser("~")
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 # --- PyQt6 核心组件 ---
 from PyQt6.QtCore import Qt, QEvent, QSize
@@ -16,7 +20,7 @@ from PyQt6.QtWidgets import (QApplication, QInputDialog, QMessageBox, QMainWindo
 from PyQt6.QtGui import QCursor, QAction, QFont, QPalette, QColor
 
 # --- 检查并添加必要的路径 ---
-chart_input_path = '/Users/yanzhang/Coding/Financial_System/Query'
+chart_input_path = os.path.join(BASE_CODING_DIR, "Financial_System", "Query")
 if chart_input_path not in sys.path:
     sys.path.append(chart_input_path)
 
@@ -27,12 +31,12 @@ except ImportError:
     sys.exit(1)
 
 # --- 文件路径 ---
-DESCRIPTION_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
-WEIGHT_CONFIG_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/tags_weight.json'
-COMPARE_DATA_PATH = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
-DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
-SECTORS_ALL_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
-PANEL_CONFIG_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
+DESCRIPTION_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "description.json")
+WEIGHT_CONFIG_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "tags_weight.json")
+COMPARE_DATA_PATH = os.path.join(BASE_CODING_DIR, "News", "backup", "Compare_All.txt")
+DB_PATH = os.path.join(BASE_CODING_DIR, "Database", "Finance.db")
+SECTORS_ALL_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_All.json")
+PANEL_CONFIG_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_panel.json")
 
 DEFAULT_WEIGHT = Decimal('1')
 
@@ -149,17 +153,16 @@ def get_clipboard_content():
     except Exception: return ""
 
 def execute_external_script(script_type, keyword):
-    base_path = '/Users/yanzhang/Coding/Financial_System'
     script_configs = {
-        'blacklist': f'{base_path}/Operations/Insert_Blacklist.py',
-        'similar':  f'{base_path}/Query/Find_Similar_Tag.py',
-        'tags':     f'{base_path}/Operations/Editor_Tags.py',
-        'editor_earning': f'{base_path}/Operations/Editor_Earning_DB.py',
-        'earning':  f'{base_path}/Operations/Insert_Earning.py',
-        'event_input': f'{base_path}/Operations/Insert_Events.py',
-        'event_editor': f'{base_path}/Operations/Editor_Events.py',
-        'futu':     '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt',
-        'kimi':     '/Users/yanzhang/Coding/ScriptEditor/Check_Earning.scpt'
+        'blacklist': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Insert_Blacklist.py'),
+        'similar':  os.path.join(BASE_CODING_DIR, 'Financial_System', 'Query', 'Find_Similar_Tag.py'),
+        'tags':     os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Editor_Tags.py'),
+        'editor_earning': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Editor_Earning_DB.py'),
+        'earning':  os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Insert_Earning.py'),
+        'event_input': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Insert_Events.py'),
+        'event_editor': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Editor_Events.py'),
+        'futu':     os.path.join(BASE_CODING_DIR, 'ScriptEditor', 'Stock_CheckFutu.scpt'),
+        'kimi':     os.path.join(BASE_CODING_DIR, 'ScriptEditor', 'Check_Earning.scpt')
     }
     path = script_configs.get(script_type)
     if not path: return
@@ -167,7 +170,7 @@ def execute_external_script(script_type, keyword):
         if script_type in ['futu', 'kimi']:
             subprocess.Popen(['osascript', path, keyword])
         else:
-            py_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
+            py_path = sys.executable
             subprocess.Popen([py_path, path, keyword])
     except Exception as e: print(f"执行脚本错误: {e}")
 

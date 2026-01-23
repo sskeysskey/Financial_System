@@ -2,22 +2,18 @@ import sqlite3
 import os
 import html
 import webbrowser
-import platform  # <--- 新增
 
-# ================= 配置区域 (跨平台修改) =================
-
-# 1. 动态获取主目录
 USER_HOME = os.path.expanduser("~")
-
-# 2. 定义基础路径
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 DATABASE_DIR = os.path.join(BASE_CODING_DIR, "Database")
 DOWNLOADS_DIR = os.path.join(USER_HOME, "Downloads")
 
+# ================= 配置区域 (跨平台修改) =================
+
 # 3. 默认数据库路径
 DEFAULT_DB_PATH = os.path.join(DATABASE_DIR, "Finance.db")
 
-# 4. 默认报告输出目录
+# 4. 报告输出目录
 DEFAULT_REPORT_DIR = DOWNLOADS_DIR
 
 # ========================================================

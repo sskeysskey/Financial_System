@@ -8,6 +8,9 @@ import re
 from collections import OrderedDict
 import holidays
 
+USER_HOME = os.path.expanduser("~")
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
+
 # --- PyQt6 导入 ---
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
@@ -18,20 +21,20 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QMimeData, QPoint, QEvent, QTimer, QSize
 from PyQt6.QtGui import QFont, QCursor, QDrag, QPainter, QColor, QPen
 
-sys.path.append('/Users/yanzhang/Coding/Financial_System/Query')
+sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Query"))
 
 # --- 修改: 增加导入 get_options_metrics ---
 from Chart_input import plot_financial_data, get_options_metrics
 
 # --- 文件路径配置 ---
-CONFIG_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
-COLORS_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Colors.json'
-DESCRIPTION_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
-SECTORS_ALL_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
-COMPARE_DATA_PATH = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
-DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
-BLACKLIST_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Blacklist.json'
-EARNING_HISTORY_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Earning_History.json'
+CONFIG_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_panel.json")
+COLORS_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Colors.json")
+DESCRIPTION_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "description.json")
+SECTORS_ALL_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_All.json")
+COMPARE_DATA_PATH = os.path.join(BASE_CODING_DIR, "News", "backup", "Compare_All.txt")
+DB_PATH = os.path.join(BASE_CODING_DIR, "Database", "Finance.db")
+BLACKLIST_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Blacklist.json")
+EARNING_HISTORY_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Earning_History.json")
 
 DISPLAY_LIMITS = {
     'default': 'all',  # 默认显示全部
@@ -481,17 +484,16 @@ def get_color_decision_data(db_path, sector_data, symbol):
         return None, None, None
 
 def execute_external_script(script_type, keyword, group=None, main_window=None):
-    base_path = '/Users/yanzhang/Coding/Financial_System'
-    python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
+    python_path = sys.executable
     script_configs = {
-        'similar': f'{base_path}/Query/Search_Similar_Tag.py',
-        'tags': f'{base_path}/Operations/Editor_Tags.py',
-        'editor_earning': f'{base_path}/Operations/Editor_Earning_DB.py',
-        'earning': f'{base_path}/Operations/Insert_Earning.py',
-        'event_input': f'{base_path}/Operations/Insert_Events.py',
-        'event_editor': f'{base_path}/Operations/Editor_Events.py',
-        'futu': '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt',
-        'doubao': '/Users/yanzhang/Coding/ScriptEditor/Check_Earning.scpt'
+        'similar': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Query', 'Search_Similar_Tag.py'),
+        'tags': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Editor_Tags.py'),
+        'editor_earning': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Editor_Earning_DB.py'),
+        'earning': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Insert_Earning.py'),
+        'event_input': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Insert_Events.py'),
+        'event_editor': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Editor_Events.py'),
+        'futu': os.path.join(BASE_CODING_DIR, 'ScriptEditor', 'Stock_CheckFutu.scpt'),
+        'doubao': os.path.join(BASE_CODING_DIR, 'ScriptEditor', 'Check_Earning.scpt')
     }
 
     try:
@@ -633,29 +635,38 @@ class MainWindow(QMainWindow):
         
         self.init_ui()
 
-        # >>> 修改后的 handle_chart_callback >>>
     def handle_chart_callback(self, deleted_symbol, action):
         """
         当 b.py 发生特定动作（如删除、上一页、下一页）时被调用
         """
-        # --- 情况 1: 删除操作 (保持原有逻辑不变) ---
+        # --- 情况 1: 删除操作 ---
         if action == 'deleted':
-            # 关键修复：在窗口焦点切换导致 refresh 清空索引之前，
-            # 立即保存当前的索引！
-            saved_index = self.current_symbol_index
-            print(f"检测到 {deleted_symbol} 已被删除，锁定索引: {saved_index}，准备跳转...")
+            # 获取当前索引
+            current_idx = self.current_symbol_index
             
-            # 将保存好的 saved_index 传给 open_next_symbol
-            # 这样即使 100ms 后 self.current_symbol_index 变成了 -1，我们手里还有正确的索引
-            QTimer.singleShot(100, lambda: self.open_next_symbol(deleted_symbol, saved_index))
+            # === 修改逻辑 START ===
+            # 1. 记录“旧列表”中，当前索引之前有多少个 deleted_symbol
+            old_preceding_count = 0
+            if 0 <= current_idx < len(self.ordered_symbols_on_screen):
+                # 切片取出当前位置之前的所有元素
+                preceding_items = self.ordered_symbols_on_screen[:current_idx]
+                old_preceding_count = preceding_items.count(deleted_symbol)
+            
+            print(f"检测到 {deleted_symbol} 删除。旧索引: {current_idx}, 前方旧副本数: {old_preceding_count}")
+
+            # 2. 将 current_idx 和 old_preceding_count 一起传给 open_next_symbol
+            # 我们推迟到刷新后再计算到底需要减多少
+            QTimer.singleShot(100, lambda: self.open_next_symbol(deleted_symbol, current_idx, old_preceding_count))
+            # === 修改逻辑 END ===
         
-        # --- 情况 2: 导航操作 (新增) ---
+        # --- 情况 2: 导航操作 (保持不变) ---
         elif action in ('next', 'prev'):
             # 立即保存当前索引，防止窗口切换时的干扰
             current_idx = self.current_symbol_index
             
             # 使用 QTimer 稍微延迟，确保旧窗口完全关闭，避免视觉冲突
             QTimer.singleShot(50, lambda: self.navigate_to_adjacent_symbol(action, current_idx))
+
 
     # >>> 新增方法: 处理左右跳转 >>>
     def navigate_to_adjacent_symbol(self, direction, current_idx):
@@ -693,28 +704,46 @@ class MainWindow(QMainWindow):
         # 打开图表 (传入新的精确索引)
         self.on_keyword_selected_chart(next_symbol, btn_index=new_index)
     
-    # >>> 修改后的 open_next_symbol >>>
-    def open_next_symbol(self, deleted_symbol, target_index):
+    # === 修改方法的参数，增加 old_preceding_count ===
+    def open_next_symbol(self, deleted_symbol, old_index, old_preceding_count):
         """
-        根据传入的 target_index (被删除元素的位置)，打开新列表中的该位置元素。
+        根据删除前的信息和删除后的新列表，计算正确的跳转位置。
         """
-        # 注意：这里我们不再读取 self.current_symbol_index，因为由于窗口激活，它可能已经被重置为 -1 了
-        # 我们直接使用传进来的 target_index，这是最准确的“座次”
-        
-        # 1. 再次刷新界面，确保 ordered_symbols_on_screen 是最新的（去掉了被删除的元素）
-        # 虽然 changeEvent 可能已经刷过一次，但再刷一次确保数据绝对同步
+        # 1. 刷新界面 (ordered_symbols_on_screen 更新为新列表)
         self.refresh_selection_window()
         
-        # 2. 检查索引是否依然有效
-        # 此时的 ordered_symbols_on_screen 已经比刚才少了一个元素
-        # 如果刚才删的是第 50 个，现在第 50 个就是原来的第 51 个（自动补位）
+        # === 核心修复逻辑 START ===
+        # 2. 在“新列表”中，计算同样的 old_index 之前，现在有多少个 deleted_symbol
+        new_preceding_count = 0
+        
+        # 获取新列表
+        current_list = self.ordered_symbols_on_screen
+        
+        # 如果 old_index 超过了新列表长度，切片会自动截止到末尾，不会报错，这正好符合逻辑
+        preceding_items_new = current_list[:old_index]
+        new_preceding_count = preceding_items_new.count(deleted_symbol)
+        
+        # 3. 计算“前方实际被删除的数量”
+        # 差值 = 旧的前方数量 - 新的前方数量
+        # 如果是单组删除（前面的没删）：1 - 1 = 0 (索引不偏移)
+        # 如果是多组删除（前面的也删了）：1 - 0 = 1 (索引向前偏移 1)
+        offset = old_preceding_count - new_preceding_count
+        if offset < 0: offset = 0 # 防御性编程
+        
+        # 4. 得出最终目标索引
+        target_index = old_index - offset
+        
+        print(f"刷新完毕。前方新副本数: {new_preceding_count}。偏移量: {offset}。最终索引: {target_index}")
+        # === 核心修复逻辑 END ===
+
+        # 5. 打开目标索引 (后续逻辑保持原有框架，但使用 target_index)
         if 0 <= target_index < len(self.ordered_symbols_on_screen):
             # 取出这个位置上的新 Symbol
             next_symbol = self.ordered_symbols_on_screen[target_index]
             
             print(f"自动打开下一个: {next_symbol} (Target Index: {target_index})")
             
-            # 3. 打开它，并把这个索引再次绑定回去，保持“座次”不乱
+            # 打开它
             self.on_keyword_selected_chart(next_symbol, btn_index=target_index)
             
         else:

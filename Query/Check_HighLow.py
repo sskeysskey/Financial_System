@@ -1,7 +1,11 @@
 import sys
 import json
+import os
 from collections import OrderedDict
 import subprocess
+
+USER_HOME = os.path.expanduser("~")
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 # --- 修改: 切换到 PyQt6 ---
 from PyQt6.QtWidgets import (
@@ -12,7 +16,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QCursor, QColor, QFont, QAction
 
-sys.path.append('/Users/yanzhang/Coding/Financial_System/Query')
+sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Query"))
 from Chart_input import plot_financial_data
 
 # ----------------------------------------------------------------------
@@ -23,16 +27,16 @@ from Chart_input import plot_financial_data
 MAX_ITEMS_PER_COLUMN = 11
 
 # 文件路径
-HIGH_LOW_PATH = '/Users/yanzhang/Coding/News/HighLow.txt'
-CONFIG_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json'
-COLORS_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Colors.json'
-DESCRIPTION_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
-SECTORS_ALL_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
-COMPARE_DATA_PATH = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
-DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
+HIGH_LOW_PATH = os.path.join(BASE_CODING_DIR, "News", "HighLow.txt")
+CONFIG_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_panel.json")
+COLORS_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Colors.json")
+DESCRIPTION_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "description.json")
+SECTORS_ALL_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_All.json")
+COMPARE_DATA_PATH = os.path.join(BASE_CODING_DIR, "News", "backup", "Compare_All.txt")
+DB_PATH = os.path.join(BASE_CODING_DIR, "Database", "Finance.db")
 
 # ### 新增 ###: 为 5Y High/Low 数据文件添加新的路径常量
-HIGH_LOW_5Y_PATH = '/Users/yanzhang/Coding/News/backup/HighLow.txt'
+HIGH_LOW_5Y_PATH = os.path.join(BASE_CODING_DIR, "News", "backup", "HighLow.txt")
 
 # 按钮＋标签固定宽度（像素）
 SYMBOL_WIDGET_FIXED_WIDTH = 150
@@ -95,11 +99,10 @@ class SymbolManager:
 
 def execute_external_script(script_type, keyword):
     """以非阻塞方式执行外部脚本（Python 或 AppleScript）"""
-    base_path = '/Users/yanzhang/Coding/Financial_System'
     script_configs = {
-        'similar':  f'{base_path}/Query/Search_Similar_Tag.py',
-        'tags':     f'{base_path}/Operations/Editor_Tags.py',
-        'futu':     '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt',
+        'similar':  os.path.join(BASE_CODING_DIR, 'Financial_System', 'Query', 'Search_Similar_Tag.py'),
+        'tags':     os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Editor_Tags.py'),
+        'futu':     os.path.join(BASE_CODING_DIR, 'ScriptEditor', 'Stock_CheckFutu.scpt'),
     }
     script_path = script_configs.get(script_type)
     if not script_path:
@@ -112,7 +115,7 @@ def execute_external_script(script_type, keyword):
             subprocess.Popen(['osascript', script_path, keyword])
         else:
             # 执行 Python 脚本
-            python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
+            python_path = sys.executable
             subprocess.Popen([python_path, script_path, keyword])
     except Exception as e:
         print(f"执行脚本 '{script_path}' 时发生错误: {e}")

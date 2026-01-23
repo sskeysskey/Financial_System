@@ -2,18 +2,21 @@ import json
 import subprocess
 import os
 import shutil  # 新增导入 shutil 模块，用于移动文件
+import sys
+
+USER_HOME = os.path.expanduser("~")
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 def show_alert(message):
-    # AppleScript 代码模板
-    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
-    # 使用 subprocess 调用 osascript
     try:
-        subprocess.run(['osascript', '-e', applescript_code], check=True)
-    except FileNotFoundError:
-        print("osascript command not found. Cannot show alert. Message:", message)
-    except subprocess.CalledProcessError as e:
-        print(f"Error showing alert: {e}. Message:", message)
-
+        if sys.platform == 'darwin':
+            applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+            subprocess.run(['osascript', '-e', applescript_code], check=True)
+        elif sys.platform == 'win32':
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(0, message, "提示", 0)
+    except Exception:
+        pass
 
 def load_keys_from_file(path):
     """
@@ -52,12 +55,12 @@ def find_file_path_with_fallback(filename, primary_dir, fallback_dir):
 
 # --- 0. 定义文件路径 ---
 # JSON 文件路径
-sector_all_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
-sector_empty_json_path = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_empty.json' # 同时也是输出路径
+sector_all_json_path = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_All.json")
+sector_empty_json_path = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_empty.json") # 同时也是输出路径
 
 # TXT 文件的主目录和备用目录
-primary_txt_dir = '/Users/yanzhang/Downloads/'
-fallback_txt_dir = '/Users/yanzhang/Coding/News/backup/'
+primary_txt_dir = os.path.join(USER_HOME, "Downloads")
+fallback_txt_dir = os.path.join(BASE_CODING_DIR, "News", "backup")
 
 # TXT 文件名
 marketcap_filename = 'marketcap_pe.txt'

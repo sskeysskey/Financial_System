@@ -1,10 +1,14 @@
 import sys
 import json
 import sqlite3
+import os
 from collections import OrderedDict
 import subprocess
 from decimal import Decimal
 from datetime import datetime, date
+
+USER_HOME = os.path.expanduser("~")
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 # --- 修改 1: 导入调整 ---
 # QAction 移动到了 QtGui
@@ -16,19 +20,19 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QCursor, QAction
 from PyQt6.QtCore import Qt, QTimer
 
-sys.path.append('/Users/yanzhang/Coding/Financial_System/Query')
+sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Query"))
 from Chart_input import plot_financial_data
 
-DESCRIPTION_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
-SECTORS_ALL_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json'
-COMPARE_DATA_PATH = '/Users/yanzhang/Coding/News/backup/Compare_All.txt'
-DB_PATH = '/Users/yanzhang/Coding/Database/Finance.db'
-EARNINGS_FILE_PATH = '/Users/yanzhang/Coding/News/Earnings_Release_new.txt'
-EARNINGS_FILE_NEXT_PATH = '/Users/yanzhang/Coding/News/Earnings_Release_next.txt'
-EARNINGS_FILE_THIRD_PATH = '/Users/yanzhang/Coding/News/Earnings_Release_third.txt'
-EARNINGS_FILE_FOURTH_PATH = '/Users/yanzhang/Coding/News/Earnings_Release_fourth.txt'
-EARNINGS_FILE_FIFTH_PATH = '/Users/yanzhang/Coding/News/Earnings_Release_fifth.txt'
-TAGS_WEIGHT_PATH = '/Users/yanzhang/Coding/Financial_System/Modules/tags_weight.json'
+DESCRIPTION_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "description.json")
+SECTORS_ALL_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_All.json")
+COMPARE_DATA_PATH = os.path.join(BASE_CODING_DIR, "News", "backup", "Compare_All.txt")
+DB_PATH = os.path.join(BASE_CODING_DIR, "Database", "Finance.db")
+EARNINGS_FILE_PATH = os.path.join(BASE_CODING_DIR, "News", "Earnings_Release_new.txt")
+EARNINGS_FILE_NEXT_PATH = os.path.join(BASE_CODING_DIR, "News", "Earnings_Release_next.txt")
+EARNINGS_FILE_THIRD_PATH = os.path.join(BASE_CODING_DIR, "News", "Earnings_Release_third.txt")
+EARNINGS_FILE_FOURTH_PATH = os.path.join(BASE_CODING_DIR, "News", "Earnings_Release_fourth.txt")
+EARNINGS_FILE_FIFTH_PATH = os.path.join(BASE_CODING_DIR, "News", "Earnings_Release_fifth.txt")
+TAGS_WEIGHT_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "tags_weight.json")
 
 RELATED_SYMBOLS_LIMIT = 10
 MAX_PER_COLUMN = 20
@@ -197,21 +201,20 @@ def get_tags_for_symbol(symbol):
 
 
 def execute_external_script(script_type, keyword):
-    base_path = '/Users/yanzhang/Coding/Financial_System'
     script_configs = {
-        'blacklist': f'{base_path}/Operations/Insert_Blacklist.py',
-        'similar':  f'{base_path}/Query/Search_Similar_Tag.py',
-        'tags':     f'{base_path}/Operations/Editor_Tags.py',
-        'editor_earning': f'{base_path}/Operations/Editor_Earning_DB.py',
-        'earning':  f'{base_path}/Operations/Insert_Earning.py',
-        'futu':     '/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt',
-        'kimi':     '/Users/yanzhang/Coding/ScriptEditor/Check_Earning.scpt'
+        'blacklist': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Insert_Blacklist.py'),
+        'similar':  os.path.join(BASE_CODING_DIR, 'Financial_System', 'Query', 'Search_Similar_Tag.py'),
+        'tags':     os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Editor_Tags.py'),
+        'editor_earning': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Editor_Earning_DB.py'),
+        'earning':  os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Insert_Earning.py'),
+        'futu':     os.path.join(BASE_CODING_DIR, 'ScriptEditor', 'Stock_CheckFutu.scpt'),
+        'kimi':     os.path.join(BASE_CODING_DIR, 'ScriptEditor', 'Check_Earning.scpt')
     }
     try:
         if script_type in ['futu', 'kimi']:
             subprocess.Popen(['osascript', script_configs[script_type], keyword])
         else:
-            python_path = '/Library/Frameworks/Python.framework/Versions/Current/bin/python3'
+            python_path = sys.executable
             subprocess.Popen([python_path, script_configs[script_type], keyword])
     except Exception as e:
         print(f"执行脚本时出错: {e}")

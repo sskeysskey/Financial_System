@@ -30,6 +30,8 @@ NORD_THEME = {
     'accent_purple': '#B48EAD',
 }
 
+import os
+
 # ---------------- 公共函数 ----------------
 def load_json_data(path):
     with open(path, 'r', encoding='utf-8') as file:
@@ -46,8 +48,12 @@ def find_in_json(symbol, data):
 
 def show_macos_dialog(message):
     try:
-        applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
-        subprocess.run(['osascript', '-e', applescript_code], check=True)
+        if sys.platform == 'darwin':
+            applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
+            subprocess.run(['osascript', '-e', applescript_code], check=True)
+        elif sys.platform == 'win32':
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(0, message, "提示", 0)
     except Exception:
         pass
 
@@ -250,7 +256,9 @@ def get_user_input_custom_qt(prompt):
 # ---------------- 主入口 ----------------
 if __name__ == '__main__':
     # 路径保持与原脚本一致
-    json_path = '/Users/yanzhang/Coding/Financial_System/Modules/description.json'
+    USER_HOME = os.path.expanduser("~")
+    BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
+    json_path = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "description.json")
     json_data = load_json_data(json_path)
 
     # 支持命令行参数：paste 或 input

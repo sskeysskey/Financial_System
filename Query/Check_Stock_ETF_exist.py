@@ -1,8 +1,13 @@
 import json
 import subprocess
 import pyperclip
+import os
+import sys
 
-json_file = "/Users/yanzhang/Coding/Financial_System/Modules/description.json"
+USER_HOME = os.path.expanduser("~")
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
+json_file = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "description.json")
+
 with open(json_file, 'r', encoding='utf-8') as file:
     data = json.load(file)
 
@@ -22,6 +27,10 @@ exists_etf = check_existence_and_descriptions(data, new_name)
 exists_stock = any(stock['symbol'] == new_name for stock in data.get('stocks', []))
 
 if exists_etf or exists_stock:
-    applescript_code = 'display dialog "Symbol代码已存在！" buttons {"OK"} default button "OK"'
-    process = subprocess.run(['osascript', '-e', applescript_code], check=True)
+    if sys.platform == 'darwin':
+        applescript_code = 'display dialog "Symbol代码已存在！" buttons {"OK"} default button "OK"'
+        process = subprocess.run(['osascript', '-e', applescript_code], check=True)
+    elif sys.platform == 'win32':
+        import ctypes
+        ctypes.windll.user32.MessageBoxW(0, "Symbol代码已存在！", "提示", 0)
     sys.exit()

@@ -1,6 +1,7 @@
 import sys
 import sqlite3
 import json
+import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
@@ -8,6 +9,9 @@ from matplotlib.dates import num2date
 from PyQt5.QtWidgets import (QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QLabel, QDateEdit, QAction)
 from PyQt5.QtGui import QFont, QKeySequence
 from PyQt5.QtCore import QDate
+
+USER_HOME = os.path.expanduser("~")
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 class StockComparisonApp(QWidget):
     def __init__(self):
@@ -110,7 +114,7 @@ class StockComparisonApp(QWidget):
     def format_symbol(self, symbol):
         """尝试将用户输入的 symbol 转换为数据库中存在的格式"""
         # 首先加载 JSON 数据
-        with open('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json', 'r') as f:
+        with open(os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules', 'Sectors_All.json'), 'r') as f:
             sector_data = json.load(f)
         
         # 从所有 symbol 列表中搜寻匹配项
@@ -156,7 +160,7 @@ class StockComparisonApp(QWidget):
         colors = ['tab:blue', 'tab:red', 'tab:green', 'tab:purple', 'tab:pink', 'tab:brown', 'tab:gray', 'tab:olive', 'tab:cyan', 'tab:orange']
 
         # 查询数据库
-        db_path = '/Users/yanzhang/Coding/Database/Finance.db'
+        db_path = os.path.join(BASE_CODING_DIR, 'Database', 'Finance.db')
         conn = sqlite3.connect(db_path, timeout=60.0)
 
         # 创建字典来存储每个symbol的数据
@@ -203,7 +207,13 @@ class StockComparisonApp(QWidget):
         fig, ax1 = plt.subplots(figsize=(16, 6))
 
         # 设置中文字体
-        zh_font = fm.FontProperties(fname='/Users/yanzhang/Library/Fonts/FangZhengHeiTiJianTi-1.ttf')
+        if sys.platform == 'darwin':
+            zh_font_path = os.path.join(USER_HOME, 'Library/Fonts/FangZhengHeiTiJianTi-1.ttf')
+        elif sys.platform == 'win32':
+            zh_font_path = "C:\\Windows\\Fonts\\msyh.ttc"
+        else:
+            zh_font_path = "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
+        zh_font = fm.FontProperties(fname=zh_font_path)
 
         # 如果没有数据可画（防止全空报错）
         if not dfs or all(df[0].empty for df in dfs.values()):
@@ -286,7 +296,7 @@ class StockComparisonApp(QWidget):
         plt.show()
 
     def find_table_by_symbol(self, symbol):
-        with open('/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json', 'r') as f:
+        with open(os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules', 'Sectors_All.json'), 'r') as f:
             sector_data = json.load(f)
 
         for table, symbols in sector_data.items():
