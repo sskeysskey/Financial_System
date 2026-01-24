@@ -1069,7 +1069,8 @@
     "NNI",
     "CBC",
     "IFS",
-    "MRSH"
+    "MRSH",
+    "AFRM"
   ],
   "Healthcare": [
     "LLY",
@@ -1657,7 +1658,6 @@
     "FFIV",
     "PCOR",
     "CYBR",
-    "AFRM",
     "GWRE",
     "DOX",
     "LSCC",
@@ -1711,7 +1711,6 @@
     "EEFT",
     "PEGA",
     "ALGM",
-    "CWAN",
     "CPAY",
     "ALAB",
     "ENTG",

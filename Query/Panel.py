@@ -719,18 +719,19 @@ class MainWindow(QMainWindow):
         # 获取新列表
         current_list = self.ordered_symbols_on_screen
         
-        # 如果 old_index 超过了新列表长度，切片会自动截止到末尾，不会报错，这正好符合逻辑
+        # 如果 old_index 超过了新列表长度，切片会自动截止到末尾，不会报错
         preceding_items_new = current_list[:old_index]
         new_preceding_count = preceding_items_new.count(deleted_symbol)
         
         # 3. 计算“前方实际被删除的数量”
-        # 差值 = 旧的前方数量 - 新的前方数量
-        # 如果是单组删除（前面的没删）：1 - 1 = 0 (索引不偏移)
-        # 如果是多组删除（前面的也删了）：1 - 0 = 1 (索引向前偏移 1)
+        # offset = 旧的前方数量 - 新的前方数量
+        # 正数：说明前方少了元素（删除了前面的副本），索引需要前移
+        # 负数：说明前方多了元素（比如移动到了前面的分组），索引需要后移
         offset = old_preceding_count - new_preceding_count
-        if offset < 0: offset = 0 # 防御性编程
+        # if offset < 0: offset = 0 # 防御性编程
         
         # 4. 得出最终目标索引
+        # 如果 offset 是 -1 (前方多了1个)，则 target = old - (-1) = old + 1 (向后修补1位)
         target_index = old_index - offset
         
         print(f"刷新完毕。前方新副本数: {new_preceding_count}。偏移量: {offset}。最终索引: {target_index}")
@@ -1271,7 +1272,29 @@ class MainWindow(QMainWindow):
                             match_prefix = re.search(r"(\d+(?:前|后|未))", raw_compare)
                             if match_prefix:
                                 prefix = match_prefix.group(1)
-                                parts.append(f"<span style='color:orange;'>{prefix}</span>")
+                                # 默认颜色为橙色
+                                prefix_color = 'orange'
+                                
+                                # 尝试从前缀中提取MMDD格式的日期
+                                date_match = re.search(r"(\d{4})", prefix)
+                                if date_match:
+                                    date_str = date_match.group(1)  # "0128"
+                                    try:
+                                        current_year = datetime.date.today().year
+                                        display_date = datetime.datetime.strptime(f"{current_year}{date_str}", "%Y%m%d").date()
+                                        
+                                        # 获取今天系统日期的前一天
+                                        yesterday = datetime.date.today() - datetime.timedelta(days=1)
+                                        
+                                        # 如果显示日期小于昨天，则颜色变为白色
+                                        if display_date < yesterday:
+                                            prefix_color = 'white'
+                                    except ValueError:
+                                        # 如果日期格式无效 (例如 "9999前")，则忽略，颜色保持默认的橙色
+                                        pass
+                                        
+                                # 使用动态设置的颜色来生成HTML
+                                parts.append(f"<span style='color:{prefix_color};'>{prefix}</span>")
                             
                             # 2. 获取 Options Metrics
                             metrics = get_options_metrics(keyword)

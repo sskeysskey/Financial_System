@@ -587,7 +587,9 @@
         "DOO",
         "SNV",
         "CFLT",
-        "MMC"
+        "MMC",
+        "CWAN",
+        "EQPT"
     ],
     "etf": [
         "VDE",

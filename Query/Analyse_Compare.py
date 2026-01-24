@@ -206,7 +206,16 @@ def read_earnings_release_for_all(filepath, error_file_path):
                 parts = [p.strip() for p in line.split(':')]
                 if len(parts) == 3:
                     company, rel_type, date = parts
-                    day = date.split('-')[2]
+                    
+                    # 假设日期格式为 YYYY-MM-DD
+                    date_parts = date.split('-')
+                    if len(date_parts) >= 3:
+                        # 提取 月(索引1) 和 日(索引2) 拼接，例如 '12' + '21' = '1221'
+                        day = f"{date_parts[1]}{date_parts[2]}"
+                    else:
+                        # 防止格式不对导致报错，保留原逻辑或原样返回
+                        day = date_parts[-1] 
+
                     earnings_companies[company] = {
                         'day': day,
                         'type': rel_type
@@ -355,7 +364,8 @@ def read_earnings_release_for_stocks(filepath, error_file_path):
                 date_str = parts[-1]
                 m = re.match(r'(\d{4})-(\d{2})-(\d{2})$', date_str)
                 if m:
-                    day = m.group(3)
+                    # 修改为提取 月(group 2) + 日(group 3)
+                    day = f"{m.group(2)}{m.group(3)}" 
                     suffix = period_map.get(period)
                     if suffix:
                         earnings_companies[company] = f"{day}{suffix}"

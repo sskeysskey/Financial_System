@@ -7,7 +7,8 @@ import pyperclip
 import subprocess
 import os
 from decimal import Decimal
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
+
 
 USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
@@ -422,18 +423,69 @@ class SimilarityViewerWindow(QMainWindow):
         return container
 
     def set_rich_compare_text(self, label, text):
-        def orange_sub(s):
-            return re.sub(r'(\d{0,2})(前|后|未)', lambda m: f"<span style='color:#CD853F;'>{m.group(1)}{m.group(2)}</span>", s)
+        # 从你的样式表中定义颜色
+        orange_color = '#CD853F'
+        red_color = '#FF5555'
+        green_color = '#2ECC71'
+        default_color = '#D0D0D0'  # QLabel的默认文字颜色
+
+        date_part_str = ""
+        percent_part_html = ""
         
-        m = re.search(r'(-?\d+(?:\.\d+)?)\s*%', text)
-        if m:
-            val = float(m.group(1))
-            color = "#FF5555" if val > 0 else "#2ECC71" if val < 0 else "#CD853F"
-            start, end = m.span()
-            res = orange_sub(text[:start]) + f"<span style='color:{color};'>{text[start:end]}</span>" + orange_sub(text[end:])
-            label.setText(res)
+        # 首先查找百分比部分，这有助于我们分割字符串
+        percent_match = re.search(r'(-?\d+(?:\.\d+)?)\s*%', text)
+
+        if percent_match:
+            # 如果找到百分比，字符串的其余部分就是日期部分
+            date_part_str = text[:percent_match.start()].strip()
+            percent_value_str = percent_match.group(1)
+            percent_full_str = percent_match.group(0)
+
+            # --- 百分比部分的上色逻辑 (保留原始逻辑) ---
+            try:
+                val = float(percent_value_str)
+                percent_color = red_color if val > 0 else green_color if val < 0 else orange_color
+                percent_part_html = f"<span style='color:{percent_color};'>{percent_full_str}</span>"
+            except ValueError:
+                percent_part_html = f"<span>{percent_full_str}</span>" # fallback
         else:
-            label.setText(orange_sub(text))
+            # 如果没有找到百分比，则整个文本都视为日期部分
+            date_part_str = text.strip()
+
+        # --- 新的日期上色逻辑 ---
+        date_color = default_color  # 默认为白色
+        colored_date_part_html = f"<span>{date_part_str}</span>" # 默认无样式
+
+        # 在日期部分中查找 MMDD前 的格式, 例如 "0128前"
+        date_info_match = re.search(r'(\d{2})(\d{2})[前后未]$', date_part_str)
+        
+        if date_info_match:
+            month_str, day_str = date_info_match.groups()
+            try:
+                # 获取当前年份，并创建日期对象
+                current_year = date.today().year
+                event_date = date(current_year, int(month_str), int(day_str))
+                
+                # 获取今天日期的前一天
+                comparison_date = date.today() - timedelta(days=1)
+
+                # 如果事件日期 >= 昨天，则使用橙色
+                if event_date >= comparison_date:
+                    date_color = orange_color
+                
+                colored_date_part_html = f"<span style='color:{date_color};'>{date_part_str}</span>"
+
+            except ValueError:
+                # 如果日期无效 (例如 02月30日), 则回退到旧逻辑，直接显示橙色
+                colored_date_part_html = f"<span style='color:{orange_color};'>{date_part_str}</span>"
+        else:
+            # 如果不匹配 MMDD前 格式 (例如只有"未"或"3天后")，也使用旧逻辑，显示橙色
+            colored_date_part_html = f"<span style='color:{orange_color};'>{date_part_str}</span>"
+
+
+        # --- 组合最终的HTML并设置给Label ---
+        final_html = f"{colored_date_part_html}{percent_part_html}"
+        label.setText(final_html)
 
     def create_symbol_button(self, symbol):
         btn = SymbolButton(symbol)
