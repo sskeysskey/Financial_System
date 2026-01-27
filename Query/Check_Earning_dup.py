@@ -1061,6 +1061,46 @@ def sort_all_main_files(directory: str):
     
     print(f"已完成 {len(main_files)} 个主文件的整理。")
 
+def remove_intra_file_duplicates(filepath: str):
+    """
+    预处理：检查单个文件，如果存在内容完全一致的重复行，保留第一条，直接删除后续重复项。
+    """
+    try:
+        # 读取文件内容
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+        except UnicodeDecodeError:
+            with open(filepath, 'r', encoding='latin-1') as f:
+                lines = f.readlines()
+        
+        seen = set()
+        new_lines = []
+        modified = False
+        
+        for line in lines:
+            stripped = line.strip()
+            
+            # 只有包含有效symbol的行才进行去重检查
+            # 这样可以避免误删空行或注释头
+            if parse_symbol(stripped):
+                if stripped in seen:
+                    modified = True
+                    # 跳过这个重复行，不添加到 new_lines
+                    continue 
+                seen.add(stripped)
+            
+            new_lines.append(line)
+        
+        # 只有当发现并删除了重复项时才重写文件
+        if modified:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.writelines(new_lines)
+            print(f"  - [预处理] 已自动清理文件 '{os.path.basename(filepath)}' 内的完全重复行。")
+            
+    except Exception as e:
+        print(f"预处理文件 {os.path.basename(filepath)} 时出错: {e}")
+
 # --- 主程序入口 ---
 
 def main():
@@ -1068,14 +1108,22 @@ def main():
     pattern = os.path.join(directory, "Earnings_Release_*.txt")
     output_path = os.path.join(directory, "duplication.txt")
 
-    # --- 阶段 1: 初始扫描和处理常规重复项 ---
-    print("--- 阶段 1: 扫描并处理常规重复项 ---")
-    files = glob.glob(pattern)
-
-    if not files:
+    # --- 新增: 阶段 0: 预处理，自动清理单个文件内的完全重复项 ---
+    # 这一步会在后续逻辑运行前，直接把 "new.txt" 里完全一样的重复行删掉
+    print("--- 阶段 0: 预处理文件内重复项 ---")
+    files_to_preprocess = glob.glob(pattern)
+    if not files_to_preprocess:
         show_alert("在指定目录中未找到 Earnings_Release_*.txt 文件。")
         return
+        
+    for path in files_to_preprocess:
+        remove_intra_file_duplicates(path)
 
+    # --- 阶段 1: 扫描并处理常规重复项 ---
+    print("\n--- 阶段 1: 扫描并处理常规重复项 ---")
+    # 注意：此时文件已经被清洗过，剩下的重复项一定是跨文件的，或者内容不一致的
+    files = glob.glob(pattern) # 重新获取文件列表（虽然路径没变，但好习惯）
+    
     symbol_counts = Counter()
     symbol_sources = defaultdict(list)
 
@@ -1109,7 +1157,10 @@ def main():
     # 如果有重复项，启动GUI进行交互式处理
     if duplicates_dict:
         print("发现常规重复 symbols，正在启动交互式处理器...")
-        app = QApplication(sys.argv)
+        app = QApplication.instance()
+        if app is None:
+            app = QApplication(sys.argv)
+            
         # 将字典转换为元组列表
         duplicates_list = list(duplicates_dict.items())
         resolver_app = DuplicateResolverApp(duplicates_list, symbol_sources, directory)
@@ -1130,7 +1181,7 @@ def main():
     print("\n--- 阶段 2: 重新分析文件以生成最终报告 ---")
     final_symbol_counts = Counter()
     final_symbol_sources = defaultdict(list)
-
+    
     # 重新扫描所有文件
     files_after_edit = glob.glob(pattern)
     for path in files_after_edit:
@@ -1155,7 +1206,7 @@ def main():
             print(f"最终分析时无法读取文件 {path}: {e}")
 
     final_duplicates = {s: c for s, c in final_symbol_counts.items() if c > 1}
-
+    
     report_generated = False
     if not final_duplicates:
         if os.path.exists(output_path):
@@ -1168,6 +1219,7 @@ def main():
             lines_out.append(f"- {sym}: {count} 次")
             for src_file, lineno in final_symbol_sources[sym]:
                 lines_out.append(f"  · {src_file}: 第 {lineno} 行")
+        
         with open(output_path, "w", encoding="utf-8") as fw:
             fw.write("\n".join(lines_out) + "\n")
         report_generated = True

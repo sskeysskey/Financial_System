@@ -185,6 +185,74 @@
             "SHOP",
             "SPOT",
             "WELL"
+        ],
+        "2026-01-26": [
+            "ALNY",
+            "ARGX",
+            "AVGO",
+            "CDW",
+            "CIEN",
+            "CRM",
+            "CYBR",
+            "DASH",
+            "DELL",
+            "DKNG",
+            "ETN",
+            "FICO",
+            "FN",
+            "GDDY",
+            "HPE",
+            "LULU",
+            "LYFT",
+            "MA",
+            "MRVL",
+            "NRG",
+            "NTAP",
+            "RKT",
+            "SNOW",
+            "SWKS",
+            "SYF",
+            "THC",
+            "TT",
+            "ZBH"
+        ]
+    },
+    "PE_Deeper": {
+        "2026-01-14": [
+            "DDOG"
+        ],
+        "2026-01-15": [
+            "DDOG",
+            "LCID"
+        ],
+        "2026-01-16": [
+            "DDOG",
+            "FIG"
+        ],
+        "2026-01-20": [
+            "DDOG",
+            "FIG",
+            "MSTR",
+            "SMR"
+        ],
+        "2026-01-21": [
+            "DDOG",
+            "FIG",
+            "MSTR"
+        ],
+        "2026-01-22": [
+            "FIG",
+            "MSTR"
+        ],
+        "2026-01-23": [
+            "COIN",
+            "MSTR"
+        ],
+        "2026-01-26": [
+            "COIN",
+            "CPNG",
+            "MSTR",
+            "SMR"
         ]
     },
     "OverSell_W": {
@@ -251,6 +319,11 @@
         ],
         "2026-01-23": [
             "CCI",
+            "IOT",
+            "SONY"
+        ],
+        "2026-01-26": [
+            "DOCU",
             "IOT",
             "SONY"
         ]
@@ -455,6 +528,15 @@
             "TDS",
             "VFC",
             "WLK"
+        ],
+        "2026-01-26": [
+            "ASH",
+            "CMG",
+            "DVN",
+            "EAT",
+            "JBS",
+            "SQM",
+            "TGT"
         ]
     },
     "Short": {
@@ -626,6 +708,18 @@
             "VICR",
             "WAB",
             "WDC"
+        ],
+        "2026-01-26": [
+            "BALL",
+            "CCJ",
+            "DAR",
+            "MT",
+            "MU",
+            "NTR",
+            "NXE",
+            "PEN",
+            "TIGO",
+            "VALE"
         ]
     },
     "PE_Deep": {
@@ -1086,6 +1180,48 @@
             "VST",
             "WST",
             "ZS"
+        ],
+        "2026-01-26": [
+            "APP",
+            "AVAV",
+            "BBY",
+            "CEG",
+            "CIFR",
+            "CRCL",
+            "CRDO",
+            "DEO",
+            "DUOL",
+            "EHC",
+            "FLY",
+            "GRAB",
+            "GWRE",
+            "HIMS",
+            "HOOD",
+            "HPQ",
+            "IONQ",
+            "JOBY",
+            "KMB",
+            "LOGI",
+            "MNDY",
+            "NET",
+            "NTNX",
+            "OKLO",
+            "PATH",
+            "PODD",
+            "PYPL",
+            "QBTS",
+            "QS",
+            "RACE",
+            "RBLX",
+            "RVMD",
+            "SHOP",
+            "SMCI",
+            "SOFI",
+            "SOUN",
+            "SPOT",
+            "TTD",
+            "VST",
+            "WST"
         ]
     },
     "PE_valid": {
@@ -1818,6 +1954,63 @@
             "WDAY",
             "WRB",
             "ZBH"
+        ],
+        "2026-01-26": [
+            "AAL",
+            "AAPL",
+            "ACHR",
+            "ADBE",
+            "AFRM",
+            "AIG",
+            "ALAB",
+            "APO",
+            "ARES",
+            "BOOT",
+            "CART",
+            "CCI",
+            "CCL",
+            "CHKP",
+            "CHWY",
+            "CLS",
+            "CRWD",
+            "CZR",
+            "DKS",
+            "DLTR",
+            "EXPE",
+            "FIS",
+            "FLEX",
+            "FOUR",
+            "HCC",
+            "HUT",
+            "KKR",
+            "KTOS",
+            "LEN",
+            "LEU",
+            "LITE",
+            "LVS",
+            "MSFT",
+            "NBIS",
+            "NBIX",
+            "NCLH",
+            "ORCL",
+            "PAYC",
+            "PDD",
+            "PLNT",
+            "PLTR",
+            "POOL",
+            "QCOM",
+            "RDDT",
+            "ROP",
+            "SE",
+            "SHAK",
+            "TLN",
+            "TPG",
+            "TSLA",
+            "UBER",
+            "VSCO",
+            "WDAY",
+            "WELL",
+            "WRB"
         ]
     },
     "PE_invalid": {
@@ -1920,6 +2113,13 @@
             "TTAN",
             "U",
             "Z"
+        ],
+        "2026-01-26": [
+            "SATS",
+            "SNAP",
+            "U",
+            "ZETA",
+            "ZS"
         ]
     },
     "season": {
@@ -3245,6 +3445,44 @@
             "VICI",
             "WCN",
             "WRB"
+        ],
+        "2026-01-26": [
+            "AFRM",
+            "ALAB",
+            "AON",
+            "ARCC",
+            "ARES",
+            "BRBR",
+            "BSX",
+            "CIFR",
+            "CLF",
+            "CNC",
+            "COIN",
+            "DELL",
+            "DLR",
+            "ETN",
+            "FIS",
+            "GEN",
+            "GLXY",
+            "GRAB",
+            "HOOD",
+            "IREN",
+            "KDP",
+            "KKR",
+            "MOH",
+            "NBIS",
+            "NRG",
+            "PLNT",
+            "PODD",
+            "POOL",
+            "RACE",
+            "SHAK",
+            "TCOM",
+            "TLN",
+            "TT",
+            "UBER",
+            "VICI",
+            "WCN"
         ]
     },
     "no_season": {
@@ -8309,38 +8547,6 @@
             "WYNN",
             "XEL",
             "ZS"
-        ]
-    },
-    "PE_Deeper": {
-        "2026-01-14": [
-            "DDOG"
-        ],
-        "2026-01-15": [
-            "DDOG",
-            "LCID"
-        ],
-        "2026-01-16": [
-            "DDOG",
-            "FIG"
-        ],
-        "2026-01-20": [
-            "DDOG",
-            "FIG",
-            "MSTR",
-            "SMR"
-        ],
-        "2026-01-21": [
-            "DDOG",
-            "FIG",
-            "MSTR"
-        ],
-        "2026-01-22": [
-            "FIG",
-            "MSTR"
-        ],
-        "2026-01-23": [
-            "COIN",
-            "MSTR"
         ]
     }
 }

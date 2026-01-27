@@ -287,7 +287,34 @@ def scrape_options():
     # 4. 合并去重 (三个集合取并集)
     merged_symbols_set = json_options_set.union(json_must_set).union(json_today_set)
     
-    custom_symbols_list = [(s, 0) for s in merged_symbols_set]
+    symbol_cap_map = {} # 用于存储 symbol -> marketcap 的字典
+    try:
+        if os.path.exists(DB_PATH):
+            # 建立临时连接查询所有市值
+            temp_conn = sqlite3.connect(DB_PATH, timeout=30.0)
+            temp_cursor = temp_conn.cursor()
+            # 查询所有有市值的记录
+            temp_cursor.execute("SELECT symbol, marketcap FROM MNSPP WHERE marketcap IS NOT NULL")
+            all_caps = temp_cursor.fetchall()
+            
+            # 存入字典
+            for s, c in all_caps:
+                symbol_cap_map[s] = c
+                
+            temp_conn.close()
+            # tqdm.write(f"已加载 {len(symbol_cap_map)} 条市值数据用于匹配 JSON 列表。")
+    except Exception as e:
+        tqdm.write(f"⚠️ 读取数据库市值映射失败: {e}")
+
+    # 生成自定义列表：如果字典里有市值就用字典的，没有则默认为 0
+    custom_symbols_list = []
+    for s in merged_symbols_set:
+        # 获取市值，默认为 0
+        cap = symbol_cap_map.get(s, 0)
+        # 确保 cap 是数字类型 (防止数据库取出的不是 float/int)
+        if not isinstance(cap, (int, float)):
+            cap = 0
+        custom_symbols_list.append((s, cap))
 
     # === 步骤 B: 获取数据库筛选列表 (静默模式) ===
     # 这里开启 silent=True，防止打印 redundant logs

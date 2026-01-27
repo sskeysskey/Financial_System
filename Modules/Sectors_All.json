@@ -580,9 +580,7 @@
     "PSKY",
     "STUB",
     "FUBO",
-    "VSNTV",
-    "TDS",
-    "AD"
+    "TDS"
   ],
   "Consumer_Cyclical": [
     "AMZN",
@@ -720,7 +718,6 @@
     "CHH",
     "BC",
     "THO",
-    "SEE",
     "MOD",
     "GME",
     "KBH",
@@ -1302,7 +1299,8 @@
     "IMVT",
     "GPCR",
     "SHC",
-    "MDLN"
+    "MDLN",
+    "MIRM"
   ],
   "Industrials": [
     "GE",

@@ -589,7 +589,10 @@
         "CFLT",
         "MMC",
         "CWAN",
-        "EQPT"
+        "EQPT",
+        "SEE",
+        "AD",
+        "VSNTV"
     ],
     "etf": [
         "VDE",

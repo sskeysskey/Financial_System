@@ -14,7 +14,8 @@
         "B",
         "VALE",
         "WPM",
-        "AU"
+        "AU",
+        "FNV"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -76,8 +77,7 @@
         "MO",
         "BTI",
         "CL",
-        "MNST",
-        "DEO"
+        "MNST"
     ],
     "Energy": [
         "XOM",
@@ -166,7 +166,6 @@
         "NDAQ",
         "RKT",
         "MET",
-        "ARES",
         "BRK-B",
         "MRSH",
         "BSBR"
@@ -205,7 +204,8 @@
         "BDX",
         "IDXX",
         "TAK",
-        "ARGX"
+        "ARGX",
+        "CAH"
     ],
     "Industrials": [
         "GE",

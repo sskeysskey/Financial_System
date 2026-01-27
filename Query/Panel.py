@@ -1577,8 +1577,19 @@ class MainWindow(QMainWindow):
             # 默认为 sector (DB表名)，如果能找到对应的 UI 分组名，则使用 UI 分组名
             window_title = sector
             if 0 <= self.current_symbol_index < len(self.ordered_groups_on_screen):
-                window_title = self.ordered_groups_on_screen[self.current_symbol_index]
-            
+                group_name = self.ordered_groups_on_screen[self.current_symbol_index]
+                
+                # 1. 计算该组在屏幕上的总数
+                total_in_group = self.ordered_groups_on_screen.count(group_name)
+                
+                # 2. 计算当前是第几个
+                # 逻辑：截取列表到当前索引位置（包含当前），统计其中该组名出现的次数
+                current_in_group = self.ordered_groups_on_screen[:self.current_symbol_index + 1].count(group_name)
+                
+                # 3. 拼接标题，例如: "Strategy12 3/12"
+                window_title = f"{group_name}  {current_in_group}/{total_in_group}"
+            # <--- 修改部分结束 --->
+
             compare_value = compare_data.get(value, "N/A")
             shares_val, marketcap_val, pe_val, pb_val = fetch_mnspp_data_from_db(DB_PATH, value)
             

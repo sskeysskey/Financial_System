@@ -358,7 +358,7 @@ if __name__ == "__main__":
     
     # --- 配置项 1: 指定要显示的表 (None 表示全部) ---
     # 场景1：只看 Options
-    my_target_tables = ["Options"]
+    my_target_tables = ["MNSPP"]
     
     # 场景2：看 Options 和 Bonds
     # my_target_tables = ["Options", "Bonds"]
