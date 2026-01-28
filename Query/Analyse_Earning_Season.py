@@ -2,7 +2,6 @@ import sqlite3
 import json
 import os
 import datetime
-import sys
 from collections import defaultdict
 
 USER_HOME = os.path.expanduser("~")

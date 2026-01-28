@@ -1,14 +1,11 @@
 {
-    "Basic_Materials": {
-        "EMAT": ""
-    },
+    "Basic_Materials": {},
     "Real_Estate": {},
     "Energy": {},
     "Technology": {
         "PAYX": "",
         "BLSH": "",
         "SONY": "",
-        "SHOP": "",
         "FIS": "",
         "PAYC": "",
         "KLAR": "",
@@ -27,13 +24,10 @@
         "CVLT": ""
     },
     "Consumer_Cyclical": {
-        "CPNG": "",
         "HRB": "",
         "BFAM": ""
     },
-    "Utilities": {
-        "CEG": ""
-    },
+    "Utilities": {},
     "Consumer_Defensive": {},
     "Industrials": {
         "RELX": "",
@@ -349,6 +343,24 @@
         "SHOP": "",
         "STLA": "",
         "TLN": "TLN9热"
+    },
+    "PE_Volume": {
+        "CPNG": "",
+        "FICO": "",
+        "LOGI": "",
+        "MANH": "",
+        "MOH": "",
+        "NET": "NET热",
+        "RELX": ""
+    },
+    "PE_Volume_backup": {
+        "CPNG": "",
+        "FICO": "",
+        "LOGI": "",
+        "MANH": "",
+        "MOH": "",
+        "NET": "NET热",
+        "RELX": ""
     },
     "PE_valid": {
         "ACHR": "",

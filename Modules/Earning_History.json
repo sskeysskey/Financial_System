@@ -231,6 +231,17 @@
             "TLN"
         ]
     },
+    "PE_Volume": {
+        "2026-01-27": [
+            "CPNG",
+            "FICO",
+            "LOGI",
+            "MANH",
+            "MOH",
+            "NET",
+            "RELX"
+        ]
+    },
     "PE_Deeper": {
         "2026-01-14": [
             "DDOG"

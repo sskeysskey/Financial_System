@@ -265,25 +265,35 @@ class MainWindow(QMainWindow):
     def apply_stylesheet(self):
         """定义并应用全局样式表"""
         qss = """
-        /* SymbolButton 保持不变 */
+        /* SymbolButton 基础样式 */
         QPushButton#SymbolButton {
             background-color: #3498db; color: white; border: none;
             padding: 5px 10px; border-radius: 4px; font-weight: bold;
         }
-        QPushButton#SymbolButton[period="BMO"] { background-color: #3498db; color: black; }
-        QPushButton#SymbolButton[period="BMO"]:hover { background-color: #2980b9; }
-        /* AMC 按钮改为淡绿色 */
+
+        /* 1. BMO (盘前) 改为绿色 */
+        QPushButton#SymbolButton[period="BMO"] { 
+            background-color: #7C9B67;   /* 原 AMC 的淡绿色 */
+            color: black; 
+        }
+        QPushButton#SymbolButton[period="BMO"]:hover { 
+            background-color: #6E8B3D;   /* 原 AMC 的深一点的绿色 hover */
+        }
+
+        /* 2. AMC (盘后) 改为蓝色 */
         QPushButton#SymbolButton[period="AMC"] {
-        background-color: #7C9B67;   /* 淡绿色 (lightgreen) */
-        color: black;                /* 字体白/黑随你喜好 */
+            background-color: #3498db;   /* 原 BMO 的蓝色 */
+            color: black;                
         }
         QPushButton#SymbolButton[period="AMC"]:hover {
-        background-color: #6E8B3D;   /* 深一点的绿色 hover 效果 */
+            background-color: #2980b9;   /* 原 BMO 的深蓝色 hover */
         }
+
+        /* TNS 保持不变 */
         QPushButton#SymbolButton[period="TNS"] { background-color: #2c3e50; color: white; }
         QPushButton#SymbolButton[period="TNS"]:hover { background-color: #1f2d3d; }
 
-        /* 把写入/替换按钮改为深灰色 */
+        /* 写入/替换按钮样式保持不变 */
         QPushButton#ReplaceButton {
             background-color: #555555;    /* 深灰 */
             color: white;

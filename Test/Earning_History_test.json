@@ -1,5 +1,5 @@
 {
-    "season": {
+    "PE_W": {
         "2025-12-22": [
             "CHWY",
             "CRWD",
@@ -19,7 +19,7 @@
             "ELV"
         ]
     },
-    "no_season": {
+    "OverSell_W": {
         "2025-12-23": [
             "A",
             "ALNY",
