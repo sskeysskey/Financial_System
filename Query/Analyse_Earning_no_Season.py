@@ -2,7 +2,6 @@ import json
 import sqlite3
 import os
 import datetime
-import sys
 
 USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
@@ -14,8 +13,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = ""
 TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "AAPL"
-# TARGET_DATE = "2026-01-08"
+# SYMBOL_TO_TRACE = "CART"
+# TARGET_DATE = "2025-11-07"
 
 # 动态生成日志路径，不再写死用户名
 LOG_FILE_PATH = os.path.join(BASE_PATH, "Downloads", "No_Season_trace_log.txt")
@@ -1526,13 +1525,13 @@ def run_processing_logic(log_detail):
                     elif is_tag_blocked:
                         log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' ({name}) 算法通过，但命中 Tag 黑名单 -> 不写Panel。")
                     else:
-                        log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' ({name}) 将写入 Panel。")
+                        log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' 将写入 ({name})。")
                 else:
                     # 其他组只检查 Tag
                     if is_tag_blocked:
                          log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' ({name}) 算法通过，但命中 Tag 黑名单 -> 不写Panel。")
                     else:
-                         log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' ({name}) 将写入 Panel。")
+                         log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' 将写入 ({name})。")
 
     hot_tags = set(CONFIG.get("HOT_TAGS", set()))
     def build_symbol_note_map(symbols):

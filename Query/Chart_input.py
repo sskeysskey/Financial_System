@@ -612,6 +612,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     show_volume = False
     mouse_pressed = False
     initial_price = None
+    initial_volume = None
     initial_date = None
     gradient_image = None
     show_global_markers = False
@@ -620,6 +621,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     show_all_annotations = False
     current_filtered_dates = []
     current_filtered_prices = []
+    current_filtered_volumes = []
     current_filtered_date_nums = []
     subtitle_artists = [] # 用于存储副标题的文本对象
 
@@ -923,16 +925,37 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             )
             all_annotations.append((annotation, 'global', date_v, price_v))
 
+        # === 修改 1: 白色浮窗 (Specific Markers) - 增加最新量差 ===
         specific_offsets = [(-50, -50), (-100, 20)]
         for i, (scatter, date_v, price_v, text) in enumerate(specific_scatter_points):
             offset = specific_offsets[i % len(specific_offsets)]
+            
+            # --- 计算价差和量差 ---
+            diff_line = ""
+            vol_line = ""
             try:
+                # 1. 价差
                 latest_price = prices[-1]
                 diff_percent = ((latest_price - price_v) / price_v) * 100 if price_v else 0
                 diff_line = f"{diff_percent:.2f}%"
+                
+                # 2. 量差 (新增)
+                if volumes:
+                    # 使用 date_v 查找对应的 index
+                    idx = dates.index(date_v) 
+                    vol_v = volumes[idx]
+                    latest_vol = volumes[-1]
+                    if vol_v and vol_v > 0 and latest_vol:
+                        v_diff = ((latest_vol - vol_v) / vol_v) * 100
+                        vol_line = f"{v_diff:.2f}%"
+                    else:
+                        vol_line = "Vol: --"
             except Exception:
-                diff_line = ""
-            new_text = f"{text}\n{diff_line}\n{date_v.strftime('%Y-%m-%d')}"
+                pass
+
+            # 拼接到文本中
+            new_text = f"{text}\n{diff_line}\n{vol_line}\n{date_v.strftime('%Y-%m-%d')}"
+            
             annotation = ax1.annotate(
                 new_text, xy=(date_v, price_v), xytext=offset, textcoords="offset points",
                 bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=NORD_THEME['text_bright'], alpha=0.8),
@@ -942,11 +965,40 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             )
             all_annotations.append((annotation, 'specific', date_v, price_v))
 
+        # === 修改 2: 黄色/橙色浮窗 (Earning Markers) - 增加最新量差 ===
         earning_offsets = [(50, -50), (-150, 25)]
         for i, (scatter, date_v, price_v, text) in enumerate(earning_scatter_points):
             offset = earning_offsets[i % len(earning_offsets)]
+            
+            # --- 计算量差并插入文本 (新增) ---
+            final_text = text
+            try:
+                if volumes:
+                    idx = dates.index(date_v)
+                    vol_v = volumes[idx]
+                    latest_vol = volumes[-1]
+                    vol_msg = ""
+                    if vol_v and vol_v > 0 and latest_vol:
+                        v_diff = ((latest_vol - vol_v) / vol_v) * 100
+                        vol_msg = f"最新量差: {v_diff:.2f}%"
+                    else:
+                        vol_msg = "最新量差: --"
+                    
+                    # text 的原始格式通常是: "昨日财报: xx%\n最新价差: xx%\nYYYY-MM-DD"
+                    # 我们想把它插入到日期（最后一行）的前面
+                    parts = text.split('\n')
+                    if len(parts) >= 1:
+                        # 在倒数第一行(日期)之前插入
+                        parts.insert(-1, vol_msg)
+                        final_text = "\n".join(parts)
+                    else:
+                        final_text = text + "\n" + vol_msg
+            except Exception:
+                pass
+
+            
             annotation = ax1.annotate(
-                text, xy=(date_v, price_v), xytext=offset, textcoords="offset points",
+                final_text, xy=(date_v, price_v), xytext=offset, textcoords="offset points",
                 bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=NORD_THEME['accent_yellow'], alpha=0.8),
                 arrowprops=dict(arrowstyle="->", color=NORD_THEME['accent_cyan']),
                 color=NORD_THEME['accent_yellow'], fontsize=12,
@@ -1294,7 +1346,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     def update_annot(ind):
         try:
             x_data, y_data = line1.get_data()
-            xval, yval = x_data[ind["ind"][0]], y_data[ind["ind"][0]]
+            # 获取当前鼠标悬停点的索引
+            idx = ind["ind"][0] 
+            xval, yval = x_data[idx], y_data[idx]
+
             if annot.xy != (xval, yval):
                 annot.xy = (xval, yval)
                 current_date = xval.replace(tzinfo=None)
@@ -1328,6 +1383,15 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                         has_earning = True
                     if marker_texts: parts.extend(marker_texts)
                     parts.append(f"最新价差: {((prices[-1] - yval) / yval) * 100:.2f}%")
+                    if current_filtered_volumes and idx < len(current_filtered_volumes) and volumes:
+                        sel_vol = current_filtered_volumes[idx]  # 当前点的成交量
+                        latest_vol = volumes[-1]                 # 全局最新的成交量 (今天/昨天的)
+
+                        if sel_vol and sel_vol > 0:
+                            vol_diff = ((latest_vol - sel_vol) / sel_vol) * 100
+                            parts.append(f"最新量差: {vol_diff:.2f}%")
+                        else:
+                            parts.append("最新量差: --") # 如果当前成交量为0或None
                     text = "\n".join(parts)
                     
                     if has_earning and not (g_text or s_text): color = NORD_THEME['accent_yellow']
@@ -1403,10 +1467,22 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                             percent_change = ((sel_price - initial_price) / (initial_price + 1e-12)) * 100.0
                         except Exception:
                             percent_change = 0.0
+
+                        # <--- 新增: 计算成交量变化 --->
+                        vol_text = ""
+                        if initial_volume is not None and current_filtered_volumes and idx < len(current_filtered_volumes):
+                            sel_vol = current_filtered_volumes[idx]
+                            if sel_vol is not None and initial_volume > 0: # 避免除以0或None
+                                try:
+                                    vol_change = ((sel_vol - initial_volume) / initial_volume) * 100.0
+                                    # 显示在第二行，使用 Vol: 标记
+                                    vol_text = f"\n{vol_change:+.1f}%" 
+                                except:
+                                    pass
                             
-                        # 轻量注释：只显示百分比，避免昂贵排版
+                        # 2. 设置注释文本，拼接价格和成交量
                         annot.xy = (sel_date, sel_price)
-                        annot.set_text(f"{percent_change:.1f}%")
+                        annot.set_text(f"{percent_change:+.1f}%{vol_text}") # 添加了 vol_text
                         drag_color = NORD_THEME['accent_red'] if percent_change > 0 else NORD_THEME['accent_green']
                         annot.set_color(drag_color)
                         annot.get_bbox_patch().set_edgecolor(drag_color)
@@ -1483,7 +1559,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             pass
 
     def update(val):
-        nonlocal gradient_image, current_filtered_dates, current_filtered_prices, current_filtered_date_nums
+        nonlocal gradient_image, current_filtered_dates, current_filtered_prices, current_filtered_volumes, current_filtered_date_nums
         try:
             years = time_options[val]
             if years == 0:
@@ -1502,6 +1578,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             # 更新当前筛选数据与缓存
             current_filtered_dates = f_dates
             current_filtered_prices = f_prices
+            current_filtered_volumes = f_volumes
             current_filtered_date_nums = matplotlib.dates.date2num(current_filtered_dates) if current_filtered_dates else np.array([])
             
             # === 修改：控制紫色和蓝色遮罩的显示 ===
@@ -1573,7 +1650,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             pass
 
     def toggle_volume():
-        nonlocal show_volume, current_filtered_dates, current_filtered_prices, current_filtered_date_nums
+        nonlocal show_volume, current_filtered_dates, current_filtered_prices, current_filtered_volumes, current_filtered_date_nums
         try:
             show_volume = not show_volume
             years = time_options[radio.value_selected]
@@ -1723,7 +1800,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             if panel_flag: sys.exit(0)
 
     def on_mouse_press(event):
-        nonlocal mouse_pressed, initial_price, initial_date
+        # 1. 在 nonlocal 中添加 initial_volume
+        nonlocal mouse_pressed, initial_price, initial_volume, initial_date
         try:
             if event.button == 1 and event.xdata is not None and current_filtered_dates:
                 mouse_pressed = True
@@ -1745,6 +1823,13 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     idx = 0
                 if idx < len(current_filtered_prices):
                     initial_price, initial_date = current_filtered_prices[idx], current_filtered_dates[idx]
+                    
+                    # <--- 新增: 记录初始成交量 --->
+                    if current_filtered_volumes and idx < len(current_filtered_volumes):
+                        initial_volume = current_filtered_volumes[idx]
+                    else:
+                        initial_volume = None
+                        
         except Exception as e:
             pass
 

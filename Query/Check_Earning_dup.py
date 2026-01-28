@@ -1063,7 +1063,7 @@ def sort_all_main_files(directory: str):
 
 def remove_intra_file_duplicates(filepath: str):
     """
-    预处理：检查单个文件，如果存在内容完全一致的重复行，保留第一条，直接删除后续重复项。
+    预处理：检查单个文件，如果存在内容实质一致的重复行（忽略空格差异），保留第一条，直接删除后续重复项。
     """
     try:
         # 读取文件内容
@@ -1074,34 +1074,48 @@ def remove_intra_file_duplicates(filepath: str):
             with open(filepath, 'r', encoding='latin-1') as f:
                 lines = f.readlines()
         
-        seen = set()
+        seen_normalized = set() # 使用标准化后的字符串作为指纹
         new_lines = []
         modified = False
         
         for line in lines:
             stripped = line.strip()
             
-            # 只有包含有效symbol的行才进行去重检查
-            # 这样可以避免误删空行或注释头
-            if parse_symbol(stripped):
-                if stripped in seen:
+            # 1. 忽略空行、注释或特殊的 BACKUP_DUP 行（这些留给后续流程处理）
+            if not stripped or stripped.startswith('#'):
+                new_lines.append(line)
+                continue
+
+            # 2. 只有包含有效symbol的行才进行去重检查
+            sym = parse_symbol(stripped)
+            if sym:
+                # --- 核心修改：生成标准化指纹 ---
+                # 将 "ELV    : BMO : 2026-01-28" 转化为 "ELV|BMO|2026-01-28"
+                # 这样无论中间有多少空格，都会被视为相同
+                if ':' in stripped:
+                    normalized_key = "|".join([part.strip() for part in stripped.split(':')])
+                else:
+                    normalized_key = stripped
+                
+                if normalized_key in seen_normalized:
                     modified = True
-                    # 跳过这个重复行，不添加到 new_lines
+                    # 发现重复，跳过添加（即删除该行）
+                    print(f"    - [自动清理] 发现文件内重复并删除: {stripped} (文件: {os.path.basename(filepath)})")
                     continue 
-                seen.add(stripped)
+                
+                seen_normalized.add(normalized_key)
             
+            # 如果不是重复项，或者是无法解析的行，保留原样
             new_lines.append(line)
         
         # 只有当发现并删除了重复项时才重写文件
         if modified:
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.writelines(new_lines)
-            print(f"  - [预处理] 已自动清理文件 '{os.path.basename(filepath)}' 内的完全重复行。")
+            print(f"  - [预处理] 已更新文件 '{os.path.basename(filepath)}'。")
             
     except Exception as e:
         print(f"预处理文件 {os.path.basename(filepath)} 时出错: {e}")
-
-# --- 主程序入口 ---
 
 def main():
     directory = os.path.join(BASE_CODING_DIR, "News")

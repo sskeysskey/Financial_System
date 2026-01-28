@@ -15,7 +15,8 @@
         "VALE",
         "WPM",
         "AU",
-        "FNV"
+        "FNV",
+        "GFI"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -312,7 +313,8 @@
         "NXPI",
         "SNDK",
         "MPWR",
-        "WDAY"
+        "WDAY",
+        "CRWV"
     ],
     "Utilities": [
         "NEE",

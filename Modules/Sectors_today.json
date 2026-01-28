@@ -467,7 +467,6 @@
     "PINS",
     "SNAP",
     "TTWO",
-    "TEF",
     "TU",
     "VOD",
     "TME",
@@ -766,7 +765,8 @@
     "JBS",
     "GHC",
     "MICC",
-    "LAUR"
+    "LAUR",
+    "AKO-B"
   ],
   "Energy": [
     "XOM",
@@ -1849,6 +1849,7 @@
     "ENLT",
     "OGS",
     "AXIA",
-    "AQN"
+    "AQN",
+    "FLNC"
   ]
 }
