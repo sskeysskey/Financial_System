@@ -7,10 +7,16 @@ from collections import defaultdict
 USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
-SYMBOL_TO_TRACE = ""
+# [回测配置区]
+# SYMBOL_TO_TRACE = ""
+# TARGET_DATE = ""
+
+SYMBOL_TO_TRACE = "PPG"
+TARGET_DATE = "2025-11-06"
+
 LOG_FILE_PATH = os.path.join(USER_HOME, "Downloads", "Season_trace_log.txt")
 
-# --- 1. 配置文件和路径 --- 使用一个配置字典来管理所有路径，更清晰
+# --- 1. 配置文件和路径 ---
 PATHS = {
     "base": BASE_CODING_DIR,
     "news": lambda base: os.path.join(base, "News"),
@@ -240,9 +246,9 @@ def get_next_er_date(last_er_date):
     return last_er_date + datetime.timedelta(days=94)
 
 
-# --- 4. 核心数据获取模块 (已集成追踪系统) ---
+# --- 4. 核心数据获取模块 (已集成追踪和回测系统) ---
 
-def build_stock_data_cache(symbols, db_path, symbol_sector_map, symbol_to_trace, log_detail):
+def build_stock_data_cache(symbols, db_path, symbol_sector_map, symbol_to_trace, log_detail, target_date=None):
     """
     为所有给定的symbols一次性从数据库加载所有需要的数据。
     这是性能优化的核心，避免了重复查询。
@@ -261,16 +267,16 @@ def build_stock_data_cache(symbols, db_path, symbol_sector_map, symbol_to_trace,
 
         data = {'is_valid': False, 'all_er_dates': [], 'latest_er_date_str': '', 'latest_er_date': None, 'all_er_prices': [], 'latest_date_str': '', 'latest_price': 0.0, 'latest_volume': 0.0, 'pe_ratio': None, 'marketcap': None, 'earning_record_price': None}
         table_name = symbol_sector_map.get(symbol)
-        if not table_name:
-            if is_tracing: log_detail(f"[{symbol}] 失败: 在板块映射中未找到该symbol，无法确定数据表。")
-            continue
-        if is_tracing: log_detail(f"[{symbol}] 信息: 找到板块为 '{table_name}'。")
+        if not table_name: continue
 
-        # 1. 获取最近 N+1 次财报 (多取一次用于策略2.5/3.5)
-        cursor.execute(
-            "SELECT date FROM Earning WHERE name = ? ORDER BY date DESC LIMIT ?",
-            (symbol, CONFIG["NUM_EARNINGS_TO_CHECK"] + 1)
-        )
+        # 1. 获取财报日期 (回测移植：增加日期上限)
+        if target_date:
+            cursor.execute("SELECT date FROM Earning WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT ?", 
+                           (symbol, target_date, CONFIG["NUM_EARNINGS_TO_CHECK"] + 1))
+        else:
+            cursor.execute("SELECT date FROM Earning WHERE name = ? ORDER BY date DESC LIMIT ?", 
+                           (symbol, CONFIG["NUM_EARNINGS_TO_CHECK"] + 1))
+        
         earnings_dates = [r[0] for r in cursor.fetchall()]
         if is_tracing: log_detail(f"[{symbol}] 步骤1: 获取财报日期。找到 {len(earnings_dates)} 个: {earnings_dates}")
         
@@ -302,8 +308,12 @@ def build_stock_data_cache(symbols, db_path, symbol_sector_map, symbol_to_trace,
 
         data['all_er_prices'] = er_prices
         
-        # 3. 获取最新交易日数据
-        cursor.execute(f'SELECT date, price, volume FROM "{table_name}" WHERE name = ? ORDER BY date DESC LIMIT 1', (symbol,))
+        # 3. 获取最新交易日数据 (回测移植：根据 target_date 锁定基准日)
+        if target_date:
+            cursor.execute(f'SELECT date, price, volume FROM "{table_name}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 1', (symbol, target_date))
+        else:
+            cursor.execute(f'SELECT date, price, volume FROM "{table_name}" WHERE name = ? ORDER BY date DESC LIMIT 1', (symbol,))
+        
         latest_row = cursor.fetchone()
         if not latest_row or latest_row[1] is None or latest_row[2] is None:
             if is_tracing: log_detail(f"[{symbol}] 失败: 未能获取到有效的最新交易日数据。查询结果: {latest_row}")
@@ -317,6 +327,7 @@ def build_stock_data_cache(symbols, db_path, symbol_sector_map, symbol_to_trace,
         data['pe_ratio'] = None
         data['marketcap'] = None
 
+        # 4. 获取 PE, 市值等 (MNSPP表通常只存最新，回测时作为参考)
         if marketcap_exists: # 如果列存在，尝试最优查询
             try:
                 cursor.execute("SELECT pe_ratio, marketcap FROM MNSPP WHERE symbol = ?", (symbol,))
@@ -560,13 +571,18 @@ def run_strategy_4(data, cursor, symbol_sector_map, symbol_to_trace, log_detail)
     
     # 步骤1: 基本条件
     is_increasing = all(asc_prices[i] < asc_prices[i+1] for i in range(len(asc_prices)-1))
-    is_recent_er = data['latest_er_date'] >= (datetime.date.today() - datetime.timedelta(days=30))
+    
+    # 【修改点】将 datetime.date.today() 改为 data['latest_date']
+    # 这样在回测 2023 年的数据时，它会判断财报是否在 2023 年那个时间点的 30 天内
+    is_recent_er = data['latest_er_date'] >= (data['latest_date'] - datetime.timedelta(days=30))
+    
     is_positive_earning = data['earning_record_price'] is not None and data['earning_record_price'] > 0
     
     if is_tracing:
         log_detail(f"  - 财报价格 (从远到近): {asc_prices}")
         log_detail(f"  - 条件1.1 (递增): {is_increasing}")
-        log_detail(f"  - 条件1.2 (最近30天财报): {data['latest_er_date']} >= {datetime.date.today() - datetime.timedelta(days=30)} -> {is_recent_er}")
+        # 【修改日志输出】
+        log_detail(f"  - 条件1.2 (相对基准日30天财报): {data['latest_er_date']} >= {data['latest_date'] - datetime.timedelta(days=30)} -> {is_recent_er}")
         log_detail(f"  - 条件1.3 (Earning表price>0): {data['earning_record_price']} > 0 -> {is_positive_earning}")
 
     if not (is_increasing and is_recent_er and is_positive_earning):
@@ -758,8 +774,9 @@ def run_processing_logic(log_detail):
     这个函数包含了所有的数据加载、策略执行、过滤和文件输出。
     """
     log_detail(f"程序开始运行...")
-    if SYMBOL_TO_TRACE:
-        log_detail(f"当前追踪的 SYMBOL: {SYMBOL_TO_TRACE}")
+    if TARGET_DATE:
+        log_detail(f"\n⚠️⚠️⚠️ 注意：当前处于【回测模式】，目标日期：{TARGET_DATE} ⚠️⚠️⚠️")
+        log_detail("为了保护现有数据，本次运行将【不会】更新任何 JSON 或备份文件。\n")
     
     # 1. 加载初始数据
     # 修改：加载外部标签配置并更新CONFIG
@@ -830,7 +847,7 @@ def run_processing_logic(log_detail):
         log_detail(f"Symbol 列表从 {original_count} 个缩减到 {len(symbols_to_process)} 个。")
     
     # 2. 构建数据缓存 (核心性能提升)
-    stock_data_cache = build_stock_data_cache(symbols_to_process, DB_FILE, symbol_sector_map, SYMBOL_TO_TRACE, log_detail)
+    stock_data_cache = build_stock_data_cache(symbols_to_process, DB_FILE, symbol_sector_map, SYMBOL_TO_TRACE, log_detail, target_date=TARGET_DATE)
 
     # 3. 运行策略
     results = defaultdict(list)
@@ -976,6 +993,21 @@ def run_processing_logic(log_detail):
     strategy12_notes = build_symbol_note_map(final_symbols)
     strategy34_notes = build_symbol_note_map(final_Strategy34_list)
 
+    # [回测移植：安全拦截]
+    if TARGET_DATE:
+        log_detail("\n" + "="*60)
+        log_detail(f"🛑 [安全拦截] 回测模式已启用。以下操作已取消：")
+        log_detail(f"   - 写入 {os.path.basename(PANEL_JSON_FILE)}")
+        log_detail(f"   - 写入 {os.path.basename(EARNING_HISTORY_JSON_FILE)}")
+        log_detail(f"   - 更新备份 TXT 文件")
+        log_detail("-" * 40)
+        # 【修正变量名】将 final_s1 改为 final_symbols
+        log_detail(f"📊 [模拟结果] Strategy12: {len(final_symbols)} 个, Strategy34: {len(final_Strategy34_list)} 个")
+        if SYMBOL_TO_TRACE:
+            log_detail(f"🔎 [验证] '{SYMBOL_TO_TRACE}' 状态: S12={SYMBOL_TO_TRACE in final_symbols}, S34={SYMBOL_TO_TRACE in final_Strategy34_list}")
+        log_detail("="*60 + "\n")
+        return 
+    
     # 8.2 打印最终结果
     log_detail("\n--- 所有过滤完成后的最终结果 ---")
     log_detail(f"主列表(Strategy12)最终数量: {len(final_symbols)} - {final_symbols}")

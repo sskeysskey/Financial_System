@@ -301,7 +301,6 @@
         "ROIV",
         "BPMC",
         "VNT",
-        "AVT",
         "WK",
         "AI",
         "PONY",
@@ -592,7 +591,8 @@
         "SEE",
         "AD",
         "VSNTV",
-        "TEF"
+        "TEF",
+        "FYBR"
     ],
     "etf": [
         "VDE",
@@ -955,7 +955,6 @@
         "BROS",
         "CAVA",
         "CMG",
-        "EAT",
         "FCNCA",
         "LPLA",
         "QFIN",

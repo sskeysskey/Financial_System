@@ -13,8 +13,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = "" 
 TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "LRN"
-# TARGET_DATE = "2025-11-11"
+# SYMBOL_TO_TRACE = "PGR"
+# TARGET_DATE = "2025-11-03"
 
 # 3. 日志路径
 LOG_FILE_PATH = os.path.join(BASE_PATH, "Downloads", "PE_Volume_trace_log.txt")
@@ -48,7 +48,7 @@ CONFIG = {
     },
     # ========== 条件8 (PE_Volume) 参数 ==========
     "COND8_VOLUME_LOOKBACK_MONTHS": 3,   # 过去3个月
-    "COND8_VOLUME_RANK_THRESHOLD": 3,    # 【新增配置】成交量排名前 N 名 (默认3)
+    "COND8_VOLUME_RANK_THRESHOLD": 4,    # 【新增配置】成交量排名前 N 名 (默认3)
     "COND8_TARGET_GROUPS": [             # 需要去历史文件中扫描的分组
         "OverSell_W", "PE_Deeper", "PE_Deep", 
         "PE_W", "PE_valid", "PE_invalid", "season", "no_season"
@@ -114,18 +114,11 @@ def update_json_panel(symbols_list, json_path, group_name, symbol_to_note=None):
     except Exception as e:
         print(f"错误: 写入JSON文件失败: {e}")
 
-def update_earning_history_json(file_path, group_name, symbols_to_add, log_detail):
+def update_earning_history_json(file_path, group_name, symbols_to_add, log_detail, base_date_str):
     log_detail(f"\n--- 更新历史记录文件: {os.path.basename(file_path)} -> '{group_name}' ---")
     
-    # 注意：这里使用 TARGET_DATE 作为记录日期，如果为空则用昨天（原逻辑习惯）
-    # 但对于 PE_Volume 这种当日策略，通常记录在当日。
-    # 为了保持与原代码一致性（原代码是用 yesterday 记录），这里保持原样，
-    yesterday = datetime.date.today() - datetime.timedelta(days=1)
-    record_date_str = yesterday.isoformat()
-    
-    # 如果是回测模式，理论上不应该写入，但如果强制写入，应使用回测日期
-    if TARGET_DATE:
-        record_date_str = TARGET_DATE
+    # 使用传入的基准日期作为记录日期
+    record_date_str = base_date_str
 
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
@@ -165,7 +158,7 @@ def get_trading_dates_list(cursor, sector_name, symbol, end_date_str, limit=10):
 
 def check_volume_rank(cursor, sector_name, symbol, latest_date_str, latest_volume, lookback_months, rank_threshold, log_detail, is_tracing):
     """
-    检查 latest_volume 是否是过去 N 个月内的前 rank_threshold 名
+    检查 latest_volume 是否是过去 N 个月内的前 rank_threshold 名，并显示对应日期
     """
     # 计算 N 个月前的日期
     try:
@@ -175,33 +168,39 @@ def check_volume_rank(cursor, sector_name, symbol, latest_date_str, latest_volum
     except Exception:
         return False
 
-    # 查询过去3个月的所有成交量
-    query = f'SELECT volume FROM "{sector_name}" WHERE name = ? AND date >= ? AND date <= ?'
+    # 【修改】查询过去3个月的所有日期和成交量
+    query = f'SELECT date, volume FROM "{sector_name}" WHERE name = ? AND date >= ? AND date <= ?'
     cursor.execute(query, (symbol, start_date_str, latest_date_str))
-    rows = cursor.fetchall()
+    rows = cursor.fetchall() # 结果是 [(date1, vol1), (date2, vol2), ...]
     
-    volumes = [r[0] for r in rows if r[0] is not None]
+    # 过滤掉 None 值
+    valid_data = [(r[0], r[1]) for r in rows if r[1] is not None]
     
-    if not volumes:
+    if not valid_data:
         return False
         
-    # 排序（从大到小）
-    sorted_volumes = sorted(volumes, reverse=True)
+    # 【修改】排序：按 volume (x[1]) 从大到小排
+    sorted_data = sorted(valid_data, key=lambda x: x[1], reverse=True)
     
     # 截取前 N 名
-    top_n_volumes = sorted_volumes[:rank_threshold]
+    top_n_data = sorted_data[:rank_threshold]
     
-    is_top_n = latest_volume in top_n_volumes
+    # 提取前 N 名的成交量数值用于逻辑判断
+    top_n_volumes = [item[1] for item in top_n_data]
     
-    # 另一种判定：如果最新成交量 >= 第N名的值，也算（处理重复值情况）
-    # 注意：数组索引是从0开始的，所以第N名的索引是 rank_threshold - 1
-    if len(top_n_volumes) >= rank_threshold and latest_volume >= top_n_volumes[rank_threshold - 1]:
+    # 判定逻辑：当前成交量是否在前 N 名中，或者大于等于第 N 名的值
+    is_top_n = False
+    if latest_volume in top_n_volumes:
+        is_top_n = True
+    elif len(top_n_volumes) >= rank_threshold and latest_volume >= top_n_volumes[rank_threshold - 1]:
         is_top_n = True
         
     if is_tracing:
-        log_detail(f"   - [放量检查] 过去{lookback_months}个月记录数: {len(volumes)}")
-        log_detail(f"   - 前{rank_threshold}名Vol: {top_n_volumes}")
-        log_detail(f"   - 当前Vol:   {latest_volume}")
+        log_detail(f"   - [放量检查] 过去{lookback_months}个月记录数: {len(valid_data)}")
+        # 【修改】格式化打印前 N 名的日期和成交量
+        top_n_str = ", ".join([f"[{d}]: {v}" for d, v in top_n_data])
+        log_detail(f"   - 前{rank_threshold}名记录: {top_n_str}")
+        log_detail(f"   - 当前成交量: {latest_volume}")
         log_detail(f"   - 结果: {is_top_n}")
         
     return is_top_n
@@ -236,7 +235,8 @@ def process_condition_8(db_path, history_json_path, sector_map, target_date_over
     log_detail(f"配置参数: 排名阈值 = Top {rank_threshold}")
 
     # 1. 确定基准日期 (Today)
-    base_date = target_date_override if target_date_override else datetime.date.today().isoformat()
+    # 如果没有指定日期，则获取昨天的日期
+    base_date = target_date_override if target_date_override else (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
     log_detail(f"基准日期 (Today): {base_date}")
     candidates_volume = set()
     
@@ -266,17 +266,19 @@ def process_condition_8(db_path, history_json_path, sector_map, target_date_over
         conn.close()
         return []
         
-    # global_dates[0] = Today
+    # 定义关键日期
+    date_t0 = global_dates[0] # Today
     date_t1 = global_dates[1]
     date_t2 = global_dates[2]
     date_t3 = global_dates[3]
     
-    log_detail(f"系统计算出的关键日期: T-1={date_t1}, T-2={date_t2}, T-3={date_t3}")
+    log_detail(f"系统计算出的关键日期: T={date_t0}, T-1={date_t1}, T-2={date_t2}, T-3={date_t3}")
     
     # 定义任务列表
     # 格式: (Target_Date_In_History, Date_Index_In_List, Task_Name)
     # Date_Index_In_List: 1代表T-1, 2代表T-2, 3代表T-3
     tasks = [
+        (date_t0, 0, "T策略"),
         (date_t1, 1, "T-1策略"),
         (date_t2, 2, "T-2策略"),
         (date_t3, 3, "T-3策略")
@@ -292,8 +294,8 @@ def process_condition_8(db_path, history_json_path, sector_map, target_date_over
                 symbols_on_date.update(syms)
         
         symbols_on_date = sorted(list(symbols_on_date))
+        log_detail(f" -> 正在扫描 {task_name} (日期: {hist_date})，包含 {len(symbols_on_date)} 个候选。")
         if symbol_to_trace:
-            log_detail(f" -> 正在扫描 {task_name} (日期: {hist_date})，包含 {len(symbols_on_date)} 个候选。")
             if symbol_to_trace in symbols_on_date:
                 log_detail(f"    !!! 目标 {symbol_to_trace} 在 {hist_date} 的历史记录中，开始检查...")
         
@@ -360,6 +362,9 @@ def process_condition_8(db_path, history_json_path, sector_map, target_date_over
 def run_pe_volume_logic(log_detail):
     log_detail("PE_Volume 独立程序开始运行...")
     if SYMBOL_TO_TRACE: log_detail(f"当前追踪的 SYMBOL: {SYMBOL_TO_TRACE}")
+    
+    base_date_str = TARGET_DATE if TARGET_DATE else (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+
     if TARGET_DATE:
         log_detail(f"\n⚠️⚠️⚠️ 注意：当前处于【回测模式】，目标日期：{TARGET_DATE} ⚠️⚠️⚠️")
         log_detail("本次运行将【不会】更新 Panel 和 History JSON 文件。")
@@ -422,7 +427,8 @@ def run_pe_volume_logic(log_detail):
 
     # 7. 写入 History (Raw Data)
     log_detail(f"正在更新 History 文件... (Raw 数量: {len(raw_pe_volume)})")
-    update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume", raw_pe_volume, log_detail)
+    # 这里传入 base_date_str 确保记录日期准确
+    update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume", raw_pe_volume, log_detail, base_date_str)
 
     log_detail("程序运行结束。")
 
