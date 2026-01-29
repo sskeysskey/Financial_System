@@ -8,11 +8,11 @@ USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 # [回测配置区]
-# SYMBOL_TO_TRACE = ""
-# TARGET_DATE = ""
+SYMBOL_TO_TRACE = ""
+TARGET_DATE = ""
 
-SYMBOL_TO_TRACE = "PPG"
-TARGET_DATE = "2025-11-06"
+# SYMBOL_TO_TRACE = "PPG"
+# TARGET_DATE = "2025-11-06"
 
 LOG_FILE_PATH = os.path.join(USER_HOME, "Downloads", "Season_trace_log.txt")
 
