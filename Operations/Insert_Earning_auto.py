@@ -2,7 +2,7 @@ import sys
 import json
 import sqlite3
 import subprocess
-import os  # 新增：用于路径处理
+import os
 from datetime import date, timedelta
 from functools import partial
 from collections import OrderedDict
@@ -15,10 +15,10 @@ from PyQt6.QtWidgets import (
     QMenu, QHeaderView
 )
 from PyQt6.QtGui import QCursor, QKeySequence, QFont, QBrush, QColor, QShortcut, QAction
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 
 # --- 路径动态化处理 ---
-HOME = os.path.expanduser("~") # 获取当前用户主目录，例如 /Users/yanzhang
+HOME = os.path.expanduser("~") 
 
 # 添加自定义模块的路径
 sys.path.append(os.path.join(HOME, 'Coding/Financial_System/Query'))
@@ -141,7 +141,10 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Earnings 百分比处理")
         
-        # --- 1. 数据处理更新：增加今天的日期 ---
+        # --- 导航相关变量 ---
+        self.ordered_symbols_on_screen = [] # 存储当前界面所有 Symbol 的顺序列表
+        self.current_symbol_index = -1      # 当前打开的 Symbol 索引
+
         today = date.today()
         self.today_str = today.strftime("%Y-%m-%d") # 今天
         self.date1 = (today - timedelta(days=1)).strftime("%Y-%m-%d") # 昨天
@@ -194,18 +197,26 @@ class MainWindow(QMainWindow):
         self.conn.row_factory = sqlite3.Row
         self.cur = self.conn.cursor()
 
-        # --- 新增：加载移动分组配置 ---
-        from json import load
         with open(PANEL_CONFIG_PATH, 'r', encoding='utf-8') as f:
-            self.panel_config = load(f, object_pairs_hook=OrderedDict)
+            self.panel_config = json.load(f, object_pairs_hook=OrderedDict)
         self.panel_config_path = PANEL_CONFIG_PATH
 
         self._init_ui()
+        self.refresh_data()
+
+    def refresh_data(self):
+        """刷新并重新填充所有表格，同时更新导航列表"""
+        self.ordered_symbols_on_screen.clear()
         
-        # --- 3. 数据处理更新：调用所有处理函数 ---
-        self.process_today() # 处理今天
-        self.process_date1() # 处理昨天
-        self.process_date2() # 处理前天
+        # 清空表格内容
+        self.table2.setRowCount(0)
+        self.table1.setRowCount(0)
+        self.table_today.setRowCount(0)
+
+        # 按照视觉顺序填充：前天 -> 昨天 -> 今天
+        self.process_date2()
+        self.process_date1()
+        self.process_today()
 
     def _init_ui(self):
         cw = QWidget()
@@ -261,6 +272,58 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(cw)
         self.resize(1400, 1000) # 增加了宽度以容纳新栏目
         self.center_window()
+
+    # ================= 核心导航逻辑 =================
+    def handle_chart_callback(self, symbol, action):
+        """处理 Chart_input 发回的导航指令"""
+        if action in ('next', 'prev'):
+            # 延迟一小会儿执行，确保窗口状态稳定
+            QTimer.singleShot(50, lambda: self.navigate_to_adjacent_symbol(action))
+
+    def navigate_to_adjacent_symbol(self, direction):
+        total_count = len(self.ordered_symbols_on_screen)
+        if total_count == 0: return
+
+        if direction == 'next':
+            new_index = (self.current_symbol_index + 1) % total_count
+        else:
+            new_index = (self.current_symbol_index - 1 + total_count) % total_count
+            
+        next_symbol = self.ordered_symbols_on_screen[new_index]
+        # 显式传递 new_index
+        self.on_symbol_button_clicked(next_symbol, btn_index=new_index)
+
+    def on_symbol_button_clicked(self, symbol, btn_index=None):
+        """点击 Symbol 按钮或导航切换时触发"""
+        self.description_data = load_json(DESCRIPTION_PATH)
+        sector = self.symbol_to_sector.get(symbol)
+        if not sector: return
+
+        # 关键修复：如果传入了明确的索引，就使用它；否则才去查找
+        if btn_index is not None:
+            self.current_symbol_index = btn_index
+        else:
+            # 这种情况通常发生在右键菜单或其他非列表点击触发时
+            try:
+                self.current_symbol_index = self.ordered_symbols_on_screen.index(symbol)
+            except ValueError:
+                self.current_symbol_index = -1
+
+        compare_value = self.compare_data.get(symbol, "N/A")
+        shares_val, marketcap_val, pe_val, pb_val = fetch_mnspp_data_from_db(self.db_path, symbol)
+
+        # 准备窗口标题（显示当前是第几个）
+        total_count = len(self.ordered_symbols_on_screen)
+        window_title = f"{symbol}  ({self.current_symbol_index + 1}/{total_count})"
+
+        plot_financial_data(
+            self.db_path, sector, symbol, compare_value,
+            (shares_val, pb_val), marketcap_val, pe_val,
+            self.description_data, '1Y', False,
+            callback=lambda action: self.handle_chart_callback(symbol, action),
+            window_title_text=window_title
+        )
+    # ===============================================
 
     def apply_stylesheet(self):
         """定义并应用全局样式表"""
@@ -335,177 +398,17 @@ class MainWindow(QMainWindow):
         
         table.setRowHeight(insert_row, 45)
 
-    def show_table_context_menu(self, pos):
-        """当在表格上右键点击时，创建并显示上下文菜单"""
-        table = self.sender()
-        if not table:
-            return
-
-        # 根据点击位置确定行、列
-        row = table.rowAt(pos.y())
-        col = table.columnAt(pos.x())
-        # 只允许在第一列（Symbol / Tag 列）弹菜单
-        if row == -1 or col != 0:
-            return
-
-        # 尝试拿当前行第0列的 widget
-        widget = table.cellWidget(row, 0)
-        symbol_button = None
-
-        if isinstance(widget, SymbolButton):
-            # 直接点在 SymbolButton 上
-            symbol_button = widget
-        elif isinstance(widget, QLabel):
-            # 点在标签行，去上一行取 SymbolButton
-            if row > 0:
-                prev = table.cellWidget(row - 1, 0)
-                if isinstance(prev, SymbolButton):
-                    symbol_button = prev
-        else:
-            # 既不是按钮也不是标签，忽略
-            return
-
-        if not symbol_button:
-            return
-
-        symbol = symbol_button.text()
-
-        menu = QMenu()
-
-        # --- 新增：移动（复制到组）子菜单 ---
-        move_menu = menu.addMenu("移动")
-        allowed_groups = ["Must", "Today", "Short"]
-        for group in allowed_groups:
-            # 判断 symbol 是否已在该组中
-            cfg_val = self.panel_config.get(group, [])
-            in_cfg = symbol in (cfg_val if isinstance(cfg_val, list) else cfg_val.keys())
-            act = QAction(group, self)
-            act.setEnabled(not in_cfg)
-            act.triggered.connect(partial(self.copy_symbol_to_group, symbol, group))
-            move_menu.addAction(act)
-        menu.addSeparator()
-
-        # --- 原有脚本执行菜单项 ---
-        menu_config = [
-            ("新增事件", "event_input"), None,
-            ("编辑 Tags", "tags"), None,
-            ("编辑事件", "event_editor"), ("Kimi检索财报", "kimi"), None,
-            ("在富途中搜索", "futu"), None,
-            ("找相似", "similar"), None,
-            ("新增 财报", "input_earning"), ("编辑 Earing 数据", "editor_earning"), None,
-            ("加入黑名单", "blacklist"),
-        ]
-        for item in menu_config:
-            if item is None:
-                menu.addSeparator()
-            else:
-                label, script_type = item
-                action = QAction(label, self)
-                action.triggered.connect(partial(execute_external_script, script_type, symbol))
-                menu.addAction(action)
-        
-        # PyQt6: exec 替代 exec_
-        menu.exec(QCursor.pos())
-
-    def copy_symbol_to_group(self, symbol: str, group: str):
-        """
-        将 symbol “复制” 到 panel_config[group]，避免重复，
-        并写回 JSON 文件。
-        """
-        cfg = self.panel_config
-
-        # 如果这个组本来不存在，默认建成 dict，和现有 "Watching" 结构保持一致
-        if group not in cfg:
-            cfg[group] = {}
-        
-        if isinstance(cfg[group], dict):
-            if symbol in cfg[group]:
-                return  # 已有，不重复
-            # 原来是 {}，改为 ""，避免写成 "ADI": {}
-            cfg[group][symbol] = ""
-        elif isinstance(cfg[group], list):
-            if symbol in cfg[group]:
-                return
-            cfg[group].append(symbol)
-        else:
-            QMessageBox.warning(self, "错误", f"组 {group} 类型不支持: {type(cfg[group])}")
-            return
-
-        # 写回 JSON
-        try:
-            with open(self.panel_config_path, 'w', encoding='utf-8') as f:
-                json.dump(cfg, f, ensure_ascii=False, indent=4)
-            QMessageBox.information(self, "复制成功", f"已将 {symbol} 复制到组「{group}」")
-        except Exception as e:
-            QMessageBox.critical(self, "保存失败", f"写入 {self.panel_config_path} 时出错: {e}")
-    
-    def on_symbol_button_clicked(self, symbol):
-        """当 Symbol 按钮被点击时，从数据库获取数据并显示图表"""
-        # ←—— 在这里重新加载你可能修改过的文件
-        self.description_data = load_json(DESCRIPTION_PATH)
-        sector = self.symbol_to_sector.get(symbol)
-        if not sector:
-            QMessageBox.warning(self, "错误", f"未找到 Symbol '{symbol}' 对应的板块(Sector)。")
-            return
-
-        compare_value = self.compare_data.get(symbol, "N/A")
-        shares_val, marketcap_val, pe_val, pb_val = fetch_mnspp_data_from_db(self.db_path, symbol)
-
-        print(f"正在为 {symbol} (板块: {sector}) 生成图表...")
-        try:
-            plot_financial_data(
-                self.db_path, sector, symbol, compare_value,
-                (shares_val, pb_val), marketcap_val, pe_val,
-                self.description_data, '1Y', False
-            )
-        except Exception as e:
-            QMessageBox.critical(self, "绘图失败", f"生成图表时发生错误: {e}")
-            print(f"绘图失败: {e}")
-
-    def center_window(self):
-        """将窗口移动到屏幕中央"""
-        try:
-            # PyQt6: 使用 QScreen 获取几何信息
-            screen = QApplication.primaryScreen()
-            if not screen:
-                screens = QApplication.screens()
-                if not screens: return
-                screen = screens[0]
-            
-            screen_geometry = screen.availableGeometry()
-            window_geometry = self.frameGeometry()
-            center_point = screen_geometry.center()
-            window_geometry.moveCenter(center_point)
-            self.move(window_geometry.topLeft())
-        except Exception as e:
-            print(f"Error centering window: {e}")
-
-    def _get_prev_price(self, table: str, dt: str, symbol: str):
-        """从指定表里找 name=symbol 且 date<dt 的最近一条 price"""
-        sql = f"SELECT price FROM `{table}` WHERE name=? AND date<? ORDER BY date DESC LIMIT 1"
-        self.cur.execute(sql, (symbol, dt))
-        r = self.cur.fetchone()
-        return r["price"] if r else None
-    
-    def _get_price_from_table(self, table: str, dt: str, symbol: str):
-        """从指定表里取单个价格"""
-        try:
-            self.cur.execute(f"SELECT price FROM `{table}` WHERE date=? AND name=?", (dt, symbol))
-            r = self.cur.fetchone()
-            return r["price"] if r else None
-        except sqlite3.OperationalError:
-            return None
-
-    ### 修改：重构 process_today 以解决布局问题 ###
     def process_today(self):
         table = self.table_today
         
         # 步骤 1: 添加所有数据行，并收集tags
         tags_to_add = []
         for symbol, period in self.symbols_by_date[self.today_str]:
-            # 只关心 BMO (盘前)
-            if period != "BMO":
-                continue
+            if period != "BMO": continue
+            
+            # 1. 先加入列表，获取它在全局的索引
+            self.ordered_symbols_on_screen.append(symbol)
+            current_idx = len(self.ordered_symbols_on_screen) - 1
 
             row = table.rowCount()
             table.insertRow(row)
@@ -517,7 +420,8 @@ class MainWindow(QMainWindow):
             btn.setProperty("period", period)
             # PyQt6: 使用 Qt.CursorShape.PointingHandCursor
             btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-            btn.clicked.connect(partial(self.on_symbol_button_clicked, symbol))
+            # 2. 关键修复：将 current_idx 绑定到点击事件中
+            btn.clicked.connect(partial(self.on_symbol_button_clicked, symbol, current_idx))
             table.setCellWidget(row, 0, btn)
             
             tags = get_tags_for_symbol(symbol, self.description_data)
@@ -552,6 +456,11 @@ class MainWindow(QMainWindow):
             if p2 is None or p2 == 0: continue
 
             pct = round((p1 - p2) / p2 * 100, 2)
+
+            # 1. 加入列表并获取索引
+            self.ordered_symbols_on_screen.append(symbol)
+            current_idx = len(self.ordered_symbols_on_screen) - 1
+
             row = table.rowCount()
             table.insertRow(row)
 
@@ -559,8 +468,8 @@ class MainWindow(QMainWindow):
             btn = SymbolButton(symbol)
             btn.setObjectName("SymbolButton")
             btn.setProperty("period", period)
-            btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-            btn.clicked.connect(partial(self.on_symbol_button_clicked, symbol))
+            # 2. 关键修复：绑定索引
+            btn.clicked.connect(partial(self.on_symbol_button_clicked, symbol, current_idx))
             table.setCellWidget(row, 0, btn)
             
             tags = get_tags_for_symbol(symbol, self.description_data)
@@ -598,34 +507,6 @@ class MainWindow(QMainWindow):
         for i in range(len(tags_to_add) - 1, -1, -1):
             self._add_tag_row(table, i, tags_to_add[i])
 
-    def auto_write_date1(self, symbol, pct, btn):
-        """如果当天 self.date1 在 Earning 表里还没有 symbol 记录，就插入"""
-        self.cur.execute("SELECT 1 FROM Earning WHERE date=? AND name=?", (self.date1, symbol))
-        if not self.cur.fetchone():
-            self.cur.execute("INSERT INTO Earning (date, name, price) VALUES (?, ?, ?)", (self.date1, symbol, pct))
-            self.conn.commit()
-        btn.setText("已写入")
-        btn.setEnabled(False)
-    
-    def on_replace_date1(self, symbol, pct, btn):
-        self.cur.execute("SELECT id FROM Earning WHERE date=? AND name=?", (self.date1, symbol))
-        exists = self.cur.fetchone() is not None
-
-        if exists:
-            reply = QMessageBox.question(self, "确认覆盖", f"Earning 表中已存在 {symbol} 在 {self.date1} 的记录，是否覆盖？", 
-                                         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-            if reply != QMessageBox.StandardButton.Yes: return
-            self.cur.execute("UPDATE Earning SET price=? WHERE date=? AND name=?", (pct, self.date1, symbol))
-            action = "已覆盖"
-        else:
-            self.cur.execute("INSERT INTO Earning (date, name, price) VALUES (?, ?, ?)", (self.date1, symbol, pct))
-            action = "已写入"
-
-        self.conn.commit()
-        btn.setText(action)
-        btn.setEnabled(False)
-
-    ### 修改：重构 process_date2 以解决布局问题 ###
     def process_date2(self):
         table = self.table2
         
@@ -640,19 +521,20 @@ class MainWindow(QMainWindow):
             if p1 is None or p2 is None or p2 == 0: continue
             pct_new = round((p1 - p2) / p2 * 100, 2)
 
+            # 1. 加入列表并获取索引
+            self.ordered_symbols_on_screen.append(symbol)
+            current_idx = len(self.ordered_symbols_on_screen) - 1
+
             self.cur.execute("SELECT id, price FROM Earning WHERE name=? AND date>=? ORDER BY date DESC LIMIT 1", (symbol, self.three_days_ago))
             rowr = self.cur.fetchone()
             
             auto_written = False
             if rowr:
-                old_pct = float(rowr["price"])
-                record_id = rowr["id"]
+                old_pct, record_id = float(rowr["price"]), rowr["id"]
             else:
                 self.cur.execute("INSERT INTO Earning (date, name, price) VALUES (?, ?, ?)", (self.date1, symbol, pct_new))
                 self.conn.commit()
-                old_pct = pct_new
-                record_id = self.cur.lastrowid
-                auto_written = True
+                old_pct, record_id, auto_written = pct_new, self.cur.lastrowid, True
 
             row = table.rowCount()
             table.insertRow(row)
@@ -661,8 +543,8 @@ class MainWindow(QMainWindow):
             btn_sym = SymbolButton(symbol)
             btn_sym.setObjectName("SymbolButton")
             btn_sym.setProperty("period", period)
-            btn_sym.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-            btn_sym.clicked.connect(partial(self.on_symbol_button_clicked, symbol))
+            # 2. 关键修复：绑定索引
+            btn_sym.clicked.connect(partial(self.on_symbol_button_clicked, symbol, current_idx))
             table.setCellWidget(row, 0, btn_sym)
 
             tags = get_tags_for_symbol(symbol, self.description_data)
@@ -670,27 +552,16 @@ class MainWindow(QMainWindow):
 
             table.setItem(row, 1, QTableWidgetItem(PERIOD_DISPLAY.get(period, period)))
             
-            font = QFont("Arial", 14, QFont.Weight.Bold)
-            item_new = QTableWidgetItem(f"{pct_new}")
-            item_new.setFont(font)
-            color_new = QColor(255, 0, 0) if pct_new < 0 else QColor(255, 215, 0)
-            item_new.setForeground(QBrush(color_new))
-            table.setItem(row, 2, item_new)
+            for i, val in enumerate([pct_new, old_pct]):
+                item = QTableWidgetItem(f"{val}")
+                item.setFont(QFont("Arial", 14, QFont.Weight.Bold))
+                item.setForeground(QBrush(QColor(255, 0, 0) if val < 0 else QColor(255, 215, 0)))
+                table.setItem(row, 2 + i, item)
 
-            item_old = QTableWidgetItem(f"{old_pct}")
-            item_old.setFont(font)
-            color_old = QColor(255, 0, 0) if old_pct < 0 else QColor(255, 215, 0)
-            item_old.setForeground(QBrush(color_old))
-            table.setItem(row, 3, item_old)
-
-            op_btn = QPushButton()
+            op_btn = QPushButton("已写入" if (auto_written or pct_new == old_pct) else "替换")
             op_btn.setObjectName("ReplaceButton")
-            op_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-            if auto_written or pct_new == old_pct:
-                op_btn.setText("已写入" if auto_written else "已写入")
-                op_btn.setEnabled(False)
-            else:
-                op_btn.setText("替换")
+            op_btn.setEnabled(not (auto_written or pct_new == old_pct))
+            if op_btn.isEnabled():
                 op_btn.clicked.connect(partial(self.on_replace_date2, symbol, pct_new, record_id, op_btn))
 
             container = QWidget()
@@ -706,50 +577,125 @@ class MainWindow(QMainWindow):
         for i in range(len(tags_to_add) - 1, -1, -1):
             self._add_tag_row(table, i, tags_to_add[i])
 
-    def on_replace_date2(self, symbol, new_pct, record_id, btn):
-        """替换三天内的旧记录"""
-        reply = QMessageBox.question(
-            self,
-            "确认替换",
-            f"真的要把 {symbol} 最近一次 ({self.three_days_ago} 之后) 的旧百分比替换成 {new_pct}% 吗？",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.Yes
-        )
-        if reply != QMessageBox.StandardButton.Yes: return
-        
-        self.cur.execute(
-            "UPDATE Earning SET price=?, date=? WHERE id=?",
-            (new_pct, self.date1, record_id)
-        )
-        self.conn.commit()
+    # ================= 其余辅助函数 =================
+    def apply_stylesheet(self):
+        qss = """
+        QPushButton#SymbolButton { background-color: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-weight: bold; }
+        QPushButton#SymbolButton[period="BMO"] { background-color: #7C9B67; color: black; }
+        QPushButton#SymbolButton[period="AMC"] { background-color: #3498db; color: black; }
+        QPushButton#SymbolButton[period="TNS"] { background-color: #2c3e50; color: white; }
+        QPushButton#ReplaceButton { background-color: #555555; color: white; border: none; padding: 5px 15px; border-radius: 4px; font-weight: bold; }
+        QPushButton#ReplaceButton:disabled { background-color: #333333; color: #888888; }
+        """
+        self.setStyleSheet(qss)
 
-        # 2. 在表格中找到这个按钮所在的行
-        table = self.table2
-        found_row = None
-        for r in range(table.rowCount()):
-            container = table.cellWidget(r, 4)  # 我们把操作按钮放在第 4 列
-            if container:
-                # container 是一个 QWidget，我们把按钮放在它的 layout[0]
-                btn_in_cell = container.layout().itemAt(0).widget()
-                if btn_in_cell is btn:
-                    found_row = r
-                    break
+    def _add_tag_row(self, table, row, tags):
+        tag_str = ", ".join(tags) if tags else "无标签"
+        insert_row = row + 1
+        table.insertRow(insert_row)
+        table.setSpan(insert_row, 0, 1, table.columnCount())
+        lbl = QLabel(tag_str)
+        lbl.setStyleSheet("color: lightyellow; font-size: 18pt; padding: 4px;")
+        table.setCellWidget(insert_row, 0, lbl)
+        table.setRowHeight(insert_row, 45)
 
-        # 3. 更新“旧百分比”这一列（第 3 列）
-        if found_row is not None:
-            item_old = table.item(found_row, 3)
-            if item_old:
-                # 修改为重新设色：
-                item_old.setText(str(new_pct))
-                np = float(new_pct)
-                color = QColor(255, 0, 0) if np < 0 else QColor(255, 215, 0)
-                item_old.setForeground(QBrush(color))
-            else:
-                table.setItem(found_row, 3, QTableWidgetItem(str(new_pct)))
+    def _get_prev_price(self, table, dt, symbol):
+        self.cur.execute(f"SELECT price FROM `{table}` WHERE name=? AND date<? ORDER BY date DESC LIMIT 1", (symbol, dt))
+        r = self.cur.fetchone()
+        return r["price"] if r else None
+    
+    def _get_price_from_table(self, table, dt, symbol):
+        try:
+            self.cur.execute(f"SELECT price FROM `{table}` WHERE date=? AND name=?", (dt, symbol))
+            r = self.cur.fetchone()
+            return r["price"] if r else None
+        except: return None
 
-        # 4. 禁用按钮并改文字
-        btn.setText("已替换")
+    def auto_write_date1(self, symbol, pct, btn):
+        self.cur.execute("SELECT 1 FROM Earning WHERE date=? AND name=?", (self.date1, symbol))
+        if not self.cur.fetchone():
+            self.cur.execute("INSERT INTO Earning (date, name, price) VALUES (?, ?, ?)", (self.date1, symbol, pct))
+            self.conn.commit()
+        btn.setText("已写入")
         btn.setEnabled(False)
+    
+    def on_replace_date1(self, symbol, pct, btn):
+        self.cur.execute("SELECT id FROM Earning WHERE date=? AND name=?", (self.date1, symbol))
+        if self.cur.fetchone():
+            if QMessageBox.question(self, "确认", f"覆盖 {symbol} {self.date1} 记录？") != QMessageBox.StandardButton.Yes: return
+            self.cur.execute("UPDATE Earning SET price=? WHERE date=? AND name=?", (pct, self.date1, symbol))
+        else:
+            self.cur.execute("INSERT INTO Earning (date, name, price) VALUES (?, ?, ?)", (self.date1, symbol, pct))
+        self.conn.commit()
+        btn.setText("已处理")
+        btn.setEnabled(False)
+
+    def on_replace_date2(self, symbol, new_pct, record_id, btn):
+        if QMessageBox.question(self, "确认", f"替换 {symbol} 旧百分比为 {new_pct}%？") == QMessageBox.StandardButton.Yes:
+            # 1. 更新数据库
+            self.cur.execute("UPDATE Earning SET price=?, date=? WHERE id=?", (new_pct, self.date1, record_id))
+            self.conn.commit()
+            
+            # 2. 更新按钮状态
+            btn.setText("已替换")
+            btn.setEnabled(False)
+
+            # --- 3. 新增：更新界面上的“旧百分比”显示 ---
+            # 我们需要找到这个按钮所在的行
+            # 在 QTableWidget 中，可以通过 indexAt 找到 widget 所在的 modelIndex
+            index = self.table2.indexAt(btn.parent().pos()) 
+            if index.isValid():
+                row = index.row()
+                # 旧百分比在第 3 列（索引为 3，因为列是：Symbol, 时段, 新%, 旧%, 操作...）
+                # 注意：在你的代码中，新%是索引2，旧%是索引3
+                old_pct_item = self.table2.item(row, 3)
+                if old_pct_item:
+                    old_pct_item.setText(f"{new_pct}")
+                    # 也可以顺便更新颜色（可选）
+                    color = QColor(255, 0, 0) if new_pct < 0 else QColor(255, 215, 0)
+                    old_pct_item.setForeground(QBrush(color))
+
+    def show_table_context_menu(self, pos):
+        table = self.sender()
+        row = table.rowAt(pos.y())
+        if row == -1: return
+        
+        # 循环向上查找，直到找到 SymbolButton 为止（防止点在 Tag 行上）
+        widget = None
+        for r in range(row, -1, -1):
+            widget = table.cellWidget(r, 0)
+            if isinstance(widget, SymbolButton):
+                break
+        
+        if not isinstance(widget, SymbolButton): return
+        symbol = widget.text()
+
+        menu = QMenu()
+        move_menu = menu.addMenu("移动")
+        for group in ["Must", "Today", "Short"]:
+            act = QAction(group, self)
+            act.triggered.connect(partial(self.copy_symbol_to_group, symbol, group))
+            move_menu.addAction(act)
+        
+        menu.addSeparator()
+        for label, stype in [("新增事件","event_input"), ("编辑 Tags","tags"), ("编辑事件","event_editor"), ("Kimi检索","kimi"), ("富途搜索","futu"), ("找相似","similar")]:
+            menu.addAction(label, partial(execute_external_script, stype, symbol))
+        menu.exec(QCursor.pos())
+
+    def copy_symbol_to_group(self, symbol, group):
+        cfg = self.panel_config
+        if group not in cfg: cfg[group] = {}
+        if isinstance(cfg[group], dict): cfg[group][symbol] = ""
+        else: cfg[group].append(symbol)
+        with open(self.panel_config_path, 'w', encoding='utf-8') as f:
+            json.dump(cfg, f, ensure_ascii=False, indent=4)
+        QMessageBox.information(self, "成功", f"已复制 {symbol} 到 {group}")
+
+    def center_window(self):
+        qr = self.frameGeometry()
+        cp = QApplication.primaryScreen().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
 
 def main():
     app = QApplication(sys.argv)
