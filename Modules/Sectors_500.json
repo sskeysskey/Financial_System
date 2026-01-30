@@ -16,7 +16,8 @@
         "WPM",
         "AU",
         "FNV",
-        "GFI"
+        "GFI",
+        "CTVA"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -78,7 +79,8 @@
         "MO",
         "BTI",
         "CL",
-        "MNST"
+        "MNST",
+        "DEO"
     ],
     "Energy": [
         "XOM",
@@ -205,7 +207,8 @@
         "BDX",
         "IDXX",
         "TAK",
-        "ARGX"
+        "ARGX",
+        "CAH"
     ],
     "Industrials": [
         "GE",
@@ -245,10 +248,10 @@
         "VRT",
         "PCAR",
         "URI",
-        "FAST",
         "AME",
         "GWW",
-        "FERG"
+        "FERG",
+        "CARR"
     ],
     "Real_Estate": [
         "PLD",
@@ -312,7 +315,6 @@
         "NXPI",
         "SNDK",
         "MPWR",
-        "WDAY",
         "CRWV"
     ],
     "Utilities": [
