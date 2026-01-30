@@ -42,6 +42,7 @@ TIMESTAMP_BACKUP_SOURCES = [
     os.path.join(USER_HOME, 'Coding/News/CompareETFs.txt'),
     os.path.join(USER_HOME, 'Coding/News/10Y_newhigh_stock.txt'), # 触发 Intro_Symbol
     os.path.join(USER_HOME, 'Coding/News/Options_Change.csv'),
+    os.path.join(USER_HOME, 'Coding/Financial_System/Modules/Earning_History.json'),
 ]
 
 # 定义触发 Intro_Symbol 更新的特定文件集合

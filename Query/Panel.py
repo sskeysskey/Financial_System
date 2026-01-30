@@ -42,7 +42,7 @@ DISPLAY_LIMITS = {
 }
 
 categories = [
-    ['Must', 'Today', 'Short_backup', 'Short_W_backup', 'PE_Volume_backup',
+    ['Must', 'Today', 'Short_backup', 'Short_W_backup', 'PE_Volume_backup', 'PE_Volume_up_backup',
      'PE_Deep_backup', 'PE_Deeper_backup', 'PE_W_backup', 'OverSell_W_backup'],
     ['PE_valid_backup', 'PE_invalid_backup', 'Strategy12_backup', 'Strategy34_backup'],
     ['Basic_Materials', 'Consumer_Cyclical', 'Real_Estate', 'Technology', 'Energy', 'Industrials',
@@ -780,6 +780,7 @@ class MainWindow(QMainWindow):
             "PE_Deep_backup": "PE_Deep",
             "PE_Deeper_backup": "PE_Deeper",
             "PE_Volume_backup": "PE_Volume",
+            "PE_Volume_up_backup": "PE_Volume_up",
             "OverSell_W_backup": "OverSell_W",
             
             # 兼容不带 _backup 后缀的情况 (如果有)
@@ -787,6 +788,8 @@ class MainWindow(QMainWindow):
             "PE_invalid": "PE_invalid",
             "PE_W": "PE_W",
             "PE_Deep": "PE_Deep",
+            "PE_Volume": "PE_Volume",
+            "PE_Volume_up": "PE_Volume_up",
             "OverSell_W": "OverSell_W"
         }
 
@@ -1091,13 +1094,13 @@ class MainWindow(QMainWindow):
             # 策略分组 (原名)
             'Must','Today','Short','Short_W',
             'PE_valid','PE_invalid','Strategy12','Strategy34',
-            'PE_Deep','OverSell_W','PE_W','PE_Deeper','PE_Volume',
+            'PE_Deep','OverSell_W','PE_W','PE_Deeper','PE_Volume', 'PE_Volume_up',
             
             # 策略分组 (Backup 版本 - 实际上 UI 中正在使用的 key)
             'PE_valid_backup', 'PE_invalid_backup', 
             'Strategy12_backup', 'Strategy34_backup',
             'PE_Deep_backup', 'PE_W_backup', 'PE_Deeper_backup',
-            'OverSell_W_backup', 'PE_W_backup', 'PE_Volume_backup',
+            'OverSell_W_backup', 'PE_W_backup', 'PE_Volume_backup', 'PE_Volume_up_backup',
             'Short_backup', 'Short_W_backup'
         }
 
@@ -1113,7 +1116,7 @@ class MainWindow(QMainWindow):
             # combined_groups
             "Must", "Today", "Short_backup", "Short_W_backup",
             # Volume Sector
-            "PE_Volume_backup",
+            "PE_Volume_backup", "PE_Volume_up_backup",
         }
 
         for index, category_group in enumerate(categories):
