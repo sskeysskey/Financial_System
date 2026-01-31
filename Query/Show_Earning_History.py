@@ -11,7 +11,7 @@ from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QPushButton, QScrollArea, QLabel, 
                              QTabWidget, QFrame, QMenu, QMessageBox)
-from PyQt6.QtGui import QCursor, QAction, QColor
+from PyQt6.QtGui import QCursor, QAction, QColor, QKeyEvent
 
 # --- 路径配置 (根据你的环境) ---
 USER_HOME = os.path.expanduser("~")
@@ -302,10 +302,20 @@ class EarningHistoryViewer(QMainWindow):
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
 
-        # 遍历 JSON 的顶层 Key (组名)
-        # 假设 earning_data 结构: {"PE_W": {"2025-12-22": [...]}, ...}
-        for group_name, dates_dict in self.earning_data.items():
+        # 获取所有组名并排序（保证顺序一致）
+        sorted_groups = sorted(self.earning_data.keys())
+
+        # 遍历添加 Tab
+        for group_name in sorted_groups:
+            dates_dict = self.earning_data[group_name]
             self.create_group_tab(group_name, dates_dict)
+        
+        # 设置默认选中的 Tab 为 "PE_Volume_up"
+        default_tab_name = "PE_Volume_up"
+        for i in range(self.tabs.count()):
+            if self.tabs.tabText(i) == default_tab_name:
+                self.tabs.setCurrentIndex(i)
+                break
 
     def create_group_tab(self, group_name, dates_dict):
         tab_page = QWidget()
@@ -336,6 +346,13 @@ class EarningHistoryViewer(QMainWindow):
         tab_layout.addWidget(scroll)
         
         self.tabs.addTab(tab_page, group_name)
+
+    def keyPressEvent(self, event: QKeyEvent):
+        """监听按键事件，按下 ESC 关闭窗口"""
+        if event.key() == Qt.Key.Key_Escape:
+            self.close()
+        else:
+            super().keyPressEvent(event)
 
     def apply_stylesheet(self):
         self.setStyleSheet("""

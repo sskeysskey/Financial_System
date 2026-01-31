@@ -153,13 +153,13 @@ class MainWindow(QMainWindow):
 
         # 表格配置
         self.table2 = QTableWidget(0, 6)
-        self.table2.setHorizontalHeaderLabels(["Symbol", "时段", "新百分比%", "旧百分比%", "操作", "—————————————————————"])
+        self.table2.setHorizontalHeaderLabels(["Symbol", "时段", "新百分比%", "旧百分比%", "操作", "———————————————————"])
         
         self.table1 = QTableWidget(0, 5)
-        self.table1.setHorizontalHeaderLabels(["Symbol", "时段", "百分比(%)", "操作", "———————————————————————————"])
+        self.table1.setHorizontalHeaderLabels(["Symbol", "时段", "百分比(%)", "操作", "————————————————————————"])
         
         self.table_today = QTableWidget(0, 3)
-        self.table_today.setHorizontalHeaderLabels(["Symbol", "时段", "——————————————————————————————"])
+        self.table_today.setHorizontalHeaderLabels(["Symbol", "时段", "————————————————————————————"])
 
         for t in [self.table2, self.table1, self.table_today]:
             t.verticalHeader().setVisible(False)

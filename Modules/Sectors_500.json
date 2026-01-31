@@ -13,11 +13,7 @@
         "FCX",
         "B",
         "VALE",
-        "WPM",
-        "AU",
-        "FNV",
-        "GFI",
-        "CTVA"
+        "WPM"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -31,7 +27,6 @@
         "SPOT",
         "NTES",
         "AMX",
-        "RBLX",
         "APP",
         "WBD",
         "EA",
@@ -314,8 +309,7 @@
         "WDC",
         "NXPI",
         "SNDK",
-        "MPWR",
-        "CRWV"
+        "MPWR"
     ],
     "Utilities": [
         "NEE",
