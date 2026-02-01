@@ -29,6 +29,7 @@ COMPARE_DATA_PATH = os.path.join(HOME, 'Coding/News/backup/Compare_All.txt')
 PANEL_CONFIG_PATH = os.path.join(HOME, 'Coding/Financial_System/Modules/Sectors_panel.json')
 
 PERIOD_DISPLAY = {"BMO": "↩︎", "AMC": "↪︎", "TNS": "？"}
+PERIOD_CN_MAP = {"BMO": "前", "AMC": "后", "TNS": "未"} # 用于标题显示的中文映射
 
 def get_tags_for_symbol(symbol, desc_data):
     for key in ["stocks", "etfs"]:
@@ -83,6 +84,11 @@ def fetch_mnspp_data_from_db(db_path, symbol):
     return result if result else ("N/A", None, "N/A", "--")
 
 class SymbolButton(QPushButton):
+    def __init__(self, text):
+        super().__init__(text)
+        # --- 修改：设置鼠标悬停时为手型 ---
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             mods = event.modifiers()
@@ -102,6 +108,11 @@ class MainWindow(QMainWindow):
         # 导航变量
         self.ordered_symbols_on_screen = []
         self.current_symbol_index = -1
+        
+        # --- 新增：用于记录每个分栏的数量 ---
+        self.count_date2 = 0  # 前天
+        self.count_date1 = 0  # 昨天
+        self.count_today = 0  # 今天
 
         today = date.today()
         self.today_str = today.strftime("%Y-%m-%d")
@@ -153,7 +164,7 @@ class MainWindow(QMainWindow):
 
         # 表格配置
         self.table2 = QTableWidget(0, 6)
-        self.table2.setHorizontalHeaderLabels(["Symbol", "时段", "新百分比%", "旧百分比%", "操作", "———————————————————"])
+        self.table2.setHorizontalHeaderLabels(["Symbol", "时段", "新百分比%", "旧百分比%", "操作", "—————————————————"])
         
         self.table1 = QTableWidget(0, 5)
         self.table1.setHorizontalHeaderLabels(["Symbol", "时段", "百分比(%)", "操作", "————————————————————————"])
@@ -182,6 +193,11 @@ class MainWindow(QMainWindow):
 
     def refresh_data(self):
         self.ordered_symbols_on_screen.clear()
+        # --- 重置计数器 ---
+        self.count_date2 = 0
+        self.count_date1 = 0
+        self.count_today = 0
+        
         self.table2.setRowCount(0)
         self.table1.setRowCount(0)
         self.table_today.setRowCount(0)
@@ -217,8 +233,43 @@ class MainWindow(QMainWindow):
         compare_val = self.compare_data.get(symbol, "N/A")
         shares, mktcap, pe, pb = fetch_mnspp_data_from_db(DB_PATH, symbol)
         
-        total = len(self.ordered_symbols_on_screen)
-        title = f"{symbol}  ({self.current_symbol_index + 1}/{total})"
+        # --- 标题逻辑计算 (更新部分) ---
+        total_global = len(self.ordered_symbols_on_screen)
+        idx = self.current_symbol_index
+        
+        # 1. 确定属于哪个日期组，并获取该组的所有 Symbol 列表
+        if idx < self.count_date2:
+            date_category = "前天"
+            group_count = self.count_date2
+            # 切片取出该组的 Symbol 列表
+            current_group_symbols = self.ordered_symbols_on_screen[0 : self.count_date2]
+        elif idx < (self.count_date2 + self.count_date1):
+            date_category = "昨天"
+            group_count = self.count_date1
+            current_group_symbols = self.ordered_symbols_on_screen[self.count_date2 : self.count_date2 + self.count_date1]
+        else:
+            date_category = "今天"
+            group_count = self.count_today
+            current_group_symbols = self.ordered_symbols_on_screen[self.count_date2 + self.count_date1 : ]
+
+        # 2. 获取当前 Symbol 的时段 (BMO/AMC)
+        period_code = self.symbol_to_period.get(symbol, "TNS")
+        period_cn = PERIOD_CN_MAP.get(period_code, "?")
+
+        # 3. 计算在当前日期组内，同属该时段的 Symbol 的位置和总数
+        # 筛选出同组内所有时段相同的 Symbol
+        same_period_symbols = [s for s in current_group_symbols if self.symbol_to_period.get(s) == period_code]
+        
+        period_total = len(same_period_symbols)
+        try:
+            # 找到当前 Symbol 在这个细分列表中的位置 (1-based)
+            local_period_idx = same_period_symbols.index(symbol) + 1
+        except ValueError:
+            local_period_idx = 0
+
+        # 4. 拼接标题: "Symbol (日期/时段 时段位置/时段总数/日期组总数/全局总数)"
+        # 例如: AAPL (前天/后 1/12/23/34)
+        title = f"{date_category}/{period_cn}     {local_period_idx}/{period_total}/{group_count}/{total_global}"
 
         try:
             plot_financial_data(
@@ -257,6 +308,7 @@ class MainWindow(QMainWindow):
         for symbol, period in self.symbols_by_date[self.today_str]:
             if period != "BMO": continue
             self.ordered_symbols_on_screen.append(symbol)
+            self.count_today += 1  # 计数增加
             idx = len(self.ordered_symbols_on_screen) - 1
             
             row = table.rowCount()
@@ -284,6 +336,7 @@ class MainWindow(QMainWindow):
             pct = round((p1 - p2) / p2 * 100, 2)
 
             self.ordered_symbols_on_screen.append(symbol)
+            self.count_date1 += 1 # 计数增加
             idx = len(self.ordered_symbols_on_screen) - 1
             row = table.rowCount()
             table.insertRow(row)
@@ -301,6 +354,8 @@ class MainWindow(QMainWindow):
 
             rep_btn = QPushButton("写入")
             rep_btn.setObjectName("ReplaceButton")
+            # --- 修改：设置鼠标悬停时为手型 ---
+            rep_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             rep_btn.clicked.connect(partial(self.on_replace_date1, symbol, pct, rep_btn))
             table.setCellWidget(row, 3, rep_btn)
             
@@ -330,6 +385,7 @@ class MainWindow(QMainWindow):
                 old_pct, rid, auto = pct_new, self.cur.lastrowid, True
 
             self.ordered_symbols_on_screen.append(symbol)
+            self.count_date2 += 1 # 计数增加
             idx = len(self.ordered_symbols_on_screen) - 1
             row = table.rowCount()
             table.insertRow(row)
@@ -348,6 +404,8 @@ class MainWindow(QMainWindow):
 
             op_btn = QPushButton("已写入" if (auto or pct_new == old_pct) else "替换")
             op_btn.setObjectName("ReplaceButton")
+            # --- 修改：设置鼠标悬停时为手型 ---
+            op_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             op_btn.setEnabled(not (auto or pct_new == old_pct))
             if op_btn.isEnabled(): op_btn.clicked.connect(partial(self.on_replace_date2, symbol, pct_new, rid, op_btn))
             table.setCellWidget(row, 4, op_btn)

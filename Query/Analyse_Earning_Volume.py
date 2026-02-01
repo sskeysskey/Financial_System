@@ -14,8 +14,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = "" 
 TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "PGR"
-# TARGET_DATE = "2025-11-03"
+# SYMBOL_TO_TRACE = "IESC"
+# TARGET_DATE = "2026-01-09"
 
 # 3. 日志路径
 LOG_FILE_PATH = os.path.join(BASE_PATH, "Downloads", "PE_Volume_trace_log.txt")
@@ -522,7 +522,25 @@ def run_pe_volume_logic(log_detail):
         SYMBOL_TO_TRACE,
         log_detail
     )
-    final_pe_volume_up = sorted(list(set(raw_pe_volume_up)))
+    # final_pe_volume_up = sorted(list(set(raw_pe_volume_up)))
+
+    # === 新增逻辑：去重处理 ，如果要恢复代码，只需删除下面恢复上面即可===
+    # 如果 PE_Volume 已经有了，PE_Volume_up 就不再输出
+    pe_volume_set = set(final_pe_volume)
+    unique_pe_volume_up = set(raw_pe_volume_up)
+    
+    filtered_pe_volume_up = []
+    
+    log_detail("\n--- 开始执行交叉去重 (PE_Volume 优先) ---")
+    for sym in sorted(list(unique_pe_volume_up)):
+        if sym in pe_volume_set:
+            log_detail(f"    [去重] Symbol {sym} 已存在于 PE_Volume，从 PE_Volume_up 中移除。")
+        else:
+            filtered_pe_volume_up.append(sym)
+            
+    final_pe_volume_up = sorted(filtered_pe_volume_up)
+    log_detail(f"去重后 PE_Volume_up 剩余: {len(final_pe_volume_up)} 个。")
+    # ===========================
 
     # 4. 构建备注 (Note)
     def build_symbol_note_map(symbols):
