@@ -135,7 +135,6 @@
         "SAN",
         "AON",
         "BN",
-        "PYPL",
         "PNC",
         "USB",
         "APO",
@@ -222,7 +221,6 @@
         "TT",
         "CTAS",
         "CP",
-        "TRI",
         "TDG",
         "PH",
         "NOC",
@@ -242,11 +240,11 @@
         "CMI",
         "VRT",
         "PCAR",
-        "URI",
         "AME",
         "GWW",
         "FERG",
-        "CARR"
+        "CARR",
+        "FAST"
     ],
     "Real_Estate": [
         "PLD",

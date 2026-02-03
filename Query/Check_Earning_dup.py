@@ -5,7 +5,7 @@ import sys
 from collections import defaultdict, Counter
 # 新增导入：用于处理日期和时间
 from datetime import datetime, timedelta
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QFrame, QSizePolicy, QTextEdit, QCheckBox
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QFrame, QSizePolicy, QTextEdit
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont
 import send2trash  # 新增导入：用于安全删除到回收站
@@ -188,7 +188,7 @@ def remove_specific_lines_from_file(filepath: str, lines_content_to_remove: list
 
 
 def insert_line_into_main_file(line_to_insert: str, all_main_files: list[str]):
-    """将指定行插入到日期匹配的第一个主文件中"""
+    """将指定行插入到日期匹配的第一个主文件中 (增加防重复检查)"""
     try:
         # 从待插入行中提取日期
         # 即使行中包含 #BACKUP_DUP，此逻辑也能正常工作，因为它会取第三部分并分割
@@ -198,6 +198,14 @@ def insert_line_into_main_file(line_to_insert: str, all_main_files: list[str]):
             return
         # 确保我们正确提取日期，即使有其他信息
         date_to_match = parts[2].strip().split(' ')[0]
+
+        # --- 新增逻辑开始: 定义标准化函数用于比较 ---
+        def normalize(s):
+            # 去除两端空格，并去除字符串内部所有空格，确保 "A : B" 和 "A:B" 被视为相同
+            return "".join(s.split())
+        
+        target_normalized = normalize(line_to_insert)
+        # --- 新增逻辑结束 ---
 
         found_insertion_spot = False
         for main_file_path in all_main_files:
@@ -209,6 +217,19 @@ def insert_line_into_main_file(line_to_insert: str, all_main_files: list[str]):
                 with open(main_file_path, 'r', encoding='latin-1') as f:
                     lines = f.readlines()
             
+            # --- 新增逻辑开始: 检查是否存在 ---
+            # 检查当前文件中是否已经包含实质相同的行
+            already_exists = False
+            for line in lines:
+                if normalize(line) == target_normalized:
+                    already_exists = True
+                    break
+            
+            if already_exists:
+                print(f"  - 提示: 文件 '{os.path.basename(main_file_path)}' 中已存在该行，跳过插入。")
+                return # 直接结束函数，防止产生重复
+            # --- 新增逻辑结束 ---
+
             new_lines = []
             inserted = False
             for i, line in enumerate(lines):
