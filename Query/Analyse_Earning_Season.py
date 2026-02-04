@@ -591,7 +591,7 @@ def run_strategy_4(data, cursor, symbol_sector_map, symbol_to_trace, log_detail)
 
     # 步骤2: 日期窗口
     window_start = data['latest_er_date'] + datetime.timedelta(days=6)
-    window_end = data['latest_er_date'] + datetime.timedelta(days=26)
+    window_end = data['latest_er_date'] + datetime.timedelta(days=77)
     is_in_window = (window_start <= data['latest_date'] <= window_end)
     if is_tracing:
         log_detail(f"  - 时间窗口: {window_start} <= 最新交易日({data['latest_date']}) <= {window_end}")

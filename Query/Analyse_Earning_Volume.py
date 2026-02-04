@@ -59,7 +59,7 @@ CONFIG = {
     # ========== 策略2 (PE_Volume_up) 参数 ==========
     # 修改点：根据新需求，放量检查回溯月份改为 3 个月
     "COND_UP_HISTORY_LOOKBACK_DAYS": 3,  # 历史记录回溯天数 (T, T-1, T-2)
-    "COND_UP_VOL_RANK_MONTHS": 3,        # 放量检查回溯月份 (改为3个月)
+    "COND_UP_VOL_RANK_MONTHS": 1,        # 放量检查回溯月份 (改为3个月)
     "COND_UP_VOL_RANK_THRESHOLD": 3,     # 放量检查前 N 名 (前3名)
 }
 

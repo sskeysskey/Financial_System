@@ -13,7 +13,9 @@
         "FCX",
         "B",
         "VALE",
-        "WPM"
+        "WPM",
+        "CTVA",
+        "AU"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -75,7 +77,8 @@
         "BTI",
         "CL",
         "MNST",
-        "DEO"
+        "DEO",
+        "TGT"
     ],
     "Energy": [
         "XOM",
@@ -155,7 +158,6 @@
         "MFC",
         "DB",
         "TFC",
-        "COIN",
         "HOOD",
         "IBKR",
         "BAM",
@@ -165,7 +167,8 @@
         "MET",
         "BRK-B",
         "MRSH",
-        "BSBR"
+        "BSBR",
+        "FITB"
     ],
     "Healthcare": [
         "LLY",
@@ -244,7 +247,8 @@
         "GWW",
         "FERG",
         "CARR",
-        "FAST"
+        "FAST",
+        "URI"
     ],
     "Real_Estate": [
         "PLD",
@@ -253,8 +257,7 @@
         "WELL",
         "SPG",
         "DLR",
-        "O",
-        "CBRE"
+        "O"
     ],
     "Technology": [
         "AAPL",
