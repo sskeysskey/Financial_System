@@ -424,7 +424,9 @@
         "RSPU",
         "BDRY",
         "CRAK",
-        "MOAT"
+        "MOAT",
+        "VLUE",
+        "IGE"
     ],
     "Basic_Materials": [
         "LIN",

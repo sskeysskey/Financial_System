@@ -1519,10 +1519,52 @@ def load_latest_earnings_scanner(db_path):
         print(f"读取 Earning 表失败 (可能表不存在): {e}")
     return earnings_map
 
+# ==============================================================================
+# 修改后的 PART 3: Volume_High_Scanner 逻辑
+# ==============================================================================
+
+def load_all_earnings_dates_scanner(db_path, earnings_files):
+    """
+    综合从数据库和文本文件中获取财报日期。
+    返回字典: {'AAPL': '2024-08-01', 'PDD': '2024-08-26', ...}
+    """
+    earnings_map = {}
+    
+    # 1. 从数据库 Earning 表读取
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        query = "SELECT name, MAX(date) FROM Earning GROUP BY name"
+        cursor.execute(query)
+        for name, date_str in cursor.fetchall():
+            if name and date_str:
+                earnings_map[name] = date_str
+        conn.close()
+    except Exception as e:
+        print(f"读取数据库 Earning 表失败: {e}")
+
+    # 2. 从文本文件读取 (补充数据库可能未同步的最新财报)
+    # 文本格式通常为 Symbol:Type:YYYY-MM-DD
+    for filepath in earnings_files:
+        if os.path.exists(filepath):
+            try:
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        parts = [p.strip() for p in line.split(':')]
+                        if len(parts) >= 3:
+                            symbol = parts[0]
+                            date_str = parts[-1] # 假设最后一部分是 YYYY-MM-DD
+                            # 如果文本里的日期比数据库新，或者数据库没记录，则采用
+                            earnings_map[symbol] = date_str
+            except Exception as e:
+                print(f"读取财报文件 {filepath} 失败: {e}")
+                
+    return earnings_map
+
 def run_volume_high_scanner():
-    """Volume Scanner 的主入口"""
+    """Volume Scanner: 分组输出，并对正增长股票放宽成交量限制"""
     print("\n" + "="*50)
-    print("STEP 3: 执行 Volume_High_Scanner 逻辑")
+    print("STEP 3: 执行 Volume_High_Scanner 逻辑 (分组模式)")
     print("="*50)
     
     # 配置路径
@@ -1531,6 +1573,9 @@ def run_volume_high_scanner():
     COMPARE_ALL_PATH = os.path.join(BASE_CODING_DIR, 'News/backup/Compare_All.txt')
     DESCRIPTION_PATH = os.path.join(BASE_CODING_DIR, 'Financial_System/Modules/description.json')
     BLACKLIST_PATH = os.path.join(BASE_CODING_DIR, 'Financial_System/Modules/blacklist.json')
+    
+    # 财报文件列表 (引用 ConfigCompare 中的定义)
+    EARNINGS_FILES = ConfigCompare.EARNINGS_FILES
 
     OUTPUT_FILENAME = f'{LOOKBACK_YEARS}Y_volume_high.txt'
     OUTPUT_FILE = os.path.join(BASE_CODING_DIR, f'News/{OUTPUT_FILENAME}')
@@ -1541,20 +1586,18 @@ def run_volume_high_scanner():
         "Industrials", "Real_Estate", "Technology", "Utilities"
     ]
 
-    print(f"--- 开始筛选 {LOOKBACK_YEARS} 年内成交量创新高的股票 ---")
-    print(f"--- 过滤条件: 若今日为财报发布日，则跳过 ---")
-    
     # 1. 加载基础数据
     sectors_data = load_json_scanner(SECTORS_ALL_PATH)
     compare_map = load_compare_info_scanner(COMPARE_ALL_PATH)
     tags_map = load_tags_scanner(DESCRIPTION_PATH)
     blacklist = get_blacklist_scanner(BLACKLIST_PATH)
     
-    # 加载最新财报日期
-    latest_earnings_map = load_latest_earnings_scanner(DB_PATH)
+    # 加载所有财报日期 (数据库 + 文本)
+    all_earnings = load_all_earnings_dates_scanner(DB_PATH, EARNINGS_FILES)
     
-    results = []
-    skipped_count = 0
+    pos_results = [] # 价格上涨或持平的
+    neg_results = [] # 价格下跌的
+    skipped_by_earnings = 0
     
     # 2. 连接数据库
     try:
@@ -1568,93 +1611,96 @@ def run_volume_high_scanner():
     for table_name in TARGET_SECTORS:
         if table_name not in sectors_data:
             continue
-            
         symbols = sectors_data[table_name]
-        print(f"正在扫描板块: {table_name} ({len(symbols)} 个代码)...")
+        print(f"正在扫描: {table_name}...")
         
         for name in symbols:
             if name in blacklist:
                 continue
                 
             try:
-                # A. 获取最新一天的成交量和日期
-                query_latest = f"SELECT date, volume FROM {table_name} WHERE name = ? ORDER BY date DESC LIMIT 1"
-                cursor.execute(query_latest, (name,))
-                latest_row = cursor.fetchone()
+                # A. 获取最近 2 天的价格和成交量
+                query_recent = f"SELECT date, price, volume FROM {table_name} WHERE name = ? ORDER BY date DESC LIMIT 2"
+                cursor.execute(query_recent, (name,))
+                rows = cursor.fetchall()
                 
-                if not latest_row or not latest_row[1]:
-                    continue
-                    
-                latest_date_str, latest_volume = latest_row
-                latest_volume = float(latest_volume)
+                if len(rows) < 2: continue # 数据不足以对比价格
                 
-                # 如果成交量太小（例如停牌或极不活跃），可以过滤，这里设为0
-                if latest_volume <= 0:
+                latest_date_str, latest_price, latest_volume = rows[0]
+                prev_price = rows[1][1]
+                
+                if latest_volume is None or latest_volume <= 0: continue
+
+                # B. 财报日过滤
+                if name in all_earnings and latest_date_str == all_earnings[name]:
+                    skipped_by_earnings += 1
                     continue
 
-                # --- 过滤逻辑：检查是否撞上财报日 ---
-                if name in latest_earnings_map:
-                    if latest_date_str == latest_earnings_map[name]:
-                        skipped_count += 1
-                        continue
-                # ---------------------------------------
+                # C. 计算回溯日期
+                latest_date_obj = datetime.strptime(latest_date_str, "%Y-%m-%d")
+                start_date = (latest_date_obj - relativedelta(years=int(LOOKBACK_YEARS), 
+                                                            months=int((LOOKBACK_YEARS % 1) * 12))).strftime("%Y-%m-%d")
 
-                # B. 计算 N 年前的日期
-                try:
-                    latest_date = datetime.strptime(latest_date_str, "%Y-%m-%d")
-                    # 支持小数年份
-                    start_date = latest_date - relativedelta(years=int(LOOKBACK_YEARS), months=int((LOOKBACK_YEARS % 1) * 12))
-                    start_date_str = start_date.strftime("%Y-%m-%d")
-                except ValueError:
-                    continue
+                # D. 获取过去 N 年的成交量排行（不含当天）
+                # 我们取前两名，用于判断
+                query_hist = f"""
+                    SELECT volume FROM {table_name} 
+                    WHERE name = ? AND date >= ? AND date < ? 
+                    ORDER BY volume DESC LIMIT 2
+                """
+                cursor.execute(query_hist, (name, start_date, latest_date_str))
+                hist_vols = [r[0] for r in cursor.fetchall() if r[0] is not None]
                 
-                # C. 查询过去 N 年内的最大成交量
-                query_max = f"SELECT MAX(volume) FROM {table_name} WHERE name = ? AND date >= ? AND date <= ?"
-                cursor.execute(query_max, (name, start_date_str, latest_date_str))
-                max_vol_row = cursor.fetchone()
+                if not hist_vols: continue # 历史无成交量数据
                 
-                if max_vol_row and max_vol_row[0] is not None:
-                    max_volume_period = float(max_vol_row[0])
+                max_1 = float(hist_vols[0]) # 历史第一名
+                max_2 = float(hist_vols[1]) if len(hist_vols) > 1 else max_1 # 历史第二名（若只有一天数据则设为与第一名相同）
+
+                # E. 判定逻辑
+                is_pos = (latest_price >= prev_price)
+                qualified = False
+                
+                if is_pos:
+                    # 正增长：成交量是全期前两名 (只要大于等于历史第二名即可)
+                    if latest_volume >= max_2:
+                        qualified = True
+                else:
+                    # 负增长：成交量是全期第一名 (必须大于等于历史第一名)
+                    if latest_volume >= max_1:
+                        qualified = True
+
+                if qualified:
+                    vol_display = format_volume_scanner(latest_volume)
+                    info_str = compare_map.get(name, "")
+                    tags_str = tags_map.get(name, "")
+                    line = f"{table_name} {name} {info_str} {vol_display} {tags_str}".replace("  ", " ").strip()
                     
-                    # D. 判断是否新高
-                    if latest_volume >= max_volume_period:
-                        # 组装数据
-                        vol_str = format_volume_scanner(latest_volume)
-                        info_str = compare_map.get(name, "")
-                        tags_str = tags_map.get(name, "")
+                    if is_pos:
+                        pos_results.append(line)
+                    else:
+                        neg_results.append(line)
                         
-                        line_parts = [table_name, name]
-                        if info_str:
-                            line_parts.append(info_str)
-                        
-                        line_parts.append(vol_str)
-                        
-                        if tags_str:
-                            line_parts.append(tags_str)
-                            
-                        results.append(" ".join(line_parts))
-                        
-            except Exception as e:
+            except Exception:
                 continue
 
     conn.close()
 
     # 4. 写入文件
-    if results:
-        try:
-            os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
-            with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
-                f.write('\n'.join(results))
-            print("\n" + "="*50)
-            print(f"成功！已生成文件: {OUTPUT_FILE}")
-            print(f"筛选条件: 过去 {LOOKBACK_YEARS} 年内成交量新高 (已剔除财报日)")
-            print(f"因财报日剔除数量: {skipped_count}")
-            print(f"最终筛选出: {len(results)} 只股票")
-            print("="*50)
-        except Exception as e:
-            print(f"写入文件失败: {e}")
-    else:
-        print(f"未找到符合条件的股票 (因财报日剔除: {skipped_count})。")
+    try:
+        os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
+        with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
+            if pos_results:
+                f.write("========== PRICE UP / FLAT (Top 2 Vol) ==========\n")
+                f.write('\n'.join(pos_results) + '\n\n')
+            
+            if neg_results:
+                f.write("========== PRICE DOWN (Top 1 Vol) ==========\n")
+                f.write('\n'.join(neg_results) + '\n')
+                
+        print(f"\n成功生成: {OUTPUT_FILENAME}")
+        print(f"正增长: {len(pos_results)} 只 | 负增长: {len(neg_results)} 只 | 因财报跳过: {skipped_by_earnings}")
+    except Exception as e:
+        print(f"写入文件失败: {e}")
 
 # ==============================================================================
 # 主入口
@@ -1665,10 +1711,10 @@ if __name__ == "__main__":
     print("************************************************************************")
 
     # 执行第一部分 (Compare)
-    execute_compare_process()
+    # execute_compare_process()
 
     # 执行第二部分 (Analyse)
-    execute_analyse_process()
+    # execute_analyse_process()
     
     # 执行第三部分 (Volume Scanner)
     run_volume_high_scanner()

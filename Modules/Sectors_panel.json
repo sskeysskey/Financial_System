@@ -19,17 +19,14 @@
         "TTAN": "",
         "MSTR": "",
         "NTSK": "",
-        "UBER": "",
         "ADP": "",
         "SONY": "",
         "SHOP": "",
         "DOX": "",
-        "PCTY": "",
         "FRSH": "",
         "GTM": "",
         "CCC": "",
         "NVDA": "",
-        "AVGO": "",
         "PLTR": "",
         "NET": "",
         "SRAD": "",
@@ -68,10 +65,8 @@
         "KLAR": ""
     },
     "Consumer_Cyclical": {
-        "SE": "",
         "HRB": "",
         "JD": "",
-        "MMYT": "",
         "TSLA": "",
         "AMZN": "",
         "BKNG": "",
@@ -92,7 +87,6 @@
         "SFM": ""
     },
     "Industrials": {
-        "RELX": "",
         "BETA": "",
         "AXON": "",
         "VRSK": "",
@@ -126,10 +120,8 @@
         "GLXY": ""
     },
     "Healthcare": {
-        "WAY": "",
         "VEEV": "",
         "UNH": "",
-        "BSX": "",
         "CAI": "",
         "HIMS": "",
         "NVO": "",
@@ -218,6 +210,7 @@
     },
     "Options_zero": {},
     "Must": {
+        "VLUE": "",
         "PATH": "",
         "BXSL": "",
         "LRCX": "",
