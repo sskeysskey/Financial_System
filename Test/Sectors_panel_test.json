@@ -73,6 +73,18 @@
     "Short": {
         "BCS": ""
     },
+    "PE_Volume": {
+        "BCS": ""
+    },
+    "PE_Volume_backup": {
+        "BCS": ""
+    },
+    "PE_Volume_up": {
+        "BCS": ""
+    },
+    "PE_Volume_up_backup": {
+        "BCS": ""
+    },
     "Short_W": {
         "LTM": ""
     },
@@ -100,6 +112,14 @@
         "STRL": "STRL15热"
     },
     "PE_Deep_backup": {},
+    "PE_Deeper": {
+        "AMD": "AMD15热",
+        "ARM": "",
+        "RBLX": "",
+        "SMCI": "SMCI15热",
+        "STRL": "STRL15热"
+    },
+    "PE_Deeper_backup": {},
     "PE_W": {
         "ARGX": "",
         "LYFT": "",

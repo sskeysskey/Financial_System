@@ -13,9 +13,7 @@
         "FCX",
         "B",
         "VALE",
-        "WPM",
-        "CTVA",
-        "AU"
+        "WPM"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -30,9 +28,7 @@
         "NTES",
         "AMX",
         "APP",
-        "WBD",
-        "EA",
-        "BIDU"
+        "WBD"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -105,7 +101,7 @@
         "SU",
         "MPC",
         "BKR",
-        "CCJ"
+        "OKE"
     ],
     "Financial_Services": [
         "JPM",
@@ -162,13 +158,10 @@
         "IBKR",
         "BAM",
         "NWG",
-        "NDAQ",
         "RKT",
         "MET",
         "BRK-B",
-        "MRSH",
-        "BSBR",
-        "FITB"
+        "MRSH"
     ],
     "Healthcare": [
         "LLY",
@@ -319,7 +312,6 @@
         "NGG",
         "CEG",
         "AEP",
-        "VST",
         "SRE",
         "D"
     ]

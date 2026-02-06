@@ -52,15 +52,14 @@ CONFIG = {
         "OverSell_W", "PE_Deeper", "PE_Deep", 
         "PE_W", "PE_valid", "PE_invalid", "season", "no_season"
     ],
-    # ========== 策略1 (PE_Volume) 参数 ==========
-    "COND8_VOLUME_LOOKBACK_MONTHS": 3,   # 过去3个月
+    # ========== 策略1 (PE_Volume放量下跌) 参数 ==========
+    "COND8_VOLUME_LOOKBACK_MONTHS": 2,   # 过去3个月
     "COND8_VOLUME_RANK_THRESHOLD": 4,    # 成交量排名前 N 名 (默认3，代码逻辑是 <4)
     
-    # ========== 策略2 (PE_Volume_up) 参数 ==========
-    # 修改点：根据新需求，放量检查回溯月份改为 3 个月
-    "COND_UP_HISTORY_LOOKBACK_DAYS": 3,  # 历史记录回溯天数 (T, T-1, T-2)
-    "COND_UP_VOL_RANK_MONTHS": 1,        # 放量检查回溯月份 (改为3个月)
-    "COND_UP_VOL_RANK_THRESHOLD": 3,     # 放量检查前 N 名 (前3名)
+    # ========== 策略2 (PE_Volume_up活跃上涨) 参数 ==========
+    "COND_UP_HISTORY_LOOKBACK_DAYS": 5,  # 历史记录回溯天数
+    "COND_UP_VOL_RANK_MONTHS": 2,        # 放量检查回溯月份 (改为3个月)
+    "COND_UP_VOL_RANK_THRESHOLD": 4,     # 放量检查前 N 名 (前3名)
 }
 
 # --- 2. 辅助与文件操作模块 ---
@@ -104,23 +103,73 @@ def load_symbol_tags(json_path):
     except Exception:
         return {}
 
-def update_json_panel(symbols_list, json_path, group_name, symbol_to_note=None):
+def update_panel_with_conflict_check(json_path, pe_vol_list, pe_vol_notes, pe_vol_up_list, pe_vol_up_notes, log_detail):
+    """
+    专门用于 PE_Volume 和 PE_Volume_up 的写入。
+    功能：
+    1. 写入 PE_Volume, PE_Volume_backup, PE_Volume_up, PE_Volume_up_backup。
+    2. 检查这些 symbol 是否存在于指定的 backup 分组中，如果存在则删除。
+    """
+    # 定义需要检查并删除 symbol 的冲突分组
+    CONFLICT_GROUPS = [
+        "PE_Deep_backup", 
+        "PE_Deeper_backup", 
+        "PE_W_backup", 
+        "OverSell_W_backup", 
+        "PE_valid_backup", 
+        "PE_invalid_backup", 
+        "Strategy12_backup", 
+        "Strategy34_backup"
+    ]
+
     try:
         with open(json_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         data = {}
 
-    if symbol_to_note is None:
-        data[group_name] = {symbol: "" for symbol in sorted(symbols_list)}
+    # 1. 汇总所有即将写入 Volume 系列的新 symbol
+    all_new_volume_symbols = set(pe_vol_list) | set(pe_vol_up_list)
+    
+    if not all_new_volume_symbols:
+        log_detail("没有新的 Volume symbol 需要写入，跳过冲突检查。")
     else:
-        data[group_name] = {symbol: symbol_to_note.get(symbol, "") for symbol in sorted(symbols_list)}
+        log_detail(f"正在检查 {len(all_new_volume_symbols)} 个新 symbol 是否存在于旧 backup 分组中...")
 
+        # 2. 遍历冲突分组进行清理
+        for group_name in CONFLICT_GROUPS:
+            if group_name in data and isinstance(data[group_name], dict):
+                original_keys = list(data[group_name].keys())
+                # 找出交集 (既在旧分组，又是新 Volume symbol)
+                intersection = set(original_keys) & all_new_volume_symbols
+                
+                if intersection:
+                    # 重建该分组，排除掉交集中的 symbol
+                    new_group_data = {
+                        k: v for k, v in data[group_name].items() 
+                        if k not in all_new_volume_symbols
+                    }
+                    data[group_name] = new_group_data
+                    log_detail(f"  -> 从 '{group_name}' 中移除了: {sorted(list(intersection))}")
+
+    # 3. 写入新的 Volume 分组数据
+    # 辅助函数：构建带备注的字典
+    def build_group_dict(symbols, notes):
+        return {sym: notes.get(sym, "") for sym in sorted(symbols)}
+
+    data['PE_Volume'] = build_group_dict(pe_vol_list, pe_vol_notes)
+    data['PE_Volume_backup'] = build_group_dict(pe_vol_list, pe_vol_notes)
+    
+    data['PE_Volume_up'] = build_group_dict(pe_vol_up_list, pe_vol_up_notes)
+    data['PE_Volume_up_backup'] = build_group_dict(pe_vol_up_list, pe_vol_up_notes)
+
+    # 4. 保存文件
     try:
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
+        log_detail("Panel 文件更新完成 (包含冲突清理)。")
     except Exception as e:
-        print(f"错误: 写入JSON文件失败: {e}")
+        log_detail(f"错误: 写入 Panel JSON 文件失败: {e}")
 
 def update_earning_history_json(file_path, group_name, symbols_to_add, log_detail, base_date_str):
     log_detail(f"\n--- 更新历史记录文件: {os.path.basename(file_path)} -> '{group_name}' ---")
@@ -447,9 +496,15 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
             if is_tracing: log_detail(f"    x 价格未上涨 ({price_curr} <= {price_prev})，跳过。")
             continue
             
-        # 规则2: 财报日过滤
+        # 规则2: 财报日过滤 (T日)
         if check_is_earnings_day(cursor, symbol, date_curr):
-            if is_tracing: log_detail(f"    🛑 今日是财报日，跳过。")
+            if is_tracing: log_detail(f"    🛑 今日({date_curr})是财报日，跳过。")
+            continue
+
+        # === 新增规则: 财报日过滤 (T-1日) ===
+        # 检查最新日期的前一天 (date_prev) 是否为财报日
+        if check_is_earnings_day(cursor, symbol, date_prev):
+            if is_tracing: log_detail(f"    🛑 昨日({date_prev})是财报日，跳过。")
             continue
 
         is_match = False
@@ -604,13 +659,14 @@ def run_pe_volume_logic(log_detail):
 
     # 6. 写入 Panel (使用过滤后的 clean data)
     log_detail(f"\n正在写入 Panel 文件...")
-    # 策略1 写入 (恢复)
-    update_json_panel(filtered_pe_volume, PANEL_JSON_FILE, 'PE_Volume', symbol_to_note=pe_volume_notes)
-    update_json_panel(filtered_pe_volume, PANEL_JSON_FILE, 'PE_Volume_backup', symbol_to_note=pe_volume_notes)
     
-    # 策略2 写入
-    update_json_panel(filtered_pe_volume_up, PANEL_JSON_FILE, 'PE_Volume_up', symbol_to_note=pe_volume_up_notes)
-    update_json_panel(filtered_pe_volume_up, PANEL_JSON_FILE, 'PE_Volume_up_backup', symbol_to_note=pe_volume_up_notes)
+    # 使用新的函数：同时写入 Volume 分组并清理 Backup 冲突
+    update_panel_with_conflict_check(
+        PANEL_JSON_FILE,
+        filtered_pe_volume, pe_volume_notes,
+        filtered_pe_volume_up, pe_volume_up_notes,
+        log_detail
+    )
 
     # 7. 写入 History (通常保留 Raw Data)
     log_detail(f"正在更新 History 文件...")

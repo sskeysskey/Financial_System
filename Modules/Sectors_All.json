@@ -758,7 +758,8 @@
         "ALH",
         "CVCO",
         "VSCO",
-        "RUSHA"
+        "RUSHA",
+        "ATMU"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -1517,7 +1518,8 @@
         "FER",
         "NPO",
         "VSEC",
-        "POWL"
+        "POWL",
+        "TEX"
     ],
     "Real_Estate": [
         "PLD",
