@@ -18,13 +18,16 @@ USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 # --- 路径配置 ---
+
 # 备份文件所在的文件夹路径 (自动模式用)
 BACKUP_DIR = os.path.join(BASE_CODING_DIR, "News", "backup")
 
 # 输出文件的配置 (a.py 输出)
 OUTPUT_DIR = os.path.join(BASE_CODING_DIR, "News")
 OUTPUT_FILENAME = 'Options_Change.csv'
-LARGE_PRICE_FILENAME = '1K_Options_Change.csv' # 新增：大额订单文件名
+
+# 【修改】文件名改为 History，暗示这是一个累加的文件
+LARGE_PRICE_FILENAME = 'Options_History.csv' 
 
 # JSON 映射文件路径
 SECTORS_JSON_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_All.json")
@@ -37,6 +40,7 @@ TABLE_NAME = 'Options'
 OUTPUT_DEBUG_PATH = os.path.join(USER_HOME, "Downloads", "3.txt")
 
 # --- 算法参数配置 ---
+
 # 每个 Symbol 的 Calls 和 Puts 各保留前多少名 (用于 Part A 过滤和 Part B 策略1)
 TOP_N = 20
 LARGE_PRICE_THRESHOLD = 10000000  # 新增：金额阈值，默认1000万 (10,000,000)
@@ -57,6 +61,7 @@ WEIGHT_POWER = 1
 DEBUG_SYMBOL = ""
 
 # --- 模式切换配置 ---
+
 # True: 手动模式 (使用下方指定的两个具体文件)
 # False: 自动模式 (自动寻找 BACKUP_DIR 下最新的两个文件)
 USE_MANUAL_MODE = False
@@ -113,6 +118,7 @@ def get_latest_prices(symbols, symbol_sector_map, db_path):
             sym_upper = sym.upper()
             lookup_sym = 'VIX' if sym_upper == '^VIX' else sym_upper
             sector = symbol_sector_map.get(lookup_sym)
+            
             if sector:
                 if sector not in sector_groups:
                     sector_groups[sector] = []
@@ -146,6 +152,7 @@ def get_latest_prices(symbols, symbol_sector_map, db_path):
                 params = sym_list + [today_str]
                 cursor.execute(query, params)
                 rows = cursor.fetchall()
+                
                 for name, price in rows:
                     name_upper = name.upper()
                     price_dict[name_upper] = price
@@ -198,7 +205,7 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
     for df_temp in [df_old, df_new]:
         # 清洗 Open Interest
         df_temp['Open Interest'] = df_temp.get('Open Interest', pd.Series(0)).apply(clean_numeric)
-
+        
         # --- 【修复代码开始】 ---
         # 强制确保 'Last Price' 字段存在。
         # 如果旧文件缺少此字段，补 0.0，这样 merge 时才会产生 Last Price_old 和 Last Price_new
@@ -280,6 +287,7 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
     if not final_rows:
         print("没有符合条件的数据。")
         return None
+
     result_df = pd.concat(final_rows)
 
     # 计算 Distance
@@ -315,24 +323,68 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
     
-    # 1. 保存常规主文件
+    # 1. 保存常规主文件 (这个文件通常还是只保留当天最新，或者你可以根据需要修改)
     output_path = os.path.join(OUTPUT_DIR, OUTPUT_FILENAME)
     final_output.to_csv(output_path, index=False)
     print(f"\n✅ 主文件已保存: {output_path}")
 
     # ==========================================
-    # 新增需求：判断 Price > 1000万 并输出
+    # 【核心修改区域】新增需求：Price > 1000万，追加到历史 CSV 并增加 Date 列
     # ==========================================
+    
     # 过滤出 Price 超过配置阈值的行
     large_price_df = final_output[final_output['Price'] > LARGE_PRICE_THRESHOLD].copy()
-    
+
     if not large_price_df.empty:
         large_price_path = os.path.join(OUTPUT_DIR, LARGE_PRICE_FILENAME)
-        large_price_df.to_csv(large_price_path, index=False)
-        print(f"🔥 检测到 {len(large_price_df)} 行大额变动，已保存至: {large_price_path}")
+        
+        # [Step 1] 添加当前运行日期列 (Run_Date)
+        # 你可以根据需要把这个格式改成 'YYYY-MM-DD HH:MM' 等
+        current_date_str = datetime.datetime.now().strftime('%Y-%m-%d')
+        large_price_df['Run_Date'] = current_date_str
+        
+        # [Step 2] 调整列顺序，将 Run_Date 放到第一列，方便阅读
+        # 获取当前所有列名
+        cols = large_price_df.columns.tolist()
+        # 把 'Run_Date' 移到最前面
+        cols = ['Run_Date'] + [c for c in cols if c != 'Run_Date']
+        large_price_df = large_price_df[cols]
+
+        # [Step 3] 智能合并逻辑：覆盖当天的旧数据
+        final_save_df = None
+        
+        if os.path.exists(large_price_path):
+            try:
+                # 读取旧历史文件
+                history_df = pd.read_csv(large_price_path)
+                
+                # 检查是否存在 'Run_Date' 列，如果没有则假设文件不兼容，直接追加
+                if 'Run_Date' in history_df.columns:
+                    # 关键步骤：过滤掉所有 Run_Date 等于今天的旧行
+                    # 这样就实现了“如果今天已运行，则删除之前的，写入最新的”
+                    history_clean = history_df[history_df['Run_Date'] != current_date_str]
+                    
+                    # 将干净的旧历史 + 今天的最新数据 合并
+                    final_save_df = pd.concat([history_clean, large_price_df], ignore_index=True)
+                    print(f"🔄 检测到历史文件，已清除今日 ({current_date_str}) 的旧记录 (如果有)，并写入新记录。")
+                else:
+                    # 如果旧文件没有 Run_Date 列，直接追加
+                    final_save_df = pd.concat([history_df, large_price_df], ignore_index=True)
+            except Exception as e:
+                print(f"⚠️ 读取/合并历史文件时出错: {e}，将尝试新建文件。")
+                final_save_df = large_price_df
+        else:
+            final_save_df = large_price_df
+
+        # [Step 4] 覆盖写入整个文件 (模式 'w' 而不是 'a')
+        try:
+            final_save_df.to_csv(large_price_path, index=False)
+            print(f"🔥 大额变动历史库已更新: {large_price_path} (今日条数: {len(large_price_df)})")
+        except Exception as e:
+            print(f"❌ 写入失败 (请关闭文件后再试): {e}")
+
     else:
         print(f"ℹ️ 未检测到 Price 超过 {LARGE_PRICE_THRESHOLD} 的数据。")
-    # ==========================================
 
     # 保存备份
     date_str = datetime.datetime.now().strftime('%y%m%d')
@@ -347,8 +399,8 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
 # ==========================================
 # [Part B] 计算 D-Score 及 IV 并入库
 # ==========================================
-
 # 修改点：增加 iv_divisor, iv_threshold, iv_adj_factor 参数
+
 def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_config, power_config, target_symbol, 
                               iv_divisor, iv_threshold, iv_adj_factor):
     """
@@ -387,7 +439,7 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
         if df[col].dtype == object:
             df[col] = df[col].astype(str).str.replace(',', '').str.replace('%', '')
         df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-
+    
     # 3. 解析日期
     df['Expiry Date'] = pd.to_datetime(df['Expiry Date'], errors='coerce')
     if df['Expiry Date'].isnull().any():
@@ -398,7 +450,7 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
     us_cal = USFederalHolidayCalendar()
     holidays = us_cal.holidays(start='2024-01-01', end='2030-12-31')
     today = pd.Timestamp.now().normalize()
-
+    
     # 存储处理结果
     processed_data = {}
     grouped = df.groupby(['Symbol', 'Type'])
@@ -409,10 +461,10 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
         # 确保该 Symbol 在字典中初始化
         if symbol not in processed_data:
             processed_data[symbol] = {'Call': 0.0, 'Put': 0.0, 'Call_IV_Sum': 0.0, 'Put_IV_Sum': 0.0}
-
+        
         # 按数值降序排列
         group = group.sort_values(by='1-Day Chg', ascending=False)
-
+        
         # ---------------------------
         # 策略 1: D-Score 逻辑 (已修改: 基于 1-Day Chg 加权)
         # ---------------------------
@@ -485,7 +537,7 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
             processed_data[symbol]['Call'] = D
         elif 'put' in type_str:
             processed_data[symbol]['Put'] = D
-
+            
         # ===========================
         # 策略 2: 新 IV 逻辑 (使用 iv_n_config)
         # ===========================
@@ -504,7 +556,6 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
             # [修改点 4] 保持原有规则: 绝对值 >= 20% 时，系数除以 3
             final_weight = base_weight
             is_adjusted = False
-
             # [修改点] 权重规则: 绝对值 >= iv_threshold 时，系数除以 iv_adj_factor
             if abs(dist_val) >= iv_threshold:
                 final_weight = base_weight / iv_adj_factor
@@ -561,7 +612,7 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
     # 设定写入日期
     target_date = (pd.Timestamp.now() - timedelta(days=1)).strftime('%Y-%m-%d')
     print(f"写入日期设定为: {target_date}")
-
+    
     conn = sqlite3.connect(db_path, timeout=60.0)
     cursor = conn.cursor()
 
@@ -606,7 +657,7 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
         change=excluded.change,
         iv=excluded.iv
     """
-
+    
     count_success = 0
     
     for symbol, values in processed_data.items():
@@ -616,7 +667,7 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
         call_str = f"{raw_call_d * 100:.2f}%"
         put_str = f"{raw_put_d * 100:.2f}%"
         final_price = round((raw_call_d + raw_put_d) * 100, 2)
-
+        
         # 计算 Change
         change_val = None
         try:
@@ -656,8 +707,8 @@ def get_latest_two_files(directory, pattern='Options_*.csv'):
     search_path = os.path.join(directory, pattern)
     files = glob.glob(search_path)
     
-    # 过滤掉文件名中包含 'Change' 的备份文件，防止读入上次的运行结果
-    files = [f for f in files if 'Change' not in os.path.basename(f)]
+    # 过滤掉文件名中包含 'Change' 或 'History' 的备份文件，防止读入上次的运行结果
+    files = [f for f in files if 'Change' not in os.path.basename(f) and 'History' not in os.path.basename(f)]
     
     files.sort(reverse=True)
     
