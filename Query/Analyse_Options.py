@@ -41,15 +41,17 @@ OUTPUT_DEBUG_PATH = os.path.join(USER_HOME, "Downloads", "3.txt")
 
 # --- 算法参数配置 ---
 
-# 每个 Symbol 的 Calls 和 Puts 各保留前多少名 (用于 Part A 过滤和 Part B 策略1)
+# 【策略 1：每个 Symbol 的 Calls 和 Puts 各保留前多少名 (用于 Part A 过滤和 Part B 策略1)】
 TOP_N = 20
-LARGE_PRICE_THRESHOLD = 10000000  # 新增：金额阈值，默认1000万 (10,000,000)
 
 # [策略 2 (IV 计算) 参数配置]
 IV_TOP_N = 20           # 取排名前多少名
 IV_DIVISOR = 7.0        # 最终汇总时的除数 (原为 7)
 IV_THRESHOLD = 20.0     # 距离阈值百分比 (原为 20，即 20%)
 IV_ADJUSTMENT = 3.0     # 超过阈值后的权重除数 (原为 3)
+
+# [策略 3] 金额阈值，默认1000万 (10,000,000)
+LARGE_PRICE_THRESHOLD = 10000000 
 
 # a.py 逻辑参数: 是否考虑新增的数据 (B有A无)
 INCLUDE_NEW_ROWS = True
