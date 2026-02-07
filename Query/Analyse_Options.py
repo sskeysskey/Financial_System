@@ -171,7 +171,8 @@ def get_latest_prices(symbols, symbol_sector_map, db_path):
 
 def process_options_change(file_old, file_new, top_n=50, include_new=True):
     """
-    处理期权变化逻辑，并新增 Price 列 (1-Day Chg * Last Price)
+    处理期权变化逻辑。
+    修改：确保 Price > 1000万的数据在 Top_N 过滤前被提取。
     """
     print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] 开始处理文件比对...")
     print(f"旧文件: {os.path.basename(file_old)}")
@@ -223,16 +224,6 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
     print(f"已剔除 {rows_before - len(df_new)} 行全新日期数据。")
     df_new.drop(columns=['_date_key'], inplace=True)
 
-    # 处理 Open Interest
-    def clean_oi(val):
-        if pd.isna(val): return 0
-        if isinstance(val, (int, float)): return val
-        try: return float(str(val).replace(',', ''))
-        except: return 0.0
-
-    df_old['Open Interest'] = df_old.get('Open Interest', pd.Series(0)).apply(clean_oi)
-    df_new['Open Interest'] = df_new.get('Open Interest', pd.Series(0)).apply(clean_oi)
-
     old_expiry_set = set(zip(df_old['Symbol'], df_old['Expiry Date']))
     
     # 合并 (Last Price 会变成 Last Price_new)
@@ -251,7 +242,7 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
     # 剔除旧持仓为0的
     merged = merged[merged['Open Interest_old'] != 0].copy()
     
-    # 计算 1-Day Chg
+    # 计算 1-Day Chg 和 Price
     merged['1-Day Chg'] = merged['Open Interest_new'] - merged['Open Interest_old']
     merged = merged[merged['1-Day Chg'] >= 0].copy()
 
@@ -259,7 +250,56 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
     # 公式：1-Day Chg * Last Price (来自最新文件)
     merged['Price'] = merged['1-Day Chg'] * merged['Last Price_new']
 
-    # 标记 new
+    # --- 【核心修改：大额异动追踪逻辑提前】 ---
+    # 在这里，merged 包含所有变动大于0的行，尚未进行 TOP_N 过滤
+    
+    large_price_raw = merged[merged['Price'] > LARGE_PRICE_THRESHOLD].copy()
+    if not large_price_raw.empty:
+        # 为大额数据准备 Distance
+        unique_l_symbols = large_price_raw['Symbol'].unique().tolist()
+        symbol_map_l = load_symbol_sector_map(SECTORS_JSON_PATH)
+        price_map_l = get_latest_prices(unique_l_symbols, symbol_map_l, DB_PATH)
+
+        def calc_dist_temp(row):
+            sym = row['Symbol'].upper()
+            try: strike_val = float(str(row['Strike']).replace(',', '').strip())
+            except: return "N/A"
+            p_val = price_map_l.get(sym)
+            if p_val is None or p_val == 0: return "N/A"
+            return f"{((strike_val - p_val) / p_val) * 100:.2f}%"
+
+        large_price_raw['Distance'] = large_price_raw.apply(calc_dist_temp, axis=1)
+        
+        # 整理格式
+        current_date_str = datetime.datetime.now().strftime('%Y-%m-%d')
+        large_price_raw['Run_Date'] = current_date_str
+        large_price_raw = large_price_raw.rename(columns={'Open Interest_new': 'Open Interest'})
+        
+        l_cols = ['Run_Date', 'Symbol', 'Type', 'Expiry Date', 'Strike', 'Distance', 'Open Interest', '1-Day Chg', 'Price']
+        large_price_final = large_price_raw[l_cols].copy()
+        large_price_final['Symbol'] = large_price_final['Symbol'].replace('^VIX', 'VIX')
+
+        # 写入历史库文件
+        large_price_path = os.path.join(OUTPUT_DIR, LARGE_PRICE_FILENAME)
+        if os.path.exists(large_price_path):
+            try:
+                history_df = pd.read_csv(large_price_path)
+                if 'Run_Date' in history_df.columns:
+                    history_clean = history_df[history_df['Run_Date'] != current_date_str]
+                    final_save_df = pd.concat([history_clean, large_price_final], ignore_index=True)
+                else:
+                    final_save_df = pd.concat([history_df, large_price_final], ignore_index=True)
+                final_save_df.to_csv(large_price_path, index=False)
+                print(f"🔥 大额变动历史库已更新 (全量监控): {large_price_path} (今日: {len(large_price_final)} 条)")
+            except Exception as e:
+                print(f"⚠️ 历史库写入失败: {e}")
+        else:
+            large_price_final.to_csv(large_price_path, index=False)
+            print(f"🔥 大额变动历史库已创建: {large_price_path}")
+
+    # --- 【回到原有逻辑：执行 TOP_N 过滤用于主表和评分】 ---
+    
+    # 标记 new (仅针对即将进入 Top N 的数据)
     if include_new and not merged.empty:
         def mark_new_rows(row):
             if row['_merge'] == 'right_only':
@@ -326,67 +366,7 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
     # 1. 保存常规主文件 (这个文件通常还是只保留当天最新，或者你可以根据需要修改)
     output_path = os.path.join(OUTPUT_DIR, OUTPUT_FILENAME)
     final_output.to_csv(output_path, index=False)
-    print(f"\n✅ 主文件已保存: {output_path}")
-
-    # ==========================================
-    # 【核心修改区域】新增需求：Price > 1000万，追加到历史 CSV 并增加 Date 列
-    # ==========================================
     
-    # 过滤出 Price 超过配置阈值的行
-    large_price_df = final_output[final_output['Price'] > LARGE_PRICE_THRESHOLD].copy()
-
-    if not large_price_df.empty:
-        large_price_path = os.path.join(OUTPUT_DIR, LARGE_PRICE_FILENAME)
-        
-        # [Step 1] 添加当前运行日期列 (Run_Date)
-        # 你可以根据需要把这个格式改成 'YYYY-MM-DD HH:MM' 等
-        current_date_str = datetime.datetime.now().strftime('%Y-%m-%d')
-        large_price_df['Run_Date'] = current_date_str
-        
-        # [Step 2] 调整列顺序，将 Run_Date 放到第一列，方便阅读
-        # 获取当前所有列名
-        cols = large_price_df.columns.tolist()
-        # 把 'Run_Date' 移到最前面
-        cols = ['Run_Date'] + [c for c in cols if c != 'Run_Date']
-        large_price_df = large_price_df[cols]
-
-        # [Step 3] 智能合并逻辑：覆盖当天的旧数据
-        final_save_df = None
-        
-        if os.path.exists(large_price_path):
-            try:
-                # 读取旧历史文件
-                history_df = pd.read_csv(large_price_path)
-                
-                # 检查是否存在 'Run_Date' 列，如果没有则假设文件不兼容，直接追加
-                if 'Run_Date' in history_df.columns:
-                    # 关键步骤：过滤掉所有 Run_Date 等于今天的旧行
-                    # 这样就实现了“如果今天已运行，则删除之前的，写入最新的”
-                    history_clean = history_df[history_df['Run_Date'] != current_date_str]
-                    
-                    # 将干净的旧历史 + 今天的最新数据 合并
-                    final_save_df = pd.concat([history_clean, large_price_df], ignore_index=True)
-                    print(f"🔄 检测到历史文件，已清除今日 ({current_date_str}) 的旧记录 (如果有)，并写入新记录。")
-                else:
-                    # 如果旧文件没有 Run_Date 列，直接追加
-                    final_save_df = pd.concat([history_df, large_price_df], ignore_index=True)
-            except Exception as e:
-                print(f"⚠️ 读取/合并历史文件时出错: {e}，将尝试新建文件。")
-                final_save_df = large_price_df
-        else:
-            final_save_df = large_price_df
-
-        # [Step 4] 覆盖写入整个文件 (模式 'w' 而不是 'a')
-        try:
-            final_save_df.to_csv(large_price_path, index=False)
-            print(f"🔥 大额变动历史库已更新: {large_price_path} (今日条数: {len(large_price_df)})")
-        except Exception as e:
-            print(f"❌ 写入失败 (请关闭文件后再试): {e}")
-
-    else:
-        print(f"ℹ️ 未检测到 Price 超过 {LARGE_PRICE_THRESHOLD} 的数据。")
-
-    # 保存备份
     date_str = datetime.datetime.now().strftime('%y%m%d')
     backup_path = os.path.join(BACKUP_DIR, f"Options_Change_{date_str}.csv")
     if not os.path.exists(BACKUP_DIR): os.makedirs(BACKUP_DIR)
