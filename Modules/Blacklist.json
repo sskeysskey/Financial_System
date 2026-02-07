@@ -1,6 +1,5 @@
 {
     "newlow": [
-        "SIRI",
         "LU",
         "STVN",
         "TAK",
@@ -598,7 +597,8 @@
         "CMPO",
         "JHG",
         "CMA",
-        "CADE"
+        "CADE",
+        "ASST"
     ],
     "etf": [
         "VDE",
@@ -954,7 +954,6 @@
     "Earning": [
         "TW",
         "BRKR",
-        "CARR",
         "AI",
         "WING",
         "ONON",
@@ -977,7 +976,8 @@
         "INSM",
         "ICLR",
         "A",
-        "MDGL"
+        "MDGL",
+        "PINS"
     ],
     "Options": [
         "BBVA",

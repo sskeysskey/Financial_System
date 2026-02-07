@@ -339,9 +339,9 @@ def main():
     new_description2 = ""
 
     # --- 修正：ETF 判断逻辑 ---
-    if "ETF" in new_description1:
-        show_alert("警告：检测到 ETF 关键词，请确认是否应归入 Stock 类别。")
-        sys.exit()
+    # if "ETF" in new_description1:
+    #     show_alert("警告：检测到 ETF 关键词，请确认是否应归入 Stock 类别。")
+    #     sys.exit()
 
     root = tk.Tk()
     root.title("Add Stock")

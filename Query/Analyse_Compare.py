@@ -1525,26 +1525,31 @@ def load_latest_earnings_scanner(db_path):
 
 def load_all_earnings_dates_scanner(db_path, earnings_files):
     """
-    综合从数据库和文本文件中获取财报日期。
-    返回字典: {'AAPL': '2024-08-01', 'PDD': '2024-08-26', ...}
+    从数据库 Earning 表和文本文件中获取所有财报日期。
+    返回字典: {'AAPL': {'2024-08-01', '2024-11-01'}, 'BOOT': {'2026-02-05'}, ...}
+    使用 set 存储日期，防止遗漏和方便快速查找。
     """
-    earnings_map = {}
+    from collections import defaultdict
+    earnings_map = defaultdict(set)
     
-    # 1. 从数据库 Earning 表读取
+    # 1. 核心：从数据库 Earning 表读取所有历史财报日期
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
-        query = "SELECT name, MAX(date) FROM Earning GROUP BY name"
+        # 获取所有已记录的财报日期，而不仅仅是 MAX
+        query = "SELECT name, date FROM Earning"
         cursor.execute(query)
         for name, date_str in cursor.fetchall():
             if name and date_str:
-                earnings_map[name] = date_str
+                # 确保日期格式统一为 YYYY-MM-DD
+                clean_date = date_str.strip()
+                earnings_map[name].add(clean_date)
         conn.close()
+        print(f"从数据库加载了 {len(earnings_map)} 只股票的历史财报记录。")
     except Exception as e:
         print(f"读取数据库 Earning 表失败: {e}")
 
-    # 2. 从文本文件读取 (补充数据库可能未同步的最新财报)
-    # 文本格式通常为 Symbol:Type:YYYY-MM-DD
+    # 2. 补充：从文本文件读取 (获取尚未同步进数据库的最新/未来财报)
     for filepath in earnings_files:
         if os.path.exists(filepath):
             try:
@@ -1553,16 +1558,17 @@ def load_all_earnings_dates_scanner(db_path, earnings_files):
                         parts = [p.strip() for p in line.split(':')]
                         if len(parts) >= 3:
                             symbol = parts[0]
-                            date_str = parts[-1] # 假设最后一部分是 YYYY-MM-DD
-                            # 如果文本里的日期比数据库新，或者数据库没记录，则采用
-                            earnings_map[symbol] = date_str
+                            date_str = parts[-1] 
+                            # 简单的正则校验 YYYY-MM-DD
+                            if re.match(r'\d{4}-\d{2}-\d{2}', date_str):
+                                earnings_map[symbol].add(date_str)
             except Exception as e:
                 print(f"读取财报文件 {filepath} 失败: {e}")
                 
     return earnings_map
 
 def run_volume_high_scanner():
-    """Volume Scanner: 分组输出，并对正增长股票放宽成交量限制"""
+    """Volume Scanner: 分组输出，并严格过滤财报日成交量"""
     print("\n" + "="*50)
     print("STEP 3: 执行 Volume_High_Scanner 逻辑 (分组模式)")
     print("="*50)
@@ -1592,11 +1598,11 @@ def run_volume_high_scanner():
     tags_map = load_tags_scanner(DESCRIPTION_PATH)
     blacklist = get_blacklist_scanner(BLACKLIST_PATH)
     
-    # 加载所有财报日期 (数据库 + 文本)
-    all_earnings = load_all_earnings_dates_scanner(DB_PATH, EARNINGS_FILES)
+    # 加载所有财报日期集合
+    all_earnings_sets = load_all_earnings_dates_scanner(DB_PATH, EARNINGS_FILES)
     
-    pos_results = [] # 价格上涨或持平的
-    neg_results = [] # 价格下跌的
+    pos_results = [] 
+    neg_results = [] 
     skipped_by_earnings = 0
     
     # 2. 连接数据库
@@ -1624,25 +1630,29 @@ def run_volume_high_scanner():
                 cursor.execute(query_recent, (name,))
                 rows = cursor.fetchall()
                 
-                if len(rows) < 2: continue # 数据不足以对比价格
+                if len(rows) < 2: continue
                 
                 latest_date_str, latest_price, latest_volume = rows[0]
                 prev_price = rows[1][1]
                 
                 if latest_volume is None or latest_volume <= 0: continue
 
-                # B. 财报日过滤
-                if name in all_earnings and latest_date_str == all_earnings[name]:
-                    skipped_by_earnings += 1
-                    continue
+                # B. 财报日过滤逻辑 (核心修改点)
+                # 检查当前交易日是否在财报日期集合中
+                if name in all_earnings_sets:
+                    if latest_date_str in all_earnings_sets[name]:
+                        skipped_by_earnings += 1
+                        # print(f"跳过财报日股票: {name} ({latest_date_str})") # 调试用
+                        continue
 
                 # C. 计算回溯日期
                 latest_date_obj = datetime.strptime(latest_date_str, "%Y-%m-%d")
-                start_date = (latest_date_obj - relativedelta(years=int(LOOKBACK_YEARS), 
-                                                            months=int((LOOKBACK_YEARS % 1) * 12))).strftime("%Y-%m-%d")
+                # 减去 LOOKBACK_YEARS
+                start_date_obj = latest_date_obj - relativedelta(years=int(LOOKBACK_YEARS), 
+                                                                months=int((LOOKBACK_YEARS % 1) * 12))
+                start_date = start_date_obj.strftime("%Y-%m-%d")
 
                 # D. 获取过去 N 年的成交量排行（不含当天）
-                # 我们取前两名，用于判断
                 query_hist = f"""
                     SELECT volume FROM {table_name} 
                     WHERE name = ? AND date >= ? AND date < ? 
@@ -1651,10 +1661,10 @@ def run_volume_high_scanner():
                 cursor.execute(query_hist, (name, start_date, latest_date_str))
                 hist_vols = [r[0] for r in cursor.fetchall() if r[0] is not None]
                 
-                if not hist_vols: continue # 历史无成交量数据
+                if not hist_vols: continue 
                 
-                max_1 = float(hist_vols[0]) # 历史第一名
-                max_2 = float(hist_vols[1]) if len(hist_vols) > 1 else max_1 # 历史第二名（若只有一天数据则设为与第一名相同）
+                max_1 = float(hist_vols[0]) 
+                max_2 = float(hist_vols[1]) if len(hist_vols) > 1 else max_1 
 
                 # E. 判定逻辑
                 is_pos = (latest_price >= prev_price)
@@ -1673,6 +1683,7 @@ def run_volume_high_scanner():
                     vol_display = format_volume_scanner(latest_volume)
                     info_str = compare_map.get(name, "")
                     tags_str = tags_map.get(name, "")
+                    # 格式化输出
                     line = f"{table_name} {name} {info_str} {vol_display} {tags_str}".replace("  ", " ").strip()
                     
                     if is_pos:
@@ -1711,10 +1722,10 @@ if __name__ == "__main__":
     print("************************************************************************")
 
     # 执行第一部分 (Compare)
-    # execute_compare_process()
+    execute_compare_process()
 
     # 执行第二部分 (Analyse)
-    # execute_analyse_process()
+    execute_analyse_process()
     
     # 执行第三部分 (Volume Scanner)
     run_volume_high_scanner()
