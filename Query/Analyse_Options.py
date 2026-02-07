@@ -252,7 +252,7 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
     # 公式：1-Day Chg * Last Price (来自最新文件)
     merged['Price'] = merged['1-Day Chg'] * merged['Last Price_new']
 
-    # --- 【核心修改：大额异动追踪逻辑提前】 ---
+    # --- 【策略 3：大额异动追踪逻辑提前】 ---
     # 在这里，merged 包含所有变动大于0的行，尚未进行 TOP_N 过滤
     
     large_price_raw = merged[merged['Price'] > LARGE_PRICE_THRESHOLD].copy()
