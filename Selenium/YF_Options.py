@@ -17,11 +17,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 from tqdm import tqdm
-import platform  # <--- 新增
+import platform
+import urllib.parse  # 导入用于处理 URL 编码
 
-# ================= 配置区域 (跨平台修改) =================
-
-# 1. 动态获取主目录
+# ================= 配置区域 =================
 USER_HOME = os.path.expanduser("~")
 
 # 2. 定义基础路径
@@ -95,10 +94,7 @@ def get_target_symbols(db_path, threshold, silent=False):
         # 增加 ORDER BY marketcap DESC
         query = "SELECT symbol, marketcap FROM MNSPP WHERE marketcap > ? ORDER BY marketcap DESC"
         cursor.execute(query, (threshold,))
-        results = cursor.fetchall()
-        
-        symbols = results 
-        
+        symbols = cursor.fetchall()
         if not silent:
             tqdm.write(f"共找到 {len(symbols)} 个市值大于 {threshold} 的代码。")
         return symbols
@@ -122,7 +118,7 @@ def format_date(date_str):
         return date_str
 
 def clean_number(num_str):
-    """处理数字字符串：去除逗号，将 '-' 转为 0"""
+    """处理 Open Interest：去除逗号，转为整数"""
     if not num_str or num_str.strip() == '-' or num_str.strip() == '':
         return 0
     try:
@@ -131,6 +127,22 @@ def clean_number(num_str):
         return int(clean_str) # Open Interest 应该是整数
     except ValueError:
         return 0
+
+def clean_price_and_multiply(price_str):
+    """
+    处理 Last Price：
+    1. 去除逗号
+    2. 将 '-' 转为 0
+    3. 转为 float 并乘以 100
+    """
+    if not price_str or price_str.strip() == '-' or price_str.strip() == '':
+        return 0.0
+    try:
+        clean_str = price_str.replace(',', '').strip()
+        price_val = float(clean_str)
+        return round(price_val * 100, 2) # 乘以100并保留两位小数
+    except ValueError:
+        return 0.0
 
 def show_error_popup(symbol):
     """显示错误弹窗"""
@@ -386,8 +398,7 @@ def scrape_options():
         show_final_summary_popup_from_json(SECTORS_JSON_PATH)
         return
 
-    # 2. 初始化 CSV 文件 (写入表头)
-    # 确保目录存在
+    # --- 2. 初始化 CSV 文件 (修改点：增加 Last Price 表头) ---
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
 
@@ -398,7 +409,8 @@ def scrape_options():
     if not file_exists:
         with open(OUTPUT_FILE, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
-            writer.writerow(['Symbol', 'Expiry Date', 'Type', 'Strike', 'Open Interest'])
+            # 增加 Last Price 到表头末尾
+            writer.writerow(['Symbol', 'Expiry Date', 'Type', 'Strike', 'Open Interest', 'Last Price'])
         tqdm.write(f"创建新文件: {OUTPUT_FILE}")
     else:
         tqdm.write(f"文件已存在，将以追加模式运行: {OUTPUT_FILE}")
@@ -470,7 +482,9 @@ def scrape_options():
             # 更新进度条描述，增加显示市值
             symbol_pbar.set_description(f"处理中: {symbol} [市值: {cap_str}]")
             
-            base_url = f"https://finance.yahoo.com/quote/{symbol}/options/"
+            # 使用 quote 确保 ^VIX 变成 %5EVIX
+            encoded_symbol = urllib.parse.quote(symbol)
+            base_url = f"https://finance.yahoo.com/quote/{encoded_symbol}/options/"
             
             # --- 阶段一：获取日期列表 (包含重试机制) ---
             date_map = []
@@ -547,7 +561,7 @@ def scrape_options():
                 # 3. 终止程序
                 sys.exit(1)
 
-            # --- 过滤日期 (6个月) ---
+            # 过滤 6 个月日期
             filtered_date_map = []
             try:
                 temp_list = []
@@ -618,14 +632,16 @@ def scrape_options():
                                 if len(cols) >= 10:
                                     # 针对不同分辨率，列索引可能微调，但通常 Strike 在 2 (index 2), OI 在 9 (index 9)
                                     # 检查列内容是否有效
-                                    strike_text = cols[2].text.strip()
-                                    oi_text = cols[9].text.strip()
+                                    strike = cols[2].text.strip().replace(',', '')
+                                    # --- 修改点：提取 Last Price (索引3) 并清洗 ---
+                                    last_price_raw = cols[3].text.strip()
+                                    last_price_final = clean_price_and_multiply(last_price_raw)
                                     
-                                    if strike_text:
-                                        strike = strike_text.replace(',', '')
-                                        oi = clean_number(oi_text)
+                                    if strike:
+                                        # 提取 Open Interest (索引9)
+                                        oi = clean_number(cols[9].text.strip())
                                         # 将数据存入 buffer
-                                        data_buffer.append([symbol, formatted_date, opt_type, strike, oi])
+                                        data_buffer.append([symbol, formatted_date, opt_type, strike, oi, last_price_final])
                                         has_data = True
                         
                         if not has_data and attempt < MAX_PAGE_RETRIES - 1:

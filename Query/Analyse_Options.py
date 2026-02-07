@@ -24,6 +24,7 @@ BACKUP_DIR = os.path.join(BASE_CODING_DIR, "News", "backup")
 # 输出文件的配置 (a.py 输出)
 OUTPUT_DIR = os.path.join(BASE_CODING_DIR, "News")
 OUTPUT_FILENAME = 'Options_Change.csv'
+LARGE_PRICE_FILENAME = '1K_Options_Change.csv' # 新增：大额订单文件名
 
 # JSON 映射文件路径
 SECTORS_JSON_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_All.json")
@@ -38,6 +39,7 @@ OUTPUT_DEBUG_PATH = os.path.join(USER_HOME, "Downloads", "3.txt")
 # --- 算法参数配置 ---
 # 每个 Symbol 的 Calls 和 Puts 各保留前多少名 (用于 Part A 过滤和 Part B 策略1)
 TOP_N = 20
+LARGE_PRICE_THRESHOLD = 10000000  # 新增：金额阈值，默认1000万 (10,000,000)
 
 # [策略 2 (IV 计算) 参数配置]
 IV_TOP_N = 20           # 取排名前多少名
@@ -162,8 +164,7 @@ def get_latest_prices(symbols, symbol_sector_map, db_path):
 
 def process_options_change(file_old, file_new, top_n=50, include_new=True):
     """
-    处理期权变化逻辑。
-    返回: 处理后的 DataFrame (如果不成功返回 None)
+    处理期权变化逻辑，并新增 Price 列 (1-Day Chg * Last Price)
     """
     print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] 开始处理文件比对...")
     print(f"旧文件: {os.path.basename(file_old)}")
@@ -174,7 +175,8 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
         return None
 
     try:
-        dtype_dict = {'Symbol': str, 'Expiry Date': str, 'Type': str, 'Strike': str}
+        # 1. 在读取时包含 Last Price
+        dtype_dict = {'Symbol': str, 'Expiry Date': str, 'Type': str, 'Strike': str, 'Last Price': str}
         df_old = pd.read_csv(file_old, dtype=dtype_dict)
         df_new = pd.read_csv(file_new, dtype=dtype_dict)
     except Exception as e:
@@ -185,14 +187,25 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
     df_old.columns = df_old.columns.str.strip()
     df_new.columns = df_new.columns.str.strip()
     
-    def clean_str_cols(df):
-        for col in ['Symbol', 'Expiry Date', 'Type', 'Strike']:
-            if col in df.columns:
-                df[col] = df[col].str.strip()
-        return df
-    
-    df_old = clean_str_cols(df_old)
-    df_new = clean_str_cols(df_new)
+    # --- 推荐的清洗方式 ---
+    def clean_numeric(val):
+        if pd.isna(val): return 0.0
+        if isinstance(val, (int, float)): return float(val)
+        try: return float(str(val).replace(',', '').strip())
+        except: return 0.0
+
+    # 统一清洗两个文件的数值列
+    for df_temp in [df_old, df_new]:
+        # 清洗 Open Interest
+        df_temp['Open Interest'] = df_temp.get('Open Interest', pd.Series(0)).apply(clean_numeric)
+
+        # --- 【修复代码开始】 ---
+        # 强制确保 'Last Price' 字段存在。
+        # 如果旧文件缺少此字段，补 0.0，这样 merge 时才会产生 Last Price_old 和 Last Price_new
+        if 'Last Price' not in df_temp.columns:
+            df_temp['Last Price'] = 0.0
+        else:
+            df_temp['Last Price'] = df_temp['Last Price'].apply(clean_numeric)
 
     # 过滤全新日期
     print("正在过滤全新出现的 Expiry Date ...")
@@ -215,7 +228,7 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
 
     old_expiry_set = set(zip(df_old['Symbol'], df_old['Expiry Date']))
     
-    # 合并
+    # 合并 (Last Price 会变成 Last Price_new)
     key_columns = ['Symbol', 'Expiry Date', 'Type', 'Strike']
     merged = pd.merge(df_old, df_new, on=key_columns, how='outer', suffixes=('_old', '_new'), indicator=True)
     
@@ -226,13 +239,18 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
         
     merged['Open Interest_old'] = merged['Open Interest_old'].fillna(0)
     merged['Open Interest_new'] = merged['Open Interest_new'].fillna(0)
+    merged['Last Price_new'] = merged['Last Price_new'].fillna(0)
     
     # 剔除旧持仓为0的
     merged = merged[merged['Open Interest_old'] != 0].copy()
     
-    # 计算变化
+    # 计算 1-Day Chg
     merged['1-Day Chg'] = merged['Open Interest_new'] - merged['Open Interest_old']
     merged = merged[merged['1-Day Chg'] >= 0].copy()
+
+    # --- 【新增步骤】计算 Price 列 ---
+    # 公式：1-Day Chg * Last Price (来自最新文件)
+    merged['Price'] = merged['1-Day Chg'] * merged['Last Price_new']
 
     # 标记 new
     if include_new and not merged.empty:
@@ -287,17 +305,34 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
 
     # 最终整理
     result_df = result_df.sort_values(by=['Symbol', 'Type_Rank', 'Abs_Chg'], ascending=[True, True, False])
-    output_cols = ['Symbol', 'Type', 'Expiry Date', 'Strike', 'Distance', 'Open Interest_new', '1-Day Chg']
+    
+    # --- 【修改点】在输出列中增加 'Price' ---
+    output_cols = ['Symbol', 'Type', 'Expiry Date', 'Strike', 'Distance', 'Open Interest_new', '1-Day Chg', 'Price']
     final_output = result_df[output_cols].rename(columns={'Open Interest_new': 'Open Interest'})
     final_output['Symbol'] = final_output['Symbol'].replace('^VIX', 'VIX')
 
-    # 保存文件 (原功能)
+    # 保存文件
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
     
+    # 1. 保存常规主文件
     output_path = os.path.join(OUTPUT_DIR, OUTPUT_FILENAME)
     final_output.to_csv(output_path, index=False)
     print(f"\n✅ 主文件已保存: {output_path}")
+
+    # ==========================================
+    # 新增需求：判断 Price > 1000万 并输出
+    # ==========================================
+    # 过滤出 Price 超过配置阈值的行
+    large_price_df = final_output[final_output['Price'] > LARGE_PRICE_THRESHOLD].copy()
+    
+    if not large_price_df.empty:
+        large_price_path = os.path.join(OUTPUT_DIR, LARGE_PRICE_FILENAME)
+        large_price_df.to_csv(large_price_path, index=False)
+        print(f"🔥 检测到 {len(large_price_df)} 行大额变动，已保存至: {large_price_path}")
+    else:
+        print(f"ℹ️ 未检测到 Price 超过 {LARGE_PRICE_THRESHOLD} 的数据。")
+    # ==========================================
 
     # 保存备份
     date_str = datetime.datetime.now().strftime('%y%m%d')
