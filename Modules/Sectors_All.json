@@ -421,12 +421,12 @@
     "LQDI",
     "IXUS",
     "FLCH",
-    "RSPU",
     "BDRY",
     "CRAK",
     "MOAT",
     "VLUE",
-    "IGE"
+    "IGE",
+    "SLVP"
   ],
   "Basic_Materials": [
     "LIN",

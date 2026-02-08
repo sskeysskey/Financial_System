@@ -1651,6 +1651,29 @@ def run_processing_logic(log_detail):
             # 分别调用更新函数，传入对应的 group_name
             update_earning_history_json(EARNING_HISTORY_JSON_FILE, group_name, unique_symbols, log_detail)
             has_written_any = True
+    
+    # ================= [新增] 写入 Tag 黑名单标记分组 =================
+    # 汇总所有本次写入的 Symbol
+    all_written_symbols = set()
+    for sym_list in groups_to_log.values():
+        all_written_symbols.update(sym_list)
+    
+    # 筛选出命中 Tag 黑名单的 Symbol
+    blocked_symbols_to_log = []
+    tag_blacklist = CONFIG["BLACKLIST_TAGS"] # 获取黑名单配置
+    
+    for sym in all_written_symbols:
+        s_tags = set(symbol_to_tags_map.get(sym, []))
+        # 如果有交集，说明命中了黑名单
+        if s_tags.intersection(tag_blacklist):
+            blocked_symbols_to_log.append(sym)
+            
+    # 写入名为 "_Tag_Blacklist" 的特殊分组
+    if blocked_symbols_to_log:
+        blocked_symbols_to_log = sorted(list(set(blocked_symbols_to_log)))
+        update_earning_history_json(EARNING_HISTORY_JSON_FILE, "_Tag_Blacklist", blocked_symbols_to_log, log_detail)
+        log_detail(f"已将 {len(blocked_symbols_to_log)} 个命中黑名单Tag的symbol额外记入 '_Tag_Blacklist' 分组。")
+    # ================================================================
 
     if not has_written_any:
         log_detail("\n--- 无符合条件的 symbol 可写入 Earning_History.json ---")

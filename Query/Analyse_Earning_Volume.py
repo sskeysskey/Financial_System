@@ -676,6 +676,24 @@ def run_pe_volume_logic(log_detail):
     # 策略2 写入 (使用原始 Raw Data，保持算法池完整性)
     update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume_up", final_pe_volume_up, log_detail, base_date_str)
 
+    # ================= [新增] 写入 Tag 黑名单标记分组 =================
+    # 汇总两个策略的所有原始 Symbol (注意：这里用的是 final_pe_volume 等原始列表，未经过 tag 剔除的)
+    all_volume_symbols = set(final_pe_volume) | set(final_pe_volume_up)
+    
+    blocked_symbols_to_log = []
+    # tag_blacklist 在函数开头已经加载
+    
+    for sym in all_volume_symbols:
+        s_tags = set(symbol_to_tags_map.get(sym, []))
+        if s_tags.intersection(tag_blacklist):
+            blocked_symbols_to_log.append(sym)
+            
+    if blocked_symbols_to_log:
+        blocked_symbols_to_log = sorted(list(set(blocked_symbols_to_log)))
+        update_earning_history_json(EARNING_HISTORY_JSON_FILE, "_Tag_Blacklist", blocked_symbols_to_log, log_detail, base_date_str)
+        log_detail(f"已将 {len(blocked_symbols_to_log)} 个命中黑名单Tag的symbol额外记入 '_Tag_Blacklist' 分组。")
+    # ================================================================
+
     log_detail("程序运行结束。")
 
 def main():

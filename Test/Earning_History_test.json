@@ -38,5 +38,19 @@
             "VLO",
             "WRB"
         ]
+    },
+    "_Tag_Blacklist": {
+        "2026-02-06": [
+            "ACN",
+            "ADBE",
+            "ADSK",
+            "APP",
+            "BSY",
+            "CHKP",
+            "CIFR",
+            "COIN",
+            "COMP",
+            "CORZ"
+        ]
     }
 }

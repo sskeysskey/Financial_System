@@ -323,7 +323,6 @@
         "TKC",
         "FLG",
         "TRP",
-        "VTR",
         "FTV",
         "CNA",
         "FG",
@@ -949,7 +948,9 @@
         "SYSB",
         "FLJH",
         "CAM",
-        "ROSC"
+        "ROSC",
+        "OPPJ",
+        "RSPU"
     ],
     "Earning": [
         "TW",
@@ -1035,6 +1036,8 @@
         "ALSN",
         "TXT",
         "CWST",
-        "MOH"
+        "MOH",
+        "VLUE",
+        "NET"
     ]
 }

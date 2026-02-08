@@ -1070,6 +1070,29 @@ def run_processing_logic(log_detail):
             all_final_symbols,
             log_detail
         )
+        
+        # ================= [新增] 写入 Tag 黑名单标记分组 =================
+        # 此时 CONFIG["BLACKLIST_TAGS"] 已经被加载
+        tag_blacklist = CONFIG.get("BLACKLIST_TAGS", set())
+        blocked_symbols_to_log = []
+        
+        for sym in all_final_symbols:
+            s_tags = set(symbol_to_tags_map.get(sym, []))
+            if s_tags.intersection(tag_blacklist):
+                blocked_symbols_to_log.append(sym)
+        
+        if blocked_symbols_to_log:
+            blocked_symbols_to_log = sorted(list(set(blocked_symbols_to_log)))
+            # 使用 update_earning_history_json 写入
+            update_earning_history_json(
+                EARNING_HISTORY_JSON_FILE, 
+                "_Tag_Blacklist", 
+                blocked_symbols_to_log, 
+                log_detail
+            )
+            log_detail(f"已将 {len(blocked_symbols_to_log)} 个命中黑名单Tag的symbol额外记入 '_Tag_Blacklist' 分组。")
+        # ================================================================
+
     else:
         log_detail("\n--- 无符合条件的 symbol 可写入 Earning_History.json ---")
     # ==========================================================

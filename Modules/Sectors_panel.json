@@ -128,20 +128,18 @@
     },
     "Options_zero": {},
     "Must": {
+        "ORCL": "",
+        "SE": "",
+        "CDNS": "",
         "VLUE": "",
         "PATH": "",
-        "BXSL": "",
-        "LRCX": "",
         "INFY": "",
-        "GS": "",
         "CRDO": "",
         "NTRA": "",
         "SNPS": "",
         "TCOM": "",
-        "MKSI": "",
         "SHOP": "",
         "EXPE": "",
-        "SONY": "",
         "FSLR": "",
         "NET": ""
     },
@@ -251,9 +249,7 @@
         "IRTC": "",
         "KTOS": "KTOS15热",
         "LEU": "LEU15热",
-        "ORCL": "ORCL15热",
-        "PL": "PL15热",
-        "SE": ""
+        "PL": "PL15热"
     },
     "PE_W": {
         "AEM": "",
@@ -415,7 +411,6 @@
         "BKNG": "",
         "BX": "BX热",
         "CCJ": "",
-        "CDNS": "",
         "CEG": "CEG热",
         "CIEN": "CIEN热",
         "CIGI": "",
@@ -433,7 +428,6 @@
         "GH": "",
         "GLXY": "GLXY热",
         "GRAB": "",
-        "GS": "",
         "HCC": "",
         "HPQ": "HPQ热",
         "IBKR": "",
@@ -466,7 +460,6 @@
         "SQM": "",
         "TCOM": "",
         "TLN": "TLN热",
-        "TPG": "TPG热",
         "TRMB": "",
         "TSEM": "TSEM热",
         "VICR": "",
@@ -539,16 +532,13 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USNonFarmA": "04 USNonFarmA",
-        "USNonPMI": "04 USNonPMI",
+        "ImportPriceM": "09 ImportPriceM",
+        "USRetailM": "10 USRetailM",
         "USUnemploy": "11 USUnemploy",
         "USNonFarm": "11 USNonFarm",
-        "USConfidence": "06 USConfidence",
-        "USInitial": "12 USInitial",
-        "ImportPriceM": "14 ImportPriceM",
-        "USRetailM": "10 USRetailM",
         "CoreCPI": "13 CoreCPI",
-        "USCPI": "13 USCPI"
+        "USCPI": "13 USCPI",
+        "USInitial": "12 USInitial"
     },
     "Economic_All": {
         "USGDP": "",

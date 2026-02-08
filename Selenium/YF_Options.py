@@ -15,7 +15,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 from tqdm import tqdm
 import platform
 import urllib.parse  # 导入用于处理 URL 编码
@@ -281,10 +281,10 @@ def scrape_options():
                 json_must_set = set(must_keys)
                 count_json_must = len(json_must_set)
                 
-                # 3. 提取 Today 分组
-                today_keys = data.get("Today", {}).keys()
-                json_today_set = set(today_keys)
-                count_json_today = len(json_today_set)
+                # 3. 提取 Today 分组 (=== 修改：暂时关闭 ===)
+                # today_keys = data.get("Today", {}).keys()
+                json_today_set = set() # set(today_keys) -> 设为空集合
+                count_json_today = 0   # len(json_today_set) -> 设为0
 
                 # 4. [核心修改] 提取 Options_zero 分组 (用于过滤)
                 zero_keys = data.get("Options_zero", {}).keys()
@@ -598,6 +598,18 @@ def scrape_options():
                 MAX_PAGE_RETRIES = 3
                 for attempt in range(MAX_PAGE_RETRIES):
                     try:
+                        # [核心修复]：在请求新 URL 前，强制删除旧表格
+                        # 这样 wait.until 必须等待新表格真正加载出来
+                        try:
+                            driver.execute_script("""
+                                var tables = document.querySelectorAll("section[data-testid='options-list-table'] table");
+                                if (tables.length > 0) {
+                                    tables.forEach(t => t.remove());
+                                }
+                            """)
+                        except Exception:
+                            pass # 忽略JS错误
+
                         # 如果不是第一次循环且有 timestamp，需要跳转
                         # 如果是默认页且是第一次，其实已经在页面上了，但为了稳妥还是 get 一下
                         try:
@@ -607,9 +619,14 @@ def scrape_options():
                         
                         # 等待表格出现
                         # 增加等待时间，因为切换日期是 AJAX 加载
-                        time.sleep(random.uniform(1.5, 2.5)) 
+                        # time.sleep(random.uniform(1.5, 2.5)) # 移除固定等待，依赖 wait
                         
+                        # 这里的 wait 现在非常有意义，因为旧表格已经被删除了
                         wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "section[data-testid='options-list-table'] table")))
+                        
+                        # 稍微缓冲一下，确保表格内容渲染完毕
+                        time.sleep(1.0)
+
                         # --- 抓取表格 ---
                         tables = driver.find_elements(By.CSS_SELECTOR, "section[data-testid='options-list-table'] table")
                         

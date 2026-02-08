@@ -69,7 +69,7 @@ def update_blacklist(symbol, list_key):
                 json.dump(data, file, indent=4)
             
             # 成功提示 (根据原有两个脚本的提示风格略有不同，这里统一格式但保留关键信息)
-            target_name = "黑名单(newlow)" if list_key == 'newlow' else "ETF列表"
+            target_name = "黑名单(newlow)" if list_key == 'newlow' else "ETF黑名单中"
             show_alert(f"成功将 {symbol} 添加到 {target_name}")
         else:
             show_alert(f"{symbol} 已经在 {list_key} 列表中")

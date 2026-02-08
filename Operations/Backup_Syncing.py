@@ -49,7 +49,8 @@ TIMESTAMP_BACKUP_SOURCES = [
 # 定义触发 Intro_Symbol 更新的特定文件集合
 INTRO_SYMBOL_TRIGGERS = {
     os.path.join(USER_HOME, 'Coding/Financial_System/Modules/Sectors_panel.json'),
-    os.path.join(USER_HOME, 'Coding/News/10Y_newhigh_stock.txt')
+    os.path.join(USER_HOME, 'Coding/News/10Y_newhigh_stock.txt'),
+    os.path.join(USER_HOME, 'Coding/News/Options_History.csv')
 }
 
 def is_file_modified(source_path, destination_path):
