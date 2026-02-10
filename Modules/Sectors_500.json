@@ -14,7 +14,8 @@
         "B",
         "VALE",
         "WPM",
-        "AU"
+        "AU",
+        "GFI"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -31,7 +32,8 @@
         "APP",
         "WBD",
         "BIDU",
-        "EA"
+        "EA",
+        "RBLX"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -104,7 +106,8 @@
         "SU",
         "MPC",
         "BKR",
-        "OKE"
+        "OKE",
+        "CCJ"
     ],
     "Financial_Services": [
         "JPM",
@@ -165,7 +168,8 @@
         "MET",
         "BRK-B",
         "MRSH",
-        "AMP"
+        "AMP",
+        "BSBR"
     ],
     "Healthcare": [
         "LLY",
@@ -309,7 +313,8 @@
         "WDC",
         "NXPI",
         "SNDK",
-        "MPWR"
+        "MPWR",
+        "CRWV"
     ],
     "Utilities": [
         "NEE",

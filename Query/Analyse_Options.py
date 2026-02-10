@@ -45,10 +45,12 @@ OUTPUT_DEBUG_PATH = os.path.join(USER_HOME, "Downloads", "3.txt")
 TOP_N = 20
 
 # [策略 2 (IV 计算) 参数配置]
-IV_TOP_N = 20           # 取排名前多少名
-IV_DIVISOR = 7.0        # 最终汇总时的除数 (原为 7)
-IV_THRESHOLD = 20.0     # 距离阈值百分比 (原为 20，即 20%)
-IV_ADJUSTMENT = 3.0     # 超过阈值后的权重除数 (原为 3)
+IV_TOP_N = 30           # 【修改】取排名前 30 名
+IV_DIVISOR = 7.0        # 最终汇总时的除数
+
+# 以下两个参数在逻辑移除后将不再起作用，但保留定义以防报错
+IV_THRESHOLD = 20.0     
+IV_ADJUSTMENT = 1.0     # 设为 1.0 相当于不调整
 
 # [策略 3] 金额阈值，默认1000万 (10,000,000)
 LARGE_PRICE_THRESHOLD = 10000000 
@@ -522,27 +524,30 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
             
         # ===========================
         # 策略 2: 新 IV 逻辑 (使用 iv_n_config)
-        # ===========================
-        # 修改点：使用 iv_n_config 替换硬编码的 10
+        # 1. 取 Top 30
+        # 2. 权重 = (1-Day Chg * Last Price) / Sum(1-Day Chg * Last Price)
+        # 3. 移除距离惩罚
+        
         top_iv_items = group.head(iv_n_config).copy()
+        
+        # 确保 Price 列是数值类型
+        top_iv_items['Price'] = pd.to_numeric(top_iv_items['Price'], errors='coerce').fillna(0)
+        
         iv_weighted_sum = 0.0
-        total_chg_iv = top_iv_items['1-Day Chg'].sum()
+        # 计算该组（Call 或 Put）前 30 名的总金额
+        total_price_iv = top_iv_items['Price'].sum()
+        
         strat2_debug_rows = []
         
         for i in range(len(top_iv_items)):
             row_data = top_iv_items.iloc[i]
             dist_val = row_data['Distance'] * 100 
-            chg_val = row_data['1-Day Chg']
-            base_weight = chg_val / total_chg_iv if total_chg_iv != 0 else 0.0
+            price_val = row_data['Price']
             
-            # [修改点 4] 保持原有规则: 绝对值 >= 20% 时，系数除以 3
-            final_weight = base_weight
-            is_adjusted = False
-            # [修改点] 权重规则: 绝对值 >= iv_threshold 时，系数除以 iv_adj_factor
-            if abs(dist_val) >= iv_threshold:
-                final_weight = base_weight / iv_adj_factor
-                is_adjusted = True
+            # 【修改点】基础权重改为基于金额 (Price = 1-Day Chg * Last Price)
+            final_weight = price_val / total_price_iv if total_price_iv != 0 else 0.0
             
+            # 【修改点】移除 IV_THRESHOLD 惩罚逻辑，直接计算贡献度
             contribution = dist_val * final_weight
             iv_weighted_sum += contribution
             
@@ -553,9 +558,7 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
                     'Expiry': row_data['Expiry Date'].strftime('%Y-%m-%d'),
                     'Strike': row_data['Strike'],
                     'Dist_Pct': dist_val,
-                    '1-Day Chg': chg_val, # 增加 Chg 显示方便调试权重来源
-                    'Base_Wt': base_weight,
-                    'Adj?': "YES" if is_adjusted else "No",
+                    'Price_Val': price_val, # 显示金额
                     'Final_Wt': final_weight,
                     'Contrib': contribution
                 })
