@@ -4,11 +4,7 @@
     "Energy": {},
     "Technology": {
         "ADP": "",
-        "SRAD": "",
-        "NOW": "",
         "TEAM": "",
-        "ZS": "",
-        "WIX": "",
         "NIQ": "",
         "WIT": "",
         "BR": "",
@@ -30,7 +26,6 @@
     "Consumer_Cyclical": {
         "HRB": "",
         "AMZN": "",
-        "DASH": "",
         "BFAM": "",
         "BKNG": "",
         "GPI": ""
@@ -42,18 +37,13 @@
         "MZTI": ""
     },
     "Industrials": {
-        "VRSK": "",
-        "TRI": "",
-        "RELX": ""
+        "VRSK": ""
     },
     "Communication_Services": {
         "TEF": "",
-        "FUBO": "",
-        "NWS": "",
-        "STUB": ""
+        "FUBO": ""
     },
     "Financial_Services": {
-        "SPGI": "",
         "MCO": "",
         "FDS": "",
         "MORN": "",
@@ -66,7 +56,6 @@
         "RYAN": ""
     },
     "Healthcare": {
-        "VEEV": "",
         "HIMS": "",
         "DOCS": "",
         "MOH": "",
@@ -157,36 +146,18 @@
     },
     "Options_zero": {},
     "Must": {
-        "ORCL": "",
+        "CEG": "",
+        "ROKU": "",
+        "WTW": "",
+        "AON": "",
         "SE": "",
-        "CDNS": "",
-        "VLUE": "",
         "PATH": "",
-        "INFY": "",
-        "CRDO": "",
         "NTRA": "",
-        "SNPS": "",
         "TCOM": "",
-        "SHOP": "",
-        "EXPE": "",
-        "NET": ""
+        "EXPE": ""
     },
     "Today": {
-        "MTN": "",
-        "CPNG": "",
-        "PL": "",
-        "CHWY": "",
-        "IRTC": "",
-        "OBDC": "",
-        "CIGI": "",
-        "SNDK": "",
-        "AMAT": "",
-        "ILMN": "",
-        "CVS": "",
-        "FIS": "",
-        "GEN": "",
-        "BSX": "",
-        "GPK": ""
+        "INFY": ""
     },
     "Short": {
         "LECO": "",
@@ -339,16 +310,13 @@
     "PE_Deep_backup": {
         "ALNY": "",
         "CART": "",
-        "CHWY": "",
         "CRL": "",
         "ETSY": "",
-        "FIS": "",
         "GRAB": "",
         "HPQ": "HPQ15热",
         "HUM": "",
         "MRNA": "",
         "RVMD": "",
-        "SNDK": "SNDK15热",
         "TRMB": "",
         "W": "W15热",
         "WST": "WST9热"
@@ -381,7 +349,6 @@
     "PE_Volume_backup": {
         "AJG": "",
         "AMZN": "AMZN热",
-        "AON": "",
         "BKNG": "",
         "ELF": "",
         "EW": "",
@@ -390,7 +357,6 @@
         "MOH": "",
         "SNAP": "",
         "THC": "",
-        "WTW": "",
         "WYNN": ""
     },
     "PE_Volume_up": {
@@ -444,8 +410,6 @@
         "APH": "APH热",
         "AXON": "",
         "BX": "BX热",
-        "CEG": "CEG热",
-        "CPNG": "",
         "CRBG": "CRBG热",
         "CRSP": "",
         "CZR": "",
@@ -468,13 +432,10 @@
         "NTRA": "",
         "NVDA": "NVDA热",
         "NXE": "",
-        "OBDC": "OBDC热",
-        "ORCL": "ORCL热",
         "OSCR": "",
         "QS": "",
         "RGEN": "",
         "RGLD": "",
-        "ROKU": "",
         "STLA": "",
         "STRL": "STRL热",
         "ZBRA": ""

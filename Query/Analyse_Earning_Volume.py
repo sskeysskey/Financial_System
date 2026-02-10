@@ -53,13 +53,13 @@ CONFIG = {
         "PE_W", "PE_valid", "PE_invalid", "season", "no_season"
     ],
     # ========== 策略1 (PE_Volume放量下跌) 参数 ==========
-    "COND8_VOLUME_LOOKBACK_MONTHS": 2,   # 过去3个月
+    "COND8_VOLUME_LOOKBACK_MONTHS": 2,   # 过去 N 个月
     "COND8_VOLUME_RANK_THRESHOLD": 4,    # 成交量排名前 N 名 (默认3，代码逻辑是 <4)
     
     # ========== 策略2 (PE_Volume_up活跃上涨) 参数 ==========
     "COND_UP_HISTORY_LOOKBACK_DAYS": 5,  # 历史记录回溯天数
-    "COND_UP_VOL_RANK_MONTHS": 2,        # 放量检查回溯月份 (改为3个月)
-    "COND_UP_VOL_RANK_THRESHOLD": 4,     # 放量检查前 N 名 (前3名)
+    "COND_UP_VOL_RANK_MONTHS": 2,        # 放量检查回溯月份
+    "COND_UP_VOL_RANK_THRESHOLD": 4,     # 放量检查前 N 名
 }
 
 # --- 2. 辅助与文件操作模块 ---

@@ -1371,7 +1371,30 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     color = NORD_THEME['accent_cyan']
                     annot.get_bbox_patch().set_edgecolor(color)
                 else:
-                    parts = [f"{datetime.strftime(xval, '%Y-%m-%d')}", f"{yval:.2f}", ""]
+                    # --- 核心修改部分：计算并格式化 Turnover ---
+                    current_vol = current_filtered_volumes[idx] if current_filtered_volumes and idx < len(current_filtered_volumes) else None
+                    
+                    turnover_str = "--"
+                    if current_vol is not None and yval is not None:
+                        turnover_val = current_vol * yval
+                        # 格式化逻辑
+                        if turnover_val >= 1e9:
+                            turnover_str = f"{turnover_val / 1e9:.2f}B"
+                        elif turnover_val >= 1e6:
+                            turnover_str = f"{turnover_val / 1e6:.2f}M"
+                        elif turnover_val >= 1e3:
+                            turnover_str = f"{turnover_val / 1e3:.1f}K"
+                        else:
+                            turnover_str = f"{turnover_val:.1f}"
+                    
+                    # 构造浮窗显示列表
+                    parts = [
+                        f"{datetime.strftime(xval, '%Y-%m-%d')}", # 第一行：日期
+                        f"{yval:.2f}",                            # 第二行：价格
+                        f"{turnover_str}",                    # 第三行：成交额 (Turnover)
+                        ""                                        # 空行占位
+                    ]
+
                     marker_texts = []
                     if g_text: marker_texts.append(g_text)
                     if s_text: marker_texts.append(s_text + "\n")
@@ -1382,7 +1405,11 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                                 marker_texts.append(line); break
                         has_earning = True
                     if marker_texts: parts.extend(marker_texts)
+                    
+                    # 添加最新价差
                     parts.append(f"最新价差: {((prices[-1] - yval) / yval) * 100:.2f}%")
+                    
+                    # 添加最新量差
                     if current_filtered_volumes and idx < len(current_filtered_volumes) and volumes:
                         sel_vol = current_filtered_volumes[idx]  # 当前点的成交量
                         latest_vol = volumes[-1]                 # 全局最新的成交量 (今天/昨天的)

@@ -631,7 +631,9 @@ class MainWindow(QMainWindow):
             'Basic_Materials': 'Materials',
             'Financial_Services': 'Financial',
             'Strategy34': '策略 3、3.5、4',
-            'Strategy12': '策略 1、2、2.5'
+            'Strategy12': '策略 1、2、2.5',
+            'PE_Volume_backup': 'Voume左',
+            'PE_Volume_up_backup': 'Voume右'
         }
         
         self.init_ui()
