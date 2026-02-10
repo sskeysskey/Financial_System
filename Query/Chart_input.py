@@ -643,6 +643,18 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         display_dialog("没有有效的数据来绘制图表。")
         return
 
+    # --- 新增: 计算 Turnover (成交额) 用于绘图 ---
+    # 我们保留 volumes 列表不变，因为 hover 和 title 逻辑还需要用到原始成交量
+    turnovers = []
+    if prices and volumes:
+        for p, v in zip(prices, volumes):
+            if p is not None and v is not None:
+                turnovers.append(p * v)
+            else:
+                turnovers.append(0.0)
+    else:
+        turnovers = [0.0] * len(dates)
+
     smooth_dates, smooth_prices = smooth_curve(dates, prices)
     date_nums = matplotlib.dates.date2num(dates)
 
@@ -763,8 +775,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     )
     small_dot_scatter = ax1.scatter(dates, prices, s=5, color=NORD_THEME['text_bright'], zorder=1.5)
     line2, = ax2.plot(
-        dates, volumes, marker='o', markersize=2, linestyle='-', linewidth=2,
-        color=NORD_THEME['accent_purple'], alpha=0.7, label='Volume'
+        dates, turnovers, marker='o', markersize=2, linestyle='-', linewidth=2,
+        color=NORD_THEME['accent_purple'], alpha=0.7, label='Turnover' # label也可以改一下
     )
     line2.set_visible(show_volume)
 
@@ -1586,26 +1598,35 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             pass
 
     def update(val):
+        # 这里的 volumes 依然是原始的成交量数据
         nonlocal gradient_image, current_filtered_dates, current_filtered_prices, current_filtered_volumes, current_filtered_date_nums
         try:
             years = time_options[val]
             if years == 0:
+                # 全量数据
                 f_dates, f_prices, f_volumes = dates, prices, volumes
+                f_turnovers = turnovers # 新增
             else:
                 min_date = datetime.now() - timedelta(days=years * 365)
                 indices = [i for i, d in enumerate(dates) if d >= min_date]
                 if not indices:
                     f_dates, f_prices = [dates[-1]], [prices[-1]]
                     f_volumes = [volumes[-1]] if volumes else None
+                    f_turnovers = [turnovers[-1]] if turnovers else None # 新增
                 else:
                     f_dates = [dates[i] for i in indices]
                     f_prices = [prices[i] for i in indices]
                     f_volumes = [volumes[i] for i in indices] if volumes else None
+                    f_turnovers = [turnovers[i] for i in indices] if turnovers else None # 新增
 
             # 更新当前筛选数据与缓存
             current_filtered_dates = f_dates
             current_filtered_prices = f_prices
-            current_filtered_volumes = f_volumes
+            
+            # 【关键点】：这里必须保留 f_volumes 赋值给全局变量，
+            # 因为 hover 函数里的 "最新量差" 计算依赖于 current_filtered_volumes (原始量)
+            current_filtered_volumes = f_volumes 
+            
             current_filtered_date_nums = matplotlib.dates.date2num(current_filtered_dates) if current_filtered_dates else np.array([])
             
             # === 修改：控制紫色和蓝色遮罩的显示 ===
@@ -1658,9 +1679,11 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 force_flag = True
                 last_rebuild_ts[0] = now
 
+            # 【关键点】：调用 update_plot 时，传入 f_turnovers 而不是 f_volumes
+            # 这样图表画的是成交额，Y轴刻度也会自动适应成交额的大小
             gradient_image = update_plot(
                 line1, gradient_image, line2,
-                f_dates, f_prices, f_volumes,
+                f_dates, f_prices, f_turnovers, # <--- 这里修改为 f_turnovers
                 ax1, ax2, show_volume,
                 cyan_transparent_cmap,
                 force_recreate=force_flag,
@@ -1681,22 +1704,33 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         try:
             show_volume = not show_volume
             years = time_options[radio.value_selected]
+            
+            # --- 增加 f_turnovers 的处理逻辑 ---
             if years == 0:
                 f_dates, f_prices, f_volumes = dates, prices, volumes
+                f_turnovers = turnovers
             else:
                 min_date = datetime.now() - timedelta(days=years * 365)
                 indices = [i for i, d in enumerate(dates) if d >= min_date]
-                f_dates = [dates[i] for i in indices] if indices else [dates[-1]]
-                f_prices = [prices[i] for i in indices] if indices else [prices[-1]]
-                f_volumes = [volumes[i] for i in indices] if volumes and indices else ([volumes[-1]] if volumes else None)
+                if indices:
+                    f_dates = [dates[i] for i in indices]
+                    f_prices = [prices[i] for i in indices]
+                    f_volumes = [volumes[i] for i in indices] if volumes else None
+                    f_turnovers = [turnovers[i] for i in indices] if turnovers else None
+                else:
+                    f_dates = [dates[-1]]
+                    f_prices = [prices[-1]]
+                    f_volumes = [volumes[-1]] if volumes else None
+                    f_turnovers = [turnovers[-1]] if turnovers else None
             
             current_filtered_dates = f_dates
             current_filtered_prices = f_prices
             current_filtered_date_nums = matplotlib.dates.date2num(current_filtered_dates) if current_filtered_dates else np.array([])
 
+            # 【关键点】：传入 f_turnovers 进行绘图
             update_plot(
                 line1, gradient_image, line2,
-                f_dates, f_prices, f_volumes,
+                f_dates, f_prices, f_turnovers, # <--- 这里修改为 f_turnovers
                 ax1, ax2, show_volume,
                 cyan_transparent_cmap,
                 force_recreate=False,
