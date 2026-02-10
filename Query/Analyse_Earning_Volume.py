@@ -635,16 +635,47 @@ def run_pe_volume_logic(log_detail):
         if SYMBOL_TO_TRACE in final_pe_volume_up and SYMBOL_TO_TRACE not in filtered_pe_volume_up:
              log_detail(f"追踪提示: {SYMBOL_TO_TRACE} (策略2) 通过，但因黑名单标签被过滤。")
 
+    # ================= [新增逻辑] 检查 PE_Deep / PE_Deeper 交叉 =================
+    # 在生成 Note 之前，先读取现有的 Panel 文件，找出哪些 symbol 在 Deep/Deeper 组里
+    current_deep_symbols = set()
+    try:
+        with open(PANEL_JSON_FILE, 'r', encoding='utf-8') as f:
+            p_data = json.load(f)
+            # 检查 PE_Deep
+            if "PE_Deep" in p_data and isinstance(p_data["PE_Deep"], dict):
+                current_deep_symbols.update(p_data["PE_Deep"].keys())
+            # 检查 PE_Deeper
+            if "PE_Deeper" in p_data and isinstance(p_data["PE_Deeper"], dict):
+                current_deep_symbols.update(p_data["PE_Deeper"].keys())
+        log_detail(f"已加载现有 Deep/Deeper 分组，共 {len(current_deep_symbols)} 个 Symbol 用于交叉检查。")
+    except Exception as e:
+        log_detail(f"警告: 读取Panel文件以检查Deep分组失败: {e}")
+
     # 4. 构建备注 (Note) - 使用过滤后的列表
-    def build_symbol_note_map(symbols):
+    # 修改：增加 highlight_set 参数，用于给特定集合中的 symbol 加 "听" 后缀
+    def build_symbol_note_map(symbols, highlight_set=None):
         note_map = {}
         for sym in symbols:
             tags = set(symbol_to_tags_map.get(sym, []))
             is_hot = bool(tags & hot_tags)
-            note_map[sym] = f"{sym}热" if is_hot else ""
+            
+            # 基础备注 (热点)
+            note_str = f"{sym}热" if is_hot else ""
+            
+            # 交叉检查 (Deep/Deeper)
+            if highlight_set and sym in highlight_set:
+                if note_str:
+                    note_str += "听"
+                else:
+                    note_str = f"{sym}听"
+            
+            note_map[sym] = note_str
         return note_map
         
-    pe_volume_notes = build_symbol_note_map(filtered_pe_volume)
+    # 为 PE_Volume 传入 current_deep_symbols 进行检查
+    pe_volume_notes = build_symbol_note_map(filtered_pe_volume, highlight_set=current_deep_symbols)
+    
+    # PE_Volume_up 暂时不需要此逻辑 (或者如果需要也可以传入)
     pe_volume_up_notes = build_symbol_note_map(filtered_pe_volume_up)
 
     # 5. 回测安全拦截

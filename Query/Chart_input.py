@@ -937,7 +937,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             )
             all_annotations.append((annotation, 'global', date_v, price_v))
 
-        # === 修改 1: 白色浮窗 (Specific Markers) - 增加最新量差 ===
+        # === 修改 1: 白色浮窗 (Specific Markers) - 增加最新额差 (使用 Turnover) ===
         specific_offsets = [(-50, -50), (-100, 20)]
         for i, (scatter, date_v, price_v, text) in enumerate(specific_scatter_points):
             offset = specific_offsets[i % len(specific_offsets)]
@@ -951,14 +951,14 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 diff_percent = ((latest_price - price_v) / price_v) * 100 if price_v else 0
                 diff_line = f"{diff_percent:.2f}%"
                 
-                # 2. 量差 (新增)
-                if volumes:
+                # 2. 量差 (使用 Turnover)
+                if turnovers:
                     # 使用 date_v 查找对应的 index
                     idx = dates.index(date_v) 
-                    vol_v = volumes[idx]
-                    latest_vol = volumes[-1]
-                    if vol_v and vol_v > 0 and latest_vol:
-                        v_diff = ((latest_vol - vol_v) / vol_v) * 100
+                    turnover_v = turnovers[idx]
+                    latest_turnover = turnovers[-1]
+                    if turnover_v and turnover_v > 0 and latest_turnover:
+                        v_diff = ((latest_turnover - turnover_v) / turnover_v) * 100
                         vol_line = f"{v_diff:.2f}%"
                     else:
                         vol_line = "Vol: --"
@@ -977,7 +977,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             )
             all_annotations.append((annotation, 'specific', date_v, price_v))
 
-        # === 修改 2: 黄色/橙色浮窗 (Earning Markers) - 增加最新量差 ===
+        # === 修改 2: 黄色/橙色浮窗 (Earning Markers) - 增加最新额差 (使用 Turnover) ===
         earning_offsets = [(50, -50), (-150, 25)]
         for i, (scatter, date_v, price_v, text) in enumerate(earning_scatter_points):
             offset = earning_offsets[i % len(earning_offsets)]
@@ -985,16 +985,16 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             # --- 计算量差并插入文本 (新增) ---
             final_text = text
             try:
-                if volumes:
+                if turnovers:
                     idx = dates.index(date_v)
-                    vol_v = volumes[idx]
-                    latest_vol = volumes[-1]
+                    turnover_v = turnovers[idx]
+                    latest_turnover = turnovers[-1]
                     vol_msg = ""
-                    if vol_v and vol_v > 0 and latest_vol:
-                        v_diff = ((latest_vol - vol_v) / vol_v) * 100
-                        vol_msg = f"最新量差: {v_diff:.2f}%"
+                    if turnover_v and turnover_v > 0 and latest_turnover:
+                        v_diff = ((latest_turnover - turnover_v) / turnover_v) * 100
+                        vol_msg = f"最新额差: {v_diff:.2f}%"
                     else:
-                        vol_msg = "最新量差: --"
+                        vol_msg = "最新额差: --"
                     
                     # text 的原始格式通常是: "昨日财报: xx%\n最新价差: xx%\nYYYY-MM-DD"
                     # 我们想把它插入到日期（最后一行）的前面
@@ -1421,16 +1421,22 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     # 添加最新价差
                     parts.append(f"最新价差: {((prices[-1] - yval) / yval) * 100:.2f}%")
                     
-                    # 添加最新量差
-                    if current_filtered_volumes and idx < len(current_filtered_volumes) and volumes:
+                    # --- 修改: 使用 Turnover 计算最新额差 ---
+                    if current_filtered_volumes and idx < len(current_filtered_volumes) and turnovers:
                         sel_vol = current_filtered_volumes[idx]  # 当前点的成交量
-                        latest_vol = volumes[-1]                 # 全局最新的成交量 (今天/昨天的)
+                        sel_price = yval                         # 当前点的价格
+                        
+                        # 计算当前点的成交额
+                        sel_turnover = sel_vol * sel_price if (sel_vol is not None and sel_price is not None) else 0
+                        
+                        # 获取全局最新的成交额
+                        latest_turnover = turnovers[-1]
 
-                        if sel_vol and sel_vol > 0:
-                            vol_diff = ((latest_vol - sel_vol) / sel_vol) * 100
-                            parts.append(f"最新量差: {vol_diff:.2f}%")
+                        if sel_turnover > 0 and latest_turnover > 0:
+                            vol_diff = ((latest_turnover - sel_turnover) / sel_turnover) * 100
+                            parts.append(f"最新额差: {vol_diff:.2f}%")
                         else:
-                            parts.append("最新量差: --") # 如果当前成交量为0或None
+                            parts.append("最新额差: --") 
                     text = "\n".join(parts)
                     
                     if has_earning and not (g_text or s_text): color = NORD_THEME['accent_yellow']
@@ -1478,9 +1484,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 vline.set_xdata([event.xdata, event.xdata])
                 vline.set_visible(True)
                 
-                # 拖拽中降级：不更新注释内容，仅移动高亮
+                # --- 拖拽模式 (按住左键移动) ---
                 if mouse_pressed:
-                    # --- 优化后的写法 (极快) ---
+                    # ... (查找 idx 的二分查找逻辑保持不变) ...
                     if len(current_filtered_date_nums) > 0:
                         # 使用二分查找找到插入位置
                         idx = np.searchsorted(current_filtered_date_nums, event.xdata)
@@ -1507,15 +1513,26 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                         except Exception:
                             percent_change = 0.0
 
-                        # <--- 新增: 计算成交量变化 --->
+                        # <--- 修改开始: 将 Volume 差值改为 Turnover 差值 --->
                         vol_text = ""
+                        # 确保我们有初始成交量，且当前点有成交量数据
                         if initial_volume is not None and current_filtered_volumes and idx < len(current_filtered_volumes):
-                            sel_vol = current_filtered_volumes[idx]
-                            if sel_vol is not None and initial_volume > 0: # 避免除以0或None
+                            sel_vol = current_filtered_volumes[idx] # 获取当前点的原始成交量
+                            
+                            # 只有当当前量和初始量都有效时才计算
+                            if sel_vol is not None and initial_price is not None:
                                 try:
-                                    vol_change = ((sel_vol - initial_volume) / initial_volume) * 100.0
-                                    # 显示在第二行，使用 Vol: 标记
-                                    vol_text = f"\n{vol_change:+.1f}%" 
+                                    # A. 计算起点成交额 (Start Turnover)
+                                    start_turnover = initial_price * initial_volume
+                                    
+                                    # B. 计算当前点成交额 (Current Turnover)
+                                    current_turnover = sel_price * sel_vol
+                                    
+                                    # C. 计算成交额变化的百分比
+                                    if start_turnover > 0:
+                                        turnover_change = ((current_turnover - start_turnover) / start_turnover) * 100.0
+                                        # 显示格式保持不变，依然显示在第二行
+                                        vol_text = f"\n{turnover_change:+.1f}%" 
                                 except:
                                     pass
                             
@@ -1624,7 +1641,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             current_filtered_prices = f_prices
             
             # 【关键点】：这里必须保留 f_volumes 赋值给全局变量，
-            # 因为 hover 函数里的 "最新量差" 计算依赖于 current_filtered_volumes (原始量)
+            # 因为 hover 函数里的 "最新额差" 计算依赖于 current_filtered_volumes (原始量)
             current_filtered_volumes = f_volumes 
             
             current_filtered_date_nums = matplotlib.dates.date2num(current_filtered_dates) if current_filtered_dates else np.array([])
@@ -1707,7 +1724,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             
             # --- 增加 f_turnovers 的处理逻辑 ---
             if years == 0:
-                f_dates, f_prices, f_volumes = dates, prices, volumes
+                f_dates, f_prices, = dates, prices, volumes
                 f_turnovers = turnovers
             else:
                 min_date = datetime.now() - timedelta(days=years * 365)
@@ -1715,12 +1732,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 if indices:
                     f_dates = [dates[i] for i in indices]
                     f_prices = [prices[i] for i in indices]
-                    f_volumes = [volumes[i] for i in indices] if volumes else None
                     f_turnovers = [turnovers[i] for i in indices] if turnovers else None
                 else:
                     f_dates = [dates[-1]]
                     f_prices = [prices[-1]]
-                    f_volumes = [volumes[-1]] if volumes else None
                     f_turnovers = [turnovers[-1]] if turnovers else None
             
             current_filtered_dates = f_dates
@@ -1922,14 +1937,14 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     plt.gcf().canvas.mpl_connect('figure_leave_event', hide_annot_on_leave)
 
-    # 首次更新，建立初始筛选与渐变
-    update(default_time_range)
-    print("图表绘制完成，等待用户操作...")
-
     # Matplotlib 3.8+ 支持
     try:
         fig.canvas.toolbar_visible = False
     except Exception:
         pass
+
+    # 首次更新，建立初始筛选与渐变
+    update(default_time_range)
+    print("图表绘制完成，等待用户操作...")
 
     plt.show()
