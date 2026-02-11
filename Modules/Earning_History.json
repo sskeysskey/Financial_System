@@ -442,6 +442,15 @@
             "DASH",
             "MELI",
             "RACE"
+        ],
+        "2026-02-10": [
+            "AIG",
+            "BBY",
+            "INFY",
+            "JAZZ",
+            "PCOR",
+            "POOL",
+            "THC"
         ]
     },
     "PE_Volume_up": {
@@ -922,6 +931,45 @@
             "ZBRA",
             "ZETA",
             "ZS"
+        ],
+        "2026-02-10": [
+            "AON",
+            "AXON",
+            "BKNG",
+            "CHDN",
+            "CRDO",
+            "EW",
+            "EXLS",
+            "EXPE",
+            "FDS",
+            "FIG",
+            "FND",
+            "FROG",
+            "FRSH",
+            "FUTU",
+            "GLBE",
+            "HUBS",
+            "IOT",
+            "KDP",
+            "LYFT",
+            "MDB",
+            "MMYT",
+            "NET",
+            "OBDC",
+            "ORCL",
+            "PODD",
+            "RGLD",
+            "RYAN",
+            "S",
+            "SHOP",
+            "STLA",
+            "SYK",
+            "THC",
+            "TLN",
+            "VICI",
+            "VST",
+            "XYZ",
+            "Z"
         ]
     },
     "PE_Volume": {
@@ -1460,6 +1508,46 @@
             "WDAY",
             "WTW",
             "WYNN"
+        ],
+        "2026-02-10": [
+            "ABNB",
+            "ADP",
+            "AJG",
+            "ALAB",
+            "AMZN",
+            "AVTR",
+            "BDX",
+            "BR",
+            "CAR",
+            "CG",
+            "CLF",
+            "CRL",
+            "CTSH",
+            "CYBR",
+            "DKNG",
+            "ELF",
+            "GFS",
+            "GGB",
+            "HIMS",
+            "HUM",
+            "INTU",
+            "LNC",
+            "MCO",
+            "MNDY",
+            "MOH",
+            "MORN",
+            "MS",
+            "MSCI",
+            "NDAQ",
+            "NTES",
+            "PANW",
+            "PAYC",
+            "SN",
+            "SSNC",
+            "TRU",
+            "WDAY",
+            "WTW",
+            "ZBRA"
         ]
     },
     "PE_Deeper": {
@@ -1643,6 +1731,16 @@
             "PCOR",
             "RELX",
             "TTD"
+        ],
+        "2026-02-10": [
+            "ASAN",
+            "DUOL",
+            "HIMS",
+            "HUBS",
+            "INTU",
+            "OKLO",
+            "RELX",
+            "TTAN"
         ]
     },
     "OverSell_W": {
@@ -1796,6 +1894,13 @@
             "OMC",
             "PODD",
             "WIX"
+        ],
+        "2026-02-10": [
+            "AON",
+            "GWRE",
+            "HPQ",
+            "MSCI",
+            "PODD"
         ]
     },
     "PE_Deep": {
@@ -3120,6 +3225,60 @@
             "VST",
             "W",
             "WDAY",
+            "WST",
+            "Z",
+            "ZS"
+        ],
+        "2026-02-10": [
+            "ADBE",
+            "ADSK",
+            "ALNY",
+            "ANF",
+            "ASTS",
+            "BDX",
+            "BKNG",
+            "CAR",
+            "CART",
+            "CEG",
+            "CHWY",
+            "CRL",
+            "CRM",
+            "CSGP",
+            "CVNA",
+            "CZR",
+            "DASH",
+            "DOCU",
+            "ETSY",
+            "EXPE",
+            "FDS",
+            "FRSH",
+            "GDDY",
+            "GRAB",
+            "GTLB",
+            "HUM",
+            "KRMN",
+            "KTOS",
+            "LEU",
+            "MCO",
+            "MORN",
+            "MRNA",
+            "MRVL",
+            "NDAQ",
+            "NET",
+            "PAYC",
+            "PL",
+            "ROKU",
+            "RVMD",
+            "RYAN",
+            "SNDK",
+            "STLA",
+            "TCOM",
+            "VEEV",
+            "VRSK",
+            "VST",
+            "W",
+            "WDAY",
+            "WIX",
             "WST",
             "Z",
             "ZS"
@@ -4615,6 +4774,40 @@
             "TLN",
             "WBD",
             "WTW"
+        ],
+        "2026-02-10": [
+            "ABNB",
+            "ACN",
+            "ADP",
+            "AJG",
+            "ARGX",
+            "AVTR",
+            "BR",
+            "CHDN",
+            "CHKP",
+            "DDS",
+            "DELL",
+            "DKS",
+            "DLTR",
+            "DPZ",
+            "ELF",
+            "EW",
+            "EXE",
+            "FUTU",
+            "GFS",
+            "MASI",
+            "MELI",
+            "META",
+            "MU",
+            "NBIX",
+            "PAYX",
+            "PDD",
+            "PLNT",
+            "PLTR",
+            "PTCT",
+            "RHI",
+            "STX",
+            "WTW"
         ]
     },
     "PE_invalid": {
@@ -4800,6 +4993,9 @@
         "2026-02-09": [
             "ASTS",
             "S",
+            "SATS"
+        ],
+        "2026-02-10": [
             "SATS"
         ]
     },
@@ -5153,6 +5349,25 @@
             "TGT",
             "TREX",
             "WSM"
+        ],
+        "2026-02-10": [
+            "BBWI",
+            "BURL",
+            "CAVA",
+            "CRC",
+            "CVNA",
+            "FRPT",
+            "GOLF",
+            "HSBC",
+            "MGM",
+            "MTDR",
+            "OVV",
+            "PR",
+            "QXO",
+            "SN",
+            "VALE",
+            "VG",
+            "VNOM"
         ]
     },
     "Short": {
@@ -5450,6 +5665,18 @@
             "USFD",
             "WAB",
             "XRAY"
+        ],
+        "2026-02-10": [
+            "AROC",
+            "DOCN",
+            "FIX",
+            "GTES",
+            "LPX",
+            "MTZ",
+            "NPO",
+            "TIGO",
+            "TRGP",
+            "TSEM"
         ]
     },
     "season": {
@@ -7165,6 +7392,32 @@
             "SYK",
             "VICI",
             "WTW"
+        ],
+        "2026-02-10": [
+            "ADSK",
+            "BBY",
+            "CHDN",
+            "CPNG",
+            "CRDO",
+            "CRM",
+            "CRWD",
+            "CTSH",
+            "DKS",
+            "DPZ",
+            "GDDY",
+            "IBM",
+            "INTU",
+            "KDP",
+            "LLY",
+            "META",
+            "MRVL",
+            "MS",
+            "PLNT",
+            "PODD",
+            "POOL",
+            "SBAC",
+            "STX",
+            "VICI"
         ]
     },
     "no_season": {
@@ -12607,6 +12860,21 @@
             "Z",
             "ZETA",
             "ZS"
+        ],
+        "2026-02-10": [
+            "ANF",
+            "DUOL",
+            "EXE",
+            "FDS",
+            "MCO",
+            "MORN",
+            "MSCI",
+            "NDAQ",
+            "RELX",
+            "TRU",
+            "VRSK",
+            "VST",
+            "XYZ"
         ]
     }
 }

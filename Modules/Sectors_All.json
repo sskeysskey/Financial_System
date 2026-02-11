@@ -1301,7 +1301,8 @@
         "GPCR",
         "SHC",
         "MDLN",
-        "MIRM"
+        "MIRM",
+        "NVST"
     ],
     "Industrials": [
         "GE",

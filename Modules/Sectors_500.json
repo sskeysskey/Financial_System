@@ -15,7 +15,8 @@
         "VALE",
         "WPM",
         "AU",
-        "GFI"
+        "GFI",
+        "CTVA"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -168,7 +169,6 @@
         "MET",
         "BRK-B",
         "MRSH",
-        "AMP",
         "BSBR"
     ],
     "Healthcare": [
@@ -202,7 +202,6 @@
         "CVS",
         "MCK",
         "COR",
-        "BDX",
         "IDXX",
         "TAK",
         "ARGX",
@@ -313,8 +312,7 @@
         "WDC",
         "NXPI",
         "SNDK",
-        "MPWR",
-        "CRWV"
+        "MPWR"
     ],
     "Utilities": [
         "NEE",
