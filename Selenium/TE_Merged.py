@@ -14,8 +14,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException
-import platform  # <--- 新增
-import sys       # <--- 新增
+import platform
+import sys
 import tkinter as tk
 from tkinter import messagebox
 

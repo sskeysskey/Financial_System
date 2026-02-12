@@ -44,79 +44,6 @@ EARNING_HISTORY_JSON_FILE = PATHS["earnings_history_json"](CONFIG_DIR)
 
 # --- 2. 可配置参数 ---
 
-# CONFIG = {
-#     "TARGET_SECTORS": {
-#         "Basic_Materials", "Communication_Services", "Consumer_Cyclical",
-#         "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare",
-#         "Industrials", "Real_Estate", "Technology", "Utilities"
-#     },
-#     # ========== 代码修改开始 1/3：新增中国概念股成交额阈值 ==========
-#     "TURNOVER_THRESHOLD": 50_000_000,
-#     "TURNOVER_THRESHOLD_CHINA": 400_000_000,  # 新增：中国概念股的成交额阈值
-
-#     "RECENT_EARNINGS_COUNT": 2,
-#     "MARKETCAP_THRESHOLD": 200_000_000_000,  # 2000亿
-#     "MARKETCAP_THRESHOLD_MEGA": 500_000_000_000,  # 5000亿
-
-#     "COND5_WINDOW_DAYS": 6,
-
-#     # 严格筛选标准
-#     "PRICE_DROP_PERCENTAGE_LARGE": 0.079,  # <2000亿=7.9%
-#     "PRICE_DROP_PERCENTAGE_SMALL": 0.06,   # 2000亿 ≤ 市值 < 5000亿 = 6%
-#     "PRICE_DROP_PERCENTAGE_MEGA": 0.05,    # ≥5000亿=5%
-    
-#     # 普通宽松筛选标准
-#     "RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.07,  # <2000亿=7%
-#     "RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.05,  # ≥2000亿=5%
-
-#     # 新增：次宽松筛选标准
-#     "SUB_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.06,  # <2000亿=6%
-#     "SUB_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.04,  # ≥2000亿=4%
-
-#     # 最宽松筛选标准
-#     "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.05,  # <2000亿=5%
-#     "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.03,  # ≥2000亿=3%
-
-#     # 触发“最宽松”标准的财报收盘价价差百分比 (条件C)
-#     "ER_PRICE_DIFF_THRESHOLD": 0.04,
-
-#     # 触发宽松筛选的最小分组数量 (仅对 PE_valid 组生效)
-#     "MIN_PE_VALID_SIZE_FOR_RELAXED_FILTER": 4,
-
-#     # 回撤阀值 6%：最新收盘价比最新交易日前10天收盘价的最低值高不超过5%（如果10天内有财报，则将财报日收盘价作为最低值）
-#     "MAX_INCREASE_PERCENTAGE_SINCE_LOW": 0.06,
-
-# # 【新增】热门板块回撤容忍度：如果属于 HOT_TAGS，则允许放宽到 12%
-#     "MAX_INCREASE_PERCENTAGE_SINCE_LOW_HOT": 0.12, 
-
-#     # 条件1c 的专属参数：最新价比最新财报收盘价低至少 X%
-#     "PRICE_DROP_FOR_COND1C": 0.14,
-
-#     # 条件3参数
-#     "COND3_DROP_THRESHOLDS": [0.07, 0.15],  # 7% 与 15%
-#     "COND3_LOOKBACK_DAYS": 60,
-
-#     # 条件4参数: 财报日至今最高价相比最新价的涨幅阈值
-#     "COND4_RISE_THRESHOLD": 0.07,  # 7%
-
-#     # ========== 新增：条件5的参数 ==========
-#     "COND5_ER_TO_HIGH_THRESHOLD": 0.3,  # 财报日到最高价的涨幅阈值 30%
-#     "COND5_HIGH_TO_LATEST_THRESHOLD": 0.079,  # 最高价到最新价的跌幅阈值 7.9%
-#     "PE_DEEP_DROP_THRESHOLD": 0.14, # 条件1-5后的深跌判断1
-#     "PE_DEEP_MAX_DROP_THRESHOLD": 0.15, # 条件1-5后的深跌判断2
-#     "PE_DEEP_HIGH_SINCE_ER_THRESHOLD": 0.18, # 条件1-5后的深跌判断3
-
-#     # ========== 代码修改开始 1/4：新增条件6（抄底W底）参数 ==========
-#     "COND6_ER_DROP_A_THRESHOLD": 0.25,  # 财报跌幅分界线 25%
-#     "COND6_LOW_DROP_B_LARGE": 0.09,     # 如果A > 25%，则B需 > 9%
-#     "COND6_LOW_DROP_B_SMALL": 0.12,     # 如果A <= 25%，则B需 > 12%
-#     "COND6_W_BOTTOM_MIN_PEAK_RISE": 0.015, # 例如改为 1.5%
-
-#     # W底形态参数
-#     "COND6_W_BOTTOM_PRICE_TOLERANCE": 0.038,  # 两个谷底的价格差容忍度 (3.8%)
-#     "COND6_W_BOTTOM_MIN_DAYS_GAP": 3,        # 两个谷底之间的最小间隔天数
-# }
-
 CONFIG = {
     "TARGET_SECTORS": {
         "Basic_Materials", "Communication_Services", "Consumer_Cyclical",
@@ -125,7 +52,7 @@ CONFIG = {
     },
     # ========== 代码修改开始 1/3：新增中国概念股成交额阈值 ==========
     "TURNOVER_THRESHOLD": 100_000_000,
-    "TURNOVER_THRESHOLD_CHINA": 200_000_000,  # 新增：中国概念股的成交额阈值
+    "TURNOVER_THRESHOLD_CHINA": 100_000_000,  # 新增：中国概念股的成交额阈值
 
     "RECENT_EARNINGS_COUNT": 2,
     "MARKETCAP_THRESHOLD": 200_000_000_000,  # 2000亿
@@ -169,10 +96,17 @@ CONFIG = {
     "COND3_DROP_THRESHOLDS": [0.09, 0.15],  # 9% 与 15%
     "COND3_LOOKBACK_DAYS": 60,
 
-    # 条件4参数: 财报日至今最高价相比最新价的涨幅阈值
-    "MARKETCAP_THRESHOLD_ULTRA": 800_000_000_000,  # 8000亿
-    "COND4_RISE_THRESHOLD_LARGE": 0.09,           # > 8000亿亿使用 9%
-    "COND4_RISE_THRESHOLD_SMALL": 0.11,           # <= 8000亿亿使用 11%
+    # ========== 修改后的条件4参数 ==========
+    "MARKETCAP_VAL_1": 220_000_000_000,
+    "MARKETCAP_VAL_2": 500_000_000_000,
+    "MARKETCAP_VAL_3": 800_000_000_000,
+    "MARKETCAP_VAL_4": 1_400_000_000_000,
+    
+    "COND4_THRESH_1": 0.062,
+    "COND4_THRESH_2": 0.056,
+    "COND4_THRESH_3": 0.051,
+    "COND4_THRESH_4": 0.047,
+    "COND4_THRESH_5": 0.045,
 
     # ========== 新增：条件5的参数 ==========
     "COND5_ER_TO_HIGH_THRESHOLD": 0.3,  # 财报日到最高价的涨幅阈值 30%
@@ -702,39 +636,59 @@ def check_new_condition_3(data, config, log_detail, symbol_to_trace):
 def check_new_condition_4(data, config, log_detail, symbol_to_trace):
     symbol = data.get('symbol')
     is_tracing = (symbol == symbol_to_trace)
-    if is_tracing: log_detail(f"\n--- [{symbol}] 新增条件4评估 (动态市值阈值) ---")
+    if is_tracing: log_detail(f"\n--- [{symbol}] 新增条件4评估 (多级动态市值阈值) ---")
     
     high_since_er = data.get('high_since_er')
     latest_price = data.get('latest_price')
     marketcap = data.get('marketcap')
-    
-    # --- 动态阈值判断逻辑 ---
-    ultra_cap_limit = config.get("MARKETCAP_THRESHOLD_ULTRA", 1000_000_000_000)
-    if marketcap and marketcap >= ultra_cap_limit:
-        rise_threshold = config.get('COND4_RISE_THRESHOLD_LARGE', 0.09)
-        cap_type = "超大市值 (>8000亿)"
-    else:
-        rise_threshold = config.get('COND4_RISE_THRESHOLD_SMALL', 0.11)
-        cap_type = "普通市值 (<=8000亿)"
-    # -----------------------
 
+    # 数据有效性检查
     if high_since_er is None or latest_price is None or latest_price <= 0:
         if is_tracing: log_detail(f"  - 结果: False (数据不足: high_since_er={high_since_er}, latest_price={latest_price})")
         return False
+    
+    # 获取配置参数，方便日志显示
+    v1 = config["MARKETCAP_VAL_1"]
+    v2 = config["MARKETCAP_VAL_2"]
+    v3 = config["MARKETCAP_VAL_3"]
+    v4 = config["MARKETCAP_VAL_4"]
 
+    # 阶梯判定逻辑 (修正了日志描述，使其与 Config 保持一致)
+    if marketcap is None:
+        rise_threshold = config["COND4_THRESH_1"]
+        cap_type = f"未知市值 (默认使用 <= {v1/1e8:.0f}亿 档位)"
+    elif marketcap <= v1:
+        rise_threshold = config["COND4_THRESH_1"]
+        cap_type = f"普通市值 (<= {v1/1e8:.0f}亿)"
+    elif marketcap <= v2:
+        rise_threshold = config["COND4_THRESH_2"]
+        cap_type = f"大市值 ({v1/1e8:.0f}亿 - {v2/1e8:.0f}亿)"
+    elif marketcap <= v3:
+        rise_threshold = config["COND4_THRESH_3"]
+        cap_type = f"超大市值 ({v2/1e8:.0f}亿 - {v3/1e8:.0f}亿)"
+    elif marketcap <= v4:
+        rise_threshold = config["COND4_THRESH_4"]
+        cap_type = f"巨型市值 ({v3/1e8:.0f}亿 - {v4/1e8:.0f}亿)"
+    else:
+        rise_threshold = config["COND4_THRESH_5"]
+        cap_type = f"顶级市值 (> {v4/1e8:.0f}亿)"
+
+    # 计算逻辑：判断 (最高价 - 最新价) / 最新价 是否大于阈值
+    # 即：检查是否有足够的反弹空间
     threshold_price = latest_price * (1 + rise_threshold)
     passed = high_since_er >= threshold_price
     
     if is_tracing:
+        # 计算实际的反弹空间 (Upside)
         rise_pct = (high_since_er - latest_price) / latest_price
-        log_detail(f"  - 当前市值: {marketcap if marketcap else '未知':,}")
-        log_detail(f"  - 判定类型: {cap_type}")
-        log_detail(f"  - 财报日至今最高价: {high_since_er:.2f}")
-        log_detail(f"  - 最新收盘价: {latest_price:.2f}")
-        log_detail(f"  - 实际涨幅: {rise_pct:.2%}")
-        log_detail(f"  - 动态要求涨幅: {rise_threshold:.2%}")
-        log_detail(f"  - 判断: {high_since_er:.2f} >= {threshold_price:.2f} -> {passed}")
-        log_detail(f"  - 结果: {passed}")
+        
+        log_detail(f"  - 当前市值: {marketcap:,.0f}" if marketcap else "  - 当前市值: 未知")
+        log_detail(f"  - 判定区间: {cap_type}")
+        log_detail(f"  - 财报日至今最高价: {high_since_er:.2f}, 最新价: {latest_price:.2f}")
+        log_detail(f"  - 要求的反弹空间(Upside): {rise_threshold:.2%}")
+        log_detail(f"  - 实际的反弹空间(Upside): {rise_pct:.2%}")
+        log_detail(f"  - 结果: {passed} (最高价 {high_since_er:.2f} >= 阈值价 {threshold_price:.2f})")
+        
     return passed
 
 # ========== 代码修改开始 3/3：更新 check_new_condition_5 函数以实现新规则 ==========

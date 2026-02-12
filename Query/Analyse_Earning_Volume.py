@@ -637,45 +637,67 @@ def run_pe_volume_logic(log_detail):
 
     # ================= [新增逻辑] 检查 PE_Deep / PE_Deeper 交叉 =================
     # 在生成 Note 之前，先读取现有的 Panel 文件，找出哪些 symbol 在 Deep/Deeper 组里
+    all_existing_notes = {}
     current_deep_symbols = set()
     try:
         with open(PANEL_JSON_FILE, 'r', encoding='utf-8') as f:
             p_data = json.load(f)
-            # 检查 PE_Deep
-            if "PE_Deep" in p_data and isinstance(p_data["PE_Deep"], dict):
-                current_deep_symbols.update(p_data["PE_Deep"].keys())
-            # 检查 PE_Deeper
-            if "PE_Deeper" in p_data and isinstance(p_data["PE_Deeper"], dict):
-                current_deep_symbols.update(p_data["PE_Deeper"].keys())
-        log_detail(f"已加载现有 Deep/Deeper 分组，共 {len(current_deep_symbols)} 个 Symbol 用于交叉检查。")
+            # 收集所有组的备注，防止覆盖
+            for group_name, group_content in p_data.items():
+                if isinstance(group_content, dict):
+                    for s, n in group_content.items():
+                        # 如果备注里有东西，就存下来
+                        if len(n) > len(all_existing_notes.get(s, "")):
+                            all_existing_notes[s] = n
+            
+            # 专门提取 Deep/Deeper 用于“听”字逻辑
+            if "PE_Deep" in p_data: current_deep_symbols.update(p_data["PE_Deep"].keys())
+            if "PE_Deeper" in p_data: current_deep_symbols.update(p_data["PE_Deeper"].keys())
+            
+            # === 修改点：新增 PE_valid 和 PE_invalid 用于“听”字逻辑 ===
+            if "PE_valid" in p_data: current_deep_symbols.update(p_data["PE_valid"].keys())
+            if "PE_invalid" in p_data: current_deep_symbols.update(p_data["PE_invalid"].keys())
+            if "OverSell_W" in p_data: current_deep_symbols.update(p_data["OverSell_W"].keys())
+            
     except Exception as e:
-        log_detail(f"警告: 读取Panel文件以检查Deep分组失败: {e}")
+        log_detail(f"提示: 读取现有备注时出错(可能是文件不存在): {e}")
 
     # 4. 构建备注 (Note) - 使用过滤后的列表
     # 修改：增加 highlight_set 参数，用于给特定集合中的 symbol 加 "听" 后缀
-    def build_symbol_note_map(symbols, highlight_set=None):
+    def build_symbol_note_map(symbols, existing_notes=None, highlight_set=None):
+        """
+        symbols: 本次筛选出的 symbol 列表
+        existing_notes: 字典，存储了从 panel.json 读取的 {symbol: "原有备注"}
+        highlight_set: Deep/Deeper/Valid/Invalid 的 symbol 集合
+        """
         note_map = {}
         for sym in symbols:
-            tags = set(symbol_to_tags_map.get(sym, []))
-            is_hot = bool(tags & hot_tags)
+            # 1. 获取原有备注（如 "OKLO15热"）
+            # 注意：这里我们通常只需要后缀部分，所以把 symbol 删掉
+            orig_note = ""
+            if existing_notes and sym in existing_notes:
+                orig_note = existing_notes[sym].replace(sym, "") # 提取出 "15热"
             
-            # 基础备注 (热点)
-            note_str = f"{sym}热" if is_hot else ""
+            # 3. 构造新备注
+            new_suffix = orig_note
             
-            # 交叉检查 (Deep/Deeper)
+            # 检查“听”：如果属于 Deep 组且当前备注里没“听”
             if highlight_set and sym in highlight_set:
-                if note_str:
-                    note_str += "听"
-                else:
-                    note_str = f"{sym}听"
+                if "听" not in new_suffix:
+                    new_suffix += "听"
             
-            note_map[sym] = note_str
+            # 最终组合：Symbol + 累加后的后缀
+            note_map[sym] = f"{sym}{new_suffix}"
         return note_map
         
-    # 为 PE_Volume 传入 current_deep_symbols 进行检查
-    pe_volume_notes = build_symbol_note_map(filtered_pe_volume, highlight_set=current_deep_symbols)
+    # 为 PE_Volume 组生成备注
+    pe_volume_notes = build_symbol_note_map(
+        filtered_pe_volume, 
+        existing_notes=all_existing_notes, 
+        highlight_set=current_deep_symbols
+    )
     
-    # PE_Volume_up 暂时不需要此逻辑 (或者如果需要也可以传入)
+    # PE_Volume_up 暂时不需要此逻辑
     pe_volume_up_notes = build_symbol_note_map(filtered_pe_volume_up)
 
     # 5. 回测安全拦截
