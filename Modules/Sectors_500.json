@@ -15,9 +15,7 @@
         "VALE",
         "WPM",
         "AU",
-        "GFI",
-        "CTVA",
-        "MT"
+        "CTVA"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -33,7 +31,6 @@
         "AMX",
         "APP",
         "WBD",
-        "BIDU",
         "EA"
     ],
     "Consumer_Cyclical": [
@@ -79,7 +76,8 @@
         "CL",
         "MNST",
         "DEO",
-        "TGT"
+        "TGT",
+        "ABEV"
     ],
     "Energy": [
         "XOM",
@@ -164,7 +162,6 @@
         "IBKR",
         "BAM",
         "NWG",
-        "RKT",
         "MET",
         "BRK-B",
         "MRSH",
@@ -201,7 +198,6 @@
         "CVS",
         "MCK",
         "COR",
-        "IDXX",
         "TAK",
         "ARGX",
         "CAH",
@@ -311,8 +307,7 @@
         "NXPI",
         "SNDK",
         "MPWR",
-        "ASX",
-        "TER"
+        "ASX"
     ],
     "Utilities": [
         "NEE",

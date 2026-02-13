@@ -1533,7 +1533,8 @@
         "HHH",
         "FRMI",
         "LXP",
-        "RYN"
+        "RYN",
+        "SBRA"
     ],
     "Technology": [
         "MSFT",
@@ -1655,7 +1656,6 @@
         "PAYC",
         "FFIV",
         "PCOR",
-        "CYBR",
         "GWRE",
         "DOX",
         "LSCC",
@@ -1790,7 +1790,8 @@
         "FORM",
         "DOCN",
         "VIAV",
-        "PLXS"
+        "PLXS",
+        "IPGP"
     ],
     "Utilities": [
         "NEE",
