@@ -37,6 +37,8 @@ DB_PATH = os.path.join(BASE_CODING_DIR, "Database", "Finance.db")
 HIGH_LOW_5Y_PATH = os.path.join(BASE_CODING_DIR, "News", "backup", "HighLow.txt")
 # ### 新增 ###: Volume High 文件路径
 VOLUME_HIGH_PATH = os.path.join(BASE_CODING_DIR, "News", "0.5Y_volume_high.txt")
+# --- 新增: ETF 文件路径 ---
+COMPARE_ETFS_PATH = os.path.join(BASE_CODING_DIR, "News", "CompareETFs.txt")
 
 # 按钮＋标签固定宽度（像素）
 SYMBOL_WIDGET_FIXED_WIDTH = 150
@@ -57,10 +59,16 @@ class ClickableLabel(QLabel):
 # ----------------------------------------------------------------------
 class SymbolManager:
     def __init__(self, symbol_list):
+        self.update_symbols(symbol_list)
+
+    # --- 修改: 新增 update_symbols 方法，用于切换 Tab 时更新列表 ---
+    def update_symbols(self, symbol_list):
+        # 使用 OrderedDict 去重，但保留当前列表的顺序
         self.symbols = list(OrderedDict.fromkeys(symbol_list))
         self.current_index = -1
         if not self.symbols:
-            print("Warning: SymbolManager received an empty list of symbols.")
+            # 这里的 print 可以注释掉，以免空列表时刷屏
+            pass 
 
     def next_symbol(self):
         if not self.symbols: return None
@@ -76,6 +84,7 @@ class SymbolManager:
         try:
             self.current_index = self.symbols.index(symbol)
         except ValueError:
+            # 如果找不到，可能是因为 parse 逻辑去掉了后缀，尝试模糊匹配或忽略
             print(f"Warning: Symbol '{symbol}' not found in the manager's list.")
 
     def reset(self):
@@ -107,6 +116,8 @@ def parse_high_low_file(path):
     data = OrderedDict()
     current_period = None
     current_category = None
+    if not os.path.exists(path): return data
+    
     with open(path, 'r', encoding='utf-8') as file:
         for line in file:
             line = line.strip()
@@ -163,23 +174,67 @@ def parse_volume_high_file(path):
                     data[current_section].append(item)
     return data
 
+# --- 新增: 解析 ETF 文件 ---
+def parse_etf_file(path):
+    items = []
+    if not os.path.exists(path): return items
+
+    with open(path, 'r', encoding='utf-8') as file:
+        for line in file:
+            line = line.strip()
+            if not line: continue
+            
+            # 格式: GDXJ.*    :   5.81%   4242000     -51.47%   黄金, 金矿...
+            if ':' in line:
+                raw_symbol_part, content_part = line.split(':', 1)
+                
+                # 处理 Symbol: 去掉第一个小数点后的部分
+                # 例如 "GDXJ.*" -> "GDXJ", "XLU.*.++" -> "XLU"
+                symbol = raw_symbol_part.split('.')[0].strip()
+                
+                # 处理内容部分
+                # split() 默认按空白字符分割
+                parts = content_part.strip().split()
+                
+                if len(parts) >= 1:
+                    percentage = parts[0] # 冒号右边第一部分
+                    
+                    # Tags 通常在后面。根据示例:
+                    # 0: 5.81%, 1: 4242000, 2: -51.47%, 3+: Tags
+                    # 但为了保险，我们假设前3个是数据，后面是tags，或者直接取剩余部分
+                    # 观察数据，tags似乎总是从第4个元素开始（index 3）
+                    if len(parts) > 3:
+                        tags = " ".join(parts[3:])
+                    else:
+                        tags = ""
+                    
+                    items.append({
+                        'symbol': symbol,
+                        'percentage': percentage,
+                        'tags': tags
+                    })
+    return items
+
 def load_json(path):
+    if not os.path.exists(path): return {}
     with open(path, 'r', encoding='utf-8') as file:
         return json.load(file, object_pairs_hook=OrderedDict)
 
 def load_text_data(path):
     data = {}
+    if not os.path.exists(path): return data
     with open(path, 'r', encoding='utf-8') as file:
         for line in file:
             line = line.strip()
             if not line: continue
-            key, value = map(str.strip, line.split(':', 1))
-            cleaned_key = key.split()[-1]
-            if ',' in value:
-                parts = [p.strip() for p in value.split(',')]
-                data[cleaned_key] = tuple(parts)
-            else:
-                data[cleaned_key] = value
+            if ':' in line:
+                key, value = map(str.strip, line.split(':', 1))
+                cleaned_key = key.split()[-1]
+                if ',' in value:
+                    parts = [p.strip() for p in value.split(',')]
+                    data[cleaned_key] = tuple(parts)
+                else:
+                    data[cleaned_key] = value
     return data
 
 # ----------------------------------------------------------------------
@@ -187,8 +242,7 @@ def load_text_data(path):
 # ----------------------------------------------------------------------
 
 class HighLowWindow(QMainWindow):
-    # ### 修改 ###: 增加 volume_high_data 参数
-    def __init__(self, high_low_data, keyword_colors, sector_data, compare_data, json_data, high_low_5y_data, volume_high_data):
+    def __init__(self, high_low_data, keyword_colors, sector_data, compare_data, json_data, high_low_5y_data, volume_high_data, etf_data):
         super().__init__()
         
         self.high_low_data = high_low_data
@@ -197,27 +251,37 @@ class HighLowWindow(QMainWindow):
         self.compare_data = compare_data
         self.json_data = json_data
         self.high_low_5y_data = high_low_5y_data
-        # ### 新增 ###
         self.volume_high_data = volume_high_data
+        self.etf_data = etf_data  # 新增数据
         
-        # --- 创建并初始化 SymbolManager ---
-        all_symbols = []
+        # --- 修改: 分别准备三个列表，而不是合并成一个 ---
         
-        # 1. High/Low symbols
+        # 1. High/Low List
+        self.list_high_low = []
         for period_data in high_low_data.values():
-            all_symbols.extend(period_data.get('Low', []))
-            all_symbols.extend(period_data.get('High', []))
-        
-        # 2. 5Y High symbols
+            self.list_high_low.extend(period_data.get('Low', []))
+            self.list_high_low.extend(period_data.get('High', []))
         five_y_high_symbols = self.high_low_5y_data.get('5Y', {}).get('High', [])
-        all_symbols.extend(five_y_high_symbols)
+        self.list_high_low.extend(five_y_high_symbols)
 
-        # ### 新增 ###: 3. Volume High symbols (确保可以通过键盘切换到这些 symbol)
+        # 2. Volume High List
+        self.list_volume = []
         for section_items in self.volume_high_data.values():
             for item in section_items:
-                all_symbols.append(item['symbol'])
+                self.list_volume.append(item['symbol'])
+        
+        # 3. ETF List (Top 24 + Bottom 24)
+        self.list_etf = []
+        top_24 = self.etf_data[:24]
+        bottom_24 = self.etf_data[-24:][::-1] # 倒数24个，且倒序显示
+        
+        for item in top_24:
+            self.list_etf.append(item['symbol'])
+        for item in bottom_24:
+            self.list_etf.append(item['symbol'])
 
-        self.symbol_manager = SymbolManager(all_symbols)
+        # 初始化 SymbolManager，默认使用 Tab 1 (High/Low) 的数据
+        self.symbol_manager = SymbolManager(self.list_high_low)
         
         self.init_ui()
 
@@ -240,18 +304,39 @@ class HighLowWindow(QMainWindow):
         self._init_volume_tab(self.tab_volume)
         self.tabs.addTab(self.tab_volume, "Volume High")
 
-        # --- 修改: 使用 QShortcut 强制捕获 Tab 键 ---
+        # Tab 3: ETFs (新增)
+        self.tab_etfs = QWidget()
+        self._init_etf_tab(self.tab_etfs)
+        self.tabs.addTab(self.tab_etfs, "ETFs")
+
+        # --- 修改: 监听 Tab 切换事件 ---
+        self.tabs.currentChanged.connect(self.on_tab_changed)
+
+        # 使用 QShortcut 强制捕获 Tab 键
         self.tab_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Tab), self)
         self.tab_shortcut.activated.connect(self.switch_tab)
 
         self.apply_stylesheet()
 
-    # --- 新增: 切换 Tab 的槽函数 ---
+    # --- 修改: Tab 切换处理逻辑 ---
+    def on_tab_changed(self, index):
+        """当 Tab 切换时，更新 SymbolManager 的列表上下文"""
+        if index == 0:
+            self.symbol_manager.update_symbols(self.list_high_low)
+        elif index == 1:
+            self.symbol_manager.update_symbols(self.list_volume)
+        elif index == 2:
+            self.symbol_manager.update_symbols(self.list_etf)
+        
+        # 打印调试信息，可选
+        # print(f"Tab switched to {index}. Symbol list updated. Count: {len(self.symbol_manager.symbols)}")
+
     def switch_tab(self):
         current_idx = self.tabs.currentIndex()
         next_idx = (current_idx + 1) % self.tabs.count()
         self.tabs.setCurrentIndex(next_idx)
 
+    # --- Tab 1 Logic ---
     def _init_high_low_tab(self, parent_widget):
         # 原来的 ScrollArea 逻辑移到这里
         layout = QVBoxLayout(parent_widget)
@@ -323,7 +408,25 @@ class HighLowWindow(QMainWindow):
         self._populate_category_columns(self.high_columns_layout, 'High')
         self._populate_5y_high_section()
 
-    # --- 新增: Volume Tab 的布局逻辑 ---
+    def _create_section_container(self, title_text, layout_ref):
+        container = QWidget()
+        v_layout = QVBoxLayout(container)
+        v_layout.setContentsMargins(10, 0, 10, 0)
+        title = QLabel(title_text)
+        title.setFont(QFont("Arial", 20, QFont.Weight.Bold))
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        v_layout.addWidget(title)
+        v_layout.addLayout(layout_ref)
+        v_layout.addStretch(1)
+        return container
+
+    def _add_separator(self, layout):
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.VLine)
+        sep.setFrameShadow(QFrame.Shadow.Sunken)
+        layout.addWidget(sep)
+
+    # --- Tab 2 Logic ---
     def _init_volume_tab(self, parent_widget):
         layout = QVBoxLayout(parent_widget)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -365,15 +468,67 @@ class HighLowWindow(QMainWindow):
             section_layout.addStretch(1)
             
             main_layout.addWidget(section_container)
-            
-            # 分隔符
-            sep = QFrame()
-            sep.setFrameShape(QFrame.Shape.VLine)
-            sep.setFrameShadow(QFrame.Shadow.Sunken)
-            main_layout.addWidget(sep)
+            self._add_separator(main_layout)
 
         main_layout.addStretch(1)
 
+    # --- Tab 3 Logic (ETFs) ---
+    def _init_etf_tab(self, parent_widget):
+        layout = QVBoxLayout(parent_widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        layout.addWidget(scroll_area)
+        scroll_content = QWidget()
+        scroll_area.setWidget(scroll_content)
+        
+        main_layout = QHBoxLayout(scroll_content)
+        main_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        scroll_content.setLayout(main_layout)
+
+        # 1. 顶部 24 个 (Top Gainers)
+        top_24_items = self.etf_data[:24]
+        top_container = self._create_section_container("Top Gainers", top_layout := QHBoxLayout())
+        # 填充 Top 24，强制 3 列，每列 8 个
+        self._populate_etf_grid(top_layout, top_24_items)
+        main_layout.addWidget(top_container)
+
+        self._add_separator(main_layout)
+
+        # 2. 底部 24 个 (Top Losers)，倒序显示
+        # 取最后24个，然后反转列表
+        bottom_24_items = self.etf_data[-24:][::-1]
+        bottom_container = self._create_section_container("Top Losers", bottom_layout := QHBoxLayout())
+        self._populate_etf_grid(bottom_layout, bottom_24_items)
+        main_layout.addWidget(bottom_container)
+
+        main_layout.addStretch(1)
+
+    def _populate_etf_grid(self, parent_layout, items):
+        # 强制分列：每列最多 MAX_ITEMS_PER_COLUMN (8) 个
+        # 预期 items 数量最多 24 个，所以会有 3 列
+        
+        # 将 items 分块
+        chunks = [items[i:i + MAX_ITEMS_PER_COLUMN] for i in range(0, len(items), MAX_ITEMS_PER_COLUMN)]
+        
+        for chunk in chunks:
+            col_layout = QVBoxLayout()
+            col_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+            
+            for item in chunk:
+                # 按钮显示: Symbol + Percentage
+                # 标签显示: Tags
+                widget = self.create_symbol_widget(
+                    item['symbol'], 
+                    override_text=item['percentage'], 
+                    override_tags=item['tags']
+                )
+                col_layout.addWidget(widget)
+            
+            col_layout.addStretch(1)
+            parent_layout.addLayout(col_layout)
+
+    # --- Common Population Logic ---
     def _populate_volume_items(self, parent_layout, items):
         """
         类似于 _populate_category_columns，但专门用于 Volume 数据结构
@@ -404,104 +559,6 @@ class HighLowWindow(QMainWindow):
         if current_column_layout:
             current_column_layout.addStretch(1)
             parent_layout.addLayout(current_column_layout)
-
-    def apply_stylesheet(self):
-        button_styles = {
-            "Cyan": ("cyan", "black"), "Blue": ("blue", "white"),
-            "Purple": ("purple", "white"), "Green": ("green", "white"),
-            "White": ("white", "black"), "Yellow": ("yellow", "black"),
-            "Orange": ("orange", "black"), "Red": ("red", "black"),
-            "Black": ("black", "white"), "Default": ("#111111", "gray")
-        }
-        qss = ""
-        for name, (bg, fg) in button_styles.items():
-            qss += f"""
-            QPushButton#{name} {{
-                background-color: {bg};
-                color: {fg};
-                font-size: 16px;
-                padding: 5px;
-                border: 1px solid #333;
-                border-radius: 4px;
-                text-align: left;
-                padding-left: 8px;
-            }}
-            QPushButton#{name}:hover {{
-                background-color: {self.lighten_color(bg)};
-            }}
-            """
-        qss += """
-        QMenu {
-            background-color: #2C2C2C;
-            color: #E0E0E0;
-            border: 1px solid #555;
-        }
-        QMenu::item {
-            padding: 6px 25px 6px 20px;
-            background: transparent;
-        }
-        QMenu::item:selected {
-            background-color: #007ACC;
-            color: white;
-        }
-        QMenu::separator {
-            height: 1px;
-            background: #555;
-            margin: 4px 10px 4px 10px;
-        }
-        QGroupBox {
-            font-size: 16px;
-            font-weight: bold;
-            margin-top: 15px;
-            border: 1px solid gray;
-            border-radius: 5px;
-        }
-        QGroupBox::title {
-            subcontrol-origin: margin;
-            subcontrol-position: top center;
-            padding: 0 10px;
-        }
-        /* Tab 样式 */
-        QTabWidget::pane { 
-            border: 1px solid #444; 
-        }
-        QTabBar::tab {
-            background: #2C2C2C;
-            color: #AAA;
-            padding: 8px 20px;
-            border: 1px solid #444;
-            border-bottom-color: #444; 
-            border-top-left-radius: 4px;
-            border-top-right-radius: 4px;
-        }
-        QTabBar::tab:selected {
-            background: #444;
-            color: white;
-            border-bottom-color: #444;
-        }
-        QTabBar::tab:hover {
-            background: #383838;
-        }
-        """
-        self.setStyleSheet(qss)
-
-    def lighten_color(self, color_name, factor=1.2):
-        color = QColor(color_name)
-        h, s, l, a = color.getHslF()
-        l = min(1.0, l * factor)
-        color.setHslF(h, s, l, a)
-        return color.name()
-
-    def get_button_style_name(self, keyword):
-        color_map = {
-            "red": "Red", "cyan": "Cyan", "blue": "Blue", "purple": "Purple",
-            "yellow": "Yellow", "orange": "Orange", "black": "Black",
-            "white": "White", "green": "Green"
-        }
-        for color, style_name in color_map.items():
-            if keyword in self.keyword_colors.get(f"{color}_keywords", []):
-                return style_name
-        return "Default"
 
     def _populate_category_columns(self, parent_layout, category_name):
         all_display_groups = []
@@ -581,6 +638,64 @@ class HighLowWindow(QMainWindow):
             widget = self.create_symbol_widget(symbol)
             group_layout.addWidget(widget)
         return group_box
+
+    # --- Styles & Helpers ---
+    def apply_stylesheet(self):
+        button_styles = {
+            "Cyan": ("cyan", "black"), "Blue": ("blue", "white"),
+            "Purple": ("purple", "white"), "Green": ("green", "white"),
+            "White": ("white", "black"), "Yellow": ("yellow", "black"),
+            "Orange": ("orange", "black"), "Red": ("red", "black"),
+            "Black": ("black", "white"), "Default": ("#111111", "gray")
+        }
+        qss = ""
+        for name, (bg, fg) in button_styles.items():
+            qss += f"""
+            QPushButton#{name} {{
+                background-color: {bg};
+                color: {fg};
+                font-size: 16px;
+                padding: 5px;
+                border: 1px solid #333;
+                border-radius: 4px;
+                text-align: left;
+                padding-left: 8px;
+            }}
+            QPushButton#{name}:hover {{
+                background-color: {self.lighten_color(bg)};
+            }}
+            """
+        qss += """
+        QMenu { background-color: #2C2C2C; color: #E0E0E0; border: 1px solid #555; }
+        QMenu::item { padding: 6px 25px 6px 20px; background: transparent; }
+        QMenu::item:selected { background-color: #007ACC; color: white; }
+        QMenu::separator { height: 1px; background: #555; margin: 4px 10px 4px 10px; }
+        QGroupBox { font-size: 16px; font-weight: bold; margin-top: 15px; border: 1px solid gray; border-radius: 5px; }
+        QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top center; padding: 0 10px; }
+        QTabWidget::pane { border: 1px solid #444; }
+        QTabBar::tab { background: #2C2C2C; color: #AAA; padding: 8px 20px; border: 1px solid #444; border-bottom-color: #444; border-top-left-radius: 4px; border-top-right-radius: 4px; }
+        QTabBar::tab:selected { background: #444; color: white; border-bottom-color: #444; }
+        QTabBar::tab:hover { background: #383838; }
+        """
+        self.setStyleSheet(qss)
+
+    def lighten_color(self, color_name, factor=1.2):
+        color = QColor(color_name)
+        h, s, l, a = color.getHslF()
+        l = min(1.0, l * factor)
+        color.setHslF(h, s, l, a)
+        return color.name()
+
+    def get_button_style_name(self, keyword):
+        color_map = {
+            "red": "Red", "cyan": "Cyan", "blue": "Blue", "purple": "Purple",
+            "yellow": "Yellow", "orange": "Orange", "black": "Black",
+            "white": "White", "green": "Green"
+        }
+        for color, style_name in color_map.items():
+            if keyword in self.keyword_colors.get(f"{color}_keywords", []):
+                return style_name
+        return "Default"
 
     def get_tags_for_symbol(self, symbol):
         for item in self.json_data.get("stocks", []):
@@ -742,9 +857,8 @@ if __name__ == '__main__':
         sector_data = load_json(SECTORS_ALL_PATH)
         compare_data = load_text_data(COMPARE_DATA_PATH)
         high_low_5y_data = parse_high_low_file(HIGH_LOW_5Y_PATH)
-        
-        # ### 新增 ###: 加载 Volume High 数据
         volume_high_data = parse_volume_high_file(VOLUME_HIGH_PATH)
+        etf_data = parse_etf_file(COMPARE_ETFS_PATH)
         
         print("数据加载完成。")
     except FileNotFoundError as e:
@@ -763,7 +877,8 @@ if __name__ == '__main__':
         compare_data,
         json_data,
         high_low_5y_data,
-        volume_high_data # ### 新增 ###
+        volume_high_data,
+        etf_data
     )
     main_window.show()
     sys.exit(app.exec())
