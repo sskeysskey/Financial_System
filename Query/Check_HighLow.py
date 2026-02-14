@@ -11,10 +11,11 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QGroupBox, QScrollArea, QLabel, QFrame,
-    QMenu
+    QMenu, QTabWidget  # <--- 新增 QTabWidget
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer 
-from PyQt6.QtGui import QCursor, QColor, QFont, QAction
+# --- 修改: 引入 QShortcut, QKeySequence ---
+from PyQt6.QtGui import QCursor, QColor, QFont, QAction, QShortcut, QKeySequence
 
 sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Query"))
 from Chart_input import plot_financial_data
@@ -22,8 +23,6 @@ from Chart_input import plot_financial_data
 # ----------------------------------------------------------------------
 # 常量 / 全局配置
 # ----------------------------------------------------------------------
-# 如果一个时间段内的项目超过这个数量，则单独成为一列。
-# 同时，这也是合并列中项目总数的上限。
 MAX_ITEMS_PER_COLUMN = 11
 
 # 文件路径
@@ -35,8 +34,9 @@ SECTORS_ALL_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", 
 COMPARE_DATA_PATH = os.path.join(BASE_CODING_DIR, "News", "backup", "Compare_All.txt")
 DB_PATH = os.path.join(BASE_CODING_DIR, "Database", "Finance.db")
 
-# ### 新增 ###: 为 5Y High/Low 数据文件添加新的路径常量
 HIGH_LOW_5Y_PATH = os.path.join(BASE_CODING_DIR, "News", "backup", "HighLow.txt")
+# ### 新增 ###: Volume High 文件路径
+VOLUME_HIGH_PATH = os.path.join(BASE_CODING_DIR, "News", "0.5Y_volume_high.txt")
 
 # 按钮＋标签固定宽度（像素）
 SYMBOL_WIDGET_FIXED_WIDTH = 150
@@ -45,12 +45,9 @@ class ClickableLabel(QLabel):
     clicked = pyqtSignal()
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # 鼠标变手型
-        # PyQt6: 使用 Qt.CursorShape.PointingHandCursor
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
     def mousePressEvent(self, event):
-        # PyQt6: 使用 Qt.MouseButton.LeftButton
         if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit()
         super().mousePressEvent(event)
@@ -58,27 +55,20 @@ class ClickableLabel(QLabel):
 # ----------------------------------------------------------------------
 # Classes
 # ----------------------------------------------------------------------
-# --- 1. 从 panel.py 移植并修改 SymbolManager 类 ---
 class SymbolManager:
-    """
-    一个更通用的 SymbolManager，直接接收一个 symbol 列表。
-    """
     def __init__(self, symbol_list):
-        # 使用 OrderedDict.fromkeys 来自动去重并保持顺序
         self.symbols = list(OrderedDict.fromkeys(symbol_list))
         self.current_index = -1
         if not self.symbols:
             print("Warning: SymbolManager received an empty list of symbols.")
 
     def next_symbol(self):
-        if not self.symbols:
-            return None
+        if not self.symbols: return None
         self.current_index = (self.current_index + 1) % len(self.symbols)
         return self.symbols[self.current_index]
 
     def previous_symbol(self):
-        if not self.symbols:
-            return None
+        if not self.symbols: return None
         self.current_index = (self.current_index - 1 + len(self.symbols)) % len(self.symbols)
         return self.symbols[self.current_index]
 
@@ -87,8 +77,6 @@ class SymbolManager:
             self.current_index = self.symbols.index(symbol)
         except ValueError:
             print(f"Warning: Symbol '{symbol}' not found in the manager's list.")
-            # 保持当前索引不变或重置
-            # self.current_index = -1
 
     def reset(self):
         self.current_index = -1
@@ -98,29 +86,23 @@ class SymbolManager:
 # ----------------------------------------------------------------------
 
 def execute_external_script(script_type, keyword):
-    """以非阻塞方式执行外部脚本（Python 或 AppleScript）"""
     script_configs = {
         'similar':  os.path.join(BASE_CODING_DIR, 'Financial_System', 'Query', 'Search_Similar_Tag.py'),
         'tags':     os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Editor_Tags.py'),
         'futu':     os.path.join(BASE_CODING_DIR, 'ScriptEditor', 'Stock_CheckFutu.scpt'),
     }
     script_path = script_configs.get(script_type)
-    if not script_path:
-        print(f"错误: 未知的脚本类型 '{script_type}'")
-        return
+    if not script_path: return
         
     try:
         if script_type in ['futu']:
-            # 执行 AppleScript
             subprocess.Popen(['osascript', script_path, keyword])
         else:
-            # 执行 Python 脚本
             python_path = sys.executable
             subprocess.Popen([python_path, script_path, keyword])
     except Exception as e:
         print(f"执行脚本 '{script_path}' 时发生错误: {e}")
 
-# (其他辅助函数无变动)
 def parse_high_low_file(path):
     data = OrderedDict()
     current_period = None
@@ -128,32 +110,64 @@ def parse_high_low_file(path):
     with open(path, 'r', encoding='utf-8') as file:
         for line in file:
             line = line.strip()
-            if not line:
-                continue
-
+            if not line: continue
             if line.startswith('[') and line.endswith(']'):
                 current_period = line[1:-1]
                 data[current_period] = {'Low': [], 'High': []}
-                current_category = None # 新周期开始，重置类别
+                current_category = None
             elif line.lower() == 'low:':
-                if current_period:
-                    current_category = 'Low'
+                if current_period: current_category = 'Low'
             elif line.lower() == 'high:':
-                if current_period:
-                    current_category = 'High'
+                if current_period: current_category = 'High'
             elif current_period and current_category:
-                # 这一行是 symbols
                 symbols = [symbol.strip() for symbol in line.split(',') if symbol.strip()]
                 data[current_period][current_category].extend(symbols)
     return data
 
+# ### 新增 ###: 解析 Volume High 文件的函数
+def parse_volume_high_file(path):
+    """
+    解析格式如下的文件：
+    ========== PRICE UP / FLAT (Top 2 Vol) ==========
+    Sector Symbol Info Volume Tags...
+    """
+    data = OrderedDict()
+    current_section = None
+    
+    if not os.path.exists(path):
+        return data
+
+    with open(path, 'r', encoding='utf-8') as file:
+        for line in file:
+            line = line.strip()
+            if not line:
+                continue
+            
+            # 检测标题行
+            if line.startswith("===") and line.endswith("==="):
+                # 去除 === 和空格，获取纯标题
+                current_section = line.replace("=", "").strip()
+                data[current_section] = []
+                continue
+            
+            # 解析数据行
+            if current_section:
+                parts = line.split()
+                if len(parts) >= 4:
+                    # 格式: Sector(0) Symbol(1) Info(2) Volume(3) Tags(4...)
+                    item = {
+                        'symbol': parts[1],
+                        'info': parts[2], # e.g. 9.56% or 0212前...
+                        'tags': " ".join(parts[4:]) # 拼接剩余部分作为 tags
+                    }
+                    data[current_section].append(item)
+    return data
+
 def load_json(path):
-    """加载 JSON 文件"""
     with open(path, 'r', encoding='utf-8') as file:
         return json.load(file, object_pairs_hook=OrderedDict)
 
 def load_text_data(path):
-    """加载文本文件数据，如 Compare_All.txt"""
     data = {}
     with open(path, 'r', encoding='utf-8') as file:
         for line in file:
@@ -173,130 +187,225 @@ def load_text_data(path):
 # ----------------------------------------------------------------------
 
 class HighLowWindow(QMainWindow):
-    # ### 修改 ###: 构造函数增加 high_low_5y_data 参数
-    def __init__(self, high_low_data, keyword_colors, sector_data, compare_data, json_data, high_low_5y_data):
+    # ### 修改 ###: 增加 volume_high_data 参数
+    def __init__(self, high_low_data, keyword_colors, sector_data, compare_data, json_data, high_low_5y_data, volume_high_data):
         super().__init__()
         
-        # 将加载的数据存储为实例变量
         self.high_low_data = high_low_data
         self.keyword_colors = keyword_colors
         self.sector_data = sector_data
         self.compare_data = compare_data
         self.json_data = json_data
-        # ### 新增 ###: 存储 5Y 数据
         self.high_low_5y_data = high_low_5y_data
+        # ### 新增 ###
+        self.volume_high_data = volume_high_data
         
         # --- 创建并初始化 SymbolManager ---
         all_symbols = []
         
-        # 1. 添加所有 Low 的 symbols
+        # 1. High/Low symbols
         for period_data in high_low_data.values():
             all_symbols.extend(period_data.get('Low', []))
-            
-        # 2. 添加所有 High 的 symbols
-        for period_data in high_low_data.values():
             all_symbols.extend(period_data.get('High', []))
         
-        # ### 新增 ###: 3. 将 5Y High 的 symbols 添加到列表末尾
+        # 2. 5Y High symbols
         five_y_high_symbols = self.high_low_5y_data.get('5Y', {}).get('High', [])
         all_symbols.extend(five_y_high_symbols)
 
-        # 将构建好的、具有正确顺序的列表传递给 SymbolManager
+        # ### 新增 ###: 3. Volume High symbols (确保可以通过键盘切换到这些 symbol)
+        for section_items in self.volume_high_data.values():
+            for item in section_items:
+                all_symbols.append(item['symbol'])
+
         self.symbol_manager = SymbolManager(all_symbols)
-        # --- 【修改结束】 ---
         
         self.init_ui()
 
     def init_ui(self):
-        """初始化UI界面"""
-        self.setWindowTitle("High/Low Viewer")
+        self.setWindowTitle("High/Low & Volume Viewer")
         self.setGeometry(100, 100, 1600, 1000)
-
-        # --- 【关键改动 1】: 设置焦点策略，让窗口能接收键盘事件 ---
-        # PyQt6: 使用 Qt.FocusPolicy.StrongFocus
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         
-        scroll_area = QScrollArea(self)
+        # --- 修改: 使用 QTabWidget 作为中心组件 ---
+        self.tabs = QTabWidget()
+        self.setCentralWidget(self.tabs)
+
+        # Tab 1: 原始的 High/Low 页面
+        self.tab_high_low = QWidget()
+        self._init_high_low_tab(self.tab_high_low)
+        self.tabs.addTab(self.tab_high_low, "High / Low")
+
+        # Tab 2: 新增的 Volume High 页面
+        self.tab_volume = QWidget()
+        self._init_volume_tab(self.tab_volume)
+        self.tabs.addTab(self.tab_volume, "Volume High")
+
+        # --- 修改: 使用 QShortcut 强制捕获 Tab 键 ---
+        self.tab_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Tab), self)
+        self.tab_shortcut.activated.connect(self.switch_tab)
+
+        self.apply_stylesheet()
+
+    # --- 新增: 切换 Tab 的槽函数 ---
+    def switch_tab(self):
+        current_idx = self.tabs.currentIndex()
+        next_idx = (current_idx + 1) % self.tabs.count()
+        self.tabs.setCurrentIndex(next_idx)
+
+    def _init_high_low_tab(self, parent_widget):
+        # 原来的 ScrollArea 逻辑移到这里
+        layout = QVBoxLayout(parent_widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
-        self.setCentralWidget(scroll_area)
+        layout.addWidget(scroll_area)
 
         scroll_content = QWidget()
         scroll_area.setWidget(scroll_content)
 
-        # 主布局：一个水平布局，容纳左右两个主要部分
+        # 主布局
         main_layout = QHBoxLayout(scroll_content)
         scroll_content.setLayout(main_layout)
 
-        # --- 创建左侧 (LOW) 的主容器 ---
+        # 1. LOW 区域
         low_main_container = QWidget()
         low_main_layout = QVBoxLayout(low_main_container)
         low_main_layout.setContentsMargins(10, 0, 10, 0)
         low_title = QLabel("新低")
         low_title.setFont(QFont("Arial", 20, QFont.Weight.Bold))
-        # PyQt6: 使用 Qt.AlignmentFlag.AlignCenter
         low_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
-        # low_columns_layout 将水平容纳多个列
         self.low_columns_layout = QHBoxLayout()
-        
         low_main_layout.addWidget(low_title)
         low_main_layout.addLayout(self.low_columns_layout)
-        low_main_layout.addStretch(1) # 保证内容向上对齐
+        low_main_layout.addStretch(1)
 
-        # --- 创建右侧 (HIGH) 的主容器 ---
+        # 2. HIGH 区域
         high_main_container = QWidget()
         high_main_layout = QVBoxLayout(high_main_container)
         high_main_layout.setContentsMargins(10, 0, 10, 0)
         high_title = QLabel("新高")
         high_title.setFont(QFont("Arial", 20, QFont.Weight.Bold))
         high_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
-        # high_columns_layout 将水平容纳多个列
         self.high_columns_layout = QHBoxLayout()
-
         high_main_layout.addWidget(high_title)
         high_main_layout.addLayout(self.high_columns_layout)
         high_main_layout.addStretch(1)
 
-        # ### 新增 ###: 创建右侧 (5Y HIGH) 的主容器
+        # 3. 5Y HIGH 区域
         high_5y_main_container = QWidget()
         high_5y_main_layout = QVBoxLayout(high_5y_main_container)
         high_5y_main_layout.setContentsMargins(10, 0, 10, 0)
         high_5y_title = QLabel("5Y HIGH")
         high_5y_title.setFont(QFont("Arial", 20, QFont.Weight.Bold))
         high_5y_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
-        self.high_5y_columns_layout = QHBoxLayout() # 用于容纳 symbol 列
+        self.high_5y_columns_layout = QHBoxLayout()
         high_5y_main_layout.addWidget(high_5y_title)
         high_5y_main_layout.addLayout(self.high_5y_columns_layout)
-        high_5y_main_layout.addStretch(1) # 保证内容向上对齐
+        high_5y_main_layout.addStretch(1)
 
-        # --- 将所有部分添加到主布局 ---
+        # 添加到主布局
         main_layout.addWidget(low_main_container)
-        
-        separator1 = QFrame()
-        # PyQt6: 使用 QFrame.Shape.VLine 和 QFrame.Shadow.Sunken
-        separator1.setFrameShape(QFrame.Shape.VLine)
-        separator1.setFrameShadow(QFrame.Shadow.Sunken)
-        main_layout.addWidget(separator1)
-
+        sep1 = QFrame()
+        sep1.setFrameShape(QFrame.Shape.VLine)
+        sep1.setFrameShadow(QFrame.Shadow.Sunken)
+        main_layout.addWidget(sep1)
         main_layout.addWidget(high_main_container)
-
-        # ### 新增 ###: 添加第二个分隔符和 5Y High 容器
-        separator2 = QFrame()
-        separator2.setFrameShape(QFrame.Shape.VLine)
-        separator2.setFrameShadow(QFrame.Shadow.Sunken)
-        main_layout.addWidget(separator2)
-        
+        sep2 = QFrame()
+        sep2.setFrameShape(QFrame.Shape.VLine)
+        sep2.setFrameShadow(QFrame.Shadow.Sunken)
+        main_layout.addWidget(sep2)
         main_layout.addWidget(high_5y_main_container)
-        
         main_layout.addStretch(1)
 
-        self.apply_stylesheet()
-        self.populate_ui()
+        # 填充数据
+        self._populate_category_columns(self.low_columns_layout, 'Low')
+        self._populate_category_columns(self.high_columns_layout, 'High')
+        self._populate_5y_high_section()
+
+    # --- 新增: Volume Tab 的布局逻辑 ---
+    def _init_volume_tab(self, parent_widget):
+        layout = QVBoxLayout(parent_widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        layout.addWidget(scroll_area)
+
+        scroll_content = QWidget()
+        scroll_area.setWidget(scroll_content)
+
+        # 使用水平布局来横向排列不同的 Section (Price Up, Price Down)
+        main_layout = QHBoxLayout(scroll_content)
+        main_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        scroll_content.setLayout(main_layout)
+
+        # 遍历解析到的数据，为每个 Section 创建一列
+        for section_title, items in self.volume_high_data.items():
+            # 容器
+            section_container = QWidget()
+            section_layout = QVBoxLayout(section_container)
+            section_layout.setContentsMargins(10, 0, 10, 0)
+            section_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+            # 标题
+            title_label = QLabel(section_title)
+            title_label.setFont(QFont("Arial", 16, QFont.Weight.Bold))
+            title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            title_label.setWordWrap(True) # 标题可能很长
+            section_layout.addWidget(title_label)
+            
+            # 内容列容器 (用于分列显示)
+            columns_layout = QHBoxLayout()
+            section_layout.addLayout(columns_layout)
+            
+            # 填充内容 (复用分列逻辑)
+            self._populate_volume_items(columns_layout, items)
+            
+            section_layout.addStretch(1)
+            
+            main_layout.addWidget(section_container)
+            
+            # 分隔符
+            sep = QFrame()
+            sep.setFrameShape(QFrame.Shape.VLine)
+            sep.setFrameShadow(QFrame.Shadow.Sunken)
+            main_layout.addWidget(sep)
+
+        main_layout.addStretch(1)
+
+    def _populate_volume_items(self, parent_layout, items):
+        """
+        类似于 _populate_category_columns，但专门用于 Volume 数据结构
+        """
+        if not items: return
+
+        current_column_layout = None
+        
+        # 简单的分列逻辑：每 MAX_ITEMS_PER_COLUMN 个项目一列
+        for i, item in enumerate(items):
+            if i % MAX_ITEMS_PER_COLUMN == 0:
+                if current_column_layout:
+                    current_column_layout.addStretch(1)
+                    parent_layout.addLayout(current_column_layout)
+                
+                current_column_layout = QVBoxLayout()
+                current_column_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+            # 创建特殊的 Volume Widget
+            # item 结构: {'symbol': 'HRB', 'info': '9.56%', 'tags': '税务...'}
+            widget = self.create_symbol_widget(
+                item['symbol'], 
+                override_text=item['info'], 
+                override_tags=item['tags']
+            )
+            current_column_layout.addWidget(widget)
+
+        if current_column_layout:
+            current_column_layout.addStretch(1)
+            parent_layout.addLayout(current_column_layout)
 
     def apply_stylesheet(self):
-        """创建并应用 QSS 样式表"""
         button_styles = {
             "Cyan": ("cyan", "black"), "Blue": ("blue", "white"),
             "Purple": ("purple", "white"), "Green": ("green", "white"),
@@ -311,13 +420,10 @@ class HighLowWindow(QMainWindow):
                 background-color: {bg};
                 color: {fg};
                 font-size: 16px;
-                padding: 5px; /* 保持上下右的内边距 */
+                padding: 5px;
                 border: 1px solid #333;
                 border-radius: 4px;
-
-                /* 新增：强制文本左对齐 */
                 text-align: left;
-                /* 新增：设置左侧内边距，让文本和边框有距离 */
                 padding-left: 8px;
             }}
             QPushButton#{name}:hover {{
@@ -325,13 +431,11 @@ class HighLowWindow(QMainWindow):
             }}
             """
         qss += """
-        /* 整体背景和边框 */
         QMenu {
             background-color: #2C2C2C;
             color: #E0E0E0;
             border: 1px solid #555;
         }
-        /* 菜单项常态与悬停 */
         QMenu::item {
             padding: 6px 25px 6px 20px;
             background: transparent;
@@ -340,7 +444,6 @@ class HighLowWindow(QMainWindow):
             background-color: #007ACC;
             color: white;
         }
-        /* 分隔符 */
         QMenu::separator {
             height: 1px;
             background: #555;
@@ -355,15 +458,34 @@ class HighLowWindow(QMainWindow):
         }
         QGroupBox::title {
             subcontrol-origin: margin;
-            subcontrol-position: top center; /* 标题居中 */
+            subcontrol-position: top center;
             padding: 0 10px;
+        }
+        /* Tab 样式 */
+        QTabWidget::pane { 
+            border: 1px solid #444; 
+        }
+        QTabBar::tab {
+            background: #2C2C2C;
+            color: #AAA;
+            padding: 8px 20px;
+            border: 1px solid #444;
+            border-bottom-color: #444; 
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+        }
+        QTabBar::tab:selected {
+            background: #444;
+            color: white;
+            border-bottom-color: #444;
+        }
+        QTabBar::tab:hover {
+            background: #383838;
         }
         """
         self.setStyleSheet(qss)
 
-
     def lighten_color(self, color_name, factor=1.2):
-        """一个简单的函数来让颜色变亮，用于:hover效果"""
         color = QColor(color_name)
         h, s, l, a = color.getHslF()
         l = min(1.0, l * factor)
@@ -371,7 +493,6 @@ class HighLowWindow(QMainWindow):
         return color.name()
 
     def get_button_style_name(self, keyword):
-        """返回按钮的 objectName 以应用 QSS 样式 (从 a.py 借用)"""
         color_map = {
             "red": "Red", "cyan": "Cyan", "blue": "Blue", "purple": "Purple",
             "yellow": "Yellow", "orange": "Orange", "black": "Black",
@@ -382,121 +503,68 @@ class HighLowWindow(QMainWindow):
                 return style_name
         return "Default"
 
-    def populate_ui(self):
-        """
-        根据数据动态创建界面。超过阈值的项目将独立成列。
-        """
-        # 填充 Low 和 High 两大区域
-        self._populate_category_columns(self.low_columns_layout, 'Low')
-        self._populate_category_columns(self.high_columns_layout, 'High')
-        # ### 新增 ###: 调用新方法填充 5Y High 区域
-        self._populate_5y_high_section()
-
-
     def _populate_category_columns(self, parent_layout, category_name):
-        """
-        【关键改动】: 采用两步法：1. 扁平化数据 2. 应用统一的打包算法
-        """
-        # --- 步骤 1: 预处理和扁平化 ---
-        # 创建一个统一的列表，其中所有分组都保证 <= 15 项。
         all_display_groups = []
         for period, categories in self.high_low_data.items():
             symbols = categories.get(category_name, [])
-            if not symbols:
-                continue
+            if not symbols: continue
 
             original_title = f"{period} {category_name}"
             num_symbols = len(symbols)
 
             if num_symbols > MAX_ITEMS_PER_COLUMN:
-                # 如果是“大分组”，则在此处将其拆分为带编号的小分组
                 for i in range(0, num_symbols, MAX_ITEMS_PER_COLUMN):
                     symbol_chunk = symbols[i:i + MAX_ITEMS_PER_COLUMN]
                     chunk_index = (i // MAX_ITEMS_PER_COLUMN) + 1
                     chunk_title = f"{original_title} ({chunk_index})"
                     all_display_groups.append((chunk_title, symbol_chunk))
             else:
-                # 如果是“小分组”，直接添加
                 all_display_groups.append((original_title, symbols))
 
-        # --- 步骤 2: 对扁平化后的列表应用统一的列打包算法 ---
-        if not all_display_groups:
-            return
+        if not all_display_groups: return
 
         current_column_layout = None
         current_column_count = 0
 
         for title, symbols in all_display_groups:
             group_item_count = len(symbols)
-
-            # 如果当前列无法容纳这个新分组，则“封箱”旧列，并创建新列
             if current_column_layout is None or (current_column_count + group_item_count > MAX_ITEMS_PER_COLUMN):
-                # 如果当前列不是None（意味着它是一个已满的列），先把它添加到父布局中
                 if current_column_layout is not None:
                     parent_layout.addLayout(current_column_layout)
-
-                # 创建一个新列
                 current_column_layout = QVBoxLayout()
-                # PyQt6: Qt.AlignmentFlag.AlignTop
                 current_column_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-                current_column_count = 0  # 重置计数器
+                current_column_count = 0
 
-            # 将当前的 groupbox 添加到当前列中
             group_box = self._create_period_groupbox(title, symbols)
             current_column_layout.addWidget(group_box)
-            current_column_count += group_item_count # 更新当前列的项目总数
+            current_column_count += group_item_count
 
-        # 循环结束后，不要忘记添加最后一个正在构建的列
         if current_column_layout is not None:
             parent_layout.addLayout(current_column_layout)
 
-    # ### 新增 ###: 专门用于填充 5Y High 列的方法
     def _populate_5y_high_section(self):
-        """
-        填充 '5Y High' 区域。此逻辑更简单，因为它只处理一个 symbol 列表。
-        """
         symbols = self.high_low_5y_data.get('5Y', {}).get('High', [])
-        if not symbols:
-            return
+        if not symbols: return
         
         parent_layout = self.high_5y_columns_layout
-        
-        # 创建一个 GroupBox 来容纳所有的 symbol
-        group_box = QGroupBox("Symbols") # 标题可以为空或设为 "Symbols"
-        group_layout = QVBoxLayout()
-        group_box.setLayout(group_layout)
-
-        for symbol in symbols:
-            widget = self.create_symbol_widget(symbol)
-            group_layout.addWidget(widget)
-            
-        # 由于 5Y High 区域本身就是一个大列，我们直接把这个 GroupBox 添加进去
-        # 如果未来 5Y High 的 symbol 数量也可能非常多，可以复用 _populate_category_columns 的分列逻辑
-        # 但目前根据需求，一个 GroupBox 就足够了。
-        # 为了视觉统一，我们还是模拟分列逻辑
-        
         num_symbols = len(symbols)
+        
         if num_symbols > MAX_ITEMS_PER_COLUMN:
-            # 如果项目太多，则创建多个列
             current_column_layout = None
             for i, symbol in enumerate(symbols):
-                # 每 MAX_ITEMS_PER_COLUMN 个项目创建一个新列
                 if i % MAX_ITEMS_PER_COLUMN == 0:
                     if current_column_layout is not None:
-                        current_column_layout.addStretch(1) # 列内向上对齐
+                        current_column_layout.addStretch(1)
                         parent_layout.addLayout(current_column_layout)
                     current_column_layout = QVBoxLayout()
                     current_column_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
                 
                 widget = self.create_symbol_widget(symbol)
                 current_column_layout.addWidget(widget)
-            
-            # 添加最后一列
             if current_column_layout is not None:
                 current_column_layout.addStretch(1)
                 parent_layout.addLayout(current_column_layout)
         else:
-            # 如果项目不多，则只创建一列
             column_layout = QVBoxLayout()
             column_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
             for symbol in symbols:
@@ -505,239 +573,153 @@ class HighLowWindow(QMainWindow):
             column_layout.addStretch(1)
             parent_layout.addLayout(column_layout)
 
-
     def _create_period_groupbox(self, title, symbols):
-        """辅助函数，创建一个包含所有symbol按钮的GroupBox"""
         group_box = QGroupBox(title)
         group_layout = QVBoxLayout()
         group_box.setLayout(group_layout)
-
         for symbol in symbols:
-            # 用新的小容器替代单个按钮
             widget = self.create_symbol_widget(symbol)
             group_layout.addWidget(widget)
-        
         return group_box
 
-    # --- 【新增方法】: 从 panel.py 移植过来的标签查找函数 ---
     def get_tags_for_symbol(self, symbol):
-        """
-        根据 symbol 在 self.json_data 中查找 tag 信息。
-        这模拟了 panel.py 中的行为，遍历 'stocks' 和 'etfs' 列表。
-        """
         for item in self.json_data.get("stocks", []):
-            if item.get("symbol") == symbol:
-                return item.get("tag", "无标签")
+            if item.get("symbol") == symbol: return item.get("tag", "无标签")
         for item in self.json_data.get("etfs", []):
-            if item.get("symbol") == symbol:
-                return item.get("tag", "无标签")
+            if item.get("symbol") == symbol: return item.get("tag", "无标签")
         return "无标签"
     
-    # --- 3. 新增方法：用于创建和显示右键菜单 ---
     def show_context_menu(self, symbol):
-        """
-        创建并显示包含丰富选项的右键菜单
-        """
         menu = QMenu(self)
-
-        # 定义要显示的菜单项：(显示文本, 回调函数)
         actions = [
             ("查相似",  lambda: execute_external_script('similar', symbol)),
             ("富途查询",      lambda: execute_external_script('futu', symbol)),
-            ("----",            None),  # 分隔符
+            ("----",            None),
             ("编辑 Tags",     lambda: execute_external_script('tags', symbol)),
         ]
-
         for text, callback in actions:
             if callback is None:
                 menu.addSeparator()
             else:
                 act = menu.addAction(text)
                 act.triggered.connect(callback)
-
-        # 在光标位置弹出菜单
         menu.exec(QCursor.pos())
 
-    def create_symbol_button(self, symbol):
-        """辅助函数，用于创建一个配置好的 symbol 按钮。"""
-        button_text = f"{symbol} {self.compare_data.get(symbol, '')}"
+    # ### 修改 ###: 增加可选参数 override_text
+    def create_symbol_button(self, symbol, override_text=None):
+        # 如果有 override_text (来自 volume 文件)，则显示它，否则去 compare_data 查找
+        if override_text:
+            button_text = f"{symbol} {override_text}"
+        else:
+            button_text = f"{symbol} {self.compare_data.get(symbol, '')}"
+            
         button = QPushButton(button_text)
         button.setObjectName(self.get_button_style_name(symbol))
-        # PyQt6: 使用 Qt.CursorShape.PointingHandCursor
         button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        
-        # 使用 lambda 捕获当前的 symbol 值
         button.clicked.connect(lambda _, s=symbol: self.on_symbol_click(s))
 
-        # --- 【关键修改】: 调用新的辅助函数并美化 Tooltip ---
         tags_info = self.get_tags_for_symbol(symbol)
-        
-        # 如果返回的是列表（尽管在此函数中不会），将其转换为字符串
         if isinstance(tags_info, list):
             tags_info = ", ".join(tags_info)
-            
-        # 使用富文本格式化 Tooltip，就像 panel.py 中一样
         button.setToolTip(f"<div style='font-size: 20px; background-color: lightyellow; color: black;'>{tags_info}</div>")
 
-        # --- 4. 启用并连接右键菜单 ---
-        # PyQt6: 使用 Qt.ContextMenuPolicy.CustomContextMenu
         button.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        button.customContextMenuRequested.connect(
-            # 使用 lambda 忽略 pos 参数，只传递 symbol
-            lambda pos, s=symbol: self.show_context_menu(s)
-        )
-        # --- 修改结束 ---
-
+        button.customContextMenuRequested.connect(lambda pos, s=symbol: self.show_context_menu(s))
         return button
 
-    # ### 修改 ###: 彻底移除获取 marketcap 和 shares 的逻辑
     def on_symbol_click(self, symbol):
-        # --- 3. 在点击时更新 SymbolManager 并设置焦点 ---
         print(f"按钮 '{symbol}' 被点击，准备显示图表...")
-        
-        # 告诉管理器当前查看的是哪个 symbol
         self.symbol_manager.set_current_symbol(symbol)
         
         sector = next((s for s, names in self.sector_data.items() if symbol in names), None)
-        if not sector:
-            print(f"警告: 在 Sectors_All.json 中找不到 '{symbol}' 的板块信息。")
-        
         compare_value = self.compare_data.get(symbol, "N/A")
         
-        # 此处不再从数据库或文件获取 marketcap/shares/pe/pb
-        
         try:
-            # --- 修改：传入 callback 参数 ---
             plot_financial_data(
-                DB_PATH, 
-                sector, 
-                symbol, 
-                compare_value, 
-                "N/A",  # shares_value 的占位符
-                None,   # marketcap_val 的占位符
-                "N/A",  # pe_val 的占位符
-                self.json_data, 
-                '1Y', 
-                False,
-                callback=self.handle_chart_callback  # <--- 关键修改：传入回调函数
+                DB_PATH, sector, symbol, compare_value, "N/A", None, "N/A", 
+                self.json_data, '1Y', False, callback=self.handle_chart_callback
             )
             self.setFocus()
         except Exception as e:
             print(f"调用 plot_financial_data 时出错: {e}")
     
-    # --- 新增：处理图表回调的方法 ---
     def handle_chart_callback(self, action):
-        """
-        处理来自 Chart_input.py 的回调 (当用户在图表中按左右键时)
-        """
         if action == 'next':
-            # 使用 QTimer 确保上一个 matplotlib 窗口完全关闭后再打开下一个
             QTimer.singleShot(50, lambda: self.navigate_symbol_from_chart('next'))
         elif action == 'prev':
             QTimer.singleShot(50, lambda: self.navigate_symbol_from_chart('prev'))
 
     def navigate_symbol_from_chart(self, direction):
-        """
-        根据图表返回的方向跳转到下一个/上一个 symbol
-        """
         symbol = None
-        if direction == 'next':
-            symbol = self.symbol_manager.next_symbol()
-        elif direction == 'prev':
-            symbol = self.symbol_manager.previous_symbol()
-        
-        if symbol:
-            # 直接调用点击逻辑来打开新图表
-            self.on_symbol_click(symbol)
+        if direction == 'next': symbol = self.symbol_manager.next_symbol()
+        elif direction == 'prev': symbol = self.symbol_manager.previous_symbol()
+        if symbol: self.on_symbol_click(symbol)
 
-    # --- 4. 新增处理方向键的方法 ---
     def handle_arrow_key(self, direction):
-        """
-        根据方向键获取下一个或上一个 symbol 并显示图表。
-        """
-        if direction == 'down':
-            symbol = self.symbol_manager.next_symbol()
-        elif direction == 'up':
-            symbol = self.symbol_manager.previous_symbol()
-        else:
-            return
-
-        if symbol:
-            # 直接调用 on_symbol_click 来处理图表显示
-            self.on_symbol_click(symbol)
+        if direction == 'down': symbol = self.symbol_manager.next_symbol()
+        elif direction == 'up': symbol = self.symbol_manager.previous_symbol()
+        else: return
+        if symbol: self.on_symbol_click(symbol)
 
     def keyPressEvent(self, event):
-        """
-        重写键盘事件处理器以响应按键。
-        """
         key = event.key()
-        
-        # --- 5. 在键盘事件中添加对上下键的处理 ---
-        # PyQt6: Qt.Key.Key_Escape, Qt.Key.Key_Down, Qt.Key.Key_Up
         if key == Qt.Key.Key_Escape:
-            print("Escape key pressed. Closing application...")
             self.close()
         elif key == Qt.Key.Key_Down:
             self.handle_arrow_key('down')
         elif key == Qt.Key.Key_Up:
             self.handle_arrow_key('up')
+        # 注意：Tab 键不再在此处处理，而是由 QShortcut 处理
         else:
-            # 对于其他按键，调用父类的实现以保留默认行为
             super().keyPressEvent(event)
 
-    # --- 【关键改动 3】: 重写 closeEvent 方法以确保程序退出 ---
     def closeEvent(self, event):
-        """
-        重写关闭事件，确保应用程序完全退出。
-        """
-        # --- 6. 在关闭时重置 SymbolManager ---
         print("Resetting symbol manager and quitting.")
         self.symbol_manager.reset()
         QApplication.quit()
-        event.accept() # 接受关闭事件
+        event.accept()
 
-    def create_symbol_widget(self, symbol):
-        """
-        创建一个 QWidget，垂直包含按钮和它下方的左对齐文本标签，
-        并统一固定宽度。
-        """
-        # 1) 按钮（保留原来的点击 & 右键菜单逻辑）
-        button = self.create_symbol_button(symbol)
+    # ### 修改 ###: 增加 override_text 和 override_tags 参数
+    def create_symbol_widget(self, symbol, override_text=None, override_tags=None):
+        # 1) 按钮
+        button = self.create_symbol_button(symbol, override_text)
         button.setFixedWidth(SYMBOL_WIDGET_FIXED_WIDTH)
 
-        # 2) 拿到标签文本
-        tags_info = self.get_tags_for_symbol(symbol)
-        if isinstance(tags_info, list):
-            tags_info = ", ".join(tags_info)
+        # 2) 标签文本
+        if override_tags:
+            tags_info = override_tags
+        else:
+            tags_info = self.get_tags_for_symbol(symbol)
+            if isinstance(tags_info, list):
+                tags_info = ", ".join(tags_info)
 
-        # 用 ClickableLabel 替代普通 QLabel
         label = ClickableLabel(tags_info)
-        # 左对齐 + 垂直居中
-        # PyQt6: 使用 Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         label.setFixedWidth(SYMBOL_WIDGET_FIXED_WIDTH)
+        
+        # 自动换行设置，防止 Tags 太多显示不全
+        label.setWordWrap(True)
 
-        # 用实例的 fontMetrics 拿高度
-        fm = label.fontMetrics()
-        label.setFixedHeight(fm.height() + 14)
+        if override_tags:
+             # 简单的估算：每行约 20px
+             fm = label.fontMetrics()
+             rect = fm.boundingRect(0, 0, SYMBOL_WIDGET_FIXED_WIDTH, 1000, Qt.TextFlag.TextWordWrap, tags_info)
+             label.setFixedHeight(rect.height() + 10)
+        else:
+             fm = label.fontMetrics()
+             label.setFixedHeight(fm.height() + 14)
 
-        # 保持浅黄底黑字，给左侧留点 padding
         label.setStyleSheet("""
             background-color: lightyellow;
             color: black;
-            font-size: 16px;
+            font-size: 14px; /* 稍微调小一点字体以容纳更多 tags */
             padding-left: 4px;
         """)
         
-        # 点击 label 时也调用 on_symbol_click
         label.clicked.connect(lambda: self.on_symbol_click(symbol))
-        
-        # ---- 新增这两行 ---- 
-        # 让 label 响应右键，用同一个上下文菜单
         label.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         label.customContextMenuRequested.connect(lambda pos, s=symbol: self.show_context_menu(s))
         
-        # 把按钮 + 可点标签 装容器
         container = QWidget()
         vlay = QVBoxLayout(container)
         vlay.setContentsMargins(0, 0, 0, 0)
@@ -752,7 +734,6 @@ class HighLowWindow(QMainWindow):
 # ----------------------------------------------------------------------
 
 if __name__ == '__main__':
-    # 1. 加载所有需要的数据
     print("正在加载数据...")
     try:
         high_low_data = parse_high_low_file(HIGH_LOW_PATH)
@@ -760,9 +741,10 @@ if __name__ == '__main__':
         json_data = load_json(DESCRIPTION_PATH)
         sector_data = load_json(SECTORS_ALL_PATH)
         compare_data = load_text_data(COMPARE_DATA_PATH)
-        
-        # ### 新增 ###: 加载 5Y High/Low 数据
         high_low_5y_data = parse_high_low_file(HIGH_LOW_5Y_PATH)
+        
+        # ### 新增 ###: 加载 Volume High 数据
+        volume_high_data = parse_volume_high_file(VOLUME_HIGH_PATH)
         
         print("数据加载完成。")
     except FileNotFoundError as e:
@@ -772,18 +754,16 @@ if __name__ == '__main__':
         print(f"加载数据时发生未知错误: {e}")
         sys.exit(1)
 
-    # 2. 创建并运行 PyQt6 应用
     app = QApplication(sys.argv)
     
-    # ### 修改 ###: 将新加载的 high_low_5y_data 传递给主窗口
     main_window = HighLowWindow(
         high_low_data,
         keyword_colors,
         sector_data,
         compare_data,
         json_data,
-        high_low_5y_data
+        high_low_5y_data,
+        volume_high_data # ### 新增 ###
     )
     main_window.show()
-    # PyQt6: exec 替代 exec_
     sys.exit(app.exec())
