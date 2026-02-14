@@ -343,8 +343,8 @@ class HighLowWindow(QMainWindow):
         for item in top_24_stock: self.list_stock.append(item['symbol'])
         for item in bottom_24_stock: self.list_stock.append(item['symbol'])
 
-        # 初始化 SymbolManager，默认使用 Tab 1 (High/Low) 的数据
-        self.symbol_manager = SymbolManager(self.list_high_low)
+        # 初始化 SymbolManager，默认使用 Tab 1 (Volume High) 的数据
+        self.symbol_manager = SymbolManager(self.list_volume)
         
         self.init_ui()
 
@@ -357,12 +357,7 @@ class HighLowWindow(QMainWindow):
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
 
-        # Tab 1: 原始的 High/Low 页面
-        self.tab_high_low = QWidget()
-        self._init_high_low_tab(self.tab_high_low)
-        self.tabs.addTab(self.tab_high_low, "High / Low")
-
-        # Tab 2: 新增的 Volume High 页面
+        # 1. Volume High (现在是第一个)
         self.tab_volume = QWidget()
         self._init_volume_tab(self.tab_volume)
         self.tabs.addTab(self.tab_volume, "Volume High")
@@ -377,6 +372,11 @@ class HighLowWindow(QMainWindow):
         self._init_stock_tab(self.tab_stocks)
         self.tabs.addTab(self.tab_stocks, "Stocks")
 
+        # 4. High/Low (现在是最后一个)
+        self.tab_high_low = QWidget()
+        self._init_high_low_tab(self.tab_high_low)
+        self.tabs.addTab(self.tab_high_low, "High / Low")
+
         # 监听 Tab 切换事件
         self.tabs.currentChanged.connect(self.on_tab_changed)
 
@@ -389,21 +389,21 @@ class HighLowWindow(QMainWindow):
     # --- 修改: Tab 切换处理逻辑 ---
     def on_tab_changed(self, index):
         """当 Tab 切换时，更新 SymbolManager 的列表上下文"""
-        if index == 0:
-            self.symbol_manager.update_symbols(self.list_high_low)
-        elif index == 1:
+        if index == 0: # Volume High
             self.symbol_manager.update_symbols(self.list_volume)
-        elif index == 2:
+        elif index == 1: # ETFs
             self.symbol_manager.update_symbols(self.list_etf)
-        elif index == 3: # Stocks
+        elif index == 2: # Stocks
             self.symbol_manager.update_symbols(self.list_stock)
+        elif index == 3: # High/Low
+            self.symbol_manager.update_symbols(self.list_high_low)
 
     def switch_tab(self):
         current_idx = self.tabs.currentIndex()
         next_idx = (current_idx + 1) % self.tabs.count()
         self.tabs.setCurrentIndex(next_idx)
 
-    # --- Tab 1 Logic ---
+    # --- Tab Logic (High/Low) ---
     def _init_high_low_tab(self, parent_widget):
         # 原来的 ScrollArea 逻辑移到这里
         layout = QVBoxLayout(parent_widget)
