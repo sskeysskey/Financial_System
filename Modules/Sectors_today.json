@@ -355,7 +355,8 @@
         "FLCH",
         "BDRY",
         "CRAK",
-        "MOAT"
+        "MOAT",
+        "GDMA"
     ],
     "Basic_Materials": [
         "LIN",
@@ -1066,7 +1067,8 @@
         "CBC",
         "IFS",
         "MRSH",
-        "AFRM"
+        "AFRM",
+        "HASI"
     ],
     "Healthcare": [
         "LLY",
@@ -1173,7 +1175,6 @@
         "ENSG",
         "HQY",
         "MASI",
-        "RVMD",
         "EXEL",
         "GRFS",
         "STVN",
@@ -1391,7 +1392,6 @@
         "MOG-A",
         "ALK",
         "R",
-        "AL",
         "FSS",
         "VMI",
         "AVAV",

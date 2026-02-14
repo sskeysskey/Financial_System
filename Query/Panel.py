@@ -1604,12 +1604,22 @@ class MainWindow(QMainWindow):
             compare_value = compare_data.get(value, "N/A")
             shares_val, marketcap_val, pe_val, pb_val = fetch_mnspp_data_from_db(DB_PATH, value)
             
-            # <--- 修改: 将 window_title 传入 plot_financial_data
+            # --- 新增：获取带"热"字样的显示名称 ---
+            display_name = value  # 默认使用原始 symbol
+            # 遍历 config 中的所有分组，查找该 symbol 对应的显示名称
+            for group_key, group_content in self.config.items():
+                if isinstance(group_content, dict) and value in group_content:
+                    # 如果找到了且有非空的显示名称，使用它
+                    if group_content[value]:
+                        display_name = group_content[value]
+                        break
+            # --- 新增结束 ---
             plot_financial_data(
                 DB_PATH, sector, value, compare_value, (shares_val, pb_val),
                 marketcap_val, pe_val, json_data, '1Y', False,
                 callback=lambda action: self.handle_chart_callback(value, action),
-                window_title_text=window_title  # <--- 传参
+                window_title_text=window_title,
+                display_name=display_name  # <--- 新增参数
             )
             
             self.setFocus()

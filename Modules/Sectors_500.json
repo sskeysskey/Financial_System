@@ -76,8 +76,7 @@
         "CL",
         "MNST",
         "DEO",
-        "TGT",
-        "ABEV"
+        "TGT"
     ],
     "Energy": [
         "XOM",
@@ -104,8 +103,7 @@
         "SU",
         "MPC",
         "BKR",
-        "OKE",
-        "CCJ"
+        "OKE"
     ],
     "Financial_Services": [
         "JPM",
@@ -165,7 +163,8 @@
         "MET",
         "BRK-B",
         "MRSH",
-        "BSBR"
+        "BSBR",
+        "RKT"
     ],
     "Healthcare": [
         "LLY",
@@ -201,7 +200,8 @@
         "TAK",
         "ARGX",
         "CAH",
-        "BDX"
+        "BDX",
+        "IDXX"
     ],
     "Industrials": [
         "GE",
@@ -307,7 +307,9 @@
         "NXPI",
         "SNDK",
         "MPWR",
-        "ASX"
+        "ASX",
+        "CRWV",
+        "TER"
     ],
     "Utilities": [
         "NEE",

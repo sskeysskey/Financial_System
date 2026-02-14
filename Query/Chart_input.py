@@ -592,7 +592,7 @@ def get_options_metrics(symbol):
 
 def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe, json_data,
                         default_time_range="1Y", panel="False", callback=None, 
-                        window_title_text=None): # <--- 新增参数
+                        window_title_text=None, display_name=None):
     app = QApplication.instance() or QApplication(sys.argv)
     plt.close('all')
     matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
@@ -1077,13 +1077,15 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     clickable = True
                     break
             if clickable: break
+        # --- 修改：使用 display_name 替代 name 显示在标题中 ---
+        title_symbol = display_name if display_name else name
 
         if table_name == 'ETFs':
             title_color = NORD_THEME['accent_orange']
-            title_text = f'{name}  {compare}  {turnover_str} "{table_name}" {fullname} {tag_str}'
+            title_text = f'{title_symbol}  {compare}  {turnover_str} "{table_name}" {fullname} {tag_str}'
         else:
             title_color = get_title_color_logic(db_path, name, table_name)
-            title_text = f'{name}  {compare}  {turnover_str} {turnover_rate} {marketcap_in_billion} {pe_text} {pb_text} "{table_name}" {fullname} {tag_str}'
+            title_text = f'{title_symbol}  {compare}  {turnover_str} {turnover_rate} {marketcap_in_billion} {pe_text} {pb_text} "{table_name}" {fullname} {tag_str}'
         
         return title_text, title_color, clickable
     

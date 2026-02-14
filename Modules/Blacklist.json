@@ -598,7 +598,9 @@
         "CMA",
         "CADE",
         "ASST",
-        "CYBR"
+        "CYBR",
+        "AL",
+        "RVMD"
     ],
     "etf": [
         "VDE",
@@ -968,7 +970,6 @@
         "LPLA",
         "QFIN",
         "DTE",
-        "TMUS",
         "BKR",
         "MPC",
         "OPEN",
