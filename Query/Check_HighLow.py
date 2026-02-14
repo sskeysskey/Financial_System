@@ -11,7 +11,7 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QGroupBox, QScrollArea, QLabel, QFrame,
-    QMenu, QTabWidget  # <--- 新增 QTabWidget
+    QMenu, QTabWidget
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer 
 # --- 修改: 引入 QShortcut, QKeySequence ---
@@ -23,7 +23,7 @@ from Chart_input import plot_financial_data
 # ----------------------------------------------------------------------
 # 常量 / 全局配置
 # ----------------------------------------------------------------------
-MAX_ITEMS_PER_COLUMN = 11
+MAX_ITEMS_PER_COLUMN = 9
 
 # 文件路径
 HIGH_LOW_PATH = os.path.join(BASE_CODING_DIR, "News", "HighLow.txt")
@@ -39,6 +39,8 @@ HIGH_LOW_5Y_PATH = os.path.join(BASE_CODING_DIR, "News", "backup", "HighLow.txt"
 VOLUME_HIGH_PATH = os.path.join(BASE_CODING_DIR, "News", "0.5Y_volume_high.txt")
 # --- 新增: ETF 文件路径 ---
 COMPARE_ETFS_PATH = os.path.join(BASE_CODING_DIR, "News", "CompareETFs.txt")
+# --- 新增: Stock 文件路径 ---
+COMPARE_STOCK_PATH = os.path.join(BASE_CODING_DIR, "News", "CompareStock.txt")
 
 # 按钮＋标签固定宽度（像素）
 SYMBOL_WIDGET_FIXED_WIDTH = 150
@@ -215,6 +217,62 @@ def parse_etf_file(path):
                     })
     return items
 
+# --- 新增: 解析 Stock 文件 ---
+def parse_stock_file(path):
+    items = []
+    if not os.path.exists(path): return items
+
+    with open(path, 'r', encoding='utf-8') as file:
+        for line in file:
+            line = line.strip()
+            if not line: continue
+            
+            # 格式: Sector(0)  Symbol.Suffix(1)  :  Percentage(0)  Tags(1...)
+            # 例如: Consumer_Cyclical  WYNN.0212后  :  5.14%  永利...
+            
+            if ':' in line:
+                # 分割冒号前后
+                left_part, right_part = line.split(':', 1)
+                
+                # 处理左边: Sector Symbol.Suffix
+                left_tokens = left_part.strip().split()
+                if len(left_tokens) < 2: 
+                    continue # 格式不对，跳过
+                
+                # 第一个 token 是 Sector (忽略)，第二个是 SymbolWithSuffix
+                raw_symbol_str = left_tokens[1]
+                
+                # 提取 Symbol 和 后缀
+                if '.' in raw_symbol_str:
+                    parts = raw_symbol_str.split('.', 1)
+                    symbol = parts[0]
+                    suffix_info = parts[1] # 例如 "0212后" 或 "0212后.*"
+                else:
+                    symbol = raw_symbol_str
+                    suffix_info = ""
+
+                # 处理右边: Percentage Tags
+                right_tokens = right_part.strip().split()
+                if not right_tokens:
+                    continue
+                
+                percentage = right_tokens[0]
+                tags = " ".join(right_tokens[1:]) if len(right_tokens) > 1 else ""
+                
+                # 拼接显示文本: 后缀 + 百分比
+                # 如果有后缀，加个空格拼在前面
+                if suffix_info:
+                    display_text = f"{suffix_info} {percentage}"
+                else:
+                    display_text = percentage
+                
+                items.append({
+                    'symbol': symbol,
+                    'display_text': display_text, # 这里的文本包含了后缀和百分比
+                    'tags': tags
+                })
+    return items
+
 def load_json(path):
     if not os.path.exists(path): return {}
     with open(path, 'r', encoding='utf-8') as file:
@@ -242,7 +300,7 @@ def load_text_data(path):
 # ----------------------------------------------------------------------
 
 class HighLowWindow(QMainWindow):
-    def __init__(self, high_low_data, keyword_colors, sector_data, compare_data, json_data, high_low_5y_data, volume_high_data, etf_data):
+    def __init__(self, high_low_data, keyword_colors, sector_data, compare_data, json_data, high_low_5y_data, volume_high_data, etf_data, stock_data):
         super().__init__()
         
         self.high_low_data = high_low_data
@@ -252,9 +310,10 @@ class HighLowWindow(QMainWindow):
         self.json_data = json_data
         self.high_low_5y_data = high_low_5y_data
         self.volume_high_data = volume_high_data
-        self.etf_data = etf_data  # 新增数据
+        self.etf_data = etf_data
+        self.stock_data = stock_data # 新增 Stock 数据
         
-        # --- 修改: 分别准备三个列表，而不是合并成一个 ---
+        # --- 准备各个 Tab 的 Symbol 列表 ---
         
         # 1. High/Low List
         self.list_high_low = []
@@ -272,13 +331,17 @@ class HighLowWindow(QMainWindow):
         
         # 3. ETF List (Top 24 + Bottom 24)
         self.list_etf = []
-        top_24 = self.etf_data[:24]
-        bottom_24 = self.etf_data[-24:][::-1] # 倒数24个，且倒序显示
-        
-        for item in top_24:
-            self.list_etf.append(item['symbol'])
-        for item in bottom_24:
-            self.list_etf.append(item['symbol'])
+        top_24_etf = self.etf_data[:24]
+        bottom_24_etf = self.etf_data[-24:][::-1]
+        for item in top_24_etf: self.list_etf.append(item['symbol'])
+        for item in bottom_24_etf: self.list_etf.append(item['symbol'])
+
+        # 4. Stock List (Top 24 + Bottom 24) - 新增
+        self.list_stock = []
+        top_24_stock = self.stock_data[:24]
+        bottom_24_stock = self.stock_data[-24:][::-1]
+        for item in top_24_stock: self.list_stock.append(item['symbol'])
+        for item in bottom_24_stock: self.list_stock.append(item['symbol'])
 
         # 初始化 SymbolManager，默认使用 Tab 1 (High/Low) 的数据
         self.symbol_manager = SymbolManager(self.list_high_low)
@@ -309,7 +372,12 @@ class HighLowWindow(QMainWindow):
         self._init_etf_tab(self.tab_etfs)
         self.tabs.addTab(self.tab_etfs, "ETFs")
 
-        # --- 修改: 监听 Tab 切换事件 ---
+        # Tab 4: Stocks (新增)
+        self.tab_stocks = QWidget()
+        self._init_stock_tab(self.tab_stocks)
+        self.tabs.addTab(self.tab_stocks, "Stocks")
+
+        # 监听 Tab 切换事件
         self.tabs.currentChanged.connect(self.on_tab_changed)
 
         # 使用 QShortcut 强制捕获 Tab 键
@@ -327,9 +395,8 @@ class HighLowWindow(QMainWindow):
             self.symbol_manager.update_symbols(self.list_volume)
         elif index == 2:
             self.symbol_manager.update_symbols(self.list_etf)
-        
-        # 打印调试信息，可选
-        # print(f"Tab switched to {index}. Symbol list updated. Count: {len(self.symbol_manager.symbols)}")
+        elif index == 3: # Stocks
+            self.symbol_manager.update_symbols(self.list_stock)
 
     def switch_tab(self):
         current_idx = self.tabs.currentIndex()
@@ -504,17 +571,41 @@ class HighLowWindow(QMainWindow):
 
         main_layout.addStretch(1)
 
+    # --- Tab 4 Logic (Stocks) - 新增 ---
+    def _init_stock_tab(self, parent_widget):
+        layout = QVBoxLayout(parent_widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        layout.addWidget(scroll_area)
+        scroll_content = QWidget()
+        scroll_area.setWidget(scroll_content)
+        
+        main_layout = QHBoxLayout(scroll_content)
+        main_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        scroll_content.setLayout(main_layout)
+
+        # 1. Top Gainers (Top 24)
+        top_24_items = self.stock_data[:24]
+        top_container = self._create_section_container("Top Gainers", top_layout := QHBoxLayout())
+        self._populate_stock_grid(top_layout, top_24_items)
+        main_layout.addWidget(top_container)
+
+        self._add_separator(main_layout)
+
+        # 2. Top Losers (Bottom 24, reversed)
+        bottom_24_items = self.stock_data[-24:][::-1]
+        bottom_container = self._create_section_container("Top Losers", bottom_layout := QHBoxLayout())
+        self._populate_stock_grid(bottom_layout, bottom_24_items)
+        main_layout.addWidget(bottom_container)
+
+        main_layout.addStretch(1)
+
     def _populate_etf_grid(self, parent_layout, items):
-        # 强制分列：每列最多 MAX_ITEMS_PER_COLUMN (8) 个
-        # 预期 items 数量最多 24 个，所以会有 3 列
-        
-        # 将 items 分块
         chunks = [items[i:i + MAX_ITEMS_PER_COLUMN] for i in range(0, len(items), MAX_ITEMS_PER_COLUMN)]
-        
         for chunk in chunks:
             col_layout = QVBoxLayout()
             col_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-            
             for item in chunk:
                 # 按钮显示: Symbol + Percentage
                 # 标签显示: Tags
@@ -524,7 +615,23 @@ class HighLowWindow(QMainWindow):
                     override_tags=item['tags']
                 )
                 col_layout.addWidget(widget)
-            
+            col_layout.addStretch(1)
+            parent_layout.addLayout(col_layout)
+
+    # --- 新增: Stock Grid Population (逻辑同 ETF，但字段名不同) ---
+    def _populate_stock_grid(self, parent_layout, items):
+        chunks = [items[i:i + MAX_ITEMS_PER_COLUMN] for i in range(0, len(items), MAX_ITEMS_PER_COLUMN)]
+        for chunk in chunks:
+            col_layout = QVBoxLayout()
+            col_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+            for item in chunk:
+                # item 结构: {'symbol': 'WYNN', 'display_text': '0212后 5.14%', 'tags': '...'}
+                widget = self.create_symbol_widget(
+                    item['symbol'], 
+                    override_text=item['display_text'], 
+                    override_tags=item['tags']
+                )
+                col_layout.addWidget(widget)
             col_layout.addStretch(1)
             parent_layout.addLayout(col_layout)
 
@@ -859,6 +966,7 @@ if __name__ == '__main__':
         high_low_5y_data = parse_high_low_file(HIGH_LOW_5Y_PATH)
         volume_high_data = parse_volume_high_file(VOLUME_HIGH_PATH)
         etf_data = parse_etf_file(COMPARE_ETFS_PATH)
+        stock_data = parse_stock_file(COMPARE_STOCK_PATH) # 加载 Stock 数据
         
         print("数据加载完成。")
     except FileNotFoundError as e:
@@ -878,7 +986,8 @@ if __name__ == '__main__':
         json_data,
         high_low_5y_data,
         volume_high_data,
-        etf_data
+        etf_data,
+        stock_data
     )
     main_window.show()
     sys.exit(app.exec())
