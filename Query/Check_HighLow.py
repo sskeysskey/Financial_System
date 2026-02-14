@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QGroupBox, QScrollArea, QLabel, QFrame,
     QMenu
 )
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer 
 from PyQt6.QtGui import QCursor, QColor, QFont, QAction
 
 sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Query"))
@@ -607,7 +607,7 @@ class HighLowWindow(QMainWindow):
         # 此处不再从数据库或文件获取 marketcap/shares/pe/pb
         
         try:
-            # 调用绘图函数，为不需要的参数传递默认/占位符值
+            # --- 修改：传入 callback 参数 ---
             plot_financial_data(
                 DB_PATH, 
                 sector, 
@@ -618,11 +618,37 @@ class HighLowWindow(QMainWindow):
                 "N/A",  # pe_val 的占位符
                 self.json_data, 
                 '1Y', 
-                False
+                False,
+                callback=self.handle_chart_callback  # <--- 关键修改：传入回调函数
             )
             self.setFocus()
         except Exception as e:
             print(f"调用 plot_financial_data 时出错: {e}")
+    
+    # --- 新增：处理图表回调的方法 ---
+    def handle_chart_callback(self, action):
+        """
+        处理来自 Chart_input.py 的回调 (当用户在图表中按左右键时)
+        """
+        if action == 'next':
+            # 使用 QTimer 确保上一个 matplotlib 窗口完全关闭后再打开下一个
+            QTimer.singleShot(50, lambda: self.navigate_symbol_from_chart('next'))
+        elif action == 'prev':
+            QTimer.singleShot(50, lambda: self.navigate_symbol_from_chart('prev'))
+
+    def navigate_symbol_from_chart(self, direction):
+        """
+        根据图表返回的方向跳转到下一个/上一个 symbol
+        """
+        symbol = None
+        if direction == 'next':
+            symbol = self.symbol_manager.next_symbol()
+        elif direction == 'prev':
+            symbol = self.symbol_manager.previous_symbol()
+        
+        if symbol:
+            # 直接调用点击逻辑来打开新图表
+            self.on_symbol_click(symbol)
 
     # --- 4. 新增处理方向键的方法 ---
     def handle_arrow_key(self, direction):

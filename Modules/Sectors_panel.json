@@ -194,6 +194,7 @@
     },
     "Options_zero": {},
     "Must": {
+        "HSBC": "",
         "CHWY": "",
         "CPNG": "",
         "MS": "",
@@ -411,7 +412,6 @@
         "DB": "DB9热听",
         "GGB": "GGB",
         "GRAB": "GRAB",
-        "HSBC": "HSBC热听",
         "ING": "ING",
         "ITRI": "ITRI听",
         "JEF": "JEF听",
