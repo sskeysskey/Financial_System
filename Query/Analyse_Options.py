@@ -42,7 +42,7 @@ OUTPUT_DEBUG_PATH = os.path.join(USER_HOME, "Downloads", "3.txt")
 # --- 算法参数配置 ---
 
 # 【策略 1：每个 Symbol 的 Calls 和 Puts 各保留前多少名 (用于 Part A 过滤和 Part B 策略1)】
-TOP_N = 20000
+TOP_N = 200000
 
 # [策略 2 (IV 计算) 参数配置]
 IV_TOP_N = 100000           # 【修改】取排名前 30 名
