@@ -496,10 +496,11 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
             if is_tracing: log_detail(f"    x 价格未上涨 ({price_curr} <= {price_prev})，跳过。")
             continue
             
+        # [修改] 注释掉财报日过滤逻辑
         # 规则2: 财报日过滤 (T日)
-        if check_is_earnings_day(cursor, symbol, date_curr):
-            if is_tracing: log_detail(f"    🛑 今日({date_curr})是财报日，跳过。")
-            continue
+        # if check_is_earnings_day(cursor, symbol, date_curr):
+        #     if is_tracing: log_detail(f"    🛑 今日({date_curr})是财报日，跳过。")
+        #     continue
 
         # === 新增规则: 财报日过滤 (T-1日) ===
         # 检查最新日期的前一天 (date_prev) 是否为财报日
