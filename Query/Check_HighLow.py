@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer 
 # --- 修改: 引入 QShortcut, QKeySequence ---
-from PyQt6.QtGui import QCursor, QColor, QFont, QAction, QShortcut, QKeySequence
+from PyQt6.QtGui import QCursor, QColor, QFont, QShortcut, QKeySequence
 
 sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Query"))
 from Chart_input import plot_financial_data
@@ -384,6 +384,10 @@ class HighLowWindow(QMainWindow):
         self.tab_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Tab), self)
         self.tab_shortcut.activated.connect(self.switch_tab)
 
+        # --- 新增: Ctrl + Tab 快捷键 (反向) ---
+        self.tab_reverse_shortcut = QShortcut(QKeySequence("Shift+Tab"), self)
+        self.tab_reverse_shortcut.activated.connect(self.switch_tab_reverse)
+
         self.apply_stylesheet()
 
     # --- 修改: Tab 切换处理逻辑 ---
@@ -397,6 +401,13 @@ class HighLowWindow(QMainWindow):
             self.symbol_manager.update_symbols(self.list_stock)
         elif index == 3: # High/Low
             self.symbol_manager.update_symbols(self.list_high_low)
+
+    def switch_tab_reverse(self):
+        current_idx = self.tabs.currentIndex()
+        count = self.tabs.count()
+        # 反向计算索引：(当前 - 1 + 总数) % 总数
+        prev_idx = (current_idx - 1 + count) % count
+        self.tabs.setCurrentIndex(prev_idx)
 
     def switch_tab(self):
         current_idx = self.tabs.currentIndex()

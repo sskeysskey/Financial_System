@@ -414,8 +414,7 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
     log_detail("\n========== 开始执行 策略2 (PE_Volume_up) ==========")
     
     # 配置参数
-    # 修改点：回溯天数改为3天 (T, T-1, T-2)
-    lookback_days = 3 
+    lookback_days = CONFIG.get("COND_UP_HISTORY_LOOKBACK_DAYS", 3) 
     # 修改点：放量检查回溯月份改为3个月
     vol_rank_months = CONFIG.get("COND_UP_VOL_RANK_MONTHS", 3)
     vol_rank_threshold = CONFIG.get("COND_UP_VOL_RANK_THRESHOLD", 3)
@@ -472,9 +471,8 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
         
         if is_tracing: log_detail(f"--- 正在检查 {symbol} (策略2) ---")
 
-        # 获取该股最近3天的数据 (T, T-1, T-2)
-        # 关键点：WHERE date <= base_date
-        query = f'SELECT date, price, volume FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 3'
+        # 【修改点 1】将 LIMIT 从 3 改为 8，以便获取今日 + 过去 7 天的数据
+        query = f'SELECT date, price, volume FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 8'
         cursor.execute(query, (symbol, base_date))
         rows = cursor.fetchall()
         
@@ -495,15 +493,22 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
         if price_curr <= price_prev:
             if is_tracing: log_detail(f"    x 价格未上涨 ({price_curr} <= {price_prev})，跳过。")
             continue
-            
-        # [修改] 注释掉财报日过滤逻辑
-        # 规则2: 财报日过滤 (T日)
-        # if check_is_earnings_day(cursor, symbol, date_curr):
-        #     if is_tracing: log_detail(f"    🛑 今日({date_curr})是财报日，跳过。")
-        #     continue
 
-        # === 新增规则: 财报日过滤 (T-1日) ===
-        # 检查最新日期的前一天 (date_prev) 是否为财报日
+        # 【修改点 2】新增过滤：比前 7 天最低点高出 3% 则过滤
+        # 提取 rows[1:] 中的所有价格（即排除今日后的前 7 天）
+        past_prices = [r[1] for r in rows[1:] if r[1] is not None]
+        if past_prices:
+            min_past_price = min(past_prices)
+            threshold_price = min_past_price * 1.03
+            if price_curr > threshold_price:
+                if is_tracing: 
+                    log_detail(f"    🛑 [过滤] 涨幅过大: 当前价 {price_curr} 超过前{len(past_prices)}日最低点 {min_past_price} 的 3% (阈值: {threshold_price:.2f})")
+                continue
+            else:
+                if is_tracing:
+                    log_detail(f"    i [通过] 价格位置合理: 当前价 {price_curr} 未超过前{len(past_prices)}日最低点 {min_past_price} 的 3%")
+
+        # 规则2: 财报日过滤 (T-1日)
         if check_is_earnings_day(cursor, symbol, date_prev):
             if is_tracing: log_detail(f"    🛑 昨日({date_prev})是财报日，跳过。")
             continue
@@ -531,9 +536,9 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
             
             # 检查列表中的每一天 (T, T-1, T-2)
             has_high_volume_history = False
-            
-            for i, row_data in enumerate(rows):
-                d_date, d_price, d_vol = row_data
+            # 检查 T, T-1, T-2
+            for i in range(min(3, len(rows))):
+                d_date, _, d_vol = rows[i]
                 if d_vol is None: continue
                 
                 # 检查这一天是否是当时的3个月内前3名
@@ -542,7 +547,6 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
                     cursor, sector, symbol, d_date, d_vol,
                     vol_rank_months, vol_rank_threshold, log_detail, False # 这里如果不追踪细节可以设为False，避免日志爆炸
                 )
-                
                 if is_high:
                     has_high_volume_history = True
                     if is_tracing: log_detail(f"    -> 发现高量日: {d_date} (Vol:{d_vol})")

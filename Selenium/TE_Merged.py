@@ -645,6 +645,12 @@ def run_etf_processing():
 # ================= 主程序入口 =================
 
 def main():
+    # 检查是否有命令行参数传入
+    # 如果参数个数大于 1 (即除了脚本名以外还有其他参数)，则 skip_etf 为 True
+    skip_etf = len(sys.argv) > 1
+    if skip_etf:
+        logging.info(">>> 检测到命令行参数，本次运行将跳过 ETF 处理任务。")
+
     # 1. 检查日期 (全局控制)
     if not check_is_workday():
         msg = "今天是周日或周一，不执行更新操作。" 
@@ -660,7 +666,7 @@ def main():
         logging.info(f"[{task_name}] 完成，休息 {TASK_INTERVAL} 秒准备下一项任务...")
         time.sleep(TASK_INTERVAL)
 
-    # 2. 顺次执行爬虫任务
+    # 2. 顺次执行爬虫任务 (这些任务无论如何都会执行)
     try: 
         run_commodities()
     except Exception as e: 
@@ -697,11 +703,14 @@ def main():
         logging.error(f"Main Loop - Economics Error: {e}")
     wait_between_tasks("Economics") # 等待
 
-    # 3. 执行 ETF 处理任务 (原 Compare_Insert 逻辑)
-    try:
-        run_etf_processing()
-    except Exception as e:
-        logging.error(f"Main Loop - ETF Processing Error: {e}")
+    # 3. 执行 ETF 处理任务 (根据 skip_etf 标志决定是否执行)
+    if not skip_etf:
+        try:
+            run_etf_processing()
+        except Exception as e:
+            logging.error(f"Main Loop - ETF Processing Error: {e}")
+    else:
+        logging.info(">>> 已跳过 ETF 处理任务 (run_etf_processing)。")
 
     logging.info(">>> 所有任务执行完毕")
 
