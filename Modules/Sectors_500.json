@@ -30,8 +30,7 @@
         "NTES",
         "AMX",
         "APP",
-        "WBD",
-        "EA"
+        "WBD"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -59,7 +58,8 @@
         "ORLY",
         "ROST",
         "CVNA",
-        "F"
+        "F",
+        "CMG"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -163,7 +163,6 @@
         "MET",
         "BRK-B",
         "MRSH",
-        "BSBR",
         "RKT"
     ],
     "Healthcare": [
@@ -201,7 +200,8 @@
         "ARGX",
         "CAH",
         "BDX",
-        "IDXX"
+        "IDXX",
+        "HLN"
     ],
     "Industrials": [
         "GE",
@@ -307,9 +307,7 @@
         "NXPI",
         "SNDK",
         "MPWR",
-        "ASX",
-        "CRWV",
-        "TER"
+        "ASX"
     ],
     "Utilities": [
         "NEE",

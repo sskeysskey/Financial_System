@@ -42,7 +42,7 @@ DISPLAY_LIMITS = {
 }
 
 categories = [
-    ['Must', 'Today', 'PE_Volume_backup', 'PE_Volume_up_backup',
+    ['Must', 'Today', 'PE_Volume_backup', 'PE_Volume_up_backup', 'PE_Volume_high_backup',
      'PE_Deeper_backup', 'PE_Deep_backup',
      'PE_W_backup', 'OverSell_W_backup'],
     ['PE_valid_backup', 'PE_invalid_backup', 'Strategy12_backup', 'Strategy34_backup', 'Short_backup', 'Short_W_backup'],
@@ -633,7 +633,8 @@ class MainWindow(QMainWindow):
             'Strategy34': '策略 3、3.5、4',
             'Strategy12': '策略 1、2、2.5',
             'PE_Volume_backup': 'Volume左',
-            'PE_Volume_up_backup': 'Volume右'
+            'PE_Volume_up_backup': 'Volume右',
+            'PE_Volume_high_backup': 'Volume追高'
         }
         
         self.init_ui()
@@ -784,6 +785,7 @@ class MainWindow(QMainWindow):
             "PE_Deeper_backup": "PE_Deeper",
             "PE_Volume_backup": "PE_Volume",
             "PE_Volume_up_backup": "PE_Volume_up",
+            "PE_Volume_high_backup": "PE_Volume_high",
             "OverSell_W_backup": "OverSell_W",
             
             # 兼容不带 _backup 后缀的情况 (如果有)
@@ -793,6 +795,7 @@ class MainWindow(QMainWindow):
             "PE_Deep": "PE_Deep",
             "PE_Volume": "PE_Volume",
             "PE_Volume_up": "PE_Volume_up",
+            "PE_Volume_high": "PE_Volume_high",
             "OverSell_W": "OverSell_W"
         }
 
@@ -1097,13 +1100,13 @@ class MainWindow(QMainWindow):
             # 策略分组 (原名)
             'Must','Today','Short','Short_W',
             'PE_valid','PE_invalid','Strategy12','Strategy34',
-            'PE_Deep','OverSell_W','PE_W','PE_Deeper','PE_Volume', 'PE_Volume_up',
+            'PE_Deep','OverSell_W','PE_W','PE_Deeper','PE_Volume', 'PE_Volume_up', 'PE_Volume_high',
             
             # 策略分组 (Backup 版本 - 实际上 UI 中正在使用的 key)
             'PE_valid_backup', 'PE_invalid_backup', 
             'Strategy12_backup', 'Strategy34_backup',
             'PE_Deep_backup', 'PE_W_backup', 'PE_Deeper_backup',
-            'OverSell_W_backup', 'PE_W_backup', 'PE_Volume_backup', 'PE_Volume_up_backup',
+            'OverSell_W_backup', 'PE_W_backup', 'PE_Volume_backup', 'PE_Volume_up_backup', 'PE_Volume_high_backup',
             'Short_backup', 'Short_W_backup'
         }
 
@@ -1119,7 +1122,7 @@ class MainWindow(QMainWindow):
             # combined_groups
             "Must", "Today", "Short_backup", "Short_W_backup",
             # Volume Sector
-            "PE_Volume_backup", "PE_Volume_up_backup",
+            "PE_Volume_backup", "PE_Volume_up_backup", "PE_Volume_high_backup"
         }
 
         for index, category_group in enumerate(categories):
