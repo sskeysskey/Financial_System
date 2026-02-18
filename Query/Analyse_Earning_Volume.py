@@ -580,9 +580,10 @@ def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_
     """
     执行策略3：PE_Volume_high
     条件：
-    1. 最近两次财报收盘价持续上升
-    2. 最新收盘价 > 最新财报日收盘价
-    3. 最新成交额是过去12个月的前2名
+    1. [新增] 最新财报日涨跌幅 > 0 (latest_er_pct > 0)
+    2. 最近两次财报收盘价持续上升
+    3. 最新收盘价 > 最新财报日收盘价
+    4. 最新成交额是过去12个月的前2名
     """
     log_detail("\n========== 开始执行 策略3 (PE_Volume_high - 财报突破放量) ==========")
     
@@ -616,6 +617,7 @@ def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_
         
         # ========== 条件1: 获取并检查财报数据 ==========
         # 获取财报日期和涨跌幅（参考 earning_no_season 的逻辑）
+        # 注意：这里的 price 字段实际上是涨跌幅 (pct)
         if target_date_override:
             # 回测模式：只获取回测日期(含)之前的财报
             cursor.execute("SELECT date, price FROM Earning WHERE name = ? AND date <= ? ORDER BY date ASC", (symbol, target_date_override))
@@ -633,8 +635,18 @@ def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_
         all_er_dates = [r[0] for r in er_rows]
         latest_er_date = all_er_dates[-1]
         
+        # [新增逻辑] 获取最新财报日的涨跌幅
+        latest_er_pct = er_rows[-1][1] # Earning表里的price列其实是pct
+        
+        # [新增判断] 检查最新财报涨跌幅是否大于 0
+        if latest_er_pct is None or latest_er_pct < 0:
+            if is_tracing:
+                log_detail(f"    x [失败] 最新财报涨跌幅 {latest_er_pct} <= 0")
+            continue
+            
         if is_tracing:
             log_detail(f"    - 财报记录: {len(er_rows)} 次, 最新财报日: {latest_er_date}")
+            log_detail(f"    ✅ [通过] 最新财报涨跌幅: {latest_er_pct} > 0")
         
         # 获取财报日对应的收盘价（从板块表中查询）
         placeholders = ', '.join(['?'] * len(all_er_dates))
@@ -664,22 +676,34 @@ def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_
             continue
         
         # ========== 条件2: 获取最新交易数据并检查价格突破 ==========
+        # 修改点：将 LIMIT 1 改为 LIMIT 2，以便获取今日和昨日数据
         if target_date_override:
-            query = f'SELECT date, price, volume FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 1'
+            query = f'SELECT date, price, volume FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 2'
             cursor.execute(query, (symbol, target_date_override))
         else:
-            query = f'SELECT date, price, volume FROM "{sector}" WHERE name = ? ORDER BY date DESC LIMIT 1'
+            query = f'SELECT date, price, volume FROM "{sector}" WHERE name = ? ORDER BY date DESC LIMIT 2'
             cursor.execute(query, (symbol,))
         
-        latest_row = cursor.fetchone()
-        
-        if not latest_row or latest_row[1] is None or latest_row[2] is None:
+        rows = cursor.fetchall()
+
+        # 至少需要2天数据才能比较涨跌
+        if len(rows) < 2 or rows[0][1] is None or rows[0][2] is None or rows[1][1] is None:
             if is_tracing:
-                log_detail(f"    x [失败] 无法获取最新交易数据")
+                log_detail(f"    x [失败] 无法获取最新两天交易数据")
             continue
-        
-        latest_date, latest_price, latest_volume = latest_row
+
+        latest_date, latest_price, latest_volume = rows[0]
+        prev_date, prev_price, _ = rows[1]
         latest_turnover = latest_price * latest_volume
+
+        # ========== 新增条件: 检查今日是否上涨 ==========
+        if latest_price <= prev_price:
+            if is_tracing:
+                log_detail(f"    x [失败] 今日未上涨: {latest_price:.2f} <= 昨日 {prev_price:.2f}")
+            continue
+
+        if is_tracing:
+            log_detail(f"    ✅ [通过] 今日上涨: {prev_price:.2f} -> {latest_price:.2f}")
         
         # 检查最新价是否高于最新财报日收盘价
         cond2_passed = latest_price > latest_er_price

@@ -3,17 +3,10 @@
     "Real_Estate": {},
     "Energy": {},
     "Technology": {
-        "FIS": "",
         "SPSC": "",
-        "CCC": "",
         "WIX": "",
         "TEAM": "",
         "GIB": "",
-        "YMM": "",
-        "INTA": "",
-        "UBER": "",
-        "MNDY": "",
-        "ITRI": "",
         "CRM": "",
         "ACN": "",
         "IBM": "",
@@ -32,14 +25,9 @@
         "NTSK": ""
     },
     "Consumer_Cyclical": {
-        "AMZN": "",
-        "DASH": "",
         "DPZ": "",
         "CHWY": "",
         "BKNG": "",
-        "DKNG": "",
-        "JD": "",
-        "BFAM": "",
         "GPI": ""
     },
     "Utilities": {},
@@ -53,20 +41,15 @@
     "Communication_Services": {
         "TEF": "",
         "GOOGL": "",
-        "Z": "",
         "FUBO": ""
     },
     "Financial_Services": {
         "SLM": "",
         "ARX": "",
-        "V": "",
-        "MA": "",
-        "RYAN": "",
         "FDS": "",
         "BXSL": ""
     },
     "Healthcare": {
-        "CAI": "",
         "DOCS": ""
     },
     "ETFs": {
@@ -151,8 +134,12 @@
         "GLD": "",
         "SLV": ""
     },
-    "Options_zero": {},
+    "Options_zero": {
+        "ROKU": "",
+        "CBRE": ""
+    },
     "Must": {
+        "ACLS": "",
         "DB": "",
         "AMKR": "",
         "HSBC": "",

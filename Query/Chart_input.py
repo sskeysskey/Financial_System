@@ -1509,15 +1509,14 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     if idx < len(x_data) and idx < len(y_data) and initial_price is not None:
                         sel_date, sel_price = x_data[idx], y_data[idx]
                         
-                        # 计算与按下点的百分比变化
+                        # 计算与按下点的价格百分比变化
                         try:
                             percent_change = ((sel_price - initial_price) / (initial_price + 1e-12)) * 100.0
                         except Exception:
                             percent_change = 0.0
 
-                        # <--- 修改开始: 将 Volume 差值改为 Turnover 差值 --->
-                        vol_text = ""
-                        # 确保我们有初始成交量，且当前点有成交量数据
+                        # 2. 计算成交额 (Turnover) 变化百分比
+                        turnover_text = ""
                         if initial_volume is not None and current_filtered_volumes and idx < len(current_filtered_volumes):
                             sel_vol = current_filtered_volumes[idx] # 获取当前点的原始成交量
                             
@@ -1533,25 +1532,52 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                                     # C. 计算成交额变化的百分比
                                     if start_turnover > 0:
                                         turnover_change = ((current_turnover - start_turnover) / start_turnover) * 100.0
-                                        # 显示格式保持不变，依然显示在第二行
-                                        vol_text = f"\n{turnover_change:+.1f}%" 
+                                        turnover_text = f"{turnover_change:+.1f}%"
+                                    else:
+                                        turnover_text = "--%"
                                 except:
-                                    pass
-                            
-                        # 2. 设置注释文本，拼接价格和成交量
+                                    turnover_text = "--%"
+
+                        # --- 新增逻辑: 计算日期和天数差 ---
+                        # 格式化日期字符串
+                        date_start_str = initial_date.strftime('%Y-%m-%d')
+                        date_end_str = sel_date.strftime('%Y-%m-%d')
+                        
+                        # 计算相差天数 (绝对值，如果你希望显示方向可以去掉 abs)
+                        days_diff = abs((sel_date - initial_date).days)
+
+                        # 3. 构造最终显示的文本内容
+                        # 格式: 
+                        # 起始日期
+                        # 结束日期
+                        # 相差天数
+                        # 价格变化%
+                        # 成交额变化%
+                        final_display_text = (
+                            f"{date_start_str}\n"
+                            f"{date_end_str}\n"
+                            f"{days_diff}\n"
+                            f"{percent_change:+.1f}%\n"
+                            f"{turnover_text}"
+                        )
+
+                        # 4. 设置注释属性
                         annot.xy = (sel_date, sel_price)
-                        annot.set_text(f"{percent_change:+.1f}%{vol_text}") # 添加了 vol_text
+                        annot.set_text(final_display_text)
+                        
+                        # 根据价格涨跌设置颜色
                         drag_color = NORD_THEME['accent_red'] if percent_change > 0 else NORD_THEME['accent_green']
                         annot.set_color(drag_color)
                         annot.get_bbox_patch().set_edgecolor(drag_color)
                         annot.get_bbox_patch().set_alpha(0.8)
                         annot.set_fontsize(16)
                         
+                        # 动态调整浮窗位置 (防止遮挡)
                         y_range, x_range = ax1.get_ylim(), ax1.get_xlim()
                         y_ratio = (sel_price - y_range[0]) / (y_range[1] - y_range[0] + 1e-12)
                         x_ratio = (matplotlib.dates.date2num(sel_date) - x_range[0]) / (x_range[1] - x_range[0] + 1e-12)
                         
-                        y_offset = 60 if y_ratio < 0.2 else -120 if y_ratio > 0.8 else -70
+                        y_offset = 60 if y_ratio < 0.2 else -160 if y_ratio > 0.8 else -100
                         x_offset = -120 if x_ratio > 0.7 else 50 if x_ratio < 0.3 else -100
                         annot.set_position((x_offset, y_offset))
                         

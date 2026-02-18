@@ -276,13 +276,13 @@ def scrape_options():
                 json_options_set = set(options_keys)
                 count_json_options = len(json_options_set)
                 
-                # 2. 提取 Must 分组
-                must_keys = data.get("Must", {}).keys()
+                # 2. 提取 MPE_Volumeust 分组
+                must_keys = data.get("PE_Volume", {}).keys()
                 json_must_set = set(must_keys)
                 count_json_must = len(json_must_set)
                 
-                # 3. 提取 Today 分组 (=== 修改：暂时关闭 ===)
-                # today_keys = data.get("Today", {}).keys()
+                # 3. 提取 PE_Volume_up 分组
+                today_keys = data.get("PE_Volume_up", {}).keys()
                 json_today_set = set() # set(today_keys) -> 设为空集合
                 count_json_today = 0   # len(json_today_set) -> 设为0
 
