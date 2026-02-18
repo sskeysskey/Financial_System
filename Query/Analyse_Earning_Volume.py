@@ -540,7 +540,7 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
                 if is_tracing: log_detail(f"    x 放量但未满足3个月Top{vol_rank_threshold}。")
         else:
             # === 分支 B: 缩量上涨 ===
-            # 修改点: 检查 T, T-1, T-2 中是否有任意一天是“3个月内前3名”
+            # 修改点: 检查 T, T-1, T-2 中是否有任意一天是"3个月内前3名"
             # 已经满足: 量缩 (vol_curr < vol_prev) 且 价涨 (price_curr > price_prev)
             
             # 检查列表中的每一天 (T, T-1, T-2)
@@ -579,11 +579,14 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
 def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_trace, log_detail):
     """
     执行策略3：PE_Volume_high
-    条件：
+    条件甲：
     1. [新增] 最新财报日涨跌幅 > 0 (latest_er_pct > 0)
     2. 最近两次财报收盘价持续上升
     3. 最新收盘价 > 最新财报日收盘价
     4. 最新成交额是过去12个月的前2名
+
+    - 乙类: 两次财报递增 + 最新财报涨跌幅>0 + 价格突破 + 成交额为财报日起最高
+    - 丙类: (无需财报递增/涨跌幅要求) + 价格突破 + 成交额为财报日起最高
     """
     log_detail("\n========== 开始执行 策略3 (PE_Volume_high - 财报突破放量) ==========")
     
@@ -591,6 +594,7 @@ def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_
     turnover_lookback_months = CONFIG.get("COND_HIGH_TURNOVER_LOOKBACK_MONTHS", 12)
     turnover_rank_threshold = CONFIG.get("COND_HIGH_TURNOVER_RANK_THRESHOLD", 2)
     log_detail(f"配置参数: 成交额回溯 = {turnover_lookback_months} 个月, 排名阈值 = Top {turnover_rank_threshold}")
+    log_detail(f"分类说明: 甲=严格条件+12月Top2, 乙=严格条件+财报日起最高, 丙=宽松条件+财报日起最高")
 
     # 确定基准日期
     base_date = target_date_override if target_date_override else (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
@@ -906,29 +910,29 @@ def run_pe_volume_logic(log_detail):
 
     # 4. 构建备注 (Note) - 使用过滤后的列表
     # 修改：增加 highlight_set 参数，用于给特定集合中的 symbol 加 "听" 后缀
-    def build_symbol_note_map(symbols, existing_notes=None, highlight_set=None):
+    def build_symbol_note_map(symbols, existing_notes=None, highlight_set=None, suffix_tag=""):
         """
         symbols: 本次筛选出的 symbol 列表
         existing_notes: 字典，存储了从 panel.json 读取的 {symbol: "原有备注"}
         highlight_set: Deep/Deeper/Valid/Invalid 的 symbol 集合
+        suffix_tag: 额外的后缀标记，如 "甲"
         """
         note_map = {}
         for sym in symbols:
-            # 1. 获取原有备注（如 "OKLO15热"）
-            # 注意：这里我们通常只需要后缀部分，所以把 symbol 删掉
             orig_note = ""
             if existing_notes and sym in existing_notes:
-                orig_note = existing_notes[sym].replace(sym, "") # 提取出 "15热"
+                orig_note = existing_notes[sym].replace(sym, "")
             
-            # 3. 构造新备注
             new_suffix = orig_note
             
-            # 检查“听”：如果属于 Deep 组且当前备注里没“听”
             if highlight_set and sym in highlight_set:
                 if "听" not in new_suffix:
                     new_suffix += "听"
             
-            # 最终组合：Symbol + 累加后的后缀
+            # 添加额外后缀（如"甲"）
+            if suffix_tag and suffix_tag not in new_suffix:
+                new_suffix += suffix_tag
+            
             note_map[sym] = f"{sym}{new_suffix}"
         return note_map
         
@@ -941,7 +945,7 @@ def run_pe_volume_logic(log_detail):
     
     # PE_Volume_up 暂时不需要此逻辑
     pe_volume_up_notes = build_symbol_note_map(filtered_pe_volume_up)
-    pe_volume_high_notes = build_symbol_note_map(filtered_pe_volume_high)  # 新增
+    pe_volume_high_notes = build_symbol_note_map(filtered_pe_volume_high, suffix_tag="甲")
 
     # 5. 回测安全拦截
     # 【回测逻辑】如果设置了 TARGET_DATE，在这里直接 return，不执行下面的写入操作
