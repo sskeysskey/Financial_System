@@ -4,61 +4,28 @@
     "Energy": {},
     "Technology": {
         "SPSC": "",
-        "WIX": "",
-        "TEAM": "",
-        "GIB": "",
-        "CRM": "",
-        "ACN": "",
-        "IBM": "",
-        "INTU": "",
         "WDAY": "",
-        "ROP": "",
-        "CTSH": "",
         "HPQ": "",
-        "NICE": "",
-        "GWRE": "",
-        "KVYO": "",
-        "QLYS": "",
-        "APPF": "",
-        "BOX": "",
-        "ASAN": "",
-        "NTSK": "",
         "PANW": "",
         "CDW": "",
         "CHKP": "",
         "QTWO": "",
         "INTA": ""
     },
-    "Consumer_Cyclical": {
-        "DPZ": "",
-        "CHWY": "",
-        "BKNG": "",
-        "GPI": ""
-    },
+    "Consumer_Cyclical": {},
     "Utilities": {
         "MWH": ""
     },
-    "Consumer_Defensive": {
-        "FLO": ""
-    },
-    "Industrials": {
-        "TRI": "",
-        "BAH": ""
-    },
+    "Consumer_Defensive": {},
+    "Industrials": {},
     "Communication_Services": {
         "TEF": "",
-        "GOOGL": "",
         "FUBO": ""
     },
     "Financial_Services": {
-        "SLM": "",
-        "ARX": "",
-        "FDS": "",
-        "BXSL": ""
+        "SLM": ""
     },
-    "Healthcare": {
-        "DOCS": ""
-    },
+    "Healthcare": {},
     "ETFs": {
         "HYG": ""
     },
@@ -330,16 +297,10 @@
         "TMO": "TMO"
     },
     "PE_Volume_high": {
-        "AUR": "AUR丙",
-        "GVA": "GVA丙",
-        "SON": "SON甲",
-        "SUN": "SUN乙"
+        "SON": "SON甲"
     },
     "PE_Volume_high_backup": {
-        "AUR": "AUR丙",
-        "GVA": "GVA丙",
-        "SON": "SON甲",
-        "SUN": "SUN乙"
+        "SON": "SON甲"
     },
     "PE_valid": {
         "AJG": "",

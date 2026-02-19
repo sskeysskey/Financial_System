@@ -63,7 +63,7 @@ CONFIG = {
 
     # ========== 策略3 (PE_Volume_high 财报突破放量) 参数 ==========
     "COND_HIGH_TURNOVER_LOOKBACK_MONTHS": 12,  # 成交额回溯12个月
-    "COND_HIGH_TURNOVER_RANK_THRESHOLD": 3,    # 成交额排名前2名
+    "COND_HIGH_TURNOVER_RANK_THRESHOLD": 3,    # 成交额排名前3名
 }
 
 # --- 2. 辅助与文件操作模块 ---
@@ -579,10 +579,9 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
 def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_trace, log_detail):
     """
     执行策略3：PE_Volume_high
-    返回三个分类：
+    返回两个分类：
     - 甲类: 两次财报递增 + 最新财报涨跌幅>0 + 价格突破 + 成交额12个月前2名
-    - 乙类: 两次财报递增 + 最新财报涨跌幅>0 + 价格突破 + 成交额为财报日起最高
-    - 丙类: (无需财报递增/涨跌幅要求) + 价格突破 + 成交额为财报日起最高
+    - 乙类: (无需财报递增/涨跌幅要求) + 价格突破 + 成交额为财报日起最高 + 财报日距今至少30天
     """
     log_detail("\n========== 开始执行 策略3 (PE_Volume_high - 财报突破放量) ==========")
     
@@ -590,16 +589,15 @@ def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_
     turnover_lookback_months = CONFIG.get("COND_HIGH_TURNOVER_LOOKBACK_MONTHS", 12)
     turnover_rank_threshold = CONFIG.get("COND_HIGH_TURNOVER_RANK_THRESHOLD", 2)
     log_detail(f"配置参数: 成交额回溯 = {turnover_lookback_months} 个月, 排名阈值 = Top {turnover_rank_threshold}")
-    log_detail(f"分类说明: 甲=严格条件+12月Top2, 乙=严格条件+财报日起最高, 丙=宽松条件+财报日起最高")
+    log_detail(f"分类说明: 甲=严格条件+12月Top2, 乙=宽松条件+财报日起最高+间隔≥30天")
 
     # 确定基准日期
     base_date = target_date_override if target_date_override else (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
     log_detail(f"基准日期: {base_date}")
     
-    # 三个分类的结果集
+    # 两个分类的结果集
     results_jia = []  # 甲类
     results_yi = []   # 乙类
-    results_bing = [] # 丙类
     
     # 连接数据库
     conn = sqlite3.connect(db_path, timeout=60.0)
@@ -626,7 +624,7 @@ def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_
         
         er_rows = cursor.fetchall()
         
-        # 至少需要1次财报记录（丙类只需要1次）
+        # 至少需要1次财报记录
         if len(er_rows) < 1:
             if is_tracing:
                 log_detail(f"    x [失败] 无财报记录")
@@ -719,11 +717,24 @@ def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_
             log_detail, is_tracing
         )
         
-        # 条件F: 成交额为财报日起最高 (用于乙类和丙类)
+        # 条件F: 成交额为财报日起最高 (用于乙类)
         cond_turnover_since_er_top = check_turnover_since_earning(
             cursor, sector, symbol, latest_er_date, latest_date, latest_turnover,
             log_detail, is_tracing
         )
+        
+        # ========== 新增条件G: 财报日距今至少30天 (用于乙类) ==========
+        cond_days_since_er = False
+        try:
+            er_dt = datetime.datetime.strptime(latest_er_date, "%Y-%m-%d")
+            latest_dt = datetime.datetime.strptime(latest_date, "%Y-%m-%d")
+            days_diff = (latest_dt - er_dt).days
+            cond_days_since_er = (days_diff >= 30)
+            if is_tracing:
+                log_detail(f"    - 条件G (财报间隔≥30天): {latest_er_date} -> {latest_date} = {days_diff}天 -> {cond_days_since_er}")
+        except Exception as e:
+            if is_tracing:
+                log_detail(f"    - 条件G (财报间隔≥30天): 日期解析失败 = False")
         
         # ========== 步骤6: 分类判定 ==========
         
@@ -733,32 +744,23 @@ def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_
             if is_tracing:
                 log_detail(f"    ✅ [选中-甲类] 严格条件 + 12个月Top2")
         
-        # 乙类: 财报递增 + 财报涨幅>0 + 价格突破 + 今日上涨 + 财报日起最高
-        if cond_er_increasing and cond_er_pct_positive and cond_turnover_since_er_top:
+        # 乙类 (原丙类): (无需财报递增/涨跌幅要求) + 价格突破 + 今日上涨 + 财报日起最高 + 间隔≥30天
+        if cond_turnover_since_er_top and cond_days_since_er:
             results_yi.append(symbol)
             if is_tracing:
-                log_detail(f"    ✅ [选中-乙类] 严格条件 + 财报日起最高")
-        
-        # 丙类: (无需财报递增/涨幅要求) + 价格突破 + 今日上涨 + 财报日起最高
-        if cond_turnover_since_er_top:
-            results_bing.append(symbol)
-            if is_tracing:
-                log_detail(f"    ✅ [选中-丙类] 宽松条件 + 财报日起最高")
+                log_detail(f"    ✅ [选中-乙类] 宽松条件 + 财报日起最高 + 间隔≥30天")
     
     conn.close()
     
     # 去重并排序
     results_jia = sorted(list(set(results_jia)))
     results_yi = sorted(list(set(results_yi)))
-    results_bing = sorted(list(set(results_bing)))
     
     log_detail(f"\n策略3 筛选完成:")
     log_detail(f"  - 甲类 (严格+12月Top2): {len(results_jia)} 个: {results_jia}")
-    log_detail(f"  - 乙类 (严格+财报起最高): {len(results_yi)} 个: {results_yi}")
-    log_detail(f"  - 丙类 (宽松+财报起最高): {len(results_bing)} 个: {results_bing}")
+    log_detail(f"  - 乙类 (宽松+财报起最高+间隔≥30天): {len(results_yi)} 个: {results_yi}")
     
-    return results_jia, results_yi, results_bing
-
+    return results_jia, results_yi
 
 def check_turnover_since_earning(cursor, sector_name, symbol, er_date_str, latest_date_str, latest_turnover, log_detail, is_tracing):
     """
@@ -888,7 +890,7 @@ def run_pe_volume_logic(log_detail):
     final_pe_volume_up = sorted(list(set(raw_pe_volume_up)))
 
     # ================= 策略 3 执行 (修改：接收三个返回值) =================
-    raw_pe_volume_high_jia, raw_pe_volume_high_yi, raw_pe_volume_high_bing = process_pe_volume_high(
+    raw_pe_volume_high_jia, raw_pe_volume_high_yi = process_pe_volume_high(
         DB_FILE,
         symbol_to_sector_map,
         TARGET_DATE,
@@ -897,7 +899,7 @@ def run_pe_volume_logic(log_detail):
     )
     
     # 合并所有策略3的结果用于统一处理
-    final_pe_volume_high = sorted(list(set(raw_pe_volume_high_jia) | set(raw_pe_volume_high_yi) | set(raw_pe_volume_high_bing)))
+    final_pe_volume_high = sorted(list(set(raw_pe_volume_high_jia) | set(raw_pe_volume_high_yi)))
 
     # ================= Tag 黑名单过滤逻辑 =================
     def filter_blacklisted_tags(symbols):
@@ -919,7 +921,6 @@ def run_pe_volume_logic(log_detail):
     # 策略3的三个子类分别过滤
     filtered_pe_volume_high_jia = filter_blacklisted_tags(raw_pe_volume_high_jia)
     filtered_pe_volume_high_yi = filter_blacklisted_tags(raw_pe_volume_high_yi)
-    filtered_pe_volume_high_bing = filter_blacklisted_tags(raw_pe_volume_high_bing)
     filtered_pe_volume_high = filter_blacklisted_tags(final_pe_volume_high)
     
     if SYMBOL_TO_TRACE:
@@ -991,15 +992,13 @@ def run_pe_volume_logic(log_detail):
             categories.append("甲")
         elif sym in filtered_pe_volume_high_yi:
             categories.append("乙")
-        elif sym in filtered_pe_volume_high_bing:
-            categories.append("丙")
         symbol_to_categories[sym] = categories
     
     # 构建策略3的备注
     pe_vol_high_notes = {}
     for sym in filtered_pe_volume_high:
         categories = symbol_to_categories.get(sym, [])
-        suffix = "".join(categories)  # 例如 "甲乙" 或 "丙"
+        suffix = "".join(categories)  # 例如 "甲乙" 或 "乙"
         pe_vol_high_notes[sym] = f"{sym}{suffix}"
     
     # 5. 回测安全拦截
@@ -1010,8 +1009,7 @@ def run_pe_volume_logic(log_detail):
         log_detail(f"📊 [策略2] PE_Volume_up (活跃上涨) 命中: {len(filtered_pe_volume_up)} 个 (Raw: {len(final_pe_volume_up)})")
         log_detail(f"📊 [策略3] PE_Volume_high 总计命中: {len(filtered_pe_volume_high)} 个")
         log_detail(f"    - 甲类 (严格+12月Top2): {len(filtered_pe_volume_high_jia)} 个")
-        log_detail(f"    - 乙类 (严格+财报起最高): {len(filtered_pe_volume_high_yi)} 个")
-        log_detail(f"    - 丙类 (宽松+财报起最高): {len(filtered_pe_volume_high_bing)} 个")
+        log_detail(f"    - 乙类 (宽松+财报起最高+间隔≥30天): {len(filtered_pe_volume_high_yi)} 个")
         log_detail("="*60 + "\n")
         return
 
