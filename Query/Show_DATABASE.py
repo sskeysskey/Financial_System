@@ -358,10 +358,10 @@ if __name__ == "__main__":
     
     # --- 配置项 1: 指定要显示的表 (None 表示全部) ---
     # 场景1：只看 Options
-    my_target_tables = ["Earning"]
+    my_target_tables = ["Options"]
     
     # 场景2：看 Options 和 Bonds
-    # my_target_tables = ["Options", "Bonds"]
+    # my_target_tables = ["Options", "Bonds", "Earning"]
     
     # 场景3：看所有表（设为 None 或空列表 []）
     # my_target_tables = None 

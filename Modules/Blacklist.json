@@ -1042,6 +1042,9 @@
         "VLUE",
         "FCN",
         "LSCC",
-        "CBRE"
+        "CBRE",
+        "POR",
+        "MWH",
+        "ALGM"
     ]
 }

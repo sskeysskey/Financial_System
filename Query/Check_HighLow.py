@@ -864,13 +864,31 @@ class HighLowWindow(QMainWindow):
         print(f"按钮 '{symbol}' 被点击，准备显示图表...")
         self.symbol_manager.set_current_symbol(symbol)
         
+        # --- 新增：计算位次逻辑 ---
+        current_list = self.symbol_manager.symbols
+        total_count = len(current_list)
+        try:
+            # 位次是 索引 + 1
+            current_pos = current_list.index(symbol) + 1
+            position_str = f"({current_pos}/{total_count})"
+        except ValueError:
+            position_str = ""
+
+        # 构造显示名称，例如 "GLD (3/22)"
+        display_name_with_pos = f"{symbol} {position_str}"
+        # -----------------------
+
         sector = next((s for s, names in self.sector_data.items() if symbol in names), None)
         compare_value = self.compare_data.get(symbol, "N/A")
         
         try:
+            # 修改调用参数：将 display_name_with_pos 传给 display_name 参数
+            # 这样 Chart_input 的标题栏和内部大标题都会显示位次
             plot_financial_data(
                 DB_PATH, sector, symbol, compare_value, "N/A", None, "N/A", 
-                self.json_data, '1Y', False, callback=self.handle_chart_callback
+                self.json_data, '1Y', False, 
+                callback=self.handle_chart_callback,
+                window_title_text=display_name_with_pos  # 关键修改
             )
             self.setFocus()
         except Exception as e:

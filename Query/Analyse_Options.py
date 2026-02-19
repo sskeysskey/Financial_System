@@ -61,6 +61,10 @@ INCLUDE_NEW_ROWS = True
 # 策略1： 逻辑参数: 权重幂次配置 (1=线性, 2=平方...)
 WEIGHT_POWER = 1
 
+# [策略 3 参数配置]
+STRAT3_COEFF_A = 0.5  # 系数 A
+STRAT3_COEFF_B = 0.05  # 系数 B
+
 # b.py 调试 Symbol
 DEBUG_SYMBOL = ""
 
@@ -381,12 +385,12 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
     return final_output
 
 # ==========================================
-# [Part B] 计算 D-Score 及 IV 并入库
+# [Part B] 计算 D-Score, IV 及 IV2 并入库
 # ==========================================
 # 修改点：增加 iv_divisor, iv_threshold, iv_adj_factor 参数
 
 def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_config, power_config, target_symbol, 
-                              iv_divisor, iv_threshold, iv_adj_factor):
+                              iv_divisor, iv_threshold, iv_adj_factor, price_map):
     """
     直接从 DataFrame 计算 Score 并写入数据库
     iv_n_config: 策略2取排名的数量
@@ -394,7 +398,7 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
     iv_threshold: 策略2距离阈值
     iv_adj_factor: 策略2权重调节系数
     """
-    print(f"\n[{datetime.datetime.now().strftime('%H:%M:%S')}] 开始执行 Score 与 IV 计算与入库...")
+    print(f"\n[{datetime.datetime.now().strftime('%H:%M:%S')}] 开始执行 Score 与 IV / IV2 计算与入库...")
     print(f"当前配置: D-Score Top N = {n_config}, IV Top N = {iv_n_config}, 权重幂次 = {power_config}")
     print(f"IV配置: 除数={iv_divisor}, 阈值={iv_threshold}%, 调节系数={iv_adj_factor}")
 
@@ -409,6 +413,7 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
                 f.write(f"运行时间: {pd.Timestamp.now()}\n")
                 f.write(f"权重幂次 (Power): {power_config}\n")
                 f.write(f"IV参数: Divisor={iv_divisor}, Threshold={iv_threshold}%, Adj={iv_adj_factor}\n\n")
+                f.write(f"策略3系数: A={STRAT3_COEFF_A}, B={STRAT3_COEFF_B}\n\n")
         except: pass
 
     # --- 数据预处理 (兼容 a.py 生成的格式) ---
@@ -419,7 +424,7 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
         pass
 
     # 2. 确保数值列格式正确
-    for col in ['Open Interest', '1-Day Chg']:
+    for col in ['Open Interest', '1-Day Chg', 'Price', 'Strike']:
         if df[col].dtype == object:
             df[col] = df[col].astype(str).str.replace(',', '').str.replace('%', '')
         df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
@@ -430,13 +435,19 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
         print("警告: 有部分日期无法解析，将被忽略。")
         df = df.dropna(subset=['Expiry Date'])
 
-    # 准备工作日
+    # 准备日期
     us_cal = USFederalHolidayCalendar()
     holidays = us_cal.holidays(start='2024-01-01', end='2030-12-31')
     today = pd.Timestamp.now().normalize()
+    # 策略3用到的基准日期：今天的前一天
+    ref_date_strat3 = today - timedelta(days=1)
     
-    # 存储处理结果
+    # 存储结果字典
     processed_data = {}
+
+    # =========================================================================
+    # 循环 1: 基于 (Symbol, Type) 分组 -> 计算 策略1 (D-Score) 和 策略2 (IV)
+    # =========================================================================
     grouped = df.groupby(['Symbol', 'Type'])
 
     print(f"开始计算分数... (调试目标: {target_symbol})")
@@ -444,7 +455,7 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
     for (symbol, type_), group in grouped:
         # 确保该 Symbol 在字典中初始化
         if symbol not in processed_data:
-            processed_data[symbol] = {'Call': 0.0, 'Put': 0.0, 'Call_IV_Sum': 0.0, 'Put_IV_Sum': 0.0}
+            processed_data[symbol] = {'Call': 0.0, 'Put': 0.0, 'Call_IV_Sum': 0.0, 'Put_IV_Sum': 0.0, 'IV2': 0.0}
         
         # 按数值降序排列
         group = group.sort_values(by='1-Day Chg', ascending=False)
@@ -505,6 +516,9 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
                 
                 if symbol == target_symbol:
                     for idx in range(len(top_items)):
+                        # 【修复点】使用 .iloc[idx] 来按位置访问 Series，避免 KeyError
+                        is_valid_str = "Yes" if valid_mask.iloc[idx] else "No"
+                        
                         strat1_debug_rows.append({
                             'Expiry': top_items.iloc[idx]['Expiry Date'].strftime('%Y-%m-%d'),
                             '1-Day Chg': top_items.iloc[idx]['1-Day Chg'],
@@ -512,7 +526,7 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
                             'Diff_i': diff_i[idx],
                             'Weight': w_i[idx],
                             'Score': scores[idx],
-                            'IsValid': "Yes" if valid_mask[idx] else "No"
+                            'IsValid': is_valid_str
                         })
 
         # 存入 D-Score
@@ -558,6 +572,7 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
                     'Expiry': row_data['Expiry Date'].strftime('%Y-%m-%d'),
                     'Strike': row_data['Strike'],
                     'Dist_Pct': dist_val,
+                    '1-Day Chg': row_data['1-Day Chg'], # 【修复点2】 必须添加这一行，否则后面打印会报错
                     'Price_Val': price_val, # 显示金额
                     'Final_Wt': final_weight,
                     'Contrib': contribution
@@ -587,11 +602,130 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
             header2 = f"{'Rank':<4} | {'Expiry':<12} | {'Dist(%)':<8} | {'Chg':<8} | {'FinalWt':<8} | {'Contrib'}"
             log_lines.append(header2 + "\n" + "-"*len(header2))
             for r in strat2_debug_rows:
+                # 这里的 r['1-Day Chg'] 现在可以正常读取了
                 log_lines.append(f"{r['Rank']:<4} | {r['Expiry']:<12} | {r['Dist_Pct']:>7.2f}% | {r['1-Day Chg']:<8.0f} | {r['Final_Wt']:.4f} | {r['Contrib']:.4f}")
             
             with open(debug_path, 'a') as f: f.write('\n'.join(log_lines) + '\n')
 
-    # --- 数据库写入逻辑 ---
+    # =========================================================================
+    # 循环 2: 基于 Symbol 分组 -> 计算 策略3 (IV2)
+    # =========================================================================
+    print("正在计算策略 3 (IV2) ...")
+    
+    grouped_symbol = df.groupby('Symbol')
+    
+    for symbol, sym_df in grouped_symbol:
+        # 1. 获取标的收盘价
+        S_close = price_map.get(symbol.upper())
+        if S_close is None or S_close == 0:
+            continue # 无法计算，跳过
+            
+        # 2. 按到期日分组
+        exp_groups = sym_df.groupby('Expiry Date')
+        
+        expiry_metrics = [] # 存储每个到期日的 {d, 1/d, p, a, dis}
+        strat3_debug_rows = []
+
+        for expiry, exp_df in exp_groups:
+            # --- 计算 d (时间差) ---
+            # 逻辑：到期日 - (今天 - 1天)
+            # 确保 d 为正数
+            d_days = (expiry - ref_date_strat3).days
+            if d_days <= 0: d_days = 1.0 # 防止除零或负数
+            else: d_days = float(d_days)
+            
+            inv_d = 1.0 / d_days
+            
+            # --- 计算 p 和 a ---
+            # 需将 Call 和 Put 的 Price 合并
+            # exp_df 包含该 Symbol 该 Expiry 下所有的 Strike 和 Type
+            
+            # 按 Strike 聚合 Price (Call Price + Put Price)
+            # 结果是一个 Series，Index 是 Strike，Value 是 Sum(Price)
+            strike_sums = exp_df.groupby('Strike')['Price'].sum()
+            
+            # 该到期日下所有 Strike 的 Price 总和
+            total_price_expiry = strike_sums.sum()
+            
+            # 该到期日下的 Strike 数量
+            num_strikes = len(strike_sums)
+            
+            if num_strikes == 0 or total_price_expiry == 0:
+                continue
+                
+            # 计算 p (平均 Price)
+            p = total_price_expiry / num_strikes
+            
+            # 计算 a (加权平均 Strike)
+            # 公式：Sum(Strike * (Strike_Price / Total_Price_Expiry))
+            # 等价于 Sum(Strike * Strike_Price) / Total_Price_Expiry
+            weighted_sum_strike = np.sum(strike_sums.index * strike_sums.values)
+            a = weighted_sum_strike / total_price_expiry
+            
+            # 计算 dis (价外程度)
+            dis = (a - S_close) / S_close
+            
+            expiry_metrics.append({
+                'expiry': expiry,
+                'd': d_days,
+                'inv_d': inv_d,
+                'p': p,
+                'a': a,
+                'dis': dis
+            })
+
+        # 3. 计算汇总值 D 和 P
+        if not expiry_metrics:
+            continue
+            
+        D_val = sum(m['inv_d'] for m in expiry_metrics)
+        P_val = sum(m['p'] for m in expiry_metrics)
+        
+        # 4. 计算最终 IV2
+        # 公式: Sum( dis * [ (1/d)/D * A + p/P * B ] )
+        iv2_final = 0.0
+        
+        for m in expiry_metrics:
+            term_time = (m['inv_d'] / D_val) * STRAT3_COEFF_A if D_val != 0 else 0
+            term_price = (m['p'] / P_val) * STRAT3_COEFF_B if P_val != 0 else 0
+            
+            term_val = m['dis'] * (term_time + term_price)
+            iv2_final += term_val
+            
+            if symbol == target_symbol:
+                strat3_debug_rows.append({
+                    'Expiry': m['expiry'].strftime('%Y-%m-%d'),
+                    'd': m['d'],
+                    '1/d': m['inv_d'],
+                    'p': m['p'],
+                    'a': m['a'],
+                    'dis': m['dis'],
+                    'Term': term_val
+                })
+
+        # 存入结果字典
+        if symbol not in processed_data:
+            processed_data[symbol] = {'Call': 0.0, 'Put': 0.0, 'Call_IV_Sum': 0.0, 'Put_IV_Sum': 0.0, 'IV2': 0.0}
+        
+        processed_data[symbol]['IV2'] = iv2_final
+
+        # --- 写入调试日志 (策略3) ---
+        if symbol == target_symbol:
+            log_lines = [f"\n[Strategy 3 - IV2]"]
+            log_lines.append(f"Underlying Close: {S_close}")
+            log_lines.append(f"Aggregates: D={D_val:.6f}, P={P_val:.2f}")
+            log_lines.append(f"Final IV2: {iv2_final:.6f}")
+            
+            header3 = f"{'Expiry':<12} | {'d':<4} | {'1/d':<8} | {'p':<10} | {'a':<8} | {'dis':<8} | {'Term'}"
+            log_lines.append(header3 + "\n" + "-"*len(header3))
+            for r in strat3_debug_rows:
+                log_lines.append(f"{r['Expiry']:<12} | {r['d']:<4.0f} | {r['1/d']:.4f}   | {r['p']:<10.2f} | {r['a']:<8.2f} | {r['dis']:<8.4f} | {r['Term']:.6f}")
+            
+            with open(debug_path, 'a') as f: f.write('\n'.join(log_lines) + '\n')
+
+    # =========================================================================
+    # 数据库写入逻辑
+    # =========================================================================
     print(f"正在连接数据库: {db_path} ...")
     
     # 设定写入日期
@@ -601,7 +735,7 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
     conn = sqlite3.connect(db_path, timeout=60.0)
     cursor = conn.cursor()
 
-    # 1. 建表
+    # 1. 建表(增加 iv2 字段)
     # 注意: IV 字段类型现在建议为 TEXT 以存储百分比字符串
     create_table_sql = f"""
     CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
@@ -613,6 +747,7 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
         price REAL,
         change REAL,
         iv TEXT,
+        iv2 TEXT,
         UNIQUE(date, name)
     )
     """
@@ -620,7 +755,7 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
 
     # 2. 检查并自动添加列
     # 如果列已存在 (即使是 REAL 类型)，SQLite 也允许存入字符串，所以这里逻辑兼容性很高
-    for col_name, col_type in [('change', 'REAL'), ('iv', 'TEXT')]:
+    for col_name, col_type in [('change', 'REAL'), ('iv', 'TEXT'), ('iv2', 'TEXT')]:
         try:
             cursor.execute(f"SELECT {col_name} FROM {TABLE_NAME} LIMIT 1")
         except:
@@ -633,14 +768,15 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
     query_prev_price_sql = f"SELECT price FROM {TABLE_NAME} WHERE name = ? AND date < ? ORDER BY date DESC LIMIT 1"
     
     insert_sql = f"""
-    INSERT INTO {TABLE_NAME} (date, name, call, put, price, change, iv)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO {TABLE_NAME} (date, name, call, put, price, change, iv, iv2)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(date, name) DO UPDATE SET
         call=excluded.call,
         put=excluded.put,
         price=excluded.price,
         change=excluded.change,
-        iv=excluded.iv
+        iv=excluded.iv,
+        iv2=excluded.iv2
     """
     
     count_success = 0
@@ -673,8 +809,12 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
         # [修改] 格式化为百分比字符串，保留2位小数
         final_iv = f"{raw_iv_val:.2f}%"
 
+        # 策略 3
+        raw_iv2_val = values.get('IV2', 0)
+        final_iv2 = f"{raw_iv2_val * 100:.2f}%" # 假设 iv2 也转为百分比存储，如果不需要百分号可去掉 *100
+
         try:
-            cursor.execute(insert_sql, (target_date, symbol, call_str, put_str, final_price, change_val, final_iv))
+            cursor.execute(insert_sql, (target_date, symbol, call_str, put_str, final_price, change_val, final_iv, final_iv2))
             count_success += 1
         except Exception as e:
             print(f"错误: 写入/更新 {symbol} 失败: {e}")
@@ -694,14 +834,12 @@ def get_latest_two_files(directory, pattern='Options_*.csv'):
     
     # 过滤掉文件名中包含 'Change' 或 'History' 的备份文件，防止读入上次的运行结果
     files = [f for f in files if 'Change' not in os.path.basename(f) and 'History' not in os.path.basename(f)]
-    
     files.sort(reverse=True)
     
     # 调试打印，方便确认读到了哪两个文件
     if len(files) >= 2:
         print(f"DEBUG: 自动选中最新文件 (New): {os.path.basename(files[0])}")
         print(f"DEBUG: 自动选中次新文件 (Old): {os.path.basename(files[1])}")
-        
     if len(files) < 2: return None, None
     return files[0], files[1]
 
@@ -741,7 +879,14 @@ if __name__ == "__main__":
         
         # 第二步：如果生成成功，直接在内存中传递数据进行入库计算
         if generated_df is not None and not generated_df.empty:
-            # 修改点：在调用时传入了新增的 IV 参数
+            # 【新增】为了策略3，我们需要在这里获取一次所有涉及 Symbol 的最新价格
+            print("正在为策略 3 获取标的资产价格...")
+            unique_symbols = generated_df['Symbol'].unique().tolist()
+            symbol_map = load_symbol_sector_map(SECTORS_JSON_PATH)
+            # 获取价格字典
+            current_price_map = get_latest_prices(unique_symbols, symbol_map, DB_PATH)
+
+            # 第二步：计算入库 (传入 price_map)
             calculate_d_score_from_df(
                 generated_df, 
                 DB_PATH, 
@@ -750,9 +895,10 @@ if __name__ == "__main__":
                 IV_TOP_N, 
                 WEIGHT_POWER, 
                 DEBUG_SYMBOL,
-                IV_DIVISOR,     # 新增
-                IV_THRESHOLD,   # 新增
-                IV_ADJUSTMENT   # 新增
+                IV_DIVISOR,
+                IV_THRESHOLD,
+                IV_ADJUSTMENT,
+                current_price_map # 传入价格字典
             )
             show_alert("流程完成：CSV已生成，数据库已更新")
         else:

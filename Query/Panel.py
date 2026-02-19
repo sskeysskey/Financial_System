@@ -43,9 +43,11 @@ DISPLAY_LIMITS = {
 
 categories = [
     ['Must', 'Today', 'PE_Volume_backup', 'PE_Volume_up_backup', 'PE_Volume_high_backup',
-     'PE_Deeper_backup', 'PE_Deep_backup',
-     'PE_W_backup', 'OverSell_W_backup'],
-    ['PE_valid_backup', 'PE_invalid_backup', 'Strategy12_backup', 'Strategy34_backup', 'Short_backup', 'Short_W_backup'],
+     'Short_backup', 'Short_W_backup'],
+    ['PE_Deeper_backup', 'PE_Deep_backup',
+     'PE_W_backup', 'OverSell_W_backup',
+     'PE_valid_backup', 'PE_invalid_backup',
+     'Strategy12_backup', 'Strategy34_backup'],
     ['Basic_Materials', 'Consumer_Cyclical', 'Real_Estate', 'Technology', 'Energy', 'Industrials',
      'Consumer_Defensive', 'Communication_Services', 'Financial_Services', 'Healthcare', 'Utilities'],
     ['ETFs', 'Bonds', 'Crypto', 'Indices', 'Currencies'],

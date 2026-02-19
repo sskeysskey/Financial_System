@@ -110,6 +110,7 @@
     },
     "Options_zero": {},
     "Must": {
+        "ALGM": "",
         "SON": "",
         "ARMK": "",
         "ACLS": "",
@@ -134,36 +135,34 @@
         "FUTU": ""
     },
     "Short": {
-        "HLN": "",
-        "LITE": "",
-        "BBWI": "",
-        "TTC": ""
+        "ENLT": "",
+        "CE": "",
+        "WPC": "",
+        "FE": "",
+        "MWH": "",
+        "DINO": "",
+        "POR": "",
+        "RSG": "",
+        "EXE": ""
     },
     "Short_backup": {
-        "HLN": "",
-        "LITE": "",
-        "BBWI": "",
-        "TTC": ""
+        "ENLT": "",
+        "CE": "",
+        "WPC": "",
+        "FE": "",
+        "MWH": "",
+        "DINO": "",
+        "POR": "",
+        "RSG": "",
+        "EXE": ""
     },
     "Short_W": {
-        "ONTO": "",
-        "ASR": "",
-        "TGT": "",
-        "TIGO": "",
-        "BURL": "",
-        "KEP": "",
-        "PACS": "",
-        "PAC": ""
+        "EPRT": "",
+        "MCY": ""
     },
     "Short_W_backup": {
-        "ONTO": "",
-        "ASR": "",
-        "TGT": "",
-        "TIGO": "",
-        "BURL": "",
-        "KEP": "",
-        "PACS": "",
-        "PAC": ""
+        "EPRT": "",
+        "MCY": ""
     },
     "Strategy12": {
         "BBY": "BBY热",
@@ -268,12 +267,13 @@
         "ALGM": "ALGM",
         "DEO": "DEO",
         "ETSY": "ETSY听",
+        "LSCC": "LSCC听追",
         "WMT": "WMT热听"
     },
     "PE_Volume_backup": {
-        "ALGM": "ALGM",
         "DEO": "DEO",
         "ETSY": "ETSY听",
+        "LSCC": "LSCC听追",
         "WMT": "WMT热听"
     },
     "PE_Volume_up": {
@@ -297,9 +297,17 @@
         "TMO": "TMO"
     },
     "PE_Volume_high": {
+        "FRO": "FRO乙",
+        "HRL": "HRL乙",
+        "JXN": "JXN乙",
+        "MASI": "MASI乙",
         "SON": "SON甲"
     },
     "PE_Volume_high_backup": {
+        "FRO": "FRO乙",
+        "HRL": "HRL乙",
+        "JXN": "JXN乙",
+        "MASI": "MASI乙",
         "SON": "SON甲"
     },
     "PE_valid": {
@@ -339,7 +347,6 @@
         "INTC": "INTC15",
         "JD": "",
         "JEF": "",
-        "LSCC": "",
         "NFLX": "NFLX15",
         "NU": "NU热",
         "ODFL": "",

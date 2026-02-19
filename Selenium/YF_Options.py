@@ -8,6 +8,7 @@ import json
 # import threading
 import sys
 import tkinter as tk
+import subprocess  # <--- 新增：用于执行外部脚本
 from tkinter import messagebox
 from datetime import datetime, timedelta
 from selenium import webdriver
@@ -36,7 +37,10 @@ OUTPUT_DIR = NEWS_BACKUP_DIR
 SECTORS_JSON_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Sectors_panel.json")
 BLACKLIST_JSON_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Blacklist.json")
 
-# 4. 浏览器与驱动路径 (跨平台适配)
+# 4. 分析脚本路径 (新增)
+ANALYSE_SCRIPT_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Query", "Analyse_Options.py")
+
+# 5. 浏览器与驱动路径 (跨平台适配)
 if platform.system() == 'Darwin':
     CHROME_BINARY_PATH = "/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta"
     CHROME_DRIVER_PATH = os.path.join(DOWNLOADS_DIR, "backup", "chromedriver_beta")
@@ -231,7 +235,29 @@ def show_final_summary_popup_from_json(json_path):
     except Exception as e:
         print(f"弹窗显示失败: {e}")
 
-# ================= 3. 爬虫核心逻辑 =================
+# ================= 3. 自动执行分析脚本 =================
+
+def run_analysis_program():
+    """执行 Analyse_Options.py 脚本"""
+    print("\n" + "="*50)
+    print("🚀 准备启动分析程序...")
+    
+    if os.path.exists(ANALYSE_SCRIPT_PATH):
+        try:
+            print(f"📂 脚本路径: {ANALYSE_SCRIPT_PATH}")
+            # 使用当前的 python 解释器执行脚本
+            subprocess.run([sys.executable, ANALYSE_SCRIPT_PATH], check=True)
+            print("✅ 分析程序执行完毕。")
+        except subprocess.CalledProcessError as e:
+            print(f"❌ 分析程序执行出错 (Exit Code: {e.returncode})")
+        except Exception as e:
+            print(f"❌ 启动分析程序时发生未知错误: {e}")
+    else:
+        print(f"⚠️ 未找到分析脚本文件: {ANALYSE_SCRIPT_PATH}")
+        print("请检查路径是否正确。")
+    print("="*50 + "\n")
+
+# ================= 4. 爬虫核心逻辑 =================
 
 def scrape_options():
     # 在主程序开始前启动鼠标移动线程
@@ -240,20 +266,24 @@ def scrape_options():
     
     # --- 1. 获取目标 Symbols (合并模式) ---
 
-    # === 步骤 A: 从 JSON 文件加载 "Options" 和 "Must" 分组 ===
-    json_options_set = set() # 替代原有的 base_custom_set
-    json_must_set = set()
-    json_today_set = set()  # <--- 新增: Today 集合
-    json_zero_set = set()   # <--- [新增]: Options_zero 集合 (用于过滤)
-    blacklist_options_set = set() # 存储黑名单
+    # === 步骤 A: 初始化各个分组集合 (变量名已统一为 JSON Key 风格) ===
+    json_options_set = set() 
+    json_pe_volume_set = set()      # 原 json_must_set
+    json_pe_volume_up_set = set()   # 原 json_today_set
+    json_short_set = set()    
+    json_short_w_set = set()  
+    json_zero_set = set()   
+    blacklist_options_set = set() 
     
     # 用于日志显示的计数
     count_json_options = 0
-    count_json_must = 0
-    count_json_today = 0    
-    count_json_zero = 0     # <--- [新增]
+    count_json_pe_volume = 0        # 原 count_json_must
+    count_json_pe_volume_up = 0     # 原 count_json_today
+    count_json_short = 0      
+    count_json_short_w = 0    
+    count_json_zero = 0     
 
-    # === 步骤 A: 加载黑名单 (新增逻辑) ===
+    # === 步骤 A: 加载黑名单 ===
     try:
         if os.path.exists(BLACKLIST_JSON_PATH):
             with open(BLACKLIST_JSON_PATH, 'r', encoding='utf-8') as f:
@@ -276,17 +306,27 @@ def scrape_options():
                 json_options_set = set(options_keys)
                 count_json_options = len(json_options_set)
                 
-                # 2. 提取 MPE_Volumeust 分组
-                must_keys = data.get("PE_Volume", {}).keys()
-                json_must_set = set(must_keys)
-                count_json_must = len(json_must_set)
+                # 2. [更名] 提取 PE_Volume 分组 (原 Must)
+                pe_vol_keys = data.get("PE_Volume", {}).keys()
+                json_pe_volume_set = set(pe_vol_keys)
+                count_json_pe_volume = len(json_pe_volume_set)
                 
-                # 3. 提取 PE_Volume_up 分组
-                today_keys = data.get("PE_Volume_up", {}).keys()
-                json_today_set = set() # set(today_keys) -> 设为空集合
-                count_json_today = 0   # len(json_today_set) -> 设为0
+                # 3. [更名] 提取 PE_Volume_up 分组 (原 Today)
+                pe_vol_up_keys = data.get("PE_Volume_up", {}).keys()
+                json_pe_volume_up_set = set(pe_vol_up_keys) 
+                count_json_pe_volume_up = len(json_pe_volume_up_set)
 
-                # 4. [核心修改] 提取 Options_zero 分组 (用于过滤)
+                # 4. 提取 Short 分组
+                short_keys = data.get("Short", {}).keys()
+                json_short_set = set(short_keys)
+                count_json_short = len(json_short_set)
+
+                # 5. 提取 Short_W 分组
+                short_w_keys = data.get("Short_W", {}).keys()
+                json_short_w_set = set(short_w_keys)
+                count_json_short_w = len(json_short_w_set)
+
+                # 6. 提取 Options_zero 分组 (用于过滤)
                 zero_keys = data.get("Options_zero", {}).keys()
                 json_zero_set = set(zero_keys)
                 count_json_zero = len(json_zero_set)
@@ -296,8 +336,14 @@ def scrape_options():
     except Exception as e:
         tqdm.write(f"⚠️ 读取 JSON 配置文件出错: {e}")
 
-    # 4. 合并去重 (三个集合取并集)
-    merged_symbols_set = json_options_set.union(json_must_set).union(json_today_set)
+    # 4. 合并去重 (使用新变量名)
+    merged_symbols_set = (
+        json_options_set
+        .union(json_pe_volume_set)      # Changed
+        .union(json_pe_volume_up_set)   # Changed
+        .union(json_short_set)
+        .union(json_short_w_set)
+    )
     
     symbol_cap_map = {} # 用于存储 symbol -> marketcap 的字典
     try:
@@ -380,11 +426,17 @@ def scrape_options():
     skipped_count = original_count - len(symbols)
     
     # --- 统一的日志输出 (修改部分) ---
-    # 格式示例: 自定义列表(13) + JSON(5) -> 去重合并(17)-->增加黑名单统计 ...
-    
+    # 计算 JSON 总数
+    total_json_count = (
+        count_json_options + 
+        count_json_pe_volume +      # Changed
+        count_json_pe_volume_up +   # Changed
+        count_json_short + 
+        count_json_short_w
+    )
+
     log_msg = (
-        # 修改: 计数加入 count_json_today
-        f"任务列表加载完成: [JSON({count_json_options + count_json_must + count_json_today}) + 数据库({len(db_symbols_list)})] | "
+        f"任务列表加载完成: [JSON({total_json_count}) + 数据库({len(db_symbols_list)})] | "
         f"排除列表(Blacklist+Zero): {blacklisted_count} (其中Zero:{count_json_zero}) | "
         f"总去重: {len(symbols) + skipped_count} | "
         f"已完成: {skipped_count} | 待抓取: {len(symbols)}"
@@ -393,10 +445,10 @@ def scrape_options():
 
     # 如果所有都抓完了，直接退出，不启动浏览器
     if not symbols:
-        tqdm.write("✅ 所有目标 Symbol 均已存在于 CSV 中，无需执行任务。")
+        tqdm.write("✅ 所有目标 Symbol 均已存在于 CSV 中，无需执行抓取任务。")
         # [修改] 即便这里退出了，也展示一下当前的 Zero 列表状态，防止用户遗忘
         show_final_summary_popup_from_json(SECTORS_JSON_PATH)
-        return
+        return True # 返回 True 表示数据状态OK，可以进行下一步分析
 
     # --- 2. 初始化 CSV 文件 (修改点：增加 Last Price 表头) ---
     if not os.path.exists(OUTPUT_DIR):
@@ -451,7 +503,7 @@ def scrape_options():
         driver = webdriver.Chrome(service=service, options=options)
     except Exception as e:
         tqdm.write(f"Selenium 启动失败: {e}")
-        return
+        return False
 
     # 设置页面加载超时，防止卡死
     driver.set_page_load_timeout(30) 
@@ -715,6 +767,8 @@ def scrape_options():
         # 无论中间是否中断，最后这一步只读文件，确保数据源可靠
         tqdm.write("正在生成最终报告...")
         show_final_summary_popup_from_json(SECTORS_JSON_PATH)
+        
+        return True # 表示任务正常结束
 
     finally:
         # 防止重复 quit
@@ -726,4 +780,9 @@ def scrape_options():
         tqdm.write(f"任务结束。数据已保存至: {OUTPUT_FILE}")
 
 if __name__ == "__main__":
-    scrape_options()
+    # 执行爬虫任务
+    # 如果 scrape_options 返回 True (无论是抓取完成，还是因为数据已存在而跳过)，都执行分析脚本
+    task_success = scrape_options()
+    
+    if task_success:
+        run_analysis_program()
