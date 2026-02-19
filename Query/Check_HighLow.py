@@ -43,7 +43,7 @@ COMPARE_ETFS_PATH = os.path.join(BASE_CODING_DIR, "News", "CompareETFs.txt")
 COMPARE_STOCK_PATH = os.path.join(BASE_CODING_DIR, "News", "CompareStock.txt")
 
 # 按钮＋标签固定宽度（像素）
-SYMBOL_WIDGET_FIXED_WIDTH = 150
+SYMBOL_WIDGET_FIXED_WIDTH = 220
 
 class ClickableLabel(QLabel):
     clicked = pyqtSignal()

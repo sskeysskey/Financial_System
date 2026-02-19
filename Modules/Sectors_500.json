@@ -30,7 +30,8 @@
         "NTES",
         "AMX",
         "APP",
-        "WBD"
+        "WBD",
+        "EA"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -103,7 +104,8 @@
         "SU",
         "MPC",
         "BKR",
-        "OKE"
+        "OKE",
+        "CCJ"
     ],
     "Financial_Services": [
         "JPM",
@@ -163,7 +165,8 @@
         "MET",
         "BRK-B",
         "MRSH",
-        "RKT"
+        "RKT",
+        "BSBR"
     ],
     "Healthcare": [
         "LLY",
@@ -200,8 +203,7 @@
         "ARGX",
         "CAH",
         "BDX",
-        "IDXX",
-        "HLN"
+        "IDXX"
     ],
     "Industrials": [
         "GE",
@@ -307,7 +309,8 @@
         "NXPI",
         "SNDK",
         "MPWR",
-        "ASX"
+        "ASX",
+        "TER"
     ],
     "Utilities": [
         "NEE",

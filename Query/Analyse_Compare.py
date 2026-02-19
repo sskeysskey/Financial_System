@@ -1439,23 +1439,24 @@ def execute_analyse_process():
 
 # --- Volume Scanner 辅助函数 ---
 
-def format_volume_scanner(vol):
-    """将成交量数值转换为 K, M, B 格式"""
-    if not vol:
-        return "0"
+def format_turnover_scanner(val):
+    """将数值转换为 K, M, B 格式，并加上 $ 符号"""
+    if not val:
+        return "$0"
     try:
-        vol = float(vol)
+        val = float(val)
     except ValueError:
-        return str(vol)
+        return str(val)
         
-    if vol >= 1_000_000_000:
-        return f"{vol / 1_000_000_000:.2f}B"
-    elif vol >= 1_000_000:
-        return f"{vol / 1_000_000:.2f}M"
-    elif vol >= 1_000:
-        return f"{vol / 1_000:.2f}K"
+    if val >= 1_000_000_000:
+        res = f"{val / 1_000_000_000:.2f}B"
+    elif val >= 1_000_000:
+        res = f"{val / 1_000_000:.2f}M"
+    elif val >= 1_000:
+        res = f"{val / 1_000:.2f}K"
     else:
-        return f"{int(vol)}"
+        res = f"{int(val)}"
+    return f"${res}"
 
 def load_json_scanner(filepath):
     try:
@@ -1568,9 +1569,9 @@ def load_all_earnings_dates_scanner(db_path, earnings_files):
     return earnings_map
 
 def run_volume_high_scanner():
-    """Volume Scanner: 分组输出，并严格过滤财报日成交量"""
+    """Volume Scanner: 改为基于 Turnover (Price * Volume) 比较"""
     print("\n" + "="*50)
-    print("STEP 3: 执行 Volume_High_Scanner 逻辑 (分组模式)")
+    print("STEP 3: 执行 Volume_High_Scanner 逻辑 (Turnover 模式)")
     print("="*50)
     
     # 配置路径
@@ -1625,7 +1626,7 @@ def run_volume_high_scanner():
                 continue
                 
             try:
-                # A. 获取最近 2 天的价格和成交量
+                # A. 获取最近 2 天的数据，用于计算当天的 Turnover 和判断涨跌
                 query_recent = f"SELECT date, price, volume FROM {table_name} WHERE name = ? ORDER BY date DESC LIMIT 2"
                 cursor.execute(query_recent, (name,))
                 rows = cursor.fetchall()
@@ -1635,10 +1636,13 @@ def run_volume_high_scanner():
                 latest_date_str, latest_price, latest_volume = rows[0]
                 prev_price = rows[1][1]
                 
-                if latest_volume is None or latest_volume <= 0: continue
+                if latest_volume is None or latest_price is None or latest_volume <= 0: 
+                    continue
 
-                # B. 财报日过滤逻辑 (核心修改点)
-                # 检查当前交易日是否在财报日期集合中
+                # 计算当天的成交额 (Turnover)
+                latest_turnover = float(latest_price) * float(latest_volume)
+
+                # B. 财报日过滤
                 if name in all_earnings_sets:
                     if latest_date_str in all_earnings_sets[name]:
                         skipped_by_earnings += 1
@@ -1652,46 +1656,49 @@ def run_volume_high_scanner():
                                                                 months=int((LOOKBACK_YEARS % 1) * 12))
                 start_date = start_date_obj.strftime("%Y-%m-%d")
 
-                # D. 获取过去 N 年的成交量排行（不含当天）
+                # D. 获取过去 N 年的成交额排行（不含当天）
+                # 在 SQL 中直接计算 price * volume 并排序
                 query_hist = f"""
-                    SELECT volume FROM {table_name} 
+                    SELECT (price * volume) as turnover FROM {table_name} 
                     WHERE name = ? AND date >= ? AND date < ? 
-                    ORDER BY volume DESC LIMIT 2
+                    AND price IS NOT NULL AND volume IS NOT NULL
+                    ORDER BY turnover DESC LIMIT 2
                 """
                 cursor.execute(query_hist, (name, start_date, latest_date_str))
-                hist_vols = [r[0] for r in cursor.fetchall() if r[0] is not None]
+                hist_turnovers = [r[0] for r in cursor.fetchall()]
                 
-                if not hist_vols: continue 
+                if not hist_turnovers: continue 
                 
-                max_1 = float(hist_vols[0]) 
-                max_2 = float(hist_vols[1]) if len(hist_vols) > 1 else max_1 
+                max_turnover_1 = float(hist_turnovers[0]) 
+                max_turnover_2 = float(hist_turnovers[1]) if len(hist_turnovers) > 1 else max_turnover_1 
 
-                # E. 判定逻辑
+                # E. 判定逻辑 (使用 Turnover 替代 Volume)
                 is_pos = (latest_price >= prev_price)
                 qualified = False
                 
                 if is_pos:
-                    # 正增长：成交量是全期前两名 (只要大于等于历史第二名即可)
-                    if latest_volume >= max_2:
+                    # 价格上涨或持平：成交额是全期前两名
+                    if latest_turnover >= max_turnover_2:
                         qualified = True
                 else:
-                    # 负增长：成交量是全期第一名 (必须大于等于历史第一名)
-                    if latest_volume >= max_1:
+                    # 价格下跌：成交额是全期第一名
+                    if latest_turnover >= max_turnover_1:
                         qualified = True
 
                 if qualified:
-                    vol_display = format_volume_scanner(latest_volume)
+                    turnover_display = format_turnover_scanner(latest_turnover)
                     info_str = compare_map.get(name, "")
                     tags_str = tags_map.get(name, "")
                     # 格式化输出
-                    line = f"{table_name} {name} {info_str} {vol_display} {tags_str}".replace("  ", " ").strip()
+                    line = f"{table_name} {name} {info_str} {turnover_display} {tags_str}".replace("  ", " ").strip()
                     
                     if is_pos:
                         pos_results.append(line)
                     else:
                         neg_results.append(line)
                         
-            except Exception:
+            except Exception as e:
+                # print(f"Error processing {name}: {e}") # 调试时取消注释
                 continue
 
     conn.close()
@@ -1701,11 +1708,11 @@ def run_volume_high_scanner():
         os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
         with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
             if pos_results:
-                f.write("========== PRICE UP / FLAT (Top 2 Vol) ==========\n")
+                f.write("========== PRICE UP / FLAT (Top 2 Turnover) ==========\n")
                 f.write('\n'.join(pos_results) + '\n\n')
             
             if neg_results:
-                f.write("========== PRICE DOWN (Top 1 Vol) ==========\n")
+                f.write("========== PRICE DOWN (Top 1 Turnover) ==========\n")
                 f.write('\n'.join(neg_results) + '\n')
                 
         print(f"\n成功生成: {OUTPUT_FILENAME}")

@@ -10,7 +10,7 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 BASE_PATH = USER_HOME
 
 # ================= 配置区域 =================
-# 如果为空，则运行“今天”模式；如果填入日期（如 "2024-11-03"），则运行回测模式
+# 如果为空，则运行"今天"模式；如果填入日期（如 "2024-11-03"），则运行回测模式
 SYMBOL_TO_TRACE = "" 
 TARGET_DATE = ""
 
@@ -63,7 +63,7 @@ CONFIG = {
 
     # ========== 策略3 (PE_Volume_high 财报突破放量) 参数 ==========
     "COND_HIGH_TURNOVER_LOOKBACK_MONTHS": 12,  # 成交额回溯12个月
-    "COND_HIGH_TURNOVER_RANK_THRESHOLD": 2,    # 成交额排名前2名
+    "COND_HIGH_TURNOVER_RANK_THRESHOLD": 3,    # 成交额排名前2名
 }
 
 # --- 2. 辅助与文件操作模块 ---
@@ -579,12 +579,8 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
 def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_trace, log_detail):
     """
     执行策略3：PE_Volume_high
-    条件甲：
-    1. [新增] 最新财报日涨跌幅 > 0 (latest_er_pct > 0)
-    2. 最近两次财报收盘价持续上升
-    3. 最新收盘价 > 最新财报日收盘价
-    4. 最新成交额是过去12个月的前2名
-
+    返回三个分类：
+    - 甲类: 两次财报递增 + 最新财报涨跌幅>0 + 价格突破 + 成交额12个月前2名
     - 乙类: 两次财报递增 + 最新财报涨跌幅>0 + 价格突破 + 成交额为财报日起最高
     - 丙类: (无需财报递增/涨跌幅要求) + 价格突破 + 成交额为财报日起最高
     """
@@ -600,7 +596,10 @@ def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_
     base_date = target_date_override if target_date_override else (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
     log_detail(f"基准日期: {base_date}")
     
-    results = []
+    # 三个分类的结果集
+    results_jia = []  # 甲类
+    results_yi = []   # 乙类
+    results_bing = [] # 丙类
     
     # 连接数据库
     conn = sqlite3.connect(db_path, timeout=60.0)
@@ -619,40 +618,28 @@ def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_
         if is_tracing:
             log_detail(f"\n--- 正在检查 {symbol} (策略3) ---")
         
-        # ========== 条件1: 获取并检查财报数据 ==========
-        # 获取财报日期和涨跌幅（参考 earning_no_season 的逻辑）
-        # 注意：这里的 price 字段实际上是涨跌幅 (pct)
+        # ========== 步骤1: 获取财报数据 ==========
         if target_date_override:
-            # 回测模式：只获取回测日期(含)之前的财报
             cursor.execute("SELECT date, price FROM Earning WHERE name = ? AND date <= ? ORDER BY date ASC", (symbol, target_date_override))
         else:
             cursor.execute("SELECT date, price FROM Earning WHERE name = ? ORDER BY date ASC", (symbol,))
         
         er_rows = cursor.fetchall()
         
-        # 至少需要2次财报记录
-        if len(er_rows) < 2:
+        # 至少需要1次财报记录（丙类只需要1次）
+        if len(er_rows) < 1:
             if is_tracing:
-                log_detail(f"    x [失败] 财报记录不足2次 (当前: {len(er_rows)})")
+                log_detail(f"    x [失败] 无财报记录")
             continue
         
         all_er_dates = [r[0] for r in er_rows]
         latest_er_date = all_er_dates[-1]
+        latest_er_pct = er_rows[-1][1]  # Earning表里的price列其实是pct
         
-        # [新增逻辑] 获取最新财报日的涨跌幅
-        latest_er_pct = er_rows[-1][1] # Earning表里的price列其实是pct
-        
-        # [新增判断] 检查最新财报涨跌幅是否大于 0
-        if latest_er_pct is None or latest_er_pct < 0:
-            if is_tracing:
-                log_detail(f"    x [失败] 最新财报涨跌幅 {latest_er_pct} <= 0")
-            continue
-            
         if is_tracing:
-            log_detail(f"    - 财报记录: {len(er_rows)} 次, 最新财报日: {latest_er_date}")
-            log_detail(f"    ✅ [通过] 最新财报涨跌幅: {latest_er_pct} > 0")
+            log_detail(f"    - 财报记录: {len(er_rows)} 次, 最新财报日: {latest_er_date}, 涨跌幅: {latest_er_pct}")
         
-        # 获取财报日对应的收盘价（从板块表中查询）
+        # ========== 步骤2: 获取财报日对应的收盘价 ==========
         placeholders = ', '.join(['?'] * len(all_er_dates))
         query = f'SELECT date, price FROM "{sector}" WHERE name = ? AND date IN ({placeholders}) ORDER BY date ASC'
         cursor.execute(query, (symbol, *all_er_dates))
@@ -660,27 +647,31 @@ def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_
         
         if len(price_data) != len(all_er_dates):
             if is_tracing:
-                log_detail(f"    x [失败] 财报日收盘价数据不完整 (需要: {len(all_er_dates)}, 实际: {len(price_data)})")
+                log_detail(f"    x [失败] 财报日收盘价数据不完整")
             continue
         
         all_er_prices = [p[1] for p in price_data]
-        
-        # 检查最近两次财报收盘价是否持续上升
         latest_er_price = all_er_prices[-1]
-        prev_er_price = all_er_prices[-2]
         
-        cond1_passed = latest_er_price > prev_er_price
+        # ========== 步骤3: 计算各项条件 ==========
         
-        if is_tracing:
-            log_detail(f"    - 条件1 (财报价格上升): {prev_er_price:.2f} -> {latest_er_price:.2f} = {cond1_passed}")
-        
-        if not cond1_passed:
+        # 条件A: 两次财报递增 (需要至少2次财报)
+        cond_er_increasing = False
+        if len(er_rows) >= 2:
+            prev_er_price = all_er_prices[-2]
+            cond_er_increasing = (latest_er_price > prev_er_price)
             if is_tracing:
-                log_detail(f"    x [失败] 最近两次财报收盘价未上升")
-            continue
+                log_detail(f"    - 条件A (财报价格递增): {prev_er_price:.2f} -> {latest_er_price:.2f} = {cond_er_increasing}")
+        else:
+            if is_tracing:
+                log_detail(f"    - 条件A (财报价格递增): 仅1次财报，无法判断 = False")
         
-        # ========== 条件2: 获取最新交易数据并检查价格突破 ==========
-        # 修改点：将 LIMIT 1 改为 LIMIT 2，以便获取今日和昨日数据
+        # 条件B: 最新财报涨跌幅 > 0
+        cond_er_pct_positive = (latest_er_pct is not None and latest_er_pct > 0)
+        if is_tracing:
+            log_detail(f"    - 条件B (财报涨跌幅>0): {latest_er_pct} > 0 = {cond_er_pct_positive}")
+        
+        # ========== 步骤4: 获取最新交易数据 ==========
         if target_date_override:
             query = f'SELECT date, price, volume FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 2'
             cursor.execute(query, (symbol, target_date_override))
@@ -689,60 +680,119 @@ def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_
             cursor.execute(query, (symbol,))
         
         rows = cursor.fetchall()
-
-        # 至少需要2天数据才能比较涨跌
+        
         if len(rows) < 2 or rows[0][1] is None or rows[0][2] is None or rows[1][1] is None:
             if is_tracing:
                 log_detail(f"    x [失败] 无法获取最新两天交易数据")
             continue
-
+        
         latest_date, latest_price, latest_volume = rows[0]
         prev_date, prev_price, _ = rows[1]
         latest_turnover = latest_price * latest_volume
-
-        # ========== 新增条件: 检查今日是否上涨 ==========
-        if latest_price <= prev_price:
+        
+        # 条件C: 今日上涨
+        cond_price_up_today = (latest_price > prev_price)
+        if is_tracing:
+            log_detail(f"    - 条件C (今日上涨): {prev_price:.2f} -> {latest_price:.2f} = {cond_price_up_today}")
+        
+        if not cond_price_up_today:
             if is_tracing:
-                log_detail(f"    x [失败] 今日未上涨: {latest_price:.2f} <= 昨日 {prev_price:.2f}")
+                log_detail(f"    x [失败] 今日未上涨")
             continue
-
+        
+        # 条件D: 价格突破财报日收盘价
+        cond_price_breakout = (latest_price > latest_er_price)
         if is_tracing:
-            log_detail(f"    ✅ [通过] 今日上涨: {prev_price:.2f} -> {latest_price:.2f}")
+            log_detail(f"    - 条件D (价格突破财报): {latest_price:.2f} > {latest_er_price:.2f} = {cond_price_breakout}")
         
-        # 检查最新价是否高于最新财报日收盘价
-        cond2_passed = latest_price > latest_er_price
-        
-        if is_tracing:
-            log_detail(f"    - 最新交易日: {latest_date}, 价格: {latest_price:.2f}, 成交额: {latest_turnover:,.0f}")
-            log_detail(f"    - 条件2 (价格突破财报): {latest_price:.2f} > {latest_er_price:.2f} = {cond2_passed}")
-        
-        if not cond2_passed:
+        if not cond_price_breakout:
             if is_tracing:
                 log_detail(f"    x [失败] 最新价未突破财报日收盘价")
             continue
         
-        # ========== 条件3: 检查成交额是否为过去12个月前2名 ==========
-        cond3_passed = check_turnover_rank(
+        # ========== 步骤5: 检查成交额条件 ==========
+        
+        # 条件E: 成交额为12个月前2名 (用于甲类)
+        cond_turnover_12m_top2 = check_turnover_rank(
             cursor, sector, symbol, latest_date, latest_turnover,
             turnover_lookback_months, turnover_rank_threshold,
             log_detail, is_tracing
         )
         
-        if not cond3_passed:
-            if is_tracing:
-                log_detail(f"    x [失败] 成交额未进入前{turnover_rank_threshold}名")
-            continue
+        # 条件F: 成交额为财报日起最高 (用于乙类和丙类)
+        cond_turnover_since_er_top = check_turnover_since_earning(
+            cursor, sector, symbol, latest_er_date, latest_date, latest_turnover,
+            log_detail, is_tracing
+        )
         
-        # ========== 所有条件通过 ==========
-        results.append(symbol)
-        if is_tracing:
-            log_detail(f"    ✅ [选中] 所有条件满足！")
+        # ========== 步骤6: 分类判定 ==========
+        
+        # 甲类: 财报递增 + 财报涨幅>0 + 价格突破 + 今日上涨 + 12月Top2
+        if cond_er_increasing and cond_er_pct_positive and cond_turnover_12m_top2:
+            results_jia.append(symbol)
+            if is_tracing:
+                log_detail(f"    ✅ [选中-甲类] 严格条件 + 12个月Top2")
+        
+        # 乙类: 财报递增 + 财报涨幅>0 + 价格突破 + 今日上涨 + 财报日起最高
+        if cond_er_increasing and cond_er_pct_positive and cond_turnover_since_er_top:
+            results_yi.append(symbol)
+            if is_tracing:
+                log_detail(f"    ✅ [选中-乙类] 严格条件 + 财报日起最高")
+        
+        # 丙类: (无需财报递增/涨幅要求) + 价格突破 + 今日上涨 + 财报日起最高
+        if cond_turnover_since_er_top:
+            results_bing.append(symbol)
+            if is_tracing:
+                log_detail(f"    ✅ [选中-丙类] 宽松条件 + 财报日起最高")
     
     conn.close()
     
-    result_list = sorted(list(set(results)))
-    log_detail(f"\n策略3 (PE_Volume_high) 筛选完成，共命中 {len(result_list)} 个: {result_list}")
-    return result_list
+    # 去重并排序
+    results_jia = sorted(list(set(results_jia)))
+    results_yi = sorted(list(set(results_yi)))
+    results_bing = sorted(list(set(results_bing)))
+    
+    log_detail(f"\n策略3 筛选完成:")
+    log_detail(f"  - 甲类 (严格+12月Top2): {len(results_jia)} 个: {results_jia}")
+    log_detail(f"  - 乙类 (严格+财报起最高): {len(results_yi)} 个: {results_yi}")
+    log_detail(f"  - 丙类 (宽松+财报起最高): {len(results_bing)} 个: {results_bing}")
+    
+    return results_jia, results_yi, results_bing
+
+
+def check_turnover_since_earning(cursor, sector_name, symbol, er_date_str, latest_date_str, latest_turnover, log_detail, is_tracing):
+    """
+    检查 latest_turnover 是否是从 er_date_str (财报日) 到 latest_date_str 期间的最高成交额
+    """
+    # 查询从财报日到最新日期的所有交易数据
+    query = f'SELECT date, price, volume FROM "{sector_name}" WHERE name = ? AND date >= ? AND date <= ?'
+    cursor.execute(query, (symbol, er_date_str, latest_date_str))
+    rows = cursor.fetchall()
+    
+    # 计算成交额并过滤掉 None 值
+    valid_data = []
+    for r in rows:
+        if r[1] is not None and r[2] is not None:
+            turnover = r[1] * r[2]
+            valid_data.append((r[0], turnover))
+    
+    if not valid_data:
+        return False
+    
+    # 找出最大成交额
+    max_turnover_record = max(valid_data, key=lambda x: x[1])
+    max_turnover = max_turnover_record[1]
+    max_turnover_date = max_turnover_record[0]
+    
+    # 判断最新成交额是否等于最大成交额
+    is_top = (latest_turnover >= max_turnover)
+    
+    if is_tracing:
+        log_detail(f"    - 条件F (财报日起最高): 范围 {er_date_str} ~ {latest_date_str}, 共 {len(valid_data)} 个交易日")
+        log_detail(f"      最高成交额: [{max_turnover_date}] {max_turnover:,.0f}")
+        log_detail(f"      当前成交额: {latest_turnover:,.0f} -> 是否为最高: {is_top}")
+    
+    return is_top
 
 
 def check_turnover_rank(cursor, sector_name, symbol, latest_date_str, latest_turnover, lookback_months, rank_threshold, log_detail, is_tracing):
@@ -787,7 +837,7 @@ def check_turnover_rank(cursor, sector_name, symbol, latest_date_str, latest_tur
         is_top_n = True
     
     if is_tracing:
-        log_detail(f"    - 条件3 (成交额排名): 回溯{lookback_months}个月，共{len(valid_data)}个交易日")
+        log_detail(f"    - 条件E (成交额12月排名): 回溯{lookback_months}个月，共{len(valid_data)}个交易日")
         top_n_str = ", ".join([f"[{d}]: {v:,.0f}" for d, v in top_n_data])
         log_detail(f"      前{rank_threshold}名: {top_n_str}")
         log_detail(f"      当前成交额: {latest_turnover:,.0f} -> 在前{rank_threshold}名: {is_top_n}")
@@ -816,7 +866,6 @@ def run_pe_volume_logic(log_detail):
         return
 
     # ================= 策略 1 执行 (已恢复) =================
-    # 执行策略1：放量下跌
     raw_pe_volume = process_condition_8(
         DB_FILE, 
         EARNING_HISTORY_JSON_FILE, 
@@ -828,7 +877,6 @@ def run_pe_volume_logic(log_detail):
     final_pe_volume = sorted(list(set(raw_pe_volume)))
 
     # ================= 策略 2 执行 =================
-    # 传入 TARGET_DATE，内部会处理
     raw_pe_volume_up = process_pe_volume_up(
         DB_FILE,
         EARNING_HISTORY_JSON_FILE,
@@ -839,84 +887,74 @@ def run_pe_volume_logic(log_detail):
     )
     final_pe_volume_up = sorted(list(set(raw_pe_volume_up)))
 
-    # ================= 策略 3 执行 (新增) =================
-    raw_pe_volume_high = process_pe_volume_high(
+    # ================= 策略 3 执行 (修改：接收三个返回值) =================
+    raw_pe_volume_high_jia, raw_pe_volume_high_yi, raw_pe_volume_high_bing = process_pe_volume_high(
         DB_FILE,
         symbol_to_sector_map,
         TARGET_DATE,
         SYMBOL_TO_TRACE,
         log_detail
     )
-    final_pe_volume_high = sorted(list(set(raw_pe_volume_high)))
+    
+    # 合并所有策略3的结果用于统一处理
+    final_pe_volume_high = sorted(list(set(raw_pe_volume_high_jia) | set(raw_pe_volume_high_yi) | set(raw_pe_volume_high_bing)))
 
     # ================= Tag 黑名单过滤逻辑 =================
     def filter_blacklisted_tags(symbols):
         allowed = []
         for sym in symbols:
-            # 获取该股的 tags
             s_tags = set(symbol_to_tags_map.get(sym, []))
-            # 检查是否有交集 (即是否命中黑名单)
             intersect = s_tags.intersection(tag_blacklist)
             if not intersect:
                 allowed.append(sym)
             else:
-                # 如果是追踪目标，打印日志
                 if sym == SYMBOL_TO_TRACE:
                     log_detail(f"🛑 [Tag过滤] {sym} 命中黑名单标签: {intersect} -> 剔除。")
         return sorted(allowed)
 
     # 对策略结果进行过滤 (用于写入 Panel)
-    # 策略 1 (虽然现在为空，但逻辑加上)
     filtered_pe_volume = filter_blacklisted_tags(final_pe_volume)
-    
-    # 策略 2
     filtered_pe_volume_up = filter_blacklisted_tags(final_pe_volume_up)
-    filtered_pe_volume_high = filter_blacklisted_tags(final_pe_volume_high)  # 新增
+    
+    # 策略3的三个子类分别过滤
+    filtered_pe_volume_high_jia = filter_blacklisted_tags(raw_pe_volume_high_jia)
+    filtered_pe_volume_high_yi = filter_blacklisted_tags(raw_pe_volume_high_yi)
+    filtered_pe_volume_high_bing = filter_blacklisted_tags(raw_pe_volume_high_bing)
+    filtered_pe_volume_high = filter_blacklisted_tags(final_pe_volume_high)
     
     if SYMBOL_TO_TRACE:
         if SYMBOL_TO_TRACE in final_pe_volume and SYMBOL_TO_TRACE not in filtered_pe_volume:
              log_detail(f"追踪提示: {SYMBOL_TO_TRACE} (策略1) 通过，但因黑名单标签被过滤。")
         if SYMBOL_TO_TRACE in final_pe_volume_up and SYMBOL_TO_TRACE not in filtered_pe_volume_up:
              log_detail(f"追踪提示: {SYMBOL_TO_TRACE} (策略2) 通过，但因黑名单标签被过滤。")
-        if SYMBOL_TO_TRACE in final_pe_volume_high and SYMBOL_TO_TRACE not in filtered_pe_volume_high:  # 新增
+        if SYMBOL_TO_TRACE in final_pe_volume_high and SYMBOL_TO_TRACE not in filtered_pe_volume_high:
              log_detail(f"追踪提示: {SYMBOL_TO_TRACE} (策略3) 通过，但因黑名单标签被过滤。")
 
     # ================= [新增逻辑] 检查 PE_Deep / PE_Deeper 交叉 =================
-    # 在生成 Note 之前，先读取现有的 Panel 文件，找出哪些 symbol 在 Deep/Deeper 组里
     all_existing_notes = {}
     current_deep_symbols = set()
     try:
         with open(PANEL_JSON_FILE, 'r', encoding='utf-8') as f:
             p_data = json.load(f)
-            # 收集所有组的备注，防止覆盖
             for group_name, group_content in p_data.items():
                 if isinstance(group_content, dict):
                     for s, n in group_content.items():
-                        # 如果备注里有东西，就存下来
                         if len(n) > len(all_existing_notes.get(s, "")):
                             all_existing_notes[s] = n
             
-            # 专门提取 Deep/Deeper 用于“听”字逻辑
             if "PE_Deep" in p_data: current_deep_symbols.update(p_data["PE_Deep"].keys())
             if "PE_Deeper" in p_data: current_deep_symbols.update(p_data["PE_Deeper"].keys())
-            
-            # === 修改点：新增 PE_valid 和 PE_invalid 用于“听”字逻辑 ===
             if "PE_valid" in p_data: current_deep_symbols.update(p_data["PE_valid"].keys())
             if "PE_invalid" in p_data: current_deep_symbols.update(p_data["PE_invalid"].keys())
+            if "PE_W" in p_data: current_deep_symbols.update(p_data["PE_W"].keys())
             if "OverSell_W" in p_data: current_deep_symbols.update(p_data["OverSell_W"].keys())
+            if "season" in p_data: current_deep_symbols.update(p_data["season"].keys())
             
     except Exception as e:
         log_detail(f"提示: 读取现有备注时出错(可能是文件不存在): {e}")
 
-    # 4. 构建备注 (Note) - 使用过滤后的列表
-    # 修改：增加 highlight_set 参数，用于给特定集合中的 symbol 加 "听" 后缀
+    # 4. 构建备注 (Note)
     def build_symbol_note_map(symbols, existing_notes=None, highlight_set=None, suffix_tag=""):
-        """
-        symbols: 本次筛选出的 symbol 列表
-        existing_notes: 字典，存储了从 panel.json 读取的 {symbol: "原有备注"}
-        highlight_set: Deep/Deeper/Valid/Invalid 的 symbol 集合
-        suffix_tag: 额外的后缀标记，如 "甲"
-        """
         note_map = {}
         for sym in symbols:
             orig_note = ""
@@ -929,13 +967,12 @@ def run_pe_volume_logic(log_detail):
                 if "听" not in new_suffix:
                     new_suffix += "听"
             
-            # 添加额外后缀（如"甲"）
             if suffix_tag and suffix_tag not in new_suffix:
                 new_suffix += suffix_tag
             
             note_map[sym] = f"{sym}{new_suffix}"
         return note_map
-        
+    
     # 为 PE_Volume 组生成备注
     pe_volume_notes = build_symbol_note_map(
         filtered_pe_volume, 
@@ -943,47 +980,62 @@ def run_pe_volume_logic(log_detail):
         highlight_set=current_deep_symbols
     )
     
-    # PE_Volume_up 暂时不需要此逻辑
     pe_volume_up_notes = build_symbol_note_map(filtered_pe_volume_up)
-    pe_volume_high_notes = build_symbol_note_map(filtered_pe_volume_high, suffix_tag="甲")
-
+    
+    # ================= 修改：为策略3生成带分类后缀的备注 =================
+    # 创建一个映射：symbol -> 它属于哪些类别
+    symbol_to_categories = {}
+    for sym in filtered_pe_volume_high:
+        categories = []
+        if sym in filtered_pe_volume_high_jia:
+            categories.append("甲")
+        elif sym in filtered_pe_volume_high_yi:
+            categories.append("乙")
+        elif sym in filtered_pe_volume_high_bing:
+            categories.append("丙")
+        symbol_to_categories[sym] = categories
+    
+    # 构建策略3的备注
+    pe_vol_high_notes = {}
+    for sym in filtered_pe_volume_high:
+        categories = symbol_to_categories.get(sym, [])
+        suffix = "".join(categories)  # 例如 "甲乙" 或 "丙"
+        pe_vol_high_notes[sym] = f"{sym}{suffix}"
+    
     # 5. 回测安全拦截
-    # 【回测逻辑】如果设置了 TARGET_DATE，在这里直接 return，不执行下面的写入操作
     if TARGET_DATE:
         log_detail("\n" + "="*60)
         log_detail(f"🛑 [安全拦截] 回测模式 (Date: {TARGET_DATE}) 已启用。")
         log_detail(f"📊 [策略1] PE_Volume (放量下跌) 命中: {len(filtered_pe_volume)} 个 (Raw: {len(final_pe_volume)})") 
         log_detail(f"📊 [策略2] PE_Volume_up (活跃上涨) 命中: {len(filtered_pe_volume_up)} 个 (Raw: {len(final_pe_volume_up)})")
-        log_detail(f"📊 [策略3] PE_Volume_high (财报突破) 命中: {len(filtered_pe_volume_high)} 个 (Raw: {len(final_pe_volume_high)})")  # 新增
+        log_detail(f"📊 [策略3] PE_Volume_high 总计命中: {len(filtered_pe_volume_high)} 个")
+        log_detail(f"    - 甲类 (严格+12月Top2): {len(filtered_pe_volume_high_jia)} 个")
+        log_detail(f"    - 乙类 (严格+财报起最高): {len(filtered_pe_volume_high_yi)} 个")
+        log_detail(f"    - 丙类 (宽松+财报起最高): {len(filtered_pe_volume_high_bing)} 个")
         log_detail("="*60 + "\n")
         return
 
-    # 6. 写入 Panel (使用过滤后的 clean data)
+    # 6. 写入 Panel
     log_detail(f"\n正在写入 Panel 文件...")
     
-    # 使用新的函数：同时写入 Volume 分组并清理 Backup 冲突
     update_panel_with_conflict_check(
         PANEL_JSON_FILE,
         filtered_pe_volume, pe_volume_notes,
         filtered_pe_volume_up, pe_volume_up_notes,
-        filtered_pe_volume_high, pe_volume_high_notes,  # 新增参数
+        filtered_pe_volume_high, pe_vol_high_notes,
         log_detail
     )
 
-    # 7. 写入 History (通常保留 Raw Data)
+    # 7. 写入 History
     log_detail(f"正在更新 History 文件...")
-    # 策略1 写入 (恢复)
     update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume", final_pe_volume, log_detail, base_date_str)
-    
-    # 策略2 写入 (使用原始 Raw Data，保持算法池完整性)
     update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume_up", final_pe_volume_up, log_detail, base_date_str)
-    update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume_high", final_pe_volume_high, log_detail, base_date_str)  # 新增
+    update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume_high", final_pe_volume_high, log_detail, base_date_str)
 
     # 写入 Tag 黑名单标记分组
-    all_volume_symbols = set(final_pe_volume) | set(final_pe_volume_up) | set(final_pe_volume_high)  # 修改：加入策略3
+    all_volume_symbols = set(final_pe_volume) | set(final_pe_volume_up) | set(final_pe_volume_high)
     
     blocked_symbols_to_log = []
-    # tag_blacklist 在函数开头已经加载
     
     for sym in all_volume_symbols:
         s_tags = set(symbol_to_tags_map.get(sym, []))
@@ -994,7 +1046,6 @@ def run_pe_volume_logic(log_detail):
         blocked_symbols_to_log = sorted(list(set(blocked_symbols_to_log)))
         update_earning_history_json(EARNING_HISTORY_JSON_FILE, "_Tag_Blacklist", blocked_symbols_to_log, log_detail, base_date_str)
         log_detail(f"已将 {len(blocked_symbols_to_log)} 个命中黑名单Tag的symbol额外记入 '_Tag_Blacklist' 分组。")
-    # ================================================================
 
     log_detail("程序运行结束。")
 

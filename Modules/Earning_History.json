@@ -508,6 +508,28 @@
             "GPN",
             "JD",
             "LYG"
+        ],
+        "2026-02-18": [
+            "ADBE",
+            "AGNC",
+            "BABA",
+            "BKNG",
+            "COMP",
+            "CRM",
+            "DPZ",
+            "FDS",
+            "FND",
+            "GFI",
+            "MELI",
+            "META",
+            "MP",
+            "MSFT",
+            "OKTA",
+            "RKT",
+            "SCCO",
+            "SOUN",
+            "TTAN",
+            "VALE"
         ]
     },
     "PE_Volume_up": {
@@ -1182,6 +1204,20 @@
             "STZ",
             "VEEV",
             "Z"
+        ],
+        "2026-02-18": [
+            "CLF",
+            "CPRT",
+            "CTSH",
+            "EXPE",
+            "GIS",
+            "INTU",
+            "LYG",
+            "MMYT",
+            "SCHW",
+            "TECH",
+            "TMO",
+            "TWLO"
         ]
     },
     "PE_Volume": {
@@ -1982,6 +2018,13 @@
             "ROKU",
             "SPSC",
             "TMO"
+        ],
+        "2026-02-18": [
+            "ALGM",
+            "DEO",
+            "ETSY",
+            "SPSC",
+            "WMT"
         ]
     },
     "PE_Deeper": {
@@ -2233,6 +2276,13 @@
             "SMR",
             "SOUN",
             "TTD"
+        ],
+        "2026-02-18": [
+            "HIMS",
+            "INTU",
+            "OKLO",
+            "PATH",
+            "SMR"
         ]
     },
     "OverSell_W": {
@@ -2444,6 +2494,16 @@
             "MSCI",
             "PODD",
             "SE"
+        ],
+        "2026-02-18": [
+            "AON",
+            "APO",
+            "CTSH",
+            "DUOL",
+            "GWRE",
+            "INFY",
+            "JKHY",
+            "TTD"
         ]
     },
     "PE_Deep": {
@@ -4081,6 +4141,35 @@
             "WDAY",
             "WIX",
             "XYZ",
+            "ZS"
+        ],
+        "2026-02-18": [
+            "ACN",
+            "ADSK",
+            "AMKR",
+            "ASTS",
+            "BBY",
+            "CHWY",
+            "CVNA",
+            "DOCU",
+            "EPAM",
+            "ETSY",
+            "FUTU",
+            "GDDY",
+            "GTLB",
+            "HPQ",
+            "IBM",
+            "MRVL",
+            "NDAQ",
+            "NICE",
+            "PAYX",
+            "SBSW",
+            "TCOM",
+            "USAR",
+            "VEEV",
+            "W",
+            "WDAY",
+            "WIX",
             "ZS"
         ]
     },
@@ -5891,6 +5980,54 @@
             "VALE",
             "WTW",
             "XOM"
+        ],
+        "2026-02-18": [
+            "ADP",
+            "AFRM",
+            "AJG",
+            "ALGM",
+            "ALK",
+            "AMP",
+            "BIDU",
+            "BWA",
+            "CACI",
+            "CDW",
+            "CLF",
+            "DELL",
+            "DEO",
+            "DKS",
+            "EBAY",
+            "ENPH",
+            "EVR",
+            "EXPD",
+            "GOOGL",
+            "HPE",
+            "ICE",
+            "INTC",
+            "IQV",
+            "JD",
+            "JEF",
+            "LLY",
+            "LSCC",
+            "MS",
+            "NFLX",
+            "NU",
+            "ODFL",
+            "PDD",
+            "PLNT",
+            "PLTR",
+            "POOL",
+            "POWL",
+            "RCL",
+            "ROP",
+            "SCHW",
+            "SMCI",
+            "SOFI",
+            "TMDX",
+            "TMO",
+            "TPG",
+            "WMT",
+            "WTW"
         ]
     },
     "PE_invalid": {
@@ -6106,6 +6243,12 @@
         "2026-02-17": [
             "BILL",
             "KVYO",
+            "RBLX",
+            "SATS",
+            "SNDK",
+            "U"
+        ],
+        "2026-02-18": [
             "RBLX",
             "SATS",
             "SNDK",
@@ -6532,6 +6675,16 @@
             "TDS",
             "VNOM",
             "WSM"
+        ],
+        "2026-02-18": [
+            "ASR",
+            "BURL",
+            "KEP",
+            "ONTO",
+            "PAC",
+            "PACS",
+            "TGT",
+            "TIGO"
         ]
     },
     "Short": {
@@ -6901,6 +7054,12 @@
             "PR",
             "QXO",
             "WF"
+        ],
+        "2026-02-18": [
+            "BBWI",
+            "HLN",
+            "LITE",
+            "TTC"
         ]
     },
     "season": {
@@ -8777,6 +8936,25 @@
             "TTEK",
             "VICI",
             "WTW"
+        ],
+        "2026-02-18": [
+            "AON",
+            "APO",
+            "BBY",
+            "CRDO",
+            "CTSH",
+            "DELL",
+            "DKS",
+            "DPZ",
+            "ENPH",
+            "ICE",
+            "LLY",
+            "MELI",
+            "META",
+            "MP",
+            "MRVL",
+            "PLNT",
+            "VICI"
         ]
     },
     "no_season": {
@@ -14483,6 +14661,7 @@
             "SOFI",
             "SOUN",
             "SPSC",
+            "TNET",
             "TPG",
             "TTD",
             "VEEV",
@@ -14493,14 +14672,66 @@
             "XYZ",
             "Z",
             "ZS"
+        ],
+        "2026-02-18": [
+            "ACN",
+            "ADBE",
+            "ADP",
+            "ADSK",
+            "AFRM",
+            "AMP",
+            "CACI",
+            "CDW",
+            "CRM",
+            "DOCU",
+            "DUOL",
+            "EPAM",
+            "EXPE",
+            "FDS",
+            "GDDY",
+            "GTLB",
+            "GWRE",
+            "INTU",
+            "JKHY",
+            "NDAQ",
+            "NICE",
+            "OKTA",
+            "PAYX",
+            "PLTR",
+            "RKT",
+            "ROP",
+            "SCHW",
+            "SOFI",
+            "SOUN",
+            "SPSC",
+            "TPG",
+            "TTAN",
+            "TTD",
+            "TWLO",
+            "VEEV",
+            "WDAY",
+            "WIX",
+            "ZS"
         ]
     },
     "PE_Volume_high": {
         "2026-02-17": [
             "ACLS",
+            "CNI",
+            "HEI",
             "KT",
+            "MASI",
             "MKSI",
-            "ORA"
+            "NCLH",
+            "ORA",
+            "SON",
+            "TNET"
+        ],
+        "2026-02-18": [
+            "AUR",
+            "GVA",
+            "SON",
+            "SUN"
         ]
     }
 }
