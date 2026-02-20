@@ -105,7 +105,9 @@
         "MPC",
         "BKR",
         "OKE",
-        "CCJ"
+        "CCJ",
+        "OXY",
+        "FANG"
     ],
     "Financial_Services": [
         "JPM",
@@ -310,7 +312,8 @@
         "SNDK",
         "MPWR",
         "ASX",
-        "TER"
+        "TER",
+        "CRWV"
     ],
     "Utilities": [
         "NEE",

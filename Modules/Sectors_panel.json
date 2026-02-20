@@ -10,22 +10,44 @@
         "CDW": "",
         "CHKP": "",
         "QTWO": "",
-        "INTA": ""
+        "INTA": "",
+        "ACN": "",
+        "IBM": "",
+        "TEAM": "",
+        "CTSH": "",
+        "WIT": "",
+        "GEN": "",
+        "EPAM": "",
+        "WIX": "",
+        "QLYS": "",
+        "PAYX": "",
+        "KLAR": ""
     },
-    "Consumer_Cyclical": {},
+    "Consumer_Cyclical": {
+        "BKNG": ""
+    },
     "Utilities": {
         "MWH": ""
     },
     "Consumer_Defensive": {},
-    "Industrials": {},
+    "Industrials": {
+        "POOL": ""
+    },
     "Communication_Services": {
         "TEF": "",
-        "FUBO": ""
+        "FUBO": "",
+        "STUB": ""
     },
     "Financial_Services": {
-        "SLM": ""
+        "SLM": "",
+        "BX": "",
+        "OWL": "",
+        "HLNE": "",
+        "BXSL": ""
     },
-    "Healthcare": {},
+    "Healthcare": {
+        "PRCT": ""
+    },
     "ETFs": {
         "HYG": ""
     },
@@ -110,264 +132,242 @@
     },
     "Options_zero": {},
     "Must": {
-        "ALGM": "",
-        "SON": "",
-        "ARMK": "",
-        "ACLS": "",
-        "DB": "",
-        "AMKR": "",
-        "HSBC": "",
-        "CHWY": "",
+        "LFUS": "",
         "CPNG": "",
-        "MS": "",
-        "IBM": "",
-        "BK": "",
-        "W": "",
-        "ACM": "",
-        "KDP": "",
         "HIMS": "",
-        "IOT": "",
-        "FSLR": "",
         "PATH": "",
         "TCOM": ""
     },
-    "Today": {
-        "FUTU": ""
-    },
+    "Today": {},
     "Short": {
+        "ARCC": "",
+        "EPAM": "",
+        "KLAR": "",
+        "POOL": "",
+        "TAP": "",
+        "MSGS": "",
         "ENLT": "",
-        "CE": "",
-        "WPC": "",
-        "FE": "",
-        "MWH": "",
-        "DINO": "",
-        "POR": "",
-        "RSG": "",
-        "EXE": ""
+        "WES": ""
     },
     "Short_backup": {
+        "ARCC": "",
+        "EPAM": "",
+        "KLAR": "",
+        "POOL": "",
+        "TAP": "",
+        "MSGS": "",
         "ENLT": "",
-        "CE": "",
-        "WPC": "",
-        "FE": "",
-        "MWH": "",
-        "DINO": "",
-        "POR": "",
-        "RSG": "",
-        "EXE": ""
+        "WES": ""
     },
     "Short_W": {
-        "EPRT": "",
-        "MCY": ""
+        "W": "",
+        "BKNG": ""
     },
     "Short_W_backup": {
-        "EPRT": "",
-        "MCY": ""
+        "W": "",
+        "BKNG": ""
     },
     "Strategy12": {
         "BBY": "BBY热",
         "DPZ": "",
+        "GIS": "",
+        "HPE": "HPE热",
         "MELI": "",
         "PLNT": ""
     },
     "Strategy12_backup": {
         "BBY": "BBY热",
         "DPZ": "",
+        "GIS": "",
+        "HPE": "HPE热",
         "MELI": "",
         "PLNT": ""
     },
     "Strategy34": {
+        "AN": "",
+        "ANET": "ANET热",
         "AON": "",
         "APO": "",
+        "CG": "",
+        "CHWY": "",
         "CRDO": "CRDO热",
         "CTSH": "CTSH热",
         "DELL": "DELL热",
         "DKS": "DKS热",
         "ENPH": "ENPH热",
+        "EVR": "",
+        "FSLR": "",
+        "IBM": "",
         "ICE": "",
+        "KDP": "",
         "LLY": "",
         "META": "",
         "MP": "",
         "MRVL": "MRVL热",
+        "POWL": "",
+        "RCL": "",
+        "STX": "STX热",
+        "TECH": "",
         "VICI": ""
     },
     "Strategy34_backup": {
+        "AN": "",
+        "ANET": "ANET热",
         "AON": "",
-        "APO": "",
+        "CG": "",
+        "CHWY": "",
         "CRDO": "CRDO热",
+        "CTSH": "CTSH热",
         "DELL": "DELL热",
         "DKS": "DKS热",
         "ENPH": "ENPH热",
+        "EVR": "",
+        "FSLR": "",
+        "IBM": "",
         "ICE": "",
+        "KDP": "",
         "LLY": "",
         "META": "",
         "MP": "",
         "MRVL": "MRVL热",
+        "POWL": "",
+        "RCL": "",
+        "STX": "STX热",
+        "TECH": "",
         "VICI": ""
     },
     "OverSell_W": {
         "AON": "",
         "APO": "",
         "CTSH": "CTSH15热",
-        "INFY": ""
+        "INFY": "",
+        "SMCI": "SMCI热",
+        "SMR": "SMR15热"
     },
     "OverSell_W_backup": {
         "AON": "",
-        "APO": "",
-        "INFY": ""
+        "CTSH": "CTSH15热",
+        "INFY": "",
+        "SMCI": "SMCI热",
+        "SMR": "SMR15热"
     },
     "PE_Deep": {
         "ASTS": "ASTS15热",
-        "CVNA": "",
-        "ETSY": "",
+        "CLF": "",
         "FUTU": "",
+        "HLNE": "",
         "HPQ": "HPQ15热",
         "SBSW": "",
         "USAR": ""
     },
     "PE_Deep_backup": {
         "ASTS": "ASTS15热",
-        "CVNA": "",
+        "CLF": "",
         "FUTU": "",
         "HPQ": "HPQ15热",
         "SBSW": "",
         "USAR": ""
     },
     "PE_W": {
-        "AGNC": "",
-        "BABA": "BABA9",
-        "BKNG": "",
-        "COMP": "",
-        "DPZ": "",
-        "FND": "",
-        "GFI": "",
-        "MELI": "",
-        "META": "META9",
-        "MP": "",
-        "MSFT": "MSFT15",
-        "SCCO": "",
-        "VALE": ""
+        "DEO": "",
+        "LLY": ""
     },
     "PE_W_backup": {
-        "AGNC": "",
-        "BABA": "BABA9",
-        "BKNG": "",
-        "COMP": "",
-        "DPZ": "",
-        "FND": "",
-        "GFI": "",
-        "MELI": "",
-        "META": "META9",
-        "MP": "",
-        "MSFT": "MSFT15",
-        "SCCO": "",
-        "VALE": ""
+        "LLY": ""
     },
     "PE_Volume": {
         "ALGM": "ALGM",
-        "DEO": "DEO",
-        "ETSY": "ETSY听",
-        "LSCC": "LSCC听追",
-        "WMT": "WMT热听"
+        "APO": "APO听",
+        "BX": "BX听",
+        "FND": "FND听",
+        "HLNE": "HLNE听",
+        "KRYS": "KRYS听",
+        "LSCC": "LSCC听追"
     },
     "PE_Volume_backup": {
-        "DEO": "DEO",
-        "ETSY": "ETSY听",
-        "LSCC": "LSCC听追",
-        "WMT": "WMT热听"
+        "ALGM": "ALGM",
+        "APO": "APO听",
+        "BX": "BX听",
+        "FND": "FND听",
+        "HLNE": "HLNE听",
+        "KRYS": "KRYS听",
+        "LSCC": "LSCC听追"
     },
     "PE_Volume_up": {
-        "CLF": "CLF",
-        "CPRT": "CPRT",
-        "CTSH": "CTSH",
-        "GIS": "GIS",
-        "LYG": "LYG",
-        "MMYT": "MMYT",
-        "TECH": "TECH",
+        "DEO": "DEO",
         "TMO": "TMO"
     },
     "PE_Volume_up_backup": {
-        "CLF": "CLF",
-        "CPRT": "CPRT",
-        "CTSH": "CTSH",
-        "GIS": "GIS",
-        "LYG": "LYG",
-        "MMYT": "MMYT",
-        "TECH": "TECH",
+        "DEO": "DEO",
         "TMO": "TMO"
     },
     "PE_Volume_high": {
-        "FRO": "FRO乙",
-        "HRL": "HRL乙",
-        "JXN": "JXN乙",
-        "MASI": "MASI乙",
-        "SON": "SON甲"
+        "KRMN": "KRMN乙",
+        "LFUS": "LFUS甲"
     },
     "PE_Volume_high_backup": {
-        "FRO": "FRO乙",
-        "HRL": "HRL乙",
-        "JXN": "JXN乙",
-        "MASI": "MASI乙",
-        "SON": "SON甲"
+        "KRMN": "KRMN乙",
+        "LFUS": "LFUS甲"
     },
     "PE_valid": {
-        "AJG": "",
+        "AAL": "",
         "ALK": "",
-        "CLF": "",
-        "EBAY": "",
-        "EVR": "",
-        "EXPD": "EXPD9热",
+        "BABA": "BABA9",
+        "BK": "BK热",
+        "BX": "",
+        "EAT": "",
+        "EXPD": "EXPD热",
+        "FND": "",
+        "GEN": "",
         "GOOGL": "GOOGL9",
-        "HPE": "HPE9热",
+        "GS": "",
+        "HBM": "",
         "INTC": "INTC15",
         "JD": "",
         "JEF": "",
+        "KRYS": "",
         "LSCC": "",
+        "MMYT": "",
+        "MS": "",
+        "MSFT": "MSFT15",
         "NFLX": "NFLX15",
         "NU": "NU热",
-        "ODFL": "",
         "PDD": "",
-        "POOL": "",
-        "POWL": "",
-        "RCL": "",
-        "SMCI": "SMCI9热",
-        "TMDX": "",
-        "TMO": "",
-        "WMT": "WMT热",
-        "WTW": ""
+        "SCCO": "",
+        "TMO": ""
     },
     "PE_valid_backup": {
-        "AJG": "",
+        "AAL": "",
         "ALK": "",
-        "EBAY": "",
-        "EVR": "",
-        "EXPD": "EXPD9热",
+        "BABA": "BABA9",
+        "BK": "BK热",
+        "EAT": "",
+        "EXPD": "EXPD热",
+        "GEN": "",
         "GOOGL": "GOOGL9",
-        "HPE": "HPE9热",
+        "GS": "",
+        "HBM": "",
         "INTC": "INTC15",
         "JD": "",
         "JEF": "",
+        "MMYT": "",
+        "MS": "",
+        "MSFT": "MSFT15",
         "NFLX": "NFLX15",
         "NU": "NU热",
-        "ODFL": "",
         "PDD": "",
-        "POOL": "",
-        "POWL": "",
-        "RCL": "",
-        "SMCI": "SMCI9热",
-        "TMDX": "",
-        "WTW": ""
+        "SCCO": ""
     },
     "PE_invalid": {
         "RBLX": "",
         "SATS": "SATS9热",
-        "SNDK": "SNDK9热",
+        "SITM": "SITM9热",
         "U": ""
     },
     "PE_invalid_backup": {
         "RBLX": "",
         "SATS": "SATS9热",
-        "SNDK": "SNDK9热",
+        "SITM": "SITM9热",
         "U": ""
     },
     "Currencies": {
@@ -415,7 +415,9 @@
         "PCEY": "20 PCEY",
         "USGDP": "20 USGDP",
         "USConfidence": "20 USConfidence",
-        "USInitial": "19 USInitial"
+        "USInitial": "19 USInitial",
+        "USPPI": "27 USPPI",
+        "CorePPI": "27 CorePPI"
     },
     "Economic_All": {
         "USGDP": "",
@@ -442,13 +444,11 @@
     "PE_Deeper": {
         "HIMS": "",
         "OKLO": "OKLO15热",
-        "PATH": "",
-        "SMR": "SMR15热"
+        "PATH": ""
     },
     "PE_Deeper_backup": {
         "HIMS": "",
         "OKLO": "OKLO15热",
-        "PATH": "",
-        "SMR": "SMR15热"
+        "PATH": ""
     }
 }

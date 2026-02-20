@@ -358,9 +358,20 @@ class HighLowWindow(QMainWindow):
             if curr_col is None or (curr_count + len(syms) > MAX_ITEMS_PER_COLUMN):
                 if curr_col: parent_layout.addLayout(curr_col)
                 curr_col = QVBoxLayout(); curr_col.setAlignment(Qt.AlignmentFlag.AlignTop); curr_count = 0
-            box = QGroupBox(title); b_lay = QVBoxLayout(box)
-            for s in syms: b_lay.addWidget(self.create_symbol_widget(s)) # High/Low 使用原配色
-            curr_col.addWidget(box); curr_count += len(syms)
+            
+            box = QGroupBox(title)
+            b_lay = QVBoxLayout(box)
+            
+            # --- 关键修改：增加顶部边距 (Left, Top, Right, Bottom) ---
+            # Top 设置为 35，确保卡片不会遮挡 GroupBox 的标题
+            b_lay.setContentsMargins(8, 35, 8, 8) 
+            b_lay.setSpacing(6) # 卡片之间的间距
+            
+            for s in syms: 
+                b_lay.addWidget(self.create_symbol_widget(s)) 
+            
+            curr_col.addWidget(box)
+            curr_count += len(syms)
         if curr_col: parent_layout.addLayout(curr_col)
 
     def _populate_5y_high_section(self):
@@ -393,8 +404,26 @@ class HighLowWindow(QMainWindow):
         for name, (bg, fg) in button_styles.items():
             qss += f"QPushButton#{name} {{ background-color: {bg}; color: {fg}; font-size: 16px; padding: 5px; border: 1px solid #333; border-radius: 4px; text-align: left; padding-left: 8px; }}\n"
             qss += f"QPushButton#{name}:hover {{ background-color: {self.lighten_color(bg)}; }}\n"
+        
+        # --- 关键修改：QGroupBox 样式 ---
+        qss += """
+            QGroupBox { 
+                font-size: 18px; 
+                font-weight: bold; 
+                margin-top: 25px;  /* 增加外边距 */
+                border: 2px solid #555; 
+                border-radius: 8px; 
+            }
+            QGroupBox::title { 
+                subcontrol-origin: margin; 
+                subcontrol-position: top left; 
+                padding: 0 5px; 
+                left: 10px;
+                top: 5px; /* 调整标题垂直位置 */
+                color: #EEE;
+            }
+        """
         qss += "QMenu { background-color: #2C2C2C; color: #E0E0E0; border: 1px solid #555; }\n"
-        qss += "QGroupBox { font-size: 16px; font-weight: bold; margin-top: 15px; border: 1px solid gray; border-radius: 5px; }\n"
         qss += "QTabBar::tab:selected { background: #444; color: white; }\n"
         self.setStyleSheet(qss)
 
@@ -432,17 +461,24 @@ class HighLowWindow(QMainWindow):
         # 垂直居中对齐
         label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         
-        # --- 动态高度计算逻辑 ---
-        padding_h = 12  # 左右内边距总和 (left 6 + right 6)
-        padding_v = 10  # 上下内边距总和 (top 5 + bottom 5)
+        # --- 【关键修改点 1：设置字体大小】 ---
+        font_size = 16  # 你想设置的字体大小 (单位: pt 或 px)
+        font = QFont("Arial", font_size)
+        label.setFont(font) 
         
-        fm = label.fontMetrics()
+        # --- 【关键修改点 2：动态高度计算逻辑】 ---
+        # 这里的 padding 必须与下方 StyleSheet 里的 padding 保持一致
+        padding_h = 16  # 左右内边距总和 (left 8 + right 8)
+        padding_v = 12  # 上下内边距总和 (top 6 + bottom 6)
+        
+        fm = label.fontMetrics() # 这里现在会基于 16px 的字体进行计算
+        
         # 计算在固定宽度下，文本自动换行所需的矩形大小
         # 参数说明: (x, y, 限制宽度, 最大高度, 换行标志, 文本内容)
         rect = fm.boundingRect(
             0, 0, 
             SYMBOL_WIDGET_FIXED_WIDTH - padding_h, 
-            2000, 
+            5000, # 给一个足够大的上限
             Qt.TextFlag.TextWordWrap, 
             tags_info
         )
@@ -450,21 +486,21 @@ class HighLowWindow(QMainWindow):
         # 最终高度 = 文本计算高度 + 上下边距
         # 设置一个最小高度（如 28），防止没字时卡片消失
         calculated_height = rect.height() + padding_v
-        final_height = max(calculated_height, 28) 
+        final_height = max(calculated_height, 35) # 字体变大后，最小高度也相应调高
         
         label.setFixedHeight(final_height)
         
-        # 设置样式，确保 padding 和计算逻辑对应
+        # --- 【关键修改点 3：更新样式表】 ---
         label.setStyleSheet(f"""
             background-color: lightyellow;
             color: black;
-            font-size: 13px;
-            padding-left: 6px;
-            padding-right: 6px;
-            padding-top: 5px;
-            padding-bottom: 5px;
-            border-radius: 3px;
-            border: 1px solid #e0e0d0; /* 增加浅色边框更有质感 */
+            font-size: {font_size}px; 
+            padding-left: 8px;
+            padding-right: 8px;
+            padding-top: 6px;
+            padding-bottom: 6px;
+            border-radius: 4px;
+            border: 1px solid #e0e0d0;
         """)
 
         # 事件绑定
@@ -476,7 +512,7 @@ class HighLowWindow(QMainWindow):
         container = QWidget()
         vlay = QVBoxLayout(container)
         vlay.setContentsMargins(0, 0, 0, 0)
-        vlay.setSpacing(3) # 按钮和Tag卡片之间的微小间距
+        vlay.setSpacing(4) 
         vlay.addWidget(button)
         vlay.addWidget(label)
         vlay.addStretch() # 重要：向下方挤压，确保容器高度由内容决定
