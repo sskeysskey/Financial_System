@@ -15,7 +15,8 @@
         "VALE",
         "WPM",
         "AU",
-        "CTVA"
+        "CTVA",
+        "FNV"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -59,8 +60,7 @@
         "ORLY",
         "ROST",
         "CVNA",
-        "F",
-        "CMG"
+        "F"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -205,7 +205,8 @@
         "ARGX",
         "CAH",
         "BDX",
-        "IDXX"
+        "IDXX",
+        "HLN"
     ],
     "Industrials": [
         "GE",
@@ -248,7 +249,8 @@
         "FERG",
         "CARR",
         "FAST",
-        "URI"
+        "URI",
+        "FIX"
     ],
     "Real_Estate": [
         "PLD",
@@ -312,8 +314,7 @@
         "SNDK",
         "MPWR",
         "ASX",
-        "TER",
-        "CRWV"
+        "TER"
     ],
     "Utilities": [
         "NEE",

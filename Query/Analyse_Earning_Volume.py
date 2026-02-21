@@ -687,7 +687,7 @@ def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_
     执行策略3：PE_Volume_high
     返回两个分类：
     - 甲类: 两次财报递增 + 最新财报涨跌幅>0 + 价格突破 + 成交额12个月前2名
-    - 乙类: (无需财报递增/涨跌幅要求) + 价格突破 + 成交额为财报日起前2名 + 财报日距今至少30天
+    - 乙类: (无需财报递增/涨跌幅要求) + 价格突破 + 成交额为财报日起前2名 + 财报日距今至少3天
     """
     log_detail("\n========== 开始执行 策略3 (PE_Volume_high - 财报突破放量) ==========")
     
@@ -695,7 +695,7 @@ def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_
     turnover_lookback_months = CONFIG.get("COND_HIGH_TURNOVER_LOOKBACK_MONTHS", 12)
     turnover_rank_threshold = CONFIG.get("COND_HIGH_TURNOVER_RANK_THRESHOLD", 2)
     log_detail(f"配置参数: 成交额回溯 = {turnover_lookback_months} 个月, 排名阈值 = Top {turnover_rank_threshold}")
-    log_detail(f"分类说明: 甲=严格条件+12月Top2, 乙=宽松条件+财报日起前2+间隔≥30天")
+    log_detail(f"分类说明: 甲=严格条件+12月Top2, 乙=宽松条件+财报日起前2+间隔>3天")
 
     # 确定基准日期
     base_date = target_date_override if target_date_override else (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
@@ -829,18 +829,18 @@ def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_
             log_detail, is_tracing
         )
         
-        # ========== 新增条件G: 财报日距今至少30天 (用于乙类) ==========
+        # ========== 新增条件G: 财报日距今至少3天 (用于乙类) ==========
         cond_days_since_er = False
         try:
             er_dt = datetime.datetime.strptime(latest_er_date, "%Y-%m-%d")
             latest_dt = datetime.datetime.strptime(latest_date, "%Y-%m-%d")
             days_diff = (latest_dt - er_dt).days
-            cond_days_since_er = (days_diff >= 30)
+            cond_days_since_er = (days_diff > 3)
             if is_tracing:
-                log_detail(f"    - 条件G (财报间隔≥30天): {latest_er_date} -> {latest_date} = {days_diff}天 -> {cond_days_since_er}")
+                log_detail(f"    - 条件G (财报间隔>3天): {latest_er_date} -> {latest_date} = {days_diff}天 -> {cond_days_since_er}")
         except Exception as e:
             if is_tracing:
-                log_detail(f"    - 条件G (财报间隔≥30天): 日期解析失败 = False")
+                log_detail(f"    - 条件G (财报间隔>3天): 日期解析失败 = False")
         
         # ========== 步骤6: 分类判定 ==========
         
@@ -850,11 +850,11 @@ def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_
             if is_tracing:
                 log_detail(f"    ✅ [选中-甲类] 严格条件 + 12个月Top2")
         
-        # 乙类 (原丙类): (无需财报递增/涨跌幅要求) + 价格突破 + 今日上涨 + 财报日起前2 + 间隔≥30天
+        # 乙类 (原丙类): (无需财报递增/涨跌幅要求) + 价格突破 + 今日上涨 + 财报日起前2 + 间隔>3天
         if cond_turnover_since_er_top and cond_days_since_er:
             results_yi.append(symbol)
             if is_tracing:
-                log_detail(f"    ✅ [选中-乙类] 宽松条件 + 财报日起前2 + 间隔≥30天")
+                log_detail(f"    ✅ [选中-乙类] 宽松条件 + 财报日起前2 + 间隔>3天")
     
     conn.close()
     
@@ -864,7 +864,7 @@ def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_
     
     log_detail(f"\n策略3 筛选完成:")
     log_detail(f"  - 甲类 (严格+12月Top2): {len(results_jia)} 个: {results_jia}")
-    log_detail(f"  - 乙类 (宽松+财报起前2+间隔≥30天): {len(results_yi)} 个: {results_yi}")
+    log_detail(f"  - 乙类 (宽松+财报起前2+间隔>3天): {len(results_yi)} 个: {results_yi}")
     
     return results_jia, results_yi
 
@@ -1154,7 +1154,7 @@ def run_pe_volume_logic(log_detail):
         log_detail(f"📊 [策略2] PE_Volume_up (活跃上涨) 命中: {len(filtered_pe_volume_up)} 个 (Raw: {len(final_pe_volume_up)})")
         log_detail(f"📊 [策略3] PE_Volume_high 总计命中: {len(filtered_pe_volume_high)} 个")
         log_detail(f"    - 甲类 (严格+12月Top2): {len(filtered_pe_volume_high_jia)} 个")
-        log_detail(f"    - 乙类 (宽松+财报起前2+间隔≥30天): {len(filtered_pe_volume_high_yi)} 个")
+        log_detail(f"    - 乙类 (宽松+财报起前2+间隔>3天): {len(filtered_pe_volume_high_yi)} 个")
         log_detail("="*60 + "\n")
         return
 
