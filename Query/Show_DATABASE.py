@@ -358,10 +358,10 @@ if __name__ == "__main__":
     
     # --- 配置项 1: 指定要显示的表 (None 表示全部) ---
     # 场景1：只看 Options
-    my_target_tables = ["Options"]
+    my_target_tables = ["ETFs"]
     
     # 场景2：看 Options 和 Bonds
-    # my_target_tables = ["Options", "Bonds", "Earning"]
+    # my_target_tables = ["Options", "Bonds", "Earning", "ETFs"]
     
     # 场景3：看所有表（设为 None 或空列表 []）
     # my_target_tables = None 
@@ -371,7 +371,7 @@ if __name__ == "__main__":
     # my_content_limit = 500
     
     # 选项 B: 显示全部数据，设置为 'all'
-    my_content_limit = 'all'
+    my_content_limit = '100'
     
     # 调用时传入 target_tables 参数
     visualize_sqlite_db(

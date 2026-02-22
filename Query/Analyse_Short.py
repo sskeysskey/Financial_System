@@ -329,7 +329,7 @@ final_short_w_symbols = []
 TARGET_SECTORS = [
     'Basic_Materials', 'Consumer_Cyclical', 'Real_Estate', 'Technology', 'Energy', 
     'Industrials', 'Consumer_Defensive', 'Communication_Services', 
-    'Financial_Services', 'Healthcare', 'Utilities'
+    'Financial_Services', 'Healthcare', 'Utilities', "ETFs",
 ]
 
 # 收集所有 Symbol

@@ -589,6 +589,8 @@ class EarningsWindow(QMainWindow):
             pass
 
     def populate_ui(self):
+        global symbol_manager  # <--- 新增 1：声明全局变量
+
         earnings_schedule, _ = parse_multiple_earnings_files([
             EARNINGS_FILE_PATH,
             EARNINGS_FILE_NEXT_PATH,
@@ -596,6 +598,9 @@ class EarningsWindow(QMainWindow):
             EARNINGS_FILE_FOURTH_PATH,
             EARNINGS_FILE_FIFTH_PATH
         ])
+        
+        # <--- 新增 2：创建一个列表，用于严格记录UI视觉顺序
+        visual_order_symbols = []
 
         valid_symbols = set()
         for names in sector_data.values():
@@ -603,9 +608,25 @@ class EarningsWindow(QMainWindow):
 
         known_time_labels = {"BMO": "盘前 (BMO)", "AMC": "盘后 (AMC)", "TNS": "待定 (TNS)"}
 
+        # 定义一个星期映射表
+        weekday_map = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"]
+
         for date_str, times in earnings_schedule.items():
-            # 日期分组
-            date_group = QGroupBox(date_str)
+            # --- 新增：解析日期并拼接星期几 ---
+            try:
+                # 将字符串 "YYYY-MM-DD" 转换为 datetime 对象
+                dt = datetime.strptime(date_str, "%Y-%m-%d")
+                # 获取星期几 (0是星期一，6是星期日)
+                weekday_str = weekday_map[dt.weekday()]
+                # 拼接新的显示标题
+                display_title = f"{date_str} {weekday_str}"
+            except ValueError:
+                # 如果 date_str 格式不是 YYYY-MM-DD（例如有一些特殊标识），则回退到原字符串
+                display_title = date_str
+            # --- 新增结束 ---
+
+            # 日期分组 (使用新的 display_title)
+            date_group = QGroupBox(display_title)
             date_layout = QVBoxLayout()
             date_layout.setContentsMargins(10, 25, 10, 10)   # ← 留出标题高度
             date_layout.setSpacing(10)
@@ -617,6 +638,7 @@ class EarningsWindow(QMainWindow):
             for tc, symbols in times.items():
                 if not symbols:
                     continue
+
                 time_group = QGroupBox(known_time_labels.get(tc, tc))
                 time_layout = QGridLayout()
                 time_layout.setContentsMargins(10, 20, 10, 10)  # ← 同样留出标题高度
@@ -626,6 +648,11 @@ class EarningsWindow(QMainWindow):
                 date_layout.addWidget(time_group)
 
                 for idx, sym in enumerate(symbols):
+                    # <--- 新增 3：在生成按钮的同时，按视觉顺序将 symbol 存入列表
+                    if sym not in visual_order_symbols:
+                        visual_order_symbols.append(sym)
+                    # <--- 新增结束
+
                     row = idx % MAX_PER_COLUMN
                     col_block = idx // MAX_PER_COLUMN
                     base_col = col_block * 3
@@ -678,6 +705,10 @@ class EarningsWindow(QMainWindow):
                     time_layout.addWidget(btn, row, base_col)
                     time_layout.addWidget(related, row, base_col + 1)
                     time_layout.addWidget(container, row, base_col + 2)
+                    
+        # <--- 新增 4：整个 UI 生成完毕后，把正确的视觉顺序覆盖给 SymbolManager
+        if symbol_manager is not None:
+            symbol_manager.symbols = visual_order_symbols
 
     def toggle_related(self, sym, container, valid_symbols):
         # 如果还没有计算过，就动态计算并添加按钮
@@ -743,8 +774,35 @@ class EarningsWindow(QMainWindow):
             symbol_manager.set_current_symbol(sym)
             cmp = compare_data.get(sym, "N/A")
             shares, mcap, pe, pb = fetch_mnspp_data_from_db(DB_PATH, sym)
-            plot_financial_data(DB_PATH, sector, sym, cmp, (shares, pb), mcap, pe, json_data, '1Y', False)
+            
+            # --- 修改部分：增加 callback 传参 ---
+            plot_financial_data(
+                DB_PATH, sector, sym, cmp, (shares, pb), mcap, pe, json_data, '1Y', False,
+                callback=lambda action: self.handle_chart_callback(sym, action)
+            )
+            
             self.setFocus()
+
+    # --- 新增：处理图表传回的按键动作 ---
+    def handle_chart_callback(self, current_symbol, action):
+        if action in ('next', 'prev'):
+            # 使用 QTimer 稍微延迟，确保旧的 matplotlib 窗口完全关闭后再打开新的
+            # 避免出现窗口卡死或黑屏的冲突
+            QTimer.singleShot(50, lambda: self.navigate_from_chart(action))
+
+    def navigate_from_chart(self, direction):
+        global symbol_manager
+        # 复用已经写好的 SymbolManager 逻辑
+        if direction == 'next':
+            sym = symbol_manager.next_symbol()
+        elif direction == 'prev':
+            sym = symbol_manager.previous_symbol()
+        else:
+            sym = None
+
+        if sym:
+            print(f"图表内快捷键触发: 切换到 {sym}")
+            self.on_keyword_selected_chart(sym)
 
     def keyPressEvent(self, ev):
         k = ev.key()

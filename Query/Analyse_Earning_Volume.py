@@ -64,6 +64,10 @@ CONFIG = {
     # ========== 策略3 (PE_Volume_high 财报突破放量) 参数 ==========
     "COND_HIGH_TURNOVER_LOOKBACK_MONTHS": 12,  # 成交额回溯12个月
     "COND_HIGH_TURNOVER_RANK_THRESHOLD": 3,    # 成交额排名前3名
+
+    # ========== 策略4 (ETF_Volume_high 放量突破) 参数 ==========
+    "ETF_COND_HIGH_TURNOVER_LOOKBACK_MONTHS": 12,  # 成交额回溯12个月
+    "ETF_COND_HIGH_TURNOVER_RANK_THRESHOLD": 3,    # 成交额排名前3名
 }
 
 # --- 2. 辅助与文件操作模块 ---
@@ -107,9 +111,9 @@ def load_symbol_tags(json_path):
     except Exception:
         return {}
 
-def update_panel_with_conflict_check(json_path, pe_vol_list, pe_vol_notes, pe_vol_up_list, pe_vol_up_notes, pe_vol_high_list, pe_vol_high_notes, log_detail):
+def update_panel_with_conflict_check(json_path, pe_vol_list, pe_vol_notes, pe_vol_up_list, pe_vol_up_notes, pe_vol_high_list, pe_vol_high_notes, etf_vol_high_list, etf_vol_high_notes, log_detail):
     """
-    专门用于 PE_Volume, PE_Volume_up, PE_Volume_high 的写入。
+    专门用于 PE_Volume, PE_Volume_up, PE_Volume_high, 以及 ETF_Volume_high 的写入。
     功能：
     1. 写入所有三个策略的主分组和 backup 分组。
     2. 检查这些 symbol 是否存在于指定的 backup 分组中，如果存在则删除。
@@ -132,8 +136,8 @@ def update_panel_with_conflict_check(json_path, pe_vol_list, pe_vol_notes, pe_vo
     except (FileNotFoundError, json.JSONDecodeError):
         data = {}
 
-    # 汇总所有即将写入 Volume 系列的新 symbol
-    all_new_volume_symbols = set(pe_vol_list) | set(pe_vol_up_list) | set(pe_vol_high_list)
+    # === 修改 ===：将 ETF symbol 也加入新写入汇总池
+    all_new_volume_symbols = set(pe_vol_list) | set(pe_vol_up_list) | set(pe_vol_high_list) | set(etf_vol_high_list)
     
     if not all_new_volume_symbols:
         log_detail("没有新的 Volume symbol 需要写入，跳过冲突检查。")
@@ -172,11 +176,15 @@ def update_panel_with_conflict_check(json_path, pe_vol_list, pe_vol_notes, pe_vo
     # 写入策略3
     data['PE_Volume_high'] = build_group_dict(pe_vol_high_list, pe_vol_high_notes)
     data['PE_Volume_high_backup'] = build_group_dict(pe_vol_high_list, pe_vol_high_notes)
+    
+    # === 新增 ===：写入策略4 (ETF)
+    data['ETF_Volume_high'] = build_group_dict(etf_vol_high_list, etf_vol_high_notes)
+    data['ETF_Volume_high_backup'] = build_group_dict(etf_vol_high_list, etf_vol_high_notes)
 
     try:
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
-        log_detail("Panel 文件更新完成 (包含冲突清理)。")
+        log_detail("Panel 文件更新完成 (包含冲突清理及 ETF 写入)。")
     except Exception as e:
         log_detail(f"错误: 写入 Panel JSON 文件失败: {e}")
 
@@ -682,28 +690,52 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
     return sorted(results)
 
 # --- 策略3: PE_Volume_high (财报持续上升 + 价格突破 + 成交额放量) ---
-def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_trace, log_detail):
+def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_map, target_date_override, symbol_to_trace, log_detail):
     """
     执行策略3：PE_Volume_high
-    返回两个分类：
-    - 甲类: 两次财报递增 + 最新财报涨跌幅>0 + 价格突破 + 成交额12个月前2名
-    - 乙类: (无需财报递增/涨跌幅要求) + 价格突破 + 成交额为财报日起前2名 + 财报日距今至少3天
+    返回三个分类：
+    - 甲类: 两次财报递增 + 最新财报涨跌幅>0 + 价格突破 + 成交额12个月前3名
+    - 乙类: (无需财报递增/涨跌幅要求) + 价格突破 + 财报日距今至少3天 + 动态成交额要求
+    - 抄底类: 最新日期到最近财报之间曾入选 PE_Volume_high 且今日在指定回调池中
     """
-    log_detail("\n========== 开始执行 策略3 (PE_Volume_high - 财报突破放量) ==========")
+    log_detail("\n========== 开始执行 策略3 (PE_Volume_high - 财报突破放量 & 抄底扫描) ==========")
     
     # 读取配置
     turnover_lookback_months = CONFIG.get("COND_HIGH_TURNOVER_LOOKBACK_MONTHS", 12)
-    turnover_rank_threshold = CONFIG.get("COND_HIGH_TURNOVER_RANK_THRESHOLD", 2)
+    turnover_rank_threshold = CONFIG.get("COND_HIGH_TURNOVER_RANK_THRESHOLD", 3)
     log_detail(f"配置参数: 成交额回溯 = {turnover_lookback_months} 个月, 排名阈值 = Top {turnover_rank_threshold}")
-    log_detail(f"分类说明: 甲=严格条件+12月Top2, 乙=宽松条件+财报日起前2+间隔>3天")
+    
+    # ================= [新增逻辑] 加载历史记录和当前回调池 =================
+    hist_pe_vol_high = {}
+    try:
+        with open(history_json_path, 'r', encoding='utf-8') as f:
+            hist_data = json.load(f)
+            hist_pe_vol_high = hist_data.get("PE_Volume_high", {})
+    except Exception as e:
+        log_detail(f"读取历史文件失败: {e}")
+
+    valid_pool = set()
+    target_pool_names = ["PE_W", "PE_Deep", "PE_Deeper", "PE_valid", "PE_invalid", "OverSell_W", "season"]
+    try:
+        with open(panel_json_path, 'r', encoding='utf-8') as f:
+            panel_data = json.load(f)
+            for name in target_pool_names:
+                group_data = panel_data.get(name, {})
+                if isinstance(group_data, dict):
+                    valid_pool.update(group_data.keys())
+        log_detail(f"已加载指定跌幅池，共 {len(valid_pool)} 个候选抄底 Symbol。")
+    except Exception as e:
+        log_detail(f"读取 Panel 文件失败: {e}")
+    # ====================================================================
 
     # 确定基准日期
     base_date = target_date_override if target_date_override else (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
     log_detail(f"基准日期: {base_date}")
     
-    # 两个分类的结果集
-    results_jia = []  # 甲类
-    results_yi = []   # 乙类
+    # 三个分类的结果集
+    results_jia = []     # 甲类
+    results_yi = []      # 乙类
+    results_chaodi = []  # 抄底类
     
     # 连接数据库
     conn = sqlite3.connect(db_path, timeout=60.0)
@@ -794,15 +826,35 @@ def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_
         prev_date, prev_price, _ = rows[1]
         latest_turnover = latest_price * latest_volume
         
+        # ================= [新增逻辑] 独立判定：抄底规则 =================
+        cond_chaodi = False
+        if symbol in valid_pool:
+            for h_date, h_symbols in hist_pe_vol_high.items():
+                # 检查日期是否在最新财报日到当前最新日期之间
+                if latest_er_date <= h_date <= latest_date:
+                    if symbol in h_symbols:
+                        cond_chaodi = True
+                        if is_tracing:
+                            log_detail(f"    - 条件H (抄底规则): 满足！在 {h_date} 曾入选 PE_Volume_high 且今日在指定池中。")
+                        break
+        else:
+            if is_tracing:
+                log_detail(f"    - 条件H (抄底规则): 不满足 (今日不在指定的7个跌幅池中)")
+                
+        if cond_chaodi:
+            results_chaodi.append(symbol)
+            if is_tracing:
+                log_detail(f"    ✅ [选中-抄底类] 财报后曾入选 PE_Volume_high 并出现回调")
+        # ===================================================================
+
         # 条件C: 今日上涨
         cond_price_up_today = (latest_price > prev_price)
         if is_tracing:
             log_detail(f"    - 条件C (今日上涨): {prev_price:.2f} -> {latest_price:.2f} = {cond_price_up_today}")
         
         if not cond_price_up_today:
-            if is_tracing:
-                log_detail(f"    x [失败] 今日未上涨")
-            continue
+            if is_tracing: log_detail(f"    x [失败] 今日未上涨")
+            continue # 未上涨则跳过甲乙类的判断，但上方的抄底类判定已经生效并保存了
         
         # 条件D: 价格突破财报日收盘价
         cond_price_breakout = (latest_price > latest_er_price)
@@ -814,23 +866,9 @@ def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_
                 log_detail(f"    x [失败] 最新价未突破财报日收盘价")
             continue
         
-        # ========== 步骤5: 检查成交额条件 ==========
-        
-        # 条件E: 成交额为12个月前2名 (用于甲类)
-        cond_turnover_12m_top2 = check_turnover_rank(
-            cursor, sector, symbol, latest_date, latest_turnover,
-            turnover_lookback_months, turnover_rank_threshold,
-            log_detail, is_tracing
-        )
-        
-        # 条件F: 成交额为财报日起前2名 (用于乙类)
-        cond_turnover_since_er_top = check_turnover_since_earning(
-            cursor, sector, symbol, latest_er_date, latest_date, latest_turnover,
-            log_detail, is_tracing
-        )
-        
-        # ========== 新增条件G: 财报日距今至少3天 (用于乙类) ==========
+        # ========== 步骤5: 调整顺序，先计算财报日距今的天数 (条件G) ==========
         cond_days_since_er = False
+        days_diff = 0
         try:
             er_dt = datetime.datetime.strptime(latest_er_date, "%Y-%m-%d")
             latest_dt = datetime.datetime.strptime(latest_date, "%Y-%m-%d")
@@ -841,8 +879,29 @@ def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_
         except Exception as e:
             if is_tracing:
                 log_detail(f"    - 条件G (财报间隔>3天): 日期解析失败 = False")
+                
+        # ========== 步骤6: 检查成交额条件 ==========
         
-        # ========== 步骤6: 分类判定 ==========
+        # 条件E: 成交额为12个月前3名 (用于甲类)
+        cond_turnover_12m_top2 = check_turnover_rank(
+            cursor, sector, symbol, latest_date, latest_turnover,
+            turnover_lookback_months, turnover_rank_threshold,
+            log_detail, is_tracing
+        )
+        
+        # 条件F: 成交额为财报日起前N名 (用于乙类，动态阈值)
+        # 如果距今在3天~30天(1个月)范围内，要求最高(1名)；超过30天，要求前3名
+        dynamic_rank_threshold = 1 if days_diff <= 30 else 2
+        
+        # 只有满足大于3天才有必要去计算乙类的成交额排名，节省性能
+        cond_turnover_since_er_top = False
+        if cond_days_since_er:
+            cond_turnover_since_er_top = check_turnover_since_earning(
+                cursor, sector, symbol, latest_er_date, latest_date, latest_turnover,
+                dynamic_rank_threshold, log_detail, is_tracing  # 传入动态的 dynamic_rank_threshold
+            )
+        
+        # ========== 步骤7: 分类判定 ==========
         
         # 甲类: 财报递增 + 财报涨幅>0 + 价格突破 + 今日上涨 + 12月Top2
         if cond_er_increasing and cond_er_pct_positive and cond_turnover_12m_top2:
@@ -850,27 +909,111 @@ def process_pe_volume_high(db_path, sector_map, target_date_override, symbol_to_
             if is_tracing:
                 log_detail(f"    ✅ [选中-甲类] 严格条件 + 12个月Top2")
         
-        # 乙类 (原丙类): (无需财报递增/涨跌幅要求) + 价格突破 + 今日上涨 + 财报日起前2 + 间隔>3天
+        # 乙类: (无需财报递增/涨跌幅要求) + 价格突破 + 今日上涨 + 动态财报起前N名 + 间隔>3天
         if cond_turnover_since_er_top and cond_days_since_er:
             results_yi.append(symbol)
             if is_tracing:
-                log_detail(f"    ✅ [选中-乙类] 宽松条件 + 财报日起前2 + 间隔>3天")
+                log_detail(f"    ✅ [选中-乙类] 宽松条件 + 财报起前{dynamic_rank_threshold} + 间隔>3天({days_diff}天)")
     
     conn.close()
     
     # 去重并排序
     results_jia = sorted(list(set(results_jia)))
     results_yi = sorted(list(set(results_yi)))
+    results_chaodi = sorted(list(set(results_chaodi))) # 排序抄底结果
     
     log_detail(f"\n策略3 筛选完成:")
     log_detail(f"  - 甲类 (严格+12月Top2): {len(results_jia)} 个: {results_jia}")
-    log_detail(f"  - 乙类 (宽松+财报起前2+间隔>3天): {len(results_yi)} 个: {results_yi}")
+    log_detail(f"  - 乙类 (宽松+财报起前3+间隔>3天): {len(results_yi)} 个: {results_yi}")
+    log_detail(f"  - 抄底类 (财报后曾入选且今日回调): {len(results_chaodi)} 个: {results_chaodi}")
     
-    return results_jia, results_yi
+    return results_jia, results_yi, results_chaodi
 
-def check_turnover_since_earning(cursor, sector_name, symbol, er_date_str, latest_date_str, latest_turnover, log_detail, is_tracing):
+# --- 策略4: ETF_Volume_high (ETF放量突破) ---
+def process_etf_volume_high(db_path, target_date_override, symbol_to_trace, log_detail):
     """
-    检查 latest_turnover 是否是从 er_date_str (财报日) 到 latest_date_str 期间的前2名成交额
+    执行策略4：ETF_Volume_high
+    规则: (无需财报要求) + 价格上涨(突破) + 成交额12个月前3名
+    直接从 "ETFs" 数据表读取所有不重复的 symbol
+    """
+    log_detail("\n========== 开始执行 策略4 (ETF_Volume_high - ETF放量突破) ==========")
+    
+    # 共用策略3的成交额参数 (12个月前3名)
+    turnover_lookback_months = CONFIG.get("ETF_COND_HIGH_TURNOVER_LOOKBACK_MONTHS", 12)
+    turnover_rank_threshold = CONFIG.get("ETF_COND_HIGH_TURNOVER_RANK_THRESHOLD", 3)
+    
+    # 确定基准日期
+    base_date = target_date_override if target_date_override else (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+    
+    results = []
+    conn = sqlite3.connect(db_path, timeout=60.0)
+    cursor = conn.cursor()
+    
+    # 1. 直接从 ETFs 表中获取所有独一无二的 symbol
+    try:
+        cursor.execute('SELECT DISTINCT name FROM "ETFs"')
+        all_etfs = [r[0] for r in cursor.fetchall()]
+        log_detail(f"从 ETFs 表中成功获取 {len(all_etfs)} 个 Symbol 进行扫描...")
+    except Exception as e:
+        log_detail(f"错误: 无法读取 ETFs 数据表: {e}")
+        conn.close()
+        return []
+        
+    for symbol in all_etfs:
+        is_tracing = (symbol == symbol_to_trace)
+        
+        if is_tracing:
+            log_detail(f"\n--- 正在检查 ETF {symbol} (策略4) ---")
+            
+        # 获取最新两天交易数据 (Today, Yesterday)
+        if target_date_override:
+            query = f'SELECT date, price, volume FROM "ETFs" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 2'
+            cursor.execute(query, (symbol, target_date_override))
+        else:
+            query = f'SELECT date, price, volume FROM "ETFs" WHERE name = ? ORDER BY date DESC LIMIT 2'
+            cursor.execute(query, (symbol,))
+            
+        rows = cursor.fetchall()
+        
+        # 数据完整性检查
+        if len(rows) < 2 or rows[0][1] is None or rows[0][2] is None or rows[1][1] is None:
+            if is_tracing: log_detail(f"    x [失败] 无法获取最新两天的交易数据")
+            continue
+            
+        latest_date, latest_price, latest_volume = rows[0]
+        prev_date, prev_price, _ = rows[1]
+        latest_turnover = latest_price * latest_volume
+        
+        # 条件1: 价格突破 (ETF无财报，这里定义为今日上涨。若需改写为突破 N 日新高，可在此处扩展逻辑)
+        cond_price_up = (latest_price > prev_price)
+        if is_tracing:
+            log_detail(f"    - 条件A (今日上涨/突破): {prev_price:.2f} -> {latest_price:.2f} = {cond_price_up}")
+            
+        if not cond_price_up:
+            continue
+            
+        # 条件2: 成交额为 12 个月前 2 名
+        cond_turnover_12m_top2 = check_turnover_rank(
+            cursor, "ETFs", symbol, latest_date, latest_turnover,
+            turnover_lookback_months, turnover_rank_threshold,
+            log_detail, is_tracing
+        )
+        
+        # 满足所有条件
+        if cond_price_up and cond_turnover_12m_top2:
+            results.append(symbol)
+            if is_tracing: log_detail(f"    ✅ [选中-ETF类] 价格上涨 + 12个月成交额Top2")
+            
+    conn.close()
+    
+    results = sorted(list(set(results)))
+    log_detail(f"\n策略4 筛选完成，共命中 {len(results)} 个 ETF: {results}")
+    
+    return results
+
+def check_turnover_since_earning(cursor, sector_name, symbol, er_date_str, latest_date_str, latest_turnover, rank_threshold, log_detail, is_tracing):
+    """
+    检查 latest_turnover 是否是从 er_date_str (财报日) 到 latest_date_str 期间的前 rank_threshold 名成交额
     """
     # 查询从财报日到最新日期的所有交易数据
     query = f'SELECT date, price, volume FROM "{sector_name}" WHERE name = ? AND date >= ? AND date <= ?'
@@ -890,12 +1033,11 @@ def check_turnover_since_earning(cursor, sector_name, symbol, er_date_str, lates
     # 按成交额从大到小排序
     sorted_data = sorted(valid_data, key=lambda x: x[1], reverse=True)
     
-    # 获取前2名
-    rank_threshold = 2
+    # 获取前 rank_threshold 名
     top_n_data = sorted_data[:rank_threshold]
     top_n_turnovers = [item[1] for item in top_n_data]
     
-    # 判断最新成交额是否在前2名中（或者大于等于第2名）
+    # 判断最新成交额是否在前 N 名中（或者大于等于第 N 名）
     is_top_n = False
     if len(top_n_turnovers) > 0:
         # 如果数据量少于阈值，且当前值在其中，那肯定是前N名
@@ -983,7 +1125,7 @@ def run_pe_volume_logic(log_detail):
         log_detail("错误: 无法加载板块映射，程序终止。")
         return
 
-    # ================= 策略 1 执行 (已恢复) =================
+    # ================= 策略 1 执行 =================
     raw_pe_volume = process_condition_8(
         DB_FILE, 
         EARNING_HISTORY_JSON_FILE, 
@@ -1022,20 +1164,32 @@ def run_pe_volume_logic(log_detail):
     )
     final_pe_volume_up = sorted(list(set(raw_pe_volume_up)))
 
-    # ================= 策略 3 执行 (修改：接收三个返回值) =================
-    raw_pe_volume_high_jia, raw_pe_volume_high_yi = process_pe_volume_high(
-        DB_FILE,
-        symbol_to_sector_map,
-        TARGET_DATE,
-        SYMBOL_TO_TRACE,
+    # ================= 策略 3 执行 (增加接纳新返回参数) =================
+    raw_pe_volume_high_jia, raw_pe_volume_high_yi, raw_pe_volume_high_chaodi = process_pe_volume_high(
+        DB_FILE, 
+        EARNING_HISTORY_JSON_FILE, # 新增传入参数
+        PANEL_JSON_FILE,           # 新增传入参数
+        symbol_to_sector_map, 
+        TARGET_DATE, 
+        SYMBOL_TO_TRACE, 
         log_detail
     )
     
     # 合并所有策略3的结果用于统一处理
-    final_pe_volume_high = sorted(list(set(raw_pe_volume_high_jia) | set(raw_pe_volume_high_yi)))
+    final_pe_volume_high = sorted(list(set(raw_pe_volume_high_jia) | set(raw_pe_volume_high_yi) | set(raw_pe_volume_high_chaodi)))
+
+    # ================= 策略 4 执行 (ETF 放量突破) =================
+    raw_etf_volume_high = process_etf_volume_high(
+        DB_FILE, 
+        TARGET_DATE, 
+        SYMBOL_TO_TRACE, 
+        log_detail
+    )
+    final_etf_volume_high = sorted(list(set(raw_etf_volume_high)))
 
     # ================= Tag 黑名单过滤逻辑 =================
     def filter_blacklisted_tags(symbols):
+        # (保持原有的 filter_blacklisted_tags 逻辑不变)
         allowed = []
         for sym in symbols:
             s_tags = set(symbol_to_tags_map.get(sym, []))
@@ -1051,20 +1205,28 @@ def run_pe_volume_logic(log_detail):
     filtered_pe_volume = filter_blacklisted_tags(final_pe_volume)
     filtered_pe_volume_up = filter_blacklisted_tags(final_pe_volume_up)
     
-    # 策略3的三个子类分别过滤
+    # 策略3的子类分别过滤
     filtered_pe_volume_high_jia = filter_blacklisted_tags(raw_pe_volume_high_jia)
     filtered_pe_volume_high_yi = filter_blacklisted_tags(raw_pe_volume_high_yi)
+    filtered_pe_volume_high_chaodi = filter_blacklisted_tags(raw_pe_volume_high_chaodi)
     filtered_pe_volume_high = filter_blacklisted_tags(final_pe_volume_high)
-    
+
+    # === 新增 ===：ETF 过滤
+    filtered_etf_volume_high = filter_blacklisted_tags(final_etf_volume_high)
+
     if SYMBOL_TO_TRACE:
+        # (保留原有的 trace 提示)
         if SYMBOL_TO_TRACE in final_pe_volume and SYMBOL_TO_TRACE not in filtered_pe_volume:
              log_detail(f"追踪提示: {SYMBOL_TO_TRACE} (策略1) 通过，但因黑名单标签被过滤。")
         if SYMBOL_TO_TRACE in final_pe_volume_up and SYMBOL_TO_TRACE not in filtered_pe_volume_up:
              log_detail(f"追踪提示: {SYMBOL_TO_TRACE} (策略2) 通过，但因黑名单标签被过滤。")
         if SYMBOL_TO_TRACE in final_pe_volume_high and SYMBOL_TO_TRACE not in filtered_pe_volume_high:
              log_detail(f"追踪提示: {SYMBOL_TO_TRACE} (策略3) 通过，但因黑名单标签被过滤。")
+        # === 新增 ===：ETF 追踪提示
+        if SYMBOL_TO_TRACE in final_etf_volume_high and SYMBOL_TO_TRACE not in filtered_etf_volume_high:
+             log_detail(f"追踪提示: {SYMBOL_TO_TRACE} (策略4) 通过，但因黑名单标签被过滤。")
 
-    # ================= [新增逻辑] 检查 PE_Deep / PE_Deeper 交叉 =================
+    # ================= 检查 PE_Deep / PE_Deeper 交叉 =================
     all_existing_notes = {}
     current_deep_symbols = set()
     try:
@@ -1137,49 +1299,59 @@ def run_pe_volume_logic(log_detail):
             categories.append("甲")
         elif sym in filtered_pe_volume_high_yi:
             categories.append("乙")
+            
+        # 如果是抄底入选的，加上“抄底”二字
+        if sym in filtered_pe_volume_high_chaodi:
+            categories.append("抄底")
+            
         symbol_to_categories[sym] = categories
     
-    # 构建策略3的备注
+    # 构建策略3的备注 (例如：ALGM抄底 或 ALGM甲抄底)
     pe_vol_high_notes = {}
     for sym in filtered_pe_volume_high:
         categories = symbol_to_categories.get(sym, [])
         suffix = "".join(categories)  # 例如 "甲乙" 或 "乙"
         pe_vol_high_notes[sym] = f"{sym}{suffix}"
     
-    # 5. 回测安全拦截
+    # === 新增 ===：生成 ETF 的备注 (正常情况下直接写入symbol本体即可)
+    etf_vol_high_notes = build_symbol_note_map(filtered_etf_volume_high)
+
+    # 5. 回测安全拦截 (新增 ETF 统计)
     if TARGET_DATE:
         log_detail("\n" + "="*60)
         log_detail(f"🛑 [安全拦截] 回测模式 (Date: {TARGET_DATE}) 已启用。")
-        log_detail(f"📊 [策略1] PE_Volume (放量下跌) 命中: {len(filtered_pe_volume)} 个 (Raw: {len(final_pe_volume)})") 
-        log_detail(f"📊 [策略2] PE_Volume_up (活跃上涨) 命中: {len(filtered_pe_volume_up)} 个 (Raw: {len(final_pe_volume_up)})")
+        log_detail(f"📊 [策略1] PE_Volume 命中: {len(filtered_pe_volume)} 个") 
+        log_detail(f"📊 [策略2] PE_Volume_up 命中: {len(filtered_pe_volume_up)} 个")
         log_detail(f"📊 [策略3] PE_Volume_high 总计命中: {len(filtered_pe_volume_high)} 个")
-        log_detail(f"    - 甲类 (严格+12月Top2): {len(filtered_pe_volume_high_jia)} 个")
-        log_detail(f"    - 乙类 (宽松+财报起前2+间隔>3天): {len(filtered_pe_volume_high_yi)} 个")
+        log_detail(f"    - 甲类: {len(filtered_pe_volume_high_jia)} 个")
+        log_detail(f"    - 乙类: {len(filtered_pe_volume_high_yi)} 个")
+        log_detail(f"    - 抄底类: {len(filtered_pe_volume_high_chaodi)} 个")
+        log_detail(f"📊 [策略4] ETF_Volume_high 命中: {len(filtered_etf_volume_high)} 个") # === 新增 ===
         log_detail("="*60 + "\n")
         return
 
-    # 6. 写入 Panel
+    # 6. 写入 Panel (已有的函数逻辑会顺带将其自动写入到对应的 _backup 里)
     log_detail(f"\n正在写入 Panel 文件...")
-    
     update_panel_with_conflict_check(
         PANEL_JSON_FILE,
         filtered_pe_volume, pe_volume_notes,
         filtered_pe_volume_up, pe_volume_up_notes,
         filtered_pe_volume_high, pe_vol_high_notes,
+        filtered_etf_volume_high, etf_vol_high_notes, # === 新增 ===
         log_detail
     )
 
-    # 7. 写入 History
+    # 7. 写入 History (新增 ETF)
     log_detail(f"正在更新 History 文件...")
     update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume", final_pe_volume, log_detail, base_date_str)
     update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume_up", final_pe_volume_up, log_detail, base_date_str)
     update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume_high", final_pe_volume_high, log_detail, base_date_str)
+    update_earning_history_json(EARNING_HISTORY_JSON_FILE, "ETF_Volume_high", final_etf_volume_high, log_detail, base_date_str) # === 新增 ===
 
-    # 写入 Tag 黑名单标记分组
-    all_volume_symbols = set(final_pe_volume) | set(final_pe_volume_up) | set(final_pe_volume_high)
+    # 写入 Tag 黑名单标记分组 (包含 ETF)
+    all_volume_symbols = set(final_pe_volume) | set(final_pe_volume_up) | set(final_pe_volume_high) | set(final_etf_volume_high) # === 修改 ===
     
     blocked_symbols_to_log = []
-    
     for sym in all_volume_symbols:
         s_tags = set(symbol_to_tags_map.get(sym, []))
         if s_tags.intersection(tag_blacklist):
