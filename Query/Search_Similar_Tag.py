@@ -14,7 +14,8 @@ USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 # --- PyQt6 核心组件 ---
-from PyQt6.QtCore import Qt, QEvent, QSize
+# 新增导入 QTimer
+from PyQt6.QtCore import Qt, QEvent, QSize, QTimer
 from PyQt6.QtWidgets import (QApplication, QInputDialog, QMessageBox, QMainWindow, QWidget,
                              QVBoxLayout, QHBoxLayout, QPushButton, QGroupBox,
                              QScrollArea, QLabel, QMenu, QLineEdit)
@@ -214,6 +215,10 @@ class SimilarityViewerWindow(QMainWindow):
         self.panel_config = all_data['panel_config']
         self.panel_config_path = all_data['panel_config_path']
         
+        # 新增：用于方向键导航的变量
+        self.ordered_symbols_on_screen = []
+        self.current_symbol_index = -1
+        
         self.init_ui()
 
     def init_ui(self):
@@ -238,7 +243,11 @@ class SimilarityViewerWindow(QMainWindow):
             self.search_input.selectAll()
 
     def populate_ui(self, layout):
+        # 每次刷新UI时清空列表
+        self.ordered_symbols_on_screen.clear()
+        
         # 1. 源 Symbol 区域
+        self.ordered_symbols_on_screen.append(self.source_symbol)
         source_group = QGroupBox("-")
         source_layout = QVBoxLayout(source_group)
         source_widget = self.create_source_symbol_widget()
@@ -262,6 +271,7 @@ class SimilarityViewerWindow(QMainWindow):
                 if sym == self.source_symbol: continue
                 if not self.compare_data.get(sym, "").strip(): continue
                 
+                self.ordered_symbols_on_screen.append(sym)
                 widget = self.create_similar_symbol_widget(sym, matched_tags, all_tags)
                 group_layout.addWidget(widget)
             
@@ -515,14 +525,50 @@ class SimilarityViewerWindow(QMainWindow):
         btn.setStyleSheet(f"color: {color};")
         return btn
 
-    def on_symbol_click(self, symbol):
+    # 修改：支持 btn_index 记录当前索引，并传递 callback 给 Chart_input.py
+    def on_symbol_click(self, symbol, btn_index=None):
+        if btn_index is not None:
+            self.current_symbol_index = btn_index
+        elif symbol in self.ordered_symbols_on_screen:
+            self.current_symbol_index = self.ordered_symbols_on_screen.index(symbol)
+
         sector = next((s for s, names in self.sector_data.items() if symbol in names), None)
         comp = self.compare_data.get(symbol, "N/A")
         shares, mcap, pe, pb = fetch_mnspp_data_from_db(DB_PATH, symbol)
         try:
-            plot_financial_data(DB_PATH, sector, symbol, comp, (shares, pb), mcap, pe, self.json_data, '1Y', False)
+            plot_financial_data(
+                DB_PATH, sector, symbol, comp, (shares, pb), mcap, pe, self.json_data, '1Y', False,
+                callback=lambda action: self.handle_chart_callback(symbol, action)
+            )
         except Exception as e:
             QMessageBox.critical(self, "错误", str(e))
+
+    # 新增：处理从图表界面传回来的 next/prev 操作
+    def handle_chart_callback(self, symbol, action):
+        if action in ('next', 'prev'):
+            current_idx = self.current_symbol_index
+            QTimer.singleShot(50, lambda: self.navigate_to_adjacent_symbol(action, current_idx))
+
+    # 新增：计算上一个/下一个索引并打开图表
+    def navigate_to_adjacent_symbol(self, direction, current_idx):
+        total_count = len(self.ordered_symbols_on_screen)
+        if total_count == 0:
+            return
+
+        new_index = current_idx
+        if direction == 'next':
+            new_index += 1
+        elif direction == 'prev':
+            new_index -= 1
+            
+        # 循环模式逻辑
+        if new_index >= total_count:
+            new_index = 0
+        elif new_index < 0:
+            new_index = total_count - 1
+            
+        next_symbol = self.ordered_symbols_on_screen[new_index]
+        self.on_symbol_click(next_symbol, btn_index=new_index)
 
     def show_context_menu(self, symbol):
         menu = QMenu(self)

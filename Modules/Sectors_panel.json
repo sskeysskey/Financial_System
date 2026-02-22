@@ -8,20 +8,12 @@
     "Technology": {
         "SPSC": "",
         "WDAY": "",
-        "HPQ": "",
         "PANW": "",
-        "CDW": "",
         "CHKP": "",
         "QTWO": "",
         "INTA": "",
-        "ACN": "",
-        "IBM": "",
         "TEAM": "",
-        "CTSH": "",
-        "WIT": "",
-        "GEN": "",
         "EPAM": "",
-        "WIX": "",
         "QLYS": "",
         "PAYX": "",
         "KLAR": "",
@@ -35,22 +27,18 @@
         "SAIL": "",
         "NTSK": ""
     },
-    "Consumer_Cyclical": {
-        "BKNG": ""
-    },
+    "Consumer_Cyclical": {},
     "Utilities": {
         "MWH": ""
     },
     "Consumer_Defensive": {},
     "Industrials": {
-        "POOL": "",
         "TRI": "",
         "CPRT": ""
     },
     "Communication_Services": {
         "TEF": "",
-        "FUBO": "",
-        "STUB": ""
+        "FUBO": ""
     },
     "Financial_Services": {
         "SLM": "",
@@ -64,7 +52,6 @@
         "FIGR": ""
     },
     "Healthcare": {
-        "PRCT": "",
         "CAI": "",
         "HIMS": ""
     },
@@ -152,12 +139,16 @@
     },
     "Options_zero": {},
     "Must": {
-        "MSGS": "",
-        "EPAM": "",
+        "HHH": "",
+        "ALGM": "",
+        "AEM": "",
+        "HEI": "",
+        "AGNC": "",
+        "BWA": "",
+        "ORA": "",
         "LSCC": "",
         "LFUS": "",
         "CPNG": "",
-        "HIMS": "",
         "PATH": "",
         "TCOM": ""
     },
@@ -174,9 +165,7 @@
         "CPRT": "",
         "TXRH": "",
         "FROG": "",
-        "AMG": "",
-        "HHH": "",
-        "AKAM": ""
+        "AMG": ""
     },
     "Short_W": {
         "ONTO": ""
@@ -320,12 +309,10 @@
     "PE_Volume_backup": {
         "AMG": "AMG",
         "BBY": "BBY热",
-        "BWA": "BWA",
         "BX": "BX听",
         "DPZ": "DPZ",
         "EAT": "EAT听",
         "HLNE": "HLNE听",
-        "ORA": "ORA9热听",
         "SAIL": "SAIL听",
         "SLM": "SLM15热听",
         "STEP": "STEP热",
@@ -337,7 +324,6 @@
         "JEF": "JEF"
     },
     "PE_Volume_up_backup": {
-        "AGNC": "AGNC",
         "APO": "APO",
         "JEF": "JEF"
     },
@@ -369,8 +355,6 @@
         "XP": "XP乙"
     },
     "PE_Volume_high_backup": {
-        "AEM": "AEM乙",
-        "ALGM": "ALGM乙",
         "ATI": "ATI乙",
         "AXS": "AXS乙",
         "BIRK": "BIRK乙",
@@ -513,7 +497,6 @@
         "ImportPriceY": ""
     },
     "PE_Deeper": {
-        "HIMS": "",
         "IONQ": "",
         "OKLO": "OKLO15热",
         "PATH": "",
@@ -521,7 +504,6 @@
         "SMR": "SMR15热"
     },
     "PE_Deeper_backup": {
-        "HIMS": "",
         "IONQ": "",
         "OKLO": "OKLO15热",
         "PATH": "",

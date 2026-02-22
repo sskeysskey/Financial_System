@@ -1401,11 +1401,13 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                         else:
                             turnover_str = f"{turnover_val:.1f}"
                     
+                    days_diff = abs((dates[-1] - xval).days)
                     # 构造浮窗显示列表
                     parts = [
                         f"{datetime.strftime(xval, '%Y-%m-%d')}", # 第一行：日期
                         f"{yval:.2f}",                            # 第二行：价格
                         f"{turnover_str}",                    # 第三行：成交额 (Turnover)
+                        f"{days_diff}天",                 # <--- 新增: 在成交额下方显示天数
                         ""                                        # 空行占位
                     ]
 
