@@ -299,7 +299,9 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("公司、股票和ETF搜索")
-        self.setGeometry(300, 100, 1000, 800)
+        self.setGeometry(200, 100, 1200, 800)
+        # --- 新增：允许主窗口接收键盘焦点 ---
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout(self.central_widget)
@@ -385,8 +387,18 @@ class MainWindow(QMainWindow):
         self.compare_data = {}
         self.sector_data = load_sectors_data()
 
+        # --- 新增：用于存储和追踪搜索结果列表的变量 ---
+        self.current_result_items = []    # 用于存储 (label对象, symbol) 元组
+        self.current_selected_index = -1  # 当前选中的结果索引（-1表示未选中任何项）
+
     def focus_search_input(self):
         self.input_field.setFocus()
+        self.input_field.selectAll() # 聚焦时自动全选，方便直接覆盖输入
+        
+        # --- 新增：使用快捷键聚焦搜索框时，也重置选中状态 ---
+        if getattr(self, "current_selected_index", -1) != -1:
+            self.current_selected_index = -1
+            self.update_result_selection()
 
     def start_search(self):
         keywords = self.input_field.text().strip()
@@ -407,6 +419,11 @@ class MainWindow(QMainWindow):
         self.worker.start()
 
     def on_text_changed(self, text: str):
+         # --- 新增：只要输入框文本改变，立刻清除键盘选中状态 ---
+         if getattr(self, "current_selected_index", -1) != -1:
+             self.current_selected_index = -1
+             self.update_result_selection() # 清除旧结果的高亮
+
          if not text.strip():
              self.display_history()
          else:
@@ -416,12 +433,19 @@ class MainWindow(QMainWindow):
         self.loading_label.hide()
         self.search_button.setEnabled(True)
         self.input_field.setEnabled(True)
-        self.input_field.setFocus()
+        
+        # --- 修改：搜索完成后，焦点交给主窗口，不再强制锁死在输入框 ---
+        self.setFocus()
+        
         if getattr(self, "suppress_history", False):
             self.input_field.selectAll()
             self.suppress_history = False
 
     def clear_results(self):
+        # --- 新增：清空当前的结果集缓存和选中状态 ---
+        self.current_result_items = []
+        self.current_selected_index = -1
+        
         while self.results_layout.count():
             child = self.results_layout.takeAt(0)
             if child.widget():
@@ -561,9 +585,57 @@ class MainWindow(QMainWindow):
                     display_text = "  ".join(display_parts)
                     lbl = self.create_result_label(display_text, symbol, sym_color, 20)
                 
+                # --- 新增：将生成的 label 和对应的 symbol 记录下来 ---
+                self.current_result_items.append((lbl, symbol))
+                
                 group_widget.addContentWidget(lbl)
             
             self.results_layout.addWidget(group_widget)
+
+    def update_result_selection(self):
+        """更新搜索结果的键盘选中状态（高亮 + 自动滚动）"""
+        for i, (lbl, sym) in enumerate(self.current_result_items):
+            if i == self.current_selected_index:
+                # 选中状态：改变背景色（这里使用深灰色，你可以按喜好调整）并加一点圆角
+                lbl.setStyleSheet("background-color: #3a3a3a; border-radius: 4px;")
+                # 让滚动区域自动滚动，确保选中的结果在屏幕内可见
+                self.result_scroll.ensureWidgetVisible(lbl, 50, 50)
+            else:
+                # 恢复默认的无背景状态
+                lbl.setStyleSheet("")
+
+    def handle_result_navigation(self, key):
+        """处理搜索结果的上下键和回车导航，返回True表示已拦截并处理"""
+        if not getattr(self, "current_result_items", []):
+            return False
+            
+        if key == Qt.Key.Key_Down:
+            self.current_selected_index = min(self.current_selected_index + 1, len(self.current_result_items) - 1)
+            self.update_result_selection()
+            return True
+        elif key == Qt.Key.Key_Up:
+            if self.current_selected_index > -1:
+                self.current_selected_index -= 1
+                self.update_result_selection()
+            return True
+        elif key in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            if getattr(self, "current_selected_index", -1) != -1:
+                lbl, symbol = self.current_result_items[self.current_selected_index]
+                self.handle_label_click(lbl, symbol)
+                return True
+        elif key == Qt.Key.Key_Escape:
+            if getattr(self, "current_selected_index", -1) != -1:
+                self.current_selected_index = -1
+                self.update_result_selection()
+                return True
+        return False
+    
+    def keyPressEvent(self, event):
+        """主窗口拦截键盘事件：即便焦点不在输入框，也能上下选择结果"""
+        if self.handle_result_navigation(event.key()):
+            event.accept()
+        else:
+            super().keyPressEvent(event)
 
     def create_result_label(self, display_text, symbol, color, font_size):
         lbl = ClickableLabel()
@@ -614,8 +686,12 @@ class MainWindow(QMainWindow):
     def _input_focus_in(self, event):
         self._orig_focus_in(event)
         if getattr(self, "suppress_history", False): return
-        self.display_history()
-        QTimer.singleShot(0, self.input_field.selectAll)
+        
+        # --- 修改：只有当输入框里没有字时，获取焦点才显示历史记录下拉框 ---
+        if not self.input_field.text().strip():
+            self.display_history()
+        else:
+            QTimer.singleShot(0, self.input_field.selectAll)
 
     def _input_mouse_press(self, event):
         self._orig_mouse_press(event)
@@ -649,6 +725,12 @@ class MainWindow(QMainWindow):
                     event.accept(); return
             elif key == Qt.Key.Key_Escape:
                  self.hide_history(); event.accept(); return
+        else:
+            # --- 修改：调用提出来的公共导航逻辑 ---
+            if self.handle_result_navigation(event.key()):
+                event.accept()
+                return
+
         self._orig_key_press(event)
 
     def hide_history(self):
