@@ -16,7 +16,9 @@
         "WPM",
         "AU",
         "CTVA",
-        "FNV"
+        "FNV",
+        "GFI",
+        "MT"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -106,8 +108,7 @@
         "BKR",
         "OKE",
         "CCJ",
-        "OXY",
-        "FANG"
+        "OXY"
     ],
     "Financial_Services": [
         "JPM",
@@ -164,10 +165,8 @@
         "IBKR",
         "BAM",
         "NWG",
-        "MET",
         "BRK-B",
         "MRSH",
-        "RKT",
         "BSBR"
     ],
     "Healthcare": [
@@ -204,9 +203,7 @@
         "TAK",
         "ARGX",
         "CAH",
-        "BDX",
-        "IDXX",
-        "HLN"
+        "BDX"
     ],
     "Industrials": [
         "GE",
@@ -249,8 +246,7 @@
         "FERG",
         "CARR",
         "FAST",
-        "URI",
-        "FIX"
+        "URI"
     ],
     "Real_Estate": [
         "PLD",

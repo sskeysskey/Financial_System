@@ -57,21 +57,25 @@ CONFIG = {
     "RECENT_EARNINGS_COUNT": 2,
     "MARKETCAP_THRESHOLD": 200_000_000_000,  # 2000亿
     "MARKETCAP_THRESHOLD_MEGA": 500_000_000_000,  # 5000亿
+    "MARKETCAP_THRESHOLD_GIANT": 1_000_000_000_000,  # 新增：10000亿
 
     "COND5_WINDOW_DAYS": 6,
 
     # 严格筛选标准
     "PRICE_DROP_PERCENTAGE_LARGE": 0.1,  # <2000亿=10%
     "PRICE_DROP_PERCENTAGE_SMALL": 0.09,   # 2000亿 ≤ 市值 < 5000亿 = 9%
-    "PRICE_DROP_PERCENTAGE_MEGA": 0.07,    # ≥5000亿=7%
+    "PRICE_DROP_PERCENTAGE_MEGA": 0.07,    # 5000亿 ≤ 市值 < 10000亿 = 7%
+    "PRICE_DROP_PERCENTAGE_GIANT": 0.05,   # 新增：≥10000亿=5%
 
     # 普通宽松筛选标准
     "RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.1,  # <2000亿=10%
-    "RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.08,  # ≥2000亿=8%
+    "RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.08,  # 2000亿 ≤ 市值 < 10000亿 = 8%
+    "RELAXED_PRICE_DROP_PERCENTAGE_MINI": 0.05,  # 新增：≥10000亿=5%
 
-    # 新增：次宽松筛选标准
+    # 次宽松筛选标准
     "SUB_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.09,  # <2000亿=9%
-    "SUB_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.07,  # ≥2000亿=7%
+    "SUB_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.07,   # 2000亿 ≤ 市值 < 10000亿 = 7%
+    "SUB_RELAXED_PRICE_DROP_PERCENTAGE_MINI": 0.05,    # 新增：≥10000亿=5%
 
     # 最宽松筛选标准
     "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.07,  # <2000亿=7%
@@ -1078,7 +1082,7 @@ def check_entry_conditions(data, symbol_to_trace, log_detail):
 # ========== 代码修改点 2/3: 新增 apply_common_filters 函数 ==========
 # 这个函数包含了从原 evaluate_stock_conditions 中移出的通用过滤逻辑
 
-def apply_common_filters(data, symbol_to_trace, log_detail, drop_pct_large, drop_pct_small, skip_drawdown=False):
+def apply_common_filters(data, symbol_to_trace, log_detail, drop_pct_large, drop_pct_small, drop_pct_mini=None, skip_drawdown=False):
     """
     应用通用的过滤条件：价格回撤、10日最低价、成交额。
     """
@@ -1086,7 +1090,7 @@ def apply_common_filters(data, symbol_to_trace, log_detail, drop_pct_large, drop
     is_tracing = (symbol == symbol_to_trace)
     
     if is_tracing:
-        log_detail(f"\n--- [{symbol}] 开始执行通用过滤 (使用 large={drop_pct_large*100}%, small={drop_pct_small*100}%) ---")
+        log_detail(f"\n--- [{symbol}] 开始执行通用过滤 (使用 large={drop_pct_large*100}%, small={drop_pct_small*100}%" + (f", mini={drop_pct_mini*100}%" if drop_pct_mini else "") + ") ---")
 
     # 1. 价格回撤条件 (可跳过)
     if not skip_drawdown:
@@ -1108,11 +1112,14 @@ def apply_common_filters(data, symbol_to_trace, log_detail, drop_pct_large, drop
         
         drop_pct = 0
         if is_strict_mode:
-            if marketcap and marketcap >= CONFIG["MARKETCAP_THRESHOLD_MEGA"]: drop_pct = CONFIG["PRICE_DROP_PERCENTAGE_MEGA"]
+            # ========== 修改点：增加对巨型市值的判断 ==========
+            if marketcap and marketcap >= CONFIG["MARKETCAP_THRESHOLD_GIANT"]: drop_pct = CONFIG["PRICE_DROP_PERCENTAGE_GIANT"]
+            elif marketcap and marketcap >= CONFIG["MARKETCAP_THRESHOLD_MEGA"]: drop_pct = CONFIG["PRICE_DROP_PERCENTAGE_MEGA"]
             elif marketcap and marketcap >= CONFIG["MARKETCAP_THRESHOLD"]: drop_pct = CONFIG["PRICE_DROP_PERCENTAGE_SMALL"]
             else: drop_pct = CONFIG["PRICE_DROP_PERCENTAGE_LARGE"]
         else:
-            if marketcap and marketcap >= CONFIG["MARKETCAP_THRESHOLD"]: drop_pct = drop_pct_small
+            if drop_pct_mini and marketcap and marketcap >= CONFIG["MARKETCAP_THRESHOLD_GIANT"]: drop_pct = drop_pct_mini
+            elif marketcap and marketcap >= CONFIG["MARKETCAP_THRESHOLD"]: drop_pct = drop_pct_small
             else: drop_pct = drop_pct_large
 
         # 使用修正后的 high_price_reference 计算阈值
@@ -1281,7 +1288,7 @@ def run_processing_logic(log_detail):
     )
     
     # ========== 修改点 1：perform_filter_pass 不再进行 Tag 过滤 ==========
-    def perform_filter_pass(symbols_to_check, drop_large, drop_small, pass_name):
+    def perform_filter_pass(symbols_to_check, drop_large, drop_small, pass_name, drop_mini=None):
         preliminary_results = []       # 普通股 (PE 分组)
         oversell_w_candidates = []     # 仅限条件 6 (OverSell_W)
         pe_deep_candidates = []        # 条件 1-5 触发普通深跌
@@ -1305,7 +1312,7 @@ def run_processing_logic(log_detail):
             # 逻辑：如果是条件5、6、7触发，跳过价格回撤过滤 (因为这些策略自带价格位置判断)
             should_skip_drawdown = passed_cond5 or passed_cond6 or passed_cond7
             
-            if apply_common_filters(data, SYMBOL_TO_TRACE, log_detail, drop_large, drop_small, skip_drawdown=should_skip_drawdown):
+            if apply_common_filters(data, SYMBOL_TO_TRACE, log_detail, drop_large, drop_small, drop_pct_mini=drop_mini, skip_drawdown=should_skip_drawdown):
                 # ========== [修改] 开始：此处新增日期重合检查，修复条件6漏检问题 ==========
                 # 检查最新交易日是否等于财报日
                 # 这一步现在对 条件6 和 条件1-5 同时生效
@@ -1418,8 +1425,17 @@ def run_processing_logic(log_detail):
 
     # 接收 5 个返回值 (Raw Data: 包含可能被 Tag 黑名单命中的 Symbol)
     res_super = perform_filter_pass(super_relaxed_symbols, CONFIG["SUPER_RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["SUPER_RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "最宽松")
-    res_sub = perform_filter_pass(sub_relaxed_symbols, CONFIG["SUB_RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["SUB_RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "次宽松")
-    res_relaxed = perform_filter_pass(relaxed_symbols, CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "普通宽松")
+    
+    # ========== 修改点：次宽松组传入 drop_mini 参数 ==========
+    res_sub = perform_filter_pass(
+        sub_relaxed_symbols, 
+        CONFIG["SUB_RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], 
+        CONFIG["SUB_RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], 
+        "次宽松", 
+        drop_mini=CONFIG.get("SUB_RELAXED_PRICE_DROP_PERCENTAGE_MINI")
+    )
+    
+    res_relaxed = perform_filter_pass(relaxed_symbols, CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "普通宽松", drop_mini=CONFIG.get("RELAXED_PRICE_DROP_PERCENTAGE_MINI"))
     res_strict = perform_filter_pass(strict_symbols, CONFIG["PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["PRICE_DROP_PERCENTAGE_SMALL"], "严格")
 
     # ========== 修改点 2: 汇总 Raw 数据 (包含 Tag 黑名单，用于 History) ==========
