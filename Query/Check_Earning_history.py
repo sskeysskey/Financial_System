@@ -199,4 +199,30 @@ if __name__ == "__main__":
         width=500,
         height=600
     )
+
+    # =======================================================
+    # 新增：解决 macOS 窗口在 Dock 弹跳而不置前的问题
+    # =======================================================
+    
+    # 1. PyQt 原生窗口置前请求
+    dialog.raise_()
+    dialog.activateWindow()
+
+    # 2. (可选推荐) 如果你希望这个查询窗口始终悬浮在主图表之上，取消下面这行的注释：
+    # dialog.setWindowFlags(dialog.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
+
+    # 3. macOS 终极杀手锏：利用 AppleScript 强制将当前 PID 进程推到最前
+    import platform
+    import subprocess
+    if platform.system() == "Darwin":
+        try:
+            # 告诉 macOS 系统事件：把当前进程 ID 的应用设为最前
+            subprocess.run([
+                'osascript', '-e',
+                f'tell application "System Events" to set frontmost of the first process whose unix id is {os.getpid()} to true'
+            ], check=False)
+        except Exception as e:
+            print(f"macOS 强制置前执行失败: {e}")
+    # =======================================================
+
     dialog.exec()
