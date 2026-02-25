@@ -12,7 +12,7 @@ BASE_PATH = USER_HOME
 # ================= 配置区域 =================
 # 如果为空，则运行"今天"模式；如果填入日期（如 "2024-11-03"），则运行回测模式
 SYMBOL_TO_TRACE = "" 
-TARGET_DATE = ""
+TARGET_DATE = "" 
 
 # SYMBOL_TO_TRACE = "IESC"
 # TARGET_DATE = "2026-01-09"
@@ -54,12 +54,12 @@ CONFIG = {
     ],
     # ========== 策略1 (PE_Volume放量下跌) 参数 ==========
     "COND8_VOLUME_LOOKBACK_MONTHS": 2,   # 过去 N 个月
-    "COND8_VOLUME_RANK_THRESHOLD": 4,    # 成交量排名前 N 名 (默认3，代码逻辑是 <4)
+    "COND8_VOLUME_RANK_THRESHOLD": 3,    # 成交量排名前 N 名 (默认3，代码逻辑是 <4)
     
     # ========== 策略2 (PE_Volume_up活跃上涨) 参数 ==========
     "COND_UP_HISTORY_LOOKBACK_DAYS": 5,  # 历史记录回溯天数
     "COND_UP_VOL_RANK_MONTHS": 2,        # 放量检查回溯月份
-    "COND_UP_VOL_RANK_THRESHOLD": 4,     # 放量检查前 N 名
+    "COND_UP_VOL_RANK_THRESHOLD": 3,     # 放量检查前 N 名
 
     # ========== 策略3 (PE_Volume_high 财报突破放量) 参数 ==========
     "COND_HIGH_TURNOVER_LOOKBACK_MONTHS": 12,  # 成交额回溯12个月
@@ -230,52 +230,6 @@ def get_trading_dates_list(cursor, sector_name, symbol, end_date_str, limit=10):
     rows = cursor.fetchall()
     return [r[0] for r in rows]
 
-def check_volume_rank(cursor, sector_name, symbol, latest_date_str, latest_volume, lookback_months, rank_threshold, log_detail, is_tracing):
-    """
-    通用检查：latest_volume 是否是过去 lookback_months 个月内的前 rank_threshold 名
-    """
-    # 计算 N 个月前的日期
-    try:
-        dt = datetime.datetime.strptime(latest_date_str, "%Y-%m-%d")
-        start_date = dt - datetime.timedelta(days=lookback_months * 30)
-        start_date_str = start_date.strftime("%Y-%m-%d")
-    except Exception:
-        return False
-
-    # 查询过去 N 个月的所有日期和成交量
-    query = f'SELECT date, volume FROM "{sector_name}" WHERE name = ? AND date >= ? AND date <= ?'
-    cursor.execute(query, (symbol, start_date_str, latest_date_str))
-    rows = cursor.fetchall() # 结果是 [(date1, vol1), (date2, vol2), ...]
-    
-    # 过滤掉 None 值
-    valid_data = [(r[0], r[1]) for r in rows if r[1] is not None]
-    
-    if not valid_data:
-        return False
-        
-    # 排序：按 volume (x[1]) 从大到小排
-    sorted_data = sorted(valid_data, key=lambda x: x[1], reverse=True)
-    
-    # 截取前 N 名
-    top_n_data = sorted_data[:rank_threshold]
-    
-    # 提取前 N 名的成交量数值
-    top_n_volumes = [item[1] for item in top_n_data]
-    
-    # 判定逻辑：当前成交量是否在前 N 名中，或者大于等于第 N 名的值
-    is_top_n = False
-    if latest_volume in top_n_volumes:
-        is_top_n = True
-    elif len(top_n_volumes) >= rank_threshold and latest_volume >= top_n_volumes[rank_threshold - 1]:
-        is_top_n = True
-        
-    if is_tracing:
-        log_detail(f"     [Rank检查] 日期:{latest_date_str}, 量:{latest_volume}, 回溯:{lookback_months}月")
-        top_n_str = ", ".join([f"[{d}]: {v}" for d, v in top_n_data])
-        log_detail(f"     前{rank_threshold}名: {top_n_str} -> 结果: {is_top_n}")
-        
-    return is_top_n
-
 def check_is_earnings_day(cursor, symbol, target_date_str):
     """
     检查 target_date_str 是否为该 symbol 在 Earning 表中的最新财报日。
@@ -294,16 +248,16 @@ def check_is_earnings_day(cursor, symbol, target_date_str):
         return False
 
 # --- 策略1: PE_Volume (T, T-1, T-2, T-3 放量下跌) ---
-def process_condition_8(db_path, history_json_path, sector_map, target_date_override, symbol_to_trace, log_detail):
+def pe_volume(db_path, history_json_path, sector_map, target_date_override, symbol_to_trace, log_detail):
     """
-    执行条件8策略：PE_Volume (修改版：T-1, T-2, T-3 检查是否放量且下跌)
+    执行条件8策略：PE_Volume (修改版：T-1, T-2, T-3 检查是否放量且下跌，使用成交额 Price * Volume 进行排名)
     """
     log_detail("\n========== 开始执行 条件8 (PE_Volume - 放量下跌) 策略 ==========")
     
     # 读取配置
     rank_threshold = CONFIG.get("COND8_VOLUME_RANK_THRESHOLD", 3)
     lookback_months = CONFIG.get("COND8_VOLUME_LOOKBACK_MONTHS", 3)
-    log_detail(f"配置参数: 排名阈值 = Top {rank_threshold}, 且必须收盘价下跌")
+    log_detail(f"配置参数: 成交额排名阈值 = Top {rank_threshold}, 且必须收盘价下跌")
 
     # 1. 确定基准日期 (Today)
     # 如果没有指定日期，则获取昨天的日期
@@ -402,9 +356,11 @@ def process_condition_8(db_path, history_json_path, sector_map, target_date_over
                 if is_tracing: log_detail(f"    x [失败] 价格未下跌 ({price_curr} >= {price_prev})。")
                 continue
 
-            # 核心判断逻辑：检查放量
-            vol_cond = check_volume_rank(
-                cursor, sector, symbol, dates[0], vol_curr, 
+            # --- 修改点：计算成交额并调用成交额排名函数 ---
+            turnover_curr = price_curr * vol_curr
+            
+            vol_cond = check_turnover_rank(
+                cursor, sector, symbol, dates[0], turnover_curr, 
                 CONFIG["COND8_VOLUME_LOOKBACK_MONTHS"], 
                 rank_threshold, 
                 log_detail, is_tracing
@@ -537,10 +493,10 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
     log_detail("\n========== 开始执行 策略2 (PE_Volume_up) ==========")
     
     # 配置参数
-    lookback_days = CONFIG.get("COND_UP_HISTORY_LOOKBACK_DAYS", 3) 
+    lookback_days = CONFIG.get("COND_UP_HISTORY_LOOKBACK_DAYS", 5) 
     # 修改点：放量检查回溯月份改为3个月
-    vol_rank_months = CONFIG.get("COND_UP_VOL_RANK_MONTHS", 3)
-    vol_rank_threshold = CONFIG.get("COND_UP_VOL_RANK_THRESHOLD", 3)
+    vol_rank_months = CONFIG.get("COND_UP_VOL_RANK_MONTHS", 2)
+    vol_rank_threshold = CONFIG.get("COND_UP_VOL_RANK_THRESHOLD", 4)
     
     log_detail(f"配置: 历史池扫描范围=近3天(T, T-1, T-2), 放量标准=近{vol_rank_months}个月前{vol_rank_threshold}名")
 
@@ -609,8 +565,11 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
         date_curr, price_curr, vol_curr = rows[0]
         date_prev, price_prev, vol_prev = rows[1]
         
-        if price_curr is None or price_prev is None or vol_curr is None or vol_prev is None:
-            continue
+        if None in [price_curr, price_prev, vol_curr, vol_prev]: continue
+
+        # 计算成交额 (Turnover)
+        turnover_curr = price_curr * vol_curr
+        turnover_prev = price_prev * vol_prev
 
         # 规则1 (硬性): 必须上涨 (最新价 > 次新价)
         if price_curr <= price_prev:
@@ -640,11 +599,11 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
         reason = ""
 
         # 规则3: 成交量分支逻辑
-        if vol_curr > vol_prev:
+        if turnover_curr > turnover_prev:
             # === 分支 A: 放量上涨 ===
             # 修改点: 检查今日(T)是否为 3个月内前3名
-            is_top_vol = check_volume_rank(
-                cursor, sector, symbol, date_curr, vol_curr, 
+            is_top_vol = check_turnover_rank(
+                cursor, sector, symbol, date_curr, turnover_curr, 
                 vol_rank_months, vol_rank_threshold, log_detail, is_tracing
             )
             if is_top_vol:
@@ -661,18 +620,20 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
             has_high_volume_history = False
             # 检查 T, T-1, T-2
             for i in range(min(3, len(rows))):
-                d_date, _, d_vol = rows[i]
-                if d_vol is None: continue
+                d_date, d_price, d_vol = rows[i] # 1. 这里要解包出 d_price
+                if d_vol is None or d_price is None: continue
                 
-                # 检查这一天是否是当时的3个月内前3名
-                # 注意：check_volume_rank 会自动回溯该日期之前的3个月
-                is_high = check_volume_rank(
-                    cursor, sector, symbol, d_date, d_vol,
-                    vol_rank_months, vol_rank_threshold, log_detail, False # 这里如果不追踪细节可以设为False，避免日志爆炸
+                # 2. 必须计算那一天的成交额
+                d_turnover = d_price * d_vol 
+                
+                # 3. 传入 d_turnover 而不是 d_vol
+                is_high = check_turnover_rank(
+                    cursor, sector, symbol, d_date, d_turnover,
+                    vol_rank_months, vol_rank_threshold, log_detail, False 
                 )
                 if is_high:
                     has_high_volume_history = True
-                    if is_tracing: log_detail(f"    -> 发现高量日: {d_date} (Vol:{d_vol})")
+                    if is_tracing: log_detail(f"    -> 发现高成交额日: {d_date} (TO:{d_turnover:,.0f})")
                     break # 只要有一天满足即可
             
             if has_high_volume_history:
@@ -715,7 +676,7 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         log_detail(f"读取历史文件失败: {e}")
 
     valid_pool = set()
-    target_pool_names = ["PE_W", "PE_Deep", "PE_Deeper", "PE_valid", "PE_invalid", "OverSell_W", "season"]
+    target_pool_names = ["PE_W", "PE_Deep", "PE_Deeper", "PE_valid", "PE_invalid", "OverSell_W", "season", "no_season"]
     try:
         with open(panel_json_path, 'r', encoding='utf-8') as f:
             panel_data = json.load(f)
@@ -726,7 +687,6 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         log_detail(f"已加载指定跌幅池，共 {len(valid_pool)} 个候选抄底 Symbol。")
     except Exception as e:
         log_detail(f"读取 Panel 文件失败: {e}")
-    # ====================================================================
 
     # 确定基准日期
     base_date = target_date_override if target_date_override else (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
@@ -828,24 +788,38 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         
         # ================= [新增逻辑] 独立判定：抄底规则 =================
         cond_chaodi = False
-        if symbol in valid_pool:
-            for h_date, h_symbols in hist_pe_vol_high.items():
-                # 检查日期是否在最新财报日到当前最新日期之间
-                if latest_er_date <= h_date <= latest_date:
-                    if symbol in h_symbols:
+        
+        # 1. 检查历史：从最新财报日到今天，该股是否进入过 PE_Volume_high
+        was_in_high_history = False
+        for h_date, h_symbols in hist_pe_vol_high.items():
+            if latest_er_date <= h_date <= latest_date:
+                if symbol in h_symbols:
+                    was_in_high_history = True
+                    break
+        
+        if was_in_high_history:
+            # 路径 A: 跌幅池抄底 (今日在 PE_W/Deep 等池子里)
+            if symbol in valid_pool:
+                cond_chaodi = True
+                if is_tracing: log_detail(f"    - 抄底判定: 命中 [回调池路径]")
+            
+            # 路径 B: 放量下跌抄底 (今日价格下跌 且 成交额是财报后Top 2)
+            else:
+                cond_price_down_today = (latest_price < prev_price)
+                if cond_price_down_today:
+                    # 检查成交额是否为财报后至今的前2名
+                    is_top2_since_er = check_turnover_since_earning(
+                        cursor, sector, symbol, latest_er_date, latest_date, latest_turnover,
+                        2, log_detail, is_tracing
+                    )
+                    if is_top2_since_er:
                         cond_chaodi = True
-                        if is_tracing:
-                            log_detail(f"    - 条件H (抄底规则): 满足！在 {h_date} 曾入选 PE_Volume_high 且今日在指定池中。")
-                        break
-        else:
-            if is_tracing:
-                log_detail(f"    - 条件H (抄底规则): 不满足 (今日不在指定的7个跌幅池中)")
-                
+                        if is_tracing: log_detail(f"    - 抄底判定: 命中 [放量下跌路径] (成交额Top2)")
+
         if cond_chaodi:
             results_chaodi.append(symbol)
             if is_tracing:
-                log_detail(f"    ✅ [选中-抄底类] 财报后曾入选 PE_Volume_high 并出现回调")
-        # ===================================================================
+                log_detail(f"    ✅ [选中-抄底类] 满足历史入选+今日回调/放量条件")
 
         # 条件C: 今日上涨
         cond_price_up_today = (latest_price > prev_price)
@@ -1054,7 +1028,6 @@ def check_turnover_since_earning(cursor, sector_name, symbol, er_date_str, lates
     
     return is_top_n
 
-
 def check_turnover_rank(cursor, sector_name, symbol, latest_date_str, latest_turnover, lookback_months, rank_threshold, log_detail, is_tracing):
     """
     检查 latest_turnover (成交额=price*volume) 是否是过去 lookback_months 个月内的前 rank_threshold 名
@@ -1126,7 +1099,7 @@ def run_pe_volume_logic(log_detail):
         return
 
     # ================= 策略 1 执行 =================
-    raw_pe_volume = process_condition_8(
+    raw_pe_volume = pe_volume(
         DB_FILE, 
         EARNING_HISTORY_JSON_FILE, 
         symbol_to_sector_map, 

@@ -21,7 +21,8 @@ NORD_THEME = {
     'text_light': '#D8DEE9',
     'text_bright': '#ECEFF4',
     'accent_blue': '#5E81AC',
-    'success_green': '#A3BE8C', # 新增一个颜色用于区分板块
+    'success_green': '#A3BE8C',
+    'warning_red': '#BF616A', # 新增：用于黑名单标记的红色
 }
 
 # --- 2. 界面类 (复用自 chart_input.py) ---
@@ -37,7 +38,7 @@ class InfoDialog(QDialog):
         text_box.setReadOnly(True)
         text_box.setFont(QFont(font_family))
         
-        # [修改点] 这里改成 setHtml，这样才能渲染颜色和字体样式
+        # 渲染 HTML 内容
         text_box.setHtml(content) 
         
         layout.addWidget(text_box)
@@ -120,7 +121,7 @@ def search_history(symbol):
         html_parts.append(f"<p style='color:orange'>警告: 找不到 Sector 文件<br>{SECTOR_PATH}</p>")
 
     # ==============================
-    # 任务 2: 检索 Earning History
+    # 任务 2: 检索 Earning History 并处理黑名单
     # ==============================
     if not os.path.exists(JSON_PATH):
         return "".join(html_parts) + f"<br><p style='color:red'>错误：找不到 Earning 文件<br>{JSON_PATH}</p>"
@@ -129,8 +130,21 @@ def search_history(symbol):
         with open(JSON_PATH, 'r', encoding='utf-8') as f:
             data = json.load(f)
             
-        # 遍历 JSON 中的所有大类 (如 season, no_season, short 等)
+        # --- [新增逻辑] 预先提取黑名单日期 ---
+        blacklist_dates = set()
+        # 假设黑名单的 key 是 '_tag_blacklist'
+        if "_Tag_Blacklist" in data:
+            for date_str, symbol_list in data["_Tag_Blacklist"].items():
+                if isinstance(symbol_list, list) and symbol in symbol_list:
+                    blacklist_dates.add(date_str)
+
+        # 遍历所有分类
         for category, date_dict in data.items():
+            # 如果是黑名单分类本身，我们通常可以选择跳过不显示，或者单独显示
+            # 这里选择跳过，因为它作为“标记”已经体现在其他分类里了
+            if category == "_Tag_Blacklist":
+                continue
+
             found_dates = []
             
             # 遍历该类下的所有日期
@@ -146,7 +160,14 @@ def search_history(symbol):
                 html_parts.append(make_header(category, NORD_THEME['success_green']))
                 
                 for d in found_dates:
-                    html_parts.append(f"&nbsp;&nbsp;• {d}<br>")
+                    # --- [核心修改] 检查该日期是否在黑名单中 ---
+                    if d in blacklist_dates:
+                        # 如果在黑名单中，添加红色警告标识
+                        marker = f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;'>⚡️</span>"
+                    else:
+                        marker = ""
+                        
+                    html_parts.append(f"&nbsp;&nbsp;• {d}{marker}<br>")
                 html_parts.append("<br>")
 
     except Exception as e:

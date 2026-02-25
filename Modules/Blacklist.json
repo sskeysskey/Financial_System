@@ -977,7 +977,6 @@
         "TEM",
         "RIVN",
         "INSM",
-        "ICLR",
         "A",
         "MDGL",
         "PINS"
@@ -1054,6 +1053,14 @@
         "HHH",
         "ONTO",
         "SAIL",
-        "YUMC"
+        "YUMC",
+        "STEP",
+        "KOF",
+        "NMR",
+        "EQH",
+        "KT",
+        "VONG",
+        "IX",
+        "DDS"
     ]
 }

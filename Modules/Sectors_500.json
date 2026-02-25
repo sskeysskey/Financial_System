@@ -17,8 +17,7 @@
         "AU",
         "CTVA",
         "FNV",
-        "GFI",
-        "MT"
+        "GFI"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -79,7 +78,8 @@
         "CL",
         "MNST",
         "DEO",
-        "TGT"
+        "TGT",
+        "ABEV"
     ],
     "Energy": [
         "XOM",
@@ -203,7 +203,8 @@
         "TAK",
         "ARGX",
         "CAH",
-        "BDX"
+        "BDX",
+        "IDXX"
     ],
     "Industrials": [
         "GE",
@@ -246,7 +247,8 @@
         "FERG",
         "CARR",
         "FAST",
-        "URI"
+        "URI",
+        "FIX"
     ],
     "Real_Estate": [
         "PLD",
@@ -310,7 +312,9 @@
         "SNDK",
         "MPWR",
         "ASX",
-        "TER"
+        "TER",
+        "KEYS",
+        "CRWV"
     ],
     "Utilities": [
         "NEE",

@@ -1534,7 +1534,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                                     # C. 计算成交额变化的百分比
                                     if start_turnover > 0:
                                         turnover_change = ((current_turnover - start_turnover) / start_turnover) * 100.0
-                                        turnover_text = f"{turnover_change:+.1f}%"
+                                        # --- 修改处 1: 去掉 +.1f 中的 + ---
+                                        turnover_text = f"{turnover_change:.1f}%"
                                     else:
                                         turnover_text = "--%"
                                 except:
@@ -1559,7 +1560,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                             f"{date_start_str}\n"
                             f"{date_end_str}\n"
                             f"{days_diff}\n"
-                            f"{percent_change:+.1f}%\n"
+                            f"{percent_change:.1f}%\n"
                             f"{turnover_text}"
                         )
 

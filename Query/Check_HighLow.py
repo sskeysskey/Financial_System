@@ -1,6 +1,7 @@
 import sys
 import json
 import os
+import sqlite3
 from collections import OrderedDict
 import subprocess
 
@@ -198,6 +199,24 @@ def load_text_data(path):
                 cleaned_key = key.split()[-1]
                 data[cleaned_key] = value.split(',')[0].strip() if ',' in value else value
     return data
+
+def fetch_mnspp_data_from_db(db_path, symbol):
+    """从数据库获取财务数据"""
+    if not os.path.exists(db_path):
+        return "N/A", None, "N/A", "--"
+    try:
+        with sqlite3.connect(db_path, timeout=60.0) as conn:
+            cursor = conn.cursor()
+            query = "SELECT shares, marketcap, pe_ratio, pb FROM MNSPP WHERE symbol = ?"
+            cursor.execute(query, (symbol,))
+            result = cursor.fetchone()
+            if result:
+                return result  # 返回 (shares, marketcap, pe, pb)
+            else:
+                return "N/A", None, "N/A", "--"
+    except Exception as e:
+        print(f"查询财务数据出错: {e}")
+        return "N/A", None, "N/A", "--"
 
 # ----------------------------------------------------------------------
 # 主窗口
@@ -529,10 +548,28 @@ class HighLowWindow(QMainWindow):
         self.symbol_manager.set_current_symbol(symbol)
         curr_list = self.symbol_manager.symbols
         pos_str = f"{symbol} ({curr_list.index(symbol)+1}/{len(curr_list)})" if symbol in curr_list else symbol
+        
+        # --- 新增：获取财务数据 ---
+        shares_val, marketcap, pe, pb = fetch_mnspp_data_from_db(DB_PATH, symbol)
+        
         sector = next((s for s, names in self.sector_data.items() if symbol in names), None)
+        
         try:
-            plot_financial_data(DB_PATH, sector, symbol, self.compare_data.get(symbol, "N/A"), "N/A", None, "N/A", 
-                                self.json_data, '1Y', False, callback=self.handle_chart_callback, window_title_text=pos_str)
+            # --- 修改：将获取到的真实数据传入 plot_financial_data ---
+            plot_financial_data(
+                DB_PATH, 
+                sector, 
+                symbol, 
+                self.compare_data.get(symbol, "N/A"), 
+                (shares_val, pb),   # 对应 share 参数，传入元组 (shares, pb)
+                marketcap,          # 对应 marketcap 参数
+                pe,                 # 对应 pe 参数
+                self.json_data, 
+                '1Y', 
+                False, 
+                callback=self.handle_chart_callback, 
+                window_title_text=pos_str
+            )
             self.setFocus()
         except Exception as e: print(f"绘图错误: {e}")
 
