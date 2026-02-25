@@ -10,11 +10,11 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 # 使用 os.path.expanduser('~') 获取用户主目录，增强可移植性
 BASE_PATH = USER_HOME
 
-SYMBOL_TO_TRACE = ""
-TARGET_DATE = ""
+# SYMBOL_TO_TRACE = ""
+# TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "KO"
-# TARGET_DATE = "2026-01-07"
+SYMBOL_TO_TRACE = "DOCN"
+TARGET_DATE = "2026-01-30"
 
 # 动态生成日志路径，不再写死用户名
 LOG_FILE_PATH = os.path.join(BASE_PATH, "Downloads", "No_Season_trace_log.txt")
@@ -87,7 +87,7 @@ CONFIG = {
     # 触发宽松筛选的最小分组数量 (仅对 PE_valid 组生效)
     "MIN_PE_VALID_SIZE_FOR_RELAXED_FILTER": 5,
 
-    # 回撤阀值 5%：最新收盘价比最新交易日前10天收盘价的最低值高不超过5%（如果10天内有财报，则将财报日收盘价作为最低值）
+    # 回撤阀值 6%：最新收盘价比最新交易日前10天收盘价的最低值高不超过6%（如果10天内有财报，则将财报日收盘价作为最低值）
     "MAX_INCREASE_PERCENTAGE_SINCE_LOW": 0.06,
 
     # 【新增】热门板块回撤容忍度：如果属于 HOT_TAGS，则允许放宽到 12%

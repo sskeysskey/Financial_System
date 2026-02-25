@@ -25,6 +25,9 @@ CONFIG = {
     "M_TOP_HEIGHT_TOLERANCE": 0.038,       # 双峰高度差容忍度 (3.8%)
     "M_TOP_NECK_DEPTH": 0.025,             # 颈线深度 (2.5%)
     "M_TOP_MIN_DAYS_GAP": 3,               # 双峰之间的最小间隔天数
+
+    # --- 新增策略：砸顶参数 ---
+    "PUMP_DUMP_THRESHOLD": 0.10,   # 最新收盘价比历史信号日收盘价高出多少 (0.10 = 10%)
 }
 
 # 动态路径生成
@@ -104,6 +107,15 @@ try:
 except FileNotFoundError:
     panel_data = {}
     logger.warning("PANEL_FILE not found, initializing empty.")
+
+# 读取 Earning_History.json (全局只读一次用于检索)
+try:
+    with open(EARNING_HISTORY_FILE, 'r', encoding='utf-8') as f:
+        earning_history_data = json.load(f)
+    logger.info('Loaded EARNING_HISTORY_FILE for global lookup')
+except (FileNotFoundError, json.JSONDecodeError):
+    earning_history_data = {}
+    logger.warning("EARNING_HISTORY_FILE not found or empty, creating empty lookup dict.")
 
 # ==========================================
 # 5. 辅助函数
@@ -299,6 +311,60 @@ def check_double_top(cursor, symbol, sector):
     except Exception as e:
         logger.error(f'[{symbol}] check_double_top error: {e}')
         return False
+    
+def get_latest_earnings_date(cursor, symbol):
+    """
+    从数据库的 Earning 表中获取该 symbol 的最近财报日。
+    如果没有找到相关记录，则默认回退指定的配置天数（默认90天）。
+    """
+    try:
+        # 按日期降序排列，取最近的一次财报日期
+        cursor.execute('SELECT date FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 1', (symbol,))
+        row = cursor.fetchone()
+        if row and row[0]:
+            return row[0]
+    except Exception as e:
+        logger.error(f"[{symbol}] Error querying latest earnings date: {e}")
+    
+    # 如果找不到财报日或者表不存在/报错，默认回退配置的天数
+    fallback_date = datetime.now() - timedelta(days=CONFIG.get("EARNINGS_LOOKBACK_DAYS", 90))
+    return fallback_date.strftime('%Y-%m-%d')
+
+def check_pump_dump_top(cursor, sector, symbol, latest_date_str, latest_price, earnings_date_str):
+    """
+    检索从最近财报日到最新日期之间，是否在 Short 或 Short_W 中出现过。
+    如果出现过，查询当天的收盘价，并比对最新收盘价是否高出配置的阈值。
+    """
+    threshold = CONFIG.get("PUMP_DUMP_THRESHOLD", 0.10)
+    hit_dates = []
+    
+    # 检索是否在指定时间段内出现过
+    for group in ["Short", "Short_W"]:
+        if group not in earning_history_data: continue
+        
+        for date_str, symbols_list in earning_history_data[group].items():
+            if earnings_date_str <= date_str < latest_date_str:
+                if symbol in symbols_list:
+                    hit_dates.append(date_str)
+                    
+    if not hit_dates:
+        return False, ""
+        
+    # 如果出现过，查询历史日期的收盘价
+    for past_date in hit_dates:
+        try:
+            cursor.execute(f'SELECT price FROM "{sector}" WHERE name = ? AND date = ?', (symbol, past_date))
+            row = cursor.fetchone()
+            if row and row[0] is not None:
+                past_price = float(row[0])
+                # 计算价格涨幅
+                if past_price > 0 and (latest_price - past_price) / past_price >= threshold:
+                    return True, f"较{past_date}信号日大涨{((latest_price - past_price) / past_price)*100:.1f}%"
+        except Exception as e:
+            logger.error(f"[{symbol}] Error querying past price for {past_date}: {e}")
+            continue
+            
+    return False, ""
 
 # ==========================================
 # 7. 主执行逻辑
@@ -373,42 +439,80 @@ for symbol in symbols:
         if price_curr is None or price_prev is None or vol_curr is None:
             continue
             
-        # --- C. 基础门槛 1: 必须下跌 ---
-        if price_curr >= price_prev:
+                # --- 提前计算今日成交额 ---
+        current_turnover = price_curr * vol_curr
+
+        # --- D2. 提前进行进阶门槛：砸顶检查 (无需下跌即可触发) ---
+        # 传入 cursor 去 Earning 表查询最近的财报日
+        earnings_date_str = get_latest_earnings_date(cursor, symbol)
+        
+        is_pump_dump = False
+        pd_reason = ""
+        # 只有获取到了合理的财报日期，才去检查是否砸顶
+        if earnings_date_str:
+            is_pump_dump, pd_reason = check_pump_dump_top(
+                cursor, sector, symbol, date_curr, price_curr, earnings_date_str
+            )
+
+        # --- C. 基础门槛 1: 必须下跌 (针对原策略的拦截) ---
+        # 核心改动：如果【不是砸顶】，且【今天没有下跌（价格>=昨天）】，才会被 continue 拦截跳过。
+        # 换言之，如果是砸顶，即使今天上涨也不会被跳过。
+        if not is_pump_dump and price_curr >= price_prev:
             continue
             
-        # 计算今日成交额
-        current_turnover = price_curr * vol_curr
-        
-        # --- D. 基础门槛 2: 成交额排名检查 ---
+        # --- D. 基础门槛 2: 成交额排名检查 (仅针对原策略) ---
         is_hit_base = False
         hit_reason = ""
         
-        # 检查 1: 过去一年 (12个月) 前 2 名
-        if check_turnover_rank(cursor, sector, symbol, date_curr, current_turnover, 
-                               CONFIG["LOOKBACK_MONTHS_LONG"], CONFIG["RANK_THRESHOLD_LONG"]):
-            is_hit_base = True
-            hit_reason = f"1年内Top{CONFIG['RANK_THRESHOLD_LONG']}天量"
-            
-        # 检查 2: 若不满足，检查半年 (6个月) 前 1 名
-        elif check_turnover_rank(cursor, sector, symbol, date_curr, current_turnover, 
-                                 CONFIG["LOOKBACK_MONTHS_SHORT"], CONFIG["RANK_THRESHOLD_SHORT"]):
-            is_hit_base = True
-            hit_reason = f"半年内Top{CONFIG['RANK_THRESHOLD_SHORT']}天量"
-            
+        # 只有在今天确实下跌的情况下，才去跑原来非常耗时的量能排名 SQL 查询
+        if price_curr < price_prev:
+            # 检查 1: 过去一年 (12个月) 前 2 名
+            if check_turnover_rank(cursor, sector, symbol, date_curr, current_turnover, 
+                                   CONFIG["LOOKBACK_MONTHS_LONG"], CONFIG["RANK_THRESHOLD_LONG"]):
+                is_hit_base = True
+                hit_reason = f"1年内Top{CONFIG['RANK_THRESHOLD_LONG']}天量"
+                
+            # 检查 2: 若不满足，检查半年 (6个月) 前 1 名
+            elif check_turnover_rank(cursor, sector, symbol, date_curr, current_turnover, 
+                                     CONFIG["LOOKBACK_MONTHS_SHORT"], CONFIG["RANK_THRESHOLD_SHORT"]):
+                is_hit_base = True
+                hit_reason = f"半年内Top{CONFIG['RANK_THRESHOLD_SHORT']}天量"
+
+        # 如果满足砸顶，强制纳入最终名单
+        if is_pump_dump:
+            is_hit_base = True 
+            if hit_reason:
+                hit_reason += f" & 砸顶({pd_reason})"
+            else:
+                hit_reason = f"砸顶({pd_reason})"
+
         # --- E. 分流逻辑 ---
         if is_hit_base:
-            # 只有满足基础门槛，才检查是否是 W 形态
-            is_double_top = check_double_top(cursor, symbol, sector)
+            # 基础规则检查 W顶（如果只是触发砸顶，根据要求它直接进Short，我们依旧让普通量能触发去查W顶）
+            is_double_top = False
+            if not is_pump_dump: 
+                is_double_top = check_double_top(cursor, symbol, sector)
             
-            if is_double_top:
-                # 符合基础规则 + 符合 W 形态 -> Short_W
+            # 分流赋值
+            if is_pump_dump:
+                # 触发了砸顶，直接进 Short 并且 panel 值赋予 'XXX砸顶'
+                panel_val = f"{symbol}砸顶"
+                short_group[symbol] = panel_val
+                short_backup_group[symbol] = panel_val
+                final_short_symbols.append(symbol)
+                
+                group_tag = "[Short砸顶]"
+                logger.info(f'[{symbol}] Hit Short(Pump Dump): {hit_reason}')
+                
+            elif is_double_top:
+                # 没触发砸顶，但是触发了M头
                 short_w_group[symbol] = ""
                 short_w_backup_group[symbol] = ""
                 final_short_w_symbols.append(symbol)
                 
                 group_tag = "[Short_W]"
                 logger.info(f'[{symbol}] Hit Short_W: {hit_reason} + M-Top')
+                
             else:
                 # 符合基础规则 + 不符合 W 形态 -> Short
                 short_group[symbol] = ""
