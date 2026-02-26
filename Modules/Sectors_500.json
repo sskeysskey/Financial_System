@@ -17,7 +17,8 @@
         "AU",
         "CTVA",
         "FNV",
-        "GFI"
+        "GFI",
+        "MT"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -77,9 +78,7 @@
         "BTI",
         "CL",
         "MNST",
-        "DEO",
-        "TGT",
-        "ABEV"
+        "TGT"
     ],
     "Energy": [
         "XOM",
@@ -314,7 +313,9 @@
         "ASX",
         "TER",
         "KEYS",
-        "CRWV"
+        "CRWV",
+        "LITE",
+        "COHR"
     ],
     "Utilities": [
         "NEE",
