@@ -273,24 +273,38 @@
         "WTW": ""
     },
     "PE_Volume": {
+        "ACN": "ACN黑",
         "PLNT": "PLNT",
         "WHR": "WHR15热听"
     },
     "PE_Volume_backup": {
+        "ACN": "ACN黑",
         "PLNT": "PLNT",
         "WHR": "WHR15热听"
     },
     "PE_Volume_up": {
+        "AXP": "AXP黑",
+        "BSY": "BSY黑",
         "DDS": "DDS",
         "FCN": "FCN",
+        "FNB": "FNB黑",
         "HPQ": "HPQ",
-        "LNC": "LNC"
+        "LNC": "LNC",
+        "MA": "MA黑",
+        "URBN": "URBN黑",
+        "V": "V黑"
     },
     "PE_Volume_up_backup": {
+        "AXP": "AXP黑",
+        "BSY": "BSY黑",
         "DDS": "DDS",
         "FCN": "FCN",
+        "FNB": "FNB黑",
         "HPQ": "HPQ",
-        "LNC": "LNC"
+        "LNC": "LNC",
+        "MA": "MA黑",
+        "URBN": "URBN黑",
+        "V": "V黑"
     },
     "PE_Volume_high": {
         "ACA": "ACA乙",
@@ -298,7 +312,7 @@
         "BHP": "BHP甲",
         "CAMT": "CAMT乙",
         "CME": "CME抄底",
-        "FCN": "FCN乙",
+        "FCN": "FCN乙抄底",
         "GLW": "GLW乙",
         "HEI": "HEI抄底",
         "IX": "IX甲",
@@ -312,6 +326,7 @@
         "SUN": "SUN抄底",
         "SUZ": "SUZ甲",
         "TECK": "TECK乙",
+        "TRI": "TRI乙黑",
         "VALE": "VALE乙",
         "VIAV": "VIAV甲"
     },
@@ -321,7 +336,7 @@
         "BHP": "BHP甲",
         "CAMT": "CAMT乙",
         "CME": "CME抄底",
-        "FCN": "FCN乙",
+        "FCN": "FCN乙抄底",
         "GLW": "GLW乙",
         "HEI": "HEI抄底",
         "IX": "IX甲",
@@ -335,6 +350,7 @@
         "SUN": "SUN抄底",
         "SUZ": "SUZ甲",
         "TECK": "TECK乙",
+        "TRI": "TRI乙黑",
         "VALE": "VALE乙",
         "VIAV": "VIAV甲"
     },

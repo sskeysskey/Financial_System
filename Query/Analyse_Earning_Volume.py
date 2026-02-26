@@ -1162,17 +1162,14 @@ def run_pe_volume_logic(log_detail):
 
     # ================= Tag 黑名单过滤逻辑 =================
     def filter_blacklisted_tags(symbols):
-        # (保持原有的 filter_blacklisted_tags 逻辑不变)
-        allowed = []
+        # 现已不再剔除，全部保留，以便写入 Panel
         for sym in symbols:
             s_tags = set(symbol_to_tags_map.get(sym, []))
             intersect = s_tags.intersection(tag_blacklist)
-            if not intersect:
-                allowed.append(sym)
-            else:
+            if intersect:
                 if sym == SYMBOL_TO_TRACE:
-                    log_detail(f"🛑 [Tag过滤] {sym} 命中黑名单标签: {intersect} -> 剔除。")
-        return sorted(allowed)
+                    log_detail(f"🛑 [Tag过滤] {sym} 命中黑名单标签: {intersect} -> 已保留并标记为'黑'。")
+        return sorted(symbols) # 直接返回完整的 sorted(symbols)
 
     # 对策略结果进行过滤 (用于写入 Panel)
     filtered_pe_volume = filter_blacklisted_tags(final_pe_volume)
@@ -1190,14 +1187,14 @@ def run_pe_volume_logic(log_detail):
     if SYMBOL_TO_TRACE:
         # (保留原有的 trace 提示)
         if SYMBOL_TO_TRACE in final_pe_volume and SYMBOL_TO_TRACE not in filtered_pe_volume:
-             log_detail(f"追踪提示: {SYMBOL_TO_TRACE} (策略1) 通过，但因黑名单标签被过滤。")
+             log_detail(f"追踪提示: {SYMBOL_TO_TRACE} (策略1) 通过，但因黑名单标签将会被打上‘黑’字。")
         if SYMBOL_TO_TRACE in final_pe_volume_up and SYMBOL_TO_TRACE not in filtered_pe_volume_up:
-             log_detail(f"追踪提示: {SYMBOL_TO_TRACE} (策略2) 通过，但因黑名单标签被过滤。")
+             log_detail(f"追踪提示: {SYMBOL_TO_TRACE} (策略2) 通过，但因黑名单标签将会被打上‘黑’字。")
         if SYMBOL_TO_TRACE in final_pe_volume_high and SYMBOL_TO_TRACE not in filtered_pe_volume_high:
-             log_detail(f"追踪提示: {SYMBOL_TO_TRACE} (策略3) 通过，但因黑名单标签被过滤。")
+             log_detail(f"追踪提示: {SYMBOL_TO_TRACE} (策略3) 通过，但因黑名单标签将会被打上‘黑’字。")
         # === 新增 ===：ETF 追踪提示
         if SYMBOL_TO_TRACE in final_etf_volume_high and SYMBOL_TO_TRACE not in filtered_etf_volume_high:
-             log_detail(f"追踪提示: {SYMBOL_TO_TRACE} (策略4) 通过，但因黑名单标签被过滤。")
+             log_detail(f"追踪提示: {SYMBOL_TO_TRACE} (策略4) 通过，但因黑名单标签将会被打上‘黑’字。")
 
     # ================= 检查 PE_Deep / PE_Deeper 交叉 =================
     all_existing_notes = {}
@@ -1239,6 +1236,12 @@ def run_pe_volume_logic(log_detail):
             
             if suffix_tag and suffix_tag not in new_suffix:
                 new_suffix += suffix_tag
+                
+            # === 新增：如果该股在黑名单里，追加“黑”字 ===
+            s_tags = set(symbol_to_tags_map.get(sym, []))
+            if s_tags.intersection(tag_blacklist):
+                if "黑" not in new_suffix:
+                    new_suffix += "黑"
             
             note_map[sym] = f"{sym}{new_suffix}"
         return note_map
@@ -1284,6 +1287,12 @@ def run_pe_volume_logic(log_detail):
     for sym in filtered_pe_volume_high:
         categories = symbol_to_categories.get(sym, [])
         suffix = "".join(categories)  # 例如 "甲乙" 或 "乙"
+        
+        # === 新增：如果该股在黑名单里，追加“黑”字 ===
+        s_tags = set(symbol_to_tags_map.get(sym, []))
+        if s_tags.intersection(tag_blacklist):
+            suffix += "黑"
+            
         pe_vol_high_notes[sym] = f"{sym}{suffix}"
     
     # === 新增 ===：生成 ETF 的备注 (正常情况下直接写入symbol本体即可)
