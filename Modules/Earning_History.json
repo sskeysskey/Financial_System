@@ -625,6 +625,15 @@
             "URBN",
             "USB",
             "WTW"
+        ],
+        "2026-02-26": [
+            "ASTS",
+            "BBY",
+            "CDW",
+            "FOX",
+            "IQV",
+            "KMX",
+            "TMO"
         ]
     },
     "PE_Volume_up": {
@@ -1367,6 +1376,11 @@
             "MA",
             "URBN",
             "V"
+        ],
+        "2026-02-26": [
+            "DDS",
+            "GPGI",
+            "RGEN"
         ]
     },
     "PE_Volume": {
@@ -2273,6 +2287,18 @@
             "ACN",
             "PLNT",
             "WHR"
+        ],
+        "2026-02-26": [
+            "FN",
+            "FORM",
+            "MELI",
+            "NTAP",
+            "NXT",
+            "PRCT",
+            "THO",
+            "UTHR",
+            "VCTR",
+            "WHR"
         ]
     },
     "PE_Volume_high": {
@@ -2416,6 +2442,36 @@
             "TRI",
             "VALE",
             "VIAV"
+        ],
+        "2026-02-26": [
+            "AMX",
+            "APA",
+            "AXIA",
+            "BCO",
+            "BHP",
+            "BSY",
+            "CNX",
+            "CRSP",
+            "CZR",
+            "FCN",
+            "FRO",
+            "GPGI",
+            "HTHT",
+            "IHG",
+            "INSP",
+            "INTU",
+            "KT",
+            "MGM",
+            "PBA",
+            "Q",
+            "RELX",
+            "SHAK",
+            "SJM",
+            "TECK",
+            "TFPM",
+            "TIGO",
+            "TKO",
+            "VALE"
         ]
     },
     "ETF_Volume_high": {
@@ -2429,7 +2485,12 @@
             "EWY",
             "IGV"
         ],
-        "2026-02-25": []
+        "2026-02-25": [],
+        "2026-02-26": [
+            "EWY",
+            "IGV",
+            "RAAX"
+        ]
     },
     "Short_W": {
         "2026-02-18": [
@@ -2458,6 +2519,16 @@
             "GDDY",
             "HEI",
             "IGE"
+        ],
+        "2026-02-26": [
+            "A",
+            "ACIW",
+            "FSK",
+            "IWF",
+            "NVDA",
+            "PRCT",
+            "TLK",
+            "VCTR"
         ]
     },
     "Short": {
@@ -2522,6 +2593,25 @@
             "MELI",
             "MOS",
             "WHR"
+        ],
+        "2026-02-26": [
+            "CHDN",
+            "CHE",
+            "CIB",
+            "COKE",
+            "DCI",
+            "FROG",
+            "GIL",
+            "GRFS",
+            "HEI",
+            "KT",
+            "LNTH",
+            "NEE",
+            "NU",
+            "ORA",
+            "SPTM",
+            "UHS",
+            "ZM"
         ]
     },
     "PE_Deeper": {
@@ -2838,6 +2928,12 @@
             "SMR",
             "TTD",
             "WIX"
+        ],
+        "2026-02-26": [
+            "CPNG",
+            "CRDO",
+            "OKLO",
+            "SMR"
         ]
     },
     "OverSell_W": {
@@ -3129,6 +3225,12 @@
             "PATH",
             "PLTR",
             "RBA"
+        ],
+        "2026-02-26": [
+            "AON",
+            "APO",
+            "CTSH",
+            "GPN"
         ]
     },
     "PE_Deep": {
@@ -5017,6 +5119,26 @@
             "VEEV",
             "WHR",
             "XYZ"
+        ],
+        "2026-02-26": [
+            "ADBE",
+            "APLD",
+            "AVAV",
+            "BX",
+            "FLNC",
+            "HPE",
+            "JEF",
+            "MRVL",
+            "NVO",
+            "ORCL",
+            "PRCT",
+            "RKT",
+            "SLM",
+            "SOFI",
+            "TECH",
+            "THO",
+            "WHR",
+            "XPEV"
         ]
     },
     "PE_valid": {
@@ -7212,6 +7334,62 @@
             "WY",
             "ZBRA",
             "ZM"
+        ],
+        "2026-02-26": [
+            "ALAB",
+            "AMKR",
+            "ARES",
+            "AVGO",
+            "BABA",
+            "BWA",
+            "CACI",
+            "CE",
+            "CHRW",
+            "CLS",
+            "CNH",
+            "CROX",
+            "DELL",
+            "DLTR",
+            "DOCN",
+            "DOW",
+            "ENPH",
+            "FN",
+            "FORM",
+            "FTNT",
+            "GDS",
+            "GILD",
+            "GOOGL",
+            "GPGI",
+            "GWW",
+            "INTC",
+            "IP",
+            "JD",
+            "JKHY",
+            "KKR",
+            "LLY",
+            "LSCC",
+            "LULU",
+            "LUV",
+            "META",
+            "MSFT",
+            "NTAP",
+            "NXT",
+            "PDD",
+            "PLTR",
+            "PNC",
+            "POWL",
+            "QXO",
+            "RCL",
+            "SCHW",
+            "SOLV",
+            "STX",
+            "SW",
+            "TFC",
+            "TSLA",
+            "TXN",
+            "VCTR",
+            "WTW",
+            "ZBRA"
         ]
     },
     "PE_invalid": {
@@ -7466,6 +7644,14 @@
             "NTRA",
             "PL",
             "SNDK"
+        ],
+        "2026-02-26": [
+            "CRWV",
+            "LMND",
+            "NET",
+            "NTRA",
+            "PL",
+            "SITM"
         ]
     },
     "season": {
@@ -9491,6 +9677,30 @@
             "RCL",
             "SITE",
             "TECH",
+            "WTW"
+        ],
+        "2026-02-26": [
+            "ANET",
+            "AON",
+            "AVGO",
+            "BBY",
+            "CHWY",
+            "CRDO",
+            "DE",
+            "ENPH",
+            "GILD",
+            "GIS",
+            "HPE",
+            "LLY",
+            "LSCC",
+            "META",
+            "MRVL",
+            "NXT",
+            "PATH",
+            "POWL",
+            "STX",
+            "TECH",
+            "TXN",
             "WTW"
         ]
     },
@@ -15583,6 +15793,33 @@
             "WIX",
             "XYZ",
             "ZM"
+        ],
+        "2026-02-26": [
+            "ADBE",
+            "APO",
+            "ARES",
+            "BSY",
+            "BX",
+            "CACI",
+            "CDW",
+            "DOCN",
+            "FTNT",
+            "GPN",
+            "INTU",
+            "JEF",
+            "JKHY",
+            "KKR",
+            "LMND",
+            "LULU",
+            "NTAP",
+            "PLTR",
+            "QXO",
+            "RELX",
+            "RKT",
+            "SCHW",
+            "SOFI",
+            "SOLV",
+            "TFC"
         ]
     }
 }

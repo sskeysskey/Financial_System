@@ -34,7 +34,8 @@
         "AMX",
         "APP",
         "WBD",
-        "EA"
+        "EA",
+        "RBLX"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -62,7 +63,8 @@
         "ORLY",
         "ROST",
         "CVNA",
-        "F"
+        "F",
+        "CMG"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -107,7 +109,8 @@
         "BKR",
         "OKE",
         "CCJ",
-        "OXY"
+        "OXY",
+        "LNG"
     ],
     "Financial_Services": [
         "JPM",
@@ -166,7 +169,10 @@
         "NWG",
         "BRK-B",
         "MRSH",
-        "BSBR"
+        "BSBR",
+        "NDAQ",
+        "RKT",
+        "MET"
     ],
     "Healthcare": [
         "LLY",
@@ -200,10 +206,10 @@
         "MCK",
         "COR",
         "TAK",
-        "ARGX",
         "CAH",
         "BDX",
-        "IDXX"
+        "IDXX",
+        "EW"
     ],
     "Industrials": [
         "GE",
@@ -313,9 +319,7 @@
         "ASX",
         "TER",
         "KEYS",
-        "CRWV",
-        "LITE",
-        "COHR"
+        "CRWV"
     ],
     "Utilities": [
         "NEE",

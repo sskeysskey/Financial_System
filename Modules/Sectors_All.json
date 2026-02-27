@@ -766,7 +766,8 @@
         "VSCO",
         "RUSHA",
         "ATMU",
-        "BGSI"
+        "BGSI",
+        "TNL"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -1130,7 +1131,6 @@
         "ARX",
         "GLXY",
         "IREN",
-        "CIFR",
         "HUT",
         "FIGR",
         "AVAL",
@@ -1269,7 +1269,6 @@
         "MMSI",
         "SMMT",
         "LNTH",
-        "RNA",
         "CRSP",
         "TMDX",
         "INSP",
@@ -1868,7 +1867,8 @@
         "VIAV",
         "PLXS",
         "IPGP",
-        "OSIS"
+        "OSIS",
+        "CIFR"
     ],
     "Utilities": [
         "NEE",

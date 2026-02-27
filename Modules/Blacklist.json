@@ -599,7 +599,8 @@
         "ASST",
         "CYBR",
         "AL",
-        "RVMD"
+        "RVMD",
+        "RNA"
     ],
     "etf": [
         "VDE",
@@ -952,7 +953,8 @@
         "CAM",
         "ROSC",
         "OPPJ",
-        "RSPU"
+        "RSPU",
+        "XMVM"
     ],
     "Earning": [
         "TW",
@@ -1063,6 +1065,13 @@
         "DDS",
         "OMAB",
         "WHR",
-        "MFC"
+        "MFC",
+        "LTH",
+        "BSY",
+        "THO",
+        "GPGI",
+        "CHE",
+        "SPTM",
+        "TLK"
     ]
 }
