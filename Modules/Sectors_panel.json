@@ -433,6 +433,12 @@
     "ETF_Volume_high_backup": {
         "XLU": ""
     },
+    "ETF_Volume_low": {
+        "CANE": ""
+    },
+    "ETF_Volume_low_backup": {
+        "CANE": ""
+    },
     "PE_valid": {
         "AAL": "",
         "AAPL": "",

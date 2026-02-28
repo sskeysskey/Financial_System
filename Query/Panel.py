@@ -43,7 +43,8 @@ DISPLAY_LIMITS = {
 
 categories = [
     ['Must', 'Today', 'PE_Volume_backup',
-     'PE_Volume_up_backup', 'PE_Volume_high_backup', 'ETF_Volume_high_backup',
+     'PE_Volume_up_backup', 'PE_Volume_high_backup',
+     'ETF_Volume_high_backup', 'ETF_Volume_low_backup',
      'PE_W_backup'],
     ['Short_backup', 'Short_W_backup', 'PE_Deeper_backup',
      'PE_Deep_backup', 'OverSell_W_backup',
@@ -638,7 +639,8 @@ class MainWindow(QMainWindow):
             'PE_Volume_backup': 'Volume左',
             'PE_Volume_up_backup': 'Volume右',
             'PE_Volume_high_backup': 'Volume追高',
-            'ETF_Volume_high_backup': 'ETF追高'
+            'ETF_Volume_high_backup': 'ETF追高',
+            'ETF_Volume_low_backup': 'ETF抄底'
         }
         
         self.init_ui()
@@ -791,6 +793,7 @@ class MainWindow(QMainWindow):
             "PE_Volume_up_backup": "PE_Volume_up",
             "PE_Volume_high_backup": "PE_Volume_high",
             "ETF_Volume_high_backup": "ETF_Volume_high",
+            "ETF_Volume_low_backup": "ETF_Volume_low",
             "OverSell_W_backup": "OverSell_W",
             
             # 兼容不带 _backup 后缀的情况 (如果有)
@@ -802,6 +805,7 @@ class MainWindow(QMainWindow):
             "PE_Volume_up": "PE_Volume_up",
             "PE_Volume_high": "PE_Volume_high",
             "ETF_Volume_high": "ETF_Volume_high",
+            "ETF_Volume_low": "ETF_Volume_low",
             "OverSell_W": "OverSell_W"
         }
 
@@ -1114,7 +1118,8 @@ class MainWindow(QMainWindow):
             'Strategy12_backup', 'Strategy34_backup',
             'PE_Deep_backup', 'PE_W_backup', 'PE_Deeper_backup',
             'OverSell_W_backup', 'PE_W_backup',
-            'PE_Volume_backup', 'PE_Volume_up_backup', 'PE_Volume_high_backup', 'ETF_Volume_high_backup',
+            'PE_Volume_backup', 'PE_Volume_up_backup', 'PE_Volume_high_backup',
+            'ETF_Volume_high_backup', 'ETF_Volume_low_backup',
             'Short_backup', 'Short_W_backup'
         }
 
@@ -1130,7 +1135,8 @@ class MainWindow(QMainWindow):
             # combined_groups
             "Must", "Today", "Short_backup", "Short_W_backup",
             # Volume Sector
-            "PE_Volume_backup", "PE_Volume_up_backup", "PE_Volume_high_backup", "ETF_Volume_high_backup"
+            "PE_Volume_backup", "PE_Volume_up_backup", "PE_Volume_high_backup",
+            "ETF_Volume_high_backup", "ETF_Volume_low_backup"
         }
 
         for index, category_group in enumerate(categories):
