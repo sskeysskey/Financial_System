@@ -878,8 +878,8 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         )
         
         # 条件F: 成交额为财报日起前N名 (用于丙类，动态阈值)
-        # 如果距今在3天~30天(1个月)范围内，要求最高(1名)；超过30天，要求前3名
-        dynamic_rank_threshold = 1 if days_diff <= 30 else 2
+        # 如果距今在3天~30天(1个月)范围内，要求最高(2名)；超过30天，要求前2名
+        dynamic_rank_threshold = 2 if days_diff <= 30 else 2
         
         # 只有满足大于3天才有必要去计算丙类的成交额排名，节省性能
         cond_turnover_since_er_top = False

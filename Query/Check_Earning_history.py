@@ -21,8 +21,7 @@ NORD_THEME = {
     'text_light': '#D8DEE9',
     'text_bright': '#ECEFF4',
     'accent_blue': '#5E81AC',
-    'success_green': '#A3BE8C',
-    'warning_red': '#BF616A', # 新增：用于黑名单标记的红色
+    'success_green': '#A3BE8C'
 }
 
 # --- 2. 界面类 (复用自 chart_input.py) ---
@@ -66,19 +65,18 @@ class InfoDialog(QDialog):
         """
         self.setStyleSheet(qss)
 
-# --- 3. 核心逻辑 (已修改) ---
-
+# --- 3. 核心逻辑 (已修改，移除了黑名单⚡️标志) ---
 def search_history(symbol):
     # 用列表存储 HTML 片段
     html_parts = []
-    
+
     # 辅助函数：生成美化的标题 HTML
     def make_header(text, color):
         # style: 颜色, 粗体, 字体稍大(1.2倍), 上下外边距
         return f"""
         <div style='margin-top: 10px; margin-bottom: 5px;'>
             <span style='color: {color}; font-weight: bold; font-size: 18px;'>
-                 {text} 
+                {text}
             </span>
         </div>
         """
@@ -90,7 +88,8 @@ def search_history(symbol):
         如果匹配，返回附加的后缀（如 '黑', '听热'）；如果不匹配，返回 None。
         """
         if item_str == target_symbol:
-            return "" # 完全匹配，无后缀
+            return ""  # 完全匹配，无后缀
+        
         if item_str.startswith(target_symbol):
             suffix = item_str[len(target_symbol):]
             # 确保后缀里没有英文字母，防止搜索 "EW" 时错误匹配到真正的股票 "EWH"
@@ -98,7 +97,7 @@ def search_history(symbol):
                 return suffix
         return None
 
-    has_data = False # 标记是否找到了任何数据
+    has_data = False  # 标记是否找到了任何数据
 
     # ==============================
     # 任务 1: 检索 Sector Panel
@@ -107,14 +106,14 @@ def search_history(symbol):
         try:
             with open(SECTOR_PATH, 'r', encoding='utf-8') as f:
                 sector_data = json.load(f)
-            
+
             found_sectors = []
             # 遍历每一个板块 (Category) 和它里面的内容 (Content)
             for category, content_dict in sector_data.items():
                 # content_dict 是一个字典，遍历它的 key (股票代码)
                 for key, note in content_dict.items():
                     suffix = get_suffix_if_match(key, symbol)
-                    if suffix is not None: # 匹配成功
+                    if suffix is not None:  # 匹配成功
                         display_text = category
                         # 如果有加中文后缀，用 Nord 主题的黄色显示出来
                         if suffix:
@@ -124,8 +123,8 @@ def search_history(symbol):
                             display_text += f" <span style='color:#88C0D0'>({note})</span>"
                         
                         found_sectors.append(display_text)
-                        break # 这个板块找到了，跳出内层循环找下一个板块
-            
+                        break  # 这个板块找到了，跳出内层循环找下一个板块
+
             if found_sectors:
                 has_data = True
                 # 使用 success_green 颜色作为板块标题
@@ -133,15 +132,16 @@ def search_history(symbol):
                 for s in found_sectors:
                     # 使用 &nbsp; 做缩进，<br> 换行
                     html_parts.append(f"&nbsp;&nbsp;★ {s}<br>")
-                html_parts.append("<br>") 
-
+                html_parts.append("<br>")
+                
         except Exception as e:
             html_parts.append(f"<p style='color:red'>读取 Sector JSON 出错: {e}</p>")
     else:
         html_parts.append(f"<p style='color:orange'>警告: 找不到 Sector 文件<br>{SECTOR_PATH}</p>")
 
+
     # ==============================
-    # 任务 2: 检索 Earning History 并处理黑名单
+    # 任务 2: 检索 Earning History 
     # ==============================
     if not os.path.exists(JSON_PATH):
         return "".join(html_parts) + f"<br><p style='color:red'>错误：找不到 Earning 文件<br>{JSON_PATH}</p>"
@@ -149,66 +149,49 @@ def search_history(symbol):
     try:
         with open(JSON_PATH, 'r', encoding='utf-8') as f:
             data = json.load(f)
-            
-        # --- [修改] 预先提取黑名单日期 ---
-        blacklist_dates = set()
-        # 假设黑名单的 key 是 '_Tag_Blacklist'
-        if "_Tag_Blacklist" in data:
-            for date_str, symbol_list in data["_Tag_Blacklist"].items():
-                if isinstance(symbol_list, list):
-                    for item in symbol_list:
-                        # 兼容带中文的黑名单标记
-                        if get_suffix_if_match(item, symbol) is not None:
-                            blacklist_dates.add(date_str)
-                            break # 当前日期已加入黑名单，看下一个日期
 
-        # 遍历所有分类
-        for category, date_dict in data.items():
-            # 如果是黑名单分类本身，我们通常可以选择跳过不显示，或者单独显示
-            # 这里选择跳过，因为它作为“标记”已经体现在其他分类里了
-            if category == "_Tag_Blacklist":
-                continue
-            
-            found_dates = [] # 改为存储元组: (日期, 中文后缀)
-            
-            # 遍历该类下的所有日期
-            for date_str, symbol_list in date_dict.items():
-                if isinstance(symbol_list, list):
-                    for item in symbol_list:
-                        suffix = get_suffix_if_match(item, symbol)
-                        if suffix is not None:
-                            found_dates.append((date_str, suffix))
-                            break # 当前日期已找到，看下一个日期
-            
-            if found_dates:
-                has_data = True
-                # 按日期降序排序 (元组的第一个元素是日期)
-                found_dates.sort(key=lambda x: x[0], reverse=True)
+            # 遍历所有分类
+            for category, date_dict in data.items():
                 
-                # [核心修改] 使用 success_green 颜色作为 Earning 标题，并应用 HTML 样式
-                html_parts.append(make_header(category, NORD_THEME['success_green']))
+                # 如果你想让 _Tag_Blacklist 作为一个普通分类显示出来，可以把下面两行注释掉或删掉。
+                # 如果你仍希望在界面上完全隐藏这个分类不显示，请保留这两行：
+                if category == "_Tag_Blacklist":
+                    continue
+
+                found_dates = []  # 改为存储元组: (日期, 中文后缀)
                 
-                for d_str, suf in found_dates:
-                    # 检查是否在黑名单中
-                    if d_str in blacklist_dates:
-                        marker = f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;'>⚡️</span>"
-                    else:
-                        marker = ""
+                # 遍历该类下的所有日期
+                for date_str, symbol_list in date_dict.items():
+                    if isinstance(symbol_list, list):
+                        for item in symbol_list:
+                            suffix = get_suffix_if_match(item, symbol)
+                            if suffix is not None:
+                                found_dates.append((date_str, suffix))
+                                break  # 当前日期已找到，看下一个日期
+
+                if found_dates:
+                    has_data = True
+                    # 按日期降序排序 (元组的第一个元素是日期)
+                    found_dates.sort(key=lambda x: x[0], reverse=True)
                     
-                    # 如果找到了你加的中文后缀（如“黑热”），在UI上以黄色小标签显示
-                    suf_html = ""
-                    if suf:
-                        suf_html = f" <span style='color:#EBCB8B; font-size:14px; font-weight:bold;'>[{suf}]</span>"
-                        
-                    html_parts.append(f"&nbsp;&nbsp;• {d_str}{marker}{suf_html}<br>")
-                html_parts.append("<br>")
+                    html_parts.append(make_header(category, NORD_THEME['success_green']))
+                    
+                    for d_str, suf in found_dates:
+                        # 如果找到了你加的中文后缀（如“黑热”），在UI上以黄色小标签显示
+                        suf_html = ""
+                        if suf:
+                            suf_html = f" <span style='color:#EBCB8B; font-size:14px; font-weight:bold;'>[{suf}]</span>"
+
+                        # 移除了 marker 变量及闪电标志
+                        html_parts.append(f"&nbsp;&nbsp;• {d_str}{suf_html}<br>")
+                    html_parts.append("<br>")
 
     except Exception as e:
         return f"<p style='color:red'>读取 Earning JSON 出错: {e}</p>"
 
-    if not has_data: 
+    if not has_data:
         return f"<div style='text-align:center; margin-top:20px; color:{NORD_THEME['text_light']}'>在所有文件中<br>未找到 <b>{symbol}</b> 的任何记录。</div>"
-    
+
     return "".join(html_parts)
 
 # --- 4. 程序入口 ---
