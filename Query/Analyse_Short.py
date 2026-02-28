@@ -499,16 +499,18 @@ for symbol in symbols:
                 panel_val = f"{symbol}砸顶"
                 short_group[symbol] = panel_val
                 short_backup_group[symbol] = panel_val
-                final_short_symbols.append(symbol)
+                # === 修改点 1：将带中文的内容直接加入到列表，用于后续写入 History ===
+                final_short_symbols.append(panel_val)
                 
                 group_tag = "[Short砸顶]"
                 logger.info(f'[{symbol}] Hit Short(Pump Dump): {hit_reason}')
                 
             elif is_double_top:
-                # 没触发砸顶，但是触发了M头
-                short_w_group[symbol] = ""
+                # 【M头情况，没有后缀】
+                # 1. Panel 保持为纯空字符串 ""
+                short_w_group[symbol] = ""           
                 short_w_backup_group[symbol] = ""
-                final_short_w_symbols.append(symbol)
+                final_short_w_symbols.append(symbol) # 存入待写入 History 的内容
                 
                 group_tag = "[Short_W]"
                 logger.info(f'[{symbol}] Hit Short_W: {hit_reason} + M-Top')
@@ -517,7 +519,7 @@ for symbol in symbols:
                 # 符合基础规则 + 不符合 W 形态 -> Short
                 short_group[symbol] = ""
                 short_backup_group[symbol] = ""
-                final_short_symbols.append(symbol)
+                final_short_symbols.append(symbol) # 存入待写入 History 的内容
                 
                 group_tag = "[Short]"
                 logger.info(f'[{symbol}] Hit Short: {hit_reason}')

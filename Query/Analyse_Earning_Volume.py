@@ -161,9 +161,17 @@ def update_panel_with_conflict_check(json_path, pe_vol_list, pe_vol_notes, pe_vo
                     log_detail(f"  -> 从 '{group_name}' 中移除了: {sorted(list(intersection))}")
 
     # 3. 写入新的 Volume 分组数据
-    # 辅助函数：构建带备注的字典
+    # 辅助函数：构建带备注的字典 (修复 "IWF": "IWF" 问题)
     def build_group_dict(symbols, notes):
-        return {sym: notes.get(sym, "") for sym in sorted(symbols)}
+        result = {}
+        for sym in sorted(symbols):
+            val = notes.get(sym, "")
+            # 如果生成的值等于纯净的 symbol，说明没有后缀，必须往 Panel 里写入 ""
+            if val == sym:
+                result[sym] = ""
+            else:
+                result[sym] = val
+        return result
 
     # 写入策略1
     data['PE_Volume'] = build_group_dict(pe_vol_list, pe_vol_notes)
@@ -191,6 +199,11 @@ def update_panel_with_conflict_check(json_path, pe_vol_list, pe_vol_notes, pe_vo
 def update_earning_history_json(file_path, group_name, symbols_to_add, log_detail, base_date_str):
     log_detail(f"\n--- 更新历史记录文件: {os.path.basename(file_path)} -> '{group_name}' ---")
     
+    # === 新增判断：如果列表为空，则直接跳过不写入 ===
+    if not symbols_to_add:
+        log_detail(f" - 列表为空，跳过写入历史记录。")
+        return
+    
     # 使用传入的基准日期作为记录日期
     record_date_str = base_date_str
 
@@ -207,9 +220,13 @@ def update_earning_history_json(file_path, group_name, symbols_to_add, log_detai
     combined_symbols = set(existing_symbols) | set(symbols_to_add)
     updated_symbols = sorted(list(combined_symbols))
     
+    # 二次保险：如果合并后依然为空，也跳过
+    if not updated_symbols:
+        return
+    
     data[group_name][record_date_str] = updated_symbols
-    num_added = len(updated_symbols) - len(existing_symbols)
 
+    num_added = len(updated_symbols) - len(existing_symbols)
     try:
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
@@ -1332,12 +1349,26 @@ def run_pe_volume_logic(log_detail):
         log_detail
     )
 
+    # # 7. 写入 History (新增 ETF)
+    # log_detail(f"正在更新 History 文件...")
+    # update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume", final_pe_volume, log_detail, base_date_str)
+    # update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume_up", final_pe_volume_up, log_detail, base_date_str)
+    # update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume_high", final_pe_volume_high, log_detail, base_date_str)
+    # update_earning_history_json(EARNING_HISTORY_JSON_FILE, "ETF_Volume_high", final_etf_volume_high, log_detail, base_date_str) # === 新增 ===
+
     # 7. 写入 History (新增 ETF)
-    log_detail(f"正在更新 History 文件...")
-    update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume", final_pe_volume, log_detail, base_date_str)
-    update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume_up", final_pe_volume_up, log_detail, base_date_str)
-    update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume_high", final_pe_volume_high, log_detail, base_date_str)
-    update_earning_history_json(EARNING_HISTORY_JSON_FILE, "ETF_Volume_high", final_etf_volume_high, log_detail, base_date_str) # === 新增 ===
+    log_detail(f"\n正在更新 History 文件...")
+    
+    # === 将带有中文后缀的变量 values() 提取成列表，用于写入 History ===
+    history_pe_volume = sorted(list(pe_volume_notes.values()))
+    history_pe_volume_up = sorted(list(pe_volume_up_notes.values()))
+    history_pe_volume_high = sorted(list(pe_vol_high_notes.values()))
+    history_etf_volume_high = sorted(list(etf_vol_high_notes.values()))
+
+    update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume", history_pe_volume, log_detail, base_date_str)
+    update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume_up", history_pe_volume_up, log_detail, base_date_str)
+    update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume_high", history_pe_volume_high, log_detail, base_date_str)
+    update_earning_history_json(EARNING_HISTORY_JSON_FILE, "ETF_Volume_high", history_etf_volume_high, log_detail, base_date_str)
 
     # 写入 Tag 黑名单标记分组 (包含 ETF)
     all_volume_symbols = set(final_pe_volume) | set(final_pe_volume_up) | set(final_pe_volume_high) | set(final_etf_volume_high) # === 修改 ===

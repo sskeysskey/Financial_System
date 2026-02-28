@@ -213,6 +213,12 @@ def update_json_panel(symbols_list, json_path, group_name, symbol_to_note=None):
 
 def update_earning_history_json(file_path, group_name, symbols_to_add, log_detail):
     log_detail(f"\n--- 更新历史记录文件: {os.path.basename(file_path)} -> '{group_name}' ---")
+    
+    # === 新增底层拦截：如果列表为空，直接跳过 ===
+    if not symbols_to_add:
+        log_detail(f" - 列表为空，跳过写入历史记录。")
+        return
+    
     yesterday = datetime.date.today() - datetime.timedelta(days=1)  # 获取昨天的日期
     yesterday_str = yesterday.isoformat()  # 获取 'YYYY-MM-DD' 格式的昨天日期
 
@@ -234,6 +240,10 @@ def update_earning_history_json(file_path, group_name, symbols_to_add, log_detai
     combined_symbols = set(existing_symbols) | set(symbols_to_add)
     updated_symbols = sorted(list(combined_symbols))
 
+    # === 二次保险 ===
+    if not updated_symbols:
+        return
+    
     # 更新数据结构
     data[group_name][yesterday_str] = updated_symbols
 

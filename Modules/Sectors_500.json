@@ -17,8 +17,7 @@
         "AU",
         "CTVA",
         "FNV",
-        "GFI",
-        "MT"
+        "GFI"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -34,8 +33,7 @@
         "AMX",
         "APP",
         "WBD",
-        "EA",
-        "RBLX"
+        "EA"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -63,8 +61,7 @@
         "ORLY",
         "ROST",
         "CVNA",
-        "F",
-        "CMG"
+        "F"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -110,7 +107,8 @@
         "OKE",
         "CCJ",
         "OXY",
-        "LNG"
+        "LNG",
+        "TRGP"
     ],
     "Financial_Services": [
         "JPM",
@@ -169,10 +167,8 @@
         "NWG",
         "BRK-B",
         "MRSH",
-        "BSBR",
         "NDAQ",
-        "RKT",
-        "MET"
+        "RKT"
     ],
     "Healthcare": [
         "LLY",
@@ -319,7 +315,8 @@
         "ASX",
         "TER",
         "KEYS",
-        "CRWV"
+        "ADSK",
+        "LITE"
     ],
     "Utilities": [
         "NEE",
@@ -330,6 +327,7 @@
         "AEP",
         "SRE",
         "D",
-        "VST"
+        "VST",
+        "EXC"
     ]
 }

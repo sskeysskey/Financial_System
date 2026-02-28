@@ -83,6 +83,21 @@ def search_history(symbol):
         </div>
         """
 
+    # --- [新增] 辅助函数：模糊匹配并提取中文后缀 ---
+    def get_suffix_if_match(item_str, target_symbol):
+        """
+        判断 item_str 是否匹配 target_symbol。
+        如果匹配，返回附加的后缀（如 '黑', '听热'）；如果不匹配，返回 None。
+        """
+        if item_str == target_symbol:
+            return "" # 完全匹配，无后缀
+        if item_str.startswith(target_symbol):
+            suffix = item_str[len(target_symbol):]
+            # 确保后缀里没有英文字母，防止搜索 "EW" 时错误匹配到真正的股票 "EWH"
+            if not any(c.isascii() and c.isalpha() for c in suffix):
+                return suffix
+        return None
+
     has_data = False # 标记是否找到了任何数据
 
     # ==============================
@@ -96,15 +111,20 @@ def search_history(symbol):
             found_sectors = []
             # 遍历每一个板块 (Category) 和它里面的内容 (Content)
             for category, content_dict in sector_data.items():
-                # content_dict 是一个字典，例如 {"MOS": "美盛化肥"}
-                # 我们只需要判断 symbol 是否是 content_dict 的 key 之一
-                if symbol in content_dict:
-                    # 如果有备注（value不为空），也可以加上
-                    note = content_dict[symbol]
-                    if note:
-                        found_sectors.append(f"{category} <span style='color:#88C0D0'>({note})</span>") # 备注也可以稍微变色
-                    else:
-                        found_sectors.append(category)
+                # content_dict 是一个字典，遍历它的 key (股票代码)
+                for key, note in content_dict.items():
+                    suffix = get_suffix_if_match(key, symbol)
+                    if suffix is not None: # 匹配成功
+                        display_text = category
+                        # 如果有加中文后缀，用 Nord 主题的黄色显示出来
+                        if suffix:
+                            display_text += f" <span style='color:#EBCB8B'>[{suffix}]</span>"
+                        # 如果有字典 value 中的备注，用蓝色显示
+                        if note:
+                            display_text += f" <span style='color:#88C0D0'>({note})</span>"
+                        
+                        found_sectors.append(display_text)
+                        break # 这个板块找到了，跳出内层循环找下一个板块
             
             if found_sectors:
                 has_data = True
@@ -130,13 +150,17 @@ def search_history(symbol):
         with open(JSON_PATH, 'r', encoding='utf-8') as f:
             data = json.load(f)
             
-        # --- [新增逻辑] 预先提取黑名单日期 ---
+        # --- [修改] 预先提取黑名单日期 ---
         blacklist_dates = set()
-        # 假设黑名单的 key 是 '_tag_blacklist'
+        # 假设黑名单的 key 是 '_Tag_Blacklist'
         if "_Tag_Blacklist" in data:
             for date_str, symbol_list in data["_Tag_Blacklist"].items():
-                if isinstance(symbol_list, list) and symbol in symbol_list:
-                    blacklist_dates.add(date_str)
+                if isinstance(symbol_list, list):
+                    for item in symbol_list:
+                        # 兼容带中文的黑名单标记
+                        if get_suffix_if_match(item, symbol) is not None:
+                            blacklist_dates.add(date_str)
+                            break # 当前日期已加入黑名单，看下一个日期
 
         # 遍历所有分类
         for category, date_dict in data.items():
@@ -144,30 +168,39 @@ def search_history(symbol):
             # 这里选择跳过，因为它作为“标记”已经体现在其他分类里了
             if category == "_Tag_Blacklist":
                 continue
-
-            found_dates = []
+            
+            found_dates = [] # 改为存储元组: (日期, 中文后缀)
             
             # 遍历该类下的所有日期
             for date_str, symbol_list in date_dict.items():
-                if isinstance(symbol_list, list) and symbol in symbol_list:
-                    found_dates.append(date_str)
+                if isinstance(symbol_list, list):
+                    for item in symbol_list:
+                        suffix = get_suffix_if_match(item, symbol)
+                        if suffix is not None:
+                            found_dates.append((date_str, suffix))
+                            break # 当前日期已找到，看下一个日期
             
             if found_dates:
                 has_data = True
-                found_dates.sort(reverse=True)
+                # 按日期降序排序 (元组的第一个元素是日期)
+                found_dates.sort(key=lambda x: x[0], reverse=True)
                 
                 # [核心修改] 使用 success_green 颜色作为 Earning 标题，并应用 HTML 样式
                 html_parts.append(make_header(category, NORD_THEME['success_green']))
                 
-                for d in found_dates:
-                    # --- [核心修改] 检查该日期是否在黑名单中 ---
-                    if d in blacklist_dates:
-                        # 如果在黑名单中，添加红色警告标识
+                for d_str, suf in found_dates:
+                    # 检查是否在黑名单中
+                    if d_str in blacklist_dates:
                         marker = f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;'>⚡️</span>"
                     else:
                         marker = ""
+                    
+                    # 如果找到了你加的中文后缀（如“黑热”），在UI上以黄色小标签显示
+                    suf_html = ""
+                    if suf:
+                        suf_html = f" <span style='color:#EBCB8B; font-size:14px; font-weight:bold;'>[{suf}]</span>"
                         
-                    html_parts.append(f"&nbsp;&nbsp;• {d}{marker}<br>")
+                    html_parts.append(f"&nbsp;&nbsp;• {d_str}{marker}{suf_html}<br>")
                 html_parts.append("<br>")
 
     except Exception as e:
