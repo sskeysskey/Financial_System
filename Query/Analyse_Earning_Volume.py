@@ -55,6 +55,7 @@ CONFIG = {
     # ========== 策略1 (PE_Volume放量下跌) 参数 ==========
     "COND8_VOLUME_LOOKBACK_MONTHS": 2,   # 过去 N 个月
     "COND8_VOLUME_RANK_THRESHOLD": 3,    # 成交量排名前 N 名 (默认3，代码逻辑是 <4)
+    "COND8_EARNINGS_CHECK_DAYS": 2,      # [新增配置] 检查财报日的回溯天数 (填2则检查前2天: T-1, T-2)
     
     # ========== 策略2 (PE_Volume_up活跃上涨) 参数 ==========
     "COND_UP_HISTORY_LOOKBACK_DAYS": 5,  # 历史记录回溯天数
@@ -284,7 +285,11 @@ def pe_volume(db_path, history_json_path, sector_map, target_date_override, symb
     # 读取配置
     rank_threshold = CONFIG.get("COND8_VOLUME_RANK_THRESHOLD", 3)
     lookback_months = CONFIG.get("COND8_VOLUME_LOOKBACK_MONTHS", 3)
+    # [修改点] 获取财报检查天数的配置
+    earnings_check_days = CONFIG.get("COND8_EARNINGS_CHECK_DAYS", 2)
+    
     log_detail(f"配置参数: 成交额排名阈值 = Top {rank_threshold}, 且必须收盘价下跌")
+    log_detail(f"配置参数: 财报日过滤范围 = 前 {earnings_check_days} 天")
 
     # 1. 确定基准日期 (Today)
     # 如果没有指定日期，则获取昨天的日期
@@ -395,16 +400,28 @@ def pe_volume(db_path, history_json_path, sector_map, target_date_override, symb
             
             if vol_cond:
                 # ================== 财报日过滤逻辑 ==================
-                # 检查今日(dates[0])是否为财报日
+                # 1. 检查今日(dates[0])是否为财报日
                 if check_is_earnings_day(cursor, symbol, dates[0]):
                     if is_tracing: log_detail(f"    🛑 [过滤] 今日({dates[0]}) 为财报日，剔除。")
+                    continue
+                
+                # 2. [新增] 检查前面三天 (T-1, T-2, T-3) 是否为财报日
+                has_recent_earnings = False
+                # [修改点] 使用配置项 earnings_check_days 来控制循环范围
+                for i in range(1, min(earnings_check_days + 1, len(dates))):
+                    if check_is_earnings_day(cursor, symbol, dates[i]):
+                        if is_tracing: log_detail(f"    🛑 [过滤] 前面第{i}天({dates[i]}) 为财报日，剔除。")
+                        has_recent_earnings = True
+                        break # 只要有一天是财报日，就跳出循环
+                
+                # 如果前三天内有财报日，则跳过该 symbol
+                if has_recent_earnings:
                     continue
 
                 candidates_volume.add(symbol)
                 if is_tracing: log_detail(f"    ✅ [通过] {task_name} 放量下跌条件满足！(Price: {price_prev}->{price_curr})")
 
     conn.close()
-    
     result_list = sorted(list(candidates_volume))
     log_detail(f"条件8 (PE_Volume) 筛选完成，共命中 {len(result_list)} 个: {result_list}")
     return result_list

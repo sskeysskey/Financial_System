@@ -600,7 +600,9 @@
         "CYBR",
         "AL",
         "RVMD",
-        "RNA"
+        "RNA",
+        "MASI",
+        "OS"
     ],
     "etf": [
         "VDE",
@@ -1072,6 +1074,8 @@
         "GPGI",
         "CHE",
         "SPTM",
-        "TLK"
+        "TLK",
+        "CGW",
+        "PFFA"
     ]
 }

@@ -227,7 +227,7 @@ def main():
     IGNORED_CATEGORIES = {
         "Strategy12", "Strategy34", "PE_invalid","PE_valid",
         "PE_W", "PE_Deep", "OverSell_W", "Short", "Short_W",
-        "PE_Volume", "PE_Volume_up", "PE_Volume_high",
+        "PE_Volume", "PE_Volume_up", "PE_Volume_high", "ETF_Volume_high", "ETF_Volume_low",
         "Basic_Materials", "Real_Estate", "Energy", "Technology", "Consumer_Cyclical",
         "Utilities", "Consumer_Defensive", "Industrials", "Communication_Services",
         "Financial_Services", "Healthcare",

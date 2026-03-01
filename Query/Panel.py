@@ -1111,7 +1111,7 @@ class MainWindow(QMainWindow):
             'Must','Today','Short','Short_W',
             'PE_valid','PE_invalid','Strategy12','Strategy34',
             'PE_Deep','OverSell_W','PE_W','PE_Deeper',
-            'PE_Volume', 'PE_Volume_up', 'PE_Volume_high', 'ETF_Volume_high',
+            'PE_Volume', 'PE_Volume_up', 'PE_Volume_high', 'ETF_Volume_high', 'ETF_Volume_low',
             
             # 策略分组 (Backup 版本 - 实际上 UI 中正在使用的 key)
             'PE_valid_backup', 'PE_invalid_backup', 
@@ -1136,7 +1136,7 @@ class MainWindow(QMainWindow):
             "Must", "Today", "Short_backup", "Short_W_backup",
             # Volume Sector
             "PE_Volume_backup", "PE_Volume_up_backup", "PE_Volume_high_backup",
-            "ETF_Volume_high_backup", "ETF_Volume_low_backup"
+            "ETF_Volume_high_backup", "ETF_Volume_low_backup",
         }
 
         for index, category_group in enumerate(categories):

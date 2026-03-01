@@ -24,7 +24,7 @@ NORD_THEME = {
     'success_green': '#A3BE8C'
 }
 
-# --- 2. 界面类 (复用自 chart_input.py) ---
+# --- 2. 界面类 ---
 class InfoDialog(QDialog):
     def __init__(self, title, content, font_family, font_size, width, height, parent=None):
         super().__init__(parent)
@@ -33,6 +33,9 @@ class InfoDialog(QDialog):
         self.center_on_screen()
         
         layout = QVBoxLayout(self)
+        # 移除布局的内边距，让内容更紧凑
+        layout.setContentsMargins(5, 5, 5, 5)
+        
         text_box = QTextEdit(self)
         text_box.setReadOnly(True)
         text_box.setFont(QFont(font_family))
@@ -65,16 +68,16 @@ class InfoDialog(QDialog):
         """
         self.setStyleSheet(qss)
 
-# --- 3. 核心逻辑 (已修改，移除了黑名单⚡️标志) ---
+# --- 3. 核心逻辑 ---
 def search_history(symbol):
     # 用列表存储 HTML 片段
     html_parts = []
 
-    # 辅助函数：生成美化的标题 HTML
+    # --- 修改点 1: 缩小标题的上下边距 ---
     def make_header(text, color):
-        # style: 颜色, 粗体, 字体稍大(1.2倍), 上下外边距
+        # 将 margin-top 从 10px 缩小到 4px，margin-bottom 从 5px 缩小到 2px
         return f"""
-        <div style='margin-top: 10px; margin-bottom: 5px;'>
+        <div style='margin-top: 4px; margin-bottom: 2px;'>
             <span style='color: {color}; font-weight: bold; font-size: 18px;'>
                 {text}
             </span>
@@ -132,13 +135,10 @@ def search_history(symbol):
                 for s in found_sectors:
                     # 使用 &nbsp; 做缩进，<br> 换行
                     html_parts.append(f"&nbsp;&nbsp;★ {s}<br>")
-                html_parts.append("<br>")
+                # --- 修改点 2: 移除这里的 html_parts.append("<br>") 以缩小大组之间的间距 ---
                 
         except Exception as e:
             html_parts.append(f"<p style='color:red'>读取 Sector JSON 出错: {e}</p>")
-    else:
-        html_parts.append(f"<p style='color:orange'>警告: 找不到 Sector 文件<br>{SECTOR_PATH}</p>")
-
 
     # ==============================
     # 任务 2: 检索 Earning History 
@@ -184,7 +184,7 @@ def search_history(symbol):
 
                         # 移除了 marker 变量及闪电标志
                         html_parts.append(f"&nbsp;&nbsp;• {d_str}{suf_html}<br>")
-                    html_parts.append("<br>")
+                    # --- 修改点 3: 移除这里的 html_parts.append("<br>") ---
 
     except Exception as e:
         return f"<p style='color:red'>读取 Earning JSON 出错: {e}</p>"
@@ -206,14 +206,14 @@ if __name__ == "__main__":
     
     result_content = search_history(target_symbol)
     
-    # 显示结果窗口
+    # --- 修改点 4: 增大界面的高度 (height 从 600 改为 850) ---
     dialog = InfoDialog(
         title=f"Info Check: {target_symbol}", # 标题稍微改了一下，因为现在不仅仅是 History
         content=result_content,
         font_family="Arial Unicode MS", 
         font_size=16,
         width=500,
-        height=600
+        height=850  # 这里调大了高度
     )
 
     # =======================================================
@@ -239,6 +239,5 @@ if __name__ == "__main__":
             ], check=False)
         except Exception as e:
             print(f"macOS 强制置前执行失败: {e}")
-    # =======================================================
 
     dialog.exec()

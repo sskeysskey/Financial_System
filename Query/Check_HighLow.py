@@ -240,9 +240,17 @@ class HighLowWindow(QMainWindow):
         for p in high_low_data.values():
             self.list_high_low.extend(p.get('Low', []) + p.get('High', []))
         self.list_high_low.extend(self.high_low_5y_data.get('5Y', {}).get('High', []))
+        
         self.list_volume = [i['symbol'] for s in volume_high_data.values() for i in s]
-        self.list_etf = [i['symbol'] for i in (self.etf_data[:24] + self.etf_data[-24:][::-1])]
-        self.list_stock = [i['symbol'] for i in (self.stock_data[:24] + self.stock_data[-24:][::-1])]
+        
+        # --- 修改点 1: 将 ETF 和 Stock 的子列表明确拆分保存 ---
+        self.etf_gainers = [i['symbol'] for i in self.etf_data[:24]]
+        self.etf_losers = [i['symbol'] for i in self.etf_data[-24:][::-1]]
+        self.list_etf = self.etf_gainers + self.etf_losers
+        
+        self.stock_gainers = [i['symbol'] for i in self.stock_data[:24]]
+        self.stock_losers = [i['symbol'] for i in self.stock_data[-24:][::-1]]
+        self.list_stock = self.stock_gainers + self.stock_losers
 
         self.symbol_manager = SymbolManager(self.list_volume)
         self.init_ui()
@@ -543,11 +551,50 @@ class HighLowWindow(QMainWindow):
         for item in self.json_data.get("stocks", []) + self.json_data.get("etfs", []):
             if item.get("symbol") == symbol: return item.get("tag", "无标签")
         return "无标签"
+    
+        # --- 修改点 2: 添加动态计算子分类和索引的方法 ---
+    def get_symbol_group_info(self, symbol):
+        current_tab = self.tabs.currentIndex()
+
+        # Tab 0: Volume High
+        if current_tab == 0:
+            for group_name, items in self.volume_high_data.items():
+                symbols_in_group = [item['symbol'] for item in items]
+                if symbol in symbols_in_group:
+                    idx = symbols_in_group.index(symbol)
+                    return f"{group_name} ({idx + 1}/{len(symbols_in_group)})"
+
+        # Tab 1: ETFs
+        elif current_tab == 1:
+            if symbol in self.etf_gainers:
+                idx = self.etf_gainers.index(symbol)
+                return f"Top Gainers ({idx + 1}/{len(self.etf_gainers)})"
+            elif symbol in self.etf_losers:
+                idx = self.etf_losers.index(symbol)
+                return f"Top Losers ({idx + 1}/{len(self.etf_losers)})"
+
+        # Tab 2: Stocks
+        elif current_tab == 2:
+            if symbol in self.stock_gainers:
+                idx = self.stock_gainers.index(symbol)
+                return f"Top Gainers ({idx + 1}/{len(self.stock_gainers)})"
+            elif symbol in self.stock_losers:
+                idx = self.stock_losers.index(symbol)
+                return f"Top Losers ({idx + 1}/{len(self.stock_losers)})"
+
+        # Tab 3: High/Low (保留原有的扁平化显示逻辑，或作为 fallback)
+        curr_list = self.symbol_manager.symbols
+        if symbol in curr_list:
+            return f"({curr_list.index(symbol) + 1}/{len(curr_list)})"
+        
+        return ""
 
     def on_symbol_click(self, symbol):
         self.symbol_manager.set_current_symbol(symbol)
-        curr_list = self.symbol_manager.symbols
-        pos_str = f"{symbol} ({curr_list.index(symbol)+1}/{len(curr_list)})" if symbol in curr_list else symbol
+        
+        # --- 修改点 3: 使用新方法获取标题文本 ---
+        group_info = self.get_symbol_group_info(symbol)
+        pos_str = f"{symbol} {group_info}".strip()
         
         # --- 新增：获取财务数据 ---
         shares_val, marketcap, pe, pb = fetch_mnspp_data_from_db(DB_PATH, symbol)
@@ -568,7 +615,7 @@ class HighLowWindow(QMainWindow):
                 '1Y', 
                 False, 
                 callback=self.handle_chart_callback, 
-                window_title_text=pos_str
+                window_title_text=pos_str  # <--- 这里传入了新的标题格式
             )
             self.setFocus()
         except Exception as e: print(f"绘图错误: {e}")
