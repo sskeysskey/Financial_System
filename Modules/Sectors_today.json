@@ -352,13 +352,16 @@
     "VEU",
     "LQDI",
     "IXUS",
-    "FLCH",
     "BDRY",
     "CRAK",
     "MOAT",
     "GDMA",
     "FEP",
-    "NZAC"
+    "NZAC",
+    "FCA",
+    "IXG",
+    "YLDE",
+    "VXUS"
   ],
   "Basic_Materials": [
     "LIN",
@@ -413,7 +416,6 @@
     "PAAS",
     "UFPI",
     "AA",
-    "CMC",
     "OLN",
     "WFG",
     "AGI",
@@ -514,7 +516,8 @@
     "PSKY",
     "STUB",
     "FUBO",
-    "TDS"
+    "TDS",
+    "VSNT"
   ],
   "Consumer_Cyclical": [
     "AMZN",
@@ -765,7 +768,6 @@
     "PRMB",
     "CALM",
     "LRN",
-    "ATGE",
     "SFD",
     "MZTI",
     "JBS",
@@ -1233,7 +1235,8 @@
     "SHC",
     "MDLN",
     "MIRM",
-    "NVST"
+    "NVST",
+    "CGON"
   ],
   "Industrials": [
     "GE",
@@ -1456,7 +1459,8 @@
     "POWL",
     "TEX",
     "FPS",
-    "GPGI"
+    "GPGI",
+    "CMC"
   ],
   "Real_Estate": [
     "PLD",
@@ -1532,7 +1536,6 @@
     "AHR",
     "MRP",
     "OPEN",
-    "GMRE",
     "HHH",
     "FRMI",
     "LXP",

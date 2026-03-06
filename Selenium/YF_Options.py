@@ -270,8 +270,6 @@ def scrape_options():
     json_options_set = set() 
     json_pe_volume_set = set()      # 原 json_must_set
     json_pe_volume_up_set = set()   # 原 json_today_set
-    json_short_set = set()    
-    json_short_w_set = set()  
     json_zero_set = set()   
     blacklist_options_set = set() 
     
@@ -279,8 +277,6 @@ def scrape_options():
     count_json_options = 0
     count_json_pe_volume = 0        # 原 count_json_must
     count_json_pe_volume_up = 0     # 原 count_json_today
-    count_json_short = 0      
-    count_json_short_w = 0    
     count_json_zero = 0     
 
     # === 步骤 A: 加载黑名单 ===
@@ -316,17 +312,7 @@ def scrape_options():
                 json_pe_volume_up_set = set(pe_vol_up_keys) 
                 count_json_pe_volume_up = len(json_pe_volume_up_set)
 
-                # 4. 提取 Short 分组
-                short_keys = data.get("Short", {}).keys()
-                json_short_set = set(short_keys)
-                count_json_short = len(json_short_set)
-
-                # 5. 提取 Short_W 分组
-                short_w_keys = data.get("Short_W", {}).keys()
-                json_short_w_set = set(short_w_keys)
-                count_json_short_w = len(json_short_w_set)
-
-                # 6. 提取 Options_zero 分组 (用于过滤)
+                # 4. 提取 Options_zero 分组 (用于过滤)
                 zero_keys = data.get("Options_zero", {}).keys()
                 json_zero_set = set(zero_keys)
                 count_json_zero = len(json_zero_set)
@@ -336,13 +322,11 @@ def scrape_options():
     except Exception as e:
         tqdm.write(f"⚠️ 读取 JSON 配置文件出错: {e}")
 
-    # 4. 合并去重 (使用新变量名)
+    # 4. 合并去重 (移除了 Short 和 Short_W)
     merged_symbols_set = (
         json_options_set
         .union(json_pe_volume_set)      # Changed
         .union(json_pe_volume_up_set)   # Changed
-        .union(json_short_set)
-        .union(json_short_w_set)
     )
     
     symbol_cap_map = {} # 用于存储 symbol -> marketcap 的字典
@@ -426,13 +410,11 @@ def scrape_options():
     skipped_count = original_count - len(symbols)
     
     # --- 统一的日志输出 (修改部分) ---
-    # 计算 JSON 总数
+    # 计算 JSON 总数 (移除了 Short 和 Short_W)
     total_json_count = (
         count_json_options + 
         count_json_pe_volume +      # Changed
-        count_json_pe_volume_up +   # Changed
-        count_json_short + 
-        count_json_short_w
+        count_json_pe_volume_up     # Changed
     )
 
     log_msg = (

@@ -15,6 +15,12 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 # 算法参数配置
 CONFIG = {
+    "MA_PERIOD": 200,              # 均线周期
+    "MA_BELOW_MAX_PCT": 0.15,   # 新增：低于MA200的最大容忍幅度（超过此值不通过）
+
+    # --- 新增：近期回溯天数 ---
+    "RECENT_DAYS_LOOKBACK": 1,      # 回溯检查天数（原硬编码为3）
+    
     # --- 基础策略：放量下跌 ---
     "LOOKBACK_MONTHS_LONG": 12,    # 策略A回溯期
     "RANK_THRESHOLD_LONG": 2,      # 策略A排名
@@ -28,6 +34,9 @@ CONFIG = {
 
     # --- 新增策略：砸顶参数 ---
     "PUMP_DUMP_THRESHOLD": 0.10,   # 最新收盘价比历史信号日收盘价高出多少 (0.10 = 10%)
+
+    # 新增：破位容忍度（可选，防止假跌破，比如跌破均线 0.5% 才算）
+    "BREAKOUT_TOLERANCE": 0.005, 
 }
 
 # 动态路径生成
@@ -120,6 +129,42 @@ except (FileNotFoundError, json.JSONDecodeError):
 # ==========================================
 # 5. 辅助函数
 # ==========================================
+
+def check_ma_breakout(cursor, sector, symbol, ma_period=200):
+    """
+    检查当前收盘价是否处于 MA200 下方（兼容多日回溯）。
+    """
+    try:
+        limit_rows = ma_period + 10
+        cursor.execute(f"""
+            SELECT price FROM "{sector}" 
+            WHERE name = ? 
+            ORDER BY date DESC 
+            LIMIT ?
+        """, (symbol, limit_rows))
+        
+        rows = cursor.fetchall()
+        if len(rows) < ma_period + 1:
+            return False, 0
+            
+        prices = [float(r[0]) for r in rows][::-1]
+        
+        ma_today = sum(prices[-ma_period:]) / ma_period
+        price_today = prices[-1]
+        
+        tolerance = CONFIG.get("BREAKOUT_TOLERANCE", 0)
+        
+        # 改动核心：只判断今天是否在均线下方，[MA × 0.85, MA × 0.995) 才算通过。
+        lower_bound = ma_today * (1 - tolerance)
+        upper_bound = ma_today * (1 - CONFIG.get("MA_BELOW_MAX_PCT", 0.15))
+
+        if upper_bound <= price_today < lower_bound:
+            return True, ma_today
+            
+        return False, 0
+    except Exception as e:
+        logger.error(f"[{symbol}] MA Breakout check error: {e}")
+        return False, 0
 
 def update_earning_history_json_b(file_path, group_name, symbols_to_add):
     """
@@ -423,12 +468,17 @@ for symbol in symbols:
         else:
             if symbol_info['has_blacklist']: continue
         
-        # --- B. 获取最近2天交易数据 ---
-        # 获取 T (今天) 和 T-1 (昨天)
-        query = f'SELECT date, price, volume FROM "{sector}" WHERE name = ? ORDER BY date DESC LIMIT 2'
+        # --- A2. 进阶门槛：必须跌破 MA200 ---
+        is_ma_break, ma_value = check_ma_breakout(cursor, sector, symbol, CONFIG["MA_PERIOD"])
+        if not is_ma_break:
+            continue
+
+        # --- B. 获取最近 N+1 天交易数据（用于 N 天回溯检查）---
+        _lookback = CONFIG["RECENT_DAYS_LOOKBACK"]
+        query = f'SELECT date, price, volume FROM "{sector}" WHERE name = ? ORDER BY date DESC LIMIT {_lookback + 1}'
         cursor.execute(query, (symbol,))
         rows = cursor.fetchall()
-        
+
         if len(rows) < 2:
             continue
             
@@ -454,29 +504,50 @@ for symbol in symbols:
                 cursor, sector, symbol, date_curr, price_curr, earnings_date_str
             )
 
-        # --- C. 基础门槛 1: 必须下跌 (针对原策略的拦截) ---
-        # 核心改动：如果【不是砸顶】，且【今天没有下跌（价格>=昨天）】，才会被 continue 拦截跳过。
-        # 换言之，如果是砸顶，即使今天上涨也不会被跳过。
-        if not is_pump_dump and price_curr >= price_prev:
+        # --- C. 基础门槛 1: 必须下跌 (N天内任意一天下跌即通过) ---
+        any_drop_in_5days = any(
+            rows[i][1] is not None and rows[i+1][1] is not None and float(rows[i][1]) < float(rows[i+1][1])
+            for i in range(min(CONFIG["RECENT_DAYS_LOOKBACK"], len(rows) - 1))
+        )
+        if not is_pump_dump and not any_drop_in_5days:
             continue
             
-        # --- D. 基础门槛 2: 成交额排名检查 (仅针对原策略) ---
+        # --- D. 基础门槛 2: 成交额排名检查（回溯N天，任意一天命中即合格）---
         is_hit_base = False
         hit_reason = ""
-        
-        # 只有在今天确实下跌的情况下，才去跑原来非常耗时的量能排名 SQL 查询
-        if price_curr < price_prev:
-            # 检查 1: 过去一年 (12个月) 前 2 名
-            if check_turnover_rank(cursor, sector, symbol, date_curr, current_turnover, 
-                                   CONFIG["LOOKBACK_MONTHS_LONG"], CONFIG["RANK_THRESHOLD_LONG"]):
+
+        for i in range(min(CONFIG["RECENT_DAYS_LOOKBACK"], len(rows) - 1)):
+            day_date, day_price, day_vol = rows[i]
+            _, prev_price_i, _ = rows[i + 1]
+
+            # 跳过数据不完整的行
+            if day_price is None or prev_price_i is None or day_vol is None:
+                continue
+
+            day_price = float(day_price)
+            prev_price_i = float(prev_price_i)
+
+            # 该天必须是下跌日
+            if day_price >= prev_price_i:
+                continue
+
+            day_turnover = day_price * float(day_vol)
+            # 非当天时在 reason 中附上触发日期，方便排查
+            date_suffix = f"({day_date})" if i > 0 else ""
+
+            # 检查1：过去一年 (12个月) 前 N 名
+            if check_turnover_rank(cursor, sector, symbol, day_date, day_turnover,
+                                CONFIG["LOOKBACK_MONTHS_LONG"], CONFIG["RANK_THRESHOLD_LONG"]):
                 is_hit_base = True
-                hit_reason = f"1年内Top{CONFIG['RANK_THRESHOLD_LONG']}天量"
-                
-            # 检查 2: 若不满足，检查半年 (6个月) 前 1 名
-            elif check_turnover_rank(cursor, sector, symbol, date_curr, current_turnover, 
-                                     CONFIG["LOOKBACK_MONTHS_SHORT"], CONFIG["RANK_THRESHOLD_SHORT"]):
+                hit_reason = f"1年内Top{CONFIG['RANK_THRESHOLD_LONG']}天量{date_suffix}"
+                break
+
+            # 检查2：半年 (6个月) 前 N 名
+            elif check_turnover_rank(cursor, sector, symbol, day_date, day_turnover,
+                                    CONFIG["LOOKBACK_MONTHS_SHORT"], CONFIG["RANK_THRESHOLD_SHORT"]):
                 is_hit_base = True
-                hit_reason = f"半年内Top{CONFIG['RANK_THRESHOLD_SHORT']}天量"
+                hit_reason = f"半年内Top{CONFIG['RANK_THRESHOLD_SHORT']}天量{date_suffix}"
+                break
 
         # 如果满足砸顶，强制纳入最终名单
         if is_pump_dump:
@@ -531,7 +602,7 @@ for symbol in symbols:
             pct_change = (price_curr - price_prev) / price_prev * 100
             
             output_line = {
-                'text': f"{sector_disp} {symbol_disp} {pct_change:.2f}% {group_tag} {hit_reason}: {tags_str}",
+                'text': f"{sector_disp} {symbol_disp} {pct_change:.2f}% MA{CONFIG['MA_PERIOD']}={ma_value:.2f} {group_tag} {hit_reason}: {tags_str}",
                 'change_percent': abs(current_turnover)
             }
             sector_outputs[sector_disp].append(output_line)

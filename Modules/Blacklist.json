@@ -602,7 +602,9 @@
         "RVMD",
         "RNA",
         "MASI",
-        "OS"
+        "OS",
+        "GMRE",
+        "ATGE"
     ],
     "etf": [
         "VDE",
@@ -956,7 +958,9 @@
         "ROSC",
         "OPPJ",
         "RSPU",
-        "XMVM"
+        "XMVM",
+        "FLCH",
+        "BEDY"
     ],
     "Earning": [
         "TW",
@@ -1076,6 +1080,45 @@
         "SPTM",
         "TLK",
         "CGW",
-        "PFFA"
+        "PFFA",
+        "IESC",
+        "PAYX",
+        "CFG",
+        "VCTR",
+        "ARCC",
+        "KRMN",
+        "KEY",
+        "KBE",
+        "FFIN",
+        "SHG",
+        "SPEM",
+        "SLM",
+        "JQUA",
+        "COLO",
+        "SCO",
+        "SNN",
+        "OLLI",
+        "EWT",
+        "EMB",
+        "IEFA",
+        "EDIV",
+        "FRDM",
+        "EMXC",
+        "PRF",
+        "EWW",
+        "EWH",
+        "ACWI",
+        "SCHG",
+        "DGRO",
+        "PRCT",
+        "BCS",
+        "IPKW",
+        "DB",
+        "CLX",
+        "VSCO",
+        "BC",
+        "VNOM",
+        "CMC",
+        "HTHT"
     ]
 }

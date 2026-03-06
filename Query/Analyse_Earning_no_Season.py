@@ -59,15 +59,19 @@ CONFIG = {
     "COND5_WINDOW_DAYS": 6,
 
     # 严格筛选标准
-    "PRICE_DROP_PERCENTAGE_LARGE": 0.1,  # <2000亿=10%
+    "PRICE_DROP_PERCENTAGE_LARGE": 0.11,  # <2000亿=11%
     "PRICE_DROP_PERCENTAGE_SMALL": 0.09,   # 2000亿 ≤ 市值 < 5000亿 = 9%
     "PRICE_DROP_PERCENTAGE_MEGA": 0.07,    # 5000亿 ≤ 市值 < 10000亿 = 7%
     "PRICE_DROP_PERCENTAGE_GIANT": 0.05,   # 新增：≥10000亿=5%
 
-    # 普通宽松筛选标准
+    # 普通宽松筛选标准 no hot_tags
     "RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.1,  # <2000亿=10%
     "RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.08,  # 2000亿 ≤ 市值 < 10000亿 = 8%
     "RELAXED_PRICE_DROP_PERCENTAGE_MINI": 0.05,  # 新增：≥10000亿=5%
+    
+    # 普通宽松标准 with hot_tags
+    "HOT_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.075,
+    "HOT_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.067,
 
     # 次宽松筛选标准
     "SUB_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.09,  # <2000亿=9%
@@ -89,7 +93,7 @@ CONFIG = {
 
     "LOOKBACK_WINDOW_DAYS": 5,  # 相对N日基准价
 
-    # 【新增】热门板块回撤容忍度：如果属于 HOT_TAGS，则允许放宽到 12%
+    # 热门板块回撤容忍度：如果属于 HOT_TAGS，则允许放宽到 12%
     "MAX_INCREASE_PERCENTAGE_SINCE_LOW_HOT": 0.12, 
 
     # 条件1c 的专属参数：最新价比最新财报收盘价低至少 X%
@@ -99,7 +103,7 @@ CONFIG = {
     "COND3_DROP_THRESHOLDS": [0.09, 0.15],  # 9% 与 15%
     "COND3_LOOKBACK_DAYS": 60,
 
-    # ========== 修改后的条件4参数 ==========
+    # 条件4参数
     "MARKETCAP_VAL_1": 220_000_000_000,
     "MARKETCAP_VAL_2": 500_000_000_000,
     "MARKETCAP_VAL_3": 800_000_000_000,
@@ -111,7 +115,7 @@ CONFIG = {
     "COND4_THRESH_4": 0.047,
     "COND4_THRESH_5": 0.045,
 
-    # ========== 新增：条件5的参数 ==========
+    # 条件5的参数
     "COND5_ER_TO_HIGH_THRESHOLD": 0.3,  # 财报日到最高价的涨幅阈值 30%
     "COND5_HIGH_TO_LATEST_THRESHOLD": 0.09,  # 最高价到最新价的跌幅阈值 9%
 
@@ -120,13 +124,13 @@ CONFIG = {
     "PE_DEEP_HIGH_SINCE_ER_THRESHOLD": 0.18, # 条件1-5后的深跌判断3
     "PE_DEEPER_DROP_THRESHOLD": 0.351, # 新增：条件1-5后的超深跌判断 (35.1%)
 
-    # ========== 代码修改开始 1/4：新增条件6（抄底W底）参数 ==========
+    # 条件6（抄底W底）参数
     "COND6_ER_DROP_A_THRESHOLD": 0.25,  # 财报跌幅分界线 25%
     "COND6_LOW_DROP_B_LARGE": 0.09,     # 如果A > 25%，则B需 > 9%
     "COND6_LOW_DROP_B_SMALL": 0.12,     # 如果A <= 25%，则B需 > 12%
     "COND6_W_BOTTOM_MIN_PEAK_RISE": 0.015, # 例如改为 1.5%
     
-    # [新增] W底形态 - 底部抬高容忍天数
+    # W底形态 - 底部抬高容忍天数
     # 含义：如果“财报后最低价”发生在 X 天前，则允许当前的 W 底价格高于那个最低价（视为上涨中继或底部抬高）。
     "COND6_W_BOTTOM_HIGHER_LOW_DAYS": 18, 
 
@@ -507,22 +511,29 @@ def check_special_condition(data, config, log_detail, symbol_to_trace):
 
     cond_a, cond_b, cond_c, cond_d = False, False, False, False
     
+    # 条件 A: 最新财报涨跌幅 > 0
     latest_er_pct = er_pcts[-1]
     cond_a = latest_er_pct > 0
 
+    # 条件 B 和 C 的计算
     if len(all_er_prices) >= recent_earnings_count:
         prices_to_check = all_er_prices[-recent_earnings_count:]
         avg_recent_price = sum(prices_to_check) / len(prices_to_check)
         latest_er_price = prices_to_check[-1]
+        
+        # B: 最新财报收盘价 > 过去N次平均价
         cond_b = latest_er_price > avg_recent_price
         
+        # C: 两次财报收盘价价差 > 阈值 (代码中目前是 ER_PRICE_DIFF_THRESHOLD)
         previous_er_price = all_er_prices[-2]
         price_diff_pct = ((latest_er_price - previous_er_price) / previous_er_price) if previous_er_price > 0 else 0
         cond_c = price_diff_pct > config["ER_PRICE_DIFF_THRESHOLD"]
     
+    # 条件 D: 最近三次财报收盘价递增
     if len(all_er_prices) >= 3:
         cond_d = all_er_prices[-1] > all_er_prices[-2] > all_er_prices[-3]
 
+    # --- 判定逻辑开始 ---
     if is_tracing:
         log_detail(f"    - a) 最新财报涨跌幅 > 0: {latest_er_pct:.4f} > 0 -> {cond_a}")
         if len(all_er_prices) >= recent_earnings_count:
@@ -535,16 +546,22 @@ def check_special_condition(data, config, log_detail, symbol_to_trace):
         else:
             log_detail(f"    - d) 跳过 (财报价格数量 < 3)")
 
+    # 1. 最宽松: A and B and C
     if cond_a and cond_b and cond_c:
         if is_tracing: log_detail(f"    - 最终决策: 命中 (A & B & C) -> 返回 3 (最宽松)")
         return 3
+        
+    # 2. 次宽松: A and D
     if cond_a and cond_d:
         if is_tracing: log_detail(f"    - 最终决策: 命中 (A & D) -> 返回 2 (次宽松)")
         return 2
-    if (cond_a and cond_b) or (cond_b and cond_c):
-        if is_tracing: log_detail(f"    - 最终决策: 命中 ((A & B) or (B & C)) -> 返回 1 (普通宽松)")
+        
+    # 3. 普通宽松: (A and B) or (C and D)  <-- 这里已经按照你的要求修改
+    if (cond_a and cond_b) or (cond_c and cond_d):
+        if is_tracing: log_detail(f"    - 最终决策: 命中 ((A & B) or (C & D)) -> 返回 1 (普通宽松)")
         return 1
 
+    # 4. 严格: 其他
     if is_tracing: log_detail(f"    - 最终决策: 未命中任何宽松条件 -> 返回 0 (严格)")
     return 0
 
@@ -584,7 +601,7 @@ def check_condition_2(data, config, log_detail, symbol_to_trace):
     
     # 同样建议关联到配置
     # 1. 先获取阈值变量 (默认为 0.04)
-    er_threshold = config.get("ER_PRICE_DIFF_THRESHOLD", 0.04)
+    er_threshold = config.get("ER_PRICE_DIFF_THRESHOLD", 0.06)
     # 2. 使用该变量进行判断
     cond_b = price_diff_pct >= er_threshold
     if is_tracing: 
@@ -1343,10 +1360,21 @@ def run_processing_logic(log_detail):
             # 逻辑：如果是条件5、6、7触发，跳过价格回撤过滤 (因为这些策略自带价格位置判断)
             should_skip_drawdown = passed_cond5 or passed_cond6 or passed_cond7
             
-            if apply_common_filters(data, SYMBOL_TO_TRACE, log_detail, drop_large, drop_small, drop_pct_mini=drop_mini, skip_drawdown=should_skip_drawdown):
-                # ========== [修改] 开始：此处新增日期重合检查，修复条件6漏检问题 ==========
-                # 检查最新交易日是否等于财报日
-                # 这一步现在对 条件6 和 条件1-5 同时生效
+            # ========== 新增：动态判断普通宽松模式下的热门专属阈值 ==========
+            current_drop_large = drop_large
+            current_drop_small = drop_small
+            
+            if pass_name == "普通宽松":
+                symbol_tags = data.get('tags', set())
+                hot_tags = CONFIG.get("HOT_TAGS", set())
+                if symbol_tags & hot_tags:
+                    current_drop_large = CONFIG.get("HOT_RELAXED_PRICE_DROP_PERCENTAGE_LARGE", drop_large)
+                    current_drop_small = CONFIG.get("HOT_RELAXED_PRICE_DROP_PERCENTAGE_SMALL", drop_small)
+                    if symbol == SYMBOL_TO_TRACE:
+                        log_detail(f" - [动态阈值] 命中热门标签，普通宽松阈值调整为 large={current_drop_large*100}%, small={current_drop_small*100}%")
+            # ==========================================================
+
+            if apply_common_filters(data, SYMBOL_TO_TRACE, log_detail, current_drop_large, current_drop_small, drop_pct_mini=drop_mini, skip_drawdown=should_skip_drawdown):
                 if data['latest_date_str'] == data['latest_er_date_str']:
                     if symbol == SYMBOL_TO_TRACE:
                         log_detail(f" - [通用过滤] 失败 (日期重合): 最新交易日({data['latest_date_str']}) 与 最新财报日相同。")
@@ -1586,15 +1614,15 @@ def run_processing_logic(log_detail):
              in_valid = SYMBOL_TO_TRACE in final_pe_valid_to_write
              in_deep = SYMBOL_TO_TRACE in final_pe_deep_to_write
              in_deeper = SYMBOL_TO_TRACE in final_pe_deeper_to_write
-             in_pe_w = SYMBOL_TO_TRACE in final_pe_w_to_write           # 【新增】
-             in_oversell = SYMBOL_TO_TRACE in final_oversell_w_to_write # 【新增】
+             in_pe_w = SYMBOL_TO_TRACE in final_pe_w_to_write
+             in_oversell = SYMBOL_TO_TRACE in final_oversell_w_to_write
              
              log_detail(f"🔎 [验证] Symbol '{SYMBOL_TO_TRACE}' 最终筛选状态:")
              log_detail(f"   - 是否进入 PE_valid:   {in_valid}")
              log_detail(f"   - 是否进入 PE_Deep:    {in_deep}")
              log_detail(f"   - 是否进入 PE_Deeper:  {in_deeper}")
-             log_detail(f"   - 是否进入 PE_W:       {in_pe_w}")       # 【新增】
-             log_detail(f"   - 是否进入 OverSell_W: {in_oversell}")   # 【新增】
+             log_detail(f"   - 是否进入 PE_W:       {in_pe_w}")
+             log_detail(f"   - 是否进入 OverSell_W: {in_oversell}")
         
         log_detail("="*60 + "\n")
         

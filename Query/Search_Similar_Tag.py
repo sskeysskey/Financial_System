@@ -62,6 +62,19 @@ def load_weight_groups():
     except Exception:
         return {}
 
+# --- 新增：大小写不敏感的 Symbol 校准函数 ---
+def get_exact_symbol_name(symbol, data):
+    """
+    忽略大小写在 description.json 中查找 symbol。
+    如果找到，返回 JSON 中准确的大小写形式；如果没找到，返回原输入。
+    """
+    target_lower = symbol.lower()
+    for category in ['stocks', 'etfs']:
+        for item in data.get(category, []):
+            if item.get('symbol', '').lower() == target_lower:
+                return item.get('symbol')
+    return symbol
+
 def find_tags_by_symbol(symbol, data, tags_weight_config):
     tags_with_weight = []
     for category in ['stocks', 'etfs']:
@@ -134,12 +147,13 @@ def load_json_data(file_path):
 
 def get_stock_symbol(default_symbol=""):
     input_dialog = QInputDialog()
-    input_dialog.setWindowTitle("输入股票代码")
-    input_dialog.setLabelText("请输入股票代码:")
+    input_dialog.setWindowTitle("输入代码")
+    input_dialog.setLabelText("请输入代码:")
     input_dialog.setTextValue(default_symbol)
     input_dialog.setWindowFlags(input_dialog.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
     if input_dialog.exec() == QInputDialog.DialogCode.Accepted:
-        return input_dialog.textValue().strip().upper()
+        # 修改：移除 .upper()，保留原始大小写
+        return input_dialog.textValue().strip()
     return None
 
 def copy2clipboard():
@@ -296,8 +310,11 @@ class SimilarityViewerWindow(QMainWindow):
             elif item.layout(): self.clear_layout(item.layout())
 
     def on_search(self):
-        symbol = self.search_input.text().strip().upper()
-        if not symbol: return
+        # 修改：移除 .upper()，并使用校准函数获取准确大小写
+        raw_symbol = self.search_input.text().strip()
+        if not raw_symbol: return
+        symbol = get_exact_symbol_name(raw_symbol, self.json_data)
+        
         tags = find_tags_by_symbol(symbol, self.json_data, self.tags_weight_config)
         if not tags:
             QMessageBox.information(self, "未找到", f"找不到符号 '{symbol}' 的标签。")
@@ -466,30 +483,33 @@ class SimilarityViewerWindow(QMainWindow):
         date_color = default_color  # 默认为白色
         colored_date_part_html = f"<span>{date_part_str}</span>" # 默认无样式
 
-        # 在日期部分中查找 MMDD前 的格式, 例如 "0128前"
-        date_info_match = re.search(r'(\d{2})(\d{2})[前后未]$', date_part_str)
-        
+        # 注意：([前后未]) 加了括号，用于捕获后缀字符
+        date_info_match = re.search(r'(\d{2})(\d{2})([前后未])$', date_part_str)
+
         if date_info_match:
-            month_str, day_str = date_info_match.groups()
+            month_str, day_str, suffix = date_info_match.groups()
             try:
-                # 获取当前年份，并创建日期对象
                 current_year = date.today().year
                 event_date = date(current_year, int(month_str), int(day_str))
-                
-                # 获取今天日期的前一天
-                comparison_date = date.today() - timedelta(days=1)
+                yesterday = date.today() - timedelta(days=1)
 
-                # 如果事件日期 >= 昨天，则使用橙色
-                if event_date >= comparison_date:
+                if event_date > yesterday:
+                    # 今天或未来：无论前/后，都用橙色
                     date_color = orange_color
-                
+                elif event_date == yesterday:
+                    # 恰好是昨天：前 → 白色（已过期），后 → 橙色（仍相关）
+                    date_color = default_color if suffix == '前' else orange_color
+                else:
+                    # 昨天之前的过去日期：无论前/后，都用白色
+                    date_color = default_color
+
                 colored_date_part_html = f"<span style='color:{date_color};'>{date_part_str}</span>"
 
             except ValueError:
-                # 如果日期无效 (例如 02月30日), 则回退到旧逻辑，直接显示橙色
+                # 日期无效（如0230）时回退为橙色
                 colored_date_part_html = f"<span style='color:{orange_color};'>{date_part_str}</span>"
         else:
-            # 如果不匹配 MMDD前 格式 (例如只有"未"或"3天后")，也使用旧逻辑，显示橙色
+            # 不含 MMDD前/后 格式的文本（如"未"单独出现）保持橙色
             colored_date_part_html = f"<span style='color:{orange_color};'>{date_part_str}</span>"
 
 
@@ -660,12 +680,14 @@ if __name__ == '__main__':
     
     symbol = None
     if len(sys.argv) > 1:
-        symbol = sys.argv[1].strip().upper()
+        # 修改：移除 .upper()，保留原始大小写
+        symbol = sys.argv[1].strip()
     else:
         pyperclip.copy('')
         if copy2clipboard():
             content = get_clipboard_content()
-            symbol = content if content and re.match('^[A-Z.-]+$', content) else get_stock_symbol(content)
+            # 修改：正则表达式允许大小写字母匹配
+            symbol = content if content and re.match('^[A-Za-z.-]+$', content) else get_stock_symbol(content)
         else:
             symbol = get_stock_symbol()
 
@@ -686,6 +708,9 @@ if __name__ == '__main__':
     except Exception as e:
         QMessageBox.critical(None, "数据加载错误", str(e))
         sys.exit(1)
+
+    # 新增：使用校准函数获取准确大小写，防止后续报错
+    symbol = get_exact_symbol_name(symbol, desc_data)
 
     target_tags = find_tags_by_symbol(symbol, desc_data, tw_cfg)
     if not target_tags:
