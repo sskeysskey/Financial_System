@@ -13,30 +13,32 @@ from datetime import datetime, timedelta
 USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
+# ============ 回测 / 追踪配置 ============
+# 如为空，则运行"今天"模式；填入日期（如 "2025-01-15"），则运行回测模式
+SYMBOL_TO_TRACE = ""
+TARGET_DATE = ""
+
+# SYMBOL_TO_TRACE = "SE"
+# TARGET_DATE = "2026-03-05"
+
+# 追踪日志路径
+LOG_FILE_PATH = os.path.join(USER_HOME, "Downloads", "OverBuy_trace_log.txt")
+# =========================================
+
 # 算法参数配置
 CONFIG = {
-    "MA_PERIOD": 200,              # 均线周期
-    "MA_BELOW_MAX_PCT": 0.15,   # 新增：低于MA200的最大容忍幅度（超过此值不通过）
-
-    # --- 新增：近期回溯天数 ---
-    "RECENT_DAYS_LOOKBACK": 1,      # 回溯检查天数（原硬编码为3）
-    
-    # --- 基础策略：放量下跌 ---
-    "LOOKBACK_MONTHS_LONG": 12,    # 策略A回溯期
-    "RANK_THRESHOLD_LONG": 2,      # 策略A排名
-    "LOOKBACK_MONTHS_SHORT": 6,    # 策略B回溯期
-    "RANK_THRESHOLD_SHORT": 1,     # 策略B排名
-
-    # --- 进阶策略：M头 (Short_W) 形态参数 ---
-    "M_TOP_HEIGHT_TOLERANCE": 0.038,       # 双峰高度差容忍度 (3.8%)
-    "M_TOP_NECK_DEPTH": 0.025,             # 颈线深度 (2.5%)
-    "M_TOP_MIN_DAYS_GAP": 3,               # 双峰之间的最小间隔天数
-
-    # --- 新增策略：砸顶参数 ---
-    "PUMP_DUMP_THRESHOLD": 0.10,   # 最新收盘价比历史信号日收盘价高出多少 (0.10 = 10%)
-
-    # 新增：破位容忍度（可选，防止假跌破，比如跌破均线 0.5% 才算）
-    "BREAKOUT_TOLERANCE": 0.005, 
+    "MA_PERIOD": 200,
+    "MA_BELOW_MAX_PCT": 0.3,
+    "RECENT_DAYS_LOOKBACK": 3,
+    "LOOKBACK_MONTHS_LONG": 12,
+    "RANK_THRESHOLD_LONG": 2,
+    "LOOKBACK_MONTHS_SHORT": 6,
+    "RANK_THRESHOLD_SHORT": 1,
+    "M_TOP_HEIGHT_TOLERANCE": 0.038,
+    "M_TOP_NECK_DEPTH": 0.025,
+    "M_TOP_MIN_DAYS_GAP": 3,
+    "PUMP_DUMP_THRESHOLD": 0.10,
+    "BREAKOUT_TOLERANCE": 0.005,
 }
 
 # 动态路径生成
@@ -47,7 +49,6 @@ NEWS_DIR = os.path.join(CODING_DIR, 'News')
 DB_DIR = os.path.join(CODING_DIR, 'Database')
 DOWNLOADS_DIR = os.path.join(BASE_PATH, 'Downloads')
 
-# 定义文件具体路径
 DESC_FILE = os.path.join(MODULES_DIR, 'description.json')
 SECTORS_FILE = os.path.join(MODULES_DIR, 'Sectors_All.json')
 PANEL_FILE = os.path.join(MODULES_DIR, 'Sectors_panel.json')
@@ -59,7 +60,7 @@ DEBUG_LOG_FILE = os.path.join(DOWNLOADS_DIR, 'OverBuy_debug.log')
 # ==========================================
 # 2. 日志配置
 # ==========================================
-LOG_ENABLED = False  # True 或 False
+LOG_ENABLED = False
 
 logger = logging.getLogger(__name__)
 handlers_list = [logging.StreamHandler()]
@@ -69,28 +70,27 @@ if LOG_ENABLED:
     handlers_list.append(logging.FileHandler(DEBUG_LOG_FILE, encoding='utf-8'))
 
 logging.basicConfig(
-    level=logging.INFO, # 调整为 INFO 减少刷屏
+    level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
     handlers=handlers_list,
-    force=True 
+    force=True
 )
 logger.disabled = False
 
 # ==========================================
 # 3. 标签过滤配置
 # ==========================================
-BLACKLIST_TAGS = [
-    "赋能半导体", "黄金", "白银", "贵金属", "卫星",
-    "国防", "军工", "生物制药", "铝", "铜", "仿制药", "卡车运输"
-]
-
-WHITELIST_TAGS = [] 
+# BLACKLIST_TAGS = [
+#     "赋能半导体", "黄金", "白银", "贵金属", "卫星",
+#     "国防", "军工", "生物制药", "铝", "铜", "仿制药", "卡车运输"
+# ]
+BLACKLIST_TAGS = []
+WHITELIST_TAGS = []
 
 # ==========================================
-# 4. 数据加载
+# 4. 数据加载（模块级只读，不影响回测）
 # ==========================================
 
-# 读取description文件
 try:
     with open(DESC_FILE, 'r', encoding='utf-8') as f:
         desc_data = json.load(f)
@@ -99,7 +99,6 @@ except Exception as e:
     logger.error(f"Failed to load DESC_FILE: {e}")
     desc_data = {}
 
-# 读取sectors文件
 try:
     with open(SECTORS_FILE, 'r', encoding='utf-8') as f:
         sectors_data = json.load(f)
@@ -108,7 +107,6 @@ except Exception as e:
     logger.error(f"Failed to load SECTORS_FILE: {e}")
     sectors_data = {}
 
-# 读取 panel.json
 try:
     with open(PANEL_FILE, 'r', encoding='utf-8') as f:
         panel_data = json.load(f)
@@ -117,7 +115,6 @@ except FileNotFoundError:
     panel_data = {}
     logger.warning("PANEL_FILE not found, initializing empty.")
 
-# 读取 Earning_History.json (全局只读一次用于检索)
 try:
     with open(EARNING_HISTORY_FILE, 'r', encoding='utf-8') as f:
         earning_history_data = json.load(f)
@@ -130,53 +127,63 @@ except (FileNotFoundError, json.JSONDecodeError):
 # 5. 辅助函数
 # ==========================================
 
-def check_ma_breakout(cursor, sector, symbol, ma_period=200):
+def check_ma_breakout(cursor, sector, symbol, ma_period=200, target_date=None):
     """
-    检查当前收盘价是否处于 MA200 下方（兼容多日回溯）。
+    检查当前收盘价是否处于 MA200 下方（兼容多日回溯 & 回测日期限制）。
     """
     try:
         limit_rows = ma_period + 10
-        cursor.execute(f"""
-            SELECT price FROM "{sector}" 
-            WHERE name = ? 
-            ORDER BY date DESC 
-            LIMIT ?
-        """, (symbol, limit_rows))
-        
+        # [回测] 限制查询日期上界
+        if target_date:
+            cursor.execute(f"""
+                SELECT price FROM "{sector}"
+                WHERE name = ? AND date <= ?
+                ORDER BY date DESC
+                LIMIT ?
+            """, (symbol, target_date, limit_rows))
+        else:
+            cursor.execute(f"""
+                SELECT price FROM "{sector}"
+                WHERE name = ?
+                ORDER BY date DESC
+                LIMIT ?
+            """, (symbol, limit_rows))
+
         rows = cursor.fetchall()
         if len(rows) < ma_period + 1:
             return False, 0
-            
+
         prices = [float(r[0]) for r in rows][::-1]
-        
+
         ma_today = sum(prices[-ma_period:]) / ma_period
         price_today = prices[-1]
-        
+
         tolerance = CONFIG.get("BREAKOUT_TOLERANCE", 0)
-        
-        # 改动核心：只判断今天是否在均线下方，[MA × 0.85, MA × 0.995) 才算通过。
         lower_bound = ma_today * (1 - tolerance)
         upper_bound = ma_today * (1 - CONFIG.get("MA_BELOW_MAX_PCT", 0.15))
 
         if upper_bound <= price_today < lower_bound:
             return True, ma_today
-            
+
         return False, 0
     except Exception as e:
         logger.error(f"[{symbol}] MA Breakout check error: {e}")
         return False, 0
 
-def update_earning_history_json_b(file_path, group_name, symbols_to_add):
+
+def update_earning_history_json_b(file_path, group_name, symbols_to_add, base_date_str=None):
     """
     更新 Earning_History.json 文件。
+    base_date_str: 指定记录日期（回测模式下由外部传入，否则默认昨天）。
     """
     if not symbols_to_add:
         return
-    # 获取昨天日期作为记录日期
-    record_date_str = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
-    
+
+    # [回测兼容] 优先使用传入的日期，否则用昨天
+    record_date_str = base_date_str if base_date_str else (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+
     logger.info(f"--- 更新历史记录文件: {os.path.basename(file_path)} -> '{group_name}' ---")
-    
+
     try:
         if os.path.exists(file_path):
             with open(file_path, 'r', encoding='utf-8') as f:
@@ -192,7 +199,7 @@ def update_earning_history_json_b(file_path, group_name, symbols_to_add):
     existing_symbols = data[group_name].get(record_date_str, [])
     combined_symbols = sorted(list(set(existing_symbols) | set(symbols_to_add)))
     data[group_name][record_date_str] = combined_symbols
-    
+
     try:
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
@@ -200,11 +207,14 @@ def update_earning_history_json_b(file_path, group_name, symbols_to_add):
     except Exception as e:
         logger.error(f"错误: 写入历史记录文件失败: {e}")
 
+
 def pad_display(s: str, width: int, align: str = 'left') -> str:
     cur = wcswidth(s)
-    if cur >= width: return s
+    if cur >= width:
+        return s
     pad = width - cur
     return s + ' ' * pad if align == 'left' else ' ' * pad + s
+
 
 def get_symbol_sector(symbol):
     for sector, symbols in sectors_data.items():
@@ -212,428 +222,509 @@ def get_symbol_sector(symbol):
             return sector
     return "Unknown"
 
+
 def get_symbol_info(symbol):
-    # 检查stocks列表
     for stock in desc_data.get('stocks', []):
         if stock['symbol'] == symbol:
             tags = stock.get('tag', [])
             has_blacklist = any(tag in BLACKLIST_TAGS for tag in tags)
             return {'has_blacklist': has_blacklist, 'tags': tags}
-            
+
     for etf in desc_data.get('etfs', []):
         if etf['symbol'] == symbol:
             tags = etf.get('tag', [])
             has_blacklist = any(tag in BLACKLIST_TAGS for tag in tags)
             return {'has_blacklist': has_blacklist, 'tags': tags}
-            
+
     return {'has_blacklist': False, 'tags': []}
 
+
 # ==========================================
-# 6. 核心策略函数 (新)
+# 6. 核心策略函数
 # ==========================================
 
 def check_turnover_rank(cursor, sector_name, symbol, latest_date_str, latest_turnover, lookback_months, rank_threshold):
     """
     检查 latest_turnover 是否是过去 lookback_months 个月内的前 rank_threshold 名。
+    （latest_date_str 本身已被上层函数通过 target_date 限制，此处无需额外处理）
     """
     try:
         dt = datetime.strptime(latest_date_str, "%Y-%m-%d")
-        # 粗略计算 N 个月前的日期
         start_date = dt - timedelta(days=lookback_months * 30)
         start_date_str = start_date.strftime("%Y-%m-%d")
     except Exception:
         return False
 
-    # 查询过去 N 个月的所有日期、价格和成交量
     query = f'SELECT date, price, volume FROM "{sector_name}" WHERE name = ? AND date >= ? AND date <= ?'
     cursor.execute(query, (symbol, start_date_str, latest_date_str))
     rows = cursor.fetchall()
-    
-    # 计算成交额并过滤掉 None 值
+
     valid_data = []
     for r in rows:
         if r[1] is not None and r[2] is not None:
             turnover = r[1] * r[2]
             valid_data.append((r[0], turnover))
-    
+
     if not valid_data:
         return False
-    
-    # 按成交额从大到小排序
+
     sorted_data = sorted(valid_data, key=lambda x: x[1], reverse=True)
-    
-    # 截取前 N 名
     top_n_data = sorted_data[:rank_threshold]
     top_n_turnovers = [item[1] for item in top_n_data]
-    
-    # 判定逻辑：当前成交额是否在前 N 名中，或者大于等于第 N 名的值
+
     if latest_turnover in top_n_turnovers:
         return True
     elif len(top_n_turnovers) >= rank_threshold and latest_turnover >= top_n_turnovers[rank_threshold - 1]:
         return True
-        
+
     return False
 
-def check_double_top(cursor, symbol, sector):
+
+def check_double_top(cursor, symbol, sector, target_date=None):
     """
-    检查是否形成 M 形态（双峰）。
+    检查是否形成 M 形态（双峰）。[回测] 新增 target_date 参数限制查询上界。
     """
     try:
         price_tolerance = CONFIG.get("M_TOP_HEIGHT_TOLERANCE", 0.038)
         min_depth = CONFIG.get("M_TOP_NECK_DEPTH", 0.025)
         min_days_gap = CONFIG.get("M_TOP_MIN_DAYS_GAP", 3)
 
-        cursor.execute(f"""
-            SELECT date, price 
-            FROM {sector}
-            WHERE name = ? 
-            ORDER BY date DESC 
-            LIMIT 60
-        """, (symbol,))
+        # [回测] 限制查询日期上界，同时修复原代码中 sector 缺少引号的问题
+        if target_date:
+            cursor.execute(f"""
+                SELECT date, price
+                FROM "{sector}"
+                WHERE name = ? AND date <= ?
+                ORDER BY date DESC
+                LIMIT 60
+            """, (symbol, target_date))
+        else:
+            cursor.execute(f"""
+                SELECT date, price
+                FROM "{sector}"
+                WHERE name = ?
+                ORDER BY date DESC
+                LIMIT 60
+            """, (symbol,))
+
         rows = cursor.fetchall()
-        
-        if len(rows) < 15: return False
-        
-        rows = rows[::-1] # 转正序
+
+        if len(rows) < 15:
+            return False
+
+        rows = rows[::-1]  # 转正序
         prices = [float(r[1]) for r in rows]
-        dates = [r[0] for r in rows]
-        
-        # 锁定 P2 (右峰) 必须是昨天 (index -2)
-        # 因为我们的基础条件是今天下跌(Today < Yesterday)，所以Yesterday天然是一个潜在的短期高点
-        curr_price = prices[-1]      # 今天
-        p2 = prices[-2]              # 昨天 (潜在 P2)
-        prev2_price = prices[-3]     # 前天
-        
-        # 确认昨天是局部高点
+
+        curr_price = prices[-1]
+        p2 = prices[-2]
+        prev2_price = prices[-3]
+
         if not (p2 > prev2_price and p2 > curr_price):
             return False
-            
+
         idx2 = len(prices) - 2
-        
-        # 向前寻找 P1 (左峰)
         start_search_index = idx2 - min_days_gap
-        
+
         found_pattern = False
-        
+
         for i in range(start_search_index, 0, -1):
             p1 = prices[i]
             idx1 = i
-            
-            # A. P1 必须是局部高点
-            if not (p1 > prices[i-1] and p1 > prices[i+1]):
-                continue
-                
-            # B. 高度对称性检查
-            diff_pct = abs(p1 - p2) / max(p1, p2)
-            if diff_pct > price_tolerance: 
+
+            if not (p1 > prices[i - 1] and p1 > prices[i + 1]):
                 continue
 
-            # C. 区间极值检查 (防止中间有更高峰)
-            period_prices = prices[idx1 : idx2 + 1]
+            diff_pct = abs(p1 - p2) / max(p1, p2)
+            if diff_pct > price_tolerance:
+                continue
+
+            period_prices = prices[idx1: idx2 + 1]
             period_high = max(period_prices)
             peak_max = max(p1, p2)
-            
+
             if period_high > peak_max * 1.001:
                 continue
 
-            # D. 颈线深度检查 (中间必须跌得够深)
-            valley_prices = prices[idx1+1 : idx2]
-            if not valley_prices: continue
-            
+            valley_prices = prices[idx1 + 1: idx2]
+            if not valley_prices:
+                continue
+
             min_valley = min(valley_prices)
             avg_peak = (p1 + p2) / 2
-            
+
             valley_depth = (avg_peak - min_valley) / avg_peak
             if valley_depth < min_depth:
                 continue
 
-            # 通过所有检查
             found_pattern = True
-            break 
-            
+            break
+
         return found_pattern
 
     except Exception as e:
         logger.error(f'[{symbol}] check_double_top error: {e}')
         return False
-    
-def get_latest_earnings_date(cursor, symbol):
+
+
+def get_latest_earnings_date(cursor, symbol, target_date=None):
     """
     从数据库的 Earning 表中获取该 symbol 的最近财报日。
-    如果没有找到相关记录，则默认回退指定的配置天数（默认90天）。
+    [回测] 新增 target_date 参数，防止查到"未来"财报。
     """
     try:
-        # 按日期降序排列，取最近的一次财报日期
-        cursor.execute('SELECT date FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 1', (symbol,))
+        if target_date:
+            cursor.execute(
+                'SELECT date FROM Earning WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 1',
+                (symbol, target_date)
+            )
+        else:
+            cursor.execute(
+                'SELECT date FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 1',
+                (symbol,)
+            )
         row = cursor.fetchone()
         if row and row[0]:
             return row[0]
     except Exception as e:
         logger.error(f"[{symbol}] Error querying latest earnings date: {e}")
-    
-    # 如果找不到财报日或者表不存在/报错，默认回退配置的天数
+
     fallback_date = datetime.now() - timedelta(days=CONFIG.get("EARNINGS_LOOKBACK_DAYS", 90))
     return fallback_date.strftime('%Y-%m-%d')
+
 
 def check_pump_dump_top(cursor, sector, symbol, latest_date_str, latest_price, earnings_date_str):
     """
     检索从最近财报日到最新日期之间，是否在 Short 或 Short_W 中出现过。
-    如果出现过，查询当天的收盘价，并比对最新收盘价是否高出配置的阈值。
+    （latest_date_str 已由上层函数通过 target_date 限制，内部 < latest_date_str 条件自然排除未来数据）
     """
     threshold = CONFIG.get("PUMP_DUMP_THRESHOLD", 0.10)
     hit_dates = []
-    
-    # 检索是否在指定时间段内出现过
+
     for group in ["Short", "Short_W"]:
-        if group not in earning_history_data: continue
-        
+        if group not in earning_history_data:
+            continue
+
         for date_str, symbols_list in earning_history_data[group].items():
             if earnings_date_str <= date_str < latest_date_str:
                 if symbol in symbols_list:
                     hit_dates.append(date_str)
-                    
+
     if not hit_dates:
         return False, ""
-        
-    # 如果出现过，查询历史日期的收盘价
+
     for past_date in hit_dates:
         try:
             cursor.execute(f'SELECT price FROM "{sector}" WHERE name = ? AND date = ?', (symbol, past_date))
             row = cursor.fetchone()
             if row and row[0] is not None:
                 past_price = float(row[0])
-                # 计算价格涨幅
                 if past_price > 0 and (latest_price - past_price) / past_price >= threshold:
-                    return True, f"较{past_date}信号日大涨{((latest_price - past_price) / past_price)*100:.1f}%"
+                    return True, f"较{past_date}信号日大涨{((latest_price - past_price) / past_price) * 100:.1f}%"
         except Exception as e:
             logger.error(f"[{symbol}] Error querying past price for {past_date}: {e}")
             continue
-            
+
     return False, ""
 
+
 # ==========================================
-# 7. 主执行逻辑
+# 7. 主执行逻辑（封装为函数，支持回测）
 # ==========================================
 
-# 1. 初始化 Short 和 Short_backup (清空旧数据)
-panel_data['Short'] = {}
-short_group = panel_data['Short']
-panel_data['Short_backup'] = {}
-short_backup_group = panel_data['Short_backup']
+def run_short_logic(log_detail):
+    log_detail("Analyse_Short 程序开始运行...")
 
-# 2. 初始化 Short_W 和 Short_W_backup (恢复使用)
-panel_data['Short_W'] = {}
-short_w_group = panel_data['Short_W']
-panel_data['Short_W_backup'] = {}
-short_w_backup_group = panel_data['Short_W_backup']
+    if SYMBOL_TO_TRACE:
+        log_detail(f"当前追踪的 SYMBOL: {SYMBOL_TO_TRACE}")
 
-# 连接数据库
-conn = sqlite3.connect(DB_FILE, timeout=60.0)
-cursor = conn.cursor()
+    # 确定基准日期
+    base_date = TARGET_DATE if TARGET_DATE else (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
 
-# 结果收集
-sector_outputs = defaultdict(list)
-final_short_symbols = []
-final_short_w_symbols = []
+    if TARGET_DATE:
+        log_detail(f"\n⚠️⚠️⚠️ 注意：当前处于【回测模式】，目标日期：{TARGET_DATE} ⚠️⚠️⚠️")
+        log_detail("本次运行将【不会】更新 Panel、History JSON 和 TXT 文件。")
 
-# 定义目标板块
-TARGET_SECTORS = [
-    'Basic_Materials', 'Consumer_Cyclical', 'Real_Estate', 'Technology', 'Energy', 
-    'Industrials', 'Consumer_Defensive', 'Communication_Services', 
-    'Financial_Services', 'Healthcare', 'Utilities', "ETFs",
-]
+    # 初始化分组（每次运行前清空，防止上次数据残留）
+    panel_data['Short'] = {}
+    short_group = panel_data['Short']
+    panel_data['Short_backup'] = {}
+    short_backup_group = panel_data['Short_backup']
+    panel_data['Short_W'] = {}
+    short_w_group = panel_data['Short_W']
+    panel_data['Short_W_backup'] = {}
+    short_w_backup_group = panel_data['Short_W_backup']
 
-# 收集所有 Symbol
-symbols = []
-for sec_name in TARGET_SECTORS:
-    if sec_name in sectors_data:
-        symbols.extend(sectors_data[sec_name])
-    else:
-        logger.warning(f"Sector '{sec_name}' not found in SECTORS_FILE.")
-symbols = list(set(symbols)) # 去重
+    conn = sqlite3.connect(DB_FILE, timeout=60.0)
+    cursor = conn.cursor()
 
-logger.info(f'Start processing {len(symbols)} symbols...')
+    sector_outputs = defaultdict(list)
+    final_short_symbols = []
+    final_short_w_symbols = []
 
-for symbol in symbols:
-    try:
-        # --- A. 基础信息与过滤 ---
-        symbol_info = get_symbol_info(symbol)
-        sector = get_symbol_sector(symbol)
-        tags_str = ", ".join(symbol_info['tags']) if symbol_info['tags'] else "无标签"
-        
-        # 白名单/黑名单 逻辑
-        if len(WHITELIST_TAGS) > 0:
-            has_whitelist_tag = any(tag in WHITELIST_TAGS for tag in symbol_info['tags'])
-            if not has_whitelist_tag: continue
+    TARGET_SECTORS = [
+        'Basic_Materials', 'Consumer_Cyclical', 'Real_Estate', 'Technology', 'Energy',
+        'Industrials', 'Consumer_Defensive', 'Communication_Services',
+        'Financial_Services', 'Healthcare', 'Utilities', "ETFs",
+    ]
+
+    symbols = []
+    for sec_name in TARGET_SECTORS:
+        if sec_name in sectors_data:
+            symbols.extend(sectors_data[sec_name])
         else:
-            if symbol_info['has_blacklist']: continue
-        
-        # --- A2. 进阶门槛：必须跌破 MA200 ---
-        is_ma_break, ma_value = check_ma_breakout(cursor, sector, symbol, CONFIG["MA_PERIOD"])
-        if not is_ma_break:
-            continue
+            logger.warning(f"Sector '{sec_name}' not found in SECTORS_FILE.")
+    symbols = list(set(symbols))
 
-        # --- B. 获取最近 N+1 天交易数据（用于 N 天回溯检查）---
-        _lookback = CONFIG["RECENT_DAYS_LOOKBACK"]
-        query = f'SELECT date, price, volume FROM "{sector}" WHERE name = ? ORDER BY date DESC LIMIT {_lookback + 1}'
-        cursor.execute(query, (symbol,))
-        rows = cursor.fetchall()
+    log_detail(f"开始扫描 {len(symbols)} 个 symbols（基准日期: {base_date}）...")
 
-        if len(rows) < 2:
-            continue
-            
-        # rows[0] 是最新一天, rows[1] 是前一天
-        date_curr, price_curr, vol_curr = rows[0]
-        date_prev, price_prev, vol_prev = rows[1]
-        
-        if price_curr is None or price_prev is None or vol_curr is None:
-            continue
-            
-                # --- 提前计算今日成交额 ---
-        current_turnover = price_curr * vol_curr
+    for symbol in symbols:
+        is_tracing = (symbol == SYMBOL_TO_TRACE)
 
-        # --- D2. 提前进行进阶门槛：砸顶检查 (无需下跌即可触发) ---
-        # 传入 cursor 去 Earning 表查询最近的财报日
-        earnings_date_str = get_latest_earnings_date(cursor, symbol)
-        
-        is_pump_dump = False
-        pd_reason = ""
-        # 只有获取到了合理的财报日期，才去检查是否砸顶
-        if earnings_date_str:
-            is_pump_dump, pd_reason = check_pump_dump_top(
-                cursor, sector, symbol, date_curr, price_curr, earnings_date_str
+        try:
+            # --- A. 基础信息与标签过滤 ---
+            symbol_info = get_symbol_info(symbol)
+            sector = get_symbol_sector(symbol)
+            tags_str = ", ".join(symbol_info['tags']) if symbol_info['tags'] else "无标签"
+
+            if len(WHITELIST_TAGS) > 0:
+                has_whitelist_tag = any(tag in WHITELIST_TAGS for tag in symbol_info['tags'])
+                if not has_whitelist_tag:
+                    if is_tracing:
+                        log_detail(f"    x [过滤] {symbol} 不在白名单中，跳过。")
+                    continue
+            else:
+                if symbol_info['has_blacklist']:
+                    if is_tracing:
+                        log_detail(f"    x [过滤] {symbol} 命中黑名单标签 ({tags_str})，跳过。")
+                    continue
+
+            if is_tracing:
+                log_detail(f"\n--- 正在检查 {symbol} (sector: {sector}) ---")
+                log_detail(f"    基准日期: {base_date}, 标签: {tags_str}")
+
+            # --- A2. 进阶门槛：必须跌破 MA200 ---
+            # [回测] 传入 base_date 限制 MA 计算范围
+            is_ma_break, ma_value = check_ma_breakout(cursor, sector, symbol, CONFIG["MA_PERIOD"], target_date=base_date)
+            if not is_ma_break:
+                if is_tracing:
+                    log_detail(f"    x [失败] MA{CONFIG['MA_PERIOD']} 破位检查未通过。(MA={ma_value:.2f})")
+                continue
+
+            if is_tracing:
+                log_detail(f"    ✓ [通过] MA{CONFIG['MA_PERIOD']} 破位，MA={ma_value:.2f}")
+
+            # --- B. 获取最近 N+1 天交易数据 ---
+            # [回测] 加入 AND date <= base_date 限制，防止穿越
+            _lookback = CONFIG["RECENT_DAYS_LOOKBACK"]
+            query = (f'SELECT date, price, volume FROM "{sector}" '
+                     f'WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT {_lookback + 1}')
+            cursor.execute(query, (symbol, base_date))
+            rows = cursor.fetchall()
+
+            if len(rows) < 2:
+                if is_tracing:
+                    log_detail(f"    x [失败] 数据不足 2 天，跳过。")
+                continue
+
+            date_curr, price_curr, vol_curr = rows[0]
+            date_prev, price_prev, vol_prev = rows[1]
+
+            if price_curr is None or price_prev is None or vol_curr is None:
+                continue
+
+            current_turnover = price_curr * vol_curr
+
+            if is_tracing:
+                log_detail(f"    最新: {date_curr} 价格={price_curr}, 成交量={vol_curr}, 成交额={current_turnover:,.0f}")
+                log_detail(f"    前一日: {date_prev} 价格={price_prev}")
+
+            # --- D2. 砸顶检查（无需下跌即可触发）---
+            # [回测] 传入 base_date 限制财报日查询范围
+            earnings_date_str = get_latest_earnings_date(cursor, symbol, target_date=base_date)
+
+            is_pump_dump = False
+            pd_reason = ""
+            if earnings_date_str:
+                is_pump_dump, pd_reason = check_pump_dump_top(
+                    cursor, sector, symbol, date_curr, price_curr, earnings_date_str
+                )
+
+            if is_tracing:
+                log_detail(f"    - 砸顶检查: {is_pump_dump}" + (f" ({pd_reason})" if is_pump_dump else ""))
+
+            # --- C. 基础门槛 1: N 天内任意一天下跌即通过 ---
+            any_drop_in_5days = any(
+                rows[i][1] is not None and rows[i + 1][1] is not None
+                and float(rows[i][1]) < float(rows[i + 1][1])
+                for i in range(min(CONFIG["RECENT_DAYS_LOOKBACK"], len(rows) - 1))
             )
 
-        # --- C. 基础门槛 1: 必须下跌 (N天内任意一天下跌即通过) ---
-        any_drop_in_5days = any(
-            rows[i][1] is not None and rows[i+1][1] is not None and float(rows[i][1]) < float(rows[i+1][1])
-            for i in range(min(CONFIG["RECENT_DAYS_LOOKBACK"], len(rows) - 1))
-        )
-        if not is_pump_dump and not any_drop_in_5days:
-            continue
-            
-        # --- D. 基础门槛 2: 成交额排名检查（回溯N天，任意一天命中即合格）---
-        is_hit_base = False
-        hit_reason = ""
+            if is_tracing:
+                log_detail(f"    - 下跌检查: {any_drop_in_5days} (砸顶豁免: {is_pump_dump})")
 
-        for i in range(min(CONFIG["RECENT_DAYS_LOOKBACK"], len(rows) - 1)):
-            day_date, day_price, day_vol = rows[i]
-            _, prev_price_i, _ = rows[i + 1]
-
-            # 跳过数据不完整的行
-            if day_price is None or prev_price_i is None or day_vol is None:
+            if not is_pump_dump and not any_drop_in_5days:
+                if is_tracing:
+                    log_detail(f"    x [失败] 未下跌且非砸顶，跳过。")
                 continue
 
-            day_price = float(day_price)
-            prev_price_i = float(prev_price_i)
+            # --- D. 基础门槛 2: 成交额排名检查 ---
+            is_hit_base = False
+            hit_reason = ""
 
-            # 该天必须是下跌日
-            if day_price >= prev_price_i:
-                continue
+            for i in range(min(CONFIG["RECENT_DAYS_LOOKBACK"], len(rows) - 1)):
+                day_date, day_price, day_vol = rows[i]
+                _, prev_price_i, _ = rows[i + 1]
 
-            day_turnover = day_price * float(day_vol)
-            # 非当天时在 reason 中附上触发日期，方便排查
-            date_suffix = f"({day_date})" if i > 0 else ""
+                if day_price is None or prev_price_i is None or day_vol is None:
+                    continue
 
-            # 检查1：过去一年 (12个月) 前 N 名
-            if check_turnover_rank(cursor, sector, symbol, day_date, day_turnover,
-                                CONFIG["LOOKBACK_MONTHS_LONG"], CONFIG["RANK_THRESHOLD_LONG"]):
-                is_hit_base = True
-                hit_reason = f"1年内Top{CONFIG['RANK_THRESHOLD_LONG']}天量{date_suffix}"
-                break
+                day_price = float(day_price)
+                prev_price_i = float(prev_price_i)
 
-            # 检查2：半年 (6个月) 前 N 名
-            elif check_turnover_rank(cursor, sector, symbol, day_date, day_turnover,
-                                    CONFIG["LOOKBACK_MONTHS_SHORT"], CONFIG["RANK_THRESHOLD_SHORT"]):
-                is_hit_base = True
-                hit_reason = f"半年内Top{CONFIG['RANK_THRESHOLD_SHORT']}天量{date_suffix}"
-                break
+                if day_price >= prev_price_i:
+                    continue
 
-        # 如果满足砸顶，强制纳入最终名单
-        if is_pump_dump:
-            is_hit_base = True 
-            if hit_reason:
-                hit_reason += f" & 砸顶({pd_reason})"
-            else:
-                hit_reason = f"砸顶({pd_reason})"
+                day_turnover = day_price * float(day_vol)
+                date_suffix = f"({day_date})" if i > 0 else ""
 
-        # --- E. 分流逻辑 ---
-        if is_hit_base:
-            # 基础规则检查 W顶（如果只是触发砸顶，根据要求它直接进Short，我们依旧让普通量能触发去查W顶）
-            is_double_top = False
-            if not is_pump_dump: 
-                is_double_top = check_double_top(cursor, symbol, sector)
-            
-            # 分流赋值
+                if check_turnover_rank(cursor, sector, symbol, day_date, day_turnover,
+                                       CONFIG["LOOKBACK_MONTHS_LONG"], CONFIG["RANK_THRESHOLD_LONG"]):
+                    is_hit_base = True
+                    hit_reason = f"1年内Top{CONFIG['RANK_THRESHOLD_LONG']}天量{date_suffix}"
+                    if is_tracing:
+                        log_detail(f"    ✓ [命中] {hit_reason}")
+                    break
+
+                elif check_turnover_rank(cursor, sector, symbol, day_date, day_turnover,
+                                         CONFIG["LOOKBACK_MONTHS_SHORT"], CONFIG["RANK_THRESHOLD_SHORT"]):
+                    is_hit_base = True
+                    hit_reason = f"半年内Top{CONFIG['RANK_THRESHOLD_SHORT']}天量{date_suffix}"
+                    if is_tracing:
+                        log_detail(f"    ✓ [命中] {hit_reason}")
+                    break
+
+            if is_tracing and not is_hit_base and not is_pump_dump:
+                log_detail(f"    x [失败] 成交额排名未达标，跳过。")
+
+            # 砸顶强制纳入
             if is_pump_dump:
-                # 触发了砸顶，直接进 Short 并且 panel 值赋予 'XXX砸顶'
-                panel_val = f"{symbol}砸顶"
-                short_group[symbol] = panel_val
-                short_backup_group[symbol] = panel_val
-                # === 修改点 1：将带中文的内容直接加入到列表，用于后续写入 History ===
-                final_short_symbols.append(panel_val)
-                
-                group_tag = "[Short砸顶]"
-                logger.info(f'[{symbol}] Hit Short(Pump Dump): {hit_reason}')
-                
-            elif is_double_top:
-                # 【M头情况，没有后缀】
-                # 1. Panel 保持为纯空字符串 ""
-                short_w_group[symbol] = ""           
-                short_w_backup_group[symbol] = ""
-                final_short_w_symbols.append(symbol) # 存入待写入 History 的内容
-                
-                group_tag = "[Short_W]"
-                logger.info(f'[{symbol}] Hit Short_W: {hit_reason} + M-Top')
-                
-            else:
-                # 符合基础规则 + 不符合 W 形态 -> Short
-                short_group[symbol] = ""
-                short_backup_group[symbol] = ""
-                final_short_symbols.append(symbol) # 存入待写入 History 的内容
-                
-                group_tag = "[Short]"
-                logger.info(f'[{symbol}] Hit Short: {hit_reason}')
+                is_hit_base = True
+                if hit_reason:
+                    hit_reason += f" & 砸顶({pd_reason})"
+                else:
+                    hit_reason = f"砸顶({pd_reason})"
 
-            # 准备 TXT 输出 (统一输出，带上标记)
-            sector_disp = pad_display(sector, 20, 'left')
-            symbol_disp = pad_display(symbol, 5, 'left')
-            # 这里的 change_percent 仅用于排序，用今日跌幅代替
-            pct_change = (price_curr - price_prev) / price_prev * 100
-            
-            output_line = {
-                'text': f"{sector_disp} {symbol_disp} {pct_change:.2f}% MA{CONFIG['MA_PERIOD']}={ma_value:.2f} {group_tag} {hit_reason}: {tags_str}",
-                'change_percent': abs(current_turnover)
-            }
-            sector_outputs[sector_disp].append(output_line)
+            # --- E. 分流逻辑 ---
+            if is_hit_base:
+                is_double_top = False
+                if not is_pump_dump:
+                    # [回测] 传入 base_date 限制 M 头查询范围
+                    is_double_top = check_double_top(cursor, symbol, sector, target_date=base_date)
 
-    except Exception as e:
-        logger.error(f'[{symbol}] Error: {e}')
-        continue
+                if is_tracing:
+                    log_detail(f"    - M头检查: {is_double_top}")
 
-# 关闭数据库连接
-conn.close()
-logger.info('DB connection closed')
+                if is_pump_dump:
+                    panel_val = f"{symbol}砸顶"
+                    short_group[symbol] = panel_val
+                    short_backup_group[symbol] = panel_val
+                    final_short_symbols.append(panel_val)
+                    group_tag = "[Short砸顶]"
+                    logger.info(f'[{symbol}] Hit Short(Pump Dump): {hit_reason}')
+                    if is_tracing:
+                        log_detail(f"    ✅ [选中-Short砸顶] {hit_reason}")
 
-# 写出 txt (按成交额或跌幅排序，这里简单按添加顺序或板块)
-with open(OUTPUT_FILE, 'w', encoding='utf-8') as output_file:
-    output_file.write(f"OverBuy Scan Result (Down + High Turnover)\n")
-    output_file.write(f"Date: {datetime.now().strftime('%Y-%m-%d')}\n")
-    output_file.write("="*60 + "\n")
-    for sector in sorted(sector_outputs.keys()):
-        # 这里按成交额大小(change_percent存的是turnover)排序
-        sorted_outputs = sorted(sector_outputs[sector], key=lambda x: x['change_percent'], reverse=True)
-        for output in sorted_outputs:
-            output_file.write(output['text'] + '\n')
-    logger.info(f'Wrote txt output to {OUTPUT_FILE}')
+                elif is_double_top:
+                    short_w_group[symbol] = ""
+                    short_w_backup_group[symbol] = ""
+                    final_short_w_symbols.append(symbol)
+                    group_tag = "[Short_W]"
+                    logger.info(f'[{symbol}] Hit Short_W: {hit_reason} + M-Top')
+                    if is_tracing:
+                        log_detail(f"    ✅ [选中-Short_W] {hit_reason} + M头形态")
 
-# 同步写入 Earning_History.json
-if final_short_symbols:
-    update_earning_history_json_b(EARNING_HISTORY_FILE, "Short", final_short_symbols)
-if final_short_w_symbols:
-    update_earning_history_json_b(EARNING_HISTORY_FILE, "Short_W", final_short_w_symbols)
+                else:
+                    short_group[symbol] = ""
+                    short_backup_group[symbol] = ""
+                    final_short_symbols.append(symbol)
+                    group_tag = "[Short]"
+                    logger.info(f'[{symbol}] Hit Short: {hit_reason}')
+                    if is_tracing:
+                        log_detail(f"    ✅ [选中-Short] {hit_reason}")
 
-# 写回 panel JSON
-with open(PANEL_FILE, 'w', encoding='utf-8') as f:
-    json.dump(panel_data, f, ensure_ascii=False, indent=4)
-    logger.info(f'Updated panel file {PANEL_FILE}')
+                sector_disp = pad_display(sector, 20, 'left')
+                symbol_disp = pad_display(symbol, 5, 'left')
+                pct_change = (price_curr - price_prev) / price_prev * 100
+
+                output_line = {
+                    'text': f"{sector_disp} {symbol_disp} {pct_change:.2f}% MA{CONFIG['MA_PERIOD']}={ma_value:.2f} {group_tag} {hit_reason}: {tags_str}",
+                    'change_percent': abs(current_turnover)
+                }
+                sector_outputs[sector_disp].append(output_line)
+
+        except Exception as e:
+            logger.error(f'[{symbol}] Error: {e}')
+            if is_tracing:
+                log_detail(f"    ✗ [异常] {symbol} 处理时发生错误: {e}")
+            continue
+
+    conn.close()
+    logger.info('DB connection closed')
+
+    # ======== 回测安全拦截：只打印结果，不写任何文件 ========
+    if TARGET_DATE:
+        log_detail("\n" + "=" * 60)
+        log_detail(f"🛑 [安全拦截] 回测模式 (Date: {TARGET_DATE}) 已启用。")
+        log_detail(f"📊 [Short]   命中 {len(final_short_symbols)} 个: {sorted(final_short_symbols)}")
+        log_detail(f"📊 [Short_W] 命中 {len(final_short_w_symbols)} 个: {sorted(final_short_w_symbols)}")
+        log_detail("=" * 60)
+        log_detail("本次运行未写入任何文件。")
+        return
+
+    # ======== 正常模式：写入 TXT、History、Panel ========
+    with open(OUTPUT_FILE, 'w', encoding='utf-8') as output_file:
+        output_file.write("OverBuy Scan Result (Down + High Turnover)\n")
+        output_file.write(f"Date: {datetime.now().strftime('%Y-%m-%d')}\n")
+        output_file.write("=" * 60 + "\n")
+        for sector in sorted(sector_outputs.keys()):
+            sorted_outputs = sorted(sector_outputs[sector], key=lambda x: x['change_percent'], reverse=True)
+            for output in sorted_outputs:
+                output_file.write(output['text'] + '\n')
+        logger.info(f'Wrote txt output to {OUTPUT_FILE}')
+
+    if final_short_symbols:
+        update_earning_history_json_b(EARNING_HISTORY_FILE, "Short", final_short_symbols, base_date_str=base_date)
+    if final_short_w_symbols:
+        update_earning_history_json_b(EARNING_HISTORY_FILE, "Short_W", final_short_w_symbols, base_date_str=base_date)
+
+    with open(PANEL_FILE, 'w', encoding='utf-8') as f:
+        json.dump(panel_data, f, ensure_ascii=False, indent=4)
+        logger.info(f'Updated panel file {PANEL_FILE}')
+
+    log_detail("程序运行结束。")
+
+
+# ==========================================
+# 8. 入口函数
+# ==========================================
+
+def main():
+    if SYMBOL_TO_TRACE:
+        print(f"追踪模式已启用，目标: {SYMBOL_TO_TRACE}。日志将写入: {LOG_FILE_PATH}")
+        try:
+            with open(LOG_FILE_PATH, 'w', encoding='utf-8') as log_file:
+                def log_detail_file(message):
+                    log_file.write(message + '\n')
+                    print(message)
+                run_short_logic(log_detail_file)
+        except IOError as e:
+            print(f"错误：无法打开或写入日志文件 {LOG_FILE_PATH}: {e}")
+    else:
+        print("追踪模式未启用。日志仅输出到控制台。")
+        def log_detail_console(message):
+            print(message)
+        run_short_logic(log_detail_console)
+
+
+if __name__ == '__main__':
+    main()

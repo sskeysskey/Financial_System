@@ -143,22 +143,18 @@
         "AVAV": ""
     },
     "Short": {
-        "INDA": "",
-        "SCO": "",
         "DB": "",
-        "BF-B": "",
-        "SE": "",
+        "INDA": "",
         "AS": "",
-        "HYG": ""
+        "HYG": "",
+        "BF-B": ""
     },
     "Short_backup": {
-        "INDA": "",
-        "SCO": "",
         "DB": "",
-        "BF-B": "",
-        "SE": "",
+        "INDA": "",
         "AS": "",
-        "HYG": ""
+        "HYG": "",
+        "BF-B": ""
     },
     "Short_W": {},
     "Short_W_backup": {},
