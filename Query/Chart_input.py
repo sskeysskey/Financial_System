@@ -1089,19 +1089,73 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         
         return title_text, title_color, clickable
     
-    def draw_subtitle():
+    def draw_subtitle(current_prices=None):
         # 清除旧的副标题
         for artist in subtitle_artists:
             artist.remove()
         subtitle_artists.clear()
 
-        # 1. 获取数据
+        # 1. 获取 Options 数据
         metrics_data = get_options_metrics(name)
-        if not metrics_data:
+        
+        # 2. 计算 Max/Min 百分比 (基于当前筛选的价格数据)
+        # --- 第一部分：无条件绘制 Max/Min ---
+        # 无论期权数据如何，先计算并绘制 Max/Min
+        max_pct_str, min_pct_str = "--", "--"
+        
+        if current_prices and len(current_prices) > 0:
+            latest_p = current_prices[-1]
+            max_p = max(current_prices)
+            min_p = min(current_prices)
+            
+            if max_p != 0:
+                # (最高-最新)/最高
+                max_pct = (max_p - latest_p) / max_p * 100
+                max_pct_str = f"{max_pct:.1f}%"
+            
+            if min_p != 0:
+                # (最新-最低)/最低
+                min_pct = (latest_p - min_p) / min_p * 100
+                min_pct_str = f"{min_pct:.1f}%"
+
+        # 3. 绘制 Max/Min 差值 (横向排列)
+        # 布局配置
+        y_pos = 0.915
+        center_x = 0.5
+        spacing_outer = 0.16 
+        
+        # Max 和 Min 的起始 X 坐标
+        base_x = center_x + spacing_outer + 0.08
+        
+        # 绘制 Max 差值 (红色)
+        t_max = fig.text(base_x, y_pos, f"Max:{max_pct_str}",
+                 color=NORD_THEME['accent_red'], fontsize=12, fontweight='normal',
+                 ha='left', va='top')
+        subtitle_artists.append(t_max)
+        
+        # 绘制 Min 差值 (绿色) - 增加 X 偏移量使其横向排列
+        # 假设 Max 文本宽度大约占用 0.08 的坐标空间，所以 Min 往右偏移 0.08
+        t_min = fig.text(base_x + 0.08, y_pos, f"Min:{min_pct_str}",
+                 color=NORD_THEME['accent_green'], fontsize=12, fontweight='normal',
+                 ha='left', va='top')
+        subtitle_artists.append(t_min)
+
+        # --- 第二部分：安全获取期权数据 ---
+        # 使用 try-except 包裹，防止任何异常导致绘图中断
+        metrics_data = None
+        try:
+            metrics_data = get_options_metrics(name)
+        except Exception as e:
+            print(f"DEBUG: 获取 {name} 期权数据时发生异常: {e}")
+            metrics_data = None # 确保出错时设为 None
+
+        # 如果没有数据，直接结束，不绘制期权部分
+        if metrics_data is None:
             return
 
-        # --- 新增逻辑: 日期校验 ---
-        # 目标日期: 系统日期的前一天
+        # --- 以下代码仅在 metrics_data 有效时执行 ---
+        
+        # 1. 日期校验
         target_date = date.today() - timedelta(days=1)
         
         # 检查最新数据 (Row 0) 的日期
@@ -1116,12 +1170,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             # 如果日期不是昨天，覆盖数据为 "--"
             iv1_data = (0.0, "--")
             sum1_data = "--"
-        
-        # 检查逻辑: "如果日期都不对(neither date is correct)，整行不显示"
-        # 既然 row0 包含了 IV 和 Price，如果 row0 无效，则 IV 和 Price 都无效。
-        # 这里只要 Row 0 (最新数据) 无效，就隐藏整行
-        if not is_row0_valid:
-            return
+            return # 如果日期无效，就不显示期权那一行了
 
         # 2. 准备 Compare 数据
         # 处理 compare可能是tuple的情况
@@ -1165,16 +1214,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             return color, weight, size
 
         # 4. 布局配置
-        y_pos = 0.915
-        center_x = 0.5
-        
-        # 定义距离中心的偏移量 (Figure Coordinates 0-1)
-        spacing_inner = 0.08  # Secondary 元素距离中心的距离
-        spacing_outer = 0.16  # Primary 元素距离中心的距离
+        spacing_inner = 0.08
+        spacing_outer = 0.16
 
-        # --- 绘制元素 ---
-        
-        # [Element 3: Compare Badge] (正中间)
+        # [Element 3: Compare Badge]
         t_comp = fig.text(center_x, y_pos, compare_str,
                  color='white', fontsize=13, fontweight='bold', fontname='Arial Unicode MS',
                  ha='center', va='top',
@@ -1738,6 +1781,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 gradient_clip_patch=gradient_clip_patch,
                 zero_line=zero_line
             )
+
+            # 新增：刷新副标题，传入当前筛选后的价格数据
+            draw_subtitle(current_prices=f_prices) 
             
             for i, circle in enumerate(radio.circles):
                 circle.set_facecolor(NORD_THEME['accent_red'] if list(time_options.keys())[i] == val else NORD_THEME['background'])
@@ -1833,7 +1879,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             title_artist.set_text(new_title_text)
             
             # 2. 刷新副标题 (新增)
-            draw_subtitle()
+            draw_subtitle() 
             
             # 3. 重新创建标记和注释
             create_markers_and_annotations()

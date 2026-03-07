@@ -122,7 +122,7 @@ CONFIG = {
     "PE_DEEP_DROP_THRESHOLD": 0.151, # 条件1-5后的深跌判断1
     "PE_DEEP_MAX_DROP_THRESHOLD": 0.16, # 条件1-5后的深跌判断2
     "PE_DEEP_HIGH_SINCE_ER_THRESHOLD": 0.18, # 条件1-5后的深跌判断3
-    "PE_DEEPER_DROP_THRESHOLD": 0.351, # 新增：条件1-5后的超深跌判断 (35.1%)
+    "PE_DEEPER_DROP_THRESHOLD": 0.225, # 新增：条件1-5后的超深跌判断 (22.5%)
 
     # 条件6（抄底W底）参数
     "COND6_ER_DROP_A_THRESHOLD": 0.25,  # 财报跌幅分界线 25%
@@ -1413,7 +1413,7 @@ def run_processing_logic(log_detail):
                         if high_since_er is None:
                                 high_since_er = er_window_high
 
-                        # A. 【新增判断】首先判断是否满足 Deeper (35%)
+                        # A. 【新增判断】首先判断是否满足 Deeper (22.5%)
                         limit_deeper = CONFIG["PE_DEEPER_DROP_THRESHOLD"]
                         pass_deeper = latest_price <= er_close_price * (1 - limit_deeper)
 
@@ -1423,7 +1423,7 @@ def run_processing_logic(log_detail):
                             pe_deeper_candidates.append(symbol) # 进 PE_Deeper
                         
                         else:
-                            # B. 如果不满足 35%，再判断是否满足原有的 Deep 三准则
+                            # B. 如果不满足 22.5%，再判断是否满足原有的 Deep 三准则
                             # 2. 设定阈值
                             # 标准1：基于财报日当天的跌幅阈值 (15%)
                             limit_er_base = CONFIG["PE_DEEP_DROP_THRESHOLD"]

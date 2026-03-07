@@ -272,12 +272,26 @@ def scrape_options():
     json_pe_volume_up_set = set()   # 原 json_today_set
     json_zero_set = set()   
     blacklist_options_set = set() 
+
+    # --- 新增 5 个分组 ---
+    json_pe_volume_high_set = set()
+    json_pe_w_set = set()
+    json_pe_deeper_set = set()
+    json_etf_volume_high_set = set()
+    json_etf_volume_low_set = set()
     
     # 用于日志显示的计数
     count_json_options = 0
     count_json_pe_volume = 0        # 原 count_json_must
     count_json_pe_volume_up = 0     # 原 count_json_today
     count_json_zero = 0     
+
+    # --- 新增计数器 ---
+    count_json_pe_volume_high = 0
+    count_json_pe_w = 0
+    count_json_pe_deeper = 0
+    count_json_etf_volume_high = 0
+    count_json_etf_volume_low = 0
 
     # === 步骤 A: 加载黑名单 ===
     try:
@@ -317,6 +331,30 @@ def scrape_options():
                 json_zero_set = set(zero_keys)
                 count_json_zero = len(json_zero_set)
 
+                # 5. [新增] 提取 PE_Volume_high 分组
+                pe_vol_high_keys = data.get("PE_Volume_high", {}).keys()
+                json_pe_volume_high_set = set(pe_vol_high_keys)
+                count_json_pe_volume_high = len(json_pe_volume_high_set)
+
+                # 6. [新增] 提取 PE_W 分组
+                pe_w_keys = data.get("PE_W", {}).keys()
+                json_pe_w_set = set(pe_w_keys)
+                count_json_pe_w = len(json_pe_w_set)
+
+                # 7. [新增] 提取 PE_Deeper 分组
+                pe_deeper_keys = data.get("PE_Deeper", {}).keys()
+                json_pe_deeper_set = set(pe_deeper_keys)
+                count_json_pe_deeper = len(json_pe_deeper_set)
+
+                # 8. [新增] 提取 ETF_Volume_high 分组
+                etf_vol_high_keys = data.get("ETF_Volume_high", {}).keys()
+                json_etf_volume_high_set = set(etf_vol_high_keys)
+                count_json_etf_volume_high = len(json_etf_volume_high_set)
+
+                # 9. [新增] 提取 ETF_Volume_low 分组
+                etf_vol_low_keys = data.get("ETF_Volume_low", {}).keys()
+                json_etf_volume_low_set = set(etf_vol_low_keys)
+                count_json_etf_volume_low = len(json_etf_volume_low_set)
         else:
             tqdm.write(f"⚠️ 警告: 未找到 JSON 文件: {SECTORS_JSON_PATH}")
     except Exception as e:
@@ -325,8 +363,13 @@ def scrape_options():
     # 4. 合并去重 (移除了 Short 和 Short_W)
     merged_symbols_set = (
         json_options_set
-        .union(json_pe_volume_set)      # Changed
-        .union(json_pe_volume_up_set)   # Changed
+        .union(json_pe_volume_set) 
+        .union(json_pe_volume_up_set) 
+        .union(json_pe_volume_high_set)
+        .union(json_pe_w_set)
+        .union(json_pe_deeper_set)
+        .union(json_etf_volume_high_set)
+        .union(json_etf_volume_low_set)
     )
     
     symbol_cap_map = {} # 用于存储 symbol -> marketcap 的字典
@@ -413,8 +456,13 @@ def scrape_options():
     # 计算 JSON 总数 (移除了 Short 和 Short_W)
     total_json_count = (
         count_json_options + 
-        count_json_pe_volume +      # Changed
-        count_json_pe_volume_up     # Changed
+        count_json_pe_volume + 
+        count_json_pe_volume_up +
+        count_json_pe_volume_high +
+        count_json_pe_w +
+        count_json_pe_deeper +
+        count_json_etf_volume_high +
+        count_json_etf_volume_low
     )
 
     log_msg = (

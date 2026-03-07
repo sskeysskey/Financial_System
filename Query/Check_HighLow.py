@@ -266,7 +266,7 @@ class HighLowWindow(QMainWindow):
         # Tab 1: Volume
         self.tab_volume = QWidget()
         self._init_volume_tab(self.tab_volume)
-        self.tabs.addTab(self.tab_volume, "Volume High")
+        self.tabs.addTab(self.tab_volume, "Volume成交额")
 
         # Tab 2: ETFs
         self.tab_etfs = QWidget()

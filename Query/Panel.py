@@ -825,7 +825,7 @@ class MainWindow(QMainWindow):
             keys_to_check = [
                 'season', 'no_season',
                 'PE_valid', 'PE_invalid', 
-                'PE_W', 'PE_Deep', 'OverSell_W'
+                'PE_W', 'PE_Deep', 'OverSell_W',
             ]
         else:
             # 默认情况 (比如其他没在映射里的组)
@@ -1294,34 +1294,70 @@ class MainWindow(QMainWindow):
                         if sector in target_sort_groups:
                             parts = []
                             
-                            # 1. 处理前缀 (只保留 03后, 02前, 未 等字样)
-                            # 如果没有匹配到，前缀部分为空
-                            match_prefix = re.search(r"(\d+(?:前|后|未))", raw_compare)
+                            # 1. 提取前缀 (数字 + 前/后/未)
+                            match_prefix = re.search(r"(\d+)(前|后|未)", raw_compare)
                             if match_prefix:
-                                prefix = match_prefix.group(1)
-                                # 默认颜色为橙色
-                                prefix_color = 'orange'
+                                full_prefix = match_prefix.group(0) # 例如 "0305前"
+                                number_part = match_prefix.group(1) # 例如 "0305"
+                                suffix_part = match_prefix.group(2) # 例如 "前"
                                 
-                                # 尝试从前缀中提取MMDD格式的日期
-                                date_match = re.search(r"(\d{4})", prefix)
-                                if date_match:
-                                    date_str = date_match.group(1)  # "0128"
-                                    try:
-                                        current_year = datetime.date.today().year
-                                        display_date = datetime.datetime.strptime(f"{current_year}{date_str}", "%Y%m%d").date()
+                                # 默认颜色
+                                prefix_color = 'orange' 
+                                
+                                # 2. 计算关键日期
+                                today = datetime.date.today()
+                                nyse = holidays.NYSE()
+                                
+                                # 获取下一个交易日 (用于判断“明天”的定义)
+                                next_trading_day = today + datetime.timedelta(days=1)
+                                while next_trading_day.weekday() >= 5 or next_trading_day in nyse:
+                                    next_trading_day += datetime.timedelta(days=1)
+                                    
+                                # 尝试解析日期
+                                try:
+                                    current_year = today.year
+                                    # 处理 MMDD 格式
+                                    if len(number_part) == 4:
+                                        target_date = datetime.datetime.strptime(f"{current_year}{number_part}", "%Y%m%d").date()
                                         
-                                        # 获取今天系统日期的前一天
-                                        yesterday = datetime.date.today() - datetime.timedelta(days=1)
+                                        # --- 核心判断逻辑 ---
                                         
-                                        # 如果显示日期小于昨天，则颜色变为白色
-                                        if display_date < yesterday:
+                                        # 规则 A: 过去 (小于昨天) -> 白色
+                                        yesterday = today - datetime.timedelta(days=1)
+                                        if target_date < yesterday:
                                             prefix_color = 'white'
-                                    except ValueError:
-                                        # 如果日期格式无效 (例如 "9999前")，则忽略，颜色保持默认的橙色
-                                        pass
                                         
-                                # 使用动态设置的颜色来生成HTML
-                                parts.append(f"<span style='color:{prefix_color};'>{prefix}</span>")
+                                        # 规则 B: 正好是昨天 (target_date == yesterday)
+                                        elif target_date == yesterday:
+                                            if suffix_part == '后':
+                                                prefix_color = 'red'
+                                            else: # '前' 或 '未'
+                                                prefix_color = 'white'
+                                        
+                                        # 规则 C: 今天 (target_date == today)
+                                        elif target_date == today:
+                                            prefix_color = 'orange' # 今天的情况保持默认橙色
+                                        
+                                        # 规则 D: 明天/未来 (target_date >= next_trading_day)
+                                        else:
+                                            if target_date == next_trading_day:
+                                                # 针对明天 (或下一个交易日)
+                                                if suffix_part == '前':
+                                                    prefix_color = 'red'
+                                                elif suffix_part == '后':
+                                                    prefix_color = 'orange'
+                                            else:
+                                                # 更远的未来
+                                                prefix_color = 'orange'
+                                                
+                                    else:
+                                        # 日期格式不对，保持默认橙色
+                                        pass
+                                except ValueError:
+                                    pass
+                                    
+                                # 使用计算出的颜色生成 HTML
+                                parts.append(f"<span style='color:{prefix_color};'>{full_prefix}</span>")
                             
                             # 2. 获取 Options Metrics
                             metrics = get_options_metrics(keyword)

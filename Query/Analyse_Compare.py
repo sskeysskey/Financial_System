@@ -1590,7 +1590,7 @@ def run_volume_high_scanner():
     TARGET_SECTORS = [
         "Basic_Materials", "Communication_Services", "Consumer_Cyclical",
         "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare",
-        "Industrials", "Real_Estate", "Technology", "Utilities"
+        "Industrials", "Real_Estate", "Technology", "Utilities", "ETFs"
     ]
 
     # 1. 加载基础数据

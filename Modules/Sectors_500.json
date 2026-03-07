@@ -15,7 +15,8 @@
         "VALE",
         "WPM",
         "AU",
-        "CTVA"
+        "CTVA",
+        "FNV"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -30,8 +31,7 @@
         "NTES",
         "AMX",
         "APP",
-        "WBD",
-        "EA"
+        "WBD"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -240,7 +240,6 @@
         "PCAR",
         "AME",
         "GWW",
-        "CARR",
         "FAST",
         "URI"
     ],
@@ -316,6 +315,7 @@
         "AEP",
         "SRE",
         "D",
-        "VST"
+        "VST",
+        "EXC"
     ]
 }
