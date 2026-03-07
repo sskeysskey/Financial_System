@@ -2265,6 +2265,156 @@
             "VIST丙"
         ]
     },
+    "ETF_Volume_high": {
+        "2026-02-20": [
+            "EWH",
+            "EWY",
+            "IWF"
+        ],
+        "2026-02-24": [
+            "EWT",
+            "EWY",
+            "IGV"
+        ],
+        "2026-02-26": [
+            "EWY",
+            "IGV",
+            "RAAX"
+        ],
+        "2026-02-27": [
+            "XLU"
+        ],
+        "2026-03-02": [
+            "DYNF",
+            "IVW",
+            "IWF",
+            "IXC",
+            "IYW",
+            "PDBC",
+            "PPA",
+            "SPYG",
+            "UCO",
+            "USO",
+            "UUP",
+            "XAR",
+            "XLE"
+        ],
+        "2026-03-03": [
+            "PDBC",
+            "SPXS",
+            "UCO",
+            "USO"
+        ],
+        "2026-03-04": [
+            "AIQ",
+            "CRAK",
+            "EMQQ",
+            "EWY",
+            "IDV",
+            "VEA",
+            "VPL"
+        ],
+        "2026-03-05": [
+            "CORN",
+            "CRAK",
+            "DBA",
+            "PDBC",
+            "UCO",
+            "USO",
+            "UUP",
+            "WEAT",
+            "XLE"
+        ],
+        "2026-03-06": [
+            "CANE",
+            "CORN",
+            "DBA",
+            "DBC",
+            "PDBC",
+            "SOXS",
+            "UCO",
+            "USO",
+            "VIXY",
+            "WEAT"
+        ]
+    },
+    "ETF_Volume_low": {
+        "2026-02-27": [
+            "CANE"
+        ],
+        "2026-03-02": [
+            "CANE",
+            "COLO",
+            "SCO",
+            "SPXS"
+        ],
+        "2026-03-03": [
+            "COLO",
+            "ECH",
+            "EWY",
+            "IYW",
+            "SCO",
+            "SOXL",
+            "SOXS",
+            "SPXS",
+            "SPXU",
+            "SVXY",
+            "TQQQ",
+            "UVXY",
+            "VIXY",
+            "VXX",
+            "YINN"
+        ],
+        "2026-03-04": [
+            "ECH",
+            "EMQQ",
+            "EWY",
+            "SCO",
+            "SOXL",
+            "SOXS",
+            "SPXS",
+            "SPXU",
+            "THD",
+            "TQQQ",
+            "UVXY",
+            "VIXY",
+            "VXX",
+            "YINN"
+        ],
+        "2026-03-05": [
+            "EMQQ",
+            "EWY",
+            "SCO",
+            "SPXS"
+        ],
+        "2026-03-06": [
+            "BDRY",
+            "CANE",
+            "EMQQ",
+            "EPHE",
+            "KBE",
+            "SCO",
+            "TUR",
+            "UVXY",
+            "VIXY",
+            "VXX"
+        ]
+    },
+    "Short_W": {},
+    "Short": {
+        "2026-03-05": [
+            "AS",
+            "BF-B",
+            "DB",
+            "HYG",
+            "INDA"
+        ],
+        "2026-03-06": [
+            "BF-B",
+            "EPHE",
+            "WAL"
+        ]
+    },
     "PE_W": {
         "2026-01-09": [
             "INSM",
@@ -3006,484 +3156,6 @@
             "RYAAY"
         ]
     },
-    "ETF_Volume_high": {
-        "2026-02-20": [
-            "EWH",
-            "EWY",
-            "IWF"
-        ],
-        "2026-02-24": [
-            "EWT",
-            "EWY",
-            "IGV"
-        ],
-        "2026-02-26": [
-            "EWY",
-            "IGV",
-            "RAAX"
-        ],
-        "2026-02-27": [
-            "XLU"
-        ],
-        "2026-03-02": [
-            "DYNF",
-            "IVW",
-            "IWF",
-            "IXC",
-            "IYW",
-            "PDBC",
-            "PPA",
-            "SPYG",
-            "UCO",
-            "USO",
-            "UUP",
-            "XAR",
-            "XLE"
-        ],
-        "2026-03-03": [
-            "PDBC",
-            "SPXS",
-            "UCO",
-            "USO"
-        ],
-        "2026-03-04": [
-            "AIQ",
-            "CRAK",
-            "EMQQ",
-            "EWY",
-            "IDV",
-            "VEA",
-            "VPL"
-        ],
-        "2026-03-05": [
-            "CORN",
-            "CRAK",
-            "DBA",
-            "PDBC",
-            "UCO",
-            "USO",
-            "UUP",
-            "WEAT",
-            "XLE"
-        ],
-        "2026-03-06": [
-            "CANE",
-            "CORN",
-            "DBA",
-            "DBC",
-            "PDBC",
-            "SOXS",
-            "UCO",
-            "USO",
-            "VIXY",
-            "WEAT"
-        ]
-    },
-    "ETF_Volume_low": {
-        "2026-02-27": [
-            "CANE"
-        ],
-        "2026-03-02": [
-            "CANE",
-            "COLO",
-            "SCO",
-            "SPXS"
-        ],
-        "2026-03-03": [
-            "COLO",
-            "ECH",
-            "EWY",
-            "IYW",
-            "SCO",
-            "SOXL",
-            "SOXS",
-            "SPXS",
-            "SPXU",
-            "SVXY",
-            "TQQQ",
-            "UVXY",
-            "VIXY",
-            "VXX",
-            "YINN"
-        ],
-        "2026-03-04": [
-            "ECH",
-            "EMQQ",
-            "EWY",
-            "SCO",
-            "SOXL",
-            "SOXS",
-            "SPXS",
-            "SPXU",
-            "THD",
-            "TQQQ",
-            "UVXY",
-            "VIXY",
-            "VXX",
-            "YINN"
-        ],
-        "2026-03-05": [
-            "EMQQ",
-            "EWY",
-            "SCO",
-            "SPXS"
-        ],
-        "2026-03-06": [
-            "BDRY",
-            "CANE",
-            "EMQQ",
-            "EPHE",
-            "KBE",
-            "SCO",
-            "TUR",
-            "UVXY",
-            "VIXY",
-            "VXX"
-        ]
-    },
-    "PE_Deeper": {
-        "2026-01-14": [
-            "DDOG"
-        ],
-        "2026-01-15": [
-            "DDOG",
-            "LCID"
-        ],
-        "2026-01-16": [
-            "DDOG",
-            "FIG"
-        ],
-        "2026-01-20": [
-            "DDOG",
-            "FIG",
-            "MSTR",
-            "SMR"
-        ],
-        "2026-01-21": [
-            "DDOG",
-            "FIG",
-            "MSTR"
-        ],
-        "2026-01-22": [
-            "FIG",
-            "MSTR"
-        ],
-        "2026-01-23": [
-            "COIN",
-            "MSTR"
-        ],
-        "2026-01-26": [
-            "COIN",
-            "CPNG",
-            "MSTR",
-            "SMR"
-        ],
-        "2026-01-27": [
-            "COIN",
-            "FIG",
-            "MSTR",
-            "RBLX",
-            "SMR"
-        ],
-        "2026-01-28": [
-            "COIN",
-            "MSTR"
-        ],
-        "2026-01-29": [
-            "COIN",
-            "FIG",
-            "MSTR",
-            "SMR",
-            "SOUN"
-        ],
-        "2026-01-30": [
-            "COIN",
-            "FIG",
-            "HIMS",
-            "MSTR",
-            "QS",
-            "RBLX",
-            "SMR",
-            "SOUN"
-        ],
-        "2026-02-02": [
-            "COIN",
-            "CRDO",
-            "FIG",
-            "GLXY",
-            "HIMS",
-            "MSTR",
-            "QS",
-            "RBLX",
-            "SMR",
-            "SOUN"
-        ],
-        "2026-02-03": [
-            "COIN",
-            "CPNG",
-            "CRDO",
-            "DDOG",
-            "DOCS",
-            "DUOL",
-            "FIG",
-            "GWRE",
-            "HIMS",
-            "HUBS",
-            "MNDY",
-            "MSTR",
-            "PCOR",
-            "QS",
-            "RBLX",
-            "SMR",
-            "SOUN",
-            "TRI",
-            "TTAN",
-            "TTD",
-            "U"
-        ],
-        "2026-02-04": [
-            "APP",
-            "CIFR",
-            "COIN",
-            "CRCL",
-            "CRDO",
-            "DDOG",
-            "DUOL",
-            "FIG",
-            "GWRE",
-            "HIMS",
-            "HOOD",
-            "HUBS",
-            "IONQ",
-            "MNDY",
-            "MSTR",
-            "OKLO",
-            "QS",
-            "RBLX",
-            "RELX",
-            "SMR",
-            "SOUN",
-            "TRI",
-            "TTAN",
-            "TTD",
-            "U"
-        ],
-        "2026-02-05": [
-            "APP",
-            "AXON",
-            "CIFR",
-            "COIN",
-            "CPNG",
-            "CRCL",
-            "CRDO",
-            "DDOG",
-            "DOCS",
-            "DUOL",
-            "FIG",
-            "GWRE",
-            "HIMS",
-            "HOOD",
-            "HUBS",
-            "IONQ",
-            "IREN",
-            "MNDY",
-            "MSTR",
-            "NET",
-            "OKLO",
-            "QBTS",
-            "QS",
-            "RBLX",
-            "SMR",
-            "SOUN",
-            "TTAN",
-            "TTD",
-            "U"
-        ],
-        "2026-02-06": [
-            "AXON",
-            "CPNG",
-            "DDOG",
-            "DUOL",
-            "FIG",
-            "GWRE",
-            "HIMS",
-            "HUBS",
-            "MNDY",
-            "PCOR",
-            "RELX",
-            "TTAN",
-            "TTD"
-        ],
-        "2026-02-09": [
-            "DUOL",
-            "GWRE",
-            "HIMS",
-            "HUBS",
-            "PCOR",
-            "RELX",
-            "TTD"
-        ],
-        "2026-02-10": [
-            "ASAN",
-            "DUOL",
-            "HIMS",
-            "HUBS",
-            "INTU",
-            "OKLO",
-            "RELX",
-            "TTAN"
-        ],
-        "2026-02-11": [
-            "COIN",
-            "CPNG",
-            "DUOL",
-            "FIG",
-            "GWRE",
-            "HIMS",
-            "HUBS",
-            "INTU",
-            "OKLO",
-            "PATH",
-            "PCOR",
-            "RELX",
-            "SMR",
-            "TTAN",
-            "TTD"
-        ],
-        "2026-02-12": [
-            "COIN",
-            "CPNG",
-            "CSGP",
-            "DUOL",
-            "FIG",
-            "GWRE",
-            "HIMS",
-            "INTU",
-            "IONQ",
-            "OKLO",
-            "PATH",
-            "PCOR",
-            "SMR",
-            "SOUN",
-            "TTD"
-        ],
-        "2026-02-13": [
-            "CPNG",
-            "CSGP",
-            "DUOL",
-            "HIMS",
-            "INTU",
-            "PATH",
-            "SOUN",
-            "TTAN",
-            "TTD",
-            "WAY"
-        ],
-        "2026-02-17": [
-            "CSGP",
-            "DUOL",
-            "GWRE",
-            "HIMS",
-            "INTU",
-            "OKLO",
-            "PATH",
-            "SMR",
-            "SOUN",
-            "TTD"
-        ],
-        "2026-02-18": [
-            "HIMS",
-            "INTU",
-            "OKLO",
-            "PATH",
-            "SMR"
-        ],
-        "2026-02-19": [
-            "DUOL",
-            "HIMS",
-            "INTU",
-            "OKLO",
-            "PATH",
-            "TTD"
-        ],
-        "2026-02-20": [
-            "GWRE",
-            "HIMS",
-            "INTU",
-            "IONQ",
-            "OKLO",
-            "PATH",
-            "QBTS",
-            "SMR",
-            "TTD",
-            "WDAY",
-            "ZS"
-        ],
-        "2026-02-23": [
-            "DOCU",
-            "DUOL",
-            "GTLB",
-            "GWRE",
-            "HIMS",
-            "INTU",
-            "IONQ",
-            "OKLO",
-            "PATH",
-            "QBTS",
-            "SMR",
-            "TTAN",
-            "TTD",
-            "WDAY",
-            "WIX",
-            "ZS"
-        ],
-        "2026-02-24": [
-            "CRDO",
-            "INTU",
-            "PATH",
-            "SMR",
-            "TTD",
-            "WDAY",
-            "WIX",
-            "ZS"
-        ],
-        "2026-02-25": [
-            "CPNG",
-            "DUOL",
-            "ICLR",
-            "OKLO",
-            "SMR",
-            "TTD",
-            "WIX"
-        ],
-        "2026-02-26": [
-            "CPNG",
-            "CRDO",
-            "OKLO",
-            "SMR"
-        ],
-        "2026-02-27": [
-            "CRDO",
-            "OKLO"
-        ],
-        "2026-03-02": [
-            "CRDO"
-        ],
-        "2026-03-03": [
-            "OKLO"
-        ],
-        "2026-03-05": [
-            "OKLO"
-        ],
-        "2026-03-06": [
-            "BX",
-            "CHWY",
-            "JEF",
-            "OKLO",
-            "ORCL",
-            "WHR"
-        ]
-    },
     "OverSell_W": {
         "2026-01-09": [
             "DUOL",
@@ -3833,19 +3505,347 @@
             "SHW"
         ]
     },
-    "Short_W": {},
-    "Short": {
+    "PE_Deeper": {
+        "2026-01-14": [
+            "DDOG"
+        ],
+        "2026-01-15": [
+            "DDOG",
+            "LCID"
+        ],
+        "2026-01-16": [
+            "DDOG",
+            "FIG"
+        ],
+        "2026-01-20": [
+            "DDOG",
+            "FIG",
+            "MSTR",
+            "SMR"
+        ],
+        "2026-01-21": [
+            "DDOG",
+            "FIG",
+            "MSTR"
+        ],
+        "2026-01-22": [
+            "FIG",
+            "MSTR"
+        ],
+        "2026-01-23": [
+            "COIN",
+            "MSTR"
+        ],
+        "2026-01-26": [
+            "COIN",
+            "CPNG",
+            "MSTR",
+            "SMR"
+        ],
+        "2026-01-27": [
+            "COIN",
+            "FIG",
+            "MSTR",
+            "RBLX",
+            "SMR"
+        ],
+        "2026-01-28": [
+            "COIN",
+            "MSTR"
+        ],
+        "2026-01-29": [
+            "COIN",
+            "FIG",
+            "MSTR",
+            "SMR",
+            "SOUN"
+        ],
+        "2026-01-30": [
+            "COIN",
+            "FIG",
+            "HIMS",
+            "MSTR",
+            "QS",
+            "RBLX",
+            "SMR",
+            "SOUN"
+        ],
+        "2026-02-02": [
+            "COIN",
+            "CRDO",
+            "FIG",
+            "GLXY",
+            "HIMS",
+            "MSTR",
+            "QS",
+            "RBLX",
+            "SMR",
+            "SOUN"
+        ],
+        "2026-02-03": [
+            "COIN",
+            "CPNG",
+            "CRDO",
+            "DDOG",
+            "DOCS",
+            "DUOL",
+            "FIG",
+            "GWRE",
+            "HIMS",
+            "HUBS",
+            "MNDY",
+            "MSTR",
+            "PCOR",
+            "QS",
+            "RBLX",
+            "SMR",
+            "SOUN",
+            "TRI",
+            "TTAN",
+            "TTD",
+            "U"
+        ],
+        "2026-02-04": [
+            "APP",
+            "CIFR",
+            "COIN",
+            "CRCL",
+            "CRDO",
+            "DDOG",
+            "DUOL",
+            "FIG",
+            "GWRE",
+            "HIMS",
+            "HOOD",
+            "HUBS",
+            "IONQ",
+            "MNDY",
+            "MSTR",
+            "OKLO",
+            "QS",
+            "RBLX",
+            "RELX",
+            "SMR",
+            "SOUN",
+            "TRI",
+            "TTAN",
+            "TTD",
+            "U"
+        ],
+        "2026-02-05": [
+            "APP",
+            "AXON",
+            "CIFR",
+            "COIN",
+            "CPNG",
+            "CRCL",
+            "CRDO",
+            "DDOG",
+            "DOCS",
+            "DUOL",
+            "FIG",
+            "GWRE",
+            "HIMS",
+            "HOOD",
+            "HUBS",
+            "IONQ",
+            "IREN",
+            "MNDY",
+            "MSTR",
+            "NET",
+            "OKLO",
+            "QBTS",
+            "QS",
+            "RBLX",
+            "SMR",
+            "SOUN",
+            "TTAN",
+            "TTD",
+            "U"
+        ],
+        "2026-02-06": [
+            "AXON",
+            "CPNG",
+            "DDOG",
+            "DUOL",
+            "FIG",
+            "GWRE",
+            "HIMS",
+            "HUBS",
+            "MNDY",
+            "PCOR",
+            "RELX",
+            "TTAN",
+            "TTD"
+        ],
+        "2026-02-09": [
+            "DUOL",
+            "GWRE",
+            "HIMS",
+            "HUBS",
+            "PCOR",
+            "RELX",
+            "TTD"
+        ],
+        "2026-02-10": [
+            "ASAN",
+            "DUOL",
+            "HIMS",
+            "HUBS",
+            "INTU",
+            "OKLO",
+            "RELX",
+            "TTAN"
+        ],
+        "2026-02-11": [
+            "COIN",
+            "CPNG",
+            "DUOL",
+            "FIG",
+            "GWRE",
+            "HIMS",
+            "HUBS",
+            "INTU",
+            "OKLO",
+            "PATH",
+            "PCOR",
+            "RELX",
+            "SMR",
+            "TTAN",
+            "TTD"
+        ],
+        "2026-02-12": [
+            "COIN",
+            "CPNG",
+            "CSGP",
+            "DUOL",
+            "FIG",
+            "GWRE",
+            "HIMS",
+            "INTU",
+            "IONQ",
+            "OKLO",
+            "PATH",
+            "PCOR",
+            "SMR",
+            "SOUN",
+            "TTD"
+        ],
+        "2026-02-13": [
+            "CPNG",
+            "CSGP",
+            "DUOL",
+            "HIMS",
+            "INTU",
+            "PATH",
+            "SOUN",
+            "TTAN",
+            "TTD",
+            "WAY"
+        ],
+        "2026-02-17": [
+            "CSGP",
+            "DUOL",
+            "GWRE",
+            "HIMS",
+            "INTU",
+            "OKLO",
+            "PATH",
+            "SMR",
+            "SOUN",
+            "TTD"
+        ],
+        "2026-02-18": [
+            "HIMS",
+            "INTU",
+            "OKLO",
+            "PATH",
+            "SMR"
+        ],
+        "2026-02-19": [
+            "DUOL",
+            "HIMS",
+            "INTU",
+            "OKLO",
+            "PATH",
+            "TTD"
+        ],
+        "2026-02-20": [
+            "GWRE",
+            "HIMS",
+            "INTU",
+            "IONQ",
+            "OKLO",
+            "PATH",
+            "QBTS",
+            "SMR",
+            "TTD",
+            "WDAY",
+            "ZS"
+        ],
+        "2026-02-23": [
+            "DOCU",
+            "DUOL",
+            "GTLB",
+            "GWRE",
+            "HIMS",
+            "INTU",
+            "IONQ",
+            "OKLO",
+            "PATH",
+            "QBTS",
+            "SMR",
+            "TTAN",
+            "TTD",
+            "WDAY",
+            "WIX",
+            "ZS"
+        ],
+        "2026-02-24": [
+            "CRDO",
+            "INTU",
+            "PATH",
+            "SMR",
+            "TTD",
+            "WDAY",
+            "WIX",
+            "ZS"
+        ],
+        "2026-02-25": [
+            "CPNG",
+            "DUOL",
+            "ICLR",
+            "OKLO",
+            "SMR",
+            "TTD",
+            "WIX"
+        ],
+        "2026-02-26": [
+            "CPNG",
+            "CRDO",
+            "OKLO",
+            "SMR"
+        ],
+        "2026-02-27": [
+            "CRDO",
+            "OKLO"
+        ],
+        "2026-03-02": [
+            "CRDO"
+        ],
+        "2026-03-03": [
+            "OKLO"
+        ],
         "2026-03-05": [
-            "AS",
-            "BF-B",
-            "DB",
-            "HYG",
-            "INDA"
+            "OKLO"
         ],
         "2026-03-06": [
-            "BF-B",
-            "EPHE",
-            "WAL"
+            "BX",
+            "CHWY",
+            "JEF",
+            "OKLO",
+            "ORCL",
+            "WHR"
         ]
     },
     "PE_Deep": {
