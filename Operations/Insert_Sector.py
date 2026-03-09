@@ -3,7 +3,6 @@ import pyperclip
 import re
 import subprocess
 import os
-from typing import Optional
 import sys
 
 # --- 1. 路径动态化配置 ---
@@ -43,8 +42,6 @@ def copy2clipboard():
         subprocess.run(['osascript', '-e', script], check=True)
     except Exception as e:
         print(f"执行 AppleScript 复制时出错: {str(e)}")
-        # 即使复制失败，也继续尝试读取剪贴板，可能已有内容
-        pass
 
 def is_uppercase_letters(text: str) -> bool:
     """检查字符串是否完全由大写英文字母组成。"""
@@ -79,64 +76,44 @@ def check_blacklist(symbol: str) -> bool:
         print(f"读取blacklist文件时出错: {str(e)}")
         return False
 
-def find_symbol_group(filename: str, symbol: str) -> Optional[str]:
-    """在指定文件中查找symbol所属的组名"""
-    try:
-        if not os.path.exists(filename):
-            return None
-        with open(filename, 'r') as file:
-            data = json.load(file)
-            for group_name, symbols in data.items():
-                if symbol in symbols:
-                    return group_name
-    except Exception as e:
-        print(f"读取文件 {filename} 时出错: {str(e)}")
-    return None
-
 def update_json_file(filename: str, group_name: str, symbol: str) -> None:
     """更新指定文件中指定组的内容，如果symbol不存在则添加。"""
-    with open(filename, 'r+') as file:
-        data = json.load(file)
-        if group_name not in data:
-            data[group_name] = []
-        
-        if symbol not in data[group_name]:
-            data[group_name].append(symbol)
-            file.seek(0)
-            json.dump(data, file, indent=2)
-            file.truncate()
-            print(f"已将 {symbol} 添加到 {filename} 的 {group_name} 组中")
-        else:
-            print(f"{symbol} 已存在于 {filename} 的 {group_name} 组中，无需操作")
+    try:
+        if not os.path.exists(filename):
+            print(f"文件不存在: {filename}")
+            return
+            
+        with open(filename, 'r+') as file:
+            data = json.load(file)
+            if group_name not in data:
+                data[group_name] = []
+            
+            if symbol not in data[group_name]:
+                data[group_name].append(symbol)
+                file.seek(0)
+                json.dump(data, file, indent=2)
+                file.truncate()
+                print(f"已将 {symbol} 添加到 {filename} 的 {group_name} 组中")
+            else:
+                print(f"{symbol} 已存在于 {filename} 的 {group_name} 组中，无需操作")
+    except Exception as e:
+        print(f"更新文件 {filename} 时出错: {str(e)}")
 
-def check_and_update_files(symbol: str) -> None:
-    """检查并更新所有相关的JSON文件。"""
-    # 如果在黑名单中，先移除
+def process_symbol(symbol: str) -> None:
+    """
+    简化后的逻辑：
+    1. 检查黑名单并移除。
+    2. 遍历所有文件，统一添加到 'ETFs' 分组。
+    """
+    # 1. 处理黑名单
     if check_blacklist(symbol):
         remove_from_blacklist(symbol)
-        print(f"检测到 {symbol} 在blacklist的etf组中，已移除")
+        print(f"检测到 {symbol} 在blacklist中，已移除")
 
-    # 2. 检查 symbol 在 all 和 today 文件中的位置
-    group_in_all = find_symbol_group(ALL_FILE, symbol)
-    group_in_today = find_symbol_group(TODAY_FILE, symbol)
-    
-    # 3. 逻辑判断
-    # 如果 symbol 在 all 和 today 的同一个组中存在
-    if group_in_all and group_in_today and group_in_all == group_in_today:
-        try:
-            update_json_file(EMPTY_FILE, group_in_all, symbol)
-            print(f"已将 {symbol} 添加到 {EMPTY_FILE} 的 {group_in_all} 组中")
-        except Exception as e:
-            print(f"更新 {EMPTY_FILE} 时出错: {str(e)}")
-        return
-    
-    # 如果不满足上述条件，默认处理为ETF
-    try:
-        for filename in [ALL_FILE, TODAY_FILE, EMPTY_FILE]:
-            update_json_file(filename, 'ETFs', symbol)
-            print(f"已将 {symbol} 添加到 {filename} 的 ETFs 组中")
-    except Exception as e:
-        print(f"更新文件时出错: {str(e)}")
+    # 2. 统一添加到 ETFs 分组
+    target_files = [ALL_FILE, TODAY_FILE, EMPTY_FILE]
+    for filename in target_files:
+        update_json_file(filename, 'ETFs', symbol)
 
 def main():
     """
@@ -176,13 +153,13 @@ def main():
     
     # 执行检查和更新操作
     print("-" * 20)
-    check_and_update_files(symbol_to_process)
+    process_symbol(symbol_to_process)
     print("-" * 20)
     print("处理完成。")
 
     # 在程序最后，只有当处于剪贴板模式时才弹窗
     if is_clipboard_mode:
-        show_alert(f"处理完成: {symbol_to_process}")
+        show_alert(f"已将 {symbol_to_process} 放入All、today、empty里了")
 
 if __name__ == "__main__":
     main()

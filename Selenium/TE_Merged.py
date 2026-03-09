@@ -6,6 +6,7 @@ import os
 import glob
 import csv
 import json
+import argparse
 from datetime import datetime, date, timedelta
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -58,6 +59,23 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 # ================= 通用辅助函数 =================
 
+def open_file_externally(file_path):
+    """跨平台打开文件"""
+    if not os.path.exists(file_path):
+        logging.warning(f"文件不存在，无法打开: {file_path}")
+        return
+
+    try:
+        if platform.system() == 'Darwin':       # macOS
+            subprocess.run(['open', file_path], check=True)
+        elif platform.system() == 'Windows':    # Windows
+            os.startfile(file_path)
+        else:                                   # Linux
+            subprocess.run(['xdg-open', file_path], check=True)
+        logging.info(f"已成功打开文件: {file_path}")
+    except Exception as e:
+        logging.error(f"打开文件失败: {e}")
+
 def get_driver():
     """创建并返回配置好的 Chrome Driver"""
     chrome_options = Options()
@@ -84,6 +102,7 @@ def get_driver():
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--blink-settings=imagesEnabled=false")
+    chrome_options.add_argument("--disable-images")
     chrome_options.page_load_strategy = 'eager'
     
     if not os.path.exists(CHROME_DRIVER_PATH):
@@ -599,20 +618,21 @@ def run_etf_processing():
         logging.error(f"处理 CSV 出错: {e}")
         return
 
-    # 7. 写入数据库
+    # 7. 写入数据库 (修改部分：注释掉数据库插入逻辑)
     if etfs_to_db:
-        conn = None
-        try:
-            conn = sqlite3.connect(DB_PATH, timeout=60.0)
-            cursor = conn.cursor()
-            cursor.executemany("INSERT INTO ETFs (date, name, price, volume) VALUES (?, ?, ?, ?)", etfs_to_db)
-            conn.commit()
-            logging.info(f"成功写入 {len(etfs_to_db)} 条 ETF 数据")
-        except Exception as e:
-            logging.error(f"数据库写入错误: {e}")
-            if conn: conn.rollback()
-        finally:
-            if conn: conn.close()
+        logging.info(f"已准备好 {len(etfs_to_db)} 条 ETF 数据，但根据配置跳过数据库写入。")
+        # conn = None
+        # try:
+        #     conn = sqlite3.connect(DB_PATH, timeout=60.0)
+        #     cursor = conn.cursor()
+        #     cursor.executemany("INSERT INTO ETFs (date, name, price, volume) VALUES (?, ?, ?, ?)", etfs_to_db)
+        #     conn.commit()
+        #     logging.info(f"成功写入 {len(etfs_to_db)} 条 ETF 数据")
+        # except Exception as e:
+        #     logging.error(f"数据库写入错误: {e}")
+        #     if conn: conn.rollback()
+        # finally:
+        #     if conn: conn.close()
     else:
         logging.info("无匹配 ETF 数据写入数据库")
 
@@ -625,31 +645,42 @@ def run_etf_processing():
             logging.info(f"写入 {len(new_etfs_to_file)} 条新 ETF 数据到文件")
         except Exception as e:
             logging.error(f"写入文件失败: {e}")
+            return # 如果写入失败，直接返回
 
-    # 9. 调用子脚本 Check_yesterday
-    logging.info("--- 开始执行 Check_yesterday.py ---")
-    try:
-        # 使用 sys.executable 动态获取 python 路径
-        result = subprocess.run(
-            [sys.executable, CHECK_YESTERDAY_SCRIPT_PATH],
-            check=True, capture_output=True, text=True, encoding='utf-8'
-        )
-        logging.info("Check_yesterday 执行成功")
-        print("--- Subprocess Output ---\n" + result.stdout)
-    except subprocess.CalledProcessError as e:
-        logging.error(f"Check_yesterday 执行失败 code={e.returncode}")
-        print(e.stderr)
-    except Exception as e:
-        logging.error(f"调用 Check_yesterday 失败: {e}")
+    # # 9. 调用子脚本 Check_yesterday
+    # logging.info("--- 开始执行 Check_yesterday.py ---")
+    # try:
+    #     # 使用 sys.executable 动态获取 python 路径
+    #     result = subprocess.run(
+    #         [sys.executable, CHECK_YESTERDAY_SCRIPT_PATH],
+    #         check=True, capture_output=True, text=True, encoding='utf-8'
+    #     )
+    #     logging.info("Check_yesterday 执行成功")
+    #     print("--- Subprocess Output ---\n" + result.stdout)
+    # except subprocess.CalledProcessError as e:
+    #     logging.error(f"Check_yesterday 执行失败 code={e.returncode}")
+    #     print(e.stderr)
+    # except Exception as e:
+    #     logging.error(f"调用 Check_yesterday 失败: {e}")
+    
+    # 无论刚才是否写入了新数据，现在检查文件是否存在
+    if os.path.exists(OUTPUT_TXT_FILE):
+        # 如果文件存在（说明有新数据或者之前就有记录），直接打开
+        open_file_externally(OUTPUT_TXT_FILE)
+    else:
+        # 如果文件不存在，说明确实没有新数据
+        display_dialog("所有 ETF 数据已同步，没有发现新的 ETF。")
 
 # ================= 主程序入口 =================
 
 def main():
-    # 检查是否有命令行参数传入
-    # 如果参数个数大于 1 (即除了脚本名以外还有其他参数)，则 skip_etf 为 True
-    skip_etf = len(sys.argv) > 1
-    if skip_etf:
-        logging.info(">>> 检测到命令行参数，本次运行将跳过 ETF 处理任务。")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--skipetf", action="store_true", help="Skip ETF processing")
+    args = parser.parse_args()
+    
+    # 使用 args.skipetf 代替 len(sys.argv)
+    if args.skipetf:
+        logging.info(">>> 检测到参数 --skipetf，跳过 ETF 处理。")
 
     # 1. 检查日期 (全局控制)
     if not check_is_workday():
@@ -703,8 +734,8 @@ def main():
         logging.error(f"Main Loop - Economics Error: {e}")
     wait_between_tasks("Economics") # 等待
 
-    # 3. 执行 ETF 处理任务 (根据 skip_etf 标志决定是否执行)
-    if not skip_etf:
+    # 3. 执行 ETF 处理任务 (根据 skipetf 标志决定是否执行)
+    if not args.skipetf:
         try:
             run_etf_processing()
         except Exception as e:

@@ -27,7 +27,6 @@
     "INR=X",
     "BRL=X",
     "AUD=X",
-    "RUB=X",
     "KRW=X",
     "TRY=X",
     "SGD=X",
@@ -40,13 +39,6 @@
     "ARS=X",
     "MYR=X",
     "MXN=X"
-  ],
-  "Crypto": [
-    "BTC-USD",
-    "ETH-USD",
-    "SOL-USD",
-    "BNB-USD",
-    "XRP-USD"
   ],
   "Indices": [
     "^HSI",
@@ -81,6 +73,14 @@
     "LE=F",
     "SI=F",
     "PL=F"
+  ],
+  "Economics": [],
+  "Crypto": [
+    "BTC-USD",
+    "ETH-USD",
+    "SOL-USD",
+    "BNB-USD",
+    "XRP-USD"
   ],
   "ETFs": [
     "EWT",
@@ -327,12 +327,14 @@
     "EUAD",
     "FMAT",
     "VNM",
+    "EWH",
     "EWZ",
     "ILS",
     "COLO",
     "IDV",
     "AOM",
     "FXF",
+    "RING",
     "ISCF",
     "FTHI",
     "EZM",
@@ -355,6 +357,9 @@
     "BDRY",
     "CRAK",
     "MOAT",
+    "VLUE",
+    "IGE",
+    "SLVP",
     "GDMA",
     "FEP",
     "NZAC",

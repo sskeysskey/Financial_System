@@ -78,10 +78,9 @@ for category_name, category_items in data.items():
 print("--------------------------")
 
 # ----------------------------------------------------------------------
-# 8. 新增功能：在 Terminal 中调用另一个 Python 脚本
-#    此功能模仿了您提供的 AppleScript 的行为。
+# 8. 新增功能：在 Terminal 中调用另一个 Python 脚本 (已移除参数)
 # ----------------------------------------------------------------------
-print("\n--- 准备调用 YF_PriceVolume.py 脚本 ---")
+print("\n--- 准备调用 YF_Today.py 脚本 ---")
 
 # 首先，检查当前操作系统是否为 macOS (在内部表示为 'darwin')
 # 因为此功能依赖于 macOS 的 Terminal 应用和 osascript
@@ -93,19 +92,17 @@ else:
         python_path = sys.executable 
         # a. 定义要执行的命令的各个部分，与 AppleScript 中一致
         # python_path = "/Library/Frameworks/Python.framework/Versions/Current/bin/python3"
-        script_path = os.path.join(BASE_DIR, "Selenium/YF_PriceVolume.py")
-        mode_arg = "--mode empty"
-
-        # b. 使用 shlex.quote 来安全地处理路径，防止路径中包含空格或特殊字符导致命令执行失败
+        script_path = os.path.join(BASE_DIR, "Selenium/YF_Today.py")
+        
+        # --- 修改部分：不再定义 mode_arg ---
+        
+        # b. 使用 shlex.quote 来安全地处理路径
         safe_script_path = shlex.quote(script_path)
 
-        # c. 组合成最终要在 Terminal 中执行的完整命令字符串
-        command_to_run_in_terminal = f"{python_path} {safe_script_path} {mode_arg}"
+        # c. 组合成最终要在 Terminal 中执行的完整命令字符串 (去掉了 mode_arg)
+        command_to_run_in_terminal = f"{python_path} {safe_script_path}"
 
-        # d. 构建一个多行的 AppleScript 脚本字符串
-        #    - 'tell application "Terminal"' 指示 AppleScript 控制 Terminal 应用
-        #    - 'activate' 会将 Terminal 应用带到最前台
-        #    - 'do script "..."' 会在新窗口或新标签页中运行指定的 shell 命令
+        # d. 构建 AppleScript 脚本
         applescript_command = f'''
         tell application "Terminal"
             activate
@@ -113,12 +110,10 @@ else:
         end tell
         '''
 
-        # e. 使用 subprocess.run() 来执行 osascript 命令，从而运行上面的 AppleScript
-        #    - ['osascript', '-e', applescript_command] 是要执行的命令列表
-        #    - check=True 表示如果命令执行失败（返回非零退出码），则会抛出异常
+        # e. 执行
         print(f"正在尝试在新的 Terminal 窗口中执行命令: {command_to_run_in_terminal}")
         subprocess.run(['osascript', '-e', applescript_command], check=True, capture_output=True)
-        print("✅ 成功启动 YF_PriceVolume.py 脚本。请检查新打开的 Terminal 窗口。")
+        print("✅ 成功启动 YF_Today.py 脚本。请检查新打开的 Terminal 窗口。")
 
     except FileNotFoundError:
         # 这个错误会在 'osascript' 命令本身不存在时发生 (几乎不可能在macOS上)

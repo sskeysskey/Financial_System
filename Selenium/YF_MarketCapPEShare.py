@@ -586,6 +586,7 @@ def main():
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--blink-settings=imagesEnabled=false")
+    chrome_options.add_argument("--disable-images")
     chrome_options.page_load_strategy = 'eager'
 
     if not os.path.exists(CHROME_DRIVER_PATH):

@@ -10,7 +10,11 @@ with open(file_path, 'r', encoding='utf-8') as f:
     data = json.load(f)
 
 # 2. 修改 Crypto 数组
-to_add_crypto = ["BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD", "XRP-USD"]
+to_add_crypto = ["Bitcoin",
+                 "Ether",
+                "Solana",
+                "Binance",
+                "XRP"]
 
 # 3. 在原有 Crypto 基础上追加并自动去重
 existing_crypto = set(data.get('Crypto', []))

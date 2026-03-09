@@ -2,9 +2,11 @@ import json
 import sqlite3
 import os
 import sys
+import argparse # 1. 导入 argparse
 import subprocess
 from datetime import datetime, timedelta
 from typing import Callable, Tuple, Optional
+import pandas_market_calendars as mcal
 
 USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
@@ -14,9 +16,6 @@ DB_PATH = os.path.join(BASE_CODING_DIR, "Database", "Finance.db")
 SECTORS_ALL_JSON = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_All.json")
 SECTOR_EMPTY_JSON = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_empty.json")
 ERROR_FILE = os.path.join(BASE_CODING_DIR, "News", "Today_error2.txt")
-# 新增：符号映射文件路径
-SYMBOL_MAPPING_JSON = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Symbol_mapping.json")
-
 
 # 不需要写入 empty 的 symbol
 FILTER_LIST = {
@@ -25,9 +24,6 @@ FILTER_LIST = {
     'PCEY', 'CorePCEY', 'CorePCEM', 'CoreCPI', 'USConspending', 'ImportPriceM',
     'ImportPriceY', 'USTrade', 'CNYI', 'JPYI', 'EURI', 'CHFI', 'GBPI'
 }
-
-yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
-
 
 def insert_ratio(
     cursor: sqlite3.Cursor,
@@ -172,12 +168,6 @@ def Insert_DB():
     finally:
         conn.close()
 
-def show_alert(message):
-    # AppleScript 代码模板
-    applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
-    # 使用 subprocess 调用 osascript
-    subprocess.run(['osascript', '-e', applescript_code], check=True)
-
 def read_json(path):
     """读取 JSON 文件并返回 Python 对象"""
     try:
@@ -196,6 +186,27 @@ def write_json(path, data):
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
+def get_last_trading_day() -> str:
+    """
+    返回距今最近的一个 NYSE 交易日（自动跳过周末和美国市场节假日）。
+    向前最多查 30 天，足够覆盖任何连续长假。
+    """
+    nyse = mcal.get_calendar('NYSE')
+    today = datetime.now().date()
+    start = today - timedelta(days=30)
+    end   = today - timedelta(days=1)   # 不包含今天本身
+
+    schedule = nyse.schedule(
+        start_date=start.strftime('%Y-%m-%d'),
+        end_date=end.strftime('%Y-%m-%d')
+    )
+
+    if schedule.empty:
+        raise RuntimeError("过去 30 天内找不到任何 NYSE 交易日，请检查日历配置。")
+
+    last_day = schedule.index[-1].strftime('%Y-%m-%d')
+    print(f"[INFO] 本次检查的目标交易日: {last_day}")
+    return last_day
 
 def query_data(table, name):
     """查询 SQLite，看表 table 中 name 和昨天日期的数据是否存在"""
@@ -216,7 +227,6 @@ def write_error(msg):
     """追加写入错误日志"""
     with open(ERROR_FILE, 'a', encoding='utf-8') as f:
         f.write(msg + '\n')
-
 
 def show_alert(message):
     """
@@ -251,22 +261,33 @@ def open_error_file():
 
 
 def main():
-    # 0. 不要一开始就清空，而是：如果存在旧的 error 文件先删掉
+    global yesterday  # 声明修改全局变量
+
+    # 1. 设置参数解析
+    parser = argparse.ArgumentParser(description="Check yesterday data script")
+    parser.add_argument('--nopop', action='store_true', help="是否强制弹出提示框")
+    args = parser.parse_args()
+
+    # ★ 在这里动态获取最近交易日，替代原来的静态 yesterday
+    try:
+        yesterday = get_last_trading_day()
+    except RuntimeError as e:
+        print(f"错误：{e}")
+        show_alert(str(e))
+        return
+
+    # 后续代码完全不变 ...
     if os.path.exists(ERROR_FILE):
         os.remove(ERROR_FILE)
 
     # 1. 读入 sectors 全量表 & empty 模板 & 符号映射表
     sectors_all = read_json(SECTORS_ALL_JSON)
     sector_empty = read_json(SECTOR_EMPTY_JSON)
-    symbol_mapping_original = read_json(SYMBOL_MAPPING_JSON)
 
     if not sectors_all: # 如果读取失败返回了空字典
         print("错误：Sectors_All.json 为空或读取失败，脚本终止。")
         show_alert("错误：Sectors_All.json 为空或读取失败，脚本终止。")
         return
-
-    # 反向映射
-    symbol_reverse_mapping = {v: k for k, v in symbol_mapping_original.items()}
 
     # 确保 empty 至少有所有表的 key
     for tbl in sectors_all:
@@ -274,6 +295,8 @@ def main():
 
     # 标志：是否有缺失
     missing_found = False
+    # --- 新增：计数器 ---
+    added_count = 0
 
     # 2. 遍历各表各 symbol
     for table, names_in_table in sectors_all.items():
@@ -288,30 +311,28 @@ def main():
             if not query_data(table, original_name):
                 # 第一次写错误时把标志置为 True
                 missing_found = True
-
-                err = f"在表 {table} 中找不到名称为 {original_name} 且日期为 {yesterday} 的数据"
-                write_error(err)
-
-                # 决定写入 empty 列表的符号
-                if original_name in symbol_reverse_mapping:
-                    symbol_to_write = symbol_reverse_mapping[original_name]
-                    print(f"信息：'{original_name}' 缺失，用映射符号 '{symbol_to_write}' 写入 empty。")
-                else:
-                    symbol_to_write = original_name
-                    print(f"信息：'{original_name}' 缺失，用原符号写入 empty。")
-
-                # 确保是列表并去重
+                
+                # --- 修改点：直接使用 original_name，不再进行映射 ---
+                print(f"信息：'{original_name}' 缺失，直接写入 empty。")
                 if not isinstance(sector_empty.get(table), list):
                     sector_empty[table] = []
-                if symbol_to_write not in sector_empty[table]:
-                    sector_empty[table].append(symbol_to_write)
+                
+                # 只有当该项确实不存在于列表中时，才进行添加并计数
+                if original_name not in sector_empty[table]:
+                    sector_empty[table].append(original_name)
+                    added_count += 1 # 计数器自增
 
     # 3. 根据 missing_found 决定后续行为
     if missing_found:
         # 写回 empty JSON
         write_json(SECTOR_EMPTY_JSON, sector_empty)
-        # 打开错误文件，方便查看
-        open_error_file()
+        
+        # --- 修改点：根据参数决定是否弹框 ---
+        if args.nopop:
+            show_alert(f"今天缺失的  {added_count}  内容已注入empty文件！")
+        else:
+            print(f"今天缺失的 {added_count} 内容已注入empty文件！(未开启弹框)")
+            
     else:
         Insert_DB()
         # 无任何缺失，直接弹框提示

@@ -1447,7 +1447,13 @@ def run_pe_volume_logic(log_detail):
             if "追" not in pe_volume_notes[sym]:
                 pe_volume_notes[sym] += "追"
                 
-    # 此时 pe_volume_notes 里的格式应该是： "LSCC听追" 或者 "LSCC听" (如果不是捞回的)
+    # === 新增：第三步：如果该 symbol 同时存在于 PE_Volume_high 中，追加“嗨”字 ===
+    for sym in filtered_pe_volume:
+        if sym in filtered_pe_volume_high:
+            if sym in pe_volume_notes and "嗨" not in pe_volume_notes[sym]:
+                pe_volume_notes[sym] += "嗨"
+                
+    # 此时 pe_volume_notes 里的格式应该是： "LSCC听追嗨" 或者 "LSCC听" (如果不是捞回的)
     
     pe_volume_up_notes = build_symbol_note_map(filtered_pe_volume_up)
     

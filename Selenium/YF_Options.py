@@ -16,10 +16,10 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
+from selenium.common.exceptions import TimeoutException
 from tqdm import tqdm
 import platform
-import urllib.parse  # 导入用于处理 URL 编码
+import urllib.parse
 
 # ================= 配置区域 =================
 USER_HOME = os.path.expanduser("~")
@@ -521,6 +521,7 @@ def scrape_options():
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--no-sandbox")
     options.add_argument("--blink-settings=imagesEnabled=false")  # 禁用图片加载
+    options.add_argument("--disable-images")
     options.page_load_strategy = 'eager'  # 使用eager策略，DOM准备好就开始
 
     # 检查驱动是否存在

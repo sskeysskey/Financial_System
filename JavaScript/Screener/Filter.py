@@ -32,15 +32,12 @@ def insert_screener_records(db_file, screener_data, prices, volumes):
     # 取出数据库中已有的表名，避免 typo 或 SQL 注入
     cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
     valid_tables = {row[0] for row in cur.fetchall()}
-
     inserted = 0
     skipped  = 0
-
     for sector, symbols in screener_data.items():
         if sector not in valid_tables:
             print(f"⚠️ 警告：数据库中不存在表 `{sector}`，已跳过该 sector 的写入")
             continue
-
         for symbol in symbols:
             price = prices.get(symbol)
             vol   = volumes.get(symbol)
@@ -57,17 +54,15 @@ def insert_screener_records(db_file, screener_data, prices, volumes):
                 skipped += 1
                 continue
 
-            # 不存在则插入
+            # 不存在则插入 (增加了 open, high, low，这里暂时设为 None)
             cur.execute(
-                f'''INSERT INTO "{sector}" (date, name, price, volume)
-                    VALUES (?, ?, ?, ?);''',
-                (yesterday, symbol, price, vol)
+                f'''INSERT INTO "{sector}" (date, name, price, volume, open, high, low)
+                    VALUES (?, ?, ?, ?, ?, ?, ?);''',
+                (yesterday, symbol, price, vol, None, None, None)
             )
             inserted += 1
-
     conn.commit()
     conn.close()
-
     print(f"✅ 插入完成：{inserted} 条新纪录，跳过 {skipped} 条已有记录（日期：{yesterday}）")
 
 # 读取screener数据文件
@@ -173,26 +168,24 @@ def filter_screener_symbols(symbols, blacklist):
 def move_stock_data_in_db(db_file, source_sector, dest_sector, symbol):
     """
     将单个股票的所有历史数据从一个 sector 表移动到另一个 sector 表。
-    这是一个事务性操作，确保数据要么完全移动，要么在出错时保持原样。
+    已更新以适配新的数据库结构 (date, name, price, volume, open, high, low)
     """
     log_message = ""
     conn = sqlite3.connect(db_file, timeout=60.0)
     try:
         cur = conn.cursor()
 
-        # 1. 从源表中查询该股票的所有记录
-        cur.execute(f'SELECT date, name, price, volume FROM "{source_sector}" WHERE name = ?', (symbol,))
+        # 1. 从源表中查询该股票的所有记录 (增加了 open, high, low)
+        cur.execute(f'SELECT date, name, price, volume, open, high, low FROM "{source_sector}" WHERE name = ?', (symbol,))
         records_to_move = cur.fetchall()
-
         if not records_to_move:
             log_message = f"信息：在源表 '{source_sector}' 中没有找到 '{symbol}' 的数据，无需移动。"
             print(log_message)
             return log_message
 
-        # 2. 将查询到的记录批量插入到目标表
-        # 注意：这里假设目标表已存在。您的代码逻辑似乎能保证这一点。
+        # 2. 将查询到的记录批量插入到目标表 (增加了 open, high, low)
         cur.executemany(
-            f'INSERT INTO "{dest_sector}" (date, name, price, volume) VALUES (?, ?, ?, ?)',
+            f'INSERT INTO "{dest_sector}" (date, name, price, volume, open, high, low) VALUES (?, ?, ?, ?, ?, ?, ?)',
             records_to_move
         )
 
@@ -201,10 +194,8 @@ def move_stock_data_in_db(db_file, source_sector, dest_sector, symbol):
 
         # 4. 提交事务
         conn.commit()
-        
         log_message = f"成功将 symbol '{symbol}' 的 {len(records_to_move)} 条历史记录从表 '{source_sector}' 移动到 '{dest_sector}'"
         print(f"✅ {log_message}")
-
     except sqlite3.Error as e:
         # 如果发生任何数据库错误，回滚所有更改
         conn.rollback()
@@ -212,7 +203,6 @@ def move_stock_data_in_db(db_file, source_sector, dest_sector, symbol):
         print(log_message)
     finally:
         conn.close()
-    
     return log_message
 
 # 【修改】比较差异并更新sectors文件的函数
@@ -250,7 +240,6 @@ def compare_and_update_sectors(screener_data, sectors_all_data, sectors_today_da
                             sectors_all_data[other_sector].remove(symbol)
                             if other_sector in sectors_today_data and symbol in sectors_today_data[other_sector]:
                                 sectors_today_data[other_sector].remove(symbol)
-                            
                             moved_symbols.append(f"将 symbol '{symbol}' 从 '{other_sector}' 移动到 '{sector}'")
                             moved = True
                             break
@@ -281,7 +270,6 @@ def compare_and_update_sectors(screener_data, sectors_all_data, sectors_today_da
         added_symbols.append("Sectors_All文件没有需要更新的内容")
     
     return sectors_all_data, sectors_today_data, sectors_empty_data, added_symbols, moved_symbols, db_operation_logs
-
 
 def count_files(prefix):
     """
@@ -544,8 +532,8 @@ def main():
         screener_data, sectors_all_data, sectors_today_data, sectors_empty_data, blacklist, db_file
     )
     
-    # ---- 把“昨天”价格、成交量写到对应 sector 表 ---- 
-    insert_screener_records(db_file, screener_data, prices, volumes)
+    # ---- 修改点：已注释掉 insert_screener_records 的调用，不再写入新价格/成交量 ----
+    # insert_screener_records(db_file, screener_data, prices, volumes)
     
     # 保存更新后的sectors文件，只有在有变化时才保存
     save_sectors_file(sectors_all_file, updated_sectors_all)
@@ -577,20 +565,24 @@ def main():
             if matched:
                 valid_below_data[sector] = matched
 
-        if valid_below_data:
-            insert_screener_records(db_file, valid_below_data, below_prices, below_volumes)
-        else:
-            print("⚠️ screener_below 中没有匹配到 sectors_all.json 里已有的 symbol，跳过写入")
+        # ---- 修改点：已注释掉 insert_screener_records 的调用 ----
+        # if valid_below_data:
+        #     insert_screener_records(db_file, valid_below_data, below_prices, below_volumes)
+        # else:
+        #     print("⚠️ screener_below 中没有匹配到 sectors_all.json 里已有的 symbol，跳过写入")
     
-    # 写入汇总日志文件
-    output_file = '/Users/yanzhang/Coding/News/screener_sectors.txt'
-    write_log_file(output_file, added_symbols, changes_5000, changes_500, moved_symbols, db_operation_logs)
+    write_log_file(output_file='/Users/yanzhang/Coding/News/screener_sectors.txt', 
+                   added_symbols=added_symbols, 
+                   changes_5000=changes_5000, 
+                   changes_500=changes_500, 
+                   moved_symbols=moved_symbols, 
+                   db_operation_logs=db_operation_logs)
 
     # 等待2秒
     time.sleep(2)
 
     # 在 macOS 系统下使用 open 命令打开文件
-    os.system(f"open {output_file}")
+    os.system(f"open /Users/yanzhang/Coding/News/screener_sectors.txt")
 
     file_patterns = [
         ("NewLow_", -1),

@@ -325,6 +325,7 @@ def create_unified_driver():
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--no-sandbox")
     # 禁止加载图片以加快速度
+    options.add_argument("--disable-images")
     options.add_argument("--blink-settings=imagesEnabled=false") 
     options.page_load_strategy = 'eager'
 

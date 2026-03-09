@@ -187,10 +187,10 @@ def init_database():
     
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS Earning (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
             date TEXT NOT NULL,
             name TEXT NOT NULL,
-            price REAL NOT NULL
+            price REAL NOT NULL,
+            UNIQUE(date, name)
         )
     ''')
     

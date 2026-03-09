@@ -478,7 +478,6 @@ def execute_external_script(script_type, keyword, on_done=None, block=False):
         'symbol_compare': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Query', 'Compare_Chart.py'),
         'panel_input': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Insert_Panel.py'),
         'panel_delete': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Delete_Panel.py'),
-        'empty_input': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Insert_Sector.py'),
         'similar_tags': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Query', 'Search_Similar_Tag.py'),
         'check_history': os.path.join(BASE_CODING_DIR, 'Financial_System', 'Query', 'Check_Earning_history.py'), 
         'check_kimi': os.path.join(BASE_CODING_DIR, 'ScriptEditor', 'Check_Earning.scpt'),
@@ -1391,7 +1390,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         circle.set_facecolor(NORD_THEME['background'])
     radio.circles[default_index].set_facecolor(NORD_THEME['accent_red'])
 
-    instructions = "N:新财报\nE:改财报\nT:改标签\nW:新事件\nQ:改事件\nK:查豆包\nZ:查富途\nP:做比较\nJ:加Panel\nH:加empty\nL:查相似\nY:删除\nG:刷新\nO:查α\nB:存在" # 新增 G
+    instructions = "N:新财报\nE:改财报\nT:改标签\nW:新事件\nQ:改事件\nK:查豆包\nZ:查富途\nP:做比较\nJ:加Panel\nL:查相似\nY:删除\nG:刷新\nO:查α\nB:存在" # 新增 G
     rax.text(0.5, 0.98, instructions, transform=rax.transAxes, ha="center", va="bottom",
              color=NORD_THEME['text_light'], fontsize=10, fontfamily="Arial Unicode MS")
     
@@ -1911,7 +1910,6 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                        'w': lambda: execute_external_script('event_input', name),
                        'y': launch_insert_then_delete_chain, 
                        'j': launch_and_close_for_y,
-                       'h': lambda: execute_external_script('empty_input', name),
                        'q': lambda: execute_external_script('event_edit', name),
                        'k': lambda: execute_external_script('check_kimi', name),
                        'z': lambda: execute_external_script('check_futu', name),
