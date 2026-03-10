@@ -590,13 +590,13 @@ def scrape_options():
                     
                     # 滚动到元素可见，防止被广告遮挡
                     driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", date_button)
-                    time.sleep(1) # 稍微多等待一点时间让JS执行
+                    time.sleep(0.5) # 稍微多等待一点时间让JS执行
                     date_button.click()
                     
                     # 显式等待下拉菜单出现 (查找带有 data-value 的 div 或 option)
                     # Yahoo 新版下拉菜单通常在 div 中，且带有 data-value 属性
                     wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-value]")))
-                    time.sleep(0.5) # 动画缓冲
+                    # time.sleep(0.5) # 动画缓冲
                     
                     # 提取所有日期选项
                     # 策略：查找所有带有 data-value 属性且看起来像时间戳的元素
@@ -708,7 +708,7 @@ def scrape_options():
                         wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "section[data-testid='options-list-table'] table")))
                         
                         # 稍微缓冲一下，确保表格内容渲染完毕
-                        time.sleep(1.0)
+                        # time.sleep(1.0)
 
                         # --- 抓取表格 ---
                         tables = driver.find_elements(By.CSS_SELECTOR, "section[data-testid='options-list-table'] table")
