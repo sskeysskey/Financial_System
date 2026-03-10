@@ -2,7 +2,6 @@ import sqlite3
 import time
 import os
 import json
-import argparse
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -27,8 +26,7 @@ DB_PATH = os.path.join(DATABASE_DIR, "Finance.db")
 MODULES_DIR = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules")
 
 # 默认文件名
-DEFAULT_JSON_FILENAME = "Sectors_temp.json"
-SYMBOL_MAPPING_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Symbol_mapping.json") # 新增映射文件路径
+SYMBOL_MAPPING_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Symbol_mapping.json")
 
 # 浏览器与驱动路径 (跨平台适配)
 if platform.system() == 'Darwin':
@@ -48,17 +46,6 @@ PERIOD_1 = "1039824000"
 PERIOD_2 = "1772928000"
 
 # ================= 1. 数据库与 JSON 操作 =================
-
-def get_args():
-    """解析命令行参数"""
-    parser = argparse.ArgumentParser(description="金融数据抓取工具")
-    parser.add_argument(
-        '--mode', 
-        type=str, 
-        default='temp', 
-        help='指定模式: 使用 "empty" 则加载 Sectors_empty.json，默认加载 Sectors_temp.json'
-    )
-    return parser.parse_args()
 
 def create_table_if_not_exists(cursor, table_name):
     """确保数据库表存在"""
@@ -155,7 +142,7 @@ def remove_symbol_from_json(json_path, group_name, symbol):
 # ================= 2. 核心抓取逻辑 =================
 
 def extract_data_via_js(driver, symbol):
-    """使用注入 JS 的方式快速提取表格数据 (参考 content.js)"""
+    """使用注入 JS 的方式快速提取表格数据"""
     js_script = """
     function getColumnIndices(table) {
         const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
@@ -339,19 +326,10 @@ def scrape_history(json_path):
         tqdm.write("🎉 所有任务执行完毕。")
 
 if __name__ == "__main__":
-    # 1. 解析参数
-    args = get_args()
-    
-    # 2. 根据参数决定 JSON 文件名
-    if args.mode == 'empty':
-        json_filename = "Sectors_empty.json"
-    else:
-        json_filename = "Sectors_temp.json"
-    
-    # 3. 定义路径
-    target_json_path = os.path.join(MODULES_DIR, json_filename)
+    # 直接指定使用 Sectors_empty.json
+    target_json_path = os.path.join(MODULES_DIR, "Sectors_empty.json")
     
     print(f"🚀 正在使用配置文件: {target_json_path}")
     
-    # 4. 启动爬虫 (传入路径)
+    # 启动爬虫
     scrape_history(target_json_path)

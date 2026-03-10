@@ -13,6 +13,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from tqdm import tqdm
 import platform
 import urllib.parse
+import pandas_market_calendars as mcal
 
 # ================= 配置区域 =================
 USER_HOME = os.path.expanduser("~")
@@ -194,8 +195,26 @@ def remove_symbol_from_json(json_path, group_name, symbol):
 
 # ================= 2. 核心抓取逻辑 =================
 
+def get_last_valid_trading_date():
+    """获取美股最近的一个有效开盘日（严格小于今天）"""
+    nyse = mcal.get_calendar('NYSE')
+    today = datetime.datetime.now().date()
+    # 往前推15天，确保能覆盖到长假
+    start_date = today - datetime.timedelta(days=15)
+    
+    # 获取这段时间内的所有交易日
+    schedule = nyse.schedule(start_date=start_date, end_date=today)
+    valid_days = schedule.index.date
+    
+    # 筛选出严格小于今天的日期
+    past_days = [d for d in valid_days if d < today]
+    
+    if past_days:
+        return past_days[-1].strftime('%Y-%m-%d')
+    return None
+
 def extract_data_via_js(driver, symbol):
-    """使用注入 JS 的方式快速提取表格数据 (只提取最新的一条)"""
+    """使用注入 JS 的方式快速提取表格数据 (提取最新的前两条数据)"""
     js_script = """
     function getColumnIndices(table) {
         const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
@@ -228,7 +247,7 @@ def extract_data_via_js(driver, symbol):
     const rows = Array.from(tbl.querySelectorAll('tbody tr'));
     const scraped = [];
 
-    // 使用 for...of 循环，方便在找到第一条有效数据后 break
+    // 提取前两条有效数据
     for (let r of rows) {
         const cells = Array.from(r.querySelectorAll('td'));
         if (cells.length <= Math.max(cols.date, cols.close)) continue;
@@ -260,7 +279,7 @@ def extract_data_via_js(driver, symbol):
         }
 
         scraped.push([dateStr, price, volume, open, high, low]);
-        break; // 提取到最新的一条有效数据后，立即退出循环
+        if (scraped.length >= 2) break; // 提取到最新的两条有效数据后退出循环
     }
     return { data: scraped };
     """
@@ -278,6 +297,13 @@ def scrape_history():
     # 1. 加载任务和映射表
     tasks_dict = load_tasks_from_json(SECTORS_JSON_PATH)
     alias_to_symbol = load_alias_mapping(SYMBOL_MAPPING_PATH)
+    
+    # 获取最近的有效开盘日
+    last_valid_date = get_last_valid_trading_date()
+    if last_valid_date:
+        tqdm.write(f"📅 计算得出的最近有效开盘日为: {last_valid_date}")
+    else:
+        tqdm.write("⚠️ 无法计算最近有效开盘日，将使用网页原始日期。")
     
     # 将字典展平为列表，方便使用 tqdm
     task_list = []
@@ -341,6 +367,7 @@ def scrape_history():
             
             max_retries = 3
             success = False
+            skip_symbol = False
             
             for attempt in range(max_retries):
                 try:
@@ -348,26 +375,66 @@ def scrape_history():
                     
                     # 等待表格加载
                     wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "table")))
-                    time.sleep(1) # 缓冲等待 JS 渲染数据
                     
-                    # 移除了向下滚动的逻辑，因为我们只需要第一条数据
-                    
-                    # 提取数据 (这里传入原始的 symbol，如 "Bitcoin"，以保证写入数据库的 name 是 "Bitcoin")
+                    # 提取数据 (获取前两条)
                     data_rows = extract_data_via_js(driver, symbol)
                     if not data_rows:
                         raise Exception("提取到的数据为空")
+                    
+                    # ================= 日期校验逻辑 =================
+                    selected_row = None
+                    
+                    if last_valid_date:
+                        row0_date = data_rows[0][0]
+                        row1_date = data_rows[1][0] if len(data_rows) > 1 else None
                         
-                    # 写入数据库 (传入 table_type)
-                    if insert_data_to_db(DB_PATH, group, data_rows, table_type):
-                        tqdm.write(f"[{symbol}] 成功写入最新 1 条数据到 {group} 表。")
-                        # 成功后从 JSON 移除 (移除原始的 symbol)
-                        remove_symbol_from_json(SECTORS_JSON_PATH, group, symbol)
-                        success = True
-                        break # 跳出重试循环
+                        # 规则1：如果最新一条日期与计算日期一致
+                        if row0_date == last_valid_date:
+                            # 检查第二条是否也一致
+                            if row1_date == last_valid_date:
+                                selected_row = data_rows[1]
+                            else:
+                                selected_row = data_rows[0]
+                                
+                        # 规则2：如果最新一条日期比计算日期大
+                        elif row0_date > last_valid_date:
+                            # 看第二条是否一致
+                            if row1_date == last_valid_date:
+                                selected_row = data_rows[1]
+                            elif row1_date is None:
+                                # 只有第一条，没有第二条，将第一条的日期修改为 last_valid_date
+                                tqdm.write(f"⚠️ [{symbol}] 最新日期 {row0_date} 过大且无第二条数据，将日期修改为 {last_valid_date} 写入。")
+                                row_list = list(data_rows[0])
+                                row_list[0] = last_valid_date  # 替换日期
+                                selected_row = tuple(row_list)
+                            else:
+                                tqdm.write(f"⚠️ [{symbol}] 最新日期 {row0_date} 过大，且第二条 {row1_date} 不匹配 {last_valid_date}，跳过。")
+                                skip_symbol = True
+                                break
+                                
+                        # 规则3：如果最新一条日期比计算日期小
+                        else: # row0_date < last_valid_date
+                            tqdm.write(f"⚠️ [{symbol}] 网页最新日期 {row0_date} < 预期日期 {last_valid_date}，数据未更新，跳过。")
+                            skip_symbol = True
+                            break # 跳出重试循环，不再重试
                     else:
-                        raise Exception("数据库写入失败")
+                        # 如果无法计算 last_valid_date，默认取第一条
+                        selected_row = data_rows[0]
+                    # ======================================================
+
+                    if selected_row:
+                        # 写入数据库（将选中的单行包装为列表传入）
+                        if insert_data_to_db(DB_PATH, group, [selected_row], table_type):
+                            tqdm.write(f"[{symbol}] 成功写入最新 1 条数据 ({selected_row[0]}) 到 {group} 表。")
+                            remove_symbol_from_json(SECTORS_JSON_PATH, group, symbol)
+                            success = True
+                            break # 跳出重试循环
+                        else:
+                            raise Exception("数据库写入失败")
                         
                 except Exception as e:
+                    if skip_symbol:
+                        break
                     if attempt < max_retries - 1:
                         time.sleep(2)
                     else:

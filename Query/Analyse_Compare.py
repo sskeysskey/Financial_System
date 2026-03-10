@@ -232,6 +232,7 @@ def read_earnings_release_for_all(filepath, error_file_path):
     return earnings_companies
 
 def run_compare_all():
+    """修改后的 Compare_All - 增强数据库兼容性"""
     print("--- 开始执行: Compare_All ---")
     type_map = {'BMO': '前', 'AMC': '后', 'TNS': '未'}
     
@@ -276,6 +277,7 @@ def run_compare_all():
                     else:
                         query = f"SELECT date, price FROM {table_name} WHERE name = ? AND date IN (?, ?) ORDER BY date DESC"
                     
+                    # 获取最近两个日期
                     query_two_closest_dates = f"SELECT date FROM {table_name} WHERE name = ? ORDER BY date DESC LIMIT 2"
                     cursor.execute(query_two_closest_dates, (keyword,))
                     dates = cursor.fetchall()
@@ -292,8 +294,9 @@ def run_compare_all():
                     if len(results) >= 2:
                         latest_price = float(results[0][1] or 0)
                         second_latest_price = float(results[1][1] or 0)
-                        latest_volume = 0
                         
+                        # ✅ 安全获取 volume
+                        latest_volume = 0
                         if has_volume and len(results[0]) > 2:
                             latest_volume = results[0][2] or 0
                         

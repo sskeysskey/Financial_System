@@ -313,7 +313,7 @@ def main():
                 missing_found = True
                 
                 # --- 修改点：直接使用 original_name，不再进行映射 ---
-                print(f"信息：'{original_name}' 缺失，直接写入 empty。")
+                # print(f"信息：'{original_name}' 缺失，直接写入 empty。")
                 if not isinstance(sector_empty.get(table), list):
                     sector_empty[table] = []
                 
@@ -322,20 +322,28 @@ def main():
                     sector_empty[table].append(original_name)
                     added_count += 1 # 计数器自增
 
-    # 3. 根据 missing_found 决定后续行为
-    if missing_found:
-        # 写回 empty JSON
+     # 3. 根据情况决定后续行为
+    if added_count > 0:
+        # 情况 1: 有新缺失 (added_count > 0)
+        # 写入 JSON，并提示用户
         write_json(SECTOR_EMPTY_JSON, sector_empty)
         
-        # --- 修改点：根据参数决定是否弹框 ---
+        msg = f"今天新增了 {added_count} 个缺失内容已注入 empty 文件！"
         if args.nopop:
-            show_alert(f"今天缺失的  {added_count}  内容已注入empty文件！")
+            show_alert(msg)
         else:
-            print(f"今天缺失的 {added_count} 内容已注入empty文件！(未开启弹框)")
-            
+            print(f"{msg} (未开启弹框)")
+
+    elif missing_found:
+        # 情况 2: 没有新缺失，但数据库仍有缺失 (missing_found 为 True)
+        # 说明这些缺失在 JSON 里已经存在了，不需要再写 JSON，但也不应该执行入库
+        msg = "数据库仍有缺失数据，且已记录在 empty 文件中，请先处理。"
+        print(msg)
+
     else:
+        # 情况 3: 数据库没有任何缺失 (missing_found 为 False)
+        # 一切正常，执行入库
         Insert_DB()
-        # 无任何缺失，直接弹框提示
         show_alert("包含CNYI等所有数据都已成功入库，没有遗漏。")
 
 if __name__ == '__main__':
