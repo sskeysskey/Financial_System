@@ -805,7 +805,7 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         if is_tracing:
             log_detail(f"\n--- 正在检查 {symbol} (策略3) ---")
         
-        # ========== 步骤1: 获取财报数据 ==========
+        # 1. 财报数据检查
         if target_date_override:
             cursor.execute("SELECT date, price FROM Earning WHERE name = ? AND date <= ? ORDER BY date ASC", (symbol, target_date_override))
         else:
@@ -826,7 +826,7 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         if is_tracing:
             log_detail(f"    - 财报记录: {len(er_rows)} 次, 最新财报日: {latest_er_date}, 涨跌幅: {latest_er_pct}")
         
-        # ========== 步骤2: 获取财报日对应的收盘价 ==========
+        # 2. 财报日价格
         placeholders = ', '.join(['?'] * len(all_er_dates))
         query = f'SELECT date, price FROM "{sector}" WHERE name = ? AND date IN ({placeholders}) ORDER BY date ASC'
         cursor.execute(query, (symbol, *all_er_dates))
@@ -839,6 +839,10 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         
         all_er_prices = [p[1] for p in price_data]
         latest_er_price = all_er_prices[-1]
+        
+        # 3. 计算财报条件
+        cond_er_increasing = (len(er_rows) >= 2 and latest_er_price > all_er_prices[-2])
+        cond_er_pct_positive = (latest_er_pct is not None and latest_er_pct > 0)
         
         # ========== 步骤3: 计算各项条件 ==========
         
@@ -858,7 +862,7 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         if is_tracing:
             log_detail(f"    - 条件B (财报涨跌幅>0): {latest_er_pct} > 0 = {cond_er_pct_positive}")
         
-        # ========== 步骤4: 获取最新交易数据 ==========
+        # 4. 获取最新交易数据
         if target_date_override:
             query = f'SELECT date, price, volume FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 2'
             cursor.execute(query, (symbol, target_date_override))
@@ -868,14 +872,17 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         
         rows = cursor.fetchall()
         
-        if len(rows) < 2 or rows[0][1] is None or rows[0][2] is None or rows[1][1] is None:
+        # 修正：确保这里能正确解包 prev_volume
+        if len(rows) < 2 or rows[0][1] is None or rows[0][2] is None or rows[1][1] is None or rows[1][2] is None:
             if is_tracing:
                 log_detail(f"    x [失败] 无法获取最新两天交易数据")
             continue
         
         latest_date, latest_price, latest_volume = rows[0]
-        prev_date, prev_price, _ = rows[1]
+        prev_date, prev_price, prev_volume = rows[1]
+        
         latest_turnover = latest_price * latest_volume
+        prev_turnover = prev_price * prev_volume
         
         # 门槛 1: 成交额大于 1.8 亿
         if latest_turnover <= 180000000:
@@ -883,7 +890,7 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
                 log_detail(f"    x [过滤] 最新成交额 {latest_turnover:,.0f} 不足 18000 万，跳过。")
             continue
         
-        # ================= 抄底逻辑 (独立判定，不受今日上涨门槛限制) =================
+        # ================= 抄底逻辑 (不受今日上涨/放量门槛限制) =================
         cond_chaodi = False
         
         # 1. 检查历史：从最新财报日到今天，该股是否进入过 PE_Volume_high
@@ -920,14 +927,21 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
             if is_tracing:
                 log_detail(f"    ✅ [选中-抄底类] 满足历史入选+今日回调/放量条件")
 
+        # ================= 甲乙丙类逻辑的基础门槛 =================
         # 门槛 2: 今日上涨 (如果未上涨，则跳过甲乙丙的判断)
         cond_price_up_today = (latest_price > prev_price)
-        if is_tracing:
-            log_detail(f"    - 条件C (今日上涨): {prev_price:.2f} -> {latest_price:.2f} = {cond_price_up_today}")
+        # 门槛 3: 今日成交额 > 昨日成交额
+        cond_turnover_up_today = (latest_turnover > prev_turnover)
         
-        if not cond_price_up_today:
-            if is_tracing: log_detail(f"    x [失败] 今日未上涨")
-            continue # 未上涨则跳过甲乙丙类的判断，但上方的抄底类判定已经生效并保存了
+        if is_tracing:
+            log_detail(f"--- 检查 {symbol} ---")
+            log_detail(f"    - 今日价: {latest_price}, 昨日价: {prev_price}, 上涨: {cond_price_up_today}")
+            log_detail(f"    - 今日额: {latest_turnover:,.0f}, 昨日额: {prev_turnover:,.0f}, 放量: {cond_turnover_up_today}")
+
+        # 如果未上涨 或 未放量，则跳过甲乙丙的判断
+        if not (cond_price_up_today and cond_turnover_up_today):
+            if is_tracing: log_detail(f"    x [失败] 今日未上涨 且 今日未放量")
+            continue 
         
         # 条件D: 价格突破财报日收盘价
         cond_price_breakout = (latest_price >= latest_er_price)
@@ -1045,7 +1059,7 @@ def process_etf_volume_high(db_path, target_date_override, symbol_to_trace, log_
             continue
             
         latest_date, latest_price, latest_volume = rows[0]
-        prev_date, prev_price, _ = rows[1]
+        prev_date, prev_price, prev_volume = rows[1]
         latest_turnover = latest_price * latest_volume
         
         # 条件1: 价格突破 (ETF无财报，这里定义为今日上涨。若需改写为突破 N 日新高，可在此处扩展逻辑)
