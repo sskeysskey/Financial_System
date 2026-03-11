@@ -14,8 +14,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = "" 
 TARGET_DATE = "" 
 
-# SYMBOL_TO_TRACE = "VRTX"
-# TARGET_DATE = "2026-03-06"
+# SYMBOL_TO_TRACE = "WIT"
+# TARGET_DATE = "2026-03-10"
 
 # 3. 日志路径
 LOG_FILE_PATH = os.path.join(BASE_PATH, "Downloads", "PE_Volume_trace_log.txt")
@@ -885,7 +885,7 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         prev_turnover = prev_price * prev_volume
         
         # 门槛 1: 成交额大于 1.8 亿
-        if latest_turnover <= 180000000:
+        if latest_turnover <= 110000000:
             if is_tracing:
                 log_detail(f"    x [过滤] 最新成交额 {latest_turnover:,.0f} 不足 18000 万，跳过。")
             continue
@@ -893,14 +893,25 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         # ================= 抄底逻辑 (不受今日上涨/放量门槛限制) =================
         cond_chaodi = False
         
-        # 1. 检查历史：从最新财报日到今天，该股是否进入过 PE_Volume_high
+        # 1. 检查历史：从最新财报日到今天，该股是否以"甲"或"乙"类进入过 PE_Volume_high
         was_in_high_history = False
         for h_date, h_symbols_raw in hist_pe_vol_high.items():
             if latest_er_date <= h_date <= latest_date:
-                # *** 关键修改：清洗 symbol ***
-                h_symbols_clean = [clean_symbol(s) for s in h_symbols_raw]
-                if symbol in h_symbols_clean:
-                    was_in_high_history = True
+                # 遍历该日期的所有记录（保留后缀）
+                for s_with_suffix in h_symbols_raw:
+                    # 清洗后获取纯净 symbol
+                    clean_sym = clean_symbol(s_with_suffix)
+                    
+                    # 如果 symbol 匹配
+                    if clean_sym == symbol:
+                        # 检查后缀是否包含"甲"或"乙"
+                        if "甲" in s_with_suffix or "乙" in s_with_suffix:
+                            was_in_high_history = True
+                            if is_tracing:
+                                log_detail(f"    - 发现历史记录: {h_date} -> {s_with_suffix} (包含甲/乙类)")
+                            break
+                
+                if was_in_high_history:
                     break
         
         if was_in_high_history:
@@ -951,7 +962,7 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         # ========== 步骤6: 检查成交额条件 ==========
         
         # 条件E: 成交额为12个月前3名 (用于甲类)
-        cond_turnover_12m_top2 = check_turnover_rank(
+        cond_turnover_12m_top3 = check_turnover_rank(
             cursor, sector, symbol, latest_date, latest_turnover,
             turnover_lookback_months, turnover_rank_threshold,
             log_detail, is_tracing
@@ -974,19 +985,19 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         # ========== 步骤7: 分类判定 ==========
         
         # 甲类: 财报递增 + 财报涨幅>0 + 价格突破 + 今日上涨 + 12月Top3
-        if cond_er_increasing and cond_er_pct_positive and cond_price_breakout and cond_turnover_12m_top2:
+        if cond_er_increasing and cond_er_pct_positive and cond_price_breakout and cond_turnover_12m_top3:
             results_jia.append(symbol)
             if is_tracing:
                 log_detail(f"    ✅ [选中-甲类] 严格条件 + 价格突破 + 12个月Top{turnover_rank_threshold}")
         
-        # 乙类: 财报涨幅>0 + 未突破 + 今日上涨 + 6月Top3
-        elif cond_er_pct_positive and not cond_price_breakout and cond_turnover_6m_top3:
+        # 乙类: 财报涨幅>0 + 今日上涨 + 6月Top3
+        elif cond_er_pct_positive and cond_turnover_6m_top3:
             results_yi.append(symbol)
             if is_tracing:
                 log_detail(f"    ✅ [选中-乙类] 财报涨幅>0 + 未突破 + 6个月Top{turnover_rank_threshold}")
         
-        # [修改] 丙类: (无需财报要求) + 价格突破 + 今日上涨 + 45天前3名
-        if cond_price_breakout and cond_turnover_45d_top3:
+        # [修改] 丙类: (无需财报要求) + 今日上涨 + 45天前3名
+        elif cond_turnover_12m_top3:
             results_bing.append(symbol)
             if is_tracing:
                 log_detail(f"    ✅ [选中-丙类] 价格突破 + {bing_lookback_days}天Top{bing_rank_threshold}")

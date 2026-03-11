@@ -213,14 +213,10 @@
     "Strategy34_backup": {
         "ADI": "ADI热",
         "AMRZ": "AMRZ热",
-        "BWXT": "BWXT热",
         "CNH": "",
         "CRH": "",
-        "DE": "",
         "ENTG": "ENTG热",
-        "FRO": "",
         "FTAI": "FTAI热",
-        "GFI": "",
         "H": "",
         "HD": "HD热",
         "HLT": "",
@@ -236,7 +232,6 @@
         "SBAC": "",
         "SITE": "",
         "SN": "SN热",
-        "TKO": "",
         "USFD": "USFD热",
         "WH": ""
     },
@@ -322,10 +317,8 @@
         "PPG": "",
         "RBLX": "",
         "RMBS": "RMBS15热",
-        "SITM": "SITM15热",
         "SW": "",
         "TMO": "",
-        "YMM": "",
         "ZBRA": ""
     },
     "PE_W": {
@@ -345,7 +338,6 @@
         "BAC": "BAC9热",
         "BK": "BK9热",
         "ELV": "",
-        "GM": "",
         "HD": "HD热",
         "KGC": "",
         "PNC": "PNC9热",
@@ -396,20 +388,17 @@
     },
     "PE_Volume_high": {
         "AAOI": "AAOI甲",
-        "BG": "BG丙",
         "FIGR": "FIGR丙",
-        "MTN": "MTN丙",
-        "NIO": "NIO丙",
-        "VG": "VG抄底",
-        "VRTX": "VRTX丙"
+        "MTN": "MTN乙",
+        "VRTX": "VRTX乙",
+        "WIT": "WIT丙"
     },
     "PE_Volume_high_backup": {
         "AAOI": "AAOI甲",
-        "BG": "BG丙",
         "FIGR": "FIGR丙",
-        "MTN": "MTN丙",
-        "NIO": "NIO丙",
-        "VRTX": "VRTX丙"
+        "MTN": "MTN乙",
+        "VRTX": "VRTX乙",
+        "WIT": "WIT丙"
     },
     "ETF_Volume_high": {
         "CORN": "",
@@ -573,7 +562,6 @@
     "PE_valid_backup": {
         "AAPL": "",
         "AEIS": "AEIS热",
-        "AGI": "",
         "AGNC": "",
         "AMAT": "AMAT9热",
         "APH": "APH15热",
@@ -585,7 +573,6 @@
         "BA": "",
         "BCS": "BCS15热",
         "BDX": "",
-        "C": "C9热",
         "CARR": "CARR9热",
         "CAT": "CAT热",
         "CCEP": "",
@@ -664,18 +651,15 @@
         "TEL": "TEL15热",
         "TEVA": "",
         "TEX": "",
-        "TMDX": "",
         "TOL": "",
         "TPR": "",
         "TSEM": "TSEM15热",
         "TSLA": "TSLA9",
         "TSM": "TSM9热",
         "TSN": "",
-        "TTMI": "TTMI9热",
         "TXN": "",
         "UBS": "UBS15热",
         "URI": "",
-        "VIAV": "VIAV15热",
         "VMC": "",
         "VNOM": "",
         "WCC": "WCC9热",
