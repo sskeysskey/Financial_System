@@ -11,11 +11,11 @@ BASE_PATH = USER_HOME
 
 # ================= 配置区域 =================
 # 如果为空，则运行"今天"模式；如果填入日期（如 "2024-11-03"），则运行回测模式
-# SYMBOL_TO_TRACE = "" 
-# TARGET_DATE = "" 
+SYMBOL_TO_TRACE = "" 
+TARGET_DATE = "" 
 
-SYMBOL_TO_TRACE = "AAOI"
-TARGET_DATE = "2026-02-27"
+# SYMBOL_TO_TRACE = "EMA"
+# TARGET_DATE = "2026-02-17"
 
 # 3. 日志路径
 LOG_FILE_PATH = os.path.join(BASE_PATH, "Downloads", "PE_Volume_trace_log.txt")
@@ -856,13 +856,13 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         prev_date, prev_price, _ = rows[1]
         latest_turnover = latest_price * latest_volume
         
-        # ================= [新增逻辑] 过滤成交额小于18000万的股票 =================
+        # 门槛 1: 成交额大于 1.8 亿
         if latest_turnover <= 180000000:
             if is_tracing:
                 log_detail(f"    x [过滤] 最新成交额 {latest_turnover:,.0f} 不足 18000 万，跳过。")
             continue
         
-        # ================= [新增逻辑] 独立判定：抄底规则 =================
+        # ================= 抄底逻辑 (独立判定，不受今日上涨门槛限制) =================
         cond_chaodi = False
         
         # 1. 检查历史：从最新财报日到今天，该股是否进入过 PE_Volume_high
@@ -899,7 +899,7 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
             if is_tracing:
                 log_detail(f"    ✅ [选中-抄底类] 满足历史入选+今日回调/放量条件")
 
-        # 条件C: 今日上涨
+        # 门槛 2: 今日上涨 (如果未上涨，则跳过甲乙丙的判断)
         cond_price_up_today = (latest_price > prev_price)
         if is_tracing:
             log_detail(f"    - 条件C (今日上涨): {prev_price:.2f} -> {latest_price:.2f} = {cond_price_up_today}")
@@ -1480,7 +1480,7 @@ def run_pe_volume_logic(log_detail):
     
     pe_volume_up_notes = build_symbol_note_map(filtered_pe_volume_up)
     
-    # ================= 修改：为策略3生成带分类后缀的备注 =================
+    # 为策略3生成带分类后缀的备注 
     # 创建一个映射：symbol -> 它属于哪些类别
     symbol_to_categories = {}
     for sym in filtered_pe_volume_high:
