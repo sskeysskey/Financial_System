@@ -11,11 +11,11 @@ BASE_PATH = USER_HOME
 
 # ================= 配置区域 =================
 # 如果为空，则运行"今天"模式；如果填入日期（如 "2024-11-03"），则运行回测模式
-# SYMBOL_TO_TRACE = "" 
-# TARGET_DATE = "" 
+SYMBOL_TO_TRACE = "" 
+TARGET_DATE = "" 
 
-SYMBOL_TO_TRACE = "VRTX"
-TARGET_DATE = "2026-03-06"
+# SYMBOL_TO_TRACE = "VRTX"
+# TARGET_DATE = "2026-03-06"
 
 # 3. 日志路径
 LOG_FILE_PATH = os.path.join(BASE_PATH, "Downloads", "PE_Volume_trace_log.txt")
@@ -65,8 +65,9 @@ CONFIG = {
     # ========== 策略3 (PE_Volume_high 财报突破放量) 参数 ==========
     "COND_HIGH_TURNOVER_LOOKBACK_MONTHS": 12,  # 成交额回溯12个月 (用于甲类)
     "COND_HIGH_TURNOVER_RANK_THRESHOLD": 3,    # 成交额排名前3名
-    # [新增] 财报日起回溯的成交额排名阈值 (原逻辑为2，现改为3)
-    "COND_HIGH_TURNOVER_SINCE_ER_RANK_THRESHOLD": 3, 
+    # [新增] 丙类专用配置
+    "COND_HIGH_TURNOVER_BING_DAYS": 45,        # 丙类：成交额回溯45天
+    "COND_HIGH_TURNOVER_BING_RANK_THRESHOLD": 3,  # 丙类：排名前3名
 
     # ========== 策略4 (ETF_Volume_high 放量突破) 参数 ==========
     "ETF_COND_HIGH_TURNOVER_LOOKBACK_MONTHS": 12,  # 成交额回溯12个月
@@ -724,8 +725,8 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
     执行策略3：PE_Volume_high
     返回四个分类：
     - 甲类: 两次财报递增 + 最新财报涨跌幅>0 + 价格突破 + 成交额12个月前3名
-    - 乙类: 最新财报涨跌幅>0 + 未突破 + 成交额6个月前3名 (已移除财报递增要求)
-    - 丙类: (无需财报递增/涨跌幅要求) + 价格突破 + 财报日距今至少3天 + 动态成交额要求
+    - 乙类: 最新财报涨跌幅>0 + 未突破 + 成交额6个月前3名
+    - 丙类: (无需财报递增/涨跌幅要求) + 价格突破 + 成交额45天前3名  # [修改说明]
     - 抄底类: 最新日期到最近财报之间曾入选 PE_Volume_high 且今日在指定回调池中
     """
     log_detail("\n========== 开始执行 策略3 (PE_Volume_high - 财报突破放量 & 抄底扫描) ==========")
@@ -733,9 +734,18 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
     # 读取配置
     turnover_lookback_months = CONFIG.get("COND_HIGH_TURNOVER_LOOKBACK_MONTHS", 12)
     turnover_rank_threshold = CONFIG.get("COND_HIGH_TURNOVER_RANK_THRESHOLD", 3)
-    log_detail(f"配置参数: 成交额回溯 = {turnover_lookback_months} 个月(甲类) / 6 个月(乙类), 排名阈值 = Top {turnover_rank_threshold}")
     
-    # 加载历史记录和当前回调池
+    # [新增] 读取丙类专用配置
+    bing_lookback_days = CONFIG.get("COND_HIGH_TURNOVER_BING_DAYS", 45)
+    bing_rank_threshold = CONFIG.get("COND_HIGH_TURNOVER_BING_RANK_THRESHOLD", 3)
+    
+    log_detail(f"配置参数: 成交额回溯 = {turnover_lookback_months} 个月(甲类) / 6 个月(乙类) / {bing_lookback_days} 天(丙类), 排名阈值 = Top {turnover_rank_threshold}")
+    
+    # 确定基准日期 (提前确定以供加载 valid_pool 使用)
+    base_date = target_date_override if target_date_override else (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+    log_detail(f"基准日期: {base_date}")
+
+    # 加载历史记录
     hist_pe_vol_high = {}
     try:
         with open(history_json_path, 'r', encoding='utf-8') as f:
@@ -744,22 +754,33 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
     except Exception as e:
         log_detail(f"读取历史文件失败: {e}")
 
+    # ================= 修复点：加载当前回调池 =================
     valid_pool = set()
     target_pool_names = ["PE_W", "PE_Deep", "PE_Deeper", "PE_valid", "PE_invalid", "OverSell_W", "season", "no_season"]
+    
     try:
-        with open(panel_json_path, 'r', encoding='utf-8') as f:
-            panel_data = json.load(f)
+        # 优先从 History 中读取 base_date 当天的跌幅池数据，以支持回测
+        if hist_data:
             for name in target_pool_names:
-                group_data = panel_data.get(name, {})
-                if isinstance(group_data, dict):
-                    valid_pool.update(group_data.keys())
-        log_detail(f"已加载指定跌幅池，共 {len(valid_pool)} 个候选抄底 Symbol。")
+                group_history = hist_data.get(name, {})
+                if base_date in group_history:
+                    # 清洗 symbol 后加入
+                    clean_syms = [clean_symbol(s) for s in group_history[base_date]]
+                    valid_pool.update(clean_syms)
+        
+        # 如果在 history 中没有找到当天的任何数据（可能是实盘当天还没写入 history），则降级从 Panel 读取
+        if not valid_pool and not target_date_override:
+            with open(panel_json_path, 'r', encoding='utf-8') as f:
+                panel_data = json.load(f)
+                for name in target_pool_names:
+                    group_data = panel_data.get(name, {})
+                    if isinstance(group_data, dict):
+                        valid_pool.update(group_data.keys())
+                        
+        log_detail(f"已加载指定跌幅池 (日期: {base_date})，共 {len(valid_pool)} 个候选抄底 Symbol。")
     except Exception as e:
-        log_detail(f"读取 Panel 文件失败: {e}")
-
-    # 确定基准日期
-    base_date = target_date_override if target_date_override else (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
-    log_detail(f"基准日期: {base_date}")
+        log_detail(f"读取跌幅池数据失败: {e}")
+    # =======================================================
     
     # 四个分类的结果集
     results_jia = []     # 甲类
@@ -912,20 +933,6 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         cond_price_breakout = (latest_price >= latest_er_price)
         if is_tracing:
             log_detail(f"    - 条件D (价格突破财报): {latest_price:.2f} > {latest_er_price:.2f} = {cond_price_breakout}")
-        
-        # ========== 步骤5: 调整顺序，先计算财报日距今的天数 (条件G) ==========
-        cond_days_since_er = False
-        days_diff = 0
-        try:
-            er_dt = datetime.datetime.strptime(latest_er_date, "%Y-%m-%d")
-            latest_dt = datetime.datetime.strptime(latest_date, "%Y-%m-%d")
-            days_diff = (latest_dt - er_dt).days
-            cond_days_since_er = (days_diff > 3)
-            if is_tracing:
-                log_detail(f"    - 条件G (财报间隔>3天): {latest_er_date} -> {latest_date} = {days_diff}天 -> {cond_days_since_er}")
-        except Exception as e:
-            if is_tracing:
-                log_detail(f"    - 条件G (财报间隔>3天): 日期解析失败 = False")
                 
         # ========== 步骤6: 检查成交额条件 ==========
         
@@ -942,18 +949,13 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
             6, turnover_rank_threshold, # 强制使用6个月
             log_detail, is_tracing
         )
-        
-        # 条件F: 成交额为财报日起前N名 (用于丙类，动态阈值)
-        # 如果距今在3天~30天(1个月)范围内，要求最高(2名)；超过30天，要求前3名
-        dynamic_rank_threshold = 2 if days_diff <= 30 else CONFIG.get("COND_HIGH_TURNOVER_SINCE_ER_RANK_THRESHOLD", 3)
-        
-        # 只有满足大于3天才有必要去计算丙类的成交额排名，节省性能
-        cond_turnover_since_er_top = False
-        if cond_days_since_er:
-            cond_turnover_since_er_top = check_turnover_since_earning(
-                cursor, sector, symbol, latest_er_date, latest_date, latest_turnover,
-                dynamic_rank_threshold, log_detail, is_tracing  # 传入动态的 dynamic_rank_threshold
-            )
+
+        # [新增] 丙类：检查成交额是否为过去45天的前3名
+        cond_turnover_45d_top3 = check_turnover_rank_by_days(
+            cursor, sector, symbol, latest_date, latest_turnover,
+            bing_lookback_days, bing_rank_threshold,
+            log_detail, is_tracing
+        )
         
         # ========== 步骤7: 分类判定 ==========
         
@@ -963,17 +965,17 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
             if is_tracing:
                 log_detail(f"    ✅ [选中-甲类] 严格条件 + 价格突破 + 12个月Top{turnover_rank_threshold}")
         
-        # 乙类: 财报涨幅>0 + 未突破 + 今日上涨 + 6月Top3 (已移除财报递增要求)
+        # 乙类: 财报涨幅>0 + 未突破 + 今日上涨 + 6月Top3
         elif cond_er_pct_positive and not cond_price_breakout and cond_turnover_6m_top3:
             results_yi.append(symbol)
             if is_tracing:
                 log_detail(f"    ✅ [选中-乙类] 财报涨幅>0 + 未突破 + 6个月Top{turnover_rank_threshold}")
         
-        # 丙类 (原乙类): (无需财报递增/涨跌幅要求) + 价格突破 + 今日上涨 + 动态财报起前N名 + 间隔>3天
-        if cond_price_breakout and cond_turnover_since_er_top and cond_days_since_er:
+        # [修改] 丙类: (无需财报要求) + 价格突破 + 今日上涨 + 45天前3名
+        if cond_price_breakout and cond_turnover_45d_top3:
             results_bing.append(symbol)
             if is_tracing:
-                log_detail(f"    ✅ [选中-丙类] 宽松条件 + 价格突破 + 财报起前{dynamic_rank_threshold} + 间隔>3天({days_diff}天)")
+                log_detail(f"    ✅ [选中-丙类] 价格突破 + {bing_lookback_days}天Top{bing_rank_threshold}")
     
     conn.close()
     
@@ -983,7 +985,7 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
     results_bing = sorted(list(set(results_bing)))
     results_chaodi = sorted(list(set(results_chaodi))) # 排序抄底结果
     
-    log_detail(f"\n策略3 筛选完成:")
+    log_detail(f"\n————策略3 Volume_high 最终筛选结果:")
     log_detail(f"  - 甲类 (严格+突破+12月Top{turnover_rank_threshold}): {len(results_jia)} 个: {results_jia}")
     log_detail(f"  - 乙类 (财报涨幅>0+未突破+6月Top{turnover_rank_threshold}): {len(results_yi)} 个: {results_yi}")
     log_detail(f"  - 丙类 (宽松+突破+财报起前3+间隔>3天): {len(results_bing)} 个: {results_bing}")
@@ -1219,6 +1221,58 @@ def check_turnover_since_earning(cursor, sector_name, symbol, er_date_str, lates
         top_n_str = ", ".join([f"[{d}]: {v:,.0f}" for d, v in top_n_data])
         log_detail(f"      前{rank_threshold}名: {top_n_str}")
         log_detail(f"      当前成交额: {latest_turnover:,.0f} -> 是否前{rank_threshold}: {is_top_n}")
+    
+    return is_top_n
+
+def check_turnover_rank_by_days(cursor, sector_name, symbol, latest_date_str, latest_turnover, lookback_days, rank_threshold, log_detail, is_tracing):
+    """
+    检查 latest_turnover (成交额=price*volume) 是否是过去 lookback_days 天内的前 rank_threshold 名
+    
+    参数:
+        lookback_days: 回溯天数（如45天）
+    """
+    # 计算 N 天前的日期
+    try:
+        dt = datetime.datetime.strptime(latest_date_str, "%Y-%m-%d")
+        start_date = dt - datetime.timedelta(days=lookback_days)
+        start_date_str = start_date.strftime("%Y-%m-%d")
+    except Exception:
+        return False
+
+    # 查询过去 N 天的所有日期、价格和成交量
+    query = f'SELECT date, price, volume FROM "{sector_name}" WHERE name = ? AND date >= ? AND date <= ?'
+    cursor.execute(query, (symbol, start_date_str, latest_date_str))
+    rows = cursor.fetchall()
+    
+    # 计算成交额并过滤掉 None 值
+    valid_data = []
+    for r in rows:
+        if r[1] is not None and r[2] is not None:
+            turnover = r[1] * r[2]
+            valid_data.append((r[0], turnover))
+    
+    if not valid_data:
+        return False
+    
+    # 按成交额从大到小排序
+    sorted_data = sorted(valid_data, key=lambda x: x[1], reverse=True)
+    
+    # 截取前 N 名
+    top_n_data = sorted_data[:rank_threshold]
+    top_n_turnovers = [item[1] for item in top_n_data]
+    
+    # 判定逻辑
+    is_top_n = False
+    if latest_turnover in top_n_turnovers:
+        is_top_n = True
+    elif len(top_n_turnovers) >= rank_threshold and latest_turnover >= top_n_turnovers[rank_threshold - 1]:
+        is_top_n = True
+    
+    if is_tracing:
+        log_detail(f"    - 条件F (成交额排名-丙类): 回溯{lookback_days}天，共{len(valid_data)}个交易日")
+        top_n_str = ", ".join([f"[{d}]: {v:,.0f}" for d, v in top_n_data])
+        log_detail(f"      前{rank_threshold}名: {top_n_str}")
+        log_detail(f"      当前成交额: {latest_turnover:,.0f} -> 在前{rank_threshold}名: {is_top_n}")
     
     return is_top_n
 
