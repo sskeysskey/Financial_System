@@ -963,7 +963,8 @@
         "BEDY",
         "TPYP",
         "FLBR",
-        "HTUS"
+        "HTUS",
+        "FDT"
     ],
     "Earning": [
         "TW",
@@ -1168,6 +1169,10 @@
         "LNTH",
         "AGX",
         "ARE",
-        "WFRD"
+        "WFRD",
+        "ITT",
+        "FBIN",
+        "CNM",
+        "CNI"
     ]
 }

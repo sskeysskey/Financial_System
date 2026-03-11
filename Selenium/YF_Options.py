@@ -363,13 +363,13 @@ def scrape_options():
     # 4. 合并去重 (移除了 Short 和 Short_W)
     merged_symbols_set = (
         json_options_set
-        .union(json_pe_volume_set) 
-        .union(json_pe_volume_up_set) 
-        .union(json_pe_volume_high_set)
-        .union(json_pe_w_set)
-        .union(json_pe_deeper_set)
-        .union(json_etf_volume_high_set)
-        .union(json_etf_volume_low_set)
+        # .union(json_pe_volume_set) 
+        # .union(json_pe_volume_up_set) 
+        # .union(json_pe_volume_high_set)
+        # .union(json_pe_w_set)          # <--- 已屏蔽
+        # .union(json_pe_deeper_set)     # <--- 已屏蔽
+        # .union(json_etf_volume_high_set) # <--- 已屏蔽
+        # .union(json_etf_volume_low_set)  # <--- 已屏蔽
     )
     
     symbol_cap_map = {} # 用于存储 symbol -> marketcap 的字典
@@ -453,16 +453,16 @@ def scrape_options():
     skipped_count = original_count - len(symbols)
     
     # --- 统一的日志输出 (修改部分) ---
-    # 计算 JSON 总数 (移除了 Short 和 Short_W)
+    # 计算 JSON 总数 (移除了被屏蔽的分组)
     total_json_count = (
-        count_json_options + 
-        count_json_pe_volume + 
-        count_json_pe_volume_up +
-        count_json_pe_volume_high +
-        count_json_pe_w +
-        count_json_pe_deeper +
-        count_json_etf_volume_high +
-        count_json_etf_volume_low
+        count_json_options
+        # count_json_pe_volume + 
+        # count_json_pe_volume_up +
+        # count_json_pe_volume_high
+        # + count_json_pe_w            # <--- 已屏蔽
+        # + count_json_pe_deeper       # <--- 已屏蔽
+        # + count_json_etf_volume_high # <--- 已屏蔽
+        # + count_json_etf_volume_low  # <--- 已屏蔽
     )
 
     log_msg = (

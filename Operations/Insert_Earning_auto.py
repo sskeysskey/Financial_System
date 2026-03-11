@@ -302,6 +302,24 @@ class MainWindow(QMainWindow):
         table.setCellWidget(insert_row, 0, lbl)
         table.setRowHeight(insert_row, 45)
 
+    def _get_price(self, table, dt, sym):
+        self.cur.execute(f"SELECT price FROM `{table}` WHERE date=? AND name=?", (dt, sym))
+        r = self.cur.fetchone()
+        return r["price"] if r else None
+
+    def _get_prev_price(self, table, dt, sym):
+        self.cur.execute(f"SELECT price FROM `{table}` WHERE name=? AND date<? ORDER BY date DESC LIMIT 1", (sym, dt))
+        r = self.cur.fetchone()
+        return r["price"] if r else None
+
+    def auto_write_date1(self, symbol, pct, btn):
+        self.cur.execute("SELECT 1 FROM Earning WHERE date=? AND name=?", (self.date1, symbol))
+        if not self.cur.fetchone():
+            self.cur.execute("INSERT INTO Earning (date, name, price) VALUES (?, ?, ?)", (self.date1, symbol, pct))
+            self.conn.commit()
+        btn.setText("已写入")
+        btn.setEnabled(False)
+
     def process_today(self):
         table = self.table_today
         tags_to_add = []
@@ -375,14 +393,15 @@ class MainWindow(QMainWindow):
             if p1 is None or not p2: continue
             pct_new = round((p1 - p2) / p2 * 100, 2)
 
-            self.cur.execute("SELECT id, price FROM Earning WHERE name=? AND date>=? ORDER BY date DESC LIMIT 1", (symbol, self.three_days_ago))
+            # --- 不再使用 id ---
+            self.cur.execute("SELECT price, date FROM Earning WHERE name=? AND date>=? ORDER BY date DESC LIMIT 1", (symbol, self.three_days_ago))
             rowr = self.cur.fetchone()
             if rowr:
-                old_pct, rid, auto = float(rowr["price"]), rowr["id"], False
+                old_pct, old_date, auto = float(rowr["price"]), rowr["date"], False
             else:
                 self.cur.execute("INSERT INTO Earning (date, name, price) VALUES (?, ?, ?)", (self.date1, symbol, pct_new))
                 self.conn.commit()
-                old_pct, rid, auto = pct_new, self.cur.lastrowid, True
+                old_pct, old_date, auto = pct_new, self.date1, True
 
             self.ordered_symbols_on_screen.append(symbol)
             self.count_date2 += 1 # 计数增加
@@ -404,53 +423,39 @@ class MainWindow(QMainWindow):
 
             op_btn = QPushButton("已写入" if (auto or pct_new == old_pct) else "替换")
             op_btn.setObjectName("ReplaceButton")
-            # --- 修改：设置鼠标悬停时为手型 ---
             op_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             op_btn.setEnabled(not (auto or pct_new == old_pct))
-            if op_btn.isEnabled(): op_btn.clicked.connect(partial(self.on_replace_date2, symbol, pct_new, rid, op_btn))
+            if op_btn.isEnabled(): 
+                op_btn.clicked.connect(partial(self.on_replace_date2, symbol, pct_new, old_date, op_btn))
             table.setCellWidget(row, 4, op_btn)
             tags_to_add.append(get_tags_for_symbol(symbol, self.description_data))
 
         table.resizeColumnsToContents()
         for i in range(len(tags_to_add)-1, -1, -1): self._add_tag_row(table, i, tags_to_add[i])
 
-    def _get_price(self, table, dt, sym):
-        self.cur.execute(f"SELECT price FROM `{table}` WHERE date=? AND name=?", (dt, sym))
-        r = self.cur.fetchone()
-        return r["price"] if r else None
-
-    def _get_prev_price(self, table, dt, sym):
-        self.cur.execute(f"SELECT price FROM `{table}` WHERE name=? AND date<? ORDER BY date DESC LIMIT 1", (sym, dt))
-        r = self.cur.fetchone()
-        return r["price"] if r else None
-
-    def auto_write_date1(self, symbol, pct, btn):
-        self.cur.execute("SELECT 1 FROM Earning WHERE date=? AND name=?", (self.date1, symbol))
-        if not self.cur.fetchone():
-            self.cur.execute("INSERT INTO Earning (date, name, price) VALUES (?, ?, ?)", (self.date1, symbol, pct))
-            self.conn.commit()
-        btn.setText("已写入")
-        btn.setEnabled(False)
-
     def on_replace_date1(self, symbol, pct, btn):
-        self.cur.execute("SELECT id FROM Earning WHERE date=? AND name=?", (self.date1, symbol))
+        self.cur.execute("SELECT 1 FROM Earning WHERE date=? AND name=?", (self.date1, symbol))
         if self.cur.fetchone():
-            if QMessageBox.question(self, "确认覆盖", f"覆盖 {symbol} 在 {self.date1} 的记录？") != QMessageBox.StandardButton.Yes: return
+            if QMessageBox.question(self, "确认覆盖", f"覆盖 {symbol} 在 {self.date1} 的记录？") != QMessageBox.StandardButton.Yes: 
+                return
             self.cur.execute("UPDATE Earning SET price=? WHERE date=? AND name=?", (pct, self.date1, symbol))
             txt = "已覆盖"
         else:
             self.cur.execute("INSERT INTO Earning (date, name, price) VALUES (?, ?, ?)", (self.date1, symbol, pct))
             txt = "已写入"
         self.conn.commit()
-        btn.setText(txt); btn.setEnabled(False)
+        btn.setText(txt)
+        btn.setEnabled(False)
 
-    def on_replace_date2(self, symbol, new_pct, rid, btn):
-        msg = f"真的要把 {symbol} 最近一次 ({self.three_days_ago} 之后) 的旧百分比替换成 {new_pct}% 吗？"
+    def on_replace_date2(self, symbol, new_pct, old_date, btn):
+        msg = f"真的要把 {symbol} 在 {old_date} 的旧百分比替换成 {new_pct}% 吗？\n(记录将更新到 {self.date1})"
         if QMessageBox.question(self, "确认替换", msg) == QMessageBox.StandardButton.Yes:
-            self.cur.execute("UPDATE Earning SET price=?, date=? WHERE id=?", (new_pct, self.date1, rid))
+            self.cur.execute("DELETE FROM Earning WHERE date=? AND name=?", (old_date, symbol))
+            self.cur.execute("INSERT INTO Earning (date, name, price) VALUES (?, ?, ?)", (self.date1, symbol, new_pct))
             self.conn.commit()
-            btn.setText("已替换"); btn.setEnabled(False)
-            # 更新界面上的旧百分比显示
+            btn.setText("已替换")
+            btn.setEnabled(False)
+            # 更新界面显示
             index = self.table2.indexAt(btn.pos())
             if index.isValid():
                 item = self.table2.item(index.row(), 3)

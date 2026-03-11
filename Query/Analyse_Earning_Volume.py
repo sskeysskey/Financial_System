@@ -11,11 +11,11 @@ BASE_PATH = USER_HOME
 
 # ================= 配置区域 =================
 # 如果为空，则运行"今天"模式；如果填入日期（如 "2024-11-03"），则运行回测模式
-SYMBOL_TO_TRACE = "" 
-TARGET_DATE = "" 
+# SYMBOL_TO_TRACE = "" 
+# TARGET_DATE = "" 
 
-# SYMBOL_TO_TRACE = "BBWI"
-# TARGET_DATE = "2025-12-01"
+SYMBOL_TO_TRACE = "AAOI"
+TARGET_DATE = "2026-02-27"
 
 # 3. 日志路径
 LOG_FILE_PATH = os.path.join(BASE_PATH, "Downloads", "PE_Volume_trace_log.txt")
@@ -53,8 +53,8 @@ CONFIG = {
         "PE_W", "PE_valid", "PE_invalid", "season", "no_season"
     ],
     # ========== 策略1 (PE_Volume放量下跌) 参数 ==========
-    "COND8_VOLUME_LOOKBACK_MONTHS": 2,   # 过去 N 个月
-    "COND8_VOLUME_RANK_THRESHOLD": 3,    # 成交量排名前 N 名 (默认3，代码逻辑是 <4)
+    "COND8_VOLUME_LOOKBACK_MONTHS": 1.5,   # 过去 N 个月
+    "COND8_VOLUME_RANK_THRESHOLD": 3,    # 成交量排名前 N 名
     "COND8_EARNINGS_CHECK_DAYS": 2,      # [新增配置] 检查财报日的回溯天数 (填2则检查前2天: T-1, T-2)
     
     # ========== 策略2 (PE_Volume_up活跃上涨) 参数 ==========
@@ -80,6 +80,22 @@ CONFIG = {
 }
 
 # --- 2. 辅助与文件操作模块 ---
+
+def clean_symbol(symbol_with_suffix):
+    """
+    从带后缀的 symbol 中提取纯净的 symbol
+    例如: "BLK黑听" -> "BLK", "ALGM甲抄底" -> "ALGM"
+    """
+    if not symbol_with_suffix:
+        return ""
+    
+    # 定义所有可能的后缀字符
+    suffix_chars = set("黑听追嗨甲乙丙丁抄底")
+    
+    # 从右往左移除后缀字符
+    clean = symbol_with_suffix.rstrip(''.join(suffix_chars))
+    
+    return clean
 
 def load_tag_settings(json_path):
     try:
@@ -350,7 +366,9 @@ def pe_volume(db_path, history_json_path, sector_map, target_date_override, symb
             grp_data = history_data.get(group, {})
             if isinstance(grp_data, dict):
                 syms = grp_data.get(hist_date, [])
-                symbols_on_date.update(syms)
+                # *** 关键修改：清洗 symbol ***
+                cleaned_syms = [clean_symbol(s) for s in syms]
+                symbols_on_date.update(cleaned_syms)
         
         symbols_on_date = sorted(list(symbols_on_date))
         log_detail(f" -> 正在扫描 {task_name} (日期: {hist_date})，包含 {len(symbols_on_date)} 个候选。")
@@ -466,7 +484,9 @@ def check_pe_volume_retention(db_path, history_json_path, panel_json_path, curre
             log_detail(f"    x 无法找到 {base_date} 之前的历史记录，跳过回溯。")
             return []
             
-        prev_symbols = set(hist_pe_vol[prev_date])
+        prev_symbols_raw = hist_pe_vol[prev_date]
+        # *** 关键修改：清洗 symbol ***
+        prev_symbols = set([clean_symbol(s) for s in prev_symbols_raw])
         log_detail(f"    -> 找到上一期 ({prev_date}) PE_Volume 记录: {len(prev_symbols)} 个")
         
     except Exception as e:
@@ -581,7 +601,9 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
             grp_data = history_data.get(group, {})
             if isinstance(grp_data, dict):
                 syms = grp_data.get(hist_date, [])
-                candidate_symbols.update(syms)
+                # *** 关键修改：清洗 symbol ***
+                cleaned_syms = [clean_symbol(s) for s in syms]
+                candidate_symbols.update(cleaned_syms)
     
     candidate_symbols = sorted(list(candidate_symbols))
     log_detail(f"在 T, T-1, T-2 的历史记录中共扫描到 {len(candidate_symbols)} 个候选 Symbol。")
@@ -713,7 +735,7 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
     turnover_rank_threshold = CONFIG.get("COND_HIGH_TURNOVER_RANK_THRESHOLD", 3)
     log_detail(f"配置参数: 成交额回溯 = {turnover_lookback_months} 个月(甲类) / 6 个月(乙类), 排名阈值 = Top {turnover_rank_threshold}")
     
-    # ================= [新增逻辑] 加载历史记录和当前回调池 =================
+    # 加载历史记录和当前回调池
     hist_pe_vol_high = {}
     try:
         with open(history_json_path, 'r', encoding='utf-8') as f:
@@ -845,9 +867,11 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         
         # 1. 检查历史：从最新财报日到今天，该股是否进入过 PE_Volume_high
         was_in_high_history = False
-        for h_date, h_symbols in hist_pe_vol_high.items():
+        for h_date, h_symbols_raw in hist_pe_vol_high.items():
             if latest_er_date <= h_date <= latest_date:
-                if symbol in h_symbols:
+                # *** 关键修改：清洗 symbol ***
+                h_symbols_clean = [clean_symbol(s) for s in h_symbols_raw]
+                if symbol in h_symbols_clean:
                     was_in_high_history = True
                     break
         
@@ -885,7 +909,7 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
             continue # 未上涨则跳过甲乙丙类的判断，但上方的抄底类判定已经生效并保存了
         
         # 条件D: 价格突破财报日收盘价
-        cond_price_breakout = (latest_price > latest_er_price)
+        cond_price_breakout = (latest_price >= latest_er_price)
         if is_tracing:
             log_detail(f"    - 条件D (价格突破财报): {latest_price:.2f} > {latest_er_price:.2f} = {cond_price_breakout}")
         
@@ -1440,12 +1464,11 @@ def run_pe_volume_logic(log_detail):
     )
 
     # 第二步：为回溯捞回的 symbol 追加“追”字
-    # 注意：retention_symbols 里的票因为条件限制，肯定在 current_deep_symbols 里，所以 build_symbol_note_map 已经给它们加了“听”
+    # 修改说明：移除 if "追" not in ... 的判断，改为直接追加，实现“追追”、“追追追”的效果
     for sym in retention_symbols:
         if sym in pe_volume_notes:
-            # 检查是否已经有“追”字（防止重复运行叠加）
-            if "追" not in pe_volume_notes[sym]:
-                pe_volume_notes[sym] += "追"
+            # 直接追加“追”字，不再检查是否已经存在
+            pe_volume_notes[sym] += "追"
                 
     # === 新增：第三步：如果该 symbol 同时存在于 PE_Volume_high 中，追加“嗨”字 ===
     for sym in filtered_pe_volume:

@@ -10,6 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from tqdm import tqdm
 import platform
 import urllib.parse
+from datetime import datetime, timedelta  # 确保添加此行导入
 
 # ================= 配置区域 =================
 USER_HOME = os.path.expanduser("~")
@@ -42,8 +43,19 @@ else:
     CHROME_DRIVER_PATH = "/usr/bin/chromedriver"
 
 # 抓取时间范围参数
-PERIOD_1 = "1039824000"
-PERIOD_2 = "1772928000"
+PERIOD_1 = "1039824000"  # 起始时间保持不变
+
+# 动态计算 PERIOD_2 (昨天 23:59:59 的时间戳)
+# 获取当前时间
+now = datetime.now()
+# 计算昨天的时间
+yesterday = now - timedelta(days=1)
+# 设置为昨天的 23:59:59 (确保包含全天数据)
+yesterday_end = yesterday.replace(hour=23, minute=59, second=59, microsecond=0)
+# 转换为 Unix 时间戳并转为字符串
+PERIOD_2 = str(int(yesterday_end.timestamp()))
+
+print(f"🚀 抓取时间范围: {datetime.fromtimestamp(int(PERIOD_1)).date()} 至 {yesterday_end.date()}")
 
 # ================= 1. 数据库与 JSON 操作 =================
 

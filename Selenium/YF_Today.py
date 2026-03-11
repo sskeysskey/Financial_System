@@ -408,9 +408,11 @@ def scrape_history():
                                 row_list[0] = last_valid_date  # 替换日期
                                 selected_row = tuple(row_list)
                             else:
-                                tqdm.write(f"⚠️ [{symbol}] 最新日期 {row0_date} 过大，且第二条 {row1_date} 不匹配 {last_valid_date}，跳过。")
-                                skip_symbol = True
-                                break
+                                # 新增规则：第二条也不匹配时，用第一条数据但修改日期为 last_valid_date
+                                tqdm.write(f"⚠️ [{symbol}] 最新日期 {row0_date} 过大，第二条 {row1_date} 不匹配 {last_valid_date}，使用第一条数据并修改日期写入。")
+                                row_list = list(data_rows[0])
+                                row_list[0] = last_valid_date  # 替换日期
+                                selected_row = tuple(row_list)
                                 
                         # 规则3：如果最新一条日期比计算日期小
                         else: # row0_date < last_valid_date
