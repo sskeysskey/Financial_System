@@ -164,7 +164,7 @@ class MainWindow(QMainWindow):
 
         # 表格配置
         self.table2 = QTableWidget(0, 6)
-        self.table2.setHorizontalHeaderLabels(["Symbol", "时段", "新百分比%", "旧百分比%", "操作", "—————————————————"])
+        self.table2.setHorizontalHeaderLabels(["Symbol", "时段", "旧百分比%", "新百分比%", "操作", "—————————————————"])
         
         self.table1 = QTableWidget(0, 5)
         self.table1.setHorizontalHeaderLabels(["Symbol", "时段", "百分比(%)", "操作", "————————————————————————"])
@@ -367,7 +367,8 @@ class MainWindow(QMainWindow):
             
             item_pct = QTableWidgetItem(f"{pct}")
             item_pct.setFont(QFont("Arial", 14, QFont.Weight.Bold))
-            item_pct.setForeground(QBrush(QColor(255, 0, 0) if pct < 0 else QColor(255, 215, 0)))
+            # 正数(>=0)为红色(255, 0, 0)，负数(<0)为绿色(0, 255, 0)
+            item_pct.setForeground(QBrush(QColor(255, 0, 0) if pct >= 0 else QColor(0, 255, 0)))
             table.setItem(row, 2, item_pct)
 
             rep_btn = QPushButton("写入")
@@ -415,10 +416,11 @@ class MainWindow(QMainWindow):
             btn.clicked.connect(partial(self.on_symbol_button_clicked, symbol, idx))
             table.setCellWidget(row, 0, btn)
             
-            for i, val in enumerate([pct_new, old_pct]):
+            for i, val in enumerate([old_pct, pct_new]):
                 item = QTableWidgetItem(f"{val}")
                 item.setFont(QFont("Arial", 14, QFont.Weight.Bold))
-                item.setForeground(QBrush(QColor(255, 0, 0) if val < 0 else QColor(255, 215, 0)))
+                # 颜色逻辑保持你刚才要求的：正红、负绿
+                item.setForeground(QBrush(QColor(255, 0, 0) if val >= 0 else QColor(0, 255, 0)))
                 table.setItem(row, 2 + i, item)
 
             op_btn = QPushButton("已写入" if (auto or pct_new == old_pct) else "替换")
@@ -458,10 +460,12 @@ class MainWindow(QMainWindow):
             # 更新界面显示
             index = self.table2.indexAt(btn.pos())
             if index.isValid():
-                item = self.table2.item(index.row(), 3)
+                # 现在旧百分比在第 2 列 (索引 2)
+                item = self.table2.item(index.row(), 2)
                 if item:
                     item.setText(str(new_pct))
-                    item.setForeground(QBrush(QColor(255, 0, 0) if new_pct < 0 else QColor(255, 215, 0)))
+                    # 正数(>=0)为红色(255, 0, 0)，负数(<0)为绿色(0, 255, 0)
+                    item.setForeground(QBrush(QColor(255, 0, 0) if new_pct >= 0 else QColor(0, 255, 0)))
 
     def show_table_context_menu(self, pos):
         table = self.sender()

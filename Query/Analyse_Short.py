@@ -18,8 +18,8 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 SYMBOL_TO_TRACE = ""
 TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "SE"
-# TARGET_DATE = "2026-03-05"
+# SYMBOL_TO_TRACE = "AVAV"
+# TARGET_DATE = "2026-01-20"
 
 # 追踪日志路径
 LOG_FILE_PATH = os.path.join(USER_HOME, "Downloads", "OverBuy_trace_log.txt")
@@ -29,7 +29,7 @@ LOG_FILE_PATH = os.path.join(USER_HOME, "Downloads", "OverBuy_trace_log.txt")
 CONFIG = {
     "MA_PERIOD": 200,
     "MA_BELOW_MAX_PCT": 0.3,
-    "RECENT_DAYS_LOOKBACK": 3,
+    "RECENT_DAYS_LOOKBACK": 1,
     "LOOKBACK_MONTHS_LONG": 12,
     "RANK_THRESHOLD_LONG": 2,
     "LOOKBACK_MONTHS_SHORT": 6,
@@ -169,6 +169,52 @@ def check_ma_breakout(cursor, sector, symbol, ma_period=200, target_date=None):
     except Exception as e:
         logger.error(f"[{symbol}] MA Breakout check error: {e}")
         return False, 0
+
+
+def check_price_above_recent_two_earnings_avg(cursor, sector, symbol, latest_price, target_date=None):
+    """
+    检查最新收盘价是否高于最近两次财报日收盘价的平均值。
+    """
+    try:
+        # 获取最近两次财报日
+        if target_date:
+            cursor.execute(
+                'SELECT date FROM Earning WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 2',
+                (symbol, target_date)
+            )
+        else:
+            cursor.execute(
+                'SELECT date FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 2',
+                (symbol,)
+            )
+        rows = cursor.fetchall()
+        
+        # 如果财报数据不足两次，默认不通过（可根据需求调整为 True）
+        if len(rows) < 2:
+            return False, 0.0
+            
+        date1, date2 = rows[0][0], rows[1][0]
+        
+        # 获取这两天在对应板块表里的收盘价
+        prices = []
+        for d in (date1, date2):
+            cursor.execute(f'SELECT price FROM "{sector}" WHERE name = ? AND date = ?', (symbol, d))
+            p_row = cursor.fetchone()
+            if p_row and p_row[0] is not None:
+                prices.append(float(p_row[0]))
+                
+        if len(prices) < 2:
+            return False, 0.0
+            
+        avg_price = sum(prices) / 2.0
+        
+        if latest_price > avg_price:
+            return True, avg_price
+        return False, avg_price
+        
+    except Exception as e:
+        logger.error(f"[{symbol}] Error checking earnings avg price: {e}")
+        return False, 0.0
 
 
 def update_earning_history_json_b(file_path, group_name, symbols_to_add, base_date_str=None):
@@ -502,16 +548,14 @@ def run_short_logic(log_detail):
                 log_detail(f"\n--- 正在检查 {symbol} (sector: {sector}) ---")
                 log_detail(f"    基准日期: {base_date}, 标签: {tags_str}")
 
-            # --- A2. 进阶门槛：必须跌破 MA200 ---
-            # [回测] 传入 base_date 限制 MA 计算范围
+            # --- A2. 进阶门槛：跌破 MA200 或高于两次财报均价（任一满足即可）---
             is_ma_break, ma_value = check_ma_breakout(cursor, sector, symbol, CONFIG["MA_PERIOD"], target_date=base_date)
-            if not is_ma_break:
-                if is_tracing:
-                    log_detail(f"    x [失败] MA{CONFIG['MA_PERIOD']} 破位检查未通过。(MA={ma_value:.2f})")
-                continue
 
             if is_tracing:
-                log_detail(f"    ✓ [通过] MA{CONFIG['MA_PERIOD']} 破位，MA={ma_value:.2f}")
+                if is_ma_break:
+                    log_detail(f"    ✓ [MA检查] MA{CONFIG['MA_PERIOD']} 破位，MA={ma_value:.2f}")
+                else:
+                    log_detail(f"    - [MA检查] 未破位 MA{CONFIG['MA_PERIOD']}，MA={ma_value:.2f}")
 
             # --- B. 获取最近 N+1 天交易数据 ---
             # [回测] 加入 AND date <= base_date 限制，防止穿越
@@ -537,6 +581,27 @@ def run_short_logic(log_detail):
             if is_tracing:
                 log_detail(f"    最新: {date_curr} 价格={price_curr}, 成交量={vol_curr}, 成交额={current_turnover:,.0f}")
                 log_detail(f"    前一日: {date_prev} 价格={price_prev}")
+
+            # --- B2. 新增进阶门槛：必须高于最近两次财报日收盘价的平均值 ---
+            # --- B2. 财报均价检查 ---
+            is_above_earning_avg, earning_avg_price = check_price_above_recent_two_earnings_avg(
+                cursor, sector, symbol, price_curr, target_date=base_date
+            )
+
+            if is_tracing:
+                if is_above_earning_avg:
+                    log_detail(f"    ✓ [财报检查] 最新价({price_curr}) 高于最近两次财报日均价({earning_avg_price:.2f})。")
+                else:
+                    log_detail(f"    - [财报检查] 最新价({price_curr}) 未高于最近两次财报日均价({earning_avg_price:.2f})。")
+
+            # --- 组合判断：MA破位 或 高于财报均价，任一满足即可通过 ---
+            if not (is_ma_break or is_above_earning_avg):
+                if is_tracing:
+                    log_detail(f"    x [失败] 两个条件均未满足：MA未破位 且 未高于财报均价，跳过。")
+                continue
+
+            if is_tracing:
+                log_detail(f"    ✓ [通过] 至少满足一个条件：{'MA破位' if is_ma_break else ''}{'、' if is_ma_break and is_above_earning_avg else ''}{'高于财报均价' if is_above_earning_avg else ''}")
 
             # --- D2. 砸顶检查（无需下跌即可触发）---
             # [回测] 传入 base_date 限制财报日查询范围

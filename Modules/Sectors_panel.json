@@ -146,28 +146,24 @@
     "Must": {},
     "Today": {},
     "Short": {
-        "SPXS": "",
-        "EPHE": "",
         "BNTX": "",
-        "VIXY": "",
-        "WAL": "",
-        "BLK": ""
+        "ENLT": "",
+        "DUK": ""
     },
     "Short_backup": {
-        "SPXS": "",
-        "EPHE": "",
         "BNTX": "",
-        "VIXY": "",
-        "WAL": "",
-        "BLK": ""
+        "ENLT": "",
+        "DUK": ""
     },
     "Short_W": {
+        "CRSP": "",
         "CANE": "",
-        "CRSP": ""
+        "TTE": ""
     },
     "Short_W_backup": {
+        "CRSP": "",
         "CANE": "",
-        "CRSP": ""
+        "TTE": ""
     },
     "Strategy12": {
         "CCL": "",
