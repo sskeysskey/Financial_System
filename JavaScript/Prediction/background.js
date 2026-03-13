@@ -1,6 +1,8 @@
+// /Users/yanzhang/Coding/Financial_System/JavaScript/Prediction/background.js
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'saveData') {
-        // 处理数据并保存
+        // 处理数据
         processAndSaveData(request.data)
             .then((processedData) => {
                 // 将处理后的数据发送回 popup 进行下载
@@ -29,7 +31,7 @@ async function processAndSaveData(predictions) {
                     subtype: subpageData.subtype,
                     volume: pred.volume,
                     enddate: subpageData.enddate,
-                    hide: "1"
+                    hide: "1" // <--- 在这里添加
                 };
 
                 pred.options.forEach((opt, index) => {
@@ -45,7 +47,7 @@ async function processAndSaveData(predictions) {
                     value: pred.value,
                     volume: pred.volume,
                     enddate: subpageData.enddate,
-                    hide: "1"
+                    hide: "1" // <--- 在这里添加
                 };
             }
         })

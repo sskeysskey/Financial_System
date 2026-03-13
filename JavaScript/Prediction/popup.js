@@ -1,3 +1,5 @@
+// /Users/yanzhang/Coding/Financial_System/JavaScript/Prediction/popup.js
+
 // 将抓取逻辑提取为一个独立的异步函数
 async function startScraping() {
     const button = document.getElementById('scrapeBtn');
