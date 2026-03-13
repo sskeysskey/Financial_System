@@ -14,8 +14,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = "" 
 TARGET_DATE = "" 
 
-# SYMBOL_TO_TRACE = "WIT"
-# TARGET_DATE = "2026-03-10"
+# SYMBOL_TO_TRACE = "CRCL"
+# TARGET_DATE = "2026-02-25"
 
 # 3. 日志路径
 LOG_FILE_PATH = os.path.join(BASE_PATH, "Downloads", "PE_Volume_trace_log.txt")

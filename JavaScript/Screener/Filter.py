@@ -250,21 +250,26 @@ def compare_and_update_sectors(screener_data, sectors_all_data, sectors_today_da
                     # 如果不是移动过来的，而是全新的，则添加到 added_symbols 列表
                     if not moved:
                         added_symbols.append(f"将 '{symbol}' 添加到 '{sector}'，先使用Ctrl+Option+9抓取marketcapshare，再到Yahoo页面使用Ctrl+Comamnd+9抓取历史数据。然后使用Ctrl+Option+1和Ctrl+V抓取description，最后使用Ctrl+option+U抓取财报数据。")
-                    
-                    # 确保sectors_today_data中有该sector
-                    if sector not in sectors_today_data:
-                        sectors_today_data[sector] = []
-                    
-                    # 将symbol添加到sectors_today_data中
-                    sectors_today_data[sector].append(symbol)
+                        
+                        # —— 修改点：将 sectors_empty 的逻辑移入这里 ——
+                        # 确保sectors_today_data中有该sector
+                        if sector not in sectors_today_data:
+                            sectors_today_data[sector] = []
+                        sectors_today_data[sector].append(symbol)
 
-                    # 确保sectors_empty_data中有该sector
-                    if sector not in sectors_empty_data:
-                        sectors_empty_data[sector] = []
+                        # 确保sectors_empty_data中有该sector
+                        if sector not in sectors_empty_data:
+                            sectors_empty_data[sector] = []
+                        
+                        # 将symbol添加到sectors_empty_data中（如果不存在）
+                        if symbol not in sectors_empty_data[sector]:
+                            sectors_empty_data[sector].append(symbol)
                     
-                    # 将symbol添加到sectors_empty_data中（如果不存在）
-                    if symbol not in sectors_empty_data[sector]:
-                        sectors_empty_data[sector].append(symbol)
+                    # 如果是移动过来的，只需要更新 sectors_today_data（如果这是你的业务需求）
+                    else:
+                        if sector not in sectors_today_data:
+                            sectors_today_data[sector] = []
+                        sectors_today_data[sector].append(symbol)
     
     if not has_changes:
         added_symbols.append("Sectors_All文件没有需要更新的内容")

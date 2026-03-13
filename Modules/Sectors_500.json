@@ -31,8 +31,7 @@
         "NTES",
         "AMX",
         "APP",
-        "WBD",
-        "EA"
+        "WBD"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -106,7 +105,8 @@
         "OXY",
         "LNG",
         "FANG",
-        "CCJ"
+        "CCJ",
+        "TRGP"
     ],
     "Financial_Services": [
         "JPM",
@@ -165,8 +165,7 @@
         "NWG",
         "BRK-B",
         "MRSH",
-        "COIN",
-        "NDAQ"
+        "COIN"
     ],
     "Healthcare": [
         "LLY",
@@ -239,9 +238,9 @@
         "CMI",
         "VRT",
         "PCAR",
-        "AME",
         "GWW",
-        "FAST"
+        "FAST",
+        "SUNB"
     ],
     "Real_Estate": [
         "PLD",
@@ -301,7 +300,6 @@
         "GLW",
         "STX",
         "WDC",
-        "NXPI",
         "SNDK",
         "MPWR",
         "ADSK"
@@ -316,7 +314,7 @@
         "SRE",
         "D",
         "VST",
-        "EXC",
-        "XEL"
+        "XEL",
+        "EXC"
     ]
 }

@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Polymarket Scraper",
+  "version": "1.0",
+  "description": "抓取Polymarket预测市场数据",
+  "permissions": [
+    "activeTab",
+    "downloads",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://polymarket.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Polymarket Scraper"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://polymarket.com/*"
+      ],
+      "js": [
+        "content.js"
+      ]
+    }
+  ]
+}
