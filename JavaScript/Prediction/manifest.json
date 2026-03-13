@@ -1,19 +1,20 @@
 {
   "manifest_version": 3,
-  "name": "Polymarket Scraper",
-  "version": "1.0",
-  "description": "抓取Polymarket预测市场数据",
+  "name": "Prediction Market Scraper",
+  "version": "1.1",
+  "description": "抓取Polymarket和Kalshi预测市场数据",
   "permissions": [
     "activeTab",
     "downloads",
     "scripting"
   ],
   "host_permissions": [
-    "https://polymarket.com/*"
+    "https://polymarket.com/*",
+    "https://kalshi.com/*"
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Polymarket Scraper"
+    "default_title": "Prediction Market Scraper"
   },
   "background": {
     "service_worker": "background.js"
@@ -21,7 +22,8 @@
   "content_scripts": [
     {
       "matches": [
-        "https://polymarket.com/*"
+        "https://polymarket.com/*",
+        "https://kalshi.com/*"
       ],
       "js": [
         "content.js"
