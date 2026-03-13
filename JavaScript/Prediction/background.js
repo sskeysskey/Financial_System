@@ -28,7 +28,8 @@ async function processAndSaveData(predictions) {
                     type: subpageData.type,
                     subtype: subpageData.subtype,
                     volume: pred.volume,
-                    enddate: subpageData.enddate
+                    enddate: subpageData.enddate,
+                    hide: "1"
                 };
 
                 pred.options.forEach((opt, index) => {
@@ -43,7 +44,8 @@ async function processAndSaveData(predictions) {
                     name: pred.name,
                     value: pred.value,
                     volume: pred.volume,
-                    enddate: subpageData.enddate
+                    enddate: subpageData.enddate,
+                    hide: "1"
                 };
             }
         })

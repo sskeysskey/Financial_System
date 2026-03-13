@@ -1,9 +1,10 @@
-document.getElementById('scrapeBtn').addEventListener('click', async () => {
+// 将抓取逻辑提取为一个独立的异步函数
+async function startScraping() {
     const button = document.getElementById('scrapeBtn');
     const statusDiv = document.getElementById('status');
 
     button.disabled = true;
-    statusDiv.textContent = '正在抓取数据...';
+    statusDiv.textContent = '正在自动抓取数据...';
     statusDiv.className = 'info';
 
     try {
@@ -23,14 +24,15 @@ document.getElementById('scrapeBtn').addEventListener('click', async () => {
                 action: 'saveData',
                 data: data
             }, (response) => {
-                if (response.success) {
+                if (response && response.success) {
                     statusDiv.textContent = `成功抓取 ${data.length} 条数据!`;
                     statusDiv.className = 'success';
                 } else {
-                    statusDiv.textContent = '保存失败: ' + response.error;
+                    statusDiv.textContent = '保存失败: ' + (response ? response.error : '未知错误');
                     statusDiv.className = 'error';
                 }
                 button.disabled = false;
+                button.textContent = '重新抓取'; // 抓取完成后修改按钮文字
             });
         } else {
             statusDiv.textContent = '未找到数据';
@@ -42,9 +44,17 @@ document.getElementById('scrapeBtn').addEventListener('click', async () => {
         statusDiv.className = 'error';
         button.disabled = false;
     }
+}
+
+// 页面加载完成时自动执行
+document.addEventListener('DOMContentLoaded', () => {
+    startScraping();
 });
 
-// 这个函数会被注入到页面中执行
+// 按钮点击事件改为调用同一个函数（用于重新抓取）
+document.getElementById('scrapeBtn').addEventListener('click', startScraping);
+
+// --- 下面的 scrapePageData 函数保持不变 ---
 function scrapePageData() {
     const predictions = [];
 
