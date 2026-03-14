@@ -191,19 +191,31 @@ function scrapeKalshiPageData() {
                 }
             }
 
-            // 🔧 修改这里：改进 options 抓取逻辑
+            // 🔧 修改这里：改进 options 抓取逻辑，支持两种卡片结构
             const options = [];
             const optionRows = card.querySelectorAll('.col-span-full');
+
             optionRows.forEach(row => {
+                // 方案1：尝试抓取普通卡片结构（原逻辑）
                 const nameEl = row.querySelector('[class*="typ-body-x30"]');
                 // 改为直接在 button 中查找 tabular-nums
                 const button = row.querySelector('button[class*="stretched-link-action"]');
-                const valueEl = button ? button.querySelector('span.tabular-nums') : null;
+                let valueEl = button ? button.querySelector('span.tabular-nums') : null;
+
+                // 方案2：如果方案1失败，尝试抓取特殊卡片结构
+                // 特殊卡片的百分比在独立的 button 中，class 包含 "rounded-x50"
+                if (nameEl && !valueEl) {
+                    const specialButton = row.querySelector('button.rounded-x50[class*="stretched-link-action"]');
+                    if (specialButton) {
+                        valueEl = specialButton.querySelector('span.tabular-nums');
+                    }
+                }
 
                 if (nameEl && valueEl) {
+                    const valueText = cleanText(valueEl.textContent);
                     options.push({
                         name: cleanText(nameEl.textContent),
-                        value: cleanText(valueEl.textContent) + '%'
+                        value: valueText.includes('%') ? valueText : valueText + '%'
                     });
                 }
             });
