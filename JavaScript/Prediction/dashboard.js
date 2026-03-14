@@ -1,8 +1,11 @@
 // ============ 状态 ============
 let mainTabId = null;
-
 const params = new URLSearchParams(window.location.search);
 mainTabId = parseInt(params.get('mainTabId'), 10);
+const autoStart = params.get('auto') === '1';
+
+let scrapedCards = null;
+let isRunning = false; // ★ 防止并发执行
 
 // ============ DOM 引用 ============
 const statusEl = document.getElementById('status');
@@ -13,202 +16,250 @@ const progressText = document.getElementById('progressText');
 const startBtn = document.getElementById('startBtn');
 const clearBtn = document.getElementById('clearBtn');
 
+// ============ 文件名工具（带日期戳） ============
+function getTimestampedFilename(base) {
+    var d = new Date();
+    var yy = String(d.getFullYear()).slice(-2);
+    var mm = String(d.getMonth() + 1).padStart(2, '0');
+    var dd = String(d.getDate()).padStart(2, '0');
+    return base + '_' + yy + mm + dd + '.json';
+}
+
+// ============ Volume 解析工具 ============
+function parseVolumeStr(v) {
+    if (!v) return 0;
+    var s = v.trim().toLowerCase()
+        .replace(/\$/g, '')
+        .replace(/vol\.?/gi, '')
+        .replace(/,/g, '')
+        .trim();
+    var multiplier = 1;
+    if (/[\d.]\s*b/.test(s)) { multiplier = 1e9; s = s.replace(/\s*b.*$/, '').trim(); }
+    else if (/[\d.]\s*m/.test(s)) { multiplier = 1e6; s = s.replace(/\s*m.*$/, '').trim(); }
+    else if (/[\d.]\s*k/.test(s)) { multiplier = 1e3; s = s.replace(/\s*k.*$/, '').trim(); }
+    var num = parseFloat(s);
+    return isNaN(num) ? 0 : Math.round(num * multiplier);
+}
+
 // ============ 日志工具 ============
-function log(message, type = 'info') {
-    const cls = {
+function log(message, type) {
+    if (!type) type = 'info';
+    var cls = {
         info: 'log-info', warn: 'log-warn', error: 'log-error',
         data: 'log-data', section: 'log-section', dim: 'log-dim'
     }[type] || '';
-    const time = new Date().toLocaleTimeString();
-    const span = document.createElement('span');
+    var time = new Date().toLocaleTimeString();
+    var span = document.createElement('span');
     span.className = cls;
-    span.textContent = `[${time}] ${message}\n`;
+    span.textContent = '[' + time + '] ' + message + '\n';
     debugLogEl.appendChild(span);
     debugLogEl.scrollTop = debugLogEl.scrollHeight;
 }
 
-function setStatus(text, type = 'info') {
+function setStatus(text, type) {
+    if (!type) type = 'info';
     statusEl.textContent = text;
-    statusEl.className = `status-box status-${type}`;
+    statusEl.className = 'status-box status-' + type;
 }
 
 function updateProgress(current, total, name) {
     progressContainer.style.display = 'block';
     progressFill.style.width = Math.round((current / total) * 100) + '%';
-    progressText.textContent = `(${current}/${total}) ${name}`;
+    progressText.textContent = '(' + current + '/' + total + ') ' + name;
 }
 
 // ============ 标签页管理 ============
-function openTabVisible(url, waitMs) {
-    return new Promise((resolve, reject) => {
-        chrome.tabs.create({ url, active: true }, (tab) => {
+
+// 创建前台标签页（active:true 是绕过 Cloudflare 的关键）
+function createTab(url) {
+    return new Promise(function (resolve, reject) {
+        chrome.tabs.create({ url: url, active: true }, function (tab) {
             if (chrome.runtime.lastError) {
-                return reject(new Error(chrome.runtime.lastError.message));
+                reject(new Error(chrome.runtime.lastError.message));
+            } else {
+                resolve(tab);
             }
-            log(`  📄 标签已创建 (id:${tab.id})`, 'dim');
-
-            const maxTimeout = setTimeout(() => {
-                chrome.tabs.onUpdated.removeListener(onUpdate);
-                log(`  ⏱️ 加载超时(30s)，强制继续`, 'warn');
-                setTimeout(() => resolve(tab), waitMs);
-            }, 30000);
-
-            function onUpdate(id, info) {
-                if (id === tab.id && info.status === 'complete') {
-                    chrome.tabs.onUpdated.removeListener(onUpdate);
-                    clearTimeout(maxTimeout);
-                    log(`  ✅ status=complete`, 'dim');
-                    log(`  ⏳ 等待 ${waitMs / 1000}s 渲染+安全检查...`, 'dim');
-                    setTimeout(() => resolve(tab), waitMs);
-                }
-            }
-            chrome.tabs.onUpdated.addListener(onUpdate);
         });
     });
 }
 
+// 等待标签页 status: complete
+function waitForTabComplete(tabId, timeoutMs) {
+    if (!timeoutMs) timeoutMs = 30000;
+    return new Promise(function (resolve) {
+        var timeout = setTimeout(function () {
+            chrome.tabs.onUpdated.removeListener(listener);
+            resolve(false);
+        }, timeoutMs);
+
+        function listener(id, info) {
+            if (id === tabId && info.status === 'complete') {
+                chrome.tabs.onUpdated.removeListener(listener);
+                clearTimeout(timeout);
+                resolve(true);
+            }
+        }
+        chrome.tabs.onUpdated.addListener(listener);
+    });
+}
+
+// 智能轮询：检测到页面内容后立即返回，不再固定等待
+async function pollForContent(tabId, maxMs) {
+    if (!maxMs) maxMs = 18000;
+    var start = Date.now();
+    while (Date.now() - start < maxMs) {
+        try {
+            var r = await chrome.scripting.executeScript({
+                target: { tabId: tabId },
+                func: function () {
+                    var opts = document.querySelectorAll('[class*="typ-body-x30"]');
+                    var isBotPage = !!document.getElementById('challenge-form') ||
+                        !!document.querySelector('.cf-browser-verification') ||
+                        document.title.toLowerCase().includes('just a moment') ||
+                        !!document.querySelector('[id*="turnstile"]');
+                    return {
+                        hasContent: opts.length > 0,
+                        optionCount: opts.length,
+                        isBotPage: isBotPage
+                    };
+                }
+            });
+            var c = r && r[0] && r[0].result;
+            if (c && c.hasContent) {
+                // 额外等 300ms 让剩余元素渲染完
+                await new Promise(function (res) { setTimeout(res, 300); });
+                return { ready: true, isBotPage: false, elapsed: Date.now() - start, optionCount: c.optionCount };
+            }
+            if (c && c.isBotPage) {
+                // 反爬虫页面，慢速轮询
+                await new Promise(function (res) { setTimeout(res, 2000); });
+            } else {
+                // 正常等待渲染，快速轮询
+                await new Promise(function (res) { setTimeout(res, 400); });
+            }
+        } catch (e) {
+            await new Promise(function (res) { setTimeout(res, 500); });
+        }
+    }
+    return { ready: false, isBotPage: true, elapsed: Date.now() - start, optionCount: 0 };
+}
+
+// 点击 More markets 后轮询等待选项增多
+async function pollForMoreOptions(tabId, prevCount, maxMs) {
+    if (!maxMs) maxMs = 5000;
+    var start = Date.now();
+    while (Date.now() - start < maxMs) {
+        try {
+            var r = await chrome.scripting.executeScript({
+                target: { tabId: tabId },
+                func: function () {
+                    return document.querySelectorAll('[class*="typ-body-x30"]').length;
+                }
+            });
+            var count = r && r[0] && r[0].result;
+            if (count && count > prevCount) {
+                await new Promise(function (res) { setTimeout(res, 300); });
+                return { expanded: true, elapsed: Date.now() - start };
+            }
+        } catch (e) { /* ignore */ }
+        await new Promise(function (res) { setTimeout(res, 300); });
+    }
+    return { expanded: false, elapsed: Date.now() - start };
+}
+
 function closeTab(tabId) {
-    return new Promise(resolve => {
-        chrome.tabs.remove(tabId, () => {
+    return new Promise(function (resolve) {
+        chrome.tabs.remove(tabId, function () {
             if (chrome.runtime.lastError) {
-                log(`  ⚠️ 关闭标签失败: ${chrome.runtime.lastError.message}`, 'warn');
+                log('  ⚠️ 关闭标签失败: ' + chrome.runtime.lastError.message, 'warn');
             }
             resolve();
         });
     });
 }
 
-// ============ JSON 下载 ============
-function downloadJson(data, filename) {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+// ============ 下载工具 ============
+
+// ★ 统一下载函数：使用 chrome.downloads API，不弹出保存对话框
+function saveJsonFile(data, filename) {
+    try {
+        var jsonStr = JSON.stringify(data, null, 2);
+        var blob = new Blob([jsonStr], { type: 'application/json' });
+        var blobUrl = URL.createObjectURL(blob);
+        chrome.downloads.download({
+            url: blobUrl,
+            filename: filename,
+            conflictAction: 'overwrite',
+            saveAs: false
+        }, function (downloadId) {
+            if (chrome.runtime.lastError) {
+                log('  ⚠️ 保存失败: ' + chrome.runtime.lastError.message, 'warn');
+            }
+            setTimeout(function () { URL.revokeObjectURL(blobUrl); }, 5000);
+        });
+    } catch (e) {
+        log('  ⚠️ 保存异常: ' + e.message, 'warn');
+    }
 }
 
 // ============================================================
-//  以下函数都是注入到目标页面执行的（完全独立，不能引用外部变量）
+//  注入函数（在目标页面执行，完全独立，不引用外部变量）
 // ============================================================
 
 // ---- 注入：主页面卡片基本信息 ----
 function injectedScrapeMainPage() {
-    const predictions = [];
+    var predictions = [];
     function clean(t) { return t.trim().replace(/\s+/g, ' '); }
-    function cap(s) { return s.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '); }
+    function cap(s) { return s.split('-').map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join(' '); }
 
-    const cards = document.querySelectorAll('[data-testid="market-tile"]');
-    cards.forEach(card => {
+    var cards = document.querySelectorAll('[data-testid="market-tile"]');
+    cards.forEach(function (card) {
         try {
-            const h2 = card.querySelector('h2');
+            var h2 = card.querySelector('h2');
             if (!h2) return;
-            const name = clean(h2.textContent);
+            var name = clean(h2.textContent);
 
-            const subLink = card.querySelector('a[href^="/markets/"]');
+            var subLink = card.querySelector('a[href^="/markets/"]');
             if (!subLink) return;
-            const subUrl = subLink.getAttribute('href');
+            var subUrl = subLink.getAttribute('href');
 
-            const catLink = card.querySelector('a[href^="/category/"]');
-            let fallbackType = '', fallbackSubtype = '';
+            var catLink = card.querySelector('a[href^="/category/"]');
+            var fallbackType = '', fallbackSubtype = '';
             if (catLink) {
                 fallbackSubtype = clean(catLink.textContent);
-                const parts = (catLink.getAttribute('href') || '').replace('/category/', '').split('/');
+                var parts = (catLink.getAttribute('href') || '').replace('/category/', '').split('/');
                 if (parts[0]) fallbackType = cap(parts[0]);
             }
 
-            let volume = '';
-            for (const span of card.querySelectorAll('span')) {
-                const t = span.textContent;
+            var volume = '';
+            var spans = card.querySelectorAll('span');
+            for (var si = 0; si < spans.length; si++) {
+                var t = spans[si].textContent;
                 if (t.includes('$') && t.toLowerCase().includes('vol')) {
                     volume = clean(t);
                     break;
                 }
             }
 
-            const options = [];
-            card.querySelectorAll('.col-span-full').forEach(row => {
-                const nameEl = row.querySelector('[class*="typ-body-x30"]');
-                const btn = row.querySelector('button[class*="stretched-link-action"]');
-                let valEl = btn ? btn.querySelector('span.tabular-nums') : null;
+            var options = [];
+            card.querySelectorAll('.col-span-full').forEach(function (row) {
+                var nameEl = row.querySelector('[class*="typ-body-x30"]');
+                var btn = row.querySelector('button[class*="stretched-link-action"]');
+                var valEl = btn ? btn.querySelector('span.tabular-nums') : null;
                 if (nameEl && !valEl) {
-                    const sb = row.querySelector('button.rounded-x50[class*="stretched-link-action"]');
+                    var sb = row.querySelector('button.rounded-x50[class*="stretched-link-action"]');
                     if (sb) valEl = sb.querySelector('span.tabular-nums');
                 }
                 if (nameEl && valEl) {
-                    const v = clean(valEl.textContent);
+                    var v = clean(valEl.textContent);
                     options.push({ name: clean(nameEl.textContent), value: v.includes('%') ? v : v + '%' });
                 }
             });
 
-            predictions.push({ name, subUrl, volume, options, fallbackType, fallbackSubtype });
+            predictions.push({ name: name, subUrl: subUrl, volume: volume, options: options, fallbackType: fallbackType, fallbackSubtype: fallbackSubtype });
         } catch (e) { /* skip */ }
     });
     return predictions;
-}
-
-// ---- 注入：诊断子页面状态 ----
-function injectedDiagnoseSubpage() {
-    const d = [];
-    d.push('URL: ' + location.href);
-    d.push('Title: ' + document.title);
-    d.push('Body HTML length: ' + document.body.innerHTML.length);
-
-    var bodyPreview = document.body.innerText.substring(0, 500).replace(/\n+/g, ' | ');
-    d.push('Body text preview: ' + bodyPreview);
-
-    // Bot detection
-    var cf1 = !!document.getElementById('challenge-form');
-    var cf2 = !!document.querySelector('.cf-browser-verification');
-    var cf3 = document.title.toLowerCase().includes('just a moment');
-    var cf4 = !!document.querySelector('[id*="turnstile"]');
-    var cf5 = !!document.querySelector('.ray-id');
-    d.push('--- Bot Detection ---');
-    d.push('  challenge-form: ' + cf1);
-    d.push('  cf-browser-verification: ' + cf2);
-    d.push('  title "Just a moment": ' + cf3);
-    d.push('  turnstile: ' + cf4);
-    d.push('  ray-id: ' + cf5);
-    var isBotPage = cf1 || cf2 || cf3;
-    d.push('  => ' + (isBotPage ? '⚠️ BOT 检测页面!' : '✅ 正常内容页面'));
-
-    // Content
-    d.push('--- Content ---');
-    var sections = document.querySelectorAll('section');
-    d.push('  <section>: ' + sections.length);
-
-    var cats = document.querySelectorAll('a[href^="/category/"]');
-    d.push('  category links: ' + cats.length);
-    cats.forEach(function (a, i) {
-        d.push('    [' + i + '] "' + a.textContent.trim() + '" -> ' + a.getAttribute('href'));
-    });
-
-    var bodyX30 = document.querySelectorAll('[class*="typ-body-x30"]');
-    d.push('  typ-body-x30: ' + bodyX30.length);
-    bodyX30.forEach(function (el, i) {
-        d.push('    [' + i + '] "' + el.textContent.trim().substring(0, 80) + '"');
-    });
-
-    var headX10 = document.querySelectorAll('[class*="typ-headline-x10"]');
-    d.push('  typ-headline-x10: ' + headX10.length);
-    headX10.forEach(function (el, i) {
-        d.push('    [' + i + '] "' + el.textContent.trim() + '"');
-    });
-
-    var moreFound = false;
-    var allSpans = document.querySelectorAll('span');
-    for (var si = 0; si < allSpans.length; si++) {
-        if (allSpans[si].textContent.trim().replace(/\s+/g, ' ') === 'More markets') {
-            moreFound = true;
-            break;
-        }
-    }
-    d.push('  "More markets" button: ' + moreFound);
-
-    return { isBotPage: isBotPage, moreMarketsFound: moreFound, debug: d };
 }
 
 // ---- 注入：点击 More markets ----
@@ -234,19 +285,17 @@ function injectedClickMore() {
                 }
             }
             if (target) {
-                d.push('Clickable ancestor: <' + target.tagName + '> class="' + (target.className || '').substring(0, 100) + '"');
                 target.click();
-                d.push('✅ Clicked!');
+                d.push('Clicked!');
                 return { clicked: true, debug: d };
             } else {
-                d.push('No clickable ancestor, trying span.click()...');
                 allSpans[i].click();
                 d.push('Clicked span directly');
                 return { clicked: true, debug: d };
             }
         }
     }
-    d.push('"More markets" NOT found on page');
+    d.push('"More markets" NOT found');
     return { clicked: false, debug: d };
 }
 
@@ -256,43 +305,36 @@ function injectedScrapeSubpage() {
     var result = { type: '', subtype: '', options: [] };
 
     // 1. Categories
-    d.push('--- Categories ---');
     var catLinks = document.querySelectorAll('a[href^="/category/"]');
     var cats = [];
     catLinks.forEach(function (a) {
         var t = a.textContent.trim().replace(/\s+/g, ' ');
         if (t && cats.indexOf(t) === -1) cats.push(t);
     });
-    d.push('  Unique categories: ' + JSON.stringify(cats));
+    d.push('Categories: ' + JSON.stringify(cats));
     if (cats.length > 0) result.type = cats[0];
     if (cats.length > 1) result.subtype = cats[1];
 
     // 2. Options — Approach A: typ-body-x30 + traverse up for typ-headline-x10
-    d.push('--- Options (Approach A: typ-body-x30) ---');
     var seen = {};
     var section = document.querySelector('section');
     var root = section || document;
-    d.push('  Search root: ' + (section ? '<section>' : '<document>'));
 
     var nameEls = root.querySelectorAll('[class*="typ-body-x30"]');
-    d.push('  Found ' + nameEls.length + ' typ-body-x30 elements');
+    d.push('typ-body-x30 count: ' + nameEls.length);
 
     nameEls.forEach(function (nameEl, idx) {
         var rawName = nameEl.textContent.trim().replace(/\s+/g, ' ');
-        d.push('  [' + idx + '] text: "' + rawName + '"');
-
-        if (!rawName) { d.push('    -> skip (empty)'); return; }
-        if (rawName.toLowerCase().indexOf('more market') !== -1) { d.push('    -> skip (More markets)'); return; }
-        if (rawName.toLowerCase().indexOf('fewer market') !== -1) { d.push('    -> skip (Fewer markets)'); return; }
-        if (seen[rawName]) { d.push('    -> skip (dup)'); return; }
+        if (!rawName) return;
+        if (rawName.toLowerCase().indexOf('more market') !== -1) return;
+        if (rawName.toLowerCase().indexOf('fewer market') !== -1) return;
+        if (seen[rawName]) return;
 
         var container = nameEl;
         var valueEl = null;
-        var steps = 0;
         for (var i = 0; i < 15; i++) {
             container = container.parentElement;
             if (!container) break;
-            steps++;
             valueEl = container.querySelector('h2[class*="typ-headline-x10"]');
             if (valueEl) break;
             valueEl = container.querySelector('[class*="typ-headline-x10"]');
@@ -300,19 +342,14 @@ function injectedScrapeSubpage() {
         }
 
         var value = valueEl ? valueEl.textContent.trim() : '';
-        d.push('    -> value: "' + value + '" (↑' + steps + ' levels, tag: ' + (valueEl ? valueEl.tagName : 'none') + ')');
-
         seen[rawName] = true;
         result.options.push({ name: rawName, value: value });
     });
 
-    // 3. If Approach A found nothing, try Approach B
+    // 3. Approach B fallback
     if (result.options.length === 0) {
-        d.push('--- Options (Approach B: flex containers) ---');
         var flexDivs = root.querySelectorAll('div[style*="flex: 1 1"]');
-        d.push('  Found ' + flexDivs.length + ' flex-1-1 containers');
-
-        flexDivs.forEach(function (div, i) {
+        flexDivs.forEach(function (div) {
             var nEl = div.querySelector('[class*="typ-body-x30"]');
             var vEl = div.querySelector('[class*="typ-headline-x10"]');
             if (nEl && vEl) {
@@ -320,7 +357,6 @@ function injectedScrapeSubpage() {
                 var val = vEl.textContent.trim();
                 if (name && name.toLowerCase().indexOf('more market') === -1 &&
                     name.toLowerCase().indexOf('fewer market') === -1 && !seen[name]) {
-                    d.push('  [' + i + '] "' + name + '" = "' + val + '"');
                     seen[name] = true;
                     result.options.push({ name: name, value: val });
                 }
@@ -328,14 +364,7 @@ function injectedScrapeSubpage() {
         });
     }
 
-    d.push('--- Final ---');
-    d.push('  type: "' + result.type + '"');
-    d.push('  subtype: "' + result.subtype + '"');
-    d.push('  options count: ' + result.options.length);
-    result.options.forEach(function (o, i) {
-        d.push('    [' + i + '] "' + o.name + '" = "' + o.value + '"');
-    });
-
+    d.push('Options count: ' + result.options.length);
     result.debug = d;
     return result;
 }
@@ -356,155 +385,241 @@ function buildFallback(card) {
     return r;
 }
 
-// ============ 主流程 ============
-async function startScraping() {
+// ============================================================
+//  Phase 1: 抓取主页面卡片（自动执行，完成后暂停等待用户操作）
+// ============================================================
+async function scrapeMainPage() {
+    if (isRunning) return;
+    isRunning = true;
     startBtn.disabled = true;
+    startBtn.textContent = '正在抓取主页面...';
     debugLogEl.innerHTML = '';
-
-    const autoClose = document.getElementById('autoClose').checked;
-    const waitSec = parseInt(document.getElementById('waitTime').value, 10) || 8;
-    const waitMs = waitSec * 1000;
-
-    // ★ 读取数量限制：留空或0表示抓全部
-    const limitInput = parseInt(document.getElementById('limitCount').value, 10);
-    const hasLimit = !isNaN(limitInput) && limitInput > 0;
+    scrapedCards = null;
 
     log('════════════════════════════════════════', 'section');
-    log('  Kalshi Scraper 开始', 'section');
+    log('  Kalshi Scraper - Phase 1: 抓取主页面', 'section');
     log('════════════════════════════════════════', 'section');
-    log('mainTabId=' + mainTabId + '  autoClose=' + autoClose + '  wait=' + waitSec + 's' +
-        (hasLimit ? '  限制=' + limitInput + '个' : '  限制=全部'));
+    log('mainTabId=' + mainTabId);
 
     // 验证主标签页
     try {
-        await new Promise((res, rej) => {
-            chrome.tabs.get(mainTabId, t =>
-                chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res(t)
-            );
+        await new Promise(function (res, rej) {
+            chrome.tabs.get(mainTabId, function (t) {
+                if (chrome.runtime.lastError) rej(new Error(chrome.runtime.lastError.message));
+                else res(t);
+            });
         });
         log('✅ 主标签页存在', 'info');
     } catch (e) {
         log('❌ 主标签页不存在: ' + e.message, 'error');
         setStatus('错误: Kalshi 主标签页已关闭，请回到 Kalshi 页面重新启动', 'error');
         startBtn.disabled = false;
+        startBtn.textContent = '重新抓取主页面';
+        isRunning = false;
         return;
     }
 
-    // STEP 1: 主页面
-    log('', 'dim');
-    log('─── STEP 1: 抓取主页面卡片 ───', 'section');
     setStatus('正在抓取主页面...');
 
-    let cards;
     try {
-        const r = await chrome.scripting.executeScript({
+        var r = await chrome.scripting.executeScript({
             target: { tabId: mainTabId },
             func: injectedScrapeMainPage
         });
-        cards = r && r[0] && r[0].result;
+        var cards = r && r[0] && r[0].result;
         if (!cards || cards.length === 0) {
             log('❌ 主页面未找到卡片', 'error');
             setStatus('主页面未找到数据，请确认页面已加载', 'error');
             startBtn.disabled = false;
+            startBtn.textContent = '重新抓取主页面';
+            isRunning = false;
             return;
         }
 
-        // ★ 根据限制截取需要处理的卡片
-        const totalCards = cards.length;
-        if (hasLimit && limitInput < totalCards) {
-            cards = cards.slice(0, limitInput);
-            log('✅ 主页面共 ' + totalCards + ' 个卡片，本次限制抓取前 ' + limitInput + ' 个', 'warn');
-        } else {
-            log('✅ 找到 ' + totalCards + ' 个卡片，全部抓取', 'info');
+        // 清洗 volume → 纯数字
+        cards.forEach(function (c) {
+            c.volumeNum = parseVolumeStr(c.volume);
+            c.volume = String(c.volumeNum);
+        });
+
+        // ★ 按 subUrl 去重，防止同一市场被重复抓取
+        var seenUrls = {};
+        var beforeDedup = cards.length;
+        cards = cards.filter(function (c) {
+            if (seenUrls[c.subUrl]) return false;
+            seenUrls[c.subUrl] = true;
+            return true;
+        });
+        if (cards.length < beforeDedup) {
+            log('⚠️ 去重: ' + beforeDedup + ' → ' + cards.length + ' 个 (移除 ' + (beforeDedup - cards.length) + ' 个重复)', 'warn');
         }
 
+        log('✅ 找到 ' + cards.length + ' 个卡片', 'info');
+        log('', 'dim');
         cards.forEach(function (c, i) {
-            log('  [' + i + '] "' + c.name + '"', 'data');
-            log('       subUrl: ' + c.subUrl, 'dim');
-            log('       主页options: ' + c.options.length + '个  volume: ' + c.volume, 'dim');
+            log('  [' + i + '] "' + c.name + '"  |  volume: ' + c.volume, 'data');
+            log('       subUrl: ' + c.subUrl + '  主页面options: ' + c.options.length + '个', 'dim');
         });
+
+        scrapedCards = cards;
+        setStatus('✅ 主页面抓取完成，共 ' + cards.length + ' 个卡片。请配置参数后点击「开始抓取」', 'success');
+        startBtn.disabled = false;
+        startBtn.textContent = '开始抓取';
+
     } catch (e) {
         log('❌ 主页面脚本失败: ' + e.message, 'error');
         setStatus('主页面抓取失败', 'error');
         startBtn.disabled = false;
+        startBtn.textContent = '重新抓取主页面';
+    }
+
+    isRunning = false;
+}
+
+// ============================================================
+//  Phase 2: 逐个抓取子页面（用户点击按钮后执行）
+// ============================================================
+async function startSubpageScraping() {
+    if (isRunning) return;
+    isRunning = true;
+    startBtn.disabled = true;
+    startBtn.textContent = '抓取中...';
+
+    var autoClose = document.getElementById('autoClose').checked;
+    var doIncremental = document.getElementById('incrementalSaveToggle').checked;
+    var limitInput = parseInt(document.getElementById('limitCount').value, 10);
+    var hasLimit = !isNaN(limitInput) && limitInput > 0;
+    var minVolumeInput = parseInt(document.getElementById('minVolume').value, 10);
+    var hasMinVolume = !isNaN(minVolumeInput) && minVolumeInput > 0;
+
+    // ★ 生成带日期戳的文件名，如 kalshi_260314.json
+    var outputFilename = getTimestampedFilename('kalshi');
+
+    var cards = scrapedCards.slice();
+
+    log('', 'dim');
+    log('════════════════════════════════════════', 'section');
+    log('  Phase 2: 开始子页面抓取', 'section');
+    log('════════════════════════════════════════', 'section');
+    log('autoClose=' + autoClose + '  增量保存=' + doIncremental +
+        (hasLimit ? '  数量限制=' + limitInput : '  数量限制=全部') +
+        (hasMinVolume ? '  最小volume=' + minVolumeInput : '  最小volume=不限'));
+    log('📁 输出文件: ' + outputFilename, 'info');
+
+    // 根据 minVolume 过滤
+    if (hasMinVolume) {
+        var beforeCount = cards.length;
+        cards = cards.filter(function (c) {
+            return c.volumeNum >= minVolumeInput;
+        });
+        var removedCount = beforeCount - cards.length;
+        log('📊 Volume 过滤: ' + beforeCount + ' → ' + cards.length + ' 个 (移除 ' + removedCount + ' 个, 阈值: $' + minVolumeInput + ')', 'warn');
+    }
+
+    // 根据数量限制截取
+    if (hasLimit && limitInput < cards.length) {
+        cards = cards.slice(0, limitInput);
+        log('📊 数量限制: 取前 ' + limitInput + ' 个', 'warn');
+    }
+
+    if (cards.length === 0) {
+        log('⚠️ 过滤后没有需要抓取的卡片', 'warn');
+        setStatus('过滤后没有需要抓取的项目，请调整参数', 'error');
+        startBtn.disabled = false;
+        startBtn.textContent = '开始抓取';
+        isRunning = false;
         return;
     }
 
-    // STEP 2: 逐个子页面
-    const results = [];
+    log('📋 最终抓取 ' + cards.length + ' 个卡片', 'info');
 
-    for (let i = 0; i < cards.length; i++) {
-        const card = cards[i];
-        const short = card.name.length > 40 ? card.name.substring(0, 40) + '...' : card.name;
+    // 记住 dashboard 标签页 id，抓完子页面后切回来
+    var dashboardTabId = null;
+    try {
+        var tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tabs && tabs[0]) dashboardTabId = tabs[0].id;
+    } catch (e) { /* ignore */ }
+
+    // ---- STEP 2: 逐个子页面（智能轮询） ----
+    var results = [];
+    var scrapeStartTime = Date.now();
+
+    for (var i = 0; i < cards.length; i++) {
+        var card = cards[i];
+        var short = card.name.length > 40 ? card.name.substring(0, 40) + '...' : card.name;
 
         log('', 'dim');
         log('─── CARD ' + (i + 1) + '/' + cards.length + ': "' + short + '" ───', 'section');
         setStatus('(' + (i + 1) + '/' + cards.length + ') ' + short);
         updateProgress(i + 1, cards.length, short);
 
-        let subTab = null;
+        var subTab = null;
         try {
-            const url = 'https://kalshi.com' + card.subUrl;
-            log('  打开: ' + url);
-            subTab = await openTabVisible(url, waitMs);
+            var url = 'https://kalshi.com' + card.subUrl;
+            log('  打开: ' + url, 'dim');
 
-            // 2a: 诊断
-            log('  🔍 诊断页面状态...', 'info');
-            const diagR = await chrome.scripting.executeScript({
-                target: { tabId: subTab.id },
-                func: injectedDiagnoseSubpage
-            });
-            const diag = (diagR && diagR[0] && diagR[0].result) || { isBotPage: true, debug: ['诊断返回空'] };
-            diag.debug.forEach(function (l) { log('    ' + l, 'dim'); });
+            subTab = await createTab(url);
+            log('  📄 标签已创建 (id:' + subTab.id + ')', 'dim');
 
-            if (diag.isBotPage) {
-                log('  ⚠️ 检测到反爬虫页面! 额外等待 12s...', 'warn');
-                await new Promise(function (r) { setTimeout(r, 12000); });
+            // 等待页面初始加载
+            var loadOk = await waitForTabComplete(subTab.id, 30000);
+            log('  ' + (loadOk ? '✅' : '⏱️') + ' status=complete', 'dim');
 
-                log('  🔍 重新诊断...', 'info');
-                const diagR2 = await chrome.scripting.executeScript({
-                    target: { tabId: subTab.id },
-                    func: injectedDiagnoseSubpage
-                });
-                const diag2 = (diagR2 && diagR2[0] && diagR2[0].result) || { isBotPage: true, debug: [] };
-                diag2.debug.forEach(function (l) { log('    ' + l, 'dim'); });
+            // 智能轮询内容（核心加速点：有内容立即返回）
+            log('  ⏳ 轮询等待内容...', 'dim');
+            var poll = await pollForContent(subTab.id, 18000);
 
-                if (diag2.isBotPage) {
-                    log('  ❌ 反爬虫页面未消除 → 使用主页面备选数据', 'error');
+            if (!poll.ready) {
+                if (poll.isBotPage) {
+                    log('  ⚠️ 反爬虫页面检测! 额外等待 12s...', 'warn');
+                    await new Promise(function (res) { setTimeout(res, 12000); });
+                    poll = await pollForContent(subTab.id, 10000);
+                }
+                if (!poll.ready) {
+                    log('  ❌ 内容未出现 → 使用主页面备选数据', 'error');
                     results.push(buildFallback(card));
-                    if (autoClose && subTab) await closeTab(subTab.id);
+                    // ★ 不在这里 closeTab，由 finally 统一处理
+                    // ★ 增量保存：仅在非最后一张卡片时保存
+                    if (doIncremental && i < cards.length - 1) {
+                        saveJsonFile(results, outputFilename);
+                        log('  💾 增量已保存 (' + results.length + '条)', 'data');
+                    }
+                    if (i < cards.length - 1) await new Promise(function (res) { setTimeout(res, 300); });
                     continue;
                 }
             }
 
-            // 2b: 点击 More markets
-            log('  🖱️ 查找 "More markets"...', 'info');
-            const clickR = await chrome.scripting.executeScript({
+            log('  ✅ 内容就绪 (' + poll.elapsed + 'ms, ' + poll.optionCount + '个元素)', 'info');
+
+            // 点击 "More markets"
+            log('  🖱️ 查找 "More markets"...', 'dim');
+            var clickR = await chrome.scripting.executeScript({
                 target: { tabId: subTab.id },
                 func: injectedClickMore
             });
-            const clickD = (clickR && clickR[0] && clickR[0].result) || { clicked: false, debug: [] };
-            clickD.debug.forEach(function (l) { log('    ' + l, 'dim'); });
+            var clickD = (clickR && clickR[0] && clickR[0].result) || { clicked: false, debug: [] };
 
             if (clickD.clicked) {
-                log('  ✅ 已点击展开，等 3s...', 'info');
-                await new Promise(function (r) { setTimeout(r, 3000); });
+                log('  ✅ 已点击展开，轮询等待新选项...', 'info');
+                var moreResult = await pollForMoreOptions(subTab.id, poll.optionCount, 5000);
+                log('  ' + (moreResult.expanded ? '✅ 选项已展开' : '⚠️ 展开超时') +
+                    ' (' + moreResult.elapsed + 'ms)', moreResult.expanded ? 'info' : 'warn');
             } else {
-                log('  ℹ️ 无需展开（按钮不存在 = 选项已全部显示）', 'dim');
+                log('  ℹ️ 无需展开', 'dim');
             }
 
-            // 2c: 抓取
-            log('  📊 抓取 options...', 'info');
-            const scrapeR = await chrome.scripting.executeScript({
+            // 抓取子页面数据
+            log('  📊 抓取 options...', 'dim');
+            var scrapeR = await chrome.scripting.executeScript({
                 target: { tabId: subTab.id },
                 func: injectedScrapeSubpage
             });
-            const sub = (scrapeR && scrapeR[0] && scrapeR[0].result) ||
+            var sub = (scrapeR && scrapeR[0] && scrapeR[0].result) ||
                 { type: '', subtype: '', options: [], debug: [] };
             sub.debug.forEach(function (l) { log('    ' + l, 'dim'); });
 
-            // 2d: 组装
-            const final = {
+            // 组装最终数据
+            var final = {
                 name: card.name,
                 type: sub.type || card.fallbackType || '',
                 subtype: sub.subtype || card.fallbackSubtype || '',
@@ -512,8 +627,8 @@ async function startScraping() {
                 hide: "1"
             };
 
-            const opts = (sub.options && sub.options.length > 0) ? sub.options : card.options;
-            const source = (sub.options && sub.options.length > 0) ? '子页面' : '主页面(备选)';
+            var opts = (sub.options && sub.options.length > 0) ? sub.options : card.options;
+            var source = (sub.options && sub.options.length > 0) ? '子页面' : '主页面(备选)';
             log('  📋 Options 来源: ' + source + ' (' + opts.length + '个)',
                 source === '子页面' ? 'info' : 'warn');
 
@@ -538,27 +653,57 @@ async function startScraping() {
             }
         }
 
-        // 间隔
+        // ★ 增量保存：仅在非最后一张卡片时保存（最终保存统一在循环后执行）
+        if (doIncremental && i < cards.length - 1) {
+            saveJsonFile(results, outputFilename);
+            log('  💾 增量已保存 (' + results.length + '条)', 'data');
+        }
+
+        // 切回 dashboard 标签页，减少用户干扰
+        if (dashboardTabId && autoClose) {
+            try {
+                chrome.tabs.update(dashboardTabId, { active: true });
+            } catch (e) { /* ignore */ }
+        }
+
+        // 短暂间隔
         if (i < cards.length - 1) {
-            await new Promise(function (r) { setTimeout(r, 1000); });
+            await new Promise(function (res) { setTimeout(res, 300); });
         }
     }
 
-    // STEP 3: 下载
+    // ---- 最终保存（唯一的一次或最后一次） ----
+    var elapsed = Math.round((Date.now() - scrapeStartTime) / 1000);
+
     log('', 'dim');
     log('════════════════════════════════════════', 'section');
-    log('  完成! 共 ' + results.length + ' 条数据' + (hasLimit ? '（已按限制提前终止）' : ''), 'section');
+    log('  完成! 共 ' + results.length + ' 条数据, 耗时 ' + elapsed + '秒', 'section');
     log('════════════════════════════════════════', 'section');
 
-    downloadJson(results, 'kalshi.json');
-    setStatus('✅ 成功! ' + results.length + ' 条数据已下载' + (hasLimit ? '（限制模式）' : ''), 'success');
+    // ★ 统一使用 saveJsonFile（chrome.downloads API），不弹出对话框
+    saveJsonFile(results, outputFilename);
+    log('💾 最终保存: ' + outputFilename, 'data');
+
     progressContainer.style.display = 'none';
+    setStatus('✅ 成功! ' + results.length + ' 条数据, 耗时 ' + elapsed + 's → ' + outputFilename, 'success');
+
+    // 重置，下次点击将重新抓取主页面
+    scrapedCards = null;
     startBtn.disabled = false;
-    startBtn.textContent = '重新抓取';
+    startBtn.textContent = '重新开始';
+    isRunning = false;
 }
 
 // ============ 事件 ============
-startBtn.addEventListener('click', startScraping);
+startBtn.addEventListener('click', function () {
+    if (isRunning) return; // ★ 防止重复点击
+    if (scrapedCards) {
+        startSubpageScraping();
+    } else {
+        scrapeMainPage();
+    }
+});
+
 clearBtn.addEventListener('click', function () {
     debugLogEl.innerHTML = '';
     log('日志已清空');
@@ -567,7 +712,15 @@ clearBtn.addEventListener('click', function () {
 // ============ 初始化 ============
 if (mainTabId && !isNaN(mainTabId)) {
     log('Dashboard 就绪. mainTabId = ' + mainTabId);
-    setStatus('就绪 — 点击「开始抓取」');
+    if (autoStart) {
+        setStatus('正在自动抓取主页面...');
+        log('🚀 自动抓取主页面（完成后请配置参数再点击按钮）', 'info');
+        setTimeout(scrapeMainPage, 500);
+    } else {
+        setStatus('就绪 — 点击按钮抓取主页面');
+        startBtn.disabled = false;
+        startBtn.textContent = '抓取主页面';
+    }
 } else {
     log('⚠️ 缺少 mainTabId 参数', 'warn');
     setStatus('错误: 请从 Kalshi 页面点击扩展图标启动', 'error');

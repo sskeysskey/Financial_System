@@ -1,3 +1,28 @@
+// ============ Volume 解析工具 ============
+function parseVolumeStr(v) {
+    if (!v) return 0;
+    var s = v.trim().toLowerCase()
+        .replace(/\$/g, '')
+        .replace(/vol\.?/gi, '')
+        .replace(/,/g, '')
+        .trim();
+    var multiplier = 1;
+    if (/[\d.]\s*b/.test(s)) { multiplier = 1e9; s = s.replace(/\s*b.*$/, '').trim(); }
+    else if (/[\d.]\s*m/.test(s)) { multiplier = 1e6; s = s.replace(/\s*m.*$/, '').trim(); }
+    else if (/[\d.]\s*k/.test(s)) { multiplier = 1e3; s = s.replace(/\s*k.*$/, '').trim(); }
+    var num = parseFloat(s);
+    return isNaN(num) ? 0 : Math.round(num * multiplier);
+}
+
+// 在文件顶部 parseVolumeStr 函数附近加上：
+function getTimestampedFilename(base) {
+    var d = new Date();
+    var yy = String(d.getFullYear()).slice(-2);
+    var mm = String(d.getMonth() + 1).padStart(2, '0');
+    var dd = String(d.getDate()).padStart(2, '0');
+    return base + '_' + yy + mm + dd + '.json';
+}
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'saveData') {
         const site = request.site || 'polymarket';
@@ -8,7 +33,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     chrome.runtime.sendMessage({
                         type: 'downloadJson',
                         data: processedData,
-                        filename: 'polymarket.json'
+                        filename: getTimestampedFilename('polymarket')
                     });
                     sendResponse({ success: true });
                 })
@@ -18,18 +43,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 });
 
-// ============ Polymarket 数据处理（保持原逻辑） ============
+// ============ Polymarket 数据处理 ============
 async function processPolymarketData(predictions) {
     const enrichedData = await Promise.all(
         predictions.map(async (pred) => {
             const subpageData = await fetchPolymarketSubpageData(pred.slug);
+            const cleanVolume = String(parseVolumeStr(pred.volume));
 
             if (pred.type === 'multi-option') {
                 const result = {
                     name: pred.name,
                     type: subpageData.type,
                     subtype: subpageData.subtype,
-                    volume: pred.volume,
+                    volume: cleanVolume,
                     enddate: subpageData.enddate,
                     hide: "1"
                 };
@@ -44,7 +70,7 @@ async function processPolymarketData(predictions) {
                 return {
                     name: pred.name,
                     value: pred.value,
-                    volume: pred.volume,
+                    volume: cleanVolume,
                     enddate: subpageData.enddate,
                     hide: "1"
                 };

@@ -82,12 +82,12 @@ async function handlePolymarket(tab, statusDiv, button) {
     }
 }
 
-// ============ Kalshi 处理 → 打开调试面板 ============
+// ============ Kalshi 处理 → 打开调试面板（自动开始） ============
 
 async function handleKalshi(tab, statusDiv, button) {
-    const dashboardUrl = chrome.runtime.getURL('dashboard.html') + '?mainTabId=' + tab.id;
+    const dashboardUrl = chrome.runtime.getURL('dashboard.html') + '?mainTabId=' + tab.id + '&auto=1';
     chrome.tabs.create({ url: dashboardUrl, active: true });
-    statusDiv.textContent = '已打开 Kalshi 调试面板（新标签页）';
+    statusDiv.textContent = '已打开 Kalshi 调试面板（自动抓取中）';
     statusDiv.className = 'info';
     button.disabled = false;
 }
