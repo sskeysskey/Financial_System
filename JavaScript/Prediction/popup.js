@@ -1,58 +1,44 @@
-// 根据当前页面自动检测网站并抓取
+// ============ 工具函数 ============
+
+function downloadJson(data, filename) {
+    const jsonData = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }, 100);
+}
+
+// ============ 主入口 ============
+
 async function startScraping() {
     const button = document.getElementById('scrapeBtn');
     const statusDiv = document.getElementById('status');
     const titleEl = document.getElementById('title');
 
     button.disabled = true;
-    statusDiv.textContent = '正在自动抓取数据...';
+    statusDiv.textContent = '正在自动检测网站...';
     statusDiv.className = 'info';
 
     try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         const url = tab.url;
 
-        let site, scrapeFunc;
-
         if (url.includes('polymarket.com')) {
-            site = 'polymarket';
-            scrapeFunc = scrapePolymarketPageData;
             titleEl.textContent = 'Polymarket 数据抓取';
+            await handlePolymarket(tab, statusDiv, button);
         } else if (url.includes('kalshi.com')) {
-            site = 'kalshi';
-            scrapeFunc = scrapeKalshiPageData;
             titleEl.textContent = 'Kalshi 数据抓取';
+            await handleKalshi(tab, statusDiv, button);
         } else {
             statusDiv.textContent = '请在 Polymarket 或 Kalshi 页面使用此扩展';
-            statusDiv.className = 'error';
-            button.disabled = false;
-            return;
-        }
-
-        const results = await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            func: scrapeFunc
-        });
-
-        if (results && results[0] && results[0].result) {
-            const data = results[0].result;
-
-            chrome.runtime.sendMessage(
-                { action: 'saveData', data: data, site: site },
-                (response) => {
-                    if (response && response.success) {
-                        statusDiv.textContent = `成功抓取 ${data.length} 条 ${site} 数据!`;
-                        statusDiv.className = 'success';
-                    } else {
-                        statusDiv.textContent = '保存失败: ' + (response ? response.error : '未知错误');
-                        statusDiv.className = 'error';
-                    }
-                    button.disabled = false;
-                    button.textContent = '重新抓取';
-                }
-            );
-        } else {
-            statusDiv.textContent = '未找到数据';
             statusDiv.className = 'error';
             button.disabled = false;
         }
@@ -63,15 +49,51 @@ async function startScraping() {
     }
 }
 
-// 页面加载完成时自动执行
-document.addEventListener('DOMContentLoaded', () => {
-    startScraping();
-});
+// ============ Polymarket 处理（保持原逻辑） ============
 
-// 按钮点击事件（重新抓取）
-document.getElementById('scrapeBtn').addEventListener('click', startScraping);
+async function handlePolymarket(tab, statusDiv, button) {
+    statusDiv.textContent = '正在抓取 Polymarket 数据...';
 
-// ============ Polymarket 主页面抓取函数（保持原逻辑） ============
+    const results = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: scrapePolymarketPageData
+    });
+
+    if (results && results[0] && results[0].result) {
+        const data = results[0].result;
+        chrome.runtime.sendMessage(
+            { action: 'saveData', data: data, site: 'polymarket' },
+            (response) => {
+                if (response && response.success) {
+                    statusDiv.textContent = `成功抓取 ${data.length} 条 Polymarket 数据!`;
+                    statusDiv.className = 'success';
+                } else {
+                    statusDiv.textContent = '保存失败: ' + (response ? response.error : '未知错误');
+                    statusDiv.className = 'error';
+                }
+                button.disabled = false;
+                button.textContent = '重新抓取';
+            }
+        );
+    } else {
+        statusDiv.textContent = '未找到 Polymarket 数据';
+        statusDiv.className = 'error';
+        button.disabled = false;
+    }
+}
+
+// ============ Kalshi 处理 → 打开调试面板 ============
+
+async function handleKalshi(tab, statusDiv, button) {
+    const dashboardUrl = chrome.runtime.getURL('dashboard.html') + '?mainTabId=' + tab.id;
+    chrome.tabs.create({ url: dashboardUrl, active: true });
+    statusDiv.textContent = '已打开 Kalshi 调试面板（新标签页）';
+    statusDiv.className = 'info';
+    button.disabled = false;
+}
+
+// ============ Polymarket 主页面抓取函数（保持原逻辑不变） ============
+
 function scrapePolymarketPageData() {
     const predictions = [];
 
@@ -139,121 +161,16 @@ function scrapePolymarketPageData() {
     return predictions;
 }
 
-// ============ Kalshi 主页面抓取函数 ============
-function scrapeKalshiPageData() {
-    const predictions = [];
+// ============ 事件监听 ============
 
-    function cleanText(text) {
-        return text.trim().replace(/\s+/g, ' ');
-    }
+document.addEventListener('DOMContentLoaded', () => {
+    startScraping();
+});
 
-    // 将 URL 路径片段转为首字母大写的单词（如 politics → Politics）
-    function capitalizeWords(str) {
-        return str.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-    }
+document.getElementById('scrapeBtn').addEventListener('click', startScraping);
 
-    const cards = document.querySelectorAll('[data-testid="market-tile"]');
-
-    cards.forEach(card => {
-        try {
-            // 获取 name
-            const h2 = card.querySelector('h2');
-            if (!h2) return;
-            const name = cleanText(h2.textContent);
-
-            // 获取子页面 URL
-            const subLink = card.querySelector('a[href^="/markets/"]');
-            if (!subLink) return;
-            const subUrl = subLink.getAttribute('href');
-
-            // 获取 category 信息（作为 type/subtype 的备选来源）
-            const categoryLink = card.querySelector('a[href^="/category/"]');
-            let fallbackType = '';
-            let fallbackSubtype = '';
-            if (categoryLink) {
-                const href = categoryLink.getAttribute('href') || '';
-                fallbackSubtype = cleanText(categoryLink.textContent);
-                // 从 /category/politics/us-elections 中解析 type
-                const parts = href.replace('/category/', '').split('/');
-                if (parts.length > 0 && parts[0]) {
-                    fallbackType = capitalizeWords(parts[0]);
-                }
-            }
-
-            // 获取 volume（寻找包含 "$" 和 "vol" 的 span）
-            let volume = '';
-            const allSpans = card.querySelectorAll('span');
-            for (const span of allSpans) {
-                const t = span.textContent;
-                if (t.includes('$') && t.toLowerCase().includes('vol')) {
-                    volume = cleanText(t);
-                    break;
-                }
-            }
-
-            // 🔧 修改这里：改进 options 抓取逻辑，支持两种卡片结构
-            const options = [];
-            const optionRows = card.querySelectorAll('.col-span-full');
-
-            optionRows.forEach(row => {
-                // 方案1：尝试抓取普通卡片结构（原逻辑）
-                const nameEl = row.querySelector('[class*="typ-body-x30"]');
-                // 改为直接在 button 中查找 tabular-nums
-                const button = row.querySelector('button[class*="stretched-link-action"]');
-                let valueEl = button ? button.querySelector('span.tabular-nums') : null;
-
-                // 方案2：如果方案1失败，尝试抓取特殊卡片结构
-                // 特殊卡片的百分比在独立的 button 中，class 包含 "rounded-x50"
-                if (nameEl && !valueEl) {
-                    const specialButton = row.querySelector('button.rounded-x50[class*="stretched-link-action"]');
-                    if (specialButton) {
-                        valueEl = specialButton.querySelector('span.tabular-nums');
-                    }
-                }
-
-                if (nameEl && valueEl) {
-                    const valueText = cleanText(valueEl.textContent);
-                    options.push({
-                        name: cleanText(nameEl.textContent),
-                        value: valueText.includes('%') ? valueText : valueText + '%'
-                    });
-                }
-            });
-
-            predictions.push({
-                type: 'multi-option',
-                name: name,
-                subUrl: subUrl,
-                volume: volume,
-                options: options,
-                fallbackType: fallbackType,
-                fallbackSubtype: fallbackSubtype
-            });
-        } catch (error) {
-            console.error('Error processing Kalshi card:', error);
-        }
-    });
-
-    return predictions;
-}
-
-// ============ 下载处理 ============
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'downloadJson') {
-        const jsonData = JSON.stringify(message.data, null, 2);
-        const blob = new Blob([jsonData], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = message.filename || 'prediction.json';
-        document.body.appendChild(a);
-        a.click();
-
-        setTimeout(() => {
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }, 100);
+        downloadJson(message.data, message.filename || 'prediction.json');
     }
 });

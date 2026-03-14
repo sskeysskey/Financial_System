@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Kalshi Scraper - 调试面板</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            padding: 20px;
+            max-width: 960px;
+            margin: 0 auto;
+            background: #f7f8fa;
+            color: #333;
+        }
+
+        h1 {
+            font-size: 20px;
+            margin-bottom: 12px;
+        }
+
+        h3 {
+            font-size: 15px;
+            margin-top: 20px;
+            margin-bottom: 8px;
+        }
+
+        .control-bar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+
+        button {
+            padding: 8px 18px;
+            font-size: 14px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: #fff;
+        }
+
+        button.primary {
+            background: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+            font-weight: bold;
+        }
+
+        button.primary:hover {
+            background: #43a047;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        label {
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-box {
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .progress-container {
+            margin-bottom: 12px;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #4CAF50;
+            border-radius: 4px;
+            transition: width 0.3s;
+            width: 0%;
+        }
+
+        .progress-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .debug-log {
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+            font-size: 11px;
+            line-height: 1.6;
+            padding: 14px;
+            border-radius: 6px;
+            max-height: 600px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .log-section {
+            color: #82aaff;
+            font-weight: bold;
+        }
+
+        .log-info {
+            color: #c3e88d;
+        }
+
+        .log-warn {
+            color: #ffcb6b;
+        }
+
+        .log-error {
+            color: #f07178;
+        }
+
+        .log-data {
+            color: #c792ea;
+        }
+
+        .log-dim {
+            color: #676e95;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔍 Kalshi Scraper - 调试面板</h1>
+
+    <div class="control-bar">
+        <button id="startBtn" class="primary">开始抓取</button>
+        <button id="clearBtn">清空日志</button>
+        <label>
+            <input type="checkbox" id="autoClose" checked>
+            自动关闭子页面
+        </label>
+        <label>
+            等待秒数:
+            <input type="number" id="waitTime" value="8" min="3" max="30"
+                style="width:50px; padding:2px 4px; font-size:13px;">
+        </label>
+        <!-- ★ 新增：抓取数量限制 -->
+        <label>
+            抓取数量:
+            <input type="number" id="limitCount" value="" min="1" placeholder="全部"
+                style="width:60px; padding:2px 4px; font-size:13px;" title="留空或0表示抓取全部；填数字则抓到该数量后自动停止">
+        </label>
+    </div>
+
+    <div id="status" class="status-box status-info">点击「开始抓取」开始</div>
+
+    <div id="progressContainer" class="progress-container">
+        <div class="progress-bar">
+            <div id="progressFill" class="progress-fill"></div>
+        </div>
+        <div id="progressText" class="progress-text"></div>
+    </div>
+
+    <h3>📋 调试日志</h3>
+    <div id="debugLog" class="debug-log">等待开始...\n</div>
+
+    <script src="dashboard.js"></script>
+</body>
+
+</html>
