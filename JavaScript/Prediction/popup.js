@@ -191,12 +191,15 @@ function scrapeKalshiPageData() {
                 }
             }
 
-            // 获取卡片上可见的 options（作为备选）
+            // 🔧 修改这里：改进 options 抓取逻辑
             const options = [];
             const optionRows = card.querySelectorAll('.col-span-full');
             optionRows.forEach(row => {
                 const nameEl = row.querySelector('[class*="typ-body-x30"]');
-                const valueEl = row.querySelector('.tabular-nums');
+                // 改为直接在 button 中查找 tabular-nums
+                const button = row.querySelector('button[class*="stretched-link-action"]');
+                const valueEl = button ? button.querySelector('span.tabular-nums') : null;
+
                 if (nameEl && valueEl) {
                     options.push({
                         name: cleanText(nameEl.textContent),
