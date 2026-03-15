@@ -548,12 +548,41 @@ async function startSubpageScraping() {
 
     var autoClose = document.getElementById('autoClose').checked;
     var doIncremental = document.getElementById('incrementalSaveToggle').checked;
-    var limitInput = parseInt(document.getElementById('limitCount').value, 10);
-    var hasLimit = !isNaN(limitInput) && limitInput > 0;
+
+    // ★ 新增：解析范围输入
+    var rangeInput = document.getElementById('rangeInput').value.trim();
+    var startIndex = 0;  // 默认从第一个开始
+    var endIndex = -1;   // -1 表示到最后
+    var hasRange = false;
+
+    if (rangeInput) {
+        if (rangeInput.includes('-')) {
+            // 范围格式: "5-10"
+            var parts = rangeInput.split('-').map(function (p) { return parseInt(p.trim(), 10); });
+            if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1]) && parts[0] > 0 && parts[1] >= parts[0]) {
+                startIndex = parts[0] - 1;  // 转为 0-based index
+                endIndex = parts[1];        // endIndex 保持为实际数字（用于 slice）
+                hasRange = true;
+            } else {
+                log('⚠️ 范围格式错误，将抓取全部。正确格式: "起始-结束" (如 5-10)', 'warn');
+            }
+        } else {
+            // 单个数字: "5" 表示只抓第5个
+            var single = parseInt(rangeInput, 10);
+            if (!isNaN(single) && single > 0) {
+                startIndex = single - 1;
+                endIndex = single;
+                hasRange = true;
+            } else {
+                log('⚠️ 输入格式错误，将抓取全部。正确格式: 单个数字或范围 (如 "5" 或 "5-10")', 'warn');
+            }
+        }
+    }
+
     var minVolumeInput = parseInt(document.getElementById('minVolume').value, 10);
     var hasMinVolume = !isNaN(minVolumeInput) && minVolumeInput > 0;
 
-    // ★ 生成带日期戳的文件名，如 kalshi_260314.json
+    // ★ 生成带日期戳的文件名
     var outputFilename = getTimestampedFilename('kalshi');
 
     var cards = scrapedCards.slice();
@@ -562,8 +591,13 @@ async function startSubpageScraping() {
     log('════════════════════════════════════════', 'section');
     log('  Phase 2: 开始子页面抓取', 'section');
     log('════════════════════════════════════════', 'section');
+
+    // ★ 更新日志输出
+    var rangeDesc = hasRange ?
+        (startIndex + 1) + '-' + endIndex + ' (共 ' + (endIndex - startIndex) + ' 个)' :
+        '全部';
     log('autoClose=' + autoClose + '  增量保存=' + doIncremental +
-        (hasLimit ? '  数量限制=' + limitInput : '  数量限制=全部') +
+        '  抓取范围=' + rangeDesc +
         (hasMinVolume ? '  最小volume=' + minVolumeInput : '  最小volume=不限'));
     log('📁 输出文件: ' + outputFilename, 'info');
 
@@ -577,10 +611,19 @@ async function startSubpageScraping() {
         log('📊 Volume 过滤: ' + beforeCount + ' → ' + cards.length + ' 个 (移除 ' + removedCount + ' 个, 阈值: $' + minVolumeInput + ')', 'warn');
     }
 
-    // 根据数量限制截取
-    if (hasLimit && limitInput < cards.length) {
-        cards = cards.slice(0, limitInput);
-        log('📊 数量限制: 取前 ' + limitInput + ' 个', 'warn');
+    // ★ 应用范围过滤（在 volume 过滤之后）
+    if (hasRange) {
+        var beforeRangeCount = cards.length;
+        if (endIndex === -1 || endIndex > cards.length) {
+            endIndex = cards.length;
+        }
+        if (startIndex >= cards.length) {
+            log('⚠️ 起始位置超出范围 (总共 ' + cards.length + ' 个)', 'warn');
+            cards = [];
+        } else {
+            cards = cards.slice(startIndex, endIndex);
+            log('📊 范围过滤: 从第 ' + (startIndex + 1) + ' 个到第 ' + endIndex + ' 个 (取 ' + cards.length + ' 个, 跳过前 ' + startIndex + ' 个)', 'warn');
+        }
     }
 
     if (cards.length === 0) {
