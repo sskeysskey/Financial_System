@@ -1,7 +1,8 @@
 // ============ 配置常量 ============
-const POLYMARKET_CLICK_COUNT = 20; // 配置点击 "Show more markets" 的次数
-const BUTTON_CHECK_INTERVAL = 500; // 每次检查按钮是否出现的间隔（毫秒）
-const MAX_WAIT_TIME = 30000; // 单次等待按钮出现的最大时间（毫秒）
+const POLYMARKET_CLICK_COUNT = 20;
+const BUTTON_CHECK_INTERVAL = 500;
+const MAX_WAIT_TIME = 30000;
+const DEFAULT_KALSHI_SCROLL_COUNT = 30; // ← 唯一需要改的地方
 
 // ============ 工具函数 ============
 
@@ -19,6 +20,16 @@ function downloadJson(data, filename) {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     }, 100);
+}
+
+// ============ 获取 Kalshi 滚动次数 ============
+function getKalshiScrollCount() {
+    const input = document.getElementById('scrollCountInput');
+    const val = parseInt(input.value, 10);
+    if (val >= 1 && val <= 50) {
+        return val;
+    }
+    return DEFAULT_KALSHI_SCROLL_COUNT;
 }
 
 // ============ 主入口 ============
@@ -45,13 +56,6 @@ async function startScraping() {
         } else if (url.includes('kalshi.com')) {
             titleEl.textContent = 'Kalshi 数据抓取';
             kalshiConfig.style.display = 'block';
-
-            // 保存用户配置
-            const scrollCount = parseInt(scrollCountInput.value, 10);
-            if (scrollCount >= 1 && scrollCount <= 50) {
-                localStorage.setItem('kalshiScrollCount', scrollCount.toString());
-            }
-
             await handleKalshi(tab, statusDiv, button);
         } else {
             kalshiConfig.style.display = 'none';
@@ -245,8 +249,8 @@ async function handleKalshi(tab, statusDiv, button) {
     progressContainer.style.display = 'block';
 
     try {
-        // 从 localStorage 获取滚动次数配置，默认 20 次
-        const scrollCount = parseInt(localStorage.getItem('kalshiScrollCount') || '20', 10);
+        // ← 直接从 input 读取，不再依赖 localStorage
+        const scrollCount = getKalshiScrollCount();
 
         // 第一步：滚动页面
         await scrollKalshiPage(tab, scrollCount, statusDiv, progressBarFill, progressText);
@@ -338,12 +342,8 @@ function scrapePolymarketPageData() {
 // ============ 事件监听 ============
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 加载保存的滚动次数配置
-    const savedScrollCount = localStorage.getItem('kalshiScrollCount');
-    if (savedScrollCount) {
-        document.getElementById('scrollCountInput').value = savedScrollCount;
-    }
-
+    // 直接用常量设置默认值，不再从 localStorage 读取
+    document.getElementById('scrollCountInput').value = DEFAULT_KALSHI_SCROLL_COUNT;
     startScraping();
 });
 
