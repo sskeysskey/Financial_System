@@ -168,13 +168,18 @@
         <button id="clearBtn">清空日志</button>
         <label>
             <input type="checkbox" id="autoClose" checked>
-            自动关闭子页面
+            自动关闭标签页
         </label>
         <label>
             <input type="checkbox" id="incrementalSaveToggle" checked>
             增量保存
         </label>
-        <!-- ★ 新增：抓取数量限制 -->
+        <!-- ★ 新增：并行度 -->
+        <label>
+            并行数:
+            <input type="number" id="concurrencyInput" value="4" min="1" max="8"
+                style="width:55px; padding:2px 4px; font-size:13px;" title="同时工作的标签页数（建议3-6）">
+        </label>
         <label>
             抓取范围:
             <input type="text" id="rangeInput" value="" placeholder="全部 或 5-10"

@@ -5,7 +5,7 @@ mainTabId = parseInt(params.get('mainTabId'), 10);
 const autoStart = params.get('auto') === '1';
 
 let scrapedCards = null;
-let isRunning = false; // ★ 防止并发执行
+let isRunning = false;
 
 // ============ DOM 引用 ============
 const statusEl = document.getElementById('status');
@@ -70,10 +70,11 @@ function updateProgress(current, total, name) {
 
 // ============ 标签页管理 ============
 
-// 创建前台标签页（active:true 是绕过 Cloudflare 的关键）
-function createTab(url) {
+// ★ 改：支持 active 参数
+function createTab(url, active) {
+    if (active === undefined) active = true;
     return new Promise(function (resolve, reject) {
-        chrome.tabs.create({ url: url, active: true }, function (tab) {
+        chrome.tabs.create({ url: url, active: active }, function (tab) {
             if (chrome.runtime.lastError) {
                 reject(new Error(chrome.runtime.lastError.message));
             } else {
@@ -83,9 +84,19 @@ function createTab(url) {
     });
 }
 
-// 等待标签页 status: complete
+// ★ 新增：导航已有标签到新 URL（复用标签，避免反复创建/关闭）
+function navigateTab(tabId, url) {
+    return new Promise(function (resolve, reject) {
+        chrome.tabs.update(tabId, { url: url }, function (tab) {
+            if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+            else resolve(tab);
+        });
+    });
+}
+
+// ★ 改：默认超时 30s → 15s
 function waitForTabComplete(tabId, timeoutMs) {
-    if (!timeoutMs) timeoutMs = 30000;
+    if (!timeoutMs) timeoutMs = 15000;
     return new Promise(function (resolve) {
         var timeout = setTimeout(function () {
             chrome.tabs.onUpdated.removeListener(listener);
@@ -103,9 +114,9 @@ function waitForTabComplete(tabId, timeoutMs) {
     });
 }
 
-// 智能轮询：检测到页面内容后立即返回，不再固定等待
+// ★ 改：默认 18s → 10s，轮询 400ms → 200ms，内容就绪后等待 300ms → 100ms
 async function pollForContent(tabId, maxMs) {
-    if (!maxMs) maxMs = 18000;
+    if (!maxMs) maxMs = 10000;
     var start = Date.now();
     while (Date.now() - start < maxMs) {
         try {
@@ -126,27 +137,24 @@ async function pollForContent(tabId, maxMs) {
             });
             var c = r && r[0] && r[0].result;
             if (c && c.hasContent) {
-                // 额外等 300ms 让剩余元素渲染完
-                await new Promise(function (res) { setTimeout(res, 300); });
+                await new Promise(function (res) { setTimeout(res, 100); });
                 return { ready: true, isBotPage: false, elapsed: Date.now() - start, optionCount: c.optionCount };
             }
             if (c && c.isBotPage) {
-                // 反爬虫页面，慢速轮询
-                await new Promise(function (res) { setTimeout(res, 2000); });
+                await new Promise(function (res) { setTimeout(res, 1500); });
             } else {
-                // 正常等待渲染，快速轮询
-                await new Promise(function (res) { setTimeout(res, 400); });
+                await new Promise(function (res) { setTimeout(res, 200); });
             }
         } catch (e) {
-            await new Promise(function (res) { setTimeout(res, 500); });
+            await new Promise(function (res) { setTimeout(res, 300); });
         }
     }
     return { ready: false, isBotPage: true, elapsed: Date.now() - start, optionCount: 0 };
 }
 
-// 点击 More markets 后轮询等待选项增多
+// ★ 改：默认 5s → 3s，轮询 300ms → 200ms
 async function pollForMoreOptions(tabId, prevCount, maxMs) {
-    if (!maxMs) maxMs = 5000;
+    if (!maxMs) maxMs = 3000;
     var start = Date.now();
     while (Date.now() - start < maxMs) {
         try {
@@ -158,11 +166,11 @@ async function pollForMoreOptions(tabId, prevCount, maxMs) {
             });
             var count = r && r[0] && r[0].result;
             if (count && count > prevCount) {
-                await new Promise(function (res) { setTimeout(res, 300); });
+                await new Promise(function (res) { setTimeout(res, 200); });
                 return { expanded: true, elapsed: Date.now() - start };
             }
         } catch (e) { /* ignore */ }
-        await new Promise(function (res) { setTimeout(res, 300); });
+        await new Promise(function (res) { setTimeout(res, 200); });
     }
     return { expanded: false, elapsed: Date.now() - start };
 }
@@ -170,17 +178,13 @@ async function pollForMoreOptions(tabId, prevCount, maxMs) {
 function closeTab(tabId) {
     return new Promise(function (resolve) {
         chrome.tabs.remove(tabId, function () {
-            if (chrome.runtime.lastError) {
-                log('  ⚠️ 关闭标签失败: ' + chrome.runtime.lastError.message, 'warn');
-            }
+            if (chrome.runtime.lastError) { /* ignore */ }
             resolve();
         });
     });
 }
 
 // ============ 下载工具 ============
-
-// ★ 统一下载函数：使用 chrome.downloads API，不弹出保存对话框
 function saveJsonFile(data, filename) {
     try {
         var jsonStr = JSON.stringify(data, null, 2);
@@ -206,25 +210,17 @@ function saveJsonFile(data, filename) {
 //  注入函数（在目标页面执行，完全独立，不引用外部变量）
 // ============================================================
 
-// ---- 注入：点击 "X more" 按钮 ----
 function injectedClickXMore() {
     var d = [];
     var clicked = false;
-
-    // 查找所有可能的 "X more" 文本
     var allElements = document.querySelectorAll('*');
     var morePattern = /^\d+\s+more$/i;
 
     for (var i = 0; i < allElements.length; i++) {
         var text = allElements[i].textContent.trim();
-
         if (morePattern.test(text)) {
             d.push('Found "' + text + '"');
-
-            // 尝试找到可点击的父元素
             var target = allElements[i];
-
-            // 检查自身是否可点击
             if (target.tagName === 'BUTTON' ||
                 target.getAttribute('role') === 'button' ||
                 target.onclick ||
@@ -234,13 +230,10 @@ function injectedClickXMore() {
                 clicked = true;
                 break;
             }
-
-            // 向上查找可点击的父元素
             var parent = target;
             for (var j = 0; j < 10; j++) {
                 parent = parent.parentElement;
                 if (!parent) break;
-
                 if (parent.tagName === 'BUTTON' ||
                     parent.getAttribute('role') === 'button' ||
                     parent.onclick ||
@@ -254,19 +247,15 @@ function injectedClickXMore() {
                     break;
                 }
             }
-
             if (clicked) break;
         }
     }
-
     if (!clicked) {
         d.push('"X more" button NOT found');
     }
-
     return { clicked: clicked, debug: d };
 }
 
-// ---- 注入：主页面卡片基本信息 ----
 function injectedScrapeMainPage() {
     var predictions = [];
     function clean(t) { return t.trim().replace(/\s+/g, ' '); }
@@ -313,32 +302,15 @@ function injectedScrapeMainPage() {
                 if (nameEl && valEl) {
                     var optName = clean(nameEl.textContent);
                     var v = clean(valEl.textContent);
-
-                    // ★ 过滤 "Show less"
                     var optNameLower = optName.toLowerCase().trim();
-                    if (optNameLower === 'show less') {
-                        return; // 跳过此 option
-                    }
-
-                    // ★ 过滤 "Hide markets"
-                    var optNameLower = optName.toLowerCase().trim();
-                    if (optNameLower === 'Hide markets') {
-                        return; // 跳过此 option
-                    }
-
-                    // 抓取 change
+                    if (optNameLower === 'show less') return;
+                    if (optNameLower === 'hide markets') return;
                     var cEl = row.querySelector('[class*="typ-emphasis-x10"]');
                     var change = cEl ? clean(cEl.textContent) : '';
-
-                    options.push({
-                        name: optName,
-                        value: v.includes('%') ? v : v + '%',
-                        change: change
-                    });
+                    options.push({ name: optName, value: v.includes('%') ? v : v + '%', change: change });
                 }
             });
 
-            // ★ 如果 options > 10，过滤 <1%
             if (options.length > 10) {
                 options = options.filter(function (opt) {
                     return opt.value.trim() !== '<1%';
@@ -351,7 +323,6 @@ function injectedScrapeMainPage() {
     return predictions;
 }
 
-// ---- 注入：点击 More markets ----
 function injectedClickMore() {
     var d = [];
     var allSpans = document.querySelectorAll('span');
@@ -388,29 +359,24 @@ function injectedClickMore() {
     return { clicked: false, debug: d };
 }
 
-// ---- 注入：抓取子页面 options ----
 function injectedScrapeSubpage() {
     var d = [];
     var result = { type: '', subtype: '', options: [] };
 
-    // 1. Categories
     var catLinks = document.querySelectorAll('a[href^="/category/"]');
     var cats = [];
     catLinks.forEach(function (a) {
         var t = a.textContent.trim().replace(/\s+/g, ' ');
         if (t && cats.indexOf(t) === -1) cats.push(t);
     });
-    d.push('Categories: ' + JSON.stringify(cats));
     if (cats.length > 0) result.type = cats[0];
     if (cats.length > 1) result.subtype = cats[1];
 
-    // 2. Options — Approach A: typ-body-x30 + traverse up for typ-headline-x10
     var seen = {};
     var section = document.querySelector('section');
     var root = section || document;
 
     var nameEls = root.querySelectorAll('[class*="typ-body-x30"]');
-    d.push('typ-body-x30 count: ' + nameEls.length);
 
     nameEls.forEach(function (nameEl, idx) {
         var rawName = nameEl.textContent.trim().replace(/\s+/g, ' ');
@@ -431,8 +397,6 @@ function injectedScrapeSubpage() {
         }
 
         var value = valueEl ? valueEl.textContent.trim() : '';
-
-        // 抓取 change
         var changeEl = container ? container.querySelector('[class*="typ-emphasis-x10"]') : null;
         var change = changeEl ? changeEl.textContent.trim().replace(/\s+/g, ' ') : '';
 
@@ -440,19 +404,16 @@ function injectedScrapeSubpage() {
         result.options.push({ name: rawName, value: value, change: change });
     });
 
-    // 3. Approach B fallback
     if (result.options.length === 0) {
         var flexDivs = root.querySelectorAll('div[style*="flex: 1 1"]');
         flexDivs.forEach(function (div) {
             var nEl = div.querySelector('[class*="typ-body-x30"]');
             var vEl = div.querySelector('[class*="typ-headline-x10"]');
             var cEl = div.querySelector('[class*="typ-emphasis-x10"]');
-
             if (nEl && vEl) {
                 var name = nEl.textContent.trim().replace(/\s+/g, ' ');
                 var val = vEl.textContent.trim();
                 var change = cEl ? cEl.textContent.trim().replace(/\s+/g, ' ') : '';
-
                 if (name && name.toLowerCase().indexOf('more market') === -1 &&
                     name.toLowerCase().indexOf('fewer market') === -1 && !seen[name]) {
                     seen[name] = true;
@@ -462,40 +423,19 @@ function injectedScrapeSubpage() {
         });
     }
 
-    d.push('Options count before filtering: ' + result.options.length);
-
-    // ★★★ 新增：过滤逻辑 ★★★
     result.options = result.options.filter(function (opt) {
         var optName = opt.name.toLowerCase().trim();
-
-        // 需求1: 过滤 "Show less"
-        if (optName === 'show less') {
-            d.push('Filtered out: "' + opt.name + '"');
-            return false;
-        }
-        // 需求2: 过滤 "Hide markets"
-        if (optName === 'hide markets') {
-            d.push('Filtered out: "' + opt.name + '"');
-            return false;
-        }
+        if (optName === 'show less') return false;
+        if (optName === 'hide markets') return false;
         return true;
     });
 
-    // 需求2: 如果超过10个option，过滤掉所有 <1%
     if (result.options.length > 10) {
-        d.push('Options > 10, filtering <1% values...');
-        var beforeFilter = result.options.length;
         result.options = result.options.filter(function (opt) {
-            if (opt.value.trim() === '<1%') {
-                d.push('Filtered out <1%: "' + opt.name + '"');
-                return false;
-            }
-            return true;
+            return opt.value.trim() !== '<1%';
         });
-        d.push('Filtered ' + (beforeFilter - result.options.length) + ' options with <1%');
     }
 
-    d.push('Options count after filtering: ' + result.options.length);
     result.debug = d;
     return result;
 }
@@ -518,7 +458,7 @@ function buildFallback(card) {
 }
 
 // ============================================================
-//  Phase 1: 抓取主页面卡片（自动执行，完成后暂停等待用户操作）
+//  Phase 1: 抓取主页面卡片（与原来相同）
 // ============================================================
 async function scrapeMainPage() {
     if (isRunning) return;
@@ -533,7 +473,6 @@ async function scrapeMainPage() {
     log('════════════════════════════════════════', 'section');
     log('mainTabId=' + mainTabId);
 
-    // 验证主标签页
     try {
         await new Promise(function (res, rej) {
             chrome.tabs.get(mainTabId, function (t) {
@@ -568,13 +507,11 @@ async function scrapeMainPage() {
             return;
         }
 
-        // 清洗 volume → 纯数字
         cards.forEach(function (c) {
             c.volumeNum = parseVolumeStr(c.volume);
             c.volume = String(c.volumeNum);
         });
 
-        // ★ 按 subUrl 去重，防止同一市场被重复抓取
         var seenUrls = {};
         var beforeDedup = cards.length;
         cards = cards.filter(function (c) {
@@ -583,14 +520,12 @@ async function scrapeMainPage() {
             return true;
         });
         if (cards.length < beforeDedup) {
-            log('⚠️ 去重: ' + beforeDedup + ' → ' + cards.length + ' 个 (移除 ' + (beforeDedup - cards.length) + ' 个重复)', 'warn');
+            log('⚠️ 去重: ' + beforeDedup + ' → ' + cards.length + ' 个', 'warn');
         }
 
         log('✅ 找到 ' + cards.length + ' 个卡片', 'info');
-        log('', 'dim');
         cards.forEach(function (c, i) {
-            log('  [' + i + '] "' + c.name + '"  |  volume: ' + c.volume, 'data');
-            log('       subUrl: ' + c.subUrl + '  主页面options: ' + c.options.length + '个', 'dim');
+            log('  [' + i + '] "' + c.name + '"  vol:' + c.volume + '  opts:' + c.options.length, 'data');
         });
 
         scrapedCards = cards;
@@ -609,216 +544,84 @@ async function scrapeMainPage() {
 }
 
 // ============================================================
-//  Phase 2: 逐个抓取子页面（用户点击按钮后执行）
+//  ★ 并行工作线程：每个 worker 独立消费队列中的任务
 // ============================================================
-async function startSubpageScraping() {
-    if (isRunning) return;
-    isRunning = true;
-    startBtn.disabled = true;
-    startBtn.textContent = '抓取中...';
+async function workerLoop(workerId, tabId, queue, results, config) {
+    while (queue.length > 0) {
+        var item = queue.shift();
+        if (!item) break;
 
-    var autoClose = document.getElementById('autoClose').checked;
-    var doIncremental = document.getElementById('incrementalSaveToggle').checked;
+        var card = item.card;
+        var idx = item.index;
+        var short = card.name.length > 35 ? card.name.substring(0, 35) + '...' : card.name;
 
-    // ★ 新增：解析范围输入
-    var rangeInput = document.getElementById('rangeInput').value.trim();
-    var startIndex = 0;  // 默认从第一个开始
-    var endIndex = -1;   // -1 表示到最后
-    var hasRange = false;
-
-    if (rangeInput) {
-        if (rangeInput.includes('-')) {
-            // 范围格式: "5-10"
-            var parts = rangeInput.split('-').map(function (p) { return parseInt(p.trim(), 10); });
-            if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1]) && parts[0] > 0 && parts[1] >= parts[0]) {
-                startIndex = parts[0] - 1;  // 转为 0-based index
-                endIndex = parts[1];        // endIndex 保持为实际数字（用于 slice）
-                hasRange = true;
-            } else {
-                log('⚠️ 范围格式错误，将抓取全部。正确格式: "起始-结束" (如 5-10)', 'warn');
-            }
-        } else {
-            // 单个数字: "5" 表示只抓第5个
-            var single = parseInt(rangeInput, 10);
-            if (!isNaN(single) && single > 0) {
-                startIndex = single - 1;
-                endIndex = single;
-                hasRange = true;
-            } else {
-                log('⚠️ 输入格式错误，将抓取全部。正确格式: 单个数字或范围 (如 "5" 或 "5-10")', 'warn');
-            }
-        }
-    }
-
-    var minVolumeInput = parseInt(document.getElementById('minVolume').value, 10);
-    var hasMinVolume = !isNaN(minVolumeInput) && minVolumeInput > 0;
-
-    // ★ 生成带日期戳的文件名
-    var outputFilename = getTimestampedFilename('kalshi');
-
-    var cards = scrapedCards.slice();
-
-    log('', 'dim');
-    log('════════════════════════════════════════', 'section');
-    log('  Phase 2: 开始子页面抓取', 'section');
-    log('════════════════════════════════════════', 'section');
-
-    // ★ 更新日志输出
-    var rangeDesc = hasRange ?
-        (startIndex + 1) + '-' + endIndex + ' (共 ' + (endIndex - startIndex) + ' 个)' :
-        '全部';
-    log('autoClose=' + autoClose + '  增量保存=' + doIncremental +
-        '  抓取范围=' + rangeDesc +
-        (hasMinVolume ? '  最小volume=' + minVolumeInput : '  最小volume=不限'));
-    log('📁 输出文件: ' + outputFilename, 'info');
-
-    // 根据 minVolume 过滤
-    if (hasMinVolume) {
-        var beforeCount = cards.length;
-        cards = cards.filter(function (c) {
-            return c.volumeNum >= minVolumeInput;
-        });
-        var removedCount = beforeCount - cards.length;
-        log('📊 Volume 过滤: ' + beforeCount + ' → ' + cards.length + ' 个 (移除 ' + removedCount + ' 个, 阈值: $' + minVolumeInput + ')', 'warn');
-    }
-
-    // ★ 应用范围过滤（在 volume 过滤之后）
-    if (hasRange) {
-        var beforeRangeCount = cards.length;
-        if (endIndex === -1 || endIndex > cards.length) {
-            endIndex = cards.length;
-        }
-        if (startIndex >= cards.length) {
-            log('⚠️ 起始位置超出范围 (总共 ' + cards.length + ' 个)', 'warn');
-            cards = [];
-        } else {
-            cards = cards.slice(startIndex, endIndex);
-            log('📊 范围过滤: 从第 ' + (startIndex + 1) + ' 个到第 ' + endIndex + ' 个 (取 ' + cards.length + ' 个, 跳过前 ' + startIndex + ' 个)', 'warn');
-        }
-    }
-
-    if (cards.length === 0) {
-        log('⚠️ 过滤后没有需要抓取的卡片', 'warn');
-        setStatus('过滤后没有需要抓取的项目，请调整参数', 'error');
-        startBtn.disabled = false;
-        startBtn.textContent = '开始抓取';
-        isRunning = false;
-        return;
-    }
-
-    log('📋 最终抓取 ' + cards.length + ' 个卡片', 'info');
-
-    // 记住 dashboard 标签页 id，抓完子页面后切回来
-    var dashboardTabId = null;
-    try {
-        var tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (tabs && tabs[0]) dashboardTabId = tabs[0].id;
-    } catch (e) { /* ignore */ }
-
-    // ---- STEP 2: 逐个子页面（智能轮询） ----
-    var results = [];
-    var scrapeStartTime = Date.now();
-
-    for (var i = 0; i < cards.length; i++) {
-        var card = cards[i];
-        var short = card.name.length > 40 ? card.name.substring(0, 40) + '...' : card.name;
-
-        log('', 'dim');
-        log('─── CARD ' + (i + 1) + '/' + cards.length + ': "' + short + '" ───', 'section');
-        setStatus('(' + (i + 1) + '/' + cards.length + ') ' + short);
-        updateProgress(i + 1, cards.length, short);
-
-        var subTab = null;
         try {
-            var url = 'https://kalshi.com' + card.subUrl;
-            log('  打开: ' + url, 'dim');
+            // 导航到子页面（复用标签页，不创建新的）
+            await navigateTab(tabId, 'https://kalshi.com' + card.subUrl);
 
-            subTab = await createTab(url);
-            log('  📄 标签已创建 (id:' + subTab.id + ')', 'dim');
+            // 等待页面加载
+            await waitForTabComplete(tabId, 15000);
 
-            // 等待页面初始加载
-            var loadOk = await waitForTabComplete(subTab.id, 30000);
-            log('  ' + (loadOk ? '✅' : '⏱️') + ' status=complete', 'dim');
-
-            // 智能轮询内容（核心加速点：有内容立即返回）
-            log('  ⏳ 轮询等待内容...', 'dim');
-            var poll = await pollForContent(subTab.id, 18000);
+            // 轮询等待内容渲染
+            var poll = await pollForContent(tabId, 10000);
 
             if (!poll.ready) {
+                // 反爬虫检测 → 切换为前台标签，等待通过
                 if (poll.isBotPage) {
-                    log('  ⚠️ 反爬虫页面检测! 额外等待 12s...', 'warn');
-                    await new Promise(function (res) { setTimeout(res, 12000); });
-                    poll = await pollForContent(subTab.id, 10000);
+                    log('[W' + workerId + '] 🛡️ "' + short + '" 反爬虫页面，切换前台...', 'warn');
+                    try {
+                        await new Promise(function (resolve) {
+                            chrome.tabs.update(tabId, { active: true }, resolve);
+                        });
+                    } catch (e) { }
+                    await new Promise(function (res) { setTimeout(res, 8000); });
+                    poll = await pollForContent(tabId, 8000);
                 }
+
                 if (!poll.ready) {
-                    log('  ❌ 内容未出现 → 使用主页面备选数据', 'error');
-                    results.push(buildFallback(card));
-                    // ★ 不在这里 closeTab，由 finally 统一处理
-                    // ★ 增量保存：仅在非最后一张卡片时保存
-                    if (doIncremental && i < cards.length - 1) {
-                        saveJsonFile(results, outputFilename);
-                        log('  💾 增量已保存 (' + results.length + '条)', 'data');
-                    }
-                    if (i < cards.length - 1) await new Promise(function (res) { setTimeout(res, 300); });
+                    log('[W' + workerId + '] ❌ "' + short + '" → 备选数据', 'error');
+                    results[idx] = buildFallback(card);
+                    config.onProgress();
                     continue;
                 }
             }
 
-            log('  ✅ 内容就绪 (' + poll.elapsed + 'ms, ' + poll.optionCount + '个元素)', 'info');
-
-            // 点击 "More markets"
-            log('  🖱️ 查找 "More markets"...', 'dim');
-            var clickR = await chrome.scripting.executeScript({
-                target: { tabId: subTab.id },
-                func: injectedClickMore
-            });
-            var clickD = (clickR && clickR[0] && clickR[0].result) || { clicked: false, debug: [] };
-
-            if (clickD.clicked) {
-                log('  ✅ 已点击 "More markets"，轮询等待新选项...', 'info');
-                var moreResult = await pollForMoreOptions(subTab.id, poll.optionCount, 5000);
-                log('  ' + (moreResult.expanded ? '✅ 选项已展开' : '⚠️ 展开超时') +
-                    ' (' + moreResult.elapsed + 'ms)', moreResult.expanded ? 'info' : 'warn');
-            } else {
-                log('  ℹ️ 无 "More markets" 按钮', 'dim');
-            }
-
-            // ★ 新增：点击 "X more" 按钮
-            log('  🖱️ 查找 "X more" 按钮...', 'dim');
-            var xMoreClickR = await chrome.scripting.executeScript({
-                target: { tabId: subTab.id },
-                func: injectedClickXMore
-            });
-            var xMoreClickD = (xMoreClickR && xMoreClickR[0] && xMoreClickR[0].result) || { clicked: false, debug: [] };
-
-            if (xMoreClickD.clicked) {
-                log('  ✅ 已点击 "X more"，轮询等待新选项...', 'info');
-
-                // 重新获取当前选项数量
-                var currentCountR = await chrome.scripting.executeScript({
-                    target: { tabId: subTab.id },
-                    func: function () {
-                        return document.querySelectorAll('[class*="typ-body-x30"]').length;
-                    }
+            // 尝试点击 "More markets"
+            try {
+                var clickR = await chrome.scripting.executeScript({
+                    target: { tabId: tabId },
+                    func: injectedClickMore
                 });
-                var currentCount = (currentCountR && currentCountR[0] && currentCountR[0].result) || 0;
+                var clickD = (clickR && clickR[0] && clickR[0].result) || { clicked: false };
+                if (clickD.clicked) {
+                    await pollForMoreOptions(tabId, poll.optionCount, 3000);
+                }
+            } catch (e) { }
 
-                var xMoreResult = await pollForMoreOptions(subTab.id, currentCount, 5000);
-                log('  ' + (xMoreResult.expanded ? '✅ 选项已展开' : '⚠️ 展开超时') +
-                    ' (' + xMoreResult.elapsed + 'ms)', xMoreResult.expanded ? 'info' : 'warn');
-            } else {
-                log('  ℹ️ 无 "X more" 按钮', 'dim');
-            }
+            // 尝试点击 "X more"
+            try {
+                var xMoreR = await chrome.scripting.executeScript({
+                    target: { tabId: tabId },
+                    func: injectedClickXMore
+                });
+                var xMoreD = (xMoreR && xMoreR[0] && xMoreR[0].result) || { clicked: false };
+                if (xMoreD.clicked) {
+                    var curR = await chrome.scripting.executeScript({
+                        target: { tabId: tabId },
+                        func: function () { return document.querySelectorAll('[class*="typ-body-x30"]').length; }
+                    });
+                    var curCount = (curR && curR[0] && curR[0].result) || 0;
+                    await pollForMoreOptions(tabId, curCount, 3000);
+                }
+            } catch (e) { }
 
             // 抓取子页面数据
-            log('  📊 抓取 options...', 'dim');
             var scrapeR = await chrome.scripting.executeScript({
-                target: { tabId: subTab.id },
+                target: { tabId: tabId },
                 func: injectedScrapeSubpage
             });
             var sub = (scrapeR && scrapeR[0] && scrapeR[0].result) ||
                 { type: '', subtype: '', options: [], debug: [] };
-            sub.debug.forEach(function (l) { log('    ' + l, 'dim'); });
 
             // 组装最终数据
             var final = {
@@ -830,69 +633,228 @@ async function startSubpageScraping() {
             };
 
             var opts = (sub.options && sub.options.length > 0) ? sub.options : card.options;
-            var source = (sub.options && sub.options.length > 0) ? '子页面' : '主页面(备选)';
-            log('  📋 Options 来源: ' + source + ' (' + opts.length + '个)',
-                source === '子页面' ? 'info' : 'warn');
-
+            var source = (sub.options && sub.options.length > 0) ? '子' : '主';
             opts.forEach(function (o, j) {
                 final['option' + (j + 1)] = o.name;
                 final['value' + (j + 1)] = o.value;
-                if (o.change) final['change' + (j + 1)] = o.change; // ★ 写入 change 数据
-
-                var changeText = o.change ? ' (' + o.change + ')' : '';
-                log('    option' + (j + 1) + ': "' + o.name + '" = ' + o.value + changeText, 'data');
+                if (o.change) final['change' + (j + 1)] = o.change;
             });
 
-            results.push(final);
-            log('  ✅ 完成', 'info');
+            results[idx] = final;
+            log('[W' + workerId + '] ✅ "' + short + '" (' + source + '页' + opts.length + 'opts ' + poll.elapsed + 'ms)', 'info');
 
         } catch (err) {
-            log('  ❌ 错误: ' + err.message, 'error');
-            log('  使用主页面备选数据', 'warn');
-            results.push(buildFallback(card));
-        } finally {
-            if (subTab && autoClose) {
-                await closeTab(subTab.id);
-            } else if (subTab) {
-                log('  📌 子页面保持打开 (id:' + subTab.id + ')', 'dim');
+            log('[W' + workerId + '] ❌ "' + short + '": ' + err.message, 'error');
+            results[idx] = buildFallback(card);
+
+            // 检查标签页是否还存在
+            try {
+                await new Promise(function (resolve, reject) {
+                    chrome.tabs.get(tabId, function (t) {
+                        if (chrome.runtime.lastError) reject(new Error('gone'));
+                        else resolve(t);
+                    });
+                });
+            } catch (e) {
+                log('[W' + workerId + '] ⚠️ 标签页已关闭，工作线程退出', 'error');
+                config.onProgress();
+                break;
             }
         }
 
-        // ★ 增量保存：仅在非最后一张卡片时保存（最终保存统一在循环后执行）
-        if (doIncremental && i < cards.length - 1) {
-            saveJsonFile(results, outputFilename);
-            log('  💾 增量已保存 (' + results.length + '条)', 'data');
-        }
+        config.onProgress();
+    }
 
-        // 切回 dashboard 标签页，减少用户干扰
-        if (dashboardTabId && autoClose) {
-            try {
-                chrome.tabs.update(dashboardTabId, { active: true });
-            } catch (e) { /* ignore */ }
-        }
+    log('[W' + workerId + '] 🏁 工作线程完成', 'dim');
+}
 
-        // 短暂间隔
-        if (i < cards.length - 1) {
-            await new Promise(function (res) { setTimeout(res, 300); });
+// ============================================================
+//  Phase 2: ★ 并行子页面抓取（核心改造）
+// ============================================================
+async function startSubpageScraping() {
+    if (isRunning) return;
+    isRunning = true;
+    startBtn.disabled = true;
+    startBtn.textContent = '抓取中...';
+
+    var autoClose = document.getElementById('autoClose').checked;
+    var doIncremental = document.getElementById('incrementalSaveToggle').checked;
+    var concurrency = parseInt(document.getElementById('concurrencyInput').value, 10) || 4;
+    if (concurrency < 1) concurrency = 1;
+    if (concurrency > 8) concurrency = 8;
+
+    // 解析范围输入
+    var rangeInput = document.getElementById('rangeInput').value.trim();
+    var startIndex = 0;
+    var endIndex = -1;
+    var hasRange = false;
+
+    if (rangeInput) {
+        if (rangeInput.includes('-')) {
+            var parts = rangeInput.split('-').map(function (p) { return parseInt(p.trim(), 10); });
+            if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1]) && parts[0] > 0 && parts[1] >= parts[0]) {
+                startIndex = parts[0] - 1;
+                endIndex = parts[1];
+                hasRange = true;
+            } else {
+                log('⚠️ 范围格式错误，将抓取全部', 'warn');
+            }
+        } else {
+            var single = parseInt(rangeInput, 10);
+            if (!isNaN(single) && single > 0) {
+                startIndex = single - 1;
+                endIndex = single;
+                hasRange = true;
+            } else {
+                log('⚠️ 输入格式错误，将抓取全部', 'warn');
+            }
         }
     }
 
-    // ---- 最终保存（唯一的一次或最后一次） ----
+    var minVolumeInput = parseInt(document.getElementById('minVolume').value, 10);
+    var hasMinVolume = !isNaN(minVolumeInput) && minVolumeInput > 0;
+
+    var outputFilename = getTimestampedFilename('kalshi');
+    var cards = scrapedCards.slice();
+
+    log('', 'dim');
+    log('════════════════════════════════════════', 'section');
+    log('  Phase 2: 并行子页面抓取', 'section');
+    log('════════════════════════════════════════', 'section');
+
+    var rangeDesc = hasRange ?
+        (startIndex + 1) + '-' + endIndex + ' (共 ' + (endIndex - startIndex) + ' 个)' : '全部';
+    log('并行度=' + concurrency + '  autoClose=' + autoClose + '  增量=' + doIncremental +
+        '  范围=' + rangeDesc +
+        (hasMinVolume ? '  minVol=' + minVolumeInput : '  minVol=不限'));
+    log('📁 输出: ' + outputFilename, 'info');
+
+    // Volume 过滤
+    if (hasMinVolume) {
+        var beforeCount = cards.length;
+        cards = cards.filter(function (c) { return c.volumeNum >= minVolumeInput; });
+        log('📊 Volume 过滤: ' + beforeCount + ' → ' + cards.length + ' 个', 'warn');
+    }
+
+    // 范围过滤
+    if (hasRange) {
+        if (endIndex === -1 || endIndex > cards.length) endIndex = cards.length;
+        if (startIndex >= cards.length) {
+            log('⚠️ 起始位置超出范围', 'warn');
+            cards = [];
+        } else {
+            cards = cards.slice(startIndex, endIndex);
+            log('📊 范围过滤: 取第 ' + (startIndex + 1) + '-' + endIndex + ' 个 (' + cards.length + ' 个)', 'warn');
+        }
+    }
+
+    if (cards.length === 0) {
+        log('⚠️ 过滤后没有需要抓取的卡片', 'warn');
+        setStatus('过滤后没有需要抓取的项目', 'error');
+        startBtn.disabled = false;
+        startBtn.textContent = '开始抓取';
+        isRunning = false;
+        return;
+    }
+
+    // 调整并行度（不超过卡片数）
+    if (concurrency > cards.length) concurrency = cards.length;
+    log('📋 最终抓取 ' + cards.length + ' 个卡片，' + concurrency + ' 个并行工作线程', 'info');
+
+    // ★ 创建工作标签页池（后台创建，不抢焦点）
+    log('🚀 创建 ' + concurrency + ' 个工作标签页...', 'info');
+    var workerTabIds = [];
+    for (var w = 0; w < concurrency; w++) {
+        try {
+            var tab = await createTab('about:blank', false);
+            workerTabIds.push(tab.id);
+            log('  标签 W' + w + ' id=' + tab.id, 'dim');
+        } catch (e) {
+            log('  ⚠️ 创建第 ' + w + ' 个工作标签失败: ' + e.message, 'warn');
+        }
+    }
+
+    if (workerTabIds.length === 0) {
+        log('❌ 无法创建任何工作标签页', 'error');
+        setStatus('错误: 无法创建标签页', 'error');
+        startBtn.disabled = false;
+        startBtn.textContent = '开始抓取';
+        isRunning = false;
+        return;
+    }
+
+    // 构建共享任务队列
+    var queue = [];
+    for (var i = 0; i < cards.length; i++) {
+        queue.push({ card: cards[i], index: i });
+    }
+
+    // 稀疏结果数组（按索引填充）
+    var results = new Array(cards.length);
+    var completedCount = 0;
+    var lastSaveCount = 0;
+    var scrapeStartTime = Date.now();
+
+    function onProgress() {
+        completedCount++;
+        var pct = Math.round((completedCount / cards.length) * 100);
+        updateProgress(completedCount, cards.length, completedCount + '/' + cards.length + ' (' + pct + '%)');
+        setStatus('抓取中: ' + completedCount + '/' + cards.length + ' (' + pct + '%)');
+
+        // 每完成 10 个增量保存一次
+        if (doIncremental && completedCount - lastSaveCount >= 10) {
+            var partial = results.filter(function (r) { return r; });
+            saveJsonFile(partial, outputFilename);
+            log('💾 增量保存 (' + partial.length + '条)', 'data');
+            lastSaveCount = completedCount;
+        }
+    }
+
+    // ★ 启动所有工作线程（并行执行）
+    var workerPromises = workerTabIds.map(function (tabId, w) {
+        return workerLoop(w, tabId, queue, results, {
+            onProgress: onProgress
+        });
+    });
+
+    await Promise.all(workerPromises);
+
+    // 关闭工作标签页
+    if (autoClose) {
+        log('🧹 关闭 ' + workerTabIds.length + ' 个工作标签页...', 'dim');
+        for (var w = 0; w < workerTabIds.length; w++) {
+            await closeTab(workerTabIds[w]);
+        }
+    }
+
+    // 切回 dashboard 标签页
+    try {
+        var dashTab = await new Promise(function (resolve) {
+            chrome.tabs.getCurrent(function (t) { resolve(t); });
+        });
+        if (dashTab) {
+            chrome.tabs.update(dashTab.id, { active: true });
+        }
+    } catch (e) { }
+
+    // 最终保存
+    var finalResults = results.filter(function (r) { return r; });
     var elapsed = Math.round((Date.now() - scrapeStartTime) / 1000);
 
     log('', 'dim');
     log('════════════════════════════════════════', 'section');
-    log('  完成! 共 ' + results.length + ' 条数据, 耗时 ' + elapsed + '秒', 'section');
+    log('  完成! ' + finalResults.length + '条, 耗时 ' + elapsed + 's', 'section');
+    log('  并行度: ' + workerTabIds.length + '  平均: ' +
+        (finalResults.length > 0 ? (elapsed / finalResults.length).toFixed(1) : '0') + 's/条', 'section');
     log('════════════════════════════════════════', 'section');
 
-    // ★ 统一使用 saveJsonFile（chrome.downloads API），不弹出对话框
-    saveJsonFile(results, outputFilename);
-    log('💾 最终保存: ' + outputFilename, 'data');
+    saveJsonFile(finalResults, outputFilename);
+    log('💾 最终保存: ' + outputFilename + ' (' + finalResults.length + '条)', 'data');
 
     progressContainer.style.display = 'none';
-    setStatus('✅ 成功! ' + results.length + ' 条数据, 耗时 ' + elapsed + 's → ' + outputFilename, 'success');
+    setStatus('✅ 完成! ' + finalResults.length + ' 条, 耗时 ' + elapsed + 's, 平均 ' +
+        (finalResults.length > 0 ? (elapsed / finalResults.length).toFixed(1) : '0') + 's/条 → ' + outputFilename, 'success');
 
-    // 重置，下次点击将重新抓取主页面
     scrapedCards = null;
     startBtn.disabled = false;
     startBtn.textContent = '重新开始';
@@ -901,7 +863,7 @@ async function startSubpageScraping() {
 
 // ============ 事件 ============
 startBtn.addEventListener('click', function () {
-    if (isRunning) return; // ★ 防止重复点击
+    if (isRunning) return;
     if (scrapedCards) {
         startSubpageScraping();
     } else {
