@@ -1,13 +1,14 @@
 // ============ 配置常量 ============
-const POLYMARKET_CLICK_COUNT = 10; // 配置点击 "Show more markets" 的次数
-const CLICK_INTERVAL = 1500; // 每次点击后的等待时间（毫秒）
+const POLYMARKET_CLICK_COUNT = 20; // 配置点击 "Show more markets" 的次数
+const BUTTON_CHECK_INTERVAL = 500; // 每次检查按钮是否出现的间隔（毫秒）
+const MAX_WAIT_TIME = 30000; // 单次等待按钮出现的最大时间（毫秒）
 
 // ============ 工具函数 ============
 
 function downloadJson(data, filename) {
     const jsonData = JSON.stringify(data, null, 2);
     const blob = new Blob([jsonData], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);  // ✅ 修正：应该是 blob
     const a = document.createElement('a');
     a.style.display = 'none';
     a.href = url;
@@ -53,7 +54,7 @@ async function startScraping() {
     }
 }
 
-// ============ Polymarket 处理（增强版：自动点击展开） ============
+// ============ Polymarket 处理（增强版：持续等待按钮出现） ============
 
 async function handlePolymarket(tab, statusDiv, button) {
     const progressContainer = document.getElementById('progressContainer');
@@ -67,26 +68,21 @@ async function handlePolymarket(tab, statusDiv, button) {
         statusDiv.textContent = `正在展开更多市场 (0/${POLYMARKET_CLICK_COUNT})...`;
 
         for (let i = 0; i < POLYMARKET_CLICK_COUNT; i++) {
-            const clickResult = await chrome.scripting.executeScript({
-                target: { tabId: tab.id },
-                func: clickShowMoreButton
-            });
+            // 持续等待按钮出现
+            statusDiv.textContent = `等待按钮出现 (${i + 1}/${POLYMARKET_CLICK_COUNT})...`;
 
-            const clicked = clickResult && clickResult[0] && clickResult[0].result;
+            const buttonFound = await waitForButtonAndClick(tab);
 
-            if (!clicked) {
-                statusDiv.textContent = `已展开 ${i} 次（未找到更多按钮）`;
+            if (!buttonFound) {
+                statusDiv.textContent = `已展开 ${i} 次（等待超时，可能已加载完所有市场）`;
                 break;
             }
 
             // 更新进度
             const progress = ((i + 1) / POLYMARKET_CLICK_COUNT) * 100;
             progressBarFill.style.width = `${progress}%`;
-            progressText.textContent = `正在展开市场: ${i + 1}/${POLYMARKET_CLICK_COUNT}`;
+            progressText.textContent = `已展开市场: ${i + 1}/${POLYMARKET_CLICK_COUNT}`;
             statusDiv.textContent = `正在展开更多市场 (${i + 1}/${POLYMARKET_CLICK_COUNT})...`;
-
-            // 等待页面加载新内容
-            await new Promise(resolve => setTimeout(resolve, CLICK_INTERVAL));
 
             // 滚动到页面底部，确保新内容加载
             await chrome.scripting.executeScript({
@@ -99,8 +95,8 @@ async function handlePolymarket(tab, statusDiv, button) {
                 }
             });
 
-            // 额外等待滚动和渲染
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // 短暂等待滚动完成
+            await new Promise(resolve => setTimeout(resolve, 500));
         }
 
         // 第二步：抓取数据
@@ -141,6 +137,31 @@ async function handlePolymarket(tab, statusDiv, button) {
         statusDiv.className = 'error';
         button.disabled = false;
     }
+}
+
+// ============ 持续等待按钮出现并点击 ============
+
+async function waitForButtonAndClick(tab) {
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < MAX_WAIT_TIME) {
+        // 尝试查找并点击按钮
+        const clickResult = await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: clickShowMoreButton
+        });
+
+        const clicked = clickResult && clickResult[0] && clickResult[0].result;
+
+        if (clicked) {
+            return true; // 找到并点击了按钮
+        }
+
+        // 等待一段时间后再次检查
+        await new Promise(resolve => setTimeout(resolve, BUTTON_CHECK_INTERVAL));
+    }
+
+    return false; // 超时仍未找到按钮
 }
 
 // ============ 注入函数：点击 "Show more markets" 按钮 ============
