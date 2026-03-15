@@ -206,6 +206,66 @@ function saveJsonFile(data, filename) {
 //  注入函数（在目标页面执行，完全独立，不引用外部变量）
 // ============================================================
 
+// ---- 注入：点击 "X more" 按钮 ----
+function injectedClickXMore() {
+    var d = [];
+    var clicked = false;
+
+    // 查找所有可能的 "X more" 文本
+    var allElements = document.querySelectorAll('*');
+    var morePattern = /^\d+\s+more$/i;
+
+    for (var i = 0; i < allElements.length; i++) {
+        var text = allElements[i].textContent.trim();
+
+        if (morePattern.test(text)) {
+            d.push('Found "' + text + '"');
+
+            // 尝试找到可点击的父元素
+            var target = allElements[i];
+
+            // 检查自身是否可点击
+            if (target.tagName === 'BUTTON' ||
+                target.getAttribute('role') === 'button' ||
+                target.onclick ||
+                (target.className && target.className.includes('cursor-pointer'))) {
+                target.click();
+                d.push('Clicked element directly');
+                clicked = true;
+                break;
+            }
+
+            // 向上查找可点击的父元素
+            var parent = target;
+            for (var j = 0; j < 10; j++) {
+                parent = parent.parentElement;
+                if (!parent) break;
+
+                if (parent.tagName === 'BUTTON' ||
+                    parent.getAttribute('role') === 'button' ||
+                    parent.onclick ||
+                    (parent.className && (
+                        parent.className.includes('cursor-pointer') ||
+                        parent.className.includes('stretched-link')
+                    ))) {
+                    parent.click();
+                    d.push('Clicked parent element');
+                    clicked = true;
+                    break;
+                }
+            }
+
+            if (clicked) break;
+        }
+    }
+
+    if (!clicked) {
+        d.push('"X more" button NOT found');
+    }
+
+    return { clicked: clicked, debug: d };
+}
+
 // ---- 注入：主页面卡片基本信息 ----
 function injectedScrapeMainPage() {
     var predictions = [];
@@ -254,9 +314,15 @@ function injectedScrapeMainPage() {
                     var optName = clean(nameEl.textContent);
                     var v = clean(valEl.textContent);
 
-                    // ★ 过滤 "Show less" 和 "X more"
+                    // ★ 过滤 "Show less"
                     var optNameLower = optName.toLowerCase().trim();
                     if (optNameLower === 'show less') {
+                        return; // 跳过此 option
+                    }
+
+                    // ★ 过滤 "Hide markets"
+                    var optNameLower = optName.toLowerCase().trim();
+                    if (optNameLower === 'Hide markets') {
                         return; // 跳过此 option
                     }
 
@@ -402,8 +468,13 @@ function injectedScrapeSubpage() {
     result.options = result.options.filter(function (opt) {
         var optName = opt.name.toLowerCase().trim();
 
-        // 需求1: 过滤 "Show less" 和 "X more" 模式
+        // 需求1: 过滤 "Show less"
         if (optName === 'show less') {
+            d.push('Filtered out: "' + opt.name + '"');
+            return false;
+        }
+        // 需求2: 过滤 "Hide markets"
+        if (optName === 'hide markets') {
             d.push('Filtered out: "' + opt.name + '"');
             return false;
         }
@@ -704,12 +775,39 @@ async function startSubpageScraping() {
             var clickD = (clickR && clickR[0] && clickR[0].result) || { clicked: false, debug: [] };
 
             if (clickD.clicked) {
-                log('  ✅ 已点击展开，轮询等待新选项...', 'info');
+                log('  ✅ 已点击 "More markets"，轮询等待新选项...', 'info');
                 var moreResult = await pollForMoreOptions(subTab.id, poll.optionCount, 5000);
                 log('  ' + (moreResult.expanded ? '✅ 选项已展开' : '⚠️ 展开超时') +
                     ' (' + moreResult.elapsed + 'ms)', moreResult.expanded ? 'info' : 'warn');
             } else {
-                log('  ℹ️ 无需展开', 'dim');
+                log('  ℹ️ 无 "More markets" 按钮', 'dim');
+            }
+
+            // ★ 新增：点击 "X more" 按钮
+            log('  🖱️ 查找 "X more" 按钮...', 'dim');
+            var xMoreClickR = await chrome.scripting.executeScript({
+                target: { tabId: subTab.id },
+                func: injectedClickXMore
+            });
+            var xMoreClickD = (xMoreClickR && xMoreClickR[0] && xMoreClickR[0].result) || { clicked: false, debug: [] };
+
+            if (xMoreClickD.clicked) {
+                log('  ✅ 已点击 "X more"，轮询等待新选项...', 'info');
+
+                // 重新获取当前选项数量
+                var currentCountR = await chrome.scripting.executeScript({
+                    target: { tabId: subTab.id },
+                    func: function () {
+                        return document.querySelectorAll('[class*="typ-body-x30"]').length;
+                    }
+                });
+                var currentCount = (currentCountR && currentCountR[0] && currentCountR[0].result) || 0;
+
+                var xMoreResult = await pollForMoreOptions(subTab.id, currentCount, 5000);
+                log('  ' + (xMoreResult.expanded ? '✅ 选项已展开' : '⚠️ 展开超时') +
+                    ' (' + xMoreResult.elapsed + 'ms)', xMoreResult.expanded ? 'info' : 'warn');
+            } else {
+                log('  ℹ️ 无 "X more" 按钮', 'dim');
             }
 
             // 抓取子页面数据
