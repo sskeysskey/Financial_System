@@ -27,6 +27,8 @@ async function startScraping() {
     const button = document.getElementById('scrapeBtn');
     const statusDiv = document.getElementById('status');
     const titleEl = document.getElementById('title');
+    const kalshiConfig = document.getElementById('kalshiConfig');
+    const scrollCountInput = document.getElementById('scrollCountInput');
 
     button.disabled = true;
     statusDiv.textContent = '正在自动检测网站...';
@@ -38,11 +40,21 @@ async function startScraping() {
 
         if (url.includes('polymarket.com')) {
             titleEl.textContent = 'Polymarket 数据抓取';
+            kalshiConfig.style.display = 'none';
             await handlePolymarket(tab, statusDiv, button);
         } else if (url.includes('kalshi.com')) {
             titleEl.textContent = 'Kalshi 数据抓取';
+            kalshiConfig.style.display = 'block';
+
+            // 保存用户配置
+            const scrollCount = parseInt(scrollCountInput.value, 10);
+            if (scrollCount >= 1 && scrollCount <= 50) {
+                localStorage.setItem('kalshiScrollCount', scrollCount.toString());
+            }
+
             await handleKalshi(tab, statusDiv, button);
         } else {
+            kalshiConfig.style.display = 'none';
             statusDiv.textContent = '请在 Polymarket 或 Kalshi 页面使用此扩展';
             statusDiv.className = 'error';
             button.disabled = false;
@@ -183,18 +195,79 @@ function clickShowMoreButton() {
     return false;
 }
 
-// ============ Kalshi 处理 → 打开调试面板（自动开始） ============
+// ============ Kalshi 滚屏函数 ============
 
-async function handleKalshi(tab, statusDiv, button) {
-    const dashboardUrl = chrome.runtime.getURL('dashboard.html') + '?mainTabId=' + tab.id + '&auto=1';
-    chrome.tabs.create({ url: dashboardUrl, active: true });
-    statusDiv.textContent = '已打开 Kalshi 调试面板（自动抓取中）';
-    statusDiv.className = 'info';
-    button.disabled = false;
+async function scrollKalshiPage(tab, scrollCount, statusDiv, progressBarFill, progressText) {
+    statusDiv.textContent = `正在滚动 Kalshi 页面 (0/${scrollCount})...`;
+
+    for (let i = 0; i < scrollCount; i++) {
+        // 滚动到页面底部
+        await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: () => {
+                window.scrollTo({
+                    top: document.body.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }
+        });
+
+        // 更新进度
+        const progress = ((i + 1) / scrollCount) * 100;
+        progressBarFill.style.width = `${progress}%`;
+        progressText.textContent = `滚动进度: ${i + 1}/${scrollCount}`;
+        statusDiv.textContent = `正在滚动 Kalshi 页面 (${i + 1}/${scrollCount})...`;
+
+        // 等待内容加载（每次滚动间隔 1.5 秒）
+        await new Promise(resolve => setTimeout(resolve, 1500));
+    }
+
+    // 滚动回顶部
+    await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 800));
 }
 
-// ============ Polymarket 主页面抓取函数（保持原逻辑不变） ============
+// ============ Kalshi 处理（完整版，包含滚屏）============
+async function handleKalshi(tab, statusDiv, button) {
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBarFill = document.getElementById('progressBarFill');
+    const progressText = document.getElementById('progressText');
 
+    progressContainer.style.display = 'block';
+
+    try {
+        // 从 localStorage 获取滚动次数配置，默认 20 次
+        const scrollCount = parseInt(localStorage.getItem('kalshiScrollCount') || '20', 10);
+
+        // 第一步：滚动页面
+        await scrollKalshiPage(tab, scrollCount, statusDiv, progressBarFill, progressText);
+
+        // 第二步：打开调试面板开始抓取
+        progressContainer.style.display = 'none';
+        const dashboardUrl = chrome.runtime.getURL('dashboard.html') + '?mainTabId=' + tab.id + '&auto=1';
+        chrome.tabs.create({ url: dashboardUrl, active: true });
+        statusDiv.textContent = `已完成 ${scrollCount} 次滚动，正在打开调试面板...`;
+        statusDiv.className = 'success';
+        button.disabled = false;
+        button.textContent = '重新抓取';
+    } catch (error) {
+        progressContainer.style.display = 'none';
+        statusDiv.textContent = '滚动失败: ' + error.message;
+        statusDiv.className = 'error';
+        button.disabled = false;
+    }
+}
+
+// ============ Polymarket 抓取函数 ============
 function scrapePolymarketPageData() {
     const predictions = [];
 
@@ -265,6 +338,12 @@ function scrapePolymarketPageData() {
 // ============ 事件监听 ============
 
 document.addEventListener('DOMContentLoaded', () => {
+    // 加载保存的滚动次数配置
+    const savedScrollCount = localStorage.getItem('kalshiScrollCount');
+    if (savedScrollCount) {
+        document.getElementById('scrollCountInput').value = savedScrollCount;
+    }
+
     startScraping();
 });
 

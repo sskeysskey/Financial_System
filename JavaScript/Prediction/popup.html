@@ -87,6 +87,20 @@
 <body>
     <h2 id="title">预测市场数据抓取</h2>
     <button id="scrapeBtn">重新抓取</button>
+
+    <!-- Kalshi 滚动配置 -->
+    <div id="kalshiConfig"
+        style="display:none; margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 4px;">
+        <label style="display: block; margin-bottom: 5px; font-size: 13px;">
+            Kalshi 滚动次数:
+            <input type="number" id="scrollCountInput" value="20" min="1" max="50"
+                style="width: 60px; padding: 4px; margin-left: 5px; border: 1px solid #ccc; border-radius: 3px;">
+        </label>
+        <div style="font-size: 11px; color: #666; margin-top: 4px;">
+            建议: 10-30次，每次约1.5秒
+        </div>
+    </div>
+
     <div id="status"></div>
     <div id="progressContainer" class="progress-container">
         <div class="progress-bar">
