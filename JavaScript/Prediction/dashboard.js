@@ -251,18 +251,33 @@ function injectedScrapeMainPage() {
                     if (sb) valEl = sb.querySelector('span.tabular-nums');
                 }
                 if (nameEl && valEl) {
+                    var optName = clean(nameEl.textContent);
                     var v = clean(valEl.textContent);
+
+                    // ★ 过滤 "Show less" 和 "X more"
+                    var optNameLower = optName.toLowerCase().trim();
+                    if (optNameLower === 'show less') {
+                        return; // 跳过此 option
+                    }
+
                     // 抓取 change
                     var cEl = row.querySelector('[class*="typ-emphasis-x10"]');
                     var change = cEl ? clean(cEl.textContent) : '';
 
                     options.push({
-                        name: clean(nameEl.textContent),
+                        name: optName,
                         value: v.includes('%') ? v : v + '%',
                         change: change
                     });
                 }
             });
+
+            // ★ 如果 options > 10，过滤 <1%
+            if (options.length > 10) {
+                options = options.filter(function (opt) {
+                    return opt.value.trim() !== '<1%';
+                });
+            }
 
             predictions.push({ name: name, subUrl: subUrl, volume: volume, options: options, fallbackType: fallbackType, fallbackSubtype: fallbackSubtype });
         } catch (e) { /* skip */ }
@@ -365,7 +380,7 @@ function injectedScrapeSubpage() {
         flexDivs.forEach(function (div) {
             var nEl = div.querySelector('[class*="typ-body-x30"]');
             var vEl = div.querySelector('[class*="typ-headline-x10"]');
-            var cEl = div.querySelector('[class*="typ-emphasis-x10"]'); // 抓取 change
+            var cEl = div.querySelector('[class*="typ-emphasis-x10"]');
 
             if (nEl && vEl) {
                 var name = nEl.textContent.trim().replace(/\s+/g, ' ');
@@ -381,7 +396,35 @@ function injectedScrapeSubpage() {
         });
     }
 
-    d.push('Options count: ' + result.options.length);
+    d.push('Options count before filtering: ' + result.options.length);
+
+    // ★★★ 新增：过滤逻辑 ★★★
+    result.options = result.options.filter(function (opt) {
+        var optName = opt.name.toLowerCase().trim();
+
+        // 需求1: 过滤 "Show less" 和 "X more" 模式
+        if (optName === 'show less') {
+            d.push('Filtered out: "' + opt.name + '"');
+            return false;
+        }
+        return true;
+    });
+
+    // 需求2: 如果超过10个option，过滤掉所有 <1%
+    if (result.options.length > 10) {
+        d.push('Options > 10, filtering <1% values...');
+        var beforeFilter = result.options.length;
+        result.options = result.options.filter(function (opt) {
+            if (opt.value.trim() === '<1%') {
+                d.push('Filtered out <1%: "' + opt.name + '"');
+                return false;
+            }
+            return true;
+        });
+        d.push('Filtered ' + (beforeFilter - result.options.length) + ' options with <1%');
+    }
+
+    d.push('Options count after filtering: ' + result.options.length);
     result.debug = d;
     return result;
 }
