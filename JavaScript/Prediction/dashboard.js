@@ -252,7 +252,15 @@ function injectedScrapeMainPage() {
                 }
                 if (nameEl && valEl) {
                     var v = clean(valEl.textContent);
-                    options.push({ name: clean(nameEl.textContent), value: v.includes('%') ? v : v + '%' });
+                    // 抓取 change
+                    var cEl = row.querySelector('[class*="typ-emphasis-x10"]');
+                    var change = cEl ? clean(cEl.textContent) : '';
+
+                    options.push({
+                        name: clean(nameEl.textContent),
+                        value: v.includes('%') ? v : v + '%',
+                        change: change
+                    });
                 }
             });
 
@@ -342,8 +350,13 @@ function injectedScrapeSubpage() {
         }
 
         var value = valueEl ? valueEl.textContent.trim() : '';
+
+        // 抓取 change
+        var changeEl = container ? container.querySelector('[class*="typ-emphasis-x10"]') : null;
+        var change = changeEl ? changeEl.textContent.trim().replace(/\s+/g, ' ') : '';
+
         seen[rawName] = true;
-        result.options.push({ name: rawName, value: value });
+        result.options.push({ name: rawName, value: value, change: change });
     });
 
     // 3. Approach B fallback
@@ -352,13 +365,17 @@ function injectedScrapeSubpage() {
         flexDivs.forEach(function (div) {
             var nEl = div.querySelector('[class*="typ-body-x30"]');
             var vEl = div.querySelector('[class*="typ-headline-x10"]');
+            var cEl = div.querySelector('[class*="typ-emphasis-x10"]'); // 抓取 change
+
             if (nEl && vEl) {
                 var name = nEl.textContent.trim().replace(/\s+/g, ' ');
                 var val = vEl.textContent.trim();
+                var change = cEl ? cEl.textContent.trim().replace(/\s+/g, ' ') : '';
+
                 if (name && name.toLowerCase().indexOf('more market') === -1 &&
                     name.toLowerCase().indexOf('fewer market') === -1 && !seen[name]) {
                     seen[name] = true;
-                    result.options.push({ name: name, value: val });
+                    result.options.push({ name: name, value: val, change: change });
                 }
             }
         });
@@ -381,6 +398,7 @@ function buildFallback(card) {
     card.options.forEach(function (o, i) {
         r['option' + (i + 1)] = o.name;
         r['value' + (i + 1)] = o.value;
+        if (o.change) r['change' + (i + 1)] = o.change;
     });
     return r;
 }
@@ -635,7 +653,10 @@ async function startSubpageScraping() {
             opts.forEach(function (o, j) {
                 final['option' + (j + 1)] = o.name;
                 final['value' + (j + 1)] = o.value;
-                log('    option' + (j + 1) + ': "' + o.name + '" = ' + o.value, 'data');
+                if (o.change) final['change' + (j + 1)] = o.change; // ★ 写入 change 数据
+
+                var changeText = o.change ? ' (' + o.change + ')' : '';
+                log('    option' + (j + 1) + ': "' + o.name + '" = ' + o.value + changeText, 'data');
             });
 
             results.push(final);

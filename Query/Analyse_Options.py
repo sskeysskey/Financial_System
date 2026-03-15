@@ -22,8 +22,8 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 # 备份文件所在的文件夹路径 (自动模式用)
 BACKUP_DIR = os.path.join(BASE_CODING_DIR, "News", "backup")
 
-# 输出文件的配置 (a.py 输出)
-OUTPUT_DIR = os.path.join(BASE_CODING_DIR, "News")
+# 【修改】将输出路径改为 Database 目录
+OUTPUT_DIR = os.path.join(BASE_CODING_DIR, "Database")
 OUTPUT_FILENAME = 'Options_Change.csv'
 
 # 【修改】文件名改为 History，暗示这是一个累加的文件
@@ -385,6 +385,107 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
     return final_output
 
 # ==========================================
+# [新增] 独立出来的数据库写入函数
+# ==========================================
+def save_results_to_db(processed_data, db_path, table_name, iv_divisor):
+    """
+    将计算完毕的 processed_data 写入到 SQLite 数据库中。
+    如果需要临时关闭数据库写入，只需在调用处注释掉此函数即可。
+    """
+    print(f"正在连接数据库: {db_path} ...")
+    
+    # 设定写入日期
+    target_date = (pd.Timestamp.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+    print(f"写入日期设定为: {target_date}")
+    
+    conn = sqlite3.connect(db_path, timeout=60.0)
+    cursor = conn.cursor()
+
+    # 1. 建表(增加 iv2 字段)
+    create_table_sql = f"""
+    CREATE TABLE IF NOT EXISTS {table_name} (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT,
+        name TEXT,
+        call TEXT,
+        put TEXT,
+        price REAL,
+        change REAL,
+        iv TEXT,
+        iv2 TEXT,
+        UNIQUE(date, name)
+    )
+    """
+    cursor.execute(create_table_sql)
+
+    # 2. 检查并自动添加列
+    for col_name, col_type in [('change', 'REAL'), ('iv', 'TEXT'), ('iv2', 'TEXT')]:
+        try:
+            cursor.execute(f"SELECT {col_name} FROM {table_name} LIMIT 1")
+        except:
+            print(f"检测到缺少 '{col_name}' 列，正在添加...")
+            try:
+                cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_type}")
+            except Exception as e:
+                print(f"添加 {col_name} 列失败: {e}")
+
+    query_prev_price_sql = f"SELECT price FROM {table_name} WHERE name = ? AND date < ? ORDER BY date DESC LIMIT 1"
+    
+    insert_sql = f"""
+    INSERT INTO {table_name} (date, name, call, put, price, change, iv, iv2)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(date, name) DO UPDATE SET
+        call=excluded.call,
+        put=excluded.put,
+        price=excluded.price,
+        change=excluded.change,
+        iv=excluded.iv,
+        iv2=excluded.iv2
+    """
+    
+    count_success = 0
+    
+    for symbol, values in processed_data.items():
+        # --- 策略 1 结果 ---
+        raw_call_d = values['Call']
+        raw_put_d = values['Put']
+        call_str = f"{raw_call_d * 100:.2f}%"
+        put_str = f"{raw_put_d * 100:.2f}%"
+        final_price = round((raw_call_d + raw_put_d) * 100, 2)
+        
+        # 计算 Change
+        change_val = None
+        try:
+            cursor.execute(query_prev_price_sql, (symbol, target_date))
+            row = cursor.fetchone()
+            if row and row[0] is not None:
+                prev_price = row[0]
+                change_val = round(final_price - prev_price, 2)
+        except:
+            change_val = None
+            
+        # --- 策略 2 结果 ---
+        sum_a = values['Call_IV_Sum']
+        sum_b = values['Put_IV_Sum']
+        raw_iv_val = (sum_a + sum_b) / iv_divisor
+        final_iv = f"{raw_iv_val:.2f}%"
+
+        # 策略 3
+        raw_iv2_val = values.get('IV2', 0)
+        final_iv2 = f"{raw_iv2_val * 100:.2f}%"
+
+        try:
+            cursor.execute(insert_sql, (target_date, symbol, call_str, put_str, final_price, change_val, final_iv, final_iv2))
+            count_success += 1
+        except Exception as e:
+            print(f"错误: 写入/更新 {symbol} 失败: {e}")
+
+    conn.commit()
+    conn.close()
+    print(f"入库完成！已处理（插入或更新）: {count_success} 条数据")
+
+
+# ==========================================
 # [Part B] 计算 D-Score, IV 及 IV2 并入库
 # ==========================================
 # 修改点：增加 iv_divisor, iv_threshold, iv_adj_factor 参数
@@ -724,104 +825,12 @@ def calculate_d_score_from_df(df_input, db_path, debug_path, n_config, iv_n_conf
             with open(debug_path, 'a') as f: f.write('\n'.join(log_lines) + '\n')
 
     # =========================================================================
-    # 数据库写入逻辑
+    # 数据库写入逻辑 (已抽取为独立函数)
     # =========================================================================
-    print(f"正在连接数据库: {db_path} ...")
+    # 💡 如果你暂时不想写数据库，只需把下面这行注释掉即可：
+    # save_results_to_db(processed_data, db_path, TABLE_NAME, iv_divisor)
     
-    # 设定写入日期
-    target_date = (pd.Timestamp.now() - timedelta(days=1)).strftime('%Y-%m-%d')
-    print(f"写入日期设定为: {target_date}")
-    
-    conn = sqlite3.connect(db_path, timeout=60.0)
-    cursor = conn.cursor()
-
-    # 1. 建表(增加 iv2 字段)
-    # 注意: IV 字段类型现在建议为 TEXT 以存储百分比字符串
-    create_table_sql = f"""
-    CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        date TEXT,
-        name TEXT,
-        call TEXT,
-        put TEXT,
-        price REAL,
-        change REAL,
-        iv TEXT,
-        iv2 TEXT,
-        UNIQUE(date, name)
-    )
-    """
-    cursor.execute(create_table_sql)
-
-    # 2. 检查并自动添加列
-    # 如果列已存在 (即使是 REAL 类型)，SQLite 也允许存入字符串，所以这里逻辑兼容性很高
-    for col_name, col_type in [('change', 'REAL'), ('iv', 'TEXT'), ('iv2', 'TEXT')]:
-        try:
-            cursor.execute(f"SELECT {col_name} FROM {TABLE_NAME} LIMIT 1")
-        except:
-            print(f"检测到缺少 '{col_name}' 列，正在添加...")
-            try:
-                cursor.execute(f"ALTER TABLE {TABLE_NAME} ADD COLUMN {col_name} {col_type}")
-            except Exception as e:
-                print(f"添加 {col_name} 列失败: {e}")
-
-    query_prev_price_sql = f"SELECT price FROM {TABLE_NAME} WHERE name = ? AND date < ? ORDER BY date DESC LIMIT 1"
-    
-    insert_sql = f"""
-    INSERT INTO {TABLE_NAME} (date, name, call, put, price, change, iv, iv2)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(date, name) DO UPDATE SET
-        call=excluded.call,
-        put=excluded.put,
-        price=excluded.price,
-        change=excluded.change,
-        iv=excluded.iv,
-        iv2=excluded.iv2
-    """
-    
-    count_success = 0
-    
-    for symbol, values in processed_data.items():
-        # --- 策略 1 结果 ---
-        raw_call_d = values['Call']
-        raw_put_d = values['Put']
-        call_str = f"{raw_call_d * 100:.2f}%"
-        put_str = f"{raw_put_d * 100:.2f}%"
-        final_price = round((raw_call_d + raw_put_d) * 100, 2)
-        
-        # 计算 Change
-        change_val = None
-        try:
-            cursor.execute(query_prev_price_sql, (symbol, target_date))
-            row = cursor.fetchone()
-            if row and row[0] is not None:
-                prev_price = row[0]
-                change_val = round(final_price - prev_price, 2)
-        except:
-            change_val = None
-            
-        # --- 策略 2 结果 ---
-        # [修改点] 使用配置的 iv_divisor
-        sum_a = values['Call_IV_Sum']
-        sum_b = values['Put_IV_Sum']
-        raw_iv_val = (sum_a + sum_b) / iv_divisor
-        
-        # [修改] 格式化为百分比字符串，保留2位小数
-        final_iv = f"{raw_iv_val:.2f}%"
-
-        # 策略 3
-        raw_iv2_val = values.get('IV2', 0)
-        final_iv2 = f"{raw_iv2_val * 100:.2f}%" # 假设 iv2 也转为百分比存储，如果不需要百分号可去掉 *100
-
-        try:
-            cursor.execute(insert_sql, (target_date, symbol, call_str, put_str, final_price, change_val, final_iv, final_iv2))
-            count_success += 1
-        except Exception as e:
-            print(f"错误: 写入/更新 {symbol} 失败: {e}")
-
-    conn.commit()
-    conn.close()
-    print(f"入库完成！已处理（插入或更新）: {count_success} 条数据")
+    return processed_data
 
 # ==========================================
 # 工具函数 & Main

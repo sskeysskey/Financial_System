@@ -41,8 +41,8 @@ TIMESTAMP_BACKUP_SOURCES = [
     os.path.join(USER_HOME, 'Coding/News/CompareStock.txt'),
     os.path.join(USER_HOME, 'Coding/News/CompareETFs.txt'),
     os.path.join(USER_HOME, 'Coding/News/10Y_newhigh_stock.txt'), # 触发 Intro_Symbol
-    os.path.join(USER_HOME, 'Coding/News/Options_Change.csv'),
-    os.path.join(USER_HOME, 'Coding/News/Options_History.csv'),
+    os.path.join(USER_HOME, 'Coding/Database/Options_Change.csv'),
+    os.path.join(USER_HOME, 'Coding/Database/Options_History.csv'),
     os.path.join(USER_HOME, 'Coding/Financial_System/Modules/Earning_History.json'),
     os.path.join(USER_HOME, 'Coding/News/0.5Y_volume_high.txt'),
 ]

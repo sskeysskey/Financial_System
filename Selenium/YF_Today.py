@@ -477,9 +477,9 @@ if __name__ == "__main__":
     weekdays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
     today_str = weekdays[today_num]
     
-    # 逻辑：周二(1) 到 周六(5) 允许执行
-    if today_num in [1, 2, 3, 4, 5]:
-        print(f"✅ 当前是 {today_str} (星期{today_num})，符合执行条件 (周二至周六)，开始任务...")
-        scrape_history()
-    else:
-        print(f"⚠️ 当前是 {today_str} (星期{today_num})，不符合执行条件 (周二至周六)，程序退出。")
+    # # 逻辑：周二(1) 到 周六(5) 允许执行
+    # if today_num in [1, 2, 3, 4, 5]:
+    #     print(f"✅ 当前是 {today_str} (星期{today_num})，符合执行条件 (周二至周六)，开始任务...")
+    scrape_history()
+    # else:
+    #     print(f"⚠️ 当前是 {today_str} (星期{today_num})，不符合执行条件 (周二至周六)，程序退出。")

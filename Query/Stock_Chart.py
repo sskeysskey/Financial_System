@@ -3,7 +3,7 @@ import sys
 import json
 import subprocess
 import pyperclip
-import platform  # <--- 新增
+import platform
 from functools import lru_cache
 import concurrent.futures
 import sqlite3
