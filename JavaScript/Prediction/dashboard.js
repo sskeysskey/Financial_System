@@ -124,12 +124,13 @@ async function pollForContent(tabId, maxMs) {
                 target: { tabId: tabId },
                 func: function () {
                     var opts = document.querySelectorAll('[class*="typ-body-x30"]');
+                    var h1 = document.querySelector('h1');
                     var isBotPage = !!document.getElementById('challenge-form') ||
                         !!document.querySelector('.cf-browser-verification') ||
                         document.title.toLowerCase().includes('just a moment') ||
                         !!document.querySelector('[id*="turnstile"]');
                     return {
-                        hasContent: opts.length > 0,
+                        hasContent: opts.length > 0 && !!h1,
                         optionCount: opts.length,
                         isBotPage: isBotPage
                     };
@@ -355,52 +356,73 @@ function injectedScrapeSubpage() {
     var d = [];
     var result = { type: '', subtype: '', options: [] };
 
-    // ★ 新增：从面包屑导航中抓取 type 和 subtype
+    // ★ 从面包屑导航中抓取 type 和 subtype
     try {
-        // 查找所有包含 "Politics"、"US Elections" 等类别的链接
-        var categoryLinks = document.querySelectorAll('a[href^="/category/"]');
         var categories = [];
 
-        categoryLinks.forEach(function (link) {
-            var span = link.querySelector('span.typ-body-x20');
-            if (span) {
-                var text = span.textContent.trim().replace(/\s+/g, ' ');
-                if (text && categories.indexOf(text) === -1) {
-                    categories.push(text);
-                }
-            }
-        });
+        // 策略1：从 h1（市场标题）的父容器中查找面包屑链接
+        // 面包屑和 h1 在同一个 flex-col 容器里
+        var h1 = document.querySelector('h1');
+        var searchRoot = h1 ? h1.parentElement : null;
 
-        // 第一个是 type，第二个是 subtype
-        if (categories.length > 0) {
-            result.type = categories[0];
-            d.push('Found type: ' + result.type);
-        }
-        if (categories.length > 1) {
-            result.subtype = categories[1];
-            d.push('Found subtype: ' + result.subtype);
-        }
-
-        // 如果没找到，尝试备用方法：直接查找特定结构
-        if (!result.type) {
-            var breadcrumbSpans = document.querySelectorAll('span.typ-body-x20');
-            var foundCategories = [];
-            breadcrumbSpans.forEach(function (span) {
-                var text = span.textContent.trim().replace(/\s+/g, ' ');
-                var parent = span.closest('a');
-                if (parent && parent.href && parent.href.includes('/category/')) {
-                    if (text && foundCategories.indexOf(text) === -1) {
-                        foundCategories.push(text);
+        if (searchRoot) {
+            var bcLinks = searchRoot.querySelectorAll('a');
+            for (var bi = 0; bi < bcLinks.length; bi++) {
+                var href = bcLinks[bi].getAttribute('href') || '';
+                // ★ 同时匹配 /category/ 和 /sports/ 两种 href 模式
+                if (href.indexOf('/category/') !== -1 || href.indexOf('/sports/') !== -1) {
+                    var span = bcLinks[bi].querySelector('span[class*="typ-body-x20"]');
+                    if (span) {
+                        var text = span.textContent.trim().replace(/\s+/g, ' ');
+                        if (text && text !== '•' && text !== '·' && categories.indexOf(text) === -1) {
+                            categories.push(text);
+                        }
                     }
                 }
-            });
-            if (foundCategories.length > 0) result.type = foundCategories[0];
-            if (foundCategories.length > 1) result.subtype = foundCategories[1];
+            }
+        }
+
+        // 策略2：如果策略1没找到（h1 不存在或容器结构不同），搜索全文档（排除导航栏）
+        if (categories.length === 0) {
+            d.push('h1-based search found nothing, trying document-wide...');
+            var allAs = document.querySelectorAll('a');
+            for (var ai = 0; ai < allAs.length; ai++) {
+                var aHref = allAs[ai].getAttribute('href') || '';
+                if (aHref.indexOf('/category/') !== -1 || aHref.indexOf('/sports/') !== -1) {
+                    // 排除导航栏里的链接，避免误抓
+                    if (allAs[ai].closest('nav')) continue;
+                    if (allAs[ai].closest('[data-testid*="navbar"]')) continue;
+                    var aSpan = allAs[ai].querySelector('span[class*="typ-body-x20"]');
+                    if (aSpan) {
+                        var aText = aSpan.textContent.trim().replace(/\s+/g, ' ');
+                        if (aText && aText !== '•' && aText !== '·' && categories.indexOf(aText) === -1) {
+                            categories.push(aText);
+                        }
+                    }
+                }
+            }
+        }
+
+        d.push('Breadcrumbs (' + categories.length + '): ' + categories.join(' > '));
+
+        // ★ 规则：
+        //   1 个分类 → type = subtype = 该分类
+        //   2 个分类 → type = 第1个, subtype = 第2个
+        //   3 个及以上 → type = 第1个, subtype = 第2个（忽略后面的）
+        if (categories.length === 1) {
+            result.type = categories[0];
+            result.subtype = categories[0];
+            d.push('Single category → type=subtype=' + categories[0]);
+        } else if (categories.length >= 2) {
+            result.type = categories[0];
+            result.subtype = categories[1];
+            d.push('type=' + categories[0] + ', subtype=' + categories[1]);
         }
     } catch (e) {
         d.push('Category extraction error: ' + e.message);
     }
 
+    // ★ 选项抓取（以下逻辑不变）
     var seen = {};
     var section = document.querySelector('section');
     var root = section || document;
