@@ -272,14 +272,6 @@ function injectedScrapeMainPage() {
             if (!subLink) return;
             var subUrl = subLink.getAttribute('href');
 
-            var catLink = card.querySelector('a[href^="/category/"]');
-            var fallbackType = '', fallbackSubtype = '';
-            if (catLink) {
-                fallbackSubtype = clean(catLink.textContent);
-                var parts = (catLink.getAttribute('href') || '').replace('/category/', '').split('/');
-                if (parts[0]) fallbackType = cap(parts[0]);
-            }
-
             var volume = '';
             var spans = card.querySelectorAll('span');
             for (var si = 0; si < spans.length; si++) {
@@ -317,7 +309,7 @@ function injectedScrapeMainPage() {
                 });
             }
 
-            predictions.push({ name: name, subUrl: subUrl, volume: volume, options: options, fallbackType: fallbackType, fallbackSubtype: fallbackSubtype });
+            predictions.push({ name: name, subUrl: subUrl, volume: volume, options: options });
         } catch (e) { /* skip */ }
     });
     return predictions;
@@ -363,14 +355,51 @@ function injectedScrapeSubpage() {
     var d = [];
     var result = { type: '', subtype: '', options: [] };
 
-    var catLinks = document.querySelectorAll('a[href^="/category/"]');
-    var cats = [];
-    catLinks.forEach(function (a) {
-        var t = a.textContent.trim().replace(/\s+/g, ' ');
-        if (t && cats.indexOf(t) === -1) cats.push(t);
-    });
-    if (cats.length > 0) result.type = cats[0];
-    if (cats.length > 1) result.subtype = cats[1];
+    // ★ 新增：从面包屑导航中抓取 type 和 subtype
+    try {
+        // 查找所有包含 "Politics"、"US Elections" 等类别的链接
+        var categoryLinks = document.querySelectorAll('a[href^="/category/"]');
+        var categories = [];
+
+        categoryLinks.forEach(function (link) {
+            var span = link.querySelector('span.typ-body-x20');
+            if (span) {
+                var text = span.textContent.trim().replace(/\s+/g, ' ');
+                if (text && categories.indexOf(text) === -1) {
+                    categories.push(text);
+                }
+            }
+        });
+
+        // 第一个是 type，第二个是 subtype
+        if (categories.length > 0) {
+            result.type = categories[0];
+            d.push('Found type: ' + result.type);
+        }
+        if (categories.length > 1) {
+            result.subtype = categories[1];
+            d.push('Found subtype: ' + result.subtype);
+        }
+
+        // 如果没找到，尝试备用方法：直接查找特定结构
+        if (!result.type) {
+            var breadcrumbSpans = document.querySelectorAll('span.typ-body-x20');
+            var foundCategories = [];
+            breadcrumbSpans.forEach(function (span) {
+                var text = span.textContent.trim().replace(/\s+/g, ' ');
+                var parent = span.closest('a');
+                if (parent && parent.href && parent.href.includes('/category/')) {
+                    if (text && foundCategories.indexOf(text) === -1) {
+                        foundCategories.push(text);
+                    }
+                }
+            });
+            if (foundCategories.length > 0) result.type = foundCategories[0];
+            if (foundCategories.length > 1) result.subtype = foundCategories[1];
+        }
+    } catch (e) {
+        d.push('Category extraction error: ' + e.message);
+    }
 
     var seen = {};
     var section = document.querySelector('section');
@@ -444,8 +473,8 @@ function injectedScrapeSubpage() {
 function buildFallback(card) {
     var r = {
         name: card.name,
-        type: card.fallbackType || '',
-        subtype: card.fallbackSubtype || '',
+        type: '',        // ★ 改：fallback 时留空，因为主页面类型不准确
+        subtype: '',     // ★ 改：fallback 时留空
         volume: card.volume,
         hide: "1"
     };
@@ -626,8 +655,8 @@ async function workerLoop(workerId, tabId, queue, results, config) {
             // 组装最终数据
             var final = {
                 name: card.name,
-                type: sub.type || card.fallbackType || '',
-                subtype: sub.subtype || card.fallbackSubtype || '',
+                type: sub.type || '',      // ★ 改：优先使用子页面的 type，不再使用 fallback
+                subtype: sub.subtype || '', // ★ 改：优先使用子页面的 subtype，不再使用 fallback
                 volume: card.volume,
                 hide: "1"
             };

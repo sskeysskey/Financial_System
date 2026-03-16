@@ -1,20 +1,11 @@
 document.addEventListener('DOMContentLoaded', function () {
   const statusDiv = document.getElementById('status');
   const progressBar = document.getElementById('progressBar');
-  const logContainer = document.getElementById('logContainer');
+  const logContainer = document.getElementById('logContainer'); // 获取日志容器
 
   let allResults = [];
-  let completedCount = 0;
 
-  // ====== 关键参数 ======
-  const CONCURRENCY = 4;   // 同时打开4个标签页并发抓取
-  const MAX_RETRIES = 3;
-  const POST_LOAD_DELAY = 800;   // 页面加载后等待(原1500ms)
-  const POLL_INTERVAL = 500;     // 轮询间隔(原1000ms)
-  const MAX_POLL_CHECKS = 40;    // 最大轮询次数(500ms×40=20秒)
-  const RETRY_DELAY = 1500;      // 重试等待(原2000ms)
-  const SCRAPE_TIMEOUT = 30000;  // 抓取超时(原60000ms)
-
+  // 预定义URL和分类
   const urls = [
     { url: 'https://finance.yahoo.com/research-hub/screener/511d9b57-07dd-4d6a-8188-0c812754034f/?start=0&count=100', category: 'Technology' },
     { url: 'https://finance.yahoo.com/research-hub/screener/511d9b57-07dd-4d6a-8188-0c812754034f/?start=100&count=100', category: 'Technology' },
@@ -41,31 +32,54 @@ document.addEventListener('DOMContentLoaded', function () {
     { url: 'https://finance.yahoo.com/research-hub/screener/360b16ee-2692-4617-bd1a-a6c715dd0c29/?start=0&count=100', category: 'Communication_Services' }
   ];
 
+  // 重试配置
+  const MAX_RETRIES = 3; // 每个页面最多重试3次
+
+  /**
+   * 向日志容器中添加一条消息
+   */
   function logMessage(text, type = 'info') {
     const p = document.createElement('p');
     p.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
-    p.className = `log-message log-${type}`;
+    p.className = `log-message log-${type}`; // 应用CSS样式
     logContainer.appendChild(p);
-    logContainer.scrollTop = logContainer.scrollHeight;
+    logContainer.scrollTop = logContainer.scrollHeight; // 自动滚动到底部
   }
 
+  // 自动开始抓取过程
   startScraping();
 
   async function startScraping() {
     try {
+      // 重置状态
       allResults = [];
-      completedCount = 0;
       progressBar.style.width = '0%';
-      logContainer.innerHTML = '';
+      logContainer.innerHTML = ''; // 清空旧日志
       statusDiv.textContent = `Starting scrape... (0/${urls.length})`;
-      logMessage(`初始化... 准备并发抓取 ${urls.length} 个页面 (并发数: ${CONCURRENCY})。`);
+      logMessage(`初始化... 准备抓取 ${urls.length} 个页面。`);
 
-      // ====== 核心改动：用并发池替代串行循环 ======
-      const orderedResults = await runWithConcurrency(urls, CONCURRENCY);
+      // 按顺序处理所有URL
+      for (let i = 0; i < urls.length; i++) {
+        const { url, category } = urls[i];
+        const progress = i + 1;
 
-      // 合并所有结果（保持原有顺序）
-      allResults = orderedResults.flat();
+        // 更新主状态和进度条
+        statusDiv.textContent = `Processing ${progress}/${urls.length}: ${category}`;
+        progressBar.style.width = `${(progress / urls.length) * 100}%`;
+        logMessage(`[${progress}/${urls.length}] 正在处理: ${category}...`);
 
+        // 使用重试机制抓取单个页面
+        const pageResults = await scrapePageWithRetry(url, category, MAX_RETRIES);
+
+        if (pageResults && pageResults.length > 0) {
+          allResults = allResults.concat(pageResults);
+          logMessage(`[${category}] 成功获取 ${pageResults.length} 条数据`, 'success');
+        } else {
+          logMessage(`[${category}] 重试 ${MAX_RETRIES} 次后仍未获取到数据`, 'warning');
+        }
+      }
+
+      // 所有页面处理完毕，开始处理数据和下载
       statusDiv.textContent = "Scraping complete. Processing data...";
       logMessage("所有页面抓取完毕。", 'final');
 
@@ -77,8 +91,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
       const above = allResults.filter(r => r.marketCap >= 5e9);
       const below = allResults.filter(r => r.marketCap < 5e9);
-      const dateStr = getDateStr();
 
+      const dateStr = getDateStr();
       const summaryMsg = `数据处理完成：${above.length} 条 (市值≥50亿)，${below.length} 条 (市值<50亿)。准备下载...`;
       logMessage(summaryMsg, 'final');
       statusDiv.textContent = "Ready to download...";
@@ -100,46 +114,6 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   /**
-   * 并发池：同时运行最多 limit 个任务
-   * 返回按原始顺序排列的结果数组
-   */
-  async function runWithConcurrency(items, limit) {
-    const results = new Array(items.length);
-    let nextIndex = 0;
-
-    async function worker() {
-      while (nextIndex < items.length) {
-        const i = nextIndex++;
-        const { url, category } = items[i];
-
-        logMessage(`[${i + 1}/${items.length}] 正在处理: ${category}...`);
-
-        const pageResults = await scrapePageWithRetry(url, category, MAX_RETRIES);
-        results[i] = pageResults;
-
-        completedCount++;
-        progressBar.style.width = `${(completedCount / items.length) * 100}%`;
-        statusDiv.textContent = `Completed ${completedCount}/${items.length}`;
-
-        if (pageResults && pageResults.length > 0) {
-          logMessage(`[${category}] 成功获取 ${pageResults.length} 条数据 (${completedCount}/${items.length})`, 'success');
-        } else {
-          logMessage(`[${category}] 重试 ${MAX_RETRIES} 次后仍未获取到数据 (${completedCount}/${items.length})`, 'warning');
-        }
-      }
-    }
-
-    // 启动 limit 个并发 worker
-    const workers = [];
-    for (let w = 0; w < Math.min(limit, items.length); w++) {
-      workers.push(worker());
-    }
-    await Promise.all(workers);
-
-    return results;
-  }
-
-  /**
    * 带重试机制的页面抓取函数
    */
   async function scrapePageWithRetry(url, category, maxRetries) {
@@ -155,10 +129,15 @@ document.addEventListener('DOMContentLoaded', function () {
       let tab = null;
 
       try {
+        // 打开页面
+        logMessage(`[${category}] 正在打开页面...`);
         tab = await chrome.tabs.create({ url, active: false });
 
+        // 等待页面加载
         await waitForPageLoad(tab.id);
+        logMessage(`[${category}] 页面加载完成，开始提取数据...`);
 
+        // 发送消息到 content.js 抓取数据
         const response = await new Promise((resolve, reject) => {
           chrome.tabs.sendMessage(tab.id, { action: "scrapeData", category }, res => {
             if (chrome.runtime.lastError) {
@@ -169,18 +148,23 @@ document.addEventListener('DOMContentLoaded', function () {
               reject(new Error("Content script did not send a response."));
             }
           });
-          setTimeout(() => reject(new Error("抓取超时")), SCRAPE_TIMEOUT);
+          // 设置60秒超时
+          setTimeout(() => reject(new Error("抓取超时 (60秒)")), 60000);
         });
 
+        // 检查响应结果
         if (response.success && response.data && response.data.length > 0) {
+          // 成功获取到数据
+          logMessage(`[${category}] ${response.message}`, 'success');
           return response.data;
         } else {
+          // 没有获取到有效数据
           const errorMsg = response.message || "未获取到有效数据";
           logMessage(`[${category}] ${errorMsg}`, 'warning');
 
           if (attempt < maxRetries) {
-            logMessage(`[${category}] 将在${RETRY_DELAY / 1000}秒后重试...`, 'warning');
-            await sleep(RETRY_DELAY);
+            logMessage(`[${category}] 将在2秒后重试...`, 'warning');
+            await sleep(2000); // 等待2秒后重试
           }
         }
 
@@ -188,21 +172,26 @@ document.addEventListener('DOMContentLoaded', function () {
         logMessage(`[${category}] 尝试 ${attempt} 失败: ${err.message}`, 'error');
 
         if (attempt < maxRetries) {
-          logMessage(`[${category}] 将在${RETRY_DELAY / 1000}秒后重试...`, 'warning');
-          await sleep(RETRY_DELAY);
+          logMessage(`[${category}] 将在2秒后重试...`, 'warning');
+          await sleep(2000);
         }
 
       } finally {
+        // 确保标签页被关闭
         if (tab && tab.id) {
           await chrome.tabs.remove(tab.id).catch(e => console.warn("Could not remove tab:", e));
         }
       }
     }
 
+    // 所有重试都失败
     logMessage(`[${category}] 达到最大重试次数 (${maxRetries})，放弃该页面`, 'error');
     return [];
   }
 
+  /**
+   * 睡眠函数
+   */
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
@@ -226,24 +215,24 @@ document.addEventListener('DOMContentLoaded', function () {
           } else {
             logMessage(`下载失败: ${response?.error || "未知错误"}`, 'error');
           }
-          resolve();
+          resolve(); // 无论成功失败都继续
         }
       );
     });
   }
 
-  /**
-   * 等待页面加载 —— 轮询间隔和延迟均已缩短
-   */
+  // waitForPageLoad 保持原样
   async function waitForPageLoad(tabId) {
     return new Promise((resolve, reject) => {
-      let checks = 0;
+      let checks = 0, maxChecks = 30; // 最多检查30次 (60秒)
       function check() {
+        // 检查标签页是否还存在
         chrome.tabs.get(tabId, (tab) => {
           if (chrome.runtime.lastError || !tab) {
             return reject(new Error("Tab was closed before loading completed."));
           }
 
+          // 注入脚本检查页面状态和表格行数
           chrome.scripting.executeScript({
             target: { tabId },
             func: () => {
@@ -252,19 +241,21 @@ document.addEventListener('DOMContentLoaded', function () {
             }
           }, (results) => {
             if (chrome.runtime.lastError) {
-              // 忽略注入错误
+              // 忽略注入错误，可能页面正在跳转
             } else if (results && results[0] && results[0].result) {
               const { readyState, rowCount } = results[0].result;
+              // 当页面加载完成并且表格中出现了至少一行数据时，认为加载成功
               if (readyState === 'complete' && rowCount > 0) {
-                setTimeout(resolve, POST_LOAD_DELAY);
+                // 等待一小段时间，确保动态内容渲染完毕
+                setTimeout(resolve, 1500);
                 return;
               }
             }
 
-            if (++checks >= MAX_POLL_CHECKS) {
-              reject(new Error(`页面加载超时 (${MAX_POLL_CHECKS * POLL_INTERVAL / 1000}秒)`));
+            if (++checks >= maxChecks) {
+              reject(new Error("页面加载或数据出现超时 (30秒)"));
             } else {
-              setTimeout(check, POLL_INTERVAL);
+              setTimeout(check, 1000);
             }
           });
         });
