@@ -18,9 +18,9 @@ USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 # --- 路径配置 ---
-
+INPUT_SOURCE_DIR = os.path.join(BASE_CODING_DIR, "News", "options")
 # 备份文件所在的文件夹路径 (自动模式用)
-BACKUP_DIR = os.path.join(BASE_CODING_DIR, "News", "backup")
+BACKUP_DIR = INPUT_SOURCE_DIR
 
 # 【修改】将输出路径改为 Database 目录
 OUTPUT_DIR = os.path.join(BASE_CODING_DIR, "Database")
@@ -71,12 +71,12 @@ DEBUG_SYMBOL = ""
 # --- 模式切换配置 ---
 
 # True: 手动模式 (使用下方指定的两个具体文件)
-# False: 自动模式 (自动寻找 BACKUP_DIR 下最新的两个文件)
+# False: 自动模式 (自动寻找 INPUT_SOURCE_DIR 下最新的两个文件)
 USE_MANUAL_MODE = False
 
 # 手动模式下的文件路径
-MANUAL_FILE_OLD = os.path.join(BACKUP_DIR, 'Options_251224.csv')
-MANUAL_FILE_NEW = os.path.join(BACKUP_DIR, 'Options_251227.csv')
+MANUAL_FILE_OLD = os.path.join(INPUT_SOURCE_DIR, 'Options_251224.csv')
+MANUAL_FILE_NEW = os.path.join(INPUT_SOURCE_DIR, 'Options_251227.csv')
 
 # ==========================================
 # [Part A] 辅助函数与核心处理 (原 a.py)
@@ -877,9 +877,10 @@ if __name__ == "__main__":
             file_new = None
     else:
         print(">>> 模式: 自动扫描 (Auto Mode)")
-        file_new, file_old = get_latest_two_files(BACKUP_DIR)
+        # 【修改点】此处改为从 INPUT_SOURCE_DIR 读取
+        file_new, file_old = get_latest_two_files(INPUT_SOURCE_DIR)
         if not file_new:
-            print("❌ 错误: 备份目录下文件不足两个。")
+            print(f"❌ 错误: 在 {INPUT_SOURCE_DIR} 目录下找不到足够的文件。")
 
     # 2. 开始执行流程
     if file_new and file_old:

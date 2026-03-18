@@ -1,6 +1,12 @@
 // Array to store scraped data
 let allYahooETFData = [];
-const MAX_RETRIES = 3; // 定义最大重试次数
+
+// ====== 关键并发参数 ======
+const CONCURRENCY = 3;         // 同时打开4个标签页并发抓取
+const MAX_RETRIES = 3;         // 最大重试次数
+const SCRAPE_TIMEOUT = 30000;  // 抓取超时时间 (30秒)
+const POST_LOAD_DELAY = 3000;  // 页面加载完成后的等待时间 (3秒，Yahoo加载较慢)
+const RETRY_DELAY = 2000;      // 重试前的等待时间 (2秒)
 
 // 辅助函数：睡眠/等待
 function sleep(ms) {
@@ -10,36 +16,75 @@ function sleep(ms) {
 // Function to update status in popup
 function updatePopupStatus(text, logType = 'info', completed = false) {
     chrome.runtime.sendMessage({
-        type: 'statusUpdate', // Changed from 'status'
+        type: 'statusUpdate',
         text: text,
-        logType: logType, // Changed from 'status'
+        logType: logType,
         completed: completed
     }).catch(error => {
-        // 如果 Popup 关闭了，忽略错误，但在控制台打印
-        // console.log("Popup closed, status update skipped.");
+        // 如果 Popup 关闭了，忽略错误
     });
 }
 
-// Function to scrape data from a tab for Yahoo Finance (带有重试机制)
-async function scrapeYahooETFFromTab(tabId, url) {
+/**
+ * 并发池：同时运行最多 limit 个任务
+ * 返回按原始顺序排列的结果数组
+ */
+async function runWithConcurrency(items, limit) {
+    const results = new Array(items.length);
+    let nextIndex = 0;
+    let completedCount = 0;
+
+    async function worker() {
+        while (nextIndex < items.length) {
+            const i = nextIndex++;
+            const url = items[i];
+
+            updatePopupStatus(`[${i + 1}/${items.length}] 正在处理: ${url}...`, 'info');
+
+            // 调用带重试机制的单页抓取
+            const pageResults = await scrapePageWithRetry(url, MAX_RETRIES);
+            results[i] = pageResults || [];
+
+            completedCount++;
+            if (pageResults && pageResults.length > 0) {
+                updatePopupStatus(`成功获取 ${pageResults.length} 条数据 (${completedCount}/${items.length})`, 'success');
+            } else {
+                updatePopupStatus(`重试 ${MAX_RETRIES} 次后仍未获取到数据: ${url} (${completedCount}/${items.length})`, 'warning');
+            }
+        }
+    }
+
+    // 启动 limit 个并发 worker
+    const workers = [];
+    for (let w = 0; w < Math.min(limit, items.length); w++) {
+        workers.push(worker());
+    }
+    await Promise.all(workers);
+
+    return results;
+}
+
+/**
+ * 带重试机制的页面抓取函数 (每次创建新标签页，抓完销毁)
+ */
+async function scrapePageWithRetry(url, maxRetries) {
     let attempt = 0;
 
-    while (attempt < MAX_RETRIES) {
+    while (attempt < maxRetries) {
         attempt++;
 
         // 如果是重试，打印日志
         if (attempt > 1) {
-            updatePopupStatus(`[Attempt ${attempt}/${MAX_RETRIES}] Retrying ${url}...`, 'warning');
-            await sleep(2000); // 重试前等待2秒
-        } else {
-            updatePopupStatus(`Navigating to ${url}`, 'info');
+            updatePopupStatus(`[Attempt ${attempt}/${maxRetries}] Retrying ${url}...`, 'warning');
         }
 
-        try {
-            // 1. Navigate to the URL (每次重试都会重新加载页面)
-            await chrome.tabs.update(tabId, { url: url });
+        let tab = null;
 
-            // 2. Wait for the page to load
+        try {
+            // 1. 创建新标签页 (后台静默打开)
+            tab = await chrome.tabs.create({ url, active: false });
+
+            // 2. 等待页面加载完成
             await new Promise((resolve, reject) => {
                 // 设置一个超时，防止页面永远加载不完
                 const timeoutId = setTimeout(() => {
@@ -48,49 +93,60 @@ async function scrapeYahooETFFromTab(tabId, url) {
                 }, 30000); // 30秒超时
 
                 const listener = (tabIdUpdated, changeInfo) => {
-                    if (tabIdUpdated === tabId && changeInfo.status === 'complete') {
+                    if (tabIdUpdated === tab.id && changeInfo.status === 'complete') {
                         chrome.tabs.onUpdated.removeListener(listener);
                         clearTimeout(timeoutId);
-                        // Additional delay for dynamic content loading
-                        setTimeout(resolve, 3000); // 增加等待时间到3秒，Yahoo比较慢
+                        // 额外等待动态内容加载
+                        setTimeout(resolve, POST_LOAD_DELAY);
                     }
                 };
                 chrome.tabs.onUpdated.addListener(listener);
             });
 
-            updatePopupStatus(`Page loaded. Sending scrape command (Attempt ${attempt})...`, 'info');
+            // 3. 发送抓取指令并等待响应
+            const response = await new Promise((resolve, reject) => {
+                chrome.tabs.sendMessage(tab.id, { action: 'scrapeYahooETFs' }, res => {
+                    if (chrome.runtime.lastError) {
+                        reject(new Error(chrome.runtime.lastError.message));
+                    } else if (res) {
+                        resolve(res);
+                    } else {
+                        reject(new Error("Content script did not send a response."));
+                    }
+                });
+                // 设置抓取超时
+                setTimeout(() => reject(new Error("Scrape timeout")), SCRAPE_TIMEOUT);
+            });
 
-            // 3. Execute content script to scrape data
-            // 注意：这里可能会抛出错误（如果 content script 没准备好），所以放在 try block 里
-            const results = await chrome.tabs.sendMessage(tabId, { action: 'scrapeYahooETFs' });
-
-            // 4. Check results
-            if (results && results.success && results.data && results.data.length > 0) {
-                updatePopupStatus(`Successfully scraped ${results.data.length} ETFs from ${url}`, 'success');
-                allYahooETFData = [...allYahooETFData, ...results.data];
-                return true; // 成功！跳出函数
+            // 4. 检查结果
+            if (response && response.success && response.data && response.data.length > 0) {
+                return response.data; // 成功，返回数据
             } else {
-                // 虽然通信成功，但返回了错误或没有数据
-                const errorMsg = results ? results.error : "No data returned";
-                console.warn(`Attempt ${attempt} failed: ${errorMsg}`);
+                const errorMsg = response ? response.error : "No data returned";
+                console.warn(`Attempt ${attempt} failed for ${url}: ${errorMsg}`);
 
-                if (attempt === MAX_RETRIES) {
-                    updatePopupStatus(`Failed to scrape ${url} after ${MAX_RETRIES} attempts. Error: ${errorMsg}`, 'error');
+                if (attempt < maxRetries) {
+                    await sleep(RETRY_DELAY);
                 }
                 // 继续循环进行下一次重试
             }
 
         } catch (error) {
-            console.error(`Error in scrapeYahooETFFromTab (Attempt ${attempt}):`, error);
+            console.error(`Error in scrapePageWithRetry (Attempt ${attempt}) for ${url}:`, error);
 
-            if (attempt === MAX_RETRIES) {
-                updatePopupStatus(`Critical error scraping ${url}: ${error.message}`, 'error');
+            if (attempt < maxRetries) {
+                await sleep(RETRY_DELAY);
+            }
+        } finally {
+            // 5. 无论成功失败，确保关闭该标签页释放资源
+            if (tab && tab.id) {
+                await chrome.tabs.remove(tab.id).catch(e => console.warn("Could not remove tab:", e));
             }
             // 继续循环进行下一次重试
         }
     }
 
-    return false; // 所有重试都失败了
+    return []; // 所有重试均失败，返回空数组
 }
 
 // Function to generate CSV from data
@@ -116,24 +172,17 @@ function downloadCSVViaPopup(csvData, filename) {
         data: csvData,
         filename: filename
     }).catch(error => {
-        updatePopupStatus(`Error sending CSV to popup for download: ${error.message}. You might need to open the popup.`, 'error');
-        // Fallback or alternative download method could be implemented here if needed
-        // For now, we'll just log it.
+        updatePopupStatus(`Error sending CSV to popup for download: ${error.message}`, 'error');
         console.error("Error sending CSV to popup:", error);
     });
 }
 
-
 // Main function to coordinate the Yahoo ETF scraping process
 async function startYahooScrapingProcess() {
-    updatePopupStatus('Starting Yahoo ETF scraping process...', 'info');
-    allYahooETFData = []; // Reset data for a new scrape
+    updatePopupStatus(`Starting Yahoo ETF scraping process with concurrency: ${CONCURRENCY}...`, 'info');
+    allYahooETFData = []; // Reset data
 
-    let tab;
     try {
-        // Create a new tab for scraping.
-        tab = await chrome.tabs.create({ active: false, url: 'about:blank' });
-
         const urls = [
             "https://finance.yahoo.com/markets/etfs/top/?start=0&count=100",
             "https://finance.yahoo.com/markets/etfs/top/?start=100&count=100",
@@ -142,20 +191,11 @@ async function startYahooScrapingProcess() {
             "https://finance.yahoo.com/markets/etfs/top/?start=400&count=100"
         ];
 
-        for (const url of urls) {
-            const success = await scrapeYahooETFFromTab(tab.id, url);
+        // ====== 核心改动：使用并发池替代串行循环 ======
+        const orderedResults = await runWithConcurrency(urls, CONCURRENCY);
 
-            if (!success) {
-                // 即使失败，我们也可以选择继续抓取下一个 URL，而不是直接 break
-                // 这里我保留了你原来的逻辑：如果一个失败，停止后续操作。
-                // 如果你想即使失败也继续，可以注释掉下面这行 break;
-                updatePopupStatus(`Stopping process due to failure on ${url}.`, 'error');
-                break;
-            }
-
-            // URL 之间的间隔，避免请求过快
-            await sleep(1000);
-        }
+        // 合并所有结果（保持原有顺序）
+        allYahooETFData = orderedResults.flat();
 
         if (allYahooETFData.length > 0) {
             updatePopupStatus(`Generating CSV with ${allYahooETFData.length} ETF records...`, 'info');
@@ -178,14 +218,6 @@ async function startYahooScrapingProcess() {
         updatePopupStatus(`Critical error in Yahoo ETF scraping process: ${error.message}`, 'error', true);
         console.error("Critical error in startYahooScrapingProcess:", error);
     } finally {
-        if (tab && tab.id) {
-            try {
-                await chrome.tabs.remove(tab.id);
-                updatePopupStatus('Scraping tab closed.', 'info');
-            } catch (closeError) {
-                console.error("Error closing tab:", closeError);
-            }
-        }
         updatePopupStatus('Yahoo ETF scraping process finished.', 'info', true);
     }
 }
@@ -195,7 +227,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'startYahooScraping') {
         startYahooScrapingProcess();
         sendResponse({ status: 'started' });
-        return true; // Indicates that the response will be sent asynchronously
+        return true;
     }
     return true;
 });

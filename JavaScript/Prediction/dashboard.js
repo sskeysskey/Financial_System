@@ -84,33 +84,44 @@ function createTab(url, active) {
     });
 }
 
-// ★ 新增：导航已有标签到新 URL（复用标签，避免反复创建/关闭）
-function navigateTab(tabId, url) {
-    return new Promise(function (resolve, reject) {
-        chrome.tabs.update(tabId, { url: url }, function (tab) {
-            if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
-            else resolve(tab);
-        });
-    });
-}
-
-// ★ 改：默认超时 30s → 15s
-function waitForTabComplete(tabId, timeoutMs) {
+// ★ 新增：合并导航与等待，彻底避免竞态条件
+function navigateAndWait(tabId, url, timeoutMs) {
     if (!timeoutMs) timeoutMs = 15000;
-    return new Promise(function (resolve) {
+    return new Promise(function (resolve, reject) {
+        var isDone = false;
         var timeout = setTimeout(function () {
-            chrome.tabs.onUpdated.removeListener(listener);
-            resolve(false);
+            if (!isDone) {
+                isDone = true;
+                chrome.tabs.onUpdated.removeListener(listener);
+                resolve(false); // 超时也返回 false，交给后续逻辑处理
+            }
         }, timeoutMs);
 
         function listener(id, info) {
+            // 监听到加载完成
             if (id === tabId && info.status === 'complete') {
-                chrome.tabs.onUpdated.removeListener(listener);
-                clearTimeout(timeout);
-                resolve(true);
+                if (!isDone) {
+                    isDone = true;
+                    chrome.tabs.onUpdated.removeListener(listener);
+                    clearTimeout(timeout);
+                    resolve(true);
+                }
             }
         }
+
+        // 关键点：先添加监听器，再发起导航请求！
         chrome.tabs.onUpdated.addListener(listener);
+
+        chrome.tabs.update(tabId, { url: url }, function (tab) {
+            if (chrome.runtime.lastError) {
+                if (!isDone) {
+                    isDone = true;
+                    chrome.tabs.onUpdated.removeListener(listener);
+                    clearTimeout(timeout);
+                    reject(new Error(chrome.runtime.lastError.message));
+                }
+            }
+        });
     });
 }
 
@@ -607,11 +618,8 @@ async function workerLoop(workerId, tabId, queue, results, config) {
         var short = card.name.length > 35 ? card.name.substring(0, 35) + '...' : card.name;
 
         try {
-            // 导航到子页面（复用标签页，不创建新的）
-            await navigateTab(tabId, 'https://kalshi.com' + card.subUrl);
-
-            // 等待页面加载
-            await waitForTabComplete(tabId, 15000);
+            // 导航到子页面并等待加载（使用合并后的安全函数）
+            await navigateAndWait(tabId, 'https://kalshi.com' + card.subUrl, 15000);
 
             // 轮询等待内容渲染
             var poll = await pollForContent(tabId, 10000);
@@ -861,8 +869,13 @@ async function startSubpageScraping() {
         }
     }
 
-    // ★ 启动所有工作线程（并行执行）
-    var workerPromises = workerTabIds.map(function (tabId, w) {
+    // ★ 启动所有工作线程（加入错峰机制，避免瞬间并发触发反爬虫）
+    var workerPromises = workerTabIds.map(async function (tabId, w) {
+        if (w > 0) {
+            // 第 0 个线程立即启动，后续线程每个延迟 2000ms (2秒) 启动。
+            // 这样 4 个线程的请求会分布在 0s, 2s, 4s, 6s，彻底避免 Cloudflare 并发拦截和前台抢夺。
+            await new Promise(function (res) { setTimeout(res, w * 2000); });
+        }
         return workerLoop(w, tabId, queue, results, {
             onProgress: onProgress
         });

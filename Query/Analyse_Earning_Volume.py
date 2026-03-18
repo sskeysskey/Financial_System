@@ -14,8 +14,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = "" 
 TARGET_DATE = "" 
 
-# SYMBOL_TO_TRACE = "CRCL"
-# TARGET_DATE = "2026-02-25"
+# SYMBOL_TO_TRACE = "OLLI"
+# TARGET_DATE = "2026-03-19"
 
 # 3. 日志路径
 LOG_FILE_PATH = os.path.join(BASE_PATH, "Downloads", "PE_Volume_trace_log.txt")
@@ -920,18 +920,23 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
                 cond_chaodi = True
                 if is_tracing: log_detail(f"    - 抄底判定: 命中 [回调池路径]")
             
-            # 路径 B: 放量下跌抄底 (今日价格下跌 且 成交额是财报后Top 2)
+            # 路径 B: 放量下跌抄底 (今日价格下跌 且 成交额是近1.5个月前2名)
             else:
                 cond_price_down_today = (latest_price < prev_price)
                 if cond_price_down_today:
-                    # 检查成交额是否为财报后至今的前2名
-                    is_top2_since_er = check_turnover_since_earning(
-                        cursor, sector, symbol, latest_er_date, latest_date, latest_turnover,
-                        2, log_detail, is_tracing
+                    # [修改点] 使用 check_turnover_rank_by_days 替代之前的 since_earning 逻辑
+                    # 45天即约等于1.5个月
+                    lookback_days = CONFIG.get("COND_HIGH_TURNOVER_BING_DAYS", 45) 
+                    rank_threshold = 2 # 保持您要求的排名前2名
+                    
+                    is_top2_recent = check_turnover_rank_by_days(
+                        cursor, sector, symbol, latest_date, latest_turnover,
+                        lookback_days, rank_threshold, log_detail, is_tracing
                     )
-                    if is_top2_since_er:
+                    
+                    if is_top2_recent:
                         cond_chaodi = True
-                        if is_tracing: log_detail(f"    - 抄底判定: 命中 [放量下跌路径] (成交额Top2)")
+                        if is_tracing: log_detail(f"    - 抄底判定: 命中 [放量下跌路径] (近{lookback_days}天成交额Top{rank_threshold})")
 
         if cond_chaodi:
             results_chaodi.append(symbol)

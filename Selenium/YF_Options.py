@@ -29,11 +29,11 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 DOWNLOADS_DIR = os.path.join(USER_HOME, "Downloads")
 FINANCIAL_SYSTEM_DIR = os.path.join(BASE_CODING_DIR, "Financial_System")
 DATABASE_DIR = os.path.join(BASE_CODING_DIR, "Database")
-NEWS_BACKUP_DIR = os.path.join(BASE_CODING_DIR, "News", "backup")
+OPTIONS_DIR = os.path.join(BASE_CODING_DIR, "News", "options")
 
 # 3. 具体业务文件路径
 DB_PATH = os.path.join(DATABASE_DIR, "Finance.db")
-OUTPUT_DIR = NEWS_BACKUP_DIR
+OUTPUT_DIR = OPTIONS_DIR 
 SECTORS_JSON_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Sectors_panel.json")
 BLACKLIST_JSON_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Blacklist.json")
 
