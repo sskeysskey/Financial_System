@@ -7,7 +7,8 @@
     "activeTab",
     "tabs",
     "downloads",
-    "scripting"
+    "scripting",
+    "power"
   ],
   "host_permissions": [
     "https://polymarket.com/*",

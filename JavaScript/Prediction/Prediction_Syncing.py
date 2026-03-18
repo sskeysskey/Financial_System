@@ -10,7 +10,6 @@ USER_HOME = os.path.expanduser("~")
 # --- 新增：Prediction 相关的路径配置 ---
 PREDICTION_SOURCE_DIR = os.path.join(USER_HOME, 'Coding/Database')
 PREDICTION_TARGET_DIR = os.path.join(USER_HOME, 'Coding/LocalServer/Resources/Prediction')
-# 假设 Prediction 的 version.json 也在该目录下，如果是同一个文件请修改此路径
 PREDICTION_VERSION_JSON_PATH = os.path.join(PREDICTION_TARGET_DIR, 'version.json')
 
 def calculate_md5(file_path):
@@ -26,6 +25,38 @@ def calculate_md5(file_path):
     except Exception as e:
         print(f"❌ 计算MD5时出错 {file_path}: {e}")
         return ""
+
+def cleanup_old_prediction_files(today_str, file_prefixes):
+    """
+    清理 Prediction 目录下的旧文件，只保留今天的文件和 version.json
+    """
+    print("\n--- 开始清理旧的 Prediction 文件 ---")
+    
+    if not os.path.exists(PREDICTION_TARGET_DIR):
+        return
+    
+    # 今天应该保留的文件名集合
+    today_files = {f"{prefix}_{today_str}.json" for prefix in file_prefixes}
+    today_files.add('version.json')  # 也保留 version.json
+    
+    try:
+        for filename in os.listdir(PREDICTION_TARGET_DIR):
+            file_path = os.path.join(PREDICTION_TARGET_DIR, filename)
+            
+            # 跳过目录
+            if os.path.isdir(file_path):
+                continue
+            
+            # 如果不在今天的文件列表中，则删除
+            if filename not in today_files:
+                try:
+                    os.remove(file_path)
+                    print(f"🗑️ 已删除旧文件: {filename}")
+                except Exception as e:
+                    print(f"❌ 删除文件失败 {filename}: {e}")
+    
+    except Exception as e:
+        print(f"❌ 清理旧文件时发生错误: {e}")
     
 def backup_prediction_files():
     """
@@ -69,6 +100,8 @@ def backup_prediction_files():
     # 如果找到了文件，更新 Prediction 的 version.json
     if new_files_info:
         update_prediction_version(new_files_info)
+        # 🆕 添加清理旧文件的步骤
+        cleanup_old_prediction_files(today_str, file_prefixes)
     else:
         print("⏭️ 没有找到任何今天的 Prediction 文件，跳过更新 version.json。")
 
@@ -172,5 +205,4 @@ def is_file_modified(source_path, destination_path):
 if __name__ == "__main__":
     # 3. 新增：执行 Prediction 文件的备份、MD5计算和 version.json 更新
     backup_prediction_files()
-    
     print("\n🎉 所有任务已完成。")

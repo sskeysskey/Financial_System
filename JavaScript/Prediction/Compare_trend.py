@@ -1,14 +1,15 @@
 import json
 import os
 import glob
-import re  # 引入正则表达式库，方便提取日期
+import re
+import shutil
+from datetime import datetime
 
 def process_market_data(old_file_path, new_file_path, output_file_path):
     """
     通用数据处理函数，对比新旧文件并计算 volume_trend
     """
     # 1. 读取旧文件并建立索引
-    # 使用字典存储 name -> item_object，方便后续获取完整信息
     old_data_map = {}
     if os.path.exists(old_file_path):
         with open(old_file_path, 'r', encoding='utf-8') as f:
@@ -77,14 +78,44 @@ def get_latest_two_files(base_dir, prefix):
     else:
         return None, None
 
-# 设置文件路径
-base_dir = "/Users/yanzhang/Downloads"
+# ================= 配置区域 =================
+db_dir = "/Users/yanzhang/Coding/Database/"
+dl_dir = "/Users/yanzhang/Downloads/"
+backup_dir = "/Users/yanzhang/Coding/News/backup/prediction/"
 platforms = ["kalshi", "polymarket"]
 
-# 循环处理每个平台
+# 获取今天日期的 YYMMDD 格式
+today_str = datetime.now().strftime("%y%m%d")
+
+# 确保目标文件夹存在
+os.makedirs(db_dir, exist_ok=True)
+os.makedirs(backup_dir, exist_ok=True)
+
+# ================= 步骤 1: 检查并移动今天的文件 =================
+print(f"今天的系统日期时间戳为: {today_str}\n")
 for platform in platforms:
-    print(f"开始检查 [{platform}] 的数据...")
-    old_file, new_file = get_latest_two_files(base_dir, platform)
+    target_filename = f"{platform}_{today_str}.json"
+    db_file_path = os.path.join(db_dir, target_filename)
+    dl_file_path = os.path.join(dl_dir, target_filename)
+    
+    # 如果 Database 目录下没有今天的文件
+    if not os.path.exists(db_file_path):
+        # 去 Downloads 目录下找
+        if os.path.exists(dl_file_path):
+            print(f"在 Downloads 找到今天的文件，正在移动到 Database: {target_filename}")
+            shutil.move(dl_file_path, db_file_path)
+        else:
+            print(f"提示: 无论是在 Database 还是 Downloads 都没有找到今天的文件: {target_filename}")
+    else:
+        print(f"Database 目录中已存在今天的文件: {target_filename}")
+
+print("-" * 40)
+
+# ================= 步骤 2: 执行对比与输出 =================
+for platform in platforms:
+    print(f"开始检查 [{platform}] 的数据并计算趋势...")
+    # 注意：现在基准目录改为了 db_dir
+    old_file, new_file = get_latest_two_files(db_dir, platform)
     
     if old_file and new_file:
         # --- 新增逻辑：提取日期 ---
@@ -93,13 +124,42 @@ for platform in platforms:
         match = re.search(r'_(\d+)\.json$', os.path.basename(new_file))
         date_str = match.group(1) if match else "unknown_date"
         
-        # 生成带日期的新文件名: platform_trend_YYMMDD.json
+        # 输出文件也保存到 db_dir
         output_filename = f"{platform}_trend_{date_str}.json"
-        output_file = os.path.join(base_dir, output_filename)
+        output_file = os.path.join(db_dir, output_filename)
         
         print(f"找到文件:\n - 旧文件: {os.path.basename(old_file)}\n - 新文件: {os.path.basename(new_file)}")
         print(f"输出文件将保存为: {output_filename}")
         
         process_market_data(old_file, new_file, output_file)
     else:
-        print(f"警告: [{platform}] 的历史文件不足两个，无法进行趋势计算。\n")
+        print(f"警告: [{platform}] 在 Database 目录下的历史文件不足两个，无法进行趋势计算。\n")
+
+print("-" * 40)
+
+# ================= 步骤 3: 备份非今天的文件 =================
+print("开始清理 Database 目录，备份旧文件...")
+for platform in platforms:
+    # 需要匹配原始文件和 trend 文件
+    patterns = [
+        f"{platform}_[0-9]*.json",
+        f"{platform}_trend_[0-9]*.json"
+    ]
+    
+    for pattern in patterns:
+        search_pattern = os.path.join(db_dir, pattern)
+        files = glob.glob(search_pattern)
+        
+        for file_path in files:
+            filename = os.path.basename(file_path)
+            # 提取文件名中的时间戳
+            match = re.search(r'_(\d+)\.json$', filename)
+            if match:
+                file_date = match.group(1)
+                # 如果时间戳不是今天的日期，则移动到 backup 目录
+                if file_date != today_str:
+                    backup_file_path = os.path.join(backup_dir, filename)
+                    print(f"备份旧文件: {filename} -> {backup_dir}")
+                    shutil.move(file_path, backup_file_path)
+
+print("\n所有流程执行完毕！")

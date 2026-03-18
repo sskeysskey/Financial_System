@@ -28,6 +28,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const site = request.site || 'polymarket';
 
         if (site === 'polymarket') {
+            // 请求保持屏幕常亮
+            chrome.power.requestKeepAwake('display');
+
             processPolymarketData(request.data)
                 .then((processedData) => {
                     chrome.runtime.sendMessage({
@@ -35,9 +38,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         data: processedData,
                         filename: getTimestampedFilename('polymarket')
                     });
+                    chrome.power.releaseKeepAwake(); // 释放唤醒
                     sendResponse({ success: true });
                 })
-                .catch(error => sendResponse({ success: false, error: error.message }));
+                .catch(error => {
+                    chrome.power.releaseKeepAwake(); // 释放唤醒
+                    sendResponse({ success: false, error: error.message });
+                });
             return true;
         }
     }

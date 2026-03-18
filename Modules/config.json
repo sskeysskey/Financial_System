@@ -1,0 +1,899 @@
+[
+    {
+        "key": "backslash",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "launchApp",
+        "target": "Stickies",
+        "message": "Stickies 已启动"
+    },
+    {
+        "key": "d",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "launchApp",
+        "target": "Reminders",
+        "message": "提醒事项 (Reminders) 已启动"
+    },
+    {
+        "key": "s",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "launchApp",
+        "target": "Notes",
+        "message": "备忘录 (Notes) 已启动"
+    },
+    {
+        "key": "slash",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/Financial_System/Operations/Update_Split2DB.py",
+        "message": "正在执行 Split2DB..."
+    },
+    {
+        "key": "j",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/Financial_System/Query/Show_Earning_History.py",
+        "message": "正在执行 Split2DB (History)..."
+    },
+    {
+        "key": "seven",
+        "modifiers": [
+            "control",
+            "command"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/Financial_System/Query/Analyse_Options.py",
+        "message": "正在执行 Analyse_Options..."
+    },
+    {
+        "key": "eight",
+        "modifiers": [
+            "control",
+            "command"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/Financial_System/Query/Check_yesterday.py",
+        "message": "正在执行 Check_yesterday..."
+    },
+    {
+        "key": "backslash",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/Financial_System/Operations/Imigrate_new_exist.py",
+        "message": "正在执行 Imigrate_new_exist.py..."
+    },
+    {
+        "key": "nine",
+        "modifiers": [
+            "control",
+            "command"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/YF_StockETFCrypto.py'",
+        "message": "正在执行 Insert_History_Data.py..."
+    },
+    {
+        "key": "seven",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/Financial_System/Query/Check_Earning_dup.py",
+        "message": "正在执行 Check_Earning_dup..."
+    },
+    {
+        "key": "q",
+        "modifiers": [
+            "control",
+            "shift"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/Financial_System/Query/Search_Similar_Tag.py",
+        "message": "正在执行 search similar tag..."
+    },
+    {
+        "key": "z",
+        "modifiers": [
+            "control",
+            "command"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/Financial_System/Operations/Insert_Panel.py",
+        "message": "正在执行 Insert panel.json"
+    },
+    {
+        "key": "l",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/python_code/Prompt_Creator.py",
+        "message": "正在执行 Prompt_Creator..."
+    },
+    {
+        "key": "g",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/python_code/split_TXT.py",
+        "message": "正在执行 split_TXT..."
+    },
+    {
+        "key": "k",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/Financial_System/Operations/Insert_Desc_Manual.py",
+        "message": "正在执行 Insert_Desc_Manual.py..."
+    },
+    {
+        "key": "k",
+        "modifiers": [
+            "control",
+            "command"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/Financial_System/Operations/Insert_Desc_null_Stock.py",
+        "message": "正在执行 Insert_Desc_null_Stock..."
+    },
+    {
+        "key": "three",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/Financial_System/Query/Fix_MarketcapPEPB.py",
+        "message": "正在执行 Fix_MarketcapPEPB..."
+    },
+    {
+        "key": "v",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/Financial_System/Operations/Insert_Desc_Stock.py",
+        "message": "正在执行 Insert_Desc_Stock..."
+    },
+    {
+        "key": "v",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/Financial_System/Operations/Insert_Desc_ETFs.py",
+        "message": "正在执行 Insert_Desc_ETFs..."
+    },
+    {
+        "key": "z",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/Financial_System/Operations/Editor_Tags.py",
+        "message": "正在执行 Editor_Tags..."
+    },
+    {
+        "key": "z",
+        "modifiers": [
+            "option",
+            "command"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/Financial_System/Query/Check_Earning_Similar.py",
+        "message": "正在打开 Earning_Similar..."
+    },
+    {
+        "key": "a",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/Financial_System/Operations/Editor_tags_weight.py",
+        "message": "正在打开 tags_weights..."
+    },
+    {
+        "key": "one",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Prediction.scpt",
+        "message": "正在 Prediction..."
+    },
+    {
+        "key": "two",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runOrunPythonBackgroundsascript",
+        "target": "/Users/yanzhang/Coding/Financial_System/JavaScript/Prediction/Prediction_Syncing.py",
+        "message": "正在 Prediction_Syncing..."
+    },
+    {
+        "key": "two",
+        "modifiers": [
+            "control",
+            "command"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/Financial_System/Operations/Insert_Blacklist.py",
+        "args": [
+            "etf"
+        ],
+        "message": "正在 Insert_Blacklist (ETF模式)..."
+    },
+    {
+        "key": "quote",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/python_code/Mouse_move.py",
+        "message": "正在 移动鼠标..."
+    },
+    {
+        "key": "e",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/Financial_System/Query/Check_Options.py",
+        "message": "正在执行 Options_Monitor..."
+    },
+    {
+        "key": "q",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/Financial_System/Operations/Editor_Blacklist.py",
+        "message": "正在执行 Editor_Blacklist..."
+    },
+    {
+        "key": "d",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/Financial_System/Operations/Insert_Earning_auto.py",
+        "message": "正在打开财报编辑界面..."
+    },
+    {
+        "key": "i",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/Financial_System/Query/Chart_Earning.py",
+        "message": "正在打开Chart_Earning界面..."
+    },
+    {
+        "key": "s",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/Financial_System/Query/Check_HighLow.py",
+        "message": "正在打开highlow.txt..."
+    },
+    {
+        "key": "w",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/Financial_System/Query/Panel.py",
+        "message": "正在运行 Panel.py..."
+    },
+    {
+        "key": "k",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Insert_PythonFile.scpt",
+        "args": [
+            "/Users/yanzhang/Coding/Financial_System/Operations/Insert_Events.py"
+        ],
+        "message": "正在执行 Insert_PythonFile 脚本..."
+    },
+    {
+        "key": "w",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Insert_PythonFile.scpt",
+        "args": [
+            "/Users/yanzhang/Coding/Financial_System/Operations/Editor_Earning_DB.py"
+        ],
+        "message": "正在执行 Editor_Earning_DB 脚本..."
+    },
+    {
+        "key": "d",
+        "modifiers": [
+            "control",
+            "command"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Insert_PythonFile.scpt",
+        "args": [
+            "/Users/yanzhang/Coding/Financial_System/Operations/Insert_Earning_Manual.py"
+        ],
+        "message": "正在执行 Insert_Earning_Manual 脚本..."
+    },
+    {
+        "key": "e",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Insert_PythonFile.scpt",
+        "args": [
+            "/Users/yanzhang/Coding/Financial_System/Operations/Editor_Events.py"
+        ],
+        "message": "正在执行 Editor_Events 脚本..."
+    },
+    {
+        "key": "o",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/API_Trans_small.scpt",
+        "message": "正在执行 API_Trans.scpt..."
+    },
+    {
+        "key": "p",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Doubao_small.scpt",
+        "message": "正在执行 Doubao_small.scpt..."
+    },
+    {
+        "key": "p",
+        "modifiers": [
+            "option",
+            "command"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Trans_doubao.scpt",
+        "message": "正在执行 Trans_doubao.scpt..."
+    },
+    {
+        "key": "u",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Check_Earning.scpt",
+        "message": "正在执行 Check_Earning.scpt..."
+    },
+    {
+        "key": "f",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Insert_Sector.scpt",
+        "message": "正在执行 Insert_Sector.scpt..."
+    },
+    {
+        "key": "f",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Delete_name.scpt",
+        "message": "正在执行 Delete_name.scpt..."
+    },
+    {
+        "key": "semicolon",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Karing1.scpt",
+        "message": "正在执行 karing 脚本..."
+    },
+    {
+        "key": "semicolon",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/singbox.scpt",
+        "message": "正在执行 singbox 脚本..."
+    },
+    {
+        "key": "m",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Googlemap_input.scpt",
+        "message": "正在执行 Googlemap_input 脚本..."
+    },
+    {
+        "key": "s",
+        "modifiers": [
+            "control",
+            "command"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Show_Description.scpt",
+        "message": "正在执行 Show_Description.scpt..."
+    },
+    {
+        "key": "zero",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Doubao_Title.scpt",
+        "message": "正在执行 Doubao_Title.scpt..."
+    },
+    {
+        "key": "minus",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Trans_SRT_Sonnet.scpt",
+        "message": "正在执行 Trans_SRT_Sonnet.scpt..."
+    },
+    {
+        "key": "minus",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Trans_SRT_Sonnet_Auto.scpt",
+        "message": "正在执行 Trans_SRT_Sonnet_Auto.scpt..."
+    },
+    {
+        "key": "equal",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Doubao_SRT.scpt",
+        "message": "正在执行 Doubao_SRT.scpt..."
+    },
+    {
+        "key": "equal",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Doubao_SRT_Auto.scpt",
+        "message": "正在执行 Doubao_SRT_Auto.scpt..."
+    },
+    {
+        "key": "a",
+        "modifiers": [
+            "control",
+            "command"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Stock_DB.scpt",
+        "message": "正在执行 Stock_DB.scpt..."
+    },
+    {
+        "key": "one",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Ask_Stock_info.scpt",
+        "message": "正在执行 Ask_Stock_info.scpt..."
+    },
+    {
+        "key": "two",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Ask_ETF_info.scpt",
+        "message": "正在执行 Ask_ETF_info.scpt..."
+    },
+    {
+        "key": "leftBracket",
+        "modifiers": [
+            "option",
+            "command"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Restore270.scpt",
+        "message": "正在执行 Restore270 脚本..."
+    },
+    {
+        "key": "rightBracket",
+        "modifiers": [
+            "option",
+            "command"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Restore90.scpt",
+        "message": "正在执行 Restore90 脚本..."
+    },
+    {
+        "key": "leftBracket",
+        "modifiers": [
+            "control",
+            "command"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/270_90.scpt",
+        "message": "正在执行 270_90 脚本..."
+    },
+    {
+        "key": "x",
+        "modifiers": [
+            "option",
+            "command"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Baidu_Call.scpt",
+        "message": "正在执行 Baiducall 脚本..."
+    },
+    {
+        "key": "s",
+        "modifiers": [
+            "option",
+            "command"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Doubao_Call.scpt",
+        "message": "正在执行 Doubaocall 脚本..."
+    },
+    {
+        "key": "l",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Find_Code.scpt",
+        "message": "正在执行Find Code..."
+    },
+    {
+        "key": "z",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Stock_CheckFutu.scpt",
+        "message": "正在执行查询富途..."
+    },
+    {
+        "key": "z",
+        "modifiers": [
+            "control",
+            "shift"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Youdao.scpt",
+        "message": "正在执行有道翻译脚本..."
+    },
+    {
+        "key": "u",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Clipboard_count.scpt",
+        "message": "正在执行查询富途(Clipboard)..."
+    },
+    {
+        "key": "o",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Stock_seekingalpha.scpt",
+        "message": "正在执行查询Seeking Alpha..."
+    },
+    {
+        "key": "a",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Stock_Chart.scpt",
+        "message": "正在执行 Stock_Chart 脚本..."
+    },
+    {
+        "key": "q",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Search.scpt",
+        "message": "正在执行搜索脚本..."
+    },
+    {
+        "key": "leftBracket",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/MemoryClearner.scpt",
+        "message": "正在执行 MemoryClearner 脚本..."
+    },
+    {
+        "key": "w",
+        "modifiers": [
+            "control",
+            "shift"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Bob.scpt",
+        "message": "正在执行 Bob 脚本..."
+    },
+    {
+        "key": "h",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runOsascriptDirect",
+        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/API_News_Sonnet.scpt\") with parameters {\"\", \"normal\", false}",
+        "message": "正在执行 API_News_Sonnet..."
+    },
+    {
+        "key": "h",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runOsascriptDirect",
+        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/API_News_Sonnet.scpt\") with parameters {\"\", \"normal\", true}",
+        "message": "正在执行 API_News_Sonnet (Force)..."
+    },
+    {
+        "key": "n",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runOsascriptDirect",
+        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/Doubao_News.scpt\") with parameters {\"\", \"normal\", false}",
+        "message": "正在执行 Doubao_News..."
+    },
+    {
+        "key": "n",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runOsascriptDirect",
+        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/Doubao_News.scpt\") with parameters {\"\", \"normal\", true}",
+        "message": "正在执行 Doubao_News (Force)..."
+    },
+    {
+        "key": "three",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/YF_MarketCapPEShare.py' --mode normal",
+        "message": "正在执行 YF_MarketCapPEShare 脚本…"
+    },
+    {
+        "key": "three",
+        "modifiers": [
+            "control",
+            "command"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/YF_MarketCapPEShare.py' --mode empty --clear",
+        "message": "正在执行 YF_MarketCapPEShare (Empty/Clear)…"
+    },
+    {
+        "key": "nine",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/YF_MarketCapPEShare.py' --mode empty",
+        "message": "正在执行 YF_MarketCapPEShare (Empty/Clear)…"
+    },
+    {
+        "key": "eight",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Query/Check_yesterday.py' --nopop && /Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/YF_Today.py'",
+        "message": "正在执行 Check_yesterday.py 并启动 YF_Today.py ..."
+    },
+    {
+        "key": "zero",
+        "modifiers": [
+            "control",
+            "command"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/YF_Options.py'",
+        "message": "正在执行 YF_Options 脚本…"
+    },
+    {
+        "key": "nine",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/JavaScript/Screener/Filter.py'",
+        "message": "正在执行 Filter 脚本…"
+    },
+    {
+        "key": "eight",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/TE_Merged.py'",
+        "message": "正在执行 TE_Merged 脚本…"
+    },
+    {
+        "key": "comma",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/LocalServer/AppServer.py'",
+        "message": "正在执行 AppServer.py 脚本…"
+    },
+    {
+        "key": "zero",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/Selenium_News/Selenium_Combined.py'",
+        "message": "正在执行 Selenium_Combined.py 脚本…"
+    },
+    {
+        "key": "five",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/txt2json.py'",
+        "message": "正在执行 txt2json.py…"
+    },
+    {
+        "key": "seven",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/YF_Earnings_Combined.py'",
+        "message": "正在执行 YF_Earnings_Combined 脚本…"
+    },
+    {
+        "key": "six",
+        "modifiers": [
+            "control",
+            "command"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Operations/Backup_Syncing.py'",
+        "message": "正在执行 Backup_Syncing 脚本…"
+    },
+    {
+        "key": "six",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Operations/Insert_Earning_auto.py' && /Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Query/Analyse_Compare.py'",
+        "message": "正在启动 Analyse_Compare 序列..."
+    },
+    {
+        "key": "six",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Query/Analyse_Short.py' && /Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Query/Analyse_Earning_Season.py' && /Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Query/Analyse_Earning_no_Season.py' && /Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Query/Analyse_Earning_Volume.py'",
+        "message": "正在启动 Analyse_season 序列..."
+    },
+    {
+        "key": "eight",
+        "modifiers": [
+            "command",
+            "option"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/TE_Merged.py' --skipetf && /Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Operations/Insert_Holiday.py'",
+        "message": "正在启动 Holiday_Insert 序列..."
+    },
+    {
+        "key": "eight",
+        "modifiers": [
+            "shift",
+            "command"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Operations/Insert_Weekend.py' && /Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/YF_Today.py'",
+        "message": "正在启动周末数据处理序列..."
+    },
+    {
+        "key": "four",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runInTerminal",
+        "target": "bash -lc '/Users/yanzhang/Coding/sh/sync_to_server.sh'",
+        "message": "正在执行同步脚本..."
+    },
+    {
+        "key": "five",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runInTerminal",
+        "target": "bash -lc '/Users/yanzhang/Coding/sh/github_sync_pythoncode.sh' && bash -lc '/Users/yanzhang/Coding/sh/github_sync_finance.sh' && bash -lc '/Users/yanzhang/Coding/sh/github_sync_xcode.sh' && bash -lc '/Users/yanzhang/Coding/sh/github_sync_scripteditor.sh' && bash -lc '/Users/yanzhang/Coding/sh/github_sync_shell.sh' && bash -lc '/Users/yanzhang/Coding/sh/github_sync_xcode.sh' && bash -lc '/Users/yanzhang/Coding/sh/github_sync_website.sh' && bash -lc '/Users/yanzhang/Coding/sh/github_sync_android.sh' && bash -lc '/Users/yanzhang/Coding/sh/github_sync_LocalServer.sh'",
+        "message": "正在执行 GitHub 全量同步..."
+    },
+    {
+        "key": "rightBracket",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/Video/whisper_mlx_auto.py'",
+        "message": "正在执行 whisper_mlx_auto..."
+    },
+    {
+        "key": "rightBracket",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/Video/whisper_mlx_manual.py'",
+        "message": "正在执行 whisper_mlx_manual..."
+    }
+]

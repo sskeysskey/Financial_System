@@ -529,7 +529,7 @@ function buildFallback(card) {
 }
 
 // ============================================================
-//  Phase 1: 抓取主页面卡片（与原来相同）
+//  Phase 1: 抓取主页面卡片
 // ============================================================
 async function scrapeMainPage() {
     if (isRunning) return;
@@ -538,6 +538,9 @@ async function scrapeMainPage() {
     startBtn.textContent = '正在抓取主页面...';
     debugLogEl.innerHTML = '';
     scrapedCards = null;
+
+    // 请求保持屏幕常亮
+    if (chrome.power) chrome.power.requestKeepAwake('display');
 
     log('════════════════════════════════════════', 'section');
     log('  Kalshi Scraper - Phase 1: 抓取主页面', 'section');
@@ -558,6 +561,7 @@ async function scrapeMainPage() {
         startBtn.disabled = false;
         startBtn.textContent = '重新抓取主页面';
         isRunning = false;
+        if (chrome.power) chrome.power.releaseKeepAwake();
         return;
     }
 
@@ -575,6 +579,7 @@ async function scrapeMainPage() {
             startBtn.disabled = false;
             startBtn.textContent = '重新抓取主页面';
             isRunning = false;
+            if (chrome.power) chrome.power.releaseKeepAwake();
             return;
         }
 
@@ -612,6 +617,7 @@ async function scrapeMainPage() {
     }
 
     isRunning = false;
+    if (chrome.power) chrome.power.releaseKeepAwake();
 }
 
 // ============================================================
@@ -745,6 +751,9 @@ async function startSubpageScraping() {
     startBtn.disabled = true;
     startBtn.textContent = '抓取中...';
 
+    // 请求保持屏幕常亮
+    if (chrome.power) chrome.power.requestKeepAwake('display');
+
     var autoClose = document.getElementById('autoClose').checked;
     var doIncremental = document.getElementById('incrementalSaveToggle').checked;
     var concurrency = parseInt(document.getElementById('concurrencyInput').value, 10) || 4;
@@ -779,7 +788,9 @@ async function startSubpageScraping() {
         }
     }
 
-    var minVolumeInput = parseInt(document.getElementById('minVolume').value, 10);
+    // ★ 修改：如果输入框为空，则默认 100000；如果有输入，则解析为整数
+    var minVolumeRaw = document.getElementById('minVolume').value.trim();
+    var minVolumeInput = minVolumeRaw === '' ? 100000 : parseInt(minVolumeRaw, 10);
     var hasMinVolume = !isNaN(minVolumeInput) && minVolumeInput > 0;
 
     var outputFilename = getTimestampedFilename('kalshi');
@@ -822,6 +833,7 @@ async function startSubpageScraping() {
         startBtn.disabled = false;
         startBtn.textContent = '开始抓取';
         isRunning = false;
+        if (chrome.power) chrome.power.releaseKeepAwake();
         return;
     }
 
@@ -848,6 +860,7 @@ async function startSubpageScraping() {
         startBtn.disabled = false;
         startBtn.textContent = '开始抓取';
         isRunning = false;
+        if (chrome.power) chrome.power.releaseKeepAwake();
         return;
     }
 
@@ -932,6 +945,9 @@ async function startSubpageScraping() {
     startBtn.disabled = false;
     startBtn.textContent = '重新开始';
     isRunning = false;
+
+    // 释放屏幕常亮
+    if (chrome.power) chrome.power.releaseKeepAwake();
 }
 
 // ============ 事件 ============

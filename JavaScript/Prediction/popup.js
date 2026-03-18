@@ -1,8 +1,8 @@
 // ============ 配置常量 ============
-const POLYMARKET_CLICK_COUNT = 20;
+const POLYMARKET_CLICK_COUNT = 2;
 const BUTTON_CHECK_INTERVAL = 500;
 const MAX_WAIT_TIME = 30000;
-const DEFAULT_KALSHI_SCROLL_COUNT = 20; // ← 唯一需要改的地方
+const DEFAULT_KALSHI_SCROLL_COUNT = 1; // ← 唯一需要改的地方
 
 // ============ 工具函数 ============
 
@@ -45,6 +45,9 @@ async function startScraping() {
     statusDiv.textContent = '正在自动检测网站...';
     statusDiv.className = 'info';
 
+    // 请求保持屏幕常亮
+    if (chrome.power) chrome.power.requestKeepAwake('display');
+
     try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         const url = tab.url;
@@ -62,11 +65,13 @@ async function startScraping() {
             statusDiv.textContent = '请在 Polymarket 或 Kalshi 页面使用此扩展';
             statusDiv.className = 'error';
             button.disabled = false;
+            if (chrome.power) chrome.power.releaseKeepAwake();
         }
     } catch (error) {
         statusDiv.textContent = '错误: ' + error.message;
         statusDiv.className = 'error';
         button.disabled = false;
+        if (chrome.power) chrome.power.releaseKeepAwake();
     }
 }
 
@@ -139,6 +144,7 @@ async function handlePolymarket(tab, statusDiv, button) {
                     }
                     button.disabled = false;
                     button.textContent = '重新抓取';
+                    if (chrome.power) chrome.power.releaseKeepAwake();
                 }
             );
         } else {
@@ -146,12 +152,14 @@ async function handlePolymarket(tab, statusDiv, button) {
             statusDiv.textContent = '未找到 Polymarket 数据';
             statusDiv.className = 'error';
             button.disabled = false;
+            if (chrome.power) chrome.power.releaseKeepAwake();
         }
     } catch (error) {
         progressContainer.style.display = 'none';
         statusDiv.textContent = '展开失败: ' + error.message;
         statusDiv.className = 'error';
         button.disabled = false;
+        if (chrome.power) chrome.power.releaseKeepAwake();
     }
 }
 
@@ -263,11 +271,13 @@ async function handleKalshi(tab, statusDiv, button) {
         statusDiv.className = 'success';
         button.disabled = false;
         button.textContent = '重新抓取';
+        if (chrome.power) chrome.power.releaseKeepAwake();
     } catch (error) {
         progressContainer.style.display = 'none';
         statusDiv.textContent = '滚动失败: ' + error.message;
         statusDiv.className = 'error';
         button.disabled = false;
+        if (chrome.power) chrome.power.releaseKeepAwake();
     }
 }
 
