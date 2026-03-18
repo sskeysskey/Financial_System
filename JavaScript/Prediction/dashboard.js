@@ -371,29 +371,41 @@ function injectedScrapeSubpage() {
     try {
         var categories = [];
 
-        // 策略1：从 h1（市场标题）的父容器中查找面包屑链接
-        // 面包屑和 h1 在同一个 flex-col 容器里
-        var h1 = document.querySelector('h1');
-        var searchRoot = h1 ? h1.parentElement : null;
+        // ★ 辅助：从 a 元素提取分类文本（优先 span，fallback 到 a.textContent）
+        function getCatText(aEl) {
+            var span = aEl.querySelector('span[class*="typ-body-x20"]');
+            var t = span ? span.textContent : aEl.textContent;
+            return t ? t.trim().replace(/\s+/g, ' ') : '';
+        }
 
-        if (searchRoot) {
-            var bcLinks = searchRoot.querySelectorAll('a');
-            for (var bi = 0; bi < bcLinks.length; bi++) {
-                var href = bcLinks[bi].getAttribute('href') || '';
-                // ★ 同时匹配 /category/ 和 /sports/ 两种 href 模式
-                if (href.indexOf('/category/') !== -1 || href.indexOf('/sports/') !== -1) {
-                    var span = bcLinks[bi].querySelector('span[class*="typ-body-x20"]');
-                    if (span) {
-                        var text = span.textContent.trim().replace(/\s+/g, ' ');
+        // ★ 策略1（改进）：从 h1 逐层向上，查找最近的含分类链接的祖先
+        var h1 = document.querySelector('h1');
+        if (h1) {
+            var ancestor = h1.parentElement;
+            for (var up = 0; up < 6 && ancestor; up++) {
+                var bcLinks = ancestor.querySelectorAll('a');
+                var foundAny = false;
+                for (var bi = 0; bi < bcLinks.length; bi++) {
+                    var href = bcLinks[bi].getAttribute('href') || '';
+                    if (href.indexOf('/category/') !== -1 || href.indexOf('/sports/') !== -1) {
+                        // 排除导航栏里的链接
+                        if (bcLinks[bi].closest('nav')) continue;
+                        if (bcLinks[bi].closest('[data-testid*="navbar"]')) continue;
+
+                        var text = getCatText(bcLinks[bi]);
                         if (text && text !== '•' && text !== '·' && categories.indexOf(text) === -1) {
                             categories.push(text);
+                            foundAny = true;
                         }
                     }
                 }
+                // 找到即停，避免范围过大抓到无关链接
+                if (foundAny) break;
+                ancestor = ancestor.parentElement;
             }
         }
 
-        // 策略2：如果策略1没找到（h1 不存在或容器结构不同），搜索全文档（排除导航栏）
+        // 策略2：如果策略1没找到，搜索全文档（排除导航栏）
         if (categories.length === 0) {
             d.push('h1-based search found nothing, trying document-wide...');
             var allAs = document.querySelectorAll('a');
@@ -403,12 +415,9 @@ function injectedScrapeSubpage() {
                     // 排除导航栏里的链接，避免误抓
                     if (allAs[ai].closest('nav')) continue;
                     if (allAs[ai].closest('[data-testid*="navbar"]')) continue;
-                    var aSpan = allAs[ai].querySelector('span[class*="typ-body-x20"]');
-                    if (aSpan) {
-                        var aText = aSpan.textContent.trim().replace(/\s+/g, ' ');
-                        if (aText && aText !== '•' && aText !== '·' && categories.indexOf(aText) === -1) {
-                            categories.push(aText);
-                        }
+                    var aText = getCatText(allAs[ai]);
+                    if (aText && aText !== '•' && aText !== '·' && categories.indexOf(aText) === -1) {
+                        categories.push(aText);
                     }
                 }
             }
