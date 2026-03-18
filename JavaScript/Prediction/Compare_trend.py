@@ -1,7 +1,12 @@
 import json
 import os
+import glob
+import re  # 引入正则表达式库，方便提取日期
 
-def process_kalshi_data(old_file_path, new_file_path, output_file_path):
+def process_market_data(old_file_path, new_file_path, output_file_path):
+    """
+    通用数据处理函数，对比新旧文件并计算 volume_trend
+    """
     # 1. 读取旧文件并建立索引
     # 使用字典存储 name -> item_object，方便后续获取完整信息
     old_data_map = {}
@@ -51,13 +56,50 @@ def process_kalshi_data(old_file_path, new_file_path, output_file_path):
     with open(output_file_path, 'w', encoding='utf-8') as f:
         json.dump(result_data, f, indent=2, ensure_ascii=False)
     
-    print(f"处理完成，结果已保存至: {output_file_path}")
+    print(f"处理完成，结果已保存至: {output_file_path}\n")
+
+def get_latest_two_files(base_dir, prefix):
+    """
+    根据前缀查找目录下最近的两个数据文件
+    假设文件名格式为 prefix_YYMMDD.json
+    """
+    # 使用 [0-9]* 确保只匹配带有数字日期后缀的文件，避开 _trend.json 文件
+    search_pattern = os.path.join(base_dir, f"{prefix}_[0-9]*.json")
+    files = glob.glob(search_pattern)
+    
+    # 因为日期格式是 YYMMDD，直接按字符串降序排列即可让最新的文件排在前面
+    files.sort(reverse=True)
+    
+    if len(files) >= 2:
+        new_file = files[0] # 最新的文件
+        old_file = files[1] # 次新的文件
+        return old_file, new_file
+    else:
+        return None, None
 
 # 设置文件路径
 base_dir = "/Users/yanzhang/Downloads"
-old_file = os.path.join(base_dir, "kalshi_260317.json")
-new_file = os.path.join(base_dir, "kalshi_260318.json")
-output_file = os.path.join(base_dir, "kalshi_trend.json")
+platforms = ["kalshi", "polymarket"]
 
-# 执行函数
-process_kalshi_data(old_file, new_file, output_file)
+# 循环处理每个平台
+for platform in platforms:
+    print(f"开始检查 [{platform}] 的数据...")
+    old_file, new_file = get_latest_two_files(base_dir, platform)
+    
+    if old_file and new_file:
+        # --- 新增逻辑：提取日期 ---
+        # 假设文件名是 platform_YYMMDD.json
+        # 使用正则提取最后的数字部分
+        match = re.search(r'_(\d+)\.json$', os.path.basename(new_file))
+        date_str = match.group(1) if match else "unknown_date"
+        
+        # 生成带日期的新文件名: platform_trend_YYMMDD.json
+        output_filename = f"{platform}_trend_{date_str}.json"
+        output_file = os.path.join(base_dir, output_filename)
+        
+        print(f"找到文件:\n - 旧文件: {os.path.basename(old_file)}\n - 新文件: {os.path.basename(new_file)}")
+        print(f"输出文件将保存为: {output_filename}")
+        
+        process_market_data(old_file, new_file, output_file)
+    else:
+        print(f"警告: [{platform}] 的历史文件不足两个，无法进行趋势计算。\n")
