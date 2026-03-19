@@ -1,8 +1,11 @@
 import sys
 import sqlite3
 import os
-import tkinter as tk
-from tkinter import ttk, messagebox, simpledialog
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QTableWidget, QTableWidgetItem, 
+                             QVBoxLayout, QWidget, QDialog, QLabel, QLineEdit, 
+                             QPushButton, QHBoxLayout, QMessageBox, QHeaderView)
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QKeyEvent
 
 USER_HOME = os.path.expanduser("~")
 
@@ -44,171 +47,187 @@ def delete_record(db_file, table_name, date, name):
     conn.commit()
     conn.close()
 
-# 刷新 Treeview
-def refresh_treeview(tree, db_info):
-    for item in tree.get_children():
-        tree.delete(item)
-    
-    columns, rows = query_database_data(db_info['path'],
-                                          db_info['table'],
-                                          db_info['condition'],
-                                          db_info['fields'],
-                                          db_info['include_condition'])
-    
-    tree["columns"] = columns
-    tree["show"] = "headings"
-    for col in columns:
-        tree.heading(col, text=col)
-        tree.column(col, anchor="w", width=100)
-    
-    for row in rows:
-        tree.insert("", tk.END, values=row)
-
-# 打开编辑窗口
-def open_edit_window(record, columns, db_info, tree, root):
-    edit_win = tk.Toplevel(root)
-    edit_win.title("编辑记录")
-    edit_win.bind("<Escape>", lambda e: edit_win.destroy())
-    
-    # 获取原始的 date 和 name，用于定位记录
-    date_idx = columns.index("date")
-    name_idx = columns.index("name")
-    old_date = record[date_idx]
-    old_name = record[name_idx]
-    
-    entries = {}
-    
-    for idx, col in enumerate(columns):
-        tk.Label(edit_win, text=col).grid(row=idx, column=0, padx=5, pady=5, sticky="e")
-        entry = tk.Entry(edit_win, width=30)
-        entry.insert(0, record[idx])
-        entry.grid(row=idx, column=1, padx=5, pady=5)
+# --- 自定义删除对话框，支持左右键切换 ---
+class DeleteConfirmDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("确认删除")
+        self.setFixedSize(300, 150)
         
-        # date 和 name 作为主键，设为只读，防止用户修改导致无法定位
-        if col in ["date", "name"]:
-            entry.config(state="readonly")
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("确定要删除该记录吗？"))
         
-        entries[col] = entry
+        btn_layout = QHBoxLayout()
+        self.yes_btn = QPushButton("确定")
+        self.no_btn = QPushButton("取消")
+        
+        btn_layout.addWidget(self.yes_btn)
+        btn_layout.addWidget(self.no_btn)
+        layout.addLayout(btn_layout)
+        self.setLayout(layout)
+        
+        self.yes_btn.clicked.connect(self.accept)
+        self.no_btn.clicked.connect(self.reject)
+        
+        # 默认焦点在“取消”上，防止误删
+        self.no_btn.setFocus()
 
-    def save_changes():
-        new_values = {}
-        for col in columns:
-            if col in ["date", "name"]: continue # 不更新主键
-            new_values[col] = entries[col].get()
-        try:
-            update_record(db_info['path'], db_info['table'], old_date, old_name, new_values)
-            edit_win.destroy()
-            refresh_treeview(tree, db_info)
-        except Exception as e:
-            messagebox.showerror("错误", str(e))
-    
-    def delete_this_record():
-        if messagebox.askyesno("确认删除", "是否要删除该记录？"):
-            try:
-                delete_record(db_info['path'], db_info['table'], old_date, old_name)
-                messagebox.showinfo("成功", "记录删除成功！")
-                edit_win.destroy()
-                refresh_treeview(tree, db_info)
-            except Exception as e:
-                messagebox.showerror("错误", str(e))
-    
-    edit_win.bind("<Return>", lambda e: save_changes())
-    tk.Button(edit_win, text="保存修改", command=save_changes).grid(row=len(columns), column=0, padx=5, pady=10)
-    tk.Button(edit_win, text="删除记录", command=delete_this_record).grid(row=len(columns), column=1, padx=5, pady=10)
-
-def on_double_click(event, tree, db_info, columns, root):
-    selected = tree.selection()
-    if selected:
-        record = tree.item(selected[0], "values")
-        open_edit_window(record, columns, db_info, tree, root)
-
-def create_main_window(db_info):
-    root = tk.Tk()
-    root.title("数据库查询与编辑")
-    root.geometry("900x600")
-    root.lift()
-    root.focus_force()
-    
-    should_exit = [False]
-    def on_closing():
-        should_exit[0] = True
-        root.destroy()
-    root.protocol("WM_DELETE_WINDOW", on_closing)
-    root.bind("<Escape>", lambda e: on_closing())
-
-    frame = tk.Frame(root)
-    frame.pack(fill=tk.BOTH, expand=True)
-    
-    tree = ttk.Treeview(frame)
-    tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-    
-    vsb = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
-    vsb.pack(side=tk.RIGHT, fill=tk.Y)
-    tree.configure(yscrollcommand=vsb.set)
-    
-    refresh_treeview(tree, db_info)
-    
-    def delete_selected_record(event):
-        selected = tree.selection()
-        if selected:
-            record = tree.item(selected[0], "values")
-            cols = tree["columns"]
-            # 获取定位信息
-            date_val = record[cols.index("date")]
-            name_val = record[cols.index("name")]
-            
-            if messagebox.askyesno("确认删除", "是否要删除该记录？"):
-                try:
-                    delete_record(db_info['path'], db_info['table'], date_val, name_val)
-                    messagebox.showinfo("成功", "记录删除成功！")
-                    refresh_treeview(tree, db_info)
-                except Exception as e:
-                    messagebox.showerror("错误", str(e))
-    
-    root.bind("<BackSpace>", delete_selected_record)
-    tree.bind("<Double-1>", lambda event: on_double_click(event, tree, db_info, tree["columns"], root))
-    
-    root.mainloop()
-    if should_exit[0]:
-        os._exit(0)
-
-if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        current_symbol = sys.argv[1].upper()
-    else:
-        current_symbol = None
-
-    db_path = os.path.join(USER_HOME, 'Coding/Database/Finance.db')
-    table_name = 'Earning' # 注意：如果需要切换表，这里可能需要逻辑支持
-
-    while True:
-        rows = []
-        if current_symbol:
-            condition = f"name = '{current_symbol}'"
-            _, rows = query_database_data(db_path, table_name, condition, '*', True)
-
-        if rows:
-            break
-        else:
-            prompt_root = tk.Tk()
-            prompt_root.withdraw()
-            prompt_text = "请输入 Symbol:"
-            if current_symbol:
-                prompt_text = f"在数据库中未找到 Symbol: '{current_symbol}'\n\n请输入新的 Symbol (或取消以退出):"
-            new_symbol = simpledialog.askstring("输入 Symbol", prompt_text, parent=prompt_root)
-            prompt_root.destroy()
-
-            if new_symbol:
-                current_symbol = new_symbol.strip().upper()
+    def keyPressEvent(self, event: QKeyEvent):
+        # 左右键切换焦点
+        if event.key() == Qt.Key.Key_Left or event.key() == Qt.Key.Key_Right:
+            if self.yes_btn.hasFocus():
+                self.no_btn.setFocus()
             else:
-                sys.exit(0)
+                self.yes_btn.setFocus()
+        # ESC 键关闭对话框
+        elif event.key() == Qt.Key.Key_Escape:
+            self.reject()
+        else:
+            super().keyPressEvent(event)
 
+# --- 主窗口类 ---
+class MainWindow(QMainWindow):
+    def __init__(self, db_info):
+        super().__init__()
+        self.db_info = db_info
+        self.setWindowTitle("数据库查询与编辑")
+        self.resize(900, 600)
+        
+        self.table_widget = QTableWidget()
+        self.setCentralWidget(self.table_widget)
+        self.table_widget.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.table_widget.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.table_widget.doubleClicked.connect(self.on_double_click)
+        
+        self.refresh_table()
+
+    def refresh_table(self):
+        cols, rows = query_database_data(self.db_info['path'], self.db_info['table'], 
+                                         self.db_info['condition'], self.db_info['fields'], 
+                                         self.db_info['include_condition'])
+        self.table_widget.setColumnCount(len(cols))
+        self.table_widget.setHorizontalHeaderLabels(cols)
+        self.table_widget.setRowCount(len(rows))
+        
+        for r_idx, row in enumerate(rows):
+            for c_idx, val in enumerate(row):
+                self.table_widget.setItem(r_idx, c_idx, QTableWidgetItem(str(val)))
+        self.table_widget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+
+    def on_double_click(self):
+        row = self.table_widget.currentRow()
+        if row < 0: return
+        
+        # 获取当前行数据
+        record = [self.table_widget.item(row, i).text() for i in range(self.table_widget.columnCount())]
+        columns = [self.table_widget.horizontalHeaderItem(i).text() for i in range(self.table_widget.columnCount())]
+        
+        self.open_edit_window(record, columns)
+
+    def open_edit_window(self, record, columns):
+        edit_win = QDialog(self)
+        edit_win.setWindowTitle("编辑记录")
+        
+        # 重写编辑窗口的 ESC 事件
+        def edit_win_keyPressEvent(event):
+            if event.key() == Qt.Key.Key_Escape:
+                edit_win.close()
+            else:
+                QDialog.keyPressEvent(edit_win, event)
+        edit_win.keyPressEvent = edit_win_keyPressEvent
+        
+        layout = QVBoxLayout()
+        
+        date_idx = columns.index("date")
+        name_idx = columns.index("name")
+        old_date = record[date_idx]
+        old_name = record[name_idx]
+        
+        inputs = {}
+        for i, col in enumerate(columns):
+            h_layout = QHBoxLayout()
+            h_layout.addWidget(QLabel(col))
+            line_edit = QLineEdit(record[i])
+            if col in ["date", "name"]:
+                line_edit.setReadOnly(True)
+            h_layout.addWidget(line_edit)
+            layout.addLayout(h_layout)
+            inputs[col] = line_edit
+            
+        def save():
+            new_vals = {col: inputs[col].text() for col in columns if col not in ["date", "name"]}
+            try:
+                update_record(self.db_info['path'], self.db_info['table'], old_date, old_name, new_vals)
+                edit_win.accept()
+                self.refresh_table()
+            except Exception as e:
+                QMessageBox.critical(self, "错误", str(e))
+                
+        def delete():
+            dialog = DeleteConfirmDialog(self)
+            if dialog.exec():
+                try:
+                    delete_record(self.db_info['path'], self.db_info['table'], old_date, old_name)
+                    edit_win.accept() # 关闭编辑窗口
+                    self.refresh_table()
+                    # 关键：强制焦点回到主窗口
+                    self.activateWindow()
+                    self.setFocus()
+                except Exception as e:
+                    QMessageBox.critical(self, "错误", str(e))
+
+        btn_layout = QHBoxLayout()
+        save_btn = QPushButton("保存")
+        del_btn = QPushButton("删除")
+        save_btn.clicked.connect(save)
+        del_btn.clicked.connect(delete)
+        btn_layout.addWidget(save_btn)
+        btn_layout.addWidget(del_btn)
+        layout.addLayout(btn_layout)
+        
+        edit_win.setLayout(layout)
+        edit_win.exec()
+
+    def keyPressEvent(self, event: QKeyEvent):
+        # ESC 键退出程序
+        if event.key() == Qt.Key.Key_Escape:
+            self.close()
+        # BackSpace 键删除记录
+        elif event.key() == Qt.Key.Key_Backspace:
+            row = self.table_widget.currentRow()
+            if row >= 0:
+                # 复用刚才的删除逻辑
+                dialog = DeleteConfirmDialog(self)
+                if dialog.exec():
+                    cols = [self.table_widget.horizontalHeaderItem(i).text() for i in range(self.table_widget.columnCount())]
+                    date_val = self.table_widget.item(row, cols.index("date")).text()
+                    name_val = self.table_widget.item(row, cols.index("name")).text()
+                    delete_record(self.db_info['path'], self.db_info['table'], date_val, name_val)
+                    self.refresh_table()
+                    self.activateWindow()
+                    self.setFocus()
+        else:
+            super().keyPressEvent(event)
+
+# --- 入口逻辑 ---
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    
+    # 模拟获取 symbol 的逻辑
+    db_path = os.path.join(USER_HOME, 'Coding/Database/Finance.db')
+    table_name = 'Earning'
+    current_symbol = sys.argv[1].upper() if len(sys.argv) > 1 else None
+    
+    # 这里为了演示，简单处理一下初始化逻辑
+    # 实际应用中建议将输入 symbol 的逻辑放在启动页
     db_info = {
         'path': db_path,
         'table': table_name,
-        'condition': f"name = '{current_symbol}'",
+        'condition': f"name = '{current_symbol}'" if current_symbol else "",
         'fields': '*',
-        'include_condition': True
+        'include_condition': True if current_symbol else False
     }
     
-    create_main_window(db_info)
+    window = MainWindow(db_info)
+    window.show()
+    sys.exit(app.exec())

@@ -14,8 +14,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = "" 
 TARGET_DATE = "" 
 
-# SYMBOL_TO_TRACE = "OLLI"
-# TARGET_DATE = "2026-03-19"
+# SYMBOL_TO_TRACE = "NET"
+# TARGET_DATE = "2026-02-23"
 
 # 3. 日志路径
 LOG_FILE_PATH = os.path.join(BASE_PATH, "Downloads", "PE_Volume_trace_log.txt")
@@ -80,6 +80,16 @@ CONFIG = {
     "ETF_COND_LOW_TURNOVER_RANK_THRESHOLD": 2,     # [新增] 成交额排名前 N 名 (前2名)
 }
 
+# ========== 新增：白名单列表 ==========
+WHITELIST_SYMBOLS = [
+    "WBD", "NBIS", "GSAT", "TIGO", "SATS", "FIVE", "IREN", "HUT", "ROIV", "ABVX", 
+    "ARWR", "COGT", "PACS", "PRAX", "TERN", "VRT", "FIX", "ATI", "STRL", "BE", 
+    "KTOS", "GEV", "AEIS", "KRMN", "ECG", "AGX", "PL", "POWL", "OPEN", "MU", 
+    "LRCX", "GLW", "WDC", "STX", "TER", "MKSI", "COHR", "CIEN", "NXT", "CLS", 
+    "ASTS", "TSEM", "LITE", "SNDK", "TTMI", "APLD", "CAMT", "VSAT", "VICR", 
+    "FORM", "VIAV", "CIFR", "AAOI", "ENLT", "FLNC"
+]
+
 # --- 2. 辅助与文件操作模块 ---
 
 def clean_symbol(symbol_with_suffix):
@@ -137,9 +147,9 @@ def load_symbol_tags(json_path):
     except Exception:
         return {}
 
-def update_panel_with_conflict_check(json_path, pe_vol_list, pe_vol_notes, pe_vol_up_list, pe_vol_up_notes, pe_vol_high_list, pe_vol_high_notes, etf_vol_high_list, etf_vol_high_notes, etf_vol_low_list, etf_vol_low_notes, log_detail):
+def update_panel_with_conflict_check(json_path, pe_vol_list, pe_vol_notes, pe_vol_up_list, pe_vol_up_notes, pe_vol_high_list, pe_vol_high_notes, etf_vol_high_list, etf_vol_high_notes, etf_vol_low_list, etf_vol_low_notes, pe_hot_list, pe_hot_notes, log_detail):
     """
-    专门用于 PE_Volume, PE_Volume_up, PE_Volume_high, 以及 ETF_Volume_high 的写入。
+    专门用于 PE_Volume, PE_Volume_up, PE_Volume_high, 以及 ETF_Volume_high 、pe_hot_list、pe_hot_notes 的写入。
     功能：
     1. 写入所有三个策略的主分组和 backup 分组。
     2. 检查这些 symbol 是否存在于指定的 backup 分组中，如果存在则删除。
@@ -219,10 +229,14 @@ def update_panel_with_conflict_check(json_path, pe_vol_list, pe_vol_notes, pe_vo
     data['ETF_Volume_low'] = build_group_dict(etf_vol_low_list, etf_vol_low_notes)
     data['ETF_Volume_low_backup'] = build_group_dict(etf_vol_low_list, etf_vol_low_notes)
 
+    # === 新增：写入 PE_Hot 分组 ===
+    data['PE_Hot'] = build_group_dict(pe_hot_list, pe_hot_notes)
+    data['PE_Hot_backup'] = build_group_dict(pe_hot_list, pe_hot_notes)
+
     try:
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
-        log_detail("Panel 文件更新完成 (包含冲突清理及 ETF 写入)。")
+        log_detail("Panel 文件更新完成 (包含冲突清理、ETF 及 PE_Hot 写入)。")
     except Exception as e:
         log_detail(f"错误: 写入 Panel JSON 文件失败: {e}")
 
@@ -412,12 +426,28 @@ def pe_volume(db_path, history_json_path, sector_map, target_date_override, symb
             # --- 修改点：计算成交额并调用成交额排名函数 ---
             turnover_curr = price_curr * vol_curr
             
-            vol_cond = check_turnover_rank(
-                cursor, sector, symbol, dates[0], turnover_curr, 
-                CONFIG["COND8_VOLUME_LOOKBACK_MONTHS"], 
-                rank_threshold, 
-                log_detail, is_tracing
-            )
+            # 先判断从最近财报日到今天是否是成交额前三
+            cursor.execute("SELECT date FROM Earning WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 1", (symbol, dates[0]))
+            er_row = cursor.fetchone()
+            
+            vol_cond = False
+            if er_row:
+                er_date_str = er_row[0]
+                if is_tracing: log_detail(f"    - 检查财报日起成交额排名 (财报日: {er_date_str})")
+                vol_cond = check_turnover_since_earning(
+                    cursor, sector, symbol, er_date_str, dates[0], turnover_curr,
+                    rank_threshold, log_detail, is_tracing
+                )
+            
+            # 如果不是，再判断1.5个月这个步骤
+            if not vol_cond:
+                if is_tracing: log_detail(f"    - 财报日起未满足前{rank_threshold}，检查过去 {CONFIG['COND8_VOLUME_LOOKBACK_MONTHS']} 个月排名")
+                vol_cond = check_turnover_rank(
+                    cursor, sector, symbol, dates[0], turnover_curr, 
+                    CONFIG["COND8_VOLUME_LOOKBACK_MONTHS"], 
+                    rank_threshold, 
+                    log_detail, is_tracing
+                )
             
             if vol_cond:
                 # ================== 财报日过滤逻辑 ==================
@@ -895,6 +925,8 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         
         # 1. 检查历史：从最新财报日到今天，该股是否以"甲"或"乙"类进入过 PE_Volume_high
         was_in_high_history = False
+        latest_jia_history_date = None  # [新增] 追踪最近一次甲类出现的日期，用于路径C
+        
         for h_date, h_symbols_raw in hist_pe_vol_high.items():
             if latest_er_date <= h_date <= latest_date:
                 # 遍历该日期的所有记录（保留后缀）
@@ -904,21 +936,27 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
                     
                     # 如果 symbol 匹配
                     if clean_sym == symbol:
-                        # 检查后缀是否包含"甲"或"乙"
+                        # 路径A/B所需：出现过甲或乙
                         if "甲" in s_with_suffix or "乙" in s_with_suffix:
                             was_in_high_history = True
                             if is_tracing:
                                 log_detail(f"    - 发现历史记录: {h_date} -> {s_with_suffix} (包含甲/乙类)")
-                            break
-                
-                if was_in_high_history:
-                    break
+                        
+                        # [新增] 路径C所需：记录最近一次"甲"类出现的日期
+                        if "甲" in s_with_suffix:
+                            if latest_jia_history_date is None or h_date > latest_jia_history_date:
+                                latest_jia_history_date = h_date
+        
+        # [说明] 移除了原有的 break，确保遍历所有历史日期找到最近的甲类日期
+        
+        if is_tracing and latest_jia_history_date:
+            log_detail(f"    - 最近甲类出现日期: {latest_jia_history_date}")
         
         if was_in_high_history:
             # 路径 A: 跌幅池抄底 (今日在 PE_W/Deep 等池子里)
             if symbol in valid_pool:
                 cond_chaodi = True
-                if is_tracing: log_detail(f"    - 抄底判定: 命中 [回调池路径]")
+                if is_tracing: log_detail(f"    - 抄底判定: 命中 [回调池路径A]")
             
             # 路径 B: 放量下跌抄底 (今日价格下跌 且 成交额是近1.5个月前2名)
             else:
@@ -936,12 +974,60 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
                     
                     if is_top2_recent:
                         cond_chaodi = True
-                        if is_tracing: log_detail(f"    - 抄底判定: 命中 [放量下跌路径] (近{lookback_days}天成交额Top{rank_threshold})")
+                        if is_tracing: log_detail(f"    - 抄底判定: 命中 [放量下跌路径B] (近{lookback_days}天成交额Top{rank_threshold})")
+            
+            # [新增] 路径 C: 缩量回调后缩量上涨
+            # 条件：甲日之后到昨天，每天都是缩量下跌；今天是缩量上涨
+            if not cond_chaodi and latest_jia_history_date is not None:
+                cond_c_price_up = (latest_price > prev_price)
+                cond_c_turnover_down = (latest_turnover < prev_turnover)
+                
+                if is_tracing:
+                    log_detail(f"    - 路径C检查: 今日缩量上涨? 价格上涨={cond_c_price_up}, 成交额缩量={cond_c_turnover_down}")
+                
+                if cond_c_price_up and cond_c_turnover_down:
+                    # 获取从甲日到今天的所有交易数据（按日期升序）
+                    query_c = f'SELECT date, price, volume FROM "{sector}" WHERE name = ? AND date >= ? AND date <= ? ORDER BY date ASC'
+                    cursor.execute(query_c, (symbol, latest_jia_history_date, latest_date))
+                    all_rows_c = cursor.fetchall()
+                    
+                    # 至少需要: 甲日 + 1个中间日 + 今天 = 3条记录
+                    # （如果你希望允许甲日紧邻今天的情况，可改为 >= 2）
+                    if len(all_rows_c) >= 3:
+                        # 检查中间日 (index 1 到 len-2)：每天都必须是缩量下跌
+                        # all_rows_c[0] = 甲日，all_rows_c[-1] = 今天
+                        all_shrink_down = True
+                        for i in range(1, len(all_rows_c) - 1):
+                            curr_d, curr_p, curr_v = all_rows_c[i]
+                            prev_d_c, prev_p_c, prev_v_c = all_rows_c[i - 1]
+                            
+                            if any(x is None for x in [curr_p, curr_v, prev_p_c, prev_v_c]):
+                                all_shrink_down = False
+                                break
+                            
+                            curr_to = curr_p * curr_v
+                            prev_to = prev_p_c * prev_v_c
+                            
+                            # 缩量下跌：价格下跌 AND 成交额下降
+                            if not (curr_p < prev_p_c and curr_to < prev_to):
+                                all_shrink_down = False
+                                if is_tracing:
+                                    log_detail(f"      路径C中断于 {curr_d}: 价格 {prev_p_c:.2f}->{curr_p:.2f}, 成交额 {prev_to:,.0f}->{curr_to:,.0f}")
+                                break
+                        
+                        if all_shrink_down:
+                            cond_chaodi = True
+                            middle_days = len(all_rows_c) - 2
+                            if is_tracing:
+                                log_detail(f"    - 抄底判定: 命中 [缩量回调路径C] (甲日: {latest_jia_history_date}, 连续缩量下跌天数: {middle_days})")
+                    else:
+                        if is_tracing:
+                            log_detail(f"    - 路径C: 数据不足，甲日到今天仅 {len(all_rows_c)} 条记录 (需要>=3)")
 
         if cond_chaodi:
             results_chaodi.append(symbol)
             if is_tracing:
-                log_detail(f"    ✅ [选中-抄底类] 满足历史入选+今日回调/放量条件")
+                log_detail(f"    ✅ [选中-抄底类] 满足历史入选+今日回调/放量/缩量回调条件")
 
         # ================= 甲乙丙类逻辑的基础门槛 =================
         # 门槛 2: 今日上涨 (如果未上涨，则跳过甲乙丙的判断)
@@ -1355,6 +1441,46 @@ def check_turnover_rank(cursor, sector_name, symbol, latest_date_str, latest_tur
     
     return is_top_n
 
+# ========== 新增：处理 PE_Hot 策略的独立函数 ==========
+def process_pe_hot(panel_json_path, exclude_symbols, log_detail):
+    """
+    检索 sectors_panel 里的特定分组，如果发现白名单中的 symbol 在这些分组里，
+    且不在 exclude_symbols (PE_Volume等) 中，则将其提取出来。
+    返回: pe_hot_list (list), pe_hot_notes (dict)
+    """
+    log_detail("\n========== 开始执行 策略: PE_Hot (白名单检索) ==========")
+    
+    target_groups = [
+        "PE_Deep", "PE_Deeper", "PE_W", "OverSell_W", 
+        "Strategy12", "Strategy34", "PE_valid", "PE_invalid"
+    ]
+    
+    pe_hot_list = []
+    pe_hot_notes = {}
+    
+    try:
+        with open(panel_json_path, 'r', encoding='utf-8') as f:
+            panel_data = json.load(f)
+            
+        for group in target_groups:
+            if group in panel_data and isinstance(panel_data[group], dict):
+                for sym, note in panel_data[group].items():
+                    # 检查是否在白名单中
+                    if sym in WHITELIST_SYMBOLS:
+                        # 检查是否在排除列表(PE_Volume系列)中
+                        if sym not in exclude_symbols:
+                            if sym not in pe_hot_list:
+                                pe_hot_list.append(sym)
+                                # 保留它在原分组的备注
+                                pe_hot_notes[sym] = note if note else sym
+                                log_detail(f"    ✅ [选中-PE_Hot] {sym} (来自分组: {group})")
+    except Exception as e:
+        log_detail(f"错误: 读取 Panel 文件执行 PE_Hot 策略失败: {e}")
+        
+    pe_hot_list = sorted(pe_hot_list)
+    log_detail(f"PE_Hot 筛选完成，共命中 {len(pe_hot_list)} 个: {pe_hot_list}")
+    return pe_hot_list, pe_hot_notes
+
 # --- 4. 主执行流程 ---
 
 def run_pe_volume_logic(log_detail):
@@ -1597,7 +1723,17 @@ def run_pe_volume_logic(log_detail):
     
     # === 新增 ===：生成 ETF 的备注 (正常情况下直接写入symbol本体即可)
     etf_vol_high_notes = build_symbol_note_map(filtered_etf_volume_high)
-    etf_vol_low_notes = build_symbol_note_map(filtered_etf_volume_low) # === 新增 ===
+    etf_vol_low_notes = build_symbol_note_map(filtered_etf_volume_low) 
+
+    # ================= 新增：执行 PE_Hot 策略 =================
+    # 排除的 symbol 列表：如果在这些 Volume 策略中，就不进入 PE_Hot
+    exclude_symbols_for_hot = set(filtered_pe_volume) | set(filtered_pe_volume_up) | set(filtered_pe_volume_high)
+    
+    pe_hot_list, pe_hot_notes = process_pe_hot(
+        PANEL_JSON_FILE, 
+        exclude_symbols_for_hot, 
+        log_detail
+    )
 
     # 5. 回测安全拦截 (新增 ETF 统计)
     if TARGET_DATE:
@@ -1611,7 +1747,8 @@ def run_pe_volume_logic(log_detail):
         log_detail(f"    - 丙类: {len(filtered_pe_volume_high_bing)} 个")
         log_detail(f"    - 抄底类: {len(filtered_pe_volume_high_chaodi)} 个")
         log_detail(f"📊 [策略4] ETF_Volume_high 命中: {len(filtered_etf_volume_high)} 个")
-        log_detail(f"📊 [策略5] ETF_Volume_low 命中: {len(filtered_etf_volume_low)} 个") # === 新增 ===
+        log_detail(f"📊 [策略5] ETF_Volume_low 命中: {len(filtered_etf_volume_low)} 个") 
+        log_detail(f"📊 [策略-Hot] PE_Hot 命中: {len(pe_hot_list)} 个") 
         log_detail("="*60 + "\n")
         return
 
@@ -1623,7 +1760,8 @@ def run_pe_volume_logic(log_detail):
         filtered_pe_volume_up, pe_volume_up_notes,
         filtered_pe_volume_high, pe_vol_high_notes,
         filtered_etf_volume_high, etf_vol_high_notes,
-        filtered_etf_volume_low, etf_vol_low_notes, # === 新增传入参数 ===
+        filtered_etf_volume_low, etf_vol_low_notes, 
+        pe_hot_list, pe_hot_notes, # 传入 PE_Hot 数据
         log_detail
     )
 
@@ -1642,13 +1780,13 @@ def run_pe_volume_logic(log_detail):
     history_pe_volume_up = sorted(list(pe_volume_up_notes.values()))
     history_pe_volume_high = sorted(list(pe_vol_high_notes.values()))
     history_etf_volume_high = sorted(list(etf_vol_high_notes.values()))
-    history_etf_volume_low = sorted(list(etf_vol_low_notes.values())) # === 新增 ===
+    history_etf_volume_low = sorted(list(etf_vol_low_notes.values())) 
 
     update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume", history_pe_volume, log_detail, base_date_str)
     update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume_up", history_pe_volume_up, log_detail, base_date_str)
     update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume_high", history_pe_volume_high, log_detail, base_date_str)
     update_earning_history_json(EARNING_HISTORY_JSON_FILE, "ETF_Volume_high", history_etf_volume_high, log_detail, base_date_str)
-    update_earning_history_json(EARNING_HISTORY_JSON_FILE, "ETF_Volume_low", history_etf_volume_low, log_detail, base_date_str) # === 新增 ===
+    update_earning_history_json(EARNING_HISTORY_JSON_FILE, "ETF_Volume_low", history_etf_volume_low, log_detail, base_date_str) 
 
     # 写入 Tag 黑名单标记分组 (包含所有策略)
     all_volume_symbols = set(final_pe_volume) | set(final_pe_volume_up) | set(final_pe_volume_high) | set(final_etf_volume_high) | set(final_etf_volume_low) 

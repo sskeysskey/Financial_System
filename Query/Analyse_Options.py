@@ -371,15 +371,15 @@ def process_options_change(file_old, file_new, top_n=50, include_new=True):
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
     
-    # 1. 保存常规主文件 (这个文件通常还是只保留当天最新，或者你可以根据需要修改)
+    # 1. 保存常规主文件
     output_path = os.path.join(OUTPUT_DIR, OUTPUT_FILENAME)
     final_output.to_csv(output_path, index=False)
     
-    date_str = datetime.datetime.now().strftime('%y%m%d')
-    backup_path = os.path.join(BACKUP_DIR, f"Options_Change_{date_str}.csv")
-    if not os.path.exists(BACKUP_DIR): os.makedirs(BACKUP_DIR)
-    final_output.to_csv(backup_path, index=False)
-    print(f"✅ 备份文件已保存: {backup_path}")
+    # date_str = datetime.datetime.now().strftime('%y%m%d')
+    # backup_path = os.path.join(BACKUP_DIR, f"Options_Change_{date_str}.csv")
+    # if not os.path.exists(BACKUP_DIR): os.makedirs(BACKUP_DIR)
+    # final_output.to_csv(backup_path, index=False)
+    # print(f"✅ 备份文件已保存: {backup_path}")
 
     # 返回 DataFrame 供后续步骤使用
     return final_output

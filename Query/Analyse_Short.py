@@ -18,8 +18,8 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 SYMBOL_TO_TRACE = ""
 TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "AVAV"
-# TARGET_DATE = "2026-01-20"
+# SYMBOL_TO_TRACE = "TME"
+# TARGET_DATE = "2025-11-12"
 
 # 追踪日志路径
 LOG_FILE_PATH = os.path.join(USER_HOME, "Downloads", "OverBuy_trace_log.txt")
@@ -27,11 +27,11 @@ LOG_FILE_PATH = os.path.join(USER_HOME, "Downloads", "OverBuy_trace_log.txt")
 
 # 算法参数配置
 CONFIG = {
-    "MA_PERIOD": 200,
+    "MA_PERIOD": 150,
     "MA_BELOW_MAX_PCT": 0.3,
     "RECENT_DAYS_LOOKBACK": 1,
     "LOOKBACK_MONTHS_LONG": 12,
-    "RANK_THRESHOLD_LONG": 2,
+    "RANK_THRESHOLD_LONG": 3,
     "LOOKBACK_MONTHS_SHORT": 6,
     "RANK_THRESHOLD_SHORT": 1,
     "M_TOP_HEIGHT_TOLERANCE": 0.038,
@@ -638,9 +638,12 @@ def run_short_logic(log_detail):
 
             for i in range(min(CONFIG["RECENT_DAYS_LOOKBACK"], len(rows) - 1)):
                 day_date, day_price, day_vol = rows[i]
-                _, prev_price_i, _ = rows[i + 1]
+                
+                # 【修改点 1】：同时获取前一天的成交量 prev_vol_i
+                _, prev_price_i, prev_vol_i = rows[i + 1]
 
-                if day_price is None or prev_price_i is None or day_vol is None:
+                # 【修改点 2】：确保前一天的成交量也不为空
+                if day_price is None or prev_price_i is None or day_vol is None or prev_vol_i is None:
                     continue
 
                 day_price = float(day_price)
@@ -650,23 +653,44 @@ def run_short_logic(log_detail):
                     continue
 
                 day_turnover = day_price * float(day_vol)
+                
+                # 【修改点 3】：计算前一天的成交额
+                prev_turnover = prev_price_i * float(prev_vol_i)
+
+                # 【修改点 4】：新增条件，当天成交额必须大于前一天成交额（即成交额上涨）
+                if day_turnover <= prev_turnover:
+                    if is_tracing:
+                        log_detail(f"    - [成交额检查] {day_date} 成交额({day_turnover:,.0f}) 未上涨 (前一日: {prev_turnover:,.0f})，跳过。")
+                    continue
+
                 date_suffix = f"({day_date})" if i > 0 else ""
 
-                if check_turnover_rank(cursor, sector, symbol, day_date, day_turnover,
-                                       CONFIG["LOOKBACK_MONTHS_LONG"], CONFIG["RANK_THRESHOLD_LONG"]):
+                # --- 修改开始：增加详细诊断日志 ---
+                # 检查 1年期 (Long)
+                is_long_hit = check_turnover_rank(cursor, sector, symbol, day_date, day_turnover,
+                                       CONFIG["LOOKBACK_MONTHS_LONG"], CONFIG["RANK_THRESHOLD_LONG"])
+                
+                # 检查 半年期 (Short)
+                is_short_hit = check_turnover_rank(cursor, sector, symbol, day_date, day_turnover,
+                                         CONFIG["LOOKBACK_MONTHS_SHORT"], CONFIG["RANK_THRESHOLD_SHORT"])
+
+                if is_long_hit:
                     is_hit_base = True
                     hit_reason = f"1年内Top{CONFIG['RANK_THRESHOLD_LONG']}天量{date_suffix}"
                     if is_tracing:
                         log_detail(f"    ✓ [命中] {hit_reason}")
                     break
-
-                elif check_turnover_rank(cursor, sector, symbol, day_date, day_turnover,
-                                         CONFIG["LOOKBACK_MONTHS_SHORT"], CONFIG["RANK_THRESHOLD_SHORT"]):
+                elif is_short_hit:
                     is_hit_base = True
                     hit_reason = f"半年内Top{CONFIG['RANK_THRESHOLD_SHORT']}天量{date_suffix}"
                     if is_tracing:
                         log_detail(f"    ✓ [命中] {hit_reason}")
                     break
+                else:
+                    # 如果都没命中，打印诊断信息
+                    if is_tracing:
+                        log_detail(f"    - [成交额检查] {day_date} 成交额={day_turnover:,.0f} 未进入排名门槛。")
+                # --- 修改结束 ---
 
             if is_tracing and not is_hit_base and not is_pump_dump:
                 log_detail(f"    x [失败] 成交额排名未达标，跳过。")

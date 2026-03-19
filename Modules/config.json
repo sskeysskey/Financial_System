@@ -57,16 +57,6 @@
         "message": "正在执行 Analyse_Options..."
     },
     {
-        "key": "eight",
-        "modifiers": [
-            "control",
-            "command"
-        ],
-        "actionType": "runPythonBackground",
-        "target": "/Users/yanzhang/Coding/Financial_System/Query/Check_yesterday.py",
-        "message": "正在执行 Check_yesterday..."
-    },
-    {
         "key": "backslash",
         "modifiers": [
             "control",
@@ -227,9 +217,9 @@
         "modifiers": [
             "control"
         ],
-        "actionType": "runOrunPythonBackgroundsascript",
-        "target": "/Users/yanzhang/Coding/Financial_System/JavaScript/Prediction/Prediction_Syncing.py",
-        "message": "正在 Prediction_Syncing..."
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Prediction_Compare.scpt",
+        "message": "正在 Prediction..."
     },
     {
         "key": "two",
@@ -748,6 +738,16 @@
     {
         "key": "zero",
         "modifiers": [
+            "shift",
+            "command"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Query/Analyse_Options.py'",
+        "message": "正在执行 Analyse_Options 脚本…"
+    },
+    {
+        "key": "zero",
+        "modifiers": [
             "control",
             "command"
         ],
@@ -770,8 +770,18 @@
             "control"
         ],
         "actionType": "runInTerminal",
-        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/TE_Merged.py'",
-        "message": "正在执行 TE_Merged 脚本…"
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/TE_Merged.py' --skipetf",
+        "message": "正在执行 TE_Merged 脚本（已跳过 ETF）…"
+    },
+    {
+        "key": "eight",
+        "modifiers": [
+            "control",
+            "command"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/JavaScript/TopETFs/Compare_Insert.py'",
+        "message": "正在执行 TE_Merged 脚本（已跳过 ETF）…"
     },
     {
         "key": "comma",

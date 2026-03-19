@@ -937,6 +937,22 @@ async function startSubpageScraping() {
     saveJsonFile(finalResults, outputFilename);
     log('💾 最终保存: ' + outputFilename + ' (' + finalResults.length + '条)', 'data');
 
+    // ★ 新增：下载一个标志文件，通知 AppleScript 抓取已完成
+    try {
+        var doneBlob = new Blob(['done'], { type: 'text/plain' });
+        var doneUrl = URL.createObjectURL(doneBlob);
+        chrome.downloads.download({
+            url: doneUrl,
+            filename: 'kalshi_scraping_done.txt',
+            conflictAction: 'overwrite',
+            saveAs: false
+        }, function (downloadId) {
+            setTimeout(function () { URL.revokeObjectURL(doneUrl); }, 5000);
+        });
+    } catch (e) {
+        log('  ⚠️ 标志文件保存异常: ' + e.message, 'warn');
+    }
+
     progressContainer.style.display = 'none';
     setStatus('✅ 完成! ' + finalResults.length + ' 条, 耗时 ' + elapsed + 's, 平均 ' +
         (finalResults.length > 0 ? (elapsed / finalResults.length).toFixed(1) : '0') + 's/条 → ' + outputFilename, 'success');

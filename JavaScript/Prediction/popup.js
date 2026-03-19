@@ -1,8 +1,8 @@
 // ============ 配置常量 ============
-const POLYMARKET_CLICK_COUNT = 2;
+const POLYMARKET_CLICK_COUNT = 30;
 const BUTTON_CHECK_INTERVAL = 500;
 const MAX_WAIT_TIME = 30000;
-const DEFAULT_KALSHI_SCROLL_COUNT = 1; // ← 唯一需要改的地方
+const DEFAULT_KALSHI_SCROLL_COUNT = 30; // ← 唯一需要改的地方
 
 // ============ 工具函数 ============
 

@@ -43,7 +43,7 @@ DISPLAY_LIMITS = {
 
 categories = [
     ['Must', 'Today', 'PE_Volume_backup',
-     'PE_Volume_up_backup', 'PE_Volume_high_backup',
+     'PE_Volume_up_backup', 'PE_Volume_high_backup', 'PE_Hot_backup',
      'ETF_Volume_high_backup', 'ETF_Volume_low_backup',
      'Short_backup', 'Short_W_backup',
      'PE_W_backup', 'OverSell_W_backup', 'PE_Deeper_backup',
@@ -639,6 +639,7 @@ class MainWindow(QMainWindow):
             'PE_Volume_backup': 'Volume左',
             'PE_Volume_up_backup': 'Volume右',
             'PE_Volume_high_backup': 'Volume追高',
+            'PE_Hot_backup': '热门筛选',
             'ETF_Volume_high_backup': 'ETF追高',
             'ETF_Volume_low_backup': 'ETF抄底'
         }
@@ -792,6 +793,7 @@ class MainWindow(QMainWindow):
             "PE_Volume_backup": "PE_Volume",
             "PE_Volume_up_backup": "PE_Volume_up",
             "PE_Volume_high_backup": "PE_Volume_high",
+            "PE_Hot_backup": "PE_Hot",
             "ETF_Volume_high_backup": "ETF_Volume_high",
             "ETF_Volume_low_backup": "ETF_Volume_low",
             "OverSell_W_backup": "OverSell_W",
@@ -804,6 +806,7 @@ class MainWindow(QMainWindow):
             "PE_Volume": "PE_Volume",
             "PE_Volume_up": "PE_Volume_up",
             "PE_Volume_high": "PE_Volume_high",
+            "PE_Hot": "PE_Hot",
             "ETF_Volume_high": "ETF_Volume_high",
             "ETF_Volume_low": "ETF_Volume_low",
             "OverSell_W": "OverSell_W"
@@ -1111,14 +1114,14 @@ class MainWindow(QMainWindow):
             'Must','Today','Short','Short_W',
             'PE_valid','PE_invalid','Strategy12','Strategy34',
             'PE_Deep','OverSell_W','PE_W','PE_Deeper',
-            'PE_Volume', 'PE_Volume_up', 'PE_Volume_high', 'ETF_Volume_high', 'ETF_Volume_low',
+            'PE_Volume', 'PE_Volume_up', 'PE_Volume_high', 'PE_Hot', 'ETF_Volume_high', 'ETF_Volume_low',
             
             # 策略分组 (Backup 版本 - 实际上 UI 中正在使用的 key)
             'PE_valid_backup', 'PE_invalid_backup', 
             'Strategy12_backup', 'Strategy34_backup',
             'PE_Deep_backup', 'PE_W_backup', 'PE_Deeper_backup',
             'OverSell_W_backup', 'PE_W_backup',
-            'PE_Volume_backup', 'PE_Volume_up_backup', 'PE_Volume_high_backup',
+            'PE_Volume_backup', 'PE_Volume_up_backup', 'PE_Volume_high_backup', 'PE_Hot_backup',
             'ETF_Volume_high_backup', 'ETF_Volume_low_backup',
             'Short_backup', 'Short_W_backup'
         }
@@ -1135,7 +1138,7 @@ class MainWindow(QMainWindow):
             # combined_groups
             "Must", "Today", "Short_backup", "Short_W_backup",
             # Volume Sector
-            "PE_Volume_backup", "PE_Volume_up_backup", "PE_Volume_high_backup",
+            "PE_Volume_backup", "PE_Volume_up_backup", "PE_Volume_high_backup", "PE_Hot_backup",
             "ETF_Volume_high_backup", "ETF_Volume_low_backup",
         }
 

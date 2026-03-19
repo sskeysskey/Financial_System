@@ -815,5 +815,5 @@ if __name__ == "__main__":
     # 如果 scrape_options 返回 True (无论是抓取完成，还是因为数据已存在而跳过)，都执行分析脚本
     task_success = scrape_options()
     
-    if task_success:
-        run_analysis_program()
+    # if task_success:
+    #     run_analysis_program()
