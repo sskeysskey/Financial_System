@@ -136,12 +136,17 @@ async function pollForContent(tabId, maxMs) {
                 func: function () {
                     var opts = document.querySelectorAll('[class*="typ-body-x30"]');
                     var h1 = document.querySelector('h1');
+                    // ★ 新增：检测分类链接是否已渲染
+                    var catLinks = document.querySelectorAll(
+                        'a[href*="/category/"], a[href*="/categories/"], a[href*="/sports/"], a[href*="/browse/"]'
+                    );
                     var isBotPage = !!document.getElementById('challenge-form') ||
                         !!document.querySelector('.cf-browser-verification') ||
                         document.title.toLowerCase().includes('just a moment') ||
                         !!document.querySelector('[id*="turnstile"]');
                     return {
-                        hasContent: opts.length > 0 && !!h1,
+                        // ★ 改：h1 存在 且 (选项存在 或 分类链接存在) 即视为就绪
+                        hasContent: !!h1 && (opts.length > 0 || catLinks.length > 0),
                         optionCount: opts.length,
                         isBotPage: isBotPage
                     };
@@ -201,6 +206,27 @@ function saveJsonFile(data, filename) {
     try {
         var jsonStr = JSON.stringify(data, null, 2);
         var blob = new Blob([jsonStr], { type: 'application/json' });
+        var blobUrl = URL.createObjectURL(blob);
+        chrome.downloads.download({
+            url: blobUrl,
+            filename: filename,
+            conflictAction: 'overwrite',
+            saveAs: false
+        }, function (downloadId) {
+            if (chrome.runtime.lastError) {
+                log('  ⚠️ 保存失败: ' + chrome.runtime.lastError.message, 'warn');
+            }
+            setTimeout(function () { URL.revokeObjectURL(blobUrl); }, 5000);
+        });
+    } catch (e) {
+        log('  ⚠️ 保存异常: ' + e.message, 'warn');
+    }
+}
+
+// ★ 新增：保存纯文本文件
+function saveTextFile(text, filename) {
+    try {
+        var blob = new Blob([text], { type: 'text/plain' });
         var blobUrl = URL.createObjectURL(blob);
         chrome.downloads.download({
             url: blobUrl,
@@ -378,57 +404,224 @@ function injectedScrapeSubpage() {
             return t ? t.trim().replace(/\s+/g, ' ') : '';
         }
 
-        // ★ 策略1（改进）：从 h1 逐层向上，查找最近的含分类链接的祖先
+        // ★ 新增：已知非分类路径（集中管理排除列表）
+        function isExcludedPath(href) {
+            return /^\/(login|signup|portfolio|profile|settings|trade|help|about|terms|privacy|register|api|docs|notifications|deposit|withdraw|leaderboard|fee|blog|press|referral|search|faq|support|contact|careers|partners|legal|rules|pricing|account|markets)\b/i.test(href);
+        }
+
+        // ★ 扩展：更宽泛的分类链接 href 匹配
+        function isCategoryHref(href) {
+            if (!href) return false;
+            if (href.indexOf('/category/') !== -1) return true;
+            if (href.indexOf('/categories/') !== -1) return true;
+            if (href.indexOf('/sports/') !== -1) return true;
+            if (href.indexOf('/browse/') !== -1) return true;
+            if (/^\/events\/[a-z]/i.test(href) && href.indexOf('/markets/') === -1) return true;
+            // ★ 新增：匹配 1-2 层简洁路径（如 /elections、/politics/elections）
+            if (/^\/[a-z][a-z0-9-]+$/i.test(href) && !isExcludedPath(href)) return true;
+            if (/^\/[a-z][a-z0-9-]+\/[a-z][a-z0-9-]+$/i.test(href) && !isExcludedPath(href)) return true;
+            return false;
+        }
+
+        // ★ 改进：精确判断是否在主导航中
+        function isInMainNav(aEl) {
+            if (aEl.closest('header')) return true;
+            if (aEl.closest('[data-testid*="navbar"]')) return true;
+            if (aEl.closest('[data-testid*="nav-bar"]')) return true;
+            var navEl = aEl.closest('nav');
+            if (navEl) {
+                if (navEl.closest('header')) return true;
+                if (navEl.querySelectorAll('a').length > 10) return true;
+            }
+            return false;
+        }
+
         var h1 = document.querySelector('h1');
-        if (h1) {
+
+        // ════════════════════════════════════════════════
+        // ★ Strategy 0 (NEW): 文本分隔符 + 近邻链接检测
+        // 从 h1 向上逐层检查祖先的子元素，寻找面包屑
+        // 核心思路：面包屑一定不在包含 h1 的那棵子树里，
+        //           而是 h1 某个祖先的另一个 child
+        // ════════════════════════════════════════════════
+        if (h1 && categories.length === 0) {
+            var anc0 = h1.parentElement;
+            for (var s0 = 0; s0 < 12 && anc0 && categories.length === 0; s0++) {
+                var kids = anc0.children;
+                for (var ki = 0; ki < kids.length && categories.length === 0; ki++) {
+                    var kid = kids[ki];
+                    // 跳过包含 h1 的子树（那是标题/正文区域）
+                    if (kid === h1 || kid.contains(h1)) continue;
+                    // 跳过页面级 header 标签
+                    if (kid.tagName === 'HEADER') continue;
+
+                    var kText = kid.textContent.trim();
+
+                    // ── Case A: 包含分隔符 · 或 • → 按分隔符拆分 ──
+                    if ((kText.includes('·') || kText.includes('•')) &&
+                        kText.length >= 3 && kText.length < 200) {
+                        var parts = kText.split(/[·•]/);
+                        var cleaned = [];
+                        for (var pi = 0; pi < parts.length; pi++) {
+                            var p = parts[pi].trim();
+                            if (p.length > 0 && p.length < 50) cleaned.push(p);
+                        }
+                        if (cleaned.length >= 1 && cleaned.length <= 6) {
+                            categories = cleaned;
+                            d.push('S0a: separator text (' + cleaned.length + '): ' + cleaned.join(' > '));
+                        }
+                    }
+
+                    // ── Case B: 不含分隔符，但是一个小元素，内含 1-5 个分类链接 ──
+                    if (categories.length === 0 && kText.length > 0 && kText.length < 100) {
+                        var kidLinks = kid.querySelectorAll('a');
+                        if (kidLinks.length >= 1 && kidLinks.length <= 5) {
+                            var catTexts = [];
+                            for (var kli = 0; kli < kidLinks.length; kli++) {
+                                var kl = kidLinks[kli];
+                                var klHref = kl.getAttribute('href') || '';
+                                if (!klHref || klHref === '#' || klHref === '/') continue;
+                                if (klHref.indexOf('/markets/') !== -1) continue;
+                                if (/^https?:/.test(klHref)) continue;
+                                if (isInMainNav(kl)) continue;
+                                if (isExcludedPath(klHref)) continue;
+                                var klText = getCatText(kl);
+                                if (klText && klText.length > 0 && klText.length < 40 &&
+                                    klText !== '·' && klText !== '•' &&
+                                    catTexts.indexOf(klText) === -1) {
+                                    catTexts.push(klText);
+                                }
+                            }
+                            if (catTexts.length >= 1 && catTexts.length <= 4) {
+                                categories = catTexts;
+                                d.push('S0b: link-based (' + catTexts.length + '): ' + catTexts.join(' > '));
+                            }
+                        }
+                    }
+                }
+                anc0 = anc0.parentElement;
+            }
+        }
+
+        // ════════════════════════════════════════════════
+        // Strategy 1: 从 h1 逐层向上，查找含分类 href 的链接
+        // ════════════════════════════════════════════════
+        if (categories.length === 0 && h1) {
             var ancestor = h1.parentElement;
-            for (var up = 0; up < 6 && ancestor; up++) {
+            for (var up = 0; up < 8 && ancestor; up++) {
                 var bcLinks = ancestor.querySelectorAll('a');
                 var foundAny = false;
                 for (var bi = 0; bi < bcLinks.length; bi++) {
                     var href = bcLinks[bi].getAttribute('href') || '';
-                    if (href.indexOf('/category/') !== -1 || href.indexOf('/sports/') !== -1) {
-                        // 排除导航栏里的链接
-                        if (bcLinks[bi].closest('nav')) continue;
-                        if (bcLinks[bi].closest('[data-testid*="navbar"]')) continue;
+                    if (!isCategoryHref(href)) continue;
+                    if (isInMainNav(bcLinks[bi])) continue;
 
-                        var text = getCatText(bcLinks[bi]);
-                        if (text && text !== '•' && text !== '·' && categories.indexOf(text) === -1) {
-                            categories.push(text);
-                            foundAny = true;
-                        }
+                    var text = getCatText(bcLinks[bi]);
+                    if (text && text !== '•' && text !== '·' && categories.indexOf(text) === -1) {
+                        categories.push(text);
+                        foundAny = true;
                     }
                 }
                 // 找到即停，避免范围过大抓到无关链接
-                if (foundAny) break;
+                if (foundAny) {
+                    d.push('S1: href-based (' + categories.length + '): ' + categories.join(' > '));
+                    break;
+                }
                 ancestor = ancestor.parentElement;
             }
         }
 
-        // 策略2：如果策略1没找到，搜索全文档（排除导航栏）
+        // Strategy 2: 全文档搜索（排除主导航）
         if (categories.length === 0) {
-            d.push('h1-based search found nothing, trying document-wide...');
+            d.push('S2: document-wide search...');
             var allAs = document.querySelectorAll('a');
             for (var ai = 0; ai < allAs.length; ai++) {
                 var aHref = allAs[ai].getAttribute('href') || '';
-                if (aHref.indexOf('/category/') !== -1 || aHref.indexOf('/sports/') !== -1) {
-                    // 排除导航栏里的链接，避免误抓
-                    if (allAs[ai].closest('nav')) continue;
-                    if (allAs[ai].closest('[data-testid*="navbar"]')) continue;
-                    var aText = getCatText(allAs[ai]);
-                    if (aText && aText !== '•' && aText !== '·' && categories.indexOf(aText) === -1) {
-                        categories.push(aText);
-                    }
+                if (!isCategoryHref(aHref)) continue;
+                if (isInMainNav(allAs[ai])) continue;
+
+                var aText = getCatText(allAs[ai]);
+                if (aText && aText !== '•' && aText !== '·' && categories.indexOf(aText) === -1) {
+                    categories.push(aText);
                 }
+            }
+            if (categories.length > 0) {
+                d.push('S2: found (' + categories.length + '): ' + categories.join(' > '));
             }
         }
 
-        d.push('Breadcrumbs (' + categories.length + '): ' + categories.join(' > '));
+        // ★ Strategy 3: 排除法在 h1 附近寻找链接
+        if (categories.length === 0 && h1) {
+            d.push('S3: exclude-based fallback...');
+            var anc3 = h1.parentElement;
+            for (var u = 0; u < 5 && anc3; u++) {
+                var links = anc3.querySelectorAll('a');
+                var cands = [];
+                for (var li = 0; li < links.length; li++) {
+                    var lHref = links[li].getAttribute('href') || '';
+                    if (!lHref || lHref === '#' || lHref === '/') continue;
+                    if (isInMainNav(links[li])) continue;
+                    // 排除市场/合约链接
+                    if (lHref.indexOf('/markets/') !== -1) continue;
+                    // 排除外部链接
+                    if (/^https?:/.test(lHref)) continue;
+                    // 排除已知非分类路径
+                    if (isExcludedPath(lHref)) continue;
+
+                    var lText = getCatText(links[li]);
+                    if (lText && lText.length > 0 && lText.length < 30 &&
+                        lText !== '•' && lText !== '·' &&
+                        cands.indexOf(lText) === -1) {
+                        cands.push(lText);
+                    }
+                }
+                // 只在候选数合理时接受
+                if (cands.length >= 1 && cands.length <= 4) {
+                    categories = cands;
+                    d.push('S3: fallback (' + cands.length + '): ' + cands.join(' > '));
+                    break;
+                }
+                anc3 = anc3.parentElement;
+            }
+        }
+
+        // ★ 调试：如果仍未找到，输出 h1 附近结构信息以便后续诊断
+        if (categories.length === 0 && h1) {
+            d.push('[DEBUG] No categories found. Ancestor children:');
+            var dbgAnc = h1.parentElement;
+            for (var du = 0; du < 6 && dbgAnc; du++) {
+                var dbgKids = dbgAnc.children;
+                d.push('  up=' + du + ' <' + dbgAnc.tagName + '> children=' + dbgKids.length);
+                for (var dki = 0; dki < dbgKids.length && dki < 10; dki++) {
+                    var dk = dbgKids[dki];
+                    var dkText = dk.textContent.trim().substring(0, 80);
+                    var dkLinkCount = dk.querySelectorAll('a').length;
+                    var dkHasH1 = dk.contains(h1) ? ' [has-h1]' : '';
+                    var dkInHeader = dk.tagName === 'HEADER' ? ' [HEADER]' : '';
+                    d.push('    [' + dki + '] <' + dk.tagName + '> links=' + dkLinkCount + dkHasH1 + dkInHeader + ' "' + dkText + '"');
+                    // 显示该子元素中的链接 href（仅链接数 <= 5 时）
+                    if (dkLinkCount > 0 && dkLinkCount <= 5 && !dk.contains(h1)) {
+                        var dkAs = dk.querySelectorAll('a');
+                        for (var dai = 0; dai < dkAs.length; dai++) {
+                            var daHref = dkAs[dai].getAttribute('href') || '';
+                            var daText = dkAs[dai].textContent.trim().substring(0, 30);
+                            var daNav = isInMainNav(dkAs[dai]) ? ' [main-nav]' : '';
+                            d.push('      a: "' + daText + '" href=' + daHref + daNav);
+                        }
+                    }
+                }
+                // 子元素数量合理时不再向上
+                if (dbgKids.length <= 15) break;
+                dbgAnc = dbgAnc.parentElement;
+            }
+        }
+
+        d.push('Final categories (' + categories.length + '): ' + categories.join(' > '));
 
         // ★ 规则：
         //   1 个分类 → type = subtype = 该分类
         //   2 个分类 → type = 第1个, subtype = 第2个
-        //   3 个及以上 → type = 第1个, subtype = 第2个（忽略后面的）
+        //   3 个及以上 → type = 第1个, subtype = 第2个
         if (categories.length === 1) {
             result.type = categories[0];
             result.subtype = categories[0];
@@ -442,7 +635,7 @@ function injectedScrapeSubpage() {
         d.push('Category extraction error: ' + e.message);
     }
 
-    // ★ 选项抓取（以下逻辑不变）
+    // ★ 选项抓取
     var seen = {};
     var section = document.querySelector('section');
     var root = section || document;
@@ -631,91 +824,132 @@ async function workerLoop(workerId, tabId, queue, results, config) {
         var card = item.card;
         var idx = item.index;
         var short = card.name.length > 35 ? card.name.substring(0, 35) + '...' : card.name;
+        var sub = null; // 提升作用域，方便后续获取 debug 信息
 
         try {
-            // 导航到子页面并等待加载（使用合并后的安全函数）
-            await navigateAndWait(tabId, 'https://kalshi.com' + card.subUrl, 15000);
+            // ★ 最多尝试 3 次（首次 + 2 次重试）
+            var maxAttempts = 3;
+            var poll = null;
+            var lastSource = '主';
 
-            // 轮询等待内容渲染
-            var poll = await pollForContent(tabId, 10000);
+            for (var attempt = 1; attempt <= maxAttempts; attempt++) {
 
-            if (!poll.ready) {
-                // 反爬虫检测 → 切换为前台标签，等待通过
-                if (poll.isBotPage) {
-                    log('[W' + workerId + '] 🛡️ "' + short + '" 反爬虫页面，切换前台...', 'warn');
-                    try {
-                        await new Promise(function (resolve) {
-                            chrome.tabs.update(tabId, { active: true }, resolve);
-                        });
-                    } catch (e) { }
-                    await new Promise(function (res) { setTimeout(res, 8000); });
-                    poll = await pollForContent(tabId, 8000);
+                // 重试时先等一会儿再重新加载
+                if (attempt > 1) {
+                    var retryDelay = 1500 * attempt;
+                    log('[W' + workerId + '] 🔄 分类为空, 重试#' + (attempt - 1) + ' "' + short + '" (等待' + retryDelay + 'ms)', 'warn');
+                    await new Promise(function (res) { setTimeout(res, retryDelay); });
                 }
+
+                // 导航到子页面并等待加载
+                await navigateAndWait(tabId, 'https://kalshi.com' + card.subUrl, 15000);
+
+                // 轮询等待内容渲染（重试时给更多时间）
+                var pollTimeout = attempt === 1 ? 10000 : 14000;
+                poll = await pollForContent(tabId, pollTimeout);
 
                 if (!poll.ready) {
-                    log('[W' + workerId + '] ❌ "' + short + '" → 备选数据', 'error');
-                    results[idx] = buildFallback(card);
-                    config.onProgress();
-                    continue;
+                    if (poll.isBotPage) {
+                        log('[W' + workerId + '] 🛡️ "' + short + '" 反爬虫页面，切换前台...', 'warn');
+                        try {
+                            await new Promise(function (resolve) {
+                                chrome.tabs.update(tabId, { active: true }, resolve);
+                            });
+                        } catch (e) { }
+                        await new Promise(function (res) { setTimeout(res, 8000); });
+                        poll = await pollForContent(tabId, 8000);
+                    }
+
+                    if (!poll.ready) {
+                        // 页面没加载好，如果还有重试机会就继续
+                        if (attempt < maxAttempts) continue;
+                        log('[W' + workerId + '] ❌ "' + short + '" → 页面加载超时/被拦截', 'error');
+                        results[idx] = buildFallback(card);
+                        sub = null;
+                        break;
+                    }
                 }
+
+                // 重试时额外等待让分类区域渲染
+                if (attempt > 1) {
+                    await new Promise(function (res) { setTimeout(res, 800); });
+                }
+
+                // 尝试点击 "More markets"
+                try {
+                    var clickR = await chrome.scripting.executeScript({
+                        target: { tabId: tabId },
+                        func: injectedClickMore
+                    });
+                    var clickD = (clickR && clickR[0] && clickR[0].result) || { clicked: false };
+                    if (clickD.clicked) {
+                        await pollForMoreOptions(tabId, poll.optionCount, 3000);
+                    }
+                } catch (e) { }
+
+                // 尝试点击 "X more"
+                try {
+                    var xMoreR = await chrome.scripting.executeScript({
+                        target: { tabId: tabId },
+                        func: injectedClickXMore
+                    });
+                    var xMoreD = (xMoreR && xMoreR[0] && xMoreR[0].result) || { clicked: false };
+                    if (xMoreD.clicked) {
+                        var curR = await chrome.scripting.executeScript({
+                            target: { tabId: tabId },
+                            func: function () { return document.querySelectorAll('[class*="typ-body-x30"]').length; }
+                        });
+                        var curCount = (curR && curR[0] && curR[0].result) || 0;
+                        await pollForMoreOptions(tabId, curCount, 3000);
+                    }
+                } catch (e) { }
+
+                // 抓取子页面数据
+                var scrapeR = await chrome.scripting.executeScript({
+                    target: { tabId: tabId },
+                    func: injectedScrapeSubpage
+                });
+                sub = (scrapeR && scrapeR[0] && scrapeR[0].result) ||
+                    { type: '', subtype: '', options: [], debug: [] };
+
+                // ★ 输出子页面分类检测的调试信息
+                if (sub.debug && sub.debug.length > 0) {
+                    sub.debug.forEach(function (msg) {
+                        log('[W' + workerId + ']   → ' + msg, 'dim');
+                    });
+                }
+
+                if (sub.type || sub.subtype) {
+                    if (attempt > 1) {
+                        log('[W' + workerId + '] ✅ 重试#' + (attempt - 1) + '成功! type="' + sub.type + '" subtype="' + sub.subtype + '"', 'info');
+                    }
+                    break;
+                }
+
+                // 删除了原先在这里的 config.failures.push，改为在最外层统一拦截
             }
 
-            // 尝试点击 "More markets"
-            try {
-                var clickR = await chrome.scripting.executeScript({
-                    target: { tabId: tabId },
-                    func: injectedClickMore
+            // 如果 sub 不为 null，说明走完了抓取流程（无论是否抓到分类）
+            if (sub !== null) {
+                var final = {
+                    name: card.name,
+                    type: sub.type || '',
+                    subtype: sub.subtype || '',
+                    volume: card.volume,
+                    hide: "1"
+                };
+
+                var opts = (sub.options && sub.options.length > 0) ? sub.options : card.options;
+                var source = (sub.options && sub.options.length > 0) ? '子' : '主';
+                opts.forEach(function (o, j) {
+                    final['option' + (j + 1)] = o.name;
+                    final['value' + (j + 1)] = o.value;
+                    if (o.change) final['change' + (j + 1)] = o.change;
                 });
-                var clickD = (clickR && clickR[0] && clickR[0].result) || { clicked: false };
-                if (clickD.clicked) {
-                    await pollForMoreOptions(tabId, poll.optionCount, 3000);
-                }
-            } catch (e) { }
 
-            // 尝试点击 "X more"
-            try {
-                var xMoreR = await chrome.scripting.executeScript({
-                    target: { tabId: tabId },
-                    func: injectedClickXMore
-                });
-                var xMoreD = (xMoreR && xMoreR[0] && xMoreR[0].result) || { clicked: false };
-                if (xMoreD.clicked) {
-                    var curR = await chrome.scripting.executeScript({
-                        target: { tabId: tabId },
-                        func: function () { return document.querySelectorAll('[class*="typ-body-x30"]').length; }
-                    });
-                    var curCount = (curR && curR[0] && curR[0].result) || 0;
-                    await pollForMoreOptions(tabId, curCount, 3000);
-                }
-            } catch (e) { }
-
-            // 抓取子页面数据
-            var scrapeR = await chrome.scripting.executeScript({
-                target: { tabId: tabId },
-                func: injectedScrapeSubpage
-            });
-            var sub = (scrapeR && scrapeR[0] && scrapeR[0].result) ||
-                { type: '', subtype: '', options: [], debug: [] };
-
-            // 组装最终数据
-            var final = {
-                name: card.name,
-                type: sub.type || '',      // ★ 改：优先使用子页面的 type，不再使用 fallback
-                subtype: sub.subtype || '', // ★ 改：优先使用子页面的 subtype，不再使用 fallback
-                volume: card.volume,
-                hide: "1"
-            };
-
-            var opts = (sub.options && sub.options.length > 0) ? sub.options : card.options;
-            var source = (sub.options && sub.options.length > 0) ? '子' : '主';
-            opts.forEach(function (o, j) {
-                final['option' + (j + 1)] = o.name;
-                final['value' + (j + 1)] = o.value;
-                if (o.change) final['change' + (j + 1)] = o.change;
-            });
-
-            results[idx] = final;
-            log('[W' + workerId + '] ✅ "' + short + '" (' + source + '页' + opts.length + 'opts ' + poll.elapsed + 'ms)', 'info');
+                results[idx] = final;
+                log('[W' + workerId + '] ✅ "' + short + '" (' + source + '页' + opts.length + 'opts) type=' + (sub.type || '(空)') + ' subtype=' + (sub.subtype || '(空)'), 'info');
+            }
 
         } catch (err) {
             log('[W' + workerId + '] ❌ "' + short + '": ' + err.message, 'error');
@@ -731,9 +965,28 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                 });
             } catch (e) {
                 log('[W' + workerId + '] ⚠️ 标签页已关闭，工作线程退出', 'error');
+                // 标签页崩溃时也要记录失败
+                config.failures.push({
+                    name: card.name,
+                    url: 'https://kalshi.com' + card.subUrl,
+                    volume: card.volume,
+                    debugInfo: ['Tab crashed or closed: ' + err.message]
+                });
                 config.onProgress();
                 break;
             }
+        }
+
+        // ★ 核心修复：统一在这里做最终检查！
+        // 无论是因为超时、报错、还是抓取到了但分类为空，只要最终结果里 type 和 subtype 都是空，就记录到 txt
+        var finalData = results[idx];
+        if (finalData && !finalData.type && !finalData.subtype) {
+            config.failures.push({
+                name: card.name,
+                url: 'https://kalshi.com' + card.subUrl,
+                volume: card.volume,
+                debugInfo: (sub && sub.debug && sub.debug.length > 0) ? sub.debug : ['Page load failed, timeout, or exception thrown']
+            });
         }
 
         config.onProgress();
@@ -875,6 +1128,7 @@ async function startSubpageScraping() {
     var completedCount = 0;
     var lastSaveCount = 0;
     var scrapeStartTime = Date.now();
+    var failures = [];
 
     function onProgress() {
         completedCount++;
@@ -899,7 +1153,8 @@ async function startSubpageScraping() {
             await new Promise(function (res) { setTimeout(res, w * 2000); });
         }
         return workerLoop(w, tabId, queue, results, {
-            onProgress: onProgress
+            onProgress: onProgress,
+            failures: failures    // ★ 新增：传入共享失败数组
         });
     });
 
@@ -937,6 +1192,37 @@ async function startSubpageScraping() {
     saveJsonFile(finalResults, outputFilename);
     log('💾 最终保存: ' + outputFilename + ' (' + finalResults.length + '条)', 'data');
 
+    // ★ 新增：保存失败记录到 kalshi_failure.txt
+    if (failures.length > 0) {
+        log('', 'dim');
+        log('⚠️ 共 ' + failures.length + ' 个项目在3次尝试后仍未获取到分类:', 'warn');
+        var failureLines = [];
+        failureLines.push('Kalshi Scraper - 分类抓取失败记录');
+        failureLines.push('生成时间: ' + new Date().toLocaleString());
+        failureLines.push('共 ' + failures.length + ' 个项目');
+        failureLines.push('');
+        failureLines.push('========================================');
+        failures.forEach(function (f, fi) {
+            failureLines.push('');
+            failureLines.push('[' + (fi + 1) + '] ' + f.name);
+            failureLines.push('    URL: ' + f.url);
+            failureLines.push('    Volume: ' + f.volume);
+            if (f.debugInfo && f.debugInfo.length > 0) {
+                failureLines.push('    Debug: ' + f.debugInfo.join(' | '));
+            }
+            log('  ❌ "' + f.name + '" → ' + f.url, 'error');
+        });
+        failureLines.push('');
+        failureLines.push('========================================');
+        failureLines.push('请将上述 URL 在浏览器中打开，右键「检查」查看页面结构，');
+        failureLines.push('特别关注分类链接的 href 是否包含 /category/ 或 /sports/');
+
+        saveTextFile(failureLines.join('\n'), 'kalshi_failure.txt');
+        log('📄 失败记录已保存到 kalshi_failure.txt', 'warn');
+    } else {
+        log('🎉 所有项目的分类均抓取成功，无失败记录!', 'info');
+    }
+
     // ★ 新增：下载一个标志文件，通知 AppleScript 抓取已完成
     try {
         var doneBlob = new Blob(['done'], { type: 'text/plain' });
@@ -954,8 +1240,12 @@ async function startSubpageScraping() {
     }
 
     progressContainer.style.display = 'none';
-    setStatus('✅ 完成! ' + finalResults.length + ' 条, 耗时 ' + elapsed + 's, 平均 ' +
-        (finalResults.length > 0 ? (elapsed / finalResults.length).toFixed(1) : '0') + 's/条 → ' + outputFilename, 'success');
+    var statusMsg = '✅ 完成! ' + finalResults.length + ' 条, 耗时 ' + elapsed + 's, 平均 ' +
+        (finalResults.length > 0 ? (elapsed / finalResults.length).toFixed(1) : '0') + 's/条 → ' + outputFilename;
+    if (failures.length > 0) {
+        statusMsg += '  ⚠️ ' + failures.length + '个分类缺失(见kalshi_failure.txt)';
+    }
+    setStatus(statusMsg, 'success');
 
     scrapedCards = null;
     startBtn.disabled = false;
