@@ -133,39 +133,3 @@ end repeat
 try
 	do shell script "rm -f " & quoted form of posixFlagFilePath
 end try
-
-delay 2 -- 给页面一点时间渲染完成状态
-
--- ★ 继续执行后续的截图寻找
-set pythonScriptPath to "/Users/yanzhang/Coding/python_code/screenshot.py"
-set imageName to "kalshi_restart.png"
-set clickValue to "false" -- 如果需要执行鼠标点击操作，则为 "true"，否则为 "false"
-set Opposite to "false" -- 如果需要是反向截图判断，则为 "true"，否则为 "false"
-
-set commandString to "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 " & quoted form of pythonScriptPath & " " & quoted form of imageName & " " & clickValue & " " & Opposite
-
-do shell script commandString
-delay 0.5
-
-set pythonPath to "/Library/Frameworks/Python.framework/Versions/Current/bin/python3"
-set scriptPath to "/Users/yanzhang/Coding/Financial_System/JavaScript/Prediction/Compare_Trend.py"
-set command to pythonPath & space & quoted form of scriptPath
-
-tell application "System Events"
-	set isRunning to exists (process "Terminal")
-end tell
-
-if isRunning then
-	-- 如果 Terminal 正在运行，激活它并新建一个标签页/窗口来执行脚本
-	tell application "Terminal"
-		activate
-		do script command
-	end tell
-else
-	-- 如果 Terminal 没有运行，先激活它（这会启动应用并创建第一个窗口）
-	-- 然后，在那个新建的第一个窗口中执行脚本，以避免打开第二个窗口
-	tell application "Terminal"
-		activate
-		do script command in window 1
-	end tell
-end if

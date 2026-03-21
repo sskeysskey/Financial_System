@@ -48,7 +48,6 @@
         "ABNB",
         "MAR",
         "AZO",
-        "SE",
         "RCL",
         "HLT",
         "GM",
@@ -231,9 +230,7 @@
         "CMI",
         "VRT",
         "PCAR",
-        "FAST",
-        "SUNB",
-        "FIX"
+        "FAST"
     ],
     "Real_Estate": [
         "PLD",
@@ -306,8 +303,6 @@
         "CEG",
         "AEP",
         "SRE",
-        "D",
-        "VST",
-        "EXC"
+        "D"
     ]
 }

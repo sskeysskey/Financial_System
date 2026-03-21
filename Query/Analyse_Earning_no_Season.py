@@ -13,8 +13,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = ""
 TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "NVT"
-# TARGET_DATE = "2026-03-06"
+# SYMBOL_TO_TRACE = "CF"
+# TARGET_DATE = "2026-03-19"
 
 # 动态生成日志路径，不再写死用户名
 LOG_FILE_PATH = os.path.join(BASE_PATH, "Downloads", "No_Season_trace_log.txt")
@@ -1036,13 +1036,13 @@ def check_new_condition_7(data, config, log_detail, symbol_to_trace):
 
 # ========== 代码修改点 1/3: 重构 evaluate_stock_conditions 函数 ==========
 # 1. 重命名为 check_entry_conditions，使其只负责检查入口条件
-# 2. 修改返回值为元组 (passed_any, passed_cond5, passed_cond6)，以便后续逻辑判断
+# 2. 修改返回值为元组 (passed_any, passed_cond4, passed_cond5, passed_cond6, passed_cond7)，以便后续逻辑判断
 # 3. 移除所有通用过滤逻辑（价格回撤、N日最低价、成交额）
 
 def check_entry_conditions(data, symbol_to_trace, log_detail):
     """
     此函数现在只检查入口条件 (条件1 OR 条件2 OR 条件3 OR 条件4 OR 条件5 OR 条件6)。
-    返回: (passed_any, passed_cond5, passed_cond6)
+    返回: (passed_any, passed_cond4, passed_cond5, passed_cond6, passed_cond7)
     条件1修改为：a AND b AND c 必须同时满足。
     """
     symbol = data.get('symbol')
@@ -1055,7 +1055,7 @@ def check_entry_conditions(data, symbol_to_trace, log_detail):
     er_pcts = data.get('all_er_pcts', [])
     if not er_pcts or len(data.get('all_er_prices', [])) < CONFIG["RECENT_EARNINGS_COUNT"]:
         if is_tracing: log_detail(" - 预检失败: 缺少财报数据，无法评估入口条件。")
-        return (False, False, False, False) # <--- 补齐为4个值
+        return (False, False, False, False, False) # <--- 补齐为5个值
 
     # --- 评估各个入口条件 ---
     
@@ -1118,12 +1118,12 @@ def check_entry_conditions(data, symbol_to_trace, log_detail):
         else:
             log_detail(f"\\n--- [{symbol}] 入口条件失败。七个入口条件均未满足。")
 
-    # ========== 修改点：返回值增加 passed_new_cond7 ==========
-    return (passed_any, passed_new_cond5, passed_new_cond6, passed_new_cond7)
+    # ========== 修改点：返回值增加 passed_new_cond4 ==========
+    return (passed_any, passed_new_cond4, passed_new_cond5, passed_new_cond6, passed_new_cond7)
 
 # ========== 代码修改点 2/3: 新增 apply_common_filters 函数 ==========
 # 这个函数包含了从原 evaluate_stock_conditions 中移出的通用过滤逻辑
-def apply_common_filters(data, symbol_to_trace, log_detail, drop_pct_large, drop_pct_small, drop_pct_mini=None, skip_drawdown=False):
+def apply_common_filters(data, symbol_to_trace, log_detail, drop_pct_large, drop_pct_small, drop_pct_mini=None, skip_drawdown=False, skip_baseline_filter=False):
     """
     应用通用的过滤条件：价格回撤、N日最低价、成交额。
     """
@@ -1178,75 +1178,78 @@ def apply_common_filters(data, symbol_to_trace, log_detail, drop_pct_large, drop
             if is_tracing: log_detail(" - 最终裁定: 失败 (通用过滤1: 价格回撤不满足)。")
             return False
     else:
-        if is_tracing: log_detail(" - [通用过滤1] 价格回撤: 已跳过 (条件5/6模式)。")
+        if is_tracing: log_detail(" - [通用过滤1] 价格回撤: 已跳过 (条件5/6/7模式)。")
 
     # 2. 修改：相对 N 日基准价条件
-    # 从配置读取天数
-    lookback_days = CONFIG.get("LOOKBACK_WINDOW_DAYS", 10)
-    
-    # 使用通用键名获取数据
-    prev_prices = data.get('prev_window_prices', [])
-    prev_dates = data.get('prev_window_dates', [])
-    latest_er_date = data.get('latest_er_date_str')
-    
-    # 动态校验数据长度
-    if len(prev_prices) < lookback_days:
-        if is_tracing: log_detail(f" - 最终裁定: 失败 (通用过滤2: 可用历史交易日不足 {lookback_days} 日，只有{len(prev_prices)}日数据)。")
-        return False
+    if not skip_baseline_filter:
+        # 从配置读取天数
+        lookback_days = CONFIG.get("LOOKBACK_WINDOW_DAYS", 10)
         
-    # ========== 修改开始：判断基准价格 ==========
-    baseline_price = None
-    using_er_price_logic = False
-    
-    # 逻辑：如果财报日在观察窗口内，以财报日价格为基准，否则以窗口内最低价为基准
-    if latest_er_date and latest_er_date in prev_dates:
-        # 如果财报日在最近N天内
-        try:
-            er_index = prev_dates.index(latest_er_date)
-            baseline_price = prev_prices[er_index]
-            using_er_price_logic = True
-        except ValueError:
-            # 理论上不会发生，因为前面check了 in prev_dates
-            baseline_price = min(prev_prices)
-    else:
-        # 如果财报日不在N天内，使用原来的逻辑（最低价）
-        baseline_price = min(prev_prices)
-
-    # ========== 【代码修改点：增加热门板块判断逻辑】 ==========
-    # 1. 获取当前 Symbol 的 Tags 和全局 HOT_TAGS
-    symbol_tags = data.get('tags', set())
-    hot_tags = CONFIG.get("HOT_TAGS", set())
-    
-    # 2. 判断是否有交集（是否属于热门）
-    is_hot_stock = bool(symbol_tags & hot_tags)
-    
-    # 3. 根据是否热门，选择不同的阈值
-    if is_hot_stock:
-        max_increase_pct = CONFIG.get("MAX_INCREASE_PERCENTAGE_SINCE_LOW_HOT", 0.12) # 默认12%
-    else:
-        max_increase_pct = CONFIG["MAX_INCREASE_PERCENTAGE_SINCE_LOW"] # 默认6%
-
-    # 4. 计算阈值价格
-    threshold_price_window = baseline_price * (1 + max_increase_pct)
-    cond_window_ok = data['latest_price'] <= threshold_price_window
-
-    if is_tracing:
-        log_detail(f" - [通用过滤2] 相对{lookback_days} 日基准价:")
-        if using_er_price_logic:
-            log_detail(f"   - 策略: 财报日({latest_er_date})在{lookback_days}天内，使用财报日收盘价作为基准。")
+        # 使用通用键名获取数据
+        prev_prices = data.get('prev_window_prices', [])
+        prev_dates = data.get('prev_window_dates', [])
+        latest_er_date = data.get('latest_er_date_str')
+        
+        # 动态校验数据长度
+        if len(prev_prices) < lookback_days:
+            if is_tracing: log_detail(f" - 最终裁定: 失败 (通用过滤2: 可用历史交易日不足 {lookback_days} 日，只有{len(prev_prices)}日数据)。")
+            return False
+            
+        # ========== 修改开始：判断基准价格 ==========
+        baseline_price = None
+        using_er_price_logic = False
+        
+        # 逻辑：如果财报日在观察窗口内，以财报日价格为基准，否则以窗口内最低价为基准
+        if latest_er_date and latest_er_date in prev_dates:
+            # 如果财报日在最近N天内
+            try:
+                er_index = prev_dates.index(latest_er_date)
+                baseline_price = prev_prices[er_index]
+                using_er_price_logic = True
+            except ValueError:
+                # 理论上不会发生，因为前面check了 in prev_dates
+                baseline_price = min(prev_prices)
         else:
-            log_detail(f"   - 策略: 财报日不在{lookback_days}天内，使用{lookback_days}日最低价作为基准。")
-        
-        # 打印热门判定详情
-        hot_status_str = f"是 (放宽至 {max_increase_pct:.0%})" if is_hot_stock else f"否 (保持 {max_increase_pct:.0%})"
-        log_detail(f"   - 热门判定: {hot_status_str} (Tags: {symbol_tags})")
-        
-        log_detail(f"   - 基准价: {baseline_price:.2f}")
-        log_detail(f"   - 判断: 最新价 {data['latest_price']:.2f} <= 基准价*{1+max_increase_pct:.2f} ({threshold_price_window:.2f}) -> {cond_window_ok}")
+            # 如果财报日不在N天内，使用原来的逻辑（最低价）
+            baseline_price = min(prev_prices)
 
-    if not cond_window_ok:
-        if is_tracing: log_detail(f" - 最终裁定: 失败 (通用过滤2: 相对{lookback_days}日基准价条件不满足)。")
-        return False
+        # ========== 【代码修改点：增加热门板块判断逻辑】 ==========
+        # 1. 获取当前 Symbol 的 Tags 和全局 HOT_TAGS
+        symbol_tags = data.get('tags', set())
+        hot_tags = CONFIG.get("HOT_TAGS", set())
+        
+        # 2. 判断是否有交集（是否属于热门）
+        is_hot_stock = bool(symbol_tags & hot_tags)
+        
+        # 3. 根据是否热门，选择不同的阈值
+        if is_hot_stock:
+            max_increase_pct = CONFIG.get("MAX_INCREASE_PERCENTAGE_SINCE_LOW_HOT", 0.12) # 默认12%
+        else:
+            max_increase_pct = CONFIG["MAX_INCREASE_PERCENTAGE_SINCE_LOW"] # 默认6%
+
+        # 4. 计算阈值价格
+        threshold_price_window = baseline_price * (1 + max_increase_pct)
+        cond_window_ok = data['latest_price'] <= threshold_price_window
+
+        if is_tracing:
+            log_detail(f" - [通用过滤2] 相对{lookback_days} 日基准价:")
+            if using_er_price_logic:
+                log_detail(f"   - 策略: 财报日({latest_er_date})在{lookback_days}天内，使用财报日收盘价作为基准。")
+            else:
+                log_detail(f"   - 策略: 财报日不在{lookback_days}天内，使用{lookback_days}日最低价作为基准。")
+            
+            # 打印热门判定详情
+            hot_status_str = f"是 (放宽至 {max_increase_pct:.0%})" if is_hot_stock else f"否 (保持 {max_increase_pct:.0%})"
+            log_detail(f"   - 热门判定: {hot_status_str} (Tags: {symbol_tags})")
+            
+            log_detail(f"   - 基准价: {baseline_price:.2f}")
+            log_detail(f"   - 判断: 最新价 {data['latest_price']:.2f} <= 基准价*{1+max_increase_pct:.2f} ({threshold_price_window:.2f}) -> {cond_window_ok}")
+
+        if not cond_window_ok:
+            if is_tracing: log_detail(f" - 最终裁定: 失败 (通用过滤2: 相对{lookback_days}日基准价条件不满足)。")
+            return False
+    else:
+        if is_tracing: log_detail(" - [通用过滤2] 相对N日基准价: 已跳过 (条件4/5模式)。")
 
     # 3. 成交额条件
     turnover = data['latest_price'] * data['latest_volume']
@@ -1350,8 +1353,8 @@ def run_processing_logic(log_detail):
             data['symbol'] = symbol
             
             # 步骤A: 检查入口条件
-            # ========== 修改点：接收4个返回值 ==========
-            passed_any, passed_cond5, passed_cond6, passed_cond7 = check_entry_conditions(data, SYMBOL_TO_TRACE, log_detail)
+            # ========== 修改点：接收5个返回值 ==========
+            passed_any, passed_cond4, passed_cond5, passed_cond6, passed_cond7 = check_entry_conditions(data, SYMBOL_TO_TRACE, log_detail)
             
             if not passed_any:
                 continue
@@ -1359,6 +1362,9 @@ def run_processing_logic(log_detail):
             # 步骤B: 应用通用过滤器
             # 逻辑：如果是条件5、6、7触发，跳过价格回撤过滤 (因为这些策略自带价格位置判断)
             should_skip_drawdown = passed_cond5 or passed_cond6 or passed_cond7
+            
+            # 逻辑：如果是条件4、5触发，跳过相对N日基准价过滤
+            should_skip_baseline = passed_cond4 or passed_cond5
             
             # ========== 新增：动态判断普通宽松模式下的热门专属阈值 ==========
             current_drop_large = drop_large
@@ -1374,7 +1380,7 @@ def run_processing_logic(log_detail):
                         log_detail(f" - [动态阈值] 命中热门标签，普通宽松阈值调整为 large={current_drop_large*100}%, small={current_drop_small*100}%")
             # ==========================================================
 
-            if apply_common_filters(data, SYMBOL_TO_TRACE, log_detail, current_drop_large, current_drop_small, drop_pct_mini=drop_mini, skip_drawdown=should_skip_drawdown):
+            if apply_common_filters(data, SYMBOL_TO_TRACE, log_detail, current_drop_large, current_drop_small, drop_pct_mini=drop_mini, skip_drawdown=should_skip_drawdown, skip_baseline_filter=should_skip_baseline):
                 if data['latest_date_str'] == data['latest_er_date_str']:
                     if symbol == SYMBOL_TO_TRACE:
                         log_detail(f" - [通用过滤] 失败 (日期重合): 最新交易日({data['latest_date_str']}) 与 最新财报日相同。")
@@ -1414,7 +1420,7 @@ def run_processing_logic(log_detail):
                                 high_since_er = er_window_high
 
                         # A. 【新增判断】首先判断是否满足 Deeper (22.5%)
-                        limit_deeper = CONFIG["PE_DEEPER_DROP_THRESHOLD"]
+                        limit_deeper = CONFIG["PE_DEEP_DROP_THRESHOLD"]
                         pass_deeper = latest_price <= er_close_price * (1 - limit_deeper)
 
                         if pass_deeper:

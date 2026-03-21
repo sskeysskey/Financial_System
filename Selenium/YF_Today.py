@@ -416,9 +416,16 @@ def scrape_history():
                                 
                         # 规则3：如果最新一条日期比计算日期小
                         else: # row0_date < last_valid_date
-                            tqdm.write(f"⚠️ [{symbol}] 网页最新日期 {row0_date} < 预期日期 {last_valid_date}，数据未更新，跳过。")
-                            skip_symbol = True
-                            break # 跳出重试循环，不再重试
+                            # 【新增逻辑】检查第一条和第二条的日期是否相同
+                            if row1_date == row0_date:
+                                tqdm.write(f"⚠️ [{symbol}] 网页最新日期 {row0_date} < 预期日期 {last_valid_date}，但存在两条相同日期数据，取第二条完整数据并修改日期写入。")
+                                row_list = list(data_rows[1])
+                                row_list[0] = last_valid_date  # 强行替换为正确的日期
+                                selected_row = tuple(row_list)
+                            else:
+                                tqdm.write(f"⚠️ [{symbol}] 网页最新日期 {row0_date} < 预期日期 {last_valid_date}，数据未更新，跳过。")
+                                skip_symbol = True
+                                break # 跳出重试循环，不再重试
                     else:
                         # 如果无法计算 last_valid_date，默认取第一条
                         selected_row = data_rows[0]

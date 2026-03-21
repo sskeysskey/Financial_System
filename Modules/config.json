@@ -239,7 +239,7 @@
         "modifiers": [
             "control"
         ],
-        "actionType": "runPythonBackground",
+        "actionType": "runInTerminal",
         "target": "/Users/yanzhang/Coding/python_code/Mouse_move.py",
         "message": "正在 移动鼠标..."
     },
