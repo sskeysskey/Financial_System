@@ -439,10 +439,34 @@ function injectedScrapeSubpage() {
         var h1 = document.querySelector('h1');
 
         // ════════════════════════════════════════════════
-        // ★ Strategy 0 (NEW): 文本分隔符 + 近邻链接检测
-        // 从 h1 向上逐层检查祖先的子元素，寻找面包屑
-        // 核心思路：面包屑一定不在包含 h1 的那棵子树里，
-        //           而是 h1 某个祖先的另一个 child
+        // ★ Strategy 0.5 (NEW): 检查 h1 的兄弟节点（解决 Trump's bad year 页面结构）
+        // ════════════════════════════════════════════════
+        if (h1 && categories.length === 0) {
+            var h1Parent = h1.parentElement;
+            if (h1Parent) {
+                var h1Siblings = h1Parent.children;
+                for (var i = 0; i < h1Siblings.length; i++) {
+                    var sib = h1Siblings[i];
+                    if (sib === h1) continue;
+                    var links = sib.querySelectorAll('a');
+                    for (var j = 0; j < links.length; j++) {
+                        var aHref = links[j].getAttribute('href') || '';
+                        if (isCategoryHref(aHref) && !isInMainNav(links[j])) {
+                            var aText = getCatText(links[j]);
+                            if (aText && aText !== '•' && aText !== '·' && categories.indexOf(aText) === -1) {
+                                categories.push(aText);
+                            }
+                        }
+                    }
+                }
+                if (categories.length > 0) {
+                    d.push('S0.5: h1 sibling search (' + categories.length + '): ' + categories.join(' > '));
+                }
+            }
+        }
+
+        // ════════════════════════════════════════════════
+        // ★ Strategy 0: 文本分隔符 + 近邻链接检测
         // ════════════════════════════════════════════════
         if (h1 && categories.length === 0) {
             var anc0 = h1.parentElement;

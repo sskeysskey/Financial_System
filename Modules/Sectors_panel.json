@@ -1887,12 +1887,9 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USPPI": "18 USPPI",
-        "CorePPI": "18 CorePPI",
-        "USInterest": "18 USInterest",
-        "USInitial": "26 USInitial",
         "ImportPriceM": "25 ImportPriceM",
-        "USConfidence": "27 USConfidence"
+        "USConfidence": "27 USConfidence",
+        "USInitial": "26 USInitial"
     },
     "Economic_All": {
         "USGDP": "",
