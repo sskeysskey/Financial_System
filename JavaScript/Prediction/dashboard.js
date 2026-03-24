@@ -41,6 +41,29 @@ function parseVolumeStr(v) {
     return isNaN(num) ? 0 : Math.round(num * multiplier);
 }
 
+// ============ 子页面选项健康检查 ============
+function isSubpageOptionsHealthy(subOptions, mainOptions) {
+    // 无选项 → 不健康
+    if (!subOptions || subOptions.length === 0) return false;
+
+    // 逐条检查 value 是否异常
+    for (var i = 0; i < subOptions.length; i++) {
+        var val = (subOptions[i].value || '').trim();
+        // 正常值形如 "52%"、"48¢"、"$0.52"、"<1%"，不会超过 20 字符
+        if (val.length > 20) return false;
+        // 去掉格式字符后，纯数字位数不应超过 8 位（亿级已经很夸张了）
+        var digits = val.replace(/[^0-9]/g, '');
+        if (digits.length > 8) return false;
+    }
+
+    // 子页面选项数比主页面少（主页面至少有 2 个，如 up/down）→ 可疑，回退
+    if (mainOptions && mainOptions.length >= 2 && subOptions.length < mainOptions.length) {
+        return false;
+    }
+
+    return true;
+}
+
 // ============ 日志工具 ============
 function log(message, type) {
     if (!type) type = 'info';
@@ -190,6 +213,39 @@ async function pollForMoreOptions(tabId, prevCount, maxMs) {
         await new Promise(function (res) { setTimeout(res, 200); });
     }
     return { expanded: false, elapsed: Date.now() - start };
+}
+
+// ★★ NEW: 专门等待分类面包屑链接在 h1 附近出现（解决分类渲染晚于选项的时序问题）
+async function pollForCategories(tabId, maxMs) {
+    if (!maxMs) maxMs = 3000;
+    var start = Date.now();
+    while (Date.now() - start < maxMs) {
+        try {
+            var r = await chrome.scripting.executeScript({
+                target: { tabId: tabId },
+                func: function () {
+                    var h1 = document.querySelector('h1');
+                    if (!h1) return 0;
+                    // 从 h1 向上查找，在附近寻找 /category/ 链接（即面包屑区域）
+                    var anc = h1.parentElement;
+                    for (var i = 0; i < 6 && anc; i++) {
+                        var links = anc.querySelectorAll(
+                            'a[href*="/category/"], a[href*="/categories/"], a[href*="/sports/"], a[href*="/browse/"]'
+                        );
+                        if (links.length > 0) return links.length;
+                        anc = anc.parentElement;
+                    }
+                    return 0;
+                }
+            });
+            var count = r && r[0] && r[0].result;
+            if (count && count > 0) {
+                return { found: true, count: count, elapsed: Date.now() - start };
+            }
+        } catch (e) { /* ignore */ }
+        await new Promise(function (res) { setTimeout(res, 200); });
+    }
+    return { found: false, count: 0, elapsed: Date.now() - start };
 }
 
 function closeTab(tabId) {
@@ -397,11 +453,14 @@ function injectedScrapeSubpage() {
     try {
         var categories = [];
 
-        // ★ 辅助：从 a 元素提取分类文本（优先 span，fallback 到 a.textContent）
+        // ★ 修改：提取文本并过滤掉干扰标记（如 REG TIME）
         function getCatText(aEl) {
             var span = aEl.querySelector('span[class*="typ-body-x20"]');
             var t = span ? span.textContent : aEl.textContent;
-            return t ? t.trim().replace(/\s+/g, ' ') : '';
+            t = t ? t.trim().replace(/\s+/g, ' ') : '';
+            // 过滤临时标记
+            if (t.toUpperCase().includes('REG TIME')) return '';
+            return t;
         }
 
         // ★ 新增：已知非分类路径（集中管理排除列表）
@@ -466,7 +525,7 @@ function injectedScrapeSubpage() {
         }
 
         // ════════════════════════════════════════════════
-        // ★ Strategy 0: 文本分隔符 + 近邻链接检测
+        // ★ Strategy 0: 近邻链接检测 (已移除不稳定的纯文本拆分逻辑)
         // ════════════════════════════════════════════════
         if (h1 && categories.length === 0) {
             var anc0 = h1.parentElement;
@@ -479,47 +538,47 @@ function injectedScrapeSubpage() {
                     // 跳过页面级 header 标签
                     if (kid.tagName === 'HEADER') continue;
 
-                    var kText = kid.textContent.trim();
+                    // var kText = kid.textContent.trim();
 
-                    // ── Case A: 包含分隔符 · 或 • → 按分隔符拆分 ──
-                    if ((kText.includes('·') || kText.includes('•')) &&
-                        kText.length >= 3 && kText.length < 200) {
-                        var parts = kText.split(/[·•]/);
-                        var cleaned = [];
-                        for (var pi = 0; pi < parts.length; pi++) {
-                            var p = parts[pi].trim();
-                            if (p.length > 0 && p.length < 50) cleaned.push(p);
-                        }
-                        if (cleaned.length >= 1 && cleaned.length <= 6) {
-                            categories = cleaned;
-                            d.push('S0a: separator text (' + cleaned.length + '): ' + cleaned.join(' > '));
-                        }
-                    }
+                    // // ── Case A: 包含分隔符 · 或 • → 按分隔符拆分 ──
+                    // if ((kText.includes('·') || kText.includes('•')) &&
+                    //     kText.length >= 3 && kText.length < 200) {
+                    //     var parts = kText.split(/[·•]/);
+                    //     var cleaned = [];
+                    //     for (var pi = 0; pi < parts.length; pi++) {
+                    //         var p = parts[pi].trim();
+                    //         if (p.length > 0 && p.length < 50) cleaned.push(p);
+                    //     }
+                    //     if (cleaned.length >= 1 && cleaned.length <= 6) {
+                    //         categories = cleaned;
+                    //         d.push('S0a: separator text (' + cleaned.length + '): ' + cleaned.join(' > '));
+                    //     }
+                    // }
 
-                    // ── Case B: 不含分隔符，但是一个小元素，内含 1-5 个分类链接 ──
-                    if (categories.length === 0 && kText.length > 0 && kText.length < 100) {
-                        var kidLinks = kid.querySelectorAll('a');
-                        if (kidLinks.length >= 1 && kidLinks.length <= 5) {
-                            var catTexts = [];
-                            for (var kli = 0; kli < kidLinks.length; kli++) {
-                                var kl = kidLinks[kli];
-                                var klHref = kl.getAttribute('href') || '';
-                                if (!klHref || klHref === '#' || klHref === '/') continue;
-                                if (klHref.indexOf('/markets/') !== -1) continue;
-                                if (/^https?:/.test(klHref)) continue;
-                                if (isInMainNav(kl)) continue;
-                                if (isExcludedPath(klHref)) continue;
-                                var klText = getCatText(kl);
-                                if (klText && klText.length > 0 && klText.length < 40 &&
-                                    klText !== '·' && klText !== '•' &&
-                                    catTexts.indexOf(klText) === -1) {
-                                    catTexts.push(klText);
-                                }
+                    // // ── Case B: 不含分隔符，但是一个小元素，内含 1-5 个分类链接 ──
+                    // if (categories.length === 0 && kText.length > 0 && kText.length < 100) {
+                    var kidLinks = kid.querySelectorAll('a');
+                    if (kidLinks.length >= 1 && kidLinks.length <= 5) {
+                        var catTexts = [];
+                        for (var kli = 0; kli < kidLinks.length; kli++) {
+                            var kl = kidLinks[kli];
+                            var klHref = kl.getAttribute('href') || '';
+                            if (!klHref || klHref === '#' || klHref === '/') continue;
+                            if (klHref.indexOf('/markets/') !== -1) continue;
+                            if (/^https?:/.test(klHref)) continue;
+                            if (isInMainNav(kl)) continue;
+                            if (isExcludedPath(klHref)) continue;
+
+                            var klText = getCatText(kl);
+                            if (klText && klText.length > 0 && klText.length < 40 &&
+                                klText !== '·' && klText !== '•' &&
+                                catTexts.indexOf(klText) === -1) {
+                                catTexts.push(klText);
                             }
-                            if (catTexts.length >= 1 && catTexts.length <= 4) {
-                                categories = catTexts;
-                                d.push('S0b: link-based (' + catTexts.length + '): ' + catTexts.join(' > '));
-                            }
+                        }
+                        if (catTexts.length >= 1 && catTexts.length <= 4) {
+                            categories = catTexts;
+                            d.push('S0: link-based (' + catTexts.length + '): ' + catTexts.join(' > '));
                         }
                     }
                 }
@@ -610,35 +669,35 @@ function injectedScrapeSubpage() {
         }
 
         // ★ 调试：如果仍未找到，输出 h1 附近结构信息以便后续诊断
-        if (categories.length === 0 && h1) {
-            d.push('[DEBUG] No categories found. Ancestor children:');
-            var dbgAnc = h1.parentElement;
-            for (var du = 0; du < 6 && dbgAnc; du++) {
-                var dbgKids = dbgAnc.children;
-                d.push('  up=' + du + ' <' + dbgAnc.tagName + '> children=' + dbgKids.length);
-                for (var dki = 0; dki < dbgKids.length && dki < 10; dki++) {
-                    var dk = dbgKids[dki];
-                    var dkText = dk.textContent.trim().substring(0, 80);
-                    var dkLinkCount = dk.querySelectorAll('a').length;
-                    var dkHasH1 = dk.contains(h1) ? ' [has-h1]' : '';
-                    var dkInHeader = dk.tagName === 'HEADER' ? ' [HEADER]' : '';
-                    d.push('    [' + dki + '] <' + dk.tagName + '> links=' + dkLinkCount + dkHasH1 + dkInHeader + ' "' + dkText + '"');
-                    // 显示该子元素中的链接 href（仅链接数 <= 5 时）
-                    if (dkLinkCount > 0 && dkLinkCount <= 5 && !dk.contains(h1)) {
-                        var dkAs = dk.querySelectorAll('a');
-                        for (var dai = 0; dai < dkAs.length; dai++) {
-                            var daHref = dkAs[dai].getAttribute('href') || '';
-                            var daText = dkAs[dai].textContent.trim().substring(0, 30);
-                            var daNav = isInMainNav(dkAs[dai]) ? ' [main-nav]' : '';
-                            d.push('      a: "' + daText + '" href=' + daHref + daNav);
-                        }
-                    }
-                }
-                // 子元素数量合理时不再向上
-                if (dbgKids.length <= 15) break;
-                dbgAnc = dbgAnc.parentElement;
-            }
-        }
+        // if (categories.length === 0 && h1) {
+        //     d.push('[DEBUG] No categories found. Ancestor children:');
+        //     var dbgAnc = h1.parentElement;
+        //     for (var du = 0; du < 6 && dbgAnc; du++) {
+        //         var dbgKids = dbgAnc.children;
+        //         d.push('  up=' + du + ' <' + dbgAnc.tagName + '> children=' + dbgKids.length);
+        //         for (var dki = 0; dki < dbgKids.length && dki < 10; dki++) {
+        //             var dk = dbgKids[dki];
+        //             var dkText = dk.textContent.trim().substring(0, 80);
+        //             var dkLinkCount = dk.querySelectorAll('a').length;
+        //             var dkHasH1 = dk.contains(h1) ? ' [has-h1]' : '';
+        //             var dkInHeader = dk.tagName === 'HEADER' ? ' [HEADER]' : '';
+        //             d.push('    [' + dki + '] <' + dk.tagName + '> links=' + dkLinkCount + dkHasH1 + dkInHeader + ' "' + dkText + '"');
+        //             // 显示该子元素中的链接 href（仅链接数 <= 5 时）
+        //             if (dkLinkCount > 0 && dkLinkCount <= 5 && !dk.contains(h1)) {
+        //                 var dkAs = dk.querySelectorAll('a');
+        //                 for (var dai = 0; dai < dkAs.length; dai++) {
+        //                     var daHref = dkAs[dai].getAttribute('href') || '';
+        //                     var daText = dkAs[dai].textContent.trim().substring(0, 30);
+        //                     var daNav = isInMainNav(dkAs[dai]) ? ' [main-nav]' : '';
+        //                     d.push('      a: "' + daText + '" href=' + daHref + daNav);
+        //                 }
+        //             }
+        //         }
+        //         // 子元素数量合理时不再向上
+        //         if (dbgKids.length <= 15) break;
+        //         dbgAnc = dbgAnc.parentElement;
+        //     }
+        // }
 
         d.push('Final categories (' + categories.length + '): ' + categories.join(' > '));
 
@@ -899,6 +958,13 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                     await new Promise(function (res) { setTimeout(res, 800); });
                 }
 
+                // ★★ NEW: 专门等待分类面包屑出现（最多 3 秒）
+                // 解决 pollForContent 因选项先渲染就返回、而分类链接尚未渲染的时序问题
+                var catPoll = await pollForCategories(tabId, 3000);
+                if (!catPoll.found) {
+                    log('[W' + workerId + '] ⚠️ "' + short + '" 分类链接未在3s内出现 (attempt=' + attempt + ')', 'dim');
+                }
+
                 // 尝试点击 "More markets"
                 try {
                     var clickR = await chrome.scripting.executeScript({
@@ -963,8 +1029,13 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                     hide: "1"
                 };
 
-                var opts = (sub.options && sub.options.length > 0) ? sub.options : card.options;
-                var source = (sub.options && sub.options.length > 0) ? '子' : '主';
+                var subHealthy = isSubpageOptionsHealthy(sub.options, card.options);
+                var opts = subHealthy ? sub.options : card.options;
+                var source = subHealthy ? '子' : '主';
+                if (!subHealthy && sub.options && sub.options.length > 0) {
+                    log('[W' + workerId + '] ⚠️ 子页面选项异常(子:' + sub.options.length +
+                        '条, 主:' + card.options.length + '条), 回退到主页面数据', 'warn');
+                }
                 opts.forEach(function (o, j) {
                     final['option' + (j + 1)] = o.name;
                     final['value' + (j + 1)] = o.value;

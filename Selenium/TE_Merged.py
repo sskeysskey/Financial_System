@@ -89,6 +89,11 @@ def get_driver():
     chrome_options.add_argument('--headless=new') 
     chrome_options.add_argument('--window-size=1920,1080')
     
+    # --- 解决 Privacy error (SSL 证书错误) ---
+    chrome_options.add_argument('--ignore-certificate-errors')
+    chrome_options.add_argument('--ignore-ssl-errors')
+    chrome_options.accept_insecure_certs = True
+    
     # --- 伪装设置 ---
     user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
     chrome_options.add_argument(f'user-agent={user_agent}')

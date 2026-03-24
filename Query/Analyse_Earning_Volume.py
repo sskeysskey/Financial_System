@@ -80,15 +80,6 @@ CONFIG = {
     "ETF_COND_LOW_TURNOVER_RANK_THRESHOLD": 2,     # [新增] 成交额排名前 N 名 (前2名)
 }
 
-# ========== 新增：白名单列表 ==========
-WHITELIST_SYMBOLS = [
-    "WBD", "NBIS", "GSAT", "TIGO", "SATS", "FIVE", "IREN", "HUT", "ROIV", "ABVX", 
-    "ARWR", "COGT", "PACS", "PRAX", "TERN", "VRT", "FIX", "ATI", "STRL", "BE", 
-    "KTOS", "GEV", "AEIS", "KRMN", "ECG", "AGX", "PL", "POWL", "OPEN", "MU", 
-    "LRCX", "GLW", "WDC", "STX", "TER", "MKSI", "COHR", "CIEN", "NXT", "CLS", 
-    "ASTS", "TSEM", "LITE", "SNDK", "TTMI", "APLD", "CAMT", "VSAT", "VICR", 
-    "FORM", "VIAV", "CIFR", "AAOI", "ENLT", "FLNC"
-]
 
 # --- 2. 辅助与文件操作模块 ---
 
@@ -307,6 +298,56 @@ def check_is_earnings_day(cursor, symbol, target_date_str):
     except Exception as e:
         # 如果表不存在或查询出错，默认不过滤
         return False
+
+# ========== 新增：动态生成白名单 (过去一年涨幅 > 150%) ==========
+def generate_whitelist_symbols(db_path, sectors_json_path, target_date_override, log_detail):
+    log_detail("\n========== 开始动态生成白名单 (过去一年涨幅 > 150%) ==========")
+    
+    if not os.path.exists(sectors_json_path):
+        log_detail(f"错误: {sectors_json_path} 不存在，无法生成白名单。")
+        return []
+
+    with open(sectors_json_path, 'r', encoding='utf-8') as f:
+        sectors_data = json.load(f)
+
+    conn = sqlite3.connect(db_path, timeout=60.0)
+    cursor = conn.cursor()
+
+    # 确定基准日期和一年前的日期
+    base_date_str = target_date_override if target_date_override else datetime.date.today().isoformat()
+    base_date = datetime.datetime.strptime(base_date_str, '%Y-%m-%d')
+    one_year_ago = base_date - datetime.timedelta(days=365)
+    one_year_ago_str = one_year_ago.strftime('%Y-%m-%d')
+
+    final_symbols = []
+    target_sectors = CONFIG["TARGET_SECTORS"]
+
+    for sector, symbols in sectors_data.items():
+        if sector not in target_sectors:
+            continue
+        
+        for symbol in symbols:
+            query = f"""
+                SELECT 
+                    (SELECT price FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 1) as latest_price,
+                    (SELECT MIN(price) FROM "{sector}" WHERE name = ? AND date >= ? AND date <= ?) as min_price
+            """
+            try:
+                cursor.execute(query, (symbol, base_date_str, symbol, one_year_ago_str, base_date_str))
+                row = cursor.fetchone()
+                
+                if row and row[0] is not None and row[1] is not None:
+                    latest_p, min_p = row
+                    if min_p > 0:
+                        growth = (latest_p - min_p) / min_p
+                        if growth > 1.5:
+                            final_symbols.append(symbol)
+            except sqlite3.OperationalError:
+                continue
+
+    conn.close()
+    log_detail(f"动态白名单生成完成，共命中 {len(final_symbols)} 个 Symbol。")
+    return final_symbols
 
 # --- 策略1: PE_Volume (T, T-1, T-2, T-3 放量下跌) ---
 def pe_volume(db_path, history_json_path, sector_map, target_date_override, symbol_to_trace, log_detail):
@@ -1441,8 +1482,8 @@ def check_turnover_rank(cursor, sector_name, symbol, latest_date_str, latest_tur
     
     return is_top_n
 
-# ========== 新增：处理 PE_Hot 策略的独立函数 ==========
-def process_pe_hot(panel_json_path, exclude_symbols, log_detail):
+# ========== 修改：处理 PE_Hot 策略的独立函数 (接收动态白名单) ==========
+def process_pe_hot(panel_json_path, exclude_symbols, whitelist_symbols, log_detail):
     """
     检索 sectors_panel 里的特定分组，如果发现白名单中的 symbol 在这些分组里，
     且不在 exclude_symbols (PE_Volume等) 中，则将其提取出来。
@@ -1465,8 +1506,8 @@ def process_pe_hot(panel_json_path, exclude_symbols, log_detail):
         for group in target_groups:
             if group in panel_data and isinstance(panel_data[group], dict):
                 for sym, note in panel_data[group].items():
-                    # 检查是否在白名单中
-                    if sym in WHITELIST_SYMBOLS:
+                    # 检查是否在动态生成的白名单中
+                    if sym in whitelist_symbols:
                         # 检查是否在排除列表(PE_Volume系列)中
                         if sym not in exclude_symbols:
                             if sym not in pe_hot_list:
@@ -1501,6 +1542,14 @@ def run_pe_volume_logic(log_detail):
     if not symbol_to_sector_map:
         log_detail("错误: 无法加载板块映射，程序终止。")
         return
+
+    # ================= 新增：动态生成白名单 =================
+    whitelist_symbols = generate_whitelist_symbols(
+        DB_FILE, 
+        SECTORS_JSON_FILE, 
+        TARGET_DATE, 
+        log_detail
+    )
 
     # ================= 策略 1 执行 =================
     raw_pe_volume = pe_volume(
@@ -1541,11 +1590,11 @@ def run_pe_volume_logic(log_detail):
     )
     final_pe_volume_up = sorted(list(set(raw_pe_volume_up)))
 
-    # ================= 策略 3 执行 (增加接纳新返回参数) =================
+    # ================= 策略 3 执行 =================
     raw_pe_volume_high_jia, raw_pe_volume_high_yi, raw_pe_volume_high_bing, raw_pe_volume_high_chaodi = process_pe_volume_high(
         DB_FILE, 
-        EARNING_HISTORY_JSON_FILE, # 新增传入参数
-        PANEL_JSON_FILE,           # 新增传入参数
+        EARNING_HISTORY_JSON_FILE, 
+        PANEL_JSON_FILE,           
         symbol_to_sector_map, 
         TARGET_DATE, 
         SYMBOL_TO_TRACE, 
@@ -1597,7 +1646,6 @@ def run_pe_volume_logic(log_detail):
 
     # === 新增 ===：ETF 过滤
     filtered_etf_volume_high = filter_blacklisted_tags(final_etf_volume_high)
-    # === 新增 ===
     filtered_etf_volume_low = filter_blacklisted_tags(final_etf_volume_low)
 
     if SYMBOL_TO_TRACE:
@@ -1608,10 +1656,8 @@ def run_pe_volume_logic(log_detail):
              log_detail(f"追踪提示: {SYMBOL_TO_TRACE} (策略2) 通过，但因黑名单标签将会被打上‘黑’字。")
         if SYMBOL_TO_TRACE in final_pe_volume_high and SYMBOL_TO_TRACE not in filtered_pe_volume_high:
              log_detail(f"追踪提示: {SYMBOL_TO_TRACE} (策略3) 通过，但因黑名单标签将会被打上‘黑’字。")
-        # === 新增 ===：ETF 追踪提示
         if SYMBOL_TO_TRACE in final_etf_volume_high and SYMBOL_TO_TRACE not in filtered_etf_volume_high:
              log_detail(f"追踪提示: {SYMBOL_TO_TRACE} (策略4) 通过，但因黑名单标签将会被打上‘黑’字。")
-        # === 新增 ===
         if SYMBOL_TO_TRACE in final_etf_volume_low and SYMBOL_TO_TRACE not in filtered_etf_volume_low:
              log_detail(f"追踪提示: {SYMBOL_TO_TRACE} (策略5) 通过，但因黑名单标签将会被打上‘黑’字。")
 
@@ -1680,7 +1726,7 @@ def run_pe_volume_logic(log_detail):
             # 直接追加“追”字，不再检查是否已经存在
             pe_volume_notes[sym] += "追"
                 
-    # === 新增：第三步：如果该 symbol 同时存在于 PE_Volume_high 中，追加“嗨”字 ===
+    # 第三步：如果该 symbol 同时存在于 PE_Volume_high 中，追加“嗨”字
     for sym in filtered_pe_volume:
         if sym in filtered_pe_volume_high:
             if sym in pe_volume_notes and "嗨" not in pe_volume_notes[sym]:
@@ -1729,9 +1775,11 @@ def run_pe_volume_logic(log_detail):
     # 排除的 symbol 列表：如果在这些 Volume 策略中，就不进入 PE_Hot
     exclude_symbols_for_hot = set(filtered_pe_volume) | set(filtered_pe_volume_up) | set(filtered_pe_volume_high)
     
+    # 传入动态生成的 whitelist_symbols
     pe_hot_list, pe_hot_notes = process_pe_hot(
         PANEL_JSON_FILE, 
         exclude_symbols_for_hot, 
+        whitelist_symbols,
         log_detail
     )
 

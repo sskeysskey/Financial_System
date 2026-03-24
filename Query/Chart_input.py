@@ -1007,7 +1007,6 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             except Exception:
                 pass
 
-            
             annotation = ax1.annotate(
                 final_text, xy=(date_v, price_v), xytext=offset, textcoords="offset points",
                 bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=NORD_THEME['accent_yellow'], alpha=0.8),
@@ -1097,10 +1096,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         # 1. 获取 Options 数据
         metrics_data = get_options_metrics(name)
         
-        # 2. 计算 Max/Min 百分比 (基于当前筛选的价格数据)
-        # --- 第一部分：无条件绘制 Max/Min ---
-        # 无论期权数据如何，先计算并绘制 Max/Min
-        max_pct_str, min_pct_str = "--", "--"
+        er_pct_str, max_pct_str, min_pct_str = "--", "--", "--"
+        er_color = NORD_THEME['text_bright']
         
         if current_prices and len(current_prices) > 0:
             latest_p = current_prices[-1]
@@ -1117,10 +1114,23 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 min_pct = (latest_p - min_p) / min_p * 100
                 min_pct_str = f"{min_pct:.1f}%"
 
-        # 3. 绘制 Max/Min 差值 (横向排列)
-        # 布局配置
+            # --- 新增: 计算最新财报日收盘价与最新价的差值 ---
+            if latest_db_earning_date:
+                try:
+                    target_dt = datetime.combine(latest_db_earning_date, datetime.min.time())
+                    closest_date = min(dates, key=lambda d: abs(d - target_dt))
+                    idx = dates.index(closest_date)
+                    earning_p = prices[idx]
+                    
+                    if earning_p != 0:
+                        er_pct = (latest_p - earning_p) / earning_p * 100
+                        er_pct_str = f"{er_pct:.1f}%"
+                        er_color = NORD_THEME['accent_red'] if er_pct > 0 else NORD_THEME['accent_green']
+                except Exception as e:
+                    pass
+
         y_pos = 0.915
-        center_x = 0.5
+        center_x = 0.3
         spacing_outer = 0.16 
         
         # Max 和 Min 的起始 X 坐标
@@ -1128,7 +1138,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         
         # 绘制 Max 差值 (红色)
         t_max = fig.text(base_x, y_pos, f"Max:{max_pct_str}",
-                 color=NORD_THEME['accent_red'], fontsize=12, fontweight='normal',
+                 color=NORD_THEME['accent_green'], fontsize=12, fontweight='normal',
                  ha='left', va='top')
         subtitle_artists.append(t_max)
         
@@ -1139,8 +1149,12 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                  ha='left', va='top')
         subtitle_artists.append(t_min)
 
-        # --- 第二部分：安全获取期权数据 ---
-        # 使用 try-except 包裹，防止任何异常导致绘图中断
+        # --- 新增: 绘制 ER 差值 ---
+        t_er = fig.text(base_x + 0.16, y_pos, f"ER:{er_pct_str}",
+                 color=er_color, fontsize=12, fontweight='normal',
+                 ha='left', va='top')
+        subtitle_artists.append(t_er)
+
         metrics_data = None
         try:
             metrics_data = get_options_metrics(name)

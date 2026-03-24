@@ -434,11 +434,12 @@ class MainWindow(QMainWindow):
         self.search_button.setEnabled(True)
         self.input_field.setEnabled(True)
         
-        # --- 修改：搜索完成后，焦点交给主窗口，不再强制锁死在输入框 ---
-        self.setFocus()
+        # --- 修改：搜索完成后，让焦点回到输入框，并全选文本 ---
+        self.input_field.setFocus()
+        self.input_field.selectAll()
         
         if getattr(self, "suppress_history", False):
-            self.input_field.selectAll()
+            # 因为上面已经统一执行了 selectAll，这里只需要重置标志位即可
             self.suppress_history = False
 
     def clear_results(self):

@@ -39,24 +39,25 @@ def get_growth_stocks():
         
         for symbol in symbols:
             # SQL 查询逻辑：
-            # 1. 获取当前价格 (最新的记录)
-            # 2. 获取一年前的价格 (日期 <= 一年前日期的最新记录)
+            # 1. 获取当前最新价格 (日期 <= today_str 的最新记录)
+            # 2. 获取过去一年内的最低价格 (date 介于 one_year_ago_str 和 today_str 之间)
             query = f"""
                 SELECT 
                     (SELECT price FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 1) as latest_price,
-                    (SELECT price FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 1) as old_price
+                    (SELECT MIN(price) FROM "{sector}" WHERE name = ? AND date >= ? AND date <= ?) as min_price
             """
             
             try:
-                cursor.execute(query, (symbol, today_str, symbol, one_year_ago_str))
+                # 注意这里传入参数的数量和顺序发生了变化
+                cursor.execute(query, (symbol, today_str, symbol, one_year_ago_str, today_str))
                 row = cursor.fetchone()
                 
                 if row and row[0] is not None and row[1] is not None:
-                    latest_p, old_p = row
+                    latest_p, min_p = row
                     
-                    # 只有当旧价格大于0时才计算，避免除零错误
-                    if old_p > 0:
-                        growth = (latest_p - old_p) / old_p
+                    # 只有当最低价格大于0时才计算，避免除零错误
+                    if min_p > 0:
+                        growth = (latest_p - min_p) / min_p
                         
                         # 增长超过 150% (即增长率 > 1.5)
                         if growth > 1.5:
