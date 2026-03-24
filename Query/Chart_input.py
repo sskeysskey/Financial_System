@@ -14,6 +14,7 @@ import json
 from matplotlib.patches import PathPatch
 from matplotlib.path import Path
 from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.collections import LineCollection
 import glob
 import time
 
@@ -211,17 +212,34 @@ def fetch_data(db_path, table_name, name):
     with sqlite3.connect(db_path, timeout=60.0) as conn:
         cursor = conn.cursor()
         try:
-            cursor.execute(f"CREATE INDEX IF NOT EXISTS idx_name ON {table_name} (name);")
-            query = f"SELECT date, price, volume FROM {table_name} WHERE name = ? ORDER BY date;"
-            result = cursor.execute(query, (name,)).fetchall()
-            if not result: raise ValueError("没有查询到可用数据")
-            return result
+            cursor.execute(f'CREATE INDEX IF NOT EXISTS idx_name ON "{table_name}" (name);')
         except sqlite3.OperationalError:
-            query = f"SELECT date, price FROM {table_name} WHERE name = ? ORDER BY date;"
-            result = cursor.execute(query, (name,)).fetchall()
-            if not result: raise ValueError("没有查询到可用数据")
-            return result
+            pass
 
+        # 尝试1: 包含 open 字段 (ETFs 和行业板块表)
+        try:
+            query = f'SELECT date, price, volume, open FROM "{table_name}" WHERE name = ? ORDER BY date;'
+            result = cursor.execute(query, (name,)).fetchall()
+            if result:
+                return result
+        except sqlite3.OperationalError:
+            pass
+
+        # 尝试2: 仅包含 volume 字段
+        try:
+            query = f'SELECT date, price, volume FROM "{table_name}" WHERE name = ? ORDER BY date;'
+            result = cursor.execute(query, (name,)).fetchall()
+            if result:
+                return result
+        except sqlite3.OperationalError:
+            pass
+
+        # 尝试3: 仅 date 和 price
+        query = f'SELECT date, price FROM "{table_name}" WHERE name = ? ORDER BY date;'
+        result = cursor.execute(query, (name,)).fetchall()
+        if not result:
+            raise ValueError("没有查询到可用数据")
+        return result
 def smooth_curve(dates, prices, num_points=500):
     date_nums = matplotlib.dates.date2num(dates)
     if len(dates) < 4:
@@ -235,16 +253,18 @@ def smooth_curve(dates, prices, num_points=500):
 
 def process_data(data):
     if not data: raise ValueError("没有可供处理的数据")
-    dates, prices, volumes = [], [], []
+    dates, prices, volumes, opens = [], [], [], []
     for row in data:
         date = datetime.strptime(row[0], "%Y-%m-%d")
         price = float(row[1]) if row[1] is not None else None
         volume = int(row[2]) if len(row) > 2 and row[2] is not None else None
+        open_price = float(row[3]) if len(row) > 3 and row[3] is not None else None
         if price is not None:
             dates.append(date)
             prices.append(price)
             volumes.append(volume)
-    return dates, prices, volumes
+            opens.append(open_price)
+    return dates, prices, volumes, opens
 
 def display_dialog(message):
     applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
@@ -618,10 +638,13 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     show_specific_markers = True
     show_earning_markers = True
     show_all_annotations = False
+    show_colored_lines = True  # <--- 新增：控制彩色线段的开关，默认关闭
     current_filtered_dates = []
+    colored_lc = [None]  # 用可变容器存储 LineCollection 引用
     current_filtered_prices = []
     current_filtered_volumes = []
     current_filtered_date_nums = []
+    current_filtered_opens = []  # <--- 【新增这行】初始化变量
     subtitle_artists = [] # 用于存储副标题的文本对象
 
     
@@ -633,7 +656,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     try:
         data = fetch_data(db_path, table_name, name)
-        dates, prices, volumes = process_data(data)
+        dates, prices, volumes, opens = process_data(data)
+        has_ohlc = any(o is not None for o in opens)
     except ValueError as e:
         display_dialog(f"{e}")
         return
@@ -772,6 +796,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         smooth_dates, smooth_prices, marker='', linestyle='-', linewidth=2,
         color=NORD_THEME['accent_cyan'], alpha=0.8, label='Price', zorder=2
     )
+    # 如果有 OHLC 数据，隐藏原始单色线，改用彩色 LineCollection 显示
+    if has_ohlc:
+        line1.set_alpha(0)
     small_dot_scatter = ax1.scatter(dates, prices, s=5, color=NORD_THEME['text_bright'], zorder=1.5)
     line2, = ax2.plot(
         dates, turnovers, marker='o', markersize=2, linestyle='-', linewidth=2,
@@ -868,6 +895,56 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         # 启动 J 脚本
         execute_external_script('panel_input', name, on_done=on_insert_done, block=True)
     
+    def build_colored_line_collection(f_dates, f_prices, f_opens):
+        """
+        根据每天的日内涨跌方向 (close vs open) 为相邻两点之间的线段上色。
+        close > open → 红色 (上涨)
+        close < open → 绿色 (下跌)
+        close == open 或无 open 数据 → 默认青色
+        如果 show_colored_lines 为 False，则统一显示青色。
+        """
+        # 移除旧的 LineCollection
+        if colored_lc[0] is not None:
+            colored_lc[0].remove()
+            colored_lc[0] = None
+
+        # 如果没有 OHLC 数据或数据不足，不创建
+        if not has_ohlc or not f_dates or len(f_dates) < 2:
+            return
+
+        date_nums_lc = matplotlib.dates.date2num(f_dates)
+        segments = []
+        seg_colors = []
+
+        for i in range(len(f_dates) - 1):
+            # 每一段: 从第 i 个点到第 i+1 个点
+            segments.append([
+                (date_nums_lc[i], f_prices[i]),
+                (date_nums_lc[i + 1], f_prices[i + 1])
+            ])
+
+            # 如果开启了彩色显示，则根据涨跌上色
+            if show_colored_lines:
+                next_open = f_opens[i + 1] if (f_opens and i + 1 < len(f_opens)) else None
+                next_close = f_prices[i + 1]
+
+                if next_open is not None and next_close is not None:
+                    if next_close > next_open:
+                        seg_colors.append(NORD_THEME['accent_red'])    # 日内上涨 → 红
+                    elif next_close < next_open:
+                        seg_colors.append(NORD_THEME['accent_green'])  # 日内下跌 → 绿
+                    else:
+                        seg_colors.append(NORD_THEME['accent_cyan'])   # 平盘 → 青
+                else:
+                    seg_colors.append(NORD_THEME['accent_cyan'])       # 无 open 数据 → 青
+            else:
+                # 如果未开启彩色显示，统一使用青色
+                seg_colors.append(NORD_THEME['accent_cyan'])
+
+        lc = LineCollection(segments, colors=seg_colors, linewidths=2, zorder=2, alpha=0.8)
+        ax1.add_collection(lc)
+        colored_lc[0] = lc
+        
     # --- 新增修改 2: 将标记和注释的创建逻辑封装成一个函数 ---
     # 这个函数将在初始化和刷新时被调用
     def create_markers_and_annotations():
@@ -1292,6 +1369,13 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     return
         display_dialog(f"未找到 {name} 的信息")
 
+    def toggle_colored_lines():
+        nonlocal show_colored_lines
+        show_colored_lines = not show_colored_lines
+        # 重新构建线段并重绘
+        build_colored_line_collection(current_filtered_dates, current_filtered_prices, current_filtered_opens)
+        fig.canvas.draw_idle()
+
     def toggle_global_markers():
         nonlocal show_global_markers
         show_global_markers = not show_global_markers
@@ -1703,25 +1787,29 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     def update(val):
         # 这里的 volumes 依然是原始的成交量数据
-        nonlocal gradient_image, current_filtered_dates, current_filtered_prices, current_filtered_volumes, current_filtered_date_nums
+        # vvv 【修改这行】在末尾加上 current_filtered_opens vvv
+        nonlocal gradient_image, current_filtered_dates, current_filtered_prices, current_filtered_volumes, current_filtered_date_nums, current_filtered_opens
         try:
             years = time_options[val]
             if years == 0:
                 # 全量数据
                 f_dates, f_prices, f_volumes = dates, prices, volumes
-                f_turnovers = turnovers # 新增
+                f_turnovers = turnovers
+                f_opens = opens                          # ← 新增
             else:
                 min_date = datetime.now() - timedelta(days=years * 365)
                 indices = [i for i, d in enumerate(dates) if d >= min_date]
                 if not indices:
                     f_dates, f_prices = [dates[-1]], [prices[-1]]
                     f_volumes = [volumes[-1]] if volumes else None
-                    f_turnovers = [turnovers[-1]] if turnovers else None # 新增
+                    f_turnovers = [turnovers[-1]] if turnovers else None
+                    f_opens = [opens[-1]] if opens else None   # ← 新增
                 else:
                     f_dates = [dates[i] for i in indices]
                     f_prices = [prices[i] for i in indices]
                     f_volumes = [volumes[i] for i in indices] if volumes else None
-                    f_turnovers = [turnovers[i] for i in indices] if turnovers else None # 新增
+                    f_turnovers = [turnovers[i] for i in indices] if turnovers else None
+                    f_opens = [opens[i] for i in indices]      # ← 新增
 
             # 更新当前筛选数据与缓存
             current_filtered_dates = f_dates
@@ -1732,8 +1820,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             current_filtered_volumes = f_volumes 
             
             current_filtered_date_nums = matplotlib.dates.date2num(current_filtered_dates) if current_filtered_dates else np.array([])
-            
-            # === 修改：控制紫色和蓝色遮罩的显示 ===
+            current_filtered_opens = f_opens                   # ← 新增
+
+            # === 遮罩逻辑保持不变（省略，和原代码完全一样）===
             if f_dates:
                 display_start = min(f_dates).date() if isinstance(min(f_dates), datetime) else min(f_dates)
                 display_end = max(f_dates).date() if isinstance(max(f_dates), datetime) else max(f_dates)
@@ -1795,9 +1884,12 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 zero_line=zero_line
             )
 
-            # 新增：刷新副标题，传入当前筛选后的价格数据
-            draw_subtitle(current_prices=f_prices) 
-            
+            # ====== 新增: 重建彩色线段 ======
+            build_colored_line_collection(f_dates, f_prices, f_opens)
+            # ================================
+
+            draw_subtitle(current_prices=f_prices)
+
             for i, circle in enumerate(radio.circles):
                 circle.set_facecolor(NORD_THEME['accent_red'] if list(time_options.keys())[i] == val else NORD_THEME['background'])
             small_dot_scatter.set_visible(val in ["1m", "3m", "6m"])
@@ -1807,15 +1899,17 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             pass
 
     def toggle_volume():
-        nonlocal show_volume, current_filtered_dates, current_filtered_prices, current_filtered_volumes, current_filtered_date_nums
+        nonlocal show_volume, current_filtered_dates, current_filtered_prices, current_filtered_volumes, current_filtered_date_nums, current_filtered_opens
         try:
             show_volume = not show_volume
             years = time_options[radio.value_selected]
             
             # --- 增加 f_turnovers 的处理逻辑 ---
             if years == 0:
-                f_dates, f_prices, = dates, prices, volumes
+                # vvv 【修改这行】去掉多余的逗号和 volumes vvv
+                f_dates, f_prices = dates, prices 
                 f_turnovers = turnovers
+                f_opens = opens 
             else:
                 min_date = datetime.now() - timedelta(days=years * 365)
                 indices = [i for i, d in enumerate(dates) if d >= min_date]
@@ -1823,14 +1917,18 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     f_dates = [dates[i] for i in indices]
                     f_prices = [prices[i] for i in indices]
                     f_turnovers = [turnovers[i] for i in indices] if turnovers else None
+                    f_opens = [opens[i] for i in indices] 
                 else:
                     f_dates = [dates[-1]]
                     f_prices = [prices[-1]]
                     f_turnovers = [turnovers[-1]] if turnovers else None
+                    f_opens = [opens[-1]] if opens else None
             
             current_filtered_dates = f_dates
             current_filtered_prices = f_prices
+            
             current_filtered_date_nums = matplotlib.dates.date2num(current_filtered_dates) if current_filtered_dates else np.array([])
+            current_filtered_opens = f_opens
 
             # 【关键点】：传入 f_turnovers 进行绘图
             update_plot(
@@ -1842,6 +1940,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 gradient_clip_patch=gradient_clip_patch,
                 zero_line=zero_line
             )
+            # ====== 新增: 重建彩色线段 ======
+            build_colored_line_collection(f_dates, f_prices, f_opens)
             fig.canvas.draw_idle()
         except Exception as e:
             pass
@@ -1924,6 +2024,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                        'w': lambda: execute_external_script('event_input', name),
                        'y': launch_insert_then_delete_chain, 
                        'j': launch_and_close_for_y,
+                       'c': toggle_colored_lines,
                        'q': lambda: execute_external_script('event_edit', name),
                        'k': lambda: execute_external_script('check_kimi', name),
                        'z': lambda: execute_external_script('check_futu', name),
