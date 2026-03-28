@@ -4,6 +4,7 @@ import os
 from PyQt6.QtWidgets import QApplication, QDialog, QVBoxLayout, QTextEdit
 from PyQt6.QtGui import QFont
 from PyQt6.QtCore import Qt
+from collections import defaultdict
 
 USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
@@ -21,7 +22,8 @@ NORD_THEME = {
     'text_light': '#D8DEE9',
     'text_bright': '#ECEFF4',
     'accent_blue': '#5E81AC',
-    'success_green': '#A3BE8C'
+    'success_green': '#A3BE8C',
+    'warning_red': '#BF616A' # 新增红色用于特殊标记
 }
 
 # --- 2. 界面类 ---
@@ -150,7 +152,12 @@ def search_history(symbol):
         with open(JSON_PATH, 'r', encoding='utf-8') as f:
             data = json.load(f)
 
-            # 遍历所有分类
+            # --- 修改点：先收集所有匹配的数据，用于检测同一天的多重出现 ---
+            # 结构: category_data[category] = [(date_str, suffix), ...]
+            # 同时统计每个日期出现的分类: date_categories[date_str] = set([category1, category2, ...])
+            category_data = defaultdict(list)
+            date_categories = defaultdict(set)
+
             for category, date_dict in data.items():
                 
                 # 如果你想让 _Tag_Blacklist 作为一个普通分类显示出来，可以把下面两行注释掉或删掉。
@@ -166,9 +173,12 @@ def search_history(symbol):
                         for item in symbol_list:
                             suffix = get_suffix_if_match(item, symbol)
                             if suffix is not None:
-                                found_dates.append((date_str, suffix))
-                                break  # 当前日期已找到，看下一个日期
+                                category_data[category].append((date_str, suffix))
+                                date_categories[date_str].add(category)
+                                break 
 
+            # 构建 HTML
+            for category, found_dates in category_data.items():
                 if found_dates:
                     has_data = True
                     # 按日期降序排序 (元组的第一个元素是日期)
@@ -182,9 +192,13 @@ def search_history(symbol):
                         if suf:
                             suf_html = f" <span style='color:#EBCB8B; font-size:14px; font-weight:bold;'>[{suf}]</span>"
 
-                        # 移除了 marker 变量及闪电标志
-                        html_parts.append(f"&nbsp;&nbsp;• {d_str}{suf_html}<br>")
-                    # --- 修改点 3: 移除这里的 html_parts.append("<br>") ---
+                        # --- 修改点：检测该日期是否在多个分类中出现 ---
+                        overlap_marker = ""
+                        if len(date_categories[d_str]) > 1:
+                            # 如果在多个分类出现，添加红色火焰/星号标记，并提示
+                            overlap_marker = f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;' title='同一天出现在多个分类中'>[★多重触发]</span>"
+
+                        html_parts.append(f"&nbsp;&nbsp;• {d_str}{suf_html}{overlap_marker}<br>")
 
     except Exception as e:
         return f"<p style='color:red'>读取 Earning JSON 出错: {e}</p>"

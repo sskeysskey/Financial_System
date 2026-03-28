@@ -463,28 +463,32 @@ function injectedScrapeSubpage() {
             return t;
         }
 
-        // ★ 新增：已知非分类路径（集中管理排除列表）
+        // ★ 新增：已知非分类路径（集中管理排除列表）补充更多 footer
         function isExcludedPath(href) {
-            return /^\/(login|signup|portfolio|profile|settings|trade|help|about|terms|privacy|register|api|docs|notifications|deposit|withdraw|leaderboard|fee|blog|press|referral|search|faq|support|contact|careers|partners|legal|rules|pricing|account|markets)\b/i.test(href);
+            return /^\/(login|signup|portfolio|profile|settings|trade|help|about|terms|privacy|register|api|docs|notifications|deposit|withdraw|leaderboard|fee|blog|press|referral|search|faq|support|contact|careers|partners|legal|rules|pricing|account|markets|brandkit|brand-kit|brand|data-terms|sweepstakes)\b/i.test(href);
         }
 
-        // ★ 扩展：更宽泛的分类链接 href 匹配
+        // ★★ FIX 2: 归一化 href（处理无前导 / 的相对路径，如 "sports/all-sports"）
         function isCategoryHref(href) {
             if (!href) return false;
-            if (href.indexOf('/category/') !== -1) return true;
-            if (href.indexOf('/categories/') !== -1) return true;
-            if (href.indexOf('/sports/') !== -1) return true;
-            if (href.indexOf('/browse/') !== -1) return true;
-            if (/^\/events\/[a-z]/i.test(href) && href.indexOf('/markets/') === -1) return true;
-            // ★ 新增：匹配 1-2 层简洁路径（如 /elections、/politics/elections）
-            if (/^\/[a-z][a-z0-9-]+$/i.test(href) && !isExcludedPath(href)) return true;
-            if (/^\/[a-z][a-z0-9-]+\/[a-z][a-z0-9-]+$/i.test(href) && !isExcludedPath(href)) return true;
+            // ★ 归一化：如果没有前导 /，补上，使后续匹配一致
+            var h = href.charAt(0) === '/' ? href : '/' + href;
+            // 排除外部链接（归一化后变成 /https://... 不会匹配，但提前排除更安全）
+            if (/^https?:/i.test(href)) return false;
+            if (h.indexOf('/category/') !== -1) return true;
+            if (h.indexOf('/categories/') !== -1) return true;
+            if (h.indexOf('/sports/') !== -1) return true;
+            if (h.indexOf('/browse/') !== -1) return true;
+            if (/^\/events\/[a-z]/i.test(h) && h.indexOf('/markets/') === -1) return true;
+            if (/^\/[a-z][a-z0-9-]+$/i.test(h) && !isExcludedPath(h)) return true;
+            if (/^\/[a-z][a-z0-9-]+\/[a-z][a-z0-9-]+$/i.test(h) && !isExcludedPath(h)) return true;
             return false;
         }
 
-        // ★ 改进：精确判断是否在主导航中
+        // ★ 改进：精确判断是否在主导航中，加入 footer 排除，防止抓到页脚链接
         function isInMainNav(aEl) {
             if (aEl.closest('header')) return true;
+            if (aEl.closest('footer')) return true;   // ★ 排除 footer 内所有链接
             if (aEl.closest('[data-testid*="navbar"]')) return true;
             if (aEl.closest('[data-testid*="nav-bar"]')) return true;
             var navEl = aEl.closest('nav');
@@ -567,7 +571,7 @@ function injectedScrapeSubpage() {
                             if (klHref.indexOf('/markets/') !== -1) continue;
                             if (/^https?:/.test(klHref)) continue;
                             if (isInMainNav(kl)) continue;
-                            if (isExcludedPath(klHref)) continue;
+                            if (isExcludedPath(klHref.charAt(0) === '/' ? klHref : '/' + klHref)) continue;
 
                             var klText = getCatText(kl);
                             if (klText && klText.length > 0 && klText.length < 40 &&
@@ -614,7 +618,7 @@ function injectedScrapeSubpage() {
             }
         }
 
-        // Strategy 2: 全文档搜索（排除主导航）
+        // Strategy 2: 全文档搜索（排除主导航和 footer）
         if (categories.length === 0) {
             d.push('S2: document-wide search...');
             var allAs = document.querySelectorAll('a');
@@ -648,8 +652,7 @@ function injectedScrapeSubpage() {
                     if (lHref.indexOf('/markets/') !== -1) continue;
                     // 排除外部链接
                     if (/^https?:/.test(lHref)) continue;
-                    // 排除已知非分类路径
-                    if (isExcludedPath(lHref)) continue;
+                    if (isExcludedPath(lHref.charAt(0) === '/' ? lHref : '/' + lHref)) continue;
 
                     var lText = getCatText(links[li]);
                     if (lText && lText.length > 0 && lText.length < 30 &&
@@ -714,6 +717,14 @@ function injectedScrapeSubpage() {
             result.subtype = categories[1];
             d.push('type=' + categories[0] + ', subtype=' + categories[1]);
         }
+
+        // ★ 新增：如果 subtype 是特定的时间周期，则将其改为与 type 相同
+        var timeSubtypes = ['hourly', 'weekly', '15 min', '15min', 'annual', 'daily', 'monthly'];
+        if (result.subtype && timeSubtypes.indexOf(result.subtype.toLowerCase()) !== -1) {
+            result.subtype = result.type;
+            d.push('Subtype is time-based, changed to match type: ' + result.type);
+        }
+
     } catch (e) {
         d.push('Category extraction error: ' + e.message);
     }

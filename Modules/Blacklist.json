@@ -700,7 +700,8 @@
         "EEFT",
         "GTM",
         "TAC",
-        "ENIC"
+        "ENIC",
+        "ADV"
     ],
     "etf": [
         "VDE",
@@ -1075,7 +1076,8 @@
         "PJUL",
         "BCPL",
         "HSCZ",
-        "FQAL"
+        "FQAL",
+        "XTL"
     ],
     "Earning": [
         "TW",

@@ -13,8 +13,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = ""
 TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "CF"
-# TARGET_DATE = "2026-03-19"
+# SYMBOL_TO_TRACE = "FRO"
+# TARGET_DATE = "2026-03-13"
 
 # 动态生成日志路径，不再写死用户名
 LOG_FILE_PATH = os.path.join(BASE_PATH, "Downloads", "No_Season_trace_log.txt")
@@ -1713,11 +1713,10 @@ def run_processing_logic(log_detail):
             blocked_symbols_to_log.append(sym)
             
     # 写入名为 "_Tag_Blacklist" 的特殊分组
-    if blocked_symbols_to_log:
-        blocked_symbols_to_log = sorted(list(set(blocked_symbols_to_log)))
-        update_earning_history_json(EARNING_HISTORY_JSON_FILE, "_Tag_Blacklist", blocked_symbols_to_log, log_detail)
-        log_detail(f"已将 {len(blocked_symbols_to_log)} 个命中黑名单Tag的symbol额外记入 '_Tag_Blacklist' 分组。")
-    # ================================================================
+    # if blocked_symbols_to_log:
+    #     blocked_symbols_to_log = sorted(list(set(blocked_symbols_to_log)))
+    #     update_earning_history_json(EARNING_HISTORY_JSON_FILE, "_Tag_Blacklist", blocked_symbols_to_log, log_detail)
+    #     log_detail(f"已将 {len(blocked_symbols_to_log)} 个命中黑名单Tag的symbol额外记入 '_Tag_Blacklist' 分组。")
 
     if not has_written_any:
         log_detail("\n--- 无符合条件的 symbol 可写入 Earning_History.json ---")

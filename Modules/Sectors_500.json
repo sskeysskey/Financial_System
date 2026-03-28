@@ -99,7 +99,8 @@
         "OXY",
         "LNG",
         "FANG",
-        "TRGP"
+        "TRGP",
+        "CVE"
     ],
     "Financial_Services": [
         "JPM",
@@ -157,8 +158,7 @@
         "BAM",
         "NWG",
         "BRK-B",
-        "MRSH",
-        "COIN"
+        "MRSH"
     ],
     "Healthcare": [
         "LLY",
@@ -187,7 +187,6 @@
         "CI",
         "BMY",
         "GSK",
-        "ZTS",
         "CVS",
         "MCK",
         "COR",
@@ -230,7 +229,8 @@
         "CMI",
         "VRT",
         "PCAR",
-        "FAST"
+        "FAST",
+        "GWW"
     ],
     "Real_Estate": [
         "PLD",
@@ -291,7 +291,6 @@
         "WDC",
         "SNDK",
         "MPWR",
-        "ADSK",
         "CIEN",
         "LITE"
     ],

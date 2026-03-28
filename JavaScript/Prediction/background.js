@@ -123,6 +123,12 @@ async function fetchPolymarketSubpageData(slug) {
         if (type && !subtype) subtype = type;
         if (subtype && !type) type = subtype;
 
+        // ★ 新增：如果 subtype 是特定的时间周期，则将其改为与 type 相同
+        var timeSubtypes = ['hourly', 'weekly', '15 min', 'annual', 'daily', 'monthly'];
+        if (subtype && timeSubtypes.indexOf(subtype.toLowerCase()) !== -1) {
+            subtype = type;
+        }
+
         // ══════════════════════════════════════════════
         // 提取 enddate: 匹配页面中的日期格式
         // ══════════════════════════════════════════════

@@ -49,8 +49,7 @@ CONFIG = {
     },
     # ========== 目标分组 (两个策略共用) ==========
     "TARGET_GROUPS": [
-        "OverSell_W", "PE_Deeper", "PE_Deep", 
-        "PE_W", "PE_valid", "PE_invalid", "season", "no_season"
+        "OverSell_W", "PE_Deeper", "PE_Deep", "PE_W"
     ],
     # ========== 策略1 (PE_Volume放量下跌) 参数 ==========
     "COND8_VOLUME_LOOKBACK_MONTHS": 1.5,   # 过去 N 个月
@@ -446,22 +445,23 @@ def pe_volume(db_path, history_json_path, sector_map, target_date_override, symb
             
             # ========== 修改点：获取今日(dates[0]) 和 昨日(dates[1]) 的价格和成交量 ==========
             # 查询最近两天的数据 (倒序: Row 0=Today, Row 1=Yesterday)
-            query = f'SELECT price, volume FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 2'
+            # 修改后:
+            query = f'SELECT price, volume, open FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 2'
             cursor.execute(query, (symbol, dates[0]))
             rows = cursor.fetchall()
-            
+
             if len(rows) < 2:
                 if is_tracing: log_detail(f"    x [失败] 缺少足够的价格数据进行涨跌幅对比。")
                 continue
-            
-            price_curr, vol_curr = rows[0]
-            price_prev, vol_prev = rows[1]
-            
-            if price_curr is None or price_prev is None or vol_curr is None: continue
 
-            # ========== 规则修改：必须下跌 (今日价 < 昨日价) ==========
-            if price_curr >= price_prev:
-                if is_tracing: log_detail(f"    x [失败] 价格未下跌 ({price_curr} >= {price_prev})。")
+            price_curr, vol_curr, open_curr = rows[0]
+            price_prev, vol_prev, _ = rows[1]
+
+            if price_curr is None or price_prev is None or vol_curr is None or open_curr is None: continue
+
+            # ========== 规则修改：必须下跌 (今日收盘 < 昨日收盘 且 今日收盘 < 今日开盘) ==========
+            if price_curr >= price_prev or price_curr >= open_curr:
+                if is_tracing: log_detail(f"    x [失败] 价格未满足下跌条件 (收盘{price_curr}, 昨收{price_prev}, 今开{open_curr})。")
                 continue
 
             # --- 修改点：计算成交额并调用成交额排名函数 ---
@@ -524,7 +524,7 @@ def check_pe_volume_retention(db_path, history_json_path, panel_json_path, curre
     如果满足：
     1. 不在今天的 current_pe_volume 中
     2. Turnover (成交额) 下降 且 收盘价下降 (缩量下跌)
-    3. 存在于今天的 PE_Deep/Deeper/OverSell_W/PE_W/PE_valid/PE_invalid 中
+    3. 存在于今天的 PE_Deep/Deeper/OverSell_W/PE_W 中
     则将其捞回。
     """
     log_detail("\n========== 执行 PE_Volume 回溯保留机制 (Retention Check) ==========")
@@ -567,7 +567,7 @@ def check_pe_volume_retention(db_path, history_json_path, panel_json_path, curre
 
     # 3. 加载 Panel 文件，获取当前存在的 Deep/Valid 等池子
     valid_pool = set()
-    target_pool_names = ["PE_Deep", "PE_Deeper", "OverSell_W", "PE_W", "PE_valid", "PE_invalid"]
+    target_pool_names = ["PE_Deep", "PE_Deeper", "OverSell_W", "PE_W"]
     try:
         with open(panel_json_path, 'r', encoding='utf-8') as f:
             panel_data = json.load(f)
@@ -602,26 +602,26 @@ def check_pe_volume_retention(db_path, history_json_path, panel_json_path, curre
 
         # 获取最近两天的交易数据 (Today, Yesterday)
         # 注意：这里的 Yesterday 指的是交易日的昨天，不一定是 prev_date (因为 prev_date 是上一次运行脚本的时间)
-        query = f'SELECT date, price, volume FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 2'
+        # 修改后:
+        query = f'SELECT date, price, volume, open FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 2'
         cursor.execute(query, (symbol, base_date))
         rows = cursor.fetchall()
-        
+
         if len(rows) < 2: continue
-        
+
         # rows[0] = Today, rows[1] = Yesterday
-        date_curr, price_curr, vol_curr = rows[0]
-        date_prev, price_prev, vol_prev = rows[1]
-        
-        if None in [price_curr, vol_curr, price_prev, vol_prev]: continue
+        date_curr, price_curr, vol_curr, open_curr = rows[0]
+        date_prev, price_prev, vol_prev, _ = rows[1]
+
+        if None in [price_curr, vol_curr, price_prev, vol_prev, open_curr]: continue
 
         turnover_curr = price_curr * vol_curr
         turnover_prev = price_prev * vol_prev
 
-        # 条件2: Turnover下降 且 收盘价降低
-        # 注意：这里对比的是最近两个交易日，体现“最新数据”
-        if (turnover_curr < turnover_prev) and (price_curr < price_prev):
+        # 条件2: Turnover下降 且 收盘价降低 且 收盘价低于开盘价
+        if (turnover_curr < turnover_prev) and (price_curr < price_prev) and (price_curr < open_curr):
             retention_list.append(symbol)
-            log_detail(f"    + [捞回] {symbol}: 上期存在且缩量下跌 (Price: {price_prev}->{price_curr}, TO: {turnover_prev/1000:.0f}k->{turnover_curr/1000:.0f}k)")
+            log_detail(f"    + [捞回] {symbol}: 上期存在且缩量下跌 (Price: {price_prev}->{price_curr}, Open: {open_curr}, TO: {turnover_prev/1000:.0f}k->{turnover_curr/1000:.0f}k)")
 
     conn.close()
     return retention_list
@@ -691,7 +691,7 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
         if is_tracing: log_detail(f"--- 正在检查 {symbol} (策略2) ---")
 
         # 【修改点 1】将 LIMIT 从 3 改为 8，以便获取今日 + 过去 7 天的数据
-        query = f'SELECT date, price, volume FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 8'
+        query = f'SELECT date, price, volume, open FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 8'
         cursor.execute(query, (symbol, base_date))
         rows = cursor.fetchall()
         
@@ -702,18 +702,18 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
             
         # rows[0]=T, rows[1]=T-1, rows[2]=T-2 (可能不存在)
         # 提取数据
-        date_curr, price_curr, vol_curr = rows[0]
-        date_prev, price_prev, vol_prev = rows[1]
+        date_curr, price_curr, vol_curr, open_curr = rows[0]
+        date_prev, price_prev, vol_prev, _ = rows[1]
         
-        if None in [price_curr, price_prev, vol_curr, vol_prev]: continue
+        if None in [price_curr, price_prev, vol_curr, vol_prev, open_curr]: continue
 
         # 计算成交额 (Turnover)
         turnover_curr = price_curr * vol_curr
         turnover_prev = price_prev * vol_prev
 
-        # 规则1 (硬性): 必须上涨 (最新价 > 次新价)
-        if price_curr <= price_prev:
-            if is_tracing: log_detail(f"    x 价格未上涨 ({price_curr} <= {price_prev})，跳过。")
+        # 规则1 (硬性): 必须上涨 (最新价 > 次新价 且 收盘价 > 开盘价)
+        if price_curr <= price_prev or price_curr <= open_curr:
+            if is_tracing: log_detail(f"    x 价格未上涨 (收盘{price_curr} <= 昨收{price_prev} 或 <= 今开{open_curr})，跳过。")
             continue
 
         # 【修改点 2】新增过滤：比前 7 天最低点高出 3% 则过滤
@@ -760,7 +760,7 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
             has_high_volume_history = False
             # 检查 T, T-1, T-2
             for i in range(min(3, len(rows))):
-                d_date, d_price, d_vol = rows[i] # 1. 这里要解包出 d_price
+                d_date, d_price, d_vol, _ = rows[i]
                 if d_vol is None or d_price is None: continue
                 
                 # 2. 必须计算那一天的成交额
@@ -827,7 +827,7 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
 
     # ================= 修复点：加载当前回调池 =================
     valid_pool = set()
-    target_pool_names = ["PE_W", "PE_Deep", "PE_Deeper", "PE_valid", "PE_invalid", "OverSell_W", "season", "no_season"]
+    target_pool_names = ["PE_W", "PE_Deep", "PE_Deeper", "OverSell_W"]
     
     try:
         # 优先从 History 中读取 base_date 当天的跌幅池数据，以支持回测
@@ -935,22 +935,22 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         
         # 4. 获取最新交易数据
         if target_date_override:
-            query = f'SELECT date, price, volume FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 2'
+            query = f'SELECT date, price, volume, open FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 2'
             cursor.execute(query, (symbol, target_date_override))
         else:
-            query = f'SELECT date, price, volume FROM "{sector}" WHERE name = ? ORDER BY date DESC LIMIT 2'
+            query = f'SELECT date, price, volume, open FROM "{sector}" WHERE name = ? ORDER BY date DESC LIMIT 2'
             cursor.execute(query, (symbol,))
         
         rows = cursor.fetchall()
         
         # 修正：确保这里能正确解包 prev_volume
-        if len(rows) < 2 or rows[0][1] is None or rows[0][2] is None or rows[1][1] is None or rows[1][2] is None:
+        if len(rows) < 2 or rows[0][1] is None or rows[0][2] is None or rows[0][3] is None or rows[1][1] is None or rows[1][2] is None:
             if is_tracing:
                 log_detail(f"    x [失败] 无法获取最新两天交易数据")
             continue
         
-        latest_date, latest_price, latest_volume = rows[0]
-        prev_date, prev_price, prev_volume = rows[1]
+        latest_date, latest_price, latest_volume, latest_open = rows[0]
+        prev_date, prev_price, prev_volume, _ = rows[1]
         
         latest_turnover = latest_price * latest_volume
         prev_turnover = prev_price * prev_volume
@@ -964,7 +964,7 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         # ================= 抄底逻辑 (不受今日上涨/放量门槛限制) =================
         cond_chaodi = False
         
-        # 1. 检查历史：从最新财报日到今天，该股是否以"甲"或"乙"类进入过 PE_Volume_high
+        # 1. 检查历史：从最新财报日到今天，该股是否以"甲"类进入过 PE_Volume_high
         was_in_high_history = False
         latest_jia_history_date = None  # [新增] 追踪最近一次甲类出现的日期，用于路径C
         
@@ -978,12 +978,13 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
                     # 如果 symbol 匹配
                     if clean_sym == symbol:
                         # 路径A/B所需：出现过甲或乙
-                        if "甲" in s_with_suffix or "乙" in s_with_suffix:
+                        # if "甲" in s_with_suffix or "乙" in s_with_suffix:
+                        if "甲" in s_with_suffix:
                             was_in_high_history = True
                             if is_tracing:
-                                log_detail(f"    - 发现历史记录: {h_date} -> {s_with_suffix} (包含甲/乙类)")
+                                log_detail(f"    - 发现历史记录: {h_date} -> {s_with_suffix} (包含甲类)")
                         
-                        # [新增] 路径C所需：记录最近一次"甲"类出现的日期
+                        # 路径C所需：记录最近一次"甲"类出现的日期
                         if "甲" in s_with_suffix:
                             if latest_jia_history_date is None or h_date > latest_jia_history_date:
                                 latest_jia_history_date = h_date
@@ -1001,7 +1002,7 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
             
             # 路径 B: 放量下跌抄底 (今日价格下跌 且 成交额是近1.5个月前2名)
             else:
-                cond_price_down_today = (latest_price < prev_price)
+                cond_price_down_today = (latest_price < prev_price) and (latest_price < latest_open)
                 if cond_price_down_today:
                     # [修改点] 使用 check_turnover_rank_by_days 替代之前的 since_earning 逻辑
                     # 45天即约等于1.5个月
@@ -1020,7 +1021,7 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
             # [新增] 路径 C: 缩量回调后缩量上涨
             # 条件：甲日之后到昨天，每天都是缩量下跌；今天是缩量上涨
             if not cond_chaodi and latest_jia_history_date is not None:
-                cond_c_price_up = (latest_price > prev_price)
+                cond_c_price_up = (latest_price > prev_price) and (latest_price > latest_open)
                 cond_c_turnover_down = (latest_turnover < prev_turnover)
                 
                 if is_tracing:
@@ -1028,32 +1029,29 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
                 
                 if cond_c_price_up and cond_c_turnover_down:
                     # 获取从甲日到今天的所有交易数据（按日期升序）
-                    query_c = f'SELECT date, price, volume FROM "{sector}" WHERE name = ? AND date >= ? AND date <= ? ORDER BY date ASC'
+                    query_c = f'SELECT date, price, volume, open FROM "{sector}" WHERE name = ? AND date >= ? AND date <= ? ORDER BY date ASC'
                     cursor.execute(query_c, (symbol, latest_jia_history_date, latest_date))
                     all_rows_c = cursor.fetchall()
-                    
+
                     # 至少需要: 甲日 + 1个中间日 + 今天 = 3条记录
-                    # （如果你希望允许甲日紧邻今天的情况，可改为 >= 2）
                     if len(all_rows_c) >= 3:
-                        # 检查中间日 (index 1 到 len-2)：每天都必须是缩量下跌
-                        # all_rows_c[0] = 甲日，all_rows_c[-1] = 今天
                         all_shrink_down = True
                         for i in range(1, len(all_rows_c) - 1):
-                            curr_d, curr_p, curr_v = all_rows_c[i]
-                            prev_d_c, prev_p_c, prev_v_c = all_rows_c[i - 1]
+                            curr_d, curr_p, curr_v, curr_open = all_rows_c[i]
+                            prev_d_c, prev_p_c, prev_v_c, _ = all_rows_c[i - 1]
                             
-                            if any(x is None for x in [curr_p, curr_v, prev_p_c, prev_v_c]):
+                            if any(x is None for x in [curr_p, curr_v, prev_p_c, prev_v_c, curr_open]):
                                 all_shrink_down = False
                                 break
                             
                             curr_to = curr_p * curr_v
                             prev_to = prev_p_c * prev_v_c
                             
-                            # 缩量下跌：价格下跌 AND 成交额下降
-                            if not (curr_p < prev_p_c and curr_to < prev_to):
+                            # 缩量下跌：价格下跌 AND 收盘低于开盘 AND 成交额下降
+                            if not (curr_p < prev_p_c and curr_p < curr_open and curr_to < prev_to):
                                 all_shrink_down = False
                                 if is_tracing:
-                                    log_detail(f"      路径C中断于 {curr_d}: 价格 {prev_p_c:.2f}->{curr_p:.2f}, 成交额 {prev_to:,.0f}->{curr_to:,.0f}")
+                                    log_detail(f"      路径C中断于 {curr_d}: 价格 {prev_p_c:.2f}->{curr_p:.2f}, 开盘 {curr_open:.2f}, 成交额 {prev_to:,.0f}->{curr_to:,.0f}")
                                 break
                         
                         if all_shrink_down:
@@ -1072,7 +1070,7 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
 
         # ================= 甲乙丙类逻辑的基础门槛 =================
         # 门槛 2: 今日上涨 (如果未上涨，则跳过甲乙丙的判断)
-        cond_price_up_today = (latest_price > prev_price)
+        cond_price_up_today = (latest_price > prev_price) and (latest_price > latest_open)
         # 门槛 3: 今日成交额 > 昨日成交额
         cond_turnover_up_today = (latest_turnover > prev_turnover)
         
@@ -1188,25 +1186,25 @@ def process_etf_volume_high(db_path, target_date_override, symbol_to_trace, log_
             
         # 获取最新两天交易数据 (Today, Yesterday)
         if target_date_override:
-            query = f'SELECT date, price, volume FROM "ETFs" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 2'
+            query = f'SELECT date, price, volume, open FROM "ETFs" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 2'
             cursor.execute(query, (symbol, target_date_override))
         else:
-            query = f'SELECT date, price, volume FROM "ETFs" WHERE name = ? ORDER BY date DESC LIMIT 2'
+            query = f'SELECT date, price, volume, open FROM "ETFs" WHERE name = ? ORDER BY date DESC LIMIT 2'
             cursor.execute(query, (symbol,))
-            
+        
         rows = cursor.fetchall()
         
         # 数据完整性检查
-        if len(rows) < 2 or rows[0][1] is None or rows[0][2] is None or rows[1][1] is None:
+        if len(rows) < 2 or rows[0][1] is None or rows[0][2] is None or rows[0][3] is None or rows[1][1] is None:
             if is_tracing: log_detail(f"    x [失败] 无法获取最新两天的交易数据")
             continue
             
-        latest_date, latest_price, latest_volume = rows[0]
-        prev_date, prev_price, prev_volume = rows[1]
+        latest_date, latest_price, latest_volume, latest_open = rows[0]
+        prev_date, prev_price, prev_volume, _ = rows[1]
         latest_turnover = latest_price * latest_volume
         
         # 条件1: 价格突破 (ETF无财报，这里定义为今日上涨。若需改写为突破 N 日新高，可在此处扩展逻辑)
-        cond_price_up = (latest_price > prev_price)
+        cond_price_up = (latest_price > prev_price) and (latest_price > latest_open)
         if is_tracing:
             log_detail(f"    - 条件A (今日上涨/突破): {prev_price:.2f} -> {latest_price:.2f} = {cond_price_up}")
             
@@ -1492,8 +1490,7 @@ def process_pe_hot(panel_json_path, exclude_symbols, whitelist_symbols, log_deta
     log_detail("\n========== 开始执行 策略: PE_Hot (白名单检索) ==========")
     
     target_groups = [
-        "PE_Deep", "PE_Deeper", "PE_W", "OverSell_W", 
-        "Strategy12", "Strategy34", "PE_valid", "PE_invalid"
+        "PE_Deep", "PE_Deeper", "PE_W", "OverSell_W"
     ]
     
     pe_hot_list = []
@@ -1737,10 +1734,11 @@ def run_pe_volume_logic(log_detail):
     pe_volume_up_notes = build_symbol_note_map(filtered_pe_volume_up)
     
     # 为策略3生成带分类后缀的备注 
-    # 创建一个映射：symbol -> 它属于哪些类别
-    symbol_to_categories = {}
+    pe_vol_high_notes = {}
     for sym in filtered_pe_volume_high:
         categories = []
+        
+        # 1. 先判断是否属于 甲、乙、丙
         if sym in filtered_pe_volume_high_jia:
             categories.append("甲")
         elif sym in filtered_pe_volume_high_yi:
@@ -1748,16 +1746,11 @@ def run_pe_volume_logic(log_detail):
         elif sym in filtered_pe_volume_high_bing:
             categories.append("丙")
             
-        # 如果是抄底入选的，加上“抄底”二字
-        if sym in filtered_pe_volume_high_chaodi:
+        # 2. 只有在没有被分类为 甲、乙、丙 的情况下，才判断是否加入“抄底”
+        # 如果 categories 为空，说明它既不是甲也不是乙也不是丙，此时才允许显示“抄底”
+        if not categories and sym in filtered_pe_volume_high_chaodi:
             categories.append("抄底")
             
-        symbol_to_categories[sym] = categories
-    
-    # 构建策略3的备注 (例如：ALGM抄底 或 ALGM甲抄底)
-    pe_vol_high_notes = {}
-    for sym in filtered_pe_volume_high:
-        categories = symbol_to_categories.get(sym, [])
         suffix = "".join(categories)  # 例如 "甲乙" 或 "乙"
         
         # === 新增：如果该股在黑名单里，追加“黑”字 ===
@@ -1837,18 +1830,18 @@ def run_pe_volume_logic(log_detail):
     update_earning_history_json(EARNING_HISTORY_JSON_FILE, "ETF_Volume_low", history_etf_volume_low, log_detail, base_date_str) 
 
     # 写入 Tag 黑名单标记分组 (包含所有策略)
-    all_volume_symbols = set(final_pe_volume) | set(final_pe_volume_up) | set(final_pe_volume_high) | set(final_etf_volume_high) | set(final_etf_volume_low) 
+    # all_volume_symbols = set(final_pe_volume) | set(final_pe_volume_up) | set(final_pe_volume_high) | set(final_etf_volume_high) | set(final_etf_volume_low) 
     
-    blocked_symbols_to_log = []
-    for sym in all_volume_symbols:
-        s_tags = set(symbol_to_tags_map.get(sym, []))
-        if s_tags.intersection(tag_blacklist):
-            blocked_symbols_to_log.append(sym)
+    # blocked_symbols_to_log = []
+    # for sym in all_volume_symbols:
+    #     s_tags = set(symbol_to_tags_map.get(sym, []))
+    #     if s_tags.intersection(tag_blacklist):
+    #         blocked_symbols_to_log.append(sym)
             
-    if blocked_symbols_to_log:
-        blocked_symbols_to_log = sorted(list(set(blocked_symbols_to_log)))
-        update_earning_history_json(EARNING_HISTORY_JSON_FILE, "_Tag_Blacklist", blocked_symbols_to_log, log_detail, base_date_str)
-        log_detail(f"已将 {len(blocked_symbols_to_log)} 个命中黑名单Tag的symbol额外记入 '_Tag_Blacklist' 分组。")
+    # if blocked_symbols_to_log:
+    #     blocked_symbols_to_log = sorted(list(set(blocked_symbols_to_log)))
+    #     update_earning_history_json(EARNING_HISTORY_JSON_FILE, "_Tag_Blacklist", blocked_symbols_to_log, log_detail, base_date_str)
+    #     log_detail(f"已将 {len(blocked_symbols_to_log)} 个命中黑名单Tag的symbol额外记入 '_Tag_Blacklist' 分组。")
 
     log_detail("程序运行结束。")
 
