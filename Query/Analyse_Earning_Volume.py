@@ -524,7 +524,7 @@ def check_pe_volume_retention(db_path, history_json_path, panel_json_path, curre
     如果满足：
     1. 不在今天的 current_pe_volume 中
     2. Turnover (成交额) 下降 且 收盘价下降 (缩量下跌)
-    3. 存在于今天的 PE_Deep/Deeper/OverSell_W/PE_W 中
+    3. 存在于今天的 [扩展后的深跌池] 中
     则将其捞回。
     """
     log_detail("\n========== 执行 PE_Volume 回溯保留机制 (Retention Check) ==========")
@@ -567,7 +567,12 @@ def check_pe_volume_retention(db_path, history_json_path, panel_json_path, curre
 
     # 3. 加载 Panel 文件，获取当前存在的 Deep/Valid 等池子
     valid_pool = set()
-    target_pool_names = ["PE_Deep", "PE_Deeper", "OverSell_W", "PE_W"]
+    # === 修改区域：在这里添加你想要包含的所有深跌/验证池名称 ===
+    target_pool_names = [
+        "PE_Deep", "PE_Deeper", "OverSell_W", "PE_W", 
+        "PE_valid", "PE_invalid"
+    ]
+    
     try:
         with open(panel_json_path, 'r', encoding='utf-8') as f:
             panel_data = json.load(f)
@@ -576,7 +581,7 @@ def check_pe_volume_retention(db_path, history_json_path, panel_json_path, curre
             group_data = panel_data.get(name, {})
             if isinstance(group_data, dict):
                 valid_pool.update(group_data.keys())
-        log_detail(f"    -> 已加载验证池 ({'/'.join(target_pool_names)}): 共 {len(valid_pool)} 个 unique symbol")
+        log_detail(f"    -> 已加载扩展后的验证池 ({'/'.join(target_pool_names)}): 共 {len(valid_pool)} 个 unique symbol")
     except Exception as e:
         log_detail(f"    x 读取 Panel 文件失败: {e}")
         return []
@@ -593,7 +598,7 @@ def check_pe_volume_retention(db_path, history_json_path, panel_json_path, curre
         if symbol in current_set:
             continue
             
-        # 条件3: 必须在 Deep/Valid 等池子里
+        # 条件3: 必须在扩展后的深跌池/验证池里
         if symbol not in valid_pool:
             continue
 
@@ -1489,9 +1494,16 @@ def process_pe_hot(panel_json_path, exclude_symbols, whitelist_symbols, log_deta
     """
     log_detail("\n========== 开始执行 策略: PE_Hot (白名单检索) ==========")
     
+    # === 修改区域：在这里添加你想要包含的所有深跌/回调池分组 ===
     target_groups = [
-        "PE_Deep", "PE_Deeper", "PE_W", "OverSell_W"
+        "PE_Deep", 
+        "PE_Deeper", 
+        "PE_W", 
+        "OverSell_W",
+        "PE_valid",    # 新增
+        "PE_invalid"   # 新增
     ]
+    # 如果你还有其他分组（例如 "season" 等），也可以直接加在这里
     
     pe_hot_list = []
     pe_hot_notes = {}
@@ -1501,6 +1513,7 @@ def process_pe_hot(panel_json_path, exclude_symbols, whitelist_symbols, log_deta
             panel_data = json.load(f)
             
         for group in target_groups:
+            # 检查分组是否存在，避免 key error
             if group in panel_data and isinstance(panel_data[group], dict):
                 for sym, note in panel_data[group].items():
                     # 检查是否在动态生成的白名单中

@@ -192,11 +192,24 @@ def search_history(symbol):
                         if suf:
                             suf_html = f" <span style='color:#EBCB8B; font-size:14px; font-weight:bold;'>[{suf}]</span>"
 
-                        # --- 修改点：检测该日期是否在多个分类中出现 ---
+                        # --- 修改点：仅当该日期同时存在于 PE_Volume 和 Short 时，才在这两个分组里标记 ---
                         overlap_marker = ""
-                        if len(date_categories[d_str]) > 1:
-                            # 如果在多个分类出现，添加红色火焰/星号标记，并提示
-                            overlap_marker = f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;' title='同一天出现在多个分类中'>[★多重触发]</span>"
+                        
+                        # 定义需要检测的组合列表
+                        # 只要日期中同时包含列表里的所有元素，就触发标记
+                        combinations = [
+                            {"tags": {"PE_Volume", "Short"}, "label": "PE_Volume & Short"},
+                            {"tags": {"PE_Volume", "Short_W"}, "label": "PE_Volume & Short_W"}
+                        ]
+                        
+                        # 检查当前日期是否触发了任何组合
+                        for combo in combinations:
+                            # 检查 date_categories[d_str] 是否包含了该组合中的所有 tag
+                            if combo["tags"].issubset(date_categories[d_str]):
+                                # 如果当前分类属于该组合中的任意一个，就显示标记
+                                if category in combo["tags"]:
+                                    overlap_marker = f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;' title='同一天同时触发 {combo['label']}'>[★多重触发]</span>"
+                                    break # 找到一个匹配就停止循环
 
                         html_parts.append(f"&nbsp;&nbsp;• {d_str}{suf_html}{overlap_marker}<br>")
 
