@@ -28,7 +28,7 @@ def calculate_md5(file_path):
 
 def cleanup_old_prediction_files(today_str, file_prefixes):
     """
-    清理 Prediction 目录下的旧文件，只保留今天的文件和 version.json
+    清理 Prediction 目录下的旧文件，保留今天的文件、version.json 和 translation_dict.json
     """
     print("\n--- 开始清理旧的 Prediction 文件 ---")
     
@@ -37,7 +37,8 @@ def cleanup_old_prediction_files(today_str, file_prefixes):
     
     # 今天应该保留的文件名集合
     today_files = {f"{prefix}_{today_str}.json" for prefix in file_prefixes}
-    today_files.add('version.json')  # 也保留 version.json
+    today_files.add('version.json')
+    today_files.add('translation_dict.json')  # ✅ 新增：保留该静态文件
     
     try:
         for filename in os.listdir(PREDICTION_TARGET_DIR):
@@ -60,50 +61,63 @@ def cleanup_old_prediction_files(today_str, file_prefixes):
     
 def backup_prediction_files():
     """
-    处理 Prediction 目录下的四个当天 JSON 文件，计算 MD5 并更新对应的 version.json
+    处理 Prediction 目录下的文件，确保所有目标文件都被记录到 version.json 中
     """
     print("\n--- 开始执行 Prediction 文件备份与更新 ---")
     
     os.makedirs(PREDICTION_TARGET_DIR, exist_ok=True)
     
-    # 获取今天的日期 YYMMDD 格式
+    # 1. 定义所有需要处理的文件列表
     today_str = datetime.now().strftime('%y%m%d')
     
-    # 需要处理的四个文件前缀
-    file_prefixes = ['kalshi', 'kalshi_trend', 'polymarket', 'polymarket_trend']
-    new_files_info = []
+    # 定义必须存在的文件列表（动态 + 静态）
+    dynamic_prefixes = ['kalshi', 'kalshi_trend', 'polymarket', 'polymarket_trend']
+    static_files = ['translation_dict.json']
     
-    files_updated = False
-
-    for prefix in file_prefixes:
+    # 2. 阶段一：同步/复制文件 (只负责移动文件)
+    # 处理动态文件
+    for prefix in dynamic_prefixes:
         filename = f"{prefix}_{today_str}.json"
         source_path = os.path.join(PREDICTION_SOURCE_DIR, filename)
         target_path = os.path.join(PREDICTION_TARGET_DIR, filename)
-        
         if os.path.exists(source_path):
-            # 复制文件
-            is_copied = smart_copy(source_path, target_path)
-            if is_copied:
-                files_updated = True
-            
-            # 计算目标文件的 MD5
-            file_md5 = calculate_md5(target_path)
-            
-            new_files_info.append({
-                "name": filename,
-                "type": "json",
-                "md5": file_md5
-            })
+            smart_copy(source_path, target_path)
         else:
             print(f"⚠️ 找不到今天的 Prediction 文件: {source_path}")
 
-    # 如果找到了文件，更新 Prediction 的 version.json
-    if new_files_info:
-        update_prediction_version(new_files_info)
-        # 🆕 添加清理旧文件的步骤
-        cleanup_old_prediction_files(today_str, file_prefixes)
+    # 处理静态文件
+    for filename in static_files:
+        source_path = os.path.join(PREDICTION_SOURCE_DIR, filename)
+        target_path = os.path.join(PREDICTION_TARGET_DIR, filename)
+        if os.path.exists(source_path):
+            smart_copy(source_path, target_path)
+        else:
+            print(f"⚠️ 警告: 静态文件不存在: {source_path}")
+
+    # 3. 阶段二：扫描目标目录，构建 version.json 需要的清单 (只负责盘点)
+    all_files_info = []
+    
+    # 这里的列表包含了所有我们关心且应该在目标目录里的文件
+    files_to_check = [f"{p}_{today_str}.json" for p in dynamic_prefixes] + static_files
+    
+    for filename in files_to_check:
+        target_path = os.path.join(PREDICTION_TARGET_DIR, filename)
+        # 只要文件在目标目录里存在，就计算它的 MD5 并加入清单
+        if os.path.exists(target_path):
+            all_files_info.append({
+                "name": filename,
+                "type": "json",
+                "md5": calculate_md5(target_path) # 无论是否刚复制，都重新计算最新 MD5
+            })
+        else:
+            print(f"⚠️ 目标目录中缺少文件，无法记录到 version.json: {filename}")
+
+    # 4. 阶段三：更新 version.json
+    if all_files_info:
+        update_prediction_version(all_files_info)
+        cleanup_old_prediction_files(today_str, dynamic_prefixes)
     else:
-        print("⏭️ 没有找到任何今天的 Prediction 文件，跳过更新 version.json。")
+        print("⏭️ 没有找到任何文件，跳过更新 version.json。")
 
 def update_prediction_version(new_files_info):
     """
