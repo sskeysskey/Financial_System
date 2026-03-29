@@ -1486,13 +1486,13 @@ def check_turnover_rank(cursor, sector_name, symbol, latest_date_str, latest_tur
     return is_top_n
 
 # ========== 修改：处理 PE_Hot 策略的独立函数 (接收动态白名单) ==========
-def process_pe_hot(panel_json_path, exclude_symbols, whitelist_symbols, log_detail):
+def process_pe_hot(db_path, sector_map, target_date_override, panel_json_path, exclude_symbols, whitelist_symbols, log_detail):
     """
     检索 sectors_panel 里的特定分组，如果发现白名单中的 symbol 在这些分组里，
-    且不在 exclude_symbols (PE_Volume等) 中，则将其提取出来。
+    且不在 exclude_symbols (PE_Volume等) 中，并且最新成交额 >= 2亿，则将其提取出来。
     返回: pe_hot_list (list), pe_hot_notes (dict)
     """
-    log_detail("\n========== 开始执行 策略: PE_Hot (白名单检索) ==========")
+    log_detail("\n========== 开始执行 策略: PE_Hot (白名单检索 + 2亿成交额过滤) ==========")
     
     # === 修改区域：在这里添加你想要包含的所有深跌/回调池分组 ===
     target_groups = [
@@ -1507,6 +1507,12 @@ def process_pe_hot(panel_json_path, exclude_symbols, whitelist_symbols, log_deta
     
     pe_hot_list = []
     pe_hot_notes = {}
+    # 确定基准日期
+    base_date = target_date_override if target_date_override else (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+    
+    # 连接数据库以获取成交额
+    conn = sqlite3.connect(db_path, timeout=60.0)
+    cursor = conn.cursor()
     
     try:
         with open(panel_json_path, 'r', encoding='utf-8') as f:
@@ -1516,17 +1522,40 @@ def process_pe_hot(panel_json_path, exclude_symbols, whitelist_symbols, log_deta
             # 检查分组是否存在，避免 key error
             if group in panel_data and isinstance(panel_data[group], dict):
                 for sym, note in panel_data[group].items():
-                    # 检查是否在动态生成的白名单中
+                    # 1. 检查是否在动态生成的白名单中
                     if sym in whitelist_symbols:
-                        # 检查是否在排除列表(PE_Volume系列)中
+                        # 2. 检查是否在排除列表(PE_Volume系列)中
                         if sym not in exclude_symbols:
-                            if sym not in pe_hot_list:
-                                pe_hot_list.append(sym)
-                                # 保留它在原分组的备注
-                                pe_hot_notes[sym] = note if note else sym
-                                log_detail(f"    ✅ [选中-PE_Hot] {sym} (来自分组: {group})")
+                            
+                            # 3. 获取板块信息以查询数据库
+                            sector = sector_map.get(sym)
+                            if not sector:
+                                continue
+                                
+                            # 4. 查询最新一天的价格和成交量
+                            query = f'SELECT price, volume FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 1'
+                            cursor.execute(query, (sym, base_date))
+                            row = cursor.fetchone()
+                            
+                            if row and row[0] is not None and row[1] is not None:
+                                price, volume = row
+                                turnover = price * volume
+                                
+                                # 5. 判断成交额是否大于等于 2 亿 (200,000,000)
+                                if turnover >= 200000000:
+                                    if sym not in pe_hot_list:
+                                        pe_hot_list.append(sym)
+                                        # 保留它在原分组的备注
+                                        pe_hot_notes[sym] = note if note else sym
+                                        log_detail(f"    ✅ [选中-PE_Hot] {sym} (来自分组: {group}, 成交额: {turnover/100000000:.2f}亿)")
+                                else:
+                                    log_detail(f"    x [过滤-PE_Hot] {sym} 成交额不足2亿 (仅 {turnover/100000000:.2f}亿)")
+                            else:
+                                log_detail(f"    x [过滤-PE_Hot] {sym} 无法获取最新交易数据")
     except Exception as e:
-        log_detail(f"错误: 读取 Panel 文件执行 PE_Hot 策略失败: {e}")
+        log_detail(f"错误: 读取 Panel 文件或查询数据库执行 PE_Hot 策略失败: {e}")
+    finally:
+        conn.close()
         
     pe_hot_list = sorted(pe_hot_list)
     log_detail(f"PE_Hot 筛选完成，共命中 {len(pe_hot_list)} 个: {pe_hot_list}")
@@ -1781,8 +1810,11 @@ def run_pe_volume_logic(log_detail):
     # 排除的 symbol 列表：如果在这些 Volume 策略中，就不进入 PE_Hot
     exclude_symbols_for_hot = set(filtered_pe_volume) | set(filtered_pe_volume_up) | set(filtered_pe_volume_high)
     
-    # 传入动态生成的 whitelist_symbols
+    # 传入动态生成的 whitelist_symbols 以及数据库参数用于成交额过滤
     pe_hot_list, pe_hot_notes = process_pe_hot(
+        DB_FILE,               # 新增：数据库路径
+        symbol_to_sector_map,  # 新增：板块映射
+        TARGET_DATE,           # 新增：目标日期(支持回测)
         PANEL_JSON_FILE, 
         exclude_symbols_for_hot, 
         whitelist_symbols,

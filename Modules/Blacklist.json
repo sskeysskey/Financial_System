@@ -701,7 +701,8 @@
         "GTM",
         "TAC",
         "ENIC",
-        "ADV"
+        "ADV",
+        "AES"
     ],
     "etf": [
         "VDE",
