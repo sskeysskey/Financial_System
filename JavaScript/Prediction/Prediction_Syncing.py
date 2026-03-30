@@ -36,6 +36,11 @@ def randomize_hide_in_data(data):
     按 subtype 分组，随机将每组中约 1/3 的项目 hide 设为 "0"，其余 2/3 设为 "1"。
     每次运行结果不同。
     """
+    # 遍历所有数据，直接将 hide 设为 "0"
+    # for item in data:
+    #     item['hide'] = "0"
+    # print(f"  ✨ 模式已切换：所有项目 hide 已设为 '0' (全部显示)")
+    
     # 按 subtype 分组，记录每个 item 的引用
     groups = {}
     for item in data:
@@ -47,14 +52,16 @@ def randomize_hide_in_data(data):
     # 对每个 subtype 组随机设置 hide
     for subtype, items in groups.items():
         n = len(items)
-        show_count = round(n / 3)  # 约 1/3 设为显示 ("0")
+        # --- 修改点在这里 ---
+        # 原来是 round(n / 3)，现在改为 round(n / 2)
+        show_count = round(n / 2)  
+        
         # 随机选出要显示的项目索引
         show_indices = set(random.sample(range(n), show_count))
         for i, item in enumerate(items):
-            # 如果在选出的 1/3 索引中，设为 "0" (显示)，否则设为 "1" (隐藏)
+            # 如果在选出的 1/2 索引中，设为 "0" (显示)，否则设为 "1" (隐藏)
             item['hide'] = "0" if i in show_indices else "1"
         print(f"  🎲 subtype='{subtype}': 共 {n} 项，随机显示 {show_count} 项，隐藏 {n - show_count} 项")
-
 
 def copy_with_random_hide(source_path, target_path):
     """
