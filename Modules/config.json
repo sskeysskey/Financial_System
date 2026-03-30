@@ -227,9 +227,9 @@
             "shift",
             "command"
         ],
-        "actionType": "runInTerminal",
-        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/Prediction/translation_helper.py' extract",
-        "message": "正在执行 translation_helper (extract)..."
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Kalshi_translate.scpt",
+        "message": "正在 Kalshi_translate..."
     },
     {
         "key": "two",
