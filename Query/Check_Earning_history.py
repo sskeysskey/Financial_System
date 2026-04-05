@@ -10,7 +10,6 @@ USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 # --- 1. 配置部分 ---
-
 JSON_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Earning_History.json")
 SECTOR_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_panel.json")
 
@@ -154,9 +153,14 @@ def search_history(symbol):
 
             # --- 修改点：先收集所有匹配的数据，用于检测同一天的多重出现 ---
             # 结构: category_data[category] = [(date_str, suffix), ...]
-            # 同时统计每个日期出现的分类: date_categories[date_str] = set([category1, category2, ...])
+            # 统计每个日期出现的分类: date_categories[date_str] = set([category1, category2, ...])
+            # 统计每个分类包含的日期（仅针对当前symbol）: category_dates[category] = set([date1, date2, ...])
             category_data = defaultdict(list)
             date_categories = defaultdict(set)
+            category_dates = defaultdict(set)
+            
+            # 收集 JSON 中所有的交易日期，用于判断“昨天”和“今天”
+            all_trading_dates = set()
 
             for category, date_dict in data.items():
                 
@@ -165,17 +169,20 @@ def search_history(symbol):
                 if category == "_Tag_Blacklist":
                     continue
 
-                found_dates = []  # 改为存储元组: (日期, 中文后缀)
-                
-                # 遍历该类下的所有日期
                 for date_str, symbol_list in date_dict.items():
+                    all_trading_dates.add(date_str) # 收集所有日期
+                    
                     if isinstance(symbol_list, list):
                         for item in symbol_list:
                             suffix = get_suffix_if_match(item, symbol)
                             if suffix is not None:
                                 category_data[category].append((date_str, suffix))
                                 date_categories[date_str].add(category)
+                                category_dates[category].add(date_str)
                                 break 
+
+            # 将所有交易日期降序排列（索引 0 是最新日期，索引越大日期越旧）
+            sorted_trading_dates = sorted(list(all_trading_dates), reverse=True)
 
             # 构建 HTML
             for category, found_dates in category_data.items():
@@ -190,13 +197,19 @@ def search_history(symbol):
                         # 如果找到了你加的中文后缀（如“黑热”），在UI上以黄色小标签显示
                         suf_html = ""
                         if suf:
-                            suf_html = f" <span style='color:#EBCB8B; font-size:14px; font-weight:bold;'>[{suf}]</span>"
+                            # 检查是否为 PE_Volume 分类且后缀包含'追'
+                            if category == "PE_Volume" and '追' in suf:
+                                # 将'追'字用红色span包裹，其他部分保持原来的黄色
+                                processed_suf = suf.replace('追', "<span style='color:red;'>追</span>")
+                                suf_html = f" <span style='color:#EBCB8B; font-size:14px; font-weight:bold;'>[{processed_suf}]</span>"
+                            else:
+                                # 其他情况，保持原样
+                                suf_html = f" <span style='color:#EBCB8B; font-size:14px; font-weight:bold;'>[{suf}]</span>"
 
                         # --- 修改点：仅当该日期同时存在于 PE_Volume 和 Short 时，才在这两个分组里标记 ---
                         overlap_marker = ""
                         
-                        # 定义需要检测的组合列表
-                        # 只要日期中同时包含列表里的所有元素，就触发标记
+                        # 1. 同日多重触发检测
                         combinations = [
                             {"tags": {"PE_Volume", "Short"}, "label": "PE_Volume & Short"},
                             {"tags": {"PE_Volume", "Short_W"}, "label": "PE_Volume & Short_W"}
@@ -208,8 +221,62 @@ def search_history(symbol):
                             if combo["tags"].issubset(date_categories[d_str]):
                                 # 如果当前分类属于该组合中的任意一个，就显示标记
                                 if category in combo["tags"]:
-                                    overlap_marker = f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;' title='同一天同时触发 {combo['label']}'>[★多重触发]</span>"
-                                    break # 找到一个匹配就停止循环
+                                    overlap_marker += f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;' title='同一天同时触发 {combo['label']}'>[★多重触发]</span>"
+                                    break 
+
+                        # =======================================================
+                        # [新增规则]: PE_Volume_high (带'抄底') & PE_W 同日触发
+                        # =======================================================
+                        if "PE_W" in date_categories[d_str] and "PE_Volume_high" in date_categories[d_str]:
+                            # 检查 PE_Volume_high 的这条记录后缀是否包含 '抄底'
+                            is_chaodi = False
+                            if category == "PE_Volume_high":
+                                is_chaodi = (suf and '抄底' in suf)
+                            else:
+                                # 如果当前正在处理的是 PE_W（或其他），我们需要去查一下 PE_Volume_high 里的后缀
+                                for d, s in category_data.get("PE_Volume_high", []):
+                                    if d == d_str and s and '抄底' in s:
+                                        is_chaodi = True
+                                        break
+                            
+                            # 如果确认包含'抄底'，且当前分类是这两个之一，则添加红色标记
+                            if is_chaodi and category in ["PE_Volume_high", "PE_W"]:
+                                overlap_marker += f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;' title='同一天触发 PE_Volume_high(抄底) 和 PE_W'>[★多重触发:抄底+W]</span>"
+
+                        # 2. 跨日接力触发检测 (pe_w 与 pe_hot / PE_Volume)
+                        try:
+                            date_idx = sorted_trading_dates.index(d_str)
+                            
+                            if category == "PE_W":
+                                # 检查前一个交易日 (date_idx + 1) 是否在 PE_Hot 或 PE_Volume 中
+                                if date_idx + 1 < len(sorted_trading_dates):
+                                    prev_date = sorted_trading_dates[date_idx + 1]
+                                    prev_in_hot = prev_date in category_dates.get("PE_Hot", set())
+                                    prev_in_vol = prev_date in category_dates.get("PE_Volume", set())
+                                    
+                                    if prev_in_hot and prev_in_vol:
+                                        overlap_marker += f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;' title='前一交易日触发 PE_Hot 和 PE_Volume'>[★接力:hot+vol->w]</span>"
+                                    elif prev_in_hot:
+                                        overlap_marker += f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;' title='前一交易日触发 PE_W'>[★接力:hot->w]</span>"
+                                    elif prev_in_vol:
+                                        overlap_marker += f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;' title='前一交易日触发 PE_Volume'>[★接力:vol->w]</span>"
+                            
+                            elif category == "PE_Hot":
+                                # 检查后一个交易日 (date_idx - 1) 是否在 pe_w 中
+                                if date_idx - 1 >= 0:
+                                    next_date = sorted_trading_dates[date_idx - 1]
+                                    if next_date in category_dates.get("pe_w", set()):
+                                        overlap_marker += f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;' title='下一交易日触发 PE_W'>[★接力:hot->w]</span>"
+                                        
+                            elif category == "PE_Volume":
+                                # 检查后一个交易日 (date_idx - 1) 是否在 pe_w 中
+                                if date_idx - 1 >= 0:
+                                    next_date = sorted_trading_dates[date_idx - 1]
+                                    if next_date in category_dates.get("pe_w", set()):
+                                        overlap_marker += f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;' title='下一交易日触发 PE_W'>[★接力:vol->w]</span>"
+                                        
+                        except ValueError:
+                            pass
 
                         html_parts.append(f"&nbsp;&nbsp;• {d_str}{suf_html}{overlap_marker}<br>")
 
@@ -221,8 +288,8 @@ def search_history(symbol):
 
     return "".join(html_parts)
 
-# --- 4. 程序入口 ---
 
+# --- 4. 程序入口 ---
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     

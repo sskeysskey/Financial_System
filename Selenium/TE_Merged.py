@@ -36,6 +36,7 @@ NEWS_DIR = os.path.join(BASE_CODING_DIR, "News")
 DB_PATH = os.path.join(DATABASE_DIR, "Finance.db")
 JSON_FILE_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Sectors_All.json")
 BLACKLIST_JSON_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Blacklist.json")
+SYMBOL_MAPPING_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Symbol_mapping.json") # 新增 Mapping 路径
 OUTPUT_DIR = NEWS_DIR
 OUTPUT_TXT_FILE = os.path.join(OUTPUT_DIR, 'ETFs_new.txt')
 CHECK_YESTERDAY_SCRIPT_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Query", "Check_yesterday.py")
@@ -377,7 +378,7 @@ def run_bonds():
         conn.close()
 
 def run_indices():
-    logging.info(">>> 开始执行: Indices")
+    logging.info(">>> 开始执行: Indices (TradingEconomics)")
     driver = get_driver()
     if not driver: return
     conn = get_db_connection()
@@ -422,6 +423,112 @@ def run_indices():
     finally:
         driver.quit()
         conn.close()
+
+# ================= 新增模块: Yahoo Indices =================
+
+def run_yahoo_indices():
+    logging.info(">>> 开始执行: Yahoo Indices")
+    driver = get_driver()
+    if not driver: return
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # 确保表存在
+        cursor.execute('''CREATE TABLE IF NOT EXISTS Indices (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, name TEXT, price REAL, volume REAL, UNIQUE(date, name));''')
+        conn.commit()
+
+        # 1. 读取 mapping 文件并建立反向映射 (Name -> Symbol)
+        if not os.path.exists(SYMBOL_MAPPING_PATH):
+            raise FileNotFoundError(f"找不到映射文件: {SYMBOL_MAPPING_PATH}")
+            
+        with open(SYMBOL_MAPPING_PATH, 'r', encoding='utf-8') as f:
+            mapping = json.load(f)
+        
+        # 反向映射: {"Oat": "ZO=F", "EURO50": "^STOXX50E", ...}
+        reverse_mapping = {v: k for k, v in mapping.items()}
+        
+        # 目标抓取列表
+        target_names = ["HANGSENG", "Shanghai", "Shenzhen", "UK100", "EURO50", "panEURO100", "India", "Singapore"]
+        yesterday_date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        
+        def parse_volume(vol_str):
+            """将带有 M/B/K 的字符串或 0 转换为整数"""
+            vol_str = vol_str.strip().upper().replace(',', '').replace('"', '')
+            if not vol_str or vol_str == '-' or vol_str == '0' or vol_str == 'Ø':
+                return 0
+            multiplier = 1
+            if vol_str.endswith('M'):
+                multiplier = 1_000_000
+                vol_str = vol_str[:-1]
+            elif vol_str.endswith('B'):
+                multiplier = 1_000_000_000
+                vol_str = vol_str[:-1]
+            elif vol_str.endswith('K'):
+                multiplier = 1_000
+                vol_str = vol_str[:-1]
+            try:
+                return int(float(vol_str) * multiplier)
+            except ValueError:
+                return 0
+
+        def extract_yahoo(d):
+            temp = []
+            # 等待表格加载出现
+            WebDriverWait(d, 15).until(EC.presence_of_element_located((By.XPATH, "//table[.//thead]")))
+            
+            # 【关键修改 1】向下滚动页面，触发懒加载的数据行
+            d.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(2) # 给页面一点时间渲染新出现的行
+            
+            for name in target_names:
+                symbol = reverse_mapping.get(name)
+                if not symbol:
+                    logging.warning(f"Yahoo Indices: 找不到 {name} 的 symbol 映射，跳过")
+                    continue
+                
+                try:
+                    # 【关键修改 2】使用 normalize-space(.) 替代 text()，防止空格干扰
+                    row_xpath = f"//tr[.//span[contains(@class, 'symbol') and normalize-space(.)='{symbol}']]"
+                    
+                    # 【关键修改 3】显式等待该特定行出现
+                    row = WebDriverWait(d, 5).until(EC.presence_of_element_located((By.XPATH, row_xpath)))
+                    
+                    # 滚动到该行，确保它在视口内可被正常读取
+                    d.execute_script("arguments[0].scrollIntoView({block: 'center'});", row)
+                    
+                    # 提取价格
+                    price_elem = row.find_element(By.XPATH, ".//td[@data-testid-cell='intradayprice']//span[@data-testid='change']")
+                    price_str = price_elem.text.strip().replace(',', '').replace('"', '')
+                    price = float(price_str)
+                    
+                    # 提取交易量
+                    vol_elem = row.find_element(By.XPATH, ".//td[@data-testid-cell='dayvolume']//span[@data-testid='change']")
+                    volume = parse_volume(vol_elem.text)
+                    
+                    temp.append((yesterday_date, name, price, volume))
+                except Exception as e:
+                    logging.warning(f"Yahoo Indices: 抓取 {name} ({symbol}) 失败: {e}")
+            
+            if not temp:
+                raise Exception("未能提取到任何 Yahoo 指数数据，触发重试")
+            return temp
+
+        all_data = fetch_with_retry(driver, 'https://finance.yahoo.com/markets/world-indices/', extract_yahoo, task_name="Yahoo-Indices")
+        
+        if all_data:
+            cursor.executemany('INSERT OR REPLACE INTO Indices (date, name, price, volume) VALUES (?, ?, ?, ?)', all_data)
+            conn.commit()
+            logging.info(f"Yahoo Indices: 成功插入 {len(all_data)} 条数据")
+    except Exception as e:
+        logging.error(f"Yahoo Indices 模块出错: {e}")
+        conn.rollback()
+    finally:
+        driver.quit()
+        conn.close()
+
+# ================= 任务模块 6: Economics =================
 
 def run_economics():
     logging.info(">>> 开始执行: Economics")
@@ -708,36 +815,45 @@ def main():
     except Exception as e: 
         logging.error(f"Main Loop - Commodities Error: {e}")
     
-    wait_between_tasks("Commodities") # 等待
+    wait_between_tasks("Commodities")
     try: 
         run_currency_cny2()
     except Exception as e: 
         logging.error(f"Main Loop - Currency CNY2 Error: {e}")
     
-    wait_between_tasks("Currency CNY2") # 等待
+    wait_between_tasks("Currency CNY2")
     try: 
         run_currency_cny()
     except Exception as e: 
         logging.error(f"Main Loop - Currency CNY Error: {e}")
     
-    wait_between_tasks("Currency CNY") # 等待
+    wait_between_tasks("Currency CNY")
     try: 
         run_bonds()
     except Exception as e: 
         logging.error(f"Main Loop - Bonds Error: {e}")
     
-    wait_between_tasks("Bonds") # 等待
+    wait_between_tasks("Bonds")
     try: 
         run_indices()
     except Exception as e: 
         logging.error(f"Main Loop - Indices Error: {e}")
         
-    wait_between_tasks("Indices") # 等待
+    wait_between_tasks("Indices")
+    
+    # --- 新增的 Yahoo Indices 任务 ---
+    try: 
+        run_yahoo_indices()
+    except Exception as e: 
+        logging.error(f"Main Loop - Yahoo Indices Error: {e}")
+        
+    wait_between_tasks("Yahoo Indices")
+    
     try: 
         run_economics()
     except Exception as e: 
         logging.error(f"Main Loop - Economics Error: {e}")
-    wait_between_tasks("Economics") # 等待
+    wait_between_tasks("Economics")
 
     # 3. 执行 ETF 处理任务 (根据 skipetf 标志决定是否执行)
     if not args.skipetf:

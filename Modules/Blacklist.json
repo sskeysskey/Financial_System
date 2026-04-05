@@ -702,7 +702,10 @@
         "TAC",
         "ENIC",
         "ADV",
-        "AES"
+        "AES",
+        "CNTA",
+        "Shenzhen",
+        "TERN"
     ],
     "etf": [
         "VDE",
@@ -1078,7 +1081,11 @@
         "BCPL",
         "HSCZ",
         "FQAL",
-        "XTL"
+        "XTL",
+        "FDMO",
+        "PWB",
+        "BCD",
+        "PPH"
     ],
     "Earning": [
         "TW",

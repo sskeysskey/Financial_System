@@ -58,10 +58,10 @@ class TagEditor(QMainWindow):
         self.weight_data = {}
         self.earning_data = {}
 
-        # --- 新增：定义互斥组 ---
-        # 这些分组内的标签是互斥的，一个标签只能存在于其中一个分组。
+        # --- 定义互斥组 ---
+        # Weight 组内的标签是两两互斥的
         self.WEIGHT_EXCLUSIVE_GROUP = {"2.0", "1.5", "1.3", "0.2"}
-        self.EARNING_EXCLUSIVE_GROUP = {"HOT_TAGS", "BLACKLIST_TAGS"}
+        # 注意：Earning 组的互斥逻辑已移至 _check_for_conflict 中动态处理
 
         self.list_widgets = {} # 使用唯一的 key (如 "1.0", "BLACKLIST_TAGS") 存储所有列表控件
         self.base_window_title = "标签编辑器"
@@ -142,7 +142,7 @@ class TagEditor(QMainWindow):
             with open(self.earning_json_path, 'r', encoding='utf-8') as f:
                 self.earning_data = json.load(f)
         except (FileNotFoundError, json.JSONDecodeError):
-            self.earning_data = {"BLACKLIST_TAGS": [], "HOT_TAGS": []}
+            self.earning_data = {"BLACKLIST_TAGS": [], "HOT_TAGS": [], "HOT_TAGS_T": []}
             QMessageBox.warning(self, "警告", f"未找到或无法解析 {self.earning_json_path}。\n已为此文件创建新的默认数据结构。")
             self._mark_as_dirty()
         
@@ -158,7 +158,7 @@ class TagEditor(QMainWindow):
         self.list_widgets.clear()
 
         # --- 第一部分：填充 Earning 数据的栏目 (左侧固定) ---
-        earning_keys = ["BLACKLIST_TAGS", "HOT_TAGS"]
+        earning_keys = ["BLACKLIST_TAGS", "HOT_TAGS", "HOT_TAGS_T"]
         for key in earning_keys:
             if key in self.earning_data: # 确保key存在
                 self._create_column_widget('earning', key, self.earning_data[key])
@@ -193,7 +193,7 @@ class TagEditor(QMainWindow):
         # 定义标题
         title_text = ""
         if file_type == 'earning':
-            mapping = {"BLACKLIST_TAGS": "BLACKLIST_TAGS", "HOT_TAGS": "HOT_TAGS"}
+            mapping = {"BLACKLIST_TAGS": "BLACKLIST_TAGS", "HOT_TAGS": "HOT_TAGS", "HOT_TAGS_T": "HOT_TAGS_T"}
             title_text = mapping.get(key, key)
         else: # weight
             mapping = {"0.2": "（待定）", "1.3": "（普遍分类）", "2.0": "（专业术语）"}
@@ -235,22 +235,34 @@ class TagEditor(QMainWindow):
         """
         tag_to_check = tag.strip()
         
-        # 确定要检查哪个互斥组和哪个数据源
+        exclusive_keys_to_check = []
+        data_source = None
+
+        # 确定要检查哪些互斥的栏目和哪个数据源
         if target_key in self.WEIGHT_EXCLUSIVE_GROUP:
-            exclusive_group = self.WEIGHT_EXCLUSIVE_GROUP
+            # Weight 组：除了目标栏目自身，其他所有 Weight 组内的栏目都互斥
+            exclusive_keys_to_check = [k for k in self.WEIGHT_EXCLUSIVE_GROUP if k != target_key]
             data_source = self.weight_data
-        elif target_key in self.EARNING_EXCLUSIVE_GROUP:
-            exclusive_group = self.EARNING_EXCLUSIVE_GROUP
+            
+        elif target_key == "BLACKLIST_TAGS":
+            # 黑名单与两个 HOT_TAGS 互斥
+            exclusive_keys_to_check = ["HOT_TAGS", "HOT_TAGS_T"]
             data_source = self.earning_data
+            
+        elif target_key in ("HOT_TAGS", "HOT_TAGS_T"):
+            # 两个 HOT_TAGS 仅与黑名单互斥，彼此之间不互斥
+            exclusive_keys_to_check = ["BLACKLIST_TAGS"]
+            data_source = self.earning_data
+            
         else:
             # 如果目标不属于任何互斥组，则不进行互斥检查
             # 也可以在这里添加其他规则，例如检查同一文件内的所有标签
             return None
 
-        for key, tags in data_source.items():
-            # 只检查在互斥组中，但不是目标栏目自身的其他栏目
-            if key in exclusive_group and key != target_key:
-                for existing_tag in tags:
+        # 在指定的互斥栏目中查找是否存在该标签
+        for key in exclusive_keys_to_check:
+            if key in data_source:
+                for existing_tag in data_source[key]:
                     # 如果是编辑操作，跳过与原始文本的比较
                     if excluding_text and existing_tag == excluding_text:
                         continue

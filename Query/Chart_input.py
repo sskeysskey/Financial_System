@@ -216,7 +216,16 @@ def fetch_data(db_path, table_name, name):
         except sqlite3.OperationalError:
             pass
 
-        # 尝试1: 包含 open 字段 (ETFs 和行业板块表)
+        # 尝试1: 包含 open, high, low 字段 (完整表)
+        try:
+            query = f'SELECT date, price, volume, open, high, low FROM "{table_name}" WHERE name = ? ORDER BY date;'
+            result = cursor.execute(query, (name,)).fetchall()
+            if result:
+                return result
+        except sqlite3.OperationalError:
+            pass
+
+        # 尝试2: 包含 open 字段 (兼容旧表)
         try:
             query = f'SELECT date, price, volume, open FROM "{table_name}" WHERE name = ? ORDER BY date;'
             result = cursor.execute(query, (name,)).fetchall()
@@ -225,7 +234,7 @@ def fetch_data(db_path, table_name, name):
         except sqlite3.OperationalError:
             pass
 
-        # 尝试2: 仅包含 volume 字段
+        # 尝试3: 仅包含 volume 字段
         try:
             query = f'SELECT date, price, volume FROM "{table_name}" WHERE name = ? ORDER BY date;'
             result = cursor.execute(query, (name,)).fetchall()
@@ -234,7 +243,7 @@ def fetch_data(db_path, table_name, name):
         except sqlite3.OperationalError:
             pass
 
-        # 尝试3: 仅 date 和 price
+        # 尝试4: 仅 date 和 price
         query = f'SELECT date, price FROM "{table_name}" WHERE name = ? ORDER BY date;'
         result = cursor.execute(query, (name,)).fetchall()
         if not result:
@@ -253,18 +262,22 @@ def smooth_curve(dates, prices, num_points=500):
 
 def process_data(data):
     if not data: raise ValueError("没有可供处理的数据")
-    dates, prices, volumes, opens = [], [], [], []
+    dates, prices, volumes, opens, highs, lows = [], [], [], [], [], []
     for row in data:
         date = datetime.strptime(row[0], "%Y-%m-%d")
         price = float(row[1]) if row[1] is not None else None
         volume = int(row[2]) if len(row) > 2 and row[2] is not None else None
         open_price = float(row[3]) if len(row) > 3 and row[3] is not None else None
+        high_price = float(row[4]) if len(row) > 4 and row[4] is not None else None
+        low_price = float(row[5]) if len(row) > 5 and row[5] is not None else None
         if price is not None:
             dates.append(date)
             prices.append(price)
             volumes.append(volume)
             opens.append(open_price)
-    return dates, prices, volumes, opens
+            highs.append(high_price)
+            lows.append(low_price)
+    return dates, prices, volumes, opens, highs, lows
 
 def display_dialog(message):
     applescript_code = f'display dialog "{message}" buttons {{"OK"}} default button "OK"'
@@ -644,8 +657,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     current_filtered_prices = []
     current_filtered_volumes = []
     current_filtered_date_nums = []
-    current_filtered_opens = []  # <--- 【新增这行】初始化变量
-    subtitle_artists = [] # 用于存储副标题的文本对象
+    current_filtered_opens = []
+    current_filtered_highs = []
+    current_filtered_lows = []
+    subtitle_artists = []
 
     
     last_hover_ts = [0.0]
@@ -656,7 +671,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     try:
         data = fetch_data(db_path, table_name, name)
-        dates, prices, volumes, opens = process_data(data)
+        dates, prices, volumes, opens, highs, lows = process_data(data) # 增加 highs
         has_ohlc = any(o is not None for o in opens)
     except ValueError as e:
         display_dialog(f"{e}")
@@ -1528,6 +1543,19 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     # --- 核心修改部分：计算并格式化 Turnover ---
                     current_vol = current_filtered_volumes[idx] if current_filtered_volumes and idx < len(current_filtered_volumes) else None
                     
+                    # === 新增：获取当前 low 和 high 并计算百分比 ===
+                    current_low = current_filtered_lows[idx] if current_filtered_lows and idx < len(current_filtered_lows) else None
+                    current_high = current_filtered_highs[idx] if current_filtered_highs and idx < len(current_filtered_highs) else None
+                    
+                    price_display = f"{yval:.2f}"
+                    if yval is not None and yval != 0:
+                        low_str = f"{((current_low - yval) / yval) * 100:+.2f}%" if current_low is not None else "--"
+                        high_str = f"{((current_high - yval) / yval) * 100:+.2f}%" if current_high is not None else "--"
+                        
+                        if current_low is not None or current_high is not None:
+                            # 拼接格式： 260.81 | -0.37% | +1.25%
+                            price_display = f"{yval:.2f} | {low_str} | {high_str}"
+
                     turnover_str = "--"
                     if current_vol is not None and yval is not None:
                         turnover_val = current_vol * yval
@@ -1545,9 +1573,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     # 构造浮窗显示列表
                     parts = [
                         f"{datetime.strftime(xval, '%Y-%m-%d')}", # 第一行：日期
-                        f"{yval:.2f}",                            # 第二行：价格
-                        f"{turnover_str}",                    # 第三行：成交额 (Turnover)
-                        f"{days_diff}天",                 # <--- 新增: 在成交额下方显示天数
+                        price_display,                            # 第二行：价格 | (low-price)/price%  <--- 修改这里
+                        f"{turnover_str}",                        # 第三行：成交额 (Turnover)
+                        f"{days_diff}天",                         # 第四行：天数
                         ""                                        # 空行占位
                     ]
 
@@ -1788,14 +1816,16 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     def update(val):
         # 这里的 volumes 依然是原始的成交量数据
         # vvv 【修改这行】在末尾加上 current_filtered_opens vvv
-        nonlocal gradient_image, current_filtered_dates, current_filtered_prices, current_filtered_volumes, current_filtered_date_nums, current_filtered_opens
+        nonlocal gradient_image, current_filtered_dates, current_filtered_prices, current_filtered_volumes, current_filtered_date_nums, current_filtered_opens, current_filtered_highs, current_filtered_lows
         try:
             years = time_options[val]
             if years == 0:
                 # 全量数据
                 f_dates, f_prices, f_volumes = dates, prices, volumes
                 f_turnovers = turnovers
-                f_opens = opens                          # ← 新增
+                f_opens = opens
+                f_highs = highs # <--- 新增
+                f_lows = lows 
             else:
                 min_date = datetime.now() - timedelta(days=years * 365)
                 indices = [i for i, d in enumerate(dates) if d >= min_date]
@@ -1803,13 +1833,17 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     f_dates, f_prices = [dates[-1]], [prices[-1]]
                     f_volumes = [volumes[-1]] if volumes else None
                     f_turnovers = [turnovers[-1]] if turnovers else None
-                    f_opens = [opens[-1]] if opens else None   # ← 新增
+                    f_opens = [opens[-1]] if opens else None
+                    f_highs = [highs[-1]] if highs else None # <--- 新增
+                    f_lows = [lows[-1]] if lows else None 
                 else:
                     f_dates = [dates[i] for i in indices]
                     f_prices = [prices[i] for i in indices]
                     f_volumes = [volumes[i] for i in indices] if volumes else None
                     f_turnovers = [turnovers[i] for i in indices] if turnovers else None
-                    f_opens = [opens[i] for i in indices]      # ← 新增
+                    f_opens = [opens[i] for i in indices]
+                    f_highs = [highs[i] for i in indices] # <--- 新增
+                    f_lows = [lows[i] for i in indices] 
 
             # 更新当前筛选数据与缓存
             current_filtered_dates = f_dates
@@ -1820,7 +1854,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             current_filtered_volumes = f_volumes 
             
             current_filtered_date_nums = matplotlib.dates.date2num(current_filtered_dates) if current_filtered_dates else np.array([])
-            current_filtered_opens = f_opens                   # ← 新增
+            current_filtered_opens = f_opens
+            current_filtered_highs = f_highs
+            current_filtered_lows = f_lows
 
             # === 遮罩逻辑保持不变（省略，和原代码完全一样）===
             if f_dates:
@@ -1899,7 +1935,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             pass
 
     def toggle_volume():
-        nonlocal show_volume, current_filtered_dates, current_filtered_prices, current_filtered_volumes, current_filtered_date_nums, current_filtered_opens
+        nonlocal show_volume, current_filtered_dates, current_filtered_prices, current_filtered_volumes, current_filtered_date_nums, current_filtered_opens, current_filtered_highs, current_filtered_lows
         try:
             show_volume = not show_volume
             years = time_options[radio.value_selected]
@@ -1910,6 +1946,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 f_dates, f_prices = dates, prices 
                 f_turnovers = turnovers
                 f_opens = opens 
+                f_highs = highs # <--- 新增
+                f_lows = lows 
             else:
                 min_date = datetime.now() - timedelta(days=years * 365)
                 indices = [i for i, d in enumerate(dates) if d >= min_date]
@@ -1918,17 +1956,22 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     f_prices = [prices[i] for i in indices]
                     f_turnovers = [turnovers[i] for i in indices] if turnovers else None
                     f_opens = [opens[i] for i in indices] 
+                    f_highs = [highs[i] for i in indices] # <--- 新增
+                    f_lows = [lows[i] for i in indices] 
                 else:
                     f_dates = [dates[-1]]
                     f_prices = [prices[-1]]
                     f_turnovers = [turnovers[-1]] if turnovers else None
                     f_opens = [opens[-1]] if opens else None
+                    f_highs = [highs[-1]] if highs else None # <--- 新增
+                    f_lows = [lows[-1]] if lows else None 
             
             current_filtered_dates = f_dates
             current_filtered_prices = f_prices
-            
             current_filtered_date_nums = matplotlib.dates.date2num(current_filtered_dates) if current_filtered_dates else np.array([])
             current_filtered_opens = f_opens
+            current_filtered_highs = f_highs # <--- 新增
+            current_filtered_lows = f_lows # <--- 新增
 
             # 【关键点】：传入 f_turnovers 进行绘图
             update_plot(

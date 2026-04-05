@@ -371,7 +371,7 @@ if __name__ == "__main__":
     # my_content_limit = 500
     
     # 选项 B: 显示全部数据，设置为 'all'
-    my_content_limit = '2'
+    my_content_limit = '15'
     
     # 调用时传入 target_tables 参数
     visualize_sqlite_db(

@@ -22,10 +22,10 @@ def show_alert(message):
         root.destroy()
 
 def get_clipboard_content():
-    """获取剪贴板内容，包含错误处理，并转换为大写"""
+    """获取剪贴板内容，包含错误处理，仅去除首尾空格，不再强制大写"""
     try:
         content = pyperclip.paste()
-        return content.strip().upper() if content else ""
+        return content.strip() if content else ""
     except Exception:
         return ""
 
@@ -134,27 +134,40 @@ def is_in_etfs_sector(symbol, sector_files):
         return False
 
 def delete_from_description_json(description_file, symbol):
-    """从description.json文件中删除指定symbol的ETF项目"""
+    """从description.json文件中删除指定symbol的项目（优先找etfs，找不到再去stocks找）"""
     try:
         # 读取JSON文件
         with open(description_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
         
-        original_length = len(data.get('etfs', []))
-        data['etfs'] = [etf for etf in data.get('etfs', []) if etf.get('symbol') != symbol]
+        deleted_category = None
+        
+        # 1. 尝试从 etfs 中删除
+        original_etfs_length = len(data.get('etfs', []))
+        data['etfs'] = [item for item in data.get('etfs', []) if item.get('symbol') != symbol]
+        
+        if len(data['etfs']) < original_etfs_length:
+            deleted_category = 'etfs'
+        else:
+            # 2. 如果 etfs 中没有，尝试从 stocks 中删除
+            original_stocks_length = len(data.get('stocks', []))
+            data['stocks'] = [item for item in data.get('stocks', []) if item.get('symbol') != symbol]
+            
+            if len(data['stocks']) < original_stocks_length:
+                deleted_category = 'stocks'
         
         # 检查是否有删除操作
-        if len(data['etfs']) < original_length:
+        if deleted_category:
             # 写回文件
             with open(description_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
-            print(f"已从description.json中删除ETF: {symbol}")
-            return True
+            print(f"已从description.json的 {deleted_category} 列表中删除: {symbol}")
+            return deleted_category
             
-        return False
+        return None
     except Exception as e:
         print(f"处理description.json文件时出错: {e}")
-        return False
+        return None
 
 # ==============================================================================
 # 新增函数：用于处理 Compare_All.txt 文件
@@ -225,7 +238,7 @@ def main():
     # 新增：Compare_All.txt 文件路径
     compare_all_file = os.path.join(USER_HOME, 'Coding/News/backup/Compare_All.txt')
     
-    # 获取剪贴板内容
+    # 获取剪贴板内容（原大小写）
     symbol = get_clipboard_content()
     if not symbol:
         show_alert("剪贴板为空")
@@ -236,12 +249,30 @@ def main():
     try:
         with open(sector_file, 'r', encoding='utf-8') as f:
             sectors_data = json.load(f)
-            # 检查symbol是否存在于任何sector中
+            
+            # 第一次尝试：按照剪贴板原内容查找
             exists_in_sectors = any(symbol in symbols for symbols in sectors_data.values())
+            
+            # 如果原内容找不到，尝试转换为全大写查找
+            if not exists_in_sectors:
+                upper_symbol = symbol.upper()
+                exists_in_upper = any(upper_symbol in symbols for symbols in sectors_data.values())
+                
+                if exists_in_upper:
+                    # 如果全大写能找到，就将 symbol 替换为全大写版本
+                    symbol = upper_symbol
+                    exists_in_sectors = True
+                else:
+                    # 如果都找不到，为了兼容之前的逻辑，默认转为全大写继续后续操作
+                    # (如果你希望找不到时保持原样，可以注释掉下面这行)
+                    symbol = upper_symbol
+
     except Exception as e:
         print(f"检查 {sector_file} 时出错: {e}")
         return
     
+    print(f"当前处理的 Symbol 为: {symbol}")
+
     # 2. 首先检查是否在ETFs分组中
     add_result_etf = False
     sector_files = [sector_file, sector_today_file]
@@ -274,8 +305,8 @@ def main():
     # 6. 新增：从 Compare_All.txt 中删除匹配行
     delete_compare_result = delete_from_compare_all(compare_all_file, symbol)
 
-    # 7. 更新 description.json 中的 ETFs 列表
-    delete_desc = delete_from_description_json(description_file, symbol)
+    # 7. 更新 description.json 中的 etfs/stocks 列表
+    deleted_category = delete_from_description_json(description_file, symbol)
     
     # 8. 输出总结 (更新了总结部分)
     print("\n操作总结:")
@@ -297,10 +328,10 @@ def main():
         print("- blacklist 更新未执行或未发生变化")
 
     print("description.json更新情况:")
-    if delete_desc:
-        print(f"- 已从 ETFs 列表中删除 {symbol}")
+    if deleted_category:
+        print(f"- 已从 {deleted_category} 列表中删除 {symbol}")
     else:
-        print(f"- 在 ETFs 列表中未找到 {symbol}")
+        print(f"- 在 etfs 和 stocks 列表中均未找到 {symbol}")
 
     # 新增：Compare_All.txt 的总结输出
     print("Compare_All.txt更新情况:")

@@ -68,7 +68,6 @@
     "HANGSENG",
     "NASDAQ",
     "Shanghai",
-    "Shenzhen",
     "VIX",
     "UK100",
     "EURO50",
@@ -303,7 +302,6 @@
     "QUAL",
     "VT",
     "XLC",
-    "PPH",
     "ASHR",
     "COPX",
     "XME",
@@ -420,7 +418,9 @@
     "VXUS",
     "INCO",
     "SLX",
-    "POWR"
+    "POWR",
+    "FPA",
+    "IHE"
   ],
   "Basic_Materials": [
     "LIN",
@@ -1244,8 +1244,8 @@
     "NVST",
     "CGON",
     "XENE",
-    "TERN",
-    "SRRK"
+    "SRRK",
+    "ERAS"
   ],
   "Industrials": [
     "GE",
@@ -1774,7 +1774,8 @@
     "OSIS",
     "CIFR",
     "AAOI",
-    "PAYP"
+    "PAYP",
+    "FSLY"
   ],
   "Utilities": [
     "NEE",

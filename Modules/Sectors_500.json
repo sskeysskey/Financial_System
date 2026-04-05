@@ -14,7 +14,8 @@
         "B",
         "VALE",
         "WPM",
-        "CTVA"
+        "CTVA",
+        "AU"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -191,7 +192,9 @@
         "MCK",
         "COR",
         "TAK",
-        "BDX"
+        "BDX",
+        "ZTS",
+        "CAH"
     ],
     "Industrials": [
         "GE",
@@ -230,7 +233,8 @@
         "VRT",
         "PCAR",
         "FAST",
-        "GWW"
+        "GWW",
+        "AME"
     ],
     "Real_Estate": [
         "PLD",
@@ -290,9 +294,11 @@
         "STX",
         "WDC",
         "SNDK",
-        "MPWR",
         "CIEN",
-        "LITE"
+        "MPWR",
+        "ADSK",
+        "LITE",
+        "UI"
     ],
     "Utilities": [
         "NEE",
@@ -303,6 +309,8 @@
         "AEP",
         "SRE",
         "D",
-        "VST"
+        "EXC",
+        "VST",
+        "XEL"
     ]
 }

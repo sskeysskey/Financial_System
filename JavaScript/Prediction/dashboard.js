@@ -209,7 +209,7 @@ async function pollForMoreOptions(tabId, prevCount, maxMs) {
                 await new Promise(function (res) { setTimeout(res, 200); });
                 return { expanded: true, elapsed: Date.now() - start };
             }
-        } catch (e) { /* ignore */ }
+        } catch (e) { }
         await new Promise(function (res) { setTimeout(res, 200); });
     }
     return { expanded: false, elapsed: Date.now() - start };
@@ -242,7 +242,7 @@ async function pollForCategories(tabId, maxMs) {
             if (count && count > 0) {
                 return { found: true, count: count, elapsed: Date.now() - start };
             }
-        } catch (e) { /* ignore */ }
+        } catch (e) { }
         await new Promise(function (res) { setTimeout(res, 200); });
     }
     return { found: false, count: 0, elapsed: Date.now() - start };
@@ -251,7 +251,7 @@ async function pollForCategories(tabId, maxMs) {
 function closeTab(tabId) {
     return new Promise(function (resolve) {
         chrome.tabs.remove(tabId, function () {
-            if (chrome.runtime.lastError) { /* ignore */ }
+            if (chrome.runtime.lastError) { }
             resolve();
         });
     });
@@ -353,7 +353,6 @@ function injectedClickXMore() {
 function injectedScrapeMainPage() {
     var predictions = [];
     function clean(t) { return t.trim().replace(/\s+/g, ' '); }
-    function cap(s) { return s.split('-').map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join(' '); }
 
     var cards = document.querySelectorAll('[data-testid="market-tile"]');
     cards.forEach(function (card) {
@@ -404,7 +403,7 @@ function injectedScrapeMainPage() {
             }
 
             predictions.push({ name: name, subUrl: subUrl, volume: volume, options: options });
-        } catch (e) { /* skip */ }
+        } catch (e) { }
     });
     return predictions;
 }
@@ -514,7 +513,8 @@ function injectedScrapeSubpage() {
                     var links = sib.querySelectorAll('a');
                     for (var j = 0; j < links.length; j++) {
                         var aHref = links[j].getAttribute('href') || '';
-                        if (isCategoryHref(aHref) && !isInMainNav(links[j])) {
+                        // 对于 h1 的兄弟节点，我们放宽 isCategoryHref 的限制，只要不是主导航即可
+                        if (!isInMainNav(links[j])) {
                             var aText = getCatText(links[j]);
                             if (aText && aText !== '•' && aText !== '·' && categories.indexOf(aText) === -1) {
                                 categories.push(aText);
@@ -529,7 +529,31 @@ function injectedScrapeSubpage() {
         }
 
         // ════════════════════════════════════════════════
-        // ★ Strategy 0: 近邻链接检测 (已移除不稳定的纯文本拆分逻辑)
+        // ★ Strategy 0.6 (NEW): 终极文本拆分兜底 (针对曼联等体育项目)
+        // 如果链接提取失败，直接提取 h1 前一个元素的纯文本并按 • 拆分
+        // ════════════════════════════════════════════════
+        if (h1 && categories.length === 0) {
+            var prev = h1.previousElementSibling;
+            if (prev) {
+                var rawText = prev.textContent.trim();
+                // 如果包含明显的面包屑分隔符
+                if (rawText.includes('•') || rawText.includes('·') || rawText.includes('/')) {
+                    var parts = rawText.split(/[•·\/]/);
+                    var cleaned = [];
+                    for (var p = 0; p < parts.length; p++) {
+                        var pt = parts[p].trim().replace(/\s+/g, ' ');
+                        if (pt && pt.length < 30) cleaned.push(pt);
+                    }
+                    if (cleaned.length > 0) {
+                        categories = cleaned;
+                        d.push('S0.6: text split from h1 previous sibling (' + categories.length + '): ' + categories.join(' > '));
+                    }
+                }
+            }
+        }
+
+        // ════════════════════════════════════════════════
+        // Strategy 0: 近邻链接检测
         // ════════════════════════════════════════════════
         if (h1 && categories.length === 0) {
             var anc0 = h1.parentElement;
@@ -542,25 +566,6 @@ function injectedScrapeSubpage() {
                     // 跳过页面级 header 标签
                     if (kid.tagName === 'HEADER') continue;
 
-                    // var kText = kid.textContent.trim();
-
-                    // // ── Case A: 包含分隔符 · 或 • → 按分隔符拆分 ──
-                    // if ((kText.includes('·') || kText.includes('•')) &&
-                    //     kText.length >= 3 && kText.length < 200) {
-                    //     var parts = kText.split(/[·•]/);
-                    //     var cleaned = [];
-                    //     for (var pi = 0; pi < parts.length; pi++) {
-                    //         var p = parts[pi].trim();
-                    //         if (p.length > 0 && p.length < 50) cleaned.push(p);
-                    //     }
-                    //     if (cleaned.length >= 1 && cleaned.length <= 6) {
-                    //         categories = cleaned;
-                    //         d.push('S0a: separator text (' + cleaned.length + '): ' + cleaned.join(' > '));
-                    //     }
-                    // }
-
-                    // // ── Case B: 不含分隔符，但是一个小元素，内含 1-5 个分类链接 ──
-                    // if (categories.length === 0 && kText.length > 0 && kText.length < 100) {
                     var kidLinks = kid.querySelectorAll('a');
                     if (kidLinks.length >= 1 && kidLinks.length <= 5) {
                         var catTexts = [];
@@ -637,9 +642,8 @@ function injectedScrapeSubpage() {
             }
         }
 
-        // ★ Strategy 3: 排除法在 h1 附近寻找链接
+        // Strategy 3: 排除法在 h1 附近寻找链接
         if (categories.length === 0 && h1) {
-            d.push('S3: exclude-based fallback...');
             var anc3 = h1.parentElement;
             for (var u = 0; u < 5 && anc3; u++) {
                 var links = anc3.querySelectorAll('a');
@@ -670,37 +674,6 @@ function injectedScrapeSubpage() {
                 anc3 = anc3.parentElement;
             }
         }
-
-        // ★ 调试：如果仍未找到，输出 h1 附近结构信息以便后续诊断
-        // if (categories.length === 0 && h1) {
-        //     d.push('[DEBUG] No categories found. Ancestor children:');
-        //     var dbgAnc = h1.parentElement;
-        //     for (var du = 0; du < 6 && dbgAnc; du++) {
-        //         var dbgKids = dbgAnc.children;
-        //         d.push('  up=' + du + ' <' + dbgAnc.tagName + '> children=' + dbgKids.length);
-        //         for (var dki = 0; dki < dbgKids.length && dki < 10; dki++) {
-        //             var dk = dbgKids[dki];
-        //             var dkText = dk.textContent.trim().substring(0, 80);
-        //             var dkLinkCount = dk.querySelectorAll('a').length;
-        //             var dkHasH1 = dk.contains(h1) ? ' [has-h1]' : '';
-        //             var dkInHeader = dk.tagName === 'HEADER' ? ' [HEADER]' : '';
-        //             d.push('    [' + dki + '] <' + dk.tagName + '> links=' + dkLinkCount + dkHasH1 + dkInHeader + ' "' + dkText + '"');
-        //             // 显示该子元素中的链接 href（仅链接数 <= 5 时）
-        //             if (dkLinkCount > 0 && dkLinkCount <= 5 && !dk.contains(h1)) {
-        //                 var dkAs = dk.querySelectorAll('a');
-        //                 for (var dai = 0; dai < dkAs.length; dai++) {
-        //                     var daHref = dkAs[dai].getAttribute('href') || '';
-        //                     var daText = dkAs[dai].textContent.trim().substring(0, 30);
-        //                     var daNav = isInMainNav(dkAs[dai]) ? ' [main-nav]' : '';
-        //                     d.push('      a: "' + daText + '" href=' + daHref + daNav);
-        //                 }
-        //             }
-        //         }
-        //         // 子元素数量合理时不再向上
-        //         if (dbgKids.length <= 15) break;
-        //         dbgAnc = dbgAnc.parentElement;
-        //     }
-        // }
 
         d.push('Final categories (' + categories.length + '): ' + categories.join(' > '));
 
