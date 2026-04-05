@@ -904,7 +904,7 @@
             "control"
         ],
         "actionType": "runInTerminal",
-        "target": "bash -lc '/Users/yanzhang/Coding/sh/github_sync_pythoncode.sh' && bash -lc '/Users/yanzhang/Coding/sh/github_sync_finance.sh' && bash -lc '/Users/yanzhang/Coding/sh/github_sync_scripteditor.sh' && bash -lc '/Users/yanzhang/Coding/sh/github_sync_shell.sh' && bash -lc '/Users/yanzhang/Coding/sh/github_sync_xcode.sh' && bash -lc '/Users/yanzhang/Coding/sh/github_sync_website.sh' && bash -lc '/Users/yanzhang/Coding/sh/github_sync_android.sh' && bash -lc '/Users/yanzhang/Coding/sh/github_sync_LocalServer.sh'",
+        "target": "bash -lc '/Users/yanzhang/Coding/sh/github_sync_pythoncode.sh' && bash -lc '/Users/yanzhang/Coding/sh/github_sync_finance.sh' && bash -lc '/Users/yanzhang/Coding/sh/github_sync_xcode.sh' && bash -lc '/Users/yanzhang/Coding/sh/github_sync_scripteditor.sh' && bash -lc '/Users/yanzhang/Coding/sh/github_sync_shell.sh' && bash -lc '/Users/yanzhang/Coding/sh/github_sync_xcode.sh' && bash -lc '/Users/yanzhang/Coding/sh/github_sync_website.sh' && bash -lc '/Users/yanzhang/Coding/sh/github_sync_android.sh' && bash -lc '/Users/yanzhang/Coding/sh/github_sync_LocalServer.sh'",
         "message": "正在执行 GitHub 全量同步..."
     },
     {
