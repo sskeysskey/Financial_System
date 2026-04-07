@@ -450,7 +450,7 @@ def run_yahoo_indices():
         reverse_mapping = {v: k for k, v in mapping.items()}
         
         # 目标抓取列表
-        target_names = ["HANGSENG", "Shanghai", "Shenzhen", "UK100", "EURO50", "panEURO100", "India", "Singapore"]
+        target_names = ["HANGSENG", "Shanghai", "UK100", "EURO50", "panEURO100", "India", "Singapore"]
         yesterday_date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
         
         def parse_volume(vol_str):

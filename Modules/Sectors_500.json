@@ -159,7 +159,8 @@
         "BAM",
         "NWG",
         "BRK-B",
-        "MRSH"
+        "MRSH",
+        "NDAQ"
     ],
     "Healthcare": [
         "LLY",
@@ -234,7 +235,8 @@
         "PCAR",
         "FAST",
         "GWW",
-        "AME"
+        "AME",
+        "FIX"
     ],
     "Real_Estate": [
         "PLD",
@@ -298,7 +300,8 @@
         "MPWR",
         "ADSK",
         "LITE",
-        "UI"
+        "UI",
+        "KEYS"
     ],
     "Utilities": [
         "NEE",

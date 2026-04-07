@@ -8,6 +8,9 @@ import hashlib
 # --- 配置部分 ---
 USER_HOME = os.path.expanduser("~")
 
+# --- 新增：随机遮蔽开关 ---
+ENABLE_RANDOM_HIDE = False  # 设置为 False 即可关闭随机遮蔽功能
+
 # --- Prediction 相关的路径配置 ---
 PREDICTION_SOURCE_DIR = os.path.join(USER_HOME, 'Coding/Database')
 PREDICTION_TARGET_DIR = os.path.join(USER_HOME, 'Coding/LocalServer/Resources/Prediction')
@@ -144,12 +147,14 @@ def backup_prediction_files():
         filename = f"{prefix}_{today_str}.json"
         source_path = os.path.join(PREDICTION_SOURCE_DIR, filename)
         target_path = os.path.join(PREDICTION_TARGET_DIR, filename)
+        
         if os.path.exists(source_path):
-            if prefix in RANDOM_HIDE_PREFIXES:
-                # 对 kalshi 和 kalshi_trend 执行随机遮蔽后写入
+            # --- 修改点：增加开关逻辑 ---
+            if ENABLE_RANDOM_HIDE and prefix in RANDOM_HIDE_PREFIXES:
+                # 开启了随机遮蔽，且当前文件在需要遮蔽的列表中
                 copy_with_random_hide(source_path, target_path)
             else:
-                # 其他文件仍使用智能复制
+                # 关闭了随机遮蔽，或者当前文件不在遮蔽列表中，使用普通智能复制
                 smart_copy(source_path, target_path)
         else:
             print(f"⚠️ 找不到今天的 Prediction 文件: {source_path}")

@@ -4,7 +4,7 @@ import pyperclip
 import sys
 import subprocess
 import time
-import os  # 新增导入 os 模块
+import os
 from PyQt5.QtWidgets import (QApplication, QInputDialog, QLineEdit, 
                            QMessageBox, QDialog, QVBoxLayout, QRadioButton, 
                            QDateEdit, QDialogButtonBox)
@@ -96,7 +96,6 @@ def get_stock_symbol(default_symbol=""):
     input_dialog.setWindowTitle("输入股票代码")
     input_dialog.setLabelText("请输入股票代码:")
     input_dialog.setTextValue(default_symbol)
-    # input_dialog.setWindowFlags(input_dialog.windowFlags() | Qt.WindowStaysOnTopHint)
     input_dialog.setWindowFlags(input_dialog.windowFlags() | Qt.WindowStaysOnTopHint)
     from PyQt5.QtCore import QTimer
     QTimer.singleShot(0, lambda: (input_dialog.raise_(), input_dialog.activateWindow()))
@@ -219,17 +218,20 @@ def main():
         # 使用选择的日期或最新日期
         target_date = adjustment_date if adjustment_date else latest_date
 
-        # 执行拆股操作
+        # 执行拆股操作（长期版本：同时更新 price, open, high, low）
         cursor.execute(f"""
             UPDATE {table_name} 
-            SET price = ROUND(price / ?, 2) 
+            SET price = ROUND(price / ?, 2),
+                open = ROUND(open / ?, 2),
+                high = ROUND(high / ?, 2),
+                low = ROUND(low / ?, 2)
             WHERE name = ? AND date < ?
-        """, (price_divisor, name, target_date))
+        """, (price_divisor, price_divisor, price_divisor, price_divisor, name, target_date))
 
         conn.commit()
         conn.close()
 
-        QMessageBox.information(None, "成功", "拆股操作已完成")
+        QMessageBox.information(None, "成功", "拆股操作已完成，价格及OHLC数据均已调整。")
     except Exception as e:
         QMessageBox.critical(None, "错误", f"数据库操作失败: {str(e)}")
 
