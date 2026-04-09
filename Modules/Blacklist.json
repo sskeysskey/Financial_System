@@ -1085,7 +1085,12 @@
         "FDMO",
         "PWB",
         "BCD",
-        "PPH"
+        "PPH",
+        "IDOG",
+        "CRUX",
+        "COMT",
+        "FYX",
+        "FTXO"
     ],
     "Earning": [
         "TW",

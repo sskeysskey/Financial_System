@@ -294,7 +294,6 @@ def check_is_earnings_day(cursor, symbol, target_date_str):
         return False
 
 
-
 def check_turnover_since_earning(cursor, sector_name, symbol, er_date_str, latest_date_str, latest_turnover, rank_threshold, log_detail, is_tracing):
     """
     检查 latest_turnover 是否是从 er_date_str (财报日) 到 latest_date_str 期间的前 rank_threshold 名成交额

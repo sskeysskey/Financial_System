@@ -1533,14 +1533,16 @@ def check_turnover_rank(cursor, sector_name, symbol, latest_date_str, latest_tur
     
     return is_top_n
 
-# ========== 修改：处理 PE_Hot 策略的独立函数 (接收动态白名单) ==========
+# ========== 修改：处理 PE_Hot 策略的独立函数 (接收动态白名单 + 增加市值维度 + 10天防暴涨过滤) ==========
 def process_pe_hot(db_path, sector_map, target_date_override, panel_json_path, exclude_symbols, whitelist_symbols, log_detail):
     """
     检索 sectors_panel 里的特定分组，如果发现白名单中的 symbol 在这些分组里，
-    且不在 exclude_symbols (PE_Volume等) 中，并且最新成交额 >= 2亿，则将其提取出来。
+    或者该 symbol 的市值 >= 4000亿，
+    且不在 exclude_symbols (PE_Volume等) 中，并且最新成交额 >= 2亿，
+    【新增】且过去10天内的最低收盘价没有比最新收盘价低超过3%，则将其提取出来。
     返回: pe_hot_list (list), pe_hot_notes (dict)
     """
-    log_detail("\n========== 开始执行 策略: PE_Hot (白名单检索 + 2亿成交额过滤) ==========")
+    log_detail("\n========== 开始执行 策略: PE_Hot (白名单/超大市值检索 + 2亿成交额过滤 + 10天防暴涨过滤) ==========")
     
     # === 修改区域：在这里添加你想要包含的所有深跌/回调池分组 ===
     target_groups = [
@@ -1552,7 +1554,6 @@ def process_pe_hot(db_path, sector_map, target_date_override, panel_json_path, e
         "PE_invalid",
         "season"
     ]
-    # 如果你还有其他分组（例如 "season" 等），也可以直接加在这里
     
     pe_hot_list = []
     pe_hot_notes = {}
@@ -1560,10 +1561,21 @@ def process_pe_hot(db_path, sector_map, target_date_override, panel_json_path, e
     # 确定基准日期
     base_date = target_date_override if target_date_override else (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
     
-    # 连接数据库以获取成交额
+    # 连接数据库以获取成交额和市值
     conn = sqlite3.connect(db_path, timeout=60.0)
     cursor = conn.cursor()
     
+    # ========== 查询市值 >= 4000亿的 symbol ==========
+    high_mcap_symbols = set()
+    try:
+        cursor.execute("SELECT symbol FROM MNSPP WHERE marketcap >= 400000000000")
+        rows = cursor.fetchall()
+        high_mcap_symbols = {r[0] for r in rows}
+        log_detail(f"从 MNSPP 表成功获取 {len(high_mcap_symbols)} 个市值 >= 4000亿 的 Symbol。")
+    except Exception as e:
+        log_detail(f"警告: 无法读取 MNSPP 表的市值数据: {e}")
+    # =======================================================
+
     try:
         with open(panel_json_path, 'r', encoding='utf-8') as f:
             panel_data = json.load(f)
@@ -1572,8 +1584,11 @@ def process_pe_hot(db_path, sector_map, target_date_override, panel_json_path, e
             # 检查分组是否存在，避免 key error
             if group in panel_data and isinstance(panel_data[group], dict):
                 for sym, note in panel_data[group].items():
-                    # 1. 检查是否在动态生成的白名单中
-                    if sym in whitelist_symbols:
+                    # 1. 检查是否在动态生成的白名单中，或者市值 >= 4000亿
+                    is_whitelist = sym in whitelist_symbols
+                    is_high_mcap = sym in high_mcap_symbols
+                    
+                    if is_whitelist or is_high_mcap:
                         # 2. 检查是否在排除列表(PE_Volume系列)中
                         if sym not in exclude_symbols:
                             
@@ -1582,22 +1597,38 @@ def process_pe_hot(db_path, sector_map, target_date_override, panel_json_path, e
                             if not sector:
                                 continue
                                 
-                            # 4. 查询最新一天的价格和成交量
-                            query = f'SELECT price, volume FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 1'
+                            # 4. 【修改】查询最新 10 天的价格和成交量
+                            query = f'SELECT price, volume FROM "{sector}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 10'
                             cursor.execute(query, (sym, base_date))
-                            row = cursor.fetchone()
+                            rows = cursor.fetchall()
                             
-                            if row and row[0] is not None and row[1] is not None:
-                                price, volume = row
-                                turnover = price * volume
+                            if rows and rows[0][0] is not None and rows[0][1] is not None:
+                                latest_price, latest_volume = rows[0]
+                                turnover = latest_price * latest_volume
                                 
                                 # 5. 判断成交额是否大于等于 2 亿 (200,000,000)
                                 if turnover >= 200000000:
-                                    if sym not in pe_hot_list:
-                                        pe_hot_list.append(sym)
-                                        # 保留它在原分组的备注
-                                        pe_hot_notes[sym] = note if note else sym
-                                        log_detail(f"    ✅ [选中-PE_Hot] {sym} (来自分组: {group}, 成交额: {turnover/100000000:.2f}亿)")
+                                    
+                                    # 6. 【新增】10天防暴涨过滤：10天内最低价不能比最新价低超过3%
+                                    valid_prices = [r[0] for r in rows if r[0] is not None]
+                                    min_price_10d = min(valid_prices) if valid_prices else latest_price
+                                    
+                                    # 如果最低价 < 最新价的 97%，说明跌下去又涨上来超过了阈值（或者单边暴涨）
+                                    if min_price_10d < latest_price * 0.97:
+                                        log_detail(f"    x [过滤-PE_Hot] {sym} 10天内最低价({min_price_10d:.2f})比最新价({latest_price:.2f})低超过3%")
+                                    else:
+                                        if sym not in pe_hot_list:
+                                            pe_hot_list.append(sym)
+                                            # 保留它在原分组的备注
+                                            pe_hot_notes[sym] = note if note else sym
+                                            
+                                            # 记录命中原因
+                                            reasons = []
+                                            if is_whitelist: reasons.append("白名单")
+                                            if is_high_mcap: reasons.append("超大市值")
+                                            reason_str = "+".join(reasons)
+                                            
+                                            log_detail(f"    ✅ [选中-PE_Hot] {sym} (来自分组: {group}, 理由: {reason_str}, 成交额: {turnover/100000000:.2f}亿, 10天最低: {min_price_10d:.2f})")
                                 else:
                                     log_detail(f"    x [过滤-PE_Hot] {sym} 成交额不足2亿 (仅 {turnover/100000000:.2f}亿)")
                             else:

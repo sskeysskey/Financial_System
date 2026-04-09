@@ -15,7 +15,8 @@
         "VALE",
         "WPM",
         "CTVA",
-        "AU"
+        "AU",
+        "FNV"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -55,7 +56,8 @@
         "DASH",
         "ORLY",
         "ROST",
-        "CVNA"
+        "CVNA",
+        "SE"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -101,7 +103,7 @@
         "LNG",
         "FANG",
         "TRGP",
-        "CVE"
+        "CCJ"
     ],
     "Financial_Services": [
         "JPM",
@@ -235,8 +237,9 @@
         "PCAR",
         "FAST",
         "GWW",
+        "FIX",
         "AME",
-        "FIX"
+        "FERG"
     ],
     "Real_Estate": [
         "PLD",
@@ -245,7 +248,8 @@
         "WELL",
         "SPG",
         "DLR",
-        "O"
+        "O",
+        "PSA"
     ],
     "Technology": [
         "AAPL",
@@ -298,10 +302,15 @@
         "SNDK",
         "CIEN",
         "MPWR",
-        "ADSK",
         "LITE",
         "UI",
-        "KEYS"
+        "KEYS",
+        "TER",
+        "ASX",
+        "COHR",
+        "NOK",
+        "NXPI",
+        "ADSK"
     ],
     "Utilities": [
         "NEE",
