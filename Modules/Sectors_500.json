@@ -161,8 +161,7 @@
         "BAM",
         "NWG",
         "BRK-B",
-        "MRSH",
-        "NDAQ"
+        "MRSH"
     ],
     "Healthcare": [
         "LLY",
@@ -197,7 +196,8 @@
         "TAK",
         "BDX",
         "ZTS",
-        "CAH"
+        "CAH",
+        "ARGX"
     ],
     "Industrials": [
         "GE",
@@ -239,7 +239,8 @@
         "GWW",
         "FIX",
         "AME",
-        "FERG"
+        "FERG",
+        "CARR"
     ],
     "Real_Estate": [
         "PLD",
@@ -292,7 +293,6 @@
         "MSI",
         "CRWD",
         "FTNT",
-        "SNOW",
         "MRVL",
         "NET",
         "TEL",
@@ -309,8 +309,7 @@
         "ASX",
         "COHR",
         "NOK",
-        "NXPI",
-        "ADSK"
+        "NXPI"
     ],
     "Utilities": [
         "NEE",
