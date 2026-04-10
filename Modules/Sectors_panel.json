@@ -754,7 +754,10 @@
         "CoreCPI": "10 CoreCPI",
         "USCPI": "10 USCPI",
         "USConfidence": "10 USConfidence",
-        "USInitial": "09 USInitial"
+        "USInitial": "09 USInitial",
+        "CorePPI": "14 CorePPI",
+        "USPPI": "14 USPPI",
+        "ImportPriceM": "15 ImportPriceM"
     },
     "Economic_All": {
         "USGDP": "",

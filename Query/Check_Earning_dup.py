@@ -3,17 +3,76 @@ import glob
 import subprocess
 import sys
 from collections import defaultdict, Counter
-# 新增导入：用于处理日期和时间
 from datetime import datetime, timedelta
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QFrame, QSizePolicy, QTextEdit
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QFrame, QSizePolicy, QTextEdit, QCheckBox
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont
-import send2trash  # 新增导入：用于安全删除到回收站
+import send2trash
 
 USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
-# 在文件开头添加新的函数来处理确认记录
+# --- 新增：调用 AppleScript 自动在富途搜索的函数 ---
+def search_in_futu(symbol: str):
+    """
+    异步执行 AppleScript，将 symbol 复制到剪贴板并拉起富途牛牛进行搜索。
+    使用 Popen 避免阻塞 PyQt5 主线程。
+    """
+    print(f"正在拉起富途牛牛搜索: {symbol}")
+    
+    applescript_code = f'''
+    set input_text to "{symbol}"
+    set the clipboard to input_text
+    
+    tell application "/Applications/FutuNiuniu.app"
+        activate
+    end tell
+    delay 0.5
+    
+    -- 使用 System Events 再次确保窗口位于最前
+    tell application "System Events"
+        tell process "FutuNiuniu"
+            set frontmost to true
+        end tell
+    end tell
+    
+    set pythonScriptPath to "/Users/yanzhang/Coding/python_code/screenshot.py"
+    set imageName to "futu_launch.png"
+    set clickValue to "false"
+    set Opposite to "false"
+    
+    set commandString to "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 " & quoted form of pythonScriptPath & " " & quoted form of imageName & " " & clickValue & " " & Opposite
+    
+    do shell script commandString
+    
+    -- 定义坐标
+    set x_coord to "1295"
+    set y_coord to "56"
+    
+    -- 构建命令字符串
+    set command to "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 /Users/yanzhang/Coding/python_code/Click.py " & x_coord & " " & y_coord
+    
+    -- 执行Python脚本
+    do shell script command
+    delay 0.5
+    
+    tell application "System Events"
+        -- 模拟全选操作
+        key code 0 using command down
+        delay 0.5
+        keystroke "v" using command down
+        delay 0.5
+        key code 36
+    end tell
+    '''
+    
+    try:
+        # 使用 Popen 异步执行，不阻塞 UI
+        subprocess.Popen(['osascript', '-e', applescript_code])
+    except Exception as e:
+        print(f"执行 AppleScript 失败: {e}")
+
+# --- 确认记录相关函数 ---
 
 def load_confirmed_symbols(directory: str) -> dict:
     """
@@ -415,7 +474,7 @@ class DuplicateResolverApp(QWidget):
 
     def init_ui(self):
         self.setWindowTitle('常规重复Symbol处理器')
-        self.setGeometry(300, 300, 800, 450)  # 增加高度以容纳确认选项
+        self.setGeometry(300, 300, 800, 500)
 
         self.main_layout = QVBoxLayout(self)
 
@@ -423,6 +482,12 @@ class DuplicateResolverApp(QWidget):
         self.title_label.setFont(QFont('Arial', 16, QFont.Bold))
         self.title_label.setAlignment(Qt.AlignCenter)
         self.main_layout.addWidget(self.title_label)
+
+        # --- 新增：富途搜索按钮 ---
+        self.futu_button = QPushButton()
+        self.futu_button.setStyleSheet("background-color: #ff9900; color: white; font-weight: bold; padding: 8px; font-size: 14px; border-radius: 4px;")
+        self.futu_button.setCursor(Qt.PointingHandCursor)
+        self.main_layout.addWidget(self.futu_button, alignment=Qt.AlignCenter)
 
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
@@ -460,6 +525,12 @@ class DuplicateResolverApp(QWidget):
         self.clear_layout(self.scroll_layout)
         symbol, count = self.manual_duplicates[self.current_duplicate_index]
         self.title_label.setText(f"手动处理 ({self.current_duplicate_index + 1}/{len(self.manual_duplicates)}): {symbol} ({count} 次)")
+
+        # --- 绑定富途搜索按钮 ---
+        self.futu_button.setText(f"🔍 在富途牛牛中查看 {symbol}")
+        try: self.futu_button.clicked.disconnect()
+        except TypeError: pass
+        self.futu_button.clicked.connect(lambda checked, s=symbol: search_in_futu(s))
 
         occurrences = self.symbol_sources[symbol]
         
@@ -520,6 +591,7 @@ class DuplicateResolverApp(QWidget):
         else:
             print("\n所有手动常规重复项已处理完毕。")
             self.close()
+
 
 # --- PyQt5 GUI部分 (#BACKUP_DUP) ---
 
@@ -583,13 +655,19 @@ class BackupDupResolverApp(QWidget):
 
     def init_ui(self):
         self.setWindowTitle('#BACKUP_DUP 处理器')
-        self.setGeometry(300, 300, 800, 450)
+        self.setGeometry(300, 300, 800, 500)
 
         self.main_layout = QVBoxLayout(self)
         self.title_label = QLabel()
         self.title_label.setFont(QFont('Arial', 16, QFont.Bold))
         self.title_label.setAlignment(Qt.AlignCenter)
         self.main_layout.addWidget(self.title_label)
+
+        # --- 新增：富途搜索按钮 ---
+        self.futu_button = QPushButton()
+        self.futu_button.setStyleSheet("background-color: #ff9900; color: white; font-weight: bold; padding: 8px; font-size: 14px; border-radius: 4px;")
+        self.futu_button.setCursor(Qt.PointingHandCursor)
+        self.main_layout.addWidget(self.futu_button, alignment=Qt.AlignCenter)
 
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
@@ -627,6 +705,12 @@ class BackupDupResolverApp(QWidget):
         self.clear_layout(self.scroll_layout)
         symbol, _, _, _ = self.manual_tasks[self.current_task_index]
         
+        # --- 绑定富途搜索按钮 ---
+        self.futu_button.setText(f"🔍 在富途牛牛中查看 {symbol}")
+        try: self.futu_button.clicked.disconnect()
+        except TypeError: pass
+        self.futu_button.clicked.connect(lambda checked, s=symbol: search_in_futu(s))
+
         occurrences = []
         for path in self.all_files:
             try:
@@ -841,7 +925,7 @@ class WeekendDatePickerApp(QWidget):
 
     def init_ui(self):
         self.setWindowTitle('周末日期修正器')
-        self.setGeometry(300, 300, 800, 300)
+        self.setGeometry(300, 300, 800, 350)
 
         self.main_layout = QVBoxLayout(self)
         self.title_label = QLabel()
@@ -849,7 +933,12 @@ class WeekendDatePickerApp(QWidget):
         self.title_label.setAlignment(Qt.AlignCenter)
         self.main_layout.addWidget(self.title_label)
 
-        # 这个界面一次只显示一个任务，不需要滚动区域
+        # --- 新增：富途搜索按钮 ---
+        self.futu_button = QPushButton()
+        self.futu_button.setStyleSheet("background-color: #ff9900; color: white; font-weight: bold; padding: 8px; font-size: 14px; border-radius: 4px;")
+        self.futu_button.setCursor(Qt.PointingHandCursor)
+        self.main_layout.addWidget(self.futu_button, alignment=Qt.AlignCenter)
+
         self.task_frame = QFrame()
         self.task_layout = QVBoxLayout(self.task_frame)
         self.main_layout.addWidget(self.task_frame)
@@ -885,6 +974,17 @@ class WeekendDatePickerApp(QWidget):
 
         self.clear_layout(self.task_layout)
         line_content, filename, lineno = self.tasks[self.current_task_index]
+        symbol = parse_symbol(line_content)
+
+        # --- 绑定富途搜索按钮 ---
+        if symbol:
+            self.futu_button.setText(f"🔍 在富途牛牛中查看 {symbol}")
+            self.futu_button.show()
+            try: self.futu_button.clicked.disconnect()
+            except TypeError: pass
+            self.futu_button.clicked.connect(lambda checked, s=symbol: search_in_futu(s))
+        else:
+            self.futu_button.hide()
         
         self.title_label.setText(f"修正周末日期 ({self.current_task_index + 1}/{len(self.tasks)})")
 
