@@ -556,26 +556,32 @@ class DuplicateResolverApp(QWidget):
             item_display.setFixedHeight(50)
             item_display.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             
-            # 添加确认复选框
-            from PyQt5.QtWidgets import QCheckBox
-            confirm_checkbox = QCheckBox('确认')
-            confirm_checkbox.setToolTip('勾选后，下次遇到相同 symbol 冲突时将自动使用此选择')
-            
+            # 普通选择按钮（不保存确认）
             select_button = QPushButton('选择')
-            select_button.setFixedWidth(100)
+            select_button.setFixedWidth(80)
             select_button.clicked.connect(
-                lambda checked, item_to_process=item, checkbox=confirm_checkbox: 
-                self.resolve_selection(item_to_process, checkbox.isChecked())
+                lambda checked, item_to_process=item: 
+                self.resolve_selection(item_to_process, False)
+            )
+
+            # 确定选择按钮（保存确认，醒目样式）
+            confirm_select_button = QPushButton('确定选择')
+            confirm_select_button.setFixedWidth(100)
+            confirm_select_button.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold; border-radius: 4px; padding: 5px;")
+            confirm_select_button.setToolTip('选择并记住此操作，下次自动处理')
+            confirm_select_button.clicked.connect(
+                lambda checked, item_to_process=item: 
+                self.resolve_selection(item_to_process, True)
             )
 
             line_layout.addWidget(item_display)
-            line_layout.addWidget(confirm_checkbox)
             line_layout.addWidget(select_button)
+            line_layout.addWidget(confirm_select_button)
             
             self.scroll_layout.addWidget(line_frame)
 
     def resolve_selection(self, selected_item, save_confirm):
-        """GUI事件：当用户点击'选择'按钮时调用"""
+        """GUI事件：当用户点击'选择'或'确定选择'按钮时调用"""
         self._perform_resolution(selected_item, save_confirm=save_confirm)
         self.next_duplicate()
 
@@ -739,30 +745,38 @@ class BackupDupResolverApp(QWidget):
             item_display.setFixedHeight(50)
             item_display.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             
-            from PyQt5.QtWidgets import QCheckBox
-            confirm_checkbox = QCheckBox('确认')
-            confirm_checkbox.setToolTip('勾选后，下次遇到相同 symbol 冲突时将自动使用此选择')
-            
+            # 普通选择按钮（不保存确认）
             select_button = QPushButton('选择并迁移')
-            select_button.setFixedWidth(120)
+            select_button.setFixedWidth(100)
+            
+            # 确定选择按钮（保存确认，醒目样式）
+            confirm_select_button = QPushButton('确定选择并迁移')
+            confirm_select_button.setFixedWidth(130)
+            confirm_select_button.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold; border-radius: 4px; padding: 5px;")
+            confirm_select_button.setToolTip('选择并记住此操作，下次自动处理')
             
             if '#BACKUP_DUP' in line_content:
                 select_button.clicked.connect(
-                    lambda checked, item_to_process=item, all_occs=occurrences, checkbox=confirm_checkbox: 
-                    self.resolve_selection(item_to_process, all_occs, checkbox.isChecked())
+                    lambda checked, item_to_process=item, all_occs=occurrences: 
+                    self.resolve_selection(item_to_process, all_occs, False)
+                )
+                confirm_select_button.clicked.connect(
+                    lambda checked, item_to_process=item, all_occs=occurrences: 
+                    self.resolve_selection(item_to_process, all_occs, True)
                 )
             else:
                 select_button.setEnabled(False)
-                confirm_checkbox.setEnabled(False)
+                confirm_select_button.setEnabled(False)
                 select_button.setToolTip("只有带 #BACKUP_DUP 标记的行才能被选择用于迁移。")
+                confirm_select_button.setToolTip("只有带 #BACKUP_DUP 标记的行才能被选择用于迁移。")
 
             line_layout.addWidget(item_display)
-            line_layout.addWidget(confirm_checkbox)
             line_layout.addWidget(select_button)
+            line_layout.addWidget(confirm_select_button)
             self.scroll_layout.addWidget(line_frame)
 
     def resolve_selection(self, selected_item, all_occurrences, save_confirm):
-        """当用户点击'选择并迁移'按钮时调用"""
+        """当用户点击'选择并迁移'或'确定选择并迁移'按钮时调用"""
         _, _, selected_line_content = selected_item
         symbol = parse_symbol(selected_line_content)
         

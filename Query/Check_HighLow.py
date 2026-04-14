@@ -2,6 +2,7 @@ import sys
 import json
 import os
 import sqlite3
+import re
 from collections import OrderedDict
 import subprocess
 
@@ -39,6 +40,8 @@ HIGH_LOW_5Y_PATH = os.path.join(BASE_CODING_DIR, "News", "backup", "HighLow.txt"
 VOLUME_HIGH_PATH = os.path.join(BASE_CODING_DIR, "News", "0.5Y_volume_high.txt")
 COMPARE_ETFS_PATH = os.path.join(BASE_CODING_DIR, "News", "CompareETFs.txt")
 COMPARE_STOCK_PATH = os.path.join(BASE_CODING_DIR, "News", "CompareStock.txt")
+# 新增：复盘历史数据路径
+EARNING_HISTORY_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Earning_History.json")
 
 class ClickableLabel(QLabel):
     clicked = pyqtSignal()
@@ -81,6 +84,70 @@ class SymbolManager:
 # ----------------------------------------------------------------------
 # 工具函数
 # ----------------------------------------------------------------------
+
+def clean_ticker(symbol):
+    """清洗 Symbol，去除中文后缀等，仅保留前面的字母和横杠"""
+    match = re.search(r"^([A-Za-z-]+)", symbol)
+    return match.group(1) if match else symbol
+
+def calculate_frequency_data(history_data):
+    """计算多组共振（次数统计）数据"""
+    excluded_groups = {"season", "no_season", "_Tag_Blacklist"}
+    support_level_groups = {"SupportLevel_Close", "SupportLevel_Over"}
+    source_groups = {
+        "Short", "Short_W", "Strategy12", "Strategy34", "OverSell_W",
+        "PE_Deep", "PE_Deeper", "PE_W", "PE_valid", "PE_invalid",
+        "PE_Volume", "PE_Volume_up", "PE_Hot", "PE_Volume_high"
+    }
+
+    symbol_groups = {}
+    
+    # 1. 遍历所有分组
+    for group, date_map in history_data.items():
+        if group in excluded_groups:
+            continue
+        if not date_map:
+            continue
+            
+        # 2. 获取该分组的最新日期
+        sorted_dates = sorted(date_map.keys(), reverse=True)
+        latest_date = sorted_dates[0]
+        symbols = date_map[latest_date]
+        
+        # 3. 清洗 Symbol 并去重
+        clean_symbols = set(clean_ticker(s).upper() for s in symbols)
+        
+        # 4. 记录该 Symbol 所在的分组
+        for sym in clean_symbols:
+            if sym not in symbol_groups:
+                symbol_groups[sym] = set()
+            symbol_groups[sym].add(group)
+            
+    # 5. 按次数分组，并过滤掉无意义的 2 次共振
+    count_to_symbols = {}
+    for sym, groups in symbol_groups.items():
+        count = len(groups)
+        if count >= 2:
+            # 特殊过滤逻辑：如果共振次数恰好为 2
+            if count == 2:
+                has_support = not groups.isdisjoint(support_level_groups)
+                has_source = not groups.isdisjoint(source_groups)
+                # 如果这 2 个分组刚好是一个衍生组配一个源头组，则毫无意义，直接跳过
+                if has_support and has_source:
+                    continue
+            
+            if count not in count_to_symbols:
+                count_to_symbols[count] = []
+            count_to_symbols[count].append(sym)
+            
+    # 6. 转换为数组，按次数降序排列，内部 Symbol 按字母排序
+    result = []
+    for count in sorted(count_to_symbols.keys(), reverse=True):
+        result.append({
+            'count': count,
+            'symbols': sorted(count_to_symbols[count])
+        })
+    return result
 
 def execute_external_script(script_type, keyword):
     script_configs = {
@@ -223,7 +290,7 @@ def fetch_mnspp_data_from_db(db_path, symbol):
 # ----------------------------------------------------------------------
 
 class HighLowWindow(QMainWindow):
-    def __init__(self, high_low_data, keyword_colors, sector_data, compare_data, json_data, high_low_5y_data, volume_high_data, etf_data, stock_data):
+    def __init__(self, high_low_data, keyword_colors, sector_data, compare_data, json_data, high_low_5y_data, volume_high_data, etf_data, stock_data, earning_history_data):
         super().__init__()
         self.high_low_data = high_low_data
         self.keyword_colors = keyword_colors
@@ -234,6 +301,11 @@ class HighLowWindow(QMainWindow):
         self.volume_high_data = volume_high_data
         self.etf_data = etf_data
         self.stock_data = stock_data
+        self.earning_history_data = earning_history_data
+        
+        # 计算多组共振数据
+        self.resonance_data = calculate_frequency_data(self.earning_history_data)
+        self.list_resonance = [sym for item in self.resonance_data for sym in item['symbols']]
         
         # 准备列表
         self.list_high_low = []
@@ -252,7 +324,8 @@ class HighLowWindow(QMainWindow):
         self.stock_losers = [i['symbol'] for i in self.stock_data[-24:][::-1]]
         self.list_stock = self.stock_gainers + self.stock_losers
 
-        self.symbol_manager = SymbolManager(self.list_volume)
+        # 默认初始化为第一个 Tab 的数据
+        self.symbol_manager = SymbolManager(self.list_resonance)
         self.init_ui()
 
     def init_ui(self):
@@ -262,6 +335,11 @@ class HighLowWindow(QMainWindow):
         
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
+
+        # Tab 0: 多组共振 (新增为第一个 Tab)
+        self.tab_resonance = QWidget()
+        self._init_resonance_tab(self.tab_resonance)
+        self.tabs.addTab(self.tab_resonance, "多组共振")
 
         # Tab 1: Volume
         self.tab_volume = QWidget()
@@ -290,13 +368,39 @@ class HighLowWindow(QMainWindow):
         self.apply_stylesheet()
 
     def on_tab_changed(self, index):
-        mapping = {0: self.list_volume, 1: self.list_etf, 2: self.list_stock, 3: self.list_high_low}
+        mapping = {
+            0: self.list_resonance,
+            1: self.list_volume, 
+            2: self.list_etf, 
+            3: self.list_stock, 
+            4: self.list_high_low
+        }
         self.symbol_manager.update_symbols(mapping.get(index, []))
 
     def switch_tab(self): self.tabs.setCurrentIndex((self.tabs.currentIndex() + 1) % self.tabs.count())
     def switch_tab_reverse(self): self.tabs.setCurrentIndex((self.tabs.currentIndex() - 1 + self.tabs.count()) % self.tabs.count())
 
-    # --- Tab 初始化方法 (逻辑同前，仅调用 create_symbol_widget 传参不同) ---
+    # --- Tab 初始化方法 ---
+    def _init_resonance_tab(self, parent):
+        layout = QVBoxLayout(parent)
+        scroll = QScrollArea(); scroll.setWidgetResizable(True); layout.addWidget(scroll)
+        content = QWidget(); scroll.setWidget(content); main_lay = QHBoxLayout(content)
+        
+        for item in self.resonance_data:
+            count = item['count']
+            symbols = item['symbols']
+            col_lay = QHBoxLayout()
+            title = f"共振 {count} 个分组 ({len(symbols)}只)"
+            main_lay.addWidget(self._create_section_container(title, col_lay))
+            
+            for chunk in [symbols[i:i + MAX_ITEMS_PER_COLUMN] for i in range(0, len(symbols), MAX_ITEMS_PER_COLUMN)]:
+                col = QVBoxLayout(); col.setAlignment(Qt.AlignmentFlag.AlignTop)
+                for sym in chunk:
+                    col.addWidget(self.create_symbol_widget(sym))
+                col.addStretch(1); col_lay.addLayout(col)
+                
+            self._add_separator(main_lay)
+
     def _init_high_low_tab(self, parent):
         layout = QVBoxLayout(parent)
         scroll = QScrollArea(); scroll.setWidgetResizable(True); layout.addWidget(scroll)
@@ -556,16 +660,23 @@ class HighLowWindow(QMainWindow):
     def get_symbol_group_info(self, symbol):
         current_tab = self.tabs.currentIndex()
 
-        # Tab 0: Volume High
+        # Tab 0: 多组共振
         if current_tab == 0:
+            for item in self.resonance_data:
+                if symbol in item['symbols']:
+                    idx = item['symbols'].index(symbol)
+                    return f"共振{item['count']}组 ({idx + 1}/{len(item['symbols'])})"
+
+        # Tab 1: Volume High
+        elif current_tab == 1:
             for group_name, items in self.volume_high_data.items():
                 symbols_in_group = [item['symbol'] for item in items]
                 if symbol in symbols_in_group:
                     idx = symbols_in_group.index(symbol)
                     return f"{group_name} ({idx + 1}/{len(symbols_in_group)})"
 
-        # Tab 1: ETFs
-        elif current_tab == 1:
+        # Tab 2: ETFs
+        elif current_tab == 2:
             if symbol in self.etf_gainers:
                 idx = self.etf_gainers.index(symbol)
                 return f"Top Gainers ({idx + 1}/{len(self.etf_gainers)})"
@@ -573,8 +684,8 @@ class HighLowWindow(QMainWindow):
                 idx = self.etf_losers.index(symbol)
                 return f"Top Losers ({idx + 1}/{len(self.etf_losers)})"
 
-        # Tab 2: Stocks
-        elif current_tab == 2:
+        # Tab 3: Stocks
+        elif current_tab == 3:
             if symbol in self.stock_gainers:
                 idx = self.stock_gainers.index(symbol)
                 return f"Top Gainers ({idx + 1}/{len(self.stock_gainers)})"
@@ -598,7 +709,6 @@ class HighLowWindow(QMainWindow):
         
         # --- 新增：获取财务数据 ---
         shares_val, marketcap, pe, pb = fetch_mnspp_data_from_db(DB_PATH, symbol)
-        
         sector = next((s for s, names in self.sector_data.items() if symbol in names), None)
         
         try:
@@ -656,8 +766,12 @@ if __name__ == '__main__':
         vol = parse_volume_high_file(VOLUME_HIGH_PATH)
         etf = parse_etf_file(COMPARE_ETFS_PATH)
         stk = parse_stock_file(COMPARE_STOCK_PATH)
+        
+        # 新增：加载复盘历史数据
+        earn_hist = load_json(EARNING_HISTORY_PATH)
+        
         app = QApplication(sys.argv)
-        win = HighLowWindow(hl, colors, sects, comp, desc, hl5y, vol, etf, stk)
+        win = HighLowWindow(hl, colors, sects, comp, desc, hl5y, vol, etf, stk, earn_hist)
         win.show()
         sys.exit(app.exec())
     except Exception as e:

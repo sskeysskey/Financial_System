@@ -195,8 +195,8 @@
         "COR",
         "TAK",
         "BDX",
-        "ZTS",
         "CAH",
+        "ZTS",
         "ARGX"
     ],
     "Industrials": [
@@ -240,7 +240,8 @@
         "FIX",
         "AME",
         "FERG",
-        "CARR"
+        "CARR",
+        "BE"
     ],
     "Real_Estate": [
         "PLD",
@@ -309,7 +310,9 @@
         "ASX",
         "COHR",
         "NOK",
-        "NXPI"
+        "NXPI",
+        "CRWV",
+        "GRMN"
     ],
     "Utilities": [
         "NEE",
@@ -320,7 +323,6 @@
         "AEP",
         "SRE",
         "D",
-        "EXC",
         "VST",
         "XEL"
     ]

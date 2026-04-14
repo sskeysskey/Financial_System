@@ -79,6 +79,12 @@
     "PE_Volume_backup": {
         "BCS": ""
     },
+    "PE_Volume_high": {
+        "BCS": ""
+    },
+    "PE_Volume_high_backup": {
+        "BCS": ""
+    },
     "PE_Volume_up": {
         "BCS": ""
     },
@@ -86,6 +92,24 @@
         "BCS": ""
     },
     "Short_W": {
+        "LTM": ""
+    },
+    "PE_Hot": {
+        "LTM": ""
+    },
+    "PE_Hot_backup": {
+        "LTM": ""
+    },
+    "SupportLevel_Close": {
+        "LTM": ""
+    },
+    "SupportLevel_Over": {
+        "LTM": ""
+    },
+    "SupportLevel_Close_backup": {
+        "LTM": ""
+    },
+    "SupportLevel_Over_backup": {
         "LTM": ""
     },
     "Strategy12": {

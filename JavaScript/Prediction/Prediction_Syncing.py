@@ -9,7 +9,7 @@ import hashlib
 USER_HOME = os.path.expanduser("~")
 
 # --- 新增：随机遮蔽开关 ---
-ENABLE_RANDOM_HIDE = False  # 设置为 False 即可关闭随机遮蔽功能
+ENABLE_RANDOM_HIDE = True  # 设置为 False 即可关闭随机遮蔽功能
 
 # --- Prediction 相关的路径配置 ---
 PREDICTION_SOURCE_DIR = os.path.join(USER_HOME, 'Coding/Database')

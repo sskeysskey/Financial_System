@@ -39,7 +39,21 @@
             "WRB"
         ]
     },
-    "_Tag_Blacklist": {
+    "SupportLevel_Close": {
+        "2026-02-06": [
+            "ACN",
+            "ADBE",
+            "ADSK",
+            "APP",
+            "BSY",
+            "CHKP",
+            "CIFR",
+            "COIN",
+            "COMP",
+            "CORZ"
+        ]
+    },
+    "SupportLevel_Over": {
         "2026-02-06": [
             "ACN",
             "ADBE",

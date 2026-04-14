@@ -243,6 +243,16 @@ def search_history(symbol):
                             if is_chaodi and category in ["PE_Volume_high", "PE_W"]:
                                 overlap_marker += f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;' title='同一天触发 PE_Volume_high(抄底) 和 PE_W'>[★多重触发:抄底+W]</span>"
 
+                        # =======================================================
+                        # [新增规则]: A分组群 与 支撑位(B分组群) 同日触发
+                        # =======================================================
+                        group_a = {"PE_Volume", "PE_Volume_up", "PE_Volume_high", "PE_W", "PE_Deeper", "PE_Deep", "OverSell_W", "PE_Hot", "Short", "Short_W"}
+                        if category in group_a:
+                            if "SupportLevel_Close" in date_categories[d_str]:
+                                overlap_marker += f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;'>[接近支撑位]</span>"
+                            if "SupportLevel_Over" in date_categories[d_str]:
+                                overlap_marker += f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;'>[超过支撑位]</span>"
+
                         # 2. 跨日接力触发检测 (pe_w 与 pe_hot / PE_Volume)
                         try:
                             date_idx = sorted_trading_dates.index(d_str)

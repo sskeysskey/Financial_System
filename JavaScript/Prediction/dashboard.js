@@ -51,6 +51,8 @@ function isSubpageOptionsHealthy(subOptions, mainOptions) {
         var val = (subOptions[i].value || '').trim();
         // 正常值形如 "52%"、"48¢"、"$0.52"、"<1%"，不会超过 20 字符
         if (val.length > 20) return false;
+        // ★ 正常的 value（价格/概率）必然包含数字，如果没有数字则视为异常
+        if (!/\d/.test(val)) return false;
         // 去掉格式字符后，纯数字位数不应超过 8 位（亿级已经很夸张了）
         var digits = val.replace(/[^0-9]/g, '');
         if (digits.length > 8) return false;
@@ -1020,14 +1022,35 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                     log('[W' + workerId + '] ⚠️ 子页面选项异常(子:' + sub.options.length +
                         '条, 主:' + card.options.length + '条), 回退到主页面数据', 'warn');
                 }
+
+                // ★ 新增：校验所有 value 字段，如果发现不包含数字的异常数据则丢弃整条记录
+                var hasInvalidValue = false;
                 opts.forEach(function (o, j) {
                     final['option' + (j + 1)] = o.name;
                     final['value' + (j + 1)] = o.value;
                     if (o.change) final['change' + (j + 1)] = o.change;
+
+                    // 如果 value 字段不包含任何数字，说明抓取到了 "Method of Victory" 等异常文本
+                    if (!/\d/.test(o.value || '')) {
+                        hasInvalidValue = true;
+                    }
                 });
 
-                results[idx] = final;
-                log('[W' + workerId + '] ✅ "' + short + '" (' + source + '页' + opts.length + 'opts) type=' + (sub.type || '(空)') + ' subtype=' + (sub.subtype || '(空)'), 'info');
+                if (hasInvalidValue) {
+                    log('[W' + workerId + '] 🗑️ "' + short + '" 包含异常的 value 数据，已放弃写入该项目', 'warn');
+                    results[idx] = null;
+
+                    // ★ 新增：将异常 value 的项目也推入 failures 数组中
+                    config.failures.push({
+                        name: card.name,
+                        url: 'https://kalshi.com' + card.subUrl,
+                        volume: card.volume,
+                        debugInfo: ['Invalid value detected (no digits in value field)']
+                    });
+                } else {
+                    results[idx] = final;
+                    log('[W' + workerId + '] ✅ "' + short + '" (' + source + '页' + opts.length + 'opts) type=' + (sub.type || '(空)') + ' subtype=' + (sub.subtype || '(空)'), 'info');
+                }
             }
 
         } catch (err) {
@@ -1257,7 +1280,7 @@ async function startSubpageScraping() {
         }
     } catch (e) { }
 
-    // 最终保存
+    // 过滤掉 null 的结果（被丢弃的异常数据）
     var finalResults = results.filter(function (r) { return r; });
     var elapsed = Math.round((Date.now() - scrapeStartTime) / 1000);
 
@@ -1271,12 +1294,12 @@ async function startSubpageScraping() {
     saveJsonFile(finalResults, outputFilename);
     log('💾 最终保存: ' + outputFilename + ' (' + finalResults.length + '条)', 'data');
 
-    // ★ 新增：保存失败记录到 kalshi_failure.txt
+    // ★ 修改：调整失败记录的文案，使其涵盖分类缺失和异常数据
     if (failures.length > 0) {
         log('', 'dim');
-        log('⚠️ 共 ' + failures.length + ' 个项目在3次尝试后仍未获取到分类:', 'warn');
+        log('⚠️ 共 ' + failures.length + ' 个项目抓取异常(分类缺失或数据异常):', 'warn');
         var failureLines = [];
-        failureLines.push('Kalshi Scraper - 分类抓取失败记录');
+        failureLines.push('Kalshi Scraper - 抓取异常(失败)记录');
         failureLines.push('生成时间: ' + new Date().toLocaleString());
         failureLines.push('共 ' + failures.length + ' 个项目');
         failureLines.push('');
@@ -1294,7 +1317,7 @@ async function startSubpageScraping() {
         failureLines.push('');
         failureLines.push('========================================');
         failureLines.push('请将上述 URL 在浏览器中打开，右键「检查」查看页面结构，');
-        failureLines.push('特别关注分类链接的 href 是否包含 /category/ 或 /sports/');
+        failureLines.push('特别关注分类链接的 href 是否包含 /category/ 或 /sports/，以及选项 value 是否包含数字。');
 
         saveTextFile(failureLines.join('\n'), 'kalshi_failure.txt');
         log('📄 失败记录已保存到 kalshi_failure.txt', 'warn');
@@ -1322,7 +1345,7 @@ async function startSubpageScraping() {
     var statusMsg = '✅ 完成! ' + finalResults.length + ' 条, 耗时 ' + elapsed + 's, 平均 ' +
         (finalResults.length > 0 ? (elapsed / finalResults.length).toFixed(1) : '0') + 's/条 → ' + outputFilename;
     if (failures.length > 0) {
-        statusMsg += '  ⚠️ ' + failures.length + '个分类缺失(见kalshi_failure.txt)';
+        statusMsg += '  ⚠️ ' + failures.length + '个项目异常(见kalshi_failure.txt)';
     }
     setStatus(statusMsg, 'success');
 
