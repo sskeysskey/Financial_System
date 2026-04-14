@@ -1,6 +1,7 @@
 import json
 import sqlite3
 import os
+import re
 import datetime
 
 USER_HOME = os.path.expanduser("~")
@@ -11,11 +12,11 @@ BASE_PATH = USER_HOME
 
 # ================= 配置区域 =================
 # 如果为空，则运行"今天"模式；如果填入日期（如 "2024-11-03"），则运行回测模式
-SYMBOL_TO_TRACE = "" 
-TARGET_DATE = "" 
+# SYMBOL_TO_TRACE = "" 
+# TARGET_DATE = "" 
 
-# SYMBOL_TO_TRACE = "CAR"
-# TARGET_DATE = "2026-03-20"
+SYMBOL_TO_TRACE = "CM"
+TARGET_DATE = "2026-03-30"
 
 # 3. 日志路径
 LOG_FILE_PATH = os.path.join(BASE_PATH, "Downloads", "PE_Volume_trace_log.txt")
@@ -77,24 +78,30 @@ CONFIG = {
     "ETF_COND_LOW_DROP_THRESHOLD": 0.06,           # 距最高点跌幅
     "ETF_COND_LOW_TURNOVER_MONTHS": 3,             # 成交额回溯3个月
     "ETF_COND_LOW_TURNOVER_RANK_THRESHOLD": 2,     # [新增] 成交额排名前 N 名 (前2名)
+
+    # ========== 策略6 (PE_Hot 白名单/超大市值) 参数 ==========
+    "PE_HOT_MIN_MARKET_CAP": 150000000000,         # 超大市值门槛 (默认 1500亿)
 }
 
 # --- 2. 辅助与文件操作模块 ---
 def clean_symbol(symbol_with_suffix):
     """
-    从带后缀的 symbol 中提取纯净的 symbol
-    例如: "BLK黑听" -> "BLK", "ALGM甲抄底" -> "ALGM"
+    更强大的清洗函数：
+    1. 移除所有非字母字符 (保留字母)
+    2. 如果有数字，通常股票代码不含数字，可以根据需要选择移除或保留
     """
     if not symbol_with_suffix:
         return ""
     
-    # 定义所有可能的后缀字符
-    suffix_chars = set("黑听追嗨甲乙丙丁抄底")
+    # 策略：只保留字母。如果你的股票代码包含数字（如某些ETF或特定代码），请调整正则表达式
+    # 这里的逻辑是：从字符串中提取出第一个连续的字母序列
+    # 例如 "C9热" -> "C", "META15" -> "META"
+    match = re.match(r'([A-Za-z]+)', symbol_with_suffix)
+    if match:
+        return match.group(1).upper()
     
-    # 从右往左移除后缀字符
-    clean = symbol_with_suffix.rstrip(''.join(suffix_chars))
-    
-    return clean
+    # 如果没有匹配到字母（极其罕见），则返回原字符串
+    return symbol_with_suffix
 
 def load_tag_settings(json_path):
     try:
@@ -560,7 +567,9 @@ def check_pe_volume_retention(db_path, history_json_path, panel_json_path, curre
         prev_symbols_raw = hist_pe_vol[prev_date]
         # *** 关键修改：清洗 symbol ***
         prev_symbols = set([clean_symbol(s) for s in prev_symbols_raw])
-        log_detail(f"    -> 找到上一期 ({prev_date}) PE_Volume 记录: {len(prev_symbols)} 个")
+        # 将集合转换为排序后的列表，方便阅读
+        sorted_prev_symbols = sorted(list(prev_symbols))
+        log_detail(f"    -> 找到上一期 ({prev_date}) PE_Volume 记录: {len(prev_symbols)} 个: {sorted_prev_symbols}")
         
     except Exception as e:
         log_detail(f"    x 读取历史文件失败: {e}")
@@ -1537,12 +1546,17 @@ def check_turnover_rank(cursor, sector_name, symbol, latest_date_str, latest_tur
 def process_pe_hot(db_path, sector_map, target_date_override, panel_json_path, exclude_symbols, whitelist_symbols, log_detail):
     """
     检索 sectors_panel 里的特定分组，如果发现白名单中的 symbol 在这些分组里，
-    或者该 symbol 的市值 >= 4000亿，
+    或者该 symbol 的市值 >= 配置门槛，
     且不在 exclude_symbols (PE_Volume等) 中，并且最新成交额 >= 2亿，
     【新增】且过去10天内的最低收盘价没有比最新收盘价低超过3%，则将其提取出来。
     返回: pe_hot_list (list), pe_hot_notes (dict)
     """
-    log_detail("\n========== 开始执行 策略: PE_Hot (白名单/超大市值检索 + 2亿成交额过滤 + 10天防暴涨过滤) ==========")
+    # [修改点] 读取配置中的市值门槛，默认值为 1500亿
+    min_mcap = CONFIG.get("PE_HOT_MIN_MARKET_CAP", 150000000000)
+    min_mcap_yi = min_mcap / 100000000  # 转换为“亿”用于日志显示
+    
+    log_detail(f"\n========== 开始执行 策略: PE_Hot (白名单/超大市值检索 + 2亿成交额过滤 + 10天防暴涨过滤) ==========")
+    log_detail(f"配置参数: 超大市值门槛 = {min_mcap_yi:.0f}亿")
     
     # === 修改区域：在这里添加你想要包含的所有深跌/回调池分组 ===
     target_groups = [
@@ -1565,13 +1579,14 @@ def process_pe_hot(db_path, sector_map, target_date_override, panel_json_path, e
     conn = sqlite3.connect(db_path, timeout=60.0)
     cursor = conn.cursor()
     
-    # ========== 查询市值 >= 4000亿的 symbol ==========
+    # ========== 查询市值 >= min_mcap 的 symbol ==========
     high_mcap_symbols = set()
     try:
-        cursor.execute("SELECT symbol FROM MNSPP WHERE marketcap >= 400000000000")
+        # [修改点] 使用参数化查询替代硬编码
+        cursor.execute("SELECT symbol FROM MNSPP WHERE marketcap >= ?", (min_mcap,))
         rows = cursor.fetchall()
         high_mcap_symbols = {r[0] for r in rows}
-        log_detail(f"从 MNSPP 表成功获取 {len(high_mcap_symbols)} 个市值 >= 4000亿 的 Symbol。")
+        log_detail(f"从 MNSPP 表成功获取 {len(high_mcap_symbols)} 个市值 >= {min_mcap_yi:.0f}亿 的 Symbol。")
     except Exception as e:
         log_detail(f"警告: 无法读取 MNSPP 表的市值数据: {e}")
     # =======================================================
@@ -1584,7 +1599,7 @@ def process_pe_hot(db_path, sector_map, target_date_override, panel_json_path, e
             # 检查分组是否存在，避免 key error
             if group in panel_data and isinstance(panel_data[group], dict):
                 for sym, note in panel_data[group].items():
-                    # 1. 检查是否在动态生成的白名单中，或者市值 >= 4000亿
+                    # 1. 检查是否在动态生成的白名单中，或者市值 >= min_mcap
                     is_whitelist = sym in whitelist_symbols
                     is_high_mcap = sym in high_mcap_symbols
                     
