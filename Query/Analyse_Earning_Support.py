@@ -145,8 +145,8 @@ for symbol in sorted(symbols):
         support_dt = datetime.strptime(support_date, "%Y-%m-%d")
         days_diff = (latest_dt - support_dt).days
         
-        if days_diff < 10:
-            print(f"  ⚠️ {symbol}: 支撑点日期({support_date})距最新日期({latest_date})仅 {days_diff} 天，不足10天，视为无效，跳过")
+        if days_diff < 7:
+            print(f"  ⚠️ {symbol}: 支撑点日期({support_date})距最新日期({latest_date})仅 {days_diff} 天，不足7天，视为无效，跳过")
             continue
 
         # 6. 比较最新收盘价与支撑位

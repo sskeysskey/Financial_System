@@ -448,7 +448,8 @@ function injectedClickMore() {
 
 function injectedScrapeSubpage() {
     var d = [];
-    var result = { type: '', subtype: '', options: [] };
+    // ★ 新增 usedFallbackStrategy 字段，用于标记是否走到了全文档检索兜底
+    var result = { type: '', subtype: '', options: [], usedFallbackStrategy: false };
 
     // ★ 从面包屑导航中抓取 type 和 subtype
     try {
@@ -625,8 +626,36 @@ function injectedScrapeSubpage() {
             }
         }
 
+        // ════════════════════════════════════════════════
+        // ★ Strategy 1.5: 提取 h1 附近的非链接纯文本分类 (如 span.typ-body-x20)
+        // 专门解决像 "World" 这样只放在 span 里而不是 a 标签里的分类
+        // 在所有链接策略失败后、全文档搜索前执行
+        // ════════════════════════════════════════════════
+        if (h1 && categories.length === 0) {
+            var h1Parent = h1.parentElement;
+            if (h1Parent) {
+                var spans = h1Parent.querySelectorAll('span[class*="typ-body-x20"]');
+                for (var i = 0; i < spans.length; i++) {
+                    if (!h1.contains(spans[i])) {
+                        var t = spans[i].textContent.trim().replace(/\s+/g, ' ');
+                        if (t && t !== '•' && t !== '·' && !t.toUpperCase().includes('REG TIME')) {
+                            if (categories.indexOf(t) === -1) {
+                                categories.push(t);
+                            }
+                        }
+                    }
+                }
+                if (categories.length > 0) {
+                    d.push('S1.5: span.typ-body-x20 near h1 (' + categories.length + '): ' + categories.join(' > '));
+                }
+            }
+        }
+
         // Strategy 2: 全文档搜索（排除主导航和 footer）
         if (categories.length === 0) {
+            // ★ 新增：如果运行到了这里，说明前面的精准策略全失败了，标记为使用了兜底策略
+            result.usedFallbackStrategy = true;
+
             d.push('S2: document-wide search...');
             var allAs = document.querySelectorAll('a');
             for (var ai = 0; ai < allAs.length; ai++) {
@@ -986,7 +1015,7 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                     func: injectedScrapeSubpage
                 });
                 sub = (scrapeR && scrapeR[0] && scrapeR[0].result) ||
-                    { type: '', subtype: '', options: [], debug: [] };
+                    { type: '', subtype: '', options: [], debug: [], usedFallbackStrategy: false };
 
                 // ★ 输出子页面分类检测的调试信息
                 if (sub.debug && sub.debug.length > 0) {
@@ -1080,15 +1109,26 @@ async function workerLoop(workerId, tabId, queue, results, config) {
         }
 
         // ★ 核心修复：统一在这里做最终检查！
-        // 无论是因为超时、报错、还是抓取到了但分类为空，只要最终结果里 type 和 subtype 都是空，就记录到 txt
+        // 检查是否分类为空，或者是否触发了 S2/S3 全文档检索兜底
         var finalData = results[idx];
-        if (finalData && !finalData.type && !finalData.subtype) {
-            config.failures.push({
-                name: card.name,
-                url: 'https://kalshi.com' + card.subUrl,
-                volume: card.volume,
-                debugInfo: (sub && sub.debug && sub.debug.length > 0) ? sub.debug : ['Page load failed, timeout, or exception thrown']
-            });
+        var emptyCategory = finalData && !finalData.type && !finalData.subtype;
+        var usedFallback = sub && sub.usedFallbackStrategy;
+
+        if (emptyCategory || usedFallback) {
+            // 检查是否在上面因为 invalid value 已经被加入过 failures 了，避免重复记录
+            var alreadyFailed = config.failures.some(function (f) { return f.url === 'https://kalshi.com' + card.subUrl; });
+
+            if (!alreadyFailed) {
+                var reason = emptyCategory ? 'Page load failed, timeout, or exception thrown' : 'Warning: Used S2/S3 document-wide fallback strategy';
+                var debugArr = (sub && sub.debug && sub.debug.length > 0) ? sub.debug : [];
+
+                config.failures.push({
+                    name: card.name,
+                    url: 'https://kalshi.com' + card.subUrl,
+                    volume: card.volume,
+                    debugInfo: [reason].concat(debugArr)
+                });
+            }
         }
 
         config.onProgress();
@@ -1297,7 +1337,7 @@ async function startSubpageScraping() {
     // ★ 修改：调整失败记录的文案，使其涵盖分类缺失和异常数据
     if (failures.length > 0) {
         log('', 'dim');
-        log('⚠️ 共 ' + failures.length + ' 个项目抓取异常(分类缺失或数据异常):', 'warn');
+        log('⚠️ 共 ' + failures.length + ' 个项目抓取异常(分类缺失/数据异常/触发兜底):', 'warn');
         var failureLines = [];
         failureLines.push('Kalshi Scraper - 抓取异常(失败)记录');
         failureLines.push('生成时间: ' + new Date().toLocaleString());
@@ -1318,9 +1358,10 @@ async function startSubpageScraping() {
         failureLines.push('========================================');
         failureLines.push('请将上述 URL 在浏览器中打开，右键「检查」查看页面结构，');
         failureLines.push('特别关注分类链接的 href 是否包含 /category/ 或 /sports/，以及选项 value 是否包含数字。');
+        failureLines.push('注：如果 Debug 中包含 "Warning: Used S2/S3..."，说明常规分类提取失败，触发了全文档检索兜底，请人工核对分类是否准确。');
 
         saveTextFile(failureLines.join('\n'), 'kalshi_failure.txt');
-        log('📄 失败记录已保存到 kalshi_failure.txt', 'warn');
+        log('📄 异常记录已保存到 kalshi_failure.txt', 'warn');
     } else {
         log('🎉 所有项目的分类均抓取成功，无失败记录!', 'info');
     }

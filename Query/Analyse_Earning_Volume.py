@@ -296,9 +296,9 @@ def check_is_earnings_day(cursor, symbol, target_date_str):
         # 如果表不存在或查询出错，默认不过滤
         return False
 
-# ========== 新增：动态生成白名单 (过去一年涨幅 > 150%) ==========
+# ========== 新增：动态生成白名单 (过去一年涨幅 > 100%) ==========
 def generate_whitelist_symbols(db_path, sectors_json_path, target_date_override, log_detail):
-    log_detail("\n========== 开始动态生成白名单 (过去一年涨幅 > 150%) ==========")
+    log_detail("\n========== 开始动态生成白名单 (过去一年涨幅 > 100%) ==========")
     
     if not os.path.exists(sectors_json_path):
         log_detail(f"错误: {sectors_json_path} 不存在，无法生成白名单。")
@@ -337,7 +337,7 @@ def generate_whitelist_symbols(db_path, sectors_json_path, target_date_override,
                     latest_p, min_p = row
                     if min_p > 0:
                         growth = (latest_p - min_p) / min_p
-                        if growth > 1.5:
+                        if growth > 1.0:  # 原来是 1.5，现在改为 1.0 (即 100%)
                             final_symbols.append(symbol)
             except sqlite3.OperationalError:
                 continue
