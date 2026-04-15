@@ -15,8 +15,7 @@
         "VALE",
         "WPM",
         "CTVA",
-        "AU",
-        "FNV"
+        "AU"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -57,7 +56,8 @@
         "ORLY",
         "ROST",
         "CVNA",
-        "SE"
+        "SE",
+        "F"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -161,7 +161,8 @@
         "BAM",
         "NWG",
         "BRK-B",
-        "MRSH"
+        "MRSH",
+        "MET"
     ],
     "Healthcare": [
         "LLY",
@@ -323,7 +324,6 @@
         "AEP",
         "SRE",
         "D",
-        "VST",
-        "XEL"
+        "VST"
     ]
 }

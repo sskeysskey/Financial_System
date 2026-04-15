@@ -13,8 +13,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = ""
 TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "NOK"
-# TARGET_DATE = "2026-03-02"
+# SYMBOL_TO_TRACE = "GSAT"
+# TARGET_DATE = "2026-03-26"
 
 # 动态生成日志路径，不再写死用户名
 LOG_FILE_PATH = os.path.join(BASE_PATH, "Downloads", "No_Season_trace_log.txt")

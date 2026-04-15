@@ -99,6 +99,12 @@ def calculate_frequency_data(history_data):
         "PE_Deep", "PE_Deeper", "PE_W", "PE_valid", "PE_invalid",
         "PE_Volume", "PE_Volume_up", "PE_Hot", "PE_Volume_high"
     }
+    
+    # 新增：PE_Hot 的源头组
+    pe_hot_sources = {
+        "PE_Deep", "PE_Deeper", "PE_W", "OverSell_W", 
+        "PE_valid", "PE_invalid", "season"
+    }
 
     symbol_groups = {}
     
@@ -126,6 +132,14 @@ def calculate_frequency_data(history_data):
     # 5. 按次数分组，并过滤掉无意义的 2 次共振
     count_to_symbols = {}
     for sym, groups in symbol_groups.items():
+        
+        # --- 核心修改点：过滤 PE_Hot 与其源头组的重复共振 ---
+        if "PE_Hot" in groups:
+            # 如果存在 PE_Hot，则将其源头组从当前集合中剔除
+            # 这样 PE_Hot 和 PE_valid 一起出现时，PE_valid 会被剔除，只算 1 次 (PE_Hot)
+            # PE_Volume, PE_Hot, PE_invalid 一起出现时，PE_invalid 被剔除，剩下 PE_Volume 和 PE_Hot，算 2 次
+            groups = groups - pe_hot_sources
+            
         count = len(groups)
         if count >= 2:
             # 特殊过滤逻辑：如果共振次数恰好为 2

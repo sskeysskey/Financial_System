@@ -2,6 +2,7 @@ import json
 import sqlite3
 import logging
 import os
+import re
 from wcwidth import wcswidth
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -137,6 +138,19 @@ except Exception as e:
 # ==========================================
 # 5. 辅助函数
 # ==========================================
+def clean_symbol(symbol_with_suffix):
+    """
+    清洗函数：移除所有非字母字符 (保留字母)
+    用于处理从 Earning_History.json 等文件中读取的带有中文或数字后缀的 symbol。
+    """
+    if not symbol_with_suffix:
+        return ""
+    
+    match = re.match(r'([A-Za-z]+)', symbol_with_suffix)
+    if match:
+        return match.group(1).upper()
+    
+    return symbol_with_suffix
 
 def check_ma_breakout(cursor, sector, symbol, ma_period=200, target_date=None):
     """
