@@ -162,7 +162,9 @@
         "NWG",
         "BRK-B",
         "MRSH",
-        "MET"
+        "MET",
+        "COIN",
+        "NDAQ"
     ],
     "Healthcare": [
         "LLY",
@@ -196,7 +198,6 @@
         "COR",
         "TAK",
         "BDX",
-        "CAH",
         "ZTS",
         "ARGX"
     ],
@@ -241,7 +242,6 @@
         "FIX",
         "AME",
         "FERG",
-        "CARR",
         "BE"
     ],
     "Real_Estate": [
@@ -313,7 +313,8 @@
         "NOK",
         "NXPI",
         "CRWV",
-        "GRMN"
+        "GRMN",
+        "ADSK"
     ],
     "Utilities": [
         "NEE",

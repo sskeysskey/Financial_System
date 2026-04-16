@@ -2,7 +2,7 @@
 const POLYMARKET_CLICK_COUNT = 30;
 const BUTTON_CHECK_INTERVAL = 500;
 const MAX_WAIT_TIME = 30000;
-const DEFAULT_KALSHI_SCROLL_COUNT = 30; // ← 唯一需要改的地方
+const DEFAULT_KALSHI_SCROLL_COUNT = 3;
 
 // ============ 工具函数 ============
 

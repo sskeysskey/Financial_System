@@ -88,8 +88,9 @@ for symbol in sorted(symbols):
             date_ago = (latest_dt - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
 
             # 获取历史记录，按日期升序排列，方便获取“昨天”的日期
+            # 【修改点 1】：将 SELECT date, price 改为 SELECT date, low
             cursor.execute(
-                f'SELECT date, price FROM [{table}] WHERE name = ? AND date >= ? AND date < ? ORDER BY date ASC',
+                f'SELECT date, low FROM [{table}] WHERE name = ? AND date >= ? AND date < ? ORDER BY date ASC',
                 (symbol, date_ago, latest_date)
             )
             hist_rows = cursor.fetchall()
@@ -123,8 +124,8 @@ for symbol in sorted(symbols):
             
             # 如果没有符合条件的财报日，则回退到使用最低价
             # if support_price is None:
-            min_date, min_price = min(hist_rows, key=lambda x: x[1])
-            support_price = min_price
+            min_date, min_low = min(hist_rows, key=lambda x: x[1])
+            support_price = min_low
             support_date = min_date
             support_type = f"最低价支撑({support_date})"
 
@@ -155,14 +156,14 @@ for symbol in sorted(symbols):
         support_dt = datetime.strptime(support_date, "%Y-%m-%d")
         days_diff = (latest_dt - support_dt).days
         
-        if days_diff < 7:
-            print(f"  ⚠️ {symbol}: 支撑点日期({support_date})距最新日期({latest_date})仅 {days_diff} 天，不足7天，视为无效，跳过")
+        if days_diff < 8:
+            print(f"  ⚠️ {symbol}: 支撑点日期({support_date})距最新日期({latest_date})仅 {days_diff} 天，不足8天，视为无效，跳过")
             continue
 
         # 6. 比较最新最低价与支撑位
         if latest_low > support_price:
             diff_pct = (latest_low - support_price) / support_price * 100
-            if diff_pct <= 2.61:
+            if diff_pct <= 2.6:
                 support_close[symbol] = ""
                 earning_close[latest_date].append(symbol)
                 print(f"  ✅ {symbol}: SupportLevel_Close "

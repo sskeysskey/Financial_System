@@ -253,36 +253,47 @@ def search_history(symbol):
                             if "SupportLevel_Over" in date_categories[d_str]:
                                 overlap_marker += f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;'>[超过支撑位]</span>"
 
-                        # 2. 跨日接力触发检测 (pe_w 与 pe_hot / PE_Volume)
+                        # 2. 跨日接力触发检测 (pe_w 与 pe_hot / PE_Volume / SupportLevel)
                         try:
                             date_idx = sorted_trading_dates.index(d_str)
                             
                             if category == "PE_W":
-                                # 检查前一个交易日 (date_idx + 1) 是否在 PE_Hot 或 PE_Volume 中
+                                # 检查前一个交易日 (date_idx + 1)
                                 if date_idx + 1 < len(sorted_trading_dates):
                                     prev_date = sorted_trading_dates[date_idx + 1]
+                                    
+                                    # 原有规则：检查是否在 PE_Hot 或 PE_Volume 中
                                     prev_in_hot = prev_date in category_dates.get("PE_Hot", set())
                                     prev_in_vol = prev_date in category_dates.get("PE_Volume", set())
                                     
                                     if prev_in_hot and prev_in_vol:
                                         overlap_marker += f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;' title='前一交易日触发 PE_Hot 和 PE_Volume'>[★接力:hot+vol->w]</span>"
                                     elif prev_in_hot:
-                                        overlap_marker += f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;' title='前一交易日触发 PE_W'>[★接力:hot->w]</span>"
+                                        overlap_marker += f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;' title='前一交易日触发 PE_Hot'>[★接力:hot->w]</span>"
                                     elif prev_in_vol:
                                         overlap_marker += f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;' title='前一交易日触发 PE_Volume'>[★接力:vol->w]</span>"
+
+                                    # =======================================================
+                                    # [新增规则]: 今天在 PE_W，且昨天在 SupportLevel_Close 或 SupportLevel_Over
+                                    # =======================================================
+                                    prev_in_supp_close = prev_date in category_dates.get("SupportLevel_Close", set())
+                                    prev_in_supp_over = prev_date in category_dates.get("SupportLevel_Over", set())
+                                    
+                                    if prev_in_supp_close or prev_in_supp_over:
+                                        overlap_marker += f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;' title='前一交易日触及或跌破支撑位'>[★支撑位->W]</span>"
                             
                             elif category == "PE_Hot":
                                 # 检查后一个交易日 (date_idx - 1) 是否在 pe_w 中
                                 if date_idx - 1 >= 0:
                                     next_date = sorted_trading_dates[date_idx - 1]
-                                    if next_date in category_dates.get("pe_w", set()):
+                                    if next_date in category_dates.get("PE_W", set()):
                                         overlap_marker += f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;' title='下一交易日触发 PE_W'>[★接力:hot->w]</span>"
                                         
                             elif category == "PE_Volume":
                                 # 检查后一个交易日 (date_idx - 1) 是否在 pe_w 中
                                 if date_idx - 1 >= 0:
                                     next_date = sorted_trading_dates[date_idx - 1]
-                                    if next_date in category_dates.get("pe_w", set()):
+                                    if next_date in category_dates.get("PE_W", set()):
                                         overlap_marker += f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;' title='下一交易日触发 PE_W'>[★接力:vol->w]</span>"
                                         
                         except ValueError:

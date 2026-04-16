@@ -174,11 +174,11 @@
             <input type="checkbox" id="incrementalSaveToggle" checked>
             增量保存
         </label>
-        <!-- ★ 新增：并行度 -->
+        <!-- ★★ 反爬虫修复：默认并行度从 4 降为 2 -->
         <label>
             并行数:
-            <input type="number" id="concurrencyInput" value="4" min="1" max="8"
-                style="width:55px; padding:2px 4px; font-size:13px;" title="同时工作的标签页数（建议3-6）">
+            <input type="number" id="concurrencyInput" value="2" min="1" max="8"
+                style="width:55px; padding:2px 4px; font-size:13px;" title="同时工作的标签页数（建议1-3）">
         </label>
         <label>
             抓取范围:
