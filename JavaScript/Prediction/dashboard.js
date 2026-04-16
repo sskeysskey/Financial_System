@@ -757,6 +757,14 @@ function injectedScrapeSubpage() {
     function findValueInContainer(cont) {
         var el;
 
+        // ★ FIX: 最高优先 — 子页面的主要值展示元素 h2.typ-headline-x10（如 "26%"、"9.9%"）
+        el = cont.querySelector('h2[class*="typ-headline-x10"]');
+        if (!el) el = cont.querySelector('[class*="typ-headline-x10"]');
+        if (el) {
+            var hv = el.textContent.trim();
+            if (/\d/.test(hv) && hv.length <= 15) return hv;
+        }
+
         // 策略1: 寻找包含 tabular-nums 的 span 或 div (当前 Kalshi 最常见的新布局)
         var allTn = cont.querySelectorAll('span.tabular-nums, div.tabular-nums');
         for (var ti = 0; ti < allTn.length; ti++) {
@@ -793,17 +801,24 @@ function injectedScrapeSubpage() {
             if (pv && /\d/.test(pv)) return pv + '%';
         }
 
-        // 策略6: typ-headline-x10 (旧版 Kalshi 布局兜底)
-        el = cont.querySelector('h2[class*="typ-headline-x10"]');
-        if (!el) el = cont.querySelector('[class*="typ-headline-x10"]');
-        if (el && /\d/.test(el.textContent)) return el.textContent.trim();
-
         return '';
     }
 
     var seen = {};
-    var section = document.querySelector('section');
-    var root = section || document;
+    // ★ FIX: 跳过空的通知栏 section，找到真正包含选项的 section
+    var allSections = document.querySelectorAll('section');
+    var root = document; // 默认用 document 兜底
+    for (var si = 0; si < allSections.length; si++) {
+        if (allSections[si].querySelectorAll('[class*="typ-body-x30"]').length > 0 ||
+            allSections[si].querySelectorAll('[class*="typ-headline-x10"]').length > 0) {
+            root = allSections[si];
+            d.push('Root: section[' + si + '] has options');
+            break;
+        }
+    }
+    if (root === document) {
+        d.push('Root: no section with options, using document');
+    }
 
     // ═══ 方法 A: 从 typ-body-x30 name 元素向上遍历找值 ═══
     var nameEls = root.querySelectorAll('[class*="typ-body-x30"]');
@@ -824,13 +839,23 @@ function injectedScrapeSubpage() {
         var value = '';
         var change = '';
 
-        for (var i = 0; i < 8; i++) {
+        for (var i = 0; i < 15; i++) {
             container = container.parentElement;
             if (!container) break;
+
+            // ★★ FIX: 如果当前容器内包含多个 typ-body-x30（选项名称），
+            // 说明已超出当前选项行的范围，继续向上会错误抓到其他选项的 value/change
+            var siblingNameCount = container.querySelectorAll('[class*="typ-body-x30"]').length;
+            if (siblingNameCount > 1) break;
 
             // 尝试在这个层级找值
             value = findValueInContainer(container);
             if (value) {
+                // ★ FIX: 在找到 value 的同一容器中提取 change
+                var cEl = container.querySelector('[class*="typ-emphasis-x10"]');
+                if (cEl) {
+                    change = cEl.textContent.trim().replace(/\s+/g, ' ');
+                }
                 break;
             }
         }
@@ -1355,7 +1380,7 @@ async function startSubpageScraping() {
 
     // ★ 修改：如果输入框为空，则默认 100000；如果有输入，则解析为整数
     var minVolumeRaw = document.getElementById('minVolume').value.trim();
-    var minVolumeInput = minVolumeRaw === '' ? 60000000 : parseInt(minVolumeRaw, 10);
+    var minVolumeInput = minVolumeRaw === '' ? 10000000 : parseInt(minVolumeRaw, 10);
     var hasMinVolume = !isNaN(minVolumeInput) && minVolumeInput > 0;
 
     var outputFilename = getTimestampedFilename('kalshi');
