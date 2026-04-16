@@ -1064,8 +1064,15 @@ async function workerLoop(workerId, tabId, queue, results, config) {
         if (Date.now() < cooldownUntil) {
             var waitMs = cooldownUntil - Date.now();
             if (waitMs > 500) {
-                log('[W' + workerId + '] ⏸️ 反爬虫冷却中，等待 ' + Math.ceil(waitMs / 1000) + 's...', 'warn');
+                var waitSec = Math.ceil(waitMs / 1000);
+                var waitStr = waitSec > 60 ? Math.ceil(waitSec / 60) + 'm' : waitSec + 's';
+                log('[W' + workerId + '] ⏸️ 冷却中，等待 ' + waitStr + '...', 'warn');
                 await new Promise(function (res) { setTimeout(res, waitMs); });
+
+                // 醒来后恢复状态显示（如果自己是第一个醒来的）
+                if (Date.now() >= cooldownUntil) {
+                    setStatus('抓取中...');
+                }
             }
         }
 
@@ -1089,7 +1096,9 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                 if (Date.now() < cooldownUntil) {
                     var cdWait = cooldownUntil - Date.now();
                     if (cdWait > 500) {
-                        log('[W' + workerId + '] ⏸️ 重试前冷却等待 ' + Math.ceil(cdWait / 1000) + 's...', 'warn');
+                        var cdSec = Math.ceil(cdWait / 1000);
+                        var cdStr = cdSec > 60 ? Math.ceil(cdSec / 60) + 'm' : cdSec + 's';
+                        log('[W' + workerId + '] ⏸️ 重试前冷却等待 ' + cdStr + '...', 'warn');
                         await new Promise(function (res) { setTimeout(res, cdWait); });
                     }
                 }
@@ -1366,7 +1375,10 @@ async function startSubpageScraping() {
     if (concurrency < 1) concurrency = 1;
     if (concurrency > 8) concurrency = 8;
 
-    // 解析范围输入
+    // ★ 新增：读取防封禁休息配置
+    var pauseInterval = parseInt(document.getElementById('pauseInterval').value, 10) || 0;
+    var pauseDuration = parseInt(document.getElementById('pauseDuration').value, 10) || 3;
+
     var rangeInput = document.getElementById('rangeInput').value.trim();
     var startIndex = 0;
     var endIndex = -1;
@@ -1412,6 +1424,7 @@ async function startSubpageScraping() {
     log('并行度=' + concurrency + '  autoClose=' + autoClose + '  增量=' + doIncremental +
         '  范围=' + rangeDesc +
         (hasMinVolume ? '  minVol=' + minVolumeInput : '  minVol=不限'));
+    log('休息策略=' + (pauseInterval > 0 ? ('每 ' + pauseInterval + ' 个休息 ' + pauseDuration + ' 分钟') : '不休息'));
     log('📁 输出: ' + outputFilename, 'info');
 
     // Volume 过滤
@@ -1452,7 +1465,7 @@ async function startSubpageScraping() {
     var workerTabIds = [];
     for (var w = 0; w < concurrency; w++) {
         try {
-            var tab = await createTab('about:blank', true); // Set to true to bring tabs to foreground
+            var tab = await createTab('about:blank', false); // Set to true to bring tabs to foreground
             workerTabIds.push(tab.id);
             log('  标签 W' + w + ' id=' + tab.id, 'dim');
         } catch (e) {
@@ -1487,7 +1500,21 @@ async function startSubpageScraping() {
         completedCount++;
         var pct = Math.round((completedCount / cards.length) * 100);
         updateProgress(completedCount, cards.length, completedCount + '/' + cards.length + ' (' + pct + '%)');
-        setStatus('抓取中: ' + completedCount + '/' + cards.length + ' (' + pct + '%)');
+
+        // ★ 新增：防封禁休息检测
+        if (pauseInterval > 0 && completedCount % pauseInterval === 0 && completedCount < cards.length) {
+            var pauseMs = pauseDuration * 60 * 1000;
+            cooldownUntil = Math.max(cooldownUntil, Date.now() + pauseMs);
+            log('⏸️ 已抓取 ' + completedCount + ' 个页面，触发防封禁休息 ' + pauseDuration + ' 分钟...', 'warn');
+        }
+
+        // 根据是否在冷却中更新状态文本
+        if (Date.now() < cooldownUntil) {
+            var remainingMin = Math.ceil((cooldownUntil - Date.now()) / 60000);
+            setStatus('防封禁休息中... 约剩余 ' + remainingMin + ' 分钟 (' + completedCount + '/' + cards.length + ')', 'warn');
+        } else {
+            setStatus('抓取中: ' + completedCount + '/' + cards.length + ' (' + pct + '%)');
+        }
 
         // 每完成 10 个增量保存一次
         if (doIncremental && completedCount - lastSaveCount >= 10) {
