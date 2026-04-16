@@ -92,6 +92,11 @@
             color: #721c24;
         }
 
+        .status-warn {
+            background: #fff3cd;
+            color: #856404;
+        }
+
         .progress-container {
             margin-bottom: 12px;
             display: none;
@@ -189,6 +194,17 @@
             最小Volume:
             <input type="number" id="minVolume" value="" min="0" placeholder="默认10万"
                 style="width:90px; padding:2px 4px; font-size:13px;" title="留空默认抓取100000以上，输入0表示不限制，单位为美元整数">
+        </label>
+        <!-- ★ 新增：防封禁休息配置 -->
+        <label>
+            休息间隔:
+            <input type="number" id="pauseInterval" value="150" min="0"
+                style="width:60px; padding:2px 4px; font-size:13px;" title="每抓取多少个页面后休息（0表示不休息）">
+        </label>
+        <label>
+            休息时长:
+            <input type="number" id="pauseDuration" value="3" min="1"
+                style="width:50px; padding:2px 4px; font-size:13px;" title="休息时长（分钟）">
         </label>
     </div>
 

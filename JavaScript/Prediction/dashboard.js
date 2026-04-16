@@ -825,14 +825,24 @@ function injectedScrapeSubpage() {
 
     d.push('Options: found ' + nameEls.length + ' typ-body-x30 elements');
 
-    nameEls.forEach(function (nameEl, idx) {
+    var stopParsing = false;
+    for (var ni = 0; ni < nameEls.length; ni++) {
+        if (stopParsing) break;
+
+        var nameEl = nameEls[ni];
         var rawName = nameEl.textContent.trim().replace(/\s+/g, ' ');
-        if (!rawName) return;
-        if (rawName.toLowerCase().indexOf('more market') !== -1) return;
-        if (rawName.toLowerCase().indexOf('fewer market') !== -1) return;
-        if (rawName.toLowerCase().indexOf('show less') !== -1) return;
-        if (rawName.toLowerCase().indexOf('hide markets') !== -1) return;
-        if (seen[rawName]) return;
+        if (!rawName) continue;
+
+        var lowerName = rawName.toLowerCase();
+        // ★ 核心修改：遇到这些词代表主列表结束，直接停止后续所有抓取
+        if (lowerName.indexOf('show less') !== -1 || lowerName.indexOf('hide markets') !== -1) {
+            stopParsing = true;
+            d.push('Stopped parsing at: ' + rawName);
+            break;
+        }
+        // 对于 more markets 等可以跳过，但不一定代表列表彻底结束
+        if (lowerName.indexOf('more market') !== -1 || lowerName.indexOf('fewer market') !== -1) continue;
+        if (seen[rawName]) continue;
 
         // 向上寻找包含整个选项的容器 (通常是包含 hover:bg-fill-x60 的 div)
         var container = nameEl;
@@ -877,38 +887,44 @@ function injectedScrapeSubpage() {
             seen[rawName] = true;
             result.options.push({ name: rawName, value: value, change: change });
         }
-    });
+    }
 
     // ═══ 方法 B: 通过 flex 容器兜底（同样使用 findValueInContainer）═══
     if (result.options.length === 0) {
         d.push('Method A found 0 options, trying Method B (flex containers)...');
         var flexDivs = root.querySelectorAll('div[style*="flex: 1 1"]');
-        flexDivs.forEach(function (div) {
+        var stopParsingB = false;
+
+        for (var fi = 0; fi < flexDivs.length; fi++) {
+            if (stopParsingB) break;
+
+            var div = flexDivs[fi];
             var nEl = div.querySelector('[class*="typ-body-x30"]');
-            if (!nEl) return;
+            if (!nEl) continue;
             var name = nEl.textContent.trim().replace(/\s+/g, ' ');
-            if (!name) return;
-            if (/more market|fewer market|show less|hide markets/i.test(name)) return;
-            if (seen[name]) return;
+            if (!name) continue;
+
+            var lowerNameB = name.toLowerCase();
+            // ★ 核心修改：遇到列表结束标志直接停止
+            if (lowerNameB.indexOf('show less') !== -1 || lowerNameB.indexOf('hide markets') !== -1) {
+                stopParsingB = true;
+                break;
+            }
+            if (/more market|fewer market/i.test(lowerNameB)) continue;
+            if (seen[name]) continue;
 
             var val = findValueInContainer(div);
             if (val && /^\d+\.?\d*$/.test(val)) val = val + '%';
 
             var cEl = div.querySelector('[class*="typ-emphasis-x10"]');
-            var change = cEl ? cEl.textContent.trim().replace(/\s+/g, ' ') : '';
+            var changeB = cEl ? cEl.textContent.trim().replace(/\s+/g, ' ') : '';
 
             seen[name] = true;
-            result.options.push({ name: name, value: val, change: change });
-        });
+            result.options.push({ name: name, value: val, change: changeB });
+        }
     }
 
-    result.options = result.options.filter(function (opt) {
-        var optName = opt.name.toLowerCase().trim();
-        if (optName === 'show less') return false;
-        if (optName === 'hide markets') return false;
-        return true;
-    });
-
+    // 后续的过滤逻辑（清理 <1% 等）保留
     if (result.options.length > 10) {
         result.options = result.options.filter(function (opt) {
             return opt.value.trim() !== '<1%';
@@ -1044,7 +1060,7 @@ async function scrapeMainPage() {
 async function workerLoop(workerId, tabId, queue, results, config) {
     while (queue.length > 0) {
 
-        // ★★ 反爬虫修复：在处理下一个任务前，检查共享冷却
+        // ★★ 反爬虫/防封禁修复：在处理下一个任务前，检查共享冷却
         if (Date.now() < cooldownUntil) {
             var waitMs = cooldownUntil - Date.now();
             if (waitMs > 500) {
@@ -1380,7 +1396,7 @@ async function startSubpageScraping() {
 
     // ★ 修改：如果输入框为空，则默认 100000；如果有输入，则解析为整数
     var minVolumeRaw = document.getElementById('minVolume').value.trim();
-    var minVolumeInput = minVolumeRaw === '' ? 10000000 : parseInt(minVolumeRaw, 10);
+    var minVolumeInput = minVolumeRaw === '' ? 100000 : parseInt(minVolumeRaw, 10);
     var hasMinVolume = !isNaN(minVolumeInput) && minVolumeInput > 0;
 
     var outputFilename = getTimestampedFilename('kalshi');
