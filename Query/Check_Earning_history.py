@@ -239,12 +239,25 @@ def search_history_by_category(symbol):
 # 视图 2：按时间 (Date) 渲染
 # =========================================================
 def search_history_by_date(symbol):
-    # --- 新增：定义需要高亮的组别 ---
-    highlight_categories = {
-        "PE_Volume", "PE_Volume_up", "PE_Volume_high", 
-        "Short", "Short_W", "SupportLevel_Close", 
-        "SupportLevel_Over", "OverSell_W", "PE_W"
+    # --- 新增：定义颜色级别 ---
+    # 红色 (高权重)
+    COLOR_HIGH = "#BF616A" 
+    # 柔和的橙色或淡红色 (中权重) - 这里使用 Nord 主题中的一个柔和色，或者你自己喜欢的颜色
+    COLOR_MEDIUM = "#D08770" 
+    
+    # --- 新增：分类映射 ---
+    # 高权重组 (保持红色)
+    high_weight_categories = {
+        "PE_Volume", "Short", "Short_W", "PE_W", "PE_Hot"
     }
+    # 中权重组 (换成弱一点的颜色)
+    medium_weight_categories = {
+        "PE_Volume_up", "PE_Volume_high", 
+        "SupportLevel_Close", "SupportLevel_Over", "OverSell_W"
+    }
+    
+    # 依然保留这个集合用于判断是否需要特殊样式背景
+    highlight_categories = high_weight_categories.union(medium_weight_categories)
     
     # --- 新增：可配置的需要压缩显示的单一分组 ---
     compress_categories = {"PE_valid"}
@@ -292,9 +305,14 @@ def search_history_by_date(symbol):
                 category_data, date_categories, category_dates, sorted_trading_dates
             )
 
+            # --- 修改核心：根据权重选择颜色 ---
             if category in highlight_categories:
+                # 决定使用哪种颜色
+                target_color = COLOR_HIGH if category in high_weight_categories else COLOR_MEDIUM
+                
+                # 构造样式字符串
                 display_category = (
-                    f"<b style='color:#BF616A; background-color:rgba(191,97,106,0.1); "
+                    f"<b style='color:{target_color}; background-color:rgba(191,97,106,0.1); "
                     f"padding:0 4px; border-radius:3px;'>{category}</b>"
                 )
             else:
