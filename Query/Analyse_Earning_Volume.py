@@ -76,8 +76,8 @@ CONFIG = {
     # ========== 策略5 (ETF_Volume_low 触底放量) 参数 ==========
     "ETF_COND_LOW_PRICE_LOOKBACK_MONTHS": 5,       # 最高点回溯6个月（半年）
     "ETF_COND_LOW_DROP_THRESHOLD": 0.06,           # 距最高点跌幅
-    "ETF_COND_LOW_TURNOVER_MONTHS": 3,             # 成交额回溯3个月
-    "ETF_COND_LOW_TURNOVER_RANK_THRESHOLD": 2,     # [新增] 成交额排名前 N 名 (前2名)
+    "ETF_COND_LOW_TURNOVER_MONTHS": 2,             # 成交额回溯3个月
+    "ETF_COND_LOW_TURNOVER_RANK_THRESHOLD": 3,     # [新增] 成交额排名前 N 名 (前2名)
 
     # ========== 策略6 (PE_Hot 白名单/超大市值) 参数 ==========
     "PE_HOT_MIN_MARKET_CAP": 150000000000,         # 超大市值门槛 (默认 1500亿)

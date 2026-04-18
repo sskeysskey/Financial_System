@@ -365,14 +365,15 @@ def search_history_by_date(symbol):
 
 
 # =========================================================
-# 对话框（Tab 版）
+# 修改后的 InfoDialog 类初始化
 # =========================================================
 class InfoDialog(QDialog):
-    def __init__(self, symbol, font_family, font_size, width, height, parent=None):
+    def __init__(self, symbol, font_family, font_size, left_width, right_width, height, parent=None):
         super().__init__(parent)
         self.setWindowTitle(f"Info Check: {symbol}")
-        # 两栏并排,宽度加倍
-        self.setGeometry(0, 0, width * 2, height)
+        
+        # 整体宽度为两栏之和
+        self.setGeometry(0, 0, left_width + right_width, height)
         self.center_on_screen()
 
         layout = QVBoxLayout(self)
@@ -422,7 +423,9 @@ class InfoDialog(QDialog):
         # 添加到 splitter
         self.splitter.addWidget(left_container)
         self.splitter.addWidget(right_container)
-        self.splitter.setSizes([width, width])  # 初始宽度五五开
+        
+        # 设置初始宽度比例 (这里传入具体的宽度值)
+        self.splitter.setSizes([left_width, right_width]) 
         self.splitter.setChildrenCollapsible(False)
 
         layout.addWidget(self.splitter)
@@ -495,7 +498,8 @@ if __name__ == "__main__":
         symbol=target_symbol,
         font_family="Arial Unicode MS",
         font_size=16,
-        width=500,      # 每一栏的宽度
+        left_width=700,   # 时间栏更宽
+        right_width=500,  # 分组栏相对窄一点
         height=850
     )
     dialog.raise_()
