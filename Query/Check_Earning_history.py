@@ -265,7 +265,10 @@ def search_history_by_date(symbol):
         "Short", "Short_W", "SupportLevel_Close", 
         "SupportLevel_Over", "OverSell_W", "PE_W"
     }
-    # -------------------------------
+    
+    # --- 新增：可配置的需要压缩显示的单一分组 ---
+    compress_categories = {"PE_valid"}
+    # -------------------------------------------
 
     html_parts = []
     sector_html, sector_has_data = build_sector_html(symbol)
@@ -277,7 +280,23 @@ def search_history_by_date(symbol):
         return "".join(html_parts) + f"<br><p style='color:red'>{err}</p>"
 
     hit_dates_sorted = sorted(date_items.keys(), reverse=True)
+    
+    # 用于分离正常日期和需要压缩的日期
+    normal_dates = []
+    compressed_records = defaultdict(list)
+
+    # 第一次遍历：筛选出需要压缩的日期
     for d_str in hit_dates_sorted:
+        items_today = sorted(date_items[d_str], key=lambda x: x[0])
+        # 如果当天只有一条记录，且属于需要压缩的分组
+        if len(items_today) == 1 and items_today[0][0] in compress_categories:
+            category, suf = items_today[0]
+            compressed_records[category].append((d_str, suf))
+        else:
+            normal_dates.append((d_str, items_today))
+
+    # 渲染正常日期的记录
+    for d_str, items_today in normal_dates:
         has_data = True
         html_parts.append(make_header(d_str, NORD_THEME['success_green']))
         items_today = sorted(date_items[d_str], key=lambda x: x[0])
@@ -300,6 +319,26 @@ def search_history_by_date(symbol):
             html_parts.append(
                 f"&nbsp;&nbsp;• {display_category}{suf_html}{overlap_marker}<br>"
             )
+
+    # 渲染被压缩的单一分组记录（统一放在下方）
+    for category, records in compressed_records.items():
+        has_data = True
+        # 使用分组名作为大标题
+        html_parts.append(make_header(f"{category} (单一触发)", NORD_THEME['success_green']))
+        
+        date_strings = []
+        for d_str, suf in records:
+            suf_html = build_suffix_html(category, suf)
+            overlap_marker = build_overlap_marker(
+                category, d_str, suf,
+                category_data, date_categories, category_dates, sorted_trading_dates
+            )
+            # 拼接日期和它可能带有的后缀/标记
+            date_strings.append(f"<span style='color:{NORD_THEME['text_bright']}'>{d_str}</span>{suf_html}{overlap_marker}")
+        
+        # 将所有日期用逗号拼接，放在一个 div 中自动换行
+        joined_dates = ",&nbsp;&nbsp;".join(date_strings)
+        html_parts.append(f"<div style='padding-left: 10px; line-height: 1.6;'>{joined_dates}</div><br>")
 
     if not has_data:
         return f"<div style='text-align:center; margin-top:20px; color:{NORD_THEME['text_light']}'>在所有文件中<br>未找到 <b>{symbol}</b> 的任何记录。</div>"
