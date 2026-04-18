@@ -87,20 +87,24 @@ CONFIG = {
 def clean_symbol(symbol_with_suffix):
     """
     更强大的清洗函数：
-    1. 移除所有非字母字符 (保留字母)
-    2. 如果有数字，通常股票代码不含数字，可以根据需要选择移除或保留
+    1. 提取连续的字母。
+    2. 允许中间包含 '-'（例如 "BRK-B"），但 '-' 必须出现在字母之间。
+    3. 忽略末尾的数字、中文或其他非字母字符（如 "BRK-B15", "C9热"）。
     """
     if not symbol_with_suffix:
         return ""
     
-    # 策略：只保留字母。如果你的股票代码包含数字（如某些ETF或特定代码），请调整正则表达式
-    # 这里的逻辑是：从字符串中提取出第一个连续的字母序列
-    # 例如 "C9热" -> "C", "META15" -> "META"
-    match = re.match(r'([A-Za-z]+)', symbol_with_suffix)
+    # 正则表达式解析：
+    # [A-Za-z]+       : 匹配一个或多个字母（如 "BRK"）
+    # (?: ... )?      : 这是一个可选的非捕获组，表示这一部分可以出现 0 次或 1 次
+    # -[A-Za-z]+      : 匹配一个 '-' 紧接着一个或多个字母（如 "-B"）
+    # 组合起来就是：匹配纯字母，或者 "字母-字母" 的格式
+    match = re.match(r'([A-Za-z]+(?:-[A-Za-z]+)?)', symbol_with_suffix)
+    
     if match:
         return match.group(1).upper()
     
-    # 如果没有匹配到字母（极其罕见），则返回原字符串
+    # 如果没有匹配到（极其罕见，比如纯数字或纯中文开头），则返回原字符串
     return symbol_with_suffix
 
 def load_tag_settings(json_path):

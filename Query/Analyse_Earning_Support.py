@@ -156,6 +156,65 @@ for symbol in sorted(symbols):
                     symbol_categorized = True
                     print(f"  🔻 {symbol}: SupportLevel_Over (最新收盘={latest_close}, 支撑={support_price})")
 
+        # ===== Phase 2.5: 并行流程 —— 继续向前延展寻找非"昨天"的最低点 =====
+        parallel_suffix = ""   # 例如 "3轮"、"4轮"...，为空则不附加
+        if skip_symbol:        # 只有在 61 天内支撑仍是前一交易日时才启动并行流程
+            round_num = 3       # 31天=第1轮, 61天=第2轮, 92天=第3轮起步
+            max_rounds = 12     # 安全上限, 避免极端情况下无限延展 (约 31*12 = 372 天)
+
+            while round_num <= max_rounds:
+                p_days = 31 * round_num
+                p_date_ago = (latest_dt - timedelta(days=p_days)).strftime("%Y-%m-%d")
+
+                cursor.execute(
+                    f'SELECT date, low FROM [{table}] '
+                    f'WHERE name = ? AND date >= ? AND date < ? ORDER BY date ASC',
+                    (symbol, p_date_ago, latest_date)
+                )
+                p_rows = cursor.fetchall()
+
+                if not p_rows:
+                    # 历史数据已经耗尽，无法继续延展
+                    print(f"  ⏹️ {symbol}: 第{round_num}轮({p_days}天)无历史数据，并行流程结束")
+                    break
+
+                p_min_date, p_min_low = min(p_rows, key=lambda x: x[1])
+                p_last_trading_day = p_rows[-1][0]
+
+                # 仍然是前一交易日 → 再延展一轮
+                if p_min_date == p_last_trading_day:
+                    print(f"  🔁 {symbol}: 第{round_num}轮({p_days}天)支撑点仍为前一交易日({p_min_date})，继续延展")
+                    round_num += 1
+                    continue
+
+                # 找到了非"昨天"的最低点 —— 做有效性与 close/over 判断
+                p_support_dt = datetime.strptime(p_min_date, "%Y-%m-%d")
+                p_days_diff = (latest_dt - p_support_dt).days
+
+                if p_days_diff < 8:
+                    print(f"  ⚠️ {symbol}: 第{round_num}轮支撑点({p_min_date})距最新日期仅 {p_days_diff} 天，不足8天，并行流程放弃")
+                    break
+
+                if latest_close > p_min_low:
+                    diff_pct = (latest_close - p_min_low) / p_min_low * 100
+                    if diff_pct <= 2.6:
+                        parallel_suffix = f"{round_num}轮"
+                        print(f"  🔗 {symbol}: 并行流程第{round_num}轮命中 Close "
+                              f"(最新={latest_close}, 支撑={p_min_low}, 差={diff_pct:.2f}%) → 后缀={parallel_suffix}")
+                    else:
+                        print(f"  ⚠️ {symbol}: 第{round_num}轮 Close 差值 {diff_pct:.2f}% 超 2.6%，并行流程无输出")
+                else:
+                    parallel_suffix = f"{round_num}轮"
+                    print(f"  🔗 {symbol}: 并行流程第{round_num}轮命中 Over "
+                          f"(最新={latest_close}, 支撑={p_min_low}) → 后缀={parallel_suffix}")
+
+                break
+            
+            # 【新增逻辑】：如果循环正常结束且 round_num 超过了 max_rounds，说明 12 轮全部失效（一直创新低）
+            if round_num > max_rounds:
+                parallel_suffix = f"{max_rounds}轮"
+                print(f"  ⚠️ {symbol}: {max_rounds}轮延展全部失效(持续下跌创新低)，为后续财报强行标记后缀为={parallel_suffix}")
+
         # ===== Phase 3: 财报支撑回退检查（仅当延展到61天且标准检查未产生结果时） =====
         if not symbol_categorized and lookback_days == 61:
             date_61_ago = (latest_dt - timedelta(days=61)).strftime("%Y-%m-%d")
@@ -188,18 +247,20 @@ for symbol in sorted(symbols):
                     if e_days_diff < 8:
                         print(f"  ⚠️ {symbol}: 财报日({earning_date})距最新日期仅 {e_days_diff} 天，不足8天，跳过")
                     else:
-                        if latest_close > earning_support: # 修改点
-                            diff_pct = (latest_close - earning_support) / earning_support * 100 # 修改点
+                        if latest_close > earning_support:
+                            diff_pct = (latest_close - earning_support) / earning_support * 100
                             if diff_pct <= 2.6:
-                                support_close[symbol] = f"{symbol}财"
+                                support_close[symbol] = f"{symbol}财{parallel_suffix}"   # ← 新增后缀
                                 earning_close[latest_date].append(symbol)
                                 symbol_categorized = True
-                                print(f"  ✅ {symbol}: SupportLevel_Close [财报回退] (最新收盘={latest_close}, 支撑={earning_support}, 差={diff_pct:.2f}%)")
+                                print(f"  ✅ {symbol}: SupportLevel_Close [财报回退{parallel_suffix}] "
+                                      f"(最新={latest_close}, 支撑={earning_support}, 差={diff_pct:.2f}%)")
                         else:
-                            support_over[symbol] = f"{symbol}财"
+                            support_over[symbol] = f"{symbol}财{parallel_suffix}"        # ← 新增后缀
                             earning_over[latest_date].append(symbol)
                             symbol_categorized = True
-                            print(f"  🔻 {symbol}: SupportLevel_Over [财报回退] (最新收盘={latest_close}, 支撑={earning_support})")
+                            print(f"  🔻 {symbol}: SupportLevel_Over [财报回退{parallel_suffix}] "
+                                  f"(最新={latest_close}, 支撑={earning_support})")
 
             if not symbol_categorized:
                 print(f"  ⏭️ {symbol}: 61天范围内无符合条件的财报支撑，最终跳过")

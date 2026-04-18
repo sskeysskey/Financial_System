@@ -49,37 +49,6 @@ def get_suffix_if_match(item_str, target_symbol):
     return None
 
 
-def build_sector_html(symbol):
-    """检索 Sector Panel，返回 (html_str, has_data)"""
-    html_parts = []
-    has_data = False
-    if not os.path.exists(SECTOR_PATH):
-        return "", False
-    try:
-        with open(SECTOR_PATH, 'r', encoding='utf-8') as f:
-            sector_data = json.load(f)
-        found_sectors = []
-        for category, content_dict in sector_data.items():
-            for key, note in content_dict.items():
-                suffix = get_suffix_if_match(key, symbol)
-                if suffix is not None:
-                    display_text = category
-                    if suffix:
-                        display_text += f" <span style='color:#EBCB8B'>[{suffix}]</span>"
-                    if note:
-                        display_text += f" <span style='color:#88C0D0'>({note})</span>"
-                    found_sectors.append(display_text)
-                    break
-        if found_sectors:
-            has_data = True
-            html_parts.append(make_header("所属板块/分组", NORD_THEME['success_green']))
-            for s in found_sectors:
-                html_parts.append(f"&nbsp;&nbsp;★ {s}<br>")
-    except Exception as e:
-        html_parts.append(f"<p style='color:red'>读取 Sector JSON 出错: {e}</p>")
-    return "".join(html_parts), has_data
-
-
 def load_earning_index(symbol):
     """
     读取 Earning JSON,构建各类索引。
@@ -196,14 +165,26 @@ def build_overlap_marker(category, d_str, suf,
         if category == "PE_W":
             if date_idx + 1 < len(sorted_trading_dates):
                 prev_date = sorted_trading_dates[date_idx + 1]
+                
+                # 获取前一天的相关状态
                 prev_in_hot = prev_date in category_dates.get("PE_Hot", set())
                 prev_in_vol = prev_date in category_dates.get("PE_Volume", set())
+                prev_in_short = prev_date in category_dates.get("Short", set())
+                prev_in_short_w = prev_date in category_dates.get("Short_W", set())
+
+                # 1. 原有的 PE_Hot 和 PE_Volume 逻辑
                 if prev_in_hot and prev_in_vol:
-                    overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='前一交易日触发 PE_Hot 和 PE_Volume'>[★接力:hot+vol->w]</span>"
+                    overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='前一交易日触发 PE_Hot 和 PE_Volume'>[★Hot+Volume->W]</span>"
                 elif prev_in_hot:
-                    overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='前一交易日触发 PE_Hot'>[★接力:hot->w]</span>"
+                    overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='前一交易日触发 PE_Hot'>[★接力:Hot->W]</span>"
                 elif prev_in_vol:
-                    overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='前一交易日触发 PE_Volume'>[★接力:vol->w]</span>"
+                    overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='前一交易日触发 PE_Volume'>[★Volume->W]</span>"
+                
+                # 2. 新增：检查 Short 或 Short_W
+                if prev_in_short or prev_in_short_w:
+                    overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='前一交易日触发 Short 或 Short_W'>[★Short->W]</span>"
+
+                # 3. 原有的支撑位逻辑
                 prev_in_supp_close = prev_date in category_dates.get("SupportLevel_Close", set())
                 prev_in_supp_over = prev_date in category_dates.get("SupportLevel_Over", set())
                 if prev_in_supp_close or prev_in_supp_over:
@@ -212,12 +193,12 @@ def build_overlap_marker(category, d_str, suf,
             if date_idx - 1 >= 0:
                 next_date = sorted_trading_dates[date_idx - 1]
                 if next_date in category_dates.get("PE_W", set()):
-                    overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='下一交易日触发 PE_W'>[★接力:hot->w]</span>"
+                    overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='下一交易日触发 PE_W'>[★Hot->W]</span>"
         elif category == "PE_Volume":
             if date_idx - 1 >= 0:
                 next_date = sorted_trading_dates[date_idx - 1]
                 if next_date in category_dates.get("PE_W", set()):
-                    overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='下一交易日触发 PE_W'>[★接力:vol->w]</span>"
+                    overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='下一交易日触发 PE_W'>[★Volume->W]</span>"
     except ValueError:
         pass
     return overlap_marker
@@ -228,13 +209,12 @@ def build_overlap_marker(category, d_str, suf,
 # =========================================================
 def search_history_by_category(symbol):
     html_parts = []
-    sector_html, sector_has_data = build_sector_html(symbol)
-    html_parts.append(sector_html)
-    has_data = sector_has_data
+    # --- 已移除 sector 相关逻辑 ---
+    has_data = False 
 
     category_data, date_categories, category_dates, date_items, sorted_trading_dates, err = load_earning_index(symbol)
     if err:
-        return "".join(html_parts) + f"<br><p style='color:red'>{err}</p>"
+        return f"<p style='color:red'>{err}</p>"
 
     for category, found_dates in category_data.items():
         if not found_dates:
@@ -268,16 +248,14 @@ def search_history_by_date(symbol):
     
     # --- 新增：可配置的需要压缩显示的单一分组 ---
     compress_categories = {"PE_valid"}
-    # -------------------------------------------
 
     html_parts = []
-    sector_html, sector_has_data = build_sector_html(symbol)
-    html_parts.append(sector_html)
-    has_data = sector_has_data
+    # --- 已移除 sector 相关逻辑 ---
+    has_data = False
 
     category_data, date_categories, category_dates, date_items, sorted_trading_dates, err = load_earning_index(symbol)
     if err:
-        return "".join(html_parts) + f"<br><p style='color:red'>{err}</p>"
+        return f"<p style='color:red'>{err}</p>"
 
     hit_dates_sorted = sorted(date_items.keys(), reverse=True)
     
