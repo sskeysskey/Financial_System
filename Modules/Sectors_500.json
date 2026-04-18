@@ -15,7 +15,8 @@
         "VALE",
         "WPM",
         "CTVA",
-        "AU"
+        "AU",
+        "FNV"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -199,7 +200,8 @@
         "TAK",
         "BDX",
         "ZTS",
-        "ARGX"
+        "ARGX",
+        "CAH"
     ],
     "Industrials": [
         "GE",
@@ -242,7 +244,9 @@
         "FIX",
         "AME",
         "FERG",
-        "BE"
+        "BE",
+        "CARR",
+        "URI"
     ],
     "Real_Estate": [
         "PLD",
@@ -314,7 +318,8 @@
         "NXPI",
         "CRWV",
         "GRMN",
-        "ADSK"
+        "ADSK",
+        "MSTR"
     ],
     "Utilities": [
         "NEE",
@@ -325,6 +330,7 @@
         "AEP",
         "SRE",
         "D",
-        "VST"
+        "VST",
+        "XEL"
     ]
 }

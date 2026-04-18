@@ -106,7 +106,11 @@ def calculate_frequency_data(history_data):
         "PE_valid", "PE_invalid", "season"
     }
 
+    pe_chaodi_sources = {"PE_Null"}
+
     symbol_groups = {}
+    # 记录哪些 Symbol 带有“抄底”后缀
+    symbols_with_chaodi = set()
     
     # 1. 遍历所有分组
     for group, date_map in history_data.items():
@@ -120,25 +124,34 @@ def calculate_frequency_data(history_data):
         latest_date = sorted_dates[0]
         symbols = date_map[latest_date]
         
-        # 3. 清洗 Symbol 并去重
+        # 3. 记录带有“抄底”的 Symbol
+        for s in symbols:
+            if "抄底" in s:
+                symbols_with_chaodi.add(clean_ticker(s).upper())
+        
+        # 4. 清洗 Symbol 并去重
         clean_symbols = set(clean_ticker(s).upper() for s in symbols)
         
-        # 4. 记录该 Symbol 所在的分组
+        # 5. 记录该 Symbol 所在的分组
         for sym in clean_symbols:
             if sym not in symbol_groups:
                 symbol_groups[sym] = set()
             symbol_groups[sym].add(group)
             
-    # 5. 按次数分组，并过滤掉无意义的 2 次共振
+    # 6. 按次数分组，并过滤掉无意义的 2 次共振
     count_to_symbols = {}
     for sym, groups in symbol_groups.items():
         
-        # --- 核心修改点：过滤 PE_Hot 与其源头组的重复共振 ---
+        # --- 核心修改点：过滤逻辑 ---
+        
+        # 逻辑 A: 如果存在 PE_Hot，剔除其源头组
         if "PE_Hot" in groups:
-            # 如果存在 PE_Hot，则将其源头组从当前集合中剔除
-            # 这样 PE_Hot 和 PE_valid 一起出现时，PE_valid 会被剔除，只算 1 次 (PE_Hot)
-            # PE_Volume, PE_Hot, PE_invalid 一起出现时，PE_invalid 被剔除，剩下 PE_Volume 和 PE_Hot，算 2 次
             groups = groups - pe_hot_sources
+            
+        # 逻辑 B: 如果 Symbol 带有“抄底”标记，且属于 PE_Volume_high (或者其他产生抄底的组)
+        # 只要它带有“抄底”，就直接剔除 pe_hot_sources，防止它和这些组发生共振
+        if sym in symbols_with_chaodi:
+            groups = groups - pe_chaodi_sources
             
         count = len(groups)
         if count >= 2:
@@ -154,7 +167,7 @@ def calculate_frequency_data(history_data):
                 count_to_symbols[count] = []
             count_to_symbols[count].append(sym)
             
-    # 6. 转换为数组，按次数降序排列，内部 Symbol 按字母排序
+    # 7. 转换为数组，按次数降序排列，内部 Symbol 按字母排序
     result = []
     for count in sorted(count_to_symbols.keys(), reverse=True):
         result.append({

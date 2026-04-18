@@ -10,6 +10,10 @@ let isRunning = false;
 // ★★ 反爬虫修复：共享冷却时间戳（任一 worker 遇到反爬虫，所有 worker 暂停）
 let cooldownUntil = 0;
 
+// ★ 新增：全局状态，用于纠错功能
+let globalFailures = [];
+let globalResults = [];
+
 // ============ DOM 引用 ============
 const statusEl = document.getElementById('status');
 const debugLogEl = document.getElementById('debugLog');
@@ -17,6 +21,7 @@ const progressContainer = document.getElementById('progressContainer');
 const progressFill = document.getElementById('progressFill');
 const progressText = document.getElementById('progressText');
 const startBtn = document.getElementById('startBtn');
+const retryBtn = document.getElementById('retryBtn'); // ★ 新增
 const clearBtn = document.getElementById('clearBtn');
 
 // ============ 文件名工具（带日期戳） ============
@@ -52,10 +57,10 @@ function isSubpageOptionsHealthy(subOptions, mainOptions) {
     // 逐条检查 value 是否异常
     for (var i = 0; i < subOptions.length; i++) {
         var val = (subOptions[i].value || '').trim();
-        // 正常值形如 "52%"、"48¢"、"$0.52"、"<1%"，不会超过 20 字符
+        // 正常值形如 "52%"、"48¢"、"$0.52"、"<1%"、"--%"，不会超过 20 字符
         if (val.length > 20) return false;
-        // ★ 正常的 value（价格/概率）必然包含数字，如果没有数字则视为异常
-        if (!/\d/.test(val)) return false;
+        // ★ 正常的 value（价格/概率）必然包含数字，或者为特定的占位符 "--%"
+        if (!/\d/.test(val) && val !== '--%') return false;
         // 去掉格式字符后，纯数字位数不应超过 8 位（亿级已经很夸张了）
         var digits = val.replace(/[^0-9]/g, '');
         if (digits.length > 8) return false;
@@ -303,6 +308,34 @@ function saveTextFile(text, filename) {
     } catch (e) {
         log('  ⚠️ 保存异常: ' + e.message, 'warn');
     }
+}
+
+// ★ 新增：统一生成失败报告的函数
+function generateFailureReport(failures) {
+    var failureLines = [];
+    failureLines.push('Kalshi Scraper - 抓取异常(失败)记录');
+    failureLines.push('生成时间: ' + new Date().toLocaleString());
+    failureLines.push('共 ' + failures.length + ' 个项目');
+    failureLines.push('');
+    failureLines.push('========================================');
+    failures.forEach(function (f, fi) {
+        failureLines.push('');
+        failureLines.push('[' + (fi + 1) + '] ' + f.name);
+        failureLines.push('    URL: ' + f.url);
+        failureLines.push('    Volume: ' + f.volume);
+        if (f.debugInfo && f.debugInfo.length > 0) {
+            failureLines.push('    Debug: ' + f.debugInfo.join(' | '));
+        }
+        log('  ❌ "' + f.name + '" → ' + f.url, 'error');
+    });
+    failureLines.push('');
+    failureLines.push('========================================');
+    failureLines.push('请将上述 URL 在浏览器中打开，右键「检查」查看页面结构，');
+    failureLines.push('特别关注分类链接的 href 是否包含 /category/ 或 /sports/，以及选项 value 是否包含数字。');
+    failureLines.push('注：如果 Debug 中包含 "Warning: Used S2/S3..."，说明常规分类提取失败，触发了全文档检索兜底，请人工核对分类是否准确。');
+
+    saveTextFile(failureLines.join('\n'), 'kalshi_failure.txt');
+    log('📄 异常记录已保存到 kalshi_failure.txt', 'warn');
 }
 
 // ============================================================
@@ -757,12 +790,15 @@ function injectedScrapeSubpage() {
     function findValueInContainer(cont) {
         var el;
 
-        // ★ FIX: 最高优先 — 子页面的主要值展示元素 h2.typ-headline-x10（如 "26%"、"9.9%"）
-        el = cont.querySelector('h2[class*="typ-headline-x10"]');
-        if (!el) el = cont.querySelector('[class*="typ-headline-x10"]');
-        if (el) {
-            var hv = el.textContent.trim();
-            if (/\d/.test(hv) && hv.length <= 15) return hv;
+        // ★ FIX: 最高优先 — 子页面的主要值展示元素 h2.typ-headline-x10（如 "26%"、"9.9%"、"--%"）
+        // 改为 querySelectorAll，防止抓到隐藏布局中的空元素导致直接跳过策略
+        var headlines = cont.querySelectorAll('h2[class*="typ-headline-x10"], [class*="typ-headline-x10"]');
+        for (var hi = 0; hi < headlines.length; hi++) {
+            var hv = headlines[hi].textContent.trim();
+            // 允许包含数字或者是占位符 "--%"
+            if ((/\d/.test(hv) || hv === '--%') && hv.length <= 15) {
+                return hv;
+            }
         }
 
         // 策略1: 寻找包含 tabular-nums 的 span 或 div (当前 Kalshi 最常见的新布局)
@@ -968,6 +1004,7 @@ async function scrapeMainPage() {
     if (isRunning) return;
     isRunning = true;
     startBtn.disabled = true;
+    retryBtn.style.display = 'none'; // 隐藏纠错按钮
     startBtn.textContent = '正在抓取主页面...';
     debugLogEl.innerHTML = '';
     scrapedCards = null;
@@ -1103,18 +1140,30 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                     }
                 }
 
+                // ★ 核心修复：如果不是第一次尝试，增加随机冷却并强制刷新页面（模拟手动 Reload）
                 if (attempt > 1) {
-                    // ★★ 反爬虫修复：重试等待时间加长（3s * attempt → 5s * attempt）
-                    var retryDelay = 5000 * attempt;
-                    log('[W' + workerId + '] 🔄 分类为空, 重试#' + (attempt - 1) + ' "' + short + '" (等待' + Math.round(retryDelay / 1000) + 's)', 'warn');
+                    // 随机冷却：基础延迟 + 随机延迟 (例如 3s~7s)
+                    var retryDelay = 3000 * attempt + Math.floor(Math.random() * 4000);
+                    log('[W' + workerId + '] 🔄 页面加载失败/分类为空, 重试#' + (attempt - 1) + ' "' + short + '" (等待' + Math.round(retryDelay / 1000) + 's)', 'warn');
                     await new Promise(function (res) { setTimeout(res, retryDelay); });
+
+                    // 尝试使用脚本强制刷新，如果失败则用 chrome.tabs.reload 兜底
+                    try {
+                        await chrome.scripting.executeScript({
+                            target: { tabId: tabId },
+                            func: function () { window.location.reload(true); }
+                        });
+                    } catch (e) {
+                        chrome.tabs.reload(tabId, { bypassCache: true });
+                    }
+                    // 等待刷新动作开始
+                    await new Promise(function (res) { setTimeout(res, 2000); });
+                } else {
+                    // 第一次尝试，正常导航
+                    await navigateAndWait(tabId, 'https://kalshi.com' + card.subUrl, 15000);
                 }
 
-                // 导航到子页面并等待加载
-                await navigateAndWait(tabId, 'https://kalshi.com' + card.subUrl, 15000);
-
-                // 轮询等待内容渲染（重试时给更多时间）
-                var pollTimeout = attempt === 1 ? 10000 : 14000;
+                var pollTimeout = attempt === 1 ? 10000 : 15000;
                 poll = await pollForContent(tabId, pollTimeout);
 
                 if (!poll.ready) {
@@ -1152,6 +1201,56 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                 if (!catPoll.found) {
                     log('[W' + workerId + '] ⚠️ "' + short + '" 分类链接未在5s内出现 (attempt=' + attempt + ')', 'dim');
                 }
+
+                // ★★★ NEW FIX: 禁用 content-visibility:auto，强制浏览器渲染所有折叠选项
+                // 针对含有 YouTube 视频等长内容把选项推到首屏下方导致懒渲染未触发的场景
+                try {
+                    await chrome.scripting.executeScript({
+                        target: { tabId: tabId },
+                        func: function () {
+                            var styleId = '__kalshi_force_render__';
+                            if (document.getElementById(styleId)) return;
+                            var st = document.createElement('style');
+                            st.id = styleId;
+                            // 关键：把所有 content-visibility 强制设为 visible
+                            // 同时清除 contain-intrinsic-size 占位尺寸，避免布局错乱
+                            st.textContent =
+                                '*, *::before, *::after {' +
+                                '  content-visibility: visible !important;' +
+                                '  contain-intrinsic-size: auto !important;' +
+                                '}';
+                            document.head.appendChild(st);
+                        }
+                    });
+
+                    // ★★★ 在这里插入你的建议逻辑：轮询确认 value 已经出现
+                    log('[W' + workerId + '] 🔍 确认渲染中...', 'dim');
+                    var vStart = Date.now();
+                    var rendered = false;
+                    while (Date.now() - vStart < 2000) {
+                        var vr = await chrome.scripting.executeScript({
+                            target: { tabId: tabId },
+                            func: function () {
+                                var names = document.querySelectorAll('[class*="typ-body-x30"]').length;
+                                // 检查包含数字的 value 元素，headline-x10 通常是价格/百分比
+                                var values = document.querySelectorAll('[class*="typ-headline-x10"], span.tabular-nums').length;
+                                return { names: names, values: values };
+                            }
+                        });
+                        var vc = vr && vr[0] && vr[0].result;
+
+                        // 当 value 数量 >= name 数量的一半时，认为渲染完成 (至少有一个选项时)
+                        if (vc && vc.names > 0 && vc.values >= Math.max(1, Math.floor(vc.names / 2))) {
+                            rendered = true;
+                            break;
+                        }
+                        await new Promise(function (res) { setTimeout(res, 200); });
+                    }
+                    if (!rendered) {
+                        log('[W' + workerId + '] ⚠️ 渲染确认超时，可能页面结构特殊', 'warn');
+                    }
+
+                } catch (e) { }
 
                 // ★★★ FIX: 点击 "More markets" 前先滚动页面，触发 content-visibility 渲染
                 try {
@@ -1263,14 +1362,19 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                         '条, 主:' + card.options.length + '条), 回退到主页面数据', 'warn');
                 }
 
-                // ★ 新增：校验所有 value 字段，如果发现不包含数字的异常数据则丢弃整条记录
+                // ★ 新增：在写入前，彻底过滤掉 value 为 "--%" 的选项
+                opts = opts.filter(function (o) {
+                    return o.value !== '--%';
+                });
+
+                // 校验所有 value 字段，如果发现不包含数字的异常数据则丢弃整条记录
                 var hasInvalidValue = false;
                 opts.forEach(function (o, j) {
                     final['option' + (j + 1)] = o.name;
                     final['value' + (j + 1)] = o.value;
                     if (o.change) final['change' + (j + 1)] = o.change;
 
-                    // 如果 value 字段不包含任何数字，说明抓取到了 "Method of Victory" 等异常文本
+                    // ★ 修改：严格要求必须包含数字，不再放行 "--%"
                     if (!/\d/.test(o.value || '')) {
                         hasInvalidValue = true;
                     }
@@ -1285,7 +1389,9 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                         name: card.name,
                         url: 'https://kalshi.com' + card.subUrl,
                         volume: card.volume,
-                        debugInfo: ['Invalid value detected (no digits in value field)']
+                        debugInfo: ['Invalid value detected (no digits in value field)'],
+                        card: card, // ★ 记录原始卡片，方便纠错
+                        index: idx
                     });
                 } else {
                     results[idx] = final;
@@ -1312,7 +1418,9 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                     name: card.name,
                     url: 'https://kalshi.com' + card.subUrl,
                     volume: card.volume,
-                    debugInfo: ['Tab crashed or closed: ' + err.message]
+                    debugInfo: ['Tab crashed or closed: ' + err.message],
+                    card: card,
+                    index: idx
                 });
                 config.onProgress();
                 break;
@@ -1337,7 +1445,9 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                     name: card.name,
                     url: 'https://kalshi.com' + card.subUrl,
                     volume: card.volume,
-                    debugInfo: [reason].concat(debugArr)
+                    debugInfo: [reason].concat(debugArr),
+                    card: card, // ★ 记录原始卡片
+                    index: idx  // ★ 记录原始索引，用于覆盖
                 });
             }
         }
@@ -1362,6 +1472,7 @@ async function startSubpageScraping() {
     if (isRunning) return;
     isRunning = true;
     startBtn.disabled = true;
+    retryBtn.style.display = 'none'; // 开始新一轮抓取时隐藏纠错按钮
     startBtn.textContent = '抓取中...';
 
     // ★★ 反爬虫修复：重置冷却时间
@@ -1489,8 +1600,9 @@ async function startSubpageScraping() {
         queue.push({ card: cards[i], index: i });
     }
 
-    // 稀疏结果数组（按索引填充）
-    var results = new Array(cards.length);
+    // ★ 初始化全局状态
+    globalResults = new Array(cards.length);
+    globalFailures = [];
     var completedCount = 0;
     var lastSaveCount = 0;
     var scrapeStartTime = Date.now();
@@ -1518,7 +1630,7 @@ async function startSubpageScraping() {
 
         // 每完成 10 个增量保存一次
         if (doIncremental && completedCount - lastSaveCount >= 10) {
-            var partial = results.filter(function (r) { return r; });
+            var partial = globalResults.filter(function (r) { return r; });
             saveJsonFile(partial, outputFilename);
             log('💾 增量保存 (' + partial.length + '条)', 'data');
             lastSaveCount = completedCount;
@@ -1532,9 +1644,9 @@ async function startSubpageScraping() {
             // 这样 4 个线程的请求会分布在 0s, 2s, 4s, 6s，彻底避免 Cloudflare 并发拦截和前台抢夺。
             await new Promise(function (res) { setTimeout(res, w * 5000); });
         }
-        return workerLoop(w, tabId, queue, results, {
+        return workerLoop(w, tabId, queue, globalResults, {
             onProgress: onProgress,
-            failures: failures    // ★ 新增：传入共享失败数组
+            failures: globalFailures
         });
     });
 
@@ -1558,8 +1670,7 @@ async function startSubpageScraping() {
         }
     } catch (e) { }
 
-    // 过滤掉 null 的结果（被丢弃的异常数据）
-    var finalResults = results.filter(function (r) { return r; });
+    var finalResults = globalResults.filter(function (r) { return r; });
     var elapsed = Math.round((Date.now() - scrapeStartTime) / 1000);
 
     log('', 'dim');
@@ -1572,34 +1683,14 @@ async function startSubpageScraping() {
     saveJsonFile(finalResults, outputFilename);
     log('💾 最终保存: ' + outputFilename + ' (' + finalResults.length + '条)', 'data');
 
-    // ★ 修改：调整失败记录的文案，使其涵盖分类缺失和异常数据
-    if (failures.length > 0) {
+    if (globalFailures.length > 0) {
         log('', 'dim');
-        log('⚠️ 共 ' + failures.length + ' 个项目抓取异常(分类缺失/数据异常/触发兜底):', 'warn');
-        var failureLines = [];
-        failureLines.push('Kalshi Scraper - 抓取异常(失败)记录');
-        failureLines.push('生成时间: ' + new Date().toLocaleString());
-        failureLines.push('共 ' + failures.length + ' 个项目');
-        failureLines.push('');
-        failureLines.push('========================================');
-        failures.forEach(function (f, fi) {
-            failureLines.push('');
-            failureLines.push('[' + (fi + 1) + '] ' + f.name);
-            failureLines.push('    URL: ' + f.url);
-            failureLines.push('    Volume: ' + f.volume);
-            if (f.debugInfo && f.debugInfo.length > 0) {
-                failureLines.push('    Debug: ' + f.debugInfo.join(' | '));
-            }
-            log('  ❌ "' + f.name + '" → ' + f.url, 'error');
-        });
-        failureLines.push('');
-        failureLines.push('========================================');
-        failureLines.push('请将上述 URL 在浏览器中打开，右键「检查」查看页面结构，');
-        failureLines.push('特别关注分类链接的 href 是否包含 /category/ 或 /sports/，以及选项 value 是否包含数字。');
-        failureLines.push('注：如果 Debug 中包含 "Warning: Used S2/S3..."，说明常规分类提取失败，触发了全文档检索兜底，请人工核对分类是否准确。');
+        log('⚠️ 共 ' + globalFailures.length + ' 个项目抓取异常(分类缺失/数据异常/触发兜底):', 'warn');
+        generateFailureReport(globalFailures);
 
-        saveTextFile(failureLines.join('\n'), 'kalshi_failure.txt');
-        log('📄 异常记录已保存到 kalshi_failure.txt', 'warn');
+        // ★ 显示纠错按钮
+        retryBtn.style.display = 'inline-block';
+        retryBtn.textContent = '纠错 (' + globalFailures.length + '个失败项)';
     } else {
         log('🎉 所有项目的分类均抓取成功，无失败记录!', 'info');
     }
@@ -1623,8 +1714,8 @@ async function startSubpageScraping() {
     progressContainer.style.display = 'none';
     var statusMsg = '✅ 完成! ' + finalResults.length + ' 条, 耗时 ' + elapsed + 's, 平均 ' +
         (finalResults.length > 0 ? (elapsed / finalResults.length).toFixed(1) : '0') + 's/条 → ' + outputFilename;
-    if (failures.length > 0) {
-        statusMsg += '  ⚠️ ' + failures.length + '个项目异常(见kalshi_failure.txt)';
+    if (globalFailures.length > 0) {
+        statusMsg += '  ⚠️ ' + globalFailures.length + '个项目异常(见kalshi_failure.txt)';
     }
     setStatus(statusMsg, 'success');
 
@@ -1633,7 +1724,107 @@ async function startSubpageScraping() {
     startBtn.textContent = '重新开始';
     isRunning = false;
 
-    // 释放屏幕常亮
+    if (chrome.power) chrome.power.releaseKeepAwake();
+}
+
+// ============================================================
+//  Phase 3: ★ 纠错重试机制
+// ============================================================
+async function retryFailedItems() {
+    if (isRunning || globalFailures.length === 0) return;
+    isRunning = true;
+    startBtn.disabled = true;
+    retryBtn.disabled = true;
+    retryBtn.textContent = '纠错中...';
+
+    cooldownUntil = 0;
+    if (chrome.power) chrome.power.requestKeepAwake('display');
+
+    var concurrency = parseInt(document.getElementById('concurrencyInput').value, 10) || 2;
+    if (concurrency < 1) concurrency = 1;
+    if (concurrency > 8) concurrency = 8;
+    if (concurrency > globalFailures.length) concurrency = globalFailures.length;
+
+    var outputFilename = getTimestampedFilename('kalshi');
+
+    log('', 'dim');
+    log('════════════════════════════════════════', 'section');
+    log('  Phase 3: 纠错重试 (' + globalFailures.length + ' 个项目)', 'section');
+    log('════════════════════════════════════════', 'section');
+
+    var workerTabIds = [];
+    for (var w = 0; w < concurrency; w++) {
+        try {
+            var tab = await createTab('about:blank', false);
+            workerTabIds.push(tab.id);
+        } catch (e) {
+            log('  ⚠️ 创建工作标签失败: ' + e.message, 'warn');
+        }
+    }
+
+    // 将失败项重新放入队列，保留原有的 index，以便覆盖 globalResults 中的对应位置
+    var queue = globalFailures.map(function (f) {
+        return { card: f.card, index: f.index };
+    });
+
+    var totalRetrying = globalFailures.length;
+    // 清空全局失败列表，worker 会将依然失败的项目重新 push 进来
+    globalFailures = [];
+    var completedCount = 0;
+    var scrapeStartTime = Date.now();
+
+    function onProgress() {
+        completedCount++;
+        var pct = Math.round((completedCount / totalRetrying) * 100);
+        updateProgress(completedCount, totalRetrying, '纠错: ' + completedCount + '/' + totalRetrying + ' (' + pct + '%)');
+        setStatus('纠错中: ' + completedCount + '/' + totalRetrying + ' (' + pct + '%)');
+    }
+
+    var workerPromises = workerTabIds.map(async function (tabId, w) {
+        if (w > 0) await new Promise(function (res) { setTimeout(res, w * 5000); });
+        // 传入同一个 globalResults，worker 成功后会直接覆盖原有的错误数据
+        return workerLoop(w, tabId, queue, globalResults, {
+            onProgress: onProgress,
+            failures: globalFailures
+        });
+    });
+
+    await Promise.all(workerPromises);
+
+    var autoClose = document.getElementById('autoClose').checked;
+    if (autoClose) {
+        for (var w = 0; w < workerTabIds.length; w++) {
+            await closeTab(workerTabIds[w]);
+        }
+    }
+
+    var finalResults = globalResults.filter(function (r) { return r; });
+    var elapsed = Math.round((Date.now() - scrapeStartTime) / 1000);
+
+    log('', 'dim');
+    log('════════════════════════════════════════', 'section');
+    log('  纠错完成! 当前总有效数据: ' + finalResults.length + '条, 纠错耗时 ' + elapsed + 's', 'section');
+    log('════════════════════════════════════════', 'section');
+
+    saveJsonFile(finalResults, outputFilename);
+    log('💾 纠错后保存: ' + outputFilename + ' (' + finalResults.length + '条)', 'data');
+
+    if (globalFailures.length > 0) {
+        retryBtn.style.display = 'inline-block';
+        retryBtn.disabled = false;
+        retryBtn.textContent = '再次纠错 (' + globalFailures.length + '个失败项)';
+        log('⚠️ 仍有 ' + globalFailures.length + ' 个项目失败，可再次点击纠错，或手动处理。', 'warn');
+        generateFailureReport(globalFailures);
+    } else {
+        retryBtn.style.display = 'none';
+        log('🎉 纠错全部成功!', 'success');
+    }
+
+    progressContainer.style.display = 'none';
+    setStatus('✅ 纠错完成! 总数据: ' + finalResults.length + ' 条 → ' + outputFilename, 'success');
+
+    startBtn.disabled = false;
+    isRunning = false;
     if (chrome.power) chrome.power.releaseKeepAwake();
 }
 
@@ -1645,6 +1836,11 @@ startBtn.addEventListener('click', function () {
     } else {
         scrapeMainPage();
     }
+});
+
+// ★ 绑定纠错按钮事件
+retryBtn.addEventListener('click', function () {
+    retryFailedItems();
 });
 
 clearBtn.addEventListener('click', function () {

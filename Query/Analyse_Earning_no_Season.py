@@ -13,8 +13,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = ""
 TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "GSAT"
-# TARGET_DATE = "2026-03-26"
+# SYMBOL_TO_TRACE = "FCX"
+# TARGET_DATE = "2026-03-31"
 
 # 动态生成日志路径，不再写死用户名
 LOG_FILE_PATH = os.path.join(BASE_PATH, "Downloads", "No_Season_trace_log.txt")
@@ -135,7 +135,7 @@ CONFIG = {
     "COND6_W_BOTTOM_HIGHER_LOW_DAYS": 18, 
 
     # W底形态参数
-    "COND6_W_BOTTOM_PRICE_TOLERANCE": 0.045,  # 两个谷底的价格差容忍度 (4.8%)
+    "COND6_W_BOTTOM_PRICE_TOLERANCE": 0.0492,  # 两个谷底的价格差容忍度 (4.92%)
     "COND6_W_BOTTOM_MIN_DAYS_GAP": 3,        # 两个谷底之间的最小间隔天数
 }
 

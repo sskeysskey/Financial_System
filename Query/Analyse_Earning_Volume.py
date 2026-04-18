@@ -15,8 +15,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = "" 
 TARGET_DATE = "" 
 
-# SYMBOL_TO_TRACE = "CM"
-# TARGET_DATE = "2026-03-30"
+# SYMBOL_TO_TRACE = "EBAY"
+# TARGET_DATE = "2026-02-11"
 
 # 3. 日志路径
 LOG_FILE_PATH = os.path.join(BASE_PATH, "Downloads", "PE_Volume_trace_log.txt")
@@ -1196,7 +1196,8 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
 
         # ================= 甲乙丙类逻辑的基础门槛 =================
         # 门槛 2: 今日上涨 (如果未上涨，则跳过甲乙丙的判断)
-        cond_price_up_today = (latest_price > prev_price) and (latest_price > latest_open)
+        # cond_price_up_today = (latest_price > prev_price) and (latest_price > latest_open)
+        cond_price_up_today = (latest_price > prev_price)
 
         # 门槛 3: 今日成交额 > 昨日成交额
         cond_turnover_up_today = (latest_turnover > prev_turnover)
@@ -1208,7 +1209,7 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
 
         # 如果未上涨 或 未放量，则跳过甲乙丙的判断
         if not (cond_price_up_today and cond_turnover_up_today):
-            if is_tracing: log_detail(f"    x [失败] 今日未上涨 且 今日未放量")
+            if is_tracing: log_detail(f"    x [失败] 今日未上涨 或 今日未放量")
             continue 
         
         # 条件D: 价格突破财报日收盘价
@@ -1254,7 +1255,7 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
                 log_detail(f"    ✅ [选中-乙类] 财报涨幅>0 + 未突破 + 6个月Top{turnover_rank_threshold}")
         
         # [修改] 丙类: (无需财报要求) + 今日上涨 + 45天前3名
-        elif cond_turnover_12m_top3:
+        elif cond_turnover_45d_top3:
             results_bing.append(symbol)
             if is_tracing:
                 log_detail(f"    ✅ [选中-丙类] 价格突破 + {bing_lookback_days}天Top{bing_rank_threshold}")

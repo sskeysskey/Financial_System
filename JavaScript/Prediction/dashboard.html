@@ -57,6 +57,17 @@
             background: #43a047;
         }
 
+        button.warning {
+            background: #ff9800;
+            color: white;
+            border-color: #ff9800;
+            font-weight: bold;
+        }
+
+        button.warning:hover {
+            background: #fb8c00;
+        }
+
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
@@ -170,6 +181,8 @@
 
     <div class="control-bar">
         <button id="startBtn" class="primary" disabled>等待主页面抓取...</button>
+        <!-- ★ 新增：纠错按钮 -->
+        <button id="retryBtn" class="warning" style="display: none;">纠错 (重试失败项)</button>
         <button id="clearBtn">清空日志</button>
         <label>
             <input type="checkbox" id="autoClose" checked>

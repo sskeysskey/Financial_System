@@ -22,7 +22,7 @@ with open(SECTORS_PANEL_PATH, 'r', encoding='utf-8') as f:
 # ========== 需要提取 symbol 的分组 ==========
 target_groups = [
     "Short", "Short_W", "Strategy12", "Strategy34", "OverSell_W",
-    "PE_Deep", "PE_Deeper", "PE_W", "PE_valid", "PE_invalid",
+    "PE_Deep", "PE_Deeper", "PE_W", "PE_valid", "PE_invalid", "season",
     "PE_Volume", "PE_Volume_up", "PE_Hot", "PE_Volume_high"
 ]
 
@@ -79,11 +79,10 @@ for symbol in sorted(symbols):
         # 2. 获取最新日期往前 31 天内的历史记录（不含最新当天）
         latest_dt = datetime.strptime(latest_date, "%Y-%m-%d")
 
-        # 设定初始回溯天数为 31 天
+        # 2. 获取历史支撑位（31天 -> 可能延展到61天）
         lookback_days = 31
-        skip_symbol = False # 用于标记是否在61天后依然无效而需要跳过
-        
-        # 使用循环来处理可能的周期延展逻辑
+        skip_symbol = False
+
         while True:
             date_ago = (latest_dt - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
 
@@ -96,34 +95,8 @@ for symbol in sorted(symbols):
             hist_rows = cursor.fetchall()
 
             if not hist_rows:
-                break  # 如果没有数据，跳出循环在外部处理
+                break
 
-            # 3. 检查周期内是否有财报日且涨跌幅为正
-            # cursor.execute(
-            #     '''SELECT date, price FROM Earning 
-            #        WHERE name = ? AND date >= ? AND date < ? 
-            #        ORDER BY date DESC LIMIT 1''',
-            #     (symbol, date_ago, latest_date)
-            # )
-            # earning_row = cursor.fetchone()
-
-            # support_price = None
-            # support_date = None
-            # support_type = ""
-
-            # # 如果有财报记录，且财报日当天涨跌幅（price字段） > 0
-            # if earning_row and earning_row[1] > 0:
-            #     earning_date = earning_row[0]
-            #     # 从历史记录中找到财报日当天的收盘价
-            #     for r_date, r_price in hist_rows:
-            #         if r_date == earning_date:
-            #             support_price = r_price
-            #             support_date = earning_date
-            #             support_type = f"财报支撑({earning_date})"
-            #             break
-            
-            # 如果没有符合条件的财报日，则回退到使用最低价
-            # if support_price is None:
             min_date, min_low = min(hist_rows, key=lambda x: x[1])
             support_price = min_low
             support_date = min_date
@@ -132,85 +105,111 @@ for symbol in sorted(symbols):
             # 4. 检查是否需要延展周期到 61 天，或者 61 天后依然无效跳过
             # hist_rows[-1][0] 是距离 latest_date 最近的一个交易日（即“昨天”）
             last_trading_day = hist_rows[-1][0]
-            
+
             if support_date == last_trading_day:
                 if lookback_days == 31:
                     print(f"  🔄 {symbol}: 支撑点为前一交易日({support_date})，可能处于持续下跌中，将判断周期延展至 61 天")
                     lookback_days = 61
                     continue  # 重新执行 while 循环，使用 61 天的数据
                 elif lookback_days == 61:
-                    print(f"  ⏭️ {symbol}: 延展至 61 天后，支撑点仍为前一交易日({support_date})，跳过")
+                    print(f"  ⏭️ {symbol}: 延展至 61 天后，支撑点仍为前一交易日({support_date})")
                     skip_symbol = True
                     break # 即使是61天依然是前一天，跳出循环并标记跳过
             else:
                 break  # 找到了合适的支撑位（非前一交易日），跳出循环
 
-        # 检查是否因为无历史数据或触发了61天跳过逻辑
+        # ===== Phase 2: 标准支撑位检查 =====
+        symbol_categorized = False
+
         if not hist_rows:
-            print(f"⚠️  {symbol} {lookback_days}天内无历史数据可比较，跳过")
-            continue
-        if skip_symbol:
-            continue
-
-        # 5. 检查支撑点日期与最新日期的天数差
-        support_dt = datetime.strptime(support_date, "%Y-%m-%d")
-        days_diff = (latest_dt - support_dt).days
-        
-        if days_diff < 8:
-            print(f"  ⚠️ {symbol}: 支撑点日期({support_date})距最新日期({latest_date})仅 {days_diff} 天，不足8天，视为无效，跳过")
-            continue
-
-        # 6. 比较最新最低价与支撑位
-        if latest_low > support_price:
-            diff_pct = (latest_low - support_price) / support_price * 100
-            if diff_pct <= 2.6:
-                support_close[symbol] = ""
-                earning_close[latest_date].append(symbol)
-                print(f"  ✅ {symbol}: SupportLevel_Close "
-                    f"(最新最低={latest_low}, 支撑={support_price} [{support_type}], 差={diff_pct:.2f}%)")
+            print(f"⚠️  {symbol} {lookback_days}天内无历史数据可比较")
+            # 如果不是61天延展场景，直接跳过
+            if lookback_days != 61:
+                continue
+            # 否则留给 Phase 3 财报回退检查
+        elif skip_symbol:
+            # 61天后支撑点仍为前一交易日，不直接跳过，留给 Phase 3
+            pass
         else:
-            # 最新价 ≤ 支撑位，即跌破支撑
-            
-            # ========== 新增逻辑：判断最近一次财报 ==========
-            support_val = ""
-            
-            # # 获取最近一次财报（日期小于等于最新日期）
-            # cursor.execute(
-            #     '''SELECT date, price FROM Earning 
-            #        WHERE name = ? AND date <= ? 
-            #        ORDER BY date DESC LIMIT 1''',
-            #     (symbol, latest_date)
-            # )
-            # last_earning = cursor.fetchone()
-            
-            # # 如果存在财报且财报日涨跌幅为正值
-            # if last_earning and last_earning[1] > 0:
-            #     last_earning_date = last_earning[0]
-                
-            #     # 获取该财报日的收盘价
-            #     cursor.execute(
-            #         f'SELECT price FROM [{table}] WHERE name = ? AND date = ?',
-            #         (symbol, last_earning_date)
-            #     )
-            #     earning_price_row = cursor.fetchone()
-                
-            #     if earning_price_row:
-            #         earning_close_price = earning_price_row[0]
-                    
-            #         # 计算最新价与财报日收盘价的百分比差值（绝对值）
-            #         diff_pct = abs(latest_low - earning_close_price) / earning_close_price * 100
-                    
-            #         # 如果差值在 2.6% 以内，则加上“财”字
-            #         if diff_pct <= 2.6:
-            #             support_val = f"{symbol}财"
+            support_dt = datetime.strptime(support_date, "%Y-%m-%d")
+            days_diff = (latest_dt - support_dt).days
 
-            support_over[symbol] = support_val
-            earning_over[latest_date].append(symbol)
-            
-            # 打印日志时附带财报条件信息（如果满足）
-            # extra_info = f" [符合财报条件: {support_val}]" if support_val else ""
-            print(f"  🔻 {symbol}: SupportLevel_Over "
-                  f"(最新最低={latest_low}, 支撑={support_price} [{support_type}])")
+            if days_diff < 8:
+                print(f"  ⚠️ {symbol}: 支撑点日期({support_date})距最新日期({latest_date})仅 {days_diff} 天，不足8天，视为无效")
+                # 如果不是61天延展场景，直接跳过
+                if lookback_days != 61:
+                    continue
+                # 否则留给 Phase 3
+            else:
+                # 比较最新最低价与支撑位
+                if latest_low > support_price:
+                    diff_pct = (latest_low - support_price) / support_price * 100
+                    if diff_pct <= 2.6:
+                        support_close[symbol] = ""
+                        earning_close[latest_date].append(symbol)
+                        symbol_categorized = True
+                        print(f"  ✅ {symbol}: SupportLevel_Close "
+                              f"(最新最低={latest_low}, 支撑={support_price} [{support_type}], 差={diff_pct:.2f}%)")
+                    # else: diff > 2.6%，不满足 close 条件，留给 Phase 3（如果是61天场景）
+                else:
+                    # 最新价 ≤ 支撑位，跌破支撑
+                    support_over[symbol] = ""
+                    earning_over[latest_date].append(symbol)
+                    symbol_categorized = True
+                    print(f"  🔻 {symbol}: SupportLevel_Over "
+                          f"(最新最低={latest_low}, 支撑={support_price} [{support_type}])")
+
+        # ===== Phase 3: 财报支撑回退检查（仅当延展到61天且标准检查未产生结果时） =====
+        if not symbol_categorized and lookback_days == 61:
+            date_61_ago = (latest_dt - timedelta(days=61)).strftime("%Y-%m-%d")
+
+            # 在61天范围内查找 price 为正值的最近一次财报
+            cursor.execute(
+                '''SELECT date, price FROM Earning 
+                   WHERE name = ? AND date >= ? AND date < ? AND price > 0
+                   ORDER BY date DESC LIMIT 1''',
+                (symbol, date_61_ago, latest_date)
+            )
+            earning_row = cursor.fetchone()
+
+            if earning_row:
+                earning_date = earning_row[0]
+
+                # 获取该财报日在对应表中的 low 作为支撑位
+                cursor.execute(
+                    f'SELECT low FROM [{table}] WHERE name = ? AND date = ?',
+                    (symbol, earning_date)
+                )
+                earning_low_row = cursor.fetchone()
+
+                if earning_low_row:
+                    earning_support = earning_low_row[0]
+                    earning_dt = datetime.strptime(earning_date, "%Y-%m-%d")
+                    e_days_diff = (latest_dt - earning_dt).days
+                    earning_support_type = f"财报支撑({earning_date})"
+
+                    if e_days_diff < 8:
+                        print(f"  ⚠️ {symbol}: 财报日({earning_date})距最新日期仅 {e_days_diff} 天，不足8天，跳过")
+                    else:
+                        if latest_low > earning_support:
+                            diff_pct = (latest_low - earning_support) / earning_support * 100
+                            if diff_pct <= 2.6:
+                                support_close[symbol] = f"{symbol}财"
+                                earning_close[latest_date].append(symbol)
+                                symbol_categorized = True
+                                print(f"  ✅ {symbol}: SupportLevel_Close [财报回退] "
+                                      f"(最新最低={latest_low}, 支撑={earning_support} [{earning_support_type}], 差={diff_pct:.2f}%)")
+                            else:
+                                print(f"  ⚠️ {symbol}: 财报支撑差值 {diff_pct:.2f}% 超过 2.6%，不满足 Close 条件")
+                        else:
+                            support_over[symbol] = f"{symbol}财"
+                            earning_over[latest_date].append(symbol)
+                            symbol_categorized = True
+                            print(f"  🔻 {symbol}: SupportLevel_Over [财报回退] "
+                                  f"(最新最低={latest_low}, 支撑={earning_support} [{earning_support_type}])")
+
+            if not symbol_categorized:
+                print(f"  ⏭️ {symbol}: 61天范围内无符合条件的财报支撑，最终跳过")
 
     except Exception as e:
         print(f"处理 {symbol} 时出错: {e}")
@@ -237,7 +236,7 @@ if "SupportLevel_Over" not in earning_history:
 for date_key, sym_list in earning_over.items():
     earning_history["SupportLevel_Over"][date_key] = sorted(sym_list)
 
-# ========== 写回文件 ======
+# ========== 写回文件 ==========
 with open(SECTORS_PANEL_PATH, 'w', encoding='utf-8') as f:
     json.dump(sectors_panel, f, indent=4, ensure_ascii=False)
 

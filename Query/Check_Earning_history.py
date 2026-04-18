@@ -225,7 +225,29 @@ def search_history(symbol):
                                     break 
 
                         # =======================================================
-                        # [新增规则]: PE_Volume_high (带'抄底') & PE_W 同日触发
+                        # [新增规则]: 最新一天，PE_Volume_high(带'抄底') & (Short 或 Short_W) 同日触发
+                        # =======================================================
+                        if sorted_trading_dates and d_str == sorted_trading_dates[0]:
+                            has_short = "Short" in date_categories[d_str] or "Short_W" in date_categories[d_str]
+                            has_pe_vol_high = "PE_Volume_high" in date_categories[d_str]
+                            
+                            if has_short and has_pe_vol_high:
+                                # 检查 PE_Volume_high 的这条记录后缀是否包含 '抄底'
+                                is_chaodi = False
+                                if category == "PE_Volume_high":
+                                    is_chaodi = (suf and '抄底' in suf)
+                                else:
+                                    for d, s in category_data.get("PE_Volume_high", []):
+                                        if d == d_str and s and '抄底' in s:
+                                            is_chaodi = True
+                                            break
+                                
+                                # 如果确认包含'抄底'，且当前正在渲染这几个相关分类，则添加红色标记
+                                if is_chaodi and category in ["PE_Volume_high", "Short", "Short_W"]:
+                                    overlap_marker += f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;' title='最新交易日触发 PE_Volume_high(抄底) 和 Short/Short_W'>[★最新日:抄底+Short]</span>"
+
+                        # =======================================================
+                        # [原有规则]: PE_Volume_high (带'抄底') & PE_W 同日触发
                         # =======================================================
                         if "PE_W" in date_categories[d_str] and "PE_Volume_high" in date_categories[d_str]:
                             # 检查 PE_Volume_high 的这条记录后缀是否包含 '抄底'
@@ -244,7 +266,7 @@ def search_history(symbol):
                                 overlap_marker += f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;' title='同一天触发 PE_Volume_high(抄底) 和 PE_W'>[★多重触发:抄底+W]</span>"
 
                         # =======================================================
-                        # [新增规则]: A分组群 与 支撑位(B分组群) 同日触发
+                        # [原有规则]: A分组群 与 支撑位(B分组群) 同日触发
                         # =======================================================
                         group_a = {"PE_Volume", "PE_Volume_up", "PE_Volume_high", "PE_W", "PE_Deeper", "PE_Deep", "OverSell_W", "PE_Hot", "Short", "Short_W"}
                         if category in group_a:
@@ -274,7 +296,7 @@ def search_history(symbol):
                                         overlap_marker += f" <span style='color:{NORD_THEME['warning_red']}; font-weight:bold;' title='前一交易日触发 PE_Volume'>[★接力:vol->w]</span>"
 
                                     # =======================================================
-                                    # [新增规则]: 今天在 PE_W，且昨天在 SupportLevel_Close 或 SupportLevel_Over
+                                    # [原有规则]: 今天在 PE_W，且昨天在 SupportLevel_Close 或 SupportLevel_Over
                                     # =======================================================
                                     prev_in_supp_close = prev_date in category_dates.get("SupportLevel_Close", set())
                                     prev_in_supp_over = prev_date in category_dates.get("SupportLevel_Over", set())

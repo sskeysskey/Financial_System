@@ -422,7 +422,8 @@
         "FPA",
         "IHE",
         "GSG",
-        "BWET"
+        "BWET",
+        "FLLA"
     ],
     "Basic_Materials": [
         "LIN",
@@ -1091,7 +1092,8 @@
         "HASI",
         "VCTR",
         "ASB",
-        "BMNR"
+        "BMNR",
+        "XXI"
     ],
     "Healthcare": [
         "LLY",
