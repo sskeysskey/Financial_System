@@ -273,29 +273,52 @@ def search_history_by_date(symbol):
         else:
             normal_dates.append((d_str, items_today))
 
+    # --- 新增：定义需要保持纵向排列的重要组别 ---
+    group_a = {"PE_Volume", "PE_Volume_up", "PE_Volume_high", "PE_W",
+                "PE_Hot", "Short", "Short_W"}
+
     # 渲染正常日期的记录
     for d_str, items_today in normal_dates:
         has_data = True
-        html_parts.append(make_header(d_str, NORD_THEME['success_green']))
-        items_today = sorted(date_items[d_str], key=lambda x: x[0])
-        
+        # 判断当天是否包含 group_a 中的重要分组
+        has_group_a = any(cat in group_a for cat, _ in items_today)
+
+        # 先把每一条渲染成 HTML 片段，横纵两种排版共用
+        rendered_items = []
         for category, suf in items_today:
             suf_html = build_suffix_html(category, suf)
             overlap_marker = build_overlap_marker(
                 category, d_str, suf,
                 category_data, date_categories, category_dates, sorted_trading_dates
             )
-            
-            # --- 修改：判断是否需要高亮 ---
+
             if category in highlight_categories:
-                # 使用鲜艳的颜色（例如 Nord 主题中的 warning_red 或自定义颜色）
-                display_category = f"<b style='color:#BF616A; background-color:rgba(191,97,106,0.1); padding:0 4px; border-radius:3px;'>{category}</b>"
+                display_category = (
+                    f"<b style='color:#BF616A; background-color:rgba(191,97,106,0.1); "
+                    f"padding:0 4px; border-radius:3px;'>{category}</b>"
+                )
             else:
                 display_category = f"<b style='color:#88C0D0'>{category}</b>"
-            # ---------------------------
-            
+
+            rendered_items.append(f"• {display_category}{suf_html}{overlap_marker}")
+
+        if has_group_a:
+            # 重要分组：保持原来的纵向排版（日期作为大标题 + 纵向列表）
+            html_parts.append(make_header(d_str, NORD_THEME['success_green']))
+            for item in rendered_items:
+                html_parts.append(f"&nbsp;&nbsp;{item}<br>")
+        else:
+            # 非重要分组：日期 + 内容 同一行横向显示
+            date_html = (
+                f"<span style='color:{NORD_THEME['success_green']}; "
+                f"font-weight:bold; font-size:15px;'>{d_str}</span>"
+            )
+            joined = "&nbsp;&nbsp;&nbsp;&nbsp;".join(rendered_items)
             html_parts.append(
-                f"&nbsp;&nbsp;• {display_category}{suf_html}{overlap_marker}<br>"
+                f"<div style='padding-left: 4px; line-height: 1.8; "
+                f"margin-top:2px; margin-bottom:2px;'>"
+                f"{date_html}&nbsp;&nbsp;&nbsp;&nbsp;{joined}"
+                f"</div>"
             )
 
     # 渲染被压缩的单一分组记录（统一放在下方）
