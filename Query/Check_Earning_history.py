@@ -2,7 +2,7 @@ import sys
 import json
 import os
 from PyQt6.QtWidgets import (
-    QApplication, QDialog, QVBoxLayout, QTextEdit, QTabWidget
+    QApplication, QDialog, QVBoxLayout, QTextEdit, QSplitter, QLabel, QWidget
 )
 from PyQt6.QtGui import QFont, QShortcut, QKeySequence
 from PyQt6.QtCore import Qt
@@ -313,37 +313,65 @@ class InfoDialog(QDialog):
     def __init__(self, symbol, font_family, font_size, width, height, parent=None):
         super().__init__(parent)
         self.setWindowTitle(f"Info Check: {symbol}")
-        self.setGeometry(0, 0, width, height)
+        # 两栏并排,宽度加倍
+        self.setGeometry(0, 0, width * 2, height)
         self.center_on_screen()
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(5, 5, 5, 5)
 
-        self.tabs = QTabWidget(self)
+        # 用 QSplitter 让两栏并排,并且可以拖拽调整宽度
+        self.splitter = QSplitter(Qt.Orientation.Horizontal, self)
 
-        # Tab 1: 按分组
+        # --- 左栏:按分组 ---
+        left_container = QWidget()
+        left_layout = QVBoxLayout(left_container)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(2)
+
+        left_title = QLabel("按分组")
+        left_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        left_title.setObjectName("panelTitle")
+
         self.text_by_cat = QTextEdit()
         self.text_by_cat.setReadOnly(True)
         self.text_by_cat.setFont(QFont(font_family))
         self.text_by_cat.setHtml(search_history_by_category(symbol))
-        self.tabs.addTab(self.text_by_cat, "按分组")
 
-        # Tab 2: 按时间
+        left_layout.addWidget(left_title)
+        left_layout.addWidget(self.text_by_cat)
+
+        # --- 右栏:按时间 ---
+        right_container = QWidget()
+        right_layout = QVBoxLayout(right_container)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(2)
+
+        right_title = QLabel("按时间")
+        right_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        right_title.setObjectName("panelTitle")
+
         self.text_by_date = QTextEdit()
         self.text_by_date.setReadOnly(True)
         self.text_by_date.setFont(QFont(font_family))
         self.text_by_date.setHtml(search_history_by_date(symbol))
-        self.tabs.addTab(self.text_by_date, "按时间")
 
-        layout.addWidget(self.tabs)
+        right_layout.addWidget(right_title)
+        right_layout.addWidget(self.text_by_date)
+
+        # 添加到 splitter
+        self.splitter.addWidget(left_container)
+        self.splitter.addWidget(right_container)
+        self.splitter.setSizes([width, width])  # 初始宽度五五开
+        self.splitter.setChildrenCollapsible(False)
+
+        layout.addWidget(self.splitter)
         self.setLayout(layout)
         self.apply_nord_style(font_size)
 
-        # 快捷键:1 按分组、2 按时间、Tab 切换
-        QShortcut(QKeySequence("1"), self, activated=lambda: self.tabs.setCurrentIndex(0))
-        QShortcut(QKeySequence("2"), self, activated=lambda: self.tabs.setCurrentIndex(1))
-        QShortcut(QKeySequence("Tab"), self,
-                  activated=lambda: self.tabs.setCurrentIndex((self.tabs.currentIndex() + 1) % self.tabs.count()))
+        # 快捷键可以保留也可以删,这里让 1/2 聚焦到对应面板
+        QShortcut(QKeySequence("1"), self, activated=lambda: self.text_by_cat.setFocus())
+        QShortcut(QKeySequence("2"), self, activated=lambda: self.text_by_date.setFocus())
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Escape:
@@ -361,38 +389,36 @@ class InfoDialog(QDialog):
     def apply_nord_style(self, font_size):
         qss = f"""
         QDialog {{ background-color: {NORD_THEME['background']}; }}
-        QTabWidget::pane {{
+        QWidget {{ background-color: {NORD_THEME['background']}; }}
+
+        QLabel#panelTitle {{
+            color: {NORD_THEME['text_bright']};
+            background-color: {NORD_THEME['widget_bg']};
+            font-weight: bold;
+            font-size: 14px;
+            padding: 6px;
             border: 1px solid {NORD_THEME['border']};
-            border-radius: 5px;
-            background: {NORD_THEME['widget_bg']};
-            top: -1px;
-        }}
-        QTabBar::tab {{
-            background: {NORD_THEME['background']};
-            color: {NORD_THEME['text_light']};
-            padding: 6px 16px;
-            border: 1px solid {NORD_THEME['border']};
-            border-bottom: none;
             border-top-left-radius: 4px;
             border-top-right-radius: 4px;
-            margin-right: 2px;
-            font-size: 13px;
         }}
-        QTabBar::tab:selected {{
-            background: {NORD_THEME['widget_bg']};
-            color: {NORD_THEME['text_bright']};
-            font-weight: bold;
-        }}
-        QTabBar::tab:hover {{
-            background: {NORD_THEME['accent_blue']};
-            color: {NORD_THEME['text_bright']};
-        }}
+
         QTextEdit {{
             background-color: {NORD_THEME['widget_bg']};
             color: {NORD_THEME['text_bright']};
-            border: none;
+            border: 1px solid {NORD_THEME['border']};
+            border-top: none;
+            border-bottom-left-radius: 4px;
+            border-bottom-right-radius: 4px;
             font-size: {font_size}px;
             padding: 10px;
+        }}
+
+        QSplitter::handle {{
+            background-color: {NORD_THEME['border']};
+            width: 4px;
+        }}
+        QSplitter::handle:hover {{
+            background-color: {NORD_THEME['accent_blue']};
         }}
         """
         self.setStyleSheet(qss)
@@ -409,7 +435,7 @@ if __name__ == "__main__":
         symbol=target_symbol,
         font_family="Arial Unicode MS",
         font_size=16,
-        width=500,
+        width=500,      # 每一栏的宽度
         height=850
     )
     dialog.raise_()
