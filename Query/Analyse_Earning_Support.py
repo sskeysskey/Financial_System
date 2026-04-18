@@ -141,23 +141,20 @@ for symbol in sorted(symbols):
                     continue
                 # 否则留给 Phase 3
             else:
-                # 比较最新最低价与支撑位
-                if latest_low > support_price:
-                    diff_pct = (latest_low - support_price) / support_price * 100
+                # 比较最新收盘价与支撑位
+                if latest_close > support_price: # 修改点
+                    diff_pct = (latest_close - support_price) / support_price * 100 # 修改点
                     if diff_pct <= 2.6:
                         support_close[symbol] = ""
                         earning_close[latest_date].append(symbol)
                         symbol_categorized = True
-                        print(f"  ✅ {symbol}: SupportLevel_Close "
-                              f"(最新最低={latest_low}, 支撑={support_price} [{support_type}], 差={diff_pct:.2f}%)")
-                    # else: diff > 2.6%，不满足 close 条件，留给 Phase 3（如果是61天场景）
+                        print(f"  ✅ {symbol}: SupportLevel_Close (最新收盘={latest_close}, 支撑={support_price}, 差={diff_pct:.2f}%)")
                 else:
-                    # 最新价 ≤ 支撑位，跌破支撑
+                    # 最新收盘价 ≤ 支撑位，跌破支撑
                     support_over[symbol] = ""
                     earning_over[latest_date].append(symbol)
                     symbol_categorized = True
-                    print(f"  🔻 {symbol}: SupportLevel_Over "
-                          f"(最新最低={latest_low}, 支撑={support_price} [{support_type}])")
+                    print(f"  🔻 {symbol}: SupportLevel_Over (最新收盘={latest_close}, 支撑={support_price})")
 
         # ===== Phase 3: 财报支撑回退检查（仅当延展到61天且标准检查未产生结果时） =====
         if not symbol_categorized and lookback_days == 61:
@@ -191,22 +188,18 @@ for symbol in sorted(symbols):
                     if e_days_diff < 8:
                         print(f"  ⚠️ {symbol}: 财报日({earning_date})距最新日期仅 {e_days_diff} 天，不足8天，跳过")
                     else:
-                        if latest_low > earning_support:
-                            diff_pct = (latest_low - earning_support) / earning_support * 100
+                        if latest_close > earning_support: # 修改点
+                            diff_pct = (latest_close - earning_support) / earning_support * 100 # 修改点
                             if diff_pct <= 2.6:
                                 support_close[symbol] = f"{symbol}财"
                                 earning_close[latest_date].append(symbol)
                                 symbol_categorized = True
-                                print(f"  ✅ {symbol}: SupportLevel_Close [财报回退] "
-                                      f"(最新最低={latest_low}, 支撑={earning_support} [{earning_support_type}], 差={diff_pct:.2f}%)")
-                            else:
-                                print(f"  ⚠️ {symbol}: 财报支撑差值 {diff_pct:.2f}% 超过 2.6%，不满足 Close 条件")
+                                print(f"  ✅ {symbol}: SupportLevel_Close [财报回退] (最新收盘={latest_close}, 支撑={earning_support}, 差={diff_pct:.2f}%)")
                         else:
                             support_over[symbol] = f"{symbol}财"
                             earning_over[latest_date].append(symbol)
                             symbol_categorized = True
-                            print(f"  🔻 {symbol}: SupportLevel_Over [财报回退] "
-                                  f"(最新最低={latest_low}, 支撑={earning_support} [{earning_support_type}])")
+                            print(f"  🔻 {symbol}: SupportLevel_Over [财报回退] (最新收盘={latest_close}, 支撑={earning_support})")
 
             if not symbol_categorized:
                 print(f"  ⏭️ {symbol}: 61天范围内无符合条件的财报支撑，最终跳过")

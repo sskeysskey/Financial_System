@@ -138,58 +138,40 @@
     "SupportLevel_Close": {
         "BMRN": "",
         "BRK-B": "BRK-B财",
-        "CVE": "",
-        "DXCM": "",
-        "GILD": "",
-        "MRK": "",
-        "PG": "",
-        "PM": ""
+        "CF": "",
+        "LNG": "",
+        "NOC": "",
+        "PR": ""
     },
     "SupportLevel_Close_backup": {
         "BMRN": "",
         "BRK-B": "BRK-B财",
-        "CVE": "",
-        "DXCM": "",
-        "GILD": "",
-        "MRK": "",
-        "PG": "",
-        "PM": ""
+        "CF": "",
+        "LNG": "",
+        "NOC": "",
+        "PR": ""
     },
     "SupportLevel_Over": {
-        "APA": "",
-        "CF": "",
         "CME": "",
         "CNQ": "",
         "EQNR": "",
-        "FANG": "",
         "LBRT": "",
         "LCID": "LCID财",
         "LMT": "",
-        "LNG": "",
         "LYB": "",
-        "NOC": "",
-        "PR": "",
         "TKO": "TKO财",
-        "VG": "",
-        "VIST": ""
+        "VG": ""
     },
     "SupportLevel_Over_backup": {
-        "APA": "",
-        "CF": "",
         "CME": "",
         "CNQ": "",
         "EQNR": "",
-        "FANG": "",
         "LBRT": "",
         "LCID": "LCID财",
         "LMT": "",
-        "LNG": "",
         "LYB": "",
-        "NOC": "",
-        "PR": "",
         "TKO": "TKO财",
-        "VG": "",
-        "VIST": ""
+        "VG": ""
     },
     "Strategy12": {
         "AJG": "",

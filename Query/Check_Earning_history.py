@@ -362,41 +362,43 @@ class InfoDialog(QDialog):
         # 用 QSplitter 让两栏并排,并且可以拖拽调整宽度
         self.splitter = QSplitter(Qt.Orientation.Horizontal, self)
 
-        # --- 左栏:按分组 ---
+        # --- 修改点：现在先创建“按时间”面板 ---
+        # --- 左栏:按时间 ---
         left_container = QWidget()
         left_layout = QVBoxLayout(left_container)
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(2)
 
-        left_title = QLabel("按分组")
+        left_title = QLabel("按时间")  # 标题改为“按时间”
         left_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         left_title.setObjectName("panelTitle")
 
-        self.text_by_cat = QTextEdit()
-        self.text_by_cat.setReadOnly(True)
-        self.text_by_cat.setFont(QFont(font_family))
-        self.text_by_cat.setHtml(search_history_by_category(symbol))
+        self.text_by_date = QTextEdit()
+        self.text_by_date.setReadOnly(True)
+        self.text_by_date.setFont(QFont(font_family))
+        self.text_by_date.setHtml(search_history_by_date(symbol)) # 调用按时间函数
 
         left_layout.addWidget(left_title)
-        left_layout.addWidget(self.text_by_cat)
+        left_layout.addWidget(self.text_by_date)
 
-        # --- 右栏:按时间 ---
+        # --- 修改点：现在后创建“按分组”面板 ---
+        # --- 右栏:按分组 ---
         right_container = QWidget()
         right_layout = QVBoxLayout(right_container)
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(2)
 
-        right_title = QLabel("按时间")
+        right_title = QLabel("按分组")  # 标题改为“按分组”
         right_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         right_title.setObjectName("panelTitle")
 
-        self.text_by_date = QTextEdit()
-        self.text_by_date.setReadOnly(True)
-        self.text_by_date.setFont(QFont(font_family))
-        self.text_by_date.setHtml(search_history_by_date(symbol))
+        self.text_by_cat = QTextEdit()
+        self.text_by_cat.setReadOnly(True)
+        self.text_by_cat.setFont(QFont(font_family))
+        self.text_by_cat.setHtml(search_history_by_category(symbol)) # 调用按分组函数
 
         right_layout.addWidget(right_title)
-        right_layout.addWidget(self.text_by_date)
+        right_layout.addWidget(self.text_by_cat)
 
         # 添加到 splitter
         self.splitter.addWidget(left_container)
@@ -408,9 +410,9 @@ class InfoDialog(QDialog):
         self.setLayout(layout)
         self.apply_nord_style(font_size)
 
-        # 快捷键可以保留也可以删,这里让 1/2 聚焦到对应面板
-        QShortcut(QKeySequence("1"), self, activated=lambda: self.text_by_cat.setFocus())
-        QShortcut(QKeySequence("2"), self, activated=lambda: self.text_by_date.setFocus())
+        # 快捷键对应调整：1 现在对应“按时间”，2 现在对应“按分组”
+        QShortcut(QKeySequence("1"), self, activated=lambda: self.text_by_date.setFocus())
+        QShortcut(QKeySequence("2"), self, activated=lambda: self.text_by_cat.setFocus())
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Escape:

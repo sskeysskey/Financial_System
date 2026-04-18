@@ -1209,12 +1209,10 @@
         "2026-04-17": [
             "BMRN",
             "BRK-B",
-            "CVE",
-            "DXCM",
-            "GILD",
-            "MRK",
-            "PG",
-            "PM"
+            "CF",
+            "LNG",
+            "NOC",
+            "PR"
         ]
     },
     "SupportLevel_Over": {
@@ -1268,22 +1266,15 @@
             "TKO"
         ],
         "2026-04-17": [
-            "APA",
-            "CF",
             "CME",
             "CNQ",
             "EQNR",
-            "FANG",
             "LBRT",
             "LCID",
             "LMT",
-            "LNG",
             "LYB",
-            "NOC",
-            "PR",
             "TKO",
-            "VG",
-            "VIST"
+            "VG"
         ]
     },
     "PE_Volume": {
