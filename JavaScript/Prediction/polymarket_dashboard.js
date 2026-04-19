@@ -107,11 +107,12 @@ async function pollForContent(tabId, maxMs) {
                     var acc = document.querySelectorAll('[data-scroll-anchor*="event-detail-accordion"]');
                     var bodyText = (document.body && document.body.innerText) || '';
                     var hasChance = /% chance/.test(bodyText);
-                    // var hasResolved = /View\s+resolved/i.test(bodyText);
+                    var hasNumberFlow = !!document.querySelector('number-flow-react');
+                    var hasResolved = /View\s+resolved/i.test(bodyText);
                     var hasGamingSidebar = document.querySelectorAll('a[href*="/esports/"]').length >= 3;
                     var isBot = !!document.getElementById('challenge-form') || document.title.toLowerCase().includes('just a moment');
                     return {
-                        hasContent: !!h1 && (acc.length > 0 || hasChance || hasGamingSidebar || bodyText.length > 500),
+                        hasContent: !!h1 && (acc.length > 0 || hasChance || hasNumberFlow || hasGamingSidebar || bodyText.length > 500),
                         isBotPage: isBot
                     };
                 }
@@ -225,7 +226,12 @@ function injectedScrapePolymarketMainPage() {
             // 首页概率值（% chance 型子页面会用到）
             var homePercentage = '';
             var pctEl = card.querySelector('p[title][class*="text-heading-2xl"]');
-            if (pctEl) homePercentage = clean(pctEl.textContent);
+            if (pctEl) {
+                var titleAttr = pctEl.getAttribute('title') || '';
+                var txtV = pctEl.textContent.trim();
+                if (/^\d+(\.\d+)?%$/.test(titleAttr)) homePercentage = titleAttr;
+                else homePercentage = clean(txtV);
+            }
 
             predictions.push({
                 name: name,
@@ -247,21 +253,16 @@ function injectedScrapePolymarketMainPage() {
 }
 
 // ============================================================
-//  注入函数：Polymarket 子页面抓取（含分流）
+//  注入函数：Polymarket 子页面抓取（修复了 Multi 误判为 Chance 的问题）
 // ============================================================
 function injectedScrapePolymarketSubpage() {
-    var result = { pageType: 'unknown', enddate: '', options: [], debug: [] };
-
-    // ━━━━━━━━━━━━ Check 1: resolved ━━━━━━━━━━━━
-    // var btns = document.querySelectorAll('button');
-    // for (var i = 0; i < btns.length; i++) {
-    //     var t = btns[i].textContent.replace(/\s+/g, ' ').trim().toLowerCase();
-    //     if (t.indexOf('resolved') !== -1 && t.indexOf('view') !== -1) {
-    //         result.pageType = 'resolved';
-    //         result.debug.push('Found "View resolved" → 跳过');
-    //         return result;
-    //     }
-    // }
+    var result = {
+        pageType: 'unknown',
+        enddate: '',
+        options: [],
+        subpagePercentage: '',
+        debug: []
+    };
 
     // ━━━━━━━━━━━━ Check 2: gaming ━━━━━━━━━━━━
     var esportsLinks = document.querySelectorAll('a[href*="/esports/"]');
@@ -287,23 +288,102 @@ function injectedScrapePolymarketSubpage() {
         if (monthRe.test(st)) { result.enddate = st; break; }
     }
     if (!result.enddate) {
-        var bodyText = (document.body && document.body.innerText) || '';
-        var m = bodyText.match(/\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2},\s+\d{4}\b/);
+        var bodyText0 = (document.body && document.body.innerText) || '';
+        var m = bodyText0.match(/\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2},\s+\d{4}\b/);
         if (m) result.enddate = m[0];
     }
 
-    // ━━━━━━━━━━━━ Check 3: "% chance" 单选项页 ━━━━━━━━━━━━
-    for (var i = 0; i < allSpans.length; i++) {
-        if (allSpans[i].textContent.trim() === '% chance') {
+    // ━━━━━━━━━━━━ 核心修复：优先判断是否为 Multi 页面 ━━━━━━━━━━━━
+    var accItems = document.querySelectorAll('[data-scroll-anchor*="event-detail-accordion"]');
+
+    // 如果有手风琴列表，绝对是 Multi 页面，跳过 Chance 的判断
+    if (accItems.length === 0) {
+        // ━━━━━━━━━━━━ Check 3: "% chance" 单选项页 ━━━━━━━━━━━━
+        var bodyText = (document.body && document.body.innerText) || '';
+        var hasChanceText = bodyText.indexOf('% chance') !== -1;
+
+        var numberFlowEls = document.querySelectorAll('number-flow-react');
+
+        var shadowChanceFound = false;
+        for (var nf = 0; nf < numberFlowEls.length; nf++) {
+            try {
+                var sr = numberFlowEls[nf].shadowRoot;
+                if (sr) {
+                    var sText = sr.textContent || '';
+                    if (sText.indexOf('chance') !== -1) {
+                        shadowChanceFound = true;
+                        break;
+                    }
+                }
+            } catch (e) { }
+        }
+
+        var spanChanceFound = false;
+        if (!hasChanceText && !shadowChanceFound) {
+            for (var i = 0; i < allSpans.length; i++) {
+                if (allSpans[i].textContent.trim() === '% chance') {
+                    spanChanceFound = true;
+                    break;
+                }
+            }
+        }
+
+        var likelyChanceByStructure = (numberFlowEls.length >= 1);
+        var isChancePage = hasChanceText || shadowChanceFound || spanChanceFound || likelyChanceByStructure;
+
+        if (isChancePage) {
             result.pageType = 'chance';
-            result.debug.push('Found "% chance" → single-option');
+            var pct = '';
+
+            for (var nf2 = 0; nf2 < numberFlowEls.length; nf2++) {
+                try {
+                    var sr2 = numberFlowEls[nf2].shadowRoot;
+                    if (!sr2) continue;
+                    var digitEls = sr2.querySelectorAll('[part*="integer-digit"]');
+                    if (digitEls.length === 0) continue;
+
+                    var digitVals = [];
+                    digitEls.forEach(function (d) {
+                        var style = d.getAttribute('style') || '';
+                        var mc = style.match(/--current\s*:\s*(\d+)/);
+                        if (mc) digitVals.push(mc[1]);
+                    });
+                    if (digitVals.length > 0) {
+                        pct = digitVals.join('') + '%';
+                        break;
+                    }
+
+                    var sTxt = (sr2.textContent || '').replace(/\s+/g, ' ').trim();
+                    var mNum = sTxt.match(/(\d+(?:\.\d+)?)\s*%/);
+                    if (mNum) {
+                        pct = mNum[1] + '%';
+                        break;
+                    }
+                } catch (e) { }
+            }
+
+            if (!pct) {
+                var bigPs = document.querySelectorAll('p[title][class*="text-heading-2xl"]');
+                for (var bi = 0; bi < bigPs.length; bi++) {
+                    var titleA = bigPs[bi].getAttribute('title') || '';
+                    if (/^\d+(\.\d+)?%$/.test(titleA)) { pct = titleA; break; }
+                    var tx = bigPs[bi].textContent.trim();
+                    if (/^\d+(\.\d+)?%$/.test(tx)) { pct = tx; break; }
+                }
+            }
+
+            if (!pct) {
+                var mBody = bodyText.match(/(\d+(?:\.\d+)?)\s*%\s*chance/i);
+                if (mBody) pct = mBody[1] + '%';
+            }
+
+            result.subpagePercentage = pct;
             return result;
         }
     }
 
     // ━━━━━━━━━━━━ 默认：多选项手风琴 ━━━━━━━━━━━━
     result.pageType = 'multi';
-    var accItems = document.querySelectorAll('[data-scroll-anchor*="event-detail-accordion"]');
     result.debug.push('accordion items: ' + accItems.length);
 
     accItems.forEach(function (item) {
@@ -416,7 +496,7 @@ async function scrapeMainPage() {
 
         log('✅ 找到 ' + cards.length + ' 个项目', 'info');
         cards.slice(0, 10).forEach(function (c, i) {
-            log('  [' + i + '] "' + c.name + '" vol:' + c.volume + ' type:' + c.type + ' subtype:' + c.subtype, 'data');
+            log('  [' + i + '] "' + c.name + '" vol:' + c.volume + ' hPct:' + (c.homePercentage || '-') + ' type:' + c.type, 'data');
         });
         if (cards.length > 10) log('  ... 还有 ' + (cards.length - 10) + ' 个', 'dim');
 
@@ -500,7 +580,7 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                 }
 
                 // 多等一会，让 React 完成渲染
-                await new Promise(function (res) { setTimeout(res, 600); });
+                await new Promise(function (res) { setTimeout(res, 800); });
 
                 var scrapeR = await chrome.scripting.executeScript({
                     target: { tabId: tabId },
@@ -512,9 +592,16 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                     sub.debug.forEach(function (m) { log('[W' + workerId + ']   → ' + m, 'dim'); });
                 }
 
-                // 如果明确是 resolved/gaming/chance 或拿到了 options，就停
-                if (sub && (sub.pageType === 'gaming' ||
-                    sub.pageType === 'chance' || (sub.options && sub.options.length > 0))) {
+                if (sub && (
+                    sub.pageType === 'gaming' ||
+                    (sub.pageType === 'chance' && sub.subpagePercentage) ||
+                    (sub.pageType === 'multi' && sub.options && sub.options.length > 0)
+                )) {
+                    break;
+                }
+
+                if (sub && sub.pageType === 'chance' && !sub.subpagePercentage && card.homePercentage) {
+                    log('[W' + workerId + ']   ℹ️ chance 页未抓到百分比, 将回退用 homePercentage=' + card.homePercentage, 'dim');
                     break;
                 }
             }
@@ -533,11 +620,23 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                 log('[W' + workerId + '] ⏭️ "' + short + '" 跳过 (' + sub.pageType + ')', 'dim');
                 results[idx] = null; // 不写入
             } else if (sub.pageType === 'chance') {
-                // 单选项，用首页抓到的 homePercentage
-                var pct = card.homePercentage || '';
+                var pct = sub.subpagePercentage || card.homePercentage || '';
+                var pctSource = sub.subpagePercentage ? 'subpage' : (card.homePercentage ? 'home' : 'none');
+
                 if (!pct) {
-                    log('[W' + workerId + '] ⏭️ "' + short + '" chance 但 homePct 无效 (' + pct + ')', 'dim');
+                    log('[W' + workerId + '] ⏭️ "' + short + '" chance 无有效百分比 (sub=' + (sub.subpagePercentage || '-') + ', home=' + (card.homePercentage || '-') + ')', 'dim');
                     results[idx] = null;
+                    config.failures.push({
+                        name: card.name,
+                        url: 'https://polymarket.com' + card.subUrl,
+                        volume: card.volume,
+                        debugInfo: [
+                            'chance page but no percentage',
+                            'sub=' + (sub.subpagePercentage || '-'),
+                            'home=' + (card.homePercentage || '-')
+                        ].concat(sub.debug || []),
+                        card: card, index: idx
+                    });
                 } else {
                     results[idx] = {
                         name: card.name,
@@ -549,7 +648,7 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                         value1: pct,
                         hide: "1"
                     };
-                    log('[W' + workerId + '] ✅ "' + short + '" [chance] = ' + pct, 'info');
+                    log('[W' + workerId + '] ✅ "' + short + '" [chance/' + pctSource + '] = ' + pct, 'info');
                 }
             } else if (sub.pageType === 'multi' && sub.options.length > 0) {
                 var final = {
@@ -573,7 +672,7 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                     name: card.name,
                     url: 'https://polymarket.com' + card.subUrl,
                     volume: card.volume,
-                    debugInfo: ['pageType=' + (sub && sub.pageType) + ', options=0'],
+                    debugInfo: ['pageType=' + (sub && sub.pageType) + ', options=0'].concat(sub && sub.debug || []),
                     card: card, index: idx
                 });
             }
@@ -647,7 +746,7 @@ async function startSubpageScraping() {
     }
 
     var minVolRaw = document.getElementById('minVolume').value.trim();
-    var minVolume = minVolRaw === '' ? 100000 : parseInt(minVolRaw, 10);
+    var minVolume = minVolRaw === '' ? 16000000 : parseInt(minVolRaw, 10);
     var hasMinVolume = !isNaN(minVolume) && minVolume > 0;
 
     var outputFilename = getTimestampedFilename('polymarket');
