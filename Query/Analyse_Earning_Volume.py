@@ -69,16 +69,6 @@ CONFIG = {
     "COND_HIGH_TURNOVER_BING_DAYS": 45,        # 丙类：成交额回溯45天
     "COND_HIGH_TURNOVER_BING_RANK_THRESHOLD": 3,  # 丙类：排名前3名
 
-    # ========== 策略4 (ETF_Volume_high 放量突破) 参数 ==========
-    "ETF_COND_HIGH_TURNOVER_LOOKBACK_MONTHS": 12,  # 成交额回溯12个月
-    "ETF_COND_HIGH_TURNOVER_RANK_THRESHOLD": 3,    # 成交额排名前3名
-
-    # ========== 策略5 (ETF_Volume_low 触底放量) 参数 ==========
-    "ETF_COND_LOW_PRICE_LOOKBACK_MONTHS": 5,       # 最高点回溯6个月（半年）
-    "ETF_COND_LOW_DROP_THRESHOLD": 0.06,           # 距最高点跌幅
-    "ETF_COND_LOW_TURNOVER_MONTHS": 2,             # 成交额回溯3个月
-    "ETF_COND_LOW_TURNOVER_RANK_THRESHOLD": 3,     # [新增] 成交额排名前 N 名 (前2名)
-
     # ========== 策略6 (PE_Hot 白名单/超大市值) 参数 ==========
     "PE_HOT_MIN_MARKET_CAP": 150000000000,         # 超大市值门槛 (默认 1500亿)
 }
@@ -148,9 +138,9 @@ def load_symbol_tags(json_path):
     except Exception:
         return {}
 
-def update_panel_with_conflict_check(json_path, pe_vol_list, pe_vol_notes, pe_vol_up_list, pe_vol_up_notes, pe_vol_high_list, pe_vol_high_notes, etf_vol_high_list, etf_vol_high_notes, etf_vol_low_list, etf_vol_low_notes, pe_hot_list, pe_hot_notes, log_detail):
+def update_panel_with_conflict_check(json_path, pe_vol_list, pe_vol_notes, pe_vol_up_list, pe_vol_up_notes, pe_vol_high_list, pe_vol_high_notes, pe_hot_list, pe_hot_notes, log_detail):
     """
-    专门用于 PE_Volume, PE_Volume_up, PE_Volume_high, 以及 ETF_Volume_high 、pe_hot_list、pe_hot_notes 的写入。
+    专门用于 PE_Volume, PE_Volume_up, PE_Volume_high、pe_hot_list、pe_hot_notes 的写入。
     功能：
     1. 写入所有三个策略的主分组和 backup 分组。
     2. 检查这些 symbol 是否存在于指定的 backup 分组中，如果存在则删除。
@@ -173,8 +163,7 @@ def update_panel_with_conflict_check(json_path, pe_vol_list, pe_vol_notes, pe_vo
     except (FileNotFoundError, json.JSONDecodeError):
         data = {}
 
-    # === 修改 ===：将 ETF symbol 也加入新写入汇总池
-    all_new_volume_symbols = set(pe_vol_list) | set(pe_vol_up_list) | set(pe_vol_high_list) | set(etf_vol_high_list)
+    all_new_volume_symbols = set(pe_vol_list) | set(pe_vol_up_list) | set(pe_vol_high_list)
     
     if not all_new_volume_symbols:
         log_detail("没有新的 Volume symbol 需要写入，跳过冲突检查。")
@@ -220,14 +209,6 @@ def update_panel_with_conflict_check(json_path, pe_vol_list, pe_vol_notes, pe_vo
     # 写入策略3
     data['PE_Volume_high'] = build_group_dict(pe_vol_high_list, pe_vol_high_notes)
     data['PE_Volume_high_backup'] = build_group_dict(pe_vol_high_list, pe_vol_high_notes)
-    
-    # 写入策略4 (ETF_Volume_high)
-    data['ETF_Volume_high'] = build_group_dict(etf_vol_high_list, etf_vol_high_notes)
-    data['ETF_Volume_high_backup'] = build_group_dict(etf_vol_high_list, etf_vol_high_notes)
-
-    # === 新增 ===：写入策略5 (ETF_Volume_low)
-    data['ETF_Volume_low'] = build_group_dict(etf_vol_low_list, etf_vol_low_notes)
-    data['ETF_Volume_low_backup'] = build_group_dict(etf_vol_low_list, etf_vol_low_notes)
 
     # === 新增：写入 PE_Hot 分组 ===
     data['PE_Hot'] = build_group_dict(pe_hot_list, pe_hot_notes)
@@ -236,7 +217,7 @@ def update_panel_with_conflict_check(json_path, pe_vol_list, pe_vol_notes, pe_vo
     try:
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
-        log_detail("Panel 文件更新完成 (包含冲突清理、ETF 及 PE_Hot 写入)。")
+        log_detail("Panel 文件更新完成 (包含冲突清理及 PE_Hot 写入)。")
     except Exception as e:
         log_detail(f"错误: 写入 Panel JSON 文件失败: {e}")
 
@@ -1296,203 +1277,6 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
     
     return results_jia, results_yi, results_bing, results_chaodi
 
-# --- 策略4: ETF_Volume_high (ETF放量突破) ---
-def process_etf_volume_high(db_path, target_date_override, symbol_to_trace, log_detail):
-    """
-    执行策略4：ETF_Volume_high
-    规则: (无需财报要求) + 价格上涨(突破) + 成交额12个月前3名
-    直接从 "ETFs" 数据表读取所有不重复的 symbol
-    """
-    log_detail("\n========== 开始执行 策略4 (ETF_Volume_high - ETF放量突破) ==========")
-    
-    # 共用策略3的成交额参数 (12个月前3名)
-    turnover_lookback_months = CONFIG.get("ETF_COND_HIGH_TURNOVER_LOOKBACK_MONTHS", 12)
-    turnover_rank_threshold = CONFIG.get("ETF_COND_HIGH_TURNOVER_RANK_THRESHOLD", 3)
-    
-    # 确定基准日期
-    base_date = target_date_override if target_date_override else (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
-    
-    results = []
-    conn = sqlite3.connect(db_path, timeout=60.0)
-    cursor = conn.cursor()
-    
-    # 1. 直接从 ETFs 表中获取所有独一无二的 symbol
-    try:
-        cursor.execute('SELECT DISTINCT name FROM "ETFs"')
-        all_etfs = [r[0] for r in cursor.fetchall()]
-        log_detail(f"从 ETFs 表中成功获取 {len(all_etfs)} 个 Symbol 进行扫描...")
-    except Exception as e:
-        log_detail(f"错误: 无法读取 ETFs 数据表: {e}")
-        conn.close()
-        return []
-        
-    for symbol in all_etfs:
-        is_tracing = (symbol == symbol_to_trace)
-        
-        if is_tracing:
-            log_detail(f"\n--- 正在检查 ETF {symbol} (策略4) ---")
-            
-        # 获取最新两天交易数据 (Today, Yesterday)
-        if target_date_override:
-            query = f'SELECT date, price, volume, open FROM "ETFs" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 2'
-            cursor.execute(query, (symbol, target_date_override))
-        else:
-            query = f'SELECT date, price, volume, open FROM "ETFs" WHERE name = ? ORDER BY date DESC LIMIT 2'
-            cursor.execute(query, (symbol,))
-        
-        rows = cursor.fetchall()
-        
-        # 数据完整性检查
-        if len(rows) < 2 or rows[0][1] is None or rows[0][2] is None or rows[0][3] is None or rows[1][1] is None:
-            if is_tracing: log_detail(f"    x [失败] 无法获取最新两天的交易数据")
-            continue
-            
-        latest_date, latest_price, latest_volume, latest_open = rows[0]
-        prev_date, prev_price, prev_volume, _ = rows[1]
-        latest_turnover = latest_price * latest_volume
-        
-        # 条件1: 价格突破 (ETF无财报，这里定义为今日上涨。若需改写为突破 N 日新高，可在此处扩展逻辑)
-        cond_price_up = (latest_price > prev_price) and (latest_price > latest_open)
-        if is_tracing:
-            log_detail(f"    - 条件A (今日上涨/突破): {prev_price:.2f} -> {latest_price:.2f} = {cond_price_up}")
-            
-        if not cond_price_up:
-            continue
-            
-        # 条件2: 成交额为 12 个月前 2 名
-        cond_turnover_12m_top2 = check_turnover_rank(
-            cursor, "ETFs", symbol, latest_date, latest_turnover,
-            turnover_lookback_months, turnover_rank_threshold,
-            log_detail, is_tracing
-        )
-        
-        # 满足所有条件
-        if cond_price_up and cond_turnover_12m_top2:
-            results.append(symbol)
-            if is_tracing: log_detail(f"    ✅ [选中-ETF类] 价格上涨 + 12个月成交额Top2")
-            
-    conn.close()
-    
-    results = sorted(list(set(results)))
-    log_detail(f"\n策略4 筛选完成，共命中 {len(results)} 个 ETF: {results}")
-    
-    return results
-
-# --- 策略5: ETF_Volume_low (ETF触底放量) ---
-def process_etf_volume_low(db_path, target_date_override, symbol_to_trace, log_detail):
-    """
-    执行策略5：ETF_Volume_low
-    规则: 比最近半年的最高点低超过11% + 最新日期或前一日的成交额为最近3个月的前 N 名 + 放量日必须下跌且T日必须下跌
-    """
-    log_detail("\n========== 开始执行 策略5 (ETF_Volume_low - ETF触底放量) ==========")
-    
-    # 读取配置
-    price_lookback_months = CONFIG.get("ETF_COND_LOW_PRICE_LOOKBACK_MONTHS", 6)
-    drop_threshold = CONFIG.get("ETF_COND_LOW_DROP_THRESHOLD", 0.11)
-    turnover_lookback_months = CONFIG.get("ETF_COND_LOW_TURNOVER_MONTHS", 3)
-    # [新增] 读取排名阈值配置，默认值为 2
-    turnover_rank_threshold = CONFIG.get("ETF_COND_LOW_TURNOVER_RANK_THRESHOLD", 2) 
-    
-    # 确定基准日期
-    base_date = target_date_override if target_date_override else (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
-    
-    results = []
-    conn = sqlite3.connect(db_path, timeout=60.0)
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('SELECT DISTINCT name FROM "ETFs"')
-        all_etfs = [r[0] for r in cursor.fetchall()]
-        log_detail(f"从 ETFs 表中成功获取 {len(all_etfs)} 个 Symbol 进行扫描 (策略5)...")
-    except Exception as e:
-        log_detail(f"错误: 无法读取 ETFs 数据表: {e}")
-        conn.close()
-        return []
-        
-    for symbol in all_etfs:
-        is_tracing = (symbol == symbol_to_trace)
-        if is_tracing:
-            log_detail(f"\n--- 正在检查 ETF {symbol} (策略5) ---")
-            
-        # 1. 计算寻找最高点的起始日期 (回溯半年)
-        try:
-            dt = datetime.datetime.strptime(base_date, "%Y-%m-%d")
-            start_date_price = dt - datetime.timedelta(days=price_lookback_months * 30)
-            start_date_price_str = start_date_price.strftime("%Y-%m-%d")
-        except Exception:
-            continue
-            
-        # 修改点：至少需要获取 3 天的数据，以便计算 T-1 日是否下跌
-        query = f'SELECT date, price, volume FROM "ETFs" WHERE name = ? AND date >= ? AND date <= ? ORDER BY date DESC'
-        cursor.execute(query, (symbol, start_date_price_str, base_date))
-        rows = cursor.fetchall()
-        
-        if len(rows) < 3:
-            if is_tracing: log_detail("    x [失败] 数据不足 3 天")
-            continue
-            
-        latest_date, latest_price, latest_volume = rows[0]
-        prev_date, prev_price, prev_volume = rows[1]
-        prev_prev_date, prev_prev_price, prev_prev_volume = rows[2]
-        
-        if latest_price is None or prev_price is None or prev_prev_price is None or latest_volume is None or prev_volume is None:
-            continue
-            
-        latest_turnover = latest_price * latest_volume
-        prev_turnover = prev_price * prev_volume
-        
-        # 新增：T日必须是下跌状态（收盘价 < 昨收价）
-        cond_latest_down = latest_price < prev_price
-        if not cond_latest_down:
-            if is_tracing: log_detail(f"    x [过滤] T日未下跌 (当前价 {latest_price:.2f} >= 昨收价 {prev_price:.2f})")
-            continue
-
-        valid_prices = [r[1] for r in rows if r[1] is not None]
-        max_price = max(valid_prices)
-        
-        cond_price_drop = latest_price <= max_price * (1 - drop_threshold)
-        
-        if is_tracing:
-            drop_pct = (1 - latest_price / max_price) if max_price > 0 else 0
-            log_detail(f"    - 条件A (跌幅>{drop_threshold*100}%): {price_lookback_months}个月最高价 {max_price:.2f}, 当前价 {latest_price:.2f}, 跌幅 {drop_pct:.2%} = {cond_price_drop}")
-            
-        if not cond_price_drop:
-            continue
-            
-        # 3. 条件B: T日或T-1日的成交额为最近 3 个月前 N 名
-        # 检查 T 日放量
-        cond_latest_turnover_topN = check_turnover_rank(
-            cursor, "ETFs", symbol, latest_date, latest_turnover,
-            turnover_lookback_months, turnover_rank_threshold, log_detail, is_tracing
-        )
-        
-        cond_prev_turnover_topN = False
-        cond_prev_down = prev_price < prev_prev_price
-        
-        # 如果 T 日不是最高，则检查 T-1 日
-        if not cond_latest_turnover_topN:
-            cond_prev_turnover_topN = check_turnover_rank(
-                cursor, "ETFs", symbol, prev_date, prev_turnover,
-                turnover_lookback_months, turnover_rank_threshold, log_detail, is_tracing
-            )
-            
-        # 修改点：放量日必须下跌。因为前面已经确保 T 日下跌，所以如果 T 日放量则直接满足。如果 T-1 日放量，则要求 T-1 日也必须下跌。
-        cond_turnover_high_and_down = cond_latest_turnover_topN or (cond_prev_turnover_topN and cond_prev_down)
-        
-        if is_tracing:
-            log_detail(f"    - 条件B (放量且下跌): T日放量={cond_latest_turnover_topN}, T-1日放量={cond_prev_turnover_topN}, T-1日下跌={cond_prev_down} -> 综合满足={cond_turnover_high_and_down}")
-            
-        if cond_price_drop and cond_turnover_high_and_down:
-            results.append(symbol)
-            if is_tracing: log_detail(f"    ✅ [选中-ETF类] 跌幅达标 + 阶段巨量且下跌")
-            
-    conn.close()
-    
-    results = sorted(list(set(results)))
-    log_detail(f"\n策略5 筛选完成，共命中 {len(results)} 个 ETF: {results}")
-    
-    return results
-
 def check_turnover_since_earning(cursor, sector_name, symbol, er_date_str, latest_date_str, latest_turnover, rank_threshold, log_detail, is_tracing):
     """
     检查 latest_turnover 是否是从 er_date_str (财报日) 到 latest_date_str 期间的前 rank_threshold 名成交额
@@ -1837,24 +1621,6 @@ def run_pe_volume_logic(log_detail):
     # 合并所有策略3的结果用于统一处理
     final_pe_volume_high = sorted(list(set(raw_pe_volume_high_jia) | set(raw_pe_volume_high_yi) | set(raw_pe_volume_high_bing) | set(raw_pe_volume_high_chaodi)))
 
-    # ================= 策略 4 执行 (ETF 放量突破) =================
-    raw_etf_volume_high = process_etf_volume_high(
-        DB_FILE, 
-        TARGET_DATE, 
-        SYMBOL_TO_TRACE, 
-        log_detail
-    )
-    final_etf_volume_high = sorted(list(set(raw_etf_volume_high)))
-
-    # ================= 策略 5 执行 (ETF 触底巨量) =================
-    raw_etf_volume_low = process_etf_volume_low(
-        DB_FILE, 
-        TARGET_DATE, 
-        SYMBOL_TO_TRACE, 
-        log_detail
-    )
-    final_etf_volume_low = sorted(list(set(raw_etf_volume_low)))
-
     # ================= Tag 黑名单过滤逻辑 =================
     def filter_blacklisted_tags(symbols):
         # 现已不再剔除，全部保留，以便写入 Panel
@@ -1877,10 +1643,6 @@ def run_pe_volume_logic(log_detail):
     filtered_pe_volume_high_chaodi = filter_blacklisted_tags(raw_pe_volume_high_chaodi)
     filtered_pe_volume_high = filter_blacklisted_tags(final_pe_volume_high)
 
-    # === 新增 ===：ETF 过滤
-    filtered_etf_volume_high = filter_blacklisted_tags(final_etf_volume_high)
-    filtered_etf_volume_low = filter_blacklisted_tags(final_etf_volume_low)
-
     if SYMBOL_TO_TRACE:
         # (保留原有的 trace 提示)
         if SYMBOL_TO_TRACE in final_pe_volume and SYMBOL_TO_TRACE not in filtered_pe_volume:
@@ -1889,10 +1651,6 @@ def run_pe_volume_logic(log_detail):
              log_detail(f"追踪提示: {SYMBOL_TO_TRACE} (策略2) 通过，但因黑名单标签将会被打上‘黑’字。")
         if SYMBOL_TO_TRACE in final_pe_volume_high and SYMBOL_TO_TRACE not in filtered_pe_volume_high:
              log_detail(f"追踪提示: {SYMBOL_TO_TRACE} (策略3) 通过，但因黑名单标签将会被打上‘黑’字。")
-        if SYMBOL_TO_TRACE in final_etf_volume_high and SYMBOL_TO_TRACE not in filtered_etf_volume_high:
-             log_detail(f"追踪提示: {SYMBOL_TO_TRACE} (策略4) 通过，但因黑名单标签将会被打上‘黑’字。")
-        if SYMBOL_TO_TRACE in final_etf_volume_low and SYMBOL_TO_TRACE not in filtered_etf_volume_low:
-             log_detail(f"追踪提示: {SYMBOL_TO_TRACE} (策略5) 通过，但因黑名单标签将会被打上‘黑’字。")
 
     # ================= 检查 PE_Deep / PE_Deeper 交叉 =================
     all_existing_notes = {}
@@ -1995,10 +1753,6 @@ def run_pe_volume_logic(log_detail):
             suffix += "黑"
             
         pe_vol_high_notes[sym] = f"{sym}{suffix}"
-    
-    # === 新增 ===：生成 ETF 的备注 (正常情况下直接写入symbol本体即可)
-    etf_vol_high_notes = build_symbol_note_map(filtered_etf_volume_high)
-    etf_vol_low_notes = build_symbol_note_map(filtered_etf_volume_low) 
 
     # ================= 新增：执行 PE_Hot 策略 =================
     # 排除的 symbol 列表：如果在这些 Volume 策略中，就不进入 PE_Hot
@@ -2033,12 +1787,10 @@ def run_pe_volume_logic(log_detail):
         else:
             log_detail(f"  策略3 PE_Volume_high (财报突破):❌ 未命中")
         
-        log_detail(f"  策略4 ETF_Volume_high (ETF突破): {'✅ 命中' if SYMBOL_TO_TRACE in filtered_etf_volume_high else '❌ 未命中 (非ETF则正常)'}")
-        log_detail(f"  策略5 ETF_Volume_low (ETF触底):  {'✅ 命中' if SYMBOL_TO_TRACE in filtered_etf_volume_low else '❌ 未命中 (非ETF则正常)'}")
         log_detail(f"  策略6 PE_Hot (白名单/超大市值):   {'✅ 命中' if SYMBOL_TO_TRACE in pe_hot_list else '❌ 未命中'}")
         log_detail(f"{'='*60}")
 
-    # 5. 回测安全拦截 (新增 ETF 统计)
+    # 5. 回测安全拦截
     if TARGET_DATE:
         log_detail("\n" + "="*60)
         log_detail(f"🛑 [安全拦截] 回测模式 (Date: {TARGET_DATE}) 已启用。")
@@ -2049,8 +1801,6 @@ def run_pe_volume_logic(log_detail):
         log_detail(f"    - 乙类: {len(filtered_pe_volume_high_yi)} 个")
         log_detail(f"    - 丙类: {len(filtered_pe_volume_high_bing)} 个")
         log_detail(f"    - 抄底类: {len(filtered_pe_volume_high_chaodi)} 个")
-        log_detail(f"📊 [策略4] ETF_Volume_high 命中: {len(filtered_etf_volume_high)} 个")
-        log_detail(f"📊 [策略5] ETF_Volume_low 命中: {len(filtered_etf_volume_low)} 个") 
         log_detail(f"📊 [策略-Hot] PE_Hot 命中: {len(pe_hot_list)} 个") 
         log_detail("="*60 + "\n")
         return
@@ -2062,28 +1812,23 @@ def run_pe_volume_logic(log_detail):
         filtered_pe_volume, pe_volume_notes,
         filtered_pe_volume_up, pe_volume_up_notes,
         filtered_pe_volume_high, pe_vol_high_notes,
-        filtered_etf_volume_high, etf_vol_high_notes,
-        filtered_etf_volume_low, etf_vol_low_notes, 
         pe_hot_list, pe_hot_notes, # 传入 PE_Hot 数据
         log_detail
     )
 
-    # # 7. 写入 History (新增 ETF)
+    # # 7. 写入 History
     # log_detail(f"正在更新 History 文件...")
     # update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume", final_pe_volume, log_detail, base_date_str)
     # update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume_up", final_pe_volume_up, log_detail, base_date_str)
     # update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume_high", final_pe_volume_high, log_detail, base_date_str)
-    # update_earning_history_json(EARNING_HISTORY_JSON_FILE, "ETF_Volume_high", final_etf_volume_high, log_detail, base_date_str) # === 新增 ===
 
-    # 7. 写入 History (新增 ETF)
+    # 7. 写入 History
     log_detail(f"\n正在更新 History 文件...")
     
     # === 将带有中文后缀的变量 values() 提取成列表，用于写入 History ===
     history_pe_volume = sorted(list(pe_volume_notes.values()))
     history_pe_volume_up = sorted(list(pe_volume_up_notes.values()))
     history_pe_volume_high = sorted(list(pe_vol_high_notes.values()))
-    history_etf_volume_high = sorted(list(etf_vol_high_notes.values()))
-    history_etf_volume_low = sorted(list(etf_vol_low_notes.values())) 
     
     # === 新增 PE_Hot 写入 History ===
     history_pe_hot = sorted(list(pe_hot_notes.values()))
@@ -2091,12 +1836,10 @@ def run_pe_volume_logic(log_detail):
     update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume", history_pe_volume, log_detail, base_date_str)
     update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume_up", history_pe_volume_up, log_detail, base_date_str)
     update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Volume_high", history_pe_volume_high, log_detail, base_date_str)
-    update_earning_history_json(EARNING_HISTORY_JSON_FILE, "ETF_Volume_high", history_etf_volume_high, log_detail, base_date_str)
-    update_earning_history_json(EARNING_HISTORY_JSON_FILE, "ETF_Volume_low", history_etf_volume_low, log_detail, base_date_str) 
     update_earning_history_json(EARNING_HISTORY_JSON_FILE, "PE_Hot", history_pe_hot, log_detail, base_date_str)
 
     # 写入 Tag 黑名单标记分组 (包含所有策略)
-    # all_volume_symbols = set(final_pe_volume) | set(final_pe_volume_up) | set(final_pe_volume_high) | set(final_etf_volume_high) | set(final_etf_volume_low) 
+    # all_volume_symbols = set(final_pe_volume) | set(final_pe_volume_up) | set(final_pe_volume_high)
     
     # blocked_symbols_to_log = []
     # for sym in all_volume_symbols:
