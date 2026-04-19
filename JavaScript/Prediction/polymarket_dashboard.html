@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Polymarket Scraper - 调试面板</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            padding: 20px;
+            max-width: 960px;
+            margin: 0 auto;
+            background: #f7f8fa;
+            color: #333;
+        }
+
+        h1 {
+            font-size: 20px;
+            margin-bottom: 12px;
+        }
+
+        h3 {
+            font-size: 15px;
+            margin-top: 20px;
+            margin-bottom: 8px;
+        }
+
+        .control-bar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+
+        button {
+            padding: 8px 18px;
+            font-size: 14px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: #fff;
+        }
+
+        button.primary {
+            background: #2962ff;
+            color: white;
+            border-color: #2962ff;
+            font-weight: bold;
+        }
+
+        button.primary:hover {
+            background: #1e4fd6;
+        }
+
+        button.warning {
+            background: #ff9800;
+            color: white;
+            border-color: #ff9800;
+            font-weight: bold;
+        }
+
+        button.warning:hover {
+            background: #fb8c00;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        label {
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-box {
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-warn {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .progress-container {
+            margin-bottom: 12px;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #2962ff;
+            border-radius: 4px;
+            transition: width 0.3s;
+            width: 0%;
+        }
+
+        .progress-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .debug-log {
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+            font-size: 11px;
+            line-height: 1.6;
+            padding: 14px;
+            border-radius: 6px;
+            max-height: 600px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .log-section {
+            color: #82aaff;
+            font-weight: bold;
+        }
+
+        .log-info {
+            color: #c3e88d;
+        }
+
+        .log-warn {
+            color: #ffcb6b;
+        }
+
+        .log-error {
+            color: #f07178;
+        }
+
+        .log-data {
+            color: #c792ea;
+        }
+
+        .log-dim {
+            color: #676e95;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔮 Polymarket Scraper - 调试面板</h1>
+    <div class="control-bar">
+        <button id="startBtn" class="primary" disabled>等待主页面抓取...</button>
+        <button id="retryBtn" class="warning" style="display:none;">纠错 (重试失败项)</button>
+        <button id="clearBtn">清空日志</button>
+        <label><input type="checkbox" id="autoClose" checked> 自动关闭标签页</label>
+        <label><input type="checkbox" id="incrementalSaveToggle" checked> 增量保存</label>
+        <label>并行数:
+            <input type="number" id="concurrencyInput" value="2" min="1" max="8"
+                style="width:55px;padding:2px 4px;font-size:13px;" title="同时工作的标签页数（建议1-3）">
+        </label>
+        <label>抓取范围:
+            <input type="text" id="rangeInput" value="" placeholder="全部 或 5-10"
+                style="width:90px;padding:2px 4px;font-size:13px;">
+        </label>
+        <label>最小Volume:
+            <input type="number" id="minVolume" value="" min="0" placeholder="默认10万"
+                style="width:90px;padding:2px 4px;font-size:13px;">
+        </label>
+        <label>休息间隔:
+            <input type="number" id="pauseInterval" value="150" min="0"
+                style="width:60px;padding:2px 4px;font-size:13px;">
+        </label>
+        <label>休息时长:
+            <input type="number" id="pauseDuration" value="3" min="1"
+                style="width:50px;padding:2px 4px;font-size:13px;">
+        </label>
+    </div>
+    <div id="status" class="status-box status-info">正在初始化...</div>
+    <div id="progressContainer" class="progress-container">
+        <div class="progress-bar">
+            <div id="progressFill" class="progress-fill"></div>
+        </div>
+        <div id="progressText" class="progress-text"></div>
+    </div>
+    <h3>📋 调试日志</h3>
+    <div id="debugLog" class="debug-log">等待开始...\n</div>
+    <script src="polymarket_dashboard.js"></script>
+</body>
+
+</html>
