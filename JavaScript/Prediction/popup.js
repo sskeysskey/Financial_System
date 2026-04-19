@@ -1,6 +1,6 @@
 // ============ 配置 ============
 const DEFAULT_KALSHI_SCROLL_COUNT = 30;
-const DEFAULT_POLYMARKET_SCROLL_COUNT = 30;
+const DEFAULT_POLYMARKET_SCROLL_COUNT = 5;
 const POLYMARKET_URL = 'https://polymarket.com/predictions';
 
 // ============ 获取滚动次数 ============

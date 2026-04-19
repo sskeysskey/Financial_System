@@ -107,11 +107,12 @@ async function pollForContent(tabId, maxMs) {
                     var acc = document.querySelectorAll('[data-scroll-anchor*="event-detail-accordion"]');
                     var bodyText = (document.body && document.body.innerText) || '';
                     var hasChance = /% chance/.test(bodyText);
+                    var hasNumberFlow = !!document.querySelector('number-flow-react');
                     var hasResolved = /View\s+resolved/i.test(bodyText);
                     var hasGamingSidebar = document.querySelectorAll('a[href*="/esports/"]').length >= 3;
                     var isBot = !!document.getElementById('challenge-form') || document.title.toLowerCase().includes('just a moment');
                     return {
-                        hasContent: !!h1 && (acc.length > 0 || hasChance || hasResolved || hasGamingSidebar || bodyText.length > 500),
+                        hasContent: !!h1 && (acc.length > 0 || hasChance || hasNumberFlow || hasResolved || hasGamingSidebar || bodyText.length > 500),
                         isBotPage: isBot
                     };
                 }
@@ -222,10 +223,16 @@ function injectedScrapePolymarketMainPage() {
                 if (/^\$[\d.,]+\s*[KMB]?\s*Vol\.?$/i.test(txt)) { volume = clean(txt); break; }
             }
 
-            // 首页概率值（% chance 型子页面会用到）
+            // 首页卡片上的大号百分数（章节里 <p title="22%">22%</p>）
             var homePercentage = '';
             var pctEl = card.querySelector('p[title][class*="text-heading-2xl"]');
-            if (pctEl) homePercentage = clean(pctEl.textContent);
+            if (pctEl) {
+                var titleAttr = pctEl.getAttribute('title') || '';
+                var txtV = pctEl.textContent.trim();
+                // 优先用 title 属性（更准），不行再用 textContent
+                if (/^\d+(\.\d+)?%$/.test(titleAttr)) homePercentage = titleAttr;
+                else homePercentage = clean(txtV);
+            }
 
             predictions.push({
                 name: name,
@@ -247,10 +254,16 @@ function injectedScrapePolymarketMainPage() {
 }
 
 // ============================================================
-//  注入函数：Polymarket 子页面抓取（含分流）
+//  注入函数：Polymarket 子页面抓取（含分流，支持 shadow DOM）
 // ============================================================
 function injectedScrapePolymarketSubpage() {
-    var result = { pageType: 'unknown', enddate: '', options: [], debug: [] };
+    var result = {
+        pageType: 'unknown',
+        enddate: '',
+        options: [],
+        subpagePercentage: '',
+        debug: []
+    };
 
     // ━━━━━━━━━━━━ Check 1: resolved ━━━━━━━━━━━━
     var btns = document.querySelectorAll('button');
@@ -287,18 +300,131 @@ function injectedScrapePolymarketSubpage() {
         if (monthRe.test(st)) { result.enddate = st; break; }
     }
     if (!result.enddate) {
-        var bodyText = (document.body && document.body.innerText) || '';
-        var m = bodyText.match(/\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2},\s+\d{4}\b/);
+        var bodyText0 = (document.body && document.body.innerText) || '';
+        var m = bodyText0.match(/\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2},\s+\d{4}\b/);
         if (m) result.enddate = m[0];
     }
 
-    // ━━━━━━━━━━━━ Check 3: "% chance" 单选项页 ━━━━━━━━━━━━
-    for (var i = 0; i < allSpans.length; i++) {
-        if (allSpans[i].textContent.trim() === '% chance') {
-            result.pageType = 'chance';
-            result.debug.push('Found "% chance" → single-option');
-            return result;
+    // ━━━━━━━━━━━━ Check 3: "% chance" 单选项页（增强版）━━━━━━━━━━━━
+    // 信号 1: body innerText
+    var bodyText = (document.body && document.body.innerText) || '';
+    var hasChanceText = bodyText.indexOf('% chance') !== -1;
+    result.debug.push('bodyText has "% chance": ' + hasChanceText);
+
+    // 信号 2: 找 number-flow-react 元素（单选项页专用组件）
+    var numberFlowEls = document.querySelectorAll('number-flow-react');
+    result.debug.push('number-flow-react count: ' + numberFlowEls.length);
+
+    // 信号 3: shadow DOM 里搜 "% chance"
+    var shadowChanceFound = false;
+    for (var nf = 0; nf < numberFlowEls.length; nf++) {
+        try {
+            var sr = numberFlowEls[nf].shadowRoot;
+            if (sr) {
+                var sText = sr.textContent || '';
+                if (sText.indexOf('chance') !== -1) {
+                    shadowChanceFound = true;
+                    result.debug.push('Found "chance" in shadow DOM[' + nf + ']');
+                    break;
+                }
+            }
+        } catch (e) { /* 有些 shadow 可能无法访问 */ }
+    }
+
+    // 信号 4: 老的 span 检测（保留向后兼容）
+    var spanChanceFound = false;
+    if (!hasChanceText && !shadowChanceFound) {
+        for (var i = 0; i < allSpans.length; i++) {
+            if (allSpans[i].textContent.trim() === '% chance') {
+                spanChanceFound = true;
+                result.debug.push('Found "% chance" span');
+                break;
+            }
         }
+    }
+
+    // 信号 5: 兜底 - 页面没有 accordion + 有 number-flow-react + 没有 esports
+    var accItems = document.querySelectorAll('[data-scroll-anchor*="event-detail-accordion"]');
+    var likelyChanceByStructure = (accItems.length === 0 && numberFlowEls.length >= 1);
+    if (likelyChanceByStructure) {
+        result.debug.push('Structural hint: no accordion + has number-flow-react');
+    }
+
+    var isChancePage = hasChanceText || shadowChanceFound || spanChanceFound || likelyChanceByStructure;
+
+    if (isChancePage) {
+        result.pageType = 'chance';
+
+        // ——— 提取百分比（多条路径）———
+        var pct = '';
+
+        // 路径 A: 解析 number-flow-react shadow DOM 的数字
+        //         每个 digit span 有 style="--current: N;"
+        for (var nf2 = 0; nf2 < numberFlowEls.length; nf2++) {
+            try {
+                var sr2 = numberFlowEls[nf2].shadowRoot;
+                if (!sr2) continue;
+                var digitEls = sr2.querySelectorAll('[part*="integer-digit"]');
+                if (digitEls.length === 0) continue;
+
+                // 需要去重：shadow DOM 里可能既有渐隐旧值也有新值
+                // 看类名带 animate-presence 且没有渐隐
+                var digitVals = [];
+                digitEls.forEach(function (d) {
+                    var style = d.getAttribute('style') || '';
+                    var mc = style.match(/--current\s*:\s*(\d+)/);
+                    if (mc) digitVals.push(mc[1]);
+                });
+                if (digitVals.length > 0) {
+                    // 直接拼接（顺序就是从高位到低位）
+                    var numStr = digitVals.join('');
+                    pct = numStr + '%';
+                    result.debug.push('Shadow digits: [' + digitVals.join(',') + '] → ' + pct);
+                    break;
+                }
+
+                // 路径 B: shadow textContent 里提数字
+                var sTxt = (sr2.textContent || '').replace(/\s+/g, ' ').trim();
+                var mNum = sTxt.match(/(\d+(?:\.\d+)?)\s*%/);
+                if (mNum) {
+                    pct = mNum[1] + '%';
+                    result.debug.push('Shadow text matched: ' + pct);
+                    break;
+                }
+            } catch (e) { }
+        }
+
+        // 路径 C: 找一个 <p title="XX%"> 的大号标题（某些页会直接渲染）
+        if (!pct) {
+            var bigPs = document.querySelectorAll('p[title][class*="text-heading-2xl"]');
+            for (var bi = 0; bi < bigPs.length; bi++) {
+                var titleA = bigPs[bi].getAttribute('title') || '';
+                if (/^\d+(\.\d+)?%$/.test(titleA)) {
+                    pct = titleA;
+                    result.debug.push('Heading title: ' + pct);
+                    break;
+                }
+                var tx = bigPs[bi].textContent.trim();
+                if (/^\d+(\.\d+)?%$/.test(tx)) {
+                    pct = tx;
+                    result.debug.push('Heading text: ' + pct);
+                    break;
+                }
+            }
+        }
+
+        // 路径 D: 在 body 文本里直接找 "XX% chance"
+        if (!pct) {
+            var mBody = bodyText.match(/(\d+(?:\.\d+)?)\s*%\s*chance/i);
+            if (mBody) {
+                pct = mBody[1] + '%';
+                result.debug.push('Body regex: ' + pct);
+            }
+        }
+
+        result.subpagePercentage = pct;
+        if (!pct) result.debug.push('⚠️ 未能在子页提取百分比，稍后将尝试 homePercentage');
+        return result;
     }
 
     // ━━━━━━━━━━━━ 默认：多选项手风琴 ━━━━━━━━━━━━
@@ -416,7 +542,7 @@ async function scrapeMainPage() {
 
         log('✅ 找到 ' + cards.length + ' 个项目', 'info');
         cards.slice(0, 10).forEach(function (c, i) {
-            log('  [' + i + '] "' + c.name + '" vol:' + c.volume + ' type:' + c.type + ' subtype:' + c.subtype, 'data');
+            log('  [' + i + '] "' + c.name + '" vol:' + c.volume + ' hPct:' + (c.homePercentage || '-') + ' type:' + c.type, 'data');
         });
         if (cards.length > 10) log('  ... 还有 ' + (cards.length - 10) + ' 个', 'dim');
 
@@ -499,8 +625,8 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                     }
                 }
 
-                // 多等一会，让 React 完成渲染
-                await new Promise(function (res) { setTimeout(res, 600); });
+                // 给 React + shadow DOM 多一点渲染时间
+                await new Promise(function (res) { setTimeout(res, 800); });
 
                 var scrapeR = await chrome.scripting.executeScript({
                     target: { tabId: tabId },
@@ -512,9 +638,19 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                     sub.debug.forEach(function (m) { log('[W' + workerId + ']   → ' + m, 'dim'); });
                 }
 
-                // 如果明确是 resolved/gaming/chance 或拿到了 options，就停
-                if (sub && (sub.pageType === 'resolved' || sub.pageType === 'gaming' ||
-                    sub.pageType === 'chance' || (sub.options && sub.options.length > 0))) {
+                // 成功条件：明确类型 或 抓到 options 或 抓到百分比
+                if (sub && (
+                    sub.pageType === 'resolved' ||
+                    sub.pageType === 'gaming' ||
+                    (sub.pageType === 'chance' && sub.subpagePercentage) ||
+                    (sub.pageType === 'multi' && sub.options && sub.options.length > 0)
+                )) {
+                    break;
+                }
+
+                // chance 页但没抓到百分比 —— 如果卡片上有 homePercentage，也视为成功
+                if (sub && sub.pageType === 'chance' && !sub.subpagePercentage && card.homePercentage) {
+                    log('[W' + workerId + ']   ℹ️ chance 页未抓到百分比, 将回退用 homePercentage=' + card.homePercentage, 'dim');
                     break;
                 }
             }
@@ -531,13 +667,26 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                 });
             } else if (sub.pageType === 'resolved' || sub.pageType === 'gaming') {
                 log('[W' + workerId + '] ⏭️ "' + short + '" 跳过 (' + sub.pageType + ')', 'dim');
-                results[idx] = null; // 不写入
+                results[idx] = null;
             } else if (sub.pageType === 'chance') {
-                // 单选项，用首页抓到的 homePercentage
-                var pct = card.homePercentage || '';
+                // 优先子页抓到的值，其次卡片上的 homePercentage
+                var pct = sub.subpagePercentage || card.homePercentage || '';
+                var pctSource = sub.subpagePercentage ? 'subpage' : (card.homePercentage ? 'home' : 'none');
+
                 if (!pct || pct === '<1%' || pct === '1%') {
-                    log('[W' + workerId + '] ⏭️ "' + short + '" chance 但 homePct 无效 (' + pct + ')', 'dim');
+                    log('[W' + workerId + '] ⏭️ "' + short + '" chance 无有效百分比 (sub=' + (sub.subpagePercentage || '-') + ', home=' + (card.homePercentage || '-') + ')', 'dim');
                     results[idx] = null;
+                    config.failures.push({
+                        name: card.name,
+                        url: 'https://polymarket.com' + card.subUrl,
+                        volume: card.volume,
+                        debugInfo: [
+                            'chance page but no percentage',
+                            'sub=' + (sub.subpagePercentage || '-'),
+                            'home=' + (card.homePercentage || '-')
+                        ].concat(sub.debug || []),
+                        card: card, index: idx
+                    });
                 } else {
                     results[idx] = {
                         name: card.name,
@@ -549,7 +698,7 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                         value1: pct,
                         hide: "1"
                     };
-                    log('[W' + workerId + '] ✅ "' + short + '" [chance] = ' + pct, 'info');
+                    log('[W' + workerId + '] ✅ "' + short + '" [chance/' + pctSource + '] = ' + pct, 'info');
                 }
             } else if (sub.pageType === 'multi' && sub.options.length > 0) {
                 var final = {
@@ -573,7 +722,7 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                     name: card.name,
                     url: 'https://polymarket.com' + card.subUrl,
                     volume: card.volume,
-                    debugInfo: ['pageType=' + (sub && sub.pageType) + ', options=0'],
+                    debugInfo: ['pageType=' + (sub && sub.pageType) + ', options=0'].concat(sub && sub.debug || []),
                     card: card, index: idx
                 });
             }
@@ -647,7 +796,7 @@ async function startSubpageScraping() {
     }
 
     var minVolRaw = document.getElementById('minVolume').value.trim();
-    var minVolume = minVolRaw === '' ? 100000 : parseInt(minVolRaw, 10);
+    var minVolume = minVolRaw === '' ? 17000000 : parseInt(minVolRaw, 10);
     var hasMinVolume = !isNaN(minVolume) && minVolume > 0;
 
     var outputFilename = getTimestampedFilename('polymarket');
