@@ -16,8 +16,8 @@ PREDICTION_SOURCE_DIR = os.path.join(USER_HOME, 'Coding/Database')
 PREDICTION_TARGET_DIR = os.path.join(USER_HOME, 'Coding/LocalServer/Resources/Prediction')
 PREDICTION_VERSION_JSON_PATH = os.path.join(PREDICTION_TARGET_DIR, 'version.json')
 
-# 需要随机遮蔽 hide 字段的文件前缀
-RANDOM_HIDE_PREFIXES = {'kalshi', 'kalshi_trend'}
+# 需要随机遮蔽 hide 字段的文件前缀 (已添加 polymarket 相关前缀)
+RANDOM_HIDE_PREFIXES = {'kalshi', 'kalshi_trend', 'polymarket', 'polymarket_trend'}
 
 def calculate_md5(file_path):
     """
@@ -36,7 +36,7 @@ def calculate_md5(file_path):
 
 def randomize_hide_in_data(data):
     """
-    按 subtype 分组，随机将每组中约 1/3 的项目 hide 设为 "0"，其余 2/3 设为 "1"。
+    按 subtype 分组，随机将每组中约 1/2 的项目 hide 设为 "0"，其余设为 "1"。
     每次运行结果不同。
     """
     # 遍历所有数据，直接将 hide 设为 "0"
@@ -55,7 +55,7 @@ def randomize_hide_in_data(data):
     # 对每个 subtype 组随机设置 hide
     for subtype, items in groups.items():
         n = len(items)
-        # --- 修改点在这里 ---
+        # 随机显示 1/2 的项目
         # 原来是 round(n / 3)，现在改为 round(n / 2)
         show_count = round(n / 2)  
         

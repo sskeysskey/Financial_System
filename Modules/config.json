@@ -209,8 +209,18 @@
             "control"
         ],
         "actionType": "runOsascript",
-        "target": "/Users/yanzhang/Coding/ScriptEditor/Prediction.scpt",
-        "message": "正在 Prediction..."
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Polymarket_Prediction.scpt",
+        "message": "正在 Polymarket_Prediction..."
+    },
+    {
+        "key": "one",
+        "modifiers": [
+            "control",
+            "command"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Prediction_Compare.scpt",
+        "message": "正在 Prediction_Compare..."
     },
     {
         "key": "two",
@@ -218,8 +228,8 @@
             "control"
         ],
         "actionType": "runOsascript",
-        "target": "/Users/yanzhang/Coding/ScriptEditor/Prediction_Compare.scpt",
-        "message": "正在 Prediction..."
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Kalshi_Prediction.scpt",
+        "message": "正在 Kalshi_Prediction..."
     },
     {
         "key": "one",
@@ -242,7 +252,7 @@
         "message": "正在执行 translation_helper (merge)..."
     },
     {
-        "key": "two",
+        "key": "e",
         "modifiers": [
             "control",
             "command"

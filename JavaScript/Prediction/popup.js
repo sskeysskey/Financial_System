@@ -1,6 +1,6 @@
 // ============ 配置 ============
 const DEFAULT_KALSHI_SCROLL_COUNT = 30;
-const DEFAULT_POLYMARKET_SCROLL_COUNT = 5;
+const DEFAULT_POLYMARKET_SCROLL_COUNT = 50;
 const POLYMARKET_URL = 'https://polymarket.com/predictions';
 
 // ============ 获取滚动次数 ============
@@ -26,7 +26,7 @@ async function scrollPage(tab, scrollCount, label, statusDiv, progressBarFill, p
         progressBarFill.style.width = progress + '%';
         progressText.textContent = '滚动进度: ' + (i + 1) + '/' + scrollCount;
         statusDiv.textContent = '正在滚动 ' + label + ' (' + (i + 1) + '/' + scrollCount + ')...';
-        await new Promise(function (r) { setTimeout(r, 1800); });
+        await new Promise(function (r) { setTimeout(r, 3000); });
     }
     // 回顶
     await chrome.scripting.executeScript({

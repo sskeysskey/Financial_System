@@ -272,10 +272,13 @@ function injectedScrapePolymarketSubpage() {
         return result;
     }
     var ucHeaders = document.querySelectorAll('p[class*="uppercase"]');
+    // 定义需要过滤的关键词列表
+    var filterKeywords = ['games', 'all sports'];
     for (var i = 0; i < ucHeaders.length; i++) {
-        if (ucHeaders[i].textContent.trim().toLowerCase() === 'games') {
-            result.pageType = 'gaming';
-            result.debug.push('Found "Games" header → 跳过');
+        var text = ucHeaders[i].textContent.trim().toLowerCase();
+        if (filterKeywords.includes(text)) {
+            result.pageType = 'gaming'; // 注意：这里根据你的逻辑保持不变，或者你可能需要根据不同关键词设置不同的 pageType
+            result.debug.push('Found "' + text + '" header → 跳过');
             return result;
         }
     }
@@ -746,7 +749,7 @@ async function startSubpageScraping() {
     }
 
     var minVolRaw = document.getElementById('minVolume').value.trim();
-    var minVolume = minVolRaw === '' ? 16000000 : parseInt(minVolRaw, 10);
+    var minVolume = minVolRaw === '' ? 100000 : parseInt(minVolRaw, 10);
     var hasMinVolume = !isNaN(minVolume) && minVolume > 0;
 
     var outputFilename = getTimestampedFilename('polymarket');
