@@ -1,317 +1,364 @@
 import json
 import sqlite3
+import os
 from datetime import datetime, timedelta
 from collections import defaultdict
 
+USER_HOME = os.path.expanduser("~")
+BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
+
+# ================= 配置区域 =================
+# 如果为空，则运行"今天"模式；如果填入日期（如 "2024-11-03"），则运行回测模式
+# SYMBOL_TO_TRACE = "" 
+# TARGET_DATE = "" 
+
+SYMBOL_TO_TRACE = "TEL"
+TARGET_DATE = "2026-03-04"
+
+# 日志路径
+LOG_FILE_PATH = os.path.join(USER_HOME, "Downloads", "Support_trace_log.txt")
+
 # ========== 文件路径 ==========
-DB_PATH = "/Users/yanzhang/Coding/Database/Finance.db"
-SECTORS_ALL_PATH = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_All.json"
-EARNING_HISTORY_PATH = "/Users/yanzhang/Coding/Financial_System/Modules/Earning_History.json"
-SECTORS_PANEL_PATH = "/Users/yanzhang/Coding/Financial_System/Modules/Sectors_panel.json"
+DB_PATH = os.path.join(BASE_CODING_DIR, "Database", "Finance.db")
+SECTORS_ALL_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_All.json")
+EARNING_HISTORY_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Earning_History.json")
+SECTORS_PANEL_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_panel.json")
 
-# ========== 加载 JSON 文件 ==========
-with open(SECTORS_ALL_PATH, 'r', encoding='utf-8') as f:
-    sectors_all = json.load(f)
+def run_support_logic(log_detail):
+    log_detail("Analyse_Earning_Support 程序开始运行...")
+    if SYMBOL_TO_TRACE: 
+        log_detail(f"当前追踪的 SYMBOL: {SYMBOL_TO_TRACE}")
+    
+    if TARGET_DATE:
+        log_detail(f"\n⚠️⚠️⚠️ 注意：当前处于【回测模式】，目标日期：{TARGET_DATE} ⚠️⚠️⚠️")
+        log_detail("本次运行将【不会】更新 Panel 和 History JSON 文件。\n")
 
-with open(EARNING_HISTORY_PATH, 'r', encoding='utf-8') as f:
-    earning_history = json.load(f)
-
-with open(SECTORS_PANEL_PATH, 'r', encoding='utf-8') as f:
-    sectors_panel = json.load(f)
-
-# ========== 需要提取 symbol 的分组 ==========
-target_groups = [
-    "Short", "Short_W", "Strategy12", "Strategy34", "OverSell_W",
-    "PE_Deep", "PE_Deeper", "PE_W", "PE_valid", "PE_invalid", "season",
-    "PE_Volume", "PE_Volume_up", "PE_Hot", "PE_Volume_high"
-]
-
-# ========== 从目标分组中提取所有唯一 symbol ==========
-symbols = set()
-for group in target_groups:
-    if group in sectors_panel:
-        for symbol in sectors_panel[group]:
-            symbols.add(symbol)
-
-print(f"共提取 {len(symbols)} 个唯一 symbol: {sorted(symbols)}")
-
-# ========== 连接数据库，构建 symbol -> 表名 映射 ==========
-conn = sqlite3.connect(DB_PATH)
-cursor = conn.cursor()
-
-# 从数据库各表中读取所有 name，构建完整映射
-symbol_to_table = {}
-for table in sectors_all.keys():
+    # ========== 加载 JSON 文件 ==========
     try:
-        cursor.execute(f'SELECT DISTINCT name FROM [{table}]')
-        for (name,) in cursor.fetchall():
-            symbol_to_table[name] = table
+        with open(SECTORS_ALL_PATH, 'r', encoding='utf-8') as f:
+            sectors_all = json.load(f)
+        with open(EARNING_HISTORY_PATH, 'r', encoding='utf-8') as f:
+            earning_history = json.load(f)
+        with open(SECTORS_PANEL_PATH, 'r', encoding='utf-8') as f:
+            sectors_panel = json.load(f)
     except Exception as e:
-        print(f"查询表 [{table}] 出错: {e}")
+        log_detail(f"加载 JSON 文件失败: {e}")
+        return
 
-# ========== 逐个 symbol 分析支撑位 ==========
-support_close = {}   # 接近支撑位（最新价 > 支撑位，差值 ≤ 2.6%）
-support_over = {}    # 跌破支撑位（最新价 ≤ 支撑位）
+    # ========== 需要提取 symbol 的分组 ==========
+    target_groups = [
+        "Short", "Short_W", "Strategy12", "Strategy34", "OverSell_W",
+        "PE_Deep", "PE_Deeper", "PE_W", "PE_valid", "PE_invalid", "season",
+        "PE_Volume", "PE_Volume_up", "PE_Hot", "PE_Volume_high"
+    ]
 
-earning_close = defaultdict(list)  # 日期 -> symbol列表
-earning_over = defaultdict(list)
+    # ========== 从目标分组中提取所有唯一 symbol ==========
+    symbols = set()
+    for group in target_groups:
+        if group in sectors_panel:
+            for symbol in sectors_panel[group]:
+                symbols.add(symbol)
 
-for symbol in sorted(symbols):
-    table = symbol_to_table.get(symbol)
-    if not table:
-        print(f"⚠️  {symbol} 未在数据库任何表中找到，跳过")
-        continue
+    log_detail(f"共提取 {len(symbols)} 个唯一 symbol")
 
-    try:
-        # 1. 获取该 symbol 的最新一条记录 (将 price 改为 low)
-        cursor.execute(
-            f'SELECT date, price, low FROM [{table}] WHERE name = ? ORDER BY date DESC LIMIT 1',
-            (symbol,)
-        )
-        latest_row = cursor.fetchone()
-        # 此时 latest_row 包含 (date, close_price, low_price)
-        if not latest_row:
-            print(f"⚠️  {symbol} 在表 [{table}] 中无数据，跳过")
+    # ========== 连接数据库，构建 symbol -> 表名 映射 ==========
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    symbol_to_table = {}
+    for table in sectors_all.keys():
+        try:
+            cursor.execute(f'SELECT DISTINCT name FROM [{table}]')
+            for (name,) in cursor.fetchall():
+                symbol_to_table[name] = table
+        except Exception as e:
+            log_detail(f"查询表 [{table}] 出错: {e}")
+
+    # ========== 逐个 symbol 分析支撑位 ==========
+    support_close = {}   # 接近支撑位（最新价 > 支撑位，差值 ≤ 2.6%）
+    support_over = {}    # 跌破支撑位（最新价 ≤ 支撑位）
+
+    earning_close = defaultdict(list)  # 日期 -> symbol列表
+    earning_over = defaultdict(list)
+
+    for symbol in sorted(symbols):
+        is_tracing = (symbol == SYMBOL_TO_TRACE)
+        table = symbol_to_table.get(symbol)
+        
+        if not table:
+            if is_tracing: log_detail(f"⚠️ [追踪] {symbol} 未在数据库任何表中找到，跳过")
             continue
 
-        latest_date, latest_close, latest_low = latest_row # 新增 latest_low
+        if is_tracing: log_detail(f"\n>>> [追踪] 开始分析 {symbol} (所在表: {table})")
 
-        # 2. 获取最新日期往前 31 天内的历史记录（不含最新当天）
-        latest_dt = datetime.strptime(latest_date, "%Y-%m-%d")
+        try:
+            # 1. 获取该 symbol 的最新一条记录 (时间旅行逻辑)
+            if TARGET_DATE:
+                cursor.execute(
+                    f'SELECT date, price, low FROM [{table}] WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT 1',
+                    (symbol, TARGET_DATE)
+                )
+            else:
+                cursor.execute(
+                    f'SELECT date, price, low FROM [{table}] WHERE name = ? ORDER BY date DESC LIMIT 1',
+                    (symbol,)
+                )
+                
+            latest_row = cursor.fetchone()
+            
+            if not latest_row:
+                if is_tracing: log_detail(f"⚠️ [追踪] {symbol} 在目标日期前无数据，跳过")
+                continue
 
-        # 2. 获取历史支撑位（31天 -> 可能延展到61天）
-        lookback_days = 31
-        skip_symbol = False
+            latest_date, latest_close, latest_low = latest_row
+            if is_tracing: 
+                log_detail(f"  -> 最新交易日: {latest_date}, 收盘价: {latest_close}, 最低价: {latest_low}")
 
-        while True:
-            date_ago = (latest_dt - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+            latest_dt = datetime.strptime(latest_date, "%Y-%m-%d")
 
-            # 获取历史记录，按日期升序排列，方便获取“昨天”的日期
-            # 【修改点 1】：将 SELECT date, price 改为 SELECT date, low
-            cursor.execute(
-                f'SELECT date, low FROM [{table}] WHERE name = ? AND date >= ? AND date < ? ORDER BY date ASC',
-                (symbol, date_ago, latest_date)
-            )
-            hist_rows = cursor.fetchall()
+            # 2. 获取历史支撑位（31天 -> 可能延展到61天）
+            lookback_days = 31
+            skip_symbol = False
+
+            while True:
+                date_ago = (latest_dt - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+
+                cursor.execute(
+                    f'SELECT date, low FROM [{table}] WHERE name = ? AND date >= ? AND date < ? ORDER BY date ASC',
+                    (symbol, date_ago, latest_date)
+                )
+                hist_rows = cursor.fetchall()
+
+                if not hist_rows:
+                    if is_tracing: log_detail(f"  -> {lookback_days}天内无历史数据")
+                    break
+
+                min_date, min_low = min(hist_rows, key=lambda x: x[1])
+                support_price = min_low
+                support_date = min_date
+                
+                last_trading_day = hist_rows[-1][0]
+
+                if is_tracing: 
+                    log_detail(f"  -> {lookback_days}天内最低点: {support_date} (Low: {support_price}) | 前一交易日: {last_trading_day}")
+
+                # 4. 检查是否需要延展周期
+                if support_date == last_trading_day:
+                    if lookback_days == 31:
+                        if is_tracing: log_detail(f"  🔄 支撑点为前一交易日，可能处于持续下跌中，延展至 61 天")
+                        lookback_days = 61
+                        continue
+                    elif lookback_days == 61:
+                        if is_tracing: log_detail(f"  ⏭️ 延展至 61 天后，支撑点仍为前一交易日，标记为跳过基础检查")
+                        skip_symbol = True
+                        break
+                else:
+                    break
+
+            # ===== Phase 2: 标准支撑位检查 =====
+            symbol_categorized = False
 
             if not hist_rows:
-                break
-
-            min_date, min_low = min(hist_rows, key=lambda x: x[1])
-            support_price = min_low
-            support_date = min_date
-            support_type = f"最低价支撑({support_date})"
-
-            # 4. 检查是否需要延展周期到 61 天，或者 61 天后依然无效跳过
-            # hist_rows[-1][0] 是距离 latest_date 最近的一个交易日（即“昨天”）
-            last_trading_day = hist_rows[-1][0]
-
-            if support_date == last_trading_day:
-                if lookback_days == 31:
-                    print(f"  🔄 {symbol}: 支撑点为前一交易日({support_date})，可能处于持续下跌中，将判断周期延展至 61 天")
-                    lookback_days = 61
-                    continue  # 重新执行 while 循环，使用 61 天的数据
-                elif lookback_days == 61:
-                    print(f"  ⏭️ {symbol}: 延展至 61 天后，支撑点仍为前一交易日({support_date})")
-                    skip_symbol = True
-                    break # 即使是61天依然是前一天，跳出循环并标记跳过
-            else:
-                break  # 找到了合适的支撑位（非前一交易日），跳出循环
-
-        # ===== Phase 2: 标准支撑位检查 =====
-        symbol_categorized = False
-
-        if not hist_rows:
-            print(f"⚠️  {symbol} {lookback_days}天内无历史数据可比较")
-            # 如果不是61天延展场景，直接跳过
-            if lookback_days != 61:
-                continue
-            # 否则留给 Phase 3 财报回退检查
-        elif skip_symbol:
-            # 61天后支撑点仍为前一交易日，不直接跳过，留给 Phase 3
-            pass
-        else:
-            support_dt = datetime.strptime(support_date, "%Y-%m-%d")
-            days_diff = (latest_dt - support_dt).days
-
-            if days_diff < 7:
-                print(f"  ⚠️ {symbol}: 支撑点日期({support_date})距最新日期({latest_date})仅 {days_diff} 天，不足7天，视为无效")
-                # 如果不是61天延展场景，直接跳过
                 if lookback_days != 61:
                     continue
-                # 否则留给 Phase 3
+            elif skip_symbol:
+                pass
             else:
-                # 比较最新收盘价与支撑位
-                if latest_close > support_price: # 修改点
-                    diff_pct = (latest_close - support_price) / support_price * 100 # 修改点
-                    if diff_pct <= 2.6:
-                        support_close[symbol] = ""
-                        earning_close[latest_date].append(symbol)
-                        symbol_categorized = True
-                        print(f"  ✅ {symbol}: SupportLevel_Close (最新收盘={latest_close}, 支撑={support_price}, 差={diff_pct:.2f}%)")
+                support_dt = datetime.strptime(support_date, "%Y-%m-%d")
+                days_diff = (latest_dt - support_dt).days
+
+                if days_diff < 7:
+                    if is_tracing: log_detail(f"  ⚠️ 支撑点距离最新日期仅 {days_diff} 天，不足7天，视为无效")
+                    if lookback_days != 61:
+                        continue
                 else:
-                    # 最新收盘价 ≤ 支撑位，跌破支撑
-                    support_over[symbol] = ""
-                    earning_over[latest_date].append(symbol)
-                    symbol_categorized = True
-                    print(f"  🔻 {symbol}: SupportLevel_Over (最新收盘={latest_close}, 支撑={support_price})")
+                    if latest_close > support_price:
+                        diff_pct = (latest_close - support_price) / support_price * 100
+                        if is_tracing: log_detail(f"  -> 距离支撑位差值: {diff_pct:.2f}% (阈值: 2.6%)")
+                        
+                        if diff_pct <= 2.6:
+                            support_close[symbol] = ""
+                            earning_close[latest_date].append(symbol)
+                            symbol_categorized = True
+                            log_detail(f"  ✅ {symbol}: SupportLevel_Close (最新收盘={latest_close}, 支撑日期={support_date}, 支撑(low)={support_price}, 差={diff_pct:.2f}%)")
+                    else:
+                        support_over[symbol] = ""
+                        earning_over[latest_date].append(symbol)
+                        symbol_categorized = True
+                        log_detail(f"  ✅🔻 {symbol}: SupportLevel_Over (最新收盘={latest_close}, 支撑日期={support_date}, 支撑(low)={support_price})")
 
-        # ===== Phase 2.5: 并行流程 —— 继续向前延展寻找非"昨天"的最低点 =====
-        parallel_suffix = ""   # 例如 "3轮"、"4轮"...，为空则不附加
-        if skip_symbol:        # 只有在 61 天内支撑仍是前一交易日时才启动并行流程
-            round_num = 3       # 31天=第1轮, 61天=第2轮, 92天=第3轮起步
-            max_rounds = 12     # 安全上限, 避免极端情况下无限延展 (约 31*12 = 372 天)
+            # ===== Phase 2.5: 并行流程 —— 继续向前延展寻找非"昨天"的最低点 =====
+            parallel_suffix = ""
+            if skip_symbol:
+                round_num = 3
+                max_rounds = 12
 
-            while round_num <= max_rounds:
-                p_days = 31 * round_num
-                p_date_ago = (latest_dt - timedelta(days=p_days)).strftime("%Y-%m-%d")
+                while round_num <= max_rounds:
+                    p_days = 31 * round_num
+                    p_date_ago = (latest_dt - timedelta(days=p_days)).strftime("%Y-%m-%d")
 
-                cursor.execute(
-                    f'SELECT date, low FROM [{table}] '
-                    f'WHERE name = ? AND date >= ? AND date < ? ORDER BY date ASC',
-                    (symbol, p_date_ago, latest_date)
-                )
-                p_rows = cursor.fetchall()
+                    cursor.execute(
+                        f'SELECT date, low FROM [{table}] '
+                        f'WHERE name = ? AND date >= ? AND date < ? ORDER BY date ASC',
+                        (symbol, p_date_ago, latest_date)
+                    )
+                    p_rows = cursor.fetchall()
 
-                if not p_rows:
-                    # 历史数据已经耗尽，无法继续延展
-                    print(f"  ⏹️ {symbol}: 第{round_num}轮({p_days}天)无历史数据，并行流程结束")
-                    break
+                    if not p_rows:
+                        if is_tracing: log_detail(f"  ⏹️ 第{round_num}轮({p_days}天)无历史数据，并行流程结束")
+                        break
 
-                p_min_date, p_min_low = min(p_rows, key=lambda x: x[1])
-                p_last_trading_day = p_rows[-1][0]
+                    p_min_date, p_min_low = min(p_rows, key=lambda x: x[1])
+                    p_last_trading_day = p_rows[-1][0]
 
-                # 仍然是前一交易日 → 再延展一轮
-                if p_min_date == p_last_trading_day:
-                    print(f"  🔁 {symbol}: 第{round_num}轮({p_days}天)支撑点仍为前一交易日({p_min_date})，继续延展")
-                    round_num += 1
-                    continue
+                    if p_min_date == p_last_trading_day:
+                        if is_tracing: log_detail(f"  🔁 第{round_num}轮({p_days}天)支撑点仍为前一交易日，继续延展")
+                        round_num += 1
+                        continue
 
-                # 找到了非"昨天"的最低点 —— 做有效性与 close/over 判断
-                p_support_dt = datetime.strptime(p_min_date, "%Y-%m-%d")
-                p_days_diff = (latest_dt - p_support_dt).days
+                    p_support_dt = datetime.strptime(p_min_date, "%Y-%m-%d")
+                    p_days_diff = (latest_dt - p_support_dt).days
 
-                if p_days_diff < 7:
-                    print(f"  ⚠️ {symbol}: 第{round_num}轮支撑点({p_min_date})距最新日期仅 {p_days_diff} 天，不足7天，并行流程放弃")
-                    break
+                    if p_days_diff < 7:
+                        if is_tracing: log_detail(f"  ⚠️ 第{round_num}轮支撑点距最新日期仅 {p_days_diff} 天，并行流程放弃")
+                        break
 
-                if latest_close > p_min_low:
-                    diff_pct = (latest_close - p_min_low) / p_min_low * 100
-                    if diff_pct <= 2.6:
+                    if latest_close > p_min_low:
+                        diff_pct = (latest_close - p_min_low) / p_min_low * 100
+                        if diff_pct <= 2.6:
+                            parallel_suffix = f"{round_num}轮"
+                            log_detail(f"  🔗 {symbol}: 并行流程第{round_num}轮命中 Close (最新={latest_close}, 支撑日期={p_min_date}, 支撑(low)={p_min_low}, 差={diff_pct:.2f}%)")
+                        else:
+                            if is_tracing: log_detail(f"  ⚠️ 第{round_num}轮 Close 差值 {diff_pct:.2f}% 超 2.6%，并行无输出")
+                    else:
                         parallel_suffix = f"{round_num}轮"
-                        print(f"  🔗 {symbol}: 并行流程第{round_num}轮命中 Close "
-                              f"(最新={latest_close}, 支撑={p_min_low}, 差={diff_pct:.2f}%) → 后缀={parallel_suffix}")
+                        log_detail(f"  🔗 {symbol}: 并行流程第{round_num}轮命中 Over (最新={latest_close}, 支撑日期={p_min_date}, 支撑(low)={p_min_low})")
+
+                    break
+                
+                if round_num > max_rounds:
+                    parallel_suffix = f"{max_rounds}轮"
+                    if is_tracing: log_detail(f"  ⚠️ {max_rounds}轮延展全部失效(持续下跌创新低)，强行标记后缀={parallel_suffix}")
+
+            # ===== Phase 3: 财报支撑回退检查（61 天 / 91 天两档） =====
+            if not symbol_categorized and lookback_days == 61:
+                if is_tracing: log_detail(f"  -> 进入 Phase 3: 财报支撑回退检查")
+                
+                for fallback_days in (61, 91):
+                    if symbol_categorized: break
+
+                    date_N_ago = (latest_dt - timedelta(days=fallback_days)).strftime("%Y-%m-%d")
+
+                    cursor.execute(
+                        '''SELECT date, price FROM Earning 
+                           WHERE name = ? AND date >= ? AND date < ? AND price > 0
+                           ORDER BY date DESC LIMIT 1''',
+                        (symbol, date_N_ago, latest_date)
+                    )
+                    earning_row = cursor.fetchone()
+
+                    if not earning_row:
+                        if is_tracing: log_detail(f"  ⏭️ {fallback_days}天范围内无符合条件的财报，尝试下一档")
+                        continue
+
+                    earning_date = earning_row[0]
+
+                    cursor.execute(
+                        f'SELECT low FROM [{table}] WHERE name = ? AND date = ?',
+                        (symbol, earning_date)
+                    )
+                    earning_low_row = cursor.fetchone()
+
+                    if not earning_low_row:
+                        if is_tracing: log_detail(f"  ⚠️ 财报日({earning_date})无 low 数据，尝试下一档")
+                        continue
+
+                    earning_support = earning_low_row[0]
+                    earning_dt = datetime.strptime(earning_date, "%Y-%m-%d")
+                    e_days_diff = (latest_dt - earning_dt).days
+
+                    if e_days_diff < 7:
+                        if is_tracing: log_detail(f"  ⚠️ 财报日({earning_date})距最新日期仅 {e_days_diff} 天，尝试下一档")
+                        continue
+
+                    if latest_close > earning_support:
+                        diff_pct = (latest_close - earning_support) / earning_support * 100
+                        if diff_pct <= 2.6:
+                            support_close[symbol] = f"{symbol}财{parallel_suffix}"
+                            earning_close[latest_date].append(symbol)
+                            symbol_categorized = True
+                            # 修改处：增加了 财报日={earning_date} 的打印
+                            log_detail(f"  ✅ {symbol}: SupportLevel_Close [财报回退-{fallback_days}天{parallel_suffix}] (最新={latest_close}, 财报日={earning_date}, 支撑(low)={earning_support}, 差={diff_pct:.2f}%)")
+                        else:
+                            if is_tracing: log_detail(f"  ⚠️ {fallback_days}天档财报支撑差值 {diff_pct:.2f}% 超 2.6%，尝试下一档")
                     else:
-                        print(f"  ⚠️ {symbol}: 第{round_num}轮 Close 差值 {diff_pct:.2f}% 超 2.6%，并行流程无输出")
-                else:
-                    parallel_suffix = f"{round_num}轮"
-                    print(f"  🔗 {symbol}: 并行流程第{round_num}轮命中 Over "
-                          f"(最新={latest_close}, 支撑={p_min_low}) → 后缀={parallel_suffix}")
-
-                break
-            
-            # 【新增逻辑】：如果循环正常结束且 round_num 超过了 max_rounds，说明 12 轮全部失效（一直创新低）
-            if round_num > max_rounds:
-                parallel_suffix = f"{max_rounds}轮"
-                print(f"  ⚠️ {symbol}: {max_rounds}轮延展全部失效(持续下跌创新低)，为后续财报强行标记后缀为={parallel_suffix}")
-
-        # ===== Phase 3: 财报支撑回退检查（61 天 / 91 天两档） =====
-        if not symbol_categorized and lookback_days == 61:
-            # 依次尝试 61 天、91 天两个回退窗口
-            for fallback_days in (61, 91):
-                if symbol_categorized:
-                    break  # 已在上一档命中，无需再尝试
-
-                date_N_ago = (latest_dt - timedelta(days=fallback_days)).strftime("%Y-%m-%d")
-
-                # 在 fallback_days 范围内查找 price 为正值的最近一次财报
-                cursor.execute(
-                    '''SELECT date, price FROM Earning 
-                       WHERE name = ? AND date >= ? AND date < ? AND price > 0
-                       ORDER BY date DESC LIMIT 1''',
-                    (symbol, date_N_ago, latest_date)
-                )
-                earning_row = cursor.fetchone()
-
-                if not earning_row:
-                    print(f"  ⏭️ {symbol}: {fallback_days}天范围内无符合条件的财报，尝试下一档")
-                    continue
-
-                earning_date = earning_row[0]
-
-                # 获取该财报日在对应表中的 low 作为支撑位
-                cursor.execute(
-                    f'SELECT low FROM [{table}] WHERE name = ? AND date = ?',
-                    (symbol, earning_date)
-                )
-                earning_low_row = cursor.fetchone()
-
-                if not earning_low_row:
-                    print(f"  ⚠️ {symbol}: 财报日({earning_date})在表[{table}]中无 low 数据，尝试下一档")
-                    continue
-
-                earning_support = earning_low_row[0]
-                earning_dt = datetime.strptime(earning_date, "%Y-%m-%d")
-                e_days_diff = (latest_dt - earning_dt).days
-
-                if e_days_diff < 7:
-                    print(f"  ⚠️ {symbol}: 财报日({earning_date})距最新日期仅 {e_days_diff} 天，不足7天，尝试下一档")
-                    continue
-
-                # 执行 close / over 判断
-                if latest_close > earning_support:
-                    diff_pct = (latest_close - earning_support) / earning_support * 100
-                    if diff_pct <= 2.6:
-                        support_close[symbol] = f"{symbol}财{parallel_suffix}"
-                        earning_close[latest_date].append(symbol)
+                        support_over[symbol] = f"{symbol}财{parallel_suffix}"
+                        earning_over[latest_date].append(symbol)
                         symbol_categorized = True
-                        print(f"  ✅ {symbol}: SupportLevel_Close [财报回退-{fallback_days}天{parallel_suffix}] "
-                              f"(最新={latest_close}, 支撑={earning_support}, 差={diff_pct:.2f}%)")
-                    else:
-                        print(f"  ⚠️ {symbol}: {fallback_days}天档财报支撑差值 {diff_pct:.2f}% 超 2.6%，尝试下一档")
-                        # 未归类，继续尝试下一档（若有）
-                else:
-                    support_over[symbol] = f"{symbol}财{parallel_suffix}"
-                    earning_over[latest_date].append(symbol)
-                    symbol_categorized = True
-                    print(f"  🔻 {symbol}: SupportLevel_Over [财报回退-{fallback_days}天{parallel_suffix}] "
-                          f"(最新={latest_close}, 支撑={earning_support})")
+                        # 修改处：增加了 财报日={earning_date} 的打印
+                        log_detail(f"  ✅🔻 {symbol}: SupportLevel_Over [财报回退-{fallback_days}天{parallel_suffix}] (最新={latest_close}, 财报日={earning_date}, 支撑(low)={earning_support})")
 
-            if not symbol_categorized:
-                print(f"  ⏭️ {symbol}: 61/91天范围内均无符合条件的财报支撑，最终跳过")
+                if not symbol_categorized and is_tracing:
+                    log_detail(f"  ⏭️ 61/91天范围内均无符合条件的财报支撑，最终跳过")
 
-    except Exception as e:
-        print(f"处理 {symbol} 时出错: {e}")
+        except Exception as e:
+            log_detail(f"处理 {symbol} 时出错: {e}")
 
-conn.close()
+    conn.close()
 
-# ========== 更新 Sectors_panel.json ==========
-# 清除原内容后写入新结果
-sectors_panel["SupportLevel_Close"] = support_close
-sectors_panel["SupportLevel_Close_backup"] = support_close.copy()
-sectors_panel["SupportLevel_Over"] = support_over
-sectors_panel["SupportLevel_Over_backup"] = support_over.copy()
+    # ========== 结果汇总与文件写入 ==========
+    if TARGET_DATE:
+        log_detail("\n" + "="*60)
+        log_detail(f"🛑 [回测模式] 运行完毕 (Date: {TARGET_DATE})。")
+        log_detail(f"📊 SupportLevel_Close 命中: {len(support_close)} 个")
+        log_detail(f"📊 SupportLevel_Over  命中: {len(support_over)} 个")
+        log_detail("⚠️ 文件未被修改。")
+        log_detail("="*60 + "\n")
+    else:
+        # 更新 Sectors_panel.json
+        sectors_panel["SupportLevel_Close"] = support_close
+        sectors_panel["SupportLevel_Close_backup"] = support_close.copy()
+        sectors_panel["SupportLevel_Over"] = support_over
+        sectors_panel["SupportLevel_Over_backup"] = support_over.copy()
 
-# ========== 更新 Earning_History.json ==========
-# SupportLevel_Close（追加日期条目）
-if "SupportLevel_Close" not in earning_history:
-    earning_history["SupportLevel_Close"] = {}
-for date_key, sym_list in earning_close.items():
-    earning_history["SupportLevel_Close"][date_key] = sorted(sym_list)
+        # 更新 Earning_History.json
+        if "SupportLevel_Close" not in earning_history:
+            earning_history["SupportLevel_Close"] = {}
+        for date_key, sym_list in earning_close.items():
+            earning_history["SupportLevel_Close"][date_key] = sorted(sym_list)
 
-# SupportLevel_Over
-if "SupportLevel_Over" not in earning_history:
-    earning_history["SupportLevel_Over"] = {}
-for date_key, sym_list in earning_over.items():
-    earning_history["SupportLevel_Over"][date_key] = sorted(sym_list)
+        if "SupportLevel_Over" not in earning_history:
+            earning_history["SupportLevel_Over"] = {}
+        for date_key, sym_list in earning_over.items():
+            earning_history["SupportLevel_Over"][date_key] = sorted(sym_list)
 
-# ========== 写回文件 ==========
-with open(SECTORS_PANEL_PATH, 'w', encoding='utf-8') as f:
-    json.dump(sectors_panel, f, indent=4, ensure_ascii=False)
+        # 写回文件
+        with open(SECTORS_PANEL_PATH, 'w', encoding='utf-8') as f:
+            json.dump(sectors_panel, f, indent=4, ensure_ascii=False)
 
-with open(EARNING_HISTORY_PATH, 'w', encoding='utf-8') as f:
-    json.dump(earning_history, f, indent=4, ensure_ascii=False)
+        with open(EARNING_HISTORY_PATH, 'w', encoding='utf-8') as f:
+            json.dump(earning_history, f, indent=4, ensure_ascii=False)
 
-print(f"\n===== 完成 =====")
-print(f"SupportLevel_Close ({len(support_close)}个): {list(support_close.keys())}")
-print(f"SupportLevel_Over  ({len(support_over)}个): {list(support_over.keys())}")
+        log_detail(f"\n===== 完成 =====")
+        log_detail(f"SupportLevel_Close ({len(support_close)}个): {list(support_close.keys())}")
+        log_detail(f"SupportLevel_Over  ({len(support_over)}个): {list(support_over.keys())}")
+
+def main():
+    if SYMBOL_TO_TRACE:
+        print(f"追踪模式已启用，目标: {SYMBOL_TO_TRACE}。日志将写入: {LOG_FILE_PATH}")
+        try:
+            with open(LOG_FILE_PATH, 'w', encoding='utf-8') as log_file:
+                def log_detail_file(message):
+                    log_file.write(message + '\n')
+                    print(message)
+                run_support_logic(log_detail_file)
+        except IOError as e:
+            print(f"错误：无法打开或写入日志文件 {LOG_FILE_PATH}: {e}")
+    else:
+        print("追踪模式未启用。日志仅输出到控制台。")
+        def log_detail_console(message):
+            print(message)
+        run_support_logic(log_detail_console)
+
+if __name__ == '__main__':
+    main()
