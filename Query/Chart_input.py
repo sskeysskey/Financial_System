@@ -84,6 +84,31 @@ def find_earning_release_date(symbol, txt_dir=None):
     except Exception as e:
         print(f"查找 earning release 日期时出错: {e}")
         return None
+    
+def get_polymarket_percentage(symbol):
+    """
+    在 earning_polymarket.txt 文件中查找 symbol 对应的百分比
+    返回找到的百分比字符串（如 '76%'），如果没找到返回 None
+    """
+    file_path = os.path.join(BASE_CODING_DIR, "News", "earning_polymarket.txt")
+    if not os.path.exists(file_path):
+        return None
+        
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                parts = line.split(':')
+                if len(parts) == 2:
+                    file_symbol = parts[0].strip()
+                    percentage = parts[1].strip()
+                    if file_symbol == symbol:
+                        return percentage
+    except Exception as e:
+        print(f"读取 polymarket 文件出错: {e}")
+    return None
 
 def calculate_three_weeks_before_range(target_date):
     """
@@ -1241,11 +1266,22 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                  ha='left', va='top')
         subtitle_artists.append(t_min)
 
-        # --- 新增: 绘制 ER 差值 ---
+        # 绘制 ER 差值
         t_er = fig.text(base_x + 0.16, y_pos, f"ER:{er_pct_str}",
                  color=er_color, fontsize=12, fontweight='normal',
                  ha='left', va='top')
         subtitle_artists.append(t_er)
+
+        # ================= 新增: 绘制 Polymarket 概率 =================
+        poly_pct = get_polymarket_percentage(name)
+        if poly_pct:
+            # 在 ER 后面增加 0.08 的偏移量 (0.16 + 0.08 = 0.24)
+            # 将 fontsize 从 12 修改为 16 (你可以根据需要调整)
+            t_poly = fig.text(base_x + 0.24, y_pos, f"Polymarket: {poly_pct}",
+                     color=er_color, fontsize=26, fontweight='bold', # 建议同时加粗以增强视觉效果
+                     ha='left', va='top')
+            subtitle_artists.append(t_poly)
+        # ==============================================================
 
         metrics_data = None
         try:

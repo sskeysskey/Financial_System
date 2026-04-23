@@ -14,9 +14,7 @@
         "B",
         "VALE",
         "WPM",
-        "CTVA",
-        "AU",
-        "FNV"
+        "CTVA"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -103,8 +101,8 @@
         "OXY",
         "LNG",
         "FANG",
-        "TRGP",
-        "CCJ"
+        "CCJ",
+        "TRGP"
     ],
     "Financial_Services": [
         "JPM",
@@ -164,8 +162,7 @@
         "BRK-B",
         "MRSH",
         "MET",
-        "COIN",
-        "NDAQ"
+        "COIN"
     ],
     "Healthcare": [
         "LLY",
@@ -198,10 +195,7 @@
         "MCK",
         "COR",
         "TAK",
-        "BDX",
-        "ZTS",
-        "ARGX",
-        "CAH"
+        "BDX"
     ],
     "Industrials": [
         "GE",
@@ -319,7 +313,8 @@
         "CRWV",
         "GRMN",
         "ADSK",
-        "MSTR"
+        "MSTR",
+        "SNOW"
     ],
     "Utilities": [
         "NEE",
@@ -330,7 +325,6 @@
         "AEP",
         "SRE",
         "D",
-        "VST",
-        "XEL"
+        "VST"
     ]
 }

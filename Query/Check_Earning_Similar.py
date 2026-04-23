@@ -33,6 +33,8 @@ EARNINGS_FILE_THIRD_PATH = os.path.join(BASE_CODING_DIR, "News", "Earnings_Relea
 EARNINGS_FILE_FOURTH_PATH = os.path.join(BASE_CODING_DIR, "News", "Earnings_Release_fourth.txt")
 EARNINGS_FILE_FIFTH_PATH = os.path.join(BASE_CODING_DIR, "News", "Earnings_Release_fifth.txt")
 TAGS_WEIGHT_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "tags_weight.json")
+# 新增：Polymarket 文件路径
+POLYMARKET_FILE_PATH = os.path.join(BASE_CODING_DIR, "News", "earning_polymarket.txt")
 
 RELATED_SYMBOLS_LIMIT = 10
 MAX_PER_COLUMN = 20
@@ -42,6 +44,7 @@ compare_data = {}
 sector_data = {}
 json_data = {}
 tags_weight_config = {}
+polymarket_data = {} # 新增：用于存储 polymarket 百分比数据
 DEFAULT_WEIGHT = Decimal('1')
 
 # 新增：SymbolButton 子类
@@ -183,6 +186,21 @@ def load_text_data(path):
         print(f"Error: Text data file not found at {path}")
     return data
 
+# 新增：读取 Polymarket 百分比数据的函数
+def load_polymarket_data(path):
+    data = {}
+    try:
+        with open(path, 'r', encoding='utf-8') as file:
+            for line in file:
+                line = line.strip()
+                if not line or ':' not in line:
+                    continue
+                symbol, percent = line.split(':', 1)
+                data[symbol.strip()] = percent.strip()
+    except FileNotFoundError:
+        print(f"Warning: Polymarket file not found at {path}")
+    return data
+
 
 def fetch_mnspp_data_from_db(db_path, symbol):
     with sqlite3.connect(db_path, timeout=60.0) as conn:
@@ -287,60 +305,6 @@ def find_symbols_by_tags_b(target_tags_with_weight, data, original_symbol):
         combined.extend(related[cat])
     return combined
 
-# --- 新增的辅助函数 ---
-def calculate_earnings_price_change(symbol, db_path, sector_data):
-    """
-    计算自上次财报日以来的股价变化百分比。
-    """
-    fallback_text = "..."
-    try:
-        with sqlite3.connect(db_path, timeout=60.0) as conn:
-            cursor = conn.cursor()
-
-            # 1. 获取最新财报日期
-            cursor.execute("SELECT date FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 1", (symbol,))
-            result = cursor.fetchone()
-            if not result:
-                return fallback_text
-            earnings_date = result[0]
-
-            # 2. 获取symbol所属的表名 (sector)
-            table_name = None
-            for sector, symbols_list in sector_data.items():
-                if symbol in symbols_list:
-                    table_name = sector
-                    break
-            if not table_name:
-                return fallback_text
-            
-            # 3. 获取财报日收盘价
-            # 注意：表名不能用 '?' 参数化，但由于表名来自受控的json文件，这里是安全的
-            query_earnings_price = f'SELECT price FROM "{table_name}" WHERE name = ? AND date = ?'
-            cursor.execute(query_earnings_price, (symbol, earnings_date))
-            result = cursor.fetchone()
-            if not result:
-                return fallback_text
-            earnings_price = result[0]
-
-            # 4. 获取最新收盘价
-            query_latest_price = f'SELECT price FROM "{table_name}" WHERE name = ? ORDER BY date DESC LIMIT 1'
-            cursor.execute(query_latest_price, (symbol,))
-            result = cursor.fetchone()
-            if not result:
-                return fallback_text
-            latest_price = result[0]
-
-            # 5. 计算百分比
-            if earnings_price is None or latest_price is None or earnings_price == 0:
-                return fallback_text
-            
-            percentage_change = ((latest_price - earnings_price) / earnings_price) * 100
-            
-            return f"{percentage_change:+.1f}%"
-
-    except Exception as e:
-        print(f"Error calculating price change for {symbol}: {e}")
-        return fallback_text
 
 # --- 新增：从 b.py 移植的核心颜色决策函数 ---
 def get_color_decision_data(symbol: str, db_path: str, sector_data: dict) -> tuple[float | None, str | None, date | None]:
@@ -546,8 +510,6 @@ class EarningsWindow(QMainWindow):
         """
         self.setStyleSheet(qss)
 
-    # --- 移除了 lighten_color 和 get_button_style_name 函数 ---
-
     def on_search(self):
         key = self.search_line.text().strip().upper()
         if not key:
@@ -668,9 +630,10 @@ class EarningsWindow(QMainWindow):
                     btn.clicked.connect(lambda _, s=sym: self.on_keyword_selected_chart(s))
 
                     # --- 修改部分开始 ---
-                    # 调用新函数计算百分比
-                    price_change_text = calculate_earnings_price_change(sym, DB_PATH, sector_data)
-                    # 使用计算结果创建按钮
+                    # 从 polymarket 数据中获取对应的百分比，如果没找到则显示空白
+                    price_change_text = polymarket_data.get(sym, "")
+                    
+                    # 使用获取到的文本创建按钮
                     related = QPushButton(price_change_text)
                     related.setObjectName("PercentBadge")
                     related.setFixedWidth(80) # 适当加宽以容纳百分比文本
@@ -846,6 +809,10 @@ if __name__ == '__main__':
     compare_data = load_text_data(COMPARE_DATA_PATH)
     wg = load_weight_groups()
     tags_weight_config = {tag: w for w, tags in wg.items() for tag in tags}
+    
+    # 新增：加载 Polymarket 数据
+    polymarket_data = load_polymarket_data(POLYMARKET_FILE_PATH)
+
     _, syms = parse_multiple_earnings_files([EARNINGS_FILE_PATH, EARNINGS_FILE_NEXT_PATH, EARNINGS_FILE_THIRD_PATH, EARNINGS_FILE_FOURTH_PATH, EARNINGS_FILE_FIFTH_PATH])
     symbol_manager = SymbolManager(syms)
 

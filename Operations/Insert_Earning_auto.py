@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget,
     QVBoxLayout, QHBoxLayout, QGroupBox, QTableWidget, QTableWidgetItem,
     QPushButton, QMessageBox, QLabel,
-    QMenu, QHeaderView
+    QMenu
 )
 from PyQt6.QtGui import QCursor, QKeySequence, QFont, QBrush, QColor, QShortcut, QAction
 from PyQt6.QtCore import Qt, QTimer
@@ -27,6 +27,8 @@ DB_PATH = os.path.join(HOME, "Coding/Database/Finance.db")
 DESCRIPTION_PATH = os.path.join(HOME, 'Coding/Financial_System/Modules/description.json')
 COMPARE_DATA_PATH = os.path.join(HOME, 'Coding/News/backup/Compare_All.txt')
 PANEL_CONFIG_PATH = os.path.join(HOME, 'Coding/Financial_System/Modules/Sectors_panel.json')
+# 新增：Polymarket 预测数据路径
+POLYMARKET_TXT_PATH = os.path.join(HOME, "Coding/News/earning_polymarket.txt")
 
 PERIOD_DISPLAY = {"BMO": "↩︎", "AMC": "↪︎", "TNS": "？"}
 PERIOD_CN_MAP = {"BMO": "前", "AMC": "后", "TNS": "未"} # 用于标题显示的中文映射
@@ -149,6 +151,16 @@ class MainWindow(QMainWindow):
         self.panel_config = load_json(PANEL_CONFIG_PATH)
         self.panel_config_path = PANEL_CONFIG_PATH
 
+        # --- 新增：读取 polymarket 预测数据 ---
+        self.polymarket_data = {}
+        if os.path.exists(POLYMARKET_TXT_PATH):
+            with open(POLYMARKET_TXT_PATH, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if ":" in line:
+                        sym, pct = line.split(":", 1)
+                        self.polymarket_data[sym.strip()] = pct.strip()
+
         self.conn = sqlite3.connect(DB_PATH, timeout=60.0)
         self.conn.row_factory = sqlite3.Row
         self.cur = self.conn.cursor()
@@ -162,15 +174,15 @@ class MainWindow(QMainWindow):
         hlay = QHBoxLayout(cw)
         self.apply_stylesheet()
 
-        # 表格配置
+        # 表格配置 (修改表头，将“时段”改为“预测”)
         self.table2 = QTableWidget(0, 6)
-        self.table2.setHorizontalHeaderLabels(["Symbol", "时段", "旧百分比%", "新百分比%", "操作", "—————————————————"])
+        self.table2.setHorizontalHeaderLabels(["Symbol", "预测", "旧百分比%", "新百分比%", "操作", "———————————————"])
         
         self.table1 = QTableWidget(0, 5)
-        self.table1.setHorizontalHeaderLabels(["Symbol", "时段", "百分比(%)", "操作", "————————————————————————"])
+        self.table1.setHorizontalHeaderLabels(["Symbol", "预测", "百分比(%)", "操作", "——————————————————————"])
         
         self.table_today = QTableWidget(0, 3)
-        self.table_today.setHorizontalHeaderLabels(["Symbol", "时段", "————————————————————————————"])
+        self.table_today.setHorizontalHeaderLabels(["Symbol", "预测", "——————————————————————————"])
 
         for t in [self.table2, self.table1, self.table_today]:
             t.verticalHeader().setVisible(False)
@@ -336,7 +348,16 @@ class MainWindow(QMainWindow):
             btn.setProperty("period", period)
             btn.clicked.connect(partial(self.on_symbol_button_clicked, symbol, idx))
             table.setCellWidget(row, 0, btn)
-            table.setItem(row, 1, QTableWidgetItem(PERIOD_DISPLAY.get(period, period)))
+            
+            # --- 修改：填入预测数据 ---
+            pred_val = self.polymarket_data.get(symbol, "")
+            pred_item = QTableWidgetItem(pred_val)
+            pred_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            # --- 新增样式 ---
+            pred_item.setFont(QFont("Arial", 22, QFont.Weight.Bold))
+            pred_item.setForeground(QBrush(QColor(255, 165, 0))) # 橙色
+            table.setItem(row, 1, pred_item)
+            
             tags_to_add.append(get_tags_for_symbol(symbol, self.description_data))
 
         table.resizeColumnsToContents()
@@ -364,6 +385,15 @@ class MainWindow(QMainWindow):
             btn.setProperty("period", period)
             btn.clicked.connect(partial(self.on_symbol_button_clicked, symbol, idx))
             table.setCellWidget(row, 0, btn)
+            
+            # --- 修改：填入预测数据 ---
+            pred_val = self.polymarket_data.get(symbol, "")
+            pred_item = QTableWidgetItem(pred_val)
+            pred_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            # --- 新增样式 ---
+            pred_item.setFont(QFont("Arial", 22, QFont.Weight.Bold))
+            pred_item.setForeground(QBrush(QColor(255, 165, 0))) # 橙色
+            table.setItem(row, 1, pred_item)
             
             item_pct = QTableWidgetItem(f"{pct}")
             item_pct.setFont(QFont("Arial", 14, QFont.Weight.Bold))
@@ -415,6 +445,15 @@ class MainWindow(QMainWindow):
             btn.setProperty("period", period)
             btn.clicked.connect(partial(self.on_symbol_button_clicked, symbol, idx))
             table.setCellWidget(row, 0, btn)
+            
+            # --- 修改：填入预测数据 ---
+            pred_val = self.polymarket_data.get(symbol, "")
+            pred_item = QTableWidgetItem(pred_val)
+            pred_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            # --- 新增样式 ---
+            pred_item.setFont(QFont("Arial", 22, QFont.Weight.Bold))
+            pred_item.setForeground(QBrush(QColor(255, 165, 0))) # 橙色
+            table.setItem(row, 1, pred_item)
             
             for i, val in enumerate([old_pct, pct_new]):
                 item = QTableWidgetItem(f"{val}")

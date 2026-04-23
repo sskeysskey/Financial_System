@@ -22,7 +22,8 @@ NORD_THEME = {
     'text_bright': '#ECEFF4',
     'accent_blue': '#5E81AC',
     'success_green': '#A3BE8C',
-    'warning_red': '#BF616A'
+    'warning_red': '#BF616A',
+    'accent_purple': '#B48EAD'  # 新增紫色
 }
 
 
@@ -109,6 +110,7 @@ def build_overlap_marker(category, d_str, suf,
     """把原来那一大串标记检测逻辑封装进来,两种视图共用"""
     overlap_marker = ""
     red = NORD_THEME['warning_red']
+    purple = NORD_THEME['accent_purple'] # 定义紫色变量
 
     # 1. 同日 PE_Volume & Short / Short_W
     combinations = [
@@ -150,15 +152,6 @@ def build_overlap_marker(category, d_str, suf,
         if is_chaodi and category in ["PE_Volume_high", "PE_W"]:
             overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='同一天触发 PE_Volume_high(抄底) 和 PE_W'>[★多重触发:抄底+W]</span>"
 
-    # A 组 & 支撑位
-    group_a = {"PE_Volume", "PE_Volume_up", "PE_Volume_high", "PE_W",
-               "PE_Deeper", "PE_Deep", "OverSell_W", "PE_Hot", "Short", "Short_W"}
-    if category in group_a:
-        if "SupportLevel_Close" in date_categories[d_str]:
-            overlap_marker += f" <span style='color:{red}; font-weight:bold;'>[接近支撑位]</span>"
-        if "SupportLevel_Over" in date_categories[d_str]:
-            overlap_marker += f" <span style='color:{red}; font-weight:bold;'>[超过支撑位]</span>"
-
     # 2. 跨日接力
     try:
         date_idx = sorted_trading_dates.index(d_str)
@@ -174,31 +167,27 @@ def build_overlap_marker(category, d_str, suf,
 
                 # 1. 原有的 PE_Hot 和 PE_Volume 逻辑
                 if prev_in_hot and prev_in_vol:
-                    overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='前一交易日触发 PE_Hot 和 PE_Volume'>[★Hot+Volume->W]</span>"
+                    overlap_marker += f" <span style='color:{purple}; font-weight:bold;' title='前一交易日触发 PE_Hot 和 PE_Volume'>[★Hot+Volume->W]</span>"
                 elif prev_in_hot:
-                    overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='前一交易日触发 PE_Hot'>[★接力:Hot->W]</span>"
+                    overlap_marker += f" <span style='color:{purple}; font-weight:bold;' title='前一交易日触发 PE_Hot'>[★接力:Hot->W]</span>"
                 elif prev_in_vol:
-                    overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='前一交易日触发 PE_Volume'>[★Volume->W]</span>"
+                    overlap_marker += f" <span style='color:{purple}; font-weight:bold;' title='前一交易日触发 PE_Volume'>[★Volume->W]</span>"
                 
                 # 2. 新增：检查 Short 或 Short_W
                 if prev_in_short or prev_in_short_w:
-                    overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='前一交易日触发 Short 或 Short_W'>[★Short->W]</span>"
+                    overlap_marker += f" <span style='color:{purple}; font-weight:bold;' title='前一交易日触发 Short 或 Short_W'>[★Short->W]</span>"
 
-                # 3. 原有的支撑位逻辑
-                prev_in_supp_close = prev_date in category_dates.get("SupportLevel_Close", set())
-                prev_in_supp_over = prev_date in category_dates.get("SupportLevel_Over", set())
-                if prev_in_supp_close or prev_in_supp_over:
-                    overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='前一交易日触及或跌破支撑位'>[★支撑位->W]</span>"
         elif category == "PE_Hot":
             if date_idx - 1 >= 0:
                 next_date = sorted_trading_dates[date_idx - 1]
                 if next_date in category_dates.get("PE_W", set()):
-                    overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='下一交易日触发 PE_W'>[★Hot->W]</span>"
+                    overlap_marker += f" <span style='color:{purple}; font-weight:bold;' title='下一交易日触发 PE_W'>[★Hot->W]</span>"
+        
         elif category == "PE_Volume":
             if date_idx - 1 >= 0:
                 next_date = sorted_trading_dates[date_idx - 1]
                 if next_date in category_dates.get("PE_W", set()):
-                    overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='下一交易日触发 PE_W'>[★Volume->W]</span>"
+                    overlap_marker += f" <span style='color:{purple}; font-weight:bold;' title='下一交易日触发 PE_W'>[★Volume->W]</span>"
     except ValueError:
         pass
     return overlap_marker
@@ -209,7 +198,6 @@ def build_overlap_marker(category, d_str, suf,
 # =========================================================
 def search_history_by_category(symbol):
     html_parts = []
-    # --- 已移除 sector 相关逻辑 ---
     has_data = False 
 
     category_data, date_categories, category_dates, date_items, sorted_trading_dates, err = load_earning_index(symbol)
@@ -234,36 +222,31 @@ def search_history_by_category(symbol):
         return f"<div style='text-align:center; margin-top:20px; color:{NORD_THEME['text_light']}'>在所有文件中<br>未找到 <b>{symbol}</b> 的任何记录。</div>"
     return "".join(html_parts)
 
-
-# =========================================================
 # 视图 2：按时间 (Date) 渲染
-# =========================================================
 def search_history_by_date(symbol):
-    # --- 新增：定义颜色级别 ---
-    # 红色 (高权重)
-    COLOR_HIGH = "#BF616A" 
-    # 柔和的橙色或淡红色 (中权重) - 这里使用 Nord 主题中的一个柔和色，或者你自己喜欢的颜色
-    COLOR_MEDIUM = "#D08770" 
+    # --- 定义颜色 ---
+    COLOR_HIGH = "#BF616A"      # 红色
+    COLOR_MEDIUM = "#D08770"    # 橙色 (用于中等权重)
+    COLOR_BLUE = "#88C0D0"      # 蓝色 (用于 PE_valid 等)
     
     # --- 新增：分类映射 ---
     # 高权重组 (保持红色)
     high_weight_categories = {
-        "PE_Volume", "Short", "Short_W", "PE_W", "PE_Hot"
+        "PE_Volume", "Short", "Short_W", "PE_W", "PE_Hot", "season", "SupportLevel_Over"
     }
     # 中权重组 (换成弱一点的颜色)
     medium_weight_categories = {
         "PE_Volume_up", "PE_Volume_high", 
-        "SupportLevel_Close", "SupportLevel_Over", "OverSell_W"
+        "SupportLevel_Close", "OverSell_W", "PE_Deeper" # 这里加入了 PE_Deeper
     }
     
     # 依然保留这个集合用于判断是否需要特殊样式背景
     highlight_categories = high_weight_categories.union(medium_weight_categories)
     
-    # --- 新增：可配置的需要压缩显示的单一分组 ---
-    compress_categories = {"PE_valid"}
+    # 可配置的需要压缩显示的单一分组
+    compress_categories = {"PE_valid", "PE_Deep"} # 确保这些在压缩组里
 
     html_parts = []
-    # --- 已移除 sector 相关逻辑 ---
     has_data = False
 
     category_data, date_categories, category_dates, date_items, sorted_trading_dates, err = load_earning_index(symbol)
@@ -286,7 +269,7 @@ def search_history_by_date(symbol):
         else:
             normal_dates.append((d_str, items_today))
 
-    # --- 新增：定义需要保持纵向排列的重要组别 ---
+    # 定义需要保持纵向排列的重要组别
     group_a = {"PE_Volume", "PE_Volume_up", "PE_Volume_high", "PE_W",
                 "PE_Hot", "Short", "Short_W"}
 
@@ -305,10 +288,25 @@ def search_history_by_date(symbol):
                 category_data, date_categories, category_dates, sorted_trading_dates
             )
 
-            # --- 修改核心：根据权重选择颜色 ---
+            # --- 修改核心：根据权重和后缀选择颜色 ---
             if category in highlight_categories:
-                # 决定使用哪种颜色
-                target_color = COLOR_HIGH if category in high_weight_categories else COLOR_MEDIUM
+                # 1. 中等权重组
+                if category in ["PE_Deeper", "OverSell_W"]:
+                    target_color = COLOR_MEDIUM
+                # 2. 高权重组
+                elif category in high_weight_categories:
+                    target_color = COLOR_HIGH
+                # 特殊规则：PE_Volume_high 且后缀包含“甲”字，使用红色
+                elif category == "PE_Volume_high" and suf and '甲' in suf:
+                    target_color = COLOR_HIGH
+                # 新增规则：PE_Volume_up 带有'空'后缀显示橙色，否则显示红色
+                elif category == "PE_Volume_up":
+                    if suf and '空' in suf:
+                        target_color = COLOR_MEDIUM
+                    else:
+                        target_color = COLOR_HIGH
+                else:
+                    target_color = COLOR_MEDIUM
                 
                 # 构造样式字符串
                 display_category = (
@@ -316,7 +314,8 @@ def search_history_by_date(symbol):
                     f"padding:0 4px; border-radius:3px;'>{category}</b>"
                 )
             else:
-                display_category = f"<b style='color:#88C0D0'>{category}</b>"
+                # 默认蓝色 (包含 PE_valid, PE_Deep 等)
+                display_category = f"<b style='color:{COLOR_BLUE}'>{category}</b>"
 
             rendered_items.append(f"• {display_category}{suf_html}{overlap_marker}")
 
@@ -339,8 +338,20 @@ def search_history_by_date(symbol):
                 f"</div>"
             )
 
-    # 渲染被压缩的单一分组记录（统一放在下方）
-    for category, records in compressed_records.items():
+    # =========================================================================
+    # 修改点：渲染被压缩的单一分组记录（统一放在下方）
+    # 使用自定义排序 key: PE_Deep (或 PE_Deeper) 优先，其次是 PE_valid
+    # =========================================================================
+    # 定义排序权重，值越小越靠前
+    sort_order = {"PE_Deep": 1, "PE_Deeper": 2, "PE_valid": 3}
+    
+    sorted_compressed_keys = sorted(
+        compressed_records.keys(), 
+        key=lambda x: sort_order.get(x, 99)
+    )
+
+    for category in sorted_compressed_keys:
+        records = compressed_records[category]
         has_data = True
         # 使用分组名作为大标题
         html_parts.append(make_header(f"{category} (单一触发)", NORD_THEME['success_green']))

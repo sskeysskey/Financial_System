@@ -423,7 +423,9 @@
         "IHE",
         "GSG",
         "BWET",
-        "FLLA"
+        "FLLA",
+        "ROKT",
+        "SBIO"
     ],
     "Basic_Materials": [
         "LIN",
@@ -516,7 +518,8 @@
         "AUGO",
         "USAR",
         "CENX",
-        "MEOH"
+        "MEOH",
+        "PRM"
     ],
     "Communication_Services": [
         "GOOGL",

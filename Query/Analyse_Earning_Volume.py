@@ -15,8 +15,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = "" 
 TARGET_DATE = "" 
 
-# SYMBOL_TO_TRACE = "EBAY"
-# TARGET_DATE = "2026-02-11"
+# SYMBOL_TO_TRACE = "ELV"
+# TARGET_DATE = "2026-03-04"
 
 # 3. 日志路径
 LOG_FILE_PATH = os.path.join(BASE_PATH, "Downloads", "PE_Volume_trace_log.txt")
@@ -709,7 +709,7 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
     if len(global_dates) < 2: # 至少需要 T 和 T-1
         log_detail("错误: 交易日数据不足，无法执行策略2。")
         conn.close()
-        return []
+        return [], []
     
     log_detail(f"扫描历史日期范围 (T, T-1, T-2): {global_dates}")
 
@@ -719,7 +719,7 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
             history_data = json.load(f)
     except Exception:
         conn.close()
-        return []
+        return [], []
 
     target_groups = CONFIG["TARGET_GROUPS"]
     candidate_symbols = set()
@@ -743,7 +743,9 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
         else:
             log_detail(f"    --- 目标 {symbol_to_trace} 不在策略2候选池中 (未在扫描日期的历史记录中找到)。")
 
-    results = []
+    # [修改点] 拆分分支A和分支B的记录列表
+    results_a = [] # 分支A：放量上涨
+    results_b = [] # 分支B：缩量上涨
     
     # 3. 逐个检查逻辑
     for symbol in candidate_symbols:
@@ -798,9 +800,6 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
             if is_tracing: log_detail(f"    🛑 昨日({date_prev})是财报日，跳过。")
             continue
 
-        is_match = False
-        reason = ""
-
         # 规则3: 成交量分支逻辑
         if turnover_curr > turnover_prev:
             # === 分支 A: 放量上涨 ===
@@ -810,8 +809,8 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
                 vol_rank_months, vol_rank_threshold, log_detail, is_tracing
             )
             if is_top_vol:
-                is_match = True
-                reason = "放量上涨 (3个月Top3)"
+                results_a.append(symbol)
+                if is_tracing: log_detail(f"    ✅ [选中] 放量上涨 (3个月Top3)")
             else:
                 if is_tracing: log_detail(f"    x 放量但未满足3个月Top{vol_rank_threshold}。")
         else:
@@ -841,28 +840,25 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
                     break # 只要有一天满足即可
             
             if has_high_volume_history:
-                is_match = True
-                reason = "缩量上涨 (近3日存在高量)"
+                results_b.append(symbol)
+                if is_tracing: log_detail(f"    ✅ [选中] 缩量上涨 (近3日存在高量)")
             else:
                 if is_tracing: log_detail(f"    x 缩量上涨，但近3日(T,T-1,T-2)均无高量记录。")
 
-        if is_match:
-            results.append(symbol)
-            if is_tracing: log_detail(f"    ✅ [选中] {reason}")
-
     conn.close()
-    log_detail(f"策略2 (PE_Volume_up) 筛选完成，共命中 {len(results)} 个。")
+    log_detail(f"策略2 (PE_Volume_up) 筛选完成，共命中 {len(results_a) + len(results_b)} 个 (放量: {len(results_a)}, 缩量: {len(results_b)})。")
 
     # ===== 新增：策略2 追踪总结 =====
     if symbol_to_trace:
         if symbol_to_trace not in candidate_symbols:
             log_detail(f"📌 [策略2总结] {symbol_to_trace}: ❌ 未命中 — 不在候选池中。")
-        elif symbol_to_trace in results:
+        elif symbol_to_trace in results_a or symbol_to_trace in results_b:
             log_detail(f"📌 [策略2总结] {symbol_to_trace}: ✅ 命中 PE_Volume_up")
         else:
             log_detail(f"📌 [策略2总结] {symbol_to_trace}: ❌ 未命中 — 在候选池中但未通过筛选条件（见上方详细日志）。")
 
-    return sorted(results)
+    # 返回两个列表，以便主函数能够区分分支B
+    return sorted(results_a), sorted(results_b)
 
 # --- 策略3: PE_Volume_high (财报持续上升 + 价格突破 + 成交额放量) ---
 def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_map, target_date_override, symbol_to_trace, log_detail, symbol_to_tags_map, hot_tags_t):
@@ -940,7 +936,6 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         log_detail(f"已加载扩展跌幅池 (PE_valid/invalid)，共 {len(extended_valid_pool)} 个候选抄底 Symbol。")
     except Exception as e:
         log_detail(f"读取跌幅池数据失败: {e}")
-    # =======================================================
     
     # 四个分类的结果集
     results_jia = []     # 甲类
@@ -1595,7 +1590,8 @@ def run_pe_volume_logic(log_detail):
         log_detail(f"合并回溯结果后，PE_Volume 总数: {len(final_pe_volume)} (新增 {len(retention_symbols)} 个)")
 
     # ================= 策略 2 执行 =================
-    raw_pe_volume_up = process_pe_volume_up(
+    # [修改点] 接收两个列表：分支A（放量）和分支B（缩量）
+    raw_pe_volume_up_a, raw_pe_volume_up_b = process_pe_volume_up(
         DB_FILE,
         EARNING_HISTORY_JSON_FILE,
         symbol_to_sector_map,
@@ -1603,7 +1599,8 @@ def run_pe_volume_logic(log_detail):
         SYMBOL_TO_TRACE,
         log_detail
     )
-    final_pe_volume_up = sorted(list(set(raw_pe_volume_up)))
+    # 合并两个分支的结果
+    final_pe_volume_up = sorted(list(set(raw_pe_volume_up_a) | set(raw_pe_volume_up_b)))
 
     # ================= 策略 3 执行 =================
     raw_pe_volume_high_jia, raw_pe_volume_high_yi, raw_pe_volume_high_bing, raw_pe_volume_high_chaodi = process_pe_volume_high(
@@ -1652,31 +1649,8 @@ def run_pe_volume_logic(log_detail):
         if SYMBOL_TO_TRACE in final_pe_volume_high and SYMBOL_TO_TRACE not in filtered_pe_volume_high:
              log_detail(f"追踪提示: {SYMBOL_TO_TRACE} (策略3) 通过，但因黑名单标签将会被打上‘黑’字。")
 
-    # ================= 检查 PE_Deep / PE_Deeper 交叉 =================
-    all_existing_notes = {}
-    current_deep_symbols = set()
-    try:
-        with open(PANEL_JSON_FILE, 'r', encoding='utf-8') as f:
-            p_data = json.load(f)
-            for group_name, group_content in p_data.items():
-                if isinstance(group_content, dict):
-                    for s, n in group_content.items():
-                        if len(n) > len(all_existing_notes.get(s, "")):
-                            all_existing_notes[s] = n
-            
-            if "PE_Deep" in p_data: current_deep_symbols.update(p_data["PE_Deep"].keys())
-            if "PE_Deeper" in p_data: current_deep_symbols.update(p_data["PE_Deeper"].keys())
-            if "PE_valid" in p_data: current_deep_symbols.update(p_data["PE_valid"].keys())
-            if "PE_invalid" in p_data: current_deep_symbols.update(p_data["PE_invalid"].keys())
-            if "PE_W" in p_data: current_deep_symbols.update(p_data["PE_W"].keys())
-            if "OverSell_W" in p_data: current_deep_symbols.update(p_data["OverSell_W"].keys())
-            if "season" in p_data: current_deep_symbols.update(p_data["season"].keys())
-            
-    except Exception as e:
-        log_detail(f"提示: 读取现有备注时出错(可能是文件不存在): {e}")
-
     # 4. 构建备注 (Note)
-    def build_symbol_note_map(symbols, existing_notes=None, highlight_set=None, suffix_tag=""):
+    def build_symbol_note_map(symbols, existing_notes=None, suffix_tag=""):
         note_map = {}
         for sym in symbols:
             orig_note = ""
@@ -1684,11 +1658,6 @@ def run_pe_volume_logic(log_detail):
                 orig_note = existing_notes[sym].replace(sym, "")
             
             new_suffix = orig_note
-            
-            # 这里会自动加上 "听"
-            if highlight_set and sym in highlight_set:
-                if "听" not in new_suffix:
-                    new_suffix += "听"
             
             if suffix_tag and suffix_tag not in new_suffix:
                 new_suffix += suffix_tag
@@ -1702,12 +1671,24 @@ def run_pe_volume_logic(log_detail):
             note_map[sym] = f"{sym}{new_suffix}"
         return note_map
     
+    # 获取已有的备注以备追加
+    all_existing_notes = {}
+    try:
+        with open(PANEL_JSON_FILE, 'r', encoding='utf-8') as f:
+            p_data = json.load(f)
+            for group_name, group_content in p_data.items():
+                if isinstance(group_content, dict):
+                    for s, n in group_content.items():
+                        if len(n) > len(all_existing_notes.get(s, "")):
+                            all_existing_notes[s] = n
+    except Exception as e:
+        log_detail(f"提示: 读取现有备注时出错(可能是文件不存在): {e}")
+
     # >>>>>>>>>> [修改] 生成 PE_Volume 备注，追加“追”字 >>>>>>>>>>
-    # 第一步：生成基础备注（包含“听”）
+    # 第一步：生成基础备注
     pe_volume_notes = build_symbol_note_map(
         filtered_pe_volume, 
-        existing_notes=all_existing_notes, 
-        highlight_set=current_deep_symbols
+        existing_notes=all_existing_notes
     )
 
     # 第二步：为回溯捞回的 symbol 追加“追”字
@@ -1717,16 +1698,13 @@ def run_pe_volume_logic(log_detail):
             # 直接追加“追”字，不再检查是否已经存在
             pe_volume_notes[sym] += "追"
                 
-    # 第三步：如果该 symbol 同时存在于 PE_Volume_high 中，追加“嗨”字
-    for sym in filtered_pe_volume:
-        if sym in filtered_pe_volume_high:
-            if sym in pe_volume_notes and "嗨" not in pe_volume_notes[sym]:
-                pe_volume_notes[sym] += "嗨"
-                
-    # 此时 pe_volume_notes 里的格式应该是： "LSCC听追嗨" 或者 "LSCC听" (如果不是捞回的)
-    
     pe_volume_up_notes = build_symbol_note_map(filtered_pe_volume_up)
     
+    # [修改点] 为策略2分支B(缩量上涨)追加“空”字
+    for sym in raw_pe_volume_up_b:
+        if sym in pe_volume_up_notes and "空" not in pe_volume_up_notes[sym]:
+            pe_volume_up_notes[sym] += "空"
+            
     # 为策略3生成带分类后缀的备注 
     pe_vol_high_notes = {}
     for sym in filtered_pe_volume_high:
@@ -1768,6 +1746,36 @@ def run_pe_volume_logic(log_detail):
         whitelist_symbols,
         log_detail
     )
+
+    # ================= 新增：PE_Hot 连续命中追加“追”字 =================
+    try:
+        with open(EARNING_HISTORY_JSON_FILE, 'r', encoding='utf-8') as f:
+            history_data = json.load(f)
+            hist_pe_hot = history_data.get("PE_Hot", {})
+            
+            if hist_pe_hot:
+                sorted_dates = sorted(hist_pe_hot.keys())
+                prev_date = None
+                # 寻找小于当前 base_date_str 的最大历史日期
+                for d in reversed(sorted_dates):
+                    if d < base_date_str:
+                        prev_date = d
+                        break
+                
+                if prev_date:
+                    # 获取上一期的 symbol 列表并清洗
+                    prev_symbols_raw = hist_pe_hot[prev_date]
+                    prev_symbols = set([clean_symbol(s) for s in prev_symbols_raw])
+                    
+                    # 遍历今天的 pe_hot_list，如果在上一期中存在，则在 notes 中追加“追”
+                    for sym in pe_hot_list:
+                        if sym in prev_symbols:
+                            if sym in pe_hot_notes:
+                                pe_hot_notes[sym] += "追"
+                                if SYMBOL_TO_TRACE == sym:
+                                    log_detail(f"    - [PE_Hot连续命中] {sym} 在上一期({prev_date})也存在，追加'追'字。")
+    except Exception as e:
+        log_detail(f"读取历史文件追加 PE_Hot '追'字失败: {e}")
 
     # ================= 新增：追踪 Symbol 全策略命中汇总 =================
     if SYMBOL_TO_TRACE:

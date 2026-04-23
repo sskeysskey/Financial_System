@@ -7,7 +7,8 @@ from datetime import datetime
 
 def process_market_data(old_file_path, new_file_path, output_file_path):
     """
-    通用数据处理函数，对比新旧文件并计算 volume_trend
+    通用数据处理函数，对比新旧文件并计算 volume_trend，
+    同时将新文件按 volume 降序排序并覆写。
     """
     # 1. 读取旧文件并建立索引
     old_data_map = {}
@@ -26,38 +27,50 @@ def process_market_data(old_file_path, new_file_path, output_file_path):
         with open(new_file_path, 'r', encoding='utf-8') as f:
             try:
                 new_data = json.load(f)
-                for item in new_data:
-                    name = item['name']
-                    new_volume = int(item.get('volume', 0))
-                    
-                    # 判断是否为新出现的项目
-                    if name in old_data_map:
-                        # A类型：两者都有
-                        old_volume = int(old_data_map[name].get('volume', 0))
-                        trend = new_volume - old_volume
-                        item['new'] = 0  # 标记为 0
-                    else:
-                        # B类型：只有新的有
-                        trend = new_volume
-                        item['new'] = 1  # 标记为 1
-                    
-                    # 将计算出的 trend 添加到当前对象中
-                    item['volume_trend'] = trend
-                    
-                    # 将完整的对象存入列表
-                    result_data.append(item)
             except json.JSONDecodeError:
                 print(f"错误: {new_file_path} 格式错误，无法处理。")
                 return
+            
+        # ================= 新增逻辑：对新文件本身按 volume 进行排序并覆写 =================
+        # 将 volume 转换为 int 进行降序排序，如果 volume 不存在则默认为 0
+        new_data.sort(key=lambda x: int(x.get('volume', 0)), reverse=True)
+        
+        # 将排序后的数据重新写回原文件
+        with open(new_file_path, 'w', encoding='utf-8') as f:
+            json.dump(new_data, f, indent=2, ensure_ascii=False)
+        print(f"已对源文件按 volume 降序排序并覆写: {os.path.basename(new_file_path)}")
+        # =================================================================================
+
+        # 遍历排序后的新数据，计算差值与标记
+        for item in new_data:
+            name = item['name']
+            new_volume = int(item.get('volume', 0))
+            
+            # 判断是否为新出现的项目
+            if name in old_data_map:
+                # A类型：两者都有
+                old_volume = int(old_data_map[name].get('volume', 0))
+                trend = new_volume - old_volume
+                item['new'] = 0  # 标记为 0
+            else:
+                # B类型：只有新的有
+                trend = new_volume
+                item['new'] = 1  # 标记为 1
+            
+            # 将计算出的 trend 添加到当前对象中
+            item['volume_trend'] = trend
+            
+            # 将完整的对象存入列表
+            result_data.append(item)
 
     # 3. 按 volume_trend 降序排序
     result_data.sort(key=lambda x: x['volume_trend'], reverse=True)
 
-    # 4. 写入结果文件
+    # 4. 写入结果文件 (trend 文件)
     with open(output_file_path, 'w', encoding='utf-8') as f:
         json.dump(result_data, f, indent=2, ensure_ascii=False)
     
-    print(f"处理完成，结果已保存至: {output_file_path}\n")
+    print(f"处理完成，趋势结果已保存至: {output_file_path}\n")
 
 def get_latest_two_files(base_dir, prefix):
     """
@@ -118,7 +131,7 @@ for platform in platforms:
     old_file, new_file = get_latest_two_files(db_dir, platform)
     
     if old_file and new_file:
-        # --- 新增逻辑：提取日期 ---
+        # --- 提取日期 ---
         # 假设文件名是 platform_YYMMDD.json
         # 使用正则提取最后的数字部分
         match = re.search(r'_(\d+)\.json$', os.path.basename(new_file))

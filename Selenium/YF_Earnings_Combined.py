@@ -9,7 +9,7 @@ import subprocess
 import tkinter as tk
 from tkinter import messagebox
 from datetime import datetime, timedelta
-import platform  # <--- 新增
+import platform
 
 # 第三方模块
 import pyautogui
@@ -21,6 +21,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException
+
+# 新增 Playwright 依赖 (用于 Part C)
+from playwright.sync_api import sync_playwright
 
 # ================= 配置区域 (跨平台修改) =================
 
@@ -51,6 +54,7 @@ EARNINGS_CONFIG_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, 'Selenium', 'earnings_
 SECTORS_ALL_JSON_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, 'Modules', 'Sectors_All.json')
 SECTORS_PANEL_JSON_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, 'Modules', 'Sectors_panel.json')
 SYMBOL_MAPPING_JSON_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, 'Modules', 'Symbol_mapping.json')
+POLYMARKET_FILE_PATH = os.path.join(NEWS_DIR, "earning_polymarket.txt") # Part C 输出路径
 
 # ==============================================================================
 # 通用工具函数
@@ -293,7 +297,7 @@ class PartA_FileProcessor:
         print("Part A 执行结束.\n")
 
 # ==============================================================================
-# PART B: 原 b.py 的逻辑
+# PART B: 原 b.py 的逻辑 (Selenium)
 # ==============================================================================
 
 def create_unified_driver():
@@ -1084,6 +1088,106 @@ def run_part_b():
         tqdm.write(f"\nPart B 发生未知错误: {e}")
 
 # ==============================================================================
+# PART C: 原 b.py 的逻辑 (Playwright Polymarket)
+# ==============================================================================
+
+def load_existing_polymarket_data(filename):
+    """读取本地已有的数据，返回一个字典 { 'MBWM': '93%', ... }"""
+    data = {}
+    if os.path.exists(filename):
+        with open(filename, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                # 假设文件格式为: MBWM: 93%
+                if ':' in line:
+                    ticker, percent = line.split(':', 1)
+                    data[ticker.strip()] = percent.strip()
+    return data
+
+def save_polymarket_data(filename, data):
+    """将合并后的数据保存回 txt 文件"""
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    with open(filename, 'w', encoding='utf-8') as f:
+        for ticker, percent in data.items():
+            f.write(f"{ticker}: {percent}\n")
+    print(f"数据已成功保存至 {filename}，共 {len(data)} 条记录。")
+
+def run_part_c():
+    print("\n" + "="*50)
+    print(">>> 正在启动 Part C (Polymarket 爬虫任务)")
+    print("="*50)
+    
+    # 1. 加载本地已有数据
+    earnings_data = load_existing_polymarket_data(POLYMARKET_FILE_PATH)
+    
+    try:
+        with sync_playwright() as p:
+            # 启动浏览器 (headless=True 表示无头模式，不弹出浏览器窗口)
+            browser = p.chromium.launch(headless=True)
+            # 伪装一下 User-Agent，防止被 Cloudflare 拦截
+            page = browser.new_page(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+            
+            print("正在访问 Polymarket 页面...")
+            # 移除 networkidle，改为 domcontentloaded，并增加整体超时时间
+            page.goto("https://polymarket.com/earnings", wait_until="domcontentloaded", timeout=60000)
+            
+            # 显式等待包含股票数据的容器出现
+            page.wait_for_selector("div.group.cursor-pointer", timeout=30000)
+            
+            # 获取所有符合条件的卡片容器
+            cards = page.locator("div.group.cursor-pointer").all()
+            print(f"页面上找到了 {len(cards)} 个股票数据组，正在提取...")
+            
+            for card in cards:
+                try:
+                    # 提取股票代码 (h4 标签)
+                    ticker_element = card.locator("h4")
+                    if ticker_element.count() == 0:
+                        continue
+                    ticker = ticker_element.first.inner_text().strip()
+                    
+                    # 提取百分比 (span 标签，包含 font-medium)
+                    percent_element = card.locator("span.font-medium")
+                    if percent_element.count() == 0:
+                        continue
+                    # inner_text() 会自动忽略 HTML 注释和 DevTools 的 == $0 等调试字符
+                    percent = percent_element.first.inner_text().strip()
+                    
+                    if ticker and percent:
+                        # --- 修改的核心逻辑开始 ---
+                        # 为了防止格式问题，清理一下字符串两端的空格
+                        clean_percent = percent.strip()
+                        
+                        # 定义需要跳过覆盖的特定值（考虑到网页上可能有小数或没带%号的情况，多加几个兼容项）
+                        skip_values = ["0%", "100%", "0", "100", "0.0%", "100.0%"]
+                        
+                        if ticker in earnings_data:
+                            # 如果本地已有该股票数据
+                            if clean_percent in skip_values:
+                                print(f"跳过更新: {ticker} (本地已存在，且新抓取值为 {percent})")
+                            else:
+                                earnings_data[ticker] = percent
+                                print(f"更新覆盖: {ticker} -> {percent}")
+                        else:
+                            # 如果本地没有该股票数据，直接新增
+                            earnings_data[ticker] = percent
+                            print(f"抓取新增: {ticker} -> {percent}")
+                        # --- 修改的核心逻辑结束 ---
+                        
+                except Exception as e:
+                    print(f"解析某个卡片时出错: {e}")
+                    continue
+                    
+            browser.close()
+            
+        # 3. 将更新后的数据保存到文件
+        save_polymarket_data(POLYMARKET_FILE_PATH, earnings_data)
+    except Exception as e:
+        print(f"Part C (Polymarket) 执行出错: {e}")
+
+# ==============================================================================
 # MAIN: 主程序入口
 # ==============================================================================
 
@@ -1096,5 +1200,11 @@ if __name__ == "__main__":
     # 2. 缓冲一下
     time.sleep(1)
     
-    # 3. 执行 Part B (爬虫)
+    # 3. 执行 Part B (Selenium 爬虫)
     run_part_b()
+    
+    # 4. 缓冲一下
+    time.sleep(1)
+    
+    # 5. 执行 Part C (Playwright 爬虫)
+    run_part_c()
