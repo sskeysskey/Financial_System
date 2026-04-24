@@ -13,11 +13,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = ""
 TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "MSCI"
-# TARGET_DATE = "2026-03-27"
-
-# 动态生成日志路径，不再写死用户名
-LOG_FILE_PATH = os.path.join(BASE_PATH, "Downloads", "No_Season_trace_log.txt")
+# SYMBOL_TO_TRACE = "AON"
+# TARGET_DATE = "2026-04-22"
 
 PATHS = {
     "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),
@@ -133,10 +130,12 @@ CONFIG = {
     # W底形态 - 底部抬高容忍天数
     # 含义：如果“财报后最低价”发生在 X 天前，则允许当前的 W 底价格高于那个最低价（视为上涨中继或底部抬高）。
     "COND6_W_BOTTOM_HIGHER_LOW_DAYS": 18, 
-
-    # W底形态参数
     "COND6_W_BOTTOM_PRICE_TOLERANCE": 0.0492,  # 两个谷底的价格差容忍度 (4.92%)
     "COND6_W_BOTTOM_MIN_DAYS_GAP": 3,        # 两个谷底之间的最小间隔天数
+    
+    # PE_W 专属附加条件：最新价较近一个月最低价的涨幅限制
+    "PE_W_LOOKBACK_DAYS": 21,        # 最近一个月（约21个交易日）
+    "PE_W_MAX_RISE_FROM_LOW": 0.07,  # 最高不超过 6%
 }
 
 # --- 3. 辅助与文件操作模块 ---
@@ -268,8 +267,11 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
     conn = sqlite3.connect(db_path, timeout=60.0)
     cursor = conn.cursor()
     marketcap_exists = True
-    # 获取配置的天数
-    lookback_days = CONFIG.get("LOOKBACK_WINDOW_DAYS", 10)
+    # 获取配置的天数（取通用回撤天数和PE_W需求天数的最大值，确保数据够用）
+    lookback_days = max(
+        CONFIG.get("LOOKBACK_WINDOW_DAYS", 10), 
+        CONFIG.get("PE_W_LOOKBACK_DAYS", 21)
+    )
 
     for i, symbol in enumerate(symbols):
         is_tracing = (symbol == symbol_to_trace)
@@ -1398,8 +1400,27 @@ def run_processing_logic(log_detail):
                     is_w_bottom = check_w_bottom_pattern(data, CONFIG, log_detail, SYMBOL_TO_TRACE, check_strict_er_drop=False)
                     
                     if is_w_bottom:
-                        pe_w_candidates.append(symbol)
-                    else:
+                        # --- 新增：PE_W 专属最近一个月底部涨幅限制 ---
+                        pe_w_lookback = CONFIG.get("PE_W_LOOKBACK_DAYS", 21)
+                        pe_w_max_rise = CONFIG.get("PE_W_MAX_RISE_FROM_LOW", 0.06)
+                        
+                        # prev_window_prices 是倒序的(离今天最近的在前)，截取所需天数并加上今天的最新价
+                        recent_prices = data.get('prev_window_prices', [])[:pe_w_lookback] + [data['latest_price']]
+                        recent_min_price = min(recent_prices) if recent_prices else data['latest_price']
+                        
+                        rise_from_recent_min = (data['latest_price'] - recent_min_price) / recent_min_price
+                        
+                        if rise_from_recent_min <= pe_w_max_rise:
+                            if symbol == SYMBOL_TO_TRACE:
+                                log_detail(f" - [PE_W 附加检查] 成功: 最新价较近{pe_w_lookback}天最低价({recent_min_price:.2f})涨幅 {rise_from_recent_min:.2%} <= {pe_w_max_rise:.0%}")
+                            pe_w_candidates.append(symbol)
+                        else:
+                            if symbol == SYMBOL_TO_TRACE:
+                                log_detail(f" - [PE_W 附加检查] 失败: 最新价较近{pe_w_lookback}天最低价({recent_min_price:.2f})涨幅 {rise_from_recent_min:.2%} > {pe_w_max_rise:.0%} -> 转入深跌判定")
+                            # 涨幅过大，不满足PE_W，强制设为False，使其转入下方的深跌判定流程
+                            is_w_bottom = False 
+                    # 注意这里：把原来的 else: 改成了 if not is_w_bottom:
+                    if not is_w_bottom:
                         # ========== 【新增代码：添加 W底 失败总结日志】 ==========
                         if symbol == SYMBOL_TO_TRACE:
                             log_detail(f" - [W形态最终裁定]： W底形态未构成 -> 转入深跌判定流程。")
@@ -1420,7 +1441,7 @@ def run_processing_logic(log_detail):
                                 high_since_er = er_window_high
 
                         # A. 【新增判断】首先判断是否满足 Deeper (22.5%)
-                        limit_deeper = CONFIG["PE_DEEP_DROP_THRESHOLD"]
+                        limit_deeper = CONFIG["PE_DEEPER_DROP_THRESHOLD"]
                         pass_deeper = latest_price <= er_close_price * (1 - limit_deeper)
 
                         if pass_deeper:
@@ -1724,20 +1745,15 @@ def run_processing_logic(log_detail):
 # --- 6. 主执行流程 ---
 def main():
     if SYMBOL_TO_TRACE:
-        print(f"追踪模式已启用，目标: {SYMBOL_TO_TRACE}。日志将写入: {LOG_FILE_PATH}")
-        try:
-            with open(LOG_FILE_PATH, 'w', encoding='utf-8') as log_file:
-                def log_detail_file(message):
-                    log_file.write(message + '\n')
-                    print(message)
-                run_processing_logic(log_detail_file)
-        except IOError as e:
-            print(f"错误：无法打开或写入日志文件 {LOG_FILE_PATH}: {e}")
+        print(f"追踪模式已启用，目标: {SYMBOL_TO_TRACE}。日志将仅在控制台输出。")
     else:
-        print("追踪模式未启用 (SYMBOL_TO_TRACE 为空)。将不会生成日志文件。")
-        def log_detail_console(message):
-            print(message)
-        run_processing_logic(log_detail_console)
+        print("追踪模式未启用 (SYMBOL_TO_TRACE 为空)。")
+        
+    # 统一使用控制台打印函数
+    def log_detail_console(message):
+        print(message)
+        
+    run_processing_logic(log_detail_console)
     
     print("\n程序运行结束。")
 

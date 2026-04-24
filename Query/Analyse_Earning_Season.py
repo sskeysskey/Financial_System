@@ -14,8 +14,6 @@ TARGET_DATE = ""
 # SYMBOL_TO_TRACE = "PPG"
 # TARGET_DATE = "2025-11-06"
 
-LOG_FILE_PATH = os.path.join(USER_HOME, "Downloads", "Season_trace_log.txt")
-
 # --- 1. 配置文件和路径 ---
 PATHS = {
     "base": BASE_CODING_DIR,
@@ -1101,30 +1099,16 @@ def main():
     """主程序入口"""
     # 检查是否设置了追踪符号
     if SYMBOL_TO_TRACE:
-        # 如果设置了，则启用文件日志记录
-        print(f"追踪模式已启用，目标: {SYMBOL_TO_TRACE}。日志将写入: {LOG_FILE_PATH}")
-        try:
-            with open(LOG_FILE_PATH, 'w', encoding='utf-8') as log_file:
-                def log_detail_file(message):
-                    """一个辅助函数，用于将调试信息写入文件并打印到控制台"""
-                    log_file.write(message + '\n')
-                    print(message)
-                
-                # 调用核心逻辑，并传入文件日志记录函数
-                run_processing_logic(log_detail_file)
-
-        except IOError as e:
-            print(f"错误：无法打开或写入日志文件 {LOG_FILE_PATH}: {e}")
-    
+        print(f"追踪模式已启用，目标: {SYMBOL_TO_TRACE}。日志将仅在控制台输出。")
     else:
-        # 如果没有设置，则只在控制台打印信息
-        print("追踪模式未启用 (SYMBOL_TO_TRACE 为空)。将不会生成日志文件。")
-        def log_detail_console(message):
-            """一个辅助函数，当不追踪时只打印到控制台"""
-            print(message)
-        
-        # 调用核心逻辑，并传入仅控制台打印的函数
-        run_processing_logic(log_detail_console)
+        print("追踪模式未启用 (SYMBOL_TO_TRACE 为空)。")
+
+    def log_detail_console(message):
+        """一个辅助函数，仅打印到控制台"""
+        print(message)
+    
+    # 调用核心逻辑，并传入仅控制台打印的函数
+    run_processing_logic(log_detail_console)
 
     print("\n程序运行结束。")
 

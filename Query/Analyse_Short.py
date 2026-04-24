@@ -55,7 +55,6 @@ SECTORS_FILE = os.path.join(MODULES_DIR, 'Sectors_All.json')
 PANEL_FILE = os.path.join(MODULES_DIR, 'Sectors_panel.json')
 EARNING_HISTORY_FILE = os.path.join(MODULES_DIR, 'Earning_History.json')
 TAGS_SETTING_JSON_FILE = os.path.join(MODULES_DIR, 'tags_filter.json') # [新增] 标签配置文件路径
-OUTPUT_FILE = os.path.join(NEWS_DIR, 'OverBuy.txt')
 DB_FILE = os.path.join(DB_DIR, 'Finance.db')
 DEBUG_LOG_FILE = os.path.join(DOWNLOADS_DIR, 'OverBuy_debug.log')
 
@@ -725,16 +724,14 @@ def run_short_logic(log_detail):
         log_detail("本次运行未写入任何文件。")
         return
 
-    # ======== 正常模式：写入 TXT、History、Panel ========
-    with open(OUTPUT_FILE, 'w', encoding='utf-8') as output_file:
-        output_file.write("OverBuy Scan Result (Down + High Turnover)\n")
-        output_file.write(f"Date: {datetime.now().strftime('%Y-%m-%d')}\n")
-        output_file.write("=" * 60 + "\n")
-        for sector in sorted(sector_outputs.keys()):
-            sorted_outputs = sorted(sector_outputs[sector], key=lambda x: x['change_percent'], reverse=True)
-            for output in sorted_outputs:
-                output_file.write(output['text'] + '\n')
-        logger.info(f'Wrote txt output to {OUTPUT_FILE}')
+    # ======== 正常模式：输出结果到控制台、写入 History、Panel ========
+    log_detail("OverBuy Scan Result (Down + High Turnover)")
+    log_detail(f"Date: {datetime.now().strftime('%Y-%m-%d')}")
+    log_detail("=" * 60)
+    for sector in sorted(sector_outputs.keys()):
+        sorted_outputs = sorted(sector_outputs[sector], key=lambda x: x['change_percent'], reverse=True)
+        for output in sorted_outputs:
+            log_detail(output['text'])
 
     if final_short_symbols:
         update_earning_history_json_b(EARNING_HISTORY_FILE, "Short", final_short_symbols, base_date_str=base_date)

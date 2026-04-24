@@ -15,11 +15,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = "" 
 TARGET_DATE = "" 
 
-# SYMBOL_TO_TRACE = "ELV"
-# TARGET_DATE = "2026-03-04"
-
-# 3. 日志路径
-LOG_FILE_PATH = os.path.join(BASE_PATH, "Downloads", "PE_Volume_trace_log.txt")
+# SYMBOL_TO_TRACE = "NOK"
+# TARGET_DATE = "2026-03-02"
 
 PATHS = {
     "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),
@@ -1222,21 +1219,21 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         
         # ========== 步骤7: 分类判定 ==========
         
-        # 甲类: 财报递增 + 财报涨幅>0 + 价格突破 + 今日上涨 + 12月Top3
-        if cond_er_increasing and cond_er_pct_positive and cond_price_breakout and cond_turnover_12m_top3:
+        # 甲类: 财报递增 + 价格突破 + 今日上涨 + 12月Top3 (已移除财报涨跌幅>0的要求)
+        if cond_er_increasing and cond_price_breakout and cond_turnover_12m_top3:
             results_jia.append(symbol)
             if is_tracing:
-                log_detail(f"    ✅ [选中-甲类] 严格条件 + 价格突破 + 12个月Top{turnover_rank_threshold}")
+                log_detail(f"    ✅ [选中-甲类] 严格条件(财报递增) + 价格突破 + 12个月Top{turnover_rank_threshold}")
         
         # 乙类: 财报涨幅>0 + 今日上涨 + 6月Top3
         elif cond_er_pct_positive and cond_turnover_6m_top3:
-            results_yi.append(symbol)
+            # results_yi.append(symbol)
             if is_tracing:
                 log_detail(f"    ✅ [选中-乙类] 财报涨幅>0 + 未突破 + 6个月Top{turnover_rank_threshold}")
         
-        # [修改] 丙类: (无需财报要求) + 今日上涨 + 45天前3名
+        # 丙类: (无需财报要求) + 今日上涨 + 45天前3名
         elif cond_turnover_45d_top3:
-            results_bing.append(symbol)
+            # results_bing.append(symbol)
             if is_tracing:
                 log_detail(f"    ✅ [选中-丙类] 价格突破 + {bing_lookback_days}天Top{bing_rank_threshold}")
     
@@ -1249,7 +1246,7 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
     results_chaodi = sorted(list(set(results_chaodi))) # 排序抄底结果
     
     log_detail(f"\n————策略3 Volume_high 最终筛选结果:")
-    log_detail(f"  - 甲类 (严格+突破+12月Top{turnover_rank_threshold}): {len(results_jia)} 个: {results_jia}")
+    log_detail(f"  - 甲类 (财报递增+突破+12月Top{turnover_rank_threshold}): {len(results_jia)} 个: {results_jia}")
     log_detail(f"  - 乙类 (财报涨幅>0+未突破+6月Top{turnover_rank_threshold}): {len(results_yi)} 个: {results_yi}")
     log_detail(f"  - 丙类 (宽松+突破+财报起前3+间隔>3天): {len(results_bing)} 个: {results_bing}")
     log_detail(f"  - 抄底类 (财报后曾入选且今日回调): {len(results_chaodi)} 个: {results_chaodi}")
@@ -1864,20 +1861,14 @@ def run_pe_volume_logic(log_detail):
 
 def main():
     if SYMBOL_TO_TRACE:
-        print(f"追踪模式已启用，目标: {SYMBOL_TO_TRACE}。日志将写入: {LOG_FILE_PATH}")
-        try:
-            with open(LOG_FILE_PATH, 'w', encoding='utf-8') as log_file:
-                def log_detail_file(message):
-                    log_file.write(message + '\n')
-                    print(message)
-                run_pe_volume_logic(log_detail_file)
-        except IOError as e:
-            print(f"错误：无法打开或写入日志文件 {LOG_FILE_PATH}: {e}")
+        print(f"追踪模式已启用，目标: {SYMBOL_TO_TRACE}。日志仅输出到控制台。")
     else:
         print("追踪模式未启用。日志仅输出到控制台。")
-        def log_detail_console(message):
-            print(message)
-        run_pe_volume_logic(log_detail_console)
+        
+    def log_detail_console(message):
+        print(message)
+        
+    run_pe_volume_logic(log_detail_console)
 
 if __name__ == '__main__':
     main()

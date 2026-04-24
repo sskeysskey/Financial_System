@@ -161,7 +161,6 @@
         "NWG",
         "BRK-B",
         "MRSH",
-        "MET",
         "COIN"
     ],
     "Healthcare": [
@@ -194,8 +193,7 @@
         "CVS",
         "MCK",
         "COR",
-        "TAK",
-        "BDX"
+        "TAK"
     ],
     "Industrials": [
         "GE",
@@ -312,7 +310,6 @@
         "NXPI",
         "CRWV",
         "GRMN",
-        "ADSK",
         "MSTR",
         "SNOW"
     ],

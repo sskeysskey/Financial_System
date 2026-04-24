@@ -112,16 +112,7 @@ def build_overlap_marker(category, d_str, suf,
     red = NORD_THEME['warning_red']
     purple = NORD_THEME['accent_purple'] # 定义紫色变量
 
-    # 1. 同日 PE_Volume & Short / Short_W
-    combinations = [
-        {"tags": {"PE_Volume", "Short"}, "label": "PE_Volume & Short"},
-        {"tags": {"PE_Volume", "Short_W"}, "label": "PE_Volume & Short_W"}
-    ]
-    for combo in combinations:
-        if combo["tags"].issubset(date_categories[d_str]):
-            if category in combo["tags"]:
-                overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='同一天同时触发 {combo['label']}'>[★多重触发]</span>"
-                break
+    # [已删除：关于 PE_Volume & Short 的多重触发检测逻辑]
 
     # 最新一天 PE_Volume_high(抄底) & Short/Short_W
     if sorted_trading_dates and d_str == sorted_trading_dates[0]:
@@ -271,7 +262,7 @@ def search_history_by_date(symbol):
 
     # 定义需要保持纵向排列的重要组别
     group_a = {"PE_Volume", "PE_Volume_up", "PE_Volume_high", "PE_W",
-                "PE_Hot", "Short", "Short_W"}
+                "PE_Hot", "Short", "Short_W", "SupportLevel_Close", "SupportLevel_Over"}
 
     # 渲染正常日期的记录
     for d_str, items_today in normal_dates:
