@@ -14,7 +14,8 @@
         "B",
         "VALE",
         "WPM",
-        "CTVA"
+        "CTVA",
+        "AU"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -55,8 +56,7 @@
         "ORLY",
         "ROST",
         "CVNA",
-        "SE",
-        "F"
+        "SE"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -156,12 +156,13 @@
         "DB",
         "TFC",
         "HOOD",
-        "IBKR",
         "BAM",
         "NWG",
         "BRK-B",
         "MRSH",
-        "COIN"
+        "COIN",
+        "NDAQ",
+        "MET"
     ],
     "Healthcare": [
         "LLY",
@@ -311,7 +312,7 @@
         "CRWV",
         "GRMN",
         "MSTR",
-        "SNOW"
+        "ADSK"
     ],
     "Utilities": [
         "NEE",

@@ -12,8 +12,14 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 SYMBOL_TO_TRACE = "" 
 TARGET_DATE = "" 
 
-# SYMBOL_TO_TRACE = "DOV"
-# TARGET_DATE = "2026-03-30"
+# SYMBOL_TO_TRACE = "TEVA"
+# TARGET_DATE = "2026-04-24"
+
+# 【新增配置项】支撑点距离最新日期的最小天数要求
+MIN_SUPPORT_DAYS = 6
+
+# 【新增配置项】支撑位判定阈值（百分比），例如 2.6 代表 2.6%
+SUPPORT_THRESHOLD_PCT = 2.6
 
 # ========== 文件路径 ==========
 DB_PATH = os.path.join(BASE_CODING_DIR, "Database", "Finance.db")
@@ -83,7 +89,7 @@ def run_support_logic(log_detail):
             log_detail(f"查询表 [{table}] 出错: {e}")
 
     # ========== 逐个 symbol 分析支撑位 ==========
-    support_close = {}   # 接近支撑位（最新价 > 支撑位，差值 ≤ 2.6%）
+    support_close = {}   # 接近支撑位（最新价 > 支撑位，差值 ≤ SUPPORT_THRESHOLD_PCT）
     support_over = {}    # 跌破支撑位（最新价 ≤ 支撑位）
 
     earning_close = defaultdict(list)  # 日期 -> symbol列表
@@ -122,6 +128,12 @@ def run_support_logic(log_detail):
             latest_date, latest_close, latest_low = latest_rows[0]
             prev_date, prev_close, prev_low = latest_rows[1]
 
+            # [新增] 检查 latest_date 是否为财报日，如果是则直接过滤跳过
+            cursor.execute('SELECT 1 FROM Earning WHERE name = ? AND date = ?', (symbol, latest_date))
+            if cursor.fetchone():
+                if is_tracing: log_detail(f"⚠️ [追踪] {symbol} 最新交易日({latest_date})恰好为财报日，按规则过滤跳过")
+                continue
+
             # 新增条件：最新收盘价必须低于前一日收盘价
             if latest_close >= prev_close:
                 if is_tracing: log_detail(f"⚠️ [追踪] {symbol} 最新收盘价({latest_close}) 未低于前一日收盘价({prev_close})，跳过")
@@ -139,7 +151,7 @@ def run_support_logic(log_detail):
             while True:
                 date_ago = (latest_dt - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
 
-                # [修改] 增加查询 price 字段
+                # 增加查询 price 字段
                 cursor.execute(
                     f'SELECT date, low, price FROM [{table}] WHERE name = ? AND date >= ? AND date < ? ORDER BY date ASC',
                     (symbol, date_ago, latest_date)
@@ -154,7 +166,7 @@ def run_support_logic(log_detail):
                 min_row = min(hist_rows, key=lambda x: x[1])
                 support_date = min_row[0]
                 support_price_low = min_row[1]
-                support_price_close = min_row[2] # [新增] 提取该支撑日的收盘价
+                support_price_close = min_row[2] # 提取该支撑日的收盘价
                 
                 last_trading_day = hist_rows[-1][0]
 
@@ -186,43 +198,75 @@ def run_support_logic(log_detail):
                 support_dt = datetime.strptime(support_date, "%Y-%m-%d")
                 days_diff = (latest_dt - support_dt).days
 
-                if days_diff < 7:
-                    if is_tracing: log_detail(f"  ⚠️ 支撑点距离最新日期仅 {days_diff} 天，不足7天，视为无效")
-                    if lookback_days != 61:
-                        continue
-                else:
-                    if latest_close > support_price_low:
-                        diff_pct = (latest_close - support_price_low) / support_price_low * 100
-                        if is_tracing: log_detail(f"  -> 距离支撑位(low)差值: {diff_pct:.2f}% (阈值: 2.6%)")
-                        
-                        if diff_pct <= 2.6:
-                            support_close[symbol] = ""
-                            earning_close[latest_date].append(symbol)
-                            symbol_categorized = True
-                            log_detail(f"  ✅ {symbol}: SupportLevel_Close (最新收盘={latest_close}, 支撑日期={support_date}, 支撑(low)={support_price_low}, 差={diff_pct:.2f}%)")
-                        else:
-                            # [新增] low 比较不合格，尝试用 price(收盘价) 比较
-                            if is_tracing: log_detail(f"  -> low比较不合格，尝试使用支撑日的收盘价({support_price_close})进行二次比较")
-                            if latest_close > support_price_close:
-                                diff_pct_close = (latest_close - support_price_close) / support_price_close * 100
-                                if diff_pct_close <= 2.6:
-                                    support_close[symbol] = ""
-                                    earning_close[latest_date].append(symbol)
-                                    symbol_categorized = True
-                                    log_detail(f"  ✅ {symbol}: SupportLevel_Close [二次Price比较] (最新收盘={latest_close}, 支撑日期={support_date}, 支撑(price)={support_price_close}, 差={diff_pct_close:.2f}%)")
-                                else:
-                                    if is_tracing: log_detail(f"  ⚠️ 二次Price比较差值 {diff_pct_close:.2f}% 仍超 2.6%，继续执行")
-                            else:
-                                # 最新价跌破了支撑日的收盘价
-                                support_over[symbol] = ""
-                                earning_over[latest_date].append(symbol)
-                                symbol_categorized = True
-                                log_detail(f"  ✅🔻 {symbol}: SupportLevel_Over [二次Price比较] (最新收盘={latest_close}, 支撑日期={support_date}, 支撑(price)={support_price_close})")
+                # [修改逻辑] 使用配置的 MIN_SUPPORT_DAYS
+                if days_diff < MIN_SUPPORT_DAYS:
+                    if is_tracing: log_detail(f"  ⚠️ 支撑点(low)距离最新日期仅 {days_diff} 天，不足{MIN_SUPPORT_DAYS}天，尝试使用收盘价(price)寻找支撑点...")
+                    
+                    min_close_row = min(hist_rows, key=lambda x: x[2])
+                    support_date_close = min_close_row[0]
+                    support_dt_close = datetime.strptime(support_date_close, "%Y-%m-%d")
+                    days_diff_close = (latest_dt - support_dt_close).days
+                    
+                    if days_diff_close < MIN_SUPPORT_DAYS:
+                        if is_tracing: log_detail(f"  ⚠️ 收盘价(price)支撑点距离最新日期也仅 {days_diff_close} 天，视为无效")
+                        if lookback_days != 61:
+                            continue
                     else:
-                        support_over[symbol] = ""
-                        earning_over[latest_date].append(symbol)
-                        symbol_categorized = True
-                        log_detail(f"  ✅🔻 {symbol}: SupportLevel_Over (最新收盘={latest_close}, 支撑日期={support_date}, 支撑(low)={support_price_low})")
+                        # 成功找到满足条件的收盘价支撑点，替换原有支撑点变量
+                        support_date = support_date_close
+                        support_price_low = min_close_row[1]
+                        support_price_close = min_close_row[2]
+                        days_diff = days_diff_close
+                        if is_tracing: log_detail(f"  ✅ 切换为收盘价(price)支撑点: {support_date} (Low: {support_price_low}, Close: {support_price_close})")
+
+                # 如果天数满足条件，或者上一步触发了 lookback_days == 61 的放行
+                if days_diff >= MIN_SUPPORT_DAYS or lookback_days == 61:
+                    if days_diff >= MIN_SUPPORT_DAYS: # 确保只有天数合格的才进行比较
+                        if latest_close > support_price_low:
+                            diff_pct = (latest_close - support_price_low) / support_price_low * 100
+                            if is_tracing: log_detail(f"  -> 距离支撑位(low)差值: {diff_pct:.2f}% (阈值: {SUPPORT_THRESHOLD_PCT}%)")
+                            
+                            if diff_pct <= SUPPORT_THRESHOLD_PCT:
+                                support_close[symbol] = ""
+                                earning_close[latest_date].append(symbol)
+                                symbol_categorized = True
+                                log_detail(f"  ✅ {symbol}: SupportLevel_Close (最新收盘={latest_close}, 支撑日期={support_date}, 支撑(low)={support_price_low}, 差={diff_pct:.2f}%)")
+                            else:
+                                # low 比较不合格，尝试用 price(收盘价) 比较
+                                if is_tracing: log_detail(f"  -> low比较不合格，尝试使用支撑日的收盘价({support_price_close})进行二次比较")
+                                if latest_close > support_price_close:
+                                    diff_pct_close = (latest_close - support_price_close) / support_price_close * 100
+                                    if diff_pct_close <= SUPPORT_THRESHOLD_PCT:
+                                        support_close[symbol] = ""
+                                        earning_close[latest_date].append(symbol)
+                                        symbol_categorized = True
+                                        log_detail(f"  ✅ {symbol}: SupportLevel_Close [二次Price比较] (最新收盘={latest_close}, 支撑日期={support_date}, 支撑(price)={support_price_close}, 差={diff_pct_close:.2f}%)")
+                                    else:
+                                        if is_tracing: log_detail(f"  ⚠️ 二次Price比较差值 {diff_pct_close:.2f}% 仍超 {SUPPORT_THRESHOLD_PCT}%，尝试使用最新日期的low({latest_low})与支撑日的收盘价({support_price_close})进行三次比较")
+                                        
+                                        # 【新增】三次比较：最新日期的low 与 支撑位的收盘价price
+                                        if latest_low > support_price_close:
+                                            diff_pct_latest_low = (latest_low - support_price_close) / support_price_close * 100
+                                            if diff_pct_latest_low <= SUPPORT_THRESHOLD_PCT:
+                                                support_close[symbol] = ""
+                                                earning_close[latest_date].append(symbol)
+                                                symbol_categorized = True
+                                                log_detail(f"  ✅ {symbol}: SupportLevel_Close [三次LatestLow比较] (最新low={latest_low}, 支撑日期={support_date}, 支撑(price)={support_price_close}, 差={diff_pct_latest_low:.2f}%)")
+                                            else:
+                                                if is_tracing: log_detail(f"  ⚠️ 三次LatestLow比较差值 {diff_pct_latest_low:.2f}% 仍超 {SUPPORT_THRESHOLD_PCT}%，继续执行")
+                                        else:
+                                            if is_tracing: log_detail(f"  ⚠️ 最新low({latest_low}) 已跌破或等于支撑(price)({support_price_close})，不符合三次比较条件，继续执行")
+                                else:
+                                    # 最新价跌破了支撑日的收盘价
+                                    support_over[symbol] = ""
+                                    earning_over[latest_date].append(symbol)
+                                    symbol_categorized = True
+                                    log_detail(f"  ✅🔻 {symbol}: SupportLevel_Over [二次Price比较] (最新收盘={latest_close}, 支撑日期={support_date}, 支撑(price)={support_price_close})")
+                        else:
+                            support_over[symbol] = ""
+                            earning_over[latest_date].append(symbol)
+                            symbol_categorized = True
+                            log_detail(f"  ✅🔻 {symbol}: SupportLevel_Over (最新收盘={latest_close}, 支撑日期={support_date}, 支撑(low)={support_price_low})")
 
             # ===== Phase 2.5: 并行流程 —— 继续向前延展寻找非"昨天"的最低点 =====
             parallel_suffix = ""
@@ -234,7 +278,7 @@ def run_support_logic(log_detail):
                     p_days = 31 * round_num
                     p_date_ago = (latest_dt - timedelta(days=p_days)).strftime("%Y-%m-%d")
 
-                    # [修改] 增加查询 price 字段
+                    # 增加查询 price 字段
                     cursor.execute(
                         f'SELECT date, low, price FROM [{table}] '
                         f'WHERE name = ? AND date >= ? AND date < ? ORDER BY date ASC',
@@ -249,7 +293,7 @@ def run_support_logic(log_detail):
                     p_min_row = min(p_rows, key=lambda x: x[1])
                     p_min_date = p_min_row[0]
                     p_min_low = p_min_row[1]
-                    p_min_close = p_min_row[2] # [新增]
+                    p_min_close = p_min_row[2] 
                     
                     p_last_trading_day = p_rows[-1][0]
 
@@ -261,30 +305,56 @@ def run_support_logic(log_detail):
                     p_support_dt = datetime.strptime(p_min_date, "%Y-%m-%d")
                     p_days_diff = (latest_dt - p_support_dt).days
 
-                    if p_days_diff < 7:
-                        if is_tracing: log_detail(f"  ⚠️ 第{round_num}轮支撑点距最新日期仅 {p_days_diff} 天，并行流程放弃")
-                        break
-
-                    if latest_close > p_min_low:
-                        diff_pct = (latest_close - p_min_low) / p_min_low * 100
-                        if diff_pct <= 2.6:
-                            parallel_suffix = f"{round_num}轮"
-                            log_detail(f"  🔗 {symbol}: 并行流程第{round_num}轮命中 Close (最新={latest_close}, 支撑日期={p_min_date}, 支撑(low)={p_min_low}, 差={diff_pct:.2f}%)")
+                    # [修改逻辑] 使用配置的 MIN_SUPPORT_DAYS
+                    if p_days_diff < MIN_SUPPORT_DAYS:
+                        if is_tracing: log_detail(f"  ⚠️ 第{round_num}轮支撑点(low)距最新日期仅 {p_days_diff} 天，尝试使用收盘价(price)寻找支撑点...")
+                        
+                        p_min_close_row = min(p_rows, key=lambda x: x[2])
+                        p_min_date_close = p_min_close_row[0]
+                        p_support_dt_close = datetime.strptime(p_min_date_close, "%Y-%m-%d")
+                        p_days_diff_close = (latest_dt - p_support_dt_close).days
+                        
+                        if p_days_diff_close < MIN_SUPPORT_DAYS:
+                            if is_tracing: log_detail(f"  ⚠️ 第{round_num}轮收盘价(price)支撑点距最新日期也仅 {p_days_diff_close} 天，并行流程放弃")
+                            break
                         else:
-                            # [新增] low 比较不合格，尝试用 price(收盘价) 比较
-                            if latest_close > p_min_close:
-                                diff_pct_close = (latest_close - p_min_close) / p_min_close * 100
-                                if diff_pct_close <= 2.6:
-                                    parallel_suffix = f"{round_num}轮"
-                                    log_detail(f"  🔗 {symbol}: 并行流程第{round_num}轮命中 Close [二次Price比较] (最新={latest_close}, 支撑日期={p_min_date}, 支撑(price)={p_min_close}, 差={diff_pct_close:.2f}%)")
-                                else:
-                                    if is_tracing: log_detail(f"  ⚠️ 第{round_num}轮 Close(含二次Price) 差值超 2.6%，并行无输出")
-                            else:
+                            # 成功找到满足条件的收盘价支撑点
+                            p_min_date = p_min_date_close
+                            p_min_low = p_min_close_row[1]
+                            p_min_close = p_min_close_row[2]
+                            p_days_diff = p_days_diff_close
+                            if is_tracing: log_detail(f"  ✅ 第{round_num}轮切换为收盘价(price)支撑点: {p_min_date} (Low: {p_min_low}, Close: {p_min_close})")
+
+                    if p_days_diff >= MIN_SUPPORT_DAYS:
+                        if latest_close > p_min_low:
+                            diff_pct = (latest_close - p_min_low) / p_min_low * 100
+                            if diff_pct <= SUPPORT_THRESHOLD_PCT:
                                 parallel_suffix = f"{round_num}轮"
-                                log_detail(f"  🔗 {symbol}: 并行流程第{round_num}轮命中 Over [二次Price比较] (最新={latest_close}, 支撑日期={p_min_date}, 支撑(price)={p_min_close})")
-                    else:
-                        parallel_suffix = f"{round_num}轮"
-                        log_detail(f"  🔗 {symbol}: 并行流程第{round_num}轮命中 Over (最新={latest_close}, 支撑日期={p_min_date}, 支撑(low)={p_min_low})")
+                                log_detail(f"  🔗 {symbol}: 并行流程第{round_num}轮命中 Close (最新={latest_close}, 支撑日期={p_min_date}, 支撑(low)={p_min_low}, 差={diff_pct:.2f}%)")
+                            else:
+                                # low 比较不合格，尝试用 price(收盘价) 比较
+                                if latest_close > p_min_close:
+                                    diff_pct_close = (latest_close - p_min_close) / p_min_close * 100
+                                    if diff_pct_close <= SUPPORT_THRESHOLD_PCT:
+                                        parallel_suffix = f"{round_num}轮"
+                                        log_detail(f"  🔗 {symbol}: 并行流程第{round_num}轮命中 Close [二次Price比较] (最新={latest_close}, 支撑日期={p_min_date}, 支撑(price)={p_min_close}, 差={diff_pct_close:.2f}%)")
+                                    else:
+                                        # 【新增】并行流程的三次比较
+                                        if latest_low > p_min_close:
+                                            diff_pct_latest_low = (latest_low - p_min_close) / p_min_close * 100
+                                            if diff_pct_latest_low <= SUPPORT_THRESHOLD_PCT:
+                                                parallel_suffix = f"{round_num}轮"
+                                                log_detail(f"  🔗 {symbol}: 并行流程第{round_num}轮命中 Close [三次LatestLow比较] (最新low={latest_low}, 支撑日期={p_min_date}, 支撑(price)={p_min_close}, 差={diff_pct_latest_low:.2f}%)")
+                                            else:
+                                                if is_tracing: log_detail(f"  ⚠️ 第{round_num}轮 Close(含三次LatestLow) 差值超 {SUPPORT_THRESHOLD_PCT}%，并行无输出")
+                                        else:
+                                            if is_tracing: log_detail(f"  ⚠️ 第{round_num}轮 最新low({latest_low}) <= 支撑(price)({p_min_close})，不符合三次比较条件，并行无输出")
+                                else:
+                                    parallel_suffix = f"{round_num}轮"
+                                    log_detail(f"  🔗 {symbol}: 并行流程第{round_num}轮命中 Over [二次Price比较] (最新={latest_close}, 支撑日期={p_min_date}, 支撑(price)={p_min_close})")
+                        else:
+                            parallel_suffix = f"{round_num}轮"
+                            log_detail(f"  🔗 {symbol}: 并行流程第{round_num}轮命中 Over (最新={latest_close}, 支撑日期={p_min_date}, 支撑(low)={p_min_low})")
 
                     break
                 
@@ -301,7 +371,7 @@ def run_support_logic(log_detail):
 
                     date_N_ago = (latest_dt - timedelta(days=fallback_days)).strftime("%Y-%m-%d")
 
-                    # 修改处：去掉了 AND price > 0 的限制
+                    # 去掉了 AND price > 0 的限制
                     cursor.execute(
                         '''SELECT date, price FROM Earning 
                            WHERE name = ? AND date >= ? AND date < ?
@@ -316,7 +386,7 @@ def run_support_logic(log_detail):
 
                     earning_date = earning_row[0]
 
-                    # [修改] 增加查询 price 字段
+                    # 增加查询 price 字段
                     cursor.execute(
                         f'SELECT low, price FROM [{table}] WHERE name = ? AND date = ?',
                         (symbol, earning_date)
@@ -328,17 +398,18 @@ def run_support_logic(log_detail):
                         continue
 
                     earning_support_low = earning_low_row[0]
-                    earning_support_close = earning_low_row[1] # [新增]
+                    earning_support_close = earning_low_row[1] 
                     earning_dt = datetime.strptime(earning_date, "%Y-%m-%d")
                     e_days_diff = (latest_dt - earning_dt).days
 
-                    if e_days_diff < 7:
+                    # [修改逻辑] 使用配置的 MIN_SUPPORT_DAYS
+                    if e_days_diff < MIN_SUPPORT_DAYS:
                         if is_tracing: log_detail(f"  ⚠️ 财报日({earning_date})距最新日期仅 {e_days_diff} 天，尝试下一档")
                         continue
 
                     if latest_close > earning_support_low:
                         diff_pct = (latest_close - earning_support_low) / earning_support_low * 100
-                        if diff_pct <= 2.6:
+                        if diff_pct <= SUPPORT_THRESHOLD_PCT:
                             support_close[symbol] = f"{symbol}财{parallel_suffix}"
                             earning_close[latest_date].append(symbol)
                             symbol_categorized = True
@@ -347,13 +418,24 @@ def run_support_logic(log_detail):
                             # [新增] low 比较不合格，尝试用 price(收盘价) 比较
                             if latest_close > earning_support_close:
                                 diff_pct_close = (latest_close - earning_support_close) / earning_support_close * 100
-                                if diff_pct_close <= 2.6:
+                                if diff_pct_close <= SUPPORT_THRESHOLD_PCT:
                                     support_close[symbol] = f"{symbol}财{parallel_suffix}"
                                     earning_close[latest_date].append(symbol)
                                     symbol_categorized = True
                                     log_detail(f"  ✅ {symbol}: SupportLevel_Close [财报回退-{fallback_days}天{parallel_suffix}][二次Price比较] (最新={latest_close}, 财报日={earning_date}, 支撑(price)={earning_support_close}, 差={diff_pct_close:.2f}%)")
                                 else:
-                                    if is_tracing: log_detail(f"  ⚠️ {fallback_days}天档财报支撑差值(含二次Price)超 2.6%，尝试下一档")
+                                    # 【新增】财报回退流程的三次比较
+                                    if latest_low > earning_support_close:
+                                        diff_pct_latest_low = (latest_low - earning_support_close) / earning_support_close * 100
+                                        if diff_pct_latest_low <= SUPPORT_THRESHOLD_PCT:
+                                            support_close[symbol] = f"{symbol}财{parallel_suffix}"
+                                            earning_close[latest_date].append(symbol)
+                                            symbol_categorized = True
+                                            log_detail(f"  ✅ {symbol}: SupportLevel_Close [财报回退-{fallback_days}天{parallel_suffix}][三次LatestLow比较] (最新low={latest_low}, 财报日={earning_date}, 支撑(price)={earning_support_close}, 差={diff_pct_latest_low:.2f}%)")
+                                        else:
+                                            if is_tracing: log_detail(f"  ⚠️ {fallback_days}天档财报支撑差值(含三次LatestLow)超 {SUPPORT_THRESHOLD_PCT}%，尝试下一档")
+                                    else:
+                                        if is_tracing: log_detail(f"  ⚠️ {fallback_days}天档财报支撑 最新low({latest_low}) <= 支撑(price)({earning_support_close})，不符合三次比较条件，尝试下一档")
                             else:
                                 support_over[symbol] = f"{symbol}财{parallel_suffix}"
                                 earning_over[latest_date].append(symbol)

@@ -842,6 +842,16 @@
         "message": "正在执行 txt2json.py…"
     },
     {
+        "key": "five",
+        "modifiers": [
+            "control",
+            "command"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/News_Hot_Update.py'",
+        "message": "正在执行 News_Hot_Update.py…"
+    },
+    {
         "key": "seven",
         "modifiers": [
             "control"

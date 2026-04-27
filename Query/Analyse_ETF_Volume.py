@@ -42,9 +42,8 @@ CONFIG = {
     "ETF_COND_HIGH_TURNOVER_RANK_THRESHOLD": 3,    # 成交额排名前3名
 
     # ========== 策略2 (ETF_Volume_low 触底放量) 参数 ==========
-    "ETF_COND_LOW_PRICE_LOOKBACK_MONTHS": 5,       # 最高点回溯月份
+    "ETF_COND_LOW_PRICE_LOOKBACK_MONTHS": 3,       # 最高点回溯月份
     "ETF_COND_LOW_DROP_THRESHOLD": 0.06,           # 距最高点跌幅 (原逻辑的常规跌幅)
-    "ETF_COND_LOW_DEEP_DROP_THRESHOLD": 0.195,      # 【新增】距最高点深度跌幅 (无视成交额直接选出)
     "ETF_COND_LOW_TURNOVER_MONTHS": 2,             # 成交额回溯月份
     "ETF_COND_LOW_TURNOVER_RANK_THRESHOLD": 3,     # 成交额排名前 N 名
 }
@@ -260,7 +259,6 @@ def process_etf_volume_low(db_path, target_date_override, symbol_to_trace, log_d
 
     price_lookback_months = CONFIG.get("ETF_COND_LOW_PRICE_LOOKBACK_MONTHS", 6)
     drop_threshold = CONFIG.get("ETF_COND_LOW_DROP_THRESHOLD", 0.11)
-    deep_drop_threshold = CONFIG.get("ETF_COND_LOW_DEEP_DROP_THRESHOLD", 0.20) # 新增：深度跌幅阈值
     turnover_lookback_months = CONFIG.get("ETF_COND_LOW_TURNOVER_MONTHS", 3)
     turnover_rank_threshold = CONFIG.get("ETF_COND_LOW_TURNOVER_RANK_THRESHOLD", 2)
 
@@ -317,26 +315,18 @@ def process_etf_volume_low(db_path, target_date_override, symbol_to_trace, log_d
         valid_prices = [r[1] for r in rows if r[1] is not None]
         max_price = max(valid_prices)
         
-        # 计算常规跌幅和深度跌幅
+        # 计算跌幅
         cond_price_drop = latest_price <= max_price * (1 - drop_threshold)
-        cond_deep_drop = latest_price <= max_price * (1 - deep_drop_threshold)
 
         if is_tracing:
             drop_pct = (1 - latest_price / max_price) if max_price > 0 else 0
             log_detail(f"    - 条件A (跌幅>{drop_threshold*100}%): 最高 {max_price:.2f}, 当前 {latest_price:.2f}, 跌幅 {drop_pct:.2%} = {cond_price_drop}")
-            log_detail(f"    - 深度跌幅条件 (>{deep_drop_threshold*100}%): {cond_deep_drop}")
 
         # 如果连常规跌幅都没达到，直接跳过
         if not cond_price_drop:
             continue
 
-        # 【新增逻辑】如果达到深度跌幅（20%），直接选中，无视成交额要求
-        if cond_deep_drop:
-            results.append(symbol)
-            if is_tracing: log_detail(f"    ✅ [选中] 深度跌幅达标 (跌幅>={deep_drop_threshold*100}%)，无视成交额")
-            continue
-
-        # 如果没有达到深度跌幅，但达到了常规跌幅，则继续检查成交额条件
+        # 检查成交额条件
         cond_latest_turnover_top = check_turnover_rank(
             cursor, "ETFs", symbol, latest_date, latest_turnover,
             turnover_lookback_months, turnover_rank_threshold, log_detail, is_tracing
@@ -371,8 +361,8 @@ def process_etf_volume_low_continuation(db_path, target_date_override,
     """
     策略2补充规则（延续信号）：
     针对每个ETF，扫描 Earning_History.json 的 ETF_Volume_low 分组，
-    检查在"基准日期前一个月内"是否曾经命中过。
-    若曾命中，且当前收盘价 < 任一历史命中日的收盘价，则加入结果。
+    检查在"基准日期前7天内"是否曾经命中过。
+    若曾命中，且当前收盘价 < 前一日收盘价，同时当前收盘价 < 任一历史命中日的收盘价，则加入结果。
     """
     log_detail("\n========== 开始执行 策略2补充规则 (ETF_Volume_low 延续) ==========")
 
@@ -393,16 +383,16 @@ def process_etf_volume_low_continuation(db_path, target_date_override,
         log_detail("ETF_Volume_low 历史记录为空，跳过。")
         return []
 
-    # --- 计算一个月窗口 ---
+    # --- 计算7天窗口 ---
     try:
         base_dt = datetime.datetime.strptime(base_date, "%Y-%m-%d")
-        one_month_ago = base_dt - datetime.timedelta(days=30)
+        seven_days_ago = base_dt - datetime.timedelta(days=7)
     except Exception as e:
         log_detail(f"日期解析失败: {e}")
         return []
 
     # --- 构建 symbol -> [历史命中日期] 的索引 ---
-    # 范围: [base_date - 30天, base_date)，不含 base_date 自身（避免自己参考自己）
+    # 范围: [base_date - 7天, base_date)，不含 base_date 自身（避免自己参考自己）
     symbol_history_dates = {}
     for date_str, symbols in low_history.items():
         try:
@@ -411,14 +401,14 @@ def process_etf_volume_low_continuation(db_path, target_date_override,
             continue
         if hist_dt >= base_dt:      # 不考虑未来日期和当日
             continue
-        if hist_dt < one_month_ago: # 超出一个月窗口
+        if hist_dt < seven_days_ago: # 超出7天窗口
             continue
         for raw_sym in symbols:
             sym = _clean_hist_symbol(raw_sym)
             if sym:
                 symbol_history_dates.setdefault(sym, []).append(date_str)
 
-    log_detail(f"一个月窗口内涉及到的历史 ETF 数: {len(symbol_history_dates)}")
+    log_detail(f"7天窗口内涉及到的历史 ETF 数: {len(symbol_history_dates)}")
 
     # --- 逐个 ETF 检查价格 ---
     results = []
@@ -440,19 +430,26 @@ def process_etf_volume_low_continuation(db_path, target_date_override,
         is_tracing = (symbol == symbol_to_trace)
         if is_tracing:
             log_detail(f"\n--- [延续规则] 检查 ETF {symbol} ---")
-            log_detail(f"    一月内历史命中日期: {symbol_history_dates[symbol]}")
+            log_detail(f"    7天内历史命中日期: {symbol_history_dates[symbol]}")
 
-        # 当前最新收盘价
+        # 获取当前最新收盘价和前一日收盘价
         cursor.execute(
             f'SELECT date, price FROM "ETFs" WHERE name = ? AND date <= ? '
-            f'ORDER BY date DESC LIMIT 1',
+            f'ORDER BY date DESC LIMIT 2',
             (symbol, base_date)
         )
-        latest_row = cursor.fetchone()
-        if not latest_row or latest_row[1] is None:
-            if is_tracing: log_detail("    x 无当前价格数据")
+        rows = cursor.fetchall()
+        if len(rows) < 2 or rows[0][1] is None or rows[1][1] is None:
+            if is_tracing: log_detail("    x 无当前或前一日价格数据")
             continue
-        latest_date, latest_price = latest_row
+            
+        latest_date, latest_price = rows[0]
+        prev_date, prev_price = rows[1]
+
+        # 检查是否低于前一日收盘价
+        if latest_price >= prev_price:
+            if is_tracing: log_detail(f"    x T日未下跌 ({latest_price:.4f} >= {prev_price:.4f})")
+            continue
 
         # 逐一比较每个历史日期的价格
         hit = False
@@ -470,7 +467,7 @@ def process_etf_volume_low_continuation(db_path, target_date_override,
             if latest_price < hist_price:
                 if is_tracing:
                     log_detail(f"    ✅ [{hist_date}] 历史价 {hist_price:.4f} > "
-                               f"当前 {latest_price:.4f}，命中")
+                               f"当前 {latest_price:.4f}，且今日已下跌，命中")
                 hit = True
                 break
             else:

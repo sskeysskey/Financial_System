@@ -49,6 +49,26 @@ function parseVolumeStr(v) {
     return isNaN(num) ? 0 : Math.round(num * multiplier);
 }
 
+// ============ Value 排序解析工具 ============
+// ★ 新增：用于将 "99%"、"<1%" 等字符串转换为可比较的数字
+function parseOptionValue(valStr) {
+    if (!valStr) return -1;
+    var s = valStr.trim();
+    // 处理带 < 的情况，例如 "<1%" 视为 0.99
+    if (s.startsWith('<')) {
+        var n = parseFloat(s.substring(1));
+        return isNaN(n) ? 0 : n - 0.01;
+    }
+    // 处理带 > 的情况，例如 ">99%" 视为 99.01
+    if (s.startsWith('>')) {
+        var n = parseFloat(s.substring(1));
+        return isNaN(n) ? 100 : n + 0.01;
+    }
+    // 提取普通数字
+    var match = s.match(/-?\d+(?:\.\d+)?/);
+    return match ? parseFloat(match[0]) : -1;
+}
+
 // ============ 子页面选项健康检查 ============
 function isSubpageOptionsHealthy(subOptions, mainOptions) {
     // 无选项 → 不健康
@@ -1232,7 +1252,7 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                             target: { tabId: tabId },
                             func: function () {
                                 var names = document.querySelectorAll('[class*="typ-body-x30"]').length;
-                                // 检查包含数字的 value 元素，headline-x10 通常是价格/百分比
+                                // 检查包含数字的 value 元素，headline-x10通常是价格/百分比
                                 var values = document.querySelectorAll('[class*="typ-headline-x10"], span.tabular-nums').length;
                                 return { names: names, values: values };
                             }
@@ -1340,8 +1360,6 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                     }
                     break;
                 }
-
-                // 删除了原先在这里的 config.failures.push，改为在最外层统一拦截
             }
 
             // 如果 sub 不为 null，说明走完了抓取流程（无论是否抓到分类）
@@ -1365,6 +1383,11 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                 // ★ 新增：在写入前，彻底过滤掉 value 为 "--%" 的选项
                 opts = opts.filter(function (o) {
                     return o.value !== '--%';
+                });
+
+                // ★★★ 新增：根据 value 进行降序排序 ★★★
+                opts.sort(function (a, b) {
+                    return parseOptionValue(b.value) - parseOptionValue(a.value);
                 });
 
                 // 校验所有 value 字段，如果发现不包含数字的异常数据则丢弃整条记录

@@ -532,6 +532,14 @@ def run_short_logic(log_detail):
                 log_detail(f"\n--- 正在检查 {symbol} (sector: {sector}) ---")
                 log_detail(f"    基准日期: {base_date}, 标签: {tags_str}")
 
+            # --- [新增] A1. 财报日当天过滤 ---
+            # 提前获取最新财报日，如果正好是基准日（今天），则直接跳过
+            latest_earning_date = get_latest_earnings_date(cursor, symbol, target_date=base_date)
+            if latest_earning_date == base_date:
+                if is_tracing:
+                    log_detail(f"    x [过滤] {symbol} 的最新财报日正好是当前基准日 ({base_date})，跳过。")
+                continue
+
             # --- A2. 进阶门槛：跌破 MA200 或高于两次财报均价（任一满足即可）---
             is_ma_break, ma_value = check_ma_breakout(cursor, sector, symbol, CONFIG["MA_PERIOD"], target_date=base_date)
             
@@ -655,8 +663,8 @@ def run_short_logic(log_detail):
                 
                 # 2. [新增] 检查最新财报价格逻辑
                 is_earning_bottom_fishing = False
-                latest_earning_date = get_latest_earnings_date(cursor, symbol, target_date=base_date)
                 
+                # 注意：latest_earning_date 已经在前面的 A1 步骤获取过了，这里直接复用即可
                 if latest_earning_date:
                     # 从对应板块表获取财报日当天的收盘价
                     cursor.execute(f'SELECT price FROM "{sector}" WHERE name = ? AND date = ?', (symbol, latest_earning_date))

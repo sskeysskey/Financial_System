@@ -13,8 +13,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = ""
 TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "AON"
-# TARGET_DATE = "2026-04-22"
+# SYMBOL_TO_TRACE = "BKR"
+# TARGET_DATE = "2026-03-13"
 
 PATHS = {
     "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),
@@ -47,7 +47,7 @@ CONFIG = {
         "Industrials", "Real_Estate", "Technology", "Utilities"
     },
     # ========== 代码修改开始 1/3：新增中国概念股成交额阈值 ==========
-    "TURNOVER_THRESHOLD": 100_000_000,
+    "TURNOVER_THRESHOLD": 80_000_000,
     "TURNOVER_THRESHOLD_CHINA": 100_000_000,  # 新增：中国概念股的成交额阈值
     "RECENT_EARNINGS_COUNT": 2,
     "MARKETCAP_THRESHOLD": 200_000_000_000,  # 2000亿

@@ -365,7 +365,8 @@
     "BWET",
     "FLLA",
     "ROKT",
-    "SBIO"
+    "SBIO",
+    "JETS"
   ],
   "Basic_Materials": [
     "LIN",
@@ -1578,7 +1579,6 @@
     "GDDY",
     "TDY",
     "ERIC",
-    "PSTG",
     "CHKP",
     "VRSN",
     "BSY",
@@ -1732,7 +1732,9 @@
     "AAOI",
     "PAYP",
     "FSLY",
-    "XNDU"
+    "XNDU",
+    "MXL",
+    "SIMO"
   ],
   "Utilities": [
     "NEE",
