@@ -608,6 +608,56 @@ def filter_positive_symbols(config_dict, compare_dict, config_file_path):
 
 # --- 主窗口 ---
 
+class SearchResultDialog(QDialog):
+    """自定义搜索结果导航对话框：支持下一个、关闭"""
+    def __init__(self, parent, symbol, found_buttons, jump_callback):
+        super().__init__(parent)
+        self.setWindowTitle("搜索结果")
+        self.symbol = symbol
+        self.found_buttons = found_buttons
+        self.current_index = 0
+        self.jump_callback = jump_callback
+
+        # Tool 窗口：不会让父窗口产生强烈的失活效应
+        self.setWindowFlags(self.windowFlags() | Qt.WindowType.Tool)
+
+        layout = QVBoxLayout(self)
+
+        self.info_label = QLabel()
+        self.info_label.setStyleSheet("font-size: 14px; padding: 10px;")
+        self.info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.info_label)
+
+        btn_row = QHBoxLayout()
+        self.next_btn = QPushButton("下一个 →")
+        self.next_btn.clicked.connect(self.go_next)
+        btn_row.addWidget(self.next_btn)
+
+        self.close_btn = QPushButton("关闭")
+        self.close_btn.clicked.connect(self.accept)
+        btn_row.addWidget(self.close_btn)
+        layout.addLayout(btn_row)
+
+        self.update_info()
+        self.resize(320, 130)
+
+    def update_info(self):
+        self.info_label.setText(
+            f"共找到 {len(self.found_buttons)} 个 '{self.symbol}'\n"
+            f"当前位置: {self.current_index + 1} / {len(self.found_buttons)}"
+        )
+
+    def go_next(self):
+        if not self.found_buttons:
+            return
+        self.current_index = (self.current_index + 1) % len(self.found_buttons)
+        try:
+            btn = self.found_buttons[self.current_index]
+            self.jump_callback(btn)
+        except (RuntimeError, IndexError):
+            pass
+        self.update_info()
+
 class MainWindow(QMainWindow):
     # --- 修改: __init__ 接受 Earning History 数据 ---
     def __init__(self, earning_history_data):
@@ -617,6 +667,10 @@ class MainWindow(QMainWindow):
         self.config = config
         # --- 新增: 存储 Earning History 数据 ---
         self.earning_history = earning_history_data
+
+        # === 新增：搜索保护标志 ===
+        self._search_active = False       # 搜索期间为 True，禁止 changeEvent 刷新
+        self._search_dialog = None        # 当前打开的搜索结果对话框引用
         
         ### <<< 修改: 将 highlighted_info 改为 highlighted_buttons 列表
         self.highlighted_buttons = []
@@ -886,7 +940,9 @@ class MainWindow(QMainWindow):
         super().changeEvent(event)
         if event.type() == QEvent.Type.ActivationChange:
             if self.isActiveWindow():
-                # 从后台回到前台（窗口被激活）
+                # ★ 关键修改：搜索期间不刷新，避免按钮被销毁导致高亮丢失/搜索失效
+                if self._search_active:
+                    return
                 self.refresh_selection_window()
                 
     def init_ui(self):
@@ -1729,91 +1785,180 @@ class MainWindow(QMainWindow):
         """
         打开一个输入对话框让用户输入 symbol，然后触发查找和高亮。
         """
+        # ★ 进入搜索流程，禁止 changeEvent 刷新
+        self._search_active = True
+        
         text, ok = QInputDialog.getText(self, "搜索 Symbol", "请输入 Symbol:")
+        
         if ok and text:
-            # 清理输入，并转换为大写以便不区分大小写匹配
             symbol_to_find = text.strip().upper()
             if symbol_to_find:
                 self.find_and_highlight_symbol(symbol_to_find)
+                # 不在这里释放 _search_active；由 find_and_highlight_symbol 或对话框关闭来释放
+                return
+        
+        # 取消或空输入：稍后释放标志（让 ActivationChange 事件先消化掉）
+        QTimer.singleShot(200, self._release_search_active)
 
-    ### <<< 修改: 完全重写 find_and_highlight_symbol 方法以支持多重高亮
+
+    def _release_search_active(self):
+        """统一释放搜索保护标志"""
+        self._search_active = False
+
+    def scroll_widget_to_center(self, widget):
+        """
+        把 widget 滚动到 QScrollArea 视口的垂直正中央。
+        这是模拟 QTableWidget.scrollTo(PositionAtCenter) 的关键。
+        """
+        if widget is None:
+            return
+        
+        # 1) 获取 widget 相对于 scroll_content（被滚动的内部容器）的坐标
+        target_pos_in_content = widget.mapTo(self.scroll_content, QPoint(0, 0))
+        
+        # 2) 视口高度
+        viewport_height = self.scroll_area.viewport().height()
+        
+        # 3) 计算让 widget 垂直居中所需的滚动条 Y 值
+        target_y = target_pos_in_content.y() - viewport_height // 2 + widget.height() // 2
+        
+        # 4) 限制在合法范围内（防止超过最大滚动值）
+        v_bar = self.scroll_area.verticalScrollBar()
+        target_y = max(v_bar.minimum(), min(target_y, v_bar.maximum()))
+        
+        # 5) 应用滚动
+        v_bar.setValue(target_y)
+
+
+    def flash_highlight(self, btn, base_style=None):
+        """让按钮边框闪烁 3 次，闪烁结束后保持高亮。"""
+        try:
+            if base_style is None:
+                base_style = btn.styleSheet()
+            full_highlight = f"{base_style}; border: 3px solid #FFD700;"
+            btn.setStyleSheet(full_highlight)
+        except RuntimeError:
+            return
+
+        state = {"count": 0, "on": True}
+
+        def toggle():
+            try:
+                if state["count"] >= 6:
+                    btn.setStyleSheet(full_highlight)
+                    return
+                border_color = "#FFD700" if state["on"] else "transparent"
+                btn.setStyleSheet(f"{base_style}; border: 3px solid {border_color};")
+                state["on"] = not state["on"]
+                state["count"] += 1
+                QTimer.singleShot(250, toggle)
+            except RuntimeError:
+                pass  # 控件已被销毁，停止动画
+
+        toggle()
+
     def find_and_highlight_symbol(self, symbol):
         """
-        查找所有具有指定 symbol 的按钮，高亮它们。
-        1. 如果找到 1 个：直接跳转，不弹窗（视觉对焦即可）。
-        2. 如果找到 > 1 个：跳转到第 1 个，并弹窗提示数量。
-        3. 如果没找到：弹窗提示未找到。
+        查找匹配的 SymbolButton：
+        - 0 个：仅"未找到"提示
+        - 1 个：精确居中 + 闪烁并保持高亮
+        - 多个：跳第一个 + 弹出可导航的 SearchResultDialog（下一个/关闭）
         """
-        # 1. 恢复上一次搜索中所有高亮的按钮
+        # ★ 确保搜索期间禁止刷新
+        self._search_active = True
+        
+        # 关闭可能已存在的旧搜索对话框
+        if self._search_dialog is not None:
+            try:
+                self._search_dialog.close()
+            except RuntimeError:
+                pass
+            self._search_dialog = None
+        
+        # 处理挂起事件，确保 UI 是最新状态
+        QApplication.processEvents()
+
+        # 1) 恢复上一次的高亮按钮样式
         for button, original_style in self.highlighted_buttons:
-            # 检查按钮是否仍然有效（可能在UI刷新后被删除）
-            if button:
-                try:
+            try:
+                if button:
                     button.setStyleSheet(original_style)
-                except RuntimeError:
-                    # 如果按钮已经被删除，会抛出 RuntimeError，忽略即可
-                    pass
+            except RuntimeError:
+                pass
         self.highlighted_buttons = []
 
-        # 2. 查找所有 SymbolButton 并收集所有匹配项
-        found_buttons = []
-        all_buttons = self.findChildren(SymbolButton)
-        
-        # 清理输入字符串
+        # 2) 收集所有匹配按钮（过滤已删除的 Qt 对象）
         target_symbol = symbol.strip().upper()
-        
-        for button in all_buttons:
-            if button._symbol.strip().upper() == target_symbol:
-                found_buttons.append(button)
+        found_buttons = []
+        for b in self.findChildren(SymbolButton):
+            try:
+                if b._symbol.strip().upper() == target_symbol:
+                    found_buttons.append(b)
+            except RuntimeError:
+                continue
 
-        # 3. 如果找到按钮，则高亮所有匹配项并滚动到第一个
-        if found_buttons:
-            highlight_style = "border: 3px solid #FFD700;" # 金色粗边框
-            
-            # 遍历并高亮
-            for button in found_buttons:
-                # 存储当前按钮和它的原始样式
-                original_style = button.styleSheet()
-                self.highlighted_buttons.append((button, original_style))
-                
-                # 应用高亮样式（在原有样式上追加一个醒目的边框）
-                button.setStyleSheet(f"{original_style}; {highlight_style}")
-            
-            # --- 关键修复 ---
-            # 定义一个内部函数，将“滚动”和“弹窗”都放在这里面
-            def perform_jump_and_notify():
-                try:
-                    # 再次检查按钮是否还存在（防止极端情况下的崩溃）
-                    if not found_buttons or not found_buttons[0].isVisible():
-                        return
+        # 3) 未找到
+        if not found_buttons:
+            QTimer.singleShot(100, lambda: self._handle_not_found(target_symbol))
+            return
 
-                    # A. 执行滚动
-                    self.scroll_area.ensureWidgetVisible(found_buttons[0], 50, 50)
-                    found_buttons[0].setFocus()
+        # 4) 保存所有匹配按钮的原始样式（供下次搜索恢复）
+        for btn in found_buttons:
+            try:
+                self.highlighted_buttons.append((btn, btn.styleSheet()))
+            except RuntimeError:
+                pass
 
-                    # B. 执行弹窗 (只有在滚动完成后，且需要弹窗时才执行)
-                    if len(found_buttons) > 1:
-                        QMessageBox.information(
-                            self, 
-                            "搜索结果", 
-                            f"共找到 {len(found_buttons)} 个 '{target_symbol}'。\n已自动跳转至第一个结果。"
-                        )
-                except Exception as e:
-                    print(f"跳转或弹窗时出错: {e}")
+        # 5) 给所有匹配按钮加持续高亮（不闪烁那些非"当前"的）
+        for btn, original in self.highlighted_buttons:
+            try:
+                btn.setStyleSheet(f"{original}; border: 3px solid #FFD700;")
+            except RuntimeError:
+                pass
 
-            # 使用 QTimer 延迟 200 毫秒执行
-            # 增加延时是为了给 QInputDialog 足够的关闭和销毁时间
-            QTimer.singleShot(200, perform_jump_and_notify)
-            
-            print(f"已找到并高亮显示 {len(found_buttons)} 个 {target_symbol}。")
+        # 6) 定义跳转函数（供首次跳转和"下一个"复用）
+        def jump_to_button(btn):
+            try:
+                if not btn.isVisible():
+                    return
+                # 找到该按钮对应的 base_style，避免叠加 border
+                base_style = None
+                for b, s in self.highlighted_buttons:
+                    if b is btn:
+                        base_style = s
+                        break
+                self.scroll_widget_to_center(btn)
+                btn.setFocus()
+                self.flash_highlight(btn, base_style)
+            except RuntimeError:
+                pass
 
+        # 7) 跳转到第一个匹配
+        first_btn = found_buttons[0]
+        QTimer.singleShot(150, lambda: jump_to_button(first_btn))
+
+        # 8) 如果多个匹配，弹出可导航对话框
+        if len(found_buttons) > 1:
+            dialog = SearchResultDialog(self, target_symbol, found_buttons, jump_to_button)
+            self._search_dialog = dialog
+
+            def on_dialog_finished(result):
+                self._search_dialog = None
+                # 对话框关闭后再延迟释放，吃掉 ActivationChange 事件
+                QTimer.singleShot(200, self._release_search_active)
+
+            dialog.finished.connect(on_dialog_finished)
+            dialog.show()  # 非模态，不会阻塞主窗口
         else:
-            # 未找到的情况，也建议稍微延迟一点弹窗，避免焦点冲突
-            def show_not_found():
-                QMessageBox.warning(self, "未找到", f"在列表中未找到 Symbol: {target_symbol}")
-            
-            QTimer.singleShot(100, show_not_found)
-            print(f"在列表中未找到 Symbol: {target_symbol}")
+            # 单个匹配，无需对话框，稍后释放保护
+            QTimer.singleShot(500, self._release_search_active)
+
+        print(f"已找到 {len(found_buttons)} 个 {target_symbol}。")
+
+
+    def _handle_not_found(self, symbol):
+        QMessageBox.warning(self, "未找到", f"在列表中未找到 Symbol: {symbol}")
+        QTimer.singleShot(200, self._release_search_active)
 
     def keyPressEvent(self, event):
         """重写键盘事件处理器"""
@@ -1828,7 +1973,7 @@ class MainWindow(QMainWindow):
         elif key == Qt.Key.Key_G:
             print("快捷键 'g' 按下：正在重新加载配置并刷新界面...")
             self.refresh_selection_window()
-        elif key == Qt.Key.Key_F:
+        elif key == Qt.Key.Key_F or key == Qt.Key.Key_Slash:
             self.open_search_dialog()
         else:
             # 对于其他按键，调用父类的实现，以保留默认行为（例如，如果需要的话）

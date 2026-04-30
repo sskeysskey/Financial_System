@@ -150,29 +150,38 @@ for platform in platforms:
 
 print("-" * 40)
 
-# ================= 步骤 3: 备份非今天的文件 =================
+# ================= 步骤 3: 备份非今天的文件（不再备份 _trend 文件） =================
 print("开始清理 Database 目录，备份旧文件...")
 for platform in platforms:
-    # 需要匹配原始文件和 trend 文件
-    patterns = [
-        f"{platform}_[0-9]*.json",
-        f"{platform}_trend_[0-9]*.json"
-    ]
-    
-    for pattern in patterns:
-        search_pattern = os.path.join(db_dir, pattern)
-        files = glob.glob(search_pattern)
+    # 只匹配原始数据文件，不再处理 _trend 文件
+    # 使用更严格的 pattern，避免误匹配到 _trend 文件
+    search_pattern = os.path.join(db_dir, f"{platform}_[0-9]*.json")
+    files = glob.glob(search_pattern)
+    trend_pattern = os.path.join(db_dir, f"{platform}_trend_[0-9]*.json")
+    trend_files = glob.glob(trend_pattern)
+
+    for file_path in trend_files:
+        filename = os.path.basename(file_path)
+        match = re.search(r'_(\d+)\.json$', filename)
+        if match and match.group(1) != today_str:
+            print(f"删除过期 trend 文件: {filename}")
+            os.remove(file_path)
+
+    for file_path in files:
+        filename = os.path.basename(file_path)
         
-        for file_path in files:
-            filename = os.path.basename(file_path)
-            # 提取文件名中的时间戳
-            match = re.search(r'_(\d+)\.json$', filename)
-            if match:
-                file_date = match.group(1)
-                # 如果时间戳不是今天的日期，则移动到 backup 目录
-                if file_date != today_str:
-                    backup_file_path = os.path.join(backup_dir, filename)
-                    print(f"备份旧文件: {filename} -> {backup_dir}")
-                    shutil.move(file_path, backup_file_path)
+        # 双重保险：跳过任何含有 _trend 的文件名
+        if "_trend" in filename:
+            continue
+        
+        # 提取文件名中的时间戳
+        match = re.search(r'_(\d+)\.json$', filename)
+        if match:
+            file_date = match.group(1)
+            # 如果时间戳不是今天的日期，则移动到 backup 目录
+            if file_date != today_str:
+                backup_file_path = os.path.join(backup_dir, filename)
+                print(f"备份旧文件: {filename} -> {backup_dir}")
+                shutil.move(file_path, backup_file_path)
 
 print("\n所有流程执行完毕！")

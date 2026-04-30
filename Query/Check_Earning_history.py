@@ -112,8 +112,6 @@ def build_overlap_marker(category, d_str, suf,
     red = NORD_THEME['warning_red']
     purple = NORD_THEME['accent_purple'] # 定义紫色变量
 
-    # [已删除：关于 PE_Volume & Short 的多重触发检测逻辑]
-
     # 最新一天 PE_Volume_high(抄底) & Short/Short_W
     if sorted_trading_dates and d_str == sorted_trading_dates[0]:
         has_short = "Short" in date_categories[d_str] or "Short_W" in date_categories[d_str]
@@ -129,19 +127,6 @@ def build_overlap_marker(category, d_str, suf,
                         break
             if is_chaodi and category in ["PE_Volume_high", "Short", "Short_W"]:
                 overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='最新交易日触发 PE_Volume_high(抄底) 和 Short/Short_W'>[★最新日:抄底+Short]</span>"
-
-    # PE_Volume_high(抄底) & PE_W
-    if "PE_W" in date_categories[d_str] and "PE_Volume_high" in date_categories[d_str]:
-        is_chaodi = False
-        if category == "PE_Volume_high":
-            is_chaodi = (suf and '抄底' in suf)
-        else:
-            for d, s in category_data.get("PE_Volume_high", []):
-                if d == d_str and s and '抄底' in s:
-                    is_chaodi = True
-                    break
-        if is_chaodi and category in ["PE_Volume_high", "PE_W"]:
-            overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='同一天触发 PE_Volume_high(抄底) 和 PE_W'>[★多重触发:抄底+W]</span>"
 
     # 2. 跨日接力
     try:

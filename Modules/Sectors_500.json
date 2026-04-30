@@ -15,7 +15,7 @@
         "VALE",
         "WPM",
         "CTVA",
-        "AU"
+        "NUE"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -101,8 +101,8 @@
         "OXY",
         "LNG",
         "FANG",
-        "CCJ",
-        "TRGP"
+        "TRGP",
+        "CVE"
     ],
     "Financial_Services": [
         "JPM",
@@ -160,7 +160,6 @@
         "NWG",
         "BRK-B",
         "MRSH",
-        "COIN",
         "NDAQ",
         "MET"
     ],
@@ -281,7 +280,6 @@
         "KLAC",
         "LRCX",
         "MU",
-        "INFY",
         "SHOP",
         "INTC",
         "PLTR",
@@ -304,15 +302,12 @@
         "LITE",
         "UI",
         "KEYS",
-        "TER",
         "ASX",
         "COHR",
         "NOK",
         "NXPI",
         "CRWV",
-        "GRMN",
-        "MSTR",
-        "ADSK"
+        "MSTR"
     ],
     "Utilities": [
         "NEE",
@@ -323,6 +318,7 @@
         "AEP",
         "SRE",
         "D",
-        "VST"
+        "VST",
+        "SBS"
     ]
 }

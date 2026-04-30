@@ -40,8 +40,10 @@ HIGH_LOW_5Y_PATH = os.path.join(BASE_CODING_DIR, "News", "backup", "HighLow.txt"
 VOLUME_HIGH_PATH = os.path.join(BASE_CODING_DIR, "News", "0.5Y_volume_high.txt")
 COMPARE_ETFS_PATH = os.path.join(BASE_CODING_DIR, "News", "CompareETFs.txt")
 COMPARE_STOCK_PATH = os.path.join(BASE_CODING_DIR, "News", "CompareStock.txt")
-# 新增：复盘历史数据路径
 EARNING_HISTORY_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Earning_History.json")
+
+# 新增：10年新高数据路径
+NEW_HIGH_10Y_PATH = os.path.join(BASE_CODING_DIR, "News", "10Y_newhigh_stock.txt")
 
 class ClickableLabel(QLabel):
     clicked = pyqtSignal()
@@ -232,6 +234,30 @@ def parse_volume_high_file(path):
                     })
     return data
 
+# 新增：解析 10年新高 文件
+def parse_10y_newhigh_file(path):
+    data = OrderedDict()
+    if not os.path.exists(path): return data
+    with open(path, 'r', encoding='utf-8') as file:
+        for line in file:
+            line = line.strip()
+            if not line: continue
+            parts = line.split()
+            if len(parts) >= 2:
+                category = parts[0]
+                symbol = parts[1]
+                info = parts[2] if len(parts) > 2 else ""
+                tags = " ".join(parts[3:]) if len(parts) > 3 else ""
+                
+                if category not in data:
+                    data[category] = []
+                data[category].append({
+                    'symbol': symbol,
+                    'info': info,
+                    'tags': tags
+                })
+    return data
+
 def parse_etf_file(path):
     items = []
     if not os.path.exists(path): return items
@@ -317,7 +343,7 @@ def fetch_mnspp_data_from_db(db_path, symbol):
 # ----------------------------------------------------------------------
 
 class HighLowWindow(QMainWindow):
-    def __init__(self, high_low_data, keyword_colors, sector_data, compare_data, json_data, high_low_5y_data, volume_high_data, etf_data, stock_data, earning_history_data):
+    def __init__(self, high_low_data, keyword_colors, sector_data, compare_data, json_data, high_low_5y_data, volume_high_data, etf_data, stock_data, earning_history_data, newhigh_10y_data):
         super().__init__()
         self.high_low_data = high_low_data
         self.keyword_colors = keyword_colors
@@ -329,6 +355,7 @@ class HighLowWindow(QMainWindow):
         self.etf_data = etf_data
         self.stock_data = stock_data
         self.earning_history_data = earning_history_data
+        self.newhigh_10y_data = newhigh_10y_data
         
         # 计算多组共振数据
         self.resonance_data = calculate_frequency_data(self.earning_history_data)
@@ -342,7 +369,9 @@ class HighLowWindow(QMainWindow):
         
         self.list_volume = [i['symbol'] for s in volume_high_data.values() for i in s]
         
-        # --- 修改点 1: 将 ETF 和 Stock 的子列表明确拆分保存 ---
+        # 提取 10年新高 的所有 symbol 列表
+        self.list_10y_newhigh = [item['symbol'] for items in self.newhigh_10y_data.values() for item in items]
+        
         self.etf_gainers = [i['symbol'] for i in self.etf_data[:24]]
         self.etf_losers = [i['symbol'] for i in self.etf_data[-24:][::-1]]
         self.list_etf = self.etf_gainers + self.etf_losers
@@ -373,17 +402,22 @@ class HighLowWindow(QMainWindow):
         self._init_volume_tab(self.tab_volume)
         self.tabs.addTab(self.tab_volume, "Volume成交额")
 
-        # Tab 2: ETFs
+        # Tab 2: 10年新高 (新增)
+        self.tab_10y_newhigh = QWidget()
+        self._init_10y_newhigh_tab(self.tab_10y_newhigh)
+        self.tabs.addTab(self.tab_10y_newhigh, "10年新高")
+
+        # Tab 3: ETFs
         self.tab_etfs = QWidget()
         self._init_etf_tab(self.tab_etfs)
         self.tabs.addTab(self.tab_etfs, "ETFs")
 
-        # Tab 3: Stocks
+        # Tab 4: Stocks
         self.tab_stocks = QWidget()
         self._init_stock_tab(self.tab_stocks)
         self.tabs.addTab(self.tab_stocks, "Stocks")
 
-        # Tab 4: High/Low
+        # Tab 5: High/Low
         self.tab_high_low = QWidget()
         self._init_high_low_tab(self.tab_high_low)
         self.tabs.addTab(self.tab_high_low, "High / Low")
@@ -398,9 +432,10 @@ class HighLowWindow(QMainWindow):
         mapping = {
             0: self.list_resonance,
             1: self.list_volume, 
-            2: self.list_etf, 
-            3: self.list_stock, 
-            4: self.list_high_low
+            2: self.list_10y_newhigh, # 新增映射
+            3: self.list_etf, 
+            4: self.list_stock, 
+            5: self.list_high_low
         }
         self.symbol_manager.update_symbols(mapping.get(index, []))
 
@@ -455,6 +490,52 @@ class HighLowWindow(QMainWindow):
             main_lay.addWidget(self._create_section_container(title, col_lay))
             self._populate_volume_items(col_lay, items)
             self._add_separator(main_lay)
+
+    # 新增：10年新高 Tab 初始化
+    def _init_10y_newhigh_tab(self, parent):
+        layout = QVBoxLayout(parent)
+        scroll = QScrollArea(); scroll.setWidgetResizable(True); layout.addWidget(scroll)
+        content = QWidget(); scroll.setWidget(content); main_lay = QVBoxLayout(content)
+        
+        for category, items in self.newhigh_10y_data.items():
+            # 创建一个水平布局来容纳该分类的一行
+            row_lay = QHBoxLayout()
+            
+            # --- 核心修改：在布局开头添加弹簧 ---
+            row_lay.addStretch(1)
+            
+            # 左侧分类名 (垂直居中)
+            cat_label = QLabel(category)
+            cat_label.setFont(QFont("Arial", 16, QFont.Weight.Bold))
+            cat_label.setFixedWidth(200)
+            cat_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            cat_label.setWordWrap(True)
+            cat_label.setStyleSheet("background-color: #3A3A3A; color: #E0E0E0; border-radius: 8px; padding: 15px;")
+            
+            left_vlay = QVBoxLayout()
+            left_vlay.addStretch()
+            left_vlay.addWidget(cat_label)
+            left_vlay.addStretch()
+            row_lay.addLayout(left_vlay)
+            
+            # 右侧 Symbols 列表
+            sym_lay = QHBoxLayout()
+            for chunk in [items[i:i + MAX_ITEMS_PER_COLUMN] for i in range(0, len(items), MAX_ITEMS_PER_COLUMN)]:
+                col = QVBoxLayout(); col.setAlignment(Qt.AlignmentFlag.AlignTop)
+                for item in chunk:
+                    col.addWidget(self.create_symbol_widget(item['symbol'], override_text=item['info'], override_tags=item['tags'], force_default=True))
+                col.addStretch(1)
+                sym_lay.addLayout(col)
+                
+            row_lay.addLayout(sym_lay)
+            
+            # --- 核心修改：在布局结尾添加弹簧 ---
+            row_lay.addStretch(1)
+            
+            main_lay.addLayout(row_lay)
+            self._add_separator_horizontal(main_lay)
+            
+        main_lay.addStretch(1)
 
     def _init_etf_tab(self, parent):
         layout = QVBoxLayout(parent)
@@ -547,6 +628,9 @@ class HighLowWindow(QMainWindow):
 
     def _add_separator(self, layout):
         sep = QFrame(); sep.setFrameShape(QFrame.Shape.VLine); sep.setFrameShadow(QFrame.Shadow.Sunken); layout.addWidget(sep)
+
+    def _add_separator_horizontal(self, layout):
+        sep = QFrame(); sep.setFrameShape(QFrame.Shape.HLine); sep.setFrameShadow(QFrame.Shadow.Sunken); layout.addWidget(sep)
 
     def apply_stylesheet(self):
         # 基础配色定义
@@ -702,8 +786,16 @@ class HighLowWindow(QMainWindow):
                     idx = symbols_in_group.index(symbol)
                     return f"{group_name} ({idx + 1}/{len(symbols_in_group)})"
 
-        # Tab 2: ETFs
+        # Tab 2: 10年新高
         elif current_tab == 2:
+            for group_name, items in self.newhigh_10y_data.items():
+                symbols_in_group = [item['symbol'] for item in items]
+                if symbol in symbols_in_group:
+                    idx = symbols_in_group.index(symbol)
+                    return f"{group_name} ({idx + 1}/{len(symbols_in_group)})"
+
+        # Tab 3: ETFs
+        elif current_tab == 3:
             if symbol in self.etf_gainers:
                 idx = self.etf_gainers.index(symbol)
                 return f"Top Gainers ({idx + 1}/{len(self.etf_gainers)})"
@@ -711,8 +803,8 @@ class HighLowWindow(QMainWindow):
                 idx = self.etf_losers.index(symbol)
                 return f"Top Losers ({idx + 1}/{len(self.etf_losers)})"
 
-        # Tab 3: Stocks
-        elif current_tab == 3:
+        # Tab 4: Stocks
+        elif current_tab == 4:
             if symbol in self.stock_gainers:
                 idx = self.stock_gainers.index(symbol)
                 return f"Top Gainers ({idx + 1}/{len(self.stock_gainers)})"
@@ -720,7 +812,7 @@ class HighLowWindow(QMainWindow):
                 idx = self.stock_losers.index(symbol)
                 return f"Top Losers ({idx + 1}/{len(self.stock_losers)})"
 
-        # Tab 3: High/Low (保留原有的扁平化显示逻辑，或作为 fallback)
+        # Tab 5: High/Low
         curr_list = self.symbol_manager.symbols
         if symbol in curr_list:
             return f"({curr_list.index(symbol) + 1}/{len(curr_list)})"
@@ -793,12 +885,14 @@ if __name__ == '__main__':
         vol = parse_volume_high_file(VOLUME_HIGH_PATH)
         etf = parse_etf_file(COMPARE_ETFS_PATH)
         stk = parse_stock_file(COMPARE_STOCK_PATH)
-        
-        # 新增：加载复盘历史数据
         earn_hist = load_json(EARNING_HISTORY_PATH)
         
+        # 新增：加载 10年新高 数据
+        newhigh_10y = parse_10y_newhigh_file(NEW_HIGH_10Y_PATH)
+        
         app = QApplication(sys.argv)
-        win = HighLowWindow(hl, colors, sects, comp, desc, hl5y, vol, etf, stk, earn_hist)
+        # 传入 newhigh_10y
+        win = HighLowWindow(hl, colors, sects, comp, desc, hl5y, vol, etf, stk, earn_hist, newhigh_10y)
         win.show()
         sys.exit(app.exec())
     except Exception as e:

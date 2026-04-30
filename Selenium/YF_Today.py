@@ -426,10 +426,11 @@ def scrape_history():
                                 tqdm.write(f"⚠️ [{symbol}] 网页最新日期 {row0_date} < 预期日期 {last_valid_date}，数据未更新，跳过。")
                                 skip_symbol = True
                                 break # 跳出重试循环，不再重试
-                                
-                                # row_list = list(data_rows[0])
-                                # row_list[0] = last_valid_date  # 强行替换为正确的日期
-                                # selected_row = tuple(row_list)
+                            # else:
+                            #     tqdm.write(f"⚠️ [{symbol}] 网页最新日期 {row0_date} < 预期日期 {last_valid_date}，数据未更新，临时使用最新数据并修改日期为 {last_valid_date} 写入。")
+                            #     row_list = list(data_rows[0])
+                            #     row_list[0] = last_valid_date  # 强行替换为正确的日期
+                            #     selected_row = tuple(row_list)
                     else:
                         # 如果无法计算 last_valid_date，默认取第一条
                         selected_row = data_rows[0]

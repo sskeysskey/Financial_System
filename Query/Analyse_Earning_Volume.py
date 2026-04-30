@@ -12,11 +12,11 @@ BASE_PATH = USER_HOME
 
 # ================= 配置区域 =================
 # 如果为空，则运行"今天"模式；如果填入日期（如 "2024-11-03"），则运行回测模式
-SYMBOL_TO_TRACE = "" 
-TARGET_DATE = "" 
+# SYMBOL_TO_TRACE = "" 
+# TARGET_DATE = "" 
 
-# SYMBOL_TO_TRACE = "BKR"
-# TARGET_DATE = "2026-03-13"
+SYMBOL_TO_TRACE = "BEN"
+TARGET_DATE = "2026-04-29"
 
 PATHS = {
     "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),

@@ -15,11 +15,11 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 # --- PyQt6 核心组件 ---
 # 新增导入 QTimer
-from PyQt6.QtCore import Qt, QEvent, QSize, QTimer
+from PyQt6.QtCore import Qt, QEvent, QTimer
 from PyQt6.QtWidgets import (QApplication, QInputDialog, QMessageBox, QMainWindow, QWidget,
                              QVBoxLayout, QHBoxLayout, QPushButton, QGroupBox,
                              QScrollArea, QLabel, QMenu, QLineEdit)
-from PyQt6.QtGui import QCursor, QAction, QFont, QPalette, QColor
+from PyQt6.QtGui import QCursor, QAction
 
 # --- 检查并添加必要的路径 ---
 chart_input_path = os.path.join(BASE_CODING_DIR, "Financial_System", "Query")
@@ -36,6 +36,7 @@ except ImportError:
 DESCRIPTION_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "description.json")
 WEIGHT_CONFIG_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "tags_weight.json")
 COMPARE_DATA_PATH = os.path.join(BASE_CODING_DIR, "News", "backup", "Compare_All.txt")
+EARNINGS_RELEASE_PATH = os.path.join(BASE_CODING_DIR, "News", "backup", "Earnings_Release.txt") # 新增路径
 DB_PATH = os.path.join(BASE_CODING_DIR, "Database", "Finance.db")
 SECTORS_ALL_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_All.json")
 PANEL_CONFIG_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_panel.json")
@@ -119,7 +120,11 @@ def find_symbols_by_tags(target_tags_with_weight, data):
                             used_tags.add(target_tag)
                         break
             if matched_tags:
-                related_symbols[category].append((item['symbol'], matched_tags, tags))
+                # 计算当前标的匹配到的总权重
+                total_weight = sum(float(w) for _, w in matched_tags)
+                # 只有总权重 > 0.4 时，才将其加入到关联列表中予以输出
+                if total_weight > 0.4:
+                    related_symbols[category].append((item['symbol'], matched_tags, tags))
 
     for cat in related_symbols:
         related_symbols[cat].sort(
@@ -138,6 +143,31 @@ def load_compare_data(file_path):
                     data[s.strip()] = v.strip()
     except Exception: pass
     return data
+
+# --- 新增：解析 Earnings_Release.txt 获取最新日期的函数 ---
+def load_earnings_release_data(file_path):
+    data = {}
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                if ':' in line:
+                    parts = line.split(':', 1)
+                    symbol = parts[0].strip()
+                    date_str = parts[1].strip()
+                    try:
+                        # 解析日期，确保格式正确并用于比较大小
+                        dt = datetime.strptime(date_str, "%Y-%m-%d")
+                        # 如果是第一次遇到该 symbol，或者当前日期比已记录的更新，则替换
+                        if symbol not in data or dt > data[symbol]['dt']:
+                            data[symbol] = {
+                                'dt': dt,
+                                'formatted': f"{dt.strftime('%m%d')}后"
+                            }
+                    except ValueError:
+                        pass
+    except Exception: pass
+    # 只返回格式化好的字符串，例如 {'LPL': '0423后'}
+    return {k: v['formatted'] for k, v in data.items()}
 
 def load_json_data(file_path):
     try:
@@ -224,6 +254,7 @@ class SimilarityViewerWindow(QMainWindow):
         self.all_data = all_data
         self.json_data = all_data['description']
         self.compare_data = all_data['compare']
+        self.earnings_release_data = all_data.get('earnings_release', {}) # 新增：接收财报日期数据
         self.sector_data = all_data['sectors']
         self.tags_weight_config = all_data['tags_weight']
         self.panel_config = all_data['panel_config']
@@ -377,6 +408,17 @@ class SimilarityViewerWindow(QMainWindow):
             return lat_price, trend, lat_date
         except Exception: return None, None, None
 
+    # --- 新增：用于合并日期和百分比的辅助函数 ---
+    def get_enriched_compare_val(self, symbol):
+        comp_val = self.compare_data.get(symbol, "")
+        # 如果 comp_val 存在，且不包含 '前', '后', '未' 这类日期后缀特征
+        if comp_val and not re.search(r'[前后未]', comp_val):
+            er_date = self.earnings_release_data.get(symbol)
+            if er_date:
+                # 拼接成 "0423后0.00%" 的格式
+                comp_val = f"{er_date}{comp_val}"
+        return comp_val
+
     def create_source_symbol_widget(self):
         container = RowWidget(self.source_symbol, self.on_symbol_click)
         layout = QHBoxLayout(container)
@@ -385,7 +427,8 @@ class SimilarityViewerWindow(QMainWindow):
         btn = self.create_symbol_button(self.source_symbol)
         btn.setMinimumHeight(35)
 
-        comp_val = self.compare_data.get(self.source_symbol, "")
+        # 修改：使用 get_enriched_compare_val 获取可能拼接了日期的字符串
+        comp_val = self.get_enriched_compare_val(self.source_symbol)
         comp_lab = QLabel()
         comp_lab.setFixedWidth(150)
         comp_lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -420,7 +463,8 @@ class SimilarityViewerWindow(QMainWindow):
         btn = self.create_symbol_button(sym)
         btn.setMinimumHeight(60)
 
-        comp_val = self.compare_data.get(sym, '')
+        # 修改：使用 get_enriched_compare_val 获取可能拼接了日期的字符串
+        comp_val = self.get_enriched_compare_val(sym)
         comp_lab = QLabel()
         comp_lab.setFixedWidth(140)
         comp_lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -474,7 +518,7 @@ class SimilarityViewerWindow(QMainWindow):
                 percent_color = red_color if val > 0 else green_color if val < 0 else orange_color
                 percent_part_html = f"<span style='color:{percent_color};'>{percent_full_str}</span>"
             except ValueError:
-                percent_part_html = f"<span>{percent_full_str}</span>" # fallback
+                percent_part_html = f"<span>{percent_full_str}</span>"
         else:
             # 如果没有找到百分比，则整个文本都视为日期部分
             date_part_str = text.strip()
@@ -697,9 +741,14 @@ if __name__ == '__main__':
         desc_data = load_json_data(DESCRIPTION_PATH)
         w_groups = load_weight_groups()
         tw_cfg = {tag: w for w, tags in w_groups.items() for tag in tags}
+        
+        # --- 新增：在这里调用加载函数，将财报发布日数据放进 all_data ---
+        earnings_release_data = load_earnings_release_data(EARNINGS_RELEASE_PATH)
+        
         all_data = {
             "description": desc_data,
             "compare": load_compare_data(COMPARE_DATA_PATH),
+            "earnings_release": earnings_release_data, # 传入新数据
             "sectors": load_json_data(SECTORS_ALL_PATH),
             "tags_weight": tw_cfg,
             "panel_config": load_json_data(PANEL_CONFIG_PATH),

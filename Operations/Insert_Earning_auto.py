@@ -166,6 +166,7 @@ class MainWindow(QMainWindow):
         self.cur = self.conn.cursor()
 
         QShortcut(QKeySequence(Qt.Key.Key_Escape), self).activated.connect(self.close)
+        QShortcut(QKeySequence(Qt.Key.Key_Slash), self).activated.connect(self.show_search_dialog)  # 新增
         self._init_ui()
         self.refresh_data()
 
@@ -203,6 +204,54 @@ class MainWindow(QMainWindow):
         lay.addWidget(table)
         return gb
 
+    def show_search_dialog(self):
+        """按 / 键弹出搜索框"""
+        from PyQt6.QtWidgets import QInputDialog
+        text, ok = QInputDialog.getText(self, "搜索 Symbol", "请输入 Symbol（回车确认）:")
+        if ok and text.strip():
+            self.search_and_locate_symbol(text.strip().upper())
+
+    def search_and_locate_symbol(self, symbol):
+        """在三个表格中查找 Symbol 并定位+高亮"""
+        tables = [
+            (self.table2, "前天"),
+            (self.table1, "昨天"),
+            (self.table_today, "今天"),
+        ]
+        for table, _name in tables:
+            for row in range(table.rowCount()):
+                w = table.cellWidget(row, 0)
+                if isinstance(w, SymbolButton) and w.text().upper() == symbol:
+                    # 1) 选中该行（视觉上多一层提示）
+                    table.setCurrentCell(row, 0)
+                    # 2) 滚动到中间位置
+                    index = table.model().index(row, 0)
+                    table.scrollTo(index, table.ScrollHint.PositionAtCenter)
+                    # 3) 让该表格获得焦点（这样选中行的高亮颜色更明显）
+                    table.setFocus()
+                    # 4) 闪烁高亮按钮
+                    self.flash_highlight(w)
+                    return
+        QMessageBox.information(self, "未找到", f"未找到 Symbol: {symbol}")
+
+    def flash_highlight(self, btn):
+        """让按钮闪烁几次，提醒用户"""
+        original_style = btn.styleSheet()
+        highlight_style = original_style + "border: 3px solid #FFD700;"  # 金色边框
+
+        state = {"count": 0, "on": False}
+
+        def toggle():
+            if state["count"] >= 6:  # 闪 3 次
+                btn.setStyleSheet(original_style)
+                return
+            btn.setStyleSheet(highlight_style if not state["on"] else original_style)
+            state["on"] = not state["on"]
+            state["count"] += 1
+            QTimer.singleShot(250, toggle)
+
+        toggle()
+    
     def refresh_data(self):
         self.ordered_symbols_on_screen.clear()
         # --- 重置计数器 ---
