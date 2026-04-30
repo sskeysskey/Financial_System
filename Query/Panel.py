@@ -100,62 +100,6 @@ class TradingDateHelper:
             return target_date
 
 # --- 控件类定义 ---
-
-# --- 新增: 用于绘制左侧竖排横杠的控件 ---
-class BarIndicatorWidget(QWidget):
-    def __init__(self, count=0, parent=None):
-        super().__init__(parent)
-        self._count = count
-        # 设置一个固定的宽度，让所有指示器对齐
-        self.setFixedWidth(12)
-
-    def setCount(self, count):
-        self._count = count
-        self.update() # 触发重绘
-
-    def paintEvent(self, event):
-        if self._count <= 0:
-            return  # 如果计数为0，则不绘制任何内容
-
-        painter = QPainter(self)
-        # PyQt6: 枚举变化 QPainter.RenderHint.Antialiasing
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        # --- 横杠属性 ---
-        bar_color = QColor("#FFA500")  # 橙色，比较醒目
-        bar_height = 2                 # 每根横杠的高度 (即画笔粗细)
-        bar_width = 8                  # 每根横杠的宽度
-        spacing = 2                    # 横杠之间的垂直间距
-        
-        # 水平居中绘制
-        start_x = (self.width() - bar_width) // 2
-
-        # 计算所有横杠加间距的总高度，以便在控件内垂直居中
-        total_content_height = self._count * bar_height + (self._count - 1) * spacing
-        if total_content_height < 0: total_content_height = 0
-        
-        start_y = (self.height() - total_content_height) // 2
-
-        pen = QPen(bar_color, bar_height)
-        # PyQt6: Qt.PenCapStyle.FlatCap
-        pen.setCapStyle(Qt.PenCapStyle.FlatCap)
-        painter.setPen(pen)
-
-        # 循环绘制每一根横杠
-        for i in range(self._count):
-            # 计算当前横杠的Y轴位置
-            y_pos = start_y + i * (bar_height + spacing)
-            # 我们画一条线，线的粗细由画笔宽度决定
-            painter.drawLine(start_x, y_pos, start_x + bar_width, y_pos)
-
-    def sizeHint(self):
-        # 为布局管理器提供一个合适的尺寸建议
-        bar_height = 2
-        spacing = 2
-        height = self._count * (bar_height + spacing)
-        return QSize(12, height)
-
-
 class DraggableGroupBox(QGroupBox):
     def __init__(self, title, group_name, parent=None):
         super().__init__(title, parent)
@@ -824,118 +768,6 @@ class MainWindow(QMainWindow):
             else:
                 print("列表已空。")
 
-    
-    # --- 新增: 计算角标数字的核心逻辑 ---
-    def get_consecutive_day_count(self, symbol, group):
-        """ 
-        根据规则计算symbol连续出现的天数。
-        修改版: 
-        1. 建立了 UI分组名 到 History键名 的映射。
-        2. 兼容模式: 同时查找对应的精确分组(如 PE_W) 和 旧的通用分组(no_season)。
-        """
-        
-        # --- 1. 定义映射关系: UI上的组名 -> Earning_History.json 中的 Key ---
-        # 只要你在第一个脚本里生成了新的 Key，这里就需要对应上
-        # 左边是 UI 上的 group 参数，右边是 History json 里的 key
-        group_mapping = {
-            # UI 分组名 : JSON 键名
-            "PE_valid_backup": "PE_valid",
-            "PE_invalid_backup": "PE_invalid",
-            "PE_W_backup": "PE_W",
-            "Short_backup": "Short",
-            "Short_W_backup": "Short_W",
-            "PE_Deep_backup": "PE_Deep",
-            "PE_Deeper_backup": "PE_Deeper",
-            "PE_Volume_backup": "PE_Volume",
-            "PE_Volume_up_backup": "PE_Volume_up",
-            "PE_Volume_high_backup": "PE_Volume_high",
-            "SupportLevel_Close_backup": "SupportLevel_Close",
-            "SupportLevel_Over_backup": "SupportLevel_Over",
-            "PE_Hot_backup": "PE_Hot",
-            "ETF_Volume_high_backup": "ETF_Volume_high",
-            "ETF_Volume_low_backup": "ETF_Volume_low",
-            "OverSell_W_backup": "OverSell_W",
-            
-            # 兼容不带 _backup 后缀的情况 (如果有)
-            "PE_valid": "PE_valid",
-            "PE_invalid": "PE_invalid",
-            "PE_W": "PE_W",
-            "PE_Deep": "PE_Deep",
-            "PE_Volume": "PE_Volume",
-            "PE_Volume_up": "PE_Volume_up",
-            "PE_Volume_high": "PE_Volume_high",
-            "SupportLevel_Close": "SupportLevel_Close",
-            "SupportLevel_Over": "SupportLevel_Over",
-            "PE_Hot": "PE_Hot",
-            "ETF_Volume_high": "ETF_Volume_high",
-            "ETF_Volume_low": "ETF_Volume_low",
-            "OverSell_W": "OverSell_W"
-        }
-
-        # --- 2. 确定需要检查的历史数据 Key 列表 ---
-        keys_to_check = []
-
-        if group in group_mapping:
-            # 逻辑: 优先查具体的分组(如 PE_W)，但也查 no_season (为了兼容以前的历史数据)
-            target_key = group_mapping[group]
-            keys_to_check = [target_key, 'no_season']
-        
-        elif group in {"Strategy12_backup", "Strategy34_backup", "Strategy12", "Strategy34"}:
-            # 情况 B: 是 Season 策略组 -> 查 'season'
-            keys_to_check = ['season']
-        
-        elif group in {"Must", "Today"}:
-            # 情况 C: 是汇总组 -> 查所有已知的具体 Key (不再查 no_season)
-            keys_to_check = [
-                'season', 'no_season',
-                'PE_valid', 'PE_invalid', 
-                'PE_W', 'PE_Deep', 'OverSell_W',
-            ]
-        else:
-            # 默认情况 (比如其他没在映射里的组)
-            keys_to_check = ['no_season']
-
-        # --- 3. 开始回溯计数 ---
-        count = 0
-        day_offset = 1
-        today = datetime.date.today()
-        
-        # 使用 holidays.NYSE() 获取美股假期
-        market_holidays = holidays.NYSE() 
-        
-        while day_offset <= 365:
-            current_date = today - datetime.timedelta(days=day_offset)
-            date_str = current_date.strftime('%Y-%m-%d')
-            
-            found_on_this_date = False
-            
-            # 遍历所有相关的 Key 查找 symbol
-            for key in keys_to_check:
-                # 获取该 Key 下的历史数据
-                hist_data = self.earning_history.get(key, {})
-                # 检查 symbol 是否存在于当天的列表中
-                if symbol in hist_data.get(date_str, []):
-                    found_on_this_date = True
-                    break # 只要在任意一个相关组里找到了，就视为当天存在，跳出内层循环
-            
-            if found_on_this_date:
-                # 如果找到了，计数器加一，继续检查前一天
-                count += 1
-                day_offset += 1
-            else:
-                # 判断周末 (5=周六, 6=周日) 或 节假日
-                is_weekend = current_date.weekday() >= 5
-                is_holiday = current_date in market_holidays
-                
-                # 如果是周末 或者 是节假日，则算作“非交易日”，不应中断连续性
-                if is_weekend or is_holiday:
-                    day_offset += 1
-                else:
-                    # 是工作日 且 不是节假日，但没有数据 -> 连续性中断
-                    break
-                    
-        return count
-
     def changeEvent(self, event):
         super().changeEvent(event)
         if event.type() == QEvent.Type.ActivationChange:
@@ -1189,22 +1021,6 @@ class MainWindow(QMainWindow):
             'Short_backup', 'Short_W_backup', 'SupportLevel_Close_backup', 'SupportLevel_Over_backup'
         }
 
-        # ==========================================================
-        # 1. 定义哪些组需要显示左侧的计数条 (把 get_consecutive_day_count 里的组搬过来)
-        # ==========================================================
-        groups_with_indicators = {
-            # no_season_groups
-            "PE_valid_backup", "PE_invalid_backup", "PE_W_backup",
-            "PE_Deep_backup", "OverSell_W_backup", "PE_Deeper_backup",
-            # season_groups
-            "Strategy12_backup", "Strategy34_backup",
-            # combined_groups
-            "Must", "Today", "Short_backup", "Short_W_backup",
-            # Volume Sector
-            "PE_Volume_backup", "PE_Volume_up_backup", "PE_Volume_high_backup", "PE_Hot_backup",
-            "ETF_Volume_high_backup", "ETF_Volume_low_backup", "SupportLevel_Close_backup", "SupportLevel_Over_backup"
-        }
-
         for index, category_group in enumerate(categories):
             for sector in category_group:
                 if sector in self.config:
@@ -1270,23 +1086,11 @@ class MainWindow(QMainWindow):
                         
                         # <--- 新增: 获取刚才添加进去的这个 keyword 的确切索引
                         current_btn_index = len(self.ordered_symbols_on_screen) - 1 
-                        
-                        # --- 1. 获取横杠数量 ---
-                        bar_count = self.get_consecutive_day_count(keyword, sector)
 
                         button_container = QWidget()
                         row_layout = QHBoxLayout(button_container)
                         row_layout.setContentsMargins(0, 0, 0, 0)
                         row_layout.setSpacing(5)
-
-                        # ==========================================================
-                        # 2. 修改这里：只有当 sector 属于指定组时，才添加指示器控件
-                        # ==========================================================
-                        if sector in groups_with_indicators:
-                            bar_widget = BarIndicatorWidget(count=bar_count)
-                            row_layout.addWidget(bar_widget)
-                        
-                        # 如果不属于这些组，就不添加 bar_widget，这样就没有那 12px 的空档了
 
                         # --- 3. 创建普通按钮 ---
                         button = SymbolButton(
