@@ -18,13 +18,12 @@ from PyQt6.QtWidgets import (
     QInputDialog, QMenu, QFrame, QLabel, QLineEdit, QMessageBox
 )
 # 注意: PyQt6 的枚举通常需要全限定名 (Scoped Enums)
-from PyQt6.QtCore import Qt, QMimeData, QPoint, QEvent, QTimer, QSize
-from PyQt6.QtGui import QFont, QCursor, QDrag, QPainter, QColor, QPen
+from PyQt6.QtCore import Qt, QMimeData, QPoint, QEvent, QTimer
+from PyQt6.QtGui import QFont, QCursor, QDrag, QColor
 
 sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Query"))
 
-# --- 修改: 增加导入 get_options_metrics ---
-from Chart_input import plot_financial_data, get_options_metrics
+from Chart_input import plot_financial_data
 
 # --- 文件路径配置 ---
 CONFIG_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_panel.json")
@@ -63,6 +62,19 @@ sector_data = {}
 json_data = {}
 # --- 新增: 全局变量用于存储 Earning History 数据 ---
 earning_history = {}
+# --- 在原有全局变量下方添加 ---
+symbol_to_sector_map = {}
+
+def build_symbol_to_sector_map(sector_data):
+    """构建反向索引字典: symbol -> sector"""
+    mapping = {}
+    for sector, symbols in sector_data.items():
+        # 处理 symbols 为列表的情况
+        if isinstance(symbols, list):
+            for symbol in symbols:
+                mapping[symbol] = sector
+        # 如果你的 sector_data 结构中 symbols 可能是其他类型，这里可以扩展
+    return mapping
 
 # --- 新增: 交易日计算工具类 ---
 class TradingDateHelper:
@@ -309,6 +321,162 @@ def fetch_mnspp_data_from_db(db_path, symbol):
         # 数据库没查到，返回默认值
         return "N/A", None, "N/A", "--"
 
+def fetch_all_latest_earning_dates(db_path, symbols):
+    """批量获取所有 symbol 最新的财报日期"""
+    if not symbols:
+        return {}
+    result = {s: "无" for s in symbols}
+    symbols = list(symbols)
+    try:
+        with sqlite3.connect(db_path, timeout=60.0) as conn:
+            cursor = conn.cursor()
+            # 分批避免 SQL 参数过多
+            CHUNK = 500
+            for i in range(0, len(symbols), CHUNK):
+                chunk = symbols[i:i+CHUNK]
+                placeholders = ','.join('?' * len(chunk))
+                cursor.execute(
+                    f"SELECT name, MAX(date) FROM earning WHERE name IN ({placeholders}) GROUP BY name",
+                    chunk
+                )
+                for name, date in cursor.fetchall():
+                    if date:
+                        result[name] = date
+    except Exception as e:
+        print(f"批量查询最新财报日期出错: {e}")
+    return result
+
+
+def fetch_all_color_decision_data(db_path, symbols, sector_data):
+    """批量获取所有 symbol 的颜色决策数据，替代逐个调用 get_color_decision_data"""
+    result = {}
+    if not symbols:
+        return result
+    today = datetime.date.today()
+    symbols = list(symbols)
+
+    try:
+        with sqlite3.connect(db_path, timeout=60.0) as conn:
+            cursor = conn.cursor()
+
+            # 1) 一次性把所有需要的 Earning 拿出来（按 name, date desc 排序）
+            earnings_by_symbol = {}
+            CHUNK = 500
+            for i in range(0, len(symbols), CHUNK):
+                chunk = symbols[i:i+CHUNK]
+                ph = ','.join('?' * len(chunk))
+                cursor.execute(
+                    f"SELECT name, date, price FROM Earning WHERE name IN ({ph}) "
+                    f"ORDER BY name, date DESC",
+                    chunk
+                )
+                for name, d, p in cursor.fetchall():
+                    lst = earnings_by_symbol.setdefault(name, [])
+                    if len(lst) < 2:
+                        lst.append((d, p))
+
+            # 2) 先确定每个 symbol 是否需要去板块表查股价
+            need_prices = {}   # sector -> set((symbol, date_str))
+            symbol_meta  = {}  # symbol -> (latest_price, latest_date, prev_date, sector)
+
+            for symbol in symbols:
+                rows = earnings_by_symbol.get(symbol, [])
+                if not rows:
+                    result[symbol] = (None, None, None)
+                    continue
+
+                latest_date_str, latest_price_str = rows[0]
+                try:
+                    latest_date = datetime.datetime.strptime(latest_date_str, "%Y-%m-%d").date()
+                except Exception:
+                    result[symbol] = (None, None, None)
+                    continue
+                latest_price = float(latest_price_str) if latest_price_str is not None else 0.0
+
+                if (today - latest_date).days > 75:
+                    result[symbol] = (latest_price, None, latest_date)
+                    continue
+                if len(rows) < 2:
+                    result[symbol] = (latest_price, 'single', latest_date)
+                    continue
+
+                prev_date_str, _ = rows[1]
+                try:
+                    prev_date = datetime.datetime.strptime(prev_date_str, "%Y-%m-%d").date()
+                except Exception:
+                    result[symbol] = (latest_price, None, latest_date)
+                    continue
+
+                sector = symbol_to_sector_map.get(symbol)
+                if not sector:
+                    result[symbol] = (latest_price, None, latest_date)
+                    continue
+
+                symbol_meta[symbol] = (latest_price, latest_date, prev_date, sector)
+                need_prices.setdefault(sector, set()).add((symbol, latest_date_str))
+                need_prices[sector].add((symbol, prev_date_str))
+
+            # 3) 按板块批量查股价
+            prices = {}  # (symbol, date_str) -> price
+            for sector, pairs in need_prices.items():
+                if not pairs:
+                    continue
+                names = list({p[0] for p in pairs})
+                dates = list({p[1] for p in pairs})
+                # 分批
+                for i in range(0, len(names), CHUNK):
+                    name_chunk = names[i:i+CHUNK]
+                    nph = ','.join('?' * len(name_chunk))
+                    dph = ','.join('?' * len(dates))
+                    try:
+                        cursor.execute(
+                            f'SELECT name, date, price FROM "{sector}" '
+                            f'WHERE name IN ({nph}) AND date IN ({dph})',
+                            name_chunk + dates
+                        )
+                        for name, d, price in cursor.fetchall():
+                            prices[(name, d)] = float(price)
+                    except Exception as e:
+                        print(f"[批量股价] {sector} 查询出错: {e}")
+
+            # 4) 合成趋势
+            for symbol, (latest_price, latest_date, prev_date, sector) in symbol_meta.items():
+                a = prices.get((symbol, latest_date.isoformat()))
+                b = prices.get((symbol, prev_date.isoformat()))
+                if a is None or b is None:
+                    result[symbol] = (latest_price, None, latest_date)
+                else:
+                    trend = 'rising' if a > b else 'falling'
+                    result[symbol] = (latest_price, trend, latest_date)
+
+    except Exception as e:
+        print(f"[批量颜色决策] 出错: {e}")
+    return result
+
+
+def fetch_all_mnspp_data(db_path, symbols):
+    """批量获取 MNSPP 数据，方便后续点击图表时直接使用缓存"""
+    result = {}
+    if not symbols:
+        return result
+    symbols = list(symbols)
+    try:
+        with sqlite3.connect(db_path, timeout=60.0) as conn:
+            cursor = conn.cursor()
+            CHUNK = 500
+            for i in range(0, len(symbols), CHUNK):
+                chunk = symbols[i:i+CHUNK]
+                ph = ','.join('?' * len(chunk))
+                cursor.execute(
+                    f"SELECT symbol, shares, marketcap, pe_ratio, pb FROM MNSPP WHERE symbol IN ({ph})",
+                    chunk
+                )
+                for sym, shares, mc, pe, pb in cursor.fetchall():
+                    result[sym] = (shares, mc, pe, pb)
+    except Exception as e:
+        print(f"[批量MNSPP] 出错: {e}")
+    return result
+
 def fetch_latest_earning_date(symbol):
     """
     从 earning 表里取 symbol 的最近一次财报日期，
@@ -393,7 +561,7 @@ def get_color_decision_data(db_path, sector_data, symbol):
         previous_earning_date = datetime.datetime.strptime(previous_earning_date_str, "%Y-%m-%d").date()
 
         # 步骤 2: 查找 sector 表名
-        sector_table = next((s for s, names in sector_data.items() if symbol in names), None)
+        sector_table = symbol_to_sector_map.get(symbol)
         if not sector_table:
             # 找不到板块，也无法比较
             return latest_earning_price, None, latest_earning_date
@@ -772,10 +940,28 @@ class MainWindow(QMainWindow):
         super().changeEvent(event)
         if event.type() == QEvent.Type.ActivationChange:
             if self.isActiveWindow():
-                # ★ 关键修改：搜索期间不刷新，避免按钮被销毁导致高亮丢失/搜索失效
                 if self._search_active:
                     return
-                self.refresh_selection_window()
+                # ★ 只有外部文件确实改了才刷新 ★
+                if self._external_files_changed():
+                    self.refresh_selection_window()
+
+    def _external_files_changed(self):
+        """检查 config / description 是否被外部脚本修改"""
+        try:
+            cfg_m = os.path.getmtime(CONFIG_PATH)
+            desc_m = os.path.getmtime(DESCRIPTION_PATH)
+            if not hasattr(self, '_last_cfg_mtime'):
+                self._last_cfg_mtime = cfg_m
+                self._last_desc_mtime = desc_m
+                return False
+            if cfg_m != self._last_cfg_mtime or desc_m != self._last_desc_mtime:
+                self._last_cfg_mtime = cfg_m
+                self._last_desc_mtime = desc_m
+                return True
+            return False
+        except Exception:
+            return False
                 
     def init_ui(self):
         self.setWindowTitle("选择查询关键字")
@@ -985,355 +1171,243 @@ class MainWindow(QMainWindow):
             # 如果没有匹配到 "数字+标志" 模式，则将它们排在最后，并保持原始顺序
             return (float('inf'), float('inf'), original_index)
 
-    # --- 修改: populate_widgets 方法以添加 BarIndicatorWidget ---
     def populate_widgets(self):
-        """动态创建界面上的所有控件"""
-        # <--- 新增: 在填充控件前，清空屏幕符号列表
+        """动态创建界面上的所有控件 —— 优化版"""
         self.ordered_symbols_on_screen.clear()
+        
+        # ★★★ 暂停绘制，最后再统一刷新（视觉感受会顺畅很多） ★★★
+        self.scroll_content.setUpdatesEnabled(False)
+        try:
+            column_layouts = [QVBoxLayout() for _ in categories]
+            for layout in column_layouts:
+                layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+                self.main_layout.addLayout(layout)
 
-        column_layouts = [QVBoxLayout() for _ in categories]
-        for layout in column_layouts:
-            # PyQt6: Qt.AlignmentFlag.AlignTop
-            layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-            self.main_layout.addLayout(layout)
+            target_sort_groups = {
+                'Basic_Materials','Consumer_Cyclical','Real_Estate','Technology','Energy',
+                'Industrials','Consumer_Defensive','Communication_Services','Financial_Services',
+                'Healthcare','Utilities',
+                'Must','Today','Short','Short_W',
+                'PE_valid','PE_invalid','Strategy12','Strategy34',
+                'PE_Deep','OverSell_W','PE_W','PE_Deeper',
+                'PE_Volume', 'PE_Volume_up', 'PE_Volume_high', 'PE_Hot',
+                'ETF_Volume_high', 'ETF_Volume_low', 'SupportLevel_Close', 'SupportLevel_Over',
+                'PE_valid_backup', 'PE_invalid_backup',
+                'Strategy12_backup', 'Strategy34_backup',
+                'PE_Deep_backup', 'PE_W_backup', 'PE_Deeper_backup',
+                'OverSell_W_backup', 'PE_W_backup',
+                'PE_Volume_backup', 'PE_Volume_up_backup', 'PE_Volume_high_backup', 'PE_Hot_backup',
+                'ETF_Volume_high_backup', 'ETF_Volume_low_backup',
+                'Short_backup', 'Short_W_backup', 'SupportLevel_Close_backup', 'SupportLevel_Over_backup'
+            }
 
-        # ### 修改 ###: 定义需要特殊排序的组
-        target_sort_groups = {
-            # 原有的板块
-            'Basic_Materials','Consumer_Cyclical','Real_Estate','Technology','Energy',
-            'Industrials','Consumer_Defensive','Communication_Services','Financial_Services',
-            'Healthcare','Utilities',
-            
-            # 策略分组 (原名)
-            'Must','Today','Short','Short_W',
-            'PE_valid','PE_invalid','Strategy12','Strategy34',
-            'PE_Deep','OverSell_W','PE_W','PE_Deeper',
-            'PE_Volume', 'PE_Volume_up', 'PE_Volume_high', 'PE_Hot',
-            'ETF_Volume_high', 'ETF_Volume_low', 'SupportLevel_Close', 'SupportLevel_Over',
-            
-            # 策略分组 (Backup 版本 - 实际上 UI 中正在使用的 key)
-            'PE_valid_backup', 'PE_invalid_backup', 
-            'Strategy12_backup', 'Strategy34_backup',
-            'PE_Deep_backup', 'PE_W_backup', 'PE_Deeper_backup',
-            'OverSell_W_backup', 'PE_W_backup',
-            'PE_Volume_backup', 'PE_Volume_up_backup', 'PE_Volume_high_backup', 'PE_Hot_backup',
-            'ETF_Volume_high_backup', 'ETF_Volume_low_backup',
-            'Short_backup', 'Short_W_backup', 'SupportLevel_Close_backup', 'SupportLevel_Over_backup'
-        }
-
-        for index, category_group in enumerate(categories):
-            for sector in category_group:
-                if sector in self.config:
-                    keywords = self.config[sector]
-
-                    # —— 在这里加一个空检查 —— 
-                    # 如果 keywords 是 dict 或 list，且长度为 0，就跳过
-                    if (isinstance(keywords, dict) and not keywords) or \
-                       (isinstance(keywords, list) and not keywords):
-                        continue
-
-                    # 下面才是原来的代码：
-                    display_sector_name = self.display_name_map.get(sector, sector)
-                    group_box = DraggableGroupBox(display_sector_name, sector)
-                    group_box.setLayout(QVBoxLayout())
-                    column_layouts[index].addWidget(group_box)
-
-                    # ===== 在这里增加排序 =====
-                    items_list = []
-                    if isinstance(keywords, dict):
-                        items_list = list(keywords.items())
-                    else:
-                        items_list = [(kw, kw) for kw in keywords]
-
-                    # ### 修改 START ###: 根据分组应用不同的排序逻辑
-                    if sector in target_sort_groups:
-                        # 对需要特殊排序的组应用新逻辑
-                        # 1. 使用 enumerate 获取原始索引
-                        indexed_items = list(enumerate(items_list))
-                        
-                        # 2. 使用新的排序键进行排序
-                        #    lambda item: self.get_custom_sort_key(keyword, original_index)
-                        #    item[0] is original_index, item[1] is (keyword, translation)
-                        #    item[1][0] is keyword
-                        indexed_items.sort(key=lambda item: self.get_custom_sort_key(item[1][0], item[0]))
-                        
-                        # 3. 去掉索引，得到排好序的列表
-                        items_list = [item[1] for item in indexed_items]
-                    else:
-                        # 对其他组，使用旧的排序逻辑
+            # ★★★ 第一步：先把所有要显示的 symbol 收集起来，准备批量查询 ★★★
+            all_symbols_to_show = set()
+            for category_group in categories:
+                for sector in category_group:
+                    if sector in self.config:
+                        keywords = self.config[sector]
                         if isinstance(keywords, dict):
-                            items_list.sort(key=lambda kv: (
-                                int(m.group(1)) if (m := re.match(r'\s*(\d+)', kv[1])) else float('inf')
-                            ))
+                            all_symbols_to_show.update(keywords.keys())
+                        elif isinstance(keywords, list):
+                            all_symbols_to_show.update(keywords)
 
-                    items = limit_items(items_list, sector)
-                    if not items:
-                        continue
-                    
-                    # 2. 使用获取到的显示名称来构建最终的标题文本。
-                    total = len(keywords)
-                    shown = len(items)
-                    title = (f"{display_sector_name} ({shown}/{total})"
-                             if shown != total else display_sector_name)
-                    group_box.setTitle(title)
-                    
-                    for keyword, translation in items:
-                        # <--- 新增: 将排序后的 keyword 添加到新列表中
-                        self.ordered_symbols_on_screen.append(keyword)
-                        
-                        # <--- 新增: 同步添加当前的分组显示名称 (display_sector_name)
-                        self.ordered_groups_on_screen.append(display_sector_name)
-                        
-                        # <--- 新增: 获取刚才添加进去的这个 keyword 的确切索引
-                        current_btn_index = len(self.ordered_symbols_on_screen) - 1 
+            # ★★★ 第二步：一次性批量查询数据库（替代上百次零散查询） ★★★
+            color_data_cache = fetch_all_color_decision_data(DB_PATH, all_symbols_to_show, sector_data)
+            latest_earning_cache = fetch_all_latest_earning_dates(DB_PATH, all_symbols_to_show)
+            # 缓存到实例上，方便点击图表时复用
+            self._mnspp_cache = fetch_all_mnspp_data(DB_PATH, all_symbols_to_show)
 
-                        button_container = QWidget()
-                        row_layout = QHBoxLayout(button_container)
-                        row_layout.setContentsMargins(0, 0, 0, 0)
-                        row_layout.setSpacing(5)
+            # 然后是原来的循环逻辑：
+            for index, category_group in enumerate(categories):
+                for sector in category_group:
+                    if sector in self.config:
+                        keywords = self.config[sector]
+                        if (isinstance(keywords, dict) and not keywords) or \
+                        (isinstance(keywords, list) and not keywords):
+                            continue
 
-                        # --- 3. 创建普通按钮 ---
-                        button = SymbolButton(
-                            translation if translation else keyword,
-                            keyword,
-                            sector
-                        )
-                        
-                        button.setObjectName(self.get_button_style_name(keyword))
-                        # PyQt6: Qt.CursorShape.PointingHandCursor
-                        button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-                        # <--- 关键修改: lambda 中增加 idx 参数，并将 current_btn_index 传进去
-                        button.clicked.connect(lambda _, k=keyword, idx=current_btn_index: self.on_keyword_selected_chart(k, idx))
+                        display_sector_name = self.display_name_map.get(sector, sector)
+                        group_box = DraggableGroupBox(display_sector_name, sector)
+                        group_box.setLayout(QVBoxLayout())
+                        column_layouts[index].addWidget(group_box)
 
-                        # (设置按钮颜色、Tooltip、右键菜单的代码保持不变)
-                        earning_price, price_trend, _ = get_color_decision_data(DB_PATH, sector_data, keyword)
-
-                        # 2. 根据 b.py 的规则确定颜色
-                        color = 'white'  # 默认颜色
-                        if earning_price is not None and price_trend is not None:
-                            if price_trend == 'single':
-                                if earning_price > 0:
-                                    color = 'red'
-                                elif earning_price < 0:
-                                    color = 'green'
-                            else:
-                                is_price_positive = earning_price > 0
-                                is_trend_rising = price_trend == 'rising'
-                                if is_trend_rising and is_price_positive:
-                                    color = 'red'
-                                elif not is_trend_rising and is_price_positive:
-                                    color = '#008B8B'  # Dark Cyan
-                                elif is_trend_rising and not is_price_positive:
-                                    color = '#912F2F'  # Dark Red
-                                elif not is_trend_rising and not is_price_positive:
-                                    color = 'green'
-
-                        # 3. 应用字体颜色
-                        # 注意：这里会覆盖 QSS 中通过 objectName 设置的 color 属性，但保留 background-color
-                        current_style = button.styleSheet()
-                        button.setStyleSheet(f"{current_style}; color: {color};")
-                        
-                        tags_info = get_tags_for_symbol(keyword)
-                        if isinstance(tags_info, list):
-                            tags_info = ", ".join(tags_info)
-                        latest_date = fetch_latest_earning_date(keyword)
-                        tip_html = (
-                            "<div style='font-size:20px;"
-                            "background-color:lightyellow; color:black;'>"
-                            f"{tags_info}"
-                            f"<br>最新财报: {latest_date}"
-                            "</div>"
-                        )
-                        button.setToolTip(tip_html)
-                        
-                        # PyQt6: Qt.ContextMenuPolicy.CustomContextMenu
-                        button.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-                        button.customContextMenuRequested.connect(
-                            # 收到局部坐标 pos，把它映射为全局坐标，再连同 keyword, group 一并传给 show_context_menu
-                            lambda local_pos, btn=button, k=keyword, g=sector:
-                                self.show_context_menu(btn.mapToGlobal(local_pos), k, g)
-                        )
-
-                        row_layout.addWidget(button)
-                        row_layout.addStretch()        # ← 这一行
-
-                        # 2) 解析 compare_data 并生成富文本
-                        raw_compare = compare_data.get(keyword, "").strip()
-                        formatted_compare_html = ""
-
-                        # --- 修改开始: 针对 target_sort_groups 使用新的显示逻辑 ---
-                        if sector in target_sort_groups:
-                            parts = []
-                            
-                            # 1. 提取前缀 (数字 + 前/后/未)
-                            match_prefix = re.search(r"(\d+)(前|后|未)", raw_compare)
-                            if match_prefix:
-                                full_prefix = match_prefix.group(0) # 例如 "0305前"
-                                number_part = match_prefix.group(1) # 例如 "0305"
-                                suffix_part = match_prefix.group(2) # 例如 "前"
-                                
-                                # 默认颜色
-                                prefix_color = 'orange' 
-                                
-                                # 2. 计算关键日期
-                                today = datetime.date.today()
-                                nyse = holidays.NYSE()
-                                
-                                # 获取下一个交易日 (用于判断“明天”的定义)
-                                next_trading_day = today + datetime.timedelta(days=1)
-                                while next_trading_day.weekday() >= 5 or next_trading_day in nyse:
-                                    next_trading_day += datetime.timedelta(days=1)
-                                    
-                                # 尝试解析日期
-                                try:
-                                    current_year = today.year
-                                    # 处理 MMDD 格式
-                                    if len(number_part) == 4:
-                                        target_date = datetime.datetime.strptime(f"{current_year}{number_part}", "%Y%m%d").date()
-                                        
-                                        # --- 核心判断逻辑 ---
-                                        
-                                        # 规则 A: 过去 (小于昨天) -> 白色
-                                        yesterday = today - datetime.timedelta(days=1)
-                                        if target_date < yesterday:
-                                            prefix_color = 'white'
-                                        
-                                        # 规则 B: 正好是昨天 (target_date == yesterday)
-                                        elif target_date == yesterday:
-                                            if suffix_part == '后':
-                                                prefix_color = 'red'
-                                            else: # '前' 或 '未'
-                                                prefix_color = 'white'
-                                        
-                                        # 规则 C: 今天 (target_date == today)
-                                        elif target_date == today:
-                                            prefix_color = 'orange' # 今天的情况保持默认橙色
-                                        
-                                        # 规则 D: 明天/未来 (target_date >= next_trading_day)
-                                        else:
-                                            if target_date == next_trading_day:
-                                                # 针对明天 (或下一个交易日)
-                                                if suffix_part == '前':
-                                                    prefix_color = 'red'
-                                                elif suffix_part == '后':
-                                                    prefix_color = 'orange'
-                                            else:
-                                                # 更远的未来
-                                                prefix_color = 'orange'
-                                                
-                                    else:
-                                        # 日期格式不对，保持默认橙色
-                                        pass
-                                except ValueError:
-                                    pass
-                                    
-                                # 使用计算出的颜色生成 HTML
-                                parts.append(f"<span style='color:{prefix_color};'>{full_prefix}</span>")
-                            
-                            # 2. 获取 Options Metrics
-                            metrics = get_options_metrics(keyword)
-                            if metrics:
-                                # --- 核心修改: 日期校验逻辑 使用 holidays 库 ---
-                                # 目标日期: 最近的一个有效交易日
-                                target_date = TradingDateHelper.get_last_trading_date()
-                                data_date = metrics.get('date1') # 获取最新数据的日期对象
-                                
-                                # 判断日期是否有效 (注意: data_date 通常是 datetime.date 类型)
-                                is_valid_date = (data_date == target_date)
-                                
-                                if is_valid_date:
-                                    # --- 日期正确，才处理数据显示 ---
-                                    
-                                    # A. 处理 IV
-                                    iv_val, iv_str = metrics['iv1']
-                                    if iv_str != "--":
-                                        if iv_val > 0: iv_color = "red"
-                                        elif iv_val < 0: iv_color = "green"
-                                        else: iv_color = "gray"
-                                        parts.append(f"<span style='color:{iv_color};'>{iv_str}</span>")
-                                    
-                                    # B. 处理 Change+Price (Sum)
-                                    sum_val = metrics['sum1']
-                                    # sum_val 通常是 float，直接判断是否显示
-                                    # 这里假设只要日期对，sum_val 就是有效的数值
-                                    if sum_val > 0: sum_color = "red"
-                                    elif sum_val < 0: sum_color = "green"
-                                    else: sum_color = "gray"
-                                    parts.append(f"<span style='color:{sum_color};'>{sum_val:.2f}</span>")
-                                
-                                else:
-                                    # 日期不对，不显示数据，只显示可能的前缀
-                                    pass
-
-                            # 只有当有内容时才组合 HTML
-                            if parts:
-                                # 使用两个空格作为分隔符
-                                display_html = "&nbsp;&nbsp;".join(parts)
-                                formatted_compare_html = (
-                                    f'<a href="{keyword}" '
-                                    f'style="color:gray; text-decoration:none;">'
-                                    f'{display_html}</a>'
-                                )
-                            else:
-                                # 如果 parts 为空 (既没有前缀，数据也是 --)，则显示空字符串
-                                formatted_compare_html = ""
-
+                        items_list = []
+                        if isinstance(keywords, dict):
+                            items_list = list(keywords.items())
                         else:
-                            # --- 原有逻辑: 其他组保持不变 ---
-                            if raw_compare:
-                                # 找百分号及前面的数字
-                                m = re.search(r"([-+]?\d+(?:\.\d+)?)%", raw_compare)
-                                if m:
-                                    # 1) 把捕获组里的数字转成 float，再格式化到一位小数
-                                    num = float(m.group(1))
-                                    percent_fmt = f"{num:.2f}%"
+                            items_list = [(kw, kw) for kw in keywords]
 
-                                    # 2) 找到原始字符串中百分号片段，用来切 prefix/suffix
-                                    orig = m.group(0)
-                                    idx  = raw_compare.find(orig)
-                                    prefix, suffix = raw_compare[:idx].strip(), raw_compare[idx + len(orig):]
+                        if sector in target_sort_groups:
+                            indexed_items = list(enumerate(items_list))
+                            indexed_items.sort(key=lambda item: self.get_custom_sort_key(item[1][0], item[0]))
+                            items_list = [item[1] for item in indexed_items]
+                        else:
+                            if isinstance(keywords, dict):
+                                items_list.sort(key=lambda kv: (
+                                    int(m.group(1)) if (m := re.match(r'\s*(\d+)', kv[1])) else float('inf')
+                                ))
 
-                                    # 3) 拼 HTML
-                                    prefix_html = f"<span style='color:orange;'>{prefix}</span>"
-                                    
-                                    # 定义需要特殊颜色处理的分组
-                                    special_color_groups = {"Bonds", "Crypto", "Indices", "Economics", "Commodities", "Currencies"}
-                                    color_val = "gray"
-                                    
-                                    if sector in special_color_groups:
-                                        if num > 0: color_val = "red"
-                                        elif num == 0: color_val = "gray"
-                                        else: color_val = "green"
-                                    
-                                    percent_html = f"<span style='color:{color_val};'>{percent_fmt}</span>"
-                                    suffix_html  = f"<span>{suffix}</span>"
-                                    
-                                    display_html = prefix_html + percent_html + suffix_html
-                                    
+                        items = limit_items(items_list, sector)
+                        if not items:
+                            continue
+                        
+                        total = len(keywords)
+                        shown = len(items)
+                        title = (f"{display_sector_name} ({shown}/{total})"
+                                if shown != total else display_sector_name)
+                        group_box.setTitle(title)
+                        
+                        for keyword, translation in items:
+                            self.ordered_symbols_on_screen.append(keyword)
+                            self.ordered_groups_on_screen.append(display_sector_name)
+                            current_btn_index = len(self.ordered_symbols_on_screen) - 1 
+
+                            button_container = QWidget()
+                            row_layout = QHBoxLayout(button_container)
+                            row_layout.setContentsMargins(0, 0, 0, 0)
+                            row_layout.setSpacing(5)
+
+                            button = SymbolButton(
+                                translation if translation else keyword,
+                                keyword,
+                                sector
+                            )
+                            button.setObjectName(self.get_button_style_name(keyword))
+                            button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                            button.clicked.connect(
+                                lambda _, k=keyword, idx=current_btn_index: self.on_keyword_selected_chart(k, idx)
+                            )
+
+                            # ★★★ 用缓存替代逐个数据库查询 ★★★
+                            earning_price, price_trend, _ = color_data_cache.get(keyword, (None, None, None))
+
+                            color = 'white'
+                            if earning_price is not None and price_trend is not None:
+                                if price_trend == 'single':
+                                    if earning_price > 0: color = 'red'
+                                    elif earning_price < 0: color = 'green'
+                                else:
+                                    is_price_positive = earning_price > 0
+                                    is_trend_rising = price_trend == 'rising'
+                                    if is_trend_rising and is_price_positive: color = 'red'
+                                    elif not is_trend_rising and is_price_positive: color = '#008B8B'
+                                    elif is_trend_rising and not is_price_positive: color = '#912F2F'
+                                    elif not is_trend_rising and not is_price_positive: color = 'green'
+
+                            current_style = button.styleSheet()
+                            button.setStyleSheet(f"{current_style}; color: {color};")
+                            
+                            # ★★★ Tooltip 改为延迟生成（懒加载），避免预先全部计算 ★★★
+                            button.setProperty("_tip_keyword", keyword)
+                            button.setProperty("_tip_loaded", False)
+                            button.installEventFilter(self)
+                            # 先存一个最小占位，hover 时再补全
+                            button.setToolTip(" ")
+                            # 也可以直接用缓存（已经批量查过了，几乎零成本）：
+                            latest_date = latest_earning_cache.get(keyword, "无")
+                            tags_info = get_tags_for_symbol(keyword)
+                            if isinstance(tags_info, list):
+                                tags_info = ", ".join(tags_info)
+                            tip_html = (
+                                "<div style='font-size:20px;"
+                                "background-color:lightyellow; color:black;'>"
+                                f"{tags_info}<br>最新财报: {latest_date}</div>"
+                            )
+                            button.setToolTip(tip_html)
+
+                            button.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+                            button.customContextMenuRequested.connect(
+                                lambda local_pos, btn=button, k=keyword, g=sector:
+                                    self.show_context_menu(btn.mapToGlobal(local_pos), k, g)
+                            )
+
+                            row_layout.addWidget(button)
+                            row_layout.addStretch()
+
+                            # ===== 下面解析 compare_data 的部分保持不变 =====
+                            raw_compare = compare_data.get(keyword, "").strip()
+                            formatted_compare_html = ""
+
+                            if sector in target_sort_groups:
+                                parts = []
+                                match_prefix = re.search(r"(\d+)(前|后|未)", raw_compare)
+                                if match_prefix:
+                                    full_prefix = match_prefix.group(0)
+                                    number_part = match_prefix.group(1)
+                                    suffix_part = match_prefix.group(2)
+                                    prefix_color = 'orange'
+                                    today = datetime.date.today()
+                                    nyse = holidays.NYSE()
+                                    next_trading_day = today + datetime.timedelta(days=1)
+                                    while next_trading_day.weekday() >= 5 or next_trading_day in nyse:
+                                        next_trading_day += datetime.timedelta(days=1)
+                                    try:
+                                        current_year = today.year
+                                        if len(number_part) == 4:
+                                            target_date = datetime.datetime.strptime(f"{current_year}{number_part}", "%Y%m%d").date()
+                                            yesterday = today - datetime.timedelta(days=1)
+                                            if target_date < yesterday:
+                                                prefix_color = 'white'
+                                            elif target_date == yesterday:
+                                                prefix_color = 'red' if suffix_part == '后' else 'white'
+                                            elif target_date == today:
+                                                prefix_color = 'orange'
+                                            else:
+                                                if target_date == next_trading_day:
+                                                    if suffix_part == '前': prefix_color = 'red'
+                                                    elif suffix_part == '后': prefix_color = 'orange'
+                                                else:
+                                                    prefix_color = 'orange'
+                                    except ValueError:
+                                        pass
+                                    parts.append(f"<span style='color:{prefix_color};'>{full_prefix}</span>")
+
+                                if parts:
+                                    display_html = "&nbsp;&nbsp;".join(parts)
                                     formatted_compare_html = (
-                                        f'<a href="{keyword}" '
-                                        f'style="color:gray; text-decoration:none;">'
+                                        f'<a href="{keyword}" style="color:gray; text-decoration:none;">'
                                         f'{display_html}</a>'
                                     )
-                                else:
-                                    # 整段无 %，全橙色
-                                    formatted_compare_html = (
-                                        f"<span style='color:orange;'>"
-                                        f"{raw_compare}</span>"
-                                    )
-                        # --- 修改结束 ---
+                            else:
+                                if raw_compare:
+                                    m = re.search(r"([-+]?\d+(?:\.\d+)?)%", raw_compare)
+                                    if m:
+                                        num = float(m.group(1))
+                                        percent_fmt = f"{num:.2f}%"
+                                        orig = m.group(0)
+                                        idx_p = raw_compare.find(orig)
+                                        prefix, suffix = raw_compare[:idx_p].strip(), raw_compare[idx_p + len(orig):]
+                                        prefix_html = f"<span style='color:orange;'>{prefix}</span>"
+                                        special_color_groups = {"Bonds", "Crypto", "Indices", "Economics", "Commodities", "Currencies"}
+                                        color_val = "gray"
+                                        if sector in special_color_groups:
+                                            if num > 0: color_val = "red"
+                                            elif num == 0: color_val = "gray"
+                                            else: color_val = "green"
+                                        percent_html = f"<span style='color:{color_val};'>{percent_fmt}</span>"
+                                        suffix_html  = f"<span>{suffix}</span>"
+                                        display_html = prefix_html + percent_html + suffix_html
+                                        formatted_compare_html = (
+                                            f'<a href="{keyword}" style="color:gray; text-decoration:none;">'
+                                            f'{display_html}</a>'
+                                        )
+                                    else:
+                                        formatted_compare_html = (
+                                            f"<span style='color:orange;'>{raw_compare}</span>"
+                                        )
 
-                        # 3) 用 QLabel 显示富文本
-                        compare_label = QLabel()
-                        # PyQt6: Qt.TextFormat.RichText
-                        compare_label.setTextFormat(Qt.TextFormat.RichText)
-                        compare_label.setText(formatted_compare_html)
-                        compare_label.setStyleSheet("font-size:22px;") 
-                        compare_label.linkActivated.connect(self.on_keyword_selected_chart)
-                        row_layout.addWidget(compare_label)  
+                            compare_label = QLabel()
+                            compare_label.setTextFormat(Qt.TextFormat.RichText)
+                            compare_label.setText(formatted_compare_html)
+                            compare_label.setStyleSheet("font-size:22px;")
+                            compare_label.linkActivated.connect(self.on_keyword_selected_chart)
+                            row_layout.addWidget(compare_label)
 
-                        # 最后把 container 加到 groupbox
-                        group_box.layout().addWidget(button_container)
+                            group_box.layout().addWidget(button_container)
+        finally:
+            # ★★★ 最后统一开启绘制 ★★★
+            self.scroll_content.setUpdatesEnabled(True)
 
     # --------------------------------------------------
     # 新：接收三个参数：global_pos、keyword、group
@@ -1434,44 +1508,43 @@ class MainWindow(QMainWindow):
             self.delete_item(keyword, group)
 
     def refresh_selection_window(self):
-        """重新加载配置并刷新UI"""
-        global config
+        global config, sector_data, symbol_to_sector_map # 必须声明这些全局变量
+        
+        # 1. 重新加载配置文件
         config = load_json(CONFIG_PATH)
         self.config = config
         
-        # 清空现有布局
+        # 2. 重新加载 sector_data (以防它被外部修改)
+        sector_data = load_json(SECTORS_ALL_PATH)
+        
+        # 3. 关键点：重新构建反向索引映射
+        symbol_to_sector_map = build_symbol_to_sector_map(sector_data)
+        
+        # 4. 原有的 UI 刷新逻辑
         while self.main_layout.count():
             layout_item = self.main_layout.takeAt(0)
             if layout_item.widget():
                 layout_item.widget().deleteLater()
             elif layout_item.layout():
-                # 递归清空子布局
                 self.clear_layout(layout_item.layout())
         
-        # self.highlighted_buttons = [] # 根据需要，如果你想保留高亮可以注释掉这行，或者保留
         self.highlighted_buttons = []
-        # <--- 新增: 刷新时清空分组列表
         self.ordered_groups_on_screen = []
-
-        # >>>>>>>>> 关键修改 START >>>>>>>>>
-        # 绝对不要在这里把索引重置为 -1！
-        # 这就是导致“连续操作后丢失位置”的罪魁祸首。
-        # 删除或注释掉下面这行：
-        # self.current_symbol_index = -1 
-        # <<<<<<<<< 关键修改 END <<<<<<<<<
-        
         self.populate_widgets()
-
-        # >>>>>>>>> 新增安全检查 >>>>>>>>>
-        # 刷新后，如果列表变短了（比如删除了最后一个），我们需要把索引修正回来，
-        # 防止它指向一个不存在的空位。
+        
         total_symbols = len(self.ordered_symbols_on_screen)
         if total_symbols > 0:
             if self.current_symbol_index >= total_symbols:
                 self.current_symbol_index = total_symbols - 1
         else:
             self.current_symbol_index = -1
-        # <<<<<<<<< 新增安全检查 END <<<<<<<<<
+            
+        # ★ 同步 mtime，避免自己触发自己 ★
+        try:
+            self._last_cfg_mtime = os.path.getmtime(CONFIG_PATH)
+            self._last_desc_mtime = os.path.getmtime(DESCRIPTION_PATH)
+        except Exception:
+            pass
 
 
     def clear_layout(self, layout):
@@ -1494,7 +1567,7 @@ class MainWindow(QMainWindow):
         except Exception as e:
             pass # 略过错误处理细节，保持原逻辑
             
-        sector = next((s for s, names in sector_data.items() if value in names), None)
+        sector = symbol_to_sector_map.get(value)
         if sector:
             # <--- 关键修改 START: 优先使用传入的精确索引 --->
             if btn_index is not None:
@@ -1525,7 +1598,12 @@ class MainWindow(QMainWindow):
             # <--- 修改部分结束 --->
 
             compare_value = compare_data.get(value, "N/A")
-            shares_val, marketcap_val, pe_val, pb_val = fetch_mnspp_data_from_db(DB_PATH, value)
+            # 优先用批量缓存，缓存里没有再回退到单条查询
+            cached = getattr(self, "_mnspp_cache", {}).get(value)
+            if cached:
+                shares_val, marketcap_val, pe_val, pb_val = cached
+            else:
+                shares_val, marketcap_val, pe_val, pb_val = fetch_mnspp_data_from_db(DB_PATH, value)
             
             # --- 新增：获取带"热"字样的显示名称 ---
             display_name = value  # 默认使用原始 symbol
@@ -1548,7 +1626,7 @@ class MainWindow(QMainWindow):
             self.setFocus()
 
     def on_keyword_selected(self, value):
-        sector = next((s for s, names in sector_data.items() if value in names), None)
+        sector = symbol_to_sector_map.get(value)
         if sector:
             condition = f"name = '{value}'"
             result = query_database(DB_PATH, sector, condition)
@@ -1916,6 +1994,8 @@ if __name__ == '__main__':
     config = load_json(CONFIG_PATH)
     json_data = load_json(DESCRIPTION_PATH)
     sector_data = load_json(SECTORS_ALL_PATH)
+    # --- 新增: 构建反向索引 ---
+    symbol_to_sector_map = build_symbol_to_sector_map(sector_data)
     compare_data = load_text_data(COMPARE_DATA_PATH)
     # --- 新增: 加载 Earning History 数据 ---
     earning_history = load_json(EARNING_HISTORY_PATH)

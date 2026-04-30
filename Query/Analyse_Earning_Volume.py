@@ -15,8 +15,8 @@ BASE_PATH = USER_HOME
 # SYMBOL_TO_TRACE = "" 
 # TARGET_DATE = "" 
 
-SYMBOL_TO_TRACE = "BEN"
-TARGET_DATE = "2026-04-29"
+SYMBOL_TO_TRACE = "NOK"
+TARGET_DATE = "2026-04-13"
 
 PATHS = {
     "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),
@@ -1040,10 +1040,19 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         latest_turnover = latest_price * latest_volume
         prev_turnover = prev_price * prev_volume
         
-        # 门槛 1: 成交额大于 2 亿
-        if latest_turnover < 200000000:
+        # 默认门槛 2亿
+        turnover_threshold = 200000000
+        threshold_desc = "2亿"
+        
+        # 如果命中 hot_tags_t，则降低为 1.5亿
+        if has_hot_tag_t:
+            turnover_threshold = 150000000
+            threshold_desc = "1.5亿 (命中 HOT_TAGS_T)"
+            
+        # 门槛 1: 成交额检查
+        if latest_turnover < turnover_threshold:
             if is_tracing:
-                log_detail(f"    x [过滤] 最新成交额 {latest_turnover:,.0f} 不足 20000 万 (2亿)，跳过。")
+                log_detail(f"    x [过滤] 最新成交额 {latest_turnover:,.0f} 不足 {threshold_desc}，跳过。")
             continue
         
         # ================= 抄底逻辑 (不受今日上涨/放量门槛限制) =================

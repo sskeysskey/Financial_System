@@ -112,7 +112,7 @@ def build_overlap_marker(category, d_str, suf,
     red = NORD_THEME['warning_red']
     purple = NORD_THEME['accent_purple'] # 定义紫色变量
 
-    # 最新一天 PE_Volume_high(抄底) & Short/Short_W
+    # 1. 最新一天 PE_Volume_high(抄底) & Short/Short_W
     if sorted_trading_dates and d_str == sorted_trading_dates[0]:
         has_short = "Short" in date_categories[d_str] or "Short_W" in date_categories[d_str]
         has_pe_vol_high = "PE_Volume_high" in date_categories[d_str]
@@ -127,6 +127,29 @@ def build_overlap_marker(category, d_str, suf,
                         break
             if is_chaodi and category in ["PE_Volume_high", "Short", "Short_W"]:
                 overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='最新交易日触发 PE_Volume_high(抄底) 和 Short/Short_W'>[★最新日:抄底+Short]</span>"
+
+    # 新增：PE_Volume_high 且后缀包含 '甲' 时，往前推15天检查是否重复
+    if category == "PE_Volume_high" and suf and '甲' in suf:
+        try:
+            date_idx = sorted_trading_dates.index(d_str)
+            # 往前推15个交易日（因为是降序，所以取当前索引之后的15个元素）
+            prev_15_dates = sorted_trading_dates[date_idx + 1 : date_idx + 16]
+            
+            # 检查这15天内是否也出现过 PE_Volume_high 且后缀含 '甲'
+            pe_vol_high_records = category_data.get("PE_Volume_high", [])
+            has_previous_jia = False
+            for prev_d in prev_15_dates:
+                for record_d, record_suf in pe_vol_high_records:
+                    if record_d == prev_d and record_suf and '甲' in record_suf:
+                        has_previous_jia = True
+                        break
+                if has_previous_jia:
+                    break
+            
+            if has_previous_jia:
+                overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='15个交易日内重复触发 PE_Volume_high(甲)'>[ x 2]</span>"
+        except ValueError:
+            pass
 
     # 2. 跨日接力
     try:

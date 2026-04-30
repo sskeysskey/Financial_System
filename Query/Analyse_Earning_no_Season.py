@@ -13,8 +13,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = ""
 TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "BKR"
-# TARGET_DATE = "2026-03-13"
+# SYMBOL_TO_TRACE = "FANG"
+# TARGET_DATE = "2026-04-17"
 
 PATHS = {
     "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),
@@ -56,7 +56,7 @@ CONFIG = {
     "COND5_WINDOW_DAYS": 6,
 
     # 严格筛选标准
-    "PRICE_DROP_PERCENTAGE_LARGE": 0.11,  # <2000亿=11%
+    "PRICE_DROP_PERCENTAGE_LARGE": 0.107,  # <2000亿=10.7%
     "PRICE_DROP_PERCENTAGE_SMALL": 0.09,   # 2000亿 ≤ 市值 < 5000亿 = 9%
     "PRICE_DROP_PERCENTAGE_MEGA": 0.07,    # 5000亿 ≤ 市值 < 10000亿 = 7%
     "PRICE_DROP_PERCENTAGE_GIANT": 0.05,   # 新增：≥10000亿=5%

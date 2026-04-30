@@ -788,11 +788,16 @@ class HighLowWindow(QMainWindow):
 
         # Tab 2: 10年新高
         elif current_tab == 2:
+            # 1. 计算所有分类下的总符号数量（缓存或临时计算）
+            total_all_symbols = sum(len(items) for items in self.newhigh_10y_data.values())
+            
+            # 2. 遍历查找当前 Symbol 所在的位置
             for group_name, items in self.newhigh_10y_data.items():
                 symbols_in_group = [item['symbol'] for item in items]
                 if symbol in symbols_in_group:
                     idx = symbols_in_group.index(symbol)
-                    return f"{group_name} ({idx + 1}/{len(symbols_in_group)})"
+                    # 3. 按照你的要求格式化输出: 分类 (当前组索引/当前组总数/总数)
+                    return f"{group_name} ({idx + 1}/{len(symbols_in_group)}/{total_all_symbols})"
 
         # Tab 3: ETFs
         elif current_tab == 3:
