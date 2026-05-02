@@ -47,16 +47,6 @@
         "message": "正在执行 Split2DB (History)..."
     },
     {
-        "key": "seven",
-        "modifiers": [
-            "control",
-            "command"
-        ],
-        "actionType": "runPythonBackground",
-        "target": "/Users/yanzhang/Coding/Financial_System/Query/Analyse_Options.py",
-        "message": "正在执行 Analyse_Options..."
-    },
-    {
         "key": "backslash",
         "modifiers": [
             "control",

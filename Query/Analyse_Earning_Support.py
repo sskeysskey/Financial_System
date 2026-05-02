@@ -9,11 +9,11 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 # ================= 配置区域 =================
 # 如果为空，则运行"今天"模式；如果填入日期（如 "2024-11-03"），则运行回测模式
-# SYMBOL_TO_TRACE = "" 
-# TARGET_DATE = "" 
+SYMBOL_TO_TRACE = "" 
+TARGET_DATE = "" 
 
-SYMBOL_TO_TRACE = "WDC"
-TARGET_DATE = "2026-03-30"
+# SYMBOL_TO_TRACE = "KEX"
+# TARGET_DATE = "2026-03-12"
 
 # 【新增配置项】支撑点距离最新日期的最小天数要求
 MIN_SUPPORT_DAYS = 6

@@ -151,10 +151,23 @@ def build_overlap_marker(category, d_str, suf,
         except ValueError:
             pass
 
-    # 2. 跨日接力
+    # 2. 跨日接力 及 PE_W 15天重复检测
     try:
         date_idx = sorted_trading_dates.index(d_str)
         if category == "PE_W":
+            # 新增：PE_W 往前推15天检查重复次数
+            prev_15_dates = sorted_trading_dates[date_idx + 1 : date_idx + 16]
+            pe_w_count = 0
+            # 统计前15个交易日中，有几天触发了 PE_W
+            for prev_d in prev_15_dates:
+                if prev_d in category_dates.get("PE_W", set()):
+                    pe_w_count += 1
+            
+            if pe_w_count > 0:
+                total_count = pe_w_count + 1
+                overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='15个交易日内重复触发 PE_W'>[ x {total_count}]</span>"
+
+            # 原有的跨日接力逻辑
             if date_idx + 1 < len(sorted_trading_dates):
                 prev_date = sorted_trading_dates[date_idx + 1]
                 

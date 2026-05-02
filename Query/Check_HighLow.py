@@ -767,7 +767,7 @@ class HighLowWindow(QMainWindow):
             if item.get("symbol") == symbol: return item.get("tag", "无标签")
         return "无标签"
     
-        # --- 修改点 2: 添加动态计算子分类和索引的方法 ---
+    # --- 修改点 2: 添加动态计算子分类和索引的方法 ---
     def get_symbol_group_info(self, symbol):
         current_tab = self.tabs.currentIndex()
 
@@ -788,16 +788,21 @@ class HighLowWindow(QMainWindow):
 
         # Tab 2: 10年新高
         elif current_tab == 2:
-            # 1. 计算所有分类下的总符号数量（缓存或临时计算）
-            total_all_symbols = sum(len(items) for items in self.newhigh_10y_data.values())
+            # 1. 计算所有分类下的总符号数量（直接取 list_10y_newhigh 的长度）
+            total_all_symbols = len(self.list_10y_newhigh)
             
-            # 2. 遍历查找当前 Symbol 所在的位置
+            # 2. 获取该 symbol 在整个 10年新高 栏目中的总进度索引
+            overall_idx = 0
+            if symbol in self.list_10y_newhigh:
+                overall_idx = self.list_10y_newhigh.index(symbol) + 1
+            
+            # 3. 遍历查找当前 Symbol 所在的位置
             for group_name, items in self.newhigh_10y_data.items():
                 symbols_in_group = [item['symbol'] for item in items]
                 if symbol in symbols_in_group:
                     idx = symbols_in_group.index(symbol)
-                    # 3. 按照你的要求格式化输出: 分类 (当前组索引/当前组总数/总数)
-                    return f"{group_name} ({idx + 1}/{len(symbols_in_group)}/{total_all_symbols})"
+                    # 4. 按照要求格式化输出: 分类 (当前组索引/当前组总数/整个栏目当前进度/整个栏目总数)
+                    return f"{group_name} ({idx + 1}/{len(symbols_in_group)}/{overall_idx}/{total_all_symbols})"
 
         # Tab 3: ETFs
         elif current_tab == 3:

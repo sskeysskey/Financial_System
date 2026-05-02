@@ -1616,7 +1616,19 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     ]
 
                     marker_texts = []
-                    if g_text: marker_texts.append(g_text)
+                    # --- 修改这里：增加全局事件的价格差计算 ---
+                    if g_text:
+                        # 计算价格差
+                        try:
+                            # yval 是当前鼠标悬停点的价格，但我们需要的是事件发生点的价格 (price_v)
+                            # 实际上，hover 时的 yval 就是该点的价格。
+                            # 我们需要计算：((最新价 - 事件点价格) / 事件点价格) * 100
+                            latest_price = prices[-1]
+                            diff_percent = ((latest_price - yval) / yval) * 100
+                            diff_str = f"最新价差: {diff_percent:+.2f}%"
+                            marker_texts.append(f"{g_text}\n{diff_str}")
+                        except Exception:
+                            marker_texts.append(g_text)
                     if s_text: marker_texts.append(s_text + "\n")
                     has_earning = False
                     if e_text:
