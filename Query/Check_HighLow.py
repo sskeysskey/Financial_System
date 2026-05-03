@@ -43,7 +43,7 @@ COMPARE_STOCK_PATH = os.path.join(BASE_CODING_DIR, "News", "CompareStock.txt")
 EARNING_HISTORY_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Earning_History.json")
 
 # 新增：10年新高数据路径
-NEW_HIGH_10Y_PATH = os.path.join(BASE_CODING_DIR, "News", "10Y_newhigh_stock.txt")
+NEW_HIGH_10Y_PATH = os.path.join(BASE_CODING_DIR, "News", "backup", "10Y_newhigh_stock.txt")
 
 class ClickableLabel(QLabel):
     clicked = pyqtSignal()

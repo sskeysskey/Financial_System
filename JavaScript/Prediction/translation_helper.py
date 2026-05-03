@@ -84,7 +84,7 @@ def cmd_extract():
     """
     提取待翻译新词。
     - names / types / subtypes：完整文本匹配
-    - options：如果包含数字，则只提取纯英文单词；如果不包含数字，则完整提取。
+    - options：如果包含数字且没有冒号，则只提取纯英文单词；如果不包含数字或包含冒号，则完整提取。
     """
     dictionary = load_json(DICT_PATH) or {"names": {}, "options": {}, "types": {}, "subtypes": {}}
     names, option_texts, types, subtypes = extract_texts_from_files()
@@ -103,15 +103,16 @@ def cmd_extract():
     unknown_words = {}  # lowercase/exact_string → 首次出现的原始形式
 
     for text in option_texts:
-        if re.search(r'\d', text):
-            # 包含数字：只提取纯英文字母序列
+        # 修改点：如果包含数字，且不包含冒号，才拆分单词
+        if re.search(r'\d', text) and ':' not in text:
+            # 包含数字且无冒号：只提取纯英文字母序列
             words = re.findall(r'[a-zA-Z]+', text)
             for word in words:
                 lower = word.lower()
                 if lower not in known_lower and lower not in unknown_words:
                     unknown_words[lower] = word
         else:
-            # 不包含数字：完整提取
+            # 不包含数字，或者包含冒号（例如 "Running Point: Season 2"）：完整提取
             # 为了防止大小写重复，依然使用小写进行校验，但保留原始文本
             lower_text = text.lower()
             if text not in known_options and lower_text not in known_lower and lower_text not in unknown_words:

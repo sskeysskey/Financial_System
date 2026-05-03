@@ -476,7 +476,8 @@
         "OXY": "OXY抄底",
         "PR": "PR甲",
         "SNDK": "SNDK甲",
-        "VG": "VG抄底"
+        "VG": "VG抄底",
+        "WDC": "WDC甲"
     },
     "PE_Volume_high_backup": {
         "AAOI": "AAOI甲",
@@ -492,7 +493,8 @@
         "OXY": "OXY抄底",
         "PR": "PR甲",
         "SNDK": "SNDK甲",
-        "VG": "VG抄底"
+        "VG": "VG抄底",
+        "WDC": "WDC甲"
     },
     "ETF_Volume_high": {},
     "ETF_Volume_high_backup": {},
@@ -646,18 +648,13 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USInterest": "29 USInterest",
-        "USGDP": "30 USGDP",
-        "PCEY": "30 PCEY",
-        "CorePCEM": "30 CorePCEM",
-        "CorePCEY": "30 CorePCEY",
-        "USInitial": "07 USInitial",
         "USTrade": "05 USTrade",
         "USNonPMI": "05 USNonPMI",
         "USNonFarmA": "06 USNonFarmA",
         "USNonFarm": "08 USNonFarm",
         "USUnemploy": "08 USUnemploy",
-        "USConfidence": "08 USConfidence"
+        "USConfidence": "08 USConfidence",
+        "USInitial": "07 USInitial"
     },
     "Economic_All": {
         "USGDP": "",

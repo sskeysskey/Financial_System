@@ -15,8 +15,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = "" 
 TARGET_DATE = "" 
 
-# SYMBOL_TO_TRACE = "NOK"
-# TARGET_DATE = "2026-04-13"
+# SYMBOL_TO_TRACE = "AUR"
+# TARGET_DATE = "2026-04-30"
 
 PATHS = {
     "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),
@@ -774,8 +774,10 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
         turnover_prev = price_prev * vol_prev
 
         # 规则1 (硬性): 必须上涨 (最新价 > 次新价 且 收盘价 > 开盘价)
-        if price_curr <= price_prev or price_curr <= open_curr:
-            if is_tracing: log_detail(f"    x 价格未上涨 (收盘{price_curr} <= 昨收{price_prev} 或 <= 今开{open_curr})，跳过。")
+        # if price_curr <= price_prev or price_curr <= open_curr:
+        if price_curr <= price_prev:
+            # if is_tracing: log_detail(f"    x 价格未上涨 (收盘{price_curr} <= 昨收{price_prev} 或 <= 今开{open_curr})，跳过。")
+            if is_tracing: log_detail(f"    x 价格未上涨 (收盘{price_curr} <= 昨收{price_prev}，跳过。")
             continue
 
         # 【修改点 2】新增过滤：比前 7 天最低点高出 3% 则过滤
@@ -1182,8 +1184,8 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
 
         # ================= 甲乙丙类逻辑的基础门槛 =================
         # 门槛 2: 今日上涨 (如果未上涨，则跳过甲乙丙的判断)
-        # cond_price_up_today = (latest_price > prev_price) and (latest_price > latest_open)
-        cond_price_up_today = (latest_price > prev_price)
+        cond_price_up_today = (latest_price > prev_price) or (latest_price > latest_open)
+        # cond_price_up_today = (latest_price > prev_price)
 
         # 门槛 3: 今日成交额 > 昨日成交额
         cond_turnover_up_today = (latest_turnover > prev_turnover)

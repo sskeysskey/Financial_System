@@ -1044,7 +1044,32 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         red_offsets = [(-60, 30),(50, -30), (-70, 45), (-50, -35)]
         for i, (scatter, date_v, price_v, text) in enumerate(global_scatter_points):
             offset = red_offsets[i % len(red_offsets)]
-            new_text = f"{text}\n{date_v.strftime('%Y-%m-%d')}"
+            
+            # --- 新增: 计算红点的价差和额差 ---
+            diff_line = ""
+            vol_line = ""
+            try:
+                # 1. 价差
+                latest_price = prices[-1]
+                diff_percent = ((latest_price - price_v) / price_v) * 100 if price_v else 0
+                diff_line = f"{diff_percent:.2f}%"
+                
+                # 2. 额差 (使用 Turnover)
+                if turnovers:
+                    idx = dates.index(date_v) 
+                    turnover_v = turnovers[idx]
+                    latest_turnover = turnovers[-1]
+                    if turnover_v and turnover_v > 0 and latest_turnover:
+                        v_diff = ((latest_turnover - turnover_v) / turnover_v) * 100
+                        vol_line = f"{v_diff:.2f}%"
+                    else:
+                        vol_line = "最新额差: --"
+            except Exception:
+                pass
+
+            # 拼接到文本中
+            new_text = f"{text}\n{diff_line}\n{vol_line}\n{date_v.strftime('%Y-%m-%d')}"
+            
             annotation = ax1.annotate(
                 new_text, xy=(date_v, price_v), xytext=offset, textcoords="offset points",
                 bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=NORD_THEME['accent_red'], alpha=0.8),
@@ -1618,17 +1643,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                     marker_texts = []
                     # --- 修改这里：增加全局事件的价格差计算 ---
                     if g_text:
-                        # 计算价格差
-                        try:
-                            # yval 是当前鼠标悬停点的价格，但我们需要的是事件发生点的价格 (price_v)
-                            # 实际上，hover 时的 yval 就是该点的价格。
-                            # 我们需要计算：((最新价 - 事件点价格) / 事件点价格) * 100
-                            latest_price = prices[-1]
-                            diff_percent = ((latest_price - yval) / yval) * 100
-                            diff_str = f"最新价差: {diff_percent:+.2f}%"
-                            marker_texts.append(f"{g_text}\n{diff_str}")
-                        except Exception:
-                            marker_texts.append(g_text)
+                        marker_texts.append(g_text)
                     if s_text: marker_texts.append(s_text + "\n")
                     has_earning = False
                     if e_text:

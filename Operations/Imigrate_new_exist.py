@@ -67,7 +67,7 @@ def process_10y_json(new_file, json_file):
       - 不存在则新增
       - 存在则当且仅当 new_price > old_price 时更新
     最终将更新后的 "stocks" 和原有的 "others" 一起写回 JSON 文件。
-    处理完删除 new_file。
+    处理完将 new_file 移动到 backup 目录下，若存在同名文件则覆盖。
     """
     if not os.path.exists(new_file):
         return
@@ -154,11 +154,23 @@ def process_10y_json(new_file, json_file):
         print(f"错误：写入 JSON 失败：{e}")
         return
 
+    # 将文件移动到 backup 目录并覆盖同名文件
     try:
-        os.remove(new_file)
+        backup_dir = os.path.join(USER_HOME, 'Coding/News/backup')
+        # 确保 backup 目录存在
+        if not os.path.exists(backup_dir):
+            os.makedirs(backup_dir, exist_ok=True)
+            
+        # 构造目标文件路径
+        backup_file_path = os.path.join(backup_dir, os.path.basename(new_file))
+        
+        # os.replace 可以跨平台地重命名/移动文件，并且如果目标文件存在，会将其覆盖
+        os.replace(new_file, backup_file_path)
+        print(f"文件已成功移动并覆盖至: {backup_file_path}")
     except Exception as e:
-        print(f"警告：删除 new 文件失败：{e}")
+        print(f"警告：移动 new 文件到 backup 目录失败：{e}")
         return
+        
     print(f"10Y_newhigh JSON 处理完成：新增 {inserts} 条，更新 {updates} 条。")
 
 if __name__ == "__main__":
