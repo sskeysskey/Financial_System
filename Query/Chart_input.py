@@ -1,9 +1,9 @@
+import os
 import re
 import sys
 import sqlite3
 import subprocess
 import numpy as np
-import os
 import matplotlib
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta, date
@@ -20,6 +20,13 @@ import time
 
 USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
+
+# --- 新增: 导入 Tiger_API ---
+sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Selenium"))
+try:
+    from Tiger_API import _get_global_fetcher
+except ImportError as e:
+    print(f"导入 Tiger_API 失败: {e}")
 
 # --- 修改: 切换到 PyQt6 ---
 from PyQt6.QtWidgets import QApplication, QDialog, QVBoxLayout, QTextEdit
@@ -1229,7 +1236,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         
         return title_text, title_color, clickable
     
-    def draw_subtitle(current_prices=None):
+    def draw_subtitle(current_prices=None, pre_after_pct=None):
         # 清除旧的副标题
         for artist in subtitle_artists:
             artist.remove()
@@ -1278,7 +1285,20 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         # Max 和 Min 的起始 X 坐标
         base_x = center_x + spacing_outer + 0.08
         
-        # 绘制 Max 差值 (红色)
+        # ================= 新增: 绘制 Pre/After 盘前盘后涨跌幅 =================
+        pre_after_str = "--"
+        pa_color = NORD_THEME['text_bright']
+        if pre_after_pct is not None:
+            pre_after_str = f"{pre_after_pct:+.2f}%"
+            pa_color = NORD_THEME['accent_red'] if pre_after_pct > 0 else NORD_THEME['accent_green']
+            
+        t_pa = fig.text(base_x - 0.08, y_pos, f"P/A:{pre_after_str}",
+                 color=pa_color, fontsize=12, fontweight='bold',
+                 ha='left', va='top')
+        subtitle_artists.append(t_pa)
+        # =====================================================================
+
+        # 绘制 Max 差值 (绿色)
         t_max = fig.text(base_x, y_pos, f"Max:{max_pct_str}",
                  color=NORD_THEME['accent_green'], fontsize=12, fontweight='normal',
                  ha='left', va='top')
@@ -2232,6 +2252,39 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             pass
 
     plt.gcf().canvas.mpl_connect('figure_leave_event', hide_annot_on_leave)
+
+    # === 新增: 定时获取 Tiger API 实时价格并更新副标题 ===
+    current_pre_after_pct = [None]  # 使用列表存储以在闭包中修改
+
+    def fetch_and_update_realtime_price():
+        try:
+            fetcher = _get_global_fetcher()
+            quote = fetcher.get_realtime_quote(name)
+            if quote and 'price' in quote:
+                rt_price = quote['price']
+                # 获取数据库中最新一天的收盘价
+                if prices and len(prices) > 0 and prices[-1] != 0:
+                    latest_db_price = prices[-1]
+                    # 计算涨跌幅
+                    pct = ((rt_price - latest_db_price) / latest_db_price) * 100
+                    current_pre_after_pct[0] = pct
+                    
+                    # 重新绘制副标题并刷新画布
+                    draw_subtitle(current_prices=current_filtered_prices, pre_after_pct=current_pre_after_pct[0])
+                    fig.canvas.draw_idle()
+        except Exception as e:
+            print(f"获取实时价格失败: {e}")
+
+    # 创建一个每 1000 毫秒 (1秒) 触发一次的定时器
+    rt_timer = fig.canvas.new_timer(interval=1000)
+    rt_timer.add_callback(fetch_and_update_realtime_price)
+    rt_timer.start()
+
+    # === 关键修复: 把 timer 绑定到 fig 上,防止函数返回后被 GC ===
+    fig._rt_timer = rt_timer
+
+    # 立即执行一次，避免前3秒显示 "--"
+    fetch_and_update_realtime_price()
 
     # Matplotlib 3.8+ 支持
     try:

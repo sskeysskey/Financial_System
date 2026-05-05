@@ -40,18 +40,14 @@
     "Industrials": {
         "BLDR": "",
         "GFL": "",
-        "DLB": "",
         "OTIS": "",
         "LPX": ""
     },
     "Communication_Services": {
-        "STUB": "",
-        "RBLX": ""
+        "STUB": ""
     },
     "Financial_Services": {
         "ERIE": "",
-        "BRO": "",
-        "MRSH": "",
         "KNSL": "",
         "RYAN": "",
         "RLI": ""
@@ -60,10 +56,8 @@
         "SYK": "",
         "ABT": "",
         "COR": "",
-        "OPCH": "",
         "WAY": "",
         "DHR": "",
-        "BSX": "",
         "MMSI": "",
         "JNJ": "",
         "TMO": "",

@@ -10,6 +10,11 @@
 5. 获取当前持仓
 """
 
+import os
+import certifi
+os.environ['SSL_CERT_FILE'] = certifi.where()
+os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
+
 import logging
 from datetime import datetime, timedelta
 from pytz import timezone as pytz_timezone
@@ -23,7 +28,7 @@ from tigeropen.trade.trade_client import TradeClient
 from tigeropen.common.consts import Language, BarPeriod, QuoteRight
 
 # ==================== 配置区 ====================
-PRIVATE_KEY_PATH = '/Users/yanzhang/Downloads/tiger.pem'
+PRIVATE_KEY_PATH = '/Users/yanzhang/Downloads/backup/tiger.pem'
 TIGER_ID = '20150215'
 ACCOUNT = '21638488022016545'
 
