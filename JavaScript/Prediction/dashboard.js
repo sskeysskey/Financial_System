@@ -1389,67 +1389,88 @@ async function workerLoop(workerId, tabId, queue, results, config) {
 
                 // ★ Say 类项目：双重确认（标题特征 + 子页面 option 数严格大于主页面），强制使用子页面数据
                 var subHealthy;
+                var isOptionCountShort = false; // ★ 新增：标记选项不足的情况
+
                 if (sub.isSayMarket && sub.options.length > card.options.length) {
                     subHealthy = true;
                     log('[W' + workerId + '] 🎤 "' + short + '" Say类项目, 强制使用子页面 ' + sub.options.length + ' 个选项', 'info');
                 } else {
                     subHealthy = isSubpageOptionsHealthy(sub.options, card.options);
-                    if (!subHealthy && sub.options && sub.options.length > 0) {
+
+                    // ★ 新增逻辑：如果子页面选项数少于主页面（且主页面至少有2个），则标记为选项不足
+                    if (card.options && card.options.length >= 2 && sub.options && sub.options.length < card.options.length) {
+                        isOptionCountShort = true;
+                    } else if (!subHealthy && sub.options && sub.options.length > 0) {
                         log('[W' + workerId + '] ⚠️ 子页面选项异常(子:' + sub.options.length +
                             '条, 主:' + card.options.length + '条), 回退到主页面数据', 'warn');
                     }
                 }
-                var opts = subHealthy ? sub.options : card.options;
-                var source = subHealthy ? '子' : '主';
 
-                // ★ Say 类项目：把 --% 转成 0%；普通项目仍然过滤掉
-                if (sub.isSayMarket && subHealthy) {
-                    opts = opts.map(function (o) {
-                        if (!o.value || o.value === '--%') {
-                            return { name: o.name, value: '0%', change: o.change || '' };
-                        }
-                        return o;
-                    });
-                } else {
-                    opts = opts.filter(function (o) {
-                        return o.value !== '--%';
-                    });
-                }
-
-                // ★★★ 新增：根据 value 进行降序排序 ★★★
-                opts.sort(function (a, b) {
-                    return parseOptionValue(b.value) - parseOptionValue(a.value);
-                });
-
-                // 校验所有 value 字段，如果发现不包含数字的异常数据则丢弃整条记录
-                var hasInvalidValue = false;
-                opts.forEach(function (o, j) {
-                    final['option' + (j + 1)] = o.name;
-                    final['value' + (j + 1)] = o.value;
-                    if (o.change) final['change' + (j + 1)] = o.change;
-
-                    // ★ 修改：严格要求必须包含数字，不再放行 "--%"
-                    if (!/\d/.test(o.value || '')) {
-                        hasInvalidValue = true;
-                    }
-                });
-
-                if (hasInvalidValue) {
-                    log('[W' + workerId + '] 🗑️ "' + short + '" 包含异常的 value 数据，已放弃写入该项目', 'warn');
+                // ★ 新增：如果是选项不足的情况，直接抛弃并加入失败队列，等待事后补抓
+                if (isOptionCountShort) {
+                    log('[W' + workerId + '] 🗑️ "' + short + '" 子页面选项不足(子:' + sub.options.length + '条, 主:' + card.options.length + '条)，已放弃并加入重试队列', 'warn');
                     results[idx] = null;
-
-                    // ★ 新增：将异常 value 的项目也推入 failures 数组中
                     config.failures.push({
                         name: card.name,
                         url: 'https://kalshi.com' + card.subUrl,
                         volume: card.volume,
-                        debugInfo: ['Invalid value detected (no digits in value field)'],
-                        card: card, // ★ 记录原始卡片，方便纠错
+                        debugInfo: ['Subpage options count (' + sub.options.length + ') < main page (' + card.options.length + ')'],
+                        card: card,
                         index: idx
                     });
                 } else {
-                    results[idx] = final;
-                    log('[W' + workerId + '] ✅ "' + short + '" (' + source + '页' + opts.length + 'opts) type=' + (sub.type || '(空)') + ' subtype=' + (sub.subtype || '(空)'), 'info');
+                    var opts = subHealthy ? sub.options : card.options;
+                    var source = subHealthy ? '子' : '主';
+
+                    // ★ Say 类项目：把 --% 转成 0%；普通项目仍然过滤掉
+                    if (sub.isSayMarket && subHealthy) {
+                        opts = opts.map(function (o) {
+                            if (!o.value || o.value === '--%') {
+                                return { name: o.name, value: '0%', change: o.change || '' };
+                            }
+                            return o;
+                        });
+                    } else {
+                        opts = opts.filter(function (o) {
+                            return o.value !== '--%';
+                        });
+                    }
+
+                    // ★★★ 新增：根据 value 进行降序排序 ★★★
+                    opts.sort(function (a, b) {
+                        return parseOptionValue(b.value) - parseOptionValue(a.value);
+                    });
+
+                    // 校验所有 value 字段，如果发现不包含数字的异常数据则丢弃整条记录
+                    var hasInvalidValue = false;
+                    opts.forEach(function (o, j) {
+                        final['option' + (j + 1)] = o.name;
+                        final['value' + (j + 1)] = o.value;
+                        if (o.change) final['change' + (j + 1)] = o.change;
+
+                        // ★ 修改：严格要求必须包含数字，不再放行 "--%"
+                        if (!/\d/.test(o.value || '')) {
+                            hasInvalidValue = true;
+                        }
+                    });
+
+                    if (hasInvalidValue) {
+                        log('[W' + workerId + '] 🗑️ "' + short + '" 包含异常的 value 数据，已放弃写入该项目', 'warn');
+                        results[idx] = null;
+
+                        // ★ 新增：将异常 value 的项目也推入 failures 数组中
+                        config.failures.push({
+                            name: card.name,
+                            url: 'https://kalshi.com' + card.subUrl,
+                            volume: card.volume,
+                            debugInfo: ['Invalid value detected (no digits in value field)'],
+                            card: card, // ★ 记录原始卡片，方便纠错
+                            index: idx
+                        });
+                    } else {
+                        results[idx] = final;
+                        log('[W' + workerId + '] ✅ "' + short + '" (' + source + '页' + opts.length + 'opts) type=' + (sub.type || '(空)') + ' subtype=' + (sub.subtype || '(空)'), 'info');
+                    }
                 }
             }
 

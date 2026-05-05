@@ -422,15 +422,15 @@ def scrape_history():
                                 row_list = list(data_rows[1])
                                 row_list[0] = last_valid_date  # 强行替换为正确的日期
                                 selected_row = tuple(row_list)
-                            else:
-                                tqdm.write(f"⚠️ [{symbol}] 网页最新日期 {row0_date} < 预期日期 {last_valid_date}，数据未更新，跳过。")
-                                skip_symbol = True
-                                break # 跳出重试循环，不再重试
                             # else:
-                            #     tqdm.write(f"⚠️ [{symbol}] 网页最新日期 {row0_date} < 预期日期 {last_valid_date}，数据未更新，临时使用最新数据并修改日期为 {last_valid_date} 写入。")
-                            #     row_list = list(data_rows[0])
-                            #     row_list[0] = last_valid_date  # 强行替换为正确的日期
-                            #     selected_row = tuple(row_list)
+                            #     tqdm.write(f"⚠️ [{symbol}] 网页最新日期 {row0_date} < 预期日期 {last_valid_date}，数据未更新，跳过。")
+                            #     skip_symbol = True
+                            #     break # 跳出重试循环，不再重试
+                            else:
+                                tqdm.write(f"⚠️ [{symbol}] 网页最新日期 {row0_date} < 预期日期 {last_valid_date}，数据未更新，临时使用最新数据并修改日期为 {last_valid_date} 写入。")
+                                row_list = list(data_rows[0])
+                                row_list[0] = last_valid_date  # 强行替换为正确的日期
+                                selected_row = tuple(row_list)
                     else:
                         # 如果无法计算 last_valid_date，默认取第一条
                         selected_row = data_rows[0]
@@ -476,7 +476,8 @@ def run_check_yesterday_if_empty():
     if is_empty:
         print("✅ Sectors_empty.json 已全部清空，开始执行 Check_yesterday.py...")
         try:
-            subprocess.run([sys.executable, CHECK_YESTERDAY_SCRIPT_PATH], check=True, capture_output=True, text=True, encoding='utf-8')
+            # 在这里增加了 "--ignore_sectors" 参数
+            subprocess.run([sys.executable, CHECK_YESTERDAY_SCRIPT_PATH, "--ignore_sectors"], check=True, capture_output=True, text=True, encoding='utf-8')
             print("✅ Check_yesterday.py 执行完毕。")
         except Exception as e:
             print(f"❌ 调用 Check_yesterday 出错: {e}")

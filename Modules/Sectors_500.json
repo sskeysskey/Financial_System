@@ -163,8 +163,7 @@
         "MRSH",
         "NDAQ",
         "MET",
-        "COIN",
-        "CM"
+        "COIN"
     ],
     "Healthcare": [
         "LLY",
@@ -196,7 +195,8 @@
         "CVS",
         "MCK",
         "COR",
-        "TAK"
+        "TAK",
+        "ARGX"
     ],
     "Industrials": [
         "GE",
@@ -312,7 +312,6 @@
         "CRWV",
         "MSTR",
         "TER",
-        "INFY",
         "MCHP",
         "ADSK",
         "DDOG"

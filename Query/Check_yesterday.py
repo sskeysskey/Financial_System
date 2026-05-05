@@ -17,6 +17,29 @@ SECTORS_ALL_JSON = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", 
 SECTOR_EMPTY_JSON = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_empty.json")
 ERROR_FILE = os.path.join(BASE_CODING_DIR, "News", "Today_error2.txt")
 
+# -------- 新增：排除特定板块的配置 -------- #
+# 全局开关：True 表示开启排除，False 表示不排除（也可以通过命令行 --ignore_sectors 开启）
+EXCLUDE_SECTORS_SWITCH = False 
+
+# 需要被排除的板块集合
+# EXCLUDE_SECTORS_LIST = {
+#     "Basic_Materials",
+#     "Communication_Services",
+#     "Consumer_Cyclical",
+#     "Consumer_Defensive",
+#     "Energy",
+#     "Financial_Services",
+#     "Healthcare",
+#     "Industrials",
+#     "Real_Estate",
+#     "Technology",
+#     "Utilities",
+#     "ETFs"
+# }
+EXCLUDE_SECTORS_LIST = {
+ 
+}
+
 # 不需要写入 empty 的 symbol
 FILTER_LIST = {
     'USInterest', 'USGDP', 'USCPI', 'USNonFarmA', 'USRetailM', 'USUnemploy',
@@ -266,7 +289,12 @@ def main():
     # 1. 设置参数解析
     parser = argparse.ArgumentParser(description="Check yesterday data script")
     parser.add_argument('--nopop', action='store_true', help="是否强制弹出提示框")
+    # 新增命令行参数，允许在运行时动态开启排除开关
+    parser.add_argument('--ignore_sectors', action='store_true', help="是否排除特定板块的缺失检查")
     args = parser.parse_args()
+
+    # 确定最终的开关状态（代码中写死的 True 或者 命令行传入了 --ignore_sectors 都会开启）
+    is_ignore_sectors_on = EXCLUDE_SECTORS_SWITCH or args.ignore_sectors
 
     # ★ 在这里动态获取最近交易日，替代原来的静态 yesterday
     try:
@@ -300,6 +328,11 @@ def main():
 
     # 2. 遍历各表各 symbol
     for table, names_in_table in sectors_all.items():
+        # -------- 新增：根据开关状态判断是否跳过指定板块 -------- #
+        if is_ignore_sectors_on and table in EXCLUDE_SECTORS_LIST:
+            print(f"提示：已开启排除开关，跳过检查板块 '{table}'。")
+            continue
+
         if not isinstance(names_in_table, list):
             print(f"警告：Sectors_All.json 中表 '{table}' 的值不是列表，已跳过。")
             continue
