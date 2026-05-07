@@ -35,6 +35,18 @@ ACCOUNT = '21638488022016545'
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
 
+# --- 新增：符号映射表 ---
+# 如果未来还有其他股票需要转换，直接在这个字典里添加即可
+SYMBOL_MAPPING = {
+    "BRK-B": "BRK.B",
+    # 例如：如果以后有其他需要转换的，可以继续加
+    "BF-B": "BF.B", 
+}
+
+def _normalize_symbol(symbol):
+    """内部辅助函数：将本地符号转换为 API 识别的符号"""
+    return SYMBOL_MAPPING.get(symbol, symbol)
+
 class TigerDataFetcher:
     def __init__(self, private_key_path: str, tiger_id: str, account: str):
         """初始化老虎 API 客户端"""
@@ -74,6 +86,9 @@ class TigerDataFetcher:
         if not symbols:
             return {}
             
+        # 将列表中的每个 symbol 都进行标准化
+        symbols = [_normalize_symbol(s) for s in symbols] 
+
         result = {}
         symbols_list = list(symbols)
         batch_size = 50  # 老虎 API 限制单次最多查询 50 只股票
@@ -124,6 +139,8 @@ class TigerDataFetcher:
         获取单只股票的实时行情（包含盘前盘后数据）
         """
         try:
+            symbol = _normalize_symbol(symbol)
+            
             df = self.quote_client.get_stock_briefs(
                 symbols=[symbol],
                 include_hour_trading=True,
@@ -169,6 +186,7 @@ class TigerDataFetcher:
 
         end_time = end_dt.strftime('%Y-%m-%d %H:%M:%S')
         begin_time = begin_dt.strftime('%Y-%m-%d %H:%M:%S')
+        symbol = _normalize_symbol(symbol)
 
         try:
             df = self.quote_client.get_bars_by_page(
@@ -245,6 +263,8 @@ class TigerDataFetcher:
         获取账户当前持仓
         :param target_symbol: 如果指定了标的，则只返回该标的的持仓；否则返回所有持仓
         """
+        target_symbol = _normalize_symbol(target_symbol)
+
         try:
             positions = self.trade_client.get_positions()
             parsed_positions = []
@@ -280,6 +300,8 @@ class TigerDataFetcher:
         获取预估可交易数量（常用于做空时查询最大可融券数量）
         action: 'BUY' 或 'SELL_SHORT'
         """
+        symbol = _normalize_symbol(symbol)
+        
         try:
             estimate = self.trade_client.get_estimate_tradable_quantity(
                 symbol=symbol, 

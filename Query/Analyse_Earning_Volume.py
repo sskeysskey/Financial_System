@@ -52,6 +52,7 @@ CONFIG = {
     # ========== 策略1 (PE_Volume放量下跌) 参数 ==========
     "COND8_VOLUME_LOOKBACK_MONTHS": 1.5,   # 过去 N 个月
     "COND8_VOLUME_RANK_THRESHOLD": 3,    # 成交量排名前 N 名
+    "COND8_ALLOW_UP_PERCENT": 0.005,  # 允许小幅上涨的幅度，0.005 表示 0.5%
     "COND8_EARNINGS_CHECK_DAYS": 2,      # [新增配置] 检查财报日的回溯天数 (填2则检查前2天: T-1, T-2)
     
     # ========== 策略2 (PE_Volume_up活跃上涨) 参数 ==========
@@ -460,9 +461,14 @@ def pe_volume(db_path, history_json_path, sector_map, target_date_override, symb
                 if is_tracing: log_detail(f"    x [失败] 价格/成交量数据存在 None。")
                 continue
 
-            # ========== 规则修改：必须下跌 (今日收盘 < 昨日收盘 且 今日收盘 < 今日开盘) ==========
-            if price_curr >= price_prev or price_curr >= open_curr:
-                if is_tracing: log_detail(f"    x [失败] 价格未满足下跌条件 (收盘{price_curr}, 昨收{price_prev}, 今开{open_curr})。")
+            # 获取允许上涨的幅度
+            allow_up_pct = CONFIG.get("COND8_ALLOW_UP_PERCENT", 0.005)
+
+            # ========== 修改：允许小幅上涨 (收盘价 <= 昨收 * (1 + 允许幅度) 且 收盘价 < 今日开盘) ==========
+            # 逻辑：如果价格上涨超过了允许的幅度，或者收盘价高于开盘价，则视为不满足条件
+            if price_curr > price_prev * (1 + allow_up_pct) or price_curr >= open_curr:
+                if is_tracing: 
+                    log_detail(f"    x [失败] 价格未满足条件 (收盘{price_curr:.2f}, 昨收{price_prev:.2f}, 允许上限{price_prev * (1 + allow_up_pct):.2f}, 今开{open_curr:.2f})。")
                 continue
 
             # --- 修改点：计算成交额并调用成交额排名函数 ---
@@ -649,16 +655,20 @@ def check_pe_volume_retention(db_path, history_json_path, panel_json_path, curre
             if is_tracing: log_detail(f"    x [回溯] {symbol}: 价格/成交量数据存在 None，跳过。")
             continue
 
-        # 条件2: 收盘价降低 且 收盘价低于开盘价 (已移除 Turnover 下降的限制)
-        cond_price_down = price_curr < price_prev
+        # 获取允许上涨的幅度
+        allow_up_pct = CONFIG.get("COND8_ALLOW_UP_PERCENT", 0.005)
+
+        # 条件2: 收盘价降低 或 小幅上涨 (不超过允许幅度) 且 收盘价低于开盘价
+        # 只要收盘价 <= 昨收 * (1 + 允许幅度) 即可视为满足条件
+        cond_price_ok = price_curr <= price_prev * (1 + allow_up_pct)
         cond_close_below_open = price_curr < open_curr
         
         if is_tracing:
             log_detail(f"    - [回溯] {symbol} 条件检查:")
-            log_detail(f"      收盘价下跌: {price_prev:.2f} -> {price_curr:.2f} = {cond_price_down}")
+            log_detail(f"      收盘价下跌: {price_prev:.2f} -> {price_curr:.2f} = {cond_price_ok}")
             log_detail(f"      收盘<开盘: {price_curr:.2f} < {open_curr:.2f} = {cond_close_below_open}")
         
-        if cond_price_down and cond_close_below_open:
+        if cond_price_ok and cond_close_below_open:
             retention_list.append(symbol)
             log_detail(f"    + [捞回] {symbol}: 上期存在且继续下跌 (Price: {price_prev}->{price_curr}, Open: {open_curr})")
         else:

@@ -13,8 +13,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = ""
 TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "FANG"
-# TARGET_DATE = "2026-04-17"
+# SYMBOL_TO_TRACE = "WAT"
+# TARGET_DATE = "2026-03-12"
 
 PATHS = {
     "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),

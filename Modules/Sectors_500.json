@@ -72,7 +72,8 @@
         "BTI",
         "CL",
         "MNST",
-        "TGT"
+        "TGT",
+        "ABEV"
     ],
     "Energy": [
         "XOM",
@@ -163,7 +164,8 @@
         "MRSH",
         "NDAQ",
         "MET",
-        "COIN"
+        "COIN",
+        "CM"
     ],
     "Healthcare": [
         "LLY",
@@ -194,7 +196,6 @@
         "GSK",
         "CVS",
         "MCK",
-        "COR",
         "TAK",
         "ARGX"
     ],
@@ -241,7 +242,8 @@
         "FERG",
         "BE",
         "CARR",
-        "URI"
+        "URI",
+        "ROK"
     ],
     "Real_Estate": [
         "PLD",
@@ -314,7 +316,9 @@
         "TER",
         "MCHP",
         "ADSK",
-        "DDOG"
+        "DDOG",
+        "STM",
+        "INFY"
     ],
     "Utilities": [
         "NEE",

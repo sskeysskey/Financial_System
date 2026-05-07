@@ -151,6 +151,28 @@ def build_overlap_marker(category, d_str, suf,
         except ValueError:
             pass
 
+    # =========================================================================
+    # 修改：SupportLevel_Close 或 SupportLevel_Over 往前推15天检查 PE_Volume
+    # 增加具体日期显示，并将颜色改为紫色
+    # =========================================================================
+    if category in ["SupportLevel_Close", "SupportLevel_Over"]:
+        try:
+            date_idx = sorted_trading_dates.index(d_str)
+            # 往前推15个交易日
+            prev_15_dates = sorted_trading_dates[date_idx + 1 : date_idx + 16]
+            
+            # 检查这15天内是否出现过 PE_Volume，并记录具体日期
+            pe_volume_dates = category_dates.get("PE_Volume", set())
+            found_dates = [prev_d for prev_d in prev_15_dates if prev_d in pe_volume_dates]
+            
+            if found_dates:
+                # 将找到的日期用逗号连接
+                dates_str = ", ".join(found_dates)
+                # 使用紫色 (purple) 并在标签中显示具体日期
+                overlap_marker += f" <span style='color:{purple}; font-weight:bold;' title='15个交易日内曾触发 PE_Volume'>[★PE_Volume: {dates_str}]</span>"
+        except ValueError:
+            pass
+
     # 2. 跨日接力 及 PE_W 15天重复检测
     try:
         date_idx = sorted_trading_dates.index(d_str)

@@ -505,14 +505,7 @@ function injectedClickMore() {
 function injectedScrapeSubpage() {
     var d = [];
     // ★ 新增 usedFallbackStrategy 字段，用于标记是否走到了全文档检索兜底
-    var result = { type: '', subtype: '', options: [], usedFallbackStrategy: false, isSayMarket: false };
-
-    // ★ 新增：检测 "What will X say/mention..." 类项目
-    var __h1tmp = document.querySelector('h1');
-    var __title = __h1tmp ? __h1tmp.textContent.trim() : '';
-    var isSayMarket = /^what will\s+.+\s+(say|mention)\b/i.test(__title);
-    result.isSayMarket = isSayMarket;
-    if (isSayMarket) d.push('🎤 Say-market detected: "' + __title + '"');
+    var result = { type: '', subtype: '', options: [], usedFallbackStrategy: false };
 
     // ★ 从面包屑导航中抓取 type 和 subtype
     try {
@@ -949,10 +942,6 @@ function injectedScrapeSubpage() {
         if (value) {
             seen[rawName] = true;
             result.options.push({ name: rawName, value: value, change: change });
-        } else if (isSayMarket) {
-            // ★ Say 类项目：值为空表示 0%
-            seen[rawName] = true;
-            result.options.push({ name: rawName, value: '0%', change: change });
         }
     }
 
@@ -986,17 +975,13 @@ function injectedScrapeSubpage() {
             var cEl = div.querySelector('[class*="typ-emphasis-x10"]');
             var changeB = cEl ? cEl.textContent.trim().replace(/\s+/g, ' ') : '';
 
-            // ★ Say 类项目：空值视为 0%
-            if (!val && isSayMarket) val = '0%';
-            if (val) {
-                seen[name] = true;
-                result.options.push({ name: name, value: val, change: changeB });
-            }
+            seen[name] = true;
+            result.options.push({ name: name, value: val, change: changeB });
         }
     }
 
-    // ★ Say 类项目：保留 <1%，因为它通常是唯一的有效信号
-    if (result.options.length > 10 && !isSayMarket) {
+    // 后续的过滤逻辑（清理 <1% 等）保留
+    if (result.options.length > 10) {
         result.options = result.options.filter(function (opt) {
             return opt.value.trim() !== '<1%';
         });
@@ -1387,54 +1372,34 @@ async function workerLoop(workerId, tabId, queue, results, config) {
                     hide: "1"
                 };
 
-                // ★ Say 类项目：双重确认（标题特征 + 子页面 option 数严格大于主页面），强制使用子页面数据
-                var subHealthy;
-                var isOptionCountShort = false; // ★ 新增：标记选项不足的情况
+                // ★ 新增：判断是否匹配 "What will ___ say/mention ___" 且子页面选项变少
+                var isSayMentionPattern = /what will .+ (say|mention)/i.test(card.name);
+                var isOptionCountDrop = card.options && card.options.length >= 2 && sub.options && sub.options.length < card.options.length;
 
-                if (sub.isSayMarket && sub.options.length > card.options.length) {
-                    subHealthy = true;
-                    log('[W' + workerId + '] 🎤 "' + short + '" Say类项目, 强制使用子页面 ' + sub.options.length + ' 个选项', 'info');
-                } else {
-                    subHealthy = isSubpageOptionsHealthy(sub.options, card.options);
-
-                    // ★ 新增逻辑：如果子页面选项数少于主页面（且主页面至少有2个），则标记为选项不足
-                    if (card.options && card.options.length >= 2 && sub.options && sub.options.length < card.options.length) {
-                        isOptionCountShort = true;
-                    } else if (!subHealthy && sub.options && sub.options.length > 0) {
-                        log('[W' + workerId + '] ⚠️ 子页面选项异常(子:' + sub.options.length +
-                            '条, 主:' + card.options.length + '条), 回退到主页面数据', 'warn');
-                    }
-                }
-
-                // ★ 新增：如果是选项不足的情况，直接抛弃并加入失败队列，等待事后补抓
-                if (isOptionCountShort) {
-                    log('[W' + workerId + '] 🗑️ "' + short + '" 子页面选项不足(子:' + sub.options.length + '条, 主:' + card.options.length + '条)，已放弃并加入重试队列', 'warn');
+                if (isOptionCountDrop && isSayMentionPattern) {
+                    log('[W' + workerId + '] 🗑️ "' + short + '" 选项数量异常(子:' + sub.options.length + '<主:' + card.options.length + ')且匹配 say/mention，已放弃写入并记录失败', 'error');
                     results[idx] = null;
                     config.failures.push({
                         name: card.name,
                         url: 'https://kalshi.com' + card.subUrl,
                         volume: card.volume,
-                        debugInfo: ['Subpage options count (' + sub.options.length + ') < main page (' + card.options.length + ')'],
+                        debugInfo: ['Option count dropped for say/mention pattern (Sub: ' + sub.options.length + ', Main: ' + card.options.length + ')'],
                         card: card,
                         index: idx
                     });
                 } else {
+                    var subHealthy = isSubpageOptionsHealthy(sub.options, card.options);
                     var opts = subHealthy ? sub.options : card.options;
                     var source = subHealthy ? '子' : '主';
-
-                    // ★ Say 类项目：把 --% 转成 0%；普通项目仍然过滤掉
-                    if (sub.isSayMarket && subHealthy) {
-                        opts = opts.map(function (o) {
-                            if (!o.value || o.value === '--%') {
-                                return { name: o.name, value: '0%', change: o.change || '' };
-                            }
-                            return o;
-                        });
-                    } else {
-                        opts = opts.filter(function (o) {
-                            return o.value !== '--%';
-                        });
+                    if (!subHealthy && sub.options && sub.options.length > 0) {
+                        log('[W' + workerId + '] ⚠️ 子页面选项异常(子:' + sub.options.length +
+                            '条, 主:' + card.options.length + '条), 回退到主页面数据', 'warn');
                     }
+
+                    // ★ 新增：在写入前，彻底过滤掉 value 为 "--%" 的选项
+                    opts = opts.filter(function (o) {
+                        return o.value !== '--%';
+                    });
 
                     // ★★★ 新增：根据 value 进行降序排序 ★★★
                     opts.sort(function (a, b) {
@@ -1563,7 +1528,7 @@ async function startSubpageScraping() {
 
     // ★ 新增：读取防封禁休息配置
     var pauseInterval = parseInt(document.getElementById('pauseInterval').value, 10) || 0;
-    var pauseDuration = parseInt(document.getElementById('pauseDuration').value, 10) || 3;
+    var pauseDuration = parseInt(document.getElementById('pauseDuration').value, 10) || 1;
 
     var rangeInput = document.getElementById('rangeInput').value.trim();
     var startIndex = 0;

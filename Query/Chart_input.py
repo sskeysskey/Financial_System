@@ -586,6 +586,7 @@ def execute_external_script(script_type, keyword, on_done=None, block=False):
     except Exception as e:
         display_dialog(f"启动程序失败: {e}")
 
+@lru_cache(maxsize=64)
 def get_options_metrics(symbol):
     """
     从 Finance.db 的 Options 表中读取数据
@@ -661,6 +662,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     plt.close('all')
     matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
     matplotlib.rcParams['toolbar'] = 'none'
+    
+    # 只更新副标题中 P/A 那一个 text，不重建整排
+    pa_text_artist = [None]   # 持有 P/A artist 的引用
+    current_pre_after_pct = [None]
 
     # --- 新增修改 1: 将传入的json_data存入可变容器，并定义文件路径 ---
     # 使用字典包装，以便在内部函数中修改其内容
@@ -1293,10 +1298,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             pa_color = NORD_THEME['accent_red'] if pre_after_pct > 0 else NORD_THEME['accent_green']
             
         t_pa = fig.text(base_x - 0.08, y_pos, f"P/A:{pre_after_str}",
-                 color=pa_color, fontsize=12, fontweight='bold',
-                 ha='left', va='top')
+                color=pa_color, fontsize=12, fontweight='bold',
+                ha='left', va='top')
         subtitle_artists.append(t_pa)
-        # =====================================================================
+        pa_text_artist[0] = t_pa   # ← 新增这一行
 
         # 绘制 Max 差值 (绿色)
         t_max = fig.text(base_x, y_pos, f"Max:{max_pct_str}",
@@ -2005,9 +2010,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
             # ====== 新增: 重建彩色线段 ======
             build_colored_line_collection(f_dates, f_prices, f_opens)
-            # ================================
 
-            draw_subtitle(current_prices=f_prices)
+            draw_subtitle(current_prices=f_prices, pre_after_pct=current_pre_after_pct[0])
 
             for i, circle in enumerate(radio.circles):
                 circle.set_facecolor(NORD_THEME['accent_red'] if list(time_options.keys())[i] == val else NORD_THEME['background'])
@@ -2253,38 +2257,76 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     plt.gcf().canvas.mpl_connect('figure_leave_event', hide_annot_on_leave)
 
-    # === 新增: 定时获取 Tiger API 实时价格并更新副标题 ===
-    current_pre_after_pct = [None]  # 使用列表存储以在闭包中修改
+    # === 实时价格刷新：后台线程 + UI 线程合并 ===
+    import threading
 
-    def fetch_and_update_realtime_price():
+    _rt_stop_flag = threading.Event()      # 用于通知后台线程退出
+    _rt_pending_result = [None]            # 后台线程把结果放这里
+    _rt_lock = threading.Lock()
+    _rt_in_flight = [False]                # 防止上一次还没回来又发新的
+
+    def _rt_worker():
+        """后台线程：只做网络请求，不碰 matplotlib 任何对象"""
         try:
             fetcher = _get_global_fetcher()
-            quote = fetcher.get_realtime_quote(name)
-            if quote and 'price' in quote:
-                rt_price = quote['price']
-                # 获取数据库中最新一天的收盘价
-                if prices and len(prices) > 0 and prices[-1] != 0:
-                    latest_db_price = prices[-1]
-                    # 计算涨跌幅
-                    pct = ((rt_price - latest_db_price) / latest_db_price) * 100
-                    current_pre_after_pct[0] = pct
-                    
-                    # 重新绘制副标题并刷新画布
-                    draw_subtitle(current_prices=current_filtered_prices, pre_after_pct=current_pre_after_pct[0])
-                    fig.canvas.draw_idle()
         except Exception as e:
-            print(f"获取实时价格失败: {e}")
+            print(f"初始化 fetcher 失败: {e}")
+            return
+        while not _rt_stop_flag.is_set():
+            try:
+                quote = fetcher.get_realtime_quote(name)
+                if quote and 'price' in quote and prices and prices[-1] != 0:
+                    rt_price = quote['price']
+                    pct = ((rt_price - prices[-1]) / prices[-1]) * 100
+                    with _rt_lock:
+                        _rt_pending_result[0] = pct
+            except Exception as e:
+                print(f"后台获取实时价格失败: {e}")
+            # 5 秒一次足矣（盘前盘后变化很慢）
+            # 用 wait 而不是 sleep，关闭时能立即响应
+            if _rt_stop_flag.wait(timeout=5.0):
+                break
 
-    # 创建一个每 1000 毫秒 (1秒) 触发一次的定时器
-    rt_timer = fig.canvas.new_timer(interval=1000)
-    rt_timer.add_callback(fetch_and_update_realtime_price)
-    rt_timer.start()
+    
 
-    # === 关键修复: 把 timer 绑定到 fig 上,防止函数返回后被 GC ===
-    fig._rt_timer = rt_timer
+    def _ui_poll_realtime():
+        """主线程：定时检查后台线程是否有新数据，只做轻量更新"""
+        with _rt_lock:
+            pct = _rt_pending_result[0]
+            _rt_pending_result[0] = None  # 取走后清空，避免重复刷新
+        if pct is None:
+            return
+        current_pre_after_pct[0] = pct
+        # 直接修改已有 text 的内容和颜色，避免 remove+重建
+        if pa_text_artist[0] is not None:
+            pa_color = NORD_THEME['accent_red'] if pct > 0 else NORD_THEME['accent_green']
+            pa_text_artist[0].set_text(f"P/A:{pct:+.2f}%")
+            pa_text_artist[0].set_color(pa_color)
+            fig.canvas.draw_idle()
 
-    # 立即执行一次，避免前3秒显示 "--"
-    fetch_and_update_realtime_price()
+    # 启动后台线程
+    _rt_thread = threading.Thread(target=_rt_worker, daemon=True)
+    _rt_thread.start()
+
+    # UI 轮询 timer：只做内存读取，0 阻塞
+    ui_timer = fig.canvas.new_timer(interval=500)  # 0.5 秒检查一次内存
+    ui_timer.add_callback(_ui_poll_realtime)
+    ui_timer.start()
+
+    # 关键：保持引用，防止 GC
+    fig._rt_thread = _rt_thread
+    fig._rt_stop_flag = _rt_stop_flag
+    fig._ui_timer = ui_timer
+
+    # 窗口关闭时正确清理
+    def _on_close(evt):
+        try:
+            _rt_stop_flag.set()
+            ui_timer.stop()
+        except Exception:
+            pass
+
+    fig.canvas.mpl_connect('close_event', _on_close)
 
     # Matplotlib 3.8+ 支持
     try:
