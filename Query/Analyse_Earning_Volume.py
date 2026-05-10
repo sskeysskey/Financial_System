@@ -589,7 +589,8 @@ def check_pe_volume_retention(db_path, history_json_path, panel_json_path, curre
         log_detail(f"    x 读取历史文件失败: {e}")
         return []
 
-    # 3. 加载 Panel 文件，获取当前存在的 Deep/Valid 等池子
+    # ================= 修改核心区域 =================
+    # 3. 动态加载验证池 (优先读取 History 以支持回测，降级读取 Panel)
     valid_pool = set()
     target_pool_names = [
         "PE_Deep", "PE_Deeper", "OverSell_W", "PE_W", 
@@ -597,16 +598,26 @@ def check_pe_volume_retention(db_path, history_json_path, panel_json_path, curre
     ]
     
     try:
-        with open(panel_json_path, 'r', encoding='utf-8') as f:
-            panel_data = json.load(f)
-        
+        # 优先从 History 中读取 base_date 当天的跌幅池数据
         for name in target_pool_names:
-            group_data = panel_data.get(name, {})
-            if isinstance(group_data, dict):
-                valid_pool.update(group_data.keys())
-        log_detail(f"    -> 已加载扩展后的验证池 ({'/'.join(target_pool_names)}): 共 {len(valid_pool)} 个 unique symbol")
+            group_history = history_data.get(name, {})
+            if base_date in group_history:
+                # 清洗 symbol 后加入
+                clean_syms = [clean_symbol(s) for s in group_history[base_date]]
+                valid_pool.update(clean_syms)
+        
+        # 如果在 history 中没有找到当天的任何数据（可能是实盘当天还没写入 history），则降级从 Panel 读取
+        if not valid_pool and not target_date_override:
+            with open(panel_json_path, 'r', encoding='utf-8') as f:
+                panel_data = json.load(f)
+                for name in target_pool_names:
+                    group_data = panel_data.get(name, {})
+                    if isinstance(group_data, dict):
+                        valid_pool.update(group_data.keys())
+                        
+        log_detail(f"    -> 已加载扩展后的验证池 ({'/'.join(target_pool_names)}) (日期: {base_date}): 共 {len(valid_pool)} 个 unique symbol")
     except Exception as e:
-        log_detail(f"    x 读取 Panel 文件失败: {e}")
+        log_detail(f"    x 读取验证池数据失败: {e}")
         return []
 
     # ===== 新增：追踪 symbol 是否在上期列表中 =====
@@ -666,7 +677,7 @@ def check_pe_volume_retention(db_path, history_json_path, panel_json_path, curre
         if is_tracing:
             log_detail(f"    - [回溯] {symbol} 条件检查:")
             log_detail(f"      收盘价下跌: {price_prev:.2f} -> {price_curr:.2f} = {cond_price_ok}")
-            log_detail(f"      收盘<开盘: {price_curr:.2f} < {open_curr:.2f} = {cond_close_below_open}")
+            log_detail(f"      收盘<=开盘: {price_curr:.2f} <= {open_curr:.2f} = {cond_close_below_open}")
         
         if cond_price_ok and cond_close_below_open:
             retention_list.append(symbol)
