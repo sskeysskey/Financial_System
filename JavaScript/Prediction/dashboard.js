@@ -942,6 +942,27 @@ function injectedScrapeSubpage() {
         if (value) {
             seen[rawName] = true;
             result.options.push({ name: rawName, value: value, change: change });
+        } else {
+            // ★ 新增：没找到 value 时，检查该名称是否处于一个「可点击选项行」容器内
+            // 识别特征：祖先节点带有 cursor-pointer 或 hover:bg-fill 类
+            var isLikelyOption = false;
+            var probe = nameEl;
+            for (var ck = 0; ck < 10 && probe; ck++) {
+                probe = probe.parentElement;
+                if (!probe) break;
+                var cn = probe.className || '';
+                if (typeof cn === 'string' &&
+                    (cn.indexOf('cursor-pointer') !== -1 ||
+                        cn.indexOf('hover:bg-fill') !== -1)) {
+                    isLikelyOption = true;
+                    break;
+                }
+            }
+            if (isLikelyOption) {
+                seen[rawName] = true;
+                result.options.push({ name: rawName, value: '0%', change: '' });
+                d.push('No value for "' + rawName + '", defaulted to 0%');
+            }
         }
     }
 
@@ -975,9 +996,21 @@ function injectedScrapeSubpage() {
             var cEl = div.querySelector('[class*="typ-emphasis-x10"]');
             var changeB = cEl ? cEl.textContent.trim().replace(/\s+/g, ' ') : '';
 
+            // ★ 新增：没找到 value 时默认给 0%
+            if (!val) val = '0%';
+
             seen[name] = true;
             result.options.push({ name: name, value: val, change: changeB });
         }
+    }
+
+    var hasRealValue = result.options.some(function (o) {
+        return o.value && o.value !== '0%' && /\d/.test(o.value);
+    });
+    if (!hasRealValue) {
+        // 如果一个真实 value 都没有，说明可能全是误判，丢弃所有 0% 默认项
+        result.options = result.options.filter(function (o) { return o.value !== '0%'; });
+        d.push('No real value found, dropped all 0% defaults');
     }
 
     // 后续的过滤逻辑（清理 <1% 等）保留

@@ -333,7 +333,6 @@
     "FTHI",
     "EZM",
     "CRBN",
-    "SIXG",
     "DBEU",
     "EIDO",
     "EPHE",
@@ -367,7 +366,8 @@
     "ROKT",
     "SBIO",
     "JETS",
-    "KBWB"
+    "KBWB",
+    "CNXT"
   ],
   "Basic_Materials": [
     "LIN",
@@ -506,7 +506,6 @@
     "LUMN",
     "MSGS",
     "NBIS",
-    "GSAT",
     "TIGO",
     "TTD",
     "APP",
@@ -689,7 +688,8 @@
     "VSCO",
     "ATMU",
     "TNL",
-    "GTX"
+    "GTX",
+    "AUR"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -1671,7 +1671,6 @@
     "CVLT",
     "CRDO",
     "ACLS",
-    "AUR",
     "PI",
     "MDB",
     "ENPH",
@@ -1739,7 +1738,8 @@
     "MXL",
     "SIMO",
     "AXTI",
-    "DIOD"
+    "DIOD",
+    "KLIC"
   ],
   "Utilities": [
     "NEE",

@@ -15,7 +15,8 @@
         "VALE",
         "WPM",
         "CTVA",
-        "NUE"
+        "NUE",
+        "AU"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -164,8 +165,7 @@
         "MRSH",
         "NDAQ",
         "MET",
-        "COIN",
-        "CM"
+        "COIN"
     ],
     "Healthcare": [
         "LLY",
@@ -197,7 +197,7 @@
         "CVS",
         "MCK",
         "TAK",
-        "ARGX"
+        "COR"
     ],
     "Industrials": [
         "GE",
@@ -239,7 +239,6 @@
         "GWW",
         "FIX",
         "AME",
-        "FERG",
         "BE",
         "CARR",
         "URI",
@@ -317,8 +316,10 @@
         "MCHP",
         "ADSK",
         "DDOG",
+        "INFY",
+        "SNOW",
         "STM",
-        "INFY"
+        "FLEX"
     ],
     "Utilities": [
         "NEE",
@@ -329,8 +330,6 @@
         "AEP",
         "SRE",
         "D",
-        "VST",
-        "SBS",
-        "XEL"
+        "VST"
     ]
 }

@@ -706,7 +706,8 @@
         "EE",
         "PEN",
         "PSTG",
-        "SLAB"
+        "SLAB",
+        "GSAT"
     ],
     "etf": [
         "VDE",
@@ -1099,7 +1100,10 @@
         "GMOM",
         "SYLD",
         "FTQI",
-        "BKFI"
+        "BKFI",
+        "MMIN",
+        "GTO",
+        "SIXG"
     ],
     "Earning": [
         "TW",
