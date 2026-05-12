@@ -178,25 +178,30 @@ class TigerDataFetcher:
 
     def get_historical_bars(self, symbol: str, days: int = 100) -> pd.DataFrame:
         """
-        分页获取历史日K线数据
+        修正后的获取历史日K线数据
         """
         us_eastern = pytz_timezone('US/Eastern')
+        
+        # 1. 明确结束时间：使用昨天或今天，确保覆盖最新交易日
         end_dt = datetime.now(us_eastern)
-        begin_dt = end_dt - timedelta(days=days + 10) # 多取几天以防节假日
+        # 2. 明确开始时间：往前推 N 天
+        begin_dt = end_dt - timedelta(days=days + 15) 
 
         end_time = end_dt.strftime('%Y-%m-%d %H:%M:%S')
         begin_time = begin_dt.strftime('%Y-%m-%d %H:%M:%S')
         symbol = _normalize_symbol(symbol)
 
         try:
+            # 修改点：将 total 设置为一个足够大的数，确保能把这段时间的数据全拿回来
+            # 然后在本地进行排序和截取
             df = self.quote_client.get_bars_by_page(
                 symbol=symbol,
                 period=BarPeriod.DAY,
                 begin_time=begin_time,
                 end_time=end_time,
-                total=days,
+                total=5000, # 增大这个值，防止被截断
                 page_size=1000,
-                right=QuoteRight.BR, # 前复权
+                right=QuoteRight.BR, 
                 time_interval=0.5
             )
 
@@ -204,15 +209,15 @@ class TigerDataFetcher:
                 logger.warning(f"获取 {symbol} 历史日K数据为空")
                 return pd.DataFrame()
 
-            # 数据清洗
-            df = df.sort_values('time').reset_index(drop=True)
+            # 数据清洗与转换
             df['time'] = pd.to_numeric(df['time'], errors='coerce')
-            df['close'] = pd.to_numeric(df['close'], errors='coerce')
-            df['volume'] = pd.to_numeric(df['volume'], errors='coerce')
-            df = df.dropna(subset=['time', 'close'])
-            
-            # 将时间戳转换为可读日期
             df['date'] = pd.to_datetime(df['time'], unit='ms').dt.tz_localize('UTC').dt.tz_convert('US/Eastern').dt.strftime('%Y-%m-%d')
+            
+            # 核心修改：按时间倒序排序，取最后 N 条
+            df = df.sort_values('time', ascending=False).head(days)
+            
+            # 为了符合你原本的习惯（从旧到新），再反转回来
+            df = df.sort_values('time', ascending=True).reset_index(drop=True)
 
             return df
         except Exception as e:

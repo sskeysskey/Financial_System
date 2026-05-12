@@ -36,7 +36,7 @@ except ImportError:
 DESCRIPTION_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "description.json")
 WEIGHT_CONFIG_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "tags_weight.json")
 COMPARE_DATA_PATH = os.path.join(BASE_CODING_DIR, "News", "backup", "Compare_All.txt")
-EARNINGS_RELEASE_PATH = os.path.join(BASE_CODING_DIR, "News", "backup", "Earnings_Release.txt") # 新增路径
+EARNINGS_RELEASE_PATH = os.path.join(BASE_CODING_DIR, "News", "backup", "Earnings_Release.txt")
 DB_PATH = os.path.join(BASE_CODING_DIR, "Database", "Finance.db")
 SECTORS_ALL_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_All.json")
 PANEL_CONFIG_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_panel.json")
@@ -408,7 +408,44 @@ class SimilarityViewerWindow(QMainWindow):
             return lat_price, trend, lat_date
         except Exception: return None, None, None
 
-    # --- 新增：用于合并日期和百分比的辅助函数 ---
+    def get_earnings_performance(self, symbol: str):
+        """
+        获取最近一次财报的 price 值，以及 (最新收盘价 - 财报日收盘价) / 财报日收盘价
+        """
+        try:
+            with sqlite3.connect(DB_PATH, timeout=60.0) as conn:
+                cur = conn.cursor()
+                cur.execute("SELECT date, price FROM Earning WHERE name = ? ORDER BY date DESC LIMIT 1", (symbol,))
+                row = cur.fetchone()
+            
+            if not row:
+                return None, None
+                
+            earning_date_str, earning_price_str = row
+            earning_price = float(earning_price_str) if earning_price_str else 0.0
+            
+            sec_table = next((s for s, names in self.sector_data.items() if symbol in names), None)
+            if not sec_table:
+                return earning_price, None
+                
+            with sqlite3.connect(DB_PATH, timeout=60.0) as conn:
+                cur = conn.cursor()
+                cur.execute(f'SELECT price FROM "{sec_table}" WHERE name=? AND date=?', (symbol, earning_date_str))
+                e_close_row = cur.fetchone()
+                
+                cur.execute(f'SELECT price FROM "{sec_table}" WHERE name=? ORDER BY date DESC LIMIT 1', (symbol,))
+                l_close_row = cur.fetchone()
+                
+            if e_close_row and l_close_row:
+                e_close = float(e_close_row[0])
+                l_close = float(l_close_row[0])
+                if e_close != 0:
+                    pct_change = (l_close - e_close) / e_close * 100
+                    return earning_price, pct_change
+            return earning_price, None
+        except Exception:
+            return None, None
+
     def get_enriched_compare_val(self, symbol):
         comp_val = self.compare_data.get(symbol, "")
         # 如果 comp_val 存在，且不包含 '前', '后', '未' 这类日期后缀特征
@@ -430,9 +467,9 @@ class SimilarityViewerWindow(QMainWindow):
         # 修改：使用 get_enriched_compare_val 获取可能拼接了日期的字符串
         comp_val = self.get_enriched_compare_val(self.source_symbol)
         comp_lab = QLabel()
-        comp_lab.setFixedWidth(150)
+        comp_lab.setFixedWidth(220) # 加宽以容纳新数据
         comp_lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.set_rich_compare_text(comp_lab, comp_val)
+        self.set_rich_compare_text(comp_lab, comp_val, self.source_symbol)
 
         highlight = "#F9A825"
         html_tags = ", ".join([f"{t} <font color='{highlight}'>{float(w):.1f}</font>" if float(w) > 0 else t for t, w in self.source_tags])
@@ -449,7 +486,7 @@ class SimilarityViewerWindow(QMainWindow):
         
         for w in (comp_lab, tags_lab): w.installEventFilter(container)
         layout.addWidget(btn, 1)
-        layout.addWidget(comp_lab, 1)
+        layout.addWidget(comp_lab, 2)
         layout.addWidget(tags_lab, 4)
         layout.addStretch()
         layout.addWidget(sinp)
@@ -466,9 +503,9 @@ class SimilarityViewerWindow(QMainWindow):
         # 修改：使用 get_enriched_compare_val 获取可能拼接了日期的字符串
         comp_val = self.get_enriched_compare_val(sym)
         comp_lab = QLabel()
-        comp_lab.setFixedWidth(140)
+        comp_lab.setFixedWidth(250) # 加宽以容纳新数据
         comp_lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.set_rich_compare_text(comp_lab, comp_val)
+        self.set_rich_compare_text(comp_lab, comp_val, sym)
 
         total_w = round(sum(float(w) for _, w in matched_tags), 1)
         w_lab = QLabel(f"{total_w:.1f}")
@@ -488,48 +525,31 @@ class SimilarityViewerWindow(QMainWindow):
         
         for w in (comp_lab, w_lab, tags_lab): w.installEventFilter(container)
         layout.addWidget(btn, 2)
-        layout.addWidget(comp_lab, 3)
+        layout.addWidget(comp_lab, 4)
         layout.addWidget(w_lab, 1)
-        layout.addWidget(tags_lab, 8)
+        layout.addWidget(tags_lab, 7)
         return container
 
-    def set_rich_compare_text(self, label, text):
-        # 从你的样式表中定义颜色
+    def set_rich_compare_text(self, label, text, symbol):
         orange_color = '#CD853F'
         red_color = '#FF5555'
         green_color = '#2ECC71'
-        default_color = '#D0D0D0'  # QLabel的默认文字颜色
+        default_color = '#D0D0D0'
 
-        date_part_str = ""
-        percent_part_html = ""
-        
-        # 首先查找百分比部分，这有助于我们分割字符串
+        # 1. 剥离原有的百分比和后面的字符，只保留日期部分（如 "0512前"）
         percent_match = re.search(r'(-?\d+(?:\.\d+)?)\s*%', text)
-
         if percent_match:
             # 如果找到百分比，字符串的其余部分就是日期部分
             date_part_str = text[:percent_match.start()].strip()
-            percent_value_str = percent_match.group(1)
-            percent_full_str = percent_match.group(0)
-
-            # --- 百分比部分的上色逻辑 (保留原始逻辑) ---
-            try:
-                val = float(percent_value_str)
-                percent_color = red_color if val > 0 else green_color if val < 0 else orange_color
-                percent_part_html = f"<span style='color:{percent_color};'>{percent_full_str}</span>"
-            except ValueError:
-                percent_part_html = f"<span>{percent_full_str}</span>"
         else:
             # 如果没有找到百分比，则整个文本都视为日期部分
             date_part_str = text.strip()
 
-        # --- 新的日期上色逻辑 ---
-        date_color = default_color  # 默认为白色
-        colored_date_part_html = f"<span>{date_part_str}</span>" # 默认无样式
+        # 2. 对日期部分进行上色逻辑
+        date_color = default_color
+        colored_date_part_html = f"<span>{date_part_str}</span>"
 
-        # 注意：([前后未]) 加了括号，用于捕获后缀字符
         date_info_match = re.search(r'(\d{2})(\d{2})([前后未])$', date_part_str)
-
         if date_info_match:
             month_str, day_str, suffix = date_info_match.groups()
             try:
@@ -556,9 +576,20 @@ class SimilarityViewerWindow(QMainWindow):
             # 不含 MMDD前/后 格式的文本（如"未"单独出现）保持橙色
             colored_date_part_html = f"<span style='color:{orange_color};'>{date_part_str}</span>"
 
+        # 3. 获取新的财报价格和差值百分比
+        earning_price, pct_change = self.get_earnings_performance(symbol)
+        
+        def format_val(val):
+            if val is None: return f"<span style='color:{default_color};'>N/A</span>"
+            color = red_color if val > 0 else green_color if val < 0 else default_color
+            sign = '+' if val > 0 else ''
+            return f"<span style='color:{color};'>{sign}{val:.2f}%</span>"
 
-        # --- 组合最终的HTML并设置给Label ---
-        final_html = f"{colored_date_part_html}{percent_part_html}"
+        val1_html = format_val(earning_price)
+        val2_html = format_val(pct_change)
+
+        # 4. 组合最终的HTML并设置给Label (格式：日期 财报Price 差值%)
+        final_html = f"{colored_date_part_html} &nbsp; {val1_html} &nbsp; {val2_html}"
         label.setText(final_html)
 
     def create_symbol_button(self, symbol):
