@@ -18,6 +18,13 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer 
 from PyQt6.QtGui import QCursor, QColor, QFont, QShortcut, QKeySequence
 
+# --- 新增: 导入 Tiger_API ---
+sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Selenium"))
+try:
+    from Tiger_API import _get_global_fetcher
+except ImportError as e:
+    print(f"导入 Tiger_API 失败: {e}")
+
 # 外部绘图函数
 sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Query"))
 from Chart_input import plot_financial_data
