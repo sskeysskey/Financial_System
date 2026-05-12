@@ -22,23 +22,24 @@ ERROR_FILE = os.path.join(BASE_CODING_DIR, "News", "Today_error2.txt")
 EXCLUDE_SECTORS_SWITCH = False 
 
 # 需要被排除的板块集合
-# EXCLUDE_SECTORS_LIST = {
-#     "Basic_Materials",
-#     "Communication_Services",
-#     "Consumer_Cyclical",
-#     "Consumer_Defensive",
-#     "Energy",
-#     "Financial_Services",
-#     "Healthcare",
-#     "Industrials",
-#     "Real_Estate",
-#     "Technology",
-#     "Utilities",
-#     "ETFs"
-# }
 EXCLUDE_SECTORS_LIST = {
- 
+    "Basic_Materials",
+    "Communication_Services",
+    "Consumer_Cyclical",
+    "Consumer_Defensive",
+    "Energy",
+    "Financial_Services",
+    "Healthcare",
+    "Industrials",
+    "Real_Estate",
+    "Technology",
+    "Utilities",
+    "ETFs"
 }
+
+# EXCLUDE_SECTORS_LIST = {
+ 
+# }
 
 # 不需要写入 empty 的 symbol
 FILTER_LIST = {

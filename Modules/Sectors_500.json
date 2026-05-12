@@ -105,7 +105,8 @@
         "FANG",
         "TRGP",
         "CVE",
-        "CCJ"
+        "CCJ",
+        "DVN"
     ],
     "Financial_Services": [
         "JPM",
@@ -197,7 +198,8 @@
         "CVS",
         "MCK",
         "TAK",
-        "COR"
+        "COR",
+        "ARGX"
     ],
     "Industrials": [
         "GE",
@@ -235,7 +237,6 @@
         "CMI",
         "VRT",
         "PCAR",
-        "FAST",
         "GWW",
         "FIX",
         "AME",
@@ -304,7 +305,6 @@
         "CIEN",
         "MPWR",
         "LITE",
-        "UI",
         "KEYS",
         "ASX",
         "COHR",
@@ -314,9 +314,7 @@
         "MSTR",
         "TER",
         "MCHP",
-        "ADSK",
         "DDOG",
-        "INFY",
         "SNOW",
         "STM",
         "FLEX"
@@ -330,6 +328,7 @@
         "AEP",
         "SRE",
         "D",
-        "VST"
+        "VST",
+        "XEL"
     ]
 }

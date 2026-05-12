@@ -1,262 +1,154 @@
-# crawler.py
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+盘前/盘后涨跌幅排行（从小到大，取前 20）
+涨跌幅 = (最新价 - 当日收盘价) / 当日收盘价
+"""
+
+import os
+import sys
 import json
 import time
-import re
-from datetime import datetime
-from urllib.parse import urljoin
 
-import requests
-from bs4 import BeautifulSoup
+# ==================== 配置区 ====================
+BASE_CODING_DIR = "/Users/yanzhang/Coding"
+JSON_PATH = os.path.join(BASE_CODING_DIR, "Financial_System/Modules/Sectors_All.json")
 
-# =============================================================
-# 配置区域 (原 config.py)
-# =============================================================
-# 列表页所在域名
-LIST_BASE_URL = "https://www.pdy0.com"
-# 详情页所在域名
-DETAIL_BASE_URL = "https://www.pys1.com"
-# 输出 JSON 文件路径
-OUTPUT_FILE = "/Users/yanzhang/Downloads/OVideos.json"
+TARGET_SECTORS = [
+    "Basic_Materials", "Communication_Services", "Consumer_Cyclical",
+    "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare",
+    "Industrials", "Real_Estate", "Technology", "Utilities",
+]
 
-# 分类配置
-CATEGORIES = {
-    "Movie": {"id": 1, "enabled": True,  "pages": 2},
-    "Drama": {"id": 2, "enabled": True,  "pages": 2},
-    "Show":  {"id": 3, "enabled": False, "pages": 2},
-    "Anime": {"id": 4, "enabled": False, "pages": 2},
-    "Short": {"id": 5, "enabled": False, "pages": 2},
-}
+TOP_N = 20
+BATCH_SIZE = 50          # 老虎 get_bars 单次最多 50 只
+SLEEP_BETWEEN_BATCH = 1.1 # 秒；保证每分钟 < 60 次
 
-# 网络请求配置
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
-    ),
-    "Accept-Language": "zh-CN,zh;q=0.9",
-}
+# ==================== 导入 Tiger_API ====================
+sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Selenium"))
+try:
+    from Tiger_API import _get_global_fetcher, _normalize_symbol
+except ImportError as e:
+    print(f"导入 Tiger_API 失败: {e}")
+    sys.exit(1)
 
-REQUEST_TIMEOUT = 15        # 单次请求超时秒数
-SLEEP_BETWEEN_REQUESTS = 1.0  # 每次请求间隔（秒）
-RETRY_TIMES = 3             # 失败重试次数
+# ==================== 工具函数 ====================
+def load_symbols(json_path, sectors):
+    with open(json_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    seen, result = set(), []
+    for sec in sectors:
+        for sym in data.get(sec, []):
+            if sym not in seen:
+                seen.add(sym)
+                result.append(sym)
+    return result
 
 
-# =============================================================
-# 工具函数
-# =============================================================
-def fetch(url: str) -> str | None:
-    for i in range(RETRY_TIMES):
+def fetch_closes_batch(fetcher, symbols, batch_size=50, sleep_sec=1.1):
+    """
+    批量拉取多只股票的"当日收盘价" (close)
+    """
+    # 归一化 & 反向映射，方便最后把结果 key 还原成原始 symbol
+    norm_list = [_normalize_symbol(s) for s in symbols]
+    norm_to_orig = {}
+    for orig, norm in zip(symbols, norm_list):
+        norm_to_orig.setdefault(norm, orig)
+
+    result = {}
+    total_batches = (len(norm_list) + batch_size - 1) // batch_size
+
+    for bi, i in enumerate(range(0, len(norm_list), batch_size), 1):
+        batch = norm_list[i:i + batch_size]
+        print(f"  [{bi}/{total_batches}] 拉取 {len(batch)} 只股票的收盘价...")
         try:
-            resp = requests.get(url, headers=HEADERS, timeout=REQUEST_TIMEOUT)
-            resp.encoding = resp.apparent_encoding or "utf-8"
-            if resp.status_code == 200:
-                return resp.text
-            print(f"  [HTTP {resp.status_code}] {url}")
+            # 使用 get_stock_briefs 获取实时行情，其中包含 close
+            briefs = fetcher.quote_client.get_stock_briefs(
+                symbols=batch,
+                include_hour_trading=False, # 这里不需要盘前盘后，只要昨收
+                lang='zh_CN'
+            )
+            
+            if briefs is not None and not briefs.empty:
+                for _, row in briefs.iterrows():
+                    sym = row.get('symbol')
+                    # 修改点：这里获取 'close' 字段
+                    close_price = row.get('close')
+                    
+                    if close_price is not None and close_price > 0:
+                        orig = norm_to_orig.get(sym, sym)
+                        result[orig] = float(close_price)
+            else:
+                print(f"    ⚠️ 批次 {bi} 返回空")
         except Exception as e:
-            print(f"  [Error {i+1}/{RETRY_TIMES}] {url} -> {e}")
-            time.sleep(2)
-    return None
+            print(f"    ❌ 批次 {bi} 失败: {e}")
+
+        # 最后一批不用睡
+        if bi < total_batches:
+            time.sleep(sleep_sec)
+
+    return result
 
 
-def now_str() -> str:
-    return datetime.now().strftime("%Y-%m-%d-%H-%M")
-
-
-# =============================================================
-# 解析列表页：提取 (name, detail_url) 列表
-# =============================================================
-def parse_list_page(html: str) -> list[dict]:
-    soup = BeautifulSoup(html, "html.parser")
-    items = []
-    for li in soup.select("div.vod-list ul.row > li"):
-        a = li.select_one("div.name h3 a")
-        if not a:
-            continue
-        name = a.get("title") or a.get_text(strip=True)
-        href = a.get("href", "")
-        if not href:
-            continue
-        full_url = urljoin(DETAIL_BASE_URL, href)
-        items.append({"name": name, "url": full_url})
-    return items
-
-
-# =============================================================
-# 解析详情页
-# =============================================================
-def _split_by_slash(span) -> list[str]:
-    """从一个 <span> 中提取所有 <a> 文本，返回列表"""
-    return [a.get_text(strip=True) for a in span.find_all("a")
-            if a.get_text(strip=True) and a.get_text(strip=True) != "[展开...]"]
-
-
-def _find_span_by_label(info_block, label: str):
-    """根据起始文字（如 '导演：'）找到对应的 <span>"""
-    for span in info_block.find_all("span"):
-        text = span.get_text(" ", strip=True)
-        if text.startswith(label):
-            return span
-    return None
-
-
-def parse_detail_page(html: str, name: str, url: str) -> dict:
-    soup = BeautifulSoup(html, "html.parser")
-    data = {
-        "time": now_str(),
-        "name": name,
-        "url": url,
-        "导演": "",
-        "编剧": [],
-        "主演": [],
-        "类型": [],
-        "地区": "",
-        "date": "",
-        "alias": "",
-        "intro": "",
-        "评分": [],
-        "playlist": [],
-    }
-
-    info_block = soup.select_one("div.vod-info .info") or soup
-
-    # 提取字段
-    span = _find_span_by_label(info_block, "导演：")
-    if span:
-        directors = _split_by_slash(span)
-        data["导演"] = directors[0] if directors else ""
-
-    # ---- 编剧 ----
-    span = _find_span_by_label(info_block, "编剧：")
-    if span:
-        data["编剧"] = _split_by_slash(span)
-
-    # ---- 主演 ----
-    span = info_block.select_one("span.zksq-actor") or _find_span_by_label(info_block, "主演：")
-    if span:
-        data["主演"] = _split_by_slash(span)
-
-    # ---- 类型 ----
-    span = _find_span_by_label(info_block, "类型：")
-    if span:
-        data["类型"] = _split_by_slash(span)
-
-    # ---- 地区 ----
-    span = _find_span_by_label(info_block, "地区：")
-    if span:
-        regions = _split_by_slash(span)
-        data["地区"] = regions[0] if regions else ""
-
-    # ---- 上映 / 又名 ----
-    for span in info_block.find_all("span"):
-        text = span.get_text(" ", strip=True)
-        if text.startswith("上映："):
-            data["date"] = text
-        elif text.startswith("又名："):
-            data["alias"] = text
-
-    # ---- 评分（豆瓣 / IMDB） ----
-    span = _find_span_by_label(info_block, "评分：")
-    if span:
-        for s in span.find_all("span"):
-            t = s.get_text(" ", strip=True)
-            if t and ("豆瓣" in t or "IMDB" in t):
-                data["评分"].append(t)
-
-    # ---- 剧情介绍 intro ----
-    intro_box = soup.select_one("div.more-box.zksq-content")
-    if intro_box:
-        # 去掉 "[展开...]" 之类的展开链接
-        for a in intro_box.find_all("a"):
-            a.decompose()
-        intro_text = intro_box.get_text(" ", strip=True)
-        # 压缩多余空白
-        data["intro"] = re.sub(r"\s+", "", intro_text)
-
-    # ---- 播放列表 playlist ----
-    data["playlist"] = parse_playlist(soup)
-
-    return data
-
-
-def parse_playlist(soup) -> list[dict]:
-    """解析播放列表：tab 名字 + 对应 ul 中的 episodes 链接"""
-    playlist = []
-
-    # tabs
-    tabs = soup.select(".playlist-tab ul.swiper-wrapper > li.swiper-slide")
-    for tab in tabs:
-        target = tab.get("data-target", "")  # 如 #ewave-playlist-1
-        # 频道名 = li 直接文本（不含 <span>/<em>）
-        channel_name = ""
-        for content in tab.contents:
-            if isinstance(content, str) and content.strip():
-                channel_name = content.strip()
-                break
-        if not channel_name:
-            channel_name = tab.get_text(strip=True)
-
-        # 找到对应 ul
-        ul_id = target.lstrip("#")
-        ul = soup.find("ul", id=ul_id)
-        episodes = []
-        if ul:
-            for a in ul.select("li a"):
-                href = a.get("href", "")
-                if href:
-                    episodes.append(urljoin(DETAIL_BASE_URL, href))
-        if episodes:
-            playlist.append({"name": channel_name, "episodes": episodes})
-    return playlist
-
-
-# =============================================================
-# 主流程
-# =============================================================
-def build_list_url(cat_id: int, page: int) -> str:
-    return f"{LIST_BASE_URL}/ms/{cat_id}--hits------{page}---.html"
-
-
-def crawl_category(cat_name: str, cat_cfg: dict) -> list[dict]:
-    print(f"\n=== 开始抓取分类: {cat_name} (id={cat_cfg['id']}, pages={cat_cfg['pages']}) ===")
-    results = []
-    for page in range(1, cat_cfg["pages"] + 1):
-        list_url = build_list_url(cat_cfg["id"], page)
-        print(f"\n[列表页] {list_url}")
-        html = fetch(list_url)
-        time.sleep(SLEEP_BETWEEN_REQUESTS)
-        if not html:
-            continue
-
-        items = parse_list_page(html)
-        print(f"  -> 共找到 {len(items)} 部")
-
-        for idx, item in enumerate(items, 1):
-            print(f"  ({idx}/{len(items)}) {item['name']}  {item['url']}")
-            detail_html = fetch(item["url"])
-            time.sleep(SLEEP_BETWEEN_REQUESTS)
-            if not detail_html:
-                continue
-            try:
-                detail = parse_detail_page(detail_html, item["name"], item["url"])
-                results.append(detail)
-            except Exception as e:
-                print(f"     [解析失败] {e}")
-    return results
-
-
+# ==================== 主逻辑 ====================
 def main():
-    final = {}
-    for cat_name, cat_cfg in CATEGORIES.items():
-        if not cat_cfg.get("enabled"):
-            print(f"跳过分类: {cat_name}（未启用）")
-            final[cat_name] = []
-            continue
-        final[cat_name] = crawl_category(cat_name, cat_cfg)
+    symbols = load_symbols(JSON_PATH, TARGET_SECTORS)
+    if not symbols:
+        print("⚠️ 指定板块下没有任何 symbol，请检查 JSON。")
+        return
+    print(f"共读取 {len(symbols)} 个 symbol\n")
 
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        json.dump(final, f, ensure_ascii=False, indent=4)
-    print(f"\n✅ 完成，已写入 {OUTPUT_FILE}")
+    fetcher = _get_global_fetcher()
+
+    # 1) 批量拿实时价（含盘前/盘后）
+    print("▶ Step 1: 批量拉取实时价（含盘前/盘后）...")
+    latest_prices = fetcher.get_realtime_prices(symbols)
+    print(f"✅ 最新价: {len(latest_prices)} / {len(symbols)}\n")
+
+    # 2) 批量拿收盘价
+    print("▶ Step 2: 批量拉取当日收盘价...")
+    close_map = fetch_closes_batch(fetcher, symbols)
+    print(f"✅ 收盘价: {len(close_map)} / {len(symbols)}\n")
+
+    # 3) 计算涨跌幅
+    changes, skipped = [], 0
+    for sym in symbols:
+        norm = _normalize_symbol(sym)
+        latest = latest_prices.get(norm) or latest_prices.get(sym)
+        close_price = close_map.get(sym)
+        
+        # 逻辑判断：如果最新价或收盘价缺失，则跳过
+        if latest is None or latest <= 0 or close_price is None or close_price <= 0:
+            skipped += 1
+            continue
+            
+        # 计算公式：(最新价 - 收盘价) / 收盘价
+        pct = (latest - close_price) / close_price * 100.0
+        changes.append({
+            "symbol": sym,
+            "latest": latest,
+            "close": close_price,
+            "pct": pct,
+        })
+
+    if not changes:
+        print("没有可计算的结果。")
+        return
+
+    # 4) 升序排序，取前 N
+    changes.sort(key=lambda x: x["pct"])
+
+    print("\n" + "=" * 78)
+    print(f"  涨跌幅从小到大 · 前 {TOP_N}  (有效 {len(changes)}，跳过 {skipped})")
+    print("=" * 78)
+    print(f"{'#':<4}{'Symbol':<10}{'最新价':>12}{'当日收盘':>14}{'涨跌幅%':>12}")
+    print("-" * 78)
+    for i, it in enumerate(changes[:TOP_N], 1):
+        print(f"{i:<4}{it['symbol']:<10}"
+              f"{it['latest']:>12.4f}"
+              f"{it['close']:>14.4f}"
+              f"{it['pct']:>+12.4f}")
+    print("=" * 78)
 
 
 if __name__ == "__main__":
