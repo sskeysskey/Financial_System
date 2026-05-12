@@ -125,6 +125,48 @@ class TigerDataFetcher:
         except Exception as e:
             logger.error(f"批量获取实时价格失败: {e}")
             return result  # 发生异常时，返回已经成功获取到的部分数据
+        
+    def get_realtime_quote(self, symbol: str) -> dict:
+        """
+        获取单只股票的实时行情（包含盘前盘后数据）
+        """
+        try:
+            symbol = _normalize_symbol(symbol)
+            
+            df = self.quote_client.get_stock_briefs(
+                symbols=[symbol],
+                include_hour_trading=True,
+                lang=Language.zh_CN
+            )
+            
+            if df is None or df.empty:
+                logger.warning(f"获取 {symbol} 价格数据为空")
+                return {}
+
+            row = df.iloc[0]
+            
+            # 判断是否有盘前/盘后价格
+            hour_price = row.get('hour_trading_latest_price')
+            if hour_price is not None and hour_price != '':
+                price = float(hour_price)
+                tag = row.get('hour_trading_tag', '常规')
+                is_extended = True
+            else:
+                price = float(row.get('latest_price', 0))
+                tag = '常规'
+                is_extended = False
+
+            return {
+                'symbol': symbol,
+                'price': price,
+                'volume': int(row.get('volume', 0)),
+                'pre_close': float(row.get('pre_close', 0)),
+                'tag': tag,
+                'is_extended': is_extended
+            }
+        except Exception as e:
+            logger.error(f"获取实时行情失败: {e}")
+            return {}
 
     def get_historical_bars(self, symbol: str, days: int = 100) -> pd.DataFrame:
         """
@@ -195,7 +237,12 @@ if __name__ == "__main__":
     
     symbol_to_check = "NVDA"
 
-    # 获取历史K线数据
+    # 1. 获取实时行情
+    logger.info("--- 获取实时行情 ---")
+    quote = fetcher.get_realtime_quote(symbol_to_check)
+    logger.info(f"实时行情: {quote}")
+
+    # 2. 获取历史K线数据
     logger.info("\n--- 获取历史K线 ---")
     bars_df = fetcher.get_historical_bars(symbol_to_check, days=5)
     if not bars_df.empty:
