@@ -112,6 +112,8 @@ def main():
 
     # 3) 计算涨跌幅
     changes, skipped = [], 0
+    print("▶ Step 3: 计算涨跌幅并获取 PE (可能较慢)...")
+    
     for sym in symbols:
         norm = _normalize_symbol(sym)
         latest = latest_prices.get(norm) or latest_prices.get(sym)
@@ -122,13 +124,17 @@ def main():
             skipped += 1
             continue
             
-        # 计算公式：(最新价 - 收盘价) / 收盘价
+        # --- 新增：获取 PE ---
+        pe = fetcher.get_financial_data(sym)
+        # --------------------
+            
         pct = (latest - close_price) / close_price * 100.0
         changes.append({
             "symbol": sym,
             "latest": latest,
             "close": close_price,
             "pct": pct,
+            "pe": pe if pe is not None else 0.0 # 处理 None 情况
         })
 
     if not changes:
@@ -141,13 +147,14 @@ def main():
     print("\n" + "=" * 78)
     print(f"  涨跌幅从小到大 · 前 {TOP_N}  (有效 {len(changes)}，跳过 {skipped})")
     print("=" * 78)
-    print(f"{'#':<4}{'Symbol':<10}{'最新价':>12}{'当日收盘':>14}{'涨跌幅%':>12}")
-    print("-" * 78)
+    print(f"{'#':<4}{'Symbol':<10}{'最新价':>12}{'当日收盘':>14}{'涨跌幅%':>12}{'PE(TTM)':>12}")
+    print("-" * 85) # 调整长度
     for i, it in enumerate(changes[:TOP_N], 1):
         print(f"{i:<4}{it['symbol']:<10}"
               f"{it['latest']:>12.4f}"
               f"{it['close']:>14.4f}"
-              f"{it['pct']:>+12.4f}")
+              f"{it['pct']:>+12.4f}"
+              f"{it['pe']:>12.2f}") # 格式化 PE 输出
     print("=" * 78)
 
 

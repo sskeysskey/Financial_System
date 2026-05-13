@@ -37,10 +37,6 @@ EXCLUDE_SECTORS_LIST = {
     "ETFs"
 }
 
-# EXCLUDE_SECTORS_LIST = {
- 
-# }
-
 # 不需要写入 empty 的 symbol
 FILTER_LIST = {
     'USInterest', 'USGDP', 'USCPI', 'USNonFarmA', 'USRetailM', 'USUnemploy',

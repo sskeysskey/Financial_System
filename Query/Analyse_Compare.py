@@ -1711,11 +1711,11 @@ def run_volume_high_scanner():
         os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
         with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
             if pos_results:
-                f.write("========== PRICE UP / FLAT (Top 2 Turnover) ==========\n")
+                f.write("========== UP ==========\n")
                 f.write('\n'.join(pos_results) + '\n\n')
             
             if neg_results:
-                f.write("========== PRICE DOWN (Top 1 Turnover) ==========\n")
+                f.write("========== DOWN ==========\n")
                 f.write('\n'.join(neg_results) + '\n')
                 
         print(f"\n成功生成: {OUTPUT_FILENAME}")

@@ -24,11 +24,14 @@ PRIVATE_KEY_PATH = '/Users/yanzhang/Downloads/backup/tiger.pem'
 TIGER_ID = '20150215'
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
+# --- 添加这行代码，屏蔽 getmac 的警告 ---
+logging.getLogger('getmac').setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
 
 SYMBOL_MAPPING = {
     "BRK-B": "BRK.B",
     "BF-B": "BF.B",
+    "MOG-A": "MOG.A"
 }
 
 # 支持的字段（防止外部传错）
@@ -46,6 +49,7 @@ class TigerDataFetcher:
         self.quote_client = None
         # 历史K线缓存: {symbol: DataFrame(index=date字符串)}
         self._hist_cache = {}
+        self._pe_cache = {}
         self._init_clients()
 
     def _init_clients(self):
@@ -63,6 +67,121 @@ class TigerDataFetcher:
 
     # ==================== 实时行情（保持不变） ====================
 
+    def get_historical_pe(self, symbol: str,
+                        start_date: str = None,
+                        end_date: str = None,
+                        market: str = 'US',
+                        use_cache: bool = True) -> pd.DataFrame:
+        """
+        获取单只股票的历史 PE 序列（日频）
+        返回: DataFrame, index=date('YYYY-MM-DD'),
+            columns 包含 ['pe_ttm', 'pe_lyr']（按接口实际返回为准）
+        """
+        from tigeropen.common.consts import Market
+
+        symbol = _normalize_symbol(symbol)
+
+        us_eastern = pytz_timezone('US/Eastern')
+        if end_date is None:
+            end_date = datetime.now(us_eastern).strftime('%Y-%m-%d')
+        if start_date is None:
+            start_date = (datetime.now(us_eastern) - timedelta(days=365)).strftime('%Y-%m-%d')
+
+        cache_key = (symbol, start_date, end_date)
+        if use_cache and cache_key in getattr(self, '_pe_cache', {}):
+            return self._pe_cache[cache_key].copy()
+
+        # ---------- 兼容多版本导入 FinancialDailyField ----------
+        FinancialDailyField = None
+        for _path in (
+            'tigeropen.common.consts.financial_fields',
+            'tigeropen.common.consts.filter_fields',
+            'tigeropen.common.consts',
+        ):
+            try:
+                _mod = __import__(_path, fromlist=['FinancialDailyField'])
+                FinancialDailyField = getattr(_mod, 'FinancialDailyField', None)
+                if FinancialDailyField is not None:
+                    break
+            except ImportError:
+                continue
+
+        # 取字段：优先用枚举，拿不到就退回字符串
+        if FinancialDailyField is not None:
+            try:
+                fields = [FinancialDailyField.pe_ttm, FinancialDailyField.pe_lyr]
+            except AttributeError:
+                fields = ['pe_ttm', 'pe_lyr']
+        else:
+            fields = ['pe_ttm', 'pe_lyr']
+        # -------------------------------------------------------
+
+        market_map = {'US': Market.US, 'HK': Market.HK, 'CN': Market.CN}
+        mkt = market_map.get(market.upper(), Market.US)
+
+        # 接口本身是否存在（老版本可能没有）
+        if not hasattr(self.quote_client, 'get_financial_daily'):
+            logger.error("当前 tigeropen 版本不支持 get_financial_daily，请升级: pip install -U tigeropen")
+            return pd.DataFrame()
+
+        try:
+            df = self.quote_client.get_financial_daily(
+                symbols=[symbol],
+                market=mkt,
+                fields=fields,
+                begin_date=start_date,
+                end_date=end_date,
+            )
+            if df is None or df.empty:
+                logger.warning(f"{symbol} 未取到 PE 历史数据")
+                return pd.DataFrame()
+
+            # 接口返回常见形式: columns=[symbol, date, field, value]（长表）
+            if {'field', 'value', 'date'}.issubset(df.columns):
+                df['date'] = pd.to_datetime(df['date']).dt.strftime('%Y-%m-%d')
+                wide = df.pivot_table(
+                    index='date', columns='field', values='value', aggfunc='last'
+                ).sort_index()
+            else:
+                if 'date' in df.columns:
+                    df['date'] = pd.to_datetime(df['date']).dt.strftime('%Y-%m-%d')
+                    wide = df.set_index('date').sort_index()
+                else:
+                    wide = df.copy()
+
+            # 有些版本 field 列返回的是枚举对象，pivot 之后列名不是字符串
+            wide.columns = [str(c).split('.')[-1] if not isinstance(c, str) else c
+                            for c in wide.columns]
+
+            if not hasattr(self, '_pe_cache'):
+                self._pe_cache = {}
+            self._pe_cache[cache_key] = wide
+            return wide.copy()
+
+        except Exception as e:
+            logger.error(f"获取 {symbol} 历史 PE 失败: {e}")
+            return pd.DataFrame()
+
+
+    def get_pe_on_date(self, symbol: str, date: str,
+                    field: str = 'pe_ttm') -> float:
+        """
+        取某只股票某一天的 PE（若当天非交易日，向前回溯到最近一个交易日）
+        """
+        df = self.get_historical_pe(symbol,
+                                    start_date=(datetime.strptime(date, '%Y-%m-%d')
+                                                - timedelta(days=20)).strftime('%Y-%m-%d'),
+                                    end_date=date)
+        if df.empty or field not in df.columns:
+            return None
+        sub = df[df.index <= date]
+        if sub.empty:
+            return None
+        val = sub[field].dropna()
+        if val.empty:
+            return None
+        return float(val.iloc[-1])
+    
     def get_realtime_prices(self, symbols):
         if not symbols:
             return {}

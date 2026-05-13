@@ -16,6 +16,7 @@ import subprocess
 import pandas as pd
 from tqdm import tqdm
 import pandas_market_calendars as mcal
+from tigeropen.common.consts import Language
 
 # ================= 路径配置 =================
 USER_HOME = os.path.expanduser("~")
@@ -174,58 +175,57 @@ def get_last_valid_trading_date():
 # Tiger 批量取数据（替换掉原来的 Selenium + JS 部分）
 # =========================================================
 
-def fetch_bars_batch(fetcher, symbols, batch_size=BATCH_SIZE,
-                     sleep_sec=SLEEP_BETWEEN_BATCH, limit=BARS_LIMIT):
+def fetch_briefs_batch(fetcher, symbols, batch_size=BATCH_SIZE,
+                       sleep_sec=SLEEP_BETWEEN_BATCH):
     """
-    批量拉取日 K 线数据。
-    入参 symbols: Tiger 真实代码列表（已经经过别名转译 & _normalize_symbol）
-    返回: {symbol: [(date, open, high, low, close, volume), ...]}
-          列表已按时间倒序（最新的在前）
+    用 get_stock_briefs 批量拉当日 OHLCV（不吃历史行情配额）
+    返回: {symbol: [(date, open, high, low, close, volume)]}
+          为了兼容原来的 pick_row_by_rules，仍然返回 list 结构，只是只有一条
     """
-    # 去重但保留顺序
     uniq = list(dict.fromkeys(symbols))
     result = {}
     total_batches = (len(uniq) + batch_size - 1) // batch_size
 
     for bi, i in enumerate(range(0, len(uniq), batch_size), 1):
         batch = uniq[i:i + batch_size]
-        tqdm.write(f"  [{bi}/{total_batches}] 批量拉取 {len(batch)} 只 symbol...")
+        tqdm.write(f"  [{bi}/{total_batches}] 批量拉取 brief {len(batch)} 只...")
         try:
-            df = fetcher.quote_client.get_bars(
+            df = fetcher.quote_client.get_stock_briefs(
                 symbols=batch,
-                period=BarPeriod.DAY,
-                limit=limit,
-                right=QuoteRight.BR
+                include_hour_trading=False,   # 只要常规盘 OHLCV
+                lang=Language.zh_CN
             )
             if df is None or df.empty:
                 tqdm.write(f"    ⚠️ 批次 {bi} 返回空")
             else:
-                df['time'] = pd.to_numeric(df['time'], errors='coerce')
-                df['date'] = (
-                    pd.to_datetime(df['time'], unit='ms')
-                      .dt.tz_localize('UTC')
-                      .dt.tz_convert('US/Eastern')
-                      .dt.strftime('%Y-%m-%d')
-                )
-                for sym in batch:
-                    sub = df[df['symbol'] == sym].sort_values('time', ascending=False)
-                    if sub.empty:
+                # latest_time 是毫秒时间戳，转美东日期
+                if 'latest_time' in df.columns:
+                    df['latest_time'] = pd.to_numeric(df['latest_time'], errors='coerce')
+                    df['date'] = (
+                        pd.to_datetime(df['latest_time'], unit='ms')
+                          .dt.tz_localize('UTC')
+                          .dt.tz_convert('US/Eastern')
+                          .dt.strftime('%Y-%m-%d')
+                    )
+                else:
+                    df['date'] = None
+
+                for _, r in df.iterrows():
+                    sym = r.get('symbol')
+                    if not sym:
                         continue
-                    rows = []
-                    for _, r in sub.iterrows():
-                        try:
-                            rows.append((
-                                r['date'],
-                                float(r['open']),
-                                float(r['high']),
-                                float(r['low']),
-                                float(r['close']),
-                                int(r['volume']) if not pd.isna(r['volume']) else 0,
-                            ))
-                        except Exception:
-                            continue
-                    if rows:
-                        result[sym] = rows
+                    try:
+                        o = float(r.get('open'))
+                        h = float(r.get('high'))
+                        l = float(r.get('low'))
+                        c = float(r.get('latest_price'))
+                        v = int(r.get('volume')) if not pd.isna(r.get('volume')) else 0
+                        d = r.get('date')
+                    except Exception:
+                        continue
+                    if not (o and h and l and c and d):
+                        continue
+                    result[sym] = [(d, o, h, l, c, v)]
         except Exception as e:
             tqdm.write(f"    ❌ 批次 {bi} 失败: {e}")
 
@@ -240,52 +240,24 @@ def fetch_bars_batch(fetcher, symbols, batch_size=BATCH_SIZE,
 # =========================================================
 
 def pick_row_by_rules(symbol, bars, last_valid_date):
-    """
-    根据规则从 bars（时间倒序）中选择要写入的行。
-    返回:
-      (selected_row, None)    成功
-      (None, reason_str)      跳过
-    selected_row: (date, open, high, low, close, volume)
-    """
     if not bars:
-        return None, "无 K 线数据"
-
-    row0 = bars[0]
-    row0_date = row0[0]
-    row1 = bars[1] if len(bars) > 1 else None
-    row1_date = row1[0] if row1 else None
+        return None, "无数据"
+    row = bars[0]
+    row_date = row[0]
 
     if last_valid_date is None:
-        return row0, None
+        return row, None
 
-    # 规则1：最新日期 == 预期日期
-    if row0_date == last_valid_date:
-        if row1_date == last_valid_date:
-            return row1, None   # 两条同日期，取第二条（更稳定）
-        return row0, None
+    if row_date == last_valid_date:
+        return row, None
 
-    # 规则2：最新日期 > 预期日期（说明存在"今日盘中 K"）
-    if row0_date > last_valid_date:
-        if row1_date == last_valid_date:
-            return row1, None
-        if row1 is None:
-            tqdm.write(f"⚠️ [{symbol}] 最新日期 {row0_date} 过大且无第二条，"
-                       f"修改日期为 {last_valid_date} 写入。")
-            lst = list(row0); lst[0] = last_valid_date
-            return tuple(lst), None
-        tqdm.write(f"⚠️ [{symbol}] 最新日期 {row0_date} 过大，第二条 {row1_date} "
-                   f"也不匹配 {last_valid_date}，使用第一条并修改日期写入。")
-        lst = list(row0); lst[0] = last_valid_date
+    # brief 日期>预期：说明今天在盘中/刚收盘；<预期：说明停牌或脚本跑得太早
+    if row_date > last_valid_date:
+        tqdm.write(f"⚠️ [{symbol}] brief 日期 {row_date} > 预期 {last_valid_date}，改写为预期日期。")
+        lst = list(row); lst[0] = last_valid_date
         return tuple(lst), None
 
-    # 规则3：最新日期 < 预期日期
-    if row1_date == row0_date:
-        tqdm.write(f"⚠️ [{symbol}] 最新日期 {row0_date} < 预期 {last_valid_date}，"
-                   f"存在两条同日期数据，取第二条并改日期写入。")
-        lst = list(row1); lst[0] = last_valid_date
-        return tuple(lst), None
-
-    return None, f"最新日期 {row0_date} < 预期 {last_valid_date}，数据未更新"
+    return None, f"brief 日期 {row_date} < 预期 {last_valid_date}，数据未更新"
 
 
 # =========================================================
@@ -334,7 +306,7 @@ def run():
     scrape_symbols = list(scrape_to_tasks.keys())
     tqdm.write(f"▶ 将批量请求 {len(scrape_symbols)} 个 Tiger 代码...\n")
 
-    bars_map = fetch_bars_batch(fetcher, scrape_symbols)
+    bars_map = fetch_briefs_batch(fetcher, scrape_symbols)
     tqdm.write(f"\n✅ 拿到 {len(bars_map)} / {len(scrape_symbols)} 只 symbol 的数据\n")
 
     # 遍历原始任务，从 bars_map 里查，走日期校验，写 DB

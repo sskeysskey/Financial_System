@@ -80,7 +80,7 @@ print("--------------------------")
 # ----------------------------------------------------------------------
 # 8. 新增功能：在 Terminal 中调用另一个 Python 脚本 (已移除参数)
 # ----------------------------------------------------------------------
-print("\n--- 准备调用 YF_Today.py 脚本 ---")
+print("\n--- 准备调用 Tiger_Today.py 脚本 ---")
 
 # 首先，检查当前操作系统是否为 macOS (在内部表示为 'darwin')
 # 因为此功能依赖于 macOS 的 Terminal 应用和 osascript
@@ -92,7 +92,7 @@ else:
         python_path = sys.executable 
         # a. 定义要执行的命令的各个部分，与 AppleScript 中一致
         # python_path = "/Library/Frameworks/Python.framework/Versions/Current/bin/python3"
-        script_path = os.path.join(BASE_DIR, "Selenium/YF_Today.py")
+        script_path = os.path.join(BASE_DIR, "Selenium/Tiger_Today.py")
         
         # --- 修改部分：不再定义 mode_arg ---
         
@@ -113,7 +113,7 @@ else:
         # e. 执行
         print(f"正在尝试在新的 Terminal 窗口中执行命令: {command_to_run_in_terminal}")
         subprocess.run(['osascript', '-e', applescript_command], check=True, capture_output=True)
-        print("✅ 成功启动 YF_Today.py 脚本。请检查新打开的 Terminal 窗口。")
+        print("✅ 成功启动 Tiger_Today.py 脚本。请检查新打开的 Terminal 窗口。")
 
     except FileNotFoundError:
         # 这个错误会在 'osascript' 命令本身不存在时发生 (几乎不可能在macOS上)

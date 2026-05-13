@@ -270,8 +270,8 @@
             "option"
         ],
         "actionType": "runPythonBackground",
-        "target": "/Users/yanzhang/Coding/python_code/OVideo/stop_downie.py",
-        "message": "正在 生成stop_downie.txt文件在桌面..."
+        "target": "/Users/yanzhang/Coding/python_code/OVideo/stop_scpt.py",
+        "message": "正在 生成stop_scpt.txt文件在桌面..."
     },
     {
         "key": "e",
@@ -769,11 +769,21 @@
         "key": "eight",
         "modifiers": [
             "control",
+            "shift"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Query/Check_yesterday.py' --nopop --ignore_sectors && /Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/Tiger_Today.py'",
+        "message": "正在执行 Check_yesterday.py 并启动 Today.py ..."
+    },
+    {
+        "key": "eight",
+        "modifiers": [
+            "control",
             "option"
         ],
         "actionType": "runInTerminal",
-        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Query/Check_yesterday.py' --nopop --ignore_sectors && /Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/YF_Today.py'",
-        "message": "正在执行 Check_yesterday.py 并启动 YF_Today.py ..."
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Query/Check_yesterday.py' --nopop && /Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/YF_Today.py'",
+        "message": "正在执行 Check_yesterday.py 并启动 Today.py ..."
     },
     {
         "key": "zero",

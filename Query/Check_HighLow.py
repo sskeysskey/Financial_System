@@ -15,11 +15,18 @@ from PyQt6.QtWidgets import (
     QPushButton, QGroupBox, QScrollArea, QLabel, QFrame,
     QMenu, QTabWidget
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QTimer 
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QThread # 确保导入了 QThread
 from PyQt6.QtGui import QCursor, QColor, QFont, QShortcut, QKeySequence
 
 # --- 新增: 导入 Tiger_API ---
 sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Selenium"))
+try:
+    from pre_after import get_pre_after_changes
+except ImportError as e:
+    print(f"导入 pre_after 失败: {e}")
+    def get_pre_after_changes(top_n=20):  # 兜底，防止崩溃
+        return []
+
 try:
     from Tiger_API import _get_global_fetcher
 except ImportError as e:
@@ -349,8 +356,21 @@ def fetch_mnspp_data_from_db(db_path, symbol):
 # 主窗口
 # ----------------------------------------------------------------------
 
+class PreAfterWorker(QThread):
+    # 定义一个信号，用于传递获取到的数据
+    data_finished = pyqtSignal(list)
+
+    def run(self):
+        # 在后台线程执行耗时操作
+        try:
+            data = get_pre_after_changes(top_n=20)
+            self.data_finished.emit(data)
+        except Exception as e:
+            print(f"后台获取盘前数据失败: {e}")
+            self.data_finished.emit([]) # 失败返回空列表
+
 class HighLowWindow(QMainWindow):
-    def __init__(self, high_low_data, keyword_colors, sector_data, compare_data, json_data, high_low_5y_data, volume_high_data, etf_data, stock_data, earning_history_data, newhigh_10y_data):
+    def __init__(self, high_low_data, keyword_colors, sector_data, compare_data, json_data, high_low_5y_data, volume_high_data, etf_data, stock_data, earning_history_data, newhigh_10y_data, pre_after_data):
         super().__init__()
         self.high_low_data = high_low_data
         self.keyword_colors = keyword_colors
@@ -363,6 +383,12 @@ class HighLowWindow(QMainWindow):
         self.stock_data = stock_data
         self.earning_history_data = earning_history_data
         self.newhigh_10y_data = newhigh_10y_data
+        self.pre_after_data = [] # 初始化为空
+        
+        # --- 启动异步线程 ---
+        self.worker = PreAfterWorker()
+        self.worker.data_finished.connect(self.update_pre_after_tab)
+        self.worker.start()
         
         # 计算多组共振数据
         self.resonance_data = calculate_frequency_data(self.earning_history_data)
@@ -378,6 +404,8 @@ class HighLowWindow(QMainWindow):
         
         # 提取 10年新高 的所有 symbol 列表
         self.list_10y_newhigh = [item['symbol'] for items in self.newhigh_10y_data.values() for item in items]
+        # 新增：盘前/盘后 symbol 列表
+        self.list_pre_after = [item['symbol'] for item in self.pre_after_data]
         
         self.etf_gainers = [i['symbol'] for i in self.etf_data[:24]]
         self.etf_losers = [i['symbol'] for i in self.etf_data[-24:][::-1]]
@@ -404,27 +432,32 @@ class HighLowWindow(QMainWindow):
         self._init_resonance_tab(self.tab_resonance)
         self.tabs.addTab(self.tab_resonance, "多组共振")
 
-        # Tab 1: Volume
+        # Tab 1: 盘前/盘后 (新增)
+        self.tab_pre_after = QWidget()
+        self._init_pre_after_tab(self.tab_pre_after)
+        self.tabs.addTab(self.tab_pre_after, "盘前/盘后")
+
+        # Tab 2: Volume
         self.tab_volume = QWidget()
         self._init_volume_tab(self.tab_volume)
         self.tabs.addTab(self.tab_volume, "Volume成交额")
 
-        # Tab 2: 10年新高 (新增)
+        # Tab 3: 10年新高
         self.tab_10y_newhigh = QWidget()
         self._init_10y_newhigh_tab(self.tab_10y_newhigh)
         self.tabs.addTab(self.tab_10y_newhigh, "10年新高")
 
-        # Tab 3: ETFs
+        # Tab 4: ETFs
         self.tab_etfs = QWidget()
         self._init_etf_tab(self.tab_etfs)
         self.tabs.addTab(self.tab_etfs, "ETFs")
 
-        # Tab 4: Stocks
+        # Tab 5: Stocks
         self.tab_stocks = QWidget()
         self._init_stock_tab(self.tab_stocks)
         self.tabs.addTab(self.tab_stocks, "Stocks")
 
-        # Tab 5: High/Low
+        # Tab 6: High/Low
         self.tab_high_low = QWidget()
         self._init_high_low_tab(self.tab_high_low)
         self.tabs.addTab(self.tab_high_low, "High / Low")
@@ -438,16 +471,82 @@ class HighLowWindow(QMainWindow):
     def on_tab_changed(self, index):
         mapping = {
             0: self.list_resonance,
-            1: self.list_volume, 
-            2: self.list_10y_newhigh, # 新增映射
-            3: self.list_etf, 
-            4: self.list_stock, 
-            5: self.list_high_low
+            1: self.list_pre_after,   # 新增
+            2: self.list_volume,
+            3: self.list_10y_newhigh,
+            4: self.list_etf,
+            5: self.list_stock,
+            6: self.list_high_low,
         }
         self.symbol_manager.update_symbols(mapping.get(index, []))
 
     def switch_tab(self): self.tabs.setCurrentIndex((self.tabs.currentIndex() + 1) % self.tabs.count())
     def switch_tab_reverse(self): self.tabs.setCurrentIndex((self.tabs.currentIndex() - 1 + self.tabs.count()) % self.tabs.count())
+
+    def _init_pre_after_tab(self, parent):
+        layout = QVBoxLayout(parent)
+        self.scroll_pre_after = QScrollArea()
+        self.scroll_pre_after.setWidgetResizable(True)
+        layout.addWidget(self.scroll_pre_after)
+        
+        # 创建一个容器，稍后用于动态填充内容
+        self.pre_after_content = QWidget()
+        self.pre_after_layout = QVBoxLayout(self.pre_after_content)
+        self.scroll_pre_after.setWidget(self.pre_after_content)
+        
+        # 初始显示
+        self.loading_label = QLabel("正在获取盘前/盘后数据，请稍候...")
+        self.loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.pre_after_layout.addWidget(self.loading_label)
+
+    def update_pre_after_tab(self, data):
+        """当线程返回数据时调用"""
+        self.pre_after_data = data
+        
+        # 1. 清除旧内容 (包括加载提示)
+        while self.pre_after_layout.count():
+            item = self.pre_after_layout.takeAt(0)
+            if item.widget(): item.widget().deleteLater()
+        
+        # 2. 重新填充数据
+        if not self.pre_after_data:
+            tip = QLabel("⚠️ 暂无盘前/盘后数据（可能是非交易时段或拉取失败）")
+            tip.setStyleSheet("color: #ccc; font-size: 18px; padding: 30px;")
+            self.pre_after_layout.addWidget(tip)
+            return
+
+        # 重新构建内容 (复用你原本的逻辑)
+        main_lay = QHBoxLayout()
+        self.pre_after_layout.addLayout(main_lay)
+        
+        losers = [it for it in self.pre_after_data if it['pct'] < 0]
+        gainers = [it for it in self.pre_after_data if it['pct'] >= 0]
+
+        def _build_column(title, items, parent_layout):
+            col_lay = QHBoxLayout()
+            parent_layout.addWidget(self._create_section_container(title, col_lay))
+            for chunk in [items[i:i + MAX_ITEMS_PER_COLUMN]
+                        for i in range(0, len(items), MAX_ITEMS_PER_COLUMN)]:
+                col = QVBoxLayout(); col.setAlignment(Qt.AlignmentFlag.AlignTop)
+                for it in chunk:
+                    # override_text 只显示涨跌幅，保留两位小数并带正负号
+                    pct_text = f"{it['pct']:+.2f}%"
+                    col.addWidget(self.create_symbol_widget(
+                        it['symbol'],
+                        override_text=pct_text,
+                        force_default=True
+                    ))
+                col.addStretch(1); col_lay.addLayout(col)
+
+        if losers:
+            _build_column(f"下跌 ({len(losers)})", losers, main_lay)
+            self._add_separator(main_lay)
+        if gainers:
+            _build_column(f"上涨 ({len(gainers)})", gainers, main_lay)
+            
+        # 更新 symbol_manager 的列表 (如果当前正在该 Tab)
+        if self.tabs.currentIndex() == 1:
+            self.symbol_manager.update_symbols([it['symbol'] for it in self.pre_after_data])
 
     # --- Tab 初始化方法 ---
     def _init_resonance_tab(self, parent):
@@ -785,34 +884,34 @@ class HighLowWindow(QMainWindow):
                     idx = item['symbols'].index(symbol)
                     return f"共振{item['count']}组 ({idx + 1}/{len(item['symbols'])})"
 
-        # Tab 1: Volume High
+        # Tab 1: 盘前/盘后 (新增)
         elif current_tab == 1:
+            for i, it in enumerate(self.pre_after_data):
+                if it['symbol'] == symbol:
+                    return f"盘前/盘后 {it['pct']:+.2f}% ({i + 1}/{len(self.pre_after_data)})"
+
+        # Tab 2: Volume High (原 Tab 1)
+        elif current_tab == 2:
             for group_name, items in self.volume_high_data.items():
                 symbols_in_group = [item['symbol'] for item in items]
                 if symbol in symbols_in_group:
                     idx = symbols_in_group.index(symbol)
                     return f"{group_name} ({idx + 1}/{len(symbols_in_group)})"
 
-        # Tab 2: 10年新高
-        elif current_tab == 2:
-            # 1. 计算所有分类下的总符号数量（直接取 list_10y_newhigh 的长度）
+        # Tab 3: 10年新高 (原 Tab 2)
+        elif current_tab == 3:
             total_all_symbols = len(self.list_10y_newhigh)
-            
-            # 2. 获取该 symbol 在整个 10年新高 栏目中的总进度索引
             overall_idx = 0
             if symbol in self.list_10y_newhigh:
                 overall_idx = self.list_10y_newhigh.index(symbol) + 1
-            
-            # 3. 遍历查找当前 Symbol 所在的位置
             for group_name, items in self.newhigh_10y_data.items():
                 symbols_in_group = [item['symbol'] for item in items]
                 if symbol in symbols_in_group:
                     idx = symbols_in_group.index(symbol)
-                    # 4. 按照要求格式化输出: 分类 (当前组索引/当前组总数/整个栏目当前进度/整个栏目总数)
                     return f"{group_name} ({idx + 1}/{len(symbols_in_group)}/{overall_idx}/{total_all_symbols})"
 
-        # Tab 3: ETFs
-        elif current_tab == 3:
+        # Tab 4: ETFs (原 Tab 3)
+        elif current_tab == 4:
             if symbol in self.etf_gainers:
                 idx = self.etf_gainers.index(symbol)
                 return f"Top Gainers ({idx + 1}/{len(self.etf_gainers)})"
@@ -820,8 +919,8 @@ class HighLowWindow(QMainWindow):
                 idx = self.etf_losers.index(symbol)
                 return f"Top Losers ({idx + 1}/{len(self.etf_losers)})"
 
-        # Tab 4: Stocks
-        elif current_tab == 4:
+        # Tab 5: Stocks (原 Tab 4)
+        elif current_tab == 5:
             if symbol in self.stock_gainers:
                 idx = self.stock_gainers.index(symbol)
                 return f"Top Gainers ({idx + 1}/{len(self.stock_gainers)})"
@@ -829,11 +928,10 @@ class HighLowWindow(QMainWindow):
                 idx = self.stock_losers.index(symbol)
                 return f"Top Losers ({idx + 1}/{len(self.stock_losers)})"
 
-        # Tab 5: High/Low
+        # Tab 6: High/Low (原 Tab 5)
         curr_list = self.symbol_manager.symbols
         if symbol in curr_list:
             return f"({curr_list.index(symbol) + 1}/{len(curr_list)})"
-        
         return ""
 
     def on_symbol_click(self, symbol):
@@ -906,10 +1004,16 @@ if __name__ == '__main__':
         
         # 新增：加载 10年新高 数据
         newhigh_10y = parse_10y_newhigh_file(NEW_HIGH_10Y_PATH)
+        # 新增：拉取盘前/盘后前 20 名（此调用会走网络，可能耗时数秒）
+        print("▶ 正在拉取盘前/盘后数据...")
+        # pre_after = get_pre_after_changes(top_n=20)
+        # print(f"✅ 盘前/盘后获取 {len(pre_after)} 条")
         
         app = QApplication(sys.argv)
         # 传入 newhigh_10y
-        win = HighLowWindow(hl, colors, sects, comp, desc, hl5y, vol, etf, stk, earn_hist, newhigh_10y)
+        win = HighLowWindow(hl, colors, sects, comp, desc, hl5y, vol,
+                            etf, stk, earn_hist, newhigh_10y, [])
+
         win.show()
         sys.exit(app.exec())
     except Exception as e:
