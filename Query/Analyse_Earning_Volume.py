@@ -15,8 +15,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = "" 
 TARGET_DATE = "" 
 
-# SYMBOL_TO_TRACE = "GTLB"
-# TARGET_DATE = "2026-04-11"
+# SYMBOL_TO_TRACE = "NBIS"
+# TARGET_DATE = "2026-03-30"
 
 PATHS = {
     "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),

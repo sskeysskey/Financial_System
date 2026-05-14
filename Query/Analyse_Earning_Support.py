@@ -12,8 +12,8 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 SYMBOL_TO_TRACE = "" 
 TARGET_DATE = "" 
 
-# SYMBOL_TO_TRACE = "ONTO"
-# TARGET_DATE = "2026-03-30"
+# SYMBOL_TO_TRACE = "NBIS"
+# TARGET_DATE = "2026-04-28"
 
 # 【新增配置项】支撑点距离最新日期的最小天数要求
 MIN_SUPPORT_DAYS = 6

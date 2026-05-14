@@ -259,8 +259,8 @@ def search_history_by_category(symbol):
 # 视图 2：按时间 (Date) 渲染
 def search_history_by_date(symbol):
     # --- 定义颜色 ---
-    COLOR_HIGH = "#BF616A"      # 红色
-    COLOR_MEDIUM = "#D08770"    # 橙色 (用于中等权重)
+    COLOR_HIGH = "#BF616A"      # 红色 (用于高权重及 PE_Deeper)
+    COLOR_MEDIUM = "#D08770"    # 橙色 (用于中等权重及 PE_Deep)
     COLOR_BLUE = "#88C0D0"      # 蓝色 (用于 PE_valid 等)
     
     # --- 新增：分类映射 ---
@@ -271,14 +271,15 @@ def search_history_by_date(symbol):
     # 中权重组 (换成弱一点的颜色)
     medium_weight_categories = {
         "PE_Volume_up", "PE_Volume_high", 
-        "SupportLevel_Close", "OverSell_W", "PE_Deeper" # 这里加入了 PE_Deeper
+        "SupportLevel_Close", "OverSell_W" # 注意：这里移除了 PE_Deeper
     }
     
     # 依然保留这个集合用于判断是否需要特殊样式背景
     highlight_categories = high_weight_categories.union(medium_weight_categories)
     
     # 可配置的需要压缩显示的单一分组
-    compress_categories = {"PE_valid", "PE_Deep"} # 确保这些在压缩组里
+    # 移除 PE_Deep 和 PE_Deeper，因为我们要给它们单独上色，不再走默认蓝色逻辑
+    compress_categories = {"PE_valid"} 
 
     html_parts = []
     has_data = False
@@ -296,7 +297,7 @@ def search_history_by_date(symbol):
     # 第一次遍历：筛选出需要压缩的日期
     for d_str in hit_dates_sorted:
         items_today = sorted(date_items[d_str], key=lambda x: x[0])
-        # 如果当天只有一条记录，且属于需要压缩的分组
+        # 如果当天只有一条记录，且属于需要压缩的分组 (现在仅 PE_valid)
         if len(items_today) == 1 and items_today[0][0] in compress_categories:
             category, suf = items_today[0]
             compressed_records[category].append((d_str, suf))
@@ -305,7 +306,8 @@ def search_history_by_date(symbol):
 
     # 定义需要保持纵向排列的重要组别
     group_a = {"PE_Volume", "PE_Volume_up", "PE_Volume_high", "PE_W",
-                "PE_Hot", "Short", "Short_W", "SupportLevel_Close", "SupportLevel_Over"}
+                "PE_Hot", "Short", "Short_W", "SupportLevel_Close", "SupportLevel_Over",
+                "PE_Deep", "PE_Deeper"} # 将 Deep/Deeper 加入 group_a 以便正常纵向排列
 
     # 渲染正常日期的记录
     for d_str, items_today in normal_dates:
@@ -322,34 +324,34 @@ def search_history_by_date(symbol):
                 category_data, date_categories, category_dates, sorted_trading_dates
             )
 
-            # --- 修改核心：根据权重和后缀选择颜色 ---
-            if category in highlight_categories:
-                # 1. 中等权重组
-                if category in ["PE_Deeper", "OverSell_W"]:
+            # --- 核心修改：颜色逻辑 ---
+            if category == "PE_Deeper":
+                target_color = COLOR_HIGH # 红色
+            elif category == "PE_Deep":
+                target_color = COLOR_MEDIUM # 橙色
+            elif category in highlight_categories:
+                # 1. 强制将 PE_Volume_up 设为橙色
+                if category == "PE_Volume_up":
                     target_color = COLOR_MEDIUM
-                # 2. 高权重组
+                # 2. 其他高权重组
                 elif category in high_weight_categories:
                     target_color = COLOR_HIGH
-                # 特殊规则：PE_Volume_high 且后缀包含“甲”字，使用红色
+                # 3. 特殊规则：PE_Volume_high 且后缀包含“甲”字，使用红色
                 elif category == "PE_Volume_high" and suf and '甲' in suf:
                     target_color = COLOR_HIGH
-                # 新增规则：PE_Volume_up 带有'空'后缀显示橙色，否则显示红色
-                elif category == "PE_Volume_up":
-                    if suf and '空' in suf:
-                        target_color = COLOR_MEDIUM
-                    else:
-                        target_color = COLOR_HIGH
+                # 4. 其他中权重组 (如 OverSell_W)
+                elif category in ["OverSell_W"]:
+                    target_color = COLOR_MEDIUM
                 else:
                     target_color = COLOR_MEDIUM
-                
-                # 构造样式字符串
-                display_category = (
-                    f"<b style='color:{target_color}; background-color:rgba(191,97,106,0.1); "
-                    f"padding:0 4px; border-radius:3px;'>{category}</b>"
-                )
             else:
-                # 默认蓝色 (包含 PE_valid, PE_Deep 等)
-                display_category = f"<b style='color:{COLOR_BLUE}'>{category}</b>"
+                # 默认蓝色 (PE_valid)
+                target_color = COLOR_BLUE
+            
+            display_category = (
+                f"<b style='color:{target_color}; background-color:rgba(191,97,106,0.1); "
+                f"padding:0 4px; border-radius:3px;'>{category}</b>"
+            )
 
             rendered_items.append(f"• {display_category}{suf_html}{overlap_marker}")
 
@@ -372,17 +374,9 @@ def search_history_by_date(symbol):
                 f"</div>"
             )
 
-    # =========================================================================
-    # 修改点：渲染被压缩的单一分组记录（统一放在下方）
-    # 使用自定义排序 key: PE_Deep (或 PE_Deeper) 优先，其次是 PE_valid
-    # =========================================================================
-    # 定义排序权重，值越小越靠前
-    sort_order = {"PE_Deep": 1, "PE_Deeper": 2, "PE_valid": 3}
-    
-    sorted_compressed_keys = sorted(
-        compressed_records.keys(), 
-        key=lambda x: sort_order.get(x, 99)
-    )
+    # 渲染被压缩的单一分组记录 (PE_valid)
+    sort_order = {"PE_valid": 1} # 仅保留 PE_valid
+    sorted_compressed_keys = sorted(compressed_records.keys(), key=lambda x: sort_order.get(x, 99))
 
     for category in sorted_compressed_keys:
         records = compressed_records[category]
