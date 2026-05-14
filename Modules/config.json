@@ -772,7 +772,7 @@
             "shift"
         ],
         "actionType": "runInTerminal",
-        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Query/Check_yesterday.py' --nopop --ignore_sectors && /Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/Tiger_Today.py'",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Query/Check_yesterday.py' --nopop && /Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/Tiger_Today.py'",
         "message": "正在执行 Check_yesterday.py 并启动 Today.py ..."
     },
     {
@@ -780,6 +780,16 @@
         "modifiers": [
             "control",
             "option"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Query/Check_yesterday.py' --nopop --ignore_sectors && /Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/YF_Today.py'",
+        "message": "正在执行 Check_yesterday.py 并启动 Today.py ..."
+    },
+    {
+        "key": "nine",
+        "modifiers": [
+            "shift",
+            "command"
         ],
         "actionType": "runInTerminal",
         "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Query/Check_yesterday.py' --nopop && /Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/YF_Today.py'",

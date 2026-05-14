@@ -890,17 +890,14 @@ function injectedScrapeSubpage() {
         if (!rawName) continue;
 
         var lowerName = rawName.toLowerCase();
-        // ★ 核心修改：遇到这些词代表主列表结束，直接停止后续所有抓取
         if (lowerName.indexOf('show less') !== -1 || lowerName.indexOf('hide markets') !== -1) {
             stopParsing = true;
             d.push('Stopped parsing at: ' + rawName);
             break;
         }
-        // 对于 more markets 等可以跳过，但不一定代表列表彻底结束
         if (lowerName.indexOf('more market') !== -1 || lowerName.indexOf('fewer market') !== -1) continue;
-        if (seen[rawName]) continue;
+        if (seen[rawName]) continue;  // 只有找到真实值后才会 seen，故此处安全
 
-        // 向上寻找包含整个选项的容器 (通常是包含 hover:bg-fill-x60 的 div)
         var container = nameEl;
         var value = '';
         var change = '';
@@ -909,15 +906,33 @@ function injectedScrapeSubpage() {
             container = container.parentElement;
             if (!container) break;
 
-            // ★★ FIX: 如果当前容器内包含多个 typ-body-x30（选项名称），
-            // 说明已超出当前选项行的范围，继续向上会错误抓到其他选项的 value/change
-            var siblingNameCount = container.querySelectorAll('[class*="typ-body-x30"]').length;
-            if (siblingNameCount > 1) break;
+            // ★★ FIX A: 只有容器内存在多个「不同」名称时才 break
+            // 这样就允许同一选项的 desktop+mobile 双布局并存（同名重复不 break）
+            var siblingNameNodes = container.querySelectorAll('[class*="typ-body-x30"]');
+            if (siblingNameNodes.length > 1) {
+                var uniqueTexts = {};
+                var uniqueCount = 0;
+                var tooMany = false;
+                for (var sn = 0; sn < siblingNameNodes.length; sn++) {
+                    var sText = siblingNameNodes[sn].textContent.trim().replace(/\s+/g, ' ');
+                    if (!sText) continue;
+                    var sLow = sText.toLowerCase();
+                    // 忽略 More markets / Show less 等控件文本
+                    if (sLow.indexOf('more market') !== -1 ||
+                        sLow.indexOf('fewer market') !== -1 ||
+                        sLow.indexOf('show less') !== -1 ||
+                        sLow.indexOf('hide markets') !== -1) continue;
+                    if (!uniqueTexts[sText]) {
+                        uniqueTexts[sText] = true;
+                        uniqueCount++;
+                        if (uniqueCount > 1) { tooMany = true; break; }
+                    }
+                }
+                if (tooMany) break;
+            }
 
-            // 尝试在这个层级找值
             value = findValueInContainer(container);
             if (value) {
-                // ★ FIX: 在找到 value 的同一容器中提取 change
                 var cEl = container.querySelector('[class*="typ-emphasis-x10"]');
                 if (cEl) {
                     change = cEl.textContent.trim().replace(/\s+/g, ' ');
@@ -926,7 +941,7 @@ function injectedScrapeSubpage() {
             }
         }
 
-        // 如果没找到，尝试在兄弟节点中找 (针对某些特殊的 flex 布局)
+        // 兼容旧的 flex 兜底（保持原逻辑）
         if (!value && nameEl.closest('.flex')) {
             var parentRow = nameEl.closest('.flex').parentElement;
             if (parentRow) {
@@ -934,17 +949,26 @@ function injectedScrapeSubpage() {
             }
         }
 
-        // ★★★ FIX: 纯数字追加 %（和主页面逻辑一致）
+        // 纯数字追加 %
         if (value && /^\d+\.?\d*$/.test(value)) {
             value = value + '%';
         }
 
         if (value) {
-            seen[rawName] = true;
-            result.options.push({ name: rawName, value: value, change: change });
+            // ★★ FIX C: 若此名称已存在 0% 占位，覆盖它
+            var existingIdx = -1;
+            for (var ei = 0; ei < result.options.length; ei++) {
+                if (result.options[ei].name === rawName) { existingIdx = ei; break; }
+            }
+            if (existingIdx !== -1) {
+                result.options[existingIdx] = { name: rawName, value: value, change: change };
+                d.push('Overwrote 0% default for "' + rawName + '" with real value ' + value);
+            } else {
+                result.options.push({ name: rawName, value: value, change: change });
+            }
+            seen[rawName] = true;   // 仅在找到真实值时锁定
         } else {
-            // ★ 新增：没找到 value 时，检查该名称是否处于一个「可点击选项行」容器内
-            // 识别特征：祖先节点带有 cursor-pointer 或 hover:bg-fill 类
+            // ★★ FIX B: 推入 0% 占位但不设 seen，保留其他布局的机会
             var isLikelyOption = false;
             var probe = nameEl;
             for (var ck = 0; ck < 10 && probe; ck++) {
@@ -959,9 +983,15 @@ function injectedScrapeSubpage() {
                 }
             }
             if (isLikelyOption) {
-                seen[rawName] = true;
-                result.options.push({ name: rawName, value: '0%', change: '' });
-                d.push('No value for "' + rawName + '", defaulted to 0%');
+                // 避免同名重复 push 0%
+                var already = false;
+                for (var ao = 0; ao < result.options.length; ao++) {
+                    if (result.options[ao].name === rawName) { already = true; break; }
+                }
+                if (!already) {
+                    result.options.push({ name: rawName, value: '0%', change: '' });
+                    d.push('No value for "' + rawName + '", defaulted to 0% (may be overwritten)');
+                }
             }
         }
     }

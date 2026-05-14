@@ -1,5 +1,7 @@
 {
-    "Basic_Materials": {},
+    "Basic_Materials": {
+        "ECL": ""
+    },
     "Real_Estate": {},
     "Energy": {},
     "Technology": {
@@ -19,7 +21,18 @@
         "INFY": "",
         "GIB": "",
         "KVYO": "",
-        "CCC": ""
+        "CCC": "",
+        "SAP": "",
+        "BR": "",
+        "LDOS": "",
+        "SSNC": "",
+        "TRMB": "",
+        "JKHY": "",
+        "PCOR": "",
+        "WIX": "",
+        "PEGA": "",
+        "EXLS": "",
+        "FISV": ""
     },
     "Consumer_Cyclical": {
         "WING": "",
@@ -35,13 +48,24 @@
         "PDD": "",
         "BBY": "",
         "LKQ": "",
-        "NCLH": ""
+        "NCLH": "",
+        "LOW": "",
+        "TJX": "",
+        "TSCO": "",
+        "FND": "",
+        "BIRK": "",
+        "CHWY": "",
+        "GLBE": "",
+        "SHAK": ""
     },
     "Utilities": {},
     "Consumer_Defensive": {
         "PPC": "",
         "MKC": "",
-        "OLLI": ""
+        "OLLI": "",
+        "GIS": "",
+        "BRBR": "",
+        "FLO": ""
     },
     "Industrials": {
         "EXPO": "",
@@ -52,24 +76,45 @@
         "TTEK": "",
         "BLDR": "",
         "DLB": "",
-        "FCN": ""
+        "FCN": "",
+        "CTAS": "",
+        "OTIS": "",
+        "VRSK": "",
+        "GFL": "",
+        "ESAB": "",
+        "BAH": ""
     },
     "Communication_Services": {
         "STUB": "",
-        "Z": ""
+        "Z": "",
+        "TME": ""
     },
     "Financial_Services": {
         "NU": "",
         "HLNE": "",
         "HDB": "",
-        "OTF": ""
+        "OTF": "",
+        "WFC": "",
+        "MRSH": "",
+        "AJG": "",
+        "WTW": "",
+        "BRO": "",
+        "RLI": ""
     },
     "Healthcare": {
         "DHR": "",
         "TMDX": "",
         "OPCH": "",
         "WAY": "",
-        "MDLN": ""
+        "MDLN": "",
+        "TMO": "",
+        "SNY": "",
+        "BSX": "",
+        "ZTS": "",
+        "TECH": "",
+        "PODD": "",
+        "RGEN": "",
+        "CAI": ""
     },
     "ETFs": {
         "HYG": ""
