@@ -24,7 +24,7 @@ try:
     from pre_after import get_pre_after_changes
 except ImportError as e:
     print(f"导入 pre_after 失败: {e}")
-    def get_pre_after_changes(top_n=20):  # 兜底，防止崩溃
+    def get_pre_after_changes(top_n=10):  # 兜底，防止崩溃
         return []
 
 try:
@@ -57,7 +57,8 @@ COMPARE_STOCK_PATH = os.path.join(BASE_CODING_DIR, "News", "CompareStock.txt")
 EARNING_HISTORY_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Earning_History.json")
 
 # 新增：10年新高数据路径
-NEW_HIGH_10Y_PATH = os.path.join(BASE_CODING_DIR, "News", "backup", "10Y_newhigh_stock.txt")
+NEW_HIGH_10Y_PRIMARY_PATH = os.path.join(BASE_CODING_DIR, "News", "10Y_newhigh_stock.txt")
+NEW_HIGH_10Y_BACKUP_PATH = os.path.join(BASE_CODING_DIR, "News", "backup", "10Y_newhigh_stock.txt")
 
 class ClickableLabel(QLabel):
     clicked = pyqtSignal()
@@ -363,7 +364,7 @@ class PreAfterWorker(QThread):
     def run(self):
         # 在后台线程执行耗时操作
         try:
-            data = get_pre_after_changes(top_n=20)
+            data = get_pre_after_changes(top_n=10)
             self.data_finished.emit(data)
         except Exception as e:
             print(f"后台获取盘前数据失败: {e}")
@@ -502,6 +503,8 @@ class HighLowWindow(QMainWindow):
     def update_pre_after_tab(self, data):
         """当线程返回数据时调用"""
         self.pre_after_data = data
+        # --- 【关键修改】：同步更新类属性，确保切换 Tab 时能读取到最新数据 ---
+        self.list_pre_after = [it['symbol'] for it in data]
         
         # 1. 清除旧内容 (包括加载提示)
         while self.pre_after_layout.count():
@@ -515,7 +518,7 @@ class HighLowWindow(QMainWindow):
             self.pre_after_layout.addWidget(tip)
             return
 
-        # 重新构建内容 (复用你原本的逻辑)
+        # 重新构建内容
         main_lay = QHBoxLayout()
         self.pre_after_layout.addLayout(main_lay)
         
@@ -546,7 +549,7 @@ class HighLowWindow(QMainWindow):
             
         # 更新 symbol_manager 的列表 (如果当前正在该 Tab)
         if self.tabs.currentIndex() == 1:
-            self.symbol_manager.update_symbols([it['symbol'] for it in self.pre_after_data])
+            self.symbol_manager.update_symbols(self.list_pre_after)
 
     # --- Tab 初始化方法 ---
     def _init_resonance_tab(self, parent):
@@ -1002,11 +1005,19 @@ if __name__ == '__main__':
         stk = parse_stock_file(COMPARE_STOCK_PATH)
         earn_hist = load_json(EARNING_HISTORY_PATH)
         
-        # 新增：加载 10年新高 数据
-        newhigh_10y = parse_10y_newhigh_file(NEW_HIGH_10Y_PATH)
-        # 新增：拉取盘前/盘后前 20 名（此调用会走网络，可能耗时数秒）
+        # --- 修改：10年新高数据路径判断逻辑 ---
+        if os.path.exists(NEW_HIGH_10Y_PRIMARY_PATH):
+            target_10y_path = NEW_HIGH_10Y_PRIMARY_PATH
+            print(f"正在读取主 10年新高文件: {target_10y_path}")
+        else:
+            target_10y_path = NEW_HIGH_10Y_BACKUP_PATH
+            print(f"主文件不存在，正在读取备份 10年新高文件: {target_10y_path}")
+            
+        newhigh_10y = parse_10y_newhigh_file(target_10y_path)
+        
+        # 新增：拉取盘前/盘后前 10 名（此调用会走网络，可能耗时数秒）
         print("▶ 正在拉取盘前/盘后数据...")
-        # pre_after = get_pre_after_changes(top_n=20)
+        # pre_after = get_pre_after_changes(top_n=10)
         # print(f"✅ 盘前/盘后获取 {len(pre_after)} 条")
         
         app = QApplication(sys.argv)
