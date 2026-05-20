@@ -16,11 +16,7 @@
         "WSE": ""
     },
     "Consumer_Cyclical": {
-        "SHAK": "",
         "NCLH": "",
-        "LOW": "",
-        "ABG": "",
-        "PDD": "",
         "RCL": "",
         "CPNG": "",
         "GPC": "",
@@ -45,8 +41,6 @@
         "BLDR": "",
         "ESAB": "",
         "PH": "",
-        "XE": "",
-        "ARXS": "",
         "OTIS": "",
         "IR": "",
         "XYL": "",
@@ -64,9 +58,7 @@
         "HLNE": ""
     },
     "Healthcare": {
-        "HCA": "",
-        "MDLN": "",
-        "REGN": ""
+        "HCA": ""
     },
     "ETFs": {
         "HYG": ""
