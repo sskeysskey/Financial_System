@@ -164,8 +164,9 @@
         "MRSH",
         "NDAQ",
         "MET",
-        "COIN",
-        "AJG"
+        "AJG",
+        "CM",
+        "COIN"
     ],
     "Healthcare": [
         "LLY",
@@ -241,7 +242,8 @@
         "BE",
         "CARR",
         "URI",
-        "RKLB"
+        "RKLB",
+        "FAST"
     ],
     "Real_Estate": [
         "PLD",
@@ -311,11 +313,12 @@
         "CRWV",
         "MSTR",
         "TER",
-        "MCHP",
         "DDOG",
         "SNOW",
         "STM",
-        "FLEX"
+        "CBRS",
+        "ADSK",
+        "INFY"
     ],
     "Utilities": [
         "NEE",
