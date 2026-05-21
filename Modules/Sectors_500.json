@@ -29,8 +29,7 @@
         "SPOT",
         "NTES",
         "APP",
-        "WBD",
-        "NBIS"
+        "WBD"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -74,7 +73,8 @@
         "BTI",
         "CL",
         "MNST",
-        "TGT"
+        "TGT",
+        "ABEV"
     ],
     "Energy": [
         "XOM",
@@ -198,7 +198,8 @@
         "CVS",
         "MCK",
         "TAK",
-        "COR"
+        "COR",
+        "ARGX"
     ],
     "Industrials": [
         "GE",
@@ -318,7 +319,8 @@
         "STM",
         "CBRS",
         "ADSK",
-        "INFY"
+        "INFY",
+        "MCHP"
     ],
     "Utilities": [
         "NEE",
