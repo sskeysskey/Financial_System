@@ -12,8 +12,8 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 SYMBOL_TO_TRACE = "" 
 TARGET_DATE = "" 
 
-# SYMBOL_TO_TRACE = "NBIS"
-# TARGET_DATE = "2026-04-28"
+# SYMBOL_TO_TRACE = "BE"
+# TARGET_DATE = "2026-05-18"
 
 # 【新增配置项】支撑点距离最新日期的最小天数要求
 MIN_SUPPORT_DAYS = 6
@@ -187,7 +187,6 @@ def run_support_logic(log_detail):
                     break
 
                 # 依然以 low 作为寻找最低点的依据
-                # min_row = min(hist_rows, key=lambda x: x[1])
                 # 对 hist_rows 按 low 价格排序
                 sorted_rows = sorted(hist_rows, key=lambda x: x[1])
                 
@@ -529,6 +528,107 @@ def run_support_logic(log_detail):
 
                 if not symbol_categorized and is_tracing:
                     log_detail(f"  ⏭️ 61/91天范围内均无符合条件的财报支撑，最终跳过")
+
+            # ===== Phase 4: 31天内财报后区间支撑位检查 (新增) =====
+            if not symbol_categorized:
+                if is_tracing: log_detail(f"  -> 进入 Phase 4: 31天内财报后区间支撑检查")
+                
+                date_31_ago = (latest_dt - timedelta(days=31)).strftime("%Y-%m-%d")
+                
+                # 寻找31天内的最近一次财报日
+                cursor.execute(
+                    '''SELECT date FROM Earning 
+                       WHERE name = ? AND date >= ? AND date < ?
+                       ORDER BY date DESC LIMIT 1''',
+                    (symbol, date_31_ago, latest_date)
+                )
+                recent_e_row = cursor.fetchone()
+                
+                if recent_e_row:
+                    recent_e_date = recent_e_row[0]
+                    if is_tracing: log_detail(f"  -> 发现31天内财报日: {recent_e_date}，开始在该区间寻找支撑点")
+                    
+                    # 在 财报日 到 最新日期 之间寻找最低支撑点
+                    cursor.execute(
+                        f'SELECT date, low, price FROM [{table}] WHERE name = ? AND date >= ? AND date < ? ORDER BY date ASC',
+                        (symbol, recent_e_date, latest_date)
+                    )
+                    p4_rows = cursor.fetchall()
+                    
+                    if p4_rows:
+                        # 默认按 low 寻找最低点
+                        p4_min_row = min(p4_rows, key=lambda x: x[1])
+                        p4_support_date = p4_min_row[0]
+                        p4_support_low = p4_min_row[1]
+                        p4_support_close = p4_min_row[2]
+                        
+                        p4_support_dt = datetime.strptime(p4_support_date, "%Y-%m-%d")
+                        p4_days_diff = (latest_dt - p4_support_dt).days
+                        
+                        # 检查 MIN_SUPPORT_DAYS
+                        if p4_days_diff < MIN_SUPPORT_DAYS:
+                            if is_tracing: log_detail(f"  ⚠️ 区间支撑点(low)距最新日期仅 {p4_days_diff} 天，尝试使用收盘价(price)寻找支撑点...")
+                            
+                            p4_min_close_row = min(p4_rows, key=lambda x: x[2])
+                            p4_support_date_close = p4_min_close_row[0]
+                            p4_support_dt_close = datetime.strptime(p4_support_date_close, "%Y-%m-%d")
+                            p4_days_diff_close = (latest_dt - p4_support_dt_close).days
+                            
+                            if p4_days_diff_close < MIN_SUPPORT_DAYS:
+                                if is_tracing: log_detail(f"  ⚠️ 区间收盘价(price)支撑点距最新日期也仅 {p4_days_diff_close} 天，Phase 4 放弃")
+                            else:
+                                p4_support_date = p4_support_date_close
+                                p4_support_low = p4_min_close_row[1]
+                                p4_support_close = p4_min_close_row[2]
+                                p4_days_diff = p4_days_diff_close
+                                if is_tracing: log_detail(f"  ✅ 切换为收盘价(price)支撑点: {p4_support_date} (Low: {p4_support_low}, Close: {p4_support_close})")
+                        
+                        # 执行阈值判定
+                        if p4_days_diff >= MIN_SUPPORT_DAYS:
+                            tag_prefix = "[31天财报区间] "
+                            val_suffix = "财区" # 给字典赋值的后缀标记
+                            
+                            if latest_close > p4_support_low:
+                                diff_pct = (latest_close - p4_support_low) / p4_support_low * 100
+                                if diff_pct <= SUPPORT_THRESHOLD_PCT:
+                                    support_close[symbol] = f"{symbol}{val_suffix}"
+                                    earning_close[latest_date].append(symbol)
+                                    symbol_categorized = True
+                                    log_detail(f"  ✅ {symbol}: SupportLevel_Close {tag_prefix}(最新={latest_close}, 支撑日期={p4_support_date}, 支撑(low)={p4_support_low}, 差={diff_pct:.2f}%){pe_high_tag}")
+                                else:
+                                    # 二次比较
+                                    if latest_close > p4_support_close:
+                                        diff_pct_close = (latest_close - p4_support_close) / p4_support_close * 100
+                                        if diff_pct_close <= SUPPORT_THRESHOLD_PCT:
+                                            support_close[symbol] = f"{symbol}{val_suffix}"
+                                            earning_close[latest_date].append(symbol)
+                                            symbol_categorized = True
+                                            log_detail(f"  ✅ {symbol}: SupportLevel_Close {tag_prefix}[二次Price比较] (最新={latest_close}, 支撑日期={p4_support_date}, 支撑(price)={p4_support_close}, 差={diff_pct_close:.2f}%){pe_high_tag}")
+                                        else:
+                                            # 三次比较
+                                            if latest_low > p4_support_close:
+                                                diff_pct_latest_low = (latest_low - p4_support_close) / p4_support_close * 100
+                                                if diff_pct_latest_low <= SUPPORT_THRESHOLD_PCT:
+                                                    support_close[symbol] = f"{symbol}{val_suffix}"
+                                                    earning_close[latest_date].append(symbol)
+                                                    symbol_categorized = True
+                                                    log_detail(f"  ✅ {symbol}: SupportLevel_Close {tag_prefix}[三次LatestLow比较] (最新low={latest_low}, 支撑日期={p4_support_date}, 支撑(price)={p4_support_close}, 差={diff_pct_latest_low:.2f}%){pe_high_tag}")
+                                                else:
+                                                    if is_tracing: log_detail(f"  ⚠️ {tag_prefix}差值超 {SUPPORT_THRESHOLD_PCT}%，无输出")
+                                            else:
+                                                if is_tracing: log_detail(f"  ⚠️ {tag_prefix}最新low({latest_low}) <= 支撑(price)({p4_support_close})，不符合三次比较条件")
+                                    else:
+                                        support_over[symbol] = f"{symbol}{val_suffix}"
+                                        earning_over[latest_date].append(symbol)
+                                        symbol_categorized = True
+                                        log_detail(f"  ✅🔻 {symbol}: SupportLevel_Over {tag_prefix}[二次Price比较] (最新={latest_close}, 支撑日期={p4_support_date}, 支撑(price)={p4_support_close}){pe_high_tag}")
+                            else:
+                                support_over[symbol] = f"{symbol}{val_suffix}"
+                                earning_over[latest_date].append(symbol)
+                                symbol_categorized = True
+                                log_detail(f"  ✅🔻 {symbol}: SupportLevel_Over {tag_prefix}(最新={latest_close}, 支撑日期={p4_support_date}, 支撑(low)={p4_support_low}){pe_high_tag}")
+                else:
+                    if is_tracing: log_detail(f"  ⏭️ 31天内无财报，跳过 Phase 4")
 
         except Exception as e:
             log_detail(f"处理 {symbol} 时出错: {e}")

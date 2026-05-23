@@ -15,8 +15,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = "" 
 TARGET_DATE = "" 
 
-# SYMBOL_TO_TRACE = "NBIS"
-# TARGET_DATE = "2026-03-30"
+# SYMBOL_TO_TRACE = "GFS"
+# TARGET_DATE = "2026-05-18"
 
 PATHS = {
     "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),
@@ -881,7 +881,7 @@ def process_pe_volume_up(db_path, history_json_path, sector_map, target_date_ove
     return sorted(results_a), sorted(results_b)
 
 # --- 策略3: PE_Volume_high (财报持续上升 + 价格突破 + 成交额放量) ---
-def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_map, target_date_override, symbol_to_trace, log_detail, symbol_to_tags_map, hot_tags_t):
+def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_map, target_date_override, symbol_to_trace, log_detail, symbol_to_tags_map, hot_tags, hot_tags_t):
     """
     执行策略3：PE_Volume_high
     返回四个分类：
@@ -980,6 +980,7 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         # [新增] 获取当前 symbol 的所有 tags，并检查是否命中 HOT_TAGS_T
         s_tags = set(symbol_to_tags_map.get(symbol, []))
         has_hot_tag_t = bool(s_tags.intersection(hot_tags_t))
+        has_hot_tag = bool(s_tags.intersection(hot_tags))
         
         if is_tracing:
             log_detail(f"\n--- 正在检查 {symbol} (策略3) ---")
@@ -1119,7 +1120,7 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
             # 路径 A: 跌幅池抄底 (今日在 PE_W/Deep 等池子里)
             # [修改点] 检查基础池，或者 (带有 HOT_TAGS_T 并且在扩展池中)
             in_base_pool = symbol in base_valid_pool
-            in_extended_pool = has_hot_tag_t and (symbol in extended_valid_pool)
+            in_extended_pool = has_hot_tag and (symbol in extended_valid_pool)
             
             if in_base_pool or in_extended_pool:
                 cond_chaodi = True
@@ -1660,6 +1661,7 @@ def run_pe_volume_logic(log_detail):
         SYMBOL_TO_TRACE, 
         log_detail,
         symbol_to_tags_map,  # [新增] 传入标签映射
+        hot_tags,           # [新增] 传入 HOT_TAGS 集合
         hot_tags_t           # [新增] 传入 HOT_TAGS_T 集合
     )
     

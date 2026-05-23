@@ -680,15 +680,6 @@
         "message": "正在执行搜索脚本..."
     },
     {
-        "key": "leftBracket",
-        "modifiers": [
-            "control"
-        ],
-        "actionType": "runOsascript",
-        "target": "/Users/yanzhang/Coding/ScriptEditor/MemoryClearner.scpt",
-        "message": "正在执行 MemoryClearner 脚本..."
-    },
-    {
         "key": "w",
         "modifiers": [
             "control",
