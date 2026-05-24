@@ -318,7 +318,7 @@
         ],
         "actionType": "runOsascript",
         "target": "/Users/yanzhang/Coding/ScriptEditor/Downie_transfer.scpt",
-        "message": "正在执行 Doubao_small.scpt..."
+        "message": "正在执行 Downie_transfer.scpt..."
     },
     {
         "key": "s",
