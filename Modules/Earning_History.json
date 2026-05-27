@@ -1324,6 +1324,10 @@
             "EXP空",
             "HXL空",
             "KR空"
+        ],
+        "2026-05-26": [
+            "DY",
+            "XYZ空"
         ]
     },
     "SupportLevel_Close": {
@@ -2099,6 +2103,48 @@
             "WSO",
             "XPO",
             "XYZ"
+        ],
+        "2026-05-26": [
+            "ADSK",
+            "ALL",
+            "ANF",
+            "AR",
+            "BILL",
+            "CGON",
+            "CHTR",
+            "COIN",
+            "COST",
+            "CRL",
+            "DG",
+            "DKNG",
+            "EXE",
+            "GKOS",
+            "GPC",
+            "JBS",
+            "JD",
+            "KR",
+            "LITE",
+            "MDLN",
+            "MOH",
+            "MUSA",
+            "NEE",
+            "NFLX",
+            "ORLY",
+            "POOL",
+            "REGN",
+            "ROP",
+            "RRC",
+            "SATS",
+            "SBAC",
+            "SO",
+            "STZ",
+            "TSCO",
+            "UBER",
+            "UI",
+            "VEEV",
+            "VLO",
+            "WCN",
+            "WM"
         ]
     },
     "SupportLevel_Over": {
@@ -3021,6 +3067,20 @@
             "THC",
             "UBER",
             "VMC"
+        ],
+        "2026-05-26": [
+            "AUR",
+            "BABA",
+            "CHDN",
+            "CPNG",
+            "CRCL",
+            "HCA",
+            "LI",
+            "LPLA",
+            "MIR",
+            "PNR",
+            "RELY",
+            "VG"
         ]
     },
     "PE_Volume": {
@@ -4987,6 +5047,16 @@
         ],
         "2026-05-22": [
             "GKOS"
+        ],
+        "2026-05-26": [
+            "ANF黑",
+            "BBWI",
+            "CASY抄底",
+            "GKOS抄底",
+            "HRL黑",
+            "KR空",
+            "LI财",
+            "SYM"
         ]
     },
     "PE_Hot": {
@@ -5711,6 +5781,20 @@
             "SATS追",
             "UBER追",
             "VIAV追"
+        ],
+        "2026-05-26": [
+            "BABA追",
+            "BMNR追",
+            "COST追",
+            "CRCL追",
+            "DIS追",
+            "MTZ追",
+            "NEE追",
+            "NFLX",
+            "SATS追",
+            "UBER追",
+            "UNH",
+            "VRT"
         ]
     },
     "PE_Volume_high": {
@@ -6843,6 +6927,36 @@
             "SNDK抄底",
             "STRL抄底",
             "VSH甲"
+        ],
+        "2026-05-26": [
+            "AAOI抄底",
+            "ADI甲",
+            "ALL抄底",
+            "AMKR甲",
+            "ASX甲",
+            "CASY抄底",
+            "FLY甲",
+            "FORM抄底",
+            "GFS甲",
+            "GKOS抄底",
+            "JD抄底",
+            "LITE抄底",
+            "MOD甲",
+            "MOG-A甲",
+            "MTSI甲",
+            "MU甲",
+            "NOK甲",
+            "ON甲",
+            "RKLB甲",
+            "SIMO甲",
+            "SITM抄底",
+            "SMTC甲",
+            "STM甲",
+            "STRL抄底",
+            "ST甲",
+            "TTMI甲",
+            "UMC甲",
+            "VSH甲"
         ]
     },
     "ETF_Volume_high": {
@@ -7128,6 +7242,14 @@
         ],
         "2026-05-22": [
             "QTUM"
+        ],
+        "2026-05-26": [
+            "CIBR",
+            "COLO",
+            "POWR",
+            "QTUM",
+            "SCO",
+            "SOXL"
         ]
     },
     "ETF_Volume_low": {
@@ -7279,6 +7401,13 @@
             "RING",
             "SOXS",
             "YINN"
+        ],
+        "2026-05-26": [
+            "BWET",
+            "EIDO",
+            "SOXS",
+            "TUR",
+            "UVXY"
         ]
     },
     "Short_W": {
@@ -7963,6 +8092,10 @@
             "IBKR抄底",
             "MAIN",
             "MCK抄底"
+        ],
+        "2026-05-26": [
+            "MXL抄底",
+            "SLF抄底"
         ]
     },
     "PE_W": {
@@ -10572,6 +10705,16 @@
             "POOL",
             "SOLS",
             "TT"
+        ],
+        "2026-05-26": [
+            "ALLY",
+            "CRH",
+            "FERG",
+            "GEV",
+            "GFI",
+            "MSTR",
+            "PSLV",
+            "XYZ"
         ]
     },
     "OverSell_W": {
@@ -11879,6 +12022,19 @@
             "SNY",
             "UL",
             "VEEV",
+            "VRSK"
+        ],
+        "2026-05-26": [
+            "BMNR",
+            "DLTR",
+            "HRL",
+            "IAG",
+            "PHM",
+            "QXO",
+            "RPM",
+            "SNY",
+            "SYM",
+            "UL",
             "VRSK"
         ]
     },
@@ -14473,6 +14629,15 @@
             "FUTU",
             "GFI",
             "LULU",
+            "UI"
+        ],
+        "2026-05-26": [
+            "BBWI",
+            "DG",
+            "FUTU",
+            "LULU",
+            "OLLI",
+            "TSCO",
             "UI"
         ]
     },
@@ -19528,6 +19693,36 @@
             "SITM",
             "STRL",
             "TSCO",
+            "WING",
+            "Z"
+        ],
+        "2026-05-26": [
+            "AAOI",
+            "AG",
+            "ALB",
+            "ANF",
+            "AVAV",
+            "BILL",
+            "CAG",
+            "CHDN",
+            "CHTR",
+            "CHWY",
+            "COIN",
+            "COO",
+            "CRCL",
+            "EFX",
+            "FIGR",
+            "GKOS",
+            "GPC",
+            "GWRE",
+            "HLN",
+            "LEU",
+            "LI",
+            "MDT",
+            "POOL",
+            "RELY",
+            "SITM",
+            "VEEV",
             "WING",
             "Z"
         ]
@@ -31523,6 +31718,108 @@
             "WSO",
             "XPO",
             "XYZ"
+        ],
+        "2026-05-26": [
+            "ACN",
+            "AGX",
+            "AKAM",
+            "AR",
+            "AU",
+            "B",
+            "BABA",
+            "BEKE",
+            "BIDU",
+            "BP",
+            "BSX",
+            "CASY",
+            "CBRE",
+            "CCEP",
+            "CCJ",
+            "CLS",
+            "COST",
+            "CPB",
+            "CPNG",
+            "CPRI",
+            "CRL",
+            "CRM",
+            "CVNA",
+            "CVS",
+            "DAR",
+            "DBX",
+            "DHI",
+            "DHR",
+            "DINO",
+            "DOW",
+            "DY",
+            "ECG",
+            "ELAN",
+            "EME",
+            "ETSY",
+            "FIVE",
+            "FIX",
+            "FLNC",
+            "FORM",
+            "FTAI",
+            "GAP",
+            "GIS",
+            "GLXY",
+            "GME",
+            "HCA",
+            "HL",
+            "ITT",
+            "JBS",
+            "JD",
+            "JLL",
+            "KR",
+            "LII",
+            "LITE",
+            "LPLA",
+            "LYB",
+            "MDLN",
+            "MIR",
+            "MKC",
+            "MKTX",
+            "MOH",
+            "MRNA",
+            "MTN",
+            "MTZ",
+            "MUSA",
+            "NEE",
+            "NFLX",
+            "NXT",
+            "NYT",
+            "ORLY",
+            "OSCR",
+            "PAAS",
+            "PATH",
+            "PNR",
+            "POWL",
+            "RDDT",
+            "REGN",
+            "ROIV",
+            "ROP",
+            "RRC",
+            "SBAC",
+            "SE",
+            "SHAK",
+            "SJM",
+            "SQM",
+            "STRL",
+            "STZ",
+            "TEM",
+            "THC",
+            "TRI",
+            "TRMB",
+            "TTEK",
+            "UBER",
+            "UNH",
+            "VG",
+            "VLO",
+            "VMC",
+            "VRT",
+            "WCN",
+            "WHR",
+            "WSO"
         ]
     },
     "PE_invalid": {
@@ -32370,6 +32667,15 @@
             "SATS",
             "SMR",
             "SYM"
+        ],
+        "2026-05-26": [
+            "AUR",
+            "CGON",
+            "DKNG",
+            "FRMI",
+            "FSLY",
+            "IOT",
+            "SATS"
         ]
     },
     "_Tag_Blacklist": {},
@@ -34803,6 +35109,43 @@
             "WM",
             "XPO",
             "XYZ"
+        ],
+        "2026-05-26": [
+            "ADSK",
+            "ALL",
+            "ALNY",
+            "AR",
+            "BABA",
+            "BEKE",
+            "BKNG",
+            "BMY",
+            "BOX",
+            "CHWY",
+            "COIN",
+            "DIS",
+            "DLTR",
+            "DTE",
+            "EXE",
+            "FIGR",
+            "GWRE",
+            "IEX",
+            "ITT",
+            "JD",
+            "KR",
+            "MTZ",
+            "MUSA",
+            "NYT",
+            "OLLI",
+            "ORLY",
+            "RDDT",
+            "SBAC",
+            "SO",
+            "TT",
+            "UBER",
+            "VEEV",
+            "VG",
+            "VRSK",
+            "WM"
         ]
     }
 }

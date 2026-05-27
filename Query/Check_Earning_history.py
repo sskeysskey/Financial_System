@@ -152,6 +152,33 @@ def build_overlap_marker(category, d_str, suf,
             pass
 
     # =========================================================================
+    # 新增：Short 往前推一周（5个交易日）检查是否出现过 PE_Volume_high 且后缀含 '甲'
+    # =========================================================================
+    if category == "Short":
+        try:
+            date_idx = sorted_trading_dates.index(d_str)
+            # 往前推一周（5个交易日）
+            prev_5_dates = sorted_trading_dates[date_idx + 1 : date_idx + 6]
+            
+            pe_vol_high_records = category_data.get("PE_Volume_high", [])
+            has_jia_in_week = False
+            found_jia_date = ""
+            for prev_d in prev_5_dates:
+                for record_d, record_suf in pe_vol_high_records:
+                    if record_d == prev_d and record_suf and '甲' in record_suf:
+                        has_jia_in_week = True
+                        found_jia_date = prev_d
+                        break
+                if has_jia_in_week:
+                    break
+            
+            if has_jia_in_week:
+                # 用红色高亮标识，并悬浮显示具体触发 PE_Volume_high(甲) 的日期
+                overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='一周内（5个交易日）曾触发 PE_Volume_high(甲): {found_jia_date}'>[ + ★Volume_High'甲']</span>"
+        except ValueError:
+            pass
+
+    # =========================================================================
     # 修改：SupportLevel_Close 或 SupportLevel_Over 往前推15天检查 PE_Volume
     # 增加具体日期显示，并将颜色改为紫色
     # =========================================================================
@@ -348,9 +375,14 @@ def search_history_by_date(symbol):
                 # 默认蓝色 (PE_valid)
                 target_color = COLOR_BLUE
             
+            # 如果是 Short 分组，且触发了“一周内有PE_Volume_high(甲)”的标记，我们给它一个更显眼的背景样式
+            extra_style = ""
+            if category == "Short" and "[★Short+前周甲]" in overlap_marker:
+                extra_style = "border: 1px solid #BF616A; background-color: rgba(191,97,106,0.25);"
+
             display_category = (
                 f"<b style='color:{target_color}; background-color:rgba(191,97,106,0.1); "
-                f"padding:0 4px; border-radius:3px;'>{category}</b>"
+                f"padding:0 4px; border-radius:3px; {extra_style}'>{category}</b>"
             )
 
             rendered_items.append(f"• {display_category}{suf_html}{overlap_marker}")
