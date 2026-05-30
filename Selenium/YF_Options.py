@@ -2,10 +2,9 @@ import sqlite3
 import csv
 import time
 import os
-import pyautogui
 import random
+import atexit
 import json
-# import threading
 import sys
 import tkinter as tk
 import subprocess  # <--- 新增：用于执行外部脚本
@@ -61,27 +60,36 @@ MARKET_CAP_THRESHOLD = 400000000000
 today_str = datetime.now().strftime('%y%m%d')
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, f'Options_{today_str}.csv')
 
-# 添加鼠标移动功能的函数
-def move_mouse_periodically():
-    while True:
-        try:
-            # 获取屏幕尺寸
-            screen_width, screen_height = pyautogui.size()
-            
-            # 随机生成目标位置，避免移动到屏幕边缘
-            x = random.randint(100, screen_width - 100)
-            y = random.randint(100, screen_height - 100)
-            
-            # 缓慢移动鼠标到随机位置
-            pyautogui.moveTo(x, y, duration=1)
-            
-            # 等待30-60秒再次移动
-            time.sleep(random.randint(30, 60))
-        except Exception as e:
-            # 使用 tqdm.write 防止打断主线程进度条
-            pass
+# ================= 防止系统休眠控制 =================
+_caffeinate_proc = None
 
-# ================= 1. 数据库操作 =================
+def start_caffeinate():
+    """启动 caffeinate 以防止系统休眠 (仅限 macOS)"""
+    global _caffeinate_proc
+    # 仅在 macOS 上运行，Windows 和 Linux 不需要或有不同实现
+    if platform.system() == 'Darwin':
+        try:
+            # -i: 防止系统空闲休眠
+            # -d: 防止显示器休眠
+            # -m: 防止磁盘休眠
+            # -u: 声明用户处于活动状态
+            _caffeinate_proc = subprocess.Popen(["caffeinate", "-idmu"])
+            tqdm.write(">>> [系统] 已开启防休眠模式 (caffeinate)")
+        except Exception as e:
+            tqdm.write(f">>> [系统] 无法启动 caffeinate: {e}")
+
+def stop_caffeinate():
+    """停止 caffeinate"""
+    global _caffeinate_proc
+    if _caffeinate_proc:
+        try:
+            _caffeinate_proc.terminate()
+            tqdm.write(">>> [系统] 已关闭防休眠模式")
+        except Exception as e:
+            tqdm.write(f">>> [系统] 关闭 caffeinate 时出错: {e}")
+
+# 注册程序退出时自动关闭，确保不会留下僵尸进程
+atexit.register(stop_caffeinate)
 
 def get_target_symbols(db_path, threshold, silent=False):
     """从数据库中获取符合市值要求的 Symbol，并按市值降序排列"""
@@ -260,10 +268,6 @@ def run_analysis_program():
 # ================= 4. 爬虫核心逻辑 =================
 
 def scrape_options():
-    # 在主程序开始前启动鼠标移动线程
-    # mouse_thread = threading.Thread(target=move_mouse_periodically, daemon=True)
-    # mouse_thread.start()
-    
     # --- 1. 获取目标 Symbols (合并模式) ---
 
     # === 步骤 A: 初始化各个分组集合 (变量名已统一为 JSON Key 风格) ===
@@ -811,9 +815,20 @@ def scrape_options():
         tqdm.write(f"任务结束。数据已保存至: {OUTPUT_FILE}")
 
 if __name__ == "__main__":
-    # 执行爬虫任务
-    # 如果 scrape_options 返回 True (无论是抓取完成，还是因为数据已存在而跳过)，都执行分析脚本
-    task_success = scrape_options()
+    # 1. 开启防休眠
+    start_caffeinate()
     
-    # if task_success:
-    #     run_analysis_program()
+    try:
+        # 2. 执行爬虫任务
+        task_success = scrape_options()
+        
+        # 3. 如果需要，执行分析脚本
+        # if task_success:
+        #     run_analysis_program()
+            
+    except Exception as e:
+        tqdm.write(f"程序运行过程中发生异常: {e}")
+    finally:
+        # 4. 确保程序结束时，即使发生异常，也会自动触发 atexit 注册的 stop_caffeinate
+        # 这里不需要手动调用 stop_caffeinate，因为 atexit 已经注册了
+        pass
