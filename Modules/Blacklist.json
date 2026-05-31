@@ -709,7 +709,8 @@
         "SLAB",
         "GSAT",
         "CTRA",
-        "CMBT"
+        "CMBT",
+        "BK"
     ],
     "etf": [
         "VDE",

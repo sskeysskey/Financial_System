@@ -1212,16 +1212,11 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USGDP": "28 USGDP",
-        "USConspending": "28 USConspending",
-        "CorePCEM": "28 CorePCEM",
-        "CorePCEY": "28 CorePCEY",
-        "PCEY": "28 PCEY",
-        "USInitial": "04 USInitial",
         "USNonFarmA": "03 USNonFarmA",
         "USNonPMI": "03 USNonPMI",
         "USNonFarm": "05 USNonFarm",
-        "USUnemploy": "05 USUnemploy"
+        "USUnemploy": "05 USUnemploy",
+        "USInitial": "04 USInitial"
     },
     "Economic_All": {
         "USGDP": "",

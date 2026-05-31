@@ -99,11 +99,12 @@ def add_to_blacklist(blacklist_file, symbol):
         return False
 
 def delete_records_by_names(db_file, table_name, stock_names):
-    """从数据库中删除记录"""
+    """从数据库中删除记录（按 name 字段匹配）"""
     if not stock_names:
         print("没有提供要删除的股票代码")
-        return
+        return 0
     conn = sqlite3.connect(db_file, timeout=60.0)
+    rowcount = 0
     try:
         cur = conn.cursor()
         cur.execute('PRAGMA foreign_keys = ON;')
@@ -112,11 +113,35 @@ def delete_records_by_names(db_file, table_name, stock_names):
         sql = f'DELETE FROM "{table_name}" WHERE name IN ({placeholders});'
         cur.execute(sql, stock_names)
         conn.commit()
-        print(f"成功从表 {table_name} 中删除 {stock_names} 的 {cur.rowcount} 条记录。")
+        rowcount = cur.rowcount
+        print(f"成功从表 {table_name} 中删除 {stock_names} 的 {rowcount} 条记录。")
     except sqlite3.Error as e:
-        print(f"数据库错误: {e}")
+        print(f"数据库错误 (表 {table_name}): {e}")
     finally:
         conn.close()
+    return rowcount
+
+def delete_from_mnspp(db_file, symbol):
+    """从 Finance.db 的 MNSPP 表中删除指定的 symbol 记录"""
+    conn = sqlite3.connect(db_file, timeout=60.0)
+    rowcount = 0
+    try:
+        cur = conn.cursor()
+        cur.execute('PRAGMA foreign_keys = ON;')
+        # 注意：MNSPP 表中的字段是 symbol 而不是 name
+        sql = 'DELETE FROM "MNSPP" WHERE symbol = ?;'
+        cur.execute(sql, (symbol,))
+        conn.commit()
+        rowcount = cur.rowcount
+        if rowcount > 0:
+            print(f"成功从 MNSPP 表中删除 {symbol} 的 {rowcount} 条记录。")
+        else:
+            print(f"MNSPP 表中未找到 {symbol} 的记录。")
+    except sqlite3.Error as e:
+        print(f"数据库错误 (表 MNSPP): {e}")
+    finally:
+        conn.close()
+    return rowcount
 
 def is_in_etfs_sector(symbol, sector_files):
     """
@@ -281,11 +306,16 @@ def main():
         add_result_etf = add_to_blacklist_etf(blacklist_file, symbol)
     
     # 3. 数据库删除
+    # (1) 从对应的 sector 表删除
     sector = find_sector_for_symbol(sector_file, symbol)
+    db_sector_deleted = 0
     if sector:
-        delete_records_by_names(db_path, sector, [symbol])
+        db_sector_deleted = delete_records_by_names(db_path, sector, [symbol])
     else:
         print(f"未找到股票代码 {symbol} 对应的sector")
+
+    # (2) 新增：从 MNSPP 表中删除
+    db_mnspp_deleted = delete_from_mnspp(db_path, symbol)
 
     # 4. 删除所有 sector JSON 文件中的记录
     delete_result1 = delete_from_json_file(sector_file, symbol)
@@ -310,6 +340,18 @@ def main():
     
     # 8. 输出总结 (更新了总结部分)
     print("\n操作总结:")
+    
+    print("数据库(Finance.db)更新情况:")
+    if db_sector_deleted > 0:
+        print(f"- 已从 sector 表 [{sector}] 中删除 {symbol}")
+    else:
+        print(f"- sector 表未发生删除")
+        
+    if db_mnspp_deleted > 0:
+        print(f"- 已从 MNSPP 表中删除 {symbol} ({db_mnspp_deleted} 条记录)")
+    else:
+        print(f"- MNSPP 表中未找到 {symbol}，未执行删除")
+
     if delete_result1 or delete_result2 or delete_result3 or delete_result4:
         print("JSON文件更新情况:")
         if delete_result1: print("- Sectors_All.json 已更新")
