@@ -7,7 +7,6 @@
         "EXE": ""
     },
     "Technology": {
-        "CBRS": "",
         "WSE": ""
     },
     "Consumer_Cyclical": {
@@ -15,31 +14,20 @@
         "ORLY": "",
         "LOW": "",
         "SCI": "",
-        "SLGN": "",
         "TM": "",
         "CMG": "",
         "BFAM": "",
         "SHAK": ""
     },
-    "Utilities": {
-        "AWK": "",
-        "FRVO": ""
-    },
+    "Utilities": {},
     "Consumer_Defensive": {
         "TAP": "",
         "WMT": "",
-        "POST": "",
-        "MZTI": "",
-        "JBS": ""
+        "MZTI": ""
     },
     "Industrials": {
-        "PNR": "",
-        "PH": "",
-        "OTIS": "",
         "SITE": "",
         "NOC": "",
-        "ITW": "",
-        "GGG": "",
         "CPRT": ""
     },
     "Communication_Services": {
@@ -48,7 +36,6 @@
     },
     "Financial_Services": {
         "ICE": "",
-        "PFSI": "",
         "HDB": "",
         "CME": "",
         "MA": "",
@@ -59,7 +46,6 @@
     },
     "Healthcare": {
         "HCA": "",
-        "REGN": "",
         "BSX": "",
         "UHS": "",
         "RMD": "",
