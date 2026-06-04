@@ -5,6 +5,9 @@ import sys
 import json
 import datetime
 import subprocess
+import platform
+import subprocess
+import atexit
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -42,6 +45,33 @@ elif platform.system() == 'Windows':
 else:
     CHROME_BINARY_PATH = "/usr/bin/google-chrome"
     CHROME_DRIVER_PATH = "/usr/bin/chromedriver"
+
+# ================= 防止系统休眠控制 (从 Crawl_6vdy 移植) =================
+_caffeinate_proc = None
+
+def start_caffeinate():
+    """启动 caffeinate 以防止系统休眠 (仅限 macOS)"""
+    global _caffeinate_proc
+    if platform.system() == 'Darwin':
+        try:
+            # -i: 防止系统空闲休眠, -d: 防止显示器休眠, -m: 防止磁盘休眠, -u: 声明用户活动
+            _caffeinate_proc = subprocess.Popen(["caffeinate", "-idmu"])
+            print(">>> [系统] 已开启防休眠模式 (caffeinate)")
+        except Exception as e:
+            print(f">>> [系统] 无法启动 caffeinate: {e}")
+
+def stop_caffeinate():
+    """停止 caffeinate"""
+    global _caffeinate_proc
+    if _caffeinate_proc:
+        try:
+            _caffeinate_proc.terminate()
+            print(">>> [系统] 已关闭防休眠模式")
+        except Exception as e:
+            print(f">>> [系统] 关闭 caffeinate 时出错: {e}")
+
+# 注册程序退出时自动关闭，确保不会留下僵尸进程
+atexit.register(stop_caffeinate)
 
 # ================= 1. 数据库与 JSON 操作 =================
 
@@ -489,6 +519,9 @@ if __name__ == "__main__":
     today_num = datetime.datetime.now().weekday()
     weekdays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
     today_str = weekdays[today_num]
+
+    # ========== 在这里加入 ==========
+    start_caffeinate()  # 开启防休眠
     
     # # 逻辑：周二(1) 到 周六(5) 允许执行
     # if today_num in [1, 2, 3, 4, 5]:
