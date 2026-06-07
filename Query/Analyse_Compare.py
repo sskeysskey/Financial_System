@@ -1572,9 +1572,9 @@ def load_all_earnings_dates_scanner(db_path, earnings_files):
     return earnings_map
 
 def run_volume_high_scanner():
-    """Volume Scanner: 改为基于 Turnover (Price * Volume) 比较"""
+    """Volume Scanner: 改为基于 Turnover (Price * Volume) 比较 + 新增 STRANGE 策略"""
     print("\n" + "="*50)
-    print("STEP 3: 执行 Volume_High_Scanner 逻辑 (Turnover 模式)")
+    print("STEP 3: 执行 Volume_High_Scanner 逻辑 (Turnover 模式 + STRANGE)")
     print("="*50)
     
     # 配置路径
@@ -1593,8 +1593,9 @@ def run_volume_high_scanner():
     TARGET_SECTORS = [
         "Basic_Materials", "Communication_Services", "Consumer_Cyclical",
         "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare",
-        "Industrials", "Real_Estate", "Technology", "Utilities", "ETFs"
+        "Industrials", "Real_Estate", "Technology", "Utilities"
     ]
+    ETF_SECTOR = "ETFs"
 
     # 1. 加载基础数据
     sectors_data = load_json_scanner(SECTORS_ALL_PATH)
@@ -1606,7 +1607,8 @@ def run_volume_high_scanner():
     all_earnings_sets = load_all_earnings_dates_scanner(DB_PATH, EARNINGS_FILES)
     
     pos_results = [] 
-    neg_results = [] 
+    neg_results = []
+    strange_results = []  # 新增
     skipped_by_earnings = 0
     
     # 2. 连接数据库
@@ -1617,12 +1619,76 @@ def run_volume_high_scanner():
         print(f"无法连接数据库: {e}")
         return
 
-    # 3. 遍历板块和股票
-    for table_name in TARGET_SECTORS:
+    # -------------------------------------------------------------------------
+    # 【新增】STRANGE 策略：扫描两次财报下跌 + 最新财报负价格 + 反弹超20%
+    # -------------------------------------------------------------------------
+    print("\n开始扫描 STRANGE 策略股票...")
+    for table_name in TARGET_SECTORS:  # 只扫股票，不扫ETF
         if table_name not in sectors_data:
             continue
         symbols = sectors_data[table_name]
-        print(f"正在扫描: {table_name}...")
+
+        for symbol in symbols:
+            if symbol in blacklist:
+                continue
+
+            try:
+                # 1. 获取该股票所有财报日记录，按日期倒序
+                cursor.execute("""
+                    SELECT date, price FROM Earning 
+                    WHERE name = ? 
+                    ORDER BY date DESC
+                """, (symbol,))
+                earnings_rows = cursor.fetchall()
+
+                if len(earnings_rows) < 2:
+                    continue  # 至少需要两次财报
+
+                latest_earn_date, latest_earn_price = earnings_rows[0]
+                prev_earn_date, prev_earn_price = earnings_rows[1]
+
+                # 规则1：最新财报收盘价 < 上一期 → 下跌趋势
+                if latest_earn_price >= prev_earn_price:
+                    continue
+
+                # 规则2：最新财报日价格为负值
+                if latest_earn_price >= 0:
+                    continue
+
+                # 规则3：获取最新收盘价
+                cursor.execute(f"""
+                    SELECT price FROM {table_name} 
+                    WHERE name = ? 
+                    ORDER BY date DESC LIMIT 1
+                """, (symbol,))
+                latest_price_row = cursor.fetchone()
+                if not latest_price_row:
+                    continue
+                latest_close = latest_price_row[0]
+
+                # 规则4：反弹 > 20%
+                if latest_earn_price == 0:
+                    continue
+                gain_pct = (latest_close - latest_earn_price) / abs(latest_earn_price)
+                if gain_pct >= 0.20:
+                    # 组装输出行
+                    info_str = compare_map.get(symbol, "")
+                    tags_str = tags_map.get(symbol, "")
+                    line = f"{table_name} {symbol} {info_str} {tags_str}".replace("  ", " ").strip()
+                    strange_results.append(line)
+
+            except Exception:
+                continue
+
+    # -------------------------------------------------------------------------
+    # 原来的 UP/DOWN 逻辑（不变）
+    # -------------------------------------------------------------------------
+    all_scan_sectors = TARGET_SECTORS + [ETF_SECTOR]
+    for table_name in all_scan_sectors:
+        if table_name not in sectors_data:
+            continue
+        symbols = sectors_data[table_name]
+        print(f"正在扫描成交量: {table_name}...")
         
         for name in symbols:
             if name in blacklist:
@@ -1706,7 +1772,9 @@ def run_volume_high_scanner():
 
     conn.close()
 
-    # 4. 写入文件
+    # -------------------------------------------------------------------------
+    # 输出文件：UP + DOWN + STRANGE
+    # -------------------------------------------------------------------------
     try:
         os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
         with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
@@ -1716,10 +1784,15 @@ def run_volume_high_scanner():
             
             if neg_results:
                 f.write("========== DOWN ==========\n")
-                f.write('\n'.join(neg_results) + '\n')
+                f.write('\n'.join(neg_results) + '\n\n')
+            
+            # 输出 STRANGE
+            if strange_results:
+                f.write("========== STRANGE ==========\n")
+                f.write('\n'.join(strange_results) + '\n')
                 
         print(f"\n成功生成: {OUTPUT_FILENAME}")
-        print(f"正增长: {len(pos_results)} 只 | 负增长: {len(neg_results)} 只 | 因财报跳过: {skipped_by_earnings}")
+        print(f"UP: {len(pos_results)} | DOWN: {len(neg_results)} | STRANGE: {len(strange_results)} | 财报跳过: {skipped_by_earnings}")
     except Exception as e:
         print(f"写入文件失败: {e}")
 

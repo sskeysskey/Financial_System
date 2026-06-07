@@ -11,7 +11,7 @@ DOWNLOADS_DIR = os.path.join(USER_HOME, "Downloads")
 # ================= 配置区域 (跨平台修改) =================
 
 # 3. 默认数据库路径
-DEFAULT_DB_PATH = os.path.join(DATABASE_DIR, "analytics.db")
+DEFAULT_DB_PATH = os.path.join(DATABASE_DIR, "Finance.db")
 
 # 4. 报告输出目录
 DEFAULT_REPORT_DIR = DOWNLOADS_DIR

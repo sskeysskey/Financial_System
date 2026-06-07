@@ -1407,17 +1407,13 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USNonFarmA": "03 USNonFarmA",
-        "USNonPMI": "03 USNonPMI",
-        "USNonFarm": "05 USNonFarm",
-        "USUnemploy": "05 USUnemploy",
-        "USInitial": "11 USInitial",
         "USTrade": "09 USTrade",
         "CoreCPI": "10 CoreCPI",
         "USCPI": "10 USCPI",
         "USPPI": "11 USPPI",
         "CorePPI": "11 CorePPI",
-        "USConfidence": "12 USConfidence"
+        "USConfidence": "12 USConfidence",
+        "USInitial": "11 USInitial"
     },
     "Economic_All": {
         "USGDP": "",
