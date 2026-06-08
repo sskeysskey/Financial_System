@@ -19,29 +19,18 @@
     },
     "Consumer_Cyclical": {
         "TM": "",
-        "CMG": "",
         "SHAK": "",
-        "MCD": "",
-        "AVY": "",
         "AMZN": "",
         "LULU": "",
         "CPNG": ""
     },
     "Utilities": {},
-    "Consumer_Defensive": {
-        "TAP": "",
-        "MZTI": "",
-        "UL": "",
-        "INGR": "",
-        "POST": ""
-    },
+    "Consumer_Defensive": {},
     "Industrials": {
-        "SITE": "",
         "XE": ""
     },
     "Communication_Services": {
         "STUB": "",
-        "TMUS": "",
         "T": "",
         "META": ""
     },
@@ -50,9 +39,7 @@
         "HLNE": "",
         "XXI": ""
     },
-    "Healthcare": {
-        "HCA": ""
-    },
+    "Healthcare": {},
     "ETFs": {
         "HYG": ""
     },
