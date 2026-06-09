@@ -3,7 +3,9 @@
         "AEM": ""
     },
     "Real_Estate": {},
-    "Energy": {},
+    "Energy": {
+        "EXE": ""
+    },
     "Technology": {
         "JKHY": "",
         "FOUR": "",
@@ -15,31 +17,52 @@
         "GRAB": "",
         "OLED": "",
         "WIX": "",
-        "OSIS": ""
+        "OSIS": "",
+        "FIS": "",
+        "LDOS": "",
+        "DOX": ""
     },
     "Consumer_Cyclical": {
         "TM": "",
         "SHAK": "",
         "AMZN": "",
         "LULU": "",
-        "CPNG": ""
+        "CPNG": "",
+        "PDD": "",
+        "AVY": "",
+        "BFAM": ""
     },
-    "Utilities": {},
-    "Consumer_Defensive": {},
+    "Utilities": {
+        "FRVO": ""
+    },
+    "Consumer_Defensive": {
+        "TAL": "",
+        "BRBR": "",
+        "LOPE": "",
+        "JBS": ""
+    },
     "Industrials": {
-        "XE": ""
+        "XE": "",
+        "SITE": ""
     },
     "Communication_Services": {
         "STUB": "",
         "T": "",
-        "META": ""
+        "META": "",
+        "Z": ""
     },
     "Financial_Services": {
         "HDB": "",
         "HLNE": "",
-        "XXI": ""
+        "XXI": "",
+        "NU": "",
+        "HLI": "",
+        "PFSI": ""
     },
-    "Healthcare": {},
+    "Healthcare": {
+        "HCA": "",
+        "ATR": ""
+    },
     "ETFs": {
         "HYG": ""
     },
