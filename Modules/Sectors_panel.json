@@ -9,25 +9,15 @@
     "Technology": {
         "JKHY": "",
         "FOUR": "",
-        "PAYP": "",
-        "INTU": "",
-        "AVGO": "",
-        "CBRS": "",
         "TRMB": "",
         "GRAB": "",
-        "OLED": "",
         "WIX": "",
-        "OSIS": "",
         "FIS": "",
         "LDOS": "",
         "DOX": ""
     },
     "Consumer_Cyclical": {
-        "TM": "",
-        "SHAK": "",
         "AMZN": "",
-        "LULU": "",
-        "CPNG": "",
         "PDD": "",
         "AVY": "",
         "BFAM": ""
@@ -42,7 +32,6 @@
         "JBS": ""
     },
     "Industrials": {
-        "XE": "",
         "SITE": ""
     },
     "Communication_Services": {
@@ -54,7 +43,6 @@
     "Financial_Services": {
         "HDB": "",
         "HLNE": "",
-        "XXI": "",
         "NU": "",
         "HLI": "",
         "PFSI": ""

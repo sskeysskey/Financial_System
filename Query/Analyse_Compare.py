@@ -1572,7 +1572,7 @@ def load_all_earnings_dates_scanner(db_path, earnings_files):
     return earnings_map
 
 def run_volume_high_scanner():
-    """Volume Scanner: 改为基于 Turnover (Price * Volume) 比较 + 新增 STRANGE 策略"""
+    """Volume Scanner: 基于 Turnover 比较 + 修正后的 STRANGE 策略"""
     print("\n" + "="*50)
     print("STEP 3: 执行 Volume_High_Scanner 逻辑 (Turnover 模式 + STRANGE)")
     print("="*50)
@@ -1606,6 +1606,12 @@ def run_volume_high_scanner():
     # 加载所有财报日期集合
     all_earnings_sets = load_all_earnings_dates_scanner(DB_PATH, EARNINGS_FILES)
     
+    # 【新增】构建 symbol 到表名的反查映射字典
+    symbol_to_table = {}
+    for table_name, symbols in sectors_data.items():
+        for sym in symbols:
+            symbol_to_table[sym] = table_name
+
     pos_results = [] 
     neg_results = []
     strange_results = []  # 新增
@@ -1620,65 +1626,90 @@ def run_volume_high_scanner():
         return
 
     # -------------------------------------------------------------------------
-    # 【新增】STRANGE 策略：扫描两次财报下跌 + 最新财报负价格 + 反弹超20%
+    # 【修正后】STRANGE 策略：扫描两次财报下跌 + 最新财报日当天跌 + 最新价反弹超20%
     # -------------------------------------------------------------------------
     print("\n开始扫描 STRANGE 策略股票...")
-    for table_name in TARGET_SECTORS:  # 只扫股票，不扫ETF
-        if table_name not in sectors_data:
+    for symbol, table_name in symbol_to_table.items():
+        # 仅扫描普通股票板块，排除 ETFs、Bonds 等
+        if table_name not in TARGET_SECTORS:
             continue
-        symbols = sectors_data[table_name]
+        if symbol in blacklist:
+            continue
 
-        for symbol in symbols:
-            if symbol in blacklist:
+        try:
+            # 1. 获取该股票在 Earning 表中的记录（按日期倒序）
+            # 注意：这里的 price 字段是财报当天的涨跌幅百分比
+            cursor.execute("""
+                SELECT date, price FROM Earning 
+                WHERE name = ? 
+                ORDER BY date DESC LIMIT 2
+            """, (symbol,))
+            earnings_rows = cursor.fetchall()
+
+            if len(earnings_rows) < 2:
+                continue  # 至少需要两次财报数据
+
+            latest_earn_date, latest_earn_change = earnings_rows[0]
+            prev_earn_date, prev_earn_change = earnings_rows[1]
+
+            # 规则 1：最新财报当天的涨跌幅（Earning 表里的 price）必须为负值
+            if latest_earn_change >= 0:
                 continue
 
-            try:
-                # 1. 获取该股票所有财报日记录，按日期倒序
-                cursor.execute("""
-                    SELECT date, price FROM Earning 
-                    WHERE name = ? 
-                    ORDER BY date DESC
-                """, (symbol,))
-                earnings_rows = cursor.fetchall()
+            # 2. 去该 symbol 实际所在的板块表中，反查这两次财报日期的真实收盘价（price 字段）
+            cursor.execute(f"""
+                SELECT price FROM "{table_name}" 
+                WHERE name = ? AND date = ?
+            """, (symbol, latest_earn_date))
+            latest_close_row = cursor.fetchone()
+            
+            cursor.execute(f"""
+                SELECT price FROM "{table_name}" 
+                WHERE name = ? AND date = ?
+            """, (symbol, prev_earn_date))
+            prev_close_row = cursor.fetchone()
 
-                if len(earnings_rows) < 2:
-                    continue  # 至少需要两次财报
-
-                latest_earn_date, latest_earn_price = earnings_rows[0]
-                prev_earn_date, prev_earn_price = earnings_rows[1]
-
-                # 规则1：最新财报收盘价 < 上一期 → 下跌趋势
-                if latest_earn_price >= prev_earn_price:
-                    continue
-
-                # 规则2：最新财报日价格为负值
-                if latest_earn_price >= 0:
-                    continue
-
-                # 规则3：获取最新收盘价
-                cursor.execute(f"""
-                    SELECT price FROM {table_name} 
-                    WHERE name = ? 
-                    ORDER BY date DESC LIMIT 1
-                """, (symbol,))
-                latest_price_row = cursor.fetchone()
-                if not latest_price_row:
-                    continue
-                latest_close = latest_price_row[0]
-
-                # 规则4：反弹 > 20%
-                if latest_earn_price == 0:
-                    continue
-                gain_pct = (latest_close - latest_earn_price) / abs(latest_earn_price)
-                if gain_pct >= 0.20:
-                    # 组装输出行
-                    info_str = compare_map.get(symbol, "")
-                    tags_str = tags_map.get(symbol, "")
-                    line = f"{table_name} {symbol} {info_str} {tags_str}".replace("  ", " ").strip()
-                    strange_results.append(line)
-
-            except Exception:
+            # 如果查不到对应的收盘价，跳过
+            if not latest_close_row or not prev_close_row:
                 continue
+
+            latest_earn_close_price = latest_close_row[0]
+            prev_earn_close_price = prev_close_row[0]
+
+            if latest_earn_close_price is None or prev_earn_close_price is None:
+                continue
+
+            # 规则 2：两次财报的收盘价是持续下跌的（最新财报收盘价 < 上一期财报收盘价）
+            if latest_earn_close_price >= prev_earn_close_price:
+                continue
+
+            # 3. 获取该股票当前最新的收盘价
+            cursor.execute(f"""
+                SELECT price FROM "{table_name}" 
+                WHERE name = ? 
+                ORDER BY date DESC LIMIT 1
+            """, (symbol,))
+            current_price_row = cursor.fetchone()
+            if not current_price_row or current_price_row[0] is None:
+                continue
+            current_close = current_price_row[0]
+
+            # 规则 3：最新收盘价比最新财报收盘价反弹超 20%
+            if latest_earn_close_price <= 0:
+                continue  # 避免除以 0 或异常负价格
+            
+            gain_pct = (current_close - latest_earn_close_price) / latest_earn_close_price
+            if gain_pct >= 0.20:
+                # 组装输出行
+                info_str = compare_map.get(symbol, "")
+                tags_str = tags_map.get(symbol, "")
+                line = f"{table_name} {symbol} {info_str} {tags_str}".replace("  ", " ").strip()
+                strange_results.append(line)
+                print(f"[STRANGE 命中] {symbol}: 财报日收盘价从 {prev_earn_close_price:.2f} 跌至 {latest_earn_close_price:.2f} (当天跌幅 {latest_earn_change}%)，当前反弹至 {current_close:.2f} (+{gain_pct*100:.2f}%)")
+
+        except Exception as e:
+            # print(f"STRANGE 扫描 {symbol} 出错: {e}") # 调试用
+            continue
 
     # -------------------------------------------------------------------------
     # 原来的 UP/DOWN 逻辑（不变）
