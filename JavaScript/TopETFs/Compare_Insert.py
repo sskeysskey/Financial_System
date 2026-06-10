@@ -7,6 +7,7 @@ import os
 import glob
 import time
 import subprocess
+import sys  # 确保导入 sys 模块，用于获取当前 Python 解释器路径
 import tkinter as tk
 from tkinter import messagebox
 
@@ -27,6 +28,9 @@ BLACKLIST_JSON_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Blacklist.j
 OUTPUT_DIR = NEWS_DIR
 OUTPUT_TXT_FILE = os.path.join(OUTPUT_DIR, 'ETFs_new.txt')
 CHECK_YESTERDAY_SCRIPT_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Query", "Check_yesterday.py")
+
+# 新增：需要追加执行的脚本路径
+IMIGRATE_SCRIPT_PATH = "/Users/yanzhang/Coding/Financial_System/Operations/Imigrate_new_exist.py"
 
 def open_file_externally(file_path):
     """跨平台打开文件"""
@@ -219,7 +223,24 @@ def run_etf_processing():
         # 如果文件存在（说明有新数据或者之前就有记录），直接打开
         open_file_externally(OUTPUT_TXT_FILE)
     else:
-        # 如果文件不存在，说明确实没有新数据
+        # ================= 新增：没有发现新 ETF 时追加执行指定脚本 =================
+        logging.info("未发现新 ETF，准备执行 Imigrate_new_exist.py...")
+        try:
+            # 使用当前 Python 解释器安全地运行指定的脚本
+            result = subprocess.run(
+                [sys.executable, IMIGRATE_SCRIPT_PATH],
+                check=True, capture_output=True, text=True, encoding='utf-8'
+            )
+            logging.info("Imigrate_new_exist.py 执行成功")
+            print("--- Imigrate Subprocess Output ---\n" + result.stdout)
+        except subprocess.CalledProcessError as e:
+            logging.error(f"Imigrate_new_exist.py 执行失败 code={e.returncode}")
+            print(e.stderr)
+        except Exception as e:
+            logging.error(f"调用 Imigrate_new_exist.py 失败: {e}")
+        # =======================================================================
+
+        # 如果文件不存在，说明确实没有新数据，并弹出提示
         display_dialog("所有 ETF 数据已同步，没有发现新的 ETF。")
 
 def display_dialog(message):
