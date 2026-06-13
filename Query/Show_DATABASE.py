@@ -14,7 +14,9 @@ DOWNLOADS_DIR = os.path.join(USER_HOME, "Downloads")
 # DEFAULT_DB_PATH = os.path.join(DATABASE_DIR, "Finance.db")
 
 # 3. 默认数据库路径（手动指定绝对路径）
-DEFAULT_DB_PATH = "/Users/yanzhang/Coding/LocalServer/Resources/OVideo/ovideo.db"
+# DEFAULT_DB_PATH = "/Users/yanzhang/Coding/LocalServer/Resources/OVideo/ovideo.db"
+DEFAULT_DB_PATH = "/Users/yanzhang/Downloads/OVideo.db"
+
 
 # 4. 报告输出目录
 DEFAULT_REPORT_DIR = DOWNLOADS_DIR
