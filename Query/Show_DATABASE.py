@@ -11,7 +11,10 @@ DOWNLOADS_DIR = os.path.join(USER_HOME, "Downloads")
 # ================= 配置区域 (跨平台修改) =================
 
 # 3. 默认数据库路径
-DEFAULT_DB_PATH = os.path.join(DATABASE_DIR, "Finance.db")
+# DEFAULT_DB_PATH = os.path.join(DATABASE_DIR, "Finance.db")
+
+# 3. 默认数据库路径（手动指定绝对路径）
+DEFAULT_DB_PATH = "/Users/yanzhang/Coding/LocalServer/Resources/OVideo/ovideo.db"
 
 # 4. 报告输出目录
 DEFAULT_REPORT_DIR = DOWNLOADS_DIR
@@ -371,7 +374,7 @@ if __name__ == "__main__":
     # my_content_limit = 500
     
     # 选项 B: 显示全部数据，设置为 'all'
-    my_content_limit = '15'
+    my_content_limit = 'all'
     
     # 调用时传入 target_tables 参数
     visualize_sqlite_db(
