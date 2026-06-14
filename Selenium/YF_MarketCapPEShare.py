@@ -18,6 +18,35 @@ import sqlite3
 import random
 import platform  # <--- 新增
 
+# ================= 防止系统休眠控制 =================
+_caffeinate_proc = None
+
+def start_caffeinate():
+    """启动 caffeinate 以防止系统休眠 (仅限 macOS)"""
+    global _caffeinate_proc
+    import platform
+    import subprocess
+    if platform.system() == 'Darwin':
+        try:
+            # -i: 防止系统空闲休眠, -d: 防止显示器休眠, -m: 防止磁盘休眠, -u: 声明用户活动
+            _caffeinate_proc = subprocess.Popen(["caffeinate", "-idmu"])
+            print(">>> [系统] 已开启防休眠模式 (caffeinate)")
+        except Exception as e:
+            print(f">>> [系统] 无法启动 caffeinate: {e}")
+
+def stop_caffeinate():
+    """停止 caffeinate"""
+    global _caffeinate_proc
+    if _caffeinate_proc:
+        try:
+            _caffeinate_proc.terminate()
+            print(">>> [系统] 已关闭防休眠模式")
+        except Exception as e:
+            print(f">>> [系统] 关闭 caffeinate 时出错: {e}")
+
+import atexit
+atexit.register(stop_caffeinate)
+
 # ================= 配置区域 (跨平台修改) =================
 
 # 1. 动态获取主目录
@@ -499,6 +528,9 @@ def show_group_selection_dialog(groups):
     return selected['group']
 
 def main():
+    # 新增：启动防休眠
+    start_caffeinate()
+
     # 解析命令行参数
     args = parse_arguments()
     
@@ -788,6 +820,9 @@ def main():
         # 关闭浏览器
         if 'driver' in locals() and driver:
             driver.quit()
+        
+        # --- 新增：关闭防休眠 ---
+        stop_caffeinate()
         
         # --- 新增：关闭数据库连接 ---
         if db_conn:

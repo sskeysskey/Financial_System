@@ -915,16 +915,10 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USTrade": "09 USTrade",
-        "CoreCPI": "10 CoreCPI",
-        "USCPI": "10 USCPI",
-        "USPPI": "11 USPPI",
-        "CorePPI": "11 CorePPI",
-        "USConfidence": "12 USConfidence",
-        "USInitial": "18 USInitial",
         "ImportPriceM": "16 ImportPriceM",
         "USRetailM": "17 USRetailM",
-        "USInterest": "17 USInterest"
+        "USInterest": "17 USInterest",
+        "USInitial": "18 USInitial"
     },
     "Economic_All": {
         "USGDP": "",
