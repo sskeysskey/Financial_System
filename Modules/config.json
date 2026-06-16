@@ -946,8 +946,8 @@
             "option"
         ],
         "actionType": "runInTerminal",
-        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/OVideo/Build_video_db.py'",
-        "message": "正在启动 视频数据库 的生成..."
+        "target": "",
+        "message": ""
     },
     {
         "key": "five",

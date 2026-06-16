@@ -2146,7 +2146,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     def on_key(event):
         try:
             actions = {'v': toggle_volume, 'r': toggle_global_markers, 'x': toggle_all_annotations,
-                       'a': toggle_earning_markers, 'c': toggle_specific_markers,
+                       'a': toggle_earning_markers,
+                       'c': toggle_specific_markers,
                        'g': refresh_description_data_and_redraw, # 新增 'g' 快捷键
                        'n': lambda: execute_external_script('earning_input', name),
                        'e': lambda: execute_external_script('earning_edit', name),
@@ -2154,7 +2155,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                        'w': lambda: execute_external_script('event_input', name),
                        'y': launch_insert_then_delete_chain, 
                        'j': launch_and_close_for_y,
-                       'c': toggle_colored_lines,
+                       's': toggle_colored_lines,
                        'q': lambda: execute_external_script('event_edit', name),
                        'k': lambda: execute_external_script('check_kimi', name),
                        'z': lambda: execute_external_script('check_futu', name),
