@@ -17,14 +17,15 @@
     "Financial_Services": [
         "BRK-B",
         "JPM",
-        "V",
-        "BAC"
+        "V"
     ],
     "Healthcare": [
         "LLY",
         "JNJ"
     ],
-    "Industrials": [],
+    "Industrials": [
+        "SPCX"
+    ],
     "Real_Estate": [],
     "Technology": [
         "AAPL",

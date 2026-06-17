@@ -15,7 +15,8 @@
         "VALE",
         "WPM",
         "CTVA",
-        "NUE"
+        "NUE",
+        "MT"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -29,7 +30,8 @@
         "SPOT",
         "NTES",
         "APP",
-        "WBD"
+        "WBD",
+        "NBIS"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -57,7 +59,7 @@
         "ROST",
         "SE",
         "F",
-        "EBAY"
+        "CVNA"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -73,8 +75,7 @@
         "BTI",
         "CL",
         "MNST",
-        "TGT",
-        "ABEV"
+        "TGT"
     ],
     "Energy": [
         "XOM",
@@ -101,11 +102,8 @@
         "BKR",
         "OKE",
         "OXY",
-        "LNG",
         "FANG",
-        "TRGP",
-        "CVE",
-        "DVN"
+        "TRGP"
     ],
     "Financial_Services": [
         "JPM",
@@ -165,7 +163,7 @@
         "MET",
         "AJG",
         "CM",
-        "COIN"
+        "BNY"
     ],
     "Healthcare": [
         "LLY",
@@ -196,9 +194,10 @@
         "GSK",
         "CVS",
         "MCK",
-        "TAK",
         "COR",
-        "ARGX"
+        "ARGX",
+        "CAH",
+        "EW"
     ],
     "Industrials": [
         "GE",
@@ -243,7 +242,11 @@
         "CARR",
         "URI",
         "RKLB",
-        "FAST"
+        "FAST",
+        "SPCX",
+        "HONAV",
+        "DAL",
+        "ROK"
     ],
     "Real_Estate": [
         "PLD",
@@ -311,14 +314,15 @@
         "NOK",
         "NXPI",
         "CRWV",
-        "MSTR",
         "TER",
         "DDOG",
         "SNOW",
         "STM",
-        "ADSK",
-        "INFY",
-        "MCHP"
+        "MCHP",
+        "HPE",
+        "ALAB",
+        "UMC",
+        "FLEX"
     ],
     "Utilities": [
         "NEE",
@@ -328,6 +332,7 @@
         "CEG",
         "AEP",
         "SRE",
-        "D"
+        "D",
+        "VST"
     ]
 }

@@ -46,6 +46,10 @@ CONFIG = {
     "ETF_COND_LOW_DROP_THRESHOLD": 0.06,           # 距最高点跌幅 (原逻辑的常规跌幅)
     "ETF_COND_LOW_TURNOVER_MONTHS": 2,             # 成交额回溯月份
     "ETF_COND_LOW_TURNOVER_RANK_THRESHOLD": 3,     # 成交额排名前 N 名
+
+    # ========== 策略2 附加：年度成交额前三 "甲" 标记 参数 ==========
+    "ETF_COND_LOW_YEARLY_TURNOVER_LOOKBACK_MONTHS": 12,  # 年度成交额回溯12个月
+    "ETF_COND_LOW_YEARLY_TURNOVER_RANK_THRESHOLD": 3,    # 年度成交额排名前3名 -> 标 "甲"
 }
 
 
@@ -184,6 +188,60 @@ def check_turnover_rank(cursor, sector_name, symbol, latest_date_str, latest_tur
         log_detail(f"      当前成交额: {latest_turnover:,.0f} -> 在前{rank_threshold}: {is_top_n}")
 
     return is_top_n
+
+
+def get_etf_yearly_turnover_top_symbols(db_path, symbols, target_date_override, log_detail,
+                                        lookback_months=12, rank_threshold=3, symbol_to_trace=""):
+    """
+    对给定的 ETF 列表，逐个判断其"最新成交额"是否为过去 lookback_months 个月的前 rank_threshold 名。
+    返回符合条件的 symbol 集合（用于在 Panel 中追加 "甲" 标记）。
+    """
+    log_detail(f"\n========== 计算 ETF_Volume_low 的年度成交额前 {rank_threshold} 名 (标记'甲') ==========")
+    result = set()
+    if not symbols:
+        log_detail(" - 输入列表为空，跳过。")
+        return result
+
+    conn = sqlite3.connect(db_path, timeout=60.0)
+    cursor = conn.cursor()
+
+    for symbol in symbols:
+        is_tracing = (symbol == symbol_to_trace)
+        if is_tracing:
+            log_detail(f"\n--- [甲标记] 检查 ETF {symbol} ---")
+
+        # 获取最新一天的数据
+        if target_date_override:
+            cursor.execute(
+                'SELECT date, price, volume FROM "ETFs" WHERE name = ? AND date <= ? '
+                'ORDER BY date DESC LIMIT 1',
+                (symbol, target_date_override)
+            )
+        else:
+            cursor.execute(
+                'SELECT date, price, volume FROM "ETFs" WHERE name = ? '
+                'ORDER BY date DESC LIMIT 1',
+                (symbol,)
+            )
+
+        row = cursor.fetchone()
+        if not row or row[1] is None or row[2] is None:
+            if is_tracing:
+                log_detail("    x 无最新成交数据")
+            continue
+
+        latest_date, latest_price, latest_volume = row
+        latest_turnover = latest_price * latest_volume
+
+        if check_turnover_rank(cursor, "ETFs", symbol, latest_date, latest_turnover,
+                               lookback_months, rank_threshold, log_detail, is_tracing):
+            result.add(symbol)
+            if is_tracing:
+                log_detail(f"    ✅ 年度成交额前{rank_threshold} -> 标记 '甲'")
+
+    conn.close()
+    log_detail(f"\n年度成交额前 {rank_threshold} 名 (标'甲') 共 {len(result)} 个: {sorted(result)}")
+    return result
 
 
 # --- 策略1: ETF_Volume_high (ETF放量突破) ---
@@ -516,19 +574,31 @@ def run_etf_volume_logic(log_detail):
     log_detail(f"\n策略2合并后: 原策略 {before_merge} 个 + 延续规则 "
                f"{len(final_etf_low_cont)} 个 => 去重后 {len(final_etf_low)} 个")
 
-    # 构建备注（含黑名单标记）
-    def build_notes(symbols):
+    # ===== 新增：计算 ETF_Volume_low 中 "年度成交额前三" 的标 "甲" 集合 =====
+    etf_low_jia_set = get_etf_yearly_turnover_top_symbols(
+        DB_FILE, final_etf_low, TARGET_DATE, log_detail,
+        CONFIG.get("ETF_COND_LOW_YEARLY_TURNOVER_LOOKBACK_MONTHS", 12),
+        CONFIG.get("ETF_COND_LOW_YEARLY_TURNOVER_RANK_THRESHOLD", 3),
+        SYMBOL_TO_TRACE
+    )
+
+    # 构建备注（含黑名单标记 / 甲标记）
+    def build_notes(symbols, jia_set=None):
+        if jia_set is None:
+            jia_set = set()
         note_map = {}
         for sym in symbols:
             suffix = ""
             s_tags = set(symbol_to_tags_map.get(sym, []))
             if s_tags.intersection(tag_blacklist):
                 suffix += "黑"
+            if sym in jia_set:
+                suffix += "甲"
             note_map[sym] = f"{sym}{suffix}"
         return note_map
 
     etf_high_notes = build_notes(final_etf_high)
-    etf_low_notes = build_notes(final_etf_low)
+    etf_low_notes = build_notes(final_etf_low, etf_low_jia_set)
 
     # 追踪汇总
     if SYMBOL_TO_TRACE:
@@ -536,6 +606,7 @@ def run_etf_volume_logic(log_detail):
         log_detail(f"📌 [{SYMBOL_TO_TRACE}] 命中汇总")
         log_detail(f"  策略1 ETF_Volume_high: {'✅' if SYMBOL_TO_TRACE in final_etf_high else '❌'}")
         log_detail(f"  策略2 ETF_Volume_low:  {'✅' if SYMBOL_TO_TRACE in final_etf_low else '❌'}")
+        log_detail(f"  年度成交额前三(甲):    {'✅' if SYMBOL_TO_TRACE in etf_low_jia_set else '❌'}")
         log_detail(f"{'='*60}")
 
     # 回测模式拦截
@@ -544,6 +615,7 @@ def run_etf_volume_logic(log_detail):
         log_detail(f"🛑 回测模式 (Date: {TARGET_DATE})")
         log_detail(f"📊 ETF_Volume_high 命中: {len(final_etf_high)} 个")
         log_detail(f"📊 ETF_Volume_low  命中: {len(final_etf_low)} 个")
+        log_detail(f"📊 其中标'甲'(年度前三): {len(etf_low_jia_set)} 个 -> {sorted(etf_low_jia_set)}")
         log_detail("="*60)
         return
 
