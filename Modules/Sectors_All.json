@@ -1273,7 +1273,8 @@
         "TWST",
         "LGND",
         "HNGE",
-        "AMRX"
+        "AMRX",
+        "TVTX"
     ],
     "Industrials": [
         "GE",
@@ -1830,7 +1831,9 @@
         "P",
         "CBRS",
         "BB",
-        "ACMR"
+        "ACMR",
+        "UCTT",
+        "NAVN"
     ],
     "Utilities": [
         "NEE",

@@ -1115,7 +1115,9 @@
         "ISMD",
         "SMMD",
         "VBK",
-        "NFLT"
+        "NFLT",
+        "FPXI",
+        "IWX"
     ],
     "Earning": [
         "TW",

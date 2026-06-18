@@ -15,8 +15,7 @@
         "VALE",
         "WPM",
         "CTVA",
-        "NUE",
-        "MT"
+        "NUE"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -58,8 +57,7 @@
         "ORLY",
         "ROST",
         "SE",
-        "F",
-        "CVNA"
+        "F"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -159,7 +157,6 @@
         "NWG",
         "BRK-B",
         "MRSH",
-        "NDAQ",
         "MET",
         "AJG",
         "CM",
@@ -196,8 +193,7 @@
         "MCK",
         "COR",
         "ARGX",
-        "CAH",
-        "EW"
+        "CAH"
     ],
     "Industrials": [
         "GE",
