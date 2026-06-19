@@ -1110,7 +1110,8 @@
         "PS",
         "KLAR",
         "MAAS",
-        "BNY"
+        "BNY",
+        "ENVA"
     ],
     "Healthcare": [
         "LLY",
@@ -1502,7 +1503,8 @@
         "HONAV",
         "SPCX",
         "FDXF",
-        "INIO"
+        "INIO",
+        "XMTR"
     ],
     "Real_Estate": [
         "PLD",

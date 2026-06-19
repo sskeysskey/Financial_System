@@ -193,7 +193,8 @@
         "MCK",
         "COR",
         "ARGX",
-        "CAH"
+        "CAH",
+        "EW"
     ],
     "Industrials": [
         "GE",
@@ -318,7 +319,9 @@
         "HPE",
         "ALAB",
         "UMC",
-        "FLEX"
+        "FLEX",
+        "CBRS",
+        "CRDO"
     ],
     "Utilities": [
         "NEE",
