@@ -306,9 +306,9 @@
         "modifiers": [
             "control"
         ],
-        "actionType": "runPythonBackground",
-        "target": "/Users/yanzhang/Coding/Financial_System/Query/Chart_Earning.py",
-        "message": "正在打开Chart_Earning界面..."
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Downie_url.scpt",
+        "message": "正在执行 Downie_url.scpt..."
     },
     {
         "key": "i",

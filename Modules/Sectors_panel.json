@@ -1641,7 +1641,7 @@
         "ImportPriceM": "16 ImportPriceM",
         "USRetailM": "17 USRetailM",
         "USInterest": "17 USInterest",
-        "USInitial": "18 USInitial",
+        "USInitial": "25 USInitial",
         "PCEY": "25 PCEY",
         "CorePCEY": "25 CorePCEY",
         "CorePCEM": "25 CorePCEM",
