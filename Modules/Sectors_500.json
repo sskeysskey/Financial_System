@@ -49,7 +49,6 @@
         "RACE",
         "ABNB",
         "MAR",
-        "AZO",
         "RCL",
         "HLT",
         "GM",
@@ -193,8 +192,7 @@
         "MCK",
         "COR",
         "ARGX",
-        "CAH",
-        "EW"
+        "CAH"
     ],
     "Industrials": [
         "GE",
@@ -320,8 +318,8 @@
         "ALAB",
         "UMC",
         "FLEX",
-        "CBRS",
-        "CRDO"
+        "CRDO",
+        "ON"
     ],
     "Utilities": [
         "NEE",

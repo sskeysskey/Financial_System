@@ -657,9 +657,9 @@
         "modifiers": [
             "control"
         ],
-        "actionType": "runOsascript",
-        "target": "/Users/yanzhang/Coding/ScriptEditor/Stock_seekingalpha.scpt",
-        "message": "正在执行查询Seeking Alpha..."
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/JavaScript/douban_grabber/auto_douban.py'",
+        "message": "正在执行 auto_doubao 脚本…"
     },
     {
         "key": "a",
