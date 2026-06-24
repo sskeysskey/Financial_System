@@ -100,7 +100,8 @@
         "OKE",
         "OXY",
         "FANG",
-        "TRGP"
+        "TRGP",
+        "DVN"
     ],
     "Financial_Services": [
         "JPM",
@@ -192,7 +193,9 @@
         "MCK",
         "COR",
         "ARGX",
-        "CAH"
+        "CAH",
+        "EW",
+        "TAK"
     ],
     "Industrials": [
         "GE",
@@ -318,8 +321,7 @@
         "ALAB",
         "UMC",
         "FLEX",
-        "CRDO",
-        "ON"
+        "CRDO"
     ],
     "Utilities": [
         "NEE",
@@ -330,6 +332,7 @@
         "AEP",
         "SRE",
         "D",
-        "VST"
+        "VST",
+        "XEL"
     ]
 }

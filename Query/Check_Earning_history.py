@@ -14,6 +14,29 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 JSON_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Earning_History.json")
 SECTOR_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_panel.json")
 
+WEEK52_LOW_SECTORS = {
+    "Basic_Materials", "Real_Estate", "Energy", "Technology",
+    "Consumer_Cyclical", "Utilities", "Consumer_Defensive",
+    "Industrials", "Communication_Services", "Financial_Services",
+    "Healthcare"
+}
+
+def load_52week_low_symbols():
+    """从 Sectors_panel.json 读取指定板块下的 symbol，作为 52week_low 集合"""
+    symbols = set()
+    if not os.path.exists(SECTOR_PATH):
+        return symbols
+    try:
+        with open(SECTOR_PATH, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except Exception as e:
+        print(f"读取 Sectors_panel.json 出错: {e}")
+        return symbols
+    for sector in WEEK52_LOW_SECTORS:
+        for sym in data.get(sector, {}).keys():
+            symbols.add(sym.upper())
+    return symbols
+
 NORD_THEME = {
     'background': '#2E3440',
     'widget_bg': '#3B4252',
@@ -286,27 +309,20 @@ def search_history_by_category(symbol):
 # 视图 2：按时间 (Date) 渲染
 def search_history_by_date(symbol):
     # --- 定义颜色 ---
-    COLOR_HIGH = "#BF616A"      # 红色 (用于高权重及 PE_Deeper)
-    COLOR_MEDIUM = "#D08770"    # 橙色 (用于中等权重及 PE_Deep)
-    COLOR_BLUE = "#88C0D0"      # 蓝色 (用于 PE_valid 等)
-    
-    # --- 新增：分类映射 ---
-    # 高权重组 (保持红色)
+    COLOR_HIGH = "#BF616A"      # 红色
+    COLOR_MEDIUM = "#D08770"    # 橙色
+    COLOR_BLUE = "#88C0D0"      # 蓝色
+
     high_weight_categories = {
         "PE_Volume", "Short", "Short_W", "PE_W", "PE_Hot", "season", "SupportLevel_Over"
     }
-    # 中权重组 (换成弱一点的颜色)
     medium_weight_categories = {
-        "PE_Volume_up", "PE_Volume_high", 
-        "SupportLevel_Close", "OverSell_W" # 注意：这里移除了 PE_Deeper
+        "PE_Volume_up", "PE_Volume_high",
+        "SupportLevel_Close", "OverSell_W"
     }
-    
-    # 依然保留这个集合用于判断是否需要特殊样式背景
+
     highlight_categories = high_weight_categories.union(medium_weight_categories)
-    
-    # 可配置的需要压缩显示的单一分组
-    # 移除 PE_Deep 和 PE_Deeper，因为我们要给它们单独上色，不再走默认蓝色逻辑
-    compress_categories = {"PE_valid"} 
+    compress_categories = {"PE_valid"}
 
     html_parts = []
     has_data = False
@@ -315,34 +331,35 @@ def search_history_by_date(symbol):
     if err:
         return f"<p style='color:red'>{err}</p>"
 
+    # --- 新增：52week_low 判定 ---
+    week52_low_symbols = load_52week_low_symbols()
+    is_52week_low = symbol.upper() in week52_low_symbols
+
     hit_dates_sorted = sorted(date_items.keys(), reverse=True)
-    
-    # 用于分离正常日期和需要压缩的日期
+    # --- 新增：记录最新命中日期 ---
+    latest_hit_date = hit_dates_sorted[0] if hit_dates_sorted else None
+
     normal_dates = []
     compressed_records = defaultdict(list)
 
     # 第一次遍历：筛选出需要压缩的日期
     for d_str in hit_dates_sorted:
         items_today = sorted(date_items[d_str], key=lambda x: x[0])
-        # 如果当天只有一条记录，且属于需要压缩的分组 (现在仅 PE_valid)
         if len(items_today) == 1 and items_today[0][0] in compress_categories:
             category, suf = items_today[0]
             compressed_records[category].append((d_str, suf))
         else:
             normal_dates.append((d_str, items_today))
 
-    # 定义需要保持纵向排列的重要组别
     group_a = {"PE_Volume", "PE_Volume_up", "PE_Volume_high", "PE_W",
                 "PE_Hot", "Short", "Short_W", "SupportLevel_Close", "SupportLevel_Over",
-                "PE_Deep", "PE_Deeper"} # 将 Deep/Deeper 加入 group_a 以便正常纵向排列
+                "PE_Deep", "PE_Deeper"}
 
     # 渲染正常日期的记录
     for d_str, items_today in normal_dates:
         has_data = True
-        # 判断当天是否包含 group_a 中的重要分组
         has_group_a = any(cat in group_a for cat, _ in items_today)
 
-        # 先把每一条渲染成 HTML 片段，横纵两种排版共用
         rendered_items = []
         for category, suf in items_today:
             suf_html = build_suffix_html(category, suf)
@@ -351,31 +368,24 @@ def search_history_by_date(symbol):
                 category_data, date_categories, category_dates, sorted_trading_dates
             )
 
-            # --- 核心修改：颜色逻辑 ---
             if category == "PE_Deeper":
-                target_color = COLOR_HIGH # 红色
+                target_color = COLOR_HIGH
             elif category == "PE_Deep":
-                target_color = COLOR_MEDIUM # 橙色
+                target_color = COLOR_MEDIUM
             elif category in highlight_categories:
-                # 1. 强制将 PE_Volume_up 设为橙色
                 if category == "PE_Volume_up":
                     target_color = COLOR_MEDIUM
-                # 2. 其他高权重组
                 elif category in high_weight_categories:
                     target_color = COLOR_HIGH
-                # 3. 特殊规则：PE_Volume_high 且后缀包含“甲”字，使用红色
                 elif category == "PE_Volume_high" and suf and '甲' in suf:
                     target_color = COLOR_HIGH
-                # 4. 其他中权重组 (如 OverSell_W)
                 elif category in ["OverSell_W"]:
                     target_color = COLOR_MEDIUM
                 else:
                     target_color = COLOR_MEDIUM
             else:
-                # 默认蓝色 (PE_valid)
                 target_color = COLOR_BLUE
-            
-            # 如果是 Short 分组，且触发了“一周内有PE_Volume_high(甲)”的标记，我们给它一个更显眼的背景样式
+
             extra_style = ""
             if category == "Short" and "[★Short+前周甲]" in overlap_marker:
                 extra_style = "border: 1px solid #BF616A; background-color: rgba(191,97,106,0.25);"
@@ -387,13 +397,18 @@ def search_history_by_date(symbol):
 
             rendered_items.append(f"• {display_category}{suf_html}{overlap_marker}")
 
+        # --- 新增：在最新交易日追加 52week_low 标记（橘色）---
+        if is_52week_low and d_str == latest_hit_date:
+            rendered_items.append(
+                "• <b style='color:#D08770; background-color:rgba(208,135,112,0.15); "
+                "padding:0 4px; border-radius:3px;'>52week_low</b>"
+            )
+
         if has_group_a:
-            # 重要分组：保持原来的纵向排版（日期作为大标题 + 纵向列表）
             html_parts.append(make_header(d_str, NORD_THEME['success_green']))
             for item in rendered_items:
                 html_parts.append(f"&nbsp;&nbsp;{item}<br>")
         else:
-            # 非重要分组：日期 + 内容 同一行横向显示
             date_html = (
                 f"<span style='color:{NORD_THEME['success_green']}; "
                 f"font-weight:bold; font-size:15px;'>{d_str}</span>"
@@ -407,15 +422,14 @@ def search_history_by_date(symbol):
             )
 
     # 渲染被压缩的单一分组记录 (PE_valid)
-    sort_order = {"PE_valid": 1} # 仅保留 PE_valid
+    sort_order = {"PE_valid": 1}
     sorted_compressed_keys = sorted(compressed_records.keys(), key=lambda x: sort_order.get(x, 99))
 
     for category in sorted_compressed_keys:
         records = compressed_records[category]
         has_data = True
-        # 使用分组名作为大标题
         html_parts.append(make_header(f"{category} (单一触发)", NORD_THEME['success_green']))
-        
+
         date_strings = []
         for d_str, suf in records:
             suf_html = build_suffix_html(category, suf)
@@ -423,10 +437,8 @@ def search_history_by_date(symbol):
                 category, d_str, suf,
                 category_data, date_categories, category_dates, sorted_trading_dates
             )
-            # 拼接日期和它可能带有的后缀/标记
             date_strings.append(f"<span style='color:{NORD_THEME['text_bright']}'>{d_str}</span>{suf_html}{overlap_marker}")
-        
-        # 将所有日期用逗号拼接，放在一个 div 中自动换行
+
         joined_dates = ",&nbsp;&nbsp;".join(date_strings)
         html_parts.append(f"<div style='padding-left: 10px; line-height: 1.6;'>{joined_dates}</div><br>")
 

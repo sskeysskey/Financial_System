@@ -54,6 +54,23 @@
         "Solana": "",
         "XRP": ""
     },
+    "Currencies": {
+        "DXY": "美元指数",
+        "USDMXN": "美兑墨比索",
+        "USDARS": "美兑阿比索",
+        "USDEGP": "美兑埃镑",
+        "USDBRL": "美兑巴雷亚尔"
+    },
+    "Economics": {
+        "USNonFarmA": "07 USNonFarmA",
+        "USConfidence": "09 USConfidence"
+    },
+    "Economic_All": {
+        "USGDP": "",
+        "USInitial": "",
+        "ImportPriceM": "",
+        "ImportPriceY": ""
+    },
     "Options": {
         "SOXS": "",
         "SOXL": "",
@@ -71,6 +88,9 @@
         "ETN": ""
     },
     "Short": {
+        "BCS": ""
+    },
+    "Short_backup": {
         "BCS": ""
     },
     "PE_Volume": {
@@ -92,6 +112,9 @@
         "BCS": ""
     },
     "Short_W": {
+        "LTM": ""
+    },
+    "Short_W_backup": {
         "LTM": ""
     },
     "PE_Hot": {
@@ -166,22 +189,5 @@
         "RIVN": "",
         "SITM": "SITM7热"
     },
-    "PE_invalid_backup": {},
-    "Currencies": {
-        "DXY": "美元指数",
-        "USDMXN": "美兑墨比索",
-        "USDARS": "美兑阿比索",
-        "USDEGP": "美兑埃镑",
-        "USDBRL": "美兑巴雷亚尔"
-    },
-    "Economics": {
-        "USNonFarmA": "07 USNonFarmA",
-        "USConfidence": "09 USConfidence"
-    },
-    "Economic_All": {
-        "USGDP": "",
-        "USInitial": "",
-        "ImportPriceM": "",
-        "ImportPriceY": ""
-    }
+    "PE_invalid_backup": {}
 }

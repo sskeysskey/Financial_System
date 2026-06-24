@@ -55,6 +55,13 @@ VOLUME_HIGH_PATH = os.path.join(BASE_CODING_DIR, "News", "0.5Y_volume_high.txt")
 COMPARE_ETFS_PATH = os.path.join(BASE_CODING_DIR, "News", "CompareETFs.txt")
 COMPARE_STOCK_PATH = os.path.join(BASE_CODING_DIR, "News", "CompareStock.txt")
 EARNING_HISTORY_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Earning_History.json")
+# 52周新低判定：以下板块内的 symbol 视为符合 52week_low 筛选
+WEEK52_LOW_SECTORS = {
+    "Basic_Materials", "Real_Estate", "Energy", "Technology",
+    "Consumer_Cyclical", "Utilities", "Consumer_Defensive",
+    "Industrials", "Communication_Services", "Financial_Services",
+    "Healthcare"
+}
 
 # 新增：10年新高数据路径
 NEW_HIGH_10Y_PRIMARY_PATH = os.path.join(BASE_CODING_DIR, "News", "10Y_newhigh_stock.txt")
@@ -107,8 +114,11 @@ def clean_ticker(symbol):
     match = re.search(r"^([A-Za-z-]+)", symbol)
     return match.group(1) if match else symbol
 
-def calculate_frequency_data(history_data):
+def calculate_frequency_data(history_data, week52_low_symbols=None):
     """计算多组共振（次数统计）数据"""
+    if week52_low_symbols is None:
+        week52_low_symbols = set()
+
     excluded_groups = {"season", "no_season", "_Tag_Blacklist"}
     support_level_groups = {"SupportLevel_Close", "SupportLevel_Over"}
     source_groups = {
@@ -116,75 +126,67 @@ def calculate_frequency_data(history_data):
         "PE_Deep", "PE_Deeper", "PE_W", "PE_valid", "PE_invalid",
         "PE_Volume", "PE_Volume_up", "PE_Hot", "PE_Volume_high"
     }
-    
-    # 新增：PE_Hot 的源头组
+
+    # PE_Hot 的源头组
     pe_hot_sources = {
-        "PE_Deep", "PE_Deeper", "PE_W", "OverSell_W", 
+        "PE_Deep", "PE_Deeper", "PE_W", "OverSell_W",
         "PE_valid", "PE_invalid", "season"
     }
 
     pe_chaodi_sources = {"PE_Null"}
 
     symbol_groups = {}
-    # 记录哪些 Symbol 带有“抄底”后缀
     symbols_with_chaodi = set()
-    
+
     # 1. 遍历所有分组
     for group, date_map in history_data.items():
         if group in excluded_groups:
             continue
         if not date_map:
             continue
-            
-        # 2. 获取该分组的最新日期
+
         sorted_dates = sorted(date_map.keys(), reverse=True)
         latest_date = sorted_dates[0]
         symbols = date_map[latest_date]
-        
-        # 3. 记录带有“抄底”的 Symbol
+
         for s in symbols:
             if "抄底" in s:
                 symbols_with_chaodi.add(clean_ticker(s).upper())
-        
-        # 4. 清洗 Symbol 并去重
+
         clean_symbols = set(clean_ticker(s).upper() for s in symbols)
-        
-        # 5. 记录该 Symbol 所在的分组
+
         for sym in clean_symbols:
             if sym not in symbol_groups:
                 symbol_groups[sym] = set()
             symbol_groups[sym].add(group)
-            
+
+    # --- 新增：为符合 52week_low 的 symbol 追加一个虚拟分组，使共振次数 +1 ---
+    for sym in list(symbol_groups.keys()):
+        if sym in week52_low_symbols:
+            symbol_groups[sym].add("52week_low")
+
     # 6. 按次数分组，并过滤掉无意义的 2 次共振
     count_to_symbols = {}
     for sym, groups in symbol_groups.items():
-        
-        # --- 核心修改点：过滤逻辑 ---
-        
-        # 逻辑 A: 如果存在 PE_Hot，剔除其源头组
+
         if "PE_Hot" in groups:
             groups = groups - pe_hot_sources
-            
-        # 逻辑 B: 如果 Symbol 带有“抄底”标记，且属于 PE_Volume_high (或者其他产生抄底的组)
-        # 只要它带有“抄底”，就直接剔除 pe_hot_sources，防止它和这些组发生共振
+
         if sym in symbols_with_chaodi:
             groups = groups - pe_chaodi_sources
-            
+
         count = len(groups)
         if count >= 2:
-            # 特殊过滤逻辑：如果共振次数恰好为 2
             if count == 2:
                 has_support = not groups.isdisjoint(support_level_groups)
                 has_source = not groups.isdisjoint(source_groups)
-                # 如果这 2 个分组刚好是一个衍生组配一个源头组，则毫无意义，直接跳过
                 if has_support and has_source:
                     continue
-            
+
             if count not in count_to_symbols:
                 count_to_symbols[count] = []
             count_to_symbols[count].append(sym)
-            
-    # 7. 转换为数组，按次数降序排列，内部 Symbol 按字母排序
+
     result = []
     for count in sorted(count_to_symbols.keys(), reverse=True):
         result.append({
@@ -318,6 +320,15 @@ def parse_stock_file(path):
                 })
     return items
 
+def load_52week_low_symbols(path):
+    """从 Sectors_panel.json 中读取指定板块下的 symbol，作为 52week_low 集合"""
+    symbols = set()
+    data = load_json(path)
+    for sector in WEEK52_LOW_SECTORS:
+        for sym in data.get(sector, {}).keys():
+            symbols.add(clean_ticker(sym).upper())
+    return symbols
+
 def load_json(path):
     if not os.path.exists(path): return {}
     with open(path, 'r', encoding='utf-8') as file:
@@ -391,8 +402,9 @@ class HighLowWindow(QMainWindow):
         self.worker.data_finished.connect(self.update_pre_after_tab)
         self.worker.start()
         
-        # 计算多组共振数据
-        self.resonance_data = calculate_frequency_data(self.earning_history_data)
+        # 计算多组共振数据（含 52week_low 加成）
+        self.week52_low_symbols = load_52week_low_symbols(CONFIG_PATH)
+        self.resonance_data = calculate_frequency_data(self.earning_history_data, self.week52_low_symbols)
         self.list_resonance = [sym for item in self.resonance_data for sym in item['symbols']]
         
         # 准备列表

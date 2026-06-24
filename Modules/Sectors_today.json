@@ -1444,7 +1444,8 @@
         "SPCX",
         "FDXF",
         "INIO",
-        "XMTR"
+        "XMTR",
+        "CECO"
     ],
     "Real_Estate": [
         "PLD",
