@@ -35,5 +35,83 @@
             "ACN",
             "CORZ"
         ]
+    },
+    "PE_Volume_up": {
+        "2026-02-06": [
+            "ACN",
+            "CORZ"
+        ]
+    },
+    "PE_Volume": {
+        "2026-02-06": [
+            "ACN",
+            "CORZ"
+        ]
+    },
+    "PE_Hot": {
+        "2026-02-06": [
+            "ACN",
+            "CORZ"
+        ]
+    },
+    "PE_Volume_high": {
+        "2026-02-06": [
+            "ACN",
+            "CORZ"
+        ]
+    },
+    "ETF_Volume_high": {
+        "2026-02-06": [
+            "ACN",
+            "CORZ"
+        ]
+    },
+    "ETF_Volume_low": {
+        "2026-02-06": [
+            "ACN",
+            "CORZ"
+        ]
+    },
+    "Short": {
+        "2026-02-06": [
+            "ACN",
+            "CORZ"
+        ]
+    },
+    "Short_W": {
+        "2026-02-06": [
+            "ACN",
+            "CORZ"
+        ]
+    },
+    "PE_Deeper": {
+        "2026-02-06": [
+            "ACN",
+            "CORZ"
+        ]
+    },
+    "PE_Deep": {
+        "2026-02-06": [
+            "ACN",
+            "CORZ"
+        ]
+    },
+    "PE_valid": {
+        "2026-02-06": [
+            "ACN",
+            "CORZ"
+        ]
+    },
+    "PE_invalid": {
+        "2026-02-06": [
+            "ACN",
+            "CORZ"
+        ]
+    },
+    "season": {
+        "2026-02-06": [
+            "ACN",
+            "CORZ"
+        ]
     }
 }

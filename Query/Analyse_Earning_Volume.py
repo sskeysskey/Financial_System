@@ -12,11 +12,11 @@ BASE_PATH = USER_HOME
 
 # ================= 配置区域 =================
 # 如果为空，则运行"今天"模式；如果填入日期（如 "2024-11-03"），则运行回测模式
-SYMBOL_TO_TRACE = "" 
-TARGET_DATE = "" 
+# SYMBOL_TO_TRACE = "" 
+# TARGET_DATE = "" 
 
-# SYMBOL_TO_TRACE = "HPE"
-# TARGET_DATE = "2026-05-29"
+SYMBOL_TO_TRACE = "LTH"
+TARGET_DATE = "2026-05-05"
 
 PATHS = {
     "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),
@@ -889,6 +889,9 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
     - 乙类: 最新财报涨跌幅>0 + 未突破 + 成交额6个月前3名
     - 丙类: (无需财报递增/涨跌幅要求) + 价格突破 + 成交额45天前3名
     - 抄底类: 最新日期到最近财报之间曾入选 PE_Volume_high 且今日在指定回调池中
+    
+    【修改说明】抄底逻辑已移至成交额门槛(门槛1)之前，不再受 2亿成交额门槛限制；
+                并补全了抄底逻辑的详细 trace 日志。
     """
     log_detail("\n========== 开始执行 策略3 (PE_Volume_high - 财报突破放量 & 抄底扫描) ==========")
     
@@ -916,7 +919,7 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         log_detail(f"读取历史文件失败: {e}")
         hist_data = {}
 
-    # ================= 修复点：加载当前回调池 (拆分基础池和扩展池) =================
+    # ================= 加载当前回调池 (拆分基础池和扩展池) =================
     base_valid_pool = set()
     extended_valid_pool = set()
     
@@ -959,8 +962,8 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
     
     # 四个分类的结果集
     results_jia = []     # 甲类
-    results_yi = []      # 乙类 (新)
-    results_bing = []    # 丙类 (原乙类)
+    results_yi = []      # 乙类
+    results_bing = []    # 丙类
     results_chaodi = []  # 抄底类
     
     # 连接数据库
@@ -977,13 +980,15 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         if not sector:
             continue
         
-        # [新增] 获取当前 symbol 的所有 tags，并检查是否命中 HOT_TAGS_T
+        # 获取当前 symbol 的所有 tags，并检查是否命中 HOT_TAGS_T / HOT_TAGS
         s_tags = set(symbol_to_tags_map.get(symbol, []))
         has_hot_tag_t = bool(s_tags.intersection(hot_tags_t))
         has_hot_tag = bool(s_tags.intersection(hot_tags))
         
         if is_tracing:
             log_detail(f"\n--- 正在检查 {symbol} (策略3) ---")
+            log_detail(f"    - Tags: {sorted(list(s_tags))}")
+            log_detail(f"    - 命中 HOT_TAGS: {has_hot_tag}, 命中 HOT_TAGS_T: {has_hot_tag_t}")
         
         # 1. 财报数据检查
         if target_date_override:
@@ -1014,18 +1019,13 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         
         if len(price_data) != len(all_er_dates):
             if is_tracing:
-                log_detail(f"    x [失败] 财报日收盘价数据不完整")
+                log_detail(f"    x [失败] 财报日收盘价数据不完整 (期望{len(all_er_dates)}条, 实际{len(price_data)}条)")
             continue
         
         all_er_prices = [p[1] for p in price_data]
         latest_er_price = all_er_prices[-1]
         
         # 3. 计算财报条件
-        cond_er_increasing = (len(er_rows) >= 2 and latest_er_price > all_er_prices[-2])
-        cond_er_pct_positive = (latest_er_pct is not None and latest_er_pct > 0)
-        
-        # ========== 步骤3: 计算各项条件 ==========
-        
         # 条件A: 两次财报递增 (需要至少2次财报)
         cond_er_increasing = False
         if len(er_rows) >= 2:
@@ -1052,7 +1052,6 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         
         rows = cursor.fetchall()
         
-        # 修正：确保这里能正确解包 prev_volume
         if len(rows) < 2 or rows[0][1] is None or rows[0][2] is None or rows[0][3] is None or rows[1][1] is None or rows[1][2] is None:
             if is_tracing:
                 log_detail(f"    x [失败] 无法获取最新两天交易数据")
@@ -1064,25 +1063,15 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
         latest_turnover = latest_price * latest_volume
         prev_turnover = prev_price * prev_volume
         
-        # 默认门槛 2亿
-        turnover_threshold = 200000000
-        threshold_desc = "2亿"
-        
-        # 如果命中 hot_tags_t，则降低为 1.5亿
-        if has_hot_tag_t:
-            turnover_threshold = 150000000
-            threshold_desc = "1.5亿 (命中 HOT_TAGS_T)"
-            
-        # 门槛 1: 成交额检查
-        if latest_turnover < turnover_threshold:
-            if is_tracing:
-                log_detail(f"    x [过滤] 最新成交额 {latest_turnover:,.0f} 不足 {threshold_desc}，跳过。")
-            continue
-        
-        # ================= 抄底逻辑 (不受今日上涨/放量门槛限制) =================
+        if is_tracing:
+            log_detail(f"    - 最新交易日: {latest_date}, 今日价: {latest_price}, 昨日价: {prev_price}, 今日开盘: {latest_open}")
+            log_detail(f"    - 今日成交额: {latest_turnover:,.0f}, 昨日成交额: {prev_turnover:,.0f}")
+
+        # ================= 抄底逻辑 (已上移至成交额门槛之前) =================
+        # ================= 不受 2亿成交额门槛 / 今日上涨放量门槛 限制 =========
         cond_chaodi = False
         
-        # 1. 检查历史：从最新财报日到今天，该股是否以"甲"类进入过 PE_Volume_high
+        # 1. 检查历史：从最新财报日到今天，该股是否以"甲"(或带HOT_TAGS_T的乙/丙)进入过 PE_Volume_high
         was_in_high_history = False
         latest_jia_history_date = None  # 追踪最近一次有效历史出现的日期，用于路径C
         
@@ -1092,8 +1081,6 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
                 for s_with_suffix in h_symbols_raw:
                     # 清洗后获取纯净 symbol
                     clean_sym = clean_symbol(s_with_suffix)
-                    
-                    # 如果 symbol 匹配
                     if clean_sym == symbol:
                         # [修改] 检查是否满足条件：甲，或者 (乙/丙 且 包含 HOT_TAGS_T)
                         is_valid_history = False
@@ -1105,35 +1092,35 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
                         if is_valid_history:
                             was_in_high_history = True
                             if is_tracing:
-                                log_detail(f"    - 发现历史记录: {h_date} -> {s_with_suffix} (满足抄底历史条件)")
-                        
-                            # 记录最近一次有效历史出现的日期
+                                log_detail(f"    - [抄底] 发现有效历史记录: {h_date} -> {s_with_suffix}")
                             if latest_jia_history_date is None or h_date > latest_jia_history_date:
                                 latest_jia_history_date = h_date
         
-        # [说明] 移除了原有的 break，确保遍历所有历史日期找到最近的甲类日期
-        
-        if is_tracing and latest_jia_history_date:
-            log_detail(f"    - 最近有效历史(甲/带Tag的乙丙)出现日期: {latest_jia_history_date}")
+        if is_tracing:
+            log_detail(f"    - [抄底] 历史区间: {latest_er_date} ~ {latest_date}, 是否有有效历史: {was_in_high_history}")
+            if latest_jia_history_date:
+                log_detail(f"    - [抄底] 最近有效历史(甲/带Tag乙丙)出现日期: {latest_jia_history_date}")
         
         if was_in_high_history:
-            # 路径 A: 跌幅池抄底 (今日在 PE_W/Deep 等池子里)
-            # [修改点] 检查基础池，或者 (带有 HOT_TAGS_T 并且在扩展池中)
+            # 路径 A: 跌幅池抄底
             in_base_pool = symbol in base_valid_pool
             in_extended_pool = has_hot_tag and (symbol in extended_valid_pool)
+            
+            if is_tracing:
+                log_detail(f"    - [抄底-路径A] 在基础回调池: {in_base_pool} | 在扩展池且含HOT_TAGS: {in_extended_pool} (has_hot_tag={has_hot_tag}, in_extended={symbol in extended_valid_pool})")
             
             if in_base_pool or in_extended_pool:
                 cond_chaodi = True
                 if is_tracing: 
-                    pool_match_reason = "基础回调池" if in_base_pool else "扩展回调池(带HOT_TAGS_T)"
-                    log_detail(f"    - 抄底判定: 命中 [回调池路径A] ({pool_match_reason})")
+                    pool_match_reason = "基础回调池" if in_base_pool else "扩展回调池(带HOT_TAGS)"
+                    log_detail(f"    ✅ [抄底] 命中 [回调池路径A] ({pool_match_reason})")
             
-            # 路径 B: 放量下跌抄底 (今日价格下跌 且 成交额是近1.5个月前2名)
+            # 路径 B: 放量下跌抄底 (今日价格下跌 且 成交额是近45天前2名)
             else:
                 cond_price_down_today = (latest_price < prev_price) and (latest_price < latest_open)
+                if is_tracing:
+                    log_detail(f"    - [抄底-路径B] 今日下跌(收盘<昨收 且 收盘<今开): {cond_price_down_today}")
                 if cond_price_down_today:
-                    # [修改点] 使用 check_turnover_rank_by_days 替代之前的 since_earning 逻辑
-                    # 45天即约等于1.5个月
                     lookback_days = CONFIG.get("COND_HIGH_TURNOVER_BING_DAYS", 45) 
                     rank_threshold = 2 # 保持您要求的排名前2名
                     
@@ -1141,19 +1128,19 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
                         cursor, sector, symbol, latest_date, latest_turnover,
                         lookback_days, rank_threshold, log_detail, is_tracing
                     )
-                    
                     if is_top2_recent:
                         cond_chaodi = True
-                        if is_tracing: log_detail(f"    - 抄底判定: 命中 [放量下跌路径B] (近{lookback_days}天成交额Top{rank_threshold})")
+                        if is_tracing: log_detail(f"    ✅ [抄底] 命中 [放量下跌路径B] (近{lookback_days}天成交额Top{rank_threshold})")
+                    else:
+                        if is_tracing: log_detail(f"    - [抄底-路径B] 成交额未进入近{lookback_days}天Top{rank_threshold}，路径B失败")
             
-            # [新增] 路径 C: 缩量回调后缩量上涨
-            # 条件：甲日之后到昨天，每天都是缩量下跌；今天是缩量上涨
+            # 路径 C: 缩量回调后缩量上涨
             if not cond_chaodi and latest_jia_history_date is not None:
                 cond_c_price_up = (latest_price > prev_price) and (latest_price > latest_open)
                 cond_c_turnover_down = (latest_turnover < prev_turnover)
                 
                 if is_tracing:
-                    log_detail(f"    - 路径C检查: 今日缩量上涨? 价格上涨={cond_c_price_up}, 成交额缩量={cond_c_turnover_down}")
+                    log_detail(f"    - [抄底-路径C] 今日缩量上涨? 价格上涨={cond_c_price_up}, 成交额缩量={cond_c_turnover_down}")
                 
                 if cond_c_price_up and cond_c_turnover_down:
                     # 获取从甲日到今天的所有交易数据（按日期升序）
@@ -1169,7 +1156,7 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
                         
                         if latest_price >= max_price_c:
                             if is_tracing:
-                                log_detail(f"    - 路径C中断: 今日收盘价 {latest_price:.2f} 是自甲日({latest_jia_history_date})以来的最高价，不符合抄底逻辑。")
+                                log_detail(f"    - [抄底-路径C] 中断: 今日收盘价 {latest_price:.2f} 是自甲日({latest_jia_history_date})以来最高价，不符合抄底逻辑。")
                         else:
                             all_shrink_down = True
                             for i in range(1, len(all_rows_c) - 1):
@@ -1187,48 +1174,59 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
                                 if not (curr_p < prev_p_c and curr_p < curr_open and curr_to < prev_to):
                                     all_shrink_down = False
                                     if is_tracing:
-                                        log_detail(f"      路径C中断于 {curr_d}: 价格 {prev_p_c:.2f}->{curr_p:.2f}, 开盘 {curr_open:.2f}, 成交额 {prev_to:,.0f}->{curr_to:,.0f}")
+                                        log_detail(f"      [路径C] 中断于 {curr_d}: 价格 {prev_p_c:.2f}->{curr_p:.2f}, 开盘 {curr_open:.2f}, 成交额 {prev_to:,.0f}->{curr_to:,.0f}")
                                     break
                             
                             if all_shrink_down:
                                 cond_chaodi = True
                                 middle_days = len(all_rows_c) - 2
                                 if is_tracing:
-                                    log_detail(f"    - 抄底判定: 命中 [缩量回调路径C] (甲日: {latest_jia_history_date}, 连续缩量下跌天数: {middle_days})")
+                                    log_detail(f"    ✅ [抄底] 命中 [缩量回调路径C] (甲日: {latest_jia_history_date}, 连续缩量下跌天数: {middle_days})")
                     else:
                         if is_tracing:
-                            log_detail(f"    - 路径C: 数据不足，甲日到今天仅 {len(all_rows_c)} 条记录 (需要>=3)")
+                            log_detail(f"    - [抄底-路径C] 数据不足，甲日到今天仅 {len(all_rows_c)} 条记录 (需要>=3)")
+        else:
+            if is_tracing:
+                log_detail(f"    - [抄底] 财报日至今未发现有效历史入选记录，跳过抄底判断。")
 
         if cond_chaodi:
             results_chaodi.append(symbol)
             if is_tracing:
                 log_detail(f"    ✅ [选中-抄底类] 满足历史入选+今日回调/放量/缩量回调条件")
 
-        # ================= 甲乙丙类逻辑的基础门槛 =================
-        # 门槛 2: 今日上涨 (如果未上涨，则跳过甲乙丙的判断)
+        # ================= 以下为甲乙丙逻辑，仍受成交额门槛限制 ===============
+        
+        # 门槛 (仅甲乙丙): 成交额门槛
+        turnover_threshold = 200000000
+        threshold_desc = "2亿"
+        if has_hot_tag_t:
+            turnover_threshold = 150000000
+            threshold_desc = "1.5亿 (命中 HOT_TAGS_T)"
+            
+        # 门槛 1: 成交额检查 (只过滤甲乙丙，抄底已在上方处理完毕)
+        if latest_turnover < turnover_threshold:
+            if is_tracing:
+                log_detail(f"    x [过滤-甲乙丙] 最新成交额 {latest_turnover:,.0f} 不足 {threshold_desc}，跳过甲乙丙判断 (抄底已单独处理)。")
+            continue
+        
+        # 门槛 2: 今日上涨
         cond_price_up_today = (latest_price > prev_price) or (latest_price > latest_open)
-        # cond_price_up_today = (latest_price > prev_price)
-
         # 门槛 3: 今日成交额 > 昨日成交额
         cond_turnover_up_today = (latest_turnover > prev_turnover)
         
         if is_tracing:
-            log_detail(f"--- 检查 {symbol} ---")
-            log_detail(f"    - 今日价: {latest_price}, 昨日价: {prev_price}, 上涨: {cond_price_up_today}")
-            log_detail(f"    - 今日额: {latest_turnover:,.0f}, 昨日额: {prev_turnover:,.0f}, 放量: {cond_turnover_up_today}")
+            log_detail(f"    - [甲乙丙] 今日上涨: {cond_price_up_today}, 今日放量: {cond_turnover_up_today}")
 
         # 如果未上涨 或 未放量，则跳过甲乙丙的判断
         if not (cond_price_up_today and cond_turnover_up_today):
-            if is_tracing: log_detail(f"    x [失败] 今日未上涨 或 今日未放量")
+            if is_tracing: log_detail(f"    x [失败-甲乙丙] 今日未上涨 或 今日未放量")
             continue 
         
         # 条件D: 价格突破财报日收盘价
         cond_price_breakout = (latest_price >= latest_er_price)
         if is_tracing:
-            log_detail(f"    - 条件D (价格突破财报): {latest_price:.2f} > {latest_er_price:.2f} = {cond_price_breakout}")
+            log_detail(f"    - 条件D (价格突破财报): {latest_price:.2f} >= {latest_er_price:.2f} = {cond_price_breakout}")
                 
-        # ========== 步骤6: 检查成交额条件 ==========
-        
         # 条件E: 成交额为12个月前3名 (用于甲类)
         cond_turnover_12m_top3 = check_turnover_rank(
             cursor, sector, symbol, latest_date, latest_turnover,
@@ -1236,35 +1234,31 @@ def process_pe_volume_high(db_path, history_json_path, panel_json_path, sector_m
             log_detail, is_tracing
         )
 
-        # [新增修改] 条件E2: 成交额为6个月前3名 (用于乙类)
+        # 条件E2: 成交额为6个月前3名 (用于乙类)
         cond_turnover_6m_top3 = check_turnover_rank(
             cursor, sector, symbol, latest_date, latest_turnover,
             6, turnover_rank_threshold, # 强制使用6个月
             log_detail, is_tracing
         )
 
-        # [新增] 丙类：检查成交额是否为过去45天的前3名
+        # 丙类：检查成交额是否为过去45天的前3名
         cond_turnover_45d_top3 = check_turnover_rank_by_days(
             cursor, sector, symbol, latest_date, latest_turnover,
             bing_lookback_days, bing_rank_threshold,
             log_detail, is_tracing
         )
         
-        # ========== 步骤7: 分类判定 ==========
-        
-        # 甲类: 财报递增 + 价格突破 + 今日上涨 + 12月Top3 (已移除财报涨跌幅>0的要求)
+        # ========== 分类判定 ==========
         if cond_er_increasing and cond_price_breakout and cond_turnover_12m_top3:
             results_jia.append(symbol)
             if is_tracing:
                 log_detail(f"    ✅ [选中-甲类] 严格条件(财报递增) + 价格突破 + 12个月Top{turnover_rank_threshold}")
         
-        # 乙类: 财报涨幅>0 + 今日上涨 + 6月Top3
         elif cond_er_pct_positive and cond_turnover_6m_top3:
             # results_yi.append(symbol)
             if is_tracing:
                 log_detail(f"    ✅ [选中-乙类] 财报涨幅>0 + 未突破 + 6个月Top{turnover_rank_threshold}")
         
-        # 丙类: (无需财报要求) + 今日上涨 + 45天前3名
         elif cond_turnover_45d_top3:
             # results_bing.append(symbol)
             if is_tracing:
