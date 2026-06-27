@@ -56,7 +56,8 @@
         "ORLY",
         "ROST",
         "SE",
-        "F"
+        "F",
+        "AZO"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -72,7 +73,8 @@
         "BTI",
         "CL",
         "MNST",
-        "TGT"
+        "TGT",
+        "ABEV"
     ],
     "Energy": [
         "XOM",
@@ -98,10 +100,9 @@
         "MPC",
         "BKR",
         "OKE",
-        "OXY",
         "FANG",
         "TRGP",
-        "DVN"
+        "LNG"
     ],
     "Financial_Services": [
         "JPM",
@@ -160,7 +161,8 @@
         "MET",
         "AJG",
         "CM",
-        "BNY"
+        "BNY",
+        "FITB"
     ],
     "Healthcare": [
         "LLY",
@@ -316,12 +318,10 @@
         "DDOG",
         "SNOW",
         "STM",
-        "MCHP",
         "HPE",
         "ALAB",
         "UMC",
-        "FLEX",
-        "CRDO"
+        "FLEX"
     ],
     "Utilities": [
         "NEE",

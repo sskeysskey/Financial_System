@@ -369,7 +369,8 @@
         "IGHG",
         "HEEM",
         "UFOX",
-        "EQRR"
+        "EQRR",
+        "HAP"
     ],
     "Basic_Materials": [
         "LIN",
@@ -1215,7 +1216,9 @@
         "LGND",
         "HNGE",
         "AMRX",
-        "TVTX"
+        "TVTX",
+        "DFTX",
+        "MANE"
     ],
     "Industrials": [
         "GE",
@@ -1445,7 +1448,8 @@
         "FDXF",
         "INIO",
         "XMTR",
-        "CECO"
+        "CECO",
+        "DPC"
     ],
     "Real_Estate": [
         "PLD",
@@ -1776,7 +1780,8 @@
         "BB",
         "ACMR",
         "UCTT",
-        "NAVN"
+        "NAVN",
+        "QNT"
     ],
     "Utilities": [
         "NEE",
