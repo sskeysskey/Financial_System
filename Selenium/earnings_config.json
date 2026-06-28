@@ -1,19 +1,19 @@
 {
   "next": {
-    "start_date": "2026-06-22",
-    "end_date": "2026-06-27"
-  },
-  "third": {
     "start_date": "2026-06-29",
     "end_date": "2026-07-04"
   },
-  "fourth": {
+  "third": {
     "start_date": "2026-07-06",
     "end_date": "2026-07-11"
   },
-  "fifth": {
+  "fourth": {
     "start_date": "2026-07-13",
     "end_date": "2026-07-18"
   },
-  "_last_advance_date": "2026-06-21"
+  "fifth": {
+    "start_date": "2026-07-20",
+    "end_date": "2026-07-25"
+  },
+  "_last_advance_date": "2026-06-28"
 }
