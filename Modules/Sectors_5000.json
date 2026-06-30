@@ -36,7 +36,9 @@
         "ASML",
         "MU",
         "AMD",
-        "INTC"
+        "INTC",
+        "AMAT",
+        "LRCX"
     ],
     "Utilities": []
 }
