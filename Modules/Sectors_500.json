@@ -99,7 +99,6 @@
         "MPC",
         "BKR",
         "OKE",
-        "FANG",
         "TRGP",
         "LNG"
     ],
@@ -245,7 +244,8 @@
         "SPCX",
         "HONAV",
         "DAL",
-        "ROK"
+        "ROK",
+        "HONA"
     ],
     "Real_Estate": [
         "PLD",
@@ -320,7 +320,8 @@
         "HPE",
         "ALAB",
         "UMC",
-        "FLEX"
+        "FLEX",
+        "CRDO"
     ],
     "Utilities": [
         "NEE",

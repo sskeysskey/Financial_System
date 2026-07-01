@@ -19,8 +19,8 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 SYMBOL_TO_TRACE = ""
 TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "MSM"
-# TARGET_DATE = "2026-03-20"
+# SYMBOL_TO_TRACE = "GOOGL"
+# TARGET_DATE = "2026-06-26"
 
 # 追踪日志路径
 LOG_FILE_PATH = os.path.join(USER_HOME, "Downloads", "OverBuy_trace_log.txt")
@@ -32,9 +32,7 @@ CONFIG = {
     "MA_BELOW_MAX_PCT": 0.3,
     "RECENT_DAYS_LOOKBACK": 1,
     "LOOKBACK_MONTHS_LONG": 12,
-    "RANK_THRESHOLD_LONG": 4,
-    "LOOKBACK_MONTHS_SHORT": 6,
-    "RANK_THRESHOLD_SHORT": 2,
+    "RANK_THRESHOLD_LONG": 3,
     "M_TOP_HEIGHT_TOLERANCE": 0.038,
     "M_TOP_NECK_DEPTH": 0.025,
     "M_TOP_MIN_DAYS_GAP": 3,
@@ -540,14 +538,8 @@ def run_short_logic(log_detail):
                     log_detail(f"    x [过滤] {symbol} 的最新财报日正好是当前基准日 ({base_date})，跳过。")
                 continue
 
-            # --- A2. 进阶门槛：跌破 MA200 或高于两次财报均价（任一满足即可）---
-            is_ma_break, ma_value = check_ma_breakout(cursor, sector, symbol, CONFIG["MA_PERIOD"], target_date=base_date)
-            
-            if is_tracing:
-                if is_ma_break:
-                    log_detail(f"    ✓ [MA检查] MA{CONFIG['MA_PERIOD']} 破位，MA={ma_value:.2f}")
-                else:
-                    log_detail(f"    - [MA检查] 未破位 MA{CONFIG['MA_PERIOD']}，MA={ma_value:.2f}")
+            # --- A2. [已取消门槛] 仅计算 MA 值用于输出显示，不再作为过滤条件 ---
+            _, ma_value = check_ma_breakout(cursor, sector, symbol, CONFIG["MA_PERIOD"], target_date=base_date)
 
             # --- B. 获取最近 N+1 天交易数据 ---
             _lookback = CONFIG["RECENT_DAYS_LOOKBACK"]
@@ -565,30 +557,13 @@ def run_short_logic(log_detail):
             date_prev, price_prev, vol_prev = rows[1]
             if price_curr is None or price_prev is None or vol_curr is None:
                 continue
-            
+
             current_turnover = price_curr * vol_curr
             if is_tracing:
                 log_detail(f"    最新: {date_curr} 价格={price_curr}, 成交量={vol_curr}, 成交额={current_turnover:,.0f}")
                 log_detail(f"    前一日: {date_prev} 价格={price_prev}")
 
-            # --- B2. 财报均价检查 ---
-            is_above_earning_avg, earning_avg_price = check_price_above_recent_two_earnings_avg(
-                cursor, sector, symbol, price_curr, target_date=base_date
-            )
-            if is_tracing:
-                if is_above_earning_avg:
-                    log_detail(f"    ✓ [财报检查] 最新价({price_curr}) 高于最近两次财报日均价({earning_avg_price:.2f})。")
-                else:
-                    log_detail(f"    - [财报检查] 最新价({price_curr}) 未高于最近两次财报日均价({earning_avg_price:.2f})。")
-
-            # --- 组合判断：MA破位 或 高于财报均价，任一满足即可通过 ---
-            if not (is_ma_break or is_above_earning_avg):
-                if is_tracing:
-                    log_detail(f"    x [失败] 两个条件均未满足：MA未破位 且 未高于财报均价，跳过。")
-                continue
-
-            if is_tracing:
-                log_detail(f"    ✓ [通过] 至少满足一个条件：{'MA破位' if is_ma_break else ''}{'、' if is_ma_break and is_above_earning_avg else ''}{'高于财报均价' if is_above_earning_avg else ''}")
+            # --- [B2 财报均价检查 与 MA/财报组合判断已整体删除] ---
 
             # --- C. 基础门槛 1: N 天内任意一天下跌即通过 ---
             any_drop_in_5days = any(
@@ -631,19 +606,10 @@ def run_short_logic(log_detail):
                 
                 is_long_hit = check_turnover_rank(cursor, sector, symbol, day_date, day_turnover,
                                        CONFIG["LOOKBACK_MONTHS_LONG"], CONFIG["RANK_THRESHOLD_LONG"])
-                
-                is_short_hit = check_turnover_rank(cursor, sector, symbol, day_date, day_turnover,
-                                         CONFIG["LOOKBACK_MONTHS_SHORT"], CONFIG["RANK_THRESHOLD_SHORT"])
 
                 if is_long_hit:
                     is_hit_base = True
                     hit_reason = f"1年内Top{CONFIG['RANK_THRESHOLD_LONG']}天量{date_suffix}"
-                    if is_tracing:
-                        log_detail(f"    ✓ [命中] {hit_reason}")
-                    break
-                elif is_short_hit:
-                    is_hit_base = True
-                    hit_reason = f"半年内Top{CONFIG['RANK_THRESHOLD_SHORT']}天量{date_suffix}"
                     if is_tracing:
                         log_detail(f"    ✓ [命中] {hit_reason}")
                     break
