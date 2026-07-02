@@ -14,8 +14,7 @@
         "B",
         "VALE",
         "WPM",
-        "CTVA",
-        "NUE"
+        "CTVA"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -245,7 +244,8 @@
         "HONAV",
         "DAL",
         "ROK",
-        "HONA"
+        "HONA",
+        "HEI"
     ],
     "Real_Estate": [
         "PLD",
@@ -312,7 +312,6 @@
         "COHR",
         "NOK",
         "NXPI",
-        "CRWV",
         "TER",
         "DDOG",
         "SNOW",
@@ -320,8 +319,7 @@
         "HPE",
         "ALAB",
         "UMC",
-        "FLEX",
-        "CRDO"
+        "FLEX"
     ],
     "Utilities": [
         "NEE",
@@ -332,7 +330,6 @@
         "AEP",
         "SRE",
         "D",
-        "VST",
-        "XEL"
+        "VST"
     ]
 }

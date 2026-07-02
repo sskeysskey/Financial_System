@@ -710,7 +710,8 @@
         "GSAT",
         "CTRA",
         "CMBT",
-        "BK"
+        "BK",
+        "SATS"
     ],
     "etf": [
         "VDE",

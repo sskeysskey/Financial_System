@@ -515,7 +515,6 @@
         "TIGO",
         "TTD",
         "APP",
-        "SATS",
         "PSKY",
         "VSNT",
         "SPHR",
@@ -769,7 +768,6 @@
         "SFD",
         "MZTI",
         "JBS",
-        "GHC",
         "MICC",
         "LAUR",
         "PSMT",
@@ -1055,7 +1053,8 @@
         "KLAR",
         "MAAS",
         "BNY",
-        "ENVA"
+        "ENVA",
+        "TFSL"
     ],
     "Healthcare": [
         "LLY",
@@ -1453,7 +1452,8 @@
         "XMTR",
         "CECO",
         "DPC",
-        "HONA"
+        "HONA",
+        "GHC"
     ],
     "Real_Estate": [
         "PLD",
