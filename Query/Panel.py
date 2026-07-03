@@ -41,9 +41,9 @@ DISPLAY_LIMITS = {
 }
 
 categories = [
-    ['Must', 'Today', 'PE_Volume_backup',
+    ['Must', 'Today', 'Short_backup', 'Short_W_backup', 'PE_Volume_backup',
      'PE_Volume_high_backup', 'PE_Hot_backup', 'PE_W_backup',
-     'Short_backup', 'Short_W_backup', 'ETF_Volume_high_backup', 
+     'ETF_Volume_high_backup', 
      'ETF_Volume_low_backup', 'SupportLevel_Over_backup',
      ],
     ['PE_Volume_up_backup', 'OverSell_W_backup', 'PE_Deeper_backup',

@@ -711,7 +711,8 @@
         "CTRA",
         "CMBT",
         "BK",
-        "SATS"
+        "SATS",
+        "HONAV"
     ],
     "etf": [
         "VDE",
