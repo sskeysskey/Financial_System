@@ -396,8 +396,8 @@
             "option"
         ],
         "actionType": "runInTerminal",
-        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/JavaScript/douban_grabber/auto_douban_rating.py'",
-        "message": "正在执行 auto_doubao_rating 脚本…"
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/JavaScript/douban_grabber/auto_douban.py'",
+        "message": "正在执行 auto_doubao 脚本…"
     },
     {
         "key": "p",
@@ -658,8 +658,8 @@
             "control"
         ],
         "actionType": "runInTerminal",
-        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/JavaScript/douban_grabber/auto_douban.py'",
-        "message": "正在执行 auto_doubao 脚本…"
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/JavaScript/douban_grabber/auto_douban_imdb.py'",
+        "message": "正在执行 auto_doubao_imdb 脚本…"
     },
     {
         "key": "a",
