@@ -701,7 +701,6 @@
         "ADV",
         "AES",
         "CNTA",
-        "Shenzhen",
         "TERN",
         "EE",
         "PEN",
@@ -1121,7 +1120,11 @@
         "FPXI",
         "IWX",
         "PBTP",
-        "PTH"
+        "PTH",
+        "LEND",
+        "SCHA",
+        "DWAS",
+        "DBEM"
     ],
     "Earning": [
         "TW",

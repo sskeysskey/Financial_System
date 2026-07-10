@@ -51,7 +51,7 @@ def main():
     output = []  # 用于收集输出信息的列表
     databases = [
         {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Indices', 'names': ('NASDAQ',
-            'S&P500', 'Shanghai', 'Shenzhen', 'Nikkei', 'India', 'HANGSENG', 'Russell', 'VIX', 'Brazil', 'Russian')},
+            'S&P500', 'Shanghai', 'Nikkei', 'India', 'HANGSENG', 'Russell', 'VIX', 'Brazil', 'Russian')},
 
         {'path': '/Users/yanzhang/Coding/Database/Finance.db', 'table': 'Crypto', 'names': ('Bitcoin',
             'Ether', 'Solana', 'Binance')},

@@ -62,7 +62,6 @@
     "^STOXX50E": "EURO50",
     "^N100": "panEURO100",
     "000001.SS": "Shanghai",
-    "399001.SZ": "Shenzhen",
     "^VIX": "VIX",
     "^BVSP": "Brazil",
     "^N225": "Nikkei",

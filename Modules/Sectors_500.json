@@ -13,9 +13,9 @@
         "FCX",
         "B",
         "VALE",
-        "WPM",
         "CTVA",
-        "NUE"
+        "NUE",
+        "WPM"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -57,8 +57,7 @@
         "ROST",
         "SE",
         "F",
-        "EBAY",
-        "CVNA"
+        "EBAY"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -101,7 +100,9 @@
         "BKR",
         "OKE",
         "TRGP",
-        "LNG"
+        "LNG",
+        "OXY",
+        "FANG"
     ],
     "Financial_Services": [
         "JPM",
@@ -245,9 +246,7 @@
         "SPCX",
         "DAL",
         "ROK",
-        "HONA",
-        "HEI",
-        "AXON"
+        "HONA"
     ],
     "Real_Estate": [
         "PLD",
@@ -332,7 +331,6 @@
         "AEP",
         "SRE",
         "D",
-        "VST",
-        "XEL"
+        "VST"
     ]
 }

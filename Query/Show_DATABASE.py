@@ -11,11 +11,11 @@ DOWNLOADS_DIR = os.path.join(USER_HOME, "Downloads")
 # ================= 配置区域 (跨平台修改) =================
 
 # 3. 默认数据库路径
-# DEFAULT_DB_PATH = os.path.join(DATABASE_DIR, "Finance.db")
+DEFAULT_DB_PATH = os.path.join(DATABASE_DIR, "Finance.db")
 
 # 3. 默认数据库路径（手动指定绝对路径）
 # DEFAULT_DB_PATH = "/Users/yanzhang/Coding/LocalServer/Resources/OVideo/ovideo.db"
-DEFAULT_DB_PATH = "/Users/yanzhang/Downloads/OVideo.db"
+# DEFAULT_DB_PATH = "/Users/yanzhang/Downloads/OVideo.db"
 
 
 # 4. 报告输出目录
@@ -363,10 +363,10 @@ if __name__ == "__main__":
     
     # --- 配置项 1: 指定要显示的表 (None 表示全部) ---
     # 场景1：只看 Options
-    my_target_tables = None
+    # my_target_tables = None
     
     # 场景2：看 Options 和 Bonds
-    # my_target_tables = ["Options", "Bonds", "Earning", "ETFs"]
+    my_target_tables = ["Indices"]
     
     # 场景3：看所有表（设为 None 或空列表 []）
     # my_target_tables = None 
