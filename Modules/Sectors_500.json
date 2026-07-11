@@ -14,8 +14,7 @@
         "B",
         "VALE",
         "CTVA",
-        "NUE",
-        "WPM"
+        "NUE"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -57,7 +56,8 @@
         "ROST",
         "SE",
         "F",
-        "EBAY"
+        "EBAY",
+        "AZO"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -319,8 +319,7 @@
         "STM",
         "HPE",
         "ALAB",
-        "UMC",
-        "FLEX"
+        "UMC"
     ],
     "Utilities": [
         "NEE",
