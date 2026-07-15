@@ -4,7 +4,6 @@ import shutil
 import json
 import time
 import random
-# import threading
 import subprocess
 import tkinter as tk
 from tkinter import messagebox
@@ -56,9 +55,7 @@ SECTORS_PANEL_JSON_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, 'Modules', 'Sectors
 SYMBOL_MAPPING_JSON_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, 'Modules', 'Symbol_mapping.json')
 POLYMARKET_FILE_PATH = os.path.join(NEWS_DIR, "earning_polymarket.txt") # Part C 输出路径
 
-# ==============================================================================
 # 通用工具函数
-# ==============================================================================
 
 def show_alert(message):
     """跨平台弹窗提示"""
@@ -73,10 +70,6 @@ def show_alert(message):
         root.withdraw()
         messagebox.showinfo("提示", message)
         root.destroy()
-
-# ==============================================================================
-# PART A: 原 a.py 的逻辑
-# ==============================================================================
 
 class PartA_FileProcessor:
     def __init__(self):
@@ -296,9 +289,6 @@ class PartA_FileProcessor:
             print("Not right date. Part A 只在周一（或周日）运行。")
         print("Part A 执行结束.\n")
 
-# ==============================================================================
-# PART B: 原 b.py 的逻辑 (Selenium)
-# ==============================================================================
 
 def create_unified_driver():
     """
@@ -695,24 +685,38 @@ def run_stock_splits_task():
 
 # --- B.3: Earnings Release Task ---
 
-def load_last_range_by_group(group_name: str):
-    """从配置文件中读取指定分组的日期范围，失败则返回默认值。"""
-    try:
-        if os.path.exists(EARNINGS_CONFIG_PATH):
-            with open(EARNINGS_CONFIG_PATH, 'r') as f:
-                data = json.load(f)
-            grp = data.get(group_name, {})
-            sd_s = grp.get('start_date')
-            ed_s = grp.get('end_date')
-            if sd_s and ed_s:
-                sd = datetime.strptime(sd_s, '%Y-%m-%d').date()
-                ed = datetime.strptime(ed_s, '%Y-%m-%d').date()
-                return sd, ed
-    except Exception as e:
-        tqdm.write(f"[{group_name}] 读取配置失败，将使用默认日期：{e}")
-    
+def compute_group_date_range(group_name: str):
+    """
+    基于"当前日期"动态计算各分组的抓取周范围（周一至周六）。
+    彻底摆脱对 _last_advance_date 递增逻辑的依赖，避免日期漂移。
+
+    基准：
+      - 周日(轮换日)：new 周指向"明天开始的那一周"
+      - 周一~周六：new 周为"本周一开始的那一周"
+    分组：
+      new    -> 本周   (仅由 Part A 文件轮换生成，不在此抓取)
+      next   -> new + 1 周
+      third  -> new + 2 周
+      fourth -> new + 3 周
+      fifth  -> new + 4 周
+    """
     today = datetime.now().date()
-    return today, today + timedelta(days=6)
+    wd = today.weekday()  # Mon=0 ... Sun=6
+    if wd == 6:  # 周日为轮换日，new 周指向即将到来的下周一
+        new_monday = today + timedelta(days=1)
+    else:
+        new_monday = today - timedelta(days=wd)
+
+    week_offset = {
+        'next': 1,
+        'third': 2,
+        'fourth': 3,
+        'fifth': 4,
+    }.get(group_name, 1)
+
+    start = new_monday + timedelta(weeks=week_offset)
+    end = start + timedelta(days=5)  # 周一 -> 周六
+    return start, end
 
 def check_and_advance_dates_if_needed():
     """
@@ -789,12 +793,12 @@ def run_single_scraper_task(driver, sectors_data, task_config):
     
     tqdm.write(f">> 正在初始化任务: {group_name.upper()}")
     
-    # -------- 步骤 1: 直接从配置文件读取日期范围 --------
-    last_sd, last_ed = load_last_range_by_group(group_name)
+    # -------- 步骤 1: 动态计算日期范围（不再读取 config 的旧值） --------
+    last_sd, last_ed = compute_group_date_range(group_name)
     start_date = datetime(last_sd.year, last_sd.month, last_sd.day)
     end_date = datetime(last_ed.year, last_ed.month, last_ed.day)
     
-    tqdm.write(f"   日期范围: {start_date.date()} -> {end_date.date()}")
+    tqdm.write(f"   日期范围(动态计算): {start_date.date()} -> {end_date.date()}")
 
     # 数据准备
     existing_release_entries = set()
@@ -984,7 +988,7 @@ def run_earnings_task():
     tqdm.write(">>> 开始执行任务: Earnings Release")
     tqdm.write("="*50)
     
-    check_and_advance_dates_if_needed()
+    # check_and_advance_dates_if_needed()
     
     # 动态路径
     new_file = os.path.join(NEWS_DIR, 'Earnings_Release_new.txt')
@@ -1087,9 +1091,6 @@ def run_part_b():
     except Exception as e:
         tqdm.write(f"\nPart B 发生未知错误: {e}")
 
-# ==============================================================================
-# PART C: 原 b.py 的逻辑 (Playwright Polymarket)
-# ==============================================================================
 
 def load_existing_polymarket_data(filename):
     """读取本地已有的数据，返回一个字典 { 'MBWM': '93%', ... }"""
@@ -1187,9 +1188,6 @@ def run_part_c():
     except Exception as e:
         print(f"Part C (Polymarket) 执行出错: {e}")
 
-# ==============================================================================
-# MAIN: 主程序入口
-# ==============================================================================
 
 if __name__ == "__main__":
     # 1. 执行 Part A (文件处理/迁移)

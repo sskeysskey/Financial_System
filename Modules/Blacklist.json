@@ -712,7 +712,8 @@
         "BK",
         "SATS",
         "HONAV",
-        "BLD"
+        "BLD",
+        "SKHYV"
     ],
     "etf": [
         "VDE",
@@ -1321,5 +1322,8 @@
         "FBIN",
         "CNM",
         "CNI"
+    ],
+    "Skip_Symbols": [
+        "SKHY"
     ]
 }

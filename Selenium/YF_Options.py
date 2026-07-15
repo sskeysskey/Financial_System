@@ -298,12 +298,17 @@ def scrape_options():
     count_json_etf_volume_low = 0
 
     # === 步骤 A: 加载黑名单 ===
+    skip_symbol_set = set()  # 新增：全局跳过抓取黑名单
     try:
         if os.path.exists(BLACKLIST_JSON_PATH):
             with open(BLACKLIST_JSON_PATH, 'r', encoding='utf-8') as f:
                 bl_data = json.load(f)
                 # 获取 Blacklist.json 中 Options 分组下的列表
                 blacklist_options_set = {str(s).strip() for s in bl_data.get("Options", [])}
+                # 新增：读取完全跳过抓取的标的黑名单
+                skip_symbol_set = {str(s).strip() for s in bl_data.get("Skip_Symbols", [])}
+                if skip_symbol_set:
+                    tqdm.write(f"📋 加载抓取黑名单，共 {len(skip_symbol_set)} 个标的直接跳过: {list(skip_symbol_set)}")
         else:
             tqdm.write(f"⚠️ 提示: 未找到黑名单文件: {BLACKLIST_JSON_PATH}")
     except Exception as e:
@@ -422,8 +427,8 @@ def scrape_options():
     
     # === 步骤 E: 执行黑名单及 Options_zero 过滤 (核心修改) ===
     # 过滤掉存在于 blacklist_options_set 和 json_zero_set 中的 symbol
-    # 构造总的排除集合
-    total_exclusion_set = blacklist_options_set.union(json_zero_set)
+    # 总排除集合：原有黑名单 + 0值期权过滤列表 + 自定义跳过抓取列表
+    total_exclusion_set = blacklist_options_set.union(json_zero_set).union(skip_symbol_set)
     symbols = [s for s in all_symbols_before_blacklist if s[0] not in total_exclusion_set]
     
     # 统计被过滤的数量
@@ -471,7 +476,7 @@ def scrape_options():
 
     log_msg = (
         f"任务列表加载完成: [JSON({total_json_count}) + 数据库({len(db_symbols_list)})] | "
-        f"排除列表(Blacklist+Zero): {blacklisted_count} (其中Zero:{count_json_zero}) | "
+        f"手动跳过黑名单: {len(skip_symbol_set)} | 排除列表(Blacklist+Zero): {blacklisted_count} (其中Zero:{count_json_zero}) | "
         f"总去重: {len(symbols) + skipped_count} | "
         f"已完成: {skipped_count} | 待抓取: {len(symbols)}"
     )
