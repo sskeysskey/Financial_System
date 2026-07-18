@@ -1323,7 +1323,5 @@
         "CNM",
         "CNI"
     ],
-    "Skip_Symbols": [
-        "SKHY"
-    ]
+    "Skip_Symbols": []
 }
