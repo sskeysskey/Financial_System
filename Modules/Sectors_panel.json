@@ -1453,16 +1453,7 @@
         "USDEGP": "美兑埃镑",
         "USDBRL": "美兑巴雷亚尔"
     },
-    "Economics": {
-        "CoreCPI": "14 CoreCPI",
-        "USCPI": "14 USCPI",
-        "CorePPI": "15 CorePPI",
-        "USPPI": "15 USPPI",
-        "USRetailM": "16 USRetailM",
-        "ImportPriceM": "17 ImportPriceM",
-        "USConfidence": "17 USConfidence",
-        "USInitial": "16 USInitial"
-    },
+    "Economics": {},
     "Economic_All": {
         "USGDP": "",
         "USCPI": "",
