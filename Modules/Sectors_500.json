@@ -14,8 +14,7 @@
         "B",
         "VALE",
         "CTVA",
-        "NUE",
-        "MT"
+        "NUE"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -55,7 +54,8 @@
         "ORLY",
         "ROST",
         "SE",
-        "F"
+        "F",
+        "EBAY"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -164,7 +164,8 @@
         "BNY",
         "FITB",
         "STT",
-        "NDAQ"
+        "NDAQ",
+        "PYPL"
     ],
     "Healthcare": [
         "LLY",
