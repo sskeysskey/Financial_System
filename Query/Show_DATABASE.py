@@ -11,12 +11,12 @@ DOWNLOADS_DIR = os.path.join(USER_HOME, "Downloads")
 # ================= 配置区域 (跨平台修改) =================
 
 # 3. 默认数据库路径
-# DEFAULT_DB_PATH = os.path.join(DATABASE_DIR, "Finance.db")
+DEFAULT_DB_PATH = os.path.join(DATABASE_DIR, "Finance.db")
 
 # 3. 默认数据库路径（手动指定绝对路径）
 # DEFAULT_DB_PATH = "/Users/yanzhang/Coding/LocalServer/Resources/OVideo/ovideo.db"
 # DEFAULT_DB_PATH = "/Users/yanzhang/Downloads/OVideo.db"
-DEFAULT_DB_PATH = "/Users/yanzhang/Downloads/analytics.db"
+# DEFAULT_DB_PATH = "/Users/yanzhang/Downloads/analytics.db"
 
 
 # 4. 报告输出目录
@@ -374,7 +374,7 @@ if __name__ == "__main__":
 
     # --- 配置项 2: 数据显示量 ---
     # 选项 A: 显示固定行数，例如 500
-    my_content_limit = 5
+    my_content_limit = 1
     
     # 选项 B: 显示全部数据，设置为 'all'
     # my_content_limit = 'all'

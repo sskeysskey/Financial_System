@@ -17,6 +17,7 @@ from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.collections import LineCollection
 import glob
 import time
+import threading
 
 USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
@@ -51,56 +52,98 @@ NORD_THEME = {
     'accent_purple': '#B48EAD',
 }
 
-# 在文件开头添加这个函数
-def find_earning_release_date(symbol, txt_dir=None):
-    """
-    在 Earnings_Release_*.txt 文件中查找 symbol 对应的日期
-    返回找到的第一个日期，如果没找到返回 None
-    """
+# ============ 新增：全局实时价格管理器（整个进程共用一个线程 + 一个 fetcher） ============
+class _RealtimeManager:
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._symbol = None
+        self._latest = {}          # symbol -> price
+        self._thread = None
+        self._stop = threading.Event()
+        self._fetcher = None
+
+    def _ensure_thread(self):
+        if self._thread is None or not self._thread.is_alive():
+            self._stop.clear()
+            self._thread = threading.Thread(target=self._run, daemon=True)
+            self._thread.start()
+
+    def set_symbol(self, symbol):
+        with self._lock:
+            self._symbol = symbol
+        self._ensure_thread()
+
+    def get_latest(self, symbol):
+        with self._lock:
+            return self._latest.get(symbol)
+
+    def _run(self):
+        try:
+            self._fetcher = _get_global_fetcher()
+        except Exception as e:
+            print(f"初始化 fetcher 失败: {e}")
+            return
+        while not self._stop.is_set():
+            with self._lock:
+                sym = self._symbol
+            if sym:
+                try:
+                    quote = self._fetcher.get_realtime_quote(sym)
+                    if quote and 'price' in quote:
+                        with self._lock:
+                            self._latest[sym] = quote['price']
+                except Exception as e:
+                    print(f"后台获取实时价格失败: {e}")
+            if self._stop.wait(timeout=5.0):
+                break
+
+_RT_MANAGER = _RealtimeManager()
+
+# ============ 新增：Earning Release 全量缓存（整个进程只读一次文件） ============
+_EARNING_RELEASE_CACHE = None
+
+def _load_all_earning_releases(txt_dir=None):
+    global _EARNING_RELEASE_CACHE
+    if _EARNING_RELEASE_CACHE is not None:
+        return _EARNING_RELEASE_CACHE
     if txt_dir is None:
         txt_dir = os.path.join(BASE_CODING_DIR, "News")
+    result = {}
     try:
-        # 查找所有匹配的文件
         pattern = os.path.join(txt_dir, 'Earnings_Release_*.txt')
-        files = glob.glob(pattern)
-        
-        for file_path in files:
+        for file_path in glob.glob(pattern):
             try:
                 with open(file_path, 'r', encoding='utf-8') as f:
                     for line in f:
                         line = line.strip()
                         if not line:
                             continue
-                        # 解析格式: "SYMBOL : TIME : DATE"
                         parts = [p.strip() for p in line.split(':')]
                         if len(parts) >= 3:
-                            file_symbol = parts[0]
-                            date_str = parts[2]
-                            if file_symbol == symbol:
-                                # 解析日期
+                            sym, date_str = parts[0], parts[2]
+                            if sym not in result:
                                 try:
-                                    return datetime.strptime(date_str, "%Y-%m-%d").date()
+                                    result[sym] = datetime.strptime(date_str, "%Y-%m-%d").date()
                                 except ValueError:
-                                    print(f"日期格式错误: {date_str}")
-                                    continue
+                                    pass
             except Exception as e:
                 print(f"读取文件 {file_path} 时出错: {e}")
                 continue
-        
-        return None
     except Exception as e:
         print(f"查找 earning release 日期时出错: {e}")
-        return None
-    
-def get_polymarket_percentage(symbol):
-    """
-    在 earning_polymarket.txt 文件中查找 symbol 对应的百分比
-    返回找到的百分比字符串（如 '76%'），如果没找到返回 None
-    """
+    _EARNING_RELEASE_CACHE = result
+    return result
+
+def find_earning_release_date(symbol, txt_dir=None):
+    """从缓存中查找 symbol 对应的 earning release 日期，没有则返回 None"""
+    return _load_all_earning_releases(txt_dir).get(symbol)
+
+@lru_cache(maxsize=1)
+def _load_polymarket_data():
     file_path = os.path.join(BASE_CODING_DIR, "News", "earning_polymarket.txt")
+    data = {}
     if not os.path.exists(file_path):
-        return None
-        
+        return data
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             for line in f:
@@ -109,13 +152,14 @@ def get_polymarket_percentage(symbol):
                     continue
                 parts = line.split(':')
                 if len(parts) == 2:
-                    file_symbol = parts[0].strip()
-                    percentage = parts[1].strip()
-                    if file_symbol == symbol:
-                        return percentage
+                    data[parts[0].strip()] = parts[1].strip()
     except Exception as e:
         print(f"读取 polymarket 文件出错: {e}")
-    return None
+    return data
+
+def get_polymarket_percentage(symbol):
+    """从缓存中查找 symbol 对应的百分比字符串（如 '76%'），没有则返回 None"""
+    return _load_polymarket_data().get(symbol)
 
 def calculate_three_weeks_before_range(target_date):
     """
@@ -2258,71 +2302,32 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
 
     plt.gcf().canvas.mpl_connect('figure_leave_event', hide_annot_on_leave)
 
-    # === 实时价格刷新：后台线程 + UI 线程合并 ===
-    import threading
-
-    _rt_stop_flag = threading.Event()      # 用于通知后台线程退出
-    _rt_pending_result = [None]            # 后台线程把结果放这里
-    _rt_lock = threading.Lock()
-    _rt_in_flight = [False]                # 防止上一次还没回来又发新的
-
-    def _rt_worker():
-        """后台线程：只做网络请求，不碰 matplotlib 任何对象"""
-        try:
-            fetcher = _get_global_fetcher()
-        except Exception as e:
-            print(f"初始化 fetcher 失败: {e}")
-            return
-        while not _rt_stop_flag.is_set():
-            try:
-                quote = fetcher.get_realtime_quote(name)
-                if quote and 'price' in quote and prices and prices[-1] != 0:
-                    rt_price = quote['price']
-                    pct = ((rt_price - prices[-1]) / prices[-1]) * 100
-                    with _rt_lock:
-                        _rt_pending_result[0] = pct
-            except Exception as e:
-                print(f"后台获取实时价格失败: {e}")
-            # 5 秒一次足矣（盘前盘后变化很慢）
-            # 用 wait 而不是 sleep，关闭时能立即响应
-            if _rt_stop_flag.wait(timeout=5.0):
-                break
-
-    
+    # === 实时价格刷新：改用全局单例管理器，避免每次开图都新建线程 & 重新初始化 fetcher ===
+    _RT_MANAGER.set_symbol(name)
 
     def _ui_poll_realtime():
-        """主线程：定时检查后台线程是否有新数据，只做轻量更新"""
-        with _rt_lock:
-            pct = _rt_pending_result[0]
-            _rt_pending_result[0] = None  # 取走后清空，避免重复刷新
-        if pct is None:
+        """主线程定时读取内存里的最新价，只做轻量更新"""
+        rt_price = _RT_MANAGER.get_latest(name)
+        if rt_price is None or not prices or prices[-1] == 0:
+            return
+        pct = ((rt_price - prices[-1]) / prices[-1]) * 100
+        # 没变化就不重绘
+        if current_pre_after_pct[0] is not None and abs(current_pre_after_pct[0] - pct) < 1e-9:
             return
         current_pre_after_pct[0] = pct
-        # 直接修改已有 text 的内容和颜色，避免 remove+重建
         if pa_text_artist[0] is not None:
             pa_color = NORD_THEME['accent_red'] if pct > 0 else NORD_THEME['accent_green']
             pa_text_artist[0].set_text(f"P/A:{pct:+.2f}%")
             pa_text_artist[0].set_color(pa_color)
             fig.canvas.draw_idle()
 
-    # 启动后台线程
-    _rt_thread = threading.Thread(target=_rt_worker, daemon=True)
-    _rt_thread.start()
-
-    # UI 轮询 timer：只做内存读取，0 阻塞
-    ui_timer = fig.canvas.new_timer(interval=500)  # 0.5 秒检查一次内存
+    ui_timer = fig.canvas.new_timer(interval=1000)  # 1 秒查一次内存，0 阻塞
     ui_timer.add_callback(_ui_poll_realtime)
     ui_timer.start()
-
-    # 关键：保持引用，防止 GC
-    fig._rt_thread = _rt_thread
-    fig._rt_stop_flag = _rt_stop_flag
     fig._ui_timer = ui_timer
 
-    # 窗口关闭时正确清理
     def _on_close(evt):
         try:
-            _rt_stop_flag.set()
             ui_timer.stop()
         except Exception:
             pass

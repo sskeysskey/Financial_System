@@ -713,7 +713,8 @@
         "SATS",
         "HONAV",
         "BLD",
-        "SKHYV"
+        "SKHYV",
+        "TMHC"
     ],
     "etf": [
         "VDE",
@@ -1126,7 +1127,8 @@
         "LEND",
         "SCHA",
         "DWAS",
-        "DBEM"
+        "DBEM",
+        "PWV"
     ],
     "Earning": [
         "TW",

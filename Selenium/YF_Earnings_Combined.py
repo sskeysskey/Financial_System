@@ -1119,71 +1119,72 @@ def run_part_c():
     print("\n" + "="*50)
     print(">>> 正在启动 Part C (Polymarket 爬虫任务)")
     print("="*50)
-    
-    # 1. 加载本地已有数据
+
     earnings_data = load_existing_polymarket_data(POLYMARKET_FILE_PATH)
-    
+
     try:
         with sync_playwright() as p:
-            # 启动浏览器 (headless=True 表示无头模式，不弹出浏览器窗口)
             browser = p.chromium.launch(headless=True)
-            # 伪装一下 User-Agent，防止被 Cloudflare 拦截
-            page = browser.new_page(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-            
+            page = browser.new_page(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                           "AppleWebKit/537.36 (KHTML, like Gecko) "
+                           "Chrome/120.0.0.0 Safari/537.36"
+            )
+
             print("正在访问 Polymarket 页面...")
-            # 移除 networkidle，改为 domcontentloaded，并增加整体超时时间
-            page.goto("https://polymarket.com/earnings", wait_until="domcontentloaded", timeout=60000)
-            
-            # 显式等待包含股票数据的容器出现
-            page.wait_for_selector("div.group.cursor-pointer", timeout=30000)
-            
-            # 获取所有符合条件的卡片容器
-            cards = page.locator("div.group.cursor-pointer").all()
-            print(f"页面上找到了 {len(cards)} 个股票数据组，正在提取...")
-            
-            for card in cards:
-                try:
-                    # 提取股票代码 (h4 标签)
-                    ticker_element = card.locator("h4")
-                    if ticker_element.count() == 0:
-                        continue
-                    ticker = ticker_element.first.inner_text().strip()
-                    
-                    # 提取百分比 (span 标签，包含 font-medium)
-                    percent_element = card.locator("span.font-medium")
-                    if percent_element.count() == 0:
-                        continue
-                    # inner_text() 会自动忽略 HTML 注释和 DevTools 的 == $0 等调试字符
-                    percent = percent_element.first.inner_text().strip()
-                    
-                    if ticker and percent:
-                        # --- 修改的核心逻辑开始 ---
-                        # 为了防止格式问题，清理一下字符串两端的空格
-                        clean_percent = percent.strip()
-                        
-                        # 定义需要跳过覆盖的特定值（考虑到网页上可能有小数或没带%号的情况，多加几个兼容项）
-                        skip_values = ["0%", "100%", "0", "100", "0.0%", "100.0%"]
-                        
-                        if ticker in earnings_data:
-                            # 如果本地已有该股票数据
-                            if clean_percent in skip_values:
-                                print(f"跳过更新: {ticker} (本地已存在，且新抓取值为 {percent})")
-                            else:
-                                earnings_data[ticker] = percent
-                                print(f"更新覆盖: {ticker} -> {percent}")
-                        else:
-                            # 如果本地没有该股票数据，直接新增
-                            earnings_data[ticker] = percent
-                            print(f"抓取新增: {ticker} -> {percent}")
-                        # --- 修改的核心逻辑结束 ---
-                        
-                except Exception as e:
-                    print(f"解析某个卡片时出错: {e}")
+            page.goto("https://polymarket.com/earnings",
+                      wait_until="domcontentloaded", timeout=60000)
+            page.wait_for_timeout(8000)  # 等 SPA 异步渲染
+
+            # 用 JS 直接在页面里提取，找所有含 "beats" 的行，回溯取 ticker 和 %
+            results = page.evaluate("""
+                () => {
+                    const out = [];
+                    // 找到所有文本含百分比的元素
+                    const all = Array.from(document.querySelectorAll('*'));
+                    for (const el of all) {
+                        const txt = (el.textContent || '').trim();
+                        // 只处理形如 "93%" 的叶子节点
+                        if (el.children.length === 0 && /^\\d{1,3}%$/.test(txt)) {
+                            // 向上找一个包含股票代码的容器
+                            let node = el;
+                            let ticker = null;
+                            for (let i = 0; i < 6 && node; i++) {
+                                node = node.parentElement;
+                                if (!node) break;
+                                // 在该容器里找一个全大写的短代码
+                                const cand = Array.from(node.querySelectorAll('*'))
+                                    .map(x => (x.childElementCount === 0 ? x.textContent.trim() : ''))
+                                    .find(t => /^[A-Z]{1,6}$/.test(t));
+                                if (cand) { ticker = cand; break; }
+                            }
+                            if (ticker) out.push([ticker, txt]);
+                        }
+                    }
+                    return out;
+                }
+            """)
+
+            print(f"提取到 {len(results)} 条原始记录，正在合并...")
+            skip_values = ["0%", "100%", "0", "100", "0.0%", "100.0%"]
+
+            for ticker, percent in results:
+                ticker = ticker.strip()
+                clean_percent = percent.strip()
+                if not ticker or not clean_percent:
                     continue
-                    
+                if ticker in earnings_data:
+                    if clean_percent in skip_values:
+                        print(f"跳过更新: {ticker} (本地已存在, 新值 {percent})")
+                    else:
+                        earnings_data[ticker] = percent
+                        print(f"更新覆盖: {ticker} -> {percent}")
+                else:
+                    earnings_data[ticker] = percent
+                    print(f"抓取新增: {ticker} -> {percent}")
+
             browser.close()
-            
-        # 3. 将更新后的数据保存到文件
+
         save_polymarket_data(POLYMARKET_FILE_PATH, earnings_data)
     except Exception as e:
         print(f"Part C (Polymarket) 执行出错: {e}")

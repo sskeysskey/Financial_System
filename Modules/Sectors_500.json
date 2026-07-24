@@ -28,7 +28,8 @@
         "SPOT",
         "NTES",
         "APP",
-        "WBD"
+        "WBD",
+        "NBIS"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -54,8 +55,7 @@
         "ORLY",
         "ROST",
         "SE",
-        "F",
-        "EBAY"
+        "F"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -164,8 +164,7 @@
         "BNY",
         "FITB",
         "STT",
-        "NDAQ",
-        "PYPL"
+        "NDAQ"
     ],
     "Healthcare": [
         "LLY",
@@ -247,7 +246,8 @@
         "SPCX",
         "DAL",
         "ROK",
-        "HONA"
+        "HONA",
+        "WAB"
     ],
     "Real_Estate": [
         "PLD",
@@ -317,7 +317,6 @@
         "TER",
         "DDOG",
         "SNOW",
-        "STM",
         "HPE",
         "ALAB",
         "UMC",
@@ -332,6 +331,7 @@
         "AEP",
         "SRE",
         "D",
-        "VST"
+        "VST",
+        "XEL"
     ]
 }

@@ -281,7 +281,7 @@ class MainWindow(QMainWindow):
         self.on_symbol_button_clicked(self.ordered_symbols_on_screen[new_index], btn_index=new_index)
 
     def on_symbol_button_clicked(self, symbol, btn_index=None):
-        self.description_data = load_json(DESCRIPTION_PATH)
+        # self.description_data = load_json(DESCRIPTION_PATH)
         sector = self.symbol_to_sector.get(symbol)
         if not sector: return
 
