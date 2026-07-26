@@ -34,7 +34,7 @@ except ImportError as e:
 
 # 外部绘图函数
 sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Query"))
-from Chart_input import plot_financial_data
+from Chart_input_single import plot_financial_data
 
 # ----------------------------------------------------------------------
 # 常量 / 全局配置
@@ -976,7 +976,6 @@ class HighLowWindow(QMainWindow):
                 callback=self.handle_chart_callback, 
                 window_title_text=pos_str  # <--- 这里传入了新的标题格式
             )
-            self.setFocus()
         except Exception as e: print(f"绘图错误: {e}")
 
     def handle_chart_callback(self, action):

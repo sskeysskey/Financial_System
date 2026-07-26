@@ -19,7 +19,7 @@ from PyQt6.QtCore import Qt, QTimer
 # --- 路径处理 ---
 HOME = os.path.expanduser("~") 
 sys.path.append(os.path.join(HOME, 'Coding/Financial_System/Query'))
-from Chart_input import plot_financial_data
+from Chart_input_single import plot_financial_data
 
 TXT_PATH = os.path.join(HOME, "Coding/News/Earnings_Release_new.txt")
 SECTORS_JSON_PATH = os.path.join(HOME, "Coding/Financial_System/Modules/Sectors_All.json")
@@ -281,7 +281,6 @@ class MainWindow(QMainWindow):
         self.on_symbol_button_clicked(self.ordered_symbols_on_screen[new_index], btn_index=new_index)
 
     def on_symbol_button_clicked(self, symbol, btn_index=None):
-        # self.description_data = load_json(DESCRIPTION_PATH)
         sector = self.symbol_to_sector.get(symbol)
         if not sector: return
 

@@ -14,7 +14,9 @@
         "B",
         "VALE",
         "CTVA",
-        "NUE"
+        "NUE",
+        "WPM",
+        "MT"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -28,8 +30,7 @@
         "SPOT",
         "NTES",
         "APP",
-        "WBD",
-        "NBIS"
+        "WBD"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -318,8 +319,6 @@
         "DDOG",
         "SNOW",
         "HPE",
-        "ALAB",
-        "UMC",
         "SKHY"
     ],
     "Utilities": [

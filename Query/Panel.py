@@ -23,7 +23,7 @@ from PyQt6.QtGui import QFont, QCursor, QDrag, QColor
 
 sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Query"))
 
-from Chart_input import plot_financial_data
+from Chart_input_single import plot_financial_data
 
 # --- 文件路径配置 ---
 CONFIG_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_panel.json")
@@ -1622,8 +1622,6 @@ class MainWindow(QMainWindow):
                 window_title_text=window_title,
                 display_name=display_name  # <--- 新增参数
             )
-            
-            self.setFocus()
 
     def on_keyword_selected(self, value):
         sector = symbol_to_sector_map.get(value)
