@@ -760,7 +760,8 @@
     "AUR",
     "SIG",
     "HSAI",
-    "ANDG"
+    "ANDG",
+    "CAKE"
   ],
   "Consumer_Defensive": [
     "WMT",
@@ -1289,7 +1290,8 @@
     "TXG",
     "ALHC",
     "KNSA",
-    "EWTX"
+    "EWTX",
+    "MMED"
   ],
   "Industrials": [
     "GE",
@@ -1579,7 +1581,6 @@
     "RITM",
     "TRNO",
     "DOC",
-    "NSA",
     "EPRT",
     "KRG",
     "LINE",

@@ -15,8 +15,8 @@
         "VALE",
         "CTVA",
         "NUE",
-        "WPM",
-        "MT"
+        "MT",
+        "WPM"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -56,7 +56,9 @@
         "ORLY",
         "ROST",
         "SE",
-        "F"
+        "F",
+        "EBAY",
+        "CVNA"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -164,8 +166,8 @@
         "CM",
         "BNY",
         "FITB",
-        "STT",
-        "NDAQ"
+        "NDAQ",
+        "STT"
     ],
     "Healthcare": [
         "LLY",
@@ -199,7 +201,8 @@
         "COR",
         "ARGX",
         "CAH",
-        "TAK"
+        "TAK",
+        "EW"
     ],
     "Industrials": [
         "GE",
@@ -240,15 +243,14 @@
         "GWW",
         "FIX",
         "AME",
-        "BE",
-        "CARR",
         "URI",
         "FAST",
         "SPCX",
         "DAL",
         "ROK",
         "HONA",
-        "WAB"
+        "BE",
+        "CARR"
     ],
     "Real_Estate": [
         "PLD",
@@ -307,19 +309,20 @@
         "STX",
         "WDC",
         "SNDK",
-        "CIEN",
         "MPWR",
-        "LITE",
         "KEYS",
         "ASX",
-        "COHR",
-        "NOK",
         "NXPI",
         "TER",
         "DDOG",
         "SNOW",
         "HPE",
-        "SKHY"
+        "SKHY",
+        "GRMN",
+        "LITE",
+        "CIEN",
+        "ALAB",
+        "NOK"
     ],
     "Utilities": [
         "NEE",
@@ -330,7 +333,6 @@
         "AEP",
         "SRE",
         "D",
-        "VST",
-        "XEL"
+        "VST"
     ]
 }

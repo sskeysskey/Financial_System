@@ -1,13 +1,14 @@
 {
     "manifest_version": 3,
     "name": "Screener Data Scraper",
-    "version": "1.1",
-    "description": "Scrape Yahoo Finance data and save locally",
+    "version": "2.0",
+    "description": "Scrape Yahoo Finance screener data (crash-proof background engine)",
     "permissions": [
-        "activeTab",
         "scripting",
         "downloads",
-        "storage"
+        "storage",
+        "tabs",
+        "alarms"
     ],
     "host_permissions": [
         "https://finance.yahoo.com/*"
@@ -17,16 +18,5 @@
     },
     "background": {
         "service_worker": "background.js"
-    },
-    "content_scripts": [
-        {
-            "matches": [
-                "https://finance.yahoo.com/*"
-            ],
-            "js": [
-                "content.js"
-            ],
-            "run_at": "document_idle"
-        }
-    ]
+    }
 }

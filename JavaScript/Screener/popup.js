@@ -2,274 +2,71 @@ document.addEventListener('DOMContentLoaded', function () {
   const statusDiv = document.getElementById('status');
   const progressBar = document.getElementById('progressBar');
   const logContainer = document.getElementById('logContainer');
+  const btnRestart = document.getElementById('btnRestart');
+  const btnStop = document.getElementById('btnStop');
 
-  let allResults = [];
-  let completedCount = 0;
+  let lastSeq = 0;
 
-  // ====== 关键参数 ======
-  const CONCURRENCY = 4;   // 同时打开4个标签页并发抓取
-  const MAX_RETRIES = 3;
-  const POST_LOAD_DELAY = 800;   // 页面加载后等待(原1500ms)
-  const POLL_INTERVAL = 500;     // 轮询间隔(原1000ms)
-  const MAX_POLL_CHECKS = 40;    // 最大轮询次数(500ms×40=20秒)
-  const RETRY_DELAY = 1500;      // 重试等待(原2000ms)
-  const SCRAPE_TIMEOUT = 30000;  // 抓取超时(原60000ms)
+  // 与 background 建立长连接：既能触发续跑，也帮 Service Worker 保活
+  let port = null;
+  try {
+    port = chrome.runtime.connect({ name: 'popup' });
+    setInterval(() => { try { port.postMessage({ type: 'ping' }); } catch (e) { } }, 5000);
+  } catch (e) { }
 
-  const urls = [
-    { url: 'https://finance.yahoo.com/research-hub/screener/511d9b57-07dd-4d6a-8188-0c812754034f/?start=0&count=100', category: 'Technology' },
-    { url: 'https://finance.yahoo.com/research-hub/screener/511d9b57-07dd-4d6a-8188-0c812754034f/?start=100&count=100', category: 'Technology' },
-    { url: 'https://finance.yahoo.com/research-hub/screener/511d9b57-07dd-4d6a-8188-0c812754034f/?start=200&count=100', category: 'Technology' },
-    { url: 'https://finance.yahoo.com/research-hub/screener/8e86de0a-46e0-469f-85d0-a367d5aa6e6b/?start=0&count=100', category: 'Industrials' },
-    { url: 'https://finance.yahoo.com/research-hub/screener/8e86de0a-46e0-469f-85d0-a367d5aa6e6b/?start=100&count=100', category: 'Industrials' },
-    { url: 'https://finance.yahoo.com/research-hub/screener/8e86de0a-46e0-469f-85d0-a367d5aa6e6b/?start=200&count=100', category: 'Industrials' },
-    { url: 'https://finance.yahoo.com/research-hub/screener/45ecdc79-d64e-46ce-8491-62261d2f0c78/?start=0&count=100', category: 'Financial_Services' },
-    { url: 'https://finance.yahoo.com/research-hub/screener/45ecdc79-d64e-46ce-8491-62261d2f0c78/?start=100&count=100', category: 'Financial_Services' },
-    { url: 'https://finance.yahoo.com/research-hub/screener/45ecdc79-d64e-46ce-8491-62261d2f0c78/?start=200&count=100', category: 'Financial_Services' },
-    { url: 'https://finance.yahoo.com/research-hub/screener/45ecdc79-d64e-46ce-8491-62261d2f0c78/?start=300&count=100', category: 'Financial_Services' },
-    { url: 'https://finance.yahoo.com/research-hub/screener/e5221069-608f-419e-a3ff-24e61e4a07ac/?start=0&count=100', category: 'Basic_Materials' },
-    { url: 'https://finance.yahoo.com/research-hub/screener/90966b0c-2902-425c-870a-f19eb1ffd0b8/?start=0&count=100', category: 'Consumer_Defensive' },
-    { url: 'https://finance.yahoo.com/research-hub/screener/84e650e0-3916-4907-ad56-2fba4209fa3f/?start=0&count=100', category: 'Utilities' },
-    { url: 'https://finance.yahoo.com/research-hub/screener/1788e450-82cf-449a-b284-b174e8e3f6d6/?start=0&count=100', category: 'Energy' },
-    { url: 'https://finance.yahoo.com/research-hub/screener/1788e450-82cf-449a-b284-b174e8e3f6d6/?start=100&count=100', category: 'Energy' },
-    { url: 'https://finance.yahoo.com/research-hub/screener/877aec73-036f-40c3-9768-1c03e937afb7/?start=0&count=100', category: 'Consumer_Cyclical' },
-    { url: 'https://finance.yahoo.com/research-hub/screener/877aec73-036f-40c3-9768-1c03e937afb7/?start=100&count=100', category: 'Consumer_Cyclical' },
-    { url: 'https://finance.yahoo.com/research-hub/screener/877aec73-036f-40c3-9768-1c03e937afb7/?start=200&count=100', category: 'Consumer_Cyclical' },
-    { url: 'https://finance.yahoo.com/research-hub/screener/9a217ba3-966a-4340-83b9-edb160f05f8e/?start=0&count=100', category: 'Real_Estate' },
-    { url: 'https://finance.yahoo.com/research-hub/screener/9a217ba3-966a-4340-83b9-edb160f05f8e/?start=100&count=100', category: 'Real_Estate' },
-    { url: 'https://finance.yahoo.com/research-hub/screener/f99d96f0-a144-48be-b220-0be74c55ebf4/?start=0&count=100', category: 'Healthcare' },
-    { url: 'https://finance.yahoo.com/research-hub/screener/f99d96f0-a144-48be-b220-0be74c55ebf4/?start=100&count=100', category: 'Healthcare' },
-    { url: 'https://finance.yahoo.com/research-hub/screener/360b16ee-2692-4617-bd1a-a6c715dd0c29/?start=0&count=100', category: 'Communication_Services' }
-  ];
+  // 打开 popup 即尝试启动（若已在跑或刚跑完，则只显示进度）
+  chrome.runtime.sendMessage({ action: 'start' }, () => void chrome.runtime.lastError);
 
-  function logMessage(text, type = 'info') {
-    const p = document.createElement('p');
-    p.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
-    p.className = `log-message log-${type}`;
-    logContainer.appendChild(p);
+  btnRestart.addEventListener('click', () => {
+    if (!confirm('确定要放弃当前进度，重新开始抓取吗？')) return;
+    lastSeq = 0;
+    logContainer.innerHTML = '';
+    chrome.runtime.sendMessage({ action: 'start', force: true }, () => void chrome.runtime.lastError);
+  });
+
+  btnStop.addEventListener('click', () => {
+    chrome.runtime.sendMessage({ action: 'stop' }, () => void chrome.runtime.lastError);
+  });
+
+  function appendLogs(logs) {
+    for (const l of logs) {
+      if (l.seq <= lastSeq) continue;
+      lastSeq = l.seq;
+      const p = document.createElement('p');
+      p.className = `log-message log-${l.type}`;
+      p.textContent = `[${new Date(l.t).toLocaleTimeString()}] ${l.text}`;
+      logContainer.appendChild(p);
+    }
     logContainer.scrollTop = logContainer.scrollHeight;
   }
 
-  startScraping();
+  function render(s) {
+    if (!s) { statusDiv.textContent = '尚未开始'; return; }
+    const total = s.tasks.length;
+    const done = s.tasks.filter(t => t.status === 'done').length;
+    const running = s.tasks.filter(t => t.status === 'running').length;
+    progressBar.style.width = `${(done / total * 100).toFixed(1)}%`;
 
-  async function startScraping() {
-    try {
-      allResults = [];
-      completedCount = 0;
-      progressBar.style.width = '0%';
-      logContainer.innerHTML = '';
-      statusDiv.textContent = `Starting scrape... (0/${urls.length})`;
-      logMessage(`初始化... 准备并发抓取 ${urls.length} 个页面 (并发数: ${CONCURRENCY})。`);
-
-      // ====== 核心改动：用并发池替代串行循环 ======
-      const orderedResults = await runWithConcurrency(urls, CONCURRENCY);
-
-      // 合并所有结果（保持原有顺序）
-      allResults = orderedResults.flat();
-
-      statusDiv.textContent = "Scraping complete. Processing data...";
-      logMessage("所有页面抓取完毕。", 'final');
-
-      if (allResults.length === 0) {
-        logMessage("抓取完成，但未收集到任何有效数据。请检查日志中的错误信息。", 'warning');
-        statusDiv.textContent = "Finished. No data found.";
-        return;
-      }
-
-      const above = allResults.filter(r => r.marketCap >= 5e9);
-      const below = allResults.filter(r => r.marketCap < 5e9);
-      const dateStr = getDateStr();
-
-      const summaryMsg = `数据处理完成：${above.length} 条 (市值≥50亿)，${below.length} 条 (市值<50亿)。准备下载...`;
-      logMessage(summaryMsg, 'final');
-      statusDiv.textContent = "Ready to download...";
-
-      if (above.length > 0) {
-        await downloadFile(`screener_above_${dateStr}.txt`, above);
-      }
-      if (below.length > 0) {
-        await downloadFile(`screener_below_${dateStr}.txt`, below);
-      }
-
-      statusDiv.textContent = "All tasks completed!";
-
-    } catch (err) {
-      console.error(err);
-      logMessage(`发生严重错误: ${err.message}`, 'error');
-      statusDiv.textContent = `Error: ${err.message}`;
+    if (s.running) {
+      statusDiv.textContent = `进行中  ${done}/${total}  (第 ${s.round} 轮, 正在抓 ${running} 页)`;
+    } else if (s.finished) {
+      statusDiv.textContent = `已完成  ${done}/${total}`;
+    } else {
+      statusDiv.textContent = `已停止  ${done}/${total}`;
     }
+    appendLogs(s.logs || []);
   }
 
-  /**
-   * 并发池：同时运行最多 limit 个任务
-   * 返回按原始顺序排列的结果数组
-   */
-  async function runWithConcurrency(items, limit) {
-    const results = new Array(items.length);
-    let nextIndex = 0;
-
-    async function worker() {
-      while (nextIndex < items.length) {
-        const i = nextIndex++;
-        const { url, category } = items[i];
-
-        logMessage(`[${i + 1}/${items.length}] 正在处理: ${category}...`);
-
-        const pageResults = await scrapePageWithRetry(url, category, MAX_RETRIES);
-        results[i] = pageResults;
-
-        completedCount++;
-        progressBar.style.width = `${(completedCount / items.length) * 100}%`;
-        statusDiv.textContent = `Completed ${completedCount}/${items.length}`;
-
-        if (pageResults && pageResults.length > 0) {
-          logMessage(`[${category}] 成功获取 ${pageResults.length} 条数据 (${completedCount}/${items.length})`, 'success');
-        } else {
-          logMessage(`[${category}] 重试 ${MAX_RETRIES} 次后仍未获取到数据 (${completedCount}/${items.length})`, 'warning');
-        }
-      }
-    }
-
-    // 启动 limit 个并发 worker
-    const workers = [];
-    for (let w = 0; w < Math.min(limit, items.length); w++) {
-      workers.push(worker());
-    }
-    await Promise.all(workers);
-
-    return results;
-  }
-
-  /**
-   * 带重试机制的页面抓取函数
-   */
-  async function scrapePageWithRetry(url, category, maxRetries) {
-    let attempt = 0;
-
-    while (attempt < maxRetries) {
-      attempt++;
-
-      if (attempt > 1) {
-        logMessage(`[${category}] 第 ${attempt} 次尝试 (共 ${maxRetries} 次)`, 'warning');
-      }
-
-      let tab = null;
-
-      try {
-        tab = await chrome.tabs.create({ url, active: false });
-
-        await waitForPageLoad(tab.id);
-
-        const response = await new Promise((resolve, reject) => {
-          chrome.tabs.sendMessage(tab.id, { action: "scrapeData", category }, res => {
-            if (chrome.runtime.lastError) {
-              reject(new Error(chrome.runtime.lastError.message));
-            } else if (res) {
-              resolve(res);
-            } else {
-              reject(new Error("Content script did not send a response."));
-            }
-          });
-          setTimeout(() => reject(new Error("抓取超时")), SCRAPE_TIMEOUT);
-        });
-
-        if (response.success && response.data && response.data.length > 0) {
-          return response.data;
-        } else {
-          const errorMsg = response.message || "未获取到有效数据";
-          logMessage(`[${category}] ${errorMsg}`, 'warning');
-
-          if (attempt < maxRetries) {
-            logMessage(`[${category}] 将在${RETRY_DELAY / 1000}秒后重试...`, 'warning');
-            await sleep(RETRY_DELAY);
-          }
-        }
-
-      } catch (err) {
-        logMessage(`[${category}] 尝试 ${attempt} 失败: ${err.message}`, 'error');
-
-        if (attempt < maxRetries) {
-          logMessage(`[${category}] 将在${RETRY_DELAY / 1000}秒后重试...`, 'warning');
-          await sleep(RETRY_DELAY);
-        }
-
-      } finally {
-        if (tab && tab.id) {
-          await chrome.tabs.remove(tab.id).catch(e => console.warn("Could not remove tab:", e));
-        }
-      }
-    }
-
-    logMessage(`[${category}] 达到最大重试次数 (${maxRetries})，放弃该页面`, 'error');
-    return [];
-  }
-
-  function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  function getDateStr() {
-    const now = new Date();
-    const yy = String(now.getFullYear() % 100).padStart(2, "0");
-    const mm = String(now.getMonth() + 1).padStart(2, "0");
-    const dd = String(now.getDate()).padStart(2, "0");
-    return `${yy}${mm}${dd}`;
-  }
-
-  function downloadFile(filename, data) {
-    return new Promise((resolve) => {
-      logMessage(`请求下载文件: ${filename} (${data.length}条记录)`);
-      chrome.runtime.sendMessage(
-        { action: "downloadData", data, filename },
-        response => {
-          if (response && response.success) {
-            logMessage(`下载成功: ${response.filename}`, 'success');
-          } else {
-            logMessage(`下载失败: ${response?.error || "未知错误"}`, 'error');
-          }
-          resolve();
-        }
-      );
+  function refresh() {
+    chrome.storage.local.get('scraperState', o => {
+      if (chrome.runtime.lastError) return;
+      render(o.scraperState);
     });
   }
 
-  /**
-   * 等待页面加载 —— 轮询间隔和延迟均已缩短
-   */
-  async function waitForPageLoad(tabId) {
-    return new Promise((resolve, reject) => {
-      let checks = 0;
-      function check() {
-        chrome.tabs.get(tabId, (tab) => {
-          if (chrome.runtime.lastError || !tab) {
-            return reject(new Error("Tab was closed before loading completed."));
-          }
-
-          chrome.scripting.executeScript({
-            target: { tabId },
-            func: () => {
-              const tableRows = document.querySelectorAll('div[data-testid="screener-table"] tbody tr');
-              return { readyState: document.readyState, rowCount: tableRows.length };
-            }
-          }, (results) => {
-            if (chrome.runtime.lastError) {
-              // 忽略注入错误
-            } else if (results && results[0] && results[0].result) {
-              const { readyState, rowCount } = results[0].result;
-              if (readyState === 'complete' && rowCount > 0) {
-                setTimeout(resolve, POST_LOAD_DELAY);
-                return;
-              }
-            }
-
-            if (++checks >= MAX_POLL_CHECKS) {
-              reject(new Error(`页面加载超时 (${MAX_POLL_CHECKS * POLL_INTERVAL / 1000}秒)`));
-            } else {
-              setTimeout(check, POLL_INTERVAL);
-            }
-          });
-        });
-      }
-      check();
-    });
-  }
+  refresh();
+  setInterval(refresh, 800);
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && changes.scraperState) render(changes.scraperState.newValue);
+  });
 });

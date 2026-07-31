@@ -276,6 +276,50 @@ def compare_and_update_sectors(screener_data, sectors_all_data, sectors_today_da
     
     return sectors_all_data, sectors_today_data, sectors_empty_data, added_symbols, moved_symbols, db_operation_logs
 
+DOWNLOADS_PATH = '/Users/yanzhang/Downloads/'
+
+def purge_stale_screener_files(downloads_path=DOWNLOADS_PATH):
+    """删除非今天日期的 screener_*.txt，避免误用昨天的旧文件"""
+    today = datetime.now().strftime('%y%m%d')
+    for f in glob.glob(os.path.join(downloads_path, 'screener_*.txt')):
+        base = os.path.basename(f)
+        if today not in base:
+            try:
+                os.remove(f)
+                print(f"🗑️ 删除过期文件: {base}")
+            except Exception as e:
+                print(f"删除 {base} 失败: {e}")
+
+def wait_for_today_file(prefix, timeout_sec=1500, relaunch_max=5,
+                        downloads_path=DOWNLOADS_PATH):
+    """
+    等待当天的 prefix_YYMMDD*.txt 出现。
+    超时则重新拉起 Chrome 扩展；重试 relaunch_max 次仍无则退出。
+    """
+    today = datetime.now().strftime('%y%m%d')
+    pattern = os.path.join(downloads_path, f'{prefix}_{today}*.txt')
+    launches = 0
+    start = 0
+    while True:
+        if launches == 0 or (time.time() - start) > timeout_sec:
+            if launches >= relaunch_max:
+                show_alert(f"⚠️ 等待 {prefix} 文件失败，已重试 {launches} 次，退出。")
+                sys.exit(1)
+            launches += 1
+            print(f"\n🚀 第 {launches} 次拉起 Chrome 扩展...")
+            extension_launch()
+            start = time.time()
+
+        files = glob.glob(pattern)
+        if files:
+            newest = max(files, key=os.path.getmtime)
+            # 等文件写完（1 秒内没再变化）
+            if time.time() - os.path.getmtime(newest) > 1.5:
+                print()
+                return newest
+        time.sleep(2)
+        print(".", end="", flush=True)
+
 def count_files(prefix):
     """
     计算Downloads目录中指定前缀开头的文件数量
@@ -497,20 +541,13 @@ def main():
 
     threading.Thread(target=move_mouse_periodically, daemon=True).start()
     
-    extension_launch()
+    downloads_path = DOWNLOADS_PATH
 
-    # ---- 原有等待 screener_above_*.txt 的逻辑，直到文件出现 ---- 
-    while count_files("screener_above") < 1:
-        time.sleep(2)
-        print(".", end="", flush=True)
-    print() # 换行
-    
-    # # 查找Downloads目录下最新的screener_above_开头的txt文件
-    downloads_path = '/Users/yanzhang/Downloads/'
-    screener_files = glob.glob(os.path.join(downloads_path, 'screener_above_*.txt'))
-    
-    # # 按文件修改时间排序，获取最新的文件
-    screener_file = max(screener_files, key=os.path.getmtime)
+    # 先清掉非当天的旧文件，防止误用昨天的数据
+    purge_stale_screener_files(downloads_path)
+
+    # 等待（并在超时后自动重新拉起扩展）
+    screener_file = wait_for_today_file("screener_above")
     print(f"使用 above 文件: {screener_file}")
 
     # ---- 你原来的变量初始化 ---- 
@@ -554,7 +591,8 @@ def main():
     save_sectors_file(sectors_500_file, updated_sectors_500)
     
     # ---- 新增：处理 screener_below ---- 
-    below_files = glob.glob(os.path.join(downloads_path, 'screener_below_*.txt'))
+    _today = datetime.now().strftime('%y%m%d')
+    below_files = glob.glob(os.path.join(downloads_path, f'screener_below_{_today}*.txt'))
     if below_files:
         screener_below_file = max(below_files, key=os.path.getmtime)
         print(f"使用 below 文件: {screener_below_file}")
