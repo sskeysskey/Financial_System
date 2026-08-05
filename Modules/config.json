@@ -454,8 +454,8 @@
             "control"
         ],
         "actionType": "runOsascript",
-        "target": "/Users/yanzhang/Coding/ScriptEditor/Karing1.scpt",
-        "message": "正在执行 karing 脚本..."
+        "target": "",
+        "message": "正在执行  脚本..."
     },
     {
         "key": "semicolon",

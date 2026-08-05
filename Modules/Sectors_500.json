@@ -30,7 +30,8 @@
         "SPOT",
         "NTES",
         "APP",
-        "WBD"
+        "WBD",
+        "NBIS"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -57,7 +58,6 @@
         "ROST",
         "SE",
         "F",
-        "EBAY",
         "CVNA"
     ],
     "Consumer_Defensive": [
@@ -167,7 +167,8 @@
         "BNY",
         "FITB",
         "NDAQ",
-        "STT"
+        "STT",
+        "PYPL"
     ],
     "Healthcare": [
         "LLY",
@@ -247,10 +248,11 @@
         "FAST",
         "SPCX",
         "DAL",
-        "ROK",
         "HONA",
         "BE",
-        "CARR"
+        "CARR",
+        "HEI",
+        "WAB"
     ],
     "Real_Estate": [
         "PLD",
@@ -322,7 +324,14 @@
         "LITE",
         "CIEN",
         "ALAB",
-        "NOK"
+        "NOK",
+        "COHR",
+        "UMC",
+        "INFY",
+        "CBRS",
+        "XYZ",
+        "CRWV",
+        "ADSK"
     ],
     "Utilities": [
         "NEE",
@@ -332,7 +341,6 @@
         "CEG",
         "AEP",
         "SRE",
-        "D",
-        "VST"
+        "D"
     ]
 }

@@ -1131,7 +1131,9 @@
         "SCHA",
         "DWAS",
         "DBEM",
-        "PWV"
+        "PWV",
+        "DIEM",
+        "RWO"
     ],
     "Earning": [
         "TW",
