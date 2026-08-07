@@ -30,8 +30,7 @@
         "SPOT",
         "NTES",
         "APP",
-        "WBD",
-        "NBIS"
+        "WBD"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -58,7 +57,8 @@
         "ROST",
         "SE",
         "F",
-        "CVNA"
+        "CVNA",
+        "AZO"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -74,7 +74,8 @@
         "BTI",
         "CL",
         "MNST",
-        "TGT"
+        "TGT",
+        "DEO"
     ],
     "Energy": [
         "XOM",
@@ -104,8 +105,7 @@
         "LNG",
         "OXY",
         "FANG",
-        "CVE",
-        "DVN"
+        "CVE"
     ],
     "Financial_Services": [
         "JPM",
@@ -248,11 +248,9 @@
         "FAST",
         "SPCX",
         "DAL",
-        "HONA",
         "BE",
         "CARR",
-        "HEI",
-        "WAB"
+        "HEI"
     ],
     "Real_Estate": [
         "PLD",
@@ -326,11 +324,7 @@
         "ALAB",
         "NOK",
         "COHR",
-        "UMC",
         "INFY",
-        "CBRS",
-        "XYZ",
-        "CRWV",
         "ADSK"
     ],
     "Utilities": [

@@ -119,12 +119,12 @@ def calculate_frequency_data(history_data, week52_low_symbols=None):
     if week52_low_symbols is None:
         week52_low_symbols = set()
 
-    excluded_groups = {"season", "no_season", "_Tag_Blacklist"}
+    excluded_groups = {"no_season", "_Tag_Blacklist"}
     support_level_groups = {"SupportLevel_Close", "SupportLevel_Over"}
     source_groups = {
         "Short", "Short_W", "Strategy12", "Strategy34", "OverSell_W",
         "PE_Deep", "PE_Deeper", "PE_W", "PE_valid", "PE_invalid",
-        "PE_Volume", "PE_Volume_up", "PE_Hot", "PE_Volume_high"
+        "PE_Volume", "PE_Volume_up", "PE_Hot", "PE_Volume_high", "season"
     }
 
     # PE_Hot 的源头组
@@ -169,8 +169,8 @@ def calculate_frequency_data(history_data, week52_low_symbols=None):
     count_to_symbols = {}
     for sym, groups in symbol_groups.items():
 
-        if "PE_Hot" in groups:
-            groups = groups - pe_hot_sources
+        # if "PE_Hot" in groups:
+        #     groups = groups - pe_hot_sources
 
         if sym in symbols_with_chaodi:
             groups = groups - pe_chaodi_sources

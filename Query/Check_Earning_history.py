@@ -342,6 +342,46 @@ def search_history_by_date(symbol):
     normal_dates = []
     compressed_records = defaultdict(list)
 
+    # 新增：计算每个命中日期的“签名”，用于检测连续相同记录
+    date_signature = {}
+    for d_str in hit_dates_sorted:
+        mapped_items = []
+        for cat, suf in date_items[d_str]:
+            # 将 Close 和 Over 统一映射为同一个名称，以便跨日匹配
+            if cat in ("SupportLevel_Close", "SupportLevel_Over"):
+                mapped_items.append(("SupportLevel_Any", suf))
+            else:
+                mapped_items.append((cat, suf))
+                
+        items_today_sig = sorted(mapped_items, key=lambda x: x[0])
+        # 用 (category, suffix) 元组作为签名，完全一致才算相同
+        date_signature[d_str] = tuple(items_today_sig)
+
+        # 新增：可配置的连续相同项最低数量要求
+    MIN_STREAK_ITEMS = 3 
+
+    def get_streak_position(d_str):
+        """返回该日期在“连续相同记录”段里的位置（最早那天=1）"""
+        if d_str not in sorted_trading_dates:
+            return 1
+            
+        sig = date_signature.get(d_str)
+        # 核心修改：如果当天的记录项数量少于设定的阈值，则不计算连续性
+        if not sig or len(sig) < MIN_STREAK_ITEMS:
+            return 1
+            
+        idx = sorted_trading_dates.index(d_str)
+        count = 1
+        j = idx + 1  # 降序列表里，索引变大 = 更早的交易日
+        while j < len(sorted_trading_dates):
+            older = sorted_trading_dates[j]
+            if date_signature.get(older) == sig:
+                count += 1
+                j += 1
+            else:
+                break
+        return count
+
     # 第一次遍历：筛选出需要压缩的日期
     for d_str in hit_dates_sorted:
         items_today = sorted(date_items[d_str], key=lambda x: x[0])
@@ -359,6 +399,18 @@ def search_history_by_date(symbol):
     for d_str, items_today in normal_dates:
         has_data = True
         has_group_a = any(cat in group_a for cat, _ in items_today)
+
+        # 新增：连续相同记录标识
+        streak_pos = get_streak_position(d_str)
+        if streak_pos >= 2:
+            streak_marker = (
+                f" <span style='color:#C4A7E7; font-weight:bold; "
+                f"background-color:rgba(235,203,139,0.15); padding:0 4px; "
+                f"border-radius:3px;' title='与前一交易日记录完全相同'>"
+                f"[⟳连续第{streak_pos}天]</span>"
+            )
+        else:
+            streak_marker = ""
 
         rendered_items = []
         for category, suf in items_today:
@@ -405,7 +457,7 @@ def search_history_by_date(symbol):
             )
 
         if has_group_a:
-            html_parts.append(make_header(d_str, NORD_THEME['success_green']))
+            html_parts.append(make_header(d_str + streak_marker, NORD_THEME['success_green']))
             for item in rendered_items:
                 html_parts.append(f"&nbsp;&nbsp;{item}<br>")
         else:
@@ -417,7 +469,7 @@ def search_history_by_date(symbol):
             html_parts.append(
                 f"<div style='padding-left: 4px; line-height: 1.8; "
                 f"margin-top:2px; margin-bottom:2px;'>"
-                f"{date_html}&nbsp;&nbsp;&nbsp;&nbsp;{joined}"
+                f"{date_html}{streak_marker}&nbsp;&nbsp;&nbsp;&nbsp;{joined}"   # ← 这里加了 streak_marker
                 f"</div>"
             )
 

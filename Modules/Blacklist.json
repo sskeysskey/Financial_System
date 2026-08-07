@@ -717,7 +717,9 @@
         "TMHC",
         "OII",
         "NUVL",
-        "NSA"
+        "NSA",
+        "CRNX",
+        "TECH"
     ],
     "etf": [
         "VDE",
@@ -1133,7 +1135,8 @@
         "DBEM",
         "PWV",
         "DIEM",
-        "RWO"
+        "RWO",
+        "HAP"
     ],
     "Earning": [
         "TW",

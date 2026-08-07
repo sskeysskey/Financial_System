@@ -15,8 +15,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = "" 
 TARGET_DATE = "" 
 
-# SYMBOL_TO_TRACE = "LTH"
-# TARGET_DATE = "2026-05-05"
+# SYMBOL_TO_TRACE = "AMD"
+# TARGET_DATE = "2026-07-29"
 
 PATHS = {
     "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),
@@ -1790,7 +1790,8 @@ def run_pe_volume_logic(log_detail):
 
     # ================= 新增：执行 PE_Hot 策略 =================
     # 排除的 symbol 列表：如果在这些 Volume 策略中，就不进入 PE_Hot
-    exclude_symbols_for_hot = set(filtered_pe_volume) | set(filtered_pe_volume_up) | set(filtered_pe_volume_high)
+    # exclude_symbols_for_hot = set(filtered_pe_volume) | set(filtered_pe_volume_up) | set(filtered_pe_volume_high)
+    exclude_symbols_for_hot = set()
     
     # 传入动态生成的 whitelist_symbols 以及数据库参数用于成交额过滤
     # [修复点] 传入 EARNING_HISTORY_JSON_FILE 以支持回测
