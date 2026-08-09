@@ -3,7 +3,7 @@ import json
 import os
 import sqlite3
 import re
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 import subprocess
 
 USER_HOME = os.path.expanduser("~")
@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QGroupBox, QScrollArea, QLabel, QFrame,
     QMenu, QTabWidget
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QThread # 确保导入了 QThread
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QThread
 from PyQt6.QtGui import QCursor, QColor, QFont, QShortcut, QKeySequence
 
 # --- 新增: 导入 Tiger_API ---
@@ -55,6 +55,7 @@ VOLUME_HIGH_PATH = os.path.join(BASE_CODING_DIR, "News", "0.5Y_volume_high.txt")
 COMPARE_ETFS_PATH = os.path.join(BASE_CODING_DIR, "News", "CompareETFs.txt")
 COMPARE_STOCK_PATH = os.path.join(BASE_CODING_DIR, "News", "CompareStock.txt")
 EARNING_HISTORY_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Earning_History.json")
+
 # 52周新低判定：以下板块内的 symbol 视为符合 52week_low 筛选
 WEEK52_LOW_SECTORS = {
     "Basic_Materials", "Real_Estate", "Energy", "Technology",
@@ -67,6 +68,34 @@ WEEK52_LOW_SECTORS = {
 NEW_HIGH_10Y_PRIMARY_PATH = os.path.join(BASE_CODING_DIR, "News", "10Y_newhigh_stock.txt")
 NEW_HIGH_10Y_BACKUP_PATH = os.path.join(BASE_CODING_DIR, "News", "backup", "10Y_newhigh_stock.txt")
 
+# ======================================================================
+# 【新增】多组共振 —— 信号强度评估配置
+# LOOKBACK_TRADING_DAYS = 120	稀有度回看窗口	想更看"近期习惯"就调到 60；想看长期基线调到 250
+# MIN_HISTORY_DAYS = 5	样本太少的判定门槛	保持
+# HIGH_WEIGHT_CATEGORIES / MEDIUM_WEIGHT_CATEGORIES	红/橙分类	想把某个组升权就搬到 HIGH 集合
+# compute_rarity 里的 0.05 / 0.15 / 0.30 / 0.50	稀有度分档	如果 ★ 太多就把阈值调紧（例如 0.03/0.10/0.20/0.35）
+# evaluate_symbol_signal 里 4.5 / 3.5 / 2.0	星级门槛	如果第一次跑发现 ★ 满屏，把 2.0 抬到 2.5；🔥 太少就把 4.5 降到 4.0
+# ======================================================================
+IGNORE_GROUPS = {"_Tag_Blacklist", "no_season"}
+
+# 与 Check_Earning_history.py 的配色口径保持一致
+HIGH_WEIGHT_CATEGORIES = {           # 红色：高权重
+    "PE_Volume", "Short", "Short_W", "PE_Volume_high", 
+    "SupportLevel_Over", "PE_Deeper", "PE_Deep"
+}
+MEDIUM_WEIGHT_CATEGORIES = {         # 橙色：中权重
+    "PE_Volume_up", "PE_W", "SupportLevel_Close", "PE_Hot",
+    "OverSell_W", "season"
+}
+# 其余 (PE_valid / PE_invalid / Strategy...) 视为蓝色：低权重
+
+LOOKBACK_TRADING_DAYS = 120   # 稀有度回看窗口（交易日）
+MIN_HISTORY_DAYS = 5          # 历史样本少于该值 → 视为“极少出现”
+
+BADGE_TEXT = {0: "", 1: "★", 2: "★★", 3: "🔥★★★"}
+BADGE_NAME = {0: "常态", 1: "值得一看", 2: "罕见/高质量", 3: "极罕见且极强"}
+
+
 class ClickableLabel(QLabel):
     clicked = pyqtSignal()
     def __init__(self, *args, **kwargs):
@@ -77,6 +106,7 @@ class ClickableLabel(QLabel):
         if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit()
         super().mousePressEvent(event)
+
 
 class SymbolManager:
     def __init__(self, symbol_list):
@@ -114,6 +144,12 @@ def clean_ticker(symbol):
     match = re.search(r"^([A-Za-z-]+)", symbol)
     return match.group(1) if match else symbol
 
+def split_symbol_suffix(raw):
+    """把 'AAPL抄底黑' 拆成 ('AAPL', '抄底黑')"""
+    base = clean_ticker(raw)
+    suffix = raw[len(base):] if raw.startswith(base) else ""
+    return base.upper(), suffix
+
 def calculate_frequency_data(history_data, week52_low_symbols=None):
     """计算多组共振（次数统计）数据"""
     if week52_low_symbols is None:
@@ -124,10 +160,10 @@ def calculate_frequency_data(history_data, week52_low_symbols=None):
     source_groups = {
         "Short", "Short_W", "Strategy12", "Strategy34", "OverSell_W",
         "PE_Deep", "PE_Deeper", "PE_W", "PE_valid", "PE_invalid",
+        "PE_low", "PE_lower", "PE_lowest",
         "PE_Volume", "PE_Volume_up", "PE_Hot", "PE_Volume_high", "season"
     }
 
-    # PE_Hot 的源头组
     pe_hot_sources = {
         "PE_Deep", "PE_Deeper", "PE_W", "OverSell_W",
         "PE_valid", "PE_invalid", "season"
@@ -160,17 +196,14 @@ def calculate_frequency_data(history_data, week52_low_symbols=None):
                 symbol_groups[sym] = set()
             symbol_groups[sym].add(group)
 
-    # --- 新增：为符合 52week_low 的 symbol 追加一个虚拟分组，使共振次数 +1 ---
+    # --- 为符合 52week_low 的 symbol 追加一个虚拟分组，使共振次数 +1 ---
     for sym in list(symbol_groups.keys()):
         if sym in week52_low_symbols:
             symbol_groups[sym].add("52week_low")
 
-    # 6. 按次数分组，并过滤掉无意义的 2 次共振
+    # 按次数分组，并过滤掉无意义的 2 次共振
     count_to_symbols = {}
     for sym, groups in symbol_groups.items():
-
-        # if "PE_Hot" in groups:
-        #     groups = groups - pe_hot_sources
 
         if sym in symbols_with_chaodi:
             groups = groups - pe_chaodi_sources
@@ -195,11 +228,268 @@ def calculate_frequency_data(history_data, week52_low_symbols=None):
         })
     return result
 
+# ======================================================================
+# 【新增】Earning_History 索引 & 信号强度评估
+# ======================================================================
+
+def build_symbol_history_index(history_data):
+    """
+    构建 symbol 维度的历史索引
+    返回:
+        sym_items     : dict[symbol][date] -> [(group, suffix), ...]
+        sorted_dates  : 全局交易日列表（降序）
+    """
+    sym_items = defaultdict(dict)
+    all_dates = set()
+
+    for group, date_map in (history_data or {}).items():
+        if group in IGNORE_GROUPS or not isinstance(date_map, dict):
+            continue
+        for date_str, symbols in date_map.items():
+            if not isinstance(symbols, list):
+                continue
+            all_dates.add(date_str)
+            for raw in symbols:
+                sym, suf = split_symbol_suffix(raw)
+                sym_items[sym].setdefault(date_str, []).append((group, suf))
+
+    return {
+        'sym_items': sym_items,
+        'sorted_dates': sorted(all_dates, reverse=True)
+    }
+
+
+def get_today_items(history_data):
+    """
+    按每个分组“各自的最新日期”汇总每个 symbol 当日命中的分组（与共振统计口径一致）
+    返回 dict[symbol] -> [(group, suffix), ...]
+    """
+    today_items = defaultdict(list)
+    for group, date_map in (history_data or {}).items():
+        if group in IGNORE_GROUPS or not isinstance(date_map, dict) or not date_map:
+            continue
+        latest = max(date_map.keys())
+        symbols = date_map.get(latest) or []
+        if not isinstance(symbols, list):
+            continue
+        for raw in symbols:
+            sym, suf = split_symbol_suffix(raw)
+            today_items[sym].append((group, suf))
+    return today_items
+
+
+def category_color(cat, suffix):
+    """返回 'red' / 'orange' / 'blue'（与 Check_Earning_history 口径一致）"""
+    if cat == "PE_Volume_high":
+        return 'red' if (suffix and '甲' in suffix) else 'orange'
+    if cat in HIGH_WEIGHT_CATEGORIES:
+        return 'red'
+    if cat in MEDIUM_WEIGHT_CATEGORIES:
+        return 'orange'
+    return 'blue'
+
+
+def compute_rarity(sym_date_items, sorted_dates, today, n_today):
+    """
+    稀有度：今天的分组数相对该 symbol 自身历史基线有多罕见
+    返回 (rarity_score, p, active_days, typical_count)
+    """
+    idx = sorted_dates.index(today) if today in sorted_dates else -1
+    if idx >= 0:
+        window = sorted_dates[idx + 1: idx + 1 + LOOKBACK_TRADING_DAYS]
+    else:
+        window = sorted_dates[:LOOKBACK_TRADING_DAYS]
+
+    counts = []
+    for d in window:
+        items = sym_date_items.get(d)
+        if items:
+            counts.append(len({c for c, _ in items}))
+
+    active = len(counts)
+    if active < MIN_HISTORY_DAYS:
+        # 历史几乎没出现过 → 本身就极罕见
+        return (3.0 if n_today >= 3 else 2.0), 0.0, active, 0
+
+    ge = sum(1 for c in counts if c >= n_today)
+    p = ge / active
+    typical = sorted(counts)[active // 2]      # 中位数
+
+    if p <= 0.05:
+        r = 3.0
+    elif p <= 0.15:
+        r = 2.5
+    elif p <= 0.30:
+        r = 2.0
+    elif p <= 0.50:
+        r = 1.0
+    else:
+        r = 0.0
+    return r, p, active, typical
+
+
+def compute_quality(today_items):
+    """今天命中的分组“颜色纯度”打分"""
+    colors = [category_color(c, s) for c, s in today_items]
+    total = len(colors)
+    if total == 0:
+        return 0.0, 0, 0, 0, 0.0
+    red = colors.count('red')
+    orange = colors.count('orange')
+    blue = colors.count('blue')
+    purity = (red + orange) / total
+
+    if purity >= 0.999:
+        if red >= 2:
+            q = 2.0
+        elif red == 1:
+            q = 1.5
+        else:
+            q = 1.0
+    elif purity >= 0.6:
+        q = 0.5
+    else:
+        q = 0.0
+    return q, red, orange, blue, purity
+
+
+def detect_bonus_markers(sym_date_items, sorted_dates, today, today_items):
+    """
+    跨日接力类标记（紫色 / 红色），逻辑来自 Check_Earning_history.build_overlap_marker
+    返回 (purple_cnt, red_cnt, notes)
+    """
+    purple, red_mark, notes = 0, 0, []
+    if today not in sorted_dates:
+        return purple, red_mark, notes
+
+    idx = sorted_dates.index(today)
+    prev15 = sorted_dates[idx + 1: idx + 16]
+    prev5 = sorted_dates[idx + 1: idx + 6]
+    prev1 = sorted_dates[idx + 1] if idx + 1 < len(sorted_dates) else None
+
+    def cats_on(d):
+        return {c for c, _ in sym_date_items.get(d, [])}
+
+    def has_jia(d):
+        return any(c == "PE_Volume_high" and s and '甲' in s
+                   for c, s in sym_date_items.get(d, []))
+
+    today_cats = {c for c, _ in today_items}
+
+    # 紫：SupportLevel_* + 近15日 PE_Volume
+    if today_cats & {"SupportLevel_Close", "SupportLevel_Over"}:
+        hits = [d for d in prev15 if "PE_Volume" in cats_on(d)]
+        if hits:
+            purple += 1
+            notes.append(f"紫｜SupportLevel + 近15日PE_Volume({hits[0]})")
+
+    # 紫：PE_W 跨日接力
+    if "PE_W" in today_cats and prev1:
+        pcats = cats_on(prev1)
+        if pcats & {"PE_Hot", "PE_Volume"}:
+            purple += 1
+            notes.append("紫｜PE_W 接力(前日 Hot/Volume)")
+        if pcats & {"Short", "Short_W"}:
+            purple += 1
+            notes.append("紫｜PE_W 接力(前日 Short)")
+
+    # 红：PE_Volume_high(甲) 15日内重复
+    if any(c == "PE_Volume_high" and s and '甲' in s for c, s in today_items):
+        if any(has_jia(d) for d in prev15):
+            red_mark += 1
+            notes.append("红｜15日内重复 PE_Volume_high(甲)")
+
+    # 红：Short 且前一周出现过 PE_Volume_high(甲)
+    if "Short" in today_cats and any(has_jia(d) for d in prev5):
+        red_mark += 1
+        notes.append("红｜一周内曾 PE_Volume_high(甲)")
+
+    # 红：当日 抄底 + Short
+    if (today_cats & {"Short", "Short_W"}) and \
+       any(c == "PE_Volume_high" and s and '抄底' in s for c, s in today_items):
+        red_mark += 1
+        notes.append("红｜当日 抄底 + Short")
+
+    return purple, red_mark, notes
+
+
+def evaluate_symbol_signal(sym, resonance_count, index, today_items_map, week52_low_symbols):
+    """
+    综合评估一个 symbol 今天的“值得关注度”
+    返回 dict: {level, score, badge, reason}
+    """
+    sym_date_items = index['sym_items'].get(sym, {})
+    sorted_dates = index['sorted_dates']
+    today = sorted_dates[0] if sorted_dates else None
+
+    # 今天命中的分组（同一分组去重，保留有后缀的那条）
+    raw_items = today_items_map.get(sym, [])
+    dedup = {}
+    for c, s in raw_items:
+        if c not in dedup or (s and not dedup[c]):
+            dedup[c] = s
+    today_items = sorted(dedup.items())
+    n_today = len(today_items) if today_items else resonance_count
+
+    rarity, p, active_days, typical = compute_rarity(sym_date_items, sorted_dates, today, n_today)
+    quality, red, orange, blue, purity = compute_quality(today_items)
+    purple_cnt, red_cnt, notes = detect_bonus_markers(sym_date_items, sorted_dates, today, today_items)
+
+    bonus = min(purple_cnt, 2) * 0.5 + min(red_cnt, 2) * 0.5
+    if sym in week52_low_symbols:
+        bonus += 0.5
+        notes.append("橙｜处于52周新低板块")
+    bonus = min(bonus, 2.0)
+
+    score = rarity + quality + bonus
+
+    if score >= 4.5:
+        level = 3
+    elif score >= 3.5:
+        level = 2
+    elif score >= 2.0:
+        level = 1
+    else:
+        level = 0
+
+    # 惩罚：今天红橙占比不足一半（全靠蓝色凑数）→ 降一级
+    if today_items and purity < 0.5 and level > 0:
+        level -= 1
+
+    # tooltip 文本
+    cat_desc = "、".join(
+        f"{c}{('[' + s + ']') if s else ''}({category_color(c, s)})" for c, s in today_items
+    ) or "无当日明细"
+
+    if active_days >= MIN_HISTORY_DAYS:
+        hist_desc = (f"近{active_days}个有记录交易日：中位数 {typical} 组；"
+                     f"历史上 ≥{n_today} 组的天数占比 {p*100:.0f}%")
+    else:
+        hist_desc = f"历史样本仅 {active_days} 天（几乎不出现）"
+
+    reason = (
+        f"【{sym}】共振 {resonance_count} 组  评级：{BADGE_TEXT[level] or '—'} ({BADGE_NAME[level]})\n"
+        f"总分 {score:.1f} = 稀有度 {rarity:.1f} + 质量 {quality:.1f} + 加成 {bonus:.1f}\n"
+        f"── 历史基线 ──\n{hist_desc}\n"
+        f"── 今日构成 ──\n红 {red} / 橙 {orange} / 蓝 {blue}（红橙占比 {purity*100:.0f}%）\n{cat_desc}\n"
+    )
+    if notes:
+        reason += "── 额外标记 ──\n" + "\n".join(notes)
+
+    return {
+        'level': level,
+        'score': score,
+        'badge': BADGE_TEXT[level],
+        'reason': reason.strip(),
+    }
+
+
 def execute_external_script(script_type, keyword):
     script_configs = {
         'similar':  os.path.join(BASE_CODING_DIR, 'Financial_System', 'Query', 'Search_Similar_Tag.py'),
         'tags':     os.path.join(BASE_CODING_DIR, 'Financial_System', 'Operations', 'Editor_Tags.py'),
         'futu':     os.path.join(BASE_CODING_DIR, 'ScriptEditor', 'Stock_CheckFutu.scpt'),
+        'earning':  os.path.join(BASE_CODING_DIR, 'Financial_System', 'Query', 'Check_Earning_history.py'),
     }
     script_path = script_configs.get(script_type)
     if not script_path: return
@@ -251,7 +541,6 @@ def parse_volume_high_file(path):
                     })
     return data
 
-# 新增：解析 10年新高 文件
 def parse_10y_newhigh_file(path):
     data = OrderedDict()
     if not os.path.exists(path): return data
@@ -265,7 +554,6 @@ def parse_10y_newhigh_file(path):
                 symbol = parts[1]
                 info = parts[2] if len(parts) > 2 else ""
                 tags = " ".join(parts[3:]) if len(parts) > 3 else ""
-                
                 if category not in data:
                     data[category] = []
                 data[category].append({
@@ -357,7 +645,7 @@ def fetch_mnspp_data_from_db(db_path, symbol):
             cursor.execute(query, (symbol,))
             result = cursor.fetchone()
             if result:
-                return result  # 返回 (shares, marketcap, pe, pb)
+                return result
             else:
                 return "N/A", None, "N/A", "--"
     except Exception as e:
@@ -369,20 +657,21 @@ def fetch_mnspp_data_from_db(db_path, symbol):
 # ----------------------------------------------------------------------
 
 class PreAfterWorker(QThread):
-    # 定义一个信号，用于传递获取到的数据
     data_finished = pyqtSignal(list)
 
     def run(self):
-        # 在后台线程执行耗时操作
         try:
             data = get_pre_after_changes(top_n=10)
             self.data_finished.emit(data)
         except Exception as e:
             print(f"后台获取盘前数据失败: {e}")
-            self.data_finished.emit([]) # 失败返回空列表
+            self.data_finished.emit([])
+
 
 class HighLowWindow(QMainWindow):
-    def __init__(self, high_low_data, keyword_colors, sector_data, compare_data, json_data, high_low_5y_data, volume_high_data, etf_data, stock_data, earning_history_data, newhigh_10y_data, pre_after_data):
+    def __init__(self, high_low_data, keyword_colors, sector_data, compare_data, json_data,
+                 high_low_5y_data, volume_high_data, etf_data, stock_data,
+                 earning_history_data, newhigh_10y_data, pre_after_data):
         super().__init__()
         self.high_low_data = high_low_data
         self.keyword_colors = keyword_colors
@@ -395,40 +684,57 @@ class HighLowWindow(QMainWindow):
         self.stock_data = stock_data
         self.earning_history_data = earning_history_data
         self.newhigh_10y_data = newhigh_10y_data
-        self.pre_after_data = [] # 初始化为空
-        
+        self.pre_after_data = []
+
         # --- 启动异步线程 ---
         self.worker = PreAfterWorker()
         self.worker.data_finished.connect(self.update_pre_after_tab)
         self.worker.start()
-        
+
         # 计算多组共振数据（含 52week_low 加成）
         self.week52_low_symbols = load_52week_low_symbols(CONFIG_PATH)
         self.resonance_data = calculate_frequency_data(self.earning_history_data, self.week52_low_symbols)
+
+        # ===== 【新增】信号强度评估 + 组内按分数排序 =====
+        self.history_index = build_symbol_history_index(self.earning_history_data)
+        self.today_items_map = get_today_items(self.earning_history_data)
+        self.symbol_marks = {}
+        for item in self.resonance_data:
+            for sym in item['symbols']:
+                try:
+                    self.symbol_marks[sym] = evaluate_symbol_signal(
+                        sym, item['count'], self.history_index,
+                        self.today_items_map, self.week52_low_symbols
+                    )
+                except Exception as e:
+                    print(f"评估 {sym} 失败: {e}")
+                    self.symbol_marks[sym] = {'level': 0, 'score': 0.0, 'badge': '', 'reason': ''}
+            # 组内：分数高的排前面，同分按字母序
+            item['symbols'] = sorted(
+                item['symbols'],
+                key=lambda s: (-self.symbol_marks[s]['score'], s)
+            )
+
         self.list_resonance = [sym for item in self.resonance_data for sym in item['symbols']]
-        
+
         # 准备列表
         self.list_high_low = []
         for p in high_low_data.values():
             self.list_high_low.extend(p.get('Low', []) + p.get('High', []))
         self.list_high_low.extend(self.high_low_5y_data.get('5Y', {}).get('High', []))
-        
+
         self.list_volume = [i['symbol'] for s in volume_high_data.values() for i in s]
-        
-        # 提取 10年新高 的所有 symbol 列表
         self.list_10y_newhigh = [item['symbol'] for items in self.newhigh_10y_data.values() for item in items]
-        # 新增：盘前/盘后 symbol 列表
         self.list_pre_after = [item['symbol'] for item in self.pre_after_data]
-        
+
         self.etf_gainers = [i['symbol'] for i in self.etf_data[:24]]
         self.etf_losers = [i['symbol'] for i in self.etf_data[-24:][::-1]]
         self.list_etf = self.etf_gainers + self.etf_losers
-        
+
         self.stock_gainers = [i['symbol'] for i in self.stock_data[:24]]
         self.stock_losers = [i['symbol'] for i in self.stock_data[-24:][::-1]]
         self.list_stock = self.stock_gainers + self.stock_losers
 
-        # 默认初始化为第一个 Tab 的数据
         self.symbol_manager = SymbolManager(self.list_resonance)
         self.init_ui()
 
@@ -436,16 +742,16 @@ class HighLowWindow(QMainWindow):
         self.setWindowTitle("High/Low & Volume Viewer")
         self.setGeometry(100, 100, 1600, 1000)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        
+
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
 
-        # Tab 0: 多组共振 (新增为第一个 Tab)
+        # Tab 0: 多组共振
         self.tab_resonance = QWidget()
         self._init_resonance_tab(self.tab_resonance)
         self.tabs.addTab(self.tab_resonance, "多组共振")
 
-        # Tab 1: 盘前/盘后 (新增)
+        # Tab 1: 盘前/盘后
         self.tab_pre_after = QWidget()
         self._init_pre_after_tab(self.tab_pre_after)
         self.tabs.addTab(self.tab_pre_after, "盘前/盘后")
@@ -484,7 +790,7 @@ class HighLowWindow(QMainWindow):
     def on_tab_changed(self, index):
         mapping = {
             0: self.list_resonance,
-            1: self.list_pre_after,   # 新增
+            1: self.list_pre_after,
             2: self.list_volume,
             3: self.list_10y_newhigh,
             4: self.list_etf,
@@ -501,39 +807,32 @@ class HighLowWindow(QMainWindow):
         self.scroll_pre_after = QScrollArea()
         self.scroll_pre_after.setWidgetResizable(True)
         layout.addWidget(self.scroll_pre_after)
-        
-        # 创建一个容器，稍后用于动态填充内容
+
         self.pre_after_content = QWidget()
         self.pre_after_layout = QVBoxLayout(self.pre_after_content)
         self.scroll_pre_after.setWidget(self.pre_after_content)
-        
-        # 初始显示
+
         self.loading_label = QLabel("正在获取盘前/盘后数据，请稍候...")
         self.loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.pre_after_layout.addWidget(self.loading_label)
 
     def update_pre_after_tab(self, data):
-        """当线程返回数据时调用"""
         self.pre_after_data = data
-        # --- 【关键修改】：同步更新类属性，确保切换 Tab 时能读取到最新数据 ---
         self.list_pre_after = [it['symbol'] for it in data]
-        
-        # 1. 清除旧内容 (包括加载提示)
+
         while self.pre_after_layout.count():
             item = self.pre_after_layout.takeAt(0)
             if item.widget(): item.widget().deleteLater()
-        
-        # 2. 重新填充数据
+
         if not self.pre_after_data:
             tip = QLabel("⚠️ 暂无盘前/盘后数据（可能是非交易时段或拉取失败）")
             tip.setStyleSheet("color: #ccc; font-size: 18px; padding: 30px;")
             self.pre_after_layout.addWidget(tip)
             return
 
-        # 重新构建内容
         main_lay = QHBoxLayout()
         self.pre_after_layout.addLayout(main_lay)
-        
+
         losers = [it for it in self.pre_after_data if it['pct'] < 0]
         gainers = [it for it in self.pre_after_data if it['pct'] >= 0]
 
@@ -541,10 +840,9 @@ class HighLowWindow(QMainWindow):
             col_lay = QHBoxLayout()
             parent_layout.addWidget(self._create_section_container(title, col_lay))
             for chunk in [items[i:i + MAX_ITEMS_PER_COLUMN]
-                        for i in range(0, len(items), MAX_ITEMS_PER_COLUMN)]:
+                          for i in range(0, len(items), MAX_ITEMS_PER_COLUMN)]:
                 col = QVBoxLayout(); col.setAlignment(Qt.AlignmentFlag.AlignTop)
                 for it in chunk:
-                    # override_text 只显示涨跌幅，保留两位小数并带正负号
                     pct_text = f"{it['pct']:+.2f}%"
                     col.addWidget(self.create_symbol_widget(
                         it['symbol'],
@@ -558,37 +856,58 @@ class HighLowWindow(QMainWindow):
             self._add_separator(main_lay)
         if gainers:
             _build_column(f"上涨 ({len(gainers)})", gainers, main_lay)
-            
-        # 更新 symbol_manager 的列表 (如果当前正在该 Tab)
+
         if self.tabs.currentIndex() == 1:
             self.symbol_manager.update_symbols(self.list_pre_after)
 
     # --- Tab 初始化方法 ---
     def _init_resonance_tab(self, parent):
         layout = QVBoxLayout(parent)
+
+        # 图例说明
+        legend = QLabel(
+            "标记规则：  🔥★★★ 极罕见且信号极强（红框）   ｜   ★★ 罕见 / 高质量（黄框）   ｜   "
+            "★ 值得一看（蓝框）   ｜   无标记 = 该票的常态表现（灰框）"
+            "        —— 每组内已按强度从左上到右下排序，鼠标悬停可查看判定依据"
+        )
+        legend.setStyleSheet("color:#9AA5B1; font-size:14px; padding:6px 10px;")
+        legend.setWordWrap(True)
+        layout.addWidget(legend)
+
         scroll = QScrollArea(); scroll.setWidgetResizable(True); layout.addWidget(scroll)
         content = QWidget(); scroll.setWidget(content); main_lay = QHBoxLayout(content)
-        
+
         for item in self.resonance_data:
             count = item['count']
             symbols = item['symbols']
+            strong_n = sum(1 for s in symbols if self.symbol_marks.get(s, {}).get('level', 0) > 0)
+
             col_lay = QHBoxLayout()
-            title = f"共振 {count} 个分组 ({len(symbols)}只)"
+            title = f"共振 {count} 个分组 ({len(symbols)}只 / ★{strong_n})"
             main_lay.addWidget(self._create_section_container(title, col_lay))
-            
-            for chunk in [symbols[i:i + MAX_ITEMS_PER_COLUMN] for i in range(0, len(symbols), MAX_ITEMS_PER_COLUMN)]:
+
+            for chunk in [symbols[i:i + MAX_ITEMS_PER_COLUMN]
+                          for i in range(0, len(symbols), MAX_ITEMS_PER_COLUMN)]:
                 col = QVBoxLayout(); col.setAlignment(Qt.AlignmentFlag.AlignTop)
                 for sym in chunk:
-                    col.addWidget(self.create_symbol_widget(sym))
+                    mark = self.symbol_marks.get(sym, {'level': 0, 'badge': '', 'reason': ''})
+                    base_text = self.compare_data.get(sym, '')
+                    disp = f"{base_text} {mark['badge']}".strip()
+                    col.addWidget(self.create_symbol_widget(
+                        sym,
+                        override_text=disp if disp else " ",
+                        force_style=f"Reso_L{mark['level']}",
+                        tooltip=mark.get('reason', '')
+                    ))
                 col.addStretch(1); col_lay.addLayout(col)
-                
+
             self._add_separator(main_lay)
 
     def _init_high_low_tab(self, parent):
         layout = QVBoxLayout(parent)
         scroll = QScrollArea(); scroll.setWidgetResizable(True); layout.addWidget(scroll)
         content = QWidget(); scroll.setWidget(content); main_lay = QHBoxLayout(content)
-        
+
         self.low_columns_layout = QHBoxLayout()
         main_lay.addWidget(self._create_section_container("新低", self.low_columns_layout))
         self._add_separator(main_lay)
@@ -597,7 +916,7 @@ class HighLowWindow(QMainWindow):
         self._add_separator(main_lay)
         self.high_5y_columns_layout = QHBoxLayout()
         main_lay.addWidget(self._create_section_container("5Y HIGH", self.high_5y_columns_layout))
-        
+
         self._populate_category_columns(self.low_columns_layout, 'Low')
         self._populate_category_columns(self.high_columns_layout, 'High')
         self._populate_5y_high_section()
@@ -612,50 +931,43 @@ class HighLowWindow(QMainWindow):
             self._populate_volume_items(col_lay, items)
             self._add_separator(main_lay)
 
-    # 新增：10年新高 Tab 初始化
     def _init_10y_newhigh_tab(self, parent):
         layout = QVBoxLayout(parent)
         scroll = QScrollArea(); scroll.setWidgetResizable(True); layout.addWidget(scroll)
         content = QWidget(); scroll.setWidget(content); main_lay = QVBoxLayout(content)
-        
+
         for category, items in self.newhigh_10y_data.items():
-            # 创建一个水平布局来容纳该分类的一行
             row_lay = QHBoxLayout()
-            
-            # --- 核心修改：在布局开头添加弹簧 ---
             row_lay.addStretch(1)
-            
-            # 左侧分类名 (垂直居中)
+
             cat_label = QLabel(category)
             cat_label.setFont(QFont("Arial", 16, QFont.Weight.Bold))
             cat_label.setFixedWidth(200)
             cat_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             cat_label.setWordWrap(True)
             cat_label.setStyleSheet("background-color: #3A3A3A; color: #E0E0E0; border-radius: 8px; padding: 15px;")
-            
+
             left_vlay = QVBoxLayout()
             left_vlay.addStretch()
             left_vlay.addWidget(cat_label)
             left_vlay.addStretch()
             row_lay.addLayout(left_vlay)
-            
-            # 右侧 Symbols 列表
+
             sym_lay = QHBoxLayout()
             for chunk in [items[i:i + MAX_ITEMS_PER_COLUMN] for i in range(0, len(items), MAX_ITEMS_PER_COLUMN)]:
                 col = QVBoxLayout(); col.setAlignment(Qt.AlignmentFlag.AlignTop)
                 for item in chunk:
-                    col.addWidget(self.create_symbol_widget(item['symbol'], override_text=item['info'], override_tags=item['tags'], force_default=True))
+                    col.addWidget(self.create_symbol_widget(item['symbol'], override_text=item['info'],
+                                                            override_tags=item['tags'], force_default=True))
                 col.addStretch(1)
                 sym_lay.addLayout(col)
-                
+
             row_lay.addLayout(sym_lay)
-            
-            # --- 核心修改：在布局结尾添加弹簧 ---
             row_lay.addStretch(1)
-            
+
             main_lay.addLayout(row_lay)
             self._add_separator_horizontal(main_lay)
-            
+
         main_lay.addStretch(1)
 
     def _init_etf_tab(self, parent):
@@ -683,26 +995,26 @@ class HighLowWindow(QMainWindow):
         for chunk in [items[i:i + MAX_ITEMS_PER_COLUMN] for i in range(0, len(items), MAX_ITEMS_PER_COLUMN)]:
             col = QVBoxLayout(); col.setAlignment(Qt.AlignmentFlag.AlignTop)
             for item in chunk:
-                # ETF 强制使用 Default 颜色
-                col.addWidget(self.create_symbol_widget(item['symbol'], override_text=item['percentage'], override_tags=item['tags'], force_default=True))
+                col.addWidget(self.create_symbol_widget(item['symbol'], override_text=item['percentage'],
+                                                        override_tags=item['tags'], force_default=True))
             col.addStretch(1); parent_layout.addLayout(col)
 
     def _populate_stock_grid(self, parent_layout, items):
         for chunk in [items[i:i + MAX_ITEMS_PER_COLUMN] for i in range(0, len(items), MAX_ITEMS_PER_COLUMN)]:
             col = QVBoxLayout(); col.setAlignment(Qt.AlignmentFlag.AlignTop)
             for item in chunk:
-                # 检查是否为财报 (后缀包含前或后)
                 is_earnings = any(k in (item.get('suffix') or "") for k in ["前", "后"])
                 style = "Earnings" if is_earnings else "Default"
-                col.addWidget(self.create_symbol_widget(item['symbol'], override_text=item['display_text'], override_tags=item['tags'], force_style=style))
+                col.addWidget(self.create_symbol_widget(item['symbol'], override_text=item['display_text'],
+                                                        override_tags=item['tags'], force_style=style))
             col.addStretch(1); parent_layout.addLayout(col)
 
     def _populate_volume_items(self, parent_layout, items):
         for chunk in [items[i:i + MAX_ITEMS_PER_COLUMN] for i in range(0, len(items), MAX_ITEMS_PER_COLUMN)]:
             col = QVBoxLayout(); col.setAlignment(Qt.AlignmentFlag.AlignTop)
             for item in chunk:
-                # Volume 强制使用 Default 颜色
-                col.addWidget(self.create_symbol_widget(item['symbol'], override_text=item['info'], override_tags=item['tags'], force_default=True))
+                col.addWidget(self.create_symbol_widget(item['symbol'], override_text=item['info'],
+                                                        override_tags=item['tags'], force_default=True))
             col.addStretch(1); parent_layout.addLayout(col)
 
     def _populate_category_columns(self, parent_layout, cat):
@@ -711,25 +1023,23 @@ class HighLowWindow(QMainWindow):
             syms = cats.get(cat, [])
             if not syms: continue
             for i in range(0, len(syms), MAX_ITEMS_PER_COLUMN):
-                groups.append((f"{p} {cat}" + (f" ({i//MAX_ITEMS_PER_COLUMN+1})" if len(syms)>MAX_ITEMS_PER_COLUMN else ""), syms[i:i+MAX_ITEMS_PER_COLUMN]))
-        
+                groups.append((f"{p} {cat}" + (f" ({i//MAX_ITEMS_PER_COLUMN+1})" if len(syms) > MAX_ITEMS_PER_COLUMN else ""),
+                               syms[i:i+MAX_ITEMS_PER_COLUMN]))
+
         curr_col, curr_count = None, 0
         for title, syms in groups:
             if curr_col is None or (curr_count + len(syms) > MAX_ITEMS_PER_COLUMN):
                 if curr_col: parent_layout.addLayout(curr_col)
                 curr_col = QVBoxLayout(); curr_col.setAlignment(Qt.AlignmentFlag.AlignTop); curr_count = 0
-            
+
             box = QGroupBox(title)
             b_lay = QVBoxLayout(box)
-            
-            # --- 关键修改：增加顶部边距 (Left, Top, Right, Bottom) ---
-            # Top 设置为 35，确保卡片不会遮挡 GroupBox 的标题
-            b_lay.setContentsMargins(8, 35, 8, 8) 
-            b_lay.setSpacing(6) # 卡片之间的间距
-            
-            for s in syms: 
-                b_lay.addWidget(self.create_symbol_widget(s)) 
-            
+            b_lay.setContentsMargins(8, 35, 8, 8)
+            b_lay.setSpacing(6)
+
+            for s in syms:
+                b_lay.addWidget(self.create_symbol_widget(s))
+
             curr_col.addWidget(box)
             curr_count += len(syms)
         if curr_col: parent_layout.addLayout(curr_col)
@@ -738,12 +1048,12 @@ class HighLowWindow(QMainWindow):
         syms = self.high_low_5y_data.get('5Y', {}).get('High', [])
         for chunk in [syms[i:i + MAX_ITEMS_PER_COLUMN] for i in range(0, len(syms), MAX_ITEMS_PER_COLUMN)]:
             col = QVBoxLayout(); col.setAlignment(Qt.AlignmentFlag.AlignTop)
-            for s in chunk: col.addWidget(self.create_symbol_widget(s)) # High/Low 使用原配色
+            for s in chunk: col.addWidget(self.create_symbol_widget(s))
             col.addStretch(1); self.high_5y_columns_layout.addLayout(col)
 
     # --- 辅助方法 ---
     def _create_section_container(self, title_text, layout_ref):
-        c = QWidget(); v = QVBoxLayout(c); v.setContentsMargins(10,0,10,0)
+        c = QWidget(); v = QVBoxLayout(c); v.setContentsMargins(10, 0, 10, 0)
         t = QLabel(title_text); t.setFont(QFont("Arial", 20, QFont.Weight.Bold)); t.setAlignment(Qt.AlignmentFlag.AlignCenter)
         v.addWidget(t); v.addLayout(layout_ref); v.addStretch(1); return c
 
@@ -754,26 +1064,40 @@ class HighLowWindow(QMainWindow):
         sep = QFrame(); sep.setFrameShape(QFrame.Shape.HLine); sep.setFrameShadow(QFrame.Shadow.Sunken); layout.addWidget(sep)
 
     def apply_stylesheet(self):
-        # 基础配色定义
+        # (背景色, 文字色, 边框色)
         button_styles = {
-            "Cyan": ("cyan", "black"), "Blue": ("blue", "white"),
-            "Purple": ("purple", "white"), "Green": ("green", "white"),
-            "White": ("white", "black"), "Yellow": ("yellow", "black"),
-            "Orange": ("orange", "black"), "Red": ("red", "black"),
-            "Black": ("black", "white"), "Default": ("#111111", "gray"),
-            "Earnings": ("#111111", "red") # 财报样式：背景黑，文字红
+            "Cyan":     ("cyan", "black", "#333"),
+            "Blue":     ("blue", "white", "#333"),
+            "Purple":   ("purple", "white", "#333"),
+            "Green":    ("green", "white", "#333"),
+            "White":    ("white", "black", "#333"),
+            "Yellow":   ("yellow", "black", "#333"),
+            "Orange":   ("orange", "black", "#333"),
+            "Red":      ("red", "black", "#333"),
+            "Black":    ("black", "white", "#333"),
+            "Default":  ("#111111", "gray", "#333"),
+            "Earnings": ("#111111", "red", "#333"),
+            # ===== 多组共振专用：统一灰白标题 + 强度描边 =====
+            "Reso_L0":  ("#111111", "#D8DEE9", "#3A3A3A"),
+            "Reso_L1":  ("#10222A", "#D8DEE9", "#88C0D0"),
+            "Reso_L2":  ("#2C2411", "#F2E3B4", "#EBCB8B"),
+            "Reso_L3":  ("#3B171C", "#FFD5D9", "#BF616A"),
         }
         qss = ""
-        for name, (bg, fg) in button_styles.items():
-            qss += f"QPushButton#{name} {{ background-color: {bg}; color: {fg}; font-size: 16px; padding: 5px; border: 1px solid #333; border-radius: 4px; text-align: left; padding-left: 8px; }}\n"
+        for name, (bg, fg, border) in button_styles.items():
+            strong = name in ("Reso_L1", "Reso_L2", "Reso_L3")
+            bw = 2 if strong else 1
+            weight = "bold" if strong else "normal"
+            qss += (f"QPushButton#{name} {{ background-color:{bg}; color:{fg}; font-size:16px; "
+                    f"padding:5px; border:{bw}px solid {border}; border-radius:4px; "
+                    f"text-align:left; padding-left:8px; font-weight:{weight}; }}\n")
             qss += f"QPushButton#{name}:hover {{ background-color: {self.lighten_color(bg)}; }}\n"
-        
-        # --- 关键修改：QGroupBox 样式 ---
+
         qss += """
             QGroupBox { 
                 font-size: 18px; 
                 font-weight: bold; 
-                margin-top: 25px;  /* 增加外边距 */
+                margin-top: 25px;
                 border: 2px solid #555; 
                 border-radius: 8px; 
             }
@@ -782,78 +1106,75 @@ class HighLowWindow(QMainWindow):
                 subcontrol-position: top left; 
                 padding: 0 5px; 
                 left: 10px;
-                top: 5px; /* 调整标题垂直位置 */
+                top: 5px;
                 color: #EEE;
             }
         """
         qss += "QMenu { background-color: #2C2C2C; color: #E0E0E0; border: 1px solid #555; }\n"
         qss += "QTabBar::tab:selected { background: #444; color: white; }\n"
+        qss += "QToolTip { background-color: #2E3440; color: #ECEFF4; border: 1px solid #4C566A; font-size: 14px; padding: 6px; }\n"
         self.setStyleSheet(qss)
 
-    def lighten_color(self, color_name, factor=1.2):
-        if color_name.startswith("#111"): return "#222222"
-        color = QColor(color_name); h, s, l, a = color.getHslF()
-        color.setHslF(h, s, min(1.0, l * factor), a); return color.name()
+    def lighten_color(self, color_name, factor=1.35):
+        color = QColor(color_name)
+        if not color.isValid():
+            return color_name
+        h, s, l, a = color.getHslF()
+        if h < 0: h = 0.0
+        l = min(1.0, max(l * factor, l + 0.08))
+        color.setHslF(h, s, l, a)
+        return color.name()
 
     def get_button_style_name(self, symbol, force_default=False, force_style=None):
-        # 如果强制指定了样式（如 Earnings 或 Default）
         if force_style: return force_style
         if force_default: return "Default"
-        
-        # 否则走 High/Low 的关键词配色逻辑
-        color_map = {"red": "Red", "cyan": "Cyan", "blue": "Blue", "purple": "Purple", "yellow": "Yellow", "orange": "Orange", "black": "Black", "white": "White", "green": "Green"}
+
+        color_map = {"red": "Red", "cyan": "Cyan", "blue": "Blue", "purple": "Purple",
+                     "yellow": "Yellow", "orange": "Orange", "black": "Black",
+                     "white": "White", "green": "Green"}
         for color, style_name in color_map.items():
             if symbol in self.keyword_colors.get(f"{color}_keywords", []):
                 return style_name
         return "Default"
 
-    def create_symbol_widget(self, symbol, override_text=None, override_tags=None, force_default=False, force_style=None):
+    def create_symbol_widget(self, symbol, override_text=None, override_tags=None,
+                             force_default=False, force_style=None, tooltip=None):
         # 1. 按钮创建
         btn_text = f"{symbol} {override_text if override_text else self.compare_data.get(symbol, '')}"
-        button = QPushButton(btn_text)
+        button = QPushButton(btn_text.rstrip())
         button.setFixedWidth(SYMBOL_WIDGET_FIXED_WIDTH)
         button.setObjectName(self.get_button_style_name(symbol, force_default, force_style))
-        
+        button.clicked.connect(lambda _, s=symbol: self.on_symbol_click(s))
+        button.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        button.customContextMenuRequested.connect(lambda pos, s=symbol: self.show_context_menu(s))
+
         tags_info = override_tags if override_tags else self.get_tags_for_symbol(symbol)
         if isinstance(tags_info, list): tags_info = ", ".join(tags_info)
-        
-        # 2. 标签部分 (实现自适应高度)
+
+        # 2. 标签部分 (自适应高度)
         label = ClickableLabel(tags_info)
         label.setFixedWidth(SYMBOL_WIDGET_FIXED_WIDTH)
         label.setWordWrap(True)
-        # 垂直居中对齐
         label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-        
-        # --- 【关键修改点 1：设置字体大小】 ---
-        font_size = 16  # 你想设置的字体大小 (单位: pt 或 px)
+
+        font_size = 16
         font = QFont("Arial", font_size)
-        label.setFont(font) 
-        
-        # --- 【关键修改点 2：动态高度计算逻辑】 ---
-        # 这里的 padding 必须与下方 StyleSheet 里的 padding 保持一致
-        padding_h = 16  # 左右内边距总和 (left 8 + right 8)
-        padding_v = 12  # 上下内边距总和 (top 6 + bottom 6)
-        
-        fm = label.fontMetrics() # 这里现在会基于 16px 的字体进行计算
-        
-        # 计算在固定宽度下，文本自动换行所需的矩形大小
-        # 参数说明: (x, y, 限制宽度, 最大高度, 换行标志, 文本内容)
+        label.setFont(font)
+
+        padding_h = 16
+        padding_v = 12
+        fm = label.fontMetrics()
         rect = fm.boundingRect(
-            0, 0, 
-            SYMBOL_WIDGET_FIXED_WIDTH - padding_h, 
-            5000, # 给一个足够大的上限
-            Qt.TextFlag.TextWordWrap, 
+            0, 0,
+            SYMBOL_WIDGET_FIXED_WIDTH - padding_h,
+            5000,
+            Qt.TextFlag.TextWordWrap,
             tags_info
         )
-        
-        # 最终高度 = 文本计算高度 + 上下边距
-        # 设置一个最小高度（如 28），防止没字时卡片消失
         calculated_height = rect.height() + padding_v
-        final_height = max(calculated_height, 35) # 字体变大后，最小高度也相应调高
-        
+        final_height = max(calculated_height, 35)
         label.setFixedHeight(final_height)
-        
-        # --- 【关键修改点 3：更新样式表】 ---
+
         label.setStyleSheet(f"""
             background-color: lightyellow;
             color: black;
@@ -866,20 +1187,22 @@ class HighLowWindow(QMainWindow):
             border: 1px solid #e0e0d0;
         """)
 
-        # 事件绑定
         label.clicked.connect(lambda: self.on_symbol_click(symbol))
         label.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         label.customContextMenuRequested.connect(lambda pos, s=symbol: self.show_context_menu(s))
 
-        # 容器封装
+        if tooltip:
+            button.setToolTip(tooltip)
+            label.setToolTip(tooltip)
+
         container = QWidget()
         vlay = QVBoxLayout(container)
         vlay.setContentsMargins(0, 0, 0, 0)
-        vlay.setSpacing(4) 
+        vlay.setSpacing(4)
         vlay.addWidget(button)
         vlay.addWidget(label)
-        vlay.addStretch() # 重要：向下方挤压，确保容器高度由内容决定
-        
+        vlay.addStretch()
+
         container.setFixedWidth(SYMBOL_WIDGET_FIXED_WIDTH)
         return container
 
@@ -887,8 +1210,7 @@ class HighLowWindow(QMainWindow):
         for item in self.json_data.get("stocks", []) + self.json_data.get("etfs", []):
             if item.get("symbol") == symbol: return item.get("tag", "无标签")
         return "无标签"
-    
-    # --- 修改点 2: 添加动态计算子分类和索引的方法 ---
+
     def get_symbol_group_info(self, symbol):
         current_tab = self.tabs.currentIndex()
 
@@ -897,15 +1219,17 @@ class HighLowWindow(QMainWindow):
             for item in self.resonance_data:
                 if symbol in item['symbols']:
                     idx = item['symbols'].index(symbol)
-                    return f"共振{item['count']}组 ({idx + 1}/{len(item['symbols'])})"
+                    badge = self.symbol_marks.get(symbol, {}).get('badge', '')
+                    badge_str = f" {badge}" if badge else ""
+                    return f"共振{item['count']}组{badge_str} ({idx + 1}/{len(item['symbols'])})"
 
-        # Tab 1: 盘前/盘后 (新增)
+        # Tab 1: 盘前/盘后
         elif current_tab == 1:
             for i, it in enumerate(self.pre_after_data):
                 if it['symbol'] == symbol:
                     return f"盘前/盘后 {it['pct']:+.2f}% ({i + 1}/{len(self.pre_after_data)})"
 
-        # Tab 2: Volume High (原 Tab 1)
+        # Tab 2: Volume High
         elif current_tab == 2:
             for group_name, items in self.volume_high_data.items():
                 symbols_in_group = [item['symbol'] for item in items]
@@ -913,7 +1237,7 @@ class HighLowWindow(QMainWindow):
                     idx = symbols_in_group.index(symbol)
                     return f"{group_name} ({idx + 1}/{len(symbols_in_group)})"
 
-        # Tab 3: 10年新高 (原 Tab 2)
+        # Tab 3: 10年新高
         elif current_tab == 3:
             total_all_symbols = len(self.list_10y_newhigh)
             overall_idx = 0
@@ -925,7 +1249,7 @@ class HighLowWindow(QMainWindow):
                     idx = symbols_in_group.index(symbol)
                     return f"{group_name} ({idx + 1}/{len(symbols_in_group)}/{overall_idx}/{total_all_symbols})"
 
-        # Tab 4: ETFs (原 Tab 3)
+        # Tab 4: ETFs
         elif current_tab == 4:
             if symbol in self.etf_gainers:
                 idx = self.etf_gainers.index(symbol)
@@ -934,7 +1258,7 @@ class HighLowWindow(QMainWindow):
                 idx = self.etf_losers.index(symbol)
                 return f"Top Losers ({idx + 1}/{len(self.etf_losers)})"
 
-        # Tab 5: Stocks (原 Tab 4)
+        # Tab 5: Stocks
         elif current_tab == 5:
             if symbol in self.stock_gainers:
                 idx = self.stock_gainers.index(symbol)
@@ -943,7 +1267,7 @@ class HighLowWindow(QMainWindow):
                 idx = self.stock_losers.index(symbol)
                 return f"Top Losers ({idx + 1}/{len(self.stock_losers)})"
 
-        # Tab 6: High/Low (原 Tab 5)
+        # Tab 6: High/Low
         curr_list = self.symbol_manager.symbols
         if symbol in curr_list:
             return f"({curr_list.index(symbol) + 1}/{len(curr_list)})"
@@ -951,32 +1275,30 @@ class HighLowWindow(QMainWindow):
 
     def on_symbol_click(self, symbol):
         self.symbol_manager.set_current_symbol(symbol)
-        
-        # --- 修改点 3: 使用新方法获取标题文本 ---
+
         group_info = self.get_symbol_group_info(symbol)
         pos_str = f"{symbol} {group_info}".strip()
-        
-        # --- 新增：获取财务数据 ---
+
         shares_val, marketcap, pe, pb = fetch_mnspp_data_from_db(DB_PATH, symbol)
         sector = next((s for s, names in self.sector_data.items() if symbol in names), None)
-        
+
         try:
-            # --- 修改：将获取到的真实数据传入 plot_financial_data ---
             plot_financial_data(
-                DB_PATH, 
-                sector, 
-                symbol, 
-                self.compare_data.get(symbol, "N/A"), 
-                (shares_val, pb),   # 对应 share 参数，传入元组 (shares, pb)
-                marketcap,          # 对应 marketcap 参数
-                pe,                 # 对应 pe 参数
-                self.json_data, 
-                '1Y', 
-                False, 
-                callback=self.handle_chart_callback, 
-                window_title_text=pos_str  # <--- 这里传入了新的标题格式
+                DB_PATH,
+                sector,
+                symbol,
+                self.compare_data.get(symbol, "N/A"),
+                (shares_val, pb),
+                marketcap,
+                pe,
+                self.json_data,
+                '1Y',
+                False,
+                callback=self.handle_chart_callback,
+                window_title_text=pos_str
             )
-        except Exception as e: print(f"绘图错误: {e}")
+        except Exception as e:
+            print(f"绘图错误: {e}")
 
     def handle_chart_callback(self, action):
         if action == 'next': QTimer.singleShot(50, lambda: self.navigate_symbol_from_chart('next'))
@@ -994,6 +1316,7 @@ class HighLowWindow(QMainWindow):
 
     def show_context_menu(self, symbol):
         menu = QMenu(self)
+        menu.addAction("查看历史明细").triggered.connect(lambda: execute_external_script('earning', symbol))
         menu.addAction("查相似").triggered.connect(lambda: execute_external_script('similar', symbol))
         menu.addAction("富途查询").triggered.connect(lambda: execute_external_script('futu', symbol))
         menu.addSeparator()
@@ -1002,6 +1325,7 @@ class HighLowWindow(QMainWindow):
 
     def closeEvent(self, event):
         self.symbol_manager.reset(); QApplication.quit(); event.accept()
+
 
 if __name__ == '__main__':
     try:
@@ -1015,24 +1339,19 @@ if __name__ == '__main__':
         etf = parse_etf_file(COMPARE_ETFS_PATH)
         stk = parse_stock_file(COMPARE_STOCK_PATH)
         earn_hist = load_json(EARNING_HISTORY_PATH)
-        
-        # --- 修改：10年新高数据路径判断逻辑 ---
+
         if os.path.exists(NEW_HIGH_10Y_PRIMARY_PATH):
             target_10y_path = NEW_HIGH_10Y_PRIMARY_PATH
             print(f"正在读取主 10年新高文件: {target_10y_path}")
         else:
             target_10y_path = NEW_HIGH_10Y_BACKUP_PATH
             print(f"主文件不存在，正在读取备份 10年新高文件: {target_10y_path}")
-            
+
         newhigh_10y = parse_10y_newhigh_file(target_10y_path)
-        
-        # 新增：拉取盘前/盘后前 10 名（此调用会走网络，可能耗时数秒）
+
         print("▶ 正在拉取盘前/盘后数据...")
-        # pre_after = get_pre_after_changes(top_n=10)
-        # print(f"✅ 盘前/盘后获取 {len(pre_after)} 条")
-        
+
         app = QApplication(sys.argv)
-        # 传入 newhigh_10y
         win = HighLowWindow(hl, colors, sects, comp, desc, hl5y, vol,
                             etf, stk, earn_hist, newhigh_10y, [])
 

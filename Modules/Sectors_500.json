@@ -250,7 +250,9 @@
         "DAL",
         "BE",
         "CARR",
-        "HEI"
+        "HEI",
+        "HONA",
+        "RKLB"
     ],
     "Real_Estate": [
         "PLD",
@@ -325,7 +327,9 @@
         "NOK",
         "COHR",
         "INFY",
-        "ADSK"
+        "ADSK",
+        "CBRS",
+        "STM"
     ],
     "Utilities": [
         "NEE",

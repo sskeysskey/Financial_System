@@ -13,8 +13,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = ""
 TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "WAT"
-# TARGET_DATE = "2026-03-12"
+# SYMBOL_TO_TRACE = "DIS"
+# TARGET_DATE = "2026-07-23"
 
 PATHS = {
     "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),
@@ -136,6 +136,28 @@ CONFIG = {
     # PE_W 专属附加条件：最新价较近一个月最低价的涨幅限制
     "PE_W_LOOKBACK_DAYS": 21,        # 最近一个月（约21个交易日）
     "PE_W_MAX_RISE_FROM_LOW": 0.07,  # 最高不超过 6%
+
+    # ============================================================
+    # ========== 【新增】条件8：财报持续下跌 + 财报后深跌 ==========
+    # 输出分组：PE_low / PE_lower / PE_lowest （三档互斥，从高档位往下判定）
+    # ============================================================
+    # 第一部分：财报持续下跌
+    "COND8_EARNINGS_LOOKBACK_COUNT": 4,      # 观察最近 N 次财报收盘价
+    "COND8_MIN_DECLINE_COUNT": 3,            # 其中至少要有 M 个价格构成严格递减链
+    "COND8_REQUIRE_LATEST_IN_SEQUENCE": False,# 递减链是否必须以“最新一次财报”结尾（推荐 True）
+
+    # 第二部分：财报日收盘价 -> 最新收盘价 的跌幅分档
+    "COND8_MARKETCAP_THRESHOLD": 500_000_000_000,  # 5000亿分界线
+    "COND8_LOW_DROP_BIG": 0.06,      # >5000亿：跌幅 >= 6%   -> PE_low
+    "COND8_LOW_DROP_SMALL": 0.108,    # ≤5000亿：跌幅 >= 11%  -> PE_low
+    "COND8_LOWER_DROP_BIG": 0.11,    # >5000亿：跌幅 >= 11%  -> PE_lower
+    "COND8_LOWER_DROP_SMALL": 0.15,  # ≤5000亿：跌幅 >= 15%  -> PE_lower
+    "COND8_LOWEST_DROP_BIG": 0.15,   # >5000亿：跌幅 >= 15%  -> PE_lowest
+    "COND8_LOWEST_DROP_SMALL": 0.21, # ≤5000亿：跌幅 >= 21%  -> PE_lowest
+
+    # 其他开关
+    "COND8_APPLY_TURNOVER_FILTER": True,     # 是否套用成交额过滤（与其他条件一致）
+    "COND8_EXCLUDE_EXISTING_RESULTS": False, # True: 剔除已进入 PE_Deep/PE_Deeper/PE_W/OverSell_W/PE_valid/PE_invalid 的 symbol
 }
 
 # --- 3. 辅助与文件操作模块 ---
@@ -1036,6 +1058,249 @@ def check_new_condition_7(data, config, log_detail, symbol_to_trace):
 
     return cond_c
 
+# ==============================================================================
+# ========== 【全新增加】条件8：财报持续下跌 + 财报后深跌 (PE_low 系列) ==========
+# ==============================================================================
+def _find_longest_declining_chain(prices, anchor_last=True):
+    """
+    在给定的价格序列(按时间正序)中寻找“最长严格递减子序列”。
+    anchor_last=True  : 子序列必须以最后一个元素(最新一次财报)结尾。
+    anchor_last=False : 全局最长递减子序列。
+    返回: (长度, 索引列表)
+    """
+    n = len(prices)
+    if n == 0:
+        return 0, []
+
+    dp = [1] * n
+    parent = [-1] * n
+    for i in range(n):
+        for j in range(i):
+            if prices[j] is None or prices[i] is None:
+                continue
+            if prices[j] > prices[i] and dp[j] + 1 > dp[i]:
+                dp[i] = dp[j] + 1
+                parent[i] = j
+
+    if anchor_last:
+        end = n - 1
+    else:
+        end = max(range(n), key=lambda k: dp[k])
+
+    chain = []
+    cur = end
+    while cur != -1:
+        chain.append(cur)
+        cur = parent[cur]
+    chain.reverse()
+    return dp[end], chain
+
+
+def check_cond8_declining_earnings(data, config, log_detail, symbol_to_trace):
+    """
+    条件8 - 第一部分：最近 N 次财报收盘价中，至少有 M 个构成严格递减链。
+    (若财报总数只有 M 次，则等价于要求这 M 次连续下跌)
+    返回: (是否通过, 描述字符串)
+    """
+    symbol = data.get('symbol')
+    is_tracing = (symbol == symbol_to_trace)
+
+    lookback = config.get("COND8_EARNINGS_LOOKBACK_COUNT", 4)
+    min_count = config.get("COND8_MIN_DECLINE_COUNT", 3)
+    require_latest = config.get("COND8_REQUIRE_LATEST_IN_SEQUENCE", True)
+
+    all_er_prices = data.get('all_er_prices', [])
+    all_er_dates = data.get('all_er_dates', [])
+
+    if is_tracing:
+        log_detail(f"\n--- [{symbol}] 新增条件8评估 · 第一部分 (财报持续下跌) ---")
+
+    if len(all_er_prices) < min_count:
+        if is_tracing:
+            log_detail(f"  - 结果: False (财报收盘价数量 {len(all_er_prices)} < 最低要求 {min_count})")
+        return False, "财报数量不足"
+
+    window_prices = all_er_prices[-lookback:]
+    window_dates = all_er_dates[-lookback:] if len(all_er_dates) >= len(window_prices) else ["?"] * len(window_prices)
+
+    length, chain_idx = _find_longest_declining_chain(window_prices, anchor_last=require_latest)
+    passed = length >= min_count
+
+    chain_desc = " → ".join(
+        [f"{window_dates[k]}({window_prices[k]:.2f})" for k in chain_idx]
+    ) if chain_idx else "无"
+
+    if is_tracing:
+        pair_desc = ", ".join([f"{d}:{p:.2f}" for d, p in zip(window_dates, window_prices)])
+        log_detail(f"  - 观察窗口 (最近{lookback}次财报): {pair_desc}")
+        log_detail(f"  - 模式: {'必须以最新财报结尾' if require_latest else '全局最长递减链'}")
+        log_detail(f"  - 找到的递减链 (长度 {length}): {chain_desc}")
+        log_detail(f"  - 要求长度 >= {min_count} -> {passed}")
+
+    return passed, chain_desc
+
+
+def check_cond8_drop_tier(data, config, log_detail, symbol_to_trace):
+    """
+    条件8 - 第二部分：以“最新一次财报日收盘价”为基准，计算最新收盘价的跌幅并分档。
+    返回: (tier, drop_pct)  tier ∈ {None, 'PE_low', 'PE_lower', 'PE_lowest'}
+    """
+    symbol = data.get('symbol')
+    is_tracing = (symbol == symbol_to_trace)
+
+    if is_tracing:
+        log_detail(f"--- [{symbol}] 新增条件8评估 · 第二部分 (财报后深跌分档) ---")
+
+    all_er_prices = data.get('all_er_prices', [])
+    latest_price = data.get('latest_price')
+    marketcap = data.get('marketcap')
+
+    if not all_er_prices or latest_price is None:
+        if is_tracing: log_detail("  - 结果: None (缺少价格数据)")
+        return None, 0.0
+
+    er_price = all_er_prices[-1]
+    if er_price is None or er_price <= 0:
+        if is_tracing: log_detail(f"  - 结果: None (最新财报收盘价无效: {er_price})")
+        return None, 0.0
+
+    drop_pct = (er_price - latest_price) / er_price
+
+    cap_line = config.get("COND8_MARKETCAP_THRESHOLD", 500_000_000_000)
+    is_big_cap = (marketcap is not None) and (marketcap > cap_line)
+
+    if is_big_cap:
+        t_low = config.get("COND8_LOW_DROP_BIG", 0.06)
+        t_lower = config.get("COND8_LOWER_DROP_BIG", 0.11)
+        t_lowest = config.get("COND8_LOWEST_DROP_BIG", 0.15)
+        cap_desc = f"大市值 (> {cap_line/1e8:.0f}亿)"
+    else:
+        t_low = config.get("COND8_LOW_DROP_SMALL", 0.11)
+        t_lower = config.get("COND8_LOWER_DROP_SMALL", 0.15)
+        t_lowest = config.get("COND8_LOWEST_DROP_SMALL", 0.21)
+        cap_desc = f"中小市值 (<= {cap_line/1e8:.0f}亿 或 市值未知)"
+
+    # 从高档位往下判定，三档互斥
+    tier = None
+    if drop_pct >= t_lowest:
+        tier = 'PE_lowest'
+    elif drop_pct >= t_lower:
+        tier = 'PE_lower'
+    elif drop_pct >= t_low:
+        tier = 'PE_low'
+
+    if is_tracing:
+        log_detail(f"  - 当前市值: {marketcap:,.0f}" if marketcap else "  - 当前市值: 未知")
+        log_detail(f"  - 市值档位: {cap_desc}")
+        log_detail(f"  - 最新财报日收盘价: {er_price:.2f}, 最新收盘价: {latest_price:.2f}")
+        log_detail(f"  - 财报后跌幅: {drop_pct:.2%}")
+        log_detail(f"  - 分档阈值: PE_low>={t_low:.2%}, PE_lower>={t_lower:.2%}, PE_lowest>={t_lowest:.2%}")
+        log_detail(f"  - 判定结果: {tier if tier else '未达到任何档位'}")
+
+    return tier, drop_pct
+
+
+def check_turnover_filter(data, config, log_detail, symbol_to_trace, prefix="条件8"):
+    """
+    通用成交额过滤 (与 apply_common_filters 中的第3步逻辑一致，独立抽出供新条件复用)
+    """
+    symbol = data.get('symbol')
+    is_tracing = (symbol == symbol_to_trace)
+
+    latest_price = data.get('latest_price')
+    latest_volume = data.get('latest_volume')
+    if latest_price is None or latest_volume is None:
+        if is_tracing: log_detail(f"  - [{prefix}·成交额] 失败: 缺少价格或成交量数据。")
+        return False
+
+    turnover = latest_price * latest_volume
+    tags = data.get('tags', set())
+    is_china_stock = any("中国" in tag for tag in tags)
+    threshold = config["TURNOVER_THRESHOLD_CHINA"] if is_china_stock else config["TURNOVER_THRESHOLD"]
+    ok = turnover > threshold
+
+    if is_tracing:
+        log_detail(f"  - [{prefix}·成交额] {'中国概念股阈值' if is_china_stock else '通用阈值'}: {threshold:,}")
+        log_detail(f"  - [{prefix}·成交额] 实际成交额 {turnover:,.0f} > {threshold:,} -> {ok}")
+
+    return ok
+
+
+def run_condition_8_scan(stock_data_cache, config, log_detail, symbol_to_trace, exclude_symbols=None):
+    """
+    条件8 独立扫描管线：完全不依赖条件 1-7 的入口判定与通用过滤，
+    只做：日期重合检查 -> 最新日下跌检查 -> 第一部分(财报持续下跌) -> 第二部分(跌幅分档) -> 成交额过滤。
+    返回: {'PE_low': [...], 'PE_lower': [...], 'PE_lowest': [...]}
+    """
+    results = {'PE_low': [], 'PE_lower': [], 'PE_lowest': []}
+    exclude_symbols = exclude_symbols or set()
+
+    log_detail("\n========== 开始执行【条件8】独立扫描 (PE_low / PE_lower / PE_lowest) ==========")
+
+    for symbol, data in stock_data_cache.items():
+        if not (data and data.get('is_valid')):
+            continue
+        data['symbol'] = symbol
+        is_tracing = (symbol == symbol_to_trace)
+
+        # 0. 与其他策略一致：最新交易日不能与最新财报日重合
+        if data.get('latest_date_str') == data.get('latest_er_date_str'):
+            if is_tracing:
+                log_detail(f"\n--- [{symbol}] 条件8: 跳过 (最新交易日 {data['latest_date_str']} 与最新财报日重合)")
+            continue
+
+        # 0.5 可选：剔除已被其它分组收录的 symbol
+        if symbol in exclude_symbols:
+            if is_tracing:
+                log_detail(f"\n--- [{symbol}] 条件8: 跳过 (已被其它分组收录，且开启了 COND8_EXCLUDE_EXISTING_RESULTS)")
+            continue
+
+        # ========== 【新增检查】最新交易日必须是下跌状态 ==========
+        latest_price = data.get('latest_price')
+        prev_prices = data.get('prev_window_prices', [])
+        
+        if not prev_prices or latest_price is None:
+            if is_tracing:
+                log_detail(f"\n--- [{symbol}] 条件8: 跳过 (缺少前一交易日价格数据无法判断是否下跌)")
+            continue
+            
+        prev_price = prev_prices[0] # prev_window_prices 是按日期降序排列的，[0] 即为前一交易日
+        if latest_price >= prev_price:
+            if is_tracing:
+                log_detail(f"\n--- [{symbol}] 条件8: 跳过 (最新收盘价 {latest_price:.2f} >= 前一日收盘价 {prev_price:.2f}，未处于下跌状态)")
+            continue
+
+        # 1. 第一部分：财报持续下跌
+        part1_ok, _chain_desc = check_cond8_declining_earnings(data, config, log_detail, symbol_to_trace)
+        if not part1_ok:
+            continue
+
+        # 2. 第二部分：财报后跌幅分档
+        tier, drop_pct = check_cond8_drop_tier(data, config, log_detail, symbol_to_trace)
+        if not tier:
+            continue
+
+        # 3. 成交额过滤 (可通过配置关闭)
+        if config.get("COND8_APPLY_TURNOVER_FILTER", True):
+            if not check_turnover_filter(data, config, log_detail, symbol_to_trace, prefix="条件8"):
+                if is_tracing:
+                    log_detail(f"  - [{symbol}] 条件8最终裁定: 失败 (成交额不足)。")
+                continue
+
+        results[tier].append(symbol)
+        if is_tracing:
+            log_detail(f"  - ✅ [{symbol}] 条件8最终裁定: 命中 {tier} (财报后跌幅 {drop_pct:.2%})。")
+
+    log_detail(f"【条件8】扫描完成 -> PE_low: {len(results['PE_low'])} 个, "
+               f"PE_lower: {len(results['PE_lower'])} 个, PE_lowest: {len(results['PE_lowest'])} 个")
+    log_detail("=" * 76)
+
+    return results
+# ==============================================================================
+# ========== 条件8 代码块结束 ==========
+# ==============================================================================
+
+
 # ========== 代码修改点 1/3: 重构 evaluate_stock_conditions 函数 ==========
 # 1. 重命名为 check_entry_conditions，使其只负责检查入口条件
 # 2. 修改返回值为元组 (passed_any, passed_cond4, passed_cond5, passed_cond6, passed_cond7)，以便后续逻辑判断
@@ -1046,6 +1311,7 @@ def check_entry_conditions(data, symbol_to_trace, log_detail):
     此函数现在只检查入口条件 (条件1 OR 条件2 OR 条件3 OR 条件4 OR 条件5 OR 条件6)。
     返回: (passed_any, passed_cond4, passed_cond5, passed_cond6, passed_cond7)
     条件1修改为：a AND b AND c 必须同时满足。
+    注意：条件8 (PE_low 系列) 为独立管线，不在此处参与，避免影响既有分组结果。
     """
     symbol = data.get('symbol')
     is_tracing = (symbol == symbol_to_trace)
@@ -1536,6 +1802,23 @@ def run_processing_logic(log_detail):
     raw_pe_w = res_super[4] + res_sub[4] + res_relaxed[4] + res_strict[4]
     raw_pe_deeper = res_super[5] + res_sub[5] + res_relaxed[5] + res_strict[5]
 
+    # ============================================================
+    # ========== 【新增】条件8 独立扫描 (PE_low / PE_lower / PE_lowest) ==========
+    # 注意：此扫描完全独立，不会改变上面任何一组的结果。
+    # ============================================================
+    cond8_exclude = set()
+    if CONFIG.get("COND8_EXCLUDE_EXISTING_RESULTS", False):
+        cond8_exclude = set(raw_pe_valid) | set(raw_pe_invalid) | set(raw_oversell_w) \
+                        | set(raw_pe_deep) | set(raw_pe_w) | set(raw_pe_deeper)
+
+    cond8_results = run_condition_8_scan(
+        stock_data_cache, CONFIG, log_detail, SYMBOL_TO_TRACE, exclude_symbols=cond8_exclude
+    )
+    raw_pe_low = cond8_results['PE_low']
+    raw_pe_lower = cond8_results['PE_lower']
+    raw_pe_lowest = cond8_results['PE_lowest']
+    # ============================================================
+
     # ========== 修改点 3: 准备写入 Panel 的数据 (需进行 Tag 过滤) ==========
     tag_blacklist = CONFIG["BLACKLIST_TAGS"]
     def filter_tags(syms):
@@ -1568,11 +1851,19 @@ def run_processing_logic(log_detail):
     # final_pe_w_to_write = sorted(list(set(filter_tags(raw_pe_w)) - blacklist - already_in_panels))
     # final_oversell_w_to_write = sorted(list(set(filter_tags(raw_oversell_w)) - blacklist - already_in_panels))
 
+    # ========== 【新增】条件8 三组的 Panel 写入数据 (逻辑参照 PE_Deep) ==========
+    final_pe_low_to_write = sorted(list(set(filter_tags(raw_pe_low)) - already_in_panels))
+    final_pe_lower_to_write = sorted(list(set(filter_tags(raw_pe_lower)) - already_in_panels))
+    final_pe_lowest_to_write = sorted(list(set(filter_tags(raw_pe_lowest)) - already_in_panels))
+
     # 追踪日志 (增强版：显示拦截原因)
     if SYMBOL_TO_TRACE:
         raw_sets = [
             (set(raw_pe_valid), "PE_valid"), (set(raw_pe_invalid), "PE_invalid"),
-            (set(raw_pe_deep), "PE_Deep"), (set(raw_pe_w), "PE_W"), (set(raw_oversell_w), "OverSell_W") 
+            (set(raw_pe_deep), "PE_Deep"), (set(raw_pe_w), "PE_W"), (set(raw_oversell_w), "OverSell_W"),
+            (set(raw_pe_deeper), "PE_Deeper"),
+            # ===== 新增 =====
+            (set(raw_pe_low), "PE_low"), (set(raw_pe_lower), "PE_lower"), (set(raw_pe_lowest), "PE_lowest")
         ]
         for s_set, name in raw_sets:
             if SYMBOL_TO_TRACE in s_set:
@@ -1586,6 +1877,14 @@ def run_processing_logic(log_detail):
                         log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' ({name}) 算法通过，但已在其他 Panel 中 -> 不写Panel。")
                     elif is_tag_blocked:
                         log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' ({name}) 算法通过，但命中 Tag 黑名单 -> 不写Panel。")
+                    else:
+                        log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' 将写入 ({name})。")
+                elif name in ["PE_low", "PE_lower", "PE_lowest", "PE_Deep"]:
+                    # 这几组：Tag 黑名单 + already_in_panels
+                    if is_tag_blocked:
+                        log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' ({name}) 算法通过，但命中 Tag 黑名单 -> 不写Panel。")
+                    elif SYMBOL_TO_TRACE in already_in_panels:
+                        log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' ({name}) 算法通过，但已在其他 Panel(Strategy/Must) 中 -> 不写Panel。")
                     else:
                         log_detail(f"\n追踪信息: '{SYMBOL_TO_TRACE}' 将写入 ({name})。")
                 else:
@@ -1635,6 +1934,10 @@ def run_processing_logic(log_detail):
         log_detail(f"   - PE_Deeper:  {len(final_pe_deeper_to_write)} 个")
         log_detail(f"   - PE_W:       {len(final_pe_w_to_write)} 个")        # 【新增】补上 PE_W 的统计
         log_detail(f"   - OverSell_W: {len(final_oversell_w_to_write)} 个")  # 【修正】文案改为 OverSell_W
+        # ===== 新增：条件8 三组 =====
+        log_detail(f"   - PE_low:     {len(final_pe_low_to_write)} 个")
+        log_detail(f"   - PE_lower:   {len(final_pe_lower_to_write)} 个")
+        log_detail(f"   - PE_lowest:  {len(final_pe_lowest_to_write)} 个")
         
         if SYMBOL_TO_TRACE:
              # 检查目标 Symbol 是否在最终列表中 (模拟验证)
@@ -1643,6 +1946,9 @@ def run_processing_logic(log_detail):
              in_deeper = SYMBOL_TO_TRACE in final_pe_deeper_to_write
              in_pe_w = SYMBOL_TO_TRACE in final_pe_w_to_write
              in_oversell = SYMBOL_TO_TRACE in final_oversell_w_to_write
+             in_low = SYMBOL_TO_TRACE in final_pe_low_to_write
+             in_lower = SYMBOL_TO_TRACE in final_pe_lower_to_write
+             in_lowest = SYMBOL_TO_TRACE in final_pe_lowest_to_write
              
              log_detail(f"🔎 [验证] Symbol '{SYMBOL_TO_TRACE}' 最终筛选状态:")
              log_detail(f"   - 是否进入 PE_valid:   {in_valid}")
@@ -1650,6 +1956,9 @@ def run_processing_logic(log_detail):
              log_detail(f"   - 是否进入 PE_Deeper:  {in_deeper}")
              log_detail(f"   - 是否进入 PE_W:       {in_pe_w}")
              log_detail(f"   - 是否进入 OverSell_W: {in_oversell}")
+             log_detail(f"   - 是否进入 PE_low:     {in_low}")
+             log_detail(f"   - 是否进入 PE_lower:   {in_lower}")
+             log_detail(f"   - 是否进入 PE_lowest:  {in_lowest}")
         
         log_detail("="*60 + "\n")
         
@@ -1667,6 +1976,10 @@ def run_processing_logic(log_detail):
     pe_deep_notes = build_symbol_note_map(final_pe_deep_to_write)
     pe_w_notes = build_symbol_note_map(final_pe_w_to_write)
     pe_deeper_notes = build_symbol_note_map(final_pe_deeper_to_write)
+    # ===== 新增 =====
+    pe_low_notes = build_symbol_note_map(final_pe_low_to_write)
+    pe_lower_notes = build_symbol_note_map(final_pe_lower_to_write)
+    pe_lowest_notes = build_symbol_note_map(final_pe_lowest_to_write)
 
     # 写入 PE_valid
     update_json_panel(final_pe_valid_to_write, PANEL_JSON_FILE, 'PE_valid', symbol_to_note=pe_valid_notes)
@@ -1694,6 +2007,16 @@ def run_processing_logic(log_detail):
     update_json_panel(final_pe_w_to_write, PANEL_JSON_FILE, 'PE_W', symbol_to_note=pe_w_notes)
     update_json_panel(final_pe_w_to_write, PANEL_JSON_FILE, 'PE_W_backup', symbol_to_note=pe_w_notes)
 
+    # ========== 【新增】写入条件8 的三个分组及其备份 ==========
+    update_json_panel(final_pe_low_to_write, PANEL_JSON_FILE, 'PE_low', symbol_to_note=pe_low_notes)
+    update_json_panel(final_pe_low_to_write, PANEL_JSON_FILE, 'PE_low_backup', symbol_to_note=pe_low_notes)
+
+    update_json_panel(final_pe_lower_to_write, PANEL_JSON_FILE, 'PE_lower', symbol_to_note=pe_lower_notes)
+    update_json_panel(final_pe_lower_to_write, PANEL_JSON_FILE, 'PE_lower_backup', symbol_to_note=pe_lower_notes)
+
+    update_json_panel(final_pe_lowest_to_write, PANEL_JSON_FILE, 'PE_lowest', symbol_to_note=pe_lowest_notes)
+    update_json_panel(final_pe_lowest_to_write, PANEL_JSON_FILE, 'PE_lowest_backup', symbol_to_note=pe_lowest_notes)
+
     # ========== 修改点 4: 写入 History (Raw Data, 包含 Tag 黑名单) ==========
     # 原逻辑：合并所有 Raw 列表写入 "no_season"
     # 新逻辑：分别写入各自的组名
@@ -1705,7 +2028,11 @@ def run_processing_logic(log_detail):
         "PE_Deep": raw_pe_deep,
         "PE_Deeper": raw_pe_deeper,
         "PE_W": raw_pe_w,
-        "OverSell_W": raw_oversell_w
+        "OverSell_W": raw_oversell_w,
+        # ===== 新增：条件8 三组 =====
+        "PE_low": raw_pe_low,
+        "PE_lower": raw_pe_lower,
+        "PE_lowest": raw_pe_lowest,
     }
 
     has_written_any = False

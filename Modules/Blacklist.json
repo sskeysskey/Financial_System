@@ -719,7 +719,8 @@
         "NUVL",
         "NSA",
         "CRNX",
-        "TECH"
+        "TECH",
+        "MKTX"
     ],
     "etf": [
         "VDE",
@@ -1136,7 +1137,8 @@
         "PWV",
         "DIEM",
         "RWO",
-        "HAP"
+        "HAP",
+        "BRSV"
     ],
     "Earning": [
         "TW",

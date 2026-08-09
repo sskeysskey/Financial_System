@@ -969,7 +969,6 @@
     "ORI",
     "GL",
     "WBS",
-    "MKTX",
     "PRI",
     "EVR",
     "VOYA",
@@ -1232,7 +1231,8 @@
     "ALHC",
     "KNSA",
     "EWTX",
-    "MMED"
+    "MMED",
+    "ACAD"
   ],
   "Industrials": [
     "GE",
