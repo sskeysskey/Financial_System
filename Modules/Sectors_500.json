@@ -252,7 +252,8 @@
         "CARR",
         "HEI",
         "HONA",
-        "RKLB"
+        "RKLB",
+        "FERG"
     ],
     "Real_Estate": [
         "PLD",
@@ -328,8 +329,7 @@
         "COHR",
         "INFY",
         "ADSK",
-        "CBRS",
-        "STM"
+        "CBRS"
     ],
     "Utilities": [
         "NEE",

@@ -217,6 +217,26 @@
         "modifiers": [
             "control"
         ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/OVideo/Crawl_gdefud.py' open",
+        "message": "正在执行 Crawl_gdefud (open)..."
+    },
+    {
+        "key": "two",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/OVideo/Crawl_gdefud.py' cdp fast",
+        "message": "正在执行 Crawl_gdefud (cdp fast)..."
+    },
+    {
+        "key": "two",
+        "modifiers": [
+            "control",
+            "command"
+        ],
         "actionType": "runOsascript",
         "target": "/Users/yanzhang/Coding/ScriptEditor/Kalshi_Prediction.scpt",
         "message": "正在 Kalshi_Prediction..."

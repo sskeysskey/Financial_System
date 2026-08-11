@@ -203,7 +203,7 @@ def build_overlap_marker(category, d_str, suf,
 
     # =========================================================================
     # 修改：SupportLevel_Close 或 SupportLevel_Over 往前推15天检查 PE_Volume
-    # 增加具体日期显示，并将颜色改为紫色
+    # 增加具体日期显示，并将颜色改为紫色 + 放大字号
     # =========================================================================
     if category in ["SupportLevel_Close", "SupportLevel_Over"]:
         try:
@@ -218,8 +218,8 @@ def build_overlap_marker(category, d_str, suf,
             if found_dates:
                 # 将找到的日期用逗号连接
                 dates_str = ", ".join(found_dates)
-                # 使用紫色 (purple) 并在标签中显示具体日期
-                overlap_marker += f" <span style='color:{purple}; font-weight:bold;' title='15个交易日内曾触发 PE_Volume'>[★PE_Volume: {dates_str}]</span>"
+                # ========== 改动：增加 font‑size:18px ==========
+                overlap_marker += f" <span style='color:{purple}; font-weight:bold; font-size:22px;' title='15个交易日内曾触发 PE_Volume'>[★PE_Volume: {dates_str}]</span>"
         except ValueError:
             pass
 

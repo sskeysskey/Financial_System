@@ -1751,6 +1751,10 @@
         ],
         "2026-08-07": [
             "BBY黑空"
+        ],
+        "2026-08-10": [
+            "ELAN",
+            "Z黑空"
         ]
     },
     "SupportLevel_Close": {
@@ -5065,6 +5069,16 @@
         ],
         "2026-08-07": [
             "WMT"
+        ],
+        "2026-08-10": [
+            "AAON",
+            "BIDU",
+            "CMG",
+            "CNH",
+            "LTH",
+            "PLD",
+            "PM",
+            "TIGO"
         ]
     },
     "SupportLevel_Over": {
@@ -9008,6 +9022,19 @@
             "ELAN",
             "HUT",
             "KMI"
+        ],
+        "2026-08-10": [
+            "AEE",
+            "ARMK",
+            "CAVA",
+            "CIFR",
+            "DUK",
+            "GME",
+            "HUT",
+            "JBHT",
+            "RELY",
+            "SIMO",
+            "VRSK"
         ]
     },
     "PE_Volume": {
@@ -11748,6 +11775,12 @@
         ],
         "2026-08-07": [
             "CIFR"
+        ],
+        "2026-08-10": [
+            "AAON抄底",
+            "CIFR追",
+            "COHR",
+            "USAR"
         ]
     },
     "PE_Hot": {
@@ -13726,6 +13759,13 @@
             "CIFR",
             "DAVE",
             "HUT",
+            "UNH追",
+            "WMT追"
+        ],
+        "2026-08-10": [
+            "CIFR追",
+            "HUT追",
+            "PM",
             "UNH追",
             "WMT追"
         ]
@@ -18584,6 +18624,30 @@
             "TXG甲",
             "W抄底",
             "ZETA抄底"
+        ],
+        "2026-08-10": [
+            "AAON抄底",
+            "ADI抄底",
+            "AGX抄底",
+            "AMAT抄底",
+            "ARMK抄底",
+            "BB抄底",
+            "CAKE甲",
+            "CHYM抄底",
+            "CRDO抄底",
+            "CSCO抄底",
+            "FN抄底",
+            "FPS抄底",
+            "HALO抄底",
+            "IREN抄底",
+            "LITE抄底",
+            "MRVL抄底",
+            "MU抄底",
+            "NBIS抄底",
+            "ONC甲",
+            "RKLB抄底",
+            "SMTC抄底",
+            "TXG甲"
         ]
     },
     "ETF_Volume_high": {
@@ -19023,6 +19087,10 @@
         ],
         "2026-08-07": [
             "BWET"
+        ],
+        "2026-08-10": [
+            "BWET",
+            "CRAK"
         ]
     },
     "ETF_Volume_low": {
@@ -19828,6 +19896,10 @@
             "VNM",
             "WEAT",
             "XLU"
+        ],
+        "2026-08-10": [
+            "TLT",
+            "XLU"
         ]
     },
     "Short_W": {
@@ -20210,6 +20282,9 @@
         "2026-08-05": [
             "DEM",
             "EWW"
+        ],
+        "2026-08-10": [
+            "DUK"
         ]
     },
     "Short": {
@@ -21187,6 +21262,10 @@
         ],
         "2026-08-07": [
             "ELAN"
+        ],
+        "2026-08-10": [
+            "LTH",
+            "SIMO"
         ]
     },
     "PE_W": {
@@ -25310,6 +25389,9 @@
             "JBHT",
             "NIO",
             "UNH"
+        ],
+        "2026-08-10": [
+            "WMT"
         ]
     },
     "OverSell_W": {
@@ -27396,6 +27478,12 @@
         "2026-08-07": [
             "GRAB",
             "SMCI"
+        ],
+        "2026-08-10": [
+            "CMG",
+            "GRAB",
+            "SMCI",
+            "VRSK"
         ]
     },
     "PE_Deeper": {
@@ -31474,6 +31562,19 @@
             "IREN",
             "MU",
             "PL"
+        ],
+        "2026-08-10": [
+            "AAON",
+            "CAVA",
+            "CIEN",
+            "CRWV",
+            "FIGR",
+            "FPS",
+            "IREN",
+            "MU",
+            "PL",
+            "RKLB",
+            "USAR"
         ]
     },
     "PE_Deep": {
@@ -41366,6 +41467,32 @@
             "SMTC",
             "SNPS",
             "USAR",
+            "WING"
+        ],
+        "2026-08-10": [
+            "AGX",
+            "AMAT",
+            "ASTS",
+            "BB",
+            "BIDU",
+            "CIFR",
+            "COHR",
+            "CORZ",
+            "CRDO",
+            "DAVE",
+            "FN",
+            "GFI",
+            "GME",
+            "HUT",
+            "LITE",
+            "MRVL",
+            "NBIS",
+            "ORCL",
+            "PAAS",
+            "PSLV",
+            "QXO",
+            "SMTC",
+            "SNPS",
             "WING"
         ]
     },
@@ -60173,6 +60300,38 @@
             "VRSK",
             "W",
             "WMT"
+        ],
+        "2026-08-10": [
+            "ADI",
+            "AFRM",
+            "ARM",
+            "AXTI",
+            "BABA",
+            "BBWI",
+            "BBY",
+            "BE",
+            "CLS",
+            "CNP",
+            "CPRT",
+            "CSCO",
+            "ELAN",
+            "F",
+            "FLR",
+            "GOOGL",
+            "GS",
+            "HIMS",
+            "JBHT",
+            "JBL",
+            "KEYS",
+            "MS",
+            "MXL",
+            "PM",
+            "PRMB",
+            "RELY",
+            "SIMO",
+            "TIGO",
+            "UNH",
+            "W"
         ]
     },
     "PE_invalid": {
@@ -61526,6 +61685,9 @@
             "MDB"
         ],
         "2026-08-07": [
+            "ABVX"
+        ],
+        "2026-08-10": [
             "ABVX"
         ]
     },
@@ -66303,6 +66465,51 @@
             "UNH",
             "USAR",
             "VRSK"
+        ],
+        "2026-08-10": [
+            "AEE",
+            "AGX",
+            "BABA",
+            "CAVA",
+            "CIEN",
+            "CMG",
+            "CNH",
+            "FN",
+            "GFI",
+            "GS",
+            "IREN",
+            "JBHT",
+            "KMI",
+            "LOW",
+            "MS",
+            "ORCL",
+            "PATH",
+            "PLD",
+            "SIMO",
+            "SMTC",
+            "SNPS",
+            "STX",
+            "UNH",
+            "USAR",
+            "VRSK"
+        ]
+    },
+    "PE_low": {
+        "2026-08-10": [
+            "CPRT",
+            "W"
+        ]
+    },
+    "PE_lower": {
+        "2026-08-10": [
+            "CIFR",
+            "GME"
+        ]
+    },
+    "PE_lowest": {
+        "2026-08-10": [
+            "CRWV",
+            "USAR"
         ]
     }
 }

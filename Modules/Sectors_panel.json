@@ -10,7 +10,8 @@
         "KMI": ""
     },
     "Technology": {
-        "WIT": ""
+        "WIT": "",
+        "MBGL": ""
     },
     "Consumer_Cyclical": {
         "ROL": "",
@@ -22,7 +23,8 @@
         "MWH": "",
         "SRE": "",
         "PEG": "",
-        "NRG": ""
+        "NRG": "",
+        "AEP": ""
     },
     "Consumer_Defensive": {
         "PEP": "",
@@ -40,7 +42,9 @@
         "META": "",
         "APP": ""
     },
-    "Financial_Services": {},
+    "Financial_Services": {
+        "HLI": ""
+    },
     "Healthcare": {
         "AZN": "",
         "ISRG": "",
@@ -145,58 +149,91 @@
     "Must": {},
     "Today": {},
     "Short": {
-        "ELAN": ""
+        "SIMO": "",
+        "LTH": ""
     },
     "Short_backup": {
-        "ELAN": ""
+        "SIMO": "",
+        "LTH": ""
     },
-    "Short_W": {},
-    "Short_W_backup": {},
+    "Short_W": {
+        "DUK": ""
+    },
+    "Short_W_backup": {
+        "DUK": ""
+    },
     "SupportLevel_Close": {
-        "WMT": ""
+        "AAON": "",
+        "BIDU": "",
+        "CMG": "",
+        "CNH": "",
+        "LTH": "",
+        "PLD": "",
+        "PM": "",
+        "TIGO": ""
     },
     "SupportLevel_Close_backup": {
-        "WMT": ""
+        "AAON": "",
+        "BIDU": "",
+        "CMG": "",
+        "CNH": "",
+        "LTH": "",
+        "PLD": "",
+        "PM": "",
+        "TIGO": ""
     },
     "SupportLevel_Over": {
-        "CIFR": "",
-        "ELAN": "",
-        "HUT": "",
-        "KMI": "KMI财"
+        "AEE": "AEE财",
+        "ARMK": "",
+        "CAVA": "",
+        "CIFR": "CIFR延",
+        "DUK": "",
+        "GME": "",
+        "HUT": "HUT延",
+        "JBHT": "",
+        "RELY": "",
+        "SIMO": "SIMO财区",
+        "VRSK": ""
     },
     "SupportLevel_Over_backup": {
-        "CIFR": "",
-        "ELAN": "",
-        "HUT": "",
-        "KMI": "KMI财"
+        "AEE": "AEE财",
+        "ARMK": "",
+        "CAVA": "",
+        "CIFR": "CIFR延",
+        "DUK": "",
+        "GME": "",
+        "HUT": "HUT延",
+        "JBHT": "",
+        "RELY": "",
+        "SIMO": "SIMO财区",
+        "VRSK": ""
     },
     "Strategy12": {
-        "AAON": "",
-        "BN": "",
-        "PAAS": "",
-        "QXO": "",
-        "SMCI": ""
+        "IREN": ""
     },
-    "Strategy12_backup": {
-        "BN": "",
-        "PAAS": "",
-        "QXO": "",
-        "SMCI": ""
-    },
+    "Strategy12_backup": {},
     "Strategy34": {
         "AEE": "",
+        "AGX": "",
         "BABA": "",
+        "CAVA": "",
         "CIEN": "",
+        "CMG": "",
+        "CNH": "",
         "FN": "",
         "GFI": "",
-        "HIMS": "",
-        "IREN": "",
+        "GS": "",
         "JBHT": "",
         "KMI": "",
+        "LOW": "",
+        "MS": "",
+        "ORCL": "",
         "PATH": "",
         "PLD": "",
-        "SE": "",
+        "SIMO": "",
+        "SMTC": "",
         "SNPS": "",
+        "STX": "",
         "UNH": "",
         "USAR": "",
         "VRSK": ""
@@ -204,226 +241,230 @@
     "Strategy34_backup": {
         "AEE": "",
         "BABA": "",
+        "CAVA": "",
         "CIEN": "",
+        "CMG": "",
+        "CNH": "",
         "GFI": "",
-        "HIMS": "",
+        "GS": "",
+        "JBHT": "",
         "KMI": "",
+        "LOW": "",
+        "MS": "",
+        "ORCL": "",
         "PATH": "",
         "PLD": "",
-        "SE": "",
+        "SIMO": "",
         "SNPS": "",
+        "STX": "",
         "UNH": "",
-        "USAR": "",
         "VRSK": ""
     },
     "OverSell_W": {
+        "CMG": "",
         "GRAB": "",
-        "SMCI": ""
+        "SMCI": "",
+        "VRSK": ""
     },
     "OverSell_W_backup": {
+        "CMG": "",
         "GRAB": "",
-        "SMCI": ""
+        "SMCI": "",
+        "VRSK": ""
     },
     "PE_Deep": {
-        "ACHR": "",
         "AMAT": "AMAT15",
         "ASTS": "",
         "BB": "",
+        "BIDU": "",
         "CIFR": "",
+        "COHR": "",
         "CORZ": "",
-        "CRWV": "",
-        "ELAN": "",
-        "ENS": "",
-        "FLY": "",
+        "CRDO": "",
+        "DAVE": "",
+        "GME": "",
+        "HUT": "",
+        "LITE": "LITE15热",
         "MRVL": "",
         "NBIS": "",
-        "ORCL": "ORCL15",
+        "PAAS": "",
         "PSLV": "",
-        "RKLB": "",
-        "SMTC": ""
+        "QXO": "",
+        "WING": ""
     },
     "PE_Deep_backup": {
-        "ACHR": "",
         "ASTS": "",
-        "CORZ": "",
-        "CRWV": "",
-        "ELAN": "",
-        "ORCL": "ORCL15",
-        "PSLV": ""
-    },
-    "PE_low_backup": {},
-    "PE_lower_backup": {},
-    "PE_lowest_backup": {},
-    "PE_low": {},
-    "PE_lower": {},
-    "PE_lowest": {},
-    "PE_W": {
-        "AXSM": "",
         "BIDU": "",
-        "CASY": "CASY热",
-        "DKS": "",
-        "JBHT": "",
-        "NIO": "",
-        "UNH": ""
+        "CORZ": "",
+        "DAVE": "",
+        "GME": "",
+        "HUT": "",
+        "PAAS": "",
+        "PSLV": "",
+        "QXO": "",
+        "WING": ""
+    },
+    "PE_low_backup": {
+        "CPRT": "",
+        "W": ""
+    },
+    "PE_lower_backup": {
+        "CIFR": "",
+        "GME": ""
+    },
+    "PE_lowest_backup": {
+        "CRWV": ""
+    },
+    "PE_low": {
+        "CPRT": "",
+        "W": ""
+    },
+    "PE_lower": {
+        "CIFR": "",
+        "GME": ""
+    },
+    "PE_lowest": {
+        "CRWV": ""
+    },
+    "PE_W": {
+        "WMT": ""
     },
     "PE_W_backup": {
-        "BIDU": "",
-        "DKS": "",
-        "NIO": "",
-        "UNH": ""
+        "WMT": ""
     },
     "PE_Volume": {
-        "CIFR": ""
+        "AAON": "AAON抄底",
+        "CIFR": "CIFR追",
+        "COHR": "",
+        "USAR": ""
     },
     "PE_Volume_backup": {
-        "CIFR": ""
+        "AAON": "AAON抄底",
+        "CIFR": "CIFR追",
+        "COHR": "",
+        "USAR": ""
     },
     "PE_Hot": {
-        "AXSM": "",
-        "CIFR": "",
-        "DAVE": "",
-        "HUT": "",
+        "CIFR": "CIFR追",
+        "HUT": "HUT追",
+        "PM": "",
         "UNH": "UNH追",
         "WMT": "WMT追"
     },
     "PE_Hot_backup": {
-        "AXSM": "",
-        "CIFR": "",
-        "DAVE": "",
-        "HUT": "",
+        "CIFR": "CIFR追",
+        "HUT": "HUT追",
+        "PM": "",
         "UNH": "UNH追",
         "WMT": "WMT追"
     },
     "PE_Volume_up": {
-        "BBY": "BBY黑空"
+        "ELAN": "",
+        "Z": "Z黑空"
     },
     "PE_Volume_up_backup": {
-        "BBY": "BBY黑空"
+        "ELAN": "",
+        "Z": "Z黑空"
     },
     "PE_Volume_high": {
         "AAON": "AAON抄底",
-        "ABNB": "ABNB甲",
         "ADI": "ADI抄底",
+        "AGX": "AGX抄底",
         "AMAT": "AMAT抄底",
-        "AXSM": "AXSM抄底",
+        "ARMK": "ARMK抄底",
         "BB": "BB抄底",
-        "BBY": "BBY抄底黑",
-        "CASY": "CASY抄底",
+        "CAKE": "CAKE甲",
         "CHYM": "CHYM抄底",
+        "CRDO": "CRDO抄底",
         "CSCO": "CSCO抄底",
-        "DBX": "DBX甲",
-        "DOCS": "DOCS甲",
-        "DORM": "DORM抄底",
-        "DY": "DY抄底",
-        "ENS": "ENS抄底",
-        "FLY": "FLY抄底",
         "FN": "FN抄底",
         "FPS": "FPS抄底",
-        "HALO": "HALO甲",
+        "HALO": "HALO抄底",
         "IREN": "IREN抄底",
-        "JBHT": "JBHT抄底",
         "LITE": "LITE抄底",
         "MRVL": "MRVL抄底",
-        "MTRN": "MTRN抄底",
         "MU": "MU抄底",
         "NBIS": "NBIS抄底",
-        "NTRA": "NTRA甲",
-        "PAYC": "PAYC抄底",
+        "ONC": "ONC甲",
         "RKLB": "RKLB抄底",
-        "RMD": "RMD甲",
-        "SHAK": "SHAK抄底黑",
         "SMTC": "SMTC抄底",
-        "TEAM": "TEAM甲",
-        "TKR": "TKR抄底",
-        "TWLO": "TWLO甲",
-        "TXG": "TXG甲",
-        "W": "W抄底",
-        "ZETA": "ZETA抄底"
+        "TXG": "TXG甲"
     },
     "PE_Volume_high_backup": {
         "AAON": "AAON抄底",
-        "ABNB": "ABNB甲",
         "ADI": "ADI抄底",
+        "AGX": "AGX抄底",
         "AMAT": "AMAT抄底",
-        "AXSM": "AXSM抄底",
+        "ARMK": "ARMK抄底",
         "BB": "BB抄底",
-        "BBY": "BBY抄底黑",
-        "CASY": "CASY抄底",
+        "CAKE": "CAKE甲",
         "CHYM": "CHYM抄底",
+        "CRDO": "CRDO抄底",
         "CSCO": "CSCO抄底",
-        "DBX": "DBX甲",
-        "DOCS": "DOCS甲",
-        "DORM": "DORM抄底",
-        "DY": "DY抄底",
-        "ENS": "ENS抄底",
-        "FLY": "FLY抄底",
         "FN": "FN抄底",
         "FPS": "FPS抄底",
-        "HALO": "HALO甲",
+        "HALO": "HALO抄底",
         "IREN": "IREN抄底",
-        "JBHT": "JBHT抄底",
         "LITE": "LITE抄底",
         "MRVL": "MRVL抄底",
-        "MTRN": "MTRN抄底",
         "MU": "MU抄底",
         "NBIS": "NBIS抄底",
-        "NTRA": "NTRA甲",
-        "PAYC": "PAYC抄底",
+        "ONC": "ONC甲",
         "RKLB": "RKLB抄底",
-        "RMD": "RMD甲",
-        "SHAK": "SHAK抄底黑",
         "SMTC": "SMTC抄底",
-        "TEAM": "TEAM甲",
-        "TKR": "TKR抄底",
-        "TWLO": "TWLO甲",
-        "TXG": "TXG甲",
-        "W": "W抄底",
-        "ZETA": "ZETA抄底"
+        "TXG": "TXG甲"
     },
     "ETF_Volume_high": {
-        "BWET": ""
+        "BWET": "",
+        "CRAK": ""
     },
     "ETF_Volume_high_backup": {
-        "BWET": ""
+        "BWET": "",
+        "CRAK": ""
     },
-    "ETF_Volume_low": {},
-    "ETF_Volume_low_backup": {},
+    "ETF_Volume_low": {
+        "TLT": "",
+        "XLU": ""
+    },
+    "ETF_Volume_low_backup": {
+        "TLT": "",
+        "XLU": ""
+    },
     "PE_valid": {
         "ADI": "ADI9热",
         "AFRM": "",
-        "B": "",
+        "AXTI": "",
+        "BBY": "",
+        "BE": "",
         "CLS": "",
-        "COHR": "",
         "CPRT": "",
-        "CRDO": "",
         "CSCO": "CSCO热",
-        "DAVE": "",
         "GOOGL": "GOOGL热",
-        "GS": "GS9",
-        "HUT": "",
-        "INCY": "",
+        "HIMS": "",
         "JBL": "",
-        "LITE": "LITE热",
-        "MS": "",
-        "VG": "",
-        "WMT": ""
+        "KEYS": "",
+        "MXL": "",
+        "PM": "",
+        "PRMB": "",
+        "RELY": "",
+        "TIGO": ""
     },
     "PE_valid_backup": {
         "AFRM": "",
-        "B": "",
+        "AXTI": "",
+        "BBY": "",
+        "BE": "",
         "CLS": "",
-        "COHR": "",
         "CPRT": "",
-        "CRDO": "",
-        "DAVE": "",
         "GOOGL": "GOOGL热",
-        "GS": "GS9",
-        "HUT": "",
-        "INCY": "",
+        "HIMS": "",
         "JBL": "",
-        "MS": "",
-        "VG": "",
-        "WMT": ""
+        "KEYS": "",
+        "MXL": "",
+        "PM": "",
+        "PRMB": "",
+        "RELY": "",
+        "TIGO": ""
     },
     "PE_invalid": {
         "ABVX": ""
@@ -470,18 +511,13 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USTrade": "04 USTrade",
-        "USNonFarmA": "05 USNonFarmA",
-        "USNonPMI": "05 USNonPMI",
-        "USNonFarm": "07 USNonFarm",
-        "USUnemploy": "07 USUnemploy",
-        "USInitial": "13 USInitial",
         "USCPI": "12 USCPI",
         "CoreCPI": "12 CoreCPI",
         "CorePPI": "13 CorePPI",
         "USPPI": "13 USPPI",
         "USRetailM": "14 USRetailM",
-        "USConfidence": "14 USConfidence"
+        "USConfidence": "14 USConfidence",
+        "USInitial": "13 USInitial"
     },
     "Economic_All": {
         "USGDP": "",
@@ -507,15 +543,20 @@
     },
     "PE_Deeper": {
         "AAON": "",
+        "CAVA": "",
         "CIEN": "",
-        "DY": "DY15热",
+        "CRWV": "",
+        "FIGR": "",
         "FPS": "",
-        "GFI": "",
         "IREN": "",
-        "MU": "MU15热"
+        "MU": "MU15热",
+        "RKLB": "",
+        "USAR": ""
     },
     "PE_Deeper_backup": {
+        "CAVA": "",
         "CIEN": "",
-        "GFI": ""
+        "CRWV": "",
+        "FIGR": ""
     }
 }
