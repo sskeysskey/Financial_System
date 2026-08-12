@@ -1,6 +1,7 @@
 import sys
 import json
 import os
+import sqlite3
 from PyQt6.QtWidgets import (
     QApplication, QDialog, QVBoxLayout, QTextEdit, QSplitter, QLabel, QWidget
 )
@@ -13,6 +14,7 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 JSON_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Earning_History.json")
 SECTOR_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_panel.json")
+DB_PATH = os.path.join(BASE_CODING_DIR, "Database", "Finance.db")
 
 WEEK52_LOW_SECTORS = {
     "Basic_Materials", "Real_Estate", "Energy", "Technology",
@@ -36,6 +38,23 @@ def load_52week_low_symbols():
         for sym in data.get(sector, {}).keys():
             symbols.add(sym.upper())
     return symbols
+
+def load_earning_report_dates(symbol):
+    """从 Finance.db 的 Earning 表读取指定 symbol 的所有财报日期"""
+    dates = set()
+    if not os.path.exists(DB_PATH):
+        return dates
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT date FROM Earning WHERE name = ?", (symbol.upper(),))
+        for row in cursor.fetchall():
+            if row[0]:
+                dates.add(str(row[0]))
+        conn.close()
+    except Exception as e:
+        print(f"读取 Finance.db 出错: {e}")
+    return dates
 
 NORD_THEME = {
     'background': '#2E3440',
@@ -117,6 +136,22 @@ def load_earning_index(symbol):
     sorted_trading_dates = sorted(list(all_trading_dates), reverse=True)
     return category_data, date_categories, category_dates, date_items, sorted_trading_dates, None
 
+
+def build_earning_marker(d_str, items_today, earning_dates):
+    """当天是财报日 且 触发了 PE_Volume_high(甲) 时，返回醒目标识"""
+    if d_str not in earning_dates:
+        return ""
+    has_jia = any(
+        cat == "PE_Volume_high" and suf and '甲' in suf
+        for cat, suf in items_today
+    )
+    if has_jia:
+        return (
+            " <span style='color:#ECEFF4; background-color:#BF616A; "
+            "font-weight:bold; padding:1px 7px; border-radius:4px; "
+            "font-size:15px;' title='财报日 + PE_Volume_high(甲)'>📊 财报</span>"
+        )
+    return ""
 
 def build_suffix_html(category, suf):
     if not suf:
@@ -334,6 +369,8 @@ def search_history_by_date(symbol):
     # --- 新增：52week_low 判定 ---
     week52_low_symbols = load_52week_low_symbols()
     is_52week_low = symbol.upper() in week52_low_symbols
+    # --- 新增：财报日期集合 ---
+    earning_dates = load_earning_report_dates(symbol)
 
     hit_dates_sorted = sorted(date_items.keys(), reverse=True)
     # --- 新增：记录最新命中日期 ---
@@ -412,6 +449,9 @@ def search_history_by_date(symbol):
         else:
             streak_marker = ""
 
+        # 新增：财报日标识
+        earning_marker = build_earning_marker(d_str, items_today, earning_dates)
+
         rendered_items = []
         for category, suf in items_today:
             suf_html = build_suffix_html(category, suf)
@@ -457,7 +497,7 @@ def search_history_by_date(symbol):
             )
 
         if has_group_a:
-            html_parts.append(make_header(d_str + streak_marker, NORD_THEME['success_green']))
+            html_parts.append(make_header(d_str + streak_marker + earning_marker, NORD_THEME['success_green']))
             for item in rendered_items:
                 html_parts.append(f"&nbsp;&nbsp;{item}<br>")
         else:
@@ -469,7 +509,7 @@ def search_history_by_date(symbol):
             html_parts.append(
                 f"<div style='padding-left: 4px; line-height: 1.8; "
                 f"margin-top:2px; margin-bottom:2px;'>"
-                f"{date_html}{streak_marker}&nbsp;&nbsp;&nbsp;&nbsp;{joined}"   # ← 这里加了 streak_marker
+                f"{date_html}{streak_marker}{earning_marker}&nbsp;&nbsp;&nbsp;&nbsp;{joined}"
                 f"</div>"
             )
 
