@@ -6,31 +6,27 @@ import pyperclip
 import subprocess
 import sqlite3
 import pickle
-import platform # <--- 新增
 from datetime import datetime, date
 from enum import Enum
 
-# --- 1. 迁移到 PyQt6 ---
+# --- 迁移到 PyQt6 ---
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit,
     QLabel, QMainWindow, QScrollArea, QToolButton, QSizePolicy,
     QListWidget, QListWidgetItem, QCheckBox
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer, QSize
 from PyQt6.QtGui import QFont, QKeySequence, QAction
 
-# ================= 配置区域 (跨平台修改) =================
+# ================= 配置区域 (跨平台) =================
 
-# 1. 动态获取主目录
 USER_HOME = os.path.expanduser("~")
 
-# 2. 定义基础路径
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 FINANCIAL_SYSTEM_DIR = os.path.join(BASE_CODING_DIR, "Financial_System")
 DATABASE_DIR = os.path.join(BASE_CODING_DIR, "Database")
 NEWS_BACKUP_DIR = os.path.join(BASE_CODING_DIR, "News", "backup")
 
-# 3. 具体业务文件路径
 JSON_DESCRIPTION_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "description.json")
 SECTORS_ALL_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Sectors_All.json")
 SEARCH_HISTORY_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "search_history.pkl")
@@ -39,6 +35,83 @@ DB_PATH = os.path.join(DATABASE_DIR, "Finance.db")
 STOCK_CHART_SCRIPT = os.path.join(FINANCIAL_SYSTEM_DIR, "Query", "Stock_Chart.py")
 
 # ========================================================
+
+# ================= 现代化全局样式 =================
+APP_STYLE = """
+    QMainWindow, QWidget#centralWidget {
+        background-color: #181818;
+    }
+    QWidget {
+        color: #e6e6e6;
+        font-family: 'Segoe UI', 'Microsoft YaHei', Arial, sans-serif;
+    }
+    /* 搜索输入框 */
+    QLineEdit {
+        background-color: #262626;
+        border: 2px solid #333333;
+        border-radius: 12px;
+        padding: 6px 16px;
+        color: #ffffff;
+        selection-background-color: #2f81f7;
+    }
+    QLineEdit:focus {
+        border: 2px solid #2f81f7;
+        background-color: #2b2b2b;
+    }
+    QLineEdit:disabled {
+        color: #777;
+        background-color: #202020;
+    }
+    /* 搜索按钮 */
+    QPushButton#searchButton {
+        background-color: #2f81f7;
+        color: #ffffff;
+        border: none;
+        border-radius: 12px;
+        font-size: 15px;
+        font-weight: 600;
+    }
+    QPushButton#searchButton:hover { background-color: #4a92f8; }
+    QPushButton#searchButton:pressed { background-color: #1f6fe0; }
+    QPushButton#searchButton:disabled { background-color: #3a3a3a; color: #888; }
+    /* OR 复选框 */
+    QCheckBox {
+        color: #bfbfbf;
+        font-size: 14px;
+        spacing: 8px;
+        padding: 0 4px;
+    }
+    QCheckBox::indicator {
+        width: 20px;
+        height: 20px;
+        border-radius: 6px;
+        border: 2px solid #4a4a4a;
+        background: #262626;
+    }
+    QCheckBox::indicator:hover { border: 2px solid #2f81f7; }
+    QCheckBox::indicator:checked {
+        background: #2f81f7;
+        border: 2px solid #2f81f7;
+    }
+    /* 滚动区域 */
+    QScrollArea { border: none; background: transparent; }
+    QScrollBar:vertical {
+        background: transparent;
+        width: 12px;
+        margin: 2px;
+    }
+    QScrollBar::handle:vertical {
+        background: #3d3d3d;
+        border-radius: 6px;
+        min-height: 34px;
+    }
+    QScrollBar::handle:vertical:hover { background: #505050; }
+    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+    QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }
+    QScrollBar:horizontal { height: 0; }
+"""
+# ==================================================
+
 
 class MatchCategory(Enum):
     STOCK_SYMBOL = ("Stock Symbol", 1000, 'stock')
@@ -53,7 +126,8 @@ class MatchCategory(Enum):
     def __init__(self, display_name, priority, item_type):
         self.display_name = display_name
         self.priority = priority
-        self.item_type = item_type 
+        self.item_type = item_type
+
 
 class SearchHistory:
     def __init__(self, max_size=20):
@@ -66,6 +140,12 @@ class SearchHistory:
         self.history.insert(0, query)
         if len(self.history) > self.max_size: self.history = self.history[:self.max_size]
         self.save_history()
+
+    def remove(self, query):
+        """删除单条历史记录"""
+        if query in self.history:
+            self.history.remove(query)
+            self.save_history()
 
     def get_history(self): return self.history
 
@@ -81,12 +161,72 @@ class SearchHistory:
             with open(self.history_file, 'wb') as f: pickle.dump(self.history, f)
         except Exception as e: print(f"保存搜索历史失败: {e}")
 
+
+class HistoryItemWidget(QWidget):
+    """单条历史记录控件：左侧文字 + 右侧删除叉号"""
+    itemClicked = pyqtSignal(str)
+    deleteClicked = pyqtSignal(str)
+
+    def __init__(self, text, parent=None):
+        super().__init__(parent)
+        self.text = text
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        # 让 item 的选中高亮能透过来
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(14, 4, 8, 4)
+        layout.setSpacing(6)
+
+        # 左侧文字（透明背景，让列表的选中高亮能透出来）
+        self.label = QLabel(text)
+        self.label.setStyleSheet(
+            "background: transparent; color: #dcdcdc; font-size: 15px;"
+        )
+        self.label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        layout.addWidget(self.label)
+        layout.addStretch()
+
+        # 右侧删除按钮
+        self.delete_btn = QToolButton()
+        self.delete_btn.setText("✕")
+        self.delete_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.delete_btn.setToolTip("删除此条历史记录")
+        self.delete_btn.setFixedSize(26, 26)
+        # 关键：不抢输入框的焦点，否则点叉号会触发 focusOut 把列表收起来
+        self.delete_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.delete_btn.setStyleSheet("""
+            QToolButton {
+                background: transparent;
+                color: #888888;
+                border: none;
+                border-radius: 13px;
+                font-size: 13px;
+            }
+            QToolButton:hover {
+                background: #d13438;
+                color: #ffffff;
+            }
+        """)
+        self.delete_btn.clicked.connect(self._on_delete)
+        layout.addWidget(self.delete_btn)
+
+        self.setStyleSheet("background: transparent;")
+
+    def _on_delete(self):
+        self.deleteClicked.emit(self.text)
+
+    def mousePressEvent(self, event):
+        # 点击整行（非删除按钮区域）即选用该历史记录
+        self.itemClicked.emit(self.text)
+        super().mousePressEvent(event)
+
+
 class ClickableLabel(QLabel):
     clicked = pyqtSignal()
 
     def __init__(self, text="", parent=None):
         super().__init__(text, parent)
-        # PyQt6: 枚举更新
         self.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self.setCursor(Qt.CursorShape.IBeamCursor)
         self.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
@@ -100,6 +240,7 @@ class ClickableLabel(QLabel):
         if self._mouse_pressed_pos and (event.pos() - self._mouse_pressed_pos).manhattanLength() < 5:
             self.clicked.emit()
         super().mouseReleaseEvent(event)
+
 
 class SearchWorker(QThread):
     results_ready = pyqtSignal(object)
@@ -138,7 +279,7 @@ class SearchWorker(QThread):
         for item_type, item in all_items:
             for category in MatchCategory:
                 if category.item_type != item_type: continue
-                
+
                 if self.use_or:
                     total_score = 0
                     for kw in keywords:
@@ -165,7 +306,7 @@ class SearchWorker(QThread):
                     'category_name': category.display_name,
                     'priority': category.priority,
                     'highest_score': highest_score,
-                    'results': sorted_results 
+                    'results': sorted_results
                 }
                 final_groups.append(group)
         return final_groups
@@ -229,24 +370,37 @@ class SearchWorker(QThread):
             previous_row = current_row
         return previous_row[-1]
 
+
 class CollapsibleWidget(QWidget):
     def __init__(self, title: str = "", parent=None):
         super().__init__(parent)
         self.toggle_button = QToolButton(text=title, checkable=True, checked=True)
-        self.toggle_button.setStyleSheet("QToolButton { border: none; font: bold 16px; }")
-        # PyQt6: 枚举更新
+        self.toggle_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.toggle_button.setStyleSheet("""
+            QToolButton {
+                border: none;
+                color: #5ea0ff;
+                font-weight: 700;
+                font-size: 15px;
+                padding: 8px 4px;
+                text-align: left;
+            }
+            QToolButton:hover { color: #83b7ff; }
+        """)
         self.toggle_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.toggle_button.setArrowType(Qt.ArrowType.DownArrow)
         self.toggle_button.clicked.connect(self.on_toggle)
         self.content_area = QWidget()
         self.content_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.content_layout = QVBoxLayout(self.content_area)
-        self.content_layout.setContentsMargins(20, 0, 0, 0)
+        self.content_layout.setContentsMargins(22, 0, 0, 8)
+        self.content_layout.setSpacing(2)
         self.content_area.setLayout(self.content_layout)
         main_layout = QVBoxLayout(self)
         main_layout.addWidget(self.toggle_button)
         main_layout.addWidget(self.content_area)
         main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
         self.setLayout(main_layout)
 
     def on_toggle(self):
@@ -257,6 +411,7 @@ class CollapsibleWidget(QWidget):
     def addContentWidget(self, widget: QWidget):
         self.content_layout.addWidget(widget)
         self.content_area.adjustSize()
+
 
 def get_latest_etf_volume(etf_name):
     if not os.path.exists(DB_PATH): return "N/A"
@@ -273,6 +428,7 @@ def get_latest_etf_volume(etf_name):
     except Exception:
         return "N/A"
 
+
 def load_compare_data():
     compare_data = {}
     try:
@@ -286,6 +442,7 @@ def load_compare_data():
         print(f"读取Compare_All.txt出错: {e}")
     return compare_data
 
+
 def load_sectors_data():
     try:
         if os.path.exists(SECTORS_ALL_PATH):
@@ -295,49 +452,71 @@ def load_sectors_data():
         print(f"读取 {SECTORS_ALL_PATH} 出错: {e}")
     return {}
 
+
 class MainWindow(QMainWindow):
+    # 历史记录文本存放的自定义角色
+    HISTORY_TEXT_ROLE = Qt.ItemDataRole.UserRole + 1
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("公司、股票和ETF搜索")
         self.setGeometry(200, 100, 1200, 800)
-        # --- 新增：允许主窗口接收键盘焦点 ---
+        self.setStyleSheet(APP_STYLE)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+
         self.central_widget = QWidget()
+        self.central_widget.setObjectName("centralWidget")
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout(self.central_widget)
-        
+        self.layout.setContentsMargins(22, 20, 22, 20)
+        self.layout.setSpacing(14)
+
         self.input_layout = QHBoxLayout()
+        self.input_layout.setSpacing(10)
         # 搜索输入框
         self.input_field = QLineEdit()
+        self.input_field.setPlaceholderText("搜索股票、ETF、名称或标签…")
         self.input_field.textChanged.connect(self.on_text_changed)
-        self.input_field.setFixedHeight(40)
-        # 跨平台字体
+        self.input_field.setFixedHeight(46)
         self.input_field.setFont(QFont("Segoe UI" if os.name == 'nt' else "Arial", 18))
         self.input_layout.addWidget(self.input_field)
-        
+
         # OR/AND 勾选框
         self.mode_checkbox = QCheckBox("OR")
         self.mode_checkbox.setToolTip("勾选后关键字空格为 OR，未勾选为 AND")
         self.input_layout.addWidget(self.mode_checkbox)
-        
+
         # 搜索按钮
         self.search_button = QPushButton("搜索")
-        self.search_button.setFixedHeight(45)
-        self.search_button.setFixedWidth(80)
+        self.search_button.setObjectName("searchButton")
+        self.search_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.search_button.setFixedHeight(46)
+        self.search_button.setFixedWidth(90)
         self.input_layout.addWidget(self.search_button)
         self.layout.addLayout(self.input_layout)
-        
+
         self.suppress_history = len(sys.argv) > 1 and sys.argv[1] == "paste"
         self.search_history = SearchHistory()
         self.history_list = QListWidget(self)
-        self.history_list.setMaximumHeight(200)
+        self.history_list.setMaximumHeight(280)
         self.history_list.setVisible(False)
-        self.history_list.itemClicked.connect(self.use_history_item)
+        # 关闭水平滚动，避免 item 宽度被撑开
+        self.history_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.history_list.setStyleSheet("""
-            QListWidget { font-size: 16px; border: 1px solid #555; background-color: #2d2d2d; color: #ccc; outline: 0; }
-            QListWidget::item { padding: 8px 12px; border-bottom: 1px solid #444; }
-            QListWidget::item:hover { background-color: #3a3a3a; }
-            QListWidget::item:selected { background-color: #0078d7; color: white; }
+            QListWidget {
+                border: 1px solid #333333;
+                border-radius: 12px;
+                background-color: #232323;
+                outline: 0;
+                padding: 4px;
+            }
+            QListWidget::item {
+                border-radius: 8px;
+                margin: 2px 4px;
+                border: none;
+            }
+            QListWidget::item:hover { background-color: #2f2f2f; }
+            QListWidget::item:selected { background-color: #2f81f7; }
         """)
         self.layout.insertWidget(1, self.history_list)
 
@@ -354,9 +533,9 @@ class MainWindow(QMainWindow):
         self.hide_timer.setSingleShot(True)
         self.hide_timer.timeout.connect(self.hide_history)
 
-        self.loading_label = QLabel("正在搜索...", self)
+        self.loading_label = QLabel("正在搜索…", self)
         self.loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.loading_label.setFont(QFont("Arial", 14))
+        self.loading_label.setStyleSheet("color: #9aa0a6; font-size: 15px; padding: 12px;")
         self.loading_label.hide()
         self.layout.addWidget(self.loading_label)
 
@@ -365,6 +544,8 @@ class MainWindow(QMainWindow):
         self.result_container = QWidget()
         self.results_layout = QVBoxLayout(self.result_container)
         self.results_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.results_layout.setContentsMargins(2, 2, 2, 2)
+        self.results_layout.setSpacing(6)
         self.result_container.setLayout(self.results_layout)
         self.result_scroll.setWidget(self.result_container)
         self.layout.addWidget(self.result_scroll)
@@ -387,15 +568,12 @@ class MainWindow(QMainWindow):
         self.compare_data = {}
         self.sector_data = load_sectors_data()
 
-        # --- 新增：用于存储和追踪搜索结果列表的变量 ---
-        self.current_result_items = []    # 用于存储 (label对象, symbol) 元组
-        self.current_selected_index = -1  # 当前选中的结果索引（-1表示未选中任何项）
+        self.current_result_items = []    # (label对象, symbol)
+        self.current_selected_index = -1  # 当前键盘选中索引
 
     def focus_search_input(self):
         self.input_field.setFocus()
-        self.input_field.selectAll() # 聚焦时自动全选，方便直接覆盖输入
-        
-        # --- 新增：使用快捷键聚焦搜索框时，也重置选中状态 ---
+        self.input_field.selectAll()
         if getattr(self, "current_selected_index", -1) != -1:
             self.current_selected_index = -1
             self.update_result_selection()
@@ -419,34 +597,30 @@ class MainWindow(QMainWindow):
         self.worker.start()
 
     def on_text_changed(self, text: str):
-         # --- 新增：只要输入框文本改变，立刻清除键盘选中状态 ---
-         if getattr(self, "current_selected_index", -1) != -1:
-             self.current_selected_index = -1
-             self.update_result_selection() # 清除旧结果的高亮
+        if getattr(self, "current_selected_index", -1) != -1:
+            self.current_selected_index = -1
+            self.update_result_selection()
 
-         if not text.strip():
-             self.display_history()
-         else:
-             self.hide_history()
+        if not text.strip():
+            self.display_history()
+        else:
+            self.hide_history()
 
     def on_search_finished(self):
         self.loading_label.hide()
         self.search_button.setEnabled(True)
         self.input_field.setEnabled(True)
-        
-        # --- 修改：搜索完成后，让焦点回到输入框，并全选文本 ---
+
         self.input_field.setFocus()
         self.input_field.selectAll()
-        
+
         if getattr(self, "suppress_history", False):
-            # 因为上面已经统一执行了 selectAll，这里只需要重置标志位即可
             self.suppress_history = False
 
     def clear_results(self):
-        # --- 新增：清空当前的结果集缓存和选中状态 ---
         self.current_result_items = []
         self.current_selected_index = -1
-        
+
         while self.results_layout.count():
             child = self.results_layout.takeAt(0)
             if child.widget():
@@ -467,21 +641,21 @@ class MainWindow(QMainWindow):
             latest_earning_date_str, latest_earning_price_str = earning_rows[0]
             latest_earning_date = datetime.strptime(latest_earning_date_str, "%Y-%m-%d").date()
             latest_earning_price = float(latest_earning_price_str) if latest_earning_price_str is not None else 0.0
-            
+
             days_diff = (date.today() - latest_earning_date).days
             if days_diff > 75:
                 return latest_earning_price, None, latest_earning_date
-            
+
             if len(earning_rows) < 2:
                 return latest_earning_price, None, latest_earning_date
-            
+
             previous_earning_date_str, _ = earning_rows[1]
             previous_earning_date = datetime.strptime(previous_earning_date_str, "%Y-%m-%d").date()
-            
+
             sector_table = next((s for s, names in self.sector_data.items() if symbol in names), None)
             if not sector_table:
                 return latest_earning_price, None, latest_earning_date
-            
+
             with sqlite3.connect(self._finance_db, timeout=60.0) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
@@ -494,13 +668,13 @@ class MainWindow(QMainWindow):
                     (symbol, previous_earning_date.isoformat())
                 )
                 previous_stock_price_row = cursor.fetchone()
-            
+
             if not latest_stock_price_row or not previous_stock_price_row:
                 return latest_earning_price, None, latest_earning_date
-            
+
             latest_stock_price = float(latest_stock_price_row[0])
             previous_stock_price = float(previous_stock_price_row[0])
-            
+
             trend = 'rising' if latest_stock_price > previous_stock_price else 'falling'
             return latest_earning_price, trend, latest_earning_date
         except Exception as e:
@@ -524,7 +698,7 @@ class MainWindow(QMainWindow):
             print(f"[MNSPP 查询错误] {symbol}: {e}")
         self._mnspp_cache[symbol] = mcap
         return mcap
-    
+
     def show_results(self, sorted_groups):
         search_term = self.input_field.text().strip().upper()
         if sorted_groups:
@@ -545,17 +719,17 @@ class MainWindow(QMainWindow):
                 ),
                 reverse=True
             )
-            
+
             group_widget = CollapsibleWidget(title=category_name)
-            
+
             for item, score in results:
                 symbol = item.get('symbol', '')
                 name = item.get('name', '')
                 tags = ' '.join(item.get('tag', []))
                 compare_info = self.compare_data.get(symbol, "")
-                
+
                 earning_price, price_trend, _ = self.get_color_decision_data(symbol)
-                
+
                 sym_color = 'white'
                 if earning_price is not None and price_trend is not None:
                     is_price_positive = earning_price > 0
@@ -568,7 +742,7 @@ class MainWindow(QMainWindow):
                         sym_color = '#912F2F'
                     elif not is_trend_rising and not is_price_positive:
                         sym_color = 'green'
-                
+
                 if 'Stock' in category_name:
                     display_parts = [symbol]
                     if compare_info: display_parts.append(compare_info)
@@ -576,7 +750,7 @@ class MainWindow(QMainWindow):
                     if tags: display_parts.append(tags)
                     display_text = "  ".join(display_parts)
                     lbl = self.create_result_label(display_text, symbol, sym_color, 20)
-                else: # ETF
+                else:  # ETF
                     latest_volume = get_latest_etf_volume(symbol)
                     display_parts = [symbol]
                     if compare_info: display_parts.append(compare_info)
@@ -585,31 +759,29 @@ class MainWindow(QMainWindow):
                     if latest_volume and latest_volume != "N/A": display_parts.append(latest_volume)
                     display_text = "  ".join(display_parts)
                     lbl = self.create_result_label(display_text, symbol, sym_color, 20)
-                
-                # --- 新增：将生成的 label 和对应的 symbol 记录下来 ---
+
                 self.current_result_items.append((lbl, symbol))
-                
                 group_widget.addContentWidget(lbl)
-            
+
             self.results_layout.addWidget(group_widget)
 
     def update_result_selection(self):
         """更新搜索结果的键盘选中状态（高亮 + 自动滚动）"""
         for i, (lbl, sym) in enumerate(self.current_result_items):
             if i == self.current_selected_index:
-                # 选中状态：改变背景色（这里使用深灰色，你可以按喜好调整）并加一点圆角
-                lbl.setStyleSheet("background-color: #3a3a3a; border-radius: 4px;")
-                # 让滚动区域自动滚动，确保选中的结果在屏幕内可见
+                lbl.setStyleSheet(
+                    "background-color: rgba(47,129,247,0.22);"
+                    "border-radius: 8px; padding: 2px 8px;"
+                )
                 self.result_scroll.ensureWidgetVisible(lbl, 50, 50)
             else:
-                # 恢复默认的无背景状态
                 lbl.setStyleSheet("")
 
     def handle_result_navigation(self, key):
         """处理搜索结果的上下键和回车导航，返回True表示已拦截并处理"""
         if not getattr(self, "current_result_items", []):
             return False
-            
+
         if key == Qt.Key.Key_Down:
             self.current_selected_index = min(self.current_selected_index + 1, len(self.current_result_items) - 1)
             self.update_result_selection()
@@ -630,9 +802,8 @@ class MainWindow(QMainWindow):
                 self.update_result_selection()
                 return True
         return False
-    
+
     def keyPressEvent(self, event):
-        """主窗口拦截键盘事件：即便焦点不在输入框，也能上下选择结果"""
         if self.handle_result_navigation(event.key()):
             event.accept()
         else:
@@ -640,16 +811,15 @@ class MainWindow(QMainWindow):
 
     def create_result_label(self, display_text, symbol, color, font_size):
         lbl = ClickableLabel()
-        # PyQt6: 枚举更新
         lbl.setTextFormat(Qt.TextFormat.RichText)
         remainder = display_text[len(symbol):] if display_text.startswith(symbol) else display_text
         pattern = r"(\d+(?:前|后))"
         remainder = re.sub(pattern,
-                            r"<span style='color:#FFFF99'>\1</span>",
-                            remainder)
+                           r"<span style='color:#FFFF99'>\1</span>",
+                           remainder)
         label_html = (
-            f"<span style='line-height: 2.2; letter-spacing: 1px;'>"
-            f"<span style='color: {color}; font-size: {font_size}px;'>{symbol}</span>"
+            f"<span style='line-height: 2.1; letter-spacing: 1px;'>"
+            f"<span style='color: {color}; font-size: {font_size}px; font-weight: 600;'>{symbol}</span>"
             f"<span style='color: #A9A9A9; font-size: {font_size}px;'>{remainder}</span>"
             f"</span>"
         )
@@ -667,28 +837,65 @@ class MainWindow(QMainWindow):
         if symbol:
             pyperclip.copy(symbol)
             try:
-                # 使用 sys.executable 调用 Python
                 subprocess.Popen([sys.executable, STOCK_CHART_SCRIPT, 'paste'])
             except Exception as e:
                 print(f"无法打开图表脚本 {STOCK_CHART_SCRIPT}: {e}")
+
+    # ---------------- 历史记录相关 ----------------
+
+    def history_text_at(self, row: int) -> str:
+        """从 item 的自定义角色里取历史文本（item 本身不再设置 DisplayRole 文本）"""
+        item = self.history_list.item(row)
+        if item is None:
+            return ""
+        return item.data(self.HISTORY_TEXT_ROLE) or ""
 
     def display_history(self):
         if getattr(self, "suppress_history", False): return
         self.history_list.clear()
         history_items = self.search_history.get_history()
         if history_items:
-            for item in history_items: self.history_list.addItem(QListWidgetItem(item))
+            row_width = max(self.history_list.viewport().width(), 1)
+            for text in history_items:
+                item = QListWidgetItem()
+                # ★ 关键修复：不要 setText()！
+                #   否则 QListWidget 的 delegate 会把这段文字画一遍，
+                #   再加上 item widget 里的 QLabel 又画一遍 → 两份文字重叠。
+                item.setData(self.HISTORY_TEXT_ROLE, text)
+                item.setSizeHint(QSize(row_width, 44))
+                self.history_list.addItem(item)
+
+                widget = HistoryItemWidget(text)
+                widget.itemClicked.connect(self.use_history_text)
+                widget.deleteClicked.connect(self.delete_history_item)
+                self.history_list.setItemWidget(item, widget)
+
             self.history_list.setVisible(True)
             self.history_list.setFixedWidth(self.input_field.width())
             self.history_list.setCurrentRow(-1)
         else:
             self.history_list.setVisible(False)
 
+    def use_history_text(self, text):
+        """点击历史记录整行 → 使用该记录搜索"""
+        self.input_field.setText(text)
+        self.hide_history()
+        self.start_search()
+
+    def delete_history_item(self, text):
+        """删除单条历史记录并刷新下拉框"""
+        self.hide_timer.stop()
+        self.search_history.remove(text)
+        self.input_field.setFocus()
+        if self.search_history.get_history():
+            self.display_history()
+        else:
+            self.hide_history()
+
     def _input_focus_in(self, event):
         self._orig_focus_in(event)
         if getattr(self, "suppress_history", False): return
-        
-        # --- 修改：只有当输入框里没有字时，获取焦点才显示历史记录下拉框 ---
+
         if not self.input_field.text().strip():
             self.display_history()
         else:
@@ -718,16 +925,16 @@ class MainWindow(QMainWindow):
                 event.accept(); return
             elif key in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
                 if current_row != -1 and self.history_list.item(current_row):
-                    self.input_field.setText(self.history_list.item(current_row).text())
+                    # ★ 改为从自定义角色读取文本
+                    self.input_field.setText(self.history_text_at(current_row))
                     self.hide_history(); self.start_search()
                     event.accept(); return
                 else:
                     self.hide_history(); self.start_search()
                     event.accept(); return
             elif key == Qt.Key.Key_Escape:
-                 self.hide_history(); event.accept(); return
+                self.hide_history(); event.accept(); return
         else:
-            # --- 修改：调用提出来的公共导航逻辑 ---
             if self.handle_result_navigation(event.key()):
                 event.accept()
                 return
@@ -738,12 +945,14 @@ class MainWindow(QMainWindow):
         self.history_list.setVisible(False)
 
     def use_history_item(self, item):
-        self.input_field.setText(item.text())
+        """兼容旧调用：从自定义角色取文本"""
+        text = item.data(self.HISTORY_TEXT_ROLE) or item.text()
+        self.input_field.setText(text)
         self.hide_history()
         self.start_search()
 
+
 if __name__ == "__main__":
-    # PyQt6 中不再需要 AA_EnableHighDpiScaling
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
@@ -752,5 +961,4 @@ if __name__ == "__main__":
         if clipboard_content:
             window.input_field.setText(clipboard_content)
             window.start_search()
-    # PyQt6: 使用 exec()
     sys.exit(app.exec())

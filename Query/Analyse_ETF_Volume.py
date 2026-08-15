@@ -50,6 +50,14 @@ CONFIG = {
     # ========== 策略2 附加：年度成交额前三 "甲" 标记 参数 ==========
     "ETF_COND_LOW_YEARLY_TURNOVER_LOOKBACK_MONTHS": 12,  # 年度成交额回溯12个月
     "ETF_COND_LOW_YEARLY_TURNOVER_RANK_THRESHOLD": 3,    # 年度成交额排名前3名 -> 标 "甲"
+
+    # ========== 策略3 (ETF 深度回撤) 参数 【新增】 ==========
+    "ETF_COND_DEEP_DROP_LOOKBACK_MONTHS": 6,   # 回溯半年 (约 6*30=180 天)
+    "ETF_COND_DEEP_DROP_THRESHOLD": 0.35,      # 从区间最高收盘价回撤 >= 35%
+    "ETF_COND_DEEP_DROP_MIN_DAYS": 30,         # 区间内至少要有 N 个交易日数据(防新上市误判)
+    "ETF_COND_DEEP_DROP_REQUIRE_DOWN": False,  # 是否额外要求 T 日收盘价 < T-1 收盘价
+    "ETF_COND_DEEP_DROP_MAX_STALE_DAYS": 15,   # 最新数据距基准日超过 N 天视为停更, 跳过
+    "ETF_DEEP_DROP_MARK": "乙",                # 深跌命中在 Panel 备注中的标记
 }
 
 
@@ -372,7 +380,7 @@ def process_etf_volume_low(db_path, target_date_override, symbol_to_trace, log_d
 
         valid_prices = [r[1] for r in rows if r[1] is not None]
         max_price = max(valid_prices)
-        
+
         # 计算跌幅
         cond_price_drop = latest_price <= max_price * (1 - drop_threshold)
 
@@ -412,6 +420,175 @@ def process_etf_volume_low(db_path, target_date_override, symbol_to_trace, log_d
     results = sorted(list(set(results)))
     log_detail(f"\n策略2 筛选完成，共命中 {len(results)} 个 ETF: {results}")
     return results
+
+
+# --- 策略3【新增】: ETF 深度回撤 (半年最高收盘价回撤 >= 35%) ---
+def process_etf_deep_drop(db_path, target_date_override, symbol_to_trace, log_detail):
+    """
+    新规则：任何 ETF，在最近 N 个月(默认6个月)内，
+    从区间内最高收盘价(price) 回撤到 最新收盘价 的跌幅 >= 阈值(默认35%)，
+    即命中，并入 ETF_Volume_low 分组（备注追加 '乙' 标记）。
+
+    不依赖成交额、不依赖当日涨跌（可通过 CONFIG 开关要求 T 日下跌）。
+    """
+    lookback_months = CONFIG.get("ETF_COND_DEEP_DROP_LOOKBACK_MONTHS", 6)
+    drop_threshold = CONFIG.get("ETF_COND_DEEP_DROP_THRESHOLD", 0.35)
+    min_days = CONFIG.get("ETF_COND_DEEP_DROP_MIN_DAYS", 30)
+    require_down = CONFIG.get("ETF_COND_DEEP_DROP_REQUIRE_DOWN", False)
+    max_stale_days = CONFIG.get("ETF_COND_DEEP_DROP_MAX_STALE_DAYS", 15)
+
+    log_detail(f"\n========== 开始执行 策略3 (ETF_Deep_Drop - 半年深度回撤) ==========")
+    log_detail(f"参数: 回溯 {lookback_months} 个月 | 回撤阈值 >= {drop_threshold:.2%} | "
+               f"最少交易日 {min_days} | 要求T日下跌={require_down} | 允许数据滞后 {max_stale_days} 天")
+
+    base_date = target_date_override if target_date_override else \
+        (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+    log_detail(f"基准日期: {base_date}")
+
+    try:
+        base_dt = datetime.datetime.strptime(base_date, "%Y-%m-%d")
+    except Exception as e:
+        log_detail(f"错误: 基准日期解析失败: {e}")
+        return [], {}
+
+    start_dt = base_dt - datetime.timedelta(days=lookback_months * 30)
+    start_date_str = start_dt.strftime("%Y-%m-%d")
+    log_detail(f"回溯区间: [{start_date_str} ~ {base_date}]")
+
+    results = []
+    detail_map = {}   # symbol -> dict(详细信息, 便于日志与后续扩展)
+
+    # 统计计数器（用于最终日志汇总）
+    stat = {
+        "total": 0,
+        "no_data": 0,
+        "not_enough_days": 0,
+        "stale": 0,
+        "bad_max": 0,
+        "drop_not_enough": 0,
+        "blocked_by_down": 0,
+        "hit": 0,
+    }
+
+    conn = sqlite3.connect(db_path, timeout=60.0)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute('SELECT DISTINCT name FROM "ETFs"')
+        all_etfs = [r[0] for r in cursor.fetchall()]
+        log_detail(f"从 ETFs 表中获取 {len(all_etfs)} 个 Symbol。")
+    except Exception as e:
+        log_detail(f"错误: 无法读取 ETFs 数据表: {e}")
+        conn.close()
+        return [], {}
+
+    for symbol in all_etfs:
+        stat["total"] += 1
+        is_tracing = (symbol == symbol_to_trace)
+        if is_tracing:
+            log_detail(f"\n--- [深跌规则] 检查 ETF {symbol} ---")
+
+        cursor.execute(
+            'SELECT date, price FROM "ETFs" WHERE name = ? AND date >= ? AND date <= ? '
+            'ORDER BY date DESC',
+            (symbol, start_date_str, base_date)
+        )
+        rows = cursor.fetchall()
+
+        valid_rows = [(r[0], r[1]) for r in rows if r[1] is not None]
+        if not valid_rows:
+            stat["no_data"] += 1
+            if is_tracing: log_detail("    x 区间内无有效收盘价数据")
+            continue
+
+        if len(valid_rows) < min_days:
+            stat["not_enough_days"] += 1
+            if is_tracing:
+                log_detail(f"    x 区间内仅 {len(valid_rows)} 个交易日, 少于最低要求 {min_days} 天")
+            continue
+
+        latest_date, latest_price = valid_rows[0]
+
+        # 数据滞后检查（停更/退市的 ETF 不参与）
+        try:
+            latest_dt = datetime.datetime.strptime(latest_date, "%Y-%m-%d")
+            stale_days = (base_dt - latest_dt).days
+        except Exception:
+            stale_days = 0
+        if max_stale_days > 0 and stale_days > max_stale_days:
+            stat["stale"] += 1
+            if is_tracing:
+                log_detail(f"    x 数据滞后 {stale_days} 天 (最新 {latest_date}), 超过 {max_stale_days} 天, 跳过")
+            continue
+
+        # 区间最高收盘价及其日期
+        max_date, max_price = max(valid_rows, key=lambda x: x[1])
+        if max_price is None or max_price <= 0:
+            stat["bad_max"] += 1
+            if is_tracing: log_detail("    x 区间最高价异常(<=0)")
+            continue
+
+        drop_pct = 1 - (latest_price / max_price)
+        cond_deep_drop = latest_price <= max_price * (1 - drop_threshold)
+
+        if is_tracing:
+            log_detail(f"    - 区间交易日数: {len(valid_rows)}")
+            log_detail(f"    - 区间最高收盘: [{max_date}] {max_price:.4f}")
+            log_detail(f"    - 最新收盘:     [{latest_date}] {latest_price:.4f}")
+            log_detail(f"    - 回撤幅度: {drop_pct:.2%} (阈值 {drop_threshold:.2%}) = {cond_deep_drop}")
+
+        if not cond_deep_drop:
+            stat["drop_not_enough"] += 1
+            continue
+
+        # 可选：要求 T 日下跌
+        if require_down:
+            if len(valid_rows) < 2:
+                stat["blocked_by_down"] += 1
+                if is_tracing: log_detail("    x 无 T-1 数据, 无法判断当日涨跌")
+                continue
+            prev_date, prev_price = valid_rows[1]
+            if not (latest_price < prev_price):
+                stat["blocked_by_down"] += 1
+                if is_tracing:
+                    log_detail(f"    x T日未下跌 ({latest_price:.4f} >= {prev_price:.4f}), 按配置过滤")
+                continue
+            if is_tracing:
+                log_detail(f"    - T日下跌校验通过: {prev_price:.4f} -> {latest_price:.4f}")
+
+        results.append(symbol)
+        stat["hit"] += 1
+        detail_map[symbol] = {
+            "max_date": max_date,
+            "max_price": max_price,
+            "latest_date": latest_date,
+            "latest_price": latest_price,
+            "drop_pct": drop_pct,
+            "days": len(valid_rows),
+        }
+        if is_tracing:
+            log_detail(f"    ✅ [选中] 半年回撤 {drop_pct:.2%} >= {drop_threshold:.2%}")
+
+    conn.close()
+
+    results = sorted(list(set(results)))
+
+    # ---- 汇总日志 ----
+    log_detail(f"\n--- 策略3 统计 ---")
+    log_detail(f"  扫描总数: {stat['total']}")
+    log_detail(f"  无数据跳过: {stat['no_data']} | 交易日不足: {stat['not_enough_days']} | 数据停更: {stat['stale']}")
+    log_detail(f"  最高价异常: {stat['bad_max']} | 回撤未达标: {stat['drop_not_enough']} | 因T日未跌过滤: {stat['blocked_by_down']}")
+    log_detail(f"  ✅ 命中: {stat['hit']}")
+
+    if results:
+        log_detail(f"\n--- 策略3 命中明细 (按回撤幅度降序) ---")
+        for sym in sorted(results, key=lambda s: detail_map[s]["drop_pct"], reverse=True):
+            d = detail_map[sym]
+            log_detail(f"  {sym:<8} 回撤 {d['drop_pct']:>7.2%} | 高点 [{d['max_date']}] {d['max_price']:.4f} "
+                       f"-> 最新 [{d['latest_date']}] {d['latest_price']:.4f} | 样本 {d['days']} 天")
+
+    log_detail(f"\n策略3 筛选完成，共命中 {len(results)} 个 ETF: {results}")
+    return results, detail_map
 
 
 def process_etf_volume_low_continuation(db_path, target_date_override,
@@ -500,7 +677,7 @@ def process_etf_volume_low_continuation(db_path, target_date_override,
         if len(rows) < 2 or rows[0][1] is None or rows[1][1] is None:
             if is_tracing: log_detail("    x 无当前或前一日价格数据")
             continue
-            
+
         latest_date, latest_price = rows[0]
         prev_date, prev_price = rows[1]
 
@@ -541,13 +718,15 @@ def process_etf_volume_low_continuation(db_path, target_date_override,
     log_detail(f"\n策略2补充规则筛选完成，共命中 {len(results)} 个 ETF: {results}")
     return results
 
+
 def _clean_hist_symbol(s):
-    """清洗 History 中的符号，去掉末尾的中文标记（如"黑"）"""
+    """清洗 History 中的符号，去掉末尾的中文标记（如"黑"/"甲"/"乙"）"""
     return re.sub(r'[\u4e00-\u9fff]+$', '', s).strip()
+
 
 # --- 4. 主执行流程 ---
 def run_etf_volume_logic(log_detail):
-    log_detail("ETF_Volume 双策略程序开始运行...")
+    log_detail("ETF_Volume 多策略程序开始运行...")
     if SYMBOL_TO_TRACE:
         log_detail(f"当前追踪的 SYMBOL: {SYMBOL_TO_TRACE}")
 
@@ -559,22 +738,39 @@ def run_etf_volume_logic(log_detail):
     tag_blacklist = load_tag_settings(TAGS_SETTING_JSON_FILE)
     symbol_to_tags_map = load_symbol_tags(DESCRIPTION_JSON_FILE)
 
+    deep_mark = CONFIG.get("ETF_DEEP_DROP_MARK", "乙")
+
     # 执行策略
     final_etf_high = process_etf_volume_high(DB_FILE, TARGET_DATE, SYMBOL_TO_TRACE, log_detail)
     final_etf_low = process_etf_volume_low(DB_FILE, TARGET_DATE, SYMBOL_TO_TRACE, log_detail)
 
-    # ===== 新增：策略2的延续规则 =====
+    # ===== 策略2的延续规则 =====
     final_etf_low_cont = process_etf_volume_low_continuation(
         DB_FILE, TARGET_DATE, EARNING_HISTORY_JSON_FILE,
         SYMBOL_TO_TRACE, log_detail
     )
+
+    # ===== 新增：策略3 半年深度回撤 (>=35%) =====
+    final_etf_deep_drop, deep_drop_detail = process_etf_deep_drop(
+        DB_FILE, TARGET_DATE, SYMBOL_TO_TRACE, log_detail
+    )
+    deep_drop_set = set(final_etf_deep_drop)
+
     # 合并去重
     before_merge = len(final_etf_low)
-    final_etf_low = sorted(list(set(final_etf_low) | set(final_etf_low_cont)))
-    log_detail(f"\n策略2合并后: 原策略 {before_merge} 个 + 延续规则 "
-               f"{len(final_etf_low_cont)} 个 => 去重后 {len(final_etf_low)} 个")
+    merged = set(final_etf_low) | set(final_etf_low_cont) | deep_drop_set
+    only_deep = sorted(deep_drop_set - set(final_etf_low) - set(final_etf_low_cont))
+    final_etf_low = sorted(list(merged))
 
-    # ===== 新增：计算 ETF_Volume_low 中 "年度成交额前三" 的标 "甲" 集合 =====
+    log_detail(f"\n========== ETF_Volume_low 合并结果 ==========")
+    log_detail(f"  原策略2: {before_merge} 个")
+    log_detail(f"  延续规则: {len(final_etf_low_cont)} 个")
+    log_detail(f"  深跌规则(策略3): {len(deep_drop_set)} 个 (其中仅由深跌规则新增: {len(only_deep)} 个)")
+    if only_deep:
+        log_detail(f"  仅深跌新增清单: {only_deep}")
+    log_detail(f"  => 去重合并后共 {len(final_etf_low)} 个")
+
+    # ===== 计算 ETF_Volume_low 中 "年度成交额前三" 的标 "甲" 集合 =====
     etf_low_jia_set = get_etf_yearly_turnover_top_symbols(
         DB_FILE, final_etf_low, TARGET_DATE, log_detail,
         CONFIG.get("ETF_COND_LOW_YEARLY_TURNOVER_LOOKBACK_MONTHS", 12),
@@ -582,10 +778,12 @@ def run_etf_volume_logic(log_detail):
         SYMBOL_TO_TRACE
     )
 
-    # 构建备注（含黑名单标记 / 甲标记）
-    def build_notes(symbols, jia_set=None):
+    # 构建备注（含黑名单标记 / 甲标记 / 乙标记）
+    def build_notes(symbols, jia_set=None, deep_set=None):
         if jia_set is None:
             jia_set = set()
+        if deep_set is None:
+            deep_set = set()
         note_map = {}
         for sym in symbols:
             suffix = ""
@@ -594,28 +792,42 @@ def run_etf_volume_logic(log_detail):
                 suffix += "黑"
             if sym in jia_set:
                 suffix += "甲"
+            if sym in deep_set:
+                suffix += deep_mark
             note_map[sym] = f"{sym}{suffix}"
         return note_map
 
     etf_high_notes = build_notes(final_etf_high)
-    etf_low_notes = build_notes(final_etf_low, etf_low_jia_set)
+    etf_low_notes = build_notes(final_etf_low, etf_low_jia_set, deep_drop_set)
 
     # 追踪汇总
     if SYMBOL_TO_TRACE:
         log_detail(f"\n{'='*60}")
         log_detail(f"📌 [{SYMBOL_TO_TRACE}] 命中汇总")
-        log_detail(f"  策略1 ETF_Volume_high: {'✅' if SYMBOL_TO_TRACE in final_etf_high else '❌'}")
-        log_detail(f"  策略2 ETF_Volume_low:  {'✅' if SYMBOL_TO_TRACE in final_etf_low else '❌'}")
-        log_detail(f"  年度成交额前三(甲):    {'✅' if SYMBOL_TO_TRACE in etf_low_jia_set else '❌'}")
+        log_detail(f"  策略1 ETF_Volume_high:      {'✅' if SYMBOL_TO_TRACE in final_etf_high else '❌'}")
+        log_detail(f"  策略2 ETF_Volume_low:       {'✅' if SYMBOL_TO_TRACE in final_etf_low else '❌'}")
+        log_detail(f"  策略3 半年深跌(标'{deep_mark}'):    {'✅' if SYMBOL_TO_TRACE in deep_drop_set else '❌'}")
+        if SYMBOL_TO_TRACE in deep_drop_detail:
+            d = deep_drop_detail[SYMBOL_TO_TRACE]
+            log_detail(f"        └─ 高点[{d['max_date']}] {d['max_price']:.4f} -> "
+                       f"最新[{d['latest_date']}] {d['latest_price']:.4f}, 回撤 {d['drop_pct']:.2%}")
+        log_detail(f"  年度成交额前三(甲):         {'✅' if SYMBOL_TO_TRACE in etf_low_jia_set else '❌'}")
+        log_detail(f"  最终备注: {etf_low_notes.get(SYMBOL_TO_TRACE, etf_high_notes.get(SYMBOL_TO_TRACE, '(未命中)'))}")
         log_detail(f"{'='*60}")
 
     # 回测模式拦截
     if TARGET_DATE:
         log_detail("\n" + "="*60)
-        log_detail(f"🛑 回测模式 (Date: {TARGET_DATE})")
+        log_detail(f"🛑 回测模式 (Date: {TARGET_DATE}) - 不写入任何文件")
         log_detail(f"📊 ETF_Volume_high 命中: {len(final_etf_high)} 个")
+        log_detail(f"   -> {final_etf_high}")
         log_detail(f"📊 ETF_Volume_low  命中: {len(final_etf_low)} 个")
+        log_detail(f"   -> {final_etf_low}")
         log_detail(f"📊 其中标'甲'(年度前三): {len(etf_low_jia_set)} 个 -> {sorted(etf_low_jia_set)}")
+        log_detail(f"📊 其中标'{deep_mark}'(半年深跌>= "
+                   f"{CONFIG.get('ETF_COND_DEEP_DROP_THRESHOLD', 0.35):.0%}): "
+                   f"{len(deep_drop_set)} 个 -> {sorted(deep_drop_set)}")
+        log_detail(f"📊 Panel 备注预览: {sorted(etf_low_notes.values())}")
         log_detail("="*60)
         return
 

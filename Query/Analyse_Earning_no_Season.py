@@ -10,11 +10,11 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 # 使用 os.path.expanduser('~') 获取用户主目录，增强可移植性
 BASE_PATH = USER_HOME
 
-SYMBOL_TO_TRACE = ""
-TARGET_DATE = ""
+# SYMBOL_TO_TRACE = ""
+# TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "DIS"
-# TARGET_DATE = "2026-07-23"
+SYMBOL_TO_TRACE = "W"
+TARGET_DATE = "2026-05-19"
 
 PATHS = {
     "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),
@@ -381,9 +381,18 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
         latest_er_date = data['latest_er_date_str']
         latest_er_price = data['all_er_prices'][-1]
         
-        cursor.execute(f'SELECT price FROM "{sector_name}" WHERE name = ? AND date > ? ORDER BY date ASC LIMIT 3', (symbol, latest_er_date))
+        # 获取财报日之后3个交易日的价格
+        if target_date:
+            cursor.execute(f'SELECT price FROM "{sector_name}" WHERE name = ? AND date > ? AND date <= ? ORDER BY date ASC LIMIT 3', (symbol, latest_er_date, target_date))
+        else:
+            cursor.execute(f'SELECT price FROM "{sector_name}" WHERE name = ? AND date > ? ORDER BY date ASC LIMIT 3', (symbol, latest_er_date))
+        
         next_days_rows = cursor.fetchall()
         next_days_prices = [row[0] for row in next_days_rows]
+
+        # ========== 【新增】保存最新财报日次日（第二天）的收盘价 ==========
+        data['latest_er_next_day_price'] = next_days_prices[0] if next_days_prices else None
+        # =================================================================
 
         er_window_prices = [latest_er_price]
         er_window_prices.extend(next_days_prices)
@@ -1143,6 +1152,7 @@ def check_cond8_declining_earnings(data, config, log_detail, symbol_to_trace):
 def check_cond8_drop_tier(data, config, log_detail, symbol_to_trace):
     """
     条件8 - 第二部分：以“最新一次财报日收盘价”为基准，计算最新收盘价的跌幅并分档。
+    如果对比财报日收盘价未达到最低门槛，则自动尝试对比“财报日次日收盘价”。
     返回: (tier, drop_pct)  tier ∈ {None, 'PE_low', 'PE_lower', 'PE_lowest'}
     """
     symbol = data.get('symbol')
@@ -1180,20 +1190,44 @@ def check_cond8_drop_tier(data, config, log_detail, symbol_to_trace):
         t_lowest = config.get("COND8_LOWEST_DROP_SMALL", 0.21)
         cap_desc = f"中小市值 (<= {cap_line/1e8:.0f}亿 或 市值未知)"
 
-    # 从高档位往下判定，三档互斥
-    tier = None
-    if drop_pct >= t_lowest:
-        tier = 'PE_lowest'
-    elif drop_pct >= t_lower:
-        tier = 'PE_lower'
-    elif drop_pct >= t_low:
-        tier = 'PE_low'
+    # 辅助判定函数：根据跌幅比例返回档位
+    def get_tier(pct):
+        if pct >= t_lowest:
+            return 'PE_lowest'
+        elif pct >= t_lower:
+            return 'PE_lower'
+        elif pct >= t_low:
+            return 'PE_low'
+        return None
+
+    # 1. 优先尝试：对比“最新财报日收盘价”
+    ref_price = er_price
+    ref_name = "最新财报日收盘价"
+    drop_pct = (ref_price - latest_price) / ref_price
+    tier = get_tier(drop_pct)
+
+    # 2. 二次尝试：如果首选比较未达到最低档位门槛，且存在次日价格，尝试对比“财报日次日收盘价”
+    if tier is None:
+        next_day_price = data.get('latest_er_next_day_price')
+        if next_day_price and next_day_price > 0:
+            drop_pct_next = (next_day_price - latest_price) / next_day_price
+            tier_next = get_tier(drop_pct_next)
+            
+            # 如果次日价格能够满足门槛，则覆盖结果
+            if tier_next is not None:
+                if is_tracing:
+                    log_detail(f"  - 提示: 相比财报日收盘价({er_price:.2f})跌幅 {drop_pct:.2%} 未达最低门槛({t_low:.2%})；"
+                               f"改用财报日次日收盘价({next_day_price:.2f})重新比较，跌幅达到 {drop_pct_next:.2%}")
+                ref_price = next_day_price
+                ref_name = "财报日次日收盘价"
+                drop_pct = drop_pct_next
+                tier = tier_next
 
     if is_tracing:
         log_detail(f"  - 当前市值: {marketcap:,.0f}" if marketcap else "  - 当前市值: 未知")
         log_detail(f"  - 市值档位: {cap_desc}")
-        log_detail(f"  - 最新财报日收盘价: {er_price:.2f}, 最新收盘价: {latest_price:.2f}")
-        log_detail(f"  - 财报后跌幅: {drop_pct:.2%}")
+        log_detail(f"  - 最终基准参考价({ref_name}): {ref_price:.2f}, 最新收盘价: {latest_price:.2f}")
+        log_detail(f"  - 最终计算跌幅: {drop_pct:.2%}")
         log_detail(f"  - 分档阈值: PE_low>={t_low:.2%}, PE_lower>={t_lower:.2%}, PE_lowest>={t_lowest:.2%}")
         log_detail(f"  - 判定结果: {tier if tier else '未达到任何档位'}")
 

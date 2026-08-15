@@ -5091,6 +5091,26 @@
             "JAN",
             "NIO",
             "OHI"
+        ],
+        "2026-08-12": [
+            "NIO",
+            "PM"
+        ],
+        "2026-08-13": [
+            "ASND",
+            "CMG",
+            "CNH",
+            "DKS",
+            "ENB",
+            "NIO"
+        ],
+        "2026-08-14": [
+            "CSCO",
+            "DFTX",
+            "DKS",
+            "IDXX",
+            "JMUB",
+            "VIK"
         ]
     },
     "SupportLevel_Over": {
@@ -9062,6 +9082,38 @@
             "VRSK",
             "WING",
             "YOU"
+        ],
+        "2026-08-12": [
+            "AHR",
+            "AMZN",
+            "BB",
+            "BBWI",
+            "BIDU",
+            "BIRK",
+            "CDNS",
+            "CZR",
+            "EQR",
+            "GME",
+            "GRAB",
+            "VRSK",
+            "YOU"
+        ],
+        "2026-08-13": [
+            "AMZN",
+            "BIDU",
+            "CIFR",
+            "COGT",
+            "DIOD",
+            "HUT",
+            "UNH",
+            "YOU"
+        ],
+        "2026-08-14": [
+            "AMZN",
+            "BIDU",
+            "PLD",
+            "VRSK",
+            "YOU"
         ]
     },
     "PE_Volume": {
@@ -11813,6 +11865,9 @@
             "CAVA",
             "NIO",
             "SIMO财区"
+        ],
+        "2026-08-13": [
+            "HUT"
         ]
     },
     "PE_Hot": {
@@ -13806,6 +13861,21 @@
             "GOOGL",
             "JBHT",
             "PM追",
+            "UNH追"
+        ],
+        "2026-08-12": [
+            "GS",
+            "UNH追"
+        ],
+        "2026-08-13": [
+            "AMZN",
+            "BABA",
+            "GS追",
+            "UNH追"
+        ],
+        "2026-08-14": [
+            "AMZN追",
+            "BABA追",
             "UNH追"
         ]
     },
@@ -18711,6 +18781,60 @@
             "NBIS抄底",
             "RHP甲",
             "SMTC抄底"
+        ],
+        "2026-08-12": [
+            "ADI抄底",
+            "AMAT抄底",
+            "BB抄底",
+            "CRDO抄底",
+            "CSCO抄底",
+            "DY抄底",
+            "EAT甲",
+            "FPS抄底",
+            "HRB甲",
+            "IREN抄底",
+            "MRVL抄底",
+            "MU抄底",
+            "NBIS甲",
+            "SMCI甲",
+            "TIGO抄底"
+        ],
+        "2026-08-13": [
+            "ADI抄底",
+            "AMAT抄底",
+            "ASND抄底",
+            "BB抄底",
+            "BHP抄底",
+            "CBRS甲",
+            "CHYM甲",
+            "CRDO抄底",
+            "DY抄底",
+            "FPS抄底",
+            "IREN抄底",
+            "MRVL抄底",
+            "MU抄底",
+            "NBIS抄底",
+            "SMCI抄底",
+            "SNDK甲",
+            "SPHR甲",
+            "TXG抄底"
+        ],
+        "2026-08-14": [
+            "ADI抄底",
+            "AVGO抄底",
+            "BB抄底",
+            "CBRS抄底",
+            "CRDO抄底",
+            "DIOD甲",
+            "DY抄底",
+            "FPS抄底",
+            "IREN抄底",
+            "MRVL抄底",
+            "MU抄底",
+            "NBIS抄底",
+            "SMCI抄底",
+            "SNDK甲",
+            "VIK抄底"
         ]
     },
     "ETF_Volume_high": {
@@ -19156,6 +19280,12 @@
             "CRAK"
         ],
         "2026-08-11": [
+            "BWET"
+        ],
+        "2026-08-13": [
+            "BWET"
+        ],
+        "2026-08-14": [
             "BWET"
         ]
     },
@@ -19971,6 +20101,45 @@
             "EWZ",
             "FLLA",
             "WEAT"
+        ],
+        "2026-08-12": [
+            "AGQ乙",
+            "EWZ",
+            "FLLA",
+            "SOXL乙",
+            "SOXS乙",
+            "SPXS乙",
+            "SPXU乙",
+            "UVXY乙",
+            "VIXY乙",
+            "VXX乙"
+        ],
+        "2026-08-13": [
+            "AGQ乙",
+            "BOIL乙",
+            "EWZ",
+            "FLLA",
+            "KWEB",
+            "SOXL乙",
+            "SOXS乙",
+            "SPXS乙",
+            "SPXU乙",
+            "UVXY乙",
+            "VIXY乙",
+            "VXX乙"
+        ],
+        "2026-08-14": [
+            "AGQ乙",
+            "BOIL乙",
+            "FLLA",
+            "SOXL乙",
+            "SOXS乙",
+            "SPXS乙",
+            "SPXU乙",
+            "TLT",
+            "UVXY乙",
+            "VIXY乙",
+            "VXX乙"
         ]
     },
     "Short_W": {
@@ -20356,6 +20525,13 @@
         ],
         "2026-08-10": [
             "DUK"
+        ],
+        "2026-08-13": [
+            "DIOD",
+            "RING"
+        ],
+        "2026-08-14": [
+            "BIRK"
         ]
     },
     "Short": {
@@ -21342,6 +21518,17 @@
             "AHR",
             "DEM抄底",
             "JAN"
+        ],
+        "2026-08-12": [
+            "CZR",
+            "EQR",
+            "EWD抄底"
+        ],
+        "2026-08-13": [
+            "ENB"
+        ],
+        "2026-08-14": [
+            "JMUB"
         ]
     },
     "PE_W": {
@@ -66679,6 +66866,74 @@
             "SNPS",
             "UNH",
             "VRSK"
+        ],
+        "2026-08-12": [
+            "AEE",
+            "AGX",
+            "AMZN",
+            "BABA",
+            "CDNS",
+            "CIEN",
+            "CMG",
+            "DY",
+            "FN",
+            "FPS",
+            "GFI",
+            "GRAB",
+            "GS",
+            "IREN",
+            "KMI",
+            "LOW",
+            "ORCL",
+            "PATH",
+            "PLD",
+            "SNPS",
+            "UNH",
+            "VRSK"
+        ],
+        "2026-08-13": [
+            "AEE",
+            "AGX",
+            "AMZN",
+            "BABA",
+            "CDNS",
+            "CIEN",
+            "CMG",
+            "CNH",
+            "FN",
+            "FPS",
+            "GFI",
+            "GS",
+            "IREN",
+            "KMI",
+            "LOW",
+            "ORCL",
+            "PLD",
+            "SMTC",
+            "SNPS",
+            "UNH",
+            "VRSK"
+        ],
+        "2026-08-14": [
+            "AGX",
+            "AMZN",
+            "BABA",
+            "CDNS",
+            "CIEN",
+            "CMG",
+            "DY",
+            "FN",
+            "FPS",
+            "IDXX",
+            "IREN",
+            "LOW",
+            "ORCL",
+            "PATH",
+            "PLD",
+            "SNPS",
+            "UNH",
+            "VRSK",
+            "W"
         ]
     },
     "PE_low": {

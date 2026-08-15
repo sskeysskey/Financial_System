@@ -394,8 +394,8 @@ def search_history_by_date(symbol):
         # 用 (category, suffix) 元组作为签名，完全一致才算相同
         date_signature[d_str] = tuple(items_today_sig)
 
-        # 新增：可配置的连续相同项最低数量要求
-    MIN_STREAK_ITEMS = 3 
+    # 新增：可配置的连续相同项最低数量要求
+    MIN_STREAK_ITEMS = 2
 
     def get_streak_position(d_str):
         """返回该日期在“连续相同记录”段里的位置（最早那天=1）"""

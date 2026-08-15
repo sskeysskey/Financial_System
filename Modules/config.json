@@ -294,13 +294,13 @@
         "message": "正在 生成stop_scpt.txt文件在桌面..."
     },
     {
-        "key": "e",
+        "key": "w",
         "modifiers": [
             "control"
         ],
         "actionType": "runPythonBackground",
-        "target": "/Users/yanzhang/Coding/Financial_System/Query/Check_Options.py",
-        "message": "正在执行 Options_Monitor..."
+        "target": "/Users/yanzhang/Coding/Financial_System/Query/Check_HighLow.py",
+        "message": "正在执行 HighLow..."
     },
     {
         "key": "q",
@@ -346,11 +346,11 @@
             "control"
         ],
         "actionType": "runPythonBackground",
-        "target": "/Users/yanzhang/Coding/Financial_System/Query/Check_HighLow.py",
-        "message": "正在打开highlow.txt..."
+        "target": "/Users/yanzhang/Coding/Financial_System/Query/Check_Group.py",
+        "message": "正在打开check_group..."
     },
     {
-        "key": "w",
+        "key": "e",
         "modifiers": [
             "control"
         ],

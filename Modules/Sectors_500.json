@@ -30,7 +30,8 @@
         "SPOT",
         "NTES",
         "APP",
-        "WBD"
+        "WBD",
+        "NBIS"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -104,7 +105,8 @@
         "LNG",
         "OXY",
         "FANG",
-        "CVE"
+        "CVE",
+        "DVN"
     ],
     "Financial_Services": [
         "JPM",
@@ -167,7 +169,8 @@
         "FITB",
         "NDAQ",
         "STT",
-        "PYPL"
+        "PYPL",
+        "AMP"
     ],
     "Healthcare": [
         "LLY",
@@ -251,7 +254,7 @@
         "CARR",
         "HEI",
         "HONA",
-        "AXON",
+        "RKLB",
         "WAB"
     ],
     "Real_Estate": [
@@ -326,9 +329,9 @@
         "ALAB",
         "NOK",
         "COHR",
-        "INFY",
         "ADSK",
-        "CBRS"
+        "CBRS",
+        "CRWV"
     ],
     "Utilities": [
         "NEE",
