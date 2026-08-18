@@ -16,7 +16,8 @@
         "CTVA",
         "NUE",
         "MT",
-        "WPM"
+        "WPM",
+        "AU"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -169,8 +170,7 @@
         "FITB",
         "NDAQ",
         "STT",
-        "PYPL",
-        "AMP"
+        "PYPL"
     ],
     "Healthcare": [
         "LLY",
@@ -331,7 +331,8 @@
         "COHR",
         "ADSK",
         "CBRS",
-        "CRWV"
+        "CRWV",
+        "CRDO"
     ],
     "Utilities": [
         "NEE",

@@ -1759,6 +1759,9 @@
         "2026-08-11": [
             "ELAN空",
             "TTD黑空"
+        ],
+        "2026-08-17": [
+            "PAAS空"
         ]
     },
     "SupportLevel_Close": {
@@ -5111,6 +5114,16 @@
             "IDXX",
             "JMUB",
             "VIK"
+        ],
+        "2026-08-17": [
+            "BRK-B",
+            "DKS",
+            "FRMI",
+            "FTNT",
+            "HON",
+            "IDXX",
+            "MNST",
+            "XYL"
         ]
     },
     "SupportLevel_Over": {
@@ -9112,6 +9125,20 @@
             "AMZN",
             "BIDU",
             "PLD",
+            "VRSK",
+            "YOU"
+        ],
+        "2026-08-17": [
+            "AMZN",
+            "BBWI",
+            "CDNS",
+            "COGT",
+            "EQR",
+            "FND",
+            "GME",
+            "GRAB",
+            "PM",
+            "TWLO",
             "VRSK",
             "YOU"
         ]
@@ -13877,6 +13904,13 @@
             "AMZN追",
             "BABA追",
             "UNH追"
+        ],
+        "2026-08-17": [
+            "AMZN追",
+            "BRK-B",
+            "FTNT",
+            "ORCL",
+            "PM"
         ]
     },
     "PE_Volume_high": {
@@ -18835,6 +18869,23 @@
             "SMCI抄底",
             "SNDK甲",
             "VIK抄底"
+        ],
+        "2026-08-17": [
+            "ADI抄底",
+            "AIR甲",
+            "ARGX甲",
+            "BB抄底",
+            "CRDO抄底",
+            "DY抄底",
+            "EAT抄底",
+            "FPS抄底",
+            "IREN抄底",
+            "MRVL抄底",
+            "MU抄底",
+            "NBIS抄底",
+            "SMCI抄底",
+            "SPHR抄底",
+            "TGT抄底"
         ]
     },
     "ETF_Volume_high": {
@@ -19287,6 +19338,9 @@
         ],
         "2026-08-14": [
             "BWET"
+        ],
+        "2026-08-17": [
+            "IFRA"
         ]
     },
     "ETF_Volume_low": {
@@ -20140,6 +20194,19 @@
             "UVXY乙",
             "VIXY乙",
             "VXX乙"
+        ],
+        "2026-08-17": [
+            "AGQ乙",
+            "BOIL乙",
+            "EDV",
+            "SOXL乙",
+            "SOXS乙",
+            "SPXS乙",
+            "SPXU乙",
+            "TLT",
+            "UVXY乙",
+            "VIXY乙",
+            "VXX乙"
         ]
     },
     "Short_W": {
@@ -20532,6 +20599,9 @@
         ],
         "2026-08-14": [
             "BIRK"
+        ],
+        "2026-08-17": [
+            "KLAR"
         ]
     },
     "Short": {
@@ -21529,6 +21599,11 @@
         ],
         "2026-08-14": [
             "JMUB"
+        ],
+        "2026-08-17": [
+            "EQR",
+            "EWC抄底",
+            "SBS"
         ]
     },
     "PE_W": {
@@ -66934,6 +67009,34 @@
             "UNH",
             "VRSK",
             "W"
+        ],
+        "2026-08-17": [
+            "AGX",
+            "AMZN",
+            "BRK-B",
+            "CDNS",
+            "CIEN",
+            "CMG",
+            "DKS",
+            "DY",
+            "FND",
+            "FPS",
+            "FTNT",
+            "GFI",
+            "GRAB",
+            "IDXX",
+            "IREN",
+            "KMI",
+            "ORCL",
+            "PATH",
+            "PM",
+            "SE",
+            "SNPS",
+            "TIGO",
+            "TWLO",
+            "VRSK",
+            "W",
+            "XYL"
         ]
     },
     "PE_low": {
