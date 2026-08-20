@@ -5124,6 +5124,20 @@
             "IDXX",
             "MNST",
             "XYL"
+        ],
+        "2026-08-18": [
+            "AFRM",
+            "AVGO",
+            "BIRK",
+            "BTSG",
+            "CORZ",
+            "CSCO",
+            "HON",
+            "NIO",
+            "OHI",
+            "QXO",
+            "VIK",
+            "WING"
         ]
     },
     "SupportLevel_Over": {
@@ -9141,6 +9155,31 @@
             "TWLO",
             "VRSK",
             "YOU"
+        ],
+        "2026-08-18": [
+            "ACHR",
+            "AMZN",
+            "AUR",
+            "BB",
+            "CAVA",
+            "CDNS",
+            "CIFR",
+            "CLS",
+            "COGT",
+            "CSL",
+            "DKS",
+            "FLY",
+            "FND",
+            "FRMI",
+            "GME",
+            "GRAB",
+            "HUT",
+            "LITE",
+            "NBIS",
+            "SHOP",
+            "SMCI",
+            "TIGO",
+            "XYL"
         ]
     },
     "PE_Volume": {
@@ -13911,6 +13950,14 @@
             "FTNT",
             "ORCL",
             "PM"
+        ],
+        "2026-08-18": [
+            "AGX",
+            "AMZN追",
+            "AVGO",
+            "FTNT追",
+            "ORCL追",
+            "SHOP"
         ]
     },
     "PE_Volume_high": {
@@ -18886,6 +18933,26 @@
             "SMCI抄底",
             "SPHR抄底",
             "TGT抄底"
+        ],
+        "2026-08-18": [
+            "ADI抄底",
+            "BB抄底",
+            "CCC甲",
+            "CRDO抄底",
+            "DY抄底",
+            "FPS抄底",
+            "IREN抄底",
+            "MNST甲",
+            "MRCY抄底",
+            "MRVL抄底",
+            "MU抄底",
+            "NBIS抄底",
+            "SAN抄底",
+            "SMCI抄底",
+            "SMTC抄底",
+            "TRGP甲",
+            "UGI甲",
+            "VIK抄底"
         ]
     },
     "ETF_Volume_high": {
@@ -19341,6 +19408,10 @@
         ],
         "2026-08-17": [
             "IFRA"
+        ],
+        "2026-08-18": [
+            "BWET",
+            "DIVB"
         ]
     },
     "ETF_Volume_low": {
@@ -20207,6 +20278,23 @@
             "UVXY乙",
             "VIXY乙",
             "VXX乙"
+        ],
+        "2026-08-18": [
+            "AGQ乙",
+            "BOIL乙",
+            "EWW",
+            "EWZ",
+            "FLLA",
+            "KWEB",
+            "ROBO",
+            "SOXL乙",
+            "SOXS乙",
+            "SPXS乙",
+            "SPXU乙",
+            "UVXY乙",
+            "VIXY乙",
+            "VXX乙",
+            "WGMI乙"
         ]
     },
     "Short_W": {
@@ -20602,6 +20690,9 @@
         ],
         "2026-08-17": [
             "KLAR"
+        ],
+        "2026-08-18": [
+            "MRCY抄底"
         ]
     },
     "Short": {
@@ -21604,6 +21695,13 @@
             "EQR",
             "EWC抄底",
             "SBS"
+        ],
+        "2026-08-18": [
+            "AUR",
+            "GLOF抄底",
+            "SAN抄底",
+            "WBS抄底",
+            "WTV抄底"
         ]
     },
     "PE_W": {
@@ -67031,6 +67129,37 @@
             "PATH",
             "PM",
             "SE",
+            "SNPS",
+            "TIGO",
+            "TWLO",
+            "VRSK",
+            "W",
+            "XYL"
+        ],
+        "2026-08-18": [
+            "ACHR",
+            "AGX",
+            "AMZN",
+            "AVGO",
+            "CDNS",
+            "CIEN",
+            "CMG",
+            "CSL",
+            "DKS",
+            "DY",
+            "FND",
+            "FPS",
+            "FTNT",
+            "GFI",
+            "GRAB",
+            "IDXX",
+            "IREN",
+            "ORCL",
+            "PATH",
+            "SE",
+            "SFM",
+            "SHOP",
+            "SMTC",
             "SNPS",
             "TIGO",
             "TWLO",

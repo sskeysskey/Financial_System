@@ -59,7 +59,8 @@
         "ROST",
         "SE",
         "F",
-        "CVNA"
+        "CVNA",
+        "AZO"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -167,7 +168,6 @@
         "AJG",
         "CM",
         "BNY",
-        "FITB",
         "NDAQ",
         "STT",
         "PYPL"
@@ -205,7 +205,9 @@
         "ARGX",
         "CAH",
         "TAK",
-        "EW"
+        "EW",
+        "MRNA",
+        "BDX"
     ],
     "Industrials": [
         "GE",
@@ -254,8 +256,7 @@
         "CARR",
         "HEI",
         "HONA",
-        "RKLB",
-        "WAB"
+        "AXON"
     ],
     "Real_Estate": [
         "PLD",
@@ -331,8 +332,7 @@
         "COHR",
         "ADSK",
         "CBRS",
-        "CRWV",
-        "CRDO"
+        "CRWV"
     ],
     "Utilities": [
         "NEE",

@@ -99,6 +99,62 @@ TURN_LEVEL3_KEYS = {
 TURN_BADGE = {0: "⤵", 1: "⤵★", 2: "⤵★★", 3: "⤵🔥★★★"}
 TURN_NAME = {0: "一般转折", 1: "值得一看", 2: "较强转折", 3: "极强转折"}
 
+# ======================================================================
+# 【修复】分组过滤 & 日期规范化
+# ======================================================================
+EXCLUDE_BACKUP_GROUPS = True   # 排除 *_backup 镜像分组（修 Bug1，务必 True）
+MAX_STALE_DAYS = 0             # 分组最新日期允许落后“全局最新交易日”的天数（修 Bug2）
+                               # 0=严格只看最新交易日；数据落盘有延迟时可设 1
+COLLAPSE_FAMILIES = False      # True=同族分组合并计 1 项（PE_low/lower/lowest 等）
+
+GROUP_FAMILIES = [
+    {"PE_low", "PE_lower", "PE_lowest"},
+    {"PE_Deep", "PE_Deeper"},
+    {"Short", "Short_W"},
+    {"SupportLevel_Close", "SupportLevel_Over"},
+    {"PE_Volume", "PE_Volume_up", "PE_Volume_high"},
+    {"ETF_Volume_high", "ETF_Volume_low", "ETF_low"},
+]
+
+_DATE_RE = re.compile(r"^(\d{4})\D+(\d{1,2})\D+(\d{1,2})")
+
+def norm_date(s):
+    """把 2025-1-9 / 2025/1/9 / 20250109 统一成 '2025-01-09'，用于排序"""
+    s = str(s).strip()
+    m = _DATE_RE.match(s)
+    if m:
+        y, mo, d = m.groups()
+        return f"{int(y):04d}-{int(mo):02d}-{int(d):02d}"
+    m = re.match(r"^(\d{4})(\d{2})(\d{2})$", s)
+    return "-".join(m.groups()) if m else s
+
+def is_valid_group(name):
+    if name in IGNORE_GROUPS:
+        return False
+    if EXCLUDE_BACKUP_GROUPS and name.endswith("_backup"):
+        return False
+    return True
+
+def build_date_universe(history_data):
+    """返回 (全局交易日降序列表, {date: 距今第几个交易日})"""
+    dates = set()
+    for g, dm in (history_data or {}).items():
+        if not is_valid_group(g) or not isinstance(dm, dict):
+            continue
+        dates.update(dm.keys())
+    ordered = sorted(dates, key=norm_date, reverse=True)
+    return ordered, {d: i for i, d in enumerate(ordered)}
+
+def collapse_family(groups):
+    """同族分组合并成 1 项（可选）"""
+    if not COLLAPSE_FAMILIES:
+        return set(groups)
+    out = set()
+    for g in groups:
+        fam = next((f for f in GROUP_FAMILIES if g in f), None)
+        out.add("|".join(sorted(fam)) if fam else g)
+    return out
+
 
 class ClickableLabel(QLabel):
     clicked = pyqtSignal()
@@ -223,12 +279,11 @@ def execute_external_script(script_type, keyword):
 # ======================================================================
 # 多组共振（次数统计）
 # ======================================================================
-def calculate_frequency_data(history_data, week52_low_symbols=None):
-    """计算多组共振（次数统计）数据"""
+def calculate_frequency_data(history_data, week52_low_symbols=None, verbose=False):
+    """计算多组共振（次数统计）—— 修复版：排除 backup / 只用全局最新交易日"""
     if week52_low_symbols is None:
         week52_low_symbols = set()
 
-    excluded_groups = {"no_season", "_Tag_Blacklist"}
     support_level_groups = {"SupportLevel_Close", "SupportLevel_Over"}
     source_groups = {
         "Short", "Short_W", "Strategy12", "Strategy34", "OverSell_W",
@@ -238,68 +293,68 @@ def calculate_frequency_data(history_data, week52_low_symbols=None):
     }
     pe_chaodi_sources = {"PE_Null"}
 
-    symbol_groups = {}
+    dates_desc, pos = build_date_universe(history_data)
+    if not dates_desc:
+        return []
+    global_latest = dates_desc[0]
+
+    symbol_groups = defaultdict(set)
+    symbol_detail = defaultdict(list)     # 供日志用
     symbols_with_chaodi = set()
 
-    for group, date_map in history_data.items():
-        if group in excluded_groups:
+    for group, date_map in (history_data or {}).items():
+        if not is_valid_group(group) or not isinstance(date_map, dict) or not date_map:
             continue
-        if not date_map:
+        latest = max(date_map.keys(), key=norm_date)
+        lag = pos.get(latest, 10 ** 9)
+        if lag > MAX_STALE_DAYS:                # ← 修 Bug2：陈旧分组不参与
+            if verbose:
+                print(f"[skip-stale] {group} 最新={latest} 落后 {lag} 交易日")
             continue
+        for raw in (date_map.get(latest) or []):
+            base, suf = split_symbol_suffix(raw)
+            if "抄底" in raw:
+                symbols_with_chaodi.add(base)
+            symbol_groups[base].add(group)
+            symbol_detail[base].append((group, latest, raw))
 
-        sorted_dates = sorted(date_map.keys(), reverse=True)
-        latest_date = sorted_dates[0]
-        symbols = date_map[latest_date]
-
-        for s in symbols:
-            if "抄底" in s:
-                symbols_with_chaodi.add(clean_ticker(s).upper())
-
-        clean_symbols = set(clean_ticker(s).upper() for s in symbols)
-        for sym in clean_symbols:
-            symbol_groups.setdefault(sym, set()).add(group)
-
-    # 符合 52week_low 的 symbol 追加一个虚拟分组，使共振次数 +1
     for sym in list(symbol_groups.keys()):
         if sym in week52_low_symbols:
             symbol_groups[sym].add("52week_low")
 
-    count_to_symbols = {}
+    count_to_symbols = defaultdict(list)
     for sym, groups in symbol_groups.items():
+        eff = set(groups)
         if sym in symbols_with_chaodi:
-            groups = groups - pe_chaodi_sources
+            eff -= pe_chaodi_sources
+        eff = collapse_family(eff)
+        count = len(eff)
+        if count < 2:
+            continue
+        # ========== 已废弃原来的：count==2且同时有SupportLevel+源头分组直接丢弃的规则 ==========
+        # if count == 2 and not eff.isdisjoint(support_level_groups) \
+        #               and not eff.isdisjoint(source_groups):
+        #     continue
+        count_to_symbols[count].append(sym)
 
-        count = len(groups)
-        if count >= 2:
-            if count == 2:
-                has_support = not groups.isdisjoint(support_level_groups)
-                has_source = not groups.isdisjoint(source_groups)
-                if has_support and has_source:
-                    continue
-            count_to_symbols.setdefault(count, []).append(sym)
+    if verbose:
+        print(f"[共振] 全局最新交易日={global_latest}")
+        for sym in sorted(symbol_groups):
+            print(f"  {sym}: {sorted(symbol_groups[sym])}")
 
-    result = []
-    for count in sorted(count_to_symbols.keys(), reverse=True):
-        result.append({'count': count, 'symbols': sorted(count_to_symbols[count])})
-    return result
+    return [{'count': c, 'symbols': sorted(count_to_symbols[c])}
+            for c in sorted(count_to_symbols, reverse=True)]
 
 
 # ======================================================================
 # Earning_History 索引 & 信号强度评估
 # ======================================================================
 def build_symbol_history_index(history_data):
-    """
-    构建 symbol 维度的历史索引
-    返回:
-        sym_items     : dict[symbol][date] -> [(group, suffix), ...]
-        sorted_dates  : 全局交易日列表（降序）
-    """
     sym_items = defaultdict(dict)
     all_dates = set()
-
     for group, date_map in (history_data or {}).items():
-        if group in IGNORE_GROUPS or not isinstance(date_map, dict):
-            continue
+        if not is_valid_group(group) or not isinstance(date_map, dict):
+            continue                                   # ← 修 Bug1
         for date_str, symbols in date_map.items():
             if not isinstance(symbols, list):
                 continue
@@ -307,21 +362,22 @@ def build_symbol_history_index(history_data):
             for raw in symbols:
                 sym, suf = split_symbol_suffix(raw)
                 sym_items[sym].setdefault(date_str, []).append((group, suf))
-
-    return {'sym_items': sym_items, 'sorted_dates': sorted(all_dates, reverse=True)}
+    return {'sym_items': sym_items,
+            'sorted_dates': sorted(all_dates, key=norm_date, reverse=True)}  # ← 修 Bug3
 
 
 def get_today_items(history_data):
-    """按每个分组“各自的最新日期”汇总每个 symbol 当日命中的分组"""
     today_items = defaultdict(list)
+    dates_desc, pos = build_date_universe(history_data)
+    if not dates_desc:
+        return today_items
     for group, date_map in (history_data or {}).items():
-        if group in IGNORE_GROUPS or not isinstance(date_map, dict) or not date_map:
+        if not is_valid_group(group) or not isinstance(date_map, dict) or not date_map:
             continue
-        latest = max(date_map.keys())
-        symbols = date_map.get(latest) or []
-        if not isinstance(symbols, list):
+        latest = max(date_map.keys(), key=norm_date)
+        if pos.get(latest, 10 ** 9) > MAX_STALE_DAYS:   # ← 修 Bug2
             continue
-        for raw in symbols:
+        for raw in (date_map.get(latest) or []):
             sym, suf = split_symbol_suffix(raw)
             today_items[sym].append((group, suf))
     return today_items

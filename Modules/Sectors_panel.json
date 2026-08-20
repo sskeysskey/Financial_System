@@ -1,37 +1,44 @@
 {
     "Basic_Materials": {
-        "EMAT": "",
-        "LIN": "",
-        "AMRZ": ""
+        "AMRZ": "",
+        "CRH": "",
+        "MLM": ""
     },
-    "Real_Estate": {},
-    "Energy": {
-        "ENB": ""
+    "Real_Estate": {
+        "VICI": ""
     },
+    "Energy": {},
     "Technology": {
         "WIT": "",
         "STNE": ""
     },
     "Consumer_Cyclical": {
-        "ROL": "",
-        "NKE": "",
         "GPI": "",
         "MNSO": ""
     },
-    "Utilities": {},
+    "Utilities": {
+        "NRG": ""
+    },
     "Consumer_Defensive": {},
     "Industrials": {
-        "RBA": "",
         "ACM": "",
-        "REZI": "",
-        "ESAB": ""
+        "ESAB": "",
+        "LII": "",
+        "JBTM": "",
+        "BBUC": "",
+        "YSS": "",
+        "MAIR": "",
+        "FOIL": ""
     },
     "Communication_Services": {
         "STUB": "",
         "APP": "",
         "RBLX": ""
     },
-    "Financial_Services": {},
+    "Financial_Services": {
+        "PFSI": "",
+        "KLAR": ""
+    },
     "Healthcare": {},
     "ETFs": {
         "HYG": ""
@@ -129,80 +136,114 @@
     "Must": {},
     "Today": {},
     "Short": {
-        "SBS": "",
-        "EWC": "EWC抄底",
-        "EQR": ""
+        "SAN": "SAN抄底",
+        "GLOF": "GLOF抄底",
+        "WBS": "WBS抄底",
+        "WTV": "WTV抄底",
+        "AUR": ""
     },
     "Short_backup": {
-        "SBS": "",
-        "EWC": "EWC抄底",
-        "EQR": ""
+        "SAN": "SAN抄底",
+        "GLOF": "GLOF抄底",
+        "WBS": "WBS抄底",
+        "WTV": "WTV抄底",
+        "AUR": ""
     },
     "Short_W": {
-        "KLAR": ""
+        "MRCY": "MRCY抄底"
     },
     "Short_W_backup": {
-        "KLAR": ""
+        "MRCY": "MRCY抄底"
     },
     "SupportLevel_Close": {
-        "BRK-B": "",
-        "DKS": "",
-        "FRMI": "",
-        "FTNT": "",
+        "AFRM": "",
+        "AVGO": "",
+        "BIRK": "",
+        "BTSG": "",
+        "CORZ": "",
+        "CSCO": "",
         "HON": "",
-        "IDXX": "",
-        "KLAR": "KLAR财区",
-        "MNST": "",
-        "XYL": ""
+        "NIO": "",
+        "OHI": "",
+        "QXO": "",
+        "VIK": "",
+        "WING": ""
     },
     "SupportLevel_Close_backup": {
-        "BRK-B": "",
-        "DKS": "",
-        "FRMI": "",
-        "FTNT": "",
+        "AFRM": "",
+        "AVGO": "",
+        "BIRK": "",
+        "BTSG": "",
+        "CORZ": "",
+        "CSCO": "",
         "HON": "",
-        "IDXX": "",
-        "KLAR": "KLAR财区",
-        "MNST": "",
-        "XYL": ""
+        "NIO": "",
+        "OHI": "",
+        "QXO": "",
+        "VIK": "",
+        "WING": ""
     },
     "SupportLevel_Over": {
+        "ACHR": "ACHR财区",
         "AMZN": "AMZN延",
-        "BBWI": "BBWI财",
-        "CDNS": "CDNS财",
-        "COGT": "COGT财",
-        "EQR": "EQR财",
-        "FND": "FND财区",
-        "GME": "GME财",
-        "GRAB": "GRAB财区",
-        "PM": "",
-        "TWLO": "TWLO财区",
-        "VRSK": "VRSK延",
-        "YOU": "YOU延"
+        "AUR": "",
+        "BB": "BB延",
+        "CAVA": "CAVA财区",
+        "CDNS": "CDNS延",
+        "CIFR": "",
+        "CLS": "",
+        "COGT": "COGT延",
+        "CSL": "CSL财区",
+        "DKS": "DKS财5轮",
+        "FLY": "FLY财区",
+        "FND": "FND延",
+        "FRMI": "",
+        "GME": "GME延",
+        "GRAB": "GRAB延",
+        "HUT": "HUT财",
+        "LITE": "LITE财区",
+        "NBIS": "NBIS财区",
+        "SHOP": "SHOP财区",
+        "SMCI": "SMCI财区",
+        "TIGO": "",
+        "XYL": ""
     },
     "SupportLevel_Over_backup": {
+        "ACHR": "ACHR财区",
         "AMZN": "AMZN延",
-        "BBWI": "BBWI财",
-        "CDNS": "CDNS财",
-        "COGT": "COGT财",
-        "EQR": "EQR财",
-        "FND": "FND财区",
-        "GME": "GME财",
-        "GRAB": "GRAB财区",
-        "PM": "",
-        "TWLO": "TWLO财区",
-        "VRSK": "VRSK延",
-        "YOU": "YOU延"
+        "AUR": "",
+        "BB": "BB延",
+        "CAVA": "CAVA财区",
+        "CDNS": "CDNS延",
+        "CIFR": "",
+        "CLS": "",
+        "COGT": "COGT延",
+        "CSL": "CSL财区",
+        "DKS": "DKS财5轮",
+        "FLY": "FLY财区",
+        "FND": "FND延",
+        "FRMI": "",
+        "GME": "GME延",
+        "GRAB": "GRAB延",
+        "HUT": "HUT财",
+        "LITE": "LITE财区",
+        "NBIS": "NBIS财区",
+        "SHOP": "SHOP财区",
+        "SMCI": "SMCI财区",
+        "TIGO": "",
+        "XYL": ""
     },
     "Strategy12": {},
     "Strategy12_backup": {},
     "Strategy34": {
+        "ACHR": "",
         "AGX": "",
         "AMZN": "",
-        "BRK-B": "",
+        "AVGO": "",
         "CDNS": "",
         "CIEN": "",
         "CMG": "",
+        "CSL": "",
         "DKS": "",
         "DY": "DY热",
         "FND": "",
@@ -212,11 +253,12 @@
         "GRAB": "",
         "IDXX": "",
         "IREN": "",
-        "KMI": "",
         "ORCL": "",
         "PATH": "",
-        "PM": "",
         "SE": "",
+        "SFM": "SFM热",
+        "SHOP": "",
+        "SMTC": "",
         "SNPS": "",
         "TIGO": "",
         "TWLO": "",
@@ -225,23 +267,25 @@
         "XYL": ""
     },
     "Strategy34_backup": {
+        "ACHR": "",
         "AGX": "",
         "AMZN": "",
-        "BRK-B": "",
+        "AVGO": "",
         "CDNS": "",
         "CIEN": "",
         "CMG": "",
+        "CSL": "",
         "DKS": "",
         "FND": "",
         "FTNT": "",
         "GFI": "",
         "GRAB": "",
         "IDXX": "",
-        "KMI": "",
         "ORCL": "",
         "PATH": "",
-        "PM": "",
         "SE": "",
+        "SFM": "SFM热",
+        "SHOP": "",
         "SNPS": "",
         "TIGO": "",
         "TWLO": "",
@@ -322,90 +366,104 @@
     "PE_Volume": {},
     "PE_Volume_backup": {},
     "PE_Hot": {
+        "AGX": "",
         "AMZN": "AMZN追",
-        "BRK-B": "",
-        "FTNT": "",
-        "ORCL": "",
-        "PM": ""
+        "AVGO": "",
+        "FTNT": "FTNT追",
+        "ORCL": "ORCL追",
+        "SHOP": ""
     },
     "PE_Hot_backup": {
+        "AGX": "",
         "AMZN": "AMZN追",
-        "BRK-B": "",
-        "FTNT": "",
-        "ORCL": "",
-        "PM": ""
+        "AVGO": "",
+        "FTNT": "FTNT追",
+        "ORCL": "ORCL追",
+        "SHOP": ""
     },
-    "PE_Volume_up": {
-        "PAAS": "PAAS空"
-    },
-    "PE_Volume_up_backup": {
-        "PAAS": "PAAS空"
-    },
+    "PE_Volume_up": {},
+    "PE_Volume_up_backup": {},
     "PE_Volume_high": {
         "ADI": "ADI抄底",
-        "AIR": "AIR甲",
-        "ARGX": "ARGX甲",
         "BB": "BB抄底",
+        "CCC": "CCC甲",
         "CRDO": "CRDO抄底",
         "DY": "DY抄底",
-        "EAT": "EAT抄底",
         "FPS": "FPS抄底",
         "IREN": "IREN抄底",
+        "MNST": "MNST甲",
+        "MRCY": "MRCY抄底",
         "MRVL": "MRVL抄底",
         "MU": "MU抄底",
         "NBIS": "NBIS抄底",
+        "SAN": "SAN抄底",
         "SMCI": "SMCI抄底",
-        "SPHR": "SPHR抄底",
-        "TGT": "TGT抄底"
+        "SMTC": "SMTC抄底",
+        "TRGP": "TRGP甲",
+        "UGI": "UGI甲",
+        "VIK": "VIK抄底"
     },
     "PE_Volume_high_backup": {
         "ADI": "ADI抄底",
-        "AIR": "AIR甲",
-        "ARGX": "ARGX甲",
         "BB": "BB抄底",
+        "CCC": "CCC甲",
         "CRDO": "CRDO抄底",
         "DY": "DY抄底",
-        "EAT": "EAT抄底",
         "FPS": "FPS抄底",
         "IREN": "IREN抄底",
+        "MNST": "MNST甲",
+        "MRCY": "MRCY抄底",
         "MRVL": "MRVL抄底",
         "MU": "MU抄底",
         "NBIS": "NBIS抄底",
+        "SAN": "SAN抄底",
         "SMCI": "SMCI抄底",
-        "SPHR": "SPHR抄底",
-        "TGT": "TGT抄底"
+        "SMTC": "SMTC抄底",
+        "TRGP": "TRGP甲",
+        "UGI": "UGI甲",
+        "VIK": "VIK抄底"
     },
     "ETF_Volume_high": {
-        "IFRA": ""
+        "BWET": "",
+        "DIVB": ""
     },
     "ETF_Volume_high_backup": {
-        "IFRA": ""
+        "BWET": "",
+        "DIVB": ""
     },
     "ETF_Volume_low": {
         "AGQ": "AGQ乙",
         "BOIL": "BOIL乙",
-        "EDV": "",
+        "EWW": "",
+        "EWZ": "",
+        "FLLA": "",
+        "KWEB": "",
+        "ROBO": "",
         "SOXL": "SOXL乙",
         "SOXS": "SOXS乙",
         "SPXS": "SPXS乙",
         "SPXU": "SPXU乙",
-        "TLT": "",
         "UVXY": "UVXY乙",
         "VIXY": "VIXY乙",
-        "VXX": "VXX乙"
+        "VXX": "VXX乙",
+        "WGMI": "WGMI乙"
     },
     "ETF_Volume_low_backup": {
         "AGQ": "AGQ乙",
         "BOIL": "BOIL乙",
-        "EDV": "",
+        "EWW": "",
+        "EWZ": "",
+        "FLLA": "",
+        "KWEB": "",
+        "ROBO": "",
         "SOXL": "SOXL乙",
         "SOXS": "SOXS乙",
         "SPXS": "SPXS乙",
         "SPXU": "SPXU乙",
-        "TLT": "",
         "UVXY": "UVXY乙",
         "VIXY": "VIXY乙",
-        "VXX": "VXX乙"
+        "VXX": "VXX乙",
+        "WGMI": "WGMI乙"
     },
     "ETF_low": {},
     "ETF_low_backup": {},
@@ -529,7 +587,6 @@
     "PE_Deeper_backup": {
         "BIDU": "",
         "CIEN": "",
-        "GFI": "",
-        "MNST": "MNST15热"
+        "GFI": ""
     }
 }

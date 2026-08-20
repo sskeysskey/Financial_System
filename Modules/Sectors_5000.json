@@ -17,7 +17,8 @@
     "Financial_Services": [
         "BRK-B",
         "JPM",
-        "V"
+        "V",
+        "MA"
     ],
     "Healthcare": [
         "LLY",
@@ -36,8 +37,7 @@
         "ASML",
         "MU",
         "AMD",
-        "SKHY",
-        "INTC"
+        "SKHY"
     ],
     "Utilities": []
 }
