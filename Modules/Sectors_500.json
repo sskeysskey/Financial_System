@@ -59,8 +59,7 @@
         "ROST",
         "SE",
         "F",
-        "CVNA",
-        "AZO"
+        "CVNA"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -253,10 +252,7 @@
         "SPCX",
         "DAL",
         "BE",
-        "CARR",
-        "HEI",
-        "HONA",
-        "AXON"
+        "HONA"
     ],
     "Real_Estate": [
         "PLD",
@@ -330,9 +326,7 @@
         "ALAB",
         "NOK",
         "COHR",
-        "ADSK",
-        "CBRS",
-        "CRWV"
+        "ADSK"
     ],
     "Utilities": [
         "NEE",

@@ -5154,6 +5154,26 @@
             "RY",
             "STLD",
             "TMV"
+        ],
+        "2026-08-20": [
+            "AEE",
+            "APH",
+            "AXTI",
+            "BBWI",
+            "BJ",
+            "BRK-B",
+            "CORZ",
+            "ENVA",
+            "ETN",
+            "IDXX",
+            "KMI",
+            "NIO",
+            "OHI",
+            "ONTO",
+            "QXO",
+            "RCL",
+            "W",
+            "WING"
         ]
     },
     "SupportLevel_Over": {
@@ -9219,6 +9239,36 @@
             "NUE",
             "SMCI",
             "TWLO",
+            "YOU"
+        ],
+        "2026-08-20": [
+            "ACHR",
+            "AGX",
+            "ANET",
+            "BB",
+            "BIRK",
+            "BYD",
+            "CASY",
+            "CDNS",
+            "CLF",
+            "COGT",
+            "CSCO",
+            "CSL",
+            "DKS",
+            "FLY",
+            "FND",
+            "FTNT",
+            "HON",
+            "MFC",
+            "MTD",
+            "NBIS",
+            "NUE",
+            "RL",
+            "RS",
+            "SMCI",
+            "STLD",
+            "TWLO",
+            "XYL",
             "YOU"
         ]
     },
@@ -14011,6 +14061,21 @@
             "ORCL追",
             "SHOP追",
             "SMTC"
+        ],
+        "2026-08-20": [
+            "AMZN追",
+            "ANET追",
+            "APH",
+            "ATI",
+            "AVGO追",
+            "BRK-B追",
+            "CIEN追",
+            "ETN追",
+            "FTNT追",
+            "ORCL追",
+            "SHOP追",
+            "SMTC追",
+            "TWLO"
         ]
     },
     "PE_Volume_high": {
@@ -19028,6 +19093,31 @@
             "SAN抄底",
             "SMCI抄底",
             "TWST甲"
+        ],
+        "2026-08-20": [
+            "BB抄底",
+            "CASY抄底",
+            "CNH甲",
+            "CRDO抄底",
+            "DE甲",
+            "DY抄底",
+            "EL抄底",
+            "ENVA抄底",
+            "FPS抄底",
+            "HEI抄底",
+            "IREN抄底",
+            "MNST抄底",
+            "MRK抄底",
+            "MRNA抄底",
+            "MRVL抄底",
+            "MU抄底",
+            "NBIS抄底",
+            "NDSN甲",
+            "PCG甲",
+            "RS抄底",
+            "SMCI抄底",
+            "TRGP甲",
+            "VIRT甲"
         ]
     },
     "ETF_Volume_high": {
@@ -19490,6 +19580,10 @@
         ],
         "2026-08-19": [
             "BWET"
+        ],
+        "2026-08-20": [
+            "BWET",
+            "PPLT"
         ]
     },
     "ETF_Volume_low": {
@@ -20387,6 +20481,20 @@
             "VIXY乙",
             "VXX乙",
             "WGMI乙"
+        ],
+        "2026-08-20": [
+            "AGQ乙",
+            "BOIL乙",
+            "KWEB",
+            "ROBO",
+            "SOXL乙",
+            "SOXS乙",
+            "SPXS乙",
+            "SPXU乙",
+            "UVXY乙",
+            "VIXY乙",
+            "VXX乙",
+            "ZSL乙"
         ]
     },
     "Short_W": {
@@ -20785,6 +20893,10 @@
         ],
         "2026-08-18": [
             "MRCY抄底"
+        ],
+        "2026-08-20": [
+            "AS",
+            "XBI"
         ]
     },
     "Short": {
@@ -21807,6 +21919,12 @@
             "STLD",
             "TMV抄底",
             "WBS抄底"
+        ],
+        "2026-08-20": [
+            "BJ抄底",
+            "MFC",
+            "MTD",
+            "VIK"
         ]
     },
     "PE_W": {
@@ -67307,6 +67425,57 @@
             "SMTC",
             "SNPS",
             "TWLO",
+            "XYL"
+        ],
+        "2026-08-20": [
+            "ACHR",
+            "AEE",
+            "AGX",
+            "AMZN",
+            "ANET",
+            "APH",
+            "ATI",
+            "AVAV",
+            "AVGO",
+            "BIRK",
+            "BRK-B",
+            "BYD",
+            "CASY",
+            "CDNS",
+            "CIEN",
+            "CLF",
+            "CSL",
+            "DKS",
+            "DY",
+            "ETN",
+            "FERG",
+            "FND",
+            "FPS",
+            "FTNT",
+            "GFI",
+            "HON",
+            "IDXX",
+            "IP",
+            "IREN",
+            "IRM",
+            "KMI",
+            "NUE",
+            "ONTO",
+            "ORCL",
+            "PATH",
+            "PH",
+            "RCL",
+            "RL",
+            "RS",
+            "SE",
+            "SFM",
+            "SHOP",
+            "SMTC",
+            "SNPS",
+            "STLD",
+            "TIGO",
+            "TWLO",
+            "W",
             "XYL"
         ]
     },
