@@ -1762,6 +1762,9 @@
         ],
         "2026-08-17": [
             "PAAS空"
+        ],
+        "2026-08-21": [
+            "DKS空"
         ]
     },
     "SupportLevel_Close": {
@@ -5174,6 +5177,21 @@
             "RCL",
             "W",
             "WING"
+        ],
+        "2026-08-21": [
+            "ALL",
+            "APP",
+            "ARM",
+            "BRK-B",
+            "MTZ",
+            "OHI",
+            "ONTO",
+            "PM",
+            "QLYS",
+            "RH",
+            "RTX",
+            "SOLS",
+            "W"
         ]
     },
     "SupportLevel_Over": {
@@ -9270,6 +9288,36 @@
             "TWLO",
             "XYL",
             "YOU"
+        ],
+        "2026-08-21": [
+            "AEE",
+            "AGX",
+            "BA",
+            "CIFR",
+            "CLS",
+            "CNP",
+            "CROX",
+            "CW",
+            "ENTG",
+            "FND",
+            "HON",
+            "HUT",
+            "HXL",
+            "KMI",
+            "KRMN",
+            "LMT",
+            "NBIS",
+            "NVT",
+            "NXT",
+            "ON",
+            "PWR",
+            "STRL",
+            "SYNA",
+            "TLN",
+            "TRV",
+            "TSEM",
+            "VRSK",
+            "XYL"
         ]
     },
     "PE_Volume": {
@@ -12024,6 +12072,11 @@
         ],
         "2026-08-13": [
             "HUT"
+        ],
+        "2026-08-21": [
+            "CIFR财",
+            "CNP",
+            "HUT财"
         ]
     },
     "PE_Hot": {
@@ -14076,6 +14129,57 @@
             "SHOP追",
             "SMTC追",
             "TWLO"
+        ],
+        "2026-08-21": [
+            "AAOI",
+            "ALAB",
+            "AMAT",
+            "AMZN追",
+            "ANET追",
+            "APH追",
+            "ARM",
+            "ASML",
+            "ATI追",
+            "AVGO追",
+            "AXTI",
+            "BA",
+            "BE",
+            "BRK-B追",
+            "CIEN追",
+            "CIFR",
+            "COHR",
+            "CRDO",
+            "CRS",
+            "CRWD",
+            "DELL",
+            "DOCN",
+            "ETN追",
+            "FIX",
+            "FLEX",
+            "FTNT追",
+            "GEV",
+            "GLW",
+            "GOOGL",
+            "HPE",
+            "HUT",
+            "INTC",
+            "KLAC",
+            "LRCX",
+            "META",
+            "MKSI",
+            "MTSI",
+            "NTAP",
+            "OKTA",
+            "ONTO",
+            "PANW",
+            "PM",
+            "RTX",
+            "SMTC追",
+            "TER",
+            "TTMI",
+            "TWLO追",
+            "UNH",
+            "VRT"
         ]
     },
     "PE_Volume_high": {
@@ -19118,6 +19222,30 @@
             "SMCI抄底",
             "TRGP甲",
             "VIRT甲"
+        ],
+        "2026-08-21": [
+            "ABVX抄底",
+            "AGX抄底",
+            "BB抄底",
+            "CASY抄底",
+            "CBRS抄底",
+            "CHYM抄底",
+            "CRDO抄底",
+            "DY抄底",
+            "FPS抄底",
+            "GS抄底",
+            "IREN抄底",
+            "MNST抄底",
+            "MRNA抄底",
+            "MRVL抄底",
+            "MS抄底",
+            "MU抄底",
+            "NBIS抄底",
+            "NDSN抄底",
+            "OKTA抄底",
+            "SMCI抄底",
+            "SMTC抄底",
+            "TRV抄底"
         ]
     },
     "ETF_Volume_high": {
@@ -19584,6 +19712,9 @@
         "2026-08-20": [
             "BWET",
             "PPLT"
+        ],
+        "2026-08-21": [
+            "DIVB"
         ]
     },
     "ETF_Volume_low": {
@@ -20494,6 +20625,22 @@
             "UVXY乙",
             "VIXY乙",
             "VXX乙",
+            "ZSL乙"
+        ],
+        "2026-08-21": [
+            "AGQ乙",
+            "BOIL乙",
+            "EDV",
+            "KWEB",
+            "PPA",
+            "SOXL乙",
+            "SOXS乙",
+            "SPXS乙",
+            "SPXU乙",
+            "UVXY乙",
+            "VIXY乙",
+            "VXX乙",
+            "WGMI乙",
             "ZSL乙"
         ]
     },
@@ -21925,6 +22072,9 @@
             "MFC",
             "MTD",
             "VIK"
+        ],
+        "2026-08-21": [
+            "DAR抄底"
         ]
     },
     "PE_W": {
@@ -26055,6 +26205,23 @@
         "2026-08-11": [
             "GME",
             "PM"
+        ],
+        "2026-08-21": [
+            "CASY",
+            "CCL",
+            "CLF",
+            "DAL",
+            "DECK",
+            "FTNT",
+            "GS",
+            "M",
+            "MS",
+            "NIO",
+            "OKTA",
+            "SMMT",
+            "TD",
+            "UAL",
+            "UNH"
         ]
     },
     "OverSell_W": {
@@ -28152,6 +28319,11 @@
             "CMG",
             "SMCI",
             "VRSK"
+        ],
+        "2026-08-21": [
+            "CNP",
+            "GRAB",
+            "WING"
         ]
     },
     "PE_Deeper": {
@@ -32255,6 +32427,16 @@
             "MNST",
             "MU",
             "PL"
+        ],
+        "2026-08-21": [
+            "AGX",
+            "CIEN",
+            "CIFR",
+            "DY",
+            "FPS",
+            "IREN",
+            "PL",
+            "XPEV"
         ]
     },
     "PE_Deep": {
@@ -42202,6 +42384,41 @@
             "SMTC",
             "SNPS",
             "WING"
+        ],
+        "2026-08-21": [
+            "AAOI",
+            "ABVX",
+            "AEIS",
+            "ALK",
+            "AMKR",
+            "AVAV",
+            "AXTI",
+            "CBRS",
+            "CLS",
+            "COHR",
+            "CORZ",
+            "CRDO",
+            "CRWV",
+            "DKS",
+            "GFI",
+            "GME",
+            "HUT",
+            "JBL",
+            "MRVL",
+            "MTSI",
+            "MU",
+            "MXL",
+            "NBIS",
+            "ORCL",
+            "PSLV",
+            "RH",
+            "SBSW",
+            "SEI",
+            "SMTC",
+            "SNPS",
+            "TTMI",
+            "VICR",
+            "XE"
         ]
     },
     "PE_valid": {
@@ -61071,6 +61288,112 @@
             "W",
             "XP",
             "YOU"
+        ],
+        "2026-08-21": [
+            "AAL",
+            "ACHR",
+            "AFRM",
+            "AKAM",
+            "ALAB",
+            "ALGM",
+            "ALL",
+            "AMAT",
+            "AME",
+            "AMZN",
+            "ANET",
+            "APH",
+            "APP",
+            "ARM",
+            "ASML",
+            "ASX",
+            "ATI",
+            "AVGO",
+            "AVT",
+            "BA",
+            "BAX",
+            "BBWI",
+            "BE",
+            "BIRK",
+            "BRK-B",
+            "BUD",
+            "BURL",
+            "BXP",
+            "CALM",
+            "CROX",
+            "CRS",
+            "CRWD",
+            "CW",
+            "DELL",
+            "DOCN",
+            "ENTG",
+            "EQH",
+            "FBIN",
+            "FERG",
+            "FIX",
+            "FLEX",
+            "FLR",
+            "FND",
+            "FSLR",
+            "GEV",
+            "GFS",
+            "GLW",
+            "GOOGL",
+            "HON",
+            "HPE",
+            "HXL",
+            "INTC",
+            "JBHT",
+            "KLAC",
+            "KRMN",
+            "KTOS",
+            "LMT",
+            "LRCX",
+            "LSCC",
+            "LUV",
+            "META",
+            "MKSI",
+            "MRNA",
+            "MTZ",
+            "NCLH",
+            "NTAP",
+            "NUE",
+            "NVT",
+            "NVTS",
+            "NXT",
+            "OHI",
+            "ON",
+            "ONTO",
+            "PANW",
+            "PM",
+            "PWR",
+            "QLYS",
+            "RBC",
+            "RCL",
+            "RDDT",
+            "RS",
+            "RTX",
+            "SE",
+            "SFM",
+            "SNDK",
+            "SOLS",
+            "STLD",
+            "STRL",
+            "STX",
+            "SYNA",
+            "TER",
+            "TLN",
+            "TRV",
+            "TSEM",
+            "TWLO",
+            "UCTT",
+            "UMC",
+            "VIAV",
+            "VRSK",
+            "VRT",
+            "VSAT",
+            "W",
+            "WDC",
+            "WHR"
         ]
     },
     "PE_invalid": {
@@ -62432,6 +62755,19 @@
         "2026-08-11": [
             "COGT",
             "DFTX"
+        ],
+        "2026-08-21": [
+            "APLD",
+            "AUR",
+            "COGT",
+            "FSLY",
+            "JOBY",
+            "MDB",
+            "NET",
+            "OKLO",
+            "RKLB",
+            "S",
+            "SITM"
         ]
     },
     "_Tag_Blacklist": {},
@@ -67477,6 +67813,45 @@
             "TWLO",
             "W",
             "XYL"
+        ],
+        "2026-08-21": [
+            "ACHR",
+            "AEE",
+            "AGX",
+            "AMZN",
+            "ATI",
+            "AVAV",
+            "AVGO",
+            "AVT",
+            "BIRK",
+            "BRK-B",
+            "CALM",
+            "CDNS",
+            "CIEN",
+            "CLF",
+            "DKS",
+            "DY",
+            "ETN",
+            "FERG",
+            "FTNT",
+            "HON",
+            "IDXX",
+            "IREN",
+            "KMI",
+            "NUE",
+            "ONTO",
+            "ORCL",
+            "PH",
+            "RCL",
+            "RL",
+            "SBSW",
+            "SE",
+            "SFM",
+            "SMTC",
+            "SNPS",
+            "TWLO",
+            "W",
+            "XYL"
         ]
     },
     "PE_low": {
@@ -67487,6 +67862,13 @@
         "2026-08-11": [
             "CPRT",
             "NIO",
+            "W"
+        ],
+        "2026-08-21": [
+            "APP",
+            "BRK-B",
+            "JOBY",
+            "KRMN",
             "W"
         ]
     },
@@ -67504,6 +67886,9 @@
         "2026-08-10": [
             "CRWV",
             "USAR"
+        ],
+        "2026-08-21": [
+            "CIFR"
         ]
     }
 }

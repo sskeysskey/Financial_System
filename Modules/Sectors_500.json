@@ -17,7 +17,8 @@
         "NUE",
         "MT",
         "WPM",
-        "AU"
+        "AU",
+        "FNV"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -240,7 +241,6 @@
         "GEV",
         "NSC",
         "PWR",
-        "LHX",
         "CMI",
         "VRT",
         "PCAR",
@@ -252,7 +252,10 @@
         "SPCX",
         "DAL",
         "BE",
-        "HONA"
+        "HONA",
+        "AXON",
+        "WAB",
+        "CARR"
     ],
     "Real_Estate": [
         "PLD",
@@ -323,7 +326,6 @@
         "GRMN",
         "LITE",
         "CIEN",
-        "ALAB",
         "NOK",
         "COHR",
         "ADSK"
