@@ -253,9 +253,7 @@
         "DAL",
         "BE",
         "HONA",
-        "AXON",
-        "WAB",
-        "CARR"
+        "WAB"
     ],
     "Real_Estate": [
         "PLD",
@@ -328,7 +326,8 @@
         "CIEN",
         "NOK",
         "COHR",
-        "ADSK"
+        "ADSK",
+        "ALAB"
     ],
     "Utilities": [
         "NEE",

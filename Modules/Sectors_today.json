@@ -524,7 +524,8 @@
         "VSNT",
         "SPHR",
         "IRDM",
-        "ECHO"
+        "ECHO",
+        "RUM"
     ],
     "Consumer_Cyclical": [
         "AMZN",
@@ -1486,9 +1487,7 @@
         "CSGP",
         "EXR",
         "VICI",
-        "AVB",
         "CBRE",
-        "EQR",
         "IRM",
         "WY",
         "INVH",
@@ -1544,7 +1543,8 @@
         "RYN",
         "SBRA",
         "JAN",
-        "OUT"
+        "OUT",
+        "VMRK"
     ],
     "Technology": [
         "MSFT",
