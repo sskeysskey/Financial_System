@@ -194,6 +194,15 @@
         "message": "正在打开 tags_weights..."
     },
     {
+        "key": "r",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runOsascript",
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Add_article_failure.scpt",
+        "message": "正在 Add_article_failure..."
+    },
+    {
         "key": "one",
         "modifiers": [
             "control"
@@ -228,8 +237,8 @@
             "option"
         ],
         "actionType": "runInTerminal",
-        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/OVideo/Crawl_gdefud.py' cdp fast",
-        "message": "正在执行 Crawl_gdefud (cdp fast)..."
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/OVideo/Crawl_shangxidq.py' open",
+        "message": "正在执行 Crawl_shangxidq (open)..."
     },
     {
         "key": "two",
@@ -710,7 +719,7 @@
         "message": "正在执行 Bob 脚本..."
     },
     {
-        "key": "h",
+        "key": "y",
         "modifiers": [
             "control"
         ],
@@ -719,7 +728,7 @@
         "message": "正在执行 API_News_Sonnet..."
     },
     {
-        "key": "h",
+        "key": "y",
         "modifiers": [
             "control",
             "option"
@@ -729,7 +738,7 @@
         "message": "正在执行 API_News_Sonnet (Force)..."
     },
     {
-        "key": "n",
+        "key": "h",
         "modifiers": [
             "control"
         ],
@@ -738,7 +747,7 @@
         "message": "正在执行 Doubao_News..."
     },
     {
-        "key": "n",
+        "key": "h",
         "modifiers": [
             "control",
             "option"
@@ -746,6 +755,25 @@
         "actionType": "runOsascriptDirect",
         "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/Doubao_News.scpt\") with parameters {\"\", \"normal\", true}",
         "message": "正在执行 Doubao_News (Force)..."
+    },
+    {
+        "key": "n",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runOsascriptDirect",
+        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/Qianwen_News.scpt\") with parameters {\"\", \"normal\", false}",
+        "message": "正在执行 Qianwen_News..."
+    },
+    {
+        "key": "n",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runOsascriptDirect",
+        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/Qianwen_News.scpt\") with parameters {\"\", \"normal\", true}",
+        "message": "正在执行 Qianwen_News (Force)..."
     },
     {
         "key": "three",

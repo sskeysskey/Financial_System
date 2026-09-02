@@ -17,8 +17,7 @@
         "NUE",
         "MT",
         "WPM",
-        "AU",
-        "FNV"
+        "AU"
     ],
     "Communication_Services": [
         "GOOGL",
@@ -169,8 +168,7 @@
         "CM",
         "BNY",
         "NDAQ",
-        "STT",
-        "PYPL"
+        "STT"
     ],
     "Healthcare": [
         "LLY",
@@ -251,9 +249,7 @@
         "FAST",
         "SPCX",
         "DAL",
-        "BE",
-        "HONA",
-        "WAB"
+        "BE"
     ],
     "Real_Estate": [
         "PLD",
@@ -263,7 +259,8 @@
         "SPG",
         "DLR",
         "O",
-        "PSA"
+        "PSA",
+        "VMRK"
     ],
     "Technology": [
         "AAPL",
@@ -327,7 +324,7 @@
         "NOK",
         "COHR",
         "ADSK",
-        "ALAB"
+        "UMC"
     ],
     "Utilities": [
         "NEE",
