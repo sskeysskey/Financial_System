@@ -227,8 +227,8 @@
             "control"
         ],
         "actionType": "runInTerminal",
-        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/OVideo/Crawl_gdefud.py' open",
-        "message": "正在执行 Crawl_gdefud (open)..."
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/OVideo/Crawl_pdy0.py' open",
+        "message": "正在执行 Crawl_pdy0 (open)..."
     },
     {
         "key": "two",
@@ -237,8 +237,8 @@
             "option"
         ],
         "actionType": "runInTerminal",
-        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/OVideo/Crawl_shangxidq.py' open",
-        "message": "正在执行 Crawl_shangxidq (open)..."
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/OVideo/Crawl_gdefud.py' open",
+        "message": "正在执行 Crawl_gdefud (open)..."
     },
     {
         "key": "two",
@@ -246,9 +246,9 @@
             "control",
             "command"
         ],
-        "actionType": "runOsascript",
-        "target": "/Users/yanzhang/Coding/ScriptEditor/Kalshi_Prediction.scpt",
-        "message": "正在 Kalshi_Prediction..."
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/OVideo/Crawl_shangxidq.py' open",
+        "message": "正在执行 Crawl_shangxidq (open)..."
     },
     {
         "key": "one",
