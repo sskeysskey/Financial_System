@@ -17,7 +17,8 @@
         "NUE",
         "MT",
         "WPM",
-        "AU"
+        "AU",
+        "FNV"
     ],
     "Communication_Services": [
         "GOOGL",
