@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Firstrade 股票标签助手",
+  "version": "1.2",
+  "description": "在 Firstrade 持仓列表中为每只股票显示本地 description.json 中的自定义 Tag 标签",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Firstrade 股票标签助手"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://invest.firstrade.com/*",
+        "https://*.firstrade.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ]
+}

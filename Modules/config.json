@@ -743,8 +743,8 @@
             "control"
         ],
         "actionType": "runOsascriptDirect",
-        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/Doubao_News.scpt\") with parameters {\"\", \"normal\", false}",
-        "message": "正在执行 Doubao_News..."
+        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/News_Engine.scpt\") with parameters {\"\", \"normal\", false, \"deepseek,qianwen,doubao\"}",
+        "message": "正在执行 News (DeepSeek→千问→豆包)..."
     },
     {
         "key": "h",
@@ -753,8 +753,8 @@
             "option"
         ],
         "actionType": "runOsascriptDirect",
-        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/Doubao_News.scpt\") with parameters {\"\", \"normal\", true}",
-        "message": "正在执行 Doubao_News (Force)..."
+        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/News_Engine.scpt\") with parameters {\"\", \"normal\", true, \"deepseek,qianwen,doubao\"}",
+        "message": "正在执行 News (DeepSeek→千问→豆包, Force)..."
     },
     {
         "key": "n",
@@ -762,8 +762,8 @@
             "control"
         ],
         "actionType": "runOsascriptDirect",
-        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/Qianwen_News.scpt\") with parameters {\"\", \"normal\", false}",
-        "message": "正在执行 Qianwen_News..."
+        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/News_Engine.scpt\") with parameters {\"\", \"normal\", false, \"qianwen,deepseek,doubao\"}",
+        "message": "正在执行 News (千问→DeepSeek→豆包)..."
     },
     {
         "key": "n",
@@ -772,8 +772,8 @@
             "option"
         ],
         "actionType": "runOsascriptDirect",
-        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/Qianwen_News.scpt\") with parameters {\"\", \"normal\", true}",
-        "message": "正在执行 Qianwen_News (Force)..."
+        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/News_Engine.scpt\") with parameters {\"\", \"normal\", true, \"qianwen,deepseek,doubao\"}",
+        "message": "正在执行 News (千问→DeepSeek→豆包, Force)..."
     },
     {
         "key": "three",

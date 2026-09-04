@@ -1,0 +1,60 @@
+/* 标签外层容器：行内显示，紧跟在股票代码右侧 */
+.ft-custom-tag-container {
+  display: inline-flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 3px !important;
+  margin-left: 6px !important;
+  vertical-align: middle !important;
+  line-height: 1 !important;
+  flex: 0 0 auto !important;
+  pointer-events: auto !important;
+}
+
+/* 标签小徽章 */
+.ft-custom-tag-badge {
+  display: inline-block !important;
+  font-size: 10px !important;
+  line-height: 14px !important;
+  padding: 0 4px !important;
+  border-radius: 3px !important;
+  background-color: rgba(59, 130, 246, 0.16) !important;
+  color: #7cb6ff !important;
+  border: 1px solid rgba(59, 130, 246, 0.35) !important;
+  white-space: nowrap !important;
+  user-select: none !important;
+  max-width: 96px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  font-weight: 400 !important;
+}
+
+.ft-custom-tag-more {
+  background-color: rgba(148, 163, 184, 0.18) !important;
+  color: #cbd5e1 !important;
+  border-color: rgba(148, 163, 184, 0.35) !important;
+}
+
+/* 让 symbol 单元格允许内容溢出显示，并盖在右侧列之上 */
+[col-id="symbol"] {
+  overflow: visible !important;
+  z-index: 5 !important;
+}
+
+[col-id="symbol"] .ag-cell-wrapper,
+[col-id="symbol"] .ag-group-value,
+[col-id="symbol"] [data-ref="eValue"] {
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+/* 解除 Tailwind 的 min-w-0 截断，让标签有空间横排 */
+[col-id="symbol"] .ag-group-value>div>div {
+  overflow: visible !important;
+}
+
+/* 亮色主题下的可读性微调 */
+html:not(.dark) .ft-custom-tag-badge,
+.ag-theme-quartz .ft-custom-tag-badge {
+  color: #2563eb !important;
+}

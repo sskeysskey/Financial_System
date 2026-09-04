@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 280px;
+      padding: 12px;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+      font-size: 13px;
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 14px;
+      margin: 0 0 6px;
+    }
+
+    .hint {
+      color: #666;
+      font-size: 12px;
+      margin: 4px 0 8px;
+      line-height: 1.5;
+    }
+
+    input[type="file"] {
+      width: 100%;
+      font-size: 12px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 70px;
+      font-size: 11px;
+      box-sizing: border-box;
+      margin-top: 6px;
+      font-family: Menlo, monospace;
+    }
+
+    button {
+      width: 100%;
+      padding: 6px;
+      margin-top: 8px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    #status {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #059669;
+      line-height: 1.5;
+      word-break: break-all;
+    }
+
+    .row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-top: 8px;
+    }
+
+    .row label {
+      flex: none;
+      color: #444;
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid #eee;
+      margin: 12px 0 6px;
+    }
+
+    .small {
+      font-size: 11px;
+      color: #999;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>同步标签数据</h1>
+  <p class="hint">选择本地的 <code>description.json</code>：</p>
+  <input type="file" id="fileInput" accept=".json,application/json">
+
+  <p class="hint" style="margin-top:10px;">或者直接粘贴 JSON 内容（备用方案）：</p>
+  <textarea id="pasteArea" placeholder='{"stocks":[...],"etfs":[...]}'></textarea>
+  <button id="pasteBtn">解析粘贴内容</button>
+
+  <div class="row">
+    <label for="maxTags">每行最多显示</label>
+    <input type="number" id="maxTags" min="1" max="20" value="4" style="width:52px;">
+    <span class="small">个标签</span>
+  </div>
+
+  <button id="clearBtn" style="background:#fff;color:#b91c1c;">清空缓存数据</button>
+
+  <div id="status"></div>
+
+  <hr>
+  <p class="small">改完数据后：重新导入一次，页面会自动刷新标签，无需重启浏览器。</p>
+
+  <script src="popup.js"></script>
+</body>
+
+</html>

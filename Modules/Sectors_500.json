@@ -169,7 +169,8 @@
         "CM",
         "BNY",
         "NDAQ",
-        "STT"
+        "STT",
+        "COIN"
     ],
     "Healthcare": [
         "LLY",
@@ -321,11 +322,10 @@
         "SKHY",
         "GRMN",
         "LITE",
-        "CIEN",
         "NOK",
         "COHR",
-        "ADSK",
-        "UMC"
+        "MSTR",
+        "XYZ"
     ],
     "Utilities": [
         "NEE",
