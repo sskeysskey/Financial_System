@@ -1,11 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Firstrade 股票标签助手",
-  "version": "1.2",
-  "description": "在 Firstrade 持仓列表中为每只股票显示本地 description.json 中的自定义 Tag 标签",
+  "version": "2.0",
+  "description": "在 Firstrade 列表中显示 Tag 徽章、悬停展示完整标签卡片，并支持点击直接唤起本地 Python 价格曲线。",
   "permissions": [
     "storage",
     "activeTab"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:18888/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -24,7 +27,7 @@
         "content.css"
       ],
       "run_at": "document_idle",
-      "all_frames": true
+      "all_frames": false
     }
   ]
 }

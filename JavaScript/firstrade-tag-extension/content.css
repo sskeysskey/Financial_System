@@ -1,60 +1,188 @@
-/* 标签外层容器：行内显示，紧跟在股票代码右侧 */
+/* ==================== 标签外层容器 ==================== */
 .ft-custom-tag-container {
   display: inline-flex !important;
-  flex-wrap: nowrap !important;
   align-items: center !important;
+  flex-wrap: nowrap !important;
   gap: 3px !important;
   margin-left: 6px !important;
   vertical-align: middle !important;
   line-height: 1 !important;
-  flex: 0 0 auto !important;
   pointer-events: auto !important;
+  flex-shrink: 0 !important;
+  z-index: 2 !important;
 }
 
-/* 标签小徽章 */
+/* ==================== 单个微型徽章 ==================== */
 .ft-custom-tag-badge {
   display: inline-block !important;
   font-size: 10px !important;
-  line-height: 14px !important;
-  padding: 0 4px !important;
-  border-radius: 3px !important;
+  line-height: 15px !important;
+  padding: 0 5px !important;
+  border-radius: 4px !important;
   background-color: rgba(59, 130, 246, 0.16) !important;
   color: #7cb6ff !important;
   border: 1px solid rgba(59, 130, 246, 0.35) !important;
   white-space: nowrap !important;
   user-select: none !important;
-  max-width: 96px !important;
+  max-width: 85px !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
-  font-weight: 400 !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
 }
 
+.ft-custom-tag-badge:hover {
+  background-color: rgba(59, 130, 246, 0.32) !important;
+  border-color: rgba(59, 130, 246, 0.6) !important;
+  color: #ffffff !important;
+}
+
+/* “+N” 更多徽章 */
 .ft-custom-tag-more {
   background-color: rgba(148, 163, 184, 0.18) !important;
   color: #cbd5e1 !important;
   border-color: rgba(148, 163, 184, 0.35) !important;
 }
 
-/* 让 symbol 单元格允许内容溢出显示，并盖在右侧列之上 */
+/* ==================== 股票代码交互修饰 ==================== */
+/* 给原股票代码按钮加上 hover 光标和图表暗示 */
+[col-id="symbol"] button[data-tooltip-trigger] {
+  cursor: pointer !important;
+  position: relative !important;
+}
+
+/* 图表触发小图标（也可以通过点击它或者点击股票代码拉起） */
+.ft-chart-trigger-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 16px !important;
+  height: 16px !important;
+  margin-left: 2px !important;
+  border-radius: 3px !important;
+  color: #88C0D0 !important;
+  cursor: pointer !important;
+  opacity: 0.7 !important;
+  transition: opacity 0.15s, transform 0.15s !important;
+  vertical-align: middle !important;
+}
+
+.ft-chart-trigger-btn:hover {
+  opacity: 1 !important;
+  transform: scale(1.18) !important;
+  color: #5E81AC !important;
+}
+
+/* ==================== 全局悬浮 Popover（完全摆脱表格限制） ==================== */
+#ft-global-tag-popover {
+  position: fixed !important;
+  z-index: 99999999 !important;
+  background: #2E3440 !important;
+  border: 1px solid #4C566A !important;
+  border-radius: 8px !important;
+  padding: 10px 12px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4) !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+  color: #ECEFF4 !important;
+  font-size: 12px !important;
+  pointer-events: auto !important;
+  max-width: 320px !important;
+  min-width: 140px !important;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.15s ease, transform 0.15s ease !important;
+  display: none;
+}
+
+#ft-global-tag-popover.ft-popover-show {
+  display: block !important;
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
+.ft-popover-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 8px !important;
+  border-bottom: 1px solid #434C5E !important;
+  padding-bottom: 4px !important;
+}
+
+.ft-popover-symbol {
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  color: #88C0D0 !important;
+}
+
+.ft-popover-openchart-tip {
+  font-size: 10px !important;
+  color: #81A1C1 !important;
+  cursor: pointer !important;
+}
+
+.ft-popover-openchart-tip:hover {
+  text-decoration: underline !important;
+  color: #ECEFF4 !important;
+}
+
+.ft-popover-tags-box {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 5px !important;
+}
+
+.ft-popover-fulltag {
+  display: inline-block !important;
+  background: #3B4252 !important;
+  color: #D8DEE9 !important;
+  border: 1px solid #4C566A !important;
+  padding: 2px 7px !important;
+  border-radius: 4px !important;
+  font-size: 11px !important;
+  line-height: 1.4 !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+}
+
+/* ==================== ag-Grid 结构解绑 ==================== */
+/* 解除表格限制 */
 [col-id="symbol"] {
   overflow: visible !important;
-  z-index: 5 !important;
 }
 
-[col-id="symbol"] .ag-cell-wrapper,
-[col-id="symbol"] .ag-group-value,
-[col-id="symbol"] [data-ref="eValue"] {
+[col-id="symbol"] .ag-cell-wrapper {
   overflow: visible !important;
-  text-overflow: clip !important;
 }
 
-/* 解除 Tailwind 的 min-w-0 截断，让标签有空间横排 */
+[col-id="symbol"] .ag-group-value {
+  overflow: visible !important;
+}
+
+[col-id="symbol"] .ag-group-value>div,
 [col-id="symbol"] .ag-group-value>div>div {
   overflow: visible !important;
 }
 
-/* 亮色主题下的可读性微调 */
-html:not(.dark) .ft-custom-tag-badge,
-.ag-theme-quartz .ft-custom-tag-badge {
-  color: #2563eb !important;
+/* 亮色模式微调 */
+html:not(.dark) #ft-global-tag-popover {
+  background: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  color: #1E293B !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15) !important;
+}
+
+html:not(.dark) .ft-popover-header {
+  border-bottom-color: #E2E8F0 !important;
+}
+
+html:not(.dark) .ft-popover-symbol {
+  color: #2563EB !important;
+}
+
+html:not(.dark) .ft-popover-fulltag {
+  background: #F1F5F9 !important;
+  border-color: #CBD5E1 !important;
+  color: #334155 !important;
 }

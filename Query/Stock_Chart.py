@@ -242,7 +242,7 @@ if __name__ == '__main__':
     db_path = DB_PATH
     
     if len(sys.argv) > 1:
-        arg = sys.argv[1]
+        arg = sys.argv[1].strip()
         if arg == "paste":
             # pyperclip.paste() 依然可用，或者使用Qt的剪贴板，去掉两端空白
             clipboard_content = pyperclip.paste().strip().upper()
@@ -253,6 +253,9 @@ if __name__ == '__main__':
             user_input = get_user_input_qt("请输入")
             # 调用更新后的 input_mapping
             input_mapping(data, db_path, user_input.upper() if user_input else None)
+        else:
+            # === 新增优化：直接把传入的参数当做股票代码解析 ===
+            input_mapping(data, db_path, arg.upper())
     else:
-        print("请提供参数 input 或 paste")
+        print("请提供参数 input, paste 或直接提供股票代码如 AAPL")
         sys.exit(1)
