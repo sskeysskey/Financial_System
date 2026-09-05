@@ -56,6 +56,75 @@ TIME_OPTIONS = {"1m": 0.08, "3m": 0.25, "6m": 0.5, "1Y": 1, "2Y": 2,
 HOVER_THROTTLE = 1 / 90.0
 REBUILD_THROTTLE = 0.15
 
+# ============ 读取 Firstrade 真实持仓缓存 ============
+FIRSTRADE_POSITIONS_FILE = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "firstrade_positions.json")
+FT_DEBUG = os.environ.get("FT_DEBUG", "") == "1"
+FT_SHOW_MISS = os.environ.get("FT_SHOW_MISS", "1") == "1"
+
+
+def _ft_norm_sym(s):
+    """AAPL / brk.b / BRK-B 统一成大写且以 '-' 为分隔的形式"""
+    return str(s).strip().upper().replace('.', '-')
+
+
+def get_firstrade_position(symbol):
+    """读取 Chrome 插件回传的真实持仓数据，返回 dict 或 None"""
+    if not symbol:
+        return None
+    path = FIRSTRADE_POSITIONS_FILE
+    if not os.path.exists(path):
+        if FT_DEBUG:
+            print(f"[FT] 持仓文件不存在: {path}")
+        return None
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except Exception as e:
+        print(f"[FT] 读取持仓数据失败: {e}")
+        return None
+    if not isinstance(data, dict):
+        return None
+
+    target = _ft_norm_sym(symbol)
+    for k, v in data.items():
+        if str(k).startswith('_') or not isinstance(v, dict):
+            continue
+        if _ft_norm_sym(k) == target:
+            if FT_DEBUG:
+                print(f"[FT] 命中持仓 {k}: {v}")
+            return v
+    if FT_DEBUG:
+        keys = [k for k in data.keys() if not str(k).startswith('_')]
+        print(f"[FT] 未找到 {symbol}（文件里有 {len(keys)} 条）: {keys[:25]}")
+    return None
+
+
+def _ft_layout_text_row(fig, x0, y, items, fontsize=12, gap_px=14, x_limit=0.32):
+    """按实际像素宽度自适应地把 [(文本, 颜色, 粗细), ...] 横向排成一行，避免互相重叠"""
+    arts = []
+    try:
+        renderer = fig.canvas.get_renderer()
+    except Exception:
+        renderer = None
+    fig_w_px = max(1.0, fig.get_figwidth() * fig.dpi)
+    x = x0
+    for txt, color, weight in items:
+        if x > x_limit:
+            break
+        t = fig.text(x, y, txt, color=color, fontsize=fontsize, fontweight=weight,
+                     ha='left', va='top', fontname='Arial Unicode MS')
+        arts.append(t)
+        w_frac = None
+        if renderer is not None:
+            try:
+                w_frac = (t.get_window_extent(renderer=renderer).width + gap_px) / fig_w_px
+            except Exception:
+                w_frac = None
+        if not w_frac or w_frac <= 0:
+            w_frac = (len(txt) * fontsize * 0.62 + gap_px) / fig_w_px
+        x += w_frac
+    return arts
+
 # ============ 全局实时价格管理器（整个进程共用一个线程 + 一个 fetcher） ============
 class _RealtimeManager:
     def __init__(self):
@@ -837,6 +906,7 @@ class ChartWindow:
         # 触发一次时间范围更新（radio.set_active 会调用 self.update）
         default_index = list(TIME_OPTIONS.keys()).index(default_time_range)
         self.radio.set_active(default_index)
+        self.update(default_time_range)  # <--- 加上这行显式调用，防止切换股票时默认范围相同时不触发副标题重绘
         return True
 
     # ------------------------------------------------------------------
@@ -1136,7 +1206,6 @@ class ChartWindow:
             title_text = f'{title_symbol}  {self.compare}  {turnover_str} {turnover_rate} {marketcap_in_billion} {pe_text} {self.pb_text} "{self.table_name}" {fullname} {tag_str}'
         return title_text, title_color, clickable
 
-    # ------------------------------------------------------------------
     def draw_subtitle(self, current_prices=None, pre_after_pct=None):
         for artist in self.subtitle_artists:
             try: artist.remove()
@@ -1145,6 +1214,90 @@ class ChartWindow:
 
         fig = self.fig
         name = self.name
+
+        # ========= 第二行最左侧：Chrome 插件从 Firstrade 网页回传的真实持仓 =========
+        pos = get_firstrade_position(name)
+        if pos:
+            raw = pos.get('raw') or {}
+
+            def _pick(*keys):
+                for k in keys:
+                    v = pos.get(k)
+                    if v not in (None, '', '--'):
+                        return str(v)
+                for k in keys:
+                    v = raw.get(k)
+                    if v not in (None, '', '--'):
+                        return str(v)
+                return None
+
+            def _num(s):
+                try:
+                    m = re.search(r'[-+]?\d[\d,]*\.?\d*', str(s).replace(' ', ''))
+                    return float(m.group(0).replace(',', '')) if m else None
+                except Exception:
+                    return None
+
+            def _sign_color(s):
+                v = _num(s)
+                if v is None:
+                    return NORD_THEME['text_bright']
+                if v > 0:
+                    return NORD_THEME['accent_red']      # 红涨
+                if v < 0:
+                    return NORD_THEME['accent_green']    # 绿跌
+                return NORD_THEME['text_bright']
+
+            def _fmt_money(s):
+                v = _num(s)
+                if v is None:
+                    return str(s)
+                if abs(v) >= 1e6:
+                    return f"{v/1e6:.2f}M"
+                if abs(v) >= 1e3:
+                    return f"{v/1e3:.1f}K"
+                return f"{v:.0f}"
+
+            cost_val = _pick('cost', 'totalCost')
+            day_val = _pick('day_change', 'changePercent')
+            gl_val = _pick('gainloss', 'gainlossPercent')
+            # qty_val = _pick('quantity')
+            alloc_val = _pick('allocation', 'allocationPercent')
+
+            ft_items = []
+            if cost_val:
+                ft_items.append((f"成本 {_fmt_money(cost_val)}",
+                                 NORD_THEME['accent_yellow'], 'bold'))
+            # if qty_val:
+            #     q = _num(qty_val)
+            #     ft_items.append((f"×{q:.0f}" if q is not None else f"×{qty_val}",
+            #                      NORD_THEME['text_light'], 'normal'))
+            if day_val:
+                ft_items.append((f"日{day_val}", _sign_color(day_val), 'bold'))
+            if gl_val:
+                ft_items.append((f"总{gl_val}", _sign_color(gl_val), 'bold'))
+            if alloc_val:
+                ft_items.append((f"仓{alloc_val}", NORD_THEME['accent_cyan'], 'normal'))
+
+            # 数据太旧时给个提示（插件回传的时间戳是毫秒）
+            try:
+                ts = pos.get('updated_at')
+                if ts:
+                    age_h = (time.time() - float(ts) / 1000.0) / 3600.0
+                    if age_h > 20:
+                        ft_items.append((f"({age_h/24:.0f}天前)", NORD_THEME['border'], 'normal'))
+            except Exception:
+                pass
+
+            if ft_items:
+                self.subtitle_artists.extend(
+                    _ft_layout_text_row(fig, 0.045, 0.915, ft_items, fontsize=12)
+                )
+        elif FT_SHOW_MISS:
+            t_miss = fig.text(0.045, 0.915, "持仓: 网页无数据",
+                              color=NORD_THEME['border'], fontsize=10,
+                              ha='left', va='top', fontname='Arial Unicode MS')
+            self.subtitle_artists.append(t_miss)
 
         er_pct_str, max_pct_str, min_pct_str = "--", "--", "--"
         er_color = NORD_THEME['text_bright']
@@ -1173,7 +1326,7 @@ class ChartWindow:
                     pass
 
         y_pos = 0.915
-        center_x = 0.3
+        center_x = 0.35  # 自适应错开持仓区域
         spacing_outer = 0.16
         base_x = center_x + spacing_outer + 0.08
 

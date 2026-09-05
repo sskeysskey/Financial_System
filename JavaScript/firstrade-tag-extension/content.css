@@ -1,4 +1,4 @@
-/* ==================== 标签外层容器 ==================== */
+/* ==================== 标签外层容器（主交互热区） ==================== */
 .ft-custom-tag-container {
   display: inline-flex !important;
   align-items: center !important;
@@ -10,9 +10,10 @@
   pointer-events: auto !important;
   flex-shrink: 0 !important;
   z-index: 2 !important;
+  cursor: pointer !important;
 }
 
-/* ==================== 单个微型徽章（仅展示） ==================== */
+/* ==================== 单个微型徽章 ==================== */
 .ft-custom-tag-badge {
   display: inline-block !important;
   font-size: 10px !important;
@@ -28,25 +29,50 @@
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   font-weight: 500 !important;
-  cursor: default !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
 }
 
-/* “+N” 更多徽章 */
+.ft-custom-tag-badge:hover {
+  background-color: rgba(59, 130, 246, 0.35) !important;
+  border-color: rgba(59, 130, 246, 0.6) !important;
+  color: #ffffff !important;
+}
+
 .ft-custom-tag-more {
   background-color: rgba(148, 163, 184, 0.18) !important;
   color: #cbd5e1 !important;
   border-color: rgba(148, 163, 184, 0.35) !important;
 }
 
-/* ==================== 股票代码交互修饰 ==================== */
+.ft-custom-tag-more:hover {
+  background-color: rgba(148, 163, 184, 0.35) !important;
+  color: #ffffff !important;
+}
+
+/* 无 tag 时的「仅看图」徽章 */
+.ft-custom-tag-chart {
+  background-color: rgba(163, 190, 140, 0.14) !important;
+  border-color: rgba(163, 190, 140, 0.30) !important;
+  color: #a3be8c !important;
+  font-size: 9px !important;
+  padding: 0 4px !important;
+  opacity: 0.45 !important;
+}
+
+.ft-custom-tag-container:hover .ft-custom-tag-chart {
+  opacity: 1 !important;
+  background-color: rgba(163, 190, 140, 0.35) !important;
+}
+
+/* ==================== 还原原股票代码为默认样式 ==================== */
 [col-id="symbol"] button[data-tooltip-trigger],
 [col-id="symbol"] button,
 [col-id="symbol"] [data-ref="eValue"] {
-  cursor: pointer !important;
-  position: relative !important;
+  cursor: default !important;
 }
 
-/* ==================== 全局悬浮 Popover（完全摆脱表格限制） ==================== */
+/* ==================== 全局悬浮 Popover ==================== */
 #ft-global-tag-popover {
   position: fixed !important;
   z-index: 99999999 !important;
@@ -60,7 +86,7 @@
   font-size: 12px !important;
   pointer-events: auto !important;
   max-width: 320px !important;
-  min-width: 140px !important;
+  min-width: 160px !important;
   opacity: 0;
   transform: translateY(4px);
   transition: opacity 0.15s ease, transform 0.15s ease !important;
@@ -77,9 +103,10 @@
   display: flex !important;
   justify-content: space-between !important;
   align-items: center !important;
-  margin-bottom: 8px !important;
+  margin-bottom: 6px !important;
   border-bottom: 1px solid #434C5E !important;
   padding-bottom: 4px !important;
+  gap: 10px !important;
 }
 
 .ft-popover-symbol {
@@ -92,11 +119,20 @@
   font-size: 10px !important;
   color: #81A1C1 !important;
   cursor: pointer !important;
+  white-space: nowrap !important;
 }
 
 .ft-popover-openchart-tip:hover {
   text-decoration: underline !important;
   color: #ECEFF4 !important;
+}
+
+/* 抓取到的持仓数据预览 */
+.ft-popover-position {
+  font-size: 11px !important;
+  color: #EBCB8B !important;
+  margin-bottom: 6px !important;
+  line-height: 1.5 !important;
 }
 
 .ft-popover-tags-box {
@@ -118,19 +154,34 @@
   word-break: break-word !important;
 }
 
+/* ==================== 右下角提示 Toast ==================== */
+#ft-toast {
+  position: fixed !important;
+  right: 16px !important;
+  bottom: 16px !important;
+  z-index: 99999999 !important;
+  background: #3B4252 !important;
+  color: #ECEFF4 !important;
+  border: 1px solid #4C566A !important;
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+  font-size: 12px !important;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4) !important;
+  opacity: 0 !important;
+  transform: translateY(8px) !important;
+  transition: opacity .2s ease, transform .2s ease !important;
+  pointer-events: none !important;
+}
+
+#ft-toast.ft-toast-show {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
 /* ==================== ag-Grid 结构解绑 ==================== */
-[col-id="symbol"] {
-  overflow: visible !important;
-}
-
-[col-id="symbol"] .ag-cell-wrapper {
-  overflow: visible !important;
-}
-
-[col-id="symbol"] .ag-group-value {
-  overflow: visible !important;
-}
-
+[col-id="symbol"],
+[col-id="symbol"] .ag-cell-wrapper,
+[col-id="symbol"] .ag-group-value,
 [col-id="symbol"] .ag-group-value>div,
 [col-id="symbol"] .ag-group-value>div>div {
   overflow: visible !important;
@@ -150,6 +201,10 @@ html:not(.dark) .ft-popover-header {
 
 html:not(.dark) .ft-popover-symbol {
   color: #2563EB !important;
+}
+
+html:not(.dark) .ft-popover-position {
+  color: #B45309 !important;
 }
 
 html:not(.dark) .ft-popover-fulltag {

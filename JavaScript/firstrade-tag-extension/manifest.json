@@ -1,15 +1,19 @@
 {
   "manifest_version": 3,
   "name": "Firstrade 股票标签助手",
-  "version": "2.0",
-  "description": "在 Firstrade 列表中显示 Tag 徽章、悬停展示完整标签卡片，并支持点击直接唤起本地 Python 价格曲线。",
+  "version": "3.0",
+  "description": "在 Firstrade 列表显示本地 Tag 徽章，并把网页真实持仓数据（成本/今日盈亏/累计盈亏）回传给本机 Python 图表。",
   "permissions": [
     "storage",
     "activeTab"
   ],
   "host_permissions": [
-    "http://127.0.0.1:18888/*"
+    "http://127.0.0.1:18888/*",
+    "http://localhost:18888/*"
   ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
     "default_popup": "popup.html",
     "default_title": "Firstrade 股票标签助手"

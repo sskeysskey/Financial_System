@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <style>
     body {
-      width: 280px;
+      width: 300px;
       padding: 12px;
       font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
       font-size: 13px;
@@ -15,6 +15,12 @@
     h1 {
       font-size: 14px;
       margin: 0 0 6px;
+    }
+
+    h2 {
+      font-size: 13px;
+      margin: 12px 0 4px;
+      color: #0f172a;
     }
 
     .hint {
@@ -31,7 +37,7 @@
 
     textarea {
       width: 100%;
-      height: 70px;
+      height: 60px;
       font-size: 11px;
       box-sizing: border-box;
       margin-top: 6px;
@@ -46,12 +52,14 @@
       font-size: 13px;
     }
 
-    #status {
-      margin-top: 10px;
+    #status,
+    #bridgeStatus {
+      margin-top: 8px;
       font-size: 12px;
       color: #059669;
       line-height: 1.5;
       word-break: break-all;
+      white-space: pre-wrap;
     }
 
     .row {
@@ -76,15 +84,22 @@
       font-size: 11px;
       color: #999;
     }
+
+    .primary {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+    }
   </style>
 </head>
 
 <body>
-  <h1>同步标签数据</h1>
+  <h1>① 同步标签数据（本地 → 网页）</h1>
   <p class="hint">选择本地的 <code>description.json</code>：</p>
   <input type="file" id="fileInput" accept=".json,application/json">
 
-  <p class="hint" style="margin-top:10px;">或者直接粘贴 JSON 内容（备用方案）：</p>
+  <p class="hint" style="margin-top:8px;">或直接粘贴 JSON（备用）：</p>
   <textarea id="pasteArea" placeholder='{"stocks":[...],"etfs":[...]}'></textarea>
   <button id="pasteBtn">解析粘贴内容</button>
 
@@ -93,13 +108,25 @@
     <input type="number" id="maxTags" min="1" max="10" value="2" style="width:52px;">
     <span class="small">个标签</span>
   </div>
-
-  <button id="clearBtn" style="background:#fff;color:#b91c1c;">清空缓存数据</button>
-
+  <button id="clearBtn" style="background:#fff;color:#b91c1c;">清空标签缓存</button>
   <div id="status"></div>
 
   <hr>
-  <p class="small">改完数据后：重新导入一次，页面会自动刷新标签，无需重启浏览器。</p>
+  <h1>② 回传持仓数据（网页 → 本地）</h1>
+  <p class="hint">先确保 <code>bridge_server.py</code> 已在终端运行。</p>
+  <button id="pingBtn">🔌 测试本地桥接连接</button>
+  <button id="scanBtn" class="primary">⬇️ 抓取全部持仓（自动滚动整表）</button>
+  <button id="dumpBtn">🔍 查看当前已抓取的数据</button>
+  <button id="serverBtn">📄 查看本机已保存的 JSON</button>
+  <div id="bridgeStatus"></div>
+
+  <div class="row">
+    <input type="checkbox" id="dbgChk" style="width:auto;">
+    <label for="dbgChk" class="small">开启控制台调试日志</label>
+  </div>
+
+  <hr>
+  <p class="small">改完 description.json 后重新导入一次即可，无需重启浏览器。</p>
 
   <script src="popup.js"></script>
 </body>
