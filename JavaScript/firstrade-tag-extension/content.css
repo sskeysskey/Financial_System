@@ -12,7 +12,7 @@
   z-index: 2 !important;
 }
 
-/* ==================== 单个微型徽章 ==================== */
+/* ==================== 单个微型徽章（仅展示） ==================== */
 .ft-custom-tag-badge {
   display: inline-block !important;
   font-size: 10px !important;
@@ -28,14 +28,7 @@
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   font-weight: 500 !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
-}
-
-.ft-custom-tag-badge:hover {
-  background-color: rgba(59, 130, 246, 0.32) !important;
-  border-color: rgba(59, 130, 246, 0.6) !important;
-  color: #ffffff !important;
+  cursor: default !important;
 }
 
 /* “+N” 更多徽章 */
@@ -46,32 +39,11 @@
 }
 
 /* ==================== 股票代码交互修饰 ==================== */
-/* 给原股票代码按钮加上 hover 光标和图表暗示 */
-[col-id="symbol"] button[data-tooltip-trigger] {
+[col-id="symbol"] button[data-tooltip-trigger],
+[col-id="symbol"] button,
+[col-id="symbol"] [data-ref="eValue"] {
   cursor: pointer !important;
   position: relative !important;
-}
-
-/* 图表触发小图标（也可以通过点击它或者点击股票代码拉起） */
-.ft-chart-trigger-btn {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 16px !important;
-  height: 16px !important;
-  margin-left: 2px !important;
-  border-radius: 3px !important;
-  color: #88C0D0 !important;
-  cursor: pointer !important;
-  opacity: 0.7 !important;
-  transition: opacity 0.15s, transform 0.15s !important;
-  vertical-align: middle !important;
-}
-
-.ft-chart-trigger-btn:hover {
-  opacity: 1 !important;
-  transform: scale(1.18) !important;
-  color: #5E81AC !important;
 }
 
 /* ==================== 全局悬浮 Popover（完全摆脱表格限制） ==================== */
@@ -147,7 +119,6 @@
 }
 
 /* ==================== ag-Grid 结构解绑 ==================== */
-/* 解除表格限制 */
 [col-id="symbol"] {
   overflow: visible !important;
 }

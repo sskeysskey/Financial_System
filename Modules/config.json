@@ -419,16 +419,6 @@
         "message": "正在执行 Editor_Events 脚本..."
     },
     {
-        "key": "o",
-        "modifiers": [
-            "control",
-            "option"
-        ],
-        "actionType": "runInTerminal",
-        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/JavaScript/douban_grabber/auto_douban.py'",
-        "message": "正在执行 auto_doubao 脚本…"
-    },
-    {
         "key": "p",
         "modifiers": [
             "control",
@@ -522,8 +512,8 @@
             "option"
         ],
         "actionType": "runOsascript",
-        "target": "/Users/yanzhang/Coding/ScriptEditor/Doubao_Title.scpt",
-        "message": "正在执行 Doubao_Title.scpt..."
+        "target": "/Users/yanzhang/Coding/ScriptEditor/Title_Engine.scpt",
+        "message": "正在执行 Title_Engine.scpt..."
     },
     {
         "key": "minus",
@@ -684,7 +674,8 @@
     {
         "key": "o",
         "modifiers": [
-            "control"
+            "control",
+            "option"
         ],
         "actionType": "runInTerminal",
         "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/python_code/JavaScript/douban_grabber/auto_douban_imdb.py'",

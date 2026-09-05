@@ -4,11 +4,11 @@
   const BRIDGE_URL = 'http://127.0.0.1:18888/plot?symbol=';
   let DEBUG = false;
   let stockTagMap = {};
-  let maxTags = 2; // 表格内默认显示2个，剩余的全部在悬浮卡片中完美展示
+  let maxTags = 2; // 表格内默认显示2个，剩余在悬浮卡片中展示
 
   const log = (...a) => { if (DEBUG) console.log(LOG_PREFIX, ...a); };
 
-  /* ---------------- 1. 全局悬浮 Popover 管理器 (突破表格遮挡) ---------------- */
+  /* ---------------- 1. 全局悬浮 Popover 管理器 ---------------- */
   let popoverEl = null;
   let popoverTimer = null;
 
@@ -30,14 +30,19 @@
     initGlobalPopover();
     clearTimeout(popoverTimer);
 
-    // 构建内容：包含股票名、全部标签、以及一个直接拉起本地看图的按钮
+    const hasTags = tags && tags.length > 0;
+    const tagsHtml = hasTags
+      ? tags.map(t => `<span class="ft-popover-fulltag">${t}</span>`).join('')
+      : '<span style="color:#94a3b8;font-size:11px;">(无对应标签)</span>';
+
+    // 构建内容：包含股票名、全部标签、以及拉起本地看图的按钮
     popoverEl.innerHTML = `
       <div class="ft-popover-header">
         <span class="ft-popover-symbol">${symbol}</span>
         <span class="ft-popover-openchart-tip" id="ft-popover-btn-launch">📈 打开本机图表</span>
       </div>
       <div class="ft-popover-tags-box">
-        ${tags.map(t => `<span class="ft-popover-fulltag">${t}</span>`).join('')}
+        ${tagsHtml}
       </div>
     `;
 
@@ -46,7 +51,7 @@
       triggerLocalChart(symbol);
     });
 
-    // 计算精准定位（浮动在 anchor 正下方或正上方，防止超出视口）
+    // 计算精准定位（浮动在 anchor 正下方或正上方）
     const rect = anchorEl.getBoundingClientRect();
     popoverEl.style.display = 'block';
     const popWidth = Math.max(popoverEl.offsetWidth, 180);
@@ -96,7 +101,7 @@
         log('本地图表启动成功:', res);
       })
       .catch(err => {
-        console.warn(`${LOG_PREFIX} 无法连接到本地 Python 桥接服务。请确保 /Query/chart_bridge_server.py 已在后台运行。`, err);
+        console.warn(`${LOG_PREFIX} 无法连接到本地 Python 桥接服务。请确保 chart_bridge_server.py 已在后台运行。`, err);
       });
   }
 
@@ -153,32 +158,8 @@
       box.appendChild(more);
     }
 
-    // 鼠标移入整个容器或徽章时：呼起完全不受表格限制的悬停 Popover
-    box.addEventListener('mouseenter', () => {
-      showPopover(box, symbol, tags);
-    });
-    box.addEventListener('mouseleave', () => {
-      hidePopover();
-    });
-
+    // tag 容器仅做静态展示，不再绑定悬浮弹窗
     return box;
-  }
-
-  function buildChartTrigger(symbol) {
-    const btn = document.createElement('span');
-    btn.className = 'ft-chart-trigger-btn';
-    btn.title = `点击打开 ${symbol} 本地图表`;
-    btn.innerHTML = `
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
-        <polyline points="16 7 22 7 22 13"></polyline>
-      </svg>
-    `;
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      triggerLocalChart(symbol);
-    });
-    return btn;
   }
 
   /* ---------------- 5. 渲染与注入 ---------------- */
@@ -197,32 +178,47 @@
       const symbol = extractSymbol(anchor);
       if (!symbol) return;
 
-      // 绑定股票代码主按钮的点击事件：既执行原网页行为，又呼起本地图表
-      if (!anchor.dataset.ftClickBound) {
-        anchor.dataset.ftClickBound = 'true';
+      // 更新 anchor 上记录的当前 symbol（防止虚拟滚动 DOM 复用错位）
+      anchor.dataset.ftSymbol = symbol;
+
+      // 为股票代码 anchor 绑定事件：悬浮出浮窗、点击拉起本地图表
+      if (!anchor.dataset.ftBound) {
+        anchor.dataset.ftBound = 'true';
+
+        // 1. 悬停在股票代码上时弹出 Popover
+        anchor.addEventListener('mouseenter', () => {
+          const curSym = anchor.dataset.ftSymbol;
+          if (!curSym) return;
+          const tags = stockTagMap[curSym] || [];
+          showPopover(anchor, curSym, tags);
+        });
+
+        anchor.addEventListener('mouseleave', () => {
+          hidePopover();
+        });
+
+        // 2. 点击原股票代码依然触发本地画图
         anchor.addEventListener('click', () => {
-          triggerLocalChart(symbol);
+          const curSym = anchor.dataset.ftSymbol;
+          if (curSym) triggerLocalChart(curSym);
         });
       }
 
-      const existingTag = cell.querySelector('.ft-custom-tag-container');
+      // 移除原有可能残留的小图标
       const existingBtn = cell.querySelector('.ft-chart-trigger-btn');
+      if (existingBtn) existingBtn.remove();
 
-      // 虚拟滚动 DOM 复用校验
+      // 检查标签胶囊是否需要更新
+      const existingTag = cell.querySelector('.ft-custom-tag-container');
       if (existingTag && existingTag.dataset.ftSymbol === symbol) return;
 
       if (existingTag) existingTag.remove();
-      if (existingBtn) existingBtn.remove();
 
-      // 1. 插入图表小按钮
-      const chartBtn = buildChartTrigger(symbol);
-      anchor.insertAdjacentElement('afterend', chartBtn);
-
-      // 2. 插入 Tag 胶囊
+      // 插入 Tag 胶囊（若该股票有 tag）
       const tags = stockTagMap[symbol];
       if (tags && tags.length) {
         const tagBox = buildTagContainer(symbol, tags);
-        chartBtn.insertAdjacentElement('afterend', tagBox);
+        anchor.insertAdjacentElement('afterend', tagBox);
       }
       added++;
     });
@@ -242,7 +238,6 @@
     return !!(
       node.classList && (
         node.classList.contains('ft-custom-tag-container') ||
-        node.classList.contains('ft-chart-trigger-btn') ||
         node.id === 'ft-global-tag-popover'
       )
     );
