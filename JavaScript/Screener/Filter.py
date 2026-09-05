@@ -634,5 +634,40 @@ def main():
     ]
     clean_old_backups(backup_directory, file_patterns)
 
+    # ========================================================
+    # 新增：Filter 执行完毕后，依次执行后两个脚本（日志实时打在当前终端）
+    # ========================================================
+    py_exec = "/Library/Frameworks/Python.framework/Versions/Current/bin/python3"
+    
+    # 1. 自动执行 YF_MarketCapPEShare.py
+    print("\n" + "=" * 60)
+    print("🚀 [1/2] 正在执行 YF_MarketCapPEShare (Empty/Clear)…")
+    print("=" * 60 + "\n")
+    try:
+        subprocess.run([
+            py_exec,
+            '/Users/yanzhang/Coding/Financial_System/Selenium/YF_MarketCapPEShare.py',
+            '--mode', 'empty'
+        ], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"❌ YF_MarketCapPEShare 执行失败，退出码: {e.returncode}")
+        return
+
+    # 2. 自动执行 YF_StockETFCrypto.py
+    print("\n" + "=" * 60)
+    print("🚀 [2/2] 正在执行 YF_StockETFCrypto.py (Insert_History_Data)…")
+    print("=" * 60 + "\n")
+    try:
+        subprocess.run([
+            py_exec,
+            '/Users/yanzhang/Coding/Financial_System/Selenium/YF_StockETFCrypto.py'
+        ], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"❌ YF_StockETFCrypto 执行失败，退出码: {e.returncode}")
+        return
+
+    print("\n🎉 全部 3 个步骤已按顺序执行完毕！")
+
+
 if __name__ == "__main__":
     main()

@@ -1823,6 +1823,14 @@
             "PVH",
             "SFM空",
             "WRB"
+        ],
+        "2026-09-04": [
+            "APG空",
+            "CMI空",
+            "DD",
+            "ODFL空",
+            "PRMB空",
+            "UNF"
         ]
     },
     "SupportLevel_Close": {
@@ -5509,6 +5517,27 @@
             "TTMI",
             "WING",
             "XE"
+        ],
+        "2026-09-04": [
+            "AVAV",
+            "CASY",
+            "CTAS",
+            "FIG",
+            "FTNT",
+            "HIMS",
+            "KTOS",
+            "LLY",
+            "MUSA",
+            "NOC",
+            "PH",
+            "QBTS",
+            "SE",
+            "TCOM",
+            "TRV",
+            "TTAN",
+            "U",
+            "USAR",
+            "VFMF"
         ]
     },
     "SupportLevel_Over": {
@@ -10422,6 +10451,55 @@
             "WDC",
             "WY",
             "XPO"
+        ],
+        "2026-09-04": [
+            "ADSK",
+            "AMZN",
+            "AON",
+            "AXON",
+            "BBIO",
+            "BKNG",
+            "CACI",
+            "CAVA",
+            "CDNS",
+            "CLX",
+            "CORZ",
+            "CW",
+            "DASH",
+            "DDOG",
+            "EXPE",
+            "EXR",
+            "FICO",
+            "FNF",
+            "FROG",
+            "FSLR",
+            "FTAI",
+            "GEHC",
+            "GRMN",
+            "HII",
+            "HWM",
+            "ITW",
+            "JOBY",
+            "KRMN",
+            "LHX",
+            "LMT",
+            "NCLH",
+            "NET",
+            "NEU",
+            "NKE",
+            "ONON",
+            "PM",
+            "PTC",
+            "RCL",
+            "ROST",
+            "RTX",
+            "SN",
+            "SNPS",
+            "SYK",
+            "TSN",
+            "TXT",
+            "WY",
+            "XYL"
         ]
     },
     "PE_Volume": {
@@ -13268,6 +13346,15 @@
             "PRMB追",
             "RCL延追追追",
             "VSH"
+        ],
+        "2026-09-04": [
+            "ADSK",
+            "FICO",
+            "FNF",
+            "ODFL财6轮追",
+            "RCL延追追追追",
+            "SNPS",
+            "USAR"
         ]
     },
     "PE_Hot": {
@@ -15792,6 +15879,27 @@
             "TXN追",
             "UNH",
             "WDC"
+        ],
+        "2026-09-04": [
+            "AMZN追",
+            "BABA追",
+            "BKNG追",
+            "BUD",
+            "DDOG追",
+            "DD追",
+            "FCX追",
+            "FTNT追",
+            "GE追",
+            "GOOGL追",
+            "LLY追",
+            "PLTR",
+            "PM追",
+            "RTX追",
+            "SN追",
+            "TSLA",
+            "TXN追",
+            "U",
+            "UNH追"
         ]
     },
     "PE_Volume_high": {
@@ -21091,6 +21199,24 @@
             "SNOW甲",
             "TENB抄底",
             "W抄底"
+        ],
+        "2026-09-04": [
+            "CACI抄底",
+            "CAKE抄底",
+            "CASY抄底",
+            "CBRS抄底",
+            "DDOG抄底",
+            "EAT抄底",
+            "FPS抄底",
+            "IESC抄底",
+            "IOT甲",
+            "MMM抄底",
+            "MU抄底",
+            "NBIS抄底",
+            "PCG抄底",
+            "TRV抄底",
+            "TWST抄底",
+            "XYL抄底"
         ]
     },
     "ETF_Volume_high": {
@@ -22665,6 +22791,20 @@
             "VIXY乙",
             "VXX乙",
             "WGMI乙"
+        ],
+        "2026-09-04": [
+            "AGQ乙",
+            "LIT",
+            "PPA",
+            "SCO乙",
+            "SLV",
+            "SOXL乙",
+            "SOXS乙",
+            "SPXS乙",
+            "SPXU乙",
+            "UVXY乙",
+            "VIXY乙",
+            "VXX乙"
         ]
     },
     "Short_W": {
@@ -23085,6 +23225,10 @@
         ],
         "2026-09-03": [
             "DXJ"
+        ],
+        "2026-09-04": [
+            "FICO",
+            "VFMF"
         ]
     },
     "Short": {
@@ -24180,6 +24324,9 @@
         ],
         "2026-09-03": [
             "SU抄底"
+        ],
+        "2026-09-04": [
+            "ANDG抄底"
         ]
     },
     "PE_W": {
@@ -28568,6 +28715,22 @@
             "TDY",
             "TENB",
             "TXT"
+        ],
+        "2026-09-04": [
+            "ALK",
+            "BROS",
+            "CAKE",
+            "CMI",
+            "COHR",
+            "DD",
+            "EAT",
+            "IDXX",
+            "MMM",
+            "MPWR",
+            "PRMB",
+            "RMBS",
+            "STX",
+            "UNF"
         ]
     },
     "OverSell_W": {
@@ -30744,6 +30907,11 @@
             "MTSI",
             "MYRG",
             "STLA"
+        ],
+        "2026-09-04": [
+            "FND",
+            "GRAB",
+            "PRIM"
         ]
     },
     "PE_Deeper": {
@@ -34953,6 +35121,11 @@
             "FPS",
             "KRMN",
             "PL"
+        ],
+        "2026-09-04": [
+            "EIX",
+            "FPS",
+            "KRMN"
         ]
     },
     "PE_Deep": {
@@ -45464,6 +45637,66 @@
             "W",
             "WING",
             "XE"
+        ],
+        "2026-09-04": [
+            "AAL",
+            "AAOI",
+            "ACHR",
+            "ADSK",
+            "AEIS",
+            "AMKR",
+            "ASTS",
+            "AVAV",
+            "AXON",
+            "AXTI",
+            "CASY",
+            "CAVA",
+            "CBRS",
+            "CCL",
+            "CORZ",
+            "CROX",
+            "CRS",
+            "CRWV",
+            "CW",
+            "DDOG",
+            "DECK",
+            "FBIN",
+            "FICO",
+            "FIG",
+            "FN",
+            "FORM",
+            "FSLR",
+            "GFS",
+            "IESC",
+            "JBL",
+            "JOBY",
+            "KTOS",
+            "LUV",
+            "MKSI",
+            "MTZ",
+            "MU",
+            "MXL",
+            "NBIS",
+            "NCLH",
+            "NVTS",
+            "NXT",
+            "ODFL",
+            "ONTO",
+            "ORCL",
+            "PCG",
+            "QBTS",
+            "RCL",
+            "RKLB",
+            "SITM",
+            "SNPS",
+            "STRL",
+            "TER",
+            "TWST",
+            "UCTT",
+            "VIAV",
+            "VICR",
+            "XE",
+            "XYL"
         ]
     },
     "PE_valid": {
@@ -65708,6 +65941,167 @@
             "WYNN",
             "XPO",
             "XYL"
+        ],
+        "2026-09-04": [
+            "ADBE",
+            "AEM",
+            "AKAM",
+            "ALB",
+            "ALGM",
+            "ALGN",
+            "AMAT",
+            "AME",
+            "AMZN",
+            "ANET",
+            "AON",
+            "ARM",
+            "AS",
+            "ASML",
+            "ATI",
+            "AU",
+            "BA",
+            "BABA",
+            "BAM",
+            "BAX",
+            "BHP",
+            "BKNG",
+            "BLDR",
+            "BUD",
+            "CACI",
+            "CAI",
+            "CDNS",
+            "CIFR",
+            "CLS",
+            "CLX",
+            "CNP",
+            "COMP",
+            "CRWD",
+            "CSX",
+            "CTAS",
+            "DAL",
+            "DASH",
+            "DEO",
+            "DOCN",
+            "EME",
+            "EMR",
+            "ENPH",
+            "ENTG",
+            "ESTC",
+            "ETN",
+            "ETSY",
+            "EXPE",
+            "EXR",
+            "FCX",
+            "FERG",
+            "FIGR",
+            "FIX",
+            "FLEX",
+            "FNF",
+            "FTAI",
+            "FTNT",
+            "GE",
+            "GEHC",
+            "GEV",
+            "GLW",
+            "GME",
+            "GMED",
+            "GNRC",
+            "GOOGL",
+            "GRMN",
+            "GS",
+            "HII",
+            "HIMS",
+            "HON",
+            "HUBB",
+            "HWM",
+            "INTC",
+            "IONQ",
+            "IP",
+            "IR",
+            "IRM",
+            "IT",
+            "ITW",
+            "JBHT",
+            "JLL",
+            "KLAC",
+            "LAD",
+            "LEN",
+            "LEU",
+            "LHX",
+            "LII",
+            "LLY",
+            "LMT",
+            "LRCX",
+            "LSCC",
+            "LVS",
+            "M",
+            "MCHP",
+            "MRNA",
+            "MTSI",
+            "MUSA",
+            "NEU",
+            "NKE",
+            "NOC",
+            "NVMI",
+            "NVT",
+            "OC",
+            "ON",
+            "ONON",
+            "PCAR",
+            "PH",
+            "PKG",
+            "PLTR",
+            "PM",
+            "PNR",
+            "POWL",
+            "PTC",
+            "PWR",
+            "PYPL",
+            "Q",
+            "RDDT",
+            "RELX",
+            "RGEN",
+            "RL",
+            "ROIV",
+            "RRX",
+            "RTX",
+            "SE",
+            "SEI",
+            "SFM",
+            "SHOP",
+            "SHW",
+            "SN",
+            "STLD",
+            "SYK",
+            "TCOM",
+            "TDY",
+            "TEM",
+            "TLN",
+            "TOST",
+            "TRV",
+            "TSEM",
+            "TSLA",
+            "TSN",
+            "TTMI",
+            "TTWO",
+            "TWLO",
+            "TXN",
+            "TXRH",
+            "TXT",
+            "UAL",
+            "UNH",
+            "URI",
+            "USAR",
+            "VFC",
+            "VRSK",
+            "VSAT",
+            "W",
+            "WAB",
+            "WDC",
+            "WIX",
+            "WTS",
+            "WY",
+            "WYNN"
         ]
     },
     "PE_invalid": {
@@ -67182,6 +67576,18 @@
             "SOUN",
             "TTAN",
             "TWST",
+            "U"
+        ],
+        "2026-09-04": [
+            "APLD",
+            "AUR",
+            "BBIO",
+            "FROG",
+            "NET",
+            "OKLO",
+            "S",
+            "SOUN",
+            "TTAN",
             "U"
         ]
     },
@@ -72603,6 +73009,32 @@
             "SHOP",
             "TTWO",
             "W"
+        ],
+        "2026-09-04": [
+            "ATI",
+            "AVAV",
+            "BKNG",
+            "CASY",
+            "CCL",
+            "FERG",
+            "FNF",
+            "FPS",
+            "GIS",
+            "IRM",
+            "JBL",
+            "LLY",
+            "MU",
+            "NKE",
+            "OC",
+            "ORCL",
+            "PH",
+            "PRMB",
+            "RL",
+            "ROST",
+            "SE",
+            "SHOP",
+            "TTWO",
+            "TWLO"
         ]
     },
     "PE_low": {
@@ -72729,6 +73161,16 @@
             "CAVA",
             "PRIM",
             "VFC"
+        ],
+        "2026-09-04": [
+            "AVAV",
+            "CAVA",
+            "FNF",
+            "FSLR",
+            "GME",
+            "HII",
+            "KTOS",
+            "NKE"
         ]
     },
     "PE_lower": {
@@ -72789,6 +73231,13 @@
             "AS",
             "SOUN",
             "WING"
+        ],
+        "2026-09-04": [
+            "ACHR",
+            "ADSK",
+            "FICO",
+            "JOBY",
+            "XYL"
         ]
     },
     "PE_lowest": {
@@ -72827,6 +73276,9 @@
             "ORCL"
         ],
         "2026-09-02": [
+            "KRMN"
+        ],
+        "2026-09-04": [
             "KRMN"
         ]
     }
