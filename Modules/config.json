@@ -739,51 +739,13 @@
         "message": "正在执行 Bob 脚本..."
     },
     {
-        "key": "y",
-        "modifiers": [
-            "control"
-        ],
-        "actionType": "runOsascriptDirect",
-        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/API_News_Sonnet.scpt\") with parameters {\"\", \"normal\", false}",
-        "message": "正在执行 API_News_Sonnet..."
-    },
-    {
-        "key": "y",
-        "modifiers": [
-            "control",
-            "option"
-        ],
-        "actionType": "runOsascriptDirect",
-        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/API_News_Sonnet.scpt\") with parameters {\"\", \"normal\", true}",
-        "message": "正在执行 API_News_Sonnet (Force)..."
-    },
-    {
-        "key": "h",
-        "modifiers": [
-            "control"
-        ],
-        "actionType": "runOsascriptDirect",
-        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/News_Engine.scpt\") with parameters {\"\", \"normal\", false, \"deepseek,qianwen,doubao\"}",
-        "message": "正在执行 News (DeepSeek→千问→豆包)..."
-    },
-    {
-        "key": "h",
-        "modifiers": [
-            "control",
-            "option"
-        ],
-        "actionType": "runOsascriptDirect",
-        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/News_Engine.scpt\") with parameters {\"\", \"normal\", true, \"deepseek,qianwen,doubao\"}",
-        "message": "正在执行 News (DeepSeek→千问→豆包, Force)..."
-    },
-    {
         "key": "n",
         "modifiers": [
             "control"
         ],
         "actionType": "runOsascriptDirect",
-        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/News_Engine.scpt\") with parameters {\"\", \"normal\", false, \"qianwen,deepseek,doubao\"}",
-        "message": "正在执行 News (千问→DeepSeek→豆包)..."
+        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/News_Engine.scpt\") with parameters {\"\", \"normal\", false, \"qianwen_ui@1,qianwen_api,deepseek_ui,doubao_ui\"}",
+        "message": "正在执行 News (千问网页→千问API→DS网页→豆包)..."
     },
     {
         "key": "n",
@@ -792,8 +754,46 @@
             "option"
         ],
         "actionType": "runOsascriptDirect",
-        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/News_Engine.scpt\") with parameters {\"\", \"normal\", true, \"qianwen,deepseek,doubao\"}",
-        "message": "正在执行 News (千问→DeepSeek→豆包, Force)..."
+        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/News_Engine.scpt\") with parameters {\"\", \"normal\", true, \"qianwen_ui@1,qianwen_api,deepseek_ui,doubao_ui\"}",
+        "message": "正在执行 News (千问网页起始, Force)..."
+    },
+    {
+        "key": "h",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runOsascriptDirect",
+        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/News_Engine.scpt\") with parameters {\"\", \"normal\", false, \"qianwen_api@2,deepseek_api,doubao_ui\"}",
+        "message": "正在执行 News (千问API→DeepSeekAPI→豆包)..."
+    },
+    {
+        "key": "h",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runOsascriptDirect",
+        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/News_Engine.scpt\") with parameters {\"\", \"normal\", true, \"qianwen_api@2,deepseek_api,doubao_ui\"}",
+        "message": "正在执行 News (千问API起始, Force)..."
+    },
+    {
+        "key": "y",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runOsascriptDirect",
+        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/News_Engine.scpt\") with parameters {\"\", \"normal\", false, \"deepseek_api@2,qianwen_api,doubao_ui\"}",
+        "message": "正在执行 News (DeepSeekAPI→千问API→豆包)..."
+    },
+    {
+        "key": "y",
+        "modifiers": [
+            "control",
+            "option"
+        ],
+        "actionType": "runOsascriptDirect",
+        "target": "run script (POSIX file \"/Users/yanzhang/Coding/ScriptEditor/News_Engine.scpt\") with parameters {\"\", \"normal\", true, \"deepseek_api@2,qianwen_api,doubao_ui\"}",
+        "message": "正在执行 News (DeepSeekAPI起始, Force)..."
     },
     {
         "key": "three",

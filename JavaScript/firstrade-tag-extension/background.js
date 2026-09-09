@@ -13,15 +13,15 @@ async function jsonFetch(url, options) {
   return data;
 }
 
-/* 只同步持仓数据 */
-async function syncPositions(positions) {
-  if (!positions || !Object.keys(positions).length) {
+/* 只同步持仓数据（支持 overwrite 全量覆盖） */
+async function syncPositions(positions, overwrite = false) {
+  if (!positions || (!Object.keys(positions).length && !overwrite)) {
     return { status: 'skip', reason: 'empty' };
   }
   return jsonFetch(`${BRIDGE_BASE}/sync_positions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(positions)
+    body: JSON.stringify({ positions: positions || {}, overwrite: !!overwrite })
   });
 }
 
@@ -55,7 +55,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   };
 
   switch (msg.action) {
-    case 'FT_SYNC': return done(syncPositions(msg.payload));
+    case 'FT_SYNC': return done(syncPositions(msg.payload, msg.overwrite));
     case 'FT_PLOT': return done(plotWithPositions(msg.symbol, msg.payload));
     case 'FT_PING': return done(ping());
     case 'FT_SERVER_POSITIONS': return done(fetchServerPositions());

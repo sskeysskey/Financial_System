@@ -254,13 +254,13 @@
     syncTimer = setTimeout(() => { flushPositions(); }, delay);
   }
 
-  async function flushPositions(force = false) {
+  async function flushPositions(force = false, overwrite = false) {
     const payload = buildPayload();
-    if (!Object.keys(payload).length) return { ok: false, error: 'cache empty' };
+    if (!Object.keys(payload).length && !overwrite) return { ok: false, error: 'cache empty' };
     const sig = signature();
-    if (!force && sig === lastSentSig) return { ok: true, data: { status: 'unchanged' } };
+    if (!force && !overwrite && sig === lastSentSig) return { ok: true, data: { status: 'unchanged' } };
 
-    const resp = await safeSendMessage({ action: 'FT_SYNC', payload });
+    const resp = await safeSendMessage({ action: 'FT_SYNC', payload, overwrite });
     if (resp.ok) {
       lastSentSig = sig;
       log('已同步到本机:', resp.data);
@@ -272,9 +272,15 @@
 
   /* 自动滚动整张表格，把所有（含虚拟滚动未渲染的）持仓都抓一遍 */
   async function fullScan() {
+    // ★ 关键1：先清空前端运行时的旧缓存，避免已被卖出/删除的股票继续残留在 payload 中
+    for (const sym of Object.keys(positionCache)) {
+      delete positionCache[sym];
+    }
+    lastSentSig = '';
+
     const vp = document.querySelector('.ag-body-viewport');
     scrapeGridData();
-    if (!vp) return flushPositions(true);
+    if (!vp) return flushPositions(true, true);
 
     const original = vp.scrollTop;
     const step = Math.max(150, vp.clientHeight - 60);
@@ -294,8 +300,10 @@
     scrapeGridData();
     vp.scrollTop = original;
     await sleep(150);
-    const r = await flushPositions(true);
-    flashToast(`✅ 已抓取 ${Object.keys(positionCache).length} 只标的持仓`);
+
+    // ★ 关键2：强制覆盖写入（force=true, overwrite=true）
+    const r = await flushPositions(true, true);
+    flashToast(`✅ 已全量刷新并保存 ${Object.keys(positionCache).length} 只持仓`);
     return r;
   }
 

@@ -547,8 +547,9 @@ class InfoDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(f"Info Check: {symbol}")
         
-        # 整体宽度为两栏之和
-        self.setGeometry(0, 0, left_width + right_width, height)
+        # 整体宽度：现在只用左侧时间面板宽度；后续恢复时改回 left_width + right_width
+        # self.setGeometry(0, 0, left_width + right_width, height)
+        self.setGeometry(0, 0, left_width, height)
         self.center_on_screen()
 
         layout = QVBoxLayout(self)
@@ -576,40 +577,42 @@ class InfoDialog(QDialog):
         left_layout.addWidget(left_title)
         left_layout.addWidget(self.text_by_date)
 
-        # --- 修改点：现在后创建“按分组”面板 ---
+        # ==============================================
+        # ======== 【临时注释：按分组右侧面板】开始 ========
+        # ==============================================
         # --- 右栏:按分组 ---
-        right_container = QWidget()
-        right_layout = QVBoxLayout(right_container)
-        right_layout.setContentsMargins(0, 0, 0, 0)
-        right_layout.setSpacing(2)
-
-        right_title = QLabel("按分组")  # 标题改为“按分组”
-        right_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        right_title.setObjectName("panelTitle")
-
-        self.text_by_cat = QTextEdit()
-        self.text_by_cat.setReadOnly(True)
-        self.text_by_cat.setFont(QFont(font_family))
-        self.text_by_cat.setHtml(search_history_by_category(symbol)) # 调用按分组函数
-
-        right_layout.addWidget(right_title)
-        right_layout.addWidget(self.text_by_cat)
+        # right_container = QWidget()
+        # right_layout = QVBoxLayout(right_container)
+        # right_layout.setContentsMargins(0, 0, 0, 0)
+        # right_layout.setSpacing(2)
+        # right_title = QLabel("按分组")
+        # right_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # right_title.setObjectName("panelTitle")
+        # self.text_by_cat = QTextEdit()
+        # self.text_by_cat.setReadOnly(True)
+        # self.text_by_cat.setFont(QFont(font_family))
+        # self.text_by_cat.setHtml(search_history_by_category(symbol))
+        # right_layout.addWidget(right_title)
+        # right_layout.addWidget(self.text_by_cat)
 
         # 添加到 splitter
         self.splitter.addWidget(left_container)
-        self.splitter.addWidget(right_container)
+        # self.splitter.addWidget(right_container)
         
-        # 设置初始宽度比例 (这里传入具体的宽度值)
-        self.splitter.setSizes([left_width, right_width]) 
+        # 设置初始宽度比例；恢复时启用下面一行
+        # self.splitter.setSizes([left_width, right_width])
+        self.splitter.setSizes([left_width])  # 当前只保留左侧
         self.splitter.setChildrenCollapsible(False)
-
         layout.addWidget(self.splitter)
         self.setLayout(layout)
         self.apply_nord_style(font_size)
 
-        # 快捷键对应调整：1 现在对应“按时间”，2 现在对应“按分组”
+        # 快捷键：1 现在对应“按时间”；快捷键2【临时注释掉】
         QShortcut(QKeySequence("1"), self, activated=lambda: self.text_by_date.setFocus())
-        QShortcut(QKeySequence("2"), self, activated=lambda: self.text_by_cat.setFocus())
+        # QShortcut(QKeySequence("2"), self, activated=lambda: self.text_by_cat.setFocus())
+        # ==============================================
+        # ======== 【临时注释：按分组右侧面板】结束 ========
+        # ==============================================
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Escape:

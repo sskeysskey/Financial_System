@@ -47,13 +47,16 @@ def _load_positions():
         return {}
 
 
-def save_positions(incoming):
-    """增量合并 + 原子写盘。返回 (新增/更新条数, 总条数)"""
-    if not isinstance(incoming, dict) or not incoming:
+def save_positions(incoming, overwrite=False):
+    """保存持仓。overwrite=True 表示全量覆盖重写（清理旧数据），False 表示增量合并。"""
+    if not isinstance(incoming, dict):
+        return 0, 0
+    if not incoming and not overwrite:
         return 0, 0
 
     with _FILE_LOCK:
-        data = _load_positions()
+        # ★ 关键：如果全量覆盖，则使用空字典重新构建，否则增量合并
+        data = {} if overwrite else _load_positions()
         n = 0
         for key, val in incoming.items():
             if not isinstance(val, dict):
@@ -70,6 +73,7 @@ def save_positions(incoming):
             "updated_at": time.time(),
             "updated_at_str": time.strftime("%Y-%m-%d %H:%M:%S"),
             "count": len([k for k in data.keys() if not k.startswith("_")]),
+            "mode": "overwrite" if overwrite else "merge"
         }
 
         os.makedirs(os.path.dirname(POSITIONS_JSON_PATH), exist_ok=True)
@@ -148,10 +152,19 @@ class StockRequestHandler(BaseHTTPRequestHandler):
 
         if path == "/sync_positions":
             try:
-                incoming = self._read_json_body()
-                n, total = save_positions(incoming)
-                _log(f"同步持仓 {n} 条（文件累计 {total} 条）-> {POSITIONS_JSON_PATH}")
-                self._reply(200, {"status": "ok", "saved": n, "total": total})
+                body = self._read_json_body()
+                # 兼容两种 payload：{"positions": {...}, "overwrite": true} 或直接是 dict
+                if "positions" in body and isinstance(body["positions"], dict):
+                    incoming = body["positions"]
+                    overwrite = bool(body.get("overwrite", False))
+                else:
+                    incoming = body
+                    overwrite = False
+
+                n, total = save_positions(incoming, overwrite=overwrite)
+                mode_str = "全量覆盖" if overwrite else "增量合并"
+                _log(f"[{mode_str}] 同步持仓 {n} 条（文件当前共 {total} 条）-> {POSITIONS_JSON_PATH}")
+                self._reply(200, {"status": "ok", "saved": n, "total": total, "overwrite": overwrite})
             except Exception as e:
                 _log(f"处理持仓同步失败: {e}")
                 self._reply(500, {"status": "error", "message": str(e)})
