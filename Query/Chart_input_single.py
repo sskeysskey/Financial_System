@@ -21,6 +21,21 @@ import threading
 
 USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
+FIRSTRADE_POSITIONS_FILE = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "firstrade_positions.json")
+
+# --- 买入/卖出痕迹（Firstrade order-status 抓取结果） ---
+_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+if _THIS_DIR not in sys.path:
+    sys.path.append(_THIS_DIR)
+try:
+    from ft_trades import (get_trades_for_symbol, build_marker_text, short_trade_label,
+                           BUY_COLOR, SELL_COLOR, BUY_MARKER, SELL_MARKER)
+except Exception as _e:
+    print(f"[FT] 加载 ft_trades 失败（买卖点将不显示）: {_e}")
+    BUY_COLOR, SELL_COLOR, BUY_MARKER, SELL_MARKER = '#5E81AC', '#D08770', '^', 'v'
+    def get_trades_for_symbol(_s): return {}
+    def build_marker_text(*_a, **_k): return ''
+    def short_trade_label(*_a, **_k): return ''
 
 # --- 导入 Tiger_API ---
 sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Selenium"))
@@ -57,7 +72,6 @@ HOVER_THROTTLE = 1 / 90.0
 REBUILD_THROTTLE = 0.15
 
 # ============ 读取 Firstrade 真实持仓缓存 ============
-FIRSTRADE_POSITIONS_FILE = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "firstrade_positions.json")
 FT_DEBUG = os.environ.get("FT_DEBUG", "") == "1"
 FT_SHOW_MISS = os.environ.get("FT_SHOW_MISS", "1") == "1"
 
@@ -125,7 +139,8 @@ def _ft_layout_text_row(fig, x0, y, items, fontsize=12, gap_px=14, x_limit=0.32)
         x += w_frac
     return arts
 
-# ============ 全局实时价格管理器（整个进程共用一个线程 + 一个 fetcher） ============
+
+# ============ 全局实时价格管理器 ============
 class _RealtimeManager:
     def __init__(self):
         self._lock = threading.Lock()
@@ -706,12 +721,12 @@ class ChartWindow:
         self.vline = self.ax1.axvline(x=0, color=NORD_THEME['accent_cyan'], linestyle='--',
                                       linewidth=1, visible=False)
 
-        # 标题（fig.text 只建一次，之后 set_text）
+        # 标题
         self.title_artist = self.fig.text(0.5, 0.95, "", ha='center', va='top',
                                           color=NORD_THEME['text_bright'], fontsize=16,
                                           fontweight='bold', transform=self.fig.transFigure)
 
-        # RadioButtons 只建一次
+        # RadioButtons
         self.rax = self.fig.add_axes([0.95, 0.0, 0.05, 0.65], facecolor=NORD_THEME['background'])
         self.radio = RadioButtons(self.rax, list(TIME_OPTIONS.keys()), active=3)
         self.rax.set_facecolor(NORD_THEME['background'])
@@ -725,7 +740,7 @@ class ChartWindow:
             circle.set_edgecolor(NORD_THEME['border'])
             circle.set_facecolor(NORD_THEME['background'])
 
-        instructions = "N:新财报\nE:改财报\nT:改标签\nW:新事件\nQ:改事件\nK:查豆包\nZ:查富途\nP:做比较\nJ:加Panel\nL:查相似\nY:删除\nG:刷新\nO:查α\nB:存在"
+        instructions = "N:新财报\nE:改财报\nT:改标签\nW:新事件\nQ:改事件\nK:查豆包\nZ:查富途\nP:做比较\nJ:加Panel\nL:查相似\nY:删除\nG:刷新\nO:查α\nB:存在\nI:买入点\nU:卖出点"
         self.rax.text(0.5, 0.98, instructions, transform=self.rax.transAxes, ha="center", va="bottom",
                       color=NORD_THEME['text_light'], fontsize=10, fontfamily="Arial Unicode MS")
 
@@ -739,6 +754,14 @@ class ChartWindow:
 
         self.global_markers, self.specific_markers, self.earning_markers = {}, {}, {}
         self.global_scatter_points, self.specific_scatter_points, self.earning_scatter_points = [], [], []
+        
+        # 买卖点容器
+        self.buy_markers, self.sell_markers = {}, {}
+        self.buy_scatter_points, self.sell_scatter_points = [], []
+        self.trade_map = {}
+        self.show_buy_markers = True
+        self.show_sell_markers = True
+
         self.all_annotations = []
 
         self.purple_shade = None
@@ -758,7 +781,7 @@ class ChartWindow:
 
         self.DESCRIPTION_JSON_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "description.json")
 
-        # ---------- 事件只绑定一次 ----------
+        # ---------- 事件绑定 ----------
         c = self.fig.canvas
         c.mpl_connect("motion_notify_event", self.hover)
         c.mpl_connect('key_press_event', self.on_key)
@@ -769,7 +792,7 @@ class ChartWindow:
         c.mpl_connect('close_event', self._on_close)
         self.radio.on_clicked(self.update)
 
-        # 实时价格 UI 定时器（只建一次）
+        # 实时价格 UI 定时器
         self.ui_timer = c.new_timer(interval=1000)
         self.ui_timer.add_callback(self._ui_poll_realtime)
         self.ui_timer.start()
@@ -780,7 +803,7 @@ class ChartWindow:
             pass
 
     # ------------------------------------------------------------------
-    # 加载 / 切换 symbol：只更新数据和少量 artist
+    # 加载 / 切换 symbol
     # ------------------------------------------------------------------
     def load(self, db_path, table_name, name, compare, share, marketcap, pe, json_data,
              default_time_range="1Y", panel=False, callback=None,
@@ -811,6 +834,9 @@ class ChartWindow:
         self.show_global_markers = False
         self.show_specific_markers = True
         self.show_earning_markers = True
+        self.show_buy_markers = True
+        self.show_sell_markers = True
+        self.trade_map = get_trades_for_symbol(name)      # ★ 重新读取当前 symbol 订单
         self.show_all_annotations = False
         self.show_colored_lines = True
         self.current_filtered_dates = []
@@ -918,7 +944,9 @@ class ChartWindow:
                 except Exception: pass
                 setattr(self, attr, None)
 
-        for lst in (self.global_scatter_points, self.specific_scatter_points, self.earning_scatter_points):
+        for lst in (self.global_scatter_points, self.specific_scatter_points,
+                    self.earning_scatter_points, self.buy_scatter_points,
+                    self.sell_scatter_points):
             for item in lst:
                 try: item[0].remove()
                 except Exception: pass
@@ -932,6 +960,8 @@ class ChartWindow:
         self.global_markers.clear()
         self.specific_markers.clear()
         self.earning_markers.clear()
+        self.buy_markers.clear()
+        self.sell_markers.clear()
 
         if self.colored_lc[0] is not None:
             try: self.colored_lc[0].remove()
@@ -1021,6 +1051,66 @@ class ChartWindow:
         self.colored_lc[0] = lc
 
     # ------------------------------------------------------------------
+    def build_trade_markers(self):
+        """买入/卖出痕迹（Chrome 插件抓取的 order-status 结果）"""
+        for scatter, _, _, _ in self.buy_scatter_points + self.sell_scatter_points:
+            try: scatter.remove()
+            except Exception: pass
+        self.buy_scatter_points.clear()
+        self.sell_scatter_points.clear()
+        self.buy_markers.clear()
+        self.sell_markers.clear()
+        if not self.trade_map:
+            return
+
+        dates, prices = self.dates, self.prices
+        dmin, dmax = min(dates).date(), max(dates).date()
+        np_dates = np.array(dates)
+
+        for d in sorted(self.trade_map.keys()):
+            if d < dmin or d > dmax:
+                continue
+            target = datetime.combine(d, datetime.min.time())
+            idx = int((np.abs(np_dates - target)).argmin())
+            px = prices[idx]
+            for side in ('buy', 'sell'):
+                agg = self.trade_map[d].get(side)
+                if not agg:
+                    continue
+                txt = build_marker_text(side, d, agg, close_price=px)
+                is_buy = (side == 'buy')
+                sc = self.ax1.scatter(
+                    [dates[idx]], [px], s=150,
+                    marker=(BUY_MARKER if is_buy else SELL_MARKER),
+                    color=(BUY_COLOR if is_buy else SELL_COLOR),
+                    edgecolors=NORD_THEME['text_bright'], linewidths=0.7,
+                    alpha=0.95, zorder=4.6, picker=5,
+                    visible=(self.show_buy_markers if is_buy else self.show_sell_markers)
+                )
+                if is_buy:
+                    self.buy_markers[dates[idx]] = txt
+                    self.buy_scatter_points.append((sc, dates[idx], px, txt))
+                else:
+                    self.sell_markers[dates[idx]] = txt
+                    self.sell_scatter_points.append((sc, dates[idx], px, txt))
+
+        trade_offsets = [(45, 45), (-170, 45), (45, -95), (-170, -95)]
+        all_trade_pts = self.buy_scatter_points + self.sell_scatter_points
+        n_buy = len(self.buy_scatter_points)
+        for i, (sc, date_v, price_v, txt) in enumerate(all_trade_pts):
+            is_buy = i < n_buy
+            color = BUY_COLOR if is_buy else SELL_COLOR
+            annotation = self.ax1.annotate(
+                txt, xy=(date_v, price_v), xytext=trade_offsets[i % len(trade_offsets)],
+                textcoords="offset points",
+                bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=color, alpha=0.85),
+                arrowprops=dict(arrowstyle="->", color=color),
+                color=color, fontsize=11,
+                visible=(self.show_buy_markers if is_buy else self.show_sell_markers) and self.show_all_annotations
+            )
+            self.all_annotations.append((annotation, 'buy' if is_buy else 'sell', date_v, price_v))
+
+    # ------------------------------------------------------------------
     def create_markers_and_annotations(self):
         for scatter, _, _, _ in self.global_scatter_points + self.specific_scatter_points:
             try: scatter.remove()
@@ -1047,7 +1137,8 @@ class ChartWindow:
         found_item = None
         for source in ['stocks', 'etfs']:
             for item in self.current_json_data['data'].get(source, []):
-                if item['symbol'] == self.name and 'description3' in item:
+                sym = item['symbol']
+                if (sym == self.name or sym.replace('-', '.') == self.name.replace('-', '.')) and 'description3' in item:
                     found_item = item
                     for date_obj in item.get('description3', []):
                         for date_str, text in date_obj.items():
@@ -1160,6 +1251,8 @@ class ChartWindow:
             )
             self.all_annotations.append((annotation, 'earning', date_v, price_v))
 
+        self.build_trade_markers()      # ★ 绘制买卖点
+
     # ------------------------------------------------------------------
     def create_or_update_title(self):
         volumes, prices = self.volumes, self.prices
@@ -1188,7 +1281,8 @@ class ChartWindow:
         tag_str, fullname, clickable = "", "", False
         for source in ['stocks', 'etfs']:
             for item in self.current_json_data['data'].get(source, []):
-                if item['symbol'] == self.name:
+                sym = item['symbol']
+                if sym == self.name or sym.replace('-', '.') == self.name.replace('-', '.'):
                     fullname = item.get('name', '')
                     tag_str = ','.join(item.get('tag', []))
                     if len(tag_str) > 45: tag_str = tag_str[:45] + '...'
@@ -1443,6 +1537,8 @@ class ChartWindow:
             if anno_type == 'global': annotation.set_visible(self.show_global_markers and self.show_all_annotations)
             elif anno_type == 'specific': annotation.set_visible(self.show_specific_markers and self.show_all_annotations)
             elif anno_type == 'earning': annotation.set_visible(self.show_earning_markers and self.show_all_annotations)
+            elif anno_type == 'buy': annotation.set_visible(self.show_buy_markers and self.show_all_annotations)
+            elif anno_type == 'sell': annotation.set_visible(self.show_sell_markers and self.show_all_annotations)
         self.fig.canvas.draw_idle()
 
     def toggle_colored_lines(self):
@@ -1471,18 +1567,37 @@ class ChartWindow:
             if anno_type == 'earning': annotation.set_visible(self.show_earning_markers and self.show_all_annotations)
         self.fig.canvas.draw_idle()
 
+    def toggle_buy_markers(self):
+        self.show_buy_markers = not self.show_buy_markers
+        for scatter, _, _, _ in self.buy_scatter_points: scatter.set_visible(self.show_buy_markers)
+        for annotation, anno_type, _, _ in self.all_annotations:
+            if anno_type == 'buy': annotation.set_visible(self.show_buy_markers and self.show_all_annotations)
+        self.fig.canvas.draw_idle()
+
+    def toggle_sell_markers(self):
+        self.show_sell_markers = not self.show_sell_markers
+        for scatter, _, _, _ in self.sell_scatter_points: scatter.set_visible(self.show_sell_markers)
+        for annotation, anno_type, _, _ in self.all_annotations:
+            if anno_type == 'sell': annotation.set_visible(self.show_sell_markers and self.show_all_annotations)
+        self.fig.canvas.draw_idle()
+
     def update_marker_visibility(self):
         years = TIME_OPTIONS[self.radio.value_selected]
         min_date = min(self.dates) if years == 0 else datetime.now() - timedelta(days=years * 365)
         for scatter, date_v, _, _ in self.global_scatter_points: scatter.set_visible((min_date <= date_v) and self.show_global_markers)
         for scatter, date_v, _, _ in self.specific_scatter_points: scatter.set_visible((min_date <= date_v) and self.show_specific_markers)
         for scatter, date_v, _, _ in self.earning_scatter_points: scatter.set_visible((min_date <= date_v) and self.show_earning_markers)
+        for scatter, date_v, _, _ in self.buy_scatter_points: scatter.set_visible((min_date <= date_v) and self.show_buy_markers)
+        for scatter, date_v, _, _ in self.sell_scatter_points: scatter.set_visible((min_date <= date_v) and self.show_sell_markers)
+
         for annotation, anno_type, date_v, _ in self.all_annotations:
             visible = False
             if min_date <= date_v:
                 if anno_type == 'global': visible = self.show_global_markers and self.show_all_annotations
                 elif anno_type == 'specific': visible = self.show_specific_markers and self.show_all_annotations
                 elif anno_type == 'earning': visible = self.show_earning_markers and self.show_all_annotations
+                elif anno_type == 'buy': visible = self.show_buy_markers and self.show_all_annotations
+                elif anno_type == 'sell': visible = self.show_sell_markers and self.show_all_annotations
             annotation.set_visible(visible)
         self.fig.canvas.draw_idle()
 
@@ -1630,6 +1745,7 @@ class ChartWindow:
                 annot.xy = (xval, yval)
                 current_date = xval.replace(tzinfo=None)
                 g_text, s_text, e_text = None, None, None
+                b_text, sl_text = None, None
                 for d, t in self.global_markers.items():
                     if abs((d - current_date).total_seconds()) < 86400:
                         g_text = t; break
@@ -1639,6 +1755,12 @@ class ChartWindow:
                 for d, t in self.earning_markers.items():
                     if abs((d - current_date).total_seconds()) < 86400:
                         e_text = t; break
+                for d, t in self.buy_markers.items():
+                    if abs((d - current_date).total_seconds()) < 86400:
+                        b_text = t; break
+                for d, t in self.sell_markers.items():
+                    if abs((d - current_date).total_seconds()) < 86400:
+                        sl_text = t; break
 
                 if self.mouse_pressed and self.initial_price is not None:
                     percent_change = ((yval - self.initial_price) / self.initial_price) * 100
@@ -1679,8 +1801,7 @@ class ChartWindow:
                     ]
 
                     marker_texts = []
-                    if g_text:
-                        marker_texts.append(g_text)
+                    if g_text: marker_texts.append(g_text)
                     if s_text: marker_texts.append(s_text + "\n")
                     has_earning = False
                     if e_text:
@@ -1688,6 +1809,8 @@ class ChartWindow:
                             if "昨日财报" in line:
                                 marker_texts.append(line); break
                         has_earning = True
+                    if b_text: marker_texts.append(b_text)
+                    if sl_text: marker_texts.append(sl_text)
                     if marker_texts: parts.extend(marker_texts)
 
                     parts.append(f"最新价差: {((self.prices[-1] - yval) / yval) * 100:.2f}%")
@@ -1704,7 +1827,9 @@ class ChartWindow:
                             parts.append("最新额差: --")
                     text = "\n".join(parts)
 
-                    if has_earning and not (g_text or s_text): color = NORD_THEME['accent_yellow']
+                    if (b_text or sl_text) and not (g_text or s_text or has_earning):
+                        color = BUY_COLOR if b_text else SELL_COLOR
+                    elif has_earning and not (g_text or s_text): color = NORD_THEME['accent_yellow']
                     elif g_text and not (s_text or has_earning): color = NORD_THEME['accent_red']
                     elif s_text and not (g_text or has_earning): color = NORD_THEME['text_bright']
                     elif g_text and (s_text or has_earning): color = NORD_THEME['accent_purple']
@@ -1826,6 +1951,11 @@ class ChartWindow:
                                 if d == sel_date:
                                     color = NORD_THEME['accent_yellow']; break
 
+                    for _, d, _, _ in self.buy_scatter_points:
+                        if d == sel_date: color = BUY_COLOR; break
+                    for _, d, _, _ in self.sell_scatter_points:
+                        if d == sel_date: color = SELL_COLOR; break
+
                     self.highlight_point.set_color(color)
                     dist = 0.2 * ((ax1.get_xlim()[1] - ax1.get_xlim()[0]) / 365)
                     if np.isclose(matplotlib.dates.date2num(sel_date), event.xdata, atol=dist):
@@ -1870,7 +2000,9 @@ class ChartWindow:
 
     def on_pick(self, event):
         try:
-            all_points = self.global_scatter_points + self.specific_scatter_points + self.earning_scatter_points
+            all_points = (self.global_scatter_points + self.specific_scatter_points +
+                          self.earning_scatter_points + self.buy_scatter_points +
+                          self.sell_scatter_points)
             artists = [p[0] for p in all_points]
             if event.artist in artists:
                 for scatter, date_v, price_v, text in all_points:
@@ -1904,7 +2036,8 @@ class ChartWindow:
     def show_stock_etf_info(self):
         for source in ['stocks', 'etfs']:
             for item in self.current_json_data['data'].get(source, []):
-                if item['symbol'] == self.name:
+                sym = item['symbol']
+                if sym == self.name or sym.replace('-', '.') == self.name.replace('-', '.'):
                     info = f"{self.name}\n{item['name']}\n\n{item['tag']}\n\n{item['description1']}\n\n{item['description2']}"
                     dialog = InfoDialog("Information", info, 'Arial Unicode MS', 22, 700, 900)
                     dialog.exec()
@@ -2002,6 +2135,8 @@ class ChartWindow:
             actions = {'v': self.toggle_volume, 'r': self.toggle_global_markers, 'x': self.toggle_all_annotations,
                        'a': self.toggle_earning_markers,
                        'c': self.toggle_specific_markers,
+                       'i': self.toggle_buy_markers,
+                       'u': self.toggle_sell_markers,
                        'g': self.refresh_description_data_and_redraw,
                        'n': lambda: execute_external_script('earning_input', self.name),
                        'e': lambda: execute_external_script('earning_edit', self.name),

@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <style>
     body {
-      width: 300px;
+      width: 320px;
       padding: 12px;
       font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
       font-size: 13px;
@@ -15,12 +15,6 @@
     h1 {
       font-size: 14px;
       margin: 0 0 6px;
-    }
-
-    h2 {
-      font-size: 13px;
-      margin: 12px 0 4px;
-      color: #0f172a;
     }
 
     .hint {
@@ -37,7 +31,7 @@
 
     textarea {
       width: 100%;
-      height: 60px;
+      height: 56px;
       font-size: 11px;
       box-sizing: border-box;
       margin-top: 6px;
@@ -53,13 +47,21 @@
     }
 
     #status,
-    #bridgeStatus {
+    #bridgeStatus,
+    #pageStatus {
       margin-top: 8px;
       font-size: 12px;
       color: #059669;
       line-height: 1.5;
       word-break: break-all;
       white-space: pre-wrap;
+    }
+
+    #pageStatus {
+      color: #334155;
+      background: #f1f5f9;
+      border-radius: 4px;
+      padding: 6px 8px;
     }
 
     .row {
@@ -91,18 +93,35 @@
       border: none;
       border-radius: 4px;
     }
+
+    .warn {
+      background: #fff7ed;
+      color: #9a3412;
+      border: 1px solid #fed7aa;
+      border-radius: 4px;
+      padding: 6px 8px;
+      font-size: 11px;
+      line-height: 1.5;
+    }
   </style>
 </head>
 
 <body>
+  <div id="pageStatus">正在检测当前页面…</div>
+
+  <div class="row" style="margin-top:10px;">
+    <input type="checkbox" id="autoChk" style="width:auto;">
+    <label for="autoChk"><b>启用自动抓取（总开关，默认关闭）</b></label>
+  </div>
+  <div class="warn">关闭时：只有下面的手动按钮会抓取并写入本机 JSON；页面滚动 / 定时器 / 点击徽章看图都<b>不会</b>抓取或改动文件。</div>
+
+  <hr>
   <h1>① 同步标签数据（本地 → 网页）</h1>
   <p class="hint">选择本地的 <code>description.json</code>：</p>
   <input type="file" id="fileInput" accept=".json,application/json">
-
   <p class="hint" style="margin-top:8px;">或直接粘贴 JSON（备用）：</p>
   <textarea id="pasteArea" placeholder='{"stocks":[...],"etfs":[...]}'></textarea>
   <button id="pasteBtn">解析粘贴内容</button>
-
   <div class="row">
     <label for="maxTags">每行最多显示</label>
     <input type="number" id="maxTags" min="1" max="10" value="2" style="width:52px;">
@@ -112,12 +131,19 @@
   <div id="status"></div>
 
   <hr>
-  <h1>② 回传持仓数据（网页 → 本地）</h1>
-  <p class="hint">先确保 <code>bridge_server.py</code> 已在终端运行。</p>
+  <h1>② 持仓快照（/app/positions）</h1>
+  <p class="hint">覆盖式，只保留最新一次的全量快照。</p>
   <button id="pingBtn">🔌 测试本地桥接连接</button>
-  <button id="scanBtn" class="primary">⬇️ 抓取全部持仓（自动滚动整表）</button>
-  <button id="dumpBtn">🔍 查看当前已抓取的数据</button>
-  <button id="serverBtn">📄 查看本机已保存的 JSON</button>
+  <button id="scanBtn" class="primary">⬇️ 手动抓取全部持仓（自动滚屏）</button>
+  <button id="dumpBtn">🔍 查看本页已抓取的持仓</button>
+  <button id="serverBtn">📄 查看本机 positions JSON</button>
+
+  <hr>
+  <h1>③ 买卖痕迹（/app/order-status）</h1>
+  <p class="hint">追加式，长期累积你的买入/卖出记录，永不覆盖。</p>
+  <button id="scanOrdersBtn" class="primary">⬇️ 手动抓取订单记录（自动滚屏）</button>
+  <button id="dumpOrdersBtn">🔍 查看本页已抓取的订单</button>
+  <button id="serverOrdersBtn">📄 查看本机 orders JSON</button>
   <div id="bridgeStatus"></div>
 
   <div class="row">
@@ -126,7 +152,7 @@
   </div>
 
   <hr>
-  <p class="small">改完 description.json 后重新导入一次即可，无需重启浏览器。</p>
+  <p class="small">图表里 <b>I</b> = 买入点显隐，<b>U</b> = 卖出点显隐，<b>X</b> = 全部浮框显隐。</p>
 
   <script src="popup.js"></script>
 </body>

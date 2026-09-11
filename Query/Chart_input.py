@@ -23,6 +23,20 @@ USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 FIRSTRADE_POSITIONS_FILE = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "firstrade_positions.json")
 
+# --- 买入/卖出痕迹（Firstrade order-status 抓取结果） ---
+_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+if _THIS_DIR not in sys.path:
+    sys.path.append(_THIS_DIR)
+try:
+    from ft_trades import (get_trades_for_symbol, build_marker_text, short_trade_label,
+                           BUY_COLOR, SELL_COLOR, BUY_MARKER, SELL_MARKER)
+except Exception as _e:
+    print(f"[FT] 加载 ft_trades 失败（买卖点将不显示）: {_e}")
+    BUY_COLOR, SELL_COLOR, BUY_MARKER, SELL_MARKER = '#5E81AC', '#D08770', '^', 'v'
+    def get_trades_for_symbol(_s): return {}
+    def build_marker_text(*_a, **_k): return ''
+    def short_trade_label(*_a, **_k): return ''
+
 # --- 导入 Tiger_API ---
 sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Selenium"))
 try:
@@ -54,7 +68,6 @@ NORD_THEME = {
 
 # ============ 读取 Firstrade 真实持仓缓存 ============
 FT_DEBUG = os.environ.get("FT_DEBUG", "") == "1"
-# 找不到数据时是否在图上显示灰色提示（调试很有用），不想看就 export FT_SHOW_MISS=0
 FT_SHOW_MISS = os.environ.get("FT_SHOW_MISS", "1") == "1"
 
 
@@ -120,6 +133,7 @@ def _ft_layout_text_row(fig, x0, y, items, fontsize=12, gap_px=14, x_limit=0.32)
             w_frac = (len(txt) * fontsize * 0.62 + gap_px) / fig_w_px
         x += w_frac
     return arts
+
 
 # ============ 全局实时价格管理器 ============
 class _RealtimeManager:
@@ -624,6 +638,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     show_global_markers = False
     show_specific_markers = True
     show_earning_markers = True
+    show_buy_markers = True        # ★ 买入点默认显示
+    show_sell_markers = True       # ★ 卖出点默认显示
     show_all_annotations = False
     show_colored_lines = True
     current_filtered_dates = []
@@ -662,7 +678,6 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         turnovers = [0.0] * len(dates)
 
     smooth_dates, smooth_prices = smooth_curve(dates, prices)
-    date_nums = matplotlib.dates.date2num(dates)
 
     fig, ax1 = plt.subplots(figsize=(16, 8))
     fig.subplots_adjust(left=0.05, bottom=0.1, right=0.83, top=0.8)
@@ -733,6 +748,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     )
 
     global_markers, specific_markers, earning_markers = {}, {}, {}
+    buy_markers, sell_markers = {}, {}
+    buy_scatter_points, sell_scatter_points = [], []
+    trade_map = get_trades_for_symbol(name)
     all_annotations = []
     
     try:
@@ -796,6 +814,63 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         ax1.add_collection(lc)
         colored_lc[0] = lc
         
+    def build_trade_markers():
+        """买入/卖出痕迹（来自 Chrome 插件抓取的 order-status 页面）"""
+        for scatter, _, _, _ in buy_scatter_points + sell_scatter_points:
+            try: scatter.remove()
+            except Exception: pass
+        buy_scatter_points.clear()
+        sell_scatter_points.clear()
+        buy_markers.clear()
+        sell_markers.clear()
+        if not trade_map:
+            return
+
+        dmin, dmax = min(dates).date(), max(dates).date()
+        np_dates = np.array(dates)
+        for d in sorted(trade_map.keys()):
+            if d < dmin or d > dmax:
+                continue
+            target = datetime.combine(d, datetime.min.time())
+            idx = int((np.abs(np_dates - target)).argmin())
+            px = prices[idx]
+            for side in ('buy', 'sell'):
+                agg = trade_map[d].get(side)
+                if not agg:
+                    continue
+                txt = build_marker_text(side, d, agg, close_price=px)
+                is_buy = (side == 'buy')
+                sc = ax1.scatter(
+                    [dates[idx]], [px], s=150,
+                    marker=(BUY_MARKER if is_buy else SELL_MARKER),
+                    color=(BUY_COLOR if is_buy else SELL_COLOR),
+                    edgecolors=NORD_THEME['text_bright'], linewidths=0.7,
+                    alpha=0.95, zorder=4.6, picker=5,
+                    visible=(show_buy_markers if is_buy else show_sell_markers)
+                )
+                if is_buy:
+                    buy_markers[dates[idx]] = txt
+                    buy_scatter_points.append((sc, dates[idx], px, txt))
+                else:
+                    sell_markers[dates[idx]] = txt
+                    sell_scatter_points.append((sc, dates[idx], px, txt))
+
+        trade_offsets = [(45, 45), (-170, 45), (45, -95), (-170, -95)]
+        all_trade_pts = buy_scatter_points + sell_scatter_points
+        n_buy = len(buy_scatter_points)
+        for i, (sc, date_v, price_v, txt) in enumerate(all_trade_pts):
+            is_buy = i < n_buy
+            color = BUY_COLOR if is_buy else SELL_COLOR
+            annotation = ax1.annotate(
+                txt, xy=(date_v, price_v), xytext=trade_offsets[i % len(trade_offsets)],
+                textcoords="offset points",
+                bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=color, alpha=0.85),
+                arrowprops=dict(arrowstyle="->", color=color),
+                color=color, fontsize=11,
+                visible=(show_buy_markers if is_buy else show_sell_markers) and show_all_annotations
+            )
+            all_annotations.append((annotation, 'buy' if is_buy else 'sell', date_v, price_v))
+
     def create_markers_and_annotations():
         for scatter, _, _, _ in global_scatter_points + specific_scatter_points: scatter.remove()
         for annotation, _, _, _ in all_annotations: annotation.remove()
@@ -814,7 +889,6 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         found_item = None
         for source in ['stocks', 'etfs']:
             for item in current_json_data['data'].get(source, []):
-                # 兼容 BRK.B 与 BRK-B 格式
                 sym = item['symbol']
                 if sym == name or sym.replace('-', '.') == name.replace('-', '.'):
                     found_item = item
@@ -926,6 +1000,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             )
             all_annotations.append((annotation, 'earning', date_v, price_v))
 
+        build_trade_markers()          # ★ 重建买卖点
+
     for marker_date, text in earning_markers.items():
         if min(dates) <= marker_date <= max(dates):
             idx = (np.abs(np.array(dates) - marker_date)).argmin()
@@ -942,6 +1018,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             if anno_type == 'global': annotation.set_visible(show_global_markers and show_all_annotations)
             elif anno_type == 'specific': annotation.set_visible(show_specific_markers and show_all_annotations)
             elif anno_type == 'earning': annotation.set_visible(show_earning_markers and show_all_annotations)
+            elif anno_type == 'buy': annotation.set_visible(show_buy_markers and show_all_annotations)
+            elif anno_type == 'sell': annotation.set_visible(show_sell_markers and show_all_annotations)
         fig.canvas.draw_idle()
 
     def clean_percentage_string(s):
@@ -1265,12 +1343,30 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             if anno_type == 'earning': annotation.set_visible(show_earning_markers and show_all_annotations)
         fig.canvas.draw_idle()
 
+    def toggle_buy_markers():
+        nonlocal show_buy_markers
+        show_buy_markers = not show_buy_markers
+        for scatter, _, _, _ in buy_scatter_points: scatter.set_visible(show_buy_markers)
+        for annotation, anno_type, _, _ in all_annotations:
+            if anno_type == 'buy': annotation.set_visible(show_buy_markers and show_all_annotations)
+        fig.canvas.draw_idle()
+
+    def toggle_sell_markers():
+        nonlocal show_sell_markers
+        show_sell_markers = not show_sell_markers
+        for scatter, _, _, _ in sell_scatter_points: scatter.set_visible(show_sell_markers)
+        for annotation, anno_type, _, _ in all_annotations:
+            if anno_type == 'sell': annotation.set_visible(show_sell_markers and show_all_annotations)
+        fig.canvas.draw_idle()
+
     def update_marker_visibility():
         years = time_options[radio.value_selected]
         min_date = min(dates) if years == 0 else datetime.now() - timedelta(days=years * 365)
         for scatter, date_v, _, _ in global_scatter_points: scatter.set_visible((min_date <= date_v) and show_global_markers)
         for scatter, date_v, _, _ in specific_scatter_points: scatter.set_visible((min_date <= date_v) and show_specific_markers)
         for scatter, date_v, _, _ in earning_scatter_points: scatter.set_visible((min_date <= date_v) and show_earning_markers)
+        for scatter, date_v, _, _ in buy_scatter_points: scatter.set_visible((min_date <= date_v) and show_buy_markers)
+        for scatter, date_v, _, _ in sell_scatter_points: scatter.set_visible((min_date <= date_v) and show_sell_markers)
 
         for annotation, anno_type, date_v, _ in all_annotations:
             visible = False
@@ -1278,14 +1374,18 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 if anno_type == 'global': visible = show_global_markers and show_all_annotations
                 elif anno_type == 'specific': visible = show_specific_markers and show_all_annotations
                 elif anno_type == 'earning': visible = show_earning_markers and show_all_annotations
+                elif anno_type == 'buy': visible = show_buy_markers and show_all_annotations
+                elif anno_type == 'sell': visible = show_sell_markers and show_all_annotations
             annotation.set_visible(visible)
         fig.canvas.draw_idle()
 
     def on_pick(event):
         try:
-            artists = [p[0] for p in global_scatter_points + specific_scatter_points + earning_scatter_points]
+            _all_pts = (global_scatter_points + specific_scatter_points +
+                        earning_scatter_points + buy_scatter_points + sell_scatter_points)
+            artists = [p[0] for p in _all_pts]
             if event.artist in artists:
-                for scatter, date_v, price_v, text in global_scatter_points + specific_scatter_points + earning_scatter_points:
+                for scatter, date_v, price_v, text in _all_pts:
                     if event.artist == scatter:
                         annot.xy = (date_v, price_v)
                         annot.set_text(f"{datetime.strftime(date_v, '%Y-%m-%d')}\n{price_v}\n{text}")
@@ -1322,7 +1422,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         result = query_database(db_path, table_name, f"name = '{name}'")
         create_window_qt(result)
 
-    if clickable: fig.canvas.mpl_connect('pick_event', on_pick)
+    # if clickable: fig.canvas.mpl_connect('pick_event', on_pick)
+    fig.canvas.mpl_connect('pick_event', on_pick)
 
     ax1.grid(True, color=NORD_THEME['border'], alpha=0.1, linestyle='--')
     plt.xticks(rotation=45)
@@ -1348,7 +1449,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         circle.set_facecolor(NORD_THEME['background'])
     radio.circles[default_index].set_facecolor(NORD_THEME['accent_red'])
 
-    instructions = "N:新财报\nE:改财报\nT:改标签\nW:新事件\nQ:改事件\nK:查豆包\nZ:查富途\nP:做比较\nJ:加Panel\nL:查相似\nY:删除\nG:刷新\nO:查α\nB:存在"
+    instructions = "N:新财报\nE:改财报\nT:改标签\nW:新事件\nQ:改事件\nK:查豆包\nZ:查富途\nP:做比较\nJ:加Panel\nL:查相似\nY:删除\nG:刷新\nO:查α\nB:存在\nI:买入点\nU:卖出点"
     rax.text(0.5, 0.98, instructions, transform=rax.transAxes, ha="center", va="bottom",
              color=NORD_THEME['text_light'], fontsize=10, fontfamily="Arial Unicode MS")
     
@@ -1362,12 +1463,17 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                 annot.xy = (xval, yval)
                 current_date = xval.replace(tzinfo=None)
                 g_text, s_text, e_text = None, None, None
+                b_text, sl_text = None, None
                 for d, t in global_markers.items():
                     if abs((d - current_date).total_seconds()) < 86400: g_text = t; break
                 for d, t in specific_markers.items():
                     if abs((d - current_date).total_seconds()) < 86400: s_text = t; break
                 for d, t in earning_markers.items():
                     if abs((d - current_date).total_seconds()) < 86400: e_text = t; break
+                for d, t in buy_markers.items():
+                    if abs((d - current_date).total_seconds()) < 86400: b_text = t; break
+                for d, t in sell_markers.items():
+                    if abs((d - current_date).total_seconds()) < 86400: sl_text = t; break
                 
                 if mouse_pressed and initial_price is not None:
                     percent_change = ((yval - initial_price) / initial_price) * 100
@@ -1411,6 +1517,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                         for line in e_text.split('\n'):
                             if "昨日财报" in line: marker_texts.append(line); break
                         has_earning = True
+                    if b_text: marker_texts.append(b_text)
+                    if sl_text: marker_texts.append(sl_text)
                     if marker_texts: parts.extend(marker_texts)
                     
                     parts.append(f"最新价差: {((prices[-1] - yval) / yval) * 100:.2f}%")
@@ -1428,7 +1536,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                             parts.append("最新额差: --") 
                     text = "\n".join(parts)
                     
-                    if has_earning and not (g_text or s_text): color = NORD_THEME['accent_yellow']
+                    if (b_text or sl_text) and not (g_text or s_text or has_earning):
+                        color = BUY_COLOR if b_text else SELL_COLOR
+                    elif has_earning and not (g_text or s_text): color = NORD_THEME['accent_yellow']
                     elif g_text and not (s_text or has_earning): color = NORD_THEME['accent_red']
                     elif s_text and not (g_text or has_earning): color = NORD_THEME['text_bright']
                     elif g_text and (s_text or has_earning): color = NORD_THEME['accent_purple']
@@ -1547,6 +1657,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                             for _, d, _, _ in earning_scatter_points:
                                 if d == sel_date: color = NORD_THEME['accent_yellow']; break
                     
+                    for _, d, _, _ in buy_scatter_points:
+                        if d == sel_date: color = BUY_COLOR; break
+                    for _, d, _, _ in sell_scatter_points:
+                        if d == sel_date: color = SELL_COLOR; break
                     highlight_point.set_color(color)
                     dist = 0.2 * ((ax1.get_xlim()[1] - ax1.get_xlim()[0]) / 365)
                     if np.isclose(matplotlib.dates.date2num(sel_date), event.xdata, atol=dist):
@@ -1730,6 +1844,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             actions = {'v': toggle_volume, 'r': toggle_global_markers, 'x': toggle_all_annotations,
                        'a': toggle_earning_markers,
                        'c': toggle_specific_markers,
+                       'i': toggle_buy_markers,
+                       'u': toggle_sell_markers,
                        'g': refresh_description_data_and_redraw,
                        'n': lambda: execute_external_script('earning_input', name),
                        'e': lambda: execute_external_script('earning_edit', name),

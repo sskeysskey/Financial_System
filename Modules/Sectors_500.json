@@ -203,7 +203,8 @@
         "ARGX",
         "CAH",
         "TAK",
-        "MRNA"
+        "MRNA",
+        "EW"
     ],
     "Industrials": [
         "GE",
@@ -247,7 +248,8 @@
         "FAST",
         "SPCX",
         "DAL",
-        "BE"
+        "BE",
+        "SUNB"
     ],
     "Real_Estate": [
         "PLD",
@@ -321,9 +323,7 @@
         "NOK",
         "COHR",
         "MSTR",
-        "ALAB",
-        "UMC",
-        "CRWV"
+        "UMC"
     ],
     "Utilities": [
         "NEE",
@@ -333,7 +333,6 @@
         "CEG",
         "AEP",
         "SRE",
-        "D",
-        "VST"
+        "D"
     ]
 }
