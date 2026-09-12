@@ -59,8 +59,7 @@
         "ORLY",
         "ROST",
         "SE",
-        "F",
-        "CVNA"
+        "F"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -203,8 +202,7 @@
         "ARGX",
         "CAH",
         "TAK",
-        "MRNA",
-        "EW"
+        "MRNA"
     ],
     "Industrials": [
         "GE",
@@ -249,7 +247,7 @@
         "SPCX",
         "DAL",
         "BE",
-        "SUNB"
+        "HONA"
     ],
     "Real_Estate": [
         "PLD",
@@ -323,7 +321,8 @@
         "NOK",
         "COHR",
         "MSTR",
-        "UMC"
+        "UMC",
+        "ALAB"
     ],
     "Utilities": [
         "NEE",

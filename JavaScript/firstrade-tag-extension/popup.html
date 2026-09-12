@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <style>
     body {
-      width: 320px;
+      width: 340px;
       padding: 12px;
       font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
       font-size: 13px;
@@ -31,7 +31,7 @@
 
     textarea {
       width: 100%;
-      height: 56px;
+      height: 52px;
       font-size: 11px;
       box-sizing: border-box;
       margin-top: 6px;
@@ -41,14 +41,15 @@
     button {
       width: 100%;
       padding: 6px;
-      margin-top: 8px;
+      margin-top: 6px;
       cursor: pointer;
       font-size: 13px;
     }
 
     #status,
     #bridgeStatus,
-    #pageStatus {
+    #pageStatus,
+    #wlStatus {
       margin-top: 8px;
       font-size: 12px;
       color: #059669;
@@ -57,7 +58,8 @@
       white-space: pre-wrap;
     }
 
-    #pageStatus {
+    #pageStatus,
+    #wlStatus {
       color: #334155;
       background: #f1f5f9;
       border-radius: 4px;
@@ -68,7 +70,7 @@
       display: flex;
       gap: 6px;
       align-items: center;
-      margin-top: 8px;
+      margin-top: 6px;
     }
 
     .row label {
@@ -94,6 +96,13 @@
       border-radius: 4px;
     }
 
+    .danger {
+      background: #fff;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+      border-radius: 4px;
+    }
+
     .warn {
       background: #fff7ed;
       color: #9a3412;
@@ -102,6 +111,16 @@
       padding: 6px 8px;
       font-size: 11px;
       line-height: 1.5;
+      margin-top: 6px;
+    }
+
+    .half {
+      display: flex;
+      gap: 6px;
+    }
+
+    .half button {
+      margin-top: 6px;
     }
   </style>
 </head>
@@ -109,11 +128,21 @@
 <body>
   <div id="pageStatus">正在检测当前页面…</div>
 
-  <div class="row" style="margin-top:10px;">
-    <input type="checkbox" id="autoChk" style="width:auto;">
-    <label for="autoChk"><b>启用自动抓取（总开关，默认关闭）</b></label>
+  <hr>
+  <h1>⚙️ 自动抓取开关（各自独立，默认全关）</h1>
+  <div class="row">
+    <input type="checkbox" id="autoPos" style="width:auto;">
+    <label for="autoPos">持仓 /app/positions 自动抓取</label>
   </div>
-  <div class="warn">关闭时：只有下面的手动按钮会抓取并写入本机 JSON；页面滚动 / 定时器 / 点击徽章看图都<b>不会</b>抓取或改动文件。</div>
+  <div class="row">
+    <input type="checkbox" id="autoOrd" style="width:auto;">
+    <label for="autoOrd">订单 /app/order-status 自动抓取</label>
+  </div>
+  <div class="row">
+    <input type="checkbox" id="autoWl" style="width:auto;">
+    <label for="autoWl">自选股 /app/watchlist 自动抓取</label>
+  </div>
+  <div class="warn">关闭时：只有手动按钮会写入本机 JSON。自选股自动抓取为<b>增量合并</b>（只写当前可见行，不会清空全表）。</div>
 
   <hr>
   <h1>① 同步标签数据（本地 → 网页）</h1>
@@ -127,7 +156,7 @@
     <input type="number" id="maxTags" min="1" max="10" value="2" style="width:52px;">
     <span class="small">个标签</span>
   </div>
-  <button id="clearBtn" style="background:#fff;color:#b91c1c;">清空标签缓存</button>
+  <button id="clearBtn" class="danger">清空标签缓存</button>
   <div id="status"></div>
 
   <hr>
@@ -135,15 +164,50 @@
   <p class="hint">覆盖式，只保留最新一次的全量快照。</p>
   <button id="pingBtn">🔌 测试本地桥接连接</button>
   <button id="scanBtn" class="primary">⬇️ 手动抓取全部持仓（自动滚屏）</button>
-  <button id="dumpBtn">🔍 查看本页已抓取的持仓</button>
-  <button id="serverBtn">📄 查看本机 positions JSON</button>
+  <div class="half">
+    <button id="dumpBtn">🔍 本页持仓</button>
+    <button id="serverBtn">📄 本机 JSON</button>
+  </div>
 
   <hr>
   <h1>③ 买卖痕迹（/app/order-status）</h1>
-  <p class="hint">追加式，长期累积你的买入/卖出记录，永不覆盖。</p>
+  <p class="hint">追加式，长期累积买入/卖出记录，永不覆盖。</p>
   <button id="scanOrdersBtn" class="primary">⬇️ 手动抓取订单记录（自动滚屏）</button>
-  <button id="dumpOrdersBtn">🔍 查看本页已抓取的订单</button>
-  <button id="serverOrdersBtn">📄 查看本机 orders JSON</button>
+  <div class="half">
+    <button id="dumpOrdersBtn">🔍 本页订单</button>
+    <button id="serverOrdersBtn">📄 本机 JSON</button>
+  </div>
+
+  <hr>
+  <h1>④ 自选股批量补齐（/app/watchlist）</h1>
+  <div id="wlStatus">未检测</div>
+  <div class="warn">开始前请确认：①已切到你要写入的<b>那个自选股分组</b>；②<code>bridge_server.py</code>
+    正在运行；③过程中<b>不要操作该标签页</b>（可切到其它标签页/其它窗口）。进度面板显示在网页右下角，关闭 popup 不影响运行。</div>
+  <button id="wlDiffBtn">🧮 比对差集（Sectors_All ↔ 自选股）</button>
+  <button id="wlStartBtn" class="primary">▶️ 开始批量添加</button>
+  <div class="half">
+    <button id="wlPauseBtn">⏸ 暂停/继续</button>
+    <button id="wlStopBtn" class="danger">⏹ 停止</button>
+  </div>
+  <div class="half">
+    <button id="wlHudBtn">👁 显示进度面板</button>
+    <button id="wlFailBtn">📋 复制失败清单</button>
+  </div>
+  <div class="half">
+    <button id="wlProbeBtn">🔬 探测弹层元素</button>
+    <button id="wlTestBtn">🧪 试添加一只</button>
+  </div>
+  <input type="text" id="wlTestSym" placeholder="自检用 symbol，如 LIN"
+    style="width:100%;box-sizing:border-box;margin-top:6px;font-size:12px;padding:4px;">
+  <p class="hint" style="margin-top:8px;">桥接不可用时的备用 symbol 清单（逗号/换行分隔，可留空）：</p>
+  <textarea id="wlManual" placeholder="AAPL, NVDA, BRK-B ..."></textarea>
+  <button id="wlManualSave">保存备用清单</button>
+
+  <hr>
+  <h1>⑤ 自选股行情「变更%」</h1>
+  <p class="hint">手动 = 全量覆盖写入 <code>firstrade_watchlist.json</code>；图表在「无持仓」时展示该数值。</p>
+  <button id="wlQuoteBtn" class="primary">⬇️ 手动抓取全部变更%（自动滚屏）</button>
+  <button id="serverWlBtn">📄 查看本机 watchlist JSON</button>
   <div id="bridgeStatus"></div>
 
   <div class="row">

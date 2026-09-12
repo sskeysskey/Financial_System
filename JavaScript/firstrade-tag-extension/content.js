@@ -1,18 +1,19 @@
 /* ============================================================================
- * Firstrade 助手 content script v4
- *  1) Tag 徽章 + 一键看图（纯展示，不涉及抓取）
- *  2) 持仓抓取：仅 /app/positions
- *  3) 订单痕迹抓取：仅 /app/order-status
- *  ★ 所有「自动抓取」由唯一开关 ftAutoScrape 控制，默认 false（关闭）
- *    关闭状态下只有 popup 里的手动按钮会抓取/落盘
+ * Firstrade 助手 content script v5
+ *  1) Tag 徽章 + 一键看图（纯展示）
+ *  2) 持仓抓取：仅 /app/positions      —— 开关 ftAutoPositions
+ *  3) 订单痕迹：仅 /app/order-status    —— 开关 ftAutoOrders
+ *  ★ 自选股（/app/watchlist）的抓取与批量补齐由 watchlist.js 负责
+ *  ★ 三个自动开关互相独立，默认全部关闭
  * ==========================================================================*/
 (() => {
-  if (window.__FT_TAG_HELPER_V4__) return;
-  window.__FT_TAG_HELPER_V4__ = true;
+  if (window.__FT_TAG_HELPER_V5__) return;
+  window.__FT_TAG_HELPER_V5__ = true;
 
   const LOG_PREFIX = '[FT]';
   let DEBUG = false;
-  let AUTO_SCRAPE = false;          // ★★★ 唯一自动抓取总开关，默认关闭 ★★★
+  let AUTO_POSITIONS = false;     // ★ 独立开关
+  let AUTO_ORDERS = false;        // ★ 独立开关
   let stockTagMap = {};
   let maxTags = 2;
 
@@ -22,7 +23,8 @@
   /* ==================== 0. 页面闸门（双重校验） ==================== */
   const PAGE_RULES = [
     { key: 'positions', re: /\/positions?(\/|$|\?|#)/i },
-    { key: 'orders', re: /\/order-status/i }
+    { key: 'orders', re: /\/order-status/i },
+    { key: 'watchlist', re: /\/watchlist/i }
   ];
 
   function detectPage() {
@@ -32,7 +34,6 @@
   }
   let PAGE = detectPage();
 
-  // 列指纹：防止「长得像但不是」的表格被误抓
   const POSITION_COL_HINTS = ['allocationPercent', 'marketValue', 'gainlossPercent',
     'totalCost', 'changePercent', 'quantity', 'averageCost'];
   const ORDER_COL_HINTS = ['transaction', 'statusCategory', 'durationType',
@@ -48,7 +49,6 @@
     const s = colIdSet();
     if (!s.has('symbol')) return false;
     if (kind === 'positions') {
-      // 订单表特征列出现 → 立刻否决，绝不把订单当持仓
       if (s.has('transaction') || s.has('statusCategory') || s.has('durationType')) return false;
       return POSITION_COL_HINTS.filter(c => s.has(c)).length >= 2;
     }
@@ -62,9 +62,12 @@
   const canScrapePositions = () => PAGE === 'positions' && gridLooksLike('positions');
   const canScrapeOrders = () => PAGE === 'orders' && gridLooksLike('orders');
 
+  /* 自选股批量补齐进行中 → 暂停一切 DOM 注入，减少干扰 */
+  const automationBusy = () => window.__FT_AUTOMATION__ === true;
+
   /* ==================== 1. 缓存与通用工具 ==================== */
-  const positionCache = Object.create(null);   // { SYMBOL: {...} }
-  const orderCache = Object.create(null);      // { orderKey: {...} }
+  const positionCache = Object.create(null);
+  const orderCache = Object.create(null);
   let lastSentSig = '';
   let lastOrderSig = '';
   let syncTimer = null;
@@ -121,7 +124,6 @@
 
   const pad2 = (n) => String(parseInt(n, 10)).padStart(2, '0');
 
-  /* "9/9/2026, 9:39:41 PM" -> "2026-09-09" */
   function parseUpdatedDate(txt) {
     if (!txt) return '';
     const head = String(txt).split(',')[0].trim();
@@ -148,7 +150,6 @@
     return t.replace(/[^A-Z0-9.\-]/g, '');
   }
 
-  /* 从 symbol 单元格拿代码（排除我们自己注入的 tag 徽章文本） */
   function symbolFromCell(cell) {
     const tagged = cell.querySelector('[data-ft-symbol]');
     if (tagged && tagged.dataset.ftSymbol) return tagged.dataset.ftSymbol;
@@ -193,7 +194,7 @@
       if (p.quantity) bits.push(`数量 ${escapeHtml(p.quantity)}`);
       if (bits.length) posHtml = `<div class="ft-popover-position">${bits.join(' · ')}</div>`;
     } else {
-      posHtml = `<div class="ft-popover-position" style="color:#81A1C1;">本页未抓取${AUTO_SCRAPE ? '' : '（自动抓取已关闭）'}，图表会读取本机已保存的 JSON</div>`;
+      posHtml = `<div class="ft-popover-position" style="color:#81A1C1;">本页未抓取，图表会读取本机已保存的 JSON</div>`;
     }
 
     popoverEl.innerHTML = `
@@ -242,9 +243,9 @@
     clearTimeout(el._t);
     el._t = setTimeout(() => el.classList.remove('ft-toast-show'), 2400);
   }
+  window.__FT_TOAST__ = flashToast;      // 供 watchlist.js 复用
 
   /* ==================== 3. 拉起本机 Python 图表 ==================== */
-  /* 注意：不再顺手抓取落盘。图表读的是「上次手动全量抓取」写下的 JSON。 */
   async function triggerLocalChart(symbol) {
     if (!symbol) return;
     const resp = await safeSendMessage({ action: 'FT_PLOT', symbol, payload: {} });
@@ -298,7 +299,7 @@
 
     if (changed > 0) {
       log('持仓抓取更新', changed, '条，累计', Object.keys(positionCache).length);
-      if (AUTO_SCRAPE) debounceSync();          // ★ 只有开关打开才自动落盘
+      if (AUTO_POSITIONS) debounceSync();
     }
     return Object.keys(buf).length;
   }
@@ -332,7 +333,6 @@
     return resp;
   }
 
-  /* 手动：滚动整表全量抓取 + 覆盖写入 */
   async function fullScan() {
     if (!canScrapePositions()) {
       return { ok: false, error: `当前页面不是持仓页（PAGE=${PAGE}），已拒绝抓取` };
@@ -395,11 +395,10 @@
     else if (/卖|sell|sold/i.test(sideTxt)) side = 'sell';
 
     const sym = rec.symbol || '';
-    if (!sym || !date || !side) return false;      // 三要素缺一不记
+    if (!sym || !date || !side) return false;
 
-    // 「数量」列：$1,000.00 = 按金额下单；1,000 = 按股数下单
     let qtyTxt = pickCol(raw, ORDER_FIELD_COLS.qty);
-    if (!qtyTxt && raw['@3']) qtyTxt = raw['@3'];   // aria-colindex=3 兜底
+    if (!qtyTxt && raw['@3']) qtyTxt = raw['@3'];
     const isDollar = /\$/.test(qtyTxt);
     const qtyNum = toNum(qtyTxt);
     const price = toNum(pickCol(raw, ORDER_FIELD_COLS.price));
@@ -471,7 +470,7 @@
     Object.keys(buf).forEach((rid) => { if (normalizeOrder(buf[rid])) changed++; });
     if (changed > 0) {
       log('订单抓取更新', changed, '条，累计', Object.keys(orderCache).length);
-      if (AUTO_SCRAPE) debounceOrderSync();       // ★ 只有开关打开才自动落盘
+      if (AUTO_ORDERS) debounceOrderSync();
     }
     return Object.keys(buf).length;
   }
@@ -494,7 +493,6 @@
     return resp;
   }
 
-  /* 手动：滚动整表抓取订单（追加，不清空） */
   async function fullScanOrders() {
     if (!canScrapeOrders()) {
       return { ok: false, error: `当前页面不是订单页（PAGE=${PAGE}），已拒绝抓取` };
@@ -540,20 +538,25 @@
   }
 
   function loadSettings() {
-    chrome.storage.local.get(['stockData', 'maxTags', 'ftDebug', 'ftAutoScrape'], (res) => {
-      stockTagMap = res.stockData || {};
-      maxTags = res.maxTags || 2;
-      DEBUG = !!res.ftDebug;
-      AUTO_SCRAPE = res.ftAutoScrape === true;     // 默认 false
-      log('设置已加载 AUTO_SCRAPE =', AUTO_SCRAPE, 'PAGE =', PAGE);
-      clearAllTags();
-      scheduleInject();
-    });
+    chrome.storage.local.get(
+      ['stockData', 'maxTags', 'ftDebug', 'ftAutoPositions', 'ftAutoOrders', 'ftAutoScrape'],
+      (res) => {
+        stockTagMap = res.stockData || {};
+        maxTags = res.maxTags || 2;
+        DEBUG = !!res.ftDebug;
+        const legacy = res.ftAutoScrape === true;
+        AUTO_POSITIONS = res.ftAutoPositions === undefined ? legacy : res.ftAutoPositions === true;
+        AUTO_ORDERS = res.ftAutoOrders === undefined ? legacy : res.ftAutoOrders === true;
+        log('设置已加载 AUTO_POSITIONS=', AUTO_POSITIONS, 'AUTO_ORDERS=', AUTO_ORDERS, 'PAGE=', PAGE);
+        clearAllTags();
+        scheduleInject();
+      });
   }
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
-    if (changes.stockData || changes.maxTags || changes.ftDebug || changes.ftAutoScrape) loadSettings();
+    if (changes.stockData || changes.maxTags || changes.ftDebug ||
+      changes.ftAutoPositions || changes.ftAutoOrders || changes.ftAutoScrape) loadSettings();
   });
 
   function clearAllTags() {
@@ -596,6 +599,8 @@
   }
 
   function injectTags() {
+    if (automationBusy()) return;           // ★ 批量补齐进行中，不注入
+
     const cells = document.querySelectorAll('[col-id="symbol"]');
     cells.forEach((cell) => {
       if (cell.closest('.ag-header')) return;
@@ -616,11 +621,8 @@
       anchor.insertAdjacentElement('afterend', buildTagContainer(symbol, getTagsForSymbol(symbol)));
     });
 
-    /* ★ 自动抓取：唯一开关控制 */
-    if (AUTO_SCRAPE) {
-      if (PAGE === 'positions') scrapeGridData();
-      else if (PAGE === 'orders') scrapeOrderGrid();
-    }
+    if (AUTO_POSITIONS && PAGE === 'positions') scrapeGridData();
+    if (AUTO_ORDERS && PAGE === 'orders') scrapeOrderGrid();
   }
 
   /* ==================== 7. 调度 ==================== */
@@ -635,7 +637,9 @@
     return !!(node.classList && (
       node.classList.contains('ft-custom-tag-container') ||
       node.id === 'ft-global-tag-popover' ||
-      node.id === 'ft-toast'
+      node.id === 'ft-toast' ||
+      node.id === 'ft-wl-hud' ||
+      (node.closest && node.closest('#ft-wl-hud'))
     ));
   }
 
@@ -652,11 +656,11 @@
   window.addEventListener('resize', () => scheduleInject(100));
   setInterval(() => scheduleInject(0), 2000);
 
-  /* 定期兜底同步：★ 仅在自动开关打开时才存在实际动作 */
+  /* 定期兜底同步：仅在对应开关打开时才动作 */
   setInterval(() => {
-    if (!AUTO_SCRAPE) return;
-    if (PAGE === 'positions') { scrapeGridData(); flushPositions(); }
-    else if (PAGE === 'orders') { scrapeOrderGrid(); flushOrders(); }
+    if (automationBusy()) return;
+    if (AUTO_POSITIONS && PAGE === 'positions') { scrapeGridData(); flushPositions(); }
+    if (AUTO_ORDERS && PAGE === 'orders') { scrapeOrderGrid(); flushOrders(); }
   }, 30000);
 
   /* SPA 路由变化 → 重新判定页面 */
@@ -681,7 +685,8 @@
         ok: true,
         page: PAGE || 'other',
         path: location.pathname,
-        auto: AUTO_SCRAPE,
+        autoPositions: AUTO_POSITIONS,
+        autoOrders: AUTO_ORDERS,
         canPositions: canScrapePositions(),
         canOrders: canScrapeOrders(),
         positions: Object.keys(positionCache).length,
@@ -715,5 +720,5 @@
 
   initGlobalPopover();
   loadSettings();
-  console.log(LOG_PREFIX, `Content Script v4 就绪（PAGE=${PAGE}，自动抓取默认关闭）`);
+  console.log(LOG_PREFIX, `Content Script v5 就绪（PAGE=${PAGE}，三个自动开关默认关闭）`);
 })();

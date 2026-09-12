@@ -212,3 +212,95 @@ html:not(.dark) .ft-popover-fulltag {
   border-color: #CBD5E1 !important;
   color: #334155 !important;
 }
+
+/* ==================== 自选股批量补齐 HUD ==================== */
+#ft-wl-hud {
+  position: fixed !important;
+  right: 16px !important;
+  bottom: 64px !important;
+  z-index: 99999999 !important;
+  width: 268px !important;
+  background: #2E3440 !important;
+  color: #ECEFF4 !important;
+  border: 1px solid #4C566A !important;
+  border-radius: 8px !important;
+  padding: 10px 12px !important;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", sans-serif !important;
+  font-size: 12px !important;
+  line-height: 1.55 !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .45) !important;
+  display: none;
+}
+
+#ft-wl-hud .ft-wl-head {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  border-bottom: 1px solid #434C5E !important;
+  padding-bottom: 5px !important;
+  margin-bottom: 6px !important;
+}
+
+#ft-wl-hud .ft-wl-title {
+  font-weight: 700 !important;
+  color: #88C0D0 !important;
+  font-size: 13px !important;
+}
+
+#ft-wl-hud .ft-wl-x {
+  cursor: pointer !important;
+  color: #81A1C1 !important;
+  padding: 0 4px !important;
+}
+
+#ft-wl-hud .ft-wl-x:hover {
+  color: #ECEFF4 !important;
+}
+
+#ft-wl-hud .ft-wl-line {
+  word-break: break-all !important;
+  color: #D8DEE9 !important;
+  margin: 2px 0 !important;
+}
+
+#ft-wl-hud .ft-wl-cur {
+  color: #EBCB8B !important;
+  min-height: 17px !important;
+}
+
+#ft-wl-hud .ft-wl-bar {
+  height: 6px !important;
+  background: #3B4252 !important;
+  border-radius: 3px !important;
+  overflow: hidden !important;
+  margin: 6px 0 !important;
+}
+
+#ft-wl-hud .ft-wl-bar i {
+  display: block !important;
+  height: 100% !important;
+  width: 0 !important;
+  background: linear-gradient(90deg, #5E81AC, #88C0D0) !important;
+  transition: width .25s ease !important;
+}
+
+#ft-wl-hud .ft-wl-btns {
+  display: flex !important;
+  gap: 6px !important;
+  margin-top: 8px !important;
+}
+
+#ft-wl-hud .ft-wl-btns button {
+  flex: 1 !important;
+  cursor: pointer !important;
+  background: #3B4252 !important;
+  color: #ECEFF4 !important;
+  border: 1px solid #4C566A !important;
+  border-radius: 4px !important;
+  padding: 4px 0 !important;
+  font-size: 11px !important;
+}
+
+#ft-wl-hud .ft-wl-btns button:hover {
+  background: #4C566A !important;
+}

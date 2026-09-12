@@ -1,14 +1,8 @@
 const $ = (id) => document.getElementById(id);
-const fileInput = $('fileInput');
-const pasteArea = $('pasteArea');
-const pasteBtn = $('pasteBtn');
-const clearBtn = $('clearBtn');
-const maxTagsInput = $('maxTags');
 const statusEl = $('status');
 const bridgeEl = $('bridgeStatus');
 const pageEl = $('pageStatus');
-const dbgChk = $('dbgChk');
-const autoChk = $('autoChk');
+const wlEl = $('wlStatus');
 
 function setStatus(text, isError) {
   statusEl.style.color = isError ? '#b91c1c' : '#059669';
@@ -17,6 +11,10 @@ function setStatus(text, isError) {
 function setBridge(text, isError) {
   bridgeEl.style.color = isError ? '#b91c1c' : '#059669';
   bridgeEl.innerText = text;
+}
+function setWl(text, isError) {
+  wlEl.style.color = isError ? '#b91c1c' : '#334155';
+  wlEl.innerText = text;
 }
 
 /* ---------- 通信 ---------- */
@@ -44,31 +42,57 @@ function sendToBg(msg) {
   });
 }
 
-const PAGE_NAME = { positions: '持仓页 ✅', orders: '订单页 ✅', other: '其它页面（不会抓取）' };
+const PAGE_NAME = {
+  positions: '持仓页 ✅', orders: '订单页 ✅',
+  watchlist: '自选股页 ✅', other: '其它页面（不会抓取）'
+};
 
 async function refreshPageStatus() {
   const r = await sendToTab({ action: 'FT_STATUS' });
   if (!r.ok) { pageEl.innerText = '未检测到页面脚本：' + r.error; return; }
   pageEl.innerText =
     `当前：${PAGE_NAME[r.page] || r.page}   ${r.path}\n` +
-    `自动抓取：${r.auto ? '已开启 ⚠️' : '已关闭（推荐）'}\n` +
+    `自动：持仓 ${r.autoPositions ? '开⚠️' : '关'} ｜ 订单 ${r.autoOrders ? '开⚠️' : '关'}\n` +
     `可抓持仓：${r.canPositions ? '是' : '否'} ｜ 可抓订单：${r.canOrders ? '是' : '否'}\n` +
     `本页缓存：持仓 ${r.positions} 条 / 订单 ${r.orders} 笔`;
 }
 
+async function refreshWlStatus() {
+  const r = await sendToTab({ action: 'FT_WL_STATUS' });
+  if (!r || !r.ok) { setWl('未检测到自选股脚本（请在 /app/watchlist 页面刷新一次）', true); return; }
+  if (!r.page) { setWl(`当前不在自选股页面（${r.path}）\n请先打开 https://invest.firstrade.com/app/watchlist`); return; }
+  setWl(
+    `分组：${r.group || '(未识别)'}｜表内行数：${r.gridRows === null ? '?' : (r.gridRows - 1)}\n` +
+    `自动抓取变更%：${r.auto ? '已开启 ⚠️' : '已关闭'}\n` +
+    `任务：${r.running ? (r.paused ? '⏸已暂停' : '▶️运行中') : '空闲'}` +
+    (r.total ? `  第${r.pass}趟 ${r.done}/${r.total}  成功${r.added} 失败${r.failed}` : '') +
+    (r.lastError ? `\n最后错误：${r.lastError}` : '')
+  );
+}
+
 /* ---------- 初始化 ---------- */
-chrome.storage.local.get(['stockData', 'maxTags', 'ftDebug', 'ftAutoScrape'], (res) => {
-  if (res.maxTags) maxTagsInput.value = res.maxTags;
-  dbgChk.checked = !!res.ftDebug;
-  autoChk.checked = res.ftAutoScrape === true;
-  if (res.stockData) {
-    const keys = Object.keys(res.stockData);
-    setStatus(`已缓存 ${keys.length} 个标的\n示例：${keys.slice(0, 8).join(', ')}`);
-  } else {
-    setStatus('尚未导入数据，请选择 description.json');
-  }
-  refreshPageStatus();
-});
+chrome.storage.local.get(
+  ['stockData', 'maxTags', 'ftDebug', 'ftAutoPositions', 'ftAutoOrders', 'ftAutoWatchlist', 'ftAutoScrape', 'ftWlManualList'],
+  (res) => {
+    if (res.maxTags) $('maxTags').value = res.maxTags;
+    $('dbgChk').checked = !!res.ftDebug;
+    const legacy = res.ftAutoScrape === true;
+    $('autoPos').checked = res.ftAutoPositions === undefined ? legacy : res.ftAutoPositions === true;
+    $('autoOrd').checked = res.ftAutoOrders === undefined ? legacy : res.ftAutoOrders === true;
+    $('autoWl').checked = res.ftAutoWatchlist === true;
+    if (Array.isArray(res.ftWlManualList)) $('wlManual').value = res.ftWlManualList.join(', ');
+
+    if (res.stockData) {
+      const keys = Object.keys(res.stockData);
+      setStatus(`已缓存 ${keys.length} 个标的\n示例：${keys.slice(0, 8).join(', ')}`);
+    } else {
+      setStatus('尚未导入数据，请选择 description.json');
+    }
+    refreshPageStatus();
+    refreshWlStatus();
+  });
+
+setInterval(refreshWlStatus, 2500);
 
 /* ---------- description.json -> {SYMBOL:[tag]} ---------- */
 function buildMap(json) {
@@ -97,7 +121,7 @@ function buildMap(json) {
 function save(map) {
   const count = Object.keys(map).length;
   if (!count) { setStatus('解析成功，但没找到任何含 tag 的 symbol', true); return; }
-  const maxTags = Math.max(1, Math.min(20, parseInt(maxTagsInput.value, 10) || 2));
+  const maxTags = Math.max(1, Math.min(20, parseInt($('maxTags').value, 10) || 2));
   chrome.storage.local.set({ stockData: map, maxTags }, () => {
     if (chrome.runtime.lastError) { setStatus('写入失败：' + chrome.runtime.lastError.message, true); return; }
     setStatus(`导入成功！共 ${count} 个标的\n示例：${Object.keys(map).slice(0, 8).join(', ')}`);
@@ -110,8 +134,8 @@ function handleText(text) {
   catch (err) { setStatus('解析 JSON 失败：' + err.message, true); }
 }
 
-/* ---------- 事件 ---------- */
-fileInput.addEventListener('change', (e) => {
+/* ---------- ① 标签 ---------- */
+$('fileInput').addEventListener('change', (e) => {
   const file = e.target.files && e.target.files[0];
   if (!file) return;
   setStatus('读取中…');
@@ -121,42 +145,48 @@ fileInput.addEventListener('change', (e) => {
   reader.readAsText(file, 'utf-8');
 });
 
-pasteBtn.addEventListener('click', () => {
-  const text = pasteArea.value.trim();
+$('pasteBtn').addEventListener('click', () => {
+  const text = $('pasteArea').value.trim();
   if (!text) { setStatus('粘贴框是空的', true); return; }
   handleText(text);
 });
 
-maxTagsInput.addEventListener('change', () => {
-  const maxTags = Math.max(1, Math.min(20, parseInt(maxTagsInput.value, 10) || 2));
+$('maxTags').addEventListener('change', () => {
+  const maxTags = Math.max(1, Math.min(20, parseInt($('maxTags').value, 10) || 2));
   chrome.storage.local.set({ maxTags }, () => {
     setStatus(`已设置为每行最多显示 ${maxTags} 个标签`);
     sendToTab({ action: 'refreshTags' });
   });
 });
 
-clearBtn.addEventListener('click', () => {
+$('clearBtn').addEventListener('click', () => {
   chrome.storage.local.remove('stockData', () => {
     setStatus('已清空标签缓存');
     sendToTab({ action: 'refreshTags' });
   });
 });
 
-dbgChk.addEventListener('change', () => {
-  chrome.storage.local.set({ ftDebug: dbgChk.checked }, () => {
-    setBridge(dbgChk.checked ? '调试日志已开启（看页面 Console）' : '调试日志已关闭');
+/* ---------- 开关 ---------- */
+$('dbgChk').addEventListener('change', () => {
+  chrome.storage.local.set({ ftDebug: $('dbgChk').checked }, () => {
+    setBridge($('dbgChk').checked ? '调试日志已开启（看页面 Console）' : '调试日志已关闭');
   });
 });
 
-autoChk.addEventListener('change', () => {
-  chrome.storage.local.set({ ftAutoScrape: autoChk.checked }, () => {
-    setBridge(autoChk.checked
-      ? '⚠️ 自动抓取已开启：滚动/定时都会抓取并写入本机 JSON'
-      : '✅ 自动抓取已关闭：只有手动按钮会写文件');
-    setTimeout(refreshPageStatus, 300);
+function bindAuto(id, key, label) {
+  $(id).addEventListener('change', () => {
+    const v = $(id).checked;
+    chrome.storage.local.set({ [key]: v }, () => {
+      setBridge(v ? `⚠️ ${label} 自动抓取已开启` : `✅ ${label} 自动抓取已关闭`);
+      setTimeout(() => { refreshPageStatus(); refreshWlStatus(); }, 300);
+    });
   });
-});
+}
+bindAuto('autoPos', 'ftAutoPositions', '持仓');
+bindAuto('autoOrd', 'ftAutoOrders', '订单');
+bindAuto('autoWl', 'ftAutoWatchlist', '自选股');
 
+/* ---------- ② 持仓 ---------- */
 $('pingBtn').addEventListener('click', async () => {
   setBridge('正在连接 127.0.0.1:18888 …');
   const r = await sendToBg({ action: 'FT_PING' });
@@ -164,7 +194,6 @@ $('pingBtn').addEventListener('click', async () => {
   else setBridge('❌ 连不上桥接服务：' + r.error + '\n请在终端运行 bridge_server.py', true);
 });
 
-/* ② 持仓 */
 $('scanBtn').addEventListener('click', async () => {
   setBridge('正在自动滚动抓取持仓全表，请勿操作页面…');
   const r = await sendToTab({ action: 'FT_SYNC_ALL' });
@@ -196,7 +225,7 @@ $('serverBtn').addEventListener('click', async () => {
   console.log('[FT-POPUP] 本机 positions', d);
 });
 
-/* ③ 订单 */
+/* ---------- ③ 订单 ---------- */
 $('scanOrdersBtn').addEventListener('click', async () => {
   setBridge('正在自动滚动抓取订单记录，请勿操作页面…');
   const r = await sendToTab({ action: 'FT_SCAN_ORDERS' });
@@ -233,4 +262,96 @@ $('serverOrdersBtn').addEventListener('click', async () => {
   }).join('\n');
   setBridge(`本机 orders JSON 共 ${keys.length} 笔（最近几笔）：\n${sample}`);
   console.log('[FT-POPUP] 本机 orders', r.data);
+});
+
+/* ---------- ④ 自选股批量补齐 ---------- */
+$('wlDiffBtn').addEventListener('click', async () => {
+  setWl('正在读取 Sectors_All + 抓取自选股全表（1800 行需 1~3 分钟）…');
+  const r = await sendToTab({ action: 'FT_WL_DIFF' });
+  if (!r || !r.ok) { setWl('比对失败：' + (r && r.error), true); return; }
+  setWl(
+    `分组：${r.group}\n来源：${r.srcFrom}（${r.srcCount} 只）\n` +
+    `自选股已有：${r.haveCount} 只\n★ 待添加：${r.missing} 只\n` +
+    (r.sample.length ? `示例：${r.sample.join(', ')}` : '')
+  );
+});
+
+$('wlStartBtn').addEventListener('click', async () => {
+  setWl('正在启动批量添加…（进度看网页右下角面板，可以关掉本窗口）');
+  const r = await sendToTab({ action: 'FT_WL_START' });
+  if (!r || !r.ok) { setWl('启动失败：' + (r && r.error), true); return; }
+  setWl(`✅ 已启动：分组「${r.group || ''}」，待添加 ${r.total} 只\n来源：${r.srcFrom || ''}\n` +
+    `请勿操作该标签页；可切到别的标签页。`);
+});
+
+$('wlPauseBtn').addEventListener('click', async () => {
+  const r = await sendToTab({ action: 'FT_WL_PAUSE' });
+  setWl(r && r.ok ? (r.paused ? '⏸ 已暂停' : '▶️ 已继续') : '操作失败');
+  setTimeout(refreshWlStatus, 400);
+});
+
+$('wlStopBtn').addEventListener('click', async () => {
+  await sendToTab({ action: 'FT_WL_STOP' });
+  setWl('⏹ 已发送停止指令');
+  setTimeout(refreshWlStatus, 800);
+});
+
+$('wlHudBtn').addEventListener('click', () => sendToTab({ action: 'FT_WL_HUD' }));
+
+$('wlFailBtn').addEventListener('click', async () => {
+  const r = await sendToTab({ action: 'FT_WL_FAILED' });
+  if (!r || !r.ok) { setWl('读取失败清单失败', true); return; }
+  const txt = (r.list || []).map(x => `${x.symbol}\t${x.error}`).join('\n');
+  console.log('[FT-POPUP] 失败清单\n' + txt);
+  try { await navigator.clipboard.writeText(txt || '(无失败项)'); } catch (e) { }
+  setWl(`失败 ${r.list.length} 只，已复制到剪贴板（也可在 Console 查看）\n` +
+    (r.list.slice(0, 8).map(x => `${x.symbol} - ${x.error}`).join('\n')));
+});
+
+$('wlManualSave').addEventListener('click', () => {
+  const arr = $('wlManual').value.split(/[\s,;]+/).map(s => s.trim().toUpperCase()).filter(Boolean);
+  chrome.storage.local.set({ ftWlManualList: arr }, () => setWl(`备用清单已保存 ${arr.length} 只`));
+});
+
+/* ---------- ④-自检 ---------- */
+$('wlProbeBtn').addEventListener('click', async () => {
+  const sym = ($('wlTestSym').value || 'LIN').trim().toUpperCase();
+  setWl('正在探测（会打开弹层并输入 ' + sym + '，不会真的添加）…');
+  const r = await sendToTab({ action: 'FT_WL_PROBE', symbol: sym });
+  if (!r || !r.ok) { setWl('探测失败：' + (r && r.error), true); return; }
+  setWl(
+    `添加按钮：${r.addBtn}\n可见弹层：${r.popover} 个\n` +
+    `输入框：${r.input}\n联想项：${r.items} 个 ${r.exact ? '(含精确匹配✅)' : ''}\n` +
+    `示例：${(r.itemSample || []).join(', ')}\n表行数：${r.rows}｜分组：${r.group}` +
+    (r.error ? `\n错误：${r.error}` : ''), !!r.error);
+  console.log('[FT-POPUP] probe', r);
+});
+
+$('wlTestBtn').addEventListener('click', async () => {
+  const sym = ($('wlTestSym').value || '').trim().toUpperCase();
+  if (!sym) { setWl('请先在下面的输入框填一个 symbol', true); return; }
+  setWl('正在测试添加 ' + sym + ' …');
+  const r = await sendToTab({ action: 'FT_WL_TEST_ADD', symbol: sym });
+  if (!r || !r.ok) { setWl('测试失败：' + (r && r.error), true); return; }
+  setWl('测试结果：' + JSON.stringify(r.result));
+});
+
+/* ---------- ⑤ 自选股行情 ---------- */
+$('wlQuoteBtn').addEventListener('click', async () => {
+  setBridge('正在全量抓取自选股「变更%」，1800 行需 1~3 分钟，请勿操作页面…');
+  const r = await sendToTab({ action: 'FT_WL_SCAN_QUOTES' });
+  if (!r || !r.ok) { setBridge('抓取失败：' + (r && r.error), true); return; }
+  const d = (r.server && r.server.data) || {};
+  setBridge(`✅ 抓到 ${r.count} 只\n本机写入：${d.saved ?? '?'} 条（模式 ${d.mode || '?'}，文件累计 ${d.total ?? '?'}）`);
+  refreshWlStatus();
+});
+
+$('serverWlBtn').addEventListener('click', async () => {
+  const r = await sendToBg({ action: 'FT_SERVER_WATCHLIST' });
+  if (!r.ok) { setBridge('读取失败：' + r.error, true); return; }
+  const q = (r.data && r.data.quotes) || {};
+  const keys = Object.keys(q);
+  const sample = keys.slice(0, 8).map(k => `${k} ${q[k].change_pct || ''} ${q[k].last || ''}`).join('\n');
+  setBridge(`本机 watchlist JSON 共 ${keys.length} 只\n更新时间：${(r.data._meta || {}).updated_at_str || '?'}\n${sample}`);
+  console.log('[FT-POPUP] 本机 watchlist', r.data);
 });

@@ -1,0 +1,353 @@
+{
+  "_meta": {
+    "updated_at": 1789182749.0882869,
+    "updated_at_str": "2026-09-12 11:12:29",
+    "count": 49,
+    "mode": "overwrite"
+  },
+  "quotes": {
+    "ADSK": {
+      "symbol": "ADSK",
+      "updated_at": 1789182749.082,
+      "last": "212.41",
+      "change_pct": "+0.38%",
+      "change_pct_num": 0.378054
+    },
+    "AEM": {
+      "symbol": "AEM",
+      "updated_at": 1789182749.082,
+      "last": "201.57",
+      "change_pct": "+2.49%",
+      "change_pct_num": 2.486272
+    },
+    "ALB": {
+      "symbol": "ALB",
+      "updated_at": 1789182749.082,
+      "last": "117.81",
+      "change_pct": "-3.20%",
+      "change_pct_num": -3.196385
+    },
+    "APD": {
+      "symbol": "APD",
+      "updated_at": 1789182749.082,
+      "last": "291.73",
+      "change_pct": "-0.65%",
+      "change_pct_num": -0.654487
+    },
+    "AU": {
+      "symbol": "AU",
+      "updated_at": 1789182749.082,
+      "last": "103.80",
+      "change_pct": "-0.08%",
+      "change_pct_num": -0.077012
+    },
+    "AXTA": {
+      "symbol": "AXTA",
+      "updated_at": 1789182749.082,
+      "last": "34.16",
+      "change_pct": "+0.41%",
+      "change_pct_num": 0.411523
+    },
+    "BHP": {
+      "symbol": "BHP",
+      "updated_at": 1789182749.082,
+      "last": "87.15",
+      "change_pct": "-0.23%",
+      "change_pct_num": -0.228964
+    },
+    "CE": {
+      "symbol": "CE",
+      "updated_at": 1789182749.082,
+      "last": "45.75",
+      "change_pct": "+0.07%",
+      "change_pct_num": 0.065617
+    },
+    "CF": {
+      "symbol": "CF",
+      "updated_at": 1789182749.082,
+      "last": "134.22",
+      "change_pct": "-0.66%",
+      "change_pct_num": -0.656206
+    },
+    "CRH": {
+      "symbol": "CRH",
+      "updated_at": 1789182749.082,
+      "last": "88.24",
+      "change_pct": "+0.67%",
+      "change_pct_num": 0.666324
+    },
+    "CTVA": {
+      "symbol": "CTVA",
+      "updated_at": 1789182749.082,
+      "last": "84.31",
+      "change_pct": "-0.21%",
+      "change_pct_num": -0.213043
+    },
+    "CX": {
+      "symbol": "CX",
+      "updated_at": 1789182749.082,
+      "last": "10.69",
+      "change_pct": "+0.28%",
+      "change_pct_num": 0.281426
+    },
+    "DD": {
+      "symbol": "DD",
+      "updated_at": 1789182749.082,
+      "last": "126.99",
+      "change_pct": "-0.26%",
+      "change_pct_num": -0.259189
+    },
+    "DOW": {
+      "symbol": "DOW",
+      "updated_at": 1789182749.082,
+      "last": "29.06",
+      "change_pct": "-1.96%",
+      "change_pct_num": -1.956815
+    },
+    "ECL": {
+      "symbol": "ECL",
+      "updated_at": 1789182749.082,
+      "last": "276.18",
+      "change_pct": "+1.69%",
+      "change_pct_num": 1.686303
+    },
+    "EMN": {
+      "symbol": "EMN",
+      "updated_at": 1789182749.082,
+      "last": "69.20",
+      "change_pct": "+1.19%",
+      "change_pct_num": 1.193331
+    },
+    "EXP": {
+      "symbol": "EXP",
+      "updated_at": 1789182749.082,
+      "last": "185.12",
+      "change_pct": "+0.73%",
+      "change_pct_num": 0.734614
+    },
+    "FCX": {
+      "symbol": "FCX",
+      "updated_at": 1789182749.082,
+      "last": "71.27",
+      "change_pct": "+0.08%",
+      "change_pct_num": 0.084258
+    },
+    "FMC": {
+      "symbol": "FMC",
+      "updated_at": 1789182749.082,
+      "last": "11.45",
+      "change_pct": "-5.23%",
+      "change_pct_num": -5.225166
+    },
+    "FNV": {
+      "symbol": "FNV",
+      "updated_at": 1789182749.082,
+      "last": "266.75",
+      "change_pct": "+2.34%",
+      "change_pct_num": 2.336377
+    },
+    "GFI": {
+      "symbol": "GFI",
+      "updated_at": 1789182749.082,
+      "last": "45.10",
+      "change_pct": "+0.96%",
+      "change_pct_num": 0.962615
+    },
+    "IFF": {
+      "symbol": "IFF",
+      "updated_at": 1789182749.082,
+      "last": "83.61",
+      "change_pct": "-0.52%",
+      "change_pct_num": -0.523498
+    },
+    "JHX": {
+      "symbol": "JHX",
+      "updated_at": 1789182749.082,
+      "last": "28.47",
+      "change_pct": "+0.99%",
+      "change_pct_num": 0.99326
+    },
+    "KGC": {
+      "symbol": "KGC",
+      "updated_at": 1789182749.082,
+      "last": "29.16",
+      "change_pct": "+0.80%",
+      "change_pct_num": 0.795022
+    },
+    "LIN": {
+      "symbol": "LIN",
+      "updated_at": 1789182749.082,
+      "last": "467.16",
+      "change_pct": "+1.20%",
+      "change_pct_num": 1.200121
+    },
+    "LYB": {
+      "symbol": "LYB",
+      "updated_at": 1789182749.082,
+      "last": "63.69",
+      "change_pct": "-0.95%",
+      "change_pct_num": -0.948678
+    },
+    "MLM": {
+      "symbol": "MLM",
+      "updated_at": 1789182749.082,
+      "last": "509.96",
+      "change_pct": "+1.49%",
+      "change_pct_num": 1.490636
+    },
+    "MOS": {
+      "symbol": "MOS",
+      "updated_at": 1789182749.082,
+      "last": "25.06",
+      "change_pct": "-1.34%",
+      "change_pct_num": -1.337008
+    },
+    "MT": {
+      "symbol": "MT",
+      "updated_at": 1789182749.082,
+      "last": "75.00",
+      "change_pct": "-0.08%",
+      "change_pct_num": -0.079936
+    },
+    "NEM": {
+      "symbol": "NEM",
+      "updated_at": 1789182749.082,
+      "last": "126.34",
+      "change_pct": "+0.16%",
+      "change_pct_num": 0.15681
+    },
+    "NTR": {
+      "symbol": "NTR",
+      "updated_at": 1789182749.082,
+      "last": "78.75",
+      "change_pct": "+0.01%",
+      "change_pct_num": 0.0127
+    },
+    "NUE": {
+      "symbol": "NUE",
+      "updated_at": 1789182749.082,
+      "last": "256.50",
+      "change_pct": "+0.41%",
+      "change_pct_num": 0.407109
+    },
+    "PKX": {
+      "symbol": "PKX",
+      "updated_at": 1789182749.082,
+      "last": "64.17",
+      "change_pct": "+4.17%",
+      "change_pct_num": 4.172078
+    },
+    "PPG": {
+      "symbol": "PPG",
+      "updated_at": 1789182749.083,
+      "last": "105.50",
+      "change_pct": "+0.43%",
+      "change_pct_num": 0.428367
+    },
+    "RGLD": {
+      "symbol": "RGLD",
+      "updated_at": 1789182749.083,
+      "last": "253.40",
+      "change_pct": "-0.23%",
+      "change_pct_num": -0.228364
+    },
+    "RIO": {
+      "symbol": "RIO",
+      "updated_at": 1789182749.083,
+      "last": "99.70",
+      "change_pct": "+0.31%",
+      "change_pct_num": 0.309085
+    },
+    "RPM": {
+      "symbol": "RPM",
+      "updated_at": 1789182749.083,
+      "last": "100.21",
+      "change_pct": "+0.91%",
+      "change_pct_num": 0.906253
+    },
+    "RS": {
+      "symbol": "RS",
+      "updated_at": 1789182749.083,
+      "last": "394.20",
+      "change_pct": "+0.46%",
+      "change_pct_num": 0.458716
+    },
+    "SCCO": {
+      "symbol": "SCCO",
+      "updated_at": 1789182749.083,
+      "last": "194.00",
+      "change_pct": "-0.07%",
+      "change_pct_num": -0.072113
+    },
+    "SHW": {
+      "symbol": "SHW",
+      "updated_at": 1789182749.083,
+      "last": "323.31",
+      "change_pct": "+1.85%",
+      "change_pct_num": 1.849168
+    },
+    "SQM": {
+      "symbol": "SQM",
+      "updated_at": 1789182749.083,
+      "last": "69.88",
+      "change_pct": "-3.60%",
+      "change_pct_num": -3.600497
+    },
+    "STLD": {
+      "symbol": "STLD",
+      "updated_at": 1789182749.083,
+      "last": "239.79",
+      "change_pct": "+1.14%",
+      "change_pct_num": 1.143074
+    },
+    "SUZ": {
+      "symbol": "SUZ",
+      "updated_at": 1789182749.083,
+      "last": "9.18",
+      "change_pct": "-2.65%",
+      "change_pct_num": -2.651113
+    },
+    "TECK": {
+      "symbol": "TECK",
+      "updated_at": 1789182749.083,
+      "last": "63.40",
+      "change_pct": "-3.79%",
+      "change_pct_num": -3.789985
+    },
+    "TX": {
+      "symbol": "TX",
+      "updated_at": 1789182749.083,
+      "last": "57.90",
+      "change_pct": "+0.50%",
+      "change_pct_num": 0.503385
+    },
+    "VALE": {
+      "symbol": "VALE",
+      "updated_at": 1789182749.083,
+      "last": "15.21",
+      "change_pct": "-0.44%",
+      "change_pct_num": -0.438482
+    },
+    "VMC": {
+      "symbol": "VMC",
+      "updated_at": 1789182749.083,
+      "last": "252.74",
+      "change_pct": "+0.85%",
+      "change_pct_num": 0.853951
+    },
+    "WMT": {
+      "symbol": "WMT",
+      "updated_at": 1789182749.083,
+      "last": "107.08",
+      "change_pct": "+1.27%",
+      "change_pct_num": 1.274473
+    },
+    "WPM": {
+      "symbol": "WPM",
+      "updated_at": 1789182749.083,
+      "last": "155.00",
+      "change_pct": "+2.66%",
+      "change_pct_num": 2.662604
+    }
+  }
+}
