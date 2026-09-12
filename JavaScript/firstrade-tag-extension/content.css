@@ -326,3 +326,21 @@ html:not(.dark) .ft-popover-fulltag {
 #ft-wl-hud.ft-wl-scan .ft-wl-title {
   color: #A3BE8C !important;
 }
+
+/* ==================== v8：清空阶段的红色警示样式 ==================== */
+#ft-wl-hud.ft-wl-danger {
+  border-color: #BF616A !important;
+  box-shadow: 0 12px 28px rgba(191, 97, 106, .35) !important;
+}
+
+#ft-wl-hud.ft-wl-danger .ft-wl-title {
+  color: #BF616A !important;
+}
+
+#ft-wl-hud.ft-wl-danger .ft-wl-bar i {
+  background: linear-gradient(90deg, #BF616A, #D08770) !important;
+}
+
+#ft-wl-hud.ft-wl-danger .ft-wl-cur {
+  color: #D08770 !important;
+}

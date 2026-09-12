@@ -47,6 +47,7 @@ const PAGE_NAME = {
   watchlist: '自选股页 ✅', other: '其它页面（不会抓取）'
 };
 const SRC_NAME = { earnings: '财报日历', sectors: 'Sectors_All', manual: '本地清单' };
+const PHASE_NAME = { idle: '空闲', clear: '🧹 清空中', diff: '🧮 比对中', add: '➕ 添加中' };
 
 async function refreshPageStatus() {
   const r = await sendToTab({ action: 'FT_STATUS' });
@@ -63,21 +64,32 @@ async function refreshWlStatus() {
   const r = await sendToTab({ action: 'FT_WL_STATUS' });
   if (!r || !r.ok) { setWl('未检测到自选股脚本（请在 /app/watchlist 页面刷新一次）', true); return; }
   if (!r.page) { setWl(`当前不在自选股页面（${r.path}）\n请先打开 https://invest.firstrade.com/app/watchlist`); return; }
-  setWl(
-    `分组：${r.group || '(未识别)'}｜表内行数：${r.gridRows === null ? '?' : (r.gridRows - 1)}\n` +
+
+  let txt =
+    `分组：${r.group || '(未识别)'}｜表内标的：${(r.dataRows === null || r.dataRows === undefined) ? '?' : r.dataRows}\n` +
     `数据源：${SRC_NAME[r.src] || r.src}（回溯 ${r.srcBack} 交易日 / 前瞻 ${r.srcAhead} 天）\n` +
     `自动抓取变更%：${r.auto ? '已开启 ⚠️' : '已关闭'}\n` +
-    `批量任务：${r.running ? (r.paused ? '⏸已暂停' : '▶️运行中') : '空闲'}` +
-    (r.running && r.total ? `  第${r.pass}趟 ${r.done}/${r.total}  成功${r.added} 失败${r.failed}` : '') +
-    `｜行情抓取：${r.scanning ? '进行中' : '空闲'}` +
-    (r.lastError ? `\n最后错误：${r.lastError}` : '')
-  );
+    `任务：${r.running ? (r.paused ? '⏸ 已暂停' : '▶️ 运行中') : '空闲'}｜阶段：${PHASE_NAME[r.phase] || r.phase}`;
+
+  if (r.running && r.phase === 'clear') {
+    txt += `\n清空进度：${r.cleared}/${r.clearTotal}（失败 ${r.clearFailed}）`;
+  }
+  if (r.running && r.phase === 'add') {
+    txt += `\n添加进度：第 ${r.pass} 趟 ${r.done}/${r.total}  成功 ${r.added} 失败 ${r.failed}`;
+  }
+  if (!r.running && (r.cleared || r.added)) {
+    txt += `\n上次结果：删除 ${r.cleared}｜新增 ${r.added}｜失败 ${r.failed + r.clearFailed}`;
+  }
+  txt += `\n行情抓取：${r.scanning ? '进行中' : '空闲'}`;
+  if (r.lastError) txt += `\n最后错误：${r.lastError}`;
+  setWl(txt);
 }
 
 /* ---------- 初始化 ---------- */
 chrome.storage.local.get(
   ['stockData', 'maxTags', 'ftDebug', 'ftAutoPositions', 'ftAutoOrders', 'ftAutoWatchlist',
-    'ftAutoScrape', 'ftWlManualList', 'ftOrderVerbose', 'ftWlSource', 'ftWlBack', 'ftWlAhead'],
+    'ftAutoScrape', 'ftWlManualList', 'ftOrderVerbose', 'ftWlSource', 'ftWlBack', 'ftWlAhead',
+    'ftWlClearFirst'],
   (res) => {
     if (res.maxTags) $('maxTags').value = res.maxTags;
     $('dbgChk').checked = !!res.ftDebug;
@@ -89,6 +101,7 @@ chrome.storage.local.get(
     $('wlSrc').value = res.ftWlSource || 'earnings';
     $('wlBack').value = (res.ftWlBack === undefined ? 1 : res.ftWlBack);
     $('wlAhead').value = (res.ftWlAhead === undefined ? 0 : res.ftWlAhead);
+    $('wlClearFirst').checked = res.ftWlClearFirst === true;
     if (Array.isArray(res.ftWlManualList)) $('wlManual').value = res.ftWlManualList.join(', ');
 
     if (res.stockData) {
@@ -301,7 +314,7 @@ $('serverOrdersBtn').addEventListener('click', async () => {
   console.log('[FT-POPUP] 本机 orders', r.data);
 });
 
-/* ---------- ④ 自选股批量补齐 ---------- */
+/* ---------- ④ 自选股一键重建 ---------- */
 function wlSrcCfg() {
   return {
     src: $('wlSrc').value,
@@ -320,6 +333,15 @@ function saveWlSrcCfg() {
 $('wlSrc').addEventListener('change', saveWlSrcCfg);
 $('wlBack').addEventListener('change', saveWlSrcCfg);
 $('wlAhead').addEventListener('change', saveWlSrcCfg);
+
+$('wlClearFirst').addEventListener('change', () => {
+  const v = $('wlClearFirst').checked;
+  chrome.storage.local.set({ ftWlClearFirst: v }, () => {
+    disarm();
+    setWl(v ? '⚠️ 已勾选「先清空当前分组」：执行时会先逐行删除现有全部标的（会先自动备份）'
+      : '✅ 已取消「先清空」：只做差集补齐，不删任何东西');
+  });
+});
 
 $('wlSrcPreviewBtn').addEventListener('click', async () => {
   const c = wlSrcCfg();
@@ -348,6 +370,86 @@ $('wlSrcPreviewBtn').addEventListener('click', async () => {
   console.log('[FT-POPUP] wl_source', d);
 });
 
+/* ---- 危险操作二次确认（8 秒内再点一次） ---- */
+let armedBtn = null, armedAt = 0, armedText = '', armTimer = null;
+
+function disarm() {
+  if (armedBtn) {
+    armedBtn.textContent = armedText;
+    armedBtn.classList.remove('armed');
+  }
+  armedBtn = null; armedAt = 0; armedText = '';
+  clearTimeout(armTimer);
+}
+
+function armOnce(btn, label) {
+  disarm();
+  armedBtn = btn; armedAt = Date.now(); armedText = btn.textContent;
+  btn.textContent = label;
+  btn.classList.add('armed');
+  armTimer = setTimeout(disarm, 8000);
+}
+
+function needConfirm(btn, label) {
+  if (armedBtn === btn && Date.now() - armedAt < 8000) { disarm(); return false; }
+  armOnce(btn, label);
+  return true;
+}
+
+/* ---- ★ 一键执行 ---- */
+$('wlRunBtn').addEventListener('click', async () => {
+  const btn = $('wlRunBtn');
+  const clearFirst = $('wlClearFirst').checked;
+
+  if (clearFirst) {
+    const st = await sendToTab({ action: 'FT_WL_STATUS' });
+    const rows = (st && st.ok && st.dataRows !== null && st.dataRows !== undefined) ? st.dataRows : '?';
+    if (needConfirm(btn, `⚠️ 再点一次：确认删掉 ${rows} 只后重建`)) {
+      setWl(`⚠️ 即将清空分组「${(st && st.group) || '?'}」内 ${rows} 只标的，然后按数据源重新添加。\n` +
+        `8 秒内再点一次按钮确认；点别处或等待即取消。`);
+      return;
+    }
+  }
+  disarm();
+
+  setWl('正在启动…（进度看网页右下角面板，可以关掉本窗口）');
+  const r = await sendToTab({ action: 'FT_WL_START', clearFirst });
+  if (!r || !r.ok) { setWl('启动失败：' + (r && r.error), true); return; }
+  setWl(`✅ 已启动：分组「${r.group || ''}」\n` +
+    (r.clearFirst ? `阶段1 清空（表内约 ${r.rows} 只，已自动备份）→ ` : '') +
+    `阶段2 比对差集 → 阶段3 批量添加\n请勿操作该标签页；可切到别的标签页。`);
+  setTimeout(refreshWlStatus, 800);
+});
+
+$('wlPauseBtn').addEventListener('click', async () => {
+  const r = await sendToTab({ action: 'FT_WL_PAUSE' });
+  setWl(r && r.ok ? (r.paused ? '⏸ 已暂停' : '▶️ 已继续') : '操作失败');
+  setTimeout(refreshWlStatus, 400);
+});
+
+$('wlStopBtn').addEventListener('click', async () => {
+  disarm();
+  await sendToTab({ action: 'FT_WL_STOP' });
+  setWl('⏹ 已发送停止指令');
+  setTimeout(refreshWlStatus, 800);
+});
+
+$('wlHudBtn').addEventListener('click', () => sendToTab({ action: 'FT_WL_HUD' }));
+
+$('wlFailBtn').addEventListener('click', async () => {
+  const r = await sendToTab({ action: 'FT_WL_FAILED' });
+  if (!r || !r.ok) { setWl('读取失败清单失败', true); return; }
+  const add = (r.list || []).map(x => `ADD\t${x.symbol}\t${x.error}`);
+  const del = (r.clearList || []).map(x => `DEL\t${x.symbol}\t${x.error}`);
+  const all = add.concat(del);
+  const txt = all.join('\n');
+  console.log('[FT-POPUP] 失败清单\n' + txt);
+  try { await navigator.clipboard.writeText(txt || '(无失败项)'); } catch (e) { }
+  setWl(`添加失败 ${add.length} 只 / 删除失败 ${del.length} 只，已复制到剪贴板\n` +
+    all.slice(0, 8).join('\n'));
+});
+
+/* ---- 高级 / 排错 ---- */
 $('wlDiffBtn').addEventListener('click', async () => {
   setWl('正在读取数据源 + 抓取自选股全表（1800 行需 1~3 分钟）…');
   const r = await sendToTab({ action: 'FT_WL_DIFF' });
@@ -359,56 +461,53 @@ $('wlDiffBtn').addEventListener('click', async () => {
   );
 });
 
-$('wlStartBtn').addEventListener('click', async () => {
-  setWl('正在启动批量添加…（进度看网页右下角面板，可以关掉本窗口）');
-  const r = await sendToTab({ action: 'FT_WL_START' });
+$('wlClearOnlyBtn').addEventListener('click', async () => {
+  const btn = $('wlClearOnlyBtn');
+  const st = await sendToTab({ action: 'FT_WL_STATUS' });
+  const rows = (st && st.ok && st.dataRows !== null && st.dataRows !== undefined) ? st.dataRows : '?';
+  if (needConfirm(btn, `⚠️ 再点一次：确认删除全部 ${rows} 只`)) {
+    setWl(`⚠️ 只清空模式：将删除分组「${(st && st.group) || '?'}」内 ${rows} 只标的，不会自动添加。\n8 秒内再点一次确认。`);
+    return;
+  }
+  disarm();
+  const r = await sendToTab({ action: 'FT_WL_START', clearOnly: true });
   if (!r || !r.ok) { setWl('启动失败：' + (r && r.error), true); return; }
-  if (!r.total) { setWl(`✅ 分组「${r.group || ''}」已包含数据源全部标的，无需添加\n来源：${r.srcFrom || ''}`); return; }
-  setWl(`✅ 已启动：分组「${r.group || ''}」，待添加 ${r.total} 只\n来源：${r.srcFrom || ''}\n` +
-    `请勿操作该标签页；可切到别的标签页。`);
+  setWl(`🧹 已启动只清空：分组「${r.group || ''}」，表内约 ${r.rows} 只（已自动备份）`);
 });
 
-$('wlPauseBtn').addEventListener('click', async () => {
-  const r = await sendToTab({ action: 'FT_WL_PAUSE' });
-  setWl(r && r.ok ? (r.paused ? '⏸ 已暂停' : '▶️ 已继续') : '操作失败');
-  setTimeout(refreshWlStatus, 400);
+$('wlBackupBtn').addEventListener('click', async () => {
+  chrome.storage.local.get(['ftWlClearBackup'], async (res) => {
+    const b = res.ftWlClearBackup;
+    if (!b || !Array.isArray(b.symbols) || !b.symbols.length) { setWl('还没有备份记录', true); return; }
+    const txt = b.symbols.join(', ');
+    try { await navigator.clipboard.writeText(txt); } catch (e) { }
+    setWl(`已复制备份清单：分组「${b.group}」共 ${b.count} 只\n` +
+      `备份时间：${new Date(b.ts).toLocaleString()}\n${b.symbols.slice(0, 25).join(', ')} …`);
+    console.log('[FT-POPUP] 清空前备份', b);
+  });
 });
 
-$('wlStopBtn').addEventListener('click', async () => {
-  await sendToTab({ action: 'FT_WL_STOP' });
-  setWl('⏹ 已发送停止指令');
-  setTimeout(refreshWlStatus, 800);
-});
-
-$('wlHudBtn').addEventListener('click', () => sendToTab({ action: 'FT_WL_HUD' }));
-
-$('wlFailBtn').addEventListener('click', async () => {
-  const r = await sendToTab({ action: 'FT_WL_FAILED' });
-  if (!r || !r.ok) { setWl('读取失败清单失败', true); return; }
-  const txt = (r.list || []).map(x => `${x.symbol}\t${x.error}`).join('\n');
-  console.log('[FT-POPUP] 失败清单\n' + txt);
-  try { await navigator.clipboard.writeText(txt || '(无失败项)'); } catch (e) { }
-  setWl(`失败 ${r.list.length} 只，已复制到剪贴板（也可在 Console 查看）\n` +
-    (r.list.slice(0, 8).map(x => `${x.symbol} - ${x.error}`).join('\n')));
-});
-
-$('wlManualSave').addEventListener('click', () => {
-  const arr = $('wlManual').value.split(/[\s,;]+/).map(s => s.trim().toUpperCase()).filter(Boolean);
-  chrome.storage.local.set({ ftWlManualList: arr }, () => setWl(`备用清单已保存 ${arr.length} 只`));
-});
-
-/* ---------- ④-自检 ---------- */
 $('wlProbeBtn').addEventListener('click', async () => {
   const sym = ($('wlTestSym').value || 'LIN').trim().toUpperCase();
-  setWl('正在探测（会打开弹层并输入 ' + sym + '，不会真的添加）…');
+  setWl('正在探测添加弹层（会输入 ' + sym + '，不会真的添加）…');
   const r = await sendToTab({ action: 'FT_WL_PROBE', symbol: sym });
   if (!r || !r.ok) { setWl('探测失败：' + (r && r.error), true); return; }
   setWl(
     `添加按钮：${r.addBtn}\n可见弹层：${r.popover} 个\n` +
     `输入框：${r.input}\n联想项：${r.items} 个 ${r.exact ? '(含精确匹配✅)' : ''}\n` +
-    `示例：${(r.itemSample || []).join(', ')}\n表行数：${r.rows}｜分组：${r.group}` +
-    (r.error ? `\n错误：${r.error}` : ''), !!r.error);
+    `示例：${(r.itemSample || []).join(', ')}\n表内标的：${r.dataRows}｜分组：${r.group}\n` +
+    `最顶可删行：${r.topRow}` + (r.error ? `\n错误：${r.error}` : ''), !!r.error);
   console.log('[FT-POPUP] probe', r);
+});
+
+$('wlProbeDelBtn').addEventListener('click', async () => {
+  setWl('正在探测删除菜单（只打开菜单，不会删除）…');
+  const r = await sendToTab({ action: 'FT_WL_PROBE_DEL' });
+  if (!r || !r.ok) { setWl('探测失败：' + (r && r.error), true); return; }
+  setWl(`目标行：${r.symbol}（rowId=${r.rowId}）\n弹出菜单：${r.menus} 个\n` +
+    `菜单项：${(r.menuItems || []).join(' / ')}\n` +
+    `找到「删除」：${r.removeFound ? '是 ✅ (' + r.removeId + ')' : '否 ❌'}`, !r.removeFound);
+  console.log('[FT-POPUP] probeDel', r);
 });
 
 $('wlTestBtn').addEventListener('click', async () => {
@@ -418,6 +517,24 @@ $('wlTestBtn').addEventListener('click', async () => {
   const r = await sendToTab({ action: 'FT_WL_TEST_ADD', symbol: sym });
   if (!r || !r.ok) { setWl('测试失败：' + (r && r.error), true); return; }
   setWl('测试结果：' + JSON.stringify(r.result));
+});
+
+$('wlTestDelBtn').addEventListener('click', async () => {
+  const btn = $('wlTestDelBtn');
+  if (needConfirm(btn, '⚠️ 再点一次：真的删掉最顶那一只')) {
+    setWl('⚠️ 这会真实删除表格最顶部的那一只标的，用于验证删除链路。8 秒内再点一次确认。');
+    return;
+  }
+  disarm();
+  setWl('正在测试删除最顶行…');
+  const r = await sendToTab({ action: 'FT_WL_TEST_DEL' });
+  if (!r || !r.ok) { setWl('测试失败：' + (r && r.error), true); return; }
+  setWl('测试删除结果：' + JSON.stringify(r.result));
+});
+
+$('wlManualSave').addEventListener('click', () => {
+  const arr = $('wlManual').value.split(/[\s,;]+/).map(s => s.trim().toUpperCase()).filter(Boolean);
+  chrome.storage.local.set({ ftWlManualList: arr }, () => setWl(`备用清单已保存 ${arr.length} 只`));
 });
 
 /* ---------- ⑤ 自选股行情 ---------- */

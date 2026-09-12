@@ -1,7 +1,7 @@
 {
  "_meta": {
-  "updated_at": 1789189881.47665,
-  "updated_at_str": "2026-09-12 13:11:21",
+  "updated_at": 1789192774.95369,
+  "updated_at_str": "2026-09-12 13:59:34",
   "count": 2,
   "mode": "overwrite"
  },
@@ -12,11 +12,11 @@
    "change_pct": "+1.35%",
    "change_pct_num": 1.354338
   },
-  "RH": {
-   "symbol": "RH",
-   "last": "133.85",
-   "change_pct": "-0.13%",
-   "change_pct_num": -0.126847
+  "ASO": {
+   "symbol": "ASO",
+   "last": "55.79",
+   "change_pct": "+2.90%",
+   "change_pct_num": 2.898561
   }
  }
 }
