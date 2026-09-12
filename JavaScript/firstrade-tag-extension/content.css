@@ -304,3 +304,25 @@ html:not(.dark) .ft-popover-fulltag {
 #ft-wl-hud .ft-wl-btns button:hover {
   background: #4C566A !important;
 }
+
+/* ==================== HUD 双模式：scan 模式隐藏批量补齐专属区块 ==================== */
+#ft-wl-hud .ft-wl-scan-only {
+  display: none !important;
+}
+
+#ft-wl-hud.ft-wl-scan .ft-wl-job-only {
+  display: none !important;
+}
+
+#ft-wl-hud.ft-wl-scan .ft-wl-scan-only {
+  display: flex !important;
+}
+
+#ft-wl-hud.ft-wl-scan .ft-wl-cur {
+  color: #A3BE8C !important;
+  min-height: 34px !important;
+}
+
+#ft-wl-hud.ft-wl-scan .ft-wl-title {
+  color: #A3BE8C !important;
+}

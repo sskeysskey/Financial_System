@@ -1,27 +1,26 @@
 /* ============================================================================
- * Firstrade 自选股助手 watchlist.js  v6      仅在 /app/watchlist 生效
+ * Firstrade 自选股助手 watchlist.js  v7      仅在 /app/watchlist 生效
  *
- * v6 修复（关键）:
- *   ★ 输入框必须位于「添加自选股」弹层 [data-popover-content]/[data-command-root] 内，
- *     彻底拉黑页头全站搜索框 #navigation-symbol-search（placeholder 同为「代号或公司名称」）
- *   ★ 联想项只在当前命令面板作用域内查找，绝不误点页头 combobox 的联想（会跳转页面）
- *   ★ typeInto 增加硬安全阀：目标不在弹层内 → 抛错而不是打字
- *   ★ 等待面板 loading spinner（svg.animate-spin）结束，避免拿到上一次残留联想
- *   ★ 点击失败时用 ArrowDown+Enter 键盘兜底
- *   ★ aria-rowcount 取 main 内最大的 grid，排除底部报价条
- *   + FT_WL_PROBE / FT_WL_TEST_ADD 两个自检入口
+ * v7 变更:
+ *   ★ 数据源可切换：earnings(财报日历 Earnings_Release_new.txt，默认)
+ *                  / sectors(Sectors_All.json，服务端默认停用)
+ *                  / manual(本地备用清单)
+ *   ★ 右下角 HUD 拆成两种模式：
+ *        job  = 批量补齐（分组/趟数/进度条/暂停·停止·复制失败）
+ *        scan = 行情抓取 / 差集比对 / 单只测试（只有一行状态 + 停止抓取）
+ *      → 修复「手动抓取变更%」时误显示批量补齐进度的问题
+ *   ★ 批量补齐 与 行情抓取 互斥，避免并发滚屏互相干扰
+ *   ★ 小清单(≤30 只)自动关闭页面定期刷新、复核趟数降为 2
  *
- * A) 批量补齐：Sectors_All.json（经桥接） → 逐个「添加自选股」
- *     · 断点续跑（chrome.storage.local）
- *     · 页面内 HUD 进度面板（popup 关掉也能看/暂停/停止）
- *     · 定期自动刷新页面防 DOM 膨胀，刷新后自动续跑
- *     · 多趟收敛 + 精确匹配 + aria-rowcount 校验
- * B) 抓「变更%」快照 → firstrade_watchlist.json
- *     · 手动全量 = 覆盖；自动增量（ftAutoWatchlist）= 合并
+ * v6 保留的关键修复:
+ *   · 输入框必须在「添加自选股」弹层内，拉黑页头全站搜索框
+ *   · 联想项只在当前命令面板作用域内查找
+ *   · 等待 loading spinner 结束；点击失败用 ArrowDown+Enter 兜底
+ *   · aria-rowcount 取 main 内最大的 grid
  * ==========================================================================*/
 (() => {
-  if (window.__FT_WATCHLIST_V6__) return;
-  window.__FT_WATCHLIST_V6__ = true;
+  if (window.__FT_WATCHLIST_V7__) return;
+  window.__FT_WATCHLIST_V7__ = true;
 
   const LOG = '[FT-WL]';
   const JOB_KEY = 'ftWlJob';
@@ -30,23 +29,36 @@
   let DEBUG = false;
   let AUTO_WATCHLIST = false;
 
+  /* ---------------- 数据源设置（popup 可改） ---------------- */
+  const SRC = { mode: 'earnings', back: 1, ahead: 0 };
+  const SRC_LABEL = { earnings: '财报日历', sectors: 'Sectors_All', manual: '本地清单' };
+
   /* ---------------- 可调参数（可用 storage.ftWlCfg 覆盖） ---------------- */
   const CFG = {
-    perSymbolDelay: 380,      // 每个 symbol 之间基础间隔(ms)
-    jitter: 220,              // 随机抖动，避免机械节奏
+    perSymbolDelay: 380,
+    jitter: 220,
     typeSettle: 70,
-    suggestTimeout: 7000,     // 等联想结果
-    verifyTimeout: 3200,      // 等行数增加
-    verifyTimeout2: 1800,     // 键盘兜底后的二次校验
+    suggestTimeout: 7000,
+    verifyTimeout: 3200,
+    verifyTimeout2: 1800,
     maxRetry: 2,
-    maxPasses: 3,             // 整体重跑趟数（自愈漏加）
-    reloadEvery: 300,         // 每加 N 个刷新一次页面（0 = 不刷新）
-    reopenPanelEvery: 40,     // 每加 N 个关闭再重开弹层，重置面板状态（0 = 不重开）
-    consecutiveFailAbort: 8,  // 连续失败次数 → 自动暂停
-    checkpointEvery: 10,      // 每 N 个持久化进度
-    strictExact: true,        // 只接受精确匹配的联想项
+    maxPasses: 3,
+    reloadEvery: 300,
+    reopenPanelEvery: 40,
+    consecutiveFailAbort: 8,
+    checkpointEvery: 10,
+    strictExact: true,
     scrollWait: 180
   };
+  let RUN = Object.assign({}, CFG);          // 本次任务实际生效参数
+
+  function prepareRun(total) {
+    RUN = Object.assign({}, CFG);
+    if (total > 0 && total <= 30) {          // 小清单不必刷新页面、少跑一趟
+      RUN.reloadEvery = 0;
+      RUN.maxPasses = Math.min(RUN.maxPasses, 2);
+    }
+  }
 
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   const log = (...a) => { if (DEBUG) console.log(LOG, ...a); };
@@ -58,7 +70,6 @@
     if (!el) return false;
     const st = getComputedStyle(el);
     if (st.visibility === 'hidden' || st.display === 'none' || st.opacity === '0') return false;
-    // display:contents 的元素本身没有盒子，交给调用方判断子元素
     if (st.display === 'contents') return true;
     const r = el.getBoundingClientRect();
     return !!(r.width || r.height);
@@ -105,10 +116,8 @@
   const storeDel = (k) => new Promise(r => chrome.storage.local.remove(k, r));
 
   /* ==========================================================================
-   *                    ★★★ 核心：弹层作用域定位（本次 bug 修复点）★★★
+   *                        弹层作用域定位（v6 修复保留）
    * ========================================================================*/
-
-  /* 绝对禁止触碰的区域：页头全站搜索、底部报价条、导航 */
   const FORBIDDEN_SCOPE = 'header, #app-header, nav, #app-quote-bar';
 
   function isForbiddenInput(el) {
@@ -119,28 +128,24 @@
     return false;
   }
 
-  /* 可见的 popover / dialog 容器（bits-ui 会把它挂到 body 末尾） */
   function popoverRoots() {
     return Array.from(document.querySelectorAll(
       '[data-popover-content], [data-dialog-content], [role="dialog"]'
     )).filter(el => isVisible(el) && !el.closest(FORBIDDEN_SCOPE));
   }
 
-  /* 「添加自选股」弹层里的命令面板根节点 */
   function getCommandRoot() {
     const roots = popoverRoots();
-    for (let i = roots.length - 1; i >= 0; i--) {   // 后出现的浮层优先
+    for (let i = roots.length - 1; i >= 0; i--) {
       const cr = roots[i].querySelector('[data-command-root]');
       if (cr && isVisible(cr) && cr.querySelector('input')) return cr;
     }
-    // 兜底：全局 data-command-root，但必须不在禁区，且内部含 command-input
     const all = Array.from(document.querySelectorAll('[data-command-root]'))
       .filter(el => isVisible(el) && !el.closest(FORBIDDEN_SCOPE) &&
         (el.querySelector('input#command-input') || el.querySelector('input[data-command-input]')));
     return all.length ? all[all.length - 1] : null;
   }
 
-  /* ★ 只返回弹层内的输入框；找不到就返回 null（绝不退化到页头搜索框） */
   function getCommandInput() {
     const cr = getCommandRoot();
     if (cr) {
@@ -155,7 +160,6 @@
     return null;
   }
 
-  /* 面板是否还在查询中（那个 animate-spin 的 svg，空闲时 opacity-0） */
   function panelLoading() {
     const cr = getCommandRoot();
     if (!cr) return false;
@@ -180,7 +184,6 @@
     return t ? cleanText(t) : '';
   }
 
-  /* 取自选股主表的 aria-rowcount（排除底部报价条 / 取最大的那个） */
   function gridRowCount() {
     const gs = Array.from(document.querySelectorAll('[role="grid"][aria-rowcount]'))
       .filter(g => !g.closest('#app-quote-bar, header, #app-header'));
@@ -192,7 +195,6 @@
     return best;
   }
 
-  /* 清掉页头搜索框里可能被污染的残留文字，避免误触发跳转 */
   function cleanNavSearch() {
     const nav = document.getElementById('navigation-symbol-search');
     if (nav && nav.value) {
@@ -227,11 +229,9 @@
           }
         } else if (col === 'last') {
           if (txt) rec.last = txt;
-        } else if (col === 'change') {
-          if (txt) rec.change_amount = txt;
         }
+        /* change_amount / 行级 updated_at 已省略：图表不用，且能省 1800 行的体积 */
       });
-      rec.updated_at = Date.now() / 1000;
     });
     return buf;
   }
@@ -271,6 +271,7 @@
 
     let guard = 0, stagnant = 0;
     while (guard++ < 4000) {
+      if (scanState.abort) break;                 // ★ 支持中止
       s = scrollState();
       const before = Object.keys(buf).length;
       const atEnd = (s.top + s.clientH >= s.scrollH - 3);
@@ -281,7 +282,7 @@
         break;
       }
       s.top = s.top + step;
-      await sleep(CFG.scrollWait);
+      await sleep(RUN.scrollWait || CFG.scrollWait);
       scrapeRows(buf);
       const after = Object.keys(buf).length;
       stagnant = (after === before) ? stagnant + 1 : 0;
@@ -337,7 +338,6 @@
     el.dispatchEvent(new MouseEvent('click', Object.assign({}, opt, { buttons: 0 })));
   }
 
-  /* 打开「添加自选股」弹层并拿到弹层内输入框；带重试与状态自愈 */
   async function ensureInput() {
     let input = getCommandInput();
     if (input) return input;
@@ -346,7 +346,6 @@
       const btn = findAddButton();
       if (!btn) throw new Error('找不到「添加自选股」按钮');
 
-      // 按钮自称 open 但我们找不到输入框 → 先关掉再重开
       if (btn.getAttribute('data-state') === 'open' || btn.getAttribute('aria-expanded') === 'true') {
         pressEscape();
         await sleep(260);
@@ -361,7 +360,6 @@
     throw new Error('点击「添加自选股」后未出现弹层输入框（DOM 可能已改版）');
   }
 
-  /* ★ 安全阀：只允许往弹层内的输入框打字 */
   function assertSafeInput(input) {
     if (!input) throw new Error('输入框为空');
     if (isForbiddenInput(input)) {
@@ -376,13 +374,12 @@
     assertSafeInput(input);
     input.focus();
     setNativeValue(input, '');
-    await sleep(CFG.typeSettle);
+    await sleep(RUN.typeSettle);
     setNativeValue(input, text);
     input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: text.slice(-1) }));
-    await sleep(CFG.typeSettle);
+    await sleep(RUN.typeSettle);
   }
 
-  /* ★ 联想项只在当前命令面板内查找 */
   function listItems() {
     const cr = getCommandRoot();
     if (!cr) return [];
@@ -426,9 +423,6 @@
         items = listItems();
         const exact = items.find(el => normKey(itemValue(el)) === tgt);
         if (exact) return { el: exact, exact: true, firstValue: itemValue(items[0]) };
-        if (items.length && Date.now() - t0 > 1200) {
-          // 有结果但没有精确项，再多等一会儿看是否刷新
-        }
       }
       await sleep(110);
     }
@@ -444,7 +438,6 @@
     await sleep(170);
   }
 
-  /* 键盘兜底：ArrowDown 把高亮移到目标项，再 Enter */
   async function keyboardSelect(input, wantVal) {
     try { assertSafeInput(input); } catch (e) { return false; }
     const tgt = normKey(wantVal);
@@ -461,7 +454,6 @@
     return false;
   }
 
-  /* 只在弹层作用域内寻找确认按钮，避免点到页面上的其它按钮 */
   async function clickConfirmIfAny() {
     const roots = popoverRoots();
     if (!roots.length) return false;
@@ -494,7 +486,7 @@
 
   async function addOneSymbol(sym) {
     let lastErr = '';
-    for (let attempt = 0; attempt <= CFG.maxRetry; attempt++) {
+    for (let attempt = 0; attempt <= RUN.maxRetry; attempt++) {
       for (const cand of candidateForms(sym)) {
         if (job.stop) return { status: 'aborted' };
         try {
@@ -503,25 +495,24 @@
           const before = gridRowCount();
 
           await typeInto(input, cand);
-          const res = await waitForSuggestion(cand, CFG.suggestTimeout);
+          const res = await waitForSuggestion(cand, RUN.suggestTimeout);
           if (!res.el) { lastErr = '无联想结果'; continue; }
-          if (CFG.strictExact && !res.exact) {
+          if (RUN.strictExact && !res.exact) {
             lastErr = `无精确匹配(首条=${res.firstValue || '空'})`;
             continue;
           }
 
           await activateItem(res.el);
           await clickConfirmIfAny();
-          let v = await verifyAdded(before, CFG.verifyTimeout);
+          let v = await verifyAdded(before, RUN.verifyTimeout);
 
           if (v === 'unchanged') {
-            // 鼠标点击可能被框架忽略 → 键盘兜底再确认一次
             const inp2 = getCommandInput();
             if (inp2 && listItems().length) {
               const ok = await keyboardSelect(inp2, cand);
               if (ok) {
                 await clickConfirmIfAny();
-                v = await verifyAdded(before, CFG.verifyTimeout2);
+                v = await verifyAdded(before, RUN.verifyTimeout2);
               }
             }
           }
@@ -530,7 +521,6 @@
           lastErr = '行数未增加(可能已存在或被拒绝)';
         } catch (e) {
           lastErr = String((e && e.message) || e);
-          // 出错时把弹层复位，下一轮重新开
           try { pressEscape(); } catch (_) { }
           await sleep(300);
         }
@@ -540,10 +530,17 @@
     return { status: 'failed', error: lastErr };
   }
 
-  /* ================= HUD 面板 ================= */
+  /* ================= HUD 面板（双模式） ================= */
   let hudEl = null;
-  function ensureHud() {
-    if (hudEl && document.body.contains(hudEl)) return hudEl;
+  let hudMode = 'job';        // 'job' | 'scan'
+  const HUD_TITLE = {
+    job: '自选股批量补齐',
+    scan: '自选股行情抓取',
+    diff: '差集比对',
+    test: '单只添加自检'
+  };
+
+  function buildHud() {
     hudEl = document.createElement('div');
     hudEl.id = 'ft-wl-hud';
     hudEl.innerHTML = `
@@ -551,36 +548,70 @@
         <span class="ft-wl-title">自选股批量补齐</span>
         <span class="ft-wl-x" title="隐藏面板">✕</span>
       </div>
-      <div class="ft-wl-line" id="ft-wl-group">分组: --</div>
-      <div class="ft-wl-bar"><i id="ft-wl-bar-i"></i></div>
-      <div class="ft-wl-line" id="ft-wl-stat">等待开始</div>
+      <div class="ft-wl-line ft-wl-job-only" id="ft-wl-group">分组: --</div>
+      <div class="ft-wl-bar ft-wl-job-only"><i id="ft-wl-bar-i"></i></div>
+      <div class="ft-wl-line ft-wl-job-only" id="ft-wl-stat">等待开始</div>
       <div class="ft-wl-line ft-wl-cur" id="ft-wl-cur"></div>
-      <div class="ft-wl-btns">
+      <div class="ft-wl-btns ft-wl-job-only">
         <button id="ft-wl-pause">暂停</button>
         <button id="ft-wl-stop">停止</button>
         <button id="ft-wl-copy">复制失败</button>
+      </div>
+      <div class="ft-wl-btns ft-wl-scan-only">
+        <button id="ft-wl-scan-stop">停止抓取</button>
       </div>`;
     document.body.appendChild(hudEl);
     hudEl.querySelector('.ft-wl-x').addEventListener('click', () => { hudEl.style.display = 'none'; });
     hudEl.querySelector('#ft-wl-pause').addEventListener('click', () => togglePause());
     hudEl.querySelector('#ft-wl-stop').addEventListener('click', () => stopJob());
     hudEl.querySelector('#ft-wl-copy').addEventListener('click', () => copyFailed());
+    hudEl.querySelector('#ft-wl-scan-stop').addEventListener('click', () => {
+      scanState.abort = true;
+      renderScan('⏹ 正在中止抓取…');
+    });
     return hudEl;
   }
 
+  function setHudMode(mode) {
+    if (!mode) return;
+    hudMode = (mode === 'job') ? 'job' : 'scan';
+    hudEl.classList.toggle('ft-wl-scan', hudMode !== 'job');
+    hudEl.querySelector('.ft-wl-title').textContent = HUD_TITLE[mode] || HUD_TITLE[hudMode];
+  }
+
+  function ensureHud(mode) {
+    if (!hudEl || !document.body.contains(hudEl)) buildHud();
+    if (mode) setHudMode(mode);
+    hudEl.style.display = 'block';
+    return hudEl;
+  }
+
+  /* job 模式渲染 */
   function renderHud(extra) {
-    const el = ensureHud();
-    el.style.display = 'block';
+    const el = ensureHud('job');
     const total = job.total || 0;
     const done = job.done || 0;
     const pct = total ? Math.min(100, Math.round(done / total * 100)) : 0;
-    el.querySelector('#ft-wl-group').textContent = `分组: ${job.group || '--'}｜第 ${job.pass || 1} 趟`;
+    el.querySelector('#ft-wl-group').textContent =
+      `分组: ${job.group || '--'}｜第 ${job.pass || 1} 趟｜源: ${SRC_LABEL[SRC.mode] || SRC.mode}`;
     el.querySelector('#ft-wl-bar-i').style.width = pct + '%';
     el.querySelector('#ft-wl-stat').textContent =
       `${done}/${total} (${pct}%)  成功 ${job.added}  失败 ${job.failed.length}` +
       (job.paused ? '  ⏸已暂停' : '');
     el.querySelector('#ft-wl-cur').textContent = extra || (job.current ? `当前: ${job.current}` : '');
     el.querySelector('#ft-wl-pause').textContent = job.paused ? '继续' : '暂停';
+  }
+
+  /* scan 模式渲染（只有一行状态） */
+  function renderScan(text, mode) {
+    const el = ensureHud(mode || (hudMode === 'job' ? 'scan' : hudMode));
+    el.querySelector('#ft-wl-cur').textContent = text || '';
+  }
+
+  /* 通用：按当前模式输出一行信息 */
+  function hudInfo(text) {
+    if (hudMode === 'job') renderHud(text);
+    else renderScan(text);
   }
 
   function copyFailed() {
@@ -595,16 +626,18 @@
     running: false, paused: false, stop: false,
     group: '', pass: 1, total: 0, done: 0, added: 0,
     failed: [], queue: [], current: '', lastError: '',
-    startedAt: 0, sinceReload: 0, sinceReopen: 0
+    startedAt: 0, sinceReload: 0, sinceReopen: 0, srcFrom: ''
   };
 
-  function markBusy(v) { window.__FT_AUTOMATION__ = !!v; }
+  const scanState = { running: false, abort: false };
+
+  function syncBusy() { window.__FT_AUTOMATION__ = !!(job.running || scanState.running); }
 
   async function persist(autoResume) {
     await storeSet({
       [JOB_KEY]: {
-        v: 6, group: job.group, pass: job.pass, total: job.total, done: job.done,
-        added: job.added, failed: job.failed, queue: job.queue,
+        v: 7, group: job.group, pass: job.pass, total: job.total, done: job.done,
+        added: job.added, failed: job.failed, queue: job.queue, src: SRC.mode,
         autoResume: !!autoResume, ts: Date.now()
       }
     });
@@ -613,72 +646,97 @@
   function togglePause() { job.paused = !job.paused; renderHud(); }
   function stopJob() { job.stop = true; job.paused = false; renderHud('正在停止…'); }
 
-  async function getSourceSymbols() {
-    const r = await bg({ action: 'FT_SECTORS' });
-    if (r.ok && r.data && Array.isArray(r.data.symbols) && r.data.symbols.length) {
-      return { symbols: r.data.symbols, from: '桥接 /sectors_all' };
-    }
+  /* ---------------- 数据源 ---------------- */
+  async function manualList() {
     const st = await storeGet([MANUAL_KEY]);
-    const manual = st[MANUAL_KEY];
-    if (Array.isArray(manual) && manual.length) {
-      return { symbols: manual, from: '本地备用清单' };
+    const arr = st[MANUAL_KEY];
+    return Array.isArray(arr) ? arr.filter(Boolean) : [];
+  }
+
+  async function getSourceSymbols() {
+    if (SRC.mode === 'manual') {
+      const m = await manualList();
+      if (m.length) return { symbols: m.slice(), from: '本地备用清单', detail: null };
+      throw new Error('本地备用清单为空（popup 里保存一份，或切回财报日历）');
     }
-    throw new Error('拿不到 symbol 源：桥接不可用且未设置备用清单（' + (r.error || '') + '）');
+
+    const r = await bg({ action: 'FT_WL_SOURCE', src: SRC.mode, back: SRC.back, ahead: SRC.ahead });
+    if (r.ok && r.data) {
+      const d = r.data;
+      if (d.status === 'disabled') {
+        throw new Error(d.message || `数据源 ${SRC.mode} 已在 bridge_server.py 中停用`);
+      }
+      if (d.status === 'error') throw new Error(d.message || '数据源返回错误');
+      if (Array.isArray(d.symbols)) {
+        // 允许合法的 0 只（当天没有财报），不要 fallback 到别的清单
+        return { symbols: d.symbols.slice(), from: d.from || SRC.mode, detail: d.dates || null };
+      }
+    }
+
+    const m = await manualList();
+    if (m.length) return { symbols: m.slice(), from: '本地备用清单(桥接不可用)', detail: null };
+    throw new Error('拿不到 symbol 源：' + (r.error || '桥接不可用') + '，且未设置备用清单');
   }
 
   async function computeDiff() {
     const src = await getSourceSymbols();
-    renderHud('正在抓取当前自选股全表…');
-    const have = await collectWatchlist(n => renderHud(`已读取 ${n} 只自选股…`));
+    hudInfo(`来源 ${src.from}：${src.symbols.length} 只，正在抓取当前自选股全表…`);
+    const have = await collectWatchlist(n => hudInfo(`已读取 ${n} 只自选股…`));
     const haveSet = new Set(Object.keys(have).map(normKey));
     const missing = src.symbols.filter(s => !haveSet.has(normKey(s)));
-    return { srcFrom: src.from, srcCount: src.symbols.length, haveCount: Object.keys(have).length, missing };
+    return {
+      srcFrom: src.from, srcCount: src.symbols.length, srcDetail: src.detail,
+      srcSymbols: src.symbols, haveCount: Object.keys(have).length, missing
+    };
   }
 
   async function startJob() {
     if (!isWatchlistPage()) return { ok: false, error: '当前不在 /app/watchlist 页面' };
     if (job.running) return { ok: false, error: '任务已在运行中' };
+    if (scanState.running) return { ok: false, error: '行情抓取进行中，请稍后再启动批量补齐' };
     if (!findAddButton()) return { ok: false, error: '找不到「添加自选股」按钮，请确认页面已加载完成' };
 
     job.running = true; job.paused = false; job.stop = false;
     job.group = groupName(); job.pass = 1; job.done = 0; job.added = 0;
     job.failed = []; job.current = ''; job.startedAt = Date.now();
     job.sinceReload = 0; job.sinceReopen = 0;
-    markBusy(true);
+    syncBusy();
     cleanNavSearch();
-    ensureHud();
+    ensureHud('job');
+    scanState.abort = false;
 
     let d;
     try { d = await computeDiff(); }
     catch (e) {
-      job.running = false; markBusy(false);
+      job.running = false; syncBusy();
       renderHud('❌ ' + e.message);
       return { ok: false, error: String(e.message || e) };
     }
 
     job.queue = d.missing.slice();
     job.total = job.queue.length;
+    job.srcFrom = d.srcFrom;
+    prepareRun(job.total);
     renderHud(`来源:${d.srcFrom} 共${d.srcCount}｜已有${d.haveCount}｜待加${job.total}`);
     if (!job.total) {
-      job.running = false; markBusy(false);
+      job.running = false; syncBusy();
       await storeDel(JOB_KEY);
-      toast('✅ 自选股已是最新，无需补齐');
-      return { ok: true, total: 0, message: '无需补齐' };
+      toast('✅ 数据源里的标的已全部在自选股中，无需补齐');
+      return { ok: true, total: 0, group: job.group, srcFrom: d.srcFrom, message: '无需补齐' };
     }
 
-    // 出发前做一次「输入框定位自检」，定位错了立刻失败，绝不乱打字
     try {
       const inp = await ensureInput();
       assertSafeInput(inp);
       log('自检通过，输入框 =', inp.id || inp.placeholder);
     } catch (e) {
-      job.running = false; markBusy(false);
+      job.running = false; syncBusy();
       renderHud('❌ 输入框自检失败: ' + e.message);
       return { ok: false, error: '输入框自检失败: ' + String(e.message || e) };
     }
 
     await persist(true);
-    runLoop();      // 不 await：后台跑，popup 可以关
+    runLoop();
     return { ok: true, total: job.total, group: job.group, srcFrom: d.srcFrom };
   }
 
@@ -688,9 +746,10 @@
     job.queue = saved.queue || []; job.total = saved.total || job.queue.length;
     job.done = saved.done || 0; job.added = saved.added || 0;
     job.failed = saved.failed || []; job.sinceReload = 0; job.sinceReopen = 0;
-    markBusy(true);
+    prepareRun(job.queue.length);
+    syncBusy();
     cleanNavSearch();
-    ensureHud();
+    ensureHud('job');
     renderHud('已从上次进度续跑');
     runLoop();
   }
@@ -702,7 +761,6 @@
       while (job.paused && !job.stop) { renderHud(); await sleep(400); }
       if (job.stop) break;
 
-      // 分组被改动 → 立即停手，避免加错分组
       const g = groupName();
       if (g && job.group && g !== job.group) {
         job.paused = true;
@@ -733,24 +791,22 @@
       }
       renderHud();
 
-      if (job.done % CFG.checkpointEvery === 0) await persist(true);
+      if (job.done % RUN.checkpointEvery === 0) await persist(true);
 
-      if (consecutiveFail >= CFG.consecutiveFailAbort) {
+      if (consecutiveFail >= RUN.consecutiveFailAbort) {
         job.paused = true;
         consecutiveFail = 0;
         renderHud(`⚠ 连续失败过多（最后: ${job.lastError}），已自动暂停，请人工检查`);
         await persist(true);
       }
 
-      // 周期性关闭再重开弹层，重置命令面板内部状态
-      if (CFG.reopenPanelEvery > 0 && job.sinceReopen >= CFG.reopenPanelEvery) {
+      if (RUN.reopenPanelEvery > 0 && job.sinceReopen >= RUN.reopenPanelEvery) {
         job.sinceReopen = 0;
         try { pressEscape(); } catch (e) { }
         await sleep(450);
       }
 
-      // 定期刷新页面，防止 ag-Grid DOM 膨胀拖慢/卡死
-      if (CFG.reloadEvery > 0 && job.sinceReload >= CFG.reloadEvery && job.queue.length) {
+      if (RUN.reloadEvery > 0 && job.sinceReload >= RUN.reloadEvery && job.queue.length) {
         renderHud('页面即将刷新以释放内存，随后自动续跑…');
         await persist(true);
         await sleep(900);
@@ -758,14 +814,13 @@
         return;
       }
 
-      await sleep(CFG.perSymbolDelay + Math.random() * CFG.jitter);
+      await sleep(RUN.perSymbolDelay + Math.random() * RUN.jitter);
     }
 
-    // ---- 本趟结束：重新比对，看是否需要下一趟（自愈漏加） ----
     try { pressEscape(); } catch (e) { }
     cleanNavSearch();
 
-    if (!job.stop && job.pass < CFG.maxPasses) {
+    if (!job.stop && job.pass < RUN.maxPasses) {
       renderHud('本趟结束，正在复核是否有漏加…');
       try {
         const d = await computeDiff();
@@ -783,26 +838,46 @@
 
     job.running = false;
     job.current = '';
-    markBusy(false);
+    syncBusy();
     await persist(false);
     renderHud(job.stop ? '⏹ 已手动停止' : `✅ 完成：成功 ${job.added}，失败 ${job.failed.length}`);
     toast(job.stop ? '⏹ 自选股补齐已停止' : `✅ 自选股补齐完成，成功 ${job.added} / 失败 ${job.failed.length}`);
 
-    // 顺手把最新的「变更%」快照落一次盘
+    // 顺手把最新的「变更%」快照落一次盘（静默，不改 HUD 模式）
     if (!job.stop) { try { await fullScanQuotes(true); } catch (e) { } }
   }
 
-  /* ================= 变更% 快照 ================= */
+  /* ================= 变更% 快照（scan 模式，与批量补齐完全隔离） ================= */
   async function fullScanQuotes(silent) {
     if (!isWatchlistPage()) return { ok: false, error: '当前不在 /app/watchlist 页面' };
-    if (!silent) { ensureHud(); renderHud('正在全量抓取「变更%」…'); }
-    const buf = await collectWatchlist(n => { if (!silent) renderHud(`已抓 ${n} 只行情…`); });
-    const n = Object.keys(buf).length;
-    if (!n) return { ok: false, error: '未抓到任何行（页面是否已加载？）' };
-    const resp = await bg({ action: 'FT_SYNC_WATCHLIST', payload: buf, overwrite: true });
-    if (!silent) renderHud(resp.ok ? `✅ 已覆盖写入 ${n} 只行情` : ('❌ 写入失败: ' + resp.error));
-    if (!silent) toast(resp.ok ? `✅ 已保存 ${n} 只自选股「变更%」` : `❌ 写入失败`);
-    return { ok: !!resp.ok, count: n, server: resp };
+    if (!silent && job.running) return { ok: false, error: '批量补齐任务进行中，请先停止后再抓行情' };
+    if (scanState.running) return { ok: false, error: '已有抓取任务在进行中' };
+
+    scanState.running = true;
+    scanState.abort = false;
+    syncBusy();
+    try {
+      if (!silent) renderScan('正在全量抓取「变更%」…（约 1~3 分钟，请勿操作本标签页）', 'scan');
+      const buf = await collectWatchlist(n => { if (!silent) renderScan(`已抓 ${n} 只行情…`); });
+      const n = Object.keys(buf).length;
+      if (!n) {
+        if (!silent) renderScan('❌ 未抓到任何行（页面是否已加载？）');
+        return { ok: false, error: '未抓到任何行（页面是否已加载？）' };
+      }
+      if (scanState.abort) {
+        if (!silent) renderScan(`⏹ 已中止（已抓 ${n} 只，未写入本机）`);
+        return { ok: false, error: '用户中止', count: n };
+      }
+      const resp = await bg({ action: 'FT_SYNC_WATCHLIST', payload: buf, overwrite: true });
+      if (!silent) {
+        renderScan(resp.ok ? `✅ 已覆盖写入 ${n} 只行情` : ('❌ 写入失败: ' + resp.error));
+        toast(resp.ok ? `✅ 已保存 ${n} 只自选股「变更%」` : `❌ 写入失败`);
+      }
+      return { ok: !!resp.ok, count: n, server: resp };
+    } finally {
+      scanState.running = false;
+      syncBusy();
+    }
   }
 
   let autoTimer = null;
@@ -810,7 +885,7 @@
     if (!AUTO_WATCHLIST) return;
     clearTimeout(autoTimer);
     autoTimer = setTimeout(async () => {
-      if (!AUTO_WATCHLIST || !isWatchlistPage() || job.running) return;
+      if (!AUTO_WATCHLIST || !isWatchlistPage() || job.running || scanState.running) return;
       const buf = scrapeRows(Object.create(null));
       if (!Object.keys(buf).length) return;
       const r = await bg({ action: 'FT_SYNC_WATCHLIST', payload: buf, overwrite: false });
@@ -820,15 +895,24 @@
 
   /* ================= 设置 & 引导 ================= */
   function loadSettings() {
-    chrome.storage.local.get(['ftDebug', 'ftAutoWatchlist', 'ftWlCfg'], (res) => {
-      DEBUG = !!res.ftDebug;
-      AUTO_WATCHLIST = res.ftAutoWatchlist === true;
-      if (res.ftWlCfg && typeof res.ftWlCfg === 'object') Object.assign(CFG, res.ftWlCfg);
-      log('设置: AUTO_WATCHLIST =', AUTO_WATCHLIST);
-    });
+    chrome.storage.local.get(
+      ['ftDebug', 'ftAutoWatchlist', 'ftWlCfg', 'ftWlSource', 'ftWlBack', 'ftWlAhead'],
+      (res) => {
+        DEBUG = !!res.ftDebug;
+        AUTO_WATCHLIST = res.ftAutoWatchlist === true;
+        if (res.ftWlCfg && typeof res.ftWlCfg === 'object') Object.assign(CFG, res.ftWlCfg);
+        SRC.mode = res.ftWlSource || 'earnings';
+        const b = parseInt(res.ftWlBack, 10);
+        const a = parseInt(res.ftWlAhead, 10);
+        SRC.back = Number.isFinite(b) ? Math.max(0, b) : 1;
+        SRC.ahead = Number.isFinite(a) ? Math.max(0, a) : 0;
+        if (!job.running) RUN = Object.assign({}, CFG);
+        log('设置: AUTO_WATCHLIST =', AUTO_WATCHLIST, 'SRC =', SRC);
+      });
   }
   chrome.storage.onChanged.addListener((c, area) => {
-    if (area === 'local' && (c.ftDebug || c.ftAutoWatchlist || c.ftWlCfg)) loadSettings();
+    if (area !== 'local') return;
+    if (c.ftDebug || c.ftAutoWatchlist || c.ftWlCfg || c.ftWlSource || c.ftWlBack || c.ftWlAhead) loadSettings();
   });
 
   async function bootstrap() {
@@ -840,7 +924,7 @@
     const st = await storeGet([JOB_KEY]);
     const saved = st[JOB_KEY];
     if (saved && saved.autoResume && Array.isArray(saved.queue) && saved.queue.length) {
-      ensureHud();
+      ensureHud('job');
       job.group = saved.group; job.total = saved.total; job.done = saved.done;
       job.added = saved.added; job.failed = saved.failed || []; job.pass = saved.pass || 1;
       const g = groupName();
@@ -864,7 +948,7 @@
   }
 
   document.addEventListener('scroll', () => autoTickSoon(3000), true);
-  setInterval(() => { if (!job.running) autoTickSoon(1500); }, 60000);
+  setInterval(() => { if (!job.running && !scanState.running) autoTickSoon(1500); }, 60000);
 
   /* ================= 与 popup 通信 ================= */
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -875,14 +959,15 @@
         ok: true, page: isWatchlistPage(), path: location.pathname,
         group: groupName(), gridRows: gridRowCount(),
         auto: AUTO_WATCHLIST,
+        src: SRC.mode, srcBack: SRC.back, srcAhead: SRC.ahead,
         running: job.running, paused: job.paused, pass: job.pass,
+        scanning: scanState.running,
         total: job.total, done: job.done, added: job.added,
         failed: job.failed.length, lastError: job.lastError
       });
       return;
     }
 
-    /* 🔬 元素探测：以后再出定位问题，一键看清抓到了谁 */
     if (msg.action === 'FT_WL_PROBE') {
       (async () => {
         const btn = findAddButton();
@@ -913,26 +998,35 @@
       return true;
     }
 
-    /* 🧪 只添加一只，用来验证链路 */
     if (msg.action === 'FT_WL_TEST_ADD') {
       const sym = String(msg.symbol || '').trim().toUpperCase();
       if (!sym) { sendResponse({ ok: false, error: '未提供 symbol' }); return; }
-      ensureHud(); renderHud('测试添加 ' + sym + ' …');
+      renderScan('测试添加 ' + sym + ' …', 'test');
       addOneSymbol(sym)
-        .then(r => { renderHud('测试结果: ' + JSON.stringify(r)); sendResponse({ ok: true, result: r }); })
+        .then(r => { renderScan('测试结果: ' + JSON.stringify(r)); sendResponse({ ok: true, result: r }); })
         .catch(e => sendResponse({ ok: false, error: String(e.message || e) }));
       return true;
     }
 
     if (msg.action === 'FT_WL_DIFF') {
-      ensureHud();
+      if (job.running) { sendResponse({ ok: false, error: '批量补齐进行中，请先停止' }); return; }
+      renderScan('正在比对差集…', 'diff');
+      scanState.running = true; scanState.abort = false; syncBusy();
       computeDiff()
-        .then(d => sendResponse({
-          ok: true, srcFrom: d.srcFrom, srcCount: d.srcCount,
-          haveCount: d.haveCount, missing: d.missing.length,
-          sample: d.missing.slice(0, 20), group: groupName()
-        }))
-        .catch(e => sendResponse({ ok: false, error: String(e.message || e) }));
+        .then(d => {
+          renderScan(`来源 ${d.srcFrom}：${d.srcCount} 只｜已有 ${d.haveCount}｜待加 ${d.missing.length}`);
+          sendResponse({
+            ok: true, srcFrom: d.srcFrom, srcCount: d.srcCount, srcDetail: d.srcDetail,
+            srcSymbols: d.srcSymbols.slice(0, 60),
+            haveCount: d.haveCount, missing: d.missing.length,
+            sample: d.missing.slice(0, 20), group: groupName()
+          });
+        })
+        .catch(e => {
+          renderScan('❌ ' + String(e.message || e));
+          sendResponse({ ok: false, error: String(e.message || e) });
+        })
+        .finally(() => { scanState.running = false; syncBusy(); });
       return true;
     }
 
@@ -942,9 +1036,14 @@
     }
 
     if (msg.action === 'FT_WL_PAUSE') { togglePause(); sendResponse({ ok: true, paused: job.paused }); return; }
-    if (msg.action === 'FT_WL_STOP') { stopJob(); sendResponse({ ok: true }); return; }
+    if (msg.action === 'FT_WL_STOP') { stopJob(); scanState.abort = true; sendResponse({ ok: true }); return; }
     if (msg.action === 'FT_WL_FAILED') { sendResponse({ ok: true, list: job.failed }); return; }
-    if (msg.action === 'FT_WL_HUD') { ensureHud().style.display = 'block'; renderHud(); sendResponse({ ok: true }); return; }
+    if (msg.action === 'FT_WL_HUD') {
+      ensureHud();
+      if (hudMode === 'job') renderHud(); else renderScan();
+      sendResponse({ ok: true, mode: hudMode });
+      return;
+    }
 
     if (msg.action === 'FT_WL_SCAN_QUOTES') {
       fullScanQuotes(false).then(r => sendResponse(r)).catch(e => sendResponse({ ok: false, error: String(e) }));
@@ -953,5 +1052,5 @@
   });
 
   bootstrap();
-  console.log(LOG, `watchlist.js v6 就绪（isWatchlist=${isWatchlistPage()}）`);
+  console.log(LOG, `watchlist.js v7 就绪（isWatchlist=${isWatchlistPage()}）`);
 })();

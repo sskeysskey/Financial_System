@@ -4,23 +4,18 @@
 Firstrade 买入/卖出痕迹读取与聚合（供 Chart_input.py / Chart_input_single.py 共用）
 
 数据来源: ~/Coding/Financial_System/Modules/firstrade_orders.json
-结构:
-{
-  "_meta": {...},
-  "orders": {
-    "<order_id>": {
-      "symbol": "AAPL", "side": "buy"/"sell", "date": "2026-09-09",
-      "datetime": "9/9/2026, 9:39:41 PM",
-      "amount": 3110.0, "quantity": 1000, "price": 49.38,
-      "amount_source": "dollar" | "qty*price" | "qty_only",
-      "status": "已执行", ...
-    }
-  }
-}
+
+★ 同时兼容两种 schema：
+  LEAN (v6+，默认，体积小 90%)
+    { "symbol":"KRMN","side":"buy","date":"2026-09-10",
+      "amount":1000,"price":34.79,"st":"F" }
+      st: F=已成交 C=取消/拒绝 P=待成交 X=未知
+  FULL (旧版，含 raw / datetime / status 等)
 
 环境变量:
   FT_TRADE_DEBUG=1        打印调试信息
   FT_ORDER_INCLUDE_ALL=1  连"已取消/已拒绝"的订单也画出来（默认剔除）
+  FT_ORDER_ONLY_FILLED=1  只画已成交(st=F)，挂单/未知一律不画
 """
 import os
 import re
@@ -31,7 +26,7 @@ USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 ORDERS_FILE = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "firstrade_orders.json")
 
-# 图上颜色/形状（与已有的 红=global / 白=specific / 黄=earning 明确区分）
+# 图上颜色/形状
 BUY_COLOR = '#5E81AC'      # 蓝色 ▲ 买入
 SELL_COLOR = '#D08770'     # 橙色 ▼ 卖出
 BUY_MARKER = '^'
@@ -39,9 +34,13 @@ SELL_MARKER = 'v'
 
 FT_TRADE_DEBUG = os.environ.get("FT_TRADE_DEBUG", "") == "1"
 FT_ORDER_INCLUDE_ALL = os.environ.get("FT_ORDER_INCLUDE_ALL", "") == "1"
+FT_ORDER_ONLY_FILLED = os.environ.get("FT_ORDER_ONLY_FILLED", "") == "1"
 
-# 只剔除“明确没有成交”的状态；其余全部保留
+_FILL_RE = re.compile(r"已成交|已执行|成交|filled|executed|partial", re.I)
 _CANCEL_RE = re.compile(r"取消|撤销|撤单|拒绝|失效|过期|无效|作废|cancel|reject|expire|void", re.I)
+_PEND_RE = re.compile(r"待|挂单|未成交|排队|已提交|open|pending|queued|working|accept", re.I)
+
+_ST_LABEL = {'F': '已成交', 'C': '已取消', 'P': '待成交', 'X': ''}
 
 _CACHE = {"mtime": None, "map": None}
 
@@ -72,11 +71,32 @@ def _to_date(s):
     return None
 
 
+def _status_code(o):
+    """LEAN 用 st 字段；FULL 回落到文本正则"""
+    st = o.get('st') or o.get('status_code')
+    if isinstance(st, str) and st.strip():
+        c = st.strip()[:1].upper()
+        if c in ('F', 'C', 'P', 'X'):
+            return c
+    raw = o.get('raw') if isinstance(o.get('raw'), dict) else {}
+    txt = "{} {} {}".format(o.get('status', ''), o.get('status_text', ''),
+                            raw.get('statusCategory', ''))
+    if _FILL_RE.search(txt):
+        return 'F'
+    if _CANCEL_RE.search(txt):
+        return 'C'
+    if _PEND_RE.search(txt):
+        return 'P'
+    return 'X'
+
+
 def _is_effective(order):
     if FT_ORDER_INCLUDE_ALL:
         return True
-    st = f"{order.get('status', '')} {order.get('status_text', '')}"
-    return not _CANCEL_RE.search(st)
+    code = _status_code(order)
+    if FT_ORDER_ONLY_FILLED:
+        return code == 'F'
+    return code != 'C'
 
 
 def _load_orders_raw():
@@ -134,11 +154,12 @@ def load_trade_map(force=False):
             continue
 
         amount = _to_float(o.get('amount'))
-        qty = _to_float(o.get('quantity'))
+        qty = _to_float(o.get('quantity') if o.get('quantity') is not None else o.get('qty'))
         price = _to_float(o.get('price'))
         if amount is None and qty and price:
             amount = qty * price
 
+        code = _status_code(o)
         node = out.setdefault(sym, {}).setdefault(d, {})
         agg = node.setdefault(side, {'amount': None, 'quantity': 0.0, 'count': 0, 'items': []})
         if amount is not None:
@@ -147,11 +168,11 @@ def load_trade_map(force=False):
             agg['quantity'] += qty
         agg['count'] += 1
         agg['items'].append({
-            'time': str(o.get('datetime', '')),
+            'time': str(o.get('datetime') or o.get('date') or ''),
             'quantity': qty,
             'amount': amount,
             'price': price,
-            'status': str(o.get('status', '')),
+            'status': str(o.get('status') or _ST_LABEL.get(code, '')),
             'price_type': str(o.get('price_type', '')),
             'source': str(o.get('amount_source', '')),
         })
@@ -219,13 +240,21 @@ def build_marker_text(side, d, agg, close_price=None):
     cnt = agg.get('count', 1)
     if cnt > 1:
         lines.append(f"当日共 {cnt} 笔")
-
-    for it in agg.get('items', [])[:5]:
+        for it in agg.get('items', [])[:5]:
+            bits = []
+            if it.get('quantity'):
+                bits.append(f"{it['quantity']:.0f}股")
+            if it.get('amount') is not None:
+                bits.append(fmt_money(it['amount']))
+            if it.get('price'):
+                bits.append(f"@{it['price']:.2f}")
+            if it.get('status'):
+                bits.append(str(it['status']))
+            if bits:
+                lines.append("  · " + " ".join(bits))
+    else:
+        it = (agg.get('items') or [{}])[0]
         bits = []
-        if it.get('quantity'):
-            bits.append(f"{it['quantity']:.0f}股")
-        if it.get('amount') is not None:
-            bits.append(fmt_money(it['amount']))
         if it.get('price'):
             bits.append(f"@{it['price']:.2f}")
         if it.get('status'):

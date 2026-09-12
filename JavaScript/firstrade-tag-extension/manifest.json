@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Firstrade 股票标签助手",
-  "version": "5.0",
-  "description": "Firstrade 列表 Tag 徽章；持仓/订单/自选股行情回传本机 Python 图表；自选股批量补齐（Sectors_All.json → watchlist）。全部自动抓取默认关闭。",
+  "version": "6.0",
+  "description": "Firstrade 列表 Tag 徽章；持仓/订单(精简LEAN)/自选股行情回传本机 Python 图表；自选股批量补齐（财报日历 Earnings_Release_new.txt 或 Sectors_All.json → watchlist）。全部自动抓取默认关闭。",
   "permissions": [
     "storage",
     "activeTab",

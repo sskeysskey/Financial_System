@@ -46,6 +46,7 @@ const PAGE_NAME = {
   positions: '持仓页 ✅', orders: '订单页 ✅',
   watchlist: '自选股页 ✅', other: '其它页面（不会抓取）'
 };
+const SRC_NAME = { earnings: '财报日历', sectors: 'Sectors_All', manual: '本地清单' };
 
 async function refreshPageStatus() {
   const r = await sendToTab({ action: 'FT_STATUS' });
@@ -53,6 +54,7 @@ async function refreshPageStatus() {
   pageEl.innerText =
     `当前：${PAGE_NAME[r.page] || r.page}   ${r.path}\n` +
     `自动：持仓 ${r.autoPositions ? '开⚠️' : '关'} ｜ 订单 ${r.autoOrders ? '开⚠️' : '关'}\n` +
+    `订单写入模式：${r.orderVerbose ? '完整字段 ⚠️体积大' : '精简 LEAN ✅'}\n` +
     `可抓持仓：${r.canPositions ? '是' : '否'} ｜ 可抓订单：${r.canOrders ? '是' : '否'}\n` +
     `本页缓存：持仓 ${r.positions} 条 / 订单 ${r.orders} 笔`;
 }
@@ -63,16 +65,19 @@ async function refreshWlStatus() {
   if (!r.page) { setWl(`当前不在自选股页面（${r.path}）\n请先打开 https://invest.firstrade.com/app/watchlist`); return; }
   setWl(
     `分组：${r.group || '(未识别)'}｜表内行数：${r.gridRows === null ? '?' : (r.gridRows - 1)}\n` +
+    `数据源：${SRC_NAME[r.src] || r.src}（回溯 ${r.srcBack} 交易日 / 前瞻 ${r.srcAhead} 天）\n` +
     `自动抓取变更%：${r.auto ? '已开启 ⚠️' : '已关闭'}\n` +
-    `任务：${r.running ? (r.paused ? '⏸已暂停' : '▶️运行中') : '空闲'}` +
-    (r.total ? `  第${r.pass}趟 ${r.done}/${r.total}  成功${r.added} 失败${r.failed}` : '') +
+    `批量任务：${r.running ? (r.paused ? '⏸已暂停' : '▶️运行中') : '空闲'}` +
+    (r.running && r.total ? `  第${r.pass}趟 ${r.done}/${r.total}  成功${r.added} 失败${r.failed}` : '') +
+    `｜行情抓取：${r.scanning ? '进行中' : '空闲'}` +
     (r.lastError ? `\n最后错误：${r.lastError}` : '')
   );
 }
 
 /* ---------- 初始化 ---------- */
 chrome.storage.local.get(
-  ['stockData', 'maxTags', 'ftDebug', 'ftAutoPositions', 'ftAutoOrders', 'ftAutoWatchlist', 'ftAutoScrape', 'ftWlManualList'],
+  ['stockData', 'maxTags', 'ftDebug', 'ftAutoPositions', 'ftAutoOrders', 'ftAutoWatchlist',
+    'ftAutoScrape', 'ftWlManualList', 'ftOrderVerbose', 'ftWlSource', 'ftWlBack', 'ftWlAhead'],
   (res) => {
     if (res.maxTags) $('maxTags').value = res.maxTags;
     $('dbgChk').checked = !!res.ftDebug;
@@ -80,6 +85,10 @@ chrome.storage.local.get(
     $('autoPos').checked = res.ftAutoPositions === undefined ? legacy : res.ftAutoPositions === true;
     $('autoOrd').checked = res.ftAutoOrders === undefined ? legacy : res.ftAutoOrders === true;
     $('autoWl').checked = res.ftAutoWatchlist === true;
+    $('ordVerbose').checked = res.ftOrderVerbose === true;
+    $('wlSrc').value = res.ftWlSource || 'earnings';
+    $('wlBack').value = (res.ftWlBack === undefined ? 1 : res.ftWlBack);
+    $('wlAhead').value = (res.ftWlAhead === undefined ? 0 : res.ftWlAhead);
     if (Array.isArray(res.ftWlManualList)) $('wlManual').value = res.ftWlManualList.join(', ');
 
     if (res.stockData) {
@@ -186,11 +195,25 @@ bindAuto('autoPos', 'ftAutoPositions', '持仓');
 bindAuto('autoOrd', 'ftAutoOrders', '订单');
 bindAuto('autoWl', 'ftAutoWatchlist', '自选股');
 
+$('ordVerbose').addEventListener('change', () => {
+  const v = $('ordVerbose').checked;
+  chrome.storage.local.set({ ftOrderVerbose: v }, () => {
+    setBridge(v ? '⚠️ 订单将保存完整字段（体积大 ~10 倍）' : '✅ 订单已切回精简写入(LEAN)');
+    setTimeout(refreshPageStatus, 300);
+  });
+});
+
 /* ---------- ② 持仓 ---------- */
 $('pingBtn').addEventListener('click', async () => {
   setBridge('正在连接 127.0.0.1:18888 …');
   const r = await sendToBg({ action: 'FT_PING' });
-  if (r.ok) setBridge('✅ 桥接服务正常\n' + JSON.stringify(r.data, null, 1));
+  if (r.ok) {
+    const d = r.data || {};
+    setBridge('✅ 桥接服务正常\n' +
+      `订单文件 ${(d.orders_bytes / 1024 || 0).toFixed(1)}KB（默认 ${d.orders_schema_default}）\n` +
+      `财报日历 ${d.earnings_release_exists ? '存在 ✅' : '缺失 ❌'}: ${d.earnings_release}\n` +
+      `Sectors 源启用：${d.sectors_source_enabled ? '是' : '否（已屏蔽）'}`);
+  }
   else setBridge('❌ 连不上桥接服务：' + r.error + '\n请在终端运行 bridge_server.py', true);
 });
 
@@ -232,20 +255,32 @@ $('scanOrdersBtn').addEventListener('click', async () => {
   if (r.ok) {
     const d = (r.server && r.server.data) || {};
     const srv = r.server && r.server.ok
-      ? `已追加写入本机 ✅ 新增 ${d.added ?? '?'} / 更新 ${d.updated ?? '?'} / 累计 ${d.total ?? '?'}`
+      ? `已追加写入本机 ✅ 新增 ${d.added ?? '?'} / 更新 ${d.updated ?? '?'} / 累计 ${d.total ?? '?'}\n` +
+      `顺手瘦身 ${d.shrunk ?? 0} 条，文件 ${((d.bytes || 0) / 1024).toFixed(1)}KB`
       : ('写入本机失败：' + JSON.stringify(r.server));
     setBridge(`本页抓到 ${r.count} 笔订单\n${srv}`);
   } else setBridge('抓取失败：' + r.error, true);
   refreshPageStatus();
 });
 
+$('compactOrdersBtn').addEventListener('click', async () => {
+  setBridge('正在压缩本机订单 JSON（首次会自动备份 .fat.bak）…');
+  const r = await sendToBg({ action: 'FT_COMPACT_ORDERS', verbose: false });
+  if (!r.ok) { setBridge('压缩失败：' + r.error, true); return; }
+  const d = r.data || {};
+  if (d.status === 'skip') { setBridge('订单文件为空，无需压缩'); return; }
+  setBridge(`🗜 压缩完成：${(d.before / 1024).toFixed(1)}KB → ${(d.after / 1024).toFixed(1)}KB` +
+    `（省 ${d.saved_pct}%）\n共 ${d.count} 笔，瘦身 ${d.shrunk} 笔，schema=${d.schema}`);
+});
+
 $('dumpOrdersBtn').addEventListener('click', async () => {
   const r = await sendToTab({ action: 'FT_DUMP_ORDERS' });
   if (!r.ok) { setBridge('读取失败：' + r.error, true); return; }
   const keys = Object.keys(r.data || {});
+  const ST = { F: '已成交', C: '已取消', P: '待成交', X: '?' };
   const sample = keys.slice(0, 5).map(k => {
     const o = r.data[k];
-    return `${o.date} ${o.symbol} ${o.side === 'buy' ? '买' : '卖'} $${o.amount ?? '?'} ${o.status || ''}`;
+    return `${o.date} ${o.symbol} ${o.side === 'buy' ? '买' : '卖'} $${o.amount ?? '?'} ${ST[o.st] || ''}`;
   }).join('\n');
   setBridge(`本页已抓取 ${r.count} 笔订单：\n${sample || '(空，请确认在 order-status 页面)'}`);
   console.log('[FT-POPUP] 订单', r.data);
@@ -255,24 +290,72 @@ $('serverOrdersBtn').addEventListener('click', async () => {
   const r = await sendToBg({ action: 'FT_SERVER_ORDERS' });
   if (!r.ok) { setBridge('读取失败：' + r.error, true); return; }
   const d = (r.data && r.data.orders) || {};
+  const meta = (r.data && r.data._meta) || {};
   const keys = Object.keys(d);
+  const ST = { F: '已成交', C: '已取消', P: '待成交', X: '?' };
   const sample = keys.slice(-6).map(k => {
     const o = d[k];
-    return `${o.date} ${o.symbol} ${o.side === 'buy' ? '买' : '卖'} $${o.amount ?? '?'}`;
+    return `${o.date} ${o.symbol} ${o.side === 'buy' ? '买' : '卖'} $${o.amount ?? '?'} ${ST[o.st] || o.status || ''}`;
   }).join('\n');
-  setBridge(`本机 orders JSON 共 ${keys.length} 笔（最近几笔）：\n${sample}`);
+  setBridge(`本机 orders JSON 共 ${keys.length} 笔（schema=${meta.schema || '?'}）：\n${sample}`);
   console.log('[FT-POPUP] 本机 orders', r.data);
 });
 
 /* ---------- ④ 自选股批量补齐 ---------- */
+function wlSrcCfg() {
+  return {
+    src: $('wlSrc').value,
+    back: Math.max(0, parseInt($('wlBack').value, 10) || 0),
+    ahead: Math.max(0, parseInt($('wlAhead').value, 10) || 0)
+  };
+}
+
+function saveWlSrcCfg() {
+  const c = wlSrcCfg();
+  chrome.storage.local.set({ ftWlSource: c.src, ftWlBack: c.back, ftWlAhead: c.ahead }, () => {
+    setWl(`数据源已切换为「${SRC_NAME[c.src] || c.src}」（回溯 ${c.back} 交易日 / 前瞻 ${c.ahead} 天）`);
+    setTimeout(refreshWlStatus, 600);
+  });
+}
+$('wlSrc').addEventListener('change', saveWlSrcCfg);
+$('wlBack').addEventListener('change', saveWlSrcCfg);
+$('wlAhead').addEventListener('change', saveWlSrcCfg);
+
+$('wlSrcPreviewBtn').addEventListener('click', async () => {
+  const c = wlSrcCfg();
+  if (c.src === 'manual') {
+    chrome.storage.local.get(['ftWlManualList'], (res) => {
+      const arr = res.ftWlManualList || [];
+      setWl(`本地备用清单共 ${arr.length} 只\n${arr.slice(0, 30).join(', ')}`);
+    });
+    return;
+  }
+  setWl('正在读取数据源…');
+  const r = await sendToBg({ action: 'FT_WL_SOURCE', src: c.src, back: c.back, ahead: c.ahead });
+  if (!r.ok) { setWl('读取失败（bridge_server.py 是否运行？）：' + r.error, true); return; }
+  const d = r.data || {};
+  if (d.status === 'disabled') { setWl('⛔ ' + (d.message || '该数据源已停用'), true); return; }
+  if (d.status === 'error') { setWl('❌ ' + (d.message || '数据源错误'), true); return; }
+  let txt = `来源：${d.from || d.source}\n共 ${d.count} 只\n`;
+  if (d.dates) {
+    Object.keys(d.dates).forEach(k => { txt += `  ${k}: ${d.dates[k].join(', ')}\n`; });
+  } else {
+    txt += (d.symbols || []).slice(0, 30).join(', ');
+  }
+  if (d.fallback) txt += '\n⚠ 目标日期无数据，已回退到最近的财报日';
+  if (d.file_exists === false) txt += `\n❌ 文件不存在：${d.file}`;
+  setWl(txt);
+  console.log('[FT-POPUP] wl_source', d);
+});
+
 $('wlDiffBtn').addEventListener('click', async () => {
-  setWl('正在读取 Sectors_All + 抓取自选股全表（1800 行需 1~3 分钟）…');
+  setWl('正在读取数据源 + 抓取自选股全表（1800 行需 1~3 分钟）…');
   const r = await sendToTab({ action: 'FT_WL_DIFF' });
   if (!r || !r.ok) { setWl('比对失败：' + (r && r.error), true); return; }
   setWl(
     `分组：${r.group}\n来源：${r.srcFrom}（${r.srcCount} 只）\n` +
     `自选股已有：${r.haveCount} 只\n★ 待添加：${r.missing} 只\n` +
-    (r.sample.length ? `示例：${r.sample.join(', ')}` : '')
+    (r.sample && r.sample.length ? `示例：${r.sample.join(', ')}` : '（无需添加 ✅）')
   );
 });
 
@@ -280,6 +363,7 @@ $('wlStartBtn').addEventListener('click', async () => {
   setWl('正在启动批量添加…（进度看网页右下角面板，可以关掉本窗口）');
   const r = await sendToTab({ action: 'FT_WL_START' });
   if (!r || !r.ok) { setWl('启动失败：' + (r && r.error), true); return; }
+  if (!r.total) { setWl(`✅ 分组「${r.group || ''}」已包含数据源全部标的，无需添加\n来源：${r.srcFrom || ''}`); return; }
   setWl(`✅ 已启动：分组「${r.group || ''}」，待添加 ${r.total} 只\n来源：${r.srcFrom || ''}\n` +
     `请勿操作该标签页；可切到别的标签页。`);
 });

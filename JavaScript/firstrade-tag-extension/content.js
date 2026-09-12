@@ -1,8 +1,10 @@
 /* ============================================================================
- * Firstrade 助手 content script v5
+ * Firstrade 助手 content script v5.1
  *  1) Tag 徽章 + 一键看图（纯展示）
  *  2) 持仓抓取：仅 /app/positions      —— 开关 ftAutoPositions
  *  3) 订单痕迹：仅 /app/order-status    —— 开关 ftAutoOrders
+ *     ★ v5.1 订单 LEAN schema：只回传 date/symbol/side/quantity/amount/price/st
+ *       体积比 v5 降约 90%；勾选 ftOrderVerbose 可恢复完整字段
  *  ★ 自选股（/app/watchlist）的抓取与批量补齐由 watchlist.js 负责
  *  ★ 三个自动开关互相独立，默认全部关闭
  * ==========================================================================*/
@@ -14,6 +16,7 @@
   let DEBUG = false;
   let AUTO_POSITIONS = false;     // ★ 独立开关
   let AUTO_ORDERS = false;        // ★ 独立开关
+  let ORDER_VERBOSE = false;      // ★ 订单是否保存完整字段（默认精简）
   let stockTagMap = {};
   let maxTags = 2;
 
@@ -36,8 +39,6 @@
 
   const POSITION_COL_HINTS = ['allocationPercent', 'marketValue', 'gainlossPercent',
     'totalCost', 'changePercent', 'quantity', 'averageCost'];
-  const ORDER_COL_HINTS = ['transaction', 'statusCategory', 'durationType',
-    'instructionType', 'limitPrice', 'priceType'];
 
   function colIdSet() {
     const s = new Set();
@@ -62,7 +63,7 @@
   const canScrapePositions = () => PAGE === 'positions' && gridLooksLike('positions');
   const canScrapeOrders = () => PAGE === 'orders' && gridLooksLike('orders');
 
-  /* 自选股批量补齐进行中 → 暂停一切 DOM 注入，减少干扰 */
+  /* 自选股自动化进行中 → 暂停一切 DOM 注入，减少干扰 */
   const automationBusy = () => window.__FT_AUTOMATION__ === true;
 
   /* ==================== 1. 缓存与通用工具 ==================== */
@@ -366,7 +367,7 @@
     return r;
   }
 
-  /* ==================== 5. 订单痕迹抓取（仅 order-status 页） ==================== */
+  /* ==================== 5. 订单痕迹抓取（仅 order-status 页，LEAN） ==================== */
   const ORDER_FIELD_COLS = {
     updated: ['updated', 'updatedTime', 'updateTime', 'time', 'date'],
     side: ['transaction', 'action', 'side'],
@@ -378,11 +379,30 @@
     status: ['statusCategory', 'status', 'orderStatus']
   };
 
+  /* 状态 → 单字符码：F 已成交 / C 取消拒绝 / P 待成交 / X 未知 */
+  const ST_FILLED = /已成交|已执行|成交|filled|executed|partial/i;
+  const ST_CANCEL = /取消|撤销|撤单|拒绝|失效|过期|无效|作废|cancel|reject|expire|void/i;
+  const ST_PENDING = /待|挂单|未成交|排队|已提交|open|pending|queued|working|accept/i;
+
+  function statusCode(txt) {
+    const s = String(txt || '');
+    if (!s) return 'X';
+    if (ST_FILLED.test(s)) return 'F';     // 「部分成交后取消」优先算有成交
+    if (ST_CANCEL.test(s)) return 'C';
+    if (ST_PENDING.test(s)) return 'P';
+    return 'X';
+  }
+
   function pickCol(raw, keys) {
     for (const k of keys) {
       if (raw[k] !== undefined && raw[k] !== null && raw[k] !== '') return raw[k];
     }
     return '';
+  }
+
+  function orderSig(o) {
+    if (!o) return '';
+    return [o.date, o.side, o.quantity, o.amount, o.price, o.st].join('|');
   }
 
   function normalizeOrder(rec) {
@@ -402,6 +422,7 @@
     const isDollar = /\$/.test(qtyTxt);
     const qtyNum = toNum(qtyTxt);
     const price = toNum(pickCol(raw, ORDER_FIELD_COLS.price));
+    const statusTxt = pickCol(raw, ORDER_FIELD_COLS.status);
 
     let amount = null, quantity = null, source = 'unknown';
     if (isDollar && qtyNum !== null) { amount = qtyNum; source = 'dollar'; }
@@ -414,29 +435,29 @@
     const key = rec.row_id ? String(rec.row_id)
       : `${date}|${sym}|${side}|${qtyTxt}|${price}`;
 
-    const out = {
-      key: key,
-      order_id: rec.row_id || '',
-      symbol: sym,
-      side: side,
-      side_text: sideTxt,
-      date: date,
-      datetime: updatedTxt,
-      quantity: quantity,
-      amount: amount === null ? null : Math.round(amount * 100) / 100,
-      price: price,
-      amount_source: source,
-      price_type: pickCol(raw, ORDER_FIELD_COLS.priceType),
-      duration: pickCol(raw, ORDER_FIELD_COLS.duration),
-      instruction: pickCol(raw, ORDER_FIELD_COLS.instruction),
-      status: pickCol(raw, ORDER_FIELD_COLS.status),
-      raw: raw,
-      scraped_at: Date.now()
-    };
+    /* ---------- LEAN：只保留图表真正需要的字段 ---------- */
+    const out = { symbol: sym, side: side, date: date, st: statusCode(statusTxt) };
+    if (quantity !== null) out.quantity = quantity;
+    if (amount !== null) out.amount = Math.round(amount * 100) / 100;
+    if (price !== null) out.price = price;
+
+    /* ---------- 可选：完整字段（默认关闭，体积大 ~10 倍） ---------- */
+    if (ORDER_VERBOSE) {
+      out.order_id = rec.row_id || '';
+      out.side_text = sideTxt;
+      out.datetime = updatedTxt;
+      out.status = statusTxt;
+      out.amount_source = source;
+      out.quantity_text = qtyTxt;
+      out.price_type = pickCol(raw, ORDER_FIELD_COLS.priceType);
+      out.duration = pickCol(raw, ORDER_FIELD_COLS.duration);
+      out.instruction = pickCol(raw, ORDER_FIELD_COLS.instruction);
+      out.raw = raw;
+    }
 
     const old = orderCache[key];
-    orderCache[key] = old ? Object.assign({}, old, out) : out;
-    return !old || JSON.stringify(old.status) !== JSON.stringify(out.status);
+    orderCache[key] = out;                 // 直接替换，避免旧胖字段残留
+    return !old || orderSig(old) !== orderSig(out);
   }
 
   function scrapeOrderGrid() {
@@ -485,9 +506,13 @@
     Object.keys(orderCache).forEach(k => { payload[k] = orderCache[k]; });
     const n = Object.keys(payload).length;
     if (!n) return { ok: false, error: 'order cache empty' };
-    const sig = `${n}|` + Object.keys(payload).sort().join(',');
+    /* 内容级签名：状态从「待成交」变「已成交」也会重新上传 */
+    const sig = Object.keys(payload).sort()
+      .map(k => k + ':' + orderSig(payload[k])).join(';');
     if (!force && sig === lastOrderSig) return { ok: true, data: { status: 'unchanged' } };
-    const resp = await safeSendMessage({ action: 'FT_SYNC_ORDERS', payload });
+    const resp = await safeSendMessage({
+      action: 'FT_SYNC_ORDERS', payload, verbose: ORDER_VERBOSE
+    });
     if (resp.ok) { lastOrderSig = sig; log('订单已追加:', resp.data); }
     else log('订单同步失败:', resp.error);
     return resp;
@@ -518,7 +543,7 @@
       await sleep(150);
     }
     const r = await flushOrders(true);
-    flashToast(`✅ 已抓取 ${Object.keys(orderCache).length} 笔订单（追加写入）`);
+    flashToast(`✅ 已抓取 ${Object.keys(orderCache).length} 笔订单（${ORDER_VERBOSE ? '完整' : '精简'}追加写入）`);
     return r;
   }
 
@@ -539,15 +564,18 @@
 
   function loadSettings() {
     chrome.storage.local.get(
-      ['stockData', 'maxTags', 'ftDebug', 'ftAutoPositions', 'ftAutoOrders', 'ftAutoScrape'],
+      ['stockData', 'maxTags', 'ftDebug', 'ftAutoPositions', 'ftAutoOrders',
+        'ftAutoScrape', 'ftOrderVerbose'],
       (res) => {
         stockTagMap = res.stockData || {};
         maxTags = res.maxTags || 2;
         DEBUG = !!res.ftDebug;
+        ORDER_VERBOSE = res.ftOrderVerbose === true;
         const legacy = res.ftAutoScrape === true;
         AUTO_POSITIONS = res.ftAutoPositions === undefined ? legacy : res.ftAutoPositions === true;
         AUTO_ORDERS = res.ftAutoOrders === undefined ? legacy : res.ftAutoOrders === true;
-        log('设置已加载 AUTO_POSITIONS=', AUTO_POSITIONS, 'AUTO_ORDERS=', AUTO_ORDERS, 'PAGE=', PAGE);
+        log('设置已加载 AUTO_POSITIONS=', AUTO_POSITIONS, 'AUTO_ORDERS=', AUTO_ORDERS,
+          'ORDER_VERBOSE=', ORDER_VERBOSE, 'PAGE=', PAGE);
         clearAllTags();
         scheduleInject();
       });
@@ -555,7 +583,7 @@
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
-    if (changes.stockData || changes.maxTags || changes.ftDebug ||
+    if (changes.stockData || changes.maxTags || changes.ftDebug || changes.ftOrderVerbose ||
       changes.ftAutoPositions || changes.ftAutoOrders || changes.ftAutoScrape) loadSettings();
   });
 
@@ -599,7 +627,7 @@
   }
 
   function injectTags() {
-    if (automationBusy()) return;           // ★ 批量补齐进行中，不注入
+    if (automationBusy()) return;           // ★ 自动化进行中，不注入
 
     const cells = document.querySelectorAll('[col-id="symbol"]');
     cells.forEach((cell) => {
@@ -687,6 +715,7 @@
         path: location.pathname,
         autoPositions: AUTO_POSITIONS,
         autoOrders: AUTO_ORDERS,
+        orderVerbose: ORDER_VERBOSE,
         canPositions: canScrapePositions(),
         canOrders: canScrapeOrders(),
         positions: Object.keys(positionCache).length,
@@ -720,5 +749,5 @@
 
   initGlobalPopover();
   loadSettings();
-  console.log(LOG_PREFIX, `Content Script v5 就绪（PAGE=${PAGE}，三个自动开关默认关闭）`);
+  console.log(LOG_PREFIX, `Content Script v5.1 就绪（PAGE=${PAGE}，订单默认精简写入）`);
 })();

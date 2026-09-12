@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <style>
     body {
-      width: 340px;
+      width: 348px;
       padding: 12px;
       font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
       font-size: 13px;
@@ -44,6 +44,12 @@
       margin-top: 6px;
       cursor: pointer;
       font-size: 13px;
+    }
+
+    select {
+      font-size: 12px;
+      padding: 3px;
+      flex: 1;
     }
 
     #status,
@@ -114,6 +120,17 @@
       margin-top: 6px;
     }
 
+    .ok {
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+      border-radius: 4px;
+      padding: 6px 8px;
+      font-size: 11px;
+      line-height: 1.5;
+      margin-top: 6px;
+    }
+
     .half {
       display: flex;
       gap: 6px;
@@ -172,7 +189,13 @@
   <hr>
   <h1>③ 买卖痕迹（/app/order-status）</h1>
   <p class="hint">追加式，长期累积买入/卖出记录，永不覆盖。</p>
+  <div class="ok">已启用<b>精简写入(LEAN)</b>：只保存 日期 / 代号 / 买卖 / 数量 / 金额 / 成交价 / 状态码，单条体积约为原来的 1/10，图表显示完全不受影响。</div>
+  <div class="row">
+    <input type="checkbox" id="ordVerbose" style="width:auto;">
+    <label for="ordVerbose" class="small">保存完整字段（含 raw，体积大 ~10 倍，仅排错时勾）</label>
+  </div>
   <button id="scanOrdersBtn" class="primary">⬇️ 手动抓取订单记录（自动滚屏）</button>
+  <button id="compactOrdersBtn">🗜 压缩本机订单 JSON（历史数据瘦身）</button>
   <div class="half">
     <button id="dumpOrdersBtn">🔍 本页订单</button>
     <button id="serverOrdersBtn">📄 本机 JSON</button>
@@ -181,9 +204,26 @@
   <hr>
   <h1>④ 自选股批量补齐（/app/watchlist）</h1>
   <div id="wlStatus">未检测</div>
+  <div class="row">
+    <label for="wlSrc">数据源</label>
+    <select id="wlSrc">
+      <option value="earnings">财报日历 Earnings_Release_new.txt</option>
+      <option value="sectors">Sectors_All.json（服务端已停用）</option>
+      <option value="manual">本地备用清单</option>
+    </select>
+  </div>
+  <div class="row">
+    <label for="wlBack">回溯</label>
+    <input type="number" id="wlBack" min="0" max="10" value="1" style="width:44px;">
+    <span class="small">个交易日（跨周末）</span>
+    <label for="wlAhead">前瞻</label>
+    <input type="number" id="wlAhead" min="0" max="10" value="0" style="width:44px;">
+    <span class="small">天</span>
+  </div>
+  <button id="wlSrcPreviewBtn">🔎 预览数据源清单</button>
   <div class="warn">开始前请确认：①已切到你要写入的<b>那个自选股分组</b>；②<code>bridge_server.py</code>
     正在运行；③过程中<b>不要操作该标签页</b>（可切到其它标签页/其它窗口）。进度面板显示在网页右下角，关闭 popup 不影响运行。</div>
-  <button id="wlDiffBtn">🧮 比对差集（Sectors_All ↔ 自选股）</button>
+  <button id="wlDiffBtn">🧮 比对差集（数据源 ↔ 自选股）</button>
   <button id="wlStartBtn" class="primary">▶️ 开始批量添加</button>
   <div class="half">
     <button id="wlPauseBtn">⏸ 暂停/继续</button>
@@ -205,7 +245,8 @@
 
   <hr>
   <h1>⑤ 自选股行情「变更%」</h1>
-  <p class="hint">手动 = 全量覆盖写入 <code>firstrade_watchlist.json</code>；图表在「无持仓」时展示该数值。</p>
+  <p class="hint">手动 = 全量覆盖写入 <code>firstrade_watchlist.json</code>；图表在「无持仓」时展示该数值。
+    与④的批量补齐<b>互斥且互不干扰</b>，右下角面板会切换成「自选股行情抓取」样式。</p>
   <button id="wlQuoteBtn" class="primary">⬇️ 手动抓取全部变更%（自动滚屏）</button>
   <button id="serverWlBtn">📄 查看本机 watchlist JSON</button>
   <div id="bridgeStatus"></div>
