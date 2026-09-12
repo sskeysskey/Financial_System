@@ -162,41 +162,8 @@
 </head>
 
 <body>
-  <div id="pageStatus">正在检测当前页面…</div>
-
-  <hr>
-  <h1>⚙️ 自动抓取开关（各自独立，默认全关）</h1>
-  <div class="row">
-    <input type="checkbox" id="autoPos" style="width:auto;">
-    <label for="autoPos">持仓 /app/positions 自动抓取</label>
-  </div>
-  <div class="row">
-    <input type="checkbox" id="autoOrd" style="width:auto;">
-    <label for="autoOrd">订单 /app/order-status 自动抓取</label>
-  </div>
-  <div class="row">
-    <input type="checkbox" id="autoWl" style="width:auto;">
-    <label for="autoWl">自选股 /app/watchlist 自动抓取</label>
-  </div>
-  <div class="warn">关闭时：只有手动按钮会写入本机 JSON。自选股自动抓取为<b>增量合并</b>（只写当前可见行，不会清空全表）。</div>
-
-  <hr>
-  <h1>① 同步标签数据（本地 → 网页）</h1>
-  <p class="hint">选择本地的 <code>description.json</code>：</p>
-  <input type="file" id="fileInput" accept=".json,application/json">
-  <p class="hint" style="margin-top:8px;">或直接粘贴 JSON（备用）：</p>
-  <textarea id="pasteArea" placeholder='{"stocks":[...],"etfs":[...]}'></textarea>
-  <button id="pasteBtn">解析粘贴内容</button>
-  <div class="row">
-    <label for="maxTags">每行最多显示</label>
-    <input type="number" id="maxTags" min="1" max="10" value="2" style="width:52px;">
-    <span class="small">个标签</span>
-  </div>
-  <button id="clearBtn" class="danger">清空标签缓存</button>
-  <div id="status"></div>
-
-  <hr>
-  <h1>② 持仓快照（/app/positions）</h1>
+  <!-- ==================== ① 持仓快照 ==================== -->
+  <h1>① 持仓快照（/app/positions）</h1>
   <p class="hint">覆盖式，只保留最新一次的全量快照。</p>
   <button id="pingBtn">🔌 测试本地桥接连接</button>
   <button id="scanBtn" class="primary">⬇️ 手动抓取全部持仓（自动滚屏）</button>
@@ -206,7 +173,8 @@
   </div>
 
   <hr>
-  <h1>③ 买卖痕迹（/app/order-status）</h1>
+  <!-- ==================== ② 买卖痕迹 ==================== -->
+  <h1>② 买卖痕迹（/app/order-status）</h1>
   <p class="hint">追加式，长期累积买入/卖出记录，永不覆盖。</p>
   <div class="ok">已启用<b>精简写入(LEAN)</b>：只保存 日期 / 代号 / 买卖 / 数量 / 金额 / 成交价 / 状态码。</div>
   <div class="row">
@@ -221,7 +189,8 @@
   </div>
 
   <hr>
-  <h1>④ 自选股一键重建（/app/watchlist）</h1>
+  <!-- ==================== ③ 自选股一键重建 ==================== -->
+  <h1>③ 自选股一键重建（/app/watchlist）</h1>
   <div id="wlStatus">未检测</div>
   <div class="row">
     <label for="wlSrc">数据源</label>
@@ -245,12 +214,12 @@
     <input type="checkbox" id="wlClearFirst" style="width:auto;">
     <label for="wlClearFirst"><b>开始前先清空当前分组</b>（逐行删除）</label>
   </div>
-  <div class="warn">
+  <!-- <div class="warn">
     ⚠️ 勾选「先清空」= 分组内<b>现有全部标的会被删掉</b>，最终只剩数据源清单。<br>
     删除前会自动把原清单备份到扩展存储（可在下方「高级」里复制）。<br>
     开始前请确认：①已切到目标<b>自选股分组</b>；②<code>bridge_server.py</code> 正在运行；③过程中<b>不要操作该标签页</b>（可切到别的标签页）。<br>
     删除速度约 0.6 秒/只，1800 只≈20 分钟；网页右下角面板会显示进度与预计剩余时间，关闭 popup 不影响运行。
-  </div>
+  </div> -->
   <button id="wlRunBtn" class="primary">🚀 一键执行（清空 → 比对差集 → 批量添加）</button>
   <div class="half">
     <button id="wlPauseBtn">⏸ 暂停/继续</button>
@@ -282,9 +251,10 @@
   </details>
 
   <hr>
-  <h1>⑤ 自选股行情「变更%」</h1>
+  <!-- ==================== ④ 自选股行情「变更%」 ==================== -->
+  <h1>④ 自选股行情「变更%」</h1>
   <p class="hint">手动 = 全量覆盖写入 <code>firstrade_watchlist.json</code>；图表在「无持仓」时展示该数值。
-    与④<b>互斥且互不干扰</b>。</p>
+    与③<b>互斥且互不干扰</b>。</p>
   <button id="wlQuoteBtn" class="primary">⬇️ 手动抓取全部变更%（自动滚屏）</button>
   <button id="serverWlBtn">📄 查看本机 watchlist JSON</button>
   <div id="bridgeStatus"></div>
@@ -295,7 +265,43 @@
   </div>
 
   <hr>
-  <p class="small">图表里 <b>I</b> = 买入点显隐，<b>U</b> = 卖出点显隐，<b>X</b> = 全部浮框显隐。</p>
+  <!-- ==================== ⑤ 同步标签数据 ==================== -->
+  <h1>⑤ 同步标签数据（本地 → 网页）</h1>
+  <p class="hint">选择本地的 <code>description.json</code>：</p>
+  <input type="file" id="fileInput" accept=".json,application/json">
+  <p class="hint" style="margin-top:8px;">或直接粘贴 JSON（备用）：</p>
+  <textarea id="pasteArea" placeholder='{"stocks":[...],"etfs":[...]}'></textarea>
+  <button id="pasteBtn">解析粘贴内容</button>
+  <div class="row">
+    <label for="maxTags">每行最多显示</label>
+    <input type="number" id="maxTags" min="1" max="10" value="2" style="width:52px;">
+    <span class="small">个标签</span>
+  </div>
+  <button id="clearBtn" class="danger">清空标签缓存</button>
+  <div id="status"></div>
+
+  <hr>
+  <!-- ==================== ⚙️ 自动抓取开关 ==================== -->
+  <h1>⚙️ 自动抓取开关（各自独立，默认全关）</h1>
+  <div class="row">
+    <input type="checkbox" id="autoPos" style="width:auto;">
+    <label for="autoPos">持仓 /app/positions 自动抓取</label>
+  </div>
+  <div class="row">
+    <input type="checkbox" id="autoOrd" style="width:auto;">
+    <label for="autoOrd">订单 /app/order-status 自动抓取</label>
+  </div>
+  <div class="row">
+    <input type="checkbox" id="autoWl" style="width:auto;">
+    <label for="autoWl">自选股 /app/watchlist 自动抓取</label>
+  </div>
+  <div class="warn">关闭时：只有手动按钮会写入本机 JSON。自选股自动抓取为<b>增量合并</b>（只写当前可见行，不会清空全表）。</div>
+
+  <hr>
+  <!-- ==================== 页面检测状态底栏 ==================== -->
+  <div id="pageStatus">正在检测当前页面…</div>
+
+  <p class="small" style="margin-top:8px;">图表里 <b>I</b> = 买入点显隐，<b>U</b> = 卖出点显隐，<b>X</b> = 全部浮框显隐。</p>
 
   <script src="popup.js"></script>
 </body>
