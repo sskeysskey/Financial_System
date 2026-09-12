@@ -154,7 +154,7 @@ _SYM_CLEAN = re.compile(r"[^A-Z0-9.\-]")
 
 
 def parse_earnings_release(path=None):
-    """-> { date对象: [SYM, ...] }"""
+    """-> { date对象: [(SYM, session), ...] }"""
     path = path or EARNINGS_RELEASE_PATH
     out = {}
     if not os.path.exists(path):
@@ -172,12 +172,18 @@ def parse_earnings_release(path=None):
                     d = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
                 except ValueError:
                     continue
-                sym = _SYM_CLEAN.sub("", line.split(":")[0].strip().upper())
+
+                # 按冒号分割，提取 symbol 和 session (AMC/BMO 等)
+                parts = [p.strip() for p in line.split(":")]
+                sym = _SYM_CLEAN.sub("", parts[0].upper())
+                session = parts[1].upper() if len(parts) >= 2 else ""
+
                 if not sym:
                     continue
                 arr = out.setdefault(d, [])
-                if sym not in arr:
-                    arr.append(sym)
+                # 避免同一天同个代码重复记录
+                if not any(item[0] == sym for item in arr):
+                    arr.append((sym, session))
     except Exception as e:
         _log(f"解析 {os.path.basename(path)} 失败: {e}")
     return out
@@ -211,15 +217,33 @@ def load_earnings_symbols(back=1, ahead=0, fallback=True):
         used_fallback = True
 
     symbols, seen = [], set()
-    for d in sorted(picked.keys()):
-        for s in picked[d]:
-            k = s.replace(".", "").replace("-", "")
-            if k in seen:
-                continue
-            seen.add(k)
-            symbols.append(s)
+    day_map = {}
 
-    day_map = {d.isoformat(): picked[d] for d in sorted(picked.keys())}
+    for d in sorted(picked.keys()):
+        day_syms = []
+        for sym, session in picked[d]:
+            # ---------------------------------------------------------
+            # ★ 规则过滤：
+            # 1. 针对历史日期（昨天/过去交易日）：只抓取 AMC
+            # 2. 针对今天的日期：只抓取 AMC
+            # ---------------------------------------------------------
+            if d < today:
+                if session != "AMC":
+                    continue
+            elif d == today:
+                if session != "BMO":
+                    continue
+            # 若后续配置 ahead > 0，未来日期默认不过滤（若也需AMC可在此加限制）
+
+            k = sym.replace(".", "").replace("-", "")
+            if k not in seen:
+                seen.add(k)
+                symbols.append(sym)
+            day_syms.append(sym)
+
+        if day_syms:
+            day_map[d.isoformat()] = day_syms
+
     if day_map:
         span = f"{min(day_map)}~{max(day_map)}"
     else:

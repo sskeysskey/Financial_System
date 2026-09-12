@@ -1,28 +1,22 @@
 {
  "_meta": {
-  "updated_at": 1789186718.945678,
-  "updated_at_str": "2026-09-12 12:18:38",
-  "count": 3,
+  "updated_at": 1789189881.47665,
+  "updated_at_str": "2026-09-12 13:11:21",
+  "count": 2,
   "mode": "overwrite"
  },
  "quotes": {
-  "FPS": {
-   "symbol": "FPS",
-   "last": "31.80",
-   "change_pct": "+8.90%",
-   "change_pct_num": 8.90411
+  "ADBE": {
+   "symbol": "ADBE",
+   "last": "252.20",
+   "change_pct": "+1.35%",
+   "change_pct_num": 1.354338
   },
-  "KR": {
-   "symbol": "KR",
-   "last": "58.78",
-   "change_pct": "+3.21%",
-   "change_pct_num": 3.213345
-  },
-  "TCOM": {
-   "symbol": "TCOM",
-   "last": "39.18",
-   "change_pct": "+1.24%",
-   "change_pct_num": 1.24031
+  "RH": {
+   "symbol": "RH",
+   "last": "133.85",
+   "change_pct": "-0.13%",
+   "change_pct_num": -0.126847
   }
  }
 }
