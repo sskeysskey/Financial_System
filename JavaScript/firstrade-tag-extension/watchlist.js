@@ -786,7 +786,8 @@
     job: '自选股一键补齐',
     scan: '自选股行情抓取',
     diff: '差集比对',
-    test: '单只添加自检'
+    test: '单只添加自检',
+    task: '🤖 远程添加(来自 Python)'
   };
   const PHASE_LABEL = { idle: '待开始', clear: '清空中', diff: '比对中', add: '添加中' };
 
@@ -911,7 +912,9 @@
 
   const scanState = { running: false, abort: false };
 
-  function syncBusy() { window.__FT_AUTOMATION__ = !!(job.running || scanState.running); }
+  function syncBusy() {
+    window.__FT_AUTOMATION__ = !!(job.running || scanState.running || window.__FT_AGENT_BUSY__);
+  }
 
   async function persist(autoResume) {
     await storeSet({
@@ -1470,6 +1473,27 @@
     }
   });
 
+  /* ================= ★ 对外 API（供 wl_agent.js 复用点击链路） ================= */
+  window.__FT_WL_API__ = {
+    version: 8,
+    isWatchlistPage,
+    groupName,
+    gridRowCount,
+    dataRowsTotal,
+    normKey,
+    collectWatchlist,
+    addOneSymbol,
+    cleanNavSearch,
+    pressEscape,
+    ensureHud,
+    renderScan,
+    toast,
+    isBusy: () => !!(job.running || scanState.running),
+    /* 上一次任务被手动停止后，job.stop 会残留 true，远程任务前必须清掉 */
+    clearStopFlags: () => { if (!job.running) job.stop = false; scanState.abort = false; },
+    setExternalBusy: (v) => { window.__FT_AGENT_BUSY__ = !!v; syncBusy(); }
+  };
+
   bootstrap();
-  console.log(LOG, `watchlist.js v8 就绪（isWatchlist=${isWatchlistPage()}）`);
+  console.log(LOG, `watchlist.js v8 就绪（isWatchlist=${isWatchlistPage()}，已导出 __FT_WL_API__）`);
 })();

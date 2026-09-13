@@ -192,6 +192,15 @@
   <!-- ==================== ③ 自选股一键重建 ==================== -->
   <h1>③ 自选股一键重建（/app/watchlist）</h1>
   <div id="wlStatus">未检测</div>
+  <div class="ok" id="agentBox">🤖 远程添加代理：未检测</div>
+  <div class="row">
+    <input type="checkbox" id="wlAgent" style="width:auto;">
+    <label for="wlAgent"><b>允许 Python 远程添加</b>（图表按 f 键 / 面板右键）</label>
+  </div>
+  <div class="row">
+    <input type="checkbox" id="wlRestore" style="width:auto;">
+    <label for="wlRestore" class="small">添加完成后自动切回原分组（推荐）</label>
+  </div>
   <div class="row">
     <label for="wlSrc">数据源</label>
     <select id="wlSrc">

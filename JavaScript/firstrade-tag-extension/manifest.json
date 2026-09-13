@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Firstrade 股票标签助手",
-  "version": "7.0",
-  "description": "Firstrade 列表 Tag 徽章；持仓/订单(LEAN)/自选股行情回传本机 Python 图表；自选股一键重建（可选先清空分组 → 比对差集 → 批量添加，数据源=财报日历/Sectors_All/本地清单）。全部自动抓取默认关闭。",
+  "version": "8.0",
+  "description": "Firstrade 列表 Tag 徽章；持仓/订单(LEAN)/自选股行情回传本机 Python 图表；自选股一键重建；★新增：Python 图表/面板一键把 symbol 远程加入指定自选股分组（买/买买/买买买/卖卖卖）。全部自动抓取默认关闭。",
   "permissions": [
     "storage",
     "activeTab",
@@ -26,7 +26,8 @@
       ],
       "js": [
         "content.js",
-        "watchlist.js"
+        "watchlist.js",
+        "wl_agent.js"
       ],
       "css": [
         "content.css"

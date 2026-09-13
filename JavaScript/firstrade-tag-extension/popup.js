@@ -89,7 +89,7 @@ async function refreshWlStatus() {
 chrome.storage.local.get(
   ['stockData', 'maxTags', 'ftDebug', 'ftAutoPositions', 'ftAutoOrders', 'ftAutoWatchlist',
     'ftAutoScrape', 'ftWlManualList', 'ftOrderVerbose', 'ftWlSource', 'ftWlBack', 'ftWlAhead',
-    'ftWlClearFirst'],
+    'ftWlClearFirst', 'ftWlAgent', 'ftWlRestoreGroup'],
   (res) => {
     if (res.maxTags) $('maxTags').value = res.maxTags;
     $('dbgChk').checked = !!res.ftDebug;
@@ -98,6 +98,8 @@ chrome.storage.local.get(
     $('autoOrd').checked = res.ftAutoOrders === undefined ? legacy : res.ftAutoOrders === true;
     $('autoWl').checked = res.ftAutoWatchlist === true;
     $('ordVerbose').checked = res.ftOrderVerbose === true;
+    $('wlAgent').checked = res.ftWlAgent !== false;
+    $('wlRestore').checked = res.ftWlRestoreGroup !== false;
     $('wlSrc').value = res.ftWlSource || 'earnings';
     $('wlBack').value = (res.ftWlBack === undefined ? 1 : res.ftWlBack);
     $('wlAhead').value = (res.ftWlAhead === undefined ? 0 : res.ftWlAhead);
@@ -556,3 +558,30 @@ $('serverWlBtn').addEventListener('click', async () => {
   setBridge(`本机 watchlist JSON 共 ${keys.length} 只\n更新时间：${(r.data._meta || {}).updated_at_str || '?'}\n${sample}`);
   console.log('[FT-POPUP] 本机 watchlist', r.data);
 });
+
+/* ---------- 🤖 远程添加代理 ---------- */
+$('wlAgent').addEventListener('change', () => {
+  chrome.storage.local.set({ ftWlAgent: $('wlAgent').checked }, () => {
+    setWl($('wlAgent').checked
+      ? '✅ 已允许 Python 远程添加（本页面每 2 秒领一次任务）'
+      : '⛔ 已关闭远程添加，Python 端会等待超时');
+    setTimeout(refreshAgentStatus, 300);
+  });
+});
+
+$('wlRestore').addEventListener('change', () => {
+  chrome.storage.local.set({ ftWlRestoreGroup: $('wlRestore').checked }, () => {
+    setWl($('wlRestore').checked ? '添加完成后会自动切回原分组' : '添加完成后停留在目标分组');
+  });
+});
+
+async function refreshAgentStatus() {
+  const r = await sendToTab({ action: 'FT_AGENT_STATUS' });
+  const el = $('agentBox');
+  if (!r || !r.ok) { el.textContent = '🤖 远程添加代理：未注入（请在 /app/watchlist 刷新一次页面）'; return; }
+  el.textContent = `🤖 远程添加代理：${r.enabled ? '已开启' : '已关闭'}` +
+    `｜当前分组 ${r.group || '?'}｜${r.busy ? '正在执行任务…' : '待命'}` +
+    `｜链路 ${r.apiReady ? 'OK' : '未就绪'}`;
+}
+setInterval(refreshAgentStatus, 3000);
+refreshAgentStatus();

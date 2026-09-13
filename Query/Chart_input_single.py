@@ -51,6 +51,22 @@ except Exception as _e:
     def get_watchlist_quote(_s): return None
     def build_market_items(_s, _t, show_miss=None): return []
 
+# --- Firstrade 一键加入自选股分组（bridge_server.py + Chrome 扩展 wl_agent.js） ---
+try:
+    from ft_watchlist_add import (add_symbol_async, watchlist_groups,
+                                  choose_group_dialog, last_group, save_last_group,
+                                  notify_mac)
+    FT_WL_ADD_OK = True
+except Exception as _e:
+    print(f"[FT] 加载 ft_watchlist_add 失败（一键加自选不可用）: {_e}")
+    FT_WL_ADD_OK = False
+    def watchlist_groups(): return []
+    def choose_group_dialog(*a, **k): return None
+    def last_group(): return ""
+    def save_last_group(g): pass
+    def notify_mac(*a, **k): pass
+    def add_symbol_async(*a, **k): return None
+
 # --- 导入 Tiger_API ---
 sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Selenium"))
 try:
@@ -644,6 +660,15 @@ class ChartWindow:
         self.closed = False
         matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
         matplotlib.rcParams['toolbar'] = 'none'
+        # ★ 关掉 matplotlib 默认快捷键，避免 f(全屏)/s(保存)/k,l(对数轴)/←→(前进后退) 抢键
+        for _k in ('keymap.fullscreen', 'keymap.save', 'keymap.quit', 'keymap.quit_all',
+                   'keymap.grid', 'keymap.grid_minor', 'keymap.yscale', 'keymap.xscale',
+                   'keymap.home', 'keymap.back', 'keymap.forward',
+                   'keymap.pan', 'keymap.zoom', 'keymap.copy', 'keymap.help'):
+            try:
+                matplotlib.rcParams[_k] = []
+            except Exception:
+                pass
 
         # ---------- 静态部分：只创建一次 ----------
         self.fig, self.ax1 = plt.subplots(figsize=(16, 8))
@@ -699,6 +724,14 @@ class ChartWindow:
                                           color=NORD_THEME['text_bright'], fontsize=16,
                                           fontweight='bold', transform=self.fig.transFigure)
 
+        # ★ 一键加自选：状态提示行 + 后台线程结果队列
+        self.wl_status_artist = self.fig.text(
+            0.5, 0.885, "", ha='center', va='top', fontsize=13, fontweight='bold',
+            color=NORD_THEME['accent_yellow'], visible=False,
+            transform=self.fig.transFigure, fontname='Arial Unicode MS')
+        self._wl_results = []        # 工作线程 append，UI 定时器读取
+        self._wl_hide_at = 0.0
+
         # RadioButtons
         self.rax = self.fig.add_axes([0.95, 0.0, 0.05, 0.65], facecolor=NORD_THEME['background'])
         self.radio = RadioButtons(self.rax, list(TIME_OPTIONS.keys()), active=3)
@@ -713,7 +746,9 @@ class ChartWindow:
             circle.set_edgecolor(NORD_THEME['border'])
             circle.set_facecolor(NORD_THEME['background'])
 
-        instructions = "N:新财报\nE:改财报\nT:改标签\nW:新事件\nQ:改事件\nK:查豆包\nZ:查富途\nP:做比较\nJ:加Panel\nL:查相似\nY:删除\nG:刷新\nO:查α\nB:存在\nI:买入点\nU:卖出点"
+        instructions = ("N:新财报\nE:改财报\nT:改标签\nW:新事件\nQ:改事件\nK:查豆包\nZ:查富途\n"
+                        "P:做比较\nJ:加Panel\nL:查相似\nY:删除\nG:刷新\nO:查α\nB:存在\n"
+                        "I:买入点\nU:卖出点\nF:加自选\n⇧F:同上组")
         self.rax.text(0.5, 0.98, instructions, transform=self.rax.transAxes, ha="center", va="bottom",
                       color=NORD_THEME['text_light'], fontsize=10, fontfamily="Arial Unicode MS")
 
@@ -893,6 +928,12 @@ class ChartWindow:
         title_text, title_color, self.clickable = self.create_or_update_title()
         self.title_artist.set_text(title_text)
         self.title_artist.set_color(title_color)
+
+        try:
+            self.wl_status_artist.set_visible(False)
+            self._wl_hide_at = 0.0
+        except Exception:
+            pass
 
         # 隐藏残留的悬浮元素
         self.annot.set_visible(False)
@@ -1927,6 +1968,57 @@ class ChartWindow:
             pass
 
     # ------------------------------------------------------------------
+    # ★ 一键把当前 symbol 加入 Firstrade 自选股分组
+    # ------------------------------------------------------------------
+    def _show_wl_status(self, text, color, ttl=6.0):
+        try:
+            self.wl_status_artist.set_text(text)
+            self.wl_status_artist.set_color(color)
+            self.wl_status_artist.set_visible(True)
+            self._wl_hide_at = time.time() + ttl
+            self.fig.canvas.draw_idle()
+        except Exception:
+            pass
+
+    def _add_to_watchlist(self, group=None):
+        if not FT_WL_ADD_OK:
+            display_dialog("未找到 ft_watchlist_add.py，无法使用「一键加自选」")
+            return
+        sym = self.name
+        if not sym:
+            return
+        if not group:
+            group = choose_group_dialog(sym, watchlist_groups())
+            if not group:
+                self._show_wl_status("已取消", NORD_THEME['text_light'], ttl=1.5)
+                return
+        save_last_group(group)
+        self._show_wl_status(f"⏳ 正在把 {sym} 加入「{group}」…（浏览器后台执行）",
+                             NORD_THEME['accent_yellow'], ttl=90)
+        add_symbol_async(sym, group,
+                         on_done=lambda res: self._wl_results.append(res), wait=45)
+
+    def _drain_wl_results(self):
+        now = time.time()
+        while self._wl_results:
+            res = self._wl_results.pop(0)
+            ok = bool(res.get('ok'))
+            msg = res.get('message') or ('成功' if ok else '失败')
+            self._show_wl_status(("✅ " if ok else "❌ ") + msg,
+                                 NORD_THEME['accent_green'] if ok else NORD_THEME['accent_red'],
+                                 ttl=7.0)
+            try:
+                notify_mac("Firstrade 自选股", msg,
+                           subtitle=f"{res.get('symbol','')} → {res.get('group','')}")
+            except Exception:
+                pass
+            print(f"[FT-WL] {'OK' if ok else 'FAIL'} {msg}")
+        if self.wl_status_artist.get_visible() and self._wl_hide_at and now > self._wl_hide_at:
+            self.wl_status_artist.set_visible(False)
+            self._wl_hide_at = 0.0
+            self.fig.canvas.draw_idle()
+    
+    # ------------------------------------------------------------------
     # 弹窗 / 外部脚本
     # ------------------------------------------------------------------
     def show_stock_etf_info(self):
@@ -2041,6 +2133,8 @@ class ChartWindow:
                        'y': self.launch_insert_then_delete_chain,
                        'j': self.launch_and_close_for_y,
                        's': self.toggle_colored_lines,
+                       'f': lambda: self._add_to_watchlist(None),
+                       'F': lambda: self._add_to_watchlist(last_group() or None),
                        'q': lambda: execute_external_script('event_edit', self.name),
                        'k': lambda: execute_external_script('check_kimi', self.name),
                        'z': lambda: execute_external_script('check_futu', self.name),
@@ -2075,6 +2169,11 @@ class ChartWindow:
 
     # ------------------------------------------------------------------
     def _ui_poll_realtime(self):
+        try:
+            self._drain_wl_results()
+        except Exception:
+            pass
+        
         try:
             if self.name is None or not self.prices or self.prices[-1] == 0:
                 return

@@ -51,6 +51,22 @@ except Exception as _e:
     def get_watchlist_quote(_s): return None
     def build_market_items(_s, _t, show_miss=None): return []
 
+# --- Firstrade 一键加入自选股分组（bridge_server.py + Chrome 扩展 wl_agent.js） ---
+try:
+    from ft_watchlist_add import (add_symbol_async, watchlist_groups,
+                                  choose_group_dialog, last_group, save_last_group,
+                                  notify_mac)
+    FT_WL_ADD_OK = True
+except Exception as _e:
+    print(f"[FT] 加载 ft_watchlist_add 失败（一键加自选不可用）: {_e}")
+    FT_WL_ADD_OK = False
+    def watchlist_groups(): return []
+    def choose_group_dialog(*a, **k): return None
+    def last_group(): return ""
+    def save_last_group(g): pass
+    def notify_mac(*a, **k): pass
+    def add_symbol_async(*a, **k): return None
+
 # --- 导入 Tiger_API ---
 sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Selenium"))
 try:
@@ -590,6 +606,16 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     plt.close('all')
     matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']
     matplotlib.rcParams['toolbar'] = 'none'
+
+    # ★ 关掉 matplotlib 默认快捷键，避免 f(全屏)/s(保存)/k,l/方向键抢键
+    for _k in ('keymap.fullscreen', 'keymap.save', 'keymap.quit', 'keymap.quit_all',
+               'keymap.grid', 'keymap.grid_minor', 'keymap.yscale', 'keymap.xscale',
+               'keymap.home', 'keymap.back', 'keymap.forward',
+               'keymap.pan', 'keymap.zoom', 'keymap.copy', 'keymap.help'):
+        try:
+            matplotlib.rcParams[_k] = []
+        except Exception:
+            pass
     
     pa_text_artist = [None]
     current_pre_after_pct = [None]
@@ -663,6 +689,62 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     else:
         fig.canvas.manager.set_window_title(name)
     
+    # ★ 一键加自选：状态提示行 + 后台线程结果队列
+    wl_status_artist = fig.text(
+        0.5, 0.885, "", ha='center', va='top', fontsize=13, fontweight='bold',
+        color=NORD_THEME['accent_yellow'], visible=False,
+        transform=fig.transFigure, fontname='Arial Unicode MS')
+    wl_results = []
+    wl_hide_at = [0.0]
+
+    def _show_wl_status(text, color, ttl=6.0):
+        try:
+            wl_status_artist.set_text(text)
+            wl_status_artist.set_color(color)
+            wl_status_artist.set_visible(True)
+            wl_hide_at[0] = time.time() + ttl
+            fig.canvas.draw_idle()
+        except Exception:
+            pass
+
+    def _add_to_watchlist(group=None):
+        if not FT_WL_ADD_OK:
+            display_dialog("未找到 ft_watchlist_add.py，无法使用「一键加自选」")
+            return
+        sym = name
+        if not sym:
+            return
+        if not group:
+            group = choose_group_dialog(sym, watchlist_groups())
+            if not group:
+                _show_wl_status("已取消", NORD_THEME['text_light'], ttl=1.5)
+                return
+        save_last_group(group)
+        _show_wl_status(f"⏳ 正在把 {sym} 加入「{group}」…（浏览器后台执行）",
+                        NORD_THEME['accent_yellow'], ttl=90)
+        add_symbol_async(sym, group,
+                         on_done=lambda res: wl_results.append(res), wait=45)
+
+    def _drain_wl_results():
+        now = time.time()
+        while wl_results:
+            res = wl_results.pop(0)
+            ok = bool(res.get('ok'))
+            msg = res.get('message') or ('成功' if ok else '失败')
+            _show_wl_status(("✅ " if ok else "❌ ") + msg,
+                            NORD_THEME['accent_green'] if ok else NORD_THEME['accent_red'],
+                            ttl=7.0)
+            try:
+                notify_mac("Firstrade 自选股", msg,
+                           subtitle=f"{res.get('symbol','')} → {res.get('group','')}")
+            except Exception:
+                pass
+            print(f"[FT-WL] {'OK' if ok else 'FAIL'} {msg}")
+        if wl_status_artist.get_visible() and wl_hide_at[0] and now > wl_hide_at[0]:
+            wl_status_artist.set_visible(False)
+            wl_hide_at[0] = 0.0
+            fig.canvas.draw_idle()
+
     earning_release_date = find_earning_release_date(name)
     purple_shade = None
     blue_shade = None
@@ -1345,7 +1427,9 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
         circle.set_facecolor(NORD_THEME['background'])
     radio.circles[default_index].set_facecolor(NORD_THEME['accent_red'])
 
-    instructions = "N:新财报\nE:改财报\nT:改标签\nW:新事件\nQ:改事件\nK:查豆包\nZ:查富途\nP:做比较\nJ:加Panel\nL:查相似\nY:删除\nG:刷新\nO:查α\nB:存在\nI:买入点\nU:卖出点"
+    instructions = ("N:新财报\nE:改财报\nT:改标签\nW:新事件\nQ:改事件\nK:查豆包\nZ:查富途\n"
+                    "P:做比较\nJ:加Panel\nL:查相似\nY:删除\nG:刷新\nO:查α\nB:存在\n"
+                    "I:买入点\nU:卖出点\nF:加自选\n⇧F:同上组")
     rax.text(0.5, 0.98, instructions, transform=rax.transAxes, ha="center", va="bottom",
              color=NORD_THEME['text_light'], fontsize=10, fontfamily="Arial Unicode MS")
     
@@ -1743,6 +1827,8 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                        'i': toggle_buy_markers,
                        'u': toggle_sell_markers,
                        'g': refresh_description_data_and_redraw,
+                       'f': lambda: _add_to_watchlist(None),
+                       'F': lambda: _add_to_watchlist(last_group() or None),
                        'n': lambda: execute_external_script('earning_input', name),
                        'e': lambda: execute_external_script('earning_edit', name),
                        't': lambda: execute_external_script('tags_edit', name),
@@ -1826,6 +1912,10 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     _RT_MANAGER.set_symbol(name)
 
     def _ui_poll_realtime():
+        try:
+            _drain_wl_results()
+        except Exception:
+            pass
         rt_price = _RT_MANAGER.get_latest(name)
         if rt_price is None or not prices or prices[-1] == 0: return
         pct = ((rt_price - prices[-1]) / prices[-1]) * 100

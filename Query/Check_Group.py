@@ -18,14 +18,30 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QScrollArea, QLabel, QFrame, QMenu
+    QPushButton, QScrollArea, QLabel, QFrame, QMenu,
+    QInputDialog, QMessageBox
 )
+from PyQt6.QtGui import QCursor, QColor, QFont, QKeySequence, QShortcut
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
-from PyQt6.QtGui import QCursor, QColor, QFont
 
 # 外部绘图函数
 sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Query"))
 from Chart_input_single import plot_financial_data
+
+try:
+    from ft_watchlist_add import (add_symbol_async, watchlist_groups,
+                                  choose_group_dialog, last_group, save_last_group,
+                                  notify_mac)
+    FT_WL_ADD_OK = True
+except Exception as _e:
+    print(f"[FT] 加载 ft_watchlist_add 失败（加自选不可用）: {_e}")
+    FT_WL_ADD_OK = False
+    def watchlist_groups(): return []
+    def choose_group_dialog(*a, **k): return None
+    def last_group(): return ""
+    def save_last_group(g): pass
+    def notify_mac(*a, **k): pass
+    def add_symbol_async(*a, **k): return None
 
 # ----------------------------------------------------------------------
 # 常量 / 全局配置
@@ -744,6 +760,7 @@ def detect_turning_points(index, week52_low_symbols):
 # 主窗口
 # ----------------------------------------------------------------------
 class GroupWindow(QMainWindow):
+    wl_done = pyqtSignal(dict)          # ★ 工作线程 → 主线程 的结果通道
     def __init__(self, keyword_colors, sector_data, compare_data, json_data, earning_history_data):
         super().__init__()
         self.keyword_colors = keyword_colors
@@ -784,6 +801,9 @@ class GroupWindow(QMainWindow):
         self.list_turning = [r['symbol'] for r in self.turning_data]
         self.list_resonance = [sym for item in self.resonance_data for sym in item['symbols']]
 
+        # 【新增】用于 Symbol 检索定位的控件映射：{ 'AAPL': [(container, button), ...], ... }
+        self.symbol_widgets_map = defaultdict(list)
+
         self.symbol_manager = SymbolManager(self.list_turning + self.list_resonance)
         self.init_ui()
 
@@ -807,16 +827,71 @@ class GroupWindow(QMainWindow):
         legend.setWordWrap(True)
         layout.addWidget(legend)
 
-        scroll = QScrollArea(); scroll.setWidgetResizable(True); layout.addWidget(scroll)
-        content = QWidget(); scroll.setWidget(content)
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        layout.addWidget(self.scroll_area)
+        
+        content = QWidget()
+        self.scroll_area.setWidget(content)
         main_lay = QHBoxLayout(content)
 
         self._build_turning_section(main_lay)
         self._build_resonance_sections(main_lay)
         main_lay.addStretch(1)
 
+        # 【新增】绑定 / 键搜索快捷键
+        QShortcut(QKeySequence(Qt.Key.Key_Slash), self).activated.connect(self.show_search_dialog)
+
+        # ★ a 键：把「当前 symbol」加入自选股分组
+        QShortcut(QKeySequence(Qt.Key.Key_A), self).activated.connect(self.add_current_to_watchlist)
+        self.wl_done.connect(self._on_wl_done)
+        self.statusBar().showMessage("提示：/ 搜索  ｜ 右键卡片或按 a 键把该股加入自选股分组", 8000)
+
         self.apply_stylesheet()
 
+    def show_search_dialog(self):
+        """按 / 键弹出搜索框"""
+        text, ok = QInputDialog.getText(self, "搜索 Symbol", "请输入 Symbol（回车确认）:")
+        if ok and text.strip():
+            self.search_and_locate_symbol(clean_ticker(text.strip()).upper())
+
+    def search_and_locate_symbol(self, symbol):
+        """查找 Symbol 并横向/纵向滚动定位 + 金色闪烁高亮"""
+        widgets = self.symbol_widgets_map.get(symbol)
+        if not widgets:
+            QMessageBox.information(self, "未找到", f"未在当前列表中找到: {symbol}")
+            return
+
+        # 若同一股票在界面有多处（如转折区、共振区），以首个为主定位，全部高亮闪烁
+        primary_container, _ = widgets[0]
+
+        # 核心：将目标卡片滚动到视口中心可见区域
+        self.scroll_area.ensureWidgetVisible(primary_container, 150, 150)
+
+        # 更新 SymbolManager 的指针，方便后续按上下键连续查看
+        self.symbol_manager.set_current_symbol(symbol)
+
+        # 闪烁按钮
+        for _, btn in widgets:
+            self.flash_highlight(btn)
+
+    def flash_highlight(self, btn):
+        """按钮金色边框闪烁 3 次提醒"""
+        highlight_style = "border: 3px solid #FFD700 !important;"
+
+        state = {"count": 0, "on": False}
+
+        def toggle():
+            if state["count"] >= 6:  # 切换 6 次即闪烁 3 周期
+                btn.setStyleSheet("")  # 恢复全局 QSS 样式
+                return
+            btn.setStyleSheet(highlight_style if not state["on"] else "")
+            state["on"] = not state["on"]
+            state["count"] += 1
+            QTimer.singleShot(250, toggle)
+
+        toggle()
+        
     def _build_turning_section(self, main_lay):
         col_lay = QHBoxLayout()
         strong_n = sum(1 for r in self.turning_data if r['level'] > 0)
@@ -996,6 +1071,9 @@ class GroupWindow(QMainWindow):
         vlay.addWidget(label)
         vlay.addStretch()
         container.setFixedWidth(SYMBOL_WIDGET_FIXED_WIDTH)
+        # 【新增】将当前生成的卡片与按钮注册到索引字典中（纯字母代码，统一大写）
+        clean_sym = clean_ticker(symbol).upper()
+        self.symbol_widgets_map[clean_sym].append((container, button))
         return container
 
     def get_tags_for_symbol(self, symbol):
@@ -1054,8 +1132,59 @@ class GroupWindow(QMainWindow):
         elif event.key() == Qt.Key.Key_Up: self.navigate_symbol_from_chart('prev')
         else: super().keyPressEvent(event)
 
+    # ------------------------------------------------------------------
+    # ★ 加入 Firstrade 自选股分组
+    # ------------------------------------------------------------------
+    def add_symbol_to_watchlist(self, symbol, group=None):
+        if not FT_WL_ADD_OK:
+            QMessageBox.warning(self, "不可用", "未找到 ft_watchlist_add.py")
+            return
+        symbol = clean_ticker(symbol).upper()
+        if not group:
+            group = choose_group_dialog(symbol, watchlist_groups(), parent=self)
+            if not group:
+                return
+        save_last_group(group)
+        self.statusBar().showMessage(f"⏳ 正在把 {symbol} 加入「{group}」…（浏览器后台执行）", 60000)
+        add_symbol_async(symbol, group, on_done=lambda res: self.wl_done.emit(res), wait=45)
+
+    def add_current_to_watchlist(self):
+        sym = None
+        mgr = self.symbol_manager
+        if mgr.symbols and 0 <= mgr.current_index < len(mgr.symbols):
+            sym = mgr.symbols[mgr.current_index]
+        if not sym:
+            QMessageBox.information(self, "提示", "请先点一下某个股票卡片，或用右键菜单添加")
+            return
+        self.add_symbol_to_watchlist(sym)
+
+    def _on_wl_done(self, res):
+        ok = bool(res.get('ok'))
+        msg = res.get('message') or ('成功' if ok else '失败')
+        self.statusBar().showMessage(("✅ " if ok else "❌ ") + msg, 10000)
+        try:
+            notify_mac("Firstrade 自选股", msg,
+                       subtitle=f"{res.get('symbol','')} → {res.get('group','')}")
+        except Exception:
+            pass
+        if not ok:
+            QMessageBox.warning(self, "添加失败", msg)
+
     def show_context_menu(self, symbol):
         menu = QMenu(self)
+
+        if FT_WL_ADD_OK:
+            sub = menu.addMenu("➕ 加入自选股分组")
+            for g in watchlist_groups():
+                sub.addAction(g).triggered.connect(
+                    lambda _=False, s=symbol, gg=g: self.add_symbol_to_watchlist(s, gg))
+            lg = last_group()
+            if lg:
+                sub.addSeparator()
+                sub.addAction(f"↺ 重复上次（{lg}）").triggered.connect(
+                    lambda _=False, s=symbol, gg=lg: self.add_symbol_to_watchlist(s, gg))
+            menu.addSeparator()
+
         menu.addAction("查看历史明细").triggered.connect(lambda: execute_external_script('earning', symbol))
         menu.addAction("查相似").triggered.connect(lambda: execute_external_script('similar', symbol))
         menu.addAction("富途查询").triggered.connect(lambda: execute_external_script('futu', symbol))
