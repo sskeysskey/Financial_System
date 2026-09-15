@@ -900,6 +900,11 @@ def run_single_scraper_task(driver, sectors_data, task_config):
                     
                     cells = row.find_elements(By.TAG_NAME, 'td')
                     if len(cells) < 4: continue
+
+                    # 定义不在 fifth 轮次收录的股票黑名单集合（支持后续随时扩充）
+                    EXCLUDE_FROM_FIFTH = {"HDB", "IBN", "BRK-B"}
+                    if group_name == "fifth" and symbol in EXCLUDE_FROM_FIFTH:
+                        continue  # 处于 fifth 组别直接跳过，既不进 target，也不进 diff
                     
                     event_name = cells[2].text.strip()
                     call_time = cells[3].text.strip() or "N/A"

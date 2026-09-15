@@ -59,7 +59,8 @@
         "ORLY",
         "ROST",
         "SE",
-        "F"
+        "F",
+        "CVNA"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -167,7 +168,8 @@
         "CM",
         "BNY",
         "NDAQ",
-        "STT"
+        "STT",
+        "COIN"
     ],
     "Healthcare": [
         "LLY",
@@ -321,8 +323,7 @@
         "NOK",
         "COHR",
         "MSTR",
-        "UMC",
-        "ALAB"
+        "UMC"
     ],
     "Utilities": [
         "NEE",

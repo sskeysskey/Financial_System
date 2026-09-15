@@ -65,9 +65,8 @@ NORD_THEME = {
     'accent_blue': '#5E81AC',
     'success_green': '#A3BE8C',
     'warning_red': '#BF616A',
-    'accent_purple': '#B48EAD'  # 新增紫色
+    'accent_purple': '#B48EAD'  # 紫色
 }
-
 
 # =========================================================
 # 公共辅助函数 & 数据加载
@@ -81,7 +80,6 @@ def make_header(text, color):
     </div>
     """
 
-
 def get_suffix_if_match(item_str, target_symbol):
     if item_str == target_symbol:
         return ""
@@ -91,17 +89,26 @@ def get_suffix_if_match(item_str, target_symbol):
             return suffix
     return None
 
+def normalize_category_for_signature(category: str) -> str:
+    """
+    对连续性判定的分类进行归一化。
+    同类指标但细分深度不同的归并为同一组，以便跨交易日连贯统计状态延续。
+    """
+    cat_lower = category.lower()
+    # 支撑位闭合/越过统一为一类
+    if cat_lower in ("supportlevel_close", "supportlevel_over"):
+        return "SupportLevel_Any"
+    # PE low / lower / lowest 统一归一化为 PE_low_any
+    if cat_lower in ("pe_low", "pe_lower", "pe_lowest"):
+        return "PE_low_any"
+    # PE valid / deep / deeper 统一归一化为 PE_depth_any
+    if cat_lower in ("pe_valid", "pe_invalid", "pe_deep", "pe_deeper"):
+        return "PE_depth_any"
+    return category
 
 def load_earning_index(symbol):
     """
     读取 Earning JSON,构建各类索引。
-    返回:
-        category_data: dict[category] -> [(date, suffix), ...]
-        date_categories: dict[date] -> set(categories)
-        category_dates: dict[category] -> set(dates)
-        date_items: dict[date] -> [(category, suffix), ...]
-        sorted_trading_dates: list[str] (降序)
-        error: str or None
     """
     if not os.path.exists(JSON_PATH):
         return None, None, None, None, None, f"错误：找不到 Earning 文件<br>{JSON_PATH}"
@@ -136,7 +143,6 @@ def load_earning_index(symbol):
     sorted_trading_dates = sorted(list(all_trading_dates), reverse=True)
     return category_data, date_categories, category_dates, date_items, sorted_trading_dates, None
 
-
 def build_earning_marker(d_str, items_today, earning_dates):
     """当天是财报日 且 触发了 PE_Volume_high(甲) 时，返回醒目标识"""
     if d_str not in earning_dates:
@@ -161,14 +167,13 @@ def build_suffix_html(category, suf):
         return f" <span style='color:#EBCB8B; font-size:14px; font-weight:bold;'>[{processed_suf}]</span>"
     return f" <span style='color:#EBCB8B; font-size:14px; font-weight:bold;'>[{suf}]</span>"
 
-
 def build_overlap_marker(category, d_str, suf,
                         category_data, date_categories,
                         category_dates, sorted_trading_dates):
-    """把原来那一大串标记检测逻辑封装进来,两种视图共用"""
+    """标记检测逻辑封装"""
     overlap_marker = ""
     red = NORD_THEME['warning_red']
-    purple = NORD_THEME['accent_purple'] # 定义紫色变量
+    purple = NORD_THEME['accent_purple']
 
     # 1. 最新一天 PE_Volume_high(抄底) & Short/Short_W
     if sorted_trading_dates and d_str == sorted_trading_dates[0]:
@@ -186,14 +191,12 @@ def build_overlap_marker(category, d_str, suf,
             if is_chaodi and category in ["PE_Volume_high", "Short", "Short_W"]:
                 overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='最新交易日触发 PE_Volume_high(抄底) 和 Short/Short_W'>[★最新日:抄底+Short]</span>"
 
-    # 新增：PE_Volume_high 且后缀包含 '甲' 时，往前推15天检查是否重复
+    # PE_Volume_high 且后缀包含 '甲' 时，往前推15天检查是否重复
     if category == "PE_Volume_high" and suf and '甲' in suf:
         try:
             date_idx = sorted_trading_dates.index(d_str)
-            # 往前推15个交易日（因为是降序，所以取当前索引之后的15个元素）
             prev_15_dates = sorted_trading_dates[date_idx + 1 : date_idx + 16]
             
-            # 检查这15天内是否也出现过 PE_Volume_high 且后缀含 '甲'
             pe_vol_high_records = category_data.get("PE_Volume_high", [])
             has_previous_jia = False
             for prev_d in prev_15_dates:
@@ -209,13 +212,10 @@ def build_overlap_marker(category, d_str, suf,
         except ValueError:
             pass
 
-    # =========================================================================
-    # 新增：Short 往前推一周（5个交易日）检查是否出现过 PE_Volume_high 且后缀含 '甲'
-    # =========================================================================
+    # Short 往前推一周（5个交易日）检查是否出现过 PE_Volume_high 且后缀含 '甲'
     if category == "Short":
         try:
             date_idx = sorted_trading_dates.index(d_str)
-            # 往前推一周（5个交易日）
             prev_5_dates = sorted_trading_dates[date_idx + 1 : date_idx + 6]
             
             pe_vol_high_records = category_data.get("PE_Volume_high", [])
@@ -231,41 +231,31 @@ def build_overlap_marker(category, d_str, suf,
                     break
             
             if has_jia_in_week:
-                # 用红色高亮标识，并悬浮显示具体触发 PE_Volume_high(甲) 的日期
                 overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='一周内（5个交易日）曾触发 PE_Volume_high(甲): {found_jia_date}'>[ + ★Volume_High'甲']</span>"
         except ValueError:
             pass
 
-    # =========================================================================
-    # 修改：SupportLevel_Close 或 SupportLevel_Over 往前推15天检查 PE_Volume
-    # 换行独立展示，无圆点、去掉中括号，视觉上作为独立一条
-    # =========================================================================
+    # SupportLevel_Close 或 SupportLevel_Over 往前推15天检查 PE_Volume
     if category in ["SupportLevel_Close", "SupportLevel_Over"]:
         try:
             date_idx = sorted_trading_dates.index(d_str)
-            # 往前推15个交易日
             prev_15_dates = sorted_trading_dates[date_idx + 1 : date_idx + 16]
             
-            # 检查这15天内是否出现过 PE_Volume，并记录具体日期
             pe_volume_dates = category_dates.get("PE_Volume", set())
             found_dates = [prev_d for prev_d in prev_15_dates if prev_d in pe_volume_dates]
             
             if found_dates:
-                # 将找到的日期用逗号连接
                 dates_str = ", ".join(found_dates)
-                # 换行 + 缩进对齐，去掉 [] 和圆点
                 overlap_marker += f"<br>&nbsp;&nbsp;<span style='color:{purple}; font-weight:bold;' title='15个交易日内曾触发 PE_Volume'>★PE_Volume: {dates_str}</span>"
         except ValueError:
             pass
 
-    # 2. 跨日接力 及 PE_W 15天重复检测
+    # 跨日接力 及 PE_W 15天重复检测
     try:
         date_idx = sorted_trading_dates.index(d_str)
         if category == "PE_W":
-            # 新增：PE_W 往前推15天检查重复次数
             prev_15_dates = sorted_trading_dates[date_idx + 1 : date_idx + 16]
             pe_w_count = 0
-            # 统计前15个交易日中，有几天触发了 PE_W
             for prev_d in prev_15_dates:
                 if prev_d in category_dates.get("PE_W", set()):
                     pe_w_count += 1
@@ -274,17 +264,13 @@ def build_overlap_marker(category, d_str, suf,
                 total_count = pe_w_count + 1
                 overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='15个交易日内重复触发 PE_W'>[ x {total_count}]</span>"
 
-            # 原有的跨日接力逻辑
             if date_idx + 1 < len(sorted_trading_dates):
                 prev_date = sorted_trading_dates[date_idx + 1]
-                
-                # 获取前一天的相关状态
                 prev_in_hot = prev_date in category_dates.get("PE_Hot", set())
                 prev_in_vol = prev_date in category_dates.get("PE_Volume", set())
                 prev_in_short = prev_date in category_dates.get("Short", set())
                 prev_in_short_w = prev_date in category_dates.get("Short_W", set())
 
-                # 1. 原有的 PE_Hot 和 PE_Volume 逻辑
                 if prev_in_hot and prev_in_vol:
                     overlap_marker += f" <span style='color:{purple}; font-weight:bold;' title='前一交易日触发 PE_Hot 和 PE_Volume'>[★Hot+Volume->W]</span>"
                 elif prev_in_hot:
@@ -292,7 +278,6 @@ def build_overlap_marker(category, d_str, suf,
                 elif prev_in_vol:
                     overlap_marker += f" <span style='color:{purple}; font-weight:bold;' title='前一交易日触发 PE_Volume'>[★Volume->W]</span>"
                 
-                # 2. 新增：检查 Short 或 Short_W
                 if prev_in_short or prev_in_short_w:
                     overlap_marker += f" <span style='color:{purple}; font-weight:bold;' title='前一交易日触发 Short 或 Short_W'>[★Short->W]</span>"
 
@@ -310,7 +295,6 @@ def build_overlap_marker(category, d_str, suf,
     except ValueError:
         pass
     return overlap_marker
-
 
 # =========================================================
 # 视图 1：按分组 (Category) 渲染
@@ -341,9 +325,10 @@ def search_history_by_category(symbol):
         return f"<div style='text-align:center; margin-top:20px; color:{NORD_THEME['text_light']}'>在所有文件中<br>未找到 <b>{symbol}</b> 的任何记录。</div>"
     return "".join(html_parts)
 
+# =========================================================
 # 视图 2：按时间 (Date) 渲染
+# =========================================================
 def search_history_by_date(symbol):
-    # --- 定义颜色 ---
     COLOR_HIGH = "#BF616A"      # 红色
     COLOR_MEDIUM = "#D08770"    # 橙色
     COLOR_BLUE = "#88C0D0"      # 蓝色
@@ -366,57 +351,64 @@ def search_history_by_date(symbol):
     if err:
         return f"<p style='color:red'>{err}</p>"
 
-    # --- 新增：52week_low 判定 ---
     week52_low_symbols = load_52week_low_symbols()
     is_52week_low = symbol.upper() in week52_low_symbols
-    # --- 新增：财报日期集合 ---
     earning_dates = load_earning_report_dates(symbol)
 
     hit_dates_sorted = sorted(date_items.keys(), reverse=True)
-    # --- 新增：记录最新命中日期 ---
     latest_hit_date = hit_dates_sorted[0] if hit_dates_sorted else None
 
     normal_dates = []
     compressed_records = defaultdict(list)
 
-    # 新增：计算每个命中日期的“签名”，用于检测连续相同记录
+    # 计算每个命中日期的归一化特征集合（set 结构方便包含运算）
     date_signature = {}
     for d_str in hit_dates_sorted:
-        mapped_items = []
+        mapped_items = set()
         for cat, suf in date_items[d_str]:
-            # 将 Close 和 Over 统一映射为同一个名称，以便跨日匹配
-            if cat in ("SupportLevel_Close", "SupportLevel_Over"):
-                mapped_items.append(("SupportLevel_Any", suf))
-            else:
-                mapped_items.append((cat, suf))
-                
-        items_today_sig = sorted(mapped_items, key=lambda x: x[0])
-        # 用 (category, suffix) 元组作为签名，完全一致才算相同
-        date_signature[d_str] = tuple(items_today_sig)
+            norm_cat = normalize_category_for_signature(cat)
+            mapped_items.add(norm_cat)
+        date_signature[d_str] = mapped_items
 
-    # 新增：可配置的连续相同项最低数量要求
+    # 连续相同/超集项的最低数量阈值
     MIN_STREAK_ITEMS = 2
 
     def get_streak_position(d_str):
-        """返回该日期在“连续相同记录”段里的位置（最早那天=1）"""
+        """
+        返回该日期在“核心特征保持/只增不减”连续段里的位置（最早那天=1）。
+        规则：
+        1. 当天特征数需达到 MIN_STREAK_ITEMS。
+        2. 沿时序往前（更早交易日）回溯时，较新的一天必须是更早一天的超集（只能增不能减）。
+        3. 更早的一天也必须满足 MIN_STREAK_ITEMS 门槛，且中间不可断档。
+        """
         if d_str not in sorted_trading_dates:
             return 1
-            
-        sig = date_signature.get(d_str)
-        # 核心修改：如果当天的记录项数量少于设定的阈值，则不计算连续性
-        if not sig or len(sig) < MIN_STREAK_ITEMS:
+
+        curr_sig = date_signature.get(d_str)
+        if not curr_sig or len(curr_sig) < MIN_STREAK_ITEMS:
             return 1
-            
+
         idx = sorted_trading_dates.index(d_str)
         count = 1
-        j = idx + 1  # 降序列表里，索引变大 = 更早的交易日
+        chain_sig = curr_sig  # 状态锚点
+
+        j = idx + 1  # 降序列表中，索引递增 = 更早的交易日
         while j < len(sorted_trading_dates):
-            older = sorted_trading_dates[j]
-            if date_signature.get(older) == sig:
+            older_date = sorted_trading_dates[j]
+            older_sig = date_signature.get(older_date)
+
+            # 中间交易日没有记录或特征少于阈值，则连续终止
+            if not older_sig or len(older_sig) < MIN_STREAK_ITEMS:
+                break
+
+            # 只能增不能减：当前较新交易日 chain_sig 必须包含更早交易日 older_sig 的所有元素
+            if chain_sig >= older_sig:
                 count += 1
+                chain_sig = older_sig  # 状态收敛为更早日期的集合，继续向前验证
                 j += 1
             else:
                 break
+
         return count
 
     # 第一次遍历：筛选出需要压缩的日期
@@ -437,19 +429,19 @@ def search_history_by_date(symbol):
         has_data = True
         has_group_a = any(cat in group_a for cat, _ in items_today)
 
-        # 新增：连续相同记录标识
+        # 连续记录标识
         streak_pos = get_streak_position(d_str)
         if streak_pos >= 2:
             streak_marker = (
                 f" <span style='color:#C4A7E7; font-weight:bold; "
                 f"background-color:rgba(235,203,139,0.15); padding:0 4px; "
-                f"border-radius:3px;' title='与前一交易日记录完全相同'>"
+                f"border-radius:3px;' title='核心指标连续保持（支持只增不减）'>"
                 f"[⟳连续第{streak_pos}天]</span>"
             )
         else:
             streak_marker = ""
 
-        # 新增：财报日标识
+        # 财报日标识
         earning_marker = build_earning_marker(d_str, items_today, earning_dates)
 
         rendered_items = []
@@ -489,7 +481,7 @@ def search_history_by_date(symbol):
 
             rendered_items.append(f"• {display_category}{suf_html}{overlap_marker}")
 
-        # --- 新增：在最新交易日追加 52week_low 标记（橘色）---
+        # 在最新交易日追加 52week_low 标记（橘色）
         if is_52week_low and d_str == latest_hit_date:
             rendered_items.append(
                 "• <b style='color:#D08770; background-color:rgba(208,135,112,0.15); "
@@ -538,81 +530,48 @@ def search_history_by_date(symbol):
         return f"<div style='text-align:center; margin-top:20px; color:{NORD_THEME['text_light']}'>在所有文件中<br>未找到 <b>{symbol}</b> 的任何记录。</div>"
     return "".join(html_parts)
 
-
 # =========================================================
-# 修改后的 InfoDialog 类初始化
+# 对话框界面
 # =========================================================
 class InfoDialog(QDialog):
     def __init__(self, symbol, font_family, font_size, left_width, right_width, height, parent=None):
         super().__init__(parent)
         self.setWindowTitle(f"Info Check: {symbol}")
         
-        # 整体宽度：现在只用左侧时间面板宽度；后续恢复时改回 left_width + right_width
-        # self.setGeometry(0, 0, left_width + right_width, height)
         self.setGeometry(0, 0, left_width, height)
         self.center_on_screen()
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(5, 5, 5, 5)
 
-        # 用 QSplitter 让两栏并排,并且可以拖拽调整宽度
         self.splitter = QSplitter(Qt.Orientation.Horizontal, self)
 
-        # --- 修改点：现在先创建“按时间”面板 ---
-        # --- 左栏:按时间 ---
+        # 左栏: 按时间
         left_container = QWidget()
         left_layout = QVBoxLayout(left_container)
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(2)
 
-        left_title = QLabel("按时间")  # 标题改为“按时间”
+        left_title = QLabel("按时间")
         left_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         left_title.setObjectName("panelTitle")
 
         self.text_by_date = QTextEdit()
         self.text_by_date.setReadOnly(True)
         self.text_by_date.setFont(QFont(font_family))
-        self.text_by_date.setHtml(search_history_by_date(symbol)) # 调用按时间函数
+        self.text_by_date.setHtml(search_history_by_date(symbol))
 
         left_layout.addWidget(left_title)
         left_layout.addWidget(self.text_by_date)
 
-        # ==============================================
-        # ======== 【临时注释：按分组右侧面板】开始 ========
-        # ==============================================
-        # --- 右栏:按分组 ---
-        # right_container = QWidget()
-        # right_layout = QVBoxLayout(right_container)
-        # right_layout.setContentsMargins(0, 0, 0, 0)
-        # right_layout.setSpacing(2)
-        # right_title = QLabel("按分组")
-        # right_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        # right_title.setObjectName("panelTitle")
-        # self.text_by_cat = QTextEdit()
-        # self.text_by_cat.setReadOnly(True)
-        # self.text_by_cat.setFont(QFont(font_family))
-        # self.text_by_cat.setHtml(search_history_by_category(symbol))
-        # right_layout.addWidget(right_title)
-        # right_layout.addWidget(self.text_by_cat)
-
-        # 添加到 splitter
         self.splitter.addWidget(left_container)
-        # self.splitter.addWidget(right_container)
-        
-        # 设置初始宽度比例；恢复时启用下面一行
-        # self.splitter.setSizes([left_width, right_width])
-        self.splitter.setSizes([left_width])  # 当前只保留左侧
+        self.splitter.setSizes([left_width])
         self.splitter.setChildrenCollapsible(False)
         layout.addWidget(self.splitter)
         self.setLayout(layout)
         self.apply_nord_style(font_size)
 
-        # 快捷键：1 现在对应“按时间”；快捷键2【临时注释掉】
         QShortcut(QKeySequence("1"), self, activated=lambda: self.text_by_date.setFocus())
-        # QShortcut(QKeySequence("2"), self, activated=lambda: self.text_by_cat.setFocus())
-        # ==============================================
-        # ======== 【临时注释：按分组右侧面板】结束 ========
-        # ==============================================
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Escape:
@@ -664,7 +623,6 @@ class InfoDialog(QDialog):
         """
         self.setStyleSheet(qss)
 
-
 # =========================================================
 # 程序入口
 # =========================================================
@@ -676,8 +634,8 @@ if __name__ == "__main__":
         symbol=target_symbol,
         font_family="Arial Unicode MS",
         font_size=16,
-        left_width=700,   # 时间栏更宽
-        right_width=500,  # 分组栏相对窄一点
+        left_width=700,
+        right_width=500,
         height=850
     )
     dialog.raise_()

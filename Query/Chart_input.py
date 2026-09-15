@@ -97,7 +97,7 @@ NORD_THEME = {
 }
 
 
-def _ft_layout_text_row(fig, x0, y, items, fontsize=12, gap_px=14, x_limit=0.32):
+def _ft_layout_text_row(fig, x0, y, items, fontsize=12, gap_px=10, x_limit=0.345):
     """按实际像素宽度自适应地把 [(文本, 颜色, 粗细), ...] 横向排成一行，避免互相重叠"""
     arts = []
     try:

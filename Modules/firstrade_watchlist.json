@@ -1,22 +1,16 @@
 {
  "_meta": {
-  "updated_at": 1789192774.95369,
-  "updated_at_str": "2026-09-12 13:59:34",
-  "count": 2,
+  "updated_at": 1789445868.816254,
+  "updated_at_str": "2026-09-15 12:17:48",
+  "count": 1,
   "mode": "overwrite"
  },
  "quotes": {
-  "ADBE": {
-   "symbol": "ADBE",
-   "last": "252.20",
-   "change_pct": "+1.35%",
-   "change_pct_num": 1.354338
-  },
-  "ASO": {
-   "symbol": "ASO",
-   "last": "55.79",
-   "change_pct": "+2.90%",
-   "change_pct_num": 2.898561
+  "FPS": {
+   "symbol": "FPS",
+   "last": "29.28",
+   "change_pct": "+2.23%",
+   "change_pct_num": 2.234637
   }
  }
 }

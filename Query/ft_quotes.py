@@ -8,7 +8,7 @@ ft_quotes.py —— Firstrade 本地数据读取层（Chart_input.py / Chart_inp
     Modules/firstrade_watchlist.json   自选股「变更%」快照（覆盖式，1800+ 只）
 
 显示优先级（build_market_items）:
-    1) 该 symbol 在持仓里  -> 显示 成本 / 日 / 总 / 仓位
+    1) 该 symbol 在持仓里  -> 显示 成本 / 损益 / 日 / 总 / 仓位
     2) 不在持仓、但在自选股 -> 显示 盘前变更% / 现价
     3) 都没有              -> 视 FT_SHOW_MISS 决定是否显示灰色占位
 """
@@ -85,6 +85,18 @@ def _fmt_money(s):
     if abs(v) >= 1e3:
         return f"{v/1e3:.1f}K"
     return f"{v:.0f}"
+
+
+def _fmt_gainloss_amount(s):
+    """损益金额格式化：自动带正负号，并兼顾大额缩写"""
+    v = _num(s)
+    if v is None:
+        return str(s)
+    if abs(v) >= 1e6:
+        return f"{v/1e6:+.2f}M"
+    if abs(v) >= 1e3:
+        return f"{v/1e3:+.1f}K"
+    return f"{v:+.2f}"
 
 
 def _age_hours(ts):
@@ -187,6 +199,14 @@ def _items_from_position(pos, theme):
         return None
 
     cost_val = _pick('cost', 'totalCost')
+    
+    # 优先获取金额型损益，若从 raw.gainloss 取，需确认不是百分比字符串
+    gl_amt_val = _pick('gainloss_amount')
+    if not gl_amt_val:
+        raw_gl = raw.get('gainloss')
+        if raw_gl not in (None, '', '--') and not str(raw_gl).strip().endswith('%'):
+            gl_amt_val = str(raw_gl)
+
     day_val = _pick('day_change', 'changePercent')
     gl_val = _pick('gainloss', 'gainlossPercent')
     alloc_val = _pick('allocation', 'allocationPercent')
@@ -194,6 +214,8 @@ def _items_from_position(pos, theme):
     items = []
     if cost_val:
         items.append((f"成本 {_fmt_money(cost_val)}", theme['accent_yellow'], 'bold'))
+    if gl_amt_val:
+        items.append((f"损益 {_fmt_gainloss_amount(gl_amt_val)}", _sign_color(gl_amt_val, theme), 'bold'))
     if day_val:
         items.append((f"日{day_val}", _sign_color(day_val, theme), 'bold'))
     if gl_val:

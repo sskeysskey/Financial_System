@@ -1143,7 +1143,8 @@
         "RWO",
         "HAP",
         "BRSV",
-        "PFIG"
+        "PFIG",
+        "GLOF"
     ],
     "Earning": [
         "TW",
