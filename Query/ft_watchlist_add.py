@@ -2,20 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ft_watchlist_add.py —— Python 侧「一键把 symbol 加入 Firstrade 自选股分组」客户端
-
-链路：
-    本文件  ──POST /wl_add──▶  bridge_server.py 任务队列
-                              ──▶ Chrome 扩展 wl_agent.js（切分组 + 添加）
-                              ◀── POST /wl_task_result
-供 Chart_input_single.py / Check_Group.py 共用。
-
-对外接口：
-    watchlist_groups()                       -> ['买','买买','买买买','卖卖卖']
-    add_symbol(sym, group, wait=45)          -> {'ok':bool,'message':str,...}   阻塞
-    add_symbol_async(sym, group, on_done)    -> threading.Thread                非阻塞
-    choose_group_dialog(sym, groups, parent) -> 选中的分组名 或 None            PyQt6
-    last_group() / save_last_group(g)
-    notify_mac(title, text)
+自动寻找与唤醒 Chrome /app/watchlist 页面，保证后台添加绝对通畅。
 """
 import os
 import re
@@ -29,17 +16,13 @@ BRIDGE_BASE = os.environ.get("FT_BRIDGE", "http://127.0.0.1:18888")
 
 USER_HOME = os.path.expanduser("~")
 MODULES_DIR = os.path.join(USER_HOME, "Coding", "Financial_System", "Modules")
-GROUPS_FILE = os.path.join(MODULES_DIR, "ft_watchlist_groups.json")   # 可选：自定义分组
-LAST_FILE = os.path.join(MODULES_DIR, "ft_watchlist_last_group.txt")  # 记住上次选择
+GROUPS_FILE = os.path.join(MODULES_DIR, "ft_watchlist_groups.json")
+LAST_FILE = os.path.join(MODULES_DIR, "ft_watchlist_last_group.txt")
 
-DEFAULT_GROUPS = ["买", "买买", "买买买", "卖卖卖"]
+DEFAULT_GROUPS = ["买", "买买", "买买买", "卖卖卖", "Short"]
 
 
-# ----------------------------------------------------------------------
-# 分组列表
-# ----------------------------------------------------------------------
 def watchlist_groups():
-    """优先 Modules/ft_watchlist_groups.json -> 环境变量 FT_WL_GROUPS -> 默认"""
     try:
         if os.path.exists(GROUPS_FILE):
             with open(GROUPS_FILE, "r", encoding="utf-8") as f:
@@ -79,9 +62,6 @@ def save_last_group(group):
         pass
 
 
-# ----------------------------------------------------------------------
-# HTTP
-# ----------------------------------------------------------------------
 def _post(path, payload, timeout=20):
     url = BRIDGE_BASE.rstrip("/") + path
     data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -105,7 +85,7 @@ def ping():
 
 
 def add_symbol(symbol, group, wait=45, restore=True):
-    """阻塞式：把 symbol 加进 group。返回 dict(ok, message, symbol, group, raw)"""
+    """阻塞式：把 symbol 加进 group。自动寻找并唤醒 Chrome 里的 Watchlist 页面"""
     symbol = str(symbol or "").strip().upper()
     group = str(group or "").strip()
     out = {"ok": False, "symbol": symbol, "group": group, "message": ""}
@@ -128,8 +108,6 @@ def add_symbol(symbol, group, wait=45, restore=True):
 
 
 def add_symbol_async(symbol, group, on_done=None, wait=45, restore=True):
-    """非阻塞：在后台线程执行，完成后回调 on_done(dict)。
-       ⚠ on_done 在工作线程里被调用，不要直接操作 GUI（用队列或 Qt signal）。"""
     def _run():
         res = add_symbol(symbol, group, wait=wait, restore=restore)
         if callable(on_done):
@@ -142,9 +120,6 @@ def add_symbol_async(symbol, group, on_done=None, wait=45, restore=True):
     return th
 
 
-# ----------------------------------------------------------------------
-# macOS 通知
-# ----------------------------------------------------------------------
 def notify_mac(title, text, subtitle=None):
     if sys.platform != "darwin":
         return
@@ -159,9 +134,6 @@ def notify_mac(title, text, subtitle=None):
         pass
 
 
-# ----------------------------------------------------------------------
-# 分组选择对话框（PyQt6，Nord 风格，支持数字键 1-9 / Esc）
-# ----------------------------------------------------------------------
 def choose_group_dialog(symbol, groups=None, parent=None, title=None):
     try:
         from PyQt6.QtWidgets import (QApplication, QDialog, QVBoxLayout,
@@ -247,7 +219,6 @@ def choose_group_dialog(symbol, groups=None, parent=None, title=None):
     return dlg.picked
 
 
-# ----------------------------------------------------------------------
 if __name__ == "__main__":
     sym = (sys.argv[1] if len(sys.argv) > 1 else "AAPL").upper()
     grp = sys.argv[2] if len(sys.argv) > 2 else watchlist_groups()[0]

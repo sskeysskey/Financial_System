@@ -1,668 +1,923 @@
 {
-    "_meta": {
-        "updated_at": 1789443777.72591,
-        "updated_at_str": "2026-09-15 11:42:57",
-        "count": 76,
-        "mode": "append",
-        "schema": "lean_v1"
-    },
-    "orders": {
-        "90185542-672": {
-            "symbol": "SHW",
-            "side": "buy",
-            "date": "2026-09-01",
-            "amount": 1500,
-            "price": 334.5,
-            "st": "F"
-        },
-        "90185542-671": {
-            "symbol": "FND",
-            "side": "buy",
-            "date": "2026-09-02",
-            "amount": 1000,
-            "price": 46.1,
-            "st": "F"
-        },
-        "90185542-670": {
-            "symbol": "ITW",
-            "side": "buy",
-            "date": "2026-09-03",
-            "amount": 2000,
-            "price": 273.9,
-            "st": "F"
-        },
-        "90185542-698": {
-            "symbol": "SON",
-            "side": "buy",
-            "date": "2026-09-09",
-            "amount": 1000,
-            "price": 49.38,
-            "st": "F"
-        },
-        "90185542-697": {
-            "symbol": "XE",
-            "side": "buy",
-            "date": "2026-09-09",
-            "amount": 1000,
-            "price": 18.49,
-            "st": "F"
-        },
-        "90185542-696": {
-            "symbol": "UNP",
-            "side": "buy",
-            "date": "2026-09-09",
-            "amount": 1000,
-            "price": 285.45,
-            "st": "F"
-        },
-        "90185542-695": {
-            "symbol": "SYK",
-            "side": "buy",
-            "date": "2026-09-09",
-            "amount": 1000,
-            "price": 274.21,
-            "st": "F"
-        },
-        "90185542-694": {
-            "symbol": "RTX",
-            "side": "buy",
-            "date": "2026-09-09",
-            "amount": 1000,
-            "price": 199.26,
-            "st": "F"
-        },
-        "90185542-693": {
-            "symbol": "MYRG",
-            "side": "buy",
-            "date": "2026-09-09",
-            "amount": 1000,
-            "price": 292.23,
-            "st": "F"
-        },
-        "90185542-692": {
-            "symbol": "MTSI",
-            "side": "buy",
-            "date": "2026-09-09",
-            "amount": 1000,
-            "price": 280.57,
-            "st": "F"
-        },
-        "90185542-691": {
-            "symbol": "GRAB",
-            "side": "buy",
-            "date": "2026-09-09",
-            "quantity": 1000,
-            "amount": 3110,
-            "price": 3.11,
-            "st": "F"
-        },
-        "90185542-690": {
-            "symbol": "ESTC",
-            "side": "buy",
-            "date": "2026-09-09",
-            "amount": 1000,
-            "price": 86.83,
-            "st": "F"
-        },
-        "90185542-689": {
-            "symbol": "BABA",
-            "side": "buy",
-            "date": "2026-09-09",
-            "amount": 1000,
-            "price": 111.17,
-            "st": "F"
-        },
-        "90185542-688": {
-            "symbol": "HRB",
-            "side": "buy",
-            "date": "2026-09-09",
-            "amount": 1000,
-            "price": 45.6,
-            "st": "F"
-        },
-        "90185542-687": {
-            "symbol": "AMGN",
-            "side": "buy",
-            "date": "2026-09-09",
-            "amount": 1000,
-            "price": 392.3,
-            "st": "F"
-        },
-        "90185542-686": {
-            "symbol": "NVS",
-            "side": "buy",
-            "date": "2026-09-09",
-            "amount": 1000,
-            "price": 138.49,
-            "st": "F"
-        },
-        "90185542-685": {
-            "symbol": "HWM",
-            "side": "buy",
-            "date": "2026-09-09",
-            "amount": 1000,
-            "price": 229.09,
-            "st": "F"
-        },
-        "90185542-684": {
-            "symbol": "TTWO",
-            "side": "buy",
-            "date": "2026-09-09",
-            "amount": 1000,
-            "price": 211.57,
-            "st": "F"
-        },
-        "90185542-683": {
-            "symbol": "FNF",
-            "side": "sell",
-            "date": "2026-09-09",
-            "quantity": 21.48343,
-            "amount": 952.36,
-            "price": 44.33,
-            "st": "F"
-        },
-        "90185542-682": {
-            "symbol": "TRV",
-            "side": "sell",
-            "date": "2026-09-09",
-            "quantity": 5.40319,
-            "amount": 1958.17,
-            "price": 362.41,
-            "st": "F"
-        },
-        "90185542-681": {
-            "symbol": "SNPS",
-            "side": "sell",
-            "date": "2026-09-09",
-            "quantity": 16.7649,
-            "amount": 6572.85,
-            "price": 392.06,
-            "st": "F"
-        },
-        "90185542-680": {
-            "symbol": "CASY",
-            "side": "sell",
-            "date": "2026-09-09",
-            "quantity": 3.97217,
-            "amount": 2466.72,
-            "price": 621,
-            "st": "F"
-        },
-        "90185542-679": {
-            "symbol": "BKNG",
-            "side": "sell",
-            "date": "2026-09-09",
-            "quantity": 10.45873,
-            "amount": 1811.35,
-            "price": 173.19,
-            "st": "F"
-        },
-        "90185542-710": {
-            "symbol": "XE",
-            "side": "sell",
-            "date": "2026-09-10",
-            "quantity": 109.70227,
-            "amount": 1870.42,
-            "price": 17.05,
-            "st": "F"
-        },
-        "90185542-709": {
-            "symbol": "BN",
-            "side": "sell",
-            "date": "2026-09-10",
-            "quantity": 24.8478,
-            "amount": 946.2,
-            "price": 38.08,
-            "st": "F"
-        },
-        "90185542-708": {
-            "symbol": "NBIS",
-            "side": "sell",
-            "date": "2026-09-10",
-            "quantity": 10.0338,
-            "amount": 2370.79,
-            "price": 236.28,
-            "st": "F"
-        },
-        "90185542-707": {
-            "symbol": "EAT",
-            "side": "buy",
-            "date": "2026-09-10",
-            "amount": 1000,
-            "price": 217.84,
-            "st": "F"
-        },
-        "90185542-706": {
-            "symbol": "NVS",
-            "side": "buy",
-            "date": "2026-09-10",
-            "amount": 1000,
-            "price": 138.78,
-            "st": "F"
-        },
-        "90185542-705": {
-            "symbol": "GPK",
-            "side": "buy",
-            "date": "2026-09-10",
-            "amount": 1000,
-            "price": 9.49,
-            "st": "F"
-        },
-        "90185542-704": {
-            "symbol": "A",
-            "side": "buy",
-            "date": "2026-09-10",
-            "amount": 1000,
-            "price": 143.21,
-            "st": "F"
-        },
-        "90185542-703": {
-            "symbol": "SYK",
-            "side": "buy",
-            "date": "2026-09-10",
-            "amount": 1000,
-            "price": 275.21,
-            "st": "F"
-        },
-        "90185542-702": {
-            "symbol": "KRMN",
-            "side": "buy",
-            "date": "2026-09-10",
-            "amount": 1000,
-            "price": 34.79,
-            "st": "F"
-        },
-        "90185542-701": {
-            "symbol": "ACHR",
-            "side": "buy",
-            "date": "2026-09-10",
-            "amount": 1000,
-            "price": 5.44,
-            "st": "F"
-        },
-        "90185542-700": {
-            "symbol": "OC",
-            "side": "buy",
-            "date": "2026-09-10",
-            "amount": 1000,
-            "price": 127.82,
-            "st": "F"
-        },
-        "90185542-699": {
-            "symbol": "JOBY",
-            "side": "sell",
-            "date": "2026-09-10",
-            "quantity": 146.41434,
-            "amount": 918.02,
-            "price": 6.27,
-            "st": "F"
-        },
-        "90185542-731": {
-            "symbol": "NET",
-            "side": "sell",
-            "date": "2026-09-11",
-            "quantity": 5.38036,
-            "amount": 1665.81,
-            "price": 309.61,
-            "st": "F"
-        },
-        "90185542-730": {
-            "symbol": "AVT",
-            "side": "sell",
-            "date": "2026-09-11",
-            "quantity": 35.50581,
-            "amount": 3412.46,
-            "price": 96.11,
-            "st": "F"
-        },
-        "90185542-729": {
-            "symbol": "KTB",
-            "side": "sell",
-            "date": "2026-09-11",
-            "quantity": 13.70723,
-            "amount": 920.71,
-            "price": 67.17,
-            "st": "F"
-        },
-        "90185542-728": {
-            "symbol": "RH",
-            "side": "sell",
-            "date": "2026-09-11",
-            "quantity": 20.32827,
-            "amount": 2733.14,
-            "price": 134.45,
-            "st": "F"
-        },
-        "90185542-727": {
-            "symbol": "GRAB",
-            "side": "sell",
-            "date": "2026-09-11",
-            "quantity": 1000,
-            "amount": 2960,
-            "price": 2.96,
-            "st": "F"
-        },
-        "90185542-726": {
-            "symbol": "GOOGL",
-            "side": "buy",
-            "date": "2026-09-11",
-            "amount": 3000,
-            "price": 338.55,
-            "st": "F"
-        },
-        "90185542-725": {
-            "symbol": "GRMN",
-            "side": "buy",
-            "date": "2026-09-11",
-            "amount": 1000,
-            "price": 276.48,
-            "st": "F"
-        },
-        "90185542-724": {
-            "symbol": "LEN",
-            "side": "buy",
-            "date": "2026-09-11",
-            "amount": 1000,
-            "price": 79.42,
-            "st": "F"
-        },
-        "90185542-723": {
-            "symbol": "PLD",
-            "side": "buy",
-            "date": "2026-09-11",
-            "amount": 1000,
-            "price": 135.48,
-            "st": "F"
-        },
-        "90185542-722": {
-            "symbol": "SHOP",
-            "side": "buy",
-            "date": "2026-09-11",
-            "amount": 1000,
-            "price": 131.28,
-            "st": "F"
-        },
-        "90185542-721": {
-            "symbol": "LLY",
-            "side": "buy",
-            "date": "2026-09-11",
-            "amount": 2000,
-            "price": 1127.81,
-            "st": "F"
-        },
-        "90185542-720": {
-            "symbol": "HWM",
-            "side": "buy",
-            "date": "2026-09-11",
-            "amount": 1000,
-            "price": 228.52,
-            "st": "F"
-        },
-        "90185542-719": {
-            "symbol": "AFRM",
-            "side": "buy",
-            "date": "2026-09-11",
-            "amount": 1000,
-            "price": 68.77,
-            "st": "F"
-        },
-        "90185542-718": {
-            "symbol": "ESTC",
-            "side": "buy",
-            "date": "2026-09-11",
-            "amount": 1000,
-            "price": 84.33,
-            "st": "F"
-        },
-        "90185542-717": {
-            "symbol": "AVAV",
-            "side": "sell",
-            "date": "2026-09-11",
-            "quantity": 6.66922,
-            "amount": 961.77,
-            "price": 144.21,
-            "st": "F"
-        },
-        "90185542-716": {
-            "symbol": "IDXX",
-            "side": "sell",
-            "date": "2026-09-11",
-            "quantity": 3.80749,
-            "amount": 1932.45,
-            "price": 507.54,
-            "st": "F"
-        },
-        "90185542-715": {
-            "symbol": "SARO",
-            "side": "sell",
-            "date": "2026-09-11",
-            "quantity": 122.16367,
-            "amount": 2923.38,
-            "price": 23.93,
-            "st": "F"
-        },
-        "90185542-714": {
-            "symbol": "ATI",
-            "side": "sell",
-            "date": "2026-09-11",
-            "quantity": 19.41048,
-            "amount": 3913.15,
-            "price": 201.6,
-            "st": "F"
-        },
-        "90185542-713": {
-            "symbol": "MPWR",
-            "side": "sell",
-            "date": "2026-09-11",
-            "quantity": 0.80656,
-            "amount": 969.09,
-            "price": 1201.51,
-            "st": "F"
-        },
-        "90185542-712": {
-            "symbol": "ORCL",
-            "side": "sell",
-            "date": "2026-09-11",
-            "quantity": 70.393,
-            "amount": 11224.16,
-            "price": 159.45,
-            "st": "F"
-        },
-        "90185542-711": {
-            "symbol": "NKE",
-            "side": "sell",
-            "date": "2026-09-11",
-            "quantity": 52.10002,
-            "amount": 1915.2,
-            "price": 36.76,
-            "st": "F"
-        },
-        "90185542-754": {
-            "symbol": "SMCI",
-            "side": "buy",
-            "date": "2026-09-14",
-            "amount": 1000,
-            "price": 37.65,
-            "st": "F"
-        },
-        "90185542-753": {
-            "symbol": "MOD",
-            "side": "buy",
-            "date": "2026-09-14",
-            "amount": 2000,
-            "price": 177.81,
-            "st": "F"
-        },
-        "90185542-752": {
-            "symbol": "ANET",
-            "side": "buy",
-            "date": "2026-09-14",
-            "amount": 2000,
-            "price": 187.6,
-            "st": "F"
-        },
-        "90185542-751": {
-            "symbol": "FPS",
-            "side": "buy",
-            "date": "2026-09-14",
-            "amount": 2000,
-            "price": 29.47,
-            "st": "F"
-        },
-        "90185542-750": {
-            "symbol": "TSEM",
-            "side": "buy",
-            "date": "2026-09-14",
-            "amount": 2000,
-            "price": 197.29,
-            "st": "F"
-        },
-        "90185542-749": {
-            "symbol": "LRCX",
-            "side": "buy",
-            "date": "2026-09-14",
-            "amount": 2000,
-            "price": 275.07,
-            "st": "F"
-        },
-        "90185542-748": {
-            "symbol": "ONTO",
-            "side": "buy",
-            "date": "2026-09-14",
-            "amount": 1000,
-            "price": 257.09,
-            "st": "F"
-        },
-        "90185542-747": {
-            "symbol": "MTSI",
-            "side": "buy",
-            "date": "2026-09-14",
-            "amount": 2000,
-            "price": 247.53,
-            "st": "F"
-        },
-        "90185542-746": {
-            "symbol": "AAOI",
-            "side": "buy",
-            "date": "2026-09-14",
-            "amount": 2000,
-            "price": 97.01,
-            "st": "F"
-        },
-        "90185542-745": {
-            "symbol": "TRU",
-            "side": "buy",
-            "date": "2026-09-14",
-            "amount": 1000,
-            "price": 79.62,
-            "st": "F"
-        },
-        "90185542-744": {
-            "symbol": "WY",
-            "side": "buy",
-            "date": "2026-09-14",
-            "amount": 1000,
-            "price": 22.22,
-            "st": "F"
-        },
-        "90185542-743": {
-            "symbol": "KMB",
-            "side": "buy",
-            "date": "2026-09-14",
-            "amount": 1000,
-            "price": 100.25,
-            "st": "F"
-        },
-        "90185542-742": {
-            "symbol": "GIS",
-            "side": "buy",
-            "date": "2026-09-14",
-            "amount": 1000,
-            "price": 36.77,
-            "st": "F"
-        },
-        "90185542-741": {
-            "symbol": "OKLO",
-            "side": "buy",
-            "date": "2026-09-14",
-            "amount": 1000,
-            "price": 35.72,
-            "st": "F"
-        },
-        "90185542-740": {
-            "symbol": "NVDA",
-            "side": "buy",
-            "date": "2026-09-14",
-            "amount": 2000,
-            "price": 209.79,
-            "st": "F"
-        },
-        "90185542-739": {
-            "symbol": "CDNS",
-            "side": "buy",
-            "date": "2026-09-14",
-            "amount": 1000,
-            "price": 285,
-            "st": "F"
-        },
-        "90185542-738": {
-            "symbol": "ATI",
-            "side": "buy",
-            "date": "2026-09-14",
-            "amount": 2000,
-            "price": 190.57,
-            "st": "F"
-        },
-        "90185542-737": {
-            "symbol": "KBH",
-            "side": "buy",
-            "date": "2026-09-14",
-            "amount": 1000,
-            "price": 48.9,
-            "st": "F"
-        },
-        "90185542-736": {
-            "symbol": "TWLO",
-            "side": "buy",
-            "date": "2026-09-14",
-            "amount": 1000,
-            "price": 230.08,
-            "st": "F"
-        },
-        "90185542-735": {
-            "symbol": "QLYS",
-            "side": "buy",
-            "date": "2026-09-14",
-            "amount": 2000,
-            "price": 159.61,
-            "st": "F"
-        },
-        "90185542-734": {
-            "symbol": "ODFL",
-            "side": "sell",
-            "date": "2026-09-14",
-            "quantity": 10.6923,
-            "amount": 1906.54,
-            "price": 178.31,
-            "st": "F"
-        },
-        "90185542-733": {
-            "symbol": "IP",
-            "side": "sell",
-            "date": "2026-09-14",
-            "quantity": 27.60661,
-            "amount": 939.45,
-            "price": 34.03,
-            "st": "F"
-        },
-        "90185542-732": {
-            "symbol": "AON",
-            "side": "sell",
-            "date": "2026-09-14",
-            "quantity": 3.13636,
-            "amount": 963.18,
-            "price": 307.1,
-            "st": "F"
-        }
-    }
+ "_meta": {
+  "updated_at": 1789534042.9892218,
+  "updated_at_str": "2026-09-16 12:47:22",
+  "count": 110,
+  "mode": "append",
+  "schema": "lean_v1"
+ },
+ "orders": {
+  "90185542-673": {
+   "symbol": "HON",
+   "side": "buy",
+   "date": "2026-09-01",
+   "amount": 3000,
+   "price": 210.0,
+   "st": "F"
+  },
+  "90185542-672": {
+   "symbol": "SHW",
+   "side": "buy",
+   "date": "2026-09-01",
+   "amount": 1500,
+   "price": 334.5,
+   "st": "F"
+  },
+  "90185542-671": {
+   "symbol": "FND",
+   "side": "buy",
+   "date": "2026-09-02",
+   "amount": 1000,
+   "price": 46.1,
+   "st": "F"
+  },
+  "90185542-670": {
+   "symbol": "ITW",
+   "side": "buy",
+   "date": "2026-09-03",
+   "amount": 2000,
+   "price": 273.9,
+   "st": "F"
+  },
+  "90185542-698": {
+   "symbol": "SON",
+   "side": "buy",
+   "date": "2026-09-09",
+   "amount": 1000,
+   "price": 49.38,
+   "st": "F"
+  },
+  "90185542-697": {
+   "symbol": "XE",
+   "side": "buy",
+   "date": "2026-09-09",
+   "amount": 1000,
+   "price": 18.49,
+   "st": "F"
+  },
+  "90185542-696": {
+   "symbol": "UNP",
+   "side": "buy",
+   "date": "2026-09-09",
+   "amount": 1000,
+   "price": 285.45,
+   "st": "F"
+  },
+  "90185542-695": {
+   "symbol": "SYK",
+   "side": "buy",
+   "date": "2026-09-09",
+   "amount": 1000,
+   "price": 274.21,
+   "st": "F"
+  },
+  "90185542-694": {
+   "symbol": "RTX",
+   "side": "buy",
+   "date": "2026-09-09",
+   "amount": 1000,
+   "price": 199.26,
+   "st": "F"
+  },
+  "90185542-693": {
+   "symbol": "MYRG",
+   "side": "buy",
+   "date": "2026-09-09",
+   "amount": 1000,
+   "price": 292.23,
+   "st": "F"
+  },
+  "90185542-692": {
+   "symbol": "MTSI",
+   "side": "buy",
+   "date": "2026-09-09",
+   "amount": 1000,
+   "price": 280.57,
+   "st": "F"
+  },
+  "90185542-691": {
+   "symbol": "GRAB",
+   "side": "buy",
+   "date": "2026-09-09",
+   "quantity": 1000,
+   "amount": 3110,
+   "price": 3.11,
+   "st": "F"
+  },
+  "90185542-690": {
+   "symbol": "ESTC",
+   "side": "buy",
+   "date": "2026-09-09",
+   "amount": 1000,
+   "price": 86.83,
+   "st": "F"
+  },
+  "90185542-689": {
+   "symbol": "BABA",
+   "side": "buy",
+   "date": "2026-09-09",
+   "amount": 1000,
+   "price": 111.17,
+   "st": "F"
+  },
+  "90185542-688": {
+   "symbol": "HRB",
+   "side": "buy",
+   "date": "2026-09-09",
+   "amount": 1000,
+   "price": 45.6,
+   "st": "F"
+  },
+  "90185542-687": {
+   "symbol": "AMGN",
+   "side": "buy",
+   "date": "2026-09-09",
+   "amount": 1000,
+   "price": 392.3,
+   "st": "F"
+  },
+  "90185542-686": {
+   "symbol": "NVS",
+   "side": "buy",
+   "date": "2026-09-09",
+   "amount": 1000,
+   "price": 138.49,
+   "st": "F"
+  },
+  "90185542-685": {
+   "symbol": "HWM",
+   "side": "buy",
+   "date": "2026-09-09",
+   "amount": 1000,
+   "price": 229.09,
+   "st": "F"
+  },
+  "90185542-684": {
+   "symbol": "TTWO",
+   "side": "buy",
+   "date": "2026-09-09",
+   "amount": 1000,
+   "price": 211.57,
+   "st": "F"
+  },
+  "90185542-683": {
+   "symbol": "FNF",
+   "side": "sell",
+   "date": "2026-09-09",
+   "quantity": 21.48343,
+   "amount": 952.36,
+   "price": 44.33,
+   "st": "F"
+  },
+  "90185542-682": {
+   "symbol": "TRV",
+   "side": "sell",
+   "date": "2026-09-09",
+   "quantity": 5.40319,
+   "amount": 1958.17,
+   "price": 362.41,
+   "st": "F"
+  },
+  "90185542-681": {
+   "symbol": "SNPS",
+   "side": "sell",
+   "date": "2026-09-09",
+   "quantity": 16.7649,
+   "amount": 6572.85,
+   "price": 392.06,
+   "st": "F"
+  },
+  "90185542-680": {
+   "symbol": "CASY",
+   "side": "sell",
+   "date": "2026-09-09",
+   "quantity": 3.97217,
+   "amount": 2466.72,
+   "price": 621,
+   "st": "F"
+  },
+  "90185542-679": {
+   "symbol": "BKNG",
+   "side": "sell",
+   "date": "2026-09-09",
+   "quantity": 10.45873,
+   "amount": 1811.35,
+   "price": 173.19,
+   "st": "F"
+  },
+  "90185542-710": {
+   "symbol": "XE",
+   "side": "sell",
+   "date": "2026-09-10",
+   "quantity": 109.70227,
+   "amount": 1870.42,
+   "price": 17.05,
+   "st": "F"
+  },
+  "90185542-709": {
+   "symbol": "BN",
+   "side": "sell",
+   "date": "2026-09-10",
+   "quantity": 24.8478,
+   "amount": 946.2,
+   "price": 38.08,
+   "st": "F"
+  },
+  "90185542-708": {
+   "symbol": "NBIS",
+   "side": "sell",
+   "date": "2026-09-10",
+   "quantity": 10.0338,
+   "amount": 2370.79,
+   "price": 236.28,
+   "st": "F"
+  },
+  "90185542-707": {
+   "symbol": "EAT",
+   "side": "buy",
+   "date": "2026-09-10",
+   "amount": 1000,
+   "price": 217.84,
+   "st": "F"
+  },
+  "90185542-706": {
+   "symbol": "NVS",
+   "side": "buy",
+   "date": "2026-09-10",
+   "amount": 1000,
+   "price": 138.78,
+   "st": "F"
+  },
+  "90185542-705": {
+   "symbol": "GPK",
+   "side": "buy",
+   "date": "2026-09-10",
+   "amount": 1000,
+   "price": 9.49,
+   "st": "F"
+  },
+  "90185542-704": {
+   "symbol": "A",
+   "side": "buy",
+   "date": "2026-09-10",
+   "amount": 1000,
+   "price": 143.21,
+   "st": "F"
+  },
+  "90185542-703": {
+   "symbol": "SYK",
+   "side": "buy",
+   "date": "2026-09-10",
+   "amount": 1000,
+   "price": 275.21,
+   "st": "F"
+  },
+  "90185542-702": {
+   "symbol": "KRMN",
+   "side": "buy",
+   "date": "2026-09-10",
+   "amount": 1000,
+   "price": 34.79,
+   "st": "F"
+  },
+  "90185542-701": {
+   "symbol": "ACHR",
+   "side": "buy",
+   "date": "2026-09-10",
+   "amount": 1000,
+   "price": 5.44,
+   "st": "F"
+  },
+  "90185542-700": {
+   "symbol": "OC",
+   "side": "buy",
+   "date": "2026-09-10",
+   "amount": 1000,
+   "price": 127.82,
+   "st": "F"
+  },
+  "90185542-699": {
+   "symbol": "JOBY",
+   "side": "sell",
+   "date": "2026-09-10",
+   "quantity": 146.41434,
+   "amount": 918.02,
+   "price": 6.27,
+   "st": "F"
+  },
+  "90185542-731": {
+   "symbol": "NET",
+   "side": "sell",
+   "date": "2026-09-11",
+   "quantity": 5.38036,
+   "amount": 1665.81,
+   "price": 309.61,
+   "st": "F"
+  },
+  "90185542-730": {
+   "symbol": "AVT",
+   "side": "sell",
+   "date": "2026-09-11",
+   "quantity": 35.50581,
+   "amount": 3412.46,
+   "price": 96.11,
+   "st": "F"
+  },
+  "90185542-729": {
+   "symbol": "KTB",
+   "side": "sell",
+   "date": "2026-09-11",
+   "quantity": 13.70723,
+   "amount": 920.71,
+   "price": 67.17,
+   "st": "F"
+  },
+  "90185542-728": {
+   "symbol": "RH",
+   "side": "sell",
+   "date": "2026-09-11",
+   "quantity": 20.32827,
+   "amount": 2733.14,
+   "price": 134.45,
+   "st": "F"
+  },
+  "90185542-727": {
+   "symbol": "GRAB",
+   "side": "sell",
+   "date": "2026-09-11",
+   "quantity": 1000,
+   "amount": 2960,
+   "price": 2.96,
+   "st": "F"
+  },
+  "90185542-726": {
+   "symbol": "GOOGL",
+   "side": "buy",
+   "date": "2026-09-11",
+   "amount": 3000,
+   "price": 338.55,
+   "st": "F"
+  },
+  "90185542-725": {
+   "symbol": "GRMN",
+   "side": "buy",
+   "date": "2026-09-11",
+   "amount": 1000,
+   "price": 276.48,
+   "st": "F"
+  },
+  "90185542-724": {
+   "symbol": "LEN",
+   "side": "buy",
+   "date": "2026-09-11",
+   "amount": 1000,
+   "price": 79.42,
+   "st": "F"
+  },
+  "90185542-723": {
+   "symbol": "PLD",
+   "side": "buy",
+   "date": "2026-09-11",
+   "amount": 1000,
+   "price": 135.48,
+   "st": "F"
+  },
+  "90185542-722": {
+   "symbol": "SHOP",
+   "side": "buy",
+   "date": "2026-09-11",
+   "amount": 1000,
+   "price": 131.28,
+   "st": "F"
+  },
+  "90185542-721": {
+   "symbol": "LLY",
+   "side": "buy",
+   "date": "2026-09-11",
+   "amount": 2000,
+   "price": 1127.81,
+   "st": "F"
+  },
+  "90185542-720": {
+   "symbol": "HWM",
+   "side": "buy",
+   "date": "2026-09-11",
+   "amount": 1000,
+   "price": 228.52,
+   "st": "F"
+  },
+  "90185542-719": {
+   "symbol": "AFRM",
+   "side": "buy",
+   "date": "2026-09-11",
+   "amount": 1000,
+   "price": 68.77,
+   "st": "F"
+  },
+  "90185542-718": {
+   "symbol": "ESTC",
+   "side": "buy",
+   "date": "2026-09-11",
+   "amount": 1000,
+   "price": 84.33,
+   "st": "F"
+  },
+  "90185542-717": {
+   "symbol": "AVAV",
+   "side": "sell",
+   "date": "2026-09-11",
+   "quantity": 6.66922,
+   "amount": 961.77,
+   "price": 144.21,
+   "st": "F"
+  },
+  "90185542-716": {
+   "symbol": "IDXX",
+   "side": "sell",
+   "date": "2026-09-11",
+   "quantity": 3.80749,
+   "amount": 1932.45,
+   "price": 507.54,
+   "st": "F"
+  },
+  "90185542-715": {
+   "symbol": "SARO",
+   "side": "sell",
+   "date": "2026-09-11",
+   "quantity": 122.16367,
+   "amount": 2923.38,
+   "price": 23.93,
+   "st": "F"
+  },
+  "90185542-714": {
+   "symbol": "ATI",
+   "side": "sell",
+   "date": "2026-09-11",
+   "quantity": 19.41048,
+   "amount": 3913.15,
+   "price": 201.6,
+   "st": "F"
+  },
+  "90185542-713": {
+   "symbol": "MPWR",
+   "side": "sell",
+   "date": "2026-09-11",
+   "quantity": 0.80656,
+   "amount": 969.09,
+   "price": 1201.51,
+   "st": "F"
+  },
+  "90185542-712": {
+   "symbol": "ORCL",
+   "side": "sell",
+   "date": "2026-09-11",
+   "quantity": 70.393,
+   "amount": 11224.16,
+   "price": 159.45,
+   "st": "F"
+  },
+  "90185542-711": {
+   "symbol": "NKE",
+   "side": "sell",
+   "date": "2026-09-11",
+   "quantity": 52.10002,
+   "amount": 1915.2,
+   "price": 36.76,
+   "st": "F"
+  },
+  "90185542-754": {
+   "symbol": "SMCI",
+   "side": "buy",
+   "date": "2026-09-14",
+   "amount": 1000,
+   "price": 37.65,
+   "st": "F"
+  },
+  "90185542-753": {
+   "symbol": "MOD",
+   "side": "buy",
+   "date": "2026-09-14",
+   "amount": 2000,
+   "price": 177.81,
+   "st": "F"
+  },
+  "90185542-752": {
+   "symbol": "ANET",
+   "side": "buy",
+   "date": "2026-09-14",
+   "amount": 2000,
+   "price": 187.6,
+   "st": "F"
+  },
+  "90185542-751": {
+   "symbol": "FPS",
+   "side": "buy",
+   "date": "2026-09-14",
+   "amount": 2000,
+   "price": 29.47,
+   "st": "F"
+  },
+  "90185542-750": {
+   "symbol": "TSEM",
+   "side": "buy",
+   "date": "2026-09-14",
+   "amount": 2000,
+   "price": 197.29,
+   "st": "F"
+  },
+  "90185542-749": {
+   "symbol": "LRCX",
+   "side": "buy",
+   "date": "2026-09-14",
+   "amount": 2000,
+   "price": 275.07,
+   "st": "F"
+  },
+  "90185542-748": {
+   "symbol": "ONTO",
+   "side": "buy",
+   "date": "2026-09-14",
+   "amount": 1000,
+   "price": 257.09,
+   "st": "F"
+  },
+  "90185542-747": {
+   "symbol": "MTSI",
+   "side": "buy",
+   "date": "2026-09-14",
+   "amount": 2000,
+   "price": 247.53,
+   "st": "F"
+  },
+  "90185542-746": {
+   "symbol": "AAOI",
+   "side": "buy",
+   "date": "2026-09-14",
+   "amount": 2000,
+   "price": 97.01,
+   "st": "F"
+  },
+  "90185542-745": {
+   "symbol": "TRU",
+   "side": "buy",
+   "date": "2026-09-14",
+   "amount": 1000,
+   "price": 79.62,
+   "st": "F"
+  },
+  "90185542-744": {
+   "symbol": "WY",
+   "side": "buy",
+   "date": "2026-09-14",
+   "amount": 1000,
+   "price": 22.22,
+   "st": "F"
+  },
+  "90185542-743": {
+   "symbol": "KMB",
+   "side": "buy",
+   "date": "2026-09-14",
+   "amount": 1000,
+   "price": 100.25,
+   "st": "F"
+  },
+  "90185542-742": {
+   "symbol": "GIS",
+   "side": "buy",
+   "date": "2026-09-14",
+   "amount": 1000,
+   "price": 36.77,
+   "st": "F"
+  },
+  "90185542-741": {
+   "symbol": "OKLO",
+   "side": "buy",
+   "date": "2026-09-14",
+   "amount": 1000,
+   "price": 35.72,
+   "st": "F"
+  },
+  "90185542-740": {
+   "symbol": "NVDA",
+   "side": "buy",
+   "date": "2026-09-14",
+   "amount": 2000,
+   "price": 209.79,
+   "st": "F"
+  },
+  "90185542-739": {
+   "symbol": "CDNS",
+   "side": "buy",
+   "date": "2026-09-14",
+   "amount": 1000,
+   "price": 285,
+   "st": "F"
+  },
+  "90185542-738": {
+   "symbol": "ATI",
+   "side": "buy",
+   "date": "2026-09-14",
+   "amount": 2000,
+   "price": 190.57,
+   "st": "F"
+  },
+  "90185542-737": {
+   "symbol": "KBH",
+   "side": "buy",
+   "date": "2026-09-14",
+   "amount": 1000,
+   "price": 48.9,
+   "st": "F"
+  },
+  "90185542-736": {
+   "symbol": "TWLO",
+   "side": "buy",
+   "date": "2026-09-14",
+   "amount": 1000,
+   "price": 230.08,
+   "st": "F"
+  },
+  "90185542-735": {
+   "symbol": "QLYS",
+   "side": "buy",
+   "date": "2026-09-14",
+   "amount": 2000,
+   "price": 159.61,
+   "st": "F"
+  },
+  "90185542-734": {
+   "symbol": "ODFL",
+   "side": "sell",
+   "date": "2026-09-14",
+   "quantity": 10.6923,
+   "amount": 1906.54,
+   "price": 178.31,
+   "st": "F"
+  },
+  "90185542-733": {
+   "symbol": "IP",
+   "side": "sell",
+   "date": "2026-09-14",
+   "quantity": 27.60661,
+   "amount": 939.45,
+   "price": 34.03,
+   "st": "F"
+  },
+  "90185542-732": {
+   "symbol": "AON",
+   "side": "sell",
+   "date": "2026-09-14",
+   "quantity": 3.13636,
+   "amount": 963.18,
+   "price": 307.1,
+   "st": "F"
+  },
+  "90185542-772": {
+   "symbol": "NVDA",
+   "side": "buy",
+   "date": "2026-09-16",
+   "amount": 1000,
+   "price": 213.09,
+   "st": "F"
+  },
+  "90185542-758": {
+   "symbol": "ASML",
+   "side": "buy",
+   "date": "2026-09-16",
+   "amount": 1000,
+   "price": 1593.16,
+   "st": "F"
+  },
+  "90185542-784": {
+   "symbol": "FTNT",
+   "side": "sell",
+   "date": "2026-09-15",
+   "quantity": 6.63431,
+   "amount": 1120.34,
+   "price": 168.87,
+   "st": "F"
+  },
+  "90185542-783": {
+   "symbol": "CAT",
+   "side": "buy",
+   "date": "2026-09-15",
+   "amount": 1000,
+   "price": 784.66,
+   "st": "F"
+  },
+  "90185542-782": {
+   "symbol": "IBP",
+   "side": "buy",
+   "date": "2026-09-15",
+   "amount": 1000,
+   "price": 200.59,
+   "st": "F"
+  },
+  "90185542-781": {
+   "symbol": "FLS",
+   "side": "buy",
+   "date": "2026-09-15",
+   "amount": 1000,
+   "price": 71.89,
+   "st": "F"
+  },
+  "90185542-780": {
+   "symbol": "EME",
+   "side": "buy",
+   "date": "2026-09-15",
+   "amount": 1000,
+   "price": 749.05,
+   "st": "F"
+  },
+  "90185542-779": {
+   "symbol": "ORA",
+   "side": "buy",
+   "date": "2026-09-15",
+   "amount": 1000,
+   "price": 92.32,
+   "st": "F"
+  },
+  "90185542-778": {
+   "symbol": "CNP",
+   "side": "buy",
+   "date": "2026-09-15",
+   "amount": 1000,
+   "price": 38.34,
+   "st": "F"
+  },
+  "90185542-777": {
+   "symbol": "TDG",
+   "side": "buy",
+   "date": "2026-09-15",
+   "amount": 1000,
+   "price": 1105.76,
+   "st": "F"
+  },
+  "90185542-776": {
+   "symbol": "APH",
+   "side": "buy",
+   "date": "2026-09-15",
+   "amount": 1000,
+   "price": 78.49,
+   "st": "F"
+  },
+  "90185542-775": {
+   "symbol": "LNG",
+   "side": "buy",
+   "date": "2026-09-15",
+   "amount": 1000,
+   "price": 274.43,
+   "st": "F"
+  },
+  "90185542-774": {
+   "symbol": "EMR",
+   "side": "buy",
+   "date": "2026-09-15",
+   "amount": 1000,
+   "price": 148.22,
+   "st": "F"
+  },
+  "90185542-773": {
+   "symbol": "ANF",
+   "side": "buy",
+   "date": "2026-09-15",
+   "amount": 1000,
+   "price": 139.54,
+   "st": "F"
+  },
+  "90185542-771": {
+   "symbol": "SNPS",
+   "side": "buy",
+   "date": "2026-09-15",
+   "amount": 1000,
+   "price": 373.87,
+   "st": "F"
+  },
+  "90185542-770": {
+   "symbol": "SRRK",
+   "side": "buy",
+   "date": "2026-09-15",
+   "amount": 1000,
+   "price": 46.77,
+   "st": "F"
+  },
+  "90185542-769": {
+   "symbol": "JLL",
+   "side": "buy",
+   "date": "2026-09-15",
+   "amount": 1000,
+   "price": 342.37,
+   "st": "F"
+  },
+  "90185542-768": {
+   "symbol": "CLX",
+   "side": "buy",
+   "date": "2026-09-15",
+   "amount": 1000,
+   "price": 88.3,
+   "st": "F"
+  },
+  "90185542-767": {
+   "symbol": "CRL",
+   "side": "buy",
+   "date": "2026-09-15",
+   "amount": 1000,
+   "price": 274.41,
+   "st": "F"
+  },
+  "90185542-766": {
+   "symbol": "AEIS",
+   "side": "buy",
+   "date": "2026-09-15",
+   "amount": 1000,
+   "price": 254,
+   "st": "F"
+  },
+  "90185542-765": {
+   "symbol": "TDY",
+   "side": "buy",
+   "date": "2026-09-15",
+   "amount": 1000,
+   "price": 599.19,
+   "st": "F"
+  },
+  "90185542-764": {
+   "symbol": "TWLO",
+   "side": "buy",
+   "date": "2026-09-15",
+   "amount": 1000,
+   "price": 233.79,
+   "st": "F"
+  },
+  "90185542-763": {
+   "symbol": "USFD",
+   "side": "buy",
+   "date": "2026-09-15",
+   "amount": 1000,
+   "price": 94.26,
+   "st": "F"
+  },
+  "90185542-762": {
+   "symbol": "AS",
+   "side": "sell",
+   "date": "2026-09-15",
+   "quantity": 35.19367,
+   "amount": 953.4,
+   "price": 27.09,
+   "st": "F"
+  },
+  "90185542-761": {
+   "symbol": "AYI",
+   "side": "sell",
+   "date": "2026-09-15",
+   "quantity": 4.53885,
+   "amount": 1386.66,
+   "price": 305.51,
+   "st": "F"
+  },
+  "90185542-760": {
+   "symbol": "RCL",
+   "side": "sell",
+   "date": "2026-09-15",
+   "quantity": 18.89223,
+   "amount": 4800.33,
+   "price": 254.09,
+   "st": "F"
+  },
+  "90185542-759": {
+   "symbol": "PCAR",
+   "side": "sell",
+   "date": "2026-09-15",
+   "quantity": 23.67185,
+   "amount": 2886.78,
+   "price": 121.95,
+   "st": "F"
+  },
+  "90185542-757": {
+   "symbol": "ATI",
+   "side": "buy",
+   "date": "2026-09-15",
+   "amount": 2000,
+   "price": 190.01,
+   "st": "F"
+  },
+  "90185542-756": {
+   "symbol": "PCG",
+   "side": "sell",
+   "date": "2026-09-15",
+   "quantity": 224.68566,
+   "amount": 3040,
+   "price": 13.53,
+   "st": "F"
+  },
+  "90185542-755": {
+   "symbol": "GS",
+   "side": "sell",
+   "date": "2026-09-15",
+   "quantity": 2.89031,
+   "amount": 2839.47,
+   "price": 982.41,
+   "st": "F"
+  }
+ }
 }

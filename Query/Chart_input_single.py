@@ -746,9 +746,12 @@ class ChartWindow:
             circle.set_edgecolor(NORD_THEME['border'])
             circle.set_facecolor(NORD_THEME['background'])
 
-        instructions = ("N:新财报\nE:改财报\nT:改标签\nW:新事件\nQ:改事件\nK:查豆包\nZ:查富途\n"
-                        "P:做比较\nJ:加Panel\nL:查相似\nY:删除\nG:刷新\nO:查α\nB:存在\n"
-                        "I:买入点\nU:卖出点\nF:加自选\n⇧F:同上组")
+        # instructions = ("N:新财报\nE:改财报\nT:改标签\nW:新事件\nQ:改事件\nK:查豆包\nZ:查富途\n"
+        #                 "P:做比较\nJ:加Panel\nL:查相似\nY:删除\nG:刷新\nO:查α\nB:存在\n"
+        #                 "I:买入点\nU:卖出点\nF:加自选\n⇧F:同上组")
+        instructions = ("E:改财报\nW:新事件\nQ:改事件\nK:查豆包\n"
+                    "P:做比较\nJ:加Panel\nL:查相似\nY:删除\nB:分组\n"
+                    "I/U:买入卖出点\nF:加自选\n⇧F:同上组")
         self.rax.text(0.5, 0.98, instructions, transform=self.rax.transAxes, ha="center", va="bottom",
                       color=NORD_THEME['text_light'], fontsize=10, fontfamily="Arial Unicode MS")
 

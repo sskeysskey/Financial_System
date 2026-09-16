@@ -377,7 +377,9 @@
     "EMCS",
     "DBAW",
     "HYHG",
-    "WLDR"
+    "WLDR",
+    "JXI",
+    "GQRE"
   ],
   "Basic_Materials": [
     "LIN",
@@ -474,7 +476,8 @@
     "PRM",
     "OGC",
     "MTRN",
-    "RML"
+    "RML",
+    "CLMT"
   ],
   "Communication_Services": [
     "GOOGL",
@@ -846,7 +849,9 @@
     "KGS",
     "WHD",
     "KNTK",
-    "INSW"
+    "INSW",
+    "CVI",
+    "CRGY"
   ],
   "Financial_Services": [
     "BRK-B",

@@ -1,18 +1,17 @@
 /* ============================================================================
- * Firstrade 远程添加代理  wl_agent.js  v1     仅在 /app/watchlist 生效
+ * Firstrade 远程添加代理  wl_agent.js  v2     仅在 /app/watchlist 生效
  *
  *   Python(Chart_input_single / Check_Group)
  *        → bridge_server.py 任务队列
- *        → 本脚本每 2s 轮询领任务
+ *        → Background 自动聚焦/切换到 watchlist Tab
+ *        → 本脚本接收唤醒或每 2s 轮询领任务
  *        → 自动切到目标分组（买/买买/买买买/卖卖卖）
  *        → 复用 watchlist.js 的 addOneSymbol() 完成添加
- *        → 去重 / 回报结果 / 可选切回原分组
- *
- *   与「功能③一键重建」「④行情抓取」严格互斥，绝不并发。
+ *        → 去重 / 回报结果 / 自动切回原分组 & 原 Tab
  * ==========================================================================*/
 (() => {
-  if (window.__FT_WL_AGENT_V1__) return;
-  window.__FT_WL_AGENT_V1__ = true;
+  if (window.__FT_WL_AGENT_V2__) return;
+  window.__FT_WL_AGENT_V2__ = true;
 
   const LOG = '[FT-AGENT]';
   const POLL_MS = 2000;
@@ -30,7 +29,6 @@
   const norm = (s) => String(s || '').replace(/\s+/g, '').trim();
   const toast = (t) => { try { (window.__FT_TOAST__ || console.log)(t); } catch (e) { } };
 
-  /* ---------------- 通用 DOM 工具（本文件自带，避免依赖过深） ---------------- */
   function isVisible(el) {
     if (!el) return false;
     const st = getComputedStyle(el);
@@ -92,7 +90,6 @@
     });
   }
 
-  /* ---------------- 分组下拉：定位 / 读取 / 切换 ---------------- */
   function groupTrigger() {
     const all = Array.from(document.querySelectorAll('[data-select-trigger]'))
       .filter(el => isVisible(el) && !el.closest(FORBIDDEN));
@@ -140,7 +137,6 @@
     return best;
   }
 
-  /* 等表格稳定（切分组后 ag-Grid 会重载） */
   async function waitGridSettled(timeout = 8000) {
     const t0 = Date.now();
     let last = null, same = 0;
@@ -172,7 +168,6 @@
       const opts = await waitFor(() => { const o = selectOptions(); return o.length ? o : null; }, 3500, 120);
       if (!opts) { await sleep(450); continue; }
 
-      /* 「买」是「买买」的前缀 → 必须严格等值匹配 */
       const hit = opts.find(o => optionLabel(o) === want);
       if (!hit) {
         const names = opts.map(optionLabel).filter(Boolean);
@@ -191,13 +186,12 @@
     return { ok: false, error: `切换到分组「${target}」失败（重试 3 次）` };
   }
 
-  /* ---------------- 任务处理 ---------------- */
   async function alreadyHas(sym) {
     const a = api();
     if (!a || !a.collectWatchlist || !a.dataRowsTotal) return false;
     const rows = a.dataRowsTotal();
     if (rows === null || rows <= 0) return false;
-    if (rows > 400) return false;            // 大分组不做全表去重（太慢），交给行数校验
+    if (rows > 400) return false;
     const buf = await a.collectWatchlist();
     const t = a.normKey(sym);
     return Object.keys(buf).some(k => a.normKey(k) === t);
@@ -243,7 +237,6 @@
       msg = String((e && e.message) || e);
     }
 
-    /* 尽量把页面还原成用户离开时的样子 */
     try {
       if (restore && origin && norm(currentGroup()) !== norm(origin)) {
         await switchGroup(origin);
@@ -263,15 +256,15 @@
     });
   }
 
-  /* ---------------- 轮询 ---------------- */
+  /* ---------------- 轮询与即时调度 ---------------- */
   async function poll() {
     if (!ENABLED || busy || !isWatchlistPage()) return;
     const a = api();
     if (!a || !a.addOneSymbol) return;
-    if (a.isBusy()) return;                      // 一键重建 / 行情抓取进行中 → 让路
+    if (a.isBusy()) return;
 
     const r = await bg({ action: 'FT_WL_TASKS', max: 3 });
-    if (!r.ok) return;                           // 桥接没开，静默
+    if (!r.ok) return;
     const tasks = (r.data && r.data.tasks) || [];
     if (!tasks.length) return;
 
@@ -289,33 +282,44 @@
     }
   }
 
-  /* ---------------- 设置 ---------------- */
   function loadSettings() {
     chrome.storage.local.get(['ftWlAgent', 'ftWlRestoreGroup', 'ftDebug'], (res) => {
-      ENABLED = res.ftWlAgent !== false;          // 默认开
-      RESTORE = res.ftWlRestoreGroup !== false;   // 默认开
+      ENABLED = res.ftWlAgent !== false;
+      RESTORE = res.ftWlRestoreGroup !== false;
       DEBUG = !!res.ftDebug;
       log('设置: ENABLED =', ENABLED, 'RESTORE =', RESTORE);
     });
   }
+
   chrome.storage.onChanged.addListener((c, area) => {
     if (area !== 'local') return;
     if (c.ftWlAgent || c.ftWlRestoreGroup || c.ftDebug) loadSettings();
   });
 
-  /* 供 popup 查询状态 */
+  // 页面激活或唤醒时，立刻 poll
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
+  window.addEventListener('focus', () => poll());
+
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-    if (!msg || msg.action !== 'FT_AGENT_STATUS') return;
-    sendResponse({
-      ok: true, page: isWatchlistPage(), enabled: ENABLED, restore: RESTORE,
-      busy: busy, group: currentGroup(), apiReady: !!(api() && api().addOneSymbol)
-    });
+    if (!msg) return;
+    if (msg.action === 'FT_AGENT_STATUS') {
+      sendResponse({
+        ok: true, page: isWatchlistPage(), enabled: ENABLED, restore: RESTORE,
+        busy: busy, group: currentGroup(), apiReady: !!(api() && api().addOneSymbol)
+      });
+      return;
+    }
+    if (msg.action === 'FT_WAKE_UP') {
+      poll();
+      sendResponse({ ok: true });
+      return;
+    }
   });
 
   loadSettings();
   if (isWatchlistPage()) {
     setInterval(poll, POLL_MS);
-    setTimeout(poll, 1500);
+    setTimeout(poll, 1000);
   }
-  console.log(LOG, `wl_agent.js v1 就绪（isWatchlist=${isWatchlistPage()}）`);
+  console.log(LOG, `wl_agent.js v2 就绪（isWatchlist=${isWatchlistPage()}）`);
 })();

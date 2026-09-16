@@ -372,14 +372,18 @@ def search_history_by_date(symbol):
 
     # 连续相同/超集项的最低数量阈值
     MIN_STREAK_ITEMS = 2
+    # 允许的最大连续空窗交易日数量（在此范围内且标的完全无信号时允许桥接）
+    MAX_EMPTY_GAP_DAYS = 2
 
     def get_streak_position(d_str):
         """
         返回该日期在“核心特征保持/只增不减”连续段里的位置（最早那天=1）。
         规则：
         1. 当天特征数需达到 MIN_STREAK_ITEMS。
-        2. 沿时序往前（更早交易日）回溯时，较新的一天必须是更早一天的超集（只能增不能减）。
-        3. 更早的一天也必须满足 MIN_STREAK_ITEMS 门槛，且中间不可断档。
+        2. 沿时序往前（更早交易日）回溯：
+           - 若前序交易日该标的完全无记录（空窗日），在不超过 MAX_EMPTY_GAP_DAYS 容纳内允许跳过空窗桥接。
+           - 若遇到有记录交易日，要求较新交易日特征集必须包含较早交易日（chain_sig >= older_sig，只增不减）。
+           - 若中间出现破坏性记录（有指标但不合规）或空窗交易日超出上限，则连续性终止。
         """
         if d_str not in sorted_trading_dates:
             return 1
@@ -391,20 +395,33 @@ def search_history_by_date(symbol):
         idx = sorted_trading_dates.index(d_str)
         count = 1
         chain_sig = curr_sig  # 状态锚点
+        empty_gap = 0         # 连续无信号空窗计数器
 
         j = idx + 1  # 降序列表中，索引递增 = 更早的交易日
         while j < len(sorted_trading_dates):
             older_date = sorted_trading_dates[j]
-            older_sig = date_signature.get(older_date)
+            # 判定中间交易日该股票是否完全无任何记录
+            is_empty_day = (older_date not in date_items)
 
-            # 中间交易日没有记录或特征少于阈值，则连续终止
+            if is_empty_day:
+                empty_gap += 1
+                if empty_gap > MAX_EMPTY_GAP_DAYS:
+                    # 超过允许的最大空窗交易日数，状态衰减终止
+                    break
+                j += 1
+                continue
+
+            # 遇到有触发记录的交易日
+            older_sig = date_signature.get(older_date)
             if not older_sig or len(older_sig) < MIN_STREAK_ITEMS:
+                # 中间出现低于阈值的杂项记录，形态被打破，终止
                 break
 
             # 只能增不能减：当前较新交易日 chain_sig 必须包含更早交易日 older_sig 的所有元素
             if chain_sig >= older_sig:
                 count += 1
                 chain_sig = older_sig  # 状态收敛为更早日期的集合，继续向前验证
+                empty_gap = 0          # 成功桥接后重置空窗计数器
                 j += 1
             else:
                 break
@@ -435,7 +452,7 @@ def search_history_by_date(symbol):
             streak_marker = (
                 f" <span style='color:#C4A7E7; font-weight:bold; "
                 f"background-color:rgba(235,203,139,0.15); padding:0 4px; "
-                f"border-radius:3px;' title='核心指标连续保持（支持只增不减）'>"
+                f"border-radius:3px;' title='核心指标连续保持（支持只增不减及短期平稳空窗容差）'>"
                 f"[⟳连续第{streak_pos}天]</span>"
             )
         else:

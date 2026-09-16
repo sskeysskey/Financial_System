@@ -1,25 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-本地极简 HTTP 桥接服务器 v7
-    GET  /ping                        健康检查
-    GET  /wl_source?src=earnings|sectors&back=1&ahead=0
-    GET  /earnings_release?back=1
-    GET  /sectors_all
-    GET  /positions                   持仓 JSON（覆盖式快照）
-    GET  /orders                      订单 JSON（追加式流水，LEAN schema）
-    GET  /watchlist                   自选股行情 JSON（覆盖式快照）
-    GET  /plot?symbol=AAPL            拉起 Stock_Chart.py
-    POST /sync_positions / /sync_orders / /sync_watchlist / /compact_orders
-    POST /plot  {symbol, positions}
-
-    ★ v7 新增「Python → 浏览器」任务队列（一键把 symbol 加入指定自选股分组）
-    POST /wl_add        {symbol, group, wait, restore}  Python 下单（wait>0 时阻塞等结果）
-    GET  /wl_tasks?max=3                                Chrome 扩展领任务（带租约）
-    POST /wl_task_result{id, ok, message, data}         Chrome 扩展回报结果
-    GET  /wl_task?id=xxx                                查询单个任务
-    GET  /wl_groups                                     可用分组白名单
-监听端口: 18888
+本地极简 HTTP 桥接服务器 v8
+    - 针对 Chrome 非激活页面提供主动 Tab 寻找、激活与置顶服务
+    - 智能保障远程自动化链路不冻结
 """
 import sys
 import os
@@ -56,26 +40,19 @@ SECTOR_GROUPS_FOR_WATCHLIST = [
     "Industrials", "Real_Estate", "Technology", "Utilities",
 ]
 
-# ======================================================================
-# ★ v7：自选股「远程添加」任务队列
-# ======================================================================
 WATCHLIST_URL = "https://invest.firstrade.com/app/watchlist"
 WATCHLIST_URL_MATCH = "invest.firstrade.com/app/watchlist"
-# 允许 Python 端投递的分组白名单（不在名单内只告警，不拦截）
-WATCHLIST_GROUPS = ["买", "买买", "买买买", "卖卖卖"]
+WATCHLIST_GROUPS = ["买", "买买", "买买买", "卖卖卖", "Short"]
 
-TASK_TTL = 600          # 任务保留时间（秒）
-TASK_LEASE = 90         # 被领取但未回报的租约时间，超时重新排队
-AGENT_ALIVE_SEC = 8     # 多久没心跳就认为「没有活着的 watchlist 标签页」
+TASK_TTL = 600
+TASK_LEASE = 90
+AGENT_ALIVE_SEC = 8
 
 _TASKS = OrderedDict()
 _TASK_LOCK = threading.Lock()
 _TASK_SEQ = [0]
 _LAST_AGENT_POLL = [0.0]
 
-# ---------------------------------------------------------------------------
-# 订单字段白名单（瘦身核心）
-# ---------------------------------------------------------------------------
 ORDER_LEAN_FIELDS = ("symbol", "side", "date", "quantity", "amount", "price", "st")
 ORDER_EXTRA_FIELDS = ("order_id", "side_text", "datetime", "status", "price_type",
                       "duration", "instruction", "amount_source", "quantity_text", "raw")
@@ -117,7 +94,7 @@ def _load_json(path):
             data = json.load(f)
         return data if isinstance(data, dict) else {}
     except Exception as e:
-        _log(f"读取 {os.path.basename(path)} 失败（将重建）: {e}")
+        _log(f"读取 {os.path.basename(path)} 失败: {e}")
         return {}
 
 
@@ -128,9 +105,6 @@ def _file_size(path):
         return 0
 
 
-# ======================================================================
-# ★ 任务队列实现
-# ======================================================================
 def _gc_tasks_locked():
     now = time.time()
     for tid in list(_TASKS.keys()):
@@ -196,31 +170,44 @@ def pending_count():
         return sum(1 for t in _TASKS.values() if t["status"] in ("pending", "taken"))
 
 
-# ---------------- 后台确保存在 watchlist 标签页（macOS / Chrome） ----------------
+# ★ 增强版 AppleScript：寻找现有 watchlist Tab 并直接切为 active Tab！
 _ENSURE_TAB_APPLESCRIPT = '''
 on run argv
 	set targetURL to item 1 of argv
 	set matchStr to "%s"
 	tell application "Google Chrome"
 		if it is not running then return "not_running"
-		set wasFound to false
 		repeat with w in windows
+			set tabIndex to 1
 			repeat with t in tabs of w
 				if (URL of t) contains matchStr then
-					set wasFound to true
-					exit repeat
+					set active tab index of w to tabIndex
+					set index of w to 1
+					return "activated_existing"
 				end if
+				set tabIndex to tabIndex + 1
 			end repeat
-			if wasFound then exit repeat
 		end repeat
-		if wasFound then return "exists"
+		-- 如果没找到已有 watchlist tab，检查是否有其他 Firstrade tab
+		repeat with w in windows
+			set tabIndex to 1
+			repeat with t in tabs of w
+				if (URL of t) contains "invest.firstrade.com" then
+					set URL of t to targetURL
+					set active tab index of w to tabIndex
+					set index of w to 1
+					return "navigated_existing"
+				end if
+				set tabIndex to tabIndex + 1
+			end repeat
+		end repeat
 		if (count of windows) is 0 then
 			make new window
 			set URL of active tab of window 1 to targetURL
 		else
 			tell window 1 to make new tab with properties {URL:targetURL}
 		end if
-		return "opened"
+		return "opened_new"
 	end tell
 end run
 ''' % WATCHLIST_URL_MATCH
@@ -231,7 +218,7 @@ _SCRIPT_PATH = [None]
 def _ensure_script_file():
     if _SCRIPT_PATH[0] and os.path.exists(_SCRIPT_PATH[0]):
         return _SCRIPT_PATH[0]
-    p = os.path.join(tempfile.gettempdir(), "ft_ensure_watchlist_tab.applescript")
+    p = os.path.join(tempfile.gettempdir(), "ft_ensure_watchlist_tab_v8.applescript")
     try:
         with open(p, "w", encoding="utf-8") as f:
             f.write(_ENSURE_TAB_APPLESCRIPT)
@@ -243,7 +230,7 @@ def _ensure_script_file():
 
 
 def ensure_watchlist_tab():
-    """尽量在后台（不抢焦点）保证有一个 watchlist 标签页"""
+    """在 macOS 下智能唤醒并激活 Watchlist Tab，解除浏览器节流"""
     if sys.platform != "darwin":
         return "unsupported_os"
     sp = _ensure_script_file()
@@ -255,17 +242,13 @@ def ensure_watchlist_tab():
         out = (p.stdout or "").strip()
         err = (p.stderr or "").strip()
         if out == "not_running":
-            # Chrome 没开：后台启动（-g 不抢焦点）
-            subprocess.Popen(["open", "-g", "-a", "Google Chrome", WATCHLIST_URL])
+            subprocess.Popen(["open", "-a", "Google Chrome", WATCHLIST_URL])
             return "launched_chrome"
         return out or ("error: " + err if err else "unknown")
     except Exception as e:
         return "error: %s" % e
 
 
-# ======================================================================
-# 数据源 A: Sectors_All.json（默认屏蔽）
-# ======================================================================
 def load_sector_symbols():
     data = _load_json(SECTORS_ALL_PATH)
     out, seen, per_group = [], set(), {}
@@ -289,9 +272,6 @@ def load_sector_symbols():
     return out, per_group
 
 
-# ======================================================================
-# 数据源 B: Earnings_Release_new.txt
-# ======================================================================
 _DATE_IN_LINE = re.compile(r"(\d{4})-(\d{1,2})-(\d{1,2})")
 _SYM_CLEAN = re.compile(r"[^A-Z0-9.\-]")
 
@@ -392,8 +372,7 @@ def build_wl_source(src, back=1, ahead=0):
     if s in ("sectors", "sectors_all", "sector"):
         if not ENABLE_SECTORS_SOURCE:
             return {"status": "disabled", "source": "sectors_all", "symbols": [], "count": 0,
-                    "message": "Sectors_All 数据源已在 bridge_server.py 停用；"
-                               "把 ENABLE_SECTORS_SOURCE 改成 True 并重启即可启用。"}
+                    "message": "Sectors_All 数据源已停用"}
         symbols, per_group = load_sector_symbols()
         return {"status": "ok", "source": "sectors_all", "file": SECTORS_ALL_PATH,
                 "from": "Sectors_All.json", "groups": per_group,
@@ -401,9 +380,6 @@ def build_wl_source(src, back=1, ahead=0):
     return {"status": "error", "message": f"未知数据源: {src}", "symbols": [], "count": 0}
 
 
-# ======================================================================
-# 持仓
-# ======================================================================
 def save_positions(incoming, overwrite=False):
     if not isinstance(incoming, dict):
         return 0, 0
@@ -433,9 +409,6 @@ def save_positions(incoming, overwrite=False):
     return n, total
 
 
-# ======================================================================
-# 订单
-# ======================================================================
 def _status_code(rec):
     st = rec.get("st") or rec.get("status_code")
     if isinstance(st, str) and st.strip():
@@ -493,7 +466,7 @@ def _maybe_backup_fat(shrunk):
         shutil.copy2(ORDERS_JSON_PATH, fat)
         _log(f"已将瘦身前的完整订单备份到 {fat}")
     except Exception as e:
-        _log(f"备份完整订单失败(忽略): {e}")
+        _log(f"备份完整订单失败: {e}")
 
 
 def _write_orders(orders, verbose, shrunk):
@@ -584,9 +557,6 @@ def compact_orders(verbose=False):
     }
 
 
-# ======================================================================
-# 自选股行情
-# ======================================================================
 def save_watchlist(incoming, overwrite=True):
     if not isinstance(incoming, dict) or not incoming:
         return 0, 0, "empty"
@@ -599,7 +569,6 @@ def save_watchlist(incoming, overwrite=True):
         old_total = len(quotes)
         mode = "overwrite" if overwrite else "merge"
         if overwrite and old_total >= 200 and len(incoming) < old_total * 0.5:
-            _log(f"⚠ 覆盖被降级为合并：本次 {len(incoming)} 条 < 原有 {old_total} 的一半")
             mode = "merge_guard"
             overwrite = False
         base = {} if overwrite else dict(quotes)
@@ -690,25 +659,17 @@ class StockRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", "0")
         self.end_headers()
 
-    # ------------------------------------------------------------------
     def do_POST(self):
         path = urlparse(self.path).path
 
         if path == "/sync_positions":
             try:
                 body = self._read_json_body()
-                if "positions" in body and isinstance(body["positions"], dict):
-                    incoming = body["positions"]
-                    overwrite = bool(body.get("overwrite", False))
-                else:
-                    incoming, overwrite = body, False
+                incoming = body.get("positions", body) if isinstance(body.get("positions"), dict) else body
+                overwrite = bool(body.get("overwrite", False))
                 n, total = save_positions(incoming, overwrite=overwrite)
-                mode_str = "全量覆盖" if overwrite else "增量合并"
-                _log(f"[{mode_str}] 同步持仓 {n} 条（文件当前共 {total} 条）")
-                self._reply(200, {"status": "ok", "saved": n, "total": total,
-                                  "overwrite": overwrite})
+                self._reply(200, {"status": "ok", "saved": n, "total": total, "overwrite": overwrite})
             except Exception as e:
-                _log(f"处理持仓同步失败: {e}")
                 self._reply(500, {"status": "error", "message": str(e)})
             return
 
@@ -718,13 +679,10 @@ class StockRequestHandler(BaseHTTPRequestHandler):
                 incoming = body.get("orders") if isinstance(body.get("orders"), dict) else body
                 verbose = body.get("verbose", None)
                 added, updated, total, shrunk = save_orders(incoming, verbose=verbose)
-                _log(f"[追加/{'full' if verbose else 'lean'}] 订单 新增 {added} / 更新 {updated} / "
-                     f"累计 {total} / 顺手瘦身 {shrunk}  文件 {_file_size(ORDERS_JSON_PATH)/1024:.1f}KB")
                 self._reply(200, {"status": "ok", "added": added, "updated": updated,
                                   "total": total, "shrunk": shrunk,
                                   "bytes": _file_size(ORDERS_JSON_PATH)})
             except Exception as e:
-                _log(f"处理订单同步失败: {e}")
                 self._reply(500, {"status": "error", "message": str(e)})
             return
 
@@ -732,11 +690,8 @@ class StockRequestHandler(BaseHTTPRequestHandler):
             try:
                 body = self._read_json_body()
                 r = compact_orders(bool(body.get("verbose", False)))
-                _log(f"[压缩] 订单 JSON {r.get('before',0)/1024:.1f}KB -> {r.get('after',0)/1024:.1f}KB "
-                     f"({r.get('saved_pct',0)}%)，共 {r.get('count',0)} 笔")
                 self._reply(200, r)
             except Exception as e:
-                _log(f"压缩订单失败: {e}")
                 self._reply(500, {"status": "error", "message": str(e)})
             return
 
@@ -746,14 +701,12 @@ class StockRequestHandler(BaseHTTPRequestHandler):
                 incoming = body.get("quotes") if isinstance(body.get("quotes"), dict) else body
                 overwrite = bool(body.get("overwrite", True))
                 n, total, mode = save_watchlist(incoming, overwrite=overwrite)
-                _log(f"[{mode}] 自选股行情 写入 {n} 条（文件当前共 {total} 条）")
                 self._reply(200, {"status": "ok", "saved": n, "total": total, "mode": mode})
             except Exception as e:
-                _log(f"处理自选股同步失败: {e}")
                 self._reply(500, {"status": "error", "message": str(e)})
             return
 
-        # ---------------- ★ v7 新增：Python 下单添加自选股 ----------------
+        # ★ Python 下单任务入口：无论何时进来，主动寻找并激活 Tab
         if path == "/wl_add":
             try:
                 body = self._read_json_body()
@@ -762,17 +715,12 @@ class StockRequestHandler(BaseHTTPRequestHandler):
                 wait = float(body.get("wait", 0) or 0)
                 restore = bool(body.get("restore", True))
                 if not symbol:
-                    self._reply(400, {"status": "error", "ok": False,
-                                      "message": "no symbol"})
+                    self._reply(400, {"status": "error", "ok": False, "message": "no symbol"})
                     return
-                if group and WATCHLIST_GROUPS and group not in WATCHLIST_GROUPS:
-                    _log(f"⚠ 分组「{group}」不在白名单 {WATCHLIST_GROUPS}，仍继续尝试")
 
-                gap = time.time() - _LAST_AGENT_POLL[0]
-                tab = ""
-                if gap > AGENT_ALIVE_SEC:
-                    tab = ensure_watchlist_tab()
-                    _log(f"[任务] 无浏览器心跳({gap:.0f}s)，确保标签页 -> {tab}")
+                # ★ 关键改进：不管有没有心跳，都直接通过 AppleScript 激活 Watchlist Tab，唤醒事件循环
+                tab = ensure_watchlist_tab()
+                _log(f"[任务] 激活并确保 Watchlist 页面状态 -> {tab}")
 
                 t = new_task("add", symbol, group, {"restore": restore})
                 _log(f"[任务] 排队 add {symbol} → 「{group or '当前分组'}」 id={t['id']}")
@@ -787,9 +735,7 @@ class StockRequestHandler(BaseHTTPRequestHandler):
                 else:
                     self._reply(200, {
                         "status": "pending", "id": t["id"], "tab": tab, "ok": False,
-                        "message": "任务已排队，但未在等待时间内收到浏览器回报。"
-                                   "请确认：①Chrome 打开了 /app/watchlist 且已登录；"
-                                   "②扩展 popup 里「允许远程添加」是勾选状态。"})
+                        "message": "任务已排队，页面已激活。如果在几秒内仍未执行，请检查该页面的网络是否通畅。"})
             except Exception as e:
                 _log(f"/wl_add 失败: {e}")
                 self._reply(500, {"status": "error", "ok": False, "message": str(e)})
@@ -815,26 +761,20 @@ class StockRequestHandler(BaseHTTPRequestHandler):
                 saved, total = (0, 0)
                 if positions:
                     saved, total = save_positions(positions)
-                    _log(f"随画图同步持仓 {saved} 条（累计 {total} 条）")
                 if not symbol:
                     self._reply(400, {"status": "error", "message": "no symbol"})
                     return
                 ok, err = launch_chart(symbol)
                 if ok:
-                    _log(f"触发绘制图表: {symbol}")
-                    self._reply(200, {"status": "ok", "symbol": symbol,
-                                      "saved": saved, "total": total})
+                    self._reply(200, {"status": "ok", "symbol": symbol, "saved": saved, "total": total})
                 else:
-                    _log(f"启动图表错误: {err}")
                     self._reply(500, {"status": "error", "message": err})
             except Exception as e:
-                _log(f"/plot POST 失败: {e}")
                 self._reply(500, {"status": "error", "message": str(e)})
             return
 
         self._reply(404, {"status": "error", "message": "not found"})
 
-    # ------------------------------------------------------------------
     def do_GET(self):
         parsed = urlparse(self.path)
         path = parsed.path
@@ -843,23 +783,7 @@ class StockRequestHandler(BaseHTTPRequestHandler):
         if path == "/ping":
             self._reply(200, {
                 "status": "ok", "port": PORT, "python": PYTHON_EXEC,
-                "chart_script": STOCK_CHART_PY,
                 "chart_script_exists": os.path.exists(STOCK_CHART_PY),
-                "positions_file": POSITIONS_JSON_PATH,
-                "positions_file_exists": os.path.exists(POSITIONS_JSON_PATH),
-                "orders_file": ORDERS_JSON_PATH,
-                "orders_file_exists": os.path.exists(ORDERS_JSON_PATH),
-                "orders_bytes": _file_size(ORDERS_JSON_PATH),
-                "orders_schema_default": "full_v1" if ORDER_VERBOSE_DEFAULT else "lean_v1",
-                "watchlist_file": WATCHLIST_JSON_PATH,
-                "watchlist_file_exists": os.path.exists(WATCHLIST_JSON_PATH),
-                "default_wl_source": DEFAULT_WL_SOURCE,
-                "earnings_release": EARNINGS_RELEASE_PATH,
-                "earnings_release_exists": os.path.exists(EARNINGS_RELEASE_PATH),
-                "sectors_all": SECTORS_ALL_PATH,
-                "sectors_all_exists": os.path.exists(SECTORS_ALL_PATH),
-                "sectors_source_enabled": ENABLE_SECTORS_SOURCE,
-                # ★ v7
                 "wl_groups": WATCHLIST_GROUPS,
                 "wl_tasks_pending": pending_count(),
                 "agent_last_poll_ago": (round(time.time() - _LAST_AGENT_POLL[0], 1)
@@ -868,16 +792,12 @@ class StockRequestHandler(BaseHTTPRequestHandler):
             return
 
         if path == "/wl_groups":
-            self._reply(200, {"status": "ok", "groups": WATCHLIST_GROUPS,
-                              "url": WATCHLIST_URL})
+            self._reply(200, {"status": "ok", "groups": WATCHLIST_GROUPS, "url": WATCHLIST_URL})
             return
 
         if path == "/wl_tasks":
             _LAST_AGENT_POLL[0] = time.time()
             tasks = take_tasks(_qint(qs, "max", 3))
-            if tasks:
-                _log(f"[任务] 下发 {len(tasks)} 个给浏览器: "
-                     f"{[t['symbol'] + '->' + (t['group'] or '当前') for t in tasks]}")
             self._reply(200, {"status": "ok", "tasks": tasks, "server_time": time.time()})
             return
 
@@ -885,30 +805,13 @@ class StockRequestHandler(BaseHTTPRequestHandler):
             tid = qs.get("id", [""])[0]
             with _TASK_LOCK:
                 t = _TASKS.get(tid)
-                self._reply(200, _task_public(t) if t
-                            else {"status": "error", "message": "unknown task"})
+                self._reply(200, _task_public(t) if t else {"status": "error", "message": "unknown task"})
             return
 
         if path == "/wl_source":
             try:
                 src = (qs.get("src", [DEFAULT_WL_SOURCE])[0] or DEFAULT_WL_SOURCE)
-                self._reply(200, build_wl_source(src, back=_qint(qs, "back", 1),
-                                                 ahead=_qint(qs, "ahead", 0)))
-            except Exception as e:
-                self._reply(500, {"status": "error", "message": str(e)})
-            return
-
-        if path == "/earnings_release":
-            try:
-                self._reply(200, load_earnings_symbols(_qint(qs, "back", 1),
-                                                       _qint(qs, "ahead", 0)))
-            except Exception as e:
-                self._reply(500, {"status": "error", "message": str(e)})
-            return
-
-        if path == "/sectors_all":
-            try:
-                self._reply(200, build_wl_source("sectors"))
+                self._reply(200, build_wl_source(src, back=_qint(qs, "back", 1), ahead=_qint(qs, "ahead", 0)))
             except Exception as e:
                 self._reply(500, {"status": "error", "message": str(e)})
             return
@@ -925,23 +828,9 @@ class StockRequestHandler(BaseHTTPRequestHandler):
             self._reply(200, _load_json(WATCHLIST_JSON_PATH))
             return
 
-        if path == "/plot":
-            symbol = qs.get("symbol", [""])[0].strip().upper()
-            if not symbol:
-                self._reply(400, {"status": "error", "message": "no symbol provided"})
-                return
-            ok, err = launch_chart(symbol)
-            if ok:
-                _log(f"触发绘制图表(GET): {symbol}")
-                self._reply(200, {"status": "ok", "symbol": symbol})
-            else:
-                self._reply(500, {"status": "error", "message": err})
-            return
-
         self._reply(404, {"status": "error", "message": "not found"})
 
     def log_message(self, fmt, *args):
-        # 任务轮询很频繁，别刷屏
         try:
             line = fmt % args
         except Exception:
@@ -955,18 +844,7 @@ if __name__ == "__main__":
     _er = load_earnings_symbols()
     print("=" * 72)
     print(f"  Firstrade 本地桥接服务已启动: http://127.0.0.1:{PORT}")
-    print(f"  Python        : {PYTHON_EXEC}")
-    print(f"  图表脚本      : {STOCK_CHART_PY}  存在={os.path.exists(STOCK_CHART_PY)}")
-    print(f"  持仓存储      : {POSITIONS_JSON_PATH}  (覆盖式)")
-    print(f"  订单存储      : {ORDERS_JSON_PATH}  (追加式, "
-          f"{'full' if ORDER_VERBOSE_DEFAULT else 'LEAN 精简'}, "
-          f"{_file_size(ORDERS_JSON_PATH)/1024:.1f}KB)")
-    print(f"  自选股行情    : {WATCHLIST_JSON_PATH}  (覆盖式)")
-    print(f"  ★默认数据源   : {DEFAULT_WL_SOURCE}")
-    print(f"  财报日历      : {EARNINGS_RELEASE_PATH}  存在={_er['file_exists']}")
-    print(f"                  {_er['from']}  待同步={_er['count']}  {_er['symbols'][:20]}")
-    print(f"  Sectors_All   : {SECTORS_ALL_PATH}  启用={ENABLE_SECTORS_SOURCE}")
-    print(f"  ★远程添加分组 : {WATCHLIST_GROUPS}   POST /wl_add")
+    print(f"  远程添加支持全自动寻找与切换标签页")
     print("=" * 72, flush=True)
     server = ThreadingHTTPServer(("127.0.0.1", PORT), StockRequestHandler)
     try:

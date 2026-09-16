@@ -59,8 +59,7 @@
         "ORLY",
         "ROST",
         "SE",
-        "F",
-        "CVNA"
+        "F"
     ],
     "Consumer_Defensive": [
         "WMT",
@@ -167,9 +166,7 @@
         "AJG",
         "CM",
         "BNY",
-        "NDAQ",
-        "STT",
-        "COIN"
+        "STT"
     ],
     "Healthcare": [
         "LLY",
@@ -204,7 +201,9 @@
         "ARGX",
         "CAH",
         "TAK",
-        "MRNA"
+        "MRNA",
+        "BDX",
+        "NTRA"
     ],
     "Industrials": [
         "GE",
