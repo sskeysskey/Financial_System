@@ -176,6 +176,8 @@ function migrateFlags() {
       if (res.ftWlBack === undefined) patch.ftWlBack = 1;
       if (res.ftWlAhead === undefined) patch.ftWlAhead = 0;
       if (res.ftWlAgent === undefined) patch.ftWlAgent = true;
+      if (res.ftWlTargetGroup === undefined) patch.ftWlTargetGroup = 'ALL';   // ★ 默认目标分组
+      if (res.ftWlStrictSync === undefined) patch.ftWlStrictSync = true;      // ★ 默认严格同步
       if (res.ftWlRestoreGroup === undefined) patch.ftWlRestoreGroup = true;
       if (res.ftWlRestoreTab === undefined) patch.ftWlRestoreTab = true; // ★ 默认开启完成切回原 Tab
       if (Object.keys(patch).length) {

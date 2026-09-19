@@ -1,16 +1,16 @@
 {
  "_meta": {
-  "updated_at": 1789534104.454325,
-  "updated_at_str": "2026-09-16 12:48:24",
+  "updated_at": 1789630343.078725,
+  "updated_at_str": "2026-09-17 15:32:23",
   "count": 1,
   "mode": "overwrite"
  },
  "quotes": {
-  "TCOM": {
-   "symbol": "TCOM",
-   "last": "40.43",
-   "change_pct": "+3.01%",
-   "change_pct_num": 3.006369
+  "LEN": {
+   "symbol": "LEN",
+   "last": "76.62",
+   "change_pct": "-2.22%",
+   "change_pct_num": -2.22
   }
  }
 }

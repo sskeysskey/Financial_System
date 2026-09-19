@@ -166,7 +166,9 @@
         "AJG",
         "CM",
         "BNY",
-        "STT"
+        "STT",
+        "NDAQ",
+        "COIN"
     ],
     "Healthcare": [
         "LLY",
@@ -202,7 +204,7 @@
         "CAH",
         "TAK",
         "MRNA",
-        "BDX",
+        "EW",
         "NTRA"
     ],
     "Industrials": [
@@ -258,8 +260,7 @@
         "SPG",
         "DLR",
         "O",
-        "PSA",
-        "VMRK"
+        "PSA"
     ],
     "Technology": [
         "AAPL",
@@ -322,7 +323,8 @@
         "NOK",
         "COHR",
         "MSTR",
-        "UMC"
+        "UMC",
+        "ALAB"
     ],
     "Utilities": [
         "NEE",

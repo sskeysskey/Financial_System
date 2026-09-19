@@ -5,7 +5,7 @@
  *        → bridge_server.py 任务队列
  *        → Background 自动聚焦/切换到 watchlist Tab
  *        → 本脚本接收唤醒或每 2s 轮询领任务
- *        → 自动切到目标分组（买/买买/买买买/卖卖卖）
+ *        → 自动切到目标分组
  *        → 复用 watchlist.js 的 addOneSymbol() 完成添加
  *        → 去重 / 回报结果 / 自动切回原分组 & 原 Tab
  * ==========================================================================*/
@@ -151,7 +151,14 @@
     return gridRowCount();
   }
 
+  /* 优先复用 watchlist.js 的实现（v9 起导出 switchGroup），避免两份逻辑漂移 */
   async function switchGroup(target) {
+    const a = api();
+    if (a && typeof a.switchGroup === 'function') return a.switchGroup(target);
+    return switchGroupLocal(target);
+  }
+
+  async function switchGroupLocal(target) {
     const want = norm(target);
     if (!want) return { ok: false, error: '目标分组名为空' };
     if (norm(currentGroup()) === want) return { ok: true, changed: false };

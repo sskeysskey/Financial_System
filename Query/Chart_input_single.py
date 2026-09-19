@@ -1080,9 +1080,11 @@ class ChartWindow:
         if not self.trade_map:
             return
 
-        dates, prices = self.dates, self.prices
+        dates, prices, turnovers = self.dates, self.prices, self.turnovers
         dmin, dmax = min(dates).date(), max(dates).date()
         np_dates = np.array(dates)
+        latest_price = prices[-1] if prices else None
+        latest_turnover = turnovers[-1] if turnovers else None
 
         for d in sorted(self.trade_map.keys()):
             if d < dmin or d > dmax:
@@ -1111,14 +1113,40 @@ class ChartWindow:
                     self.sell_markers[dates[idx]] = txt
                     self.sell_scatter_points.append((sc, dates[idx], px, txt))
 
-        trade_offsets = [(45, 45), (-170, 45), (45, -95), (-170, -95)]
+        trade_offsets = [(45, 45), (-170, 45), (45, -110), (-170, -110)]
         all_trade_pts = self.buy_scatter_points + self.sell_scatter_points
         n_buy = len(self.buy_scatter_points)
+
         for i, (sc, date_v, price_v, txt) in enumerate(all_trade_pts):
             is_buy = i < n_buy
             color = BUY_COLOR if is_buy else SELL_COLOR
+
+            # 计算最新价差
+            diff_line = "最新价差: --"
+            try:
+                if latest_price is not None and price_v and price_v != 0:
+                    diff_pct = ((latest_price - price_v) / price_v) * 100
+                    diff_line = f"最新价差: {diff_pct:.2f}%"
+            except Exception:
+                pass
+
+            # 计算最新额差
+            vol_line = "最新额差: --"
+            try:
+                if turnovers and date_v in dates:
+                    t_idx = dates.index(date_v)
+                    turnover_v = turnovers[t_idx]
+                    if turnover_v and turnover_v > 0 and latest_turnover:
+                        vol_diff = ((latest_turnover - turnover_v) / turnover_v) * 100
+                        vol_line = f"最新额差: {vol_diff:.2f}%"
+            except Exception:
+                pass
+
+            final_annotation_text = f"{txt}\n{diff_line}\n{vol_line}"
+
             annotation = self.ax1.annotate(
-                txt, xy=(date_v, price_v), xytext=trade_offsets[i % len(trade_offsets)],
+                final_annotation_text, xy=(date_v, price_v),
+                xytext=trade_offsets[i % len(trade_offsets)],
                 textcoords="offset points",
                 bbox=dict(boxstyle="round", fc=NORD_THEME['widget_bg'], ec=color, alpha=0.85),
                 arrowprops=dict(arrowstyle="->", color=color),

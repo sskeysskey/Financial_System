@@ -1,18 +1,17 @@
 /* ============================================================================
- * Firstrade 自选股助手 watchlist.js  v8.1      仅在 /app/watchlist 生效
+ * Firstrade 自选股助手 watchlist.js  v9      仅在 /app/watchlist 生效
  *
- * v8.1 变更:
- *   ★ 修复空分组无法启动一键重建的问题：
- *        - 放宽表格就绪检测，空表状态下安全识别为 0 行
- *        - 当分组为空（0只）时，自动跳过清空阶段，直接进入比对与批量添加
- *        - 增强 0->1 行时的添加校验（支持 row-id 精准捕获）
- *   ★ 新增「清空当前分组」能力（逐行 三点菜单 → 删除）
- *   ★ 三步合一 pipeline：清空 → 比对差集 → 批量添加（一个按钮）
- *   ★ HUD 支持 phase(clear/diff/add) + ETA，清空阶段红色警示
+ * v9 变更（核心）:
+ *   ★ 阶段0：任务开始前自动切换到「目标分组」(默认 ALL)，结束后按开关切回原分组
+ *   ★ 增量对账(reconcile)：待加 = 源-现有；待删 = 现有-源；完全一致则零操作
+ *   ★ 严格同步开关：删除分组内多余标的（竖三点菜单 → 红色「删除」项）
+ *   ★ 支持按 symbol 精准删除（虚拟滚动自动寻行），不再只能删最顶行
+ *   ★ row-id 去重（ag-Grid pinned 三容器重复节点）、空表/无数据覆盖层识别
+ *   ★ 断点续跑持久化 待删队列 + 目标分组；运行中分组被改会自动切回
  * ==========================================================================*/
 (() => {
-  if (window.__FT_WATCHLIST_V8__) return;
-  window.__FT_WATCHLIST_V8__ = true;
+  if (window.__FT_WATCHLIST_V9__) return;
+  window.__FT_WATCHLIST_V9__ = true;
 
   const LOG = '[FT-WL]';
   const JOB_KEY = 'ftWlJob';
@@ -25,6 +24,9 @@
   /* ---------------- 数据源设置（popup 可改） ---------------- */
   const SRC = { mode: 'earnings', back: 1, ahead: 0 };
   const SRC_LABEL = { earnings: '财报日历', sectors: 'Sectors_All', manual: '本地清单' };
+
+  /* ---------------- ★ 目标分组 / 同步策略（popup 可改） ---------------- */
+  const TARGET = { group: 'ALL', strictSync: true, backToOrigin: true };
 
   /* ---------------- 可调参数（可用 storage.ftWlCfg 覆盖） ---------------- */
   const CFG = {
@@ -43,7 +45,7 @@
     checkpointEvery: 10,
     strictExact: true,
     scrollWait: 180,
-    /* ★ 清空相关 */
+    /* 删除相关 */
     clearDelay: 180,
     clearJitter: 140,
     clearScrollWait: 220,
@@ -52,14 +54,17 @@
     removeVerifyTimeout2: 1600,
     clearFailAbort: 6,
     clearReloadEvery: 400,
-    clearCountdown: 5
+    clearCountdown: 5,
+    /* 分组切换 */
+    groupSwitchTimeout: 7000,
+    gridSettleTimeout: 8000
   };
-  let RUN = Object.assign({}, CFG);          // 本次任务实际生效参数
+  let RUN = Object.assign({}, CFG);
 
   function prepareRun(total) {
     const keep = { clearDelay: RUN.clearDelay, clearJitter: RUN.clearJitter };
     RUN = Object.assign({}, CFG, keep);
-    if (total > 0 && total <= 30) {          // 小清单不必刷新页面、少跑一趟
+    if (total > 0 && total <= 30) {
       RUN.reloadEvery = 0;
       RUN.maxPasses = Math.min(RUN.maxPasses, 2);
     }
@@ -93,8 +98,14 @@
 
   const normKey = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
+  /* 分组名归一化：去尾部计数「ALL (123)」、去空格、大写 */
+  const normGroup = (s) => String(s || '')
+    .replace(/[（(][^）)]*[）)]\s*$/g, '')
+    .replace(/\s+/g, '')
+    .toUpperCase();
+
   function cleanText(el) {
-    const t = (el.innerText || el.textContent || '');
+    const t = (el && (el.innerText || el.textContent)) || '';
     return t.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
@@ -118,7 +129,6 @@
 
   const storeGet = (keys) => new Promise(r => chrome.storage.local.get(keys, r));
   const storeSet = (obj) => new Promise(r => chrome.storage.local.set(obj, r));
-  const storeDel = (k) => new Promise(r => chrome.storage.local.remove(k, r));
 
   /* ==========================================================================
    *                        弹层作用域定位
@@ -183,16 +193,140 @@
     return b || null;
   }
 
+  /* ==========================================================================
+   *                     ★ 分组选择器：识别 / 列举 / 切换
+   * ========================================================================*/
+  function groupTriggerEl() {
+    const all = Array.from(document.querySelectorAll('[data-select-trigger]'))
+      .filter(el => isVisible(el) && !el.closest(FORBIDDEN_SCOPE));
+    const inMain = all.filter(el => el.closest('main'));
+    return inMain[0] || all[0] || null;
+  }
+
   function groupName() {
-    const t = document.querySelector('main [data-select-trigger]') ||
-      document.querySelector('[data-select-trigger]');
+    const t = groupTriggerEl();
     return t ? cleanText(t) : '';
   }
 
-  /* 健壮的行数识别：支持空表与虚拟滚动 */
+  function groupOptions() {
+    const roots = Array.from(document.querySelectorAll(
+      '[data-select-content], [role="listbox"], [data-popover-content]'
+    )).filter(el => isVisible(el) && !el.closest(FORBIDDEN_SCOPE));
+    let items = [];
+    roots.forEach(r => {
+      items = items.concat(Array.from(r.querySelectorAll('[data-select-item], [role="option"]')));
+    });
+    if (!items.length) {
+      items = Array.from(document.querySelectorAll('[data-select-item], [role="option"]'))
+        .filter(el => !el.closest(FORBIDDEN_SCOPE) && !el.closest('[data-command-root]'));
+    }
+    return items.filter(isVisible);
+  }
+
+  function matchOption(opts, want) {
+    const w = normGroup(want);
+    if (!w) return null;
+    let hit = opts.find(o => normGroup(cleanText(o)) === w);
+    if (hit) return hit;
+    hit = opts.find(o => normGroup(cleanText(o)).startsWith(w));
+    if (hit) return hit;
+    return opts.find(o => normGroup(cleanText(o)).includes(w)) || null;
+  }
+
+  async function listGroupOptions() {
+    const trig = groupTriggerEl();
+    if (!trig) return { ok: false, error: '找不到分组选择器 [data-select-trigger]' };
+    if (trig.getAttribute('data-state') === 'open' || trig.getAttribute('aria-expanded') === 'true') {
+      sendKey(trig, 'Escape', 27);
+      await sleep(220);
+    }
+    fireMouseSeq(trig);
+    const opts = await waitFor(() => { const o = groupOptions(); return o.length ? o : null; }, 3500, 120);
+    const names = opts ? opts.map(o => cleanText(o)).filter(Boolean) : [];
+    sendKey(trig, 'Escape', 27);
+    return { ok: !!names.length, current: groupName(), options: names };
+  }
+
+  async function waitGridSettled(timeout) {
+    timeout = timeout || RUN.gridSettleTimeout || 8000;
+    const t0 = Date.now();
+    let last = null, same = 0;
+    while (Date.now() - t0 < timeout) {
+      const n = gridRowCount();
+      if (n !== null && n === last) {
+        same++;
+        if (same >= 3) return n;
+      } else { same = 0; last = n; }
+      await sleep(200);
+    }
+    return gridRowCount();
+  }
+
+  async function switchGroup(target) {
+    const want = normGroup(target);
+    if (!want) return { ok: false, error: '目标分组名为空' };
+    if (normGroup(groupName()) === want) return { ok: true, changed: false };
+
+    const trig = groupTriggerEl();
+    if (!trig) return { ok: false, error: '页面上找不到分组选择器 [data-select-trigger]' };
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (trig.getAttribute('data-state') === 'open' || trig.getAttribute('aria-expanded') === 'true') {
+        sendKey(trig, 'Escape', 27);
+        await sleep(250);
+      }
+      fireMouseSeq(trig);
+      const opts = await waitFor(() => { const o = groupOptions(); return o.length ? o : null; }, 3500, 120);
+      if (!opts) { await sleep(420); continue; }
+
+      const hit = matchOption(opts, target);
+      if (!hit) {
+        const names = opts.map(o => cleanText(o)).filter(Boolean);
+        sendKey(trig, 'Escape', 27);
+        return { ok: false, options: names, error: `分组「${target}」不存在（页面可选：${names.join(' / ') || '空'}）` };
+      }
+      const label = cleanText(hit);
+      fireMouseSeq(hit);
+      try { hit.click(); } catch (e) { }
+      const ok = await waitFor(() => {
+        const cur = normGroup(groupName());
+        return cur === want || cur === normGroup(label);
+      }, RUN.groupSwitchTimeout || 7000, 160);
+      if (ok) {
+        await waitGridSettled();
+        await sleep(300);
+        return { ok: true, changed: true, group: groupName() };
+      }
+      sendKey(trig, 'Escape', 27);
+      await sleep(500);
+    }
+    return { ok: false, error: `切换到分组「${target}」失败（重试 3 次）` };
+  }
+
+  /* ==========================================================================
+   *                    行数识别（去重 + 空表识别）
+   * ========================================================================*/
+  const ROW_EXCLUDE = '.ag-floating-top, .ag-floating-bottom, #app-quote-bar, header, #app-header';
+
+  function domRowIds() {
+    const set = new Set();
+    document.querySelectorAll('[row-id]').forEach(r => {
+      if (r.closest(ROW_EXCLUDE)) return;
+      const rid = r.getAttribute('row-id');
+      if (rid && symbolFromRowId(rid)) set.add(rid);
+    });
+    return set;
+  }
+
+  function gridSaysEmpty() {
+    const ov = document.querySelector('.ag-overlay-no-rows-wrapper, .ag-overlay-no-rows-center');
+    if (ov && isVisible(ov) && domRowIds().size === 0) return true;
+    return false;
+  }
+
   function gridRowCount() {
     const gs = Array.from(document.querySelectorAll('[role="grid"][aria-rowcount]'))
-      .filter(g => !g.closest('#app-quote-bar, header, #app-header'));
+      .filter(g => !g.closest(ROW_EXCLUDE));
     let best = null;
     gs.forEach(g => {
       const n = parseInt(g.getAttribute('aria-rowcount'), 10);
@@ -200,19 +334,13 @@
     });
     if (best !== null) return best;
 
-    // 兜底 1: 扫描 DOM 内的真实行
-    const rows = Array.from(document.querySelectorAll('[row-id]'))
-      .filter(r => !r.closest('.ag-floating-top, .ag-floating-bottom, #app-quote-bar, header, #app-header'));
-    if (rows.length > 0) return rows.length + 1;
-
-    // 兜底 2: 如果页面主组件已加载但确实没有数据行，返回 1（只有表头，0 数据行）
-    if (document.querySelector('.ag-root, [role="grid"], .ag-body-viewport, main') || findAddButton()) {
-      return 1;
-    }
+    const n = domRowIds().size;
+    if (n > 0) return n + 1;
+    if (gridSaysEmpty()) return 1;
+    if (document.querySelector('.ag-root, [role="grid"], .ag-body-viewport, main') || findAddButton()) return 1;
     return null;
   }
 
-  /* 表内数据行数（减去表头行） */
   function dataRowsTotal() {
     const n = gridRowCount();
     if (n === null) return 0;
@@ -235,8 +363,7 @@
   function scrapeRows(buf) {
     const rows = document.querySelectorAll('[row-id]');
     rows.forEach((row) => {
-      if (row.closest('.ag-floating-top, .ag-floating-bottom')) return;
-      if (row.closest('#app-quote-bar')) return;
+      if (row.closest(ROW_EXCLUDE)) return;
       const sym = symbolFromRowId(row.getAttribute('row-id'));
       if (!sym) return;
       const rec = buf[sym] || (buf[sym] = { symbol: sym });
@@ -385,9 +512,7 @@
 
   function assertSafeInput(input) {
     if (!input) throw new Error('输入框为空');
-    if (isForbiddenInput(input)) {
-      throw new Error('拒绝写入：命中了页头/报价条搜索框');
-    }
+    if (isForbiddenInput(input)) throw new Error('拒绝写入：命中了页头/报价条搜索框');
     if (!input.closest('[data-command-root], [data-popover-content], [role="dialog"]')) {
       throw new Error('拒绝写入：输入框不在「添加自选股」弹层内');
     }
@@ -450,10 +575,7 @@
       await sleep(110);
     }
     items = listItems();
-    return {
-      el: items[0] || null, exact: false,
-      firstValue: items[0] ? itemValue(items[0]) : ''
-    };
+    return { el: items[0] || null, exact: false, firstValue: items[0] ? itemValue(items[0]) : '' };
   }
 
   async function activateItem(wrapper) {
@@ -489,9 +611,8 @@
 
   function hasSymbolInGrid(sym) {
     const k = normKey(sym);
-    const rows = document.querySelectorAll('[row-id]');
-    for (const r of rows) {
-      const s = symbolFromRowId(r.getAttribute('row-id'));
+    for (const rid of domRowIds()) {
+      const s = symbolFromRowId(rid);
       if (s && normKey(s) === k) return true;
     }
     return false;
@@ -565,21 +686,25 @@
   }
 
   /* ==========================================================================
-   *                    ★ 清空当前分组（逐行 三点菜单 → 删除）
+   *          ★ 删除：竖三点菜单 → 红色「删除」项（可按 symbol 精准删）
    * ========================================================================*/
   function rowMenuButton(row) {
     return row.querySelector('[col-id="actions"] button[aria-haspopup="menu"]')
+      || row.querySelector('button[id^="watchlist-action-menu"]')
       || row.querySelector('button[aria-haspopup="menu"][data-dropdown-menu-trigger]')
       || row.querySelector('button[aria-haspopup="menu"]')
       || row.querySelector('[col-id="actions"] button')
       || null;
   }
 
+  function allDataRows() {
+    return Array.from(document.querySelectorAll('[row-id]'))
+      .filter(r => !r.closest(ROW_EXCLUDE) && symbolFromRowId(r.getAttribute('row-id')));
+  }
+
   function firstDeletableRow(skip) {
-    const rows = Array.from(document.querySelectorAll('[row-id]'))
-      .filter(r => !r.closest('.ag-floating-top, .ag-floating-bottom, #app-quote-bar, header, #app-header'));
     let best = null, bestIdx = Infinity;
-    for (const row of rows) {
+    for (const row of allDataRows()) {
       const rowId = row.getAttribute('row-id');
       const sym = symbolFromRowId(rowId);
       if (!sym) continue;
@@ -593,6 +718,44 @@
     return best;
   }
 
+  /* 按 symbol 找行（同一行会在 pinned-left/center/pinned-right 出现 3 次，
+     只有 pinned-right 那份带 actions 三点按钮） */
+  function pickRowBySymbol(sym) {
+    const k = normKey(sym);
+    for (const row of allDataRows()) {
+      const rowId = row.getAttribute('row-id');
+      const s = symbolFromRowId(rowId);
+      if (!s || normKey(s) !== k) continue;
+      const btn = rowMenuButton(row);
+      if (btn && isVisible(btn)) return { row, rowId, sym: s, btn };
+    }
+    return null;
+  }
+
+  /* 虚拟滚动：自动滚动寻找目标行 */
+  async function locateRow(sym) {
+    let hit = pickRowBySymbol(sym);
+    if (hit) return hit;
+
+    const s0 = scrollState();
+    s0.top = 0;
+    await sleep(RUN.clearScrollWait);
+    hit = pickRowBySymbol(sym);
+    if (hit) return hit;
+
+    let guard = 0;
+    for (; ;) {
+      if (job.stop || guard++ > 4000) break;
+      const s = scrollState();
+      if (s.top + s.clientH >= s.scrollH - 3) break;
+      s.top = s.top + Math.max(160, s.clientH - 120);
+      await sleep(RUN.clearScrollWait);
+      hit = pickRowBySymbol(sym);
+      if (hit) return hit;
+    }
+    return null;
+  }
+
   function menuRoots() {
     return Array.from(document.querySelectorAll('[data-dropdown-menu-content], [role="menu"]'))
       .filter(el => isVisible(el) && !el.closest(FORBIDDEN_SCOPE));
@@ -603,9 +766,14 @@
     for (let i = roots.length - 1; i >= 0; i--) {
       const items = Array.from(roots[i].querySelectorAll('[role="menuitem"], [data-dropdown-menu-item]'))
         .filter(isVisible);
-      const hit = items.find(x =>
-        /watchlist-remove/i.test(x.id || '') ||
-        /^(删除|移除|移除自选|删除自选|Remove|Remove from watchlist|Delete)$/i.test(cleanText(x)));
+      let hit = items.find(x => /watchlist-(remove|delete)/i.test(x.id || ''));
+      if (hit) return hit;
+      hit = items.find(x => /^(删除|移除|移出|删除自选|移除自选|Remove|Remove from watchlist|Delete)$/i.test(cleanText(x)));
+      if (hit) return hit;
+      hit = items.find(x => /删除|移除|移出|Remove|Delete/i.test(cleanText(x)) &&
+        /text-action-down|surface-tint-red|text-red|destructive/i.test(String(x.className || '')));
+      if (hit) return hit;
+      hit = items.find(x => /删除|移除|移出|Remove|Delete/i.test(cleanText(x)));
       if (hit) return hit;
     }
     return null;
@@ -624,23 +792,25 @@
     if (!dlgs.length) return false;
     const root = dlgs[dlgs.length - 1];
     const btns = Array.from(root.querySelectorAll('button')).filter(isVisible);
-    const ok = btns.find(b => /^(删除|移除|确定|确认|是|Remove|Delete|Confirm|Yes|OK)$/i.test(cleanText(b)));
+    const ok = btns.find(b => /^(删除|移除|移出|确定|确认|是|Remove|Delete|Confirm|Yes|OK)$/i.test(cleanText(b)));
     if (ok) { fireMouseSeq(ok); await sleep(240); return true; }
     return false;
   }
 
   function rowExists(rowId) {
-    const rows = document.querySelectorAll('[row-id]');
-    for (const r of rows) if (r.getAttribute('row-id') === rowId) return true;
+    for (const r of document.querySelectorAll('[row-id]')) {
+      if (r.getAttribute('row-id') === rowId) return true;
+    }
     return false;
   }
 
-  async function waitRowGone(rowId, before, timeout) {
+  async function waitRowGone(rowId, before, timeout, sym) {
     const t0 = Date.now();
     while (Date.now() - t0 < timeout) {
       const cur = gridRowCount();
       if (before !== null && cur !== null && cur < before) return true;
       if (!rowExists(rowId)) return true;
+      if (sym && !hasSymbolInGrid(sym)) return true;
       await sleep(120);
     }
     return false;
@@ -652,7 +822,7 @@
     const root = roots[roots.length - 1];
     for (let i = 0; i < 12; i++) {
       const hl = root.querySelector('[data-highlighted], [data-highlighted="true"], [aria-selected="true"]');
-      if (hl && (/watchlist-remove/i.test(hl.id || '') || /删除|移除|Remove|Delete/i.test(cleanText(hl)))) {
+      if (hl && (/watchlist-(remove|delete)/i.test(hl.id || '') || /删除|移除|移出|Remove|Delete/i.test(cleanText(hl)))) {
         sendKey(root, 'Enter', 13);
         await sleep(220);
         return true;
@@ -663,17 +833,12 @@
     return false;
   }
 
-  async function deleteTopRow(skip) {
-    const s = scrollState();
-    if (s.top > 2) { s.top = 0; await sleep(RUN.clearScrollWait); }
-
-    let tgt = firstDeletableRow(skip);
-    if (!tgt) { await sleep(350); tgt = firstDeletableRow(skip); }
-    if (!tgt) return { status: 'empty' };
-
+  /* 核心删除动作：给定一行 → 打开竖三点 → 点「删除」→ 校验 */
+  async function removeViaRowMenu(tgt) {
     const { btn, sym, rowId } = tgt;
     const before = gridRowCount();
 
+    try { tgt.row.scrollIntoView({ block: 'nearest' }); } catch (e) { }
     closeMenus();
     await sleep(90);
 
@@ -697,13 +862,11 @@
     await sleep(140);
     await clickDangerConfirm();
 
-    let gone = await waitRowGone(rowId, before, RUN.removeVerifyTimeout);
-    if (!gone) {
-      if (findRemoveMenuItem()) {
-        await keyboardRemove();
-        await clickDangerConfirm();
-        gone = await waitRowGone(rowId, before, RUN.removeVerifyTimeout2);
-      }
+    let gone = await waitRowGone(rowId, before, RUN.removeVerifyTimeout, sym);
+    if (!gone && findRemoveMenuItem()) {
+      await keyboardRemove();
+      await clickDangerConfirm();
+      gone = await waitRowGone(rowId, before, RUN.removeVerifyTimeout2, sym);
     }
     closeMenus();
     return gone
@@ -711,6 +874,22 @@
       : { status: 'failed', symbol: sym, rowId, error: '点了删除但行未消失' };
   }
 
+  async function deleteTopRow(skip) {
+    const s = scrollState();
+    if (s.top > 2) { s.top = 0; await sleep(RUN.clearScrollWait); }
+    let tgt = firstDeletableRow(skip);
+    if (!tgt) { await sleep(350); tgt = firstDeletableRow(skip); }
+    if (!tgt) return { status: 'empty' };
+    return removeViaRowMenu(tgt);
+  }
+
+  async function deleteSymbol(sym) {
+    const tgt = await locateRow(sym);
+    if (!tgt) return { status: 'missing', symbol: sym };
+    return removeViaRowMenu(tgt);
+  }
+
+  /* ---------------- 备份 ---------------- */
   async function backupCurrentList() {
     renderHud('正在备份当前分组清单（删除前保险）…');
     const buf = await collectWatchlist(n => renderHud(`备份中：已读取 ${n} 只…`));
@@ -725,17 +904,29 @@
     return symbols;
   }
 
-  async function runClearPhase() {
+  /* ---------------- 分组守卫：被改了自动切回 ---------------- */
+  async function guardGroup() {
+    const g = groupName();
+    if (!g || !job.group || normGroup(g) === normGroup(job.group)) return true;
+    renderHud(`⚠ 分组变成了「${g}」，正在自动切回「${job.group}」…`);
+    const r = await switchGroup(job.group);
+    if (r.ok) return true;
+    job.paused = true;
+    renderHud(`⚠ 分组已从「${job.group}」变为「${g}」且切回失败，已暂停`);
+    await sleep(1200);
+    return false;
+  }
+
+  /* ---------------- 删除阶段 A：清空整个分组 ---------------- */
+  async function runClearAllPhase() {
     job.phase = 'clear';
     job.clearStartedAt = job.clearStartedAt || Date.now();
     job.clearTotal = (job.cleared || 0) + (dataRowsTotal() || 0);
 
-    if (job.clearTotal <= 0 && !firstDeletableRow()) {
-      return 'done';
-    }
+    if (job.clearTotal <= 0 && !firstDeletableRow()) return 'done';
 
     for (let i = RUN.clearCountdown; i > 0 && !job.stop; i--) {
-      renderHud(`⚠️ ${i} 秒后开始删除「${job.group || '当前分组'}」内 ${job.clearTotal} 只…点「停止」可取消`);
+      renderHud(`⚠️ ${i} 秒后开始清空「${job.group || '当前分组'}」内 ${job.clearTotal} 只…点「停止」可取消`);
       await sleep(1000);
     }
     if (job.stop) return 'stopped';
@@ -744,14 +935,7 @@
     while (!job.stop && guard++ < 6000) {
       while (job.paused && !job.stop) { renderHud(); await sleep(400); }
       if (job.stop) break;
-
-      const grp = groupName();
-      if (grp && job.group && grp !== job.group) {
-        job.paused = true;
-        renderHud(`⚠ 分组已从「${job.group}」变为「${grp}」，已暂停`);
-        await sleep(1200);
-        continue;
-      }
+      if (!(await guardGroup())) continue;
 
       const left = dataRowsTotal();
       if (left === 0 && !firstDeletableRow()) break;
@@ -760,9 +944,7 @@
       if (r.status === 'empty') break;
 
       if (r.status === 'removed') {
-        job.cleared++;
-        job.current = r.symbol;
-        consec = 0;
+        job.cleared++; job.current = r.symbol; consec = 0;
       } else {
         consec++;
         if (r.rowId) job.clearSkip.add(r.rowId);
@@ -792,6 +974,57 @@
 
     closeMenus();
     job.clearSkip.clear();
+    job.removeQueue = [];
+    return job.stop ? 'stopped' : 'done';
+  }
+
+  /* ---------------- 删除阶段 B：只删指定 symbol（严格同步用） ---------------- */
+  async function runRemovePhase(list, silentCountdown) {
+    job.phase = 'clear';
+    job.removeQueue = (list || []).slice();
+    job.clearStartedAt = job.clearStartedAt || Date.now();
+    job.clearTotal = (job.cleared || 0) + job.removeQueue.length;
+    if (!job.removeQueue.length) return 'done';
+
+    if (!silentCountdown) {
+      for (let i = RUN.clearCountdown; i > 0 && !job.stop; i--) {
+        renderHud(`⚠️ ${i} 秒后从「${job.group}」删除 ${job.removeQueue.length} 只「不在数据源里」的标的…点「停止」可取消`);
+        await sleep(1000);
+      }
+    }
+    if (job.stop) return 'stopped';
+
+    let consec = 0;
+    while (job.removeQueue.length && !job.stop) {
+      while (job.paused && !job.stop) { renderHud(); await sleep(400); }
+      if (job.stop) break;
+      if (!(await guardGroup())) continue;
+
+      const sym = job.removeQueue[0];
+      job.current = sym;
+      renderHud();
+
+      const r = await deleteSymbol(sym);
+      job.removeQueue.shift();
+
+      if (r.status === 'removed') { job.cleared++; consec = 0; }
+      else if (r.status === 'missing') { consec = 0; log('待删标的已不在表内', sym); }
+      else {
+        job.clearFailed.push({ symbol: sym, error: r.error || '未知' });
+        job.lastError = r.error || '';
+        consec++;
+        if (consec >= RUN.clearFailAbort) {
+          job.paused = true; consec = 0;
+          renderHud(`⚠ 连续删除失败（${job.lastError}），已自动暂停，请人工检查`);
+          await persist(true);
+        }
+      }
+      renderHud();
+
+      if ((job.cleared + job.clearFailed.length) % RUN.checkpointEvery === 0) await persist(true);
+      await sleep(RUN.clearDelay + Math.random() * RUN.clearJitter);
+    }
+    closeMenus();
     return job.stop ? 'stopped' : 'done';
   }
 
@@ -799,23 +1032,28 @@
   let hudEl = null;
   let hudMode = 'job';
   const HUD_TITLE = {
-    job: '自选股一键补齐',
+    job: '自选股同步(对账)',
     scan: '自选股行情抓取',
     diff: '差集比对',
-    test: '单只添加自检',
+    test: '单只操作自检',
     task: '🤖 远程添加(来自 Python)'
   };
-  const PHASE_LABEL = { idle: '待开始', clear: '清空中', diff: '比对中', add: '添加中' };
+  const PHASE_LABEL = {
+    idle: '待开始', group: '切换分组', diff: '比对中',
+    clear: '删除中', add: '添加中', verify: '复核中'
+  };
 
   function buildHud() {
     hudEl = document.createElement('div');
     hudEl.id = 'ft-wl-hud';
     hudEl.innerHTML = `
       <div class="ft-wl-head">
-        <span class="ft-wl-title">自选股一键补齐</span>
+        <span class="ft-wl-title">自选股同步(对账)</span>
         <span class="ft-wl-x" title="隐藏面板">✕</span>
       </div>
       <div class="ft-wl-line ft-wl-job-only" id="ft-wl-group">分组: --</div>
+      <div class="ft-wl-line ft-wl-job-only" id="ft-wl-sub"
+           style="color:#81A1C1 !important;font-size:11px !important;">--</div>
       <div class="ft-wl-bar ft-wl-job-only"><i id="ft-wl-bar-i"></i></div>
       <div class="ft-wl-line ft-wl-job-only" id="ft-wl-stat">等待开始</div>
       <div class="ft-wl-line ft-wl-cur" id="ft-wl-cur"></div>
@@ -865,7 +1103,7 @@
     const el = ensureHud('job');
     const clearing = job.phase === 'clear';
     el.classList.toggle('ft-wl-danger', clearing);
-    el.querySelector('.ft-wl-title').textContent = clearing ? '⚠️ 正在清空自选股分组' : HUD_TITLE.job;
+    el.querySelector('.ft-wl-title').textContent = clearing ? '⚠️ 正在删除自选股标的' : HUD_TITLE.job;
 
     let total, done, stat;
     if (clearing) {
@@ -876,16 +1114,19 @@
     } else {
       total = job.total || 0;
       done = job.done || 0;
-      const pct = total ? Math.min(100, Math.round(done / total * 100)) : 0;
-      stat = `${done}/${total} (${pct}%)  成功 ${job.added}  失败 ${job.failed.length}` +
+      const p = total ? Math.min(100, Math.round(done / total * 100)) : 0;
+      stat = `${done}/${total} (${p}%)  成功 ${job.added}  失败 ${job.failed.length}` +
         etaText(done, total, job.addStartedAt) + (job.paused ? '  ⏸已暂停' : '');
     }
     const pct = total ? Math.min(100, Math.round(done / total * 100)) : 0;
 
     el.querySelector('#ft-wl-group').textContent =
       `分组: ${job.group || '--'}｜${PHASE_LABEL[job.phase] || job.phase}` +
-      (clearing ? '' : `｜第 ${job.pass || 1} 趟`) +
-      `｜源: ${SRC_LABEL[SRC.mode] || SRC.mode}`;
+      (clearing ? '' : `｜第 ${job.pass || 1} 趟`);
+    el.querySelector('#ft-wl-sub').textContent =
+      `目标「${job.targetGroup || '-'}」｜源 ${SRC_LABEL[SRC.mode] || SRC.mode}` +
+      `｜待删 ${job.removeQueue.length}｜待加 ${job.queue.length}` +
+      `｜严格同步 ${job.strictSync ? '开' : '关'}`;
     el.querySelector('#ft-wl-bar-i').style.width = pct + '%';
     el.querySelector('#ft-wl-stat').textContent = stat;
     el.querySelector('#ft-wl-cur').textContent = extra || (job.current ? `当前: ${job.current}` : '');
@@ -916,9 +1157,11 @@
   const job = {
     running: false, paused: false, stop: false,
     phase: 'idle', clearFirst: false, clearOnly: false,
+    strictSync: true, targetGroup: 'ALL', originGroup: '',
     group: '', pass: 1, total: 0, done: 0, added: 0,
     failed: [], queue: [], current: '', lastError: '',
     cleared: 0, clearTotal: 0, clearFailed: [], clearSkip: new Set(),
+    removeQueue: [], backedUp: false,
     clearStartedAt: 0, addStartedAt: 0,
     startedAt: 0, sinceReload: 0, sinceReopen: 0,
     srcFrom: '', srcCount: 0, haveCount: 0
@@ -933,11 +1176,13 @@
   async function persist(autoResume) {
     await storeSet({
       [JOB_KEY]: {
-        v: 8, phase: job.phase, clearFirst: job.clearFirst, clearOnly: job.clearOnly,
+        v: 9, phase: job.phase, clearFirst: job.clearFirst, clearOnly: job.clearOnly,
+        strictSync: job.strictSync, targetGroup: job.targetGroup, originGroup: job.originGroup,
         group: job.group, pass: job.pass, total: job.total, done: job.done,
         added: job.added, failed: job.failed, queue: job.queue, src: SRC.mode,
         cleared: job.cleared, clearTotal: job.clearTotal, clearFailed: job.clearFailed,
-        backedUp: true, autoResume: !!autoResume, ts: Date.now()
+        removeQueue: job.removeQueue, backedUp: job.backedUp,
+        autoResume: !!autoResume, ts: Date.now()
       }
     });
   }
@@ -966,9 +1211,7 @@
     const r = await bg({ action: 'FT_WL_SOURCE', src: SRC.mode, back: SRC.back, ahead: SRC.ahead });
     if (r.ok && r.data) {
       const d = r.data;
-      if (d.status === 'disabled') {
-        throw new Error(d.message || `数据源 ${SRC.mode} 已在 bridge_server.py 中停用`);
-      }
+      if (d.status === 'disabled') throw new Error(d.message || `数据源 ${SRC.mode} 已在 bridge_server.py 中停用`);
       if (d.status === 'error') throw new Error(d.message || '数据源返回错误');
       if (Array.isArray(d.symbols)) {
         return { symbols: d.symbols.slice(), from: d.from || SRC.mode, detail: d.dates || null };
@@ -980,28 +1223,38 @@
     throw new Error('拿不到 symbol 源：' + (r.error || '桥接不可用') + '，且未设置备用清单');
   }
 
+  /* ★ 双向差集 */
   async function computeDiff() {
     const src = await getSourceSymbols();
-    hudInfo(`来源 ${src.from}：${src.symbols.length} 只，正在抓取当前自选股全表…`);
-    const have = await collectWatchlist(n => hudInfo(`已读取 ${n} 只自选股…`));
-    const haveSet = new Set(Object.keys(have).map(normKey));
+    hudInfo(`来源 ${src.from}：${src.symbols.length} 只，正在抓取「${groupName()}」全表…`);
+    const have = await collectWatchlist(n => hudInfo(`已读取 ${n} 只…`));
+    const haveSymbols = Object.keys(have);
+    const haveSet = new Set(haveSymbols.map(normKey));
+    const srcSet = new Set(src.symbols.map(normKey));
     const missing = src.symbols.filter(s => !haveSet.has(normKey(s)));
+    const extra = haveSymbols.filter(s => !srcSet.has(normKey(s)));
     return {
       srcFrom: src.from, srcCount: src.symbols.length, srcDetail: src.detail,
-      srcSymbols: src.symbols, haveCount: Object.keys(have).length, missing
+      srcSymbols: src.symbols, haveCount: haveSymbols.length, haveSymbols,
+      missing, extra
     };
   }
 
   /* ================= 一键 pipeline ================= */
   function resetJob(opts) {
+    opts = opts || {};
     job.running = true; job.paused = false; job.stop = false;
     job.phase = 'idle';
-    job.clearFirst = !!(opts && (opts.clearFirst || opts.clearOnly));
-    job.clearOnly = !!(opts && opts.clearOnly);
-    job.group = groupName();
+    job.clearFirst = !!opts.clearFirst;
+    job.clearOnly = !!opts.clearOnly;
+    job.strictSync = (opts.strictSync !== undefined) ? !!opts.strictSync : !!TARGET.strictSync;
+    job.targetGroup = (opts.targetGroup || TARGET.group || '').trim();
+    job.originGroup = groupName();
+    job.group = job.originGroup;
     job.pass = 1; job.total = 0; job.done = 0; job.added = 0;
     job.failed = []; job.queue = []; job.current = ''; job.lastError = '';
     job.cleared = 0; job.clearTotal = 0; job.clearFailed = []; job.clearSkip = new Set();
+    job.removeQueue = []; job.backedUp = false;
     job.clearStartedAt = 0; job.addStartedAt = 0;
     job.startedAt = Date.now(); job.sinceReload = 0; job.sinceReopen = 0;
     job.srcFrom = ''; job.srcCount = 0; job.haveCount = 0;
@@ -1015,13 +1268,9 @@
     if (!isWatchlistPage()) return { ok: false, error: '当前不在 /app/watchlist 页面' };
     if (job.running) return { ok: false, error: '任务已在运行中' };
     if (scanState.running) return { ok: false, error: '行情抓取进行中，请稍后再启动' };
-    if (!opts.clearOnly && !findAddButton()) {
-      return { ok: false, error: '找不到「添加自选股」按钮，请确认页面已加载完成' };
-    }
 
-    // ★ 优化：只要页面主要结构或添加按钮就绪，即使空表格也允许启动
-    const hasGridOrContainer = document.querySelector('.ag-root, [role="grid"], .ag-body-viewport, main, [data-select-trigger]');
-    if (!hasGridOrContainer && !findAddButton()) {
+    const pageReady = document.querySelector('.ag-root, [role="grid"], .ag-body-viewport, main, [data-select-trigger]');
+    if (!pageReady && !findAddButton()) {
       return { ok: false, error: '未识别到自选股页面元素，请等页面加载完成后重试' };
     }
 
@@ -1038,6 +1287,7 @@
 
     return {
       ok: true, started: true, group: job.group,
+      targetGroup: job.targetGroup, strictSync: job.strictSync,
       clearFirst: job.clearFirst, clearOnly: job.clearOnly,
       rows: dataRowsTotal()
     };
@@ -1046,63 +1296,100 @@
   async function runPipeline(opts) {
     opts = opts || {};
 
-    /* ---------- 阶段 1：清空（★ 针对空分组自动跳过） ---------- */
-    if ((job.clearFirst || job.clearOnly) && opts.startPhase !== 'add') {
-      const currentRows = dataRowsTotal();
-      const hasDeletable = !!firstDeletableRow();
-
-      if (currentRows === 0 && !hasDeletable) {
-        log('当前分组已为空，跳过清空阶段');
-        renderHud('当前分组已为空，直接进入比对与添加阶段…');
-        await sleep(350);
-        if (job.clearOnly) {
-          toast('ℹ️ 当前分组已是空的，无需清空');
-          return finishJob();
-        }
-      } else {
-        if (!opts.skipBackup) {
-          try { await backupCurrentList(); }
-          catch (e) { log('备份失败（继续执行）', e); }
-        }
-        if (job.stop) return finishJob();
-        const r = await runClearPhase();
-        if (r === 'reload') return;
-        if (r === 'stopped') return finishJob();
-        renderHud(`✅ 清空完成：删除 ${job.cleared} 只，失败 ${job.clearFailed.length}`);
-        await sleep(800);
-        if (job.clearOnly) return finishJob();
+    /* ---------- 阶段 0：切到目标分组（如 ALL） ---------- */
+    job.phase = 'group';
+    if (!job.originGroup) job.originGroup = groupName();
+    const want = job.targetGroup;
+    if (want && normGroup(groupName()) !== normGroup(want)) {
+      renderHud(`正在从「${job.originGroup || '?'}」切换到目标分组「${want}」…`);
+      const sr = await switchGroup(want);
+      if (!sr.ok) {
+        job.lastError = sr.error || '切换分组失败';
+        renderHud('❌ ' + job.lastError);
+        toast('❌ ' + job.lastError);
+        return finishJob();
       }
+      await waitGridSettled();
     }
-    if (job.clearOnly) return finishJob();
+    job.group = groupName() || want;
     if (job.stop) return finishJob();
 
-    /* ---------- 阶段 2：比对差集 ---------- */
-    if (opts.resumeAdd && job.queue.length) {
-      job.phase = 'add';
+    if (!job.clearOnly) {
+      const addBtn = await waitFor(findAddButton, 6000, 200);
+      if (!addBtn) {
+        job.lastError = `分组「${job.group}」里找不到「添加自选股」按钮（该分组可能不支持添加）`;
+        renderHud('❌ ' + job.lastError);
+        toast('❌ ' + job.lastError);
+        return finishJob();
+      }
+    }
+    renderHud(`已定位到分组「${job.group}」（表内 ${dataRowsTotal()} 只）`);
+    await sleep(300);
+
+    /* ---------- 阶段 1：比对（源 ↔ 现有），双向差集 ---------- */
+    if (opts.resume && (job.queue.length || job.removeQueue.length)) {
       prepareRun(job.queue.length);
+      renderHud(`续跑：待删 ${job.removeQueue.length}｜待加 ${job.queue.length}`);
     } else {
       job.phase = 'diff';
       renderHud('正在读取数据源并比对差集…');
       const d = await computeDiff();
       if (job.stop) return finishJob();
-      job.queue = d.missing.slice();
-      job.total = job.queue.length;
       job.srcFrom = d.srcFrom; job.srcCount = d.srcCount; job.haveCount = d.haveCount;
+
+      if (job.clearOnly) {
+        job.queue = [];
+        job.removeQueue = d.haveSymbols.slice();
+      } else if (job.clearFirst) {
+        job.queue = d.srcSymbols.slice();
+        job.removeQueue = d.haveSymbols.slice();
+      } else {
+        job.queue = d.missing.slice();
+        job.removeQueue = job.strictSync ? d.extra.slice() : [];
+      }
+      job.total = job.queue.length;
       prepareRun(job.total);
-      renderHud(`来源:${d.srcFrom} 共${d.srcCount}｜已有${d.haveCount}｜待加${job.total}`);
-      if (!job.total) {
-        toast('✅ 数据源里的标的已全部在自选股中，无需补齐');
+      renderHud(`源 ${d.srcFrom}: ${d.srcCount} 只｜「${job.group}」现有 ${d.haveCount}` +
+        `｜待删 ${job.removeQueue.length}｜待加 ${job.total}`);
+      await sleep(700);
+
+      if (!job.removeQueue.length && !job.queue.length) {
+        toast(`✅ 分组「${job.group}」已与数据源完全一致，无需任何改动`);
+        renderHud(`✅ 已一致：${d.haveCount} 只，未做任何点击`);
         return finishJob();
       }
-      job.phase = 'add';
+    }
+
+    /* ---------- 阶段 2：删除（多余 / 全清） ---------- */
+    if (job.removeQueue.length && !job.stop) {
+      if (!job.backedUp) {
+        try { await backupCurrentList(); job.backedUp = true; }
+        catch (e) { log('备份失败（继续执行）', e); }
+      }
+      if (job.stop) return finishJob();
+
+      const wipeAll = (job.clearFirst || job.clearOnly);
+      const r = wipeAll ? await runClearAllPhase() : await runRemovePhase(job.removeQueue);
+      if (r === 'reload') return;
+      if (r === 'stopped') return finishJob();
+      renderHud(`✅ 删除阶段完成：删除 ${job.cleared} 只，失败 ${job.clearFailed.length}`);
+      await sleep(700);
+    }
+    if (job.clearOnly || job.stop) return finishJob();
+
+    if (!job.queue.length) {
+      renderHud('无需添加，进入复核…');
     }
 
     /* ---------- 阶段 3：批量添加 ---------- */
+    job.phase = 'add';
     job.addStartedAt = job.addStartedAt || Date.now();
     try {
       const inp = await ensureInput();
       assertSafeInput(inp);
       log('自检通过，输入框 =', inp.id || inp.placeholder);
+      pressEscape();
+      await sleep(200);
     } catch (e) {
       job.lastError = '输入框自检失败: ' + String((e && e.message) || e);
       renderHud('❌ ' + job.lastError);
@@ -1119,17 +1406,11 @@
     let consecutiveFail = 0;
 
     for (; ;) {
+      job.phase = 'add';
       while (job.queue.length && !job.stop) {
         while (job.paused && !job.stop) { renderHud(); await sleep(400); }
         if (job.stop) break;
-
-        const g = groupName();
-        if (g && job.group && g !== job.group) {
-          job.paused = true;
-          renderHud(`⚠ 分组已从「${job.group}」变为「${g}」，已暂停`);
-          await sleep(1200);
-          continue;
-        }
+        if (!(await guardGroup())) continue;
 
         const sym = job.queue[0];
         job.current = sym;
@@ -1182,11 +1463,27 @@
 
       if (job.stop || job.pass >= RUN.maxPasses) break;
 
-      renderHud('本趟结束，正在复核是否有漏加…');
+      /* ---------- 阶段 4：复核（缺的补加，多的补删） ---------- */
+      job.phase = 'verify';
+      renderHud('本趟结束，正在复核分组与数据源是否一致…');
       try {
+        if (!(await guardGroup())) continue;
         const d = await computeDiff();
-        if (!d.missing.length) break;
+        const extra = job.strictSync ? d.extra : [];
+        if (!d.missing.length && !extra.length) {
+          renderHud('✅ 复核通过：分组与数据源一致');
+          break;
+        }
         job.pass++;
+        if (extra.length) {
+          renderHud(`复核发现 ${extra.length} 只多余，正在删除…`);
+          const rr = await runRemovePhase(extra, true);
+          if (rr === 'stopped') break;
+        }
+        if (!d.missing.length) {
+          if (job.pass >= RUN.maxPasses) break;
+          continue;
+        }
         job.queue = d.missing.slice();
         job.total = job.done + job.queue.length;
         job.sinceReload = 0;
@@ -1203,21 +1500,37 @@
     job.phase = 'idle';
     syncBusy();
     await persist(false);
+
     const bits = [];
-    if (job.clearFirst && job.cleared > 0) bits.push(`删除 ${job.cleared}（失败 ${job.clearFailed.length}）`);
+    if (job.cleared > 0 || job.clearFailed.length) bits.push(`删除 ${job.cleared}（失败 ${job.clearFailed.length}）`);
     if (!job.clearOnly) bits.push(`新增 ${job.added}（失败 ${job.failed.length}）`);
     const summary = bits.join(' ｜ ') || '无操作';
     renderHud(job.stop ? '⏹ 已手动停止：' + summary : `✅ 完成：${summary}`);
     toast(job.stop ? '⏹ 自选股任务已停止' : `✅ 自选股任务完成：${summary}`);
 
+    /* 先在目标分组抓一次「变更%」，再切回原分组 */
     if (!job.stop && !job.clearOnly) { try { await fullScanQuotes(true); } catch (e) { } }
+
+    try {
+      if (TARGET.backToOrigin && job.originGroup &&
+        normGroup(groupName()) !== normGroup(job.originGroup)) {
+        renderHud(`正在切回原分组「${job.originGroup}」…`);
+        await switchGroup(job.originGroup);
+        renderHud(`✅ ${summary}｜已切回「${job.originGroup}」`);
+      }
+    } catch (e) { log('切回原分组失败', e); }
   }
 
   async function resumeJob(saved) {
-    resetJob({ clearFirst: saved.clearFirst, clearOnly: saved.clearOnly });
+    resetJob({
+      clearFirst: saved.clearFirst, clearOnly: saved.clearOnly,
+      strictSync: saved.strictSync, targetGroup: saved.targetGroup || TARGET.group
+    });
+    job.originGroup = saved.originGroup || job.originGroup;
     job.group = saved.group || groupName();
     job.pass = saved.pass || 1;
     job.queue = saved.queue || [];
+    job.removeQueue = saved.removeQueue || [];
     job.total = saved.total || job.queue.length;
     job.done = saved.done || 0;
     job.added = saved.added || 0;
@@ -1225,15 +1538,11 @@
     job.cleared = saved.cleared || 0;
     job.clearTotal = saved.clearTotal || 0;
     job.clearFailed = saved.clearFailed || [];
-    job.phase = saved.phase === 'clear' ? 'clear' : 'add';
+    job.backedUp = !!saved.backedUp;
     cleanNavSearch();
     ensureHud('job');
     renderHud('已从上次进度续跑');
-    runPipeline({
-      skipBackup: true,
-      startPhase: job.phase === 'clear' ? 'clear' : 'add',
-      resumeAdd: job.phase !== 'clear'
-    }).catch(e => {
+    runPipeline({ resume: true }).catch(e => {
       job.lastError = String((e && e.message) || e);
       renderHud('❌ ' + job.lastError);
       finishJob();
@@ -1289,7 +1598,8 @@
   /* ================= 设置 & 引导 ================= */
   function loadSettings() {
     chrome.storage.local.get(
-      ['ftDebug', 'ftAutoWatchlist', 'ftWlCfg', 'ftWlSource', 'ftWlBack', 'ftWlAhead'],
+      ['ftDebug', 'ftAutoWatchlist', 'ftWlCfg', 'ftWlSource', 'ftWlBack', 'ftWlAhead',
+        'ftWlTargetGroup', 'ftWlStrictSync', 'ftWlRestoreGroup'],
       (res) => {
         DEBUG = !!res.ftDebug;
         AUTO_WATCHLIST = res.ftAutoWatchlist === true;
@@ -1299,43 +1609,46 @@
         const a = parseInt(res.ftWlAhead, 10);
         SRC.back = Number.isFinite(b) ? Math.max(0, b) : 1;
         SRC.ahead = Number.isFinite(a) ? Math.max(0, a) : 0;
+        TARGET.group = (res.ftWlTargetGroup === undefined || res.ftWlTargetGroup === null ||
+          String(res.ftWlTargetGroup).trim() === '') ? 'ALL' : String(res.ftWlTargetGroup).trim();
+        TARGET.strictSync = res.ftWlStrictSync !== false;
+        TARGET.backToOrigin = res.ftWlRestoreGroup !== false;
         if (!job.running) RUN = Object.assign({}, CFG);
-        log('设置: AUTO_WATCHLIST =', AUTO_WATCHLIST, 'SRC =', SRC);
+        log('设置: AUTO =', AUTO_WATCHLIST, 'SRC =', SRC, 'TARGET =', TARGET);
       });
   }
   chrome.storage.onChanged.addListener((c, area) => {
     if (area !== 'local') return;
-    if (c.ftDebug || c.ftAutoWatchlist || c.ftWlCfg || c.ftWlSource || c.ftWlBack || c.ftWlAhead) loadSettings();
+    if (c.ftDebug || c.ftAutoWatchlist || c.ftWlCfg || c.ftWlSource || c.ftWlBack ||
+      c.ftWlAhead || c.ftWlTargetGroup || c.ftWlStrictSync || c.ftWlRestoreGroup) loadSettings();
   });
 
   async function bootstrap() {
     loadSettings();
     if (!isWatchlistPage()) return;
 
-    // ★ 放宽初始化等待，空表也能正确载入
     await waitFor(() => (document.querySelector('.ag-root, [role="grid"], main') &&
       (findAddButton() || document.querySelector('[role="grid"]'))), 25000, 400);
 
     const st = await storeGet([JOB_KEY]);
     const saved = st[JOB_KEY];
     const hasWork = saved && saved.autoResume &&
-      ((saved.phase === 'clear') || (Array.isArray(saved.queue) && saved.queue.length));
+      ((Array.isArray(saved.queue) && saved.queue.length) ||
+        (Array.isArray(saved.removeQueue) && saved.removeQueue.length) ||
+        saved.phase === 'clear');
     if (hasWork) {
       ensureHud('job');
       job.group = saved.group; job.total = saved.total; job.done = saved.done;
       job.added = saved.added; job.failed = saved.failed || []; job.pass = saved.pass || 1;
       job.cleared = saved.cleared || 0; job.clearTotal = saved.clearTotal || 0;
+      job.queue = saved.queue || []; job.removeQueue = saved.removeQueue || [];
+      job.targetGroup = saved.targetGroup || TARGET.group;
       job.phase = saved.phase || 'add';
-      const g = groupName();
-      if (g && saved.group && g !== saved.group) {
-        renderHud(`⚠ 检测到未完成任务，但当前分组「${g}」≠ 任务分组「${saved.group}」，未自动续跑`);
-        return;
-      }
-      const what = saved.phase === 'clear'
-        ? `清空（已删 ${saved.cleared || 0}）`
+      const what = (saved.removeQueue && saved.removeQueue.length)
+        ? `删除（剩 ${saved.removeQueue.length} 只）`
         : `添加（剩 ${(saved.queue || []).length} 只）`;
       for (let i = 5; i > 0; i--) {
-        renderHud(`检测到未完成任务：${what}，${i} 秒后自动续跑…点「停止」可取消`);
+        renderHud(`检测到未完成任务：${what}，目标分组「${job.targetGroup}」，${i} 秒后自动续跑…点「停止」可取消`);
         await sleep(1000);
         if (job.stop) {
           await storeSet({ [JOB_KEY]: Object.assign({}, saved, { autoResume: false }) });
@@ -1363,16 +1676,38 @@
         group: groupName(), gridRows: gridRowCount(), dataRows: dataRowsTotal(),
         auto: AUTO_WATCHLIST,
         src: SRC.mode, srcBack: SRC.back, srcAhead: SRC.ahead,
+        targetGroup: TARGET.group, strictSync: TARGET.strictSync,
+        onTarget: normGroup(groupName()) === normGroup(TARGET.group),
+        originGroup: job.originGroup,
         running: job.running, paused: job.paused, pass: job.pass,
         phase: job.phase, clearFirst: job.clearFirst, clearOnly: job.clearOnly,
         scanning: scanState.running,
         total: job.total, done: job.done, added: job.added,
-        failed: job.failed.length,
+        failed: job.failed.length, toAdd: job.queue.length, toRemove: job.removeQueue.length,
         cleared: job.cleared, clearTotal: job.clearTotal, clearFailed: job.clearFailed.length,
         srcFrom: job.srcFrom, srcCount: job.srcCount, haveCount: job.haveCount,
         lastError: job.lastError
       });
       return;
+    }
+
+    /* ★ 列出/切换分组（popup 的「检测/切换」按钮） */
+    if (msg.action === 'FT_WL_GROUPS_PROBE') {
+      (async () => {
+        if (job.running) { sendResponse({ ok: false, error: '任务进行中，勿手动切分组' }); return; }
+        const r = await listGroupOptions();
+        let switched = null;
+        if (msg.switchTo) {
+          const sr = await switchGroup(msg.switchTo);
+          switched = sr;
+        }
+        sendResponse({
+          ok: true, current: groupName(), options: r.options || [],
+          probeError: r.error || '', switched,
+          dataRows: dataRowsTotal()
+        });
+      })();
+      return true;
     }
 
     if (msg.action === 'FT_WL_PROBE') {
@@ -1411,15 +1746,15 @@
 
     if (msg.action === 'FT_WL_PROBE_DEL') {
       (async () => {
-        const tgt = firstDeletableRow();
-        if (!tgt) { sendResponse({ ok: false, error: '未找到带三点菜单的行' }); return; }
+        const tgt = msg.symbol ? await locateRow(String(msg.symbol).toUpperCase()) : firstDeletableRow();
+        if (!tgt) { sendResponse({ ok: false, error: '未找到带三点菜单的目标行' }); return; }
         closeMenus(); await sleep(100);
         fireMouseSeq(tgt.btn);
         const item = await waitFor(findRemoveMenuItem, 2500, 100);
         const roots = menuRoots();
         const sample = roots.length
           ? Array.from(roots[roots.length - 1].querySelectorAll('[role="menuitem"],[data-dropdown-menu-item]'))
-            .map(x => cleanText(x)).slice(0, 8)
+            .map(x => `${cleanText(x)}#${x.id || '-'}`).slice(0, 10)
           : [];
         closeMenus();
         sendResponse({
@@ -1443,9 +1778,9 @@
 
     if (msg.action === 'FT_WL_TEST_DEL') {
       if (job.running) { sendResponse({ ok: false, error: '批量任务进行中' }); return; }
-      renderScan('测试删除最顶行…', 'test');
-      deleteTopRow(new Set())
-        .then(r => { renderScan('测试删除结果: ' + JSON.stringify(r)); sendResponse({ ok: true, result: r }); })
+      renderScan('测试删除…', 'test');
+      const p = msg.symbol ? deleteSymbol(String(msg.symbol).toUpperCase()) : deleteTopRow(new Set());
+      p.then(r => { renderScan('测试删除结果: ' + JSON.stringify(r)); sendResponse({ ok: true, result: r }); })
         .catch(e => sendResponse({ ok: false, error: String(e.message || e) }));
       return true;
     }
@@ -1456,12 +1791,14 @@
       scanState.running = true; scanState.abort = false; syncBusy();
       computeDiff()
         .then(d => {
-          renderScan(`来源 ${d.srcFrom}：${d.srcCount} 只｜已有 ${d.haveCount}｜待加 ${d.missing.length}`);
+          renderScan(`来源 ${d.srcFrom}：${d.srcCount}｜现有 ${d.haveCount}｜待加 ${d.missing.length}｜多余 ${d.extra.length}`);
           sendResponse({
             ok: true, srcFrom: d.srcFrom, srcCount: d.srcCount, srcDetail: d.srcDetail,
             srcSymbols: d.srcSymbols.slice(0, 60),
             haveCount: d.haveCount, missing: d.missing.length,
-            sample: d.missing.slice(0, 20), group: groupName()
+            extraCount: d.extra.length, extraSample: d.extra.slice(0, 20),
+            sample: d.missing.slice(0, 20), group: groupName(),
+            targetGroup: TARGET.group, onTarget: normGroup(groupName()) === normGroup(TARGET.group)
           });
         })
         .catch(e => {
@@ -1473,18 +1810,17 @@
     }
 
     if (msg.action === 'FT_WL_START') {
-      startJob({ clearFirst: !!msg.clearFirst, clearOnly: !!msg.clearOnly })
-        .then(r => sendResponse(r)).catch(e => sendResponse({ ok: false, error: String(e) }));
+      startJob({
+        clearFirst: !!msg.clearFirst, clearOnly: !!msg.clearOnly,
+        strictSync: msg.strictSync, targetGroup: msg.targetGroup
+      }).then(r => sendResponse(r)).catch(e => sendResponse({ ok: false, error: String(e) }));
       return true;
     }
 
     if (msg.action === 'FT_WL_PAUSE') { togglePause(); sendResponse({ ok: true, paused: job.paused }); return; }
     if (msg.action === 'FT_WL_STOP') { stopJob(); scanState.abort = true; sendResponse({ ok: true }); return; }
     if (msg.action === 'FT_WL_FAILED') {
-      sendResponse({
-        ok: true, list: job.failed,
-        clearList: job.clearFailed
-      });
+      sendResponse({ ok: true, list: job.failed, clearList: job.clearFailed });
       return;
     }
     if (msg.action === 'FT_WL_HUD') {
@@ -1500,16 +1836,21 @@
     }
   });
 
-  /* ================= 对外 API ================= */
+  /* ================= 对外 API（wl_agent.js 复用） ================= */
   window.__FT_WL_API__ = {
-    version: 8.1,
+    version: 9.0,
     isWatchlistPage,
     groupName,
+    normGroup,
+    switchGroup,          // ★ 供 wl_agent.js 复用，避免两份实现
+    listGroupOptions,
+    waitGridSettled,
     gridRowCount,
     dataRowsTotal,
     normKey,
     collectWatchlist,
     addOneSymbol,
+    deleteSymbol,
     cleanNavSearch,
     pressEscape,
     ensureHud,
@@ -1521,5 +1862,5 @@
   };
 
   bootstrap();
-  console.log(LOG, `watchlist.js v8.1 就绪（isWatchlist=${isWatchlistPage()}）`);
+  console.log(LOG, `watchlist.js v9 就绪（isWatchlist=${isWatchlistPage()}，目标分组默认 ${TARGET.group}）`);
 })();

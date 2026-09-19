@@ -47,7 +47,10 @@ const PAGE_NAME = {
   watchlist: '自选股页 ✅', other: '其它页面（不会抓取）'
 };
 const SRC_NAME = { earnings: '财报日历', sectors: 'Sectors_All', manual: '本地清单' };
-const PHASE_NAME = { idle: '空闲', clear: '🧹 清空中', diff: '🧮 比对中', add: '➕ 添加中' };
+const PHASE_NAME = {
+  idle: '空闲', group: '🎯 切换分组', diff: '🧮 比对中',
+  clear: '🗑 删除中', add: '➕ 添加中', verify: '🔍 复核中'
+};
 
 async function refreshPageStatus() {
   const r = await sendToTab({ action: 'FT_STATUS' });
@@ -67,16 +70,16 @@ async function refreshWlStatus() {
 
   const rowsCount = (r.dataRows === null || r.dataRows === undefined) ? '0' : r.dataRows;
   let txt =
-    `分组：${r.group || '(未识别)'}｜表内标的：${rowsCount}\n` +
+    `当前分组：${r.group || '(未识别)'} ${r.onTarget ? '✅在目标分组' : `→ 将自动切到「${r.targetGroup}」`}\n` +
+    `表内标的：${rowsCount}｜严格同步：${r.strictSync ? '开（删多余）' : '关（只补齐）'}\n` +
     `数据源：${SRC_NAME[r.src] || r.src}（回溯 ${r.srcBack} 交易日 / 前瞻 ${r.srcAhead} 天）\n` +
     `自动抓取变更%：${r.auto ? '已开启 ⚠️' : '已关闭'}\n` +
     `任务：${r.running ? (r.paused ? '⏸ 已暂停' : '▶️ 运行中') : '空闲'}｜阶段：${PHASE_LABEL_FMT(r.phase)}`;
 
-  if (r.running && r.phase === 'clear') {
-    txt += `\n清空进度：${r.cleared}/${r.clearTotal}（失败 ${r.clearFailed}）`;
-  }
-  if (r.running && r.phase === 'add') {
-    txt += `\n添加进度：第 ${r.pass} 趟 ${r.done}/${r.total}  成功 ${r.added} 失败 ${r.failed}`;
+  if (r.running) {
+    txt += `\n待删 ${r.toRemove}｜待加 ${r.toAdd}`;
+    if (r.phase === 'clear') txt += `\n删除进度：${r.cleared}/${r.clearTotal}（失败 ${r.clearFailed}）`;
+    if (r.phase === 'add') txt += `\n添加进度：第 ${r.pass} 趟 ${r.done}/${r.total}  成功 ${r.added} 失败 ${r.failed}`;
   }
   if (!r.running && (r.cleared || r.added)) {
     txt += `\n上次结果：删除 ${r.cleared}｜新增 ${r.added}｜失败 ${r.failed + r.clearFailed}`;
@@ -105,6 +108,8 @@ chrome.storage.local.get(
     $('ordVerbose').checked = res.ftOrderVerbose === true;
     $('wlAgent').checked = res.ftWlAgent !== false;
     $('wlRestore').checked = res.ftWlRestoreGroup !== false;
+    $('wlStrict').checked = res.ftWlStrictSync !== false;
+    $('wlTarget').value = (res.ftWlTargetGroup && String(res.ftWlTargetGroup).trim()) || 'ALL';
     $('wlSrc').value = res.ftWlSource || 'earnings';
     $('wlBack').value = (res.ftWlBack === undefined ? 1 : res.ftWlBack);
     $('wlAhead').value = (res.ftWlAhead === undefined ? 0 : res.ftWlAhead);
@@ -326,6 +331,38 @@ function wlSrcCfg() {
   };
 }
 
+/* ---- 目标分组 / 严格同步 ---- */
+function saveTargetCfg() {
+  const g = ($('wlTarget').value || 'ALL').trim() || 'ALL';
+  $('wlTarget').value = g;
+  chrome.storage.local.set({ ftWlTargetGroup: g }, () => {
+    setWl(`目标分组已设为「${g}」：任务开始时会自动切过去，结束后按开关切回原分组`);
+    setTimeout(refreshWlStatus, 500);
+  });
+}
+$('wlTarget').addEventListener('change', saveTargetCfg);
+$('wlTarget').addEventListener('blur', saveTargetCfg);
+
+$('wlStrict').addEventListener('change', () => {
+  const v = $('wlStrict').checked;
+  chrome.storage.local.set({ ftWlStrictSync: v }, () => {
+    disarm();
+    setWl(v ? '✅ 严格同步已开：分组内「不在数据源里」的标的会被删除（删前自动备份）'
+      : 'ℹ️ 严格同步已关：只补齐缺失，不删任何东西');
+  });
+});
+
+$('wlGroupsBtn').addEventListener('click', async () => {
+  const g = ($('wlTarget').value || 'ALL').trim();
+  setWl('正在读取页面上的分组列表并切换…');
+  const r = await sendToTab({ action: 'FT_WL_GROUPS_PROBE', switchTo: g });
+  if (!r || !r.ok) { setWl('检测失败：' + ((r && r.error) || '页面无响应'), true); return; }
+  const sw = r.switched;
+  setWl(`页面可选分组：${(r.options || []).join(' / ') || '(未读到)'}\n` +
+    `当前分组：${r.current}｜表内 ${r.dataRows} 只\n` +
+    (sw ? (sw.ok ? `✅ 已切换/已在「${g}」` : `❌ 切换失败：${sw.error}`) : ''), !!(sw && !sw.ok));
+});
+
 function saveWlSrcCfg() {
   const c = wlSrcCfg();
   chrome.storage.local.set({ ftWlSource: c.src, ftWlBack: c.back, ftWlAhead: c.ahead }, () => {
@@ -402,28 +439,31 @@ function needConfirm(btn, label) {
 $('wlRunBtn').addEventListener('click', async () => {
   const btn = $('wlRunBtn');
   const clearFirst = $('wlClearFirst').checked;
+  const strictSync = $('wlStrict').checked;
+  const targetGroup = ($('wlTarget').value || 'ALL').trim() || 'ALL';
 
+  // 只有「全清重建」这种一定会删掉全部的动作才强制二次确认；
+  // 严格同步只删「多余」，网页 HUD 里另有 5 秒红色倒计时可取消。
   if (clearFirst) {
     const st = await sendToTab({ action: 'FT_WL_STATUS' });
-    const rows = (st && st.ok && st.dataRows !== null && st.dataRows !== undefined) ? st.dataRows : 0;
-    // ★ 行业最佳实践：仅当分组内真正有标的（rows > 0）时才二次确认防误删；空分组（0只）直接启动！
-    if (rows > 0 && needConfirm(btn, `⚠️ 再点一次：确认删掉 ${rows} 只后重建`)) {
-      setWl(`⚠️ 即将清空分组「${(st && st.group) || '?'}」内 ${rows} 只标的，然后按数据源重新添加。\n` +
-        `8 秒内再点一次按钮确认；点别处或等待即取消。`);
+    const rows = (st && st.ok && st.dataRows) ? st.dataRows : 0;
+    if (needConfirm(btn, `⚠️ 再点一次：确认全清「${targetGroup}」后重建`)) {
+      setWl(`⚠️ 全清重建：会把目标分组「${targetGroup}」内全部标的删掉再按数据源重建` +
+        (rows ? `（当前分组显示 ${rows} 只）` : '') + `\n8 秒内再点一次确认。`);
       return;
     }
   }
   disarm();
 
   setWl('正在启动…（进度看网页右下角面板，可以关掉本窗口）');
-  const r = await sendToTab({ action: 'FT_WL_START', clearFirst });
+  const r = await sendToTab({ action: 'FT_WL_START', clearFirst, strictSync, targetGroup });
   if (!r || !r.ok) {
     setWl('启动失败：' + (r ? r.error : '页面无响应，请刷新自选股页面重试'), true);
     return;
   }
-  setWl(`✅ 已启动：分组「${r.group || ''}」\n` +
-    (r.clearFirst && r.rows > 0 ? `阶段1 清空（表内约 ${r.rows} 只）→ ` : (r.clearFirst ? '分组为空，跳过清空 → ' : '')) +
-    `阶段2 比对差集 → 阶段3 批量添加\n请勿操作该标签页；可切到别的标签页。`);
+  setWl(`✅ 已启动：目标分组「${r.targetGroup}」（当前「${r.group}」）\n` +
+    `阶段0 切分组 → 阶段1 比对 → 阶段2 删多余${r.strictSync ? '' : '(已关闭)'} → 阶段3 补缺失 → 阶段4 复核\n` +
+    `请勿操作该标签页；可切到别的标签页。`);
   setTimeout(refreshWlStatus, 800);
 });
 
@@ -460,28 +500,25 @@ $('wlDiffBtn').addEventListener('click', async () => {
   const r = await sendToTab({ action: 'FT_WL_DIFF' });
   if (!r || !r.ok) { setWl('比对失败：' + (r && r.error), true); return; }
   setWl(
-    `分组：${r.group}\n来源：${r.srcFrom}（${r.srcCount} 只）\n` +
-    `自选股已有：${r.haveCount} 只\n★ 待添加：${r.missing} 只\n` +
-    (r.sample && r.sample.length ? `示例：${r.sample.join(', ')}` : '（无需添加 ✅）')
+    `分组：${r.group}${r.onTarget ? ' ✅' : ` (目标「${r.targetGroup}」)`}\n` +
+    `来源：${r.srcFrom}（${r.srcCount} 只）\n自选股已有：${r.haveCount} 只\n` +
+    `★ 待添加：${r.missing} 只｜★ 多余(将被删)：${r.extraCount} 只\n` +
+    (r.sample && r.sample.length ? `待加示例：${r.sample.join(', ')}\n` : '') +
+    (r.extraSample && r.extraSample.length ? `多余示例：${r.extraSample.join(', ')}` : '')
   );
 });
 
 $('wlClearOnlyBtn').addEventListener('click', async () => {
   const btn = $('wlClearOnlyBtn');
-  const st = await sendToTab({ action: 'FT_WL_STATUS' });
-  const rows = (st && st.ok && st.dataRows !== null && st.dataRows !== undefined) ? st.dataRows : 0;
-  if (rows <= 0) {
-    setWl(`ℹ️ 当前分组「${(st && st.group) || '?'}」本就没有任何标的，无需清空。`);
-    return;
-  }
-  if (needConfirm(btn, `⚠️ 再点一次：确认删除全部 ${rows} 只`)) {
-    setWl(`⚠️ 只清空模式：将删除分组「${(st && st.group) || '?'}」内 ${rows} 只标的，不会自动添加。\n8 秒内再点一次确认。`);
+  const targetGroup = ($('wlTarget').value || 'ALL').trim() || 'ALL';
+  if (needConfirm(btn, `⚠️ 再点一次：清空分组「${targetGroup}」`)) {
+    setWl(`⚠️ 只清空模式：会切到「${targetGroup}」并删除其中全部标的（不添加，删前自动备份）。\n8 秒内再点一次确认。`);
     return;
   }
   disarm();
-  const r = await sendToTab({ action: 'FT_WL_START', clearOnly: true });
+  const r = await sendToTab({ action: 'FT_WL_START', clearOnly: true, targetGroup });
   if (!r || !r.ok) { setWl('启动失败：' + (r && r.error), true); return; }
-  setWl(`🧹 已启动只清空：分组「${r.group || ''}」，表内约 ${r.rows} 只（已自动备份）`);
+  setWl(`🧹 已启动只清空：目标分组「${r.targetGroup}」`);
 });
 
 $('wlBackupBtn').addEventListener('click', async () => {
@@ -508,8 +545,9 @@ $('wlProbeBtn').addEventListener('click', async () => {
 });
 
 $('wlProbeDelBtn').addEventListener('click', async () => {
+  const sym = ($('wlTestSym').value || '').trim().toUpperCase();
   setWl('正在探测删除菜单（只打开菜单，不会删除）…');
-  const r = await sendToTab({ action: 'FT_WL_PROBE_DEL' });
+  const r = await sendToTab({ action: 'FT_WL_PROBE_DEL', symbol: sym });
   if (!r || !r.ok) { setWl('探测失败：' + (r && r.error), true); return; }
   setWl(`目标行：${r.symbol}（rowId=${r.rowId}）\n弹出菜单：${r.menus} 个\n` +
     `菜单项：${(r.menuItems || []).join(' / ')}\n` +
@@ -527,13 +565,14 @@ $('wlTestBtn').addEventListener('click', async () => {
 
 $('wlTestDelBtn').addEventListener('click', async () => {
   const btn = $('wlTestDelBtn');
-  if (needConfirm(btn, '⚠️ 再点一次：真的删掉最顶那一只')) {
-    setWl('⚠️ 这会真实删除表格最顶部的那一只标的，用于验证删除链路。8 秒内再点一次确认。');
+  const sym = ($('wlTestSym').value || '').trim().toUpperCase();
+  if (needConfirm(btn, sym ? `⚠️ 再点一次：真的删掉 ${sym}` : '⚠️ 再点一次：真的删掉最顶那一只')) {
+    setWl('⚠️ 这会真实删除标的，用于验证删除链路。8 秒内再点一次确认。');
     return;
   }
   disarm();
-  setWl('正在测试删除最顶行…');
-  const r = await sendToTab({ action: 'FT_WL_TEST_DEL' });
+  setWl('正在测试删除…');
+  const r = await sendToTab({ action: 'FT_WL_TEST_DEL', symbol: sym });
   if (!r || !r.ok) { setWl('测试失败：' + (r && r.error), true); return; }
   setWl('测试删除结果：' + JSON.stringify(r.result));
 });

@@ -373,7 +373,7 @@ def search_history_by_date(symbol):
     # 连续相同/超集项的最低数量阈值
     MIN_STREAK_ITEMS = 2
     # 允许的最大连续空窗交易日数量（在此范围内且标的完全无信号时允许桥接）
-    MAX_EMPTY_GAP_DAYS = 2
+    MAX_EMPTY_GAP_DAYS = 5
 
     def get_streak_position(d_str):
         """

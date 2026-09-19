@@ -189,17 +189,31 @@
   </div>
 
   <hr>
-  <!-- ==================== ③ 自选股一键重建 ==================== -->
-  <h1>③ 自选股一键重建（/app/watchlist）</h1>
+  <!-- ==================== ③ 自选股一键同步（对账） ==================== -->
+  <h1>③ 自选股一键同步（/app/watchlist）</h1>
   <div id="wlStatus">未检测</div>
   <div class="ok" id="agentBox">🤖 远程添加代理：未检测</div>
+
+  <div class="row">
+    <label for="wlTarget"><b>目标分组</b></label>
+    <input type="text" id="wlTarget" value="ALL" placeholder="ALL" style="width:96px;font-size:12px;padding:3px;">
+    <button id="wlGroupsBtn" style="width:auto;margin-top:0;padding:3px 8px;font-size:12px;">
+      🎯 检测/切换</button>
+  </div>
+  <div class="row">
+    <input type="checkbox" id="wlStrict" style="width:auto;">
+    <label for="wlStrict"><b>严格同步</b>：分组内「不在数据源里」的标的先删掉</label>
+  </div>
+  <div class="ok">流程：切到目标分组 → 比对差集 → 删多余 → 加缺失 → 复核 → 切回原分组。<br>
+    若分组内容与数据源<b>完全一致，则零点击直接结束</b>。</div>
+
   <div class="row">
     <input type="checkbox" id="wlAgent" style="width:auto;">
     <label for="wlAgent"><b>允许 Python 远程添加</b>（图表按 f 键 / 面板右键）</label>
   </div>
   <div class="row">
     <input type="checkbox" id="wlRestore" style="width:auto;">
-    <label for="wlRestore" class="small">添加完成后自动切回原分组（推荐）</label>
+    <label for="wlRestore" class="small">任务/添加完成后自动切回原分组（推荐）</label>
   </div>
   <div class="row">
     <label for="wlSrc">数据源</label>
@@ -221,15 +235,9 @@
 
   <div class="row">
     <input type="checkbox" id="wlClearFirst" style="width:auto;">
-    <label for="wlClearFirst"><b>开始前先清空当前分组</b>（逐行删除）</label>
+    <label for="wlClearFirst">强制<b>全清重建</b>（连相同的也删，通常不需要）</label>
   </div>
-  <!-- <div class="warn">
-    ⚠️ 勾选「先清空」= 分组内<b>现有全部标的会被删掉</b>，最终只剩数据源清单。<br>
-    删除前会自动把原清单备份到扩展存储（可在下方「高级」里复制）。<br>
-    开始前请确认：①已切到目标<b>自选股分组</b>；②<code>bridge_server.py</code> 正在运行；③过程中<b>不要操作该标签页</b>（可切到别的标签页）。<br>
-    删除速度约 0.6 秒/只，1800 只≈20 分钟；网页右下角面板会显示进度与预计剩余时间，关闭 popup 不影响运行。
-  </div> -->
-  <button id="wlRunBtn" class="primary">🚀 一键执行（清空 → 比对差集 → 批量添加）</button>
+  <button id="wlRunBtn" class="primary">🚀 一键同步（切ALL → 比对 → 删多余 → 补缺失）</button>
   <div class="half">
     <button id="wlPauseBtn">⏸ 暂停/继续</button>
     <button id="wlStopBtn" class="danger">⏹ 停止</button>
@@ -242,17 +250,17 @@
   <details>
     <summary>高级 / 排错（平时不用展开）</summary>
     <button id="wlDiffBtn">🧮 只比对差集（不修改任何数据）</button>
-    <button id="wlClearOnlyBtn" class="danger">🧹 只清空当前分组（不添加）</button>
-    <button id="wlBackupBtn">📋 复制「清空前」备份清单</button>
+    <button id="wlClearOnlyBtn" class="danger">🧹 只清空目标分组（不添加）</button>
+    <button id="wlBackupBtn">📋 复制「删除前」备份清单</button>
     <div class="half">
       <button id="wlProbeBtn">🔬 探测添加弹层</button>
       <button id="wlProbeDelBtn">🔬 探测删除菜单</button>
     </div>
     <div class="half">
       <button id="wlTestBtn">🧪 试添加一只</button>
-      <button id="wlTestDelBtn">🧪 试删最顶行</button>
+      <button id="wlTestDelBtn">🧪 试删一只</button>
     </div>
-    <input type="text" id="wlTestSym" placeholder="自检用 symbol，如 LIN"
+    <input type="text" id="wlTestSym" placeholder="自检用 symbol，如 AAPL（试删也用它，留空=删最顶行）"
       style="width:100%;box-sizing:border-box;margin-top:6px;font-size:12px;padding:4px;">
     <p class="hint" style="margin-top:8px;">桥接不可用时的备用 symbol 清单（逗号/换行分隔，可留空）：</p>
     <textarea id="wlManual" placeholder="AAPL, NVDA, BRK-B ..."></textarea>
