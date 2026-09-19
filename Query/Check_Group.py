@@ -2,8 +2,14 @@
 #「转折」条目太少 / 漏掉你例子那种：把 TURN_MAX_GAP 调到 3（容忍中间连续 2 天无记录），TURN_RECENT_DAYS 调到 5。
 # 想把“信号彻底消失”也抓出来：TURN_ALLOW_DROP_TO_ZERO = True（会明显变多，建议同时把 TURN_MIN_STREAK 提到 4）。
 # 星级门槛：在 _score_turning() 末尾改 4.5 / 3.5 / 2.5。
-# 关键项名单：直接改 TURN_LEVEL2_KEYS / TURN_LEVEL3_KEYS 即可（我按你给的名单填的，PE_SupportLevel_Over 在 JSON 里实际是 SupportLevel_Over，已按真实分组名写入）。
-
+# 关键项名单：直接改 TURN_LEVEL2_KEYS / TURN_LEVEL3_KEYS 即可。
+#
+# ★ 新增「持仓」分组（放在转折之前）：
+#   - 数据来源 Modules/firstrade_positions.json（Chrome 插件 + bridge_server.py 落盘）
+#   - 支持三种排序，点击表头按钮切换，同一按钮再点一次切换升/降序：
+#       A-Z（代码）｜盈亏%（gainloss）｜成本（cost）
+#   - 在该分组里点开图表后，Chart_input_single 的左右键就按这个排序在持仓内循环
+#   - 按 R 键重新读取 firstrade_positions.json（不用重启）
 
 import sys
 import json
@@ -27,6 +33,17 @@ from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 # 外部绘图函数
 sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Query"))
 from Chart_input_single import plot_financial_data
+
+# ★ 持仓读取层
+try:
+    from ft_quotes import load_all_positions, position_num, fmt_money
+    FT_POS_OK = True
+except Exception as _e:
+    print(f"[FT] 加载 ft_quotes 失败（持仓分组不可用）: {_e}")
+    FT_POS_OK = False
+    def load_all_positions(): return {}, {}
+    def position_num(rec, *keys): return None
+    def fmt_money(s): return str(s)
 
 try:
     from ft_watchlist_add import (add_symbol_async, watchlist_groups,
@@ -57,6 +74,15 @@ COMPARE_DATA_PATH = os.path.join(BASE_CODING_DIR, "News", "backup", "Compare_All
 DB_PATH = os.path.join(BASE_CODING_DIR, "Database", "Finance.db")
 EARNING_HISTORY_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Earning_History.json")
 
+# ---------- 持仓分组排序配置 ----------
+HOLD_SORT_MODES = [('alpha', 'A-Z'), ('gainloss', '盈亏%'), ('cost', '成本')]
+HOLD_SORT_LABEL = dict(HOLD_SORT_MODES)
+HOLD_SORT_KEYS = {
+    'gainloss': ('gainloss', 'gainlossPercent', 'gainloss_amount'),
+    'cost': ('cost', 'totalCost', 'market_value'),
+}
+HOLD_DEFAULT_DESC = {'alpha': False, 'gainloss': True, 'cost': True}
+
 # 52周新低判定：以下板块内的 symbol 视为符合 52week_low 筛选
 WEEK52_LOW_SECTORS = {
     "Basic_Materials", "Real_Estate", "Energy", "Technology",
@@ -67,11 +93,6 @@ WEEK52_LOW_SECTORS = {
 
 # ======================================================================
 # 多组共振 —— 信号强度评估配置
-# LOOKBACK_TRADING_DAYS = 120   稀有度回看窗口
-# MIN_HISTORY_DAYS = 5          样本太少的判定门槛
-# HIGH/MEDIUM_WEIGHT_CATEGORIES 红/橙分类
-# compute_rarity 里的 0.05/0.15/0.30/0.50   稀有度分档
-# evaluate_symbol_signal 里 4.5/3.5/2.0     星级门槛
 # ======================================================================
 IGNORE_GROUPS = {"_Tag_Blacklist", "no_season"}
 
@@ -83,7 +104,6 @@ MEDIUM_WEIGHT_CATEGORIES = {         # 橙色：中权重
     "PE_Volume_up", "PE_W", "SupportLevel_Close", "PE_Hot",
     "OverSell_W", "season"
 }
-# 其余 (PE_valid / PE_invalid / Strategy...) 视为蓝色：低权重
 
 LOOKBACK_TRADING_DAYS = 120   # 稀有度回看窗口（交易日）
 MIN_HISTORY_DAYS = 5          # 历史样本少于该值 → 视为“极少出现”
@@ -92,21 +112,18 @@ BADGE_TEXT = {0: "", 1: "★", 2: "★★", 3: "🔥★★★"}
 BADGE_NAME = {0: "常态", 1: "值得一看", 2: "罕见/高质量", 3: "极罕见且极强"}
 
 # ======================================================================
-# 【新增】“转折”检测配置
-#   规则：连续 N 天保持较多项（且含足够的关键项），突然某天项数明显下降
+# “转折”检测配置
 # ======================================================================
-TURN_MIN_STREAK = 3            # 平台期最少连续记录日
-TURN_MIN_DROP = 1              # 至少减少几项才算转折（1 → 覆盖 3→2 / 4→3）
-TURN_MAX_GAP = 2               # 相邻记录日允许的交易日间隔（容忍中间 1 天无记录）
-TURN_RECENT_DAYS = 3           # 只显示最近 N 个交易日内发生的转折
-TURN_ALLOW_DROP_TO_ZERO = False  # True: 把“当天完全没记录(0项)”也算转折
-TURN_REQUIRE_NO_RECOVERY = True   # True: 转折后若已回升，则不再输出
+TURN_MIN_STREAK = 3
+TURN_MIN_DROP = 1
+TURN_MAX_GAP = 2
+TURN_RECENT_DAYS = 3
+TURN_ALLOW_DROP_TO_ZERO = False
+TURN_REQUIRE_NO_RECOVERY = True
 
-# 平台期为 2 项时：以下关键项至少命中 1 个
 TURN_LEVEL2_KEYS = {
     "PE_Volume", "SupportLevel_Over", "Short", "PE_Volume_high", "PE_Deep"
 }
-# 平台期为 3 项及以上时：以下关键项至少命中 2 个
 TURN_LEVEL3_KEYS = {
     "PE_Volume", "SupportLevel_Over", "SupportLevel_Close", "Short", "Short_W",
     "PE_Volume_high", "PE_Deep", "PE_valid", "PE_invalid", "PE_Deeper", "season"
@@ -116,12 +133,11 @@ TURN_BADGE = {0: "⤵", 1: "⤵★", 2: "⤵★★", 3: "⤵🔥★★★"}
 TURN_NAME = {0: "一般转折", 1: "值得一看", 2: "较强转折", 3: "极强转折"}
 
 # ======================================================================
-# 【修复】分组过滤 & 日期规范化
+# 分组过滤 & 日期规范化
 # ======================================================================
-EXCLUDE_BACKUP_GROUPS = True   # 排除 *_backup 镜像分组（修 Bug1，务必 True）
-MAX_STALE_DAYS = 0             # 分组最新日期允许落后“全局最新交易日”的天数（修 Bug2）
-                               # 0=严格只看最新交易日；数据落盘有延迟时可设 1
-COLLAPSE_FAMILIES = False      # True=同族分组合并计 1 项（PE_low/lower/lowest 等）
+EXCLUDE_BACKUP_GROUPS = True
+MAX_STALE_DAYS = 0
+COLLAPSE_FAMILIES = False
 
 GROUP_FAMILIES = [
     {"PE_low", "PE_lower", "PE_lowest"},
@@ -134,6 +150,7 @@ GROUP_FAMILIES = [
 
 _DATE_RE = re.compile(r"^(\d{4})\D+(\d{1,2})\D+(\d{1,2})")
 
+
 def norm_date(s):
     """把 2025-1-9 / 2025/1/9 / 20250109 统一成 '2025-01-09'，用于排序"""
     s = str(s).strip()
@@ -144,12 +161,14 @@ def norm_date(s):
     m = re.match(r"^(\d{4})(\d{2})(\d{2})$", s)
     return "-".join(m.groups()) if m else s
 
+
 def is_valid_group(name):
     if name in IGNORE_GROUPS:
         return False
     if EXCLUDE_BACKUP_GROUPS and name.endswith("_backup"):
         return False
     return True
+
 
 def build_date_universe(history_data):
     """返回 (全局交易日降序列表, {date: 距今第几个交易日})"""
@@ -160,6 +179,7 @@ def build_date_universe(history_data):
         dates.update(dm.keys())
     ordered = sorted(dates, key=norm_date, reverse=True)
     return ordered, {d: i for i, d in enumerate(ordered)}
+
 
 def collapse_family(groups):
     """同族分组合并成 1 项（可选）"""
@@ -208,6 +228,11 @@ class SymbolManager:
             self.current_index = self.symbols.index(symbol)
         except ValueError:
             pass
+
+    def current_symbol(self):
+        if self.symbols and 0 <= self.current_index < len(self.symbols):
+            return self.symbols[self.current_index]
+        return None
 
     def reset(self):
         self.current_index = -1
@@ -296,17 +321,9 @@ def execute_external_script(script_type, keyword):
 # 多组共振（次数统计）
 # ======================================================================
 def calculate_frequency_data(history_data, week52_low_symbols=None, verbose=False):
-    """计算多组共振（次数统计）—— 修复版：排除 backup / 只用全局最新交易日"""
     if week52_low_symbols is None:
         week52_low_symbols = set()
 
-    support_level_groups = {"SupportLevel_Close", "SupportLevel_Over"}
-    source_groups = {
-        "Short", "Short_W", "Strategy12", "Strategy34", "OverSell_W",
-        "PE_Deep", "PE_Deeper", "PE_W", "PE_valid", "PE_invalid",
-        "PE_low", "PE_lower", "PE_lowest",
-        "PE_Volume", "PE_Volume_up", "PE_Hot", "PE_Volume_high", "season"
-    }
     pe_chaodi_sources = {"PE_Null"}
 
     dates_desc, pos = build_date_universe(history_data)
@@ -315,7 +332,7 @@ def calculate_frequency_data(history_data, week52_low_symbols=None, verbose=Fals
     global_latest = dates_desc[0]
 
     symbol_groups = defaultdict(set)
-    symbol_detail = defaultdict(list)     # 供日志用
+    symbol_detail = defaultdict(list)
     symbols_with_chaodi = set()
 
     for group, date_map in (history_data or {}).items():
@@ -323,7 +340,7 @@ def calculate_frequency_data(history_data, week52_low_symbols=None, verbose=Fals
             continue
         latest = max(date_map.keys(), key=norm_date)
         lag = pos.get(latest, 10 ** 9)
-        if lag > MAX_STALE_DAYS:                # ← 修 Bug2：陈旧分组不参与
+        if lag > MAX_STALE_DAYS:
             if verbose:
                 print(f"[skip-stale] {group} 最新={latest} 落后 {lag} 交易日")
             continue
@@ -347,10 +364,6 @@ def calculate_frequency_data(history_data, week52_low_symbols=None, verbose=Fals
         count = len(eff)
         if count < 2:
             continue
-        # ========== 已废弃原来的：count==2且同时有SupportLevel+源头分组直接丢弃的规则 ==========
-        # if count == 2 and not eff.isdisjoint(support_level_groups) \
-        #               and not eff.isdisjoint(source_groups):
-        #     continue
         count_to_symbols[count].append(sym)
 
     if verbose:
@@ -370,7 +383,7 @@ def build_symbol_history_index(history_data):
     all_dates = set()
     for group, date_map in (history_data or {}).items():
         if not is_valid_group(group) or not isinstance(date_map, dict):
-            continue                                   # ← 修 Bug1
+            continue
         for date_str, symbols in date_map.items():
             if not isinstance(symbols, list):
                 continue
@@ -379,7 +392,7 @@ def build_symbol_history_index(history_data):
                 sym, suf = split_symbol_suffix(raw)
                 sym_items[sym].setdefault(date_str, []).append((group, suf))
     return {'sym_items': sym_items,
-            'sorted_dates': sorted(all_dates, key=norm_date, reverse=True)}  # ← 修 Bug3
+            'sorted_dates': sorted(all_dates, key=norm_date, reverse=True)}
 
 
 def get_today_items(history_data):
@@ -391,7 +404,7 @@ def get_today_items(history_data):
         if not is_valid_group(group) or not isinstance(date_map, dict) or not date_map:
             continue
         latest = max(date_map.keys(), key=norm_date)
-        if pos.get(latest, 10 ** 9) > MAX_STALE_DAYS:   # ← 修 Bug2
+        if pos.get(latest, 10 ** 9) > MAX_STALE_DAYS:
             continue
         for raw in (date_map.get(latest) or []):
             sym, suf = split_symbol_suffix(raw)
@@ -400,7 +413,7 @@ def get_today_items(history_data):
 
 
 def category_color(cat, suffix):
-    """返回 'red' / 'orange' / 'blue'（与 Check_Earning_history 口径一致）"""
+    """返回 'red' / 'orange' / 'blue'"""
     if cat == "PE_Volume_high":
         return 'red' if (suffix and '甲' in suffix) else 'orange'
     if cat in HIGH_WEIGHT_CATEGORIES:
@@ -411,7 +424,6 @@ def category_color(cat, suffix):
 
 
 def compute_rarity(sym_date_items, sorted_dates, today, n_today):
-    """稀有度：今天的分组数相对该 symbol 自身历史基线有多罕见"""
     idx = sorted_dates.index(today) if today in sorted_dates else -1
     window = sorted_dates[idx + 1: idx + 1 + LOOKBACK_TRADING_DAYS] if idx >= 0 \
         else sorted_dates[:LOOKBACK_TRADING_DAYS]
@@ -444,7 +456,6 @@ def compute_rarity(sym_date_items, sorted_dates, today, n_today):
 
 
 def compute_quality(today_items):
-    """今天命中的分组“颜色纯度”打分"""
     colors = [category_color(c, s) for c, s in today_items]
     total = len(colors)
     if total == 0:
@@ -464,7 +475,6 @@ def compute_quality(today_items):
 
 
 def detect_bonus_markers(sym_date_items, sorted_dates, today, today_items):
-    """跨日接力类标记（紫色 / 红色）"""
     purple, red_mark, notes = 0, 0, []
     if today not in sorted_dates:
         return purple, red_mark, notes
@@ -516,7 +526,6 @@ def detect_bonus_markers(sym_date_items, sorted_dates, today, today_items):
 
 
 def evaluate_symbol_signal(sym, resonance_count, index, today_items_map, week52_low_symbols):
-    """综合评估一个 symbol 今天的“值得关注度”"""
     sym_date_items = index['sym_items'].get(sym, {})
     sorted_dates = index['sorted_dates']
     today = sorted_dates[0] if sorted_dates else None
@@ -576,10 +585,9 @@ def evaluate_symbol_signal(sym, resonance_count, index, today_items_map, week52_
 
 
 # ======================================================================
-# 【新增】“转折”检测
+# “转折”检测
 # ======================================================================
 def _fmt_day_items(items):
-    """(group, suffix) 列表 → 'PE_Deep、PE_Volume_high[抄底]'"""
     dedup = {}
     for c, s in items:
         if c not in dedup or (s and not dedup[c]):
@@ -588,10 +596,6 @@ def _fmt_day_items(items):
 
 
 def _turn_key_hits(cats, cnt):
-    """
-    平台期某一天是否满足“关键项”门槛
-    返回 (命中的关键项集合, 是否满足)
-    """
     if cnt <= 2:
         hits = cats & TURN_LEVEL2_KEYS
         return hits, len(hits) >= 1
@@ -600,7 +604,6 @@ def _turn_key_hits(cats, cnt):
 
 
 def _score_turning(rec, week52_low_symbols):
-    """转折强度打分 → (score, level, notes)"""
     notes = []
     score = 0.0
 
@@ -640,28 +643,23 @@ def _score_turning(rec, week52_low_symbols):
 
 
 def detect_turning_points(index, week52_low_symbols):
-    """
-    扫描所有 symbol，找出“连续多天多项 → 突然减项”的转折
-    返回按强度降序的 list[dict]
-    """
     sym_items = index['sym_items']
     sorted_dates = index['sorted_dates']
     if not sorted_dates:
         return []
 
-    pos = {d: i for i, d in enumerate(sorted_dates)}          # 0 = 最新交易日
+    pos = {d: i for i, d in enumerate(sorted_dates)}
     recent = set(sorted_dates[:min(TURN_RECENT_DAYS, len(sorted_dates))])
     results = []
 
     for sym, date_map in sym_items.items():
-        rec_dates = sorted(date_map.keys(), key=lambda d: pos.get(d, 10 ** 9))  # 降序（新→旧）
+        rec_dates = sorted(date_map.keys(), key=lambda d: pos.get(d, 10 ** 9))
         if len(rec_dates) < TURN_MIN_STREAK:
             continue
         cats_of = {d: {c for c, _ in date_map[d]} for d in rec_dates}
         cnt_of = {d: len(cats_of[d]) for d in rec_dates}
 
-        # ---- 组织候选“转折日” ----
-        candidates = []   # (drop_date, to_n, 平台起始在 rec_dates 里的下标)
+        candidates = []
         if TURN_ALLOW_DROP_TO_ZERO:
             newest = rec_dates[0]
             p = pos.get(newest)
@@ -671,29 +669,28 @@ def detect_turning_points(index, week52_low_symbols):
                     candidates.append((zero_day, 0, 0))
         for i, d in enumerate(rec_dates):
             if d not in recent:
-                break                       # rec_dates 为降序，后面只会更旧
+                break
             candidates.append((d, cnt_of[d], i + 1))
 
         best = None
         for d, m, p_start in candidates:
-            # 转折之后若已回升（存在更新的一天项数 > m），视为失效
             if TURN_REQUIRE_NO_RECOVERY:
                 newer = [x for x in rec_dates if pos[x] < pos[d]]
                 if any(cnt_of[x] > m for x in newer):
                     continue
 
-            plateau = []                    # [(date, cnt, key_hit_cnt)]
+            plateau = []
             prev = d
             j = p_start
             while j < len(rec_dates):
                 cd = rec_dates[j]
-                if pos[cd] - pos[prev] > TURN_MAX_GAP:      # 中间空洞太大 → 断裂
+                if pos[cd] - pos[prev] > TURN_MAX_GAP:
                     break
                 cnt = cnt_of[cd]
-                if cnt <= m or cnt < 2:                     # 必须比转折日多，且≥2项
+                if cnt <= m or cnt < 2:
                     break
                 hits, ok = _turn_key_hits(cats_of[cd], cnt)
-                if not ok:                                  # 关键项不达标 → 断裂
+                if not ok:
                     break
                 plateau.append((cd, cnt, len(hits)))
                 prev = cd
@@ -727,7 +724,7 @@ def detect_turning_points(index, week52_low_symbols):
                 'drop_items': _fmt_day_items(date_map.get(d, [])) or "（当日无任何记录）",
             }
             best = rec
-            break        # 每只股票只保留最近的一次转折
+            break
 
         if not best:
             continue
@@ -760,7 +757,8 @@ def detect_turning_points(index, week52_low_symbols):
 # 主窗口
 # ----------------------------------------------------------------------
 class GroupWindow(QMainWindow):
-    wl_done = pyqtSignal(dict)          # ★ 工作线程 → 主线程 的结果通道
+    wl_done = pyqtSignal(dict)          # 工作线程 → 主线程 的结果通道
+
     def __init__(self, keyword_colors, sector_data, compare_data, json_data, earning_history_data):
         super().__init__()
         self.keyword_colors = keyword_colors
@@ -768,6 +766,9 @@ class GroupWindow(QMainWindow):
         self.compare_data = compare_data
         self.json_data = json_data
         self.earning_history_data = earning_history_data
+
+        # 用于 Symbol 检索定位的控件映射：{ 'AAPL': [(container, button), ...], ... }
+        self.symbol_widgets_map = defaultdict(list)
 
         # ===== 共振 =====
         self.week52_low_symbols = load_52week_low_symbols(CONFIG_PATH)
@@ -801,15 +802,71 @@ class GroupWindow(QMainWindow):
         self.list_turning = [r['symbol'] for r in self.turning_data]
         self.list_resonance = [sym for item in self.resonance_data for sym in item['symbols']]
 
-        # 【新增】用于 Symbol 检索定位的控件映射：{ 'AAPL': [(container, button), ...], ... }
-        self.symbol_widgets_map = defaultdict(list)
+        # ===== ★ 持仓 =====
+        self.positions = {}
+        self.positions_meta = {}
+        self.hold_sort_mode = 'alpha'
+        self.hold_sort_desc = HOLD_DEFAULT_DESC['alpha']
+        self._hold_widget_refs = []
+        self.load_positions_data()
+        self.list_holdings = self._sorted_holdings()
 
-        self.symbol_manager = SymbolManager(self.list_turning + self.list_resonance)
+        # ===== 导航作用域 =====
+        main_list = self.list_turning + self.list_resonance
+        if main_list:
+            self.active_source = 'main'
+            self.symbol_manager = SymbolManager(main_list)
+        else:
+            self.active_source = 'holdings'
+            self.symbol_manager = SymbolManager(self.list_holdings)
+
         self.init_ui()
+
+    # ==================================================================
+    # 持仓数据
+    # ==================================================================
+    def load_positions_data(self):
+        try:
+            pos, meta = load_all_positions()
+        except Exception as e:
+            print(f"[FT] 读取持仓失败: {e}")
+            pos, meta = {}, {}
+        clean = {}
+        for k, v in (pos or {}).items():
+            sym = str(k).strip().upper()
+            if sym and isinstance(v, dict):
+                clean[sym] = v
+        self.positions = clean
+        self.positions_meta = meta or {}
+
+    def _sorted_holdings(self):
+        syms = list(self.positions.keys())
+        mode, desc = self.hold_sort_mode, self.hold_sort_desc
+        if mode == 'alpha':
+            syms.sort(reverse=desc)
+            return syms
+        keys = HOLD_SORT_KEYS.get(mode, ('gainloss',))
+
+        def sort_key(s):
+            v = position_num(self.positions.get(s, {}), *keys)
+            missing = v is None
+            val = 0.0 if missing else float(v)
+            # 无数据的一律排最后；其余按方向排，最后用代码兜底保证稳定
+            return (1 if missing else 0, -val if desc else val, s)
+
+        syms.sort(key=sort_key)
+        return syms
+
+    def reload_positions(self):
+        self.load_positions_data()
+        self._apply_sort()
+        ts = self.positions_meta.get('updated_at_str', '')
+        self.statusBar().showMessage(
+            f"已重新读取持仓：{len(self.positions)} 只 ｜ 数据时间 {ts or '未知'}", 8000)
 
     # ------------------------------------------------------------------
     def init_ui(self):
-        self.setWindowTitle("多组共振 / 转折")
+        self.setWindowTitle("持仓 / 多组共振 / 转折")
         self.setGeometry(100, 100, 1600, 1000)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
@@ -818,6 +875,8 @@ class GroupWindow(QMainWindow):
         layout = QVBoxLayout(central)
 
         legend = QLabel(
+            "【持仓】读取 firstrade_positions.json；点上方按钮切换排序（同一按钮再点一次切升/降序），"
+            "排序结果决定图表里左右键的浏览顺序；按 R 键重新读盘。\n"
             "【共振】🔥★★★ 极罕见且信号极强（红框）｜ ★★ 罕见/高质量（黄框）｜ ★ 值得一看（蓝框）｜ 无标记 = 常态（灰框）\n"
             f"【转折】连续 ≥{TURN_MIN_STREAK} 天保持多项关键信号后，突然减项（如 4项→2项 / 2项→1项）；"
             "按钮上的 4→2 表示“平台4项 → 当日2项”，鼠标悬停可看平台期逐日明细。"
@@ -830,68 +889,229 @@ class GroupWindow(QMainWindow):
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         layout.addWidget(self.scroll_area)
-        
+
         content = QWidget()
         self.scroll_area.setWidget(content)
         main_lay = QHBoxLayout(content)
 
+        self._build_holdings_section(main_lay)       # ★ 持仓放最前
         self._build_turning_section(main_lay)
         self._build_resonance_sections(main_lay)
         main_lay.addStretch(1)
 
-        # 【新增】绑定 / 键搜索快捷键
+        # 快捷键
         QShortcut(QKeySequence(Qt.Key.Key_Slash), self).activated.connect(self.show_search_dialog)
-
-        # ★ a 键：把「当前 symbol」加入自选股分组
         QShortcut(QKeySequence(Qt.Key.Key_A), self).activated.connect(self.add_current_to_watchlist)
+        QShortcut(QKeySequence(Qt.Key.Key_R), self).activated.connect(self.reload_positions)
         self.wl_done.connect(self._on_wl_done)
-        self.statusBar().showMessage("提示：/ 搜索  ｜ 右键卡片或按 a 键把该股加入自选股分组", 8000)
+        self.statusBar().showMessage(
+            "提示：/ 搜索 ｜ a 加自选 ｜ R 重新读取持仓 ｜ 右键卡片有更多操作", 8000)
 
         self.apply_stylesheet()
 
+    # ==================================================================
+    # ★ 持仓分组
+    # ==================================================================
+    def _build_holdings_section(self, main_lay):
+        self.hold_container = QWidget()
+        v = QVBoxLayout(self.hold_container)
+        v.setContentsMargins(10, 0, 10, 0)
+
+        self.hold_title = QLabel("")
+        self.hold_title.setFont(QFont("Arial", 20, QFont.Weight.Bold))
+        self.hold_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        v.addWidget(self.hold_title)
+
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(6)
+        self.sort_buttons = {}
+        for mode, label in HOLD_SORT_MODES:
+            b = QPushButton(label)
+            b.setFixedWidth(74)
+            b.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            b.clicked.connect(lambda _=False, m=mode: self.on_sort_clicked(m))
+            self.sort_buttons[mode] = b
+            btn_row.addWidget(b)
+        btn_row.addStretch(1)
+        v.addLayout(btn_row)
+
+        self.hold_body = QHBoxLayout()
+        v.addLayout(self.hold_body)
+        v.addStretch(1)
+
+        main_lay.addWidget(self.hold_container)
+        self._add_separator(main_lay)
+
+        self._refresh_holdings_body()
+        self._update_hold_header()
+
+    def _update_hold_header(self):
+        arrow = '↓' if self.hold_sort_desc else '↑'
+        label = HOLD_SORT_LABEL.get(self.hold_sort_mode, self.hold_sort_mode)
+        ts = self.positions_meta.get('updated_at_str', '')
+        self.hold_title.setText(f"持仓 ({len(self.positions)}只)  排序：{label}{arrow}")
+        self.hold_title.setToolTip(f"数据文件：firstrade_positions.json\n更新时间：{ts or '未知'}\n"
+                                   f"（按 R 键重新读盘）")
+        for mode, btn in self.sort_buttons.items():
+            active = (mode == self.hold_sort_mode)
+            btn.setText(f"{HOLD_SORT_LABEL[mode]}{(' ' + arrow) if active else ''}")
+            btn.setObjectName("SortBtnOn" if active else "SortBtn")
+            btn.style().unpolish(btn)
+            btn.style().polish(btn)
+
+    def on_sort_clicked(self, mode):
+        if mode == self.hold_sort_mode:
+            self.hold_sort_desc = not self.hold_sort_desc
+        else:
+            self.hold_sort_mode = mode
+            self.hold_sort_desc = HOLD_DEFAULT_DESC.get(mode, True)
+        self._apply_sort()
+        arrow = '降序' if self.hold_sort_desc else '升序'
+        self.statusBar().showMessage(
+            f"持仓排序：{HOLD_SORT_LABEL[self.hold_sort_mode]} {arrow}"
+            f"（图表左右键将按此顺序浏览）", 6000)
+
+    def _apply_sort(self):
+        cur = self.symbol_manager.current_symbol() if self.active_source == 'holdings' else None
+        self.list_holdings = self._sorted_holdings()
+        self._refresh_holdings_body()
+        self._update_hold_header()
+        if self.active_source == 'holdings':
+            self.symbol_manager.update_symbols(self.list_holdings)
+            if cur:
+                self.symbol_manager.set_current_symbol(cur)
+
+    def _clear_layout(self, layout):
+        while layout.count():
+            item = layout.takeAt(0)
+            w = item.widget()
+            if w is not None:
+                w.setParent(None)
+                w.deleteLater()
+                continue
+            sub = item.layout()
+            if sub is not None:
+                self._clear_layout(sub)
+                sub.deleteLater()
+
+    def _refresh_holdings_body(self):
+        # 先把旧控件从检索索引里摘掉，避免 / 搜索命中已销毁的对象
+        for sym, container, _btn in self._hold_widget_refs:
+            lst = self.symbol_widgets_map.get(sym)
+            if lst:
+                remain = [t for t in lst if t[0] is not container]
+                if remain:
+                    self.symbol_widgets_map[sym] = remain
+                else:
+                    self.symbol_widgets_map.pop(sym, None)
+        self._hold_widget_refs = []
+
+        self._clear_layout(self.hold_body)
+
+        if not self.positions:
+            tip = QLabel("无持仓数据\n请在 Chrome 插件里点\n「手动抓取全部持仓」\n然后按 R 刷新")
+            tip.setStyleSheet("color:#888; font-size:15px; padding:12px;")
+            self.hold_body.addWidget(tip)
+            return
+
+        items = self.list_holdings
+        for chunk in [items[i:i + MAX_ITEMS_PER_COLUMN]
+                      for i in range(0, len(items), MAX_ITEMS_PER_COLUMN)]:
+            col = QVBoxLayout()
+            col.setAlignment(Qt.AlignmentFlag.AlignTop)
+            for sym in chunk:
+                col.addWidget(self._create_holding_widget(sym))
+            col.addStretch(1)
+            self.hold_body.addLayout(col)
+
+    def _create_holding_widget(self, sym):
+        rec = self.positions.get(sym, {})
+        gl_txt = str(rec.get('gainloss') or '').strip()
+        cost_txt = str(rec.get('cost') or '').strip()
+        gl_num = position_num(rec, 'gainloss', 'gainlossPercent')
+
+        parts = []
+        if gl_txt:
+            parts.append(gl_txt)
+        if cost_txt:
+            parts.append(fmt_money(cost_txt))
+        disp = '  '.join(parts) or ' '
+
+        if gl_num is None or gl_num == 0:
+            style = 'Hold_Flat'
+        else:
+            style = 'Hold_Up' if gl_num > 0 else 'Hold_Dn'
+
+        return self.create_symbol_widget(
+            sym, override_text=disp, force_style=style,
+            tooltip=self._holding_tooltip(sym),
+            source='holdings', track=self._hold_widget_refs)
+
+    def _holding_tooltip(self, sym):
+        rec = self.positions.get(sym) or {}
+        lst = self.list_holdings
+        idx = lst.index(sym) + 1 if sym in lst else 0
+
+        def g(key, label):
+            v = rec.get(key)
+            if v in (None, '', '--'):
+                return None
+            return f"{label} {v}"
+
+        lines = [f"【{sym}】持仓"]
+        row1 = [x for x in (g('quantity', '数量'), g('avg_cost', '均价'),
+                            g('cost', '成本'), g('market_value', '市值')) if x]
+        if row1:
+            lines.append('｜'.join(row1))
+        row2 = [x for x in (g('day_change', '今日'), g('gainloss', '总盈亏'),
+                            g('gainloss_amount', '金额'), g('allocation', '仓位')) if x]
+        if row2:
+            lines.append('｜'.join(row2))
+        lines.append(f"排序：{HOLD_SORT_LABEL[self.hold_sort_mode]} "
+                     f"{'降序↓' if self.hold_sort_desc else '升序↑'}（第 {idx}/{len(lst)}）")
+        ts = self.positions_meta.get('updated_at_str')
+        if ts:
+            lines.append(f"数据更新：{ts}")
+        return "\n".join(lines)
+
+    # ==================================================================
+    # 搜索定位
+    # ==================================================================
     def show_search_dialog(self):
-        """按 / 键弹出搜索框"""
         text, ok = QInputDialog.getText(self, "搜索 Symbol", "请输入 Symbol（回车确认）:")
         if ok and text.strip():
             self.search_and_locate_symbol(clean_ticker(text.strip()).upper())
 
     def search_and_locate_symbol(self, symbol):
-        """查找 Symbol 并横向/纵向滚动定位 + 金色闪烁高亮"""
         widgets = self.symbol_widgets_map.get(symbol)
         if not widgets:
             QMessageBox.information(self, "未找到", f"未在当前列表中找到: {symbol}")
             return
-
-        # 若同一股票在界面有多处（如转折区、共振区），以首个为主定位，全部高亮闪烁
         primary_container, _ = widgets[0]
-
-        # 核心：将目标卡片滚动到视口中心可见区域
         self.scroll_area.ensureWidgetVisible(primary_container, 150, 150)
-
-        # 更新 SymbolManager 的指针，方便后续按上下键连续查看
         self.symbol_manager.set_current_symbol(symbol)
-
-        # 闪烁按钮
         for _, btn in widgets:
             self.flash_highlight(btn)
 
     def flash_highlight(self, btn):
-        """按钮金色边框闪烁 3 次提醒"""
         highlight_style = "border: 3px solid #FFD700 !important;"
-
         state = {"count": 0, "on": False}
 
         def toggle():
-            if state["count"] >= 6:  # 切换 6 次即闪烁 3 周期
-                btn.setStyleSheet("")  # 恢复全局 QSS 样式
+            try:
+                if state["count"] >= 6:
+                    btn.setStyleSheet("")
+                    return
+                btn.setStyleSheet(highlight_style if not state["on"] else "")
+            except RuntimeError:
                 return
-            btn.setStyleSheet(highlight_style if not state["on"] else "")
             state["on"] = not state["on"]
             state["count"] += 1
             QTimer.singleShot(250, toggle)
 
         toggle()
-        
+
+    # ==================================================================
     def _build_turning_section(self, main_lay):
         col_lay = QHBoxLayout()
         strong_n = sum(1 for r in self.turning_data if r['level'] > 0)
@@ -914,7 +1134,8 @@ class GroupWindow(QMainWindow):
                         r['symbol'],
                         override_text=disp,
                         force_style=f"Turn_L{r['level']}",
-                        tooltip=r['reason']
+                        tooltip=r['reason'],
+                        source='turning'
                     ))
                 col.addStretch(1); col_lay.addLayout(col)
 
@@ -941,7 +1162,8 @@ class GroupWindow(QMainWindow):
                         sym,
                         override_text=disp if disp else " ",
                         force_style=f"Reso_L{mark['level']}",
-                        tooltip=mark.get('reason', '')
+                        tooltip=mark.get('reason', ''),
+                        source='resonance'
                     ))
                 col.addStretch(1); col_lay.addLayout(col)
 
@@ -970,18 +1192,24 @@ class GroupWindow(QMainWindow):
             "Red":      ("red", "black", "#333"),
             "Black":    ("black", "white", "#333"),
             "Default":  ("#111111", "gray", "#333"),
-            # 共振：统一灰白标题 + 强度描边
+            # 共振
             "Reso_L0":  ("#111111", "#D8DEE9", "#3A3A3A"),
             "Reso_L1":  ("#10222A", "#D8DEE9", "#88C0D0"),
             "Reso_L2":  ("#2C2411", "#F2E3B4", "#EBCB8B"),
             "Reso_L3":  ("#3B171C", "#FFD5D9", "#BF616A"),
-            # 转折：偏绿/紫的描边，和共振区分
+            # 转折
             "Turn_L0":  ("#111111", "#D8DEE9", "#3A3A3A"),
             "Turn_L1":  ("#13251C", "#D8E9DE", "#A3BE8C"),
             "Turn_L2":  ("#241B2C", "#EBD9F2", "#B48EAD"),
             "Turn_L3":  ("#3B171C", "#FFD5D9", "#BF616A"),
+            # ★ 持仓（红涨绿跌，与 Chart 一致）
+            "Hold_Up":  ("#3B171C", "#FFD5D9", "#BF616A"),
+            "Hold_Dn":  ("#13251C", "#D8E9DE", "#A3BE8C"),
+            "Hold_Flat": ("#111111", "#D8DEE9", "#3A3A3A"),
         }
-        strong_set = {"Reso_L1", "Reso_L2", "Reso_L3", "Turn_L1", "Turn_L2", "Turn_L3"}
+        strong_set = {"Reso_L1", "Reso_L2", "Reso_L3",
+                      "Turn_L1", "Turn_L2", "Turn_L3",
+                      "Hold_Up", "Hold_Dn"}
         qss = ""
         for name, (bg, fg, border) in button_styles.items():
             strong = name in strong_set
@@ -991,6 +1219,15 @@ class GroupWindow(QMainWindow):
                     f"padding:5px; border:{bw}px solid {border}; border-radius:4px; "
                     f"text-align:left; padding-left:8px; font-weight:{weight}; }}\n")
             qss += f"QPushButton#{name}:hover {{ background-color: {self.lighten_color(bg)}; }}\n"
+
+        # ★ 排序按钮
+        qss += ("QPushButton#SortBtn { background-color:#2E3440; color:#D8DEE9; font-size:13px; "
+                "border:1px solid #4C566A; border-radius:4px; padding:3px 4px; text-align:center; }\n"
+                "QPushButton#SortBtn:hover { background-color:#3B4252; }\n"
+                "QPushButton#SortBtnOn { background-color:#4C566A; color:#ECEFF4; font-size:13px; "
+                "font-weight:bold; border:1px solid #88C0D0; border-radius:4px; "
+                "padding:3px 4px; text-align:center; }\n"
+                "QPushButton#SortBtnOn:hover { background-color:#5E81AC; }\n")
 
         qss += "QMenu { background-color: #2C2C2C; color: #E0E0E0; border: 1px solid #555; }\n"
         qss += ("QToolTip { background-color: #2E3440; color: #ECEFF4; "
@@ -1019,12 +1256,14 @@ class GroupWindow(QMainWindow):
         return "Default"
 
     def create_symbol_widget(self, symbol, override_text=None, override_tags=None,
-                             force_default=False, force_style=None, tooltip=None):
+                             force_default=False, force_style=None, tooltip=None,
+                             source=None, track=None):
         btn_text = f"{symbol} {override_text if override_text else self.compare_data.get(symbol, '')}"
         button = QPushButton(btn_text.rstrip())
         button.setFixedWidth(SYMBOL_WIDGET_FIXED_WIDTH)
         button.setObjectName(self.get_button_style_name(symbol, force_default, force_style))
-        button.clicked.connect(lambda _, s=symbol: self.on_symbol_click(s))
+        button.clicked.connect(
+            lambda _=False, s=symbol, src=source: self.on_symbol_click(s, src))
         button.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         button.customContextMenuRequested.connect(lambda pos, s=symbol: self.show_context_menu(s))
 
@@ -1055,7 +1294,7 @@ class GroupWindow(QMainWindow):
             border-radius: 4px;
             border: 1px solid #e0e0d0;
         """)
-        label.clicked.connect(lambda: self.on_symbol_click(symbol))
+        label.clicked.connect(lambda s=symbol, src=source: self.on_symbol_click(s, src))
         label.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         label.customContextMenuRequested.connect(lambda pos, s=symbol: self.show_context_menu(s))
 
@@ -1071,9 +1310,11 @@ class GroupWindow(QMainWindow):
         vlay.addWidget(label)
         vlay.addStretch()
         container.setFixedWidth(SYMBOL_WIDGET_FIXED_WIDTH)
-        # 【新增】将当前生成的卡片与按钮注册到索引字典中（纯字母代码，统一大写）
+
         clean_sym = clean_ticker(symbol).upper()
         self.symbol_widgets_map[clean_sym].append((container, button))
+        if track is not None:
+            track.append((clean_sym, container, button))
         return container
 
     def get_tags_for_symbol(self, symbol):
@@ -1081,7 +1322,32 @@ class GroupWindow(QMainWindow):
             if item.get("symbol") == symbol: return item.get("tag", "无标签")
         return "无标签"
 
+    # ==================================================================
+    # 导航作用域
+    # ==================================================================
+    def _use_list(self, source):
+        src = 'holdings' if source == 'holdings' else 'main'
+        if src == self.active_source:
+            return
+        self.active_source = src
+        lst = self.list_holdings if src == 'holdings' else (self.list_turning + self.list_resonance)
+        self.symbol_manager.update_symbols(lst)
+
     def get_symbol_group_info(self, symbol):
+        # ★ 持仓作用域优先
+        if self.active_source == 'holdings' and symbol in self.positions:
+            lst = self.list_holdings
+            idx = lst.index(symbol) + 1 if symbol in lst else 0
+            rec = self.positions.get(symbol, {})
+            bits = []
+            gl = str(rec.get('gainloss') or '').strip()
+            if gl: bits.append(gl)
+            if rec.get('cost'): bits.append(fmt_money(rec.get('cost')))
+            arrow = '↓' if self.hold_sort_desc else '↑'
+            return (f"持仓 {' '.join(bits)} "
+                    f"[{HOLD_SORT_LABEL[self.hold_sort_mode]}{arrow}] "
+                    f"({idx}/{len(lst)})").replace("  ", " ").strip()
+
         for i, r in enumerate(self.turning_data):
             if r['symbol'] == symbol:
                 return (f"转折 {r['from_n']}→{r['to_n']} @{r['date']} {r['badge']} "
@@ -1099,7 +1365,9 @@ class GroupWindow(QMainWindow):
             return f"({curr_list.index(symbol) + 1}/{len(curr_list)})"
         return ""
 
-    def on_symbol_click(self, symbol):
+    def on_symbol_click(self, symbol, source=None):
+        if source:
+            self._use_list(source)
         self.symbol_manager.set_current_symbol(symbol)
         pos_str = f"{symbol} {self.get_symbol_group_info(symbol)}".strip()
 
@@ -1124,7 +1392,7 @@ class GroupWindow(QMainWindow):
 
     def navigate_symbol_from_chart(self, direction):
         s = self.symbol_manager.next_symbol() if direction == 'next' else self.symbol_manager.previous_symbol()
-        if s: self.on_symbol_click(s)
+        if s: self.on_symbol_click(s)      # 不传 source → 保持当前作用域
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Escape: self.close()
@@ -1133,7 +1401,7 @@ class GroupWindow(QMainWindow):
         else: super().keyPressEvent(event)
 
     # ------------------------------------------------------------------
-    # ★ 加入 Firstrade 自选股分组
+    # 加入 Firstrade 自选股分组
     # ------------------------------------------------------------------
     def add_symbol_to_watchlist(self, symbol, group=None):
         if not FT_WL_ADD_OK:
@@ -1149,10 +1417,7 @@ class GroupWindow(QMainWindow):
         add_symbol_async(symbol, group, on_done=lambda res: self.wl_done.emit(res), wait=45)
 
     def add_current_to_watchlist(self):
-        sym = None
-        mgr = self.symbol_manager
-        if mgr.symbols and 0 <= mgr.current_index < len(mgr.symbols):
-            sym = mgr.symbols[mgr.current_index]
+        sym = self.symbol_manager.current_symbol()
         if not sym:
             QMessageBox.information(self, "提示", "请先点一下某个股票卡片，或用右键菜单添加")
             return
@@ -1192,6 +1457,9 @@ class GroupWindow(QMainWindow):
         menu.addAction("编辑 Tags").triggered.connect(lambda: execute_external_script('tags', symbol))
         menu.addSeparator()
         menu.addAction("打开 High/Low 面板").triggered.connect(lambda: execute_external_script('highlow', symbol))
+        if symbol in self.positions:
+            menu.addSeparator()
+            menu.addAction("🔄 重新读取持仓 (R)").triggered.connect(self.reload_positions)
         menu.exec(QCursor.pos())
 
     def closeEvent(self, event):

@@ -135,14 +135,19 @@ def get_firstrade_position(symbol):
         if FT_DEBUG:
             print(f"[FT] 持仓文件为空或不存在: {FIRSTRADE_POSITIONS_FILE}")
         return None
+    meta_ts = (data.get('_meta') or {}).get('updated_at')
     target = _norm_key(symbol)
     for k, v in data.items():
         if str(k).startswith('_') or not isinstance(v, dict):
             continue
         if _norm_key(k) == target:
+            out = dict(v)
+            out.setdefault('symbol', str(k).upper())
+            if not out.get('updated_at'):        # ★ 逐条 updated_at 已取消，从 _meta 回填
+                out['updated_at'] = meta_ts
             if FT_DEBUG:
-                print(f"[FT] 命中持仓 {k}: {v}")
-            return v
+                print(f"[FT] 命中持仓 {k}: {out}")
+            return out
     if FT_DEBUG:
         keys = [k for k in data.keys() if not str(k).startswith('_')]
         print(f"[FT] 持仓未找到 {symbol}（共 {len(keys)} 条）: {keys[:25]}")
@@ -271,3 +276,47 @@ def build_market_items(symbol, theme, show_miss=None):
     if show_miss:
         return [("持仓/自选: 无数据", theme['border'], 'normal')]
     return []
+
+# ----------------------------------------------------------------------
+# 供 Check_Group.py 使用：整份持仓 + 数值解析 + 格式化
+# ----------------------------------------------------------------------
+def load_all_positions():
+    """返回 (positions: {SYMBOL: rec}, meta: dict)；symbol 统一为大写 '-' 形式"""
+    data = _load_json_cached(FIRSTRADE_POSITIONS_FILE)
+    meta = data.get('_meta') or {}
+    out = {}
+    for k, v in data.items():
+        if str(k).startswith('_') or not isinstance(v, dict):
+            continue
+        sym = _ft_norm_sym(v.get('symbol') or k)
+        if not sym:
+            continue
+        rec = dict(v)
+        rec['symbol'] = sym
+        if not rec.get('updated_at'):
+            rec['updated_at'] = meta.get('updated_at')
+        out[sym] = rec
+    return out, meta
+
+
+def position_num(rec, *keys):
+    """按优先级从记录里取第一个可解析成数字的字段（'+7.16%' -> 7.16, '6,000.00' -> 6000.0）"""
+    if not isinstance(rec, dict):
+        return None
+    for k in keys:
+        v = rec.get(k)
+        if v in (None, '', '--'):
+            continue
+        n = _num(v)
+        if n is not None:
+            return n
+    return None
+
+
+def fmt_money(s):
+    """6,000.00 -> 6.0K / 1,234,567 -> 1.23M"""
+    return _fmt_money(s)
+
+
+def fmt_signed(s):
+    return _fmt_gainloss_amount(s)

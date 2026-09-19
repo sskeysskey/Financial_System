@@ -58,6 +58,15 @@ ORDER_EXTRA_FIELDS = ("order_id", "side_text", "datetime", "status", "price_type
                       "duration", "instruction", "amount_source", "quantity_text", "raw")
 ORDER_VERBOSE_DEFAULT = os.environ.get("FT_ORDER_VERBOSE", "") == "1"
 
+# ---------- 持仓 LEAN schema ----------
+POSITION_LEAN_FIELDS = ("symbol", "quantity", "cost", "avg_cost", "market_value",
+                        "last_price", "day_change", "day_change_amount",
+                        "gainloss", "gainloss_amount", "allocation")
+POSITION_JUNK_KEYS = ("raw", "dayTrend", "trend", "chart", "sparkline",
+                      "updated_at", "row_id", "actions", "menu")
+POSITION_MAX_VALUE_LEN = 40
+POSITION_VERBOSE_DEFAULT = os.environ.get("FT_POSITION_VERBOSE", "") == "1"
+
 _ST_FILL = re.compile(r"已成交|已执行|成交|filled|executed|partial", re.I)
 _ST_CANCEL = re.compile(r"取消|撤销|撤单|拒绝|失效|过期|无效|作废|cancel|reject|expire|void", re.I)
 _ST_PEND = re.compile(r"待|挂单|未成交|排队|已提交|open|pending|queued|working|accept", re.I)
@@ -380,13 +389,81 @@ def build_wl_source(src, back=1, ahead=0):
     return {"status": "error", "message": f"未知数据源: {src}", "symbols": [], "count": 0}
 
 
-def save_positions(incoming, overwrite=False):
+def _slim_position(sym, rec, verbose=False):
+    """持仓记录瘦身：白名单字段 + 去 raw / dayTrend / 逐条 updated_at"""
+    out = {"symbol": sym}
+    for k in POSITION_LEAN_FIELDS:
+        if k == "symbol":
+            continue
+        v = rec.get(k)
+        if v in (None, "", "--", {}, []):
+            continue
+        if isinstance(v, str):
+            v = v.strip()
+            if not v or v == "--" or len(v) > POSITION_MAX_VALUE_LEN:
+                continue
+        out[k] = v
+    # 老格式兼容：顶层缺字段时，从残留的 raw 里补一次（补完照样不落 raw）
+    raw = rec.get("raw")
+    if isinstance(raw, dict):
+        alias = {"quantity": "quantity", "totalCost": "cost", "averageCost": "avg_cost",
+                 "marketValue": "market_value", "price": "last_price",
+                 "changePercent": "day_change", "change": "day_change_amount",
+                 "gainlossPercent": "gainloss", "gainloss": "gainloss_amount",
+                 "allocationPercent": "allocation"}
+        for rk, ak in alias.items():
+            if ak in out:
+                continue
+            v = raw.get(rk)
+            if isinstance(v, (int, float)):
+                out[ak] = v
+            elif isinstance(v, str):
+                v = v.strip()
+                if v and v != "--" and len(v) <= POSITION_MAX_VALUE_LEN:
+                    out[ak] = v
+        if verbose:
+            clean = {k: v for k, v in raw.items()
+                     if k not in POSITION_JUNK_KEYS
+                     and isinstance(v, (str, int, float))
+                     and len(str(v)) <= POSITION_MAX_VALUE_LEN}
+            if clean:
+                out["raw"] = clean
+    return out
+
+
+def _write_positions(data, verbose, mode):
+    data["_meta"] = {
+        "updated_at": time.time(),
+        "updated_at_str": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "count": len([k for k in data.keys() if not str(k).startswith("_")]),
+        "mode": mode,
+        "schema": "full_v1" if verbose else "lean_v1",
+    }
+    # ★ backup=True → 每次写入前把上一期存成 firstrade_positions.json.bak
+    _atomic_write(POSITIONS_JSON_PATH, data, backup=True)
+    return data["_meta"]["count"]
+
+
+def save_positions(incoming, overwrite=False, verbose=None):
     if not isinstance(incoming, dict):
         return 0, 0
     if not incoming and not overwrite:
         return 0, 0
+    verbose = POSITION_VERBOSE_DEFAULT if verbose is None else bool(verbose)
     with _FILE_LOCK:
         data = {} if overwrite else _load_json(POSITIONS_JSON_PATH)
+
+        # 合并模式下，顺手把历史胖记录洗一遍
+        if data:
+            for k in list(data.keys()):
+                if str(k).startswith("_"):
+                    continue
+                if isinstance(data[k], dict):
+                    data[k] = _slim_position(str(k).strip().upper(), data[k], verbose)
+                else:
+                    data.pop(k, None)
+
+        old_total = len([k for k in data.keys() if not str(k).startswith("_")])
         n = 0
         for key, val in incoming.items():
             if not isinstance(val, dict):
@@ -394,19 +471,47 @@ def save_positions(incoming, overwrite=False):
             sym = str(key).strip().upper()
             if not sym:
                 continue
-            val = dict(val)
-            val.setdefault("symbol", sym)
-            data[sym] = val
+            slim = _slim_position(sym, val, verbose)
+            if len(slim) <= 1:          # 只有 symbol，没有任何有效字段
+                continue
+            if not overwrite and isinstance(data.get(sym), dict):
+                merged = dict(data[sym])
+                merged.update(slim)
+                slim = merged
+            data[sym] = slim
             n += 1
-        data["_meta"] = {
-            "updated_at": time.time(),
-            "updated_at_str": time.strftime("%Y-%m-%d %H:%M:%S"),
-            "count": len([k for k in data.keys() if not k.startswith("_")]),
-            "mode": "overwrite" if overwrite else "merge",
-        }
-        _atomic_write(POSITIONS_JSON_PATH, data)
-        total = data["_meta"]["count"]
+
+        if overwrite and old_total >= 10 and n < old_total * 0.4:
+            _log(f"⚠ 覆盖写入的持仓数({n}) 远少于原有({old_total})，"
+                 f"旧数据已备份到 {os.path.basename(POSITIONS_JSON_PATH)}.bak")
+
+        total = _write_positions(data, verbose, "overwrite" if overwrite else "merge")
     return n, total
+
+
+def compact_positions(verbose=False):
+    """一次性给历史胖 firstrade_positions.json 瘦身（写入前自动 .bak）"""
+    with _FILE_LOCK:
+        before = _file_size(POSITIONS_JSON_PATH)
+        data = _load_json(POSITIONS_JSON_PATH)
+        if not data:
+            return {"status": "skip", "reason": "empty",
+                    "before": before, "after": before, "count": 0}
+        out, shrunk = {}, 0
+        for k, v in data.items():
+            if str(k).startswith("_") or not isinstance(v, dict):
+                continue
+            sym = str(k).strip().upper()
+            s = _slim_position(sym, v, verbose)
+            if len(s) < len(v):
+                shrunk += 1
+            out[sym] = s
+        cnt = _write_positions(out, verbose, "compact")
+        after = _file_size(POSITIONS_JSON_PATH)
+    return {"status": "ok", "count": cnt, "shrunk": shrunk,
+            "before": before, "after": after,
+            "saved_pct": round((1 - (after / before)) * 100, 1) if before else 0.0,
+            "schema": "full_v1" if verbose else "lean_v1"}
 
 
 def _status_code(rec):
@@ -695,6 +800,14 @@ class StockRequestHandler(BaseHTTPRequestHandler):
                 self._reply(500, {"status": "error", "message": str(e)})
             return
 
+        if path == "/compact_positions":
+            try:
+                body = self._read_json_body()
+                self._reply(200, compact_positions(bool(body.get("verbose", False))))
+            except Exception as e:
+                self._reply(500, {"status": "error", "message": str(e)})
+            return
+
         if path == "/sync_watchlist":
             try:
                 body = self._read_json_body()
@@ -786,6 +899,8 @@ class StockRequestHandler(BaseHTTPRequestHandler):
                 "chart_script_exists": os.path.exists(STOCK_CHART_PY),
                 "wl_groups": WATCHLIST_GROUPS,
                 "wl_tasks_pending": pending_count(),
+                "positions_bytes": _file_size(POSITIONS_JSON_PATH),
+                "positions_bak_exists": os.path.exists(POSITIONS_JSON_PATH + ".bak"),
                 "agent_last_poll_ago": (round(time.time() - _LAST_AGENT_POLL[0], 1)
                                         if _LAST_AGENT_POLL[0] else None),
             })

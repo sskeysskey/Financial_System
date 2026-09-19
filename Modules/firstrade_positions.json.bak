@@ -648,8 +648,8 @@
   "allocation": "0.38%"
  },
  "_meta": {
-  "updated_at": 1789803486.562798,
-  "updated_at_str": "2026-09-19 15:38:06",
+  "updated_at": 1789803422.484579,
+  "updated_at_str": "2026-09-19 15:37:02",
   "count": 72,
   "mode": "overwrite",
   "schema": "lean_v1"

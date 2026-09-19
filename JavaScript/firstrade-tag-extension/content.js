@@ -74,20 +74,33 @@
   let syncTimer = null;
   let orderSyncTimer = null;
 
+  /* ★ 白名单：只有这里列出的列才会落盘（顶层别名字段即最终 schema） */
   const COL_ALIAS = {
     quantity: 'quantity',
     changePercent: 'day_change',
+    change: 'day_change_amount',
     gainlossPercent: 'gainloss',
+    gainloss: 'gainloss_amount',
     totalCost: 'cost',
     allocationPercent: 'allocation',
     marketValue: 'market_value',
     price: 'last_price',
     lastPrice: 'last_price',
     averageCost: 'avg_cost',
-    avgCost: 'avg_cost',
-    gainloss: 'gainloss_amount',
-    change: 'day_change_amount'
+    avgCost: 'avg_cost'
   };
+
+  /* ★ 黑名单：这些列里是内嵌图表/样式表文本，体积大且无用 */
+  const POSITION_COL_BLACKLIST = new Set(
+    ['dayTrend', 'trend', 'chart', 'sparkline', 'actions', 'menu']);
+  const MAX_CELL_LEN = 40;    // 超过这个长度的单元格文本一律视为噪音
+
+  /* 持仓内容级签名（用于判断是否有变化） */
+  function posSig(p) {
+    if (!p) return '';
+    return [p.cost, p.day_change, p.gainloss, p.gainloss_amount,
+    p.quantity, p.market_value, p.allocation, p.avg_cost].join('|');
+  }
 
   function safeSendMessage(msg) {
     return new Promise((resolve) => {
@@ -192,6 +205,7 @@
       if (p.cost) bits.push(`成本 ${escapeHtml(p.cost)}`);
       if (p.day_change) bits.push(`今日 ${escapeHtml(p.day_change)}`);
       if (p.gainloss) bits.push(`盈亏 ${escapeHtml(p.gainloss)}`);
+      if (p.gainloss_amount) bits.push(`金额 ${escapeHtml(p.gainloss_amount)}`);
       if (p.quantity) bits.push(`数量 ${escapeHtml(p.quantity)}`);
       if (bits.length) posHtml = `<div class="ft-popover-position">${bits.join(' · ')}</div>`;
     } else {
@@ -271,15 +285,16 @@
       if (row.closest('.ag-floating-top, .ag-floating-bottom')) return;
       const sym = symbolFromRowId(row.getAttribute('row-id'));
       if (!sym) return;
-      const rec = buf[sym] || (buf[sym] = { symbol: sym, raw: {} });
+      const rec = buf[sym] || (buf[sym] = { symbol: sym });
       row.querySelectorAll('[col-id]').forEach((cell) => {
         const col = cell.getAttribute('col-id');
         if (!col || col === 'symbol') return;
-        const txt = cleanText(cell);
-        if (!txt) return;
-        rec.raw[col] = txt;
+        if (POSITION_COL_BLACKLIST.has(col)) return;   // ★ 干掉 dayTrend 之类
         const alias = COL_ALIAS[col];
-        if (alias) rec[alias] = txt;
+        if (!alias) return;                            // ★ 白名单之外一律不要
+        const txt = cleanText(cell);
+        if (!txt || txt === '--' || txt.length > MAX_CELL_LEN) return;
+        rec[alias] = txt;
       });
     });
 
@@ -288,12 +303,11 @@
       const rec = buf[sym];
       if (!(rec.cost || rec.day_change || rec.gainloss || rec.quantity)) return;
       const old = positionCache[sym];
-      const merged = Object.assign({}, old || {}, rec, {
-        raw: Object.assign({}, (old && old.raw) || {}, rec.raw),
-        updated_at: Date.now()
-      });
-      const oldSig = old ? [old.cost, old.day_change, old.gainloss, old.quantity].join('|') : '';
-      const newSig = [merged.cost, merged.day_change, merged.gainloss, merged.quantity].join('|');
+      const merged = Object.assign({}, old || {}, rec);
+      delete merged.raw;          // ★ 清掉历史遗留
+      delete merged.updated_at;   // ★ 时间戳统一由文件 _meta 记录
+      const oldSig = posSig(old);
+      const newSig = posSig(merged);
       positionCache[sym] = merged;
       if (oldSig !== newSig) changed++;
     });
@@ -306,10 +320,8 @@
   }
 
   function signature() {
-    return Object.keys(positionCache).sort().map(k => {
-      const p = positionCache[k];
-      return `${k}:${p.cost}|${p.day_change}|${p.gainloss}|${p.quantity}`;
-    }).join(';');
+    return Object.keys(positionCache).sort()
+      .map(k => `${k}:${posSig(positionCache[k])}`).join(';');
   }
 
   function buildPayload() {
