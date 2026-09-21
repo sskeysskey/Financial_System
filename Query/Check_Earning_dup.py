@@ -839,8 +839,8 @@ class WeekendDatePickerApp(QWidget):
             new_date_str = new_dt.strftime('%Y-%m-%d')
             new_date_part = date_part_full.replace(original_date_str, new_date_str)
             
-            # 标准化格式并将 BMO/TNS 改为 AMC
-            new_line = f"{symbol_part}: AMC :{new_date_part}"
+            # 标准化格式并将 BMO/TNS 改为 BMO
+            new_line = f"{symbol_part}: BMO :{new_date_part}"
             
             print(f"  - 原行: {original_line}")
             print(f"  - 新行: {new_line.strip()}")

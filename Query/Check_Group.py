@@ -1,5 +1,5 @@
-#「转折」条目太多：把 TURN_MIN_DROP 改成 2（只看 4→2、5→3 这类硬转折），或 TURN_MIN_STREAK 改 4，或 TURN_RECENT_DAYS 改 1（只看最新交易日）。
-#「转折」条目太少 / 漏掉你例子那种：把 TURN_MAX_GAP 调到 3（容忍中间连续 2 天无记录），TURN_RECENT_DAYS 调到 5。
+# 「转折」条目太多：把 TURN_MIN_DROP 改成 2（只看 4→2、5→3 这类硬转折），或 TURN_MIN_STREAK 改 4，或 TURN_RECENT_DAYS 改 1（只看最新交易日）。
+# 「转折」条目太少 / 漏掉你例子那种：把 TURN_MAX_GAP 调到 3（容忍中间连续 2 天无记录），TURN_RECENT_DAYS 调到 5。
 # 想把“信号彻底消失”也抓出来：TURN_ALLOW_DROP_TO_ZERO = True（会明显变多，建议同时把 TURN_MIN_STREAK 提到 4）。
 # 星级门槛：在 _score_turning() 末尾改 4.5 / 3.5 / 2.5。
 # 关键项名单：直接改 TURN_LEVEL2_KEYS / TURN_LEVEL3_KEYS 即可。
@@ -8,7 +8,7 @@
 #   - 数据来源 Modules/firstrade_positions.json（Chrome 插件 + bridge_server.py 落盘）
 #   - 支持三种排序，点击表头按钮切换，同一按钮再点一次切换升/降序：
 #       A-Z（代码）｜盈亏%（gainloss）｜成本（cost）
-#   - 在该分组里点开图表后，Chart_input_single 的左右键就按这个排序在持仓内循环
+#   - 在该分组里点开图表后，左右键按当前持仓排序顺序浏览；到达最后一个时顺畅流转到下一个分组（转折/共振）
 #   - 按 R 键重新读取 firstrade_positions.json（不用重启）
 
 import sys
@@ -81,7 +81,7 @@ HOLD_SORT_KEYS = {
     'gainloss': ('gainloss', 'gainlossPercent', 'gainloss_amount'),
     'cost': ('cost', 'totalCost', 'market_value'),
 }
-HOLD_DEFAULT_DESC = {'alpha': False, 'gainloss': True, 'cost': True}
+HOLD_DEFAULT_DESC = {'alpha': False, 'gainloss': False, 'cost': True}
 
 # 52周新低判定：以下板块内的 symbol 视为符合 52week_low 筛选
 WEEK52_LOW_SECTORS = {
@@ -205,34 +205,68 @@ class ClickableLabel(QLabel):
         super().mousePressEvent(event)
 
 
-class SymbolManager:
-    def __init__(self, symbol_list):
-        self.update_symbols(symbol_list)
-
-    def update_symbols(self, symbol_list):
-        self.symbols = list(OrderedDict.fromkeys(symbol_list))
+# ======================================================================
+# 上下文感知的全局导航序列管理器
+# ======================================================================
+class GlobalNavigationManager:
+    """
+    统一管理 (symbol, source) 的全序列流转
+    支持跨分组平滑循环，即使同一个 symbol 存在于不同分组也能精准区分上下文
+    """
+    def __init__(self, items=None):
+        self.items = []
         self.current_index = -1
+        if items:
+            self.set_items(items)
 
-    def next_symbol(self):
-        if not self.symbols: return None
-        self.current_index = (self.current_index + 1) % len(self.symbols)
-        return self.symbols[self.current_index]
+    def set_items(self, items):
+        """设置全量条目列表 [(sym, source), ...]"""
+        old_item = self.current_item()
+        self.items = list(items) if items else []
+        if not self.items:
+            self.current_index = -1
+            return
+        if old_item:
+            self.set_current(old_item[0], old_item[1])
+        elif self.current_index >= len(self.items):
+            self.current_index = len(self.items) - 1
 
-    def previous_symbol(self):
-        if not self.symbols: return None
-        self.current_index = (self.current_index - 1 + len(self.symbols)) % len(self.symbols)
-        return self.symbols[self.current_index]
+    def next_item(self):
+        if not self.items:
+            return None
+        self.current_index = (self.current_index + 1) % len(self.items)
+        return self.items[self.current_index]
 
-    def set_current_symbol(self, symbol):
-        try:
-            self.current_index = self.symbols.index(symbol)
-        except ValueError:
-            pass
+    def previous_item(self):
+        if not self.items:
+            return None
+        self.current_index = (self.current_index - 1 + len(self.items)) % len(self.items)
+        return self.items[self.current_index]
+
+    def set_current(self, symbol, source=None):
+        if not self.items:
+            self.current_index = -1
+            return
+        # 1. 优先完全匹配 (symbol, source)
+        if source:
+            for idx, (sym, src) in enumerate(self.items):
+                if sym == symbol and src == source:
+                    self.current_index = idx
+                    return
+        # 2. 次优匹配 symbol
+        for idx, (sym, _) in enumerate(self.items):
+            if sym == symbol:
+                self.current_index = idx
+                return
+
+    def current_item(self):
+        if self.items and 0 <= self.current_index < len(self.items):
+            return self.items[self.current_index]
+        return None
 
     def current_symbol(self):
-        if self.symbols and 0 <= self.current_index < len(self.symbols):
-            return self.symbols[self.current_index]
-        return None
+        item = self.current_item()
+        return item[0] if item else None
 
     def reset(self):
         self.current_index = -1
@@ -805,22 +839,35 @@ class GroupWindow(QMainWindow):
         # ===== ★ 持仓 =====
         self.positions = {}
         self.positions_meta = {}
-        self.hold_sort_mode = 'alpha'
-        self.hold_sort_desc = HOLD_DEFAULT_DESC['alpha']
+        self.hold_sort_mode = 'gainloss'                     # 默认模式改为盈亏
+        self.hold_sort_desc = HOLD_DEFAULT_DESC['gainloss']  # 取上面改好的 False（升序，负值大/亏损大的排最前）
         self._hold_widget_refs = []
         self.load_positions_data()
         self.list_holdings = self._sorted_holdings()
 
-        # ===== 导航作用域 =====
-        main_list = self.list_turning + self.list_resonance
-        if main_list:
-            self.active_source = 'main'
-            self.symbol_manager = SymbolManager(main_list)
-        else:
-            self.active_source = 'holdings'
-            self.symbol_manager = SymbolManager(self.list_holdings)
+        # ===== ★ 全局统一切换序列管理器 =====
+        # 顺序：持仓(当前排序) -> 转折 -> 共振
+        self.nav_manager = GlobalNavigationManager(self._build_full_navigation_list())
 
         self.init_ui()
+
+    # ==================================================================
+    # 导航全序列生成
+    # ==================================================================
+    def _build_full_navigation_list(self):
+        """构建统一的全局导航列表：[ (sym, 'holdings'), ..., (sym, 'turning'), ..., (sym, 'resonance'), ... ]"""
+        items = []
+        for s in self.list_holdings:
+            items.append((s, 'holdings'))
+        for s in self.list_turning:
+            items.append((s, 'turning'))
+        for s in self.list_resonance:
+            items.append((s, 'resonance'))
+        return items
+
+    def _sync_navigation_list(self):
+        """当持仓排序或数据变动时，同步全局导航序列"""
+        self.nav_manager.set_items(self._build_full_navigation_list())
 
     # ==================================================================
     # 持仓数据
@@ -876,7 +923,7 @@ class GroupWindow(QMainWindow):
 
         legend = QLabel(
             "【持仓】读取 firstrade_positions.json；点上方按钮切换排序（同一按钮再点一次切升/降序），"
-            "排序结果决定图表里左右键的浏览顺序；按 R 键重新读盘。\n"
+            "浏览完持仓最后一项将顺畅进入转折/共振；按 R 键重新读盘。\n"
             "【共振】🔥★★★ 极罕见且信号极强（红框）｜ ★★ 罕见/高质量（黄框）｜ ★ 值得一看（蓝框）｜ 无标记 = 常态（灰框）\n"
             f"【转折】连续 ≥{TURN_MIN_STREAK} 天保持多项关键信号后，突然减项（如 4项→2项 / 2项→1项）；"
             "按钮上的 4→2 表示“平台4项 → 当日2项”，鼠标悬停可看平台期逐日明细。"
@@ -969,17 +1016,13 @@ class GroupWindow(QMainWindow):
         arrow = '降序' if self.hold_sort_desc else '升序'
         self.statusBar().showMessage(
             f"持仓排序：{HOLD_SORT_LABEL[self.hold_sort_mode]} {arrow}"
-            f"（图表左右键将按此顺序浏览）", 6000)
+            f"（图表左右键将按此顺序浏览并流转至后续分组）", 6000)
 
     def _apply_sort(self):
-        cur = self.symbol_manager.current_symbol() if self.active_source == 'holdings' else None
         self.list_holdings = self._sorted_holdings()
         self._refresh_holdings_body()
         self._update_hold_header()
-        if self.active_source == 'holdings':
-            self.symbol_manager.update_symbols(self.list_holdings)
-            if cur:
-                self.symbol_manager.set_current_symbol(cur)
+        self._sync_navigation_list()
 
     def _clear_layout(self, layout):
         while layout.count():
@@ -995,7 +1038,6 @@ class GroupWindow(QMainWindow):
                 sub.deleteLater()
 
     def _refresh_holdings_body(self):
-        # 先把旧控件从检索索引里摘掉，避免 / 搜索命中已销毁的对象
         for sym, container, _btn in self._hold_widget_refs:
             lst = self.symbol_widgets_map.get(sym)
             if lst:
@@ -1089,7 +1131,7 @@ class GroupWindow(QMainWindow):
             return
         primary_container, _ = widgets[0]
         self.scroll_area.ensureWidgetVisible(primary_container, 150, 150)
-        self.symbol_manager.set_current_symbol(symbol)
+        self.nav_manager.set_current(symbol)
         for _, btn in widgets:
             self.flash_highlight(btn)
 
@@ -1323,19 +1365,11 @@ class GroupWindow(QMainWindow):
         return "无标签"
 
     # ==================================================================
-    # 导航作用域
+    # 标题信息与导航
     # ==================================================================
-    def _use_list(self, source):
-        src = 'holdings' if source == 'holdings' else 'main'
-        if src == self.active_source:
-            return
-        self.active_source = src
-        lst = self.list_holdings if src == 'holdings' else (self.list_turning + self.list_resonance)
-        self.symbol_manager.update_symbols(lst)
-
-    def get_symbol_group_info(self, symbol):
-        # ★ 持仓作用域优先
-        if self.active_source == 'holdings' and symbol in self.positions:
+    def get_symbol_group_info(self, symbol, source=None):
+        """精准提取 symbol 在当前分组上下文下的标识与排位信息"""
+        if source == 'holdings' and symbol in self.positions:
             lst = self.list_holdings
             idx = lst.index(symbol) + 1 if symbol in lst else 0
             rec = self.positions.get(symbol, {})
@@ -1348,29 +1382,48 @@ class GroupWindow(QMainWindow):
                     f"[{HOLD_SORT_LABEL[self.hold_sort_mode]}{arrow}] "
                     f"({idx}/{len(lst)})").replace("  ", " ").strip()
 
+        if source == 'turning':
+            for i, r in enumerate(self.turning_data):
+                if r['symbol'] == symbol:
+                    return (f"转折 {r['from_n']}→{r['to_n']} @{r['date']} {r['badge']} "
+                            f"({i + 1}/{len(self.turning_data)})")
+
+        if source == 'resonance':
+            for item in self.resonance_data:
+                if symbol in item['symbols']:
+                    idx = item['symbols'].index(symbol)
+                    badge = self.symbol_marks.get(symbol, {}).get('badge', '')
+                    badge_str = f" {badge}" if badge else ""
+                    return f"共振{item['count']}组{badge_str} ({idx + 1}/{len(item['symbols'])})"
+
+        # 兜底：未显式指定 source 时按出现顺序查找
+        if symbol in self.positions:
+            lst = self.list_holdings
+            idx = lst.index(symbol) + 1 if symbol in lst else 0
+            return f"持仓 ({idx}/{len(lst)})"
         for i, r in enumerate(self.turning_data):
             if r['symbol'] == symbol:
-                return (f"转折 {r['from_n']}→{r['to_n']} @{r['date']} {r['badge']} "
-                        f"({i + 1}/{len(self.turning_data)})")
-
+                return f"转折 {r['from_n']}→{r['to_n']} ({i + 1}/{len(self.turning_data)})"
         for item in self.resonance_data:
             if symbol in item['symbols']:
                 idx = item['symbols'].index(symbol)
-                badge = self.symbol_marks.get(symbol, {}).get('badge', '')
-                badge_str = f" {badge}" if badge else ""
-                return f"共振{item['count']}组{badge_str} ({idx + 1}/{len(item['symbols'])})"
+                return f"共振{item['count']}组 ({idx + 1}/{len(item['symbols'])})"
 
-        curr_list = self.symbol_manager.symbols
-        if symbol in curr_list:
-            return f"({curr_list.index(symbol) + 1}/{len(curr_list)})"
         return ""
 
     def on_symbol_click(self, symbol, source=None):
-        if source:
-            self._use_list(source)
-        self.symbol_manager.set_current_symbol(symbol)
-        pos_str = f"{symbol} {self.get_symbol_group_info(symbol)}".strip()
+        self.nav_manager.set_current(symbol, source)
+        self._plot_current_symbol(source)
 
+    def _plot_current_symbol(self, preferred_source=None):
+        item = self.nav_manager.current_item()
+        if not item:
+            return
+        symbol, src = item
+        if preferred_source:
+            src = preferred_source
+
+        pos_str = f"{symbol} {self.get_symbol_group_info(symbol, src)}".strip()
         shares_val, marketcap, pe, pb = fetch_mnspp_data_from_db(DB_PATH, symbol)
         sector = next((s for s, names in self.sector_data.items() if symbol in names), None)
 
@@ -1387,12 +1440,15 @@ class GroupWindow(QMainWindow):
             print(f"绘图错误: {e}")
 
     def handle_chart_callback(self, action):
-        if action == 'next': QTimer.singleShot(50, lambda: self.navigate_symbol_from_chart('next'))
-        elif action == 'prev': QTimer.singleShot(50, lambda: self.navigate_symbol_from_chart('prev'))
+        if action == 'next':
+            QTimer.singleShot(50, lambda: self.navigate_symbol_from_chart('next'))
+        elif action == 'prev':
+            QTimer.singleShot(50, lambda: self.navigate_symbol_from_chart('prev'))
 
     def navigate_symbol_from_chart(self, direction):
-        s = self.symbol_manager.next_symbol() if direction == 'next' else self.symbol_manager.previous_symbol()
-        if s: self.on_symbol_click(s)      # 不传 source → 保持当前作用域
+        item = self.nav_manager.next_item() if direction == 'next' else self.nav_manager.previous_item()
+        if item:
+            self._plot_current_symbol()
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Escape: self.close()
@@ -1417,7 +1473,7 @@ class GroupWindow(QMainWindow):
         add_symbol_async(symbol, group, on_done=lambda res: self.wl_done.emit(res), wait=45)
 
     def add_current_to_watchlist(self):
-        sym = self.symbol_manager.current_symbol()
+        sym = self.nav_manager.current_symbol()
         if not sym:
             QMessageBox.information(self, "提示", "请先点一下某个股票卡片，或用右键菜单添加")
             return
@@ -1463,7 +1519,7 @@ class GroupWindow(QMainWindow):
         menu.exec(QCursor.pos())
 
     def closeEvent(self, event):
-        self.symbol_manager.reset(); QApplication.quit(); event.accept()
+        self.nav_manager.reset(); QApplication.quit(); event.accept()
 
 
 if __name__ == '__main__':

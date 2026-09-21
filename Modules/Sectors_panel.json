@@ -3493,11 +3493,8 @@
         "USDBRL": "美兑巴雷亚尔"
     },
     "Economics": {
-        "USRetailM": "16 USRetailM",
-        "ImportPriceM": "16 ImportPriceM",
-        "USInterest": "16 USInterest",
-        "USInitial": "24 USInitial",
-        "USConfidence": "25 USConfidence"
+        "USConfidence": "25 USConfidence",
+        "USInitial": "24 USInitial"
     },
     "Economic_All": {
         "USGDP": "",
