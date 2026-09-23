@@ -51,6 +51,8 @@ SYMBOL_MAPPING_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Symbol_mapp
 # 可选：MarketWatch 专用覆盖映射（不存在则忽略）。支持两种格式（可混用）：
 #   平铺: {"BRK-B": "brk.b"}
 #   分组: {"Indices": {"UK100": "ukx?countrycode=uk"}, "Commodities": {"Rice": ["rr00", "zr00"]}}
+# 值中可带"品种类型/"前缀以覆盖分组默认的 URL 类型（同时页面类型校验也随之改变），例如：
+#   {"Currencies": {"DXY": "index/dxy"}}  -> https://www.marketwatch.com/investing/index/dxy
 MW_SYMBOL_OVERRIDE_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Symbol_mapping_mw.json")
 CHECK_YESTERDAY_SCRIPT_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Query", "Check_yesterday.py")
 
@@ -92,6 +94,18 @@ PRICE_SANITY_CHECK = True
 PRICE_SANITY_THRESHOLD = 0.25   # 25%
 PRICE_SANITY_ACTION = "skip"    # "skip" -> 不写入并保留在 JSON；"warn" -> 仅提示仍写入
 
+# ---- MarketWatch URL 中的品种类型 -> 页面 body 上 symbol--xxx 类名 ----
+# 用于映射中带"类型/"前缀时（如 "index/dxy"），自动切换页面类型校验
+ASSET_PATH_TO_BODY_TYPE = {
+    "stock": "stock",
+    "fund": "fund",
+    "bond": "bond",
+    "currency": "currency",
+    "cryptocurrency": "cryptocurrency",
+    "index": "index",
+    "future": "future",
+}
+
 # ---- 分组 -> 抓取处理器 ----
 STOCK_SECTORS = [
     'Basic_Materials', 'Communication_Services', 'Consumer_Cyclical',
@@ -104,6 +118,7 @@ STOCK_SECTORS = [
 #   quote       -> 行情概览页 (h2.intraday__price)
 # resolver: symbol -> MarketWatch 路径的推导规则（内置/用户覆盖映射优先）
 # expect_type: 页面 body 上的 symbol--xxx 类名，用于识别是否跳转到了错误品种页
+#              （若映射值带"类型/"前缀，则以该类型为准）
 # row_style:
 #   price_only -> (date, name, price, volume=0)，由 insert_data_to_db 按表结构过滤
 #   flat_ohlc  -> open/high/low 均等于 price，volume=0（Crypto 表是 expanded 结构）
@@ -134,11 +149,16 @@ SECTOR_HANDLERS.update({
 })
 
 # 内置映射（优先级低于 Symbol_mapping_mw.json，高于推导规则）。值可以是字符串或候选列表（依次尝试）
+# 值格式: "[品种类型/]代码[?查询参数]"，品种类型省略时使用分组默认 asset_path
 MW_BUILTIN_OVERRIDES = {
     "Bonds": {
         "US10Y": "tmubmusd10y?countrycode=bx",
         "US2Y": "tmubmusd02y?countrycode=bx",
         "US30Y": "tmubmusd30y?countrycode=bx",
+    },
+    "Currencies": {
+        # 美元指数在 MarketWatch 属于"指数"：/currency/dxy 会被重定向到 /index/dxy（body 为 symbol--index）
+        "DXY": "index/dxy",
     },
     "Indices": {
         "NASDAQ": "comp",
@@ -208,7 +228,10 @@ class ScrapeError(Exception):
 
 
 class SymbolNotFoundError(ScrapeError):
-    pass
+    def __init__(self, msg, actual_type=None, final_url=None):
+        super().__init__(msg)
+        self.actual_type = actual_type    # 类型不符时，页面实际的 symbol--xxx 类型
+        self.final_url = final_url        # 重定向后的最终 URL
 
 
 class CaptchaBlockedError(ScrapeError):
@@ -427,18 +450,33 @@ def parse_quote_date(text):
 
 
 # ================= 3. Symbol -> URL =================
+# 候选统一为三元组: (asset_override 或 None, mw_path, extra_query_dict)
 
 def _parse_override_value(value):
-    """'tmubmusd10y?countrycode=bx' 或 ['rr00', 'zr00'] -> [(path, query_dict), ...]"""
+    """
+    'tmubmusd10y?countrycode=bx' / 'index/dxy' / ['rr00', 'zr00']
+      -> [(asset_override 或 None, path, query_dict), ...]
+    """
     values = value if isinstance(value, (list, tuple)) else [value]
     out = []
     for v in values:
         if not v:
             continue
-        path_part, _, qs = str(v).partition('?')
-        path_part = path_part.strip().lower()
+        path_part, _, qs = str(v).strip().partition('?')
+        path_part = path_part.strip().strip('/').lower()
+        # 兼容用户直接粘贴 "investing/index/dxy"
+        if path_part.startswith('investing/'):
+            path_part = path_part[len('investing/'):]
+        asset = None
+        if '/' in path_part:
+            asset, _, path_part = path_part.partition('/')
+            asset = asset.strip() or None
+            path_part = path_part.strip('/')
+            if asset and asset not in ASSET_PATH_TO_BODY_TYPE:
+                tqdm.write(f"⚠️ 映射值 '{v}' 中的品种类型 '{asset}' 不在已知列表 "
+                           f"{list(ASSET_PATH_TO_BODY_TYPE)} 中，仍按原样尝试。")
         if path_part:
-            out.append((path_part, dict(urllib.parse.parse_qsl(qs))))
+            out.append((asset, path_part, dict(urllib.parse.parse_qsl(qs))))
     return out
 
 
@@ -449,29 +487,29 @@ def _derive_by_rule(symbol, handler, alias_to_symbol):
 
     if rule == "stock":
         s = (alias or symbol).strip().replace('-', '.').replace('/', '.')
-        return [(s.lower(), {})]
-    if rule == "name_lower":            # Currencies: CNYINR -> cnyinr, DXY -> dxy
+        return [(None, s.lower(), {})]
+    if rule == "name_lower":            # Currencies: CNYINR -> cnyinr
         s = re.sub(r'[^a-z0-9]', '', symbol.lower())
-        return [(s, {})] if s else []
+        return [(None, s, {})] if s else []
     if rule == "crypto":                # Bitcoin -> BTC-USD -> btcusd
         s = re.sub(r'[^a-z0-9]', '', (alias or symbol).lower())
-        return [(s, {})] if s else []
+        return [(None, s, {})] if s else []
     if rule == "index":                 # ^RUT -> rut
         if alias and alias.startswith('^'):
             s = re.sub(r'[^a-z0-9]', '', alias[1:].lower())
-            return [(s, {})] if s else []
+            return [(None, s, {})] if s else []
         return []
     if rule == "future":                # GC=F -> gc00
         if alias and alias.upper().endswith('=F'):
             root = re.sub(r'[^a-z0-9]', '', alias[:-2].lower())
-            return [(root + "00", {})] if root else []
+            return [(None, root + "00", {})] if root else []
         return []
     return []                           # override_only (Bonds) 等
 
 
 def resolve_mw_candidates(symbol, group, handler, alias_to_symbol, mw_overrides):
     """
-    返回候选列表 [(mw_path, extra_query), ...]，依次尝试直到找到页面
+    返回候选列表 [(asset_override, mw_path, extra_query), ...]，依次尝试直到找到页面
     优先级：Symbol_mapping_mw.json(分组) > Symbol_mapping_mw.json(平铺) > 内置映射 > 推导规则
     """
     candidates = []
@@ -487,21 +525,53 @@ def resolve_mw_candidates(symbol, group, handler, alias_to_symbol, mw_overrides)
     candidates += _derive_by_rule(symbol, handler, alias_to_symbol)
 
     seen, uniq = set(), []
-    for path, q in candidates:
-        key = (path, tuple(sorted(q.items())))
+    for asset, path, q in candidates:
+        eff_asset = asset or handler['asset_path']
+        key = (eff_asset, path, tuple(sorted(q.items())))
         if key not in seen:
             seen.add(key)
-            uniq.append((path, q))
+            uniq.append((asset, path, q))
     return uniq
 
 
-def build_target_url(handler, mw_path, extra_query):
+def candidate_label(handler, asset, mw_path):
+    """用于日志显示：分组默认类型只显示代码，覆盖类型显示 '类型/代码'"""
+    return f"{asset}/{mw_path}" if asset and asset != handler['asset_path'] else mw_path
+
+
+def expected_type_for(handler, asset):
+    """映射指定了品种类型时，以该类型作为页面校验依据；否则用分组默认 expect_type"""
+    if asset and asset != handler['asset_path']:
+        return ASSET_PATH_TO_BODY_TYPE.get(asset, asset)
+    return handler.get("expect_type")
+
+
+def build_target_url(handler, asset, mw_path, extra_query):
     query = dict(handler.get("query", {}))
     query.update(extra_query or {})
-    url = f"{MW_BASE_URL}/{handler['asset_path']}/{urllib.parse.quote(mw_path, safe='.')}{handler.get('suffix', '')}"
+    asset_path = asset or handler['asset_path']
+    url = f"{MW_BASE_URL}/{asset_path}/{urllib.parse.quote(mw_path, safe='.')}{handler.get('suffix', '')}"
     if query:
         url += "?" + urllib.parse.urlencode(query)
     return url
+
+
+def suggest_override_from_url(final_url):
+    """从重定向后的 URL 推出可用的映射写法：.../investing/index/dxy?countrycode=xx -> 'index/dxy?countrycode=xx'"""
+    if not final_url:
+        return None
+    try:
+        p = urllib.parse.urlparse(final_url)
+        m = re.match(r'^/investing/([^/]+)/([^/]+)', p.path, re.I)
+        if not m:
+            return None
+        s = f"{m.group(1).lower()}/{urllib.parse.unquote(m.group(2)).lower()}"
+        q = {k: v for k, v in urllib.parse.parse_qsl(p.query) if k.lower() == 'countrycode'}
+        if q:
+            s += "?" + urllib.parse.urlencode(q)
+        return s
+    except Exception:
+        return None
 
 
 # ================= 4. 浏览器 =================
@@ -571,6 +641,16 @@ def load_page(driver, url):
             driver.execute_script("window.stop();")
         except WebDriverException:
             pass
+
+
+def detect_body_symbol_type(driver):
+    """读取页面 body 上的 symbol--xxx 类型（如 index / currency），失败返回 None"""
+    try:
+        bc = driver.execute_script("return document.body ? (document.body.className || '') : '';") or ''
+    except WebDriverException:
+        return None
+    m = re.search(r'(?:^|\s)symbol--([a-z0-9_-]+)', bc, re.I)
+    return m.group(1).lower() if m else None
 
 
 # ================= 5. 页面解析：历史表格 (ETFs / 股票) =================
@@ -652,7 +732,7 @@ return { data: out };
 """
 
 
-def _wait_loop(driver, timeout, headless, state_fn, timeout_msg):
+def _wait_loop(driver, timeout, headless, state_fn, timeout_msg, expect_type=None):
     """通用等待循环：state_fn() 返回 ready/notfound/mismatch/captcha/loading"""
     deadline = time.time() + timeout
     captcha_notified = False
@@ -661,9 +741,15 @@ def _wait_loop(driver, timeout, headless, state_fn, timeout_msg):
         if state == 'ready':
             return
         if state == 'notfound':
-            raise SymbolNotFoundError(f"页面不存在或被重定向: {driver.current_url}")
+            raise SymbolNotFoundError(f"页面不存在或被重定向: {driver.current_url}",
+                                      final_url=driver.current_url)
         if state == 'mismatch':
-            raise SymbolNotFoundError(f"页面品种类型与分组不符（可能被重定向到其他品种）: {driver.current_url}")
+            actual = detect_body_symbol_type(driver)
+            final_url = driver.current_url
+            raise SymbolNotFoundError(
+                f"页面品种类型为 '{actual or '?'}'，与预期 '{expect_type or '?'}' 不符"
+                f"（被重定向到其他类型页面）: {final_url}",
+                actual_type=actual, final_url=final_url)
         if state == 'captcha':
             if headless:
                 raise CaptchaBlockedError("触发反爬验证（无头模式无法处理）")
@@ -805,7 +891,8 @@ return {
 
 def wait_for_quote(driver, timeout, headless, expect_type):
     _wait_loop(driver, timeout, headless,
-               lambda: driver.execute_script(QUOTE_STATE_JS, expect_type or ""), "等待行情价格超时")
+               lambda: driver.execute_script(QUOTE_STATE_JS, expect_type or ""), "等待行情价格超时",
+               expect_type=expect_type)
 
 
 def extract_quote(driver):
@@ -880,7 +967,7 @@ def build_task_list(tasks_dict, only_groups=None):
     return task_list, unknown_pending
 
 
-def run_single_url(driver, ctx, url, symbol, group, handler, last_valid_date, opts):
+def run_single_url(driver, ctx, url, symbol, group, handler, last_valid_date, opts, expect_type=None):
     """
     对单个 URL 执行抓取（含重试）。返回 (outcome, driver)
     outcome: success / skipped / not_found / failed
@@ -901,7 +988,7 @@ def run_single_url(driver, ctx, url, symbol, group, handler, last_valid_date, op
                     raise ScrapeError("提取到的数据为空")
                 selected_row, note = select_row(rows, last_valid_date)
             else:
-                wait_for_quote(driver, QUOTE_WAIT_TIMEOUT, headless, handler.get("expect_type"))
+                wait_for_quote(driver, QUOTE_WAIT_TIMEOUT, headless, expect_type)
                 ctx["consecutive_blocks"] = 0
                 quote = extract_quote(driver)
                 selected_row, note = build_quote_row(symbol, handler, quote, last_valid_date)
@@ -936,7 +1023,11 @@ def run_single_url(driver, ctx, url, symbol, group, handler, last_valid_date, op
             return "success", driver
 
         except SymbolNotFoundError as e:
-            tqdm.write(f"❓ [{symbol}] MarketWatch 未找到: {str(e)[:150]}")
+            tqdm.write(f"❓ [{symbol}] MarketWatch 未找到: {str(e)[:200]}")
+            if e.actual_type:
+                hint = suggest_override_from_url(e.final_url)
+                if hint:
+                    ctx["mismatch_hints"].append(hint)
             return "not_found", driver
 
         except CaptchaBlockedError as e:
@@ -998,7 +1089,7 @@ def scrape_marketwatch(headless=True, only_groups=None, dry_run=False, sanity=Tr
         return empty_stats
 
     stats = {"success": [], "failed": [], "not_found": [], "skipped": [], "aborted": False}
-    ctx = {"consecutive_blocks": 0, "aborted": False}
+    ctx = {"consecutive_blocks": 0, "aborted": False, "mismatch_hints": []}
     opts = {"headless": headless, "dry_run": dry_run, "sanity": sanity}
 
     try:
@@ -1011,23 +1102,29 @@ def scrape_marketwatch(headless=True, only_groups=None, dry_run=False, sanity=Tr
                 stats["not_found"].append(f"{group}:{symbol}")
                 continue
 
-            first = candidates[0][0]
+            labels = [candidate_label(handler, a, p) for a, p, _ in candidates]
+            first = labels[0]
             pbar.set_description(f"处理中: {symbol}" + (f" (→ {first})" if first != symbol.lower() else "") + f" [{group}]")
 
+            ctx["mismatch_hints"] = []
             outcome = "failed"
-            for c_idx, (mw_path, extra_q) in enumerate(candidates):
-                target_url = build_target_url(handler, mw_path, extra_q)
+            for c_idx, (asset, mw_path, extra_q) in enumerate(candidates):
+                target_url = build_target_url(handler, asset, mw_path, extra_q)
+                expect_type = expected_type_for(handler, asset)
                 outcome, driver = run_single_url(driver, ctx, target_url, symbol, group, handler,
-                                                 last_valid_date, opts)
+                                                 last_valid_date, opts, expect_type=expect_type)
                 if outcome != "not_found" or ctx["aborted"]:
                     break
                 if c_idx < len(candidates) - 1:
-                    tqdm.write(f"   ↪ [{symbol}] 尝试下一个候选地址: {candidates[c_idx + 1][0]}")
+                    tqdm.write(f"   ↪ [{symbol}] 尝试下一个候选地址: {labels[c_idx + 1]}")
                     time.sleep(random.uniform(*REQUEST_DELAY_RANGE))
 
             if outcome == "not_found":
-                tqdm.write(f"   [{symbol}] 所有候选地址均未找到（{', '.join(c[0] for c in candidates)}），"
+                tqdm.write(f"   [{symbol}] 所有候选地址均未找到（{', '.join(labels)}），"
                            f"可在 Symbol_mapping_mw.json 中添加映射。")
+                for hint in dict.fromkeys(ctx["mismatch_hints"]):
+                    tqdm.write(f"   💡 页面被重定向到其他品种类型。若确认该页面就是目标品种（请用 --dry-run 核对页面名称），"
+                               f"可添加映射: {{\"{group}\": {{\"{symbol}\": \"{hint}\"}}}}")
             stats[outcome].append(f"{group}:{symbol}")
 
             if ctx["aborted"]:

@@ -815,26 +815,6 @@
         "message": "正在执行 YF_MarketCapPEShare (Empty/Clear)…"
     },
     {
-        "key": "eight",
-        "modifiers": [
-            "control",
-            "shift"
-        ],
-        "actionType": "runInTerminal",
-        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Query/Check_yesterday.py' --nopop && /Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/Tiger_Today.py'",
-        "message": "正在执行 Check_yesterday.py 并启动 Today.py ..."
-    },
-    {
-        "key": "eight",
-        "modifiers": [
-            "control",
-            "option"
-        ],
-        "actionType": "runInTerminal",
-        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Query/Check_yesterday.py' --nopop && /Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/MW_Today.py' --headful",
-        "message": "如果用tiger的话开启check_yesterday的“ --ignore_sectors“参数"
-    },
-    {
         "key": "zero",
         "modifiers": [
             "shift",
@@ -853,25 +833,6 @@
         "actionType": "runInTerminal",
         "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/YF_Options.py'",
         "message": "正在执行 YF_Options 脚本…"
-    },
-    {
-        "key": "eight",
-        "modifiers": [
-            "control"
-        ],
-        "actionType": "runInTerminal",
-        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/TE_Merged.py' --skipetf",
-        "message": "正在执行 TE_Merged 脚本（已跳过 ETF）…"
-    },
-    {
-        "key": "eight",
-        "modifiers": [
-            "control",
-            "command"
-        ],
-        "actionType": "runInTerminal",
-        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/JavaScript/TopETFs/Compare_Insert.py'",
-        "message": "正在执行 TE_Merged 脚本（已跳过 ETF）…"
     },
     {
         "key": "comma",
@@ -952,8 +913,47 @@
     {
         "key": "eight",
         "modifiers": [
-            "command",
+            "control"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/TE_Merged.py' --skipetf",
+        "message": "正在执行 TE_Merged 脚本（已跳过 ETF）…"
+    },
+    {
+        "key": "eight",
+        "modifiers": [
+            "control",
             "option"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Query/Check_yesterday.py' --nopop && /Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/YF_Today.py'",
+        "message": "如果用tiger的话开启check_yesterday的“ --ignore_sectors“参数"
+    },
+    {
+        "key": "eight",
+        "modifiers": [
+            "control",
+            "shift"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Query/Check_yesterday.py' --nopop && /Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/MW_Today.py' --headful",
+        "message": ""
+    },
+    {
+        "key": "eight",
+        "modifiers": [
+            "control",
+            "command"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/JavaScript/TopETFs/Compare_Insert.py'",
+        "message": "正在执行 TE_Merged 脚本（已跳过 ETF）…"
+    },
+    {
+        "key": "eight",
+        "modifiers": [
+            "option",
+            "command"
         ],
         "actionType": "runInTerminal",
         "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/TE_Merged.py' --skipetf && /Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Operations/Insert_Holiday.py'",
@@ -968,6 +968,16 @@
         "actionType": "runInTerminal",
         "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Operations/Insert_Weekend.py' && /Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/YF_Today.py'",
         "message": "正在启动周末数据处理序列..."
+    },
+    {
+        "key": "eight",
+        "modifiers": [
+            "option",
+            "shift"
+        ],
+        "actionType": "runInTerminal",
+        "target": "/Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Query/Check_yesterday.py' --nopop && /Library/Frameworks/Python.framework/Versions/Current/bin/python3 '/Users/yanzhang/Coding/Financial_System/Selenium/Tiger_Today.py'",
+        "message": "正在执行 Check_yesterday.py 并启动 Today.py ..."
     },
     {
         "key": "four",

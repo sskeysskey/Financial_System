@@ -1,10 +1,10 @@
 /* ============================================================================
- * Firstrade 助手 content script v5.1
+ * Firstrade 助手 content script v5.2 (去除 Popover 浮窗，纯点击响应)
  *  1) Tag 徽章 + 一键看图（纯展示）
  *  2) 持仓抓取：仅 /app/positions      —— 开关 ftAutoPositions
  *  3) 订单痕迹：仅 /app/order-status    —— 开关 ftAutoOrders
- *     ★ v5.1 订单 LEAN schema：只回传 date/symbol/side/quantity/amount/price/st
- *       体积比 v5 降约 90%；勾选 ftOrderVerbose 可恢复完整字段
+ *     ★ 订单 LEAN schema：只回传 date/symbol/side/quantity/amount/price/st
+ *       体积比老版本降约 90%；勾选 ftOrderVerbose 可恢复完整字段
  *  ★ 自选股（/app/watchlist）的抓取与批量补齐由 watchlist.js 负责
  *  ★ 三个自动开关互相独立，默认全部关闭
  * ==========================================================================*/
@@ -124,12 +124,6 @@
       .trim();
   }
 
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, (c) => (
-      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
-    ));
-  }
-
   const toNum = (s) => {
     if (s === null || s === undefined) return null;
     const m = String(s).replace(/\s/g, '').match(/-?\d[\d,]*\.?\d*/);
@@ -176,80 +170,7 @@
     return extractSymbol(clone);
   }
 
-  /* ==================== 2. 全局悬浮 Popover ==================== */
-  let popoverEl = null;
-  let popoverTimer = null;
-
-  function initGlobalPopover() {
-    if (popoverEl && document.body.contains(popoverEl)) return;
-    popoverEl = document.createElement('div');
-    popoverEl.id = 'ft-global-tag-popover';
-    document.body.appendChild(popoverEl);
-    popoverEl.addEventListener('mouseenter', () => clearTimeout(popoverTimer));
-    popoverEl.addEventListener('mouseleave', () => hidePopover());
-  }
-
-  function showPopover(anchorEl, symbol, tags) {
-    initGlobalPopover();
-    clearTimeout(popoverTimer);
-
-    const hasTags = tags && tags.length > 0;
-    const tagsHtml = hasTags
-      ? tags.map(t => `<span class="ft-popover-fulltag">${escapeHtml(t)}</span>`).join('')
-      : '<span style="color:#94a3b8;font-size:11px;">(无对应标签)</span>';
-
-    let posHtml = '';
-    const p = positionCache[symbol];
-    if (p) {
-      const bits = [];
-      if (p.cost) bits.push(`成本 ${escapeHtml(p.cost)}`);
-      if (p.day_change) bits.push(`今日 ${escapeHtml(p.day_change)}`);
-      if (p.gainloss) bits.push(`盈亏 ${escapeHtml(p.gainloss)}`);
-      if (p.gainloss_amount) bits.push(`金额 ${escapeHtml(p.gainloss_amount)}`);
-      if (p.quantity) bits.push(`数量 ${escapeHtml(p.quantity)}`);
-      if (bits.length) posHtml = `<div class="ft-popover-position">${bits.join(' · ')}</div>`;
-    } else {
-      posHtml = `<div class="ft-popover-position" style="color:#81A1C1;">本页未抓取，图表会读取本机已保存的 JSON</div>`;
-    }
-
-    popoverEl.innerHTML = `
-      <div class="ft-popover-header">
-        <span class="ft-popover-symbol">${escapeHtml(symbol)}</span>
-        <span class="ft-popover-openchart-tip" id="ft-popover-btn-launch">📈 打开本机图表</span>
-      </div>
-      ${posHtml}
-      <div class="ft-popover-tags-box">${tagsHtml}</div>
-    `;
-
-    const btn = popoverEl.querySelector('#ft-popover-btn-launch');
-    if (btn) btn.addEventListener('click', (e) => { e.stopPropagation(); triggerLocalChart(symbol); });
-
-    const rect = anchorEl.getBoundingClientRect();
-    popoverEl.style.display = 'block';
-    const popWidth = Math.max(popoverEl.offsetWidth, 180);
-    const popHeight = popoverEl.offsetHeight;
-    let left = rect.left;
-    let top = rect.bottom + 4;
-    if (left + popWidth > window.innerWidth - 10) left = window.innerWidth - popWidth - 10;
-    if (top + popHeight > window.innerHeight - 10) top = rect.top - popHeight - 4;
-    popoverEl.style.left = `${Math.max(10, left)}px`;
-    popoverEl.style.top = `${top}px`;
-    requestAnimationFrame(() => popoverEl.classList.add('ft-popover-show'));
-  }
-
-  function hidePopover(delay = 120) {
-    if (!popoverEl) return;
-    clearTimeout(popoverTimer);
-    popoverTimer = setTimeout(() => {
-      popoverEl.classList.remove('ft-popover-show');
-      setTimeout(() => {
-        if (popoverEl && !popoverEl.classList.contains('ft-popover-show')) {
-          popoverEl.style.display = 'none';
-        }
-      }, 150);
-    }, delay);
-  }
-
+  /* ==================== 2. 右下角提示 Toast ==================== */
   function flashToast(text) {
     let el = document.getElementById('ft-toast');
     if (!el) { el = document.createElement('div'); el.id = 'ft-toast'; document.body.appendChild(el); }
@@ -518,7 +439,6 @@
     Object.keys(orderCache).forEach(k => { payload[k] = orderCache[k]; });
     const n = Object.keys(payload).length;
     if (!n) return { ok: false, error: 'order cache empty' };
-    /* 内容级签名：状态从「待成交」变「已成交」也会重新上传 */
     const sig = Object.keys(payload).sort()
       .map(k => k + ':' + orderSig(payload[k])).join(';');
     if (!force && sig === lastOrderSig) return { ok: true, data: { status: 'unchanged' } };
@@ -559,7 +479,7 @@
     return r;
   }
 
-  /* ==================== 6. 标签匹配与注入（纯展示） ==================== */
+  /* ==================== 6. 标签匹配与注入（纯展示，仅点击看图） ==================== */
   function getTagsForSymbol(symbol) {
     if (!symbol) return [];
     if (stockTagMap[symbol]) return stockTagMap[symbol];
@@ -629,8 +549,7 @@
       box.appendChild(only);
     }
 
-    box.addEventListener('mouseenter', () => showPopover(box, symbol, tags));
-    box.addEventListener('mouseleave', () => hidePopover());
+    // ★ 关键：移除了 mouseenter 和 mouseleave 浮窗监听，仅保留点击看图
     box.addEventListener('click', (e) => {
       e.stopPropagation(); e.preventDefault();
       triggerLocalChart(symbol);
@@ -676,7 +595,6 @@
     if (!node || node.nodeType !== 1) return false;
     return !!(node.classList && (
       node.classList.contains('ft-custom-tag-container') ||
-      node.id === 'ft-global-tag-popover' ||
       node.id === 'ft-toast' ||
       node.id === 'ft-wl-hud' ||
       (node.closest && node.closest('#ft-wl-hud'))
@@ -759,7 +677,6 @@
     }
   });
 
-  initGlobalPopover();
   loadSettings();
-  console.log(LOG_PREFIX, `Content Script v5.1 就绪（PAGE=${PAGE}，订单默认精简写入）`);
+  console.log(LOG_PREFIX, `Content Script v5.2 就绪（已移除悬浮浮窗，保留点击直开图表）`);
 })();

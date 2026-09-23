@@ -72,88 +72,6 @@
   cursor: default !important;
 }
 
-/* ==================== 全局悬浮 Popover ==================== */
-#ft-global-tag-popover {
-  position: fixed !important;
-  z-index: 99999999 !important;
-  background: #2E3440 !important;
-  border: 1px solid #4C566A !important;
-  border-radius: 8px !important;
-  padding: 10px 12px !important;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4) !important;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
-  color: #ECEFF4 !important;
-  font-size: 12px !important;
-  pointer-events: auto !important;
-  max-width: 320px !important;
-  min-width: 160px !important;
-  opacity: 0;
-  transform: translateY(4px);
-  transition: opacity 0.15s ease, transform 0.15s ease !important;
-  display: none;
-}
-
-#ft-global-tag-popover.ft-popover-show {
-  display: block !important;
-  opacity: 1 !important;
-  transform: translateY(0) !important;
-}
-
-.ft-popover-header {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  margin-bottom: 6px !important;
-  border-bottom: 1px solid #434C5E !important;
-  padding-bottom: 4px !important;
-  gap: 10px !important;
-}
-
-.ft-popover-symbol {
-  font-weight: 700 !important;
-  font-size: 14px !important;
-  color: #88C0D0 !important;
-}
-
-.ft-popover-openchart-tip {
-  font-size: 10px !important;
-  color: #81A1C1 !important;
-  cursor: pointer !important;
-  white-space: nowrap !important;
-}
-
-.ft-popover-openchart-tip:hover {
-  text-decoration: underline !important;
-  color: #ECEFF4 !important;
-}
-
-/* 抓取到的持仓数据预览 */
-.ft-popover-position {
-  font-size: 11px !important;
-  color: #EBCB8B !important;
-  margin-bottom: 6px !important;
-  line-height: 1.5 !important;
-}
-
-.ft-popover-tags-box {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  gap: 5px !important;
-}
-
-.ft-popover-fulltag {
-  display: inline-block !important;
-  background: #3B4252 !important;
-  color: #D8DEE9 !important;
-  border: 1px solid #4C566A !important;
-  padding: 2px 7px !important;
-  border-radius: 4px !important;
-  font-size: 11px !important;
-  line-height: 1.4 !important;
-  white-space: normal !important;
-  word-break: break-word !important;
-}
-
 /* ==================== 右下角提示 Toast ==================== */
 #ft-toast {
   position: fixed !important;
@@ -185,32 +103,6 @@
 [col-id="symbol"] .ag-group-value>div,
 [col-id="symbol"] .ag-group-value>div>div {
   overflow: visible !important;
-}
-
-/* 亮色模式微调 */
-html:not(.dark) #ft-global-tag-popover {
-  background: #FFFFFF !important;
-  border: 1px solid #E2E8F0 !important;
-  color: #1E293B !important;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15) !important;
-}
-
-html:not(.dark) .ft-popover-header {
-  border-bottom-color: #E2E8F0 !important;
-}
-
-html:not(.dark) .ft-popover-symbol {
-  color: #2563EB !important;
-}
-
-html:not(.dark) .ft-popover-position {
-  color: #B45309 !important;
-}
-
-html:not(.dark) .ft-popover-fulltag {
-  background: #F1F5F9 !important;
-  border-color: #CBD5E1 !important;
-  color: #334155 !important;
 }
 
 /* ==================== 自选股批量补齐 HUD ==================== */

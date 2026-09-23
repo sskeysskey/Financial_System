@@ -1,28 +1,34 @@
 {
  "_meta": {
-  "updated_at": 1790044073.016541,
-  "updated_at_str": "2026-09-22 10:27:53",
-  "count": 3,
+  "updated_at": 1790161654.564804,
+  "updated_at_str": "2026-09-23 19:07:34",
+  "count": 4,
   "mode": "overwrite"
  },
  "quotes": {
-  "ABVX": {
-   "symbol": "ABVX",
-   "last": "103.15",
-   "change_pct": "-1.80%",
-   "change_pct_num": -1.799315
+  "CTAS": {
+   "symbol": "CTAS",
+   "last": "200.57",
+   "change_pct": "+0.89%",
+   "change_pct_num": 0.890342
   },
-  "AZO": {
-   "symbol": "AZO",
-   "last": "2,826.98",
-   "change_pct": "-0.99%",
-   "change_pct_num": -0.99219
+  "GIS": {
+   "symbol": "GIS",
+   "last": "35.82",
+   "change_pct": "+1.04%",
+   "change_pct_num": 1.043441
   },
-  "THO": {
-   "symbol": "THO",
-   "last": "70.12",
-   "change_pct": "+3.47%",
-   "change_pct_num": 3.467611
+  "KBH": {
+   "symbol": "KBH",
+   "last": "47.16",
+   "change_pct": "-2.94%",
+   "change_pct_num": -2.942992
+  },
+  "PAYX": {
+   "symbol": "PAYX",
+   "last": "116.20",
+   "change_pct": "+1.46%",
+   "change_pct_num": 1.458133
   }
  }
 }
