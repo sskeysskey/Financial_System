@@ -1,13 +1,19 @@
 # -*- coding: utf-8 -*-
 """
 MW_Today.py
-从 MarketWatch 抓取 Sectors_empty.json 中 ETFs 及 11 个股票分组的最新一日 OHLCV 数据，
-写入 Finance.db（组名即表名），成功后从 JSON 中移除该 symbol。
+从 MarketWatch 抓取 Sectors_empty.json 中各分组的最新一日数据，写入 Finance.db（组名即表名），
+成功后从 JSON 中移除该 symbol。
+
+支持分组：
+  - ETFs + 11 个股票分组      -> download-data 历史表格 (OHLCV)
+  - Bonds / Currencies / Crypto / Indices / Commodities -> 行情概览页的实时价格
 
 用法:
     python MW_Today.py                      # 默认无头模式
     python MW_Today.py --headful            # 有界面（首次运行 / 遇到验证码时推荐）
     python MW_Today.py --groups ETFs Energy # 只跑指定分组
+    python MW_Today.py --dry-run            # 只抓取并打印，不写库、不改 JSON（验证映射用）
+    python MW_Today.py --no-sanity          # 关闭价格偏差校验
     python MW_Today.py --no-check           # 结束后不调用 Check_yesterday.py
 """
 import argparse
@@ -17,6 +23,7 @@ import json
 import os
 import platform
 import random
+import re
 import sqlite3
 import subprocess
 import sys
@@ -41,7 +48,9 @@ DATABASE_DIR = os.path.join(BASE_CODING_DIR, "Database")
 DB_PATH = os.path.join(DATABASE_DIR, "Finance.db")
 SECTORS_JSON_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Sectors_empty.json")
 SYMBOL_MAPPING_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Symbol_mapping.json")
-# 可选：MarketWatch 专用覆盖映射（不存在则忽略），格式 {"BRK-B": "brk.b", "XXX": "xxx?countrycode=uk"}
+# 可选：MarketWatch 专用覆盖映射（不存在则忽略）。支持两种格式（可混用）：
+#   平铺: {"BRK-B": "brk.b"}
+#   分组: {"Indices": {"UK100": "ukx?countrycode=uk"}, "Commodities": {"Rice": ["rr00", "zr00"]}}
 MW_SYMBOL_OVERRIDE_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Symbol_mapping_mw.json")
 CHECK_YESTERDAY_SCRIPT_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Query", "Check_yesterday.py")
 
@@ -64,7 +73,8 @@ else:
 # ---- 抓取参数 ----
 MW_BASE_URL = "https://www.marketwatch.com/investing"
 PAGE_LOAD_TIMEOUT = 30          # driver.get 超时
-TABLE_WAIT_TIMEOUT = 15         # 等待表格出现的超时
+TABLE_WAIT_TIMEOUT = 15         # 等待历史表格出现的超时
+QUOTE_WAIT_TIMEOUT = 15         # 等待行情价格出现的超时
 CAPTCHA_MANUAL_WAIT = 180       # 有界面模式下，等待手动完成验证码的最长时间
 MAX_RETRIES = 3
 MAX_CONSECUTIVE_BLOCKS = 3      # 连续被反爬拦截次数达到此值，终止整轮任务
@@ -73,9 +83,14 @@ REQUEST_DELAY_RANGE = (2.0, 4.5)  # 每个 symbol 之间的随机间隔（秒）
 MAX_ROWS_TO_EXTRACT = 5         # 从表格顶部提取的行数（用于日期匹配）
 
 # 日期对不上时的策略：
-#   "overwrite_date" -> 与 YF_Today 保持一致：取最新一行并把日期改为最近有效开盘日写入
+#   "overwrite_date" -> 与 YF_Today 保持一致：取最新数据并把日期改为最近有效开盘日写入
 #   "skip"           -> 不写入，保留在 JSON 中等待下次
 STALE_DATA_POLICY = "overwrite_date"
+
+# 价格合理性校验（仅对行情页分组生效）：与库中该 name 上一条价格比较，偏差超过阈值视为异常
+PRICE_SANITY_CHECK = True
+PRICE_SANITY_THRESHOLD = 0.25   # 25%
+PRICE_SANITY_ACTION = "skip"    # "skip" -> 不写入并保留在 JSON；"warn" -> 仅提示仍写入
 
 # ---- 分组 -> 抓取处理器 ----
 STOCK_SECTORS = [
@@ -84,20 +99,79 @@ STOCK_SECTORS = [
     'Industrials', 'Real_Estate', 'Technology', 'Utilities',
 ]
 
+# parser:
+#   ohlcv_table -> /download-data 历史表格
+#   quote       -> 行情概览页 (h2.intraday__price)
+# resolver: symbol -> MarketWatch 路径的推导规则（内置/用户覆盖映射优先）
+# expect_type: 页面 body 上的 symbol--xxx 类名，用于识别是否跳转到了错误品种页
+# row_style:
+#   price_only -> (date, name, price, volume=0)，由 insert_data_to_db 按表结构过滤
+#   flat_ohlc  -> open/high/low 均等于 price，volume=0（Crypto 表是 expanded 结构）
 SECTOR_HANDLERS = {
-    "ETFs": {"asset_path": "fund", "query": {"mod": "mw_quote_tab"}, "parser": "ohlcv_table"},
+    "ETFs": {"asset_path": "fund", "query": {"mod": "mw_quote_tab"}, "parser": "ohlcv_table",
+             "suffix": "/download-data", "resolver": "stock"},
 }
 for _s in STOCK_SECTORS:
-    SECTOR_HANDLERS[_s] = {"asset_path": "stock", "query": {}, "parser": "ohlcv_table"}
+    SECTOR_HANDLERS[_s] = {"asset_path": "stock", "query": {}, "parser": "ohlcv_table",
+                           "suffix": "/download-data", "resolver": "stock"}
 
-# 预留分组：后续实现时，把对应配置加入 SECTOR_HANDLERS 即可（asset_path 为 MarketWatch 的路径参考）
-# 注意：这些分组在数据库中的表结构（get_table_type）与股票不同，写入时会自动按表类型过滤字段
-RESERVED_SECTORS = {
-    "Bonds":       "bond        例: /investing/bond/tmubmusd10y?countrycode=bx",
-    "Currencies":  "currency    例: /investing/currency/eurusd",
-    "Crypto":      "cryptocurrency 例: /investing/cryptocurrency/btcusd",
-    "Indices":     "index       例: /investing/index/spx",
-    "Commodities": "future      例: /investing/future/gc00",
+SECTOR_HANDLERS.update({
+    "Bonds": {"asset_path": "bond", "query": {}, "parser": "quote", "suffix": "",
+              "resolver": "override_only", "expect_type": "bond", "row_style": "price_only",
+              "allow_non_positive": True, "sanity": True},
+    "Currencies": {"asset_path": "currency", "query": {}, "parser": "quote", "suffix": "",
+                   "resolver": "name_lower", "expect_type": "currency", "row_style": "price_only",
+                   "sanity": True},
+    "Crypto": {"asset_path": "cryptocurrency", "query": {}, "parser": "quote", "suffix": "",
+               "resolver": "crypto", "expect_type": "cryptocurrency", "row_style": "flat_ohlc",
+               "sanity": True},
+    "Indices": {"asset_path": "index", "query": {}, "parser": "quote", "suffix": "",
+                "resolver": "index", "expect_type": "index", "row_style": "price_only",
+                "sanity": True},
+    "Commodities": {"asset_path": "future", "query": {}, "parser": "quote", "suffix": "",
+                    "resolver": "future", "expect_type": "future", "row_style": "price_only",
+                    "sanity": True},
+})
+
+# 内置映射（优先级低于 Symbol_mapping_mw.json，高于推导规则）。值可以是字符串或候选列表（依次尝试）
+MW_BUILTIN_OVERRIDES = {
+    "Bonds": {
+        "US10Y": "tmubmusd10y?countrycode=bx",
+        "US2Y": "tmubmusd02y?countrycode=bx",
+        "US30Y": "tmubmusd30y?countrycode=bx",
+    },
+    "Indices": {
+        "NASDAQ": "comp",
+        "VIX": "vix",
+        "Brazil": "bvsp?countrycode=br",
+        "Nikkei": "nik?countrycode=jp",
+        "Russell": "rut",
+        "S&P500": "spx",
+        "Korea": "180721?countrycode=kr",
+        "DowJones": "djia",
+        # ---- 以下未经你确认，首次请用 --dry-run 核对页面名称；UK100(^BUK100P)/panEURO100(^N100)
+        #      与 MarketWatch 常见指数口径不同，故不内置，需要时写到 Symbol_mapping_mw.json ----
+        "HANGSENG": "hsi?countrycode=hk",
+        "Shanghai": "shcomp?countrycode=cn",
+        "EURO50": "sx5e?countrycode=xx",
+        "Singapore": "sti?countrycode=sg",
+        "India": "1?countrycode=in",
+    },
+    "Commodities": {
+        "Huangjin": "gc00",
+        "Silver": "si00",
+        "Copper": "hg00",
+        "Platinum": "pl00",
+        "Naturalgas": "ng00",
+        "CrudeOil": "cl00",
+        "Brent": "brn00?countrycode=uk",   # ICE 布伦特，推导规则 bz00 在 MW 不存在
+        "YuMi": "c00",                     # CBOT 玉米在 MW 为 c00（非 zc00）
+        "Soybean": "s00",                  # 大豆 s00（非 zs00）
+        "Oat": "o00",                      # 找不到时自动回退到推导规则 zo00
+        "Rice": "rr00",                    # 找不到时自动回退到推导规则 zr00
+        "LeanHogs": "lh00",                # 瘦肉猪 lh00（非 he00）
+        "LiveCattle": "lc00",              # 活牛 lc00（非 le00）
+    },
 }
 
 # ================= 防止系统休眠控制 =================
@@ -223,6 +297,24 @@ def insert_data_to_db(db_path, table_name, data_rows, table_type):
         conn.close()
 
 
+def get_last_db_price(db_path, table_name, name, before_date):
+    """读取库中该 name 在 before_date 之前的最后一条价格（用于合理性校验），表不存在返回 None"""
+    if not os.path.exists(db_path):
+        return None
+    try:
+        conn = sqlite3.connect(db_path, timeout=30.0)
+        try:
+            cur = conn.execute(
+                f'SELECT price FROM "{table_name}" WHERE name = ? AND date < ? AND price IS NOT NULL '
+                f'ORDER BY date DESC LIMIT 1', (name, before_date))
+            r = cur.fetchone()
+            return float(r[0]) if r and r[0] is not None else None
+        finally:
+            conn.close()
+    except sqlite3.Error:
+        return None
+
+
 def load_json_file(json_path, desc="JSON"):
     if not os.path.exists(json_path):
         return None
@@ -283,47 +375,136 @@ def remove_symbol_from_json(json_path, group_name, symbol):
     return False
 
 
-# ================= 2. 交易日与 Symbol/URL =================
+# ================= 2. 交易日 =================
+
+def get_prev_trading_date(ref_date):
+    """严格小于 ref_date 的最近一个 NYSE 交易日 ('YYYY-MM-DD')；日历异常时退化为"前一个工作日" """
+    try:
+        nyse = mcal.get_calendar('NYSE')
+        schedule = nyse.schedule(start_date=ref_date - datetime.timedelta(days=15), end_date=ref_date)
+        past_days = [d for d in schedule.index.date if d < ref_date]
+        if past_days:
+            return past_days[-1].strftime('%Y-%m-%d')
+    except Exception as e:
+        tqdm.write(f"⚠️ 计算交易日失败（退化为前一个工作日）: {e}")
+    d = ref_date - datetime.timedelta(days=1)
+    while d.weekday() >= 5:
+        d -= datetime.timedelta(days=1)
+    return d.strftime('%Y-%m-%d')
+
 
 def get_last_valid_trading_date():
     """获取美股最近的一个有效开盘日（严格小于今天）"""
     try:
-        nyse = mcal.get_calendar('NYSE')
-        today = datetime.datetime.now().date()
-        start_date = today - datetime.timedelta(days=15)
-        schedule = nyse.schedule(start_date=start_date, end_date=today)
-        past_days = [d for d in schedule.index.date if d < today]
-        if past_days:
-            return past_days[-1].strftime('%Y-%m-%d')
+        return get_prev_trading_date(datetime.datetime.now().date())
     except Exception as e:
         tqdm.write(f"⚠️ 计算交易日失败: {e}")
+        return None
+
+
+_MONTHS = {m: i for i, m in enumerate(
+    ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'], 1)}
+
+
+def parse_quote_date(text):
+    """解析 'Sep 23, 2026 3:34 a.m.' / 'Sept. 23, 2026 at 3:46 a.m.' / '09/23/2026' -> '2026-09-23'"""
+    if not text:
+        return None
+    for m in re.finditer(r'\b([A-Za-z]{3})[A-Za-z]*\.?\s+(\d{1,2}),?\s+(\d{4})', text):
+        mon = _MONTHS.get(m.group(1).lower())
+        if mon:
+            try:
+                return datetime.date(int(m.group(3)), mon, int(m.group(2))).strftime('%Y-%m-%d')
+            except ValueError:
+                continue
+    m = re.search(r'\b(\d{1,2})/(\d{1,2})/(\d{4})\b', text)
+    if m:
+        try:
+            return datetime.date(int(m.group(3)), int(m.group(1)), int(m.group(2))).strftime('%Y-%m-%d')
+        except ValueError:
+            pass
     return None
 
 
-def resolve_mw_symbol(symbol, alias_to_symbol, mw_overrides):
-    """
-    返回 (MarketWatch 路径中的 symbol, 额外 query 参数 dict)
-    优先级：MW 覆盖映射 > 通用别名映射 > 原 symbol；并将 '-' 转为 '.'（BRK-B -> brk.b）
-    """
-    raw = mw_overrides.get(symbol)
-    if raw:
-        path_part, _, qs = str(raw).partition('?')
-        return path_part.strip().lower(), dict(urllib.parse.parse_qsl(qs))
-    s = alias_to_symbol.get(symbol, symbol)
-    s = s.strip().replace('-', '.').replace('/', '.')
-    return s.lower(), {}
+# ================= 3. Symbol -> URL =================
+
+def _parse_override_value(value):
+    """'tmubmusd10y?countrycode=bx' 或 ['rr00', 'zr00'] -> [(path, query_dict), ...]"""
+    values = value if isinstance(value, (list, tuple)) else [value]
+    out = []
+    for v in values:
+        if not v:
+            continue
+        path_part, _, qs = str(v).partition('?')
+        path_part = path_part.strip().lower()
+        if path_part:
+            out.append((path_part, dict(urllib.parse.parse_qsl(qs))))
+    return out
 
 
-def build_target_url(handler, mw_symbol, extra_query):
+def _derive_by_rule(symbol, handler, alias_to_symbol):
+    """按分组规则推导 MarketWatch 路径（兜底方案）"""
+    rule = handler.get("resolver")
+    alias = alias_to_symbol.get(symbol)
+
+    if rule == "stock":
+        s = (alias or symbol).strip().replace('-', '.').replace('/', '.')
+        return [(s.lower(), {})]
+    if rule == "name_lower":            # Currencies: CNYINR -> cnyinr, DXY -> dxy
+        s = re.sub(r'[^a-z0-9]', '', symbol.lower())
+        return [(s, {})] if s else []
+    if rule == "crypto":                # Bitcoin -> BTC-USD -> btcusd
+        s = re.sub(r'[^a-z0-9]', '', (alias or symbol).lower())
+        return [(s, {})] if s else []
+    if rule == "index":                 # ^RUT -> rut
+        if alias and alias.startswith('^'):
+            s = re.sub(r'[^a-z0-9]', '', alias[1:].lower())
+            return [(s, {})] if s else []
+        return []
+    if rule == "future":                # GC=F -> gc00
+        if alias and alias.upper().endswith('=F'):
+            root = re.sub(r'[^a-z0-9]', '', alias[:-2].lower())
+            return [(root + "00", {})] if root else []
+        return []
+    return []                           # override_only (Bonds) 等
+
+
+def resolve_mw_candidates(symbol, group, handler, alias_to_symbol, mw_overrides):
+    """
+    返回候选列表 [(mw_path, extra_query), ...]，依次尝试直到找到页面
+    优先级：Symbol_mapping_mw.json(分组) > Symbol_mapping_mw.json(平铺) > 内置映射 > 推导规则
+    """
+    candidates = []
+    grp_over = mw_overrides.get(group)
+    if isinstance(grp_over, dict) and symbol in grp_over:
+        candidates += _parse_override_value(grp_over[symbol])
+    flat = mw_overrides.get(symbol)
+    if isinstance(flat, (str, list)):
+        candidates += _parse_override_value(flat)
+    builtin = MW_BUILTIN_OVERRIDES.get(group, {}).get(symbol)
+    if builtin:
+        candidates += _parse_override_value(builtin)
+    candidates += _derive_by_rule(symbol, handler, alias_to_symbol)
+
+    seen, uniq = set(), []
+    for path, q in candidates:
+        key = (path, tuple(sorted(q.items())))
+        if key not in seen:
+            seen.add(key)
+            uniq.append((path, q))
+    return uniq
+
+
+def build_target_url(handler, mw_path, extra_query):
     query = dict(handler.get("query", {}))
     query.update(extra_query or {})
-    url = f"{MW_BASE_URL}/{handler['asset_path']}/{urllib.parse.quote(mw_symbol, safe='.')}/download-data"
+    url = f"{MW_BASE_URL}/{handler['asset_path']}/{urllib.parse.quote(mw_path, safe='.')}{handler.get('suffix', '')}"
     if query:
         url += "?" + urllib.parse.urlencode(query)
     return url
 
 
-# ================= 3. 浏览器 =================
+# ================= 4. 浏览器 =================
 
 def create_driver(headless=True):
     options = webdriver.ChromeOptions()
@@ -347,7 +528,6 @@ def create_driver(headless=True):
     driver = webdriver.Chrome(service=Service(executable_path=CHROME_DRIVER_PATH), options=options)
     driver.set_page_load_timeout(PAGE_LOAD_TIMEOUT)
 
-    # 去除 navigator.webdriver 标记
     try:
         driver.execute_cdp_cmd('Page.addScriptToEvaluateOnNewDocument', {
             'source': "Object.defineProperty(navigator, 'webdriver', {get: () => undefined});"
@@ -355,7 +535,6 @@ def create_driver(headless=True):
     except Exception:
         pass
 
-    # 使用真实浏览器版本的 UA，仅去掉 "HeadlessChrome" 字样（避免版本号与内核不一致）
     try:
         ua = driver.execute_script("return navigator.userAgent")
         if 'HeadlessChrome' in ua:
@@ -388,19 +567,17 @@ def load_page(driver, url):
     try:
         driver.get(url)
     except TimeoutException:
-        # eager 模式下超时通常 DOM 已可用，停止加载后继续轮询
         try:
             driver.execute_script("window.stop();")
         except WebDriverException:
             pass
 
 
-# ================= 4. 页面解析 =================
+# ================= 5. 页面解析：历史表格 (ETFs / 股票) =================
 
 JS_COMMON = r"""
 function mwCellText(el) {
     if (!el) return '';
-    // Date 列有两个重复 div（固定列 + 普通列），只取第一个
     const d = el.querySelector('div');
     return ((d ? d.textContent : el.textContent) || '').replace(/\s+/g, ' ').trim();
 }
@@ -413,12 +590,16 @@ function mwFindTable() {
     }
     return null;
 }
+function mwIsCaptcha() {
+    const txt = (document.body ? document.body.innerText : '').slice(0, 3000);
+    if (document.querySelector('iframe[src*="captcha-delivery.com"], iframe[src*="geo.captcha"]')) return true;
+    return /access denied|you have been blocked|verify you are (a )?human|are you a robot/i.test(txt);
+}
 """
 
 PAGE_STATE_JS = JS_COMMON + r"""
 const txt = (document.body ? document.body.innerText : '').slice(0, 3000);
-if (document.querySelector('iframe[src*="captcha-delivery.com"], iframe[src*="geo.captcha"]')) return 'captcha';
-if (/access denied|you have been blocked|verify you are (a )?human|are you a robot/i.test(txt)) return 'captcha';
+if (mwIsCaptcha()) return 'captcha';
 const tbl = mwFindTable();
 if (tbl && tbl.querySelectorAll('tbody tr').length > 0) return 'ready';
 if (!location.pathname.toLowerCase().includes('download-data')) return 'notfound';
@@ -471,15 +652,18 @@ return { data: out };
 """
 
 
-def wait_for_table(driver, timeout, headless):
+def _wait_loop(driver, timeout, headless, state_fn, timeout_msg):
+    """通用等待循环：state_fn() 返回 ready/notfound/mismatch/captcha/loading"""
     deadline = time.time() + timeout
     captcha_notified = False
     while True:
-        state = driver.execute_script(PAGE_STATE_JS)
+        state = state_fn()
         if state == 'ready':
             return
         if state == 'notfound':
             raise SymbolNotFoundError(f"页面不存在或被重定向: {driver.current_url}")
+        if state == 'mismatch':
+            raise SymbolNotFoundError(f"页面品种类型与分组不符（可能被重定向到其他品种）: {driver.current_url}")
         if state == 'captcha':
             if headless:
                 raise CaptchaBlockedError("触发反爬验证（无头模式无法处理）")
@@ -490,8 +674,12 @@ def wait_for_table(driver, timeout, headless):
         if time.time() > deadline:
             if state == 'captcha':
                 raise CaptchaBlockedError("验证码等待超时")
-            raise ScrapeError("等待数据表格超时")
+            raise ScrapeError(timeout_msg)
         time.sleep(0.5)
+
+
+def wait_for_table(driver, timeout, headless):
+    _wait_loop(driver, timeout, headless, lambda: driver.execute_script(PAGE_STATE_JS), "等待数据表格超时")
 
 
 def extract_rows(driver, symbol):
@@ -506,7 +694,7 @@ def extract_rows(driver, symbol):
         date_str, price, volume, open_, high, low = r
         if price is None or price <= 0:
             continue
-        volume = int(volume) if volume is not None else 0  # 与 YF_Today 一致，缺失记为 0
+        volume = int(volume) if volume is not None else 0
         rows.append((date_str, symbol, float(price), volume, open_, high, low))
     rows.sort(key=lambda x: x[0], reverse=True)
     return rows
@@ -534,10 +722,150 @@ def select_row(rows, last_valid_date):
     return fixed, f"网页最新日期 {row0[0]} {relation}预期日期 {last_valid_date}，且无匹配行，使用最新数据并修改日期为 {last_valid_date} 写入。"
 
 
-# ================= 5. 主流程 =================
+# ================= 6. 页面解析：行情概览页 (Bonds/Currencies/Crypto/Indices/Commodities) =================
+
+QUOTE_COMMON_JS = JS_COMMON + r"""
+function qText(el) { return el ? (el.textContent || '').replace(/\s+/g, ' ').trim() : ''; }
+function qNum(s) {
+    if (s === null || s === undefined) return null;
+    s = String(s).replace(/[\u2212\u2013]/g, '-').replace(/[^0-9.\-]/g, '');
+    if (!s || s === '-' || s === '.') return null;
+    const v = parseFloat(s);
+    return isFinite(v) ? v : null;
+}
+function qScope() { return document.querySelector('.element--intraday') || document; }
+function qPrice() {
+    const scope = qScope();
+    // 兼容 intraday__price（BEM 双下划线）与 intraday_price 两种写法
+    const h2 = scope.querySelector('h2[class*="intraday"][class*="price"]')
+            || document.querySelector('h2[class*="intraday"][class*="price"]');
+    if (h2) {
+        const bq = h2.querySelector('bg-quote[field="Last" i]') || h2.querySelector('bg-quote:not([class*="change"])');
+        if (bq) {
+            const raw = bq.getAttribute('data-last-raw');
+            let v = qNum(raw);
+            if (v !== null) return { raw: raw, value: v, src: 'data-last-raw' };
+            const t = qText(bq);
+            v = qNum(t);
+            if (v !== null) return { raw: t, value: v, src: 'bg-quote' };
+        }
+        const clone = h2.cloneNode(true);
+        clone.querySelectorAll('sup').forEach(s => s.remove());
+        const t = qText(clone);
+        const v = qNum(t);
+        if (v !== null) return { raw: t, value: v, src: 'h2' };
+    }
+    const meta = document.querySelector('meta[name="price"]');
+    if (meta) {
+        const c = meta.getAttribute('content');
+        const v = qNum(c);
+        if (v !== null) return { raw: c, value: v, src: 'meta' };
+    }
+    return { raw: null, value: null, src: null };
+}
+function qTimestamp() {
+    const scope = qScope();
+    let t = qText(scope.querySelector('bg-quote[field="date" i]'));
+    if (!t) t = qText(scope.querySelector('[class*="timestamp"][class*="time"]'));
+    if (!t) {
+        const m = document.querySelector('meta[name="quoteTime"]');
+        if (m) t = m.getAttribute('content') || '';
+    }
+    return t;
+}
+"""
+
+QUOTE_STATE_JS = QUOTE_COMMON_JS + r"""
+const expectType = arguments[0];
+const txt = (document.body ? document.body.innerText : '').slice(0, 3000);
+if (mwIsCaptcha()) return 'captcha';
+const path = location.pathname.toLowerCase();
+if (path.includes('/search') || path === '/' || path === '/investing' || path === '/investing/') return 'notfound';
+const bc = document.body ? (document.body.className || '') : '';
+if (expectType && /(^|\s)symbol--/.test(bc)
+    && !new RegExp('(^|\\s)symbol--' + expectType + '(\\s|$)').test(bc)) return 'mismatch';
+if (qPrice().value !== null) return 'ready';
+if (/symbol lookup|no results found|there were no matches/i.test(txt)) return 'notfound';
+return 'loading';
+"""
+
+QUOTE_EXTRACT_JS = QUOTE_COMMON_JS + r"""
+const p = qPrice();
+const st = qScope().querySelector('small[class*="status"]');
+return {
+    price: p.value, price_raw: p.raw, price_src: p.src,
+    ts: qTimestamp(),
+    status: qText(st),
+    company: qText(document.querySelector('h1[class*="company"]')),
+    body_class: document.body ? (document.body.className || '') : '',
+    url: location.href
+};
+"""
+
+
+def wait_for_quote(driver, timeout, headless, expect_type):
+    _wait_loop(driver, timeout, headless,
+               lambda: driver.execute_script(QUOTE_STATE_JS, expect_type or ""), "等待行情价格超时")
+
+
+def extract_quote(driver):
+    r = driver.execute_script(QUOTE_EXTRACT_JS)
+    if not isinstance(r, dict):
+        raise ScrapeError("JS 返回结果异常")
+    if r.get("price") is None:
+        raise ScrapeError("未解析到价格")
+    return r
+
+
+def build_quote_row(symbol, handler, quote, last_valid_date):
+    """
+    返回 (row 或 None, 提示信息 或 None)
+    写入日期规则：统一为最近有效开盘日（与表格型分组一致）；页面时间仅用于"过期"校验。
+    """
+    price = float(quote["price"])
+    if not handler.get("allow_non_positive") and price <= 0:
+        raise ScrapeError(f"价格异常: {quote.get('price_raw')}")
+
+    page_date = parse_quote_date(quote.get("ts"))
+    notes = []
+
+    if last_valid_date:
+        target_date = last_valid_date
+        if page_date is None:
+            notes.append(f"未能解析页面更新时间（'{quote.get('ts')}'），按 {last_valid_date} 写入。")
+        elif page_date < last_valid_date:
+            msg = f"页面行情时间 {page_date} 早于预期日期 {last_valid_date}（可能当地休市或数据未更新）"
+            if STALE_DATA_POLICY == "skip":
+                return None, msg + "，跳过（保留在 JSON）。"
+            notes.append(msg + f"，使用当前价格并按 {last_valid_date} 写入。")
+    elif page_date:
+        target_date = get_prev_trading_date(datetime.date.fromisoformat(page_date))
+        notes.append(f"无法计算最近开盘日，按页面时间 {page_date} 的前一交易日 {target_date} 写入。")
+    else:
+        raise ScrapeError("无法确定写入日期（交易日计算失败且页面时间无法解析）")
+
+    if handler.get("row_style") == "flat_ohlc":
+        row = (target_date, symbol, price, 0, price, price, price)
+    else:
+        row = (target_date, symbol, price, 0, None, None, None)
+    return row, (" ".join(notes) if notes else None)
+
+
+def check_price_sanity(table_name, name, date_str, price):
+    """返回 (是否通过, 说明)"""
+    prev = get_last_db_price(DB_PATH, table_name, name, date_str)
+    if prev is None or prev == 0:
+        return True, None
+    dev = abs(price - prev) / abs(prev)
+    if dev > PRICE_SANITY_THRESHOLD:
+        return False, (f"价格 {price} 与库中上一条 {prev} 偏差 {dev:.1%}，超过阈值 {PRICE_SANITY_THRESHOLD:.0%}")
+    return True, None
+
+
+# ================= 7. 主流程 =================
 
 def build_task_list(tasks_dict, only_groups=None):
-    task_list, reserved_pending, unknown_pending = [], {}, {}
+    task_list, unknown_pending = [], {}
     for group, symbols in tasks_dict.items():
         if not symbols:
             continue
@@ -545,17 +873,98 @@ def build_task_list(tasks_dict, only_groups=None):
             continue
         handler = SECTOR_HANDLERS.get(group)
         if handler is None:
-            if group in RESERVED_SECTORS:
-                reserved_pending[group] = len(symbols)
-            else:
-                unknown_pending[group] = len(symbols)
+            unknown_pending[group] = len(symbols)
             continue
         for sym in dict.fromkeys(symbols):  # 去重且保持顺序
             task_list.append((sym, group, handler))
-    return task_list, reserved_pending, unknown_pending
+    return task_list, unknown_pending
 
 
-def scrape_marketwatch(headless=True, only_groups=None):
+def run_single_url(driver, ctx, url, symbol, group, handler, last_valid_date, opts):
+    """
+    对单个 URL 执行抓取（含重试）。返回 (outcome, driver)
+    outcome: success / skipped / not_found / failed
+    """
+    headless = opts["headless"]
+    table_type = get_table_type(group)
+
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            load_page(driver, url)
+            page_info = ""
+
+            if handler["parser"] == "ohlcv_table":
+                wait_for_table(driver, TABLE_WAIT_TIMEOUT, headless)
+                ctx["consecutive_blocks"] = 0
+                rows = extract_rows(driver, symbol)
+                if not rows:
+                    raise ScrapeError("提取到的数据为空")
+                selected_row, note = select_row(rows, last_valid_date)
+            else:
+                wait_for_quote(driver, QUOTE_WAIT_TIMEOUT, headless, handler.get("expect_type"))
+                ctx["consecutive_blocks"] = 0
+                quote = extract_quote(driver)
+                selected_row, note = build_quote_row(symbol, handler, quote, last_valid_date)
+                page_info = (f"（页面: {quote.get('company') or '-'} | 原始值: {quote.get('price_raw')} "
+                             f"| 更新: {quote.get('ts') or '-'}）")
+
+            if note:
+                tqdm.write(f"⚠️ [{symbol}] {note}")
+            if selected_row is None:
+                return "skipped", driver
+
+            if opts["sanity"] and handler.get("sanity"):
+                ok, msg = check_price_sanity(group, symbol, selected_row[0], selected_row[2])
+                if not ok:
+                    if PRICE_SANITY_ACTION == "skip":
+                        tqdm.write(f"🚫 [{symbol}] {msg}，疑似映射错误或单位不一致，跳过（保留在 JSON）。{page_info}\n"
+                                   f"   URL: {url}  （确认无误可用 --no-sanity 重跑）")
+                        return "skipped", driver
+                    tqdm.write(f"⚠️ [{symbol}] {msg}（仅提示，继续写入）")
+
+            detail = (f"{selected_row[0]} | price={selected_row[2]} vol={selected_row[3]} "
+                      f"O={selected_row[4]} H={selected_row[5]} L={selected_row[6]}")
+
+            if opts["dry_run"]:
+                tqdm.write(f"🔍 [DRY-RUN] [{symbol}] -> {group}: {detail} {page_info}\n   URL: {url}")
+                return "success", driver
+
+            if not insert_data_to_db(DB_PATH, group, [selected_row], table_type):
+                raise ScrapeError("数据库写入失败")
+            remove_symbol_from_json(SECTORS_JSON_PATH, group, symbol)
+            tqdm.write(f"[{symbol}] 成功写入 1 条数据 ({detail}) 到 {group} 表。{page_info}")
+            return "success", driver
+
+        except SymbolNotFoundError as e:
+            tqdm.write(f"❓ [{symbol}] MarketWatch 未找到: {str(e)[:150]}")
+            return "not_found", driver
+
+        except CaptchaBlockedError as e:
+            ctx["consecutive_blocks"] += 1
+            tqdm.write(f"🛑 [{symbol}] 被反爬拦截 ({ctx['consecutive_blocks']}/{MAX_CONSECUTIVE_BLOCKS}): {e}")
+            if ctx["consecutive_blocks"] >= MAX_CONSECUTIVE_BLOCKS:
+                ctx["aborted"] = True
+                return "failed", driver
+            time.sleep(BLOCK_BACKOFF_SECONDS * attempt + random.uniform(0, 5))
+
+        except Exception as e:
+            if isinstance(e, WebDriverException) and not is_driver_alive(driver):
+                tqdm.write("♻️ 浏览器会话已失效，正在重建...")
+                safe_quit(driver)
+                try:
+                    driver = create_driver(headless)
+                except Exception as ce:
+                    tqdm.write(f"❌ 浏览器重建失败: {ce}")
+                    ctx["aborted"] = True
+                    return "failed", None
+            if attempt < MAX_RETRIES:
+                time.sleep(2 * attempt)
+            else:
+                tqdm.write(f"❌ [{symbol}] 抓取失败 (已重试 {MAX_RETRIES} 次): {str(e)[:150]}")
+    return "failed", driver
+
+
+def scrape_marketwatch(headless=True, only_groups=None, dry_run=False, sanity=True):
     tasks_dict = load_tasks_from_json(SECTORS_JSON_PATH)
     alias_to_symbol = load_alias_mapping(SYMBOL_MAPPING_PATH)
     mw_overrides = load_mw_overrides(MW_SYMBOL_OVERRIDE_PATH)
@@ -566,18 +975,17 @@ def scrape_marketwatch(headless=True, only_groups=None):
     else:
         tqdm.write("⚠️ 无法计算最近有效开盘日，将使用网页原始日期。")
 
-    task_list, reserved_pending, unknown_pending = build_task_list(tasks_dict, only_groups)
-
-    for g, n in reserved_pending.items():
-        tqdm.write(f"⏭️  分组 [{g}] 有 {n} 个待抓取项，MarketWatch 爬虫暂未实现（已预留: {RESERVED_SECTORS[g]}），跳过。")
+    task_list, unknown_pending = build_task_list(tasks_dict, only_groups)
     for g, n in unknown_pending.items():
         tqdm.write(f"⏭️  分组 [{g}] 有 {n} 个待抓取项，不在本爬虫支持范围内，跳过。")
 
+    empty_stats = {"success": [], "failed": [], "not_found": [], "skipped": [], "aborted": False}
     if not task_list:
         tqdm.write("✅ 支持的分组中没有待抓取的 Symbol，任务结束。")
-        return {"success": [], "failed": [], "not_found": [], "skipped": [], "aborted": False}
+        return empty_stats
 
-    tqdm.write(f"共加载 {len(task_list)} 个待抓取任务。（模式: {'无头' if headless else '有界面'}）")
+    tqdm.write(f"共加载 {len(task_list)} 个待抓取任务。（模式: {'无头' if headless else '有界面'}"
+               f"{' | DRY-RUN 不写库' if dry_run else ''}{' | 已关闭价格校验' if not sanity else ''}）")
 
     try:
         driver = create_driver(headless)
@@ -585,84 +993,45 @@ def scrape_marketwatch(headless=True, only_groups=None):
         tqdm.write(f"❌ Selenium 启动失败: {e}")
         if USE_PERSISTENT_PROFILE:
             tqdm.write(f"   提示：若提示 Profile 被占用，请关闭使用 {MW_PROFILE_DIR} 的浏览器进程。")
-        return {"success": [], "failed": [t[0] for t in task_list], "not_found": [], "skipped": [], "aborted": True}
+        empty_stats["failed"] = [f"{t[1]}:{t[0]}" for t in task_list]
+        empty_stats["aborted"] = True
+        return empty_stats
 
     stats = {"success": [], "failed": [], "not_found": [], "skipped": [], "aborted": False}
-    consecutive_blocks = 0
+    ctx = {"consecutive_blocks": 0, "aborted": False}
+    opts = {"headless": headless, "dry_run": dry_run, "sanity": sanity}
 
     try:
         pbar = tqdm(task_list, desc="总体进度", position=0)
         for idx, (symbol, group, handler) in enumerate(pbar):
-            table_type = get_table_type(group)
-            mw_symbol, extra_q = resolve_mw_symbol(symbol, alias_to_symbol, mw_overrides)
-            target_url = build_target_url(handler, mw_symbol, extra_q)
+            candidates = resolve_mw_candidates(symbol, group, handler, alias_to_symbol, mw_overrides)
+            if not candidates:
+                tqdm.write(f"❓ [{symbol}] 分组 {group} 无法推导 MarketWatch 地址，"
+                           f"请在 Symbol_mapping_mw.json 中添加，例如 {{\"{group}\": {{\"{symbol}\": \"xxx\"}}}}")
+                stats["not_found"].append(f"{group}:{symbol}")
+                continue
 
-            if mw_symbol != symbol.lower():
-                pbar.set_description(f"处理中: {symbol} (转译为 {mw_symbol}) [{group}]")
-            else:
-                pbar.set_description(f"处理中: {symbol} [{group}]")
+            first = candidates[0][0]
+            pbar.set_description(f"处理中: {symbol}" + (f" (→ {first})" if first != symbol.lower() else "") + f" [{group}]")
 
-            outcome = None
-            for attempt in range(1, MAX_RETRIES + 1):
-                try:
-                    load_page(driver, target_url)
-                    wait_for_table(driver, TABLE_WAIT_TIMEOUT, headless)
-
-                    rows = extract_rows(driver, symbol)
-                    if not rows:
-                        raise ScrapeError("提取到的数据为空")
-
-                    selected_row, note = select_row(rows, last_valid_date)
-                    if note:
-                        tqdm.write(f"⚠️ [{symbol}] {note}")
-                    if selected_row is None:
-                        outcome = "skipped"
-                        break
-
-                    if not insert_data_to_db(DB_PATH, group, [selected_row], table_type):
-                        raise ScrapeError("数据库写入失败")
-
-                    remove_symbol_from_json(SECTORS_JSON_PATH, group, symbol)
-                    tqdm.write(f"[{symbol}] 成功写入 1 条数据 ({selected_row[0]} | price={selected_row[2]} "
-                               f"vol={selected_row[3]} O={selected_row[4]} H={selected_row[5]} L={selected_row[6]}) 到 {group} 表。")
-                    outcome = "success"
-                    consecutive_blocks = 0
+            outcome = "failed"
+            for c_idx, (mw_path, extra_q) in enumerate(candidates):
+                target_url = build_target_url(handler, mw_path, extra_q)
+                outcome, driver = run_single_url(driver, ctx, target_url, symbol, group, handler,
+                                                 last_valid_date, opts)
+                if outcome != "not_found" or ctx["aborted"]:
                     break
+                if c_idx < len(candidates) - 1:
+                    tqdm.write(f"   ↪ [{symbol}] 尝试下一个候选地址: {candidates[c_idx + 1][0]}")
+                    time.sleep(random.uniform(*REQUEST_DELAY_RANGE))
 
-                except SymbolNotFoundError as e:
-                    tqdm.write(f"❓ [{symbol}] MarketWatch 未找到该代码（{mw_symbol}）: {str(e)[:120]}。"
-                               f"可在 Symbol_mapping_mw.json 中添加映射。")
-                    outcome = "not_found"
-                    break
-
-                except CaptchaBlockedError as e:
-                    consecutive_blocks += 1
-                    tqdm.write(f"🛑 [{symbol}] 被反爬拦截 ({consecutive_blocks}/{MAX_CONSECUTIVE_BLOCKS}): {e}")
-                    if consecutive_blocks >= MAX_CONSECUTIVE_BLOCKS:
-                        stats["aborted"] = True
-                        break
-                    time.sleep(BLOCK_BACKOFF_SECONDS * attempt + random.uniform(0, 5))
-
-                except Exception as e:
-                    if isinstance(e, WebDriverException) and not is_driver_alive(driver):
-                        tqdm.write(f"♻️ 浏览器会话已失效，正在重建...")
-                        safe_quit(driver)
-                        try:
-                            driver = create_driver(headless)
-                        except Exception as ce:
-                            tqdm.write(f"❌ 浏览器重建失败: {ce}")
-                            stats["aborted"] = True
-                            break
-                    if attempt < MAX_RETRIES:
-                        time.sleep(2 * attempt)
-                    else:
-                        tqdm.write(f"❌ [{symbol}] 抓取失败 (已重试 {MAX_RETRIES} 次): {str(e)[:120]}")
-
-            if outcome is None:
-                outcome = "failed"
+            if outcome == "not_found":
+                tqdm.write(f"   [{symbol}] 所有候选地址均未找到（{', '.join(c[0] for c in candidates)}），"
+                           f"可在 Symbol_mapping_mw.json 中添加映射。")
             stats[outcome].append(f"{group}:{symbol}")
 
-            if stats["aborted"]:
+            if ctx["aborted"]:
+                stats["aborted"] = True
                 tqdm.write("🛑 连续被反爬拦截或浏览器无法恢复，终止本轮任务。"
                            "建议稍后使用 --headful 运行一次并手动完成验证。")
                 break
@@ -675,10 +1044,9 @@ def scrape_marketwatch(headless=True, only_groups=None):
 
     tqdm.write(f"📊 统计：成功 {len(stats['success'])} | 失败 {len(stats['failed'])} | "
                f"未找到 {len(stats['not_found'])} | 跳过 {len(stats['skipped'])}")
-    if stats["failed"]:
-        tqdm.write(f"   失败列表: {', '.join(stats['failed'])}")
-    if stats["not_found"]:
-        tqdm.write(f"   未找到列表: {', '.join(stats['not_found'])}")
+    for key, label in (("failed", "失败"), ("not_found", "未找到"), ("skipped", "跳过")):
+        if stats[key]:
+            tqdm.write(f"   {label}列表: {', '.join(stats[key])}")
     return stats
 
 
@@ -704,7 +1072,9 @@ def run_check_yesterday_if_empty():
 def parse_args():
     parser = argparse.ArgumentParser(description="MarketWatch 每日数据抓取")
     parser.add_argument("--headful", action="store_true", help="显示浏览器窗口（可手动处理验证码）")
-    parser.add_argument("--groups", nargs="+", default=None, help="只抓取指定分组，例如 --groups ETFs Technology")
+    parser.add_argument("--groups", nargs="+", default=None, help="只抓取指定分组，例如 --groups Currencies Indices")
+    parser.add_argument("--dry-run", action="store_true", help="只抓取并打印，不写数据库、不修改 JSON")
+    parser.add_argument("--no-sanity", action="store_true", help="关闭价格偏差合理性校验")
     parser.add_argument("--no-check", action="store_true", help="结束后不调用 Check_yesterday.py")
     return parser.parse_args()
 
@@ -713,8 +1083,9 @@ if __name__ == "__main__":
     args = parse_args()
     start_caffeinate()
     try:
-        scrape_marketwatch(headless=not args.headful, only_groups=args.groups)
-        if not args.no_check:
+        scrape_marketwatch(headless=not args.headful, only_groups=args.groups,
+                           dry_run=args.dry_run, sanity=not args.no_sanity)
+        if not args.no_check and not args.dry_run:
             run_check_yesterday_if_empty()
     finally:
         stop_caffeinate()
