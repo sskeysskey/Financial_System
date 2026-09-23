@@ -1,16 +1,28 @@
 {
  "_meta": {
-  "updated_at": 1789630343.078725,
-  "updated_at_str": "2026-09-17 15:32:23",
-  "count": 1,
+  "updated_at": 1790044073.016541,
+  "updated_at_str": "2026-09-22 10:27:53",
+  "count": 3,
   "mode": "overwrite"
  },
  "quotes": {
-  "LEN": {
-   "symbol": "LEN",
-   "last": "76.62",
-   "change_pct": "-2.22%",
-   "change_pct_num": -2.22
+  "ABVX": {
+   "symbol": "ABVX",
+   "last": "103.15",
+   "change_pct": "-1.80%",
+   "change_pct_num": -1.799315
+  },
+  "AZO": {
+   "symbol": "AZO",
+   "last": "2,826.98",
+   "change_pct": "-0.99%",
+   "change_pct_num": -0.99219
+  },
+  "THO": {
+   "symbol": "THO",
+   "last": "70.12",
+   "change_pct": "+3.47%",
+   "change_pct_num": 3.467611
   }
  }
 }
