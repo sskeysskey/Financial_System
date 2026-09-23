@@ -56,7 +56,6 @@
         "^GSPC",
         "^BSESN",
         "^KS11",
-        "^AXJO",
         "^STI"
     ],
     "Commodities": [
@@ -79,7 +78,6 @@
         "BTC-USD",
         "ETH-USD",
         "SOL-USD",
-        "BNB-USD",
         "XRP-USD"
     ],
     "ETFs": [

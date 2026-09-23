@@ -53,7 +53,6 @@
     "BTC-USD": "Bitcoin",
     "ETH-USD": "Ether",
     "SOL-USD": "Solana",
-    "BNB-USD": "Binance",
     "XRP-USD": "XRP",
     "^HSI": "HANGSENG",
     "^IXIC": "NASDAQ",
@@ -68,7 +67,6 @@
     "^RUT": "Russell",
     "^GSPC": "S&P500",
     "^BSESN": "India",
-    "^AXJO": "Australia",
     "^KS11": "Korea",
     "^STI": "Singapore",
     "GDP Advance": "USGDP",
@@ -92,5 +90,7 @@
     "Core PCE Price Index MM": "CorePCEM",
     "GDP Cons Spending Prelim": "USConspending",
     "Import Prices MM": "ImportPriceM",
-    "Import Prices YY": "ImportPriceY"
+    "Import Prices YY": "ImportPriceY",
+    "BRK-B": "brk.b",
+    "BF-B": "bf.b"
 }

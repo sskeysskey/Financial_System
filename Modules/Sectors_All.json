@@ -61,7 +61,6 @@
         "Bitcoin",
         "Ether",
         "Solana",
-        "Binance",
         "XRP"
     ],
     "Indices": [
@@ -79,7 +78,6 @@
         "S&P500",
         "India",
         "Korea",
-        "Australia",
         "DowJones",
         "Singapore"
     ],
