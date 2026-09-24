@@ -1,1 +1,0 @@
-{"disable-features":"IgnoreDuplicateNavs,Prewarm","enable-features":"SingleAxisScrollContainers,UkmSamplingRate\u003CUkmSamplingRate","force-fieldtrial-params":"UkmSamplingRate.Sampled_NoSeed_Other:_default_sampling/1","force-fieldtrials":"*SeedFileTrial/SeedFilesLaunched/UkmSamplingRate/Sampled_NoSeed_Other"}
