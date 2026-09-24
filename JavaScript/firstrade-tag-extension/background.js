@@ -159,13 +159,28 @@ async function postWlTaskResult(payload) {
 }
 
 async function fetchWlGroups() { return jsonFetch(`${BRIDGE_BASE}/wl_groups`, { method: 'GET' }); }
+/* ---------- 自选股分组归属 ---------- */
+async function postMembership(payload) {
+  return jsonFetch(`${BRIDGE_BASE}/wl_membership`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload || {})
+  });
+}
+async function postMembershipEvent(payload) {
+  return jsonFetch(`${BRIDGE_BASE}/wl_membership_event`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload || {})
+  });
+}
+async function fetchMembership() { return jsonFetch(`${BRIDGE_BASE}/wl_membership`, { method: 'GET' }); }
 
 /* ---------- 开关迁移与默认值 ---------- */
 function migrateFlags() {
   chrome.storage.local.get(
     ['ftAutoScrape', 'ftAutoPositions', 'ftAutoOrders', 'ftAutoWatchlist',
       'ftOrderVerbose', 'ftWlSource', 'ftWlBack', 'ftWlAhead',
-      'ftWlAgent', 'ftWlRestoreGroup', 'ftWlRestoreTab'],
+      'ftWlAgent', 'ftWlRestoreGroup', 'ftWlRestoreTab',
+      'ftWlTargetGroup', 'ftWlStrictSync', 'ftWlMemberPassive'],
     (res) => {
       const patch = {};
       if (res.ftAutoPositions === undefined) patch.ftAutoPositions = res.ftAutoScrape === true;
@@ -176,10 +191,11 @@ function migrateFlags() {
       if (res.ftWlBack === undefined) patch.ftWlBack = 1;
       if (res.ftWlAhead === undefined) patch.ftWlAhead = 0;
       if (res.ftWlAgent === undefined) patch.ftWlAgent = true;
-      if (res.ftWlTargetGroup === undefined) patch.ftWlTargetGroup = 'ALL';   // ★ 默认目标分组
-      if (res.ftWlStrictSync === undefined) patch.ftWlStrictSync = true;      // ★ 默认严格同步
+      if (res.ftWlTargetGroup === undefined) patch.ftWlTargetGroup = 'ALL';
+      if (res.ftWlStrictSync === undefined) patch.ftWlStrictSync = true;
       if (res.ftWlRestoreGroup === undefined) patch.ftWlRestoreGroup = true;
-      if (res.ftWlRestoreTab === undefined) patch.ftWlRestoreTab = true; // ★ 默认开启完成切回原 Tab
+      if (res.ftWlRestoreTab === undefined) patch.ftWlRestoreTab = true;
+      if (res.ftWlMemberPassive === undefined) patch.ftWlMemberPassive = true;   // ★ 分组归属被动同步默认开
       if (Object.keys(patch).length) {
         chrome.storage.local.set(patch, () => {
           chrome.storage.local.remove('ftAutoScrape');
@@ -218,6 +234,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     case 'FT_WL_TASKS': return done(fetchWlTasks(msg.max));
     case 'FT_WL_TASK_RESULT': return done(postWlTaskResult(msg.payload));
     case 'FT_WL_GROUPS': return done(fetchWlGroups());
+    case 'FT_WL_MEMBERSHIP': return done(postMembership(msg.payload));
+    case 'FT_WL_MEMBERSHIP_EVENT': return done(postMembershipEvent(msg.payload));
+    case 'FT_SERVER_MEMBERSHIP': return done(fetchMembership());
     /* ★ 唤醒与定位 Tab */
     case 'FT_ENSURE_WATCHLIST_TAB':
       return done(ensureWatchlistActive(true));

@@ -41,7 +41,8 @@ try:
     from ft_quotes import (build_market_items, get_firstrade_position,
                            get_watchlist_quote, _ft_norm_sym,
                            FT_DEBUG, FT_SHOW_MISS,
-                           FIRSTRADE_POSITIONS_FILE, FIRSTRADE_WATCHLIST_FILE)
+                           FIRSTRADE_POSITIONS_FILE, FIRSTRADE_WATCHLIST_FILE,
+                           build_membership_items, membership_signature)
 except Exception as _e:
     print(f"[FT] 加载 ft_quotes 失败（持仓/自选行情将不显示）: {_e}")
     FT_DEBUG, FT_SHOW_MISS = False, False
@@ -50,12 +51,14 @@ except Exception as _e:
     def get_firstrade_position(_s): return None
     def get_watchlist_quote(_s): return None
     def build_market_items(_s, _t, show_miss=None): return []
+    def build_membership_items(_s, _t): return []
+    def membership_signature(): return 0.0
 
 # --- Firstrade 一键加入自选股分组（bridge_server.py + Chrome 扩展 wl_agent.js） ---
 try:
     from ft_watchlist_add import (add_symbol_async, watchlist_groups,
                                   choose_group_dialog, last_group, save_last_group,
-                                  notify_mac)
+                                  notify_mac, scan_groups_async)
     FT_WL_ADD_OK = True
 except Exception as _e:
     print(f"[FT] 加载 ft_watchlist_add 失败（一键加自选不可用）: {_e}")
@@ -63,6 +66,7 @@ except Exception as _e:
     def watchlist_groups(): return []
     def choose_group_dialog(*a, **k): return None
     def last_group(): return ""
+    def scan_groups_async(*a, **k): return None
     def save_last_group(g): pass
     def notify_mac(*a, **k): pass
     def add_symbol_async(*a, **k): return None
@@ -731,6 +735,8 @@ class ChartWindow:
             transform=self.fig.transFigure, fontname='Arial Unicode MS')
         self._wl_results = []        # 工作线程 append，UI 定时器读取
         self._wl_hide_at = 0.0
+        self.member_artists = []     # ★ 自选分组归属行
+        self._member_sig = None
 
         # RadioButtons
         self.rax = self.fig.add_axes([0.95, 0.0, 0.05, 0.65], facecolor=NORD_THEME['background'])
@@ -751,7 +757,7 @@ class ChartWindow:
         #                 "I:买入点\nU:卖出点\nF:加自选\n⇧F:同上组")
         instructions = ("E:改财报\nW:新事件\nQ:改事件\nK:查豆包\n"
                     "P:做比较\nJ:加Panel\nL:查相似\nY:删除\nB:分组\n"
-                    "I/U:买入卖出点\nF:加自选\n⇧F:同上组")
+                    "I/U:买入卖出点\nF:加自选\n⇧F:同上组\nM:刷新分组")
         self.rax.text(0.5, 0.98, instructions, transform=self.rax.transAxes, ha="center", va="bottom",
                       color=NORD_THEME['text_light'], fontsize=10, fontfamily="Arial Unicode MS")
 
@@ -950,6 +956,8 @@ class ChartWindow:
         default_index = list(TIME_OPTIONS.keys()).index(default_time_range)
         self.radio.set_active(default_index)
         self.update(default_time_range)  # <--- 加上这行显式调用，防止切换股票时默认范围相同时不触发副标题重绘
+        self._draw_membership(force=True)
+        self.fig.canvas.draw_idle()
         return True
 
     # ------------------------------------------------------------------
@@ -999,6 +1007,11 @@ class ChartWindow:
             except Exception: pass
         self.subtitle_artists.clear()
         self.pa_text_artist[0] = None
+        for a in self.member_artists:
+            try: a.remove()
+            except Exception: pass
+        self.member_artists.clear()
+        self._member_sig = None
 
     # ------------------------------------------------------------------
     def _setup_shades(self):
@@ -2048,6 +2061,41 @@ class ChartWindow:
             self.wl_status_artist.set_visible(False)
             self._wl_hide_at = 0.0
             self.fig.canvas.draw_idle()
+
+    def _draw_membership(self, force=False):
+        """画「自选 [买] [Watch]」行；文件 mtime 或 symbol 没变则跳过，返回是否重画"""
+        try:
+            sig = (self.name, membership_signature())
+        except Exception:
+            sig = (self.name, None)
+        if not force and sig == self._member_sig:
+            return False
+        self._member_sig = sig
+        for a in self.member_artists:
+            try: a.remove()
+            except Exception: pass
+        self.member_artists.clear()
+        if not self.name:
+            return True
+        try:
+            items = build_membership_items(self.name, NORD_THEME)
+        except Exception as e:
+            print(f"[FT] 分组归属读取失败: {e}")
+            items = []
+        if items:
+            self.member_artists.extend(
+                _ft_layout_text_row(self.fig, 0.045, 0.884, items, fontsize=12, x_limit=0.34))
+        return True
+
+    def _refresh_membership(self):
+        """M 键：让浏览器全量扫描所有分组的归属"""
+        if not FT_WL_ADD_OK:
+            display_dialog("未找到 ft_watchlist_add.py，无法刷新分组归属")
+            return
+        self._show_wl_status("⏳ 正在让浏览器扫描全部自选分组…（约 10~90 秒）",
+                             NORD_THEME['accent_yellow'], ttl=300)
+        scan_groups_async(on_done=lambda res: self._wl_results.append(res),
+                          groups=(watchlist_groups() or None), wait=300)
     
     # ------------------------------------------------------------------
     # 弹窗 / 外部脚本
@@ -2133,6 +2181,7 @@ class ChartWindow:
                                pre_after_pct=self.current_pre_after_pct[0])
             self.create_markers_and_annotations()
             self.update_marker_visibility()
+            self._draw_membership(force=True)
             self.fig.canvas.draw_idle()
             print("图表刷新完成。")
         except FileNotFoundError:
@@ -2163,6 +2212,7 @@ class ChartWindow:
                        'w': lambda: execute_external_script('event_input', self.name),
                        'y': self.launch_insert_then_delete_chain,
                        'j': self.launch_and_close_for_y,
+                       'm': self._refresh_membership,
                        's': self.toggle_colored_lines,
                        'f': lambda: self._add_to_watchlist(None),
                        'F': lambda: self._add_to_watchlist(last_group() or None),
@@ -2202,6 +2252,12 @@ class ChartWindow:
     def _ui_poll_realtime(self):
         try:
             self._drain_wl_results()
+        except Exception:
+            pass
+
+        try:
+            if self.name and self._draw_membership():
+                self.fig.canvas.draw_idle()
         except Exception:
             pass
         

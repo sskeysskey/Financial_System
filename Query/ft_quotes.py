@@ -320,3 +320,93 @@ def fmt_money(s):
 
 def fmt_signed(s):
     return _fmt_gainloss_amount(s)
+
+# ----------------------------------------------------------------------
+# 自选股「分组归属」：该 symbol 在 Firstrade 哪些 watchlist 分组里
+#   数据：Modules/firstrade_wl_membership.json（bridge_server.py 写入）
+# ----------------------------------------------------------------------
+FIRSTRADE_WL_MEMBERSHIP_FILE = os.path.join(MODULES_DIR, "firstrade_wl_membership.json")
+FT_MEMBER_STALE_HOURS = float(os.environ.get("FT_MEMBER_STALE_HOURS", "72"))
+_MEMBER_INDEX = {"mtime": None, "index": {}, "order": [], "groups": {}}
+
+
+def membership_signature():
+    """文件 mtime，图表用它判断是否需要重画归属行"""
+    try:
+        return os.path.getmtime(FIRSTRADE_WL_MEMBERSHIP_FILE) if os.path.exists(FIRSTRADE_WL_MEMBERSHIP_FILE) else 0.0
+    except Exception:
+        return 0.0
+
+
+def _membership_index():
+    data = _load_json_cached(FIRSTRADE_WL_MEMBERSHIP_FILE)
+    mtime = (_CACHE.get(FIRSTRADE_WL_MEMBERSHIP_FILE) or (None,))[0]
+    if _MEMBER_INDEX["mtime"] is not None and _MEMBER_INDEX["mtime"] == mtime:
+        return _MEMBER_INDEX
+    groups = data.get('groups') if isinstance(data.get('groups'), dict) else {}
+    idx = {}
+    for g, rec in groups.items():
+        if not isinstance(rec, dict):
+            continue
+        for s in rec.get('symbols') or []:
+            idx.setdefault(_norm_key(s), []).append(g)
+    page = [str(x) for x in (data.get('page_groups') or []) if str(x) in groups]
+    order = page + sorted(g for g in groups if g not in page)
+    _MEMBER_INDEX.update({"mtime": mtime, "index": idx, "order": order,
+                          "groups": {g: groups[g] for g in order if isinstance(groups[g], dict)}})
+    return _MEMBER_INDEX
+
+
+def get_watchlist_membership(symbol):
+    """返回 {'groups': [所在分组], 'unsure': [未完整扫描且未命中的分组], 'oldest_age_h': float}
+       无任何归属数据时返回 None"""
+    if not symbol:
+        return None
+    ix = _membership_index()
+    if not ix["groups"]:
+        return None
+    hit = set(ix["index"].get(_norm_key(symbol), []))
+    inside = [g for g in ix["order"] if g in hit]
+    unsure = [g for g in ix["order"] if g not in hit and not ix["groups"].get(g, {}).get('complete')]
+    ages = [_age_hours(rec.get('updated_at')) for rec in ix["groups"].values()]
+    ages = [a for a in ages if a is not None]
+    if FT_DEBUG:
+        print(f"[FT] 分组归属 {symbol}: {inside} 未全扫 {unsure}")
+    return {"groups": inside, "unsure": unsure, "oldest_age_h": max(ages) if ages else None}
+
+
+def _group_color(name, theme):
+    n = str(name)
+    low = n.lower()
+    if 'short' in low:
+        return theme['accent_purple']
+    if '卖' in n:
+        return theme['accent_green']
+    if '买' in n:
+        return theme['accent_red']
+    if low == 'watch':
+        return theme['accent_cyan']
+    if n.upper() == 'ALL':
+        return theme['accent_yellow']
+    return theme['accent_orange']
+
+
+def build_membership_items(symbol, theme):
+    """图表第三行：[(文本, 颜色, 粗细), ...]"""
+    m = get_watchlist_membership(symbol)
+    if m is None:
+        return [("自选: 未同步(按M扫描)", theme['border'], 'normal')]
+    items = []
+    if m['groups']:
+        items.append(("自选", theme['text_light'], 'normal'))
+        for g in m['groups']:
+            items.append((f"[{g}]", _group_color(g, theme), 'bold'))
+    else:
+        items.append(("自选: 未加入", theme['border'], 'normal'))
+    if m['unsure']:
+        tail = '/'.join(m['unsure'][:3]) + ('…' if len(m['unsure']) > 3 else '')
+        items.append((f"(未全扫:{tail})", theme['border'], 'normal'))
+    age = m.get('oldest_age_h')
+    if age is not None and age > FT_MEMBER_STALE_HOURS:
+        items.append((f"(最旧{age/24:.0f}天前,按M刷新)", theme['border'], 'normal'))
+    return items

@@ -97,7 +97,7 @@ function PHASE_LABEL_FMT(phase) {
 chrome.storage.local.get(
   ['stockData', 'maxTags', 'ftDebug', 'ftAutoPositions', 'ftAutoOrders', 'ftAutoWatchlist',
     'ftAutoScrape', 'ftWlManualList', 'ftOrderVerbose', 'ftWlSource', 'ftWlBack', 'ftWlAhead',
-    'ftWlClearFirst', 'ftWlAgent', 'ftWlRestoreGroup'],
+    'ftWlClearFirst', 'ftWlAgent', 'ftWlRestoreGroup', 'ftWlTargetGroup', 'ftWlStrictSync', 'ftWlMemberPassive'],
   (res) => {
     if (res.maxTags) $('maxTags').value = res.maxTags;
     $('dbgChk').checked = !!res.ftDebug;
@@ -114,8 +114,8 @@ chrome.storage.local.get(
     $('wlBack').value = (res.ftWlBack === undefined ? 1 : res.ftWlBack);
     $('wlAhead').value = (res.ftWlAhead === undefined ? 0 : res.ftWlAhead);
     $('wlClearFirst').checked = res.ftWlClearFirst === true;
+    $('wlMemberPassive').checked = res.ftWlMemberPassive !== false;
     if (Array.isArray(res.ftWlManualList)) $('wlManual').value = res.ftWlManualList.join(', ');
-
     if (res.stockData) {
       const keys = Object.keys(res.stockData);
       setStatus(`已缓存 ${keys.length} 个标的\n示例：${keys.slice(0, 8).join(', ')}`);
@@ -627,3 +627,36 @@ async function refreshAgentStatus() {
 }
 setInterval(refreshAgentStatus, 3000);
 refreshAgentStatus();
+/* ---------- 分组归属 ---------- */
+$('wlMemberPassive').addEventListener('change', () => {
+  const v = $('wlMemberPassive').checked;
+  chrome.storage.local.set({ ftWlMemberPassive: v }, () => {
+    setWl(v ? '✅ 分组归属被动同步已开（小分组自动完整快照，大分组合并可见行）'
+      : '⛔ 已关闭被动同步（仍会记录 F 键添加 / 批量任务 / 全量扫描）');
+  });
+});
+
+$('wlMemberScanBtn').addEventListener('click', async () => {
+  setWl('🗂 正在逐个分组扫描归属（进度看网页右下角，请勿操作该标签页）…');
+  const r = await sendToTab({ action: 'FT_MEMBER_SCAN' });
+  if (!r || !r.ok) {
+    setWl('扫描失败：' + ((r && (r.error || r.message)) || '页面无响应（需在 /app/watchlist 页面）'), true);
+    return;
+  }
+  setWl('✅ ' + r.message + '\n' +
+    (r.results || []).map(x => `${x.group}: ${x.ok ? x.count + ' 只' : '❌ ' + (x.error || '')}`).join('\n'));
+});
+
+$('wlMemberViewBtn').addEventListener('click', async () => {
+  const r = await sendToBg({ action: 'FT_SERVER_MEMBERSHIP' });
+  if (!r.ok) { setWl('读取失败：' + r.error, true); return; }
+  const g = (r.data && r.data.groups) || {};
+  const names = Object.keys(g);
+  if (!names.length) { setWl('本机还没有分组归属数据：打开 watchlist 浏览各分组，或点「扫描全部分组归属」'); return; }
+  const lines = names.map(n => {
+    const x = g[n] || {};
+    const t = x.updated_at ? new Date(x.updated_at * 1000).toLocaleString() : '?';
+    return `${n}: ${x.count || 0} 只 ${x.complete ? '✅完整' : '⚠部分'}  ${t}`;
+  });
+  setWl(`本机分组归属（${names.length} 组）：\n` + lines.join('\n'));
+});

@@ -119,6 +119,35 @@ def add_symbol_async(symbol, group, on_done=None, wait=45, restore=True):
     th.start()
     return th
 
+def scan_groups(groups=None, wait=300):
+    """阻塞式：让浏览器逐个分组扫描归属，结果写入 firstrade_wl_membership.json"""
+    out = {"ok": False, "symbol": "", "group": "全部分组", "message": ""}
+    payload = {"wait": max(1, int(wait))}
+    if groups:
+        payload["groups"] = [str(g) for g in groups if str(g).strip()]
+    try:
+        r = _post("/wl_scan_groups", payload, timeout=int(wait) + 20)
+    except Exception as e:
+        out["message"] = f"连不上本地桥接服务 {BRIDGE_BASE}：{e}\n请先在终端运行 bridge_server.py"
+        return out
+    out["ok"] = bool(r.get("ok"))
+    out["message"] = r.get("message") or ("分组归属已刷新" if out["ok"] else "未收到浏览器回报")
+    out["raw"] = r
+    return out
+
+
+def scan_groups_async(on_done=None, groups=None, wait=300):
+    def _run():
+        res = scan_groups(groups=groups, wait=wait)
+        if callable(on_done):
+            try:
+                on_done(res)
+            except Exception as e:
+                print(f"[FT-WL] on_done 回调异常: {e}")
+    th = threading.Thread(target=_run, daemon=True)
+    th.start()
+    return th
+
 
 def notify_mac(title, text, subtitle=None):
     if sys.platform != "darwin":

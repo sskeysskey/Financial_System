@@ -41,7 +41,8 @@ try:
     from ft_quotes import (build_market_items, get_firstrade_position,
                            get_watchlist_quote, _ft_norm_sym,
                            FT_DEBUG, FT_SHOW_MISS,
-                           FIRSTRADE_POSITIONS_FILE, FIRSTRADE_WATCHLIST_FILE)
+                           FIRSTRADE_POSITIONS_FILE, FIRSTRADE_WATCHLIST_FILE,
+                           build_membership_items, membership_signature)
 except Exception as _e:
     print(f"[FT] 加载 ft_quotes 失败（持仓/自选行情将不显示）: {_e}")
     FT_DEBUG, FT_SHOW_MISS = False, False
@@ -50,12 +51,14 @@ except Exception as _e:
     def get_firstrade_position(_s): return None
     def get_watchlist_quote(_s): return None
     def build_market_items(_s, _t, show_miss=None): return []
+    def build_membership_items(_s, _t): return []
+    def membership_signature(): return 0.0
 
 # --- Firstrade 一键加入自选股分组（bridge_server.py + Chrome 扩展 wl_agent.js） ---
 try:
     from ft_watchlist_add import (add_symbol_async, watchlist_groups,
                                   choose_group_dialog, last_group, save_last_group,
-                                  notify_mac)
+                                  notify_mac, scan_groups_async)
     FT_WL_ADD_OK = True
 except Exception as _e:
     print(f"[FT] 加载 ft_watchlist_add 失败（一键加自选不可用）: {_e}")
@@ -65,6 +68,7 @@ except Exception as _e:
     def last_group(): return ""
     def save_last_group(g): pass
     def notify_mac(*a, **k): pass
+    def scan_groups_async(*a, **k): return None
     def add_symbol_async(*a, **k): return None
 
 # --- 导入 Tiger_API ---
@@ -744,6 +748,39 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             wl_status_artist.set_visible(False)
             wl_hide_at[0] = 0.0
             fig.canvas.draw_idle()
+
+    member_artists = []
+    member_sig = [None]
+
+    def draw_membership(force=False):
+        try:
+            sig = membership_signature()
+        except Exception:
+            sig = None
+        if not force and sig == member_sig[0]:
+            return False
+        member_sig[0] = sig
+        for a in member_artists:
+            try: a.remove()
+            except Exception: pass
+        member_artists.clear()
+        try:
+            items = build_membership_items(name, NORD_THEME)
+        except Exception as e:
+            print(f"[FT] 分组归属读取失败: {e}")
+            items = []
+        if items:
+            member_artists.extend(_ft_layout_text_row(fig, 0.045, 0.884, items, fontsize=12, x_limit=0.34))
+        return True
+
+    def _refresh_membership():
+        if not FT_WL_ADD_OK:
+            display_dialog("未找到 ft_watchlist_add.py，无法刷新分组归属")
+            return
+        _show_wl_status("⏳ 正在让浏览器扫描全部自选分组…（约 10~90 秒）",
+                        NORD_THEME['accent_yellow'], ttl=300)
+        scan_groups_async(on_done=lambda res: wl_results.append(res),
+                          groups=(watchlist_groups() or None), wait=300)
 
     earning_release_date = find_earning_release_date(name)
     purple_shade = None
@@ -1461,7 +1498,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             #                 "I:买入点\nU:卖出点\nF:加自选\n⇧F:同上组")
     instructions = ("E:改财报\nW:新事件\nQ:改事件\nK:查豆包\n"
                     "P:做比较\nJ:加Panel\nL:查相似\nY:删除\nB:分组\n"
-                    "I/U:买入卖出点\nF:加自选\n⇧F:同上组")
+                    "I/U:买入卖出点\nF:加自选\n⇧F:同上组\nM:刷新分组")
     rax.text(0.5, 0.98, instructions, transform=rax.transAxes, ha="center", va="bottom",
              color=NORD_THEME['text_light'], fontsize=10, fontfamily="Arial Unicode MS")
     
@@ -1847,6 +1884,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             draw_subtitle() 
             create_markers_and_annotations()
             update_marker_visibility()
+            draw_membership(force=True)
             fig.canvas.draw_idle()
         except Exception as e:
             display_dialog(f"刷新出错: {e}")
@@ -1868,6 +1906,7 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
                        'y': launch_insert_then_delete_chain, 
                        'j': launch_and_close_for_y,
                        's': toggle_colored_lines,
+                       'm': _refresh_membership,
                        'q': lambda: execute_external_script('event_edit', name),
                        'k': lambda: execute_external_script('check_kimi', name),
                        'z': lambda: execute_external_script('check_futu', name),
@@ -1948,6 +1987,13 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
             _drain_wl_results()
         except Exception:
             pass
+
+        try:
+            if draw_membership():
+                fig.canvas.draw_idle()
+        except Exception:
+            pass
+
         rt_price = _RT_MANAGER.get_latest(name)
         if rt_price is None or not prices or prices[-1] == 0: return
         pct = ((rt_price - prices[-1]) / prices[-1]) * 100
@@ -1974,4 +2020,5 @@ def plot_financial_data(db_path, table_name, name, compare, share, marketcap, pe
     except Exception: pass
 
     update(default_time_range)
+    draw_membership(force=True)
     plt.show()

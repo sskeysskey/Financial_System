@@ -102,7 +102,7 @@ def normalize_category_for_signature(category: str) -> str:
     if cat_lower in ("pe_low", "pe_lower", "pe_lowest"):
         return "PE_low_any"
     # PE valid / deep / deeper 统一归一化为 PE_depth_any
-    if cat_lower in ("pe_valid", "pe_invalid", "pe_deep", "pe_deeper"):
+    if cat_lower in ("pe_valid", "pe_invalid", "pe_deep", "pe_deeper", "oversell_w"):
         return "PE_depth_any"
     return category
 

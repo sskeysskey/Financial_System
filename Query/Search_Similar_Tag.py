@@ -290,36 +290,41 @@ class SimilarityViewerWindow(QMainWindow):
     def populate_ui(self, layout):
         # 每次刷新UI时清空列表
         self.ordered_symbols_on_screen.clear()
-        
+
+        # 提前计算源 Symbol 类型（源区域和关联区域都要用）
+        symbol_type = get_symbol_type(self.source_symbol, self.json_data)
+        source_is_etf = (symbol_type == 'etf')
+
         # 1. 源 Symbol 区域
         self.ordered_symbols_on_screen.append(self.source_symbol)
         source_group = QGroupBox("-")
         source_layout = QVBoxLayout(source_group)
-        source_widget = self.create_source_symbol_widget()
+        source_widget = self.create_source_symbol_widget(is_etf=source_is_etf)
         source_layout.addWidget(source_widget)
         layout.addWidget(source_group)
 
         # 2. 关联列表区域
         related_layout = QHBoxLayout()
-        symbol_type = get_symbol_type(self.source_symbol, self.json_data)
-        categories_order = ['etfs', 'stocks'] if symbol_type == 'etf' else ['stocks', 'etfs']
+        categories_order = ['etfs', 'stocks'] if source_is_etf else ['stocks', 'etfs']
 
         for category in categories_order:
             symbols_list = self.related_symbols.get(category, [])
             if not symbols_list: continue
 
+            is_etf_category = (category == 'etfs')
+
             group_box = QGroupBox("-")
             group_layout = QVBoxLayout(group_box)
             group_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-            
+
             for sym, matched_tags, all_tags in symbols_list:
                 if sym == self.source_symbol: continue
                 if not self.compare_data.get(sym, "").strip(): continue
-                
+
                 self.ordered_symbols_on_screen.append(sym)
-                widget = self.create_similar_symbol_widget(sym, matched_tags, all_tags)
+                widget = self.create_similar_symbol_widget(sym, matched_tags, all_tags, is_etf=is_etf_category)
                 group_layout.addWidget(widget)
-            
+
             # 比例 70:30
             stretch = 7 if category == 'stocks' else 3
             related_layout.addWidget(group_box, stretch)
@@ -456,56 +461,54 @@ class SimilarityViewerWindow(QMainWindow):
                 comp_val = f"{er_date}{comp_val}"
         return comp_val
 
-    def create_source_symbol_widget(self):
+    def create_source_symbol_widget(self, is_etf=False):
         container = RowWidget(self.source_symbol, self.on_symbol_click)
         layout = QHBoxLayout(container)
         layout.setContentsMargins(5, 5, 5, 5)
 
-        btn = self.create_symbol_button(self.source_symbol)
+        btn = self.create_symbol_button(self.source_symbol, is_etf=is_etf)
         btn.setMinimumHeight(35)
-
-        # 修改：使用 get_enriched_compare_val 获取可能拼接了日期的字符串
-        comp_val = self.get_enriched_compare_val(self.source_symbol)
-        comp_lab = QLabel()
-        comp_lab.setFixedWidth(220) # 加宽以容纳新数据
-        comp_lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.set_rich_compare_text(comp_lab, comp_val, self.source_symbol)
 
         highlight = "#F9A825"
         html_tags = ", ".join([f"{t} <font color='{highlight}'>{float(w):.1f}</font>" if float(w) > 0 else t for t, w in self.source_tags])
         tags_lab = QLabel(f"<div style='font-size:24px;'>{html_tags}</div>")
         tags_lab.setWordWrap(True)
         tags_lab.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        
+
         sinp = QLineEdit()
         sinp.setFixedWidth(200)
         sinp.setFixedHeight(32)
         sinp.setPlaceholderText("输入代码…")
         sinp.returnPressed.connect(self.on_search)
         self.search_input = sinp
-        
-        for w in (comp_lab, tags_lab): w.installEventFilter(container)
+
+        filter_widgets = [tags_lab]
         layout.addWidget(btn, 1)
-        layout.addWidget(comp_lab, 2)
-        layout.addWidget(tags_lab, 4)
+
+        # ETF 无财报：不创建 compare 标签（日期 / 财报Price / 涨跌幅），空间让给 tags
+        if not is_etf:
+            comp_val = self.get_enriched_compare_val(self.source_symbol)
+            comp_lab = QLabel()
+            comp_lab.setFixedWidth(220)
+            comp_lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.set_rich_compare_text(comp_lab, comp_val, self.source_symbol)
+            layout.addWidget(comp_lab, 2)
+            filter_widgets.append(comp_lab)
+
+        layout.addWidget(tags_lab, 6 if is_etf else 4)
         layout.addStretch()
         layout.addWidget(sinp)
+
+        for w in filter_widgets: w.installEventFilter(container)
         return container
 
-    def create_similar_symbol_widget(self, sym, matched_tags, all_tags):
+    def create_similar_symbol_widget(self, sym, matched_tags, all_tags, is_etf=False):
         container = RowWidget(sym, self.on_symbol_click)
         layout = QHBoxLayout(container)
         layout.setContentsMargins(0, 2, 0, 2)
 
-        btn = self.create_symbol_button(sym)
+        btn = self.create_symbol_button(sym, is_etf=is_etf)
         btn.setMinimumHeight(60)
-
-        # 修改：使用 get_enriched_compare_val 获取可能拼接了日期的字符串
-        comp_val = self.get_enriched_compare_val(sym)
-        comp_lab = QLabel()
-        comp_lab.setFixedWidth(250) # 加宽以容纳新数据
-        comp_lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.set_rich_compare_text(comp_lab, comp_val, sym)
 
         total_w = round(sum(float(w) for _, w in matched_tags), 1)
         w_lab = QLabel(f"{total_w:.1f}")
@@ -518,16 +521,28 @@ class SimilarityViewerWindow(QMainWindow):
         for tag in all_tags:
             w = next((float(w0) for t0, w0 in matched_tags if t0 == tag), 0.0)
             tag_items.append(f"{tag} <font color='{highlight}'>{w:.1f}</font>" if w > 0 else tag)
-        
+
         tags_lab = QLabel(f"<div style='font-size:22px;'>{',   '.join(tag_items)}</div>")
         tags_lab.setWordWrap(True)
         tags_lab.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        
-        for w in (comp_lab, w_lab, tags_lab): w.installEventFilter(container)
+
+        filter_widgets = [w_lab, tags_lab]
         layout.addWidget(btn, 2)
-        layout.addWidget(comp_lab, 4)
+
+        # ETF 无财报：不创建 compare 标签，也就不会查询财报数据；原来 4 份空间并给 tags
+        if not is_etf:
+            comp_val = self.get_enriched_compare_val(sym)
+            comp_lab = QLabel()
+            comp_lab.setFixedWidth(250)
+            comp_lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.set_rich_compare_text(comp_lab, comp_val, sym)
+            layout.addWidget(comp_lab, 4)
+            filter_widgets.append(comp_lab)
+
         layout.addWidget(w_lab, 1)
-        layout.addWidget(tags_lab, 7)
+        layout.addWidget(tags_lab, 11 if is_etf else 7)
+
+        for w in filter_widgets: w.installEventFilter(container)
         return container
 
     def set_rich_compare_text(self, label, text, symbol):
@@ -592,20 +607,28 @@ class SimilarityViewerWindow(QMainWindow):
         final_html = f"{colored_date_part_html} &nbsp; {val1_html} &nbsp; {val2_html}"
         label.setText(final_html)
 
-    def create_symbol_button(self, symbol):
+    def create_symbol_button(self, symbol, is_etf=False):
         btn = SymbolButton(symbol)
         btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         btn.setFixedWidth(90)
         btn.setObjectName("SymbolButton")
         btn.clicked.connect(lambda _, s=symbol: self.on_symbol_click(s))
-        
-        e_price, trend, l_date = self.get_color_decision_data(symbol)
-        tip = f"最新财报日期: {l_date.isoformat()}" if l_date else "最新财报日期: 未知"
-        btn.setToolTip(f"<div style='font-size:16px; background-color:#FFFFE0; color:black; padding:5px;'>{tip}</div>")
-        
+
         btn.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         btn.customContextMenuRequested.connect(lambda pos, s=symbol: self.show_context_menu(s))
-        
+
+        tip_style = "font-size:16px; background-color:#FFFFE0; color:black; padding:5px;"
+
+        # ETF 无财报：不查询财报数据，颜色固定白色，提示改为说明文字
+        if is_etf:
+            btn.setToolTip(f"<div style='{tip_style}'>ETF（无财报数据）</div>")
+            btn.setStyleSheet("color: white;")
+            return btn
+
+        e_price, trend, l_date = self.get_color_decision_data(symbol)
+        tip = f"最新财报日期: {l_date.isoformat()}" if l_date else "最新财报日期: 未知"
+        btn.setToolTip(f"<div style='{tip_style}'>{tip}</div>")
+
         color = 'white'
         if e_price is not None and trend is not None:
             if trend == 'single':
@@ -616,7 +639,7 @@ class SimilarityViewerWindow(QMainWindow):
                 elif not rise_t and pos_p: color = '#008B8B'
                 elif rise_t and not pos_p: color = '#912F2F'
                 elif not rise_t and not pos_p: color = 'green'
-        
+
         btn.setStyleSheet(f"color: {color};")
         return btn
 

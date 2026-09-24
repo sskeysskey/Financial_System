@@ -193,6 +193,14 @@
   <h1>③ 自选股一键同步（/app/watchlist）</h1>
   <div id="wlStatus">未检测</div>
   <div class="ok" id="agentBox">🤖 远程添加代理：未检测</div>
+  <div class="row">
+    <input type="checkbox" id="wlMemberPassive" style="width:auto;">
+    <label for="wlMemberPassive"><b>分组归属被动同步</b>（浏览/手动增删时自动回传，图表显示「自选 [分组]」）</label>
+  </div>
+  <div class="half">
+    <button id="wlMemberScanBtn">🗂 扫描全部分组归属</button>
+    <button id="wlMemberViewBtn">📄 本机归属 JSON</button>
+  </div>
 
   <div class="row">
     <label for="wlTarget"><b>目标分组</b></label>

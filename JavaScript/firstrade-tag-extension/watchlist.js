@@ -444,6 +444,23 @@
     s = scrollState();
     s.top = original;
     if (onProgress) onProgress(Object.keys(buf).length);
+
+    /* ★ 完整滚动读取 = 天然的分组快照，回传给分组归属模块 */
+    if (!(scanState.abort || job.stop)) {
+      try {
+        const M = window.__FT_WL_MEMBER__;
+        const g = groupName();
+        const keys = Object.keys(buf);
+        const total = dataRowsTotal();
+        if (M && g) {
+          if (keys.length === 0) {
+            if (gridSaysEmpty()) M.snapshot(g, [], true, 'collect_empty');
+          } else {
+            M.snapshot(g, keys, keys.length >= total, 'collect');
+          }
+        }
+      } catch (e) { log('分组归属快照失败', e); }
+    }
     return buf;
   }
 
@@ -1510,6 +1527,7 @@
 
     /* 先在目标分组抓一次「变更%」，再切回原分组 */
     if (!job.stop && !job.clearOnly) { try { await fullScanQuotes(true); } catch (e) { } }
+    else if (!job.stop && job.clearOnly) { try { await collectWatchlist(); } catch (e) { } }   // ★ 清空后刷新归属
 
     try {
       if (TARGET.backToOrigin && job.originGroup &&
@@ -1847,6 +1865,7 @@
     waitGridSettled,
     gridRowCount,
     dataRowsTotal,
+    gridSaysEmpty,
     normKey,
     collectWatchlist,
     addOneSymbol,

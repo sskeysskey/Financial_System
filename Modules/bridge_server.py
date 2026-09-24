@@ -27,6 +27,10 @@ MODULES_DIR = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules")
 POSITIONS_JSON_PATH = os.path.join(MODULES_DIR, "firstrade_positions.json")
 ORDERS_JSON_PATH = os.path.join(MODULES_DIR, "firstrade_orders.json")
 WATCHLIST_JSON_PATH = os.path.join(MODULES_DIR, "firstrade_watchlist.json")
+WL_MEMBERSHIP_JSON_PATH = os.path.join(MODULES_DIR, "firstrade_wl_membership.json")
+MEMBER_RECENT_MAX = 200
+_MEM_LOCK = threading.Lock()
+_GROUP_TAIL = re.compile(r"[（(]\s*\d+\s*[）)]\s*$")
 SECTORS_ALL_PATH = os.path.join(MODULES_DIR, "Sectors_All.json")
 
 EARNINGS_RELEASE_PATH = os.path.join(BASE_CODING_DIR, "News", "Earnings_Release_new.txt")
@@ -118,10 +122,12 @@ def _gc_tasks_locked():
     now = time.time()
     for tid in list(_TASKS.keys()):
         t = _TASKS[tid]
-        if t["status"] == "taken" and (now - t["taken_at"]) > TASK_LEASE:
+        lease = float(t.get("lease") or TASK_LEASE)
+        ttl = float(t.get("ttl") or TASK_TTL)
+        if t["status"] == "taken" and (now - t["taken_at"]) > lease:
             t["status"] = "pending"
             _log(f"[任务] {tid} 租约超时，重新排队")
-        if (now - t["created_at"]) > TASK_TTL:
+        if (now - t["created_at"]) > ttl:
             _TASKS.pop(tid, None)
 
 
@@ -156,11 +162,19 @@ def take_tasks(limit=3):
             t["taken_at"] = time.time()
             out.append({"id": t["id"], "action": t["action"],
                         "symbol": t["symbol"], "group": t["group"],
+                        "groups": t.get("groups"),
                         "restore": bool(t.get("restore", True))})
             if len(out) >= max(1, limit):
                 break
     return out
 
+def find_active_task(action):
+    with _TASK_LOCK:
+        _gc_tasks_locked()
+        for t in _TASKS.values():
+            if t["action"] == action and t["status"] in ("pending", "taken"):
+                return t
+    return None
 
 def finish_task(tid, ok, message, data=None):
     with _TASK_LOCK:
@@ -702,6 +716,117 @@ def save_watchlist(incoming, overwrite=True):
         _atomic_write(WATCHLIST_JSON_PATH, out)
     return n, len(base), mode
 
+# ---------------------------------------------------------------------------
+# 自选股分组归属  firstrade_wl_membership.json
+#   { "_meta": {...}, "page_groups": [...],
+#     "groups": { "买": {"symbols": [...], "count": n, "complete": true,
+#                        "scanned_at": ts, "updated_at": ts, "source": "..."} },
+#     "recent": [ {op, group, symbol/count, source, ts}, ... ] }
+# ---------------------------------------------------------------------------
+def _clean_group(g):
+    return _GROUP_TAIL.sub("", str(g or "").replace("\u00a0", " ")).strip()
+
+
+def _sym_key(s):
+    return re.sub(r"[^A-Z0-9]", "", str(s or "").upper())
+
+
+def _clean_symbols(arr):
+    out, seen = [], set()
+    for s in arr or []:
+        sym = str(s).strip().upper()
+        k = _sym_key(sym)
+        if not k or k in seen:
+            continue
+        seen.add(k)
+        out.append(sym)
+    return sorted(out)
+
+
+def _mem_load():
+    data = _load_json(WL_MEMBERSHIP_JSON_PATH)
+    if not isinstance(data.get("groups"), dict):
+        data["groups"] = {}
+    if not isinstance(data.get("recent"), list):
+        data["recent"] = []
+    return data
+
+
+def _mem_write(data, note):
+    now = time.time()
+    note = dict(note or {})
+    note["ts"] = now
+    data["recent"] = (data.get("recent") or [])[-(MEMBER_RECENT_MAX - 1):] + [note]
+    data["_meta"] = {
+        "updated_at": now,
+        "updated_at_str": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "groups": len(data["groups"]),
+        "schema": "membership_v1",
+    }
+    _atomic_write(WL_MEMBERSHIP_JSON_PATH, data)
+
+
+def save_membership_snapshot(group, symbols, complete=True, source="", page_groups=None):
+    g = _clean_group(group)
+    if not g:
+        return {"status": "skip", "reason": "no group"}
+    syms = _clean_symbols(symbols)
+    source = str(source or "")
+    with _MEM_LOCK:
+        data = _mem_load()
+        rec = dict(data["groups"].get(g) or {})
+        old = _clean_symbols(rec.get("symbols") or [])
+        now = time.time()
+        mode = "snapshot" if complete else "merge"
+        # 被动快照骤减 → 疑似页面未加载完，降级为合并
+        if complete and source.startswith("passive") and len(old) >= 20 and len(syms) < len(old) * 0.3:
+            mode, complete = "merge_guard", False
+            _log(f"[归属] 「{g}」被动快照 {len(syms)} 远少于原有 {len(old)}，降级为合并")
+        new = syms if complete else _clean_symbols(old + syms)
+        old_k, new_k = set(map(_sym_key, old)), set(map(_sym_key, new))
+        added = sorted(s for s in new if _sym_key(s) not in old_k)
+        removed = sorted(s for s in old if _sym_key(s) not in new_k)
+        if complete:
+            rec["complete"] = True
+            rec["scanned_at"] = now
+        rec.setdefault("complete", False)
+        rec.update({"symbols": new, "count": len(new), "source": source, "updated_at": now})
+        data["groups"][g] = rec
+        pg_changed = False
+        if isinstance(page_groups, list) and page_groups:
+            pg = [_clean_group(x) for x in page_groups if _clean_group(x)]
+            if pg and pg != data.get("page_groups"):
+                data["page_groups"] = pg
+                pg_changed = True
+        if added or removed or complete or pg_changed or "symbols" not in (data["groups"].get(g) or {}):
+            _mem_write(data, {"op": mode, "group": g, "count": len(new), "source": source,
+                              "added": added[:30], "removed": removed[:30]})
+    if added or removed:
+        _log(f"[归属] 「{g}」{mode} {len(new)} 只 (+{len(added)} -{len(removed)}) via {source}")
+    return {"status": "ok", "group": g, "mode": mode, "count": len(new),
+            "added": len(added), "removed": len(removed)}
+
+
+def apply_membership_event(group, symbol, op, source=""):
+    g = _clean_group(group)
+    sym = str(symbol or "").strip().upper()
+    k = _sym_key(sym)
+    if not g or not k or op not in ("add", "remove"):
+        return {"status": "skip"}
+    with _MEM_LOCK:
+        data = _mem_load()
+        rec = dict(data["groups"].get(g) or {"symbols": [], "complete": False})
+        syms = [s for s in (rec.get("symbols") or []) if _sym_key(s) != k]
+        if op == "add":
+            syms.append(sym)
+        syms = _clean_symbols(syms)
+        rec.update({"symbols": syms, "count": len(syms), "source": source, "updated_at": time.time()})
+        rec.setdefault("complete", False)
+        data["groups"][g] = rec
+        _mem_write(data, {"op": op, "group": g, "symbol": sym, "source": source})
+    _log(f"[归属] {op} {sym} @「{g}」 via {source}")
+    return {"status": "ok", "group": g, "symbol": sym, "op": op, "count": len(syms)}
+
 
 def launch_chart(symbol):
     try:
@@ -854,13 +979,77 @@ class StockRequestHandler(BaseHTTPRequestHandler):
                 self._reply(500, {"status": "error", "ok": False, "message": str(e)})
             return
 
+        if path == "/wl_membership":
+            try:
+                body = self._read_json_body()
+                r = save_membership_snapshot(body.get("group"), body.get("symbols") or [],
+                                             complete=bool(body.get("complete", True)),
+                                             source=str(body.get("source", "")),
+                                             page_groups=body.get("page_groups"))
+                self._reply(200, r)
+            except Exception as e:
+                self._reply(500, {"status": "error", "message": str(e)})
+            return
+
+        if path == "/wl_membership_event":
+            try:
+                body = self._read_json_body()
+                r = apply_membership_event(body.get("group"), body.get("symbol"),
+                                           str(body.get("op", "")), str(body.get("source", "")))
+                self._reply(200, r)
+            except Exception as e:
+                self._reply(500, {"status": "error", "message": str(e)})
+            return
+
+        # ★ 全量扫描所有分组的归属（图表 M 键 / 其它脚本）
+        if path == "/wl_scan_groups":
+            try:
+                body = self._read_json_body()
+                groups = body.get("groups")
+                groups = [str(x).strip() for x in groups if str(x).strip()] if isinstance(groups, list) else None
+                wait = float(body.get("wait", 0) or 0)
+                tab = ensure_watchlist_tab()
+                t = find_active_task("scan_groups")
+                if t:
+                    _log(f"[任务] 已有扫描任务 {t['id']} 在进行，复用")
+                else:
+                    t = new_task("scan_groups", "", "", {"groups": groups, "restore": True,
+                                                         "lease": 900, "ttl": 1500})
+                    _log(f"[任务] 排队 scan_groups {groups or '(页面全部分组)'} id={t['id']}")
+                if wait > 0:
+                    t["event"].wait(min(wait, 900))
+                res = t.get("result")
+                if res:
+                    out = {"status": "ok", "id": t["id"], "tab": tab}
+                    out.update(res)
+                    self._reply(200, out)
+                else:
+                    self._reply(200, {"status": "pending", "id": t["id"], "tab": tab, "ok": False,
+                                      "message": "扫描任务已排队但未在等待时间内完成（稍后图表会自动刷新）"})
+            except Exception as e:
+                self._reply(500, {"status": "error", "ok": False, "message": str(e)})
+            return
+
         if path == "/wl_task_result":
             try:
                 body = self._read_json_body()
-                ok = finish_task(body.get("id"), bool(body.get("ok")),
-                                 str(body.get("message", "")), body.get("data"))
-                _log(f"[任务] 回报 id={body.get('id')} ok={body.get('ok')} "
-                     f"msg={str(body.get('message',''))[:90]}")
+                tid = str(body.get("id"))
+                reported_ok = bool(body.get("ok"))
+                with _TASK_LOCK:
+                    t = _TASKS.get(tid)
+                    info = (t.get("action"), t.get("symbol"), t.get("group")) if t else (None, None, None)
+                # ★ 先记账（F 键添加成功 / 已存在 都说明该 symbol 在该分组），再唤醒等待方
+                if reported_ok and info[0] == "add":
+                    d = body.get("data") or {}
+                    grp = d.get("group") or info[2]
+                    sym = d.get("symbol") or info[1]
+                    if grp and sym:
+                        try:
+                            apply_membership_event(grp, sym, "add", "agent_add")
+                        except Exception as e:
+                            _log(f"[归属] 记账失败: {e}")
+                ok = finish_task(tid, reported_ok, str(body.get("message", "")), body.get("data"))
+                _log(f"[任务] 回报 id={tid} ok={reported_ok} msg={str(body.get('message',''))[:90]}")
                 self._reply(200, {"status": "ok" if ok else "unknown_task"})
             except Exception as e:
                 self._reply(500, {"status": "error", "message": str(e)})
@@ -898,6 +1087,8 @@ class StockRequestHandler(BaseHTTPRequestHandler):
                 "status": "ok", "port": PORT, "python": PYTHON_EXEC,
                 "chart_script_exists": os.path.exists(STOCK_CHART_PY),
                 "wl_groups": WATCHLIST_GROUPS,
+                "membership_exists": os.path.exists(WL_MEMBERSHIP_JSON_PATH),
+                "membership_bytes": _file_size(WL_MEMBERSHIP_JSON_PATH),
                 "wl_tasks_pending": pending_count(),
                 "positions_bytes": _file_size(POSITIONS_JSON_PATH),
                 "positions_bak_exists": os.path.exists(POSITIONS_JSON_PATH + ".bak"),
@@ -939,6 +1130,10 @@ class StockRequestHandler(BaseHTTPRequestHandler):
             self._reply(200, _load_json(ORDERS_JSON_PATH))
             return
 
+        if path == "/wl_membership":
+            self._reply(200, _load_json(WL_MEMBERSHIP_JSON_PATH))
+            return
+        
         if path == "/watchlist":
             self._reply(200, _load_json(WATCHLIST_JSON_PATH))
             return

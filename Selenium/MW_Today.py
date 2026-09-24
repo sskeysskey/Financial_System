@@ -24,6 +24,7 @@ import os
 import platform
 import random
 import re
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -57,8 +58,22 @@ MW_SYMBOL_OVERRIDE_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Symbol_
 CHECK_YESTERDAY_SCRIPT_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Query", "Check_yesterday.py")
 
 # 独立的浏览器 Profile（保存 Cookie，降低被反爬拦截概率；不要与正在运行的 Chrome 共用）
+# 注意：Profile 会产生大量文件，必须放在 Git 仓库之外。可用环境变量 MW_PROFILE_DIR 覆盖。
 USE_PERSISTENT_PROFILE = True
-MW_PROFILE_DIR = os.path.join(FINANCIAL_SYSTEM_DIR, "Selenium", "mw_chrome_profile")
+MW_PROFILE_DIR = os.environ.get("MW_PROFILE_DIR") or os.path.join(DOWNLOADS_DIR, "backup", "mw_chrome_profile")
+# 旧版本放在仓库内的位置：若存在，首次运行时会自动迁移到 MW_PROFILE_DIR（保留 Cookie）
+LEGACY_MW_PROFILE_DIRS = [
+    os.path.join(FINANCIAL_SYSTEM_DIR, "Selenium", "mw_chrome_profile"),
+]
+# 每次运行结束后清理 Profile 中的纯缓存目录（不影响 Cookie / 登录状态），防止目录无限膨胀
+CLEAN_PROFILE_CACHE_ON_EXIT = True
+PROFILE_CACHE_SUBPATHS = [
+    "Default/Cache", "Default/Code Cache", "Default/GPUCache",
+    "Default/DawnCache", "Default/DawnGraphiteCache", "Default/DawnWebGPUCache",
+    "Default/Service Worker/CacheStorage", "Default/Service Worker/ScriptCache",
+    "GrShaderCache", "GraphiteDawnCache", "ShaderCache",
+    "component_crx_cache", "extensions_crx_cache", "Crashpad",
+]
 
 if platform.system() == 'Darwin':
     CHROME_BINARY_PATH = "/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta"
@@ -575,6 +590,72 @@ def suggest_override_from_url(final_url):
 
 
 # ================= 4. 浏览器 =================
+def _find_git_root(path):
+    """向上查找包含 .git 的目录，找不到返回 None"""
+    cur = os.path.abspath(path)
+    while True:
+        if os.path.exists(os.path.join(cur, ".git")):
+            return cur
+        parent = os.path.dirname(cur)
+        if parent == cur:
+            return None
+        cur = parent
+
+
+def _remove_dir_if_empty(path):
+    try:
+        if os.path.isdir(path) and not os.listdir(path):
+            os.rmdir(path)
+    except OSError:
+        pass
+
+
+def prepare_profile_dir():
+    """
+    1. 旧 Profile（位于仓库内）自动迁移到 MW_PROFILE_DIR，保留 Cookie
+    2. 确保目录存在
+    3. 若目标目录位于 Git 仓库内，给出警告
+    """
+    if not USE_PERSISTENT_PROFILE:
+        return
+    target = os.path.abspath(MW_PROFILE_DIR)
+
+    for legacy in LEGACY_MW_PROFILE_DIRS:
+        legacy = os.path.abspath(legacy)
+        if legacy == target or not os.path.isdir(legacy):
+            continue
+        if not os.path.exists(target):
+            try:
+                os.makedirs(os.path.dirname(target), exist_ok=True)
+                shutil.move(legacy, target)
+                tqdm.write(f">>> [Profile] 已将旧浏览器 Profile 迁移到仓库外: {legacy} -> {target}")
+                _remove_dir_if_empty(os.path.dirname(legacy))
+            except Exception as e:
+                tqdm.write(f"⚠️ [Profile] 迁移旧 Profile 失败（请手动移动或删除）: {e}")
+        else:
+            tqdm.write(f"⚠️ [Profile] 发现遗留的旧 Profile 目录（新目录已存在，已不再使用），"
+                       f"可手动删除: {legacy}")
+
+    os.makedirs(target, exist_ok=True)
+
+    git_root = _find_git_root(target)
+    if git_root:
+        tqdm.write(f"⚠️ [Profile] 浏览器 Profile 目录位于 Git 仓库 {git_root} 内，会产生大量文件！"
+                   f"请修改 MW_PROFILE_DIR 或将其加入 .gitignore。")
+
+
+def clean_profile_cache():
+    """浏览器退出后清理纯缓存目录（保留 Cookies / Local Storage 等身份数据）"""
+    if not (USE_PERSISTENT_PROFILE and CLEAN_PROFILE_CACHE_ON_EXIT):
+        return
+    root = os.path.abspath(MW_PROFILE_DIR)
+    if not os.path.isdir(root):
+        return
+    time.sleep(1)  # 等 Chrome 子进程释放文件句柄
+    for sub in PROFILE_CACHE_SUBPATHS:
+        p = os.path.join(root, *sub.split("/"))
+        if os.path.isdir(p):
+            shutil.rmtree(p, ignore_errors=True)
 
 def create_driver(headless=True):
     options = webdriver.ChromeOptions()
@@ -590,9 +671,12 @@ def create_driver(headless=True):
     options.add_argument('--blink-settings=imagesEnabled=false')
     options.add_experimental_option('excludeSwitches', ['enable-automation'])
     options.add_experimental_option('useAutomationExtension', False)
+    options.add_argument('--no-first-run')
+    options.add_argument('--no-default-browser-check')
+    options.add_argument('--disk-cache-size=52428800')   # 磁盘缓存上限 50MB
     if USE_PERSISTENT_PROFILE:
         os.makedirs(MW_PROFILE_DIR, exist_ok=True)
-        options.add_argument(f'--user-data-dir={MW_PROFILE_DIR}')
+        options.add_argument(f'--user-data-dir={os.path.abspath(MW_PROFILE_DIR)}')
     options.page_load_strategy = 'eager'
 
     driver = webdriver.Chrome(service=Service(executable_path=CHROME_DRIVER_PATH), options=options)
@@ -1078,6 +1162,7 @@ def scrape_marketwatch(headless=True, only_groups=None, dry_run=False, sanity=Tr
     tqdm.write(f"共加载 {len(task_list)} 个待抓取任务。（模式: {'无头' if headless else '有界面'}"
                f"{' | DRY-RUN 不写库' if dry_run else ''}{' | 已关闭价格校验' if not sanity else ''}）")
 
+    prepare_profile_dir()
     try:
         driver = create_driver(headless)
     except Exception as e:
@@ -1137,6 +1222,7 @@ def scrape_marketwatch(headless=True, only_groups=None, dry_run=False, sanity=Tr
                 time.sleep(random.uniform(*REQUEST_DELAY_RANGE))
     finally:
         safe_quit(driver)
+        clean_profile_cache()
         tqdm.write("🎉 所有任务执行完毕。")
 
     tqdm.write(f"📊 统计：成功 {len(stats['success'])} | 失败 {len(stats['failed'])} | "

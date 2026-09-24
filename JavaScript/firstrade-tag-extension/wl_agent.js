@@ -204,7 +204,27 @@
     return Object.keys(buf).some(k => a.normKey(k) === t);
   }
 
+  /* ★ 分组归属全量扫描任务（Python 图表 M 键） */
+  async function handleScanTask(t) {
+    const M = window.__FT_WL_MEMBER__;
+    let ok = false, msg = '', data = {};
+    if (!M) {
+      msg = 'wl_membership.js 未加载（请刷新 watchlist 页面）';
+    } else {
+      try {
+        const r = await M.scanAllGroups(Array.isArray(t.groups) ? t.groups : null);
+        ok = !!r.ok;
+        msg = r.message || r.error || '';
+        data = { results: r.results || [], groups: r.groups || [] };
+      } catch (e) { msg = String((e && e.message) || e); }
+    }
+    toast((ok ? '✅ ' : '❌ ') + msg);
+    console.log(LOG, msg);
+    await bg({ action: 'FT_WL_TASK_RESULT', payload: { id: t.id, ok, message: msg, data } });
+  }
+
   async function handleTask(t) {
+    if (String(t.action || 'add') === 'scan_groups') return handleScanTask(t);   // ★ 新增分发
     const a = api();
     const sym = String(t.symbol || '').trim().toUpperCase();
     const grp = String(t.group || '').trim();
