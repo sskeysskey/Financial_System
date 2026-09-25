@@ -1,28 +1,16 @@
 {
  "_meta": {
-  "updated_at": 1790219355.4665248,
-  "updated_at_str": "2026-09-24 11:09:15",
-  "count": 3,
+  "updated_at": 1790327690.557059,
+  "updated_at_str": "2026-09-25 17:14:50",
+  "count": 1,
   "mode": "overwrite"
  },
  "quotes": {
-  "BB": {
-   "symbol": "BB",
-   "last": "8.42",
-   "change_pct": "-2.32%",
-   "change_pct_num": -2.320186
-  },
-  "DRI": {
-   "symbol": "DRI",
-   "last": "213.69",
-   "change_pct": "+0.07%",
-   "change_pct_num": 0.070244
-  },
-  "SNX": {
-   "symbol": "SNX",
-   "last": "289.95",
-   "change_pct": "+2.37%",
-   "change_pct_num": 2.365402
+  "COST": {
+   "symbol": "COST",
+   "last": "894.84",
+   "change_pct": "-0.18%",
+   "change_pct_num": -0.182715
   }
  }
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ft_quotes.py —— Firstrade 本地数据读取层（Chart_input.py / Chart_input_single.py 共用）
+ft_quotes.py —— Firstrade 本地数据读取层（Chart_input.py）
 
 数据来源（均由 Chrome 插件 + bridge_server.py 落盘）:
     Modules/firstrade_positions.json   持仓快照（覆盖式）

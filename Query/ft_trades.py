@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Firstrade 买入/卖出痕迹读取与聚合（供 Chart_input.py / Chart_input_single.py 共用）
+Firstrade 买入/卖出痕迹读取与聚合（供 Chart_input.py）
 
 数据来源: ~/Coding/Financial_System/Modules/firstrade_orders.json
 

@@ -19,7 +19,7 @@ from PyQt6.QtCore import Qt, QTimer
 # --- 路径处理 ---
 HOME = os.path.expanduser("~") 
 sys.path.append(os.path.join(HOME, 'Coding/Financial_System/Query'))
-from Chart_input_single import plot_financial_data
+from Chart_input import plot_financial_data
 
 TXT_PATH = os.path.join(HOME, "Coding/News/Earnings_Release_new.txt")
 SECTORS_JSON_PATH = os.path.join(HOME, "Coding/Financial_System/Modules/Sectors_All.json")

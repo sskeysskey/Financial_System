@@ -341,6 +341,8 @@ class MainWindow(QMainWindow):
         self.data_manager = DataManager()
         self.cards_map = {}
         self.last_highlighted_card = None
+        self.ordered_data = []
+        self.current_index = -1
 
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
@@ -398,6 +400,7 @@ class MainWindow(QMainWindow):
 
     def load_and_render(self):
         data_list = self.data_manager.load_data()
+        self.ordered_data = data_list
         self.cards_map.clear()
         while self.list_layout.count() > 1:
             item = self.list_layout.takeAt(0)
@@ -423,24 +426,30 @@ class MainWindow(QMainWindow):
         else:
             print(f"Symbol {search_text} not found.")
 
-    def on_card_clicked(self, data):
+    def on_card_clicked(self, data, idx=None):
         symbol = data['symbol']
-        print(f"Opening chart for {symbol}...")
+        if idx is None:
+            idx = next((i for i, d in enumerate(self.ordered_data) if d['symbol'] == symbol), -1)
+        self.current_index = idx
         sector = next((k for k, v in self.data_manager.sectors_data.items() if symbol in v), None)
         try:
             plot_financial_data(
-                self.data_manager.path_db, 
-                sector, 
-                symbol, 
-                data['raw_compare'], 
-                (data['shares'], data['pb']), 
-                data['marketcap'], 
-                data['pe'], 
-                self.data_manager.full_json_data, 
-                '1Y', False
+                self.data_manager.path_db, sector, symbol, data['raw_compare'],
+                (data['shares'], data['pb']), data['marketcap'], data['pe'],
+                self.data_manager.full_json_data, '1Y', False,
+                callback=self.handle_chart_callback,
+                window_title_text=f"{symbol} ({idx + 1}/{len(self.ordered_data)})"
             )
         except Exception as e:
             print(f"Chart Error: {e}")
+
+    def handle_chart_callback(self, action):
+        if action in ('next', 'prev') and self.ordered_data:
+            step = 1 if action == 'next' else -1
+            QTimer.singleShot(50, lambda: self._goto((self.current_index + step) % len(self.ordered_data)))
+
+    def _goto(self, idx):
+        self.on_card_clicked(self.ordered_data[idx], idx)
 
     def apply_styles(self):
         self.setStyleSheet("""

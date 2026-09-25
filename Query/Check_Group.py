@@ -32,7 +32,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 
 # 外部绘图函数
 sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Query"))
-from Chart_input_single import plot_financial_data
+from Chart_input import plot_financial_data
 
 # ★ 持仓读取层
 try:
