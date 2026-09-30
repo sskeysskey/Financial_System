@@ -243,7 +243,7 @@ def run_currency_cny2():
         cursor.execute('''CREATE TABLE IF NOT EXISTS Currencies (
             id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, name TEXT, price REAL);''')
         conn.commit()
-        target_currencies = ["CNYARS", "CNYIDR", "CNYIRR", "CNYEGP", "CNYMXN"]
+        target_currencies = ["CNYARS", "CNYIDR", "CNYIRR", "CNYEGP", "CNYMXN", "CNYRUB"]
         yesterday_date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
         def extract_currency_list(d):
             WebDriverWait(d, 10).until(EC.presence_of_element_located((By.LINK_TEXT, "CNYARS")))

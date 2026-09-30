@@ -9,11 +9,11 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 # --- 1. 配置文件和路径 ---
 BASE_PATH = USER_HOME
 
-SYMBOL_TO_TRACE = ""
-TARGET_DATE = ""
+# SYMBOL_TO_TRACE = ""
+# TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "VVV"
-# TARGET_DATE = "2026-09-21"
+SYMBOL_TO_TRACE = "LIN"
+TARGET_DATE = "2026-09-21"
 
 PATHS = {
     "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),
@@ -44,7 +44,7 @@ CONFIG = {
         "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare",
         "Industrials", "Real_Estate", "Technology", "Utilities"
     },
-    "TURNOVER_THRESHOLD": 80_000_000,
+    "TURNOVER_THRESHOLD": 75_000_000,
     "TURNOVER_THRESHOLD_CHINA": 100_000_000,
 
     # ============================================================
@@ -67,9 +67,9 @@ CONFIG = {
     "MARKETCAP_THRESHOLD_GIANT": 1_000_000_000_000,
     "COND5_WINDOW_DAYS": 6,
 
-    "PRICE_DROP_PERCENTAGE_LARGE": 0.107,
-    "PRICE_DROP_PERCENTAGE_SMALL": 0.09,
-    "PRICE_DROP_PERCENTAGE_MEGA": 0.07,
+    "PRICE_DROP_PERCENTAGE_LARGE": 0.09,
+    "PRICE_DROP_PERCENTAGE_SMALL": 0.07,
+    "PRICE_DROP_PERCENTAGE_MEGA": 0.06,
     "PRICE_DROP_PERCENTAGE_GIANT": 0.05,
 
     "RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.1,

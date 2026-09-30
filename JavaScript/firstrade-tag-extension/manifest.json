@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Firstrade 股票标签助手",
-  "version": "8.1",
-  "description": "Firstrade 列表 Tag 徽章；持仓/订单(LEAN)/自选股行情回传本机 Python 图表；自选股一键重建；★新增：Python 图表/面板一键把 symbol 远程加入指定自选股分组。全部自动抓取默认关闭。",
+  "version": "9.0",
+  "description": "Firstrade 列表 Tag 徽章；持仓/订单(LEAN)/自选股行情回传本机 Python 图表；自选股一键同步；Python 图表远程加入/移出自选股分组；所有功能自动定位/跳转/新开 Firstrade 页面。",
   "permissions": [
     "storage",
     "activeTab",
@@ -11,7 +11,8 @@
   ],
   "host_permissions": [
     "http://127.0.0.1:18888/*",
-    "http://localhost:18888/*"
+    "http://localhost:18888/*",
+    "https://invest.firstrade.com/*"
   ],
   "background": {
     "service_worker": "background.js"

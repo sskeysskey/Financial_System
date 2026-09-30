@@ -4,28 +4,38 @@
 # 星级门槛：在 _score_turning() 末尾改 4.5 / 3.5 / 2.5。
 # 关键项名单：直接改 TURN_LEVEL2_KEYS / TURN_LEVEL3_KEYS 即可。
 #
-# ★ 新增「持仓」分组（放在转折之前）：
+# ★ 「持仓」分组（放在转折之前）：
 #   - 数据来源 Modules/firstrade_positions.json（Chrome 插件 + bridge_server.py 落盘）
-#   - 支持三种排序，点击表头按钮切换，同一按钮再点一次切换升/降序：
-#       A-Z（代码）｜盈亏%（gainloss）｜成本（cost）
-#   - 在该分组里点开图表后，左右键按当前持仓排序顺序浏览；到达最后一个时顺畅流转到下一个分组（转折/共振）
-#   - 按 R 键重新读取 firstrade_positions.json（不用重启）
+#   - 三种排序：A-Z｜盈亏%｜成本，同一按钮再点切换升/降序
+#   - 左右键按当前持仓排序浏览；到最后一个顺畅流转到转折/共振
+#   - 按 R 键重新读取 firstrade_positions.json
+#
+# ★ Tag 黑名单（Modules/Tag_Blacklist.json，分「确定」「疑似」两组）—— 按分组独立配置：
+#   - 「转折」「共振 N 组」每个分组都可单独选择屏蔽「确定」/「疑似」；「持仓」始终完整显示
+#   - 默认：确定 → 转折、共振3、共振2；疑似 → 共振2；其他（含以后新出现的共振N）默认不屏蔽
+#   - 配置保存在 Modules/Check_Group_Blacklist_Sections.json，启动不再弹窗，沿用上次设定
+#   - 修改方式：① 每个分组标题下的「⛔屏蔽 ☐确定 ☐疑似」即点即生效；② B 键 / ⚙ 按钮打开总表
+#   - 黑名单、description.json、分组配置文件变化 1 秒内自动刷新
+#   - 未被屏蔽但带黑名单 Tag 的卡片：Tag 标 ⛔ 并标红/橙
 
 import sys
 import json
 import os
 import sqlite3
 import re
+import html as _html
+import tempfile
 import subprocess
+import traceback
 from collections import OrderedDict, defaultdict
 
 USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QPushButton, QScrollArea, QLabel, QFrame, QMenu,
-    QInputDialog, QMessageBox
+    QInputDialog, QMessageBox, QCheckBox, QDialog, QDialogButtonBox
 )
 from PyQt6.QtGui import QCursor, QColor, QFont, QKeySequence, QShortcut
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
@@ -33,6 +43,15 @@ from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 # 外部绘图函数
 sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Query"))
 from Chart_input import plot_financial_data
+
+# ★ Tag 黑名单
+try:
+    import tag_blacklist as TB
+    TB_OK = True
+except Exception as _e:
+    print(f"[黑名单] 加载 tag_blacklist 失败（黑名单功能不可用）: {_e}")
+    TB = None
+    TB_OK = False
 
 # ★ 持仓读取层
 try:
@@ -65,14 +84,40 @@ except Exception as _e:
 # ----------------------------------------------------------------------
 MAX_ITEMS_PER_COLUMN = 9
 SYMBOL_WIDGET_FIXED_WIDTH = 220
+WATCH_INTERVAL_MS = 1000
 
-CONFIG_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_panel.json")
-COLORS_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Colors.json")
-DESCRIPTION_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "description.json")
-SECTORS_ALL_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Sectors_All.json")
+MODULES_DIR = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules")
+CONFIG_PATH = os.path.join(MODULES_DIR, "Sectors_panel.json")
+COLORS_PATH = os.path.join(MODULES_DIR, "Colors.json")
+DESCRIPTION_PATH = os.path.join(MODULES_DIR, "description.json")
+SECTORS_ALL_PATH = os.path.join(MODULES_DIR, "Sectors_All.json")
 COMPARE_DATA_PATH = os.path.join(BASE_CODING_DIR, "News", "backup", "Compare_All.txt")
 DB_PATH = os.path.join(BASE_CODING_DIR, "Database", "Finance.db")
-EARNING_HISTORY_PATH = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules", "Earning_History.json")
+EARNING_HISTORY_PATH = os.path.join(MODULES_DIR, "Earning_History.json")
+
+# ★ 分组级黑名单屏蔽配置文件
+BL_SECTION_CONFIG_PATH = os.path.join(MODULES_DIR, "Check_Group_Blacklist_Sections.json")
+
+# ---------- 黑名单分组常量（TB 不可用时也能正常运行）----------
+BL_GROUP_SURE = TB.GROUP_SURE if TB_OK else "确定"
+BL_GROUP_MAYBE = TB.GROUP_MAYBE if TB_OK else "疑似"
+BL_GROUPS = tuple(TB.GROUPS) if TB_OK else (BL_GROUP_SURE, BL_GROUP_MAYBE)
+
+SEC_TURNING = "turning"
+
+
+def reso_key(n):
+    return f"reso:{int(n)}"
+
+
+# 默认：确定 → 转折 / 共振3 / 共振2；疑似 → 共振2
+BL_SECTION_DEFAULTS = {
+    SEC_TURNING: {BL_GROUP_SURE},
+    reso_key(3): {BL_GROUP_SURE},
+    reso_key(2): {BL_GROUP_SURE, BL_GROUP_MAYBE},
+}
+# 从未配置过的新分组（例如新出现的共振7）默认不屏蔽
+BL_NEW_SECTION_DEFAULT = frozenset()
 
 # ---------- 持仓分组排序配置 ----------
 HOLD_SORT_MODES = [('alpha', 'A-Z'), ('gainloss', '盈亏%'), ('cost', '成本')]
@@ -83,7 +128,6 @@ HOLD_SORT_KEYS = {
 }
 HOLD_DEFAULT_DESC = {'alpha': False, 'gainloss': False, 'cost': True}
 
-# 52周新低判定：以下板块内的 symbol 视为符合 52week_low 筛选
 WEEK52_LOW_SECTORS = {
     "Basic_Materials", "Real_Estate", "Energy", "Technology",
     "Consumer_Cyclical", "Utilities", "Consumer_Defensive",
@@ -96,17 +140,17 @@ WEEK52_LOW_SECTORS = {
 # ======================================================================
 IGNORE_GROUPS = {"_Tag_Blacklist", "no_season"}
 
-HIGH_WEIGHT_CATEGORIES = {           # 红色：高权重
+HIGH_WEIGHT_CATEGORIES = {
     "PE_Volume", "Short", "Short_W", "PE_Volume_high",
     "SupportLevel_Over", "PE_Deeper", "PE_Deep"
 }
-MEDIUM_WEIGHT_CATEGORIES = {         # 橙色：中权重
+MEDIUM_WEIGHT_CATEGORIES = {
     "PE_Volume_up", "PE_W", "SupportLevel_Close", "PE_Hot",
     "OverSell_W", "season"
 }
 
-LOOKBACK_TRADING_DAYS = 120   # 稀有度回看窗口（交易日）
-MIN_HISTORY_DAYS = 5          # 历史样本少于该值 → 视为“极少出现”
+LOOKBACK_TRADING_DAYS = 120
+MIN_HISTORY_DAYS = 5
 
 BADGE_TEXT = {0: "", 1: "★", 2: "★★", 3: "🔥★★★"}
 BADGE_NAME = {0: "常态", 1: "值得一看", 2: "罕见/高质量", 3: "极罕见且极强"}
@@ -152,7 +196,6 @@ _DATE_RE = re.compile(r"^(\d{4})\D+(\d{1,2})\D+(\d{1,2})")
 
 
 def norm_date(s):
-    """把 2025-1-9 / 2025/1/9 / 20250109 统一成 '2025-01-09'，用于排序"""
     s = str(s).strip()
     m = _DATE_RE.match(s)
     if m:
@@ -171,7 +214,6 @@ def is_valid_group(name):
 
 
 def build_date_universe(history_data):
-    """返回 (全局交易日降序列表, {date: 距今第几个交易日})"""
     dates = set()
     for g, dm in (history_data or {}).items():
         if not is_valid_group(g) or not isinstance(dm, dict):
@@ -182,7 +224,6 @@ def build_date_universe(history_data):
 
 
 def collapse_family(groups):
-    """同族分组合并成 1 项（可选）"""
     if not COLLAPSE_FAMILIES:
         return set(groups)
     out = set()
@@ -209,25 +250,32 @@ class ClickableLabel(QLabel):
 # 上下文感知的全局导航序列管理器
 # ======================================================================
 class GlobalNavigationManager:
-    """
-    统一管理 (symbol, source) 的全序列流转
-    支持跨分组平滑循环，即使同一个 symbol 存在于不同分组也能精准区分上下文
-    """
     def __init__(self, items=None):
         self.items = []
         self.current_index = -1
         if items:
             self.set_items(items)
 
+    def _find_exact(self, symbol, source):
+        for idx, (sym, src) in enumerate(self.items):
+            if sym == symbol and src == source:
+                return idx
+        return -1
+
     def set_items(self, items):
-        """设置全量条目列表 [(sym, source), ...]"""
+        """设置全量条目；若当前条目被过滤掉，则把指针放在其前一位，使“下一个”正好落在原位置的新条目"""
         old_item = self.current_item()
+        old_index = self.current_index
         self.items = list(items) if items else []
         if not self.items:
             self.current_index = -1
             return
         if old_item:
-            self.set_current(old_item[0], old_item[1])
+            idx = self._find_exact(old_item[0], old_item[1])
+            if idx >= 0:
+                self.current_index = idx
+            else:
+                self.current_index = min(old_index, len(self.items)) - 1
         elif self.current_index >= len(self.items):
             self.current_index = len(self.items) - 1
 
@@ -247,13 +295,11 @@ class GlobalNavigationManager:
         if not self.items:
             self.current_index = -1
             return
-        # 1. 优先完全匹配 (symbol, source)
         if source:
-            for idx, (sym, src) in enumerate(self.items):
-                if sym == symbol and src == source:
-                    self.current_index = idx
-                    return
-        # 2. 次优匹配 symbol
+            idx = self._find_exact(symbol, source)
+            if idx >= 0:
+                self.current_index = idx
+                return
         for idx, (sym, _) in enumerate(self.items):
             if sym == symbol:
                 self.current_index = idx
@@ -276,13 +322,15 @@ class GlobalNavigationManager:
 # 通用工具
 # ----------------------------------------------------------------------
 def clean_ticker(symbol):
-    """清洗 Symbol，去除中文后缀等，仅保留前面的字母和横杠"""
     match = re.search(r"^([A-Za-z-]+)", symbol)
     return match.group(1) if match else symbol
 
 
+def norm_symbol(s):
+    return str(s).strip().upper().replace('.', '-')
+
+
 def split_symbol_suffix(raw):
-    """把 'AAPL抄底黑' 拆成 ('AAPL', '抄底黑')"""
     base = clean_ticker(raw)
     suffix = raw[len(base):] if raw.startswith(base) else ""
     return base.upper(), suffix
@@ -294,6 +342,45 @@ def load_json(path):
         return json.load(file, object_pairs_hook=OrderedDict)
 
 
+def file_mtime(path):
+    try:
+        st = os.stat(path)
+        return (st.st_mtime_ns, st.st_size)
+    except OSError:
+        return (0, 0)
+
+
+def atomic_write_json(path, obj):
+    """临时文件 + fsync + os.replace 原子替换，避免写一半被其他进程读到"""
+    d = os.path.dirname(path)
+    os.makedirs(d, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=d, prefix=".tmp_", suffix=".json")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(obj, f, ensure_ascii=False, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        raise
+
+
+def open_text_file(path):
+    try:
+        if sys.platform == "darwin":
+            subprocess.Popen(["open", "-t", path])
+        elif sys.platform == "win32":
+            os.startfile(path)   # noqa
+        else:
+            subprocess.Popen(["xdg-open", path])
+    except Exception as e:
+        print(f"打开文件失败: {e}")
+
+
 def load_text_data(path):
     data = {}
     if not os.path.exists(path): return data
@@ -302,13 +389,15 @@ def load_text_data(path):
             line = line.strip()
             if ':' in line:
                 key, value = map(str.strip, line.split(':', 1))
-                cleaned_key = key.split()[-1]
+                key_parts = key.split()
+                if not key_parts:          # ": xxx" 这种行会 IndexError
+                    continue
+                cleaned_key = key_parts[-1]
                 data[cleaned_key] = value.split(',')[0].strip() if ',' in value else value
     return data
 
 
 def load_52week_low_symbols(path):
-    """从 Sectors_panel.json 中读取指定板块下的 symbol，作为 52week_low 集合"""
     symbols = set()
     data = load_json(path)
     for sector in WEEK52_LOW_SECTORS:
@@ -317,8 +406,29 @@ def load_52week_low_symbols(path):
     return symbols
 
 
+def build_tags_index(json_data):
+    """{规范化symbol: [tag, ...]}"""
+    idx = {}
+    for src in ('stocks', 'etfs'):
+        for item in (json_data or {}).get(src, []) or []:
+            sym = item.get('symbol')
+            if not sym:
+                continue
+            tags = item.get('tag') or []
+            if isinstance(tags, str):
+                tags = [tags]
+            idx.setdefault(norm_symbol(sym), [str(t) for t in tags])
+    return idx
+
+
+def preview_tags(tags, n=30):
+    if not tags:
+        return "（空）"
+    s = "、".join(tags[:n])
+    return s + (f" … 共{len(tags)}个" if len(tags) > n else "")
+
+
 def fetch_mnspp_data_from_db(db_path, symbol):
-    """从数据库获取财务数据"""
     if not os.path.exists(db_path):
         return "N/A", None, "N/A", "--"
     try:
@@ -349,6 +459,130 @@ def execute_external_script(script_type, keyword):
             subprocess.Popen([sys.executable, script_path, keyword])
     except Exception as e:
         print(f"执行脚本错误: {e}")
+
+
+# ======================================================================
+# ★ 分组级黑名单屏蔽配置
+# ======================================================================
+def normalize_section_key(k):
+    """兼容手动编辑：turning / 转折 / reso:2 / reso_2 / 共振2 / 共振2组"""
+    s = str(k).strip()
+    if s.lower() in ("turning", "转折"):
+        return SEC_TURNING
+    m = re.search(r"(\d+)", s)
+    if m and (s.lower().startswith("reso") or s.startswith("共振")):
+        return reso_key(int(m.group(1)))
+    return None
+
+
+def section_label(key):
+    if key == SEC_TURNING:
+        return "转折"
+    if key.startswith("reso:"):
+        return f"共振{key.split(':', 1)[1]}组"
+    return key
+
+
+def section_sort_key(key):
+    if key == SEC_TURNING:
+        return (0, 0)
+    try:
+        return (1, -int(key.split(":", 1)[1]))
+    except Exception:
+        return (2, 0)
+
+
+def ordered_groups(groups):
+    return [g for g in BL_GROUPS if g in groups]
+
+
+class SectionFilterConfig:
+    """每个分组（转折 / 共振N）各自屏蔽哪些黑名单类别；持久化到 JSON"""
+    NOTE = ("Check_Group 分组级黑名单屏蔽配置。sections 的键：turning=转折，reso:N=共振N组"
+            "（也接受 转折 / 共振N / reso_N）；值为要屏蔽的黑名单类别数组，可选「确定」「疑似」，"
+            "空数组 = 不屏蔽。未列出的分组用程序默认值（确定→转折/共振3/共振2，疑似→共振2，其它不屏蔽）。"
+            "保存后约 1 秒内自动生效；程序内修改也会写回本文件。")
+
+    def __init__(self, path=BL_SECTION_CONFIG_PATH):
+        self.path = path
+        self.sections = {k: set(v) for k, v in BL_SECTION_DEFAULTS.items()}
+        self.error = None
+        self.sig = None
+        self.load()
+
+    def signature(self):
+        return file_mtime(self.path)
+
+    def load(self):
+        self.sig = self.signature()
+        if not os.path.exists(self.path):
+            self.error = None
+            return
+        try:
+            with open(self.path, "r", encoding="utf-8-sig") as f:
+                txt = f.read()
+            raw = json.loads(txt) if txt.strip() else {}
+            secs = raw.get("sections", {}) if isinstance(raw, dict) else None
+            if not isinstance(secs, dict):
+                raise ValueError("缺少 sections 对象（应为 {\"sections\": {...}}）")
+            out = {}
+            for k, v in secs.items():
+                nk = normalize_section_key(k)
+                if not nk:
+                    continue
+                if v is None:
+                    v = []
+                if isinstance(v, str):
+                    v = [v]
+                if not isinstance(v, (list, tuple)):
+                    continue
+                out[nk] = {str(g).strip() for g in v if str(g).strip() in BL_GROUPS}
+            self.sections = out
+            self.error = None
+        except Exception as e:
+            # 解析失败：沿用上次内容（首次即失败则为默认值）
+            self.error = f"{type(e).__name__}: {e}"
+            print(f"[分组屏蔽] 解析 {self.path} 失败，沿用上次/默认配置: {e}")
+
+    def get(self, key):
+        if key in self.sections:
+            return set(self.sections[key])
+        return set(BL_SECTION_DEFAULTS.get(key, BL_NEW_SECTION_DEFAULT))
+
+    def default_of(self, key):
+        return set(BL_SECTION_DEFAULTS.get(key, BL_NEW_SECTION_DEFAULT))
+
+    def configured_keys(self):
+        return list(self.sections.keys())
+
+    def update(self, mapping):
+        """mapping: {key: set(groups)}；先改内存再落盘，落盘失败抛异常（内存设置仍生效）"""
+        for k, v in mapping.items():
+            self.sections[k] = {g for g in v if g in BL_GROUPS}
+        self.save()
+
+    def save(self):
+        if self.error and os.path.exists(self.path):
+            # 文件被手动改坏：先备份，不静默冲掉
+            try:
+                bak = self.path + ".corrupt.bak"
+                with open(self.path, "rb") as src, open(bak, "wb") as dst:
+                    dst.write(src.read())
+                print(f"[分组屏蔽] 原文件解析失败，已备份到 {bak}")
+            except Exception as e:
+                print(f"[分组屏蔽] 备份损坏文件失败: {e}")
+        obj = OrderedDict()
+        obj["_说明"] = self.NOTE
+        obj["sections"] = OrderedDict(
+            (k, ordered_groups(self.sections[k]))
+            for k in sorted(self.sections, key=section_sort_key))
+        atomic_write_json(self.path, obj)
+        self.error = None
+        self.sig = self.signature()
+
+    def ensure_file(self):
+        if not os.path.exists(self.path):
+            self.save()
 
 
 # ======================================================================
@@ -447,7 +681,6 @@ def get_today_items(history_data):
 
 
 def category_color(cat, suffix):
-    """返回 'red' / 'orange' / 'blue'"""
     if cat == "PE_Volume_high":
         return 'red' if (suffix and '甲' in suffix) else 'orange'
     if cat in HIGH_WEIGHT_CATEGORIES:
@@ -745,15 +978,9 @@ def detect_turning_points(index, week52_low_symbols):
             )
 
             rec = {
-                'symbol': sym,
-                'date': d,
-                'to_n': m,
-                'from_n': from_n,
-                'from_max': max(counts),
-                'drop': drop,
-                'streak': len(plateau),
-                'key_max': max(k for _, _, k in plateau),
-                'plateau': plateau,
+                'symbol': sym, 'date': d, 'to_n': m, 'from_n': from_n,
+                'from_max': max(counts), 'drop': drop, 'streak': len(plateau),
+                'key_max': max(k for _, _, k in plateau), 'plateau': plateau,
                 'plateau_red': plateau_red,
                 'drop_items': _fmt_day_items(date_map.get(d, [])) or "（当日无任何记录）",
             }
@@ -787,11 +1014,133 @@ def detect_turning_points(index, week52_low_symbols):
     return results
 
 
+# ======================================================================
+# ★ 分组级黑名单设置对话框（B 键 / ⚙ 按钮）
+# ======================================================================
+DIALOG_QSS = """
+QDialog { background-color: #2E3440; }
+QLabel { color: #D8DEE9; font-size: 14px; }
+QLabel#DlgHead { color: #ECEFF4; font-size: 16px; font-weight: bold; }
+QLabel#DlgColHead { color: #ECEFF4; font-size: 14px; font-weight: bold; }
+QLabel#DlgDim { color: #6B7385; font-size: 14px; }
+QLabel#DlgHint { color: #88C0D0; font-size: 12px; }
+QCheckBox { color: #ECEFF4; font-size: 16px; font-weight: bold; spacing: 10px; }
+QCheckBox::indicator { width: 20px; height: 20px; }
+QPushButton { background-color: #4C566A; color: #ECEFF4; border: none; padding: 7px 16px;
+              border-radius: 5px; font-size: 14px; }
+QPushButton:default { background-color: #5E81AC; font-weight: bold; }
+QPushButton:hover { background-color: #81A1C1; }
+"""
+
+
+class SectionBlacklistDialog(QDialog):
+    """rows: [(key, 显示文字, 今日是否出现)]；current: {key: set(groups)}"""
+
+    def __init__(self, rows, current, default_of, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Check_Group · 分组黑名单屏蔽设置")
+        self.setMinimumWidth(620)
+        self.rows = rows
+        self.default_of = default_of
+        data = TB.load() if TB_OK else {}
+
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(18, 16, 18, 14)
+        lay.setSpacing(10)
+        head = QLabel("为每个分组单独选择要屏蔽的黑名单类别\n"
+                      "（「持仓」始终完整显示；从未配置过的新分组默认不屏蔽）")
+        head.setObjectName("DlgHead")
+        lay.addWidget(head)
+
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(28)
+        grid.setVerticalSpacing(8)
+        h0 = QLabel("分组")
+        h0.setObjectName("DlgColHead")
+        grid.addWidget(h0, 0, 0)
+
+        self.checks = {}
+        for c, g in enumerate(BL_GROUPS, start=1):
+            b = QPushButton(f"{g}（{len(data.get(g, []))}个Tag）全选/清空")
+            b.setAutoDefault(False)
+            b.setDefault(False)
+            b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            b.setToolTip(f"「{g}」黑名单 Tag：\n{preview_tags(data.get(g, []), 60)}")
+            b.clicked.connect(lambda _=False, gg=g: self._toggle_column(gg))
+            grid.addWidget(b, 0, c)
+
+        for r, (key, text, present) in enumerate(rows, start=1):
+            lb = QLabel(text)
+            if not present:
+                lb.setObjectName("DlgDim")
+            grid.addWidget(lb, r, 0)
+            for c, g in enumerate(BL_GROUPS, start=1):
+                cb = QCheckBox()
+                cb.setChecked(g in current.get(key, set()))
+                cb.setToolTip(f"在「{section_label(key)}」中屏蔽带「{g}」黑名单 Tag 的股票")
+                grid.addWidget(cb, r, c, alignment=Qt.AlignmentFlag.AlignCenter)
+                self.checks[(key, g)] = cb
+        lay.addLayout(grid)
+
+        hint = QLabel("Enter 应用 ｜ Esc 取消 ｜ 也可在主界面每个分组标题下直接勾选（即点即生效）\n"
+                      "灰色行 = 今日未出现、但曾配置过的分组")
+        hint.setObjectName("DlgHint")
+        lay.addWidget(hint)
+
+        btns = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok |
+                                QDialogButtonBox.StandardButton.Cancel)
+        ok_btn = btns.button(QDialogButtonBox.StandardButton.Ok)
+        ok_btn.setText("应用")
+        ok_btn.setDefault(True)
+        btns.button(QDialogButtonBox.StandardButton.Cancel).setText("取消")
+        b_def = btns.addButton("恢复默认", QDialogButtonBox.ButtonRole.ResetRole)
+        b_none = btns.addButton("全部不屏蔽", QDialogButtonBox.ButtonRole.ResetRole)
+        for b in (b_def, b_none):
+            b.setAutoDefault(False)
+        b_def.clicked.connect(self._restore_defaults)
+        b_none.clicked.connect(self._clear_all)
+        btns.accepted.connect(self.accept)
+        btns.rejected.connect(self.reject)
+        lay.addWidget(btns)
+        self.setStyleSheet(DIALOG_QSS)
+
+    def _toggle_column(self, g):
+        cbs = [cb for (k, gg), cb in self.checks.items() if gg == g]
+        target = not all(cb.isChecked() for cb in cbs)
+        for cb in cbs:
+            cb.setChecked(target)
+
+    def _restore_defaults(self):
+        for (k, g), cb in self.checks.items():
+            cb.setChecked(g in self.default_of(k))
+
+    def _clear_all(self):
+        for cb in self.checks.values():
+            cb.setChecked(False)
+
+    def keyPressEvent(self, e):
+        if e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            self.accept()
+            return
+        super().keyPressEvent(e)
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        self.raise_()
+        self.activateWindow()
+
+    def result_map(self):
+        out = {}
+        for key, _, _ in self.rows:
+            out[key] = {g for g in BL_GROUPS if self.checks[(key, g)].isChecked()}
+        return out
+
+
 # ----------------------------------------------------------------------
 # 主窗口
 # ----------------------------------------------------------------------
 class GroupWindow(QMainWindow):
-    wl_done = pyqtSignal(dict)          # 工作线程 → 主线程 的结果通道
+    wl_done = pyqtSignal(dict)
 
     def __init__(self, keyword_colors, sector_data, compare_data, json_data, earning_history_data):
         super().__init__()
@@ -801,8 +1150,16 @@ class GroupWindow(QMainWindow):
         self.json_data = json_data
         self.earning_history_data = earning_history_data
 
-        # 用于 Symbol 检索定位的控件映射：{ 'AAPL': [(container, button), ...], ... }
         self.symbol_widgets_map = defaultdict(list)
+
+        # ===== ★ 黑名单状态（分组级）=====
+        self.sec_cfg = SectionFilterConfig()
+        self.tags_index = build_tags_index(self.json_data)
+        self.hidden_info = {}          # sym -> {'hits': [(tag, group)], 'sections': [label]}
+        self.section_hidden = {}       # section_key -> 隐藏数量
+        self.view_turning = []
+        self.view_resonance = []
+        self.turning_hidden = 0
 
         # ===== 共振 =====
         self.week52_low_symbols = load_52week_low_symbols(CONFIG_PATH)
@@ -833,29 +1190,207 @@ class GroupWindow(QMainWindow):
             print(f"转折检测失败: {e}")
             self.turning_data = []
 
-        self.list_turning = [r['symbol'] for r in self.turning_data]
-        self.list_resonance = [sym for item in self.resonance_data for sym in item['symbols']]
-
-        # ===== ★ 持仓 =====
+        # ===== 持仓 =====
         self.positions = {}
         self.positions_meta = {}
-        self.hold_sort_mode = 'gainloss'                     # 默认模式改为盈亏
-        self.hold_sort_desc = HOLD_DEFAULT_DESC['gainloss']  # 取上面改好的 False（升序，负值大/亏损大的排最前）
+        self.hold_sort_mode = 'gainloss'
+        self.hold_sort_desc = HOLD_DEFAULT_DESC['gainloss']
         self._hold_widget_refs = []
         self.load_positions_data()
         self.list_holdings = self._sorted_holdings()
 
-        # ===== ★ 全局统一切换序列管理器 =====
-        # 顺序：持仓(当前排序) -> 转折 -> 共振
+        # ===== 应用黑名单过滤 → 生成可见列表 =====
+        self._compute_views()
+
         self.nav_manager = GlobalNavigationManager(self._build_full_navigation_list())
 
         self.init_ui()
+
+        # ===== ★ 文件联动监视 =====
+        self._bl_sig = TB.signature() if TB_OK else None
+        self._desc_sig = file_mtime(DESCRIPTION_PATH)
+        self.watch_timer = QTimer(self)
+        self.watch_timer.setInterval(WATCH_INTERVAL_MS)
+        self.watch_timer.timeout.connect(self._poll_external_changes)
+        self.watch_timer.start()
+
+    # ==================================================================
+    # ★ 黑名单：命中计算 / 过滤（分组级）
+    # ==================================================================
+    def _blacklist_hits(self, symbol, groups=None):
+        if not TB_OK:
+            return []
+        tags = self.tags_index.get(norm_symbol(symbol), [])
+        return TB.blacklisted_tags(tags, groups)
+
+    def present_section_keys(self):
+        return [SEC_TURNING] + [reso_key(item['count']) for item in self.resonance_data]
+
+    def _compute_views(self):
+        self.hidden_info = {}
+        self.section_hidden = {}
+
+        def visible(sym, key):
+            if not TB_OK:
+                return True
+            groups = self.sec_cfg.get(key)
+            if not groups:
+                return True
+            hits = self._blacklist_hits(sym, groups)
+            if not hits:
+                return True
+            info = self.hidden_info.setdefault(sym, {'hits': [], 'sections': []})
+            for h in hits:
+                if h not in info['hits']:
+                    info['hits'].append(h)
+            lbl = section_label(key)
+            if lbl not in info['sections']:
+                info['sections'].append(lbl)
+            self.section_hidden[key] = self.section_hidden.get(key, 0) + 1
+            return False
+
+        self.view_turning = [r for r in self.turning_data if visible(r['symbol'], SEC_TURNING)]
+        self.turning_hidden = len(self.turning_data) - len(self.view_turning)
+        self.view_resonance = []
+        for item in self.resonance_data:
+            key = reso_key(item['count'])
+            vis = [s for s in item['symbols'] if visible(s, key)]
+            self.view_resonance.append({'count': item['count'], 'key': key, 'symbols': vis,
+                                        'total': len(item['symbols']),
+                                        'hidden': len(item['symbols']) - len(vis)})
+        self.list_turning = [r['symbol'] for r in self.view_turning]
+        self.list_resonance = [s for item in self.view_resonance for s in item['symbols']]
+
+    def apply_blacklist_filter(self):
+        self._compute_views()
+        self._sync_navigation_list()
+        self._rebuild_content()
+        self._update_bl_bar()
+        self._update_window_title()
+
+    def _config_summary(self):
+        parts = []
+        for key in self.present_section_keys():
+            g = ordered_groups(self.sec_cfg.get(key))
+            if g:
+                parts.append(f"{section_label(key)}:{'+'.join(g)}")
+        return "屏蔽 → " + "  ".join(parts) if parts else "当前各分组均未屏蔽"
+
+    def _save_section_config(self, mapping):
+        try:
+            self.sec_cfg.update(mapping)
+            return True
+        except Exception as e:
+            traceback.print_exc()
+            QMessageBox.warning(self, "保存失败",
+                                f"分组屏蔽配置写入失败（本次运行内仍生效）：\n{e}")
+            return False
+
+    def _after_config_change(self, msg=""):
+        self.apply_blacklist_filter()
+        text = (msg + " ｜ " if msg else "") + f"共隐藏 {len(self.hidden_info)} 只"
+        self.statusBar().showMessage(text, 6000)
+
+    def _on_section_toggle(self, key, group, checked):
+        groups = self.sec_cfg.get(key)
+        if checked:
+            groups.add(group)
+        else:
+            groups.discard(group)
+        self._save_section_config({key: groups})
+        desc = "+".join(ordered_groups(groups)) or "不屏蔽"
+        # 推迟重建：当前勾选框本身就在将被重建的分组里，不能在其信号里同步销毁
+        QTimer.singleShot(0, lambda: self._after_config_change(f"「{section_label(key)}」→ {desc}"))
+
+    def _dialog_rows(self):
+        rows = [(SEC_TURNING,
+                 f"转折（{len(self.turning_data)}只，隐藏 {self.turning_hidden}）", True)]
+        present = {SEC_TURNING}
+        for item in self.view_resonance:
+            rows.append((item['key'],
+                         f"共振 {item['count']} 组（{item['total']}只，隐藏 {item['hidden']}）", True))
+            present.add(item['key'])
+        absent = sorted((k for k in self.sec_cfg.configured_keys() if k not in present),
+                        key=section_sort_key)
+        for k in absent:
+            rows.append((k, f"{section_label(k)}（今日未出现）", False))
+        return rows
+
+    def open_blacklist_settings(self):
+        if not TB_OK:
+            QMessageBox.warning(self, "不可用", "tag_blacklist.py 未加载")
+            return
+        rows = self._dialog_rows()
+        current = {k: self.sec_cfg.get(k) for k, _, _ in rows}
+        dlg = SectionBlacklistDialog(rows, current, self.sec_cfg.default_of, parent=self)
+        if dlg.exec():
+            self._save_section_config(dlg.result_map())
+            self._after_config_change("已应用分组屏蔽设置")
+
+    def open_blacklist_file(self):
+        if TB_OK:
+            TB.open_in_editor()
+            self.statusBar().showMessage(f"已打开 {TB.BLACKLIST_PATH}（保存后约 1 秒自动生效）", 8000)
+
+    def open_section_config_file(self):
+        try:
+            self.sec_cfg.ensure_file()
+        except Exception as e:
+            QMessageBox.warning(self, "失败", f"创建配置文件失败：{e}")
+            return
+        open_text_file(self.sec_cfg.path)
+        self.statusBar().showMessage(f"已打开 {self.sec_cfg.path}（保存后约 1 秒自动生效）", 8000)
+
+    def _poll_external_changes(self, force=False):
+        changed = False
+        try:
+            dsig = file_mtime(DESCRIPTION_PATH)
+            if force or dsig != self._desc_sig:
+                self._desc_sig = dsig
+                try:
+                    new = load_json(DESCRIPTION_PATH)
+                except Exception as e:
+                    # 只报一次；文件写完后签名会变化，届时自动重读
+                    print(f"[联动] description.json 读取失败（可能正在写入），等待下次变化: {e}")
+                    new = None
+                if isinstance(new, dict) and new:
+                    # 原地更新：Chart 持有同一个 dict 引用，也能拿到新数据
+                    self.json_data.clear()
+                    self.json_data.update(new)
+                    self.tags_index = build_tags_index(self.json_data)
+                    changed = True
+            if TB_OK:
+                bsig = TB.signature()
+                if force or bsig != self._bl_sig:
+                    self._bl_sig = bsig
+                    TB.load(force=True)
+                    changed = True
+            ssig = self.sec_cfg.signature()
+            if force or ssig != self.sec_cfg.sig:
+                self.sec_cfg.load()
+                changed = True
+        except Exception:
+            traceback.print_exc()
+        if changed:
+            before = set(self.hidden_info)
+            self.apply_blacklist_filter()
+            after = set(self.hidden_info)
+            add_n, rm_n = len(after - before), len(before - after)
+            msg = "黑名单 / Tag / 分组配置 已更新"
+            if add_n or rm_n:
+                msg += f"：新隐藏 {add_n} 只，恢复显示 {rm_n} 只"
+            self.statusBar().showMessage(msg, 6000)
+
+    def _update_window_title(self):
+        if TB_OK:
+            self.setWindowTitle(f"持仓 / 多组共振 / 转折   ｜ 黑名单（按分组）已隐藏 {len(self.hidden_info)} 只")
+        else:
+            self.setWindowTitle("持仓 / 多组共振 / 转折")
 
     # ==================================================================
     # 导航全序列生成
     # ==================================================================
     def _build_full_navigation_list(self):
-        """构建统一的全局导航列表：[ (sym, 'holdings'), ..., (sym, 'turning'), ..., (sym, 'resonance'), ... ]"""
         items = []
         for s in self.list_holdings:
             items.append((s, 'holdings'))
@@ -866,7 +1401,6 @@ class GroupWindow(QMainWindow):
         return items
 
     def _sync_navigation_list(self):
-        """当持仓排序或数据变动时，同步全局导航序列"""
         self.nav_manager.set_items(self._build_full_navigation_list())
 
     # ==================================================================
@@ -898,7 +1432,6 @@ class GroupWindow(QMainWindow):
             v = position_num(self.positions.get(s, {}), *keys)
             missing = v is None
             val = 0.0 if missing else float(v)
-            # 无数据的一律排最后；其余按方向排，最后用代码兜底保证稳定
             return (1 if missing else 0, -val if desc else val, s)
 
         syms.sort(key=sort_key)
@@ -913,7 +1446,7 @@ class GroupWindow(QMainWindow):
 
     # ------------------------------------------------------------------
     def init_ui(self):
-        self.setWindowTitle("持仓 / 多组共振 / 转折")
+        self._update_window_title()
         self.setGeometry(100, 100, 1600, 1000)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
@@ -921,43 +1454,138 @@ class GroupWindow(QMainWindow):
         self.setCentralWidget(central)
         layout = QVBoxLayout(central)
 
-        legend = QLabel(
-            "【持仓】读取 firstrade_positions.json；点上方按钮切换排序（同一按钮再点一次切升/降序），"
-            "浏览完持仓最后一项将顺畅进入转折/共振；按 R 键重新读盘。\n"
-            "【共振】🔥★★★ 极罕见且信号极强（红框）｜ ★★ 罕见/高质量（黄框）｜ ★ 值得一看（蓝框）｜ 无标记 = 常态（灰框）\n"
-            f"【转折】连续 ≥{TURN_MIN_STREAK} 天保持多项关键信号后，突然减项（如 4项→2项 / 2项→1项）；"
-            "按钮上的 4→2 表示“平台4项 → 当日2项”，鼠标悬停可看平台期逐日明细。"
-            f"  只显示最近 {TURN_RECENT_DAYS} 个交易日内发生的转折。"
-        )
-        legend.setStyleSheet("color:#9AA5B1; font-size:14px; padding:6px 10px;")
-        legend.setWordWrap(True)
-        layout.addWidget(legend)
+        # legend = QLabel(
+        #     "【持仓】读取 firstrade_positions.json；点上方按钮切换排序（同一按钮再点一次切升/降序），"
+        #     "浏览完持仓最后一项将顺畅进入转折/共振；按 R 键重新读盘。\n"
+        #     "【共振】🔥★★★ 极罕见且信号极强（红框）｜ ★★ 罕见/高质量（黄框）｜ ★ 值得一看（蓝框）｜ 无标记 = 常态（灰框）\n"
+        #     f"【转折】连续 ≥{TURN_MIN_STREAK} 天保持多项关键信号后，突然减项（如 4项→2项 / 2项→1项）；"
+        #     "按钮上的 4→2 表示“平台4项 → 当日2项”，鼠标悬停可看平台期逐日明细。"
+        #     f"  只显示最近 {TURN_RECENT_DAYS} 个交易日内发生的转折。\n"
+        #     "【黑名单】每个分组标题下可单独勾选屏蔽「确定 / 疑似」，即点即生效并自动保存（持仓不受影响）；"
+        #     "B 键打开总表设置。未隐藏卡片里的黑名单 Tag 以 ⛔ 标出（红=确定，橙=疑似）。"
+        # )
+        # legend.setStyleSheet("color:#9AA5B1; font-size:14px; padding:6px 10px;")
+        # legend.setWordWrap(True)
+        # layout.addWidget(legend)
+
+        layout.addLayout(self._build_blacklist_bar())
 
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         layout.addWidget(self.scroll_area)
 
-        content = QWidget()
-        self.scroll_area.setWidget(content)
-        main_lay = QHBoxLayout(content)
+        self.apply_stylesheet()
+        self._rebuild_content()
+        self._update_bl_bar()
 
-        self._build_holdings_section(main_lay)       # ★ 持仓放最前
+        QShortcut(QKeySequence(Qt.Key.Key_Slash), self).activated.connect(self.show_search_dialog)
+        QShortcut(QKeySequence(Qt.Key.Key_A), self).activated.connect(self.add_current_to_watchlist)
+        QShortcut(QKeySequence(Qt.Key.Key_R), self).activated.connect(self.reload_positions)
+        QShortcut(QKeySequence(Qt.Key.Key_B), self).activated.connect(self.open_blacklist_settings)
+        self.wl_done.connect(self._on_wl_done)
+        self.statusBar().showMessage(
+            "提示：/ 搜索 ｜ a 加自选 ｜ R 重新读取持仓 ｜ B 分组黑名单设置 ｜ 右键卡片有更多操作 ｜ "
+            + self._config_summary(), 10000)
+
+    # ==================================================================
+    # ★ 黑名单工具栏
+    # ==================================================================
+    def _build_blacklist_bar(self):
+        bar = QHBoxLayout()
+        bar.setContentsMargins(10, 0, 10, 4)
+        bar.setSpacing(12)
+        title = QLabel("⛔ 黑名单（按分组配置，不影响持仓）：")
+        title.setObjectName("BLTitle")
+        bar.addWidget(title)
+
+        self.bl_info_label = QLabel("" if TB_OK else "tag_blacklist.py 未加载，黑名单功能不可用")
+        self.bl_info_label.setObjectName("BLInfo")
+        self.bl_info_label.setWordWrap(True)
+        bar.addWidget(self.bl_info_label, 1)
+
+        for text, slot, tip in (
+                ("⚙ 分组屏蔽设置 (B)", self.open_blacklist_settings, "按分组勾选要屏蔽的黑名单类别"),
+                ("📝 编辑黑名单 Tag", self.open_blacklist_file, "用文本编辑器打开 Tag_Blacklist.json"),
+                ("📝 编辑分组配置", self.open_section_config_file,
+                 "用文本编辑器打开 Check_Group_Blacklist_Sections.json"),
+                ("↻ 重新读取", lambda: self._poll_external_changes(force=True),
+                 "强制重新读取黑名单、分组配置与 description.json")):
+            b = QPushButton(text)
+            b.setObjectName("SortBtn")
+            b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            b.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            b.setToolTip(tip)
+            b.clicked.connect(lambda _=False, f=slot: f())
+            b.setEnabled(TB_OK)
+            bar.addWidget(b)
+        return bar
+
+    def _update_bl_bar(self):
+        if not TB_OK or not hasattr(self, 'bl_info_label'):
+            return
+        data = TB.load()
+        parts = [self._config_summary()]
+        n = len(self.hidden_info)
+        parts.append(f"｜ 共隐藏 {n} 只" if n else "｜ 无隐藏")
+        err = TB.last_error()
+        if err:
+            parts.append("⚠ 黑名单文件解析失败，沿用上次内容")
+        if self.sec_cfg.error:
+            parts.append("⚠ 分组配置文件解析失败，沿用上次/默认配置")
+        self.bl_info_label.setText("   ".join(parts))
+
+        lines = [f"黑名单 Tag 数：" + "，".join(f"{g} {len(data.get(g, []))}" for g in BL_GROUPS), ""]
+        for key in self.present_section_keys():
+            g = ordered_groups(self.sec_cfg.get(key))
+            lines.append(f"{section_label(key)}：屏蔽 {'+'.join(g) or '无'}，"
+                         f"隐藏 {self.section_hidden.get(key, 0)} 只")
+        if self.hidden_info:
+            lines.append("")
+            for sym in sorted(self.hidden_info)[:80]:
+                info = self.hidden_info[sym]
+                lines.append(f"{sym}［{'、'.join(info['sections'])}］：" +
+                             "、".join(f"{t}[{g}]" for t, g in info['hits']))
+            if len(self.hidden_info) > 80:
+                lines.append(f"… 共 {len(self.hidden_info)} 只")
+        if err:
+            lines.insert(0, f"黑名单解析错误：{err}\n")
+        if self.sec_cfg.error:
+            lines.insert(0, f"分组配置解析错误：{self.sec_cfg.error}\n")
+        self.bl_info_label.setToolTip("\n".join(lines))
+
+    # ==================================================================
+    # ★ 整体重建内容区（保持滚动位置）
+    # ==================================================================
+    def _rebuild_content(self):
+        hbar = self.scroll_area.horizontalScrollBar()
+        vbar = self.scroll_area.verticalScrollBar()
+        hv, vv = hbar.value(), vbar.value()
+
+        self.symbol_widgets_map = defaultdict(list)
+        self._hold_widget_refs = []
+
+        content = QWidget()
+        main_lay = QHBoxLayout(content)
+        self._build_holdings_section(main_lay)
         self._build_turning_section(main_lay)
         self._build_resonance_sections(main_lay)
         main_lay.addStretch(1)
 
-        # 快捷键
-        QShortcut(QKeySequence(Qt.Key.Key_Slash), self).activated.connect(self.show_search_dialog)
-        QShortcut(QKeySequence(Qt.Key.Key_A), self).activated.connect(self.add_current_to_watchlist)
-        QShortcut(QKeySequence(Qt.Key.Key_R), self).activated.connect(self.reload_positions)
-        self.wl_done.connect(self._on_wl_done)
-        self.statusBar().showMessage(
-            "提示：/ 搜索 ｜ a 加自选 ｜ R 重新读取持仓 ｜ 右键卡片有更多操作", 8000)
+        old = self.scroll_area.takeWidget()
+        self.scroll_area.setWidget(content)
+        if old is not None:
+            old.deleteLater()
 
-        self.apply_stylesheet()
+        def restore():
+            try:
+                hbar.setValue(hv)
+                vbar.setValue(vv)
+            except RuntimeError:
+                pass
+        QTimer.singleShot(0, restore)
 
     # ==================================================================
-    # ★ 持仓分组
+    # 持仓分组
     # ==================================================================
     def _build_holdings_section(self, main_lay):
         self.hold_container = QWidget()
@@ -1126,14 +1754,25 @@ class GroupWindow(QMainWindow):
 
     def search_and_locate_symbol(self, symbol):
         widgets = self.symbol_widgets_map.get(symbol)
+        info = self.hidden_info.get(symbol)
         if not widgets:
-            QMessageBox.information(self, "未找到", f"未在当前列表中找到: {symbol}")
+            if info:
+                QMessageBox.information(
+                    self, "已被黑名单隐藏",
+                    f"{symbol} 在「{'、'.join(info['sections'])}」中被黑名单隐藏：\n" +
+                    "、".join(f"{t}[{g}]" for t, g in info['hits']) +
+                    "\n\n可在对应分组标题下取消勾选（或按 B 打开设置）后再查看。")
+            else:
+                QMessageBox.information(self, "未找到", f"未在当前列表中找到: {symbol}")
             return
         primary_container, _ = widgets[0]
         self.scroll_area.ensureWidgetVisible(primary_container, 150, 150)
         self.nav_manager.set_current(symbol)
         for _, btn in widgets:
             self.flash_highlight(btn)
+        if info:
+            self.statusBar().showMessage(
+                f"{symbol} 另在「{'、'.join(info['sections'])}」中被黑名单隐藏", 6000)
 
     def flash_highlight(self, btn):
         highlight_style = "border: 3px solid #FFD700 !important;"
@@ -1156,16 +1795,20 @@ class GroupWindow(QMainWindow):
     # ==================================================================
     def _build_turning_section(self, main_lay):
         col_lay = QHBoxLayout()
-        strong_n = sum(1 for r in self.turning_data if r['level'] > 0)
-        title = f"转折 ({len(self.turning_data)}只 / ★{strong_n})"
-        main_lay.addWidget(self._create_section_container(title, col_lay))
+        strong_n = sum(1 for r in self.view_turning if r['level'] > 0)
+        title = f"转折 ({len(self.view_turning)}只 / ★{strong_n})"
+        if self.turning_hidden:
+            title += f" ⛔{self.turning_hidden}"
+        main_lay.addWidget(self._create_section_container(title, col_lay, SEC_TURNING))
 
-        if not self.turning_data:
-            tip = QLabel("最近无转折信号")
+        if not self.view_turning:
+            msg = (f"最近的 {self.turning_hidden} 只转折\n均已被黑名单隐藏"
+                   if self.turning_hidden else "最近无转折信号")
+            tip = QLabel(msg)
             tip.setStyleSheet("color:#888; font-size:16px; padding:12px;")
             col_lay.addWidget(tip)
         else:
-            items = self.turning_data
+            items = self.view_turning
             for chunk in [items[i:i + MAX_ITEMS_PER_COLUMN]
                           for i in range(0, len(items), MAX_ITEMS_PER_COLUMN)]:
                 col = QVBoxLayout(); col.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -1173,25 +1816,32 @@ class GroupWindow(QMainWindow):
                     date_tag = "" if r['date'] == self.latest_date else f" {r['date'][5:]}"
                     disp = f"{r['from_n']}→{r['to_n']}{date_tag} {r['badge']}".strip()
                     col.addWidget(self.create_symbol_widget(
-                        r['symbol'],
-                        override_text=disp,
+                        r['symbol'], override_text=disp,
                         force_style=f"Turn_L{r['level']}",
-                        tooltip=r['reason'],
-                        source='turning'
-                    ))
+                        tooltip=r['reason'], source='turning'))
                 col.addStretch(1); col_lay.addLayout(col)
 
         self._add_separator(main_lay)
 
     def _build_resonance_sections(self, main_lay):
-        for item in self.resonance_data:
+        for item in self.view_resonance:
             count = item['count']
             symbols = item['symbols']
             strong_n = sum(1 for s in symbols if self.symbol_marks.get(s, {}).get('level', 0) > 0)
 
             col_lay = QHBoxLayout()
             title = f"共振 {count} 个分组 ({len(symbols)}只 / ★{strong_n})"
-            main_lay.addWidget(self._create_section_container(title, col_lay))
+            if item['hidden']:
+                title += f" ⛔{item['hidden']}"
+            main_lay.addWidget(self._create_section_container(title, col_lay, item['key']))
+
+            if not symbols:
+                # 整组被屏蔽也保留分组（否则无法在标题下取消屏蔽）
+                tip = QLabel(f"本组 {item['hidden']} 只\n均已被黑名单隐藏")
+                tip.setStyleSheet("color:#888; font-size:16px; padding:12px;")
+                col_lay.addWidget(tip)
+                self._add_separator(main_lay)
+                continue
 
             for chunk in [symbols[i:i + MAX_ITEMS_PER_COLUMN]
                           for i in range(0, len(symbols), MAX_ITEMS_PER_COLUMN)]:
@@ -1201,22 +1851,47 @@ class GroupWindow(QMainWindow):
                     base_text = self.compare_data.get(sym, '')
                     disp = f"{base_text} {mark['badge']}".strip()
                     col.addWidget(self.create_symbol_widget(
-                        sym,
-                        override_text=disp if disp else " ",
+                        sym, override_text=disp if disp else " ",
                         force_style=f"Reso_L{mark['level']}",
-                        tooltip=mark.get('reason', ''),
-                        source='resonance'
-                    ))
+                        tooltip=mark.get('reason', ''), source='resonance'))
                 col.addStretch(1); col_lay.addLayout(col)
 
             self._add_separator(main_lay)
 
     # --- 辅助方法 ---
-    def _create_section_container(self, title_text, layout_ref):
+    def _section_bl_row(self, key):
+        """分组标题下的「⛔屏蔽 ☐确定 ☐疑似」"""
+        row = QHBoxLayout()
+        row.setSpacing(10)
+        row.addStretch(1)
+        lab = QLabel("⛔屏蔽")
+        lab.setObjectName("SecBLLabel")
+        row.addWidget(lab)
+        active = self.sec_cfg.get(key)
+        data = TB.load() if TB_OK else {}
+        is_default = active == self.sec_cfg.default_of(key)
+        for g in BL_GROUPS:
+            cb = QCheckBox(g)
+            cb.setObjectName("SecBLSure" if g == BL_GROUP_SURE else "SecBLMaybe")
+            cb.setChecked(g in active)
+            cb.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            cb.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            cb.setToolTip(f"在「{section_label(key)}」中屏蔽带「{g}」黑名单 Tag 的股票"
+                          f"（即点即生效，自动保存）\n{'当前 = 默认设置' if is_default else '当前 ≠ 默认设置'}\n\n"
+                          f"「{g}」Tag：{preview_tags(data.get(g, []), 60)}")
+            cb.toggled.connect(lambda checked, k=key, gg=g: self._on_section_toggle(k, gg, checked))
+            row.addWidget(cb)
+        row.addStretch(1)
+        return row
+
+    def _create_section_container(self, title_text, layout_ref, section_key=None):
         c = QWidget(); v = QVBoxLayout(c); v.setContentsMargins(10, 0, 10, 0)
         t = QLabel(title_text); t.setFont(QFont("Arial", 20, QFont.Weight.Bold))
         t.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        v.addWidget(t); v.addLayout(layout_ref); v.addStretch(1); return c
+        v.addWidget(t)
+        if section_key and TB_OK:
+            v.addLayout(self._section_bl_row(section_key))
+        v.addLayout(layout_ref); v.addStretch(1); return c
 
     def _add_separator(self, layout):
         sep = QFrame(); sep.setFrameShape(QFrame.Shape.VLine)
@@ -1234,17 +1909,14 @@ class GroupWindow(QMainWindow):
             "Red":      ("red", "black", "#333"),
             "Black":    ("black", "white", "#333"),
             "Default":  ("#111111", "gray", "#333"),
-            # 共振
             "Reso_L0":  ("#111111", "#D8DEE9", "#3A3A3A"),
             "Reso_L1":  ("#10222A", "#D8DEE9", "#88C0D0"),
             "Reso_L2":  ("#2C2411", "#F2E3B4", "#EBCB8B"),
             "Reso_L3":  ("#3B171C", "#FFD5D9", "#BF616A"),
-            # 转折
             "Turn_L0":  ("#111111", "#D8DEE9", "#3A3A3A"),
             "Turn_L1":  ("#13251C", "#D8E9DE", "#A3BE8C"),
             "Turn_L2":  ("#241B2C", "#EBD9F2", "#B48EAD"),
             "Turn_L3":  ("#3B171C", "#FFD5D9", "#BF616A"),
-            # ★ 持仓（红涨绿跌，与 Chart 一致）
             "Hold_Up":  ("#3B171C", "#FFD5D9", "#BF616A"),
             "Hold_Dn":  ("#13251C", "#D8E9DE", "#A3BE8C"),
             "Hold_Flat": ("#111111", "#D8DEE9", "#3A3A3A"),
@@ -1262,14 +1934,22 @@ class GroupWindow(QMainWindow):
                     f"text-align:left; padding-left:8px; font-weight:{weight}; }}\n")
             qss += f"QPushButton#{name}:hover {{ background-color: {self.lighten_color(bg)}; }}\n"
 
-        # ★ 排序按钮
         qss += ("QPushButton#SortBtn { background-color:#2E3440; color:#D8DEE9; font-size:13px; "
-                "border:1px solid #4C566A; border-radius:4px; padding:3px 4px; text-align:center; }\n"
+                "border:1px solid #4C566A; border-radius:4px; padding:3px 8px; text-align:center; }\n"
                 "QPushButton#SortBtn:hover { background-color:#3B4252; }\n"
+                "QPushButton#SortBtn:disabled { color:#666; }\n"
                 "QPushButton#SortBtnOn { background-color:#4C566A; color:#ECEFF4; font-size:13px; "
                 "font-weight:bold; border:1px solid #88C0D0; border-radius:4px; "
                 "padding:3px 4px; text-align:center; }\n"
                 "QPushButton#SortBtnOn:hover { background-color:#5E81AC; }\n")
+
+        qss += ("QLabel#BLTitle { color:#BF616A; font-size:14px; font-weight:bold; }\n"
+                "QLabel#BLInfo { color:#9AA5B1; font-size:13px; }\n"
+                "QLabel#SecBLLabel { color:#8F9BB3; font-size:12px; }\n"
+                "QCheckBox#SecBLSure { color:#BF616A; font-size:13px; font-weight:bold; spacing:4px; }\n"
+                "QCheckBox#SecBLMaybe { color:#D08770; font-size:13px; font-weight:bold; spacing:4px; }\n"
+                "QCheckBox#SecBLSure::indicator, QCheckBox#SecBLMaybe::indicator "
+                "{ width:14px; height:14px; }\n")
 
         qss += "QMenu { background-color: #2C2C2C; color: #E0E0E0; border: 1px solid #555; }\n"
         qss += ("QToolTip { background-color: #2E3440; color: #ECEFF4; "
@@ -1297,6 +1977,22 @@ class GroupWindow(QMainWindow):
                 return style_name
         return "Default"
 
+    # ------------------------------------------------------------------
+    def _tags_rich_text(self, tags, hits):
+        hit_map = {TB.norm_tag(t): g for t, g in hits} if TB_OK else {}
+        html_parts, plain_parts = [], []
+        for t in tags:
+            g = hit_map.get(TB.norm_tag(t)) if TB_OK else None
+            esc = _html.escape(str(t))
+            if g:
+                color = "#C0392B" if g == BL_GROUP_SURE else "#D35400"
+                html_parts.append(f'<span style="color:{color}; font-weight:bold;">⛔{esc}</span>')
+                plain_parts.append(f"⛔{t}")
+            else:
+                html_parts.append(esc)
+                plain_parts.append(str(t))
+        return ", ".join(html_parts), ", ".join(plain_parts)
+
     def create_symbol_widget(self, symbol, override_text=None, override_tags=None,
                              force_default=False, force_style=None, tooltip=None,
                              source=None, track=None):
@@ -1309,37 +2005,60 @@ class GroupWindow(QMainWindow):
         button.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         button.customContextMenuRequested.connect(lambda pos, s=symbol: self.show_context_menu(s))
 
-        tags_info = override_tags if override_tags else self.get_tags_for_symbol(symbol)
-        if isinstance(tags_info, list): tags_info = ", ".join(tags_info)
+        # ---- Tag 文本（黑名单 Tag 高亮）----
+        if override_tags is not None:
+            tags = override_tags if isinstance(override_tags, list) else [str(override_tags)]
+        else:
+            tags = self.tags_index.get(norm_symbol(symbol), [])
+        hits = self._blacklist_hits(symbol)            # 不论是否屏蔽，都用于标识
+        if tags:
+            rich, plain = self._tags_rich_text(tags, hits)
+        else:
+            rich = plain = "无标签"
 
-        label = ClickableLabel(tags_info)
+        label = ClickableLabel()
+        label.setTextFormat(Qt.TextFormat.RichText)
+        label.setText(rich)
         label.setFixedWidth(SYMBOL_WIDGET_FIXED_WIDTH)
         label.setWordWrap(True)
         label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
 
         font_size = 16
         label.setFont(QFont("Arial", font_size))
-
         fm = label.fontMetrics()
-        rect = fm.boundingRect(0, 0, SYMBOL_WIDGET_FIXED_WIDTH - 16, 5000,
-                               Qt.TextFlag.TextWordWrap, tags_info)
-        label.setFixedHeight(max(rect.height() + 12, 35))
+        rect = fm.boundingRect(0, 0, SYMBOL_WIDGET_FIXED_WIDTH - 20, 5000,
+                               Qt.TextFlag.TextWordWrap, plain)
+        label.setFixedHeight(max(rect.height() + 16, 35))
 
+        if hits:
+            sure = any(g == BL_GROUP_SURE for _, g in hits)
+            border = f"2px solid {'#BF616A' if sure else '#D08770'}"
+            bg = "#FFE9E9" if sure else "#FFF1E3"
+        else:
+            border, bg = "1px solid #e0e0d0", "lightyellow"
         label.setStyleSheet(f"""
-            background-color: lightyellow;
+            background-color: {bg};
             color: black;
             font-size: {font_size}px;
-            padding-left: 8px;
-            padding-right: 8px;
-            padding-top: 6px;
-            padding-bottom: 6px;
+            padding-left: 8px; padding-right: 8px;
+            padding-top: 6px; padding-bottom: 6px;
             border-radius: 4px;
-            border: 1px solid #e0e0d0;
+            border: {border};
         """)
         label.clicked.connect(lambda s=symbol, src=source: self.on_symbol_click(s, src))
         label.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         label.customContextMenuRequested.connect(lambda pos, s=symbol: self.show_context_menu(s))
 
+        clean_sym = clean_ticker(symbol).upper()
+        head_lines = []
+        if hits:
+            head_lines.append("⛔ 黑名单 Tag：" + "、".join(f"{t}[{g}]" for t, g in hits))
+        hinfo = self.hidden_info.get(clean_sym)
+        if hinfo:
+            head_lines.append(f"（该股在「{'、'.join(hinfo['sections'])}」中已被屏蔽）")
+        if head_lines:
+            head = "\n".join(head_lines)
+            tooltip = f"{head}\n\n{tooltip}" if tooltip else head
         if tooltip:
             button.setToolTip(tooltip)
             label.setToolTip(tooltip)
@@ -1353,22 +2072,19 @@ class GroupWindow(QMainWindow):
         vlay.addStretch()
         container.setFixedWidth(SYMBOL_WIDGET_FIXED_WIDTH)
 
-        clean_sym = clean_ticker(symbol).upper()
         self.symbol_widgets_map[clean_sym].append((container, button))
         if track is not None:
             track.append((clean_sym, container, button))
         return container
 
     def get_tags_for_symbol(self, symbol):
-        for item in self.json_data.get("stocks", []) + self.json_data.get("etfs", []):
-            if item.get("symbol") == symbol: return item.get("tag", "无标签")
-        return "无标签"
+        tags = self.tags_index.get(norm_symbol(symbol))
+        return tags if tags else "无标签"
 
     # ==================================================================
     # 标题信息与导航
     # ==================================================================
     def get_symbol_group_info(self, symbol, source=None):
-        """精准提取 symbol 在当前分组上下文下的标识与排位信息"""
         if source == 'holdings' and symbol in self.positions:
             lst = self.list_holdings
             idx = lst.index(symbol) + 1 if symbol in lst else 0
@@ -1383,32 +2099,30 @@ class GroupWindow(QMainWindow):
                     f"({idx}/{len(lst)})").replace("  ", " ").strip()
 
         if source == 'turning':
-            for i, r in enumerate(self.turning_data):
+            for i, r in enumerate(self.view_turning):
                 if r['symbol'] == symbol:
                     return (f"转折 {r['from_n']}→{r['to_n']} @{r['date']} {r['badge']} "
-                            f"({i + 1}/{len(self.turning_data)})")
+                            f"({i + 1}/{len(self.view_turning)})")
 
         if source == 'resonance':
-            for item in self.resonance_data:
+            for item in self.view_resonance:
                 if symbol in item['symbols']:
                     idx = item['symbols'].index(symbol)
                     badge = self.symbol_marks.get(symbol, {}).get('badge', '')
                     badge_str = f" {badge}" if badge else ""
                     return f"共振{item['count']}组{badge_str} ({idx + 1}/{len(item['symbols'])})"
 
-        # 兜底：未显式指定 source 时按出现顺序查找
         if symbol in self.positions:
             lst = self.list_holdings
             idx = lst.index(symbol) + 1 if symbol in lst else 0
             return f"持仓 ({idx}/{len(lst)})"
-        for i, r in enumerate(self.turning_data):
+        for i, r in enumerate(self.view_turning):
             if r['symbol'] == symbol:
-                return f"转折 {r['from_n']}→{r['to_n']} ({i + 1}/{len(self.turning_data)})"
-        for item in self.resonance_data:
+                return f"转折 {r['from_n']}→{r['to_n']} ({i + 1}/{len(self.view_turning)})"
+        for item in self.view_resonance:
             if symbol in item['symbols']:
                 idx = item['symbols'].index(symbol)
                 return f"共振{item['count']}组 ({idx + 1}/{len(item['symbols'])})"
-
         return ""
 
     def on_symbol_click(self, symbol, source=None):
@@ -1510,7 +2224,9 @@ class GroupWindow(QMainWindow):
         menu.addAction("查相似").triggered.connect(lambda: execute_external_script('similar', symbol))
         menu.addAction("富途查询").triggered.connect(lambda: execute_external_script('futu', symbol))
         menu.addSeparator()
-        menu.addAction("编辑 Tags").triggered.connect(lambda: execute_external_script('tags', symbol))
+        menu.addAction("编辑 Tags / 黑名单").triggered.connect(lambda: execute_external_script('tags', symbol))
+        if TB_OK:
+            menu.addAction("⛔ 分组黑名单屏蔽设置 (B)").triggered.connect(self.open_blacklist_settings)
         menu.addSeparator()
         menu.addAction("打开 High/Low 面板").triggered.connect(lambda: execute_external_script('highlow', symbol))
         if symbol in self.positions:
@@ -1519,6 +2235,10 @@ class GroupWindow(QMainWindow):
         menu.exec(QCursor.pos())
 
     def closeEvent(self, event):
+        try:
+            self.watch_timer.stop()
+        except Exception:
+            pass
         self.nav_manager.reset(); QApplication.quit(); event.accept()
 
 
@@ -1531,8 +2251,19 @@ if __name__ == '__main__':
         earn_hist = load_json(EARNING_HISTORY_PATH)
 
         app = QApplication(sys.argv)
+
+        if TB_OK:
+            try:
+                TB.ensure_file()
+            except Exception as e:
+                print(f"[黑名单] 创建文件失败: {e}")
+
+        # 不再弹窗：直接按默认 / 上次保存的分组配置打开
         win = GroupWindow(colors, sects, comp, desc, earn_hist)
         win.show()
+        win.raise_()
+        win.activateWindow()
         sys.exit(app.exec())
     except Exception as e:
+        traceback.print_exc()
         print(f"启动失败: {e}")

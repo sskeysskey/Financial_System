@@ -223,8 +223,56 @@
     await bg({ action: 'FT_WL_TASK_RESULT', payload: { id: t.id, ok, message: msg, data } });
   }
 
+  /* 公共收尾：切回原分组 → 清理 → 提示 → 回报 */
+  async function reportTask(t, ok, msg, data, restore, origin) {
+    const a = api();
+    try {
+      if (restore && origin && norm(currentGroup()) !== norm(origin)) await switchGroup(origin);
+    } catch (e) { log('切回原分组失败', e); }
+    try { a.pressEscape(); a.cleanNavSearch(); } catch (e) { }
+    const text = (ok ? '✅ ' : '❌ ') + msg;
+    try { a.renderScan(text); } catch (e) { }
+    toast(text);
+    console.log(LOG, text);
+    await bg({ action: 'FT_WL_TASK_RESULT', payload: { id: t.id, ok, message: msg, data } });
+  }
+
+  /* ★ 远程删除：Python 图表点分组旁的 × */
+  async function handleRemoveTask(t) {
+    const a = api();
+    const sym = String(t.symbol || '').trim().toUpperCase();
+    const grp = String(t.group || '').trim();
+    const restore = (t.restore === undefined) ? RESTORE : (!!t.restore && RESTORE);
+    const origin = currentGroup();
+    let ok = false, msg = '', status = '';
+
+    try { a.ensureHud('task'); a.renderScan(`收到删除任务：${sym} ✕「${grp}」`, 'task'); } catch (e) { }
+    try {
+      if (!sym) throw new Error('symbol 为空');
+      if (!grp) throw new Error('删除任务必须指定分组');
+      if (typeof a.deleteSymbol !== 'function') throw new Error('watchlist.js 版本过旧（缺少 deleteSymbol），请刷新页面');
+      a.clearStopFlags();
+      a.cleanNavSearch();
+      const sr = await switchGroup(grp);
+      if (!sr.ok) throw new Error(sr.error);
+      await waitGridSettled(4000);
+      const r = await a.deleteSymbol(sym);
+      status = (r && r.status) || '';
+      if (status === 'removed') { ok = true; msg = `${sym} 已从「${grp}」删除`; }
+      else if (status === 'missing') { ok = true; msg = `${sym} 本就不在「${grp}」中（已同步本机记录）`; }
+      else msg = `${sym} 从「${grp}」删除失败：${(r && (r.error || r.status)) || '未知原因'}`;
+    } catch (e) {
+      ok = false;
+      msg = String((e && e.message) || e);
+    }
+    await reportTask(t, ok, msg, { symbol: sym, group: grp, status }, restore, origin);
+  }
+
   async function handleTask(t) {
-    if (String(t.action || 'add') === 'scan_groups') return handleScanTask(t);   // ★ 新增分发
+    const action = String(t.action || 'add');
+    if (action === 'scan_groups') return handleScanTask(t);
+    if (action === 'remove') return handleRemoveTask(t);
+
     const a = api();
     const sym = String(t.symbol || '').trim().toUpperCase();
     const grp = String(t.group || '').trim();
@@ -233,54 +281,29 @@
     let ok = false, msg = '';
 
     try { a.ensureHud('task'); a.renderScan(`收到任务：${sym} → 「${grp || '当前分组'}」`, 'task'); } catch (e) { }
-
     try {
       if (!sym) throw new Error('symbol 为空');
       a.clearStopFlags();
       a.cleanNavSearch();
-
       if (grp) {
         const sr = await switchGroup(grp);
         if (!sr.ok) throw new Error(sr.error);
         if (sr.changed) try { a.renderScan(`已切到「${grp}」，正在添加 ${sym}…`); } catch (e) { }
       }
       await waitGridSettled(4000);
-
       if (await alreadyHas(sym)) {
         ok = true;
         msg = `${sym} 已在「${grp || currentGroup()}」中，无需重复添加`;
       } else {
         const r = await a.addOneSymbol(sym);
-        if (r && r.status === 'added') {
-          ok = true;
-          msg = `${sym} 已加入「${grp || currentGroup()}」`;
-        } else {
-          ok = false;
-          msg = `${sym} 添加失败：${(r && (r.error || r.status)) || '未知原因'}`;
-        }
+        if (r && r.status === 'added') { ok = true; msg = `${sym} 已加入「${grp || currentGroup()}」`; }
+        else msg = `${sym} 添加失败：${(r && (r.error || r.status)) || '未知原因'}`;
       }
     } catch (e) {
       ok = false;
       msg = String((e && e.message) || e);
     }
-
-    try {
-      if (restore && origin && norm(currentGroup()) !== norm(origin)) {
-        await switchGroup(origin);
-      }
-    } catch (e) { log('切回原分组失败', e); }
-
-    try { a.pressEscape(); a.cleanNavSearch(); } catch (e) { }
-
-    const text = (ok ? '✅ ' : '❌ ') + msg;
-    try { a.renderScan(text); } catch (e) { }
-    toast(text);
-    console.log(LOG, text);
-
-    await bg({
-      action: 'FT_WL_TASK_RESULT',
-      payload: { id: t.id, ok: ok, message: msg, data: { symbol: sym, group: grp } }
-    });
+    await reportTask(t, ok, msg, { symbol: sym, group: grp }, restore, origin);
   }
 
   /* ---------------- 轮询与即时调度 ---------------- */

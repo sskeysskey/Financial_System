@@ -638,6 +638,30 @@
 
     if (msg.action === 'refreshTags') { loadSettings(); sendResponse({ ok: true }); return; }
 
+    /* ★ 后台自动导航用：判断页面是否已就绪 / 是否未登录 */
+    if (msg.action === 'FT_PAGE_READY') {
+      PAGE = detectPage();
+      const pw = Array.from(document.querySelectorAll('input[type="password"]'))
+        .some(el => el.offsetParent !== null);
+      const rows = Array.from(document.querySelectorAll('[row-id]'))
+        .filter(r => !r.closest('.ag-floating-top, .ag-floating-bottom')).length;
+      const overlay = !!document.querySelector('.ag-overlay-no-rows-wrapper, .ag-overlay-no-rows-center');
+      let looks = false, ready = false;
+      if (PAGE === 'positions' || PAGE === 'orders') {
+        looks = gridLooksLike(PAGE);
+        ready = looks && (rows > 0 || overlay);
+      } else if (PAGE === 'watchlist') {
+        const api = window.__FT_WL_API__;
+        looks = !!(api && (document.querySelector('[role="grid"], .ag-root') || api.groupName()));
+        ready = !!(looks && api.groupName() && (rows > 0 || (api.gridSaysEmpty && api.gridSaysEmpty())));
+      }
+      sendResponse({
+        ok: true, page: PAGE || 'other', path: location.pathname,
+        looks, ready, rows, loggedOut: pw && !looks, busy: automationBusy()
+      });
+      return;
+    }
+
     if (msg.action === 'FT_STATUS') {
       sendResponse({
         ok: true,

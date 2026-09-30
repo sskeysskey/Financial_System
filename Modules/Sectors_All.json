@@ -438,7 +438,9 @@
     "WLDR",
     "JXI",
     "GQRE",
-    "IVOG"
+    "IVOG",
+    "LGDS",
+    "JSML"
   ],
   "Basic_Materials": [
     "LIN",
@@ -589,7 +591,8 @@
     "SPHR",
     "IRDM",
     "ECHO",
-    "RUM"
+    "RUM",
+    "VEON"
   ],
   "Consumer_Cyclical": [
     "AMZN",
@@ -1129,7 +1132,6 @@
     "MIAX",
     "PS",
     "KLAR",
-    "MAAS",
     "BNY",
     "ENVA",
     "TFSL",
@@ -1308,7 +1310,9 @@
     "DYN",
     "GOSS",
     "LFST",
-    "GRAL"
+    "GRAL",
+    "KOD",
+    "IOVA"
   ],
   "Industrials": [
     "GE",
@@ -1883,7 +1887,8 @@
     "OCTV",
     "PAY",
     "RNG",
-    "IQMX"
+    "IQMX",
+    "MAAS"
   ],
   "Utilities": [
     "NEE",

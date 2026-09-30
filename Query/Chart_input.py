@@ -32,7 +32,7 @@ from datetime import datetime, timedelta, date
 from functools import lru_cache
 
 # ---- 先导入 PyQt6，再强制 matplotlib 使用 QtAgg 后端 ----
-from PyQt6.QtWidgets import QApplication, QDialog, QVBoxLayout, QTextEdit
+from PyQt6.QtWidgets import QApplication, QDialog, QVBoxLayout, QTextEdit, QMessageBox
 from PyQt6.QtGui import QFont
 from PyQt6.QtCore import Qt, QThread
 
@@ -89,7 +89,7 @@ except Exception as _e:
 
 # --- Firstrade 一键加入自选股分组 ---
 try:
-    from ft_watchlist_add import (add_symbol_async, watchlist_groups,
+    from ft_watchlist_add import (add_symbol_async, remove_symbol_async, watchlist_groups,
                                   choose_group_dialog, last_group, save_last_group,
                                   notify_mac, scan_groups_async)
     FT_WL_ADD_OK = True
@@ -103,6 +103,16 @@ except Exception as _e:
     def save_last_group(g): pass
     def notify_mac(*a, **k): pass
     def add_symbol_async(*a, **k): return None
+    def remove_symbol_async(*a, **k): return None
+
+# --- Tag 黑名单 ---
+try:
+    import tag_blacklist as TB
+    TB_OK = True
+except Exception as _e:
+    print(f"[黑名单] 加载 tag_blacklist 失败（黑名单标识不显示）: {_e}")
+    TB = None
+    TB_OK = False
 
 # --- 导入 Tiger_API ---
 sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Selenium"))
@@ -188,7 +198,7 @@ def display_dialog(message):
 
 
 def _ft_layout_text_row(fig, x0, y, items, fontsize=12, gap_px=10, x_limit=0.345):
-    """按实际像素宽度自适应地把 [(文本, 颜色, 粗细), ...] 横向排成一行，避免互相重叠"""
+    """按像素宽度横排 [(文本, 颜色, 粗细[, 动作]), ...]；带动作的项渲染成可点击小按钮（pick 事件）"""
     arts = []
     try:
         renderer = fig.canvas.get_renderer()
@@ -196,20 +206,31 @@ def _ft_layout_text_row(fig, x0, y, items, fontsize=12, gap_px=10, x_limit=0.345
         renderer = None
     fig_w_px = max(1.0, fig.get_figwidth() * fig.dpi)
     x = x0
-    for txt, color, weight in items:
+    for it in items:
+        txt, color, weight = it[0], it[1], it[2]
+        action = it[3] if len(it) > 3 else None
         if x > x_limit:
             break
-        t = fig.text(x, y, txt, color=color, fontsize=fontsize, fontweight=weight,
-                     ha='left', va='top', fontname='Arial Unicode MS')
+        if action:
+            t = fig.text(x, y, txt, color=NORD_THEME['text_bright'], fontsize=max(8, fontsize - 1),
+                         fontweight=weight, ha='left', va='top', fontname='Arial Unicode MS',
+                         picker=True,
+                         bbox=dict(boxstyle="round,pad=0.15", fc=color, ec='none', alpha=0.85))
+            t.ft_action = action
+            extra_gap = gap_px + 4
+        else:
+            t = fig.text(x, y, txt, color=color, fontsize=fontsize, fontweight=weight,
+                         ha='left', va='top', fontname='Arial Unicode MS')
+            extra_gap = gap_px
         arts.append(t)
         w_frac = None
         if renderer is not None:
             try:
-                w_frac = (t.get_window_extent(renderer=renderer).width + gap_px) / fig_w_px
+                w_frac = (t.get_window_extent(renderer=renderer).width + extra_gap) / fig_w_px
             except Exception:
                 w_frac = None
         if not w_frac or w_frac <= 0:
-            w_frac = (len(txt) * fontsize * 0.62 + gap_px) / fig_w_px
+            w_frac = (len(txt) * fontsize * 0.62 + extra_gap) / fig_w_px
         x += w_frac
     return arts
 
@@ -796,8 +817,18 @@ class ChartWindow:
             transform=self.fig.transFigure, fontname='Arial Unicode MS')
         self._wl_results = []
         self._wl_hide_at = 0.0
+        self._wl_pending = set()          # 正在执行的 (symbol, group) 删除任务，防重复点击
         self.member_artists = []
         self._member_sig = None
+        # ★ 黑名单醒目横幅（最顶部居中）
+        self.bl_artist = self.fig.text(
+            0.5, 0.995, "", ha='center', va='top', fontsize=13, fontweight='bold',
+            color=NORD_THEME['text_bright'], visible=False, transform=self.fig.transFigure,
+            fontname='Arial Unicode MS',
+            bbox=dict(boxstyle="round,pad=0.35", fc=NORD_THEME['accent_red'], ec='none', alpha=0.95))
+        self._bl_sig = None
+        self._desc_sig = None
+        self._base_window_title = ""
 
         # RadioButtons（activecolor 兼容新旧 matplotlib）
         self.rax = self.fig.add_axes([0.95, 0.0, 0.05, 0.65], facecolor=NORD_THEME['background'])
@@ -989,8 +1020,10 @@ class ChartWindow:
         self.date_nums = mdates.date2num(self.dates)
         self.small_dot_scatter.set_offsets(np.column_stack([self.date_nums, self.prices]))
 
+        self._base_window_title = window_title_text if window_title_text else name
+        self._desc_sig = _file_sig(self.DESCRIPTION_JSON_PATH)[0]
         try:
-            self.fig.canvas.manager.set_window_title(window_title_text if window_title_text else name)
+            self.fig.canvas.manager.set_window_title(self._base_window_title)
         except Exception:
             pass
 
@@ -1029,6 +1062,7 @@ class ChartWindow:
         title_text, title_color, self.clickable = self.create_or_update_title()
         self.title_artist.set_text(title_text)
         self.title_artist.set_color(title_color)
+        self._draw_blacklist_badge(force=True)
 
         self.wl_status_artist.set_visible(False)
         self._wl_hide_at = 0.0
@@ -1357,7 +1391,56 @@ class ChartWindow:
 
         self.build_trade_markers()
 
-    # ------------------------------------------------------------------
+    def _find_desc_item(self):
+        data = (self.current_json_data or {}).get('data') or {}
+        if not self.name:
+            return None
+        for source in ('stocks', 'etfs'):
+            for item in data.get(source, []) or []:
+                sym = str(item.get('symbol', ''))
+                if sym == self.name or sym.replace('-', '.') == self.name.replace('-', '.'):
+                    return item
+        return None
+
+    def _blacklist_hits(self, tags=None):
+        if not TB_OK:
+            return []
+        if tags is None:
+            item = self._find_desc_item()
+            tags = (item or {}).get('tag', []) or []
+        return TB.blacklisted_tags(tags)
+
+    def _draw_blacklist_badge(self, force=False):
+        """顶部醒目横幅 + 窗口标题前缀；黑名单 / symbol / 描述数据变化时才重画"""
+        sig = (self.name, TB.signature() if TB_OK else None,
+               id((self.current_json_data or {}).get('data')))
+        if not force and sig == self._bl_sig:
+            return False
+        self._bl_sig = sig
+        hits = self._blacklist_hits()
+        prefix = ""
+        if hits:
+            by = {g: [t for t, gg in hits if gg == g] for g in TB.GROUPS}
+            segs = [f"{g}：{'、'.join(v)}" for g, v in by.items() if v]
+            sure = bool(by.get(TB.GROUP_SURE))
+            self.bl_artist.set_text("⛔ 黑名单 Tag   " + "   ｜   ".join(segs))
+            self.bl_artist.set_color(NORD_THEME['text_bright'] if sure else NORD_THEME['background'])
+            self.bl_artist.get_bbox_patch().set_facecolor(
+                NORD_THEME['accent_red'] if sure else NORD_THEME['accent_orange'])
+            self.bl_artist.set_visible(True)
+            prefix = f"⛔[{TB.GROUP_SURE}] " if sure else f"⚠[{TB.GROUP_MAYBE}] "
+        else:
+            self.bl_artist.set_visible(False)
+        try:
+            self.fig.canvas.manager.set_window_title(prefix + (self._base_window_title or self.name or ""))
+        except Exception:
+            pass
+        if not force:     # 黑名单变化时，标题里的 ⛔ 也要跟着更新
+            t, c, self.clickable = self.create_or_update_title()
+            self.title_artist.set_text(t)
+            self.title_artist.set_color(c)
+        return True
+    
     def create_or_update_title(self):
         volumes, prices = self.volumes, self.prices
         turnover = (volumes[-1] * prices[-1]) / 1e6 if volumes and volumes[-1] is not None and prices[-1] is not None else None
@@ -1386,18 +1469,19 @@ class ChartWindow:
         pe_text = f"{self.pe}" if self.pe not in [None, "N/A"] else "--"
 
         tag_str, fullname, clickable = "", "", False
-        for source in ['stocks', 'etfs']:
-            for item in (self.current_json_data['data'] or {}).get(source, []):
-                sym = item['symbol']
-                if sym == self.name or sym.replace('-', '.') == self.name.replace('-', '.'):
-                    fullname = item.get('name', '')
-                    tag_str = ','.join(item.get('tag', []))
-                    if len(tag_str) > 45:
-                        tag_str = tag_str[:45] + '...'
-                    clickable = True
-                    break
-            if clickable:
-                break
+        item = self._find_desc_item()
+        if item is not None:
+            fullname = item.get('name', '')
+            tags = item.get('tag', []) or []
+            if isinstance(tags, str):
+                tags = [tags]
+            hit_keys = {TB.norm_tag(t) for t, _ in self._blacklist_hits(tags)} if TB_OK else set()
+            bl = [f"⛔{t}" for t in tags if TB_OK and TB.norm_tag(t) in hit_keys]
+            normal = [str(t) for t in tags if not (TB_OK and TB.norm_tag(t) in hit_keys)]
+            tag_str = ','.join(bl + normal)      # 黑名单 Tag 排最前，避免被截断
+            if len(tag_str) > 45:
+                tag_str = tag_str[:45] + '...'
+            clickable = True
 
         title_symbol = self.display_name if self.display_name else self.name
         if self.table_name == 'ETFs':
@@ -1910,6 +1994,11 @@ class ChartWindow:
 
     def on_pick(self, event):
         try:
+            act = getattr(event.artist, 'ft_action', None)
+            if act:
+                if getattr(event.mouseevent, 'button', 1) == 1:
+                    self._handle_ft_action(act)
+                return
             all_points = (self.global_scatter_points + self.specific_scatter_points +
                           self.earning_scatter_points + self.buy_scatter_points +
                           self.sell_scatter_points)
@@ -1974,10 +2063,14 @@ class ChartWindow:
             res = self._wl_results.pop(0)
             ok = bool(res.get('ok'))
             msg = res.get('message') or ('成功' if ok else '失败')
+            if res.get('action') == 'remove':
+                self._wl_pending.discard((str(res.get('symbol', '')).upper(), str(res.get('group', ''))))
+                self._member_sig = None       # 立即重读归属文件
             self._show_wl_status(("✅ " if ok else "❌ ") + msg,
                                  NORD_THEME['accent_green'] if ok else NORD_THEME['accent_red'], ttl=7.0)
             try:
-                notify_mac("Firstrade 自选股", msg, subtitle=f"{res.get('symbol','')} → {res.get('group','')}")
+                arrow = '✕' if res.get('action') == 'remove' else '→'
+                notify_mac("Firstrade 自选股", msg, subtitle=f"{res.get('symbol','')} {arrow} {res.get('group','')}")
             except Exception:
                 pass
             print(f"[FT-WL] {'OK' if ok else 'FAIL'} {msg}")
@@ -2018,6 +2111,36 @@ class ChartWindow:
                              NORD_THEME['accent_yellow'], ttl=300)
         scan_groups_async(on_done=lambda res: self._wl_results.append(res),
                           groups=(watchlist_groups() or None), wait=300)
+
+    def _handle_ft_action(self, action):
+        if not action:
+            return
+        if action[0] == 'wl_remove' and len(action) > 1:
+            self._remove_from_watchlist(action[1])
+
+    def _remove_from_watchlist(self, group):
+        self.mouse_pressed = False
+        if not FT_WL_ADD_OK:
+            display_dialog("未找到 ft_watchlist_add.py，无法删除自选股")
+            return
+        sym = self.name
+        if not sym or not group:
+            return
+        key = (str(sym).upper(), str(group))
+        if key in self._wl_pending:
+            self._show_wl_status(f"⏳ {sym} ✕「{group}」已在执行中…", NORD_THEME['accent_yellow'], ttl=5)
+            return
+        ret = QMessageBox.question(
+            None, "从自选股分组删除",
+            f"确定把 {sym} 从 Firstrade 自选股分组「{group}」中删除？\n（浏览器将自动切到该分组完成删除）",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No)
+        if ret != QMessageBox.StandardButton.Yes:
+            return
+        self._wl_pending.add(key)
+        self._show_wl_status(f"⏳ 正在把 {sym} 从「{group}」删除…（浏览器后台执行）",
+                             NORD_THEME['accent_yellow'], ttl=120)
+        remove_symbol_async(sym, group, on_done=lambda res: self._wl_results.append(res), wait=90)
 
     # ------------------------------------------------------------------
     # 弹窗 / 外部脚本
@@ -2075,8 +2198,11 @@ class ChartWindow:
     def launch_and_close_for_y(self):
         execute_external_script('panel_delete', self.name, on_done=self._after_delete, block=True)
 
-    def refresh_description_data_and_redraw(self):
-        print("正在重新加载 description.json...")
+    def refresh_description_data_and_redraw(self, silent=False):
+        self._desc_sig = _file_sig(self.DESCRIPTION_JSON_PATH)[0]
+        if not silent:
+            print("正在重新加载 description.json...")
+        err = None
         try:
             with open(self.DESCRIPTION_JSON_PATH, 'r', encoding='utf-8') as f:
                 self.current_json_data['data'] = json.load(f)
@@ -2088,14 +2214,22 @@ class ChartWindow:
             self.create_markers_and_annotations()
             self.update_marker_visibility()
             self._draw_membership(force=True)
+            self._draw_blacklist_badge(force=True)
             self.fig.canvas.draw_idle()
-            print("图表刷新完成。")
+            if not silent:
+                print("图表刷新完成。")
+            return True
         except FileNotFoundError:
-            display_dialog(f"错误: 未找到文件\n{self.DESCRIPTION_JSON_PATH}")
+            err = f"错误: 未找到文件\n{self.DESCRIPTION_JSON_PATH}"
         except json.JSONDecodeError as e:
-            display_dialog(f"错误: 解析JSON文件失败\n{e}")
+            err = f"错误: 解析JSON文件失败\n{e}"
         except Exception as e:
-            display_dialog(f"刷新时发生未知错误:\n{e}")
+            err = f"刷新时发生未知错误:\n{e}"
+        if silent:
+            print(f"[自动刷新] {err}")
+        else:
+            display_dialog(err)
+        return False
 
     # ------------------------------------------------------------------
     def on_key(self, event):
@@ -2104,7 +2238,9 @@ class ChartWindow:
                 self.close_window()
                 return
 
-            actions = {'v': self.toggle_volume, 'r': self.toggle_global_markers, 'x': self.toggle_all_annotations,
+            actions = {'v': self.toggle_volume,
+                       'r': self.toggle_global_markers,
+                       'x': self.toggle_all_annotations,
                        'a': self.toggle_earning_markers,
                        'c': self.toggle_specific_markers,
                        'i': self.toggle_buy_markers,
@@ -2156,6 +2292,15 @@ class ChartWindow:
     def _ui_poll_realtime(self):
         try:
             self._drain_wl_results()
+        except Exception:
+            pass
+        try:
+            if self.name:
+                dsig = _file_sig(self.DESCRIPTION_JSON_PATH)[0]
+                if self._desc_sig is not None and dsig != self._desc_sig:
+                    self.refresh_description_data_and_redraw(silent=True)   # 改完 Tag 自动刷新
+                if self._draw_blacklist_badge():
+                    self.fig.canvas.draw_idle()
         except Exception:
             pass
         try:

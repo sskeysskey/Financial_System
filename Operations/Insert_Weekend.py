@@ -13,7 +13,6 @@ with open(file_path, 'r', encoding='utf-8') as f:
 to_add_crypto = ["Bitcoin",
                  "Ether",
                 "Solana",
-                "Binance",
                 "XRP"]
 
 # 3. 在原有 Crypto 基础上追加并自动去重

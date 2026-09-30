@@ -401,6 +401,8 @@ def build_membership_items(symbol, theme):
         items.append(("自选", theme['text_light'], 'normal'))
         for g in m['groups']:
             items.append((f"[{g}]", _group_color(g, theme), 'bold'))
+            # 第 4 个元素 = 可点击动作：Chart_input 渲染成红色小按钮，点击后从该分组删除
+            items.append(("×", theme['accent_red'], 'bold', ('wl_remove', g)))
     else:
         items.append(("自选: 未加入", theme['border'], 'normal'))
     if m['unsure']:

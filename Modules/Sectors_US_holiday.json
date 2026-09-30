@@ -30,7 +30,6 @@
     "Bitcoin",
     "Ether",
     "Solana",
-    "Binance",
     "XRP"
   ],
   "Indices": [
@@ -39,8 +38,7 @@
     "Brazil",
     "Nikkei",
     "India",
-    "Korea",
-    "Australia"
+    "Korea"
   ],
   "Commodities": [],
   "ETFs": []

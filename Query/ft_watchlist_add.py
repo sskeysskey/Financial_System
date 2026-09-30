@@ -84,32 +84,34 @@ def ping():
         return None
 
 
-def add_symbol(symbol, group, wait=45, restore=True):
-    """阻塞式：把 symbol 加进 group。自动寻找并唤醒 Chrome 里的 Watchlist 页面"""
+def _symbol_task(path, action, symbol, group, wait, restore):
     symbol = str(symbol or "").strip().upper()
     group = str(group or "").strip()
-    out = {"ok": False, "symbol": symbol, "group": group, "message": ""}
+    out = {"ok": False, "symbol": symbol, "group": group, "action": action, "message": ""}
     if not symbol:
         out["message"] = "symbol 为空"
         return out
+    if action == "remove" and not group:
+        out["message"] = "删除必须指定分组"
+        return out
     try:
-        r = _post("/wl_add",
-                  {"symbol": symbol, "group": group,
-                   "wait": max(1, int(wait)), "restore": bool(restore)},
+        r = _post(path, {"symbol": symbol, "group": group,
+                         "wait": max(1, int(wait)), "restore": bool(restore)},
                   timeout=int(wait) + 20)
     except Exception as e:
         out["message"] = (f"连不上本地桥接服务 {BRIDGE_BASE}：{e}\n"
                           f"请先在终端运行 bridge_server.py")
         return out
     out["ok"] = bool(r.get("ok"))
-    out["message"] = r.get("message") or ("已加入" if out["ok"] else "未收到浏览器回报")
+    out["message"] = r.get("message") or (("已加入" if action == "add" else "已删除")
+                                          if out["ok"] else "未收到浏览器回报")
     out["raw"] = r
     return out
 
 
-def add_symbol_async(symbol, group, on_done=None, wait=45, restore=True):
+def _run_async(fn, on_done, *args, **kw):
     def _run():
-        res = add_symbol(symbol, group, wait=wait, restore=restore)
+        res = fn(*args, **kw)
         if callable(on_done):
             try:
                 on_done(res)
@@ -118,6 +120,24 @@ def add_symbol_async(symbol, group, on_done=None, wait=45, restore=True):
     th = threading.Thread(target=_run, daemon=True)
     th.start()
     return th
+
+
+def add_symbol(symbol, group, wait=45, restore=True):
+    """阻塞式：把 symbol 加进 group（自动唤醒 Chrome 里的 Watchlist 页面）"""
+    return _symbol_task("/wl_add", "add", symbol, group, wait, restore)
+
+
+def add_symbol_async(symbol, group, on_done=None, wait=45, restore=True):
+    return _run_async(add_symbol, on_done, symbol, group, wait=wait, restore=restore)
+
+
+def remove_symbol(symbol, group, wait=90, restore=True):
+    """阻塞式：把 symbol 从 group 删除（浏览器自动切分组 → 三点菜单 → 删除）"""
+    return _symbol_task("/wl_remove", "remove", symbol, group, wait, restore)
+
+
+def remove_symbol_async(symbol, group, on_done=None, wait=90, restore=True):
+    return _run_async(remove_symbol, on_done, symbol, group, wait=wait, restore=restore)
 
 def scan_groups(groups=None, wait=300):
     """阻塞式：让浏览器逐个分组扫描归属，结果写入 firstrade_wl_membership.json"""

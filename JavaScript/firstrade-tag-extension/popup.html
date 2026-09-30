@@ -55,13 +55,19 @@
     #status,
     #bridgeStatus,
     #pageStatus,
-    #wlStatus {
+    #wlStatus,
+    #wlMsg {
       margin-top: 8px;
       font-size: 12px;
       color: #059669;
       line-height: 1.5;
       word-break: break-all;
       white-space: pre-wrap;
+    }
+
+    #wlMsg {
+      color: #065f46;
+      min-height: 4px;
     }
 
     #pageStatus,
@@ -164,7 +170,7 @@
 <body>
   <!-- ==================== ① 持仓快照 ==================== -->
   <h1>① 持仓快照（/app/positions）</h1>
-  <p class="hint">覆盖式，只保留最新一次的全量快照。</p>
+  <p class="hint">覆盖式，只保留最新一次的全量快照。<b>无需先打开持仓页</b>：会自动切换/跳转/新开，完成后切回。</p>
   <button id="pingBtn">🔌 测试本地桥接连接</button>
   <button id="scanBtn" class="primary">⬇️ 手动抓取全部持仓（自动滚屏）</button>
   <div class="half">
@@ -175,7 +181,7 @@
   <hr>
   <!-- ==================== ② 买卖痕迹 ==================== -->
   <h1>② 买卖痕迹（/app/order-status）</h1>
-  <p class="hint">追加式，长期累积买入/卖出记录，永不覆盖。</p>
+  <p class="hint">追加式，长期累积买入/卖出记录，永不覆盖。同样全自动定位 /app/order-status。</p>
   <div class="ok">已启用<b>精简写入(LEAN)</b>：只保存 日期 / 代号 / 买卖 / 数量 / 金额 / 成交价 / 状态码。</div>
   <div class="row">
     <input type="checkbox" id="ordVerbose" style="width:auto;">
@@ -192,6 +198,7 @@
   <!-- ==================== ③ 自选股一键同步（对账） ==================== -->
   <h1>③ 自选股一键同步（/app/watchlist）</h1>
   <div id="wlStatus">未检测</div>
+  <div id="wlMsg"></div>
   <div class="ok" id="agentBox">🤖 远程添加代理：未检测</div>
   <div class="row">
     <input type="checkbox" id="wlMemberPassive" style="width:auto;">
@@ -213,7 +220,8 @@
     <label for="wlStrict"><b>严格同步</b>：分组内「不在数据源里」的标的先删掉</label>
   </div>
   <div class="ok">流程：切到目标分组 → 比对差集 → 删多余 → 加缺失 → 复核 → 切回原分组。<br>
-    若分组内容与数据源<b>完全一致，则零点击直接结束</b>。</div>
+    若分组内容与数据源<b>完全一致，则零点击直接结束</b>。<br>
+    ⚠ 财报日历<b>不回退</b>：今日目标日期无数据时，严格同步会把目标分组清空（删前备份 + 5 秒倒计时可取消）。</div>
 
   <div class="row">
     <input type="checkbox" id="wlAgent" style="width:auto;">

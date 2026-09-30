@@ -1226,18 +1226,19 @@
     }
 
     const r = await bg({ action: 'FT_WL_SOURCE', src: SRC.mode, back: SRC.back, ahead: SRC.ahead });
-    if (r.ok && r.data) {
-      const d = r.data;
-      if (d.status === 'disabled') throw new Error(d.message || `数据源 ${SRC.mode} 已在 bridge_server.py 中停用`);
-      if (d.status === 'error') throw new Error(d.message || '数据源返回错误');
-      if (Array.isArray(d.symbols)) {
-        return { symbols: d.symbols.slice(), from: d.from || SRC.mode, detail: d.dates || null };
-      }
+    /* ★ 不再「退而求其次」改用本地清单：严格同步按错误数据源对账会误删 */
+    if (!r.ok || !r.data) {
+      throw new Error('桥接服务不可用（' + (r.error || '无响应') + '）。为防止按错误清单增删已中止；' +
+        '请先运行 bridge_server.py，或在 popup 把数据源切到「本地备用清单」');
     }
-
-    const m = await manualList();
-    if (m.length) return { symbols: m.slice(), from: '本地备用清单(桥接不可用)', detail: null };
-    throw new Error('拿不到 symbol 源：' + (r.error || '桥接不可用') + '，且未设置备用清单');
+    const d = r.data;
+    if (d.status === 'disabled') throw new Error(d.message || `数据源 ${SRC.mode} 已在 bridge_server.py 中停用`);
+    if (d.status === 'error') throw new Error(d.message || '数据源返回错误');
+    if (!Array.isArray(d.symbols)) throw new Error('数据源返回格式异常（缺少 symbols）');
+    return {
+      symbols: d.symbols.slice(), from: d.from || SRC.mode,
+      detail: d.dates || null, empty: d.symbols.length === 0
+    };
   }
 
   /* ★ 双向差集 */
@@ -1369,6 +1370,12 @@
       renderHud(`源 ${d.srcFrom}: ${d.srcCount} 只｜「${job.group}」现有 ${d.haveCount}` +
         `｜待删 ${job.removeQueue.length}｜待加 ${job.total}`);
       await sleep(700);
+      if (d.srcCount === 0 && job.removeQueue.length) {
+        const warn = `⚠ 数据源在目标日期无数据（不回退到最近财报日）→ 将从「${job.group}」删除全部 ${job.removeQueue.length} 只`;
+        toast(warn);
+        renderHud(warn);
+        await sleep(1500);
+      }
 
       if (!job.removeQueue.length && !job.queue.length) {
         toast(`✅ 分组「${job.group}」已与数据源完全一致，无需任何改动`);
@@ -1401,16 +1408,18 @@
     /* ---------- 阶段 3：批量添加 ---------- */
     job.phase = 'add';
     job.addStartedAt = job.addStartedAt || Date.now();
-    try {
-      const inp = await ensureInput();
-      assertSafeInput(inp);
-      log('自检通过，输入框 =', inp.id || inp.placeholder);
-      pressEscape();
-      await sleep(200);
-    } catch (e) {
-      job.lastError = '输入框自检失败: ' + String((e && e.message) || e);
-      renderHud('❌ ' + job.lastError);
-      return finishJob();
+    if (job.queue.length) {
+      try {
+        const inp = await ensureInput();
+        assertSafeInput(inp);
+        log('自检通过，输入框 =', inp.id || inp.placeholder);
+        pressEscape();
+        await sleep(200);
+      } catch (e) {
+        job.lastError = '输入框自检失败: ' + String((e && e.message) || e);
+        renderHud('❌ ' + job.lastError);
+        return finishJob();
+      }
     }
 
     await persist(true);
@@ -1668,6 +1677,7 @@
       for (let i = 5; i > 0; i--) {
         renderHud(`检测到未完成任务：${what}，目标分组「${job.targetGroup}」，${i} 秒后自动续跑…点「停止」可取消`);
         await sleep(1000);
+        if (job.running) return;              // ★ 倒计时期间用户/后台已启动新任务 → 放弃续跑
         if (job.stop) {
           await storeSet({ [JOB_KEY]: Object.assign({}, saved, { autoResume: false }) });
           renderHud('⏹ 已取消续跑');
@@ -1675,6 +1685,7 @@
           return;
         }
       }
+      if (job.running) return;
       resumeJob(saved);
       return;
     }

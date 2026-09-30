@@ -1,16 +1,40 @@
 {
  "_meta": {
-  "updated_at": 1790327690.557059,
-  "updated_at_str": "2026-09-25 17:14:50",
-  "count": 1,
+  "updated_at": 1790756646.913203,
+  "updated_at_str": "2026-09-30 16:24:06",
+  "count": 5,
   "mode": "overwrite"
  },
  "quotes": {
-  "COST": {
-   "symbol": "COST",
-   "last": "894.84",
-   "change_pct": "-0.18%",
-   "change_pct_num": -0.182715
+  "AIR": {
+   "symbol": "AIR",
+   "last": "104.80",
+   "change_pct": "-1.83%",
+   "change_pct_num": -1.826698
+  },
+  "CAG": {
+   "symbol": "CAG",
+   "last": "14.15",
+   "change_pct": "+0.14%",
+   "change_pct_num": 0.141543
+  },
+  "CALM": {
+   "symbol": "CALM",
+   "last": "68.55",
+   "change_pct": "0.00%",
+   "change_pct_num": 0
+  },
+  "FDS": {
+   "symbol": "FDS",
+   "last": "258.00",
+   "change_pct": "-0.76%",
+   "change_pct_num": -0.75778
+  },
+  "JBL": {
+   "symbol": "JBL",
+   "last": "320.51",
+   "change_pct": "+0.52%",
+   "change_pct_num": 0.523774
   }
  }
 }

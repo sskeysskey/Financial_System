@@ -168,12 +168,17 @@ def take_tasks(limit=3):
                 break
     return out
 
-def find_active_task(action):
+def find_active_task(action, symbol=None, group=None):
     with _TASK_LOCK:
         _gc_tasks_locked()
         for t in _TASKS.values():
-            if t["action"] == action and t["status"] in ("pending", "taken"):
-                return t
+            if t["action"] != action or t["status"] not in ("pending", "taken"):
+                continue
+            if symbol is not None and _sym_key(t.get("symbol")) != _sym_key(symbol):
+                continue
+            if group is not None and _clean_group(t.get("group")) != _clean_group(group):
+                continue
+            return t
     return None
 
 def finish_task(tid, ok, message, data=None):
@@ -344,9 +349,14 @@ def _target_dates(today, back=1, ahead=0):
     return dates
 
 
-def load_earnings_symbols(back=1, ahead=0, fallback=True):
-    by_date = parse_earnings_release()
+def load_earnings_symbols(back=1, ahead=0, fallback=False):
+    """★ 默认 fallback=False：目标日期无数据就返回空清单（严格同步会据此清空目标分组）"""
     today = date.today()
+    if not os.path.exists(EARNINGS_RELEASE_PATH):
+        return {"status": "error", "source": "earnings_release", "file": EARNINGS_RELEASE_PATH,
+                "file_exists": False, "symbols": [], "count": 0, "today": today.isoformat(),
+                "message": f"财报日历文件不存在：{EARNINGS_RELEASE_PATH}（为防误删已拒绝同步）"}
+    by_date = parse_earnings_release()
     targets = _target_dates(today, back, ahead)
     picked = {d: by_date[d] for d in sorted(targets) if d in by_date}
     used_fallback = False
@@ -356,18 +366,14 @@ def load_earnings_symbols(back=1, ahead=0, fallback=True):
         picked = {d: by_date[d] for d in sorted(past)}
         used_fallback = True
 
-    symbols, seen = [], set()
-    day_map = {}
-
+    symbols, seen, day_map = [], set(), {}
     for d in sorted(picked.keys()):
         day_syms = []
         for sym, session in picked[d]:
-            if d < today:
-                if session != "AMC":
-                    continue
-            elif d == today:
-                if session != "BMO":
-                    continue
+            if d < today and session != "AMC":
+                continue
+            if d == today and session != "BMO":
+                continue
             k = sym.replace(".", "").replace("-", "")
             if k not in seen:
                 seen.add(k)
@@ -376,22 +382,23 @@ def load_earnings_symbols(back=1, ahead=0, fallback=True):
         if day_syms:
             day_map[d.isoformat()] = day_syms
 
-    span = f"{min(day_map)}~{max(day_map)}" if day_map else today.isoformat()
-    frm = f"财报日历 {span}" + ("（回退到最近财报日）" if used_fallback else "")
+    if day_map:
+        frm = f"财报日历 {min(day_map)}~{max(day_map)}" + ("（回退到最近财报日）" if used_fallback else "")
+    else:
+        frm = f"财报日历 {today.isoformat()}（目标日期无数据，不回退）"
     return {
         "status": "ok", "source": "earnings_release",
-        "file": EARNINGS_RELEASE_PATH,
-        "file_exists": os.path.exists(EARNINGS_RELEASE_PATH),
+        "file": EARNINGS_RELEASE_PATH, "file_exists": True,
         "from": frm, "today": today.isoformat(), "back": back, "ahead": ahead,
-        "fallback": used_fallback, "dates": day_map,
+        "fallback": used_fallback, "empty": not symbols, "dates": day_map,
         "count": len(symbols), "symbols": symbols,
     }
 
 
-def build_wl_source(src, back=1, ahead=0):
+def build_wl_source(src, back=1, ahead=0, fallback=False):
     s = (src or DEFAULT_WL_SOURCE).strip().lower()
     if s in ("earnings", "earnings_release", "er", "release"):
-        return load_earnings_symbols(back=back, ahead=ahead)
+        return load_earnings_symbols(back=back, ahead=ahead, fallback=fallback)
     if s in ("sectors", "sectors_all", "sector"):
         if not ENABLE_SECTORS_SOURCE:
             return {"status": "disabled", "source": "sectors_all", "symbols": [], "count": 0,
@@ -883,6 +890,43 @@ class StockRequestHandler(BaseHTTPRequestHandler):
             return {}
         return json.loads(raw.decode("utf-8"))
 
+    def _handle_symbol_task(self, action):
+        """/wl_add 与 /wl_remove 共用：激活 watchlist Tab → 排队（同 symbol+分组去重）→ 可选阻塞等待结果"""
+        try:
+            body = self._read_json_body()
+            symbol = str(body.get("symbol", "")).strip().upper()
+            group = str(body.get("group", "")).strip()
+            wait = float(body.get("wait", 0) or 0)
+            restore = bool(body.get("restore", True))
+            if not symbol:
+                self._reply(400, {"status": "error", "ok": False, "message": "no symbol"})
+                return
+            if action == "remove" and not group:
+                self._reply(400, {"status": "error", "ok": False, "message": "删除必须指定分组"})
+                return
+            tab = ensure_watchlist_tab()
+            _log(f"[任务] 激活 Watchlist 页面 -> {tab}")
+            t = find_active_task(action, symbol, group)
+            if t:
+                _log(f"[任务] 复用已排队的 {action} {symbol}@{group} id={t['id']}")
+            else:
+                t = new_task(action, symbol, group, {"restore": restore})
+                _log(f"[任务] 排队 {action} {symbol} {'→' if action == 'add' else '✕'} 「{group or '当前分组'}」 id={t['id']}")
+            if wait > 0:
+                t["event"].wait(min(wait, 180))
+            res = t.get("result")
+            if res:
+                out = {"status": "ok", "id": t["id"], "tab": tab, "action": action}
+                out.update(res)
+                self._reply(200, out)
+            else:
+                self._reply(200, {
+                    "status": "pending", "id": t["id"], "tab": tab, "ok": False, "action": action,
+                    "message": "任务已排队、页面已激活，但未在等待时间内完成（检查 watchlist 页面是否登录/网络是否通畅）"})
+        except Exception as e:
+            _log(f"/wl_{action} 失败: {e}")
+            self._reply(500, {"status": "error", "ok": False, "message": str(e)})
+
     def do_OPTIONS(self):
         self.send_response(204)
         self._cors()
@@ -944,39 +988,8 @@ class StockRequestHandler(BaseHTTPRequestHandler):
                 self._reply(500, {"status": "error", "message": str(e)})
             return
 
-        # ★ Python 下单任务入口：无论何时进来，主动寻找并激活 Tab
-        if path == "/wl_add":
-            try:
-                body = self._read_json_body()
-                symbol = str(body.get("symbol", "")).strip().upper()
-                group = str(body.get("group", "")).strip()
-                wait = float(body.get("wait", 0) or 0)
-                restore = bool(body.get("restore", True))
-                if not symbol:
-                    self._reply(400, {"status": "error", "ok": False, "message": "no symbol"})
-                    return
-
-                # ★ 关键改进：不管有没有心跳，都直接通过 AppleScript 激活 Watchlist Tab，唤醒事件循环
-                tab = ensure_watchlist_tab()
-                _log(f"[任务] 激活并确保 Watchlist 页面状态 -> {tab}")
-
-                t = new_task("add", symbol, group, {"restore": restore})
-                _log(f"[任务] 排队 add {symbol} → 「{group or '当前分组'}」 id={t['id']}")
-
-                if wait > 0:
-                    t["event"].wait(min(wait, 180))
-                res = t.get("result")
-                if res:
-                    out = {"status": "ok", "id": t["id"], "tab": tab}
-                    out.update(res)
-                    self._reply(200, out)
-                else:
-                    self._reply(200, {
-                        "status": "pending", "id": t["id"], "tab": tab, "ok": False,
-                        "message": "任务已排队，页面已激活。如果在几秒内仍未执行，请检查该页面的网络是否通畅。"})
-            except Exception as e:
-                _log(f"/wl_add 失败: {e}")
-                self._reply(500, {"status": "error", "ok": False, "message": str(e)})
+        if path in ("/wl_add", "/wl_remove"):
+            self._handle_symbol_task("add" if path == "/wl_add" else "remove")
             return
 
         if path == "/wl_membership":
@@ -1048,6 +1061,15 @@ class StockRequestHandler(BaseHTTPRequestHandler):
                             apply_membership_event(grp, sym, "add", "agent_add")
                         except Exception as e:
                             _log(f"[归属] 记账失败: {e}")
+                if reported_ok and info[0] == "remove":
+                    d = body.get("data") or {}
+                    grp = d.get("group") or info[2]
+                    sym = d.get("symbol") or info[1]
+                    if grp and sym:
+                        try:
+                            apply_membership_event(grp, sym, "remove", "agent_remove")
+                        except Exception as e:
+                            _log(f"[归属] 删除记账失败: {e}")
                 ok = finish_task(tid, reported_ok, str(body.get("message", "")), body.get("data"))
                 _log(f"[任务] 回报 id={tid} ok={reported_ok} msg={str(body.get('message',''))[:90]}")
                 self._reply(200, {"status": "ok" if ok else "unknown_task"})
@@ -1090,6 +1112,11 @@ class StockRequestHandler(BaseHTTPRequestHandler):
                 "membership_exists": os.path.exists(WL_MEMBERSHIP_JSON_PATH),
                 "membership_bytes": _file_size(WL_MEMBERSHIP_JSON_PATH),
                 "wl_tasks_pending": pending_count(),
+                "orders_bytes": _file_size(ORDERS_JSON_PATH),
+                "orders_schema_default": "full_v1" if ORDER_VERBOSE_DEFAULT else "lean_v1",
+                "earnings_release": EARNINGS_RELEASE_PATH,
+                "earnings_release_exists": os.path.exists(EARNINGS_RELEASE_PATH),
+                "sectors_source_enabled": ENABLE_SECTORS_SOURCE,
                 "positions_bytes": _file_size(POSITIONS_JSON_PATH),
                 "positions_bak_exists": os.path.exists(POSITIONS_JSON_PATH + ".bak"),
                 "agent_last_poll_ago": (round(time.time() - _LAST_AGENT_POLL[0], 1)
@@ -1111,13 +1138,16 @@ class StockRequestHandler(BaseHTTPRequestHandler):
             tid = qs.get("id", [""])[0]
             with _TASK_LOCK:
                 t = _TASKS.get(tid)
-                self._reply(200, _task_public(t) if t else {"status": "error", "message": "unknown task"})
+                pub = _task_public(t) if t else None
+            self._reply(200, pub or {"status": "error", "message": "unknown task"})
             return
 
         if path == "/wl_source":
             try:
                 src = (qs.get("src", [DEFAULT_WL_SOURCE])[0] or DEFAULT_WL_SOURCE)
-                self._reply(200, build_wl_source(src, back=_qint(qs, "back", 1), ahead=_qint(qs, "ahead", 0)))
+                fb = qs.get("fallback", ["0"])[0] == "1"
+                self._reply(200, build_wl_source(src, back=_qint(qs, "back", 1),
+                                                 ahead=_qint(qs, "ahead", 0), fallback=fb))
             except Exception as e:
                 self._reply(500, {"status": "error", "message": str(e)})
             return

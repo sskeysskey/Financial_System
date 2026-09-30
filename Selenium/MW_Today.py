@@ -45,27 +45,24 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 DOWNLOADS_DIR = os.path.join(USER_HOME, "Downloads")
 FINANCIAL_SYSTEM_DIR = os.path.join(BASE_CODING_DIR, "Financial_System")
 DATABASE_DIR = os.path.join(BASE_CODING_DIR, "Database")
+NEWS_DIR = os.path.join(BASE_CODING_DIR, "News")
 
 DB_PATH = os.path.join(DATABASE_DIR, "Finance.db")
 SECTORS_JSON_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Sectors_empty.json")
 SYMBOL_MAPPING_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Symbol_mapping.json")
-# 可选：MarketWatch 专用覆盖映射（不存在则忽略）。支持两种格式（可混用）：
-#   平铺: {"BRK-B": "brk.b"}
-#   分组: {"Indices": {"UK100": "ukx?countrycode=uk"}, "Commodities": {"Rice": ["rr00", "zr00"]}}
-# 值中可带"品种类型/"前缀以覆盖分组默认的 URL 类型（同时页面类型校验也随之改变），例如：
-#   {"Currencies": {"DXY": "index/dxy"}}  -> https://www.marketwatch.com/investing/index/dxy
 MW_SYMBOL_OVERRIDE_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Modules", "Symbol_mapping_mw.json")
 CHECK_YESTERDAY_SCRIPT_PATH = os.path.join(FINANCIAL_SYSTEM_DIR, "Query", "Check_yesterday.py")
 
+# 波动偏差过大异常记录文件
+WRONG_TXT_PATH = os.path.join(NEWS_DIR, "wrong.txt")
+PRICE_DEVIATION_ALERT_THRESHOLD = 0.10  # 偏差超过 10% 记录到 wrong.txt
+
 # 独立的浏览器 Profile（保存 Cookie，降低被反爬拦截概率；不要与正在运行的 Chrome 共用）
-# 注意：Profile 会产生大量文件，必须放在 Git 仓库之外。可用环境变量 MW_PROFILE_DIR 覆盖。
 USE_PERSISTENT_PROFILE = True
 MW_PROFILE_DIR = os.environ.get("MW_PROFILE_DIR") or os.path.join(DOWNLOADS_DIR, "backup", "mw_chrome_profile")
-# 旧版本放在仓库内的位置：若存在，首次运行时会自动迁移到 MW_PROFILE_DIR（保留 Cookie）
 LEGACY_MW_PROFILE_DIRS = [
     os.path.join(FINANCIAL_SYSTEM_DIR, "Selenium", "mw_chrome_profile"),
 ]
-# 每次运行结束后清理 Profile 中的纯缓存目录（不影响 Cookie / 登录状态），防止目录无限膨胀
 CLEAN_PROFILE_CACHE_ON_EXIT = True
 PROFILE_CACHE_SUBPATHS = [
     "Default/Cache", "Default/Code Cache", "Default/GPUCache",
@@ -100,7 +97,7 @@ REQUEST_DELAY_RANGE = (2.0, 4.5)  # 每个 symbol 之间的随机间隔（秒）
 MAX_ROWS_TO_EXTRACT = 5         # 从表格顶部提取的行数（用于日期匹配）
 
 # 日期对不上时的策略：
-#   "overwrite_date" -> 与 YF_Today 保持一致：取最新数据并把日期改为最近有效开盘日写入
+#   "overwrite_date" -> 取最新数据并把日期改为最近有效开盘日写入
 #   "skip"           -> 不写入，保留在 JSON 中等待下次
 STALE_DATA_POLICY = "overwrite_date"
 
@@ -109,8 +106,6 @@ PRICE_SANITY_CHECK = True
 PRICE_SANITY_THRESHOLD = 0.25   # 25%
 PRICE_SANITY_ACTION = "skip"    # "skip" -> 不写入并保留在 JSON；"warn" -> 仅提示仍写入
 
-# ---- MarketWatch URL 中的品种类型 -> 页面 body 上 symbol--xxx 类名 ----
-# 用于映射中带"类型/"前缀时（如 "index/dxy"），自动切换页面类型校验
 ASSET_PATH_TO_BODY_TYPE = {
     "stock": "stock",
     "fund": "fund",
@@ -121,22 +116,12 @@ ASSET_PATH_TO_BODY_TYPE = {
     "future": "future",
 }
 
-# ---- 分组 -> 抓取处理器 ----
 STOCK_SECTORS = [
     'Basic_Materials', 'Communication_Services', 'Consumer_Cyclical',
     'Consumer_Defensive', 'Energy', 'Financial_Services', 'Healthcare',
     'Industrials', 'Real_Estate', 'Technology', 'Utilities',
 ]
 
-# parser:
-#   ohlcv_table -> /download-data 历史表格
-#   quote       -> 行情概览页 (h2.intraday__price)
-# resolver: symbol -> MarketWatch 路径的推导规则（内置/用户覆盖映射优先）
-# expect_type: 页面 body 上的 symbol--xxx 类名，用于识别是否跳转到了错误品种页
-#              （若映射值带"类型/"前缀，则以该类型为准）
-# row_style:
-#   price_only -> (date, name, price, volume=0)，由 insert_data_to_db 按表结构过滤
-#   flat_ohlc  -> open/high/low 均等于 price，volume=0（Crypto 表是 expanded 结构）
 SECTOR_HANDLERS = {
     "ETFs": {"asset_path": "fund", "query": {"mod": "mw_quote_tab"}, "parser": "ohlcv_table",
              "suffix": "/download-data", "resolver": "stock"},
@@ -163,8 +148,6 @@ SECTOR_HANDLERS.update({
                     "sanity": True},
 })
 
-# 内置映射（优先级低于 Symbol_mapping_mw.json，高于推导规则）。值可以是字符串或候选列表（依次尝试）
-# 值格式: "[品种类型/]代码[?查询参数]"，品种类型省略时使用分组默认 asset_path
 MW_BUILTIN_OVERRIDES = {
     "Bonds": {
         "US10Y": "tmubmusd10y?countrycode=bx",
@@ -172,7 +155,6 @@ MW_BUILTIN_OVERRIDES = {
         "US30Y": "tmubmusd30y?countrycode=bx",
     },
     "Currencies": {
-        # 美元指数在 MarketWatch 属于"指数"：/currency/dxy 会被重定向到 /index/dxy（body 为 symbol--index）
         "DXY": "index/dxy",
     },
     "Indices": {
@@ -184,8 +166,6 @@ MW_BUILTIN_OVERRIDES = {
         "S&P500": "spx",
         "Korea": "180721?countrycode=kr",
         "DowJones": "djia",
-        # ---- 以下未经你确认，首次请用 --dry-run 核对页面名称；UK100(^BUK100P)/panEURO100(^N100)
-        #      与 MarketWatch 常见指数口径不同，故不内置，需要时写到 Symbol_mapping_mw.json ----
         "HANGSENG": "hsi?countrycode=hk",
         "Shanghai": "shcomp?countrycode=cn",
         "EURO50": "sx5e?countrycode=xx",
@@ -199,13 +179,13 @@ MW_BUILTIN_OVERRIDES = {
         "Platinum": "pl00",
         "Naturalgas": "ng00",
         "CrudeOil": "cl00",
-        "Brent": "brn00?countrycode=uk",   # ICE 布伦特，推导规则 bz00 在 MW 不存在
-        "YuMi": "c00",                     # CBOT 玉米在 MW 为 c00（非 zc00）
-        "Soybean": "s00",                  # 大豆 s00（非 zs00）
-        "Oat": "o00",                      # 找不到时自动回退到推导规则 zo00
-        "Rice": "rr00",                    # 找不到时自动回退到推导规则 zr00
-        "LeanHogs": "lh00",                # 瘦肉猪 lh00（非 he00）
-        "LiveCattle": "lc00",              # 活牛 lc00（非 le00）
+        "Brent": "brn00?countrycode=uk",
+        "YuMi": "c00",
+        "Soybean": "s00",
+        "Oat": "o00",
+        "Rice": "rr00",
+        "LeanHogs": "lh00",
+        "LiveCattle": "lc00",
     },
 }
 
@@ -245,8 +225,8 @@ class ScrapeError(Exception):
 class SymbolNotFoundError(ScrapeError):
     def __init__(self, msg, actual_type=None, final_url=None):
         super().__init__(msg)
-        self.actual_type = actual_type    # 类型不符时，页面实际的 symbol--xxx 类型
-        self.final_url = final_url        # 重定向后的最终 URL
+        self.actual_type = actual_type
+        self.final_url = final_url
 
 
 class CaptchaBlockedError(ScrapeError):
@@ -256,7 +236,7 @@ class CaptchaBlockedError(ScrapeError):
 # ================= 1. 数据库与 JSON 操作 =================
 
 def get_table_type(sector):
-    """根据分组判断表结构类型（与 YF_Today 保持一致）"""
+    """根据分组判断表结构类型"""
     expanded_sectors = [
         'ETFs', 'Basic_Materials', 'Communication_Services', 'Consumer_Cyclical',
         'Consumer_Defensive', 'Energy', 'Financial_Services', 'Healthcare',
@@ -336,7 +316,7 @@ def insert_data_to_db(db_path, table_name, data_rows, table_type):
 
 
 def get_last_db_price(db_path, table_name, name, before_date):
-    """读取库中该 name 在 before_date 之前的最后一条价格（用于合理性校验），表不存在返回 None"""
+    """读取库中该 name 在 before_date 之前的最后一条有效价格"""
     if not os.path.exists(db_path):
         return None
     try:
@@ -346,11 +326,55 @@ def get_last_db_price(db_path, table_name, name, before_date):
                 f'SELECT price FROM "{table_name}" WHERE name = ? AND date < ? AND price IS NOT NULL '
                 f'ORDER BY date DESC LIMIT 1', (name, before_date))
             r = cur.fetchone()
-            return float(r[0]) if r and r[0] is not None else None
+            if r and r[0] is not None:
+                try:
+                    return float(r[0])
+                except (ValueError, TypeError):
+                    return None
+            return None
         finally:
             conn.close()
     except sqlite3.Error:
         return None
+
+
+# 运行期去重集合，避免同一轮重复向 wrong.txt 追加相同 symbol
+_RECORDED_WRONG_SYMBOLS = set()
+
+
+def record_wrong_symbol_if_exceeded(group, symbol, target_date, new_price, dry_run=False):
+    """
+    比较新抓取的 price 与前一交易日 price：
+    若变动百分比绝对值超过 10%（无论正负），追加写入 wrong.txt
+    """
+    prev_price = get_last_db_price(DB_PATH, group, symbol, target_date)
+    if prev_price is None or abs(prev_price) < 1e-8:
+        return None
+
+    diff = (new_price - prev_price) / abs(prev_price)
+    if abs(diff) > PRICE_DEVIATION_ALERT_THRESHOLD:
+        log_msg = (
+            f"🚨 [{symbol}] ({group}) 价格与前一日偏差超 10%: "
+            f"前值 {prev_price} -> 新值 {new_price} ({diff:+.2%})"
+        )
+        tqdm.write(log_msg)
+
+        if dry_run:
+            tqdm.write(f"   🔍 [DRY-RUN] 模拟追加 [{symbol}] 到: {WRONG_TXT_PATH}")
+            return diff
+
+        dedup_key = (group, symbol, target_date)
+        if dedup_key not in _RECORDED_WRONG_SYMBOLS:
+            try:
+                os.makedirs(NEWS_DIR, exist_ok=True)
+                with open(WRONG_TXT_PATH, "a", encoding="utf-8") as f:
+                    f.write(f"{symbol}\n")
+                _RECORDED_WRONG_SYMBOLS.add(dedup_key)
+                tqdm.write(f"   📝 已追加 [{symbol}] 到 {WRONG_TXT_PATH}")
+            except Exception as e:
+                tqdm.write(f"❌ 写入 {WRONG_TXT_PATH} 失败: {e}")
+        return diff
+    return None
 
 
 def load_json_file(json_path, desc="JSON"):
@@ -373,7 +397,6 @@ def load_tasks_from_json(json_path):
 
 
 def load_alias_mapping(json_path):
-    """反转 Symbol 映射表：{"BTC-USD": "Bitcoin"} -> {"Bitcoin": "BTC-USD"}"""
     mapping = load_json_file(json_path, "映射文件")
     if not mapping:
         return {}
@@ -381,13 +404,11 @@ def load_alias_mapping(json_path):
 
 
 def load_mw_overrides(json_path):
-    """MarketWatch 专用覆盖映射（可选文件）"""
     data = load_json_file(json_path, "MW 覆盖映射")
     return data if isinstance(data, dict) else {}
 
 
 def atomic_write_json(json_path, data):
-    """原子写入：先写临时文件再替换，防止中途崩溃导致 JSON 损坏"""
     dir_name = os.path.dirname(json_path) or "."
     fd, tmp_path = tempfile.mkstemp(dir=dir_name, suffix=".tmp")
     try:
@@ -416,7 +437,7 @@ def remove_symbol_from_json(json_path, group_name, symbol):
 # ================= 2. 交易日 =================
 
 def get_prev_trading_date(ref_date):
-    """严格小于 ref_date 的最近一个 NYSE 交易日 ('YYYY-MM-DD')；日历异常时退化为"前一个工作日" """
+    """严格小于 ref_date 的最近一个 NYSE 交易日 ('YYYY-MM-DD')"""
     try:
         nyse = mcal.get_calendar('NYSE')
         schedule = nyse.schedule(start_date=ref_date - datetime.timedelta(days=15), end_date=ref_date)
@@ -432,7 +453,6 @@ def get_prev_trading_date(ref_date):
 
 
 def get_last_valid_trading_date():
-    """获取美股最近的一个有效开盘日（严格小于今天）"""
     try:
         return get_prev_trading_date(datetime.datetime.now().date())
     except Exception as e:
@@ -445,7 +465,6 @@ _MONTHS = {m: i for i, m in enumerate(
 
 
 def parse_quote_date(text):
-    """解析 'Sep 23, 2026 3:34 a.m.' / 'Sept. 23, 2026 at 3:46 a.m.' / '09/23/2026' -> '2026-09-23'"""
     if not text:
         return None
     for m in re.finditer(r'\b([A-Za-z]{3})[A-Za-z]*\.?\s+(\d{1,2}),?\s+(\d{4})', text):
@@ -465,13 +484,8 @@ def parse_quote_date(text):
 
 
 # ================= 3. Symbol -> URL =================
-# 候选统一为三元组: (asset_override 或 None, mw_path, extra_query_dict)
 
 def _parse_override_value(value):
-    """
-    'tmubmusd10y?countrycode=bx' / 'index/dxy' / ['rr00', 'zr00']
-      -> [(asset_override 或 None, path, query_dict), ...]
-    """
     values = value if isinstance(value, (list, tuple)) else [value]
     out = []
     for v in values:
@@ -479,7 +493,6 @@ def _parse_override_value(value):
             continue
         path_part, _, qs = str(v).strip().partition('?')
         path_part = path_part.strip().strip('/').lower()
-        # 兼容用户直接粘贴 "investing/index/dxy"
         if path_part.startswith('investing/'):
             path_part = path_part[len('investing/'):]
         asset = None
@@ -496,37 +509,32 @@ def _parse_override_value(value):
 
 
 def _derive_by_rule(symbol, handler, alias_to_symbol):
-    """按分组规则推导 MarketWatch 路径（兜底方案）"""
     rule = handler.get("resolver")
     alias = alias_to_symbol.get(symbol)
 
     if rule == "stock":
         s = (alias or symbol).strip().replace('-', '.').replace('/', '.')
         return [(None, s.lower(), {})]
-    if rule == "name_lower":            # Currencies: CNYINR -> cnyinr
+    if rule == "name_lower":
         s = re.sub(r'[^a-z0-9]', '', symbol.lower())
         return [(None, s, {})] if s else []
-    if rule == "crypto":                # Bitcoin -> BTC-USD -> btcusd
+    if rule == "crypto":
         s = re.sub(r'[^a-z0-9]', '', (alias or symbol).lower())
         return [(None, s, {})] if s else []
-    if rule == "index":                 # ^RUT -> rut
+    if rule == "index":
         if alias and alias.startswith('^'):
             s = re.sub(r'[^a-z0-9]', '', alias[1:].lower())
             return [(None, s, {})] if s else []
         return []
-    if rule == "future":                # GC=F -> gc00
+    if rule == "future":
         if alias and alias.upper().endswith('=F'):
             root = re.sub(r'[^a-z0-9]', '', alias[:-2].lower())
             return [(None, root + "00", {})] if root else []
         return []
-    return []                           # override_only (Bonds) 等
+    return []
 
 
 def resolve_mw_candidates(symbol, group, handler, alias_to_symbol, mw_overrides):
-    """
-    返回候选列表 [(asset_override, mw_path, extra_query), ...]，依次尝试直到找到页面
-    优先级：Symbol_mapping_mw.json(分组) > Symbol_mapping_mw.json(平铺) > 内置映射 > 推导规则
-    """
     candidates = []
     grp_over = mw_overrides.get(group)
     if isinstance(grp_over, dict) and symbol in grp_over:
@@ -550,12 +558,10 @@ def resolve_mw_candidates(symbol, group, handler, alias_to_symbol, mw_overrides)
 
 
 def candidate_label(handler, asset, mw_path):
-    """用于日志显示：分组默认类型只显示代码，覆盖类型显示 '类型/代码'"""
     return f"{asset}/{mw_path}" if asset and asset != handler['asset_path'] else mw_path
 
 
 def expected_type_for(handler, asset):
-    """映射指定了品种类型时，以该类型作为页面校验依据；否则用分组默认 expect_type"""
     if asset and asset != handler['asset_path']:
         return ASSET_PATH_TO_BODY_TYPE.get(asset, asset)
     return handler.get("expect_type")
@@ -572,7 +578,6 @@ def build_target_url(handler, asset, mw_path, extra_query):
 
 
 def suggest_override_from_url(final_url):
-    """从重定向后的 URL 推出可用的映射写法：.../investing/index/dxy?countrycode=xx -> 'index/dxy?countrycode=xx'"""
     if not final_url:
         return None
     try:
@@ -591,7 +596,6 @@ def suggest_override_from_url(final_url):
 
 # ================= 4. 浏览器 =================
 def _find_git_root(path):
-    """向上查找包含 .git 的目录，找不到返回 None"""
     cur = os.path.abspath(path)
     while True:
         if os.path.exists(os.path.join(cur, ".git")):
@@ -611,11 +615,6 @@ def _remove_dir_if_empty(path):
 
 
 def prepare_profile_dir():
-    """
-    1. 旧 Profile（位于仓库内）自动迁移到 MW_PROFILE_DIR，保留 Cookie
-    2. 确保目录存在
-    3. 若目标目录位于 Git 仓库内，给出警告
-    """
     if not USE_PERSISTENT_PROFILE:
         return
     target = os.path.abspath(MW_PROFILE_DIR)
@@ -631,31 +630,30 @@ def prepare_profile_dir():
                 tqdm.write(f">>> [Profile] 已将旧浏览器 Profile 迁移到仓库外: {legacy} -> {target}")
                 _remove_dir_if_empty(os.path.dirname(legacy))
             except Exception as e:
-                tqdm.write(f"⚠️ [Profile] 迁移旧 Profile 失败（请手动移动或删除）: {e}")
+                tqdm.write(f"⚠️ [Profile] 迁移旧 Profile 失败: {e}")
         else:
-            tqdm.write(f"⚠️ [Profile] 发现遗留的旧 Profile 目录（新目录已存在，已不再使用），"
-                       f"可手动删除: {legacy}")
+            tqdm.write(f"⚠️ [Profile] 发现遗留的旧 Profile 目录，可手动删除: {legacy}")
 
     os.makedirs(target, exist_ok=True)
 
     git_root = _find_git_root(target)
     if git_root:
-        tqdm.write(f"⚠️ [Profile] 浏览器 Profile 目录位于 Git 仓库 {git_root} 内，会产生大量文件！"
-                   f"请修改 MW_PROFILE_DIR 或将其加入 .gitignore。")
+        tqdm.write(f"⚠️ [Profile] 浏览器 Profile 目录位于 Git 仓库 {git_root} 内，"
+                   f"建议修改 MW_PROFILE_DIR 或将其加入 .gitignore。")
 
 
 def clean_profile_cache():
-    """浏览器退出后清理纯缓存目录（保留 Cookies / Local Storage 等身份数据）"""
     if not (USE_PERSISTENT_PROFILE and CLEAN_PROFILE_CACHE_ON_EXIT):
         return
     root = os.path.abspath(MW_PROFILE_DIR)
     if not os.path.isdir(root):
         return
-    time.sleep(1)  # 等 Chrome 子进程释放文件句柄
+    time.sleep(1)
     for sub in PROFILE_CACHE_SUBPATHS:
         p = os.path.join(root, *sub.split("/"))
         if os.path.isdir(p):
             shutil.rmtree(p, ignore_errors=True)
+
 
 def create_driver(headless=True):
     options = webdriver.ChromeOptions()
@@ -673,7 +671,7 @@ def create_driver(headless=True):
     options.add_experimental_option('useAutomationExtension', False)
     options.add_argument('--no-first-run')
     options.add_argument('--no-default-browser-check')
-    options.add_argument('--disk-cache-size=52428800')   # 磁盘缓存上限 50MB
+    options.add_argument('--disk-cache-size=52428800')
     if USE_PERSISTENT_PROFILE:
         os.makedirs(MW_PROFILE_DIR, exist_ok=True)
         options.add_argument(f'--user-data-dir={os.path.abspath(MW_PROFILE_DIR)}')
@@ -702,6 +700,8 @@ def create_driver(headless=True):
 
 
 def is_driver_alive(driver):
+    if driver is None:
+        return False
     try:
         _ = driver.current_url
         return True
@@ -728,7 +728,6 @@ def load_page(driver, url):
 
 
 def detect_body_symbol_type(driver):
-    """读取页面 body 上的 symbol--xxx 类型（如 index / currency），失败返回 None"""
     try:
         bc = driver.execute_script("return document.body ? (document.body.className || '') : '';") or ''
     except WebDriverException:
@@ -817,7 +816,6 @@ return { data: out };
 
 
 def _wait_loop(driver, timeout, headless, state_fn, timeout_msg, expect_type=None):
-    """通用等待循环：state_fn() 返回 ready/notfound/mismatch/captcha/loading"""
     deadline = time.time() + timeout
     captcha_notified = False
     while True:
@@ -831,8 +829,7 @@ def _wait_loop(driver, timeout, headless, state_fn, timeout_msg, expect_type=Non
             actual = detect_body_symbol_type(driver)
             final_url = driver.current_url
             raise SymbolNotFoundError(
-                f"页面品种类型为 '{actual or '?'}'，与预期 '{expect_type or '?'}' 不符"
-                f"（被重定向到其他类型页面）: {final_url}",
+                f"页面品种类型为 '{actual or '?'}'，与预期 '{expect_type or '?'}' 不符: {final_url}",
                 actual_type=actual, final_url=final_url)
         if state == 'captcha':
             if headless:
@@ -853,7 +850,6 @@ def wait_for_table(driver, timeout, headless):
 
 
 def extract_rows(driver, symbol):
-    """返回 [(date, name, price, volume, open, high, low), ...]，按日期降序"""
     result = driver.execute_script(EXTRACT_JS, MAX_ROWS_TO_EXTRACT)
     if not isinstance(result, dict):
         raise ScrapeError("JS 返回结果异常")
@@ -871,11 +867,6 @@ def extract_rows(driver, symbol):
 
 
 def select_row(rows, last_valid_date):
-    """
-    返回 (selected_row 或 None, 提示信息 或 None)
-    1. 存在日期 == last_valid_date 的行 -> 直接使用
-    2. 否则按 STALE_DATA_POLICY 处理（默认与 YF_Today 一致：用最新一行并改日期）
-    """
     if not rows:
         return None, "无有效数据"
     if not last_valid_date:
@@ -892,7 +883,7 @@ def select_row(rows, last_valid_date):
     return fixed, f"网页最新日期 {row0[0]} {relation}预期日期 {last_valid_date}，且无匹配行，使用最新数据并修改日期为 {last_valid_date} 写入。"
 
 
-# ================= 6. 页面解析：行情概览页 (Bonds/Currencies/Crypto/Indices/Commodities) =================
+# ================= 6. 页面解析：行情概览页 =================
 
 QUOTE_COMMON_JS = JS_COMMON + r"""
 function qText(el) { return el ? (el.textContent || '').replace(/\s+/g, ' ').trim() : ''; }
@@ -906,7 +897,6 @@ function qNum(s) {
 function qScope() { return document.querySelector('.element--intraday') || document; }
 function qPrice() {
     const scope = qScope();
-    // 兼容 intraday__price（BEM 双下划线）与 intraday_price 两种写法
     const h2 = scope.querySelector('h2[class*="intraday"][class*="price"]')
             || document.querySelector('h2[class*="intraday"][class*="price"]');
     if (h2) {
@@ -989,10 +979,6 @@ def extract_quote(driver):
 
 
 def build_quote_row(symbol, handler, quote, last_valid_date):
-    """
-    返回 (row 或 None, 提示信息 或 None)
-    写入日期规则：统一为最近有效开盘日（与表格型分组一致）；页面时间仅用于"过期"校验。
-    """
     price = float(quote["price"])
     if not handler.get("allow_non_positive") and price <= 0:
         raise ScrapeError(f"价格异常: {quote.get('price_raw')}")
@@ -1023,7 +1009,6 @@ def build_quote_row(symbol, handler, quote, last_valid_date):
 
 
 def check_price_sanity(table_name, name, date_str, price):
-    """返回 (是否通过, 说明)"""
     prev = get_last_db_price(DB_PATH, table_name, name, date_str)
     if prev is None or prev == 0:
         return True, None
@@ -1046,20 +1031,20 @@ def build_task_list(tasks_dict, only_groups=None):
         if handler is None:
             unknown_pending[group] = len(symbols)
             continue
-        for sym in dict.fromkeys(symbols):  # 去重且保持顺序
+        for sym in dict.fromkeys(symbols):
             task_list.append((sym, group, handler))
     return task_list, unknown_pending
 
 
 def run_single_url(driver, ctx, url, symbol, group, handler, last_valid_date, opts, expect_type=None):
-    """
-    对单个 URL 执行抓取（含重试）。返回 (outcome, driver)
-    outcome: success / skipped / not_found / failed
-    """
     headless = opts["headless"]
     table_type = get_table_type(group)
 
     for attempt in range(1, MAX_RETRIES + 1):
+        if driver is None:
+            ctx["aborted"] = True
+            return "failed", None
+
         try:
             load_page(driver, url)
             page_info = ""
@@ -1084,6 +1069,16 @@ def run_single_url(driver, ctx, url, symbol, group, handler, last_valid_date, op
             if selected_row is None:
                 return "skipped", driver
 
+            # 【新增核心步骤】比较与前一天的 price，超过 10% 则输出 symbol 到 wrong.txt
+            record_wrong_symbol_if_exceeded(
+                group=group,
+                symbol=symbol,
+                target_date=selected_row[0],
+                new_price=selected_row[2],
+                dry_run=opts["dry_run"]
+            )
+
+            # 行情概览类原有的合理性兜底校验
             if opts["sanity"] and handler.get("sanity"):
                 ok, msg = check_price_sanity(group, symbol, selected_row[0], selected_row[2])
                 if not ok:
@@ -1180,10 +1175,13 @@ def scrape_marketwatch(headless=True, only_groups=None, dry_run=False, sanity=Tr
     try:
         pbar = tqdm(task_list, desc="总体进度", position=0)
         for idx, (symbol, group, handler) in enumerate(pbar):
+            if driver is None or ctx["aborted"]:
+                break
+
             candidates = resolve_mw_candidates(symbol, group, handler, alias_to_symbol, mw_overrides)
             if not candidates:
                 tqdm.write(f"❓ [{symbol}] 分组 {group} 无法推导 MarketWatch 地址，"
-                           f"请在 Symbol_mapping_mw.json 中添加，例如 {{\"{group}\": {{\"{symbol}\": \"xxx\"}}}}")
+                           f"请在 Symbol_mapping_mw.json 中添加。")
                 stats["not_found"].append(f"{group}:{symbol}")
                 continue
 
@@ -1205,17 +1203,14 @@ def scrape_marketwatch(headless=True, only_groups=None, dry_run=False, sanity=Tr
                     time.sleep(random.uniform(*REQUEST_DELAY_RANGE))
 
             if outcome == "not_found":
-                tqdm.write(f"   [{symbol}] 所有候选地址均未找到（{', '.join(labels)}），"
-                           f"可在 Symbol_mapping_mw.json 中添加映射。")
+                tqdm.write(f"   [{symbol}] 所有候选地址均未找到（{', '.join(labels)}），可在 Symbol_mapping_mw.json 中添加映射。")
                 for hint in dict.fromkeys(ctx["mismatch_hints"]):
-                    tqdm.write(f"   💡 页面被重定向到其他品种类型。若确认该页面就是目标品种（请用 --dry-run 核对页面名称），"
-                               f"可添加映射: {{\"{group}\": {{\"{symbol}\": \"{hint}\"}}}}")
+                    tqdm.write(f"   💡 建议映射: {{\"{group}\": {{\"{symbol}\": \"{hint}\"}}}}")
             stats[outcome].append(f"{group}:{symbol}")
 
             if ctx["aborted"]:
                 stats["aborted"] = True
-                tqdm.write("🛑 连续被反爬拦截或浏览器无法恢复，终止本轮任务。"
-                           "建议稍后使用 --headful 运行一次并手动完成验证。")
+                tqdm.write("🛑 连续被反爬拦截或浏览器无法恢复，终止本轮任务。")
                 break
 
             if idx < len(task_list) - 1:
@@ -1234,9 +1229,17 @@ def scrape_marketwatch(headless=True, only_groups=None, dry_run=False, sanity=Tr
 
 
 def run_check_yesterday_if_empty():
-    """JSON 全部清空才执行 Check_yesterday.py（与 YF_Today 行为一致）"""
+    """只有在 Sectors_empty.json 文件存在且全部清空时才执行 Check_yesterday.py"""
+    if not os.path.exists(SECTORS_JSON_PATH):
+        print(f"⚠️ 未找到任务文件 {SECTORS_JSON_PATH}，跳过执行 Check_yesterday.py。")
+        return
+
     final_tasks = load_tasks_from_json(SECTORS_JSON_PATH)
-    is_empty = all(len(v) == 0 for v in final_tasks.values()) if final_tasks else True
+    if not isinstance(final_tasks, dict):
+        print("⚠️ 无法正确读取任务 JSON，跳过执行 Check_yesterday.py。")
+        return
+
+    is_empty = all(len(v) == 0 for v in final_tasks.values())
 
     if is_empty:
         print("✅ Sectors_empty.json 已全部清空，开始执行 Check_yesterday.py...")
