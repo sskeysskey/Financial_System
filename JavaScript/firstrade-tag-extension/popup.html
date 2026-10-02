@@ -56,7 +56,9 @@
     #bridgeStatus,
     #pageStatus,
     #wlStatus,
-    #wlMsg {
+    #wlMsg,
+    #topMsg,
+    #tradeMsg {
       margin-top: 8px;
       font-size: 12px;
       color: #059669;
@@ -65,7 +67,9 @@
       white-space: pre-wrap;
     }
 
-    #wlMsg {
+    #wlMsg,
+    #topMsg,
+    #tradeMsg {
       color: #065f46;
       min-height: 4px;
     }
@@ -106,6 +110,10 @@
       color: #fff;
       border: none;
       border-radius: 4px;
+    }
+
+    .primary:hover {
+      background: #1d4ed8;
     }
 
     .danger {
@@ -152,6 +160,19 @@
       margin-top: 6px;
     }
 
+    .combo {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 6px;
+      padding: 8px;
+    }
+
+    .combo button {
+      font-weight: 600;
+      padding: 8px 4px;
+      font-size: 12px;
+    }
+
     details {
       margin-top: 8px;
       border: 1px solid #eee;
@@ -168,6 +189,17 @@
 </head>
 
 <body>
+  <!-- ==================== ⚡ 一键组合 ==================== -->
+  <div class="combo">
+    <h1>⚡ 一键组合（后台串行执行，关掉本窗口也不中断）</h1>
+    <div class="half">
+      <button id="comboCollectBtn" class="primary">📥 持仓+订单+分组归属</button>
+      <button id="comboSyncBtn" class="primary">🔄 同步Earning+变更%</button>
+    </div>
+    <div id="topMsg"></div>
+  </div>
+
+  <hr>
   <!-- ==================== ① 持仓快照 ==================== -->
   <h1>① 持仓快照（/app/positions）</h1>
   <p class="hint">覆盖式，只保留最新一次的全量快照。<b>无需先打开持仓页</b>：会自动切换/跳转/新开，完成后切回。</p>
@@ -195,8 +227,8 @@
   </div>
 
   <hr>
-  <!-- ==================== ③ 自选股一键同步（对账） ==================== -->
-  <h1>③ 自选股一键同步（/app/watchlist）</h1>
+  <!-- ==================== ③ 自选股一键同步 ==================== -->
+  <h1>③ 自选股一键同步（Earning 分组）</h1>
   <div id="wlStatus">未检测</div>
   <div id="wlMsg"></div>
   <div class="ok" id="agentBox">🤖 远程添加代理：未检测</div>
@@ -205,27 +237,27 @@
     <label for="wlMemberPassive"><b>分组归属被动同步</b>（浏览/手动增删时自动回传，图表显示「自选 [分组]」）</label>
   </div>
   <div class="half">
-    <button id="wlMemberScanBtn">🗂 扫描全部分组归属</button>
+    <button id="wlMemberScanBtn" class="primary">🗂 扫描全部分组归属</button>
     <button id="wlMemberViewBtn">📄 本机归属 JSON</button>
   </div>
 
   <div class="row">
     <label for="wlTarget"><b>目标分组</b></label>
-    <input type="text" id="wlTarget" value="ALL" placeholder="ALL" style="width:96px;font-size:12px;padding:3px;">
-    <button id="wlGroupsBtn" style="width:auto;margin-top:0;padding:3px 8px;font-size:12px;">
-      🎯 检测/切换</button>
+    <input type="text" id="wlTarget" value="Earning" placeholder="Earning"
+      style="width:96px;font-size:12px;padding:3px;">
+    <button id="wlGroupsBtn" style="width:auto;margin-top:0;padding:3px 8px;font-size:12px;">🎯 检测/切换</button>
   </div>
   <div class="row">
     <input type="checkbox" id="wlStrict" style="width:auto;">
     <label for="wlStrict"><b>严格同步</b>：分组内「不在数据源里」的标的先删掉</label>
   </div>
-  <div class="ok">流程：切到目标分组 → 比对差集 → 删多余 → 加缺失 → 复核 → 切回原分组。<br>
+  <div class="ok">流程：切到目标分组 → 比对差集 → 删多余（逐只确认、失败自动重试、结束复核）→ 加缺失 → 复核 → 切回原分组。<br>
     若分组内容与数据源<b>完全一致，则零点击直接结束</b>。<br>
     ⚠ 财报日历<b>不回退</b>：今日目标日期无数据时，严格同步会把目标分组清空（删前备份 + 5 秒倒计时可取消）。</div>
 
   <div class="row">
     <input type="checkbox" id="wlAgent" style="width:auto;">
-    <label for="wlAgent"><b>允许 Python 远程添加</b>（图表按 f 键 / 面板右键）</label>
+    <label for="wlAgent"><b>允许 Python 远程添加/删除/交易</b>（图表 f 键 / 面板右键）</label>
   </div>
   <div class="row">
     <input type="checkbox" id="wlRestore" style="width:auto;">
@@ -253,7 +285,7 @@
     <input type="checkbox" id="wlClearFirst" style="width:auto;">
     <label for="wlClearFirst">强制<b>全清重建</b>（连相同的也删，通常不需要）</label>
   </div>
-  <button id="wlRunBtn" class="primary">🚀 一键同步（切ALL → 比对 → 删多余 → 补缺失）</button>
+  <button id="wlRunBtn" class="primary">🚀 一键同步（切Earning → 比对 → 删多余 → 补缺失）</button>
   <div class="half">
     <button id="wlPauseBtn">⏸ 暂停/继续</button>
     <button id="wlStopBtn" class="danger">⏹ 停止</button>
@@ -262,6 +294,13 @@
     <button id="wlHudBtn">👁 显示进度面板</button>
     <button id="wlFailBtn">📋 复制失败清单</button>
   </div>
+
+  <div class="row">
+    <label for="wlKeepExtra" class="small">额外保留</label>
+    <input type="text" id="wlKeepExtra" placeholder="除 Earning / Wrong 外还要保留的分组，逗号分隔"
+      style="flex:1;font-size:12px;padding:3px;">
+  </div>
+  <button id="wlClearGroupsBtn" class="danger">🧹 一键清空除 Earning / Wrong 外的所有分组</button>
 
   <details>
     <summary>高级 / 排错（平时不用展开）</summary>
@@ -284,12 +323,13 @@
   </details>
 
   <hr>
-  <!-- ==================== ④ 自选股行情「变更%」 ==================== -->
-  <h1>④ 自选股行情「变更%」</h1>
-  <p class="hint">手动 = 全量覆盖写入 <code>firstrade_watchlist.json</code>；图表在「无持仓」时展示该数值。
-    与③<b>互斥且互不干扰</b>。</p>
-  <button id="wlQuoteBtn" class="primary">⬇️ 手动抓取全部变更%（自动滚屏）</button>
-  <button id="serverWlBtn">📄 查看本机 watchlist JSON</button>
+  <!-- ==================== ④ Earning 行情「变更%」 ==================== -->
+  <h1>④ Earning 分组行情「变更%」</h1>
+  <p class="hint">会<b>自动切到目标分组（默认 Earning）</b>再抓取，抓完切回原分组；全量覆盖写入
+    <code>firstrade_watchlist_earning.json</code>。图表在「无持仓」时展示该数值。
+  </p>
+  <button id="wlQuoteBtn" class="primary">⬇️ 手动抓取全部变更%（自动切 Earning + 滚屏）</button>
+  <button id="serverWlBtn">📄 查看本机 watchlist_earning JSON</button>
   <div id="bridgeStatus"></div>
 
   <div class="row">
@@ -314,6 +354,34 @@
   <div id="status"></div>
 
   <hr>
+  <!-- ==================== ⑥ 快速交易 ==================== -->
+  <h1>⑥ 快速交易（/app/watchlist 点击代码弹出）</h1>
+  <p class="hint">买 / 买买 / 买买买 → 直接<b>买进（按金额）</b>；卖卖卖 → 直接<b>卖出（按股数，读 positions JSON）</b>；
+    其它分组 → 让你选。成交后自动从勾选的分组移除（Earning / Wrong 永不自动删）。<b>按住 Alt 再点代码</b> = 网页原生行为。</p>
+  <div class="row">
+    <input type="checkbox" id="tradeEnabled" style="width:auto;">
+    <label for="tradeEnabled"><b>启用</b>：点击股票代码弹出交易层</label>
+  </div>
+  <div class="row">
+    <label for="tradeMode"><b>下单模式</b></label>
+    <select id="tradeMode">
+      <option value="dry">🧪 预演：只填表，绝不点「下单」</option>
+      <option value="confirm">✋ 下单前暂停：填好后等我点「确认下单」</option>
+      <option value="live">⚡ 实盘：点金额档立即下单</option>
+    </select>
+  </div>
+  <div class="row">
+    <input type="checkbox" id="tradeRemove" style="width:auto;">
+    <label for="tradeRemove">成交后默认勾选「从所在分组移除」</label>
+  </div>
+  <div class="row">
+    <label for="tradePresets">金额档</label>
+    <input type="text" id="tradePresets" value="1000,2000,3000" style="flex:1;font-size:12px;padding:3px;">
+  </div>
+  <button id="tradeProbeBtn">🔬 探测交易面板（只打开，不填写）</button>
+  <div id="tradeMsg"></div>
+
+  <hr>
   <!-- ==================== ⚙️ 自动抓取开关 ==================== -->
   <h1>⚙️ 自动抓取开关（各自独立，默认全关）</h1>
   <div class="row">
@@ -326,14 +394,12 @@
   </div>
   <div class="row">
     <input type="checkbox" id="autoWl" style="width:auto;">
-    <label for="autoWl">自选股 /app/watchlist 自动抓取</label>
+    <label for="autoWl">自选股 Earning 分组行情自动抓取（仅停留在 Earning 时）</label>
   </div>
-  <div class="warn">关闭时：只有手动按钮会写入本机 JSON。自选股自动抓取为<b>增量合并</b>（只写当前可见行，不会清空全表）。</div>
+  <div class="warn">关闭时：只有手动按钮会写入本机 JSON。自选股自动抓取为<b>增量合并</b>，且只在当前分组 = 目标分组时写入。</div>
 
   <hr>
-  <!-- ==================== 页面检测状态底栏 ==================== -->
   <div id="pageStatus">正在检测当前页面…</div>
-
   <p class="small" style="margin-top:8px;">图表里 <b>I</b> = 买入点显隐，<b>U</b> = 卖出点显隐，<b>X</b> = 全部浮框显隐。</p>
 
   <script src="popup.js"></script>

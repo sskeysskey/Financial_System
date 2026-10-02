@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Firstrade 股票标签助手",
-  "version": "9.0",
-  "description": "Firstrade 列表 Tag 徽章；持仓/订单(LEAN)/自选股行情回传本机 Python 图表；自选股一键同步；Python 图表远程加入/移出自选股分组；所有功能自动定位/跳转/新开 Firstrade 页面。",
+  "version": "10.0",
+  "description": "Firstrade 列表 Tag 徽章；持仓/订单/Earning 行情回传本机；自选股一键同步；分组归属；点击代码快速交易；Python 远程加入/移出/交易。",
   "permissions": [
     "storage",
     "activeTab",
@@ -30,7 +30,8 @@
         "content.js",
         "watchlist.js",
         "wl_agent.js",
-        "wl_membership.js"
+        "wl_membership.js",
+        "ft_trade.js"
       ],
       "css": [
         "content.css"

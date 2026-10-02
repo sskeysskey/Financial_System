@@ -22,7 +22,7 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 MODULES_DIR = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules")
 
 FIRSTRADE_POSITIONS_FILE = os.path.join(MODULES_DIR, "firstrade_positions.json")
-FIRSTRADE_WATCHLIST_FILE = os.path.join(MODULES_DIR, "firstrade_watchlist.json")
+FIRSTRADE_WATCHLIST_FILE = os.path.join(MODULES_DIR, "firstrade_watchlist_earning.json")
 
 FT_DEBUG = os.environ.get("FT_DEBUG", "") == "1"
 FT_SHOW_MISS = os.environ.get("FT_SHOW_MISS", "1") == "1"
@@ -386,7 +386,7 @@ def _group_color(name, theme):
         return theme['accent_red']
     if low == 'watch':
         return theme['accent_cyan']
-    if n.upper() == 'ALL':
+    if n.upper() in ('ALL', 'EARNING'):
         return theme['accent_yellow']
     return theme['accent_orange']
 

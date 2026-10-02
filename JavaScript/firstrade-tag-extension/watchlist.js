@@ -1,13 +1,22 @@
 /* ============================================================================
- * Firstrade 自选股助手 watchlist.js  v9      仅在 /app/watchlist 生效
+ * Firstrade 自选股助手 watchlist.js  v10      仅在 /app/watchlist 生效
  *
  * v9 变更（核心）:
- *   ★ 阶段0：任务开始前自动切换到「目标分组」(默认 ALL)，结束后按开关切回原分组
+ *   ★ 阶段0：任务开始前自动切换到「目标分组」，结束后按开关切回原分组
  *   ★ 增量对账(reconcile)：待加 = 源-现有；待删 = 现有-源；完全一致则零操作
  *   ★ 严格同步开关：删除分组内多余标的（竖三点菜单 → 红色「删除」项）
- *   ★ 支持按 symbol 精准删除（虚拟滚动自动寻行），不再只能删最顶行
- *   ★ row-id 去重（ag-Grid pinned 三容器重复节点）、空表/无数据覆盖层识别
+ *   ★ 支持按 symbol 精准删除（虚拟滚动自动寻行）
+ *   ★ row-id 去重、空表/无数据覆盖层识别
  *   ★ 断点续跑持久化 待删队列 + 目标分组；运行中分组被改会自动切回
+ *
+ * v10 变更:
+ *   ★ 默认目标分组改为 Earning（旧 ALL 设置自动迁移）
+ *   ★ 删除更稳：等旧菜单关闭 → 只认本行菜单 → 确认消失 → 等表格落定 → 防回滚 → 自动重试
+ *   ★ 严格同步删除后收尾复核
+ *   ★ 停止标志残留修复（仅任务运行时才认 job.stop）
+ *   ★ 新增「一键清空除保留分组外的所有分组」
+ *   ★ 行情抓取强制只抓目标分组；自动增量只在目标分组写入
+ *   ★ 新增 finishing / 交易忙碌标志，避免与快速交易冲突
  * ==========================================================================*/
 (() => {
   if (window.__FT_WATCHLIST_V9__) return;
@@ -26,7 +35,7 @@
   const SRC_LABEL = { earnings: '财报日历', sectors: 'Sectors_All', manual: '本地清单' };
 
   /* ---------------- ★ 目标分组 / 同步策略（popup 可改） ---------------- */
-  const TARGET = { group: 'ALL', strictSync: true, backToOrigin: true };
+  const TARGET = { group: 'Earning', strictSync: true, backToOrigin: true };
 
   /* ---------------- 可调参数（可用 storage.ftWlCfg 覆盖） ---------------- */
   const CFG = {
@@ -45,13 +54,16 @@
     checkpointEvery: 10,
     strictExact: true,
     scrollWait: 180,
-    /* 删除相关 */
-    clearDelay: 180,
-    clearJitter: 140,
+    /* 删除相关（v10：放慢 + 每删一只等页面落定 + 自动重试） */
+    clearDelay: 450,
+    clearJitter: 250,
     clearScrollWait: 220,
     menuTimeout: 2400,
-    removeVerifyTimeout: 2400,
-    removeVerifyTimeout2: 1600,
+    menuCloseTimeout: 1500,
+    removeVerifyTimeout: 3000,
+    removeVerifyTimeout2: 2000,
+    deleteSettle: 600,
+    deleteMaxTry: 3,
     clearFailAbort: 6,
     clearReloadEvery: 400,
     clearCountdown: 5,
@@ -421,7 +433,7 @@
 
     let guard = 0, stagnant = 0;
     while (guard++ < 4000) {
-      if (scanState.abort || job.stop) break;
+      if (scanState.abort || (job.running && job.stop)) break;
       s = scrollState();
       const before = Object.keys(buf).length;
       const atEnd = (s.top + s.clientH >= s.scrollH - 3);
@@ -446,7 +458,7 @@
     if (onProgress) onProgress(Object.keys(buf).length);
 
     /* ★ 完整滚动读取 = 天然的分组快照，回传给分组归属模块 */
-    if (!(scanState.abort || job.stop)) {
+    if (!(scanState.abort || (job.running && job.stop))) {
       try {
         const M = window.__FT_WL_MEMBER__;
         const g = groupName();
@@ -762,7 +774,7 @@
 
     let guard = 0;
     for (; ;) {
-      if (job.stop || guard++ > 4000) break;
+      if ((job.running && job.stop) || guard++ > 4000) break;
       const s = scrollState();
       if (s.top + s.clientH >= s.scrollH - 3) break;
       s.top = s.top + Math.max(160, s.clientH - 120);
@@ -778,8 +790,7 @@
       .filter(el => isVisible(el) && !el.closest(FORBIDDEN_SCOPE));
   }
 
-  function findRemoveMenuItem() {
-    const roots = menuRoots();
+  function findRemoveMenuItemIn(roots) {
     for (let i = roots.length - 1; i >= 0; i--) {
       const items = Array.from(roots[i].querySelectorAll('[role="menuitem"], [data-dropdown-menu-item]'))
         .filter(isVisible);
@@ -795,6 +806,26 @@
     }
     return null;
   }
+  function findRemoveMenuItem() { return findRemoveMenuItemIn(menuRoots()); }
+
+  const isOpenState = (el) => !!el && (el.getAttribute('aria-expanded') === 'true' || el.getAttribute('data-state') === 'open');
+
+  /* ★ v10 根因修复：只认「属于这一行三点按钮、且不是正在关闭动画中」的菜单 */
+  function menuOwnedBy(btn, root) {
+    if (!btn || !root) return false;
+    const lb = root.getAttribute('aria-labelledby');
+    if (lb && btn.id) return lb === btn.id;
+    const ctl = btn.getAttribute('aria-controls');
+    if (ctl && root.id) return ctl === root.id;
+    return isOpenState(btn);
+  }
+  const liveMenuRoots = () => menuRoots().filter(r => r.getAttribute('data-state') !== 'closed');
+  function findRemoveItemFor(btn) {
+    const roots = liveMenuRoots();
+    let own = roots.filter(r => menuOwnedBy(btn, r));
+    if (!own.length && roots.length === 1 && isOpenState(btn)) own = roots;
+    return findRemoveMenuItemIn(own);
+  }
 
   function closeMenus() {
     const roots = menuRoots();
@@ -802,10 +833,23 @@
     sendKey(document.body, 'Escape', 27);
   }
 
+  async function waitMenusClosed(timeout) {
+    const lim = timeout || RUN.menuCloseTimeout || 1500;
+    const t0 = Date.now();
+    let n = 0;
+    while (menuRoots().length && Date.now() - t0 < lim) {
+      if (liveMenuRoots().length && n % 4 === 0) closeMenus();
+      n++;
+      await sleep(100);
+    }
+    return menuRoots().length === 0;
+  }
+
   async function clickDangerConfirm() {
     const dlgs = Array.from(document.querySelectorAll(
       '[role="dialog"], [role="alertdialog"], [data-dialog-content], [data-alert-dialog-content]'
-    )).filter(el => isVisible(el) && !el.closest(FORBIDDEN_SCOPE) && !el.querySelector('[data-command-root]'));
+    )).filter(el => isVisible(el) && !el.closest(FORBIDDEN_SCOPE) && !el.querySelector('[data-command-root]') &&
+      !el.closest('#ft-trade-layer') && !el.querySelector('#quick-trade-symbol-search'));
     if (!dlgs.length) return false;
     const root = dlgs[dlgs.length - 1];
     const btns = Array.from(root.querySelectorAll('button')).filter(isVisible);
@@ -826,84 +870,102 @@
     while (Date.now() - t0 < timeout) {
       const cur = gridRowCount();
       if (before !== null && cur !== null && cur < before) return true;
-      if (!rowExists(rowId)) return true;
-      if (sym && !hasSymbolInGrid(sym)) return true;
+      if (!rowExists(rowId) && (!sym || !hasSymbolInGrid(sym))) return true;
       await sleep(120);
     }
     return false;
   }
 
-  async function keyboardRemove() {
-    const roots = menuRoots();
-    if (!roots.length) return false;
-    const root = roots[roots.length - 1];
-    for (let i = 0; i < 12; i++) {
-      const hl = root.querySelector('[data-highlighted], [data-highlighted="true"], [aria-selected="true"]');
-      if (hl && (/watchlist-(remove|delete)/i.test(hl.id || '') || /删除|移除|移出|Remove|Delete/i.test(cleanText(hl)))) {
-        sendKey(root, 'Enter', 13);
-        await sleep(220);
-        return true;
-      }
-      sendKey(root, 'ArrowDown', 40);
-      await sleep(80);
-    }
-    return false;
-  }
-
-  /* 核心删除动作：给定一行 → 打开竖三点 → 点「删除」→ 校验 */
-  async function removeViaRowMenu(tgt) {
+  /* ★ 单次删除（v10）：等旧菜单关完 → 重新定位行 → 只点本行菜单 → 确认消失 → 等表格落定 → 防回滚 */
+  async function removeCore(findTgt) {
+    await waitMenusClosed();
+    let tgt = await findTgt();
+    if (!tgt) return { status: 'missing' };
+    try { tgt.row.scrollIntoView({ block: 'nearest' }); } catch (e) { }
+    await sleep(120);
+    tgt = pickRowBySymbol(tgt.sym) || tgt;               // ag-Grid 可能已回收重建行节点
     const { btn, sym, rowId } = tgt;
     const before = gridRowCount();
 
-    try { tgt.row.scrollIntoView({ block: 'nearest' }); } catch (e) { }
-    closeMenus();
-    await sleep(90);
-
     let item = null;
-    for (let attempt = 0; attempt < 2 && !item; attempt++) {
+    for (let a = 0; a < 2 && !item; a++) {
       fireMouseSeq(btn);
-      item = await waitFor(findRemoveMenuItem, RUN.menuTimeout, 90);
+      item = await waitFor(() => findRemoveItemFor(btn), RUN.menuTimeout, 90);
       if (!item) {
         try { btn.focus(); sendKey(btn, 'Enter', 13); } catch (e) { }
-        item = await waitFor(findRemoveMenuItem, 1200, 90);
+        item = await waitFor(() => findRemoveItemFor(btn), 1200, 90);
       }
-      if (!item) { closeMenus(); await sleep(320); }
+      if (!item) await waitMenusClosed();
     }
     if (!item) {
-      closeMenus();
+      await waitMenusClosed();
       return { status: 'failed', symbol: sym, rowId, error: '未弹出操作菜单/未找到「删除」项' };
     }
-
-    fireMouseSeq(item);
-    try { item.click(); } catch (e) { }
-    await sleep(140);
-    await clickDangerConfirm();
-
-    let gone = await waitRowGone(rowId, before, RUN.removeVerifyTimeout, sym);
-    if (!gone && findRemoveMenuItem()) {
-      await keyboardRemove();
-      await clickDangerConfirm();
-      gone = await waitRowGone(rowId, before, RUN.removeVerifyTimeout2, sym);
+    const owner = btn.isConnected ? btn.closest('[row-id]') : null;
+    if (!owner || normKey(symbolFromRowId(owner.getAttribute('row-id'))) !== normKey(sym)) {
+      await waitMenusClosed();
+      return { status: 'failed', symbol: sym, rowId, error: '菜单打开期间行节点被回收（已放弃点击，防误删）' };
     }
-    closeMenus();
-    return gone
-      ? { status: 'removed', symbol: sym, rowId }
-      : { status: 'failed', symbol: sym, rowId, error: '点了删除但行未消失' };
+
+    fireMouseSeq(item);                                  // ★ 只点一次（旧版双击是隐患）
+    await sleep(220);
+    await clickDangerConfirm();
+    let gone = await waitRowGone(rowId, before, RUN.removeVerifyTimeout, sym);
+    if (!gone) {
+      const again = findRemoveItemFor(btn);
+      if (again) {
+        try { again.click(); } catch (e) { }
+        await sleep(220);
+        await clickDangerConfirm();
+        gone = await waitRowGone(rowId, before, RUN.removeVerifyTimeout2, sym);
+      }
+    }
+    await waitMenusClosed();
+    if (!gone) return { status: 'failed', symbol: sym, rowId, error: '点了删除但行未消失', clicked: true };
+
+    await waitGridSettled(2500);
+    await sleep(RUN.deleteSettle || 600);
+    if (hasSymbolInGrid(sym)) {
+      return { status: 'failed', symbol: sym, rowId, error: '删除后行又出现（服务器可能拒绝了过快的请求）', clicked: true };
+    }
+    return { status: 'removed', symbol: sym, rowId };
   }
 
   async function deleteTopRow(skip) {
     const s = scrollState();
     if (s.top > 2) { s.top = 0; await sleep(RUN.clearScrollWait); }
-    let tgt = firstDeletableRow(skip);
-    if (!tgt) { await sleep(350); tgt = firstDeletableRow(skip); }
-    if (!tgt) return { status: 'empty' };
-    return removeViaRowMenu(tgt);
+    const find = async () => {
+      let t = firstDeletableRow(skip);
+      if (!t) { await sleep(350); t = firstDeletableRow(skip); }
+      return t;
+    };
+    let r = null;
+    const tries = RUN.deleteMaxTry || 3;
+    for (let i = 0; i < tries; i++) {
+      r = await removeCore(find);
+      if (r.status === 'missing') return { status: 'empty' };
+      if (r.status === 'removed') return r;
+      await sleep(900 + i * 900);
+    }
+    return r;
   }
 
   async function deleteSymbol(sym) {
-    const tgt = await locateRow(sym);
-    if (!tgt) return { status: 'missing', symbol: sym };
-    return removeViaRowMenu(tgt);
+    let last = null, clicked = false;
+    const tries = RUN.deleteMaxTry || 3;
+    for (let i = 0; i < tries; i++) {
+      if (job.running && job.stop) return { status: 'aborted', symbol: sym };
+      const r = await removeCore(() => locateRow(sym));
+      if (r.status === 'removed') return r;
+      if (r.status === 'missing') {
+        return clicked ? { status: 'removed', symbol: sym, late: true } : { status: 'missing', symbol: sym };
+      }
+      clicked = clicked || !!r.clicked;
+      last = r;
+      log(`删除 ${sym} 第 ${i + 1} 次失败：${r.error}，稍后重试`);
+      await sleep(900 + i * 900);
+    }
+    return last || { status: 'failed', symbol: sym, error: '未知' };
   }
 
   /* ---------------- 备份 ---------------- */
@@ -935,16 +997,17 @@
   }
 
   /* ---------------- 删除阶段 A：清空整个分组 ---------------- */
-  async function runClearAllPhase() {
+  async function runClearAllPhase(skipCountdown) {
     job.phase = 'clear';
     job.clearStartedAt = job.clearStartedAt || Date.now();
     job.clearTotal = (job.cleared || 0) + (dataRowsTotal() || 0);
+    if ((dataRowsTotal() || 0) <= 0 && !firstDeletableRow()) return 'done';
 
-    if (job.clearTotal <= 0 && !firstDeletableRow()) return 'done';
-
-    for (let i = RUN.clearCountdown; i > 0 && !job.stop; i--) {
-      renderHud(`⚠️ ${i} 秒后开始清空「${job.group || '当前分组'}」内 ${job.clearTotal} 只…点「停止」可取消`);
-      await sleep(1000);
+    if (!skipCountdown) {
+      for (let i = RUN.clearCountdown; i > 0 && !job.stop; i--) {
+        renderHud(`⚠️ ${i} 秒后开始清空「${job.group || '当前分组'}」内 ${dataRowsTotal()} 只…点「停止」可取消`);
+        await sleep(1000);
+      }
     }
     if (job.stop) return 'stopped';
 
@@ -985,17 +1048,15 @@
         location.reload();
         return 'reload';
       }
-
       await sleep(RUN.clearDelay + Math.random() * RUN.clearJitter);
     }
-
-    closeMenus();
+    await waitMenusClosed();
     job.clearSkip.clear();
     job.removeQueue = [];
     return job.stop ? 'stopped' : 'done';
   }
 
-  /* ---------------- 删除阶段 B：只删指定 symbol（严格同步用） ---------------- */
+  /* ---------------- 删除阶段 B：只删指定 symbol（严格同步用，v10 逐只确认 + 收尾复核） ---------------- */
   async function runRemovePhase(list, silentCountdown) {
     job.phase = 'clear';
     job.removeQueue = (list || []).slice();
@@ -1011,7 +1072,17 @@
     }
     if (job.stop) return 'stopped';
 
-    let consec = 0;
+    const state = Object.create(null);
+    const mark = (sym, st, err) => {
+      const prev = state[sym];
+      if (prev === 'removed') job.cleared--;
+      if (prev === 'failed') job.clearFailed = job.clearFailed.filter(f => f.symbol !== sym);
+      state[sym] = st;
+      if (st === 'removed') job.cleared++;
+      if (st === 'failed') { job.clearFailed.push({ symbol: sym, error: err || '未知' }); job.lastError = err || ''; }
+    };
+
+    let consec = 0, n = 0;
     while (job.removeQueue.length && !job.stop) {
       while (job.paused && !job.stop) { renderHud(); await sleep(400); }
       if (job.stop) break;
@@ -1020,15 +1091,15 @@
       const sym = job.removeQueue[0];
       job.current = sym;
       renderHud();
-
       const r = await deleteSymbol(sym);
+      if (r.status === 'aborted') break;
       job.removeQueue.shift();
+      n++;
 
-      if (r.status === 'removed') { job.cleared++; consec = 0; }
-      else if (r.status === 'missing') { consec = 0; log('待删标的已不在表内', sym); }
+      if (r.status === 'removed') { mark(sym, 'removed'); consec = 0; }
+      else if (r.status === 'missing') { mark(sym, 'missing'); consec = 0; log('待删标的已不在表内', sym); }
       else {
-        job.clearFailed.push({ symbol: sym, error: r.error || '未知' });
-        job.lastError = r.error || '';
+        mark(sym, 'failed', r.error);
         consec++;
         if (consec >= RUN.clearFailAbort) {
           job.paused = true; consec = 0;
@@ -1037,11 +1108,36 @@
         }
       }
       renderHud();
-
-      if ((job.cleared + job.clearFailed.length) % RUN.checkpointEvery === 0) await persist(true);
+      if (n % RUN.checkpointEvery === 0) await persist(true);
       await sleep(RUN.clearDelay + Math.random() * RUN.clearJitter);
     }
-    closeMenus();
+
+    /* ★ 收尾复核：重新读整组，凡「点过删除」的标的仍在表内 → 再删（最多 2 轮） */
+    for (let round = 0; round < 2 && !job.stop; round++) {
+      const targets = Object.keys(state).filter(s => state[s] !== 'missing');
+      if (!targets.length) break;
+      renderHud(`复核删除结果（第 ${round + 1} 轮）…`);
+      await waitMenusClosed();
+      await sleep(800);
+      const have = await collectWatchlist();
+      const haveSet = new Set(Object.keys(have).map(normKey));
+      targets.filter(s => !haveSet.has(normKey(s)) && state[s] === 'failed').forEach(s => mark(s, 'removed'));
+      const still = targets.filter(s => haveSet.has(normKey(s)));
+      if (!still.length) break;
+      for (const sym of still) {
+        if (job.stop) break;
+        if (!(await guardGroup())) break;
+        job.current = sym;
+        renderHud(`复核：${sym} 仍在表内，重新删除…`);
+        await sleep(800);
+        const r = await deleteSymbol(sym);
+        if (r.status === 'removed' || r.status === 'missing') mark(sym, 'removed');
+        else if (r.status !== 'aborted') mark(sym, 'failed', r.error);
+        renderHud();
+        await sleep(RUN.clearDelay + Math.random() * RUN.clearJitter);
+      }
+    }
+    await waitMenusClosed();
     return job.stop ? 'stopped' : 'done';
   }
 
@@ -1172,34 +1268,37 @@
 
   /* ================= 任务状态机 ================= */
   const job = {
-    running: false, paused: false, stop: false,
+    running: false, paused: false, stop: false, finishing: false,
     phase: 'idle', clearFirst: false, clearOnly: false,
-    strictSync: true, targetGroup: 'ALL', originGroup: '',
+    strictSync: true, targetGroup: 'Earning', originGroup: '',
     group: '', pass: 1, total: 0, done: 0, added: 0,
     failed: [], queue: [], current: '', lastError: '',
     cleared: 0, clearTotal: 0, clearFailed: [], clearSkip: new Set(),
     removeQueue: [], backedUp: false,
     clearStartedAt: 0, addStartedAt: 0,
     startedAt: 0, sinceReload: 0, sinceReopen: 0,
-    srcFrom: '', srcCount: 0, haveCount: 0
+    srcFrom: '', srcCount: 0, haveCount: 0,
+    multi: null, skipQuotes: false
   };
 
   const scanState = { running: false, abort: false };
 
   function syncBusy() {
-    window.__FT_AUTOMATION__ = !!(job.running || scanState.running || window.__FT_AGENT_BUSY__);
+    window.__FT_AUTOMATION__ = !!(job.running || job.finishing || scanState.running ||
+      window.__FT_AGENT_BUSY__ || window.__FT_TRADE_BUSY__);
   }
 
   async function persist(autoResume) {
     await storeSet({
       [JOB_KEY]: {
-        v: 9, phase: job.phase, clearFirst: job.clearFirst, clearOnly: job.clearOnly,
+        v: 10, phase: job.phase, clearFirst: job.clearFirst, clearOnly: job.clearOnly,
         strictSync: job.strictSync, targetGroup: job.targetGroup, originGroup: job.originGroup,
         group: job.group, pass: job.pass, total: job.total, done: job.done,
         added: job.added, failed: job.failed, queue: job.queue, src: SRC.mode,
         cleared: job.cleared, clearTotal: job.clearTotal, clearFailed: job.clearFailed,
-        removeQueue: job.removeQueue, backedUp: job.backedUp,
-        autoResume: !!autoResume, ts: Date.now()
+        removeQueue: job.removeQueue, backedUp: job.backedUp, skipQuotes: job.skipQuotes,
+        autoResume: !!autoResume && !job.multi,          // ★ 多分组清空不做断点续跑
+        ts: Date.now()
       }
     });
   }
@@ -1261,7 +1360,7 @@
   /* ================= 一键 pipeline ================= */
   function resetJob(opts) {
     opts = opts || {};
-    job.running = true; job.paused = false; job.stop = false;
+    job.running = true; job.paused = false; job.stop = false; job.finishing = false;
     job.phase = 'idle';
     job.clearFirst = !!opts.clearFirst;
     job.clearOnly = !!opts.clearOnly;
@@ -1276,6 +1375,8 @@
     job.clearStartedAt = 0; job.addStartedAt = 0;
     job.startedAt = Date.now(); job.sinceReload = 0; job.sinceReopen = 0;
     job.srcFrom = ''; job.srcCount = 0; job.haveCount = 0;
+    job.multi = null;
+    job.skipQuotes = !!opts.skipQuotes;
     RUN = Object.assign({}, CFG);
     scanState.abort = false;
     syncBusy();
@@ -1284,7 +1385,8 @@
   async function startJob(opts) {
     opts = opts || {};
     if (!isWatchlistPage()) return { ok: false, error: '当前不在 /app/watchlist 页面' };
-    if (job.running) return { ok: false, error: '任务已在运行中' };
+    if (job.running || job.finishing) return { ok: false, error: '任务已在运行中' };
+    if (window.__FT_TRADE_BUSY__) return { ok: false, error: '快速交易进行中，请稍后' };
     if (scanState.running) return { ok: false, error: '行情抓取进行中，请稍后再启动' };
 
     const pageReady = document.querySelector('.ag-root, [role="grid"], .ag-body-viewport, main, [data-select-trigger]');
@@ -1314,7 +1416,7 @@
   async function runPipeline(opts) {
     opts = opts || {};
 
-    /* ---------- 阶段 0：切到目标分组（如 ALL） ---------- */
+    /* ---------- 阶段 0：切到目标分组 ---------- */
     job.phase = 'group';
     if (!job.originGroup) job.originGroup = groupName();
     const want = job.targetGroup;
@@ -1521,31 +1623,112 @@
   }
 
   async function finishJob() {
+    job.finishing = true;
     job.running = false;
     job.current = '';
     job.phase = 'idle';
     syncBusy();
-    await persist(false);
-
-    const bits = [];
-    if (job.cleared > 0 || job.clearFailed.length) bits.push(`删除 ${job.cleared}（失败 ${job.clearFailed.length}）`);
-    if (!job.clearOnly) bits.push(`新增 ${job.added}（失败 ${job.failed.length}）`);
-    const summary = bits.join(' ｜ ') || '无操作';
-    renderHud(job.stop ? '⏹ 已手动停止：' + summary : `✅ 完成：${summary}`);
-    toast(job.stop ? '⏹ 自选股任务已停止' : `✅ 自选股任务完成：${summary}`);
-
-    /* 先在目标分组抓一次「变更%」，再切回原分组 */
-    if (!job.stop && !job.clearOnly) { try { await fullScanQuotes(true); } catch (e) { } }
-    else if (!job.stop && job.clearOnly) { try { await collectWatchlist(); } catch (e) { } }   // ★ 清空后刷新归属
-
     try {
-      if (TARGET.backToOrigin && job.originGroup &&
-        normGroup(groupName()) !== normGroup(job.originGroup)) {
-        renderHud(`正在切回原分组「${job.originGroup}」…`);
-        await switchGroup(job.originGroup);
-        renderHud(`✅ ${summary}｜已切回「${job.originGroup}」`);
+      await persist(false);
+      const bits = [];
+      if (job.multi) bits.push(`清空分组 ${job.multi.join('/')}`);
+      if (job.cleared > 0 || job.clearFailed.length) bits.push(`删除 ${job.cleared}（失败 ${job.clearFailed.length}）`);
+      if (!job.clearOnly) bits.push(`新增 ${job.added}（失败 ${job.failed.length}）`);
+      const summary = bits.join(' ｜ ') || '无操作';
+      renderHud(job.stop ? '⏹ 已手动停止：' + summary : `✅ 完成：${summary}`);
+      toast(job.stop ? '⏹ 自选股任务已停止' : `✅ 自选股任务完成：${summary}`);
+
+      if (!job.stop && !job.clearOnly && !job.skipQuotes) { try { await fullScanQuotes(true); } catch (e) { } }
+      else if (!job.stop && job.clearOnly && !job.multi) { try { await collectWatchlist(); } catch (e) { } }
+
+      try {
+        if (TARGET.backToOrigin && job.originGroup && normGroup(groupName()) !== normGroup(job.originGroup)) {
+          renderHud(`正在切回原分组「${job.originGroup}」…`);
+          await switchGroup(job.originGroup);
+          renderHud(`✅ ${summary}｜已切回「${job.originGroup}」`);
+        }
+      } catch (e) { log('切回原分组失败', e); }
+    } finally {
+      job.finishing = false;
+      syncBusy();
+    }
+  }
+
+  /* ================= ★ 一键清空除保留分组外的所有分组 ================= */
+  const NOT_A_GROUP_RE = /新建|创建|管理|编辑|重命名|删除|new|create|manage|edit|rename|delete/i;
+  const ALWAYS_KEEP = ['Earning', 'Wrong'];
+  const stripCount = (s) => String(s || '').replace(/\u00a0/g, ' ').replace(/[（(]\s*\d+\s*[）)]\s*$/, '').trim();
+
+  function snapshotEmpty(g) {
+    try { const M = window.__FT_WL_MEMBER__; if (M && g) M.snapshot(g, [], true, 'clear_groups'); } catch (e) { }
+  }
+  function buildMultiBackup(b) {
+    const all = [].concat(...Object.values(b));
+    return { group: Object.keys(b).join(' + '), ts: Date.now(), count: all.length, src: 'clear_groups', symbols: all, groups: b };
+  }
+
+  async function startClearGroups(opts) {
+    opts = opts || {};
+    if (!isWatchlistPage()) return { ok: false, error: '当前不在 /app/watchlist 页面' };
+    if (job.running || job.finishing) return { ok: false, error: '已有自选股任务在运行中' };
+    if (scanState.running || window.__FT_AGENT_BUSY__ || window.__FT_TRADE_BUSY__) {
+      return { ok: false, error: '行情抓取/远程任务/交易进行中，请稍后' };
+    }
+    const keep = Array.from(new Set(ALWAYS_KEEP.concat(Array.isArray(opts.keep) ? opts.keep : [])
+      .map(s => String(s).trim()).filter(Boolean)));
+    const keepN = new Set(keep.map(normGroup));
+    const lr = await listGroupOptions();
+    await sleep(300);
+    if (!lr.ok) return { ok: false, error: '读不到页面分组列表：' + (lr.error || '下拉框没有选项') };
+    const groups = Array.from(new Set((lr.options || []).map(stripCount).filter(Boolean)))
+      .filter(n => !NOT_A_GROUP_RE.test(n) && !keepN.has(normGroup(n)));
+    if (!groups.length) return { ok: true, started: false, keep, groups: [], message: '除保留分组外没有其它分组，无需清空' };
+
+    resetJob({ clearOnly: true, targetGroup: groups[0], strictSync: false });
+    job.multi = groups.slice();
+    RUN.clearReloadEvery = 0;
+    ensureHud('job');
+    renderHud(`准备清空 ${groups.length} 个分组：${groups.join(' / ')}`);
+    runMultiClear(groups, keep).catch(e => {
+      job.lastError = String((e && e.message) || e);
+      renderHud('❌ ' + job.lastError);
+      finishJob();
+    });
+    return { ok: true, started: true, groups, keep };
+  }
+
+  async function runMultiClear(groups, keep) {
+    for (let i = RUN.clearCountdown; i > 0 && !job.stop; i--) {
+      renderHud(`⚠️ ${i} 秒后依次清空：${groups.join(' / ')}（保留 ${keep.join(' / ')}）…点「停止」可取消`);
+      await sleep(1000);
+    }
+    const backups = {};
+    for (let gi = 0; gi < groups.length && !job.stop; gi++) {
+      const g = groups[gi];
+      job.phase = 'group';
+      job.targetGroup = g;
+      renderHud(`(${gi + 1}/${groups.length}) 切换到「${g}」…`);
+      const sr = await switchGroup(g);
+      if (!sr.ok) {
+        job.clearFailed.push({ symbol: `[${g}]`, error: sr.error || '切换失败' });
+        job.lastError = sr.error || '';
+        continue;
       }
-    } catch (e) { log('切回原分组失败', e); }
+      job.group = groupName() || g;
+      await waitGridSettled();
+      await sleep(300);
+      if ((dataRowsTotal() || 0) === 0 && !firstDeletableRow()) { snapshotEmpty(job.group); continue; }
+      try {
+        renderHud(`(${gi + 1}/${groups.length}) 备份「${job.group}」…`);
+        backups[job.group] = Object.keys(await collectWatchlist());
+        await storeSet({ [BACKUP_KEY]: buildMultiBackup(backups) });
+      } catch (e) { log('备份失败', e); }
+      if (job.stop) break;
+      const r = await runClearAllPhase(true);
+      if (r === 'stopped') break;
+      if ((dataRowsTotal() || 0) === 0) snapshotEmpty(job.group);
+    }
+    return finishJob();
   }
 
   async function resumeJob(saved) {
@@ -1576,34 +1759,54 @@
     });
   }
 
-  /* ================= 变更% 快照 ================= */
+  /* ================= 变更% 快照（v10：强制只抓目标分组，默认 Earning） ================= */
   async function fullScanQuotes(silent) {
     if (!isWatchlistPage()) return { ok: false, error: '当前不在 /app/watchlist 页面' };
+    if (!silent) await waitFor(() => !job.finishing, 30000, 300);
     if (!silent && job.running) return { ok: false, error: '批量任务进行中，请先停止后再抓行情' };
+    if (!silent && window.__FT_TRADE_BUSY__) return { ok: false, error: '快速交易进行中，请稍后' };
     if (scanState.running) return { ok: false, error: '已有抓取任务在进行中' };
 
     scanState.running = true;
     scanState.abort = false;
     syncBusy();
+    const want = TARGET.group || 'Earning';
+    const origin = groupName();
+    let switched = false;
     try {
-      if (!silent) renderScan('正在全量抓取「变更%」…（约 1~3 分钟，请勿操作本标签页）', 'scan');
-      const buf = await collectWatchlist(n => { if (!silent) renderScan(`已抓 ${n} 只行情…`); });
-      const n = Object.keys(buf).length;
-      if (!n) {
-        if (!silent) renderScan('❌ 未抓到任何行（页面是否已加载？）');
-        return { ok: false, error: '未抓到任何行（页面是否已加载？）' };
+      if (normGroup(origin) !== normGroup(want)) {
+        if (!silent) renderScan(`正在切换到行情分组「${want}」…`, 'scan');
+        const sr = await switchGroup(want);
+        if (!sr.ok) {
+          const err = `切换到「${want}」失败：${sr.error}（为防写入错误分组的数据，已中止）`;
+          if (!silent) renderScan('❌ ' + err, 'scan');
+          return { ok: false, error: err };
+        }
+        switched = !!sr.changed;
+        await waitGridSettled();
       }
+      const g = groupName();
+      if (!silent) renderScan(`正在全量抓取「${g}」的「变更%」…（请勿操作本标签页）`, 'scan');
+      const buf = await collectWatchlist(n => { if (!silent) renderScan(`「${g}」已抓 ${n} 只行情…`); });
+      const n = Object.keys(buf).length;
       if (scanState.abort) {
         if (!silent) renderScan(`⏹ 已中止（已抓 ${n} 只，未写入本机）`);
         return { ok: false, error: '用户中止', count: n };
       }
-      const resp = await bg({ action: 'FT_SYNC_WATCHLIST', payload: buf, overwrite: true });
-      if (!silent) {
-        renderScan(resp.ok ? `✅ 已覆盖写入 ${n} 只行情` : ('❌ 写入失败: ' + resp.error));
-        toast(resp.ok ? `✅ 已保存 ${n} 只自选股「变更%」` : `❌ 写入失败`);
+      if (!n && !gridSaysEmpty()) {
+        if (!silent) renderScan('❌ 未抓到任何行（页面是否已加载？）');
+        return { ok: false, error: '未抓到任何行（页面是否已加载？）' };
       }
-      return { ok: !!resp.ok, count: n, server: resp };
+      const resp = await bg({ action: 'FT_SYNC_WATCHLIST', payload: buf, overwrite: true, group: g });
+      if (!silent) {
+        renderScan(resp.ok ? `✅ 「${g}」已覆盖写入 ${n} 只行情` : ('❌ 写入失败: ' + resp.error));
+        toast(resp.ok ? `✅ 已保存「${g}」${n} 只「变更%」` : `❌ 写入失败`);
+      }
+      return { ok: !!resp.ok, count: n, server: resp, group: g };
     } finally {
+      if (switched && !silent && TARGET.backToOrigin && origin) {
+        try { renderScan(`正在切回原分组「${origin}」…`); await switchGroup(origin); } catch (e) { }
+      }
       scanState.running = false;
       syncBusy();
     }
@@ -1614,10 +1817,12 @@
     if (!AUTO_WATCHLIST) return;
     clearTimeout(autoTimer);
     autoTimer = setTimeout(async () => {
-      if (!AUTO_WATCHLIST || !isWatchlistPage() || job.running || scanState.running) return;
+      if (!AUTO_WATCHLIST || !isWatchlistPage() || job.running || scanState.running || window.__FT_AUTOMATION__) return;
+      const g = groupName();
+      if (!g || normGroup(g) !== normGroup(TARGET.group)) return;     // ★ 只在 Earning 分组时增量写
       const buf = scrapeRows(Object.create(null));
       if (!Object.keys(buf).length) return;
-      const r = await bg({ action: 'FT_SYNC_WATCHLIST', payload: buf, overwrite: false });
+      const r = await bg({ action: 'FT_SYNC_WATCHLIST', payload: buf, overwrite: false, group: g });
       log('自动增量同步自选股', Object.keys(buf).length, r.ok ? 'ok' : r.error);
     }, delay);
   }
@@ -1636,8 +1841,10 @@
         const a = parseInt(res.ftWlAhead, 10);
         SRC.back = Number.isFinite(b) ? Math.max(0, b) : 1;
         SRC.ahead = Number.isFinite(a) ? Math.max(0, a) : 0;
-        TARGET.group = (res.ftWlTargetGroup === undefined || res.ftWlTargetGroup === null ||
-          String(res.ftWlTargetGroup).trim() === '') ? 'ALL' : String(res.ftWlTargetGroup).trim();
+        let tg = (res.ftWlTargetGroup === undefined || res.ftWlTargetGroup === null ||
+          String(res.ftWlTargetGroup).trim() === '') ? 'Earning' : String(res.ftWlTargetGroup).trim();
+        if (normGroup(tg) === 'ALL') tg = 'Earning';          // ★ 旧设置迁移
+        TARGET.group = tg;
         TARGET.strictSync = res.ftWlStrictSync !== false;
         TARGET.backToOrigin = res.ftWlRestoreGroup !== false;
         if (!job.running) RUN = Object.assign({}, CFG);
@@ -1715,6 +1922,7 @@
         failed: job.failed.length, toAdd: job.queue.length, toRemove: job.removeQueue.length,
         cleared: job.cleared, clearTotal: job.clearTotal, clearFailed: job.clearFailed.length,
         srcFrom: job.srcFrom, srcCount: job.srcCount, haveCount: job.haveCount,
+        finishing: job.finishing, multi: job.multi,
         lastError: job.lastError
       });
       return;
@@ -1723,7 +1931,7 @@
     /* ★ 列出/切换分组（popup 的「检测/切换」按钮） */
     if (msg.action === 'FT_WL_GROUPS_PROBE') {
       (async () => {
-        if (job.running) { sendResponse({ ok: false, error: '任务进行中，勿手动切分组' }); return; }
+        if (job.running || job.finishing) { sendResponse({ ok: false, error: '任务进行中，勿手动切分组' }); return; }
         const r = await listGroupOptions();
         let switched = null;
         if (msg.switchTo) {
@@ -1841,8 +2049,13 @@
     if (msg.action === 'FT_WL_START') {
       startJob({
         clearFirst: !!msg.clearFirst, clearOnly: !!msg.clearOnly,
-        strictSync: msg.strictSync, targetGroup: msg.targetGroup
+        strictSync: msg.strictSync, targetGroup: msg.targetGroup, skipQuotes: !!msg.skipQuotes
       }).then(r => sendResponse(r)).catch(e => sendResponse({ ok: false, error: String(e) }));
+      return true;
+    }
+
+    if (msg.action === 'FT_WL_CLEAR_GROUPS') {
+      startClearGroups({ keep: msg.keep }).then(r => sendResponse(r)).catch(e => sendResponse({ ok: false, error: String(e) }));
       return true;
     }
 
@@ -1867,30 +2080,18 @@
 
   /* ================= 对外 API（wl_agent.js 复用） ================= */
   window.__FT_WL_API__ = {
-    version: 9.0,
-    isWatchlistPage,
-    groupName,
-    normGroup,
-    switchGroup,          // ★ 供 wl_agent.js 复用，避免两份实现
-    listGroupOptions,
-    waitGridSettled,
-    gridRowCount,
-    dataRowsTotal,
-    gridSaysEmpty,
-    normKey,
-    collectWatchlist,
-    addOneSymbol,
-    deleteSymbol,
-    cleanNavSearch,
-    pressEscape,
-    ensureHud,
-    renderScan,
-    toast,
-    isBusy: () => !!(job.running || scanState.running),
+    version: 10.0,
+    isWatchlistPage, groupName, normGroup, switchGroup, listGroupOptions,
+    waitGridSettled, gridRowCount, dataRowsTotal, gridSaysEmpty, normKey,
+    collectWatchlist, addOneSymbol, deleteSymbol, hasSymbolInGrid,
+    cleanNavSearch, pressEscape, ensureHud, renderScan, toast,
+    targetGroup: () => TARGET.group,
+    isBusy: () => !!(job.running || job.finishing || scanState.running),
     clearStopFlags: () => { if (!job.running) job.stop = false; scanState.abort = false; },
-    setExternalBusy: (v) => { window.__FT_AGENT_BUSY__ = !!v; syncBusy(); }
+    setExternalBusy: (v) => { window.__FT_AGENT_BUSY__ = !!v; syncBusy(); },
+    setTradeBusy: (v) => { window.__FT_TRADE_BUSY__ = !!v; syncBusy(); }
   };
 
   bootstrap();
-  console.log(LOG, `watchlist.js v9 就绪（isWatchlist=${isWatchlistPage()}，目标分组默认 ${TARGET.group}）`);
+  console.log(LOG, `watchlist.js v10 就绪（isWatchlist=${isWatchlistPage()}，目标分组默认 ${TARGET.group}）`);
 })();

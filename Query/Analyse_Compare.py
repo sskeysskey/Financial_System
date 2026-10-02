@@ -115,7 +115,6 @@ def clean_backups_compare(directory, prefix, days=4, exts=None):
                 date_part = date_part[1:]
                 
             file_date = datetime.strptime(date_part, '%y%m%d')
-            file_date = file_date.replace(year=now.year)
             
             if file_date < cutoff:
                 file_path = os.path.join(directory, filename)
@@ -664,7 +663,7 @@ def execute_compare_process():
 
 # --- 全局路径配置 (Analyse) 动态化 ---
 DB_PATH_ANALYSE = os.path.join(BASE_CODING_DIR, 'Database/Finance.db')
-BLACKLIST_PATH = os.path.join(BASE_CODING_DIR, 'Financial_System/Modules/blacklist.json')
+BLACKLIST_PATH = os.path.join(BASE_CODING_DIR, 'Financial_System/Modules/Blacklist.json')
 STOCK_SPLITS_FILE = os.path.join(BASE_CODING_DIR, 'News/Stock_Splits_next.txt')
 ERROR_LOG_FILE_ANALYSE = os.path.join(BASE_CODING_DIR, 'News/Today_error.txt')
 
@@ -677,6 +676,18 @@ DOWNLOADS_DIR = os.path.join(USER_HOME, "Downloads")
 NEWS_DIR = os.path.join(BASE_CODING_DIR, "News")
 
 BLACKLIST_GLOB = set(["YNDX"])
+
+# --- 新低/新高扫描通用配置 ---
+# 新低逻辑负责的 panel 分组（每次运行会被清空后重写；panel 中其他分组不受影响）
+NEWLOW_TARGET_SECTORS = [
+    "Basic_Materials", "Communication_Services", "Consumer_Cyclical",
+    "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare",
+    "Industrials", "Real_Estate", "Technology", "Utilities"
+]
+# 历史覆盖容差：库中最早数据日期必须 <= 回溯起点 + N 天，否则该周期视为历史不足，不做判定
+HISTORY_COVERAGE_TOLERANCE_DAYS = 7
+# 浮点比较容差
+PRICE_EPS = 1e-9
 
 # --- Analyse 模块辅助函数 ---
 
@@ -693,8 +704,29 @@ def log_error_analyse(error_message):
 def log_and_print_error(error_message):
     formatted_error_message = log_error_analyse(error_message)
     print(f"注意！ {error_message}")
-    with open(ERROR_LOG_FILE_ANALYSE, 'a') as error_file:
-        error_file.write(formatted_error_message)
+    try:
+        with open(ERROR_LOG_FILE_ANALYSE, 'a', encoding='utf-8') as error_file:
+            error_file.write(formatted_error_message)
+    except Exception as e:
+        print(f"写入错误日志失败: {e}")
+
+def atomic_write_json(path, data):
+    """先写临时文件再原子替换，防止中途崩溃把 JSON 写坏"""
+    directory = os.path.dirname(path)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    tmp_path = path + ".tmp"
+    with open(tmp_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp_path, path)
+
+def to_float(value):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 def load_blacklist_newlow_shared(file_path):
     try:
@@ -717,27 +749,138 @@ def load_stock_splits_shared(file_path):
     return stock_splits_symbols
 
 def get_latest_price_and_date_shared(cursor, table_name, name):
-    query = f"SELECT date, price FROM {table_name} WHERE name = ? ORDER BY date DESC LIMIT 1"
+    query = f'SELECT date, price FROM "{table_name}" WHERE name = ? ORDER BY date DESC LIMIT 1'
     cursor.execute(query, (name,))
     return cursor.fetchone()
 
-def update_sectors_panel_json(config_path, updates, blacklist_newlow):
-    with open(config_path, 'r', encoding='utf-8') as file:
-        data = json.load(file, object_pairs_hook=OrderedDict)
-    for category, symbols in updates.items():
-        if category in data:
-            for symbol in symbols:
-                if symbol not in data[category] and symbol not in blacklist_newlow:
-                    data[category][symbol] = ""
-                    print(f"Panel Update: 将 '{symbol}' 添加到 '{category}'")
-                elif symbol in data[category]:
-                    pass
-                else:
-                    print(f"Panel Update: '{symbol}' 在黑名单中，跳过")
-        else:
-            data[category] = {symbol: "" for symbol in symbols if symbol not in blacklist_newlow}
-    with open(config_path, 'w', encoding='utf-8') as file:
-        json.dump(data, file, ensure_ascii=False, indent=4)
+def get_table_latest_date(cursor, table_name, cache):
+    """获取整张表的最新日期（带缓存），用于识别停更/过期的股票"""
+    if table_name not in cache:
+        try:
+            cursor.execute(f'SELECT MAX(date) FROM "{table_name}"')
+            row = cursor.fetchone()
+            cache[table_name] = str(row[0])[:10] if row and row[0] else None
+        except Exception as e:
+            print(f"读取表 {table_name} 最新日期失败: {e}")
+            cache[table_name] = None
+    return cache[table_name]
+
+def get_first_date_dt(cursor, table_name, name):
+    """获取某股票在库中最早的有效数据日期"""
+    cursor.execute(f'SELECT MIN(date) FROM "{table_name}" WHERE name = ? AND price IS NOT NULL', (name,))
+    row = cursor.fetchone()
+    if not row or not row[0]:
+        return None
+    try:
+        return datetime.strptime(str(row[0])[:10], "%Y-%m-%d")
+    except ValueError:
+        return None
+
+def get_window_extremes(cursor, table_name, name, start_dt, end_dt):
+    """区间 [start_dt, end_dt] 内的 (最高价, 最低价)，强制按数值比较"""
+    query = f"""
+        SELECT MAX(CAST(price AS REAL)), MIN(CAST(price AS REAL)), COUNT(*)
+        FROM "{table_name}"
+        WHERE name = ? AND date BETWEEN ? AND ? AND price IS NOT NULL
+    """
+    cursor.execute(query, (name, start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")))
+    row = cursor.fetchone()
+    if not row or not row[2] or row[0] is None or row[1] is None:
+        return None
+    return float(row[0]), float(row[1])
+
+def scan_extremes(tag, sectors_path, low_intervals, past_date_fn, low_label_fn,
+                  stock_splits_symbols, high_intervals=None, high_label_fn=None):
+    """
+    通用新低/新高扫描。
+    - low_intervals 从长周期到短周期判定，命中最长的那个周期即停止（输出最有意义的标签）
+    - 最新日期落后于所在表最新日期的股票（停更/过期）直接跳过
+    - 历史数据不足以覆盖某周期时，该周期不做判定（防止新股/数据缺失导致误报）
+    返回 (low_lines, high_lines)
+    读取配置失败会抛异常，由上层决定是否改写 panel
+    """
+    high_intervals = list(high_intervals or [])
+    with open(sectors_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    low_order = sorted(set(low_intervals), reverse=True)
+    all_intervals = sorted(set(low_order) | set(high_intervals), reverse=True)
+
+    output_low, output_high = [], []
+    stats = {"stale": 0, "no_data": 0, "short_history": 0, "split_skip": 0, "error": 0}
+    table_latest_cache = {}
+
+    with create_connection_analyse(DB_PATH_ANALYSE) as conn:
+        cursor = conn.cursor()
+        for table_name, names in data.items():
+            if table_name not in NEWLOW_TARGET_SECTORS:
+                continue
+            table_latest = get_table_latest_date(cursor, table_name, table_latest_cache)
+            for name in names:
+                if is_blacklisted(name):
+                    continue
+                try:
+                    latest = get_latest_price_and_date_shared(cursor, table_name, name)
+                    if not latest:
+                        stats["no_data"] += 1
+                        log_and_print_error(f"[{tag}] 无历史数据: {name}")
+                        continue
+                    validate_str, raw_price = latest
+                    validate_str = str(validate_str)[:10]
+                    validate_price = to_float(raw_price)
+                    if validate_price is None:
+                        stats["no_data"] += 1
+                        continue
+
+                    # 停更/过期数据：不参与当日判定
+                    if table_latest and validate_str < table_latest:
+                        stats["stale"] += 1
+                        continue
+
+                    validate = datetime.strptime(validate_str, "%Y-%m-%d")
+                    ex_validate = validate - timedelta(days=1)
+                    first_dt = get_first_date_dt(cursor, table_name, name)
+
+                    extremes = {}
+                    for itv in all_intervals:
+                        past_date = past_date_fn(validate, itv)
+                        if first_dt is None or first_dt > past_date + timedelta(days=HISTORY_COVERAGE_TOLERANCE_DAYS):
+                            continue  # 历史不足以覆盖该周期
+                        res = get_window_extremes(cursor, table_name, name, past_date, ex_validate)
+                        if res:
+                            extremes[itv] = res
+
+                    if not extremes:
+                        stats["short_history"] += 1
+                        continue
+
+                    # 新高
+                    for hi in high_intervals:
+                        if hi in extremes and validate_price >= extremes[hi][0] - PRICE_EPS:
+                            output_high.append(f"{table_name} {name} {high_label_fn(hi)} {validate_price}")
+
+                    # 新低（长周期优先）
+                    for itv in low_order:
+                        if itv not in extremes:
+                            continue
+                        min_price = extremes[itv][1]
+                        if validate_price <= min_price + PRICE_EPS:
+                            if name in stock_splits_symbols:
+                                stats["split_skip"] += 1
+                                log_and_print_error(f"[{tag}] {name} 在拆股名单中，跳过。")
+                                break
+                            line = f"{table_name} {name} {low_label_fn(itv)}"
+                            print(f"[{tag} Output] {line}  (最新 {validate_str} 价 {validate_price} <= 区间最低 {min_price})")
+                            output_low.append(line)
+                            break
+                except Exception as e:
+                    stats["error"] += 1
+                    log_and_print_error(f"[{tag}] 处理 {table_name}.{name} 出错: {e}")
+
+    print(f"[{tag}] 扫描完成: 新低 {len(output_low)} | 新高 {len(output_high)} | "
+          f"停更跳过 {stats['stale']} | 历史不足 {stats['short_history']} | "
+          f"无数据 {stats['no_data']} | 拆股跳过 {stats['split_skip']} | 出错 {stats['error']}")
+    return output_low, output_high
 
 def parse_output_generic(output):
     updates = {}
@@ -748,44 +891,97 @@ def parse_output_generic(output):
             if len(parts) >= 2:
                 category = parts[0]
                 symbol = parts[1]
-                if category in updates:
+                updates.setdefault(category, [])
+                if symbol not in updates[category]:
                     updates[category].append(symbol)
-                else:
-                    updates[category] = [symbol]
     return updates
+
+def rewrite_sectors_panel_newlow(config_path, updates, blacklist_newlow, managed_categories):
+    """
+    清空 managed_categories 下的旧内容，再写入本次结果。
+    - panel 中不属于 managed_categories 的分组原样保留
+    - 本次仍上榜的股票保留其原有 value（例如手工备注）
+    """
+    try:
+        with open(config_path, 'r', encoding='utf-8') as file:
+            data = json.load(file, object_pairs_hook=OrderedDict)
+    except FileNotFoundError:
+        data = OrderedDict()
+    except json.JSONDecodeError as e:
+        log_and_print_error(f"Sectors_panel.json 解析失败，拒绝覆盖以免丢数据: {e}")
+        return False
+
+    blacklist_set = set(blacklist_newlow)
+    old_values = {}
+    removed_total = 0
+    for cat in managed_categories:
+        old = data.get(cat)
+        if isinstance(old, dict):
+            old_values[cat] = old
+            removed_total += len(old)
+        data[cat] = OrderedDict()   # 已存在的 key 会保留原位置
+
+    added_total = 0
+    for cat, symbols in updates.items():
+        if cat not in managed_categories:
+            print(f"Panel Update: 分组 '{cat}' 不在新低管理范围，忽略")
+            continue
+        for symbol in symbols:
+            if symbol in blacklist_set:
+                print(f"Panel Update: '{symbol}' 在黑名单中，跳过")
+                continue
+            if symbol not in data[cat]:
+                data[cat][symbol] = old_values.get(cat, {}).get(symbol, "")
+                added_total += 1
+                print(f"Panel Update: 将 '{symbol}' 写入 '{cat}'")
+
+    try:
+        atomic_write_json(config_path, data)
+        print(f"Panel Update: 已清空旧条目 {removed_total} 个，写入新条目 {added_total} 个 -> {config_path}")
+        return True
+    except Exception as e:
+        log_and_print_error(f"写入 Sectors_panel.json 失败: {e}")
+        return False
 
 def _apply_color_updates_with_priority(color_path, updates, priority_map, log_prefix):
     try:
         with open(color_path, 'r', encoding='utf-8') as file:
             all_colors = json.load(file)
-    except: return
+    except Exception as e:
+        print(f"[{log_prefix} Color] 读取Colors文件错误: {e}")
+        return
     colors = {k: v for k, v in all_colors.items() if k != "red_keywords"}
     symbol_to_color = {}
     for color, symbols in colors.items():
-        for s in symbols: symbol_to_color[s] = color
+        for s in symbols:
+            symbol_to_color[s] = color
     for cat, names in updates.items():
-        if cat not in priority_map: continue
+        if cat not in priority_map:
+            continue
         new_p = priority_map[cat]
         for name in names:
             existing_color = symbol_to_color.get(name)
             if existing_color:
+                if existing_color == cat:
+                    continue
                 existing_p = priority_map.get(existing_color, float('inf'))
                 if new_p <= existing_p:
-                    if name in colors[existing_color]:
+                    if name in colors.get(existing_color, []):
                         colors[existing_color].remove(name)
-                        if not colors[existing_color]: del colors[existing_color]
-                    if cat not in colors: colors[cat] = []
-                    colors[cat].append(name)
+                        if not colors[existing_color]:
+                            del colors[existing_color]
+                    colors.setdefault(cat, []).append(name)
                     symbol_to_color[name] = cat
                     print(f"[{log_prefix} Color] '{name}' 从 '{existing_color}' 移动到 '{cat}'")
             else:
-                if cat not in colors: colors[cat] = []
-                colors[cat].append(name)
+                colors.setdefault(cat, []).append(name)
                 symbol_to_color[name] = cat
                 print(f"[{log_prefix} Color] '{name}' 添加到 '{cat}'")
     colors["red_keywords"] = all_colors.get("red_keywords", [])
-    with open(color_path, 'w', encoding='utf-8') as f:
-        json.dump(colors, f, ensure_ascii=False, indent=4)
+    try:
+        atomic_write_json(color_path, colors)
+    except Exception as e:
+        print(f"[{log_prefix} Color] 写入Colors文件错误: {e}")
 
 def clean_backups_analyse(directory, file_patterns):
     if not os.path.exists(directory): return
@@ -799,7 +995,7 @@ def clean_backups_analyse(directory, file_patterns):
                     date_part = parts[date_pos]
                     date_str = date_part.split('.')[0][-6:] if '.' in date_part else date_part[-6:]
                     file_date = datetime.strptime(date_str, '%y%m%d').replace(hour=0,minute=0,second=0,microsecond=0)
-                    
+
                     if file_date < cutoff:
                         os.remove(os.path.join(directory, filename))
                         print(f"删除旧备份: {filename}")
@@ -810,19 +1006,6 @@ def clean_backups_analyse(directory, file_patterns):
 
 # 1. Analyse 5000 (Weekly)
 PATH_SECTORS_5000 = os.path.join(HOME, 'Coding/Financial_System/Modules/Sectors_5000.json')
-
-def get_price_comparison_5000(cursor, table_name, interval_weeks, name, validate):
-    ex_validate = validate - timedelta(days=1)
-    past_date = validate - timedelta(weeks=interval_weeks)
-    query = f"""
-    SELECT MAX(price), MIN(price)
-    FROM {table_name} WHERE date BETWEEN ? AND ? AND name = ?
-    """
-    cursor.execute(query, (past_date.strftime("%Y-%m-%d"), ex_validate.strftime("%Y-%m-%d"), name))
-    result = cursor.fetchone()
-    if result and (result[0] is not None and result[1] is not None):
-        return result
-    return None
 
 def parse_output_color_5000(output):
     updates_color = {}
@@ -835,88 +1018,48 @@ def parse_output_color_5000(output):
         descriptor = parts[2]
         category_list = None
         if 'W' in descriptor:
-            week_part, _ = descriptor.split('_')
             try:
+                week_part = descriptor.split('_')[0]
                 weeks = int(week_part.replace('W', ''))
                 if weeks in [6, 8, 10]:
                     category_list = 'blue_keywords'
             except ValueError:
                 continue
         if category_list:
-            if category_list in updates_color:
-                if symbol not in updates_color[category_list]:
-                    updates_color[category_list].append(symbol)
-            else:
-                updates_color[category_list] = [symbol]
+            updates_color.setdefault(category_list, [])
+            if symbol not in updates_color[category_list]:
+                updates_color[category_list].append(symbol)
     return updates_color
 
 def update_color_json_5000(color_config_path, updates_colors):
     color_priority = {
         'black_keywords': 1, 'orange_keywords': 2, 'yellow_keywords': 3,
-        'white_keywords': 4, 'blue_keywords': 5 
+        'white_keywords': 4, 'blue_keywords': 5
     }
     _apply_color_updates_with_priority(color_config_path, updates_colors, color_priority, "5000")
 
 def run_logic_5000(blacklist_newlow, stock_splits_symbols):
+    """返回新低行列表；panel 由 execute_analyse_process 统一改写"""
     print("\n" + "="*40)
     print(">>> 正在执行: Analyse_Stocks_5000 (Weekly)")
     print("="*40)
-    with open(PATH_SECTORS_5000, 'r') as file:
-        data = json.load(file)
-    output = []
-    intervals = [6, 8, 10]
-    valid_tables = ["Basic_Materials", "Communication_Services", "Consumer_Cyclical",
-                    "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare",
-                    "Industrials", "Real_Estate", "Technology", "Utilities"]
-    with create_connection_analyse(DB_PATH_ANALYSE) as conn:
-        cursor = conn.cursor()
-        for table_name, names in data.items():
-            if table_name not in valid_tables: continue
-            for name in names:
-                if is_blacklisted(name): continue
-                result = get_latest_price_and_date_shared(cursor, table_name, name)
-                if not result:
-                    log_and_print_error(f"[5000] 无历史数据: {name}")
-                    continue
-                validate_str, validate_price = result
-                validate = datetime.strptime(validate_str, "%Y-%m-%d")
-                price_extremes = {}
-                for interval in intervals:
-                    res = get_price_comparison_5000(cursor, table_name, interval, name, validate)
-                    if res:
-                        price_extremes[interval] = res
-                for interval in intervals:
-                    _, min_price = price_extremes.get(interval, (None, None))
-                    if min_price is not None and validate_price <= min_price:
-                        if name in stock_splits_symbols:
-                            log_and_print_error(f"[5000] {name} 在拆股名单中，跳过。")
-                            break
-                        output_line = f"{table_name} {name} {interval}W_newlow"
-                        print(f"[5000 Output] {output_line}")
-                        output.append(output_line)
-                        break
+    output, _ = scan_extremes(
+        tag="5000",
+        sectors_path=PATH_SECTORS_5000,
+        low_intervals=[6, 8, 10],
+        past_date_fn=lambda v, w: v - timedelta(weeks=w),
+        low_label_fn=lambda w: f"{w}W_newlow",
+        stock_splits_symbols=stock_splits_symbols,
+    )
     if output:
-        final_output = "\n".join(output)
-        updates = parse_output_generic(final_output)
-        update_sectors_panel_json(SECTORS_PANEL_PATH, updates, blacklist_newlow)
-        updates_color = parse_output_color_5000(final_output)
+        updates_color = parse_output_color_5000("\n".join(output))
         update_color_json_5000(COLORS_JSON_PATH_ANALYSE, updates_color)
+    else:
+        print("[5000] 未检索到符合条件的股票。")
+    return output
 
 # 2. Analyse 500 (Monthly)
 PATH_SECTORS_500 = os.path.join(HOME, 'Coding/Financial_System/Modules/Sectors_500.json')
-
-def get_price_comparison_500(cursor, table_name, interval_months, name, validate):
-    ex_validate = validate - timedelta(days=1)
-    past_date = validate - relativedelta(months=int(interval_months))
-    query = f"""
-    SELECT MAX(price), MIN(price)
-    FROM {table_name} WHERE date BETWEEN ? AND ? AND name = ?
-    """
-    cursor.execute(query, (past_date.strftime("%Y-%m-%d"), ex_validate.strftime("%Y-%m-%d"), name))
-    result = cursor.fetchone()
-    if result and (result[0] is not None and result[1] is not None):
-        return result
-    return None
 
 def parse_output_color_500(output):
     updates_color = {}
@@ -936,11 +1079,9 @@ def parse_output_color_500(output):
             except ValueError:
                 continue
         if category_list:
-            if category_list in updates_color:
-                if symbol not in updates_color[category_list]:
-                    updates_color[category_list].append(symbol)
-            else:
-                updates_color[category_list] = [symbol]
+            updates_color.setdefault(category_list, [])
+            if symbol not in updates_color[category_list]:
+                updates_color[category_list].append(symbol)
     return updates_color
 
 def update_color_json_500(color_config_path, updates_colors):
@@ -954,48 +1095,20 @@ def run_logic_500(blacklist_newlow, stock_splits_symbols):
     print("\n" + "="*40)
     print(">>> 正在执行: Analyse_Stocks_500 (Monthly)")
     print("="*40)
-    with open(PATH_SECTORS_500, 'r') as file:
-        data = json.load(file)
-    output = []
-    intervals = [5]
-    valid_tables = ["Basic_Materials", "Communication_Services", "Consumer_Cyclical",
-                    "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare",
-                    "Industrials", "Real_Estate", "Technology", "Utilities"]
-    with create_connection_analyse(DB_PATH_ANALYSE) as conn:
-        cursor = conn.cursor()
-        for table_name, names in data.items():
-            if table_name not in valid_tables: continue
-            for name in names:
-                if is_blacklisted(name): continue
-                result = get_latest_price_and_date_shared(cursor, table_name, name)
-                if not result:
-                    log_and_print_error(f"[500] 无历史数据: {name}")
-                    continue
-                validate_str, validate_price = result
-                validate = datetime.strptime(validate_str, "%Y-%m-%d")
-                price_extremes = {}
-                for interval in intervals:
-                    res = get_price_comparison_500(cursor, table_name, interval, name, validate)
-                    if res:
-                        price_extremes[interval] = res
-                for interval in intervals:
-                    _, min_price = price_extremes.get(interval, (None, None))
-                    if min_price is not None and validate_price <= min_price:
-                        if name in stock_splits_symbols:
-                            log_and_print_error(f"[500] {name} 在拆股名单中，跳过。")
-                            break
-                        output_line = f"{table_name} {name} {interval}M_newlow"
-                        print(f"[500 Output] {output_line}")
-                        output.append(output_line)
-                        break
+    output, _ = scan_extremes(
+        tag="500",
+        sectors_path=PATH_SECTORS_500,
+        low_intervals=[5],
+        past_date_fn=lambda v, m: v - relativedelta(months=int(m)),
+        low_label_fn=lambda m: f"{m}M_newlow",
+        stock_splits_symbols=stock_splits_symbols,
+    )
     if output:
-        final_output = "\n".join(output)
-        updates = parse_output_generic(final_output)
-        update_sectors_panel_json(SECTORS_PANEL_PATH, updates, blacklist_newlow)
-        updates_color = parse_output_color_500(final_output)
+        updates_color = parse_output_color_500("\n".join(output))
         update_color_json_500(COLORS_JSON_PATH_ANALYSE, updates_color)
     else:
         log_and_print_error("[500] 未检索到符合条件的股票。")
+    return output
 
 # 3. Analyse 50 (Yearly & Highs)
 PATH_SECTORS_ALL = os.path.join(HOME, 'Coding/Financial_System/Modules/Sectors_All.json')
@@ -1003,24 +1116,6 @@ PATH_NEWHIGH_10Y = os.path.join(HOME, 'Coding/Financial_System/Modules/10Y_newhi
 PATH_NEWHIGH_OUTPUT = os.path.join(HOME, 'Coding/News/10Y_newhigh_stock.txt')
 PATH_COMPARE_ALL = os.path.join(HOME, 'Coding/News/backup/Compare_All.txt')
 PATH_DESCRIPTION = os.path.join(HOME, 'Coding/Financial_System/Modules/description.json')
-
-def get_price_comparison_50(cursor, table_name, interval, name, validate):
-    today = datetime.now()
-    ex_validate = validate - timedelta(days=1)
-    if interval < 1:
-        days = int(interval * 30)
-        past_date = validate - timedelta(days=days - 1)
-    else:
-        past_date = today - relativedelta(months=int(interval))
-    query = f"""
-    SELECT MAX(price), MIN(price)
-    FROM {table_name} WHERE date BETWEEN ? AND ? AND name = ?
-    """
-    cursor.execute(query, (past_date.strftime("%Y-%m-%d"), ex_validate.strftime("%Y-%m-%d"), name))
-    result = cursor.fetchone()
-    if result and (result[0] is not None and result[1] is not None):
-        return result
-    return None
 
 def parse_output_color_50(output):
     updates_color = {}
@@ -1039,13 +1134,11 @@ def parse_output_color_50(output):
                     elif years == 2: category_list = 'yellow_keywords'
                     elif years == 5: category_list = 'orange_keywords'
                     elif years == 10: category_list = 'black_keywords'
-                    
+
                     if category_list:
-                        if category_list in updates_color:
-                            if symbol not in updates_color[category_list]:
-                                updates_color[category_list].append(symbol)
-                        else:
-                            updates_color[category_list] = [symbol]
+                        updates_color.setdefault(category_list, [])
+                        if symbol not in updates_color[category_list]:
+                            updates_color[category_list].append(symbol)
                 except ValueError:
                     continue
     return updates_color
@@ -1077,8 +1170,7 @@ def update_color_json_50(color_config_path, updates_colors):
                 print(f"[50 Color] '{name}' 已在 '{category_list}' 中")
     colors["red_keywords"] = all_colors.get("red_keywords", [])
     try:
-        with open(color_config_path, 'w', encoding='utf-8') as file:
-            json.dump(colors, file, ensure_ascii=False, indent=4)
+        atomic_write_json(color_config_path, colors)
     except Exception as e:
         print(f"写入Colors文件错误: {e}")
 
@@ -1134,7 +1226,7 @@ def process_high_data_output_50(input_lines, compare_data, tag_map):
             compare_info = compare_data.get(symbol, '')
             if compare_info: new_line = f"{sector} {symbol} {compare_info} {price_str}"
             else: new_line = f"{sector} {symbol} {price_str}"
-        
+
         if new_line and symbol:
             tags = tag_map.get(symbol, '')
             if tags: final_line = f"{new_line} {tags}"
@@ -1146,66 +1238,27 @@ def run_logic_50(blacklist_newlow, stock_splits_symbols):
     print("\n" + "="*40)
     print(">>> 正在执行: Analyse_Stocks_50 (All Sectors & Highs)")
     print("="*40)
-    with open(PATH_SECTORS_ALL, 'r') as file:
-        data = json.load(file)
-    output = []
-    output_high = []
-    intervals = [120, 60, 24, 13]
-    highintervals = [120]
     existing_highs = load_existing_highs_json_50(PATH_NEWHIGH_10Y)
-    
-    valid_tables = ["Basic_Materials", "Communication_Services", "Consumer_Cyclical",
-                    "Consumer_Defensive", "Energy", "Financial_Services", "Healthcare",
-                    "Industrials", "Real_Estate", "Technology", "Utilities"]
-    with create_connection_analyse(DB_PATH_ANALYSE) as conn:
-        cursor = conn.cursor()
-        for table_name, names in data.items():
-            if table_name not in valid_tables: continue
-            for name in names:
-                if is_blacklisted(name): continue
-                result = get_latest_price_and_date_shared(cursor, table_name, name)
-                if not result:
-                    log_and_print_error(f"[50] 无历史数据: {name}")
-                    continue
-                validate_str, validate_price = result
-                validate = datetime.strptime(validate_str, "%Y-%m-%d")
-                price_extremes = {}
-                for interval in intervals:
-                    res = get_price_comparison_50(cursor, table_name, interval, name, validate)
-                    if res:
-                        price_extremes[interval] = res
-                
-                # Check New Highs
-                for highinterval in highintervals:
-                    max_price, _ = price_extremes.get(highinterval, (None, None))
-                    if max_price is not None and validate_price >= max_price:
-                        if highinterval >= 12:
-                            years = highinterval // 12
-                            output_line = f"{table_name} {name} {years}Y_newhigh {validate_price}"
-                            output_high.append(output_line)
-                # Check New Lows
-                for interval in intervals:
-                    _, min_price = price_extremes.get(interval, (None, None))
-                    if min_price is not None and validate_price <= min_price:
-                        if interval >= 12:
-                            if name in stock_splits_symbols:
-                                log_and_print_error(f"[50] {name} 在拆股名单中，跳过。")
-                                break
-                            years = interval // 12
-                            output_line = f"{table_name} {name} {years}Y_newlow"
-                            print(f"[50 Output] {output_line}")
-                            output.append(output_line)
-                            break
-    
+
+    output, output_high = scan_extremes(
+        tag="50",
+        sectors_path=PATH_SECTORS_ALL,
+        low_intervals=[120, 60, 24, 13],
+        past_date_fn=lambda v, m: v - relativedelta(months=int(m)),
+        low_label_fn=lambda m: f"{m // 12}Y_newlow",
+        stock_splits_symbols=stock_splits_symbols,
+        high_intervals=[120],
+        high_label_fn=lambda m: f"{m // 12}Y_newhigh",
+    )
+
     if output:
-        final_output = "\n".join(output)
-        updates = parse_output_generic(final_output)
-        updates_color = parse_output_color_50(final_output)
-        update_sectors_panel_json(SECTORS_PANEL_PATH, updates, blacklist_newlow)
+        updates_color = parse_output_color_50("\n".join(output))
         update_color_json_50(COLORS_JSON_PATH_ANALYSE, updates_color)
     else:
         log_and_print_error("[50] 未检索到符合条件的股票 (Lows)。")
 
+    # 新高：每次都重写输出文件（无结果则写空），避免残留旧数据
+    processed = []
     if output_high:
         compare_data = read_compare_all_50(PATH_COMPARE_ALL)
         tag_map = load_tags_map_50(PATH_DESCRIPTION)
@@ -1221,13 +1274,15 @@ def run_logic_50(blacklist_newlow, stock_splits_symbols):
                     filtered_highs.append(line)
         if filtered_highs:
             processed = process_high_data_output_50(filtered_highs, compare_data, tag_map)
-            try:
-                os.makedirs(os.path.dirname(PATH_NEWHIGH_OUTPUT), exist_ok=True)
-                with open(PATH_NEWHIGH_OUTPUT, 'w', encoding='utf-8') as f:
-                    f.write('\n'.join(processed))
-                print(f"[50] 新高数据已保存: {PATH_NEWHIGH_OUTPUT}")
-            except Exception as e:
-                print(f"[50] 写入新高文件错误: {e}")
+    try:
+        os.makedirs(os.path.dirname(PATH_NEWHIGH_OUTPUT), exist_ok=True)
+        with open(PATH_NEWHIGH_OUTPUT, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(processed))
+        print(f"[50] 新高数据已保存 ({len(processed)} 条): {PATH_NEWHIGH_OUTPUT}")
+    except Exception as e:
+        print(f"[50] 写入新高文件错误: {e}")
+
+    return output
 
 # 4. Analyse HighLow
 HL_OUTPUT_PATH = os.path.join(BASE_CODING_DIR, "News/HighLow.txt")
@@ -1247,7 +1302,7 @@ def get_prices_in_range_hl(cursor, table_name, symbol, start_date_str, end_date_
     try:
         query = f'SELECT price FROM "{table_name}" WHERE name = ? AND date BETWEEN ? AND ?'
         cursor.execute(query, (symbol, start_date_str, end_date_str))
-        return [row[0] for row in cursor.fetchall() if row[0] is not None]
+        return [float(row[0]) for row in cursor.fetchall() if row[0] is not None]
     except Exception as e:
         print(f"[HL] Warning: Could not query price range for {symbol}. {e}")
         return []
@@ -1277,12 +1332,13 @@ def write_results_hl(results_data, filepath):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     try:
         with open(filepath, 'w', encoding='utf-8') as outfile:
+            labels = list(results_data.keys())
             for label, data in results_data.items():
                 if not data["Low"] and not data["High"]: continue
                 outfile.write(f"{label}\n")
                 outfile.write("Low:\n" + (", ".join(data["Low"]) + "\n" if data["Low"] else "\n"))
                 outfile.write("High:\n" + (", ".join(data["High"]) + "\n" if data["High"] else "\n"))
-                if label != list(results_data.keys())[-1]: outfile.write("\n")
+                if label != labels[-1]: outfile.write("\n")
         print(f"[HL] 成功写入: {filepath}")
     except Exception as e:
         print(f"[HL] 写入错误: {e}")
@@ -1302,44 +1358,52 @@ def run_logic_highlow():
         print(f"[HL] Setup Error: {e}")
         return
     current_run_results = {label: {"Low": [], "High": []} for label in HL_TIME_INTERVALS.keys()}
-    
-    for category in target_categories:
-        if category not in all_sectors: continue
-        symbols = all_sectors[category]
-        if not symbols: continue
-        print(f"[HL] Processing {category}...")
-        for symbol in symbols:
-            latest = get_latest_price_and_date_shared(cursor, category, symbol)
-            if not latest: continue
-            try:
-                latest_date_str, latest_price = latest
-                latest_date_obj = date.fromisoformat(latest_date_str)
-            except: continue
-            if latest_price is None: continue
-            for label, time_delta in HL_TIME_INTERVALS.items():
-                start_date = (latest_date_obj + time_delta).isoformat()
-                prices = get_prices_in_range_hl(cursor, category, symbol, start_date, latest_date_str)
-                if len(prices) < 2: continue
-                min_p, max_p = min(prices), max(prices)
-                if latest_price == min_p:
-                    if symbol not in current_run_results[label]["Low"]:
-                        current_run_results[label]["Low"].append(symbol)
-                if latest_price == max_p:
-                    if symbol not in current_run_results[label]["High"]:
-                        current_run_results[label]["High"].append(symbol)
-    if conn: conn.close()
-    
+
+    try:
+        for category in target_categories:
+            if category not in all_sectors: continue
+            symbols = all_sectors[category]
+            if not symbols: continue
+            print(f"[HL] Processing {category}...")
+            for symbol in symbols:
+                try:
+                    latest = get_latest_price_and_date_shared(cursor, category, symbol)
+                except Exception as e:
+                    print(f"[HL] 查询 {category}.{symbol} 失败: {e}")
+                    continue
+                if not latest: continue
+                try:
+                    latest_date_str, latest_price = latest
+                    latest_date_str = str(latest_date_str)[:10]
+                    latest_date_obj = date.fromisoformat(latest_date_str)
+                except: continue
+                latest_price = to_float(latest_price)
+                if latest_price is None: continue
+                for label, time_delta in HL_TIME_INTERVALS.items():
+                    start_date = (latest_date_obj + time_delta).isoformat()
+                    prices = get_prices_in_range_hl(cursor, category, symbol, start_date, latest_date_str)
+                    if len(prices) < 2: continue
+                    min_p, max_p = min(prices), max(prices)
+                    if latest_price <= min_p + PRICE_EPS:
+                        if symbol not in current_run_results[label]["Low"]:
+                            current_run_results[label]["Low"].append(symbol)
+                    if latest_price >= max_p - PRICE_EPS:
+                        if symbol not in current_run_results[label]["High"]:
+                            current_run_results[label]["High"].append(symbol)
+    finally:
+        conn.close()
+
     print("[HL] Reading backup and filtering...")
     backup_data = parse_highlow_backup_hl(HL_BACKUP_OUTPUT_PATH)
     results_for_main = {label: {"Low": [], "High": []} for label in HL_TIME_INTERVALS.keys()}
-    
+
     for label in HL_TIME_INTERVALS:
         for typ in ["Low", "High"]:
             curr = current_run_results[label][typ]
             old = backup_data.get(label, {}).get(typ, [])
             new_only = [s for s in curr if s not in old]
             results_for_main[label][typ] = new_only
-            
+
     short_term = ["[0.5 months]", "[1 months]", "[3 months]"]
     for label, data in results_for_main.items():
         if label in short_term:
@@ -1350,13 +1414,13 @@ def run_logic_highlow():
                     print(f"[HL] Filtered {len(original)-len(filtered)} ETFs from {label} {typ}")
                 results_for_main[label][typ] = filtered
 
+    cascade = OrderedDict()
     has_new = any(results_for_main[l][t] for l in results_for_main for t in ["Low", "High"])
     if has_new:
         filtered_results = {l: d for l, d in results_for_main.items() if d["Low"] or d["High"]}
         rev_filtered = OrderedDict(reversed(list(filtered_results.items())))
-        cascade = OrderedDict()
         seen_low, seen_high = set(), set()
-        
+
         for label, data in rev_filtered.items():
             new_l = [s for s in data["Low"] if s not in seen_low]
             new_h = [s for s in data["High"] if s not in seen_high]
@@ -1364,10 +1428,10 @@ def run_logic_highlow():
                 cascade[label] = {"Low": new_l, "High": new_h}
                 seen_low.update(new_l)
                 seen_high.update(new_h)
-        if cascade:
-            write_results_hl(cascade, HL_OUTPUT_PATH)
     else:
         print("[HL] No new symbols found.")
+    # 每次都重写主输出（无结果则为空文件），避免残留旧内容
+    write_results_hl(cascade, HL_OUTPUT_PATH)
     write_results_hl(current_run_results, HL_BACKUP_OUTPUT_PATH)
 
 def move_files_to_backup_routine():
@@ -1404,7 +1468,7 @@ def clean_backups_routine():
         ("Stock_50_", -1, 3), ("Stock_500_", -1, 3), ("Stock_5000_", -1, 3)
     ]
     clean_backups_analyse(BACKUP_DIR_MAIN, patterns_1)
-    
+
     patterns_2 = [
         ("article_copier_", -1, 3), ("screener_above_", -1, 3),
         ("screener_below_", -1, 3), ("topetf_", -1, 3),
@@ -1417,24 +1481,37 @@ def execute_analyse_process():
     print("STEP 2: 执行 Analyse_Combined 逻辑")
     print("="*50)
 
-    try:
-        blacklist_newlow = load_blacklist_newlow_shared(BLACKLIST_PATH)
-        stock_splits = load_stock_splits_shared(STOCK_SPLITS_FILE)
-        
-        run_logic_5000(blacklist_newlow, stock_splits)
-        run_logic_500(blacklist_newlow, stock_splits)
-        run_logic_50(blacklist_newlow, stock_splits)
-        
-        print("\n----------------------------------------")
-        print("切换至下一阶段任务 (High/Low Analysis)")
-        print("----------------------------------------")
-        
-        run_logic_highlow()
-        move_files_to_backup_routine()
-        clean_backups_routine()
-    except Exception as e:
-        print(f"\nCRITICAL ERROR in Analyse Main Loop: {e}")
-        log_and_print_error(f"主程序异常: {e}")
+    blacklist_newlow = load_blacklist_newlow_shared(BLACKLIST_PATH)
+    stock_splits = load_stock_splits_shared(STOCK_SPLITS_FILE)
+
+    # 1) 三个新低扫描：只收集结果，不各自写 panel
+    all_low_lines = []
+    failed = []
+    for tag, fn in (("5000", run_logic_5000), ("500", run_logic_500), ("50", run_logic_50)):
+        try:
+            all_low_lines.extend(fn(blacklist_newlow, stock_splits) or [])
+        except Exception as e:
+            failed.append(tag)
+            log_and_print_error(f"[{tag}] 扫描异常: {e}")
+
+    # 2) 统一清空并重写 panel（任一扫描失败则不动 panel，避免写入残缺结果）
+    if failed:
+        log_and_print_error(f"新低扫描 {failed} 失败，本次不改写 Sectors_panel.json（保留旧内容）。")
+    else:
+        updates = parse_output_generic("\n".join(all_low_lines))
+        rewrite_sectors_panel_newlow(SECTORS_PANEL_PATH, updates, blacklist_newlow, NEWLOW_TARGET_SECTORS)
+
+    print("\n----------------------------------------")
+    print("切换至下一阶段任务 (High/Low Analysis)")
+    print("----------------------------------------")
+
+    for step_name, step_fn in (("HighLow", run_logic_highlow),
+                               ("文件归档", move_files_to_backup_routine),
+                               ("备份清理", clean_backups_routine)):
+        try:
+            step_fn()
+        except Exception as e:
+            log_and_print_error(f"{step_name} 异常: {e}")
 
 # ==============================================================================
 # PART 3: Volume_High_Scanner 逻辑

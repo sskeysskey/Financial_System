@@ -26,7 +26,9 @@ STOCK_CHART_PY = os.path.join(BASE_CODING_DIR, "Financial_System", "Query", "Sto
 MODULES_DIR = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules")
 POSITIONS_JSON_PATH = os.path.join(MODULES_DIR, "firstrade_positions.json")
 ORDERS_JSON_PATH = os.path.join(MODULES_DIR, "firstrade_orders.json")
-WATCHLIST_JSON_PATH = os.path.join(MODULES_DIR, "firstrade_watchlist.json")
+WATCHLIST_JSON_PATH = os.path.join(MODULES_DIR, "firstrade_watchlist_earning.json")   # ★ v10.1 改名
+TRADE_LOG_PATH = os.path.join(MODULES_DIR, "firstrade_trade_log.jsonl")               # ★ 快速交易审计日志
+_TRADE_LOG_LOCK = threading.Lock()
 WL_MEMBERSHIP_JSON_PATH = os.path.join(MODULES_DIR, "firstrade_wl_membership.json")
 MEMBER_RECENT_MAX = 200
 _MEM_LOCK = threading.Lock()
@@ -46,7 +48,7 @@ SECTOR_GROUPS_FOR_WATCHLIST = [
 
 WATCHLIST_URL = "https://invest.firstrade.com/app/watchlist"
 WATCHLIST_URL_MATCH = "invest.firstrade.com/app/watchlist"
-WATCHLIST_GROUPS = ["ALL", "买", "买买", "买买买", "卖卖卖", "Short", "Watch"]
+WATCHLIST_GROUPS = ["Earning", "买", "买买", "买买买", "卖卖卖", "Short", "Watch", "Wrong"]
 
 TASK_TTL = 600
 TASK_LEASE = 90
@@ -124,10 +126,25 @@ def _gc_tasks_locked():
         t = _TASKS[tid]
         lease = float(t.get("lease") or TASK_LEASE)
         ttl = float(t.get("ttl") or TASK_TTL)
+        pending_ttl = t.get("pending_ttl")
         if t["status"] == "taken" and (now - t["taken_at"]) > lease:
-            t["status"] = "pending"
-            _log(f"[任务] {tid} 租约超时，重新排队")
+            if t.get("action") == "trade":
+                # ★ 交易 at-most-once：绝不重新排队，避免重复下单
+                t["status"] = "error"
+                t["result"] = {"ok": False, "finished_at": now, "data": {},
+                               "message": "交易任务执行超时：为防重复下单不会重试，请到订单页核对是否已成交"}
+                t["event"].set()
+                _log(f"[任务] 交易 {tid} 超时，已判失败（不重排）")
+            else:
+                t["status"] = "pending"
+                _log(f"[任务] {tid} 租约超时，重新排队")
+        if pending_ttl and t["status"] == "pending" and (now - t["created_at"]) > float(pending_ttl):
+            t["status"] = "error"
+            t["result"] = {"ok": False, "finished_at": now, "data": {},
+                           "message": "浏览器未在规定时间内领取任务，已作废（未执行）"}
+            t["event"].set()
         if (now - t["created_at"]) > ttl:
+            t["event"].set()
             _TASKS.pop(tid, None)
 
 
@@ -163,6 +180,7 @@ def take_tasks(limit=3):
             out.append({"id": t["id"], "action": t["action"],
                         "symbol": t["symbol"], "group": t["group"],
                         "groups": t.get("groups"),
+                        "params": t.get("params"),
                         "restore": bool(t.get("restore", True))})
             if len(out) >= max(1, limit):
                 break
@@ -683,20 +701,20 @@ def compact_orders(verbose=False):
     }
 
 
-def save_watchlist(incoming, overwrite=True):
-    if not isinstance(incoming, dict) or not incoming:
+def save_watchlist(incoming, overwrite=True, group=""):
+    """★ v10.1：只存目标分组（Earning）行情；允许空覆盖（分组被清空时）；记录分组名；写前 .bak"""
+    if not isinstance(incoming, dict):
+        return 0, 0, "invalid"
+    if not incoming and not overwrite:
         return 0, 0, "empty"
+    group = _clean_group(group)
     with _WL_LOCK:
         data = _load_json(WATCHLIST_JSON_PATH)
-        quotes = data.get("quotes")
-        if not isinstance(quotes, dict):
-            quotes = {k: v for k, v in data.items()
-                      if isinstance(v, dict) and not str(k).startswith("_")}
-        old_total = len(quotes)
+        quotes = data.get("quotes") if isinstance(data.get("quotes"), dict) else {}
+        old_group = _clean_group((data.get("_meta") or {}).get("group", ""))
+        if not overwrite and group and old_group and group != old_group:
+            return 0, len(quotes), "skip_group_mismatch"
         mode = "overwrite" if overwrite else "merge"
-        if overwrite and old_total >= 200 and len(incoming) < old_total * 0.5:
-            mode = "merge_guard"
-            overwrite = False
         base = {} if overwrite else dict(quotes)
         now = time.time()
         n = 0
@@ -717,10 +735,10 @@ def save_watchlist(incoming, overwrite=True):
         out = {
             "_meta": {"updated_at": now,
                       "updated_at_str": time.strftime("%Y-%m-%d %H:%M:%S"),
-                      "count": len(base), "mode": mode},
+                      "count": len(base), "mode": mode, "group": group or old_group},
             "quotes": base,
         }
-        _atomic_write(WATCHLIST_JSON_PATH, out)
+        _atomic_write(WATCHLIST_JSON_PATH, out, backup=True)
     return n, len(base), mode
 
 # ---------------------------------------------------------------------------
@@ -982,7 +1000,7 @@ class StockRequestHandler(BaseHTTPRequestHandler):
                 body = self._read_json_body()
                 incoming = body.get("quotes") if isinstance(body.get("quotes"), dict) else body
                 overwrite = bool(body.get("overwrite", True))
-                n, total, mode = save_watchlist(incoming, overwrite=overwrite)
+                n, total, mode = save_watchlist(incoming, overwrite=overwrite, group=str(body.get("group", "")))
                 self._reply(200, {"status": "ok", "saved": n, "total": total, "mode": mode})
             except Exception as e:
                 self._reply(500, {"status": "error", "message": str(e)})
@@ -1077,6 +1095,70 @@ class StockRequestHandler(BaseHTTPRequestHandler):
                 self._reply(500, {"status": "error", "message": str(e)})
             return
 
+        # ★ 远程快速交易（Python → 浏览器 ft_trade.js），at-most-once
+        if path == "/wl_trade":
+            try:
+                body = self._read_json_body()
+                symbol = str(body.get("symbol", "")).strip().upper()
+                side = str(body.get("side", "")).strip().lower()
+                if not symbol or side not in ("buy", "sell"):
+                    self._reply(400, {"status": "error", "ok": False, "message": "需要 symbol 和 side=buy/sell"})
+                    return
+                params = {"side": side, "remove": bool(body.get("remove", True)), "dry": bool(body.get("dry", False))}
+                if side == "buy":
+                    amount = float(body.get("amount") or 0)
+                    if amount <= 0:
+                        self._reply(400, {"status": "error", "ok": False, "message": "买入金额必须 > 0"})
+                        return
+                    params["amount"] = amount
+                else:
+                    qty = str(body.get("qty", "all")).replace(",", "").strip() or "all"
+                    if qty.lower() != "all":
+                        try:
+                            if float(qty) <= 0:
+                                raise ValueError
+                        except ValueError:
+                            self._reply(400, {"status": "error", "ok": False, "message": "卖出股数无效"})
+                            return
+                    params["qty"] = qty
+                wait = float(body.get("wait", 0) or 0)
+                tab = ensure_watchlist_tab()
+                t = find_active_task("trade", symbol)
+                if t:
+                    _log(f"[交易] {symbol} 已有进行中的交易任务 {t['id']}，复用（防重复下单）")
+                else:
+                    t = new_task("trade", symbol, "", {"params": params, "restore": True,
+                                                       "lease": 900, "ttl": 1800, "pending_ttl": 120})
+                    _log(f"[交易] 排队 {side} {symbol} {params} id={t['id']}")
+                if wait > 0:
+                    t["event"].wait(min(wait, 600))
+                res = t.get("result")
+                if res:
+                    out = {"status": "ok", "id": t["id"], "tab": tab, "action": "trade"}
+                    out.update(res)
+                    self._reply(200, out)
+                else:
+                    self._reply(200, {"status": "pending", "id": t["id"], "tab": tab, "ok": False,
+                                      "message": "交易任务已排队但未在等待时间内完成（请勿重复提交，去订单页核对）"})
+            except Exception as e:
+                self._reply(500, {"status": "error", "ok": False, "message": str(e)})
+            return
+
+        if path == "/trade_log":
+            try:
+                body = self._read_json_body()
+                body["logged_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+                os.makedirs(MODULES_DIR, exist_ok=True)
+                with _TRADE_LOG_LOCK:
+                    with open(TRADE_LOG_PATH, "a", encoding="utf-8") as f:
+                        f.write(json.dumps(body, ensure_ascii=False) + "\n")
+                _log(f"[交易日志] {body.get('mode')} {body.get('side')} {body.get('symbol')} "
+                     f"status={body.get('status')} ok={body.get('ok')} 订单号={body.get('orderNo') or '-'}")
+                self._reply(200, {"status": "ok"})
+            except Exception as e:
+                self._reply(500, {"status": "error", "message": str(e)})
+            return
+        
         if path == "/plot":
             try:
                 payload = self._read_json_body()
@@ -1117,6 +1199,8 @@ class StockRequestHandler(BaseHTTPRequestHandler):
                 "earnings_release": EARNINGS_RELEASE_PATH,
                 "earnings_release_exists": os.path.exists(EARNINGS_RELEASE_PATH),
                 "sectors_source_enabled": ENABLE_SECTORS_SOURCE,
+                "watchlist_file": WATCHLIST_JSON_PATH,
+                "trade_log": TRADE_LOG_PATH,
                 "positions_bytes": _file_size(POSITIONS_JSON_PATH),
                 "positions_bak_exists": os.path.exists(POSITIONS_JSON_PATH + ".bak"),
                 "agent_last_poll_ago": (round(time.time() - _LAST_AGENT_POLL[0], 1)
@@ -1166,6 +1250,21 @@ class StockRequestHandler(BaseHTTPRequestHandler):
         
         if path == "/watchlist":
             self._reply(200, _load_json(WATCHLIST_JSON_PATH))
+            return
+
+        if path == "/trade_log":
+            n = max(1, min(500, _qint(qs, "n", 50)))
+            lines = []
+            if os.path.exists(TRADE_LOG_PATH):
+                with open(TRADE_LOG_PATH, "r", encoding="utf-8") as f:
+                    lines = f.readlines()[-n:]
+            out = []
+            for ln in lines:
+                try:
+                    out.append(json.loads(ln))
+                except Exception:
+                    pass
+            self._reply(200, {"status": "ok", "items": out})
             return
 
         self._reply(404, {"status": "error", "message": "not found"})

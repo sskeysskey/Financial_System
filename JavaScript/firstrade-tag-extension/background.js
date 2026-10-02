@@ -1,9 +1,10 @@
 /* ============================================================================
- * Firstrade 桥接后台 v9
- *  ★ FT_RUN_ON_PAGE：自动 定位已开页面 / 跳转其它 Firstrade 标签页 / 新开标签页
- *                     → 等待页面就绪（识别未登录/会话过期/脚本未注入）→ 执行 → 成功后切回原标签页
- *  ★ FT_PEEK_PAGE  ：不切换标签页，直接向对应页面查询状态
- *  ★ 结果写入 storage.ftLastOp（popup 因切标签被关闭也不丢结果）
+ * Firstrade 桥接后台 v10
+ *  ★ FT_RUN_ON_PAGE / FT_PEEK_PAGE：自动 定位/跳转/新开 Firstrade 页面后执行
+ *  ★ FT_COMBO：组合任务（①持仓→②订单→③分组归属 / ③一键同步 Earning→④抓变更%）
+ *              后台串行执行，popup 关掉也不中断，进度/结果写 storage.ftLastOp
+ *  ★ 默认目标分组 ALL → Earning（自动迁移旧设置）
+ *  ★ FT_TRADE_LOG：快速交易审计日志 → bridge /trade_log
  * ==========================================================================*/
 
 const BRIDGE_BASE = 'http://127.0.0.1:18888';
@@ -23,6 +24,8 @@ const PAGE_RE = {
 };
 const PAGE_LABEL = { positions: '持仓页', orders: '订单页', watchlist: '自选股页' };
 const READY_TIMEOUT = 60000;
+const WL_JOB_TIMEOUT = 90 * 60 * 1000;
+const DEFAULT_GROUP = 'Earning';
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -34,6 +37,9 @@ async function jsonFetch(url, options) {
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${txt.slice(0, 200)}`);
   return data;
 }
+const postJson = (path, body) => jsonFetch(`${BRIDGE_BASE}${path}`, {
+  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {})
+});
 
 /* ==================== 页面识别 & 标签页工具 ==================== */
 function pageOfUrl(url) {
@@ -80,7 +86,6 @@ async function findPageTab(page) {
   return hits[0] || null;
 }
 
-/* 定位 → 跳转 → 新开；不会把 watchlist 标签页（远程代理/同步任务所在）跳走去别的页面 */
 async function openPageTab(page, activate = true) {
   const cur = await activeTab();
   let tab = await findPageTab(page);
@@ -131,7 +136,7 @@ async function waitPageReady(tabId, page, timeout) {
           } else looksSince = 0;
         } else if (r && r.noReceiver) {
           noRecvSince = noRecvSince || Date.now();
-          if (!reloaded && Date.now() - noRecvSince > 3000) {      // 扩展更新后旧页面没有脚本 → 刷新一次
+          if (!reloaded && Date.now() - noRecvSince > 3000) {
             reloaded = true; noRecvSince = 0;
             console.log(LOG, '页面脚本未注入，刷新标签页', tabId);
             try { await chrome.tabs.reload(tabId); } catch (e) { }
@@ -146,7 +151,6 @@ async function waitPageReady(tabId, page, timeout) {
   return { ok: false, error: `等待${PAGE_LABEL[page]}加载超时（${Math.round(timeout / 1000)}s），请检查网络或是否已登录` };
 }
 
-/* MV3 service worker 30s 空闲会被回收：长任务期间定时调用扩展 API 续命 */
 function keepAlive() {
   const h = setInterval(() => { try { chrome.runtime.getPlatformInfo(() => { }); } catch (e) { } }, 20000);
   return () => clearInterval(h);
@@ -163,45 +167,50 @@ function slimResp(resp) {
 
 const setLastOp = (op) => chrome.storage.local.set({ ftLastOp: op });
 
+/* 只负责「到页面上执行一条消息」，不写 lastOp、不切回 */
+async function execOnPage(opt) {
+  const page = opt.page;
+  const msg = opt.msg || {};
+  if (!PAGE_URL[page]) return { ok: false, error: '未知页面: ' + page };
+  try {
+    const loc = await openPageTab(page, opt.activate !== false);
+    console.log(LOG, `[${opt.kind || msg.action}] ${PAGE_LABEL[page]} → ${loc.how} tab=${loc.tab.id}`);
+    const rd = await waitPageReady(loc.tab.id, page, opt.readyTimeout || READY_TIMEOUT);
+    if (!rd.ok) return { ok: false, error: rd.error, how: loc.how, tabId: loc.tab.id, originTabId: loc.originTabId };
+    await sleep(rd.waited > 1500 ? 900 : 250);
+    const resp = await tabMsg(loc.tab.id, msg);
+    return {
+      ok: !!(resp && resp.ok), resp, how: loc.how, tabId: loc.tab.id, originTabId: loc.originTabId,
+      error: (resp && !resp.ok) ? (resp.error || resp.message || '执行失败') : ''
+    };
+  } catch (e) {
+    return { ok: false, error: String((e && e.message) || e) };
+  }
+}
+
+async function restoreTab(origin) {
+  if (!origin) return;
+  const cfg = await chrome.storage.local.get(['ftWlRestoreTab']);
+  if (cfg.ftWlRestoreTab === false) return;
+  try {
+    const t = await chrome.tabs.get(origin);
+    await chrome.tabs.update(origin, { active: true });
+    await chrome.windows.update(t.windowId, { focused: true });
+  } catch (e) { }
+}
+
 async function runOnPage(opt) {
   const page = opt.page;
   const msg = opt.msg || {};
   const kind = opt.kind || msg.action || '';
   const label = opt.label || '';
-  if (!PAGE_URL[page]) return { ok: false, error: '未知页面: ' + page };
-
   const stop = keepAlive();
   const id = Date.now() + '_' + Math.random().toString(36).slice(2, 6);
   await setLastOp({ id, kind, label, page, state: 'running', ts: Date.now() });
-
-  let result, origin = null;
-  try {
-    const loc = await openPageTab(page, opt.activate !== false);
-    origin = loc.originTabId;
-    console.log(LOG, `[${kind}] ${PAGE_LABEL[page]} → ${loc.how} tab=${loc.tab.id}`);
-    const rd = await waitPageReady(loc.tab.id, page, opt.readyTimeout || READY_TIMEOUT);
-    if (!rd.ok) throw new Error(rd.error);
-    await sleep(rd.waited > 1500 ? 900 : 250);           // 刚加载完的页面给 ag-Grid 一点渲染时间
-    const resp = await tabMsg(loc.tab.id, msg);
-    result = {
-      ok: !!(resp && resp.ok), resp, how: loc.how, tabId: loc.tab.id,
-      error: (resp && !resp.ok) ? (resp.error || resp.message || '执行失败') : ''
-    };
-  } catch (e) {
-    result = { ok: false, error: String((e && e.message) || e) };
-  } finally { stop(); }
-
-  // 只有成功才切回原标签页；失败（如未登录）停在 Firstrade 页面便于处理
-  if (result.ok && opt.restore && origin) {
-    const cfg = await chrome.storage.local.get(['ftWlRestoreTab']);
-    if (cfg.ftWlRestoreTab !== false) {
-      try {
-        const t = await chrome.tabs.get(origin);
-        await chrome.tabs.update(origin, { active: true });
-        await chrome.windows.update(t.windowId, { focused: true });
-      } catch (e) { }
-    }
-  }
+  let result;
+  try { result = await execOnPage(Object.assign({}, opt, { kind })); }
+  finally { stop(); }
+  if (result.ok && opt.restore && result.originTabId) await restoreTab(result.originTabId);
   await setLastOp({
     id, kind, label, page, state: 'done', ts: Date.now(),
     ok: result.ok, error: result.error, how: result.how, resp: slimResp(result.resp)
@@ -217,75 +226,144 @@ async function peekPage(page, msg) {
   return r;
 }
 
+/* ==================== ★ 组合任务 ==================== */
+const fmtPos = (r) => `${r.count ?? '?'} 只` + (r.server && r.server.ok ? '，已覆盖写入本机' : '，写入本机失败');
+const fmtOrd = (r) => {
+  const d = (r.server && r.server.data) || {};
+  return `${r.count ?? '?'} 笔` + (r.server && r.server.ok ? `，新增 ${d.added ?? '?'} / 累计 ${d.total ?? '?'}` : '，写入本机失败');
+};
+const PHASE_TXT = { idle: '收尾', group: '切换分组', diff: '比对差集', clear: '删除中', add: '添加中', verify: '复核中' };
+
+const COMBOS = {
+  combo_collect: {
+    label: '一键抓取（持仓 + 订单 + 分组归属）',
+    steps: () => [
+      { page: 'positions', label: '① 抓取全部持仓', msg: { action: 'FT_SYNC_ALL' }, fmt: fmtPos },
+      { page: 'orders', label: '② 抓取订单记录', msg: { action: 'FT_SCAN_ORDERS' }, fmt: fmtOrd },
+      { page: 'watchlist', label: '③ 扫描全部分组归属', msg: { action: 'FT_MEMBER_SCAN' }, fmt: r => r.message || 'OK' }
+    ]
+  },
+  combo_sync: {
+    label: '一键同步 Earning + 抓取变更%',
+    steps: (o) => [
+      {
+        page: 'watchlist', label: `③ 一键同步「${o.targetGroup || DEFAULT_GROUP}」`, waitJob: true,
+        msg: {
+          action: 'FT_WL_START', clearFirst: false, strictSync: o.strictSync !== false,
+          targetGroup: o.targetGroup || DEFAULT_GROUP, skipQuotes: true
+        }
+      },
+      {
+        page: 'watchlist', label: '④ 抓取全部变更%', msg: { action: 'FT_WL_SCAN_QUOTES' },
+        fmt: r => `${r.count ?? '?'} 只（分组「${r.group || '?'}」）` + (r.server && r.server.ok ? '，已覆盖写入' : '')
+      }
+    ]
+  }
+};
+
+async function waitWlJob(tabId, onTick) {
+  const t0 = Date.now();
+  let idle = 0, last = null;
+  await sleep(1200);
+  while (Date.now() - t0 < WL_JOB_TIMEOUT) {
+    const st = await tabMsg(tabId, { action: 'FT_WL_STATUS' });
+    if (st && st.ok) {
+      last = st;
+      if (st.running || st.finishing) {
+        idle = 0;
+        if (onTick) { try { await onTick(st); } catch (e) { } }
+      } else {
+        const saved = ((await chrome.storage.local.get(['ftWlJob'])).ftWlJob) || {};
+        if (saved.autoResume === true) idle = 0;          // 页面刷新后等待续跑
+        else if (++idle >= 2) break;
+      }
+    }
+    await sleep(1500);
+  }
+  if (!last) return { ok: false, msg: '无法读取自选股任务状态' };
+  if (last.running || last.finishing) return { ok: false, msg: '等待任务结束超时' };
+  const fails = (last.failed || 0) + (last.clearFailed || 0);
+  const did = (last.cleared || 0) + (last.added || 0);
+  const ok = fails === 0 && !(last.lastError && did === 0 && last.lastError.indexOf('一致') < 0);
+  let msg = `删除 ${last.cleared || 0}（失败 ${last.clearFailed || 0}）｜新增 ${last.added || 0}（失败 ${last.failed || 0}）`;
+  if (did === 0 && fails === 0 && !last.lastError) msg = '分组已与数据源一致，无需改动';
+  if (last.lastError) msg += `｜最后错误：${last.lastError}`;
+  return { ok, msg };
+}
+
+async function runCombo(msg) {
+  const kind = msg.combo;
+  const C = COMBOS[kind];
+  if (!C) return { ok: false, error: '未知组合任务：' + kind };
+  const steps = C.steps(msg.opts || {});
+  const id = Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+  const out = [];
+  let origin = null;
+  const stop = keepAlive();
+  const progress = (i, extra) => setLastOp({
+    id, kind, label: C.label, state: 'running', ts: Date.now(), steps: out.slice(),
+    progress: `步骤 ${i + 1}/${steps.length}：${steps[i].label}${extra ? '｜' + extra : ''}`
+  });
+  try {
+    for (let i = 0; i < steps.length; i++) {
+      const s = steps[i];
+      await progress(i);
+      const r = await execOnPage({ page: s.page, msg: s.msg, kind, readyTimeout: READY_TIMEOUT });
+      if (i === 0) origin = r.originTabId || null;
+      let ok = !!r.ok;
+      if (ok && r.resp && r.resp.server && r.resp.server.ok === false) ok = false;
+      let text = r.ok ? (s.fmt ? s.fmt(r.resp || {}) : 'OK') : (r.error || '失败');
+      if (r.ok && s.waitJob) {
+        const w = await waitWlJob(r.tabId, (st) => progress(i,
+          `${PHASE_TXT[st.phase] || st.phase}｜待删 ${st.toRemove}｜待加 ${st.toAdd}｜已删 ${st.cleared}｜已加 ${st.added}`));
+        ok = w.ok; text = w.msg;
+      }
+      out.push({ label: s.label, ok, msg: text });
+    }
+  } finally { stop(); }
+  const allOk = out.length === steps.length && out.every(x => x.ok);
+  if (allOk && origin) await restoreTab(origin);
+  const result = { ok: allOk, error: allOk ? '' : '部分步骤失败（见下方明细）', resp: { steps: out } };
+  await setLastOp({ id, kind, label: C.label, state: 'done', ts: Date.now(), ok: allOk, error: result.error, resp: result.resp });
+  return result;
+}
+
 /* ==================== 桥接 API ==================== */
 async function syncPositions(positions, overwrite = false) {
   if (!positions || (!Object.keys(positions).length && !overwrite)) return { status: 'skip', reason: 'empty' };
-  return jsonFetch(`${BRIDGE_BASE}/sync_positions`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ positions: positions || {}, overwrite: !!overwrite })
-  });
+  return postJson('/sync_positions', { positions: positions || {}, overwrite: !!overwrite });
 }
 async function syncOrders(orders, verbose = false) {
   if (!orders || !Object.keys(orders).length) return { status: 'skip', reason: 'empty' };
-  return jsonFetch(`${BRIDGE_BASE}/sync_orders`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ orders, verbose: !!verbose })
-  });
+  return postJson('/sync_orders', { orders, verbose: !!verbose });
 }
-async function compactOrders(verbose = false) {
-  return jsonFetch(`${BRIDGE_BASE}/compact_orders`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ verbose: !!verbose })
-  });
+const compactOrders = (verbose = false) => postJson('/compact_orders', { verbose: !!verbose });
+async function syncWatchlist(quotes, overwrite = true, group = '') {
+  if (!quotes || (!Object.keys(quotes).length && !overwrite)) return { status: 'skip', reason: 'empty' };
+  return postJson('/sync_watchlist', { quotes: quotes || {}, overwrite: !!overwrite, group: group || '' });
 }
-async function syncWatchlist(quotes, overwrite = true) {
-  if (!quotes || !Object.keys(quotes).length) return { status: 'skip', reason: 'empty' };
-  return jsonFetch(`${BRIDGE_BASE}/sync_watchlist`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ quotes, overwrite: !!overwrite })
-  });
-}
-async function plotWithPositions(symbol, positions) {
-  return jsonFetch(`${BRIDGE_BASE}/plot`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ symbol, positions: positions || {} })
-  });
-}
-async function ping() { return jsonFetch(`${BRIDGE_BASE}/ping`, { method: 'GET' }); }
-async function fetchServerPositions() { return jsonFetch(`${BRIDGE_BASE}/positions`, { method: 'GET' }); }
-async function fetchServerOrders() { return jsonFetch(`${BRIDGE_BASE}/orders`, { method: 'GET' }); }
-async function fetchServerWatchlist() { return jsonFetch(`${BRIDGE_BASE}/watchlist`, { method: 'GET' }); }
-async function fetchSectors() { return jsonFetch(`${BRIDGE_BASE}/sectors_all`, { method: 'GET' }); }
+const plotWithPositions = (symbol, positions) => postJson('/plot', { symbol, positions: positions || {} });
+const ping = () => jsonFetch(`${BRIDGE_BASE}/ping`, { method: 'GET' });
+const fetchServerPositions = () => jsonFetch(`${BRIDGE_BASE}/positions`, { method: 'GET' });
+const fetchServerOrders = () => jsonFetch(`${BRIDGE_BASE}/orders`, { method: 'GET' });
+const fetchServerWatchlist = () => jsonFetch(`${BRIDGE_BASE}/watchlist`, { method: 'GET' });
+const fetchSectors = () => jsonFetch(`${BRIDGE_BASE}/sectors_all`, { method: 'GET' });
 
 async function fetchWlSource(src, back, ahead) {
   const q = new URLSearchParams();
   q.set('src', src || 'earnings');
   if (back !== undefined && back !== null && back !== '') q.set('back', String(back));
   if (ahead !== undefined && ahead !== null && ahead !== '') q.set('ahead', String(ahead));
-  q.set('fallback', '0');                        // ★ 永不回退到最近财报日
+  q.set('fallback', '0');
   return jsonFetch(`${BRIDGE_BASE}/wl_source?${q.toString()}`, { method: 'GET' });
 }
-async function fetchWlTasks(max) { return jsonFetch(`${BRIDGE_BASE}/wl_tasks?max=${max || 3}`, { method: 'GET' }); }
-async function postWlTaskResult(payload) {
-  return jsonFetch(`${BRIDGE_BASE}/wl_task_result`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload || {})
-  });
-}
-async function fetchWlGroups() { return jsonFetch(`${BRIDGE_BASE}/wl_groups`, { method: 'GET' }); }
-async function postMembership(payload) {
-  return jsonFetch(`${BRIDGE_BASE}/wl_membership`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload || {})
-  });
-}
-async function postMembershipEvent(payload) {
-  return jsonFetch(`${BRIDGE_BASE}/wl_membership_event`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload || {})
-  });
-}
-async function fetchMembership() { return jsonFetch(`${BRIDGE_BASE}/wl_membership`, { method: 'GET' }); }
+const fetchWlTasks = (max) => jsonFetch(`${BRIDGE_BASE}/wl_tasks?max=${max || 3}`, { method: 'GET' });
+const postWlTaskResult = (p) => postJson('/wl_task_result', p);
+const fetchWlGroups = () => jsonFetch(`${BRIDGE_BASE}/wl_groups`, { method: 'GET' });
+const postMembership = (p) => postJson('/wl_membership', p);
+const postMembershipEvent = (p) => postJson('/wl_membership_event', p);
+const fetchMembership = () => jsonFetch(`${BRIDGE_BASE}/wl_membership`, { method: 'GET' });
+const postTradeLog = (p) => postJson('/trade_log', p);
 
 /* ==================== 开关迁移与默认值 ==================== */
 function migrateFlags() {
@@ -293,7 +371,8 @@ function migrateFlags() {
     ['ftAutoScrape', 'ftAutoPositions', 'ftAutoOrders', 'ftAutoWatchlist',
       'ftOrderVerbose', 'ftWlSource', 'ftWlBack', 'ftWlAhead',
       'ftWlAgent', 'ftWlRestoreGroup', 'ftWlRestoreTab',
-      'ftWlTargetGroup', 'ftWlStrictSync', 'ftWlMemberPassive'],
+      'ftWlTargetGroup', 'ftWlStrictSync', 'ftWlMemberPassive',
+      'ftTradeEnabled', 'ftTradeDryRun', 'ftTradeRemoveAfter', 'ftTradePresets'],
     (res) => {
       const patch = {};
       if (res.ftAutoPositions === undefined) patch.ftAutoPositions = res.ftAutoScrape === true;
@@ -304,11 +383,16 @@ function migrateFlags() {
       if (res.ftWlBack === undefined) patch.ftWlBack = 1;
       if (res.ftWlAhead === undefined) patch.ftWlAhead = 0;
       if (res.ftWlAgent === undefined) patch.ftWlAgent = true;
-      if (res.ftWlTargetGroup === undefined) patch.ftWlTargetGroup = 'ALL';
+      const tg = String(res.ftWlTargetGroup || '').trim();
+      if (!tg || tg.toUpperCase() === 'ALL') patch.ftWlTargetGroup = DEFAULT_GROUP;    // ★ ALL → Earning
       if (res.ftWlStrictSync === undefined) patch.ftWlStrictSync = true;
       if (res.ftWlRestoreGroup === undefined) patch.ftWlRestoreGroup = true;
       if (res.ftWlRestoreTab === undefined) patch.ftWlRestoreTab = true;
       if (res.ftWlMemberPassive === undefined) patch.ftWlMemberPassive = true;
+      if (res.ftTradeEnabled === undefined) patch.ftTradeEnabled = true;
+      if (!['dry', 'confirm', 'live'].includes(res.ftTradeMode)) patch.ftTradeMode = 'dry';   // ★ 默认预演
+      if (res.ftTradeRemoveAfter === undefined) patch.ftTradeRemoveAfter = true;
+      if (!Array.isArray(res.ftTradePresets) || !res.ftTradePresets.length) patch.ftTradePresets = [1000, 2000, 3000];
       if (Object.keys(patch).length) {
         chrome.storage.local.set(patch, () => {
           chrome.storage.local.remove('ftAutoScrape');
@@ -323,7 +407,6 @@ chrome.runtime.onStartup.addListener(migrateFlags);
 /* ==================== 消息分发 ==================== */
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || !msg.action) return;
-
   const done = (p) => {
     p.then((data) => sendResponse({ ok: true, data }))
       .catch((err) => sendResponse({ ok: false, error: String(err && err.message ? err.message : err) }));
@@ -339,7 +422,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     case 'FT_SYNC': return done(syncPositions(msg.payload, msg.overwrite));
     case 'FT_SYNC_ORDERS': return done(syncOrders(msg.payload, msg.verbose));
     case 'FT_COMPACT_ORDERS': return done(compactOrders(msg.verbose));
-    case 'FT_SYNC_WATCHLIST': return done(syncWatchlist(msg.payload, msg.overwrite));
+    case 'FT_SYNC_WATCHLIST': return done(syncWatchlist(msg.payload, msg.overwrite, msg.group));
     case 'FT_PLOT': return done(plotWithPositions(msg.symbol, msg.payload));
     case 'FT_PING': return done(ping());
     case 'FT_SERVER_POSITIONS': return done(fetchServerPositions());
@@ -353,10 +436,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     case 'FT_WL_MEMBERSHIP': return done(postMembership(msg.payload));
     case 'FT_WL_MEMBERSHIP_EVENT': return done(postMembershipEvent(msg.payload));
     case 'FT_SERVER_MEMBERSHIP': return done(fetchMembership());
+    case 'FT_TRADE_LOG': return done(postTradeLog(msg.payload));
 
-    /* ★ 全自动页面执行 / 免切换查询 */
     case 'FT_RUN_ON_PAGE': return direct(runOnPage(msg));
     case 'FT_PEEK_PAGE': return direct(peekPage(msg.page, msg.msg));
+    case 'FT_COMBO': return direct(runCombo(msg));
     case 'FT_ENSURE_WATCHLIST_TAB':
       return done(openPageTab('watchlist', true).then(r => ({ tabId: r.tab.id, status: r.how })));
     case 'FT_RESTORE_TAB':
@@ -366,4 +450,4 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
-console.log(LOG, 'service worker 就绪 (v9：全功能自动定位/跳转/新开 Firstrade 页面)');
+console.log(LOG, 'service worker 就绪 (v10：组合任务 / Earning 分组 / 快速交易日志)');

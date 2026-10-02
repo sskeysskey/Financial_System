@@ -236,3 +236,279 @@
 #ft-wl-hud.ft-wl-danger .ft-wl-cur {
   color: #D08770 !important;
 }
+
+/* ==================== v10 快速交易层 ==================== */
+html.ft-trade-on [col-id="symbol"] button[data-tooltip-trigger],
+html.ft-trade-on [col-id="symbol"] button,
+html.ft-trade-on [col-id="symbol"] [data-ref="eValue"] {
+  cursor: pointer !important;
+}
+
+#ft-trade-layer {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 99999998 !important;
+  background: rgba(15, 18, 24, .45) !important;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", sans-serif !important;
+}
+
+#ft-trade-layer.ftt-show {
+  display: flex !important;
+}
+
+#ft-trade-layer.ftt-running {
+  background: transparent !important;
+  pointer-events: none !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  padding: 90px 0 0 24px !important;
+}
+
+#ft-trade-layer .ftt-box {
+  pointer-events: auto !important;
+  width: 350px !important;
+  background: #2E3440 !important;
+  color: #ECEFF4 !important;
+  border: 1px solid #4C566A !important;
+  border-radius: 10px !important;
+  padding: 12px 14px !important;
+  font-size: 12px !important;
+  line-height: 1.6 !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .5) !important;
+}
+
+#ft-trade-layer .ftt-head {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  border-bottom: 1px solid #434C5E !important;
+  padding-bottom: 6px !important;
+  margin-bottom: 6px !important;
+}
+
+#ft-trade-layer .ftt-title {
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  color: #88C0D0 !important;
+  flex: 1 !important;
+}
+
+#ft-trade-layer .ftt-tag {
+  background: #EBCB8B !important;
+  color: #2E3440 !important;
+  border-radius: 4px !important;
+  padding: 0 6px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+
+#ft-trade-layer .ftt-x {
+  cursor: pointer !important;
+  color: #81A1C1 !important;
+  padding: 0 4px !important;
+}
+
+#ft-trade-layer .ftt-line {
+  margin: 3px 0 !important;
+  color: #D8DEE9 !important;
+  word-break: break-all !important;
+}
+
+#ft-trade-layer .ftt-dim {
+  color: #81A1C1 !important;
+  font-size: 11px !important;
+}
+
+#ft-trade-layer .ftt-warn {
+  color: #EBCB8B !important;
+  font-size: 11px !important;
+}
+
+#ft-trade-layer .ftt-badge {
+  display: inline-block !important;
+  border: 1px solid #4C566A !important;
+  border-radius: 4px !important;
+  padding: 0 5px !important;
+  margin: 0 3px 2px 0 !important;
+  color: #D8DEE9 !important;
+  font-size: 11px !important;
+}
+
+#ft-trade-layer .ftt-badge.b {
+  border-color: #BF616A !important;
+  color: #ff9aa2 !important;
+}
+
+#ft-trade-layer .ftt-badge.s {
+  border-color: #A3BE8C !important;
+  color: #A3BE8C !important;
+}
+
+#ft-trade-layer .ftt-tabs {
+  display: flex !important;
+  gap: 6px !important;
+  margin: 8px 0 !important;
+}
+
+#ft-trade-layer button {
+  font-family: inherit !important;
+  cursor: pointer !important;
+}
+
+#ft-trade-layer .ftt-tab {
+  flex: 1 !important;
+  padding: 6px 0 !important;
+  border-radius: 6px !important;
+  background: #3B4252 !important;
+  color: #ECEFF4 !important;
+  border: 1px solid #4C566A !important;
+  font-size: 13px !important;
+}
+
+#ft-trade-layer .ftt-tab.on {
+  background: #BF616A !important;
+  border-color: #BF616A !important;
+  font-weight: 700 !important;
+}
+
+#ft-trade-layer .ftt-tab.sell.on {
+  background: #5E8B5A !important;
+  border-color: #A3BE8C !important;
+}
+
+#ft-trade-layer .ftt-presets {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 6px !important;
+  margin: 6px 0 !important;
+}
+
+#ft-trade-layer .ftt-btn {
+  padding: 7px 0 !important;
+  border-radius: 6px !important;
+  border: 1px solid #5E81AC !important;
+  background: #5E81AC !important;
+  color: #fff !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+
+#ft-trade-layer .ftt-btn:hover {
+  filter: brightness(1.12) !important;
+}
+
+#ft-trade-layer .ftt-btn.sell {
+  background: #4C7A49 !important;
+  border-color: #A3BE8C !important;
+}
+
+#ft-trade-layer .ftt-btn.ghost {
+  background: #3B4252 !important;
+  border-color: #4C566A !important;
+  font-weight: 400 !important;
+}
+
+#ft-trade-layer .ftt-btn.wide {
+  width: 100% !important;
+  margin: 4px 0 !important;
+}
+
+#ft-trade-layer .ftt-row {
+  display: flex !important;
+  gap: 6px !important;
+  margin: 6px 0 !important;
+}
+
+#ft-trade-layer .ftt-row input {
+  flex: 1 !important;
+  background: #3B4252 !important;
+  color: #ECEFF4 !important;
+  border: 1px solid #4C566A !important;
+  border-radius: 6px !important;
+  padding: 5px 8px !important;
+  font-size: 13px !important;
+}
+
+#ft-trade-layer .ftt-row .ftt-btn {
+  width: 90px !important;
+  flex: none !important;
+}
+
+#ft-trade-layer .ftt-rm {
+  margin: 8px 0 4px !important;
+  padding-top: 6px !important;
+  border-top: 1px dashed #434C5E !important;
+  color: #D8DEE9 !important;
+}
+
+#ft-trade-layer .ftt-rm label {
+  margin-right: 10px !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+}
+
+#ft-trade-layer .ftt-log {
+  max-height: 160px !important;
+  overflow-y: auto !important;
+  margin-top: 6px !important;
+  background: #272C36 !important;
+  border-radius: 6px !important;
+  padding: 4px 8px !important;
+  font-size: 11px !important;
+  color: #D8DEE9 !important;
+}
+
+#ft-trade-layer .ftt-log:empty {
+  display: none !important;
+}
+
+#ft-trade-layer .ftt-foot {
+  margin-top: 8px !important;
+  display: flex !important;
+}
+
+#ft-trade-layer .ftt-foot .ftt-btn {
+  flex: 1 !important;
+}
+
+#ft-trade-layer.ftt-running .ftt-box button:not([data-act="close"]):not([data-act="confirm"]):not([data-act="cancel"]),
+#ft-trade-layer.ftt-running .ftt-box input {
+  opacity: .4 !important;
+  pointer-events: none !important;
+}
+
+/* v10.1：下单模式标签 + 下单前确认区 */
+#ft-trade-layer .ftt-tag.dry {
+  background: #A3BE8C !important;
+}
+
+#ft-trade-layer .ftt-tag.confirm {
+  background: #EBCB8B !important;
+}
+
+#ft-trade-layer .ftt-tag.live {
+  background: #BF616A !important;
+  color: #fff !important;
+}
+
+#ft-trade-layer .ftt-confirm {
+  margin: 8px 0 !important;
+  padding: 6px 8px !important;
+  border: 1px solid #EBCB8B !important;
+  border-radius: 6px !important;
+  background: rgba(235, 203, 139, .08) !important;
+}
+
+#ft-trade-layer .ftt-confirm .ftt-row .ftt-btn {
+  flex: 1 !important;
+  width: auto !important;
+}
+
+#ft-trade-layer .ftt-btn.go {
+  background: #BF616A !important;
+  border-color: #BF616A !important;
+  font-weight: 700 !important;
+}

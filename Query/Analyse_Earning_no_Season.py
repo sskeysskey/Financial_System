@@ -2,6 +2,7 @@ import json
 import sqlite3
 import os
 import datetime
+from collections import Counter   # 【新增】
 
 USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
@@ -9,11 +10,11 @@ BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 # --- 1. 配置文件和路径 ---
 BASE_PATH = USER_HOME
 
-# SYMBOL_TO_TRACE = ""
-# TARGET_DATE = ""
+SYMBOL_TO_TRACE = ""
+TARGET_DATE = ""
 
-SYMBOL_TO_TRACE = "LIN"
-TARGET_DATE = "2026-09-21"
+# SYMBOL_TO_TRACE = "RCL"
+# TARGET_DATE = "2026-09-30"
 
 PATHS = {
     "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),
@@ -48,7 +49,7 @@ CONFIG = {
     "TURNOVER_THRESHOLD_CHINA": 100_000_000,
 
     # ============================================================
-    # ========== 【新增】成交额三级判定 (满足任一级即通过) ==========
+    # ========== 成交额三级判定 (满足任一级即通过) ==========
     # 级别① 单日：今日成交额 > 阈值 (原逻辑)
     # 级别② ADV ：最近 N 个交易日(含今日)平均成交额 >= 阈值，且今日成交额 >= 阈值 × MIN_TODAY_RATIO
     # 级别③ 链条：前一交易日已在 CHAIN_GROUPS 中 + 今日收盘更低 + 今日成交额 >= 阈值 × CHAIN_RATIO
@@ -60,31 +61,57 @@ CONFIG = {
     "TURNOVER_CHAIN_RATIO": 0.6,
     "TURNOVER_CHAIN_GROUPS": ["PE_Deeper", "PE_Deep", "PE_low", "PE_lower", "PE_lowest"],
     "TURNOVER_CHAIN_GAP_MAX_DAYS": 7,   # 前一交易日与今日的最大自然日跨度(防停牌后误继承)
+    # ============================================================
+    # ========== 【新增】反弹保护 (Rebound Guard) ==========
+    # 无论入口条件是否跳过"通用过滤2(N日基准价)"，都强制检查：
+    #   最新价 相对 [财报日之后、最近 N 个交易日(含今日)] 的最低价 涨幅 <= 阈值
+    # 防止已从低点大幅反弹的股票，仅因"距财报价仍有深跌"被归入 PE_Deep / PE_Deeper / OverSell_W 等
+    # ============================================================
+    "REBOUND_GUARD_ENABLE": True,
+    "REBOUND_GUARD_LOOKBACK_DAYS": 15,
+    "REBOUND_GUARD_MAX_RISE": 0.08,
+    "REBOUND_GUARD_MAX_RISE_HOT": 0.10,
 
     "RECENT_EARNINGS_COUNT": 2,
-    "MARKETCAP_THRESHOLD": 200_000_000_000,
-    "MARKETCAP_THRESHOLD_MEGA": 500_000_000_000,
-    "MARKETCAP_THRESHOLD_GIANT": 1_000_000_000_000,
+
+    # 市值分档线：SMALL < MARKETCAP_THRESHOLD <= LARGE < MEGA <= MEGA档 < GIANT <= GIANT档
+    "MARKETCAP_THRESHOLD": 200_000_000_000,          # 小市值 / 大市值 分界 (2000亿)
+    "MARKETCAP_THRESHOLD_MEGA": 500_000_000_000,     # 超大市值起点 (5000亿)
+    "MARKETCAP_THRESHOLD_GIANT": 1_000_000_000_000,  # 巨型市值起点 (1万亿)
     "COND5_WINDOW_DAYS": 6,
 
-    "PRICE_DROP_PERCENTAGE_LARGE": 0.09,
-    "PRICE_DROP_PERCENTAGE_SMALL": 0.07,
+    # ============================================================
+    # 【修改】回撤阈值统一按"市值"命名：
+    #   *_SMALL = 小市值(< 2000亿)  -> 要求回撤最深
+    #   *_LARGE = 大市值(2000亿~5000亿)
+    #   *_MEGA  = 超大市值(5000亿~1万亿)   (仅严格模式使用)
+    #   *_GIANT = 巨型市值(>= 1万亿)        (原 *_MINI 已更名为 *_GIANT)
+    # 规律：同一模式内 SMALL >= LARGE >= MEGA >= GIANT；
+    #       跨模式 严格 >= 普通宽松 >= 次宽松 >= 最宽松
+    # ============================================================
+    # 严格模式
+    "PRICE_DROP_PERCENTAGE_SMALL": 0.10,
+    "PRICE_DROP_PERCENTAGE_LARGE": 0.07,
     "PRICE_DROP_PERCENTAGE_MEGA": 0.06,
     "PRICE_DROP_PERCENTAGE_GIANT": 0.05,
 
-    "RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.1,
-    "RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.08,
-    "RELAXED_PRICE_DROP_PERCENTAGE_MINI": 0.05,
+    # 普通宽松
+    "RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.1,
+    "RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.08,
+    "RELAXED_PRICE_DROP_PERCENTAGE_GIANT": 0.05,
 
-    "HOT_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.075,
-    "HOT_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.067,
+    # 普通宽松 · 热门标签覆盖 (GIANT 档沿用 RELAXED_PRICE_DROP_PERCENTAGE_GIANT)
+    "HOT_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.075,
+    "HOT_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.067,
 
-    "SUB_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.09,
-    "SUB_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.07,
-    "SUB_RELAXED_PRICE_DROP_PERCENTAGE_MINI": 0.05,
+    # 次宽松
+    "SUB_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.09,
+    "SUB_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.07,
+    "SUB_RELAXED_PRICE_DROP_PERCENTAGE_GIANT": 0.05,
 
-    "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.07,
-    "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.05,
+    # 最宽松
+    "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_SMALL": 0.07,
+    "SUPER_RELAXED_PRICE_DROP_PERCENTAGE_LARGE": 0.05,
 
     "ER_PRICE_DIFF_THRESHOLD": 0.06,
     "MIN_PE_VALID_SIZE_FOR_RELAXED_FILTER": 5,
@@ -197,7 +224,7 @@ def load_symbol_tags(json_path):
     except Exception:
         return {}
 
-# ========== 【新增】只读加载 Earning_History，用于成交额链条顺延判定 ==========
+# ========== 只读加载 Earning_History，用于成交额链条顺延判定 ==========
 def load_earning_history_readonly(json_path):
     try:
         with open(json_path, 'r', encoding='utf-8') as f:
@@ -205,6 +232,43 @@ def load_earning_history_readonly(json_path):
         return data if isinstance(data, dict) else {}
     except Exception:
         return {}
+
+# ========== 【新增】回撤阈值配置自检 (只警告，不中断) ==========
+def validate_drop_config(config, log_detail):
+    warnings = []
+    tiers_order = ("SMALL", "LARGE", "MEGA", "GIANT")
+    passes = [
+        ("严格", "PRICE_DROP_PERCENTAGE"),
+        ("普通宽松", "RELAXED_PRICE_DROP_PERCENTAGE"),
+        ("次宽松", "SUB_RELAXED_PRICE_DROP_PERCENTAGE"),
+        ("最宽松", "SUPER_RELAXED_PRICE_DROP_PERCENTAGE"),
+    ]
+
+    # 1) 同一模式内：市值越大，要求回撤应越小
+    for name, prefix in passes + [("热门普通宽松", "HOT_RELAXED_PRICE_DROP_PERCENTAGE")]:
+        seq = [(t, config.get(f"{prefix}_{t}")) for t in tiers_order]
+        seq = [(t, v) for t, v in seq if v is not None]
+        for (t1, v1), (t2, v2) in zip(seq, seq[1:]):
+            if v1 < v2:
+                warnings.append(f"[{name}] {prefix}_{t1}={v1} < {prefix}_{t2}={v2}：市值更大的档位反而要求更深回撤，请检查是否写反。")
+
+    # 2) 跨模式：越宽松要求回撤应越小
+    for tier in ("SMALL", "LARGE"):
+        vals = [(name, config.get(f"{prefix}_{tier}")) for name, prefix in passes]
+        for (n1, v1), (n2, v2) in zip(vals, vals[1:]):
+            if v1 is not None and v2 is not None and v1 < v2:
+                warnings.append(f"[{tier}档] {n1}({v1}) < {n2}({v2})：更严格的模式反而阈值更宽松，层级倒挂。")
+
+    # 3) 残留旧命名
+    legacy = [k for k in config if isinstance(k, str) and k.endswith("_PRICE_DROP_PERCENTAGE_MINI")]
+    if legacy:
+        warnings.append(f"检测到旧配置名 {legacy}，已不再被读取，请改名为 *_GIANT。")
+
+    if warnings:
+        log_detail("\n⚠️ [配置自检] 回撤阈值存在以下可疑设置：")
+        for w in warnings:
+            log_detail(f"   - {w}")
+    return warnings
 
 def update_json_panel(symbols_list, json_path, group_name, symbol_to_note=None):
     try:
@@ -224,15 +288,16 @@ def update_json_panel(symbols_list, json_path, group_name, symbol_to_note=None):
     except Exception as e:
         print(f"错误: 写入JSON文件失败: {e}")
 
-def update_earning_history_json(file_path, group_name, symbols_to_add, log_detail):
+def update_earning_history_json(file_path, group_name, symbols_to_add, log_detail, date_str=None):
     log_detail(f"\n--- 更新历史记录文件: {os.path.basename(file_path)} -> '{group_name}' ---")
 
     if not symbols_to_add:
         log_detail(f" - 列表为空，跳过写入历史记录。")
         return
 
-    yesterday = datetime.date.today() - datetime.timedelta(days=1)
-    yesterday_str = yesterday.isoformat()
+    # 【修复】优先使用数据的真实交易日；缺失时才回退到"运行日的昨天"
+    if not date_str:
+        date_str = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
 
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
@@ -244,20 +309,18 @@ def update_earning_history_json(file_path, group_name, symbols_to_add, log_detai
     if group_name not in data:
         data[group_name] = {}
 
-    existing_symbols = data[group_name].get(yesterday_str, [])
-    combined_symbols = set(existing_symbols) | set(symbols_to_add)
-    updated_symbols = sorted(list(combined_symbols))
-
+    existing_symbols = data[group_name].get(date_str, [])
+    updated_symbols = sorted(set(existing_symbols) | set(symbols_to_add))
     if not updated_symbols:
         return
 
-    data[group_name][yesterday_str] = updated_symbols
+    data[group_name][date_str] = updated_symbols
     num_added = len(updated_symbols) - len(existing_symbols)
 
     try:
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
-        log_detail(f"成功更新历史记录。日期: {yesterday_str}, 分组: '{group_name}'.")
+        log_detail(f"成功更新历史记录。日期: {date_str}, 分组: '{group_name}'.")
         log_detail(f" - 本次新增 {num_added} 个不重复的 symbol。")
         log_detail(f" - 当天总计 {len(updated_symbols)} 个 symbol。")
     except Exception as e:
@@ -346,7 +409,7 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
         if is_tracing:
             log_detail(f"[{symbol}] 步骤3.1: 获取最近 {lookback_days} 个交易日数据。日期: {data['prev_window_dates']}, 价格: {data['prev_window_prices']}")
 
-        # ========== 【新增】步骤3.1b: 最近 N 个交易日(含今日)成交额，用于 ADV 判定 ==========
+        # ========== 步骤3.1b: 最近 N 个交易日(含今日)成交额，用于 ADV 判定 ==========
         cursor.execute(
             f'SELECT date, price, volume FROM "{sector_name}" WHERE name = ? AND date <= ? ORDER BY date DESC LIMIT ?',
             (symbol, data['latest_date_str'], adv_days)
@@ -390,12 +453,16 @@ def build_stock_data_cache(symbols, symbol_to_sector_map, db_path, symbol_to_tra
 
         if is_tracing: log_detail(f"[{symbol}] 步骤3.4: 获取从财报日({latest_er_date})到最新日({data['latest_date_str']})之间的最高价: {data['high_between_er_and_latest']}")
 
+        # 【修复】增加 date <= latest_date_str 上限，防止回测模式读取到未来数据
         limit_days = CONFIG.get("COND5_WINDOW_DAYS", 6)
-        cursor.execute(f'SELECT price FROM "{sector_name}" WHERE name = ? AND date >= ? ORDER BY date ASC LIMIT {limit_days}', (symbol, data['latest_er_date_str']))
+        cursor.execute(
+            f'SELECT price FROM "{sector_name}" WHERE name = ? AND date >= ? AND date <= ? ORDER BY date ASC LIMIT {limit_days}',
+            (symbol, data['latest_er_date_str'], data['latest_date_str'])
+        )
         er_6_day_prices = [row[0] for row in cursor.fetchall() if row[0] is not None]
         data['er_6_day_window_low'] = min(er_6_day_prices) if er_6_day_prices else None
         if is_tracing:
-            log_detail(f"[{symbol}] 步骤3.5: 为条件5获取财报窗口期(6天)最低价。价格: {er_6_day_prices}, 最低价: {data['er_6_day_window_low']}")
+            log_detail(f"[{symbol}] 步骤3.5: 为条件5获取财报窗口期({limit_days}天)最低价。价格: {er_6_day_prices}, 最低价: {data['er_6_day_window_low']}")
 
         if target_date:
             cursor.execute(f'SELECT date, price FROM "{sector_name}" WHERE name = ? AND date >= ? AND date <= ? ORDER BY date ASC', (symbol, data['latest_er_date_str'], target_date))
@@ -485,7 +552,7 @@ def get_high_price_last_n_days(cursor, sector_name, symbol, latest_date_str, loo
     return row[0] if row and row[0] is not None else None
 
 # ==============================================================================
-# ========== 【新增】成交额三级判定 (单日 / ADV / 链条顺延) ==========
+# ========== 成交额三级判定 (单日 / ADV / 链条顺延) ==========
 # ==============================================================================
 def _find_turnover_chain_source(data, config, symbol):
     """
@@ -803,7 +870,7 @@ def check_new_condition_5(data, config, log_detail, symbol_to_trace):
     latest_price = data.get('latest_price')
 
     er_to_high_threshold = config.get('COND5_ER_TO_HIGH_THRESHOLD', 0.3)
-    high_to_latest_threshold = config.get('COND5_HIGH_TO_LATEST_THRESHOLD', 0.079)
+    high_to_latest_threshold = config.get('COND5_HIGH_TO_LATEST_THRESHOLD', 0.09)
 
     if high_between is None or er_window_low_price is None or latest_price is None:
         if is_tracing: log_detail(f"  - 结果: False (数据不足: high_between={high_between}, er_window_low_price={er_window_low_price}, latest_price={latest_price})")
@@ -820,7 +887,7 @@ def check_new_condition_5(data, config, log_detail, symbol_to_trace):
     if is_tracing:
         er_rise_pct = (high_between - er_window_low_price) / er_window_low_price
         latest_rise_pct = (high_between - latest_price) / latest_price
-        log_detail(f"  - 财报窗口期(6天)最低价: {er_window_low_price:.2f}")
+        log_detail(f"  - 财报窗口期最低价: {er_window_low_price:.2f}")
         log_detail(f"  - 财报日到最新日之间最高价: {high_between:.2f}")
         log_detail(f"  - 最新收盘价: {latest_price:.2f}")
         log_detail(f"  - 条件A (新): 最高价相对财报窗口期最低价涨幅 {er_rise_pct:.2%} >= {er_to_high_threshold:.2%} -> {cond_a}")
@@ -1114,7 +1181,7 @@ def check_cond8_drop_tier(data, config, log_detail, symbol_to_trace):
         t_lowest = config.get("COND8_LOWEST_DROP_BIG", 0.15)
         cap_desc = f"大市值 (> {cap_line/1e8:.0f}亿)"
     else:
-        t_low = config.get("COND8_LOW_DROP_SMALL", 0.11)
+        t_low = config.get("COND8_LOW_DROP_SMALL", 0.108)
         t_lower = config.get("COND8_LOWER_DROP_SMALL", 0.15)
         t_lowest = config.get("COND8_LOWEST_DROP_SMALL", 0.21)
         cap_desc = f"中小市值 (<= {cap_line/1e8:.0f}亿 或 市值未知)"
@@ -1157,7 +1224,7 @@ def check_cond8_drop_tier(data, config, log_detail, symbol_to_trace):
 
 def check_turnover_filter(data, config, log_detail, symbol_to_trace, prefix="条件8"):
     """
-    【修改】统一改用三级成交额判定 (单日 / ADV / 链条顺延)
+    统一改用三级成交额判定 (单日 / ADV / 链条顺延)
     """
     ok, mode = evaluate_turnover(data, config, log_detail, symbol_to_trace, prefix=prefix)
     if ok and data.get('symbol') == symbol_to_trace:
@@ -1293,15 +1360,65 @@ def check_entry_conditions(data, symbol_to_trace, log_detail):
 
     return (passed_any, passed_new_cond4, passed_new_cond5, passed_new_cond6, passed_new_cond7)
 
-def apply_common_filters(data, symbol_to_trace, log_detail, drop_pct_large, drop_pct_small, drop_pct_mini=None, skip_drawdown=False, skip_baseline_filter=False):
+def check_rebound_guard(data, config, log_detail, symbol_to_trace):
+    """
+    【新增】反弹保护：最新价相对 财报日之后、最近 N 个交易日(含今日) 最低价的涨幅不得超过阈值。
+    返回 True=通过(未过度反弹)，False=拦截。
+    """
+    symbol = data.get('symbol')
+    is_tracing = (symbol == symbol_to_trace)
+
+    if not config.get("REBOUND_GUARD_ENABLE", True):
+        return True
+
+    n = int(config.get("REBOUND_GUARD_LOOKBACK_DAYS", 10))
+    latest_price = data.get('latest_price')
+    latest_date = data.get('latest_date_str')
+    latest_er_date = data.get('latest_er_date_str') or ""
+
+    if latest_price is None or latest_price <= 0:
+        if is_tracing: log_detail("   - [反弹保护] 缺少最新价，跳过(放行)。")
+        return True
+
+    # 仅使用财报日(含)之后的价格，避免把财报前的低价当作参照
+    pairs = [(d, p) for d, p in zip(data.get('prev_window_dates', [])[:n],
+                                    data.get('prev_window_prices', [])[:n])
+             if d is not None and p is not None and p > 0 and d >= latest_er_date]
+    pairs.append((latest_date, latest_price))
+
+    low_date, low_price = min(pairs, key=lambda x: x[1])
+    rise = (latest_price - low_price) / low_price
+
+    is_hot = bool(data.get('tags', set()) & config.get("HOT_TAGS", set()))
+    max_rise = config.get("REBOUND_GUARD_MAX_RISE_HOT", 0.15) if is_hot else config.get("REBOUND_GUARD_MAX_RISE", 0.10)
+    ok = rise <= max_rise
+
+    if is_tracing:
+        log_detail(f" - [通用过滤2b] 反弹保护 (财报后最近{n}个交易日含今日, 热门={is_hot}):")
+        log_detail(f"   - 窗口最低价: {low_price:.2f} ({low_date}), 最新价: {latest_price:.2f}")
+        log_detail(f"   - 自低点涨幅 {rise:.2%} <= 允许 {max_rise:.0%} -> {ok}")
+    return ok
+
+def apply_common_filters(data, symbol_to_trace, log_detail,
+                         drop_pct_small_cap, drop_pct_large_cap, drop_pct_giant_cap=None,
+                         use_strict_tiers=False, skip_drawdown=False, skip_baseline_filter=False):
     """
     应用通用的过滤条件：价格回撤、N日基准价、成交额(三级判定)。
+
+    【修改】参数按"市值"命名：
+      drop_pct_small_cap : 小市值 (< MARKETCAP_THRESHOLD) 要求的回撤
+      drop_pct_large_cap : 大市值 (>= MARKETCAP_THRESHOLD) 要求的回撤
+      drop_pct_giant_cap : 巨型市值 (>= MARKETCAP_THRESHOLD_GIANT) 要求的回撤 (可选)
+      use_strict_tiers   : 严格模式显式开关 (启用 MEGA/GIANT 四档)，
+                           替代原来"比较数值是否相等"来判断严格模式的脆弱写法
     """
     symbol = data.get('symbol')
     is_tracing = (symbol == symbol_to_trace)
 
     if is_tracing:
-        log_detail(f"\n--- [{symbol}] 开始执行通用过滤 (使用 large={drop_pct_large*100}%, small={drop_pct_small*100}%" + (f", mini={drop_pct_mini*100}%" if drop_pct_mini else "") + ") ---")
+        mode_desc = "严格四档" if use_strict_tiers else "宽松档"
+        log_detail(f"\n--- [{symbol}] 开始执行通用过滤 ({mode_desc}: 小市值={drop_pct_small_cap*100:.1f}%, 大市值={drop_pct_large_cap*100:.1f}%"
+                   + (f", 巨型={drop_pct_giant_cap*100:.1f}%" if drop_pct_giant_cap is not None else "") + ") ---")
 
     # 1. 价格回撤
     if not skip_drawdown:
@@ -1314,28 +1431,34 @@ def apply_common_filters(data, symbol_to_trace, log_detail, drop_pct_large, drop
             if is_tracing: log_detail(f" - 最终裁定: 失败 (通用过滤1: 无法获取有效的最高价数据: {high_price_reference})。")
             return False
 
-        is_strict_mode = (
-            drop_pct_large == CONFIG["PRICE_DROP_PERCENTAGE_LARGE"] and
-            drop_pct_small == CONFIG["PRICE_DROP_PERCENTAGE_SMALL"]
-        )
+        cap_giant = CONFIG["MARKETCAP_THRESHOLD_GIANT"]
+        cap_mega = CONFIG["MARKETCAP_THRESHOLD_MEGA"]
+        cap_large = CONFIG["MARKETCAP_THRESHOLD"]
 
-        if is_strict_mode:
-            if marketcap and marketcap >= CONFIG["MARKETCAP_THRESHOLD_GIANT"]: drop_pct = CONFIG["PRICE_DROP_PERCENTAGE_GIANT"]
-            elif marketcap and marketcap >= CONFIG["MARKETCAP_THRESHOLD_MEGA"]: drop_pct = CONFIG["PRICE_DROP_PERCENTAGE_MEGA"]
-            elif marketcap and marketcap >= CONFIG["MARKETCAP_THRESHOLD"]: drop_pct = CONFIG["PRICE_DROP_PERCENTAGE_SMALL"]
-            else: drop_pct = CONFIG["PRICE_DROP_PERCENTAGE_LARGE"]
+        if use_strict_tiers:
+            if marketcap and marketcap >= cap_giant:
+                drop_pct, cap_desc = CONFIG["PRICE_DROP_PERCENTAGE_GIANT"], "巨型市值(GIANT)"
+            elif marketcap and marketcap >= cap_mega:
+                drop_pct, cap_desc = CONFIG["PRICE_DROP_PERCENTAGE_MEGA"], "超大市值(MEGA)"
+            elif marketcap and marketcap >= cap_large:
+                drop_pct, cap_desc = drop_pct_large_cap, "大市值(LARGE)"
+            else:
+                drop_pct, cap_desc = drop_pct_small_cap, "小市值/未知(SMALL)"
         else:
-            if drop_pct_mini and marketcap and marketcap >= CONFIG["MARKETCAP_THRESHOLD_GIANT"]: drop_pct = drop_pct_mini
-            elif marketcap and marketcap >= CONFIG["MARKETCAP_THRESHOLD"]: drop_pct = drop_pct_small
-            else: drop_pct = drop_pct_large
+            if drop_pct_giant_cap is not None and marketcap and marketcap >= cap_giant:
+                drop_pct, cap_desc = drop_pct_giant_cap, "巨型市值(GIANT)"
+            elif marketcap and marketcap >= cap_large:
+                drop_pct, cap_desc = drop_pct_large_cap, "大市值(LARGE)"
+            else:
+                drop_pct, cap_desc = drop_pct_small_cap, "小市值/未知(SMALL)"
 
         threshold_price_drawdown = high_price_reference * (1 - drop_pct)
         cond_drawdown_ok = data['latest_price'] <= threshold_price_drawdown
 
         if is_tracing:
             log_detail(" - [通用过滤1] 价格回撤:")
-            log_detail(f"   - 市值: {marketcap} -> 使用下跌百分比: {drop_pct*100:.1f}%")
-            log_detail(f"   - 判断: 最新价({data['latest_price']:.2f}) <= 财报日至今最高价({high_price_reference:.2f}) * (1 - {drop_pct:.2f}) = 阈值价({threshold_price_drawdown:.2f}) -> {cond_drawdown_ok}")
+            log_detail(f"   - 市值: {marketcap} -> 档位: {cap_desc} -> 使用下跌百分比: {drop_pct*100:.1f}%")
+            log_detail(f"   - 判断: 最新价({data['latest_price']:.2f}) <= 财报日至今最高价({high_price_reference:.2f}) * (1 - {drop_pct:.3f}) = 阈值价({threshold_price_drawdown:.2f}) -> {cond_drawdown_ok}")
 
         if not cond_drawdown_ok:
             if is_tracing: log_detail(" - 最终裁定: 失败 (通用过滤1: 价格回撤不满足)。")
@@ -1346,8 +1469,10 @@ def apply_common_filters(data, symbol_to_trace, log_detail, drop_pct_large, drop
     # 2. 相对 N 日基准价
     if not skip_baseline_filter:
         lookback_days = CONFIG.get("LOOKBACK_WINDOW_DAYS", 10)
-        prev_prices = data.get('prev_window_prices', [])
-        prev_dates = data.get('prev_window_dates', [])
+        # 【修复】缓存按 max(LOOKBACK_WINDOW_DAYS, PE_W_LOOKBACK_DAYS) 取数，这里必须截取前 N 天，
+        #        否则实际使用的是 21 日窗口，与配置/日志的"N日"不一致
+        prev_prices = data.get('prev_window_prices', [])[:lookback_days]
+        prev_dates = data.get('prev_window_dates', [])[:lookback_days]
         latest_er_date = data.get('latest_er_date_str')
 
         if len(prev_prices) < lookback_days:
@@ -1391,7 +1516,12 @@ def apply_common_filters(data, symbol_to_trace, log_detail, drop_pct_large, drop
     else:
         if is_tracing: log_detail(" - [通用过滤2] 相对N日基准价: 已跳过 (条件4/5模式)。")
 
-    # 3. 【修改】成交额三级判定
+    # 2b. 【新增】反弹保护 —— 不受 skip_baseline_filter / skip_drawdown 影响，始终执行
+    if not check_rebound_guard(data, CONFIG, log_detail, symbol_to_trace):
+        if is_tracing: log_detail(" - 最终裁定: 失败 (通用过滤2b: 自近期低点反弹过大，已非低位)。")
+        return False
+    
+    # 3. 成交额三级判定
     if is_tracing: log_detail(" - [通用过滤3] 成交额 (三级判定: 单日 / ADV / 链条顺延):")
     cond_turnover_ok, turnover_mode = evaluate_turnover(data, CONFIG, log_detail, symbol_to_trace, prefix="通用过滤3")
     data['turnover_pass_mode'] = turnover_mode
@@ -1434,12 +1564,15 @@ def run_processing_logic(log_detail):
         log_detail("为了保护现有数据，本次运行将【不会】更新 Panel 和 History JSON 文件。")
         log_detail("仅用于生成 trace log 进行逻辑验证。\n")
 
+    # 【新增】配置自检
+    validate_drop_config(CONFIG, log_detail)
+
     tag_blacklist_from_file, hot_tags_from_file = load_tag_settings(TAGS_SETTING_JSON_FILE)
     CONFIG["BLACKLIST_TAGS"] = tag_blacklist_from_file
     CONFIG["HOT_TAGS"] = hot_tags_from_file
     CONFIG["SYMBOL_BLACKLIST"] = load_earning_symbol_blacklist(BLACKLIST_JSON_FILE)
 
-    # ========== 【新增】只读加载历史，供成交额链条顺延使用 ==========
+    # 只读加载历史，供成交额链条顺延使用
     CONFIG["_EARNING_HISTORY"] = load_earning_history_readonly(EARNING_HISTORY_JSON_FILE)
 
     all_symbols, symbol_to_sector_map = load_all_symbols(SECTORS_JSON_FILE, CONFIG["TARGET_SECTORS"])
@@ -1458,7 +1591,8 @@ def run_processing_logic(log_detail):
         log_detail, symbol_to_tags_map, target_date=TARGET_DATE
     )
 
-    def perform_filter_pass(symbols_to_check, drop_large, drop_small, pass_name, drop_mini=None):
+    def perform_filter_pass(symbols_to_check, drop_small_cap, drop_large_cap, pass_name,
+                            drop_giant_cap=None, use_strict_tiers=False):
         preliminary_results = []
         oversell_w_candidates = []
         pe_deep_candidates = []
@@ -1478,19 +1612,27 @@ def run_processing_logic(log_detail):
             should_skip_drawdown = passed_cond5 or passed_cond6 or passed_cond7
             should_skip_baseline = passed_cond4 or passed_cond5
 
-            current_drop_large = drop_large
-            current_drop_small = drop_small
+            current_drop_small_cap = drop_small_cap
+            current_drop_large_cap = drop_large_cap
 
             if pass_name == "普通宽松":
                 symbol_tags = data.get('tags', set())
                 hot_tags = CONFIG.get("HOT_TAGS", set())
                 if symbol_tags & hot_tags:
-                    current_drop_large = CONFIG.get("HOT_RELAXED_PRICE_DROP_PERCENTAGE_LARGE", drop_large)
-                    current_drop_small = CONFIG.get("HOT_RELAXED_PRICE_DROP_PERCENTAGE_SMALL", drop_small)
+                    current_drop_small_cap = CONFIG.get("HOT_RELAXED_PRICE_DROP_PERCENTAGE_SMALL", drop_small_cap)
+                    current_drop_large_cap = CONFIG.get("HOT_RELAXED_PRICE_DROP_PERCENTAGE_LARGE", drop_large_cap)
                     if symbol == SYMBOL_TO_TRACE:
-                        log_detail(f" - [动态阈值] 命中热门标签，普通宽松阈值调整为 large={current_drop_large*100}%, small={current_drop_small*100}%")
+                        log_detail(f" - [动态阈值] 命中热门标签，普通宽松阈值调整为 小市值={current_drop_small_cap*100:.1f}%, 大市值={current_drop_large_cap*100:.1f}%")
 
-            if apply_common_filters(data, SYMBOL_TO_TRACE, log_detail, current_drop_large, current_drop_small, drop_pct_mini=drop_mini, skip_drawdown=should_skip_drawdown, skip_baseline_filter=should_skip_baseline):
+            if symbol == SYMBOL_TO_TRACE:
+                log_detail(f" - [筛选轮次] 当前处于【{pass_name}】轮次")
+
+            if apply_common_filters(data, SYMBOL_TO_TRACE, log_detail,
+                                    current_drop_small_cap, current_drop_large_cap,
+                                    drop_pct_giant_cap=drop_giant_cap,
+                                    use_strict_tiers=use_strict_tiers,
+                                    skip_drawdown=should_skip_drawdown,
+                                    skip_baseline_filter=should_skip_baseline):
                 if data['latest_date_str'] == data['latest_er_date_str']:
                     if symbol == SYMBOL_TO_TRACE:
                         log_detail(f" - [通用过滤] 失败 (日期重合): 最新交易日({data['latest_date_str']}) 与 最新财报日相同。")
@@ -1576,16 +1718,35 @@ def run_processing_logic(log_detail):
         elif filter_mode == 1: relaxed_symbols.append(symbol)
         else: strict_symbols.append(symbol)
 
-    res_super = perform_filter_pass(super_relaxed_symbols, CONFIG["SUPER_RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["SUPER_RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "最宽松")
+    # 【修改】参数顺序统一为 (小市值, 大市值, 巨型)，严格模式显式开启四档
+    res_super = perform_filter_pass(
+        super_relaxed_symbols,
+        CONFIG["SUPER_RELAXED_PRICE_DROP_PERCENTAGE_SMALL"],
+        CONFIG["SUPER_RELAXED_PRICE_DROP_PERCENTAGE_LARGE"],
+        "最宽松",
+        drop_giant_cap=CONFIG.get("SUPER_RELAXED_PRICE_DROP_PERCENTAGE_GIANT")
+    )
     res_sub = perform_filter_pass(
         sub_relaxed_symbols,
-        CONFIG["SUB_RELAXED_PRICE_DROP_PERCENTAGE_LARGE"],
         CONFIG["SUB_RELAXED_PRICE_DROP_PERCENTAGE_SMALL"],
+        CONFIG["SUB_RELAXED_PRICE_DROP_PERCENTAGE_LARGE"],
         "次宽松",
-        drop_mini=CONFIG.get("SUB_RELAXED_PRICE_DROP_PERCENTAGE_MINI")
+        drop_giant_cap=CONFIG.get("SUB_RELAXED_PRICE_DROP_PERCENTAGE_GIANT")
     )
-    res_relaxed = perform_filter_pass(relaxed_symbols, CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_SMALL"], "普通宽松", drop_mini=CONFIG.get("RELAXED_PRICE_DROP_PERCENTAGE_MINI"))
-    res_strict = perform_filter_pass(strict_symbols, CONFIG["PRICE_DROP_PERCENTAGE_LARGE"], CONFIG["PRICE_DROP_PERCENTAGE_SMALL"], "严格")
+    res_relaxed = perform_filter_pass(
+        relaxed_symbols,
+        CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_SMALL"],
+        CONFIG["RELAXED_PRICE_DROP_PERCENTAGE_LARGE"],
+        "普通宽松",
+        drop_giant_cap=CONFIG.get("RELAXED_PRICE_DROP_PERCENTAGE_GIANT")
+    )
+    res_strict = perform_filter_pass(
+        strict_symbols,
+        CONFIG["PRICE_DROP_PERCENTAGE_SMALL"],
+        CONFIG["PRICE_DROP_PERCENTAGE_LARGE"],
+        "严格",
+        use_strict_tiers=True
+    )
 
     raw_pe_valid = res_super[0] + res_sub[0] + res_relaxed[0] + res_strict[0]
     raw_pe_invalid = res_super[1] + res_sub[1] + res_relaxed[1] + res_strict[1]
@@ -1697,6 +1858,7 @@ def run_processing_logic(log_detail):
         if SYMBOL_TO_TRACE:
             log_detail(f"🔎 [验证] Symbol '{SYMBOL_TO_TRACE}' 最终筛选状态:")
             log_detail(f"   - 是否进入 PE_valid:   {SYMBOL_TO_TRACE in final_pe_valid_to_write}")
+            log_detail(f"   - 是否进入 PE_invalid: {SYMBOL_TO_TRACE in final_pe_invalid_to_write}")
             log_detail(f"   - 是否进入 PE_Deep:    {SYMBOL_TO_TRACE in final_pe_deep_to_write}")
             log_detail(f"   - 是否进入 PE_Deeper:  {SYMBOL_TO_TRACE in final_pe_deeper_to_write}")
             log_detail(f"   - 是否进入 PE_W:       {SYMBOL_TO_TRACE in final_pe_w_to_write}")
@@ -1753,10 +1915,17 @@ def run_processing_logic(log_detail):
         "PE_lowest": raw_pe_lowest,
     }
 
+    # 【修复】取缓存中最多股票共有的最新交易日作为历史 key（众数，可抵御个别停牌股的旧日期）
+    date_counter = Counter(d.get('latest_date_str') for d in stock_data_cache.values()
+                           if d.get('is_valid') and d.get('latest_date_str'))
+    history_date_str = date_counter.most_common(1)[0][0] if date_counter else None
+    log_detail(f"\n历史记录日期 key: {history_date_str or '(回退为运行日昨天)'}")
+
     has_written_any = False
     for group_name, symbols in groups_to_log.items():
         if symbols:
-            update_earning_history_json(EARNING_HISTORY_JSON_FILE, group_name, sorted(set(symbols)), log_detail)
+            update_earning_history_json(EARNING_HISTORY_JSON_FILE, group_name, sorted(set(symbols)),
+                                        log_detail, date_str=history_date_str)
             has_written_any = True
 
     if not has_written_any:

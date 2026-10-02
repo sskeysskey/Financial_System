@@ -593,12 +593,11 @@
 
   function isOurNode(node) {
     if (!node || node.nodeType !== 1) return false;
-    return !!(node.classList && (
-      node.classList.contains('ft-custom-tag-container') ||
-      node.id === 'ft-toast' ||
-      node.id === 'ft-wl-hud' ||
-      (node.closest && node.closest('#ft-wl-hud'))
-    ));
+    return !!(
+      (node.classList && node.classList.contains('ft-custom-tag-container')) ||
+      node.id === 'ft-toast' || node.id === 'ft-wl-hud' || node.id === 'ft-trade-layer' ||
+      (node.closest && (node.closest('#ft-wl-hud') || node.closest('#ft-trade-layer')))
+    );
   }
 
   const observer = new MutationObserver((records) => {

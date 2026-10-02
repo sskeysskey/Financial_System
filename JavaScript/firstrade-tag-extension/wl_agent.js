@@ -268,10 +268,37 @@
     await reportTask(t, ok, msg, { symbol: sym, group: grp, status }, restore, origin);
   }
 
+  /* ★ 远程交易（Python /wl_trade）：at-most-once，同一任务 id 永不重复执行 */
+  async function handleTradeTask(t) {
+    const T = window.__FT_TRADE__;
+    const p = t.params || {};
+    const st = await new Promise(r => chrome.storage.local.get(['ftTradeDoneIds'], r));
+    const doneIds = Array.isArray(st.ftTradeDoneIds) ? st.ftTradeDoneIds : [];
+    if (doneIds.includes(t.id)) {
+      await bg({ action: 'FT_WL_TASK_RESULT', payload: { id: t.id, ok: false, message: '该交易任务已执行过（防重复下单，已忽略）' } });
+      return;
+    }
+    await new Promise(r => chrome.storage.local.set({ ftTradeDoneIds: doneIds.concat([t.id]).slice(-300) }, r));
+    let ok = false, msg = '', data = {};
+    if (!T) msg = 'ft_trade.js 未加载（请刷新 watchlist 页面）';
+    else {
+      try {
+        const r = await T.executeRemote({
+          symbol: t.symbol, side: p.side, amount: p.amount, qty: p.qty,
+          remove: p.remove !== false, dry: !!p.dry
+        });
+        ok = !!r.ok; msg = r.message || r.error || ''; data = r;
+      } catch (e) { msg = String((e && e.message) || e); }
+    }
+    toast((ok ? '✅ ' : '❌ ') + msg);
+    await bg({ action: 'FT_WL_TASK_RESULT', payload: { id: t.id, ok, message: msg, data } });
+  }
+
   async function handleTask(t) {
     const action = String(t.action || 'add');
     if (action === 'scan_groups') return handleScanTask(t);
     if (action === 'remove') return handleRemoveTask(t);
+    if (action === 'trade') return handleTradeTask(t);
 
     const a = api();
     const sym = String(t.symbol || '').trim().toUpperCase();
@@ -311,7 +338,7 @@
     if (!ENABLED || busy || !isWatchlistPage()) return;
     const a = api();
     if (!a || !a.addOneSymbol) return;
-    if (a.isBusy()) return;
+    if (a.isBusy() || window.__FT_TRADE_BUSY__) return;
 
     const r = await bg({ action: 'FT_WL_TASKS', max: 3 });
     if (!r.ok) return;
