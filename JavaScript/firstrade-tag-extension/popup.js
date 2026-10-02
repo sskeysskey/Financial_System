@@ -733,14 +733,14 @@ $('wlMemberViewBtn').addEventListener('click', async () => {
 $('tradeEnabled').addEventListener('change', () => {
   const v = $('tradeEnabled').checked;
   chrome.storage.local.set({ ftTradeEnabled: v }, () =>
-    setTrade(v ? '✅ 已启用：在自选股页点击股票代码会弹出交易层（Alt+点击 = 原生行为）' : '⛔ 已关闭快速交易层'));
+    setTrade(v ? '✅ 已启用：在自选股页 / 持仓页点击股票代码会弹出交易层（Alt+点击 = 原生行为）' : '⛔ 已关闭快速交易层'));
 });
 $('tradeMode').addEventListener('change', () => {
   const v = $('tradeMode').value;
   const txt = {
     dry: '🧪 预演：只自动填表，不点「下单」，也不会移出分组',
     confirm: '✋ 下单前暂停：表单填好后，交易层出现「确认下单」，点了才真正下单（120 秒不点自动取消）',
-    live: '⚠️ 实盘：点金额档 / 一键全卖 会立即真实下单！'
+    live: '⚠️ 实盘：点金额档（按网页现价换算整数股）/ 一键全卖 会立即真实下单！'
   };
   chrome.storage.local.set({ ftTradeMode: v }, () => setTrade(txt[v], v === 'live'));
 });

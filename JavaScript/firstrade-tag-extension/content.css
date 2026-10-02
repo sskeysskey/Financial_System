@@ -512,3 +512,21 @@ html.ft-trade-on [col-id="symbol"] [data-ref="eValue"] {
   border-color: #BF616A !important;
   font-weight: 700 !important;
 }
+
+/* v10.1：金额档下方的「≈N股」+ 碎股提示 */
+#ft-trade-layer .ftt-sub {
+  display: block !important;
+  font-size: 10px !important;
+  font-weight: 400 !important;
+  opacity: .85 !important;
+  line-height: 1.2 !important;
+}
+
+#ft-trade-layer .ftt-frac {
+  margin: 8px 0 !important;
+  padding: 6px 8px !important;
+  border: 1px solid #D08770 !important;
+  border-radius: 6px !important;
+  color: #D08770 !important;
+  background: rgba(208, 135, 112, .08) !important;
+}

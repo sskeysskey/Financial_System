@@ -84,6 +84,7 @@
     totalCost: 'cost',
     allocationPercent: 'allocation',
     marketValue: 'market_value',
+    last: 'last_price',
     price: 'last_price',
     lastPrice: 'last_price',
     averageCost: 'avg_cost',
@@ -238,6 +239,30 @@
       if (AUTO_POSITIONS) debounceSync();
     }
     return Object.keys(buf).length;
+  }
+
+  /* ★ G 键：只抓一只股票的整行（白名单字段），并更新本页缓存 */
+  function scrapeOneRow(sym) {
+    const k = String(sym || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    let rec = null;
+    document.querySelectorAll('[row-id]').forEach((row) => {
+      if (row.closest('.ag-floating-top, .ag-floating-bottom')) return;
+      if (/\bag-row-level-[1-9]/.test(String(row.className || ''))) return;     // 跳过展开后的子行(税批)
+      const s = symbolFromRowId(row.getAttribute('row-id'));
+      if (!s || s.replace(/[^A-Z0-9]/g, '') !== k) return;
+      rec = rec || { symbol: s };
+      row.querySelectorAll('[col-id]').forEach((cell) => {
+        const col = cell.getAttribute('col-id');
+        if (!col || col === 'symbol' || POSITION_COL_BLACKLIST.has(col)) return;
+        const alias = COL_ALIAS[col];
+        if (!alias) return;
+        const txt = cleanText(cell);
+        if (!txt || txt === '--' || txt.length > MAX_CELL_LEN) return;
+        rec[alias] = txt;
+      });
+    });
+    if (rec) positionCache[rec.symbol] = Object.assign({}, positionCache[rec.symbol] || {}, rec);
+    return rec;
   }
 
   function signature() {
@@ -659,6 +684,33 @@
         looks, ready, rows, loggedOut: pw && !looks, busy: automationBusy()
       });
       return;
+    }
+
+    /* ★ G 键取数：读持仓页某一行（可滚动寻找） */
+    if (msg.action === 'FT_POS_ROW') {
+      (async () => {
+        PAGE = detectPage();
+        if (!canScrapePositions()) {
+          sendResponse({ ok: false, hidden: document.hidden, error: `当前页面不是持仓页或表格未加载（PAGE=${PAGE}）` });
+          return;
+        }
+        const sym = String(msg.symbol || '').trim().toUpperCase();
+        const api = window.__FT_WL_API__;
+        if (!api || !api.findRowQuote) { sendResponse({ ok: false, error: 'watchlist.js 未就绪' }); return; }
+        if (msg.settle) await sleep(600);              // 刚切到前台，等表格把最新值渲染出来
+        let q = await api.findRowQuote(sym, !!msg.scroll);
+        if (q) {
+          const t0 = Date.now();
+          while (!/%/.test(q.change_pct || '') && Date.now() - t0 < 3000) {
+            await sleep(250);
+            q = api.rowQuote(sym) || q;
+          }
+        }
+        if (!q) { sendResponse({ ok: true, found: false, hidden: document.hidden }); return; }
+        const rec = scrapeOneRow(q.symbol) || {};
+        sendResponse({ ok: true, found: true, hidden: document.hidden, symbol: q.symbol, quote: q, record: rec });
+      })();
+      return true;
     }
 
     if (msg.action === 'FT_STATUS') {

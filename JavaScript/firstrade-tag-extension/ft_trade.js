@@ -1,30 +1,33 @@
 /* ============================================================================
- * Firstrade 快速交易层  ft_trade.js  v2        仅在 /app/watchlist 生效
+ * Firstrade 快速交易层  ft_trade.js  v3      /app/watchlist + /app/positions
  *   点击股票代码 → 弹出交易层 → 自动驱动页面底部「交易」快速下单面板
- *   规则：当前/所在分组 ∈ 买/买买/买买买 → 买进（金额档 / 自定义金额）
- *         当前/所在分组 ∈ 卖卖卖          → 卖出（股数：positions JSON 的 quantity 一键全卖 / 自定义）
- *         其它 / 冲突                     → 由用户选择
- *   下单模式（storage.ftTradeMode）：
- *         dry     预演：自动填好表单，绝不点「下单」
- *         confirm 下单前暂停：填好后等用户在交易层点「确认下单」
- *         live    实盘：直接点「下单」
- *   成交判定：仅当出现「您的订单已送出 / 订单号码」等明确成功提示才算成功 → 才移出分组
- *   安全：同一时间只跑一笔；「下单」只点一次；下单前复核表单；全程审计日志
+ *   v3：
+ *     ★ 持仓页 /app/positions 也可点代码交易（Alt+点击 / 点展开箭头 = 原生行为）
+ *     ★ 买卖一律按「股数」下单：买入金额档 ÷ 网页实时价（col-id=last）→ 四舍五入整数股
+ *     ★ 碎股持仓禁止网页卖出 → 提示去手机 App
+ *     ★ 持仓页成交后的「移出分组」排队给自选股页代理执行
+ *   下单模式（storage.ftTradeMode）：dry 预演 / confirm 下单前确认 / live 实盘
+ *   成交判定：仅当出现明确成功提示才算成功 → 才移出分组
  * ==========================================================================*/
 (() => {
-  if (window.__FT_TRADE_V2__) return;
-  window.__FT_TRADE_V2__ = true;
+  if (window.__FT_TRADE_V3__) return;
+  window.__FT_TRADE_V3__ = true;
 
   const LOG = '[FT-TRADE]';
   const BUY_GROUPS = ['买', '买买', '买买买'];
   const SELL_GROUPS = ['卖卖卖'];
   const PROTECTED = ['Earning', 'Wrong'];
+  const HIDDEN_GROUPS = ['temp'];            // 临时取数分组：不显示、不参与交易
   const ROW_EXCLUDE = '.ag-floating-top, .ag-floating-bottom, #app-quote-bar, header, #app-header';
   const MODES = ['dry', 'confirm', 'live'];
   const MODE_TXT = { dry: '🧪 预演', confirm: '✋ 下单前确认', live: '⚡ 实盘' };
+  const PAGE_TXT = { watchlist: '自选股页', positions: '持仓页' };
   const CONFIRM_TIMEOUT = 120000;
   const MAX_BUY_AMOUNT = 50000;          // 单笔买入金额上限（防手滑多打一个 0）
-  const POS_STALE_H = 20;                // 持仓 JSON 超过这么多小时提示过期
+  const MAX_SHARES = 100000;             // 单笔股数上限
+  const POS_STALE_H = 20;
+  const PRICE_DRIFT_WARN = 0.03;
+  const FRACTION_MSG = '该持仓含碎股（小数股），网页端只能卖整数股：请到 Firstrade 手机 App 卖出';
 
   const S = { enabled: true, mode: 'dry', removeAfter: true, presets: [1000, 2000, 3000], debug: false };
   let running = false;
@@ -33,7 +36,14 @@
 
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   const log = (...a) => { if (S.debug) console.log(LOG, ...a); };
-  const isWatchlistPage = () => /\/watchlist/i.test(location.pathname || '');
+  const pageKind = () => {
+    const p = location.pathname || '';
+    if (/\/watchlist/i.test(p)) return 'watchlist';
+    if (/\/positions?(\/|$)/i.test(p)) return 'positions';
+    return '';
+  };
+  const isWatchlistPage = () => pageKind() === 'watchlist';
+  const isTradePage = () => !!pageKind();
   const api = () => window.__FT_WL_API__ || null;
   const toast = (t) => { try { (window.__FT_TOAST__ || console.log)(t); } catch (e) { } };
   const normKey = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -42,6 +52,8 @@
   const inList = (g, list) => list.some(x => normGroup(x) === normGroup(g));
   const $id = (id) => document.getElementById(id);
   const parseNum = (v) => parseFloat(String(v === undefined || v === null ? '' : v).replace(/[,$\s]/g, ''));
+  const isWhole = (n) => Number.isFinite(n) && n > 0 && Math.abs(n - Math.round(n)) < 1e-6;
+  const fmtPx = (n) => Number.isFinite(n) ? (n >= 1 ? n.toFixed(2) : n.toFixed(4)) : '-';
   const esc = (s) => String(s === undefined || s === null ? '' : s)
     .replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -122,14 +134,52 @@
   }
 
   /* ==========================================================================
+   *              ★ 网页实时行情（col-id="last" / "quantity"）
+   * ========================================================================*/
+  function readRow(sym) {
+    const a = api();
+    const q = a && a.rowQuote ? a.rowQuote(sym) : null;
+    if (!q) return null;
+    return {
+      symbol: q.symbol, price: q.price > 0 ? q.price : null, last: q.last || '',
+      qtyStr: q.quantity > 0 ? String(q.quantity) : '', change_pct: q.change_pct || ''
+    };
+  }
+
+  async function livePrice(sym, ctx, allowSwitch, say) {
+    const good = (q) => (q && q.price > 0) ? q : null;
+    let q = good(readRow(sym));
+    if (q) return q;
+    const a = api();
+    if (a && a.findRowQuote) {
+      if (say) say('↳ 当前视图未渲染该行，滚动查找…');
+      const r = await a.findRowQuote(sym, true);
+      q = good(r ? { symbol: r.symbol, price: r.price, last: r.last } : null);
+      if (q) return q;
+    }
+    if (allowSwitch && isWatchlistPage() && a && ctx) {
+      const cur = normGroup(a.groupName());
+      for (const g of allGroups(ctx)) {
+        if (normGroup(g) === cur) continue;
+        if (say) say(`↳ 切到「${g}」读取 ${sym} 现价…`);
+        const sr = await a.switchGroup(g);
+        if (!sr.ok) continue;
+        await a.waitGridSettled(4000);
+        const r = await a.findRowQuote(sym, true);
+        q = good(r ? { symbol: r.symbol, price: r.price, last: r.last } : null);
+        if (q) return q;
+      }
+    }
+    return null;
+  }
+
+  /* ==========================================================================
    *                  页面「快速交易」面板 DOM 驱动
    * ========================================================================*/
   const NEW_ORDER_RE = /^(新订单|新建订单|再下一单|继续交易|继续下单|New Order|Place Another Order)$/i;
 
-  /* 表单态：代码输入框可见 */
   function formReady() { const i = $id('quick-trade-symbol-search'); return !!(i && isVisible(i)); }
 
-  /* ★ v2：面板根节点按「可拖动标题栏」识别，表单态 / 订单确认态都能找到 */
   function tradeRoot() {
     const inp = $id('quick-trade-symbol-search');
     if (inp && isVisible(inp)) {
@@ -170,7 +220,7 @@
   async function openPanel() {
     if (formReady()) return { ok: true, reused: true };
     const r0 = tradeRoot();
-    if (r0) {                                      // 停在上一笔的「订单确认」页
+    if (r0) {
       const nb = Array.from(r0.querySelectorAll('button')).find(b => isVisible(b) && NEW_ORDER_RE.test(cleanText(b)));
       if (nb) {
         fireMouseSeq(nb);
@@ -243,7 +293,7 @@
     return { ok: false, error: lastErr || '无法选择代码' };
   }
 
-  /* ---------- 下拉框（交易类型 / 订单类型） ---------- */
+  /* ---------- 下拉框 ---------- */
   function openSelectItems() {
     return Array.from(document.querySelectorAll('[data-select-content] [data-select-item], [role="listbox"] [data-select-item]'))
       .filter(isVisible);
@@ -314,7 +364,7 @@
   }
   async function fillQty(val) {
     const i = await waitFor(qtyInput, 2500, 100);
-    if (!i) return { ok: false, error: '找不到数量/金额输入框' };
+    if (!i) return { ok: false, error: '找不到数量输入框' };
     i.focus();
     setNativeValue(i, '');
     await sleep(60);
@@ -408,7 +458,7 @@
     const t0 = Date.now();
     while (Date.now() - t0 < 25000) {
       await sleep(250);
-      const out = readOutcome(before, n0, sent0);    // ★ 先判结果，再考虑点确认（防止成功后误点「确定」）
+      const out = readOutcome(before, n0, sent0);
       if (out) return Object.assign({ clicked: true }, out);
       if (confirms < 2) {
         const c = confirmCandidates(btn).filter(b => !clicked.has(b));
@@ -425,7 +475,6 @@
     return { status: 'unknown', clicked: true, message: '25 秒内未看到成功/失败提示（不会移出分组，请到订单页核对）' };
   }
 
-  /* 下单前最后复核：防止等待确认期间表单被改动 */
   function verifyForm(form, txLabel, mode, val) {
     if (!formReady()) return { ok: false, error: '交易表单已不在（可能已手动下单或面板被关闭）' };
     if (!symbolConfirmed(normKey(form))) return { ok: false, error: `代码不是 ${form}` };
@@ -469,6 +518,23 @@
     return { removed, failed };
   }
 
+  /* 持仓页无法切自选分组 → 排队给 watchlist 页的代理执行 */
+  async function enqueueRemoval(sym, groups, say) {
+    const queued = [], failed = [];
+    for (const g of groups) {
+      const r = await bg({ action: 'FT_WL_ENQUEUE', task: 'remove', symbol: sym, group: g });
+      if (r && r.ok) {
+        queued.push(g);
+        const tip = r.data && r.data.watchlistTab ? '自选股页代理会自动执行' : '⚠ 当前没有打开 /app/watchlist，打开后 1 小时内会自动执行';
+        if (say) say(`↳ 已排队：从「${g}」移出 ${sym}（${tip}）`);
+      } else {
+        failed.push({ group: g, error: (r && r.error) || '排队失败' });
+        if (say) say(`↳ ❌ 排队移出「${g}」失败：${(r && r.error) || ''}`);
+      }
+    }
+    return { queued, failed };
+  }
+
   function waitUserConfirm(ms) {
     return new Promise((resolve) => {
       const t = setTimeout(() => { if (confirmWaiter) confirmWaiter(false); }, ms);
@@ -477,68 +543,102 @@
     });
   }
 
-  /* ---------- 主流程 ---------- */
+  /* ---------- 主流程（v3：一律按股数） ----------
+   * opts.qty    整数股（卖出必填；买入可直接给股数）
+   * opts.amount 买入预算金额（未给 qty 时：金额 ÷ 网页实时价 → 四舍五入整数股） */
   async function execute(opts) {
     const o = opts || {};
     const sym = String(o.symbol || '').trim().toUpperCase();
     const side = o.side === 'sell' ? 'sell' : (o.side === 'buy' ? 'buy' : '');
-    const valStr = side === 'buy' ? String(parseNum(o.amount)) : String(o.qty === undefined ? '' : o.qty).replace(/,/g, '').trim();
-    const valNum = parseNum(valStr);
-    const groups = (Array.isArray(o.removeGroups) ? o.removeGroups : []).filter(g => !inList(g, PROTECTED));
+    let qty = (o.qty === undefined || o.qty === null || o.qty === '') ? NaN : parseNum(o.qty);
+    const budget = (side === 'buy' && !(qty > 0)) ? parseNum(o.amount) : NaN;
+    const groups = (Array.isArray(o.removeGroups) ? o.removeGroups : [])
+      .filter(g => !inList(g, PROTECTED) && !inList(g, HIDDEN_GROUPS));
     const mode = o.dry ? 'dry' : (MODES.includes(S.mode) ? S.mode : 'dry');
+    const page = pageKind();
     const say = (t) => { log(t); if (typeof o.onLog === 'function') { try { o.onLog(t); } catch (e) { } } };
     const res = {
-      ok: false, symbol: sym, side, amount: side === 'buy' ? valNum : null, qty: side === 'sell' ? valStr : null,
-      mode, status: '', message: '', orderNo: '', submitted: false, removed: [], removeFailed: [],
-      source: o.source || 'layer'
+      ok: false, symbol: sym, side, amount: budget > 0 ? budget : null, qty: null, price: null,
+      mode, page, status: '', message: '', orderNo: '', submitted: false,
+      removed: [], removeFailed: [], removeQueued: [], source: o.source || 'layer'
     };
-    const fail = (m) => Object.assign(res, { message: m, error: m });
+    const fail = (m, st) => Object.assign(res, { message: m, error: m, status: st || 'error' });
 
     if (running) return fail('已有一笔交易在执行中');
     const a = api();
-    if (!isWatchlistPage() || !a) return fail('请在 /app/watchlist 页面使用（watchlist.js 未就绪）');
+    if (!page) return fail('请在 /app/watchlist 或 /app/positions 页面使用');
+    if (!a) return fail('watchlist.js 未就绪，请刷新页面');
     if (a.isBusy()) return fail('自选股同步/行情抓取进行中，请稍后再交易');
     if (!sym || !side) return fail('缺少代码或买卖方向');
-    if (!(valNum > 0)) return fail(side === 'buy' ? '买入金额必须大于 0' : '卖出股数必须大于 0');
-    if (side === 'buy' && valNum > MAX_BUY_AMOUNT) return fail(`单笔买入金额超过上限 $${MAX_BUY_AMOUNT}`);
+    if (side === 'sell' && !(qty > 0)) return fail('卖出股数必须大于 0');
+    if (side === 'buy' && !(qty > 0) && !(budget > 0)) return fail('买入金额必须大于 0');
+    if (budget > MAX_BUY_AMOUNT) return fail(`单笔买入金额超过上限 $${MAX_BUY_AMOUNT}`);
+    if (qty > 0 && !isWhole(qty)) return fail('股数必须是整数（网页端不支持碎股；碎股请到手机 App 操作）', 'fractional');
 
     running = true; abortFlag = false;
     try { a.setTradeBusy(true); } catch (e) { }
+    const startGroup = isWatchlistPage() ? a.groupName() : '';
     const chk = () => { if (abortFlag) throw new Error('已取消（尚未点击「下单」）'); };
     const must = (r, step) => { if (!r || !r.ok) throw new Error(`${step}：${(r && r.error) || '失败'}`); return r; };
     try {
       a.clearStopFlags(); a.cleanNavSearch();
-      say(`模式：${MODE_TXT[mode]}`);
+      say(`模式：${MODE_TXT[mode]}｜页面：${PAGE_TXT[page]}`);
+
+      /* ⓪ 金额 → 股数（必须用网页实时价） */
+      if (!(qty > 0)) {
+        say('⓪ 读取网页最新价…');
+        const q = await livePrice(sym, o.ctx, !!o.allowSwitch, say);
+        if (!q) throw new Error('网页上读不到该股票的最新价格，为防止股数算错已中止（未打开交易面板）');
+        const px = q.price;
+        res.price = px;
+        qty = Math.round(budget / px);
+        say(`现价 $${fmtPx(px)}：$${budget} ÷ ${fmtPx(px)} = ${(budget / px).toFixed(2)} → 四舍五入 ${qty} 股（约 $${(qty * px).toFixed(2)}）`);
+        if (qty < 1) throw new Error(`$${budget} 不足 1 股（现价 $${fmtPx(px)}）`);
+        if (qty * px > MAX_BUY_AMOUNT * 1.05) throw new Error(`换算后金额 $${(qty * px).toFixed(0)} 超过上限 $${MAX_BUY_AMOUNT}`);
+        const prev = o.ctx && o.ctx.price;
+        if (prev > 0 && Math.abs(px - prev) / prev > PRICE_DRIFT_WARN) {
+          say(`⚠ 现价较打开交易层时变动 ${(((px - prev) / prev) * 100).toFixed(1)}%（以最新价为准）`);
+        }
+        chk();
+      } else if (side === 'buy') {
+        const q = readRow(sym);
+        if (q && q.price) res.price = q.price;
+      }
+      if (qty > MAX_SHARES) throw new Error(`股数 ${qty} 超过单笔上限 ${MAX_SHARES}`);
+      qty = Math.round(qty);
+      res.qty = qty;
+      const valStr = String(qty);
+      const txLabel = side === 'buy' ? '买进' : '卖出';
+
       say('① 打开快速交易面板…'); must(await openPanel(), '打开交易面板'); chk();
       await ensureStocksTab();
       say(`② 选择代码 ${sym}…`);
       const pk = must(await pickSymbol(sym), '选择代码'); chk();
-      const txLabel = side === 'buy' ? '买进' : '卖出';
       say(`③ 交易类型 → ${txLabel}`); must(await chooseSelect('quick-trade-form-transaction', txLabel), '交易类型'); chk();
       await sleep(300);
-      const qMode = side === 'buy' ? '金额' : '股数';
-      say(`④ 数量方式 → ${qMode}`); must(await setQtyMode(qMode), '数量方式'); chk();
-      say(`⑤ 填写 ${side === 'buy' ? '$' + valStr : valStr + ' 股'}`); must(await fillQty(valStr), '填写数量'); chk();
-      if (trig('quick-trade-form-order-type')) {
+      say('④ 数量方式 → 股数'); must(await setQtyMode('股数'), '数量方式'); chk();
+      say(`⑤ 填写 ${valStr} 股`); must(await fillQty(valStr), '填写股数'); chk();
+      if (await waitFor(() => trig('quick-trade-form-order-type'), 1500, 100)) {
         say('⑥ 订单类型 → 市价'); must(await chooseSelect('quick-trade-form-order-type', '市价'), '订单类型');
-      } else say('⑥ 未出现订单类型下拉框（金额单通常固定市价），跳过');
+      } else say('⑥ 未出现订单类型下拉框，跳过');
       await sleep(250);
-      if (!qtyMatches(valStr)) { say('数量框被重置，重新填写…'); must(await fillQty(valStr), '重新填写数量'); }
+      if (!qtyMatches(valStr)) { say('股数框被重置，重新填写…'); must(await fillQty(valStr), '重新填写股数'); }
       chk();
 
+      const notional = res.price ? `，约 $${(qty * res.price).toFixed(2)}` : '';
       if (mode === 'dry') {
         res.ok = true; res.status = 'dry';
-        res.message = '🧪 预演完成：表单已全部填好，未点击「下单」，请在页面右侧交易面板核对';
+        res.message = `🧪 预演完成：${txLabel} ${qty} 股（市价${notional}），未点击「下单」，请在交易面板核对`;
         say(res.message);
         return res;
       }
       if (mode === 'confirm') {
-        say('⏸ 表单已填好：请核对右侧交易面板，然后在本层点「✅ 确认下单」（120 秒内）');
+        say(`⏸ 表单已填好（${txLabel} ${qty} 股${notional}）：核对后在本层点「✅ 确认下单」（120 秒内）`);
         const go = await waitUserConfirm(CONFIRM_TIMEOUT);
         if (!go) throw new Error('已取消：未点击「下单」');
       }
       chk();
-      const vf = verifyForm(pk.form, txLabel, qMode, valStr);
+      const vf = verifyForm(pk.form, txLabel, '股数', valStr);
       if (!vf.ok) throw new Error('下单前复核失败：' + vf.error + '（未点击「下单」）');
 
       say('⑦ 点击「下单」…');
@@ -554,9 +654,14 @@
       say('✅ ' + sw.message + (res.orderNo ? `（订单号 ${res.orderNo}）` : ''));
       if (groups.length) {
         say(`⑧ 从分组移除：${groups.join(' / ')}`);
-        await closeTradePanel();
-        const rr = await removeFromGroups(sym, groups, say);
-        res.removed = rr.removed; res.removeFailed = rr.failed;
+        if (isWatchlistPage()) {
+          await closeTradePanel();
+          const rr = await removeFromGroups(sym, groups, say);
+          res.removed = rr.removed; res.removeFailed = rr.failed;
+        } else {
+          const rq = await enqueueRemoval(sym, groups, say);
+          res.removeQueued = rq.queued; res.removeFailed = rq.failed;
+        }
       } else {
         say('⑧ 未勾选任何分组，保留在分组内');
       }
@@ -564,26 +669,35 @@
       res.ok = false;
       res.error = String((e && e.message) || e);
       if (!res.message || res.status === '') res.message = res.error;
+      if (!res.status) res.status = 'error';
       say('❌ ' + res.error);
     } finally {
+      try {
+        if (startGroup && isWatchlistPage() && normGroup(a.groupName()) !== normGroup(startGroup)) {
+          say(`↳ 切回「${cleanGroupName(startGroup)}」`);
+          await a.switchGroup(startGroup);
+        }
+      } catch (e) { }
       running = false;
       try { a.setTradeBusy(false); } catch (e) { }
-      bg({ action: 'FT_TRADE_LOG', payload: Object.assign({ ts: Date.now(), page_group: cleanGroupName(a.groupName()) }, res) });
+      bg({ action: 'FT_TRADE_LOG', payload: Object.assign({ ts: Date.now(), page_group: isWatchlistPage() ? cleanGroupName(a.groupName()) : '(positions)' }, res) });
     }
     return res;
   }
 
   /* ==========================================================================
-   *                       上下文（分组归属 / 持仓）
+   *                       上下文（分组归属 / 持仓 / 现价）
    * ========================================================================*/
   async function loadContext(sym, inCurrent) {
     const a = api();
-    const current = a ? cleanGroupName(a.groupName()) : '';
+    const page = pageKind();
+    const current = (page === 'watchlist' && a) ? cleanGroupName(a.groupName()) : '';
     const [mem, pos] = await Promise.all([bg({ action: 'FT_SERVER_MEMBERSHIP' }), bg({ action: 'FT_SERVER_POSITIONS' })]);
     const k = normKey(sym);
     const groups = [];
     const gmap = (mem && mem.ok && mem.data && mem.data.groups) || {};
     Object.keys(gmap).forEach(g => {
+      if (inList(g, HIDDEN_GROUPS)) return;
       const syms = (gmap[g] && gmap[g].symbols) || [];
       if (syms.some(s => normKey(s) === k)) groups.push(g);
     });
@@ -595,24 +709,29 @@
         if (normKey(key) === k) { position = pos.data[key]; break; }
       }
     }
+    const row = readRow(sym);
     return {
-      symbol: sym, current, inCurrent: !!inCurrent, groups, position, posMeta,
+      symbol: sym, page, current, inCurrent: !!inCurrent, groups, position, posMeta,
+      price: row && row.price > 0 ? row.price : null,
+      liveQtyStr: (page === 'positions' && row && row.qtyStr) ? row.qtyStr : '',
       memOk: !!(mem && mem.ok), posOk: !!(pos && pos.ok)
     };
   }
   function allGroups(c) {
-    const s = c.groups.slice();
-    if (c.inCurrent && c.current && !s.some(g => normGroup(g) === normGroup(c.current))) s.unshift(c.current);
+    const s = c.groups.filter(g => !inList(g, HIDDEN_GROUPS));
+    if (c.inCurrent && c.current && !inList(c.current, HIDDEN_GROUPS) &&
+      !s.some(g => normGroup(g) === normGroup(c.current))) s.unshift(c.current);
     return s;
   }
-  const removable = (groups) => groups.filter(g => !inList(g, PROTECTED));
+  const removable = (groups) => groups.filter(g => !inList(g, PROTECTED) && !inList(g, HIDDEN_GROUPS));
   function positionQtyStr(p) {
     if (!p) return '';
     const raw = String(p.quantity === undefined || p.quantity === null ? '' : p.quantity).replace(/,/g, '').trim();
     const n = parseFloat(raw);
     return Number.isFinite(n) && n > 0 ? raw : '';
   }
-  const positionQty = (p) => { const s = positionQtyStr(p); return s ? parseFloat(s) : 0; };
+  const heldQtyStr = (c) => (c && c.liveQtyStr) || positionQtyStr(c && c.position);
+  const heldQty = (c) => { const s = heldQtyStr(c); return s ? parseFloat(s) : 0; };
   function decideSide(c) {
     if (c.inCurrent && inList(c.current, BUY_GROUPS)) return 'buy';
     if (c.inCurrent && inList(c.current, SELL_GROUPS)) return 'sell';
@@ -627,7 +746,7 @@
    *                             交易层 UI
    * ========================================================================*/
   let layer = null;
-  let view = null;     // { ctx, side, rmSel:Set, logs:[], remote, result, loading }
+  let view = null;
 
   function ensureLayer() {
     if (layer && document.body.contains(layer)) return layer;
@@ -672,7 +791,9 @@
     if (!layer || !view) return;
     const c = view.ctx;
     const sd = view.side;
-    const qStr = positionQtyStr(c.position);
+    const qStr = heldQtyStr(c);
+    const held = qStr ? parseFloat(qStr) : 0;
+    const frac = held > 0 && !isWhole(held);
     const modeCls = S.mode === 'live' ? 'live' : (S.mode === 'confirm' ? 'confirm' : 'dry');
     const gs = allGroups(c);
     const badge = (g) => `<span class="ftt-badge ${inList(g, BUY_GROUPS) ? 'b' : (inList(g, SELL_GROUPS) ? 's' : '')}">${esc(g)}</span>`;
@@ -683,21 +804,26 @@
         <span class="ftt-x" data-act="close" title="${running ? '中止' : '关闭 (Esc)'}">✕</span>
       </div>`;
     if (view.loading) {
-      h += `<div class="ftt-line ftt-dim">正在读取分组归属 / 持仓…</div></div>`;
+      h += `<div class="ftt-line ftt-dim">正在读取分组归属 / 持仓 / 现价…</div></div>`;
       layer.innerHTML = h;
       return;
     }
-    h += `<div class="ftt-line">当前分组：<b>${esc(c.current || '?')}</b>　所在：${gs.length ? gs.map(badge).join('') : '<span class="ftt-dim">（无归属数据）</span>'}</div>`;
-    if (c.position) {
-      const p = c.position;
-      h += `<div class="ftt-line ftt-dim">持仓 <b>${esc(qStr || '?')}</b> 股 · 成本 ${esc(p.cost || '-')} · 损益 ${esc(p.gainloss_amount || '-')} (${esc(p.gainloss || '-')})</div>`;
+    const where = c.page === 'positions' ? '页面：<b>持仓页</b>' : `当前分组：<b>${esc(c.current || '?')}</b>`;
+    h += `<div class="ftt-line">${where}　所在：${gs.length ? gs.map(badge).join('') : '<span class="ftt-dim">（无归属数据）</span>'}</div>`;
+    h += c.price > 0
+      ? `<div class="ftt-line ftt-dim">网页现价 <b>$${fmtPx(c.price)}</b>（下单前会再读一次最新价）</div>`
+      : `<div class="ftt-warn">⚠ 当前列表读不到 ${esc(c.symbol)} 的现价，买入时会自动再找</div>`;
+    if (c.position || qStr) {
+      const p = c.position || {};
+      h += `<div class="ftt-line ftt-dim">持仓 <b>${esc(qStr || '?')}</b> 股${c.liveQtyStr ? '（持仓页实时）' : ''} · 成本 ${esc(p.cost || '-')} · 损益 ${esc(p.gainloss_amount || '-')} (${esc(p.gainloss || '-')})</div>`;
       const ts = c.posMeta && c.posMeta.updated_at;
-      if (ts && (Date.now() / 1000 - ts) / 3600 > POS_STALE_H) {
+      if (!c.liveQtyStr && ts && (Date.now() / 1000 - ts) / 3600 > POS_STALE_H) {
         h += `<div class="ftt-warn">⚠ 持仓数据更新于 ${esc(c.posMeta.updated_at_str || '?')}，可能已过期（建议先抓一次持仓）</div>`;
       }
     } else {
-      h += `<div class="ftt-line ftt-dim">${c.posOk ? '无持仓记录（没买过 → 不能一键全卖）' : '⚠ 读不到持仓 JSON（bridge_server.py 是否在运行？）'}</div>`;
+      h += `<div class="ftt-line ftt-dim">${c.posOk ? '无持仓记录（不能一键全卖）' : '⚠ 读不到持仓 JSON（bridge_server.py 是否在运行？）'}</div>`;
     }
+    if (frac) h += `<div class="ftt-frac">⛔ 持仓 ${esc(qStr)} 股含碎股：网页端只能卖整数股，<b>请到 Firstrade 手机 App 卖出</b></div>`;
     if (!c.memOk) h += `<div class="ftt-warn">⚠ 读不到分组归属，仅按当前分组判断</div>`;
     if (S.mode === 'live') h += `<div class="ftt-warn">⚡ 实盘模式：点击金额档 / 全卖 会<b>立即真实下单</b></div>`;
 
@@ -708,22 +834,29 @@
     if (!sd) {
       h += `<div class="ftt-warn">该股票所在分组没有固定方向（或同时在买/卖分组），请选择买进或卖出</div>`;
     } else if (sd === 'buy') {
-      h += `<div class="ftt-presets">${S.presets.map(v => `<button class="ftt-btn" data-act="buy" data-amt="${v}">$${v}</button>`).join('')}</div>
-        <div class="ftt-row"><input data-in="amt" type="number" min="1" step="1" placeholder="自定义金额 $"><button class="ftt-btn" data-act="buy-custom">买进</button></div>`;
+      h += `<div class="ftt-presets">${S.presets.map(v => {
+        const est = c.price > 0 ? Math.round(v / c.price) : null;
+        return `<button class="ftt-btn" data-act="buy" data-amt="${v}">$${v}<span class="ftt-sub">${est === null ? '按现价换算' : (est >= 1 ? '≈' + est + ' 股' : '不足 1 股')}</span></button>`;
+      }).join('')}</div>
+        <div class="ftt-row"><input data-in="amt" type="number" min="1" step="1" placeholder="自定义金额 $"><button class="ftt-btn" data-act="buy-custom">买进</button></div>
+        <div class="ftt-dim">金额 ÷ 网页实时价 → 四舍五入整数股，以「股数 + 市价」下单</div>`;
+    } else if (frac) {
+      h += `<div class="ftt-warn">碎股持仓不支持网页卖出，请用手机 App</div>`;
     } else {
-      if (qStr) h += `<button class="ftt-btn sell wide" data-act="sell-all">一键全卖 ${esc(qStr)} 股</button>`;
-      h += `<div class="ftt-row"><input data-in="qty" type="number" min="0" step="any" placeholder="自定义股数${qStr ? '（≤ ' + esc(qStr) + '）' : ''}"><button class="ftt-btn sell" data-act="sell-custom">卖出</button></div>`;
+      if (qStr) h += `<button class="ftt-btn sell wide" data-act="sell-all">一键全卖 ${esc(String(Math.round(held)))} 股</button>`;
+      h += `<div class="ftt-row"><input data-in="qty" type="number" min="1" step="1" placeholder="自定义整数股数${qStr ? '（≤ ' + esc(String(Math.round(held))) + '）' : ''}"><button class="ftt-btn sell" data-act="sell-custom">卖出</button></div>`;
     }
     const rm = removable(gs);
     if (rm.length) {
       h += `<div class="ftt-rm">成交后移出：${rm.map(g =>
-        `<label><input type="checkbox" data-rm="${esc(g)}" ${view.rmSel.has(g) ? 'checked' : ''}> ${esc(g)}</label>`).join('')}</div>`;
+        `<label><input type="checkbox" data-rm="${esc(g)}" ${view.rmSel.has(g) ? 'checked' : ''}> ${esc(g)}</label>`).join('')}` +
+        (c.page === 'positions' ? `<div class="ftt-dim">（持仓页：移出任务会排队到 /app/watchlist 页执行）</div>` : '') + `</div>`;
     } else if (gs.length) {
       h += `<div class="ftt-rm ftt-dim">所在分组均为保护分组（Earning / Wrong），成交后不移除</div>`;
     }
     if (confirmWaiter) {
       h += `<div class="ftt-confirm">
-          <div class="ftt-warn">⏸ 表单已填好，请核对右侧交易面板（代码 / 买卖 / 数量 / 市价）</div>
+          <div class="ftt-warn">⏸ 表单已填好，请核对交易面板（代码 / 买卖 / 股数 / 市价）</div>
           <div class="ftt-row"><button class="ftt-btn go" data-act="confirm">✅ 确认下单</button>
           <button class="ftt-btn ghost" data-act="cancel">取消</button></div>
         </div>`;
@@ -732,8 +865,10 @@
       const r = view.result;
       const color = r.ok ? '#A3BE8C' : (r.status === 'unknown' ? '#EBCB8B' : '#BF616A');
       h += `<div class="ftt-line" style="color:${color} !important;font-weight:700;">${esc(r.message || r.error || '')}` +
+        (r.qty ? `<br>股数：${esc(r.qty)}${r.price ? ' @ $' + esc(fmtPx(r.price)) : ''}` : '') +
         (r.orderNo ? `<br>订单号：${esc(r.orderNo)}` : '') +
         (r.removed && r.removed.length ? `<br>已移出：${esc(r.removed.join(' / '))}` : '') +
+        (r.removeQueued && r.removeQueued.length ? `<br>已排队移出：${esc(r.removeQueued.join(' / '))}` : '') +
         (r.removeFailed && r.removeFailed.length ? `<br>移出失败：${esc(r.removeFailed.map(f => f.group).join(' / '))}` : '') + `</div>`;
     }
     h += `<div class="ftt-log">${view.logs.map(l => `<div>${esc(l)}</div>`).join('')}</div>
@@ -748,25 +883,38 @@
     const x = extra || {};
     if (running || !view) return { ok: false, message: running ? '已有交易在执行' : '交易层未打开' };
     const c = view.ctx;
-    const n = parseNum(val);
-    if (!(n > 0)) { addLog(sd === 'buy' ? '❌ 请输入大于 0 的金额' : '❌ 请输入大于 0 的股数'); return { ok: false, message: '数值无效' }; }
-    if (sd === 'buy' && n > MAX_BUY_AMOUNT) { addLog(`❌ 超过单笔上限 $${MAX_BUY_AMOUNT}`); return { ok: false, message: '超过上限' }; }
-    if (sd === 'sell') {
-      const held = positionQty(c.position);
-      if (held > 0 && n > held * 1.000001) { addLog(`❌ 卖出股数 ${n} 超过持仓 ${held}`); return { ok: false, message: '超过持仓' }; }
+    let amount, qty;
+    if (sd === 'buy') {
+      if (x.qty !== undefined) {
+        qty = parseNum(x.qty);
+        if (!isWhole(qty)) { addLog('❌ 买入股数必须是正整数'); return { ok: false, message: '股数无效' }; }
+      } else {
+        amount = parseNum(val);
+        if (!(amount > 0)) { addLog('❌ 请输入大于 0 的金额'); return { ok: false, message: '金额无效' }; }
+        if (amount > MAX_BUY_AMOUNT) { addLog(`❌ 超过单笔上限 $${MAX_BUY_AMOUNT}`); return { ok: false, message: '超过上限' }; }
+      }
+    } else {
+      const held = heldQty(c);
+      if (held > 0 && !isWhole(held)) {
+        addLog('⛔ ' + FRACTION_MSG);
+        toast(`⛔ ${c.symbol}：${FRACTION_MSG}`);
+        return { ok: false, status: 'fractional', message: `${c.symbol} ${FRACTION_MSG}` };
+      }
+      qty = parseNum(val);
+      if (!isWhole(qty)) { addLog('❌ 卖出股数必须是正整数（网页端不支持碎股）'); return { ok: false, message: '股数无效' }; }
+      if (held > 0 && qty > held + 1e-6) { addLog(`❌ 卖出股数 ${qty} 超过持仓 ${held}`); return { ok: false, message: '超过持仓' }; }
     }
     view.side = sd; view.logs = []; view.result = null;
     layer.classList.add('ftt-running');
     render();
     const groups = allGroups(c).filter(g => view.rmSel.has(g));
     const res = await execute({
-      symbol: c.symbol, side: sd,
-      amount: sd === 'buy' ? n : undefined,
-      qty: sd === 'sell' ? String(val).replace(/,/g, '').trim() : undefined,
-      removeGroups: groups, dry: !!x.dry, source: x.source || 'layer', onLog: addLog
+      symbol: c.symbol, side: sd, amount, qty,
+      removeGroups: groups, dry: !!x.dry, source: x.source || 'layer', onLog: addLog,
+      ctx: c, allowSwitch: !!x.allowSwitch
     });
     if (layer) layer.classList.remove('ftt-running');
-    if (view) { view.result = res; render(); }
+    if (view) { if (res.price) view.ctx.price = res.price; view.result = res; render(); }
     toast((res.ok ? (res.status === 'dry' ? '🧪 ' : '✅ ') : '❌ ') + `${c.symbol} ${res.message || res.error || ''}`.slice(0, 120));
     return res;
   }
@@ -793,11 +941,11 @@
     if (act === 'side') { view.side = b.dataset.side; view.result = null; render(); return; }
     if (act === 'buy') { runTrade('buy', b.dataset.amt); return; }
     if (act === 'buy-custom') { const i = layer.querySelector('input[data-in="amt"]'); runTrade('buy', i ? i.value : ''); return; }
-    if (act === 'sell-all') { runTrade('sell', positionQtyStr(view.ctx.position)); return; }
+    if (act === 'sell-all') { runTrade('sell', String(Math.round(heldQty(view.ctx)))); return; }
     if (act === 'sell-custom') { const i = layer.querySelector('input[data-in="qty"]'); runTrade('sell', i ? i.value : ''); return; }
   }
 
-  /* ★ window 捕获阶段拦截：交易层内的事件不再传到页面（防止 Firstrade 交易面板把它当成"点外面"而自动关闭） */
+  /* ★ window 捕获阶段拦截：交易层内的事件不再传到页面 */
   const inLayer = (e) => !!(e.target && e.target.closest && e.target.closest('#ft-trade-layer'));
   ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'focusin'].forEach(type => {
     window.addEventListener(type, (e) => {
@@ -829,14 +977,15 @@
   }, true);
 
   /* ==========================================================================
-   *                      点击股票代码 → 打开交易层
+   *                点击股票代码 → 打开交易层（watchlist + positions）
    * ========================================================================*/
   function symbolFromEvent(e) {
-    if (!S.enabled || !isWatchlistPage() || !e.isTrusted) return '';
+    if (!S.enabled || !isTradePage() || !e.isTrusted) return '';
     if (e.button !== 0 || e.altKey || e.metaKey || e.ctrlKey || e.shiftKey) return '';
     const t = e.target;
     if (!t || !t.closest) return '';
     if (t.closest('.ft-custom-tag-container, #ft-wl-hud, #ft-trade-layer')) return '';
+    if (t.closest('.ag-group-contracted, .ag-group-expanded, .ag-group-checkbox, .ag-row-drag')) return '';   // 持仓页展开箭头 = 原生
     const cell = t.closest('[col-id="symbol"]');
     if (!cell || cell.closest('.ag-header') || cell.closest(ROW_EXCLUDE)) return '';
     const row = cell.closest('[row-id]');
@@ -857,8 +1006,10 @@
     const a = api();
     if (!a) { toast('watchlist.js 未就绪，请刷新页面'); return; }
     if (a.isBusy() || window.__FT_AGENT_BUSY__) { toast('⏳ 自选股任务/远程任务进行中，稍后再交易'); return; }
-    openLayer({ symbol: sym, current: cleanGroupName(a.groupName()), inCurrent: true, groups: [] }, '', { loading: true });
-    const c = await loadContext(sym, true);
+    const pg = pageKind();
+    const inCur = pg === 'watchlist';
+    openLayer({ symbol: sym, page: pg, current: inCur ? cleanGroupName(a.groupName()) : '', inCurrent: inCur, groups: [] }, '', { loading: true });
+    const c = await loadContext(sym, inCur);
     if (!view || view.ctx.symbol !== sym || running) return;
     view.ctx = c;
     view.side = decideSide(c);
@@ -867,7 +1018,7 @@
     render();
   }
 
-  /* ---------- 远程（Python /wl_trade → wl_agent.js） ---------- */
+  /* ---------- 远程（Python /wl_trade → wl_agent.js，仅 watchlist 页） ---------- */
   async function executeRemote(p) {
     p = p || {};
     const sym = String(p.symbol || '').trim().toUpperCase();
@@ -875,16 +1026,26 @@
     if (running) return { ok: false, message: '已有一笔交易在执行中' };
     if (!S.enabled) return { ok: false, message: '快速交易已在 popup 中关闭' };
     if (!sym || !side) return { ok: false, message: '缺少代码或买卖方向' };
+    if (!isWatchlistPage()) return { ok: false, message: '远程交易只在 /app/watchlist 页执行' };
     const a = api();
     const inCur = !!(a && a.hasSymbolInGrid && a.hasSymbolInGrid(sym));
     const c = await loadContext(sym, inCur);
-    let val = side === 'buy' ? p.amount : p.qty;
-    if (side === 'sell' && (val === undefined || val === null || val === '' || String(val).toLowerCase() === 'all')) {
-      val = positionQtyStr(c.position);
-      if (!val) return { ok: false, message: `${sym} 无持仓记录，无法全卖` };
+    const rm = p.remove === false ? [] : removable(allGroups(c));
+    if (side === 'sell') {
+      const held = heldQty(c);
+      if (held > 0 && !isWhole(held)) return { ok: false, status: 'fractional', message: `${sym} ${FRACTION_MSG}` };
+      let val = p.qty;
+      if (val === undefined || val === null || val === '' || String(val).toLowerCase() === 'all') {
+        val = heldQtyStr(c);
+        if (!val) return { ok: false, message: `${sym} 无持仓记录，无法全卖` };
+        val = String(Math.round(parseFloat(val)));
+      }
+      openLayer(c, 'sell', { remote: true, rmSel: rm });
+      return runTrade('sell', val, { dry: !!p.dry, source: 'remote', allowSwitch: true });
     }
-    openLayer(c, side, { remote: true, rmSel: p.remove === false ? [] : removable(allGroups(c)) });
-    return runTrade(side, val, { dry: !!p.dry, source: 'remote' });
+    openLayer(c, 'buy', { remote: true, rmSel: rm });
+    const hasQty = p.qty !== undefined && p.qty !== null && p.qty !== '' && String(p.qty).toLowerCase() !== 'all';
+    return runTrade('buy', p.amount, { dry: !!p.dry, source: 'remote', allowSwitch: true, qty: hasQty ? p.qty : undefined });
   }
 
   /* ---------- 探测（popup 按钮） ---------- */
@@ -914,7 +1075,7 @@
 
   /* ---------- 设置 & 通信 ---------- */
   function applyClass() {
-    document.documentElement.classList.toggle('ft-trade-on', S.enabled && isWatchlistPage());
+    document.documentElement.classList.toggle('ft-trade-on', S.enabled && isTradePage());
   }
   function loadSettings() {
     chrome.storage.local.get(['ftTradeEnabled', 'ftTradeMode', 'ftTradeRemoveAfter', 'ftTradePresets', 'ftDebug'], (res) => {
@@ -941,13 +1102,13 @@
       return true;
     }
     if (msg.action === 'FT_TRADE_STATUS') {
-      sendResponse({ ok: true, running, mode: S.mode, enabled: S.enabled });
+      sendResponse({ ok: true, running, mode: S.mode, enabled: S.enabled, page: pageKind() });
       return;
     }
   });
 
-  window.__FT_TRADE__ = { version: 2, execute, executeRemote, probe, isRunning: () => running };
+  window.__FT_TRADE__ = { version: 3, execute, executeRemote, probe, isRunning: () => running };
 
   loadSettings();
-  console.log(LOG, `ft_trade.js v2 就绪（isWatchlist=${isWatchlistPage()}）`);
+  console.log(LOG, `ft_trade.js v3 就绪（page=${pageKind() || 'other'}）`);
 })();

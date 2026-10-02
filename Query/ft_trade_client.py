@@ -78,7 +78,10 @@ def load_membership():
 def trade(symbol, side, amount=None, qty=None, remove=True, dry=False, wait=240):
     payload = {"symbol": symbol, "side": side, "remove": bool(remove), "dry": bool(dry), "wait": int(wait)}
     if side == "buy":
-        payload["amount"] = float(amount)
+        if qty not in (None, ""):
+            payload["qty"] = str(int(qty))          # 直接给股数
+        else:
+            payload["amount"] = float(amount)       # 浏览器按网页现价换算整数股
     else:
         payload["qty"] = str(qty if qty not in (None, "") else "all")
     try:
@@ -117,7 +120,11 @@ def build_plan(amount, buy_groups, sell_groups):
             if not q:
                 skipped.append((s, g, "无持仓，无法卖出"))
                 continue
-            plan.append({"symbol": s, "side": "sell", "qty": q, "group": g})
+            qf = float(q)
+            if abs(qf - round(qf)) > 1e-6:
+                skipped.append((s, g, f"碎股 {q} 股：网页端只能卖整数股，请用手机 App"))
+                continue
+            plan.append({"symbol": s, "side": "sell", "qty": str(int(round(qf))), "group": g})
     for gname in buy_groups:
         g = find(gname)
         if not g:
@@ -142,7 +149,8 @@ def _print_plan(plan, skipped, incomplete, meta):
     if incomplete:
         print(f"⚠ 这些分组的归属数据不完整（建议先 --scan）：{', '.join(incomplete)}")
     for i, p in enumerate(plan, 1):
-        what = f"买进 ${p['amount']:.0f}" if p["side"] == "buy" else f"卖出 {p['qty']} 股（全卖）"
+        what = (f"买进 ≈${p['amount']:.0f}（按网页现价换算整数股）" if p["side"] == "buy"
+                else f"卖出 {p['qty']} 股（全卖）")
         print(f"  {i:>3}. [{p['group']}] {p['symbol']:<8} {what}")
     for s, g, why in skipped:
         print(f"  跳过 [{g}] {s}: {why}")
@@ -164,7 +172,9 @@ def main():
             p.add_argument("--gap", type=float, default=4)
             p.add_argument("--scan", action="store_true", help="先扫描全部分组归属")
             p.add_argument("--yes", action="store_true", help="跳过 YES 确认")
-    b = sub.add_parser("buy"); b.add_argument("symbol"); b.add_argument("amount", type=float)
+    b = sub.add_parser("buy"); b.add_argument("symbol")
+    b.add_argument("amount", type=float, nargs="?", default=None, help="预算金额（按网页现价换算股数）")
+    b.add_argument("--shares", type=int, default=None, help="直接指定整数股数")
     s = sub.add_parser("sell"); s.add_argument("symbol"); s.add_argument("qty", nargs="?", default="all")
     for p in (b, s):
         p.add_argument("--dry", action="store_true")
@@ -172,10 +182,15 @@ def main():
     a = ap.parse_args()
 
     if a.cmd in ("buy", "sell"):
-        r = trade(a.symbol.upper(), a.cmd, amount=getattr(a, "amount", None), qty=getattr(a, "qty", None),
-                  remove=not a.keep, dry=a.dry)
+        if a.cmd == "buy":
+            if not a.shares and not a.amount:
+                print("❌ 需要金额，或用 --shares 指定股数"); sys.exit(2)
+            r = trade(a.symbol.upper(), "buy", amount=a.amount, qty=a.shares, remove=not a.keep, dry=a.dry)
+        else:
+            r = trade(a.symbol.upper(), "sell", qty=a.qty, remove=not a.keep, dry=a.dry)
         d = r.get("data") or {}
-        print(("✅ " if r.get("ok") else "❌ ") + str(r.get("message")), d.get("orderNo") or "")
+        extra = f"{d.get('qty')} 股" + (f" @ ${d.get('price')}" if d.get("price") else "") if d.get("qty") else ""
+        print(("✅ " if r.get("ok") else "❌ ") + str(r.get("message")), extra, d.get("orderNo") or "")
         sys.exit(0 if r.get("ok") else 1)
 
     split = lambda s: [x.strip() for x in re.split(r"[,，]", s) if x.strip()]

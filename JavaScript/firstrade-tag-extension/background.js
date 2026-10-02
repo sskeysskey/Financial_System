@@ -1,10 +1,9 @@
 /* ============================================================================
- * Firstrade 桥接后台 v10
- *  ★ FT_RUN_ON_PAGE / FT_PEEK_PAGE：自动 定位/跳转/新开 Firstrade 页面后执行
- *  ★ FT_COMBO：组合任务（①持仓→②订单→③分组归属 / ③一键同步 Earning→④抓变更%）
- *              后台串行执行，popup 关掉也不中断，进度/结果写 storage.ftLastOp
- *  ★ 默认目标分组 ALL → Earning（自动迁移旧设置）
- *  ★ FT_TRADE_LOG：快速交易审计日志 → bridge /trade_log
+ * Firstrade 桥接后台 v10.1
+ *  ★ FT_RUN_ON_PAGE / FT_PEEK_PAGE / FT_COMBO（同 v10）
+ *  ★ FT_POS_QUOTE：G 键取数 —— 读持仓页单行（隐藏标签页会短暂切过去再切回，不抢窗口焦点）
+ *  ★ FT_WL_ENQUEUE：持仓页成交后「移出分组」排队给自选股页代理
+ *  ★ 修复：migrateFlags 漏读 ftTradeMode → 每次启动都把下单模式重置为预演
  * ==========================================================================*/
 
 const BRIDGE_BASE = 'http://127.0.0.1:18888';
@@ -72,11 +71,9 @@ async function activeTab() {
     return t || null;
   } catch (e) { return null; }
 }
-
 async function ftTabs() {
   try { return await chrome.tabs.query({ url: FT_ORIGIN + '/*' }); } catch (e) { return []; }
 }
-
 const byRecent = (a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0);
 
 async function findPageTab(page) {
@@ -86,7 +83,7 @@ async function findPageTab(page) {
   return hits[0] || null;
 }
 
-async function openPageTab(page, activate = true) {
+async function openPageTab(page, activate = true, focusWindow = true) {
   const cur = await activeTab();
   let tab = await findPageTab(page);
   let how = 'existing';
@@ -105,7 +102,7 @@ async function openPageTab(page, activate = true) {
   }
   if (activate) {
     try { await chrome.tabs.update(tab.id, { active: true }); } catch (e) { }
-    try { await chrome.windows.update(tab.windowId, { focused: true }); } catch (e) { }
+    if (focusWindow) { try { await chrome.windows.update(tab.windowId, { focused: true }); } catch (e) { } }
   }
   return { tab, how, originTabId: (cur && cur.id !== tab.id) ? cur.id : null };
 }
@@ -167,13 +164,12 @@ function slimResp(resp) {
 
 const setLastOp = (op) => chrome.storage.local.set({ ftLastOp: op });
 
-/* 只负责「到页面上执行一条消息」，不写 lastOp、不切回 */
 async function execOnPage(opt) {
   const page = opt.page;
   const msg = opt.msg || {};
   if (!PAGE_URL[page]) return { ok: false, error: '未知页面: ' + page };
   try {
-    const loc = await openPageTab(page, opt.activate !== false);
+    const loc = await openPageTab(page, opt.activate !== false, opt.focusWindow !== false);
     console.log(LOG, `[${opt.kind || msg.action}] ${PAGE_LABEL[page]} → ${loc.how} tab=${loc.tab.id}`);
     const rd = await waitPageReady(loc.tab.id, page, opt.readyTimeout || READY_TIMEOUT);
     if (!rd.ok) return { ok: false, error: rd.error, how: loc.how, tabId: loc.tab.id, originTabId: loc.originTabId };
@@ -197,6 +193,11 @@ async function restoreTab(origin) {
     await chrome.tabs.update(origin, { active: true });
     await chrome.windows.update(t.windowId, { focused: true });
   } catch (e) { }
+}
+/* 只切回标签，不抢 OS 窗口焦点（G 键取数用，避免 Chrome 盖住图表窗口） */
+async function restoreTabQuiet(origin) {
+  if (!origin) return;
+  try { await chrome.tabs.update(origin, { active: true }); } catch (e) { }
 }
 
 async function runOnPage(opt) {
@@ -226,7 +227,38 @@ async function peekPage(page, msg) {
   return r;
 }
 
-/* ==================== ★ 组合任务 ==================== */
+/* ==================== ★ G 键：读持仓页单行 ==================== */
+async function posQuote(symbol) {
+  const sym = String(symbol || '').trim().toUpperCase();
+  if (!sym) return { ok: false, error: 'symbol 为空' };
+  const stop = keepAlive();
+  try {
+    const tab = await findPageTab('positions');
+    if (tab) {
+      const r = await tabMsg(tab.id, { action: 'FT_POS_ROW', symbol: sym, scroll: false });
+      // 只有页面处于可见状态时，表格数据才保证是最新的
+      if (r && r.ok && r.found && !r.hidden) return Object.assign({ how: 'visible' }, r);
+    }
+    const ex = await execOnPage({
+      page: 'positions', kind: 'pos_quote', activate: true, focusWindow: false, readyTimeout: 30000,
+      msg: { action: 'FT_POS_ROW', symbol: sym, scroll: true, settle: true }
+    });
+    if (ex.originTabId) await restoreTabQuiet(ex.originTabId);
+    if (!ex.resp || !ex.resp.ok) return { ok: false, error: ex.error || '持仓页读取失败' };
+    return Object.assign({ how: ex.how }, ex.resp);
+  } finally { stop(); }
+}
+
+/* ==================== ★ 排队远程增删（不激活/不跳转任何标签页） ==================== */
+async function enqueueSymbolTask(task, symbol, group) {
+  const path = task === 'add' ? '/wl_add' : '/wl_remove';
+  const r = await postJson(path, { symbol, group, wait: 0, restore: true, activate: false });
+  const tab = await findPageTab('watchlist');
+  if (tab) tabMsg(tab.id, { action: 'FT_WAKE_UP' });
+  return Object.assign({}, r, { watchlistTab: !!tab });
+}
+
+/* ==================== 组合任务 ==================== */
 const fmtPos = (r) => `${r.count ?? '?'} 只` + (r.server && r.server.ok ? '，已覆盖写入本机' : '，写入本机失败');
 const fmtOrd = (r) => {
   const d = (r.server && r.server.data) || {};
@@ -274,7 +306,7 @@ async function waitWlJob(tabId, onTick) {
         if (onTick) { try { await onTick(st); } catch (e) { } }
       } else {
         const saved = ((await chrome.storage.local.get(['ftWlJob'])).ftWlJob) || {};
-        if (saved.autoResume === true) idle = 0;          // 页面刷新后等待续跑
+        if (saved.autoResume === true) idle = 0;
         else if (++idle >= 2) break;
       }
     }
@@ -372,7 +404,7 @@ function migrateFlags() {
       'ftOrderVerbose', 'ftWlSource', 'ftWlBack', 'ftWlAhead',
       'ftWlAgent', 'ftWlRestoreGroup', 'ftWlRestoreTab',
       'ftWlTargetGroup', 'ftWlStrictSync', 'ftWlMemberPassive',
-      'ftTradeEnabled', 'ftTradeDryRun', 'ftTradeRemoveAfter', 'ftTradePresets'],
+      'ftTradeEnabled', 'ftTradeMode', 'ftTradeRemoveAfter', 'ftTradePresets'],     // ★ 补上 ftTradeMode
     (res) => {
       const patch = {};
       if (res.ftAutoPositions === undefined) patch.ftAutoPositions = res.ftAutoScrape === true;
@@ -384,13 +416,13 @@ function migrateFlags() {
       if (res.ftWlAhead === undefined) patch.ftWlAhead = 0;
       if (res.ftWlAgent === undefined) patch.ftWlAgent = true;
       const tg = String(res.ftWlTargetGroup || '').trim();
-      if (!tg || tg.toUpperCase() === 'ALL') patch.ftWlTargetGroup = DEFAULT_GROUP;    // ★ ALL → Earning
+      if (!tg || tg.toUpperCase() === 'ALL') patch.ftWlTargetGroup = DEFAULT_GROUP;
       if (res.ftWlStrictSync === undefined) patch.ftWlStrictSync = true;
       if (res.ftWlRestoreGroup === undefined) patch.ftWlRestoreGroup = true;
       if (res.ftWlRestoreTab === undefined) patch.ftWlRestoreTab = true;
       if (res.ftWlMemberPassive === undefined) patch.ftWlMemberPassive = true;
       if (res.ftTradeEnabled === undefined) patch.ftTradeEnabled = true;
-      if (!['dry', 'confirm', 'live'].includes(res.ftTradeMode)) patch.ftTradeMode = 'dry';   // ★ 默认预演
+      if (!['dry', 'confirm', 'live'].includes(res.ftTradeMode)) patch.ftTradeMode = 'dry';
       if (res.ftTradeRemoveAfter === undefined) patch.ftTradeRemoveAfter = true;
       if (!Array.isArray(res.ftTradePresets) || !res.ftTradePresets.length) patch.ftTradePresets = [1000, 2000, 3000];
       if (Object.keys(patch).length) {
@@ -437,7 +469,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     case 'FT_WL_MEMBERSHIP_EVENT': return done(postMembershipEvent(msg.payload));
     case 'FT_SERVER_MEMBERSHIP': return done(fetchMembership());
     case 'FT_TRADE_LOG': return done(postTradeLog(msg.payload));
+    case 'FT_WL_ENQUEUE': return done(enqueueSymbolTask(msg.task, msg.symbol, msg.group));
 
+    case 'FT_POS_QUOTE': return direct(posQuote(msg.symbol));
     case 'FT_RUN_ON_PAGE': return direct(runOnPage(msg));
     case 'FT_PEEK_PAGE': return direct(peekPage(msg.page, msg.msg));
     case 'FT_COMBO': return direct(runCombo(msg));
@@ -450,4 +484,4 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
-console.log(LOG, 'service worker 就绪 (v10：组合任务 / Earning 分组 / 快速交易日志)');
+console.log(LOG, 'service worker 就绪 (v10.1：持仓页交易 / 按股数下单 / G 键取变更%)');

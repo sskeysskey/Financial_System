@@ -139,6 +139,28 @@ def remove_symbol(symbol, group, wait=90, restore=True):
 def remove_symbol_async(symbol, group, on_done=None, wait=90, restore=True):
     return _run_async(remove_symbol, on_done, symbol, group, wait=wait, restore=restore)
 
+def quote_symbol(symbol, wait=120):
+    """阻塞式：让浏览器取 symbol 最新「变更%」（持仓页 → 自选分组 → temp 临时分组）"""
+    symbol = str(symbol or "").strip().upper()
+    out = {"ok": False, "symbol": symbol, "group": "", "action": "quote", "message": "", "data": {}}
+    if not symbol:
+        out["message"] = "symbol 为空"
+        return out
+    try:
+        r = _post("/ft_quote", {"symbol": symbol, "wait": max(1, int(wait))}, timeout=int(wait) + 20)
+    except Exception as e:
+        out["message"] = f"连不上本地桥接服务 {BRIDGE_BASE}：{e}\n请先在终端运行 bridge_server.py"
+        return out
+    out["ok"] = bool(r.get("ok"))
+    out["data"] = r.get("data") or {}
+    out["message"] = r.get("message") or ("已取到最新变更%" if out["ok"] else "未收到浏览器回报")
+    out["raw"] = r
+    return out
+
+
+def quote_symbol_async(symbol, on_done=None, wait=120):
+    return _run_async(quote_symbol, on_done, symbol, wait=wait)
+
 def scan_groups(groups=None, wait=300):
     """阻塞式：让浏览器逐个分组扫描归属，结果写入 firstrade_wl_membership.json"""
     out = {"ok": False, "symbol": "", "group": "全部分组", "message": ""}

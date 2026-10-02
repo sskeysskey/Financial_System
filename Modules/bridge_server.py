@@ -30,6 +30,10 @@ WATCHLIST_JSON_PATH = os.path.join(MODULES_DIR, "firstrade_watchlist_earning.jso
 TRADE_LOG_PATH = os.path.join(MODULES_DIR, "firstrade_trade_log.jsonl")               # ★ 快速交易审计日志
 _TRADE_LOG_LOCK = threading.Lock()
 WL_MEMBERSHIP_JSON_PATH = os.path.join(MODULES_DIR, "firstrade_wl_membership.json")
+LIVE_QUOTES_JSON_PATH = os.path.join(MODULES_DIR, "firstrade_quotes_live.json")   # ★ G 键实时取数
+LIVE_QUOTES_MAX = 600
+TEMP_GROUP = os.environ.get("FT_TEMP_GROUP", "temp")
+_LIVE_LOCK = threading.Lock()
 MEMBER_RECENT_MAX = 200
 _MEM_LOCK = threading.Lock()
 _GROUP_TAIL = re.compile(r"[（(]\s*\d+\s*[）)]\s*$")
@@ -853,6 +857,84 @@ def apply_membership_event(group, symbol, op, source=""):
     return {"status": "ok", "group": g, "symbol": sym, "op": op, "count": len(syms)}
 
 
+# ---------------------------------------------------------------------------
+# ★ G 键实时取数：保存结果 / 单只 patch 持仓 / 决定取数路径
+# ---------------------------------------------------------------------------
+def save_live_quote(symbol, d):
+    sym = str(symbol or "").strip().upper()
+    if not sym or not isinstance(d, dict):
+        return False
+    rec = {"symbol": sym, "updated_at": time.time()}
+    for k in ("change_pct", "change_pct_num", "last", "source", "group"):
+        v = d.get(k)
+        if v not in (None, ""):
+            rec[k] = v
+    if "change_pct" not in rec and "last" not in rec:
+        return False
+    with _LIVE_LOCK:
+        data = _load_json(LIVE_QUOTES_JSON_PATH)
+        quotes = data.get("quotes") if isinstance(data.get("quotes"), dict) else {}
+        for k in [k for k in quotes if _sym_key(k) == _sym_key(sym)]:
+            quotes.pop(k, None)
+        quotes[sym] = rec
+        if len(quotes) > LIVE_QUOTES_MAX:
+            keep = sorted(quotes.items(), key=lambda kv: float((kv[1] or {}).get("updated_at") or 0),
+                          reverse=True)[:LIVE_QUOTES_MAX]
+            quotes = dict(keep)
+        _atomic_write(LIVE_QUOTES_JSON_PATH, {
+            "_meta": {"updated_at": time.time(), "updated_at_str": time.strftime("%Y-%m-%d %H:%M:%S"),
+                      "count": len(quotes)},
+            "quotes": quotes})
+    _log(f"[取数] {sym} 变更% {rec.get('change_pct')} 现价 {rec.get('last')} via {rec.get('source')}")
+    return True
+
+
+def patch_position(symbol, rec):
+    """只更新一只持仓的字段；不动 _meta.updated_at（避免掩盖整体快照的过期）、不覆盖 .bak"""
+    if not isinstance(rec, dict):
+        return False
+    with _FILE_LOCK:
+        data = _load_json(POSITIONS_JSON_PATH)
+        if not data:
+            return False
+        key = next((k for k in data if not str(k).startswith("_") and _sym_key(k) == _sym_key(symbol)), None)
+        if not key:
+            return False
+        slim = _slim_position(key, rec)
+        if len(slim) <= 1:
+            return False
+        merged = dict(data[key]) if isinstance(data[key], dict) else {}
+        merged.update(slim)
+        merged["patched_at"] = time.time()
+        data[key] = merged
+        meta = data.get("_meta") if isinstance(data.get("_meta"), dict) else {}
+        meta["patched_at"] = time.time()
+        meta["patched_symbol"] = key
+        data["_meta"] = meta
+        _atomic_write(POSITIONS_JSON_PATH, data)
+    return True
+
+
+def build_quote_plan(symbol):
+    """持仓页 → 所在自选分组（成员少的优先，最多 2 个）→ temp 临时分组"""
+    k = _sym_key(symbol)
+    plan = []
+    pos = _load_json(POSITIONS_JSON_PATH)
+    if any(_sym_key(s) == k for s in pos.keys() if not str(s).startswith("_")):
+        plan.append({"src": "positions"})
+    mem = _load_json(WL_MEMBERSHIP_JSON_PATH)
+    groups = mem.get("groups") if isinstance(mem.get("groups"), dict) else {}
+    hits = []
+    for g, r in groups.items():
+        if not isinstance(r, dict) or _clean_group(g).lower() == TEMP_GROUP.lower():
+            continue
+        if any(_sym_key(s) == k for s in (r.get("symbols") or [])):
+            hits.append((int(r.get("count") or 0), _clean_group(g)))
+    for _, g in sorted(hits)[:2]:
+        plan.append({"src": "group", "group": g})
+    plan.append({"src": "temp", "group": TEMP_GROUP})
+    return plan
+
 def launch_chart(symbol):
     try:
         try:
@@ -922,13 +1004,18 @@ class StockRequestHandler(BaseHTTPRequestHandler):
             if action == "remove" and not group:
                 self._reply(400, {"status": "error", "ok": False, "message": "删除必须指定分组"})
                 return
-            tab = ensure_watchlist_tab()
+            activate = bool(body.get("activate", True))
+            # ★ activate=False：持仓页排队移出等场景，绝不跑 AppleScript（它可能把当前页跳转走）
+            tab = ensure_watchlist_tab() if activate else "skipped"
             _log(f"[任务] 激活 Watchlist 页面 -> {tab}")
             t = find_active_task(action, symbol, group)
             if t:
                 _log(f"[任务] 复用已排队的 {action} {symbol}@{group} id={t['id']}")
             else:
-                t = new_task(action, symbol, group, {"restore": restore})
+                extra = {"restore": restore}
+                if not activate:
+                    extra["ttl"] = 3600          # 等用户打开 watchlist 页，最多保留 1 小时
+                t = new_task(action, symbol, group, extra)
                 _log(f"[任务] 排队 {action} {symbol} {'→' if action == 'add' else '✕'} 「{group or '当前分组'}」 id={t['id']}")
             if wait > 0:
                 t["event"].wait(min(wait, 180))
@@ -1088,6 +1175,16 @@ class StockRequestHandler(BaseHTTPRequestHandler):
                             apply_membership_event(grp, sym, "remove", "agent_remove")
                         except Exception as e:
                             _log(f"[归属] 删除记账失败: {e}")
+                if reported_ok and info[0] == "quote":
+                    d = body.get("data") or {}
+                    sym = str(d.get("symbol") or info[1] or "").upper()
+                    if sym:
+                        try:
+                            save_live_quote(sym, d)
+                            if d.get("source") == "positions" and isinstance(d.get("record"), dict):
+                                patch_position(sym, d["record"])
+                        except Exception as e:
+                            _log(f"[取数] 保存失败: {e}")
                 ok = finish_task(tid, reported_ok, str(body.get("message", "")), body.get("data"))
                 _log(f"[任务] 回报 id={tid} ok={reported_ok} msg={str(body.get('message',''))[:90]}")
                 self._reply(200, {"status": "ok" if ok else "unknown_task"})
@@ -1095,6 +1192,38 @@ class StockRequestHandler(BaseHTTPRequestHandler):
                 self._reply(500, {"status": "error", "message": str(e)})
             return
 
+        # ★ G 键：取某只股票最新「变更%」（持仓页 → 自选分组 → temp 临时分组）
+        if path == "/ft_quote":
+            try:
+                body = self._read_json_body()
+                symbol = str(body.get("symbol", "")).strip().upper()
+                if not symbol:
+                    self._reply(400, {"status": "error", "ok": False, "message": "no symbol"})
+                    return
+                wait = float(body.get("wait", 0) or 0)
+                plan = build_quote_plan(symbol)
+                tab = ensure_watchlist_tab()
+                t = find_active_task("quote", symbol)
+                if t:
+                    _log(f"[取数] {symbol} 已有任务 {t['id']}，复用")
+                else:
+                    t = new_task("quote", symbol, "", {"params": {"plan": plan}, "restore": True,
+                                                       "lease": 240, "ttl": 900, "pending_ttl": 120})
+                    _log(f"[取数] 排队 {symbol} plan={[p.get('group') or p['src'] for p in plan]} id={t['id']}")
+                if wait > 0:
+                    t["event"].wait(min(wait, 240))
+                res = t.get("result")
+                if res:
+                    out = {"status": "ok", "id": t["id"], "tab": tab, "action": "quote", "plan": plan}
+                    out.update(res)
+                    self._reply(200, out)
+                else:
+                    self._reply(200, {"status": "pending", "id": t["id"], "tab": tab, "ok": False, "action": "quote",
+                                      "plan": plan, "message": "取数任务已排队但未在等待时间内完成（检查 watchlist 页是否打开/登录）"})
+            except Exception as e:
+                self._reply(500, {"status": "error", "ok": False, "message": str(e)})
+            return
+        
         # ★ 远程快速交易（Python → 浏览器 ft_trade.js），at-most-once
         if path == "/wl_trade":
             try:
@@ -1105,21 +1234,37 @@ class StockRequestHandler(BaseHTTPRequestHandler):
                     self._reply(400, {"status": "error", "ok": False, "message": "需要 symbol 和 side=buy/sell"})
                     return
                 params = {"side": side, "remove": bool(body.get("remove", True)), "dry": bool(body.get("dry", False))}
+
+                def _int_qty(v):
+                    try:
+                        f = float(str(v).replace(",", "").strip())
+                    except ValueError:
+                        return None
+                    return int(round(f)) if f > 0 and abs(f - round(f)) < 1e-9 else None
+
                 if side == "buy":
-                    amount = float(body.get("amount") or 0)
-                    if amount <= 0:
-                        self._reply(400, {"status": "error", "ok": False, "message": "买入金额必须 > 0"})
-                        return
-                    params["amount"] = amount
+                    qraw = str(body.get("qty", "") or "").strip()
+                    if qraw and qraw.lower() != "all":
+                        q = _int_qty(qraw)
+                        if not q:
+                            self._reply(400, {"status": "error", "ok": False, "message": "买入股数必须为正整数"})
+                            return
+                        params["qty"] = str(q)
+                    else:
+                        amount = float(body.get("amount") or 0)
+                        if amount <= 0:
+                            self._reply(400, {"status": "error", "ok": False, "message": "买入金额必须 > 0（浏览器会按网页现价换算股数）"})
+                            return
+                        params["amount"] = amount
                 else:
                     qty = str(body.get("qty", "all")).replace(",", "").strip() or "all"
                     if qty.lower() != "all":
-                        try:
-                            if float(qty) <= 0:
-                                raise ValueError
-                        except ValueError:
-                            self._reply(400, {"status": "error", "ok": False, "message": "卖出股数无效"})
+                        q = _int_qty(qty)
+                        if not q:
+                            self._reply(400, {"status": "error", "ok": False,
+                                              "message": "卖出股数必须为正整数（网页端不支持碎股，碎股请用手机 App）"})
                             return
+                        qty = str(q)
                     params["qty"] = qty
                 wait = float(body.get("wait", 0) or 0)
                 tab = ensure_watchlist_tab()
@@ -1246,6 +1391,10 @@ class StockRequestHandler(BaseHTTPRequestHandler):
 
         if path == "/wl_membership":
             self._reply(200, _load_json(WL_MEMBERSHIP_JSON_PATH))
+            return
+        
+        if path == "/quotes_live":
+            self._reply(200, _load_json(LIVE_QUOTES_JSON_PATH))
             return
         
         if path == "/watchlist":

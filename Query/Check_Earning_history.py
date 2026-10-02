@@ -502,7 +502,7 @@ def search_history_by_date(symbol):
         if is_52week_low and d_str == latest_hit_date:
             rendered_items.append(
                 "• <b style='color:#D08770; background-color:rgba(208,135,112,0.15); "
-                "padding:0 4px; border-radius:3px;'>52week_low</b>"
+                "padding:0 4px; border-radius:3px;'>X_week_low</b>"
             )
 
         if has_group_a:

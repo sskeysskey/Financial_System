@@ -3,10 +3,12 @@
   "symbol": "MCD",
   "quantity": "93.43275",
   "cost": "23,000.00",
-  "day_change": "+0.24%",
-  "gainloss": "-5.60%",
-  "gainloss_amount": "-1,287.16",
-  "allocation": "7.41%"
+  "day_change": "+0.23%",
+  "gainloss": "-5.61%",
+  "gainloss_amount": "-1,289.97",
+  "allocation": "7.41%",
+  "last_price": "232.36",
+  "patched_at": 1790923269.542937
  },
  "UMBF": {
   "symbol": "UMBF",
@@ -39,19 +41,23 @@
   "symbol": "BMRN",
   "quantity": "33.43417",
   "cost": "2,000.00",
-  "day_change": "-1.15%",
-  "gainloss": "-3.43%",
-  "gainloss_amount": "-68.51",
-  "allocation": "0.66%"
+  "day_change": "+0.07%",
+  "gainloss": "-2.24%",
+  "gainloss_amount": "-44.81",
+  "allocation": "0.66%",
+  "last_price": "58.48",
+  "patched_at": 1790933666.2966678
  },
  "TRU": {
   "symbol": "TRU",
   "quantity": "15.84467",
   "cost": "1,000.00",
-  "day_change": "-1.33%",
-  "gainloss": "-2.79%",
-  "gainloss_amount": "-27.93",
-  "allocation": "0.33%"
+  "day_change": "-1.72%",
+  "gainloss": "-3.17%",
+  "gainloss_amount": "-31.73",
+  "allocation": "0.33%",
+  "last_price": "61.11",
+  "patched_at": 1790924895.8650901
  },
  "RYTM": {
   "symbol": "RYTM",
@@ -60,16 +66,20 @@
   "day_change": "0.00%",
   "gainloss": "-2.61%",
   "gainloss_amount": "-26.09",
-  "allocation": "0.33%"
+  "allocation": "0.33%",
+  "last_price": "93.41",
+  "patched_at": 1790933128.839819
  },
  "BABA": {
   "symbol": "BABA",
   "quantity": "9.17928",
   "cost": "1,000.00",
-  "day_change": "-1.10%",
-  "gainloss": "-2.45%",
-  "gainloss_amount": "-24.52",
-  "allocation": "0.33%"
+  "day_change": "-1.21%",
+  "gainloss": "-2.56%",
+  "gainloss_amount": "-25.62",
+  "allocation": "0.33%",
+  "last_price": "106.15",
+  "patched_at": 1790931571.0024772
  },
  "MA": {
   "symbol": "MA",
@@ -87,7 +97,9 @@
   "day_change": "-0.12%",
   "gainloss": "-2.36%",
   "gainloss_amount": "-23.65",
-  "allocation": "0.33%"
+  "allocation": "0.33%",
+  "last_price": "307.70",
+  "patched_at": 1790926898.79455
  },
  "DGX": {
   "symbol": "DGX",
@@ -96,7 +108,9 @@
   "day_change": "0.00%",
   "gainloss": "-2.20%",
   "gainloss_amount": "-109.77",
-  "allocation": "1.67%"
+  "allocation": "1.67%",
+  "last_price": "231.09",
+  "patched_at": 1790926942.8183308
  },
  "PDD": {
   "symbol": "PDD",
@@ -105,16 +119,20 @@
   "day_change": "-0.46%",
   "gainloss": "-2.15%",
   "gainloss_amount": "-43.05",
-  "allocation": "0.67%"
+  "allocation": "0.66%",
+  "last_price": "76.15",
+  "patched_at": 1790933549.656917
  },
  "SLB": {
   "symbol": "SLB",
   "quantity": "20.15998",
   "cost": "1,000.00",
-  "day_change": "-0.08%",
-  "gainloss": "-1.98%",
-  "gainloss_amount": "-19.82",
-  "allocation": "0.33%"
+  "day_change": "-1.43%",
+  "gainloss": "-3.30%",
+  "gainloss_amount": "-33.00",
+  "allocation": "0.33%",
+  "last_price": "47.97",
+  "patched_at": 1790933642.5047522
  },
  "SPXC": {
   "symbol": "SPXC",
@@ -132,7 +150,9 @@
   "day_change": "0.00%",
   "gainloss": "-1.64%",
   "gainloss_amount": "-16.38",
-  "allocation": "0.34%"
+  "allocation": "0.34%",
+  "last_price": "27.08",
+  "patched_at": 1790927042.831985
  },
  "ACAD": {
   "symbol": "ACAD",
@@ -147,10 +167,12 @@
   "symbol": "PCAR",
   "quantity": "53.78881",
   "cost": "6,000.00",
-  "day_change": "0.00%",
-  "gainloss": "-1.44%",
-  "gainloss_amount": "-86.46",
-  "allocation": "2.02%"
+  "day_change": "+2.64%",
+  "gainloss": "+1.16%",
+  "gainloss_amount": "+69.53",
+  "allocation": "2.06%",
+  "last_price": "112.84",
+  "patched_at": 1790932936.9256551
  },
  "ALL": {
   "symbol": "ALL",
@@ -195,7 +217,9 @@
   "day_change": "0.00%",
   "gainloss": "-1.03%",
   "gainloss_amount": "-10.31",
-  "allocation": "0.34%"
+  "allocation": "0.34%",
+  "last_price": "158.02",
+  "patched_at": 1790932952.826406
  },
  "BX": {
   "symbol": "BX",
@@ -240,7 +264,9 @@
   "day_change": "+1.25%",
   "gainloss": "-0.56%",
   "gainloss_amount": "-22.55",
-  "allocation": "1.36%"
+  "allocation": "1.36%",
+  "last_price": "308.40",
+  "patched_at": 1790927367.173342
  },
  "BNY": {
   "symbol": "BNY",
@@ -255,10 +281,12 @@
   "symbol": "BMY",
   "quantity": "32.54626",
   "cost": "2,000.00",
-  "day_change": "-0.55%",
-  "gainloss": "-0.54%",
-  "gainloss_amount": "-10.77",
-  "allocation": "0.68%"
+  "day_change": "+1.05%",
+  "gainloss": "+0.03%",
+  "gainloss_amount": "+0.62",
+  "allocation": "0.68%",
+  "last_price": "61.47",
+  "patched_at": 1790932019.165905
  },
  "GRFS": {
   "symbol": "GRFS",
@@ -276,7 +304,9 @@
   "day_change": "-0.96%",
   "gainloss": "-0.47%",
   "gainloss_amount": "-14.09",
-  "allocation": "1.02%"
+  "allocation": "1.02%",
+  "last_price": "284.17",
+  "patched_at": 1790927508.844385
  },
  "FERG": {
   "symbol": "FERG",
@@ -300,10 +330,12 @@
   "symbol": "BAX",
   "quantity": "84.46711",
   "cost": "2,000.00",
-  "day_change": "0.00%",
-  "gainloss": "-0.16%",
-  "gainloss_amount": "-3.20",
-  "allocation": "0.68%"
+  "day_change": "+0.30%",
+  "gainloss": "+0.14%",
+  "gainloss_amount": "+2.72",
+  "allocation": "0.68%",
+  "last_price": "23.71",
+  "patched_at": 1790932296.793904
  },
  "SMG": {
   "symbol": "SMG",
@@ -345,10 +377,12 @@
   "symbol": "EXPE",
   "quantity": "11.43766",
   "cost": "3,000.00",
-  "day_change": "+0.04%",
-  "gainloss": "+0.18%",
-  "gainloss_amount": "+5.47",
-  "allocation": "1.03%"
+  "day_change": "+4.86%",
+  "gainloss": "+5.01%",
+  "gainloss_amount": "+150.43",
+  "allocation": "1.07%",
+  "last_price": "275.44",
+  "patched_at": 1790933713.1870499
  },
  "CBRE": {
   "symbol": "CBRE",
@@ -381,10 +415,12 @@
   "symbol": "BKNG",
   "quantity": "43.61898",
   "cost": "7,000.00",
-  "day_change": "+0.62%",
-  "gainloss": "+0.49%",
-  "gainloss_amount": "+34.43",
-  "allocation": "2.40%"
+  "day_change": "+0.98%",
+  "gainloss": "+0.85%",
+  "gainloss_amount": "+59.73",
+  "allocation": "2.40%",
+  "last_price": "161.85",
+  "patched_at": 1790932313.3675342
  },
  "CPRT": {
   "symbol": "CPRT",
@@ -525,10 +561,12 @@
   "symbol": "LLY",
   "quantity": "1.77334",
   "cost": "1,999.99",
-  "day_change": "+0.13%",
-  "gainloss": "+2.09%",
-  "gainloss_amount": "+41.75",
-  "allocation": "0.70%"
+  "day_change": "+0.03%",
+  "gainloss": "+1.98%",
+  "gainloss_amount": "+39.63",
+  "allocation": "0.69%",
+  "last_price": "1,150.16",
+  "patched_at": 1790933581.042973
  },
  "BROS": {
   "symbol": "BROS",
@@ -552,10 +590,12 @@
   "symbol": "HON",
   "quantity": "19.12898",
   "cost": "4,000.00",
-  "day_change": "+0.18%",
-  "gainloss": "+2.43%",
-  "gainloss_amount": "+97.24",
-  "allocation": "1.40%"
+  "day_change": "+0.11%",
+  "gainloss": "+2.36%",
+  "gainloss_amount": "+94.37",
+  "allocation": "1.40%",
+  "last_price": "214.04",
+  "patched_at": 1790928061.47394
  },
  "VEEV": {
   "symbol": "VEEV",
@@ -570,10 +610,12 @@
   "symbol": "BETA",
   "quantity": "47.27685",
   "cost": "1,000.00",
-  "day_change": "0.00%",
-  "gainloss": "+2.73%",
-  "gainloss_amount": "+27.33",
-  "allocation": "0.35%"
+  "day_change": "+0.14%",
+  "gainloss": "+2.87%",
+  "gainloss_amount": "+28.74",
+  "allocation": "0.35%",
+  "last_price": "21.76",
+  "patched_at": 1790928187.7706618
  },
  "EQT": {
   "symbol": "EQT",
@@ -615,10 +657,12 @@
   "symbol": "HII",
   "quantity": "7.5378",
   "cost": "2,000.00",
-  "day_change": "+0.54%",
-  "gainloss": "+3.95%",
-  "gainloss_amount": "+79.08",
-  "allocation": "0.71%"
+  "day_change": "+0.24%",
+  "gainloss": "+3.64%",
+  "gainloss_amount": "+72.89",
+  "allocation": "0.71%",
+  "last_price": "275.00",
+  "patched_at": 1790928352.8601532
  },
  "EMR": {
   "symbol": "EMR",
@@ -760,6 +804,8 @@
   "updated_at_str": "2026-10-02 12:55:00",
   "count": 84,
   "mode": "overwrite",
-  "schema": "lean_v1"
+  "schema": "lean_v1",
+  "patched_at": 1790933713.187051,
+  "patched_symbol": "EXPE"
  }
 }

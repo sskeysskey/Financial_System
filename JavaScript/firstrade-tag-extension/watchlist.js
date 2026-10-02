@@ -476,6 +476,67 @@
     return buf;
   }
 
+  /* ---------------- ★ v10.1 单只行情读取（交易层 / G 键取数 / 持仓页共用） ---------------- */
+  function numOf(t) {
+    const m = String(t || '').replace(/,/g, '').match(/-?\d+(?:\.\d+)?/);
+    return m ? parseFloat(m[0]) : NaN;
+  }
+
+  function rowQuote(sym) {
+    const k = normKey(sym);
+    let out = null;
+    document.querySelectorAll('[row-id]').forEach((row) => {
+      if (row.closest(ROW_EXCLUDE) || row.closest('#ft-trade-layer')) return;
+      const s = symbolFromRowId(row.getAttribute('row-id'));
+      if (!s || normKey(s) !== k) return;
+      const child = /\bag-row-level-[1-9]/.test(String(row.className || ''));
+      out = out || { symbol: s };
+      const ch = row.querySelector('[col-id="changePercent"]');
+      if (ch && !out.change_pct) {
+        const t = cleanText(ch);
+        if (t && t !== '--') out.change_pct = t;
+        const dv = ch.querySelector('[data-value]');
+        if (dv) {
+          const n = parseFloat(dv.getAttribute('data-value'));
+          if (Number.isFinite(n)) out.change_pct_num = Math.round(n * 1e6) / 1e6;
+        }
+      }
+      const la = row.querySelector('[col-id="last"]');
+      if (la && !(out.price > 0)) {
+        const t = cleanText(la);
+        const n = numOf(t);
+        if (n > 0) { out.price = n; out.last = t; }
+      }
+      const qt = row.querySelector('[col-id="quantity"]');
+      if (qt && !child && !(out.quantity > 0)) {
+        const n = numOf(cleanText(qt));
+        if (n > 0) out.quantity = n;
+      }
+    });
+    return out;
+  }
+
+  /* 虚拟滚动寻找；找到后不回滚（保持该行处于渲染状态） */
+  async function findRowQuote(sym, scroll) {
+    let q = rowQuote(sym);
+    if (q || !scroll) return q;
+    const s0 = scrollState();
+    const original = s0.top;
+    s0.top = 0;
+    await sleep(RUN.scrollWait || 180);
+    q = rowQuote(sym);
+    let guard = 0;
+    while (!q && guard++ < 2000) {
+      const s = scrollState();
+      if (s.top + s.clientH >= s.scrollH - 3) break;
+      s.top = s.top + Math.max(160, s.clientH - 120);
+      await sleep(RUN.scrollWait || 180);
+      q = rowQuote(sym);
+    }
+    if (!q) scrollState().top = original;
+    return q;
+  }
+
   /* ---------------- 输入 & 联想 & 点击 ---------------- */
   function setNativeValue(el, value) {
     const proto = Object.getPrototypeOf(el);
@@ -2080,10 +2141,10 @@
 
   /* ================= 对外 API（wl_agent.js 复用） ================= */
   window.__FT_WL_API__ = {
-    version: 10.0,
+    version: 10.1,
     isWatchlistPage, groupName, normGroup, switchGroup, listGroupOptions,
     waitGridSettled, gridRowCount, dataRowsTotal, gridSaysEmpty, normKey,
-    collectWatchlist, addOneSymbol, deleteSymbol, hasSymbolInGrid,
+    collectWatchlist, addOneSymbol, deleteSymbol, hasSymbolInGrid, rowQuote, findRowQuote,
     cleanNavSearch, pressEscape, ensureHud, renderScan, toast,
     targetGroup: () => TARGET.group,
     isBusy: () => !!(job.running || job.finishing || scanState.running),

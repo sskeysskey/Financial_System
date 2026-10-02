@@ -355,9 +355,10 @@
 
   <hr>
   <!-- ==================== ⑥ 快速交易 ==================== -->
-  <h1>⑥ 快速交易（/app/watchlist 点击代码弹出）</h1>
-  <p class="hint">买 / 买买 / 买买买 → 直接<b>买进（按金额）</b>；卖卖卖 → 直接<b>卖出（按股数，读 positions JSON）</b>；
-    其它分组 → 让你选。成交后自动从勾选的分组移除（Earning / Wrong 永不自动删）。<b>按住 Alt 再点代码</b> = 网页原生行为。</p>
+  <h1>⑥ 快速交易（/app/watchlist、/app/positions 点击代码弹出）</h1>
+  <p class="hint">买 / 买买 / 买买买 → <b>买进</b>：金额档 ÷ <b>网页实时价</b> → 四舍五入整数股，以「股数 + 市价」下单；
+    卖卖卖 → <b>卖出整数股</b>（碎股持仓会提示去手机 App）；其它分组 → 让你选。
+    成交后自动从勾选的分组移除（持仓页会排队到自选股页执行；Earning / Wrong 永不自动删）。<b>按住 Alt 再点代码</b> = 网页原生行为。</p>
   <div class="row">
     <input type="checkbox" id="tradeEnabled" style="width:auto;">
     <label for="tradeEnabled"><b>启用</b>：点击股票代码弹出交易层</label>

@@ -4,13 +4,15 @@
 ft_quotes.py —— Firstrade 本地数据读取层（Chart_input.py）
 
 数据来源（均由 Chrome 插件 + bridge_server.py 落盘）:
-    Modules/firstrade_positions.json   持仓快照（覆盖式）
-    Modules/firstrade_watchlist.json   自选股「变更%」快照（覆盖式，1800+ 只）
+    Modules/firstrade_positions.json          持仓快照（覆盖式；G 键会单只 patch）
+    Modules/firstrade_watchlist_earning.json  Earning 分组「变更%」快照
+    Modules/firstrade_quotes_live.json        ★ G 键实时取数结果（单只、带时间戳）
+    Modules/firstrade_wl_membership.json      分组归属
 
 显示优先级（build_market_items）:
-    1) 该 symbol 在持仓里  -> 显示 成本 / 损益 / 日 / 总 / 仓位
-    2) 不在持仓、但在自选股 -> 显示 盘前变更% / 现价
-    3) 都没有              -> 视 FT_SHOW_MISS 决定是否显示灰色占位
+    1) 在持仓里  -> 成本 / 损益 / 日 / 总 / 仓位（若 G 键实时数据更新，「日」用实时值）
+    2) 不在持仓  -> 变更% / 现价（Earning 快照 与 实时取数 取较新者）
+    3) 都没有    -> 视 FT_SHOW_MISS 决定是否显示灰色占位
 """
 import os
 import re
@@ -23,12 +25,13 @@ MODULES_DIR = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules")
 
 FIRSTRADE_POSITIONS_FILE = os.path.join(MODULES_DIR, "firstrade_positions.json")
 FIRSTRADE_WATCHLIST_FILE = os.path.join(MODULES_DIR, "firstrade_watchlist_earning.json")
+FIRSTRADE_LIVE_QUOTES_FILE = os.path.join(MODULES_DIR, "firstrade_quotes_live.json")
 
 FT_DEBUG = os.environ.get("FT_DEBUG", "") == "1"
 FT_SHOW_MISS = os.environ.get("FT_SHOW_MISS", "1") == "1"
-
-# 自选股数据超过该小时数就打「N天前」标记
 FT_STALE_HOURS = float(os.environ.get("FT_STALE_HOURS", "20"))
+# 不在图表「自选 [..]」行显示的分组（临时取数用）
+FT_HIDDEN_GROUPS = {s.strip().lower() for s in os.environ.get("FT_HIDDEN_GROUPS", "temp").split(",") if s.strip()}
 
 _CACHE = {}          # path -> (mtime, data)
 
@@ -37,17 +40,14 @@ _CACHE = {}          # path -> (mtime, data)
 # 基础工具
 # ----------------------------------------------------------------------
 def _ft_norm_sym(s):
-    """AAPL / brk.b / BRK-B 统一成大写且以 '-' 为分隔的形式"""
     return str(s).strip().upper().replace('.', '-')
 
 
 def _norm_key(s):
-    """比较用：去掉一切分隔符 BRK.B / BRK-B / BRKB -> BRKB"""
     return re.sub(r'[^A-Z0-9]', '', str(s).strip().upper())
 
 
 def _load_json_cached(path):
-    """按 mtime 缓存，避免 matplotlib 频繁重画时反复读盘"""
     try:
         mtime = os.path.getmtime(path) if os.path.exists(path) else 0.0
     except Exception:
@@ -88,7 +88,6 @@ def _fmt_money(s):
 
 
 def _fmt_gainloss_amount(s):
-    """损益金额格式化：自动带正负号，并兼顾大额缩写"""
     v = _num(s)
     if v is None:
         return str(s)
@@ -99,17 +98,27 @@ def _fmt_gainloss_amount(s):
     return f"{v:+.2f}"
 
 
-def _age_hours(ts):
-    """兼容秒 / 毫秒时间戳"""
+def _ts(v):
+    """秒 / 毫秒时间戳 → 秒；无效返回 0"""
     try:
-        t = float(ts)
+        t = float(v)
     except Exception:
-        return None
-    if t <= 0:
-        return None
-    if t > 1e11:          # 毫秒
+        return 0.0
+    if t > 1e11:
         t /= 1000.0
+    return t if t > 0 else 0.0
+
+
+def _age_hours(ts):
+    t = _ts(ts)
+    if not t:
+        return None
     return (time.time() - t) / 3600.0
+
+
+def _hhmm(ts):
+    t = _ts(ts)
+    return time.strftime('%H:%M', time.localtime(t)) if t else ''
 
 
 def _sign_color(s, theme):
@@ -117,9 +126,9 @@ def _sign_color(s, theme):
     if v is None:
         return theme['text_bright']
     if v > 0:
-        return theme['accent_red']        # 红涨
+        return theme['accent_red']
     if v < 0:
-        return theme['accent_green']      # 绿跌
+        return theme['accent_green']
     return theme['text_bright']
 
 
@@ -127,7 +136,6 @@ def _sign_color(s, theme):
 # 持仓
 # ----------------------------------------------------------------------
 def get_firstrade_position(symbol):
-    """读取插件回传的真实持仓数据，返回 dict 或 None"""
     if not symbol:
         return None
     data = _load_json_cached(FIRSTRADE_POSITIONS_FILE)
@@ -143,8 +151,11 @@ def get_firstrade_position(symbol):
         if _norm_key(k) == target:
             out = dict(v)
             out.setdefault('symbol', str(k).upper())
-            if not out.get('updated_at'):        # ★ 逐条 updated_at 已取消，从 _meta 回填
+            if not out.get('updated_at'):
                 out['updated_at'] = meta_ts
+            # ★ G 键单只 patch 过 → 以 patch 时间为准
+            if _ts(out.get('patched_at')) > _ts(out.get('updated_at')):
+                out['updated_at'] = out['patched_at']
             if FT_DEBUG:
                 print(f"[FT] 命中持仓 {k}: {out}")
             return out
@@ -155,41 +166,59 @@ def get_firstrade_position(symbol):
 
 
 # ----------------------------------------------------------------------
-# 自选股行情（变更%）
+# 行情（变更%）
 # ----------------------------------------------------------------------
-def get_watchlist_quote(symbol):
-    """返回 {'symbol','change_pct','change_pct_num','last','updated_at'} 或 None"""
-    if not symbol:
-        return None
-    data = _load_json_cached(FIRSTRADE_WATCHLIST_FILE)
-    if not data:
-        return None
+def _find_in_quotes(data, symbol):
     quotes = data.get('quotes')
     if not isinstance(quotes, dict):
-        quotes = {k: v for k, v in data.items()
-                  if isinstance(v, dict) and not str(k).startswith('_')}
+        quotes = {k: v for k, v in data.items() if isinstance(v, dict) and not str(k).startswith('_')}
     target = _norm_key(symbol)
     meta_ts = (data.get('_meta') or {}).get('updated_at')
     for k, v in quotes.items():
-        if not isinstance(v, dict):
-            continue
-        if _norm_key(k) == target:
+        if isinstance(v, dict) and _norm_key(k) == target:
             out = dict(v)
             out.setdefault('symbol', str(k).upper())
             if not out.get('updated_at'):
                 out['updated_at'] = meta_ts
-            if FT_DEBUG:
-                print(f"[FT] 命中自选股行情 {k}: {out}")
             return out
-    if FT_DEBUG:
-        print(f"[FT] 自选股行情未找到 {symbol}（共 {len(quotes)} 条）")
     return None
 
 
+def get_live_quote(symbol):
+    """G 键实时取数结果"""
+    if not symbol:
+        return None
+    data = _load_json_cached(FIRSTRADE_LIVE_QUOTES_FILE)
+    if not data:
+        return None
+    q = _find_in_quotes(data, symbol)
+    if q:
+        q['live'] = True
+    return q
+
+
+def get_watchlist_quote(symbol):
+    """Earning 快照 与 实时取数 中较新的一份"""
+    if not symbol:
+        return None
+    earn = None
+    data = _load_json_cached(FIRSTRADE_WATCHLIST_FILE)
+    if data:
+        earn = _find_in_quotes(data, symbol)
+    live = get_live_quote(symbol)
+    if live and (not earn or _ts(live.get('updated_at')) >= _ts(earn.get('updated_at'))):
+        if FT_DEBUG:
+            print(f"[FT] 使用实时取数 {symbol}: {live}")
+        return live
+    if FT_DEBUG and earn:
+        print(f"[FT] 命中自选股行情 {symbol}: {earn}")
+    return earn
+
+
 # ----------------------------------------------------------------------
-# 供图表副标题使用：[(文本, 颜色, 粗细), ...]
+# 图表副标题：[(文本, 颜色, 粗细), ...]
 # ----------------------------------------------------------------------
-def _items_from_position(pos, theme):
+def _items_from_position(pos, theme, live=None):
     raw = pos.get('raw') or {}
 
     def _pick(*keys):
@@ -204,8 +233,6 @@ def _items_from_position(pos, theme):
         return None
 
     cost_val = _pick('cost', 'totalCost')
-    
-    # 优先获取金额型损益，若从 raw.gainloss 取，需确认不是百分比字符串
     gl_amt_val = _pick('gainloss_amount')
     if not gl_amt_val:
         raw_gl = raw.get('gainloss')
@@ -215,6 +242,13 @@ def _items_from_position(pos, theme):
     day_val = _pick('day_change', 'changePercent')
     gl_val = _pick('gainloss', 'gainlossPercent')
     alloc_val = _pick('allocation', 'allocationPercent')
+
+    refreshed = None
+    if live and live.get('change_pct') and _ts(live.get('updated_at')) > _ts(pos.get('updated_at')):
+        day_val = str(live['change_pct'])
+        refreshed = live.get('updated_at')
+    elif pos.get('patched_at'):
+        refreshed = pos.get('patched_at')
 
     items = []
     if cost_val:
@@ -228,6 +262,9 @@ def _items_from_position(pos, theme):
     if alloc_val:
         items.append((f"仓{alloc_val}", theme['accent_cyan'], 'normal'))
 
+    ra = _age_hours(refreshed)
+    if ra is not None and ra < FT_STALE_HOURS:
+        items.append((f"↻{_hhmm(refreshed)}", theme['accent_cyan'], 'normal'))
     age = _age_hours(pos.get('updated_at'))
     if age is not None and age > FT_STALE_HOURS:
         items.append((f"({age/24:.0f}天前)", theme['border'], 'normal'))
@@ -241,47 +278,42 @@ def _items_from_watchlist(q, theme):
         txt = f"{float(n):+.2f}%" if isinstance(n, (int, float)) else None
     if not txt:
         return []
-
-    items = [(f"盘前 {txt}", _sign_color(txt, theme), 'bold')]
+    label = "变更" if q.get('live') else "盘前"
+    items = [(f"{label} {txt}", _sign_color(txt, theme), 'bold')]
     last = q.get('last')
     if last not in (None, '', '--'):
         items.append((f"现价 {last}", theme['text_light'], 'normal'))
-
     age = _age_hours(q.get('updated_at'))
-    if age is not None and age > FT_STALE_HOURS:
+    if q.get('live') and age is not None and age < FT_STALE_HOURS:
+        items.append((f"↻{_hhmm(q.get('updated_at'))}", theme['accent_cyan'], 'normal'))
+    elif age is not None and age > FT_STALE_HOURS:
         items.append((f"({age/24:.0f}天前)", theme['border'], 'normal'))
     return items
 
 
 def build_market_items(symbol, theme, show_miss=None):
-    """
-    图表副标题左侧一行的内容。
-    持仓优先；无持仓则用自选股「变更%」；都没有按 show_miss 决定占位。
-    """
     if show_miss is None:
         show_miss = FT_SHOW_MISS
-
+    live = get_live_quote(symbol)
     pos = get_firstrade_position(symbol)
     if pos:
-        items = _items_from_position(pos, theme)
+        items = _items_from_position(pos, theme, live)
         if items:
             return items
-
     q = get_watchlist_quote(symbol)
     if q:
         items = _items_from_watchlist(q, theme)
         if items:
             return items
-
     if show_miss:
         return [("持仓/自选: 无数据", theme['border'], 'normal')]
     return []
 
+
 # ----------------------------------------------------------------------
-# 供 Check_Group.py 使用：整份持仓 + 数值解析 + 格式化
+# 供 Check_Group.py 使用
 # ----------------------------------------------------------------------
 def load_all_positions():
-    """返回 (positions: {SYMBOL: rec}, meta: dict)；symbol 统一为大写 '-' 形式"""
     data = _load_json_cached(FIRSTRADE_POSITIONS_FILE)
     meta = data.get('_meta') or {}
     out = {}
@@ -300,7 +332,6 @@ def load_all_positions():
 
 
 def position_num(rec, *keys):
-    """按优先级从记录里取第一个可解析成数字的字段（'+7.16%' -> 7.16, '6,000.00' -> 6000.0）"""
     if not isinstance(rec, dict):
         return None
     for k in keys:
@@ -314,16 +345,15 @@ def position_num(rec, *keys):
 
 
 def fmt_money(s):
-    """6,000.00 -> 6.0K / 1,234,567 -> 1.23M"""
     return _fmt_money(s)
 
 
 def fmt_signed(s):
     return _fmt_gainloss_amount(s)
 
+
 # ----------------------------------------------------------------------
-# 自选股「分组归属」：该 symbol 在 Firstrade 哪些 watchlist 分组里
-#   数据：Modules/firstrade_wl_membership.json（bridge_server.py 写入）
+# 自选股「分组归属」
 # ----------------------------------------------------------------------
 FIRSTRADE_WL_MEMBERSHIP_FILE = os.path.join(MODULES_DIR, "firstrade_wl_membership.json")
 FT_MEMBER_STALE_HOURS = float(os.environ.get("FT_MEMBER_STALE_HOURS", "72"))
@@ -331,7 +361,6 @@ _MEMBER_INDEX = {"mtime": None, "index": {}, "order": [], "groups": {}}
 
 
 def membership_signature():
-    """文件 mtime，图表用它判断是否需要重画归属行"""
     try:
         return os.path.getmtime(FIRSTRADE_WL_MEMBERSHIP_FILE) if os.path.exists(FIRSTRADE_WL_MEMBERSHIP_FILE) else 0.0
     except Exception:
@@ -343,7 +372,8 @@ def _membership_index():
     mtime = (_CACHE.get(FIRSTRADE_WL_MEMBERSHIP_FILE) or (None,))[0]
     if _MEMBER_INDEX["mtime"] is not None and _MEMBER_INDEX["mtime"] == mtime:
         return _MEMBER_INDEX
-    groups = data.get('groups') if isinstance(data.get('groups'), dict) else {}
+    groups_all = data.get('groups') if isinstance(data.get('groups'), dict) else {}
+    groups = {g: r for g, r in groups_all.items() if str(g).strip().lower() not in FT_HIDDEN_GROUPS}
     idx = {}
     for g, rec in groups.items():
         if not isinstance(rec, dict):
@@ -358,8 +388,6 @@ def _membership_index():
 
 
 def get_watchlist_membership(symbol):
-    """返回 {'groups': [所在分组], 'unsure': [未完整扫描且未命中的分组], 'oldest_age_h': float}
-       无任何归属数据时返回 None"""
     if not symbol:
         return None
     ix = _membership_index()
@@ -392,7 +420,6 @@ def _group_color(name, theme):
 
 
 def build_membership_items(symbol, theme):
-    """图表第三行：[(文本, 颜色, 粗细), ...]"""
     m = get_watchlist_membership(symbol)
     if m is None:
         return [("自选: 未同步(按M扫描)", theme['border'], 'normal')]
@@ -401,7 +428,6 @@ def build_membership_items(symbol, theme):
         items.append(("自选", theme['text_light'], 'normal'))
         for g in m['groups']:
             items.append((f"[{g}]", _group_color(g, theme), 'bold'))
-            # 第 4 个元素 = 可点击动作：Chart_input 渲染成红色小按钮，点击后从该分组删除
             items.append(("×", theme['accent_red'], 'bold', ('wl_remove', g)))
     else:
         items.append(("自选: 未加入", theme['border'], 'normal'))

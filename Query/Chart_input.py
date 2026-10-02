@@ -75,7 +75,8 @@ try:
                            get_watchlist_quote, _ft_norm_sym,
                            FT_DEBUG, FT_SHOW_MISS,
                            FIRSTRADE_POSITIONS_FILE, FIRSTRADE_WATCHLIST_FILE,
-                           build_membership_items, membership_signature)
+                           build_membership_items, membership_signature,
+                           get_watchlist_membership)
 except Exception as _e:
     print(f"[FT] 加载 ft_quotes 失败（持仓/自选行情将不显示）: {_e}")
     FT_DEBUG, FT_SHOW_MISS = False, False
@@ -86,12 +87,13 @@ except Exception as _e:
     def build_market_items(_s, _t, show_miss=None): return []
     def build_membership_items(_s, _t): return []
     def membership_signature(): return 0.0
+    def get_watchlist_membership(_s): return None
 
 # --- Firstrade 一键加入自选股分组 ---
 try:
     from ft_watchlist_add import (add_symbol_async, remove_symbol_async, watchlist_groups,
                                   choose_group_dialog, last_group, save_last_group,
-                                  notify_mac, scan_groups_async)
+                                  notify_mac, scan_groups_async, quote_symbol_async)
     FT_WL_ADD_OK = True
 except Exception as _e:
     print(f"[FT] 加载 ft_watchlist_add 失败（一键加自选不可用）: {_e}")
@@ -104,6 +106,7 @@ except Exception as _e:
     def notify_mac(*a, **k): pass
     def add_symbol_async(*a, **k): return None
     def remove_symbol_async(*a, **k): return None
+    def quote_symbol_async(*a, **k): return None
 
 # --- Tag 黑名单 ---
 try:
@@ -818,6 +821,7 @@ class ChartWindow:
         self._wl_results = []
         self._wl_hide_at = 0.0
         self._wl_pending = set()          # 正在执行的 (symbol, group) 删除任务，防重复点击
+        self._quote_pending = set()       # 正在取「变更%」的 symbol，防重复按 G
         self.member_artists = []
         self._member_sig = None
         # ★ 黑名单醒目横幅（最顶部居中）
@@ -2063,6 +2067,19 @@ class ChartWindow:
             res = self._wl_results.pop(0)
             ok = bool(res.get('ok'))
             msg = res.get('message') or ('成功' if ok else '失败')
+            if res.get('action') == 'quote':
+                qsym = str(res.get('symbol', '')).upper()
+                self._quote_pending.discard(qsym)
+                if ok and self.name and _ft_norm_sym(self.name) == _ft_norm_sym(qsym):
+                    try:
+                        self.draw_subtitle(current_prices=self.current_filtered_prices,
+                                           pre_after_pct=self.current_pre_after_pct[0])
+                    except Exception:
+                        traceback.print_exc()
+                self._show_wl_status(("✅ " if ok else "❌ ") + msg,
+                                     NORD_THEME['accent_green'] if ok else NORD_THEME['accent_red'], ttl=8.0)
+                print(f"[FT-QUOTE] {'OK' if ok else 'FAIL'} {msg}")
+                continue
             if res.get('action') == 'remove':
                 self._wl_pending.discard((str(res.get('symbol', '')).upper(), str(res.get('group', ''))))
                 self._member_sig = None       # 立即重读归属文件
@@ -2111,6 +2128,35 @@ class ChartWindow:
                              NORD_THEME['accent_yellow'], ttl=300)
         scan_groups_async(on_done=lambda res: self._wl_results.append(res),
                           groups=(watchlist_groups() or None), wait=300)
+
+    def _quote_source_hint(self, sym):
+        try:
+            if get_firstrade_position(sym):
+                return "持仓页"
+            m = get_watchlist_membership(sym)
+            if m and m.get('groups'):
+                return f"自选「{m['groups'][0]}」"
+        except Exception:
+            pass
+        return "临时分组 temp"
+
+    def _refresh_ft_quote(self):
+        """G 键：让浏览器抓该 symbol 最新「变更%」，完成后自动重画副标题"""
+        if not FT_WL_ADD_OK or not self.name:
+            return
+        sym = str(self.name).upper()
+        if sym in self._quote_pending:
+            self._show_wl_status(f"⏳ {sym} 正在取数中，请稍候…", NORD_THEME['accent_yellow'], ttl=5)
+            return
+        self._quote_pending.add(sym)
+        src = self._quote_source_hint(sym)
+        self._show_wl_status(f"⏳ 正在从{src}抓取 {sym} 最新「变更%」…（浏览器后台执行）",
+                             NORD_THEME['accent_yellow'], ttl=150)
+        quote_symbol_async(sym, on_done=lambda res: self._wl_results.append(res), wait=120)
+
+    def _g_refresh(self):
+        self.refresh_description_data_and_redraw()
+        self._refresh_ft_quote()
 
     def _handle_ft_action(self, action):
         if not action:
@@ -2245,7 +2291,7 @@ class ChartWindow:
                        'c': self.toggle_specific_markers,
                        'i': self.toggle_buy_markers,
                        'u': self.toggle_sell_markers,
-                       'g': self.refresh_description_data_and_redraw,
+                       'g': self._g_refresh,
                        'n': lambda: execute_external_script('earning_input', self.name),
                        'e': lambda: execute_external_script('earning_edit', self.name),
                        't': lambda: execute_external_script('tags_edit', self.name),
