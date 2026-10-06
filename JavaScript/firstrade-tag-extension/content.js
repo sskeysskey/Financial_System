@@ -172,15 +172,15 @@
   }
 
   /* ==================== 2. 右下角提示 Toast ==================== */
-  function flashToast(text) {
+  function flashToast(text, ms) {
     let el = document.getElementById('ft-toast');
     if (!el) { el = document.createElement('div'); el.id = 'ft-toast'; document.body.appendChild(el); }
     el.textContent = text;
     el.classList.add('ft-toast-show');
     clearTimeout(el._t);
-    el._t = setTimeout(() => el.classList.remove('ft-toast-show'), 2400);
+    el._t = setTimeout(() => el.classList.remove('ft-toast-show'), Math.max(1200, Number(ms) || 2400));
   }
-  window.__FT_TOAST__ = flashToast;      // 供 watchlist.js 复用
+  window.__FT_TOAST__ = flashToast;      // 供 watchlist.js / ft_trade.js 复用（第二个参数 = 显示毫秒数）
 
   /* ==================== 3. 拉起本机 Python 图表 ==================== */
   async function triggerLocalChart(symbol) {
@@ -522,26 +522,28 @@
   function loadSettings() {
     chrome.storage.local.get(
       ['stockData', 'maxTags', 'ftDebug', 'ftAutoPositions', 'ftAutoOrders',
-        'ftAutoScrape', 'ftOrderVerbose'],
+        'ftAutoScrape', 'ftOrderVerbose', 'ftSymColor'],
       (res) => {
         stockTagMap = res.stockData || {};
         maxTags = res.maxTags || 2;
         DEBUG = !!res.ftDebug;
         ORDER_VERBOSE = res.ftOrderVerbose === true;
+        SYM_COLOR = res.ftSymColor !== false;
         const legacy = res.ftAutoScrape === true;
         AUTO_POSITIONS = res.ftAutoPositions === undefined ? legacy : res.ftAutoPositions === true;
         AUTO_ORDERS = res.ftAutoOrders === undefined ? legacy : res.ftAutoOrders === true;
         log('设置已加载 AUTO_POSITIONS=', AUTO_POSITIONS, 'AUTO_ORDERS=', AUTO_ORDERS,
-          'ORDER_VERBOSE=', ORDER_VERBOSE, 'PAGE=', PAGE);
+          'ORDER_VERBOSE=', ORDER_VERBOSE, 'SYM_COLOR=', SYM_COLOR, 'PAGE=', PAGE);
         clearAllTags();
         scheduleInject();
+        refreshAttrs();
       });
   }
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
     if (changes.stockData || changes.maxTags || changes.ftDebug || changes.ftOrderVerbose ||
-      changes.ftAutoPositions || changes.ftAutoOrders || changes.ftAutoScrape) loadSettings();
+      changes.ftAutoPositions || changes.ftAutoOrders || changes.ftAutoScrape || changes.ftSymColor) loadSettings();
   });
 
   function clearAllTags() {
@@ -582,12 +584,105 @@
     return box;
   }
 
-  function injectTags() {
-    if (automationBusy()) return;           // ★ 自动化进行中，不注入
+  /* ==================== 6b. ★ 代码着色（分组归属 / 持仓） ====================
+   * 持仓页：卖卖卖 > 买/买买/买买买 > Earning > Watch > 原色
+   * 自选股页：持仓且在 Earning > 持仓 > 在 Earning（当前不在 Earning 分组时）> 原色
+   * ======================================================================== */
+  let SYM_COLOR = true;
+  const SYM_CLS = ['ft-sym-watch', 'ft-sym-buy', 'ft-sym-sell', 'ft-sym-earn', 'ft-sym-held', 'ft-sym-held-earn'];
+  const COLOR_BUY = ['买', '买买', '买买买'];
+  const COLOR_SELL = ['卖卖卖'];
+  const normG = (s) => String(s || '').replace(/[（(][^）)]*[）)]\s*$/, '').replace(/\s+/g, '').toUpperCase();
+  const nk = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const ATTR = { mem: Object.create(null), held: new Set(), memOk: false, posOk: false };
+  const COLOR_CTX = { onEarn: false };
+  let attrBusy = false, attrDirtyTimer = null;
 
-    const cells = document.querySelectorAll('[col-id="symbol"]');
-    cells.forEach((cell) => {
-      if (cell.closest('.ag-header')) return;
+  async function refreshAttrs() {
+    if (!SYM_COLOR || (PAGE !== 'positions' && PAGE !== 'watchlist') || attrBusy) return;
+    attrBusy = true;
+    try {
+      const [m, p] = await Promise.all([
+        safeSendMessage({ action: 'FT_SERVER_MEMBERSHIP' }),
+        PAGE === 'watchlist' ? safeSendMessage({ action: 'FT_SERVER_POSITIONS' }) : Promise.resolve(null)
+      ]);
+      if (m && m.ok && m.data) {
+        const mem = Object.create(null);
+        const gs = m.data.groups || {};
+        Object.keys(gs).forEach(g => {
+          if (normG(g) === 'TEMP') return;
+          ((gs[g] && gs[g].symbols) || []).forEach(s => { const k = nk(s); (mem[k] || (mem[k] = [])).push(g); });
+        });
+        ATTR.mem = mem; ATTR.memOk = true;
+      }
+      if (p && p.ok && p.data) {
+        const held = new Set();
+        Object.keys(p.data).forEach(k => {
+          if (String(k).startsWith('_')) return;
+          const raw = (p.data[k] || {}).quantity;
+          const q = parseFloat(String(raw === undefined || raw === null ? '' : raw).replace(/,/g, ''));
+          if (!(Number.isFinite(q) && q === 0)) held.add(nk(k));
+        });
+        ATTR.held = held; ATTR.posOk = true;
+      }
+      scheduleInject(0);
+    } finally { attrBusy = false; }
+  }
+  function markAttrDirty() {
+    clearTimeout(attrDirtyTimer);
+    attrDirtyTimer = setTimeout(refreshAttrs, 800);
+  }
+  window.addEventListener('ft-attr-dirty', markAttrDirty);     // wl_membership.js 回传成功后触发
+
+  function groupsOf(sym) { return ATTR.mem[nk(sym)] || []; }
+  const inAny = (gs, list) => gs.some(g => list.some(x => normG(x) === normG(g)));
+
+  function symClass(sym) {
+    const gs = groupsOf(sym);
+    const inEarn = inAny(gs, ['Earning']);
+    if (PAGE === 'positions') {
+      if (inAny(gs, COLOR_SELL)) return 'ft-sym-sell';
+      if (inAny(gs, COLOR_BUY)) return 'ft-sym-buy';
+      if (inEarn) return 'ft-sym-earn';
+      if (inAny(gs, ['Watch'])) return 'ft-sym-watch';
+      return '';
+    }
+    if (PAGE === 'watchlist') {
+      const held = ATTR.held.has(nk(sym));
+      if (held && inEarn) return 'ft-sym-held-earn';
+      if (held) return 'ft-sym-held';
+      if (inEarn && !COLOR_CTX.onEarn) return 'ft-sym-earn';
+      return '';
+    }
+    return '';
+  }
+  function attrTitle(sym) {
+    const gs = groupsOf(sym);
+    let t = `自选：${gs.length ? gs.join(' / ') : (ATTR.memOk ? '未加入' : '归属未同步')}`;
+    if (PAGE === 'watchlist') t += `｜${ATTR.held.has(nk(sym)) ? '持仓中' : (ATTR.posOk ? '未持仓' : '持仓未知')}`;
+    return t + '｜点击徽章看图';
+  }
+  function paintAnchor(anchor, sym, box) {
+    const cls = (SYM_COLOR && sym) ? symClass(sym) : '';
+    if (anchor.dataset.ftColor !== cls || (cls && !anchor.classList.contains(cls))) {
+      SYM_CLS.forEach(c => anchor.classList.remove(c));
+      if (cls) anchor.classList.add(cls);
+      anchor.dataset.ftColor = cls;
+    }
+    if (box) {
+      const t = SYM_COLOR ? attrTitle(sym) : '';
+      if (box.title !== t) box.title = t;
+    }
+  }
+
+  function injectTags() {
+    const busy = automationBusy();            // 自动化进行中：不插入 DOM，只纠正颜色（行复用时防串色）
+    if (PAGE === 'watchlist') {
+      const api = window.__FT_WL_API__;
+      COLOR_CTX.onEarn = !!(api && normG(api.groupName()) === 'EARNING');
+    }
+    document.querySelectorAll('[col-id="symbol"]').forEach((cell) => {
+      if (cell.closest('.ag-header') || cell.closest('#ft-trade-layer')) return;
       const anchor =
         cell.querySelector('button[data-tooltip-trigger]') ||
         cell.querySelector('button') ||
@@ -598,13 +693,18 @@
       const symbol = (row && symbolFromRowId(row.getAttribute('row-id'))) || symbolFromCell(cell);
       if (!symbol) return;
 
-      anchor.dataset.ftSymbol = symbol;
-      const existing = cell.querySelector('.ft-custom-tag-container');
-      if (existing && existing.dataset.ftSymbol === symbol) return;
-      if (existing) existing.remove();
-      anchor.insertAdjacentElement('afterend', buildTagContainer(symbol, getTagsForSymbol(symbol)));
+      if (!busy) {
+        anchor.dataset.ftSymbol = symbol;
+        const existing = cell.querySelector('.ft-custom-tag-container');
+        if (!existing || existing.dataset.ftSymbol !== symbol) {
+          if (existing) existing.remove();
+          anchor.insertAdjacentElement('afterend', buildTagContainer(symbol, getTagsForSymbol(symbol)));
+        }
+      }
+      paintAnchor(anchor, symbol, cell.querySelector('.ft-custom-tag-container'));
     });
 
+    if (busy) return;
     if (AUTO_POSITIONS && PAGE === 'positions') scrapeGridData();
     if (AUTO_ORDERS && PAGE === 'orders') scrapeOrderGrid();
   }
@@ -654,6 +754,7 @@
     log('路由变化 ->', location.pathname, 'PAGE =', PAGE);
     clearAllTags();
     scheduleInject(150);
+    refreshAttrs();
   }, 800);
 
   /* ==================== 8. 与 popup 通信 ==================== */
@@ -752,6 +853,9 @@
     }
   });
 
+  setInterval(refreshAttrs, 20000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshAttrs(); });
+
   loadSettings();
-  console.log(LOG_PREFIX, `Content Script v5.2 就绪（已移除悬浮浮窗，保留点击直开图表）`);
+  console.log(LOG_PREFIX, `Content Script v6 就绪（代码按分组/持仓着色）`);
 })();

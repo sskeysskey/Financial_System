@@ -265,10 +265,13 @@
     let last = null, same = 0;
     while (Date.now() - t0 < timeout) {
       const n = gridRowCount();
-      if (n !== null && n === last) {
+      /* ★ v12：「0 行」只有在确认是空分组（空状态提示 / 空覆盖层 / aria-rowcount≤1）时才算落定；
+         否则说明页面还在加载，不计入稳定次数 */
+      const shapeOk = n !== null && (n > 1 || gridSaysEmpty());
+      if (shapeOk && n === last) {
         same++;
         if (same >= 3) return n;
-      } else { same = 0; last = n; }
+      } else { same = 0; last = shapeOk ? n : null; }
       await sleep(200);
     }
     return gridRowCount();
@@ -330,10 +333,91 @@
     return set;
   }
 
+  /* ★ v12：空表识别
+   *   Firstrade 分组为空时【根本不渲染 ag-Grid】，只在 <main> 里显示一块空状态提示：
+   *     <h3>自选列表中尚未添加任何内容。</h3>
+   *     <p>添加股票代码以查看表现并追踪您喜爱的股票。</p>
+   *   出现这段文字 = 页面已正常加载、分组确实为空（最强依据，优先于其它一切判断）。
+   *   没有表格、也没有这段文字 = 仍在加载 / 页面异常。 */
+  const EMPTY_STATE_RE = /自选列表中尚未添加任何内容|尚未添加任何(内容|股票|标的)|添加股票代码以查看表现|Nothing (has been )?added|haven'?t added any|watchlist is empty|No symbols (have been )?added/i;
+  const EMPTY_TXT_RE = /没有(任何)?(自选股|股票|标的|数据|记录|结果)|暂无(自选股|股票|数据|记录)?|列表为空|No (symbols|rows|data|results|securities)|is empty|Nothing to show/i;
+
+  function emptyStateEl() {
+    const main = document.querySelector('main');
+    if (!main) return null;
+    const els = main.querySelectorAll('h1, h2, h3, h4, h5, p');
+    for (const el of els) {
+      if (el.closest('#ft-wl-hud, #ft-trade-layer, [role="grid"], .ag-root')) continue;
+      const t = cleanText(el);
+      if (!t || t.length > 80 || !EMPTY_STATE_RE.test(t)) continue;
+      if (isVisible(el)) return el;
+    }
+    return null;
+  }
+
+  function gridLoading() {
+    const ld = document.querySelector('.ag-overlay-loading-wrapper, .ag-overlay-loading-center');
+    if (ld && isVisible(ld)) return true;
+    const sp = document.querySelector('main [role="grid"] .animate-spin, main .ag-root .animate-spin');
+    return !!(sp && isVisible(sp));
+  }
+
   function gridSaysEmpty() {
+    if (domRowIds().size > 0) return false;
+    if (emptyStateEl()) return true;                                    // ★ v12：官方空状态提示 = 真空
+    if (gridLoading()) return false;
     const ov = document.querySelector('.ag-overlay-no-rows-wrapper, .ag-overlay-no-rows-center');
-    if (ov && isVisible(ov) && domRowIds().size === 0) return true;
+    if (ov && isVisible(ov)) return true;
+    const gs = Array.from(document.querySelectorAll('[role="grid"][aria-rowcount]'))
+      .filter(g => !g.closest(ROW_EXCLUDE) && !g.closest('#ft-trade-layer'));
+    if (gs.length) {
+      const ns = gs.map(g => parseInt(g.getAttribute('aria-rowcount'), 10)).filter(Number.isFinite);
+      if (ns.length && ns.every(n => n >= 0 && n <= 1)) return true;      // 只剩表头行
+    }
+    const main = document.querySelector('main');
+    if (main && EMPTY_TXT_RE.test(cleanText(main).slice(0, 5000))) return true;
     return false;
+  }
+
+  /* ★ v12：抓到 0 行时，持续观察确认「分组真的为空」还是「页面异常/未加载」
+   *   顺序很关键：先认空状态提示，再看有没有表格（空分组本来就没有表格） */
+  async function confirmGroupEmpty(want, timeout) {
+    const t0 = Date.now();
+    let es = 0, strong = 0, weak = 0, why = '';
+    while (Date.now() - t0 < (timeout || 7000)) {
+      const g = groupName();
+      if (!g) why = '找不到分组选择器（页面可能未加载完或已退出登录）';
+      else if (want && normGroup(g) !== normGroup(want)) why = `当前分组是「${g}」而不是「${want}」`;
+      else if (domRowIds().size > 0) return { empty: false, rowsAppeared: true };
+      else if (emptyStateEl()) {
+        strong = 0; weak = 0;
+        if (++es >= 3) return { empty: true, how: 'empty_state' };   // 连续约 1 秒看到「尚未添加任何内容」
+        why = ''; await sleep(350); continue;
+      }
+      else if (!document.querySelector('[role="grid"], .ag-root, .ag-body-viewport')) {
+        why = '页面上既没有表格，也没有「自选列表中尚未添加任何内容」的空状态提示（可能仍在加载）';
+      }
+      else if (gridLoading()) why = '表格仍在加载中';
+      else if (gridSaysEmpty()) { es = 0; weak = 0; if (++strong >= 4) return { empty: true, how: 'strong' }; why = ''; await sleep(350); continue; }
+      else if (findAddButton() && dataRowsTotal() === 0) { es = 0; strong = 0; if (++weak >= 9) return { empty: true, how: 'weak' }; why = '表格无行但无空状态标识'; await sleep(350); continue; }
+      else why = '表格状态无法判定';
+      es = 0; strong = 0; weak = 0;
+      await sleep(350);
+    }
+    return { empty: false, error: why || '确认超时' };
+  }
+
+  /* 数据源条数（仅用于给出准确提示，不影响写入） */
+  async function probeSourceCount() {
+    if (SRC.mode === 'manual') {
+      const m = await manualList();
+      return { ok: true, count: m.length, from: '本地备用清单' };
+    }
+    const r = await bg({ action: 'FT_WL_SOURCE', src: SRC.mode, back: SRC.back, ahead: SRC.ahead });
+    if (!r.ok || !r.data) return { ok: false, error: '桥接不可用：' + (r.error || '无响应') };
+    const d = r.data;
+    if (d.status !== 'ok') return { ok: false, error: d.message || d.status || '数据源异常' };
+    return { ok: true, count: d.count || 0, from: d.from || SRC.mode };
   }
 
   function gridRowCount() {
@@ -1401,12 +1485,24 @@
     };
   }
 
-  /* ★ 双向差集 */
+  /* ★ 双向差集（v12：读到 0 行必须先确认是真空分组，否则中止，绝不按「假空」增删） */
   async function computeDiff() {
     const src = await getSourceSymbols();
     hudInfo(`来源 ${src.from}：${src.symbols.length} 只，正在抓取「${groupName()}」全表…`);
-    const have = await collectWatchlist(n => hudInfo(`已读取 ${n} 只…`));
-    const haveSymbols = Object.keys(have);
+    let have = await collectWatchlist(n => hudInfo(`已读取 ${n} 只…`));
+    let haveSymbols = Object.keys(have);
+    if (!haveSymbols.length && !(scanState.abort || (job.running && job.stop))) {
+      const g = groupName();
+      hudInfo(`「${g || '?'}」没读到任何行，正在确认是「空分组」还是「页面未加载」…`);
+      const ce = await confirmGroupEmpty(g, 8000);
+      if (ce.rowsAppeared) {
+        have = await collectWatchlist(n => hudInfo(`已读取 ${n} 只…`));
+        haveSymbols = Object.keys(have);
+      }
+      if (!haveSymbols.length && !ce.empty) {
+        throw new Error(`页面异常：${ce.error || '无法确认分组为空'}（分组「${g || '?'}」，为防按错误数据增删已中止，未做任何修改）`);
+      }
+    }
     const haveSet = new Set(haveSymbols.map(normKey));
     const srcSet = new Set(src.symbols.map(normKey));
     const missing = src.symbols.filter(s => !haveSet.has(normKey(s)));
@@ -1820,7 +1916,7 @@
     });
   }
 
-  /* ================= 变更% 快照（v10：强制只抓目标分组，默认 Earning） ================= */
+  /* ================= 变更% 快照（v11：区分「分组本来就空」与「页面/桥接异常」） ================= */
   async function fullScanQuotes(silent) {
     if (!isWatchlistPage()) return { ok: false, error: '当前不在 /app/watchlist 页面' };
     if (!silent) await waitFor(() => !job.finishing, 30000, 300);
@@ -1834,36 +1930,75 @@
     const want = TARGET.group || 'Earning';
     const origin = groupName();
     let switched = false;
+    const say = (t) => { if (!silent) renderScan(t, 'scan'); };
     try {
       if (normGroup(origin) !== normGroup(want)) {
-        if (!silent) renderScan(`正在切换到行情分组「${want}」…`, 'scan');
+        say(`正在切换到行情分组「${want}」…`);
         const sr = await switchGroup(want);
         if (!sr.ok) {
-          const err = `切换到「${want}」失败：${sr.error}（为防写入错误分组的数据，已中止）`;
-          if (!silent) renderScan('❌ ' + err, 'scan');
-          return { ok: false, error: err };
+          const err = `页面异常：切换到「${want}」失败：${sr.error}（为防写入错误分组的数据，已中止）`;
+          say('❌ ' + err);
+          return { ok: false, error: err, pageError: true };
         }
         switched = !!sr.changed;
         await waitGridSettled();
       }
       const g = groupName();
-      if (!silent) renderScan(`正在全量抓取「${g}」的「变更%」…（请勿操作本标签页）`, 'scan');
-      const buf = await collectWatchlist(n => { if (!silent) renderScan(`「${g}」已抓 ${n} 只行情…`); });
-      const n = Object.keys(buf).length;
+      say(`正在全量抓取「${g}」的「变更%」…（请勿操作本标签页）`);
+      let buf = await collectWatchlist(n => say(`「${g}」已抓 ${n} 只行情…`));
+      let n = Object.keys(buf).length;
       if (scanState.abort) {
-        if (!silent) renderScan(`⏹ 已中止（已抓 ${n} 只，未写入本机）`);
+        say(`⏹ 已中止（已抓 ${n} 只，未写入本机）`);
         return { ok: false, error: '用户中止', count: n };
       }
-      if (!n && !gridSaysEmpty()) {
-        if (!silent) renderScan('❌ 未抓到任何行（页面是否已加载？）');
-        return { ok: false, error: '未抓到任何行（页面是否已加载？）' };
+
+      let empty = null;
+      if (!n) {
+        say(`「${g}」没读到任何行，正在判断是「分组本来就空」还是「页面异常」…`);
+        const ce = await confirmGroupEmpty(want, 7000);
+        if (ce.rowsAppeared) {
+          buf = await collectWatchlist();
+          n = Object.keys(buf).length;
+        }
+        if (!n) {
+          if (!ce.empty) {
+            const err = `页面异常：${ce.error || '无法确认分组为空'}（分组「${g || '?'}」，为防误清本机数据已中止，未写入）`;
+            say('❌ ' + err);
+            if (!silent) toast('❌ ' + err);
+            return { ok: false, error: err, pageError: true, count: 0, group: g };
+          }
+          empty = await probeSourceCount();
+        }
       }
+
       const resp = await bg({ action: 'FT_SYNC_WATCHLIST', payload: buf, overwrite: true, group: g });
-      if (!silent) {
-        renderScan(resp.ok ? `✅ 「${g}」已覆盖写入 ${n} 只行情` : ('❌ 写入失败: ' + resp.error));
-        toast(resp.ok ? `✅ 已保存「${g}」${n} 只「变更%」` : `❌ 写入失败`);
+      if (!resp.ok) {
+        const err = `桥接异常：写入本机失败（${resp.error || '无响应'}），bridge_server.py 是否在运行？`;
+        say('❌ ' + err);
+        if (!silent) toast('❌ ' + err);
+        return { ok: false, error: err, bridgeError: true, count: n, group: g, server: resp };
       }
-      return { ok: !!resp.ok, count: n, server: resp, group: g };
+
+      if (empty) {
+        let message;
+        if (empty.ok && empty.count === 0) {
+          message = `分组「${g}」为空：数据源（${empty.from}）在目标日期没有符合条件的标的 → 已清空本机行情 JSON`;
+        } else if (empty.ok) {
+          message = `⚠ 分组「${g}」为空，但数据源有 ${empty.count} 只（一键同步可能未完成）→ 已按页面实际情况清空本机 JSON`;
+        } else {
+          message = `分组「${g}」为空（数据源核对失败：${empty.error}）→ 已按页面实际情况清空本机 JSON`;
+        }
+        say('✅ ' + message);
+        if (!silent) toast('✅ ' + message.slice(0, 90));
+        return {
+          ok: true, count: 0, empty: true, srcOk: !!empty.ok,
+          srcCount: empty.ok ? empty.count : null, message, server: resp, group: g
+        };
+      }
+
+      say(`✅ 「${g}」已覆盖写入 ${n} 只行情`);
+      if (!silent) toast(`✅ 已保存「${g}」${n} 只「变更%」`);
+      return { ok: true, count: n, server: resp, group: g };
     } finally {
       if (switched && !silent && TARGET.backToOrigin && origin) {
         try { renderScan(`正在切回原分组「${origin}」…`); await switchGroup(origin); } catch (e) { }
@@ -1923,7 +2058,7 @@
     if (!isWatchlistPage()) return;
 
     await waitFor(() => (document.querySelector('.ag-root, [role="grid"], main') &&
-      (findAddButton() || document.querySelector('[role="grid"]'))), 25000, 400);
+      (findAddButton() || document.querySelector('[role="grid"]') || emptyStateEl())), 25000, 400);
 
     const st = await storeGet([JOB_KEY]);
     const saved = st[JOB_KEY];

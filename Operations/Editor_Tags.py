@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 import pyperclip
 import os
+import unicodedata
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QLabel, QTextEdit, QPushButton,
                              QListWidget, QMessageBox, QInputDialog, QAction,
@@ -16,7 +17,7 @@ from PyQt5.QtGui import QKeySequence, QColor, QPainter, QFont, QFontMetrics, QCu
 USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 
-# ★ Tag 黑名单共享层（位于 Query 目录）
+# ★ Tag 黑名单 / 热门 共享层（位于 Query 目录）
 sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Query"))
 try:
     import tag_blacklist as TB
@@ -25,6 +26,21 @@ except Exception as _e:
     print(f"[黑名单] 加载 tag_blacklist 失败: {_e}")
     TB = None
     TB_OK = False
+
+try:
+    import tag_hot as TH
+    TH_OK = True
+except Exception as _e:
+    print(f"[热门] 加载 tag_hot 失败: {_e}")
+    TH = None
+    TH_OK = False
+
+ANY_OK = TB_OK or TH_OK
+GREY_BTN = "#4C566A"
+
+
+def _norm(t):
+    return unicodedata.normalize("NFKC", str(t)).strip().casefold()
 
 
 def get_clipboard_content():
@@ -81,19 +97,20 @@ def get_stock_symbol(default_symbol=""):
 
 
 # ======================================================================
-# ★ Tag 行绘制代理：左侧常驻黑名单徽章 + 悬停/选中时右侧显示操作按钮
+# ★ Tag 行绘制代理：左侧常驻徽章（黑名单 / 热门）+ 悬停/选中时右侧两组操作按钮
 #   （用 delegate 而不是 setItemWidget，拖拽排序时按钮不会丢失）
 # ======================================================================
 class TagItemDelegate(QStyledItemDelegate):
     BTN_H = 26
-    BTN_GAP = 6
+    BTN_GAP = 5
+    GROUP_GAP = 16
     PAD = 10
     ROW_MIN_H = 42
 
     def __init__(self, view, on_action):
         super().__init__(view)
         self.view = view
-        self.on_action = on_action
+        self.on_action = on_action          # on_action(domain, target, tag)
         self.hover_row = -1
         self.hover_pos = None
         self.btn_font = QFont()
@@ -105,37 +122,58 @@ class TagItemDelegate(QStyledItemDelegate):
 
     @staticmethod
     def actions_for(tag):
-        """[(op, group, 文本, 颜色)]"""
-        if not TB_OK:
-            return []
-        sure, maybe = TB.GROUP_SURE, TB.GROUP_MAYBE
-        c = TB.GROUP_COLORS
-        g = TB.group_of(tag)
-        if g is None:
-            return [("add", sure, f"＋{sure}", c[sure]),
-                    ("add", maybe, f"＋{maybe}", c[maybe])]
-        other = maybe if g == sure else sure
-        return [("move", other, f"→{other}", c[other]),
-                ("remove", g, f"✕ 移出{g}", "#4C566A")]
+        """[(domain, target, 文本, 底色, 字色)]；domain ∈ {'bl','hot'}；target=None 表示移出"""
+        acts = []
+        if TB_OK:
+            sure, maybe = TB.GROUP_SURE, TB.GROUP_MAYBE
+            c = TB.GROUP_COLORS
+            g = TB.group_of(tag)
+            if g is None:
+                acts += [("bl", sure, f"＋{sure}", c[sure], "#FFFFFF"),
+                         ("bl", maybe, f"＋{maybe}", c[maybe], "#FFFFFF")]
+            else:
+                other = maybe if g == sure else sure
+                acts += [("bl", other, f"→{other}", c[other], "#FFFFFF"),
+                         ("bl", None, "✕黑名单", GREY_BTN, "#FFFFFF")]
+        if TH_OK:
+            H, T = TH.LEVEL_HOT, TH.LEVEL_T
+            c = TH.LEVEL_COLORS
+            dark = TH.LEVEL_TEXT_COLOR
+            lv = TH.level_of(tag)
+            if lv is None:
+                acts += [("hot", H, f"＋{H}", c[H], dark),
+                         ("hot", T, f"＋{T}", c[T], dark)]
+            elif lv == H:
+                acts += [("hot", T, f"↑{T}", c[T], dark),
+                         ("hot", None, f"✕{H}", GREY_BTN, "#FFFFFF")]
+            else:
+                acts += [("hot", H, f"↓{H}", c[H], dark),
+                         ("hot", None, f"✕{T}", GREY_BTN, "#FFFFFF")]
+        return acts
 
     def button_rects(self, rect, tag):
         fm = QFontMetrics(self.btn_font)
         out = []
         x = rect.right() - self.PAD
-        for op, grp, label, color in reversed(self.actions_for(tag)):
-            w = fm.horizontalAdvance(label) + 20
+        prev_dom = None
+        for act in reversed(self.actions_for(tag)):
+            dom, label = act[0], act[2]
+            if prev_dom is not None and dom != prev_dom:
+                x -= (self.GROUP_GAP - self.BTN_GAP)       # 两组按钮之间留更大间隔
+            w = fm.horizontalAdvance(label) + 16
             r = QRect(x - w, rect.center().y() - self.BTN_H // 2, w, self.BTN_H)
-            out.insert(0, (op, grp, label, color, r))
+            out.insert(0, (*act, r))
             x = r.left() - self.BTN_GAP
+            prev_dom = dom
         return out
 
     def hit(self, index, pos):
-        if not index.isValid():
+        if not index.isValid() or pos is None:
             return None
         tag = index.data(Qt.DisplayRole) or ""
-        for op, grp, _, _, r in self.button_rects(self.view.visualRect(index), tag):
+        for dom, target, _, _, _, r in self.button_rects(self.view.visualRect(index), tag):
             if r.contains(pos):
-                return op, grp, tag
+                return dom, target, tag
         return None
 
     def _buttons_visible(self, option, index):
@@ -159,59 +197,71 @@ class TagItemDelegate(QStyledItemDelegate):
         painter.setRenderHint(QPainter.Antialiasing, True)
         rect = option.rect
         g = TB.group_of(tag) if TB_OK else None
+        lv = TH.level_of(tag) if TH_OK else None
         x = rect.left() + self.PAD
 
-        if g:   # 常驻徽章
-            fm = QFontMetrics(self.chip_font)
-            cw = fm.horizontalAdvance(g) + 14
+        chips = []
+        if g:
+            chips.append((g, TB.GROUP_COLORS[g], "#FFFFFF"))
+        if lv:
+            chips.append((f"{TH.LEVEL_ICONS[lv]}{lv}", TH.LEVEL_COLORS[lv], TH.LEVEL_TEXT_COLOR))
+        fm_chip = QFontMetrics(self.chip_font)
+        for text, bg, fg in chips:      # 常驻徽章
+            cw = fm_chip.horizontalAdvance(text) + 14
             chip = QRect(x, rect.center().y() - 10, cw, 20)
             painter.setPen(Qt.NoPen)
-            painter.setBrush(QColor(TB.GROUP_COLORS[g]))
+            painter.setBrush(QColor(bg))
             painter.drawRoundedRect(chip, 4, 4)
             painter.setFont(self.chip_font)
-            painter.setPen(QColor("#FFFFFF"))
-            painter.drawText(chip, Qt.AlignCenter, g)
-            x = chip.right() + 8
+            painter.setPen(QColor(fg))
+            painter.drawText(chip, Qt.AlignCenter, text)
+            x = chip.right() + 6
+        if chips:
+            x += 2
 
-        rects = self.button_rects(rect, tag) if (TB_OK and self._buttons_visible(option, index)) else []
-        right = (rects[0][4].left() - 8) if rects else rect.right() - self.PAD
+        rects = self.button_rects(rect, tag) if (ANY_OK and self._buttons_visible(option, index)) else []
+        right = (rects[0][5].left() - 8) if rects else rect.right() - self.PAD
         text_rect = QRect(x, rect.top(), max(0, right - x), rect.height())
 
         f = QFont(opt.font)
-        if g:
+        if g or lv:
             f.setBold(True)
         painter.setFont(f)
-        if g == (TB.GROUP_SURE if TB_OK else None):
+        if TB_OK and g == TB.GROUP_SURE:
             painter.setPen(QColor("#FF9DA4"))
         elif g:
             painter.setPen(QColor("#F0B48F"))
+        elif TH_OK and lv == TH.LEVEL_T:
+            painter.setPen(QColor("#EBCB8B"))
+        elif lv:
+            painter.setPen(QColor("#B9D6A0"))
         else:
             painter.setPen(QColor("#ECEFF4"))
         painter.drawText(text_rect, Qt.AlignVCenter | Qt.AlignLeft,
                          QFontMetrics(f).elidedText(tag, Qt.ElideRight, text_rect.width()))
 
-        for op, grp, label, col, r in rects:
+        for dom, target, label, bg, fg, r in rects:
             hovered = (self.hover_pos is not None and index.row() == self.hover_row
                        and r.contains(self.hover_pos))
-            c = QColor(col)
+            c = QColor(bg)
             if hovered:
-                c = c.lighter(130)
+                c = c.lighter(125)
             painter.setPen(Qt.NoPen)
             painter.setBrush(c)
             painter.drawRoundedRect(r, 5, 5)
             painter.setFont(self.btn_font)
-            painter.setPen(QColor("#FFFFFF"))
+            painter.setPen(QColor(fg))
             painter.drawText(r, Qt.AlignCenter, label)
         painter.restore()
 
     def editorEvent(self, event, model, option, index):
-        if TB_OK and event.type() in (QEvent.MouseButtonPress, QEvent.MouseButtonRelease,
-                                      QEvent.MouseButtonDblClick):
+        if ANY_OK and event.type() in (QEvent.MouseButtonPress, QEvent.MouseButtonRelease,
+                                       QEvent.MouseButtonDblClick):
             tag = index.data(Qt.DisplayRole) or ""
-            for op, grp, _, _, r in self.button_rects(option.rect, tag):
+            for dom, target, _, _, _, r in self.button_rects(option.rect, tag):
                 if r.contains(event.pos()):
                     if event.type() == QEvent.MouseButtonRelease and event.button() == Qt.LeftButton:
-                        QTimer.singleShot(0, lambda o=op, g=grp, t=tag: self.on_action(o, g, t))
+                        QTimer.singleShot(0, lambda d=dom, t=target, tg=tag: self.on_action(d, t, tg))
                     return True      # 吃掉事件：不触发选择 / 拖拽 / 编辑
         return super().editorEvent(event, model, option, index)
 
@@ -225,8 +275,8 @@ class TagEditor(QMainWindow):
         self.original_tags = []
         self.load_json_data()
 
-        self.setWindowTitle("标签编辑器 (支持拖拽排序 / 黑名单)")
-        self.setGeometry(100 + 400, 100, 640, 720)
+        self.setWindowTitle("标签编辑器 (拖拽排序 / 黑名单 / 热门)")
+        self.setGeometry(100 + 400, 100, 800, 740)
 
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
@@ -244,14 +294,15 @@ class TagEditor(QMainWindow):
         self.new_tag_input.setFocus()
         self.tags_list.setFocusPolicy(Qt.StrongFocus)
 
-        # ★ 黑名单文件监视（Check_Group 设置 / 手动编辑后同步显示）
-        self._bl_sig = TB.signature() if TB_OK else None
-        self._bl_timer = QTimer(self)
-        self._bl_timer.setInterval(1000)
-        self._bl_timer.timeout.connect(self._poll_blacklist)
-        self._bl_timer.start()
-        self.refresh_blacklist_view()
+        # ★ 黑名单 / 热门 文件监视（Check_Group / 手动编辑 / 其他进程修改后同步显示）
+        self._tl_sig = self._current_sigs()
+        self._tl_timer = QTimer(self)
+        self._tl_timer.setInterval(1000)
+        self._tl_timer.timeout.connect(self._poll_tag_lists)
+        self._tl_timer.start()
+        self.refresh_tag_lists_view()
 
+    # ------------------------------------------------------------------
     def eventFilter(self, source, event):
         # ★ Qt 虚函数里绝不能让异常漏出去，否则 PyQt 会 qFatal → abort（闪退）
         try:
@@ -280,9 +331,13 @@ class TagEditor(QMainWindow):
         if source is tags_list and et == QEvent.KeyPress and tags_list.currentItem():
             k = event.key()
             if TB_OK and k == Qt.Key_1:
-                self.toggle_current_blacklist(TB.GROUP_SURE); return True
+                self.toggle_current("bl", TB.GROUP_SURE); return True
             if TB_OK and k == Qt.Key_2:
-                self.toggle_current_blacklist(TB.GROUP_MAYBE); return True
+                self.toggle_current("bl", TB.GROUP_MAYBE); return True
+            if TH_OK and k == Qt.Key_3:
+                self.toggle_current("hot", TH.LEVEL_HOT); return True
+            if TH_OK and k == Qt.Key_4:
+                self.toggle_current("hot", TH.LEVEL_T); return True
             if k in (Qt.Key_Return, Qt.Key_Enter):
                 self.edit_current_tag(); return True
             if k in (Qt.Key_Delete, Qt.Key_Backspace):
@@ -315,25 +370,39 @@ class TagEditor(QMainWindow):
         self.tags_list.setDefaultDropAction(Qt.MoveAction)
         self.tags_list.setMouseTracking(True)
         self.tags_list.viewport().setMouseTracking(True)
-        self.tag_delegate = TagItemDelegate(self.tags_list, self.apply_blacklist_action)
+        self.tag_delegate = TagItemDelegate(self.tags_list, self.apply_tag_action)
         self.tags_list.setItemDelegate(self.tag_delegate)
         self.layout.addWidget(self.tags_list)
 
-        # 黑名单提示 + 汇总
+        # 提示 + 文件按钮
         bl_row = QHBoxLayout()
         self.bl_hint = QLabel()
         self.bl_hint.setObjectName("hintLabel")
         self.bl_hint.setWordWrap(True)
-        self.bl_hint.setText(
-            "黑名单：鼠标悬停或 ↑↓ 选中 Tag → 右侧按钮加入 / 转组 / 移出（立即生效）；"
-            "快捷键 1=确定  2=疑似（再按一次即移出）" if TB_OK else
-            "⚠ tag_blacklist.py 未加载，黑名单功能不可用")
+        if ANY_OK:
+            keys = []
+            if TB_OK:
+                keys.append("1=确定  2=疑似（黑名单）")
+            if TH_OK:
+                keys.append("3=热门  4=热门T")
+            self.bl_hint.setText(
+                "鼠标悬停或 ↑↓ 选中 Tag → 右侧按钮加入 / 转组 / 移出（立即生效）；快捷键 "
+                + "，".join(keys) + "，再按同一键即移出；黑名单与热门互斥（加入一方自动移出另一方）")
+        else:
+            self.bl_hint.setText("⚠ tag_blacklist.py / tag_hot.py 均未加载，黑名单 / 热门功能不可用")
         bl_row.addWidget(self.bl_hint, 1)
+
         self.bl_file_btn = QPushButton("📝 黑名单文件")
         self.bl_file_btn.setObjectName("smallButton")
         self.bl_file_btn.setEnabled(TB_OK)
         self.bl_file_btn.clicked.connect(lambda: TB.open_in_editor() if TB_OK else None)
         bl_row.addWidget(self.bl_file_btn)
+
+        self.hot_file_btn = QPushButton("📝 热门文件")
+        self.hot_file_btn.setObjectName("smallButton")
+        self.hot_file_btn.setEnabled(TH_OK)
+        self.hot_file_btn.clicked.connect(lambda: TH.open_in_editor() if TH_OK else None)
+        bl_row.addWidget(self.hot_file_btn)
         self.layout.addLayout(bl_row)
 
         input_layout = QHBoxLayout()
@@ -350,8 +419,8 @@ class TagEditor(QMainWindow):
         buttons_layout = QHBoxLayout()
         self.bl_summary = QLabel("")
         self.bl_summary.setObjectName("hintLabel")
-        buttons_layout.addWidget(self.bl_summary)
-        buttons_layout.addStretch(1)
+        self.bl_summary.setWordWrap(True)
+        buttons_layout.addWidget(self.bl_summary, 1)
         delete_button = QPushButton("删除选中")
         save_button = QPushButton("保存并退出")
         delete_button.setObjectName("deleteButton")
@@ -404,63 +473,127 @@ class TagEditor(QMainWindow):
         self.setStyleSheet(qss)
 
     # ==================================================================
-    # ★ 黑名单
+    # ★ 黑名单 / 热门
     # ==================================================================
-    def apply_blacklist_action(self, op, grp, tag):
-        if not TB_OK:
-            return
-        try:
-            if op == "remove":
-                TB.set_group(tag, None)
-                msg = f"已将「{tag}」移出「{grp}」黑名单"
-            else:
-                TB.set_group(tag, grp)
-                msg = f"已将「{tag}」{'转入' if op == 'move' else '加入'}「{grp}」黑名单"
-        except Exception as e:
-            QMessageBox.warning(self, "黑名单写入失败", str(e))
-            return
-        self._bl_sig = TB.signature()
-        self.refresh_blacklist_view()
-        self.statusBar().showMessage(msg + "（Check_Group / Chart 约 1 秒内同步）", 5000)
+    @staticmethod
+    def _current_sigs():
+        return (TB.signature() if TB_OK else None, TH.signature() if TH_OK else None)
 
-    def toggle_current_blacklist(self, grp):
+    def apply_tag_action(self, domain, target, tag):
+        """domain='bl'：target ∈ {确定, 疑似, None}；domain='hot'：target ∈ {热门, 热门T, None}"""
+        try:
+            if domain == "bl":
+                if not TB_OK:
+                    return
+                cur = TB.group_of(tag)
+                had_hot = TH.level_of(tag) if TH_OK else None
+                if target == cur:
+                    return
+                TB.set_group(tag, target)
+                if target is None:
+                    msg = f"已将「{tag}」移出「{cur}」黑名单"
+                else:
+                    msg = f"已将「{tag}」{'转入' if cur else '加入'}「{target}」黑名单"
+                if target and had_hot and TH_OK and not TH.level_of(tag):
+                    msg += f"，并自动移出「{had_hot}」"
+            elif domain == "hot":
+                if not TH_OK:
+                    return
+                cur = TH.level_of(tag)
+                had_bl = TB.group_of(tag) if TB_OK else None
+                if target == cur:
+                    return
+                TH.set_level(tag, target)
+                if target is None:
+                    msg = f"已将「{tag}」移出「{cur}」"
+                elif cur is None:
+                    msg = f"已将「{tag}」加入「{target}」"
+                else:
+                    msg = f"已将「{tag}」由「{cur}」调整为「{target}」"
+                if target and had_bl and TB_OK and not TB.group_of(tag):
+                    msg += f"，并自动移出「{had_bl}」黑名单"
+            else:
+                return
+        except Exception as e:
+            QMessageBox.warning(self, "写入失败", str(e))
+            return
+        self._tl_sig = self._current_sigs()
+        self.refresh_tag_lists_view()
+        self.statusBar().showMessage(msg + "（Check_Group / Chart 约 1 秒内同步）", 6000)
+
+    def toggle_current(self, domain, target):
         it = self.tags_list.currentItem()
-        if not it or not TB_OK:
+        if not it:
             return
         tag = it.text()
-        cur = TB.group_of(tag)
-        if cur == grp:
-            self.apply_blacklist_action("remove", grp, tag)
+        if domain == "bl":
+            if not TB_OK:
+                return
+            cur = TB.group_of(tag)
         else:
-            self.apply_blacklist_action("move" if cur else "add", grp, tag)
+            if not TH_OK:
+                return
+            cur = TH.level_of(tag)
+        self.apply_tag_action(domain, None if cur == target else target, tag)
 
-    def refresh_blacklist_view(self):
+    # 兼容旧调用
+    def toggle_current_blacklist(self, grp):
+        self.toggle_current("bl", grp)
+
+    def refresh_tag_lists_view(self):
         self.tags_list.viewport().update()
-        if not TB_OK:
+        if not ANY_OK:
             return
-        c = TB.counts()
-        hits = TB.blacklisted_tags(self._ui_tags())
-        txt = f"黑名单  确定 {c[TB.GROUP_SURE]} ｜ 疑似 {c[TB.GROUP_MAYBE]}"
+        tags = self._ui_tags()
+        parts, hits, errs = [], [], []
+        if TB_OK:
+            c = TB.counts()
+            parts.append(f"黑名单 确定 {c[TB.GROUP_SURE]} ｜ 疑似 {c[TB.GROUP_MAYBE]}")
+            n = len(TB.blacklisted_tags(tags))
+            if n:
+                hits.append(f"黑名单 {n}")
+            if TB.last_error():
+                errs.append("黑名单文件解析失败")
+        if TH_OK:
+            h = TH.counts()
+            parts.append(f"热门T {h[TH.LEVEL_T]} ｜ 热门 {h[TH.LEVEL_HOT]}")
+            n = len(TH.hot_tags(tags))
+            if n:
+                hits.append(f"热门 {n}")
+            if TH.last_error():
+                errs.append("热门文件解析失败")
+        txt = "      ".join(parts)
         if hits:
-            txt += f"   本股命中 {len(hits)} 个"
-        if TB.last_error():
-            txt += "   ⚠ 文件解析失败"
+            txt += "      本股命中：" + " · ".join(hits)
+        if errs:
+            txt += "      ⚠ " + "、".join(errs)
         self.bl_summary.setText(txt)
 
-    def _poll_blacklist(self):
-        if not TB_OK:
+    # 兼容旧调用
+    def refresh_blacklist_view(self):
+        self.refresh_tag_lists_view()
+
+    def _poll_tag_lists(self):
+        if not ANY_OK:
             return
-        sig = TB.signature()
-        if sig != self._bl_sig:
-            self._bl_sig = sig
-            TB.load(force=True)
-            self.refresh_blacklist_view()
+        sig = self._current_sigs()
+        if sig != self._tl_sig:
+            self._tl_sig = sig
+            if TB_OK:
+                TB.load(force=True)
+            if TH_OK:
+                TH.load(force=True)
+            self.refresh_tag_lists_view()
 
     # ==================================================================
     # Tag 编辑（一律以 UI 列表为准 —— 修复拖拽后按行号改错数据的 bug）
     # ==================================================================
     def _ui_tags(self):
         return [self.tags_list.item(i).text() for i in range(self.tags_list.count())]
+
+    def _has_tag(self, tag, exclude_row=-1):
+        k = _norm(tag)
+        return any(_norm(t) == k for i, t in enumerate(self._ui_tags()) if i != exclude_row)
 
     def save_json_data(self):
         """只在确有改动时保存；保存前重新读取磁盘最新内容，只替换当前 symbol 的 tag，原子写入"""
@@ -519,8 +652,8 @@ class TagEditor(QMainWindow):
         if not new_tag:
             self.new_tag_input.setFocus()
             return
-        if new_tag in self._ui_tags():
-            QMessageBox.information(self, "提示", "该标签已存在。")
+        if self._has_tag(new_tag):
+            QMessageBox.information(self, "提示", "该标签已存在（忽略大小写/全半角）。")
             self.new_tag_input.clear()
             self.new_tag_input.setFocus()
             return
@@ -533,9 +666,14 @@ class TagEditor(QMainWindow):
         self.tags_list.scrollToItem(self.tags_list.currentItem())
         self.new_tag_input.clear()
         self.new_tag_input.setFocus()
-        self.refresh_blacklist_view()
+        self.refresh_tag_lists_view()
+        notes = []
         if TB_OK and TB.group_of(new_tag):
-            self.statusBar().showMessage(f"注意：「{new_tag}」在「{TB.group_of(new_tag)}」黑名单中", 5000)
+            notes.append(f"在「{TB.group_of(new_tag)}」黑名单中")
+        if TH_OK and TH.level_of(new_tag):
+            notes.append(f"属于「{TH.level_of(new_tag)}」")
+        if notes:
+            self.statusBar().showMessage(f"注意：「{new_tag}」" + "，".join(notes), 5000)
 
     def edit_current_tag(self):
         item = self.tags_list.currentItem()
@@ -545,11 +683,11 @@ class TagEditor(QMainWindow):
         new_tag, ok = QInputDialog.getText(self, "编辑标签", "请输入新标签:", QLineEdit.Normal, old_tag)
         new_tag = (new_tag or "").strip()
         if ok and new_tag and new_tag != old_tag:
-            if new_tag in self._ui_tags():
+            if self._has_tag(new_tag, exclude_row=self.tags_list.row(item)):
                 QMessageBox.information(self, "提示", "该标签已存在。")
                 return
             item.setText(new_tag)
-            self.refresh_blacklist_view()
+            self.refresh_tag_lists_view()
 
     def delete_current_tag(self):
         item = self.tags_list.currentItem()
@@ -558,7 +696,7 @@ class TagEditor(QMainWindow):
             self.tags_list.takeItem(row)
             if self.tags_list.count():
                 self.tags_list.setCurrentRow(min(row, self.tags_list.count() - 1))
-            self.refresh_blacklist_view()
+            self.refresh_tag_lists_view()
 
     def show(self):
         super().show()
@@ -579,7 +717,7 @@ class TagEditor(QMainWindow):
                 QTimer.singleShot(0, self.close)
             return
 
-        original_symbol = symbol
+        original_symbol = symbol.strip()
         category, item = self.find_symbol(original_symbol)
         if not item:
             uppercase_symbol = original_symbol.upper()
@@ -611,7 +749,7 @@ class TagEditor(QMainWindow):
             QTimer.singleShot(0, self.close)
 
     def on_double_click(self, item):
-        # 双击落在右侧黑名单按钮上时不弹编辑框
+        # 双击落在右侧按钮上时不弹编辑框
         vp = self.tags_list.viewport()
         pos = vp.mapFromGlobal(QCursor.pos())
         if self.tag_delegate.hit(self.tags_list.indexAt(pos), pos):
@@ -631,7 +769,7 @@ class TagEditor(QMainWindow):
         if self.original_tags:
             self.tags_list.addItems(self.original_tags)
         if hasattr(self, 'bl_summary'):
-            self.refresh_blacklist_view()
+            self.refresh_tag_lists_view()
 
     def delete_tag(self):
         self.delete_current_tag()

@@ -266,30 +266,26 @@ const fmtOrd = (r) => {
 };
 const PHASE_TXT = { idle: '收尾', group: '切换分组', diff: '比对差集', clear: '删除中', add: '添加中', verify: '复核中' };
 
+const fmtQuotes = (r) => r.empty
+  ? (r.message || `分组「${r.group || '?'}」为空，已清空本机 JSON`)
+  : `${r.count ?? '?'} 只（分组「${r.group || '?'}」）` + (r.server && r.server.ok ? '，已覆盖写入' : '，写入失败');
+
 const COMBOS = {
-  combo_collect: {
-    label: '一键抓取（持仓 + 订单 + 分组归属）',
-    steps: () => [
-      { page: 'positions', label: '① 抓取全部持仓', msg: { action: 'FT_SYNC_ALL' }, fmt: fmtPos },
-      { page: 'orders', label: '② 抓取订单记录', msg: { action: 'FT_SCAN_ORDERS' }, fmt: fmtOrd },
-      { page: 'watchlist', label: '③ 扫描全部分组归属', msg: { action: 'FT_MEMBER_SCAN' }, fmt: r => r.message || 'OK' }
-    ]
-  },
-  combo_sync: {
-    label: '一键同步 Earning + 抓取变更%',
-    steps: (o) => [
-      {
-        page: 'watchlist', label: `③ 一键同步「${o.targetGroup || DEFAULT_GROUP}」`, waitJob: true,
-        msg: {
-          action: 'FT_WL_START', clearFirst: false, strictSync: o.strictSync !== false,
-          targetGroup: o.targetGroup || DEFAULT_GROUP, skipQuotes: true
-        }
-      },
-      {
-        page: 'watchlist', label: '④ 抓取全部变更%', msg: { action: 'FT_WL_SCAN_QUOTES' },
-        fmt: r => `${r.count ?? '?'} 只（分组「${r.group || '?'}」）` + (r.server && r.server.ok ? '，已覆盖写入' : '')
-      }
-    ]
+  combo_all: {
+    label: '一键全流程（持仓 → 订单 → 同步 Earning → 变更% → 分组归属）',
+    steps: (o) => {
+      const tg = o.targetGroup || DEFAULT_GROUP;
+      return [
+        { page: 'positions', label: '① 抓取全部持仓', msg: { action: 'FT_SYNC_ALL' }, fmt: fmtPos },
+        { page: 'orders', label: '② 抓取订单记录', msg: { action: 'FT_SCAN_ORDERS' }, fmt: fmtOrd },
+        {
+          page: 'watchlist', label: `③ 一键同步「${tg}」`, waitJob: true,
+          msg: { action: 'FT_WL_START', clearFirst: false, strictSync: o.strictSync !== false, targetGroup: tg, skipQuotes: true }
+        },
+        { page: 'watchlist', label: '④ 抓取全部变更%', msg: { action: 'FT_WL_SCAN_QUOTES' }, fmt: fmtQuotes },
+        { page: 'watchlist', label: '⑤ 扫描全部分组归属', msg: { action: 'FT_MEMBER_SCAN' }, fmt: r => r.message || 'OK' }
+      ];
+    }
   }
 };
 
@@ -402,7 +398,7 @@ function migrateFlags() {
   chrome.storage.local.get(
     ['ftAutoScrape', 'ftAutoPositions', 'ftAutoOrders', 'ftAutoWatchlist',
       'ftOrderVerbose', 'ftWlSource', 'ftWlBack', 'ftWlAhead',
-      'ftWlAgent', 'ftWlRestoreGroup', 'ftWlRestoreTab',
+      'ftWlAgent', 'ftWlRestoreGroup', 'ftWlRestoreTab', 'ftSymColor',
       'ftWlTargetGroup', 'ftWlStrictSync', 'ftWlMemberPassive',
       'ftTradeEnabled', 'ftTradeMode', 'ftTradeRemoveAfter', 'ftTradePresets'],     // ★ 补上 ftTradeMode
     (res) => {
@@ -425,6 +421,7 @@ function migrateFlags() {
       if (!['dry', 'confirm', 'live'].includes(res.ftTradeMode)) patch.ftTradeMode = 'dry';
       if (res.ftTradeRemoveAfter === undefined) patch.ftTradeRemoveAfter = true;
       if (!Array.isArray(res.ftTradePresets) || !res.ftTradePresets.length) patch.ftTradePresets = [1000, 2000, 3000];
+      if (res.ftSymColor === undefined) patch.ftSymColor = true;
       if (Object.keys(patch).length) {
         chrome.storage.local.set(patch, () => {
           chrome.storage.local.remove('ftAutoScrape');

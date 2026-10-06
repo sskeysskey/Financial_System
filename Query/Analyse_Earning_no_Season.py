@@ -13,8 +13,8 @@ BASE_PATH = USER_HOME
 SYMBOL_TO_TRACE = ""
 TARGET_DATE = ""
 
-# SYMBOL_TO_TRACE = "RCL"
-# TARGET_DATE = "2026-09-30"
+# SYMBOL_TO_TRACE = "ROK"
+# TARGET_DATE = "2026-09-17"
 
 PATHS = {
     "config_dir": os.path.join(BASE_CODING_DIR, 'Financial_System', 'Modules'),
@@ -90,7 +90,7 @@ CONFIG = {
     #       跨模式 严格 >= 普通宽松 >= 次宽松 >= 最宽松
     # ============================================================
     # 严格模式
-    "PRICE_DROP_PERCENTAGE_SMALL": 0.10,
+    "PRICE_DROP_PERCENTAGE_SMALL": 0.079,
     "PRICE_DROP_PERCENTAGE_LARGE": 0.07,
     "PRICE_DROP_PERCENTAGE_MEGA": 0.06,
     "PRICE_DROP_PERCENTAGE_GIANT": 0.05,

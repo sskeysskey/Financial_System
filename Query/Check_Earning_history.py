@@ -2,6 +2,7 @@ import sys
 import json
 import os
 import sqlite3
+from contextlib import closing
 from PyQt6.QtWidgets import (
     QApplication, QDialog, QVBoxLayout, QTextEdit, QSplitter, QLabel, QWidget
 )
@@ -23,6 +24,23 @@ WEEK52_LOW_SECTORS = {
     "Healthcare"
 }
 
+# =========================================================
+# 规则参数（集中管理，便于调整）
+# =========================================================
+# SupportLevel 回看 PE_Volume 的交易日窗口
+SUPPORT_PE_VOLUME_LOOKBACK = 15
+# SupportLevel 回看 Short 的交易日窗口
+SUPPORT_SHORT_LOOKBACK = 7
+# SupportLevel 回看时视为 "Short 信号" 的分类（与代码其他处 Short/Short_W 同组处理保持一致）
+SUPPORT_SHORT_CATEGORIES = ("Short", "Short_W")
+
+# 连续性判定时忽略的"事件型/瞬时型"信号（不参与特征比较，也不计入最低项数）
+STREAK_IGNORED_CATEGORIES = {"Short", "Short_W"}
+
+# Short 前一周出现 PE_Volume_high(甲) 时的标记文本（渲染与判定共用，避免文本不一致）
+SHORT_PREV_JIA_TAG = "[ + ★Volume_High'甲']"
+
+
 def load_52week_low_symbols():
     """从 Sectors_panel.json 读取指定板块下的 symbol，作为 52week_low 集合"""
     symbols = set()
@@ -40,18 +58,18 @@ def load_52week_low_symbols():
     return symbols
 
 def load_earning_report_dates(symbol):
-    """从 Finance.db 的 Earning 表读取指定 symbol 的所有财报日期"""
+    """从 Finance.db 的 Earning 表读取指定 symbol 的所有财报日期（统一为 YYYY-MM-DD）"""
     dates = set()
     if not os.path.exists(DB_PATH):
         return dates
     try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        cursor.execute("SELECT date FROM Earning WHERE name = ?", (symbol.upper(),))
-        for row in cursor.fetchall():
-            if row[0]:
-                dates.add(str(row[0]))
-        conn.close()
+        with closing(sqlite3.connect(DB_PATH)) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT date FROM Earning WHERE name = ?", (symbol.upper(),))
+            for row in cursor.fetchall():
+                if row[0]:
+                    # 兼容 'YYYY-MM-DD HH:MM:SS' 等带时间格式
+                    dates.add(str(row[0]).strip()[:10])
     except Exception as e:
         print(f"读取 Finance.db 出错: {e}")
     return dates
@@ -106,6 +124,26 @@ def normalize_category_for_signature(category: str) -> str:
         return "PE_depth_any"
     return category
 
+def get_prev_dates(d_str, n, sorted_trading_dates):
+    """返回 d_str 之前（更早）的 n 个交易日，不含当天；d_str 不存在时返回空列表"""
+    try:
+        idx = sorted_trading_dates.index(d_str)
+    except ValueError:
+        return []
+    return sorted_trading_dates[idx + 1: idx + 1 + n]
+
+def find_prev_hit_dates(d_str, categories, window, category_dates, sorted_trading_dates):
+    """
+    在 d_str 之前 window 个交易日内，查找触发了 categories 中任一分类的日期。
+    返回 [(date, [命中的分类...]), ...]，按时间降序。
+    """
+    results = []
+    for prev_d in get_prev_dates(d_str, window, sorted_trading_dates):
+        hit_cats = [c for c in categories if prev_d in category_dates.get(c, set())]
+        if hit_cats:
+            results.append((prev_d, hit_cats))
+    return results
+
 def load_earning_index(symbol):
     """
     读取 Earning JSON,构建各类索引。
@@ -128,10 +166,14 @@ def load_earning_index(symbol):
     for category, date_dict in data.items():
         if category == "_Tag_Blacklist":
             continue
+        if not isinstance(date_dict, dict):
+            continue
         for date_str, symbol_list in date_dict.items():
             all_trading_dates.add(date_str)
             if isinstance(symbol_list, list):
                 for item in symbol_list:
+                    if not isinstance(item, str):
+                        continue
                     suffix = get_suffix_if_match(item, symbol)
                     if suffix is not None:
                         category_data[category].append((date_str, suffix))
@@ -182,7 +224,7 @@ def build_overlap_marker(category, d_str, suf,
         if has_short and has_pe_vol_high:
             is_chaodi = False
             if category == "PE_Volume_high":
-                is_chaodi = (suf and '抄底' in suf)
+                is_chaodi = bool(suf and '抄底' in suf)
             else:
                 for d, s in category_data.get("PE_Volume_high", []):
                     if d == d_str and s and '抄底' in s:
@@ -193,73 +235,69 @@ def build_overlap_marker(category, d_str, suf,
 
     # PE_Volume_high 且后缀包含 '甲' 时，往前推15天检查是否重复
     if category == "PE_Volume_high" and suf and '甲' in suf:
-        try:
-            date_idx = sorted_trading_dates.index(d_str)
-            prev_15_dates = sorted_trading_dates[date_idx + 1 : date_idx + 16]
-            
-            pe_vol_high_records = category_data.get("PE_Volume_high", [])
-            has_previous_jia = False
-            for prev_d in prev_15_dates:
-                for record_d, record_suf in pe_vol_high_records:
-                    if record_d == prev_d and record_suf and '甲' in record_suf:
-                        has_previous_jia = True
-                        break
-                if has_previous_jia:
-                    break
-            
-            if has_previous_jia:
-                overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='15个交易日内重复触发 PE_Volume_high(甲)'>[ x 2]</span>"
-        except ValueError:
-            pass
+        prev_15_dates = set(get_prev_dates(d_str, 15, sorted_trading_dates))
+        has_previous_jia = any(
+            record_d in prev_15_dates and record_suf and '甲' in record_suf
+            for record_d, record_suf in category_data.get("PE_Volume_high", [])
+        )
+        if has_previous_jia:
+            overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='15个交易日内重复触发 PE_Volume_high(甲)'>[ x 2]</span>"
 
     # Short 往前推一周（5个交易日）检查是否出现过 PE_Volume_high 且后缀含 '甲'
     if category == "Short":
-        try:
-            date_idx = sorted_trading_dates.index(d_str)
-            prev_5_dates = sorted_trading_dates[date_idx + 1 : date_idx + 6]
-            
-            pe_vol_high_records = category_data.get("PE_Volume_high", [])
-            has_jia_in_week = False
-            found_jia_date = ""
-            for prev_d in prev_5_dates:
-                for record_d, record_suf in pe_vol_high_records:
-                    if record_d == prev_d and record_suf and '甲' in record_suf:
-                        has_jia_in_week = True
-                        found_jia_date = prev_d
-                        break
-                if has_jia_in_week:
-                    break
-            
-            if has_jia_in_week:
-                overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='一周内（5个交易日）曾触发 PE_Volume_high(甲): {found_jia_date}'>[ + ★Volume_High'甲']</span>"
-        except ValueError:
-            pass
+        prev_5_dates = get_prev_dates(d_str, 5, sorted_trading_dates)
+        jia_dates = {
+            record_d for record_d, record_suf in category_data.get("PE_Volume_high", [])
+            if record_suf and '甲' in record_suf
+        }
+        found_jia_date = next((d for d in prev_5_dates if d in jia_dates), "")
+        if found_jia_date:
+            overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='一周内（5个交易日）曾触发 PE_Volume_high(甲): {found_jia_date}'>{SHORT_PREV_JIA_TAG}</span>"
 
-    # SupportLevel_Close 或 SupportLevel_Over 往前推15天检查 PE_Volume
-    if category in ["SupportLevel_Close", "SupportLevel_Over"]:
-        try:
-            date_idx = sorted_trading_dates.index(d_str)
-            prev_15_dates = sorted_trading_dates[date_idx + 1 : date_idx + 16]
-            
-            pe_volume_dates = category_dates.get("PE_Volume", set())
-            found_dates = [prev_d for prev_d in prev_15_dates if prev_d in pe_volume_dates]
-            
-            if found_dates:
-                dates_str = ", ".join(found_dates)
-                overlap_marker += f"<br>&nbsp;&nbsp;<span style='color:{purple}; font-weight:bold;' title='15个交易日内曾触发 PE_Volume'>★PE_Volume: {dates_str}</span>"
-        except ValueError:
-            pass
+    # SupportLevel_Close / SupportLevel_Over：
+    #   往前推 15 个交易日检查 PE_Volume；往前推 7 个交易日检查 Short（含 Short_W）
+    if category in ("SupportLevel_Close", "SupportLevel_Over"):
+        pe_vol_hits = find_prev_hit_dates(
+            d_str, ("PE_Volume",), SUPPORT_PE_VOLUME_LOOKBACK,
+            category_dates, sorted_trading_dates
+        )
+        if pe_vol_hits:
+            dates_str = ", ".join(d for d, _ in pe_vol_hits)
+            overlap_marker += (
+                f"<br>&nbsp;&nbsp;<span style='color:{purple}; font-weight:bold;' "
+                f"title='{SUPPORT_PE_VOLUME_LOOKBACK}个交易日内曾触发 PE_Volume'>"
+                f"★PE_Volume: {dates_str}</span>"
+            )
+
+        short_hits = find_prev_hit_dates(
+            d_str, SUPPORT_SHORT_CATEGORIES, SUPPORT_SHORT_LOOKBACK,
+            category_dates, sorted_trading_dates
+        )
+        if short_hits:
+            labels = []
+            for d, cats in short_hits:
+                cat_set = set(cats)
+                if cat_set == {"Short_W"}:
+                    labels.append(f"{d}(W)")
+                elif "Short_W" in cat_set:
+                    labels.append(f"{d}(+W)")
+                else:
+                    labels.append(d)
+            dates_str = ", ".join(labels)
+            overlap_marker += (
+                f"<br>&nbsp;&nbsp;<span style='color:{purple}; font-weight:bold;' "
+                f"title='{SUPPORT_SHORT_LOOKBACK}个交易日内曾触发 Short/Short_W（W=Short_W）'>"
+                f"★Short: {dates_str}</span>"
+            )
 
     # 跨日接力 及 PE_W 15天重复检测
     try:
         date_idx = sorted_trading_dates.index(d_str)
         if category == "PE_W":
             prev_15_dates = sorted_trading_dates[date_idx + 1 : date_idx + 16]
-            pe_w_count = 0
-            for prev_d in prev_15_dates:
-                if prev_d in category_dates.get("PE_W", set()):
-                    pe_w_count += 1
-            
+            pe_w_dates = category_dates.get("PE_W", set())
+            pe_w_count = sum(1 for prev_d in prev_15_dates if prev_d in pe_w_dates)
+
             if pe_w_count > 0:
                 total_count = pe_w_count + 1
                 overlap_marker += f" <span style='color:{red}; font-weight:bold;' title='15个交易日内重复触发 PE_W'>[ x {total_count}]</span>"
@@ -361,16 +399,18 @@ def search_history_by_date(symbol):
     normal_dates = []
     compressed_records = defaultdict(list)
 
-    # 计算每个命中日期的归一化特征集合（set 结构方便包含运算）
+    # 计算每个命中日期的归一化"核心特征"集合
+    # 事件型信号（Short / Short_W）不参与连续性比较，也不计入最低项数
     date_signature = {}
     for d_str in hit_dates_sorted:
         mapped_items = set()
         for cat, suf in date_items[d_str]:
-            norm_cat = normalize_category_for_signature(cat)
-            mapped_items.add(norm_cat)
+            if cat in STREAK_IGNORED_CATEGORIES:
+                continue
+            mapped_items.add(normalize_category_for_signature(cat))
         date_signature[d_str] = mapped_items
 
-    # 连续相同/超集项的最低数量阈值
+    # 连续相同/超集项的最低数量阈值（按核心特征计）
     MIN_STREAK_ITEMS = 2
     # 允许的最大连续空窗交易日数量（在此范围内且标的完全无信号时允许桥接）
     MAX_EMPTY_GAP_DAYS = 5
@@ -379,11 +419,12 @@ def search_history_by_date(symbol):
         """
         返回该日期在“核心特征保持/只增不减”连续段里的位置（最早那天=1）。
         规则：
-        1. 当天特征数需达到 MIN_STREAK_ITEMS。
-        2. 沿时序往前（更早交易日）回溯：
+        1. 核心特征 = 当天全部分类经归一化后，剔除 STREAK_IGNORED_CATEGORIES（Short/Short_W）。
+        2. 当天核心特征数需达到 MIN_STREAK_ITEMS。
+        3. 沿时序往前（更早交易日）回溯：
            - 若前序交易日该标的完全无记录（空窗日），在不超过 MAX_EMPTY_GAP_DAYS 容纳内允许跳过空窗桥接。
-           - 若遇到有记录交易日，要求较新交易日特征集必须包含较早交易日（chain_sig >= older_sig，只增不减）。
-           - 若中间出现破坏性记录（有指标但不合规）或空窗交易日超出上限，则连续性终止。
+           - 若遇到有记录交易日，要求较新交易日核心特征集必须包含较早交易日（chain_sig >= older_sig，只增不减）。
+           - 若中间出现破坏性记录（有指标但核心特征不合规，包括仅有 Short 的日子）或空窗超限，则连续性终止。
         """
         if d_str not in sorted_trading_dates:
             return 1
@@ -406,22 +447,18 @@ def search_history_by_date(symbol):
             if is_empty_day:
                 empty_gap += 1
                 if empty_gap > MAX_EMPTY_GAP_DAYS:
-                    # 超过允许的最大空窗交易日数，状态衰减终止
                     break
                 j += 1
                 continue
 
-            # 遇到有触发记录的交易日
             older_sig = date_signature.get(older_date)
             if not older_sig or len(older_sig) < MIN_STREAK_ITEMS:
-                # 中间出现低于阈值的杂项记录，形态被打破，终止
                 break
 
-            # 只能增不能减：当前较新交易日 chain_sig 必须包含更早交易日 older_sig 的所有元素
             if chain_sig >= older_sig:
                 count += 1
-                chain_sig = older_sig  # 状态收敛为更早日期的集合，继续向前验证
-                empty_gap = 0          # 成功桥接后重置空窗计数器
+                chain_sig = older_sig
+                empty_gap = 0
                 j += 1
             else:
                 break
@@ -452,7 +489,7 @@ def search_history_by_date(symbol):
             streak_marker = (
                 f" <span style='color:#C4A7E7; font-weight:bold; "
                 f"background-color:rgba(235,203,139,0.15); padding:0 4px; "
-                f"border-radius:3px;' title='核心指标连续保持（支持只增不减及短期平稳空窗容差）'>"
+                f"border-radius:3px;' title='核心指标连续保持（忽略Short/Short_W，支持只增不减及短期平稳空窗容差）'>"
                 f"[⟳连续第{streak_pos}天]</span>"
             )
         else:
@@ -480,15 +517,14 @@ def search_history_by_date(symbol):
                     target_color = COLOR_HIGH
                 elif category == "PE_Volume_high" and suf and '甲' in suf:
                     target_color = COLOR_HIGH
-                elif category in ["OverSell_W"]:
-                    target_color = COLOR_MEDIUM
                 else:
                     target_color = COLOR_MEDIUM
             else:
                 target_color = COLOR_BLUE
 
             extra_style = ""
-            if category == "Short" and "[★Short+前周甲]" in overlap_marker:
+            # 修复：原代码判断的标记文本与实际生成的文本不一致，导致高亮永不生效
+            if category == "Short" and SHORT_PREV_JIA_TAG in overlap_marker:
                 extra_style = "border: 1px solid #BF616A; background-color: rgba(191,97,106,0.25);"
 
             display_category = (
@@ -555,7 +591,7 @@ class InfoDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(f"Info Check: {symbol}")
         
-        self.setGeometry(0, 0, left_width, height)
+        self.resize(left_width, height)
         self.center_on_screen()
 
         layout = QVBoxLayout(self)
@@ -598,10 +634,12 @@ class InfoDialog(QDialog):
 
     def center_on_screen(self):
         screen = QApplication.primaryScreen()
-        screen_geometry = screen.geometry()
-        x = (screen_geometry.width() - self.width()) // 2
-        y = (screen_geometry.height() - self.height()) // 2
-        self.move(x, y)
+        if screen is None:
+            return
+        geo = screen.availableGeometry()  # 排除 Dock / 菜单栏，并考虑多屏偏移
+        x = geo.x() + (geo.width() - self.width()) // 2
+        y = geo.y() + (geo.height() - self.height()) // 2
+        self.move(max(geo.x(), x), max(geo.y(), y))
 
     def apply_nord_style(self, font_size):
         qss = f"""
@@ -645,7 +683,7 @@ class InfoDialog(QDialog):
 # =========================================================
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    target_symbol = sys.argv[1] if len(sys.argv) > 1 else "UNKNOWN"
+    target_symbol = sys.argv[1].strip().upper() if len(sys.argv) > 1 else "UNKNOWN"
 
     dialog = InfoDialog(
         symbol=target_symbol,

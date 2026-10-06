@@ -70,7 +70,8 @@
         "BTI",
         "CL",
         "MNST",
-        "TGT"
+        "TGT",
+        "ABEV"
     ],
     "Energy": [
         "XOM",
@@ -161,7 +162,8 @@
         "AJG",
         "CM",
         "BNY",
-        "NDAQ"
+        "NDAQ",
+        "VYLR"
     ],
     "Healthcare": [
         "LLY",
@@ -197,7 +199,8 @@
         "CAH",
         "TAK",
         "MRNA",
-        "NTRA"
+        "NTRA",
+        "EW"
     ],
     "Industrials": [
         "GE",
@@ -241,7 +244,8 @@
         "FAST",
         "SPCX",
         "DAL",
-        "BE"
+        "BE",
+        "ROK"
     ],
     "Real_Estate": [
         "PLD",
@@ -316,7 +320,8 @@
         "MSTR",
         "UMC",
         "ALAB",
-        "CIEN"
+        "CIEN",
+        "STM"
     ],
     "Utilities": [
         "NEE",

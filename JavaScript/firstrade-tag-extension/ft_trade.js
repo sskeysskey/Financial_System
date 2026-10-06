@@ -1,33 +1,34 @@
 /* ============================================================================
- * Firstrade 快速交易层  ft_trade.js  v3      /app/watchlist + /app/positions
+ * Firstrade 快速交易层  ft_trade.js  v4      /app/watchlist + /app/positions
  *   点击股票代码 → 弹出交易层 → 自动驱动页面底部「交易」快速下单面板
- *   v3：
- *     ★ 持仓页 /app/positions 也可点代码交易（Alt+点击 / 点展开箭头 = 原生行为）
- *     ★ 买卖一律按「股数」下单：买入金额档 ÷ 网页实时价（col-id=last）→ 四舍五入整数股
- *     ★ 碎股持仓禁止网页卖出 → 提示去手机 App
- *     ★ 持仓页成交后的「移出分组」排队给自选股页代理执行
+ *   v4：
+ *     ★ 修复「加仓时 没有输入代号」：旧版 symbolConfirmed 只看输入框文字（脚本自己填的，永远为真）
+ *       → 现在：等联想列表稳定（搜索结果优先于「最近搜寻」）→ 点选 →
+ *         严格校验「输入框代码 + 面板出现公司名/报价 + 公司名与联想项一致」→ 失败改键盘选择 → 重试
+ *     ★ 列表读不到现价时，改用交易面板报价换算股数（远程交易更稳）
+ *     ★ 预演模式也做下单前复核
  *   下单模式（storage.ftTradeMode）：dry 预演 / confirm 下单前确认 / live 实盘
- *   成交判定：仅当出现明确成功提示才算成功 → 才移出分组
  * ==========================================================================*/
 (() => {
-  if (window.__FT_TRADE_V3__) return;
-  window.__FT_TRADE_V3__ = true;
+  if (window.__FT_TRADE_V4__) return;
+  window.__FT_TRADE_V4__ = true;
 
   const LOG = '[FT-TRADE]';
   const BUY_GROUPS = ['买', '买买', '买买买'];
   const SELL_GROUPS = ['卖卖卖'];
   const PROTECTED = ['Earning', 'Wrong'];
-  const HIDDEN_GROUPS = ['temp'];            // 临时取数分组：不显示、不参与交易
+  const HIDDEN_GROUPS = ['temp'];
   const ROW_EXCLUDE = '.ag-floating-top, .ag-floating-bottom, #app-quote-bar, header, #app-header';
   const MODES = ['dry', 'confirm', 'live'];
   const MODE_TXT = { dry: '🧪 预演', confirm: '✋ 下单前确认', live: '⚡ 实盘' };
   const PAGE_TXT = { watchlist: '自选股页', positions: '持仓页' };
   const CONFIRM_TIMEOUT = 120000;
-  const MAX_BUY_AMOUNT = 50000;          // 单笔买入金额上限（防手滑多打一个 0）
-  const MAX_SHARES = 100000;             // 单笔股数上限
+  const MAX_BUY_AMOUNT = 50000;
+  const MAX_SHARES = 100000;
   const POS_STALE_H = 20;
   const PRICE_DRIFT_WARN = 0.03;
   const FRACTION_MSG = '该持仓含碎股（小数股），网页端只能卖整数股：请到 Firstrade 手机 App 卖出';
+  const RECENT_RE = /最近搜寻|最近搜索|最近查询|搜寻记录|搜索记录|Recent/i;
 
   const S = { enabled: true, mode: 'dry', removeAfter: true, presets: [1000, 2000, 3000], debug: false };
   let running = false;
@@ -45,8 +46,9 @@
   const isWatchlistPage = () => pageKind() === 'watchlist';
   const isTradePage = () => !!pageKind();
   const api = () => window.__FT_WL_API__ || null;
-  const toast = (t) => { try { (window.__FT_TOAST__ || console.log)(t); } catch (e) { } };
+  const toast = (t, ms) => { try { (window.__FT_TOAST__ || console.log)(t, ms); } catch (e) { } };
   const normKey = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const normName = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
   const normGroup = (s) => String(s || '').replace(/[（(][^）)]*[）)]\s*$/g, '').replace(/\s+/g, '').toUpperCase();
   const cleanGroupName = (s) => String(s || '').replace(/\u00a0/g, ' ').replace(/[（(]\s*\d+\s*[）)]\s*$/, '').trim();
   const inList = (g, list) => list.some(x => normGroup(x) === normGroup(g));
@@ -134,7 +136,7 @@
   }
 
   /* ==========================================================================
-   *              ★ 网页实时行情（col-id="last" / "quantity"）
+   *              网页实时行情（col-id="last" / "quantity"）
    * ========================================================================*/
   function readRow(sym) {
     const a = api();
@@ -248,47 +250,160 @@
     }
   }
 
-  /* ---------- 代码选择 ---------- */
+  /* ==========================================================================
+   *        ★ v4 代码选择：稳定联想 → 点选 → 严格确认（公司名 + 报价）
+   * ========================================================================*/
   function comboItems() {
     const sel = '[data-combobox-content] [data-combobox-item], [role="listbox"] [role="option"], [data-combobox-item]';
     return Array.from(document.querySelectorAll(sel)).filter(el => isVisible(el) &&
       !el.closest('[data-command-root]') && !el.closest('[data-select-content]') && !el.closest('#ft-trade-layer'));
   }
-  function itemMatches(el, k) {
-    if (normKey(el.getAttribute('data-value')) === k || normKey(el.getAttribute('data-label')) === k) return true;
-    const first = (cleanText(el).split(/\s+/)[0] || '');
-    if (normKey(first) === k) return true;
-    return Array.from(el.querySelectorAll('span, div, p, strong, b')).some(x => normKey(cleanText(x)) === k);
+  function itemSym(el) {
+    const v = el.getAttribute('data-label') || el.getAttribute('data-value');
+    if (v && /[A-Za-z]/.test(v)) return String(v).trim().toUpperCase();
+    const b = el.querySelector('.font-semibold, strong, b');
+    if (b) return cleanText(b).toUpperCase();
+    return (cleanText(el).split(/\s+/)[0] || '').toUpperCase();
   }
-  function symbolConfirmed(k) {
+  function itemName(el) {
+    const t = el.querySelector('.truncate');
+    if (t) return cleanText(t);
+    const sp = el.querySelectorAll('span');
+    return sp.length > 1 ? cleanText(sp[1]) : '';
+  }
+  function itemMatches(el, k) {
+    if (normKey(el.getAttribute('data-label')) === k) return true;
+    if (normKey(el.getAttribute('data-value')) === k) return true;
+    const b = el.querySelector('.font-semibold, strong, b');
+    if (b && normKey(cleanText(b)) === k) return true;
+    return normKey(cleanText(el).split(/\s+/)[0] || '') === k;
+  }
+  /* 该联想项是否位于「最近搜寻」分区（已持仓/搜过的股票几乎都在这里，且会被真正的搜索结果替换掉） */
+  function isRecentItem(el) {
+    const box = el.closest('[data-combobox-content], [role="listbox"]') ||
+      (el.parentElement && el.parentElement.parentElement);
+    if (!box) return false;
+    const heads = Array.from(box.querySelectorAll('span, div, p'))
+      .filter(x => x.children.length === 0 && RECENT_RE.test(cleanText(x)));
+    return heads.some(h => !!(h.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING));
+  }
+  /* 交易面板里的「公司名 + 现价」信息块（选中代码后才会出现） */
+  function quoteInfo() {
     const root = tradeRoot();
-    if (!root) return false;
+    if (!root) return null;
+    const boxes = Array.from(root.querySelectorAll('div.tabular-nums')).filter(isVisible);
+    for (const box of boxes) {
+      const pxEl = box.querySelector('span.text-xl');
+      const nameEl = box.querySelector('span.truncate');
+      if (!pxEl && !nameEl) continue;
+      const px = pxEl ? parseNum(cleanText(pxEl)) : NaN;
+      const name = nameEl ? cleanText(nameEl) : '';
+      if (!name && !(px > 0)) continue;
+      return { name, price: px > 0 ? px : NaN };
+    }
+    return null;
+  }
+  function inputSymKey() {
     const i = $id('quick-trade-symbol-search');
-    if (i && normKey(i.value) === k) return true;
-    const info = root.querySelector('p[class*="pl-8"]');
-    if (info) {
-      const toks = cleanText(info).toUpperCase().split(/[^A-Z0-9.\-]+/);
-      if (toks.some(t => normKey(t) === k)) return true;
+    return i ? normKey(String(i.value || '').trim().split(/\s+/)[0]) : '';
+  }
+  function selectionState(k, wantName) {
+    const i = $id('quick-trade-symbol-search');
+    if (!i || !isVisible(i)) return { ok: false, why: '代码输入框不见了' };
+    if (inputSymKey() !== k) return { ok: false, why: `输入框内容是「${i.value || '空'}」` };
+    const q = quoteInfo();
+    if (!q) return { ok: false, why: '面板没有出现该股票的公司名/报价（联想项未真正选中）' };
+    if (wantName && q.name && normName(wantName) !== normName(q.name)) {
+      return { ok: false, why: `面板显示「${q.name}」≠ 联想项「${wantName}」（可能点到了别的股票）` };
+    }
+    return { ok: true, quote: q };
+  }
+  async function waitSelection(k, wantName, timeout) {
+    const t0 = Date.now();
+    let st = selectionState(k, wantName);
+    while (!st.ok && Date.now() - t0 < timeout) {
+      await sleep(150);
+      st = selectionState(k, wantName);
+    }
+    return st;
+  }
+  /* 等联想列表稳定：搜索结果稳定 ≥ 3 次采样即可；只在「最近搜寻」里命中则多等一会儿给真正结果替换 */
+  async function waitMatch(k, timeout) {
+    const t0 = Date.now();
+    let lastSig = '', stable = 0;
+    while (Date.now() - t0 < timeout) {
+      const items = comboItems();
+      const sig = items.map(itemSym).join(',');
+      if (sig && sig === lastSig) stable++; else { stable = 0; lastSig = sig; }
+      const hits = items.filter(el => itemMatches(el, k));
+      if (hits.length && stable >= 2) {
+        const fresh = hits.find(el => !isRecentItem(el));
+        if (fresh) return fresh;
+        if (stable >= 6 || Date.now() - t0 > 2500) return hits[0];
+      }
+      await sleep(120);
+    }
+    const items = comboItems().filter(el => itemMatches(el, k));
+    return items.find(el => !isRecentItem(el)) || items[0] || null;
+  }
+  async function keyboardPick(inp, k) {
+    inp.focus();
+    for (let i = 0; i < 12; i++) {
+      const items = comboItems();
+      const ad = inp.getAttribute('aria-activedescendant');
+      const hl = items.find(el => el.hasAttribute('data-highlighted') || el.getAttribute('aria-selected') === 'true' ||
+        (ad && (el.id === ad || (el.closest('[id]') && el.closest('[id]').id === ad))));
+      if (hl && itemMatches(hl, k)) { sendKey(inp, 'Enter', 13); return true; }
+      sendKey(inp, 'ArrowDown', 40);
+      await sleep(130);
     }
     return false;
   }
-  async function pickSymbol(sym) {
+  async function pickSymbol(sym, say) {
     let lastErr = '';
     for (const f of candidateForms(sym)) {
-      const inp = $id('quick-trade-symbol-search');
-      if (!inp) return { ok: false, error: '找不到交易面板的代码输入框' };
       const k = normKey(f);
-      inp.focus();
-      setNativeValue(inp, '');
-      await sleep(80);
-      setNativeValue(inp, f);
-      inp.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: f.slice(-1) }));
-      const hit = await waitFor(() => comboItems().find(el => itemMatches(el, k)) || null, 6000, 120);
-      if (!hit) { lastErr = `联想列表里没有精确匹配 ${f}`; continue; }
-      fireMouseSeq(hit);
-      const ok = await waitFor(() => symbolConfirmed(k), 4000, 120);
-      if (ok) { await sleep(350); return { ok: true, form: f }; }
-      lastErr = `点选 ${f} 后未在面板上确认到该代码`;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const inp = $id('quick-trade-symbol-search');
+        if (!inp || !isVisible(inp)) return { ok: false, error: '找不到交易面板的代码输入框' };
+        inp.focus();
+        setNativeValue(inp, '');
+        await sleep(200);
+        await waitFor(() => !quoteInfo(), 1200, 100);            // 清空后旧报价块一般会消失（不消失也不阻塞）
+        setNativeValue(inp, f);
+        inp.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: f.slice(-1) }));
+
+        const hit = await waitMatch(k, 7000);
+        if (!hit) { lastErr = `联想列表里没有精确匹配 ${f}`; break; }   // 换下一种写法（BRK.B / BRK-B）
+        const wantName = itemName(hit);
+        if (say) say(`↳ 联想命中 ${itemSym(hit)}${wantName ? '（' + wantName + '）' : ''}${isRecentItem(hit) ? '［最近搜寻］' : ''}`);
+        if (!hit.isConnected) { lastErr = '联想项在点击前被刷新'; await sleep(400); continue; }
+        try { hit.scrollIntoView({ block: 'nearest' }); } catch (e) { }
+        fireMouseSeq(hit);
+        let st = await waitSelection(k, wantName, 4000);
+        if (!st.ok) {
+          if (say) say(`↳ 鼠标选择未生效（${st.why}），改用键盘选择…`);
+          const i2 = $id('quick-trade-symbol-search');
+          if (i2) {
+            if (!comboItems().some(el => itemMatches(el, k))) {
+              setNativeValue(i2, f);
+              await waitMatch(k, 4000);
+            }
+            if (await keyboardPick(i2, k)) st = await waitSelection(k, wantName, 4000);
+          }
+        }
+        if (st.ok) {
+          await sleep(500);
+          const again = selectionState(k, wantName);               // 二次确认：防止页面随后又把代码清掉
+          if (again.ok) {
+            return { ok: true, form: f, name: again.quote.name || wantName, price: again.quote.price > 0 ? again.quote.price : null };
+          }
+          st = again;
+        }
+        lastErr = `选择 ${f} 未生效：${st.why}`;
+        if (say) say(`↳ ${lastErr}（第 ${attempt + 1}/3 次）`);
+        await sleep(600 + attempt * 600);
+      }
     }
     return { ok: false, error: lastErr || '无法选择代码' };
   }
@@ -380,7 +495,7 @@
   /* ---------- 下单 & 结果识别 ---------- */
   const SENT_RE = /订单已送出|已送出|订单号码|委托号|submitted|order placed|has been placed/i;
   const OK_RE = /成功|已提交|已下单|已接收|已受理|已委托|success|accepted|received/i;
-  const ERR_RE = /失败|错误|不足|拒绝|无效|不允许|无法|超出|error|fail|insufficient|reject|invalid|not allowed|exceed/i;
+  const ERR_RE = /失败|错误|不足|拒绝|无效|不允许|无法|超出|没有输入|请输入|error|fail|insufficient|reject|invalid|not allowed|exceed|required/i;
   const CONFIRM_RE = /^(确认|确定|确认下单|确认交易|确认订单|提交|提交订单|发送订单|送出|继续|Confirm|Submit|Place Order|Send Order|Continue)$/i;
 
   function submitButton() {
@@ -475,9 +590,10 @@
     return { status: 'unknown', clicked: true, message: '25 秒内未看到成功/失败提示（不会移出分组，请到订单页核对）' };
   }
 
-  function verifyForm(form, txLabel, mode, val) {
+  function verifyForm(pk, txLabel, mode, val) {
     if (!formReady()) return { ok: false, error: '交易表单已不在（可能已手动下单或面板被关闭）' };
-    if (!symbolConfirmed(normKey(form))) return { ok: false, error: `代码不是 ${form}` };
+    const st = selectionState(normKey(pk.form), pk.name);
+    if (!st.ok) return { ok: false, error: `代码未确认为 ${pk.form}：${st.why}` };
     const t = trig('quick-trade-form-transaction');
     if (!t || cleanText(t) !== txLabel) return { ok: false, error: `交易类型不是「${txLabel}」` };
     if (qtyMode() !== mode) return { ok: false, error: `数量方式不是「${mode}」` };
@@ -518,7 +634,6 @@
     return { removed, failed };
   }
 
-  /* 持仓页无法切自选分组 → 排队给 watchlist 页的代理执行 */
   async function enqueueRemoval(sym, groups, say) {
     const queued = [], failed = [];
     for (const g of groups) {
@@ -543,9 +658,7 @@
     });
   }
 
-  /* ---------- 主流程（v3：一律按股数） ----------
-   * opts.qty    整数股（卖出必填；买入可直接给股数）
-   * opts.amount 买入预算金额（未给 qty 时：金额 ÷ 网页实时价 → 四舍五入整数股） */
+  /* ---------- 主流程（一律按股数） ---------- */
   async function execute(opts) {
     const o = opts || {};
     const sym = String(o.symbol || '').trim().toUpperCase();
@@ -580,40 +693,54 @@
     const startGroup = isWatchlistPage() ? a.groupName() : '';
     const chk = () => { if (abortFlag) throw new Error('已取消（尚未点击「下单」）'); };
     const must = (r, step) => { if (!r || !r.ok) throw new Error(`${step}：${(r && r.error) || '失败'}`); return r; };
+    const sizeFromPrice = (px, how) => {
+      res.price = px;
+      qty = Math.round(budget / px);
+      say(`${how} $${fmtPx(px)}：$${budget} ÷ ${fmtPx(px)} = ${(budget / px).toFixed(2)} → 四舍五入 ${qty} 股（约 $${(qty * px).toFixed(2)}）`);
+      if (qty < 1) throw new Error(`$${budget} 不足 1 股（现价 $${fmtPx(px)}）`);
+      if (qty * px > MAX_BUY_AMOUNT * 1.05) throw new Error(`换算后金额 $${(qty * px).toFixed(0)} 超过上限 $${MAX_BUY_AMOUNT}`);
+      const prev = o.ctx && o.ctx.price;
+      if (prev > 0 && Math.abs(px - prev) / prev > PRICE_DRIFT_WARN) {
+        say(`⚠ 现价较打开交易层时变动 ${(((px - prev) / prev) * 100).toFixed(1)}%（以最新价为准）`);
+      }
+    };
     try {
       a.clearStopFlags(); a.cleanNavSearch();
       say(`模式：${MODE_TXT[mode]}｜页面：${PAGE_TXT[page]}`);
 
-      /* ⓪ 金额 → 股数（必须用网页实时价） */
+      /* ⓪ 金额 → 股数：优先用列表实时价；读不到则选好代码后用面板报价 */
+      let deferred = false;
       if (!(qty > 0)) {
         say('⓪ 读取网页最新价…');
         const q = await livePrice(sym, o.ctx, !!o.allowSwitch, say);
-        if (!q) throw new Error('网页上读不到该股票的最新价格，为防止股数算错已中止（未打开交易面板）');
-        const px = q.price;
-        res.price = px;
-        qty = Math.round(budget / px);
-        say(`现价 $${fmtPx(px)}：$${budget} ÷ ${fmtPx(px)} = ${(budget / px).toFixed(2)} → 四舍五入 ${qty} 股（约 $${(qty * px).toFixed(2)}）`);
-        if (qty < 1) throw new Error(`$${budget} 不足 1 股（现价 $${fmtPx(px)}）`);
-        if (qty * px > MAX_BUY_AMOUNT * 1.05) throw new Error(`换算后金额 $${(qty * px).toFixed(0)} 超过上限 $${MAX_BUY_AMOUNT}`);
-        const prev = o.ctx && o.ctx.price;
-        if (prev > 0 && Math.abs(px - prev) / prev > PRICE_DRIFT_WARN) {
-          say(`⚠ 现价较打开交易层时变动 ${(((px - prev) / prev) * 100).toFixed(1)}%（以最新价为准）`);
-        }
+        if (q) sizeFromPrice(q.price, '列表现价');
+        else { deferred = true; say('↳ 列表里读不到现价：先选好代码，再用交易面板报价换算股数'); }
         chk();
       } else if (side === 'buy') {
         const q = readRow(sym);
         if (q && q.price) res.price = q.price;
       }
-      if (qty > MAX_SHARES) throw new Error(`股数 ${qty} 超过单笔上限 ${MAX_SHARES}`);
-      qty = Math.round(qty);
-      res.qty = qty;
-      const valStr = String(qty);
       const txLabel = side === 'buy' ? '买进' : '卖出';
 
       say('① 打开快速交易面板…'); must(await openPanel(), '打开交易面板'); chk();
       await ensureStocksTab();
       say(`② 选择代码 ${sym}…`);
-      const pk = must(await pickSymbol(sym), '选择代码'); chk();
+      const pk = must(await pickSymbol(sym, say), '选择代码'); chk();
+      say(`↳ ✔ 面板已确认：${pk.form}${pk.name ? '｜' + pk.name : ''}${pk.price ? '｜$' + fmtPx(pk.price) : ''}`);
+      if (deferred) {
+        const qp = pk.price || await waitFor(() => { const q = quoteInfo(); return q && q.price > 0 ? q.price : null; }, 5000, 150);
+        if (!qp) throw new Error('交易面板也读不到报价：为防股数算错已中止（未点击「下单」）');
+        sizeFromPrice(qp, '面板报价');
+        chk();
+      } else if (res.price && pk.price && Math.abs(pk.price - res.price) / res.price > PRICE_DRIFT_WARN) {
+        say(`⚠ 面板报价 $${fmtPx(pk.price)} 与列表现价 $${fmtPx(res.price)} 相差超过 ${PRICE_DRIFT_WARN * 100}%，请核对`);
+      }
+      if (!(qty > 0)) throw new Error('股数无效');
+      if (qty > MAX_SHARES) throw new Error(`股数 ${qty} 超过单笔上限 ${MAX_SHARES}`);
+      qty = Math.round(qty);
+      res.qty = qty;
+      const valStr = String(qty);
+
       say(`③ 交易类型 → ${txLabel}`); must(await chooseSelect('quick-trade-form-transaction', txLabel), '交易类型'); chk();
       await sleep(300);
       say('④ 数量方式 → 股数'); must(await setQtyMode('股数'), '数量方式'); chk();
@@ -627,8 +754,10 @@
 
       const notional = res.price ? `，约 $${(qty * res.price).toFixed(2)}` : '';
       if (mode === 'dry') {
+        const vf0 = verifyForm(pk, txLabel, '股数', valStr);
+        if (!vf0.ok) throw new Error('预演复核失败：' + vf0.error);
         res.ok = true; res.status = 'dry';
-        res.message = `🧪 预演完成：${txLabel} ${qty} 股（市价${notional}），未点击「下单」，请在交易面板核对`;
+        res.message = `🧪 预演完成：${txLabel} ${qty} 股（市价${notional}），表单复核通过，未点击「下单」`;
         say(res.message);
         return res;
       }
@@ -638,7 +767,7 @@
         if (!go) throw new Error('已取消：未点击「下单」');
       }
       chk();
-      const vf = verifyForm(pk.form, txLabel, '股数', valStr);
+      const vf = verifyForm(pk, txLabel, '股数', valStr);
       if (!vf.ok) throw new Error('下单前复核失败：' + vf.error + '（未点击「下单」）');
 
       say('⑦ 点击「下单」…');
@@ -665,6 +794,8 @@
       } else {
         say('⑧ 未勾选任何分组，保留在分组内');
       }
+      /* ★ v5：实盘成交后关闭 Firstrade 自带的「订单已送出」面板（订单号已读取），不在屏幕中间留结果 */
+      if (tradeRoot()) { try { await closeTradePanel(); } catch (e) { } }
     } catch (e) {
       res.ok = false;
       res.error = String((e && e.message) || e);
@@ -762,7 +893,7 @@
       remote: !!opts.remote, result: null, loading: !!opts.loading
     };
     ensureLayer();
-    layer.classList.remove('ftt-running');
+    layer.classList.remove('ftt-running', 'ftt-docked');
     layer.classList.add('ftt-show');
     render();
   }
@@ -773,7 +904,7 @@
       addLog('⏹ 已请求中止（若尚未点击「下单」则不会下单）');
       return;
     }
-    if (layer) layer.classList.remove('ftt-show', 'ftt-running');
+    if (layer) layer.classList.remove('ftt-show', 'ftt-running', 'ftt-docked');
     view = null;
   }
   function addLog(t) {
@@ -812,7 +943,7 @@
     h += `<div class="ftt-line">${where}　所在：${gs.length ? gs.map(badge).join('') : '<span class="ftt-dim">（无归属数据）</span>'}</div>`;
     h += c.price > 0
       ? `<div class="ftt-line ftt-dim">网页现价 <b>$${fmtPx(c.price)}</b>（下单前会再读一次最新价）</div>`
-      : `<div class="ftt-warn">⚠ 当前列表读不到 ${esc(c.symbol)} 的现价，买入时会自动再找</div>`;
+      : `<div class="ftt-warn">⚠ 当前列表读不到 ${esc(c.symbol)} 的现价，买入时会用交易面板报价换算</div>`;
     if (c.position || qStr) {
       const p = c.position || {};
       h += `<div class="ftt-line ftt-dim">持仓 <b>${esc(qStr || '?')}</b> 股${c.liveQtyStr ? '（持仓页实时）' : ''} · 成本 ${esc(p.cost || '-')} · 损益 ${esc(p.gainloss_amount || '-')} (${esc(p.gainloss || '-')})</div>`;
@@ -879,6 +1010,18 @@
     if (lg) lg.scrollTop = lg.scrollHeight;
   }
 
+  /* ★ v5：交易结果 → 右下角提示文本（多行） */
+  function resultSummary(sym, r) {
+    const icon = r.ok ? (r.status === 'dry' ? '🧪' : '✅') : (r.status === 'unknown' ? '⚠️' : '❌');
+    const lines = [`${icon} ${sym} ${r.message || r.error || ''}`.slice(0, 160)];
+    if (r.qty) lines.push(`股数 ${r.qty}${r.price ? ' @ $' + fmtPx(r.price) : ''}`);
+    if (r.orderNo) lines.push(`订单号 ${r.orderNo}`);
+    if (r.removed && r.removed.length) lines.push(`已移出：${r.removed.join(' / ')}`);
+    if (r.removeQueued && r.removeQueued.length) lines.push(`已排队移出：${r.removeQueued.join(' / ')}`);
+    if (r.removeFailed && r.removeFailed.length) lines.push(`⚠ 移出失败：${r.removeFailed.map(f => f.group).join(' / ')}`);
+    return lines.join('\n');
+  }
+
   async function runTrade(sd, val, extra) {
     const x = extra || {};
     if (running || !view) return { ok: false, message: running ? '已有交易在执行' : '交易层未打开' };
@@ -905,6 +1048,7 @@
       if (held > 0 && qty > held + 1e-6) { addLog(`❌ 卖出股数 ${qty} 超过持仓 ${held}`); return { ok: false, message: '超过持仓' }; }
     }
     view.side = sd; view.logs = []; view.result = null;
+    layer.classList.remove('ftt-docked');
     layer.classList.add('ftt-running');
     render();
     const groups = allGroups(c).filter(g => view.rmSel.has(g));
@@ -914,8 +1058,18 @@
       ctx: c, allowSwitch: !!x.allowSwitch
     });
     if (layer) layer.classList.remove('ftt-running');
-    if (view) { if (res.price) view.ctx.price = res.price; view.result = res; render(); }
-    toast((res.ok ? (res.status === 'dry' ? '🧪 ' : '✅ ') : '❌ ') + `${c.symbol} ${res.message || res.error || ''}`.slice(0, 120));
+    if (view && res.price) view.ctx.price = res.price;
+    const text = resultSummary(c.symbol, res);
+    const clean = res.ok && !(res.removeFailed && res.removeFailed.length);
+    if (clean) {
+      /* ★ v5：成功（含预演）不在屏幕中央保留结果页 → 自动关闭交易层，结果放到右下角提示 */
+      closeLayer();
+      toast(text, res.status === 'dry' ? 5000 : 8000);
+    } else {
+      /* 失败 / 无法确认 / 移出失败：结果停靠在右下角（无遮罩、不拦截页面点击），看完点 ✕ 或 Esc 关闭 */
+      if (view && layer) { view.result = res; layer.classList.add('ftt-docked'); render(); }
+      toast(text, 8000);
+    }
     return res;
   }
 
@@ -945,7 +1099,6 @@
     if (act === 'sell-custom') { const i = layer.querySelector('input[data-in="qty"]'); runTrade('sell', i ? i.value : ''); return; }
   }
 
-  /* ★ window 捕获阶段拦截：交易层内的事件不再传到页面 */
   const inLayer = (e) => !!(e.target && e.target.closest && e.target.closest('#ft-trade-layer'));
   ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'focusin'].forEach(type => {
     window.addEventListener(type, (e) => {
@@ -961,9 +1114,10 @@
   window.addEventListener('keydown', (e) => {
     if (!layer || !view || !layer.classList.contains('ftt-show')) return;
     if (e.key === 'Escape') {
+      const docked = layer.classList.contains('ftt-docked');
       if (confirmWaiter) confirmWaiter(false);
       else if (!running) closeLayer();
-      e.stopPropagation();
+      if (!docked || inLayer(e)) e.stopPropagation();
       return;
     }
     if (inLayer(e)) {
@@ -985,7 +1139,7 @@
     const t = e.target;
     if (!t || !t.closest) return '';
     if (t.closest('.ft-custom-tag-container, #ft-wl-hud, #ft-trade-layer')) return '';
-    if (t.closest('.ag-group-contracted, .ag-group-expanded, .ag-group-checkbox, .ag-row-drag')) return '';   // 持仓页展开箭头 = 原生
+    if (t.closest('.ag-group-contracted, .ag-group-expanded, .ag-group-checkbox, .ag-row-drag')) return '';
     const cell = t.closest('[col-id="symbol"]');
     if (!cell || cell.closest('.ag-header') || cell.closest(ROW_EXCLUDE)) return '';
     const row = cell.closest('[row-id]');
@@ -1058,12 +1212,14 @@
     const tx = trig('quick-trade-form-transaction');
     const ot = trig('quick-trade-form-order-type');
     const sb = submitButton();
+    const qi = quoteInfo();
     return {
       ok: true,
       tradeBtn: !!tb,
       panel: r ? (formReady() ? '已打开（表单态）✅' : '已打开（非表单态）') : ('未打开 ❌ ' + (op.error || '')),
       tabs,
       symbolInput: formReady(),
+      quoteInfo: qi ? `${qi.name || '-'} $${fmtPx(qi.price)}` : '',
       transaction: tx ? cleanText(tx) : '',
       qtyMode: qtyMode(),
       orderType: ot ? cleanText(ot) : '',
@@ -1107,8 +1263,8 @@
     }
   });
 
-  window.__FT_TRADE__ = { version: 3, execute, executeRemote, probe, isRunning: () => running };
+  window.__FT_TRADE__ = { version: 4, execute, executeRemote, probe, isRunning: () => running };
 
   loadSettings();
-  console.log(LOG, `ft_trade.js v3 就绪（page=${pageKind() || 'other'}）`);
+  console.log(LOG, `ft_trade.js v4 就绪（page=${pageKind() || 'other'}）`);
 })();

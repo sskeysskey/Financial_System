@@ -65,6 +65,7 @@ function fmtOrders(r) {
 }
 function fmtQuotes(r) {
   const d = (r.server && r.server.data) || {};
+  if (r.empty) return `✅ ${r.message || `分组「${r.group || '?'}」为空，已清空本机 JSON`}`;
   return `✅ 分组「${r.group || '?'}」抓到 ${r.count} 只\n本机写入：${d.saved ?? '?'} 条（模式 ${d.mode || '?'}，文件累计 ${d.total ?? '?'}）`;
 }
 function fmtMember(r) {
@@ -110,6 +111,7 @@ function fmtProbeDel(r) {
 function fmtTradeProbe(r) {
   return `「交易」按钮：${r.tradeBtn ? '找到 ✅' : '未找到 ❌'}\n面板：${r.panel}\n` +
     `标签页：${(r.tabs || []).join(' / ') || '-'}\n代码输入框：${r.symbolInput ? '✅' : '❌'}\n` +
+    `面板报价块：${r.quoteInfo || '-（未选代码时为空，正常）'}\n` +
     `交易类型：${r.transaction || '-'}\n数量方式：${r.qtyMode || '-'}\n订单类型：${r.orderType || '-'}\n` +
     `下单按钮：${r.submit || '-'}\n底部按钮：${(r.footerButtons || []).join(' / ') || '-'}\n` +
     `通知区域：${r.notifications ? '✅' : '❌'}`;
@@ -132,8 +134,7 @@ const OPS = {
   wl_test_del: { label: '试删除', page: 'watchlist', area: 'wl', fmt: r => '测试删除结果：' + JSON.stringify(r.result) },
   wl_hud: { label: '显示进度面板', page: 'watchlist', area: 'wl', fmt: () => '👁 已显示网页右下角进度面板' },
   trade_probe: { label: '探测交易面板', page: 'watchlist', area: 'trade', fmt: fmtTradeProbe },
-  combo_collect: { label: '一键抓取（持仓 + 订单 + 分组归属）', area: 'top', combo: true },
-  combo_sync: { label: '一键同步 Earning + 抓取变更%', area: 'top', combo: true }
+  combo_all: { label: '一键全流程（持仓 → 订单 → 同步 Earning → 变更% → 分组归属）', area: 'top', combo: true }
 };
 
 function showOp(op) {
@@ -247,11 +248,12 @@ chrome.storage.local.get(
   ['stockData', 'maxTags', 'ftDebug', 'ftAutoPositions', 'ftAutoOrders', 'ftAutoWatchlist',
     'ftAutoScrape', 'ftWlManualList', 'ftOrderVerbose', 'ftWlSource', 'ftWlBack', 'ftWlAhead',
     'ftWlClearFirst', 'ftWlAgent', 'ftWlRestoreGroup', 'ftWlTargetGroup', 'ftWlStrictSync',
-    'ftWlMemberPassive', 'ftLastOp', 'ftWlKeepExtra', 'ftTradeMode',
+    'ftWlMemberPassive', 'ftLastOp', 'ftWlKeepExtra', 'ftTradeMode', 'ftSymColor',
     'ftTradeEnabled', 'ftTradeDryRun', 'ftTradeRemoveAfter', 'ftTradePresets'],
   (res) => {
     if (res.maxTags) $('maxTags').value = res.maxTags;
     $('dbgChk').checked = !!res.ftDebug;
+    $('symColor').checked = res.ftSymColor !== false;
     const legacy = res.ftAutoScrape === true;
     $('autoPos').checked = res.ftAutoPositions === undefined ? legacy : res.ftAutoPositions === true;
     $('autoOrd').checked = res.ftAutoOrders === undefined ? legacy : res.ftAutoOrders === true;
@@ -292,9 +294,8 @@ setInterval(refreshWlStatus, 2500);
 setInterval(refreshAgentStatus, 3000);
 
 /* ---------- ⚡ 一键组合 ---------- */
-$('comboCollectBtn').addEventListener('click', () => runCombo('combo_collect'));
-$('comboSyncBtn').addEventListener('click', () =>
-  runCombo('combo_sync', { strictSync: $('wlStrict').checked, targetGroup: targetGroupVal() }));
+$('comboAllBtn').addEventListener('click', () =>
+  runCombo('combo_all', { strictSync: $('wlStrict').checked, targetGroup: targetGroupVal() }));
 
 /* ---------- JSON 处理 ---------- */
 function buildMap(json) {
@@ -755,3 +756,8 @@ $('tradePresets').addEventListener('change', () => {
   chrome.storage.local.set({ ftTradePresets: v }, () => setTrade(`金额档已设为：${v.map(x => '$' + x).join(' / ')}`));
 });
 $('tradeProbeBtn').addEventListener('click', () => runOp('trade_probe', { action: 'FT_TRADE_PROBE' }, { restore: false }));
+$('symColor').addEventListener('change', () => {
+  const v = $('symColor').checked;
+  chrome.storage.local.set({ ftSymColor: v }, () =>
+    setStatus(v ? '✅ 已开启代码着色（持仓页按分组、自选股页按持仓/Earning）' : '已关闭代码着色，恢复原色'));
+});

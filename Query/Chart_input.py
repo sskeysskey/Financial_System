@@ -117,6 +117,23 @@ except Exception as _e:
     TB = None
     TB_OK = False
 
+# --- 热门 Tag ---
+try:
+    import tag_hot as TH
+    TH_OK = True
+except Exception as _e:
+    print(f"[热门] 加载 tag_hot 失败（热门标识不显示）: {_e}")
+    TH = None
+    TH_OK = False
+
+
+def _norm_tag(t):
+    if TB_OK:
+        return TB.norm_tag(t)
+    if TH_OK:
+        return TH.norm_tag(t)
+    return str(t).strip().casefold()
+
 # --- 导入 Tiger_API ---
 sys.path.append(os.path.join(BASE_CODING_DIR, "Financial_System", "Selenium"))
 try:
@@ -830,6 +847,12 @@ class ChartWindow:
             color=NORD_THEME['text_bright'], visible=False, transform=self.fig.transFigure,
             fontname='Arial Unicode MS',
             bbox=dict(boxstyle="round,pad=0.35", fc=NORD_THEME['accent_red'], ec='none', alpha=0.95))
+        # ★ 热门醒目横幅（与黑名单同一行；两者同时出现时左右并排）
+        self.hot_artist = self.fig.text(
+            0.5, 0.995, "", ha='center', va='top', fontsize=13, fontweight='bold',
+            color=NORD_THEME['background'], visible=False, transform=self.fig.transFigure,
+            fontname='Arial Unicode MS',
+            bbox=dict(boxstyle="round,pad=0.35", fc=NORD_THEME['accent_yellow'], ec='none', alpha=0.95))
         self._bl_sig = None
         self._desc_sig = None
         self._base_window_title = ""
@@ -1406,23 +1429,50 @@ class ChartWindow:
                     return item
         return None
 
+    @staticmethod
+    def _item_tags(item):
+        tags = (item or {}).get('tag', []) or []
+        if isinstance(tags, str):
+            tags = [tags]
+        return [str(t) for t in tags if t is not None]
+
     def _blacklist_hits(self, tags=None):
         if not TB_OK:
             return []
         if tags is None:
-            item = self._find_desc_item()
-            tags = (item or {}).get('tag', []) or []
+            tags = self._item_tags(self._find_desc_item())
         return TB.blacklisted_tags(tags)
 
-    def _draw_blacklist_badge(self, force=False):
-        """顶部醒目横幅 + 窗口标题前缀；黑名单 / symbol / 描述数据变化时才重画"""
-        sig = (self.name, TB.signature() if TB_OK else None,
+    def _hot_hits(self, tags=None):
+        if not TH_OK:
+            return []
+        if tags is None:
+            tags = self._item_tags(self._find_desc_item())
+        return TH.hot_tags(tags)
+
+    def _layout_badges(self):
+        bl_on, hot_on = self.bl_artist.get_visible(), self.hot_artist.get_visible()
+        if bl_on and hot_on:
+            self.bl_artist.set_x(0.495); self.bl_artist.set_horizontalalignment('right')
+            self.hot_artist.set_x(0.505); self.hot_artist.set_horizontalalignment('left')
+        else:
+            for a in (self.bl_artist, self.hot_artist):
+                a.set_x(0.5); a.set_horizontalalignment('center')
+
+    def _draw_tag_badges(self, force=False):
+        """顶部黑名单 / 热门横幅 + 窗口标题前缀；黑名单 / 热门 / symbol / 描述数据变化时才重画"""
+        sig = (self.name,
+               TB.signature() if TB_OK else None,
+               TH.signature() if TH_OK else None,
                id((self.current_json_data or {}).get('data')))
         if not force and sig == self._bl_sig:
             return False
         self._bl_sig = sig
-        hits = self._blacklist_hits()
+        tags = self._item_tags(self._find_desc_item())
         prefix = ""
+
+        # --- 黑名单 ---
+        hits = self._blacklist_hits(tags)
         if hits:
             by = {g: [t for t, gg in hits if gg == g] for g in TB.GROUPS}
             segs = [f"{g}：{'、'.join(v)}" for g, v in by.items() if v]
@@ -1432,18 +1482,36 @@ class ChartWindow:
             self.bl_artist.get_bbox_patch().set_facecolor(
                 NORD_THEME['accent_red'] if sure else NORD_THEME['accent_orange'])
             self.bl_artist.set_visible(True)
-            prefix = f"⛔[{TB.GROUP_SURE}] " if sure else f"⚠[{TB.GROUP_MAYBE}] "
+            prefix += f"⛔[{TB.GROUP_SURE}] " if sure else f"⚠[{TB.GROUP_MAYBE}] "
         else:
             self.bl_artist.set_visible(False)
+
+        # --- 热门 ---
+        hot = self._hot_hits(tags)
+        if hot:
+            by = {lv: [t for t, l in hot if l == lv] for lv in TH.LEVELS}
+            segs = [f"{TH.LEVEL_ICONS[lv]} {lv}：{'、'.join(v)}" for lv, v in by.items() if v]
+            top = TH.LEVEL_T if by.get(TH.LEVEL_T) else TH.LEVEL_HOT
+            self.hot_artist.set_text("热门 Tag   " + "   ｜   ".join(segs))
+            self.hot_artist.set_color(NORD_THEME['background'])
+            self.hot_artist.get_bbox_patch().set_facecolor(TH.LEVEL_COLORS[top])
+            self.hot_artist.set_visible(True)
+            prefix += f"{TH.LEVEL_ICONS[top]}[{top}] "
+        else:
+            self.hot_artist.set_visible(False)
+
+        self._layout_badges()
         try:
             self.fig.canvas.manager.set_window_title(prefix + (self._base_window_title or self.name or ""))
         except Exception:
             pass
-        if not force:     # 黑名单变化时，标题里的 ⛔ 也要跟着更新
+        if not force:     # 名单变化时，标题里的 ⛔/★/☆ 也要跟着更新
             t, c, self.clickable = self.create_or_update_title()
             self.title_artist.set_text(t)
             self.title_artist.set_color(c)
         return True
+
+    _draw_blacklist_badge = _draw_tag_badges      # 兼容旧调用
     
     def create_or_update_title(self):
         volumes, prices = self.volumes, self.prices
@@ -1476,13 +1544,21 @@ class ChartWindow:
         item = self._find_desc_item()
         if item is not None:
             fullname = item.get('name', '')
-            tags = item.get('tag', []) or []
-            if isinstance(tags, str):
-                tags = [tags]
-            hit_keys = {TB.norm_tag(t) for t, _ in self._blacklist_hits(tags)} if TB_OK else set()
-            bl = [f"⛔{t}" for t in tags if TB_OK and TB.norm_tag(t) in hit_keys]
-            normal = [str(t) for t in tags if not (TB_OK and TB.norm_tag(t) in hit_keys)]
-            tag_str = ','.join(bl + normal)      # 黑名单 Tag 排最前，避免被截断
+            tags = self._item_tags(item)
+            bl_keys = {_norm_tag(t) for t, _ in self._blacklist_hits(tags)}
+            hot_lv = {_norm_tag(t): lv for t, lv in self._hot_hits(tags)}
+            bl, hot_t, hot_h, normal = [], [], [], []
+            for t in tags:
+                k = _norm_tag(t)
+                if k in bl_keys:                                   # 冲突时黑名单优先
+                    bl.append(f"⛔{t}")
+                elif TH_OK and hot_lv.get(k) == TH.LEVEL_T:
+                    hot_t.append(f"{TH.LEVEL_ICONS[TH.LEVEL_T]}{t}")
+                elif k in hot_lv:
+                    hot_h.append(f"{TH.LEVEL_ICONS[TH.LEVEL_HOT]}{t}")
+                else:
+                    normal.append(t)
+            tag_str = ','.join(bl + hot_t + hot_h + normal)   # 黑名单 → 热门T → 热门 → 普通，避免被截断
             if len(tag_str) > 45:
                 tag_str = tag_str[:45] + '...'
             clickable = True
@@ -2196,7 +2272,16 @@ class ChartWindow:
             for item in (self.current_json_data['data'] or {}).get(source, []):
                 sym = item['symbol']
                 if sym == self.name or sym.replace('-', '.') == self.name.replace('-', '.'):
-                    info = (f"{self.name}\n{item.get('name','')}\n\n{item.get('tag','')}\n\n"
+                    tags_disp = []
+                    for t in self._item_tags(item):
+                        k = _norm_tag(t)
+                        if TB_OK and TB.group_of(t):
+                            tags_disp.append(f"⛔{t}")
+                        elif TH_OK and TH.level_of(t):
+                            tags_disp.append(f"{TH.LEVEL_ICONS[TH.level_of(t)]}{t}")
+                        else:
+                            tags_disp.append(t)
+                    info = (f"{self.name}\n{item.get('name','')}\n\n{'，'.join(tags_disp)}\n\n"
                             f"{item.get('description1','')}\n\n{item.get('description2','')}")
                     InfoDialog("Information", info, 'Arial Unicode MS', 22, 700, 900).exec()
                     return

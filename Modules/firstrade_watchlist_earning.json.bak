@@ -1,35 +1,10 @@
 {
  "_meta": {
-  "updated_at": 1790843668.992494,
-  "updated_at_str": "2026-10-01 16:34:28",
-  "count": 4,
+  "updated_at": 1791010041.326862,
+  "updated_at_str": "2026-10-03 14:47:21",
+  "count": 0,
   "mode": "overwrite",
   "group": "Earning"
  },
- "quotes": {
-  "ACN": {
-   "symbol": "ACN",
-   "last": "181.90",
-   "change_pct": "-0.80%",
-   "change_pct_num": -0.801658
-  },
-  "AYI": {
-   "symbol": "AYI",
-   "last": "309.81",
-   "change_pct": "0.00%",
-   "change_pct_num": 0
-  },
-  "MKC": {
-   "symbol": "MKC",
-   "last": "46.77",
-   "change_pct": "+0.80%",
-   "change_pct_num": 0.797414
-  },
-  "MU": {
-   "symbol": "MU",
-   "last": "1,054.56",
-   "change_pct": "-0.99%",
-   "change_pct_num": -0.990499
-  }
- }
+ "quotes": {}
 }

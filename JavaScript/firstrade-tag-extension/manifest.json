@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Firstrade 股票标签助手",
-  "version": "10.1",
+  "version": "11.0",
   "description": "Firstrade 列表 Tag 徽章；持仓/订单/Earning 行情回传本机；自选股一键同步；分组归属；自选股页+持仓页点击代码按股数快速交易；Python 远程加入/移出/交易/取变更%。",
   "permissions": [
     "storage",

@@ -191,11 +191,8 @@
 <body>
   <!-- ==================== ⚡ 一键组合 ==================== -->
   <div class="combo">
-    <h1>⚡ 一键组合（后台串行执行，关掉本窗口也不中断）</h1>
-    <div class="half">
-      <button id="comboCollectBtn" class="primary">📥 持仓+订单+分组归属</button>
-      <button id="comboSyncBtn" class="primary">🔄 同步Earning+变更%</button>
-    </div>
+    <h1>⚡ 一键全流程（后台串行执行，关掉本窗口也不中断）</h1>
+    <button id="comboAllBtn" class="primary">🚀 持仓 → 订单 → 同步Earning → 变更% → 分组归属</button>
     <div id="topMsg"></div>
   </div>
 
@@ -349,6 +346,18 @@
     <label for="maxTags">每行最多显示</label>
     <input type="number" id="maxTags" min="1" max="10" value="2" style="width:52px;">
     <span class="small">个标签</span>
+  </div>
+  <div class="row">
+    <input type="checkbox" id="symColor" style="width:auto;">
+    <label for="symColor"><b>代码着色</b>（按分组归属 / 持仓）</label>
+  </div>
+  <div class="ok">持仓页：<span style="color:#0284c7"><b>Watch</b></span> ·
+    <span style="color:#dc2626"><b>买/买买/买买买</b></span> ·
+    <span style="color:#16a34a"><b>卖卖卖</b></span> ·
+    <span style="color:#d97706"><b>Earning</b></span>（多分组时优先级：卖 &gt; 买 &gt; Earning &gt; Watch）<br>
+    自选股页：<span style="color:#9333ea"><b>持仓中</b></span> ·
+    <span style="color:#ea580c"><b>持仓 + Earning</b></span> ·
+    <span style="color:#d97706"><b>仅 Earning</b></span>｜鼠标悬停徽章可看全部分组
   </div>
   <button id="clearBtn" class="danger">清空标签缓存</button>
   <div id="status"></div>

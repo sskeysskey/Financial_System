@@ -28,6 +28,10 @@ try:
 except ImportError:          # Windows
     fcntl = None
 
+_HERE = os.path.dirname(os.path.abspath(__file__))
+if _HERE not in sys.path:
+    sys.path.append(_HERE)
+
 USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 MODULES_DIR = os.path.join(BASE_CODING_DIR, "Financial_System", "Modules")
@@ -203,8 +207,9 @@ def _write_raw(obj):
         raise
 
 
-def set_group(tag, group):
-    """把 tag 放进 group（'确定'/'疑似'）；group=None 表示移出黑名单。返回新分组"""
+def set_group(tag, group, exclusive=True):
+    """把 tag 放进 group（'确定'/'疑似'）；group=None 表示移出黑名单。返回新分组
+    exclusive=True：加入黑名单时自动从热门（tags_filter.json）移出"""
     s = str(tag).strip()
     if not s:
         raise ValueError("Tag 为空")
@@ -228,6 +233,14 @@ def set_group(tag, group):
             data[group].append(s)
         _write_raw(_compose(raw, data))
     load(force=True)
+
+    if group and exclusive:            # 与热门互斥（锁已释放，避免跨文件死锁）
+        try:
+            import tag_hot as _TH
+            if _TH.level_of(s):
+                _TH.set_level(s, None, exclusive=False)
+        except Exception as e:
+            print(f"[黑名单] 同步移出热门失败: {e}")
     return group
 
 

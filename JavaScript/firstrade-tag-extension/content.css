@@ -530,3 +530,67 @@ html.ft-trade-on [col-id="symbol"] [data-ref="eValue"] {
   color: #D08770 !important;
   background: rgba(208, 135, 112, .08) !important;
 }
+
+/* ==================== v11 代码按分组 / 持仓着色 ====================
+ * 持仓页：Watch=天蓝  买*=红  卖卖卖=绿  Earning=琥珀
+ * 自选股页：持仓=紫  持仓+Earning=橙  仅 Earning=琥珀（当前不在 Earning 分组时）
+ * 400 色阶在深/浅主题下都清晰；红买绿卖与图表 ft_quotes.py 的配色一致 */
+[col-id="symbol"] .ft-sym-watch,
+[col-id="symbol"] .ft-sym-watch * {
+  color: #faf9fb !important;
+  font-weight: 700 !important;
+}
+
+[col-id="symbol"] .ft-sym-buy,
+[col-id="symbol"] .ft-sym-buy * {
+  color: #F87171 !important;
+  font-weight: 700 !important;
+}
+
+[col-id="symbol"] .ft-sym-sell,
+[col-id="symbol"] .ft-sym-sell * {
+  color: #4ADE80 !important;
+  font-weight: 700 !important;
+}
+
+[col-id="symbol"] .ft-sym-earn,
+[col-id="symbol"] .ft-sym-earn * {
+  color: #FBBF24 !important;
+  font-weight: 700 !important;
+}
+
+[col-id="symbol"] .ft-sym-held,
+[col-id="symbol"] .ft-sym-held * {
+  color: #C084FC !important;
+  font-weight: 700 !important;
+}
+
+[col-id="symbol"] .ft-sym-held-earn,
+[col-id="symbol"] .ft-sym-held-earn * {
+  color: #F87171 !important;
+  font-weight: 700 !important;
+}
+
+/* ==================== v12：Toast 支持多行（交易结果摘要） ==================== */
+#ft-toast {
+  max-width: 440px !important;
+  white-space: pre-line !important;
+  line-height: 1.5 !important;
+  word-break: break-all !important;
+}
+
+/* ==================== v12：交易结果停靠右下角（无遮罩、不拦截页面点击） ==================== */
+#ft-trade-layer.ftt-docked {
+  background: transparent !important;
+  pointer-events: none !important;
+  align-items: flex-end !important;
+  justify-content: flex-end !important;
+  padding: 0 16px 60px 0 !important;
+}
+
+#ft-trade-layer.ftt-docked .ftt-box {
+  width: 320px !important;
+  max-height: 55vh !important;
+  overflow-y: auto !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .45) !important;
+}

@@ -1,17 +1,23 @@
 {
  "_meta": {
-  "updated_at": 1790916982.7368572,
-  "updated_at_str": "2026-10-02 12:56:22",
-  "count": 1,
+  "updated_at": 1791256025.632031,
+  "updated_at_str": "2026-10-06 11:07:05",
+  "count": 2,
   "mode": "overwrite",
   "group": "Earning"
  },
  "quotes": {
-  "NKE": {
-   "symbol": "NKE",
-   "last": "32.12",
-   "change_pct": "-8.62%",
-   "change_pct_num": -8.620199
+  "LW": {
+   "symbol": "LW",
+   "change_pct": "+3.46%",
+   "change_pct_num": 3.463303,
+   "last": "45.11"
+  },
+  "RPM": {
+   "symbol": "RPM",
+   "change_pct": "-3.65%",
+   "change_pct_num": -3.649561,
+   "last": "95.57"
   }
  }
 }

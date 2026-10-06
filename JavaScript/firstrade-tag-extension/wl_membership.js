@@ -101,7 +101,11 @@
         group: g, symbols: arr, complete: !!complete, source: source || '',
         page_groups: knownGroups.length ? knownGroups : null
       }
-    }).then(r => { if (!r || !r.ok) delete lastSent[key]; return r; });
+    }).then(r => {
+      if (!r || !r.ok) delete lastSent[key];
+      else { try { window.dispatchEvent(new Event('ft-attr-dirty')); } catch (e) { } }
+      return r;
+    });
   }
 
   function sendEvent(group, symbol, op, source) {
@@ -111,7 +115,8 @@
     delete lastSent[g + '#C'];
     delete lastSent[g + '#P'];
     log('event', op, sym, g, source);
-    return bg({ action: 'FT_WL_MEMBERSHIP_EVENT', payload: { group: g, symbol: sym, op, source } });
+    return bg({ action: 'FT_WL_MEMBERSHIP_EVENT', payload: { group: g, symbol: sym, op, source } })
+      .then(r => { if (r && r.ok) { try { window.dispatchEvent(new Event('ft-attr-dirty')); } catch (e) { } } return r; });
   }
 
   /* ---------------- ① 被动快照 ---------------- */
