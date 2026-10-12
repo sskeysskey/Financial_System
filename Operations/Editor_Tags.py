@@ -43,6 +43,10 @@ def _norm(t):
     return unicodedata.normalize("NFKC", str(t)).strip().casefold()
 
 
+def _hot_groups(tag):
+    return TH.groups_of(tag) if TH_OK else ()
+
+
 def get_clipboard_content():
     try:
         content = pyperclip.paste()
@@ -97,7 +101,7 @@ def get_stock_symbol(default_symbol=""):
 
 
 # ======================================================================
-# ★ Tag 行绘制代理：左侧常驻徽章（黑名单 / 热门）+ 悬停/选中时右侧两组操作按钮
+# ★ Tag 行绘制代理：左侧常驻徽章（黑名单 / 热门 / 热门T）+ 悬停/选中时右侧两组操作按钮
 #   （用 delegate 而不是 setItemWidget，拖拽排序时按钮不会丢失）
 # ======================================================================
 class TagItemDelegate(QStyledItemDelegate):
@@ -122,7 +126,9 @@ class TagItemDelegate(QStyledItemDelegate):
 
     @staticmethod
     def actions_for(tag):
-        """[(domain, target, 文本, 底色, 字色)]；domain ∈ {'bl','hot'}；target=None 表示移出"""
+        """[(domain, target, 文本, 底色, 字色)]
+        domain='bl'  ：target ∈ {确定, 疑似, None(移出)}
+        domain='hot' ：target = (等级, 是否加入)；热门 / 热门T 两个独立开关"""
         acts = []
         if TB_OK:
             sure, maybe = TB.GROUP_SURE, TB.GROUP_MAYBE
@@ -136,19 +142,14 @@ class TagItemDelegate(QStyledItemDelegate):
                 acts += [("bl", other, f"→{other}", c[other], "#FFFFFF"),
                          ("bl", None, "✕黑名单", GREY_BTN, "#FFFFFF")]
         if TH_OK:
-            H, T = TH.LEVEL_HOT, TH.LEVEL_T
             c = TH.LEVEL_COLORS
             dark = TH.LEVEL_TEXT_COLOR
-            lv = TH.level_of(tag)
-            if lv is None:
-                acts += [("hot", H, f"＋{H}", c[H], dark),
-                         ("hot", T, f"＋{T}", c[T], dark)]
-            elif lv == H:
-                acts += [("hot", T, f"↑{T}", c[T], dark),
-                         ("hot", None, f"✕{H}", GREY_BTN, "#FFFFFF")]
-            else:
-                acts += [("hot", H, f"↓{H}", c[H], dark),
-                         ("hot", None, f"✕{T}", GREY_BTN, "#FFFFFF")]
+            g = TH.groups_of(tag)
+            for lv in (TH.LEVEL_HOT, TH.LEVEL_T):          # 与快捷键 3 / 4 顺序一致
+                if lv in g:
+                    acts.append(("hot", (lv, False), f"✕{lv}", GREY_BTN, "#FFFFFF"))
+                else:
+                    acts.append(("hot", (lv, True), f"＋{lv}", c[lv], dark))
         return acts
 
     def button_rects(self, rect, tag):
@@ -197,13 +198,13 @@ class TagItemDelegate(QStyledItemDelegate):
         painter.setRenderHint(QPainter.Antialiasing, True)
         rect = option.rect
         g = TB.group_of(tag) if TB_OK else None
-        lv = TH.level_of(tag) if TH_OK else None
+        hot = _hot_groups(tag)                       # 可能同时含 热门T 与 热门
         x = rect.left() + self.PAD
 
         chips = []
         if g:
             chips.append((g, TB.GROUP_COLORS[g], "#FFFFFF"))
-        if lv:
+        for lv in hot:
             chips.append((f"{TH.LEVEL_ICONS[lv]}{lv}", TH.LEVEL_COLORS[lv], TH.LEVEL_TEXT_COLOR))
         fm_chip = QFontMetrics(self.chip_font)
         for text, bg, fg in chips:      # 常驻徽章
@@ -224,16 +225,16 @@ class TagItemDelegate(QStyledItemDelegate):
         text_rect = QRect(x, rect.top(), max(0, right - x), rect.height())
 
         f = QFont(opt.font)
-        if g or lv:
+        if g or hot:
             f.setBold(True)
         painter.setFont(f)
         if TB_OK and g == TB.GROUP_SURE:
             painter.setPen(QColor("#FF9DA4"))
         elif g:
             painter.setPen(QColor("#F0B48F"))
-        elif TH_OK and lv == TH.LEVEL_T:
+        elif TH_OK and TH.LEVEL_T in hot:
             painter.setPen(QColor("#EBCB8B"))
-        elif lv:
+        elif hot:
             painter.setPen(QColor("#B9D6A0"))
         else:
             painter.setPen(QColor("#ECEFF4"))
@@ -384,7 +385,7 @@ class TagEditor(QMainWindow):
             if TB_OK:
                 keys.append("1=确定  2=疑似（黑名单）")
             if TH_OK:
-                keys.append("3=热门  4=热门T")
+                keys.append("3=热门  4=热门T（两者独立，可同时属于）")
             self.bl_hint.setText(
                 "鼠标悬停或 ↑↓ 选中 Tag → 右侧按钮加入 / 转组 / 移出（立即生效）；快捷键 "
                 + "，".join(keys) + "，再按同一键即移出；黑名单与热门互斥（加入一方自动移出另一方）")
@@ -480,13 +481,14 @@ class TagEditor(QMainWindow):
         return (TB.signature() if TB_OK else None, TH.signature() if TH_OK else None)
 
     def apply_tag_action(self, domain, target, tag):
-        """domain='bl'：target ∈ {确定, 疑似, None}；domain='hot'：target ∈ {热门, 热门T, None}"""
+        """domain='bl'：target ∈ {确定, 疑似, None}
+        domain='hot'：target = (等级, 是否加入)，只改该等级对应的列表"""
         try:
             if domain == "bl":
                 if not TB_OK:
                     return
                 cur = TB.group_of(tag)
-                had_hot = TH.level_of(tag) if TH_OK else None
+                had_hot = _hot_groups(tag)
                 if target == cur:
                     return
                 TB.set_group(tag, target)
@@ -494,23 +496,23 @@ class TagEditor(QMainWindow):
                     msg = f"已将「{tag}」移出「{cur}」黑名单"
                 else:
                     msg = f"已将「{tag}」{'转入' if cur else '加入'}「{target}」黑名单"
-                if target and had_hot and TH_OK and not TH.level_of(tag):
-                    msg += f"，并自动移出「{had_hot}」"
+                if target and had_hot:
+                    gone = [lv for lv in had_hot if lv not in _hot_groups(tag)]
+                    if gone:
+                        msg += f"，并自动移出「{'、'.join(gone)}」"
             elif domain == "hot":
                 if not TH_OK:
                     return
-                cur = TH.level_of(tag)
-                had_bl = TB.group_of(tag) if TB_OK else None
-                if target == cur:
+                level, want = target
+                if TH.has(tag, level) == want:
                     return
-                TH.set_level(tag, target)
-                if target is None:
-                    msg = f"已将「{tag}」移出「{cur}」"
-                elif cur is None:
-                    msg = f"已将「{tag}」加入「{target}」"
-                else:
-                    msg = f"已将「{tag}」由「{cur}」调整为「{target}」"
-                if target and had_bl and TB_OK and not TB.group_of(tag):
+                had_bl = TB.group_of(tag) if TB_OK else None
+                TH.set_member(tag, level, want)
+                msg = f"已将「{tag}」{'加入' if want else '移出'}「{level}」"
+                others = [lv for lv in TH.groups_of(tag) if lv != level]
+                if others:
+                    msg += f"（同时属于「{'、'.join(others)}」）"
+                if want and had_bl and TB_OK and not TB.group_of(tag):
                     msg += f"，并自动移出「{had_bl}」黑名单"
             else:
                 return
@@ -530,11 +532,11 @@ class TagEditor(QMainWindow):
             if not TB_OK:
                 return
             cur = TB.group_of(tag)
-        else:
+            self.apply_tag_action("bl", None if cur == target else target, tag)
+        elif domain == "hot":
             if not TH_OK:
                 return
-            cur = TH.level_of(tag)
-        self.apply_tag_action(domain, None if cur == target else target, tag)
+            self.apply_tag_action("hot", (target, not TH.has(tag, target)), tag)
 
     # 兼容旧调用
     def toggle_current_blacklist(self, grp):
@@ -557,9 +559,13 @@ class TagEditor(QMainWindow):
         if TH_OK:
             h = TH.counts()
             parts.append(f"热门T {h[TH.LEVEL_T]} ｜ 热门 {h[TH.LEVEL_HOT]}")
-            n = len(TH.hot_tags(tags))
-            if n:
-                hits.append(f"热门 {n}")
+            full = TH.hot_tags_full(tags)
+            nt = sum(1 for _, lvs in full if TH.LEVEL_T in lvs)
+            nh = sum(1 for _, lvs in full if TH.LEVEL_HOT in lvs)
+            if nt:
+                hits.append(f"热门T {nt}")
+            if nh:
+                hits.append(f"热门 {nh}")
             if TH.last_error():
                 errs.append("热门文件解析失败")
         txt = "      ".join(parts)
@@ -623,12 +629,20 @@ class TagEditor(QMainWindow):
             target['tag'] = tags
 
             dir_ = os.path.dirname(self.json_file_path)
+            try:
+                mode = os.stat(self.json_file_path).st_mode & 0o777
+            except OSError:
+                mode = 0o644
             fd, tmp = tempfile.mkstemp(dir=dir_, prefix=".description.", suffix=".tmp")
             try:
                 with os.fdopen(fd, 'w', encoding='utf-8') as f:
                     json.dump(fresh, f, ensure_ascii=False, indent=2)
                     f.flush()
                     os.fsync(f.fileno())
+                try:
+                    os.chmod(tmp, mode)   # mkstemp 默认 0600，避免替换后改掉原文件权限
+                except OSError:
+                    pass
                 os.replace(tmp, self.json_file_path)
             except Exception:
                 try:
@@ -670,8 +684,9 @@ class TagEditor(QMainWindow):
         notes = []
         if TB_OK and TB.group_of(new_tag):
             notes.append(f"在「{TB.group_of(new_tag)}」黑名单中")
-        if TH_OK and TH.level_of(new_tag):
-            notes.append(f"属于「{TH.level_of(new_tag)}」")
+        hot = _hot_groups(new_tag)
+        if hot:
+            notes.append(f"属于「{'、'.join(hot)}」")
         if notes:
             self.statusBar().showMessage(f"注意：「{new_tag}」" + "，".join(notes), 5000)
 
@@ -819,7 +834,7 @@ def main():
     editor = TagEditor(init_symbol)
     if not editor.isVisible():
         editor.show()
-        sys.exit(app.exec_())
+    sys.exit(app.exec_())
 
 
 if __name__ == "__main__":

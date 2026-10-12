@@ -724,7 +724,10 @@
         "AXIA",
         "AVB",
         "EQR",
-        "WBS"
+        "WBS",
+        "PSKY",
+        "WBD",
+        "QRVO"
     ],
     "etf": [
         "VDE",

@@ -561,7 +561,6 @@
     "VOD",
     "TME",
     "LYV",
-    "WBD",
     "RBLX",
     "TLK",
     "OMC",
@@ -587,13 +586,13 @@
     "TIGO",
     "TTD",
     "APP",
-    "PSKY",
     "VSNT",
     "SPHR",
     "IRDM",
     "ECHO",
     "RUM",
-    "VEON"
+    "VEON",
+    "SKYD"
   ],
   "Consumer_Cyclical": [
     "AMZN",
@@ -1314,7 +1313,8 @@
     "LFST",
     "GRAL",
     "KOD",
-    "IOVA"
+    "IOVA",
+    "HAE"
   ],
   "Industrials": [
     "GE",
@@ -1746,7 +1746,6 @@
     "DOX",
     "LSCC",
     "CACI",
-    "QRVO",
     "PCTY",
     "YMM",
     "MNDY",

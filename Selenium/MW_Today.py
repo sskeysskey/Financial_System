@@ -15,6 +15,12 @@ MW_Today.py
     python MW_Today.py --dry-run            # 只抓取并打印，不写库、不改 JSON（验证映射用）
     python MW_Today.py --no-sanity          # 关闭价格偏差校验
     python MW_Today.py --no-check           # 结束后不调用 Check_yesterday.py
+
+防串页机制（修复"上一个 symbol 的数据被写到下一个 symbol"）：
+    1. 每次导航前先跳 about:blank，并在旧文档上打 window.__mwStalePage 标记；
+       页面状态检测发现标记仍在（说明导航被 window.stop() 取消、仍停留在旧页面）时只会继续等待，绝不当作 ready；
+    2. 历史表格页校验 URL 中的 symbol 段与目标一致；
+    3. 同一轮内数据指纹去重：与其它 symbol 数据完全相同即判定为串页，重试，仍相同则不写库。
 """
 import argparse
 import atexit
@@ -105,6 +111,9 @@ STALE_DATA_POLICY = "overwrite_date"
 PRICE_SANITY_CHECK = True
 PRICE_SANITY_THRESHOLD = 0.25   # 25%
 PRICE_SANITY_ACTION = "skip"    # "skip" -> 不写入并保留在 JSON；"warn" -> 仅提示仍写入
+
+# 防串页：导航前打在旧文档上的标记名（新文档的 window 是全新的，标记自然消失）
+STALE_PAGE_MARKER = "__mwStalePage"
 
 ASSET_PATH_TO_BODY_TYPE = {
     "stock": "stock",
@@ -233,6 +242,11 @@ class CaptchaBlockedError(ScrapeError):
     pass
 
 
+class StalePageError(ScrapeError):
+    """页面未完成跳转（仍停留在旧页面）或抓到的数据与其它 symbol 完全一致（串页）"""
+    pass
+
+
 # ================= 1. 数据库与 JSON 操作 =================
 
 def get_table_type(sector):
@@ -353,6 +367,10 @@ def record_wrong_symbol_if_exceeded(group, symbol, target_date, new_price, dry_r
 
     diff = (new_price - prev_price) / abs(prev_price)
     if abs(diff) > PRICE_DEVIATION_ALERT_THRESHOLD:
+        dedup_key = (group, symbol, target_date)
+        if dedup_key in _RECORDED_WRONG_SYMBOLS:
+            return diff
+
         log_msg = (
             f"🚨 [{symbol}] ({group}) 价格与前一日偏差超 10%: "
             f"前值 {prev_price} -> 新值 {new_price} ({diff:+.2%})"
@@ -361,18 +379,17 @@ def record_wrong_symbol_if_exceeded(group, symbol, target_date, new_price, dry_r
 
         if dry_run:
             tqdm.write(f"   🔍 [DRY-RUN] 模拟追加 [{symbol}] 到: {WRONG_TXT_PATH}")
+            _RECORDED_WRONG_SYMBOLS.add(dedup_key)
             return diff
 
-        dedup_key = (group, symbol, target_date)
-        if dedup_key not in _RECORDED_WRONG_SYMBOLS:
-            try:
-                os.makedirs(NEWS_DIR, exist_ok=True)
-                with open(WRONG_TXT_PATH, "a", encoding="utf-8") as f:
-                    f.write(f"{symbol}\n")
-                _RECORDED_WRONG_SYMBOLS.add(dedup_key)
-                tqdm.write(f"   📝 已追加 [{symbol}] 到 {WRONG_TXT_PATH}")
-            except Exception as e:
-                tqdm.write(f"❌ 写入 {WRONG_TXT_PATH} 失败: {e}")
+        try:
+            os.makedirs(NEWS_DIR, exist_ok=True)
+            with open(WRONG_TXT_PATH, "a", encoding="utf-8") as f:
+                f.write(f"{symbol}\n")
+            _RECORDED_WRONG_SYMBOLS.add(dedup_key)
+            tqdm.write(f"   📝 已追加 [{symbol}] 到 {WRONG_TXT_PATH}")
+        except Exception as e:
+            tqdm.write(f"❌ 写入 {WRONG_TXT_PATH} 失败: {e}")
         return diff
     return None
 
@@ -717,7 +734,28 @@ def safe_quit(driver):
         pass
 
 
+def _mark_current_document_stale(driver):
+    """在当前文档的 window 上打标记；真正跳转到新页面后 window 是全新的，标记会消失"""
+    try:
+        driver.execute_script(f"try {{ window.{STALE_PAGE_MARKER} = true; }} catch (e) {{}}")
+    except WebDriverException:
+        pass
+
+
 def load_page(driver, url):
+    """
+    防串页导航：
+      1) 给旧文档打标记，再跳 about:blank 清空旧 DOM；
+      2) 给 about:blank 也打标记；
+      3) 导航到目标 URL。若超时后 window.stop() 取消了导航，页面会停留在带标记的旧文档上，
+         后续状态检测会识别为 'stale'，绝不会把旧页面的数据当成新 symbol 的数据。
+    """
+    _mark_current_document_stale(driver)
+    try:
+        driver.get("about:blank")
+    except WebDriverException:
+        pass
+    _mark_current_document_stale(driver)
     try:
         driver.get(url)
     except TimeoutException:
@@ -739,6 +777,10 @@ def detect_body_symbol_type(driver):
 # ================= 5. 页面解析：历史表格 (ETFs / 股票) =================
 
 JS_COMMON = r"""
+function mwIsStale() {
+    try { if (window.__mwStalePage) return true; } catch (e) {}
+    return location.protocol === 'about:' || location.href === 'about:blank';
+}
 function mwCellText(el) {
     if (!el) return '';
     const d = el.querySelector('div');
@@ -758,20 +800,30 @@ function mwIsCaptcha() {
     if (document.querySelector('iframe[src*="captcha-delivery.com"], iframe[src*="geo.captcha"]')) return true;
     return /access denied|you have been blocked|verify you are (a )?human|are you a robot/i.test(txt);
 }
+function mwPathSymbolSeg() {
+    const segs = location.pathname.toLowerCase().split('/').filter(Boolean);
+    let seg = segs.length > 2 ? segs[2] : '';
+    try { seg = decodeURIComponent(seg); } catch (e) {}
+    return seg;
+}
 """
 
 PAGE_STATE_JS = JS_COMMON + r"""
+const expectSeg = (arguments[0] || '').toLowerCase();
+if (mwIsStale()) return 'stale';
 const txt = (document.body ? document.body.innerText : '').slice(0, 3000);
 if (mwIsCaptcha()) return 'captcha';
+if (!location.pathname.toLowerCase().includes('download-data')) return 'notfound';
+if (expectSeg && mwPathSymbolSeg() !== expectSeg) return 'wrong_symbol';
 const tbl = mwFindTable();
 if (tbl && tbl.querySelectorAll('tbody tr').length > 0) return 'ready';
-if (!location.pathname.toLowerCase().includes('download-data')) return 'notfound';
 if (/symbol lookup|no results found|there were no matches/i.test(txt)) return 'notfound';
 return 'loading';
 """
 
 EXTRACT_JS = JS_COMMON + r"""
 const maxRows = arguments[0] || 5;
+if (mwIsStale()) return { stale: true };
 const tbl = mwFindTable();
 if (!tbl) return { error: '未找到数据表格' };
 
@@ -811,11 +863,11 @@ for (const tr of tbl.querySelectorAll('tbody tr')) {
     out.push([dateStr, close, vol(g('volume')), num(g('open')), num(g('high')), num(g('low'))]);
     if (out.length >= maxRows) break;
 }
-return { data: out };
+return { data: out, path_seg: mwPathSymbolSeg(), url: location.href };
 """
 
 
-def _wait_loop(driver, timeout, headless, state_fn, timeout_msg, expect_type=None):
+def _wait_loop(driver, timeout, headless, state_fn, timeout_msg, expect_type=None, expect_seg=None):
     deadline = time.time() + timeout
     captcha_notified = False
     while True:
@@ -831,6 +883,12 @@ def _wait_loop(driver, timeout, headless, state_fn, timeout_msg, expect_type=Non
             raise SymbolNotFoundError(
                 f"页面品种类型为 '{actual or '?'}'，与预期 '{expect_type or '?'}' 不符: {final_url}",
                 actual_type=actual, final_url=final_url)
+        if state == 'wrong_symbol':
+            final_url = driver.current_url
+            actual = detect_body_symbol_type(driver) or "redirected"
+            raise SymbolNotFoundError(
+                f"页面 URL 中的代码与预期 '{expect_seg or '?'}' 不符（可能被重定向到其它代码）: {final_url}",
+                actual_type=actual, final_url=final_url)
         if state == 'captcha':
             if headless:
                 raise CaptchaBlockedError("触发反爬验证（无头模式无法处理）")
@@ -841,20 +899,30 @@ def _wait_loop(driver, timeout, headless, state_fn, timeout_msg, expect_type=Non
         if time.time() > deadline:
             if state == 'captcha':
                 raise CaptchaBlockedError("验证码等待超时")
+            if state == 'stale':
+                raise StalePageError("页面未完成跳转，仍停留在旧页面（导航超时被中止）")
             raise ScrapeError(timeout_msg)
         time.sleep(0.5)
 
 
-def wait_for_table(driver, timeout, headless):
-    _wait_loop(driver, timeout, headless, lambda: driver.execute_script(PAGE_STATE_JS), "等待数据表格超时")
+def wait_for_table(driver, timeout, headless, expect_seg=None):
+    _wait_loop(driver, timeout, headless,
+               lambda: driver.execute_script(PAGE_STATE_JS, (expect_seg or "").lower()),
+               "等待数据表格超时", expect_seg=expect_seg)
 
 
-def extract_rows(driver, symbol):
+def extract_rows(driver, symbol, expect_seg=None):
     result = driver.execute_script(EXTRACT_JS, MAX_ROWS_TO_EXTRACT)
     if not isinstance(result, dict):
         raise ScrapeError("JS 返回结果异常")
+    if result.get("stale"):
+        raise StalePageError("提取时检测到仍为旧页面")
     if "error" in result:
         raise ScrapeError(result["error"])
+    # 二次确认：提取时刻的 URL 仍是目标 symbol（防止等待与提取之间页面发生变化）
+    if expect_seg and (result.get("path_seg") or "") != expect_seg.lower():
+        raise StalePageError(f"提取时页面代码为 '{result.get('path_seg')}'，与预期 '{expect_seg}' 不符: "
+                             f"{result.get('url')}")
     rows = []
     for r in result.get("data", []):
         date_str, price, volume, open_, high, low = r
@@ -875,12 +943,16 @@ def select_row(rows, last_valid_date):
         if r[0] == last_valid_date:
             return r, None
 
-    row0 = rows[0]
-    relation = "晚于" if row0[0] > last_valid_date else "早于"
+    # 无精确匹配：优先选不晚于预期日期的最近一行（避免把“今天盘中”数据冒充为上一交易日）
+    older = [r for r in rows if r[0] < last_valid_date]
+    base = older[0] if older else rows[0]
+    relation = "晚于" if base[0] > last_valid_date else "早于"
     if STALE_DATA_POLICY == "skip":
-        return None, f"网页最新日期 {row0[0]} {relation}预期日期 {last_valid_date}，且无匹配行，跳过（保留在 JSON）。"
-    fixed = (last_valid_date,) + tuple(row0[1:])
-    return fixed, f"网页最新日期 {row0[0]} {relation}预期日期 {last_valid_date}，且无匹配行，使用最新数据并修改日期为 {last_valid_date} 写入。"
+        return None, f"网页最近可用日期 {base[0]} {relation}预期日期 {last_valid_date}，且无匹配行，跳过（保留在 JSON）。"
+    fixed = (last_valid_date,) + tuple(base[1:])
+    extra = "（表中仅有更晚日期的数据，可能为盘中数据，请留意）" if not older else ""
+    return fixed, (f"网页最近可用日期 {base[0]} {relation}预期日期 {last_valid_date}，且无匹配行，"
+                   f"使用该行数据并修改日期为 {last_valid_date} 写入。{extra}")
 
 
 # ================= 6. 页面解析：行情概览页 =================
@@ -937,6 +1009,7 @@ function qTimestamp() {
 
 QUOTE_STATE_JS = QUOTE_COMMON_JS + r"""
 const expectType = arguments[0];
+if (mwIsStale()) return 'stale';
 const txt = (document.body ? document.body.innerText : '').slice(0, 3000);
 if (mwIsCaptcha()) return 'captcha';
 const path = location.pathname.toLowerCase();
@@ -950,6 +1023,7 @@ return 'loading';
 """
 
 QUOTE_EXTRACT_JS = QUOTE_COMMON_JS + r"""
+if (mwIsStale()) return { stale: true };
 const p = qPrice();
 const st = qScope().querySelector('small[class*="status"]');
 return {
@@ -973,6 +1047,8 @@ def extract_quote(driver):
     r = driver.execute_script(QUOTE_EXTRACT_JS)
     if not isinstance(r, dict):
         raise ScrapeError("JS 返回结果异常")
+    if r.get("stale"):
+        raise StalePageError("提取时检测到仍为旧页面")
     if r.get("price") is None:
         raise ScrapeError("未解析到价格")
     return r
@@ -1018,6 +1094,25 @@ def check_price_sanity(table_name, name, date_str, price):
     return True, None
 
 
+# ================= 6.5 防串页：数据指纹 =================
+
+def table_fingerprint(rows):
+    """历史表格前 N 行 (日期, 收盘, 量, 开, 高, 低) 组成的指纹；不同标的完全相同的概率可忽略"""
+    return ("table",) + tuple((r[0], r[2], r[3], r[4], r[5], r[6]) for r in rows)
+
+
+def quote_fingerprint(quote):
+    return ("quote", quote.get("company") or "", str(quote.get("price_raw")), quote.get("ts") or "")
+
+
+def check_and_register_fingerprint(ctx, fp, symbol, group):
+    """同一轮内若该指纹已属于其它 symbol，判定为串页"""
+    owner = ctx["fingerprints"].get(fp)
+    if owner and owner != (group, symbol):
+        raise StalePageError(f"抓到的数据与 [{owner[1]}]({owner[0]}) 完全相同，疑似串页（页面未切换）")
+    ctx["fingerprints"][fp] = (group, symbol)
+
+
 # ================= 7. 主流程 =================
 
 def build_task_list(tasks_dict, only_groups=None):
@@ -1036,7 +1131,8 @@ def build_task_list(tasks_dict, only_groups=None):
     return task_list, unknown_pending
 
 
-def run_single_url(driver, ctx, url, symbol, group, handler, last_valid_date, opts, expect_type=None):
+def run_single_url(driver, ctx, url, symbol, group, handler, last_valid_date, opts,
+                   expect_type=None, mw_path=None):
     headless = opts["headless"]
     table_type = get_table_type(group)
 
@@ -1050,16 +1146,18 @@ def run_single_url(driver, ctx, url, symbol, group, handler, last_valid_date, op
             page_info = ""
 
             if handler["parser"] == "ohlcv_table":
-                wait_for_table(driver, TABLE_WAIT_TIMEOUT, headless)
+                wait_for_table(driver, TABLE_WAIT_TIMEOUT, headless, expect_seg=mw_path)
                 ctx["consecutive_blocks"] = 0
-                rows = extract_rows(driver, symbol)
+                rows = extract_rows(driver, symbol, expect_seg=mw_path)
                 if not rows:
                     raise ScrapeError("提取到的数据为空")
+                check_and_register_fingerprint(ctx, table_fingerprint(rows), symbol, group)
                 selected_row, note = select_row(rows, last_valid_date)
             else:
                 wait_for_quote(driver, QUOTE_WAIT_TIMEOUT, headless, expect_type)
                 ctx["consecutive_blocks"] = 0
                 quote = extract_quote(driver)
+                check_and_register_fingerprint(ctx, quote_fingerprint(quote), symbol, group)
                 selected_row, note = build_quote_row(symbol, handler, quote, last_valid_date)
                 page_info = (f"（页面: {quote.get('company') or '-'} | 原始值: {quote.get('price_raw')} "
                              f"| 更新: {quote.get('ts') or '-'}）")
@@ -1069,7 +1167,7 @@ def run_single_url(driver, ctx, url, symbol, group, handler, last_valid_date, op
             if selected_row is None:
                 return "skipped", driver
 
-            # 【新增核心步骤】比较与前一天的 price，超过 10% 则输出 symbol 到 wrong.txt
+            # 比较与前一天的 price，超过 10% 则输出 symbol 到 wrong.txt（已通过防串页校验后才执行）
             record_wrong_symbol_if_exceeded(
                 group=group,
                 symbol=symbol,
@@ -1117,6 +1215,13 @@ def run_single_url(driver, ctx, url, symbol, group, handler, last_valid_date, op
                 return "failed", driver
             time.sleep(BLOCK_BACKOFF_SECONDS * attempt + random.uniform(0, 5))
 
+        except StalePageError as e:
+            if attempt < MAX_RETRIES:
+                tqdm.write(f"⏳ [{symbol}] {e}，重新加载 ({attempt}/{MAX_RETRIES})...")
+                time.sleep(2 * attempt + random.uniform(0, 2))
+            else:
+                tqdm.write(f"❌ [{symbol}] 防串页校验未通过 (已重试 {MAX_RETRIES} 次)，不写入，保留在 JSON: {e}")
+
         except Exception as e:
             if isinstance(e, WebDriverException) and not is_driver_alive(driver):
                 tqdm.write("♻️ 浏览器会话已失效，正在重建...")
@@ -1128,6 +1233,7 @@ def run_single_url(driver, ctx, url, symbol, group, handler, last_valid_date, op
                     ctx["aborted"] = True
                     return "failed", None
             if attempt < MAX_RETRIES:
+                tqdm.write(f"⏳ [{symbol}] 第 {attempt} 次抓取出错，准备重试: {str(e)[:120]}")
                 time.sleep(2 * attempt)
             else:
                 tqdm.write(f"❌ [{symbol}] 抓取失败 (已重试 {MAX_RETRIES} 次): {str(e)[:150]}")
@@ -1169,7 +1275,7 @@ def scrape_marketwatch(headless=True, only_groups=None, dry_run=False, sanity=Tr
         return empty_stats
 
     stats = {"success": [], "failed": [], "not_found": [], "skipped": [], "aborted": False}
-    ctx = {"consecutive_blocks": 0, "aborted": False, "mismatch_hints": []}
+    ctx = {"consecutive_blocks": 0, "aborted": False, "mismatch_hints": [], "fingerprints": {}}
     opts = {"headless": headless, "dry_run": dry_run, "sanity": sanity}
 
     try:
@@ -1195,7 +1301,8 @@ def scrape_marketwatch(headless=True, only_groups=None, dry_run=False, sanity=Tr
                 target_url = build_target_url(handler, asset, mw_path, extra_q)
                 expect_type = expected_type_for(handler, asset)
                 outcome, driver = run_single_url(driver, ctx, target_url, symbol, group, handler,
-                                                 last_valid_date, opts, expect_type=expect_type)
+                                                 last_valid_date, opts, expect_type=expect_type,
+                                                 mw_path=mw_path)
                 if outcome != "not_found" or ctx["aborted"]:
                     break
                 if c_idx < len(candidates) - 1:

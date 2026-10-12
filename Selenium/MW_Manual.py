@@ -45,6 +45,8 @@ MANUAL_TASKS = [
     # {"symbol": "S&P500", "dates": ["2026-09-19"]},
 ]
 
+HEADLESS = False   # True=无头（不弹窗）；False=有界面（弹出浏览器窗口）
+
 USER_HOME = os.path.expanduser("~")
 BASE_CODING_DIR = os.path.join(USER_HOME, "Coding")
 DOWNLOADS_DIR = os.path.join(USER_HOME, "Downloads")
@@ -1230,7 +1232,6 @@ def parse_args():
     p.add_argument("--symbol", help="与 --dates 配合使用的单个 symbol")
     p.add_argument("--dates", nargs="+", help="日期列表 YYYY-MM-DD")
     p.add_argument("--group", help="显式指定分组（对所有任务生效，自动判断有歧义时使用）")
-    p.add_argument("--headful", action="store_true", help="显示浏览器窗口（可手动过验证码）")
     p.add_argument("--dry-run", action="store_true", help="只抓取并对比，不写库")
     p.add_argument("--no-sanity", action="store_true", help="关闭行情页分组的价格偏差校验")
     p.add_argument("--strict-date", action="store_true", help="行情页日期与指定日期不一致时跳过")
@@ -1276,8 +1277,8 @@ def main():
             log("已取消。")
             return 0
 
-    opts = {"headless": not args.headful, "dry_run": args.dry_run, "sanity": not args.no_sanity,
-            "strict_date": args.strict_date, "record_wrong": args.record_wrong}
+    opts = {"headless": HEADLESS, "dry_run": args.dry_run, "sanity": not args.no_sanity,
+        "strict_date": args.strict_date, "record_wrong": args.record_wrong}
     log(f"🚀 开始（模式: {'无头' if opts['headless'] else '有界面'}"
         f"{' | DRY-RUN' if args.dry_run else ''}）")
     results = run(jobs, opts)

@@ -1,10 +1,17 @@
 {
  "_meta": {
-  "updated_at": 1791010041.326862,
-  "updated_at_str": "2026-10-03 14:47:21",
-  "count": 0,
+  "updated_at": 1791521008.71638,
+  "updated_at_str": "2026-10-09 12:43:28",
+  "count": 1,
   "mode": "overwrite",
   "group": "Earning"
  },
- "quotes": {}
+ "quotes": {
+  "DAL": {
+   "symbol": "DAL",
+   "change_pct": "+0.56%",
+   "change_pct_num": 0.560019,
+   "last": "82.60"
+  }
+ }
 }

@@ -1703,7 +1703,7 @@ def run_volume_high_scanner():
         return
 
     # -------------------------------------------------------------------------
-    # 【修正后】STRANGE 策略：扫描两次财报下跌 + 最新财报日当天跌 + 最新价反弹超20%
+    # 【修正后】STRANGE 策略：扫描两次财报下跌 + 最新财报日当天跌 + 最新价反弹超13%
     # -------------------------------------------------------------------------
     print("\n开始扫描 STRANGE 策略股票...")
     for symbol, table_name in symbol_to_table.items():
@@ -1771,12 +1771,12 @@ def run_volume_high_scanner():
                 continue
             current_close = current_price_row[0]
 
-            # 规则 3：最新收盘价比最新财报收盘价反弹超 20%
+            # 规则 3：最新收盘价比最新财报收盘价反弹超 13%
             if latest_earn_close_price <= 0:
                 continue  # 避免除以 0 或异常负价格
             
             gain_pct = (current_close - latest_earn_close_price) / latest_earn_close_price
-            if gain_pct >= 0.20:
+            if gain_pct >= 0.13:
                 # 组装输出行
                 info_str = compare_map.get(symbol, "")
                 tags_str = tags_map.get(symbol, "")
