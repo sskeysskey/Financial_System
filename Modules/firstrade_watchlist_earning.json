@@ -1,10 +1,53 @@
 {
  "_meta": {
-  "updated_at": 1791628624.652398,
-  "updated_at_str": "2026-10-10 18:37:04",
-  "count": 0,
+  "updated_at": 1791941756.634876,
+  "updated_at_str": "2026-10-14 09:35:56",
+  "count": 7,
   "mode": "overwrite",
   "group": "Earning"
  },
- "quotes": {}
+ "quotes": {
+  "ASML": {
+   "symbol": "ASML",
+   "change_pct": "-2.50%",
+   "change_pct_num": -2.504799,
+   "last": "1,706.40"
+  },
+  "BAC": {
+   "symbol": "BAC",
+   "change_pct": "-2.62%",
+   "change_pct_num": -2.620007,
+   "last": "53.15"
+  },
+  "BLK": {
+   "symbol": "BLK",
+   "change_pct": "-1.31%",
+   "change_pct_num": -1.309137,
+   "last": "1,069.73"
+  },
+  "FAST": {
+   "symbol": "FAST",
+   "change_pct": "+0.16%",
+   "change_pct_num": 0.15537,
+   "last": "51.57"
+  },
+  "MS": {
+   "symbol": "MS",
+   "change_pct": "-1.65%",
+   "change_pct_num": -1.647195,
+   "last": "186.89"
+  },
+  "PGR": {
+   "symbol": "PGR",
+   "change_pct": "+1.18%",
+   "change_pct_num": 1.180316,
+   "last": "222.88"
+  },
+  "STT": {
+   "symbol": "STT",
+   "change_pct": "+0.44%",
+   "change_pct_num": 0.440176,
+   "last": "175.70"
+  }
+ }
 }

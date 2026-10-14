@@ -1,17 +1,65 @@
 {
  "_meta": {
-  "updated_at": 1791521008.71638,
-  "updated_at_str": "2026-10-09 12:43:28",
-  "count": 1,
+  "updated_at": 1791874067.0608919,
+  "updated_at_str": "2026-10-13 14:47:47",
+  "count": 9,
   "mode": "overwrite",
   "group": "Earning"
  },
  "quotes": {
-  "DAL": {
-   "symbol": "DAL",
-   "change_pct": "+0.56%",
-   "change_pct_num": 0.560019,
-   "last": "82.60"
+  "ACI": {
+   "symbol": "ACI",
+   "change_pct": "-0.04%",
+   "change_pct_num": -0.04386,
+   "last": "12.53"
+  },
+  "C": {
+   "symbol": "C",
+   "change_pct": "+0.05%",
+   "change_pct_num": 0.045482,
+   "last": "131.98"
+  },
+  "DPZ": {
+   "symbol": "DPZ",
+   "change_pct": "-0.45%",
+   "change_pct_num": -0.450306,
+   "last": "309.50"
+  },
+  "FDX": {
+   "symbol": "FDX",
+   "change_pct": "-0.17%",
+   "change_pct_num": -0.171098,
+   "last": "291.73"
+  },
+  "GS": {
+   "symbol": "GS",
+   "change_pct": "+0.15%",
+   "change_pct_num": 0.152134,
+   "last": "895.31"
+  },
+  "JNJ": {
+   "symbol": "JNJ",
+   "change_pct": "+1.00%",
+   "change_pct_num": 1.001024,
+   "last": "266.37"
+  },
+  "JPM": {
+   "symbol": "JPM",
+   "change_pct": "+0.53%",
+   "change_pct_num": 0.526473,
+   "last": "336.06"
+  },
+  "UNH": {
+   "symbol": "UNH",
+   "change_pct": "+0.52%",
+   "change_pct_num": 0.517806,
+   "last": "380.48"
+  },
+  "WFC": {
+   "symbol": "WFC",
+   "change_pct": "+0.19%",
+   "change_pct_num": 0.192031,
+   "last": "83.48"
   }
  }
 }

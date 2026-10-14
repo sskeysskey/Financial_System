@@ -371,15 +371,6 @@
         "message": "正在执行 Editor_Blacklist..."
     },
     {
-        "key": "d",
-        "modifiers": [
-            "control"
-        ],
-        "actionType": "runPythonBackground",
-        "target": "/Users/yanzhang/Coding/Financial_System/Operations/Insert_Earning_auto.py",
-        "message": "正在打开财报编辑界面..."
-    },
-    {
         "key": "i",
         "modifiers": [
             "control"
@@ -440,6 +431,15 @@
             "/Users/yanzhang/Coding/Financial_System/Operations/Editor_Earning_DB.py"
         ],
         "message": "正在执行 Editor_Earning_DB 脚本..."
+    },
+    {
+        "key": "d",
+        "modifiers": [
+            "control"
+        ],
+        "actionType": "runPythonBackground",
+        "target": "/Users/yanzhang/Coding/Financial_System/Operations/Insert_Earning_auto.py",
+        "message": "正在打开财报编辑界面..."
     },
     {
         "key": "d",
